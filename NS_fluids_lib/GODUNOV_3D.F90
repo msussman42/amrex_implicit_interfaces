@@ -14461,6 +14461,9 @@ stop
       return
       end subroutine fort_sdc_time_quad_face
 
+       ! viscoelastic force = div ( H(phi) mu_p (1/lambda)(f(A)A-I)) if
+       !  FENE-P
+       ! Pushpendra Singh (NJIT)
       subroutine fort_maketensor( &
        partid, & ! 0..num_materials_viscoelastic-1
        level, &
@@ -14806,6 +14809,14 @@ stop
        if (viscoelastic_model.eq.5) then !FENE-P          
         if (trace_A.gt.zero) then
          if (polymer_factor.gt.zero) then !1/L
+             ! (f(A)A-I)/lambda  f(A)=1/(1-trac(A)/L^2)
+             ! ((f(A)(Q+I)-I)/lambda
+             ! (f(A)Q + f(A)I-I)/lambda=
+             ! (f(A)/lambda)(Q+I-I/f(A))=
+             ! (f(A)/lambda)(Q+(f(A)I-I)/f(A))
+             ! (f(A)-1)/f(A)=1-1/f(A)=1-(1-trac(A)/L^2)=trace(A)/L^2
+             ! (f(A)A-I)/lambda = (f(A)/lambda)*(Q+trace(A)I/L^{2})
+             ! 
           do ii=1,3
            Q(ii,ii)=Q(ii,ii)+min(trace_A*(polymer_factor**2),one)
           enddo
@@ -14843,6 +14854,7 @@ stop
         !  visc(D_DECL(i,j,k),2*nmat+im_parm)=modtime
        do ii=1,3
        do jj=1,3
+         ! FENE-P or FENE-CP visc(nmat+im+1)=f(A)/lambda
         TQ(ii,jj)=Q(ii,jj)*visc(D_DECL(i,j,k),nmat+im_parm+1)
        enddo
        enddo
@@ -15935,6 +15947,7 @@ stop
        Q(3,1)=Q(1,3)
        Q(3,2)=Q(2,3)
 
+        ! modtime=lambda/f(A)
        modtime=visc(D_DECL(i,j,k),2*nmat+im_critical+1)
        if (modtime.ge.zero) then
         ! do nothing
@@ -15969,6 +15982,11 @@ stop
         endif
        enddo ! ii=1,3
 
+        ! (1/lambda)*(f(A)A-I)=
+        ! (f(A)/lambda)*(A-I/f(A))=
+        ! (f(A)/lambda)*(Q+I-I/f(A))
+        ! 1-1/f(A)=1-(1-trac(A)/L^2)=trac(A)/L^2
+        ! (1/lambda)*(f(A)A-I)=(f(A)/lambda)*(Q+trac(A)I/L^{2})
        if (viscoelastic_model.eq.5) then !FENE-P          
         if (trace_A.gt.zero) then
          if (polymer_factor.gt.zero) then !1/L
@@ -16067,6 +16085,7 @@ stop
 
         do ii=1,3
          Smult(ii,ii)=Smult(ii,ii)+one
+          ! Aadvect <-- Q+I
          Aadvect(ii,ii)=Aadvect(ii,ii)+one
         enddo  ! ii=1,3
 
@@ -16195,21 +16214,23 @@ stop
         endif 
  
         do ii=1,3
-         Q(ii,ii)=Q(ii,ii)-one
+         Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
         enddo
 
         ! note: for viscoelastic_model==2 or
         !           viscoelastic_model==3,
-        !  modtime=lambda=elastic_time >> 1
+        !  modtime=lambda_tilde=elastic_time >> 1
         !
-        ! lambda (Q^n+1-Q^n)=-dt (Q^n+1 + ofs)
-        ! (Q^n+1-Q^n)/dt = -(Q^n+1+ofs)/lambda
-        ! Q^n+1 * (1/dt+1/lambda) = Q_n/dt-ofs/lambda
-        ! Q^n+1 * (1+dt/lambda) = Q_n-ofs*dt/lambda
-        ! Q^{n+1}=(lambda/(lambda+dt))*(Q_n-ofs*dt/lambda)
-        ! Q^n+1 = (Q_n/dt-ofs/lambda)*dt*lambda/
-        !         (lambda+dt)
-        ! Q^n+1=(Q^n * lambda - ofs * dt)/(lambda+dt) 
+        ! lambda_tilde=f(A)/lambda=(1/(lambda(1-tr(A)/L^2)))
+        ! ofs \equiv equilibrium_diagonal
+        ! lambda_tilde (Q^n+1-Q^n)=-dt (Q^n+1 + ofs I)
+        ! (Q^n+1-Q^n)/dt = -(Q^n+1+ofs)/lambda_tilde
+        ! Q^n+1 * (1/dt+1/lambda_tilde) = Q_n/dt-ofs/lambda_tilde
+        ! Q^n+1 * (1+dt/lambda_tilde) = Q_n-ofs*dt/lambda_tilde
+        ! Q^{n+1}=(lambda_tilde/(lambda_tilde+dt))*(Q_n-ofs*dt/lambda_tilde)
+        ! Q^n+1 = (Q_n/dt-ofs/lambda_tilde)*dt*lambda_tilde/
+        !         (lambda_tilde+dt)
+        ! Q^n+1=(Q^n * lambda_tilde - ofs * dt)/(lambda+dt) 
         do ii=1,3
         do jj=1,3
          if (ii.eq.jj) then

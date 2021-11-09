@@ -2179,6 +2179,9 @@ protected:
     static Vector<Real> elastic_time; // viscoelastic parameter
 
      // 0 => viscoelastic FENE-CR material  
+     //    force= (div mu_p(f(A)/lambda) Q)   Q=A-I  mu_p="elastic_viscosity"
+     //                                       (no shear thinning case)
+     //    relaxation term=(f(A)/lambda)Q     f(A)=1/(1-trac(A)/L^2)
      //     updating Q:
      //       (i) CISL advection Q^advect=Q^n(x-V dt)
      //       (ii) A^advect=Q^advect+I
@@ -2188,6 +2191,7 @@ protected:
      //       (v) lambda'=lambda * (1-tr(A)/L^2)
      //       (vi) Q^n+1=lambda' Q^n+1/(lambda'+dt)
      // 1 => Oldroyd-B
+     //       Oldroyd-B=lim_{L\rightarrow\infty} FENE_CR
      //       (i) lambda'=lambda
      // 2=> elastic material  Q=bulk_modulus*(grad X + grad X^{T}) (linear ex.)
      // 3=> incremental elastic model 
@@ -2206,6 +2210,8 @@ protected:
      //         S^advect+dt (2D)+dt W S+dt S W^T + O(dt^2)
      // 4=> elastic model handled in the coupler (Lagrangian).
      // 5=> FENE-P 
+     //       force=div mu_p (1/lambda)(f(A)A - I)
+     //       relaxation term=(1/lambda)(f(A)A-I)
      //       (v) lambda'=lambda * (1-tr(A)/L^2)
      //       (vi) ofs=I*tr(A)/L^2
      //       (vi) Q_t = -(1/lambda')(Q+ofs)  
