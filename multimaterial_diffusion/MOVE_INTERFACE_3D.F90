@@ -400,9 +400,9 @@ stop
        stop
       endif
 
-       !nparts x (velocity + LS + temperature + flag+stress)  3D
+       !nparts x (velocity + LS + temperature + flag+force)  3D
       if ((nFSI_all.eq.global_nparts*nFSI_sub).and. &
-          (nFSI_sub.eq.12).and. &
+          (nFSI_sub.eq.9).and. &
           (ngrowFSI.eq.3).and. &
           (ngrow.eq.3)) then
        ! do nothing
@@ -1132,7 +1132,7 @@ stop
        stop
       endif
  
-      if (nFSI_sub.eq.12) then
+      if (nFSI_sub.eq.9) then
        ! do nothing
       else
        print *,"nFSI_sub invalid ns_header_msg_level: ",nFSI_sub
@@ -1263,9 +1263,9 @@ stop
 
        elements_generated=1;
 
-        !nparts x (velocity + LS + temperature + flag+stress)  3D
+        !nparts x (velocity + LS + temperature + flag+force)  3D
        if ((nFSI_all.eq.global_nparts*nFSI_sub).and. &
-           (nFSI_sub.eq.12).and. &
+           (nFSI_sub.eq.9).and. &
            (ngrowFSI.eq.3)) then
         ! do nothing
        else
@@ -1310,7 +1310,7 @@ stop
               if (((isub.ge.1).and.(isub.le.3)).or. & ! velocity
                   (isub.eq.4).or. & ! LS
                   (isub.eq.5).or. & ! temperature
-                  ((isub.ge.7).and.(isub.le.12))) then
+                  ((isub.ge.7).and.(isub.le.9))) then
                MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+isub)=coarse_data
               else if (isub.eq.6) then ! flag
                if (ilev.gt.0) then
@@ -1534,8 +1534,8 @@ stop
         stop
        endif
 
-        !nparts x (velocity + LS + temperature + flag+stress)  3D
-       nFSI_sub=12
+        !nparts x (velocity + LS + temperature + flag+force)  3D
+       nFSI_sub=9
        nFSI_all=global_nparts*nFSI_sub
        ngrowFSI=3
 
@@ -1645,8 +1645,8 @@ stop
           MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+3)=-9999.0d0 ! LS
           MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+4)=0.0d0 ! temp
           MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+5)=0.0d0 ! mask
-          do dir=1,6
-           MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+5+dir)=0.0d0 ! stress
+          do dir=1,3
+           MG(ilev)%FSI_MF(D_DECL(i,j,k),ibase+5+dir)=0.0d0 ! force
           enddo
          enddo
          enddo
