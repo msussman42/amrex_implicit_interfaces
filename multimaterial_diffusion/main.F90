@@ -38,8 +38,10 @@ IMPLICIT NONE
 ! 15=hypocycloid with 2 materials
 ! 20=hypocycloid with 6 materials
 ! 400=melting gingerbread (material 1 inside, T=TSAT initially)
-INTEGER,PARAMETER          :: probtype_in=400
-INTEGER        :: stefan_flag ! VARIABLE TSAT
+! 404=melting Xue (material 1 inside, T=TSAT initially)
+! 406=melting Fractal (material 1 inside, T=TSAT initially)
+INTEGER,PARAMETER          :: probtype_in=406
+INTEGER          :: stefan_flag   !VARIABLE TSAT
 ! 0.1 if probtype_in=3  0.4 if probtype_in=4
 real(kind=8),PARAMETER     :: radblob_in = 0.4d0
 ! buffer for probtype_in=3
@@ -54,12 +56,16 @@ real(kind=8),parameter     :: NB_top=0.0d0, NB_bot=10.0d0
 ! for probtype==5, T(x=0)=273.0  T(x=1)=272.0+e^{-V(1-Vt)}
 ! material 1 on the left, material 2 on the right.
 ! 1.0d0 for probtype==400 (gingerbread)
+! 1.0d0 for probtype==406 (Fractal)
+! 1.0d0 for probtype==404 (Xue)
 !  (T=TSAT interior domain initially, T=TSAT+TDIFF on walls)
 real(kind=8),PARAMETER     :: TDIFF_in = 1.0d0
 ! 10.0d0 for probtype==3
 ! 1.0d0 for probtype==4 (stationary benchmark)
 ! 1.0d0 for probtype==4 (shrinking material 1)
 ! 1.0d0 for probtype==400 (melting gingerbread)
+! 1.0d0 for probtype==404 (Xue)
+! 1.0d0 for probtype==406 (Fractal)
 real(kind=8),PARAMETER     :: latent_heat_in = 1.0d0
 !0=low,1=simple,2=Dai and Scannapieco,3=orthogonal probe
 INTEGER,PARAMETER          :: local_operator_internal = 3
@@ -71,7 +77,7 @@ INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=40 probtype_in=3 test with N=64
 INTEGER                    :: M_START,M_FACTOR,M_CURRENT
 INTEGER,PARAMETER          :: M_MAX_TIME_STEP = 4000
-INTEGER,PARAMETER          :: plot_int = 1
+INTEGER,PARAMETER          :: plot_int = 10
 ! TSTOP=1.25d-2 for probtype_in=1 (annulus)
 ! TSTOP=1.25d-2 for probtype_in=13,15,20 (pentafoil, Hypocycloid)
 ! explicit time step for N=512 grid: 4 dt/dx^2 < 1
@@ -83,10 +89,8 @@ INTEGER,PARAMETER          :: plot_int = 1
 !
 ! non-axisymmetric, polar solver for validation (probtype_in.eq.19):
 ! TSTOP=0.004d0
-! VALIDATION TSTOP:
-!real(kind=8),parameter     :: TSTOP = 0.5d0
-! VERIFICATION TSTOP:
-real(kind=8),parameter     :: TSTOP = 0.02d0
+! VERIFICATION
+real(kind=8),parameter     :: TSTOP = 0.2d0
 ! fixed_dt=0.0d0 => use CFL condition
 ! fixed_dt=-1.0d0 => use TSTOP/M
 real(kind=8)               :: fixed_dt_main,fixed_dt_current
@@ -130,8 +134,8 @@ integer                     :: nhalf
 integer                     :: imof
 integer                     :: im
 integer                     :: im1
-real(kind=8)                :: sumT,sumvf,local_Pi
 real(kind=8)                :: test_radblob
+real(kind=8)                :: sumT,sumvf,local_Pi
 
 !---------------------------------------------------
 integer                     :: local_nten
@@ -156,6 +160,7 @@ real(kind=8) :: dtemp1,dtemp2
 real(kind=8) :: flxavg1,flxavg2
 real(kind=8) :: y_fluxtest1
 real(kind=8) :: y_fluxtest2
+
 
 integer ireverse,isink
 
@@ -189,10 +194,12 @@ integer :: iter
 real(kind=8) :: iter_average
 
 integer :: sci_max_level
+character(40) :: dw,dw1
+
 
 print *,"PROTOTYPE CODE DATE= November 9, 2021, 7:00am"
 
-stefan_flag=1 ! VARIABLE TSAT
+stefan_flag=1  ! VARIABLE TSAT
 
 global_nparts=0
 
@@ -203,14 +210,40 @@ print *,"im_measure= ",im_measure
 print *,"constant_K_test= ",constant_K_test
 
 ! probtype_in=400 for gingerbread man problem
+! probtype_in=404 for Xue problem
+! probtype_in=406 for Fractal problem
 ! N space
 ! M time
+! N=64,128,256
+! M=250,500,1000
+! VERIFICATION
 N_START=64
 N_FINISH=64
-! VERIFICATION: M_START=50,100,200 corresponding to 64,128,256
-M_START=50
+M_START=250 
 M_FACTOR=2
 height_function_flag_global=0
+
+
+
+dw="fractalinit.dat"
+dw1="list0.dat"
+OPEN(unit=15,file=dw,access='sequential',form="formatted",status='old')
+read(15,*) mtemp 
+OPEN(unit=16,file=dw1,access='sequential',form="formatted",status='old')
+read(16,*) list0
+
+close(15)
+close(16)
+
+!do i=1,100
+!print *,list0(i,:)
+!print *,"end of list0__________________________"
+!enddo
+
+!do i=1,100
+!print *, mtemp(i,:)
+!enddo
+
 
 if (probtype_in.eq.4) then
  fixed_dt_main=-1.0d0 ! dt=1.25D-4 N=64  M=10  TSTOP=1.25D-3
@@ -237,11 +270,19 @@ else if (probtype_in.eq.5) then ! phase change vertical planar interface
 else if (probtype_in.eq.400) then ! gingerbread man
  ! fixed_dt=0.0d0 => use CFL condition
  ! fixed_dt=-1.0d0 => use TSTOP/M
- ! VALIDATION:
- ! fixed_dt_main=0.0d0
- ! VERIFICATION:
- fixed_dt_main=-1.0d0
+ fixed_dt_main=0.0d0
  print *,"gingeroutline should be in run directory"
+else if (probtype_in.eq.404) then ! Xue
+ ! fixed_dt=0.0d0 => use CFL condition
+ ! fixed_dt=-1.0d0 => use TSTOP/M
+ fixed_dt_main=-1.0d0
+ print *,"xueoutline should be in run directory"
+else if (probtype_in.eq.406) then ! Xue
+ ! fixed_dt=0.0d0 => use CFL condition
+ ! VERIFICATION
+ ! fixed_dt=-1.0d0 => use TSTOP/M
+ fixed_dt_main=-1.0d0
+ print *,"fractalinit.dat and list0.dat should be in run directory"
 else
  print *,"probtype_in invalid"
  stop
@@ -435,7 +476,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     stop
    endif
 
- else if (probtype_in.eq.400) then ! gingerbread
+ else if ((probtype_in.eq.400).or. &
+          (probtype_in.eq.406).or. & ! fractal
+          (probtype_in.eq.404)) then ! gingerbread, Xue
 
    sci_max_level=2
    nmat_in=2
@@ -457,11 +500,15 @@ DO WHILE (N_CURRENT.le.N_FINISH)
        (local_linear_exact.eq.1)) then
     ! do nothing
    else
-    print *,"stefan_flag,op int,op ext,or local_linear_exact invalid prob==400"
+    print *,"stef_flag,op int,op ext,or local_linear_exact bad 400,404,or 406"
     stop
    endif
 
-   FSI_flag(1)=7 ! gingerbread (in the man)
+   if (probtype_in.eq.406) then
+    FSI_flag(1)=0
+   else
+    FSI_flag(1)=7 ! gingerbread or Xue (in the man/character)
+   endif
  else if (probtype_in.eq.5) then
 
    nmat_in=2
@@ -856,7 +903,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
    print *,"probtype_in=",probtype_in
    print *,"max_front_vel=",max_front_vel
 
- else if (probtype_in.eq.400) then
+ else if ((probtype_in.eq.400).or. &
+          (probtype_in.eq.406).or. &
+          (probtype_in.eq.404)) then
 
     ! max_front_vel
    if ((abs(latent_heat_in).gt.0.0d0).and. &
@@ -1134,7 +1183,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
     else if (max_front_vel.eq.0.0d0) then
      deltat_in = 0.5d0*h_in
     else
-     print *,"max_front_vel invalid"
+     print *,"max_front_vel invalid @main1"
      stop
     endif
  else if (fixed_dt_current.gt.0.0) then
@@ -1158,7 +1207,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
      ! N=2*radblob/(max_front_vel * dt)
     print *,"approx number time steps to double radius: ", &
      NINT(radblob/(max_front_vel*deltat_in))
- else if (probtype_in.eq.400) then
+ else if ((probtype_in.eq.400).or. &
+          (probtype_in.eq.406).or. &
+          (probtype_in.eq.404)) then
   ! do nothing
  else if (probtype_in.eq.5) then
   print *,"Velocity is 1"
@@ -1343,7 +1394,9 @@ DO WHILE (N_CURRENT.le.N_FINISH)
        stop
       endif
 
-     else if (probtype_in.eq.400) then
+     else if ((probtype_in.eq.400).or. &
+              (probtype_in.eq.406).or. &
+              (probtype_in.eq.404)) then
 
       T_FIELD=saturation_temp(1)
       T(i,j,im)=T_FIELD
@@ -1480,7 +1533,6 @@ DO WHILE (N_CURRENT.le.N_FINISH)
 
 ! BEGIN TIME LOOP - ABOVE INITIALIZATION
 !                   BELOW INTEGRATION IN TIME
-
 
  call integrate_steps( &
   nx_in,ny_in,lox_in,loy_in,hix_in,hiy_in, &
@@ -1741,5 +1793,7 @@ DO WHILE (N_CURRENT.le.N_FINISH)
  call delete_tsatfab() ! VARIABLE TSAT
 
 ENDDO ! N_CURRENT.le.N_FINISH
+
+close(10)
 
 END PROGRAM

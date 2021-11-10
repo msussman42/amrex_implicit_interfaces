@@ -128,6 +128,7 @@
          problo3D(3)=0.0
          probhi3D(3)=0.62
         else if ((probtype_in.eq.400).or. &
+                 (probtype_in.eq.406).or. & ! fractal
                  (probtype_in.eq.404)) then ! gingerbread man or Xue
          xmap3D(1)=1
          xmap3D(2)=2

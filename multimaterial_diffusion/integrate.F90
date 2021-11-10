@@ -374,6 +374,8 @@ do while (finished_flag.eq.0)
   ! do nothing
  else if (probtype_in.eq.404) then
   ! do nothing
+ else if (probtype_in.eq.406) then
+  ! do nothing
  else if (probtype_in.eq.405) then
   ! do nothing
  else if (probtype_in.eq.5) then
@@ -442,6 +444,8 @@ do while (finished_flag.eq.0)
     endif
 
    else if (probtype_in.eq.404) then
+    ! do nothing
+   else if (probtype_in.eq.406) then
     ! do nothing
    else if (probtype_in.eq.405) then ! growing annulus seed
     local_dist=sqrt((xcen-xblob)**2+(ycen-yblob)**2)
@@ -608,6 +612,8 @@ do while (finished_flag.eq.0)
   ! do nothing
  else if (probtype_in.eq.404) then
   ! do nothing
+ else if (probtype_in.eq.406) then
+  ! do nothing
  else if (probtype_in.eq.405) then
   ! do nothing
  else if (probtype_in.eq.5) then
@@ -725,6 +731,7 @@ do while (finished_flag.eq.0)
      (probtype_in.eq.402).or. &
      (probtype_in.eq.403).or. &
      (probtype_in.eq.404).or. &
+     (probtype_in.eq.406).or. &
      (probtype_in.eq.405)) then 
 
   max_front_vel=0.0
@@ -816,6 +823,7 @@ do while (finished_flag.eq.0)
 
  else if ((probtype_in.ne.400).and. &
           (probtype_in.ne.404).and. &
+          (probtype_in.ne.406).and. &
           (probtype_in.ne.403)) then
   ! do not alter dt
  else
