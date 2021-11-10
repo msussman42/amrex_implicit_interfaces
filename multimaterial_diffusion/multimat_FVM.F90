@@ -1989,6 +1989,10 @@ real(kind=8), intent(out)        :: dist
 real(kind=8)                     :: dist1,dist2,dist3
 real(kind=8)                     :: r1,r2
 real(kind=8)                     :: center(2)
+integer                          :: x1n,x2n,y1n,y2n
+real(kind=8)                     :: xtemp(626)
+integer                          :: i,j,k
+real(kind=8)                     :: plustemp,minustemp,dtemp
 
 if ((imat.ge.1).and.(imat.le.num_materials)) then
  ! do nothing
@@ -2097,6 +2101,56 @@ else if ((probtype_in.eq.400).or. & ! gingerbread man
          (probtype_in.eq.404)) then ! Xue
 
  call interp_from_fsi(imat,x,y,y,dist,2,probtype_in)
+
+elseif(probtype_in.eq.406)then !fractal
+
+ x1n=floor(x/0.0016d0)+1
+ y1n=floor(y/0.0016d0)+1
+ 
+ dist=10000.0d0
+   
+ do k=1,6362
+   dtemp=sqrt((x-list0(k,1))**2.0d0+(y-list0(k,2))**2.0d0)
+   if(dtemp .lt. dist)then
+    dist=dtemp
+   endif
+ enddo
+ 
+ minustemp=0.0d0
+ plustemp=0.0d0  
+ if(x1n.ge.626 .or. y1n.ge.626)then
+  dist=-1.0d0*dist
+ else if((x1n.lt.1).or.(y1n.lt.1)) then
+  dist=-1.0d0*dist
+ else
+  do i=0,1
+  do j=0,1 
+   if(mtemp(x1n+i,y1n+j).lt.0.0)then
+    minustemp=minustemp+abs(mtemp(x1n+i,y1n+j))
+   elseif(mtemp(x1n+i,y1n+j).ge.0.0)then
+    plustemp=plustemp+abs(mtemp(x1n+i,y1n+j))
+   else
+    print *,"check mtemp"
+    stop
+   endif
+  enddo
+  enddo
+  if(minustemp.gt.plustemp)then
+   dist=-1.0d0*dist
+  else
+   ! do nothing
+  endif
+ endif
+ 
+ 
+ if(imat.eq.1)then
+  ! do nothing 
+ elseif(imat.eq.2)then
+  dist=-1.0*dist
+ else   
+  print *,"invalid imat"
+  stop
+ endif
 
 else if (probtype_in.eq.401) then
 
@@ -2449,6 +2503,7 @@ else if (probtype_in.eq.4) then
  endif
 
 else if ((probtype_in.eq.400).or. &
+         (probtype_in.eq.406).or. &
          (probtype_in.eq.404)) then
         ! call dist_concentric
 else if (probtype_in.eq.401) then
@@ -2868,6 +2923,7 @@ if ((probtype_in.eq.0).or. &
     (probtype_in.eq.4).or. &
     (probtype_in.eq.400).or. & ! gingerbread man
     (probtype_in.eq.404).or. & ! Xue
+    (probtype_in.eq.406).or. & ! fractal
     (probtype_in.eq.403).or. & ! dendrite
     (probtype_in.eq.5).or. &
     (probtype_in.eq.14).or. &
@@ -3229,6 +3285,8 @@ else if (probtype_in.eq.400) then
  ! do nothing
 else if (probtype_in.eq.404) then
  ! do nothing
+else if (probtype_in.eq.406) then
+ ! do nothing
 else if (probtype_in.eq.401) then
  ! do nothing
 else if (probtype_in.eq.402) then
@@ -3371,6 +3429,8 @@ else if (probtype_in.eq.4) then
 else if (probtype_in.eq.400) then
  ! do nothing
 else if (probtype_in.eq.404) then
+ ! do nothing
+else if (probtype_in.eq.406) then
  ! do nothing
 else if (probtype_in.eq.401) then
  ! do nothing
@@ -3691,13 +3751,14 @@ real(kind=8) :: radial_slope
    stop
   endif
  else if ((probtype_in.eq.400).or. &
+          (probtype_in.eq.406).or. &
           (probtype_in.eq.404)) then
   if (im.eq.1) then
    G_in=0.0
   else if (im.eq.2) then
    G_in=0.0
   else
-   print *,"im invalid 4 probtype_in==400 or 404"
+   print *,"im invalid 4 probtype_in==400 or 404 or 406"
    stop
   endif
 
@@ -4503,6 +4564,8 @@ else if (local_probtype.eq.400) then
         Uprescribe=0.0d0
 else if (local_probtype.eq.404) then
         Uprescribe=0.0d0
+else if (local_probtype.eq.406) then
+        Uprescribe=0.0d0
 else if (local_probtype.eq.401) then
         Uprescribe=0.0d0
 else if (local_probtype.eq.402) then
@@ -4574,6 +4637,8 @@ else if (local_probtype.eq.4) then
 else if (local_probtype.eq.400) then
         Vprescribe=0.0d0
 else if (local_probtype.eq.404) then
+        Vprescribe=0.0d0
+else if (local_probtype.eq.406) then
         Vprescribe=0.0d0
 else if (local_probtype.eq.401) then
         Vprescribe=0.0d0
@@ -5085,6 +5150,7 @@ real(kind=8)              :: radial_slope
    stop
   endif
  else if ((probtype_in.eq.400).or. &
+          (probtype_in.eq.406).or. &
           (probtype_in.eq.404))then
 
   exact_temperature=0.0d0

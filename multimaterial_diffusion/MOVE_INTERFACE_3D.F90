@@ -492,6 +492,7 @@ stop
         stop
        endif
       else if ((probtype.eq.400).or. & ! gingerbreadman
+               (probtype.eq.406).or. & ! fractal
                (probtype.eq.404)) then ! Xue
        call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
       else if (probtype.eq.401) then
@@ -610,6 +611,7 @@ stop
                (probtype.eq.1).or. &
                (probtype.eq.400).or. &
                (probtype.eq.404).or. &
+               (probtype.eq.406).or. &
                (probtype.eq.401).or. &
                (probtype.eq.402).or. &
                (probtype.eq.403).or. &
@@ -725,6 +727,7 @@ stop
         stop
        endif
       else if ((probtype.eq.400).or. &
+               (probtype.eq.406).or. &
                (probtype.eq.404)) then
 
        if (iten.eq.1) then

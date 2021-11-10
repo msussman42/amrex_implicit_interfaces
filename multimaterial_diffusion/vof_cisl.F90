@@ -50,6 +50,8 @@ real(kind=8) :: rhi
 real(kind=8),parameter :: BC_T1=2.0d0
 real(kind=8),parameter :: BC_T2=3.0d0
 
+real(kind=8)      :: mtemp(626,626)
+real(kind=8)      :: list0(6362,2)
 
 !//////////////////////////////////////
 !    TYPE DEFINE

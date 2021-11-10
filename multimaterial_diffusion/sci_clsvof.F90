@@ -2882,6 +2882,11 @@ INTEGER_T :: stand_alone_flag
     newxxblob1(2)=0.5
     newxxblob1(3)=0.0
     radradblob1=4000.0 
+   else if (probtype.eq.406) then
+    newxxblob1(1)=0.0
+    newxxblob1(2)=0.0
+    newxxblob1(3)=0.0
+    radradblob1=1.0 
    else
     print *,"probtype invalid"
     stop
@@ -2897,6 +2902,10 @@ INTEGER_T :: stand_alone_flag
     OPEN(unit=14,file=dwave,access='sequential',form="formatted",status='old')
    else if (probtype.eq.404) then ! Xue
     dwave="xueoutline"
+    print *,"opening ",dwave
+    OPEN(unit=14,file=dwave,access='sequential',form="formatted",status='old')
+   else if (probtype.eq.406) then ! Fractal
+    dwave="kochsnowoutline"
     print *,"opening ",dwave
     OPEN(unit=14,file=dwave,access='sequential',form="formatted",status='old')
    else
@@ -5741,6 +5750,7 @@ REAL_T :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
           (probtype.eq.9)) then ! ship
   call advance_solid(sci_sdim,sci_curtime,sci_dt,sci_istop,sci_istep,part_id)
  else if ((probtype.eq.400).or. &
+          (probtype.eq.406).or. &
           (probtype.eq.404)) then
   call init_gingerbread2D(CLSVOF_curtime,sci_dt,ifirst,sci_sdim,sci_istop, &
     sci_istep,ioproc,part_id,isout) 
@@ -5922,6 +5932,7 @@ INTEGER_T :: fsi_part_id
     call initship(sci_curtime,sci_dt,sci_sdim,sci_istop,sci_istep, &
       paddle_pos,paddle_vel)
    else if ((probtype.eq.400).or. &
+            (probtype.eq.406).or. &
             (probtype.eq.404)) then
     call init_gingerbread2D(CLSVOFtime,sci_dt,ifirst,sci_sdim,sci_istop, &
      sci_istep,ioproc,part_id,isout) 
