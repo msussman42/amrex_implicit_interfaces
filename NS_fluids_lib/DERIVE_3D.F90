@@ -1766,7 +1766,7 @@ stop
       REAL_T visc_localtorque(SDIM)
       REAL_T visco_localtorque(SDIM)
       REAL_T Q(3,3)
-      REAL_T nsolid(SDIM)
+      REAL_T nsolid(3)
       INTEGER_T mask_cell
       REAL_T ls_sort(nmat)
       REAL_T mu
@@ -2175,7 +2175,7 @@ stop
               endif
 
                ! nsolid points into the forced material
-              do dir=1,SDIM 
+              do dir=1,3
                nsolid(dir)=zero
               enddo
               if (side_cell.eq.0) then
