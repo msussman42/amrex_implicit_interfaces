@@ -77,7 +77,7 @@ INTEGER                    :: N_START,N_FINISH,N_CURRENT
 ! M=40 probtype_in=3 test with N=64
 INTEGER                    :: M_START,M_FACTOR,M_CURRENT
 INTEGER,PARAMETER          :: M_MAX_TIME_STEP = 4000
-INTEGER,PARAMETER          :: plot_int = 10
+INTEGER,PARAMETER          :: plot_int = 20
 ! TSTOP=1.25d-2 for probtype_in=1 (annulus)
 ! TSTOP=1.25d-2 for probtype_in=13,15,20 (pentafoil, Hypocycloid)
 ! explicit time step for N=512 grid: 4 dt/dx^2 < 1
@@ -214,12 +214,12 @@ print *,"constant_K_test= ",constant_K_test
 ! probtype_in=406 for Fractal problem
 ! N space
 ! M time
-! N=64,128,256
-! M=250,500,1000
+! N=64,128,256,512
+! M=250,500,1000,2000
 ! VERIFICATION
-N_START=64
-N_FINISH=64
-M_START=250 
+N_START=512
+N_FINISH=512
+M_START=2000
 M_FACTOR=2
 height_function_flag_global=0
 

@@ -685,7 +685,7 @@
       local_level=0
       ncomp_gap=1
        ! VERIFICATION
-      if (1.eq.1) then
+      if (1.eq.0) then
        call fort_tecplotfab_sanity( &
         root_char_array, &
         n_root, &
@@ -2055,7 +2055,7 @@
       print *,"initial,dnorm0 ",dnorm0
       dnorm=1.0
       dnorm_wt=1.0
-      maxiter=2000
+      maxiter=100
       iter=0
 
       hflagcg=1
