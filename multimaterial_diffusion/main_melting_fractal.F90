@@ -214,8 +214,8 @@ print *,"constant_K_test= ",constant_K_test
 ! probtype_in=406 for Fractal problem
 ! N space
 ! M time
-! N=64,128,256,512
-! M=250,500,1000,2000
+! N=32,64,128,256,512
+! M=125,250,500,1000,2000
 ! VERIFICATION
 N_START=512
 N_FINISH=512
@@ -277,7 +277,7 @@ else if (probtype_in.eq.404) then ! Xue
  ! fixed_dt=-1.0d0 => use TSTOP/M
  fixed_dt_main=-1.0d0
  print *,"xueoutline should be in run directory"
-else if (probtype_in.eq.406) then ! Xue
+else if (probtype_in.eq.406) then ! Fractal
  ! fixed_dt=0.0d0 => use CFL condition
  ! VERIFICATION
  ! fixed_dt=-1.0d0 => use TSTOP/M

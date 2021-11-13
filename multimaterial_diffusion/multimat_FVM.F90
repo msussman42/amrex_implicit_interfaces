@@ -2102,13 +2102,17 @@ else if ((probtype_in.eq.400).or. & ! gingerbread man
 
  call interp_from_fsi(imat,x,y,y,dist,2,probtype_in)
 
-elseif(probtype_in.eq.406)then !fractal
+elseif(probtype_in.eq.406)then !fractal (inside of dist_concentric)
 
  x1n=floor(x/0.0016d0)+1
  y1n=floor(y/0.0016d0)+1
  
  dist=10000.0d0
-   
+
+ if (1.eq.0) then
+  print *,"looping through 6362 points ...."
+ endif   
+
  do k=1,6362
    dtemp=sqrt((x-list0(k,1))**2.0d0+(y-list0(k,2))**2.0d0)
    if(dtemp .lt. dist)then
