@@ -1861,8 +1861,11 @@ contains
   enddo ! dir_local=1..2
 
   if (in_box.eq.1) then
-   call LS_sub(VP_im_in_current,x_interface(1),x_interface(2), &
+   dist_sanity=-1.0
+   if (probtype.ne.406) then ! fractal is non-steady case.
+    call LS_sub(VP_im_in_current,x_interface(1),x_interface(2), &
           dist_sanity,probtype)
+   endif
    if (abs(dist_sanity).gt.VP_max_LS_error) then
     VP_i_max=VP_i_current
     VP_j_max=VP_j_current

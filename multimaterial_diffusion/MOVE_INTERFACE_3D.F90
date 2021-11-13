@@ -491,8 +491,9 @@ stop
         print *,"im invalid 105"
         stop
        endif
+      else if (probtype.eq.406) then ! fractal
+       LS=1.0d0  ! avoid dist_concentric which is slow.
       else if ((probtype.eq.400).or. & ! gingerbreadman
-               (probtype.eq.406).or. & ! fractal
                (probtype.eq.404)) then ! Xue
        call dist_concentric(im,xgrid(1),xgrid(2),LS,probtype)
       else if (probtype.eq.401) then
@@ -605,13 +606,17 @@ stop
         print *,"im invalid 109"
         stop
        endif
-
+      else if (probtype.eq.406) then ! fractal
+       ! avoid dist_concentric which is slow
+       do dir=1,SDIM
+        NRM(dir)=0.0d0
+       enddo
+       NRM(SDIM)=1.0d0
       else if ((probtype.eq.19).or. &
                (probtype.eq.13).or. &
                (probtype.eq.1).or. &
                (probtype.eq.400).or. &
                (probtype.eq.404).or. &
-               (probtype.eq.406).or. &
                (probtype.eq.401).or. &
                (probtype.eq.402).or. &
                (probtype.eq.403).or. &
