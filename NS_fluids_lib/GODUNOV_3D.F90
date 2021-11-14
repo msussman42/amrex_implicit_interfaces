@@ -193,6 +193,8 @@ stop
       use probf90_module
 
       type law_of_wall_parm_type
+      INTEGER_T :: ngrow_distance
+      INTEGER_T :: ngrow_law_of_wall
       INTEGER_T :: level
       INTEGER_T :: finest_level
       INTEGER_T :: bfact
@@ -1357,7 +1359,7 @@ stop
        side_solid, &  ! =0 if solid on the left
        side_image, &
        data_dir, &
-       uimage_raster, &
+       uimage_raster, & ! in
        usolid_law_of_wall, & ! out
        angle_ACT, & ! aka angle_ACT_cell "out"
        im_fluid, &
@@ -1378,7 +1380,7 @@ stop
        INTEGER_T, intent(in) :: side_image
        INTEGER_T, intent(in) :: iSD,jSD,kSD
        INTEGER_T, intent(in) :: iFD,jFD,kFD
-       REAL_T, dimension(SDIM), intent(inout) :: uimage_raster
+       REAL_T, dimension(SDIM), intent(in) :: uimage_raster
        REAL_T, dimension(SDIM), intent(out) :: usolid_law_of_wall
        REAL_T, intent(out) :: angle_ACT
       
@@ -1386,6 +1388,7 @@ stop
 
 
        REAL_T, dimension(SDIM) :: u_tngt
+       REAL_T, dimension(SDIM) :: uimage_raster_solid_frame
        REAL_T :: uimage_nrml, ughost_nrml
        REAL_T :: ughost_tngt
        REAL_T :: uimage_tngt_mag
@@ -2148,8 +2151,9 @@ stop
        ! convert to solid velocity frame of reference.
        uimage_mag=zero
        do dir=1,SDIM
-        uimage_raster(dir)=uimage_raster(dir)-LOW%usolid_raster(dir)
-        uimage_mag=uimage_mag+uimage_raster(dir)**2
+        uimage_raster_solid_frame(dir)= &
+                uimage_raster(dir)-LOW%usolid_raster(dir)
+        uimage_mag=uimage_mag+uimage_raster_solid_frame(dir)**2
        enddo
        uimage_mag=sqrt(uimage_mag)
        if (uimage_mag.ge.zero) then
@@ -2161,9 +2165,10 @@ stop
 
        !normal and tangential velocity components of image point
        !magnitude, normal velocity component
-       uimage_nrml = DOT_PRODUCT(uimage_raster,LOW%n_raster) 
+       uimage_nrml = DOT_PRODUCT(uimage_raster_solid_frame,LOW%n_raster) 
        do dir = 1,SDIM
-        u_tngt(dir) = uimage_raster(dir)-uimage_nrml*LOW%n_raster(dir)
+        u_tngt(dir) = uimage_raster_solid_frame(dir)- &
+                      uimage_nrml*LOW%n_raster(dir)
        enddo
 
        uimage_tngt_mag = DOT_PRODUCT(u_tngt,u_tngt)
@@ -2185,6 +2190,8 @@ stop
         print *,"uimage_nrml=",uimage_nrml
         do dir=1,SDIM
          print *,"dir,uimage_raster(dir) ",dir,uimage_raster(dir)
+         print *,"dir,uimage_raster_solid_frame(dir) ", &
+                 dir,uimage_raster_solid_frame(dir)
          print *,"dir,usolid_raster(dir) ",dir,LOW%usolid_raster(dir)
          print *,"dir,u_tngt(dir) ",dir,u_tngt(dir)
         enddo
@@ -18113,6 +18120,9 @@ stop
       history_dat_ptr=>history_dat
       call checkbound_array(fablo,fabhi,history_dat_ptr,0,data_dir,1255)
 
+      law_of_wall_parm%ngrow_distance=ngrow_distance
+      law_of_wall_parm%ngrow_law_of_wall=ngrow_law_of_wall
+
       law_of_wall_parm%visc_coef=visc_coef
       law_of_wall_parm%time=time
       law_of_wall_parm%dt=dt
@@ -18308,7 +18318,7 @@ stop
               ! call CODY ESTEBEs routine here 
               ! (defined in this file: GODUNOV_3D.F90)
              call getGhostVel( &
-               law_of_wall_parm, &
+               law_of_wall_parm, & ! intent(in)
                law_of_the_wall, &
                isideSOL, &
                jsideSOL, &
@@ -18319,14 +18329,15 @@ stop
                side_solid, &
                side_image, &
                data_dir, &
-               uimage_raster, &
-               usolid_law_of_wall, &
-               angle_ACT_cell, &   ! actual contact angle at image point
+               uimage_raster, & ! intent(in)
+               usolid_law_of_wall, & ! intent(out)
+               angle_ACT_cell, & !intent(out) dyn. contact angle at image point
                im_fluid, &
                im_solid)
 
                ! solid "ghost" velocity in the solid regions.
              do dir=1,SDIM
+               !ughost is an output.
               ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)= &
                usolid_law_of_wall(dir)
 
