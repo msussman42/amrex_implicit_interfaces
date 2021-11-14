@@ -22,6 +22,34 @@ stop
 
 module probcommon_module_types
 
+
+      type law_of_wall_parm_type
+      INTEGER_T :: ngrow_distance
+      INTEGER_T :: ngrow_law_of_wall
+      INTEGER_T :: level
+      INTEGER_T :: finest_level
+      INTEGER_T :: bfact
+      INTEGER_T :: nmat
+      INTEGER_T :: nten
+      REAL_T :: visc_coef
+      REAL_T :: time
+      REAL_T :: dt
+      REAL_T, pointer :: usolid_raster(:)
+      REAL_T, pointer :: n_raster(:)
+      REAL_T, pointer :: x_image_raster(:)
+      REAL_T, pointer :: x_projection_raster(:)
+      REAL_T, pointer :: dx(:)
+      REAL_T :: dxmin
+      REAL_T, pointer :: xlo(:)
+      INTEGER_T, pointer :: fablo(:)
+      INTEGER_T, pointer :: fabhi(:)
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LSCP
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LSFD
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state ! nden comp.
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: ufluid
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: usolid
+      end type law_of_wall_parm_type
+
       type user_defined_sum_int_type
        INTEGER_T ncomp_sum_int_user1
        INTEGER_T ncomp_sum_int_user2
