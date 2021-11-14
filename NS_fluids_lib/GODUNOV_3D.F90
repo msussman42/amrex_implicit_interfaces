@@ -17993,7 +17993,9 @@ stop
        print *,"ngrow_distance invalid"
        stop
       endif
-      if (ngrow_law_of_wall.ne.4) then
+      if (ngrow_law_of_wall.eq.4) then
+       ! do nothing
+      else
        print *,"ngrow_law_of_wall invalid"
        stop
       endif
@@ -18055,6 +18057,12 @@ stop
        print *,"visc_coef invalid"
        stop
       endif 
+      if (visc_coef.eq.fort_visc_coef) then
+       ! do nothing
+      else
+       print *,"visc_coef.eq.fort_visc_coef is false"
+       stop
+      endif
       if ((law_of_the_wall.eq.0).or. &
           (law_of_the_wall.eq.1).or. &
           (law_of_the_wall.eq.2)) then
@@ -18117,11 +18125,11 @@ stop
       law_of_wall_parm%xlo=>xlo
       law_of_wall_parm%fablo=>fablo
       law_of_wall_parm%fabhi=>fabhi
-      law_of_wall_parm%LSCP=>LSCP
-      law_of_wall_parm%LSFD=>LSFD
-      law_of_wall_parm%state=>state
-      law_of_wall_parm%ufluid=>ufluid
-      law_of_wall_parm%usolid=>usolid
+      law_of_wall_parm%LSCP=>LSCP ! LS + gradient from closest point.
+      law_of_wall_parm%LSFD=>LSFD ! gradient from finite differences
+      law_of_wall_parm%state=>state ! density, temperature, species
+      law_of_wall_parm%ufluid=>ufluid ! velocity and pressure
+      law_of_wall_parm%usolid=>usolid ! solid velocity in solid bulk
 
       law_of_wall_parm%dxmin=dx(1)
       if (dx(2).lt.law_of_wall_parm%dxmin) then
