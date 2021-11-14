@@ -1244,7 +1244,7 @@ REAL_T :: MOF_PI=zero
 contains
 
 
-      function wallFunc(u_tau,u,y,K,B,rho_w,mu_w) result(f)
+      function wallfunc(u_tau,u,y,K,B,rho_w,mu_w) result(f)
       implicit none
         !incompressible wall function, to be called in 
         !Newton's method, solving for friction 
@@ -1305,9 +1305,9 @@ contains
 
        f = -y_plus + u_plus + exp(-K*B)* &
         ( exp(K*u_plus)-one-K*u_plus-half*(K*u_plus)**2-(K*u_plus)**3/six )
-      end function wallFunc
+      end function wallfunc
   
-      function wallFuncDeriv(u_tau,u,y,K,B,rho_w,mu_w) result(fprime)
+      function wallfuncderiv(u_tau,u,y,K,B,rho_w,mu_w) result(fprime)
       implicit none
         !derivative of incompressible wall function w.r.t. u_tau, to be 
         !called in Newton's method
@@ -1326,9 +1326,9 @@ contains
          exp(-K*B)*( -(K*u_plus/u_tau)*exp(K*u_plus)+ &
                      K*u_plus/u_tau+(K*u_plus)**2/u_tau+ &
                      (K*u_plus)**3/(two*u_tau) )
-      end function wallFuncDeriv
+      end function wallfuncderiv
       
-      subroutine wallFunc_NewtonsMethod(u,y,tau_w,im_fluid)
+      subroutine wallfunc_newtonsmethod(u,y,tau_w,im_fluid)
       use probcommon_module
        implicit none
        INTEGER_T, intent(in) :: im_fluid
@@ -1337,7 +1337,6 @@ contains
        REAL_T :: u_tau,x_n,x_np1 !x_n, x_(n+1) --> u_tau
        REAL_T :: iter_diff
        REAL_T :: f, fprime
-       REAL_T :: wallFunc, wallFuncDeriv
        INTEGER_T :: iter, iter_max=1000
         !initialize wall function parameters here
        REAL_T :: K=0.41, B=5.5, &
@@ -1345,7 +1344,7 @@ contains
                    !molecular viscosity, tau_w: wall shear stress
 
        if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
-        print *,"im_fluid invalid in wallFunc_NewtonsMethod"
+        print *,"im_fluid invalid in wallfunc_newtonsmethod"
         stop
        endif
 
@@ -1357,11 +1356,11 @@ contains
        iter_diff=one
        iter=0
        do while ((iter_diff.gt.VOFTOL).and.(iter.lt.iter_max))
-        f = wallFunc(x_n,u,y,K,B,rho_w,mu_w)
-        fprime = wallFuncDeriv(x_n,u,y,K,B,rho_w,mu_w)
+        f = wallfunc(x_n,u,y,K,B,rho_w,mu_w)
+        fprime = wallfuncderiv(x_n,u,y,K,B,rho_w,mu_w)
    
         if (abs(fprime).le.1.0e-15) then 
-         print *, "divide by zero error: wallFunc_NewtonsMethod" !avoid /0
+         print *, "divide by zero error: wallfunc_newtonsmethod" !avoid /0
          stop
         else
          x_np1 = x_n-f/fprime
@@ -1371,7 +1370,7 @@ contains
 
         iter = iter+1
         if(iter.ge.iter_max)then
-          print *, "wallFunc_NewtonsMethod: no convergence"
+          print *, "wallfunc_newtonsmethod: no convergence"
           print *, "u (image velocity tangent) = ",u
           print *, "y (delta_r) = ",y
           print *, "im_fluid= ",im_fluid
@@ -1402,7 +1401,7 @@ contains
           print *, "iter_diff = ",iter_diff
        endif
 
-      end subroutine wallFunc_NewtonsMethod
+      end subroutine wallfunc_newtonsmethod
 
       subroutine interp_from_fluid( &
        LOW, &
@@ -2762,7 +2761,7 @@ end subroutine dynamic_contact_angle
           !out tau_w
 
           if (delta_r_raster.gt.zero) then
-           call wallFunc_NewtonsMethod(uimage_tngt_mag, &
+           call wallfunc_newtonsmethod(uimage_tngt_mag, &
                  delta_r_raster,tau_w,im_fluid) 
             ! this will not be the velocity at the ghost point, it will be
             ! a velocity at the projection (wall) point.
@@ -2771,7 +2770,7 @@ end subroutine dynamic_contact_angle
             (viscosity_molecular+viscosity_eddy)
 
            if (1.eq.0) then
-            print *,"after wallFunc_NewtonsMethod"
+            print *,"after wallfunc_newtonsmethod"
             print *,"uimage_tngt_mag=",uimage_tngt_mag
             print *,"ughost_tngt (projection point vel)=",ughost_tngt
             print *,"delta_r_raster=",delta_r_raster
@@ -21838,6 +21837,239 @@ enddo
 enddo
 
 end subroutine stress_from_strain
+
+        ! tau_solid=
+        ! F=deformation gradient=I + grad XD 
+        ! note: Michael Lai and David Rubin "intro to continuum mech"
+        ! "u equiv XD"  "v equiv u"
+        ! C=F^T F right Cauchy Green Tensor
+        ! B=F F^T left Cauchy Green Tensor
+        ! I1=tr(C),I2=(1/2)Tr(C)^2−tr(C^2),and I3=det(C)
+      subroutine local_tensor_from_xdisplace( &
+        im_elastic, & ! 1..nmat
+        tilelo,tilehi, &  ! tile box dimensions
+        fablo,fabhi, &    ! fortran array box dimensions containing the tile
+        bfact, &          ! space order
+        level, &          ! 0<=level<=finest_level
+        finest_level, &
+        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
+        ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
+        nmat, &
+        TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
+        xdfab, &      
+        ydfab, &      
+        zdfab)
+
+      use probcommon_module
+      implicit none
+
+      INTEGER_T, intent(in) :: im_elastic ! 1..nmat
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: ncomp_tensor
+      INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in), target :: xlo(SDIM)
+      REAL_T, intent(in), target :: dx(SDIM)
+       ! pointers are always intent(in)
+       ! the intent attribute of the actual data is inherited
+       ! from the target.
+      REAL_T, intent(in), pointer :: TNEWfab(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: xdfab(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: ydfab(D_DECL(:,:,:))
+      REAL_T, intent(in), pointer :: zdfab(D_DECL(:,:,:))
+
+      type(single_deriv_from_grid_parm_type) :: data_in
+      type(interp_from_grid_out_parm_type) :: data_out
+      REAL_T, target :: cell_data_deriv(1)
+
+      INTEGER_T growlo(3)
+      INTEGER_T growhi(3)
+      INTEGER_T i,j,k
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+
+      REAL_T gradu(SDIM,SDIM)  ! dir_x (displace), dir_space
+      REAL_T DISP_TEN(SDIM,SDIM) ! dir_x (displace), dir_space
+      REAL_T xdisplace_local(SDIM)
+      REAL_T hoop_22
+      REAL_T x_stress(SDIM)
+      INTEGER_T dir_local
+      INTEGER_T dir_XD
+      INTEGER_T dir_flux
+      INTEGER_T ibase
+
+      nhalf=3
+
+      if (nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"nmat invalid"
+       stop
+      endif
+
+      if ((im_elastic.ge.1).and.(im_elastic.le.nmat)) then
+       ! do nothing
+      else
+       print *,"im_elastic invalid"
+       stop
+      endif
+
+       ! 6 in 3D, 4 in 2D
+      if (ncomp_tensor.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"ncomp_tensor invalid"
+       stop
+      endif
+
+      call checkbound_array(fablo,fabhi,TNEWfab,1,-1,2458)
+      call checkbound_array1(fablo,fabhi,xdfab,1,0,2459)
+      call checkbound_array1(fablo,fabhi,ydfab,1,1,2460)
+      call checkbound_array1(fablo,fabhi,zdfab,1,SDIM-1,2461)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+! grad u=| u_r  u_t/r-v/r  u_z  |
+!        | v_r  v_t/r+u/r  v_z  |
+!        | w_r  w_t/r      w_z  |
+! in RZ:  T33 gets u/r=x_displace/r
+! in RTZ: T12=u_t/r - v/r
+!         T22=v_t/r + u/r
+! later:
+! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
+!         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
+!         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+       do dir_local=1,SDIM
+        x_stress(dir_local)=xsten(0,dir_local)
+       enddo
+
+       data_out%data_interp=>cell_data_deriv
+
+        !type(deriv_from_grid_parm_type) :: data_in
+       data_in%level=level
+       data_in%finest_level=finest_level
+       data_in%bfact=bfact ! bfact=kind of spectral element grid 
+       data_in%dx=>dx
+       data_in%xlo=>xlo
+       data_in%fablo=>fablo
+       data_in%fabhi=>fabhi
+
+       data_in%index_flux(1)=i
+       data_in%index_flux(2)=j
+       if (SDIM.eq.3) then
+        data_in%index_flux(SDIM)=k
+       else if (SDIM.eq.2) then
+        !do nothing
+       else
+        print *,"dimension bust"
+        stop
+       endif
+       data_in%grid_type_flux=-1
+       do dir_local=1,SDIM
+        data_in%box_type_flux(dir_local)=0
+       enddo
+
+       do dir_XD=1,SDIM
+
+        do dir_local=1,SDIM
+         data_in%box_type_data(dir_local)=0
+        enddo
+
+        data_in%grid_type_data=dir_XD-1
+        data_in%box_type_data(dir_XD)=1
+
+        if (dir_XD.eq.1) then
+         data_in%disp_data=>xdfab
+        else if (dir_XD.eq.2) then
+         data_in%disp_data=>ydfab
+        else if ((dir_XD.eq.3).and.(SDIM.eq.3)) then
+         data_in%disp_data=>zdfab
+        else
+         print *,"dir_XD invalid"
+         stop
+        endif
+
+        do dir_flux=0,SDIM-1
+         data_in%dir_deriv=dir_flux+1
+         call single_deriv_from_grid_util(data_in,data_out)
+         gradu(dir_XD,dir_flux+1)=cell_data_deriv(1)
+        enddo
+        data_in%dir_deriv=-1
+        call single_deriv_from_grid_util(data_in,data_out)
+        xdisplace_local(dir_XD)=cell_data_deriv(1)
+
+       enddo ! dir_XD=1..sdim
+
+        ! declared in GLOBALUTIL.F90
+       call stress_from_strain( &
+         im_elastic, &
+         x_stress, &
+         dx, &
+         gradu, &  ! dir_x (displace),dir_space
+         xdisplace_local(1), &
+         xdisplace_local(2), &
+         DISP_TEN, &  ! dir_x (displace),dir_space
+         hoop_22) ! output: "theta-theta" component (xdisp/r)
+
+       ibase=1
+       TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,1)
+       ibase=ibase+1
+       TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,2)
+       ibase=ibase+1
+       TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(2,2)
+
+       ibase=ibase+1
+       if (SDIM.eq.3) then
+        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(SDIM,SDIM)
+       else if (SDIM.eq.2) then
+        if (levelrz.eq.0) then
+          ! T33 (theta coordinate)
+         TNEWfab(D_DECL(i,j,k),ibase)=zero
+        else if (levelrz.eq.1) then
+          ! T33 (theta coordinate)
+          ! dX/dx + dX/dx
+         TNEWfab(D_DECL(i,j,k),ibase)=two*hoop_22 ! 2 * (xdisp/r)
+        else if (levelrz.eq.3) then
+          ! T33 (z coordinate)
+         TNEWfab(D_DECL(i,j,k),ibase)=zero
+        else
+         print *,"levelrz invalid"
+         stop
+        endif
+       else
+        print *,"dimension bust"
+        stop
+       endif
+                    
+       if (SDIM.eq.3) then                
+        ibase=ibase+1
+        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(1,SDIM)
+        ibase=ibase+1
+        TNEWfab(D_DECL(i,j,k),ibase)=DISP_TEN(2,SDIM)
+       endif
+       if (ibase.eq.2*SDIM) then
+        ! do nothing
+       else
+        print *,"ibase invalid (7) ibase=",ibase
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo
+
+      end subroutine local_tensor_from_xdisplace
+
+
 
 subroutine get_primary_material(LS,nmat,im_primary)
 use probcommon_module
