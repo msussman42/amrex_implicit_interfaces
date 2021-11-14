@@ -6703,9 +6703,9 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
     FArrayBox& lsCPfab=(*localMF[LS_NRM_CP_MF])[mfi];
     FArrayBox& lsFDfab=(*localMF[LS_NRM_FD_GNBC_MF])[mfi];
 
-    FArrayBox& statefab=(*state_var_mf)[mfi];
-    FArrayBox& fluidvelfab=(*fluid_vel_mf)[mfi]; 
-    FArrayBox& solidvelfab=(*solid_vel_mf)[mfi]; 
+    FArrayBox& statefab=(*state_var_mf)[mfi]; //ngrow_law_of_wall=4
+    FArrayBox& fluidvelfab=(*fluid_vel_mf)[mfi]; //ngrow_law_of_wall=4
+    FArrayBox& solidvelfab=(*solid_vel_mf)[mfi]; //ngrow_law_of_wall=4
     FArrayBox& ghostsolidvelfab=(*localMF[FSI_GHOST_MAC_MF+data_dir])[mfi]; 
 
     FArrayBox& histfab=(*localMF[HISTORY_MAC_MF+data_dir])[mfi]; 
@@ -6736,7 +6736,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
      //     ghost tangential velocity, and unchanged where
      //     0>phi_solid>-|cutoff|)
      //    ghost normal velocity = solid normal velocity everywhere.
-     // in: GODUNOV_3D.F90
+     // declared in: GODUNOV_3D.F90
     fort_wallfunction( 
      &data_dir,
      &law_of_the_wall,
