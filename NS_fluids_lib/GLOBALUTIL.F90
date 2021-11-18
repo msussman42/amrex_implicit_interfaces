@@ -1876,15 +1876,17 @@ end subroutine dynamic_contact_angle
 
        ! This routine transforms all velocities to a frame of reference with
        ! respect to the solid.
+       ! getGhostVel is called from "fort_wallfunction" (GODUNOV_3D.F90)
       subroutine getGhostVel( &
        LOW, &
        law_of_the_wall, &
-       iSD,jSD,kSD, & ! index for the solid cell
-       iFD,jFD,kFD, & ! index for the fluid cell
+       iSOLID,jSOLID,kSOLID, & ! index for the solid cell
+       iFLUID,jFLUID,kFLUID, & ! index for the fluid cell
        side_solid, &  ! =0 if solid on the left
        side_image, &
        data_dir, &
        uimage_raster, & ! in
+       temperature_image, & ! in
        usolid_law_of_wall, & ! out
        angle_ACT, & ! aka angle_ACT_cell "out"
        im_fluid, &
@@ -1899,9 +1901,10 @@ end subroutine dynamic_contact_angle
        INTEGER_T, intent(in) :: im_solid
        INTEGER_T, intent(in) :: side_solid
        INTEGER_T, intent(in) :: side_image
-       INTEGER_T, intent(in) :: iSD,jSD,kSD
-       INTEGER_T, intent(in) :: iFD,jFD,kFD
+       INTEGER_T, intent(in) :: iSOLID,jSOLID,kSOLID
+       INTEGER_T, intent(in) :: iFLUID,jFLUID,kFLUID
        REAL_T, dimension(SDIM), intent(in) :: uimage_raster
+       REAL_T, intent(in) :: temperature_image
        REAL_T, dimension(SDIM), intent(out) :: usolid_law_of_wall
        REAL_T, intent(out) :: angle_ACT
       
@@ -1962,8 +1965,8 @@ end subroutine dynamic_contact_angle
        REAL_T :: nCL_dot_n_raster
        INTEGER_T :: nrad
        INTEGER_T nhalf
-       REAL_T :: xstenFD(-3:3,SDIM)
-       REAL_T :: xstenSD(-3:3,SDIM)
+       REAL_T :: xstenFLUID(-3:3,SDIM)
+       REAL_T :: xstenSOLID(-3:3,SDIM)
        REAL_T :: thermal_interp(num_materials)
        REAL_T :: LSPLUS_interp(num_materials*(1+SDIM))
        REAL_T :: LSMINUS_interp(num_materials*(1+SDIM))
@@ -2068,13 +2071,13 @@ end subroutine dynamic_contact_angle
        ughost_tngt=zero
        angle_ACT=zero
 
-       call gridsten_level(xstenFD,iFD,jFD,kFD,LOW%level,nhalf)
+       call gridsten_level(xstenFLUID,iFLUID,jFLUID,kFLUID,LOW%level,nhalf)
        do im=1,LOW%nmat*(1+SDIM)
-        LS_fluid(im)=LOW%LSCP(D_DECL(iFD,jFD,kFD),im)
+        LS_fluid(im)=LOW%LSCP(D_DECL(iFLUID,jFLUID,kFLUID),im)
        enddo
-       call gridsten_level(xstenSD,iSD,jSD,kSD,LOW%level,nhalf)
+       call gridsten_level(xstenSOLID,iSOLID,jSOLID,kSOLID,LOW%level,nhalf)
        do im=1,LOW%nmat*(1+SDIM)
-        LS_solid(im)=LOW%LSCP(D_DECL(iSD,jSD,kSD),im)
+        LS_solid(im)=LOW%LSCP(D_DECL(iSOLID,jSOLID,kSOLID),im)
        enddo
 
        near_contact_line=0
@@ -2097,8 +2100,8 @@ end subroutine dynamic_contact_angle
               ! xcrossing is where the solid interface passes inbetween
               ! the ghost (solid) point and the fluid (image) point.
            do dir=1,SDIM
-            xcrossing(dir)=cross_factor*xstenFD(0,dir)+ &
-                    (one-cross_factor)*xstenSD(0,dir)
+            xcrossing(dir)=cross_factor*xstenFLUID(0,dir)+ &
+                    (one-cross_factor)*xstenSOLID(0,dir)
            enddo
 
            do im=1,LOW%nmat*(1+SDIM)
@@ -2757,13 +2760,16 @@ end subroutine dynamic_contact_angle
         if (critical_length.lt.LOW%dxmin) then
 
          if (viscosity_eddy.gt.zero) then
-          !obtain wall shear stress tau_w
-          !out tau_w
-
+          !obtain wall shear stress tau_w (MKS units: Pascal)
+          !delta_r_raster is distance from image point to the wall.
           if (delta_r_raster.gt.zero) then
            call wallfunc_newtonsmethod(uimage_tngt_mag, &
                  delta_r_raster,tau_w,im_fluid) 
-            ! this will not be the velocity at the ghost point, it will be
+            ! MKS units of viscosity: Pascal * seconds= 
+            !  (kg m/s^2)*(1/m^2)*s=kg /(m s)
+            ! MKS units of Pascal: N/m^2
+            ! MKS units of tau: pascal
+            ! This will not be the velocity at the ghost point, it will be
             ! a velocity at the projection (wall) point.
            ughost_tngt = uimage_tngt_mag - &
             tau_w*delta_r_raster/ &
@@ -2972,6 +2978,7 @@ end subroutine dynamic_contact_angle
        deallocate(user_tension)
  
       end subroutine getGhostVel
+
 ! nfree points towards the liquid
 ! nsolid points away from the solid 
 ! (nsolid is gradient of psi where psi<0 in solid)
