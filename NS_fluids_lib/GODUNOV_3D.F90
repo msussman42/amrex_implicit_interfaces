@@ -11846,8 +11846,8 @@ stop
       INTEGER_T im_primary_right
       INTEGER_T im
       INTEGER_T dir
-      INTEGER_T isideSOL,jsideSOL,ksideSOL
-      INTEGER_T isideFD,jsideFD,ksideFD
+      INTEGER_T isideSOLID,jsideSOLID,ksideSOLID
+      INTEGER_T isideFLUID,jsideFLUID,ksideFLUID
       REAL_T, target :: n_raster(SDIM)
       REAL_T, target :: x_projection_raster(SDIM)
       REAL_T, target :: x_image_raster(SDIM)
@@ -12111,12 +12111,12 @@ stop
             if ((LS_right(im_solid).ge.zero).and. &
                 (im_primary_right.eq.im_solid)) then
              side_solid=1 ! right side
-             isideSOL=i
-             jsideSOL=j
-             ksideSOL=k
-             isideFD=i-ii
-             jsideFD=j-jj
-             ksideFD=k-kk
+             isideSOLID=i
+             jsideSOLID=j
+             ksideSOLID=k
+             isideFLUID=i-ii
+             jsideFLUID=j-jj
+             ksideFLUID=k-kk
 
              if (is_rigid(nmat,im_primary_left).eq.0) then
               side_image=0  ! left side
@@ -12135,12 +12135,12 @@ stop
             else if ((LS_left(im_solid).ge.zero).and. &
                      (im_primary_left.eq.im_solid)) then 
              side_solid=0  ! left side
-             isideSOL=i-ii
-             jsideSOL=j-jj
-             ksideSOL=k-kk
-             isideFD=i
-             jsideFD=j
-             ksideFD=k
+             isideSOLID=i-ii
+             jsideSOLID=j-jj
+             ksideSOLID=k-kk
+             isideFLUID=i
+             jsideFLUID=j
+             ksideFLUID=k
 
              if (is_rigid(nmat,im_primary_right).eq.0) then
               side_image=1 ! right side
@@ -12171,7 +12171,8 @@ stop
              !     |     .     |      .     |     .    |
              !          i-1           i          i+1
              ! xsten(-3,1)   xsten(-1,1) xsten(1,1)  xsten(3,1)
-             call gridsten_level(xsten,isideSOL,jsideSOL,ksideSOL,level,nhalf)
+             call gridsten_level(xsten,isideSOLID,jsideSOLID,ksideSOLID, &
+                     level,nhalf)
 
              do dir=1,SDIM
               x_projection_raster(dir)=xsten(0,dir)
@@ -12197,20 +12198,21 @@ stop
              law_of_wall_parm%n_raster=>n_raster
 
               ! call CODY ESTEBEs routine here 
-              ! (defined in this file: GODUNOV_3D.F90)
+              ! (getGhostVel is declared in: GLOBALUTIL.F90)
              call getGhostVel( &
                law_of_wall_parm, & ! intent(in)
                law_of_the_wall, &
-               isideSOL, &
-               jsideSOL, &
-               ksideSOL, &
-               isideFD, &
-               jsideFD, &
-               ksideFD, &
+               isideSOLID, &
+               jsideSOLID, &
+               ksideSOLID, &
+               isideFLUID, &
+               jsideFLUID, &
+               ksideFLUID, &
                side_solid, &
                side_image, &
                data_dir, &
                uimage_raster, & ! intent(in)
+               temperature_image, & ! intent(in)
                usolid_law_of_wall, & ! intent(out)
                angle_ACT_cell, & !intent(out) dyn. contact angle at image point
                im_fluid, &
