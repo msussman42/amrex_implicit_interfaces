@@ -9514,7 +9514,8 @@ void NavierStokes::getStateVISC() {
 } // omp
   ns_reconcile_d_num(165);
 
-  if (les_model[im]==1) {
+  if ((les_model[im]==1)||
+      (viscconst_eddy[im]>0.0)) {
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
@@ -9558,7 +9559,8 @@ void NavierStokes::getStateVISC() {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
       // in: DERIVE_3D.F90
-    FORT_DERTURBVISC(
+    fort_derturbvisc(
+      &les_model[im],
       &level,
       &fortran_im,
       &nmat,
@@ -9584,10 +9586,11 @@ void NavierStokes::getStateVISC() {
 } // omp
    ns_reconcile_d_num(166);
 
-  } else if (les_model[im]==0) {
+  } else if ((les_model[im]==0)&&
+             (viscconst_eddy[im]==0.0)) {
    // do nothing
   } else
-   amrex::Error("les_model invalid");
+   amrex::Error("les_model or viscconst_eddy invalid");
 
   delete gammadot_mf;
  } // im=0..nmat-1

@@ -8,24 +8,20 @@
 
 #ifdef BL_LANG_FORT
 #    define FORT_MAXPRESVEL maxpresvel 
-#    define FORT_DERTURBVISC derturbvisc
 #    define FORT_INTEGRATE_RECALESCE integrate_recalesce
 #    define FORT_RESET_TEMPERATURE reset_temperature
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_MAXPRESVEL MAXPRESVEL
-#    define FORT_DERTURBVISC DERTURBVISC
 #    define FORT_INTEGRATE_RECALESCE INTEGRATE_RECALESCE
 #    define FORT_RESET_TEMPERATURE RESET_TEMPERATURE
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_MAXPRESVEL maxpresvel 
-#    define FORT_DERTURBVISC derturbvisc
 #    define FORT_INTEGRATE_RECALESCE integrate_recalesce
 #    define FORT_RESET_TEMPERATURE reset_temperature
 #  else
 #    define FORT_MAXPRESVEL maxpresvel_ 
-#    define FORT_DERTURBVISC derturbvisc_
 #    define FORT_INTEGRATE_RECALESCE integrate_recalesce_
 #    define FORT_RESET_TEMPERATURE reset_temperature_
 #  endif
@@ -218,7 +214,8 @@ extern "C" {
       const Real* dx, const Real* xlo,
       int* ngrow);
 
-     void FORT_DERTURBVISC(
+     void fort_derturbvisc(
+      int* les_model,
       int* level,
       int* fortran_im,
       int* nmat,

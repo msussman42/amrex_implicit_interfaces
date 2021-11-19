@@ -35,8 +35,9 @@ module probcommon_module_types
       REAL_T :: time
       REAL_T :: dt
       REAL_T, pointer :: usolid_raster(:)
-      REAL_T, pointer :: n_raster(:)
+      REAL_T, pointer :: n_raster(:) ! points to solid
       REAL_T, pointer :: x_image_raster(:)
+      REAL_T, pointer :: x_probe_raster(:)
       REAL_T, pointer :: x_projection_raster(:)
       REAL_T, pointer :: dx(:)
       REAL_T :: dxmin
@@ -532,6 +533,31 @@ implicit none
 
       ABSTRACT INTERFACE
 
+      subroutine TEMPLATE_wallfunc( &
+        x_projection_raster, &
+        n_raster, & ! points to solid
+        u, & !intent(in) magnitude of image tangent velocity
+        temperature_image, & !intent(in) 
+        temperature_wall, & ! intent(in)      
+        viscosity_molecular, & ! intent(in)      
+        viscosity_eddy, & ! intent(in)      
+        y, & !intent(in) distance from image to wall
+        tau_w, & ! intent(out)
+        im_fluid, &  ! intent(in)
+        critical_length) ! intent(in) used for sanity check
+      REAL_T, intent(in), pointer :: x_projection_raster(:)
+      REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
+      INTEGER_T, intent(in) :: im_fluid
+      REAL_T, intent(in) :: u !uimage_tngt
+      REAL_T, intent(in) :: temperature_image
+      REAL_T, intent(in) :: temperature_wall
+      REAL_T, intent(in) :: viscosity_molecular
+      REAL_T, intent(in) :: viscosity_eddy
+      REAL_T, intent(in) :: y !delta_r
+      REAL_T, intent(in) :: critical_length
+      REAL_T, intent(out) :: tau_w ! wall shear stress
+      end subroutine TEMPLATE_wallfunc
+
       subroutine TEMPLATE_INIT_REGIONS_LIST(constant_density_all_time, &
           num_materials_in,num_threads_in)
       INTEGER_T, intent(in) :: num_materials_in
@@ -841,6 +867,8 @@ implicit none
       PROCEDURE(TEMPLATE_microcell_heat_coeff), POINTER :: &
               SUB_microcell_heat_coeff
       PROCEDURE(TEMPLATE_ASSIMILATE), POINTER :: SUB_ASSIMILATE
+
+      PROCEDURE(TEMPLATE_wallfunc), POINTER :: SUB_wallfunc
 
       PROCEDURE(TEMPLATE_INIT_REGIONS_LIST), POINTER :: SUB_INIT_REGIONS_LIST
       PROCEDURE(TEMPLATE_CHARFN_REGION), POINTER :: SUB_CHARFN_REGION
