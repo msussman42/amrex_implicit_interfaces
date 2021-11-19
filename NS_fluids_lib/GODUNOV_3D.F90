@@ -11834,25 +11834,36 @@ stop
 
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
-      REAL_T xsten(-3:3,SDIM)
+      REAL_T xsten_solid(-3:3,SDIM)
+      REAL_T xsten_probe(-3:3,SDIM)
+      REAL_T xsten_fluid(-3:3,SDIM)
+      REAL_T xsten_MAC(-3:3,SDIM)
       INTEGER_T nhalf
       REAL_T LS_left(nmat)
+      REAL_T LS_left_probe(nmat)
       REAL_T LS_right(nmat)
+      REAL_T LS_right_probe(nmat)
       INTEGER_T side_solid,side_image
       INTEGER_T partid
       INTEGER_T im_solid
       INTEGER_T im_fluid
       INTEGER_T im_primary_left
+      INTEGER_T im_primary_left_probe
       INTEGER_T im_primary_right
+      INTEGER_T im_primary_right_probe
       INTEGER_T im
       INTEGER_T dir
       INTEGER_T isideSOLID,jsideSOLID,ksideSOLID
       INTEGER_T isideFLUID,jsideFLUID,ksideFLUID
-      REAL_T, target :: n_raster(SDIM)
+      INTEGER_T iside_probe,jside_probe,kside_probe
+      REAL_T, target :: n_raster(SDIM) ! points to solid
       REAL_T, target :: x_projection_raster(SDIM)
       REAL_T, target :: x_image_raster(SDIM)
+      REAL_T, target :: x_probe_raster(SDIM)
       REAL_T usolid_law_of_wall(SDIM)
       REAL_T uimage_raster(SDIM)
+      REAL_T temperature_image
+      REAL_T temperature_wall
       REAL_T, target :: usolid_raster(SDIM)
       REAL_T angle_ACT_cell
       INTEGER_T nten
@@ -12029,7 +12040,8 @@ stop
       if (dx(SDIM).lt.law_of_wall_parm%dxmin) then
        law_of_wall_parm%dxmin=dx(SDIM)
       endif
-       
+      
+       ! data_dir=0,1, or 2. 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi, &
               0,data_dir,29) 
 
@@ -12072,15 +12084,27 @@ stop
 
           do im=1,nmat
            LS_right(im)=LSCP(D_DECL(i,j,k),im)
+           LS_right_probe(im)=LSCP(D_DECL(i+ii,j+jj,k+kk),im)
            LS_left(im)=LSCP(D_DECL(i-ii,j-jj,k-kk),im)
+           LS_left_probe(im)=LSCP(D_DECL(i-2*ii,j-2*jj,k-2*kk),im)
           enddo
           call get_primary_material(LS_right,nmat,im_primary_right)
+          call get_primary_material(LS_right_probe,nmat,im_primary_right_probe)
           call get_primary_material(LS_left,nmat,im_primary_left)
-          if ((im_primary_right.ge.1).and.(im_primary_right.le.nmat).and. &
-              (im_primary_left.ge.1).and.(im_primary_left.le.nmat)) then
+          call get_primary_material(LS_left_probe,nmat,im_primary_left_probe)
+          if ((im_primary_right.ge.1).and. &
+              (im_primary_right.le.nmat).and. &
+              (im_primary_right_probe.ge.1).and. &
+              (im_primary_right_probe.le.nmat).and. &
+              (im_primary_left.ge.1).and. &
+              (im_primary_left.le.nmat).and. &
+              (im_primary_left_probe.ge.1).and. &
+              (im_primary_left_probe.le.nmat)) then
            ! do nothing
           else
-           print *,"im_primary_left or im_primary_right invalid"
+           print *,"im_primary_left, im_primary_right, "
+           print *,"im_primary_left_probe, or im_primary_right_probe "
+           print *,"invalid"
            stop
           endif
 
@@ -12107,7 +12131,8 @@ stop
 
             do dir=1,SDIM
              n_raster(dir)=zero ! points to solid
-            enddo      
+            enddo
+
             if ((LS_right(im_solid).ge.zero).and. &
                 (im_primary_right.eq.im_solid)) then
              side_solid=1 ! right side
@@ -12117,18 +12142,34 @@ stop
              isideFLUID=i-ii
              jsideFLUID=j-jj
              ksideFLUID=k-kk
+             iside_probe=i-2*ii
+             jside_probe=j-2*jj
+             kside_probe=k-2*kk
 
-             if (is_rigid(nmat,im_primary_left).eq.0) then
+             if ((is_rigid(nmat,im_primary_left).eq.0).and. &
+                 (is_rigid(nmat,im_primary_left_probe).eq.0).and. &
+                 (im_primary_left.eq.im_primary_left_probe)) then
               side_image=0  ! left side
               im_fluid=im_primary_left
-              n_raster(data_dir+1)=one
+              n_raster(data_dir+1)=one ! points to solid
               do dir=1,SDIM
-               uimage_raster(dir)=ufluid(D_DECL(i-ii,j-jj,k-kk),dir)
+               uimage_raster(dir)= &
+                 ufluid(D_DECL(iside_probe,jside_probe,kside_probe),dir)
               enddo  
-             else if (is_rigid(nmat,im_primary_left).eq.1) then
+              temperature_image= &
+                 state(D_DECL(iside_probe,jside_probe,kside_probe), &
+                      (im_primary_left-1)*num_state_material+2)
+              temperature_wall= &
+                 state(D_DECL(isideSOLID,jsideSOLID,ksideSOLID), &
+                      (im_solid-1)*num_state_material+2)
+             else if ((is_rigid(nmat,im_primary_left).eq.1).or. &
+                      (is_rigid(nmat,im_primary_left_probe).eq.1).or. &
+                      (im_primary_left.ne.im_primary_left_probe)) then
               ! do nothing
              else
-              print *,"is_rigid(nmat,im_primary_left) invalid"
+              print *,"is_rigid(nmat,im_primary_left), or "
+              print *,"is_rigid(nmat,im_primary_left_probe), "
+              print *,"invalid"
               stop
              endif
 
@@ -12141,18 +12182,34 @@ stop
              isideFLUID=i
              jsideFLUID=j
              ksideFLUID=k
+             iside_probe=i+ii
+             jside_probe=j+jj
+             kside_probe=k+kk
 
-             if (is_rigid(nmat,im_primary_right).eq.0) then
+             if ((is_rigid(nmat,im_primary_right).eq.0).and. &
+                 (is_rigid(nmat,im_primary_right_probe).eq.0).and. &
+                 (im_primary_right.eq.im_primary_right_probe)) then
               side_image=1 ! right side
               im_fluid=im_primary_right
-              n_raster(data_dir+1)=-one
+              n_raster(data_dir+1)=-one ! points to solid
               do dir=1,SDIM
-               uimage_raster(dir)=ufluid(D_DECL(i,j,k),dir)
+               uimage_raster(dir)= &
+                 ufluid(D_DECL(iside_probe,jside_probe,kside_probe),dir)
               enddo  
-             else if (is_rigid(nmat,im_primary_right).eq.1) then
+              temperature_image= &
+                 state(D_DECL(iside_probe,jside_probe,kside_probe), &
+                      (im_primary_right-1)*num_state_material+2)
+              temperature_wall= &
+                 state(D_DECL(isideSOLID,jsideSOLID,ksideSOLID), &
+                      (im_solid-1)*num_state_material+2)
+             else if ((is_rigid(nmat,im_primary_right).eq.1).or. &
+                      (is_rigid(nmat,im_primary_right_probe).eq.1).or. &
+                      (im_primary_right.ne.im_primary_right_probe)) then
               ! do nothing
              else
-              print *,"is_rigid(nmat,im_primary_right) invalid"
+              print *,"is_rigid(nmat,im_primary_right), or "
+              print *,"is_rigid(nmat,im_primary_right_probe), "
+              print *,"invalid"
               stop
              endif
 
@@ -12171,31 +12228,33 @@ stop
              !     |     .     |      .     |     .    |
              !          i-1           i          i+1
              ! xsten(-3,1)   xsten(-1,1) xsten(1,1)  xsten(3,1)
-             call gridsten_level(xsten,isideSOLID,jsideSOLID,ksideSOLID, &
-                     level,nhalf)
+             call gridsten_level(xsten_solid, &
+                isideSOLID,jsideSOLID,ksideSOLID, &
+                level,nhalf)
+
+             call gridsten_level(xsten_probe, &
+                iside_probe,jside_probe,kside_probe, &
+                level,nhalf)
+
+             call gridsten_level(xsten_fluid, &
+                isideFLUID,jsideFLUID,ksideFLUID, &
+                level,nhalf)
+
+              ! data_dir=0,1, or 2. 
+             call gridstenMAC_level(xsten_MAC,i,j,k, &
+                level,nhalf,data_dir,35)
 
              do dir=1,SDIM
-              x_projection_raster(dir)=xsten(0,dir)
-              x_image_raster(dir)=xsten(0,dir)
+              x_projection_raster(dir)=xsten_MAC(0,dir)
+              x_image_raster(dir)=xsten_fluid(0,dir)
+              x_probe_raster(dir)=xsten_probe(0,dir)
              enddo
-              ! left side is solid
-             if ((side_solid.eq.0).and.(side_image.eq.1)) then
-                ! x_projection on the face.
-              x_projection_raster(data_dir+1)=xsten(1,data_dir+1)
-                ! x_image_raster is in the fluid.
-              x_image_raster(data_dir+1)=xsten(2,data_dir+1)
-             else if ((side_solid.eq.1).and.(side_image.eq.0)) then
-              x_projection_raster(data_dir+1)=xsten(-1,data_dir+1)
-              x_image_raster(data_dir+1)=xsten(-2,data_dir+1)
-             else
-              print *,"side_solid or side_image invalid"
-              stop
-             endif
 
              law_of_wall_parm%x_image_raster=>x_image_raster
+             law_of_wall_parm%x_probe_raster=>x_probe_raster
              law_of_wall_parm%x_projection_raster=>x_projection_raster
              law_of_wall_parm%usolid_raster=>usolid_raster
-             law_of_wall_parm%n_raster=>n_raster
+             law_of_wall_parm%n_raster=>n_raster ! points to solid
 
               ! call CODY ESTEBEs routine here 
               ! (getGhostVel is declared in: GLOBALUTIL.F90)
@@ -12208,11 +12267,15 @@ stop
                isideFLUID, &
                jsideFLUID, &
                ksideFLUID, &
+               iside_probe, &
+               jside_probe, &
+               kside_probe, &
                side_solid, &
                side_image, &
                data_dir, &
                uimage_raster, & ! intent(in)
                temperature_image, & ! intent(in)
+               temperature_wall, & ! intent(in)
                usolid_law_of_wall, & ! intent(out)
                angle_ACT_cell, & !intent(out) dyn. contact angle at image point
                im_fluid, &

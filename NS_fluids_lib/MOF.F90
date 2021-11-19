@@ -21591,7 +21591,8 @@ contains
 
 
        ! called from: get_mach_number, fort_eos_pressure,
-       !        FORT_PRESSURE_INDICATOR, fort_advective_pressure
+       !        FORT_PRESSURE_INDICATOR, fort_advective_pressure,
+       !        fort_derturbvisc
       subroutine get_primary_material_VFRAC(VFRAC,nmat,im_primary,caller_id)
       use probcommon_module
       use geometry_intersect_module

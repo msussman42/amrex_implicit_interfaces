@@ -1328,80 +1328,220 @@ contains
                      (K*u_plus)**3/(two*u_tau) )
       end function wallfuncderiv
       
-      subroutine wallfunc_newtonsmethod(u,y,tau_w,im_fluid)
+      subroutine wallfunc_newtonsmethod( &
+        x_projection_raster, &
+        n_raster, & ! points to solid
+        u, & !intent(in) magnitude of image tangent velocity
+        temperature_image, & !intent(in) 
+        temperature_wall, & ! intent(in)      
+        viscosity_molecular, & ! intent(in)      
+        viscosity_eddy, & ! intent(in)      
+        y, & !intent(in) distance from image to wall
+        tau_w, & ! intent(out)
+        im_fluid, &  ! intent(in)
+        critical_length) ! intent(in) used for sanity check
       use probcommon_module
-       implicit none
-       INTEGER_T, intent(in) :: im_fluid
-       REAL_T, intent(in) :: u, y !uimage_tngt, delta_r
-       REAL_T, intent(out) :: tau_w
-       REAL_T :: u_tau,x_n,x_np1 !x_n, x_(n+1) --> u_tau
-       REAL_T :: iter_diff
-       REAL_T :: f, fprime
-       INTEGER_T :: iter, iter_max=1000
-        !initialize wall function parameters here
-       REAL_T :: K=0.41, B=5.5, &
-       rho_w, mu_w !rho_w: wall density, mu_w: wall 
-                   !molecular viscosity, tau_w: wall shear stress
+      implicit none
+      REAL_T, intent(in), pointer :: x_projection_raster(:)
+      REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
+      INTEGER_T, intent(in) :: im_fluid
+      REAL_T, intent(in) :: u !uimage_tngt
+      REAL_T, intent(in) :: temperature_image
+      REAL_T, intent(in) :: temperature_wall
+      REAL_T, intent(in) :: viscosity_molecular
+      REAL_T, intent(in) :: viscosity_eddy
+      REAL_T, intent(in) :: y !delta_r
+      REAL_T, intent(in) :: critical_length
+      REAL_T, intent(out) :: tau_w ! wall shear stress
 
-       if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
-        print *,"im_fluid invalid in wallfunc_newtonsmethod"
-        stop
-       endif
+      REAL_T :: u_tau,x_n,x_np1 !x_n, x_(n+1) --> u_tau
+      REAL_T :: iter_diff
+      REAL_T :: f, fprime
+      INTEGER_T :: iter, iter_max=1000
+       !initialize wall function parameters here
+      REAL_T :: K=0.41d0, B=5.5d0
+      REAL_T :: rho_w !wall density
+      REAL_T :: mu_w  !mu_w: wall molecular viscosity
+      REAL_T :: predict_deriv_utan
+      REAL_T :: max_deriv_utan
+      REAL_T :: ughost_tngt_local
+      REAL_T :: thermal_conductivity
+      REAL_T :: thermal_diffusivity
+      REAL_T :: gravity_local
+      REAL_T :: expansion_coefficient
+      REAL_T :: Cp
 
-       mu_w=fort_viscconst(im_fluid) 
-       rho_w=fort_denconst(im_fluid)
+      if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
+       print *,"im_fluid invalid in wallfunc_newtonsmethod"
+       stop
+      endif
 
-       x_n = u !initial guess for u_tau
-       x_np1=u
-       iter_diff=one
-       iter=0
-       do while ((iter_diff.gt.VOFTOL).and.(iter.lt.iter_max))
-        f = wallfunc(x_n,u,y,K,B,rho_w,mu_w)
-        fprime = wallfuncderiv(x_n,u,y,K,B,rho_w,mu_w)
+      mu_w=fort_viscconst(im_fluid) 
+      rho_w=fort_denconst(im_fluid)
+
+      if (rho_w.gt.zero) then
+       ! do nothing
+      else
+       print *,"rho_w invalid"
+       stop
+      endif
+
+      thermal_conductivity=fort_heatviscconst(im_fluid)
+      Cp=fort_stiffCP(im_fluid)
+
+      if (Cp.gt.zero) then
+       ! do nothing
+      else
+       print *,"Cp invalid"
+       stop
+      endif
+
+      thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
+      gravity_local=abs(gravity)
+      expansion_coefficient=fort_DrhoDT(im_fluid) ! units: 1/temperature
+
+      if (mu_w.eq.viscosity_molecular) then
+       ! do nothing
+      else
+       print *,"mu_w.eq.viscosity_molecular == false"
+       stop
+      endif
+      if (viscosity_eddy.eq.fort_viscconst_eddy(im_fluid)) then
+       ! do nothing
+      else
+       print *,"viscosity_eddy.eq.fort_viscconst_eddy(im_fluid) == false"
+       stop
+      endif
+
+      x_n = u !initial guess for u_tau
+      x_np1=u
+      iter_diff=one
+      iter=0
+      do while ((iter_diff.gt.VOFTOL).and.(iter.lt.iter_max))
+       f = wallfunc(x_n,u,y,K,B,rho_w,mu_w)
+       fprime = wallfuncderiv(x_n,u,y,K,B,rho_w,mu_w)
    
-        if (abs(fprime).le.1.0e-15) then 
-         print *, "divide by zero error: wallfunc_newtonsmethod" !avoid /0
-         stop
-        else
-         x_np1 = x_n-f/fprime
-        endif
-        iter_diff=abs(x_np1-x_n)
-        x_n=x_np1
-
-        iter = iter+1
-        if(iter.ge.iter_max)then
-          print *, "wallfunc_newtonsmethod: no convergence"
-          print *, "u (image velocity tangent) = ",u
-          print *, "y (delta_r) = ",y
-          print *, "im_fluid= ",im_fluid
-          print *, "mu_w= ",mu_w
-          print *, "rho_w= ",rho_w
-          print *, "f= ",f
-          print *, "fprime= ",fprime
-          print *, "x_np1= ",x_np1
-          print *, "x_n= ",x_n
-          print *, "iter=",iter
-          print *, "iter_diff = ",iter_diff
-          stop
-        endif
-       enddo ! while (iter_diff>VOFTOL .and. iter<iter_max)
-    
-       u_tau = x_np1
-       tau_w = rho_w*u_tau**2
-
-       if (1.eq.0) then
-          print *, "u (image velocity tangent) = ",u
-          print *, "y (delta_r) = ",y
-          print *, "im_fluid= ",im_fluid
-          print *, "mu_w= ",mu_w
-          print *, "rho_w= ",rho_w
-          print *, "u_tau= ",u_tau
-          print *, "tau_w= ",tau_w
-          print *, "iter=",iter
-          print *, "iter_diff = ",iter_diff
+       if (abs(fprime).le.1.0e-15) then 
+        print *, "divide by zero error: wallfunc_newtonsmethod" !avoid /0
+        stop
+       else
+        x_np1 = x_n-f/fprime
        endif
+       iter_diff=abs(x_np1-x_n)
+       x_n=x_np1
+
+       iter = iter+1
+       if(iter.ge.iter_max)then
+         print *, "wallfunc_newtonsmethod: no convergence"
+         print *, "u (image velocity tangent) = ",u
+         print *, "y (delta_r) = ",y
+         print *, "im_fluid= ",im_fluid
+         print *, "mu_w= ",mu_w
+         print *, "rho_w= ",rho_w
+         print *, "f= ",f
+         print *, "fprime= ",fprime
+         print *, "x_np1= ",x_np1
+         print *, "x_n= ",x_n
+         print *, "iter=",iter
+         print *, "iter_diff = ",iter_diff
+         stop
+       endif
+      enddo ! while (iter_diff>VOFTOL .and. iter<iter_max)
+    
+      u_tau = x_np1
+      tau_w = rho_w*u_tau**2
+
+       ! sanity check
+      ughost_tngt_local=u-tau_w*y/(viscosity_molecular+viscosity_eddy)
+
+      predict_deriv_utan=abs(ughost_tngt_local-u)/y
+      max_deriv_utan=four*u/critical_length
+      if (predict_deriv_utan.lt.max_deriv_utan) then
+       ! do nothing
+      else
+       print *,"predict_deriv_utan or max_deriv_utan invalid"
+       print *,"predict_deriv_utan= ",predict_deriv_utan
+       print *,"max_deriv_utan= ",max_deriv_utan
+       print *,"ughost_tngt_local=",ughost_tngt_local
+       print *,"u=",u
+       print *,"critical_length= ",critical_length
+       print *,"y= ",y
+       stop
+      endif
+
+      if (1.eq.0) then
+         print *, "u (image velocity tangent) = ",u
+         print *, "y (delta_r) = ",y
+         print *, "im_fluid= ",im_fluid
+         print *, "mu_w= ",mu_w
+         print *, "rho_w= ",rho_w
+         print *, "u_tau= ",u_tau
+         print *, "tau_w= ",tau_w
+         print *, "iter=",iter
+         print *, "iter_diff = ",iter_diff
+      endif
 
       end subroutine wallfunc_newtonsmethod
+
+
+
+      subroutine wallfunc_general( &
+        x_projection_raster, &
+        n_raster, & ! points to solid
+        u, & !intent(in) magnitude of image tangent velocity
+        temperature_image, & !intent(in) 
+        temperature_wall, & ! intent(in)      
+        viscosity_molecular, & ! intent(in)      
+        viscosity_eddy, & ! intent(in)      
+        y, & !intent(in) distance from image to wall
+        tau_w, & ! intent(out)
+        im_fluid, &  ! intent(in)
+        critical_length) ! intent(in) used for sanity check
+      use probcommon_module
+      implicit none
+      REAL_T, intent(in), pointer :: x_projection_raster(:)
+      REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
+      INTEGER_T, intent(in) :: im_fluid
+      REAL_T, intent(in) :: u !uimage_tngt
+      REAL_T, intent(in) :: temperature_image
+      REAL_T, intent(in) :: temperature_wall
+      REAL_T, intent(in) :: viscosity_molecular
+      REAL_T, intent(in) :: viscosity_eddy
+      REAL_T, intent(in) :: y !delta_r
+      REAL_T, intent(in) :: critical_length
+      REAL_T, intent(out) :: tau_w ! wall shear stress
+
+      if (is_in_probtype_list().eq.1) then
+       call SUB_wallfunc( &
+        x_projection_raster, &
+        n_raster, & ! points to solid
+        u, & !intent(in) magnitude of image tangent velocity
+        temperature_image, & !intent(in) 
+        temperature_wall, & ! intent(in)      
+        viscosity_molecular, & ! intent(in)      
+        viscosity_eddy, & ! intent(in)      
+        y, & !intent(in) distance from image to wall
+        tau_w, & ! intent(out)
+        im_fluid, &  ! intent(in)
+        critical_length) ! intent(in) used for sanity check
+      else
+       call wallfunc_newtonsmethod( &
+        x_projection_raster, &
+        n_raster, & ! points to solid
+        u, & !intent(in) magnitude of image tangent velocity
+        temperature_image, & !intent(in) 
+        temperature_wall, & ! intent(in)      
+        viscosity_molecular, & ! intent(in)      
+        viscosity_eddy, & ! intent(in)      
+        y, & !intent(in) distance from image to wall
+        tau_w, & ! intent(out)
+        im_fluid, &  ! intent(in)
+        critical_length) ! intent(in) used for sanity check
+      endif
+
+      end subroutine wallfunc_general
+
+
 
       subroutine interp_from_fluid( &
        LOW, &
@@ -1882,11 +2022,13 @@ end subroutine dynamic_contact_angle
        law_of_the_wall, &
        iSOLID,jSOLID,kSOLID, & ! index for the solid cell
        iFLUID,jFLUID,kFLUID, & ! index for the fluid cell
+       i_probe,j_probe,k_probe, & ! index for the fluid probe cell
        side_solid, &  ! =0 if solid on the left
        side_image, &
        data_dir, &
-       uimage_raster, & ! in
-       temperature_image, & ! in
+       uimage_raster, & ! in (at the probe)
+       temperature_image, & ! in (at the probe)
+       temperature_wall, & ! in
        usolid_law_of_wall, & ! out
        angle_ACT, & ! aka angle_ACT_cell "out"
        im_fluid, &
@@ -1903,8 +2045,10 @@ end subroutine dynamic_contact_angle
        INTEGER_T, intent(in) :: side_image
        INTEGER_T, intent(in) :: iSOLID,jSOLID,kSOLID
        INTEGER_T, intent(in) :: iFLUID,jFLUID,kFLUID
+       INTEGER_T, intent(in) :: i_probe,j_probe,k_probe
        REAL_T, dimension(SDIM), intent(in) :: uimage_raster
        REAL_T, intent(in) :: temperature_image
+       REAL_T, intent(in) :: temperature_wall
        REAL_T, dimension(SDIM), intent(out) :: usolid_law_of_wall
        REAL_T, intent(out) :: angle_ACT
       
@@ -1922,8 +2066,6 @@ end subroutine dynamic_contact_angle
        INTEGER_T :: dir
        REAL_T :: nrm_sanity
        REAL_T :: nrm_sanity_crossing
-       REAL_T :: predict_deriv_utan
-       REAL_T :: max_deriv_utan
        REAL_T :: critical_length
        REAL_T :: uimage_mag
        INTEGER_T :: im
@@ -1965,12 +2107,14 @@ end subroutine dynamic_contact_angle
        REAL_T :: nCL_dot_n_raster
        INTEGER_T :: nrad
        INTEGER_T nhalf
+       REAL_T :: xsten_probe(-3:3,SDIM)
        REAL_T :: xstenFLUID(-3:3,SDIM)
        REAL_T :: xstenSOLID(-3:3,SDIM)
        REAL_T :: thermal_interp(num_materials)
        REAL_T :: LSPLUS_interp(num_materials*(1+SDIM))
        REAL_T :: LSMINUS_interp(num_materials*(1+SDIM))
        REAL_T :: LSTRIPLE_interp(num_materials*(1+SDIM))
+       REAL_T :: LS_probe(num_materials*(1+SDIM))
        REAL_T :: LS_fluid(num_materials*(1+SDIM))
        REAL_T :: LS_solid(num_materials*(1+SDIM))
        REAL_T :: LS_crossing(num_materials*(1+SDIM))
@@ -2072,7 +2216,9 @@ end subroutine dynamic_contact_angle
        angle_ACT=zero
 
        call gridsten_level(xstenFLUID,iFLUID,jFLUID,kFLUID,LOW%level,nhalf)
+       call gridsten_level(xsten_probe,i_probe,j_probe,k_probe,LOW%level,nhalf)
        do im=1,LOW%nmat*(1+SDIM)
+        LS_probe(im)=LOW%LSCP(D_DECL(i_probe,j_probe,k_probe),im)
         LS_fluid(im)=LOW%LSCP(D_DECL(iFLUID,jFLUID,kFLUID),im)
        enddo
        call gridsten_level(xstenSOLID,iSOLID,jSOLID,kSOLID,LOW%level,nhalf)
@@ -2663,7 +2809,7 @@ end subroutine dynamic_contact_angle
        endif
 
        !x_projection is closest point on the fluid/solid interface. 
-       delta_r_raster=abs(LOW%x_image_raster(data_dir+1)- &
+       delta_r_raster=abs(LOW%x_probe_raster(data_dir+1)- &
                           LOW%x_projection_raster(data_dir+1))
        if (delta_r_raster.gt.zero) then
         ! do nothing
@@ -2763,8 +2909,18 @@ end subroutine dynamic_contact_angle
           !obtain wall shear stress tau_w (MKS units: Pascal)
           !delta_r_raster is distance from image point to the wall.
           if (delta_r_raster.gt.zero) then
-           call wallfunc_newtonsmethod(uimage_tngt_mag, &
-                 delta_r_raster,tau_w,im_fluid) 
+           call wallfunc_general( &
+             LOW%x_projection_raster, & ! coordinate on the wall
+             LOW%n_raster, & ! points to solid
+             uimage_tngt_mag, &
+             temperature_image, &
+             temperature_wall, &
+             viscosity_molecular, &
+             viscosity_eddy, &
+             delta_r_raster, &
+             tau_w, &
+             im_fluid, &
+             critical_length) 
             ! MKS units of viscosity: Pascal * seconds= 
             !  (kg m/s^2)*(1/m^2)*s=kg /(m s)
             ! MKS units of Pascal: N/m^2
@@ -2782,21 +2938,6 @@ end subroutine dynamic_contact_angle
             print *,"delta_r_raster=",delta_r_raster
            endif
 
-           predict_deriv_utan=abs(ughost_tngt-uimage_tngt_mag)/ &
-              delta_r_raster
-           max_deriv_utan=four*uimage_tngt_mag/critical_length
-           if (predict_deriv_utan.lt.max_deriv_utan) then
-            ! do nothing
-           else
-            print *,"predict_deriv_utan or max_deriv_utan invalid"
-            print *,"predict_deriv_utan= ",predict_deriv_utan
-            print *,"max_deriv_utan= ",max_deriv_utan
-            print *,"ughost_tngt=",ughost_tngt
-            print *,"uimage_tngt_mag=",uimage_tngt_mag
-            print *,"critical_length= ",critical_length
-            print *,"delta_r_raster= ",delta_r_raster
-            stop
-           endif
           else
            print *,"delta_r_raster invalid"
            stop

@@ -30,13 +30,12 @@ stop
       contains
 
 
-      end module derive_module
-
        ! WALE model
        ! Wall Adapting Local Eddy-viscosity models for simulations in complex
        ! geometries.   Ducros, Nicoud, Poinsot 1998
        ! called from getStateVISC
-      subroutine FORT_DERTURBVISC( &
+      subroutine fort_derturbvisc( &
+       les_model, &
        level, &
        im, &
        nmat, &
@@ -52,50 +51,77 @@ stop
        cur_time, &
        dx,xlo, &
        ngrow, &
-       ncompvisc)
+       ncompvisc) &
+      bind(c,name='fort_derturbvisc')
 
       use global_utility_module
       use probf90_module
-      use derive_module
+      use MOF_routines_module
 
       IMPLICIT NONE
 
-      INTEGER_T level
-      INTEGER_T im
-      INTEGER_T nmat
-      INTEGER_T ncompvisc
-      INTEGER_T ngrow
-      INTEGER_T ntensor
-      REAL_T dt
-      REAL_T cur_time
+      INTEGER_T, intent(in) :: les_model
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: im
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: ncompvisc
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: ntensor
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: cur_time
 
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact
-      REAL_T dx(SDIM),xlo(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
 
-      INTEGER_T DIMDEC(denstate)
-      INTEGER_T DIMDEC(vof)
-      INTEGER_T DIMDEC(vel)
-      INTEGER_T DIMDEC(visc)
-      INTEGER_T DIMDEC(cellten)
+      INTEGER_T, intent(in) :: DIMDEC(denstate)
+      INTEGER_T, intent(in) :: DIMDEC(vof)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(visc)
+      INTEGER_T, intent(in) :: DIMDEC(cellten)
   
-      REAL_T denstate(DIMV(denstate),nmat*num_state_material)
-      REAL_T vof(DIMV(vof),nmat*ngeom_recon)
-      REAL_T vel(DIMV(vel),SDIM)
-      REAL_T visc(DIMV(visc),ncompvisc)
-      REAL_T cellten(DIMV(cellten),ntensor)
+      REAL_T, intent(in), target :: &
+              denstate(DIMV(denstate),nmat*num_state_material)
+      REAL_T, pointer :: denstate_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: visc(DIMV(visc),ncompvisc)
+      REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)
+      REAL_T, pointer :: cellten_ptr(D_DECL(:,:,:),:)
 
       REAL_T g(3,3),s(3,3),sd(3,3),g2(3),g2tr,ss,sdsd
       REAL_T g2_12,g2_13,g2_21,g2_23,g2_31,g2_32,turb_visc,density
       REAL_T rr
-      INTEGER_T i,j,k,veldir,dir,flagcomp
+      INTEGER_T i,j,k
+      INTEGER_T i1,j1,k1
+      INTEGER_T k1lo,k1hi
+      INTEGER_T veldir,dir
+      INTEGER_T flagcomp
+      INTEGER_T vofcomp
       INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz,nbase
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
+      INTEGER_T near_solid
+      INTEGER_T caller_id
+      INTEGER_T im_primary
+      INTEGER_T im_local
+      REAL_T VFRAC(nmat)
      
       nhalf=1
+
+      caller_id=113
+
+      if (ngrow.eq.1) then
+       ! do nothing
+      else
+       print *,"expecting ngrow==1"
+       stop
+      endif
 
       if ((ncompvisc.ne.nmat).and.(ncompvisc.ne.3*nmat)) then
        print *,"ncompvisc invalid"
@@ -136,12 +162,17 @@ stop
 
       ! compute u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
       call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
-     
-      call checkbound(fablo,fabhi,DIMS(vof),ngrow+1,-1,310)
-      call checkbound(fablo,fabhi,DIMS(visc),ngrow,-1,311)
-      call checkbound(fablo,fabhi,DIMS(vel),ngrow,-1,312)
-      call checkbound(fablo,fabhi,DIMS(denstate),ngrow,-1,313)
-      call checkbound(fablo,fabhi,DIMS(cellten),ngrow,-1,314)
+    
+      vof_ptr=>vof 
+      call checkbound_array(fablo,fabhi,vof_ptr,ngrow+1,-1,310)
+      visc_ptr=>visc
+      call checkbound_array(fablo,fabhi,visc_ptr,ngrow,-1,311)
+      vel_ptr=>vel
+      call checkbound_array(fablo,fabhi,vel_ptr,ngrow,-1,312)
+      denstate_ptr=>denstate
+      call checkbound_array(fablo,fabhi,denstate_ptr,ngrow,-1,313)
+      cellten_ptr=>cellten
+      call checkbound_array(fablo,fabhi,cellten_ptr,ngrow,-1,314)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
@@ -218,7 +249,7 @@ stop
          g2(veldir)=g2(veldir)+g(veldir,dir)*g(dir,veldir)
         enddo
        enddo
-       g2tr=(g2(1)+g2(2)+g2(3))/3. ! tensor trace
+       g2tr=(g2(1)+g2(2)+g2(3))/3.0d0 ! tensor trace
        g2_12=g(1,1)*g(1,2)+g(1,2)*g(2,2)+g(1,3)*g(3,2)
        g2_13=g(1,1)*g(1,3)+g(1,2)*g(2,3)+g(1,3)*g(3,3)
        g2_21=g(2,1)*g(1,1)+g(2,2)*g(2,1)+g(2,3)*g(3,1)
@@ -227,8 +258,8 @@ stop
        g2_32=g(3,1)*g(1,2)+g(3,2)*g(2,2)+g(3,3)*g(3,2)
  
        sd(1,1)=g2(1)-g2tr
-       sd(1,2)=0.5*(g2_12+g2_21)
-       sd(1,3)=0.5*(g2_13+g2_31)
+       sd(1,2)=0.5d0*(g2_12+g2_21)
+       sd(1,3)=0.5d0*(g2_13+g2_31)
 
        sd(2,1)=sd(1,2)
        sd(2,2)=g2(2)-g2tr
@@ -243,18 +274,75 @@ stop
             sd(2,1)*sd(2,1)+sd(2,2)*sd(2,2)+sd(2,3)*sd(2,3)+&
             sd(3,1)*sd(3,1)+sd(3,2)*sd(3,2)+sd(3,3)*sd(3,3)
 
-       if(sdsd.ne.zero) then
+       if (les_model.eq.1) then
 
-        turb_visc=(0.5*dx(1))**2*sdsd**1.5/(ss**2.5+sdsd**1.25)
-        density=denstate(D_DECL(i,j,k),flagcomp)
-        ! limiter: arbitrary at this point
-        turb_visc=min(turb_visc,two*visc(D_DECL(i,j,k),im)/density)
-        visc(D_DECL(i,j,k),im)=visc(D_DECL(i,j,k),im)+turb_visc*density
+        if(sdsd.ne.zero) then
+         turb_visc=(0.5d0*dx(1))**2*sdsd**1.5d0/(ss**2.5d0+sdsd**1.25d0)
+         density=denstate(D_DECL(i,j,k),flagcomp)
+         ! limiter: arbitrary at this point
+         turb_visc=min(turb_visc,two*visc(D_DECL(i,j,k),im)/density)
+         visc(D_DECL(i,j,k),im)=visc(D_DECL(i,j,k),im)+turb_visc*density
+        else if (sdsd.eq.zero) then
+         turb_visc=zero
+        else
+         print *,"sdsd nan"
+         stop
+        endif
 
-       else if (sdsd.eq.zero) then
-        turb_visc=zero
+       else if (les_model.eq.0) then
+        ! do nothing
        else
-        print *,"sdsd nan"
+        print *,"les_model invalid"
+        stop
+       endif
+
+       if (fort_viscconst_eddy(im).gt.zero) then
+        k1lo=0
+        k1hi=0
+        if (SDIM.eq.3) then
+         k1lo=-1
+         k1hi=1
+        else if (SDIM.eq.2) then
+         ! do nothing
+        else
+         print *,"dimension problem"
+         stop
+        endif
+        near_solid=0
+        do i1=-1,1
+        do j1=-1,1
+        do k1=k1lo,k1hi
+         do im_local=1,nmat
+          vofcomp=(im_local-1)*ngeom_recon+1
+          VFRAC(im_local)=vof(D_DECL(i+i1,j+j1,k+k1),vofcomp)
+         enddo
+         call get_primary_material_VFRAC(VFRAC,nmat,im_primary,caller_id)
+         if (is_rigid(nmat,im_primary).eq.1) then
+          near_solid=1
+         else if (is_rigid(nmat,im_primary).eq.0) then
+          ! do nothing
+         else
+          print *,"is_rigid invalid"
+          stop
+         endif
+        enddo !k1
+        enddo !j1
+        enddo !i1
+
+        if (near_solid.eq.1) then
+         visc(D_DECL(i,j,k),im)=visc(D_DECL(i,j,k),im)+ &
+                 fort_viscconst_eddy(im)
+        else if (near_solid.eq.0) then
+         ! do nothing
+        else
+         print *,"near_solid invalid"
+         stop
+        endif
+
+       else if (fort_viscconst_eddy(im).eq.zero) then
+        ! do nothing
+       else
+        print *,"fort_viscconst_eddy invalid"
         stop
        endif
   
@@ -263,7 +351,7 @@ stop
       enddo 
 
       return
-      end subroutine DERTURBVISC
+      end subroutine fort_derturbvisc
 
       subroutine fort_getshear( &
        ntensor, &
@@ -283,7 +371,6 @@ stop
       bind(c,name='fort_getshear')
 
       use global_utility_module
-      use derive_module
 
       IMPLICIT NONE
 
@@ -307,7 +394,10 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(tensordata)
   
       REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)
+      REAL_T, pointer :: cellten_ptr(D_DECL(:,:,:),:)
+
       REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(out), target :: tensordata(DIMV(tensordata),20)
       REAL_T, pointer :: tensordata_ptr(D_DECL(:,:,:),:)
@@ -322,6 +412,8 @@ stop
       nhalf=1
 
       tensordata_ptr=>tensordata
+      cellten_ptr=>cellten
+      vel_ptr=>vel
 
       if (ntensor.ne.SDIM*SDIM) then
        print *,"ntensor invalid"
@@ -343,8 +435,8 @@ stop
       ! compute u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
       call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
 
-      call checkbound_array(fablo,fabhi,cellten,ngrow,-1,64)
-      call checkbound_array(fablo,fabhi,vel,ngrow+1,-1,64)
+      call checkbound_array(fablo,fabhi,cellten_ptr,ngrow,-1,64)
+      call checkbound_array(fablo,fabhi,vel_ptr,ngrow+1,-1,64)
       call checkbound_array(fablo,fabhi, &
        tensordata_ptr, &
        ngrow,-1,65)
@@ -495,7 +587,7 @@ stop
       return
       end subroutine fort_getshear
 
-       ! called from getStateVISC
+       ! called from NavierStokes::getStateVISC() (NavierStokes2.cpp) 
       subroutine fort_derviscosity( &
         level, &
         finest_level, &
@@ -532,7 +624,6 @@ stop
 
       use global_utility_module
       use probf90_module
-      use derive_module
 
       IMPLICIT NONE
 
@@ -1125,7 +1216,6 @@ stop
 
       use global_utility_module
       use probf90_module
-      use derive_module
 
       IMPLICIT NONE
 
@@ -1562,7 +1652,7 @@ stop
       enddo
 
       return
-      end subroutine FORT_DERMAGTRACE
+      end subroutine fort_dermagtrace
 
        ! decompose: 2 (mu0-mu0+mu(grad U) D = 2 mu0 D + 2(mu(grad U)-mu0)D
        ! NavierStokes::GetDrag is called from
@@ -2509,6 +2599,7 @@ stop
       return
       end subroutine fort_getdrag
 
+      end module derive_module
 
       subroutine FORT_INTEGRATE_RECALESCE( &
        isweep, &

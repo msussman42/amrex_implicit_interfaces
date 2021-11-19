@@ -1658,5 +1658,48 @@ endif
 
 end subroutine CRYOGENIC_TANK_MK_THERMAL_K
 
+subroutine CRYOGENIC_TANK_MK_wallfunc( &
+  x_projection_raster, &
+  n_raster, & ! points to solid
+  u, & !intent(in) magnitude of image tangent velocity
+  temperature_image, & !intent(in) 
+  temperature_wall, & ! intent(in)      
+  viscosity_molecular, & ! intent(in)      
+  viscosity_eddy, & ! intent(in)      
+  y, & !intent(in) distance from image to wall
+  tau_w, & ! intent(out)
+  im_fluid, &  ! intent(in)
+  critical_length) ! intent(in) used for sanity check
+use probcommon_module
+use global_utility_module
+implicit none
+REAL_T, intent(in), pointer :: x_projection_raster(:)
+REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
+INTEGER_T, intent(in) :: im_fluid
+REAL_T, intent(in) :: u !uimage_tngt
+REAL_T, intent(in) :: temperature_image
+REAL_T, intent(in) :: temperature_wall
+REAL_T, intent(in) :: viscosity_molecular
+REAL_T, intent(in) :: viscosity_eddy
+REAL_T, intent(in) :: y !delta_r
+REAL_T, intent(in) :: critical_length
+REAL_T, intent(out) :: tau_w ! wall shear stress
+
+  ! remark: "subroutine wallfunc_newtonsmethod" is 
+  ! declared in GLOBALUTIL.F90
+ call wallfunc_newtonsmethod( &
+  x_projection_raster, &
+  n_raster, & ! points to solid
+  u, & !intent(in) magnitude of image tangent velocity
+  temperature_image, & !intent(in) 
+  temperature_wall, & ! intent(in)      
+  viscosity_molecular, & ! intent(in)      
+  viscosity_eddy, & ! intent(in)      
+  y, & !intent(in) distance from image to wall
+  tau_w, & ! intent(out)
+  im_fluid, &  ! intent(in)
+  critical_length) ! intent(in) used for sanity check
+
+end subroutine CRYOGENIC_TANK_MK_wallfunc
 
 end module CRYOGENIC_TANK_MK_module

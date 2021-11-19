@@ -936,7 +936,7 @@ Vector<Real> NavierStokes::prerecalesce_viscconst;
 Vector<Real> NavierStokes::viscconst;
 Real NavierStokes::viscconst_max=0.0;
 Real NavierStokes::viscconst_min=0.0;
-Vector<Real> NavierStokes::viscconst_eddy;
+Vector<Real> NavierStokes::viscconst_eddy; //default = 0
 Vector<Real> NavierStokes::speciesviscconst;// species mass diffusion coeff.
 Vector<Real> NavierStokes::prerecalesce_heatviscconst;
 Real NavierStokes::smoothing_length_scale=0.0;
