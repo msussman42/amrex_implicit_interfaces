@@ -6617,6 +6617,8 @@ END SUBROUTINE SIMP
       INTEGER_T minint_sum_comp,maxint_sum_comp
 
       INTEGER_T pdrag_sum_comp
+      INTEGER_T viscousdrag_sum_comp
+      INTEGER_T viscous0drag_sum_comp
       INTEGER_T viscodrag_sum_comp
 
       INTEGER_T minden_sum_comp,maxden_sum_comp
@@ -6629,7 +6631,10 @@ END SUBROUTINE SIMP
 
       INTEGER_T torque_sum_comp
       INTEGER_T ptorque_sum_comp
+      INTEGER_T viscoustorque_sum_comp
+      INTEGER_T viscous0torque_sum_comp
       INTEGER_T viscotorque_sum_comp
+
       INTEGER_T step_perim_sum_comp
 
       INTEGER_T minint_slice
@@ -6754,7 +6759,9 @@ END SUBROUTINE SIMP
       maxint_sum_comp=minint_sum_comp+3*nmat
 
       pdrag_sum_comp=maxint_sum_comp+3*nmat
-      viscodrag_sum_comp=pdrag_sum_comp+3*nmat
+      viscousdrag_sum_comp=pdrag_sum_comp+3*nmat
+      viscous0drag_sum_comp=viscousdrag_sum_comp+3*nmat
+      viscodrag_sum_comp=viscous0drag_sum_comp+3*nmat
 
       minden_sum_comp=viscodrag_sum_comp+3*nmat
       maxden_sum_comp=minden_sum_comp+2*nmat
@@ -6772,7 +6779,10 @@ END SUBROUTINE SIMP
 
       torque_sum_comp=LS_cen_sum_comp+3*nmat
       ptorque_sum_comp=torque_sum_comp+3*nmat
-      viscotorque_sum_comp=ptorque_sum_comp+3*nmat
+      viscoustorque_sum_comp=ptorque_sum_comp+3*nmat
+      viscous0torque_sum_comp=viscoustorque_sum_comp+3*nmat
+      viscotorque_sum_comp=viscous0torque_sum_comp+3*nmat
+
       step_perim_sum_comp=viscotorque_sum_comp+3*nmat
 
       minint_slice=step_perim_sum_comp+nmat
@@ -7263,21 +7273,43 @@ END SUBROUTINE SIMP
          idest=drag_sum_comp+local_comp
          local_result(idest)=local_result(idest)+ &
            drag(D_DECL(i,j,k),DRAGCOMP_FORCE+local_comp)
+
          idest=pdrag_sum_comp+local_comp
          local_result(idest)=local_result(idest)+ &
            drag(D_DECL(i,j,k),DRAGCOMP_PFORCE+local_comp)
+
+         idest=viscousdrag_sum_comp+local_comp
+         local_result(idest)=local_result(idest)+ &
+           drag(D_DECL(i,j,k),DRAGCOMP_VISCOUSFORCE+local_comp)
+
+         idest=viscous0drag_sum_comp+local_comp
+         local_result(idest)=local_result(idest)+ &
+           drag(D_DECL(i,j,k),DRAGCOMP_VISCOUS0FORCE+local_comp)
+
          idest=viscodrag_sum_comp+local_comp
          local_result(idest)=local_result(idest)+ &
            drag(D_DECL(i,j,k),DRAGCOMP_VISCOFORCE+local_comp)
+
          idest=torque_sum_comp+local_comp
          local_result(idest)=local_result(idest)+ &
            drag(D_DECL(i,j,k),DRAGCOMP_TORQUE+local_comp)
+
          idest=ptorque_sum_comp+local_comp
          local_result(idest)=local_result(idest)+ &
            drag(D_DECL(i,j,k),DRAGCOMP_PTORQUE+local_comp)
+
+         idest=viscoustorque_sum_comp+local_comp
+         local_result(idest)=local_result(idest)+ &
+           drag(D_DECL(i,j,k),DRAGCOMP_VISCOUSTORQUE+local_comp)
+
+         idest=viscous0torque_sum_comp+local_comp
+         local_result(idest)=local_result(idest)+ &
+           drag(D_DECL(i,j,k),DRAGCOMP_VISCOUS0TORQUE+local_comp)
+
          idest=viscotorque_sum_comp+local_comp
          local_result(idest)=local_result(idest)+ &
            drag(D_DECL(i,j,k),DRAGCOMP_VISCOTORQUE+local_comp)
+
          local_comp=local_comp+1
         enddo ! dir=1..3
         enddo ! im=1..nmat

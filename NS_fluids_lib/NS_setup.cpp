@@ -2057,6 +2057,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   // max interface location 3 x nmat  (x1,y1,z1   x2,y2,z2  ...)
   //
   // pressure drag (3 x nmat comp)
+  // viscous drag (3 x nmat comp)
+  // viscous0 drag (3 x nmat comp)
   // viscoelastic drag (3 x nmat comp)
   //
   // min den,temp 2 x nmat
@@ -2075,7 +2077,10 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   //
   // torque (3 x nmat comp)
   // pressure torque (3 x nmat comp)
+  // viscous torque (3 x nmat comp)
+  // viscous0 torque (3 x nmat comp)
   // viscoelastic torque (3 x nmat comp)
+  //
   // perimeter (rasterized) (nmat comp)
   //
   // min interface extent on slice (nmat comp)
@@ -2097,7 +2102,9 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  int maxint_sum_comp=minint_sum_comp+3*nmat;
 
  int pdrag_sum_comp=maxint_sum_comp+3*nmat;
- int viscodrag_sum_comp=pdrag_sum_comp+3*nmat;
+ int viscousdrag_sum_comp=pdrag_sum_comp+3*nmat;
+ int viscous0drag_sum_comp=viscousdrag_sum_comp+3*nmat;
+ int viscodrag_sum_comp=viscous0drag_sum_comp+3*nmat;
 
  int minden_sum_comp=viscodrag_sum_comp+3*nmat;
  int maxden_sum_comp=minden_sum_comp+2*nmat;
@@ -2115,7 +2122,10 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
 
  int torque_sum_comp=LS_cen_sum_comp+3*nmat;
  int ptorque_sum_comp=torque_sum_comp+3*nmat;
- int viscotorque_sum_comp=ptorque_sum_comp+3*nmat;
+ int viscoustorque_sum_comp=ptorque_sum_comp+3*nmat;
+ int viscous0torque_sum_comp=viscoustorque_sum_comp+3*nmat;
+ int viscotorque_sum_comp=viscous0torque_sum_comp+3*nmat;
+
  int step_perim_sum_comp=viscotorque_sum_comp+3*nmat;
 
  int minint_slice=step_perim_sum_comp+nmat;
@@ -2836,17 +2846,37 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     local_counter++;
    }
   }
+
   local_counter=0;
   for (int im=0;im<nmat;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
-     " DIR= " << dir << " VDRAG " << 
-     sumdata[drag_sum_comp+local_counter]-
-     sumdata[pdrag_sum_comp+local_counter]-
+     " DIR= " << dir << " VISCOUSDRAG " << 
+     sumdata[viscousdrag_sum_comp+local_counter] << '\n';
+    local_counter++;
+   }
+  }
+
+  local_counter=0;
+  for (int im=0;im<nmat;im++) {
+   for (int dir=0;dir<3;dir++) {
+    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
+     " DIR= " << dir << " VISCOUS0DRAG " << 
+     sumdata[viscous0drag_sum_comp+local_counter] << '\n';
+    local_counter++;
+   }
+  }
+
+  local_counter=0;
+  for (int im=0;im<nmat;im++) {
+   for (int dir=0;dir<3;dir++) {
+    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
+     " DIR= " << dir << " VISCOELASTICDRAG " << 
      sumdata[viscodrag_sum_comp+local_counter] << '\n';
     local_counter++;
    }
   }
+
   local_counter=0;
   for (int im=0;im<nmat;im++) {
    for (int dir=0;dir<3;dir++) {
@@ -2860,13 +2890,33 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   for (int im=0;im<nmat;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
-     " DIR= " << dir << " VTORQUE " <<
-     sumdata[torque_sum_comp+local_counter]-
-     sumdata[ptorque_sum_comp+local_counter]-
+     " DIR= " << dir << " VISCOUSTORQUE " <<
+     sumdata[viscoustorque_sum_comp+local_counter] << '\n';
+    local_counter++;
+   }
+  }
+
+  local_counter=0;
+  for (int im=0;im<nmat;im++) {
+   for (int dir=0;dir<3;dir++) {
+    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
+     " DIR= " << dir << " VISCOUS0TORQUE " <<
+     sumdata[viscous0torque_sum_comp+local_counter] << '\n';
+    local_counter++;
+   }
+  }
+
+  local_counter=0;
+  for (int im=0;im<nmat;im++) {
+   for (int dir=0;dir<3;dir++) {
+    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
+     " DIR= " << dir << " VISCOELASTICTORQUE " <<
      sumdata[viscotorque_sum_comp+local_counter] << '\n';
     local_counter++;
    }
   }
+
+
   for (int im=0;im<nmat;im++) {
    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
     " STEP_PERIM " <<
