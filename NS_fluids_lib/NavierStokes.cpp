@@ -18040,7 +18040,9 @@ void NavierStokes::volWgtSum(
  int maxint_sum_comp=minint_sum_comp+3*nmat;
 
  int pdrag_sum_comp=maxint_sum_comp+3*nmat;
- int viscodrag_sum_comp=pdrag_sum_comp+3*nmat;
+ int viscousdrag_sum_comp=pdrag_sum_comp+3*nmat;
+ int viscous0drag_sum_comp=viscousdrag_sum_comp+3*nmat;
+ int viscodrag_sum_comp=viscous0drag_sum_comp+3*nmat;
 
  int minden_sum_comp=viscodrag_sum_comp+3*nmat;
  int maxden_sum_comp=minden_sum_comp+2*nmat;
@@ -18058,7 +18060,10 @@ void NavierStokes::volWgtSum(
 
  int torque_sum_comp=LS_cen_sum_comp+3*nmat;
  int ptorque_sum_comp=torque_sum_comp+3*nmat;
- int viscotorque_sum_comp=ptorque_sum_comp+3*nmat;
+ int viscoustorque_sum_comp=ptorque_sum_comp+3*nmat;
+ int viscous0torque_sum_comp=viscoustorque_sum_comp+3*nmat;
+ int viscotorque_sum_comp=viscous0torque_sum_comp+3*nmat;
+
  int step_perim_sum_comp=viscotorque_sum_comp+3*nmat;
 
  int minint_slice=step_perim_sum_comp+nmat;
