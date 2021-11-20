@@ -97,6 +97,8 @@ extern "C" {
       Real* yface,AMREX_ARLIM_P(yfacelo),AMREX_ARLIM_P(yfacehi),
       Real* zface,AMREX_ARLIM_P(zfacelo),AMREX_ARLIM_P(zfacehi),
       Real* cvisc,AMREX_ARLIM_P(cvisclo),AMREX_ARLIM_P(cvischi),
+      Real* c_mat_visc,
+      AMREX_ARLIM_P(c_mat_visclo),AMREX_ARLIM_P(c_mat_vischi),
       int* facevisc_index,
       int* faceheat_index,
       int* ncphys,
