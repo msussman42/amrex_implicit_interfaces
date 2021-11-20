@@ -16733,8 +16733,22 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
   amrex::Error("levelpc mf has incorrect ncomp");
  VOF_Recon_resize(1,SLOPE_RECON_MF);
  debug_ngrow(SLOPE_RECON_MF,1,46);
+
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,47);
  debug_ngrow(CELL_VISC_MF,1,47);
+
+ if (localMF[CELL_VISC_MATERIAL_MF]->nComp()==3*nmat) {
+  // do nothing
+ } else {
+  amrex::Error("GetDrag: CELL_VISC_MATERIAL_MF invalid ncomp");
+ }
+
+ if (localMF[CELL_VISC_MF]->nComp()==1) {
+  // do nothing
+ } else {
+  amrex::Error("GetDrag: CELL_VISC_MF invalid ncomp");
+ }
+
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,48);
  debug_ngrow(DRAG_MF,0,50);
@@ -16890,6 +16904,13 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
   FArrayBox& areaz=(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
 
   FArrayBox& mufab=(*localMF[CELL_VISC_MF])[mfi];
+  FArrayBox& mu_mat_fab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
+  if (mu_mat_fab.nComp()==3*nmat) {
+   // do nothing
+  } else {
+   amrex::Error("mu_mat_fab.nComp()==3*nmat is false");
+  }
+
   FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];
   FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];
   FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];
@@ -16951,6 +16972,8 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
    yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
    zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
    mufab.dataPtr(),ARLIM(mufab.loVect()),ARLIM(mufab.hiVect()),
+   mu_mat_fab.dataPtr(),
+   ARLIM(mu_mat_fab.loVect()),ARLIM(mu_mat_fab.hiVect()),
    &facevisc_index,
    &faceheat_index,
    &ncphys,
@@ -20698,7 +20721,7 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
 
 } // matrix_solveCPP
 
-
+//called from: NavierStokes::sum_integrated_quantities (NS_setup.cpp)
 void
 NavierStokes::volWgtSumALL(
  int post_init_flag,
@@ -20741,6 +20764,7 @@ NavierStokes::volWgtSumALL(
  } else
   amrex::Error("post_init_flag invalid");
 
+   //make_physics_varsALL calls "getStateVISC_ALL"
  make_physics_varsALL(project_option,post_restart_flag,0);
 
   // see <DRAG_COMP.H>
@@ -20786,6 +20810,12 @@ NavierStokes::volWgtSumALL(
  } else
   amrex::Error("expecting NUM_TENSOR_TYPE==2*AMREX_SPACEDIM");
 
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
+ if (localMF[CELL_VISC_MATERIAL_MF]->nComp()==3*nmat) {
+  // do nothing
+ } else {
+  amrex::Error("volWgtSumALL: CELL_VISC_MATERIAL_MF invalid ncomp");
+ }
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
@@ -20852,12 +20882,20 @@ NavierStokes::volWgtSumALL(
      std::cout << "DRAGCOMP_FORCE 3 nmat\n";
     } else if (iq==DRAGCOMP_PFORCE) {
      std::cout << "DRAGCOMP_PFORCE 3 nmat\n";
+    } else if (iq==DRAGCOMP_VISCOUSFORCE) {
+     std::cout << "DRAGCOMP_VISCOUSFORCE 3 nmat\n";
+    } else if (iq==DRAGCOMP_VISCOUS0FORCE) {
+     std::cout << "DRAGCOMP_VISCOUS0FORCE 3 nmat\n";
     } else if (iq==DRAGCOMP_VISCOFORCE) {
      std::cout << "DRAGCOMP_VISCOFORCE 3 nmat\n";
     } else if (iq==DRAGCOMP_TORQUE) {
      std::cout << "DRAGCOMP_TORQUE 3 nmat\n";
     } else if (iq==DRAGCOMP_PTORQUE) {
      std::cout << "DRAGCOMP_PTORQUE 3 nmat\n";
+    } else if (iq==DRAGCOMP_VISCOUSTORQUE) {
+     std::cout << "DRAGCOMP_VISCOUSTORQUE 3 nmat\n";
+    } else if (iq==DRAGCOMP_VISCOUS0TORQUE) {
+     std::cout << "DRAGCOMP_VISCOUS0TORQUE 3 nmat\n";
     } else if (iq==DRAGCOMP_VISCOTORQUE) {
      std::cout << "DRAGCOMP_VISCOTORQUE 3 nmat\n";
     } else if (iq==DRAGCOMP_COM) {

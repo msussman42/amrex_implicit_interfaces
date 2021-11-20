@@ -1682,6 +1682,8 @@ stop
        yface,DIMS(yface), &
        zface,DIMS(zface), &
        cvisc,DIMS(cvisc), &
+       c_mat_visc, &
+       DIMS(c_mat_visc), &
        facevisc_index, &
        faceheat_index, &
        ncphys, &
@@ -1710,7 +1712,6 @@ stop
       use probf90_module
       use godunov_module
 
-
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: nparts
@@ -1730,7 +1731,8 @@ stop
       INTEGER_T, intent(in) :: gravdir
       INTEGER_T, intent(in) :: ntenvisco
       REAL_T, intent(in) :: visc_coef
-      INTEGER_T, intent(in) :: nmat,rzflag
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: rzflag
       REAL_T, intent(in) :: time
       REAL_T presmag
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
@@ -1752,7 +1754,9 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(xface)
       INTEGER_T, intent(in) :: DIMDEC(yface)
       INTEGER_T, intent(in) :: DIMDEC(zface)
+
       INTEGER_T, intent(in) :: DIMDEC(cvisc)
+      INTEGER_T, intent(in) :: DIMDEC(c_mat_visc)
 
       INTEGER_T, intent(in) :: DIMDEC(solxfab)
       INTEGER_T, intent(in) :: DIMDEC(solyfab)
@@ -1789,8 +1793,16 @@ stop
       REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: zface(DIMV(zface),ncphys)
       REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
+
       REAL_T, intent(in),target :: cvisc(DIMV(cvisc))
       REAL_T, pointer :: cvisc_ptr(D_DECL(:,:,:))
+
+        ! c_mat_visc initialized in fort_derviscosity
+        ! 1..nmat viscosity
+        ! nmat+1 ... 2*nmat viscoelastic coeff.
+        ! 2*nmat+1 ... 3*nmat modtime
+      REAL_T, intent(in),target :: c_mat_visc(DIMV(c_mat_visc),3*nmat)
+      REAL_T, pointer :: c_mat_visc_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in),target :: solxfab(DIMV(solxfab),nparts_def*SDIM)
       REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
@@ -1828,6 +1840,7 @@ stop
       REAL_T lsright(nmat)
       REAL_T pressure_load(3)
       REAL_T viscous_stress_load(3)
+      REAL_T viscous0_stress_load(3)
       REAL_T visco_stress_load(3)
 
       REAL_T xsten(-3:3,SDIM)
@@ -1849,17 +1862,20 @@ stop
       REAL_T global_centroid(SDIM)
       REAL_T rvec(3),gravvector(3),rcross(3)
       REAL_T pres_rcross(3)
-      REAL_T visc_rcross(3)
+      REAL_T viscous0_rcross(3)
+      REAL_T viscous_rcross(3)
       REAL_T visco_rcross(3)
       REAL_T grav_localtorque(SDIM)
       REAL_T pres_localtorque(SDIM)
-      REAL_T visc_localtorque(SDIM)
+      REAL_T viscous_localtorque(SDIM)
+      REAL_T viscous0_localtorque(SDIM)
       REAL_T visco_localtorque(SDIM)
       REAL_T Q(3,3)
       REAL_T nsolid(3)
       INTEGER_T mask_cell
       REAL_T ls_sort(nmat)
-      REAL_T mu
+      REAL_T mu_0 ! viscosity for ambient case.
+      REAL_T mu_non_ambient ! viscosity for non ambient case.
       REAL_T delx
       INTEGER_T partid
       INTEGER_T ibase
@@ -1879,7 +1895,10 @@ stop
       xface_ptr=>xface
       yface_ptr=>yface
       zface_ptr=>zface
+
       cvisc_ptr=>cvisc
+      c_mat_visc_ptr=>c_mat_visc
+
       solxfab_ptr=>solxfab
       solyfab_ptr=>solyfab
       solzfab_ptr=>solzfab
@@ -1923,7 +1942,9 @@ stop
       call checkbound_array(fablo,fabhi,xface_ptr,0,0,1258)
       call checkbound_array(fablo,fabhi,yface_ptr,0,1,1259)
       call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,1261)
+
       call checkbound_array1(fablo,fabhi,cvisc_ptr,0,-1,1262)
+      call checkbound_array(fablo,fabhi,c_mat_visc_ptr,1,-1,1262)
 
       call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,6604)
       call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,6604)
@@ -1956,11 +1977,11 @@ stop
         print *,"denconst invalid"
         stop
        endif
-       mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
-       if (mu.ge.zero) then
+       mu_0=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
+       if (mu_0.ge.zero) then
         ! do nothing
        else
-        print *,"viscconst invalid"
+        print *,"mu_0=get_user_viscconst invalid"
         stop
        endif
       enddo
@@ -2426,23 +2447,37 @@ stop
                stop
               endif
 
-              mu=get_user_viscconst(im_primary, &
+              mu_0=get_user_viscconst(im_primary, &
                 fort_denconst(im_primary),fort_tempconst(im_primary))
+              mu_non_ambient= &
+                c_mat_visc(D_DECL(icell,jcell,kcell),im_primary)
+              if ((mu_0.ge.zero).and.(mu_non_ambient.ge.zero)) then
+               ! do nothing
+              else
+               print *,"mu_0 or mu_non_ambient invalid"
+               stop
+              endif
 
               do j1=1,3
                viscous_stress_load(j1)=zero
+               viscous0_stress_load(j1)=zero
                visco_stress_load(j1)=zero
                pressure_load(j1)=zero
                do i1=1,3
+                viscous0_stress_load(j1)= &
+                  viscous0_stress_load(j1)- &
+                    mu_0*visc_coef* &
+                    (gradu(i1,j1)+gradu(j1,i1))*nsolid(i1)
                 viscous_stress_load(j1)= &
                   viscous_stress_load(j1)- &
-                    mu*visc_coef* &
+                    mu_non_ambient*visc_coef* &
                     (gradu(i1,j1)+gradu(j1,i1))*nsolid(i1)
                 visco_stress_load(j1)= &
                   visco_stress_load(j1)- &
                    Q(i1,j1)*nsolid(i1)
                enddo ! i1=1,3
                pressure_load(j1)=presmag*nsolid(j1)*facearea
+               viscous0_stress_load(j1)=viscous0_stress_load(j1)*facearea
                viscous_stress_load(j1)=viscous_stress_load(j1)*facearea
                visco_stress_load(j1)=visco_stress_load(j1)*facearea
               enddo ! j1=1,3
@@ -2456,25 +2491,36 @@ stop
               if (SDIM.eq.2) then
                rvec(3)=zero
                viscous_stress_load(3)=zero
+               viscous0_stress_load(3)=zero
                visco_stress_load(3)=zero
                pressure_load(3)=zero
               endif
               call crossprod(rvec,visco_stress_load,visco_rcross)
-              call crossprod(rvec,viscous_stress_load,visc_rcross)
+              call crossprod(rvec,viscous0_stress_load,viscous0_rcross)
+              call crossprod(rvec,viscous_stress_load,viscous_rcross)
               call crossprod(rvec,pressure_load,pres_rcross)
               do dir=1,SDIM
-               visc_localtorque(dir)=zero
+               viscous_localtorque(dir)=zero
+               viscous0_localtorque(dir)=zero
                visco_localtorque(dir)=zero
                pres_localtorque(dir)=zero
               enddo
-              visc_localtorque(1)=visc_rcross(3) ! x-y plane of rotation
+
+              viscous_localtorque(1)=viscous_rcross(3) ! x-y plane of rotation
+              viscous0_localtorque(1)=viscous0_rcross(3) ! x-y plane of rotation
               visco_localtorque(1)=visco_rcross(3) ! x-y plane of rotation
               pres_localtorque(1)=pres_rcross(3) ! x-y plane of rotation
+
               if (SDIM.eq.3) then
-               visc_localtorque(2)=visc_rcross(1) ! y-z plane of rotation
+
+               viscous_localtorque(2)=viscous_rcross(1) !y-z plane of rotation
+               viscous0_localtorque(2)=viscous0_rcross(1)!y-z plane of rotation
                visco_localtorque(2)=visco_rcross(1) ! y-z plane of rotation
                pres_localtorque(2)=pres_rcross(1) ! y-z plane of rotation
-               visc_localtorque(SDIM)=visc_rcross(2) ! x-z plane of rotation
+
+               viscous_localtorque(SDIM)=viscous_rcross(2)!x-z plane of rotation
+               viscous0_localtorque(SDIM)= &
+                       viscous0_rcross(2)!x-z plane of rotation
                visco_localtorque(SDIM)=visco_rcross(2) ! x-z plane of rotation
                pres_localtorque(SDIM)=pres_rcross(2) ! x-z plane of rotation
               endif
@@ -2511,6 +2557,24 @@ stop
                localsum(ibase)=localsum(ibase)+ &
                 pressure_load(dir)
 
+               ibase=DRAGCOMP_VISCOUSFORCE+3*(im_test-1)+dir
+
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
+                drag(D_DECL(icell,jcell,kcell),ibase)+ &
+                viscous_stress_load(dir)
+
+               localsum(ibase)=localsum(ibase)+ &
+                viscous_stress_load(dir)
+
+               ibase=DRAGCOMP_VISCOUS0FORCE+3*(im_test-1)+dir
+
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
+                drag(D_DECL(icell,jcell,kcell),ibase)+ &
+                viscous0_stress_load(dir)
+
+               localsum(ibase)=localsum(ibase)+ &
+                viscous0_stress_load(dir)
+
                ibase=DRAGCOMP_VISCOFORCE+3*(im_test-1)+dir
 
                drag(D_DECL(icell,jcell,kcell),ibase)= &
@@ -2534,12 +2598,12 @@ stop
                drag(D_DECL(icell,jcell,kcell),ibase)= &
                 drag(D_DECL(icell,jcell,kcell),ibase)+ &
                 pres_localtorque(dir)+ &
-                visc_localtorque(dir)+ &
+                viscous_localtorque(dir)+ &
                 visco_localtorque(dir)
 
                localsum(ibase)=localsum(ibase)+ &
                 pres_localtorque(dir)+ &
-                visc_localtorque(dir)+ &
+                viscous_localtorque(dir)+ &
                 visco_localtorque(dir)
 
                ibase=DRAGCOMP_PTORQUE+3*(im_test-1)+dir
@@ -2550,6 +2614,24 @@ stop
 
                localsum(ibase)=localsum(ibase)+ &
                 pres_localtorque(dir)
+
+               ibase=DRAGCOMP_VISCOUSTORQUE+3*(im_test-1)+dir
+
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
+                drag(D_DECL(icell,jcell,kcell),ibase)+ &
+                viscous_localtorque(dir)
+
+               localsum(ibase)=localsum(ibase)+ &
+                viscous_localtorque(dir)
+
+               ibase=DRAGCOMP_VISCOUS0TORQUE+3*(im_test-1)+dir
+
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
+                drag(D_DECL(icell,jcell,kcell),ibase)+ &
+                viscous0_localtorque(dir)
+
+               localsum(ibase)=localsum(ibase)+ &
+                viscous0_localtorque(dir)
 
                ibase=DRAGCOMP_VISCOTORQUE+3*(im_test-1)+dir
 
