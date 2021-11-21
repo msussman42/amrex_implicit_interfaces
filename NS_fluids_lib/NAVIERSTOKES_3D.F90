@@ -6610,6 +6610,8 @@ END SUBROUTINE SIMP
       REAL_T cengrid(SDIM)
       REAL_T xboundary(SDIM)
 
+      INTEGER_T drag_flag
+
       INTEGER_T filler_comp,FE_sum_comp
 
       INTEGER_T drag_sum_comp
@@ -6853,7 +6855,7 @@ END SUBROUTINE SIMP
       call checkbound_array(fablo,fabhi,lsfab_ptr,2,-1,411) 
       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,411) 
       call checkbound_array1(fablo,fabhi,mask_ptr,2,-1,411) 
-      call checkbound_array(fablo,fabhi,drag_ptr,0,-1,413) 
+      call checkbound_array(fablo,fabhi,drag_ptr,4,-1,413) 
       call checkbound_array(fablo,fabhi,slopes_ptr,2,-1,413) 
       call checkbound_array(fablo,fabhi,den_ptr,1,-1,413) 
       call checkbound_array(fablo,fabhi,vel_ptr,1,-1,413) 
@@ -7271,64 +7273,75 @@ END SUBROUTINE SIMP
          local_result(idest+2)=local_result(idest+2)+volgrid
         endif
 
-        local_comp=1
-        do im=1,nmat
-        do dir=1,3
-         idest=drag_sum_comp+local_comp
-         local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),DRAGCOMP_FORCE+local_comp)
+        drag_flag=NINT(drag(D_DECL(i,j,k),DRAGCOMP_FLAG))
 
-         idest=pdrag_sum_comp+local_comp
-         local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),DRAGCOMP_PFORCE+local_comp)
+        if (drag_flag.eq.1) then
 
-         idest=viscousdrag_sum_comp+local_comp
-         local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),DRAGCOMP_VISCOUSFORCE+local_comp)
+         local_comp=1
+         do im=1,nmat
+         do dir=1,3
+          idest=drag_sum_comp+local_comp
+          local_result(idest)=local_result(idest)+ &
+            drag(D_DECL(i,j,k),DRAGCOMP_FORCE+local_comp)
 
-         idest=viscous0drag_sum_comp+local_comp
-         local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),DRAGCOMP_VISCOUS0FORCE+local_comp)
+          idest=pdrag_sum_comp+local_comp
+          local_result(idest)=local_result(idest)+ &
+            drag(D_DECL(i,j,k),DRAGCOMP_PFORCE+local_comp)
 
-         idest=viscodrag_sum_comp+local_comp
-         local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),DRAGCOMP_VISCOFORCE+local_comp)
+          idest=viscousdrag_sum_comp+local_comp
+          local_result(idest)=local_result(idest)+ &
+            drag(D_DECL(i,j,k),DRAGCOMP_VISCOUSFORCE+local_comp)
 
-         idest=torque_sum_comp+local_comp
-         local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),DRAGCOMP_TORQUE+local_comp)
+          idest=viscous0drag_sum_comp+local_comp
+          local_result(idest)=local_result(idest)+ &
+            drag(D_DECL(i,j,k),DRAGCOMP_VISCOUS0FORCE+local_comp)
 
-         idest=ptorque_sum_comp+local_comp
-         local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),DRAGCOMP_PTORQUE+local_comp)
+          idest=viscodrag_sum_comp+local_comp
+          local_result(idest)=local_result(idest)+ &
+            drag(D_DECL(i,j,k),DRAGCOMP_VISCOFORCE+local_comp)
 
-         idest=viscoustorque_sum_comp+local_comp
-         local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),DRAGCOMP_VISCOUSTORQUE+local_comp)
+          idest=torque_sum_comp+local_comp
+          local_result(idest)=local_result(idest)+ &
+            drag(D_DECL(i,j,k),DRAGCOMP_TORQUE+local_comp)
 
-         idest=viscous0torque_sum_comp+local_comp
-         local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),DRAGCOMP_VISCOUS0TORQUE+local_comp)
+          idest=ptorque_sum_comp+local_comp
+          local_result(idest)=local_result(idest)+ &
+            drag(D_DECL(i,j,k),DRAGCOMP_PTORQUE+local_comp)
 
-         idest=viscotorque_sum_comp+local_comp
-         local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),DRAGCOMP_VISCOTORQUE+local_comp)
+          idest=viscoustorque_sum_comp+local_comp
+          local_result(idest)=local_result(idest)+ &
+            drag(D_DECL(i,j,k),DRAGCOMP_VISCOUSTORQUE+local_comp)
 
-         idest=step_perim_vector_sum_comp+local_comp
-         local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),DRAGCOMP_PERIM_VECTOR+local_comp)
+          idest=viscous0torque_sum_comp+local_comp
+          local_result(idest)=local_result(idest)+ &
+            drag(D_DECL(i,j,k),DRAGCOMP_VISCOUS0TORQUE+local_comp)
 
-         local_comp=local_comp+1
-        enddo ! dir=1..3
-        enddo ! im=1..nmat
+          idest=viscotorque_sum_comp+local_comp
+          local_result(idest)=local_result(idest)+ &
+            drag(D_DECL(i,j,k),DRAGCOMP_VISCOTORQUE+local_comp)
 
+          idest=step_perim_vector_sum_comp+local_comp
+          local_result(idest)=local_result(idest)+ &
+            drag(D_DECL(i,j,k),DRAGCOMP_PERIM_VECTOR+local_comp)
 
+          local_comp=local_comp+1
+         enddo ! dir=1..3
+         enddo ! im=1..nmat
 
-        do im=1,nmat
-         idest=step_perim_sum_comp+im
-         local_result(idest)=local_result(idest)+ &
-          drag(D_DECL(i,j,k),DRAGCOMP_PERIM+im)
-        enddo
+         do im=1,nmat
+          idest=step_perim_sum_comp+im
+          local_result(idest)=local_result(idest)+ &
+           drag(D_DECL(i,j,k),DRAGCOMP_PERIM+im)
+         enddo
+
+        else if (drag_flag.eq.2) then
+         ! do not increment
+        else if (drag_flag.eq.0) then
+         ! do not increment
+        else
+         print *,"drag_flag invalid"
+         stop
+        endif
 
         do im=1,nmat
 
