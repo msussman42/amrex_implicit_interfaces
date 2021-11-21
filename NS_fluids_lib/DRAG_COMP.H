@@ -14,7 +14,14 @@
 #define DRAGCOMP_COM (DRAGCOMP_VISCOTORQUE+3*num_materials)
 #define DRAGCOMP_MOMINERTIA (DRAGCOMP_COM+3*num_materials)
 #define DRAGCOMP_MASS (DRAGCOMP_MOMINERTIA+3*num_materials)
-#define DRAGCOMP_PERIM (DRAGCOMP_MASS+num_materials)
-#define N_DRAG (DRAGCOMP_PERIM+num_materials)
+#define DRAGCOMP_PERIM_VECTOR (DRAGCOMP_MASS+num_materials)
+#define DRAGCOMP_PERIM (DRAGCOMP_PERIM_VECTOR+3*num_materials)
+#if (0)
+DRAGCOMP_FLAG=0 => drag uninitialized
+DRAGCOMP_FLAG=1 => drag initialized
+DRAGCOMP_FLAG=2 => drag extended
+#endif
+#define DRAGCOMP_FLAG (DRAGCOMP_PERIM+num_materials)
+#define N_DRAG (DRAGCOMP_FLAG+num_materials)
 
 #endif

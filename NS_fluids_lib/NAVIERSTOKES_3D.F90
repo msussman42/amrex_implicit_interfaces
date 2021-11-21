@@ -6630,11 +6630,13 @@ END SUBROUTINE SIMP
       INTEGER_T LS_F_sum_comp,LS_cen_sum_comp
 
       INTEGER_T torque_sum_comp
+
       INTEGER_T ptorque_sum_comp
       INTEGER_T viscoustorque_sum_comp
       INTEGER_T viscous0torque_sum_comp
       INTEGER_T viscotorque_sum_comp
 
+      INTEGER_T step_perim_vector_sum_comp
       INTEGER_T step_perim_sum_comp
 
       INTEGER_T minint_slice
@@ -6778,12 +6780,14 @@ END SUBROUTINE SIMP
       LS_cen_sum_comp=LS_F_sum_comp+nmat
 
       torque_sum_comp=LS_cen_sum_comp+3*nmat
+
       ptorque_sum_comp=torque_sum_comp+3*nmat
       viscoustorque_sum_comp=ptorque_sum_comp+3*nmat
       viscous0torque_sum_comp=viscoustorque_sum_comp+3*nmat
       viscotorque_sum_comp=viscous0torque_sum_comp+3*nmat
 
-      step_perim_sum_comp=viscotorque_sum_comp+3*nmat
+      step_perim_vector_sum_comp=viscotorque_sum_comp+3*nmat
+      step_perim_sum_comp=step_perim_vector_sum_comp+3*nmat
 
       minint_slice=step_perim_sum_comp+nmat
       maxint_slice=minint_slice+nmat
@@ -7310,9 +7314,16 @@ END SUBROUTINE SIMP
          local_result(idest)=local_result(idest)+ &
            drag(D_DECL(i,j,k),DRAGCOMP_VISCOTORQUE+local_comp)
 
+         idest=step_perim_vector_sum_comp+local_comp
+         local_result(idest)=local_result(idest)+ &
+           drag(D_DECL(i,j,k),DRAGCOMP_PERIM_VECTOR+local_comp)
+
          local_comp=local_comp+1
         enddo ! dir=1..3
         enddo ! im=1..nmat
+
+
+
         do im=1,nmat
          idest=step_perim_sum_comp+im
          local_result(idest)=local_result(idest)+ &

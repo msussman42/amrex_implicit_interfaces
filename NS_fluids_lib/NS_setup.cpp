@@ -2121,12 +2121,14 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  int LS_cen_sum_comp=LS_F_sum_comp+nmat;
 
  int torque_sum_comp=LS_cen_sum_comp+3*nmat;
+
  int ptorque_sum_comp=torque_sum_comp+3*nmat;
  int viscoustorque_sum_comp=ptorque_sum_comp+3*nmat;
  int viscous0torque_sum_comp=viscoustorque_sum_comp+3*nmat;
  int viscotorque_sum_comp=viscous0torque_sum_comp+3*nmat;
 
- int step_perim_sum_comp=viscotorque_sum_comp+3*nmat;
+ int step_perim_vector_sum_comp=viscotorque_sum_comp+3*nmat;
+ int step_perim_sum_comp=step_perim_vector_sum_comp+3*nmat;
 
  int minint_slice=step_perim_sum_comp+nmat;
  int maxint_slice=minint_slice+nmat;
@@ -2912,6 +2914,17 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " VISCOELASTICTORQUE " <<
      sumdata[viscotorque_sum_comp+local_counter] << '\n';
+    local_counter++;
+   }
+  }
+
+
+  local_counter=0;
+  for (int im=0;im<nmat;im++) {
+   for (int dir=0;dir<3;dir++) {
+    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
+     " DIR= " << dir << " STEP_PERIM_VECTOR " <<
+     sumdata[step_perim_vector_sum_comp+local_counter] << '\n';
     local_counter++;
    }
   }
