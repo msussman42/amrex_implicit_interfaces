@@ -16751,7 +16751,7 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
 
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,48);
- debug_ngrow(DRAG_MF,0,50);
+ debug_ngrow(DRAG_MF,ngrow_distance,50);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2);
@@ -18087,7 +18087,8 @@ void NavierStokes::volWgtSum(
  int viscous0torque_sum_comp=viscoustorque_sum_comp+3*nmat;
  int viscotorque_sum_comp=viscous0torque_sum_comp+3*nmat;
 
- int step_perim_sum_comp=viscotorque_sum_comp+3*nmat;
+ int step_perim_vector_sum_comp=viscotorque_sum_comp+3*nmat;
+ int step_perim_sum_comp=step_perim_vector_sum_comp+3*nmat;
 
  int minint_slice=step_perim_sum_comp+nmat;
  int maxint_slice=minint_slice+nmat;
@@ -18155,7 +18156,7 @@ void NavierStokes::volWgtSum(
  debug_ngrow(SLOPE_RECON_MF,2,54);
  debug_ngrow(CELLTENSOR_MF,1,54);
 
- debug_ngrow(DRAG_MF,0,50);
+ debug_ngrow(DRAG_MF,ngrow_distance,50);
  if (localMF[DRAG_MF]->nComp()!=N_DRAG)
   amrex::Error("drag ncomp invalid");
 
@@ -20768,7 +20769,7 @@ NavierStokes::volWgtSumALL(
  make_physics_varsALL(project_option,post_restart_flag,0);
 
   // see <DRAG_COMP.H>
- allocate_array(0,N_DRAG,-1,DRAG_MF);
+ allocate_array(ngrow_distance,N_DRAG,-1,DRAG_MF);
 
  Vector<Real> integrated_quantities;
  integrated_quantities.resize(N_DRAG); 
@@ -20947,7 +20948,7 @@ NavierStokes::volWgtSumALL(
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  amrex::Error("num_materials_viscoelastic invalid:GetDragALL");
+  amrex::Error("num_materials_viscoelastic invalid:volWgtSumALL");
 
  delete_array(DRAG_MF);
  delete_array(CELLTENSOR_MF);
