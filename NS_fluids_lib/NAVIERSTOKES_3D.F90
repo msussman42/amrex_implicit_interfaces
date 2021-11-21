@@ -6614,6 +6614,7 @@ END SUBROUTINE SIMP
 
       INTEGER_T filler_comp,FE_sum_comp
 
+      INTEGER_T bodydrag_sum_comp
       INTEGER_T drag_sum_comp
 
       INTEGER_T minint_sum_comp,maxint_sum_comp
@@ -6631,6 +6632,7 @@ END SUBROUTINE SIMP
       INTEGER_T kinetic_energy_comp
       INTEGER_T LS_F_sum_comp,LS_cen_sum_comp
 
+      INTEGER_T bodytorque_sum_comp
       INTEGER_T torque_sum_comp
 
       INTEGER_T ptorque_sum_comp
@@ -6757,7 +6759,8 @@ END SUBROUTINE SIMP
       filler_comp=0
       FE_sum_comp=filler_comp+1
 
-      drag_sum_comp=FE_sum_comp+2*nmat
+      bodydrag_sum_comp=FE_sum_comp+2*nmat
+      drag_sum_comp=bodydrag_sum_comp+3*nmat
 
       minint_sum_comp=drag_sum_comp+3*nmat
       maxint_sum_comp=minint_sum_comp+3*nmat
@@ -6781,7 +6784,8 @@ END SUBROUTINE SIMP
       LS_F_sum_comp=kinetic_energy_comp+nmat
       LS_cen_sum_comp=LS_F_sum_comp+nmat
 
-      torque_sum_comp=LS_cen_sum_comp+3*nmat
+      bodytorque_sum_comp=LS_cen_sum_comp+3*nmat
+      torque_sum_comp=bodytorque_sum_comp+3*nmat
 
       ptorque_sum_comp=torque_sum_comp+3*nmat
       viscoustorque_sum_comp=ptorque_sum_comp+3*nmat
@@ -7274,6 +7278,22 @@ END SUBROUTINE SIMP
         endif
 
         drag_flag=NINT(drag(D_DECL(i,j,k),DRAGCOMP_FLAG))
+
+        local_comp=1
+        do im=1,nmat
+        do dir=1,3
+
+         idest=bodydrag_sum_comp+local_comp
+         local_result(idest)=local_result(idest)+ &
+           drag(D_DECL(i,j,k),DRAGCOMP_BODYFORCE+local_comp)
+
+         idest=bodytorque_sum_comp+local_comp
+         local_result(idest)=local_result(idest)+ &
+            drag(D_DECL(i,j,k),DRAGCOMP_BODYTORQUE+local_comp)
+
+         local_comp=local_comp+1
+        enddo ! dir=1..3
+        enddo ! im=1..nmat
 
         if (drag_flag.eq.1) then
 

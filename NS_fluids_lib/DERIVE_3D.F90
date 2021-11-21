@@ -2153,8 +2153,10 @@ stop
           endif 
 
           do dir=1,SDIM
-           ibase=DRAGCOMP_FORCE+3*(im_test-1)+dir
+           ibase=DRAGCOMP_BODYFORCE+3*(im_test-1)+dir
+
            localsum(ibase)=localsum(ibase)+gravvector(dir)
+
            drag(D_DECL(icell,jcell,kcell),ibase)= &
              drag(D_DECL(icell,jcell,kcell),ibase)+gravvector(dir)
           enddo
@@ -2185,9 +2187,11 @@ stop
            dirend=3
           endif
  
-          ibase=DRAGCOMP_TORQUE+3*(im_test-1)
+          ibase=DRAGCOMP_BODYTORQUE+3*(im_test-1)
           do dir=1,dirend
+
            localsum(ibase+dir)=localsum(ibase+dir)+grav_localtorque(dir)
+
            drag(D_DECL(icell,jcell,kcell),ibase+dir)= &
              drag(D_DECL(icell,jcell,kcell),ibase+dir)+grav_localtorque(dir)
           enddo
