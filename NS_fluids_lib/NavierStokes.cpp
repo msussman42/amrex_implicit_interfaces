@@ -18057,7 +18057,8 @@ void NavierStokes::volWgtSum(
  int filler_comp=0;
  int FE_sum_comp=filler_comp+1;
 
- int drag_sum_comp=FE_sum_comp+2*nmat;
+ int bodydrag_sum_comp=FE_sum_comp+2*nmat;
+ int drag_sum_comp=bodydrag_sum_comp+3*nmat;
 
  int minint_sum_comp=drag_sum_comp+3*nmat;
  int maxint_sum_comp=minint_sum_comp+3*nmat;
@@ -18081,7 +18082,9 @@ void NavierStokes::volWgtSum(
  int LS_F_sum_comp=kinetic_energy_sum_comp+nmat;
  int LS_cen_sum_comp=LS_F_sum_comp+nmat;
 
- int torque_sum_comp=LS_cen_sum_comp+3*nmat;
+ int bodytorque_sum_comp=LS_cen_sum_comp+3*nmat;
+ int torque_sum_comp=bodytorque_sum_comp+3*nmat;
+
  int ptorque_sum_comp=torque_sum_comp+3*nmat;
  int viscoustorque_sum_comp=ptorque_sum_comp+3*nmat;
  int viscous0torque_sum_comp=viscoustorque_sum_comp+3*nmat;

@@ -2096,7 +2096,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  int filler_comp=0;
  int FE_sum_comp=filler_comp+1;
 
- int drag_sum_comp=FE_sum_comp+2*nmat;
+ int bodydrag_sum_comp=FE_sum_comp+2*nmat;
+ int drag_sum_comp=bodydrag_sum_comp+3*nmat;
 
  int minint_sum_comp=drag_sum_comp+3*nmat;
  int maxint_sum_comp=minint_sum_comp+3*nmat;
@@ -2120,7 +2121,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
  int LS_F_sum_comp=kinetic_energy_sum_comp+nmat;
  int LS_cen_sum_comp=LS_F_sum_comp+nmat;
 
- int torque_sum_comp=LS_cen_sum_comp+3*nmat;
+ int bodytorque_sum_comp=LS_cen_sum_comp+3*nmat;
+ int torque_sum_comp=bodytorque_sum_comp+3*nmat;
 
  int ptorque_sum_comp=torque_sum_comp+3*nmat;
  int viscoustorque_sum_comp=ptorque_sum_comp+3*nmat;
@@ -2758,6 +2760,16 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
    }
   }
 
+  local_counter=0;
+  for (int im=0;im<nmat;im++) {
+   for (int dir=0;dir<3;dir++) {
+    std::cout << "TIME= "<<upper_slab_time<<" im= " << im << 
+     " DIR= " << dir << " BODY DRAG " << 
+     sumdata[bodydrag_sum_comp+local_counter] << '\n';
+    local_counter++;
+   }
+  }
+
   if ((probtype==55)&&(axis_dir==5)&&(AMREX_SPACEDIM==2)&&(nmat==4)) {
    std::cout << "TIME= "<<upper_slab_time<<" F1+F3= " << 
      F_MAT[0]+F_MAT[2] << '\n';
@@ -2883,11 +2895,33 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   for (int im=0;im<nmat;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
+     " DIR= " << dir << " BODYTORQUE " <<
+     sumdata[bodytorque_sum_comp+local_counter] << '\n';
+    local_counter++;
+   }
+  }
+
+  local_counter=0;
+  for (int im=0;im<nmat;im++) {
+   for (int dir=0;dir<3;dir++) {
+    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
+     " DIR= " << dir << " TORQUE " <<
+     sumdata[torque_sum_comp+local_counter] << '\n';
+    local_counter++;
+   }
+  }
+
+
+  local_counter=0;
+  for (int im=0;im<nmat;im++) {
+   for (int dir=0;dir<3;dir++) {
+    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " PTORQUE " <<
      sumdata[ptorque_sum_comp+local_counter] << '\n';
     local_counter++;
    }
   }
+
   local_counter=0;
   for (int im=0;im<nmat;im++) {
    for (int dir=0;dir<3;dir++) {
