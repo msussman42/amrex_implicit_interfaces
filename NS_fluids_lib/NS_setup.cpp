@@ -2051,6 +2051,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   // 0 empty
   // F,E  2 x nmat
   //
+  // bodydrag (3 x nmat comp)
   // drag (3 x nmat comp)
   //
   // min interface location 3 x nmat  (x1,y1,z1   x2,y2,z2  ...)
@@ -2075,7 +2076,9 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
   // LS F  nmat
   // LS centroid 3 x nmat (x1,y1,z1  x2,y2,z2 ... )
   //
+  // bodytorque (3 x nmat comp)
   // torque (3 x nmat comp)
+  //
   // pressure torque (3 x nmat comp)
   // viscous torque (3 x nmat comp)
   // viscous0 torque (3 x nmat comp)
