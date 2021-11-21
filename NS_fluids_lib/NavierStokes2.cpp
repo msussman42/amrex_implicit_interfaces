@@ -9558,7 +9558,9 @@ void NavierStokes::getStateVISC() {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-      // in: DERIVE_3D.F90
+      // declared in: DERIVE_3D.F90
+      // WALE model and "viscconst_eddy" effects are added to "viscfab"
+      // (idx==CELL_VISC_MATERIAL_MF)
     fort_derturbvisc(
       &les_model[im],
       &level,
