@@ -38,6 +38,7 @@ CTML_FBC = FALSE
 # cd ~sussman/lammps_run
 # ./lmp_serial -in rod.LAMMPS_script
 # VMD to visualize "rod_LAMMPS_atom.dcd"
+#
 # CYGWIN:
 # CYGWIN=TRUE
 #  (causes: -Wl,--image-base -Wl,0x10000000)
