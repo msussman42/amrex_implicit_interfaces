@@ -1750,6 +1750,8 @@ subroutine wallfunc_thermocorrelation( &
    REAL_T,parameter :: local_pi=4.0*atan(1.0d0)
    REAL_T,parameter :: R=0.1016d0 ! for ZBOT
    INTEGER_T :: turb_flag  ! 1 for turb  0 for laminar
+   REAL_T :: Ra,Gr,Pr
+   REAL_T :: nu
 
    if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
     print *,"im_fluid invalid in wallfunc_newtonsmethod"
@@ -1758,13 +1760,15 @@ subroutine wallfunc_thermocorrelation( &
 
    mu_w=fort_viscconst(im_fluid) 
    rho_w=fort_denconst(im_fluid)
-
+  
    if (rho_w.gt.zero) then
     ! do nothing
    else
     print *,"rho_w invalid"
     stop
    endif
+   
+   nu=mu_w/rho_w
 
    thermal_conductivity=fort_heatviscconst(im_fluid)
    Cp=fort_stiffCP(im_fluid)
@@ -1780,6 +1784,17 @@ subroutine wallfunc_thermocorrelation( &
    gravity_local=abs(gravity)
    expansion_coefficient=fort_DrhoDT(im_fluid) ! units: 1/temperature
 
+   Ra=gravity_local*expansion_coefficient* &
+       (temperature_wall-temperature_image)*(xi**3.0)/(nu*thermal_diffusivity)
+   if(Ra.lt.1.0e+9)then
+     turb_flag=0
+   elseif(Ra.ge.1.0e+9)then
+     turb_flag=1
+   else
+     print *,"Ra number invalid"
+     stop
+   endif
+
    if (mu_w.eq.viscosity_molecular) then
     ! do nothing
    else
@@ -1793,10 +1808,10 @@ subroutine wallfunc_thermocorrelation( &
     stop
    endif
 
-   Pr= mu_w/thermal_diffusivity
+   Pr= nu/thermal_diffusivity
    Gr= gravity_local*expansion_coefficient*(temperature_wall-temperature_image)* &
-                      (xi**(3.0d0))/(mu_w**2.0d0)
-   vtemp=1.185d0*mu_w/xi*(Gr/(1+0.494*Pr**(2.0d0/3.0d0)))**0.5d0
+                      (xi**(3.0d0))/(nu**2.0d0)
+   vtemp=1.185d0*nu/xi*(Gr/(1+0.494*Pr**(2.0d0/3.0d0)))**0.5d0
 
    if(turb_flag.eq.1)then
     dtemp=xi*0.565*((1+0.494d0*Pr**(2.0d0/3.0d0))/Gr)**(0.1d0)/Pr**(8.0d0/15.0d0)
