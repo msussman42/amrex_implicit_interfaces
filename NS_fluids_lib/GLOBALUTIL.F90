@@ -1335,7 +1335,7 @@ contains
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
-        viscosity_eddy, & ! intent(in)      
+        viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
         tau_w, & ! intent(out)
         im_fluid, &  ! intent(in)
@@ -1349,7 +1349,7 @@ contains
       REAL_T, intent(in) :: temperature_image
       REAL_T, intent(in) :: temperature_wall
       REAL_T, intent(in) :: viscosity_molecular
-      REAL_T, intent(in) :: viscosity_eddy
+      REAL_T, intent(in) :: viscosity_eddy_wall
       REAL_T, intent(in) :: y !delta_r
       REAL_T, intent(in) :: critical_length
       REAL_T, intent(out) :: tau_w ! wall shear stress
@@ -1406,10 +1406,11 @@ contains
        print *,"mu_w.eq.viscosity_molecular == false"
        stop
       endif
-      if (viscosity_eddy.eq.fort_viscconst_eddy(im_fluid)) then
+      if (viscosity_eddy_wall.eq.fort_viscconst_eddy_wall(im_fluid)) then
        ! do nothing
       else
-       print *,"viscosity_eddy.eq.fort_viscconst_eddy(im_fluid) == false"
+       print *,"viscosity_eddy_wall.eq.fort_viscconst_eddy_wall(im_fluid)"
+       print *,"evaluates to false."
        stop
       endif
 
@@ -1452,7 +1453,7 @@ contains
       tau_w = rho_w*u_tau**2
 
        ! sanity check
-      ughost_tngt_local=u-tau_w*y/(viscosity_molecular+viscosity_eddy)
+      ughost_tngt_local=u-tau_w*y/(viscosity_molecular+viscosity_eddy_wall)
 
       predict_deriv_utan=abs(ughost_tngt_local-u)/y
       max_deriv_utan=four*u/critical_length
@@ -1492,7 +1493,7 @@ contains
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
-        viscosity_eddy, & ! intent(in)      
+        viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
         tau_w, & ! intent(out)
         im_fluid, &  ! intent(in)
@@ -1506,7 +1507,7 @@ contains
       REAL_T, intent(in) :: temperature_image
       REAL_T, intent(in) :: temperature_wall
       REAL_T, intent(in) :: viscosity_molecular
-      REAL_T, intent(in) :: viscosity_eddy
+      REAL_T, intent(in) :: viscosity_eddy_wall
       REAL_T, intent(in) :: y !delta_r
       REAL_T, intent(in) :: critical_length
       REAL_T, intent(out) :: tau_w ! wall shear stress
@@ -1519,7 +1520,7 @@ contains
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
-        viscosity_eddy, & ! intent(in)      
+        viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
         tau_w, & ! intent(out)
         im_fluid, &  ! intent(in)
@@ -1532,7 +1533,7 @@ contains
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
-        viscosity_eddy, & ! intent(in)      
+        viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
         tau_w, & ! intent(out)
         im_fluid, &  ! intent(in)
@@ -2061,7 +2062,7 @@ end subroutine dynamic_contact_angle
        REAL_T :: ughost_tngt
        REAL_T :: uimage_tngt_mag
        REAL_T :: tau_w
-       REAL_T :: viscosity_molecular, viscosity_eddy
+       REAL_T :: viscosity_molecular, viscosity_eddy_wall
        REAL_T :: density_fluid
        INTEGER_T :: dir
        REAL_T :: nrm_sanity
@@ -2798,7 +2799,7 @@ end subroutine dynamic_contact_angle
        endif
 
        viscosity_molecular=fort_viscconst(im_fluid)
-       viscosity_eddy=fort_viscconst_eddy(im_fluid)
+       viscosity_eddy_wall=fort_viscconst_eddy_wall(im_fluid)
        density_fluid=fort_denconst(im_fluid)
 
        if (density_fluid.gt.zero) then
@@ -2884,10 +2885,10 @@ end subroutine dynamic_contact_angle
        endif
 
        if ((viscosity_molecular.gt.zero).and. &
-           (viscosity_eddy.ge.zero)) then
+           (viscosity_eddy_wall.ge.zero)) then
         ! do nothing
        else
-        print *,"viscosity_molecular.le.zero or viscosity_eddy.lt.zero"
+        print *,"viscosity_molecular.le.zero or viscosity_eddy_wall.lt.zero"
         stop
        endif
 
@@ -2905,7 +2906,7 @@ end subroutine dynamic_contact_angle
 
         if (critical_length.lt.LOW%dxmin) then
 
-         if (viscosity_eddy.gt.zero) then
+         if (viscosity_eddy_wall.gt.zero) then
           !obtain wall shear stress tau_w (MKS units: Pascal)
           !delta_r_raster is distance from image point to the wall.
           if (delta_r_raster.gt.zero) then
@@ -2916,7 +2917,7 @@ end subroutine dynamic_contact_angle
              temperature_image, &
              temperature_wall, &
              viscosity_molecular, &
-             viscosity_eddy, &
+             viscosity_eddy_wall, &
              delta_r_raster, &
              tau_w, &
              im_fluid, &
@@ -2929,7 +2930,7 @@ end subroutine dynamic_contact_angle
             ! a velocity at the projection (wall) point.
            ughost_tngt = uimage_tngt_mag - &
             tau_w*delta_r_raster/ &
-            (viscosity_molecular+viscosity_eddy)
+            (viscosity_molecular+viscosity_eddy_wall)
 
            if (1.eq.0) then
             print *,"after wallfunc_newtonsmethod"
@@ -2943,11 +2944,11 @@ end subroutine dynamic_contact_angle
            stop
           endif
 
-         else if (viscosity_eddy.eq.zero) then
+         else if (viscosity_eddy_wall.eq.zero) then
            ! ghost velocity lives *on* the rasterized interface.
           ughost_tngt = zero
          else
-          print *,"viscosity_eddy invalid"
+          print *,"viscosity_eddy_wall invalid"
           stop
          endif
 

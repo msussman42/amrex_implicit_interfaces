@@ -156,7 +156,7 @@ ns.adv_dir=1  # adv_dir=1..sdim+1
 ns.viscconst=0.00853 0.00853 0.00853 #CAVITATION W Nozzle
 
 ns.viscconst=0.001 0.001 # Simple J Nozzle (Pascals * sec)
-ns.viscconst_eddy=1.0e-10 0.0
+ns.viscconst_eddy_wall=1.0e-10 0.0
 
 ns.tempconst=293.0 293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0

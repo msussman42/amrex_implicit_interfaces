@@ -1936,11 +1936,14 @@ protected:
      // e.g. k_heater=k * max(1,dx/thermal_microlayer_size)
     static Vector<Real> thermal_microlayer_size;
      // minimum transition length for viscosity. 
-     // e.g. visc+viscconst_eddy<visc * max(1,dx/shear_microlayer_size)
+     // e.g. visc+viscconst_eddy_wall<visc * max(1,dx/shear_microlayer_size)
      // e.g. (u_in - u_law_of_wall)/dx<u_in * max(1,dx/shear_microlayer_size)
     static Vector<Real> shear_microlayer_size;
      // e.g. k_model<k * dx/buoyancy_microlayer_size
     static Vector<Real> buoyancy_microlayer_size;
+     // grad T \approx (T_probe-T_I)/phasechange_microlayer_size if material
+     // "im" macro scale probe cannot be found.
+    static Vector<Real> phasechange_microlayer_size;
 
      // if the contact line size>max_size, then
      // multiply the microlayer model heat flux by 
@@ -2327,7 +2330,10 @@ protected:
     static Vector<Real> viscconst;
     static Real viscconst_max;
     static Real viscconst_min;
-    static Vector<Real> viscconst_eddy;
+    static Vector<Real> viscconst_eddy_wall;
+    static Vector<Real> viscconst_eddy_bulk;
+    static Vector<Real> heatviscconst_eddy_wall;
+    static Vector<Real> heatviscconst_eddy_bulk;
     static Vector<Real> prerecalesce_viscconst;
     static Vector<Real> viscconst_interface;
     static Real smoothing_length_scale;

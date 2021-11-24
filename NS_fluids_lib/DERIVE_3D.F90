@@ -177,7 +177,7 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
       if (is_rigid(nmat,im).eq.1) then
-       print *,"cannot have eddy viscosity and (is_rigid(nmat,im).eq.1)"
+       print *,"cannot have eddy wall viscosity and (is_rigid(nmat,im).eq.1)"
        stop
       endif
 
@@ -296,7 +296,7 @@ stop
         stop
        endif
 
-       if (fort_viscconst_eddy(im).gt.zero) then
+       if (fort_viscconst_eddy_wall(im).gt.zero) then
         k1lo=0
         k1hi=0
         if (SDIM.eq.3) then
@@ -331,7 +331,7 @@ stop
 
         if (near_solid.eq.1) then
          visc(D_DECL(i,j,k),im)=visc(D_DECL(i,j,k),im)+ &
-                 fort_viscconst_eddy(im)
+                 fort_viscconst_eddy_wall(im)
         else if (near_solid.eq.0) then
          ! do nothing
         else
@@ -339,10 +339,10 @@ stop
          stop
         endif
 
-       else if (fort_viscconst_eddy(im).eq.zero) then
+       else if (fort_viscconst_eddy_wall(im).eq.zero) then
         ! do nothing
        else
-        print *,"fort_viscconst_eddy invalid"
+        print *,"fort_viscconst_eddy_wall invalid"
         stop
        endif
   
@@ -2492,7 +2492,7 @@ stop
                fort_denconst(im_primary),fort_tempconst(im_primary))
               ! c_mat_visc is initialized in NavierStokes2.cpp: getStateVISC,
               ! getStateVISC_ALL.  "c_mat_visc" includes WALE model and
-              ! "viscconst_eddy" effects.
+              ! "viscconst_eddy_wall" effects.
              mu_non_ambient= &
                c_mat_visc(D_DECL(icell,jcell,kcell),im_primary)
              if ((mu_0.ge.zero).and.(mu_non_ambient.ge.zero)) then

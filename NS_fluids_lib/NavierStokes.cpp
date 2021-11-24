@@ -734,6 +734,9 @@ Vector<Real> NavierStokes::thermal_microlayer_size;
 Vector<Real> NavierStokes::shear_microlayer_size;
 // e.g. k_model<k * dx/buoyancy_microlayer_size
 Vector<Real> NavierStokes::buoyancy_microlayer_size;
+// grad T \approx (T_probe-T_I)/phasechange_microlayer_size if material
+// "im" macro scale probe cannot be found.
+Vector<Real> NavierStokes::phasechange_microlayer_size;
 
 // if freezing_model==0: (ambient air is 100 percent saturated)
 //
@@ -947,7 +950,10 @@ Vector<Real> NavierStokes::prerecalesce_viscconst;
 Vector<Real> NavierStokes::viscconst;
 Real NavierStokes::viscconst_max=0.0;
 Real NavierStokes::viscconst_min=0.0;
-Vector<Real> NavierStokes::viscconst_eddy; //default = 0
+Vector<Real> NavierStokes::viscconst_eddy_bulk; //default = 0
+Vector<Real> NavierStokes::viscconst_eddy_wall; //default = 0
+Vector<Real> NavierStokes::heatviscconst_eddy_bulk; //default = 0
+Vector<Real> NavierStokes::heatviscconst_eddy_wall; //default = 0
 Vector<Real> NavierStokes::speciesviscconst;// species mass diffusion coeff.
 Vector<Real> NavierStokes::prerecalesce_heatviscconst;
 Real NavierStokes::smoothing_length_scale=0.0;
@@ -1623,7 +1629,10 @@ void fortran_parameters() {
  Vector<Real> tempconst_temp(nmat);
  Vector<Real> initial_temperature_temp(nmat);
  Vector<Real> viscconst_temp(nmat);
- Vector<Real> viscconst_eddy_temp(nmat);
+ Vector<Real> viscconst_eddy_wall_temp(nmat);
+ Vector<Real> viscconst_eddy_bulk_temp(nmat);
+ Vector<Real> heatviscconst_eddy_wall_temp(nmat);
+ Vector<Real> heatviscconst_eddy_bulk_temp(nmat);
  Vector<int> viscosity_state_model_temp(nmat);
  Vector<Real> heatviscconst_temp(nmat);
  Vector<Real> speciesconst_temp((num_species_var+1)*nmat);
@@ -1726,9 +1735,16 @@ void fortran_parameters() {
  pp.queryarr("density_ceiling",den_ceiling_temp,0,nmat);
 
  pp.getarr("viscconst",viscconst_temp,0,nmat);
- for (int im=0;im<nmat;im++)
-  viscconst_eddy_temp[im]=0.0;
- pp.queryarr("viscconst_eddy",viscconst_eddy_temp,0,nmat);
+ for (int im=0;im<nmat;im++) {
+  viscconst_eddy_wall_temp[im]=0.0;
+  viscconst_eddy_bulk_temp[im]=0.0;
+  heatviscconst_eddy_wall_temp[im]=0.0;
+  heatviscconst_eddy_bulk_temp[im]=0.0;
+ }
+ pp.queryarr("viscconst_eddy_wall",viscconst_eddy_wall_temp,0,nmat);
+ pp.queryarr("viscconst_eddy_bulk",viscconst_eddy_bulk_temp,0,nmat);
+ pp.queryarr("heatviscconst_eddy_wall",heatviscconst_eddy_wall_temp,0,nmat);
+ pp.queryarr("heatviscconst_eddy_bulk",heatviscconst_eddy_bulk_temp,0,nmat);
 
  Vector<Real> prerecalesce_viscconst_temp(nmat);
  for (int im=0;im<nmat;im++)
@@ -2019,7 +2035,10 @@ void fortran_parameters() {
   den_ceiling_temp.dataPtr(),
   cavdenconst_temp.dataPtr(),
   viscconst_temp.dataPtr(),
-  viscconst_eddy_temp.dataPtr(),
+  viscconst_eddy_wall_temp.dataPtr(),
+  viscconst_eddy_bulk_temp.dataPtr(),
+  heatviscconst_eddy_wall_temp.dataPtr(),
+  heatviscconst_eddy_bulk_temp.dataPtr(),
   viscosity_state_model_temp.dataPtr(),
   elastic_viscosity_temp.dataPtr(),
   elastic_time_temp.dataPtr(),
@@ -3198,7 +3217,10 @@ NavierStokes::read_params ()
     tempcutoff.resize(nmat);
     tempcutoffmax.resize(nmat);
     viscconst.resize(nmat);
-    viscconst_eddy.resize(nmat);
+    viscconst_eddy_wall.resize(nmat);
+    viscconst_eddy_bulk.resize(nmat);
+    heatviscconst_eddy_wall.resize(nmat);
+    heatviscconst_eddy_bulk.resize(nmat);
     viscosity_state_model.resize(nmat);
     les_model.resize(nmat);
     viscconst_interface.resize(nten);
@@ -3254,6 +3276,7 @@ NavierStokes::read_params ()
     thermal_microlayer_size.resize(nmat);
     shear_microlayer_size.resize(nmat);
     buoyancy_microlayer_size.resize(nmat);
+    phasechange_microlayer_size.resize(nmat);
  
     microlayer_temperature_substrate.resize(nmat);
 
@@ -3331,6 +3354,7 @@ NavierStokes::read_params ()
      thermal_microlayer_size[i]=0.0;
      shear_microlayer_size[i]=0.0;
      buoyancy_microlayer_size[i]=0.0;
+     phasechange_microlayer_size[i]=0.0;
     }
 
     for (int i=0;i<nten;i++) { 
@@ -3510,9 +3534,15 @@ NavierStokes::read_params ()
      if (viscconst[i]>viscconst_max)
       viscconst_max=viscconst[i];
 
-     viscconst_eddy[i]=0.0;
+     viscconst_eddy_wall[i]=0.0;
+     viscconst_eddy_bulk[i]=0.0;
+     heatviscconst_eddy_wall[i]=0.0;
+     heatviscconst_eddy_bulk[i]=0.0;
     }
-    pp.queryarr("viscconst_eddy",viscconst_eddy,0,nmat);
+    pp.queryarr("viscconst_eddy_wall",viscconst_eddy_wall,0,nmat);
+    pp.queryarr("viscconst_eddy_bulk",viscconst_eddy_bulk,0,nmat);
+    pp.queryarr("heatviscconst_eddy_wall",heatviscconst_eddy_wall,0,nmat);
+    pp.queryarr("heatviscconst_eddy_bulk",heatviscconst_eddy_bulk,0,nmat);
 
     for (int i=0;i<nmat;i++)
      viscosity_state_model[i]=0;
@@ -3620,6 +3650,8 @@ NavierStokes::read_params ()
     pp.queryarr("thermal_microlayer_size",thermal_microlayer_size,0,nmat);
     pp.queryarr("shear_microlayer_size",shear_microlayer_size,0,nmat);
     pp.queryarr("buoyancy_microlayer_size",buoyancy_microlayer_size,0,nmat);
+    pp.queryarr("phasechange_microlayer_size",
+	phasechange_microlayer_size,0,nmat);
 
     for (int i=0;i<nmat;i++) {
      if (microlayer_temperature_substrate[i]<0.0)
@@ -3643,6 +3675,8 @@ NavierStokes::read_params ()
       amrex::Error("shear_microlayer_size invalid");
      if (buoyancy_microlayer_size[i]<0.0)
       amrex::Error("buoyancy_microlayer_size invalid");
+     if (phasechange_microlayer_size[i]<0.0)
+      amrex::Error("phasechange_microlayer_size invalid");
     }  // i=0..nmat-1
 
     pp.queryarr("nucleation_temp",nucleation_temp,0,2*nten);
@@ -4869,7 +4903,16 @@ NavierStokes::read_params ()
       std::cout << "override_density i=" << i << " " << 
          override_density[i] << '\n';
       std::cout << "viscconst i=" << i << "  " << viscconst[i] << '\n';
-      std::cout << "viscconst_eddy i=" <<i<<"  "<<viscconst_eddy[i]<<'\n';
+
+      std::cout << "viscconst_eddy_wall i=" <<i<<"  "<<
+	      viscconst_eddy_wall[i]<<'\n';
+      std::cout << "viscconst_eddy_bulk i=" <<i<<"  "<<
+	      viscconst_eddy_bulk[i]<<'\n';
+      std::cout << "heatviscconst_eddy_wall i=" <<i<<"  "<<
+	      heatviscconst_eddy_wall[i]<<'\n';
+      std::cout << "heatviscconst_eddy_bulk i=" <<i<<"  "<<
+	      heatviscconst_eddy_bulk[i]<<'\n';
+
       std::cout << "heatviscconst i=" << i << "  " << 
           heatviscconst[i] << '\n';
       std::cout << "prerecalesce_viscconst i=" << i << "  " << 
@@ -4940,6 +4983,8 @@ NavierStokes::read_params ()
        shear_microlayer_size[i] << '\n';
       std::cout << "buoyancy_microlayer_size i=" << i << "  " << 
        buoyancy_microlayer_size[i] << '\n';
+      std::cout << "phasechange_microlayer_size i=" << i << "  " << 
+       phasechange_microlayer_size[i] << '\n';
      } // i=0..nmat-1
 
      for (int i=0;i<num_species_var;i++) {

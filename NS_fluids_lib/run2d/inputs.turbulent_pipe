@@ -96,9 +96,9 @@ ns.advbot=0.0   # Gas Velocity (cm/s)
 ns.adv_vel=65.8d0 # -dp/dx/2/mu # corresponds to Rew=395
 ns.adv_dir=1    # flow in the x-direction
 ns.viscconst=0.01 0.00018 0.01
-# viscconst_eddy==0.0 and ns.law_of_the_wall==0 means Arienti Sussman 2014
-# viscconst_eddy==0.0 and ns.law_of_the_wall==1 means standard GFM
-ns.viscconst_eddy=0.0 0.0 0.0
+# viscconst_eddy_wall==0.0 and ns.law_of_the_wall==0 means Arienti Sussman 2014
+# viscconst_eddy_wall==0.0 and ns.law_of_the_wall==1 means standard GFM
+ns.viscconst_eddy_wall=0.0 0.0 0.0
 ns.les_model=1 0 0
 ns.denconst=1.0 0.001225 1.0
 # 1 Watt=10^7 ERG/S
