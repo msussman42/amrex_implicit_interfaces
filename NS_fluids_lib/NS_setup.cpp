@@ -1927,12 +1927,11 @@ NavierStokes::variableSetUp ()
 
 }  // end subroutine variableSetUp
 
-// post_init_flag==0 if called from post_timestep
-// post_init_flag==0 if called from writePlotFile
-// post_init_flag==1 if called from post_init_state
-// post_init_flag==2 if called from post_restart
+// post_init_flag==-1 if called from post_timestep
+// post_init_flag==1  if called from post_init
+// post_init_flag==2  if called from post_restart
 void
-NavierStokes::sum_integrated_quantities (int post_init_flag) {
+NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
@@ -2257,6 +2256,9 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     ZZ,FF,dirx,diry,cut_flag,isweep);
 
   if (isweep==0) {
+
+   delete_array(DRAG_MF);
+
    for (int im=0;im<nmat;im++) {
     Real volmat=sumdata[FE_sum_comp+2*im];
     Real LSvolmat=sumdata[LS_F_sum_comp+im];
@@ -2271,7 +2273,44 @@ NavierStokes::sum_integrated_quantities (int post_init_flag) {
     }
    } // im
   }  // isweep=0
- }
+ } //for (int isweep=0;isweep<2;isweep++) 
+
+ if (visual_drag_plot_int>0) {
+
+  int visual_drag_plot_int_trigger=0;
+ 
+  if (post_init_flag==-1) { //called from post_timestep
+   if (parent->levelSteps(0)%visual_drag_plot_int == 0) {
+    visual_drag_plot_int_trigger=1;
+   }
+  } else if (post_init_flag==1) { //called from post_init
+   visual_drag_plot_int_trigger=1;
+  } else if (post_init_flag==2) { //called from post_restart
+   visual_drag_plot_int_trigger=1;
+  } else
+   amrex::Error("post_init_flag invalid in sum_integrated_quantities");
+
+  if ( (visual_drag_plot_int_trigger==1)||
+       (stop_time-upper_slab_time<1.0E-8) ) {
+
+   int drag_caller_id=2302;
+    //DRAG<stuff>.plt (visit can open binary tecplot files)
+   writeSanityCheckData(
+     "DRAG",
+     "DRAG_MF: see DRAG_COMP.H",
+     drag_caller_id,
+     localMF[DRAG_MF]->nComp(), 
+     DRAG_MF,
+     -1,  // State_Type==-1 
+     -1); // data_dir==-1 (cell centered)
+  }
+
+ } else if ((visual_drag_plot_int==0)||(visual_drag_plot_int==-1)) {
+  // do nothing
+ } else
+  amrex::Error("visual_drag_plot_int invalid");
+
+ delete_array(DRAG_MF);
 
  int f_js=0;
  int f_je=NN-1;

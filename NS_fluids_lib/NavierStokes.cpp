@@ -427,6 +427,7 @@ int  NavierStokes::visual_phase_change_plot_int=0;
 int  NavierStokes::visual_buoyancy_plot_int=0; 
 int  NavierStokes::visual_divergence_plot_int=0; 
 int  NavierStokes::visual_WALLVEL_plot_int=0; 
+int  NavierStokes::visual_drag_plot_int=0; 
 
 int NavierStokes::visual_compare=0; 
 Vector<int> NavierStokes::visual_ncell;
@@ -723,6 +724,16 @@ Vector<Real> NavierStokes::microlayer_angle;
 Vector<Real> NavierStokes::microlayer_size;
 Vector<Real> NavierStokes::macrolayer_size;
 Vector<Real> NavierStokes::max_contact_line_size;
+
+// minimum transition length for heat conduction.
+// e.g. k_heater=k * max(1,dx/thermal_microlayer_size)
+Vector<Real> NavierStokes::thermal_microlayer_size;
+// minimum transition length for viscosity. 
+// e.g. visc+viscconst_eddy<visc * max(1,dx/shear_microlayer_size)
+// e.g. (u_in - u_law_of_wall)/dx<u_in * max(1,dx/shear_microlayer_size)
+Vector<Real> NavierStokes::shear_microlayer_size;
+// e.g. k_model<k * dx/buoyancy_microlayer_size
+Vector<Real> NavierStokes::buoyancy_microlayer_size;
 
 // if freezing_model==0: (ambient air is 100 percent saturated)
 //
@@ -2753,6 +2764,7 @@ NavierStokes::read_params ()
     pp.query("visual_buoyancy_plot_int",visual_buoyancy_plot_int);
     pp.query("visual_divergence_plot_int",visual_divergence_plot_int);
     pp.query("visual_WALLVEL_plot_int",visual_WALLVEL_plot_int);
+    pp.query("visual_drag_plot_int",visual_drag_plot_int);
 
     if ((visual_tessellate_vfrac!=0)&&
         (visual_tessellate_vfrac!=1)&&
@@ -3238,6 +3250,10 @@ NavierStokes::read_params ()
     microlayer_size.resize(nmat);
     macrolayer_size.resize(nmat);
     max_contact_line_size.resize(nmat);
+
+    thermal_microlayer_size.resize(nmat);
+    shear_microlayer_size.resize(nmat);
+    buoyancy_microlayer_size.resize(nmat);
  
     microlayer_temperature_substrate.resize(nmat);
 
@@ -3311,6 +3327,10 @@ NavierStokes::read_params ()
      macrolayer_size[i]=0.0;
      max_contact_line_size[i]=0.0;
      microlayer_temperature_substrate[i]=0.0;
+
+     thermal_microlayer_size[i]=0.0;
+     shear_microlayer_size[i]=0.0;
+     buoyancy_microlayer_size[i]=0.0;
     }
 
     for (int i=0;i<nten;i++) { 
@@ -3596,6 +3616,11 @@ NavierStokes::read_params ()
                 max_contact_line_size,0,nmat);
     pp.queryarr("microlayer_temperature_substrate",
      microlayer_temperature_substrate,0,nmat);
+
+    pp.queryarr("thermal_microlayer_size",thermal_microlayer_size,0,nmat);
+    pp.queryarr("shear_microlayer_size",shear_microlayer_size,0,nmat);
+    pp.queryarr("buoyancy_microlayer_size",buoyancy_microlayer_size,0,nmat);
+
     for (int i=0;i<nmat;i++) {
      if (microlayer_temperature_substrate[i]<0.0)
       amrex::Error("microlayer_temperature_substrate[i]<0.0");
@@ -3612,6 +3637,12 @@ NavierStokes::read_params ()
       amrex::Error("max_contact_line_size invalid");
      if ((microlayer_size[i]>0.0)&&(solidheat_flag==0))
       amrex::Error("cannot have microlayer_size>0.0&&solidheat_flag==0");
+     if (thermal_microlayer_size[i]<0.0)
+      amrex::Error("thermal_microlayer_size invalid");
+     if (shear_microlayer_size[i]<0.0)
+      amrex::Error("shear_microlayer_size invalid");
+     if (buoyancy_microlayer_size[i]<0.0)
+      amrex::Error("buoyancy_microlayer_size invalid");
     }  // i=0..nmat-1
 
     pp.queryarr("nucleation_temp",nucleation_temp,0,2*nten);
@@ -4903,6 +4934,12 @@ NavierStokes::read_params ()
        max_contact_line_size[i] << '\n';
       std::cout << "microlayer_temperature_substrate i=" << i << "  " << 
        microlayer_temperature_substrate[i] << '\n';
+      std::cout << "thermal_microlayer_size i=" << i << "  " << 
+       thermal_microlayer_size[i] << '\n';
+      std::cout << "shear_microlayer_size i=" << i << "  " << 
+       shear_microlayer_size[i] << '\n';
+      std::cout << "buoyancy_microlayer_size i=" << i << "  " << 
+       buoyancy_microlayer_size[i] << '\n';
      } // i=0..nmat-1
 
      for (int i=0;i<num_species_var;i++) {
@@ -5118,6 +5155,8 @@ NavierStokes::read_params ()
 	     visual_divergence_plot_int << '\n';
      std::cout << "visual_WALLVEL_plot_int " << 
 	     visual_WALLVEL_plot_int << '\n';
+     std::cout << "visual_drag_plot_int " << 
+	     visual_drag_plot_int << '\n';
 
      std::cout << "visual_compare " << visual_compare << '\n';
      for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -8507,6 +8546,10 @@ void NavierStokes::ns_header_msg_level(
 // called from Amr::restart 
 void NavierStokes::post_restart() {
 
+ ParmParse ppmain;
+ Real local_stop_time=-1.0;
+ ppmain.query("stop_time",local_stop_time);
+
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
  slab_step=ns_time_order-1;
@@ -8590,10 +8633,11 @@ void NavierStokes::post_restart() {
  if (level==0) {
 
   int post_init_flag=2; // post_restart
+
   prepare_post_process(post_init_flag);
 
   if (sum_interval>0) {
-   sum_integrated_quantities(post_init_flag);
+   sum_integrated_quantities(post_init_flag,local_stop_time);
   }
 
  } else if (level>0) {
@@ -8602,7 +8646,7 @@ void NavierStokes::post_restart() {
   amrex::Error("level invalid20");
  } 
 
-}  // subroutine post_restart
+}  // end subroutine post_restart
 
 
 // This routine might be called twice at level 0 if AMR program
@@ -18467,7 +18511,7 @@ void NavierStokes::volWgtSum(
  } else
   amrex::Error("num_materials_viscoelastic invalid"); 
 
-}  // subroutine volWgtSum
+}  // end subroutine volWgtSum
 
 //put "ns.show_mem=1" in the inputs file to activate this.
 //called from NavierStokes::do_the_advance
@@ -20247,22 +20291,60 @@ NavierStokes::okToContinue ()
 void
 NavierStokes::post_timestep (Real stop_time) {
 
+ int max_level = parent->maxLevel();
+
  SDC_outer_sweeps=0;
  slab_step=ns_time_order-1;
  SDC_setup_step();
 
  if (level==0) {
-  if (sum_interval>0) {
-   if ( (parent->levelSteps(0)%sum_interval == 0)||
+  if ((sum_interval>0)||
+      (visual_drag_plot_int>0)) {
+
+   int sum_interval_trigger=0;
+   if (sum_interval>0) {
+    if (parent->levelSteps(0)%sum_interval == 0) {
+     sum_interval_trigger=1;
+    }
+   } else if ((sum_interval==0)||(sum_interval==-1)) {
+    // do nothing
+   } else
+    amrex::Error("sum_interval invalid");
+
+   int visual_drag_plot_int_trigger=0;
+
+   if (visual_drag_plot_int>0) {
+    if (parent->levelSteps(0)%visual_drag_plot_int == 0) {
+     visual_drag_plot_int_trigger=1;
+    }
+   } else if ((visual_drag_plot_int==0)||(visual_drag_plot_int==-1)) {
+    // do nothing
+   } else
+    amrex::Error("visual_drag_plot_int invalid");
+
+   if ( (sum_interval_trigger==1)||
+        (visual_drag_plot_int_trigger==1)||
         (stop_time-upper_slab_time<1.0E-8) ) {
-    int post_init_flag=0;
-    sum_integrated_quantities(post_init_flag);
+    int post_init_flag=-1;
+    sum_integrated_quantities(post_init_flag,stop_time);
    }
+  } else if (((sum_interval==0)||
+	      (sum_interval==-1))&&
+	     ((visual_drag_plot_int==0)||
+	      (visual_drag_plot_int==-1))) {
+   // do nothing
+  } else {
+   amrex::Error("sum_interval or visual_drag_plot_int invalid");
   }
+ } else if ((level<=max_level)&&(level>0)) {
+  // do nothing
+ } else {
+  amrex::Error("level invalid");
  } 
 
  init_regrid_history();
-}
+
+} // end subroutine post_timestep
 
 //
 // Ensure state, and pressure are consistent.
@@ -20332,7 +20414,7 @@ NavierStokes::post_init (Real stop_time)
 
   if (sum_interval_local > 0) {
      int post_init_flag=1;
-     sum_integrated_quantities(post_init_flag);
+     sum_integrated_quantities(post_init_flag,stop_time);
   }
 
   ParallelDescriptor::Barrier();
@@ -20348,7 +20430,7 @@ NavierStokes::post_init (Real stop_time)
   }
  }
 
-}  // subroutine post_init
+}  // end subroutine post_init
 
 // HH is m+1 x m
 // yy is m x 1
@@ -20726,6 +20808,9 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
 } // matrix_solveCPP
 
 //called from: NavierStokes::sum_integrated_quantities (NS_setup.cpp)
+// post_init_flag==-1 if sum_integrated_quantities called from post_timestep
+// post_init_flag==1  if sum_integrated_quantities called from post_init
+// post_init_flag==2  if sum_integrated_quantities called from post_restart
 void
 NavierStokes::volWgtSumALL(
  int post_init_flag,
@@ -20772,6 +20857,10 @@ NavierStokes::volWgtSumALL(
  make_physics_varsALL(project_option,post_restart_flag,0);
 
   // see <DRAG_COMP.H>
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.delete_localMF_if_exist(DRAG_MF,1);
+ }
  allocate_array(ngrow_distance,N_DRAG,-1,DRAG_MF);
 
  Vector<Real> integrated_quantities;
@@ -20882,7 +20971,9 @@ NavierStokes::volWgtSumALL(
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "DRAGCOMP nmat=" << num_materials << '\n';
    for (int iq=0;iq<N_DRAG;iq++) {
-    if (iq==DRAGCOMP_FORCE) {
+    if (iq==DRAGCOMP_BODYFORCE) {
+     std::cout << "DRAGCOMP_BODYFORCE 3 nmat\n";
+    } else if (iq==DRAGCOMP_FORCE) {
      std::cout << "DRAGCOMP_FORCE 3 nmat\n";
     } else if (iq==DRAGCOMP_PFORCE) {
      std::cout << "DRAGCOMP_PFORCE 3 nmat\n";
@@ -20892,6 +20983,8 @@ NavierStokes::volWgtSumALL(
      std::cout << "DRAGCOMP_VISCOUS0FORCE 3 nmat\n";
     } else if (iq==DRAGCOMP_VISCOFORCE) {
      std::cout << "DRAGCOMP_VISCOFORCE 3 nmat\n";
+    } else if (iq==DRAGCOMP_BODYTORQUE) {
+     std::cout << "DRAGCOMP_BODYTORQUE 3 nmat\n";
     } else if (iq==DRAGCOMP_TORQUE) {
      std::cout << "DRAGCOMP_TORQUE 3 nmat\n";
     } else if (iq==DRAGCOMP_PTORQUE) {
@@ -20953,11 +21046,10 @@ NavierStokes::volWgtSumALL(
  } else
   amrex::Error("num_materials_viscoelastic invalid:volWgtSumALL");
 
- delete_array(DRAG_MF);
  delete_array(CELLTENSOR_MF);
  delete_array(FACETENSOR_MF);
 
-}  // subroutine volWgtSumALL
+}  // end subroutine volWgtSumALL
 
 void
 NavierStokes::MaxPressureVelocityALL(
