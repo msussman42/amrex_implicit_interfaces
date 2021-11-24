@@ -1307,6 +1307,46 @@ void read_geometry_raw(int& geometry_coord,
 //  amrptr->init(strt_time,stop_time);
 void fortran_parameters() {
 
+ int geometry_coord;
+ Vector<Real> geometry_prob_lo;
+ Vector<Real> geometry_prob_hi;
+ Vector<int> geometry_is_periodic;
+ int geometry_is_any_periodic;
+ read_geometry_raw(geometry_coord,geometry_prob_lo,geometry_prob_hi,
+		 geometry_is_periodic,geometry_is_any_periodic);
+
+ int rz_flag=0;
+ if ((CoordSys::CoordType) geometry_coord == CoordSys::RZ)  
+  rz_flag=1;
+ else if ((CoordSys::CoordType) geometry_coord == CoordSys::cartesian)  
+  rz_flag=0;
+ else if ((CoordSys::CoordType) geometry_coord == CoordSys::CYLINDRICAL)  
+  rz_flag=3;
+ else
+  amrex::Error("CoordSys bust 1");
+
+ Real problox=geometry_prob_lo[0];
+ Real probloy=geometry_prob_lo[1];
+ Real probloz=geometry_prob_lo[AMREX_SPACEDIM-1];
+ Real probhix=geometry_prob_hi[0];
+ Real probhiy=geometry_prob_hi[1];
+ Real probhiz=geometry_prob_hi[AMREX_SPACEDIM-1];
+
+ Real problen_min=probhix-problox;
+ if (problen_min>0.0) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   Real problen=geometry_prob_hi[dir]-geometry_prob_lo[dir];
+   if (problen>0.0) {
+    if (problen<problen_min) 
+     problen_min=problen;
+   } else
+    amrex::Error("problen invalid");
+  }
+ } else
+  amrex::Error("problen_min invalid");
+
+ Real microlayer_size_default=problen_min/1.0e+9;
+
  Real denfact;
  Real velfact=0.0;
  Real xblob;
@@ -1748,10 +1788,10 @@ void fortran_parameters() {
   heatviscconst_eddy_wall_temp[im]=0.0;
   heatviscconst_eddy_bulk_temp[im]=0.0;
 
-  thermal_microlayer_size_temp[im]=0.0;
-  shear_microlayer_size_temp[im]=0.0;
-  buoyancy_microlayer_size_temp[im]=0.0;
-  phasechange_microlayer_size_temp[im]=0.0;
+  thermal_microlayer_size_temp[im]=microlayer_size_defult;
+  shear_microlayer_size_temp[im]=microlayer_size_defult;
+  buoyancy_microlayer_size_temp[im]=microlayer_size_defult;
+  phasechange_microlayer_size_temp[im]=microlayer_size_defult;
  }
  pp.queryarr("viscconst_eddy_wall",viscconst_eddy_wall_temp,0,nmat);
  pp.queryarr("viscconst_eddy_bulk",viscconst_eddy_bulk_temp,0,nmat);
@@ -1901,31 +1941,6 @@ void fortran_parameters() {
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid 9");
-
- int geometry_coord;
- Vector<Real> geometry_prob_lo;
- Vector<Real> geometry_prob_hi;
- Vector<int> geometry_is_periodic;
- int geometry_is_any_periodic;
- read_geometry_raw(geometry_coord,geometry_prob_lo,geometry_prob_hi,
-		 geometry_is_periodic,geometry_is_any_periodic);
-
- int rz_flag=0;
- if ((CoordSys::CoordType) geometry_coord == CoordSys::RZ)  
-  rz_flag=1;
- else if ((CoordSys::CoordType) geometry_coord == CoordSys::cartesian)  
-  rz_flag=0;
- else if ((CoordSys::CoordType) geometry_coord == CoordSys::CYLINDRICAL)  
-  rz_flag=3;
- else
-  amrex::Error("CoordSys bust 1");
-
- Real problox=geometry_prob_lo[0];
- Real probloy=geometry_prob_lo[1];
- Real probloz=geometry_prob_lo[AMREX_SPACEDIM-1];
- Real probhix=geometry_prob_hi[0];
- Real probhiy=geometry_prob_hi[1];
- Real probhiz=geometry_prob_hi[AMREX_SPACEDIM-1];
 
  int ioproc=0;
  if (ParallelDescriptor::IOProcessor())
