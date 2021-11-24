@@ -202,6 +202,10 @@ stop
         ccviscconst_eddy_bulk, &
         ccheatviscconst_eddy_wall, &
         ccheatviscconst_eddy_bulk, &
+        ccthermal_microlayer_size, &
+        ccshear_microlayer_size, &
+        ccbuoyancy_microlayer_size, &
+        ccphasechange_microlayer_size, &
         ccviscosity_state_model, &
         ccelastic_viscosity, &
         ccelastic_time, &
@@ -349,10 +353,17 @@ stop
       REAL_T, intent(in) :: ccden_ceiling(ccnum_materials)
       REAL_T, intent(in) :: cccavdenconst(ccnum_materials)
       REAL_T, intent(in) :: ccviscconst(ccnum_materials)
+
       REAL_T, intent(in) :: ccviscconst_eddy_wall(ccnum_materials)
       REAL_T, intent(in) :: ccviscconst_eddy_bulk(ccnum_materials)
       REAL_T, intent(in) :: ccheatviscconst_eddy_wall(ccnum_materials)
       REAL_T, intent(in) :: ccheatviscconst_eddy_bulk(ccnum_materials)
+
+      REAL_T, intent(in) :: ccthermal_microlayer_size(ccnum_materials)
+      REAL_T, intent(in) :: ccshear_microlayer_size(ccnum_materials)
+      REAL_T, intent(in) :: ccbuoyancy_microlayer_size(ccnum_materials)
+      REAL_T, intent(in) :: ccphasechange_microlayer_size(ccnum_materials)
+
       INTEGER_T, intent(in) :: ccviscosity_state_model(ccnum_materials)
       REAL_T, intent(in) :: ccelastic_viscosity(ccnum_materials)
       REAL_T, intent(in) :: ccelastic_time(ccnum_materials)
@@ -1101,10 +1112,17 @@ stop
        fort_density_ceiling(im)=ccden_ceiling(im)
        fort_cavdenconst(im)=cccavdenconst(im)
        fort_viscconst(im)=ccviscconst(im)
+
        fort_viscconst_eddy_wall(im)=ccviscconst_eddy_wall(im)
        fort_viscconst_eddy_bulk(im)=ccviscconst_eddy_bulk(im)
        fort_heatviscconst_eddy_wall(im)=ccheatviscconst_eddy_wall(im)
        fort_heatviscconst_eddy_bulk(im)=ccheatviscconst_eddy_bulk(im)
+
+       fort_thermal_microlayer_size(im)=ccthermal_microlayer_size(im)
+       fort_shear_microlayer_size(im)=ccshear_microlayer_size(im)
+       fort_buoyancy_microlayer_size(im)=ccbuoyancy_microlayer_size(im)
+       fort_phasechange_microlayer_size(im)=ccphasechange_microlayer_size(im)
+
        fort_viscosity_state_model(im)= &
          ccviscosity_state_model(im)
        fort_elastic_viscosity(im)=ccelastic_viscosity(im)
@@ -1239,12 +1257,23 @@ stop
         print *,"im,den_ceiling ",im,fort_density_ceiling(im)
         print *,"im,cavden ",im,fort_cavdenconst(im)
         print *,"im,visc ",im,fort_viscconst(im)
+
         print *,"im,viscconst_eddy_wall ",im,fort_viscconst_eddy_wall(im)
         print *,"im,viscconst_eddy_bulk ",im,fort_viscconst_eddy_bulk(im)
         print *,"im,heatviscconst_eddy_wall ",im, &
                 fort_heatviscconst_eddy_wall(im)
         print *,"im,heatviscconst_eddy_bulk ",im, &
                 fort_heatviscconst_eddy_bulk(im)
+
+        print *,"im,thermal_microlayer_size ",im, &
+                fort_thermal_microlayer_size(im)
+        print *,"im,shear_microlayer_size ",im, &
+                fort_shear_microlayer_size(im)
+        print *,"im,buoyancy_microlayer_size ",im, &
+                fort_buoyancy_microlayer_size(im)
+        print *,"im,phasechange_microlayer_size ",im, &
+                fort_phasechange_microlayer_size(im)
+
         print *,"im,viscosity_state_model ",im, &
          fort_viscosity_state_model(im)
         print *,"im,fort_elastic_viscosity ",im,fort_elastic_viscosity(im)

@@ -8,6 +8,9 @@ FEXE_headers += DRAG_COMP.H
 FEXE_headers += MACOPERATOR_F.H probdata.H probdataf95.H PROB_F.H 
 FEXE_headers += PROB_CPP_PARMS_F.H 
 
+F90EXE_headers += PROBCOMMON.F90
+F90EXE_sources += PROBCOMMON.F90
+
 CEXE_sources += \
        NavierStokes.cpp NavierStokes2.cpp \
        NavierStokes3.cpp \
@@ -31,7 +34,6 @@ F90EXE_headers += \
   river.F90 \
   shockdrop.F90 \
   marangoni.F90 \
-  PROBCOMMON.F90 \
   GLOBALUTIL.F90 \
   sample_user_defined.F90 \
   YAOHONG_INKJET.F90 \
@@ -74,7 +76,6 @@ F90EXE_sources += \
   river.F90 \
   shockdrop.F90 \
   marangoni.F90 \
-  PROBCOMMON.F90 \
   GLOBALUTIL.F90 \
   sample_user_defined.F90 \
   YAOHONG_INKJET.F90 \
