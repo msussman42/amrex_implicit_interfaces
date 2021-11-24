@@ -45,7 +45,10 @@
       REAL_T fort_density_ceiling(MAX_NUM_MATERIALS)
       REAL_T fort_cavdenconst(MAX_NUM_MATERIALS)
       REAL_T fort_viscconst(MAX_NUM_MATERIALS)
-      REAL_T fort_viscconst_eddy(MAX_NUM_MATERIALS)
+      REAL_T fort_viscconst_eddy_wall(MAX_NUM_MATERIALS)
+      REAL_T fort_viscconst_eddy_bulk(MAX_NUM_MATERIALS)
+      REAL_T fort_heatviscconst_eddy_wall(MAX_NUM_MATERIALS)
+      REAL_T fort_heatviscconst_eddy_bulk(MAX_NUM_MATERIALS)
       INTEGER_T fort_viscosity_state_model(MAX_NUM_MATERIALS)
       REAL_T fort_heatviscconst(MAX_NUM_MATERIALS)
 

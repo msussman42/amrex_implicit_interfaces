@@ -198,7 +198,10 @@ stop
         ccden_ceiling, &
         cccavdenconst, &
         ccviscconst, &
-        ccviscconst_eddy, &
+        ccviscconst_eddy_wall, &
+        ccviscconst_eddy_bulk, &
+        ccheatviscconst_eddy_wall, &
+        ccheatviscconst_eddy_bulk, &
         ccviscosity_state_model, &
         ccelastic_viscosity, &
         ccelastic_time, &
@@ -346,7 +349,10 @@ stop
       REAL_T, intent(in) :: ccden_ceiling(ccnum_materials)
       REAL_T, intent(in) :: cccavdenconst(ccnum_materials)
       REAL_T, intent(in) :: ccviscconst(ccnum_materials)
-      REAL_T, intent(in) :: ccviscconst_eddy(ccnum_materials)
+      REAL_T, intent(in) :: ccviscconst_eddy_wall(ccnum_materials)
+      REAL_T, intent(in) :: ccviscconst_eddy_bulk(ccnum_materials)
+      REAL_T, intent(in) :: ccheatviscconst_eddy_wall(ccnum_materials)
+      REAL_T, intent(in) :: ccheatviscconst_eddy_bulk(ccnum_materials)
       INTEGER_T, intent(in) :: ccviscosity_state_model(ccnum_materials)
       REAL_T, intent(in) :: ccelastic_viscosity(ccnum_materials)
       REAL_T, intent(in) :: ccelastic_time(ccnum_materials)
@@ -1095,7 +1101,10 @@ stop
        fort_density_ceiling(im)=ccden_ceiling(im)
        fort_cavdenconst(im)=cccavdenconst(im)
        fort_viscconst(im)=ccviscconst(im)
-       fort_viscconst_eddy(im)=ccviscconst_eddy(im)
+       fort_viscconst_eddy_wall(im)=ccviscconst_eddy_wall(im)
+       fort_viscconst_eddy_bulk(im)=ccviscconst_eddy_bulk(im)
+       fort_heatviscconst_eddy_wall(im)=ccheatviscconst_eddy_wall(im)
+       fort_heatviscconst_eddy_bulk(im)=ccheatviscconst_eddy_bulk(im)
        fort_viscosity_state_model(im)= &
          ccviscosity_state_model(im)
        fort_elastic_viscosity(im)=ccelastic_viscosity(im)
@@ -1230,7 +1239,12 @@ stop
         print *,"im,den_ceiling ",im,fort_density_ceiling(im)
         print *,"im,cavden ",im,fort_cavdenconst(im)
         print *,"im,visc ",im,fort_viscconst(im)
-        print *,"im,visc_eddy ",im,fort_viscconst_eddy(im)
+        print *,"im,viscconst_eddy_wall ",im,fort_viscconst_eddy_wall(im)
+        print *,"im,viscconst_eddy_bulk ",im,fort_viscconst_eddy_bulk(im)
+        print *,"im,heatviscconst_eddy_wall ",im, &
+                fort_heatviscconst_eddy_wall(im)
+        print *,"im,heatviscconst_eddy_bulk ",im, &
+                fort_heatviscconst_eddy_bulk(im)
         print *,"im,viscosity_state_model ",im, &
          fort_viscosity_state_model(im)
         print *,"im,fort_elastic_viscosity ",im,fort_elastic_viscosity(im)

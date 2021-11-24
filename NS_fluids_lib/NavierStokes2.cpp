@@ -9515,7 +9515,7 @@ void NavierStokes::getStateVISC() {
   ns_reconcile_d_num(165);
 
   if ((les_model[im]==1)||
-      (viscconst_eddy[im]>0.0)) {
+      (viscconst_eddy_wall[im]>0.0)) {
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
@@ -9559,7 +9559,7 @@ void NavierStokes::getStateVISC() {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
       // declared in: DERIVE_3D.F90
-      // WALE model and "viscconst_eddy" effects are added to "viscfab"
+      // WALE model and "viscconst_eddy_wall" effects are added to "viscfab"
       // (idx==CELL_VISC_MATERIAL_MF)
     fort_derturbvisc(
       &les_model[im],
@@ -9589,10 +9589,10 @@ void NavierStokes::getStateVISC() {
    ns_reconcile_d_num(166);
 
   } else if ((les_model[im]==0)&&
-             (viscconst_eddy[im]==0.0)) {
+             (viscconst_eddy_wall[im]==0.0)) {
    // do nothing
   } else
-   amrex::Error("les_model or viscconst_eddy invalid");
+   amrex::Error("les_model or viscconst_eddy_wall invalid");
 
   delete gammadot_mf;
  } // im=0..nmat-1

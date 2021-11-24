@@ -244,7 +244,7 @@ implicit none
 ! fort_elastic_viscosity added: August 22, 2018
 ! fort_im_elastic_map added: August 22, 2018
 ! num_materials_elastic deleted: August 21, 2018
-! fort_viscconst_eddy added: July 15, 2018
+! fort_viscconst_eddy_wall added: July 15, 2018
 ! fort_initial_temperature added: April 10, 2018
 ! nucleation_init_time added: May 5, 2018
 ! fort_density_floor and fort_density_ceiling added: January 8, 2019
@@ -280,6 +280,11 @@ implicit none
 ! fort_etaS,
 ! fort_etaP,
 ! fort_visc_coef
+! Added November 24,2021:
+!  fort_viscconst_eddy_wall 
+!  fort_viscconst_eddy_bulk
+!  fort_heatviscconst_eddy_wall 
+!  fort_heatviscconst_eddy_bulk
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
        !nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
@@ -540,7 +545,7 @@ implicit none
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
-        viscosity_eddy, & ! intent(in)      
+        viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
         tau_w, & ! intent(out)
         im_fluid, &  ! intent(in)
@@ -552,7 +557,7 @@ implicit none
       REAL_T, intent(in) :: temperature_image
       REAL_T, intent(in) :: temperature_wall
       REAL_T, intent(in) :: viscosity_molecular
-      REAL_T, intent(in) :: viscosity_eddy
+      REAL_T, intent(in) :: viscosity_eddy_wall
       REAL_T, intent(in) :: y !delta_r
       REAL_T, intent(in) :: critical_length
       REAL_T, intent(out) :: tau_w ! wall shear stress
