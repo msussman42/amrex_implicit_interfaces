@@ -522,6 +522,9 @@ public:
 
     void Number_CellsALL(Real& rcells);
 
+// post_init_flag==-1 if called from post_timestep
+// post_init_flag==1  if called from post_init
+// post_init_flag==2  if called from post_restart
     void volWgtSumALL(
      int post_init_flag,
      Vector<Real>& result,
@@ -876,7 +879,10 @@ protected:
     static void set_tensor_extrap_components_main(
       int coord,std::string postfix,int indx);
 
-    void sum_integrated_quantities (int post_init_flag);
+// post_init_flag==-1 if called from post_timestep
+// post_init_flag==1  if called from post_init
+// post_init_flag==2  if called from post_restart
+    void sum_integrated_quantities (int post_init_flag,Real stop_time);
 
     void CopyNewToOldALL();
     void CopyOldToNewALL();
@@ -1926,6 +1932,16 @@ protected:
     static Vector<Real> microlayer_size; // minimum transition length
     static Vector<Real> macrolayer_size; // maximum transition length
 
+     // minimum transition length for heat conduction.
+     // e.g. k_heater=k * max(1,dx/thermal_microlayer_size)
+    static Vector<Real> thermal_microlayer_size;
+     // minimum transition length for viscosity. 
+     // e.g. visc+viscconst_eddy<visc * max(1,dx/shear_microlayer_size)
+     // e.g. (u_in - u_law_of_wall)/dx<u_in * max(1,dx/shear_microlayer_size)
+    static Vector<Real> shear_microlayer_size;
+     // e.g. k_model<k * dx/buoyancy_microlayer_size
+    static Vector<Real> buoyancy_microlayer_size;
+
      // if the contact line size>max_size, then
      // multiply the microlayer model heat flux by 
      // max_size/size
@@ -2114,6 +2130,7 @@ protected:
     static int visual_buoyancy_plot_int; //def=0
     static int visual_divergence_plot_int; //def=0
     static int visual_WALLVEL_plot_int; //def=0
+    static int visual_drag_plot_int; //def=0
 
     static Vector<int> visual_ncell;
     static int visual_compare;
