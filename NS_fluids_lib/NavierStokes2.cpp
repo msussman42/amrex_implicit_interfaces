@@ -9515,7 +9515,8 @@ void NavierStokes::getStateVISC() {
   ns_reconcile_d_num(165);
 
   if ((les_model[im]==1)||
-      (viscconst_eddy_wall[im]>0.0)) {
+      (viscconst_eddy_wall[im]>0.0)||
+      (viscconst_eddy_bulk[im]>0.0)) {
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
@@ -9559,7 +9560,8 @@ void NavierStokes::getStateVISC() {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
       // declared in: DERIVE_3D.F90
-      // WALE model and "viscconst_eddy_wall" effects are added to "viscfab"
+      // WALE model, "viscconst_eddy_wall", "viscconst_eddy_bulk",
+      // effects are added to "viscfab"
       // (idx==CELL_VISC_MATERIAL_MF)
     fort_derturbvisc(
       &les_model[im],
@@ -9589,10 +9591,11 @@ void NavierStokes::getStateVISC() {
    ns_reconcile_d_num(166);
 
   } else if ((les_model[im]==0)&&
-             (viscconst_eddy_wall[im]==0.0)) {
+             (viscconst_eddy_wall[im]==0.0)&&
+	     (viscconst_eddy_bulk[im]==0.0)) {
    // do nothing
   } else
-   amrex::Error("les_model or viscconst_eddy_wall invalid");
+   amrex::Error("les_model,viscconst_eddy_wall, or bulk invalid");
 
   delete gammadot_mf;
  } // im=0..nmat-1
@@ -9631,7 +9634,7 @@ void NavierStokes::getStateCONDUCTIVITY() {
 
  new_localMF(idx,nmat,ngrow,-1); // sets values to 0.0
 
- MultiFab* EOSdata=getStateDen(ngrow,cur_time_slab);
+ MultiFab* EOSdata=getStateDen(ngrow+1,cur_time_slab);
  const Real* dx = geom.CellSize();
 
  for (int im=0;im<nmat;im++) {
@@ -9661,6 +9664,8 @@ void NavierStokes::getStateCONDUCTIVITY() {
 
    FArrayBox& eosfab=(*EOSdata)[mfi];
 
+   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
+
    int fortran_im=im+1;
 
    int tid_current=ns_thread();
@@ -9680,6 +9685,8 @@ void NavierStokes::getStateCONDUCTIVITY() {
       ARLIM(conductivity_fab.hiVect()),
       eosfab.dataPtr(),
       ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
+      voffab.dataPtr(),
+      ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
       tilelo,tilehi,
       fablo,fabhi,
       &bfact,

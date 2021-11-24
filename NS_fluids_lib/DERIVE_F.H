@@ -209,6 +209,7 @@ extern "C" {
       Real* dt,
       Real* dat,AMREX_ARLIM_P(datlo),AMREX_ARLIM_P(dathi),
       Real* eosdata,AMREX_ARLIM_P(eosdatalo),AMREX_ARLIM_P(eosdatahi),
+      Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
       const int* tilelo, const int* tilehi,
       const int* fablo, const int* fabhi,
       int* bfact,
