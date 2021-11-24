@@ -285,6 +285,10 @@ implicit none
 !  fort_viscconst_eddy_bulk
 !  fort_heatviscconst_eddy_wall 
 !  fort_heatviscconst_eddy_bulk
+!  fort_thermal_microlayer_size 
+!  fort_shear_microlayer_size 
+!  fort_buoyancy_microlayer_size 
+!  fort_phasechange_microlayer_size 
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
        !nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
