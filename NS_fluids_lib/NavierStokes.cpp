@@ -2574,6 +2574,21 @@ NavierStokes::read_params ()
      std::cout << "species_phys_bc= " << species_phys_bc << '\n';
     }
 
+    Real problen_min=geometry_prob_hi[0]-geometry_prob_lo[0];
+    if (problen_min>0.0) {
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+      Real problen=geometry_prob_hi[dir]-geometry_prob_lo[dir];
+      if (problen>0.0) {
+       if (problen<problen_min) 
+        problen_min=problen;
+      } else
+       amrex::Error("problen invalid");
+     }
+    } else
+     amrex::Error("problen_min invalid");
+
+    Real microlayer_size_default=problen_min/1.0e+9;
+
     //
     // Get timestepping parameters.
     //
@@ -3388,10 +3403,10 @@ NavierStokes::read_params ()
      max_contact_line_size[i]=0.0;
      microlayer_temperature_substrate[i]=0.0;
 
-     thermal_microlayer_size[i]=0.0;
-     shear_microlayer_size[i]=0.0;
-     buoyancy_microlayer_size[i]=0.0;
-     phasechange_microlayer_size[i]=0.0;
+     thermal_microlayer_size[i]=microlayer_size_default;
+     shear_microlayer_size[i]=microlayer_size_default;
+     buoyancy_microlayer_size[i]=microlayer_size_default;
+     phasechange_microlayer_size[i]=microlayer_size_default;
     }
 
     for (int i=0;i<nten;i++) { 
@@ -3706,14 +3721,14 @@ NavierStokes::read_params ()
       amrex::Error("max_contact_line_size invalid");
      if ((microlayer_size[i]>0.0)&&(solidheat_flag==0))
       amrex::Error("cannot have microlayer_size>0.0&&solidheat_flag==0");
-     if (thermal_microlayer_size[i]<0.0)
-      amrex::Error("thermal_microlayer_size invalid");
-     if (shear_microlayer_size[i]<0.0)
-      amrex::Error("shear_microlayer_size invalid");
-     if (buoyancy_microlayer_size[i]<0.0)
-      amrex::Error("buoyancy_microlayer_size invalid");
-     if (phasechange_microlayer_size[i]<0.0)
-      amrex::Error("phasechange_microlayer_size invalid");
+     if (thermal_microlayer_size[i]<microlayer_size_default)
+      amrex::Error("thermal_microlayer_size too small");
+     if (shear_microlayer_size[i]<microlayer_size_default)
+      amrex::Error("shear_microlayer_size too small");
+     if (buoyancy_microlayer_size[i]<microlayer_size_default)
+      amrex::Error("buoyancy_microlayer_size too small");
+     if (phasechange_microlayer_size[i]<microlayer_size_default)
+      amrex::Error("phasechange_microlayer_size too small");
     }  // i=0..nmat-1
 
     pp.queryarr("nucleation_temp",nucleation_temp,0,2*nten);

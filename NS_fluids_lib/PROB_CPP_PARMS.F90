@@ -1123,6 +1123,23 @@ stop
        fort_buoyancy_microlayer_size(im)=ccbuoyancy_microlayer_size(im)
        fort_phasechange_microlayer_size(im)=ccphasechange_microlayer_size(im)
 
+       if (fort_thermal_microlayer_size(im).le.zero) then
+        print *,"fort_thermal_microlayer_size(im) must be positive"
+        stop
+       endif
+       if (fort_shear_microlayer_size(im).le.zero) then
+        print *,"fort_shear_microlayer_size(im) must be positive"
+        stop
+       endif
+       if (fort_buoyancy_microlayer_size(im).le.zero) then
+        print *,"fort_buoyancy_microlayer_size(im) must be positive"
+        stop
+       endif
+       if (fort_phasechange_microlayer_size(im).le.zero) then
+        print *,"fort_phasechange_microlayer_size(im) must be positive"
+        stop
+       endif
+
        fort_viscosity_state_model(im)= &
          ccviscosity_state_model(im)
        fort_elastic_viscosity(im)=ccelastic_viscosity(im)

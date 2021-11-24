@@ -296,6 +296,16 @@ stop
         stop
        endif
 
+       if (fort_viscconst_eddy_bulk(im).gt.zero) then
+        visc(D_DECL(i,j,k),im)=visc(D_DECL(i,j,k),im)+ &
+               fort_viscconst_eddy_bulk(im)
+       else if (fort_viscconst_eddy_bulk(im).eq.zero) then
+        ! do nothing
+       else
+        print *,"fort_viscconst_eddy_bulk invalid"
+        stop
+       endif
+
        if (fort_viscconst_eddy_wall(im).gt.zero) then
         k1lo=0
         k1hi=0
@@ -1207,6 +1217,7 @@ stop
         dt, &
         conduct,DIMS(conduct), &
         eosdata,DIMS(eosdata), &
+        vof,DIMS(vof), &
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
         time, &
@@ -1230,6 +1241,7 @@ stop
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: DIMDEC(conduct)
       INTEGER_T, intent(in) :: DIMDEC(eosdata)
+      INTEGER_T, intent(in) :: DIMDEC(vof)
       INTEGER_T, intent(in) :: ngrow
       REAL_T, intent(in) :: time
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM)
@@ -1239,6 +1251,9 @@ stop
       REAL_T, intent(in), target :: eosdata(DIMV(eosdata), &
               nmat*num_state_material)
       REAL_T, pointer :: eosdata_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: vof(DIMV(vof),nmat*ngeom_recon)
+      REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k
       INTEGER_T dir
@@ -1286,7 +1301,10 @@ stop
 
       call checkbound_array(fablo,fabhi,conduct_ptr,ngrow,-1,316)
       eosdata_ptr=>eosdata
-      call checkbound_array(fablo,fabhi,eosdata_ptr,ngrow,-1,318)
+      call checkbound_array(fablo,fabhi,eosdata_ptr,ngrow+1,-1,318)
+
+      vof_ptr=>vof 
+      call checkbound_array(fablo,fabhi,vof_ptr,ngrow+1,-1,310)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
