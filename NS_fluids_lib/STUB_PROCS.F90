@@ -683,6 +683,7 @@ end subroutine STUB_SUMINT
 
 subroutine STUB_wallfunc( &
   x_projection_raster, &
+  dx, &
   n_raster, & ! points to solid
   u, & !intent(in) magnitude of image tangent velocity
   temperature_image, & !intent(in) 
@@ -697,6 +698,7 @@ use probcommon_module
 use global_utility_module
 implicit none
 REAL_T, intent(in), pointer :: x_projection_raster(:)
+REAL_T, intent(in), pointer :: dx(:)
 REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
 INTEGER_T, intent(in) :: im_fluid
 REAL_T, intent(in) :: u !uimage_tngt
@@ -710,6 +712,7 @@ REAL_T, intent(out) :: tau_w ! wall shear stress
 
  call wallfunc_newtonsmethod( &
   x_projection_raster, &
+  dx, &
   n_raster, & ! points to solid
   u, & !intent(in) magnitude of image tangent velocity
   temperature_image, & !intent(in) 

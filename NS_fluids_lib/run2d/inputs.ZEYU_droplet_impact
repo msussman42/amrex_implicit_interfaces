@@ -132,11 +132,11 @@ ns.gravity        = -980.0  # ZEYU
 #  12=LV,13=SL,23=SV
 ns.tension=73.0 73.0 73.0  #ZEYU  dyne/cm
 #ns.tension=72.0 144.9 72.0  #Kensuke hydrophobic surface dyne/cm
-#law_of_the_wall=0 if static angle condition or non-GNBC dynamic angle 
-#                  conditions.
-#if law_of_the_wall=2 (GNBC) then
+#law_of_the_wall=0 0 0 if static angle condition or non-GNBC dynamic angle 
+#  conditions.
+#if law_of_the_wall=2 2 2(GNBC) then
 # calls to FORT_WALLFUNCTION and getGhostVel are made.
-ns.law_of_the_wall=2
+ns.law_of_the_wall=2 2 2
 # =-1 static angle
 # =1 GNBC
 # =2 Jiang 1970

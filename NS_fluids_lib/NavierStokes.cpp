@@ -1010,7 +1010,7 @@ Real NavierStokes::bottom_bottom_tol_factor=0.001;
 // 2=> generalized Navier Boundary condition (GNBC),
 //   for conventional contact line dynamics, 
 //   modify "get_use_DCA" in PROB.F90.
-int NavierStokes::law_of_the_wall=0;
+Vector<int> NavierStokes::law_of_the_wall;
 Real NavierStokes::wall_slip_weight=0.0;
 int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 
@@ -2864,13 +2864,18 @@ NavierStokes::read_params ()
     if (!((invert_solid_levelset==1)||(invert_solid_levelset==0)))
      amrex::Error("invert_solid_levelset invalid");
 
-    pp.query("law_of_the_wall",law_of_the_wall);
-    if ((law_of_the_wall==0)||
-        (law_of_the_wall==1)||
-	(law_of_the_wall==2)) {
-     // do nothing
-    } else {
-     amrex::Error("law_of_the_wall invalid");
+    for (int i=0;i<nmat;i++) {
+     law_of_the_wall[i]=0;
+    }
+    pp.queryarr("law_of_the_wall",law_of_the_wall,0,nmat);
+    for (int i=0;i<nmat;i++) {
+     if ((law_of_the_wall[i]==0)||
+         (law_of_the_wall[i]==1)||
+  	 (law_of_the_wall[i]==2)) {
+      // do nothing
+     } else {
+      amrex::Error("law_of_the_wall invalid");
+     }
     }
 
     pp.query("wall_slip_weight",wall_slip_weight);
@@ -3187,7 +3192,10 @@ NavierStokes::read_params ()
      }
 
      std::cout << "invert_solid_levelset " << invert_solid_levelset << '\n';
-     std::cout << "law_of_the_wall " << law_of_the_wall << '\n';
+     for (int i=0;i<nmat;i++) {
+      std::cout << "law_of_the_wall i=" << i << " " << 
+	      law_of_the_wall[i] << '\n';
+     }
      std::cout << "wall_slip_weight " << wall_slip_weight << '\n';
      std::cout << "ZEYU_DCA_SELECT " << ZEYU_DCA_SELECT << '\n';
      std::cout << "adapt_quad_depth= " << adapt_quad_depth << '\n';
@@ -6809,21 +6817,26 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
 
   new_localMF(HISTORY_MAC_MF+data_dir,nhistory,0,data_dir);
 
-  if ((law_of_the_wall==0)||   //just use the solid velocity
-      (law_of_the_wall==1)||   //turbulent wall flux
-      (law_of_the_wall==2)) {  //GNBC
+  for (int im=0;im<nmat;im++) {
+   if ((law_of_the_wall[im]==0)||   //just use the solid velocity
+       (law_of_the_wall[im]==1)||   //turbulent wall flux
+       (law_of_the_wall[im]==2)) {  //GNBC
+    // do nothing
+   } else
+    amrex::Error("law_of_the_wall[im] invalid");
+  }
 
-   const Real* dx = geom.CellSize();
+  const Real* dx = geom.CellSize();
 
-   if (thread_class::nthreads<1)
-    amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(localMF[LS_NRM_CP_MF]->boxArray().d_numPts());
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(localMF[LS_NRM_CP_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(*localMF[LS_NRM_CP_MF],use_tiling); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(*localMF[LS_NRM_CP_MF],use_tiling); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
     const int gridno = mfi.index();
     const Box& tilegrid = mfi.tilebox();
@@ -6875,7 +6888,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
      // declared in: GODUNOV_3D.F90
     fort_wallfunction( 
      &data_dir,
-     &law_of_the_wall,
+     law_of_the_wall.dataPtr(),
      im_solid_map.dataPtr(),
      &level,
      &finest_level,
@@ -6903,21 +6916,18 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
      ARLIM(histfab.loVect()),ARLIM(histfab.hiVect()),
      &nhistory_local,
      &visc_coef);
-   } // mfi
+  } // mfi
 } // omp
-   ns_reconcile_d_num(45); //thread_class::sync_tile_d_numPts(),
+  ns_reconcile_d_num(45); //thread_class::sync_tile_d_numPts(),
                            //ParallelDescriptor::ReduceRealSum
 			   //thread_class::reconcile_d_numPts(caller_id)
 
-   if (dealloc_history==0) {
-    // do nothing
-   } else if (dealloc_history==1) {
-    delete_localMF(HISTORY_MAC_MF+data_dir,1);
-   } else 
-    amrex::Error("dealloc_history invalid");
-
-  } else
-   amrex::Error("law_of_the_wall invalid");
+  if (dealloc_history==0) {
+   // do nothing
+  } else if (dealloc_history==1) {
+   delete_localMF(HISTORY_MAC_MF+data_dir,1);
+  } else 
+   amrex::Error("dealloc_history invalid");
 
  } // data_dir=0..sdim-1
 
@@ -7015,9 +7025,9 @@ void NavierStokes::assimilate_state_data() {
     // isweep==0 => update cell data
     // isweep==1 => update MAC data 
     // in: GODUNOV_3D.F90
-   FORT_ASSIMILATE_STATEDATA( 
+   fort_assimilate_statedata( 
      &isweep,
-     &law_of_the_wall,
+     law_of_the_wall.dataPtr(),
      &wall_slip_weight,
      damping_coefficient.dataPtr(),
      im_solid_map.dataPtr(),

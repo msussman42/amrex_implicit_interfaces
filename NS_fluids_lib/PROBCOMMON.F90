@@ -544,6 +544,7 @@ implicit none
 
       subroutine TEMPLATE_wallfunc( &
         x_projection_raster, &
+        dx, &
         n_raster, & ! points to solid
         u, & !intent(in) magnitude of image tangent velocity
         temperature_image, & !intent(in) 
@@ -555,6 +556,7 @@ implicit none
         im_fluid, &  ! intent(in)
         critical_length) ! intent(in) used for sanity check
       REAL_T, intent(in), pointer :: x_projection_raster(:)
+      REAL_T, intent(in), pointer :: dx(:)
       REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
       INTEGER_T, intent(in) :: im_fluid
       REAL_T, intent(in) :: u !uimage_tngt

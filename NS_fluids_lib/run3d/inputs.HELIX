@@ -133,7 +133,7 @@ ns.density_floor=0.99 0.00099 0.99
 ns.density_ceiling=1.01 0.0011 1.01
 # see FORT_WALLFUNCTION in GODUNOV_3D.F90
 # see getGhostVel in GODUNOV_3D.F90
-ns.law_of_the_wall=0  # make 1 for law of the wall
+ns.law_of_the_wall=0 0 0  # make 1 for law of the wall
 ns.FSI_flag=0 0 2  # 1 (GLOBALDIST), 2 (cas (or related) file)
 # refine_factor==0 => do not refine the LAG surface.
 ns.FSI_refine_factor=0 0 0

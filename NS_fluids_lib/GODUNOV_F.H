@@ -2,21 +2,17 @@
 #define _GODUNOV_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_BUILD_MASKSEM build_masksem
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_ASSIMILATE_STATEDATA ASSIMILATE_STATEDATA
 #    define FORT_HEATADVANCE  HEATADVANCE
 #    define FORT_BUILD_MASKSEM BUILD_MASKSEM
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_ASSIMILATE_STATEDATA assimilate_statedata
 #    define FORT_HEATADVANCE  heatadvance
 #    define FORT_BUILD_MASKSEM build_masksem
 #  else
-#    define FORT_ASSIMILATE_STATEDATA assimilate_statedata_
 #    define FORT_HEATADVANCE  heatadvance_
 #    define FORT_BUILD_MASKSEM build_masksem_
 #  endif
@@ -504,7 +500,7 @@ extern "C"
 
 
 
-   void FORT_ASSIMILATE_STATEDATA(
+   void fort_assimilate_statedata(
     int* isweep,
     int* law_of_the_wall,
     Real* wall_slip_weight,

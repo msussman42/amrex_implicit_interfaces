@@ -142,7 +142,7 @@ ns.material_type=0 999 # INCOMPRESSIBLE
 # ns.density_ceiling=1.006 1.00000001  # corresponds ~ 10^9 dyne/cm^2
 # see FORT_WALLFUNCTION in GODUNOV_3D.F90
 # see getGhostVel in GODUNOV_3D.F90
-# ns.law_of_the_wall=0  # make 1 for law of the wall
+# ns.law_of_the_wall=0 0 # make 1 for law of the wall
 ns.FSI_flag=0 1  # 1 (GLOBALDIST), 2 (cas file)
 #ns.FSI_refine_factor=1 0
 #ns.FSI_bounding_box_ngrow=3 3

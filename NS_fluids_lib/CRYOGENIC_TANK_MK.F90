@@ -42,6 +42,7 @@ REAL_T :: TANK_MK_END_CENTER
 ! Heater flux
 REAL_T :: TANK_MK_HEATER_WATTS
 ! Heater location in dim=2 direction
+REAL_T :: TANK_MK_HEATER_WALL_MODEL
 REAL_T :: TANK_MK_HEATER_LOW
 REAL_T :: TANK_MK_HEATER_HIGH
 REAL_T :: TANK_MK_HEATER_R
@@ -99,6 +100,7 @@ contains
    ! Applications.
    ! ZBOT
   if (axis_dir.eq.0) then ! volume=pi(.09^2-0.08^2)*.02=pi(.01)(.17)(0.02)
+   TANK_MK_HEATER_WALL_MODEL = 0.1
    TANK_MK_HEATER_LOW       = -0.1683d0
    TANK_MK_HEATER_HIGH      = -0.1429d0
    TANK_MK_HEATER_R         = 0.1016d0+0.027d0
@@ -110,6 +112,7 @@ contains
 
    ! TPCE
   else if (axis_dir.eq.1) then ! heater on top
+   TANK_MK_HEATER_WALL_MODEL = 0.0
    TANK_MK_HEATER_THICK     = 0.01d0
    TANK_MK_HEATER_TOTAL_ANGLE = 30.0d0*Pi/180.0d0
 
@@ -1688,142 +1691,184 @@ endif
 
 end subroutine CRYOGENIC_TANK_MK_THERMAL_K
 
-
+! Temperature Stratification in a Cryogenic Fuel Tank
+! JOURNAL OF THERMOPHYSICS AND HEAT TRANSFER
+! Vol. 27, No. 1, January–March 2013
+! Daigle, Smelyanskiy, Boschee, Foygel
+!   also
+! Upper Stage Tank Thermodynamic Modeling Using SINDA/FLUINT
+! 42nd AIAA/ASME/SAE/ASEE Joint Propulsion Conference & Exhibit
+! 9 - 12 July 2006, Sacramento, California
+! AIAA 2006-5051
+! Paul Schallhorn, D. Michael Campbell, Sukhdeep Chase,
+! Jorge Piquero, Cindy Fortenberry, Xiaoyi Li, Lisa Grob
+!
+! This routine only called when "law_of_the_wall==1" associated with 
+! im_fluid.
 subroutine wallfunc_thermocorrelation( &
-     x_projection_raster, &
-     n_raster, & ! points to solid
-     u, & !intent(in) magnitude of image tangent velocity
-     temperature_image, & !intent(in) 
-     temperature_wall, & ! intent(in)      
-     viscosity_molecular, & ! intent(in)      
-     viscosity_eddy, & ! intent(in)      
-     y, & !intent(in) distance from image to wall
-     tau_w, & ! intent(out)
-     im_fluid, &  ! intent(in)
-     critical_length) ! intent(in) used for sanity check
-   use probcommon_module
-   implicit none
-   REAL_T, intent(in), pointer :: x_projection_raster(:)
-   REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
-   INTEGER_T, intent(in) :: im_fluid
-   REAL_T, intent(in) :: u !uimage_tngt
-   REAL_T, intent(in) :: temperature_image
-   REAL_T, intent(in) :: temperature_wall
-   REAL_T, intent(in) :: viscosity_molecular
-   REAL_T, intent(in) :: viscosity_eddy
-   REAL_T, intent(in) :: y !delta_r
-   REAL_T, intent(in) :: critical_length
-   REAL_T, intent(out) :: tau_w ! wall shear stress
+  x_projection_raster, &
+  dx, &
+  n_raster, & ! points to solid
+  u, & !intent(in) magnitude of image tangent velocity
+  temperature_image, & !intent(in) 
+  temperature_wall, & ! intent(in)      
+  viscosity_molecular, & ! intent(in)      
+  viscosity_eddy, & ! intent(in)      
+  y, & !intent(in) distance from image to wall
+  tau_w, & ! intent(out)
+  im_fluid, &  ! intent(in)
+  critical_length) ! intent(in) used for sanity check
+use probcommon_module
+implicit none
+REAL_T, intent(in), pointer :: x_projection_raster(:)
+REAL_T, intent(in), pointer :: dx(:)
+REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
+INTEGER_T, intent(in) :: im_fluid
+REAL_T, intent(in) :: u !uimage_tngt
+REAL_T, intent(in) :: temperature_image
+REAL_T, intent(in) :: temperature_wall
+REAL_T, intent(in) :: viscosity_molecular
+REAL_T, intent(in) :: viscosity_eddy
+REAL_T, intent(in) :: y !delta_r
+REAL_T, intent(in) :: critical_length
+REAL_T, intent(out) :: tau_w ! wall shear stress
 
-   REAL_T :: u_tau,x_n,x_np1 !x_n, x_(n+1) --> u_tau
-   REAL_T :: iter_diff
-   REAL_T :: f, fprime
-   INTEGER_T :: iter, iter_max=1000
-   !initialize wall function parameters here
-   REAL_T :: K=0.41d0, B=5.5d0
-   REAL_T :: rho_w !wall density
-   REAL_T :: mu_w  !mu_w: wall molecular viscosity
-   REAL_T :: predict_deriv_utan
-   REAL_T :: max_deriv_utan
-   REAL_T :: ughost_tngt_local
-   REAL_T :: thermal_conductivity
-   REAL_T :: thermal_diffusivity
-   REAL_T :: gravity_local
-   REAL_T :: expansion_coefficient
-   REAL_T :: Cp
-   REAL_T :: Jtemp,dtemp,vtemp
-   REAL_T,parameter :: local_pi=4.0*atan(1.0d0)
-   REAL_T,parameter :: R=0.1016d0 ! for ZBOT
-   INTEGER_T :: turb_flag  ! 1 for turb  0 for laminar
-   REAL_T :: Ra,Gr,Pr
-   REAL_T :: nu
+REAL_T :: rho_w !wall density
+REAL_T :: mu_w  !mu_w: wall molecular viscosity
+REAL_T :: ughost_tngt_local
+REAL_T :: thermal_conductivity
+REAL_T :: thermal_diffusivity
+REAL_T :: gravity_local
+REAL_T :: expansion_coefficient
+REAL_T :: Cp
+REAL_T :: Jtemp,dtemp,vtemp
+REAL_T,parameter :: local_pi=4.0*atan(1.0d0)
+INTEGER_T :: turb_flag  ! 1 for turb  0 for laminar
+REAL_T :: Ra,Gr,Pr
+REAL_T :: nu
+REAL_T :: xi
+REAL_T :: R
 
-   if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
-    print *,"im_fluid invalid in wallfunc_newtonsmethod"
-    stop
-   endif
+if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
+ print *,"im_fluid invalid in wallfunc_thermocorrelation"
+ stop
+endif
 
-   mu_w=fort_viscconst(im_fluid) 
-   rho_w=fort_denconst(im_fluid)
-  
-   if (rho_w.gt.zero) then
-    ! do nothing
-   else
-    print *,"rho_w invalid"
-    stop
-   endif
-   
-   nu=mu_w/rho_w
+mu_w=fort_viscconst(im_fluid) 
+rho_w=fort_denconst(im_fluid)
 
-   thermal_conductivity=fort_heatviscconst(im_fluid)
-   Cp=fort_stiffCP(im_fluid)
+if (dx(1).gt.0.0d0) then
+ ! do nothing
+else
+ print *,"dx(1) invalid"
+ stop
+endif
 
-   if (Cp.gt.zero) then
-    ! do nothing
-   else
-    print *,"Cp invalid"
-    stop
-   endif
+if (rho_w.gt.zero) then
+ ! do nothing
+else
+ print *,"rho_w invalid"
+ stop
+endif
 
-   thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
-   gravity_local=abs(gravity)
-   expansion_coefficient=fort_DrhoDT(im_fluid) ! units: 1/temperature
+nu=mu_w/rho_w
 
-   Ra=gravity_local*expansion_coefficient* &
-       (temperature_wall-temperature_image)*(xi**3.0)/(nu*thermal_diffusivity)
-   if(Ra.lt.1.0e+9)then
-     turb_flag=0
-   elseif(Ra.ge.1.0e+9)then
-     turb_flag=1
-   else
-     print *,"Ra number invalid"
-     stop
-   endif
+thermal_conductivity=fort_heatviscconst(im_fluid)
+Cp=fort_stiffCP(im_fluid)
 
-   if (mu_w.eq.viscosity_molecular) then
-    ! do nothing
-   else
-    print *,"mu_w.eq.viscosity_molecular == false"
-    stop
-   endif
-   if (viscosity_eddy.eq.fort_viscconst_eddy(im_fluid)) then
-    ! do nothing
-   else
-    print *,"viscosity_eddy.eq.fort_viscconst_eddy(im_fluid) == false"
-    stop
-   endif
+if (thermal_conductivity.gt.zero) then
+ ! do nothing
+else
+ print *,"expecting thermal_conductivity to be positive"
+ stop
+endif
 
-   Pr= nu/thermal_diffusivity
-   Gr= gravity_local*expansion_coefficient*(temperature_wall-temperature_image)* &
-                      (xi**(3.0d0))/(nu**2.0d0)
-   vtemp=1.185d0*nu/xi*(Gr/(1+0.494*Pr**(2.0d0/3.0d0)))**0.5d0
+if (Cp.gt.zero) then
+ ! do nothing
+else
+ print *,"Cp invalid"
+ stop
+endif
 
-   if(turb_flag.eq.1)then
-    dtemp=xi*0.565*((1+0.494d0*Pr**(2.0d0/3.0d0))/Gr)**(0.1d0)/Pr**(8.0d0/15.0d0)
-    Jtemp=2.0d0*local_pi*R*0.1436d0*rho_w*vtemp*dtemp 
-   elseif(turb_flag.eq.0)then
-    dtemp=y*3.93*((0.952+Pr)/(Gr*(Pr**2.0d0)))**0.25d0
-    Jtemp=2.0d0*local_pi*R*0.0833d0*rho_w*vtemp*dtemp
-   else
-    print *,"wrong turb_flag"
-    stop
-   endif
+xi=x_projection_raster(SDIM)-TANK_MK_HEATER_HIGH
+R=x_projection_raster(1)
 
-    ! getGhostVel (GLOBALUTIL.F90) has the lines
-    ! ughost_tngt = uimage_tngt_mag - &
-    !    tau_w*delta_r_raster/ &
-    !    (viscosity_molecular+viscosity_eddy_wall)
+if ((xi.gt.0.0d0).and. &
+    (xi.le.TANK_MK_HEATER_WALL_MODEL).and. &
+    (n_raster(1).eq.one).and. &
+    (temperature_wall.gt.temperature_image)) then
 
-   ughost_tngt_local=(2.0d0*Jtemp)/(y*rho_w)-vtemp
-   tau_w=(u-ughost_tngt_local)*(viscosity_molecular+viscosity_eddy)/y
+ thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
+ gravity_local=abs(gravity)
+ expansion_coefficient=fort_DrhoDT(im_fluid) ! units: 1/temperature
+
+ Gr=gravity_local*expansion_coefficient* &
+    (temperature_wall-temperature_image)*(xi**3.0)/(nu*nu)
+ Pr=nu/thermal_diffusivity
+ Ra=Gr*Pr
+ if(Ra.lt.1.0e+9)then
+  turb_flag=0
+ else if(Ra.ge.1.0e+9)then
+  turb_flag=1
+ else
+  print *,"Ra number invalid"
+  stop
+ endif
+
+ if (mu_w.eq.viscosity_molecular) then
+  ! do nothing
+ else
+  print *,"mu_w.eq.viscosity_molecular == false"
+  stop
+ endif
+ if (viscosity_eddy.eq.fort_viscconst_eddy_wall(im_fluid)) then
+  ! do nothing
+ else
+  print *,"viscosity_eddy.eq.fort_viscconst_eddy(im_fluid) == false"
+  stop
+ endif
+
+ vtemp=1.185d0*(nu/xi)*(Gr/(1.0d0+0.494*(Pr**(2.0d0/3.0d0))))**0.5d0
+
+  ! Jtemp is mass flux through horizontal face of length dtemp.
+  ! Jtemp has units of mass/sec=rho * velocity * area_face
+  ! We assume that J=rho * u_tan * 2 pi R * dr
+  ! u_tan=J/(2 pi R rho dr)
+ if(turb_flag.eq.1)then
+  dtemp=xi*0.565*((1.0d0+0.494d0*Pr**(2.0d0/3.0d0))/Gr)**(0.1d0)/ &
+        (Pr**(8.0d0/15.0d0))
+  Jtemp=2.0d0*local_pi*R*0.1436d0*rho_w*vtemp*dtemp 
+ else if(turb_flag.eq.0)then
+  dtemp=xi*3.93*((0.952+Pr)/(Gr*(Pr**2.0d0)))**0.25d0
+  Jtemp=2.0d0*local_pi*R*0.0833d0*rho_w*vtemp*dtemp
+ else
+  print *,"wrong turb_flag"
+  stop
+ endif
+
+ ! getGhostVel (GLOBALUTIL.F90) has the lines
+ ! ughost_tngt = uimage_tngt_mag - &
+ !    tau_w*delta_r_raster/ &
+ !    (viscosity_molecular+viscosity_eddy_wall)
+
+ ughost_tngt_local=Jtemp/(2.0d0*local_pi*R*rho_w*dx(1))
+else if ((xi.le.0.0d0).or. &
+         (xi.ge.TANK_MK_HEATER_WALL_MODEL).or. &
+         (n_raster(1).ne.one).or. &
+         (temperature_wall.le.temperature_image)) then
+ ughost_tngt_local=0.0d0
+else
+ print *,"xi,n_raster,twall or timage became corrupt"
+ stop
+endif
+tau_w=(u-ughost_tngt_local)*(viscosity_molecular+viscosity_eddy)/y
 
 end subroutine wallfunc_thermocorrelation
 
 
-
-
 subroutine CRYOGENIC_TANK_MK_wallfunc( &
   x_projection_raster, &
+  dx, &
   n_raster, & ! points to solid
   u, & !intent(in) magnitude of image tangent velocity
   temperature_image, & !intent(in) 
@@ -1838,6 +1883,7 @@ use probcommon_module
 use global_utility_module
 implicit none
 REAL_T, intent(in), pointer :: x_projection_raster(:)
+REAL_T, intent(in), pointer :: dx(:)
 REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
 INTEGER_T, intent(in) :: im_fluid
 REAL_T, intent(in) :: u !uimage_tngt
@@ -1854,6 +1900,7 @@ REAL_T, intent(out) :: tau_w ! wall shear stress
   ! declared in GLOBALUTIL.F90
   call wallfunc_newtonsmethod( &
    x_projection_raster, &
+   dx, &
    n_raster, & ! points to solid
    u, & !intent(in) magnitude of image tangent velocity
    temperature_image, & !intent(in) 
@@ -1867,6 +1914,7 @@ REAL_T, intent(out) :: tau_w ! wall shear stress
  else
   call wallfunc_thermocorrelation( &
    x_projection_raster, &
+   dx, &
    n_raster, & ! points to solid
    u, & !intent(in) magnitude of image tangent velocity
    temperature_image, & !intent(in) 
