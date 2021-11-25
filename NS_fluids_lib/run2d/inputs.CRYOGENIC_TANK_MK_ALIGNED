@@ -62,6 +62,8 @@ geometry.prob_lo    = 0.0   -0.254
 geometry.prob_hi    = 0.127  0.254
 geometry.is_periodic= 0 0
 
+ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
+
 amr.n_cell          = 16 64 
 amr.max_level       = 0
 

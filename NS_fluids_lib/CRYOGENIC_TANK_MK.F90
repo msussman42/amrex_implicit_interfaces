@@ -1557,18 +1557,32 @@ endif
 end subroutine CRYOGENIC_TANK_MK_CHARFN_REGION
 
 
-subroutine CRYOGENIC_TANK_MK_THERMAL_K(x,dx,cur_time,density,temperature, &
-          thermal_k,im)
+subroutine CRYOGENIC_TANK_MK_THERMAL_K(x,dx,cur_time, &
+  density, &
+  temperature, &
+  thermal_k, &
+  im, &
+  near_interface, &
+  im_solid, &
+  temperature_wall, &
+  temperature_probe, &
+  nrm) ! nrm points from solid to fluid
 use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: im
+INTEGER_T, intent(in) :: im_solid
+INTEGER_T, intent(in) :: near_interface
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: dx(SDIM)
 REAL_T, intent(in) :: cur_time
 REAL_T, intent(in) :: density
 REAL_T, intent(in) :: temperature
+REAL_T, intent(in) :: temperature_wall
+REAL_T, intent(in) :: temperature_probe
+REAL_T, intent(in) :: nrm(SDIM) ! nrm points from solid to fluid
 REAL_T, intent(inout) :: thermal_k
+
 REAL_T :: LS_A
 INTEGER_T :: caller_id
 
@@ -1579,7 +1593,21 @@ else
  stop
 endif
 
+if ((im_solid.ge.0).and.(im_solid.le.num_materials)) then
+ ! do nothing
+else
+ print *,"im_solid invalid"
+ stop
+endif
+
 if ((im.ge.1).and.(im.le.num_materials)) then
+
+ if (fort_thermal_microlayer_size(im).gt.zero) then
+  !do nothing
+ else
+  print *,"thermal_microlayer_size(im) invalid"
+  stop
+ endif  
 
  if (axis_dir.eq.0) then ! ZBOT
 
@@ -1590,7 +1618,8 @@ if ((im.ge.1).and.(im.le.num_materials)) then
        (abs(x(1)).ge.TANK_MK_HEATER_R_LOW-dx(1)).and.&
        (x(2).ge.TANK_MK_HEATER_LOW).and.&
        (x(2).le.TANK_MK_HEATER_HIGH)) then
-    thermal_k=fort_heatviscconst(im)*1.0D+3
+    thermal_k=fort_heatviscconst(im)* &
+      max(one,dx(1)/fort_thermal_microlayer_size(im))
    else if ((abs(x(2)).ge.TANK_MK_INSULATE_THICK+TANK_MK_HEIGHT/2.0d0).or. &
             (abs(x(1)).ge.TANK_MK_INSULATE_R_HIGH)) then
     if (im.eq.3) then
@@ -1627,7 +1656,8 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    caller_id=1
    call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,caller_id)
    if (LS_A.gt.-dx(1)) then
-    thermal_k=fort_heatviscconst(im)*1.0D+3
+    thermal_k=fort_heatviscconst(im)* &
+      max(one,dx(1)/fort_thermal_microlayer_size(im))
    else if (LS_A.le.-dx(1)) then
     if (im.eq.3) then
      thermal_k=0.0d0

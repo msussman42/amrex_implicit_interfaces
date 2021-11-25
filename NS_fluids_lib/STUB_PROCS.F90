@@ -782,23 +782,42 @@ IMPLICIT NONE
 
 end subroutine STUB_DELETE_REGIONS_LIST
 
-subroutine STUB_THERMAL_K(x,dx,cur_time,density,temperature, &
-          thermal_k,im)
+subroutine STUB_THERMAL_K(x,dx,cur_time, &
+  density, &
+  temperature, &
+  thermal_k, &
+  im, &
+  near_interface, &
+  im_solid, &
+  temperature_wall, &
+  temperature_probe, &
+  nrm) ! nrm points from solid to fluid
 use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: im
+INTEGER_T, intent(in) :: im_solid
+INTEGER_T, intent(in) :: near_interface
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: dx(SDIM)
 REAL_T, intent(in) :: cur_time
 REAL_T, intent(in) :: density
 REAL_T, intent(in) :: temperature
+REAL_T, intent(in) :: temperature_wall
+REAL_T, intent(in) :: temperature_probe
+REAL_T, intent(in) :: nrm(SDIM) ! nrm points from solid to fluid
 REAL_T, intent(inout) :: thermal_k
 
 if ((im.ge.1).and.(im.le.num_materials)) then
  ! do nothing
 else 
  print *,"im invalid in STUB_THERMAL_K"
+ stop
+endif
+if ((im_solid.ge.0).and.(im_solid.le.num_materials)) then
+ ! do nothing
+else
+ print *,"im_solid invalid STUB_THERMAL_K"
  stop
 endif
 

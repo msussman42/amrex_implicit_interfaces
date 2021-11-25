@@ -1227,6 +1227,7 @@ stop
 
       use global_utility_module
       use probf90_module
+      use MOF_routines_module
 
       IMPLICIT NONE
 
@@ -1260,6 +1261,7 @@ stop
       INTEGER_T isolid,jsolid,ksolid
       INTEGER_T iprobe,jprobe,kprobe
       INTEGER_T dir,side
+      INTEGER_T dir_local
       INTEGER_T flagcomp
       INTEGER_T vofcomp
       REAL_T density
@@ -1455,9 +1457,12 @@ stop
           temperature_wall=eosdata(D_DECL(isolid,jsolid,ksolid),flagcomp+1)
           flagcomp=(im_parm-1)*num_state_material+1
           temperature_probe=eosdata(D_DECL(iprobe,jprobe,kprobe),flagcomp+1)
+          thermal_k=get_user_heatviscconst(im_parm)+ &
+               fort_heatviscconst_eddy_wall(im_parm)
          else if (near_interface.eq.0) then
           temperature_wall=temperature
           temperature_probe=temperature
+          thermal_k=get_user_heatviscconst(im_parm)
          else
           print *,"near_interface invalid"
           stop
@@ -1465,24 +1470,15 @@ stop
 
          if (is_in_probtype_list().eq.1) then
           call SUB_THERMAL_K(xvec,dx,time, &
-            density,temperature, &
-            thermal_k, &
+            density, &
+            temperature, &
+            thermal_k, & ! intent(inout)
             im_parm, &
             near_interface, &
-            im_solid, &
+            im_solid_crit, &
             temperature_wall, &
             temperature_probe, &
             nrm) ! nrm points from solid to fluid
-         else
-          if (near_interface.eq.0) then
-           thermal_k=get_user_heatviscconst(im_parm)
-          else if (near_interface.eq.1) then
-           thermal_k=get_user_heatviscconst(im_parm)+ &
-                   fort_heat_viscconst_eddy_wall(im_parm)
-          else
-           print *,"near_interface invalid"
-           stop
-          endif
          endif
 
          if (thermal_k.ge.zero) then

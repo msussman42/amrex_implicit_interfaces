@@ -582,7 +582,8 @@ implicit none
       end subroutine TEMPLATE_CHARFN_REGION
 
       subroutine TEMPLATE_THERMAL_K(x,dx,cur_time, &
-        density,temperature, &
+        density, &
+        temperature, &
         thermal_k, &
         im, &
         near_interface, &
@@ -597,6 +598,7 @@ implicit none
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: cur_time
       REAL_T, intent(in) :: density
+      REAL_T, intent(in) :: temperature
       REAL_T, intent(in) :: temperature_wall
       REAL_T, intent(in) :: temperature_probe
       REAL_T, intent(in) :: nrm(SDIM) ! nrm points from solid to fluid
