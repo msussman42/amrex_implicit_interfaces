@@ -581,14 +581,25 @@ implicit none
       REAL_T, intent(out) :: charfn_out
       end subroutine TEMPLATE_CHARFN_REGION
 
-      subroutine TEMPLATE_THERMAL_K(x,dx,cur_time,density,temperature, &
-                      thermal_k,im)
+      subroutine TEMPLATE_THERMAL_K(x,dx,cur_time, &
+        density,temperature, &
+        thermal_k, &
+        im, &
+        near_interface, &
+        im_solid, &
+        temperature_wall, &
+        temperature_probe, &
+        nrm) ! nrm points from solid to fluid
       INTEGER_T, intent(in) :: im
+      INTEGER_T, intent(in) :: im_solid
+      INTEGER_T, intent(in) :: near_interface
       REAL_T, intent(in) :: x(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: cur_time
       REAL_T, intent(in) :: density
-      REAL_T, intent(in) :: temperature
+      REAL_T, intent(in) :: temperature_wall
+      REAL_T, intent(in) :: temperature_probe
+      REAL_T, intent(in) :: nrm(SDIM) ! nrm points from solid to fluid
       REAL_T, intent(inout) :: thermal_k
       end subroutine TEMPLATE_THERMAL_K
 

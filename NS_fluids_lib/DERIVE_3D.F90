@@ -1256,15 +1256,34 @@ stop
       REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k
-      INTEGER_T dir
+      INTEGER_T ii,jj,kk
+      INTEGER_T isolid,jsolid,ksolid
+      INTEGER_T iprobe,jprobe,kprobe
+      INTEGER_T dir,side
       INTEGER_T flagcomp
-      REAL_T density,temperature
+      INTEGER_T vofcomp
+      REAL_T density
+      REAL_T temperature
+      REAL_T temperature_wall
+      REAL_T temperature_probe
       REAL_T thermal_k
+      REAL_T thermal_k_max
       REAL_T xvec(SDIM)
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
+      INTEGER_T im_local
+      INTEGER_T im_solid_crit
+      INTEGER_T im_primary_center
+      INTEGER_T im_primary_side
+      INTEGER_T im_primary_probe
+      REAL_T VFRAC(nmat)
+      INTEGER_T caller_id
+      INTEGER_T near_interface
+      REAL_T nrm(SDIM)
 
       nhalf=1
+
+      caller_id=1338
 
       conduct_ptr=>conduct
 
@@ -1333,14 +1352,13 @@ stop
        temperature=eosdata(D_DECL(i,j,k),flagcomp+1)
 
        thermal_k=get_user_heatviscconst(im_parm)
+       thermal_k_max=thermal_k
 
        do im_local=1,nmat
         vofcomp=(im_local-1)*ngeom_recon+1
         VFRAC(im_local)=vof(D_DECL(i,j,k),vofcomp)
        enddo
        call get_primary_material_VFRAC(VFRAC,nmat,im_primary_center,caller_id)
-
-       thermal_k_max=thermal_k
 
        do dir=1,SDIM
         ii=0
@@ -1385,10 +1403,10 @@ stop
           isolid=i+side*ii
           jsolid=j+side*jj
           ksolid=k+side*kk
-          iprobe=i+side*ii-2*side*ii
-          jprobe=j+side*jj-2*side*jj
-          kprobe=k+side*kk-2*side*kk
-          nrm(dir)=-side
+          iprobe=isolid-2*side*ii
+          jprobe=jsolid-2*side*jj
+          kprobe=ksolid-2*side*kk
+          nrm(dir)=-side  ! points from solid to fluid
          else if ((is_rigid(nmat,im_primary_center).eq.1).and. &
                   (is_rigid(nmat,im_primary_side).eq.0).and. &
                   (im_primary_side.eq.im_parm)) then
@@ -1397,10 +1415,10 @@ stop
           isolid=i
           jsolid=j
           ksolid=k
-          iprobe=i+2*side*ii
-          jprobe=j+2*side*jj
-          kprobe=k+2*side*kk
-          nrm(dir)=side
+          iprobe=isolid+2*side*ii
+          jprobe=jsolid+2*side*jj
+          kprobe=ksolid+2*side*kk
+          nrm(dir)=side ! points from solid to fluid
          else if ((is_rigid(nmat,im_primary_center).eq.0).and. &
                   (is_rigid(nmat,im_primary_side).eq.0)) then
           ! do nothing
@@ -1446,8 +1464,10 @@ stop
          endif
 
          if (is_in_probtype_list().eq.1) then
-          call SUB_THERMAL_K(xvec,dx,time,density,temperature, &
-            thermal_k,im_parm, &
+          call SUB_THERMAL_K(xvec,dx,time, &
+            density,temperature, &
+            thermal_k, &
+            im_parm, &
             near_interface, &
             im_solid, &
             temperature_wall, &
