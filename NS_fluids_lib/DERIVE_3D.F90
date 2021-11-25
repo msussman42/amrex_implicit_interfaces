@@ -1298,13 +1298,25 @@ stop
        print *,"time invalid in fort_derconductivity"
        stop
       endif
+      if (fort_heatviscconst_eddy_bulk(im_parm).ge.zero) then
+       ! do nothing
+      else
+       print *,"fort_heatviscconst_eddy_bulk invalid"
+       stop
+      endif
+      if (fort_heatviscconst_eddy_wall(im_parm).ge.zero) then
+       ! do nothing
+      else
+       print *,"fort_heatviscconst_eddy_wall invalid"
+       stop
+      endif
 
       call checkbound_array(fablo,fabhi,conduct_ptr,ngrow,-1,316)
       eosdata_ptr=>eosdata
-      call checkbound_array(fablo,fabhi,eosdata_ptr,ngrow+1,-1,318)
+      call checkbound_array(fablo,fabhi,eosdata_ptr,ngrow+2,-1,318)
 
       vof_ptr=>vof 
-      call checkbound_array(fablo,fabhi,vof_ptr,ngrow+1,-1,310)
+      call checkbound_array(fablo,fabhi,vof_ptr,ngrow+2,-1,310)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
@@ -1322,12 +1334,156 @@ stop
 
        thermal_k=get_user_heatviscconst(im_parm)
 
-       if (is_in_probtype_list().eq.1) then
-        call SUB_THERMAL_K(xvec,dx,time,density,temperature, &
-                thermal_k,im_parm)
-       endif
+       do im_local=1,nmat
+        vofcomp=(im_local-1)*ngeom_recon+1
+        VFRAC(im_local)=vof(D_DECL(i,j,k),vofcomp)
+       enddo
+       call get_primary_material_VFRAC(VFRAC,nmat,im_primary_center,caller_id)
 
-       conduct(D_DECL(i,j,k),im_parm) = thermal_k
+       thermal_k_max=thermal_k
+
+       do dir=1,SDIM
+        ii=0
+        jj=0
+        kk=0
+        if (dir.eq.1) then
+         ii=1
+        else if (dir.eq.2) then
+         jj=1
+        else if ((dir.eq.3).and.(SDIM.eq.3)) then
+         kk=1
+        else
+         print *,"dir invalid"
+         stop
+        endif
+        do side=-1,1,2
+         isolid=i
+         jsolid=j
+         ksolid=k
+         iprobe=i 
+         jprobe=j 
+         kprobe=k 
+         im_solid_crit=0
+         do im_local=1,nmat
+          vofcomp=(im_local-1)*ngeom_recon+1
+          VFRAC(im_local)=vof(D_DECL(i+side*ii,j+side*jj,k+side*kk),vofcomp)
+         enddo
+         call get_primary_material_VFRAC(VFRAC,nmat,im_primary_side,caller_id)
+
+         near_interface=0
+         do dir_local=1,SDIM
+          nrm(dir_local)=zero
+         enddo
+         if ((is_rigid(nmat,im_primary_side).eq.1).and. &
+             (is_rigid(nmat,im_primary_center).eq.1)) then
+          ! do nothing 
+         else if ((is_rigid(nmat,im_primary_side).eq.1).and. &
+                  (is_rigid(nmat,im_primary_center).eq.0).and. &
+                  (im_primary_center.eq.im_parm)) then
+          im_solid_crit=im_primary_side
+          near_interface=1
+          isolid=i+side*ii
+          jsolid=j+side*jj
+          ksolid=k+side*kk
+          iprobe=i+side*ii-2*side*ii
+          jprobe=j+side*jj-2*side*jj
+          kprobe=k+side*kk-2*side*kk
+          nrm(dir)=-side
+         else if ((is_rigid(nmat,im_primary_center).eq.1).and. &
+                  (is_rigid(nmat,im_primary_side).eq.0).and. &
+                  (im_primary_side.eq.im_parm)) then
+          im_solid_crit=im_primary_center
+          near_interface=1
+          isolid=i
+          jsolid=j
+          ksolid=k
+          iprobe=i+2*side*ii
+          jprobe=j+2*side*jj
+          kprobe=k+2*side*kk
+          nrm(dir)=side
+         else if ((is_rigid(nmat,im_primary_center).eq.0).and. &
+                  (is_rigid(nmat,im_primary_side).eq.0)) then
+          ! do nothing
+         else
+          print *,"is_rigid invalid"
+          stop
+         endif
+         if (near_interface.eq.1) then
+          do im_local=1,nmat
+           vofcomp=(im_local-1)*ngeom_recon+1
+           VFRAC(im_local)=vof(D_DECL(iprobe,jprobe,kprobe),vofcomp)
+          enddo
+          call get_primary_material_VFRAC(VFRAC,nmat,im_primary_probe, &
+                  caller_id)
+          if ((is_rigid(nmat,im_primary_probe).eq.1).or. &
+              (im_primary_probe.ne.im_parm)) then
+           near_interface=0
+          else if ((is_rigid(nmat,im_primary_probe).eq.0).and. &
+                   (im_primary_probe.eq.im_parm)) then
+           ! do nothing
+          else
+           print *,"is_rigid or im_primary_probe invalid"
+           stop
+          endif
+         else if (near_interface.eq.0) then
+          ! do nothing
+         else
+          print *,"near_interface invalid"
+          stop
+         endif
+
+         if (near_interface.eq.1) then
+          flagcomp=(im_solid_crit-1)*num_state_material+1
+          temperature_wall=eosdata(D_DECL(isolid,jsolid,ksolid),flagcomp+1)
+          flagcomp=(im_parm-1)*num_state_material+1
+          temperature_probe=eosdata(D_DECL(iprobe,jprobe,kprobe),flagcomp+1)
+         else if (near_interface.eq.0) then
+          temperature_wall=temperature
+          temperature_probe=temperature
+         else
+          print *,"near_interface invalid"
+          stop
+         endif
+
+         if (is_in_probtype_list().eq.1) then
+          call SUB_THERMAL_K(xvec,dx,time,density,temperature, &
+            thermal_k,im_parm, &
+            near_interface, &
+            im_solid, &
+            temperature_wall, &
+            temperature_probe, &
+            nrm) ! nrm points from solid to fluid
+         else
+          if (near_interface.eq.0) then
+           thermal_k=get_user_heatviscconst(im_parm)
+          else if (near_interface.eq.1) then
+           thermal_k=get_user_heatviscconst(im_parm)+ &
+                   fort_heat_viscconst_eddy_wall(im_parm)
+          else
+           print *,"near_interface invalid"
+           stop
+          endif
+         endif
+
+         if (thermal_k.ge.zero) then
+          ! do nothing
+         else
+          print *,"thermal_k became corrupt"
+          stop
+         endif
+         if (thermal_k.ge.thermal_k_max) then
+          thermal_k_max=thermal_k
+         else if (thermal_k.le.thermal_k_max) then
+          ! do nothing
+         else
+          print *,"thermal_k or thermal_k_max corrupt"
+          stop
+         endif
+        enddo ! side=-1,1,2
+       enddo ! dir=1,SDIM
+
+       conduct(D_DECL(i,j,k),im_parm) = thermal_k_max+ &
+          fort_heatviscconst_eddy_bulk(im_parm)
 
       enddo
       enddo
