@@ -1788,10 +1788,10 @@ void fortran_parameters() {
   heatviscconst_eddy_wall_temp[im]=0.0;
   heatviscconst_eddy_bulk_temp[im]=0.0;
 
-  thermal_microlayer_size_temp[im]=microlayer_size_defult;
-  shear_microlayer_size_temp[im]=microlayer_size_defult;
-  buoyancy_microlayer_size_temp[im]=microlayer_size_defult;
-  phasechange_microlayer_size_temp[im]=microlayer_size_defult;
+  thermal_microlayer_size_temp[im]=microlayer_size_default;
+  shear_microlayer_size_temp[im]=microlayer_size_default;
+  buoyancy_microlayer_size_temp[im]=microlayer_size_default;
+  phasechange_microlayer_size_temp[im]=microlayer_size_default;
  }
  pp.queryarr("viscconst_eddy_wall",viscconst_eddy_wall_temp,0,nmat);
  pp.queryarr("viscconst_eddy_bulk",viscconst_eddy_bulk_temp,0,nmat);

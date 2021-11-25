@@ -106,6 +106,8 @@ geometry.prob_lo    = 0.0  -0.2
 geometry.prob_hi    = 0.2  0.2
 geometry.is_periodic= 0 0
 
+ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
+
 # dx_coarse=(prob_hi_x-prob_lo_x)/n_cell_x
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.

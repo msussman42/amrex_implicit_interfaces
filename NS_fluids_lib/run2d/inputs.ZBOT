@@ -90,6 +90,8 @@ geometry.prob_lo    = 0.0  -0.3
 geometry.prob_hi    = 0.15  0.3
 geometry.is_periodic= 0 0
 
+ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
+
 # how to get same results as the 64x256 case, but finish in 1 hour?
 # Remark: 32x128 case takes 24 hours and is too diffusive.
 # strategy:
