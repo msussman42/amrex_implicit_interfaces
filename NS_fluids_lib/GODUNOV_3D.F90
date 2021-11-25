@@ -21379,7 +21379,7 @@ stop
           (nparts_ghost.ge.nparts)) then 
        ! do nothing
       else
-       print *,"nparts_ghost invalid fort_wallfunction"
+       print *,"nparts_ghost invalid FORT_ASSIMILATE_STATEDATA"
        stop
       endif
 
