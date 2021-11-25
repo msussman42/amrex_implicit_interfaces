@@ -104,11 +104,11 @@ ns.tension       = 1118.0 559.0 1118.0
 # sigma_{SL}/sigma_{LV}=1-2^{-1/2}
 #ns.tension       = 1118.0 327.0 1118.0 
 
-#law_of_the_wall=0 if static angle condition or non-GNBC dynamic angle 
+#law_of_the_wall=0 0 0 if static angle condition or non-GNBC dynamic angle 
 #                  conditions.
-#if law_of_the_wall=2 (GNBC) then
+#if law_of_the_wall=2 2 2 (GNBC) then
 # calls to FORT_WALLFUNCTION and getGhostVel are made.
-ns.law_of_the_wall=0  #1=law of the wall   2=GNBC  0=neither
+ns.law_of_the_wall=0 0 0 #1=law of the wall   2=GNBC  0=neither
 
 # =-1 static angle
 # =1 GNBC

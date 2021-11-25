@@ -1825,7 +1825,7 @@ protected:
      // 0=> u=u_solid if phi_solid>=0
      // 1=> u=u_solid_ghost if phi_solid>=0
      // 2=> GNBC (u=u_solid_ghost if phi_solid>=0)
-    static int         law_of_the_wall;  // def=0
+    static Vector<int> law_of_the_wall;  // def=0
     static Real        wall_slip_weight; // def=0.0
      // 1..7 "1" corresponds to the GNBC option.
     static int         ZEYU_DCA_SELECT;  // DCA=dynamic contact angle

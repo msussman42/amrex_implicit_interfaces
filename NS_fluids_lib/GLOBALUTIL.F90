@@ -1330,6 +1330,7 @@ contains
       
       subroutine wallfunc_newtonsmethod( &
         x_projection_raster, &
+        dx, &
         n_raster, & ! points to solid
         u, & !intent(in) magnitude of image tangent velocity
         temperature_image, & !intent(in) 
@@ -1343,6 +1344,7 @@ contains
       use probcommon_module
       implicit none
       REAL_T, intent(in), pointer :: x_projection_raster(:)
+      REAL_T, intent(in), pointer :: dx(:)
       REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
       INTEGER_T, intent(in) :: im_fluid
       REAL_T, intent(in) :: u !uimage_tngt
@@ -1488,6 +1490,7 @@ contains
 
       subroutine wallfunc_general( &
         x_projection_raster, &
+        dx, &
         n_raster, & ! points to solid
         u, & !intent(in) magnitude of image tangent velocity
         temperature_image, & !intent(in) 
@@ -1501,6 +1504,7 @@ contains
       use probcommon_module
       implicit none
       REAL_T, intent(in), pointer :: x_projection_raster(:)
+      REAL_T, intent(in), pointer :: dx(:)
       REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
       INTEGER_T, intent(in) :: im_fluid
       REAL_T, intent(in) :: u !uimage_tngt
@@ -1515,6 +1519,7 @@ contains
       if (is_in_probtype_list().eq.1) then
        call SUB_wallfunc( &
         x_projection_raster, &
+        dx, &
         n_raster, & ! points to solid
         u, & !intent(in) magnitude of image tangent velocity
         temperature_image, & !intent(in) 
@@ -1528,6 +1533,7 @@ contains
       else
        call wallfunc_newtonsmethod( &
         x_projection_raster, &
+        dx, &
         n_raster, & ! points to solid
         u, & !intent(in) magnitude of image tangent velocity
         temperature_image, & !intent(in) 
@@ -2912,6 +2918,7 @@ end subroutine dynamic_contact_angle
           if (delta_r_raster.gt.zero) then
            call wallfunc_general( &
              LOW%x_projection_raster, & ! coordinate on the wall
+             LOW%dx, &
              LOW%n_raster, & ! points to solid
              uimage_tngt_mag, &
              temperature_image, &

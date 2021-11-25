@@ -174,7 +174,7 @@ ns.density_ceiling=1.001 1.001
 
 # see fort_wallfunction in GODUNOV_3D.F90
 # see getGhostVel in GODUNOV_3D.F90
-ns.law_of_the_wall=1  # make 1 for law of the wall (2 for GNBC)
+ns.law_of_the_wall=1 1 0 # make 1 for law of the wall (2 for GNBC)
 ns.FSI_flag=0 0 1 # CAVITATION
 
 ns.FSI_flag=0 1 # Simple J nozzle
