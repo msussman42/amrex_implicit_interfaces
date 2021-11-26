@@ -37,7 +37,7 @@ stop
       subroutine fort_derturbvisc( &
        les_model, &
        level, &
-       im, &
+       im, &  ! im=1..nmat
        nmat, &
        dt, &
        ntensor, &  ! for declaring cellten
@@ -49,7 +49,9 @@ stop
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
        cur_time, &
-       dx,xlo, &
+       dx, &
+       xlo, &
+       dx_coarsest, &
        ngrow, &
        ncompvisc) &
       bind(c,name='fort_derturbvisc')
@@ -62,7 +64,7 @@ stop
 
       INTEGER_T, intent(in) :: les_model
       INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: im
+      INTEGER_T, intent(in) :: im ! 1..nmat
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ncompvisc
       INTEGER_T, intent(in) :: ngrow
@@ -74,7 +76,9 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx_coarsest(SDIM)
 
       INTEGER_T, intent(in) :: DIMDEC(denstate)
       INTEGER_T, intent(in) :: DIMDEC(vof)
@@ -179,6 +183,11 @@ stop
       if (is_rigid(nmat,im).eq.1) then
        print *,"cannot have eddy wall viscosity and (is_rigid(nmat,im).eq.1)"
        stop
+      else if (is_rigid(nmat,im).eq.0) then
+       ! do nothing
+      else
+       print *,"is_rigid invalid"
+       stop
       endif
 
        ! density
@@ -189,6 +198,12 @@ stop
       do k=growlo(3),growhi(3)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
+
+       do im_local=1,nmat
+        vofcomp=(im_local-1)*ngeom_recon+1
+        VFRAC(im_local)=vof(D_DECL(i+i1,j+j1,k+k1),vofcomp)
+       enddo
+       call get_primary_material_VFRAC(VFRAC,nmat,im_primary,caller_id)
 
        do veldir=1,3
        do dir=1,3
@@ -237,12 +252,14 @@ stop
        enddo
        enddo
 
+        ! ss=s : s
        ss=s(1,1)*s(1,1)+s(1,2)*s(1,2)+s(1,3)*s(1,3)+&
           s(2,1)*s(2,1)+s(2,2)*s(2,2)+s(2,3)*s(2,3)+&
           s(3,1)*s(3,1)+s(3,2)*s(3,2)+s(3,3)*s(3,3)
 
        ! Builds the traceless symmetric part of the square of the
        ! velocity tensor
+       ! g2 (the vector)=diagonal(g^T g)
        do veldir=1,3
         g2(veldir)=zero
         do dir=1,3
@@ -250,6 +267,8 @@ stop
         enddo
        enddo
        g2tr=(g2(1)+g2(2)+g2(3))/3.0d0 ! tensor trace
+
+        ! the off diagonals of g2 (the matrix) are g * g
        g2_12=g(1,1)*g(1,2)+g(1,2)*g(2,2)+g(1,3)*g(3,2)
        g2_13=g(1,1)*g(1,3)+g(1,2)*g(2,3)+g(1,3)*g(3,3)
        g2_21=g(2,1)*g(1,1)+g(2,2)*g(2,1)+g(2,3)*g(3,1)
@@ -257,13 +276,13 @@ stop
        g2_31=g(3,1)*g(1,1)+g(3,2)*g(2,1)+g(3,3)*g(3,1)
        g2_32=g(3,1)*g(1,2)+g(3,2)*g(2,2)+g(3,3)*g(3,2)
  
-       sd(1,1)=g2(1)-g2tr
-       sd(1,2)=0.5d0*(g2_12+g2_21)
+       sd(1,1)=g2(1)-g2tr  !g^T g - (1/3)Tr(g^T g)
+       sd(1,2)=0.5d0*(g2_12+g2_21) !(g g + (g g)^T)/2
        sd(1,3)=0.5d0*(g2_13+g2_31)
 
        sd(2,1)=sd(1,2)
        sd(2,2)=g2(2)-g2tr
-       sd(2,3)=0.5*(g2_23+g2_23)
+       sd(2,3)=0.5*(g2_23+g2_32)
 
        sd(3,1)=sd(1,3)
        sd(3,2)=sd(2,3)
@@ -276,12 +295,44 @@ stop
 
        if (les_model.eq.1) then
 
-        if(sdsd.ne.zero) then
-         turb_visc=(0.5d0*dx(1))**2*sdsd**1.5d0/(ss**2.5d0+sdsd**1.25d0)
+         ! units of viscosity: Pa s = Newton sec/m^2 = (kg m/sec^2)(sec/m^2) =
+         !  kg/(m sec) 
+         ! units of g: (1/sec)
+         ! units of s: (1/sec)
+         ! units of ss: (1/sec^2)
+         ! units of g2: (1/sec^2)
+         ! units of sd: (1/sec^2)
+         ! units of sdsd: (1/sec^4)
+         ! units of sdsd^(3/2): (1/sec^6)
+         ! units of sdsd^(5/4): (1/sec^5)
+         ! units of ss^(5/2)=(1/sec^5)
+         ! units of turb_visc: m^2 (1/sec^6)/(1/sec^5)=m^2/s
+         ! units of turb_visc * density=kg/(m s)
+        if(sdsd.gt.zero) then
+         turb_visc=((0.5d0*dx_coarsest(1))**2)*(sdsd**1.5d0)/ &
+                 (ss**2.5d0+sdsd**1.25d0)
          density=denstate(D_DECL(i,j,k),flagcomp)
          ! limiter: arbitrary at this point
          turb_visc=min(turb_visc,two*visc(D_DECL(i,j,k),im)/density)
-         visc(D_DECL(i,j,k),im)=visc(D_DECL(i,j,k),im)+turb_visc*density
+
+         if (im_primary.eq.im) then
+          if (VFRAC(im).ge.one-VOFTOL) then
+           visc(D_DECL(i,j,k),im)=visc(D_DECL(i,j,k),im)+turb_visc*density
+          else if ((VFRAC(im).ge.-VOFTOL).and. &
+                   (VFRAC(im).le.one-VOFTOL)) then
+           ! do nothing
+          else
+           print *,"VFRAC invalid"
+           stop
+          endif
+         else if ((im_primary.ne.im).and. &
+                  (im_primary.ge.1).and. &
+                  (im_primary.le.nmat)) then
+          ! do nothing
+         else
+          print *,"im_primary invalid"
+          stop
+         endif
         else if (sdsd.eq.zero) then
          turb_visc=zero
         else

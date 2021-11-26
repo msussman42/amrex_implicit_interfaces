@@ -6839,7 +6839,7 @@ stop
       endif
       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
       if (nten_test.ne.nten) then
-       print *,"nten invalid turbulenceforce nten, nten_test ",nten,nten_test
+       print *,"nten invalid marangoniforce nten, nten_test ",nten,nten_test
        stop
       endif
 

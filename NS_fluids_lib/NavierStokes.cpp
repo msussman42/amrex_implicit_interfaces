@@ -18968,7 +18968,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   amrex::Error("localMF[FACETENSOR_MF]->nComp() invalid");
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
- getStateVISC_ALL();
+ getStateVISC_ALL(); //we are in writeTECPLOT_file
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*nmat)
   amrex::Error("viscmf invalid ncomp");
@@ -19025,7 +19025,9 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  int dest_idx=-1; // we put the interpolant in State_Type so that the
                   // command MultiFab* velmf=ns_level.getState( ... 
                   // gets the interpolated data.  We have to restore
-                  // HOLD_VELOCITY_DATA_MF at the end.
+                  // HOLD_VELOCITY_DATA_MF at the end.  Note: this should
+		  // be done after getStateVISC_ALL() since the WALE model
+		  // for eddy viscosity depends on the velocity.
  VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
 
  int tecplot_finest_level=finest_level;

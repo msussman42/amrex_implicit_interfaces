@@ -233,7 +233,9 @@ extern "C" {
       const int* fablo, const int* fabhi,
       int* bfact,
       Real* cur_time,
-      const Real* dx, const Real* xlo,
+      const Real* dx, 
+      const Real* xlo,
+      const Real* dx_coarsest, 
       int* ngrow,
       int* ncompvisc);
 
