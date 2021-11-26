@@ -3389,7 +3389,7 @@ stop
         else if (is_rigid(nmat,im_primary).eq.1) then
          rigid_in_stencil=1
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid MASS_TRANSFER_3D.F90"
          stop
         endif
        enddo
@@ -4615,7 +4615,7 @@ stop
                 else if (is_rigid(nmat,u_im).eq.1) then 
                  ! do nothing
                 else
-                 print *,"is_rigid invalid"
+                 print *,"is_rigid invalid MASS_TRANSFER_3D.F90"
                  stop
                 endif
 
@@ -4915,7 +4915,7 @@ stop
              else if (is_rigid(nmat,im_local).eq.1) then
               ! ignore, solids are embedded
              else
-              print *,"is_rigid invalid"
+              print *,"is_rigid invalid MASS_TRANSFER_3D.F90"
               stop
              endif
             else
@@ -6407,7 +6407,7 @@ stop
               stop
              endif
             else
-             print *,"is_rigid invalid"
+             print *,"is_rigid invalid MASS_TRANSFER_3D.F90"
              stop
             endif
            enddo ! ireverse=0,1
@@ -9306,7 +9306,7 @@ stop
           ! do nothing
 
          else 
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid MASS_TRANSFER_3D.F90"
           stop
          endif
 

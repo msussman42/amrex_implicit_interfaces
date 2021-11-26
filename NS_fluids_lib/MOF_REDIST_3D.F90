@@ -449,7 +449,7 @@ stop
          else if (is_rigid(nmat,im).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid MOF_REDIST_3D.F90"
           stop
          endif
         enddo ! im=1..nmat
@@ -1683,7 +1683,7 @@ stop
          endif
 
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid MOF_REDIST_3D.F90"
          stop
         endif
 
@@ -1744,7 +1744,7 @@ stop
        if (is_rigid(nmat,im_crit).eq.0) then
         ! do nothing
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid MOF_REDIST_3D.F90"
         stop
        endif
 
@@ -1772,7 +1772,7 @@ stop
         else if (is_rigid(nmat,im).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid MOF_REDIST_3D.F90"
          stop
         endif
 
@@ -1949,7 +1949,7 @@ stop
          else if (is_rigid(nmat,im).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid MOF_REDIST_3D.F90"
           stop
          endif
         enddo ! im=1..nmat
@@ -2267,7 +2267,7 @@ stop
            else if (is_rigid(nmat,im).eq.1) then
             ! do nothing
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid MOF_REDIST_3D.F90"
             stop
            endif
           enddo ! im=1..nmat 
@@ -2407,7 +2407,7 @@ stop
         else if (is_rigid(nmat,im).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid MOF_REDIST_3D.F90"
          stop
         endif
        enddo ! im=1..nmat
@@ -2620,7 +2620,7 @@ stop
          endif
 
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid MOF_REDIST_3D.F90"
          stop
         endif
 
@@ -3308,7 +3308,7 @@ stop
             else if (is_rigid(nmat,im).eq.1) then
              ! do nothing
             else
-             print *,"is_rigid invalid"
+             print *,"is_rigid invalid MOF_REDIST_3D.F90"
              stop
             endif
            else
@@ -4186,7 +4186,7 @@ stop
              else if (is_rigid(nmat,im).eq.1) then
               ! do nothing
              else
-              print *,"is_rigid invalid"
+              print *,"is_rigid invalid MOF_REDIST_3D.F90"
               stop
              endif
             else
@@ -4583,7 +4583,7 @@ stop
          else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
           ! do nothing
          else 
-          print *,"tessellate or is_rigid invalid"
+          print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
           stop
          endif 
 
@@ -4640,7 +4640,7 @@ stop
          else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
           ! do nothing
          else
-          print *,"tessellate or is_rigid invalid"
+          print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
           stop
          endif 
 
@@ -4667,7 +4667,7 @@ stop
             mofdata_right(vofcomp+dir2-1)=zero 
            enddo
           else
-           print *,"tessellate or is_rigid invalid"
+           print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
            stop
           endif
 
@@ -4824,7 +4824,7 @@ stop
            else if ((tessellate.eq.0).and.(is_rigid(nmat,mr).eq.1)) then
             ! do nothing
            else
-            print *,"tessellate or is_rigid invalid"
+            print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
             stop
            endif 
 
@@ -4833,7 +4833,7 @@ stop
          else if ((tessellate.eq.0).and.(is_rigid(nmat,ml).eq.1)) then
           ! do nothing
          else
-          print *,"tessellate or is_rigid invalid"
+          print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
           stop
          endif 
 

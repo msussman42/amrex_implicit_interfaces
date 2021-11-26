@@ -2320,7 +2320,7 @@ stop
                    (is_rigid(nmat,imR).eq.0)) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid GODUNOV_3D.F90"
            stop
           endif
          else
@@ -3084,7 +3084,7 @@ stop
        else if (is_rigid(nmat,im).eq.1) then
         ! do nothing
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid GODUNOV_3D.F90"
         stop
        endif
 
@@ -3802,7 +3802,7 @@ stop
        else if (is_rigid(nmat,im_primaryL).eq.1) then
         ! do nothing
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid GODUNOV_3D.F90"
         stop
        endif  
 
@@ -3854,7 +3854,7 @@ stop
        else if (is_rigid(nmat,im_primaryR).eq.1) then
         ! do nothing
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid GODUNOV_3D.F90"
         stop
        endif
 
@@ -14800,7 +14800,7 @@ stop
                  else if (is_rigid(nmat,im).eq.1) then
                   ! do nothing (fluids tessellate)
                  else
-                  print *,"is_rigid invalid"
+                  print *,"is_rigid invalid GODUNOV_3D.F90"
                   stop
                  endif
                 enddo !im=1..nmat
@@ -15308,7 +15308,7 @@ stop
              else if (is_rigid(nmat,im).eq.1) then
               ! do nothing
              else
-              print *,"is_rigid invalid"
+              print *,"is_rigid invalid GODUNOV_3D.F90"
               stop
              endif
 
@@ -15507,7 +15507,7 @@ stop
               else if (is_rigid(nmat,im).eq.1) then
                ! do nothing
               else
-               print *,"is_rigid invalid"
+               print *,"is_rigid invalid GODUNOV_3D.F90"
                stop
               endif
              enddo ! veldir=1..sdim
@@ -15542,7 +15542,7 @@ stop
           else if (is_rigid(nmat,im).eq.1) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid GODUNOV_3D.F90"
            stop
           endif
          enddo ! im=1..nmat
@@ -15772,7 +15772,7 @@ stop
           else if (is_rigid(nmat,im).eq.1) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid GODUNOV_3D.F90"
            stop
           endif
          enddo ! im=1..nmat
@@ -15867,7 +15867,7 @@ stop
                 stop
                endif 
               else
-               print *,"is_rigid invalid"
+               print *,"is_rigid invalid GODUNOV_3D.F90"
                stop
               endif
              else 
@@ -15988,7 +15988,7 @@ stop
               endif
               snew_hold(dencomp+tempcomp_data)=ETcore
              else
-              print *,"is_rigid invalid"
+              print *,"is_rigid invalid GODUNOV_3D.F90"
               stop
              endif
             else 
@@ -16044,7 +16044,7 @@ stop
            endif
 
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid GODUNOV_3D.F90"
            stop
           endif
 

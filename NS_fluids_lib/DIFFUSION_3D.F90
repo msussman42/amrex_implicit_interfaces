@@ -411,7 +411,7 @@ stop
           if (is_rigid(nmat,im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid DIFFUSION_3D.F90"
            stop
           endif
          else

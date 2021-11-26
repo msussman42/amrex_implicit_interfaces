@@ -8293,7 +8293,7 @@ END SUBROUTINE SIMP
                  stop
                 endif
                else
-                print *,"is_rigid invalid"
+                print *,"is_rigid invalid NAVIERSTOKES_3D.F90"
                 stop
                endif
 
@@ -8676,7 +8676,7 @@ END SUBROUTINE SIMP
                  stop
                 endif
                else
-                print *,"is_rigid invalid"
+                print *,"is_rigid invalid NAVIERSTOKES_3D.F90"
                 stop
                endif
 
@@ -13354,7 +13354,7 @@ END SUBROUTINE SIMP
         else if (is_rigid(nmat,im).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid NAVIERSTOKES_3D.F90"
          stop
         endif 
 

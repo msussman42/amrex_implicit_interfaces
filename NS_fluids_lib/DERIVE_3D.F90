@@ -186,7 +186,7 @@ stop
       else if (is_rigid(nmat,im).eq.0) then
        ! do nothing
       else
-       print *,"is_rigid invalid"
+       print *,"is_rigid invalid DERIVE_3D.F90 1"
        stop
       endif
 
@@ -201,7 +201,7 @@ stop
 
        do im_local=1,nmat
         vofcomp=(im_local-1)*ngeom_recon+1
-        VFRAC(im_local)=vof(D_DECL(i+i1,j+j1,k+k1),vofcomp)
+        VFRAC(im_local)=vof(D_DECL(i,j,k),vofcomp)
        enddo
        call get_primary_material_VFRAC(VFRAC,nmat,im_primary,caller_id)
 
@@ -383,7 +383,7 @@ stop
          else if (is_rigid(nmat,im_primary).eq.0) then
           ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid DERIVE_3D.F90 2"
           stop
          endif
         enddo !k1
@@ -1475,8 +1475,16 @@ stop
          else if ((is_rigid(nmat,im_primary_center).eq.0).and. &
                   (is_rigid(nmat,im_primary_side).eq.0)) then
           ! do nothing
+         else if ((is_rigid(nmat,im_primary_side).eq.1).and. &
+                  (is_rigid(nmat,im_primary_center).eq.0).and. &
+                  (im_primary_center.ne.im_parm)) then
+          ! do nothing
+         else if ((is_rigid(nmat,im_primary_center).eq.1).and. &
+                  (is_rigid(nmat,im_primary_side).eq.0).and. &
+                  (im_primary_side.ne.im_parm)) then
+          ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid DERIVE_3D.F90 3"
           stop
          endif
          if (near_interface.eq.1) then

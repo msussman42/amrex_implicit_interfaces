@@ -2700,7 +2700,6 @@ NavierStokes::read_params ()
     if (thread_class::nthreads<1)
      amrex::Error("thread_class::nthreads invalid ns init");
 
-
     MUSHY_THICK=2.0;
     pp.query("MUSHY_THICK",MUSHY_THICK);
 
@@ -2863,6 +2862,8 @@ NavierStokes::read_params ()
     pp.query("invert_solid_levelset",invert_solid_levelset);
     if (!((invert_solid_levelset==1)||(invert_solid_levelset==0)))
      amrex::Error("invert_solid_levelset invalid");
+
+    law_of_the_wall.resize(nmat);
 
     for (int i=0;i<nmat;i++) {
      law_of_the_wall[i]=0;
@@ -20971,12 +20972,14 @@ NavierStokes::volWgtSumALL(
   // variables.
   // in: volWgtSumALL
  int post_restart_flag=0;
- if ((post_init_flag==0)||(post_init_flag==1)) {
+ if (post_init_flag==-1) { //called from post_timestep
   // do nothing
- } else if (post_init_flag==2) {
+ } else if (post_init_flag==1) { //called from post_init
+  // do nothing
+ } else if (post_init_flag==2) { //called from post_restart
   post_restart_flag=1;
  } else
-  amrex::Error("post_init_flag invalid");
+  amrex::Error("post_init_flag invalid 20982");
 
    //make_physics_varsALL calls "getStateVISC_ALL"
  make_physics_varsALL(project_option,post_restart_flag,0);
@@ -21356,7 +21359,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
     // in: NavierStokes::prepare_post_process
    ns_level.allocate_levelsetLO(1,LEVELPC_MF);
   } else
-   amrex::Error("post_init_flag invalid");
+   amrex::Error("post_init_flag invalid 21362");
    
  } // ilev=level ... finest_level
 
@@ -21388,7 +21391,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
  } else if (post_init_flag==2) {
   error_update_flag=1;  // called from post_restart, update S_old
  } else
-  amrex::Error("post_init_flag invalid");
+  amrex::Error("post_init_flag invalid 21394");
 	
  if (post_init_flag==1) { // called from post_init_state
   VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
@@ -21423,7 +21426,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   int post_restart_flag=1;
   make_physics_varsALL(project_option,post_restart_flag,3);
  } else
-  amrex::Error("post_init_flag invalid");
+  amrex::Error("post_init_flag invalid 21429");
 
 }  // subroutine prepare_post_process
 

@@ -2279,7 +2279,7 @@ end subroutine dynamic_contact_angle
               stop
              endif
             else 
-             print *,"is_rigid invalid"
+             print *,"is_rigid invalid GLOBALUTIL.F90"
              stop
             endif
            enddo ! im=1..nmat
@@ -6737,7 +6737,7 @@ end subroutine dynamic_contact_angle
        else if (is_rigid(nmat,imaterial).eq.1) then
         ! do nothing
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid GLOBALUTIL.F90"
         stop
        endif
       enddo ! imaterial
@@ -12840,7 +12840,7 @@ end subroutine dynamic_contact_angle
         stop
        endif
       else
-       print *,"is_rigid invalid"
+       print *,"is_rigid invalid GLOBALUTIL.F90"
        stop
       endif
 
@@ -12871,7 +12871,7 @@ end subroutine dynamic_contact_angle
        else if (is_rigid(nmat,im).eq.0) then
         ! do nothing
        else
-        print *,"is_rigid invalid in rigid_exists"
+        print *,"is_rigid invalid GLOBALUTIL.F90 in rigid_exists"
         stop
        endif
       enddo ! im
@@ -12959,7 +12959,7 @@ end subroutine dynamic_contact_angle
          stop
         endif 
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid GLOBALUTIL.F90"
         stop
        endif
       enddo ! im=1..nmat
@@ -12992,7 +12992,7 @@ end subroutine dynamic_contact_angle
        else if (is_rigid(nmat,im).eq.1) then
         solid_vof=solid_vof+VOF(im)
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid GLOBALUTIL.F90"
         stop
        endif
       enddo ! im=1..nmat
@@ -13064,7 +13064,7 @@ end subroutine dynamic_contact_angle
        else if (is_rigid(num_materials,im).eq.0) then
         ! do nothing
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid GLOBALUTIL.F90"
         stop
        endif
       enddo ! im
@@ -13108,7 +13108,7 @@ end subroutine dynamic_contact_angle
                 (im_solid_primary.gt.0)) then
         ! do nothing
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid GLOBALUTIL.F90"
         stop
        endif
       enddo ! im
@@ -13133,7 +13133,7 @@ end subroutine dynamic_contact_angle
        print *,"expecting solid im=",im
        stop
       else
-       print *,"is_rigid invalid"
+       print *,"is_rigid invalid GLOBALUTIL.F90"
        stop
       endif
 
@@ -13614,7 +13614,7 @@ end subroutine dynamic_contact_angle
       endif
 
       if (is_rigid(num_materials,im).ne.1) then
-       print *,"is_rigid invalid"
+       print *,"is_rigid invalid GLOBALUTIL.F90"
        stop
       endif
 
@@ -15070,7 +15070,7 @@ end subroutine dynamic_contact_angle
       endif
       if (imattype.eq.999) then
        if (is_rigid(nmat,im).eq.0) then
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid GLOBALUTIL.F90"
         stop
        endif
 !       temperature=fort_tempconst(im)
@@ -22288,7 +22288,7 @@ do im=1,nmat
  else if (is_rigid_local(im).eq.0) then
   ! do nothing
  else
-  print *,"is_rigid invalid"
+  print *,"is_rigid invalid GLOBALUTIL.F90"
   stop
  endif
 enddo !im=1..nmat
