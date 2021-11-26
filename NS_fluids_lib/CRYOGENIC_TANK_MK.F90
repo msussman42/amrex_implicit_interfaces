@@ -102,9 +102,9 @@ contains
   if (axis_dir.eq.0) then ! volume=pi(.09^2-0.08^2)*.02=pi(.01)(.17)(0.02)
    TANK_MK_HEATER_WALL_MODEL = 0.1
    TANK_MK_HEATER_LOW       = -0.1683d0
-   TANK_MK_HEATER_HIGH      = -0.1429d0
-   TANK_MK_HEATER_R         = 0.1016d0+0.027d0
+   TANK_MK_HEATER_HIGH      = TANK_MK_HEATER_LOW+0.0254d0
    TANK_MK_HEATER_R_LOW     = 0.1016d0
+   TANK_MK_HEATER_R         = TANK_MK_HEATER_R_LOW+0.027d0
 
    TANK_MK_INSULATE_R = xblob+0.027d0 !xblob is the tank cavity radius
    TANK_MK_INSULATE_THICK = 0.0508
