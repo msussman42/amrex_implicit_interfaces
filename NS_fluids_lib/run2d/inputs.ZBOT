@@ -90,29 +90,24 @@ geometry.prob_lo    = 0.0  -0.3
 geometry.prob_hi    = 0.15  0.3
 geometry.is_periodic= 0 0
 
+#k=k*max(1,dx/1.0e-6) at the heater
 ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
+#for ZBOT, the wall thermal eddy model is given by:
+# Temperature Stratification in a Cryogenic Fuel Tank
+# JOURNAL OF THERMOPHYSICS AND HEAT TRANSFER
+# Vol. 27, No. 1, January–March 2013
+# Daigle, Smelyanskiy, Boschee, Foygel
+#
+ns.heatviscconst_eddy_wall=0.0 0.0 0.0
+ns.heatviscconst_eddy_bulk=0.0 0.0 0.0
 
-# how to get same results as the 64x256 case, but finish in 1 hour?
-# Remark: 32x128 case takes 24 hours and is too diffusive.
-# strategy:
-# 1. base level 16x64
-# 2. 1 level of AMR
-# 3. blocking factor for finest level is 2.
-# 4. error_buf=1 for finest level
-# 5. grid_eff=0.8 or 0.9
-# 6. 2nd order space time spectral element method in bulk regions.
-# 7. if 1-6 is still not satisfactory then:
-#     a) law of the wall model
-#     b) WALE LES model in the bulk
-#     c) model for the thermal conductivity in order to enhance heat transter
-#        in order to compensate for numerical errors in predicting the 
-#        proper convective heat transfer rate.
-#     7a and 7b need to be verified.
-#     7c ability to have user defined thermal conductivity has been verified
-#     and validated.  BUT, what will the model be?
 # dx_coarse=(prob_hi_x-prob_lo_x)/n_cell_x
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.
+# prob_lo_x=0.0
+# prob_hi_x=0.15
+# 0.15/16=0.009375
+# 0.15/8=0.01875
 amr.n_cell          = 32 128
 amr.max_level       = 1
 
@@ -265,6 +260,11 @@ ns.heatviscconst=0.075 0.00375 0.189
 # Dynamic viscosity [Pa.s]
 # (PNP: 4.2E-4)
 ns.viscconst=4.48E-04 1.093e-6 1.0
+
+ns.viscconst_eddy_wall=1.0e-3 0.0 0.0
+ns.viscconst_eddy_bulk=0.0 1.0e-5 0.0
+ns.law_of_the_wall=1 0 0
+ns.les_model=1 0 0
 
 # Initial temeparture [K]
 ns.tempconst=295.41 295.41 295.41
