@@ -1585,6 +1585,10 @@ REAL_T, intent(in) :: temperature_wall
 REAL_T, intent(in) :: temperature_probe
 REAL_T, intent(in) :: nrm(SDIM) ! nrm points from solid to fluid
 REAL_T, intent(inout) :: thermal_k
+REAL_T :: Ra,Gr,Pr,psi,alpha
+REAL_T :: mu_w,rho_w,nu,thermal_conductivity,Cp,xi,R,thermal_diffusivity
+REAL_T :: gravity_local,expansion_coefficient
+INTEGER_T :: turb_flag
 
 REAL_T :: LS_A
 INTEGER_T :: caller_id
@@ -1643,8 +1647,81 @@ if ((im.ge.1).and.(im.le.num_materials)) then
      print *,"im invalid"
      stop
     endif
-   else
+   else if (im.eq.3) then
     ! do nothing
+   else if (im.eq.1) then
+    mu_w=fort_viscconst(im) 
+    rho_w=fort_denconst(im)
+    if (rho_w.gt.zero) then
+     ! do nothing
+    else
+     print *,"rho_w invalid"
+     stop
+    endif
+    nu=mu_w/rho_w
+
+    thermal_conductivity=fort_heatviscconst(im)
+    Cp=fort_stiffCP(im)
+    if (thermal_conductivity.gt.zero) then
+     ! do nothing
+    else
+     print *,"expecting thermal_conductivity to be positive"
+     stop
+    endif
+    if (Cp.gt.zero) then
+     ! do nothing
+    else
+     print *,"Cp invalid"
+     stop
+    endif
+    xi=x(SDIM)-TANK_MK_HEATER_HIGH
+    R=x(1)
+    if ((xi.gt.0.0d0).and. &
+        (xi.le.TANK_MK_HEATER_WALL_MODEL).and. &
+        (nrm(1).eq.-one).and. &
+        (near_interface.eq.1).and. &
+        (temperature_wall.gt.temperature_probe)) then
+     thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
+     gravity_local=abs(gravity)
+     expansion_coefficient=fort_DrhoDT(im) ! units: 1/temperature
+     Gr=gravity_local*expansion_coefficient* &
+       (temperature_wall-temperature_probe)*(xi**3.0)/(nu*nu)
+     Pr=nu/thermal_diffusivity
+     Ra=Gr*Pr
+
+     if(Ra.lt.1.0e+9)then
+      turb_flag=0
+     else if(Ra.ge.1.0e+9)then
+      turb_flag=1
+     else
+      print *,"Ra number invalid"
+      stop
+     endif
+     psi=(1.0d0+(0.492/Pr)**(9.0d0/16.0d0))**(-16.0d0/9.0d0)
+     if (turb_flag.eq.0) then
+      alpha=(thermal_conductivity/xi)* &
+            (0.68d0+0.503d0*((Ra*psi)**0.25d0))
+     else if (turb_flag.eq.1) then
+      alpha=(thermal_conductivity/xi)* &
+            (0.15d0*((Ra*psi)**(1.0d0/3.0d0)))
+     else
+      print *,"turb_flag invalid"
+      stop
+     endif 
+     thermal_k=max(thermal_k,alpha*dx(1))
+    else if ((xi.le.0.0d0).or. &
+             (xi.ge.TANK_MK_HEATER_WALL_MODEL).or. &
+             (nrm(1).ne.-one).or. &
+             (near_interface.eq.0).or. &
+             (temperature_wall.le.temperature_probe)) then
+     ! do nothing
+    else
+     print *,"xi,nrm,temp_wall, or temp_probe invalid"
+     stop
+    endif
+   else
+    print *,"im must be 1 or 3"
+    stop
    endif
 
   else
@@ -1806,6 +1883,7 @@ if ((xi.gt.0.0d0).and. &
     (temperature_wall-temperature_image)*(xi**3.0)/(nu*nu)
  Pr=nu/thermal_diffusivity
  Ra=Gr*Pr
+
  if(Ra.lt.1.0e+9)then
   turb_flag=0
  else if(Ra.ge.1.0e+9)then
