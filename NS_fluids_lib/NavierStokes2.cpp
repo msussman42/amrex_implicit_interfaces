@@ -380,6 +380,9 @@ void NavierStokes::maskfiner_localMF(int idx_MF,int ngrow,
  localMF_grow[idx_MF]=ngrow;
 }  // subroutine maskfiner_localMF
 
+//called from:
+//NavierStokes::make_physics_varsALL
+//NavierStokes::writeTECPLOT_File
 void NavierStokes::getStateVISC_ALL() {
 
  if (level!=0)
@@ -4723,7 +4726,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
   //ngrow=1
- getStateVISC_ALL();
+ getStateVISC_ALL(); //we are in make_physics_varsALL 
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
  int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
  if (ncomp_visc!=3*nmat)
@@ -9331,6 +9334,8 @@ void NavierStokes::getStateVISC() {
  for (int im=0;im<nmat;im++) {
 
   const Real* dx = geom.CellSize();
+  NavierStokes& ns_level0=getLevel(0);
+  const Real* dx_coarsest = ns_level0.geom.CellSize();
 
   MultiFab* gammadot_mf=new MultiFab(grids,dmap,1,ngrow,
 	MFInfo().SetTag("gammadot_mf"),FArrayBoxFactory());
@@ -9583,7 +9588,9 @@ void NavierStokes::getStateVISC() {
       tilelo,tilehi,
       fablo,fabhi,&bfact,
       &cur_time_slab,
-      dx,xlo,
+      dx,
+      xlo,
+      dx_coarsest,
       &ngrow,
       &ncomp_visc);
    } //mfi
