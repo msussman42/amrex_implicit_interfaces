@@ -265,6 +265,7 @@ ns.viscconst_eddy_wall=1.0e-3 0.0 0.0
 ns.viscconst_eddy_bulk=0.0 1.0e-5 0.0
 ns.law_of_the_wall=1 0 0
 ns.les_model=1 0 0
+ns.visual_WALLVEL_plot_int=1
 
 # Initial temeparture [K]
 ns.tempconst=295.41 295.41 295.41

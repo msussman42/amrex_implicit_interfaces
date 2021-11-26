@@ -6686,6 +6686,22 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
      ratio=ratio*visual_WALLVEL_plot_int;
      if (ratio==nsteps+1) {
 
+      int nmat=num_materials;
+      int nparts=im_solid_map.size();
+      int nparts_def=nparts;
+      if (nparts==0) {
+       nparts_def=1;
+      } else if ((nparts>=1)&&(nparts<=nmat)) {
+       //do nothing
+      } else
+       amrex::Error("nparts invalid");
+
+      if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!= 
+		      nparts_def*AMREX_SPACEDIM)
+       amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+      if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+       amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+
       //MAC grid rasterized solid boundary condition.
       //WALLVEL<stuff>.plt (visit can open binary tecplot files)
       writeSanityCheckData(
