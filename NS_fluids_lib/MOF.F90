@@ -11771,7 +11771,7 @@ contains
          endif
         endif  ! material not already processed.
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid MOF.F90"
         stop
        endif
       enddo ! im
@@ -11849,7 +11849,7 @@ contains
           stop
          endif 
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid MOF.F90"
          stop
         endif
 
@@ -11876,7 +11876,7 @@ contains
          stop
         endif
         if (is_rigid_local(critical_material).ne.0) then
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid MOF.F90"
          stop
         endif
 
@@ -11978,7 +11978,7 @@ contains
          stop
         endif
         if (is_rigid_local(critical_material).ne.0) then
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid MOF.F90"
          stop
         endif
          
@@ -12000,7 +12000,7 @@ contains
             mat_before=im
            endif
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid MOF.F90"
            stop
           endif
          enddo ! im=1..nmat
@@ -12013,7 +12013,7 @@ contains
 
         if ((mat_before.ge.1).and.(mat_before.le.nmat)) then
           if (is_rigid_local(mat_before).ne.0) then
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid MOF.F90"
            stop
           endif
           vofcomp_before=(mat_before-1)*ngeom_recon+1
@@ -13972,7 +13972,7 @@ contains
              mofdata_in(vofcomp)*((xref_matT(dir)-xact_matT(dir))**2)
            enddo ! dir
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid MOF.F90"
            stop
           endif
          enddo ! imaterial
@@ -14017,7 +14017,7 @@ contains
              centroidA_array(argmin_order,imaterial,dir)
            enddo
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid MOF.F90"
            stop
           endif
          enddo ! imaterial
@@ -14552,7 +14552,7 @@ contains
        else if (is_rigid_local(im).eq.0) then
         mofdata(vofcomp)=mofdata(vofcomp)/voffluid
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid MOF.F90"
         stop
        endif
       enddo  ! im=1..nmat
@@ -14696,7 +14696,7 @@ contains
        else if (is_rigid_local(im).eq.1) then
         vofsolid=vofsolid+vof_test
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid MOF.F90"
         stop
        endif
        do dir=1,ngeom_recon
@@ -15383,7 +15383,7 @@ contains
            else if (is_rigid_local(im).eq.0) then
             ! do nothing
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid MOF.F90"
             stop
            endif
           enddo ! im=1..nmat
@@ -15486,7 +15486,7 @@ contains
            else if (is_rigid_local(im).eq.0) then
             ! do nothing
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid MOF.F90"
             stop
            endif
           enddo ! im=1..nmat
@@ -15700,7 +15700,7 @@ contains
               stop
              endif
             else
-             print *,"is_rigid invalid"
+             print *,"is_rigid invalid MOF.F90"
              stop
             endif
            else if (local_tessellate.eq.2) then
@@ -15835,7 +15835,7 @@ contains
            else if (is_rigid_local(im).eq.1) then
             ! do nothing
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid MOF.F90"
             stop
            endif
           enddo ! im=1..nmat
@@ -17416,7 +17416,7 @@ contains
         vfrac_solid_sum=vfrac_solid_sum+mofdatasave(vofcomp)
         nmat_solid=nmat_solid+1
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid MOF.F90"
         stop
        endif
       enddo ! im
@@ -17521,7 +17521,7 @@ contains
          else if (is_rigid_local(im).eq.1) then
           multi_volume(im)=uncaptured_volume_target*mofdatasave(vofcomp)
          else
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid MOF.F90"
           stop
          endif
 
@@ -17627,7 +17627,7 @@ contains
            else if (is_rigid_local(im).eq.0) then
             ! do nothing
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid MOF.F90"
             stop
            endif
           enddo ! im=1..nmat
@@ -17713,7 +17713,7 @@ contains
            else if (is_rigid_local(im).eq.0) then
             ! do nothing
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid MOF.F90"
             stop
            endif
           enddo ! im=1..nmat
@@ -17922,7 +17922,7 @@ contains
               stop
              endif
             else
-             print *,"is_rigid invalid"
+             print *,"is_rigid invalid MOF.F90"
              stop
             endif
 
@@ -18040,7 +18040,7 @@ contains
            else if (is_rigid_local(im).eq.1) then
             ! do nothing
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid MOF.F90"
             stop
            endif
           enddo ! im=1..nmat
@@ -18436,7 +18436,7 @@ contains
         vfrac_solid_sum=vfrac_solid_sum+mofdatasave(vofcomp)
         nmat_solid=nmat_solid+1
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid MOF.F90"
         stop
        endif
       enddo ! im
@@ -18489,7 +18489,7 @@ contains
          multi_volume_map(im)=uncaptured_volume_fluid_map* &
            mofdatasave(vofcomp)
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid MOF.F90"
          stop
         endif
 
@@ -18594,7 +18594,7 @@ contains
           else if (is_rigid_local(im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid MOF.F90"
            stop
           endif
          enddo ! im=1..nmat
@@ -18682,7 +18682,7 @@ contains
           else if (is_rigid_local(im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid MOF.F90"
            stop
           endif
          enddo ! im=1..nmat
@@ -18890,7 +18890,7 @@ contains
             stop
            endif
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid MOF.F90"
            stop
           endif
          enddo ! im=1..nmat
@@ -18982,7 +18982,7 @@ contains
           else if (is_rigid_local(im).eq.1) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid MOF.F90"
            stop
           endif
          enddo ! im=1..nmat
@@ -19286,12 +19286,12 @@ contains
           LS_new(im)=LS(im)
          endif
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid MOF.F90"
          stop
         endif
        enddo ! im=1..nmat
       else
-       print *,"is_rigid invalid"
+       print *,"is_rigid invalid MOF.F90"
        stop
       endif
 
@@ -19456,7 +19456,7 @@ contains
        else if (is_rigid_local(im).eq.0) then
         fluid_vfrac_sum=fluid_vfrac_sum+mofdata(vofcomp)
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid MOF.F90"
         stop
        endif
       enddo ! im=1,nmat
@@ -19480,7 +19480,7 @@ contains
           mofdata(vofcomp+dir)=zero
          enddo
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid MOF.F90"
          stop
         endif
        enddo ! im=1,nmat
@@ -19497,7 +19497,7 @@ contains
         else if (is_rigid_local(im).eq.0) then
          mofdata(vofcomp)=mofdata(vofcomp)/fluid_vfrac_sum
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid MOF.F90"
          stop
         endif
        enddo ! im=1,nmat
@@ -19535,7 +19535,7 @@ contains
           else if (is_rigid_local(im).eq.0) then
            mofdata(vofcomp)=mofdata(vofcomp)/fluid_vfrac_sum
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid MOF.F90"
            stop
           endif
          enddo ! im=1..nmat
@@ -19823,7 +19823,7 @@ contains
         stop
        endif
        if (is_rigid_local(im_test(nc)).ne.0) then
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid MOF.F90"
         stop
        endif
       enddo ! nc=1..n_im
@@ -19994,7 +19994,7 @@ contains
        else if (is_rigid_local(im).eq.1) then
         ! do nothing
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid MOF.F90"
         stop
        endif 
       enddo ! im=1..nmat
@@ -20543,7 +20543,7 @@ contains
        if (is_rigid_local(im).eq.0) then
         ! do nothing
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid MOF.F90"
         stop
        endif
 
@@ -20584,7 +20584,7 @@ contains
           else if (is_rigid_local(im).eq.1) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid MOF.F90"
            stop
           endif
          enddo ! im=1..nmat
@@ -20742,7 +20742,7 @@ contains
       if (is_rigid_local(im).eq.0) then
        ! do nothing
       else
-       print *,"is_rigid invalid"
+       print *,"is_rigid invalid MOF.F90"
        stop
       endif
        ! a full cell, so distance is either +bigdist or -bigdist,
@@ -21015,7 +21015,7 @@ contains
          else if (is_rigid_local(im).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid MOF.F90"
           stop
          endif
         enddo ! im
@@ -21467,7 +21467,7 @@ contains
           else if (is_rigid_local(im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid MOF.F90"
            stop
           endif
          enddo !im=1..nmat
@@ -21517,7 +21517,7 @@ contains
            else if (is_rigid_local(im).eq.1) then
             ! do nothing
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid MOF.F90"
             stop
            endif
            
@@ -21546,7 +21546,7 @@ contains
            else if (is_rigid_local(im).eq.1) then
             ! do nothing
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid MOF.F90"
             stop
            endif
           enddo ! im=1..nmat
@@ -21675,7 +21675,7 @@ contains
         sum_vfrac_fluid=sum_vfrac_fluid+VFRAC(im)
 
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid MOF.F90"
         stop
        endif
        VOFSUM=VOFSUM+VFRAC(im)
@@ -21807,7 +21807,7 @@ contains
          stop
         endif
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid MOF.F90"
         stop
        endif
 
@@ -22072,7 +22072,7 @@ contains
            stop
           endif
          else
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid MOF.F90"
           stop 
          endif
         else

@@ -678,7 +678,7 @@ stop
         stop
        endif
       else
-       print *,"is_rigid invalid"
+       print *,"is_rigid invalid PROB.F90"
        stop
       endif
       mach=UMACH_local/USOUND_local
@@ -3203,14 +3203,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          else if (is_rigid(nmat,im_opp).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid PROB.F90"
           stop
          endif
         enddo ! im_opp
        else if (is_rigid(nmat,im).eq.1) then
         ! do nothing
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid PROB.F90"
         stop
        endif
       enddo ! im
@@ -4568,7 +4568,7 @@ END SUBROUTINE Adist
        endif
 
       else
-       print *,"is_rigid invalid"
+       print *,"is_rigid invalid PROB.F90"
        stop
       endif
 
@@ -4720,7 +4720,7 @@ END SUBROUTINE Adist
        endif
 
       else
-       print *,"is_rigid invalid"
+       print *,"is_rigid invalid PROB.F90"
        stop
       endif
 
@@ -5782,7 +5782,7 @@ END SUBROUTINE Adist
        endif
 
       else
-       print *,"is_rigid invalid"
+       print *,"is_rigid invalid PROB.F90"
        stop
       endif
 
@@ -5902,7 +5902,7 @@ END SUBROUTINE Adist
           stop
          endif
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid PROB.F90"
          stop
         endif
 
@@ -6362,7 +6362,7 @@ END SUBROUTINE Adist
         else if (is_rigid(nmat,im_primary).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid PROB.F90"
          stop
         endif
        enddo
@@ -7262,7 +7262,7 @@ END SUBROUTINE Adist
       im_solid_temp=im_solid_primary()
 
       if (is_rigid(nmat,im).ne.1) then
-       print *,"is_rigid invalid in tempsolid"
+       print *,"is_rigid invalid PROB.F90 in tempsolid"
        stop
       endif
       xvec(1)=x      
@@ -8317,7 +8317,7 @@ END SUBROUTINE Adist
        else if (is_rigid(nmat,imaterial).eq.0) then
         ! do nothing
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid PROB.F90"
         stop
        endif
       enddo ! imaterial=1..nmat
@@ -9428,7 +9428,7 @@ END SUBROUTINE Adist
        else if (is_rigid(nmat,im).eq.0) then
         ! do nothing
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid PROB.F90"
         stop
        endif
       enddo ! im=1..nmat
@@ -12778,7 +12778,7 @@ END SUBROUTINE Adist
             else if (is_rigid(nmat,im_opp).eq.1) then
              ! do nothing
             else
-             print *,"is_rigid invalid"
+             print *,"is_rigid invalid PROB.F90"
              stop
             endif
            else if (im.eq.im_opp) then
@@ -12807,7 +12807,7 @@ END SUBROUTINE Adist
         else if (is_rigid(nmat,im).eq.0) then
          ! do nothing
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid PROB.F90"
          stop
         endif
        enddo ! im=1..nmat
@@ -25150,7 +25150,7 @@ end subroutine initialize2d
         else if (is_rigid(nmat,im).eq.0) then
          ! do nothing
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid PROB.F90"
          stop
         endif
        enddo ! im=1..nmat
@@ -26163,7 +26163,7 @@ end subroutine initialize2d
          endif
 
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid PROB.F90"
          stop
         endif
     
@@ -27231,7 +27231,7 @@ end subroutine initialize2d
            vofsolid_wall=vofsolid_wall+voftest_wall
            vofsolid_bound=vofsolid_bound+voftest_bound
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid PROB.F90"
            stop
           endif
          enddo ! im=1..nmat
@@ -30599,7 +30599,7 @@ end subroutine initialize2d
           else if (is_rigid(nmat,im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid PROB.F90"
            stop
           endif 
           LS_stencil(D_DECL(i1,j1,k1),im)=distbatch(im)

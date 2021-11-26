@@ -1991,7 +1991,7 @@ stop
           nsolid_save(D_DECL(i,j,k),dir2)=nfluid(dir2)
          enddo
         else 
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid LEVELSET_3D.F90"
          stop
         endif
 
@@ -2253,7 +2253,7 @@ stop
        else if (is_rigid(nmat,im3).eq.0) then
         ! do nothing
        else
-        print *,"is_rigid invalid"
+        print *,"is_rigid invalid LEVELSET_3D.F90"
         stop
        endif
 
@@ -2299,7 +2299,7 @@ stop
            user_tension(iten_13))/user_tension(iten)
 
         else
-         print *,"is_rigid invalid"
+         print *,"is_rigid invalid LEVELSET_3D.F90"
          stop
         endif
 
@@ -3210,7 +3210,7 @@ stop
            nmat_rigid=nmat_rigid+1
            vfrac_solid_sum=vfrac_solid_sum+vcenter(im)
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid LEVELSET_3D.F90"
            stop
           endif
          enddo ! im=1..nmat
@@ -3458,7 +3458,7 @@ stop
             else if (is_rigid(nmat,im).eq.0) then
              ! do nothing
             else
-             print *,"is_rigid invalid"
+             print *,"is_rigid invalid LEVELSET_3D.F90"
              stop
             endif
 
@@ -3707,7 +3707,7 @@ stop
            else if (is_rigid(nmat,im).eq.1) then
             ! do nothing
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid LEVELSET_3D.F90"
             stop
            endif
 
@@ -4627,7 +4627,7 @@ stop
                  stop
                 endif
                else
-                print *,"is_rigid invalid"
+                print *,"is_rigid invalid LEVELSET_3D.F90"
                 stop
                endif
 
@@ -4968,7 +4968,7 @@ stop
          else if (is_rigid(nmat,im).eq.0) then
           ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid LEVELSET_3D.F90"
           stop
          endif
         enddo ! im=1..nmat
@@ -8683,7 +8683,7 @@ stop
           else if (is_rigid(nmat,im_opp).eq.1) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid LEVELSET_3D.F90"
            stop
           endif
          enddo !im_opp=im+1,nmat
@@ -10956,7 +10956,7 @@ stop
              voltotal_solid=voltotal_solid+multi_volume(im)
              mass_total_solid=mass_total_solid+den_value*multi_volume(im)
             else
-             print *,"is_rigid invalid"
+             print *,"is_rigid invalid LEVELSET_3D.F90"
              stop
             endif
   
@@ -12389,7 +12389,7 @@ stop
            else if (is_rigid(nmat,im).eq.0) then
             ! do nothing
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid LEVELSET_3D.F90"
             stop
            endif
            nparts_temp=nparts_temp+1
@@ -12398,7 +12398,7 @@ stop
            if (is_rigid(nmat,im).eq.0) then
             ! do nothing
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid LEVELSET_3D.F90"
             stop
            endif
           else
@@ -14407,7 +14407,7 @@ stop
              else if (is_rigid(nmat,im).eq.1) then
               ! do nothing
              else
-              print *,"is_rigid invalid"
+              print *,"is_rigid invalid LEVELSET_3D.F90"
               stop
              endif
             enddo ! im=1..nmat
@@ -16687,7 +16687,7 @@ stop
            endif
 
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid LEVELSET_3D.F90"
            stop
           endif
 
@@ -16923,7 +16923,7 @@ stop
             endif
 
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid LEVELSET_3D.F90"
             stop
            endif
           else 
@@ -16990,7 +16990,7 @@ stop
             statecomp_solid=(im_solid_max-1)*num_state_material+istate
             den_hold(statecomp)=den_hold(statecomp_solid)
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid LEVELSET_3D.F90"
             stop
            endif
           enddo ! im=1..nmat
@@ -17024,7 +17024,7 @@ stop
             mofnew(vofcomp+istate-1)=zero
            enddo
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid LEVELSET_3D.F90"
            stop
           endif
          enddo ! im=1..nmat
@@ -17312,7 +17312,7 @@ stop
                  stop
                 endif
                else
-                print *,"is_rigid invalid"
+                print *,"is_rigid invalid LEVELSET_3D.F90"
                 stop
                endif
               enddo ! im_opp=1..nmat
@@ -17335,7 +17335,7 @@ stop
               endif
 
              else
-              print *,"is_rigid invalid"
+              print *,"is_rigid invalid LEVELSET_3D.F90"
               stop
              endif
 
@@ -17420,7 +17420,7 @@ stop
                local_mof(vofcomprecon+dir)=censolid_new(im,dir)
               enddo
              else
-              print *,"is_rigid invalid"
+              print *,"is_rigid invalid LEVELSET_3D.F90"
               stop
              endif
 
@@ -17573,7 +17573,7 @@ stop
               stop
              endif
             else
-             print *,"is_rigid invalid"
+             print *,"is_rigid invalid LEVELSET_3D.F90"
              stop
             endif
 

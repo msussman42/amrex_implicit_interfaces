@@ -457,7 +457,7 @@ stop
          else if (is_rigid(nmat,im).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid PLIC_3D.F90"
           stop
          endif
         enddo ! im=1..nmat
@@ -887,7 +887,7 @@ stop
           else if (is_rigid(nmat,im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid invalid"
+           print *,"is_rigid invalid PLIC_3D.F90"
            stop
           endif
 
