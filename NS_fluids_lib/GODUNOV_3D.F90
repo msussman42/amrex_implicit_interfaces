@@ -12135,6 +12135,7 @@ stop
 
            if ((LS_right(im_solid).ge.zero).and. &
                (im_primary_right.eq.im_solid)) then
+
             side_solid=1 ! right side
             isideSOLID=i
             jsideSOLID=j
@@ -12145,6 +12146,11 @@ stop
             iside_probe=i-2*ii
             jside_probe=j-2*jj
             kside_probe=k-2*kk
+
+            if (1.eq.0) then
+             print *,"sideSOLID ",side_solid,isideSOLID,jsideSOLID,ksideSOLID
+             print *,"sideFLUID ",side_solid,isideFLUID,jsideFLUID,ksideFLUID
+            endif
 
             if ((is_rigid(nmat,im_primary_left).eq.0).and. &
                 (is_rigid(nmat,im_primary_left_probe).eq.0).and. &
@@ -12185,6 +12191,11 @@ stop
             iside_probe=i+ii
             jside_probe=j+jj
             kside_probe=k+kk
+
+            if (1.eq.0) then
+             print *,"sideSOLID ",side_solid,isideSOLID,jsideSOLID,ksideSOLID
+             print *,"sideFLUID ",side_solid,isideFLUID,jsideFLUID,ksideFLUID
+            endif
 
             if ((is_rigid(nmat,im_primary_right).eq.0).and. &
                 (is_rigid(nmat,im_primary_right_probe).eq.0).and. &

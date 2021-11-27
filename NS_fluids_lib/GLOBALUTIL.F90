@@ -1329,6 +1329,7 @@ contains
       end function wallfuncderiv
       
       subroutine wallfunc_newtonsmethod( &
+        dxmin, &
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
@@ -1343,6 +1344,7 @@ contains
         critical_length) ! intent(in) used for sanity check
       use probcommon_module
       implicit none
+      REAL_T, intent(in) :: dxmin
       REAL_T, intent(in), pointer :: x_projection_raster(:)
       REAL_T, intent(in), pointer :: dx(:)
       REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
@@ -1388,6 +1390,19 @@ contains
        stop
       endif
 
+      if (y.gt.zero) then
+       ! do nothing
+      else
+       print *,"y should be positive"
+       stop
+      endif
+      if (dxmin.gt.zero) then
+       ! do nothing
+      else
+       print *,"dxmin should be positive"
+       stop
+      endif
+
       thermal_conductivity=fort_heatviscconst(im_fluid)
       Cp=fort_stiffCP(im_fluid)
 
@@ -1416,25 +1431,27 @@ contains
        stop
       endif
 
-      x_n = u !initial guess for u_tau
-      x_np1=u
-      iter_diff=one
-      iter=0
-      do while ((iter_diff.gt.VOFTOL).and.(iter.lt.iter_max))
-       f = wallfunc(x_n,u,y,K,B,rho_w,mu_w)
-       fprime = wallfuncderiv(x_n,u,y,K,B,rho_w,mu_w)
-   
-       if (abs(fprime).le.1.0e-15) then 
-        print *, "divide by zero error: wallfunc_newtonsmethod" !avoid /0
-        stop
-       else
-        x_np1 = x_n-f/fprime
-       endif
-       iter_diff=abs(x_np1-x_n)
-       x_n=x_np1
+      if (critical_length.lt.dxmin) then
 
-       iter = iter+1
-       if(iter.ge.iter_max)then
+       x_n = u !initial guess for u_tau
+       x_np1=u
+       iter_diff=one
+       iter=0
+       do while ((iter_diff.gt.VOFTOL).and.(iter.lt.iter_max))
+        f = wallfunc(x_n,u,y,K,B,rho_w,mu_w)
+        fprime = wallfuncderiv(x_n,u,y,K,B,rho_w,mu_w)
+   
+        if (abs(fprime).le.1.0e-15) then 
+         print *, "divide by zero error: wallfunc_newtonsmethod" !avoid /0
+         stop
+        else
+         x_np1 = x_n-f/fprime
+        endif
+        iter_diff=abs(x_np1-x_n)
+        x_n=x_np1
+
+        iter = iter+1
+        if(iter.ge.iter_max)then
          print *, "wallfunc_newtonsmethod: no convergence"
          print *, "u (image velocity tangent) = ",u
          print *, "y (delta_r) = ",y
@@ -1448,40 +1465,51 @@ contains
          print *, "iter=",iter
          print *, "iter_diff = ",iter_diff
          stop
-       endif
-      enddo ! while (iter_diff>VOFTOL .and. iter<iter_max)
+        endif
+       enddo ! while (iter_diff>VOFTOL .and. iter<iter_max)
     
-      u_tau = x_np1
-      tau_w = rho_w*u_tau**2
+       u_tau = x_np1
+       tau_w = rho_w*u_tau**2
 
        ! sanity check
-      ughost_tngt_local=u-tau_w*y/(viscosity_molecular+viscosity_eddy_wall)
+       ughost_tngt_local=u-tau_w*y/(viscosity_molecular+viscosity_eddy_wall)
 
-      predict_deriv_utan=abs(ughost_tngt_local-u)/y
-      max_deriv_utan=four*u/critical_length
-      if (predict_deriv_utan.lt.max_deriv_utan) then
-       ! do nothing
+       predict_deriv_utan=abs(ughost_tngt_local-u)/y
+       max_deriv_utan=four*u/critical_length
+       if (predict_deriv_utan.lt.max_deriv_utan) then
+        ! do nothing
+       else
+        print *,"predict_deriv_utan or max_deriv_utan invalid"
+        print *,"predict_deriv_utan= ",predict_deriv_utan
+        print *,"max_deriv_utan= ",max_deriv_utan
+        print *,"ughost_tngt_local=",ughost_tngt_local
+        print *,"u=",u
+        print *,"critical_length= ",critical_length
+        print *,"y= ",y
+        stop
+       endif
+
+      else if (critical_length.ge.dxmin) then
+
+       ughost_tngt_local=zero
+       u_tau=zero
+       tau_w=u*(viscosity_molecular+viscosity_eddy_wall)/y
+
       else
-       print *,"predict_deriv_utan or max_deriv_utan invalid"
-       print *,"predict_deriv_utan= ",predict_deriv_utan
-       print *,"max_deriv_utan= ",max_deriv_utan
-       print *,"ughost_tngt_local=",ughost_tngt_local
-       print *,"u=",u
-       print *,"critical_length= ",critical_length
-       print *,"y= ",y
+       print *,"critical_length is NaN"
        stop
       endif
 
       if (1.eq.0) then
-         print *, "u (image velocity tangent) = ",u
-         print *, "y (delta_r) = ",y
-         print *, "im_fluid= ",im_fluid
-         print *, "mu_w= ",mu_w
-         print *, "rho_w= ",rho_w
-         print *, "u_tau= ",u_tau
-         print *, "tau_w= ",tau_w
-         print *, "iter=",iter
-         print *, "iter_diff = ",iter_diff
+       print *, "u (image velocity tangent) = ",u
+       print *, "y (delta_r) = ",y
+       print *, "im_fluid= ",im_fluid
+       print *, "mu_w= ",mu_w
+       print *, "rho_w= ",rho_w
+       print *, "u_tau= ",u_tau
+       print *, "tau_w= ",tau_w
+       print *, "iter=",iter
+       print *, "iter_diff = ",iter_diff
       endif
 
       end subroutine wallfunc_newtonsmethod
@@ -1489,6 +1517,7 @@ contains
 
 
       subroutine wallfunc_general( &
+        dxmin, &
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
@@ -1503,6 +1532,7 @@ contains
         critical_length) ! intent(in) used for sanity check
       use probcommon_module
       implicit none
+      REAL_T, intent(in) :: dxmin
       REAL_T, intent(in), pointer :: x_projection_raster(:)
       REAL_T, intent(in), pointer :: dx(:)
       REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
@@ -1518,6 +1548,7 @@ contains
 
       if (is_in_probtype_list().eq.1) then
        call SUB_wallfunc( &
+        dxmin, &
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
@@ -1532,6 +1563,7 @@ contains
         critical_length) ! intent(in) used for sanity check
       else
        call wallfunc_newtonsmethod( &
+        dxmin, &
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
@@ -2032,7 +2064,7 @@ end subroutine dynamic_contact_angle
        i_probe,j_probe,k_probe, & ! index for the fluid probe cell
        side_solid, &  ! =0 if solid on the left
        side_image, &
-       data_dir, &
+       data_dir, &  ! normal dir=0..sdim-1
        uimage_raster, & ! in (at the probe)
        temperature_image, & ! in (at the probe)
        temperature_wall, & ! in
@@ -2045,7 +2077,7 @@ end subroutine dynamic_contact_angle
        
        type(law_of_wall_parm_type), intent(in) :: LOW
        INTEGER_T, intent(in) :: law_of_the_wall
-       INTEGER_T, intent(in) :: data_dir
+       INTEGER_T, intent(in) :: data_dir ! normal dir=0..sdim-1
        INTEGER_T, intent(in) :: im_fluid
        INTEGER_T, intent(in) :: im_solid
        INTEGER_T, intent(in) :: side_solid
@@ -2061,12 +2093,11 @@ end subroutine dynamic_contact_angle
       
        !D_DECL is defined in SPACE.H in the BoxLib/Src/C_BaseLib
 
-
-       REAL_T, dimension(SDIM) :: u_tngt
        REAL_T, dimension(SDIM) :: uimage_raster_solid_frame
-       REAL_T :: uimage_nrml, ughost_nrml
-       REAL_T :: ughost_tngt
+
        REAL_T :: uimage_tngt_mag
+
+       REAL_T :: ughost_tngt(SDIM)
        REAL_T :: tau_w
        REAL_T :: viscosity_molecular, viscosity_eddy_wall
        REAL_T :: density_fluid
@@ -2074,7 +2105,6 @@ end subroutine dynamic_contact_angle
        REAL_T :: nrm_sanity
        REAL_T :: nrm_sanity_crossing
        REAL_T :: critical_length
-       REAL_T :: uimage_mag
        INTEGER_T :: im
        INTEGER_T :: im_fluid_crossing
        INTEGER_T :: im_primary_image
@@ -2141,6 +2171,12 @@ end subroutine dynamic_contact_angle
        REAL_T :: xprobe_triple(SDIM)
        REAL_T :: xtriple(SDIM)
        INTEGER_T :: debug_slip_velocity_enforcement
+
+       if (1.eq.0) then
+        print *,"in getGhostVel"
+        print *,"ijkSOLID ",iSOLID,jSOLID,kSOLID
+        print *,"ijkFLUID ",iFLUID,jFLUID,kFLUID
+       endif
 
        debug_slip_velocity_enforcement=0
     
@@ -2216,9 +2252,7 @@ end subroutine dynamic_contact_angle
         ! uimage_raster and LOW%usolid_raster are already initialized.
        do dir=1,SDIM
         usolid_law_of_wall(dir)=zero
-        u_tngt(dir)=zero
        enddo
-       ughost_nrml=zero
        ughost_tngt=zero
        angle_ACT=zero
 
@@ -2826,54 +2860,15 @@ end subroutine dynamic_contact_angle
        endif
       
        ! convert to solid velocity frame of reference.
-       uimage_mag=zero
+       uimage_tngt_mag=zero
        do dir=1,SDIM
         uimage_raster_solid_frame(dir)= &
-                uimage_raster(dir)-LOW%usolid_raster(dir)
-        uimage_mag=uimage_mag+uimage_raster_solid_frame(dir)**2
+           uimage_raster(dir)-LOW%usolid_raster(dir)
+        if (dir.ne.data_dir+1) then
+         uimage_tngt_mag=uimage_tngt_mag+uimage_raster_solid_frame(dir)**2
+        endif
        enddo
-       uimage_mag=sqrt(uimage_mag)
-       if (uimage_mag.ge.zero) then
-        ! do nothing
-       else
-        print *,"uimage_mag invalid"
-        stop
-       endif
-
-       !normal and tangential velocity components of image point
-       !magnitude, normal velocity component
-       uimage_nrml = DOT_PRODUCT(uimage_raster_solid_frame,LOW%n_raster) 
-       do dir = 1,SDIM
-        u_tngt(dir) = uimage_raster_solid_frame(dir)- &
-                      uimage_nrml*LOW%n_raster(dir)
-       enddo
-
-       uimage_tngt_mag = DOT_PRODUCT(u_tngt,u_tngt)
-       uimage_tngt_mag = sqrt(uimage_tngt_mag) 
-
-       if (uimage_tngt_mag.lt.zero) then
-        print *,"uimage_tngt_mag.lt.zero"
-        stop
-       else if (uimage_tngt_mag.eq.zero) then
-        ! do nothing
-       else if (uimage_tngt_mag.gt.zero) then 
-        !normalize tangential velocity vector
-        do dir = 1,SDIM
-         u_tngt(dir) = u_tngt(dir)/uimage_tngt_mag 
-        enddo
-       else
-        print *,"uimage_tngt_mag invalid"
-        print *,"uimage_tngt_mag=",uimage_tngt_mag
-        print *,"uimage_nrml=",uimage_nrml
-        do dir=1,SDIM
-         print *,"dir,uimage_raster(dir) ",dir,uimage_raster(dir)
-         print *,"dir,uimage_raster_solid_frame(dir) ", &
-                 dir,uimage_raster_solid_frame(dir)
-         print *,"dir,usolid_raster(dir) ",dir,LOW%usolid_raster(dir)
-         print *,"dir,u_tngt(dir) ",dir,u_tngt(dir)
-        enddo
-        stop
-       endif
+       uimage_tngt_mag=sqrt(uimage_tngt_mag)
 
        ! laminar boundary layer thickness:
        ! delta=4.91 (mu x / (U rho))^(1/2)
@@ -2898,9 +2893,6 @@ end subroutine dynamic_contact_angle
         stop
        endif
 
-        ! ghost velocity lives *on* the rasterized interface.
-       ughost_nrml = zero
-
        ! From Spaldings' paper, a representative size for the linear 
        ! region is:
        ! y+ = 10.0
@@ -2910,17 +2902,20 @@ end subroutine dynamic_contact_angle
 
        if (law_of_the_wall.eq.1) then ! turbulence modeling here.
 
-        if (critical_length.lt.LOW%dxmin) then
+        do dir=1,SDIM
+         if (dir.ne.data_dir+1) then
 
-         if (viscosity_eddy_wall.gt.zero) then
-          !obtain wall shear stress tau_w (MKS units: Pascal)
-          !delta_r_raster is distance from image point to the wall.
-          if (delta_r_raster.gt.zero) then
-           call wallfunc_general( &
+          if (viscosity_eddy_wall.gt.zero) then
+
+           !obtain wall shear stress tau_w (MKS units: Pascal)
+           !delta_r_raster is distance from image point to the wall.
+           if (delta_r_raster.gt.zero) then
+            call wallfunc_general( &
+             LOW%dxmin, &
              LOW%x_projection_raster, & ! coordinate on the wall
              LOW%dx, &
              LOW%n_raster, & ! points to solid
-             uimage_tngt_mag, &
+             uimage_raster_solid_frame(dir), &
              temperature_image, &
              temperature_wall, &
              viscosity_molecular, &
@@ -2935,40 +2930,37 @@ end subroutine dynamic_contact_angle
             ! MKS units of tau: pascal
             ! This will not be the velocity at the ghost point, it will be
             ! a velocity at the projection (wall) point.
-           ughost_tngt = uimage_tngt_mag - &
-            tau_w*delta_r_raster/ &
-            (viscosity_molecular+viscosity_eddy_wall)
+            FIX ME
+            ughost_tngt(dir) = uimage_raster_solid_frame(dir) - &
+             tau_w*delta_r_raster/ &
+             (viscosity_molecular+viscosity_eddy_wall)
 
-           if (1.eq.0) then
-            print *,"after wallfunc_newtonsmethod"
-            print *,"uimage_tngt_mag=",uimage_tngt_mag
-            print *,"ughost_tngt (projection point vel)=",ughost_tngt
-            print *,"delta_r_raster=",delta_r_raster
+            if (1.eq.1) then
+             print *,"after wallfunc_general"
+             print *,"dir,ughost_tngt (projection point vel)=", &
+                     dir,ughost_tngt(dir)
+             print *,"delta_r_raster=",delta_r_raster
+             print *,"viscosity_molecular ",viscosity_molecular
+             print *,"viscosity_eddy_wall ",viscosity_eddy_wall
+            endif
+
+           else
+            print *,"delta_r_raster invalid"
+            stop
            endif
 
+          else if (viscosity_eddy_wall.eq.zero) then
+           ! ghost velocity lives *on* the rasterized interface.
+           ughost_tngt(dir) = zero
           else
-           print *,"delta_r_raster invalid"
+           print *,"viscosity_eddy_wall invalid"
            stop
           endif
-
-         else if (viscosity_eddy_wall.eq.zero) then
-           ! ghost velocity lives *on* the rasterized interface.
-          ughost_tngt = zero
-         else
-          print *,"viscosity_eddy_wall invalid"
-          stop
          endif
-
-        else if (critical_length.ge.LOW%dxmin) then
-          ! ghost velocity lives *on* the rasterized interface.
-         ughost_tngt = zero
-        else
-         print *,"critical_length invalid"
-         stop
-        endif
+        enddo !dir=1..sdim
 
        else if (law_of_the_wall.eq.2) then ! GNBC model
-
+        FIX ME
         if (near_contact_line.eq.1) then
 
          if ((fort_denconst(im_fluid1).gt.zero).and. &
@@ -3107,21 +3099,12 @@ end subroutine dynamic_contact_angle
         stop
        endif
 
-        !get ghost velocity using normal and tangential components
-        !default:
-        !ughost dot n = ughost_nrml + 
-        !               ughost_tngt * u_tngt dot n +
-        !               usolid dot n=
-        ! -(uimage-usolid) dot n +
-        ! -(I-P)(uimage-usolid)dot n+
-        ! usolid dot n = (2 usolid - uimage) dot n
-        ! (I-P)ughost=(I-P)usolid+
-        ! -(I-P)(uimage-usolid)=(I-P)(2 usolid - uimage)
        do dir=1,SDIM
-        usolid_law_of_wall(dir) = &
-                ughost_nrml*LOW%n_raster(dir)+ &
-                ughost_tngt*u_tngt(dir)+ &
-                LOW%usolid_raster(dir)
+        if (dir.eq.data_dir+1) then
+         usolid_law_of_wall(dir)=LOW%usolid_raster(dir)
+        else
+         usolid_law_of_wall(dir)=ughost_tngt(dir)+LOW%usolid_raster(dir)
+        endif
        enddo
       
        deallocate(user_tension)

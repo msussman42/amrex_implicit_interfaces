@@ -682,6 +682,7 @@ k=GRID_DATA_IN%kgrid
 end subroutine STUB_SUMINT
 
 subroutine STUB_wallfunc( &
+  dxmin, &
   x_projection_raster, &
   dx, &
   n_raster, & ! points to solid
@@ -689,7 +690,7 @@ subroutine STUB_wallfunc( &
   temperature_image, & !intent(in) 
   temperature_wall, & ! intent(in)      
   viscosity_molecular, & ! intent(in)      
-  viscosity_eddy, & ! intent(in)      
+  viscosity_eddy_wall, & ! intent(in)      
   y, & !intent(in) distance from image to wall
   tau_w, & ! intent(out)
   im_fluid, &  ! intent(in)
@@ -697,6 +698,7 @@ subroutine STUB_wallfunc( &
 use probcommon_module
 use global_utility_module
 implicit none
+REAL_T, intent(in) :: dxmin
 REAL_T, intent(in), pointer :: x_projection_raster(:)
 REAL_T, intent(in), pointer :: dx(:)
 REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
@@ -705,12 +707,13 @@ REAL_T, intent(in) :: u !uimage_tngt
 REAL_T, intent(in) :: temperature_image
 REAL_T, intent(in) :: temperature_wall
 REAL_T, intent(in) :: viscosity_molecular
-REAL_T, intent(in) :: viscosity_eddy
+REAL_T, intent(in) :: viscosity_eddy_wall
 REAL_T, intent(in) :: y !delta_r
 REAL_T, intent(in) :: critical_length
 REAL_T, intent(out) :: tau_w ! wall shear stress
 
  call wallfunc_newtonsmethod( &
+  dxmin, &
   x_projection_raster, &
   dx, &
   n_raster, & ! points to solid
@@ -718,7 +721,7 @@ REAL_T, intent(out) :: tau_w ! wall shear stress
   temperature_image, & !intent(in) 
   temperature_wall, & ! intent(in)      
   viscosity_molecular, & ! intent(in)      
-  viscosity_eddy, & ! intent(in)      
+  viscosity_eddy_wall, & ! intent(in)      
   y, & !intent(in) distance from image to wall
   tau_w, & ! intent(out)
   im_fluid, &  ! intent(in)
