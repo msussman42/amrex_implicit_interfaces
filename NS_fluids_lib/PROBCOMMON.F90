@@ -543,6 +543,7 @@ implicit none
       ABSTRACT INTERFACE
 
       subroutine TEMPLATE_wallfunc( &
+        dxmin, &
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
@@ -555,6 +556,7 @@ implicit none
         tau_w, & ! intent(out)
         im_fluid, &  ! intent(in)
         critical_length) ! intent(in) used for sanity check
+      REAL_T, intent(in) :: dxmin
       REAL_T, intent(in), pointer :: x_projection_raster(:)
       REAL_T, intent(in), pointer :: dx(:)
       REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
