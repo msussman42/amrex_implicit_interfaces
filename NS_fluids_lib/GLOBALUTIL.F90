@@ -2999,7 +2999,7 @@ end subroutine dynamic_contact_angle
              im_fluid, &
              critical_length) 
 
-            if (1.eq.1) then
+            if (1.eq.0) then
              print *,"after wallfunc_general"
              print *,"dir,ughost_tngt (projection point vel)=", &
                      dir,ughost_tngt(dir)
