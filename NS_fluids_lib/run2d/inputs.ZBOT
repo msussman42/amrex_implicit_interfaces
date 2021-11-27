@@ -265,8 +265,14 @@ ns.heatviscconst=0.075 0.00375 0.189
 # (PNP: 4.2E-4)
 ns.viscconst=4.48E-04 1.093e-6 1.0
 
-ns.viscconst_eddy_wall=1.0e-3 0.0 0.0
-ns.viscconst_eddy_bulk=0.0 1.0e-5 0.0
+# eddy_bulk viscosity should at least place one
+# in the laminar regime:  rho L U/mu=1400 * 0.2 * U/ mu < 100
+# For fine resolution run: U_liquid=0.005 m/s
+# (1400)(0.2)(0.005)/100 < mu mu>0.014
+# For the gas,
+# (5.3)(0.2)(0.05)/100 < mu  mu>5.3e-4
+ns.viscconst_eddy_wall=5.0e-3 0.0 0.0
+ns.viscconst_eddy_bulk=5.0e-3 5.3e-4 0.0
 ns.law_of_the_wall=1 0 0
 ns.les_model=1 0 0
 ns.visual_WALLVEL_plot_int=1

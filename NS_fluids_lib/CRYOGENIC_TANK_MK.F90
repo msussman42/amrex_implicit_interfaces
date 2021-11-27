@@ -1972,7 +1972,9 @@ if ((xi.gt.0.0d0).and. &
  endif
  Jtemp=2.0d0*local_pi*R*Jtemp_no_area*dtemp
 
- macro_scale_thickness=0.50d0*dx(1)
+  ! it is known that converged solutions can be obtained on a 128x512 grid.
+  ! on a 16x64 grid, choose a thickness associated to the finer grid.
+ macro_scale_thickness=dx(1)/16.0d0
  if (macro_scale_thickness.lt.dtemp) then
   macro_scale_thickness=dtemp
  endif

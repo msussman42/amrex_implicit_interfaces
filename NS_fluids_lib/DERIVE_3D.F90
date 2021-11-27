@@ -313,7 +313,8 @@ stop
                  (ss**2.5d0+sdsd**1.25d0)
          density=denstate(D_DECL(i,j,k),flagcomp)
          ! limiter: arbitrary at this point
-         turb_visc=min(turb_visc,two*visc(D_DECL(i,j,k),im)/density)
+         turb_visc=min(turb_visc, &
+           two*(visc(D_DECL(i,j,k),im)+fort_viscconst_eddy_bulk(im))/density)
 
          if (im_primary.eq.im) then
           if (VFRAC(im).ge.one-VOFTOL) then
