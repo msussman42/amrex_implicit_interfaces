@@ -543,32 +543,38 @@ implicit none
       ABSTRACT INTERFACE
 
       subroutine TEMPLATE_wallfunc( &
+        dir, & ! =1,2,3
+        data_dir, & ! =0,1,2
         dxmin, &
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
-        u, & !intent(in) magnitude of image tangent velocity
+        u, & !intent(in) uimage_raster_solid_frame(dir)
+        uimage_tngt_mag, & !intent(in) 
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
         viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
-        tau_w, & ! intent(out)
+        ughost_tngt, & ! intent(out)
         im_fluid, &  ! intent(in)
         critical_length) ! intent(in) used for sanity check
+      INTEGER_T, intent(in) :: dir ! 1,2,3
+      INTEGER_T, intent(in) :: data_dir ! 0,1,2
       REAL_T, intent(in) :: dxmin
       REAL_T, intent(in), pointer :: x_projection_raster(:)
       REAL_T, intent(in), pointer :: dx(:)
       REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
       INTEGER_T, intent(in) :: im_fluid
-      REAL_T, intent(in) :: u !uimage_tngt
+      REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
+      REAL_T, intent(in) :: uimage_tngt_mag
       REAL_T, intent(in) :: temperature_image
       REAL_T, intent(in) :: temperature_wall
       REAL_T, intent(in) :: viscosity_molecular
       REAL_T, intent(in) :: viscosity_eddy_wall
       REAL_T, intent(in) :: y !delta_r
       REAL_T, intent(in) :: critical_length
-      REAL_T, intent(out) :: tau_w ! wall shear stress
+      REAL_T, intent(out) :: ughost_tngt  ! dir direction
       end subroutine TEMPLATE_wallfunc
 
       subroutine TEMPLATE_INIT_REGIONS_LIST(constant_density_all_time, &
