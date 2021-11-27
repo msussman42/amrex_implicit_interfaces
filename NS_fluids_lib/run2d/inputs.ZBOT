@@ -142,7 +142,10 @@ ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 #0=only at t=0 1=always account for sound speed 2=ignore
 ns.shock_timestep=2 2 2 
 #advection, surface tension, gravity
-ns.fixed_dt_scales=0.0 0.1 0.1
+#dt cannot exceed the fixed_dt_scales values.
+#0.1 is used for 64x256 grid.
+#0.4 is used for 16x64 grid.
+ns.fixed_dt_scales=0.0 0.4 0.4
 #ns.fixed_dt	    = 5.0e-5   # Hardwire dt
 
 # ----------------------------------------------------------
@@ -275,7 +278,7 @@ ns.viscconst_eddy_wall=5.0e-3 0.0 0.0
 ns.viscconst_eddy_bulk=5.0e-3 5.3e-4 0.0
 ns.law_of_the_wall=1 0 0
 ns.les_model=1 0 0
-ns.visual_WALLVEL_plot_int=1
+#ns.visual_WALLVEL_plot_int=1
 
 # Initial temeparture [K]
 ns.tempconst=295.41 295.41 295.41
