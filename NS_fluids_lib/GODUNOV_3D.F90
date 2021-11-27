@@ -11980,6 +11980,7 @@ stop
        print *,"data_dir invalid"
        stop
       endif
+
       ii=0
       jj=0
       kk=0
@@ -12290,7 +12291,7 @@ stop
                kside_probe, &
                side_solid, &
                side_image, &
-               data_dir, &
+               data_dir, & ! data_dir=0,1, or 2
                uimage_raster, & ! intent(in)
                temperature_image, & ! intent(in)
                temperature_wall, & ! intent(in)

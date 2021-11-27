@@ -1783,38 +1783,43 @@ end subroutine CRYOGENIC_TANK_MK_THERMAL_K
 ! This routine only called when "law_of_the_wall==1" associated with 
 ! im_fluid.
 subroutine wallfunc_thermocorrelation( &
+  dir, & ! =1,2,3
+  data_dir, & ! =0,1,2
   dxmin, &
   x_projection_raster, &
   dx, &
   n_raster, & ! points to solid
-  u, & !intent(in) magnitude of image tangent velocity
+  u, & !intent(in) uimage_raster_solid_frame(dir)
+  uimage_tngt_mag, & !intent(in) 
   temperature_image, & !intent(in) 
   temperature_wall, & ! intent(in)      
   viscosity_molecular, & ! intent(in)      
   viscosity_eddy_wall, & ! intent(in)      
   y, & !intent(in) distance from image to wall
-  tau_w, & ! intent(out)
+  ughost_tngt, & ! intent(out)
   im_fluid, &  ! intent(in)
   critical_length) ! intent(in) used for sanity check
 use probcommon_module
 implicit none
+INTEGER_T, intent(in) :: dir ! 1,2,3
+INTEGER_T, intent(in) :: data_dir ! 0,1,2
 REAL_T, intent(in) :: dxmin
 REAL_T, intent(in), pointer :: x_projection_raster(:)
 REAL_T, intent(in), pointer :: dx(:)
 REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
 INTEGER_T, intent(in) :: im_fluid
-REAL_T, intent(in) :: u !uimage_tngt
+REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
+REAL_T, intent(in) :: uimage_tngt_mag
 REAL_T, intent(in) :: temperature_image
 REAL_T, intent(in) :: temperature_wall
 REAL_T, intent(in) :: viscosity_molecular
 REAL_T, intent(in) :: viscosity_eddy_wall
 REAL_T, intent(in) :: y !delta_r
 REAL_T, intent(in) :: critical_length
-REAL_T, intent(out) :: tau_w ! wall shear stress
+REAL_T, intent(out) :: ughost_tngt  ! dir direction
 
 REAL_T :: rho_w !wall density
 REAL_T :: mu_w  !mu_w: wall molecular viscosity
-REAL_T :: ughost_tngt_local
 REAL_T :: thermal_conductivity
 REAL_T :: thermal_diffusivity
 REAL_T :: gravity_local
@@ -1892,6 +1897,25 @@ if (1.eq.0) then
  print *,"temperature_image ",temperature_image
 endif
 
+if (dir.eq.data_dir+1) then
+ if (abs(n_raster(dir)).eq.one) then
+  ! do nothing
+ else
+  print *,"abs(n_raster(dir)) invalid"
+  stop
+ endif
+else if (dir.ne.data_dir+1) then
+ if (n_raster(dir).eq.zero) then
+  ! do nothing
+ else
+  print *,"n_raster(dir) invalid"
+  stop
+ endif
+else
+ print *,"dir or data_dir corrupt"
+ stop
+endif
+
 if ((xi.gt.0.0d0).and. &
     (xi.le.TANK_MK_HEATER_WALL_MODEL).and. &
     (n_raster(1).eq.one).and. &
@@ -1947,12 +1971,7 @@ if ((xi.gt.0.0d0).and. &
  endif
  Jtemp=2.0d0*local_pi*R*Jtemp_no_area*dtemp
 
- ! getGhostVel (GLOBALUTIL.F90) has the lines
- ! ughost_tngt = uimage_tngt_mag - &
- !    tau_w*delta_r_raster/ &
- !    (viscosity_molecular+viscosity_eddy_wall)
-
- ughost_tngt_local=Jtemp_no_area*dtemp/(rho_w*0.5d0*dx(1))
+ ughost_tngt=Jtemp_no_area*dtemp/(rho_w*0.5d0*dx(1))
  if (1.eq.0) then
   print *,"xi=",xi
   print *,"Gr,Pr,Ra,vtemp,dtemp ",Gr,Pr,Ra,vtemp,dtemp
@@ -1960,83 +1979,94 @@ if ((xi.gt.0.0d0).and. &
   print *,"R=",R
   print *,"rho_w=",rho_w
   print *,"dx(1)=",dx(1)
-  print *,"ughost_tngt_local=",ughost_tngt_local
+  print *,"ughost_tngt=",ughost_tngt
  endif
 else if ((xi.le.0.0d0).or. &
          (xi.ge.TANK_MK_HEATER_WALL_MODEL).or. &
          (n_raster(1).ne.one).or. &
          (temperature_wall.le.temperature_image)) then
- ughost_tngt_local=0.0d0
+ ughost_tngt=0.0d0
 else
  print *,"xi,n_raster,twall or timage became corrupt"
  stop
 endif
-tau_w=(u-ughost_tngt_local)*(viscosity_molecular+viscosity_eddy_wall)/y
 
 end subroutine wallfunc_thermocorrelation
 
 
 subroutine CRYOGENIC_TANK_MK_wallfunc( &
+  dir, & ! =1,2,3
+  data_dir, & ! =0,1,2
   dxmin, &
   x_projection_raster, &
   dx, &
   n_raster, & ! points to solid
-  u, & !intent(in) magnitude of image tangent velocity
+  u, & !intent(in) uimage_raster_solid_frame(dir)
+  uimage_tngt_mag, & !intent(in) 
   temperature_image, & !intent(in) 
   temperature_wall, & ! intent(in)      
   viscosity_molecular, & ! intent(in)      
   viscosity_eddy_wall, & ! intent(in)      
   y, & !intent(in) distance from image to wall
-  tau_w, & ! intent(out)
+  ughost_tngt, & ! intent(out)
   im_fluid, &  ! intent(in)
   critical_length) ! intent(in) used for sanity check
 use probcommon_module
 use global_utility_module
 implicit none
+INTEGER_T, intent(in) :: dir ! 1,2,3
+INTEGER_T, intent(in) :: data_dir ! 0,1,2
 REAL_T, intent(in) :: dxmin
 REAL_T, intent(in), pointer :: x_projection_raster(:)
 REAL_T, intent(in), pointer :: dx(:)
 REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
 INTEGER_T, intent(in) :: im_fluid
-REAL_T, intent(in) :: u !uimage_tngt
+REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
+REAL_T, intent(in) :: uimage_tngt_mag
 REAL_T, intent(in) :: temperature_image
 REAL_T, intent(in) :: temperature_wall
 REAL_T, intent(in) :: viscosity_molecular
 REAL_T, intent(in) :: viscosity_eddy_wall
 REAL_T, intent(in) :: y !delta_r
 REAL_T, intent(in) :: critical_length
-REAL_T, intent(out) :: tau_w ! wall shear stress
+REAL_T, intent(out) :: ughost_tngt  ! dir direction
 
  if (1.eq.0) then
   ! remark: "subroutine wallfunc_newtonsmethod" is 
   ! declared in GLOBALUTIL.F90
   call wallfunc_newtonsmethod( &
+   dir, & ! =1,2,3
+   data_dir, & ! =0,1,2
    dxmin, &
    x_projection_raster, &
    dx, &
    n_raster, & ! points to solid
-   u, & !intent(in) magnitude of image tangent velocity
+   u, & !intent(in) uimage_raster_solid_frame(dir)
+   uimage_tngt_mag, & !intent(in) 
    temperature_image, & !intent(in) 
    temperature_wall, & ! intent(in)      
    viscosity_molecular, & ! intent(in)      
    viscosity_eddy_wall, & ! intent(in)      
    y, & !intent(in) distance from image to wall
-   tau_w, & ! intent(out)
+   ughost_tngt, & ! intent(out)
    im_fluid, &  ! intent(in)
    critical_length) ! intent(in) used for sanity check
  else
   call wallfunc_thermocorrelation( &
+   dir, & ! =1,2,3
+   data_dir, & ! =0,1,2
    dxmin, &
    x_projection_raster, &
    dx, &
    n_raster, & ! points to solid
-   u, & !intent(in) magnitude of image tangent velocity
+   u, & !intent(in) uimage_raster_solid_frame(dir)
+   uimage_tngt_mag, & !intent(in) 
    temperature_image, & !intent(in) 
    temperature_wall, & ! intent(in)      
    viscosity_molecular, & ! intent(in)      
    viscosity_eddy_wall, & ! intent(in)      
    y, & !intent(in) distance from image to wall
-   tau_w, & ! intent(out)
+   ughost_tngt, & ! intent(out)
    im_fluid, &  ! intent(in)
    critical_length) ! intent(in) used for sanity check
  endif

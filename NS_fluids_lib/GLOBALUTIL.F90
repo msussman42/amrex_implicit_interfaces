@@ -1329,36 +1329,42 @@ contains
       end function wallfuncderiv
       
       subroutine wallfunc_newtonsmethod( &
+        dir, & ! =1,2,3
+        data_dir, & ! =0,1,2
         dxmin, &
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
-        u, & !intent(in) magnitude of image tangent velocity
+        u, & !intent(in) uimage_raster_solid_frame(dir)
+        uimage_tngt_mag, & !intent(in) 
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
         viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
-        tau_w, & ! intent(out)
+        ughost_tngt, & ! intent(out)
         im_fluid, &  ! intent(in)
         critical_length) ! intent(in) used for sanity check
       use probcommon_module
       implicit none
+      INTEGER_T, intent(in) :: dir ! 1,2,3
+      INTEGER_T, intent(in) :: data_dir ! 0,1,2
       REAL_T, intent(in) :: dxmin
       REAL_T, intent(in), pointer :: x_projection_raster(:)
       REAL_T, intent(in), pointer :: dx(:)
       REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
       INTEGER_T, intent(in) :: im_fluid
-      REAL_T, intent(in) :: u !uimage_tngt
+      REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
+      REAL_T, intent(in) :: uimage_tngt_mag
       REAL_T, intent(in) :: temperature_image
       REAL_T, intent(in) :: temperature_wall
       REAL_T, intent(in) :: viscosity_molecular
       REAL_T, intent(in) :: viscosity_eddy_wall
       REAL_T, intent(in) :: y !delta_r
       REAL_T, intent(in) :: critical_length
-      REAL_T, intent(out) :: tau_w ! wall shear stress
+      REAL_T, intent(out) :: ughost_tngt  ! dir direction
 
-      REAL_T :: u_tau,x_n,x_np1 !x_n, x_(n+1) --> u_tau
+      REAL_T :: u_tau,tau_w,x_n,x_np1 !x_n, x_(n+1) --> u_tau
       REAL_T :: iter_diff
       REAL_T :: f, fprime
       INTEGER_T :: iter, iter_max=1000
@@ -1368,12 +1374,13 @@ contains
       REAL_T :: mu_w  !mu_w: wall molecular viscosity
       REAL_T :: predict_deriv_utan
       REAL_T :: max_deriv_utan
-      REAL_T :: ughost_tngt_local
+      REAL_T :: ughost_tngt_mag
       REAL_T :: thermal_conductivity
       REAL_T :: thermal_diffusivity
       REAL_T :: gravity_local
       REAL_T :: expansion_coefficient
       REAL_T :: Cp
+      REAL_T :: u_abs
 
       if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
        print *,"im_fluid invalid in wallfunc_newtonsmethod"
@@ -1433,13 +1440,14 @@ contains
 
       if (critical_length.lt.dxmin) then
 
-       x_n = u !initial guess for u_tau
-       x_np1=u
+       u_abs=abs(u)
+       x_n=u_abs !initial guess for u_tau
+       x_np1=u_abs
        iter_diff=one
        iter=0
        do while ((iter_diff.gt.VOFTOL).and.(iter.lt.iter_max))
-        f = wallfunc(x_n,u,y,K,B,rho_w,mu_w)
-        fprime = wallfuncderiv(x_n,u,y,K,B,rho_w,mu_w)
+        f = wallfunc(x_n,u_abs,y,K,B,rho_w,mu_w)
+        fprime = wallfuncderiv(x_n,u_abs,y,K,B,rho_w,mu_w)
    
         if (abs(fprime).le.1.0e-15) then 
          print *, "divide by zero error: wallfunc_newtonsmethod" !avoid /0
@@ -1453,7 +1461,7 @@ contains
         iter = iter+1
         if(iter.ge.iter_max)then
          print *, "wallfunc_newtonsmethod: no convergence"
-         print *, "u (image velocity tangent) = ",u
+         print *, "u (uimage_raster_solid_frame(dir)) = ",u
          print *, "y (delta_r) = ",y
          print *, "im_fluid= ",im_fluid
          print *, "mu_w= ",mu_w
@@ -1469,21 +1477,28 @@ contains
        enddo ! while (iter_diff>VOFTOL .and. iter<iter_max)
     
        u_tau = x_np1
-       tau_w = rho_w*u_tau**2
+       tau_w = rho_w*(u_tau**2)
 
-       ! sanity check
-       ughost_tngt_local=u-tau_w*y/(viscosity_molecular+viscosity_eddy_wall)
+        ! MKS units of viscosity: Pascal * seconds= 
+        !  (kg m/s^2)*(1/m^2)*s=kg /(m s)
+        ! MKS units of Pascal: N/m^2
+        ! MKS units of tau: pascal
+        ! This will not be the velocity at the ghost point, it will be
+        ! a velocity at the projection (wall) point.
+       ughost_tngt_mag=u_abs-tau_w*y/ &
+          (viscosity_molecular+viscosity_eddy_wall)
 
-       predict_deriv_utan=abs(ughost_tngt_local-u)/y
-       max_deriv_utan=four*u/critical_length
+       predict_deriv_utan=abs(ughost_tngt_mag-u_abs)/y
+       max_deriv_utan=four*uimage_tngt_mag/critical_length
        if (predict_deriv_utan.lt.max_deriv_utan) then
         ! do nothing
        else
         print *,"predict_deriv_utan or max_deriv_utan invalid"
         print *,"predict_deriv_utan= ",predict_deriv_utan
         print *,"max_deriv_utan= ",max_deriv_utan
-        print *,"ughost_tngt_local=",ughost_tngt_local
+        print *,"ughost_tngt_mag=",ughost_tngt_mag
         print *,"u=",u
+        print *,"uimage_tngt_mag=",uimage_tngt_mag
         print *,"critical_length= ",critical_length
         print *,"y= ",y
         stop
@@ -1491,22 +1506,33 @@ contains
 
       else if (critical_length.ge.dxmin) then
 
-       ughost_tngt_local=zero
+       ughost_tngt_mag=zero
        u_tau=zero
-       tau_w=u*(viscosity_molecular+viscosity_eddy_wall)/y
+       tau_w=u_abs*(viscosity_molecular+viscosity_eddy_wall)/y
 
       else
        print *,"critical_length is NaN"
        stop
       endif
 
+      ughost_tngt=ughost_tngt_mag
+      if (u.lt.zero) then
+       ughost_tngt=-ughost_tngt
+      else if (u.ge.zero) then
+       ! do nothing
+      else
+       print *,"u is NaN"
+       stop
+      endif
+
       if (1.eq.0) then
-       print *, "u (image velocity tangent) = ",u
+       print *, "u (uimage_raster_solid_frame(dir)) = ",u
        print *, "y (delta_r) = ",y
        print *, "im_fluid= ",im_fluid
        print *, "mu_w= ",mu_w
        print *, "rho_w= ",rho_w
        print *, "u_tau= ",u_tau
+       print *, "ughost_tngt= ",ughost_tngt
        print *, "tau_w= ",tau_w
        print *, "iter=",iter
        print *, "iter_diff = ",iter_diff
@@ -1517,63 +1543,75 @@ contains
 
 
       subroutine wallfunc_general( &
+        dir, & ! =1,2,3
+        data_dir, & ! =0,1,2
         dxmin, &
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
-        u, & !intent(in) magnitude of image tangent velocity
+        u, & !intent(in) uimage_raster_solid_frame(dir)
+        uimage_tngt_mag, & !intent(in) 
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
         viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
-        tau_w, & ! intent(out)
+        ughost_tngt, & ! intent(out)
         im_fluid, &  ! intent(in)
         critical_length) ! intent(in) used for sanity check
       use probcommon_module
       implicit none
+      INTEGER_T, intent(in) :: dir ! 1,2,3
+      INTEGER_T, intent(in) :: data_dir ! 0,1,2
       REAL_T, intent(in) :: dxmin
       REAL_T, intent(in), pointer :: x_projection_raster(:)
       REAL_T, intent(in), pointer :: dx(:)
       REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
       INTEGER_T, intent(in) :: im_fluid
-      REAL_T, intent(in) :: u !uimage_tngt
+      REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
+      REAL_T, intent(in) :: uimage_tngt_mag
       REAL_T, intent(in) :: temperature_image
       REAL_T, intent(in) :: temperature_wall
       REAL_T, intent(in) :: viscosity_molecular
       REAL_T, intent(in) :: viscosity_eddy_wall
       REAL_T, intent(in) :: y !delta_r
       REAL_T, intent(in) :: critical_length
-      REAL_T, intent(out) :: tau_w ! wall shear stress
+      REAL_T, intent(out) :: ughost_tngt  ! dir direction
 
       if (is_in_probtype_list().eq.1) then
        call SUB_wallfunc( &
+        dir, & ! =1,2,3
+        data_dir, & ! =0,1,2
         dxmin, &
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
-        u, & !intent(in) magnitude of image tangent velocity
+        u, & !intent(in) uimage_raster_solid_frame(dir)
+        uimage_tngt_mag, & !intent(in)
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
         viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
-        tau_w, & ! intent(out)
+        ughost_tngt, & ! intent(out)
         im_fluid, &  ! intent(in)
         critical_length) ! intent(in) used for sanity check
       else
        call wallfunc_newtonsmethod( &
+        dir, & ! =1,2,3
+        data_dir, & ! =0,1,2
         dxmin, &
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
-        u, & !intent(in) magnitude of image tangent velocity
+        u, & !intent(in) uimage_raster_solid_frame(dir)
+        uimage_tngt_mag, & !intent(in)
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
         viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
-        tau_w, & ! intent(out)
+        ughost_tngt, & ! intent(out)
         im_fluid, &  ! intent(in)
         critical_length) ! intent(in) used for sanity check
       endif
@@ -1805,7 +1843,9 @@ subroutine dynamic_contact_angle(mu_l, mu_g, sigma, &
                 imodel, ifgnbc, lambda, &
                 l_macro, l_micro, &
                 dgrid, d_closest, thet_d_apparent, &
-                u_cl, u_slip, thet_d)
+                u_cl, &
+                u_slip, &
+                thet_d)
 implicit none
 
 integer imodel, ifgnbc
@@ -1909,7 +1949,7 @@ select case (imodel)
             print *, "number of iteration is: ", iter
              ! beta = mu_l / lambda  e.g. lambda=8.0D-7
              ! integral_{-2 dx}^{2 dx} u_slip = u_CL_JIANG * 4 dx ?
-            u_slip = 1. / (beta * dgrid + 1.0D-20) *  &
+            u_slip = 1.0d0 / (beta * dgrid + 1.0D-20) *  &
                   ZEYU_delta(d_closest/dgrid) * sigma *  &
                   (cos(thet_s) - cos(thet_d_micro))
             thet_d = thet_d_apparent
@@ -1928,7 +1968,7 @@ select case (imodel)
 
         if (ifgnbc.eq.0) then !If don't implement GNBC.
             thet_d = (thet_s**3 + 9. * Ca * log(l_macro / l_micro))**(1./3.)
-            u_slip = 0.
+            u_slip = 0.0d0
         else if (ifgnbc.eq.1) then !Implement GNBC
             print *,"imodel and ifgnbc mismatch"
             stop
@@ -1955,7 +1995,7 @@ select case (imodel)
          print *,"Ca invalid"
          stop
         endif
-        u_slip = 0.
+        u_slip = 0.0d0
         if (diag_output.eq.1) then
          print *, "End Implement model 2, thet_d= ...",thet_d
         endif 
@@ -1984,7 +2024,7 @@ select case (imodel)
          print *, "Calculating thet_d..."
          print *, "number of iteration is: ", iter
         endif
-        u_slip = 0.
+        u_slip = 0.0d0
 
     case (4) !Kalliadasis1994-'abs(tan(the_d))=...', so how to determine the_d<90 or thet_d>90? It seems have problems...
         print *,"Kalliadasis 1994 fails if Ca<=0, also no theta_s input!"
@@ -1994,7 +2034,7 @@ select case (imodel)
          print *, "Implement model 4 ..."
         endif
         thet_d = atan(7.48 * Ca**(1./3.) - 3.28 * 1.e-8**0.04 * Ca**0.293)
-        u_slip = 0.
+        u_slip = 0.0d0
         
     case (5) !Kistler1993
         if (diag_output.eq.1) then
@@ -2015,7 +2055,7 @@ select case (imodel)
          print *, "number of iteration is: ", iter
         endif
         thet_d = acos(1. - 2. * tanh(5.16 * ((Ca + fHI)/(1. + 1.31 * (Ca + fHI)**0.99))**0.706))
-        u_slip = 0.
+        u_slip = 0.0d0
 
     case (6) !modified Bracke1989
 
@@ -2041,7 +2081,7 @@ select case (imodel)
         sigma_0 = 1.7e-2 !sigma_0 = 1.7e-2 for water and 1.e-2 for oil in Popescu2008
         v_0 = 5.e-3 !v_0 = 5e-3 for water and 1.35e-5 for oil in Popescu2008
         thet_d = acos(cos(thet_s) - sigma_0 / sigma * asinh(u_cl / v_0))
-        u_slip = 0.
+        u_slip = 0.0d0
 
     case default
         print *, "unknown model index"
@@ -2063,7 +2103,7 @@ end subroutine dynamic_contact_angle
        iFLUID,jFLUID,kFLUID, & ! index for the fluid cell
        i_probe,j_probe,k_probe, & ! index for the fluid probe cell
        side_solid, &  ! =0 if solid on the left
-       side_image, &
+       side_image, &  ! =0 if image on the left
        data_dir, &  ! normal dir=0..sdim-1
        uimage_raster, & ! in (at the probe)
        temperature_image, & ! in (at the probe)
@@ -2095,10 +2135,10 @@ end subroutine dynamic_contact_angle
 
        REAL_T, dimension(SDIM) :: uimage_raster_solid_frame
 
-       REAL_T :: uimage_tngt_mag
+        ! uimage_tngt_mag used for estimating the boundary layer thickness
+       REAL_T :: uimage_tngt_mag 
 
        REAL_T :: ughost_tngt(SDIM)
-       REAL_T :: tau_w
        REAL_T :: viscosity_molecular, viscosity_eddy_wall
        REAL_T :: density_fluid
        INTEGER_T :: dir
@@ -2249,11 +2289,14 @@ end subroutine dynamic_contact_angle
 
        nrad=3
 
-        ! uimage_raster and LOW%usolid_raster are already initialized.
+        !REAL_T, dimension(SDIM), intent(in) :: uimage_raster
+        !type(law_of_wall_parm_type), intent(in) :: LOW
+        !LOW%usolid_raster 
        do dir=1,SDIM
         usolid_law_of_wall(dir)=zero
+        ughost_tngt(dir)=zero
        enddo
-       ughost_tngt=zero
+
        angle_ACT=zero
 
        call gridsten_level(xstenFLUID,iFLUID,jFLUID,kFLUID,LOW%level,nhalf)
@@ -2865,7 +2908,35 @@ end subroutine dynamic_contact_angle
         uimage_raster_solid_frame(dir)= &
            uimage_raster(dir)-LOW%usolid_raster(dir)
         if (dir.ne.data_dir+1) then
+         if (LOW%n_raster(dir).eq.zero) then
+          ! do nothing
+         else
+          print *,"LOW%n_raster(dir) invalid"
+          stop
+         endif
          uimage_tngt_mag=uimage_tngt_mag+uimage_raster_solid_frame(dir)**2
+        else if (dir.eq.data_dir+1) then
+         if ((side_solid.eq.1).and.(side_image.eq.0)) then
+          if (LOW%n_raster(dir).eq.one) then
+           ! do nothing
+          else
+           print *,"LOW%n_raster(dir) invalid"
+           stop
+          endif
+         else if ((side_solid.eq.0).and.(side_image.eq.1)) then
+          if (LOW%n_raster(dir).eq.-one) then
+           ! do nothing
+          else
+           print *,"LOW%n_raster(dir) invalid"
+           stop
+          endif
+         else
+          print *,"side_solid or side_image invalid"
+          stop
+         endif
+        else
+         print *,"dir or data_dir corrupt"
+         stop
         endif
        enddo
        uimage_tngt_mag=sqrt(uimage_tngt_mag)
@@ -2907,33 +2978,26 @@ end subroutine dynamic_contact_angle
 
           if (viscosity_eddy_wall.gt.zero) then
 
-           !obtain wall shear stress tau_w (MKS units: Pascal)
+           !obtain ughost_tngt(dir)
            !delta_r_raster is distance from image point to the wall.
            if (delta_r_raster.gt.zero) then
             call wallfunc_general( &
+             dir, & ! = 1,2,3
+             data_dir, & ! = 0,1,2
              LOW%dxmin, &
              LOW%x_projection_raster, & ! coordinate on the wall
              LOW%dx, &
              LOW%n_raster, & ! points to solid
              uimage_raster_solid_frame(dir), &
+             uimage_tngt_mag, &
              temperature_image, &
              temperature_wall, &
              viscosity_molecular, &
              viscosity_eddy_wall, &
              delta_r_raster, &
-             tau_w, &
+             ughost_tngt(dir), &
              im_fluid, &
              critical_length) 
-            ! MKS units of viscosity: Pascal * seconds= 
-            !  (kg m/s^2)*(1/m^2)*s=kg /(m s)
-            ! MKS units of Pascal: N/m^2
-            ! MKS units of tau: pascal
-            ! This will not be the velocity at the ghost point, it will be
-            ! a velocity at the projection (wall) point.
-            FIX ME
-            ughost_tngt(dir) = uimage_raster_solid_frame(dir) - &
-             tau_w*delta_r_raster/ &
-             (viscosity_molecular+viscosity_eddy_wall)
 
             if (1.eq.1) then
              print *,"after wallfunc_general"
@@ -2956,11 +3020,16 @@ end subroutine dynamic_contact_angle
            print *,"viscosity_eddy_wall invalid"
            stop
           endif
+         else if (dir.eq.data_dir+1) then
+          ! do nothing
+         else
+          print *,"dir or data_dir bust"
+          stop
          endif
         enddo !dir=1..sdim
 
        else if (law_of_the_wall.eq.2) then ! GNBC model
-        FIX ME
+
         if (near_contact_line.eq.1) then
 
          if ((fort_denconst(im_fluid1).gt.zero).and. &
@@ -3020,7 +3089,9 @@ end subroutine dynamic_contact_angle
            ZEYU_imodel, ZEYU_ifgnbc, ZEYU_lambda, &
            ZEYU_l_macro, ZEYU_l_micro, &
            ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent, &
-           ZEYU_u_cl, ZEYU_u_slip, ZEYU_thet_d)
+           ZEYU_u_cl, &
+           ZEYU_u_slip, &
+           ZEYU_thet_d)
 
           ! nCL is normal to the contact line in the substrate plane.
           ! nCL points to the im_primary_image material.
@@ -3031,7 +3102,6 @@ end subroutine dynamic_contact_angle
           ! a constant on the interface.  This is what people call 
           ! "parasitic currents" when the interface moves due to surface
           ! tension, even though the curvature = constant.
-          ughost_tngt=ZEYU_u_slip     ! debugging: ZEYU_u_slip  * 1000.0 ??
 
           nCL_dot_n_raster=zero
           do dir=1,SDIM
@@ -3047,14 +3117,43 @@ end subroutine dynamic_contact_angle
            do dir=1,SDIM
             nCL_raster(dir)=nCL_raster(dir)/mag
            enddo
+          else if (mag.eq.zero) then
+           ! do nothing
+          else
+           print *,"mag is NaN"
+           stop
           endif
           do dir=1,SDIM
-           if (im_primary_image.eq.im_liquid) then
-            u_tngt(dir)=-nCL_raster(dir)
-           else if (im_primary_image.eq.im_vapor) then
-            u_tngt(dir)=nCL_raster(dir)
+           if (dir.ne.data_dir+1) then
+            if (im_primary_image.eq.im_liquid) then
+             ughost_tngt(dir)=-ZEYU_u_slip*nCL_raster(dir)
+            else if (im_primary_image.eq.im_vapor) then
+             ughost_tngt(dir)=ZEYU_u_slip*nCL_raster(dir)
+            else
+             print *,"im_primary_image or im_vapor invalid"
+             stop
+            endif
+            if (LOW%n_raster(dir).eq.zero) then
+             ! do nothing
+            else
+             print *,"LOW%n_raster(dir) invalid"
+             stop
+            endif
+           else if (dir.eq.data_dir+1) then
+            if (abs(nCL_raster(dir)).le.VOFTOL) then
+             ! do nothing
+            else
+             print *,"nCL_raster(dir) invalid"
+             stop
+            endif
+            if (abs(LOW%n_raster(dir)).eq.one) then
+             ! do nothing
+            else
+             print *,"LOW%n_raster(dir) invalid"
+             stop
+            endif
            else
-            print *,"im_primary_image or im_vapor invalid"
+            print *,"dir or data_dir corrupt"
             stop
            endif
           enddo ! dir=1..sdim
@@ -3076,22 +3175,25 @@ end subroutine dynamic_contact_angle
                im_primary_image,im_secondary_image
           print *," ZEYU_thet_s(rad,deg) ", &
            ZEYU_thet_s,ZEYU_thet_s*180.0d0/Pi
-          print *,"u_tngt ",u_tngt(1),u_tngt(2),u_tngt(SDIM)
-          print *,"ughost_tngt=",ughost_tngt
+          print *,"nCL_raster=",nCL_raster(1),nCL_raster(2),nCL_raster(SDIM)
+          print *,"ughost_tngt=",ughost_tngt(1),ughost_tngt(2), &
+                  ughost_tngt(SDIM)
          endif
 
         else if (near_contact_line.eq.0) then
           ! ghost velocity lives *on* the rasterized interface.
-         ughost_tngt = zero
+         do dir=1,SDIM
+          ughost_tngt(dir)=zero
+         enddo
         else
          print *,"near_contact_line invalid"
          stop
         endif
 
         if (debug_slip_velocity_enforcement.eq.1) then
-         ughost_tngt = ten
-         u_tngt(1)=one
-         u_tngt(2)=zero
+         ughost_tngt(1)=ten
+         ughost_tngt(2)=zero
+         ughost_tngt(SDIM)=zero
         endif
 
        else
