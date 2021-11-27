@@ -1832,6 +1832,7 @@ REAL_T :: Ra,Gr,Pr
 REAL_T :: nu
 REAL_T :: xi
 REAL_T :: R
+REAL_T :: macro_scale_thickness
 
 if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
  print *,"im_fluid invalid in wallfunc_thermocorrelation"
@@ -1971,7 +1972,11 @@ if ((xi.gt.0.0d0).and. &
  endif
  Jtemp=2.0d0*local_pi*R*Jtemp_no_area*dtemp
 
- ughost_tngt=Jtemp_no_area*dtemp/(rho_w*0.5d0*dx(1))
+ macro_scale_thickness=0.50d0*dx(1)
+ if (macro_scale_thickness.lt.dtemp) then
+  macro_scale_thickness=dtemp
+ endif
+ ughost_tngt=(Jtemp_no_area/rho_w)*dtemp/macro_scale_thickness
  if (1.eq.0) then
   print *,"xi=",xi
   print *,"Gr,Pr,Ra,vtemp,dtemp ",Gr,Pr,Ra,vtemp,dtemp
