@@ -72,6 +72,7 @@ ZBOT_level1_AXISFINE/
 ZBOT_uniform_finer/
 ZBOT_law_of_the_wall/
 ZBOT_no_law_of_the_wall/
+ZBOT_hardwire_vtemp/
 ZBOT_microgravity/
 flexible_plate/
 ICE_ON_SUBSTRATE/

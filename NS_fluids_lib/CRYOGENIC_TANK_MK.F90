@@ -100,7 +100,7 @@ contains
    ! Applications.
    ! ZBOT
   if (axis_dir.eq.0) then ! volume=pi(.09^2-0.08^2)*.02=pi(.01)(.17)(0.02)
-   TANK_MK_HEATER_WALL_MODEL = 0.15
+   TANK_MK_HEATER_WALL_MODEL = 0.12
    TANK_MK_HEATER_LOW       = -0.1683d0
    TANK_MK_HEATER_HIGH      = TANK_MK_HEATER_LOW+0.0254d0
    TANK_MK_HEATER_R_LOW     = 0.1016d0
@@ -1869,6 +1869,20 @@ else
  stop
 endif
 
+if (viscosity_eddy_wall.eq.fort_viscconst_eddy_wall(im_fluid)) then
+ ! do nothing
+else
+ print *,"viscosity_eddy_wall.eq.fort_viscconst_eddy_wall(im_fluid) == false"
+ stop
+endif
+
+if (mu_w.eq.viscosity_molecular) then
+ ! do nothing
+else
+ print *,"mu_w.eq.viscosity_molecular == false"
+ stop
+endif
+
 nu=mu_w/rho_w
 
 thermal_conductivity=fort_heatviscconst(im_fluid)
@@ -1919,68 +1933,73 @@ endif
 
 if ((xi.gt.0.0d0).and. &
     (xi.le.TANK_MK_HEATER_WALL_MODEL).and. &
-    (n_raster(1).eq.one).and. &
-    (temperature_wall.gt.temperature_image)) then
+    (n_raster(1).eq.one)) then
 
  thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
  gravity_local=abs(gravity)
  expansion_coefficient=abs(fort_DrhoDT(im_fluid)) ! units: 1/temperature
-
- Gr=gravity_local*expansion_coefficient* &
-    (temperature_wall-temperature_image)*(xi**3.0)/(nu*nu)
  Pr=nu/thermal_diffusivity
- Ra=Gr*Pr
 
- if(Ra.lt.1.0e+9)then
-  turb_flag=0
- else if(Ra.ge.1.0e+9)then
-  turb_flag=1
- else
-  print *,"Ra number invalid"
-  stop
- endif
+ if (temperature_wall.gt.temperature_image) then
 
- if (mu_w.eq.viscosity_molecular) then
-  ! do nothing
- else
-  print *,"mu_w.eq.viscosity_molecular == false"
-  stop
- endif
- if (viscosity_eddy_wall.eq.fort_viscconst_eddy_wall(im_fluid)) then
-  ! do nothing
- else
-  print *,"viscosity_eddy_wall.eq.fort_viscconst_eddy_wall(im_fluid) == false"
-  stop
- endif
+  Gr=gravity_local*expansion_coefficient* &
+    (temperature_wall-temperature_image)*(xi**3.0)/(nu*nu)
+  Ra=Gr*Pr
 
- vtemp=1.185d0*(nu/xi)*(Gr/(1.0d0+0.494*(Pr**(2.0d0/3.0d0))))**0.5d0
+  if(Ra.lt.1.0e+9)then
+   turb_flag=0
+  else if(Ra.ge.1.0e+9)then
+   turb_flag=1
+  else
+   print *,"Ra number invalid"
+   stop
+  endif
 
-  ! Jtemp is mass flux through horizontal face of length dtemp.
-  ! Jtemp has units of mass/sec=rho * velocity * area_face
-  ! We assume that J=rho * u_tan * 2 pi R * dr
-  ! u_tan=J/(2 pi R rho dr)
- if(turb_flag.eq.1)then
-  dtemp=xi*0.565*((1.0d0+0.494d0*Pr**(2.0d0/3.0d0))/Gr)**(0.1d0)/ &
+  vtemp=1.185d0*(nu/xi)*(Gr/(1.0d0+0.494*(Pr**(2.0d0/3.0d0))))**0.5d0
+
+   ! Jtemp is mass flux through horizontal face of length dtemp.
+   ! Jtemp has units of mass/sec=rho * velocity * area_face
+   ! We assume that J=rho * u_tan * 2 pi R * dr
+   ! u_tan=J/(2 pi R rho dr)
+  if(turb_flag.eq.1)then
+   dtemp=xi*0.565*((1.0d0+0.494d0*Pr**(2.0d0/3.0d0))/Gr)**(0.1d0)/ &
         (Pr**(8.0d0/15.0d0))
-  Jtemp_no_area=0.1436d0*rho_w*vtemp
- else if(turb_flag.eq.0)then
-  dtemp=xi*3.93*((0.952+Pr)/(Gr*(Pr**2.0d0)))**0.25d0
-  Jtemp_no_area=0.0833d0*rho_w*vtemp
- else
-  print *,"wrong turb_flag"
-  stop
- endif
- Jtemp=2.0d0*local_pi*R*Jtemp_no_area*dtemp
+   Jtemp_no_area=0.1436d0*rho_w*vtemp
+  else if(turb_flag.eq.0)then
+   dtemp=xi*3.93*((0.952+Pr)/(Gr*(Pr**2.0d0)))**0.25d0
+   Jtemp_no_area=0.0833d0*rho_w*vtemp
+  else
+   print *,"wrong turb_flag"
+   stop
+  endif
+  Jtemp=2.0d0*local_pi*R*Jtemp_no_area*dtemp
 
   ! it is known that converged solutions can be obtained on a 128x512 grid.
   ! on a 16x64 grid, choose a thickness associated to the finer grid.
- macro_scale_thickness=dx(1)/16.0d0
- macro_scale_thickness=dtemp
- if (macro_scale_thickness.lt.dtemp) then
+  macro_scale_thickness=dx(1)/16.0d0
   macro_scale_thickness=dtemp
+  if (macro_scale_thickness.lt.dtemp) then
+   macro_scale_thickness=dtemp
+  endif
+  ughost_tngt=(Jtemp_no_area/rho_w)*dtemp/macro_scale_thickness
+
+ else if (temperature_wall.le.temperature_image) then
+  Gr=zero
+  Ra=zero
+  turb_flag=0
+  vtemp=zero
+  dtemp=zero
+  Jtemp_no_area=zero
+  Jtemp=zero
+  macro_scale_thickness=zero
+  ughost_tngt=zero
+ else
+  print *,"temperature_wall or temperature_image is NaN"
+  stop
  endif
- ughost_tngt=(Jtemp_no_area/rho_w)*dtemp/macro_scale_thickness
-! ughost_tngt=0.005d0
+
+ ughost_tngt=0.005d0
+
  if (1.eq.0) then
   print *,"xi=",xi
   print *,"Gr,Pr,Ra,vtemp,dtemp ",Gr,Pr,Ra,vtemp,dtemp
@@ -1990,10 +2009,10 @@ if ((xi.gt.0.0d0).and. &
   print *,"dx(1)=",dx(1)
   print *,"ughost_tngt=",ughost_tngt
  endif
+
 else if ((xi.le.0.0d0).or. &
          (xi.ge.TANK_MK_HEATER_WALL_MODEL).or. &
-         (n_raster(1).ne.one).or. &
-         (temperature_wall.le.temperature_image)) then
+         (n_raster(1).ne.one)) then
  ughost_tngt=0.0d0
 else
  print *,"xi,n_raster,twall or timage became corrupt"
