@@ -100,7 +100,7 @@ contains
    ! Applications.
    ! ZBOT
   if (axis_dir.eq.0) then ! volume=pi(.09^2-0.08^2)*.02=pi(.01)(.17)(0.02)
-   TANK_MK_HEATER_WALL_MODEL = 0.1
+   TANK_MK_HEATER_WALL_MODEL = 0.15
    TANK_MK_HEATER_LOW       = -0.1683d0
    TANK_MK_HEATER_HIGH      = TANK_MK_HEATER_LOW+0.0254d0
    TANK_MK_HEATER_R_LOW     = 0.1016d0
@@ -1975,10 +1975,12 @@ if ((xi.gt.0.0d0).and. &
   ! it is known that converged solutions can be obtained on a 128x512 grid.
   ! on a 16x64 grid, choose a thickness associated to the finer grid.
  macro_scale_thickness=dx(1)/16.0d0
+ macro_scale_thickness=dtemp
  if (macro_scale_thickness.lt.dtemp) then
   macro_scale_thickness=dtemp
  endif
  ughost_tngt=(Jtemp_no_area/rho_w)*dtemp/macro_scale_thickness
+! ughost_tngt=0.005d0
  if (1.eq.0) then
   print *,"xi=",xi
   print *,"Gr,Pr,Ra,vtemp,dtemp ",Gr,Pr,Ra,vtemp,dtemp
