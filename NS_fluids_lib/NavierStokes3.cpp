@@ -599,7 +599,8 @@ void NavierStokes::nonlinear_advection() {
    S_new.nComp(),
    -1, // data_mf==-1
    State_Type,
-   -1); // data_dir==-1
+   -1, // data_dir==-1
+   parent->levelSteps(0)); 
  }
 
 
@@ -629,7 +630,8 @@ void NavierStokes::nonlinear_advection() {
    S_new.nComp(),
    -1, // data_mf==-1
    State_Type,
-   -1); // data_dir==-1
+   -1, // data_dir==-1
+   parent->levelSteps(0)); 
  }
 
 }  // subroutine nonlinear_advection
@@ -3028,7 +3030,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
            localMF[SATURATION_TEMP_MF]->nComp(), 
            SATURATION_TEMP_MF,
            -1,  // State_Type==-1 
-           -1); // data_dir==-1 (cell centered)
+           -1, // data_dir==-1 (cell centered)
+           parent->levelSteps(0)); 
 
 	  caller_id=2;
            //BURNVEL<stuff>.plt (visit can open binary tecplot files)
@@ -3039,7 +3042,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
            localMF[BURNING_VELOCITY_MF]->nComp(), 
            BURNING_VELOCITY_MF,
            -1,  // State_Type==-1 
-           -1); // data_dir==-1 (cell centered)
+           -1,  // data_dir==-1 (cell centered)
+           parent->levelSteps(0)); 
 
 	 }
 	} else if (very_last_sweep==0) {
@@ -3377,7 +3381,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          S_new.nComp(),
          -1, // data_mf==-1
          State_Type,
-         -1); // data_dir==-1
+         -1,  // data_dir==-1
+         parent->levelSteps(0)); 
        }
 
        if (1==0) {
@@ -3928,7 +3933,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       localMF[MACDIV_MF]->nComp(), 
       MACDIV_MF,
       -1,  // State_Type==-1 
-      -1); // data_dir==-1 (cell centered)
+      -1,  // data_dir==-1 (cell centered)
+      parent->levelSteps(0)); 
 
     caller_id=2;
     MultiFab& DIV_new=get_new_data(DIV_Type,slab_step+1);
@@ -3940,7 +3946,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       DIV_new.nComp(), 
       -1,
       DIV_Type,  // State_Type==-1 
-      -1); // data_dir==-1 (cell centered)
+      -1,  // data_dir==-1 (cell centered)
+      parent->levelSteps(0)); 
 
     delete_array(MACDIV_MF);
    }
@@ -6160,7 +6167,8 @@ NavierStokes::LowMachDIVUALL(
    localMF[MDOT_LOCAL_MF]->nComp(),
    MDOT_LOCAL_MF, 
    -1, //State_Type==-1
-   -1); // data_dir==-1 (cell centered)
+   -1, // data_dir==-1 (cell centered)
+   parent->levelSteps(0)); 
  }
 
  delete_array(MDOT_LOCAL_MF);
@@ -9706,7 +9714,9 @@ void NavierStokes::multiphase_project(int project_option) {
        localMF[FACE_VAR_MF+dir]->nComp(),
        FACE_VAR_MF+dir,
        -1, // State_Type==-1
-       dir);
+       dir,
+       parent->levelSteps(0)); 
+
 
        // gravity * dt
       writeSanityCheckData(
@@ -9716,7 +9726,8 @@ void NavierStokes::multiphase_project(int project_option) {
        localMF[POTENTIAL_FORCE_EDGE_MF+dir]->nComp(),
        POTENTIAL_FORCE_EDGE_MF+dir,
        -1, // State_Type==-1
-       dir);
+       dir,
+       parent->levelSteps(0)); 
      } // dir=0..sdim-1
 
     } // ratio==nsteps+1
