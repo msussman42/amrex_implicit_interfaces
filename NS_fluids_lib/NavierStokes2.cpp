@@ -4699,7 +4699,8 @@ void NavierStokes::make_physics_varsALL(int project_option,
     localMF[HISTORY_MF]->nComp(),
     HISTORY_MF,
     -1, // State_Type==-1
-    -1); // data_dir==-1
+    -1, // data_dir==-1
+    parent->levelSteps(0)); 
  }
  delete_array(HISTORY_MF);
 
@@ -4810,7 +4811,8 @@ void NavierStokes::make_physics_varsALL(int project_option,
     localMF[FACE_VAR_MF+dir]->nComp(),
     FACE_VAR_MF+dir,
     -1, // State_Type==-1
-    dir);
+    dir, 
+    parent->levelSteps(0));
   } // dir=0..sdim-1
  }
 

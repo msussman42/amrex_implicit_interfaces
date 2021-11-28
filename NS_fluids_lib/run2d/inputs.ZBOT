@@ -118,8 +118,8 @@ amr.regrid_int      = 1     # How often to regrid
 amr.max_grid_size   = 128    # 128 is optimal for MPI in 2D
 
 # Note: (max_level+1) values needed
-amr.n_error_buf     = 2 2 2 2 2 # number of buffer cells in error est 
-amr.blocking_factor = 8 4 # block factor in grid generation
+amr.n_error_buf     = 1 1 1 1 1 # number of buffer cells in error est 
+amr.blocking_factor = 8 2 # block factor in grid generation
 ns.nblocks=0
 #ns.nblocks=1
 ns.xblocks=0.0
@@ -129,7 +129,7 @@ ns.rxblocks=0.01
 ns.ryblocks=0.3
 ns.rzblocks=0.3
 
-amr.grid_eff        = 0.7  # smaller => less boxes
+amr.grid_eff        = 0.99  # smaller => less boxes
 
 ns.vorterr	    = 0.0 0.0 0.0 # vorticity limit for grid refinement
 
@@ -144,8 +144,8 @@ ns.shock_timestep=2 2 2
 #advection, surface tension, gravity
 #dt cannot exceed the fixed_dt_scales values.
 #0.1 is used for 64x256 grid.
-#0.4 is used for 16x64 grid.
-ns.fixed_dt_scales=0.0 0.4 0.4
+#0.8 is used for 16x64 grid. (since eddy viscosity turned on)
+ns.fixed_dt_scales=0.0 0.8 0.8
 #ns.fixed_dt	    = 5.0e-5   # Hardwire dt
 
 # ----------------------------------------------------------

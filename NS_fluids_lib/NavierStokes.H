@@ -592,7 +592,8 @@ public:
 		int ncomp,
 		int data_mf,
 		int state_type_mf,
-		int data_dir);
+		int data_dir,
+		int nsteps_actual); 
 
     virtual void writePlotFile (
      int do_plot,int do_slice,

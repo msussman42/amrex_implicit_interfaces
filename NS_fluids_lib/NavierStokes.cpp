@@ -6677,15 +6677,16 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
      localMF[HISTORY_MAC_MF+data_dir]->nComp(), 
      HISTORY_MAC_MF+data_dir,
      -1,  // State_Type==-1 
-     data_dir); 
+     data_dir,
+     parent->levelSteps(0)); 
    }
 
    if (visual_WALLVEL_plot_int>0) {
     if (very_last_sweep==1) {
-     int nsteps=parent->levelSteps(0); // nsteps==0 very first step.
-     int ratio=(nsteps+1)/visual_WALLVEL_plot_int;
+     int nsteps=parent->levelSteps(0)+1; // nsteps==0 very first step.
+     int ratio=nsteps/visual_WALLVEL_plot_int;
      ratio=ratio*visual_WALLVEL_plot_int;
-     if (ratio==nsteps+1) {
+     if (ratio==nsteps) {
 
       int nmat=num_materials;
       int nparts=im_solid_map.size();
@@ -6712,7 +6713,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
        localMF[FSI_GHOST_MAC_MF+data_dir]->nComp(),
        FSI_GHOST_MAC_MF+data_dir,
        -1,  // State_Type==-1 
-       data_dir); 
+       data_dir,
+       nsteps); 
      }
     } else if (very_last_sweep==0) {
      // do nothing
@@ -9937,7 +9939,8 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
    localMF[flux_mf]->nComp(), 
    flux_mf,
    -1, //State_Type==-1
-   flux_grid_type);
+   flux_grid_type,
+   parent->levelSteps(0)); 
  }
 
  override_enable_spectral(push_enable_spectral);
@@ -18852,7 +18855,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     S_new_temp.nComp(),
     -1,  //data_mf=-1
     State_Type, //state_type_mf
-    -1); //data_dir=-1
+    -1, //data_dir=-1
+    nsteps); 
   } else if (visual_output_raw_State_Type==0) {
    // do nothing
   } else
@@ -18870,7 +18874,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
      mac_new_temp.nComp(),
      -1,  //data_mf=-1
      Umac_Type+dir_mac, //state_type_mf
-     dir_mac); //data_dir=dir_mac
+     dir_mac, //data_dir==dir_mac
+     nsteps); 
    } //dir_mac=0,..,sdim-1
 
   } else if (visual_output_raw_mac_Type==0) {
@@ -19409,7 +19414,8 @@ void NavierStokes::writeSanityCheckData(
                 int ncomp,
                 int data_mf, 
 		int state_type_mf,
-                int data_dir) {
+                int data_dir,
+		int nsteps_actual) {
 
  std::string path1="./temptecplot";
  UtilCreateDirectoryDestructive(path1);
@@ -19423,6 +19429,11 @@ void NavierStokes::writeSanityCheckData(
     data_mf << " state_type_mf=" << state_type_mf << '\n';
  }
 
+ if (nsteps_actual>=0) {
+  // do nothing
+ } else
+  amrex::Error("nsteps_actual invalid");
+
  if (level!=0)
   amrex::Error("level invalid writeSanityCheckData");
 
@@ -19431,8 +19442,6 @@ void NavierStokes::writeSanityCheckData(
   // do nothing
  } else
   amrex::Error("SDC_outer_sweeps invalid");
-
- int nsteps=parent->levelSteps(0);
 
  int finest_level = parent->finestLevel();
 
@@ -19596,7 +19605,7 @@ void NavierStokes::writeSanityCheckData(
     &SDC_outer_sweeps,
     &slab_step,
     &data_id,
-    &nsteps,
+    &nsteps_actual,
     &num_levels,
     &cur_time_slab,
     &visual_revolve,

@@ -2302,7 +2302,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
      localMF[DRAG_MF]->nComp(), 
      DRAG_MF,
      -1,  // State_Type==-1 
-     -1); // data_dir==-1 (cell centered)
+     -1,  // data_dir==-1 (cell centered)
+     parent->levelSteps(0)); 
   }
 
  } else if ((visual_drag_plot_int==0)||(visual_drag_plot_int==-1)) {
