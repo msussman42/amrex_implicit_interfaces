@@ -100,7 +100,7 @@ contains
    ! Applications.
    ! ZBOT
   if (axis_dir.eq.0) then ! volume=pi(.09^2-0.08^2)*.02=pi(.01)(.17)(0.02)
-   TANK_MK_HEATER_WALL_MODEL = 0.12
+   TANK_MK_HEATER_WALL_MODEL = 0.1683d0
    TANK_MK_HEATER_LOW       = -0.1683d0
    TANK_MK_HEATER_HIGH      = TANK_MK_HEATER_LOW+0.0254d0
    TANK_MK_HEATER_R_LOW     = 0.1016d0
@@ -1791,6 +1791,8 @@ subroutine wallfunc_thermocorrelation( &
   n_raster, & ! points to solid
   u, & !intent(in) uimage_raster_solid_frame(dir)
   uimage_tngt_mag, & !intent(in) 
+  dist_probe, & ! intent(in)
+  dist_fluid, & ! intent(in)
   temperature_image, & !intent(in) 
   temperature_wall, & ! intent(in)      
   viscosity_molecular, & ! intent(in)      
@@ -1810,6 +1812,8 @@ REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
 INTEGER_T, intent(in) :: im_fluid
 REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
 REAL_T, intent(in) :: uimage_tngt_mag
+REAL_T, intent(in) :: dist_probe
+REAL_T, intent(in) :: dist_fluid
 REAL_T, intent(in) :: temperature_image
 REAL_T, intent(in) :: temperature_wall
 REAL_T, intent(in) :: viscosity_molecular
@@ -1932,7 +1936,6 @@ else
 endif
 
 if ((xi.gt.0.0d0).and. &
-    (xi.le.TANK_MK_HEATER_WALL_MODEL).and. &
     (n_raster(1).eq.one)) then
 
  thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
@@ -1999,7 +2002,16 @@ if ((xi.gt.0.0d0).and. &
  endif
 
  ughost_tngt=0.005d0
-
+ if ((dist_probe.lt.dx(SDIM)).or. &
+     (dist_fluid.lt.dx(SDIM))) then
+  ughost_tngt=0.0d0
+ else if ((dist_probe.ge.dx(SDIM)).and. &
+          (dist_fluid.ge.dx(SDIM))) then
+  ! do nothing
+ else
+  print *,"dist_probe or dist_fluid is NaN"
+  stop
+ endif
  if (1.eq.0) then
   print *,"xi=",xi
   print *,"Gr,Pr,Ra,vtemp,dtemp ",Gr,Pr,Ra,vtemp,dtemp
@@ -2011,7 +2023,6 @@ if ((xi.gt.0.0d0).and. &
  endif
 
 else if ((xi.le.0.0d0).or. &
-         (xi.ge.TANK_MK_HEATER_WALL_MODEL).or. &
          (n_raster(1).ne.one)) then
  ughost_tngt=0.0d0
 else
@@ -2031,6 +2042,8 @@ subroutine CRYOGENIC_TANK_MK_wallfunc( &
   n_raster, & ! points to solid
   u, & !intent(in) uimage_raster_solid_frame(dir)
   uimage_tngt_mag, & !intent(in) 
+  dist_probe, & ! intent(in)
+  dist_fluid, & ! intent(in)
   temperature_image, & !intent(in) 
   temperature_wall, & ! intent(in)      
   viscosity_molecular, & ! intent(in)      
@@ -2051,6 +2064,8 @@ REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
 INTEGER_T, intent(in) :: im_fluid
 REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
 REAL_T, intent(in) :: uimage_tngt_mag
+REAL_T, intent(in) :: dist_probe
+REAL_T, intent(in) :: dist_fluid
 REAL_T, intent(in) :: temperature_image
 REAL_T, intent(in) :: temperature_wall
 REAL_T, intent(in) :: viscosity_molecular
@@ -2071,6 +2086,8 @@ REAL_T, intent(out) :: ughost_tngt  ! dir direction
    n_raster, & ! points to solid
    u, & !intent(in) uimage_raster_solid_frame(dir)
    uimage_tngt_mag, & !intent(in) 
+   dist_probe, & ! intent(in)
+   dist_fluid, & ! intent(in)
    temperature_image, & !intent(in) 
    temperature_wall, & ! intent(in)      
    viscosity_molecular, & ! intent(in)      
@@ -2089,6 +2106,8 @@ REAL_T, intent(out) :: ughost_tngt  ! dir direction
    n_raster, & ! points to solid
    u, & !intent(in) uimage_raster_solid_frame(dir)
    uimage_tngt_mag, & !intent(in) 
+   dist_probe, & ! intent(in)
+   dist_fluid, & ! intent(in)
    temperature_image, & !intent(in) 
    temperature_wall, & ! intent(in)      
    viscosity_molecular, & ! intent(in)      
