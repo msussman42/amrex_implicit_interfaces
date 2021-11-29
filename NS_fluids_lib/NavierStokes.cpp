@@ -1011,6 +1011,7 @@ Real NavierStokes::bottom_bottom_tol_factor=0.001;
 //   for conventional contact line dynamics, 
 //   modify "get_use_DCA" in PROB.F90.
 Vector<int> NavierStokes::law_of_the_wall;
+Vector<Real> NavierStokes::wall_model_velocity;
 Real NavierStokes::wall_slip_weight=0.0;
 int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 
@@ -2864,11 +2865,14 @@ NavierStokes::read_params ()
      amrex::Error("invert_solid_levelset invalid");
 
     law_of_the_wall.resize(nmat);
+    wall_model_velocity.resize(nmat);
 
     for (int i=0;i<nmat;i++) {
      law_of_the_wall[i]=0;
+     wall_model_velocity[i]=0.0;
     }
     pp.queryarr("law_of_the_wall",law_of_the_wall,0,nmat);
+    pp.queryarr("wall_model_velocity",wall_model_velocity,0,nmat);
     for (int i=0;i<nmat;i++) {
      if ((law_of_the_wall[i]==0)||
          (law_of_the_wall[i]==1)||
@@ -3196,6 +3200,8 @@ NavierStokes::read_params ()
      for (int i=0;i<nmat;i++) {
       std::cout << "law_of_the_wall i=" << i << " " << 
 	      law_of_the_wall[i] << '\n';
+      std::cout << "wall_model_velocity i=" << i << " " << 
+	      wall_model_velocity[i] << '\n';
      }
      std::cout << "wall_slip_weight " << wall_slip_weight << '\n';
      std::cout << "ZEYU_DCA_SELECT " << ZEYU_DCA_SELECT << '\n';
@@ -6908,6 +6914,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
     fort_wallfunction( 
      &data_dir,
      law_of_the_wall.dataPtr(),
+     wall_model_velocity.dataPtr(),
      im_solid_map.dataPtr(),
      &level,
      &finest_level,
@@ -7046,7 +7053,7 @@ void NavierStokes::assimilate_state_data() {
     // in: GODUNOV_3D.F90
    fort_assimilate_statedata( 
      &isweep,
-     law_of_the_wall.dataPtr(),
+     law_of_the_wall.dataPtr(), //currently unused in this routine.
      &wall_slip_weight,
      damping_coefficient.dataPtr(),
      im_solid_map.dataPtr(),

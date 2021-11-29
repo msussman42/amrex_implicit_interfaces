@@ -690,6 +690,7 @@ subroutine STUB_wallfunc( &
   n_raster, & ! points to solid
   u, & !intent(in) uimage_raster_solid_frame(dir)
   uimage_tngt_mag, & !intent(in) 
+  wall_model_velocity, & ! intent(in)
   dist_probe, & ! intent(in)
   dist_fluid, & ! intent(in)
   temperature_image, & !intent(in) 
@@ -712,6 +713,7 @@ REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
 INTEGER_T, intent(in) :: im_fluid
 REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
 REAL_T, intent(in) :: uimage_tngt_mag
+REAL_T, intent(in) :: wall_model_velocity
 REAL_T, intent(in) :: dist_probe
 REAL_T, intent(in) :: dist_fluid
 REAL_T, intent(in) :: temperature_image
@@ -731,6 +733,7 @@ REAL_T, intent(out) :: ughost_tngt  ! dir direction
   n_raster, & ! points to solid
   u, & !intent(in) uimage_raster_solid_frame(dir)
   uimage_tngt_mag, & !intent(in)
+  wall_model_velocity, & ! intent(in)
   dist_probe, & ! intent(in)
   dist_fluid, & ! intent(in)
   temperature_image, & !intent(in) 

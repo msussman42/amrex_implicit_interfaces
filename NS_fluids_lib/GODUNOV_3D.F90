@@ -11745,6 +11745,7 @@ stop
       subroutine fort_wallfunction( &
        data_dir, &
        law_of_the_wall, &
+       wall_model_velocity, &
        im_solid_map, &
        level, &
        finest_level, &
@@ -11783,6 +11784,7 @@ stop
       INTEGER_T, intent(in) :: ngrow_distance
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: law_of_the_wall(nmat)
+      REAL_T, intent(in) :: wall_model_velocity(nmat)
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_ghost
       INTEGER_T, intent(in) :: nden
@@ -11966,6 +11968,14 @@ stop
       endif
 
       do im=1,nmat
+
+       if (abs(wall_model_velocity(im)).le.1.0D+20) then
+        ! do nothing
+       else
+        print *,"wall_model_velocity(im) is corrupt"
+        stop
+       endif
+
        if ((law_of_the_wall(im).eq.0).or. &
            (law_of_the_wall(im).eq.1).or. &  ! CODY (turbulent)
            (law_of_the_wall(im).eq.2)) then  ! ZEYU (GNBC) 
@@ -12303,6 +12313,7 @@ stop
                side_image, &
                data_dir, & ! data_dir=0,1, or 2
                uimage_raster, & ! intent(in)
+               wall_model_velocity(im_fluid), &
                dist_probe, & ! intent(in)
                dist_fluid, & ! intent(in)
                temperature_image, & ! intent(in)
