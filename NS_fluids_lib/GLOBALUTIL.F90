@@ -1337,6 +1337,8 @@ contains
         n_raster, & ! points to solid
         u, & !intent(in) uimage_raster_solid_frame(dir)
         uimage_tngt_mag, & !intent(in) 
+        dist_probe, & ! intent(in)
+        dist_fluid, & ! intent(in)
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
@@ -1356,6 +1358,8 @@ contains
       INTEGER_T, intent(in) :: im_fluid
       REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
       REAL_T, intent(in) :: uimage_tngt_mag
+      REAL_T, intent(in) :: dist_probe
+      REAL_T, intent(in) :: dist_fluid
       REAL_T, intent(in) :: temperature_image
       REAL_T, intent(in) :: temperature_wall
       REAL_T, intent(in) :: viscosity_molecular
@@ -1551,6 +1555,8 @@ contains
         n_raster, & ! points to solid
         u, & !intent(in) uimage_raster_solid_frame(dir)
         uimage_tngt_mag, & !intent(in) 
+        dist_probe, & ! intent(in)
+        dist_fluid, & ! intent(in)
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
@@ -1570,6 +1576,8 @@ contains
       INTEGER_T, intent(in) :: im_fluid
       REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
       REAL_T, intent(in) :: uimage_tngt_mag
+      REAL_T, intent(in) :: dist_probe
+      REAL_T, intent(in) :: dist_fluid
       REAL_T, intent(in) :: temperature_image
       REAL_T, intent(in) :: temperature_wall
       REAL_T, intent(in) :: viscosity_molecular
@@ -1588,6 +1596,8 @@ contains
         n_raster, & ! points to solid
         u, & !intent(in) uimage_raster_solid_frame(dir)
         uimage_tngt_mag, & !intent(in)
+        dist_probe, & ! intent(in)
+        dist_fluid, & ! intent(in)
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
@@ -1606,6 +1616,8 @@ contains
         n_raster, & ! points to solid
         u, & !intent(in) uimage_raster_solid_frame(dir)
         uimage_tngt_mag, & !intent(in)
+        dist_probe, & ! intent(in)
+        dist_fluid, & ! intent(in)
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
@@ -2106,6 +2118,8 @@ end subroutine dynamic_contact_angle
        side_image, &  ! =0 if image on the left
        data_dir, &  ! normal dir=0..sdim-1
        uimage_raster, & ! in (at the probe)
+       dist_probe, & ! intent(in)
+       dist_fluid, & ! intent(in)
        temperature_image, & ! in (at the probe)
        temperature_wall, & ! in
        usolid_law_of_wall, & ! out
@@ -2126,6 +2140,8 @@ end subroutine dynamic_contact_angle
        INTEGER_T, intent(in) :: iFLUID,jFLUID,kFLUID
        INTEGER_T, intent(in) :: i_probe,j_probe,k_probe
        REAL_T, dimension(SDIM), intent(in) :: uimage_raster
+       REAL_T, intent(in) :: dist_probe
+       REAL_T, intent(in) :: dist_fluid
        REAL_T, intent(in) :: temperature_image
        REAL_T, intent(in) :: temperature_wall
        REAL_T, dimension(SDIM), intent(out) :: usolid_law_of_wall
@@ -2990,6 +3006,8 @@ end subroutine dynamic_contact_angle
              LOW%n_raster, & ! points to solid
              uimage_raster_solid_frame(dir), &
              uimage_tngt_mag, &
+             dist_probe, & ! intent(in)
+             dist_fluid, & ! intent(in)
              temperature_image, &
              temperature_wall, &
              viscosity_molecular, &

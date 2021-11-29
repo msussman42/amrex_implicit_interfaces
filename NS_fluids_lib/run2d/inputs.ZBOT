@@ -144,8 +144,8 @@ ns.shock_timestep=2 2 2
 #advection, surface tension, gravity
 #dt cannot exceed the fixed_dt_scales values.
 #0.1 is used for 64x256 grid.
-#0.8 is used for 16x64 grid. (since eddy viscosity turned on)
-ns.fixed_dt_scales=0.0 0.8 0.8
+#0.4 is used for 16x64 grid. 
+ns.fixed_dt_scales=0.0 0.4 0.4
 #ns.fixed_dt	    = 5.0e-5   # Hardwire dt
 
 # ----------------------------------------------------------

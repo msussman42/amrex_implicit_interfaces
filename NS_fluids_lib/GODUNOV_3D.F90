@@ -11864,6 +11864,8 @@ stop
       REAL_T uimage_raster(SDIM)
       REAL_T temperature_image
       REAL_T temperature_wall
+      REAL_T dist_probe
+      REAL_T dist_fluid
       REAL_T, target :: usolid_raster(SDIM)
       REAL_T angle_ACT_cell
       INTEGER_T nten
@@ -12163,6 +12165,10 @@ stop
               uimage_raster(dir)= &
                 ufluid(D_DECL(iside_probe,jside_probe,kside_probe),dir)
              enddo  
+             dist_probe=LSCP(D_DECL(iside_probe,jside_probe,kside_probe), &
+              im_fluid) 
+             dist_fluid=LSCP(D_DECL(isideFLUID,jsideFLUID,ksideFLUID), &
+              im_fluid) 
              temperature_image= &
                 state(D_DECL(iside_probe,jside_probe,kside_probe), &
                      (im_primary_left-1)*num_state_material+2)
@@ -12208,6 +12214,10 @@ stop
               uimage_raster(dir)= &
                 ufluid(D_DECL(iside_probe,jside_probe,kside_probe),dir)
              enddo  
+             dist_probe=LSCP(D_DECL(iside_probe,jside_probe,kside_probe), &
+              im_fluid) 
+             dist_fluid=LSCP(D_DECL(isideFLUID,jsideFLUID,ksideFLUID), &
+              im_fluid) 
              temperature_image= &
                 state(D_DECL(iside_probe,jside_probe,kside_probe), &
                      (im_primary_right-1)*num_state_material+2)
@@ -12293,6 +12303,8 @@ stop
                side_image, &
                data_dir, & ! data_dir=0,1, or 2
                uimage_raster, & ! intent(in)
+               dist_probe, & ! intent(in)
+               dist_fluid, & ! intent(in)
                temperature_image, & ! intent(in)
                temperature_wall, & ! intent(in)
                usolid_law_of_wall, & ! intent(out)

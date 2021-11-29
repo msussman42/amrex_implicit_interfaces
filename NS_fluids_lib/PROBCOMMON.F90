@@ -551,6 +551,8 @@ implicit none
         n_raster, & ! points to solid
         u, & !intent(in) uimage_raster_solid_frame(dir)
         uimage_tngt_mag, & !intent(in) 
+        dist_probe, & ! intent(in)
+        dist_fluid, & ! intent(in)
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
@@ -568,6 +570,8 @@ implicit none
       INTEGER_T, intent(in) :: im_fluid
       REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
       REAL_T, intent(in) :: uimage_tngt_mag
+      REAL_T, intent(in) :: dist_probe
+      REAL_T, intent(in) :: dist_fluid
       REAL_T, intent(in) :: temperature_image
       REAL_T, intent(in) :: temperature_wall
       REAL_T, intent(in) :: viscosity_molecular
