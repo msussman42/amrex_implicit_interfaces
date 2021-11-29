@@ -1337,6 +1337,7 @@ contains
         n_raster, & ! points to solid
         u, & !intent(in) uimage_raster_solid_frame(dir)
         uimage_tngt_mag, & !intent(in) 
+        wall_model_velocity, & ! intent(in)
         dist_probe, & ! intent(in)
         dist_fluid, & ! intent(in)
         temperature_image, & !intent(in) 
@@ -1358,6 +1359,7 @@ contains
       INTEGER_T, intent(in) :: im_fluid
       REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
       REAL_T, intent(in) :: uimage_tngt_mag
+      REAL_T, intent(in) :: wall_model_velocity
       REAL_T, intent(in) :: dist_probe
       REAL_T, intent(in) :: dist_fluid
       REAL_T, intent(in) :: temperature_image
@@ -1555,6 +1557,7 @@ contains
         n_raster, & ! points to solid
         u, & !intent(in) uimage_raster_solid_frame(dir)
         uimage_tngt_mag, & !intent(in) 
+        wall_model_velocity, & ! intent(in)
         dist_probe, & ! intent(in)
         dist_fluid, & ! intent(in)
         temperature_image, & !intent(in) 
@@ -1576,6 +1579,7 @@ contains
       INTEGER_T, intent(in) :: im_fluid
       REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
       REAL_T, intent(in) :: uimage_tngt_mag
+      REAL_T, intent(in) :: wall_model_velocity
       REAL_T, intent(in) :: dist_probe
       REAL_T, intent(in) :: dist_fluid
       REAL_T, intent(in) :: temperature_image
@@ -1596,6 +1600,7 @@ contains
         n_raster, & ! points to solid
         u, & !intent(in) uimage_raster_solid_frame(dir)
         uimage_tngt_mag, & !intent(in)
+        wall_model_velocity, & ! intent(in)
         dist_probe, & ! intent(in)
         dist_fluid, & ! intent(in)
         temperature_image, & !intent(in) 
@@ -1616,6 +1621,7 @@ contains
         n_raster, & ! points to solid
         u, & !intent(in) uimage_raster_solid_frame(dir)
         uimage_tngt_mag, & !intent(in)
+        wall_model_velocity, & ! intent(in)
         dist_probe, & ! intent(in)
         dist_fluid, & ! intent(in)
         temperature_image, & !intent(in) 
@@ -2118,6 +2124,7 @@ end subroutine dynamic_contact_angle
        side_image, &  ! =0 if image on the left
        data_dir, &  ! normal dir=0..sdim-1
        uimage_raster, & ! in (at the probe)
+       wall_model_velocity, & ! intent(in)
        dist_probe, & ! intent(in)
        dist_fluid, & ! intent(in)
        temperature_image, & ! in (at the probe)
@@ -2140,6 +2147,7 @@ end subroutine dynamic_contact_angle
        INTEGER_T, intent(in) :: iFLUID,jFLUID,kFLUID
        INTEGER_T, intent(in) :: i_probe,j_probe,k_probe
        REAL_T, dimension(SDIM), intent(in) :: uimage_raster
+       REAL_T, intent(in) :: wall_model_velocity
        REAL_T, intent(in) :: dist_probe
        REAL_T, intent(in) :: dist_fluid
        REAL_T, intent(in) :: temperature_image
@@ -2295,7 +2303,12 @@ end subroutine dynamic_contact_angle
         print *,"law_of_the_wall invalid"
         stop
        endif
-
+       if (abs(wall_model_velocity).le.1.0D+20) then
+        ! do nothing
+       else
+        print *,"wall_model_velocity became corrupt"
+        stop
+       endif
        if (LOW%dxmin.gt.zero) then
         ! do nothing
        else
@@ -3006,6 +3019,7 @@ end subroutine dynamic_contact_angle
              LOW%n_raster, & ! points to solid
              uimage_raster_solid_frame(dir), &
              uimage_tngt_mag, &
+             wall_model_velocity, & ! intent(in)
              dist_probe, & ! intent(in)
              dist_fluid, & ! intent(in)
              temperature_image, &
