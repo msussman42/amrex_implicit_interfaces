@@ -2901,7 +2901,8 @@ stop
       REAL_T velsum
       REAL_T RR
       REAL_T level_cap_wave_speed(nten)
-      REAL_T ksource,kdest,alpha,beta,dt_heat
+      REAL_T ksource,kdest
+      REAL_T alpha,beta,dt_heat
       INTEGER_T for_estdt
       REAL_T xI(SDIM)
       REAL_T mu
@@ -3638,8 +3639,26 @@ stop
               stop
              endif
 
-             ksource=get_user_heatviscconst(im_source)
-             kdest=get_user_heatviscconst(im_dest)
+             ksource=get_user_heatviscconst(im_source)* &
+                     fort_heatflux_factor(im_source)
+
+             if (ksource.ge.zero) then
+              ! do nothing
+             else
+              print *,"ksource invalid"
+              stop
+             endif
+
+             kdest=get_user_heatviscconst(im_dest)* &
+                     fort_heatflux_factor(im_dest)
+
+             if (kdest.ge.zero) then
+              ! do nothing
+             else
+              print *,"kdest invalid"
+              stop
+             endif
+
              alpha=fort_alpha(iten+ireverse*nten)
              beta=fort_beta(iten+ireverse*nten)
              if ((alpha.le.zero).or.(beta.le.zero)) then

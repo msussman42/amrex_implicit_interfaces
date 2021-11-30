@@ -5664,7 +5664,16 @@ stop
               stop
              endif
 
-             thermal_k(iprobe)=conductstate(D_DECL(i,j,k),im_probe)
+             thermal_k(iprobe)=conductstate(D_DECL(i,j,k),im_probe)* &
+                fort_heatflux_factor(im_probe)
+
+             if (fort_heatflux_factor(im_probe).ge.zero) then
+              ! do nothing
+             else
+              print *,"fort_heatflux_factor(im_probe) invalid"
+              stop
+             endif
+
              if (thermal_k(iprobe).ge.zero) then
               ! do nothing
              else
@@ -7973,8 +7982,25 @@ stop
                  PROBE_PARMS%dencomp_dest=>dencomp_dest
                  PROBE_PARMS%xI=>xI
 
-                 thermal_k(1)=conductstate(D_DECL(i,j,k),im_source)
-                 thermal_k(2)=conductstate(D_DECL(i,j,k),im_dest)
+                 thermal_k(1)=conductstate(D_DECL(i,j,k),im_source)* &
+                   fort_heatflux_factor(im_source)
+
+                 if (fort_heatflux_factor(im_source).ge.zero) then
+                  ! do nothing
+                 else
+                  print *,"fort_heatflux_factor(im_source) invalid"
+                  stop
+                 endif
+
+                 thermal_k(2)=conductstate(D_DECL(i,j,k),im_dest)* &
+                   fort_heatflux_factor(im_dest)
+
+                 if (fort_heatflux_factor(im_dest).ge.zero) then
+                  ! do nothing
+                 else
+                  print *,"fort_heatflux_factor(im_dest) invalid"
+                  stop
+                 endif
 
                  if (LL(ireverse).gt.zero) then ! evaporation
                   iprobe_vapor=2  ! destination
