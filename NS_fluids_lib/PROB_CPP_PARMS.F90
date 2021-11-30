@@ -214,6 +214,7 @@ stop
         cclinear_elastic_model, &
         ccshear_modulus, &
         ccstore_elastic_data, &
+        ccheatflux_factor, &
         ccheatviscconst, &
         ccprerecalesce_heatviscconst, &
         ccprerecalesce_viscconst, &
@@ -372,6 +373,7 @@ stop
       INTEGER_T, intent(in) :: cclinear_elastic_model(ccnum_materials)
       REAL_T, intent(in) :: ccshear_modulus(ccnum_materials)
       INTEGER_T, intent(in) :: ccstore_elastic_data(ccnum_materials)
+      REAL_T, intent(in) :: ccheatflux_factor(ccnum_materials)
       REAL_T, intent(in) :: ccheatviscconst(ccnum_materials)
       REAL_T, intent(in) :: ccprerecalesce_heatviscconst(ccnum_materials)
       REAL_T, intent(in) :: ccprerecalesce_viscconst(ccnum_materials)
@@ -1149,6 +1151,7 @@ stop
        fort_linear_elastic_model(im)=cclinear_elastic_model(im)
        fort_shear_modulus(im)=ccshear_modulus(im)
        fort_store_elastic_data(im)=ccstore_elastic_data(im)
+       fort_heatflux_factor(im)=ccheatflux_factor(im)
        fort_heatviscconst(im)=ccheatviscconst(im)
        fort_prerecalesce_heatviscconst(im)=ccprerecalesce_heatviscconst(im)
        fort_prerecalesce_viscconst(im)=ccprerecalesce_viscconst(im)
@@ -1237,7 +1240,13 @@ stop
         print *,"fort_molar_mass invalid"
         stop
        endif
-      enddo
+       if (fort_heatflux_factor(im).ge.zero) then
+        ! do nothing
+       else
+        print *,"fort_heatflux_factor invalid"
+        stop
+       endif
+      enddo ! do im=1,num_materials
       do im=1,num_species_var
        fort_species_molar_mass(im)=ccspecies_molar_mass(im)
        if (fort_species_molar_mass(im).gt.zero) then
@@ -1318,6 +1327,8 @@ stop
         print *,"im,fort_etaS ",im,fort_etaS(im)
         print *,"im,fort_etaP ",im,fort_etaP(im)
 
+        print *,"im,fort_heatflux_factor ",im,fort_heatflux_factor(im)
+       
         print *,"im,heatvisc ",im,fort_heatviscconst(im)
         print *,"im,prerecalesce_heatvisc ",im, &
          fort_prerecalesce_heatviscconst(im)

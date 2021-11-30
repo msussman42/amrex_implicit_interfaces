@@ -957,6 +957,7 @@ Vector<Real> NavierStokes::heatviscconst_eddy_bulk; //default = 0
 Vector<Real> NavierStokes::speciesviscconst;// species mass diffusion coeff.
 Vector<Real> NavierStokes::prerecalesce_heatviscconst;
 Real NavierStokes::smoothing_length_scale=0.0;
+Vector<Real> NavierStokes::heatflux_factor;
 Vector<Real> NavierStokes::heatviscconst;
 Real NavierStokes::heatviscconst_max=0.0;
 Real NavierStokes::heatviscconst_min=0.0;
@@ -1682,6 +1683,7 @@ void fortran_parameters() {
  Vector<Real> phasechange_microlayer_size_temp(nmat);
 
  Vector<int> viscosity_state_model_temp(nmat);
+ Vector<Real> heatflux_factor_temp(nmat);
  Vector<Real> heatviscconst_temp(nmat);
  Vector<Real> speciesconst_temp((num_species_var+1)*nmat);
  Vector<Real> speciesviscconst_temp((num_species_var+1)*nmat);
@@ -1810,11 +1812,14 @@ void fortran_parameters() {
   prerecalesce_viscconst_temp[im]=viscconst_temp[im];
  pp.queryarr("precalesce_viscconst",prerecalesce_viscconst_temp,0,nmat);
 
- for (int im=0;im<nmat;im++)
+ for (int im=0;im<nmat;im++) {
   viscosity_state_model_temp[im]=0;
+  heatflux_factor_temp[im]=1.0;
+ }
  pp.queryarr("viscosity_state_model",
   viscosity_state_model_temp,0,nmat);
 
+ pp.queryarr("heatflux_factor",heatflux_factor_temp,0,nmat);
  pp.getarr("heatviscconst",heatviscconst_temp,0,nmat);
 
  Vector<Real> prerecalesce_heatviscconst_temp(nmat);
@@ -2085,6 +2090,7 @@ void fortran_parameters() {
   linear_elastic_model_temp.dataPtr(),
   shear_modulus_temp.dataPtr(),
   store_elastic_data_temp.dataPtr(),
+  heatflux_factor_temp.dataPtr(),
   heatviscconst_temp.dataPtr(),
   prerecalesce_heatviscconst_temp.dataPtr(),
   prerecalesce_viscconst_temp.dataPtr(),
@@ -3614,15 +3620,19 @@ NavierStokes::read_params ()
     for (int i=0;i<nmat;i++)
      viscosity_state_model[i]=0;
     pp.queryarr("viscosity_state_model",viscosity_state_model,0,nmat);
+    heatflux_factor.resize(nmat);
     
-    for (int i=0;i<nmat;i++)
+    for (int i=0;i<nmat;i++) {
+     heatflux_factor[i]=1.0;
      les_model[i]=0;
+    }
     pp.queryarr("les_model",les_model,0,nmat);
 
     pp.query("smoothing_length_scale",smoothing_length_scale);
 
     heatviscconst.resize(nmat);
     heatviscconst_interface.resize(nten);
+    pp.queryarr("heatflux_factor",heatflux_factor,0,nmat);
     pp.getarr("heatviscconst",heatviscconst,0,nmat);
 
     heatviscconst_min=heatviscconst[0];
@@ -4980,6 +4990,8 @@ NavierStokes::read_params ()
       std::cout << "heatviscconst_eddy_bulk i=" <<i<<"  "<<
 	      heatviscconst_eddy_bulk[i]<<'\n';
 
+      std::cout << "heatflux_factor i=" << i << "  " << 
+          heatflux_factor[i] << '\n';
       std::cout << "heatviscconst i=" << i << "  " << 
           heatviscconst[i] << '\n';
       std::cout << "prerecalesce_viscconst i=" << i << "  " << 

@@ -127,6 +127,7 @@ namespace amrex{
        int* linear_elastic_model,
        Real* shear_modulus,
        int* store_elastic_data,
+       Real* heatflux_factor,
        Real* heatviscconst,
        Real* prerecalesce_heatviscconst,
        Real* prerecalesce_viscconst,

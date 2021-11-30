@@ -57,6 +57,7 @@
       REAL_T fort_phasechange_microlayer_size(MAX_NUM_MATERIALS)
 
       INTEGER_T fort_viscosity_state_model(MAX_NUM_MATERIALS)
+      REAL_T fort_heatflux_factor(MAX_NUM_MATERIALS)
       REAL_T fort_heatviscconst(MAX_NUM_MATERIALS)
 
       REAL_T fort_prerecalesce_heatviscconst(MAX_NUM_MATERIALS)

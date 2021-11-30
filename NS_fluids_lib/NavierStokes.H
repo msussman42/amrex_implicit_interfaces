@@ -2339,6 +2339,7 @@ protected:
     static Vector<Real> prerecalesce_viscconst;
     static Vector<Real> viscconst_interface;
     static Real smoothing_length_scale;
+    static Vector<Real> heatflux_factor;
     static Vector<Real> heatviscconst;
     static Real heatviscconst_max;
     static Real heatviscconst_min;

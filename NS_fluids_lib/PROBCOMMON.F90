@@ -289,6 +289,8 @@ implicit none
 !  fort_shear_microlayer_size 
 !  fort_buoyancy_microlayer_size 
 !  fort_phasechange_microlayer_size 
+! Added November 30,2021:
+!  fort_heatflux_factor
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
        !nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
