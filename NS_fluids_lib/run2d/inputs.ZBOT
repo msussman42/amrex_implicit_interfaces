@@ -277,6 +277,7 @@ ns.viscconst=4.48E-04 1.093e-6 1.0
 ns.viscconst_eddy_wall=5.0e-3 0.0 0.0
 ns.viscconst_eddy_bulk=5.0e-3 5.3e-4 0.0
 ns.wall_model_velocity=0.005 0.0 0.0
+ns.heatflux_factor=1.0 1.0 1.0
 ns.law_of_the_wall=1 0 0
 ns.les_model=1 0 0
 ns.visual_WALLVEL_plot_int=100  # 100 for standard tests.
