@@ -2003,7 +2003,15 @@ if ((xi.gt.0.0d0).and. &
   stop
  endif
 
- ughost_tngt=wall_model_velocity
+ if (wall_model_velocity.eq.zero) then
+  ! do nothing
+ else if (wall_model_velocity.ne.zero) then
+  ughost_tngt=wall_model_velocity
+ else
+  print *,"wall_model_velocity is NaN"
+  stop
+ endif
+
  if ((dist_probe.lt.dx(SDIM)).or. &
      (dist_fluid.lt.dx(SDIM))) then
   ughost_tngt=0.0d0
@@ -2014,6 +2022,7 @@ if ((xi.gt.0.0d0).and. &
   print *,"dist_probe or dist_fluid is NaN"
   stop
  endif
+
  if (1.eq.0) then
   print *,"xi=",xi
   print *,"Gr,Pr,Ra,vtemp,dtemp ",Gr,Pr,Ra,vtemp,dtemp
