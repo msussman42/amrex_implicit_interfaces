@@ -252,7 +252,7 @@ stop
        enddo
        enddo
 
-        ! ss=s : s
+        ! ss=s : s = s_{ij}s_{ij}
        ss=s(1,1)*s(1,1)+s(1,2)*s(1,2)+s(1,3)*s(1,3)+&
           s(2,1)*s(2,1)+s(2,2)*s(2,2)+s(2,3)*s(2,3)+&
           s(3,1)*s(3,1)+s(3,2)*s(3,2)+s(3,3)*s(3,3)
@@ -260,22 +260,27 @@ stop
        ! Builds the traceless symmetric part of the square of the
        ! velocity tensor
        ! g2 (the vector)=diagonal(g^T g)
+       ! g2_{i}=g_{ik}g_{ki}=g^{2}_{ii} (no summation on last)
        do veldir=1,3
         g2(veldir)=zero
         do dir=1,3
          g2(veldir)=g2(veldir)+g(veldir,dir)*g(dir,veldir)
         enddo
        enddo
+        ! g2tr=g^{2}_{kk}/3
        g2tr=(g2(1)+g2(2)+g2(3))/3.0d0 ! tensor trace
 
-        ! the off diagonals of g2 (the matrix) are g * g
+        ! the off diagonals of g2 (the matrix) are 
+        ! g^{2}_{ij} \equiv g_{ik}g_{kj}\equiv (G * G)_{ij}
        g2_12=g(1,1)*g(1,2)+g(1,2)*g(2,2)+g(1,3)*g(3,2)
        g2_13=g(1,1)*g(1,3)+g(1,2)*g(2,3)+g(1,3)*g(3,3)
        g2_21=g(2,1)*g(1,1)+g(2,2)*g(2,1)+g(2,3)*g(3,1)
        g2_23=g(2,1)*g(1,3)+g(2,2)*g(2,3)+g(2,3)*g(3,3)
        g2_31=g(3,1)*g(1,1)+g(3,2)*g(2,1)+g(3,3)*g(3,1)
        g2_32=g(3,1)*g(1,2)+g(3,2)*g(2,2)+g(3,3)*g(3,2)
- 
+
+        ! S^{d}_{ij}=(1/2)(g_{ij}^{2}+g_{ji}^{2})-
+        !  (1/3)delta_{ij}g_{kk}^{2} 
        sd(1,1)=g2(1)-g2tr  !g^T g - (1/3)Tr(g^T g)
        sd(1,2)=0.5d0*(g2_12+g2_21) !(g g + (g g)^T)/2
        sd(1,3)=0.5d0*(g2_13+g2_31)
@@ -289,6 +294,7 @@ stop
        sd(3,3)=g2(3)-g2tr
 
        ! tensor squared
+       ! sdsd=S^{d}_{ij}S^{d}_{ij}
        sdsd=sd(1,1)*sd(1,1)+sd(1,2)*sd(1,2)+sd(1,3)*sd(1,3)+&
             sd(2,1)*sd(2,1)+sd(2,2)*sd(2,2)+sd(2,3)*sd(2,3)+&
             sd(3,1)*sd(3,1)+sd(3,2)*sd(3,2)+sd(3,3)*sd(3,3)
