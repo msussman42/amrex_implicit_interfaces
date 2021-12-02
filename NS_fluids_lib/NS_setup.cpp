@@ -2095,22 +2095,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   // user defined (ncomp_sum_int_user1+ncomp_sum_int_user2 comp)
   // species mass (num_species_var * nmat comp)
 
- int filler_comp=0;
- int FE_sum_comp=filler_comp+1;
 
- int bodydrag_sum_comp=FE_sum_comp+2*nmat;
- int drag_sum_comp=bodydrag_sum_comp+3*nmat;
 
- int minint_sum_comp=drag_sum_comp+3*nmat;
- int maxint_sum_comp=minint_sum_comp+3*nmat;
-
- int pdrag_sum_comp=maxint_sum_comp+3*nmat;
- int viscousdrag_sum_comp=pdrag_sum_comp+3*nmat;
- int viscous0drag_sum_comp=viscousdrag_sum_comp+3*nmat;
- int viscodrag_sum_comp=viscous0drag_sum_comp+3*nmat;
-
- int minden_sum_comp=viscodrag_sum_comp+3*nmat;
- int maxden_sum_comp=minden_sum_comp+2*nmat;
  int xnot_amp_sum_comp=maxden_sum_comp+2*nmat;
  int cen_sum_comp=xnot_amp_sum_comp+1;
  int mincen_sum_comp=cen_sum_comp+3*nmat;

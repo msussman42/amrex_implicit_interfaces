@@ -1,0 +1,44 @@
+#ifndef INTEGRATED_QUANTITY_H_
+#define INTEGRATED_QUANTITY_H_
+
+#define IQ_FILLER_COMP (0)
+#define IQ_FE_SUM_COMP (IQ_FILLER_COMP+1)
+#define IQ_BODYDRAG_SUM_COMP (IQ_FE_SUM_COMP+2*num_materials)
+#define IQ_DRAG_SUM_COMP (IQ_BODYDRAG_SUM_COMP+3*num_materials)
+#define IQ_MININT_SUM_COMP (IQ_DRAG_SUM_COMP+3*num_materials)
+#define IQ_MAXINT_SUM_COMP (IQ_MININT_SUM_COMP+3*num_materials)
+
+#define IQ_PDRAG_SUM_COMP (IQ_MAXINT_SUM_COMP+3*num_materials)
+#define IQ_VISCOUSDRAG_SUM_COMP (IQ_PDRAG_SUM_COMP+3*num_materials)
+#define IQ_VISCOUS0DRAG_SUM_COMP (IQ_VISCOUSDRAG_SUM_COMP+3*num_materials)
+#define IQ_VISCODRAG_SUM_COMP (IQ_VISCOUS0DRAG_SUM_COMP+3*num_materials)
+
+#define IQ_MINDEN_SUM_COMP (IQ_VISCODRAG_SUM_COMP+3*num_materials)
+#define IQ_MAXDEN_SUM_COMP (IQ_MINDEN_SUM_COMP+2*num_materials)
+
+#define IQ_MINTEMP_SUM_COMP (IQ_MAXDEN_SUM_COMP+2*num_materials)
+#define IQ_MAXTEMP_SUM_COMP (IQ_MINTEMP_SUM_COMP+2*num_materials)
+
+
+
+#define DRAGCOMP_BODYTORQUE (DRAGCOMP_VISCOFORCE+3*num_materials)
+#define DRAGCOMP_TORQUE (DRAGCOMP_BODYTORQUE+3*num_materials)
+#define DRAGCOMP_PTORQUE (DRAGCOMP_TORQUE+3*num_materials)
+#define DRAGCOMP_VISCOUSTORQUE (DRAGCOMP_PTORQUE+3*num_materials)
+#define DRAGCOMP_VISCOUS0TORQUE (DRAGCOMP_VISCOUSTORQUE+3*num_materials)
+#define DRAGCOMP_VISCOTORQUE (DRAGCOMP_VISCOUS0TORQUE+3*num_materials)
+
+#define DRAGCOMP_COM (DRAGCOMP_VISCOTORQUE+3*num_materials)
+#define DRAGCOMP_MOMINERTIA (DRAGCOMP_COM+3*num_materials)
+#define DRAGCOMP_MASS (DRAGCOMP_MOMINERTIA+3*num_materials)
+#define DRAGCOMP_PERIM_VECTOR (DRAGCOMP_MASS+num_materials)
+#define DRAGCOMP_PERIM (DRAGCOMP_PERIM_VECTOR+3*num_materials)
+#if (0)
+DRAGCOMP_FLAG=0 => drag uninitialized
+DRAGCOMP_FLAG=1 => drag initialized
+DRAGCOMP_FLAG=2 => drag extended
+#endif
+#define DRAGCOMP_FLAG (DRAGCOMP_PERIM+num_materials)
+#define N_DRAG (DRAGCOMP_FLAG+num_materials)
+
+#endif
