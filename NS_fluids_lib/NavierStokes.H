@@ -2407,6 +2407,10 @@ protected:
     static int vofface_index;
     static int ncphys;
 
+    static Vector<Real> NS_sumdata;
+    static Vector<int> NS_sumdata_type;
+    static Vector<int> NS_sumdata_sweep;
+
 };
 
 }/* namespace amrex */
