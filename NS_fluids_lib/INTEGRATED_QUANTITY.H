@@ -3,8 +3,10 @@
 
 #define IQ_FILLER_SUM_COMP (0)
 #define IQ_FE_SUM_COMP (IQ_FILLER_SUM_COMP+1)
+
 #define IQ_BODYDRAG_SUM_COMP (IQ_FE_SUM_COMP+2*num_materials)
 #define IQ_DRAG_SUM_COMP (IQ_BODYDRAG_SUM_COMP+3*num_materials)
+
 #define IQ_MININT_SUM_COMP (IQ_DRAG_SUM_COMP+3*num_materials)
 #define IQ_MAXINT_SUM_COMP (IQ_MININT_SUM_COMP+3*num_materials)
 
@@ -38,8 +40,6 @@
 #define IQ_VISCOTORQUE_SUM_COMP (IQ_VISCOUS0TORQUE_SUM_COMP+3*num_materials)
 
 #define IQ_STEP_PERIM_VECTOR_SUM_COMP (IQ_VISCOTORQUE_SUM_COMP+3*num_materials)
-#define IQ_STEP_PERIM_SUM_COMP (IQ_STEP_PERIM_VECTOR_SUM_COMP+3*num_materials)
-
 #define IQ_STEP_PERIM_SUM_COMP (IQ_STEP_PERIM_VECTOR_SUM_COMP+3*num_materials)
 
 #define IQ_MININT_SLICE_SUM_COMP (IQ_STEP_PERIM_SUM_COMP+num_materials)

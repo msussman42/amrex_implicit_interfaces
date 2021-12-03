@@ -11,6 +11,7 @@
 
 ! N_EXTRA_REAL.H is in the amrlib directory.
 #include "N_EXTRA_REAL.H"
+#include "INTEGRATED_QUANTITY.H"
 #include "DRAG_COMP.H"
 #include "NAVIERSTOKES_F.H"
 
@@ -6613,48 +6614,6 @@ END SUBROUTINE SIMP
 
       INTEGER_T drag_flag
 
-      INTEGER_T filler_comp,FE_sum_comp
-
-      INTEGER_T bodydrag_sum_comp
-      INTEGER_T drag_sum_comp
-
-      INTEGER_T minint_sum_comp,maxint_sum_comp
-
-      INTEGER_T pdrag_sum_comp
-      INTEGER_T viscousdrag_sum_comp
-      INTEGER_T viscous0drag_sum_comp
-      INTEGER_T viscodrag_sum_comp
-
-      INTEGER_T minden_sum_comp,maxden_sum_comp
-      INTEGER_T xnot_amp_sum_comp,cen_sum_comp
-      INTEGER_T mincen_sum_comp,maxcen_sum_comp
-      INTEGER_T mass_sum_comp,mom_sum_comp,energy_sum_comp
-      INTEGER_T left_pressure_comp
-      INTEGER_T kinetic_energy_comp
-      INTEGER_T LS_F_sum_comp,LS_cen_sum_comp
-
-      INTEGER_T bodytorque_sum_comp
-      INTEGER_T torque_sum_comp
-
-      INTEGER_T ptorque_sum_comp
-      INTEGER_T viscoustorque_sum_comp
-      INTEGER_T viscous0torque_sum_comp
-      INTEGER_T viscotorque_sum_comp
-
-      INTEGER_T step_perim_vector_sum_comp
-      INTEGER_T step_perim_sum_comp
-
-      INTEGER_T minint_slice
-      INTEGER_T maxint_slice
-      INTEGER_T vort_sum_comp
-      INTEGER_T vort_error
-      INTEGER_T vel_error
-      INTEGER_T energy_moment
-      INTEGER_T enstrophy
-      INTEGER_T user_comp
-      INTEGER_T species_mass_comp
-      INTEGER_T total_comp
-
       INTEGER_T isrc,idest
       INTEGER_T iside
       REAL_T dz_external
@@ -6759,61 +6718,11 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      filler_comp=0
-      FE_sum_comp=filler_comp+1
-
-      bodydrag_sum_comp=FE_sum_comp+2*nmat
-      drag_sum_comp=bodydrag_sum_comp+3*nmat
-
-      minint_sum_comp=drag_sum_comp+3*nmat
-      maxint_sum_comp=minint_sum_comp+3*nmat
-
-      pdrag_sum_comp=maxint_sum_comp+3*nmat
-      viscousdrag_sum_comp=pdrag_sum_comp+3*nmat
-      viscous0drag_sum_comp=viscousdrag_sum_comp+3*nmat
-      viscodrag_sum_comp=viscous0drag_sum_comp+3*nmat
-
-      minden_sum_comp=viscodrag_sum_comp+3*nmat
-      maxden_sum_comp=minden_sum_comp+2*nmat
-      xnot_amp_sum_comp=maxden_sum_comp+2*nmat
-      cen_sum_comp=xnot_amp_sum_comp+1
-      mincen_sum_comp=cen_sum_comp+3*nmat
-      maxcen_sum_comp=mincen_sum_comp+nmat
-      mass_sum_comp=maxcen_sum_comp+nmat
-      mom_sum_comp=mass_sum_comp+nmat
-      energy_sum_comp=mom_sum_comp+3*nmat
-      left_pressure_comp=energy_sum_comp+nmat
-      kinetic_energy_comp=left_pressure_comp+4
-      LS_F_sum_comp=kinetic_energy_comp+nmat
-      LS_cen_sum_comp=LS_F_sum_comp+nmat
-
-      bodytorque_sum_comp=LS_cen_sum_comp+3*nmat
-      torque_sum_comp=bodytorque_sum_comp+3*nmat
-
-      ptorque_sum_comp=torque_sum_comp+3*nmat
-      viscoustorque_sum_comp=ptorque_sum_comp+3*nmat
-      viscous0torque_sum_comp=viscoustorque_sum_comp+3*nmat
-      viscotorque_sum_comp=viscous0torque_sum_comp+3*nmat
-
-      step_perim_vector_sum_comp=viscotorque_sum_comp+3*nmat
-      step_perim_sum_comp=step_perim_vector_sum_comp+3*nmat
-
-      minint_slice=step_perim_sum_comp+nmat
-      maxint_slice=minint_slice+nmat
-      vort_sum_comp=maxint_slice+nmat
-      vort_error=vort_sum_comp+3
-      vel_error=vort_error+1
-      energy_moment=vel_error+1
-      enstrophy=energy_moment+1 ! integral of w dot w
-      user_comp=enstrophy+nmat
-      species_mass_comp=user_comp+ncomp_sum_int_user12
-      total_comp=species_mass_comp+num_species_var*nmat
-
-      if (resultsize.ne.total_comp) then
-       print *,"mismatch between resultsize and total_comp"
+      if (resultsize.ne.IQ_TOTAL_SUM_COMP) then
+       print *,"mismatch between resultsize and IQ_TOTAL_SUM_COMP"
        stop
       endif
-      do idest=1,total_comp
+      do idest=1,IQ_TOTAL_SUM_COMP
        if ((sumdata_type(idest).ne.1).and. &
            (sumdata_type(idest).ne.2).and. &
            (sumdata_type(idest).ne.3)) then
@@ -6984,7 +6893,7 @@ END SUBROUTINE SIMP
 
          ! F1,E1,F2,E2,F3,E3,...
         do dir=1,2*nmat
-         idest=FE_sum_comp+dir
+         idest=IQ_FE_SUM_COMP+dir
          local_result(idest)=local_result(idest)+errorparm(dir)
         enddo
 
@@ -7063,25 +6972,25 @@ END SUBROUTINE SIMP
          enddo
 
          do dir=1,SDIM
-          idest=cen_sum_comp+dir+3*(im-1)
+          idest=IQ_CEN_SUM_COMP+dir+3*(im-1)
           local_result(idest)=local_result(idest)+ &
             volgrid*mofdata_tess(vofcomp)*cen_material(dir)
-          idest=LS_cen_sum_comp+dir+3*(im-1)
+          idest=IQ_LS_CEN_SUM_COMP+dir+3*(im-1)
           local_result(idest)=local_result(idest)+ &
             volgrid*LSvolume*LScen_material(dir)
          enddo
-         idest=LS_F_sum_comp+im
+         idest=IQ_LS_F_SUM_COMP+im
          local_result(idest)=local_result(idest)+volgrid*LSvolume
 
          dencore=den(D_DECL(i,j,k),1+num_state_material*(im-1))
          Tcore=den(D_DECL(i,j,k),2+num_state_material*(im-1))
 
-         idest=mass_sum_comp+im
+         idest=IQ_MASS_SUM_COMP+im
          local_result(idest)=local_result(idest)+ &
            dencore*volgrid*mofdata_tess(vofcomp)
 
          do ispec=1,num_species_var
-          idest=species_mass_comp+(ispec-1)*nmat+im
+          idest=IQ_SPECIES_MASS_SUM_COMP+(ispec-1)*nmat+im
           local_result(idest)=local_result(idest)+ &
             dencore*volgrid*mofdata_tess(vofcomp)* &
             den(D_DECL(i,j,k),2+ispec+num_state_material*(im-1))
@@ -7091,7 +7000,7 @@ END SUBROUTINE SIMP
 
          do dir=1,SDIM
           velcomp=dir
-          idest=mom_sum_comp+3*(im-1)+dir
+          idest=IQ_MOM_SUM_COMP+3*(im-1)+dir
           local_result(idest)=local_result(idest)+ &
             vel(D_DECL(i,j,k),velcomp)*volgrid*mofdata_tess(vofcomp)*dencore
 
@@ -7100,14 +7009,14 @@ END SUBROUTINE SIMP
 
          KECELL=half*KECELL
 
-         idest=kinetic_energy_comp+im
+         idest=IQ_KINETIC_ENERGY_SUM_COMP+im
 
          local_kinetic_energy(im)= &
            KECELL*volgrid*mofdata_tess(vofcomp)*dencore
 
          local_result(idest)=local_result(idest)+local_kinetic_energy(im)
 
-         idest=energy_sum_comp+im
+         idest=IQ_ENERGY_SUM_COMP+im
 
          call init_massfrac_parm(dencore,massfrac_parm,im)
          do ispec=1,num_species_var
@@ -7126,9 +7035,9 @@ END SUBROUTINE SIMP
         call get_primary_material(LS_LOCAL,nmat,im_primary)
 
         do dir=1,3
-         idest=vort_sum_comp+dir
+         idest=IQ_VORT_SUM_COMP+dir
          local_result(idest)=local_result(idest)+volgrid*vort(dir)
-         idest=enstrophy+1
+         idest=IQ_ENSTROPHY_SUM_COMP+1
          if ((im_primary.ge.1).and.(im_primary.le.nmat)) then
           local_result(idest+im_primary-1)= &
               local_result(idest+im_primary-1)+volgrid*(vort(dir)**2)
@@ -7144,7 +7053,7 @@ END SUBROUTINE SIMP
          if (is_in_probtype_list().eq.1) then
 
           do im=1,ncomp_sum_int_user1
-           idest=user_comp+im
+           idest=IQ_USER_SUM_COMP+im
            if (sumdata_sweep(idest).eq.0) then
             ! do nothing
            else
@@ -7162,7 +7071,7 @@ END SUBROUTINE SIMP
           enddo !im=1,ncomp_sum_int_user1
 
           do im=1,ncomp_sum_int_user2
-           idest=user_comp+ncomp_sum_int_user1+im
+           idest=IQ_USER_SUM_COMP+ncomp_sum_int_user1+im
            if (sumdata_sweep(idest).eq.1) then
             ! do nothing
            else
@@ -7178,12 +7087,12 @@ END SUBROUTINE SIMP
 
           if (isweep.eq.0) then
            do im=1,ncomp_sum_int_user1
-            idest=user_comp+im
+            idest=IQ_USER_SUM_COMP+im
             local_result(idest)=local_result(idest)+local_user_out1(im)
            enddo
           else if (isweep.eq.1) then
            do im=1,ncomp_sum_int_user2
-            idest=user_comp+ncomp_sum_int_user1+im
+            idest=IQ_USER_SUM_COMP+ncomp_sum_int_user1+im
             local_result(idest)=local_result(idest)+local_user_out2(im)
            enddo
           else
@@ -7210,20 +7119,20 @@ END SUBROUTINE SIMP
          local_vort_error,local_vel_error,vort_expect,vel_expect, &
          local_energy_moment)
         
-        local_result(energy_moment+1)=local_result(energy_moment+1)+ &
+        local_result(IQ_ENERGY_MOMENT_SUM_COMP+1)=local_result(IQ_ENERGY_MOMENT_SUM_COMP+1)+ &
          local_energy_moment*local_kinetic_energy(1)
 
-        if (local_result(vort_error+1).lt.local_vort_error) then
-         local_result(vort_error+1)=local_vort_error
+        if (local_result(IQ_VORT_ERROR_SUM_COMP+1).lt.local_vort_error) then
+         local_result(IQ_VORT_ERROR_SUM_COMP+1)=local_vort_error
         endif
-        if (local_result(vel_error+1).lt.local_vel_error) then
-         local_result(vel_error+1)=local_vel_error
+        if (local_result(IQ_VEL_ERROR_SUM_COMP+1).lt.local_vel_error) then
+         local_result(IQ_VEL_ERROR_SUM_COMP+1)=local_vel_error
         endif
         if (isweep.eq.0) then
          ! do nothing
         else if (isweep.eq.1) then
          if (local_vort_error.gt.zero) then
-          if (local_vort_error.gt.resultALL(vort_error+1)-VOFTOL) then
+          if (local_vort_error.gt.resultALL(IQ_VORT_ERROR_SUM_COMP+1)-VOFTOL) then
            print *,"**** POSITION OF MAX VORT ERROR ****"
            do dir=1,SDIM
             print *,"dir,xpos ",dir,local_xsten(dir)
@@ -7241,7 +7150,7 @@ END SUBROUTINE SIMP
          endif
 
          if (local_vel_error.gt.zero) then
-          if (local_vel_error.gt.resultALL(vel_error+1)-VOFTOL) then
+          if (local_vel_error.gt.resultALL(IQ_VEL_ERROR_SUM_COMP+1)-VOFTOL) then
            print *,"**** POSITION OF MAX VEL ERROR ****"
            do dir=1,SDIM
             print *,"dir,xpos ",dir,local_xsten(dir)
@@ -7267,13 +7176,13 @@ END SUBROUTINE SIMP
 
         prescomp=SDIM+1
 
-        idest=left_pressure_comp+1
+        idest=IQ_LEFT_PRESSURE_SUM_COMP+1
         if (xsten(-1,1).le.problox+VOFTOL*dx(1)) then
          local_result(idest)=local_result(idest)+ &
           volgrid*vel(D_DECL(i,j,k),prescomp) 
          local_result(idest+2)=local_result(idest+2)+volgrid
         endif
-        idest=left_pressure_comp+2
+        idest=IQ_LEFT_PRESSURE_SUM_COMP+2
         if (xsten(1,1).ge.probhix-VOFTOL*dx(1)) then
          local_result(idest)=local_result(idest)+ &
           volgrid*vel(D_DECL(i,j,k),prescomp) 
@@ -7286,11 +7195,11 @@ END SUBROUTINE SIMP
         do im=1,nmat
         do dir=1,3
 
-         idest=bodydrag_sum_comp+local_comp
+         idest=IQ_BODYDRAG_SUM_COMP+local_comp
          local_result(idest)=local_result(idest)+ &
            drag(D_DECL(i,j,k),DRAGCOMP_BODYFORCE+local_comp)
 
-         idest=bodytorque_sum_comp+local_comp
+         idest=IQ_BODYTORQUE_SUM_COMP+local_comp
          local_result(idest)=local_result(idest)+ &
             drag(D_DECL(i,j,k),DRAGCOMP_BODYTORQUE+local_comp)
 
@@ -7303,47 +7212,47 @@ END SUBROUTINE SIMP
          local_comp=1
          do im=1,nmat
          do dir=1,3
-          idest=drag_sum_comp+local_comp
+          idest=IQ_DRAG_SUM_COMP+local_comp
           local_result(idest)=local_result(idest)+ &
             drag(D_DECL(i,j,k),DRAGCOMP_FORCE+local_comp)
 
-          idest=pdrag_sum_comp+local_comp
+          idest=IQ_PDRAG_SUM_COMP+local_comp
           local_result(idest)=local_result(idest)+ &
             drag(D_DECL(i,j,k),DRAGCOMP_PFORCE+local_comp)
 
-          idest=viscousdrag_sum_comp+local_comp
+          idest=IQ_VISCOUSDRAG_SUM_COMP+local_comp
           local_result(idest)=local_result(idest)+ &
             drag(D_DECL(i,j,k),DRAGCOMP_VISCOUSFORCE+local_comp)
 
-          idest=viscous0drag_sum_comp+local_comp
+          idest=IQ_VISCOUS0DRAG_SUM_COMP+local_comp
           local_result(idest)=local_result(idest)+ &
             drag(D_DECL(i,j,k),DRAGCOMP_VISCOUS0FORCE+local_comp)
 
-          idest=viscodrag_sum_comp+local_comp
+          idest=IQ_VISCODRAG_SUM_COMP+local_comp
           local_result(idest)=local_result(idest)+ &
             drag(D_DECL(i,j,k),DRAGCOMP_VISCOFORCE+local_comp)
 
-          idest=torque_sum_comp+local_comp
+          idest=IQ_TORQUE_SUM_COMP+local_comp
           local_result(idest)=local_result(idest)+ &
             drag(D_DECL(i,j,k),DRAGCOMP_TORQUE+local_comp)
 
-          idest=ptorque_sum_comp+local_comp
+          idest=IQ_PTORQUE_SUM_COMP+local_comp
           local_result(idest)=local_result(idest)+ &
             drag(D_DECL(i,j,k),DRAGCOMP_PTORQUE+local_comp)
 
-          idest=viscoustorque_sum_comp+local_comp
+          idest=IQ_VISCOUSTORQUE_SUM_COMP+local_comp
           local_result(idest)=local_result(idest)+ &
             drag(D_DECL(i,j,k),DRAGCOMP_VISCOUSTORQUE+local_comp)
 
-          idest=viscous0torque_sum_comp+local_comp
+          idest=IQ_VISCOUS0TORQUE_SUM_COMP+local_comp
           local_result(idest)=local_result(idest)+ &
             drag(D_DECL(i,j,k),DRAGCOMP_VISCOUS0TORQUE+local_comp)
 
-          idest=viscotorque_sum_comp+local_comp
+          idest=IQ_VISCOTORQUE_SUM_COMP+local_comp
           local_result(idest)=local_result(idest)+ &
             drag(D_DECL(i,j,k),DRAGCOMP_VISCOTORQUE+local_comp)
 
-          idest=step_perim_vector_sum_comp+local_comp
+          idest=IQ_STEP_PERIM_VECTOR_SUM_COMP+local_comp
           local_result(idest)=local_result(idest)+ &
             drag(D_DECL(i,j,k),DRAGCOMP_PERIM_VECTOR+local_comp)
 
@@ -7352,7 +7261,7 @@ END SUBROUTINE SIMP
          enddo ! im=1..nmat
 
          do im=1,nmat
-          idest=step_perim_sum_comp+im
+          idest=IQ_STEP_PERIM_SUM_COMP+im
           local_result(idest)=local_result(idest)+ &
            drag(D_DECL(i,j,k),DRAGCOMP_PERIM+im)
          enddo
@@ -7368,7 +7277,7 @@ END SUBROUTINE SIMP
 
         do im=1,nmat
 
-         idest=minden_sum_comp+2*(im-1)+1
+         idest=IQ_MINSTATE_SUM_COMP+2*(im-1)+1
          isrc=num_state_material*(im-1)+1
          if (local_result(idest).gt.den(D_DECL(i,j,k),isrc)) then
           local_result(idest)=den(D_DECL(i,j,k),isrc)
@@ -7380,7 +7289,7 @@ END SUBROUTINE SIMP
           local_result(idest)=den(D_DECL(i,j,k),isrc)
          endif
 
-         idest=maxden_sum_comp+2*(im-1)+1
+         idest=IQ_MAXSTATE_SUM_COMP+2*(im-1)+1
          isrc=num_state_material*(im-1)+1
          if (local_result(idest).lt.den(D_DECL(i,j,k),isrc)) then
           local_result(idest)=den(D_DECL(i,j,k),isrc)
@@ -7446,11 +7355,11 @@ END SUBROUTINE SIMP
             enddo
             cen_material(dir)=xcrit
 
-            idest=minint_sum_comp+3*(im-1)+dir
+            idest=IQ_MININT_SUM_COMP+3*(im-1)+dir
             if (xcrit.lt.local_result(idest)) then
              local_result(idest)=xcrit
             endif
-            idest=maxint_sum_comp+3*(im-1)+dir
+            idest=IQ_MAXINT_SUM_COMP+3*(im-1)+dir
             if (xcrit.gt.local_result(idest)) then
              local_result(idest)=xcrit
             endif
@@ -7467,11 +7376,11 @@ END SUBROUTINE SIMP
               endif ! dir3<>dir ?
              enddo ! dir3
              if (in_slice.eq.1) then
-              idest=minint_slice+im
+              idest=IQ_MININT_SLICE_SUM_COMP+im
               if (xcrit.lt.local_result(idest)) then
                local_result(idest)=xcrit
               endif
-              idest=maxint_slice+im
+              idest=IQ_MAXINT_SLICE_SUM_COMP+im
               if (xcrit.gt.local_result(idest)) then
                local_result(idest)=xcrit
               endif
@@ -7484,7 +7393,7 @@ END SUBROUTINE SIMP
             endif ! slice_dir+1 == dir ?
             
             if ((dir.eq.SDIM).and.(im.eq.1).and.(i.eq.0)) then
-             idest=xnot_amp_sum_comp+1
+             idest=IQ_XNOT_AMP_SUM_COMP+1
              if (xcrit.gt.local_result(idest)) then
               local_result(idest)=xcrit
              endif
@@ -7496,7 +7405,7 @@ END SUBROUTINE SIMP
 
              do dir2=1,SDIM
               xboundary(dir2)=xsten(0,dir2)
-              cengrid(dir2)=resultALL(cen_sum_comp+dir2+3*(im-1))
+              cengrid(dir2)=resultALL(IQ_CEN_SUM_COMP+dir2+3*(im-1))
              enddo
              xboundary(dir)=xcrit
              distbound=zero
@@ -7504,11 +7413,11 @@ END SUBROUTINE SIMP
               distbound=distbound+(xboundary(dir2)-cengrid(dir2))**2
              enddo
              distbound=sqrt(distbound)
-             idest=mincen_sum_comp+im
+             idest=IQ_MINCEN_SUM_COMP+im
              if (distbound.lt.local_result(idest)) then
               local_result(idest)=distbound
              endif
-             idest=maxcen_sum_comp+im
+             idest=IQ_MAXCEN_SUM_COMP+im
              if (distbound.gt.local_result(idest)) then
               local_result(idest)=distbound
              endif 

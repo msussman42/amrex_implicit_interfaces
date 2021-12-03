@@ -7,6 +7,7 @@
 #include <PROB_F.H>
 #include <DERIVE_F.H>
 #include <NAVIERSTOKES_F.H>
+#include <INTEGRATED_QUANTITY.H>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -2065,11 +2066,12 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   NS_sumdata_sweep[IQ_USER_SUM_COMP+im]=0; //update 1st sweep
  }
  for (int im=0;im<ncomp_sum_int_user2;im++) {
-  NS_sumdata_sweep[IQ_USER_SUM_COMP+ncomp_sum_int_user1+im]=1; //update 2nd sweep
+   //update 2nd sweep
+  NS_sumdata_sweep[IQ_USER_SUM_COMP+ncomp_sum_int_user1+im]=1; 
  }
 
- NS_sumdata_type[vort_error]=3;  // reduce real max (-1.0E+6)
- NS_sumdata_type[vel_error]=3;   // reduce real max (-1.0E+6)
+ NS_sumdata_type[IQ_VORT_ERROR_SUM_COMP]=3;  // reduce real max (-1.0E+6)
+ NS_sumdata_type[IQ_VEL_ERROR_SUM_COMP]=3;   // reduce real max (-1.0E+6)
 
  for (int idir=0;idir<3;idir++) {
   for (int im=0;im<nmat;im++) {
@@ -2078,8 +2080,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   }
  }
  for (int im=0;im<nmat;im++) {
-  NS_sumdata_type[minint_slice+im]=2; // reduce real min (1.0E+6)
-  NS_sumdata_type[maxint_slice+im]=3; // reduce real max (-1.0E+6)
+  NS_sumdata_type[IQ_MININT_SLICE_SUM_COMP+im]=2; // reduce real min (1.0E+6)
+  NS_sumdata_type[IQ_MAXINT_SLICE_SUM_COMP+im]=3; // reduce real max (-1.0E+6)
  }
  for (int idir=0;idir<2*nmat;idir++) {
   NS_sumdata_type[idir+IQ_MINSTATE_SUM_COMP]=2;  // reduce real min
@@ -2145,13 +2147,19 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   // call FLUSH(6)
  fort_flush_fortran();
 
+ if (IQ_TOTAL_SUM_COMP!=NS_sumdata.size())
+  amrex::Error("(IQ_TOTAL_SUM_COMP!=NS_sumdata.size())");
+ if (IQ_TOTAL_SUM_COMP!=NS_sumdata_type.size())
+  amrex::Error("(IQ_TOTAL_SUM_COMP!=NS_sumdata_type.size())");
+ if (IQ_TOTAL_SUM_COMP!=NS_sumdata_sweep.size())
+  amrex::Error("(IQ_TOTAL_SUM_COMP!=NS_sumdata_sweep.size())");
+
  for (int isweep=0;isweep<2;isweep++) {
    // VOF_Recon_ALL 
    // make_physics_varsALL
    // FORT_SUMMASS -> stackerror -> get_symmetric_error -> uses mofdata_tess
   volWgtSumALL(
     post_init_flag,
-    sumdata,sumdata_type,sumdata_sweep,
     ZZ,FF,dirx,diry,cut_flag,isweep);
 
   if (isweep==0) {
@@ -2939,16 +2947,16 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
    std::cout << "TIME=" << upper_slab_time << " MAT="<<im<<
     " SLICE MIN INT=" << 
-    NS_sumdata[im+minint_slice] << '\n';
+    NS_sumdata[im+IQ_MININT_SLICE_SUM_COMP] << '\n';
 
    std::cout << "TIME=" << upper_slab_time << " MAT="<<im<<
     " SLICE MAX INT=" << 
-    NS_sumdata[im+maxint_slice] << '\n';
+    NS_sumdata[im+IQ_MAXINT_SLICE_SUM_COMP] << '\n';
 
    std::cout << "TIME=" << upper_slab_time << " MAT="<<im<<
     " SLICE SEPARATION=" << 
-    NS_sumdata[im+maxint_slice]-
-    NS_sumdata[im+minint_slice] << '\n';
+    NS_sumdata[im+IQ_MAXINT_SLICE_SUM_COMP]-
+    NS_sumdata[im+IQ_MININT_SLICE_SUM_COMP] << '\n';
 
   }  // im
   Real offset=yblob;
@@ -2969,12 +2977,12 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 	   << " dt_min= " << dt_min[iscale] << '\n';
   }
 
-  Real leftwt=NS_sumdata[left_pressure_sum+2];
-  Real rightwt=NS_sumdata[left_pressure_sum+3];
+  Real leftwt=NS_sumdata[IQ_LEFT_PRESSURE_SUM_COMP+2];
+  Real rightwt=NS_sumdata[IQ_LEFT_PRESSURE_SUM_COMP+3];
   if ((leftwt<=0.0)||(rightwt<=0.0))
    amrex::Error("leftwt or rightwt are invalid");
-  Real leftpres=NS_sumdata[left_pressure_sum]/leftwt;
-  Real rightpres=NS_sumdata[left_pressure_sum+1]/rightwt;
+  Real leftpres=NS_sumdata[IQ_LEFT_PRESSURE_SUM_COMP]/leftwt;
+  Real rightpres=NS_sumdata[IQ_LEFT_PRESSURE_SUM_COMP+1]/rightwt;
   std::cout << "TIME= " << upper_slab_time << 
    " LEFTPRES=  " << leftpres << '\n';
   std::cout << "TIME= " << upper_slab_time << 

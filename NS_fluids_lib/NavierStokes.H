@@ -513,9 +513,6 @@ public:
     void recalesce_temperature(int im_source);
 
     void volWgtSum(
-     Vector<Real>& result,
-     Vector<int>& sumdata_type,
-     Vector<int>& sumdata_sweep,
      Vector<Real>& ZZ,Vector<Real>& FF,
      int dirx,int diry,int cut_flag,
      int isweep);
@@ -527,9 +524,6 @@ public:
 // post_init_flag==2  if called from post_restart
     void volWgtSumALL(
      int post_init_flag,
-     Vector<Real>& result,
-     Vector<int>& sumdata_type,
-     Vector<int>& sumdata_sweep,
      Vector<Real>& ZZ,Vector<Real>& FF,
      int dirx,int diry,int cut_flag,
      int isweep);
