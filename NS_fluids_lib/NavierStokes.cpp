@@ -163,6 +163,7 @@
 */
 
 #include <NavierStokes.H>
+#include <INTEGRATED_QUANTITY.H>
 #include <DRAG_COMP.H>
 #include <INTERP_F.H>
 #include <MACOPERATOR_F.H>
@@ -325,6 +326,10 @@ Real NavierStokes::truncate_thickness=2.0;
 Real NavierStokes::init_shrink  = 1.0;
 Real NavierStokes::change_max   = 1.1;
 Real NavierStokes::change_max_init = 1.1;
+
+Vector<Real> NavierStokes::NS_sumdata; 
+Vector<int> NavierStokes::NS_sumdata_type; 
+Vector<int> NavierStokes::NS_sumdata_sweep; 
 
 // component 0 => advective scales
 // component 1 => surface tension scales
@@ -18190,10 +18195,6 @@ void NavierStokes::levelCombine(
 } // subroutine levelCombine
 
 void NavierStokes::volWgtSum(
-		FIX ME
-  Vector<Real>& result,
-  Vector<int>& sumdata_type,
-  Vector<int>& sumdata_sweep,
   Vector<Real>& ZZ,Vector<Real>& FF,
   int dirx,int diry,int cut_flag,
   int isweep) {
@@ -18210,104 +18211,12 @@ void NavierStokes::volWgtSum(
  int nmat=num_materials;
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
 
-
- FIX ME
-  // 0 empty
-  // F,E  2 x nmat
-  //
-  // drag (3 x nmat comp)
-  //
-  // min interface location 3 x nmat  (x1,y1,z1   x2,y2,z2  ...)
-  // max interface location 3 x nmat  (x1,y1,z1   x2,y2,z2  ...)
-  //
-  // pressure drag (3 x nmat comp)
-  // viscoelastic drag (3 x nmat comp)
-  //
-  // min den,denA 2 x nmat
-  // max den,denA 2 x nmat
-  // x=0 amplitude
-  // centroid 3 x nmat (x1,y1,z1  x2,y2,z2  ... )
-  // min dist from centroid  nmat
-  // max dist from centroid  nmat
-  // mass      nmat
-  // momentum  3 x nmat
-  // energy    nmat
-  // left pressure,right pressure, left wt,right wt
-  // kinetic energy derived  nmat
-  // LS F  nmat
-  // LS centroid 3 x nmat (x1,y1,z1  x2,y2,z2 ... )
-  //
-  // torque (3 x nmat comp)
-  // pressure torque (3 x nmat comp)
-  // viscoelastic torque (3 x nmat comp)
-  // perimeter (rasterized) (nmat comp)
-  //
-  // min interface extent on slice (nmat comp)
-  // max interface extent on slice (nmat comp)
-  // integral of vorticity (3 comp)
-  // vort_error (1 comp)
-  // vel_error (1 comp)
-  // energy_moment (1 comp)
-  // enstrophy (nmat comp)
-  // user defined (ncomp_sum_int_user1+ncomp_sum_int_user2 comp)
-  // species mass (num_species_var * nmat comp)
-
- int filler_comp=0;
- int FE_sum_comp=filler_comp+1;
-
- int bodydrag_sum_comp=FE_sum_comp+2*nmat;
- int drag_sum_comp=bodydrag_sum_comp+3*nmat;
-
- int minint_sum_comp=drag_sum_comp+3*nmat;
- int maxint_sum_comp=minint_sum_comp+3*nmat;
-
- int pdrag_sum_comp=maxint_sum_comp+3*nmat;
- int viscousdrag_sum_comp=pdrag_sum_comp+3*nmat;
- int viscous0drag_sum_comp=viscousdrag_sum_comp+3*nmat;
- int viscodrag_sum_comp=viscous0drag_sum_comp+3*nmat;
-
- int minden_sum_comp=viscodrag_sum_comp+3*nmat;
- int maxden_sum_comp=minden_sum_comp+2*nmat;
- int xnot_amp_sum_comp=maxden_sum_comp+2*nmat;
- int cen_sum_comp=xnot_amp_sum_comp+1;
- int mincen_sum_comp=cen_sum_comp+3*nmat;
- int maxcen_sum_comp=mincen_sum_comp+nmat;
- int mass_sum_comp=maxcen_sum_comp+nmat;
- int mom_sum_comp=mass_sum_comp+nmat;
- int energy_sum_comp=mom_sum_comp+3*nmat;
- int left_pressure_sum=energy_sum_comp+nmat;
- int kinetic_energy_sum_comp=left_pressure_sum+4;
- int LS_F_sum_comp=kinetic_energy_sum_comp+nmat;
- int LS_cen_sum_comp=LS_F_sum_comp+nmat;
-
- int bodytorque_sum_comp=LS_cen_sum_comp+3*nmat;
- int torque_sum_comp=bodytorque_sum_comp+3*nmat;
-
- int ptorque_sum_comp=torque_sum_comp+3*nmat;
- int viscoustorque_sum_comp=ptorque_sum_comp+3*nmat;
- int viscous0torque_sum_comp=viscoustorque_sum_comp+3*nmat;
- int viscotorque_sum_comp=viscous0torque_sum_comp+3*nmat;
-
- int step_perim_vector_sum_comp=viscotorque_sum_comp+3*nmat;
- int step_perim_sum_comp=step_perim_vector_sum_comp+3*nmat;
-
- int minint_slice=step_perim_sum_comp+nmat;
- int maxint_slice=minint_slice+nmat;
- int vort_sum_comp=maxint_slice+nmat;
- int vort_error=vort_sum_comp+3; 
- int vel_error=vort_error+1; 
- int energy_moment=vel_error+1; 
- int enstrophy=energy_moment+1; // integral of w dot w
- int user_comp=enstrophy+nmat;
- int species_mass_comp=user_comp+ncomp_sum_int_user1+ncomp_sum_int_user2;
- int total_comp=species_mass_comp+num_species_var*nmat; 
-
- if (total_comp!=result.size())
-  amrex::Error("result size invalid");
- if (total_comp!=sumdata_type.size())
-  amrex::Error("sumdata_type size invalid");
- if (total_comp!=sumdata_sweep.size())
-  amrex::Error("sumdata_sweep size invalid");
+ if (IQ_TOTAL_SUM_COMP!=NS_sumdata.size())
+  amrex::Error("(IQ_TOTAL_SUM_COMP!=NS_sumdata.size())");
+ if (IQ_TOTAL_SUM_COMP!=NS_sumdata_type.size())
+  amrex::Error("(IQ_TOTAL_SUM_COMP!=NS_sumdata_type.size())");
+ if (IQ_TOTAL_SUM_COMP!=NS_sumdata_sweep.size())
+  amrex::Error("(IQ_TOTAL_SUM_COMP!=NS_sumdata_sweep.size())");
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -18382,8 +18291,8 @@ void NavierStokes::volWgtSum(
 
  const Real* dx = geom.CellSize();
 
- int resultsize=result.size();
- if (resultsize!=total_comp)
+ int resultsize=NS_sumdata.size();
+ if (resultsize!=IQ_TOTAL_SUM_COMP)
   amrex::Error("resultsize invalid");
 
  int NN=ZZ.size()-1;
@@ -18403,14 +18312,14 @@ void NavierStokes::volWgtSum(
 
   for (int isum=0;isum<resultsize;isum++) {
    local_result[tid][isum]=0.0;
-   if (sumdata_type[isum]==2) // min
+   if (NS_sumdata_type[isum]==2) // min
     local_result[tid][isum]=1.0E+15;
-   else if (sumdata_type[isum]==3)  // max
+   else if (NS_sumdata_type[isum]==3)  // max
     local_result[tid][isum]=-1.0E+15;
-   else if (sumdata_type[isum]==1)
+   else if (NS_sumdata_type[isum]==1)
     local_result[tid][isum]=0.0;
    else
-    amrex::Error("sumdata_type invalid");
+    amrex::Error("NS_sumdata_type invalid");
   } // isum
 
   local_ZZ[tid].resize(NN+1);
@@ -18501,9 +18410,9 @@ void NavierStokes::volWgtSum(
     &bfact,
     &upper_slab_time,
     local_result[tid_current].dataPtr(),
-    result.dataPtr(),
-    sumdata_type.dataPtr(),
-    sumdata_sweep.dataPtr(),
+    NS_sumdata.dataPtr(),
+    NS_sumdata_type.dataPtr(),
+    NS_sumdata_sweep.dataPtr(),
     &resultsize,
     &NN,
     local_ZZ[tid_current].dataPtr(),
@@ -18520,28 +18429,28 @@ void NavierStokes::volWgtSum(
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
 
-  for (int idest=1;idest<total_comp;idest++) {
+  for (int idest=1;idest<IQ_TOTAL_SUM_COMP;idest++) {
 
-   if (((sumdata_sweep[idest]==0)&&(isweep==0))|| //default (update 1st sweep)
-       ((sumdata_sweep[idest]==1)&&(isweep==1))) {//(update 2nd sweep) 
+   if (((NS_sumdata_sweep[idest]==0)&&(isweep==0))|| //def (update 1st sweep)
+       ((NS_sumdata_sweep[idest]==1)&&(isweep==1))) {//(update 2nd sweep) 
 
-    if (sumdata_type[idest]==1) { // reduce real sum (default)
+    if (NS_sumdata_type[idest]==1) { // reduce real sum (default)
      local_result[0][idest]+=local_result[tid][idest];
-    } else if (sumdata_type[idest]==2) { // reduce real min 
+    } else if (NS_sumdata_type[idest]==2) { // reduce real min 
      if (local_result[tid][idest]<local_result[0][idest])
       local_result[0][idest]=local_result[tid][idest];
-    } else if (sumdata_type[idest]==3) { // reduce real max
+    } else if (NS_sumdata_type[idest]==3) { // reduce real max
      if (local_result[tid][idest]>local_result[0][idest])
       local_result[0][idest]=local_result[tid][idest];
     } else
      amrex::Error("sumdata_type invalid");
 
-   } else if (sumdata_sweep[idest]==0) {
+   } else if (NS_sumdata_sweep[idest]==0) {
     // do nothing
-   } else if (sumdata_sweep[idest]==1) {
+   } else if (NS_sumdata_sweep[idest]==1) {
     // do nothing
    } else
-    amrex::Error("sumdata_sweep invalid");
+    amrex::Error("NS_sumdata_sweep invalid");
 
   } // idest
  
@@ -18579,33 +18488,33 @@ void NavierStokes::volWgtSum(
   update_flux,
   interface_cond_avail);
 
- result[filler_comp]=0.0;
+ NS_sumdata[IQ_FILLER_SUM_COMP]=0.0;
 
- for (int idest=1;idest<total_comp;idest++) {
+ for (int idest=1;idest<IQ_TOTAL_SUM_COMP;idest++) {
 
-  if (((sumdata_sweep[idest]==0)&&(isweep==0))||
-      ((sumdata_sweep[idest]==1)&&(isweep==1))) { 
+  if (((NS_sumdata_sweep[idest]==0)&&(isweep==0))||
+      ((NS_sumdata_sweep[idest]==1)&&(isweep==1))) { 
 
-   if (sumdata_type[idest]==1) { // reduce real sum
+   if (NS_sumdata_type[idest]==1) { // reduce real sum
     ParallelDescriptor::ReduceRealSum(local_result[0][idest]);
-    result[idest]=result[idest]+local_result[0][idest];
-   } else if (sumdata_type[idest]==2) { // reduce real min
+    NS_sumdata[idest]=NS_sumdata[idest]+local_result[0][idest];
+   } else if (NS_sumdata_type[idest]==2) { // reduce real min
     ParallelDescriptor::ReduceRealMin(local_result[0][idest]);
-    if (local_result[0][idest]<result[idest])
-     result[idest]=local_result[0][idest];
-   } else if (sumdata_type[idest]==3) { // reduce real max
+    if (local_result[0][idest]<NS_sumdata[idest])
+     NS_sumdata[idest]=local_result[0][idest];
+   } else if (NS_sumdata_type[idest]==3) { // reduce real max
     ParallelDescriptor::ReduceRealMax(local_result[0][idest]);
-    if (local_result[0][idest]>result[idest])
-     result[idest]=local_result[0][idest];
+    if (local_result[0][idest]>NS_sumdata[idest])
+     NS_sumdata[idest]=local_result[0][idest];
    } else
-    amrex::Error("sumdata_type invalid");
+    amrex::Error("NS_sumdata_type invalid");
 
-  } else if (sumdata_sweep[idest]==0) {
+  } else if (NS_sumdata_sweep[idest]==0) {
    // do nothing
-  } else if (sumdata_sweep[idest]==1) {
+  } else if (NS_sumdata_sweep[idest]==1) {
    // do nothing
   } else
-   amrex::Error("sumdata_sweep invalid");
+   amrex::Error("NS_sumdata_sweep invalid");
 
  } // idest
  
@@ -20976,9 +20885,6 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
 void
 NavierStokes::volWgtSumALL(
  int post_init_flag,
- Vector<Real>& result,
- Vector<int>& sumdata_type,
- Vector<int>& sumdata_sweep,
  Vector<Real>& ZZ,Vector<Real>& FF,
  int dirx,int diry,int cut_flag,
  int isweep) {
@@ -21193,9 +21099,6 @@ NavierStokes::volWgtSumALL(
 
   NavierStokes& ns_level = getLevel(ilev);
   ns_level.volWgtSum(
-    result,
-    sumdata_type,
-    sumdata_sweep,
     ZZ,FF,
     dirx,diry,cut_flag,
     isweep);
