@@ -2047,109 +2047,25 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
  int local_counter=0;
 
-  // 0 empty
-  // F,E  2 x nmat
-  //
-  // bodydrag (3 x nmat comp)
-  // drag (3 x nmat comp)
-  //
-  // min interface location 3 x nmat  (x1,y1,z1   x2,y2,z2  ...)
-  // max interface location 3 x nmat  (x1,y1,z1   x2,y2,z2  ...)
-  //
-  // pressure drag (3 x nmat comp)
-  // viscous drag (3 x nmat comp)
-  // viscous0 drag (3 x nmat comp)
-  // viscoelastic drag (3 x nmat comp)
-  //
-  // min den,temp 2 x nmat
-  // max den,temp 2 x nmat
-  // x=0 amplitude
-  // centroid 3 x nmat (x1,y1,z1  x2,y2,z2  ... )
-  // min dist from centroid  nmat
-  // max dist from centroid  nmat
-  // mass      nmat
-  // momentum  3 x nmat
-  // energy    nmat
-  // left pressure, right pressure, left weight, right weight
-  // kinetic energy derived  nmat
-  // LS F  nmat
-  // LS centroid 3 x nmat (x1,y1,z1  x2,y2,z2 ... )
-  //
-  // bodytorque (3 x nmat comp)
-  // torque (3 x nmat comp)
-  //
-  // pressure torque (3 x nmat comp)
-  // viscous torque (3 x nmat comp)
-  // viscous0 torque (3 x nmat comp)
-  // viscoelastic torque (3 x nmat comp)
-  //
-  // perimeter (rasterized) (nmat comp)
-  //
-  // min interface extent on slice (nmat comp)
-  // max interface extent on slice (nmat comp)
-  // integral of vorticity (3 comp)
-  // vort_error (1 comp)
-  // vel_error (1 comp)
-  // energy_moment (1 comp)
-  // enstrophy (nmat comp)
-  // user defined (ncomp_sum_int_user1+ncomp_sum_int_user2 comp)
-  // species mass (num_species_var * nmat comp)
-
-
-
- int xnot_amp_sum_comp=maxden_sum_comp+2*nmat;
- int cen_sum_comp=xnot_amp_sum_comp+1;
- int mincen_sum_comp=cen_sum_comp+3*nmat;
- int maxcen_sum_comp=mincen_sum_comp+nmat;
- int mass_sum_comp=maxcen_sum_comp+nmat;
- int mom_sum_comp=mass_sum_comp+nmat;
- int energy_sum_comp=mom_sum_comp+3*nmat;
- int left_pressure_sum=energy_sum_comp+nmat;
- int kinetic_energy_sum_comp=left_pressure_sum+4;
- int LS_F_sum_comp=kinetic_energy_sum_comp+nmat;
- int LS_cen_sum_comp=LS_F_sum_comp+nmat;
-
- int bodytorque_sum_comp=LS_cen_sum_comp+3*nmat;
- int torque_sum_comp=bodytorque_sum_comp+3*nmat;
-
- int ptorque_sum_comp=torque_sum_comp+3*nmat;
- int viscoustorque_sum_comp=ptorque_sum_comp+3*nmat;
- int viscous0torque_sum_comp=viscoustorque_sum_comp+3*nmat;
- int viscotorque_sum_comp=viscous0torque_sum_comp+3*nmat;
-
- int step_perim_vector_sum_comp=viscotorque_sum_comp+3*nmat;
- int step_perim_sum_comp=step_perim_vector_sum_comp+3*nmat;
-
- int minint_slice=step_perim_sum_comp+nmat;
- int maxint_slice=minint_slice+nmat;
- int vort_sum_comp=maxint_slice+nmat;
- int vort_error=vort_sum_comp+3;
- int vel_error=vort_error+1;
- int energy_moment=vel_error+1; 
- int enstrophy=energy_moment+1; // integral of w dot w
- int user_comp=enstrophy+nmat;
- int species_mass_comp=user_comp+ncomp_sum_int_user1+ncomp_sum_int_user2;
- int total_comp=species_mass_comp+num_species_var*nmat; 
-
- NS_sumdata.resize(total_comp);
- NS_sumdata_type.resize(total_comp);
- NS_sumdata_sweep.resize(total_comp);
+ NS_sumdata.resize(IQ_TOTAL_SUM_COMP);
+ NS_sumdata_type.resize(IQ_TOTAL_SUM_COMP);
+ NS_sumdata_sweep.resize(IQ_TOTAL_SUM_COMP);
 
  Vector<Real> F_MAT;
  Vector<Real> MASS_MAT;
  F_MAT.resize(nmat);
  MASS_MAT.resize(nmat);
 
- for (int isum=0;isum<total_comp;isum++) {
+ for (int isum=0;isum<IQ_TOTAL_SUM_COMP;isum++) {
   NS_sumdata[isum]=0.0;
   NS_sumdata_type[isum]=1;  // reduce real sum
   NS_sumdata_sweep[isum]=0;  // update first sweep
  }
  for (int im=0;im<ncomp_sum_int_user1;im++) {
-  NS_sumdata_sweep[user_comp+im]=0; //update 1st sweep
+  NS_sumdata_sweep[IQ_USER_SUM_COMP+im]=0; //update 1st sweep
  }
  for (int im=0;im<ncomp_sum_int_user2;im++) {
-  NS_sumdata_sweep[user_comp+ncomp_sum_int_user1+im]=1; //update 2nd sweep
+  NS_sumdata_sweep[IQ_USER_SUM_COMP+ncomp_sum_int_user1+im]=1; //update 2nd sweep
  }
 
  NS_sumdata_type[vort_error]=3;  // reduce real max (-1.0E+6)
@@ -2157,8 +2073,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
  for (int idir=0;idir<3;idir++) {
   for (int im=0;im<nmat;im++) {
-   NS_sumdata_type[idir+minint_sum_comp+3*im]=2; // reduce real min (1.0E+6)
-   NS_sumdata_type[idir+maxint_sum_comp+3*im]=3; // reduce real max (-1.0E+6)
+   NS_sumdata_type[idir+IQ_MININT_SUM_COMP+3*im]=2; // reduce real min (1.0E+6)
+   NS_sumdata_type[idir+IQ_MAXINT_SUM_COMP+3*im]=3; // reduce real max (-1.0E+6)
   }
  }
  for (int im=0;im<nmat;im++) {
@@ -2166,20 +2082,20 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   NS_sumdata_type[maxint_slice+im]=3; // reduce real max (-1.0E+6)
  }
  for (int idir=0;idir<2*nmat;idir++) {
-  NS_sumdata_type[idir+minden_sum_comp]=2;  // reduce real min
-  NS_sumdata_type[idir+maxden_sum_comp]=3;  // reduce real max
+  NS_sumdata_type[idir+IQ_MINSTATE_SUM_COMP]=2;  // reduce real min
+  NS_sumdata_type[idir+IQ_MAXSTATE_SUM_COMP]=3;  // reduce real max
  }
 
- NS_sumdata_type[xnot_amp_sum_comp]=3;  // x=0 amplitude  material 1
+ NS_sumdata_type[IQ_XNOT_AMP_SUM_COMP]=3;  // x=0 amplitude  material 1
 
  for (int idir=0;idir<nmat;idir++) {
-  NS_sumdata_type[idir+mincen_sum_comp]=2;  // min dist from centroid
-  NS_sumdata_type[idir+maxcen_sum_comp]=3;  // max dist from centroid
-  NS_sumdata_sweep[idir+mincen_sum_comp]=1;  
-  NS_sumdata_sweep[idir+maxcen_sum_comp]=1; 
+  NS_sumdata_type[idir+IQ_MINCEN_SUM_COMP]=2;  // min dist from centroid
+  NS_sumdata_type[idir+IQ_MAXCEN_SUM_COMP]=3;  // max dist from centroid
+  NS_sumdata_sweep[idir+IQ_MINCEN_SUM_COMP]=1;  
+  NS_sumdata_sweep[idir+IQ_MAXCEN_SUM_COMP]=1; 
  }
 
- for (int isum=0;isum<total_comp;isum++) {
+ for (int isum=0;isum<IQ_TOTAL_SUM_COMP;isum++) {
   NS_sumdata[isum]=0.0;
   if (NS_sumdata_type[isum]==2) // min
    NS_sumdata[isum]=1.0E+6;
@@ -2243,16 +2159,17 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    delete_array(DRAG_MF);
 
    for (int im=0;im<nmat;im++) {
-    Real volmat=NS_sumdata[FE_sum_comp+2*im];
-    Real LSvolmat=NS_sumdata[LS_F_sum_comp+im];
+    Real volmat=NS_sumdata[IQ_FE_SUM_COMP+2*im];
+    Real LSvolmat=NS_sumdata[IQ_LS_F_SUM_COMP+im];
     if (volmat>0.0) {
      for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-      NS_sumdata[3*im+cen_sum_comp+dir]=NS_sumdata[3*im+cen_sum_comp+dir]/volmat;
+      NS_sumdata[3*im+IQ_CEN_SUM_COMP+dir]=
+	      NS_sumdata[3*im+IQ_CEN_SUM_COMP+dir]/volmat;
     }
     if (LSvolmat>0.0) {
      for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-      NS_sumdata[3*im+LS_cen_sum_comp+dir]=
-       NS_sumdata[3*im+LS_cen_sum_comp+dir]/LSvolmat;
+      NS_sumdata[3*im+IQ_LS_CEN_SUM_COMP+dir]=
+       NS_sumdata[3*im+IQ_LS_CEN_SUM_COMP+dir]/LSvolmat;
     }
    } // im
   }  // isweep=0
@@ -2604,14 +2521,14 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   std::cout << "TIME= "<<upper_slab_time<< " max|U|/max|C|=" << UMACH << '\n';
 
   for (int im=0;im<nmat;im++) {
-   F_MAT[im]=NS_sumdata[2*im+FE_sum_comp];
+   F_MAT[im]=NS_sumdata[2*im+IQ_FE_SUM_COMP];
 
    std::cout <<"TIME= "<< upper_slab_time << " MAT="<<im<<" F=" << 
              F_MAT[im] << '\n';
    std::cout <<"TIME= "<< upper_slab_time << " MAT="<<im<<" LS F=" <<
-      NS_sumdata[im+LS_F_sum_comp] << '\n';
+      NS_sumdata[im+IQ_LS_F_SUM_COMP] << '\n';
    std::cout <<"TIME= "<< upper_slab_time << " MAT="<<im<<" E=" <<
-      NS_sumdata[2*im+FE_sum_comp+1] << '\n';
+      NS_sumdata[2*im+IQ_FE_SUM_COMP+1] << '\n';
   }
   if (parent->AMR_volume_history_recorded==0) {
    parent->AMR_volume_history.resize(nmat);
@@ -2693,82 +2610,87 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    } // im_opp
   } // im=1..nmat
 
+   //minden1,mintemp1
+   //minden2,mintemp2,....
   for (int im=0;im<nmat;im++) {
    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" min den=" <<
-      NS_sumdata[2*im+minden_sum_comp] << '\n';
+      NS_sumdata[2*im+IQ_MINSTATE_SUM_COMP] << '\n';
    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" min temp=" <<
-      NS_sumdata[2*im+minden_sum_comp+1] << '\n';
+      NS_sumdata[2*im+IQ_MINSTATE_SUM_COMP+1] << '\n';
    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" max den=" <<
-      NS_sumdata[2*im+maxden_sum_comp] << '\n';
+      NS_sumdata[2*im+IQ_MAXSTATE_SUM_COMP] << '\n';
    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" max temp=" <<
-      NS_sumdata[2*im+maxden_sum_comp+1] << '\n';
+      NS_sumdata[2*im+IQ_MAXSTATE_SUM_COMP+1] << '\n';
 
-   MASS_MAT[im]=NS_sumdata[im+mass_sum_comp];
+   MASS_MAT[im]=NS_sumdata[im+IQ_MASS_SUM_COMP];
 
    std::cout<<"TIME= "<<upper_slab_time<<" MAT="<<im<<
 	   " mass="<<MASS_MAT[im]<< '\n';
 
    for (int ispec=0;ispec<num_species_var;ispec++) {
-    Real mass_spec=NS_sumdata[im+species_mass_comp+ispec*nmat];
+    Real mass_spec=NS_sumdata[im+IQ_SPECIES_MASS_SUM_COMP+ispec*nmat];
     std::cout<<"TIME= "<<upper_slab_time<<" MAT="<<im<<
      " ispec="<<ispec<< " species mass="<<mass_spec<< '\n';
    }
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" dir= "<<
-      dir << " mom=" << NS_sumdata[3*im+dir+mom_sum_comp] << '\n';
+      dir << " mom=" << NS_sumdata[3*im+dir+IQ_MOM_SUM_COMP] << '\n';
    }
    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" energy=" <<
-      NS_sumdata[im+energy_sum_comp] << '\n';
+      NS_sumdata[im+IQ_ENERGY_SUM_COMP] << '\n';
   }
   for (int im=0;im<nmat;im++) { 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" cendir=" << dir << 
-     " centroid=" << NS_sumdata[cen_sum_comp+3*im+dir] << '\n';
+    std::cout << "TIME= " << upper_slab_time << 
+     " MAT="<<im<<" cendir=" << dir << 
+     " centroid=" << NS_sumdata[IQ_CEN_SUM_COMP+3*im+dir] << '\n';
    }
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" cendir=" << dir << 
-     " LS centroid=" << NS_sumdata[LS_cen_sum_comp+3*im+dir] << '\n';
+    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<
+     " cendir=" << dir << 
+     " LS centroid=" << NS_sumdata[IQ_LS_CEN_SUM_COMP+3*im+dir] << '\n';
    }
    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" mindistcen=" <<
-     NS_sumdata[mincen_sum_comp+im] << '\n';
+     NS_sumdata[IQ_MINCEN_SUM_COMP+im] << '\n';
    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" maxdistcen=" <<
-     NS_sumdata[maxcen_sum_comp+im] << '\n';
+     NS_sumdata[IQ_MAXCEN_SUM_COMP+im] << '\n';
 
    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<
      " KINETIC ENERGY=" <<
-     NS_sumdata[kinetic_energy_sum_comp+im] << '\n';
+     NS_sumdata[IQ_KINETIC_ENERGY_SUM_COMP+im] << '\n';
   } // im=0..nmat-1
 
   for (int dir=0;dir<3;dir++) {
    std::cout << "TIME= "<<upper_slab_time<<" DIR= " << dir << " VORT SUM " << 
-     NS_sumdata[vort_sum_comp+dir] << '\n';
+     NS_sumdata[IQ_VORT_SUM_COMP+dir] << '\n';
   }
   for (int im=0;im<nmat;im++) {
    std::cout << "TIME= "<<upper_slab_time<<
     "material id (1..nmat) " << im+1 <<
-    " ENSTROPHY " << NS_sumdata[enstrophy+im] << '\n';
+    " ENSTROPHY " << NS_sumdata[IQ_ENSTROPHY_SUM_COMP+im] << '\n';
   }
   for (int im=0;im<ncomp_sum_int_user1;im++) {
    std::cout << "TIME= "<<upper_slab_time<<
     "user_comp1 (1..ncomp_sum_int_user1) " << im+1 <<
-    " sum_int_user1 " << NS_sumdata[user_comp+im] << '\n';
+    " sum_int_user1 " << NS_sumdata[IQ_USER_SUM_COMP+im] << '\n';
   }
   for (int im=0;im<ncomp_sum_int_user2;im++) {
    std::cout << "TIME= "<<upper_slab_time<<
     "user_comp2 (1..ncomp_sum_int_user2) " << im+1 <<
-    " sum_int_user2 " << NS_sumdata[user_comp+ncomp_sum_int_user1+im] << '\n';
+    " sum_int_user2 " << 
+    NS_sumdata[IQ_USER_SUM_COMP+ncomp_sum_int_user1+im] << '\n';
   }
 
   std::cout << "TIME= "<<upper_slab_time<<" VORT ERR= " << 
-    NS_sumdata[vort_error] << '\n';
+    NS_sumdata[IQ_VORT_ERROR_SUM_COMP] << '\n';
   std::cout << "TIME= "<<upper_slab_time<<" VEL ERR= " << 
-    NS_sumdata[vel_error] << '\n';
+    NS_sumdata[IQ_VEL_ERROR_SUM_COMP] << '\n';
 
   Real r_moment=0.0;
-  Real energy_first_mat=NS_sumdata[kinetic_energy_sum_comp]; 
+  Real energy_first_mat=NS_sumdata[IQ_KINETIC_ENERGY_SUM_COMP]; 
   if (energy_first_mat>0.0) {
-   r_moment=NS_sumdata[energy_moment]/energy_first_mat;
+   r_moment=NS_sumdata[IQ_ENERGY_MOMENT_SUM_COMP]/energy_first_mat;
   } else if (energy_first_mat==0.0) {
    // do nothing
   } else
@@ -2781,7 +2703,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im << 
      " DIR= " << dir << " DRAG " << 
-     NS_sumdata[drag_sum_comp+local_counter] << '\n';
+     NS_sumdata[IQ_DRAG_SUM_COMP+local_counter] << '\n';
     local_counter++;
    }
   }
@@ -2791,7 +2713,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im << 
      " DIR= " << dir << " BODY DRAG " << 
-     NS_sumdata[bodydrag_sum_comp+local_counter] << '\n';
+     NS_sumdata[IQ_BODYDRAG_SUM_COMP+local_counter] << '\n';
     local_counter++;
    }
   }
@@ -2819,7 +2741,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    local_counter=0;
    for (int im=0;im<nmat;im++) {
     for (int dir=0;dir<3;dir++) {
-     Real power=NS_sumdata[drag_sum_comp+local_counter]*(3.0/thick)/1.0E7;
+     Real power=NS_sumdata[IQ_DRAG_SUM_COMP+local_counter]*(3.0/thick)/1.0E7;
      std::cout << "TIME= "<<upper_slab_time<<" im= " << im << 
       " DIR= " << dir << " predicted power loss " << 
       power << '\n';
@@ -2850,8 +2772,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    local_counter=0;
    for (int im=0;im<nmat;im++) {
     for (int dir=0;dir<3;dir++) {
-     Real dragcoeff=NS_sumdata[drag_sum_comp+local_counter];
-     Real pdragcoeff=NS_sumdata[pdrag_sum_comp+local_counter];  
+     Real dragcoeff=NS_sumdata[IQ_DRAG_SUM_COMP+local_counter];
+     Real pdragcoeff=NS_sumdata[IQ_PDRAG_SUM_COMP+local_counter];  
    
      if (dcoef!=0.0) {
       dragcoeff/=dcoef;
@@ -2882,7 +2804,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " PDRAG " << 
-     NS_sumdata[pdrag_sum_comp+local_counter] << '\n';
+     NS_sumdata[IQ_PDRAG_SUM_COMP+local_counter] << '\n';
     local_counter++;
    }
   }
@@ -2892,7 +2814,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " VISCOUSDRAG " << 
-     NS_sumdata[viscousdrag_sum_comp+local_counter] << '\n';
+     NS_sumdata[IQ_VISCOUSDRAG_SUM_COMP+local_counter] << '\n';
     local_counter++;
    }
   }
@@ -2902,7 +2824,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " VISCOUS0DRAG " << 
-     NS_sumdata[viscous0drag_sum_comp+local_counter] << '\n';
+     NS_sumdata[IQ_VISCOUS0DRAG_SUM_COMP+local_counter] << '\n';
     local_counter++;
    }
   }
@@ -2912,7 +2834,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " VISCOELASTICDRAG " << 
-     NS_sumdata[viscodrag_sum_comp+local_counter] << '\n';
+     NS_sumdata[IQ_VISCODRAG_SUM_COMP+local_counter] << '\n';
     local_counter++;
    }
   }
@@ -2922,7 +2844,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " BODYTORQUE " <<
-     NS_sumdata[bodytorque_sum_comp+local_counter] << '\n';
+     NS_sumdata[IQ_BODYTORQUE_SUM_COMP+local_counter] << '\n';
     local_counter++;
    }
   }
@@ -2932,7 +2854,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " TORQUE " <<
-     NS_sumdata[torque_sum_comp+local_counter] << '\n';
+     NS_sumdata[IQ_TORQUE_SUM_COMP+local_counter] << '\n';
     local_counter++;
    }
   }
@@ -2943,7 +2865,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " PTORQUE " <<
-     NS_sumdata[ptorque_sum_comp+local_counter] << '\n';
+     NS_sumdata[IQ_PTORQUE_SUM_COMP+local_counter] << '\n';
     local_counter++;
    }
   }
@@ -2953,7 +2875,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " VISCOUSTORQUE " <<
-     NS_sumdata[viscoustorque_sum_comp+local_counter] << '\n';
+     NS_sumdata[IQ_VISCOUSTORQUE_SUM_COMP+local_counter] << '\n';
     local_counter++;
    }
   }
@@ -2963,7 +2885,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " VISCOUS0TORQUE " <<
-     NS_sumdata[viscous0torque_sum_comp+local_counter] << '\n';
+     NS_sumdata[IQ_VISCOUS0TORQUE_SUM_COMP+local_counter] << '\n';
     local_counter++;
    }
   }
@@ -2973,7 +2895,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " VISCOELASTICTORQUE " <<
-     NS_sumdata[viscotorque_sum_comp+local_counter] << '\n';
+     NS_sumdata[IQ_VISCOTORQUE_SUM_COMP+local_counter] << '\n';
     local_counter++;
    }
   }
@@ -2984,7 +2906,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " STEP_PERIM_VECTOR " <<
-     NS_sumdata[step_perim_vector_sum_comp+local_counter] << '\n';
+     NS_sumdata[IQ_STEP_PERIM_VECTOR_SUM_COMP+local_counter] << '\n';
     local_counter++;
    }
   }
@@ -2993,7 +2915,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   for (int im=0;im<nmat;im++) {
    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
     " STEP_PERIM " <<
-    NS_sumdata[step_perim_sum_comp+im] << '\n';
+    NS_sumdata[IQ_STEP_PERIM_SUM_COMP+im] << '\n';
   }
 
   for (int im=0;im<nmat;im++) {
@@ -3001,16 +2923,16 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
     std::cout << "TIME=" << upper_slab_time << " MAT="<<im<<
      " dir= " << dir << " GLOBAL MIN INT=" << 
-     NS_sumdata[dir+3*im+minint_sum_comp] << '\n';
+     NS_sumdata[dir+3*im+IQ_MININT_SUM_COMP] << '\n';
 
     std::cout << "TIME=" << upper_slab_time << " MAT="<<im<<
      " dir= " << dir << " GLOBAL MAX INT=" << 
-     NS_sumdata[dir+3*im+maxint_sum_comp] << '\n';
+     NS_sumdata[dir+3*im+IQ_MAXINT_SUM_COMP] << '\n';
 
     std::cout << "TIME=" << upper_slab_time << " MAT="<<im<<
      " dir= " << dir << " SEPARATION=" << 
-     NS_sumdata[dir+3*im+maxint_sum_comp]-
-     NS_sumdata[dir+3*im+minint_sum_comp] << '\n';
+     NS_sumdata[dir+3*im+IQ_MAXINT_SUM_COMP]-
+     NS_sumdata[dir+3*im+IQ_MININT_SUM_COMP] << '\n';
 
    }  // dir
 
@@ -3034,7 +2956,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    offset=zblob;
 
   std::cout << "TIME=" << upper_slab_time << " FREE AMPLITUDE=" <<
-      NS_sumdata[xnot_amp_sum_comp]-offset << '\n';
+      NS_sumdata[IQ_XNOT_AMP_SUM_COMP]-offset << '\n';
 
   std::cout << "TIME= " << upper_slab_time << " MINPRES=  " << minpres << '\n';
   std::cout << "TIME= " << upper_slab_time << " MAXPRES=  " << maxpres << '\n';
@@ -3060,7 +2982,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
    // bubble jetting problem
   if (probtype==42) {
-   Real bubble_volume=NS_sumdata[FE_sum_comp+2];
+   Real bubble_volume=NS_sumdata[IQ_FE_SUM_COMP+2];
    Real radbubble=exp(log(3.0*bubble_volume/(4.0*NS_PI))/3.0);
    std::cout << "TIME= " << upper_slab_time << " JETTINGVOL=  " << 
     radbubble << '\n';
@@ -3070,7 +2992,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    // pi r^2/4=F
    // r=sqrt(4F/pi)
   if ((probtype==801)&&(axis_dir==3)) {
-   Real bubble_volume=NS_sumdata[FE_sum_comp+2];
+   Real bubble_volume=NS_sumdata[IQ_FE_SUM_COMP+2];
    Real radbubble=0.0;
    if (rz_flag==0) {
     radbubble=sqrt(4.0*bubble_volume/NS_PI);
@@ -3091,7 +3013,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
       ((axis_dir==6)||    // incompressible boiling
        (axis_dir==7))) {  // compressible boiling
 
-   Real bubble_volume=NS_sumdata[FE_sum_comp+2];
+   Real bubble_volume=NS_sumdata[IQ_FE_SUM_COMP+2];
    Real radbubble=0.0;
 
    if (AMREX_SPACEDIM==2) {

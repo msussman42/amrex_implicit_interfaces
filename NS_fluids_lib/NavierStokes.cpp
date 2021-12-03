@@ -517,6 +517,7 @@ int  NavierStokes::num_materials=0;
 int  NavierStokes::use_supermesh=0;
 int  NavierStokes::ncomp_sum_int_user1=0;
 int  NavierStokes::ncomp_sum_int_user2=0;
+int  NavierStokes::ncomp_sum_int_user12=0;
 
 // set using elastic_viscosity, and other criteria
 int  NavierStokes::num_materials_viscoelastic=0;
@@ -2311,6 +2312,8 @@ NavierStokes::read_params ()
     } else
      amrex::Error("ncomp_sum_int_user2 invalid");
 
+    ncomp_sum_int_user12=ncomp_sum_int_user1+ncomp_sum_int_user2;
+
     BLB_MATRIX=0;
     BLB_RHS=BLB_MATRIX+3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM);
     BLB_VEL=BLB_RHS+3*(2*AMREX_SPACEDIM);
@@ -2444,6 +2447,8 @@ NavierStokes::read_params ()
        ncomp_sum_int_user1 << '\n';
      std::cout << "ncomp_sum_int_user2 " << 
        ncomp_sum_int_user2 << '\n';
+     std::cout << "ncomp_sum_int_user12 " << 
+       ncomp_sum_int_user12 << '\n';
      std::cout << "tecplot_max_level " << 
        tecplot_max_level << '\n';
      std::cout << "max_level_for_use " << 
@@ -18185,6 +18190,7 @@ void NavierStokes::levelCombine(
 } // subroutine levelCombine
 
 void NavierStokes::volWgtSum(
+		FIX ME
   Vector<Real>& result,
   Vector<int>& sumdata_type,
   Vector<int>& sumdata_sweep,
@@ -18204,6 +18210,8 @@ void NavierStokes::volWgtSum(
  int nmat=num_materials;
  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
 
+
+ FIX ME
   // 0 empty
   // F,E  2 x nmat
   //

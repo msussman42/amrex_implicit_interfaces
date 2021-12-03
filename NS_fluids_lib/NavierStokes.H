@@ -2168,6 +2168,7 @@ protected:
     static int use_supermesh; //def=0
     static int ncomp_sum_int_user1; //def=0
     static int ncomp_sum_int_user2; //def=0
+    static int ncomp_sum_int_user12; //def=0
 
      // this is set according to store_elastic_data
     static int num_materials_viscoelastic;
