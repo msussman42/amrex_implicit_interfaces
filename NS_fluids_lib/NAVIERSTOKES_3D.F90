@@ -6528,6 +6528,7 @@ END SUBROUTINE SIMP
 
       INTEGER_T, intent(in) :: ncomp_sum_int_user1
       INTEGER_T, intent(in) :: ncomp_sum_int_user2
+      INTEGER_T :: ncomp_sum_int_user12
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -6702,6 +6703,8 @@ END SUBROUTINE SIMP
       REAL_T local_user_out1(ncomp_sum_int_user1+1)
       REAL_T local_user_out2(ncomp_sum_int_user2+1)
 
+      ncomp_sum_int_user12=ncomp_sum_int_user1+ncomp_sum_int_user2
+
       nhalf=3
       nmax=POLYGON_LIST_MAX  ! in: fort_summass
 
@@ -6803,8 +6806,7 @@ END SUBROUTINE SIMP
       energy_moment=vel_error+1
       enstrophy=energy_moment+1 ! integral of w dot w
       user_comp=enstrophy+nmat
-      species_mass_comp=user_comp+ncomp_sum_int_user1+ &
-              ncomp_sum_int_user2
+      species_mass_comp=user_comp+ncomp_sum_int_user12
       total_comp=species_mass_comp+num_species_var*nmat
 
       if (resultsize.ne.total_comp) then
@@ -6867,6 +6869,7 @@ END SUBROUTINE SIMP
 
       GRID_DATA_PARM%ncomp_sum_int_user1=ncomp_sum_int_user1
       GRID_DATA_PARM%ncomp_sum_int_user2=ncomp_sum_int_user2
+      GRID_DATA_PARM%ncomp_sum_int_user12=ncomp_sum_int_user12
       GRID_DATA_PARM%time=time
       GRID_DATA_PARM%problo=>problo
       GRID_DATA_PARM%probhi=>probhi
