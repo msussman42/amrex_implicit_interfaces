@@ -498,7 +498,7 @@ public:
     void process_potential_force_face();
     void init_gravity_potential();
 
-    void GetDrag(Vector<Real>& integrated_quantities,int isweep);
+    void GetDrag(int isweep);
 
     void process_recalesce_dataALL(
      Vector<int> recalesce_material,
@@ -525,8 +525,7 @@ public:
     void volWgtSumALL(
      int post_init_flag,
      Vector<Real>& ZZ,Vector<Real>& FF,
-     int dirx,int diry,int cut_flag,
-     int isweep);
+     int dirx,int diry,int cut_flag);
 
     void zap_resid_where_singular(int index_MF);
 
@@ -2404,6 +2403,7 @@ protected:
     static int vofface_index;
     static int ncphys;
 
+    static Vector<Real> NS_drag_integrated_quantities;
     static Vector<Real> NS_sumdata;
     static Vector<int> NS_sumdata_type;
     static Vector<int> NS_sumdata_sweep;

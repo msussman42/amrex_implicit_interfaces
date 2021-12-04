@@ -327,6 +327,7 @@ Real NavierStokes::init_shrink  = 1.0;
 Real NavierStokes::change_max   = 1.1;
 Real NavierStokes::change_max_init = 1.1;
 
+Vector<Real> NavierStokes::NS_drag_integrated_quantities; 
 Vector<Real> NavierStokes::NS_sumdata; 
 Vector<int> NavierStokes::NS_sumdata_type; 
 Vector<int> NavierStokes::NS_sumdata_sweep; 
@@ -2226,6 +2227,11 @@ NavierStokes::read_geometry ()
 void
 NavierStokes::setup_integrated_quantities() {
 
+ NS_drag_integrated_quantities.resize(N_DRAG); 
+ for (int iq=0;iq<N_DRAG;iq++) {
+  NS_drag_integrated_quantities[iq]=0.0;
+ }
+
  NS_sumdata.resize(IQ_TOTAL_SUM_COMP);
  NS_sumdata_type.resize(IQ_TOTAL_SUM_COMP);
  NS_sumdata_sweep.resize(IQ_TOTAL_SUM_COMP);
@@ -2248,23 +2254,23 @@ NavierStokes::setup_integrated_quantities() {
  NS_sumdata_type[IQ_VEL_ERROR_SUM_COMP]=3;   // reduce real max (-1.0E+6)
 
  for (int idir=0;idir<3;idir++) {
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    NS_sumdata_type[idir+IQ_MININT_SUM_COMP+3*im]=2; // reduce real min (1.0E+6)
    NS_sumdata_type[idir+IQ_MAXINT_SUM_COMP+3*im]=3; // reduce real max (-1.0E+6)
   }
  }
- for (int im=0;im<nmat;im++) {
+ for (int im=0;im<num_materials;im++) {
   NS_sumdata_type[IQ_MININT_SLICE_SUM_COMP+im]=2; // reduce real min (1.0E+6)
   NS_sumdata_type[IQ_MAXINT_SLICE_SUM_COMP+im]=3; // reduce real max (-1.0E+6)
  }
- for (int idir=0;idir<2*nmat;idir++) {
+ for (int idir=0;idir<2*num_materials;idir++) {
   NS_sumdata_type[idir+IQ_MINSTATE_SUM_COMP]=2;  // reduce real min
   NS_sumdata_type[idir+IQ_MAXSTATE_SUM_COMP]=3;  // reduce real max
  }
 
  NS_sumdata_type[IQ_XNOT_AMP_SUM_COMP]=3;  // x=0 amplitude  material 1
 
- for (int idir=0;idir<nmat;idir++) {
+ for (int idir=0;idir<num_materials;idir++) {
   NS_sumdata_type[idir+IQ_MINCEN_SUM_COMP]=2;  // min dist from centroid
   NS_sumdata_type[idir+IQ_MAXCEN_SUM_COMP]=3;  // max dist from centroid
   NS_sumdata_sweep[idir+IQ_MINCEN_SUM_COMP]=1;  
@@ -16969,7 +16975,7 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
 // sweep=0: integral (rho x), integral (rho) 
 // sweep=1: find force, torque, moments of inertia, center of mass,mass
 void
-NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
+NavierStokes::GetDrag(int isweep) {
 
  int bfact=parent->Space_blockingFactor(level);
 
@@ -17048,8 +17054,8 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
- if (integrated_quantities.size()!=N_DRAG)
-  amrex::Error("integrated_quantities invalid size");
+ if (NS_drag_integrated_quantities.size()!=N_DRAG)
+  amrex::Error("NS_drag_integrated_quantities invalid size");
  
  Vector< Vector<Real> > local_integrated_quantities;
  local_integrated_quantities.resize(thread_class::nthreads);
@@ -17213,7 +17219,7 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
    // fort_getdrag is declared in: DERIVE_3D.F90
   fort_getdrag(
    &isweep,
-   integrated_quantities.dataPtr(),
+   NS_drag_integrated_quantities.dataPtr(),
    local_integrated_quantities[tid_current].dataPtr(),
    &gravity_normalized,
    &gravity_dir,
@@ -17284,7 +17290,7 @@ NavierStokes::GetDrag(Vector<Real>& integrated_quantities,int isweep) {
 
  for (int iq=iqstart;iq<iqend;iq++) {
   ParallelDescriptor::ReduceRealSum(local_integrated_quantities[0][iq]);
-  integrated_quantities[iq]+=local_integrated_quantities[0][iq];
+  NS_drag_integrated_quantities[iq]+=local_integrated_quantities[0][iq];
  }
 
  project_option_combine=3; // velocity in GetDrag
@@ -20950,8 +20956,7 @@ void
 NavierStokes::volWgtSumALL(
  int post_init_flag,
  Vector<Real>& ZZ,Vector<Real>& FF,
- int dirx,int diry,int cut_flag,
- int isweep) {
+ int dirx,int diry,int cut_flag) {
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
@@ -20997,9 +21002,6 @@ NavierStokes::volWgtSumALL(
  }
  allocate_array(ngrow_distance,N_DRAG,-1,DRAG_MF);
 
- Vector<Real> integrated_quantities;
- integrated_quantities.resize(N_DRAG); 
-
 // GetDragALL section------------------------------------------
 //
 // compute (-pI+2\mu D)dot n_solid for cut cells.
@@ -21015,11 +21017,7 @@ NavierStokes::volWgtSumALL(
 // r_axis=(x-x_{COM})_{axis}  y_axis=y-(y dot e_axis)e_axis
 // torque_axis=integral r_axis x (div sigma + rho g)=
 //   integral_boundary r_axis x sigma dot n + integral r_axis x rho g
-// integrated_quantities: see <DRAG_COMP.H>
-
- for (int iq=0;iq<N_DRAG;iq++) {
-  integrated_quantities[iq]=0.0;
- }
+// NS_drag_integrated_quantities: see <DRAG_COMP.H>
 
  allocate_levelsetLO_ALL(2,LEVELPC_MF);
 
@@ -21097,7 +21095,7 @@ NavierStokes::volWgtSumALL(
  for (int isweep_drag=0;isweep_drag<2;isweep_drag++) {
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
-   ns_level.GetDrag(integrated_quantities,isweep_drag);
+   ns_level.GetDrag(isweep_drag);
   }
  }
 
@@ -21141,15 +21139,15 @@ NavierStokes::volWgtSumALL(
      //do nothing
     }
      
-    std::cout << "GetDrag  iq= " << iq << " integrated_quantities= " <<
-     integrated_quantities[iq] << '\n';
+    std::cout << "GetDrag  iq= " << iq << " NS_drag_integrated_quantities= " <<
+     NS_drag_integrated_quantities[iq] << '\n';
    }
    for (int im=0;im<num_materials;im++) {
-    Real mass=integrated_quantities[DRAGCOMP_MASS+im];
+    Real mass=NS_drag_integrated_quantities[DRAGCOMP_MASS+im];
     if (mass>0.0) {
      for (int idir=0;idir<3;idir++) {
       std::cout << "COM im,idir= " << im << ' ' << idir << " COM= " <<
-        integrated_quantities[DRAGCOMP_COM+im*3+idir]/mass << '\n';
+        NS_drag_integrated_quantities[DRAGCOMP_COM+im*3+idir]/mass << '\n';
      } //idir=0,1,2
     } //mass>0.0
 
@@ -21159,15 +21157,36 @@ NavierStokes::volWgtSumALL(
 
 // END GetDragALL section------------------------------------------
 
- for (int ilev = 0; ilev <= finest_level; ilev++) {
+ for (int isweep=0;isweep<2;isweep++) {
 
-  NavierStokes& ns_level = getLevel(ilev);
-  ns_level.volWgtSum(
+  for (int ilev = 0; ilev <= finest_level; ilev++) {
+
+   NavierStokes& ns_level = getLevel(ilev);
+   ns_level.volWgtSum(
     ZZ,FF,
     dirx,diry,cut_flag,
     isweep);
 
- }  // ilev 
+  }  // ilev=0..finest_level 
+
+  if (isweep==0) {
+
+   for (int im=0;im<nmat;im++) {
+    Real volmat=NS_sumdata[IQ_FE_SUM_COMP+2*im];
+    Real LSvolmat=NS_sumdata[IQ_LS_F_SUM_COMP+im];
+    if (volmat>0.0) {
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+      NS_sumdata[3*im+IQ_CEN_SUM_COMP+dir]=
+	      NS_sumdata[3*im+IQ_CEN_SUM_COMP+dir]/volmat;
+    }
+    if (LSvolmat>0.0) {
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+      NS_sumdata[3*im+IQ_LS_CEN_SUM_COMP+dir]=
+       NS_sumdata[3*im+IQ_LS_CEN_SUM_COMP+dir]/LSvolmat;
+    }
+   } // im=0..nmat-1
+  }  // isweep=0
+ } //for (int isweep=0;isweep<2;isweep++) 
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
