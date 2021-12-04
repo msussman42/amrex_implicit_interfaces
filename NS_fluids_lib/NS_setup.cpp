@@ -2048,66 +2048,12 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
  int local_counter=0;
 
- NS_sumdata.resize(IQ_TOTAL_SUM_COMP);
- NS_sumdata_type.resize(IQ_TOTAL_SUM_COMP);
- NS_sumdata_sweep.resize(IQ_TOTAL_SUM_COMP);
+ setup_integrated_quantities();
 
  Vector<Real> F_MAT;
  Vector<Real> MASS_MAT;
  F_MAT.resize(nmat);
  MASS_MAT.resize(nmat);
-
- for (int isum=0;isum<IQ_TOTAL_SUM_COMP;isum++) {
-  NS_sumdata[isum]=0.0;
-  NS_sumdata_type[isum]=1;  // reduce real sum
-  NS_sumdata_sweep[isum]=0;  // update first sweep
- }
- for (int im=0;im<ncomp_sum_int_user1;im++) {
-  NS_sumdata_sweep[IQ_USER_SUM_COMP+im]=0; //update 1st sweep
- }
- for (int im=0;im<ncomp_sum_int_user2;im++) {
-   //update 2nd sweep
-  NS_sumdata_sweep[IQ_USER_SUM_COMP+ncomp_sum_int_user1+im]=1; 
- }
-
- NS_sumdata_type[IQ_VORT_ERROR_SUM_COMP]=3;  // reduce real max (-1.0E+6)
- NS_sumdata_type[IQ_VEL_ERROR_SUM_COMP]=3;   // reduce real max (-1.0E+6)
-
- for (int idir=0;idir<3;idir++) {
-  for (int im=0;im<nmat;im++) {
-   NS_sumdata_type[idir+IQ_MININT_SUM_COMP+3*im]=2; // reduce real min (1.0E+6)
-   NS_sumdata_type[idir+IQ_MAXINT_SUM_COMP+3*im]=3; // reduce real max (-1.0E+6)
-  }
- }
- for (int im=0;im<nmat;im++) {
-  NS_sumdata_type[IQ_MININT_SLICE_SUM_COMP+im]=2; // reduce real min (1.0E+6)
-  NS_sumdata_type[IQ_MAXINT_SLICE_SUM_COMP+im]=3; // reduce real max (-1.0E+6)
- }
- for (int idir=0;idir<2*nmat;idir++) {
-  NS_sumdata_type[idir+IQ_MINSTATE_SUM_COMP]=2;  // reduce real min
-  NS_sumdata_type[idir+IQ_MAXSTATE_SUM_COMP]=3;  // reduce real max
- }
-
- NS_sumdata_type[IQ_XNOT_AMP_SUM_COMP]=3;  // x=0 amplitude  material 1
-
- for (int idir=0;idir<nmat;idir++) {
-  NS_sumdata_type[idir+IQ_MINCEN_SUM_COMP]=2;  // min dist from centroid
-  NS_sumdata_type[idir+IQ_MAXCEN_SUM_COMP]=3;  // max dist from centroid
-  NS_sumdata_sweep[idir+IQ_MINCEN_SUM_COMP]=1;  
-  NS_sumdata_sweep[idir+IQ_MAXCEN_SUM_COMP]=1; 
- }
-
- for (int isum=0;isum<IQ_TOTAL_SUM_COMP;isum++) {
-  NS_sumdata[isum]=0.0;
-  if (NS_sumdata_type[isum]==2) // min
-   NS_sumdata[isum]=1.0E+6;
-  else if (NS_sumdata_type[isum]==3)  // max
-   NS_sumdata[isum]=-1.0E+6;
-  else if (NS_sumdata_type[isum]==1)
-   NS_sumdata[isum]=0.0;
-  else
-   amrex::Error("sumdata_type invalid");
- } // isum
 
  int dirx=AMREX_SPACEDIM-1;
  int diry=0;

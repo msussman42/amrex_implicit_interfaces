@@ -861,6 +861,8 @@ protected:
     void zero_independent_variable(int project_option,int nsolve); 
     void zero_independent_vel(int project_option,int idx,int nsolve); 
 
+    static void setup_integrated_quantities ();
+
     static void read_params ();   // Read input file
     static void read_geometry (); // Set metrics
 
