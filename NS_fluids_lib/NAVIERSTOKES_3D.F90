@@ -10275,8 +10275,8 @@ END SUBROUTINE SIMP
        fdomhi, &
        Z_dir, & !0..sdim-1
        R_dir, & !0..sdim-1 
-       num_cells,
-       coflow_Z,
+       num_cells, &
+       coflow_Z, &
        coflow_R_of_Z) &
       bind(c,name='fort_coflow')
 

@@ -152,8 +152,8 @@ extern "C" {
 
     void fort_coflow(
      Real* time,
-     int* fdomlo,
-     int* fdomhi,
+     const int* fdomlo,
+     const int* fdomhi,
      int* Z_dir,  //0..sdim-1
      int* R_dir,  //0..sdim-1
      int* num_cells,
