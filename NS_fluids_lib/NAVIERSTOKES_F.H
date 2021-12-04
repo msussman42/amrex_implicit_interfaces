@@ -7,7 +7,6 @@
 
 #ifdef BL_LANG_FORT
 #    define FORT_PRESSURE_INDICATOR pressure_indicator
-#    define FORT_COFLOW coflow
 #    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
 #    define FORT_FLUIDSOLIDCOR    fluidsolidcor
@@ -25,7 +24,6 @@
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_PRESSURE_INDICATOR PRESSURE_INDICATOR
-#    define FORT_COFLOW COFLOW
 #    define FORT_ZALESAK_CELL ZALESAK_CELL
 #    define FORT_EDGEAVGDOWN EDGEAVGDOWN
 #    define FORT_VOFFLUX_CORRECT VOFFLUX_CORRECT
@@ -44,7 +42,6 @@
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_PRESSURE_INDICATOR pressure_indicator
-#    define FORT_COFLOW coflow
 #    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
 #    define FORT_FLUIDSOLIDCOR    fluidsolidcor
@@ -61,7 +58,6 @@
 #    define FORT_METRICS metrics
 #  else
 #    define FORT_PRESSURE_INDICATOR pressure_indicator_
-#    define FORT_COFLOW coflow_
 #    define FORT_ZALESAK_CELL zalesak_cell_
 #    define FORT_EDGEAVGDOWN edgeavgdown_
 #    define FORT_FLUIDSOLIDCOR    fluidsolidcor_
@@ -154,9 +150,15 @@ extern "C" {
      int* finest_level,
      int* nmat);
 
-    void FORT_COFLOW(
-     Real* time,int* js,int* je,int* NN,Real* ZZ,Real* FF,
-     int* dirx,int* diry,int* cut_flag);
+    void fort_coflow(
+     Real* time,
+     int* fdomlo,
+     int* fdomhi,
+     int* Z_dir,  //0..sdim-1
+     int* R_dir,  //0..sdim-1
+     int* num_cells,
+     Real* coflow_Z, 
+     Real* coflow_R_of_Z);
 
     void fort_cellgrid(
      int* tid,
@@ -555,8 +557,11 @@ extern "C" {
      int* sumdata_type,
      int* sumdata_sweep,
      int* resultsize,
-     int* NN,Real* ZZ,Real* FF,
-     int* dirx,int* diry,int* cut_flag,
+     int* num_cells,
+     Real* local_coflow_Z,
+     Real* local_coflow_R_of_Z,
+     int* Z_dir,
+     int* R_dir,
      int* nmat,
      int* ntensor,
      int* den_Ncomp,

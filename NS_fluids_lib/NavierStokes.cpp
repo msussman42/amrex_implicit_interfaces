@@ -327,6 +327,9 @@ Real NavierStokes::init_shrink  = 1.0;
 Real NavierStokes::change_max   = 1.1;
 Real NavierStokes::change_max_init = 1.1;
 
+Vector<Real> NavierStokes::NS_coflow_Z; 
+Vector<Real> NavierStokes::NS_coflow_R_of_Z; 
+
 Vector<Real> NavierStokes::NS_drag_integrated_quantities; 
 Vector<Real> NavierStokes::NS_sumdata; 
 Vector<int> NavierStokes::NS_sumdata_type; 
@@ -6745,7 +6748,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   int dealloc_history=0;
-  ns_level.init_FSI_GHOST_MAC_MF(dealloc_history);
+  ns_level.init_FSI_GHOST_MAC_MF(caller_id,dealloc_history);
  } // ilev=level...finest_level
 
   // GNBC DEBUGGING
@@ -6840,9 +6843,27 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
 // initialize Fluid Structure Interaction Ghost Multifab
 // multifab = multiple fortran array blocks.
 // called from:
-//  NavierStokes::init_FSI_GHOST_MAC_MF_ALL
-//  NavierStokes::initData ()
-void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
+//  NavierStokes::init_FSI_GHOST_MAC_MF_ALL (caller_id passed through)
+//  NavierStokes::initData ()  (caller_id=40)
+//
+// called from:
+//  NavierStokes::prescribe_solid_geometryALL (if correcting solid state)
+//    (caller_id=31,32,33,34,35,36,37)
+//
+//  NavierStokes::do_the_advance (begin of divu_outer_sweeps loop)
+//    (caller_id=4)
+//
+//  NavierStokes::do_the_advance (prior to viscous diffusion)
+//    (caller_id=4)
+//
+//  NavierStokes::MaxAdvectSpeedALL (caller_id=1)
+//
+//  NavierStokes::sum_integrated_quantities
+//    (caller_id==5)
+//
+//  NavierStokes::prepare_post_process (caller_id=2)
+//
+void NavierStokes::init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history) {
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
@@ -18264,15 +18285,13 @@ void NavierStokes::levelCombine(
 
 } // subroutine levelCombine
 
-void NavierStokes::volWgtSum(
-  Vector<Real>& ZZ,Vector<Real>& FF,
-  int dirx,int diry,int cut_flag,
-  int isweep) {
-
+void NavierStokes::volWgtSum(int isweep) {
  
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
+ NavierStokes& ns_fine = getLevel(finest_level);
+
  if ((level<=finest_level)&&(level>=0)) {
   // do nothing
  } else
@@ -18364,18 +18383,40 @@ void NavierStokes::volWgtSum(
  int resultsize=NS_sumdata.size();
  if (resultsize!=IQ_TOTAL_SUM_COMP)
   amrex::Error("resultsize invalid");
+ int num_cells=0;
+ int Z_dir=-1;
+ int R_dir=-1;
+ const Box& fdomain = ns_fine.geom.Domain();
+ const int* fdomlo = fdomain.loVect();
+ const int* fdomhi = fdomain.hiVect();
 
- int NN=ZZ.size()-1;
- if (NN!=FF.size()-1)
-  amrex::Error("FF and ZZ fail size sanity check");
+ fort_coflow(
+  &upper_slab_time, &
+  fdomlo,
+  fdomhi,
+  &Z_dir,
+  &R_dir,
+  &num_cells,
+  coflow_Z.dataPtr(),
+  coflow_R_of_Z.dataPtr());
+
+ if (num_cells+1==coflow_Z.size()) {
+  // do nothing
+ } else
+  amrex::Error("coflow_Z.size() invalid");
+
+ if (num_cells+1==coflow_R_of_Z.size()) {
+  // do nothing
+ } else
+  amrex::Error("coflow_R_of_Z.size() invalid");
 
  Vector< Vector<Real> > local_result;
- Vector< Vector<Real> > local_ZZ;
- Vector< Vector<Real> > local_FF;
+ Vector< Vector<Real> > local_coflow_Z;
+ Vector< Vector<Real> > local_coflow_R_of_Z;
 
  local_result.resize(thread_class::nthreads);
- local_ZZ.resize(thread_class::nthreads);
- local_FF.resize(thread_class::nthreads);
+ local_coflow_Z.resize(thread_class::nthreads);
+ local_coflow_R_of_Z.resize(thread_class::nthreads);
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   local_result[tid].resize(resultsize);
@@ -18392,11 +18433,11 @@ void NavierStokes::volWgtSum(
     amrex::Error("NS_sumdata_type invalid");
   } // isum
 
-  local_ZZ[tid].resize(NN+1);
-  local_FF[tid].resize(NN+1);
-  for (int iz=0;iz<=NN;iz++) {
-   local_ZZ[tid][iz]=0.0;
-   local_FF[tid][iz]=0.0;
+  local_coflow_Z[tid].resize(num_cells+1);
+  local_coflow_R_of_Z[tid].resize(num_cells+1);
+  for (int iz=0;iz<=num_cells;iz++) {
+   local_coflow_Z[tid][iz]=0.0;
+   local_coflow_R_of_Z[tid][iz]=0.0;
   }
  }  // tid
 
@@ -18484,10 +18525,11 @@ void NavierStokes::volWgtSum(
     NS_sumdata_type.dataPtr(),
     NS_sumdata_sweep.dataPtr(),
     &resultsize,
-    &NN,
-    local_ZZ[tid_current].dataPtr(),
-    local_FF[tid_current].dataPtr(),
-    &dirx,&diry,&cut_flag,
+    &num_cells,
+    local_coflow_Z[tid_current].dataPtr(),
+    local_coflow_R_of_Z[tid_current].dataPtr(),
+    &Z_dir,
+    &R_dir,
     &nmat,
     &ntensor,
     &den_ncomp,
@@ -18525,11 +18567,13 @@ void NavierStokes::volWgtSum(
   } // idest
  
   if (isweep==0) { 
-   for (int iz=0;iz<=NN;iz++) {
-    if (local_ZZ[tid][iz]>local_ZZ[0][iz])
-     local_ZZ[0][iz]=local_ZZ[tid][iz];
-    if (local_FF[tid][iz]>local_FF[0][iz])
-     local_FF[0][iz]=local_FF[tid][iz];
+   for (int iz=0;iz<=num_cells;iz++) {
+
+    if (local_coflow_Z[tid][iz]>local_coflow_Z[0][iz])
+     local_coflow_Z[0][iz]=local_coflow_Z[tid][iz];
+
+    if (local_coflow_R_of_Z[tid][iz]>local_coflow_R_of_Z[0][iz])
+     local_coflow_R_of_Z[0][iz]=local_coflow_R_of_Z[tid][iz];
    } // iz
   }  // isweep==0
  } // tid
@@ -18589,13 +18633,15 @@ void NavierStokes::volWgtSum(
  } // idest
  
  if (isweep==0) { 
-  for (int iz=0;iz<=NN;iz++) {
-   ParallelDescriptor::ReduceRealMax(local_ZZ[0][iz]);
-   ParallelDescriptor::ReduceRealMax(local_FF[0][iz]);
-   if (local_ZZ[0][iz]>ZZ[iz])
-    ZZ[iz]=local_ZZ[0][iz];
-   if (local_FF[0][iz]>FF[iz])
-    FF[iz]=local_FF[0][iz];
+  for (int iz=0;iz<=num_cells;iz++) {
+   ParallelDescriptor::ReduceRealMax(local_coflow_Z[0][iz]);
+   ParallelDescriptor::ReduceRealMax(local_coflow_R_of_Z[0][iz]);
+
+   if (local_coflow_Z[0][iz]>local_coflow_Z[iz])
+    local_coflow_Z[iz]=local_coflow_Z[0][iz];
+
+   if (local_coflow_R_of_Z[0][iz]>local_coflow_R_of_Z[iz])
+    local_coflow_R_of_Z[iz]=local_coflow_R_of_Z[0][iz];
   }
  }  // isweep==0
 
@@ -20953,13 +20999,11 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
 // post_init_flag==1  if sum_integrated_quantities called from post_init
 // post_init_flag==2  if sum_integrated_quantities called from post_restart
 void
-NavierStokes::volWgtSumALL(
- int post_init_flag,
- Vector<Real>& ZZ,Vector<Real>& FF,
- int dirx,int diry,int cut_flag) {
+NavierStokes::volWgtSumALL(int post_init_flag) {
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
+ NavierStokes& ns_fine = getLevel(finest_level);
 
  if (level!=0)
   amrex::Error("it is required that level=0 in volWgtSumALL");
@@ -21157,15 +21201,38 @@ NavierStokes::volWgtSumALL(
 
 // END GetDragALL section------------------------------------------
 
+ int num_cells=0;
+ int Z_dir=-1;
+ int R_dir=-1;
+ const Box& fdomain = ns_fine.geom.Domain();
+ const int* fdomlo = fdomain.loVect();
+ const int* fdomhi = fdomain.hiVect();
+ coflow_Z.resize(num_cells+1);
+ coflow_R_of_Z.resize(num_cells+1);
+
+ fort_coflow(
+  &upper_slab_time, &
+  fdomlo,
+  fdomhi,
+  &Z_dir,
+  &R_dir,
+  &num_cells,
+  coflow_Z.dataPtr(),
+  coflow_R_of_Z.dataPtr());
+
+ coflow_Z.resize(num_cells+1);
+ coflow_R_of_Z.resize(num_cells+1);
+ for (int jfine=0;jfine<=num_cells;jfine++) {
+  coflow_Z[jfine]=0.0;
+  coflow_R_of_Z[jfine]=0.0;
+ }
+
  for (int isweep=0;isweep<2;isweep++) {
 
   for (int ilev = 0; ilev <= finest_level; ilev++) {
 
    NavierStokes& ns_level = getLevel(ilev);
-   ns_level.volWgtSum(
-    ZZ,FF,
-    dirx,diry,cut_flag,
-    isweep);
+   ns_level.volWgtSum(isweep);
 
   }  // ilev=0..finest_level 
 
@@ -21187,6 +21254,23 @@ NavierStokes::volWgtSumALL(
    } // im=0..nmat-1
   }  // isweep=0
  } //for (int isweep=0;isweep<2;isweep++) 
+
+ if (num_cells>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   fort_coflow(
+    &upper_slab_time, &
+    fdomlo,
+    fdomhi,
+    &Z_dir,
+    &R_dir,
+    &num_cells,
+    coflow_Z.dataPtr(),
+    coflow_R_of_Z.dataPtr());
+  }
+ } else if (num_cells==0) {
+  // do nothing
+ } else
+  amrex::Error("num_cells invalid");
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
