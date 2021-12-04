@@ -6511,8 +6511,11 @@ END SUBROUTINE SIMP
         sumdata_type, &
         sumdata_sweep, &
         resultsize, &
-        NN,ZZ,FF, &
-        dirx,diry,cut_flag, &
+        num_cells, &
+        coflow_Z, &
+        coflow_R_of_Z, &
+        Z_dir, &
+        R_dir, &
         nmat, &
         ntensor,  &
         den_ncomp, &
@@ -6542,9 +6545,9 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ntensor
       INTEGER_T, intent(in) :: isweep  ! isweep=0 or 1
-      INTEGER_T, intent(in) :: NN,dirx,diry,cut_flag
-      REAL_T, intent(out) :: ZZ(0:NN)
-      REAL_T, intent(out) :: FF(0:NN)
+      INTEGER_T, intent(in) :: num_cells,Z_dir,R_dir
+      REAL_T, intent(out) :: coflow_Z(0:num_cells)
+      REAL_T, intent(out) :: coflow_R_of_Z(0:num_cells)
 
       REAL_T, intent(in), target :: problo(SDIM)
       REAL_T, intent(in), target :: probhi(SDIM)
@@ -6701,16 +6704,12 @@ END SUBROUTINE SIMP
        print *,"ntensor invalid"
        stop
       endif
-      if ((dirx.lt.0).or.(dirx.ge.SDIM)) then
-       print *,"dirx invalid"
+      if ((Z_dir.lt.0).or.(Z_dir.ge.SDIM)) then
+       print *,"Z_dir invalid"
        stop
       endif
-      if ((diry.lt.0).or.(diry.ge.SDIM).or.(diry.eq.dirx)) then
-       print *,"diry invalid"
-       stop
-      endif
-      if ((cut_flag.ne.0).and.(cut_flag.ne.1)) then
-       print *,"cut_flag invalid"
+      if ((R_dir.lt.0).or.(R_dir.ge.SDIM).or.(R_dir.eq.Z_dir)) then
+       print *,"R_dir invalid"
        stop
       endif
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
@@ -7438,13 +7437,13 @@ END SUBROUTINE SIMP
       enddo
       enddo  ! i,j,k
 
-       ! cut_flag is a parameter
-      if (cut_flag.eq.1) then
+       ! num_cells is a parameter.
+      if (num_cells.gt.0) then
 
        if (SDIM.eq.2) then
 
          ! r=h(z)
-        if ((dirx.eq.SDIM-1).and.(diry.eq.0)) then
+        if ((Z_dir.eq.SDIM-1).and.(R_dir.eq.0)) then
        
          k=0 
          do j = growlo(2),growhi(2)+1
@@ -7455,7 +7454,7 @@ END SUBROUTINE SIMP
               (mask(D_DECL(i+1,j-1,k)).gt.zero).and. &
               (mask(D_DECL(i-1,j,k)).gt.zero).and. &
               (mask(D_DECL(i-1,j-1,k)).gt.zero)) then
-           dir=diry+1  !diry=0 r=h(z)  dir=1
+           dir=R_dir+1  !R_dir=0 r=h(z)  dir=1
            im=1
 
            do iside=0,1
@@ -7463,7 +7462,7 @@ END SUBROUTINE SIMP
             call gridstenMAC(xstenMAC,xlo,i,j,k,fablo,bfact,dx,nhalf, &
                     dirMAC,14)
 
-            xcen=xstenMAC(0,dir) ! diry=0  dir=diry+1=1
+            xcen=xstenMAC(0,dir) ! R_dir=0  dir=R_dir+1=1
 
             if (iside.eq.0) then
              xbottom=xstenMAC(-2,dir)
@@ -7485,18 +7484,18 @@ END SUBROUTINE SIMP
             endif
 
              ! coordinate along streamwise direction starts at 0
-             ! dirx=sdim-1
+             ! Z_dir=sdim-1
              ! dirMAC=1
              ! r=h(z)
-            ZZgrid=xstenMAC(0,dirx+1)-problo(dirx+1)
-            dz_external=(probhi(dirx+1)-problo(dirx+1))/NN
+            ZZgrid=xstenMAC(0,Z_dir+1)-problo(Z_dir+1)
+            dz_external=(probhi(Z_dir+1)-problo(Z_dir+1))/num_cells
              ! j_external * dz_external = ZZgrid
             j_external=NINT(ZZgrid/dz_external)  ! round to nearest whole int. 
-            if ((j_external.lt.0).or.(j_external.gt.NN)) then
+            if ((j_external.lt.0).or.(j_external.gt.num_cells)) then
              print *,"j_external invalid"
              stop
             endif
-            ZZ(j_external)=j_external*dz_external
+            coflow_Z(j_external)=j_external*dz_external
 
             if ((ls_below*ls_above.le.zero).and. &
                 (abs(ls_below)+abs(ls_above).ge.LSTOL*dx(1))) then
@@ -7510,7 +7509,7 @@ END SUBROUTINE SIMP
                  (ls_above-ls_below)
              endif
 
-             FF(j_external)=xcrit
+             coflow_R_of_Z(j_external)=xcrit
             endif ! interface found
            enddo ! iside
           endif  ! mask>0
@@ -7518,16 +7517,14 @@ END SUBROUTINE SIMP
          enddo
 
         else
-         print *,"dirx,diry option not supported"
+         print *,"Z_dir,R_dir option not supported"
          stop
         endif
 
-       endif ! 2D
-
-       if (SDIM.eq.3) then
+       else if (SDIM.eq.3) then
 
          ! z=h(x)
-        if ((dirx.eq.0).and.(diry.eq.SDIM-1)) then
+        if ((Z_dir.eq.0).and.(R_dir.eq.SDIM-1)) then
        
          j=0 
          if ((j.ge.growlo(2)).and. &
@@ -7541,7 +7538,7 @@ END SUBROUTINE SIMP
                (mask(D_DECL(i-1,j,k+1)).gt.zero).and. &
                (mask(D_DECL(i,j,k-1)).gt.zero).and. &
                (mask(D_DECL(i-1,j,k-1)).gt.zero)) then
-            dir=diry+1  ! diry=sdim-1  dir=sdim  z=h(x)
+            dir=R_dir+1  ! R_dir=sdim-1  dir=sdim  z=h(x)
             im=1  ! check liquid height
             vofcomp=(im-1)*ngeom_recon+1
 
@@ -7550,7 +7547,7 @@ END SUBROUTINE SIMP
              call gridstenMAC(xstenMAC,xlo,i,j,k,fablo,bfact,dx,nhalf, &
                      dirMAC,15)
 
-              ! diry=sdim-1  dir=sdim  z=h(x)
+              ! R_dir=sdim-1  dir=sdim  z=h(x)
              xcen=xstenMAC(0,dir)
 
              if (iside.eq.0) then
@@ -7580,21 +7577,21 @@ END SUBROUTINE SIMP
               stop
              endif
 
-              ! dirx=0 diry=sdim-1 dir=sdim  z=h(x) 
+              ! Z_dir=0 R_dir=sdim-1 dir=sdim  z=h(x) 
               ! coordinate along streamwise direction starts at 0
-             ZZgrid=xstenMAC(0,dirx+1)-problo(dirx+1)
-             dz_external=(probhi(dirx+1)-problo(dirx+1))/NN
+             ZZgrid=xstenMAC(0,Z_dir+1)-problo(Z_dir+1)
+             dz_external=(probhi(Z_dir+1)-problo(Z_dir+1))/num_cells
               ! j_external * dz_external = ZZgrid
              j_external=NINT(ZZgrid/dz_external)  ! round to nearest whole int. 
-             if ((j_external.lt.0).or.(j_external.gt.NN)) then
+             if ((j_external.lt.0).or.(j_external.gt.num_cells)) then
               print *,"j_external invalid"
               stop
              endif
-             ZZ(j_external)=j_external*dz_external
+             coflow_Z(j_external)=j_external*dz_external
 
              use_vof_height=1
 
-              ! diry=sdim-1  dir=sdim  z=h(x)
+              ! R_dir=sdim-1  dir=sdim  z=h(x)
              if (use_vof_height.eq.0) then
 
               if ((ls_below*ls_above.le.zero).and. &
@@ -7609,7 +7606,7 @@ END SUBROUTINE SIMP
                   (ls_above-ls_below)
                endif
  
-               FF(j_external)=xcrit
+               coflow_R_of_Z(j_external)=xcrit
               endif ! interface found
 
              else if (use_vof_height.eq.1) then
@@ -7623,7 +7620,7 @@ END SUBROUTINE SIMP
                 xcrit=xstenMAC(3,dir)- &
                  (xstenMAC(3,dir)-xstenMAC(-1,dir))*vof_face
                endif
-               FF(j_external)=xcrit
+               coflow_R_of_Z(j_external)=xcrit
               endif
              else
               print *,"use_vof_height invalid"
@@ -7638,16 +7635,19 @@ END SUBROUTINE SIMP
          endif ! j=0 in grid.
 
         else
-         print *,"dirx,diry option not supported"
+         print *,"Z_dir,R_dir option not supported"
          stop
         endif
 
-       endif ! 3D
+       else
+        print *,"dimension bust"
+        stop
+       endif 
 
-      else if (cut_flag.eq.0) then
+      else if (num_cells.eq.0) then
        ! do nothing
       else
-       print *,"cut_flag invalid"
+       print *,"num_cells invalid"
        stop
       endif
 
@@ -10265,138 +10265,181 @@ END SUBROUTINE SIMP
       return
       end subroutine fort_eos_pressure
 
-      end module navierstokesf90_module
 
-! ZZ are the x values
-! FF are the z values
 ! 2 files:
 !   height_integral.txt
 !   jet_height.txt
-      subroutine FORT_COFLOW( &
-       time,js,je,NN,ZZ,FF,dirx,diry,cut_flag)
-
-      use navierstokesf90_module
+      subroutine fort_coflow( &
+       time, &
+       fdomlo, &
+       fdomhi, &
+       Z_dir, & !0..sdim-1
+       R_dir, & !0..sdim-1 
+       num_cells,
+       coflow_Z,
+       coflow_R_of_Z) &
+      bind(c,name='fort_coflow')
 
       IMPLICIT NONE
 
-      REAL_T time
-      INTEGER_T dirx,diry,cut_flag
-      INTEGER_T js,je,NN
-      REAL_T ZZ(0:NN)
-      REAL_T FF(0:NN)
-      REAL_T FFMASK(0:NN)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: fdomlo(SDIM)
+      INTEGER_T, intent(in) :: fdomhi(SDIM)
+      INTEGER_T, intent(inout) :: Z_dir !0..sdim-1
+      INTEGER_T, intent(inout) :: R_dir !0..sdim-1
+      INTEGER_T, intent(inout) :: num_cells;
+      REAL_T, intent(inout) :: coflow_Z(0:num_cells)
+      REAL_T, intent(inout) :: coflow_R_of_Z(0:num_cells)
+      REAL_T R_of_Z_MASK(0:num_cells)
       REAL_T major,minor,wavelength,amplitude,minrad
       REAL_T masklo,maskhi,HH,SS
       INTEGER_T j,jleft,jright
       REAL_T dzz,theta
+      INTEGER_T local_num_cells
+      INTEGER_T local_Z_dir
+      INTEGER_T local_R_dir
+      INTEGER_T dir
+      INTEGER_T js,je
 
-
-      if (NN.ne.je-js+1) then
-       print *,"NN invalid"
-       stop
-      endif
-      if (js.ne.0) then
-       print *,"js should be 0 in coflow (if 3d)"
-       stop
-      endif
-      if (NN.lt.1) then
-       print *,"NN invalid"
-       stop
-      endif
-      if ((dirx.lt.0).or.(dirx.ge.SDIM)) then
-       print *,"dirx invalid"
-       stop
-      endif
-      if ((diry.lt.0).or.(diry.ge.SDIM).or.(diry.eq.dirx)) then
-       print *,"diry invalid"
-       stop
-      endif
-      if ((cut_flag.ne.0).and.(cut_flag.ne.1)) then
-       print *,"cut_flag invalid"
-       stop
-      endif
-
-      if ((cut_flag.eq.1).and.(SDIM.eq.2)) then
-       major=yblob
-       if (abs(major-ZZ(NN)).le.1.0D-10) then
-        call FINDAMPLITUDE_2D(NN,ZZ,FF,major,minor)
-        call FINDMINRAD(NN,ZZ,FF,minrad)
-        wavelength=major
-        amplitude=minor
-        print *,"TIME,wavelength (major)",time,wavelength
-        print *,"TIME,amplitude  (minor)",time,amplitude
-        print *,"TIME,minimum radius ",time,minrad
-        open(unit=19,file="growth.txt",access="append")
-        write(19,*) time, amplitude
-        close(19)
-        open(unit=29,file="minrad.txt",access="append")
-        write(29,*) time, minrad
-        close(29)
-       endif
-      else if ((cut_flag.eq.1).and.(SDIM.eq.3)) then
-       open(unit=19,file="height_integral.txt",access="append")
-       open(unit=20,file="jet_height.txt",access="append")
-       maskhi=one
-       masklo=half*(xblob+maskhi)
-
-       ZZ(NN)=probhix-problox
-       dzz=(probhix-problox)/NN
-
-         ! fill in gaps in coarse regions
-       do j=js+1,je
-        if (ZZ(j).eq.zero) then  ! value not initialized in summass
-         ZZ(j)=j*dzz
-         jleft=j-1
-         jright=j+1
-         do while (ZZ(jright).eq.zero)
-          jright=jright+1
-         enddo  
-         theta=one/(jright-jleft)
-         FF(j)=FF(jleft)*(one-theta)+theta*FF(jright)
-        endif
-       enddo
-
-       do j=js,je+1 
-        if (ZZ(j).lt.masklo) then
-         FFMASK(j)=zero
-        else if (ZZ(j).gt.maskhi) then
-         FFMASK(j)=zero
-        else 
-         FFMASK(j)=FF(j)
-        endif
-       enddo
-       HH=ZZ(NN)-ZZ(0)
-       call SIMP(NN,HH,FFMASK,SS)
-       if ((SS.lt.zero).or.(HH.le.zero)) then
-        print *,"SS or HH invalid"
-        print *,"SS= ",SS
-        print *,"HH= ",HH
-        print *,"NN= ",NN
-        do j=js,je+1
-         print *,"j,ZZ ",j,ZZ(j)
-        enddo
+      do dir=1,SDIM
+       if (fdomlo(dir).eq.0) then
+        ! do nothing
+       else
+        print *,"fdomlo invalid"
         stop
        endif
-       SS=SS/HH
-       write(19,*) time,SS 
-       print *,"TIME,AVERAGE HEIGHT ",time,SS
-       do j=js,je+1 
-        write(20,*) ZZ(j),FF(j)
-       enddo
-       write(20,*) ' '
+      enddo !dir=1,sdim
 
-       close(19) 
-       close(20) 
-      else if (cut_flag.eq.0) then
-       ! do nothing
+      local_num_cells=0
+      local_Z_dir=-1
+      local_R_dir=-1
+    
+      if ((SDIM.eq.2).and. &
+          (probtype.eq.41).and. &
+          (axis_dir.eq.4)) then
+       local_Z_dir=SDIM-1
+       local_R_dir=0
+       local_num_cells=fdomhi(local_Z_dir+1)-fdomlo(local_Z_dir+1)+1
+      else if ((SDIM.eq.3).and. &
+               (probtype.eq.53).and. &
+               (axis_dir.eq.0)) then
+       local_Z_dir=0
+       local_R_dir=SDIM-1
+       local_num_cells=fdomhi(local_Z_dir+1)-fdomlo(local_Z_dir+1)+1
       else
-       print *,"cut_flag invalid"
+       local_num_cells=0
+      endif
+ 
+      if (num_cells.eq.0) then ! setup
+       num_cells=local_num_cells
+       Z_dir=local_Z_dir
+       R_dir=local_R_dir
+      else if (num_cells.gt.0) then ! diagnostics
+       Z_dir=local_Z_dir
+       R_dir=local_R_dir
+       js=fdomlo(local_Z_dir+1)
+       je=fdomhi(local_Z_dir+1)
+
+       if (num_cells.eq.local_num_cells) then
+        ! do nothing
+       else 
+        print *,"num_cells invalid"
+        stop
+       endif
+       if ((Z_dir.lt.0).or.(Z_dir.ge.SDIM)) then
+        print *,"Z_dir invalid"
+        stop
+       endif
+       if ((R_dir.lt.0).or.(R_dir.ge.SDIM).or.(R_dir.eq.Z_dir)) then
+        print *,"R_dir or Z_dir invalid"
+        stop
+       endif
+
+       if (SDIM.eq.2) then
+        major=yblob
+        if (abs(major-coflow_Z(num_cells)).le.1.0D-10) then
+         call FINDAMPLITUDE_2D(num_cells,coflow_Z,coflow_R_of_Z,major,minor)
+         call FINDMINRAD(num_cells,coflow_Z,coflow_R_of_Z,minrad)
+         wavelength=major
+         amplitude=minor
+         print *,"TIME,wavelength (major)",time,wavelength
+         print *,"TIME,amplitude  (minor)",time,amplitude
+         print *,"TIME,minimum radius ",time,minrad
+         open(unit=19,file="growth.txt",access="append")
+         write(19,*) time, amplitude
+         close(19)
+         open(unit=29,file="minrad.txt",access="append")
+         write(29,*) time, minrad
+         close(29)
+        endif
+       else if (SDIM.eq.3) then
+        open(unit=19,file="height_integral.txt",access="append")
+        open(unit=20,file="jet_height.txt",access="append")
+        maskhi=one
+        masklo=half*(xblob+maskhi)
+
+        coflow_Z(num_cells)=probhix-problox
+        dzz=(probhix-problox)/num_cells
+
+         ! fill in gaps in coarse regions
+        do j=js+1,je
+         if (coflow_Z(j).eq.zero) then  ! value not initialized in summass
+          coflow_Z(j)=j*dzz
+          jleft=j-1
+          jright=j+1
+          do while (coflow_Z(jright).eq.zero)
+           jright=jright+1
+          enddo  
+          theta=one/(jright-jleft)
+          coflow_R_of_Z(j)= &
+           coflow_R_of_Z(jleft)*(one-theta)+theta*coflow_R_of_Z(jright)
+         endif
+        enddo
+
+        do j=js,je+1 
+         if (coflow_Z(j).lt.masklo) then
+          R_of_Z_MASK(j)=zero
+         else if (coflow_Z(j).gt.maskhi) then
+          R_of_Z_MASK(j)=zero
+         else 
+          R_of_Z_MASK(j)=coflow_R_of_Z(j)
+         endif
+        enddo
+        HH=coflow_Z(num_cells)-coflow_Z(0)
+        call SIMP(num_cells,HH,R_of_Z_MASK,SS)
+        if ((SS.lt.zero).or.(HH.le.zero)) then
+         print *,"SS or HH invalid"
+         print *,"SS= ",SS
+         print *,"HH= ",HH
+         print *,"num_cells= ",num_cells
+         do j=js,je+1
+          print *,"j,coflow_Z ",j,coflow_Z(j)
+         enddo
+         stop
+        endif
+        SS=SS/HH
+        write(19,*) time,SS 
+        print *,"TIME,AVERAGE HEIGHT ",time,SS
+        do j=js,je+1 
+         write(20,*) coflow_Z(j),coflow_R_of_Z(j)
+        enddo
+        write(20,*) ' '
+ 
+        close(19) 
+        close(20) 
+       else 
+        print *,"dimension bust"
+        stop
+       endif
+      else
+       print *,"num_cells invalid"
        stop
       endif
 
-
       return
-      end subroutine FORT_COFLOW
+      end subroutine fort_coflow
+
+      end module navierstokesf90_module
 
       subroutine FORT_IO_COMPARE( &
        nmat, &

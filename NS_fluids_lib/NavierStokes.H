@@ -512,20 +512,14 @@ public:
      int isweep);
     void recalesce_temperature(int im_source);
 
-    void volWgtSum(
-     Vector<Real>& ZZ,Vector<Real>& FF,
-     int dirx,int diry,int cut_flag,
-     int isweep);
+    void volWgtSum(int isweep);
 
     void Number_CellsALL(Real& rcells);
 
 // post_init_flag==-1 if called from post_timestep
 // post_init_flag==1  if called from post_init
 // post_init_flag==2  if called from post_restart
-    void volWgtSumALL(
-     int post_init_flag,
-     Vector<Real>& ZZ,Vector<Real>& FF,
-     int dirx,int diry,int cut_flag);
+    void volWgtSumALL(int post_init_flag);
 
     void zap_resid_where_singular(int index_MF);
 
@@ -1580,7 +1574,7 @@ void apply_pressure_grad(
     static int FSI_flag_valid(int im);
 
     void init_FSI_GHOST_MAC_MF_ALL(int caller_id);
-    void init_FSI_GHOST_MAC_MF(int dealloc_history);
+    void init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history);
 
     void assimilate_state_data();
 
@@ -2402,6 +2396,9 @@ protected:
     static int massface_index;
     static int vofface_index;
     static int ncphys;
+
+    static Vector<Real> NS_coflow_Z;
+    static Vector<Real> NS_coflow_R_of_Z;
 
     static Vector<Real> NS_drag_integrated_quantities;
     static Vector<Real> NS_sumdata;

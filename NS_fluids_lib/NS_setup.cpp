@@ -2055,36 +2055,6 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
  F_MAT.resize(nmat);
  MASS_MAT.resize(nmat);
 
- int dirx=AMREX_SPACEDIM-1;
- int diry=0;
- int cut_flag=0;
- 
- if ((AMREX_SPACEDIM==2)&&
-     (probtype==41)&&
-     (axis_dir==4)) {
-  dirx=AMREX_SPACEDIM-1;
-  diry=0;
-  cut_flag=1;
- }
- if ((AMREX_SPACEDIM==3)&&(probtype==53)&&(axis_dir==0)) {
-  dirx=0;
-  diry=AMREX_SPACEDIM-1;
-  cut_flag=1;
- }
-
- Vector<Real> ZZ;
- Vector<Real> FF;
- const Box& fdomain = ns_fine.geom.Domain();
- const int* fdomlo = fdomain.loVect();
- const int* fdomhi = fdomain.hiVect();
- int NN=fdomhi[dirx]-fdomlo[dirx]+1;
- ZZ.resize(NN+1);
- FF.resize(NN+1);
- for (int iz=0;iz<=NN;iz++) {
-  ZZ[iz]=0.0;
-  FF[iz]=0.0;
- }
-
  std::fflush(NULL);
   // call FLUSH(6)
  fort_flush_fortran();
@@ -2103,9 +2073,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   // VOF_Recon_ALL 
   // make_physics_varsALL
   // FORT_SUMMASS -> stackerror -> get_symmetric_error -> uses mofdata_tess
- volWgtSumALL(
-   post_init_flag,
-   ZZ,FF,dirx,diry,cut_flag);
+ volWgtSumALL(post_init_flag);
 
  if (visual_drag_plot_int>0) {
 
@@ -2144,13 +2112,6 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   amrex::Error("visual_drag_plot_int invalid");
 
  delete_array(DRAG_MF);
-
- int f_js=0;
- int f_je=NN-1;
- if (ParallelDescriptor::IOProcessor()) {
-  FORT_COFLOW(&upper_slab_time,&f_js,&f_je,&NN,ZZ.dataPtr(),FF.dataPtr(),
-    &dirx,&diry,&cut_flag);
- }
 
  ParallelDescriptor::Barrier();
 
