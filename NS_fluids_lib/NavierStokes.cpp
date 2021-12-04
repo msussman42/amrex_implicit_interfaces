@@ -6727,6 +6727,9 @@ void NavierStokes::create_fortran_grid_struct(Real cur_time,Real dt) {
 //  NavierStokes::prescribe_solid_geometryALL (if correcting solid state)
 //    (caller_id=31,32,33,34,35,36,37)
 //
+//  NavierStokes::initData()
+//    (caller_id=40)
+//
 //  NavierStokes::do_the_advance (begin of divu_outer_sweeps loop)
 //    (caller_id=4)
 //
@@ -6739,6 +6742,7 @@ void NavierStokes::create_fortran_grid_struct(Real cur_time,Real dt) {
 //    (caller_id==5)
 //
 //  NavierStokes::prepare_post_process (caller_id=2)
+//
 void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
 
  int finest_level=parent->finestLevel();
@@ -6834,21 +6838,14 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
 
 } // end subroutine init_FSI_GHOST_MAC_MF_ALL
 
-//    create a ghost solid velocity variable:
-//    simple method: ghost solid velocity=solid velocity
-//    law of wall  : ghost solid velocity in the solid
-//                   is some kind of reflection of
-//                   the interior fluid velocity.  ghost 
-//                   solid velocity in the fluid=fluid velocity.
-// initialize Fluid Structure Interaction Ghost Multifab
-// multifab = multiple fortran array blocks.
-// called from:
-//  NavierStokes::init_FSI_GHOST_MAC_MF_ALL (caller_id passed through)
-//  NavierStokes::initData ()  (caller_id=40)
-//
+
+
 // called from:
 //  NavierStokes::prescribe_solid_geometryALL (if correcting solid state)
 //    (caller_id=31,32,33,34,35,36,37)
+//
+//  NavierStokes::initData()
+//    (caller_id=40)
 //
 //  NavierStokes::do_the_advance (begin of divu_outer_sweeps loop)
 //    (caller_id=4)
@@ -6955,13 +6952,22 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history) {
 
   new_localMF(HISTORY_MAC_MF+data_dir,nhistory,0,data_dir);
 
+  Vector<int> local_law_of_the_wall;
+
   for (int im=0;im<nmat;im++) {
+
    if ((law_of_the_wall[im]==0)||   //just use the solid velocity
        (law_of_the_wall[im]==1)||   //turbulent wall flux
        (law_of_the_wall[im]==2)) {  //GNBC
     // do nothing
    } else
     amrex::Error("law_of_the_wall[im] invalid");
+
+   local_law_of_the_wall[im]=law_of_the_wall[im];
+    //disable wall modeling when called from initData
+   if (caller_id==40) {
+    local_law_of_the_wall[im]=0; 
+   }
   }
 
   const Real* dx = geom.CellSize();
@@ -7026,7 +7032,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history) {
      // declared in: GODUNOV_3D.F90
     fort_wallfunction( 
      &data_dir,
-     law_of_the_wall.dataPtr(),
+     local_law_of_the_wall.dataPtr(),
      wall_model_velocity.dataPtr(),
      im_solid_map.dataPtr(),
      &level,
@@ -9248,7 +9254,8 @@ NavierStokes::initData () {
   //  Initialize FSI_GHOST_MAC_MF from Solid_State_Type
   // Otherwise initialize FSI_GHOST_MAC_MF with the fluid velocity.
  int dealloc_history=1;
- init_FSI_GHOST_MAC_MF(dealloc_history);
+  //caller_id==40 => do not do law of wall stuff.
+ init_FSI_GHOST_MAC_MF(40,dealloc_history);
 
  init_regrid_history();
  is_first_step_after_regrid=-1;
@@ -18391,24 +18398,24 @@ void NavierStokes::volWgtSum(int isweep) {
  const int* fdomhi = fdomain.hiVect();
 
  fort_coflow(
-  &upper_slab_time, &
+  &upper_slab_time, 
   fdomlo,
   fdomhi,
   &Z_dir,
   &R_dir,
   &num_cells,
-  coflow_Z.dataPtr(),
-  coflow_R_of_Z.dataPtr());
+  NS_coflow_Z.dataPtr(),
+  NS_coflow_R_of_Z.dataPtr());
 
- if (num_cells+1==coflow_Z.size()) {
+ if (num_cells+1==NS_coflow_Z.size()) {
   // do nothing
  } else
-  amrex::Error("coflow_Z.size() invalid");
+  amrex::Error("NS_coflow_Z.size() invalid");
 
- if (num_cells+1==coflow_R_of_Z.size()) {
+ if (num_cells+1==NS_coflow_R_of_Z.size()) {
   // do nothing
  } else
-  amrex::Error("coflow_R_of_Z.size() invalid");
+  amrex::Error("NS_coflow_R_of_Z.size() invalid");
 
  Vector< Vector<Real> > local_result;
  Vector< Vector<Real> > local_coflow_Z;
@@ -18637,11 +18644,11 @@ void NavierStokes::volWgtSum(int isweep) {
    ParallelDescriptor::ReduceRealMax(local_coflow_Z[0][iz]);
    ParallelDescriptor::ReduceRealMax(local_coflow_R_of_Z[0][iz]);
 
-   if (local_coflow_Z[0][iz]>local_coflow_Z[iz])
-    local_coflow_Z[iz]=local_coflow_Z[0][iz];
+   if (local_coflow_Z[0][iz]>NS_coflow_Z[iz])
+    NS_coflow_Z[iz]=local_coflow_Z[0][iz];
 
-   if (local_coflow_R_of_Z[0][iz]>local_coflow_R_of_Z[iz])
-    local_coflow_R_of_Z[iz]=local_coflow_R_of_Z[0][iz];
+   if (local_coflow_R_of_Z[0][iz]>NS_coflow_R_of_Z[iz])
+    NS_coflow_R_of_Z[iz]=local_coflow_R_of_Z[0][iz];
   }
  }  // isweep==0
 
@@ -21036,7 +21043,8 @@ NavierStokes::volWgtSumALL(int post_init_flag) {
  } else
   amrex::Error("post_init_flag invalid 20982");
 
-   //make_physics_varsALL calls "getStateVISC_ALL"
+  //make_physics_varsALL calls "getStateVISC_ALL"
+  //make_physics_varsALL calls "init_gradu_tensorALL"
  make_physics_varsALL(project_option,post_restart_flag,0);
 
   // see <DRAG_COMP.H>
@@ -21207,24 +21215,24 @@ NavierStokes::volWgtSumALL(int post_init_flag) {
  const Box& fdomain = ns_fine.geom.Domain();
  const int* fdomlo = fdomain.loVect();
  const int* fdomhi = fdomain.hiVect();
- coflow_Z.resize(num_cells+1);
- coflow_R_of_Z.resize(num_cells+1);
+ NS_coflow_Z.resize(num_cells+1);
+ NS_coflow_R_of_Z.resize(num_cells+1);
 
  fort_coflow(
-  &upper_slab_time, &
+  &upper_slab_time, 
   fdomlo,
   fdomhi,
   &Z_dir,
   &R_dir,
   &num_cells,
-  coflow_Z.dataPtr(),
-  coflow_R_of_Z.dataPtr());
+  NS_coflow_Z.dataPtr(),
+  NS_coflow_R_of_Z.dataPtr());
 
- coflow_Z.resize(num_cells+1);
- coflow_R_of_Z.resize(num_cells+1);
+ NS_coflow_Z.resize(num_cells+1);
+ NS_coflow_R_of_Z.resize(num_cells+1);
  for (int jfine=0;jfine<=num_cells;jfine++) {
-  coflow_Z[jfine]=0.0;
-  coflow_R_of_Z[jfine]=0.0;
+  NS_coflow_Z[jfine]=0.0;
+  NS_coflow_R_of_Z[jfine]=0.0;
  }
 
  for (int isweep=0;isweep<2;isweep++) {
@@ -21258,14 +21266,14 @@ NavierStokes::volWgtSumALL(int post_init_flag) {
  if (num_cells>0) {
   if (ParallelDescriptor::IOProcessor()) {
    fort_coflow(
-    &upper_slab_time, &
+    &upper_slab_time, 
     fdomlo,
     fdomhi,
     &Z_dir,
     &R_dir,
     &num_cells,
-    coflow_Z.dataPtr(),
-    coflow_R_of_Z.dataPtr());
+    NS_coflow_Z.dataPtr(),
+    NS_coflow_R_of_Z.dataPtr());
   }
  } else if (num_cells==0) {
   // do nothing

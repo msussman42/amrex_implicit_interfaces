@@ -4717,7 +4717,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
  init_gradu_tensorALL(
-   HOLD_VELOCITY_DATA_MF,
+   HOLD_VELOCITY_DATA_MF, //alloc and delete since do_alloc==1
    do_alloc,
    CELLTENSOR_MF,
    FACETENSOR_MF,
