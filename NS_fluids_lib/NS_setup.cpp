@@ -2100,34 +2100,12 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
  if (IQ_TOTAL_SUM_COMP!=NS_sumdata_sweep.size())
   amrex::Error("(IQ_TOTAL_SUM_COMP!=NS_sumdata_sweep.size())");
 
- for (int isweep=0;isweep<2;isweep++) {
-   // VOF_Recon_ALL 
-   // make_physics_varsALL
-   // FORT_SUMMASS -> stackerror -> get_symmetric_error -> uses mofdata_tess
-  volWgtSumALL(
-    post_init_flag,
-    ZZ,FF,dirx,diry,cut_flag,isweep);
-
-  if (isweep==0) {
-
-   delete_array(DRAG_MF);
-
-   for (int im=0;im<nmat;im++) {
-    Real volmat=NS_sumdata[IQ_FE_SUM_COMP+2*im];
-    Real LSvolmat=NS_sumdata[IQ_LS_F_SUM_COMP+im];
-    if (volmat>0.0) {
-     for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-      NS_sumdata[3*im+IQ_CEN_SUM_COMP+dir]=
-	      NS_sumdata[3*im+IQ_CEN_SUM_COMP+dir]/volmat;
-    }
-    if (LSvolmat>0.0) {
-     for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-      NS_sumdata[3*im+IQ_LS_CEN_SUM_COMP+dir]=
-       NS_sumdata[3*im+IQ_LS_CEN_SUM_COMP+dir]/LSvolmat;
-    }
-   } // im
-  }  // isweep=0
- } //for (int isweep=0;isweep<2;isweep++) 
+  // VOF_Recon_ALL 
+  // make_physics_varsALL
+  // FORT_SUMMASS -> stackerror -> get_symmetric_error -> uses mofdata_tess
+ volWgtSumALL(
+   post_init_flag,
+   ZZ,FF,dirx,diry,cut_flag);
 
  if (visual_drag_plot_int>0) {
 
