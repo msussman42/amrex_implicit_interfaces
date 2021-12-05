@@ -472,6 +472,8 @@ extern "C"
    void fort_wallfunction(
     int* data_dir,
     int* law_of_the_wall,
+    int* NS_sumdata_size,
+    Real* NS_sumdata,
     Real* wall_model_velocity,
     int* im_solid_map,
     int* level,
