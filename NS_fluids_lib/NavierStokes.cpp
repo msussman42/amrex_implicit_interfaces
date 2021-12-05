@@ -6749,6 +6749,11 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
  if (level!=0)
   amrex::Error("level invalid init_FSI_GHOST_MAC_MF_ALL");
 
+ setup_integrated_quantities();
+ int fast_mode=1;
+ int local_post_init_flag=10;
+ volWgtSumALL(local_post_init_flag,fast_mode);
+
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   int dealloc_history=0;
@@ -18496,6 +18501,14 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
    FArrayBox& lsfab=(*lsmf)[mfi];
    int bfact=parent->Space_blockingFactor(level);
 
+   int local_adapt_quad_depth=adapt_quad_depth;
+   if (fast_mode==1) {
+    local_adapt_quad_depth=1;
+   } else if (fast_mode==0) {
+    // do nothing
+   } else
+    amrex::Error("fast_mode invalid");
+
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
@@ -18508,7 +18521,7 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
     &finest_level,
     &ncomp_sum_int_user1,
     &ncomp_sum_int_user2,
-    &adapt_quad_depth,
+    &local_adapt_quad_depth,
     &slice_dir,
     xslice.dataPtr(),
     problo,probhi, 
