@@ -512,14 +512,15 @@ public:
      int isweep);
     void recalesce_temperature(int im_source);
 
-    void volWgtSum(int isweep);
+    void volWgtSum(int isweep,int fast_mode);
 
     void Number_CellsALL(Real& rcells);
 
 // post_init_flag==-1 if called from post_timestep
 // post_init_flag==1  if called from post_init
 // post_init_flag==2  if called from post_restart
-    void volWgtSumALL(int post_init_flag);
+// post_init_flag==10 if called from init_FSI_GHOST_MAC_MF_ALL
+    void volWgtSumALL(int post_init_flag,int fast_mode);
 
     void zap_resid_where_singular(int index_MF);
 

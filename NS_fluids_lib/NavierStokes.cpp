@@ -18292,7 +18292,7 @@ void NavierStokes::levelCombine(
 
 } // subroutine levelCombine
 
-void NavierStokes::volWgtSum(int isweep) {
+void NavierStokes::volWgtSum(int isweep,int fast_mode) {
  
  bool use_tiling=ns_tiling;
 
@@ -18397,15 +18397,20 @@ void NavierStokes::volWgtSum(int isweep) {
  const int* fdomlo = fdomain.loVect();
  const int* fdomhi = fdomain.hiVect();
 
- fort_coflow(
-  &upper_slab_time, 
-  fdomlo,
-  fdomhi,
-  &Z_dir,
-  &R_dir,
-  &num_cells,
-  NS_coflow_Z.dataPtr(),
-  NS_coflow_R_of_Z.dataPtr());
+ if (fast_mode==1) {
+  // do nothing
+ } else if (fast_mode==0) {
+  fort_coflow(
+   &upper_slab_time, 
+   fdomlo,
+   fdomhi,
+   &Z_dir,
+   &R_dir,
+   &num_cells,
+   NS_coflow_Z.dataPtr(),
+   NS_coflow_R_of_Z.dataPtr());
+ } else
+  amrex::Error("fast_mode invalid");
 
  if (num_cells+1==NS_coflow_Z.size()) {
   // do nothing
@@ -21005,8 +21010,9 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
 // post_init_flag==-1 if sum_integrated_quantities called from post_timestep
 // post_init_flag==1  if sum_integrated_quantities called from post_init
 // post_init_flag==2  if sum_integrated_quantities called from post_restart
+// post_init_flag==10 if called from init_FSI_GHOST_MAC_MF_ALL
 void
-NavierStokes::volWgtSumALL(int post_init_flag) {
+NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
@@ -21034,12 +21040,19 @@ NavierStokes::volWgtSumALL(int post_init_flag) {
   // variables.
   // in: volWgtSumALL
  int post_restart_flag=0;
- if (post_init_flag==-1) { //called from post_timestep
+ if (post_init_flag==-1) { //sum_integrated_quant. call from post_timestep
   // do nothing
- } else if (post_init_flag==1) { //called from post_init
+ } else if (post_init_flag==1) { //sum_integrated_quant. call from post_init
   // do nothing
- } else if (post_init_flag==2) { //called from post_restart
+ } else if (post_init_flag==2) { //sum_integrated_quand. call from post_restart
   post_restart_flag=1;
+ } else if (post_init_flag==10) { //this routine called directly from
+	                          //init_FSI_GHOST_MAC_MF_ALL
+  if (fast_mode==1) {
+   // do nothing
+  } else
+   amrex::Error("expecting fast_mode==1");
+
  } else
   amrex::Error("post_init_flag invalid 20982");
 
@@ -21072,15 +21085,6 @@ NavierStokes::volWgtSumALL(int post_init_flag) {
 // NS_drag_integrated_quantities: see <DRAG_COMP.H>
 
  allocate_levelsetLO_ALL(2,LEVELPC_MF);
-
- int do_alloc=1;
- int simple_AMR_BC_flag_viscosity=1;
- init_gradu_tensorALL(
-   HOLD_VELOCITY_DATA_MF,//alloc and delete since do_alloc==1
-   do_alloc,
-   CELLTENSOR_MF,
-   FACETENSOR_MF,
-   simple_AMR_BC_flag_viscosity);
 
  if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
   // do nothing
@@ -21218,18 +21222,24 @@ NavierStokes::volWgtSumALL(int post_init_flag) {
  NS_coflow_Z.resize(num_cells+1);
  NS_coflow_R_of_Z.resize(num_cells+1);
 
- fort_coflow(
-  &upper_slab_time, 
-  fdomlo,
-  fdomhi,
-  &Z_dir,
-  &R_dir,
-  &num_cells,
-  NS_coflow_Z.dataPtr(),
-  NS_coflow_R_of_Z.dataPtr());
+ if (fast_mode==1) {
+  // do nothing
+ } else if (fast_mode==0) {
+  fort_coflow(
+   &upper_slab_time, 
+   fdomlo,
+   fdomhi,
+   &Z_dir,
+   &R_dir,
+   &num_cells,
+   NS_coflow_Z.dataPtr(),
+   NS_coflow_R_of_Z.dataPtr());
 
- NS_coflow_Z.resize(num_cells+1);
- NS_coflow_R_of_Z.resize(num_cells+1);
+  NS_coflow_Z.resize(num_cells+1);
+  NS_coflow_R_of_Z.resize(num_cells+1);
+ } else
+  amrex::Error("fast_mode invalid");
+
  for (int jfine=0;jfine<=num_cells;jfine++) {
   NS_coflow_Z[jfine]=0.0;
   NS_coflow_R_of_Z[jfine]=0.0;
@@ -21240,7 +21250,7 @@ NavierStokes::volWgtSumALL(int post_init_flag) {
   for (int ilev = 0; ilev <= finest_level; ilev++) {
 
    NavierStokes& ns_level = getLevel(ilev);
-   ns_level.volWgtSum(isweep);
+   ns_level.volWgtSum(isweep,fast_mode);
 
   }  // ilev=0..finest_level 
 
@@ -21436,7 +21446,7 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   delete velmac[dir];
  }
-} // subroutine MaxPressureVelocity
+} // end subroutine MaxPressureVelocity
 
 // called from 
 // 1. writePlotFile   (post_init_flag=0)
@@ -21507,42 +21517,48 @@ NavierStokes::prepare_post_process(int post_init_flag) {
  } else
   amrex::Error("post_init_flag invalid 21394");
 	
+ int project_option=1;  // initial project
+ int post_restart_flag=0;
+ int caller_id=1;
+
  if (post_init_flag==1) { // called from post_init_state
   VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
    init_vof_prev_time,SLOPE_RECON_MF);
   int keep_all_interfaces=1;
   makeStateDistALL(keep_all_interfaces);
-  int caller_id=1;
+  caller_id=1;
   prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
 		  local_truncate,caller_id);
-  int project_option=1;  // initial project
-  int post_restart_flag=0;
-  make_physics_varsALL(project_option,post_restart_flag,1);
+  project_option=1;  // initial project
+  post_restart_flag=0;
+  caller_id=1;
  } else if (post_init_flag==0) { // called from writePlotFile
-  if (1==1) {
-   VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
+  VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
     init_vof_prev_time,SLOPE_RECON_MF);
-   int project_option=1;  // initial project
-   int post_restart_flag=0;
-   make_physics_varsALL(project_option,post_restart_flag,2);
-  }
+  project_option=1;  // initial project
+  post_restart_flag=0;
+  caller_id=2;
  } else if (post_init_flag==2) { // called from post_restart
   VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
     init_vof_prev_time,SLOPE_RECON_MF);
   if (1==0) {
    int keep_all_interfaces=0;
    makeStateDistALL(keep_all_interfaces);
-   int caller_id=2;
+   caller_id=2;
    prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
 		   local_truncate,caller_id);
   }
-  int project_option=1;  // initial project
-  int post_restart_flag=1;
-  make_physics_varsALL(project_option,post_restart_flag,3);
+  project_option=1;  // initial project
+  post_restart_flag=1;
+  caller_id=3;
  } else
   amrex::Error("post_init_flag invalid 21429");
 
-}  // subroutine prepare_post_process
+ make_physics_varsALL(project_option,post_restart_flag,caller_id);
+ delete_array(CELLTENSOR_MF);
+ delete_array(FACETENSOR_MF);
+
+}  // end subroutine prepare_post_process
 
 // called from: NavierStokes::correct_xdisplace_with_particles() 
 // (NavierStokes3.cpp)

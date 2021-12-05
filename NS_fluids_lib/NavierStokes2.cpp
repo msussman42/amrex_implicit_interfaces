@@ -4619,7 +4619,11 @@ void NavierStokes::apply_pressure_grad(
 
 } // subroutine apply_pressure_grad
 
-
+// called from:
+//  NavierStokes::volWgtSumALL
+//  NavierStokes::prepare_post_process
+//  NavierStokes::do_the_advance
+//
 void NavierStokes::make_physics_varsALL(int project_option,
   int post_restart_flag,int caller_id) {
 
@@ -4820,9 +4824,11 @@ void NavierStokes::make_physics_varsALL(int project_option,
  delete_array(MOM_DEN_MF);
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   delete_array(AMRSYNC_VEL_MF+dir);
- delete_array(CELLTENSOR_MF);
- delete_array(FACETENSOR_MF);
 
+ //it is the responsibility of the caller to issue the following commands:
+ //delete_array(CELLTENSOR_MF);
+ //delete_array(FACETENSOR_MF);
+ 
 } // subroutine make_physics_varsALL
 
 // called from: prelim_alloc() and make_physics_vars

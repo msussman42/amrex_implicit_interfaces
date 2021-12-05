@@ -2812,6 +2812,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        makeStateDistALL(keep_all_interfaces);
 
        make_physics_varsALL(project_option,post_restart_flag,5); 
+       delete_array(CELLTENSOR_MF);
+       delete_array(FACETENSOR_MF);
 
       } else if (mass_transfer_active==0) {
 
@@ -3144,6 +3146,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 // to be scaled later.
     debug_memory();
     make_physics_varsALL(project_option,post_restart_flag,6); 
+    delete_array(CELLTENSOR_MF);
+    delete_array(FACETENSOR_MF);
 
     if (1==0) {
      int basestep_debug=nStep();

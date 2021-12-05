@@ -6511,7 +6511,7 @@ END SUBROUTINE SIMP
         sumdata_type, &
         sumdata_sweep, &
         resultsize, &
-        num_cells, &
+        coflow_num_cells, &
         coflow_Z, &
         coflow_R_of_Z, &
         Z_dir, &
@@ -6545,9 +6545,9 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ntensor
       INTEGER_T, intent(in) :: isweep  ! isweep=0 or 1
-      INTEGER_T, intent(in) :: num_cells,Z_dir,R_dir
-      REAL_T, intent(out) :: coflow_Z(0:num_cells)
-      REAL_T, intent(out) :: coflow_R_of_Z(0:num_cells)
+      INTEGER_T, intent(in) :: coflow_num_cells,Z_dir,R_dir
+      REAL_T, intent(out) :: coflow_Z(0:coflow_num_cells)
+      REAL_T, intent(out) :: coflow_R_of_Z(0:coflow_num_cells)
 
       REAL_T, intent(in), target :: problo(SDIM)
       REAL_T, intent(in), target :: probhi(SDIM)
@@ -7437,8 +7437,8 @@ END SUBROUTINE SIMP
       enddo
       enddo  ! i,j,k
 
-       ! num_cells is a parameter.
-      if (num_cells.gt.0) then
+       ! coflow_num_cells is a parameter.
+      if (coflow_num_cells.gt.0) then
 
        if (SDIM.eq.2) then
 
@@ -7488,10 +7488,10 @@ END SUBROUTINE SIMP
              ! dirMAC=1
              ! r=h(z)
             ZZgrid=xstenMAC(0,Z_dir+1)-problo(Z_dir+1)
-            dz_external=(probhi(Z_dir+1)-problo(Z_dir+1))/num_cells
+            dz_external=(probhi(Z_dir+1)-problo(Z_dir+1))/coflow_num_cells
              ! j_external * dz_external = ZZgrid
             j_external=NINT(ZZgrid/dz_external)  ! round to nearest whole int. 
-            if ((j_external.lt.0).or.(j_external.gt.num_cells)) then
+            if ((j_external.lt.0).or.(j_external.gt.coflow_num_cells)) then
              print *,"j_external invalid"
              stop
             endif
@@ -7580,10 +7580,10 @@ END SUBROUTINE SIMP
               ! Z_dir=0 R_dir=sdim-1 dir=sdim  z=h(x) 
               ! coordinate along streamwise direction starts at 0
              ZZgrid=xstenMAC(0,Z_dir+1)-problo(Z_dir+1)
-             dz_external=(probhi(Z_dir+1)-problo(Z_dir+1))/num_cells
+             dz_external=(probhi(Z_dir+1)-problo(Z_dir+1))/coflow_num_cells
               ! j_external * dz_external = ZZgrid
              j_external=NINT(ZZgrid/dz_external)  ! round to nearest whole int. 
-             if ((j_external.lt.0).or.(j_external.gt.num_cells)) then
+             if ((j_external.lt.0).or.(j_external.gt.coflow_num_cells)) then
               print *,"j_external invalid"
               stop
              endif
@@ -7644,10 +7644,10 @@ END SUBROUTINE SIMP
         stop
        endif 
 
-      else if (num_cells.eq.0) then
+      else if (coflow_num_cells.eq.0) then
        ! do nothing
       else
-       print *,"num_cells invalid"
+       print *,"coflow_num_cells invalid"
        stop
       endif
 
