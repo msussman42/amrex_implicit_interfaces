@@ -7038,6 +7038,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history) {
     fort_wallfunction( 
      &data_dir,
      local_law_of_the_wall.dataPtr(),
+     &NS_sumdata.size(),
+     NS_sumdata.dataPtr(),
      wall_model_velocity.dataPtr(),
      im_solid_map.dataPtr(),
      &level,

@@ -11764,6 +11764,8 @@ stop
       subroutine fort_wallfunction( &
        data_dir, &
        law_of_the_wall, &
+       NS_sumdata_size, &
+       NS_sumdata, &
        wall_model_velocity, &
        im_solid_map, &
        level, &
@@ -11802,6 +11804,7 @@ stop
       INTEGER_T, intent(in) :: ngrow_law_of_wall
       INTEGER_T, intent(in) :: ngrow_distance
       INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: NS_sumdata_size
       INTEGER_T, intent(in) :: law_of_the_wall(nmat)
       REAL_T, intent(in) :: wall_model_velocity(nmat)
       INTEGER_T, intent(in) :: nparts
@@ -11812,6 +11815,7 @@ stop
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: NS_sumdata(NS_sumdata_size)
       REAL_T, intent(in), target :: xlo(SDIM)
       REAL_T, intent(in), target :: dx(SDIM)
       REAL_T, intent(in) :: dt
