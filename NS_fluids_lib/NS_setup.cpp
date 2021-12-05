@@ -2073,7 +2073,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   // VOF_Recon_ALL 
   // make_physics_varsALL
   // FORT_SUMMASS -> stackerror -> get_symmetric_error -> uses mofdata_tess
- volWgtSumALL(post_init_flag);
+ int fast_mode=0;
+ volWgtSumALL(post_init_flag,fast_mode);
 
  if (visual_drag_plot_int>0) {
 
