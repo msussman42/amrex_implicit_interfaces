@@ -559,6 +559,7 @@ implicit none
         dist_fluid, & ! intent(in)
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
+        temperature_wall_max, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
         viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
@@ -579,6 +580,7 @@ implicit none
       REAL_T, intent(in) :: dist_fluid
       REAL_T, intent(in) :: temperature_image
       REAL_T, intent(in) :: temperature_wall
+      REAL_T, intent(in) :: temperature_wall_max
       REAL_T, intent(in) :: viscosity_molecular
       REAL_T, intent(in) :: viscosity_eddy_wall
       REAL_T, intent(in) :: y !delta_r
@@ -608,6 +610,7 @@ implicit none
         near_interface, &
         im_solid, &
         temperature_wall, &
+        temperature_wall_max, &
         temperature_probe, &
         nrm) ! nrm points from solid to fluid
       INTEGER_T, intent(in) :: im
@@ -619,6 +622,7 @@ implicit none
       REAL_T, intent(in) :: density
       REAL_T, intent(in) :: temperature
       REAL_T, intent(in) :: temperature_wall
+      REAL_T, intent(in) :: temperature_wall_max
       REAL_T, intent(in) :: temperature_probe
       REAL_T, intent(in) :: nrm(SDIM) ! nrm points from solid to fluid
       REAL_T, intent(inout) :: thermal_k

@@ -1342,6 +1342,7 @@ contains
         dist_fluid, & ! intent(in)
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
+        temperature_wall_max, & ! intent(in)
         viscosity_molecular, & ! intent(in)      
         viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
@@ -1364,6 +1365,7 @@ contains
       REAL_T, intent(in) :: dist_fluid
       REAL_T, intent(in) :: temperature_image
       REAL_T, intent(in) :: temperature_wall
+      REAL_T, intent(in) :: temperature_wall_max
       REAL_T, intent(in) :: viscosity_molecular
       REAL_T, intent(in) :: viscosity_eddy_wall
       REAL_T, intent(in) :: y !delta_r
@@ -1562,6 +1564,7 @@ contains
         dist_fluid, & ! intent(in)
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
+        temperature_wall_max, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
         viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
@@ -1584,6 +1587,7 @@ contains
       REAL_T, intent(in) :: dist_fluid
       REAL_T, intent(in) :: temperature_image
       REAL_T, intent(in) :: temperature_wall
+      REAL_T, intent(in) :: temperature_wall_max
       REAL_T, intent(in) :: viscosity_molecular
       REAL_T, intent(in) :: viscosity_eddy_wall
       REAL_T, intent(in) :: y !delta_r
@@ -1605,6 +1609,7 @@ contains
         dist_fluid, & ! intent(in)
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
+        temperature_wall_max, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
         viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
@@ -1626,6 +1631,7 @@ contains
         dist_fluid, & ! intent(in)
         temperature_image, & !intent(in) 
         temperature_wall, & ! intent(in)      
+        temperature_wall_max, & ! intent(in)      
         viscosity_molecular, & ! intent(in)      
         viscosity_eddy_wall, & ! intent(in)      
         y, & !intent(in) distance from image to wall
@@ -2129,6 +2135,7 @@ end subroutine dynamic_contact_angle
        dist_fluid, & ! intent(in)
        temperature_image, & ! in (at the probe)
        temperature_wall, & ! in
+       temperature_wall_max, & ! in
        usolid_law_of_wall, & ! out
        angle_ACT, & ! aka angle_ACT_cell "out"
        im_fluid, &
@@ -2152,6 +2159,7 @@ end subroutine dynamic_contact_angle
        REAL_T, intent(in) :: dist_fluid
        REAL_T, intent(in) :: temperature_image
        REAL_T, intent(in) :: temperature_wall
+       REAL_T, intent(in) :: temperature_wall_max
        REAL_T, dimension(SDIM), intent(out) :: usolid_law_of_wall
        REAL_T, intent(out) :: angle_ACT
       
@@ -3024,6 +3032,7 @@ end subroutine dynamic_contact_angle
              dist_fluid, & ! intent(in)
              temperature_image, &
              temperature_wall, &
+             temperature_wall_max, &
              viscosity_molecular, &
              viscosity_eddy_wall, &
              delta_r_raster, &

@@ -1574,6 +1574,9 @@ void apply_pressure_grad(
     static int FSI_material_exists_presvel();
     static int FSI_flag_valid(int im);
 
+    void init_FSI_GHOST_MAC_MF_ALL_predict();
+    void init_FSI_GHOST_MAC_MF_predict();
+
     void init_FSI_GHOST_MAC_MF_ALL(int caller_id);
     void init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history);
 

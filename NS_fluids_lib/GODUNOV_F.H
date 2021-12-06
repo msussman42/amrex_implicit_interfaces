@@ -474,6 +474,8 @@ extern "C"
     int* law_of_the_wall,
     int* NS_sumdata_size,
     Real* NS_sumdata,
+    int* ncomp_sum_int_user1,
+    int* ncomp_sum_int_user2,
     Real* wall_model_velocity,
     int* im_solid_map,
     int* level,
@@ -500,6 +502,26 @@ extern "C"
     AMREX_ARLIM_P(history_datlo),AMREX_ARLIM_P(history_dathi),
     int* nhistory,
     Real* visc_coef);
+
+   void fort_wallfunction_predict(
+    int* data_dir,
+    int* im_solid_map,
+    int* level,
+    int* finest_level,
+    int* ngrow_law_of_wall,
+    int* nmat,
+    int* nparts,
+    int* nparts_ghost,
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact,
+    const Real* xlo,const Real* dx,
+    Real* dt,
+    Real* time,
+    Real* ufluid,AMREX_ARLIM_P(ufluidlo),AMREX_ARLIM_P(ufluidhi),
+    Real* usolid,AMREX_ARLIM_P(usolidlo),AMREX_ARLIM_P(usolidhi),
+    Real* ughost,AMREX_ARLIM_P(ughostlo),AMREX_ARLIM_P(ughosthi));
+
 
 
 

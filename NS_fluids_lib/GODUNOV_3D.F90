@@ -11766,6 +11766,8 @@ stop
        law_of_the_wall, &
        NS_sumdata_size, &
        NS_sumdata, &
+       ncomp_sum_int_user1, &
+       ncomp_sum_int_user2, &
        wall_model_velocity, &
        im_solid_map, &
        level, &
@@ -11798,6 +11800,9 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: ncomp_sum_int_user1
+      INTEGER_T, intent(in) :: ncomp_sum_int_user2
+      INTEGER_T :: ncomp_sum_int_user12
       INTEGER_T, intent(in) :: data_dir
       INTEGER_T, intent(in) :: nhistory
       INTEGER_T, intent(in) :: level,finest_level
@@ -11889,6 +11894,7 @@ stop
       REAL_T uimage_raster(SDIM)
       REAL_T temperature_image
       REAL_T temperature_wall
+      REAL_T temperature_wall_max
       REAL_T dist_probe
       REAL_T dist_fluid
       REAL_T, target :: usolid_raster(SDIM)
@@ -11896,6 +11902,10 @@ stop
       INTEGER_T nten
       INTEGER_T nhistory_sub
       type(law_of_wall_parm_type) :: law_of_wall_parm
+
+      INTEGER_T idest
+
+      ncomp_sum_int_user12=ncomp_sum_int_user1+ncomp_sum_int_user2
 
       nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
 
@@ -11906,7 +11916,7 @@ stop
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid in ratemasschange"
+       print *,"level invalid in wallfunction"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -11952,6 +11962,10 @@ stop
        ! do nothing
       else
        print *,"nparts_ghost invalid"
+       stop
+      endif
+      if (NS_sumdata_size.ne.IQ_TOTAL_SUM_COMP) then
+       print *,"mismatch between NS_sumdata_size and IQ_TOTAL_SUM_COMP"
        stop
       endif
 
@@ -12208,6 +12222,8 @@ stop
              temperature_wall= &
                 state(D_DECL(isideSOLID,jsideSOLID,ksideSOLID), &
                      (im_solid-1)*num_state_material+2)
+             temperature_wall_max= &
+               NS_sumdata(IQ_MAXSTATE_SUM_COMP+2*(im_solid-1)+2)
             else if ((is_rigid(nmat,im_primary_left).eq.1).or. &
                      (is_rigid(nmat,im_primary_left_probe).eq.1).or. &
                      (im_primary_left.ne.im_primary_left_probe)) then
@@ -12257,6 +12273,8 @@ stop
              temperature_wall= &
                 state(D_DECL(isideSOLID,jsideSOLID,ksideSOLID), &
                      (im_solid-1)*num_state_material+2)
+             temperature_wall_max= &
+               NS_sumdata(IQ_MAXSTATE_SUM_COMP+2*(im_solid-1)+2)
             else if ((is_rigid(nmat,im_primary_right).eq.1).or. &
                      (is_rigid(nmat,im_primary_right_probe).eq.1).or. &
                      (im_primary_right.ne.im_primary_right_probe)) then
@@ -12341,6 +12359,7 @@ stop
                dist_fluid, & ! intent(in)
                temperature_image, & ! intent(in)
                temperature_wall, & ! intent(in)
+               temperature_wall_max, & ! intent(in)
                usolid_law_of_wall, & ! intent(out)
                angle_ACT_cell, & !intent(out) dyn. contact angle at image point
                im_fluid, &
@@ -12401,6 +12420,197 @@ stop
       end subroutine fort_wallfunction
 
 
+       ! called from:NavierStokes::init_FSI_GHOST_MAC_MF_predict(int ngrow) 
+       ! (in NavierStokes.cpp)
+       ! if nparts==0 => interpolate state cell velocity to MAC grid.
+       ! if nparts>0 => interpolate solid cell velocity
+       ! to MAC grid.
+      subroutine fort_wallfunction_predict( &
+       data_dir, &
+       im_solid_map, &
+       level, &
+       finest_level, &
+       ngrow_law_of_wall, &
+       nmat, &
+       nparts, &
+       nparts_ghost, &
+       tilelo,tilehi, &
+       fablo,fabhi,bfact, &
+       xlo,dx, &
+       dt, &
+       time, &
+       ufluid,DIMS(ufluid), &
+       usolid,DIMS(usolid), &
+       ughost,DIMS(ughost)) &
+      bind(c,name='fort_wallfunction_predict')
+      use probf90_module
+      use global_utility_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: data_dir
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: ngrow_law_of_wall
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: nparts_ghost
+      INTEGER_T, intent(in) :: im_solid_map(nparts_ghost)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in), target :: xlo(SDIM)
+      REAL_T, intent(in), target :: dx(SDIM)
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: DIMDEC(ufluid) ! declare x,y,z dimensions of LS
+      INTEGER_T, intent(in) :: DIMDEC(usolid)
+      INTEGER_T, intent(in) :: DIMDEC(ughost)
+
+      REAL_T, intent(in), target :: ufluid(DIMV(ufluid),SDIM+1) ! u,v,w,p
+      REAL_T, pointer :: ufluid_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: usolid(DIMV(usolid),nparts_ghost*SDIM) 
+      REAL_T, pointer :: usolid_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(out),target :: ughost(DIMV(ughost),nparts_ghost*SDIM) 
+      REAL_T, pointer :: ughost_ptr(D_DECL(:,:,:),:)
+
+      INTEGER_T i,j,k
+      INTEGER_T ii,jj,kk
+      INTEGER_T dir
+      INTEGER_T partid
+      REAL_T :: usolid_raster(SDIM)
+
+
+      if (bfact.lt.1) then
+       print *,"bfact too small"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid in wallfunction_predict"
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+      if (ngrow_law_of_wall.eq.1) then
+       ! do nothing
+      else
+       print *,"ngrow_law_of_wall invalid"
+       stop
+      endif
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if ((nparts.ge.0).and.(nparts.le.nmat)) then 
+       ! do nothing
+      else
+       print *,"nparts invalid fort_wallfunction_predict"
+       stop
+      endif
+      if ((nparts_ghost.ge.1).and. &
+          (nparts_ghost.le.nmat).and. &
+          (nparts_ghost.ge.nparts)) then 
+       ! do nothing
+      else
+       print *,"nparts_ghost invalid fort_wallfunction"
+       stop
+      endif
+
+      if ((nparts_ghost.eq.nparts).or.(nparts_ghost.eq.1)) then
+       ! do nothing
+      else
+       print *,"nparts_ghost invalid"
+       stop
+      endif
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
+      endif 
+      if (time.ge.zero) then
+       ! do nothing
+      else
+       print *,"time invalid"
+       stop
+      endif 
+
+      if ((data_dir.ge.0).and.(data_dir.le.SDIM-1)) then
+       ! do nothing
+      else
+       print *,"data_dir invalid"
+       stop
+      endif
+
+      ii=0
+      jj=0
+      kk=0
+      if (data_dir.eq.0) then
+       ii=1
+      else if (data_dir.eq.1) then
+       jj=1
+      else if ((data_dir.eq.SDIM-1).and.(SDIM.eq.3)) then
+       kk=1
+      else
+       print *,"data_dir invalid"
+       stop
+      endif
+
+      ufluid_ptr=>ufluid
+      call checkbound_array(fablo,fabhi,ufluid_ptr,ngrow_law_of_wall,-1,1254)
+      usolid_ptr=>usolid
+      call checkbound_array(fablo,fabhi,usolid_ptr,ngrow_law_of_wall,-1,1255)
+      ughost_ptr=>ughost
+      call checkbound_array(fablo,fabhi,ughost_ptr,0,data_dir,1255)
+
+       ! data_dir=0,1, or 2. 
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi, &
+              0,data_dir,29) 
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       if (nparts.eq.0) then
+         ! no solids, as placeholder put fictitious fluid velocity
+         ! on the face.
+        if (nparts_ghost.eq.1) then 
+         do dir=1,SDIM
+          ughost(D_DECL(i,j,k),dir)= &
+            half*(ufluid(D_DECL(i,j,k),dir)+ &
+                  ufluid(D_DECL(i-ii,j-jj,k-kk),dir))
+         enddo
+        else
+         print *,"nparts_ghost invalid"
+         stop
+        endif
+       else if ((nparts.ge.1).and.(nparts.le.nmat)) then
+
+        do partid=1,nparts
+
+         do dir=1,SDIM
+          usolid_raster(dir)= &
+            half*(usolid(D_DECL(i,j,k),(partid-1)*SDIM+dir)+ &
+                  usolid(D_DECL(i-ii,j-jj,k-kk),(partid-1)*SDIM+dir))
+          ughost(D_DECL(i,j,k),(partid-1)*SDIM+dir)=usolid_raster(dir)
+         enddo  
+
+        enddo ! partid=1..nparts
+       else
+        print *,"nparts invalid"
+        stop
+       endif
+      enddo ! k
+      enddo ! j
+      enddo ! i
+
+      return
+      end subroutine fort_wallfunction_predict
 
       ! tag = 1 -> donor cell
       ! tag = 2 -> receving cell
