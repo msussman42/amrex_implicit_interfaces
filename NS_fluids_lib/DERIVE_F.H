@@ -202,6 +202,10 @@ extern "C" {
       int* ncompvisc);
 
      void fort_derconductivity(
+      int* NS_sumdata_size,
+      Real* NS_sumdata,
+      int* ncomp_sum_int_user1,
+      int* ncomp_sum_int_user2,
       int* level,
       int* finest_level,
       int* fortran_im,

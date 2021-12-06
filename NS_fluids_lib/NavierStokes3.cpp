@@ -2684,8 +2684,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       if (mass_transfer_active==1) {
 
-       getStateCONDUCTIVITY_ALL();
-
 	// CREATE SEEDS, NUCLEATION.
        for (int ilev=level;ilev<=finest_level;ilev++) {
         int nucleation_flag=1;
