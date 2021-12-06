@@ -365,7 +365,7 @@ void NavierStokes::getStateTensor_localMF(int idx_MF,int ngrow,
  localMF[idx_MF]=getStateTensor(ngrow,scomp,ncomp,time);
  localMF_grow[idx_MF]=ngrow;
 
-} //subroutine getStateTensor_localMF
+} //end subroutine getStateTensor_localMF
 
 
 
@@ -378,7 +378,7 @@ void NavierStokes::maskfiner_localMF(int idx_MF,int ngrow,
 
  localMF[idx_MF]=maskfiner(ngrow,tag,clearbdry);
  localMF_grow[idx_MF]=ngrow;
-}  // subroutine maskfiner_localMF
+}  // end subroutine maskfiner_localMF
 
 //called from:
 //NavierStokes::make_physics_varsALL
@@ -397,7 +397,7 @@ void NavierStokes::getStateVISC_ALL() {
   ns_level.avgDown_localMF(CELL_VISC_MATERIAL_MF,scomp,ncomp,0);
  }
 
-} // subroutine getStateVISC_ALL 
+} // end subroutine getStateVISC_ALL 
 
 
 void NavierStokes::getStateCONDUCTIVITY_ALL() {
@@ -416,7 +416,7 @@ void NavierStokes::getStateCONDUCTIVITY_ALL() {
   ns_level.avgDown_localMF(CELL_CONDUCTIVITY_MATERIAL_MF,scomp,ncomp,0);
  }
 
-} // subroutine getStateCONDUCTIVITY_ALL 
+} // end subroutine getStateCONDUCTIVITY_ALL 
 
 
 void NavierStokes::delete_localMF(int idx_MF,int ncomp) {
@@ -4617,7 +4617,32 @@ void NavierStokes::apply_pressure_grad(
  } else
   amrex::Error("project_option invalid27");
 
-} // subroutine apply_pressure_grad
+} // end subroutine apply_pressure_grad
+
+void NavierStokes::init_gradu_tensor_and_material_visc_ALL() {
+
+
+ int save_enable_spectral=enable_spectral;
+ override_enable_spectral(viscous_enable_spectral);
+
+ // allocate and delete HOLD_VELOCITY_DATA_MF in init_gradu_tensorALL:
+ // (since do_alloc==1)
+ int simple_AMR_BC_flag_viscosity=1;
+ int do_alloc=1; 
+ init_gradu_tensorALL(
+   HOLD_VELOCITY_DATA_MF, //alloc and delete since do_alloc==1
+   do_alloc,
+   CELLTENSOR_MF,
+   FACETENSOR_MF,
+   simple_AMR_BC_flag_viscosity);
+
+ override_enable_spectral(save_enable_spectral);
+
+  //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
+  //ngrow=1
+ getStateVISC_ALL(); //we are in make_physics_varsALL 
+
+} // end subroutine init_gradu_tensor_and_material_visc_ALL
 
 // called from:
 //  NavierStokes::volWgtSumALL
@@ -4713,25 +4738,13 @@ void NavierStokes::make_physics_varsALL(int project_option,
   ns_level.avgDownCURV_localMF(DIST_CURV_MF);
  }
 
- int save_enable_spectral=enable_spectral;
- override_enable_spectral(viscous_enable_spectral);
-
- // allocate and delete HOLD_VELOCITY_DATA_MF in init_gradu_tensorALL:
- // (since do_alloc==1)
- int simple_AMR_BC_flag_viscosity=1;
- int do_alloc=1; 
- init_gradu_tensorALL(
-   HOLD_VELOCITY_DATA_MF, //alloc and delete since do_alloc==1
-   do_alloc,
-   CELLTENSOR_MF,
-   FACETENSOR_MF,
-   simple_AMR_BC_flag_viscosity);
-
- override_enable_spectral(save_enable_spectral);
-
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
-  //ngrow=1
- getStateVISC_ALL(); //we are in make_physics_varsALL 
+  //responsibility of caller to issue commands,
+  // delete_array(CELLTENSOR_MF);
+  // delete_array(FACETENSOR_MF);
+  //
+ init_gradu_tensor_and_material_visc_ALL();
+
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
  int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
  if (ncomp_visc!=3*nmat)

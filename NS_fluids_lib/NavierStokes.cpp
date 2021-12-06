@@ -10529,9 +10529,6 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
  } else 
   amrex::Error("VISCOTEN_MF should not be allocated");
 
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  debug_ngrow(FACE_VAR_MF+dir,0,2);
- }
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,3);
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
@@ -17132,8 +17129,124 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
  ns_reconcile_d_num(99);
 
  delete mf;
-} // subroutine errorEst
+} // end subroutine errorEst
 
+void NavierStokes::GetDragALL() {
+
+//
+// compute (-pI+2\mu D)dot n_solid for cut cells.
+//
+// F=mA  rho du/dt = div sigma + rho g
+// integral rho du/dt = integral (div sigma + rho g)
+// du/dt=(integral_boundary sigma dot n)/mass  + g
+// torque_axis=r_axis x F=r_axis x (m alpha_axis x r_axis)   
+// alpha=angular acceleration  (1/s^2)
+// torque_axis=I_axis alpha_axis  
+// I_axis=integral rho r_axis x (e_axis x r_axis)   I=moment of inertia
+// I_axis=integral rho r_axis^{2}
+// r_axis=(x-x_{COM})_{axis}  y_axis=y-(y dot e_axis)e_axis
+// torque_axis=integral r_axis x (div sigma + rho g)=
+//   integral_boundary r_axis x sigma dot n + integral r_axis x rho g
+// NS_drag_integrated_quantities: see <DRAG_COMP.H>
+
+ int finest_level=parent->finestLevel();
+ int nmat=num_materials;
+
+ if (level!=0)
+  amrex::Error("it is required that level=0 in GetDragALL");
+
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
+ if (localMF[CELL_VISC_MATERIAL_MF]->nComp()==3*nmat) {
+  // do nothing
+ } else 
+  amrex::Error("GetDragALL: CELL_VISC_MATERIAL_MF invalid ncomp");
+ 
+
+ debug_ngrow(DRAG_MF,ngrow_distance,9);
+ if (localMF[DRAG_MF]->nComp()==N_DRAG) {
+  // do nothing
+ } else 
+  amrex::Error("GetDragALL: DRAG_MF invalid ncomp");
+ 
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+  debug_ngrow(VISCOTEN_ALL_MAT_MF,1,9);
+  if (localMF[VISCOTEN_ALL_MAT_MF]->nComp()==
+      num_materials_viscoelastic*NUM_TENSOR_TYPE) {
+   // do nothing
+  } else 
+   amrex::Error("GetDragALL: VISCOTEN_ALL_MAT_MF invalid ncomp");
+ } else if (num_materials_viscoelastic==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid:GetDragALL");
+
+ for (int isweep_drag=0;isweep_drag<2;isweep_drag++) {
+  for (int ilev=level;ilev<=finest_level;ilev++) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.GetDrag(isweep_drag);
+  }
+ }
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "DRAGCOMP num_materials=" << num_materials << '\n';
+   for (int iq=0;iq<N_DRAG;iq++) {
+    if (iq==DRAGCOMP_BODYFORCE) {
+     std::cout << "DRAGCOMP_BODYFORCE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_FORCE) {
+     std::cout << "DRAGCOMP_FORCE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_PFORCE) {
+     std::cout << "DRAGCOMP_PFORCE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_VISCOUSFORCE) {
+     std::cout << "DRAGCOMP_VISCOUSFORCE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_VISCOUS0FORCE) {
+     std::cout << "DRAGCOMP_VISCOUS0FORCE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_VISCOFORCE) {
+     std::cout << "DRAGCOMP_VISCOFORCE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_BODYTORQUE) {
+     std::cout << "DRAGCOMP_BODYTORQUE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_TORQUE) {
+     std::cout << "DRAGCOMP_TORQUE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_PTORQUE) {
+     std::cout << "DRAGCOMP_PTORQUE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_VISCOUSTORQUE) {
+     std::cout << "DRAGCOMP_VISCOUSTORQUE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_VISCOUS0TORQUE) {
+     std::cout << "DRAGCOMP_VISCOUS0TORQUE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_VISCOTORQUE) {
+     std::cout << "DRAGCOMP_VISCOTORQUE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_COM) {
+     std::cout << "DRAGCOMP_COM 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_MOMINERTIA) {
+     std::cout << "DRAGCOMP_MOMINERTIA 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_MASS) {
+     std::cout << "DRAGCOMP_MASS num_materials\n";
+    } else if (iq==DRAGCOMP_PERIM) {
+     std::cout << "DRAGCOMP_PERIM num_materials\n";
+    } else {
+     //do nothing
+    }
+     
+    std::cout << "GetDragALL  iq= " << iq << 
+     " NS_drag_integrated_quantities= " <<
+     NS_drag_integrated_quantities[iq] << '\n';
+   }
+   for (int im=0;im<num_materials;im++) {
+    Real mass=NS_drag_integrated_quantities[DRAGCOMP_MASS+im];
+    if (mass>0.0) {
+     for (int idir=0;idir<3;idir++) {
+      std::cout << "COM im,idir= " << im << ' ' << idir << " COM= " <<
+        NS_drag_integrated_quantities[DRAGCOMP_COM+im*3+idir]/mass << '\n';
+     } //idir=0,1,2
+    } //mass>0.0
+
+   } //im=0;im<nmat
+  } //IOproc
+ } //verbose>0
+
+} // end subroutine GetDragALL
 
 // sweep=0: integral (rho x), integral (rho) 
 // sweep=1: find force, torque, moments of inertia, center of mass,mass
@@ -21147,7 +21260,7 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
   }
  }
 
-} // matrix_solveCPP
+} // end subroutine matrix_solveCPP
 
 //called from: NavierStokes::sum_integrated_quantities (NS_setup.cpp)
 // post_init_flag==-1 if sum_integrated_quantities called from post_timestep
@@ -21206,13 +21319,20 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
  } else
   amrex::Error("post_init_flag invalid 20982");
 
-FIX ME (if fast_mode==1) then call init_gradu_tensorALL, and
-getStateVISC_ALL no need
-to call make_physics_varsALL.
+ allocate_levelsetLO_ALL(2,LEVELPC_MF);
 
-  //make_physics_varsALL calls "getStateVISC_ALL"
-  //make_physics_varsALL calls "init_gradu_tensorALL"
- make_physics_varsALL(project_option,post_restart_flag,0);
+ if (fast_mode==0) {
+  //make_physics_varsALL calls "init_gradu_tensor_and_material_visc_ALL"
+  make_physics_varsALL(project_option,post_restart_flag,0);
+ } else if (fast_mode==1) {
+  //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
+  //responsibility of caller to issue commands,
+  // delete_array(CELLTENSOR_MF);
+  // delete_array(FACETENSOR_MF);
+  //
+  init_gradu_tensor_and_material_visc_ALL();
+ } else
+  amrex::Error("fast_mode invalid");
 
   // see <DRAG_COMP.H>
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -21222,7 +21342,6 @@ to call make_physics_varsALL.
 
   // initializes DRAG_MF to 0.0.
  allocate_array(ngrow_distance,N_DRAG,-1,DRAG_MF);
- allocate_levelsetLO_ALL(2,LEVELPC_MF);
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()==3*nmat) {
@@ -21264,7 +21383,7 @@ to call make_physics_varsALL.
          VISCOTEN_ALL_MAT_MF,VISCOTEN_MF);
        delete_array(VISCOTEN_MF);
       } else
-       amrex::Error("partid could not be found: GetDragALL");
+       amrex::Error("partid could not be found: volWgtSumALL");
      } else
       amrex::Error("elastic_viscosity invalid");
     } else if (store_elastic_data[im]==0) {
@@ -21284,91 +21403,14 @@ to call make_physics_varsALL.
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  amrex::Error("num_materials_viscoelastic invalid:GetDragALL");
+  amrex::Error("num_materials_viscoelastic invalid:volWgtSumALL");
 
-FIX ME, DO NOT CALL THIS SECTION IF fast_mode==1
-
-// GetDragALL section------------------------------------------
-//
-// compute (-pI+2\mu D)dot n_solid for cut cells.
-//
-// F=mA  rho du/dt = div sigma + rho g
-// integral rho du/dt = integral (div sigma + rho g)
-// du/dt=(integral_boundary sigma dot n)/mass  + g
-// torque_axis=r_axis x F=r_axis x (m alpha_axis x r_axis)   
-// alpha=angular acceleration  (1/s^2)
-// torque_axis=I_axis alpha_axis  
-// I_axis=integral rho r_axis x (e_axis x r_axis)   I=moment of inertia
-// I_axis=integral rho r_axis^{2}
-// r_axis=(x-x_{COM})_{axis}  y_axis=y-(y dot e_axis)e_axis
-// torque_axis=integral r_axis x (div sigma + rho g)=
-//   integral_boundary r_axis x sigma dot n + integral r_axis x rho g
-// NS_drag_integrated_quantities: see <DRAG_COMP.H>
-
- for (int isweep_drag=0;isweep_drag<2;isweep_drag++) {
-  for (int ilev=level;ilev<=finest_level;ilev++) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.GetDrag(isweep_drag);
-  }
- }
-
- if (verbose>0) {
-  if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "DRAGCOMP nmat=" << num_materials << '\n';
-   for (int iq=0;iq<N_DRAG;iq++) {
-    if (iq==DRAGCOMP_BODYFORCE) {
-     std::cout << "DRAGCOMP_BODYFORCE 3 nmat\n";
-    } else if (iq==DRAGCOMP_FORCE) {
-     std::cout << "DRAGCOMP_FORCE 3 nmat\n";
-    } else if (iq==DRAGCOMP_PFORCE) {
-     std::cout << "DRAGCOMP_PFORCE 3 nmat\n";
-    } else if (iq==DRAGCOMP_VISCOUSFORCE) {
-     std::cout << "DRAGCOMP_VISCOUSFORCE 3 nmat\n";
-    } else if (iq==DRAGCOMP_VISCOUS0FORCE) {
-     std::cout << "DRAGCOMP_VISCOUS0FORCE 3 nmat\n";
-    } else if (iq==DRAGCOMP_VISCOFORCE) {
-     std::cout << "DRAGCOMP_VISCOFORCE 3 nmat\n";
-    } else if (iq==DRAGCOMP_BODYTORQUE) {
-     std::cout << "DRAGCOMP_BODYTORQUE 3 nmat\n";
-    } else if (iq==DRAGCOMP_TORQUE) {
-     std::cout << "DRAGCOMP_TORQUE 3 nmat\n";
-    } else if (iq==DRAGCOMP_PTORQUE) {
-     std::cout << "DRAGCOMP_PTORQUE 3 nmat\n";
-    } else if (iq==DRAGCOMP_VISCOUSTORQUE) {
-     std::cout << "DRAGCOMP_VISCOUSTORQUE 3 nmat\n";
-    } else if (iq==DRAGCOMP_VISCOUS0TORQUE) {
-     std::cout << "DRAGCOMP_VISCOUS0TORQUE 3 nmat\n";
-    } else if (iq==DRAGCOMP_VISCOTORQUE) {
-     std::cout << "DRAGCOMP_VISCOTORQUE 3 nmat\n";
-    } else if (iq==DRAGCOMP_COM) {
-     std::cout << "DRAGCOMP_COM 3 nmat\n";
-    } else if (iq==DRAGCOMP_MOMINERTIA) {
-     std::cout << "DRAGCOMP_MOMINERTIA 3 nmat\n";
-    } else if (iq==DRAGCOMP_MASS) {
-     std::cout << "DRAGCOMP_MASS nmat\n";
-    } else if (iq==DRAGCOMP_PERIM) {
-     std::cout << "DRAGCOMP_PERIM nmat\n";
-    } else {
-     //do nothing
-    }
-     
-    std::cout << "GetDrag  iq= " << iq << " NS_drag_integrated_quantities= " <<
-     NS_drag_integrated_quantities[iq] << '\n';
-   }
-   for (int im=0;im<num_materials;im++) {
-    Real mass=NS_drag_integrated_quantities[DRAGCOMP_MASS+im];
-    if (mass>0.0) {
-     for (int idir=0;idir<3;idir++) {
-      std::cout << "COM im,idir= " << im << ' ' << idir << " COM= " <<
-        NS_drag_integrated_quantities[DRAGCOMP_COM+im*3+idir]/mass << '\n';
-     } //idir=0,1,2
-    } //mass>0.0
-
-   } //im=0;im<nmat
-  } //IOproc
- } //verbose>0
-
-// END GetDragALL section------------------------------------------
+ if (fast_mode==0) {
+  GetDragALL();
+ } else if (fast_mode==1) {
+  // do nothing
+ } else
+  amrex::Error("fast_mode invalid");
 
  int num_cells=0;
  int Z_dir=-1;
