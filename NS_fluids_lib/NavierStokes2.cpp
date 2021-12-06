@@ -7914,6 +7914,7 @@ void NavierStokes::zeroALL(int ngrow,int ncomp,int idx_localMF) {
  }
 } // end subroutine zeroALL
 
+// initializes localMF[idx_localMF] to 0.0
 void NavierStokes::allocate_array(int ngrow,int ncomp,int grid_type,
   int idx_localMF) {
 

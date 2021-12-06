@@ -6723,12 +6723,149 @@ void NavierStokes::create_fortran_grid_struct(Real cur_time,Real dt) {
 
 } // end subroutine create_fortran_grid_struct
 
+
+void NavierStokes::init_FSI_GHOST_MAC_MF_ALL_predict() {
+
+ int finest_level=parent->finestLevel();
+ if (level!=0)
+  amrex::Error("level invalid init_FSI_GHOST_MAC_MF_ALL_predict");
+
+ setup_integrated_quantities();
+
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.init_FSI_GHOST_MAC_MF_predict();
+ } // ilev=level...finest_level
+
+} // end subroutine init_FSI_GHOST_MAC_MF_ALL_predict
+
+void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
+
+ int finest_level=parent->finestLevel();
+ int nmat=num_materials;
+ int nparts=im_solid_map.size();
+ bool use_tiling=ns_tiling;
+
+ int nparts_ghost=nparts;
+ int ghost_state_type=Solid_State_Type;
+ if (nparts==0) {
+  nparts_ghost=1;
+  ghost_state_type=State_Type;
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
+  // do nothing
+ } else {
+  amrex::Error("nparts invalid");
+ }
+
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) { 
+
+  if (localMF_grow[FSI_GHOST_MAC_MF+data_dir]==0) {
+   delete_localMF(FSI_GHOST_MAC_MF+data_dir,1);
+  } else if (localMF_grow[FSI_GHOST_MAC_MF+data_dir]==-1) {
+   // do nothing
+  } else
+   amrex::Error("localMF_grow[FSI_GHOST_MAC_MF+data_dir] invalid");
+
+  new_localMF(FSI_GHOST_MAC_MF+data_dir,
+    nparts_ghost*AMREX_SPACEDIM,0,data_dir);
+ }
+
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ int nstate=(AMREX_SPACEDIM+1)+
+  nmat*(num_state_material+ngeom_raw)+1;
+ if (nstate!=S_new.nComp())
+  amrex::Error("nstate invalid");
+
+ int ngrow_law_of_wall=1;
+
+ MultiFab* solid_vel_mf;
+ if (nparts==0) {
+  if (nparts_ghost==1) {
+   solid_vel_mf=getState(ngrow_law_of_wall,0,AMREX_SPACEDIM,
+    cur_time_slab);
+  } else
+   amrex::Error("nparts_ghost invalid");
+ } else if (nparts>0) {
+  solid_vel_mf=getStateSolid(ngrow_law_of_wall,0,
+    nparts*AMREX_SPACEDIM,cur_time_slab);
+ } else
+  amrex::Error("nparts invalid");
+
+  // velocity and pressure
+ MultiFab* fluid_vel_mf=getState(ngrow_law_of_wall,0,AMREX_SPACEDIM+1,
+    cur_time_slab);
+
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) { 
+
+  const Real* dx = geom.CellSize();
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(fluid_vel_mf->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(*fluid_vel_mf,use_tiling); mfi.isValid(); ++mfi) {
+    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+    const int gridno = mfi.index();
+    const Box& tilegrid = mfi.tilebox();
+    const Box& fabgrid = grids[gridno];
+    const int* tilelo=tilegrid.loVect();
+    const int* tilehi=tilegrid.hiVect();
+    const int* fablo=fabgrid.loVect();
+    const int* fabhi=fabgrid.hiVect();
+    int bfact=parent->Space_blockingFactor(level);
+
+    const Real* xlo = grid_loc[gridno].lo();
+
+    FArrayBox& fluidvelfab=(*fluid_vel_mf)[mfi]; //ngrow_law_of_wall=1
+    FArrayBox& solidvelfab=(*solid_vel_mf)[mfi]; //ngrow_law_of_wall=1
+    FArrayBox& ghostsolidvelfab=(*localMF[FSI_GHOST_MAC_MF+data_dir])[mfi]; 
+
+    int tid_current=ns_thread();
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    fort_wallfunction_predict( 
+     &data_dir,
+     im_solid_map.dataPtr(),
+     &level,
+     &finest_level,
+     &ngrow_law_of_wall,
+     &nmat,
+     &nparts,
+     &nparts_ghost,
+     tilelo,tilehi,
+     fablo,fabhi,&bfact,
+     xlo,dx,
+     &dt_slab,
+     &cur_time_slab,
+     fluidvelfab.dataPtr(),
+     ARLIM(fluidvelfab.loVect()),ARLIM(fluidvelfab.hiVect()),
+     solidvelfab.dataPtr(),
+     ARLIM(solidvelfab.loVect()),ARLIM(solidvelfab.hiVect()),
+     ghostsolidvelfab.dataPtr(),
+     ARLIM(ghostsolidvelfab.loVect()),ARLIM(ghostsolidvelfab.hiVect()));
+  } // mfi
+} // omp
+  ns_reconcile_d_num(45); //thread_class::sync_tile_d_numPts(),
+                           //ParallelDescriptor::ReduceRealSum
+			   //thread_class::reconcile_d_numPts(caller_id)
+
+ } // data_dir=0..sdim-1
+
+
+ delete fluid_vel_mf;
+ delete solid_vel_mf;
+
+} // end subroutine init_FSI_GHOST_MAC_MF_predict
+
+
+
 // called from:
 //  NavierStokes::prescribe_solid_geometryALL (if correcting solid state)
 //    (caller_id=31,32,33,34,35,36,37)
-//
-//  NavierStokes::initData()
-//    (caller_id=40)
 //
 //  NavierStokes::do_the_advance (begin of divu_outer_sweeps loop)
 //    (caller_id=4)
@@ -6849,9 +6986,6 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
 //  NavierStokes::prescribe_solid_geometryALL (if correcting solid state)
 //    (caller_id=31,32,33,34,35,36,37)
 //
-//  NavierStokes::initData()
-//    (caller_id=40)
-//
 //  NavierStokes::do_the_advance (begin of divu_outer_sweeps loop)
 //    (caller_id=4)
 //
@@ -6957,8 +7091,6 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history) {
 
   new_localMF(HISTORY_MAC_MF+data_dir,nhistory,0,data_dir);
 
-  Vector<int> local_law_of_the_wall;
-
   for (int im=0;im<nmat;im++) {
 
    if ((law_of_the_wall[im]==0)||   //just use the solid velocity
@@ -6968,11 +7100,6 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history) {
    } else
     amrex::Error("law_of_the_wall[im] invalid");
 
-   local_law_of_the_wall[im]=law_of_the_wall[im];
-    //disable wall modeling when called from initData
-   if (caller_id==40) {
-    local_law_of_the_wall[im]=0; 
-   }
   }
 
   const Real* dx = geom.CellSize();
@@ -7037,9 +7164,11 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history) {
      // declared in: GODUNOV_3D.F90
     fort_wallfunction( 
      &data_dir,
-     local_law_of_the_wall.dataPtr(),
+     law_of_the_wall.dataPtr(),
      &NS_sumdata.size(),
      NS_sumdata.dataPtr(),
+     &ncomp_sum_int_user1,
+     &ncomp_sum_int_user2,
      wall_model_velocity.dataPtr(),
      im_solid_map.dataPtr(),
      &level,
@@ -9260,9 +9389,8 @@ NavierStokes::initData () {
   // if nparts>0,
   //  Initialize FSI_GHOST_MAC_MF from Solid_State_Type
   // Otherwise initialize FSI_GHOST_MAC_MF with the fluid velocity.
- int dealloc_history=1;
-  //caller_id==40 => do not do law of wall stuff.
- init_FSI_GHOST_MAC_MF(40,dealloc_history);
+  // No law of the wall modeling.
+ init_FSI_GHOST_MAC_MF_predict();
 
  init_regrid_history();
  is_first_step_after_regrid=-1;
@@ -21044,6 +21172,13 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
   amrex::Error("SDC_outer_sweeps invalid");
  }
 
+ if (fast_mode==1) {
+  init_FSI_GHOST_MAC_MF_ALL_predict();
+ } else if (fast_mode==0) {
+  // do nothing
+ } else
+  amrex::Error("fast_mode invalid");
+
     // vof,ref cen, order,slope,int
  int update_flag=0;  // do not update the error
  int init_vof_prev_time=0;
@@ -21071,6 +21206,10 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
  } else
   amrex::Error("post_init_flag invalid 20982");
 
+FIX ME (if fast_mode==1) then call init_gradu_tensorALL, and
+getStateVISC_ALL no need
+to call make_physics_varsALL.
+
   //make_physics_varsALL calls "getStateVISC_ALL"
   //make_physics_varsALL calls "init_gradu_tensorALL"
  make_physics_varsALL(project_option,post_restart_flag,0);
@@ -21080,31 +21219,10 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.delete_localMF_if_exist(DRAG_MF,1);
  }
+
+  // initializes DRAG_MF to 0.0.
  allocate_array(ngrow_distance,N_DRAG,-1,DRAG_MF);
-
-// GetDragALL section------------------------------------------
-//
-// compute (-pI+2\mu D)dot n_solid for cut cells.
-//
-// F=mA  rho du/dt = div sigma + rho g
-// integral rho du/dt = integral (div sigma + rho g)
-// du/dt=(integral_boundary sigma dot n)/mass  + g
-// torque_axis=r_axis x F=r_axis x (m alpha_axis x r_axis)   
-// alpha=angular acceleration  (1/s^2)
-// torque_axis=I_axis alpha_axis  
-// I_axis=integral rho r_axis x (e_axis x r_axis)   I=moment of inertia
-// I_axis=integral rho r_axis^{2}
-// r_axis=(x-x_{COM})_{axis}  y_axis=y-(y dot e_axis)e_axis
-// torque_axis=integral r_axis x (div sigma + rho g)=
-//   integral_boundary r_axis x sigma dot n + integral r_axis x rho g
-// NS_drag_integrated_quantities: see <DRAG_COMP.H>
-
  allocate_levelsetLO_ALL(2,LEVELPC_MF);
-
- if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
-  // do nothing
- } else
-  amrex::Error("expecting NUM_TENSOR_TYPE==2*AMREX_SPACEDIM");
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()==3*nmat) {
@@ -21112,6 +21230,11 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
  } else {
   amrex::Error("volWgtSumALL: CELL_VISC_MATERIAL_MF invalid ncomp");
  }
+
+ if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+  // do nothing
+ } else
+  amrex::Error("expecting NUM_TENSOR_TYPE==2*AMREX_SPACEDIM");
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
@@ -21134,7 +21257,7 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
       }
 
       if (partid<im_elastic_map.size()) {
-       // we are currently in "GetDragALL"
+       // we are currently in "volWgtSumALL"
        make_viscoelastic_tensorALL(im); // (mu_p/lambda)(f(A)A-I) if FENE-P
         //ngrow,ncomp,scomp,dcomp,dst,src
        copyALL(1,NUM_TENSOR_TYPE,0,partid*NUM_TENSOR_TYPE,
@@ -21162,6 +21285,25 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
   // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid:GetDragALL");
+
+FIX ME, DO NOT CALL THIS SECTION IF fast_mode==1
+
+// GetDragALL section------------------------------------------
+//
+// compute (-pI+2\mu D)dot n_solid for cut cells.
+//
+// F=mA  rho du/dt = div sigma + rho g
+// integral rho du/dt = integral (div sigma + rho g)
+// du/dt=(integral_boundary sigma dot n)/mass  + g
+// torque_axis=r_axis x F=r_axis x (m alpha_axis x r_axis)   
+// alpha=angular acceleration  (1/s^2)
+// torque_axis=I_axis alpha_axis  
+// I_axis=integral rho r_axis x (e_axis x r_axis)   I=moment of inertia
+// I_axis=integral rho r_axis^{2}
+// r_axis=(x-x_{COM})_{axis}  y_axis=y-(y dot e_axis)e_axis
+// torque_axis=integral r_axis x (div sigma + rho g)=
+//   integral_boundary r_axis x sigma dot n + integral r_axis x rho g
+// NS_drag_integrated_quantities: see <DRAG_COMP.H>
 
  for (int isweep_drag=0;isweep_drag<2;isweep_drag++) {
   for (int ilev=level;ilev<=finest_level;ilev++) {
