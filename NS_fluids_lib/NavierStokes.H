@@ -498,6 +498,7 @@ public:
     void process_potential_force_face();
     void init_gravity_potential();
 
+    void GetDragALL();
     void GetDrag(int isweep);
 
     void process_recalesce_dataALL(
@@ -960,6 +961,8 @@ protected:
      int itensor_iter,
      MultiFab* mask3,
      int simple_AMR_BC_flag_viscosity);
+
+    void init_gradu_tensor_and_material_visc_ALL();
 
     void init_gradu_tensorALL(
      int idx,
