@@ -9,6 +9,7 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 
+#include "INTEGRATED_QUANTITY.H"
 #include "DRAG_COMP.H"
 #include "DERIVE_F.H"
 #include "PROB_F.H"
@@ -1268,19 +1269,23 @@ stop
 
        ! called from getStateCONDUCTIVITY
       subroutine fort_derconductivity( &
-        level, &
-        finest_level, &
-        im_parm, & ! =1..nmat
-        nmat, &
-        dt, &
-        conduct,DIMS(conduct), &
-        eosdata,DIMS(eosdata), &
-        vof,DIMS(vof), &
-        tilelo,tilehi, &
-        fablo,fabhi,bfact, &
-        time, &
-        dx,xlo, &
-        ngrow) &
+       NS_sumdata_size, &
+       NS_sumdata, &
+       ncomp_sum_int_user1, &
+       ncomp_sum_int_user2, &
+       level, &
+       finest_level, &
+       im_parm, & ! =1..nmat
+       nmat, &
+       dt, &
+       conduct,DIMS(conduct), &
+       eosdata,DIMS(eosdata), &
+       vof,DIMS(vof), &
+       tilelo,tilehi, &
+       fablo,fabhi,bfact, &
+       time, &
+       dx,xlo, &
+       ngrow) &
       bind(c,name='fort_derconductivity')
 
       use global_utility_module
@@ -1289,6 +1294,10 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: ncomp_sum_int_user1
+      INTEGER_T, intent(in) :: ncomp_sum_int_user2
+      INTEGER_T :: ncomp_sum_int_user12
+      INTEGER_T, intent(in) :: NS_sumdata_size
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: im_parm !=1..nmat
@@ -1304,6 +1313,9 @@ stop
       INTEGER_T, intent(in) :: ngrow
       REAL_T, intent(in) :: time
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM)
+
+      REAL_T, intent(in) :: NS_sumdata(NS_sumdata_size)
+
       REAL_T, intent(out), target :: conduct(DIMV(conduct),nmat) 
       REAL_T, pointer :: conduct_ptr(D_DECL(:,:,:),:)
 
@@ -1325,6 +1337,7 @@ stop
       REAL_T density
       REAL_T temperature
       REAL_T temperature_wall
+      REAL_T temperature_wall_max
       REAL_T temperature_probe
       REAL_T thermal_k
       REAL_T thermal_k_max
@@ -1340,6 +1353,12 @@ stop
       INTEGER_T caller_id
       INTEGER_T near_interface
       REAL_T nrm(SDIM)
+
+      ncomp_sum_int_user12=ncomp_sum_int_user1+ncomp_sum_int_user2
+      if (NS_sumdata_size.ne.IQ_TOTAL_SUM_COMP) then
+       print *,"mismatch between NS_sumdata_size and IQ_TOTAL_SUM_COMP"
+       stop
+      endif
 
       nhalf=1
 
@@ -1521,12 +1540,15 @@ stop
          if (near_interface.eq.1) then
           flagcomp=(im_solid_crit-1)*num_state_material+1
           temperature_wall=eosdata(D_DECL(isolid,jsolid,ksolid),flagcomp+1)
+          temperature_wall_max= &
+            NS_sumdata(IQ_MAXSTATE_SUM_COMP+2*(im_solid_crit-1)+2)
           flagcomp=(im_parm-1)*num_state_material+1
           temperature_probe=eosdata(D_DECL(iprobe,jprobe,kprobe),flagcomp+1)
           thermal_k=get_user_heatviscconst(im_parm)+ &
                fort_heatviscconst_eddy_wall(im_parm)
          else if (near_interface.eq.0) then
           temperature_wall=temperature
+          temperature_wall_max=temperature
           temperature_probe=temperature
           thermal_k=get_user_heatviscconst(im_parm)
          else
@@ -1543,6 +1565,7 @@ stop
             near_interface, &
             im_solid_crit, &
             temperature_wall, &
+            temperature_wall_max, &
             temperature_probe, &
             nrm) ! nrm points from solid to fluid
          endif

@@ -695,6 +695,7 @@ subroutine STUB_wallfunc( &
   dist_fluid, & ! intent(in)
   temperature_image, & !intent(in) 
   temperature_wall, & ! intent(in)      
+  temperature_wall_max, & ! intent(in)      
   viscosity_molecular, & ! intent(in)      
   viscosity_eddy_wall, & ! intent(in)      
   y, & !intent(in) distance from image to wall
@@ -718,6 +719,7 @@ REAL_T, intent(in) :: dist_probe
 REAL_T, intent(in) :: dist_fluid
 REAL_T, intent(in) :: temperature_image
 REAL_T, intent(in) :: temperature_wall
+REAL_T, intent(in) :: temperature_wall_max
 REAL_T, intent(in) :: viscosity_molecular
 REAL_T, intent(in) :: viscosity_eddy_wall
 REAL_T, intent(in) :: y !delta_r
@@ -738,6 +740,7 @@ REAL_T, intent(out) :: ughost_tngt  ! dir direction
   dist_fluid, & ! intent(in)
   temperature_image, & !intent(in) 
   temperature_wall, & ! intent(in)      
+  temperature_wall_max, & ! intent(in)      
   viscosity_molecular, & ! intent(in)      
   viscosity_eddy_wall, & ! intent(in)      
   y, & !intent(in) distance from image to wall
@@ -814,6 +817,7 @@ subroutine STUB_THERMAL_K(x,dx,cur_time, &
   near_interface, &
   im_solid, &
   temperature_wall, &
+  temperature_wall_max, &
   temperature_probe, &
   nrm) ! nrm points from solid to fluid
 use probcommon_module
@@ -828,6 +832,7 @@ REAL_T, intent(in) :: cur_time
 REAL_T, intent(in) :: density
 REAL_T, intent(in) :: temperature
 REAL_T, intent(in) :: temperature_wall
+REAL_T, intent(in) :: temperature_wall_max
 REAL_T, intent(in) :: temperature_probe
 REAL_T, intent(in) :: nrm(SDIM) ! nrm points from solid to fluid
 REAL_T, intent(inout) :: thermal_k

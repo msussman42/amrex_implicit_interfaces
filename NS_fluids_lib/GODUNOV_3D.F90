@@ -12,6 +12,7 @@
 
 ! N_EXTRA_REAL.H is in the amrlib directory.
 #include "N_EXTRA_REAL.H"
+#include "INTEGRATED_QUANTITY.H"
 #include "GODUNOV_F.H"
 
 
@@ -11902,8 +11903,6 @@ stop
       INTEGER_T nten
       INTEGER_T nhistory_sub
       type(law_of_wall_parm_type) :: law_of_wall_parm
-
-      INTEGER_T idest
 
       ncomp_sum_int_user12=ncomp_sum_int_user1+ncomp_sum_int_user2
 

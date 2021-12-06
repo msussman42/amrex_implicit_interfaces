@@ -16,6 +16,7 @@
 #include <AMReX_Utility.H>
 
 #include <NavierStokes.H>
+#include <INTEGRATED_QUANTITY.H>
 #include <GLOBALUTIL_F.H>
 #include <TECPLOTUTIL_F.H>
 #include <MARCHING_TETRA_F.H>
@@ -399,7 +400,7 @@ void NavierStokes::getStateVISC_ALL() {
 
 } // end subroutine getStateVISC_ALL 
 
-
+//called from: NavierStokes::init_FSI_GHOST_MAC_MF_ALL
 void NavierStokes::getStateCONDUCTIVITY_ALL() {
 
  if (level!=0)
@@ -4750,7 +4751,6 @@ void NavierStokes::make_physics_varsALL(int project_option,
  if (ncomp_visc!=3*nmat)
   amrex::Error("visc_data invalid ncomp");
 
- getStateCONDUCTIVITY_ALL();
  debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_MF,1,9);
  int ncomp_conductivity=localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp();
  if (ncomp_conductivity!=nmat)
@@ -9702,26 +9702,32 @@ void NavierStokes::getStateCONDUCTIVITY() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   int local_sumdata_size=NS_sumdata.size();
+
     // declared in: DERIVE_3D.F90
    fort_derconductivity(
-      &level,
-      &finest_level,
-      &fortran_im,
-      &nmat,
-      &dt_slab,
-      conductivity_fab.dataPtr(),
-      ARLIM(conductivity_fab.loVect()),
-      ARLIM(conductivity_fab.hiVect()),
-      eosfab.dataPtr(),
-      ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
-      voffab.dataPtr(),
-      ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
-      tilelo,tilehi,
-      fablo,fabhi,
-      &bfact,
-      &cur_time_slab,
-      dx,xlo,
-      &ngrow);
+     &local_sumdata_size,
+     NS_sumdata.dataPtr(),
+     &ncomp_sum_int_user1,
+     &ncomp_sum_int_user2,
+     &level,
+     &finest_level,
+     &fortran_im,
+     &nmat,
+     &dt_slab,
+     conductivity_fab.dataPtr(),
+     ARLIM(conductivity_fab.loVect()),
+     ARLIM(conductivity_fab.hiVect()),
+     eosfab.dataPtr(),
+     ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
+     voffab.dataPtr(),
+     ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     &cur_time_slab,
+     dx,xlo,
+     &ngrow);
   } //mfi
 } // omp
   ns_reconcile_d_num(165);

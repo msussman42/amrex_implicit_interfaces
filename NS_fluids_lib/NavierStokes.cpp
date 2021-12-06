@@ -6891,6 +6891,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
  int local_post_init_flag=10;
  volWgtSumALL(local_post_init_flag,fast_mode);
 
+ getStateCONDUCTIVITY_ALL();
+
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   int dealloc_history=0;
@@ -7162,10 +7164,13 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history) {
      //     0>phi_solid>-|cutoff|)
      //    ghost normal velocity = solid normal velocity everywhere.
      // declared in: GODUNOV_3D.F90
+
+    int local_sumdata_size=NS_sumdata.size();
+
     fort_wallfunction( 
      &data_dir,
      law_of_the_wall.dataPtr(),
-     &NS_sumdata.size(),
+     &local_sumdata_size,
      NS_sumdata.dataPtr(),
      &ncomp_sum_int_user1,
      &ncomp_sum_int_user2,
@@ -19315,7 +19320,6 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*nmat)
   amrex::Error("viscmf invalid ncomp");
 
- getStateCONDUCTIVITY_ALL();
  debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_MF,1,9);
  if (localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp()!=nmat)
   amrex::Error("conductivity_data invalid ncomp");
