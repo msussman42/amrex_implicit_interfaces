@@ -3,18 +3,14 @@
 
 #ifdef BL_LANG_FORT
 #    define FORT_HEATADVANCE  heatadvance
-#    define FORT_BUILD_MASKSEM build_masksem
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_HEATADVANCE  HEATADVANCE
-#    define FORT_BUILD_MASKSEM BUILD_MASKSEM
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_HEATADVANCE  heatadvance
-#    define FORT_BUILD_MASKSEM build_masksem
 #  else
 #    define FORT_HEATADVANCE  heatadvance_
-#    define FORT_BUILD_MASKSEM build_masksem_
 #  endif
 #  endif
 
@@ -205,7 +201,7 @@ extern "C"
     Real* dt);
 
 
-   void FORT_BUILD_MASKSEM(
+   void fort_build_masksem(
     Real* spectral_cells_level,
     int* mask_sweep,
     int* level,

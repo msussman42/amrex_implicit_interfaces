@@ -18585,7 +18585,7 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
  int hflag=0;
  int combine_idx=-1;  // update state variables
  int update_flux=0;
- int interface_cond_avail=0;
+ int interface_cond_avail=0; // T_I,Y_I not available.
 
  combine_state_variable(
   project_option_combine,
@@ -18595,21 +18595,27 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
   update_flux,
   interface_cond_avail);
 
- project_option_combine=0; // mac velocity
- update_flux=1;
- combine_state_variable(
-  project_option_combine,
-  combine_idx,
-  combine_flag,
-  hflag,
-  update_flux,
-  interface_cond_avail);
+ if (fast_mode==0) {
+
+  project_option_combine=0; // mac velocity
+  update_flux=1;
+  combine_state_variable(
+   project_option_combine,
+   combine_idx,
+   combine_flag,
+   hflag,
+   update_flux,
+   interface_cond_avail);
+
+ } else if (fast_mode==1) {
+
+  // do nothing
+	
+ } else
+  amrex::Error("fast_mode invalid");
 
  resize_maskfiner(2,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,2,53);
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2);
 
  VOF_Recon_resize(2,SLOPE_RECON_MF);
  debug_ngrow(SLOPE_RECON_MF,2,54);
@@ -18644,8 +18650,8 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
  if (resultsize!=IQ_TOTAL_SUM_COMP)
   amrex::Error("resultsize invalid");
  int num_cells=0;
- int Z_dir=-1;
- int R_dir=-1;
+ int Z_dir=1;
+ int R_dir=0;
  const Box& fdomain = ns_fine.geom.Domain();
  const int* fdomlo = fdomain.loVect();
  const int* fdomhi = fdomain.hiVect();
@@ -18852,28 +18858,6 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
  } // tid
 
  ParallelDescriptor::Barrier();
-
- project_option_combine=3; // velocity in volWgtSum
- combine_flag=2;
- hflag=0;
- combine_idx=-1;  // update state variables
- update_flux=0;
- combine_state_variable(
-  project_option_combine,
-  combine_idx,
-  combine_flag,
-  hflag,
-  update_flux,
-  interface_cond_avail);
- project_option_combine=0; // mac velocity
- update_flux=1;
- combine_state_variable(
-  project_option_combine,
-  combine_idx,
-  combine_flag,
-  hflag,
-  update_flux,
-  interface_cond_avail);
 
  NS_sumdata[IQ_FILLER_SUM_COMP]=0.0;
 
@@ -21417,8 +21401,8 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
   amrex::Error("fast_mode invalid");
 
  int num_cells=0;
- int Z_dir=-1;
- int R_dir=-1;
+ int Z_dir=1;
+ int R_dir=0;
  const Box& fdomain = ns_fine.geom.Domain();
  const int* fdomlo = fdomain.loVect();
  const int* fdomhi = fdomain.hiVect();
@@ -21690,9 +21674,9 @@ NavierStokes::prepare_post_process(int post_init_flag) {
    
  } // ilev=level ... finest_level
 
- init_FSI_GHOST_MAC_MF_ALL(2);
-
  build_masksemALL();
+
+ init_FSI_GHOST_MAC_MF_ALL(2);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
