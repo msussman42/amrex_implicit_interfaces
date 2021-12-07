@@ -1682,12 +1682,12 @@ if ((im.ge.1).and.(im.le.num_materials)) then
         (xi.le.TANK_MK_HEATER_WALL_MODEL).and. &
         (nrm(1).eq.-one).and. &
         (near_interface.eq.1).and. &
-        (temperature_wall.gt.temperature_probe)) then
+        (temperature_wall_max.gt.temperature_probe)) then
      thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
      gravity_local=abs(gravity)
      expansion_coefficient=abs(fort_DrhoDT(im)) ! units: 1/temperature
      Gr=gravity_local*expansion_coefficient* &
-       (temperature_wall-temperature_probe)*(xi**3.0)/(nu*nu)
+       (temperature_wall_max-temperature_probe)*(xi**3.0)/(nu*nu)
      Pr=nu/thermal_diffusivity
      Ra=Gr*Pr
 
@@ -1715,7 +1715,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
              (xi.ge.TANK_MK_HEATER_WALL_MODEL).or. &
              (nrm(1).ne.-one).or. &
              (near_interface.eq.0).or. &
-             (temperature_wall.le.temperature_probe)) then
+             (temperature_wall_max.le.temperature_probe)) then
      ! do nothing
     else
      print *,"xi,nrm,temp_wall, or temp_probe invalid"
@@ -1950,10 +1950,10 @@ if ((xi.gt.0.0d0).and. &
  expansion_coefficient=abs(fort_DrhoDT(im_fluid)) ! units: 1/temperature
  Pr=nu/thermal_diffusivity
 
- if (temperature_wall.gt.temperature_image) then
+ if (temperature_wall_max.gt.temperature_image) then
 
   Gr=gravity_local*expansion_coefficient* &
-    (temperature_wall-temperature_image)*(xi**3.0)/(nu*nu)
+    (temperature_wall_max-temperature_image)*(xi**3.0)/(nu*nu)
   Ra=Gr*Pr
 
   if(Ra.lt.1.0e+9)then
@@ -1993,7 +1993,7 @@ if ((xi.gt.0.0d0).and. &
   endif
   ughost_tngt=(Jtemp_no_area/rho_w)*dtemp/macro_scale_thickness
 
- else if (temperature_wall.le.temperature_image) then
+ else if (temperature_wall_max.le.temperature_image) then
   Gr=zero
   Ra=zero
   turb_flag=0
@@ -2004,7 +2004,7 @@ if ((xi.gt.0.0d0).and. &
   macro_scale_thickness=zero
   ughost_tngt=zero
  else
-  print *,"temperature_wall or temperature_image is NaN"
+  print *,"temperature_wall_max or temperature_image is NaN"
   stop
  endif
 

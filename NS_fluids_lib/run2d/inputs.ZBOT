@@ -87,6 +87,7 @@ ns.yblob4	    = 0.0127 # Z coord (vert) of the top spherical cap center
 # dx=.15/32=0.0046875
 # n_cell=16x64
 # dx=.15/16=0.009375
+# n_cell=8x32
 # dx=.15/8=0.01875
 geometry.coord_sys  = 1
 geometry.prob_lo    = 0.0  -0.3
@@ -111,7 +112,8 @@ ns.heatviscconst_eddy_bulk=0.0 0.0 0.0
 # prob_hi_x=0.15
 # 0.15/16=0.009375
 # 0.15/8=0.01875
-amr.n_cell          = 16 64
+#amr.n_cell          = 16 64
+amr.n_cell          = 8 32
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
@@ -145,7 +147,8 @@ ns.shock_timestep=2 2 2
 #dt cannot exceed the fixed_dt_scales values.
 #0.1 is used for 64x256 grid.
 #0.4 is used for 16x64 grid. 
-ns.fixed_dt_scales=0.0 0.4 0.4
+#0.8 is used for  8x32 grid. 
+ns.fixed_dt_scales=0.0 0.8 0.8
 #ns.fixed_dt	    = 5.0e-5   # Hardwire dt
 
 # ----------------------------------------------------------
@@ -277,7 +280,8 @@ ns.viscconst=4.48E-04 1.093e-6 1.0
 ns.viscconst_eddy_wall=5.0e-3 0.0 0.0
 ns.viscconst_eddy_bulk=5.0e-3 5.3e-4 0.0
 ns.wall_model_velocity=0.005 0.0 0.0
-ns.heatflux_factor=1.0 1.0 1.0
+#ns.heatflux_factor=1.0 1.0 1.0
+ns.heatflux_factor=16.0 0.0 1.0
 ns.law_of_the_wall=1 0 0
 ns.les_model=1 0 0
 ns.visual_WALLVEL_plot_int=100  # 100 for standard tests.

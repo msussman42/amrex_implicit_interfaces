@@ -10311,8 +10311,8 @@ END SUBROUTINE SIMP
       enddo !dir=1,sdim
 
       local_num_cells=0
-      local_Z_dir=-1
-      local_R_dir=-1
+      local_Z_dir=1
+      local_R_dir=0
     
       if ((SDIM.eq.2).and. &
           (probtype.eq.41).and. &

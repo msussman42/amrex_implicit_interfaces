@@ -8518,8 +8518,8 @@ void NavierStokes::build_masksem(int mask_sweep) {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // in: GODUNOV_3D.F90
-  FORT_BUILD_MASKSEM( 
+   // declared in: GODUNOV_3D.F90
+  fort_build_masksem( 
    spectral_cells_level[tid_current].dataPtr(),
    &mask_sweep,
    &level,

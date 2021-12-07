@@ -21520,15 +21520,12 @@ stop
       end subroutine fort_assimilate_statedata
 
 
-      end module godunov_module
-
-
       ! enable_spectral:
       ! 0 - low order
       ! 1 - space/time spectral
       ! 2 - space spectral only
       ! 3 - time spectral only
-      subroutine FORT_BUILD_MASKSEM( &
+      subroutine fort_build_masksem( &
        spectral_cells_level, &
        mask_sweep, &
        level, &
@@ -21546,7 +21543,9 @@ stop
        fablo,fabhi, &
        bfact, &
        bfact_fine, &
-       nmat)
+       nmat) &
+      bind(c,name='fort_build_masksem')
+
       use probcommon_module
       use global_utility_module
       use MOF_routines_module
@@ -21572,11 +21571,16 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(mask) 
       INTEGER_T, intent(in) :: DIMDEC(oldmask) 
       INTEGER_T, intent(in) :: DIMDEC(vfrac) 
-      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-      REAL_T, intent(in) :: masknbr(DIMV(masknbr))
-      REAL_T, intent(out) :: mask(DIMV(mask))
-      REAL_T, intent(in) :: oldmask(DIMV(oldmask))
-      REAL_T, intent(in) :: vfrac(DIMV(vfrac),nmat)
+      REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: masknbr(DIMV(masknbr))
+      REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out), target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: oldmask(DIMV(oldmask))
+      REAL_T, pointer :: oldmask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: vfrac(DIMV(vfrac),nmat)
+      REAL_T, pointer :: vfrac_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T im,imcrit,im_max
       INTEGER_T sumtag
@@ -21642,11 +21646,16 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,11303)
-      call checkbound(fablo,fabhi,DIMS(masknbr),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(mask),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(oldmask),1,-1,1271)
-      call checkbound(fablo,fabhi,DIMS(vfrac),0,-1,1272)
+      maskcov_ptr=>maskcov
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,11303)
+      masknbr_ptr=>masknbr
+      call checkbound_array1(fablo,fabhi,masknbr_ptr,1,-1,1271)
+      mask_ptr=>mask
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,1271)
+      oldmask_ptr=>oldmask
+      call checkbound_array1(fablo,fabhi,oldmask_ptr,1,-1,1271)
+      vfrac_ptr=>vfrac
+      call checkbound_array(fablo,fabhi,vfrac_ptr,0,-1,1272)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
@@ -22136,7 +22145,9 @@ stop
       enddo ! i,j,k (only interior cells)
 
       return
-      end subroutine FORT_BUILD_MASKSEM
+      end subroutine fort_build_masksem
+
+      end module godunov_module
 
 
        ! called from: NavierStokes3.cpp
