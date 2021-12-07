@@ -74,6 +74,7 @@ ZBOT_law_of_the_wall/
 ZBOT_no_law_of_the_wall/
 ZBOT_hardwire_vtemp/
 ZBOT_microgravity/
+ZBOT_valgrind/
 flexible_plate/
 ICE_ON_SUBSTRATE/
 SIMPLE_PALMORE_DESJARDINS/
