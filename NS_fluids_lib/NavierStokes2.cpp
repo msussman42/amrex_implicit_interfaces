@@ -7611,6 +7611,7 @@ void NavierStokes::output_zones(
    delete mom_denmfminus;
    delete lsdistmfminus;
    delete viscmfminus;
+   delete conductmfminus;
    delete magtracemfminus;
    delete elasticforcemfminus;
 

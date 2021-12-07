@@ -5210,7 +5210,7 @@ stop
       REAL_T den_mat
       REAL_T TEMP_mat
       REAL_T internal_energy
-      REAL_T massfrac_parm(num_species_var)
+      REAL_T massfrac_parm(num_species_var+1)
       REAL_T pressure_local
       REAL_T xsten(-3:3,SDIM)
       REAL_T dx_sten(SDIM)
@@ -6891,7 +6891,7 @@ stop
       REAL_T den_mat
       REAL_T TEMP_mat
       REAL_T internal_energy
-      REAL_T massfrac_parm(num_species_var)
+      REAL_T massfrac_parm(num_species_var+1)
       REAL_T pressure_local
       REAL_T pressure_sum
       REAL_T dVdT
