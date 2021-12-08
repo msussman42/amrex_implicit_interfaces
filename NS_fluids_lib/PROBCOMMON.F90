@@ -628,6 +628,52 @@ implicit none
       REAL_T, intent(inout) :: thermal_k
       end subroutine TEMPLATE_THERMAL_K
 
+      subroutine TEMPLATE_INTERFACE_TEMPERATURE( &
+        probe_constrain, &
+        ireverse, &
+        iten, &        
+        xI, &        
+        cur_time, &        
+        prev_time, &        
+        dt, &        
+        TI, &
+        YI, &
+        user_override_TI_YI, &
+        molar_mass, & ! index: 1..nmat
+        species_molar_mass, & ! index: 1..num_species_var
+        ksrc, &
+        kdst, &
+        T_probe_src, &
+        T_probe_dst, &
+        LL, &
+        dxprobe_src, &
+        dxprobe_dst, &
+        num_materials_in, &
+        num_species_var_in)
+      INTEGER_T, intent(in) :: num_materials_in
+      INTEGER_T, intent(in) :: num_species_var_in
+      INTEGER_T, intent(in) :: probe_constrain
+      INTEGER_T, intent(in) :: ireverse
+      INTEGER_T, intent(in) :: iten
+      REAL_T, intent(in) :: xI(SDIM)
+      REAL_T, intent(in) :: cur_time
+      REAL_T, intent(in) :: prev_time
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(inout) :: TI
+      REAL_T, intent(inout) :: YI
+      INTEGER_T, intent(inout) :: user_override_TI_YI
+      REAL_T, intent(in) :: molar_mass(num_materials_in)
+      REAL_T, intent(in) :: species_molar_mass(num_species_var_in)
+      REAL_T, intent(in) :: ksrc
+      REAL_T, intent(in) :: kdst
+      REAL_T, intent(in) :: T_probe_src
+      REAL_T, intent(in) :: T_probe_dst
+      REAL_T, intent(in) :: LL
+      REAL_T, intent(in) :: dxprobe_src
+      REAL_T, intent(in) :: dxprobe_dst
+      end subroutine TEMPLATE_INTERFACE_TEMPERATURE
+
+
       subroutine TEMPLATE_reference_wavelen(wavelen)
       REAL_T, intent(inout) :: wavelen
       end subroutine TEMPLATE_reference_wavelen
@@ -921,6 +967,8 @@ implicit none
               SUB_DELETE_REGIONS_LIST
 
       PROCEDURE(TEMPLATE_THERMAL_K), POINTER :: SUB_THERMAL_K
+      PROCEDURE(TEMPLATE_INTERFACE_TEMPERATURE), POINTER :: &
+              SUB_INTERFACE_TEMPERATURE
 
       PROCEDURE(TEMPLATE_reference_wavelen), POINTER :: SUB_reference_wavelen
 
