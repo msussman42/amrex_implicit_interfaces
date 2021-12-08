@@ -1987,11 +1987,12 @@ if ((xi.gt.0.0d0).and. &
   ! it is known that converged solutions can be obtained on a 128x512 grid.
   ! on a 16x64 grid, choose a thickness associated to the finer grid.
   macro_scale_thickness=dx(1)/16.0d0
-  macro_scale_thickness=dtemp
-  if (macro_scale_thickness.lt.dtemp) then
+  if ((macro_scale_thickness.lt.dtemp).or.(1.eq.1)) then
    macro_scale_thickness=dtemp
   endif
-  ughost_tngt=(Jtemp_no_area/rho_w)*dtemp/macro_scale_thickness
+! ughost_tngt=(Jtemp_no_area/rho_w)*dtemp/macro_scale_thickness
+  ughost_tngt=vtemp ! vtemp is the maximum tangential velocity in the
+                    ! boundary layer region.
 
  else if (temperature_wall_max.le.temperature_image) then
   Gr=zero
@@ -2017,6 +2018,8 @@ if ((xi.gt.0.0d0).and. &
   stop
  endif
 
+  ! do not prescribe a wall velocity if near (or in) another fluid.
+  !
  if ((dist_probe.lt.dx(SDIM)).or. &
      (dist_fluid.lt.dx(SDIM))) then
   ughost_tngt=0.0d0
