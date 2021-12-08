@@ -2111,7 +2111,7 @@ stop
       LS_INT_OWN_counter=0
       VOF_pos_probe_counter=0
 
-       ! tessellating volume fractions.
+       ! tessellating volume fractions at xI.
       call interpfabVFRAC_tess( &
        PROBE_PARMS%tid, &
        PROBE_PARMS%bfact, &
@@ -2239,7 +2239,7 @@ stop
         PROBE_PARMS%EOS, &
         PROBE_PARMS%LS, &
         PROBE_PARMS%recon, &
-        POUT%T_probe(iprobe), &
+        POUT%T_probe(iprobe), & !T_probe constrained by T_I
         PROBE_PARMS%debugrate)
 
        if (POUT%T_probe(iprobe).lt.zero) then
@@ -6905,6 +6905,7 @@ stop
       INTEGER_T, target, intent(in) :: level
       INTEGER_T, target, intent(in) :: finest_level
       INTEGER_T :: local_probe_constrain
+      INTEGER_T :: user_override_TI_YI
       INTEGER_T :: probe_ok
       INTEGER_T, intent(in) :: normal_probe_size
       REAL_T :: microscale_probe_size
@@ -8066,6 +8067,10 @@ stop
                  if (probe_ok.eq.1) then
                   ! do nothing
                  else if (probe_ok.eq.0) then
+                  ! if local_probe_constrain==1, then
+                  !  probe values depend on interface values.
+                  ! if local_probe_constrain==0, then
+                  !  probe values are insensitive to the interface values.
                   call probe_interpolation( &
                    PROBE_PARMS, &
                    local_Tsat(ireverse), &
@@ -8083,6 +8088,35 @@ stop
                  else
                   print *,"local_probe_constrain invalid"
                   stop
+                 endif
+
+                 user_override_TI_YI=0
+
+                 if (is_in_probtype_list().eq.1) then
+                   ! do not call "mdot_diff_func" (below) if 
+                   ! user_override_TI_YI=1
+                  call SUB_INTERFACE_TEMPERATURE( &
+                    local_probe_constrain, &
+                    ireverse, &
+                    iten, &
+                    xI, &
+                    cur_time, &
+                    prev_time, &
+                    dt, &
+                    local_Tsat(ireverse), &
+                    Y_predict, &
+                    user_override_TI_YI, &
+                    molar_mass, & ! index: 1..nmat
+                    species_molar_mass, & ! index: 1..num_species_var
+                    thermal_k(1), &
+                    thermal_k(2), & ! ksrc,kdst
+                    POUT%T_probe(1), & ! source
+                    POUT%T_probe(2), & ! dest
+                    LL(ireverse), &
+                    POUT%dxprobe_target(1), & ! source
+                    POUT%dxprobe_target(2), & ! dest
+                    num_materials, &
+                    num_species_var)
                  endif
 
                  interp_valid_flag_initial(1)=POUT%interp_valid_flag(1)
