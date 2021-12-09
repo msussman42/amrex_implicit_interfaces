@@ -359,12 +359,20 @@ contains
   end subroutine Methane_usage
 !**************************************************** 
 ! cell_volume not needed.
-  subroutine Hydrate_energy_source_term(dF,dt,ksource, &
-       energy_source,LL)
-    REAL_T dF,dt,ksource,energy_source,LL
+  subroutine Hydrate_energy_source_term( &
+     dF,dt, &
+     ksource_physical, & ! fort_heatviscconst(im_source)
+     ksource_model, & ! conductstate * fort_heatflux_factor(im_source)
+     energy_source,LL)
+    REAL_T, intent(in) :: dF,dt
+    REAL_T, intent(in) :: ksource_physical
+    REAL_T, intent(in) :: ksource_model
+    REAL_T, intent(in) :: LL
+    REAL_T, intent(out) :: energy_source
 
     energy_source  = abs(LL) * dF ! [erg.g^-1]
   end subroutine Hydrate_energy_source_term
+
 !**************************************************** 
 ! Temperature and pressure for Liquid_Water-Hydrate-Vapor and
 ! Ice-Hydrate-Vapor three-phase equilibrium.  

@@ -3718,7 +3718,8 @@ stop
       REAL_T multi_area(nmat)
       REAL_T multi_cen(SDIM,nmat)
 
-      REAL_T thermal_k(2)  ! source,dest
+      REAL_T thermal_k_model_predict(2)  ! source,dest
+      REAL_T thermal_k_physical_base(2)  ! source,dest
 
       INTEGER_T nmax,nhalf,nhalf0
       INTEGER_T klosten,khisten
@@ -5664,8 +5665,10 @@ stop
               stop
              endif
 
-             thermal_k(iprobe)=conductstate(D_DECL(i,j,k),im_probe)* &
-                fort_heatflux_factor(im_probe)
+             thermal_k_model_predict(iprobe)= &
+               conductstate(D_DECL(i,j,k),im_probe)* &
+               fort_heatflux_factor(im_probe)
+             thermal_k_physical_base(iprobe)=fort_heatviscconst(im_probe)
 
              if (fort_heatflux_factor(im_probe).ge.zero) then
               ! do nothing
@@ -5674,10 +5677,16 @@ stop
               stop
              endif
 
-             if (thermal_k(iprobe).ge.zero) then
+             if (thermal_k_model_predict(iprobe).ge.zero) then
               ! do nothing
              else
-              print *,"thermal_k(iprobe) invalid"
+              print *,"thermal_k_model_predict(iprobe) invalid"
+              stop
+             endif
+             if (thermal_k_physical_base(iprobe).ge.zero) then
+              ! do nothing
+             else
+              print *,"thermal_k_physical_base(iprobe) invalid"
               stop
              endif
 
@@ -6112,9 +6121,12 @@ stop
                 print *,"num_species_var invalid"
                 stop
                endif
-    
-               call Hydrate_energy_source_term(dF,dt, &
-                thermal_k(1), &  ! source
+   
+               ! Hydrate_energy_soure_term is declared in HYDRATE_REACTOR.F90 
+               call Hydrate_energy_source_term( &
+                dF,dt, &
+                thermal_k_physical_base(1), & 
+                thermal_k_model_predict(1), & 
                 energy_source,LL)
                call Methane_usage(dF,dt, &
                 fort_speciesviscconst(im_dest),amount_used)
@@ -7074,7 +7086,9 @@ stop
       INTEGER_T valid_phase_change(0:1)
       REAL_T, target :: dxprobe_source
       REAL_T, target :: dxprobe_dest
-      REAL_T, target :: thermal_k(2) ! source,dest
+      REAL_T, target :: thermal_k_model_predict(2) ! source,dest
+      REAL_T, target :: thermal_k_model_correct(2) ! source,dest
+      REAL_T, target :: thermal_k_physical_base(2) ! source,dest
       REAL_T LS_pos
       REAL_T C_w0
       INTEGER_T, target :: local_freezing_model
@@ -7983,25 +7997,45 @@ stop
                  PROBE_PARMS%dencomp_dest=>dencomp_dest
                  PROBE_PARMS%xI=>xI
 
-                 thermal_k(1)=conductstate(D_DECL(i,j,k),im_source)* &
-                   fort_heatflux_factor(im_source)
+                 do iprobe=1,2
+                  if (iprobe.eq.1) then
+                   im_probe=im_source
+                  else if (iprobe.eq.2) then
+                   im_probe=im_dest
+                  else
+                   print *,"iprobe invalid"
+                   stop
+                  endif
 
-                 if (fort_heatflux_factor(im_source).ge.zero) then
-                  ! do nothing
-                 else
-                  print *,"fort_heatflux_factor(im_source) invalid"
-                  stop
-                 endif
+                  thermal_k_model_predict(iprobe)= &
+                   conductstate(D_DECL(i,j,k),im_probe)* &
+                   fort_heatflux_factor(im_probe)
+                  thermal_k_model_correct(iprobe)= &
+                      thermal_k_model_predict(iprobe)
+                  thermal_k_physical_base(iprobe)= &
+                      fort_heatviscconst(im_probe)
 
-                 thermal_k(2)=conductstate(D_DECL(i,j,k),im_dest)* &
-                   fort_heatflux_factor(im_dest)
+                  if (fort_heatflux_factor(im_probe).ge.zero) then
+                   ! do nothing
+                  else
+                   print *,"fort_heatflux_factor(im_probe) invalid"
+                   stop
+                  endif
+                  if (thermal_k_model_predict(iprobe).ge.zero) then
+                   ! do nothing
+                  else
+                   print *,"thermal_k_model_predict(iprobe) invalid"
+                   stop
+                  endif
+                  if (thermal_k_physical_base(iprobe).ge.zero) then
+                   ! do nothing
+                  else
+                   print *,"thermal_k_physical_base(iprobe) invalid"
+                   stop
+                  endif
 
-                 if (fort_heatflux_factor(im_dest).ge.zero) then
-                  ! do nothing
-                 else
-                  print *,"fort_heatflux_factor(im_dest) invalid"
-                  stop
-                 endif
+                 enddo ! iprobe=1,2
+
 
                  if (LL(ireverse).gt.zero) then ! evaporation
                   iprobe_vapor=2  ! destination
