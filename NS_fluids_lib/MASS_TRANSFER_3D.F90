@@ -7998,6 +7998,7 @@ stop
                  PROBE_PARMS%xI=>xI
 
                  do iprobe=1,2
+
                   if (iprobe.eq.1) then
                    im_probe=im_source
                   else if (iprobe.eq.2) then
@@ -8142,8 +8143,8 @@ stop
                     user_override_TI_YI, &
                     molar_mass, & ! index: 1..nmat
                     species_molar_mass, & ! index: 1..num_species_var
-                    thermal_k(1), &
-                    thermal_k(2), & ! ksrc,kdst
+                    thermal_k_model_predict(1), &
+                    thermal_k_model_predict(2), & ! ksrc,kdst
                     POUT%T_probe(1), & ! source
                     POUT%T_probe(2), & ! dest
                     LL(ireverse), &
@@ -8602,6 +8603,24 @@ stop
                     ! of estimating the timestep dt.
                    for_estdt=0
 
+                   if (is_in_probtype_list().eq.1) then
+                    call SUB_K_EFFECTIVE( &
+                     ireverse, &
+                     iten, &
+                     molar_mass, & ! index: 1..nmat
+                     species_molar_mass, & ! index: 1..num_species_var
+                     thermal_k_model_predict, &
+                     thermal_k_model_correct, &
+                     thermal_k_physical_base, &
+                     POUT%T_probe(1), & ! source
+                     POUT%T_probe(2), & ! dest
+                     POUT%dxprobe_target(1), & ! source
+                     POUT%dxprobe_target(2), & ! dest
+                     LL(ireverse), &
+                     num_materials, &
+                     num_species_var)
+                   endif
+
 #if (STANDALONE==0)
                     ! if local_freezing_model==0 stefan problem
                     !  5, some kind of evaporation model,
@@ -8625,8 +8644,8 @@ stop
                      den_I_interp_SAT(2), & ! dest
                      POUT%den_probe(1), & ! source 
                      POUT%den_probe(2), & ! dest
-                     thermal_k(1), &
-                     thermal_k(2), & ! ksrc,kdst
+                     thermal_k_model_correct(1), &
+                     thermal_k_model_correct(2), & ! ksrc,kdst
                      POUT%T_probe(1), & ! source
                      POUT%T_probe(2), & ! dest
                      TSAT_predict, &
@@ -8659,9 +8678,9 @@ stop
                    if (local_freezing_model.eq.0) then
                      DTsrc=POUT%T_probe(1)-TSAT_predict
                      DTdst=POUT%T_probe(2)-TSAT_predict
-                     velsrc=thermal_k(1)*DTsrc/ &
+                     velsrc=thermal_k_model_correct(1)*DTsrc/ &
                        (LL(ireverse)*POUT%dxprobe_target(1))
-                     veldst=thermal_k(2)*DTdst/ &
+                     veldst=thermal_k_model_correct(2)*DTdst/ &
                        (LL(ireverse)*POUT%dxprobe_target(2))
                    
                      velsum=velsrc+veldst
@@ -8709,7 +8728,7 @@ stop
                     TSAT_Y_PARMS%TSAT_base=local_Tsat(ireverse)
                     TSAT_Y_PARMS%D_MASS=FicksLawD(iprobe_vapor)
                     TSAT_Y_PARMS%den_G=den_I_interp_SAT(iprobe_vapor)
-                    TSAT_Y_PARMS%thermal_k=>thermal_k
+                    TSAT_Y_PARMS%thermal_k=>thermal_k_model_correct
 
                     if (hardwire_flag(ireverse).eq.0) then
 
@@ -9101,7 +9120,8 @@ stop
                    print *,"LL,dxmin ",LL(ireverse),dxmin
                    print *,"dxprobe_target(1)=",POUT%dxprobe_target(1)
                    print *,"dxprobe_target(2)=",POUT%dxprobe_target(2)
-                   print *,"thermal_k ",thermal_k(1),thermal_k(2)
+                   print *,"thermal_k_model_correct ", &
+                    thermal_k_model_correct(1),thermal_k_model_correct(2)
                    print *,"local_Tsat(ireverse) ",local_Tsat(ireverse)
                    print *,"T_Probe(1),T_probe(2) ",POUT%T_Probe(1), &
                     POUT%T_probe(2)

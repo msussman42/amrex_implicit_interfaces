@@ -495,6 +495,7 @@ stop
       
       SUB_THERMAL_K=>STUB_THERMAL_K
       SUB_INTERFACE_TEMPERATURE=>STUB_INTERFACE_TEMPERATURE
+      SUB_K_EFFECTIVE=>STUB_K_EFFECTIVE
 
       SUB_reference_wavelen=>STUB_reference_wavelen
 
@@ -556,6 +557,7 @@ stop
        SUB_THERMAL_K=>CRYOGENIC_TANK_MK_THERMAL_K
 
        SUB_wallfunc=>CRYOGENIC_TANK_MK_wallfunc
+       SUB_K_EFFECTIVE=>CRYOGENIC_TANK_MK_K_EFFECTIVE
 
       else if (probtype.eq.424) then
 

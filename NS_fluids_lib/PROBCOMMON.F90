@@ -673,6 +673,37 @@ implicit none
       REAL_T, intent(in) :: dxprobe_dst
       end subroutine TEMPLATE_INTERFACE_TEMPERATURE
 
+      subroutine TEMPLATE_K_EFFECTIVE( &
+        ireverse, &
+        iten, &        
+        molar_mass, & ! index: 1..nmat
+        species_molar_mass, & ! index: 1..num_species_var
+        k_model_predict, &
+        k_model_correct, &
+        k_physical_base, &
+        T_probe_src, &
+        T_probe_dst, &
+        dxprobe_src, &
+        dxprobe_dst, &
+        LL, &
+        num_materials_in, &
+        num_species_var_in)
+      INTEGER_T, intent(in) :: num_materials_in
+      INTEGER_T, intent(in) :: num_species_var_in
+      INTEGER_T, intent(in) :: ireverse
+      INTEGER_T, intent(in) :: iten
+      REAL_T, intent(in) :: molar_mass(num_materials_in)
+      REAL_T, intent(in) :: species_molar_mass(num_species_var_in)
+      REAL_T, intent(in) :: k_model_predict(2) ! src,dst
+      REAL_T, intent(inout) :: k_model_correct(2) ! src,dst
+      REAL_T, intent(in) :: k_physical_base(2) ! src, dst
+      REAL_T, intent(in) :: T_probe_src
+      REAL_T, intent(in) :: T_probe_dst
+      REAL_T, intent(in) :: LL
+      REAL_T, intent(in) :: dxprobe_src
+      REAL_T, intent(in) :: dxprobe_dst
+      end subroutine TEMPLATE_K_EFFECTIVE
+
 
       subroutine TEMPLATE_reference_wavelen(wavelen)
       REAL_T, intent(inout) :: wavelen
@@ -969,6 +1000,8 @@ implicit none
       PROCEDURE(TEMPLATE_THERMAL_K), POINTER :: SUB_THERMAL_K
       PROCEDURE(TEMPLATE_INTERFACE_TEMPERATURE), POINTER :: &
               SUB_INTERFACE_TEMPERATURE
+      PROCEDURE(TEMPLATE_K_EFFECTIVE), POINTER :: &
+              SUB_K_EFFECTIVE
 
       PROCEDURE(TEMPLATE_reference_wavelen), POINTER :: SUB_reference_wavelen
 
