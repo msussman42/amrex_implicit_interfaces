@@ -2147,4 +2147,71 @@ REAL_T, intent(out) :: ughost_tngt  ! dir direction
 
 end subroutine CRYOGENIC_TANK_MK_wallfunc
 
+subroutine CRYOGENIC_TANK_MK_K_EFFECTIVE( &
+  ireverse, &
+  iten, &        
+  molar_mass, & ! index: 1..nmat
+  species_molar_mass, & ! index: 1..num_species_var
+  k_model_predict, &
+  k_model_correct, &
+  k_physical_base, &
+  T_probe_src, &
+  T_probe_dst, &
+  dxprobe_src, &
+  dxprobe_dst, &
+  LL, &
+  num_materials_in, &
+  num_species_var_in)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: num_materials_in
+INTEGER_T, intent(in) :: num_species_var_in
+INTEGER_T, intent(in) :: ireverse
+INTEGER_T, intent(in) :: iten
+REAL_T, intent(in) :: molar_mass(num_materials_in)
+REAL_T, intent(in) :: species_molar_mass(num_species_var_in)
+REAL_T, intent(in) :: k_model_predict(2) ! src,dst
+REAL_T, intent(inout) :: k_model_correct(2) ! src,dst
+REAL_T, intent(in) :: k_physical_base(2) ! src, dst
+REAL_T, intent(in) :: T_probe_src
+REAL_T, intent(in) :: T_probe_dst
+REAL_T, intent(in) :: LL
+REAL_T, intent(in) :: dxprobe_src
+REAL_T, intent(in) :: dxprobe_dst
+
+REAL_T :: RA1,RA2
+
+if (1.eq.0) then
+
+ RA1=(1.7069d+9)*abs(302.0d0-T_probe_src)
+ RA2=(5.8395e+8)*abs(302.0d0-T_probe_dst)
+
+ if (RA1.gt.1.0d+4.and.RA1.le.1.0d+7)then
+  k_model_correct(1)=dxprobe_src*k_model_predict(1)/0.1016d0* &
+           0.54d0*(RA1**(1.0d0/4.0d0))
+ else if (RA1.ge.1.0d+7.and.RA1.le.1.0d+11)then
+  k_model_correct(1)=dxprobe_src*k_model_predict(1)/0.1016d0* &
+           0.15d0*(RA1**(1.0d0/3.0d0))
+ else
+   print *,"invalid Ra1 number"
+   stop
+ endif
+
+ if (RA2.gt.1.0d+4.and.RA2.le.1.0d+7)then
+  k_model_correct(2)=dxprobe_dst*k_model_predict(2)/0.1016d0* &
+           0.54d0*(RA2**(1.0d0/4.0d0))
+ else if (RA2.ge.1.0d+7.and.RA2.le.1.0d+11)then
+  k_model_correct(2)=dxprobe_dst*k_model_predict(2)/0.1016d0* &
+           0.15d0*(RA2**(1.0d0/3.0d0))
+ else
+   print *,"invalid Ra2 number"
+   stop
+ endif
+
+endif
+
+end subroutine CRYOGENIC_TANK_MK_K_EFFECTIVE
+
+
 end module CRYOGENIC_TANK_MK_module
