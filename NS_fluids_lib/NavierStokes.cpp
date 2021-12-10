@@ -1022,7 +1022,8 @@ Real NavierStokes::bottom_bottom_tol_factor=0.001;
 //   for conventional contact line dynamics, 
 //   modify "get_use_DCA" in PROB.F90.
 Vector<int> NavierStokes::law_of_the_wall;
-Vector<Real> NavierStokes::wall_model_velocity;
+Vector<Real> NavierStokes::wall_model_velocity; //1..nmat
+Vector<int> NavierStokes::interface_mass_transfer_model; //1..2*nten
 Real NavierStokes::wall_slip_weight=0.0;
 int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 
@@ -2953,6 +2954,11 @@ NavierStokes::read_params ()
 
     law_of_the_wall.resize(nmat);
     wall_model_velocity.resize(nmat);
+    interface_mass_transfer_model.resize(2*nten);
+
+    for (int i=0;i<2*nten;i++) {
+     interface_mass_transfer_model[i]=0;
+    }
 
     for (int i=0;i<nmat;i++) {
      law_of_the_wall[i]=0;
@@ -2960,6 +2966,9 @@ NavierStokes::read_params ()
     }
     pp.queryarr("law_of_the_wall",law_of_the_wall,0,nmat);
     pp.queryarr("wall_model_velocity",wall_model_velocity,0,nmat);
+    pp.queryarr("interface_mass_transfer_model",
+       interface_mass_transfer_model,0,2*nten);
+
     for (int i=0;i<nmat;i++) {
      if ((law_of_the_wall[i]==0)||
          (law_of_the_wall[i]==1)||
@@ -3289,6 +3298,10 @@ NavierStokes::read_params ()
 	      law_of_the_wall[i] << '\n';
       std::cout << "wall_model_velocity i=" << i << " " << 
 	      wall_model_velocity[i] << '\n';
+     }
+     for (int i=0;i<2*nten;i++) {
+      std::cout << "interface_mass_transfer_model i=" << i << " " << 
+	      interface_mass_transfer_model[i] << '\n';
      }
      std::cout << "wall_slip_weight " << wall_slip_weight << '\n';
      std::cout << "ZEYU_DCA_SELECT " << ZEYU_DCA_SELECT << '\n';
@@ -13092,6 +13105,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      saturation_temp_max.dataPtr(),
      freezing_model.dataPtr(),
      Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
+     interface_mass_transfer_model.dataPtr(),
      distribute_from_target.dataPtr(),
      mass_fraction_id.dataPtr(),
      constant_density_all_time.dataPtr(),
@@ -13182,6 +13196,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      saturation_temp_max.dataPtr(),
      freezing_model.dataPtr(),
      Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
+     interface_mass_transfer_model.dataPtr(),
      distribute_from_target.dataPtr(),
      mass_fraction_id.dataPtr(),
      constant_density_all_time.dataPtr(),
