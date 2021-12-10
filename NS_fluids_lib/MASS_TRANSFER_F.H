@@ -117,6 +117,7 @@ extern "C"
     Real* saturation_temp_max,
     int* freezing_model,
     int* Tanasawa_or_Schrage_or_Kassemi,
+    int* interface_mass_transfer_model,
     int* distribute_from_target,
     int* mass_fraction_id,
     int* constant_density_all_time,

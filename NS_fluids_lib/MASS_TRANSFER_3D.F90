@@ -6863,6 +6863,7 @@ stop
        saturation_temp_max, &
        freezing_model, &
        Tanasawa_or_Schrage_or_Kassemi, &
+       interface_mass_transfer_model, &
        distribute_from_target, &
        mass_fraction_id, &
        constant_density_all_time, & ! 1..nmat
@@ -6961,6 +6962,7 @@ stop
       REAL_T, intent(in) :: saturation_temp_max(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*nten)
+      INTEGER_T, intent(in) :: interface_mass_transfer_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
       INTEGER_T, intent(in), target :: material_type_evap(nmat)
@@ -8131,6 +8133,7 @@ stop
                    ! do not call "mdot_diff_func" (below) if 
                    ! user_override_TI_YI=1
                   call SUB_INTERFACE_TEMPERATURE( &
+                    interface_mass_transfer_model(iten+ireverse*nten), &
                     local_probe_constrain, &
                     ireverse, &
                     iten, &
@@ -8605,6 +8608,7 @@ stop
 
                    if (is_in_probtype_list().eq.1) then
                     call SUB_K_EFFECTIVE( &
+                     interface_mass_transfer_model(iten+ireverse*nten), &
                      ireverse, &
                      iten, &
                      molar_mass, & ! index: 1..nmat
