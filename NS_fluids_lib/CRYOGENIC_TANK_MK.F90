@@ -2148,7 +2148,7 @@ REAL_T, intent(out) :: ughost_tngt  ! dir direction
 end subroutine CRYOGENIC_TANK_MK_wallfunc
 
 subroutine CRYOGENIC_TANK_MK_K_EFFECTIVE( &
-  INTEGER_T, intent(in) :: interface_mass_transfer_model
+  interface_mass_transfer_model, &
   ireverse, &
   iten, &        
   molar_mass, & ! index: 1..nmat
