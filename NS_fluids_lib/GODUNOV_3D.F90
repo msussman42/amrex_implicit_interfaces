@@ -2712,6 +2712,7 @@ stop
         ! u_max(1..sdim) is max vel in dir.
         ! u_max(sdim+1) is max c^2
       subroutine fort_estdt( &
+        interface_mass_transfer_model, &
         caller_id, &
         tid, &
         n_scales, &
@@ -2795,6 +2796,7 @@ stop
       REAL_T, intent(in) :: microlayer_angle(nmat)
       REAL_T, intent(in) :: microlayer_size(nmat)
       REAL_T, intent(in) :: macrolayer_size(nmat)
+      INTEGER_T, intent(in) :: interface_mass_transfer_model(2*nten)
       REAL_T, intent(in) :: latent_heat(2*nten)
       REAL_T, intent(in) :: reaction_rate(2*nten)
       REAL_T :: K_f
@@ -3640,23 +3642,27 @@ stop
               stop
              endif
 
-             ksource=get_user_heatviscconst(im_source)* &
+             ksource_predict=get_user_heatviscconst(im_source)* &
                      fort_heatflux_factor(im_source)
+             ksource_physical=get_user_heatviscconst(im_source)
 
-             if (ksource.ge.zero) then
+             if ((ksource_predict.ge.zero).and. &
+                 (ksource_physical.ge.zero)) then
               ! do nothing
              else
-              print *,"ksource invalid"
+              print *,"ksource_predict or ksource_physical invalid"
               stop
              endif
 
-             kdest=get_user_heatviscconst(im_dest)* &
+             kdest_predict=get_user_heatviscconst(im_dest)* &
                      fort_heatflux_factor(im_dest)
+             kdest_physical=get_user_heatviscconst(im_dest)
 
-             if (kdest.ge.zero) then
+             if ((kdest_predict.ge.zero).and. &
+                 (kdest_physical.ge.zero)) then
               ! do nothing
              else
-              print *,"kdest invalid"
+              print *,"kdest_predict or kdest_physical invalid"
               stop
              endif
 
@@ -3678,6 +3684,7 @@ stop
              dest_perim_factor=one
 
              call get_vel_phasechange( &
+              interface_mass_transfer_model(iten+ireverse*nten), &
               for_estdt, &
               xI, &
               ispec, &
@@ -3689,7 +3696,10 @@ stop
               USTEFAN_hold, &
               Dsrc,Ddst, &
               Dsrc,Ddst, &
-              ksource,kdest, &
+              ksource_predict, &
+              kdest_predict, &
+              ksource_physical, &
+              kdest_physical, &
               Tsrc,Tdst, &
               TSAT, &
               Tsrcalt,Tdstalt, &

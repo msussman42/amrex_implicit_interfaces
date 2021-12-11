@@ -5668,7 +5668,8 @@ stop
              thermal_k_model_predict(iprobe)= &
                conductstate(D_DECL(i,j,k),im_probe)* &
                fort_heatflux_factor(im_probe)
-             thermal_k_physical_base(iprobe)=fort_heatviscconst(im_probe)
+             thermal_k_physical_base(iprobe)= &
+               get_user_heatviscconst(im_probe)
 
              if (fort_heatflux_factor(im_probe).ge.zero) then
               ! do nothing
@@ -8016,7 +8017,7 @@ stop
                   thermal_k_model_correct(iprobe)= &
                       thermal_k_model_predict(iprobe)
                   thermal_k_physical_base(iprobe)= &
-                      fort_heatviscconst(im_probe)
+                      get_user_heatviscconst(im_probe)
 
                   if (fort_heatflux_factor(im_probe).ge.zero) then
                    ! do nothing
@@ -8129,10 +8130,11 @@ stop
 
                  user_override_TI_YI=0
 
-                 if (is_in_probtype_list().eq.1) then
+                 if (hardwire_flag(ireverse).eq.0) then
+                  if (is_in_probtype_list().eq.1) then
                    ! do not call "mdot_diff_func" (below) if 
                    ! user_override_TI_YI=1
-                  call SUB_INTERFACE_TEMPERATURE( &
+                   call SUB_INTERFACE_TEMPERATURE( &
                     interface_mass_transfer_model(iten+ireverse*nten), &
                     local_probe_constrain, &
                     ireverse, &
@@ -8157,6 +8159,12 @@ stop
                     POUT%dxprobe_target(2), & ! dest
                     num_materials, &
                     num_species_var)
+                  endif
+                 else if (hardwire_flag(ireverse).eq.1) then
+                  ! do nothing
+                 else
+                  print *,"hardwire_flag invalid"
+                  stop
                  endif
 
                  interp_valid_flag_initial(1)=POUT%interp_valid_flag(1)
@@ -8383,7 +8391,17 @@ stop
                       endif
 
                      else if (user_override_TI_YI.eq.1) then
-                      ! do nothing
+
+                      if (Y_predict.eq.one) then
+                       fully_saturated=1
+                      else if ((Y_predict.ge.zero).and. &
+                               (Y_predict.lt.one)) then
+                       ! do nothing
+                      else
+                       print *,"Y_predict invalid"
+                       stop
+                      endif
+
                      else
                       print *,"user_override_TI_YI invalid"
                       stop
@@ -8647,6 +8665,7 @@ stop
                     !  veldst=kdst*DTdst/(LL * dxprobe_dest)
                     !  in: PROB.F90
                    call get_vel_phasechange( &
+                     interface_mass_transfer_model(iten+ireverse*nten), &
                      for_estdt, &
                      xI, &
                      ispec, &
@@ -8732,245 +8751,257 @@ stop
                   endif
 
                   TSAT_correct=TSAT_predict
-FIX ME
+
                   if (POUT%at_interface.eq.1) then
 
-                   if (local_freezing_model.eq.6) then ! Palmore/Desjardins
+                   if (user_override_TI_YI.eq.0) then
+
+                    if (local_freezing_model.eq.6) then ! Palmore/Desjardins
 
                      ! type(TSAT_MASS_FRAC_parm_type)
-                    Y_interface_min=zero
-                    TSAT_Y_PARMS%PROBE_PARMS=>PROBE_PARMS
-                    TSAT_Y_PARMS%YI_min=Y_interface_min
-                    TSAT_Y_PARMS%TI_min=TI_min
-                    TSAT_Y_PARMS%TI_max=TI_max
-                    TSAT_Y_PARMS%TSAT_base=local_Tsat(ireverse)
-                    TSAT_Y_PARMS%D_MASS=FicksLawD(iprobe_vapor)
-                    TSAT_Y_PARMS%den_G=den_I_interp_SAT(iprobe_vapor)
-                    TSAT_Y_PARMS%thermal_k=>thermal_k_model_correct
+                     Y_interface_min=zero
+                     TSAT_Y_PARMS%PROBE_PARMS=>PROBE_PARMS
+                     TSAT_Y_PARMS%YI_min=Y_interface_min
+                     TSAT_Y_PARMS%TI_min=TI_min
+                     TSAT_Y_PARMS%TI_max=TI_max
+                     TSAT_Y_PARMS%TSAT_base=local_Tsat(ireverse)
+                     TSAT_Y_PARMS%D_MASS=FicksLawD(iprobe_vapor)
+                     TSAT_Y_PARMS%den_G=den_I_interp_SAT(iprobe_vapor)
+                     TSAT_Y_PARMS%thermal_k=>thermal_k_model_correct
 
-                    if (hardwire_flag(ireverse).eq.0) then
+                     if (hardwire_flag(ireverse).eq.0) then
 
                          ! Kassemi
-                     if (fully_saturated.eq.2) then
+                      if (fully_saturated.eq.2) then
 
-                      T_gamma_c=half*(T_gamma_a+T_gamma_b)
-                      X_gamma_c=one
-                      Y_gamma_c=one
+                       T_gamma_c=half*(T_gamma_a+T_gamma_b)
+                       X_gamma_c=one
+                       Y_gamma_c=one
 
-                      call mdot_diff_func( &
+                       call mdot_diff_func( &
                          probe_ok,TSAT_Y_PARMS, &
                          POUT, &
                          Y_gamma_a,T_gamma_a,mdot_diff_a)
-                      call mdot_diff_func( &
+                       call mdot_diff_func( &
                          probe_ok,TSAT_Y_PARMS, &
                          POUT, &
                          Y_gamma_b,T_gamma_b,mdot_diff_b)
-                      call mdot_diff_func( &
+                       call mdot_diff_func( &
                          probe_ok,TSAT_Y_PARMS, &
                          POUT, &
                          Y_gamma_c,T_gamma_c,mdot_diff_c)
 
-                      if (mdot_diff_a*mdot_diff_b.le.zero) then
-                       if (mdot_diff_a*mdot_diff_c.gt.zero) then
-                        T_gamma_a=T_gamma_c
-                       else if (mdot_diff_a*mdot_diff_c.le.zero) then
-                        T_gamma_b=T_gamma_c
+                       if (mdot_diff_a*mdot_diff_b.le.zero) then
+                        if (mdot_diff_a*mdot_diff_c.gt.zero) then
+                         T_gamma_a=T_gamma_c
+                        else if (mdot_diff_a*mdot_diff_c.le.zero) then
+                         T_gamma_b=T_gamma_c
+                        else
+                         print *,"mdot_diff_a or mdot_diff_c invalid"
+                         stop
+                        endif
                        else
-                        print *,"mdot_diff_a or mdot_diff_c invalid"
+                        print *,"bracketing interval lost Kassemi model"
+                        print *,"T_gamma init: a,b ", &
+                          T_gamma_a_init,T_gamma_b_init
+                        print *,"Y_gamma init: a,b ", &
+                          Y_gamma_a_init,Y_gamma_b_init
+                        print *,"T_gamma a,b,c ", &
+                          T_gamma_a,T_gamma_b,T_gamma_c
+                        print *,"Y_gamma a,b,c ", &
+                          Y_gamma_a,Y_gamma_b,Y_gamma_c
+                        print *,"mdot_diff a,b,c ", &
+                          mdot_diff_a,mdot_diff_b,mdot_diff_c
+                        print *,"TSAT_iter=",TSAT_iter
+                        print *,"Y_interface_min ",Y_interface_min
+                        print *,"TI_min ",TI_min
+                        print *,"TI_max ",TI_max
+                        print *,"molar_mass_ambient ",molar_mass_ambient
+                        print *,"molar_mass_vapor ",molar_mass_vapor
+                        print *,"iprobe_vapor = ",iprobe_vapor
+                        print *,"FicksLawD(iprobe_vapor) ", &
+                               FicksLawD(iprobe_vapor)
+                        print *,"den_I_interp_sat ", &
+                               den_I_interp_SAT(iprobe_vapor)
+                        print *," LL(ireverse) ",LL(ireverse)
+                        print *," local_Tsat(ireverse) ",local_Tsat(ireverse)
+                        print *,"im_source,im_dest ",im_source,im_dest
                         stop
                        endif
-                      else
-                       print *,"bracketing interval lost Kassemi model"
-                       print *,"T_gamma init: a,b ", &
-                          T_gamma_a_init,T_gamma_b_init
-                       print *,"Y_gamma init: a,b ", &
-                          Y_gamma_a_init,Y_gamma_b_init
-                       print *,"T_gamma a,b,c ", &
-                          T_gamma_a,T_gamma_b,T_gamma_c
-                       print *,"Y_gamma a,b,c ", &
-                          Y_gamma_a,Y_gamma_b,Y_gamma_c
-                       print *,"mdot_diff a,b,c ", &
-                          mdot_diff_a,mdot_diff_b,mdot_diff_c
-                       print *,"TSAT_iter=",TSAT_iter
-                       print *,"Y_interface_min ",Y_interface_min
-                       print *,"TI_min ",TI_min
-                       print *,"TI_max ",TI_max
-                       print *,"molar_mass_ambient ",molar_mass_ambient
-                       print *,"molar_mass_vapor ",molar_mass_vapor
-                       print *,"iprobe_vapor = ",iprobe_vapor
-                       print *,"FicksLawD(iprobe_vapor) ", &
-                               FicksLawD(iprobe_vapor)
-                       print *,"den_I_interp_sat ", &
-                               den_I_interp_SAT(iprobe_vapor)
-                       print *," LL(ireverse) ",LL(ireverse)
-                       print *," local_Tsat(ireverse) ",local_Tsat(ireverse)
-                       print *,"im_source,im_dest ",im_source,im_dest
-                       stop
-                      endif
 
-                      TSAT_correct=T_gamma_c
-                      Y_predict=Y_gamma_c
+                       TSAT_correct=T_gamma_c
+                       Y_predict=Y_gamma_c
 
                        ! Palmore and Desjardins, or
                        ! Kassemi, or,
                        ! Tgamma=f(P_vapor_smooth)
-                     else if ((molar_mass_ambient.gt.zero).and. &
-                              (molar_mass_vapor.gt.zero).and. &
-                              (R_Palmore_Desjardins.gt.zero).and. &
-                              (TSAT_Y_PARMS%den_G.gt.zero).and. &
-                              ((fully_saturated.eq.0).or. &
-                               (fully_saturated.eq.1).or. &
-                               (fully_saturated.eq.3))) then
+                      else if ((molar_mass_ambient.gt.zero).and. &
+                               (molar_mass_vapor.gt.zero).and. &
+                               (R_Palmore_Desjardins.gt.zero).and. &
+                               (TSAT_Y_PARMS%den_G.gt.zero).and. &
+                               ((fully_saturated.eq.0).or. &
+                                (fully_saturated.eq.1).or. &
+                                (fully_saturated.eq.3))) then
 
                        ! Palmore and Desjardins, Y=X=1
-                      if (fully_saturated.eq.1) then 
-                       Y_interface_min=one
-                       Y_predict=one
-                       TSAT_correct=local_Tsat(ireverse)
+                       if (fully_saturated.eq.1) then 
+                        Y_interface_min=one
+                        Y_predict=one
+                        TSAT_correct=local_Tsat(ireverse)
 
                        ! Tgamma=f(P_vapor_smooth)
-                      else if (fully_saturated.eq.3) then
-                       T_gamma_c=half*(T_gamma_a+T_gamma_b)
-                       X_gamma_c=one
-                       Y_gamma_c=one
-                      else if ((fully_saturated.eq.0).and. &
-                               (POUT%Y_probe(iprobe_vapor).ge. &
-                                one-Y_TOLERANCE).and. &
-                               (POUT%Y_probe(iprobe_vapor).le.one)) then
-                       Y_interface_min=one
-                       Y_predict=one
-                       TSAT_correct=local_Tsat(ireverse)
-                      else if ((fully_saturated.eq.0).and. &
-                               (TSAT_Y_PARMS%D_MASS.eq.zero)) then
-                       Y_interface_min=one
-                       Y_predict=one
-                       TSAT_correct=local_Tsat(ireverse)
-                      else if ((fully_saturated.eq.0).and. &
-                               (POUT%Y_probe(iprobe_vapor).le. &
-                                one-Y_TOLERANCE).and. &
-                               (POUT%Y_probe(iprobe_vapor).ge.zero).and. &
-                               (TSAT_Y_PARMS%D_MASS.gt.zero)) then
-
-                       if (fully_saturated.eq.0) then
+                       else if (fully_saturated.eq.3) then
                         T_gamma_c=half*(T_gamma_a+T_gamma_b)
-                        call X_from_Tgamma(X_gamma_c,T_gamma_c, &
-                         local_Tsat(ireverse), &
-                         LL(ireverse),R_Palmore_Desjardins, &
-                         molar_mass_vapor) ! WV
-                        call massfrac_from_volfrac(X_gamma_c,Y_gamma_c, &
-                         molar_mass_ambient,molar_mass_vapor) ! WA,WV
+                        X_gamma_c=one
+                        Y_gamma_c=one
+                       else if ((fully_saturated.eq.0).and. &
+                                (POUT%Y_probe(iprobe_vapor).ge. &
+                                 one-Y_TOLERANCE).and. &
+                                (POUT%Y_probe(iprobe_vapor).le.one)) then
+                        Y_interface_min=one
+                        Y_predict=one
+                        TSAT_correct=local_Tsat(ireverse)
+                       else if ((fully_saturated.eq.0).and. &
+                                (TSAT_Y_PARMS%D_MASS.eq.zero)) then
+                        Y_interface_min=one
+                        Y_predict=one
+                        TSAT_correct=local_Tsat(ireverse)
+                       else if ((fully_saturated.eq.0).and. &
+                                (POUT%Y_probe(iprobe_vapor).le. &
+                                 one-Y_TOLERANCE).and. &
+                                (POUT%Y_probe(iprobe_vapor).ge.zero).and. &
+                                (TSAT_Y_PARMS%D_MASS.gt.zero)) then
 
-                        call mdot_diff_func( &
-                         probe_ok,TSAT_Y_PARMS, &
-                         POUT, &
-                         Y_gamma_a,T_gamma_a,mdot_diff_a)
-                        call mdot_diff_func( &
-                         probe_ok,TSAT_Y_PARMS, &
-                         POUT, &
-                         Y_gamma_b,T_gamma_b,mdot_diff_b)
-                        call mdot_diff_func( &
-                         probe_ok,TSAT_Y_PARMS, &
-                         POUT, &
-                         Y_gamma_c,T_gamma_c,mdot_diff_c)
+                        if (fully_saturated.eq.0) then
+                         T_gamma_c=half*(T_gamma_a+T_gamma_b)
+                         call X_from_Tgamma(X_gamma_c,T_gamma_c, &
+                          local_Tsat(ireverse), &
+                          LL(ireverse),R_Palmore_Desjardins, &
+                          molar_mass_vapor) ! WV
+                         call massfrac_from_volfrac(X_gamma_c,Y_gamma_c, &
+                          molar_mass_ambient,molar_mass_vapor) ! WA,WV
 
-                        if (mdot_diff_a*mdot_diff_b.le.zero) then
-                         if (mdot_diff_a*mdot_diff_c.gt.zero) then
-                          T_gamma_a=T_gamma_c
-                          Y_gamma_a=Y_gamma_c
-                         else if (mdot_diff_a*mdot_diff_c.le.zero) then
-                          T_gamma_b=T_gamma_c
-                          Y_gamma_b=Y_gamma_c 
+                         call mdot_diff_func( &
+                          probe_ok,TSAT_Y_PARMS, &
+                          POUT, &
+                          Y_gamma_a,T_gamma_a,mdot_diff_a)
+                         call mdot_diff_func( &
+                          probe_ok,TSAT_Y_PARMS, &
+                          POUT, &
+                          Y_gamma_b,T_gamma_b,mdot_diff_b)
+                         call mdot_diff_func( &
+                          probe_ok,TSAT_Y_PARMS, &
+                          POUT, &
+                          Y_gamma_c,T_gamma_c,mdot_diff_c)
+
+                         if (mdot_diff_a*mdot_diff_b.le.zero) then
+                          if (mdot_diff_a*mdot_diff_c.gt.zero) then
+                           T_gamma_a=T_gamma_c
+                           Y_gamma_a=Y_gamma_c
+                          else if (mdot_diff_a*mdot_diff_c.le.zero) then
+                           T_gamma_b=T_gamma_c
+                           Y_gamma_b=Y_gamma_c 
+                          else
+                           print *,"mdot_diff_a or mdot_diff_c invalid"
+                           stop
+                          endif
                          else
-                          print *,"mdot_diff_a or mdot_diff_c invalid"
+                          print *,"bracketing interval lost"
+                          print *,"T_gamma init: a,b ", &
+                            T_gamma_a_init,T_gamma_b_init
+                          print *,"Y_gamma init: a,b ", &
+                            Y_gamma_a_init,Y_gamma_b_init
+                          print *,"T_gamma a,b,c ", &
+                            T_gamma_a,T_gamma_b,T_gamma_c
+                          print *,"Y_gamma a,b,c ", &
+                            Y_gamma_a,Y_gamma_b,Y_gamma_c
+                          print *,"mdot_diff a,b,c ", &
+                            mdot_diff_a,mdot_diff_b,mdot_diff_c
+                          print *,"TSAT_iter=",TSAT_iter
+                          print *,"Y_interface_min ",Y_interface_min
+                          print *,"TI_min ",TI_min
+                          print *,"TI_max ",TI_max
+                          print *,"molar_mass_ambient ",molar_mass_ambient
+                          print *,"molar_mass_vapor ",molar_mass_vapor
+                          print *,"iprobe_vapor = ",iprobe_vapor
+                          print *,"FicksLawD(iprobe_vapor) ", &
+                                 FicksLawD(iprobe_vapor)
+                          print *,"den_I_interp_sat ", &
+                                 den_I_interp_SAT(iprobe_vapor)
+                          print *," LL(ireverse) ",LL(ireverse)
+                          print *," local_Tsat(ireverse) ",local_Tsat(ireverse)
+                          print *,"im_source,im_dest ",im_source,im_dest
                           stop
                          endif
-                        else
-                         print *,"bracketing interval lost"
-                         print *,"T_gamma init: a,b ", &
-                            T_gamma_a_init,T_gamma_b_init
-                         print *,"Y_gamma init: a,b ", &
-                            Y_gamma_a_init,Y_gamma_b_init
-                         print *,"T_gamma a,b,c ", &
-                            T_gamma_a,T_gamma_b,T_gamma_c
-                         print *,"Y_gamma a,b,c ", &
-                            Y_gamma_a,Y_gamma_b,Y_gamma_c
-                         print *,"mdot_diff a,b,c ", &
-                            mdot_diff_a,mdot_diff_b,mdot_diff_c
-                         print *,"TSAT_iter=",TSAT_iter
-                         print *,"Y_interface_min ",Y_interface_min
-                         print *,"TI_min ",TI_min
-                         print *,"TI_max ",TI_max
-                         print *,"molar_mass_ambient ",molar_mass_ambient
-                         print *,"molar_mass_vapor ",molar_mass_vapor
-                         print *,"iprobe_vapor = ",iprobe_vapor
-                         print *,"FicksLawD(iprobe_vapor) ", &
-                                 FicksLawD(iprobe_vapor)
-                         print *,"den_I_interp_sat ", &
-                                 den_I_interp_SAT(iprobe_vapor)
-                         print *," LL(ireverse) ",LL(ireverse)
-                         print *," local_Tsat(ireverse) ",local_Tsat(ireverse)
-                         print *,"im_source,im_dest ",im_source,im_dest
+
+                         TSAT_correct=T_gamma_c
+                         Y_predict=Y_gamma_c
+
+                        else 
+                         print *,"expecting fully_saturated==0"
                          stop
                         endif
 
-                        TSAT_correct=T_gamma_c
-                        Y_predict=Y_gamma_c
-
-                       else 
-                        print *,"expecting fully_saturated==0"
+                       else
+                        print *,"fully_saturated or Y_probe invalid"
                         stop
                        endif
 
                       else
-                       print *,"fully_saturated or Y_probe invalid"
+                       print *,"molar masses, den_G, fully_saturated, or R bad"
+                       print *,"molar_mass_ambient=",molar_mass_ambient
+                       print *,"molar_mass_vapor=",molar_mass_vapor
+                       print *,"R_Palmore_Desjardins=",R_Palmore_Desjardins
+                       print *,"TSAT_Y_PARMS%den_G=",TSAT_Y_PARMS%den_G
+                       print *,"fully_saturated=",fully_saturated
+                       print *,"local_freezing_model=",local_freezing_model
                        stop
                       endif
-
+ 
+                     else if (hardwire_flag(ireverse).eq.1) then
+                      ! do nothing
                      else
-                      print *,"molar masses, den_G, fully_saturated, or R bad"
-                      print *,"molar_mass_ambient=",molar_mass_ambient
-                      print *,"molar_mass_vapor=",molar_mass_vapor
-                      print *,"R_Palmore_Desjardins=",R_Palmore_Desjardins
-                      print *,"TSAT_Y_PARMS%den_G=",TSAT_Y_PARMS%den_G
-                      print *,"fully_saturated=",fully_saturated
-                      print *,"local_freezing_model=",local_freezing_model
+                      print *,"hardwire_flag(ireverse) invalid"
                       stop
                      endif
-
-                    else if (hardwire_flag(ireverse).eq.1) then
-                     ! do nothing
-                    else
-                     print *,"hardwire_flag(ireverse) invalid"
-                     stop
-                    endif
  
-                    call mdot_from_T_probe( &
-                     probe_ok, &
-                     TSAT_Y_PARMS, &
-                     POUT, &
-                     TSAT_correct,Y_predict, &
-                     mdotT_debug, &
-                     TEMP_PROBE_source, &
-                     TEMP_PROBE_dest)
+                     call mdot_from_T_probe( &
+                      probe_ok, &
+                      TSAT_Y_PARMS, &
+                      POUT, &
+                      TSAT_correct,Y_predict, &
+                      mdotT_debug, &
+                      TEMP_PROBE_source, &
+                      TEMP_PROBE_dest)
 
-                    call mdot_from_Y_probe( &
-                     probe_ok, &
-                     TSAT_Y_PARMS, &
-                     POUT, &
-                     Y_predict,TSAT_correct, &
-                     mdotY_top_debug,mdotY_bot_debug,mdotY_debug)
+                     call mdot_from_Y_probe( &
+                      probe_ok, &
+                      TSAT_Y_PARMS, &
+                      POUT, &
+                      Y_predict,TSAT_correct, &
+                      mdotY_top_debug,mdotY_bot_debug,mdotY_debug)
 
-                   else if &
-                     (is_valid_freezing_modelF(local_freezing_model).eq.1) &
+                    else if &
+                      (is_valid_freezing_modelF(local_freezing_model).eq.1) &
                      then
 
+                     mdotT_debug=zero
+                     mdotY_top_debug=zero
+                     mdotY_bot_debug=zero
+                     mdotY_debug=zero
+
+                    else
+                     print *,"local_freezing_model invalid 7"
+                     stop
+                    endif
+
+                   else if (user_override_TI_YI.eq.1) then
                     mdotT_debug=zero
                     mdotY_top_debug=zero
                     mdotY_bot_debug=zero
                     mdotY_debug=zero
-
                    else
-                    print *,"local_freezing_model invalid 7"
+                    print *,"(user_override_TI_YI invalid)"
                     stop
                    endif
 
@@ -8989,33 +9020,43 @@ FIX ME
 
                   if (hardwire_flag(ireverse).eq.0) then
 
-                   if ((interface_resolved.eq.1).and. &
-                       (interp_status.eq.1)) then
-                    delta_Tsat= &
-                     saturation_temp_vel(iten+ireverse*nten)* &
-                     (VEL_correct-VEL_predict)
-                   else if ((interface_resolved.eq.0).or. &
-                            (interp_status.eq.0)) then
-                    delta_Tsat=zero
-                   else
-                    print *,"interface_resolved or TSAT_iter invalid"
-                    stop
-                   endif
+                   if (user_override_TI_YI.eq.0) then
+
+                    if ((interface_resolved.eq.1).and. &
+                        (interp_status.eq.1)) then
+                     delta_Tsat= &
+                      saturation_temp_vel(iten+ireverse*nten)* &
+                      (VEL_correct-VEL_predict)
+                    else if ((interface_resolved.eq.0).or. &
+                             (interp_status.eq.0)) then
+                     delta_Tsat=zero
+                    else
+                     print *,"interface_resolved or TSAT_iter invalid"
+                     stop
+                    endif
 
                     !  Tgamma^{k+1}=Tgamma^{k}- 
                     !    eps2 * (V^{k+1}(Tgamma^{k})-
                     !            V^{k}(Tgamma^{k-1}) ) 
                     !  V^{0}=0
-                   TSAT_correct=TSAT_correct-delta_Tsat
+                    TSAT_correct=TSAT_correct-delta_Tsat
 
-                   if (TSAT_correct.lt.TI_min) then
-                    TSAT_correct=TI_min
-                   endif
-                   if (TSAT_correct.gt.TI_max) then
-                    TSAT_correct=TI_max
+                    if (TSAT_correct.lt.TI_min) then
+                     TSAT_correct=TI_min
+                    endif
+                    if (TSAT_correct.gt.TI_max) then
+                     TSAT_correct=TI_max
+                    endif
+
+                   else if (user_override_TI_YI.eq.1) then
+                    delta_Tsat=zero
+                   else
+                    print *,"user_override_TI_YI invalid"
+                    stop
                    endif
 
                   else if (hardwire_flag(ireverse).eq.1) then
+                   delta_Tsat=zero
                    TSAT_correct=local_hardwire_T(ireverse)
                   else
                    print *,"hardwire_flag(ireverse) invalid"
