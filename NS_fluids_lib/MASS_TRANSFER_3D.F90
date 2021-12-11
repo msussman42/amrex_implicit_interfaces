@@ -8141,13 +8141,15 @@ stop
                     cur_time, &
                     prev_time, &
                     dt, &
-                    local_Tsat(ireverse), &
-                    Y_predict, &
-                    user_override_TI_YI, &
+                    local_Tsat(ireverse), & ! intent(inout)
+                    Y_predict, &  ! intent(inout)
+                    user_override_TI_YI, & ! intent(inout)
                     molar_mass, & ! index: 1..nmat
                     species_molar_mass, & ! index: 1..num_species_var
                     thermal_k_model_predict(1), &
                     thermal_k_model_predict(2), & ! ksrc,kdst
+                    thermal_k_physical_base(1), &
+                    thermal_k_physical_base(2), & ! ksrc,kdst
                     POUT%T_probe(1), & ! source
                     POUT%T_probe(2), & ! dest
                     LL(ireverse), &
@@ -8241,139 +8243,149 @@ stop
 
                    if (POUT%at_interface.eq.1) then
                     if (hardwire_flag(ireverse).eq.0) then
-                      ! 3=Kassemi model
-                      ! 4=Stefan model with "T_gamma=f(Pressure_smooth)"
-                     if ((local_Tanasawa_or_Schrage_or_Kassemi.eq.3).or. &
-                         (local_Tanasawa_or_Schrage_or_Kassemi.eq.4)) then
-                      fully_saturated=2
-                      Y_predict=one
-                      X_predict=one
-                      Y_gamma_a=Y_predict
-                      Y_gamma_b=Y_predict
 
-                      if (local_Tanasawa_or_Schrage_or_Kassemi.eq.3) then
-                       ! do nothing
-                      else if (local_Tanasawa_or_Schrage_or_Kassemi.eq.4) then
-                       fully_saturated=3
-                       if (PROBE_PARMS%LL.gt.zero) then  ! evaporation 
-                        im_probe=im_dest
-                       else if (PROBE_PARMS%LL.lt.zero) then ! condensation 
-                        im_probe=im_source
-                       else
-                        print *,"LL invalid"
-                        stop
-                       endif
+                     if (user_override_TI_YI.eq.0) then
 
-                       call init_massfrac_parm( &
+                       ! 3=Kassemi model
+                       ! 4=Stefan model with "T_gamma=f(Pressure_smooth)"
+                      if ((local_Tanasawa_or_Schrage_or_Kassemi.eq.3).or. &
+                          (local_Tanasawa_or_Schrage_or_Kassemi.eq.4)) then
+                       fully_saturated=2
+                       Y_predict=one
+                       X_predict=one
+                       Y_gamma_a=Y_predict
+                       Y_gamma_b=Y_predict
+
+                       if (local_Tanasawa_or_Schrage_or_Kassemi.eq.3) then
+                        ! do nothing
+                       else if (local_Tanasawa_or_Schrage_or_Kassemi.eq.4) then
+                        fully_saturated=3
+                        if (PROBE_PARMS%LL.gt.zero) then  ! evaporation 
+                         im_probe=im_dest
+                        else if (PROBE_PARMS%LL.lt.zero) then ! condensation 
+                         im_probe=im_source
+                        else
+                         print *,"LL invalid"
+                         stop
+                        endif
+
+                        call init_massfrac_parm( &
                           POUT%den_I_interp(iprobe_vapor), &
                           massfrac_parm,im_probe)
-                       do local_ispec=1,num_species_var
-                        massfrac_parm(local_ispec)=Y_predict
-                       enddo
-                       call INTERNAL_material( &
+                        do local_ispec=1,num_species_var
+                         massfrac_parm(local_ispec)=Y_predict
+                        enddo
+                        call INTERNAL_material( &
                          POUT%den_I_interp(iprobe_vapor), &
                          massfrac_parm, &
                          POUT%T_probe_raw_smooth(iprobe_vapor), &
                          internal_energy, &
                          material_type_evap(im_probe), &
                          im_probe)
-                       call EOS_material( &
+                        call EOS_material( &
                          POUT%den_I_interp(iprobe_vapor), &
                          massfrac_parm, &
                          internal_energy, &
                          Pvapor_probe, &
                          material_type_evap(im_probe), &
                          im_probe)
-                       X_predict=Pvapor_probe/TSAT_Y_PARMS%reference_pressure
-                       if (X_predict.gt.one) then
-                        TSAT_predict=local_Tsat(ireverse)
-                       else if ((X_predict.gt.zero).and. &
-                                (X_predict.le.one)) then 
-                        call Tgamma_from_TSAT_and_X(TSAT_predict, &
+                        X_predict=Pvapor_probe/TSAT_Y_PARMS%reference_pressure
+                        if (X_predict.gt.one) then
+                         TSAT_predict=local_Tsat(ireverse)
+                        else if ((X_predict.gt.zero).and. &
+                                 (X_predict.le.one)) then 
+                         call Tgamma_from_TSAT_and_X(TSAT_predict, &
                           local_Tsat(ireverse), &
                           X_predict, &
                           PROBE_PARMS%LL, &
                           R_Palmore_Desjardins, &
                           molar_mass_vapor,TI_min,TI_max)
+                        else
+                         print *,"X_predict invalid"
+                         stop
+                        endif
+                        X_predict=one 
                        else
-                        print *,"X_predict invalid"
+                        print *,"local_Tanasawa_or_Schrage_or_Kassemi invalid"
                         stop
                        endif
-                       X_predict=one 
+
+                       T_gamma_a=TSAT_predict
+                       T_gamma_b=TSAT_predict
+                      else if ((POUT%Y_probe(iprobe_vapor).ge. &
+                                one-Y_TOLERANCE).and. &
+                               (POUT%Y_probe(iprobe_vapor).le.one).and. &
+                               (Y_predict.eq.one)) then
+                       fully_saturated=1
+                      else if ((POUT%Y_probe(iprobe_vapor).le. &
+                                one-Y_TOLERANCE).and. &
+                               (POUT%Y_probe(iprobe_vapor).ge.zero).and. &
+                               (Y_predict.eq.one)) then
+                        ! declared in PROBCOMMON.F90
+                       Y_predict=one-EVAP_BISECTION_TOL
+                       call volfrac_from_massfrac(X_predict,Y_predict, &
+                        molar_mass_ambient,molar_mass_vapor) ! WA,WV
+                       call Tgamma_from_TSAT_and_X(TSAT_predict, &
+                        local_Tsat(ireverse), &
+                        X_predict,LL(ireverse),R_Palmore_Desjardins, &
+                        molar_mass_vapor,TI_min,TI_max)
+
+                       T_gamma_a=TSAT_predict
+                       T_gamma_b=TSAT_predict
+                       Y_gamma_a=Y_predict
+                       Y_gamma_b=Y_predict
                       else
-                       print *,"local_Tanasawa_or_Schrage_or_Kassemi invalid"
+                       print *,"mass fraction bust"
                        stop
                       endif
 
-                      T_gamma_a=TSAT_predict
-                      T_gamma_b=TSAT_predict
-                     else if ((POUT%Y_probe(iprobe_vapor).ge. &
-                               one-Y_TOLERANCE).and. &
-                              (POUT%Y_probe(iprobe_vapor).le.one).and. &
-                              (Y_predict.eq.one)) then
-                      fully_saturated=1
-                     else if ((POUT%Y_probe(iprobe_vapor).le. &
-                               one-Y_TOLERANCE).and. &
-                              (POUT%Y_probe(iprobe_vapor).ge.zero).and. &
-                              (Y_predict.eq.one)) then
-                       ! declared in PROBCOMMON.F90
-                      Y_predict=one-EVAP_BISECTION_TOL
-                      call volfrac_from_massfrac(X_predict,Y_predict, &
-                        molar_mass_ambient,molar_mass_vapor) ! WA,WV
-                      call Tgamma_from_TSAT_and_X(TSAT_predict, &
-                       local_Tsat(ireverse), &
-                       X_predict,LL(ireverse),R_Palmore_Desjardins, &
-                       molar_mass_vapor,TI_min,TI_max)
+                      if (fully_saturated.eq.1) then ! Tgamma=Tboil
+                       ! do nothing
+                      else if (fully_saturated.eq.3) then ! Tgamma<Tboil
+                       ! do nothing (T_gamma_[ab] defined as "TSAT_predict")
+                      else if (fully_saturated.eq.2) then ! Kassemi
+                       if (LL(ireverse).gt.zero) then ! evaporation
+                        T_gamma_a=TI_min
+                        X_gamma_a=one
+                        Y_gamma_a=one
+                       else if (LL(ireverse).lt.zero) then ! condensation
+                        T_gamma_b=TI_max
+                        X_gamma_b=one
+                        Y_gamma_b=one
+                       else
+                        print *,"LL(ireverse) invalid"
+                        stop
+                       endif
+                      else if (fully_saturated.eq.0) then
+                       if (LL(ireverse).gt.zero) then ! evaporation
+                        T_gamma_a=TI_min
+                        call X_from_Tgamma(X_gamma_a,T_gamma_a, &
+                         local_Tsat(ireverse), &
+                         LL(ireverse),R_Palmore_Desjardins, &
+                         molar_mass_vapor) ! WV
+                        call massfrac_from_volfrac(X_gamma_a,Y_gamma_a, &
+                         molar_mass_ambient,molar_mass_vapor) ! WA,WV
+                       else if (LL(ireverse).lt.zero) then ! condensation
+                        T_gamma_b=TI_max
+                        call X_from_Tgamma(X_gamma_b,T_gamma_b, &
+                         local_Tsat(ireverse), &
+                         LL(ireverse),R_Palmore_Desjardins, &
+                         molar_mass_vapor) ! WV
+                        call massfrac_from_volfrac(X_gamma_b,Y_gamma_b, &
+                         molar_mass_ambient,molar_mass_vapor) ! WA,WV
+                       else
+                        print *,"LL(ireverse) invalid"
+                        stop
+                       endif
+                      else
+                       print *,"fully_saturated invalid"
+                       stop
+                      endif
 
-                      T_gamma_a=TSAT_predict
-                      T_gamma_b=TSAT_predict
-                      Y_gamma_a=Y_predict
-                      Y_gamma_b=Y_predict
-                     else
-                      print *,"mass fraction bust"
-                      stop
-                     endif
-
-                     if (fully_saturated.eq.1) then ! Tgamma=Tboil
+                     else if (user_override_TI_YI.eq.1) then
                       ! do nothing
-                     else if (fully_saturated.eq.3) then ! Tgamma<Tboil
-                      ! do nothing (T_gamma_[ab] defined as "TSAT_predict")
-                     else if (fully_saturated.eq.2) then ! Kassemi
-                      if (LL(ireverse).gt.zero) then ! evaporation
-                       T_gamma_a=TI_min
-                       X_gamma_a=one
-                       Y_gamma_a=one
-                      else if (LL(ireverse).lt.zero) then ! condensation
-                       T_gamma_b=TI_max
-                       X_gamma_b=one
-                       Y_gamma_b=one
-                      else
-                       print *,"LL(ireverse) invalid"
-                       stop
-                      endif
-                     else if (fully_saturated.eq.0) then
-                      if (LL(ireverse).gt.zero) then ! evaporation
-                       T_gamma_a=TI_min
-                       call X_from_Tgamma(X_gamma_a,T_gamma_a, &
-                         local_Tsat(ireverse), &
-                         LL(ireverse),R_Palmore_Desjardins, &
-                         molar_mass_vapor) ! WV
-                       call massfrac_from_volfrac(X_gamma_a,Y_gamma_a, &
-                        molar_mass_ambient,molar_mass_vapor) ! WA,WV
-                      else if (LL(ireverse).lt.zero) then ! condensation
-                       T_gamma_b=TI_max
-                       call X_from_Tgamma(X_gamma_b,T_gamma_b, &
-                         local_Tsat(ireverse), &
-                         LL(ireverse),R_Palmore_Desjardins, &
-                         molar_mass_vapor) ! WV
-                       call massfrac_from_volfrac(X_gamma_b,Y_gamma_b, &
-                        molar_mass_ambient,molar_mass_vapor) ! WA,WV
-                      else
-                       print *,"LL(ireverse) invalid"
-                       stop
-                      endif
                      else
-                      print *,"fully_saturated invalid"
+                      print *,"user_override_TI_YI invalid"
                       stop
                      endif
 
@@ -8650,6 +8662,8 @@ stop
                      POUT%den_probe(2), & ! dest
                      thermal_k_model_correct(1), &
                      thermal_k_model_correct(2), & ! ksrc,kdst
+                     thermal_k_physical_base(1), &
+                     thermal_k_physical_base(2), & ! ksrc,kdst
                      POUT%T_probe(1), & ! source
                      POUT%T_probe(2), & ! dest
                      TSAT_predict, &
@@ -8718,7 +8732,7 @@ stop
                   endif
 
                   TSAT_correct=TSAT_predict
-
+FIX ME
                   if (POUT%at_interface.eq.1) then
 
                    if (local_freezing_model.eq.6) then ! Palmore/Desjardins

@@ -629,6 +629,7 @@ implicit none
       end subroutine TEMPLATE_THERMAL_K
 
       subroutine TEMPLATE_INTERFACE_TEMPERATURE( &
+        interface_mass_transfer_model, &
         probe_constrain, &
         ireverse, &
         iten, &        
@@ -641,8 +642,10 @@ implicit none
         user_override_TI_YI, &
         molar_mass, & ! index: 1..nmat
         species_molar_mass, & ! index: 1..num_species_var
-        ksrc, &
-        kdst, &
+        ksrc_predict, &
+        kdst_predict, &
+        ksrc_physical, &
+        kdst_physical, &
         T_probe_src, &
         T_probe_dst, &
         LL, &
@@ -650,6 +653,7 @@ implicit none
         dxprobe_dst, &
         num_materials_in, &
         num_species_var_in)
+      INTEGER_T, intent(in) :: interface_mass_transfer_model
       INTEGER_T, intent(in) :: num_materials_in
       INTEGER_T, intent(in) :: num_species_var_in
       INTEGER_T, intent(in) :: probe_constrain
@@ -664,8 +668,10 @@ implicit none
       INTEGER_T, intent(inout) :: user_override_TI_YI
       REAL_T, intent(in) :: molar_mass(num_materials_in)
       REAL_T, intent(in) :: species_molar_mass(num_species_var_in)
-      REAL_T, intent(in) :: ksrc
-      REAL_T, intent(in) :: kdst
+      REAL_T, intent(in) :: ksrc_predict
+      REAL_T, intent(in) :: kdst_predict
+      REAL_T, intent(in) :: ksrc_physical
+      REAL_T, intent(in) :: kdst_physical
       REAL_T, intent(in) :: T_probe_src
       REAL_T, intent(in) :: T_probe_dst
       REAL_T, intent(in) :: LL
@@ -674,6 +680,7 @@ implicit none
       end subroutine TEMPLATE_INTERFACE_TEMPERATURE
 
       subroutine TEMPLATE_K_EFFECTIVE( &
+        interface_mass_transfer_model, &
         ireverse, &
         iten, &        
         molar_mass, & ! index: 1..nmat
@@ -688,6 +695,7 @@ implicit none
         LL, &
         num_materials_in, &
         num_species_var_in)
+      INTEGER_T, intent(in) :: interface_mass_transfer_model
       INTEGER_T, intent(in) :: num_materials_in
       INTEGER_T, intent(in) :: num_species_var_in
       INTEGER_T, intent(in) :: ireverse
