@@ -21842,6 +21842,7 @@ end subroutine RatePhaseChange
        ! either: 1-den_dst/den_src (distribute_from_target==0)
        !     or: 1-den_src/den_dst (distribute_from_target==1)
       subroutine get_vel_phasechange( &
+       interface_mass_transfer_model, &
        for_estdt, &
        xI, &
        ispec, &
@@ -21854,7 +21855,10 @@ end subroutine RatePhaseChange
        vel, &
        densrc_I,dendst_I, & ! replaced with vapor_den if freezing_model=5,6
        densrc_probe,dendst_probe, &
-       ksrc,kdst, &
+       ksrc_derived, &
+       kdst_derived, &
+       ksrc_physical, &
+       kdst_physical, &
        Tsrc_probe,Tdst_probe, &
        Tsat, &
        Tsrc_INT,Tdst_INT, &
@@ -21886,6 +21890,7 @@ end subroutine RatePhaseChange
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: interface_mass_transfer_model
       INTEGER_T, intent(in) :: for_estdt
       REAL_T, intent(in) :: xI(SDIM)
       INTEGER_T, intent(in) :: local_freezing_model
@@ -21906,7 +21911,8 @@ end subroutine RatePhaseChange
       REAL_T, intent(in) :: densrc_probe,dendst_probe
       REAL_T, intent(in) :: time,dt,alpha,beta
       REAL_T, intent(in) :: expansion_fact
-      REAL_T, intent(in) :: ksrc,kdst
+      REAL_T, intent(in) :: ksrc_derived,kdst_derived
+      REAL_T, intent(in) :: ksrc_physical,kdst_physical
       REAL_T, intent(in) :: Tsrc_probe,Tdst_probe,Tsat
       REAL_T, intent(in) :: LL
       REAL_T, intent(in) :: source_perim_factor,dest_perim_factor
@@ -22087,8 +22093,8 @@ end subroutine RatePhaseChange
         DTsrc=Tsrc_probe-Tsat 
         ! Tdst_probe is the probe temperature in the destination
         DTdst=Tdst_probe-Tsat  
-        velsrc=ksrc*DTsrc/(LL*dxprobe_source)
-        veldst=kdst*DTdst/(LL*dxprobe_dest)
+        velsrc=ksrc_derived*DTsrc/(LL*dxprobe_source)
+        veldst=kdst_derived*DTdst/(LL*dxprobe_dest)
 
         if (local_freezing_model.eq.0) then
 
@@ -22113,7 +22119,7 @@ end subroutine RatePhaseChange
               log(psi_upper/psi_lower)* &
               sqrt(one+micro_slope**2)/ &
               (micro_slope*(psi_upper-psi_lower))
-             velsrc_micro=source_perim_factor*abs(ksrc*velsrc_micro/LL)
+             velsrc_micro=source_perim_factor*abs(ksrc_derived*velsrc_micro/LL)
              velsrc=velsrc_micro
             else
              print *,"microlayer_angle_source invalid"
@@ -22154,7 +22160,7 @@ end subroutine RatePhaseChange
               log(psi_upper/psi_lower)* &
               sqrt(one+micro_slope**2)/ &
               (micro_slope*(psi_upper-psi_lower))
-             veldst_micro=dest_perim_factor*abs(kdst*veldst_micro/LL)
+             veldst_micro=dest_perim_factor*abs(kdst_derived*veldst_micro/LL)
              veldst=veldst_micro
             else
              print *,"microlayer_angle_dest invalid"
@@ -22262,7 +22268,8 @@ end subroutine RatePhaseChange
          print *,"distribute_from_target=",distribute_from_target
          print *,"LL=",LL
          print *,"local_freezing_model=",local_freezing_model
-         print *,"ksrc,kdst ",ksrc,kdst
+         print *,"ksrc_derived,kdst_derived ",ksrc_derived,kdst_derived
+         print *,"ksrc_physical,kdst_physical ",ksrc_physical,kdst_physical
          print *,"DTsrc,DTdst ",DTsrc,DTdst
          print *,"dxprobe_source, dxprobe_dest ", &
                  dxprobe_source, dxprobe_dest
