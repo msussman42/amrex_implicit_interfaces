@@ -2148,6 +2148,7 @@ REAL_T, intent(out) :: ughost_tngt  ! dir direction
 end subroutine CRYOGENIC_TANK_MK_wallfunc
 
 subroutine CRYOGENIC_TANK_MK_K_EFFECTIVE( &
+  INTEGER_T, intent(in) :: interface_mass_transfer_model
   ireverse, &
   iten, &        
   molar_mass, & ! index: 1..nmat
@@ -2165,6 +2166,7 @@ subroutine CRYOGENIC_TANK_MK_K_EFFECTIVE( &
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, intent(in) :: interface_mass_transfer_model
 INTEGER_T, intent(in) :: num_materials_in
 INTEGER_T, intent(in) :: num_species_var_in
 INTEGER_T, intent(in) :: ireverse
@@ -2182,7 +2184,7 @@ REAL_T, intent(in) :: dxprobe_dst
 
 REAL_T :: RA1,RA2
 
-if (1.eq.0) then
+if (interface_mass_transfer_model.eq.1) then
 
  RA1=(1.7069d+9)*abs(302.0d0-T_probe_src)
  RA2=(5.8395e+8)*abs(302.0d0-T_probe_dst)
@@ -2209,6 +2211,11 @@ if (1.eq.0) then
    stop
  endif
 
+else if (interface_mass_transfer_model.eq.0) then
+ ! do nothing
+else
+ print *,"interface_mass_transfer_model invalid"
+ stop
 endif
 
 end subroutine CRYOGENIC_TANK_MK_K_EFFECTIVE
