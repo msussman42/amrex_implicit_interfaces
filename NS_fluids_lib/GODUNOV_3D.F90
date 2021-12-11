@@ -2904,7 +2904,8 @@ stop
       REAL_T velsum
       REAL_T RR
       REAL_T level_cap_wave_speed(nten)
-      REAL_T ksource,kdest
+      REAL_T ksource_predict,kdest_predict
+      REAL_T ksource_physical,kdest_physical
       REAL_T alpha,beta,dt_heat
       INTEGER_T for_estdt
       REAL_T xI(SDIM)
