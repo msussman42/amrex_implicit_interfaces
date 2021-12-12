@@ -21838,6 +21838,15 @@ end subroutine RatePhaseChange
 
       end subroutine get_vel_phasechange_NUCLEATE
 
+       ! distribute_from_target=0 => distribute to the destination material
+       ! => velocity in the source will be divergence free (continuous) => 
+       ! velocity on the interface will correspond to the source velocity.
+       !  V=u_src dot n + mdot/rho_src
+       ! distribute_from_target=1 => distribute to the source material
+       ! => velocity in the destination will be divergence free (continuous) => 
+       ! velocity on the interface will correspond to the destination velocity.
+       !  V=u_dst dot n + mdot/rho_dst
+       !
        ! expansion_fact=
        ! either: 1-den_dst/den_src (distribute_from_target==0)
        !     or: 1-den_src/den_dst (distribute_from_target==1)
@@ -21939,6 +21948,8 @@ end subroutine RatePhaseChange
       REAL_T Tsrc_ref,psrc_ref
       REAL_T psrc_sat,densrc_sat
       INTEGER_T verb_hydrate
+      INTEGER_T mdot_override
+      REAL_T mdot
 
       nmat=num_materials
       if ((im_source.lt.1).or.(im_source.gt.nmat)) then
@@ -21949,12 +21960,16 @@ end subroutine RatePhaseChange
        print *,"im_dest invalid"
        stop
       endif
-      if ((densrc_I.le.zero).or.(dendst_I.le.zero)) then
-       print *,"density must be positive"
+      if ((densrc_I.gt.zero).and.(dendst_I.gt.zero)) then
+       ! do nothing
+      else
+       print *,"density I must be positive"
        stop
       endif
-      if ((densrc_probe.le.zero).or.(dendst_probe.le.zero)) then
-       print *,"density must be positive"
+      if ((densrc_probe.gt.zero).and.(dendst_probe.gt.zero)) then
+       ! do nothing
+      else
+       print *,"density probe be positive"
        stop
       endif
       if ((distribute_from_target.ne.0).and. &
@@ -22002,43 +22017,57 @@ end subroutine RatePhaseChange
        stop
       endif
 
-      if ((VOFsrc.lt.-VOFTOL).or. &
-          (VOFdst.lt.-VOFTOL).or. &
-          (VOFsrc.gt.one+VOFTOL).or. &
-          (VOFdst.gt.one+VOFTOL)) then
+      if ((VOFsrc.ge.-VOFTOL).and. &
+          (VOFdst.ge.-VOFTOL).and. &
+          (VOFsrc.le.one+VOFTOL).and. &
+          (VOFdst.le.one+VOFTOL)) then
+       ! do nothing
+      else
        print *,"VOFsrc or VOFdst invalid"
        stop
       endif
 
-      if ((Tsrc_probe.lt.zero).or.(Tdst_probe.lt.zero).or. &
-          (Tsat.lt.zero).or.(Tsrc_INT.lt.zero).or. &
-          (Tdst_INT.lt.zero)) then
+      if ((Tsrc_probe.ge.zero).and.(Tdst_probe.ge.zero).and. &
+          (Tsat.ge.zero).and.(Tsrc_INT.ge.zero).and. &
+          (Tdst_INT.ge.zero)) then
+       ! do nothing
+      else
        print *,"temperature cannot be negative in get_vel_phasechange"
        print *,"Tsrc_probe,Tdst_probe,Tsat,TsrcI,TdstI ", &
          Tsrc_probe, Tdst_probe, Tsat, Tsrc_INT, Tdst_INT
        print *,"for_estdt= ",for_estdt
        stop
       endif
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif
-      if (time.lt.zero) then
+      if (time.ge.zero) then
+       ! do nothing
+      else
        print *,"time invalid"
        stop
       endif
-      if (alpha.lt.zero) then
+      if (alpha.ge.zero) then
+       ! do nothing
+      else
        print *,"alpha invalid"
        stop
       endif
-      if (beta.lt.zero) then
+      if (beta.ge.zero) then
+       ! do nothing
+      else
        print *,"beta invalid"
        stop
       endif
        ! expansion_fact=
        ! either: 1-den_dst/den_src
        !     or: 1-den_src/den_dst
-      if (expansion_fact.ge.one) then
+      if (expansion_fact.lt.one) then
+       ! do nothing
+      else
        print *,"expansion_fact invalid get_vel_phasechange:",expansion_fact
        stop
       endif
@@ -22046,10 +22075,12 @@ end subroutine RatePhaseChange
        print *,"for_estdt invalid"
        stop
       endif
-      if ((source_perim_factor.le.zero).or. &
-          (source_perim_factor.gt.one).or. &
-          (dest_perim_factor.le.zero).or. &
-          (dest_perim_factor.gt.one)) then
+      if ((source_perim_factor.gt.zero).and. &
+          (source_perim_factor.le.one).and. &
+          (dest_perim_factor.gt.zero).and. &
+          (dest_perim_factor.le.one)) then
+       ! do nothing
+      else
        print *,"source_perim_factor or dest_perim_factor invalid"
        stop
       endif
@@ -22076,9 +22107,11 @@ end subroutine RatePhaseChange
                 (local_freezing_model.eq.1)) then
          ! LL<0 if freezing
 
-        if ((LL.eq.zero).or. &
-            (dxprobe_source.le.zero).or. &
-            (dxprobe_dest.le.zero)) then
+        if ((LL.ne.zero).and. &
+            (dxprobe_source.gt.zero).and. &
+            (dxprobe_dest.gt.zero)) then
+         ! do nothing
+        else
          print *,"LL, dxprobe_source, or dxprobe_dest invalid"
          stop
         endif
@@ -22560,6 +22593,45 @@ end subroutine RatePhaseChange
 
       else
        print *,"start_freezing invalid"
+       stop
+      endif
+
+      mdot_override=0
+
+       ! user defined mdot=[k grad T dot n]/L
+       ! k units=W/(m K)
+       ! W=J/s
+       ! L=J/kg
+       ! J/(m s K) * (1/m) (K)/(J/kg)=J/(m^2 s)  * kg/J = kg/(m^2 s)
+       ! velocity=mdot/rho=kg/(m^2 s)  / (kg/m^3)= m/s
+      if (is_in_probtype_list().eq.1) then
+       ! compute mdot here
+      endif 
+
+      if (mdot_override.eq.1) then
+
+       if (distribute_from_target.eq.0) then 
+        vel=mdot/densrc_I
+       else if (distribute_from_target.eq.1) then
+        vel=mdot/dendst_I
+       else
+        print *,"distribute_from_target invalid"
+        stop
+       endif
+
+       if (for_estdt.eq.1) then
+        vel=max(abs(vel),abs(vel)/(one-expansion_fact))
+       else if (for_estdt.eq.0) then
+        ! do nothing
+       else
+        print *,"for_estdt invalid"
+        stop
+       endif
+
+      else if (mdot_override.eq.0) then
+       ! do nothing
+      else
+       print *,"mdot_override invalid"
        stop
       endif
 
