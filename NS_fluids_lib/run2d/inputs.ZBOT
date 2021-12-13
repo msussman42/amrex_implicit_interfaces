@@ -277,12 +277,15 @@ ns.viscconst=4.48E-04 1.093e-6 1.0
 # (1400)(0.2)(0.005)/100 < mu mu>0.014
 # For the gas,
 # (5.3)(0.2)(0.05)/100 < mu  mu>5.3e-4
-#ns.viscconst_eddy_wall=5.0e-3 0.0 0.0
+#ns.viscconst_eddy_wall=5.0e-3 0.0 0.0 #YANG
+#ns.viscconst_eddy_bulk=5.0e-3 5.3e-4 0.0 #YANG
 ns.viscconst_eddy_wall=2.0e-2 0.0 0.0
 ns.viscconst_eddy_bulk=2.0e-2 1.0e-3 0.0
 ns.wall_model_velocity=0.005 0.0 0.0
-#ns.heatflux_factor=1.0 1.0 1.0
+#ns.heatflux_factor=1.0 1.0 1.0 #YANG
 ns.heatflux_factor=16.0 0.0 1.0
+ns.interface_mass_transfer_model=0 0 0 0 0 0
+#ns.interface_mass_transfer_model=1 0 0 0 0 0 #YANG
 ns.law_of_the_wall=1 0 0
 ns.les_model=1 0 0
 ns.visual_WALLVEL_plot_int=100  # 100 for standard tests.
