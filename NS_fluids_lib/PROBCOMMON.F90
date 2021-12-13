@@ -679,6 +679,52 @@ implicit none
       REAL_T, intent(in) :: dxprobe_dst
       end subroutine TEMPLATE_INTERFACE_TEMPERATURE
 
+      subroutine TEMPLATE_MDOT( &
+        num_materials_in, &
+        num_species_var_in, &
+        interface_mass_transfer_model, &
+        xI, & 
+        ispec, &
+        molar_mass, & ! 1..nmat
+        species_molar_mass, & ! 1..num_species_var+1
+        im_source, &
+        im_dest, &
+        mdot, & ! intent(out)
+        mdot_override, & ! intent(inout)
+        ksrc_derived, &
+        kdst_derived, &
+        ksrc_physical, &
+        kdst_physical, &
+        T_probe_src, &
+        T_probe_dst, &
+        TI, &
+        LL, &
+        dxprobe_src, &
+        dxprobe_dst)
+      INTEGER_T, intent(in) :: interface_mass_transfer_model
+      INTEGER_T, intent(in) :: num_materials_in
+      INTEGER_T, intent(in) :: num_species_var_in
+      INTEGER_T, intent(in) :: ispec
+      INTEGER_T, intent(in) :: im_source
+      INTEGER_T, intent(in) :: im_dest
+      REAL_T, intent(in) :: xI(SDIM)
+      REAL_T, intent(in) :: TI
+      REAL_T, intent(in) :: molar_mass(num_materials_in)
+      REAL_T, intent(in) :: species_molar_mass(num_species_var_in+1)
+      REAL_T, intent(out) :: mdot
+      INTEGER_T, intent(inout) :: mdot_override
+      REAL_T, intent(in) :: ksrc_derived
+      REAL_T, intent(in) :: kdst_derived
+      REAL_T, intent(in) :: ksrc_physical
+      REAL_T, intent(in) :: kdst_physical
+      REAL_T, intent(in) :: T_probe_src
+      REAL_T, intent(in) :: T_probe_dst
+      REAL_T, intent(in) :: LL
+      REAL_T, intent(in) :: dxprobe_src
+      REAL_T, intent(in) :: dxprobe_dst
+      end subroutine TEMPLATE_MDOT
+
+
       subroutine TEMPLATE_K_EFFECTIVE( &
         interface_mass_transfer_model, &
         ireverse, &
@@ -1008,6 +1054,8 @@ implicit none
       PROCEDURE(TEMPLATE_THERMAL_K), POINTER :: SUB_THERMAL_K
       PROCEDURE(TEMPLATE_INTERFACE_TEMPERATURE), POINTER :: &
               SUB_INTERFACE_TEMPERATURE
+      PROCEDURE(TEMPLATE_MDOT), POINTER :: &
+              SUB_MDOT
       PROCEDURE(TEMPLATE_K_EFFECTIVE), POINTER :: &
               SUB_K_EFFECTIVE
 
