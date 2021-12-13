@@ -975,6 +975,11 @@ else if (interface_mass_transfer_model.eq.999) then
   stop
  endif
  mdot=mdotsum
+else if (interface_mass_transfer_model.gt.0) then
+ ! do nothing
+else
+ print *,"interface_mass_transfer_model invalid"
+ stop
 endif
 
 end subroutine STUB_MDOT

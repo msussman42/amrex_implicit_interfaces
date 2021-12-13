@@ -2213,6 +2213,8 @@ if (interface_mass_transfer_model.eq.1) then
 
 else if (interface_mass_transfer_model.eq.0) then
  ! do nothing
+else if (interface_mass_transfer_model.gt.0) then
+ ! do nothing
 else
  print *,"interface_mass_transfer_model invalid"
  stop
