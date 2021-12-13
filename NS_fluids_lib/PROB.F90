@@ -22606,6 +22606,28 @@ end subroutine RatePhaseChange
        ! velocity=mdot/rho=kg/(m^2 s)  / (kg/m^3)= m/s
       if (is_in_probtype_list().eq.1) then
        ! compute mdot here
+       call SUB_MDOT( &
+        nmat, &
+        num_species_var, &
+        interface_mass_transfer_model, &
+        xI, &
+        ispec, &
+        molar_mass, & ! 1..num_materials
+        species_molar_mass, & ! 1..num_species_var+1
+        im_source, &
+        im_dest, &
+        mdot, & ! intent(out)
+        mdot_override, & ! intent(inout)
+        ksrc_derived, &
+        kdst_derived, &
+        ksrc_physical, &
+        kdst_physical, &
+        Tsrc_probe, &
+        Tdst_probe, &
+        Tsat, &
+        LL, &
+        dxprobe_source, &
+        dxprobe_dest)
       endif 
 
       if (mdot_override.eq.1) then

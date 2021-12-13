@@ -495,6 +495,7 @@ stop
       
       SUB_THERMAL_K=>STUB_THERMAL_K
       SUB_INTERFACE_TEMPERATURE=>STUB_INTERFACE_TEMPERATURE
+      SUB_MDOT=>STUB_MDOT
       SUB_K_EFFECTIVE=>STUB_K_EFFECTIVE
 
       SUB_reference_wavelen=>STUB_reference_wavelen
