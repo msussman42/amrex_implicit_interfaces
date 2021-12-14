@@ -2186,8 +2186,9 @@ REAL_T :: RA1,RA2
 
 if (interface_mass_transfer_model.eq.1) then
 
- RA1=(1.7069d+9)*abs(302.0d0-T_probe_src)
- RA2=(5.8395e+8)*abs(302.0d0-T_probe_dst)
+  !December 14: replaced 302 with 307.
+ RA1=(1.7069d+9)*abs(307.0d0-T_probe_src)
+ RA2=(5.8395d+8)*abs(307.0d0-T_probe_dst)
 
  if (RA1.gt.1.0d+4.and.RA1.le.1.0d+7)then
   k_model_correct(1)=dxprobe_src*k_model_predict(1)/0.1016d0* &
