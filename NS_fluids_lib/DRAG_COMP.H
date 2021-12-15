@@ -1,6 +1,12 @@
 #ifndef DRAG_COMP_H_
 #define DRAG_COMP_H_
 
+#if (0)
+This enumerated type indexes into DRAG_MF which has
+ngrow_make_distance=3 ghost cells and gives the local force/torque
+applied to a given material "im_test"
+#endif
+
 #define DRAGCOMP_BODYFORCE (0)
 #define DRAGCOMP_FORCE (DRAGCOMP_BODYFORCE+3*num_materials)
 #define DRAGCOMP_PFORCE (DRAGCOMP_FORCE+3*num_materials)
