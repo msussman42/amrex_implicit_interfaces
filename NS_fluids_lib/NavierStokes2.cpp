@@ -651,8 +651,8 @@ void NavierStokes::avgDownDRAG_MF() {
  if (level<finest_level) {
   NavierStokes& ns_fine=getLevel(level+1);
 
-  debug_ngrow(DRAG_MF,0,2000);
-  ns_fine.debug_ngrow(DRAG_MF,0,2500);
+  debug_ngrow(DRAG_MF,ngrow_make_distance,2000);
+  ns_fine.debug_ngrow(DRAG_MF,ngrow_make_distance,2500);
   MultiFab& S_crseD=*localMF[DRAG_MF];
   MultiFab& S_fineD=*ns_fine.localMF[DRAG_MF];
   if ((S_crseD.nComp()==N_DRAG)&&

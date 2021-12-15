@@ -22932,7 +22932,7 @@ NavierStokes::level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine,
   const int* fine_fabhi=fine_fabgrid.hiVect();
 
    // in: NAVIERSTOKES_3D.F90
-  FORT_AVGDOWN_BURNING(
+  fort_avgdown_burning(
    &velflag,
    prob_lo,
    dxf,
@@ -22952,7 +22952,111 @@ NavierStokes::level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine,
  ns_reconcile_d_num(109);
  S_crse.copy(crse_S_fine,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
-} // subroutine level_avgDownBURNING
+
+} // end subroutine level_avgDownBURNING
+
+void
+NavierStokes::level_avgDownDRAG(MultiFab& S_crse,MultiFab& S_fine) {
+
+ int nmat=num_materials;
+ int scomp=0;
+ int ncomp=N_DRAG;
+
+ int finest_level=parent->finestLevel();
+ if (level>=finest_level)
+  amrex::Error("level invalid in level_avgDownDRAG");
+
+ int f_level=level+1;
+ NavierStokes&   fine_lev = getLevel(f_level);
+ const BoxArray& fgrids=fine_lev.grids;
+ const DistributionMapping& fdmap=fine_lev.dmap;
+
+ if (grids!=S_crse.boxArray())
+  amrex::Error("S_crse invalid level_avgDownDRAG");
+ if (fgrids!=S_fine.boxArray())
+  amrex::Error("S_fine invalid");
+ if (S_crse.nComp()!=S_fine.nComp())
+  amrex::Error("nComp mismatch");
+ if (S_crse.nComp()!=scomp+ncomp)
+  amrex::Error("S_crse.nComp() invalid level_avgDownDRAG");
+
+ BoxArray crse_S_fine_BA(fgrids.size());
+ for (int i = 0; i < fgrids.size(); ++i) {
+  crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
+ }
+ DistributionMapping crse_dmap=fdmap;
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,ncomp,0,
+   MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
+
+ ParallelDescriptor::Barrier();
+
+ const Real* dx = geom.CellSize();
+ const Real* dxf = fine_lev.geom.CellSize();
+ const Real* prob_lo   = geom.ProbLo();
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_fine.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(S_fine,false); mfi.isValid(); ++mfi) {
+  BL_ASSERT(fgrids[mfi.index()] == mfi.validbox());
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  const Real* xlo_fine = fine_lev.grid_loc[gridno].lo();
+  const Box& ovgrid = crse_S_fine_BA[gridno];
+  const int* ovlo=ovgrid.loVect();
+  const int* ovhi=ovgrid.hiVect();
+
+  FArrayBox& fine_fab=S_fine[gridno];
+  const Box& fgrid=fine_fab.box();
+  const int* flo=fgrid.loVect();
+  const int* fhi=fgrid.hiVect();
+  const Real* f_dat=fine_fab.dataPtr(scomp);
+
+  FArrayBox& coarse_fab=crse_S_fine[gridno];
+  const Box& cgrid = coarse_fab.box();
+  const int* clo=cgrid.loVect();
+  const int* chi=cgrid.hiVect();
+  const Real* c_dat=coarse_fab.dataPtr();
+
+  int bfact_c=parent->Space_blockingFactor(level);
+  int bfact_f=parent->Space_blockingFactor(f_level);
+
+  const Box& fine_fabgrid = fine_lev.grids[gridno];
+  const int* fine_fablo=fine_fabgrid.loVect();
+  const int* fine_fabhi=fine_fabgrid.hiVect();
+
+   // in: NAVIERSTOKES_3D.F90
+  fort_avgdown_drag(
+   prob_lo,
+   dxf,
+   &level,&f_level,
+   &bfact_c,&bfact_f,
+   xlo_fine,dx,
+   &ncomp,
+   &nmat,
+   c_dat,ARLIM(clo),ARLIM(chi),
+   f_dat,ARLIM(flo),ARLIM(fhi),
+   ovlo,ovhi,
+   fine_fablo,fine_fabhi);
+
+ }// mfi
+} //omp
+ ns_reconcile_d_num(109);
+ S_crse.copy(crse_S_fine,0,scomp,ncomp);
+ ParallelDescriptor::Barrier();
+
+} // end subroutine level_avgDownDRAG
 
 
 void

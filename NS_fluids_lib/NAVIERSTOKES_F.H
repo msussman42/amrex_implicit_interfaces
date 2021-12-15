@@ -15,7 +15,6 @@
 #    define FORT_AVGDOWN     avgdown
 #    define FORT_AVGDOWN_LOW avgdown_low
 #    define FORT_AVGDOWN_TAG avgdown_tag
-#    define FORT_AVGDOWN_BURNING avgdown_burning
 #    define FORT_AVGDOWN_CURV avgdown_curv
 #    define FORT_DIAGINV     diaginv
 #    define FORT_OUTPUTSLICE outputslice
@@ -33,7 +32,6 @@
 #    define FORT_AVGDOWN     AVGDOWN
 #    define FORT_AVGDOWN_LOW AVGDOWN_LOW
 #    define FORT_AVGDOWN_TAG AVGDOWN_TAG
-#    define FORT_AVGDOWN_BURNING AVGDOWN_BURNING
 #    define FORT_AVGDOWN_CURV AVGDOWN_CURV
 #    define FORT_DIAGINV     DIAGINV
 #    define FORT_OUTPUTSLICE OUTPUTSLICE
@@ -50,7 +48,6 @@
 #    define FORT_AVGDOWN     avgdown
 #    define FORT_AVGDOWN_LOW avgdown_low
 #    define FORT_AVGDOWN_TAG avgdown_tag
-#    define FORT_AVGDOWN_BURNING avgdown_burning
 #    define FORT_AVGDOWN_CURV avgdown_curv
 #    define FORT_DIAGINV     diaginv
 #    define FORT_OUTPUTSLICE outputslice
@@ -66,7 +63,6 @@
 #    define FORT_AVGDOWN     avgdown_
 #    define FORT_AVGDOWN_LOW avgdown_low_
 #    define FORT_AVGDOWN_TAG avgdown_tag_
-#    define FORT_AVGDOWN_BURNING avgdown_burning_
 #    define FORT_AVGDOWN_CURV avgdown_curv_
 #    define FORT_DIAGINV     diaginv_
 #    define FORT_OUTPUTSLICE outputslice_
@@ -430,7 +426,7 @@ extern "C" {
       const int* lo, const int* hi,
       const int* lof, const int* hif);
 
-    void FORT_AVGDOWN_BURNING(
+    void fort_avgdown_burning(
       int* velflag,
       const Real* problo,
       const Real* dxf,
@@ -444,6 +440,21 @@ extern "C" {
       const Real* fine,AMREX_ARLIM_P(fine_lo),AMREX_ARLIM_P(fine_hi),
       const int* lo, const int* hi,
       const int* lof, const int* hif);
+
+
+    void fort_avgdown_drag(
+      const Real* problo,
+      const Real* dxf,
+      int* level_c,int* level_f,
+      int* bfact_c,int* bfact_f,
+      const Real* xlo_fine,const Real* dx,
+      int* ncomp,
+      int* nmat,
+      const Real* crse,AMREX_ARLIM_P(clo),AMREX_ARLIM_P(chi),
+      const Real* fine,AMREX_ARLIM_P(fine_lo),AMREX_ARLIM_P(fine_hi),
+      const int* lo, const int* hi,
+      const int* lof, const int* hif);
+
 
     void FORT_AVGDOWN_CURV(
       const Real* problo,
