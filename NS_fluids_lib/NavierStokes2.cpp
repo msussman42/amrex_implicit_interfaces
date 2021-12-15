@@ -17,6 +17,7 @@
 
 #include <NavierStokes.H>
 #include <INTEGRATED_QUANTITY.H>
+#include <DRAG_COMP.H>
 #include <GLOBALUTIL_F.H>
 #include <TECPLOTUTIL_F.H>
 #include <MARCHING_TETRA_F.H>
@@ -631,8 +632,38 @@ void NavierStokes::avgDownBURNING_localMF(
 
  } // level<finest_level
 
-} // subroutine avgDownBURNING_localMF
+} // end subroutine avgDownBURNING_localMF
 
+void NavierStokes::avgDownDRAG_MF() {
+
+  //ngrow_make_distance=3
+  //ngrow_distance=4
+ debug_ngrow(DRAG_MF,ngrow_make_distance,9);
+ debug_ixType(DRAG_MF,-1,DRAG_MF);
+ if (localMF[DRAG_MF]->nComp()==N_DRAG) {
+  // do nothing
+ } else 
+  amrex::Error("DRAG_MF invalid ncomp");
+
+ int finest_level=parent->finestLevel();
+ int nmat=num_materials;
+
+ if (level<finest_level) {
+  NavierStokes& ns_fine=getLevel(level+1);
+
+  debug_ngrow(DRAG_MF,0,2000);
+  ns_fine.debug_ngrow(DRAG_MF,0,2500);
+  MultiFab& S_crseD=*localMF[DRAG_MF];
+  MultiFab& S_fineD=*ns_fine.localMF[DRAG_MF];
+  if ((S_crseD.nComp()==N_DRAG)&&
+      (S_fineD.nComp()==N_DRAG)) {
+   level_avgDownDRAG(S_crseD,S_fineD);
+  } else
+   amrex::Error("S_crseD or S_fineD invalid nComp");
+
+ } // level<finest_level
+
+} // end subroutine avgDownDRAG_MF
 
 void NavierStokes::avgDownCURV_localMF(int idxMF) {
 
