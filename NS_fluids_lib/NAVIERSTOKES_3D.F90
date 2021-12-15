@@ -10441,6 +10441,562 @@ END SUBROUTINE SIMP
       return
       end subroutine fort_coflow
 
+       ! do_the_advance -> level_phase_change_rate
+       ! avgDownBURNING_localMF 
+       ! level_avgDownBURNING
+       ! (note: after level_avgDownBURNING comes 
+       !  level_phase_change_rate_extend)
+      subroutine fort_avgdown_burning( &
+       velflag, &
+       problo, &
+       dxf, &
+       level_c,level_f, &
+       bfact_c,bfact_f, &
+       xlo_fine,dx, &
+       ncomp, &
+       nmat, &
+       nten, &
+       crse,DIMS(crse), &
+       fine,DIMS(fine), &
+       lo,hi, &
+       lof,hif) &
+      bind(c,name='fort_avgdown_burning')
+
+      use global_utility_module
+      use geometry_intersect_module
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: velflag
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level_f
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact_f
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T stenlo(3),stenhi(3)
+      REAL_T, target, intent(out) :: crse(DIMV(crse),ncomp)
+      REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
+      REAL_T, target, intent(in) :: fine(DIMV(fine),ncomp)
+      REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
+      INTEGER_T ic,jc,kc
+      INTEGER_T ifine,jfine,kfine
+      INTEGER_T dir2
+      INTEGER_T iten
+      INTEGER_T n
+      REAL_T voltotal
+      REAL_T volall
+      REAL_T wt(SDIM)
+      REAL_T crse_value(ncomp)
+      INTEGER_T fine_test
+      INTEGER_T coarse_test
+      REAL_T velwt(nten)
+      INTEGER_T local_comp
+      INTEGER_T avgdown_sweep
+      INTEGER_T ncomp_expect
+      INTEGER_T ncomp_per_interface
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+
+      if (nten.eq.( (nmat-1)*(nmat-1)+nmat-1)/2) then
+       ! do nothing
+      else
+       print *,"nten invalid"
+       stop
+      endif
+
+      if (velflag.eq.1) then  ! burning velocity
+       ncomp_per_interface=SDIM
+      else if (velflag.eq.0) then ! interface temperature, mass fraction
+       ncomp_per_interface=2
+      else
+       print *,"velflag invalid"
+       stop
+      endif
+      ncomp_expect=nten+nten*ncomp_per_interface
+
+      if (ncomp.eq.ncomp_expect) then
+       ! do nothing
+      else
+       print *,"ncomp invalid34"
+       stop
+      endif
+
+      if (bfact_f.lt.1) then
+       print *,"bfact_f invalid4 ",bfact_f
+       stop
+      endif
+      if (bfact_c.lt.1) then
+       print *,"bfact_c invalid4 ",bfact_c
+       stop
+      endif
+      if ((bfact_c.ne.bfact_f).and. &
+          (bfact_c.ne.2*bfact_f)) then
+       print *,"bfact_c invalid"
+       stop
+      endif
+      if ((level_c.lt.0).or. &
+          (level_c.ne.level_f-1)) then
+       print *,"level_c or level_f invalid"
+       stop
+      endif
+
+      crse_ptr=>crse
+      call checkbound_array(lo,hi,crse_ptr,0,-1,411)
+      fine_ptr=>fine
+      call checkbound_array(lof,hif,fine_ptr,0,-1,411)
+
+      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
+
+      do ic=growlo(1),growhi(1)
+      do jc=growlo(2),growhi(2)
+      do kc=growlo(3),growhi(3)
+
+       do n=1,ncomp
+        crse_value(n)=zero
+       enddo
+
+       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
+        bfact_c,bfact_f)
+
+       do avgdown_sweep=0,1
+
+        do iten=1,nten
+         velwt(iten)=zero
+        enddo
+        voltotal=zero
+
+        do ifine=stenlo(1),stenhi(1)
+         call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
+         if (wt(1).gt.zero) then
+          do jfine=stenlo(2),stenhi(2)
+           call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
+           if (wt(2).gt.zero) then
+            do kfine=stenlo(3),stenhi(3)
+             if (SDIM.eq.3) then
+              call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
+             endif
+             if (wt(SDIM).gt.zero) then
+              volall=wt(1)
+              do dir2=2,SDIM
+               volall=volall*wt(dir2)
+              enddo
+              if (volall.le.zero) then
+               print *,"volall invalid"
+               stop
+              endif
+
+              do iten=1,nten
+               fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),iten))
+               coarse_test=NINT(crse_value(iten)) ! crse_value init to 0
+
+               if (avgdown_sweep.eq.0) then
+
+                if (coarse_test.eq.0) then 
+                 coarse_test=fine_test
+                else if (fine_test.eq.0) then
+                 ! do nothing
+                else if ((fine_test.eq.1).or.(fine_test.eq.-1)) then
+                 coarse_test=fine_test
+                else
+                 print *,"fine_test invalid"
+                 stop
+                endif
+
+                if ((coarse_test.eq.1).or. &
+                    (coarse_test.eq.-1)) then
+                 crse_value(iten)=coarse_test
+                else if (coarse_test.eq.0) then
+                 ! do nothing (crse_value init. to zero)
+                else
+                 print *,"coarse_test invalid"
+                 stop
+                endif
+
+               else if (avgdown_sweep.eq.1) then
+
+                if ((coarse_test.eq.0).or. &
+                    (coarse_test.eq.1).or. &
+                    (coarse_test.eq.-1)) then
+
+                 if (fine_test.eq.0) then
+                  ! do nothing
+                 else if (fine_test.eq.coarse_test) then
+                  velwt(iten)=velwt(iten)+volall
+                  do dir2=1,ncomp_per_interface
+                   local_comp=nten+(iten-1)*ncomp_per_interface+dir2
+                   crse_value(local_comp)=crse_value(local_comp)+ &
+                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
+                  enddo
+                 else
+                  print *,"fine_test bad (avgdown burning): ",fine_test
+                  stop
+                 endif
+                else
+                 print *,"coarse_test invalid"
+                 stop
+                endif
+               else 
+                print *,"avgdown_sweep invalid"
+                stop
+               endif
+              enddo ! iten=1..nten
+
+              voltotal=voltotal+volall
+             endif ! wt(sdim).gt.0
+            enddo ! kfine
+           endif
+          enddo ! jfine
+         endif
+        enddo ! ifine
+
+        if (voltotal.le.zero) then
+         print *,"voltotal invalid"
+         stop
+        endif
+
+        if (avgdown_sweep.eq.0) then
+         ! do nothing
+        else if (avgdown_sweep.eq.1) then
+
+         do iten=1,nten
+
+          coarse_test=NINT(crse_value(iten))
+          if (coarse_test.eq.0) then
+           if (velwt(iten).eq.zero) then
+            ! do nothing
+           else
+            print *,"velwt invalid"
+            stop
+           endif
+           crse(D_DECL(ic,jc,kc),iten)=zero
+           do dir2=1,ncomp_per_interface
+            crse(D_DECL(ic,jc,kc),nten+(iten-1)*ncomp_per_interface+dir2)=zero
+           enddo
+          else if ((coarse_test.eq.1).or. &
+                   (coarse_test.eq.-1)) then
+           if (velwt(iten).gt.zero) then
+            crse(D_DECL(ic,jc,kc),iten)=coarse_test
+            do dir2=1,ncomp_per_interface
+             crse(D_DECL(ic,jc,kc),nten+(iten-1)*ncomp_per_interface+dir2)= &
+              crse_value(nten+(iten-1)*ncomp_per_interface+dir2)/velwt(iten)
+            enddo
+           else
+            print *,"velwt invalid"
+            stop
+           endif
+          else
+           print *,"coarse_test invalid"
+           stop
+          endif
+
+         enddo ! iten=1..nten
+
+        else 
+         print *,"avgdown_sweep invalid"
+         stop
+        endif
+
+       enddo ! avgdown_sweep=0..1
+
+      enddo
+      enddo
+      enddo ! ic,jc,kc
+
+      return
+      end subroutine fort_avgdown_burning
+
+
+       ! do_the_advance -> level_phase_change_rate
+       ! avgDownDRAG_MF 
+       ! level_avgDownDRAG
+       ! (note: after level_avgDownDRAG comes 
+       !  level_phase_change_rate_extend)
+      subroutine fort_avgdown_drag( &
+       problo, &
+       dxf, &
+       level_c,level_f, &
+       bfact_c,bfact_f, &
+       xlo_fine,dx, &
+       ncomp, &
+       nmat, &
+       crse,DIMS(crse), &
+       fine,DIMS(fine), &
+       lo,hi, &
+       lof,hif) &
+      bind(c,name='fort_avgdown_drag')
+
+      use global_utility_module
+      use geometry_intersect_module
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: level_c
+      INTEGER_T, intent(in) :: level_f
+      INTEGER_T, intent(in) :: bfact_c
+      INTEGER_T, intent(in) :: bfact_f
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
+      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T stenlo(3),stenhi(3)
+      REAL_T, target, intent(out) :: crse(DIMV(crse),ncomp)
+      REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
+      REAL_T, target, intent(in) :: fine(DIMV(fine),ncomp)
+      REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
+      INTEGER_T ic,jc,kc
+      INTEGER_T ifine,jfine,kfine
+      INTEGER_T dir2
+      INTEGER_T iten
+      INTEGER_T n
+      REAL_T voltotal
+      REAL_T volall
+      REAL_T wt(SDIM)
+      REAL_T crse_value(ncomp)
+      INTEGER_T fine_test
+      INTEGER_T coarse_test
+      REAL_T velwt(nten)
+      INTEGER_T local_comp
+      INTEGER_T avgdown_sweep
+      INTEGER_T ncomp_expect
+      INTEGER_T ncomp_per_interface
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+
+      if (nten.eq.( (nmat-1)*(nmat-1)+nmat-1)/2) then
+       ! do nothing
+      else
+       print *,"nten invalid"
+       stop
+      endif
+
+      if (velflag.eq.1) then  ! burning velocity
+       ncomp_per_interface=SDIM
+      else if (velflag.eq.0) then ! interface temperature, mass fraction
+       ncomp_per_interface=2
+      else
+       print *,"velflag invalid"
+       stop
+      endif
+      ncomp_expect=nten+nten*ncomp_per_interface
+
+      if (ncomp.eq.ncomp_expect) then
+       ! do nothing
+      else
+       print *,"ncomp invalid34"
+       stop
+      endif
+
+      if (bfact_f.lt.1) then
+       print *,"bfact_f invalid4 ",bfact_f
+       stop
+      endif
+      if (bfact_c.lt.1) then
+       print *,"bfact_c invalid4 ",bfact_c
+       stop
+      endif
+      if ((bfact_c.ne.bfact_f).and. &
+          (bfact_c.ne.2*bfact_f)) then
+       print *,"bfact_c invalid"
+       stop
+      endif
+      if ((level_c.lt.0).or. &
+          (level_c.ne.level_f-1)) then
+       print *,"level_c or level_f invalid"
+       stop
+      endif
+
+      crse_ptr=>crse
+      call checkbound_array(lo,hi,crse_ptr,0,-1,411)
+      fine_ptr=>fine
+      call checkbound_array(lof,hif,fine_ptr,0,-1,411)
+
+      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
+
+      do ic=growlo(1),growhi(1)
+      do jc=growlo(2),growhi(2)
+      do kc=growlo(3),growhi(3)
+
+       do n=1,ncomp
+        crse_value(n)=zero
+       enddo
+
+       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
+        bfact_c,bfact_f)
+
+       do avgdown_sweep=0,1
+
+        do iten=1,nten
+         velwt(iten)=zero
+        enddo
+        voltotal=zero
+
+        do ifine=stenlo(1),stenhi(1)
+         call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
+         if (wt(1).gt.zero) then
+          do jfine=stenlo(2),stenhi(2)
+           call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
+           if (wt(2).gt.zero) then
+            do kfine=stenlo(3),stenhi(3)
+             if (SDIM.eq.3) then
+              call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
+             endif
+             if (wt(SDIM).gt.zero) then
+              volall=wt(1)
+              do dir2=2,SDIM
+               volall=volall*wt(dir2)
+              enddo
+              if (volall.le.zero) then
+               print *,"volall invalid"
+               stop
+              endif
+
+              do iten=1,nten
+               fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),iten))
+               coarse_test=NINT(crse_value(iten)) ! crse_value init to 0
+
+               if (avgdown_sweep.eq.0) then
+
+                if (coarse_test.eq.0) then 
+                 coarse_test=fine_test
+                else if (fine_test.eq.0) then
+                 ! do nothing
+                else if ((fine_test.eq.1).or.(fine_test.eq.-1)) then
+                 coarse_test=fine_test
+                else
+                 print *,"fine_test invalid"
+                 stop
+                endif
+
+                if ((coarse_test.eq.1).or. &
+                    (coarse_test.eq.-1)) then
+                 crse_value(iten)=coarse_test
+                else if (coarse_test.eq.0) then
+                 ! do nothing (crse_value init. to zero)
+                else
+                 print *,"coarse_test invalid"
+                 stop
+                endif
+
+               else if (avgdown_sweep.eq.1) then
+
+                if ((coarse_test.eq.0).or. &
+                    (coarse_test.eq.1).or. &
+                    (coarse_test.eq.-1)) then
+
+                 if (fine_test.eq.0) then
+                  ! do nothing
+                 else if (fine_test.eq.coarse_test) then
+                  velwt(iten)=velwt(iten)+volall
+                  do dir2=1,ncomp_per_interface
+                   local_comp=nten+(iten-1)*ncomp_per_interface+dir2
+                   crse_value(local_comp)=crse_value(local_comp)+ &
+                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
+                  enddo
+                 else
+                  print *,"fine_test bad (avgdown burning): ",fine_test
+                  stop
+                 endif
+                else
+                 print *,"coarse_test invalid"
+                 stop
+                endif
+               else 
+                print *,"avgdown_sweep invalid"
+                stop
+               endif
+              enddo ! iten=1..nten
+
+              voltotal=voltotal+volall
+             endif ! wt(sdim).gt.0
+            enddo ! kfine
+           endif
+          enddo ! jfine
+         endif
+        enddo ! ifine
+
+        if (voltotal.le.zero) then
+         print *,"voltotal invalid"
+         stop
+        endif
+
+        if (avgdown_sweep.eq.0) then
+         ! do nothing
+        else if (avgdown_sweep.eq.1) then
+
+         do iten=1,nten
+
+          coarse_test=NINT(crse_value(iten))
+          if (coarse_test.eq.0) then
+           if (velwt(iten).eq.zero) then
+            ! do nothing
+           else
+            print *,"velwt invalid"
+            stop
+           endif
+           crse(D_DECL(ic,jc,kc),iten)=zero
+           do dir2=1,ncomp_per_interface
+            crse(D_DECL(ic,jc,kc),nten+(iten-1)*ncomp_per_interface+dir2)=zero
+           enddo
+          else if ((coarse_test.eq.1).or. &
+                   (coarse_test.eq.-1)) then
+           if (velwt(iten).gt.zero) then
+            crse(D_DECL(ic,jc,kc),iten)=coarse_test
+            do dir2=1,ncomp_per_interface
+             crse(D_DECL(ic,jc,kc),nten+(iten-1)*ncomp_per_interface+dir2)= &
+              crse_value(nten+(iten-1)*ncomp_per_interface+dir2)/velwt(iten)
+            enddo
+           else
+            print *,"velwt invalid"
+            stop
+           endif
+          else
+           print *,"coarse_test invalid"
+           stop
+          endif
+
+         enddo ! iten=1..nten
+
+        else 
+         print *,"avgdown_sweep invalid"
+         stop
+        endif
+
+       enddo ! avgdown_sweep=0..1
+
+      enddo
+      enddo
+      enddo ! ic,jc,kc
+
+      return
+      end subroutine fort_avgdown_drag
+
+
       end module navierstokesf90_module
 
       subroutine FORT_IO_COMPARE( &
@@ -11733,282 +12289,6 @@ END SUBROUTINE SIMP
 
       return
       end subroutine FORT_AVGDOWN_TAG
-
-
-       ! do_the_advance -> level_phase_change_rate
-       ! avgDownBURNING_localMF 
-       ! level_avgDownBURNING
-       ! (note: after level_avgDownBURNING comes 
-       !  level_phase_change_rate_extend)
-      subroutine FORT_AVGDOWN_BURNING( &
-       velflag, &
-       problo, &
-       dxf, &
-       level_c,level_f, &
-       bfact_c,bfact_f, &
-       xlo_fine,dx, &
-       ncomp, &
-       nmat, &
-       nten, &
-       crse,DIMS(crse), &
-       fine,DIMS(fine), &
-       lo,hi, &
-       lof,hif) 
-
-      use global_utility_module
-      use geometry_intersect_module
-      use probcommon_module
-      use navierstokesf90_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: velflag
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level_f
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact_f
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
-      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
-      INTEGER_T ic,jc,kc
-      INTEGER_T ifine,jfine,kfine
-      INTEGER_T dir2
-      INTEGER_T iten
-      INTEGER_T n
-      REAL_T voltotal
-      REAL_T volall
-      REAL_T wt(SDIM)
-      REAL_T crse_value(ncomp)
-      INTEGER_T fine_test
-      INTEGER_T coarse_test
-      REAL_T velwt(nten)
-      INTEGER_T local_comp
-      INTEGER_T avgdown_sweep
-      INTEGER_T ncomp_expect
-      INTEGER_T ncomp_per_interface
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-
-      if (nten.eq.( (nmat-1)*(nmat-1)+nmat-1)/2) then
-       ! do nothing
-      else
-       print *,"nten invalid"
-       stop
-      endif
-
-      if (velflag.eq.1) then  ! burning velocity
-       ncomp_per_interface=SDIM
-      else if (velflag.eq.0) then ! interface temperature, mass fraction
-       ncomp_per_interface=2
-      else
-       print *,"velflag invalid"
-       stop
-      endif
-      ncomp_expect=nten+nten*ncomp_per_interface
-
-      if (ncomp.eq.ncomp_expect) then
-       ! do nothing
-      else
-       print *,"ncomp invalid34"
-       stop
-      endif
-
-      if (bfact_f.lt.1) then
-       print *,"bfact_f invalid4 ",bfact_f
-       stop
-      endif
-      if (bfact_c.lt.1) then
-       print *,"bfact_c invalid4 ",bfact_c
-       stop
-      endif
-      if ((bfact_c.ne.bfact_f).and. &
-          (bfact_c.ne.2*bfact_f)) then
-       print *,"bfact_c invalid"
-       stop
-      endif
-      if ((level_c.lt.0).or. &
-          (level_c.ne.level_f-1)) then
-       print *,"level_c or level_f invalid"
-       stop
-      endif
-
-      call checkbound(lo,hi,DIMS(crse),0,-1,411)
-      call checkbound(lof,hif,DIMS(fine),0,-1,411)
-
-      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
-
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
-      do kc=growlo(3),growhi(3)
-
-       do n=1,ncomp
-        crse_value(n)=zero
-       enddo
-
-       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
-        bfact_c,bfact_f)
-
-       do avgdown_sweep=0,1
-
-        do iten=1,nten
-         velwt(iten)=zero
-        enddo
-        voltotal=zero
-
-        do ifine=stenlo(1),stenhi(1)
-         call intersect_weight_avg(ic,ifine,bfact_c,bfact_f,wt(1))
-         if (wt(1).gt.zero) then
-          do jfine=stenlo(2),stenhi(2)
-           call intersect_weight_avg(jc,jfine,bfact_c,bfact_f,wt(2))
-           if (wt(2).gt.zero) then
-            do kfine=stenlo(3),stenhi(3)
-             if (SDIM.eq.3) then
-              call intersect_weight_avg(kc,kfine,bfact_c,bfact_f,wt(SDIM))
-             endif
-             if (wt(SDIM).gt.zero) then
-              volall=wt(1)
-              do dir2=2,SDIM
-               volall=volall*wt(dir2)
-              enddo
-              if (volall.le.zero) then
-               print *,"volall invalid"
-               stop
-              endif
-
-              do iten=1,nten
-               fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),iten))
-               coarse_test=NINT(crse_value(iten)) ! crse_value init to 0
-
-               if (avgdown_sweep.eq.0) then
-
-                if (coarse_test.eq.0) then 
-                 coarse_test=fine_test
-                else if (fine_test.eq.0) then
-                 ! do nothing
-                else if ((fine_test.eq.1).or.(fine_test.eq.-1)) then
-                 coarse_test=fine_test
-                else
-                 print *,"fine_test invalid"
-                 stop
-                endif
-
-                if ((coarse_test.eq.1).or. &
-                    (coarse_test.eq.-1)) then
-                 crse_value(iten)=coarse_test
-                else if (coarse_test.eq.0) then
-                 ! do nothing (crse_value init. to zero)
-                else
-                 print *,"coarse_test invalid"
-                 stop
-                endif
-
-               else if (avgdown_sweep.eq.1) then
-
-                if ((coarse_test.eq.0).or. &
-                    (coarse_test.eq.1).or. &
-                    (coarse_test.eq.-1)) then
-
-                 if (fine_test.eq.0) then
-                  ! do nothing
-                 else if (fine_test.eq.coarse_test) then
-                  velwt(iten)=velwt(iten)+volall
-                  do dir2=1,ncomp_per_interface
-                   local_comp=nten+(iten-1)*ncomp_per_interface+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-                  enddo
-                 else
-                  print *,"fine_test bad (avgdown burning): ",fine_test
-                  stop
-                 endif
-                else
-                 print *,"coarse_test invalid"
-                 stop
-                endif
-               else 
-                print *,"avgdown_sweep invalid"
-                stop
-               endif
-              enddo ! iten=1..nten
-
-              voltotal=voltotal+volall
-             endif ! wt(sdim).gt.0
-            enddo ! kfine
-           endif
-          enddo ! jfine
-         endif
-        enddo ! ifine
-
-        if (voltotal.le.zero) then
-         print *,"voltotal invalid"
-         stop
-        endif
-
-        if (avgdown_sweep.eq.0) then
-         ! do nothing
-        else if (avgdown_sweep.eq.1) then
-
-         do iten=1,nten
-
-          coarse_test=NINT(crse_value(iten))
-          if (coarse_test.eq.0) then
-           if (velwt(iten).eq.zero) then
-            ! do nothing
-           else
-            print *,"velwt invalid"
-            stop
-           endif
-           crse(D_DECL(ic,jc,kc),iten)=zero
-           do dir2=1,ncomp_per_interface
-            crse(D_DECL(ic,jc,kc),nten+(iten-1)*ncomp_per_interface+dir2)=zero
-           enddo
-          else if ((coarse_test.eq.1).or. &
-                   (coarse_test.eq.-1)) then
-           if (velwt(iten).gt.zero) then
-            crse(D_DECL(ic,jc,kc),iten)=coarse_test
-            do dir2=1,ncomp_per_interface
-             crse(D_DECL(ic,jc,kc),nten+(iten-1)*ncomp_per_interface+dir2)= &
-              crse_value(nten+(iten-1)*ncomp_per_interface+dir2)/velwt(iten)
-            enddo
-           else
-            print *,"velwt invalid"
-            stop
-           endif
-          else
-           print *,"coarse_test invalid"
-           stop
-          endif
-
-         enddo ! iten=1..nten
-
-        else 
-         print *,"avgdown_sweep invalid"
-         stop
-        endif
-
-       enddo ! avgdown_sweep=0..1
-
-      enddo
-      enddo
-      enddo ! ic,jc,kc
-
-      return
-      end subroutine FORT_AVGDOWN_BURNING
 
         ! icurv=(iten-1)*(5+SDIM)
         ! dir=1..sdim
