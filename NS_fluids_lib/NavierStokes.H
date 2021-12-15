@@ -703,6 +703,9 @@ protected:
     void avgDown_tag_localMF(int idxMF);
     void level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine);
 
+    void avgDownDRAG_MF();
+    void level_avgDownDRAG(MultiFab& S_crse,MultiFab& S_fine);
+
     void avgDownBURNING_localMF(
 		int burnvel_MF,
 		int TSAT_MF);

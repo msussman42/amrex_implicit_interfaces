@@ -17184,6 +17184,7 @@ void NavierStokes::GetDragALL() {
   //ngrow_make_distance=3
   //ngrow_distance=4
  debug_ngrow(DRAG_MF,ngrow_make_distance,9);
+ debug_ixType(DRAG_MF,-1,DRAG_MF);
  if (localMF[DRAG_MF]->nComp()==N_DRAG) {
   // do nothing
  } else 
@@ -17319,6 +17320,7 @@ NavierStokes::GetDrag(int isweep) {
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,48);
  debug_ngrow(DRAG_MF,ngrow_make_distance,50);
+ debug_ixType(DRAG_MF,-1,DRAG_MF);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2);
@@ -18638,6 +18640,7 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
  debug_ngrow(CELLTENSOR_MF,1,54);
 
  debug_ngrow(DRAG_MF,ngrow_make_distance,50);
+ debug_ixType(DRAG_MF,-1,DRAG_MF);
  if (localMF[DRAG_MF]->nComp()!=N_DRAG)
   amrex::Error("drag ncomp invalid");
 
