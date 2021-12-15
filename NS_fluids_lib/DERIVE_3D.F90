@@ -2230,7 +2230,8 @@ stop
 
       call checkbound_array1(fablo,fabhi,pres_ptr,1,-1,6605)
       call checkbound_array(fablo,fabhi,vel_ptr,1,-1,6606)
-      call checkbound_array(fablo,fabhi,drag_ptr,0,-1,6607)
+       ! DRAG_MF has ngrow_make_distance=3 ghost cells
+      call checkbound_array(fablo,fabhi,drag_ptr,3,-1,6607)
 
       if (bfact.lt.1) then
        print *,"bfact invalid5"
@@ -2332,6 +2333,8 @@ stop
         do dir=1,N_DRAG
          drag(D_DECL(icell,jcell,kcell),dir)=zero
         enddo
+
+         ! im_test is the material on which a force/torque is applied.
         do im_test=1,nmat
          mask_cell=NINT(mask(D_DECL(icell,jcell,kcell)))
          if (mask_cell.eq.1) then
@@ -2364,6 +2367,7 @@ stop
 
       else if (isweep.eq.1) then ! above, mass and centroid
 
+        ! im_test is the material on which a force/torque is applied.
        do im_test=1,nmat
 
         mass=globalsum(DRAGCOMP_MASS+im_test)
@@ -2410,6 +2414,7 @@ stop
        do kcell=growlo(3),growhi(3)
 
          ! calculate the forces exerted on material "im_test"
+         ! i.e. im_test is the material on which a force/torque is applied.
         do im_test=1,nmat
          mask_cell=NINT(mask(D_DECL(icell,jcell,kcell)))
          if (mask_cell.eq.1) then
@@ -2497,13 +2502,15 @@ stop
 
         if (mask_cell.eq.1) then
 
-          ! im_test is the material for which a given force is applied.
+          ! im_test is the material on which a given force/torque is applied.
          do im_test=1,nmat
 
           do im=1,nmat
            ls_sort(im)=levelpc(D_DECL(icell,jcell,kcell),im)
           enddo
-           ! declared in GLOBALUTIL.F90
+           ! im_primary is the material applying a given force/torque onto
+           ! "im_test"
+           ! "get_primary_material" declared in GLOBALUTIL.F90
           call get_primary_material(ls_sort,nmat,im_primary)
 
           if (im_primary.eq.im_test) then
@@ -2622,7 +2629,8 @@ stop
              call gridstenMAC(xsten_face,xlo,imac,jmac,kmac,fablo,bfact, &
                dx,nhalf,facedir-1,91)
 
-             ! im_primary is the forcing fluid at cell (icell,jcell,kcell)
+             ! im_primary is the forcing fluid at cell (icell,jcell,kcell) 
+             ! which is applying a force/torque to im_test.
              do dir_visc=1,SDIM
               ii_visc=0
               jj_visc=0
@@ -2731,6 +2739,8 @@ stop
              enddo
              enddo
 
+              ! if the forcing fluid "im_primary" is a viscoelastic material,
+              ! then the viscoelastic force onto "im_test" must be considered.
              if (fort_is_eulerian_elastic_model( &
                    fort_elastic_viscosity(im_primary), &
                    fort_viscoelastic_model(im_primary)).eq.1) then 
@@ -2862,6 +2872,7 @@ stop
 ! w=2 pi vinletgas/60 radians/second
 ! so for gear problem, scale torque by 2 pi abs(vinletgas)/60
 
+              ! im_test is the material on which a force/torque is applied.
              do dir=1,SDIM
               ibase=DRAGCOMP_FORCE+3*(im_test-1)+dir
 

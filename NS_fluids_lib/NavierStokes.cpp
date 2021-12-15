@@ -17181,8 +17181,9 @@ void NavierStokes::GetDragALL() {
  } else 
   amrex::Error("GetDragALL: CELL_VISC_MATERIAL_MF invalid ncomp");
  
-
- debug_ngrow(DRAG_MF,ngrow_distance,9);
+  //ngrow_make_distance=3
+  //ngrow_distance=4
+ debug_ngrow(DRAG_MF,ngrow_make_distance,9);
  if (localMF[DRAG_MF]->nComp()==N_DRAG) {
   // do nothing
  } else 
@@ -17317,7 +17318,7 @@ NavierStokes::GetDrag(int isweep) {
 
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,48);
- debug_ngrow(DRAG_MF,ngrow_distance,50);
+ debug_ngrow(DRAG_MF,ngrow_make_distance,50);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2);
@@ -18636,7 +18637,7 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
  debug_ngrow(SLOPE_RECON_MF,2,54);
  debug_ngrow(CELLTENSOR_MF,1,54);
 
- debug_ngrow(DRAG_MF,ngrow_distance,50);
+ debug_ngrow(DRAG_MF,ngrow_make_distance,50);
  if (localMF[DRAG_MF]->nComp()!=N_DRAG)
   amrex::Error("drag ncomp invalid");
 
@@ -21345,7 +21346,9 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
  }
 
   // initializes DRAG_MF to 0.0.
- allocate_array(ngrow_distance,N_DRAG,-1,DRAG_MF);
+  // ngrow_make_distance=3
+  // ngrow_distance=4
+ allocate_array(ngrow_make_distance,N_DRAG,-1,DRAG_MF);
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()==3*nmat) {
