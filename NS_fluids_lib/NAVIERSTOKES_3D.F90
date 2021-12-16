@@ -10990,7 +10990,9 @@ END SUBROUTINE SIMP
          endif
         enddo ! ifine
 
-        if (voltotal.le.zero) then
+        if (voltotal.gt.zero) then
+         ! do nothing
+        else
          print *,"voltotal invalid"
          stop
         endif
