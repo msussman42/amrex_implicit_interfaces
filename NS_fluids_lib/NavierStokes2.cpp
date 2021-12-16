@@ -646,7 +646,6 @@ void NavierStokes::avgDownDRAG_MF() {
   amrex::Error("DRAG_MF invalid ncomp");
 
  int finest_level=parent->finestLevel();
- int nmat=num_materials;
 
  if (level<finest_level) {
   NavierStokes& ns_fine=getLevel(level+1);
