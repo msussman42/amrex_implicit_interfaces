@@ -2964,7 +2964,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // HOLD_LS_DATA_MF is deleted in phase_change_redistributeALL()
        allocate_levelsetLO_ALL(ngrow_distance,HOLD_LS_DATA_MF);
        if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
-        amrex::Error("localMF[idx]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
+        amrex::Error("hold_LS_DATA_MF (nComp()) !=nmat*(AMREX_SPACEDIM+1)");
        debug_ngrow(HOLD_LS_DATA_MF,normal_probe_size+3,30);
 
        for (int ilev=level;ilev<=finest_level;ilev++) {

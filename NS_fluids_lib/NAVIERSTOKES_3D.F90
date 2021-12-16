@@ -10720,10 +10720,11 @@ END SUBROUTINE SIMP
       return
       end subroutine fort_avgdown_burning
 
-
-       ! 1. avgDownDRAG_MF 
-       ! 2. level_avgDownDRAG
-       ! 3. level_DRAG_extend
+       ! 1. GetDragALL
+       ! 2. GetDrag
+       ! 3. avgDownDRAG_MF 
+       ! 4. level_avgDownDRAG
+       ! 5. level_DRAG_extend
       subroutine fort_avgdown_drag( &
        problo, &
        dxf, &
