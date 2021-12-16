@@ -935,6 +935,8 @@ protected:
     void level_phase_change_rate(Vector<blobclass> blobdata,
        int color_count,int nucleation_flag);
     void level_phase_change_rate_extend();
+
+    void level_DRAG_extend();
    
     void allocate_SDC();
     void deallocate_SDC();
