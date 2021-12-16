@@ -10721,11 +10721,9 @@ END SUBROUTINE SIMP
       end subroutine fort_avgdown_burning
 
 
-       ! do_the_advance -> level_phase_change_rate
-       ! avgDownDRAG_MF 
-       ! level_avgDownDRAG
-       ! (note: after level_avgDownDRAG comes 
-       !  level_phase_change_rate_extend)
+       ! 1. avgDownDRAG_MF 
+       ! 2. level_avgDownDRAG
+       ! 3. level_DRAG_extend
       subroutine fort_avgdown_drag( &
        problo, &
        dxf, &

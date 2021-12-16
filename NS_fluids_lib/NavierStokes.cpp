@@ -13444,7 +13444,188 @@ NavierStokes::level_phase_change_rate_extend() {
 
  } // velflag=0,1 (velflag==0: interface temp/massfrac;velflag==1: burnvel
 
-} // subroutine level_phase_change_rate_extend
+} // end subroutine level_phase_change_rate_extend
+
+
+void
+NavierStokes::level_DRAG_extend() {
+
+ bool use_tiling=ns_tiling;
+ int finest_level=parent->finestLevel();
+ if ((level<0)||(level>finest_level))
+  amrex::Error("level invalid level_DRAG_extend");
+
+ int nmat=num_materials;
+
+ const Real* dx = geom.CellSize();
+
+ MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
+ if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1)) 
+  amrex::Error("LS_new invalid ncomp");
+
+ if (localMF[BURNING_VELOCITY_MF]->nComp()!=nburning)
+  amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ncomp");
+ if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
+  amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ncomp");
+
+ if (ngrow_make_distance!=3)
+  amrex::Error("expecting ngrow_make_distance==3");
+
+ if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_make_distance)
+  amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
+ if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_make_distance)
+  amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
+
+ debug_ngrow(HOLD_LS_DATA_MF,normal_probe_size+3,30);
+ if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM)) 
+  amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
+
+ for (int velflag=0;velflag<=1;velflag++) {
+
+  int ncomp=0;
+  int ncomp_per_interface=0;
+  if (velflag==0) {
+   ncomp_per_interface=ncomp_per_tsat; // interface temperature, mass fraction
+  } else if (velflag==1) {
+   ncomp_per_interface=ncomp_per_burning;
+  } else
+   amrex::Error("velflag invalid");
+
+  ncomp=nten+nten*ncomp_per_interface;
+
+  Vector<int> scompBC_map;
+  scompBC_map.resize(ncomp);
+   // extrap, u_extrap, v_extrap, w_extrap
+   // mof recon extrap
+   // maskSEMextrap
+  int burnvel_start_pos_base=1+AMREX_SPACEDIM+nmat*ngeom_recon+1;
+  int extend_start_pos=burnvel_start_pos_base;
+  if (velflag==0) {
+   extend_start_pos=burnvel_start_pos_base+nburning;
+  } else if (velflag==1) { 
+   extend_start_pos=burnvel_start_pos_base;
+  } else
+   amrex::Error("velflag invalid");
+
+  for (int imdest=0;imdest<ncomp;imdest++)
+   scompBC_map[imdest]=extend_start_pos+imdest;
+
+  int local_mf=0;
+  if (velflag==0) {
+   local_mf=SATURATION_TEMP_MF;
+  } else if (velflag==1) {
+   local_mf=BURNING_VELOCITY_MF;
+  } else
+   amrex::Error("velflag invalid");
+
+  PCINTERP_fill_borders(local_mf,ngrow_make_distance,
+   0,ncomp,State_Type,scompBC_map);
+
+  if (1==0) {
+   int gridno=0;
+   const Box& fabgrid = grids[gridno];
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   const Real* xlo = grid_loc[gridno].lo();
+   int interior_only=0;
+   FArrayBox& burnvelfab=(*localMF[local_mf])[0];
+   const Real* dxplot = geom.CellSize();
+   int scomp=0;
+   int dirplot=-1;
+   int id=0;
+   tecplot_debug(burnvelfab,xlo,fablo,fabhi,dxplot,dirplot,id,
+     scomp,ncomp,interior_only);
+  }
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(LS_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(LS_new,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+
+   const Real* xlo = grid_loc[gridno].lo();
+   FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
+   FArrayBox& burnvelfab=(*localMF[local_mf])[mfi];
+   if (burnvelfab.nComp()==ncomp) {
+    // do nothing
+   } else {
+    amrex::Error("burnvelfab.nComp() invalid");
+   }
+
+   int ngrow=normal_probe_size+3;
+   if (ngrow!=4)
+    amrex::Error("expecting ngrow==4");
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // burnvelfab=BURNING_VELOCITY_MF or 
+    // burnvelfab=SATURATION_TEMP_MF is cell centered.
+    // sets the burning velocity/saturation temp flag from 0 to 2 if
+    // foot of characteristic within range.
+    // in: MASS_TRANSFER_3D.F90
+   fort_extend_drag( 
+    &velflag,
+    &level,
+    &finest_level,
+    xlo,dx,
+    &nmat,
+    &nten,
+    &ncomp,
+    &ngrow,
+    latent_heat.dataPtr(),
+    tilelo,tilehi,
+    fablo,fabhi,&bfact,
+    burnvelfab.dataPtr(),
+    ARLIM(burnvelfab.loVect()),ARLIM(burnvelfab.hiVect()),
+    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()));
+  } // mfi
+} // omp
+  ns_reconcile_d_num(71);
+
+  scompBC_map.resize(ncomp);
+
+  for (int imdest=0;imdest<ncomp;imdest++)
+   scompBC_map[imdest]=extend_start_pos+imdest;
+
+  PCINTERP_fill_borders(local_mf,ngrow_make_distance,
+   0,ncomp,State_Type,scompBC_map);
+
+  if (1==0) {
+   int gridno=0;
+   const Box& fabgrid = grids[gridno];
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   const Real* xlo = grid_loc[gridno].lo();
+   int interior_only=0;
+   FArrayBox& burnvelfab=(*localMF[local_mf])[0];
+   const Real* dxplot = geom.CellSize();
+   int scomp=0;
+   int dirplot=-1;
+   int id=0;
+   tecplot_debug(burnvelfab,xlo,fablo,fabhi,dxplot,dirplot,id,
+     scomp,ncomp,interior_only);
+  }
+
+ } // velflag=0,1 (velflag==0: interface temp/massfrac;velflag==1: burnvel
+
+} // end subroutine level_DRAG_extend
+
 
 void
 NavierStokes::level_phase_change_convertALL() {
@@ -17209,6 +17390,17 @@ void NavierStokes::GetDragALL() {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.GetDrag(isweep_drag);
   }
+ }
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+   // declared in: NavierStokes2.cpp
+  ns_level.avgDownDRAG_MF();
+ }
+
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.level_DRAG_extend();
  }
 
  if (verbose>0) {
