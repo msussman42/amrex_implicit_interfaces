@@ -17398,10 +17398,16 @@ void NavierStokes::GetDragALL() {
   ns_level.avgDownDRAG_MF();
  }
 
+ allocate_levelsetLO_ALL(ngrow_distance,HOLD_LS_DATA_MF);
+ if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
+  amrex::Error("hold_LS_DATA_MF (nComp()) !=nmat*(AMREX_SPACEDIM+1)");
+ debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
+
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.level_DRAG_extend();
  }
+ delete_array(HOLD_LS_DATA_MF);
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
