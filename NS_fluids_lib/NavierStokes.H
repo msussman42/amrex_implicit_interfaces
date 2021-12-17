@@ -326,30 +326,6 @@ enum StateNames {
 // See: Stewart, Lay, Sussman, Ohta (and papers cited, and papers who
 // cite this)
 // See also earlier work involving Pushpendra Singh (NJIT).
-#if (AMREX_SPACEDIM == 2)
-
-enum TensorNames {T11=0,T12,T22,T33,NUM_TENSOR_TYPE};
-
-enum VelocityNames {
-  Xvel=0, Yvel };
-
-enum MOF_Names  { 
-   VoFVar=0,CenxVar,CenyVar,OrderVar,NxVar,NyVar,LSVar,NUM_MOF_VAR };
-
-#else
-
-enum TensorNames {T11=0,T12,T22,T33,T13,T23,NUM_TENSOR_TYPE};
-
-enum VelocityNames {
-  Xvel=0, Yvel, Zvel };
-
-enum MOF_Names  { 
-   VoFVar=0,CenxVar,CenyVar,CenzVar,OrderVar,
-   NxVar,NyVar,NzVar,LSVar, NUM_MOF_VAR };
-
-#endif
-
-
 
 class NSBld
     :
