@@ -318,7 +318,7 @@ void NavierStokes::viscous_boundary_fluxes(
   bool use_tiling=ns_tiling;
 
   int nmat=num_materials;
-  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+  int nten=num_interfaces;
 
   if (project_option==3) { // viscosity
    if (nsolve!=AMREX_SPACEDIM)
@@ -496,7 +496,7 @@ void NavierStokes::combine_state_variable(
  if (S_new.nComp()!=nstate)
   amrex::Error("(S_new.nComp()!=nstate)");
 
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 

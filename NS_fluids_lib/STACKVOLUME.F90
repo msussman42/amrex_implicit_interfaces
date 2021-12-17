@@ -142,8 +142,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten=( (num_materials-1)*(num_materials-1)+ &
-          num_materials-1 )/2
+      nten=num_interfaces
 
       allocate(distbatch(nmat))
 

@@ -1208,7 +1208,8 @@ void advance_recalesce(
  Vector<Real>& TSAT, // size=2*nten
  Real time)
  {
-  int nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+  int num_interfaces_local=( (nmat-1)*(nmat-1) + (nmat-1) )/2;
+  int nten_test=num_interfaces_local;
   if (nten_test!=nten)
    amrex::Error("nten invalid");
   int num_integrate=6+AMREX_SPACEDIM;
@@ -1417,7 +1418,7 @@ NavierStokes::recalesce_temperature(int im_source) {
  bool use_tiling=ns_tiling;
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  int finest_level=parent->finestLevel();
 
  if ((im_source<0)||(im_source>=nmat))
@@ -1677,7 +1678,7 @@ void NavierStokes::process_recalesce_dataALL(
  int recalesce_num_state=6;
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  if (recalesce_material.size()!=nmat)
   amrex::Error("invalid size for recalesce_material");
@@ -2228,7 +2229,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
  int post_restart_flag=0; 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  int finest_level = parent->finestLevel();
  const int max_level = parent->maxLevel();
@@ -5067,7 +5068,7 @@ NavierStokes::ColorSum(
  bool use_tiling=ns_tiling;
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  if (level>finest_level)
   amrex::Error("level invalid ColorSum");
@@ -5748,7 +5749,7 @@ NavierStokes::LowMachDIVU(
  bool use_tiling=ns_tiling;
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid LowMachDIVU");
@@ -6555,7 +6556,7 @@ NavierStokes::ColorSumALL(
   amrex::Error("num_colors=0 in ColorSumALL");
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  int ncomp_mdot_alloc=1;
  int ncomp_mdot=0;
@@ -7540,7 +7541,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
  int GFM_flag=0;
  int adjust_temperature=-1;  // adjust faceheat_index
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
   // adjust faceheat_index if thermal diffusion
   // and phase change using sharp interface method.
@@ -7815,7 +7816,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
 
  int adjust_temperature=1; 
  int GFM_flag=0;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
   // temperature diffusion
  if (project_option==2) {

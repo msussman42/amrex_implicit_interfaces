@@ -3188,7 +3188,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid estdt nten, nten_test ",nten,nten_test
        stop
@@ -5154,7 +5154,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
        stop
@@ -5447,7 +5447,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
        stop
@@ -6868,7 +6868,7 @@ stop
        print *,"num_curv invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid marangoniforce nten, nten_test ",nten,nten_test
        stop
@@ -10610,7 +10610,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
        stop
@@ -11576,7 +11576,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
        stop
@@ -11917,7 +11917,7 @@ stop
 
       ncomp_sum_int_user12=ncomp_sum_int_user1+ncomp_sum_int_user2
 
-      nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten=num_interfaces
 
       nhalf=3
 
@@ -12763,7 +12763,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid tagexpansion nten, nten_test ",nten,nten_test
        stop
@@ -14410,7 +14410,7 @@ stop
        stop
       endif
 
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid vfrac_split nten, nten_test ",nten,nten_test
        stop
@@ -16693,7 +16693,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid combinevel nten, nten_test ",nten,nten_test
        stop
@@ -17981,7 +17981,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid combinevelface nten, nten_test ",nten,nten_test
        stop

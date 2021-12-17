@@ -360,7 +360,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  int GFM_flag=0;
  int adjust_temperature=0; 
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
   // alpha T - div beta grad T = f
  if (project_option==2) {
@@ -1593,7 +1593,7 @@ void NavierStokes::apply_div(
  } else
   amrex::Error("project_option_momeqn invalid66");
 
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  int finest_level=parent->finestLevel();
 
  bool use_tiling=ns_tiling;
@@ -2297,7 +2297,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
 
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  int nsolve=1;
 
  int fluxvel_index=0;

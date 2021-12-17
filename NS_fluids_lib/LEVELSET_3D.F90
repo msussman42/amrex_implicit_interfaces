@@ -864,7 +864,7 @@ stop
       ZEYU_thet_d=zero
       totaludotn=zero
 
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid initheightLS nten nten test", &
          nten,nten_test
@@ -3023,7 +3023,7 @@ stop
        print *,"tessellate invalid1"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid CELLFACEINIT nten nten_test ",nten,nten_test
        stop
@@ -4038,7 +4038,7 @@ stop
        stop
       endif
 
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid curvstrip nten nten_test ",nten,nten_test
        stop
@@ -5299,7 +5299,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid fort_getcolorsum nten nten_test ",nten,nten_test
        stop
@@ -6935,7 +6935,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid get_lowmach_divu nten nten_test ",nten,nten_test
        stop
@@ -8464,7 +8464,7 @@ stop
        stop
       endif
 
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid phys vars nten nten_test ",nten,nten_test
        stop
@@ -10779,7 +10779,7 @@ stop
        print *,"nrefine_vof invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid semi refine vof nten nten_test ",nten,nten_test
        stop
@@ -11639,7 +11639,7 @@ stop
        print *,"enable_spectral invalid mac_to_cell"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten.ne.nten_test) then
        print *,"nten invalid mac_to_cell nten nten_test ",nten,nten_test
        stop
@@ -13752,7 +13752,7 @@ stop
        print *,"ncfluxreg invalid12 ",ncfluxreg
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten.ne.nten_test) then
        print *,"nten invalid edge grad nten nten_test ",nten,nten_test
        stop
@@ -16323,7 +16323,7 @@ stop
 
       nhalf_box=1
 
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.eq.nten) then
        ! do nothing
       else

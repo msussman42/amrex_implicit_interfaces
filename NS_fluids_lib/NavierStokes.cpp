@@ -522,6 +522,7 @@ int  NavierStokes::num_SoA_var=0;
 //  im_pres,velcomp,prescomp,flagcomp
 // nfacefrac,ncellfrac,mm_,cellmm,facemm
 int  NavierStokes::num_materials=0;
+int  NavierStokes::num_interfaces=0;
 
 int  NavierStokes::use_supermesh=0;
 int  NavierStokes::ncomp_sum_int_user1=0;
@@ -1564,6 +1565,7 @@ void fortran_parameters() {
 
  int num_species_var=0;
  int num_materials=0;
+ int num_interfaces=0;
  int num_materials_viscoelastic_temp=0;
 
  int num_state_material=SpeciesVar;  // den,T
@@ -1576,6 +1578,9 @@ void fortran_parameters() {
   amrex::Error("num materials invalid");
 
  int nmat=num_materials;
+ num_interfaces=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ if ((num_interfaces<1)||(num_interfaces>999))
+  amrex::Error("num interfaces invalid");
 
   // this is local variable, not static variable
  int MOFITERMAX=DEFAULT_MOFITERMAX;  
@@ -1843,7 +1848,8 @@ void fortran_parameters() {
   pp.queryarr("speciesviscconst",speciesviscconst_temp,0,num_species_var*nmat);
  }
 
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
+
  Vector<Real> tension_slopetemp(nten);
  Vector<Real> tension_T0temp(nten);
  Vector<Real> tension_mintemp(nten);
@@ -2361,12 +2367,17 @@ NavierStokes::read_params ()
      amrex::Error("nblocks out of range");
 
     num_materials=0;
+    num_interfaces=0;
     pp.get("num_materials",num_materials);
     if ((num_materials<2)||(num_materials>999))
      amrex::Error("num materials invalid");
 
     int nmat=num_materials;
-    int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+    num_interfaces=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+    if ((num_interfaces<1)||(num_interfaces>999))
+     amrex::Error("num interfaces invalid");
+
+    int nten=num_interfaces;
 
     pp.query("use_supermesh",use_supermesh);
     if ((use_supermesh!=0)&&
@@ -5300,6 +5311,7 @@ NavierStokes::read_params ()
      std::cout << "num_SoA_var " << num_SoA_var << '\n';
      std::cout << "num_species_var " << num_species_var << '\n';
      std::cout << "num_materials " << num_materials << '\n';
+     std::cout << "num_interfaces " << num_interfaces << '\n';
      std::cout << "MOFITERMAX= " << MOFITERMAX << '\n';
      std::cout << "MOF_DEBUG_RECON= " << MOF_DEBUG_RECON << '\n';
      std::cout << "MOF_TURN_OFF_LS= " << MOF_TURN_OFF_LS << '\n';
@@ -8992,7 +9004,7 @@ void NavierStokes::post_restart() {
 
  MultiFab& S_new = get_new_data(State_Type,slab_step+1);
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  int nc=S_new.nComp();
 
  fort_initdata_alloc(&nmat,&nten,&nc,
@@ -9092,7 +9104,7 @@ NavierStokes::initData () {
  if (ngeom_raw!=AMREX_SPACEDIM+1)
   amrex::Error("ngeom_raw bust");
 
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  int max_level = parent->maxLevel();
 
@@ -10956,7 +10968,7 @@ void NavierStokes::make_marangoni_force() {
 
  resize_metrics(2);
 
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
@@ -12528,7 +12540,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   amrex::Error("level invalid level_phase_change_rate");
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  int nden=nmat*num_state_material;
  int ncomp_per_burning=AMREX_SPACEDIM;
  int ncomp_per_tsat=2;
@@ -13268,7 +13280,7 @@ NavierStokes::level_phase_change_rate_extend() {
   amrex::Error("level invalid level_phase_change_rate_extend");
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  int ncomp_per_burning=AMREX_SPACEDIM;
  int ncomp_per_tsat=2;
@@ -13463,38 +13475,25 @@ NavierStokes::level_DRAG_extend() {
  if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1)) 
   amrex::Error("LS_new invalid ncomp");
 
- if (localMF[BURNING_VELOCITY_MF]->nComp()!=nburning)
-  amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ncomp");
- if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
-  amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ncomp");
+ if (localMF[DRAG_MF]->nComp()!=N_DRAG)
+  amrex::Error("localMF[DRAG_MF] incorrect ncomp");
 
  if (ngrow_make_distance!=3)
   amrex::Error("expecting ngrow_make_distance==3");
 
- if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_make_distance)
-  amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
- if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_make_distance)
-  amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
+ if (localMF[DRAG_MF]->nGrow()!=ngrow_make_distance)
+  amrex::Error("localMF[DRAG_MF] incorrect ngrow");
 
- debug_ngrow(HOLD_LS_DATA_MF,normal_probe_size+3,30);
+ debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM)) 
   amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
 
- for (int velflag=0;velflag<=1;velflag++) {
+ int ncomp=N_DRAG;
 
-  int ncomp=0;
-  int ncomp_per_interface=0;
-  if (velflag==0) {
-   ncomp_per_interface=ncomp_per_tsat; // interface temperature, mass fraction
-  } else if (velflag==1) {
-   ncomp_per_interface=ncomp_per_burning;
-  } else
-   amrex::Error("velflag invalid");
+ FIX ME use num_interfaces and num_materials add drag extrap stuff
 
-  ncomp=nten+nten*ncomp_per_interface;
-
-  Vector<int> scompBC_map;
-  scompBC_map.resize(ncomp);
+ Vector<int> scompBC_map;
+ scompBC_map.resize(ncomp);
    // extrap, u_extrap, v_extrap, w_extrap
    // mof recon extrap
    // maskSEMextrap
@@ -13637,7 +13636,7 @@ NavierStokes::level_phase_change_convertALL() {
   amrex::Error("level must be 0");
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  int nden=nmat*num_state_material;
 
  int iten;
@@ -13788,7 +13787,7 @@ NavierStokes::level_phase_change_convert(
   amrex::Error("level invalid level_phase_change_convert");
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  int iten;
  get_iten_cpp(im_outer,im_opp_outer,iten,nmat);
@@ -14181,7 +14180,7 @@ NavierStokes::phase_change_redistributeALL() {
   amrex::Error("level invalid phase_change_redistributeALL");
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  int finest_level=parent->finestLevel();
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -14535,7 +14534,7 @@ NavierStokes::level_phase_change_redistribute(
   amrex::Error("level invalid level_phase_change_redistribute");
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  int scomp_mofvars=(AMREX_SPACEDIM+1)+nmat*num_state_material;
 
  debug_ngrow(JUMP_STRENGTH_MF,ngrow_expansion,355);
@@ -15028,7 +15027,7 @@ NavierStokes::level_init_icemask() {
   amrex::Error("level invalid level_init_icemask");
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  resize_maskfiner(1,MASKCOEF_MF);
  VOF_Recon_resize(1,SLOPE_RECON_MF);
@@ -15167,7 +15166,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
   amrex::Error("adjust_temperature invalid");
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  int nstate=(AMREX_SPACEDIM+1)+
   nmat*(num_state_material+ngeom_raw)+1;
 
@@ -15483,7 +15482,7 @@ NavierStokes::heat_source_term_flux_source() {
   amrex::Error("num_state_base invalid");
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  int nstate=(AMREX_SPACEDIM+1)+
   nmat*(num_state_material+ngeom_raw)+1;
 
@@ -15948,7 +15947,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
   if (localMF[VELADVECT_MF]->nComp()!=AMREX_SPACEDIM)
    amrex::Error("localMF[VELADVECT_MF]->nComp()!=AMREX_SPACEDIM");
 
-  int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+  int nten=num_interfaces;
   int nstate=(AMREX_SPACEDIM+1)+
    nmat*(num_state_material+ngeom_raw)+1;
 
@@ -16490,7 +16489,7 @@ NavierStokes::split_scalar_advection() {
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  int normdir_here=normdir_direct_split[dir_absolute_direct_split];
  if ((normdir_here<0)||(normdir_here>=AMREX_SPACEDIM))
   amrex::Error("normdir_here invalid");
@@ -20320,7 +20319,7 @@ void NavierStokes::MaxAdvectSpeed(
  int nmat=num_materials;
  int scomp_mofvars=(AMREX_SPACEDIM+1)+
   nmat*num_state_material;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>nmat))
@@ -23041,7 +23040,7 @@ NavierStokes::level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine,
 		int velflag) {
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  int ncomp_per_burning=AMREX_SPACEDIM;
  int ncomp_per_tsat=2;
  int nburning=nten*(ncomp_per_burning+1);
@@ -23261,7 +23260,7 @@ void
 NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  int scomp=0;
  int ncomp=nten*(AMREX_SPACEDIM+5);
@@ -24253,7 +24252,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
  int nmat=num_materials;
  int scomp_mofvars=(AMREX_SPACEDIM+1)+
   nmat*num_state_material;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
 
@@ -24808,7 +24807,7 @@ NavierStokes::makeFaceFrac(
  bool use_tiling=ns_tiling;
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
   // (nmat,sdim,2,sdim+1) area+centroid on each face of a cell.
  int nface=nmat*AMREX_SPACEDIM*2*(1+AMREX_SPACEDIM); 
@@ -25019,7 +25018,7 @@ NavierStokes::makeCellFrac(
  bool use_tiling=ns_tiling;
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
   // (nmat,nmat,3+sdim)
   // im_inside,im_outside,3+sdim --> area, dist_to_line, dist, line normal.
  int ncellfrac=nmat*nmat*(3+AMREX_SPACEDIM); 
@@ -25137,7 +25136,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
   amrex::Error("ngrow_distance invalid");
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  Vector< Real > curv_min_local;
  Vector< Real > curv_max_local;

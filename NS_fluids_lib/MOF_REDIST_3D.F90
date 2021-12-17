@@ -539,7 +539,7 @@ stop
        print *,"level invalid in fort_fd_node_normal"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid fd_node_normal nten nten_test ",nten,nten_test
        stop
@@ -799,7 +799,7 @@ stop
        print *,"level invalid in fort_node_to_cell"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid node_to_cell nten nten_test ",nten,nten_test
        stop
@@ -1463,7 +1463,7 @@ stop
        print *,"nface_dst invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid levelstrip nten nten_test ",nten,nten_test
        stop
@@ -3005,7 +3005,7 @@ stop
        stop
       endif
 
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid FACEINIT nten nten_test ",nten,nten_test
        stop

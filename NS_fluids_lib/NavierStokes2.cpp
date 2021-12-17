@@ -599,7 +599,7 @@ void NavierStokes::avgDownBURNING_localMF(
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  int ncomp_per_burning=AMREX_SPACEDIM;
  int ncomp_per_tsat=2;
  int nburning=nten*(ncomp_per_burning+1);
@@ -1518,7 +1518,7 @@ void NavierStokes::avgDownEdge_localMF(int idxMF,int scomp,int ncomp,
 void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  if ((im_elastic>=0)&&(im_elastic<nmat)) {
    if (ns_is_rigid(im_elastic)==0) {
@@ -1851,7 +1851,7 @@ void NavierStokes::apply_cell_pressure_gradient(
 
  const Real* dx = geom.CellSize();
 
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  MultiFab* presmf=localMF[idx_pres];
  if (presmf->nComp()!=nsolve)
@@ -2498,7 +2498,7 @@ void NavierStokes::increment_face_velocity(
 
  int finest_level = parent->finestLevel();
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  MultiFab* levelcolor=nullptr;
  MultiFab* leveltype=nullptr;
@@ -3112,7 +3112,7 @@ void NavierStokes::VELMAC_TO_CELL(
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
@@ -4084,7 +4084,7 @@ void NavierStokes::apply_pressure_grad(
  
  bool use_tiling=ns_tiling;
 
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -4699,7 +4699,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
   amrex::Error("SDC_outer_sweeps invalid");
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  int nhistory=nten*2;
 
  int finest_level = parent->finestLevel();
@@ -4969,7 +4969,7 @@ void NavierStokes::make_physics_vars(int project_option) {
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
   // height function curvature
   // finite difference curvature
@@ -5943,7 +5943,7 @@ void NavierStokes::process_potential_force_face() {
  for (int m=0;m<2*AMREX_SPACEDIM;m++)
   dombcpres[m]=b_rec[m];
 
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  MultiFab* dendata=getStateDen(1,cur_time_slab);
 
@@ -6391,7 +6391,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  MultiFab &S_new = get_new_data(State_Type,slab_step+1);
  MultiFab &LS_new = get_new_data(LS_Type,slab_step+1);
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
  int scomp_mofvars=(AMREX_SPACEDIM+1)+nmat*num_state_material;
  int dencomp=(AMREX_SPACEDIM+1);
 
@@ -8225,7 +8225,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
   amrex::Error("cannot extrapolate slope data in time");
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  int scomp_mofvars=(AMREX_SPACEDIM+1)+
   nmat*num_state_material;

@@ -2165,8 +2165,11 @@ protected:
     static Vector<Real> rzcoarseblocks;
 
     static int num_SoA_var; //number of Structure of Array variables
+
     static int num_species_var; 
     static int num_materials;
+    static int num_interfaces;
+
     static int use_supermesh; //def=0
     static int ncomp_sum_int_user1; //def=0
     static int ncomp_sum_int_user2; //def=0
