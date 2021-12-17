@@ -1,0 +1,70 @@
+#ifndef EXTRAP_COMP_H_
+#define EXTRAP_COMP_H_
+
+#define EXTRAP_T11 (0)
+#define EXTRAP_T12 (1)
+#define EXTRAP_T22 (2)
+#define EXTRAP_T33 (3)
+#define EXTRAP_T13 (4)
+#define EXTRAP_T23 (5)
+#define EXTRAP_NUM_TENSOR_TYPE (2*AMREX_SPACEDIM)
+#define EXTRAP_XVEL (0)
+#define EXTRAP_YVEL (1)
+#define EXTRAP_ZVEL (2)
+#define EXTRAP_VOFVAR (0)
+#define EXTRAP_CENXVAR (1)
+#define EXTRAP_CENXVAR (2)
+#define EXTRAP_CENZVAR (3)
+#define EXTRAP_ORDERVAR (AMREX_SPACEDIM+1)
+#define EXTRAP_NXVAR (EXTRAP_ORDERVAR+1)
+#define EXTRAP_NYVAR (EXTRAP_NXVAR+1)
+#define EXTRAP_NZVAR (EXTRAP_NYVAR+1)
+#define EXTRAP_LSVAR (2*AMREX_SPACEDIM+2)
+#define EXTRAP_NUM_MOF_VAR (EXTRAP_LS_VAR+1)
+
+#define EXTRAP_PER_BURNING (AMREX_SPACEDIM)
+#if (0)
+interface temperature and interface mass fraction.
+#endif
+#define EXTRAP_PER_TSAT (2)
+
+#define EXTRAP_NCOMP_BURNING (num_interfaces+num_interfaces*EXTRAP_PER_BURNING)
+#define EXTRAP_NCOMP_TSAT (num_interfaces+num_interfaces*EXTRAP_PER_TSAT)
+#define EXTRAP_NCOMP_ELASTIC (NUM
+
+#define EXTRAP_SCALAR (0)
+#define EXTRAP_VEL (EXTRAP_SCALAR+1)
+#define EXTRAP_RECON (EXTRAP_VEL+AMREX_SPACEDIM)
+#define EXTRAP_MASK (EXTRAP_RECON+num_materials*ngeom_recon);
+#define EXTRAP_BURNING (EXTRAP_MASK+1)
+#define EXTRAP_TSAT (EXTRAP_BURNING+EXTRAP_NCOMP_BURNING)
+#define EXTRAP_ELASTIC (EXTRAP_TSAT+EXTRAP_NCOMP_TSAT)
+
+#define DRAGCOMP_BODYFORCE (0)
+#define DRAGCOMP_FORCE (DRAGCOMP_BODYFORCE+3*num_materials)
+#define DRAGCOMP_PFORCE (DRAGCOMP_FORCE+3*num_materials)
+#define DRAGCOMP_VISCOUSFORCE (DRAGCOMP_PFORCE+3*num_materials)
+#define DRAGCOMP_VISCOUS0FORCE (DRAGCOMP_VISCOUSFORCE+3*num_materials)
+#define DRAGCOMP_VISCOFORCE (DRAGCOMP_VISCOUS0FORCE+3*num_materials)
+
+#define DRAGCOMP_BODYTORQUE (DRAGCOMP_VISCOFORCE+3*num_materials)
+#define DRAGCOMP_TORQUE (DRAGCOMP_BODYTORQUE+3*num_materials)
+#define DRAGCOMP_PTORQUE (DRAGCOMP_TORQUE+3*num_materials)
+#define DRAGCOMP_VISCOUSTORQUE (DRAGCOMP_PTORQUE+3*num_materials)
+#define DRAGCOMP_VISCOUS0TORQUE (DRAGCOMP_VISCOUSTORQUE+3*num_materials)
+#define DRAGCOMP_VISCOTORQUE (DRAGCOMP_VISCOUS0TORQUE+3*num_materials)
+
+#define DRAGCOMP_COM (DRAGCOMP_VISCOTORQUE+3*num_materials)
+#define DRAGCOMP_MOMINERTIA (DRAGCOMP_COM+3*num_materials)
+#define DRAGCOMP_MASS (DRAGCOMP_MOMINERTIA+3*num_materials)
+#define DRAGCOMP_PERIM_VECTOR (DRAGCOMP_MASS+num_materials)
+#define DRAGCOMP_PERIM (DRAGCOMP_PERIM_VECTOR+3*num_materials)
+#if (0)
+DRAGCOMP_FLAG=0 => drag uninitialized
+DRAGCOMP_FLAG=1 => drag initialized
+DRAGCOMP_FLAG=2 => drag extended
+#endif
+#define DRAGCOMP_FLAG (DRAGCOMP_PERIM+num_materials)
+#define N_DRAG (DRAGCOMP_FLAG+num_materials)
+
+#endif
