@@ -12,6 +12,8 @@ applied to a given material "im_test"
 #define DRAG_TYPE_VFORCE (2)
 #define DRAG_TYPE_WFORCE (3)
 #define DRAG_TYPE_SCALAR (4)
+#define DRAG_TYPE_FLAG (5)
+#define DRAG_TYPE_NEXT (6)
 
 #define DRAGCOMP_BODYFORCE (0)
 #define DRAGCOMP_FORCE (DRAGCOMP_BODYFORCE+3*num_materials)

@@ -10780,6 +10780,7 @@ END SUBROUTINE SIMP
       INTEGER_T avgdown_sweep
       INTEGER_T ncomp_expect
       INTEGER_T im_test
+      INTEGER_T drag_type,drag_im
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -10896,77 +10897,39 @@ END SUBROUTINE SIMP
                   ! do nothing
                  else if (fine_test.eq.coarse_test) then
                   velwt(im_test)=velwt(im_test)+volall
-                  do dir2=1,3
-FIX ME MAKE ONE LOOP THROUGH ALL COMPS
-                   local_comp=DRAGCOMP_BODYFORCE+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
+                  do local_comp=0,N_DRAG-1
+                   drag_type=fort_drag_type(local_comp,drag_im)
+                   if ((drag_type.ge.0).and. &
+                       (drag_type.lt.DRAG_TYPE_NEXT)) then
 
-                   local_comp=DRAGCOMP_FORCE+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
+                    if ((drag_im.ge.0).and. &
+                        (drag_im.lt.num_materials)) then
+                     if (drag_im.eq.im_test-1) then
+                      if (drag_type.ne.DRAG_TYPE_FLAG) then
+                       crse_value(local_comp)=crse_value(local_comp)+ &
+                         volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
+                      else if (drag_type.eq.DRAG_TYPE_FLAG) then
+                       ! do nothing
+                      else
+                       print *,"drag_type invalid"
+                       stop
+                      endif
+                     else if (drag_im.ne.im_test-1) then
+                      ! do nothing
+                     else
+                      print *,"drag_im invalid"
+                      stop
+                     endif
+                    else
+                     print *,"drag_im invalid"
+                     stop
+                    endif
+                   else
+                    print *,"drag_type invalid"
+                    stop
+                   endif
+                  enddo !local_comp=0,N_DRAG-1
 
-                   local_comp=DRAGCOMP_PFORCE+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-
-                   local_comp=DRAGCOMP_VISCOUSFORCE+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-
-                   local_comp=DRAGCOMP_VISCOUS0FORCE+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-
-                   local_comp=DRAGCOMP_VISCOFORCE+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-
-                   local_comp=DRAGCOMP_BODYTORQUE+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-
-                   local_comp=DRAGCOMP_TORQUE+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-
-                   local_comp=DRAGCOMP_PTORQUE+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-
-                   local_comp=DRAGCOMP_VISCOUSTORQUE+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-
-                   local_comp=DRAGCOMP_VISCOUS0TORQUE+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-
-                   local_comp=DRAGCOMP_VISCOTORQUE+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-
-                   local_comp=DRAGCOMP_COM+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-
-                   local_comp=DRAGCOMP_MOMINERTIA+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-
-                   local_comp=DRAGCOMP_PERIM_VECTOR+(im_test-1)*3+dir2
-                   crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-
-                  enddo ! dir2=1,3
-
-                  local_comp=DRAGCOMP_MASS+im_test
-                  crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
-
-                  local_comp=DRAGCOMP_PERIM+im_test
-                  crse_value(local_comp)=crse_value(local_comp)+ &
-                    volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
                  else
                   print *,"fine_test bad (avgdown burning): ",fine_test
                   stop
@@ -11010,111 +10973,72 @@ FIX ME MAKE ONE LOOP THROUGH ALL COMPS
             print *,"velwt invalid"
             stop
            endif
-           FIX ME
-           crse(D_DECL(ic,jc,kc),DRAGCOMP_FLAG+im_test)=zero
-           do dir2=1,3
-            local_comp=DRAGCOMP_BODYFORCE+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-            local_comp=DRAGCOMP_FORCE+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-            local_comp=DRAGCOMP_PFORCE+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-            local_comp=DRAGCOMP_VISCOUSFORCE+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-            local_comp=DRAGCOMP_VISCOUS0FORCE+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-            local_comp=DRAGCOMP_VISCOFORCE+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-
-            local_comp=DRAGCOMP_BODYTORQUE+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-            local_comp=DRAGCOMP_TORQUE+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-            local_comp=DRAGCOMP_PTORQUE+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-            local_comp=DRAGCOMP_VISCOUSTORQUE+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-            local_comp=DRAGCOMP_VISCOUS0TORQUE+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-            local_comp=DRAGCOMP_VISCOTORQUE+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-
-            local_comp=DRAGCOMP_COM+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-            local_comp=DRAGCOMP_MOMINERTIA+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-            local_comp=DRAGCOMP_PERIM_VECTOR+(im_test-1)*3+dir2
-            crse(D_DECL(ic,jc,kc),local_comp)=zero
-           enddo ! dir2=1,3
-           local_comp=DRAGCOMP_MASS+im_test
-           crse(D_DECL(ic,jc,kc),local_comp)=zero
-           local_comp=DRAGCOMP_PERIM+im_test
-           crse(D_DECL(ic,jc,kc),local_comp)=zero
-
+           crse(D_DECL(ic,jc,kc),DRAGCOMP_FLAG+im_test)=coarse_test
+           do local_comp=0,N_DRAG-1
+            drag_type=fort_drag_type(local_comp,drag_im)
+            if ((drag_type.ge.0).and. &
+                (drag_type.lt.DRAG_TYPE_NEXT)) then
+             if ((drag_im.ge.0).and. &
+                 (drag_im.lt.num_materials)) then
+              if (drag_im.eq.im_test-1) then
+               if (drag_type.ne.DRAG_TYPE_FLAG) then
+                crse(D_DECL(ic,jc,kc),local_comp)=zero
+               else if (drag_type.eq.DRAG_TYPE_FLAG) then
+                ! do nothing
+               else
+                print *,"drag_type invalid"
+                stop
+               endif
+              else if (drag_im.ne.im_test-1) then
+               ! do nothing
+              else
+               print *,"drag_im invalid"
+               stop
+              endif
+             else
+              print *,"drag_im invalid"
+              stop
+             endif
+            else
+             print *,"drag_type invalid"
+             stop
+            endif
+           enddo !local_comp=0,N_DRAG-1
           else if (coarse_test.eq.1) then
            if (velwt(im_test).gt.zero) then
             crse(D_DECL(ic,jc,kc),DRAGCOMP_FLAG+im_test)=coarse_test
 
-            do dir2=1,3
-
-             local_comp=DRAGCOMP_BODYFORCE+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-             local_comp=DRAGCOMP_FORCE+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-             local_comp=DRAGCOMP_PFORCE+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-             local_comp=DRAGCOMP_VISCOUSFORCE+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-             local_comp=DRAGCOMP_VISCOUS0FORCE+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-             local_comp=DRAGCOMP_VISCOFORCE+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-
-             local_comp=DRAGCOMP_BODYTORQUE+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-             local_comp=DRAGCOMP_TORQUE+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-             local_comp=DRAGCOMP_PTORQUE+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-             local_comp=DRAGCOMP_VISCOUSTORQUE+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-             local_comp=DRAGCOMP_VISCOUS0TORQUE+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-             local_comp=DRAGCOMP_VISCOTORQUE+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-
-             local_comp=DRAGCOMP_COM+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-
-             local_comp=DRAGCOMP_MOMINERTIA+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-
-             local_comp=DRAGCOMP_PERIM_VECTOR+(im_test-1)*3+dir2
-             crse(D_DECL(ic,jc,kc),local_comp)= &
-              crse_value(local_comp)/velwt(im_test)
-            enddo ! dir2=1,3
-
-            local_comp=DRAGCOMP_MASS+im_test
-            crse(D_DECL(ic,jc,kc),local_comp)= &
-             crse_value(local_comp)/velwt(im_test)
-
-            local_comp=DRAGCOMP_PERIM+im_test
-            crse(D_DECL(ic,jc,kc),local_comp)= &
-             crse_value(local_comp)/velwt(im_test)
+            do local_comp=0,N_DRAG-1
+             drag_type=fort_drag_type(local_comp,drag_im)
+             if ((drag_type.ge.0).and. &
+                 (drag_type.lt.DRAG_TYPE_NEXT)) then
+              if ((drag_im.ge.0).and. &
+                  (drag_im.lt.num_materials)) then
+               if (drag_im.eq.im_test-1) then
+                if (drag_type.ne.DRAG_TYPE_FLAG) then
+                 crse(D_DECL(ic,jc,kc),local_comp)= &
+                   crse_value(local_comp)/velwt(im_test)
+                else if (drag_type.eq.DRAG_TYPE_FLAG) then
+                 ! do nothing
+                else
+                 print *,"drag_type invalid"
+                 stop
+                endif
+               else if (drag_im.ne.im_test-1) then
+                ! do nothing
+               else
+                print *,"drag_im invalid"
+                stop
+               endif
+              else
+               print *,"drag_im invalid"
+               stop
+              endif
+             else
+              print *,"drag_type invalid"
+              stop
+             endif
+            enddo !local_comp=0,N_DRAG-1
 
            else
             print *,"velwt invalid"
