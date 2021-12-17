@@ -21,6 +21,7 @@ print *,"dimension bust"
 stop
 #endif
 
+#include "DRAG_COMP.H"
 
 
       module LagrangeInterpolationPolynomial
@@ -2253,7 +2254,7 @@ end subroutine dynamic_contact_angle
        debug_slip_velocity_enforcement=0
     
        nhalf=3 
-       nten_test=( (LOW%nmat-1)*(LOW%nmat-1)+LOW%nmat-1 )/2
+       nten_test=num_interfaces
        allocate(user_tension(nten_test))
        if (LOW%nten.eq.nten_test) then
         ! do nothing
@@ -12811,7 +12812,79 @@ end subroutine dynamic_contact_angle
 
       return
       end function is_lag_part
- 
+       
+      function fort_drag_type(drag_comp,drag_im) &
+      bind(c,name='fort_drag_type')
+
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: drag_comp
+      INTEGER_T, intent(out) :: drag_im
+      INTEGER_T fort_drag_type
+      INTEGER_T drag_mod
+
+      if (drag_comp.lt.DRAGCOMP_FORCE) then
+       drag_im=drag_comp/3
+       drag_mod=MOD(drag_comp,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if (drag_comp.lt.DRAGCOMP_PFORCE) then
+       drag_im=(drag_comp-DRAGCOMP_FORCE)/3
+       drag_mod=drag_comp-DRAGCOMP_FORCE
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if (drag_comp.lt.DRAGCOMP_VISCOUSFORCE) then
+       drag_im=(drag_comp-DRAGCOMP_PFORCE)/3
+       drag_mod=drag_comp-DRAGCOMP_PFORCE
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if (drag_comp.lt.DRAGCOMP_VISCOUS0FORCE) then
+       drag_im=(drag_comp-DRAGCOMP_VISCOUSFORCE)/3
+       drag_mod=drag_comp-DRAGCOMP_VISCOUSFORCE
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+
+       FIX ME
+      return
+      end function fort_drag_type
+                      
       function fort_is_rigid_base(FSI_flag_local,nmat,im) &
       bind(c,name='fort_is_rigid_base')
 
@@ -15094,7 +15167,7 @@ end subroutine dynamic_contact_angle
       REAL_T avgtemp
       INTEGER_T iten,im,im_opp,ibase,stage
 
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid get_user_tension nten nten test", &
          nten,nten_test
@@ -20151,7 +20224,7 @@ end subroutine dynamic_contact_angle
 
 
       nmat=num_materials
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten: get_CL_iten nten nten_test ",nten,nten_test
        stop

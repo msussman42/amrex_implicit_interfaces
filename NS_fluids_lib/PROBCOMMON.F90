@@ -292,9 +292,11 @@ implicit none
 !  fort_phasechange_microlayer_size 
 ! Added November 30,2021:
 !  fort_heatflux_factor
+! Added December 16,2021:
+!  num_interfaces
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
-       !nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
+       !nten=num_interfaces=( (nmat-1)*(nmat-1)+nmat-1 )/2
       INTEGER_T, PARAMETER :: MAX_NUM_INTERFACES=55
       INTEGER_T, PARAMETER :: MAX_NUM_SPECIES=10
       INTEGER_T, PARAMETER :: MAX_NUM_EOS=24

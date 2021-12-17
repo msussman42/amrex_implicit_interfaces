@@ -10897,7 +10897,7 @@ END SUBROUTINE SIMP
                  else if (fine_test.eq.coarse_test) then
                   velwt(im_test)=velwt(im_test)+volall
                   do dir2=1,3
-
+FIX ME MAKE ONE LOOP THROUGH ALL COMPS
                    local_comp=DRAGCOMP_BODYFORCE+(im_test-1)*3+dir2
                    crse_value(local_comp)=crse_value(local_comp)+ &
                     volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
@@ -11010,6 +11010,7 @@ END SUBROUTINE SIMP
             print *,"velwt invalid"
             stop
            endif
+           FIX ME
            crse(D_DECL(ic,jc,kc),DRAGCOMP_FLAG+im_test)=zero
            do dir2=1,3
             local_comp=DRAGCOMP_BODYFORCE+(im_test-1)*3+dir2
@@ -12493,7 +12494,7 @@ END SUBROUTINE SIMP
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten.ne.nten_test) then
        print *,"nten invalid avgdown_curv nten nten_test ",nten,nten_test
        stop

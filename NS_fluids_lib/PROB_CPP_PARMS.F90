@@ -433,7 +433,9 @@ stop
        print *,"increase MAX_NUM_MATERIALS; aborting"
        stop
       endif
-      
+      num_interfaces=( (num_materials-1)*(num_materials-1)+ &
+             (num_materials-1) )/2
+
       ! USER DEFINED (used by "is_in_probtype_list")
       ! IN ORDER TO ADD A NEW TEST PROBLEM:
       ! 1. increment probtype_list_size by 1.
@@ -1052,7 +1054,9 @@ stop
           (num_materials_viscoelastic.lt.0).or. &
           (num_materials_viscoelastic.gt.num_materials).or. &
           (num_materials.lt.1).or. &
+          (num_interfaces.lt.1).or. &
           (num_materials.gt.MAX_NUM_MATERIALS).or. &
+          (num_interfaces.gt.100).or. &
           (num_materials.gt.100)) then
        print *,"material parameters illegal"
        stop
@@ -1079,9 +1083,11 @@ stop
        print *,"bfact_time_order ",bfact_time_order
       
        print *,"fort material parameters"
-       print *,"numspec,num_mat_visc,MAX_NUM_MATERIALS,num_materials ", &
+       print *,"num_materials= ",num_materials
+       print *,"num_interfaces= ",num_interfaces
+       print *,"numspec,num_mat_visc,MAX_NUM_MATERIALS ", &
         num_species_var,num_materials_viscoelastic, &
-        MAX_NUM_MATERIALS,num_materials
+        MAX_NUM_MATERIALS
        print *,"MAX_NUM_EOS ",MAX_NUM_EOS
        print *,"ngeom_raw ",ngeom_raw
        print *,"ngeom_recon ",ngeom_recon
@@ -1205,8 +1211,8 @@ stop
        stop
       endif
       
-      nten=( (num_materials-1)*(num_materials-1)+ &
-         num_materials-1 )/2
+      nten=num_interfaces
+
       if (nten.ne.ccnten) then
        print *,"nten or ccnten invalid"
        print *,"nten=",nten
@@ -1251,6 +1257,7 @@ stop
         stop
        endif
       enddo ! do im=1,num_materials
+
       do im=1,num_species_var
        fort_species_molar_mass(im)=ccspecies_molar_mass(im)
        if (fort_species_molar_mass(im).gt.zero) then
@@ -1343,6 +1350,7 @@ stop
         print *,"im,prerecalesce_cv ",im, &
          fort_prerecalesce_stiffCV(im)
        enddo ! im
+
        do im=1,num_species_var*num_materials
         print *,"im,species ",im,fort_speciesconst(im)
         print *,"im,speciesvisc ",im,fort_speciesviscconst(im)

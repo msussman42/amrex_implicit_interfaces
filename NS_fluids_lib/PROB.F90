@@ -111,7 +111,7 @@ stop
       endif
 
       nmat=num_materials
-      nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten=num_interfaces
 
       nparts=0
       do im=1,nmat
@@ -179,7 +179,7 @@ stop
       endif
 
       nmat=num_materials
-      nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten=num_interfaces
 
       nparts=0
       do im=1,nmat
@@ -1123,7 +1123,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid get_icemask nten, nten_test ",nten,nten_test
        stop
@@ -2371,7 +2371,7 @@ stop
       REAL_T new_tension(nten)
       INTEGER_T iten
 
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid get_max_user_tension nten nten test", &
          nten,nten_test
@@ -6030,7 +6030,7 @@ END SUBROUTINE Adist
       INTEGER_T imL,imR
       INTEGER_T iten
 
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten: fluid_interface_tension nten nten_test ",nten,nten_test
        stop
@@ -6183,7 +6183,7 @@ END SUBROUTINE Adist
        stop
       endif
 
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid calc_error_ind",nten,nten_test
        stop
@@ -6468,7 +6468,7 @@ END SUBROUTINE Adist
        z=xsten(0,SDIM)
 
        nmat=num_materials
-       nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
+       nten=num_interfaces
 
        if (SDIM.eq.2) then
         if (abs(z-y).gt.1.0E-8) then
@@ -7724,8 +7724,7 @@ END SUBROUTINE Adist
        print *,"nmat invalid"
        stop
       endif
-      nten=( (num_materials-1)*(num_materials-1)+ &
-          num_materials-1 )/2
+      nten=num_interfaces
 
       allocate(distbatch(nmat))
 
@@ -26051,7 +26050,7 @@ end subroutine initialize2d
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid viscfluxfill nten nten test", &
         nten,nten_test
@@ -27859,8 +27858,9 @@ end subroutine initialize2d
        print *,"grid_type invalid"
        stop
       endif
+
       nmat=num_materials
-      nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten=num_interfaces
 
       ncomp_per_burning=SDIM
       ncomp_per_tsat=2  ! interface temperature, mass fraction
@@ -29083,7 +29083,7 @@ end subroutine initialize2d
         print *,"nmat invalid"
         stop
        endif
-       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+       nten_test=num_interfaces
        if (nten_test.ne.nten) then
         print *,"nten invalid initdata nten nten test", &
           nten,nten_test
@@ -29656,7 +29656,7 @@ end subroutine initialize2d
         print *,"nc invalid"
         stop
        endif
-       nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+       nten_test=num_interfaces
        if (nten_test.ne.nten) then
         print *,"nten invalid initdata nten nten test", &
           nten,nten_test
@@ -31347,8 +31347,7 @@ end subroutine initialize2d
       call checkbound_array(fablo,fabhi,vel_ptr,1,-1,1308)
 
       nmat=num_materials
-      nten=( (num_materials-1)*(num_materials-1)+ &
-          num_materials-1 )/2
+      nten=num_interfaces
 
       allocate(distbatch(nmat))
 

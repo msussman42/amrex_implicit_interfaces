@@ -1538,7 +1538,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid interpfab_curv nten, nten_test ",nten,nten_test
        stop
@@ -3947,7 +3947,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
        stop
@@ -6563,7 +6563,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid velextend nten, nten_test ",nten,nten_test
        stop
@@ -7302,7 +7302,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nten_test=( (nmat-1)*(nmat-1)+nmat-1 )/2
+      nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
        stop

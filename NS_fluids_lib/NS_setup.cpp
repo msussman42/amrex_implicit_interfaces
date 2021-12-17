@@ -706,7 +706,7 @@ NavierStokes::variableSetUp ()
      prescribe_temperature_outflow << '\n';
     
     int nmat=num_materials;
-    int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+    int nten=num_interfaces;
 
     int null_state_holds_data=0;
     int state_holds_data=1;
@@ -721,9 +721,18 @@ NavierStokes::variableSetUp ()
 
     int ncomp_per_burning=AMREX_SPACEDIM;
     int ncomp_per_tsat=2; // interface temperature and mass fraction
+
       // first nten components represent a status.
     int nburning=nten*(ncomp_per_burning+1);
     int ncomp_tsat=nten*(ncomp_per_tsat+1);
+
+     //extrap,velx,vely,velz
+    int extrecon_scomp=AMREX_SPACEDIM+1;
+     //extrap,velx,vely,velz, mof recon
+    int mask_scomp=extrecon_scomp+nmat*ngeom_recon;
+    int burnvel_scomp=mask_scomp+1;
+    int tsat_scomp=burnvel_scomp+nburning;
+    int elastic_scomp=tsat_scomp+ncomp_tsat;
 
      // 11,12,22,33,13,23,XD,YD,ZD
     ncghost_elastic=NUM_TENSOR_TYPE+AMREX_SPACEDIM;
@@ -1420,6 +1429,8 @@ NavierStokes::variableSetUp ()
     desc_lst.addDescriptor(State_Type,IndexType::TheCellType(),
      1,nc,&pc_interp,state_holds_data);
 
+ FIX ME use num_interfaces and num_materials add drag extrap stuff
+
     desc_lstGHOST.addDescriptor(State_Type,IndexType::TheCellType(),
      1,ncghost_state,&pc_interp,null_state_holds_data);
 
@@ -1942,7 +1953,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
  SDC_setup_step();
 
  int nmat=num_materials;
- int nten=( (nmat-1)*(nmat-1)+nmat-1 )/2;
+ int nten=num_interfaces;
 
  if ((adv_dir<1)||(adv_dir>2*AMREX_SPACEDIM+1))
   amrex::Error("adv_dir invalid");
