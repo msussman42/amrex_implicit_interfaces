@@ -17447,8 +17447,11 @@ void NavierStokes::GetDragALL() {
     } else {
      //do nothing
     }
-     
-    std::cout << "GetDragALL  iq= " << iq << 
+    int drag_im=-1;
+    int drag_type=fort_drag_type(iq,drag_im);
+
+    std::cout << "GetDragALL  iq= " << iq << " drag_im= " <<
+	    drag_im << " drag_type= " << drag_type <<
      " NS_drag_integrated_quantities= " <<
      NS_drag_integrated_quantities[iq] << '\n';
    }

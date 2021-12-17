@@ -12780,7 +12780,7 @@ end subroutine dynamic_contact_angle
       IMPLICIT NONE
 
       INTEGER_T is_lag_part
-      INTEGER_T nmat,im
+      INTEGER_T, intent(in) :: nmat,im
 
       if ((im.lt.1).or.(im.gt.nmat)) then
        print *,"im invalid17 in is_lag_part: im=",im
@@ -12812,7 +12812,10 @@ end subroutine dynamic_contact_angle
 
       return
       end function is_lag_part
-       
+      
+       ! drag_comp>=0 and drag_comp<N_DRAG
+       ! drag_im>=0 and drag_im<num_materials 
+       ! drag_type>=0 and drag_type<DRAG_TYPE_NEXT
       function fort_drag_type(drag_comp,drag_im) &
       bind(c,name='fort_drag_type')
 
@@ -12825,7 +12828,11 @@ end subroutine dynamic_contact_angle
       INTEGER_T fort_drag_type
       INTEGER_T drag_mod
 
-      if (drag_comp.lt.DRAGCOMP_FORCE) then
+      drag_im=-1
+      fort_drag_type=-1
+
+      if ((drag_comp.ge.0).and. &
+          (drag_comp.lt.DRAGCOMP_FORCE)) then
        drag_im=drag_comp/3
        drag_mod=MOD(drag_comp,3)
        if (drag_mod.eq.0) then
@@ -12838,9 +12845,10 @@ end subroutine dynamic_contact_angle
         print *,"drag_mod invalid"
         stop
        endif
-      else if (drag_comp.lt.DRAGCOMP_PFORCE) then
-       drag_im=(drag_comp-DRAGCOMP_FORCE)/3
+      else if ((drag_comp.ge.DRAGCOMP_FORCE).and. &
+               (drag_comp.lt.DRAGCOMP_PFORCE)) then
        drag_mod=drag_comp-DRAGCOMP_FORCE
+       drag_im=drag_mod/3
        drag_mod=MOD(drag_mod,3)
        if (drag_mod.eq.0) then
         fort_drag_type=DRAG_TYPE_UFORCE
@@ -12852,9 +12860,10 @@ end subroutine dynamic_contact_angle
         print *,"drag_mod invalid"
         stop
        endif
-      else if (drag_comp.lt.DRAGCOMP_VISCOUSFORCE) then
-       drag_im=(drag_comp-DRAGCOMP_PFORCE)/3
+      else if ((drag_comp.ge.DRAGCOMP_PFORCE).and. &
+               (drag_comp.lt.DRAGCOMP_VISCOUSFORCE)) then
        drag_mod=drag_comp-DRAGCOMP_PFORCE
+       drag_im=drag_mod/3
        drag_mod=MOD(drag_mod,3)
        if (drag_mod.eq.0) then
         fort_drag_type=DRAG_TYPE_UFORCE
@@ -12866,9 +12875,10 @@ end subroutine dynamic_contact_angle
         print *,"drag_mod invalid"
         stop
        endif
-      else if (drag_comp.lt.DRAGCOMP_VISCOUS0FORCE) then
-       drag_im=(drag_comp-DRAGCOMP_VISCOUSFORCE)/3
+      else if ((drag_comp.ge.DRAGCOMP_VISCOUSFORCE).and. &
+               (drag_comp.lt.DRAGCOMP_VISCOUS0FORCE)) then
        drag_mod=drag_comp-DRAGCOMP_VISCOUSFORCE
+       drag_im=drag_mod/3
        drag_mod=MOD(drag_mod,3)
        if (drag_mod.eq.0) then
         fort_drag_type=DRAG_TYPE_UFORCE
@@ -12880,8 +12890,201 @@ end subroutine dynamic_contact_angle
         print *,"drag_mod invalid"
         stop
        endif
+      else if ((drag_comp.ge.DRAGCOMP_VISCOUS0FORCE).and. &
+               (drag_comp.lt.DRAGCOMP_VISCOFORCE)) then
+       drag_mod=drag_comp-DRAGCOMP_VISCOUS0FORCE
+       drag_im=drag_mod/3
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if ((drag_comp.ge.DRAGCOMP_VISCOFORCE).and. &
+               (drag_comp.lt.DRAGCOMP_BODYTORQUE)) then
+       drag_mod=drag_comp-DRAGCOMP_VISCOFORCE
+       drag_im=drag_mod/3
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if ((drag_comp.ge.DRAGCOMP_BODYTORQUE).and. &
+               (drag_comp.lt.DRAGCOMP_TORQUE)) then
+       drag_mod=drag_comp-DRAGCOMP_BODYTORQUE
+       drag_im=drag_mod/3
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if ((drag_comp.ge.DRAGCOMP_TORQUE).and. &
+               (drag_comp.lt.DRAGCOMP_PTORQUE)) then
+       drag_mod=drag_comp-DRAGCOMP_TORQUE
+       drag_im=drag_mod/3
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if ((drag_comp.ge.DRAGCOMP_PTORQUE).and. &
+               (drag_comp.lt.DRAGCOMP_VISCOUSTORQUE)) then
+       drag_mod=drag_comp-DRAGCOMP_PTORQUE
+       drag_im=drag_mod/3
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if ((drag_comp.ge.DRAGCOMP_VISCOUSTORQUE).and. &
+               (drag_comp.lt.DRAGCOMP_VISCOUS0TORQUE)) then
+       drag_mod=drag_comp-DRAGCOMP_VISCOUSTORQUE
+       drag_im=drag_mod/3
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if ((drag_comp.ge.DRAGCOMP_VISCOUS0TORQUE).and. &
+               (drag_comp.lt.DRAGCOMP_VISCOTORQUE)) then
+       drag_mod=drag_comp-DRAGCOMP_VISCOUS0TORQUE
+       drag_im=drag_mod/3
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if ((drag_comp.ge.DRAGCOMP_VISCOTORQUE).and. &
+               (drag_comp.lt.DRAGCOMP_COM)) then
+       drag_mod=drag_comp-DRAGCOMP_VISCOTORQUE
+       drag_im=drag_mod/3
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if ((drag_comp.ge.DRAGCOMP_COM).and. &
+               (drag_comp.lt.DRAGCOMP_MOMINERTIA)) then
+       drag_mod=drag_comp-DRAGCOMP_COM
+       drag_im=drag_mod/3
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if ((drag_comp.ge.DRAGCOMP_MOMINERTIA).and. &
+               (drag_comp.lt.DRAGCOMP_MASS)) then
+       drag_mod=drag_comp-DRAGCOMP_MOMINERTIA
+       drag_im=drag_mod/3
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if ((drag_comp.ge.DRAGCOMP_MASS).and. &
+               (drag_comp.lt.DRAGCOMP_PERIM_VECTOR)) then
+       drag_im=drag_comp-DRAGCOMP_MASS
+       fort_drag_type=DRAG_TYPE_SCALAR
+      else if ((drag_comp.ge.DRAGCOMP_PERIM_VECTOR).and. &
+               (drag_comp.lt.DRAGCOMP_PERIM)) then
+       drag_mod=drag_comp-DRAGCOMP_PERIM_VECTOR
+       drag_im=drag_mod/3
+       drag_mod=MOD(drag_mod,3)
+       if (drag_mod.eq.0) then
+        fort_drag_type=DRAG_TYPE_UFORCE
+       else if (drag_mod.eq.1) then
+        fort_drag_type=DRAG_TYPE_VFORCE
+       else if (drag_mod.eq.2) then
+        fort_drag_type=DRAG_TYPE_WFORCE
+       else
+        print *,"drag_mod invalid"
+        stop
+       endif
+      else if ((drag_comp.ge.DRAGCOMP_PERIM).and. &
+               (drag_comp.lt.DRAGCOMP_FLAG)) then
+       drag_im=drag_comp-DRAGCOMP_PERIM
+       fort_drag_type=DRAG_TYPE_SCALAR
+      else if ((drag_comp.ge.DRAGCOMP_FLAG).and. &
+               (drag_comp.lt.N_DRAG)) then
+       drag_im=drag_comp-DRAGCOMP_FLAG
+       fort_drag_type=DRAG_TYPE_FLAG
+      else
+       print *,"drag_comp invalid"
+       stop
+      endif
 
-       FIX ME
+      if ((drag_im.ge.0).and.(drag_im.lt.num_materials)) then
+       ! do nothing
+      else
+       print *,"drag_im invalid"
+       stop
+      endif
+      if ((fort_drag_type.ge.0).and.(fort_drag_type.lt.DRAG_TYPE_NEXT)) then
+       ! do nothing
+      else
+       print *,"fort_drag_type invalid"
+       stop
+      endif
+
       return
       end function fort_drag_type
                       
