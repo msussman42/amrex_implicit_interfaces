@@ -6,6 +6,8 @@
 #include <LevelBld.H>
 #include <ABecLaplacian.H>
 
+#include <EXTRAP_COMP.H>
+
 namespace {
     constexpr double NS_PI = 3.14159265358979323846264338327950288;
 }
@@ -316,10 +318,6 @@ namespace amrex{
 // velocity
 // Tensor_Type:
 // Tij x num_materials_viscoelastic + sdim
-
-enum StateNames {
-
-  DenVar=0, TemperatureVar, SpeciesVar };
 
 // Q is stored in the code.  A=Q+I   A is sometimes called the
 // "configuration tensor" 
@@ -2162,8 +2160,6 @@ protected:
     static int num_state_base;
     static int ngeom_raw;
     static int ngeom_recon;
-    static int ncghost_elastic;
-    static int ncghost_state;
 
     static Vector<Real> compressible_dt_factor;  //def=1.0
     static int disable_advection;

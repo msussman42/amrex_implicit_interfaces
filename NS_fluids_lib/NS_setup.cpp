@@ -388,8 +388,6 @@ void
 NavierStokes::override_enable_spectral(int enable_spectral_in) {
 
  int nmat=num_materials;
- int scomp_states=AMREX_SPACEDIM+1;
- int ncomp_vel_pres=AMREX_SPACEDIM+1;
 
  enable_spectral=enable_spectral_in;
 
@@ -716,28 +714,6 @@ NavierStokes::variableSetUp ()
      amrex::Error("nmat invalid in ns setup variable setup");
     }
 
-    int nc=(AMREX_SPACEDIM+1)+
-     nmat*(ngeom_raw+num_state_material)+1;
-
-    int ncomp_per_burning=AMREX_SPACEDIM;
-    int ncomp_per_tsat=2; // interface temperature and mass fraction
-
-      // first nten components represent a status.
-    int nburning=nten*(ncomp_per_burning+1);
-    int ncomp_tsat=nten*(ncomp_per_tsat+1);
-
-     //extrap,velx,vely,velz
-    int extrecon_scomp=AMREX_SPACEDIM+1;
-     //extrap,velx,vely,velz, mof recon
-    int mask_scomp=extrecon_scomp+nmat*ngeom_recon;
-    int burnvel_scomp=mask_scomp+1;
-    int tsat_scomp=burnvel_scomp+nburning;
-    int elastic_scomp=tsat_scomp+ncomp_tsat;
-
-     // 11,12,22,33,13,23,XD,YD,ZD
-    ncghost_elastic=NUM_TENSOR_TYPE+AMREX_SPACEDIM;
-    ncghost_state=1+AMREX_SPACEDIM+nmat*ngeom_recon+1+nburning+ncomp_tsat+
-         ncghost_elastic;
 
     std::string CC_postfix_str="CC";
 
@@ -862,10 +838,8 @@ NavierStokes::variableSetUp ()
      desc_lst.addDescriptor(Solid_State_Type,IndexType::TheCellType(),
       1,nparts*AMREX_SPACEDIM,&pc_interp,state_holds_data);
 
-     int ncghost_solid=1+AMREX_SPACEDIM;
-
      desc_lstGHOST.addDescriptor(Solid_State_Type,IndexType::TheCellType(),
-      1,ncghost_solid,&pc_interp,null_state_holds_data);
+      1,EXTRAP_NCOMP_SOLID,&pc_interp,null_state_holds_data);
 
      int dcomp=0;
      set_extrap_bc(bc,phys_bc);
@@ -892,7 +866,7 @@ NavierStokes::variableSetUp ()
       desc_lstGHOST.setComponent(Solid_State_Type,dcomp,
        w_extrap_str_solid,bc,FORT_EXTRAPFILL,&pc_interp);
      }
-     if (dcomp!=ncghost_solid-1)
+     if (dcomp!=EXTRAP_NCOMP_SOLID-1)
       amrex::Error("dcomp invalid");
 
      for (int partid=0;partid<nparts;partid++) {
@@ -1050,7 +1024,7 @@ NavierStokes::variableSetUp ()
 
       // ngrow=1
      desc_lstGHOST.addDescriptor(Tensor_Type,IndexType::TheCellType(),
-      1,ncghost_elastic,&pc_interp,null_state_holds_data);
+      1,EXTRAP_NCOMP_ELASTIC,&pc_interp,null_state_holds_data);
 
       // setComponent: 0..NUM_TENSOR_TYPE-1
      set_tensor_extrap_components(coord,CC_postfix_str,Tensor_Type,0);
@@ -1083,7 +1057,7 @@ NavierStokes::variableSetUp ()
      }
 #endif
 
-     if (ibase_tensor!=ncghost_elastic-1)
+     if (ibase_tensor!=EXTRAP_NCOMP_ELASTIC-1)
       amrex::Error("ibase_tensor invalid");
 
      for (int partid=0;partid<num_materials_viscoelastic;partid++) {
@@ -1432,7 +1406,7 @@ NavierStokes::variableSetUp ()
  FIX ME use num_interfaces and num_materials add drag extrap stuff
 
     desc_lstGHOST.addDescriptor(State_Type,IndexType::TheCellType(),
-     1,ncghost_state,&pc_interp,null_state_holds_data);
+     1,EXTRAP_NCOMP,&pc_interp,null_state_holds_data);
 
     dcomp=0;
     set_extrap_bc(bc,phys_bc);
@@ -1545,19 +1519,16 @@ NavierStokes::variableSetUp ()
     StateDescriptor::BndryFunc EXTMOF_fill_class(FORT_EXTMOFFILL,
        FORT_GROUP_EXTMOFFILL);
 
-    int extrecon_start_pos=1+AMREX_SPACEDIM; //state extrap, vel extrap
-
     multi_extmof_interp.multiMOFInterp_nmat=nmat;
     multi_extmof_interp.multiMOFInterp_ngeom_raw=ngeom_raw;
     multi_extmof_interp.multiMOFInterp_ngeom_recon=ngeom_recon;
 
-    desc_lstGHOST.setComponent(State_Type,extrecon_start_pos,EXTMOF_names,
+    desc_lstGHOST.setComponent(State_Type,EXTRAPCOMP_MOF,EXTMOF_names,
      EXTMOF_bcs,EXTMOF_fill_class,&multi_extmof_interp);
 
     set_extrap_bc(bc,phys_bc);
     std::string maskextrap_str="maskSEMextrap"; 
 
-    int mask_scomp=extrecon_start_pos+nmat*ngeom_recon;
     desc_lstGHOST.setComponent(State_Type,mask_scomp,
       maskextrap_str,bc,FORT_EXTRAPFILL,&mask_sem_interp);
 
@@ -1618,13 +1589,11 @@ NavierStokes::variableSetUp ()
     StateDescriptor::BndryFunc BURNVEL_fill_class(FORT_EXTRAPFILL,
        FORT_GROUP_EXTRAPFILL);
 
-    int burnvel_start_pos=mask_scomp+1;
-
     burnvel_interp.burnvel_nmat=nmat;
     burnvel_interp.burnvel_nten=nten;
     burnvel_interp.burnvel_ncomp_per=ncomp_per_burning;
 
-    desc_lstGHOST.setComponent(State_Type,burnvel_start_pos,BURNVEL_names,
+    desc_lstGHOST.setComponent(State_Type,EXTRAPCOMP_BURNVEL,BURNVEL_names,
      BURNVEL_bcs,BURNVEL_fill_class,&burnvel_interp);
 
     Vector<std::string> TSAT_names;
@@ -1677,26 +1646,19 @@ NavierStokes::variableSetUp ()
     StateDescriptor::BndryFunc TSAT_fill_class(FORT_EXTRAPFILL,
        FORT_GROUP_EXTRAPFILL);
 
-    int tsat_start_pos=burnvel_start_pos+nburning;
-
     tsat_interp.burnvel_nmat=nmat;
     tsat_interp.burnvel_nten=nten;
     //interface temperature and mass fraction
     tsat_interp.burnvel_ncomp_per=ncomp_per_tsat; 
 
-    desc_lstGHOST.setComponent(State_Type,tsat_start_pos,TSAT_names,
+    desc_lstGHOST.setComponent(State_Type,EXTRAPCOMP_TSAT,TSAT_names,
      TSAT_bcs,TSAT_fill_class,&tsat_interp);
-
-    if (tsat_start_pos==ncghost_state-ncghost_elastic-ncomp_tsat) {
-     // do nothing
-    } else
-     amrex::Error("tsat_start_pos invalid");
 
      // setComponent: 0..NUM_TENSOR_TYPE-1
     set_tensor_extrap_components(coord,CC_postfix_str,State_Type,
-		    ncghost_state-ncghost_elastic);
+		    EXTRAPCOMP_ELASTIC);
 
-    int ibase_state_tensor=ncghost_state-ncghost_elastic+NUM_TENSOR_TYPE;
+    int ibase_state_tensor=EXTRAPCOMP_ELASTIC+ENUM_NUM_TENSOR_TYPE;
 
      // same as x_vel_bc except that EXT_DIR => FOEXTRAP
     set_x_vel_extrap_bc(bc,phys_bc);
@@ -1855,10 +1817,8 @@ NavierStokes::variableSetUp ()
     StateDescriptor::BndryFunc MOFstate_fill_class(FORT_STATEFILL,
        FORT_GROUP_STATEFILL);
 
-    int scomp_states=(AMREX_SPACEDIM+1);
-
     desc_lst.setComponent(State_Type,
-     scomp_states,
+     STATECOMP_STATES,
      MOFstate_names,
      MOFstate_bcs,
      MOFstate_fill_class,&pc_interp);
@@ -1924,13 +1884,11 @@ NavierStokes::variableSetUp ()
     StateDescriptor::BndryFunc MOF_fill_class(FORT_MOFFILL,
        FORT_GROUP_MOFFILL);
 
-    int recon_start_pos=scomp_states+nmat*num_state_material;
-
     multi_mof_interp.multiMOFInterp_nmat=nmat;
     multi_mof_interp.multiMOFInterp_ngeom_raw=ngeom_raw;
     multi_mof_interp.multiMOFInterp_ngeom_recon=ngeom_recon;
 
-    desc_lst.setComponent(State_Type,recon_start_pos,MOF_names,
+    desc_lst.setComponent(State_Type,STATECOMP_MOF,MOF_names,
      MOF_bcs,MOF_fill_class,&multi_mof_interp);
 
     set_scalar_bc(bc,phys_bc);
