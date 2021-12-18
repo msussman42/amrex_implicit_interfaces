@@ -2409,6 +2409,9 @@ stop
         !  tau=-pI + 2 mu D + mu_p f(A)/lambda  \tilde{Q} 
         ! buoyancy force (body forces within the materials).
         ! Also, update the moment of inertia integral.
+
+        ! DRAGCOMP_FLAG not changed when accumulating the body forces
+        ! within materials.
        do icell=growlo(1),growhi(1)
        do jcell=growlo(2),growhi(2)
        do kcell=growlo(3),growhi(3)
