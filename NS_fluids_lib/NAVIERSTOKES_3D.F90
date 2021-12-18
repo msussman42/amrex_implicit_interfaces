@@ -7190,8 +7190,7 @@ END SUBROUTINE SIMP
          local_result(idest+2)=local_result(idest+2)+volgrid
         endif
 
-        drag_flag=NINT(drag(D_DECL(i,j,k),DRAGCOMP_FLAG))
-
+         ! Accumulate body forces and torques regardless of DRAGCOMP_FLAG
         local_comp=1
         do im=1,nmat
         do dir=1,3
@@ -7208,11 +7207,12 @@ END SUBROUTINE SIMP
         enddo ! dir=1..3
         enddo ! im=1..nmat
 
-        if (drag_flag.eq.1) then
+        local_comp=1
+        do im=1,nmat
+        do dir=1,3
+         drag_flag=NINT(drag(D_DECL(i,j,k),DRAGCOMP_FLAG+im))
 
-         local_comp=1
-         do im=1,nmat
-         do dir=1,3
+         if (drag_flag.eq.1) then
           idest=IQ_DRAG_SUM_COMP+local_comp
           local_result(idest)=local_result(idest)+ &
             drag(D_DECL(i,j,k),DRAGCOMP_FORCE+local_comp)
@@ -7256,25 +7256,32 @@ END SUBROUTINE SIMP
           idest=IQ_STEP_PERIM_VECTOR_SUM_COMP+local_comp
           local_result(idest)=local_result(idest)+ &
             drag(D_DECL(i,j,k),DRAGCOMP_PERIM_VECTOR+local_comp)
+         else if ((drag_flag.eq.0).or. &
+                  (drag_flag.eq.2)) then
+          ! do nothing
+         else
+          print *,"drag_flag invalid"
+          stop
+         endif
 
-          local_comp=local_comp+1
-         enddo ! dir=1..3
-         enddo ! im=1..nmat
+         local_comp=local_comp+1
+        enddo ! dir=1..3
+        enddo ! im=1..nmat
 
-         do im=1,nmat
+        do im=1,nmat
+         drag_flag=NINT(drag(D_DECL(i,j,k),DRAGCOMP_FLAG+im))
+         if (drag_flag.eq.1) then
           idest=IQ_STEP_PERIM_SUM_COMP+im
           local_result(idest)=local_result(idest)+ &
            drag(D_DECL(i,j,k),DRAGCOMP_PERIM+im)
-         enddo
-
-        else if (drag_flag.eq.2) then
-         ! do not increment
-        else if (drag_flag.eq.0) then
-         ! do not increment
-        else
-         print *,"drag_flag invalid"
-         stop
-        endif
+         else if ((drag_flag.eq.0).or. &
+                  (drag_flag.eq.2)) then
+          ! do nothing
+         else
+          print *,"drag_flag invalid"
+          stop
+         endif
+        enddo ! im=1..nmat
 
         do im=1,nmat
 

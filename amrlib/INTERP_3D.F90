@@ -1152,6 +1152,7 @@ stop
 
       INTEGER_T dir
       INTEGER_T iten
+      INTEGER_T im
       REAL_T xsten(-3:3,SDIM)
       REAL_T xstenfine(-3:3,SDIM)
       REAL_T xstengrid(-1:1,SDIM)
@@ -1161,7 +1162,8 @@ stop
       INTEGER_T iflag,iflag_sign,hitflag
       REAL_T burn_fine(nburning,-2:2)
       REAL_T burn_coarse(nburning)
-      INTEGER_T n_burn(nten,-2:2)
+      INTEGER_T n_burn_interface(nten,-2:2)
+      INTEGER_T n_burn_material(nmat,0:2)
       INTEGER_T burnstat
       INTEGER_T bcomp
       REAL_T rburnstat
@@ -1169,10 +1171,10 @@ stop
       INTEGER_T ncomp_expect
 
       if (velflag.eq.0) then
-       ncomp_per=2  ! interface temperature and mass fraction
+       ncomp_per=EXTRAP_PER_TSAT ! interface temperature and mass fraction
        ncomp_expect=nten*(ncomp_per+1)
       else if (velflag.eq.1) then
-       ncomp_per=SDIM
+       ncomp_per=EXTRAP_PER_BURNING
        ncomp_expect=nten*(ncomp_per+1)
       else if (velflag.eq.2) then
        ncomp_per=0
@@ -1228,7 +1230,7 @@ stop
       do ifine=growlo(1),growhi(1)
       do jfine=growlo(2),growhi(2)
       do kfine=growlo(3),growhi(3)
-FIX ME
+
        do dir=1,nburning
         do iflag=-2,2
          burn_fine(dir,iflag)=zero
@@ -1239,7 +1241,12 @@ FIX ME
 
        do iten=1,nten
         do iflag=-2,2
-         n_burn(iten,iflag)=0
+         n_burn_interface(iten,iflag)=0
+        enddo
+       enddo
+       do im=1,nmat
+        do iflag=0,2
+         n_burn_material(iten,iflag)=0
         enddo
        enddo
 
@@ -1296,35 +1303,80 @@ FIX ME
                endif
               enddo ! dir
 
-              do iten=1,nten
-               rburnstat=burn_coarse(iten)
-               burnstat=NINT(rburnstat)
-               if ((burnstat.eq.0).and.(rburnstat.eq.zero)) then
-                ! do nothing (burn_fine and n_burn already init to 0)
-               else if (((burnstat.eq.1).and.(rburnstat.eq.one)).or.  &
-                        ((burnstat.eq.2).and.(rburnstat.eq.two)).or.  &
-                        ((burnstat.eq.-1).and.(rburnstat.eq.-one)).or. &
-                        ((burnstat.eq.-2).and.(rburnstat.eq.-two))) then
-                n_burn(iten,burnstat)=n_burn(iten,burnstat)+1
-                do dir=1,ncomp_per
-                 bcomp=nten+(iten-1)*ncomp_per+dir
-                 burn_fine(bcomp,burnstat)= &
+              if ((velflag.eq.0).or &
+                  (velflag.eq.1)) then
+
+               do iten=1,nten
+                rburnstat=burn_coarse(iten)
+                burnstat=NINT(rburnstat)
+                if ((burnstat.eq.0).and.(rburnstat.eq.zero)) then
+                 ! do nothing (burn_fine and n_burn_interface already init to 0)
+                else if (((burnstat.eq.1).and.(rburnstat.eq.one)).or.  &
+                         ((burnstat.eq.2).and.(rburnstat.eq.two)).or.  &
+                         ((burnstat.eq.-1).and.(rburnstat.eq.-one)).or. &
+                         ((burnstat.eq.-2).and.(rburnstat.eq.-two))) then
+                 n_burn_interface(iten,burnstat)= &
+                   n_burn_interface(iten,burnstat)+1
+                 do dir=1,ncomp_per
+                  bcomp=nten+(iten-1)*ncomp_per+dir
+                  burn_fine(bcomp,burnstat)= &
                    burn_fine(bcomp,burnstat)+burn_coarse(bcomp)
-                enddo ! dir
-               else
-                print *,"burnstat or rburnstatus invalid"
-                print *,"nmat,nten,iten,burnstat,rburnstat ",  &
-                   nmat,nten,iten,burnstat,rburnstat
-                do iflag=-2,2
-                 print *,"iflag ",iflag
-                 print *,"n_burn(iten,iflag) ",n_burn(iten,iflag)
-                 print *,"n_overlap ",n_overlap
-                 print *,"ifine,jfine,kfine ",ifine,jfine,kfine
-                 print *,"ic,jc,kc ",ic,jc,kc
-                 stop
-                enddo ! iflag=-2,2
-               endif
-              enddo ! iten=1..nten
+                 enddo ! dir
+                else
+                 print *,"burnstat or rburnstatus invalid"
+                 print *,"nmat,nten,iten,burnstat,rburnstat ",  &
+                    nmat,nten,iten,burnstat,rburnstat
+                 do iflag=-2,2
+                  print *,"iflag ",iflag
+                  print *,"n_burn_interface(iten,iflag) ", &
+                    n_burn_interface(iten,iflag)
+                  print *,"n_overlap ",n_overlap
+                  print *,"ifine,jfine,kfine ",ifine,jfine,kfine
+                  print *,"ic,jc,kc ",ic,jc,kc
+                  stop
+                 enddo ! iflag=-2,2
+                endif
+               enddo ! iten=1..nten
+
+              else if (velflag.eq.2) then
+
+               do im=1,nmat
+                rburnstat=burn_coarse(DRAGCOMP_FLAG+im)
+                burnstat=NINT(rburnstat)
+                if ((burnstat.eq.0).and.(rburnstat.eq.zero)) then
+                 ! do nothing (burn_fine and n_burn already init to 0)
+                else if (((burnstat.eq.1).and.(rburnstat.eq.one)).or.  &
+                         ((burnstat.eq.2).and.(rburnstat.eq.two))) then
+                 n_burn_material(iten,burnstat)= &
+                    n_burn_material(iten,burnstat)+1
+
+FIX ME
+                 do dir=1,ncomp_per
+                  bcomp=nten+(iten-1)*ncomp_per+dir
+                  burn_fine(bcomp,burnstat)= &
+                   burn_fine(bcomp,burnstat)+burn_coarse(bcomp)
+                 enddo ! dir
+                else
+                 print *,"burnstat or rburnstatus invalid"
+                 print *,"nmat,nten,iten,burnstat,rburnstat ",  &
+                    nmat,nten,iten,burnstat,rburnstat
+                 do iflag=-2,2
+                  print *,"iflag ",iflag
+                  print *,"n_burn(iten,iflag) ",n_burn(iten,iflag)
+                  print *,"n_overlap ",n_overlap
+                  print *,"ifine,jfine,kfine ",ifine,jfine,kfine
+                  print *,"ic,jc,kc ",ic,jc,kc
+                  stop
+                 enddo ! iflag=-2,2
+                endif
+               enddo ! iten=1..nten
+
+
+
+              else
+               print *,"velflag invalid"
+               stop
+              endif
 
              else if (testwt.eq.zero) then
               print *,"testwt cannot be 0"

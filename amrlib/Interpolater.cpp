@@ -5,7 +5,7 @@
 #include <AMReX_Geometry.H>
 #include <Interpolater.H>
 #include <INTERP_F.H>
-#include <DRAG_COMP.H>
+#include <EXTRAP_COMP.H>
 
 namespace amrex {
 
@@ -383,9 +383,9 @@ BurnVelInterp::interp (Real time,
 
  int velflag=0;
 
- if (burnvel_ncomp_per==2) { // interface temperature, mass fraction
+ if (burnvel_ncomp_per==EXTRAP_PER_TSAT) {//interface temperature,mass fraction
   velflag=0;
- } else if (burnvel_ncomp_per==AMREX_SPACEDIM) {
+ } else if (burnvel_ncomp_per==EXTRAP_PER_BURNING) {
   velflag=1;
  } else if (burnvel_ncomp_per==0) {
   velflag=2;
