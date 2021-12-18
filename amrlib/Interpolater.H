@@ -237,6 +237,7 @@ public:
     int burnvel_nmat;
     int burnvel_nten;
     int burnvel_ncomp_per;
+    int burnvel_ncomp;
 
     virtual ~BurnVelInterp ();
     virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type);

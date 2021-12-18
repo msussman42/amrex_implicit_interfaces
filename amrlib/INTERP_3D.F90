@@ -10,6 +10,7 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 #include "INTERP_F.H"
+#include "EXTRAP_COMP.H"
 
 #define POLYGON_LIST_MAX (1000)
 
@@ -23,7 +24,11 @@ print *,"dimension bust"
 stop
 #endif
 
-      subroutine FORT_OVERRIDE_FINEST_LEVEL(cc_finest_level)
+      module interp_module
+
+      subroutine fort_override_finest_level(cc_finest_level) &
+      bind(c,name='fort_override_finest_level')
+
       use probcommon_module
 
       IMPLICIT NONE
@@ -38,13 +43,15 @@ stop
       fort_finest_level=cc_finest_level
 
       return
-      end subroutine FORT_OVERRIDE_FINEST_LEVEL
+      end subroutine fort_override_finest_level
 
-      subroutine FORT_GL_SLAB( &
+      subroutine fort_gl_slab( &
        time_array, &
        slab_dt_type, &
        cc_time_order, &
-       slablow,slabhigh)
+       slablow,slabhigh) &
+      bind(c,name='fort_gl_slab')
+
       use LegendreNodes
       use probcommon_module
       use global_utility_module
@@ -101,9 +108,9 @@ stop
       enddo
 
       return
-      end subroutine FORT_GL_SLAB
+      end subroutine fort_gl_slab
 
-      subroutine FORT_MULTIMOFINTERP( &
+      subroutine fort_multimofinterp( &
        time, &
        datamof,DIMS(dmof), &
        clo,chi, &
@@ -113,7 +120,9 @@ stop
        problo,dxf,dxc,nmat, &
        ngeom_recon_test,ngeom_raw_test, &
        levelc,levelf, &
-       bfact_coarse,bfact_fine)
+       bfact_coarse,bfact_fine) &
+      bind(c,name='fort_multimofinterp')
+
       use geometry_intersect_module
       use MOF_routines_module
       use global_utility_module
@@ -457,10 +466,10 @@ stop
       enddo ! ifine,jfine,kfine
  
       return 
-      end subroutine FORT_MULTIMOFINTERP
+      end subroutine fort_multimofinterp
 
 
-      subroutine FORT_LSHOINTERP( &
+      subroutine fort_lshointerp( &
        LSHOInterp_LO, &
        clsdata,DIMS(clsdata), &
        clo,chi, &
@@ -471,7 +480,9 @@ stop
        nmat, &
        ncomp, &
        levelc,levelf, &
-       bfact_coarse,bfact_fine)
+       bfact_coarse,bfact_fine) &
+      bind(c,name='fort_lshointerp')
+
       use geometry_intersect_module
       use MOF_routines_module
       use global_utility_module
@@ -734,7 +745,7 @@ stop
       enddo ! ifine,jfine,kfine
  
       return 
-      end subroutine FORT_LSHOINTERP
+      end subroutine fort_lshointerp
 
 
 
@@ -742,7 +753,7 @@ stop
       ! 1. get MOF data with 1 ghost cell (so that CMOF can be chosen)
       ! 2. reconstruct interior cells only.
       ! 3. do extended filpatch; MOF used for coarse/fine and ext_dir cells.
-      subroutine FORT_MULTIEXTMOFINTERP( &
+      subroutine fort_multiextmofinterp( &
        time, &
        datamof,DIMS(dmof), &
        fdatamof,DIMS(fdmof), &
@@ -752,7 +763,9 @@ stop
        nmat, &
        ngeom_recon_test,ngeom_raw_test, &
        levelc,levelf, &
-       bfact_coarse,bfact_fine)
+       bfact_coarse,bfact_fine) &
+      bind(c,name='fort_multiextmofinterp')
+
       use geometry_intersect_module
       use MOF_routines_module
       use global_utility_module
@@ -1091,10 +1104,10 @@ stop
       enddo ! ifine,jfine,kfine
  
       return 
-      end subroutine FORT_MULTIEXTMOFINTERP
+      end subroutine fort_multiextmofinterp
 
 
-      subroutine FORT_EXT_BURNVEL_INTERP( &
+      subroutine fort_ext_burnvel_interp( &
        velflag, &
        time, &
        cburn,DIMS(cburn), &
@@ -1106,7 +1119,9 @@ stop
        nten, &
        nburning, &
        levelc,levelf, &
-       bfact_coarse,bfact_fine)
+       bfact_coarse,bfact_fine) &
+      bind(c,name='fort_ext_burnvel_interp')
+
       use global_utility_module
       use probcommon_module
 
@@ -1151,11 +1166,17 @@ stop
       INTEGER_T bcomp
       REAL_T rburnstat
       INTEGER_T ncomp_per
+      INTEGER_T ncomp_expect
 
       if (velflag.eq.0) then
        ncomp_per=2  ! interface temperature and mass fraction
+       ncomp_expect=nten*(ncomp_per+1)
       else if (velflag.eq.1) then
        ncomp_per=SDIM
+       ncomp_expect=nten*(ncomp_per+1)
+      else if (velflag.eq.2) then
+       ncomp_per=0
+       ncomp_expect=N_DRAG
       else
        print *,"velflag invalid"
        stop
@@ -1190,7 +1211,7 @@ stop
        print *,"nten invalid"
        stop
       endif
-      if (nburning.eq.nten*(ncomp_per+1)) then
+      if (nburning.eq.ncomp_expect) then
        ! do nothing
       else
        print *,"nburning invalid"
@@ -1207,7 +1228,7 @@ stop
       do ifine=growlo(1),growhi(1)
       do jfine=growlo(2),growhi(2)
       do kfine=growlo(3),growhi(3)
-
+FIX ME
        do dir=1,nburning
         do iflag=-2,2
          burn_fine(dir,iflag)=zero
@@ -1387,10 +1408,10 @@ stop
       enddo ! ifine,jfine,kfine
  
       return 
-      end subroutine FORT_EXT_BURNVEL_INTERP
+      end subroutine fort_ext_burnvel_interp
 
 
-      subroutine FORT_PCINTERP ( &
+      subroutine fort_pcinterp ( &
        grid_type, &
        zapflag, &
        crse_data, &
@@ -1404,7 +1425,8 @@ stop
        dxf,dxc, &
        nvar, &
        levelc,levelf, &
-       bfact_coarse,bfact_fine)
+       bfact_coarse,bfact_fine) &
+      bind(c,name='fort_pcinterp')
 
       use global_utility_module
       use probcommon_module
@@ -1630,7 +1652,7 @@ stop
       enddo
       enddo ! looping ifine,jfine,kfine
 
-      end subroutine FORT_PCINTERP
+      end subroutine fort_pcinterp
 
 
       ! enable_spectral:
@@ -1638,7 +1660,7 @@ stop
       ! 1 - space/time spectral
       ! 2 - space spectral only
       ! 3 - time spectral only
-      subroutine FORT_SEMINTERP ( &
+      subroutine fort_seminterp ( &
        enable_spectral, &
        dxc,dxf, &
        crse,DIMS(crse), &
@@ -1646,7 +1668,8 @@ stop
        fblo,fbhi, &
        nvar, &
        levelc,levelf, &
-       bfact_coarse,bfact_fine)
+       bfact_coarse,bfact_fine) &
+      bind(c,name='fort_seminterp')
 
       use global_utility_module
       use probcommon_module
@@ -1852,15 +1875,16 @@ stop
 
       deallocate(fcoarse)
 
-      end subroutine FORT_SEMINTERP
+      end subroutine fort_seminterp
 
-      subroutine FORT_MASKINTERPPC ( &
+      subroutine fort_maskinterppc ( &
        crse,DIMS(crse), &
        fine,DIMS(fine), &
        fblo,fbhi, &
        nvar, &
        levelc,levelf, &
-       bfact_coarse,bfact_fine)
+       bfact_coarse,bfact_fine) &
+      bind(c,name='fort_maskinterppc')
 
       use global_utility_module
       use probcommon_module
@@ -2032,7 +2056,7 @@ stop
       enddo
       enddo ! looping ifine,jfine,kfine
 
-      end subroutine FORT_MASKINTERPPC
+      end subroutine fort_maskinterppc
 
 
       ! cloMAC,chiMAC and floMAC,fhiMAC are face centered boxes
@@ -2042,7 +2066,7 @@ stop
       ! 1 - space/time spectral
       ! 2 - space spectral only
       ! 3 - time spectral only
-      subroutine FORT_EDGEINTERP( &
+      subroutine fort_edgeinterp( &
        enable_spectral, &
        grid_type, & ! -1...5
        cdata, &
@@ -2055,7 +2079,8 @@ stop
        dxf,dxc, &
        nvar, &
        levelc,levelf, &
-       bfact_coarse,bfact_fine)
+       bfact_coarse,bfact_fine) &
+      bind(c,name='fort_edgeinterp')
 
       use global_utility_module
       use probcommon_module
@@ -2344,5 +2369,7 @@ stop
       deallocate(fcoarse)
 
       return 
-      end subroutine FORT_EDGEINTERP
+      end subroutine fort_edgeinterp
+
+      end module interp_module
 
