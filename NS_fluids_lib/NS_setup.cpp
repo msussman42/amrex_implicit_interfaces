@@ -7,6 +7,7 @@
 #include <PROB_F.H>
 #include <DERIVE_F.H>
 #include <NAVIERSTOKES_F.H>
+#include <GLOBALUTIL_F.H>
 #include <INTEGRATED_QUANTITY.H>
 #include <iostream>
 #include <sstream>
@@ -1401,9 +1402,7 @@ NavierStokes::variableSetUp ()
 // newdata FABS have ncomp=desc->nComp() components.
 //
     desc_lst.addDescriptor(State_Type,IndexType::TheCellType(),
-     1,nc,&pc_interp,state_holds_data);
-
- FIX ME use num_interfaces and num_materials add drag extrap stuff
+     1,STATE_NCOMP,&pc_interp,state_holds_data);
 
     desc_lstGHOST.addDescriptor(State_Type,IndexType::TheCellType(),
      1,EXTRAP_NCOMP,&pc_interp,null_state_holds_data);
@@ -1433,7 +1432,6 @@ NavierStokes::variableSetUp ()
      desc_lstGHOST.setComponent(State_Type,dcomp,
       w_extrap_str,bc,FORT_EXTRAPFILL,&pc_interp);
     }
-
 
     // in NavierStokes::VOF_Recon
     // 1. get MOF data with 1 ghost cell (so that CMOF can be chosen)
@@ -1529,13 +1527,13 @@ NavierStokes::variableSetUp ()
     set_extrap_bc(bc,phys_bc);
     std::string maskextrap_str="maskSEMextrap"; 
 
-    desc_lstGHOST.setComponent(State_Type,mask_scomp,
+    desc_lstGHOST.setComponent(State_Type,EXTRAPCOMP_MASK,
       maskextrap_str,bc,FORT_EXTRAPFILL,&mask_sem_interp);
 
     Vector<std::string> BURNVEL_names;
-    BURNVEL_names.resize(nburning);
+    BURNVEL_names.resize(EXTRAP_NCOMP_BURNING);
     Vector<BCRec> BURNVEL_bcs;
-    BURNVEL_bcs.resize(nburning);
+    BURNVEL_bcs.resize(EXTRAP_NCOMP_BURNING);
 
     for (int im=0;im<nten;im++) {
 
@@ -1581,7 +1579,7 @@ NavierStokes::variableSetUp ()
      set_z_vel_extrap_bc(BURNVEL_bcs[ibase_burnvel],phys_bc);
 #endif    
 
-     if (ibase_burnvel!=nten+(im+1)*ncomp_per_burning-1)
+     if (ibase_burnvel!=nten+(im+1)*EXTRAP_PER_BURNING-1)
       amrex::Error("ibase_burnvel invalid");
 
     }  // im=0..nten-1  (burning velocity)
@@ -1591,15 +1589,15 @@ NavierStokes::variableSetUp ()
 
     burnvel_interp.burnvel_nmat=nmat;
     burnvel_interp.burnvel_nten=nten;
-    burnvel_interp.burnvel_ncomp_per=ncomp_per_burning;
+    burnvel_interp.burnvel_ncomp_per=EXTRAP_PER_BURNING;
 
     desc_lstGHOST.setComponent(State_Type,EXTRAPCOMP_BURNVEL,BURNVEL_names,
      BURNVEL_bcs,BURNVEL_fill_class,&burnvel_interp);
 
     Vector<std::string> TSAT_names;
-    TSAT_names.resize(ncomp_tsat);
+    TSAT_names.resize(EXTRAP_NCOMP_TSAT);
     Vector<BCRec> TSAT_bcs;
-    TSAT_bcs.resize(ncomp_tsat);
+    TSAT_bcs.resize(EXTRAP_NCOMP_TSAT);
 
     for (int im=0;im<nten;im++) {
 
@@ -1618,7 +1616,7 @@ NavierStokes::variableSetUp ()
 
     for (int im=0;im<nten;im++) {
 
-     int ibase_tsat=nten+im*ncomp_per_tsat;
+     int ibase_tsat=nten+im*EXTRAP_PER_TSAT;
 
      std::stringstream im_string_stream(std::stringstream::in |
         std::stringstream::out);
@@ -1638,7 +1636,7 @@ NavierStokes::variableSetUp ()
      TSAT_names[ibase_tsat]=massfrac_str;
      set_extrap_bc(TSAT_bcs[ibase_tsat],phys_bc);
 
-     if (ibase_tsat!=nten+(im+1)*ncomp_per_tsat-1)
+     if (ibase_tsat!=nten+(im+1)*EXTRAP_PER_TSAT-1)
       amrex::Error("ibase_tsat invalid");
 
     }  // im=0..nten-1  (TSAT)
@@ -1649,12 +1647,12 @@ NavierStokes::variableSetUp ()
     tsat_interp.burnvel_nmat=nmat;
     tsat_interp.burnvel_nten=nten;
     //interface temperature and mass fraction
-    tsat_interp.burnvel_ncomp_per=ncomp_per_tsat; 
+    tsat_interp.burnvel_ncomp_per=EXTRAP_PER_TSAT; 
 
     desc_lstGHOST.setComponent(State_Type,EXTRAPCOMP_TSAT,TSAT_names,
      TSAT_bcs,TSAT_fill_class,&tsat_interp);
 
-     // setComponent: 0..NUM_TENSOR_TYPE-1
+     // setComponent: 0..ENUM_NUM_TENSOR_TYPE-1
     set_tensor_extrap_components(coord,CC_postfix_str,State_Type,
 		    EXTRAPCOMP_ELASTIC);
 
@@ -1686,9 +1684,42 @@ NavierStokes::variableSetUp ()
     }
 #endif
 
-    if (ibase_state_tensor!=ncghost_state-1)
+    if (ibase_state_tensor!=EXTRAPCOMP_ELASTIC+EXTRAP_NCOMP_ELASTIC-1)
      amrex::Error("ibase_state_tensor invalid");
 
+    Vector<std::string> DRAG_names;
+    DRAG_names.resize(N_DRAG);
+    Vector<BCRec> DRAG_bcs;
+    DRAG_bcs.resize(N_DRAG);
+
+    for (int drag_comp=0;drag_comp<N_DRAG;drag_comp++) {
+     int drag_im=-1;
+     int drag_type=fort_drag_type(drag_comp,drag_im);
+     std::stringstream im_string_stream(std::stringstream::in |
+        std::stringstream::out);
+     im_string_stream << drag_im+1;
+     std::string im_string=im_string_stream.str();
+     std::string status_str="drag"; 
+     status_str+=im_string; 
+     std::string status_str2="type"; 
+     status_str+=status_str2; 
+
+     std::stringstream type_string_stream(std::stringstream::in |
+        std::stringstream::out);
+     type_string_stream << drag_type;
+     std::string type_string=type_string_stream.str();
+     status_str+=type_string; 
+
+     std::string status_str3="comp"; 
+     status_str+=status_str2; 
+
+     std::stringstream comp_string_stream(std::stringstream::in |
+        std::stringstream::out);
+     comp_string_stream << drag_comp;
+     std::string comp_string=comp_string_stream.str();
+     status_str+=comp_string; 
+
+     DRAG_names[drag_comp]=status_str;
 
     // boundary routines are of type BndryFuncDefaultSUSSMAN
     // setComponent expects a parameter of type 
