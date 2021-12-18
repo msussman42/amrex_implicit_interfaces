@@ -397,13 +397,13 @@ NavierStokes::override_enable_spectral(int enable_spectral_in) {
   sem_interp_HIGH_PARM.interp_enable_spectral=enable_spectral_in;
   for (int im=0;im<nmat;im++) {
    int ibase=im*num_state_material;
-   desc_lst.resetMapper(State_Type,scomp_states+ibase+DenVar,
+   desc_lst.resetMapper(State_Type,STATECOMP_STATES+ibase+ENUM_DENVAR,
      &sem_interp_HIGH_PARM);
-   desc_lst.resetMapper(State_Type,scomp_states+ibase+TemperatureVar,
+   desc_lst.resetMapper(State_Type,STATECOMP_STATES+ibase+ENUM_TEMPERATUREVAR,
      &sem_interp_HIGH_PARM);
   } // im=0..nmat-1
 
-  for (int imvel=0;imvel<ncomp_vel_pres;imvel++) {
+  for (int imvel=0;imvel<STATECOMP_STATES;imvel++) {
    desc_lst.resetMapper(State_Type,imvel,&sem_interp_HIGH_PARM);
   }
 
@@ -412,13 +412,13 @@ NavierStokes::override_enable_spectral(int enable_spectral_in) {
   sem_interp_LOW_PARM.interp_enable_spectral=enable_spectral_in;
   for (int im=0;im<nmat;im++) {
    int ibase=im*num_state_material;
-   desc_lst.resetMapper(State_Type,scomp_states+ibase+DenVar,
+   desc_lst.resetMapper(State_Type,STATECOMP_STATES+ibase+ENUM_DENVAR,
      &sem_interp_LOW_PARM);
-   desc_lst.resetMapper(State_Type,scomp_states+ibase+TemperatureVar,
+   desc_lst.resetMapper(State_Type,STATECOMP_STATES+ibase+ENUM_TEMPERATUREVAR,
      &sem_interp_LOW_PARM);
   } // im=0..nmat-1
 
-  for (int imvel=0;imvel<ncomp_vel_pres;imvel++) {
+  for (int imvel=0;imvel<STATECOMP_STATES;imvel++) {
    desc_lst.resetMapper(State_Type,imvel,&sem_interp_LOW_PARM);
   }
  } else
@@ -1552,7 +1552,7 @@ NavierStokes::variableSetUp ()
 
     for (int im=0;im<nten;im++) {
 
-     int ibase_burnvel=nten+im*ncomp_per_burning;
+     int ibase_burnvel=nten+im*EXTRAP_PER_BURNING;
 
      std::stringstream im_string_stream(std::stringstream::in |
         std::stringstream::out);
@@ -1590,6 +1590,7 @@ NavierStokes::variableSetUp ()
     burnvel_interp.burnvel_nmat=nmat;
     burnvel_interp.burnvel_nten=nten;
     burnvel_interp.burnvel_ncomp_per=EXTRAP_PER_BURNING;
+    burnvel_interp.burnvel_ncomp=EXTRAP_NCOMP_BURNING;
 
     desc_lstGHOST.setComponent(State_Type,EXTRAPCOMP_BURNVEL,BURNVEL_names,
      BURNVEL_bcs,BURNVEL_fill_class,&burnvel_interp);
@@ -1648,6 +1649,7 @@ NavierStokes::variableSetUp ()
     tsat_interp.burnvel_nten=nten;
     //interface temperature and mass fraction
     tsat_interp.burnvel_ncomp_per=EXTRAP_PER_TSAT; 
+    tsat_interp.burnvel_ncomp=EXTRAP_NCOMP_TSAT; 
 
     desc_lstGHOST.setComponent(State_Type,EXTRAPCOMP_TSAT,TSAT_names,
      TSAT_bcs,TSAT_fill_class,&tsat_interp);
@@ -1747,10 +1749,10 @@ NavierStokes::variableSetUp ()
     StateDescriptor::BndryFunc DRAG_fill_class(FORT_EXTRAPFILL,
        FORT_GROUP_EXTRAPFILL);
 
-FIX ME add "total_ncomp" to BurnVelInterp
     drag_interp.burnvel_nmat=nmat;
     drag_interp.burnvel_nten=nten;
     drag_interp.burnvel_ncomp_per=0;
+    drag_interp.burnvel_ncomp=N_DRAG;
 
     desc_lstGHOST.setComponent(State_Type,EXTRAPCOMP_DRAG,DRAG_names,
      DRAG_bcs,DRAG_fill_class,&drag_interp);
@@ -1807,7 +1809,7 @@ FIX ME add "total_ncomp" to BurnVelInterp
      // pressure
     set_pressure_bc(bc,phys_bc_pres);
     std::string pres_str="pressure"; 
-    desc_lst.setComponent(State_Type,AMREX_SPACEDIM,
+    desc_lst.setComponent(State_Type,STATECOMP_PRES,
       pres_str,bc,FORT_PRESSUREFILL,&sem_interp_DEFAULT);
 
     Vector<std::string> MOFstate_names;
@@ -1933,7 +1935,7 @@ FIX ME add "total_ncomp" to BurnVelInterp
      set_z_vel_bc(MOF_bcs[ibase_mof],phys_bc);
 #endif    
 
-     if (ngeom_raw==NUM_MOF_VAR) {
+     if (ngeom_raw==ENUM_NUM_MOF_VAR) {
       amrex::Error("cannot have ngeom_raw=ngeom_recon");
      } else if (ngeom_raw==AMREX_SPACEDIM+1) {
       // do nothing
@@ -1958,7 +1960,7 @@ FIX ME add "total_ncomp" to BurnVelInterp
      MOF_bcs,MOF_fill_class,&multi_mof_interp);
 
     set_scalar_bc(bc,phys_bc);
-    desc_lst.setComponent(State_Type,nc-1,"errorind",bc,
+    desc_lst.setComponent(State_Type,STATECOMP_ERR,"errorind",bc,
       FORT_SCALARFILL,&pc_interp_null);
 
 }  // end subroutine variableSetUp

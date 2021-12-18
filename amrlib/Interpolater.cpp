@@ -177,7 +177,7 @@ multiMOFInterp::interp (Real time,
   // 2 loops:
   // 1. MOF reconstruction on coarse level
   // 2. interpolate from coarse to fine (traverse fine grid)
- FORT_MULTIMOFINTERP(
+ fort_multimofinterp(
   &time,
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
   clo,chi,
@@ -283,7 +283,7 @@ multiEXTMOFInterp::interp (Real time,
  // 1. get MOF data with 1 ghost cell (so that CMOF can be chosen)
  // 2. reconstruct interior cells only.
  // 3. do extended filpatch; MOF used for coarse/fine and ext_dir cells.
- FORT_MULTIEXTMOFINTERP(
+ fort_multiextmofinterp(
   &time,
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
   fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
@@ -376,6 +376,11 @@ BurnVelInterp::interp (Real time,
  if (burnvel_ncomp_per==0)
   ncomp_check=N_DRAG;
 
+ if (ncomp_check==burnvel_ncomp) {
+  // do nothing
+ } else
+  amrex::Error("ncomp_check invalid");
+
  int velflag=0;
 
  if (burnvel_ncomp_per==2) { // interface temperature, mass fraction
@@ -403,11 +408,11 @@ BurnVelInterp::interp (Real time,
   std::cout << "ncomp " << ncomp << '\n';
   amrex::Error("must interpolate all burnvel data at once");
  }
+  // if (velflag=0 or 1):
   // first nmat components are the status.
   // next sdim * nmat components are the burning velocities.
   
- FIX ME
- FORT_EXT_BURNVEL_INTERP(
+ fort_ext_burnvel_interp(
   &velflag,
   &time,
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
@@ -618,7 +623,7 @@ PCInterp::interp (
  int zapflag=0;
 
    //fine_bx = fine_region & fine.box();
- FORT_PCINTERP (
+ fort_pcinterp (
   &grid_type,
   &zapflag,
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
@@ -712,7 +717,7 @@ LSHOInterp::interp (
   amrex::Error("must interpolate all ls ho data at once");
  }
 
- FORT_LSHOINTERP (
+ fort_lshointerp (
   &LSHOInterp_LO,
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
   clo,chi,
@@ -801,7 +806,7 @@ SEMInterp::interp (
    // 1 - space/time spectral
    // 2 - space spectral only
    // 3 - time spectral only
- FORT_SEMINTERP (
+ fort_seminterp (
   &interp_enable_spectral,
   dxc,dxf, 
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
@@ -877,7 +882,7 @@ maskSEMInterp::interp (
  const Real* cdat  = crse.dataPtr(crse_comp);
  Real*       fdat  = fine.dataPtr(fine_comp);
 
- FORT_MASKINTERPPC (
+ fort_maskinterppc (
   cdat,
   AMREX_ARLIM(clo),AMREX_ARLIM(chi),
   fdat,
@@ -1033,7 +1038,7 @@ PCInterpNull::interp (
 
    //fine_bx = fine_region & fine.box();
  int zapflag=1;
- FORT_PCINTERP (
+ fort_pcinterp (
   &grid_type,
   &zapflag,
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
@@ -1157,7 +1162,7 @@ UMACInterp::interp(
   // 1 - space/time spectral
   // 2 - space spectral only
   // 3 - time spectral only
- FORT_EDGEINTERP(
+ fort_edgeinterp(
    &interp_enable_spectral,
    &grid_type,
    crse.dataPtr(crse_comp),
