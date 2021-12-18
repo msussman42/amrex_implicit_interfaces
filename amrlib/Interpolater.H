@@ -301,6 +301,7 @@ extern multiMOFInterp            multi_mof_interp;
 extern multiEXTMOFInterp         multi_extmof_interp;
 extern BurnVelInterp             burnvel_interp;
 extern BurnVelInterp             tsat_interp;
+extern BurnVelInterp             drag_interp;
 extern UMACInterp                umac_interp;
 extern UMACInterp                xd_mac_interp;
 extern UMACInterp                xd_mac_lo_interp;

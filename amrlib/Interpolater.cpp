@@ -5,6 +5,7 @@
 #include <AMReX_Geometry.H>
 #include <Interpolater.H>
 #include <INTERP_F.H>
+#include <DRAG_COMP.H>
 
 namespace amrex {
 
@@ -22,6 +23,7 @@ multiMOFInterp            multi_mof_interp;
 multiEXTMOFInterp         multi_extmof_interp;
 BurnVelInterp             burnvel_interp;
 BurnVelInterp             tsat_interp;
+BurnVelInterp             drag_interp;
 UMACInterp                umac_interp;
 UMACInterp                xd_mac_interp;
 UMACInterp                xd_mac_lo_interp;
@@ -371,6 +373,8 @@ BurnVelInterp::interp (Real time,
  int nmat=burnvel_nmat;
  int nten=burnvel_nten;
  int ncomp_check=nten+nten*burnvel_ncomp_per;
+ if (burnvel_ncomp_per==0)
+  ncomp_check=N_DRAG;
 
  int velflag=0;
 
@@ -378,6 +382,8 @@ BurnVelInterp::interp (Real time,
   velflag=0;
  } else if (burnvel_ncomp_per==AMREX_SPACEDIM) {
   velflag=1;
+ } else if (burnvel_ncomp_per==0) {
+  velflag=2;
  } else
   amrex::Error("burnvel_ncomp_per invalid");
 
@@ -399,6 +405,8 @@ BurnVelInterp::interp (Real time,
  }
   // first nmat components are the status.
   // next sdim * nmat components are the burning velocities.
+  
+ FIX ME
  FORT_EXT_BURNVEL_INTERP(
   &velflag,
   &time,

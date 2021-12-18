@@ -7,13 +7,12 @@ ngrow_make_distance=3 ghost cells and gives the local force/torque
 applied to a given material "im_test"
 #endif
 
-#define DRAG_TYPE_STATUS (0)
-#define DRAG_TYPE_UFORCE (1)
-#define DRAG_TYPE_VFORCE (2)
-#define DRAG_TYPE_WFORCE (3)
-#define DRAG_TYPE_SCALAR (4)
-#define DRAG_TYPE_FLAG (5)
-#define DRAG_TYPE_NEXT (6)
+#define DRAG_TYPE_UFORCE (0)
+#define DRAG_TYPE_VFORCE (1)
+#define DRAG_TYPE_WFORCE (2)
+#define DRAG_TYPE_SCALAR (3)
+#define DRAG_TYPE_FLAG (4)
+#define DRAG_TYPE_NEXT (5)
 
 #define DRAGCOMP_BODYFORCE (0)
 #define DRAGCOMP_FORCE (DRAGCOMP_BODYFORCE+3*num_materials)

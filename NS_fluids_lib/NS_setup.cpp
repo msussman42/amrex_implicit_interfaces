@@ -1695,31 +1695,66 @@ NavierStokes::variableSetUp ()
     for (int drag_comp=0;drag_comp<N_DRAG;drag_comp++) {
      int drag_im=-1;
      int drag_type=fort_drag_type(drag_comp,drag_im);
-     std::stringstream im_string_stream(std::stringstream::in |
+
+     if ((drag_im>=0)&&
+         (drag_im<num_materials)&&
+         (drag_type>=0)) {
+
+      std::stringstream im_string_stream(std::stringstream::in |
         std::stringstream::out);
-     im_string_stream << drag_im+1;
-     std::string im_string=im_string_stream.str();
-     std::string status_str="drag"; 
-     status_str+=im_string; 
-     std::string status_str2="type"; 
-     status_str+=status_str2; 
+      im_string_stream << drag_im+1;
+      std::string im_string=im_string_stream.str();
 
-     std::stringstream type_string_stream(std::stringstream::in |
+      std::string status_str="drag"; 
+      status_str+=im_string; 
+
+      std::string status_str2="type"; 
+      status_str+=status_str2; 
+
+      std::stringstream type_string_stream(std::stringstream::in |
         std::stringstream::out);
-     type_string_stream << drag_type;
-     std::string type_string=type_string_stream.str();
-     status_str+=type_string; 
+      type_string_stream << drag_type;
+      std::string type_string=type_string_stream.str();
+      status_str+=type_string; 
 
-     std::string status_str3="comp"; 
-     status_str+=status_str2; 
+      std::string status_str3="comp"; 
+      status_str+=status_str2; 
 
-     std::stringstream comp_string_stream(std::stringstream::in |
+      std::stringstream comp_string_stream(std::stringstream::in |
         std::stringstream::out);
-     comp_string_stream << drag_comp;
-     std::string comp_string=comp_string_stream.str();
-     status_str+=comp_string; 
+      comp_string_stream << drag_comp;
+      std::string comp_string=comp_string_stream.str();
+      status_str+=comp_string; 
 
-     DRAG_names[drag_comp]=status_str;
+      DRAG_names[drag_comp]=status_str;
+
+      if (drag_type==DRAG_TYPE_UFORCE) {
+       set_x_vel_extrap_bc(DRAG_bcs[drag_comp],phys_bc);
+      } else if (drag_type==DRAG_TYPE_VFORCE) {
+       set_y_vel_extrap_bc(DRAG_bcs[drag_comp],phys_bc);
+      } else if (drag_type==DRAG_TYPE_WFORCE) {
+       set_z_vel_extrap_bc(DRAG_bcs[drag_comp],phys_bc);
+      } else if (drag_type==DRAG_TYPE_FLAG) {
+       set_extrap_bc(DRAG_bcs[drag_comp],phys_bc);
+      } else if (drag_type==DRAG_TYPE_SCALAR) {
+       set_extrap_bc(DRAG_bcs[drag_comp],phys_bc);
+      } else
+       amrex::Error("drag_type invalid");
+     } else
+      amrex::Error("drag_im or drag_type invalid");
+    } //drag_comp=0..N_DRAG-1
+
+    StateDescriptor::BndryFunc DRAG_fill_class(FORT_EXTRAPFILL,
+       FORT_GROUP_EXTRAPFILL);
+
+FIX ME add "total_ncomp" to BurnVelInterp
+    drag_interp.burnvel_nmat=nmat;
+    drag_interp.burnvel_nten=nten;
+    drag_interp.burnvel_ncomp_per=0;
+
+    desc_lstGHOST.setComponent(State_Type,EXTRAPCOMP_DRAG,DRAG_names,
+     DRAG_bcs,DRAG_fill_class,&drag_interp);
+
 
     // boundary routines are of type BndryFuncDefaultSUSSMAN
     // setComponent expects a parameter of type 
