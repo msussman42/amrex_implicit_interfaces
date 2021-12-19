@@ -1246,7 +1246,7 @@ stop
        enddo
        do im=1,nmat
         do iflag=0,2
-         n_burn_material(iten,iflag)=0
+         n_burn_material(im,iflag)=0
         enddo
        enddo
 
@@ -1344,35 +1344,49 @@ stop
                 rburnstat=burn_coarse(DRAGCOMP_FLAG+im)
                 burnstat=NINT(rburnstat)
                 if ((burnstat.eq.0).and.(rburnstat.eq.zero)) then
-                 ! do nothing (burn_fine and n_burn already init to 0)
+                 ! do nothing (burn_fine and n_burn_material already init to 0)
                 else if (((burnstat.eq.1).and.(rburnstat.eq.one)).or.  &
                          ((burnstat.eq.2).and.(rburnstat.eq.two))) then
-                 n_burn_material(iten,burnstat)= &
-                    n_burn_material(iten,burnstat)+1
+                 n_burn_material(im,burnstat)= &
+                    n_burn_material(im,burnstat)+1
 
-FIX ME
-                 do dir=1,ncomp_per
-                  bcomp=nten+(iten-1)*ncomp_per+dir
-                  burn_fine(bcomp,burnstat)= &
-                   burn_fine(bcomp,burnstat)+burn_coarse(bcomp)
-                 enddo ! dir
+                 do bcomp=1,nburning
+                  drag_type=fort_drag_type(bcomp,drag_im)
+                  if (drag_im+1.eq.im) then 
+                   if ((drag_type.ge.0).and.(drag_type.lt.DRAG_TYPE_NEXT)) then
+                    burn_fine(bcomp,burnstat)= &
+                     burn_fine(bcomp,burnstat)+burn_coarse(bcomp)
+                   else
+                    print *,"drag_type invalid"
+                    stop
+                   endif
+                  else if ((drag_im.ge.0).and.(drag_im.lt.nmat)) then
+                   if ((drag_type.ge.0).and.(drag_type.lt.DRAG_TYPE_NEXT)) then
+                    ! do nothing
+                   else
+                    print *,"drag_type invalid"
+                    stop
+                   endif
+                  else
+                   print *,"drag_im invalid"
+                   stop
+                  endif
+                 enddo ! bcomp=1..nburning
                 else
                  print *,"burnstat or rburnstatus invalid"
-                 print *,"nmat,nten,iten,burnstat,rburnstat ",  &
-                    nmat,nten,iten,burnstat,rburnstat
-                 do iflag=-2,2
+                 print *,"nmat,nten,im,burnstat,rburnstat ",  &
+                    nmat,nten,im,burnstat,rburnstat
+                 do iflag=0,2
                   print *,"iflag ",iflag
-                  print *,"n_burn(iten,iflag) ",n_burn(iten,iflag)
+                  print *,"n_burn_material(im,iflag) ", &
+                    n_burn_material(im,iflag)
                   print *,"n_overlap ",n_overlap
                   print *,"ifine,jfine,kfine ",ifine,jfine,kfine
                   print *,"ic,jc,kc ",ic,jc,kc
                   stop
-                 enddo ! iflag=-2,2
+                 enddo ! iflag=0,2
                 endif
-               enddo ! iten=1..nten
-
-
-
+               enddo ! im=1..nmat
               else
                print *,"velflag invalid"
                stop
@@ -1406,24 +1420,91 @@ FIX ME
        endif
 
        if (n_overlap.ge.1) then
-        do iten=1,nten
-         hitflag=0
-         do iflag=1,2
-          do iflag_sign=-1,1,2
-           if (hitflag.eq.0) then
-            if ((n_burn(iten,iflag*iflag_sign).gt.0).and. &
-                (n_burn(iten,iflag*iflag_sign).le.n_overlap)) then
-             hitflag=1
-             fburn(D_DECL(ifine,jfine,kfine),iten)=iflag*iflag_sign
-             do dir=1,ncomp_per
-              bcomp=nten+(iten-1)*ncomp_per+dir
-              fburn(D_DECL(ifine,jfine,kfine),bcomp)= &
-               burn_fine(bcomp,iflag*iflag_sign)/n_burn(iten,iflag*iflag_sign)
-             enddo
-            else if (n_burn(iten,iflag*iflag_sign).eq.0) then
+
+        if ((velflag.eq.0).or &
+            (velflag.eq.1)) then
+
+         do iten=1,nten
+          hitflag=0
+          do iflag=1,2
+           do iflag_sign=-1,1,2
+            if (hitflag.eq.0) then
+             if ((n_burn_interface(iten,iflag*iflag_sign).gt.0).and. &
+                 (n_burn_interface(iten,iflag*iflag_sign).le.n_overlap)) then
+              hitflag=1
+              fburn(D_DECL(ifine,jfine,kfine),iten)=iflag*iflag_sign
+              do dir=1,ncomp_per
+               bcomp=nten+(iten-1)*ncomp_per+dir
+               fburn(D_DECL(ifine,jfine,kfine),bcomp)= &
+                burn_fine(bcomp,iflag*iflag_sign)/ &
+                n_burn_interface(iten,iflag*iflag_sign)
+              enddo
+             else if (n_burn_interface(iten,iflag*iflag_sign).eq.0) then
+              ! do nothing
+             else
+              print *,"n_burn_interface(iten,iflag*iflag_sign) invalid"
+              stop
+             endif
+            else if (hitflag.eq.1) then
              ! do nothing
             else
-             print *,"n_burn(iten,iflag*iflag_sign) invalid"
+             print *,"hitflag invalid"
+             stop
+            endif
+           enddo ! iflag_sign=-1,1
+          enddo ! iflag=1,2
+
+          if (hitflag.eq.0) then
+           fburn(D_DECL(ifine,jfine,kfine),iten)=zero
+           do dir=1,ncomp_per
+            bcomp=nten+(iten-1)*ncomp_per+dir
+            fburn(D_DECL(ifine,jfine,kfine),bcomp)=zero
+           enddo
+          else if (hitflag.eq.1) then
+           ! do nothing
+          else     
+           print *,"hitflag invalid"
+           stop
+          endif
+
+         enddo ! iten=1..nten
+
+        else if (velflag.eq.2) then
+
+         do im=1,nmat
+          hitflag=0
+          do iflag=1,2
+           if (hitflag.eq.0) then
+            if ((n_burn_material(im,iflag).gt.0).and. &
+                (n_burn_material(im,iflag).le.n_overlap)) then
+             hitflag=1
+             fburn(D_DECL(ifine,jfine,kfine),DRAGCOMP_FLAG+im)=iflag
+             do bcomp=1,nburning
+              drag_type=fort_drag_type(bcomp,drag_im)
+              if (drag_im+1.eq.im) then 
+               if ((drag_type.ge.0).and.(drag_type.lt.DRAG_TYPE_NEXT)) then
+                fburn(D_DECL(ifine,jfine,kfine),bcomp)= &
+                  burn_fine(bcomp,iflag)/n_burn_material(im,iflag)
+               else
+                print *,"drag_type invalid"
+                stop
+               endif
+              else if ((drag_im.ge.0).and.(drag_im.lt.nmat)) then
+               if ((drag_type.ge.0).and.(drag_type.lt.DRAG_TYPE_NEXT)) then
+                ! do nothing
+               else
+                print *,"drag_type invalid"
+                stop
+               endif
+              else
+               print *,"drag_im invalid"
+               stop
+              endif
+             enddo ! bcomp=1..nburning
+            else if (n_burn_material(im,iflag).eq.0) then
+             ! do nothing
+            else
+             print *,"n_burn_material(im,iflag) invalid"
              stop
             endif
            else if (hitflag.eq.1) then
@@ -1432,23 +1513,55 @@ FIX ME
             print *,"hitflag invalid"
             stop
            endif
-          enddo ! iflag_sign=-1,1
-         enddo ! iflag=1,2
+          enddo ! iflag=1,2
 
-         if (hitflag.eq.0) then
-          fburn(D_DECL(ifine,jfine,kfine),iten)=zero
-          do dir=1,ncomp_per
-           bcomp=nten+(iten-1)*ncomp_per+dir
-           fburn(D_DECL(ifine,jfine,kfine),bcomp)=zero
-          enddo
-         else if (hitflag.eq.1) then
-          ! do nothing
-         else     
-          print *,"hitflag invalid"
-          stop
-         endif
+          if (hitflag.eq.0) then
 
-        enddo ! iten=1..nten
+           fburn(D_DECL(ifine,jfine,kfine),DRAGCOMP_FLAG+im)=zero
+           do bcomp=1,nburning
+            drag_type=fort_drag_type(bcomp,drag_im)
+            if (drag_im+1.eq.im) then 
+             if ((drag_type.ge.0).and. &
+                 (drag_type.lt.DRAG_TYPE_NEXT).and. &
+                 (drag_type.ne.DRAG_TYPE_FLAG)) then
+              fburn(D_DECL(ifine,jfine,kfine),bcomp)=zero
+             else if (drag_type.eq.DRAG_TYPE_FLAG) then
+              if (bcomp.eq.DRAGCOMP_FLAG+im) then
+               ! do nothing
+              else
+               print *,"bcomp or get_drag_type invalid"
+               stop
+              endif
+             else
+              print *,"drag_type invalid"
+              stop
+             endif
+            else if ((drag_im.ge.0).and.(drag_im.lt.nmat)) then
+             if ((drag_type.ge.0).and.(drag_type.lt.DRAG_TYPE_NEXT)) then
+              ! do nothing
+             else
+              print *,"drag_type invalid"
+              stop
+             endif
+            else
+             print *,"drag_im invalid"
+             stop
+            endif
+           enddo ! bcomp=1..nburning
+
+          else if (hitflag.eq.1) then
+           ! do nothing
+          else     
+           print *,"hitflag invalid"
+           stop
+          endif
+
+         enddo ! iten=1..nten
+
+        else
+         print *,"velflag invalid"
+         stop
+        endif
 
        else
         print *,"n_overlap invalid"
