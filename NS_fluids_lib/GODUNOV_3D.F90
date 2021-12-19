@@ -13,6 +13,7 @@
 ! N_EXTRA_REAL.H is in the amrlib directory.
 #include "N_EXTRA_REAL.H"
 #include "INTEGRATED_QUANTITY.H"
+#include "EXTRAP_COMP.H"
 #include "GODUNOV_F.H"
 
 
@@ -10584,8 +10585,8 @@ stop
 
       theta_cutoff=0.001
 
-      ncomp_per_tsat=2
-      if (ntsat.eq.nten*(ncomp_per_tsat+1)) then
+      ncomp_per_tsat=EXTRAP_PER_TSAT
+      if (ntsat.eq.EXTRAP_NCOMP_TSAT) then
        ! do nothing
       else
        print *,"nstat invalid"
@@ -10615,9 +10616,7 @@ stop
        print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
        stop
       endif
-      if (nstate.ne. &
-          (SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
@@ -10625,7 +10624,9 @@ stop
        print *,"level or finest_level invalid stefan solver"
        stop
       endif
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif
@@ -16699,8 +16700,8 @@ stop
        stop
       endif
 
-      ncomp_per_tsat=2
-      if (ntsat.eq.nten*(ncomp_per_tsat+1)) then
+      ncomp_per_tsat=EXTRAP_PER_TSAT
+      if (ntsat.eq.EXTRAP_NCOMP_TSAT) then
        ! do nothing
       else
        print *,"nstat invalid"
