@@ -498,7 +498,7 @@ NavierStokes::set_tensor_extrap_components(
  std::string T11_strE="T11extrap"+postfix; 
   // low order extrapolation (if EXT_DIR BCs were present)
  desc_lstGHOST.setComponent(indx,ibase_tensor_local,
-   T11_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+   T11_strE,bc,fort_extrapfill,&tensor_pc_interp);
 
  ibase_tensor_local++;
      
@@ -506,7 +506,7 @@ NavierStokes::set_tensor_extrap_components(
  set_tensor_bc(bc,phys_bc,0,1);
  std::string T12_strE="T12extrap"+postfix; 
  desc_lstGHOST.setComponent(indx,ibase_tensor_local,
-   T12_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+   T12_strE,bc,fort_extrapfill,&tensor_pc_interp);
 
  ibase_tensor_local++;
      
@@ -514,7 +514,7 @@ NavierStokes::set_tensor_extrap_components(
  set_tensor_bc(bc,phys_bc,1,1);
  std::string T22_strE="T22extrap"+postfix; 
  desc_lstGHOST.setComponent(indx,ibase_tensor_local,
-   T22_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+   T22_strE,bc,fort_extrapfill,&tensor_pc_interp);
 
  ibase_tensor_local++;
     
@@ -546,7 +546,7 @@ NavierStokes::set_tensor_extrap_components(
  
   std::string T33_strE="T33extrap"+postfix; 
   desc_lstGHOST.setComponent(indx,ibase_tensor_local,
-    T33_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+    T33_strE,bc,fort_extrapfill,&tensor_pc_interp);
 
 #if (AMREX_SPACEDIM == 3)
   ibase_tensor_local++;
@@ -555,7 +555,7 @@ NavierStokes::set_tensor_extrap_components(
   set_tensor_bc(bc,phys_bc,0,2);
   std::string T13_strE="T13extrap"+postfix; 
   desc_lstGHOST.setComponent(indx,ibase_tensor_local,
-    T13_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+    T13_strE,bc,fort_extrapfill,&tensor_pc_interp);
      
   ibase_tensor_local++;
      
@@ -563,7 +563,7 @@ NavierStokes::set_tensor_extrap_components(
   set_tensor_bc(bc,phys_bc,1,2);
   std::string T23_strE="T23extrap"+postfix; 
   desc_lstGHOST.setComponent(indx,ibase_tensor_local,
-    T23_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+    T23_strE,bc,fort_extrapfill,&tensor_pc_interp);
 #endif
 
   if (ibase_tensor_local==ibase_tensor+NUM_TENSOR_TYPE-1) {
@@ -594,7 +594,7 @@ NavierStokes::set_tensor_extrap_components_main(
  std::string T11_strE="T11main"+postfix; 
   // low order extrapolation (if EXT_DIR BCs were present)
  desc_lst.setComponent(indx,ibase_tensor_local,
-   T11_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+   T11_strE,bc,fort_extrapfill,&tensor_pc_interp);
 
  ibase_tensor_local++;
      
@@ -602,7 +602,7 @@ NavierStokes::set_tensor_extrap_components_main(
  set_tensor_bc(bc,phys_bc,0,1);
  std::string T12_strE="T12main"+postfix; 
  desc_lst.setComponent(indx,ibase_tensor_local,
-   T12_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+   T12_strE,bc,fort_extrapfill,&tensor_pc_interp);
 
  ibase_tensor_local++;
      
@@ -610,7 +610,7 @@ NavierStokes::set_tensor_extrap_components_main(
  set_tensor_bc(bc,phys_bc,1,1);
  std::string T22_strE="T22main"+postfix; 
  desc_lst.setComponent(indx,ibase_tensor_local,
-   T22_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+   T22_strE,bc,fort_extrapfill,&tensor_pc_interp);
 
  ibase_tensor_local++;
     
@@ -642,7 +642,7 @@ NavierStokes::set_tensor_extrap_components_main(
  
   std::string T33_strE="T33main"+postfix; 
   desc_lst.setComponent(indx,ibase_tensor_local,
-    T33_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+    T33_strE,bc,fort_extrapfill,&tensor_pc_interp);
 
 #if (AMREX_SPACEDIM == 3)
   ibase_tensor_local++;
@@ -651,7 +651,7 @@ NavierStokes::set_tensor_extrap_components_main(
   set_tensor_bc(bc,phys_bc,0,2);
   std::string T13_strE="T13main"+postfix; 
   desc_lst.setComponent(indx,ibase_tensor_local,
-    T13_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+    T13_strE,bc,fort_extrapfill,&tensor_pc_interp);
      
   ibase_tensor_local++;
      
@@ -659,7 +659,7 @@ NavierStokes::set_tensor_extrap_components_main(
   set_tensor_bc(bc,phys_bc,1,2);
   std::string T23_strE="T23main"+postfix; 
   desc_lst.setComponent(indx,ibase_tensor_local,
-    T23_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+    T23_strE,bc,fort_extrapfill,&tensor_pc_interp);
 #endif
 
   if (ibase_tensor_local==NUM_TENSOR_TYPE-1) {
@@ -822,7 +822,7 @@ NavierStokes::variableSetUp ()
     set_extrap_bc(bc,phys_bc);
     std::string divghost_str="divghost"; 
     desc_lstGHOST.setComponent(DIV_Type,0,
-      divghost_str,bc,FORT_EXTRAPFILL,&sem_interp_DEFAULT);
+      divghost_str,bc,fort_extrapfill,&sem_interp_DEFAULT);
 
     set_pressure_bc(bc,phys_bc_pres);
     std::string div_pres_str="div_pressure";
@@ -846,26 +846,26 @@ NavierStokes::variableSetUp ()
      set_extrap_bc(bc,phys_bc);
      std::string extrap_str_solid="extrap_solid"; 
      desc_lstGHOST.setComponent(Solid_State_Type,dcomp,
-      extrap_str_solid,bc,FORT_EXTRAPFILL,&pc_interp);
+      extrap_str_solid,bc,fort_extrapfill,&pc_interp);
 
      dcomp++;
      std::string u_extrap_str_solid="u_extrap_solid";
      set_x_vel_extrap_bc(bc,phys_bc);
      desc_lstGHOST.setComponent(Solid_State_Type,dcomp,
-      u_extrap_str_solid,bc,FORT_EXTRAPFILL,&pc_interp);
+      u_extrap_str_solid,bc,fort_extrapfill,&pc_interp);
 
      dcomp++;
      std::string v_extrap_str_solid="v_extrap_solid";
      set_y_vel_extrap_bc(bc,phys_bc);
      desc_lstGHOST.setComponent(Solid_State_Type,dcomp,
-      v_extrap_str_solid,bc,FORT_EXTRAPFILL,&pc_interp);
+      v_extrap_str_solid,bc,fort_extrapfill,&pc_interp);
 
      if (AMREX_SPACEDIM==3) {
       dcomp++;
       std::string w_extrap_str_solid="w_extrap_solid";
       set_z_vel_extrap_bc(bc,phys_bc);
       desc_lstGHOST.setComponent(Solid_State_Type,dcomp,
-       w_extrap_str_solid,bc,FORT_EXTRAPFILL,&pc_interp);
+       w_extrap_str_solid,bc,fort_extrapfill,&pc_interp);
      }
      if (dcomp!=EXTRAP_NCOMP_SOLID-1)
       amrex::Error("dcomp invalid");
@@ -945,7 +945,7 @@ NavierStokes::variableSetUp ()
     std::string extrap_str="xd_extrap"; 
       //dcomp=0
     desc_lstGHOST.setComponent(XDmac_Type,0,
-      extrap_str,bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
+      extrap_str,bc,fort_x_extrapfill,&xd_mac_lo_interp);
 
      // ngrow=0
     desc_lst.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
@@ -959,7 +959,7 @@ NavierStokes::variableSetUp ()
     extrap_str="yd_extrap"; 
       //dcomp=0
     desc_lstGHOST.setComponent(YDmac_Type,0,
-      extrap_str,bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
+      extrap_str,bc,fort_x_extrapfill,&xd_mac_lo_interp);
 
 #if (AMREX_SPACEDIM == 3)
      // ngrow=0
@@ -974,7 +974,7 @@ NavierStokes::variableSetUp ()
     extrap_str="zd_extrap"; 
       //dcomp=0
     desc_lstGHOST.setComponent(ZDmac_Type,0,
-      extrap_str,bc,FORT_X_EXTRAPFILL,&xd_mac_lo_interp);
+      extrap_str,bc,fort_x_extrapfill,&xd_mac_lo_interp);
 #endif
 
     std::string xd_mac_name="XDMAC";
@@ -1036,7 +1036,7 @@ NavierStokes::variableSetUp ()
      set_x_vel_extrap_bc(bc,phys_bc);
      std::string xdisplace_strE="XDISPLACEextrap"; 
      desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
-      xdisplace_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+      xdisplace_strE,bc,fort_extrapfill,&tensor_pc_interp);
 
      ibase_tensor++;
 
@@ -1044,7 +1044,7 @@ NavierStokes::variableSetUp ()
      set_y_vel_extrap_bc(bc,phys_bc);
      std::string ydisplace_strE="YDISPLACEextrap"; 
      desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
-      ydisplace_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+      ydisplace_strE,bc,fort_extrapfill,&tensor_pc_interp);
 
 #if (AMREX_SPACEDIM == 3)
      if (AMREX_SPACEDIM==3) {
@@ -1054,7 +1054,7 @@ NavierStokes::variableSetUp ()
       set_z_vel_extrap_bc(bc,phys_bc);
       std::string zdisplace_strE="ZDISPLACEextrap"; 
       desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
-       zdisplace_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+       zdisplace_strE,bc,fort_extrapfill,&tensor_pc_interp);
      }
 #endif
 
@@ -1258,7 +1258,7 @@ NavierStokes::variableSetUp ()
        amrex::Error("dir invalid ns_setup");
 
       desc_lstGHOST.setComponent(LS_Type,dcomp,
-        nrm_extrap_str,bc,FORT_EXTRAPFILL,&pc_interp);
+        nrm_extrap_str,bc,fort_extrapfill,&pc_interp);
  
       dcomp++;
      } // dir=0..AMREX_SPACEDIM-1
@@ -1411,26 +1411,26 @@ NavierStokes::variableSetUp ()
     set_extrap_bc(bc,phys_bc);
     std::string state_extrap_str="extrap"; 
     desc_lstGHOST.setComponent(State_Type,0,
-      state_extrap_str,bc,FORT_EXTRAPFILL,&pc_interp);
+      state_extrap_str,bc,fort_extrapfill,&pc_interp);
 
     dcomp++;
     std::string u_extrap_str="u_extrap";
     set_x_vel_extrap_bc(bc,phys_bc);
     desc_lstGHOST.setComponent(State_Type,dcomp,
-     u_extrap_str,bc,FORT_EXTRAPFILL,&pc_interp);
+     u_extrap_str,bc,fort_extrapfill,&pc_interp);
 
     dcomp++;
     std::string v_extrap_str="v_extrap";
     set_y_vel_extrap_bc(bc,phys_bc);
     desc_lstGHOST.setComponent(State_Type,dcomp,
-     v_extrap_str,bc,FORT_EXTRAPFILL,&pc_interp);
+     v_extrap_str,bc,fort_extrapfill,&pc_interp);
 
     if (AMREX_SPACEDIM==3) {
      dcomp++;
      std::string w_extrap_str="w_extrap";
      set_z_vel_extrap_bc(bc,phys_bc);
      desc_lstGHOST.setComponent(State_Type,dcomp,
-      w_extrap_str,bc,FORT_EXTRAPFILL,&pc_interp);
+      w_extrap_str,bc,fort_extrapfill,&pc_interp);
     }
 
     // in NavierStokes::VOF_Recon
@@ -1528,7 +1528,7 @@ NavierStokes::variableSetUp ()
     std::string maskextrap_str="maskSEMextrap"; 
 
     desc_lstGHOST.setComponent(State_Type,EXTRAPCOMP_MASK,
-      maskextrap_str,bc,FORT_EXTRAPFILL,&mask_sem_interp);
+      maskextrap_str,bc,fort_extrapfill,&mask_sem_interp);
 
     Vector<std::string> BURNVEL_names;
     BURNVEL_names.resize(EXTRAP_NCOMP_BURNING);
@@ -1584,8 +1584,8 @@ NavierStokes::variableSetUp ()
 
     }  // im=0..nten-1  (burning velocity)
 
-    StateDescriptor::BndryFunc BURNVEL_fill_class(FORT_EXTRAPFILL,
-       FORT_GROUP_EXTRAPFILL);
+    StateDescriptor::BndryFunc BURNVEL_fill_class(fort_extrapfill,
+       fort_group_extrapfill);
 
     burnvel_interp.burnvel_nmat=nmat;
     burnvel_interp.burnvel_nten=nten;
@@ -1642,8 +1642,8 @@ NavierStokes::variableSetUp ()
 
     }  // im=0..nten-1  (TSAT)
 
-    StateDescriptor::BndryFunc TSAT_fill_class(FORT_EXTRAPFILL,
-       FORT_GROUP_EXTRAPFILL);
+    StateDescriptor::BndryFunc TSAT_fill_class(fort_extrapfill,
+       fort_group_extrapfill);
 
     tsat_interp.burnvel_nmat=nmat;
     tsat_interp.burnvel_nten=nten;
@@ -1664,7 +1664,7 @@ NavierStokes::variableSetUp ()
     set_x_vel_extrap_bc(bc,phys_bc);
     std::string xdisplace_state_strE="XDISPLACEextrap"; 
     desc_lstGHOST.setComponent(State_Type,ibase_state_tensor,
-      xdisplace_state_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+      xdisplace_state_strE,bc,fort_extrapfill,&tensor_pc_interp);
 
     ibase_state_tensor++;
 
@@ -1672,7 +1672,7 @@ NavierStokes::variableSetUp ()
     set_y_vel_extrap_bc(bc,phys_bc);
     std::string ydisplace_state_strE="YDISPLACEextrap"; 
     desc_lstGHOST.setComponent(State_Type,ibase_state_tensor,
-      ydisplace_state_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+      ydisplace_state_strE,bc,fort_extrapfill,&tensor_pc_interp);
 
 #if (AMREX_SPACEDIM == 3)
     if (AMREX_SPACEDIM==3) {
@@ -1682,7 +1682,7 @@ NavierStokes::variableSetUp ()
      set_z_vel_extrap_bc(bc,phys_bc);
      std::string zdisplace_state_strE="ZDISPLACEextrap"; 
      desc_lstGHOST.setComponent(State_Type,ibase_state_tensor,
-       zdisplace_state_strE,bc,FORT_EXTRAPFILL,&tensor_pc_interp);
+       zdisplace_state_strE,bc,fort_extrapfill,&tensor_pc_interp);
     }
 #endif
 
@@ -1746,8 +1746,8 @@ NavierStokes::variableSetUp ()
       amrex::Error("drag_im or drag_type invalid");
     } //drag_comp=0..N_DRAG-1
 
-    StateDescriptor::BndryFunc DRAG_fill_class(FORT_EXTRAPFILL,
-       FORT_GROUP_EXTRAPFILL);
+    StateDescriptor::BndryFunc DRAG_fill_class(fort_extrapfill,
+       fort_group_extrapfill);
 
     drag_interp.burnvel_nmat=nmat;
     drag_interp.burnvel_nten=nten;

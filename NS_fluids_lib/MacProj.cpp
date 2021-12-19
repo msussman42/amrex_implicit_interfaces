@@ -52,7 +52,7 @@ NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
   ns_level.allocate_maccoef(project_option,nsolve,create_hierarchy);
  }
 
-  // FORT_EXTRAPFILL, pc_interp
+  // fort_extrapfill, pc_interp
  Vector<int> scompBC_map;
  scompBC_map.resize(1);
  scompBC_map[0]=0;

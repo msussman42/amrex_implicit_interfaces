@@ -785,7 +785,7 @@ Amr::initialInit (Real strt_time,
  AMR_checkInput();
 
  finest_level = 0;
- FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
+ fort_override_finest_level(&finest_level);
 
  cumtime = strt_time;
 
@@ -900,7 +900,7 @@ Amr::restart (const std::string& filename)
     is >> finest_level;
     int old_finest_level=finest_level;
 
-    FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
+    fort_override_finest_level(&finest_level);
 
     Vector<Box> inputs_domain(max_level+1);
     for (int lev = 0; lev <= max_level; lev++) {
@@ -1019,7 +1019,7 @@ Amr::restart (const std::string& filename)
        int new_finest_level = std::min(max_level,finest_level);
 
        finest_level = new_finest_level;
-       FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
+       fort_override_finest_level(&finest_level);
  
        // These are just used to hold the extra stuff we have to read in.
        Geometry   geom_dummy;
@@ -1823,7 +1823,7 @@ Amr::regrid (int  lbase,
  }  // lev=start ... min(finest_level,new_finest)
 
  finest_level = new_finest;
- FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
+ fort_override_finest_level(&finest_level);
 
  for (int lev = start; lev <= new_finest; lev++) {
 
@@ -2113,7 +2113,7 @@ Amr::bldFineLevels (Real strt_time)
   amrex::Error("max_level invalid in bldFineLevels");
 
  finest_level = 0;
- FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
+ fort_override_finest_level(&finest_level);
 
  Vector<BoxArray> new_grid_places(max_level+1);
 
@@ -2132,7 +2132,7 @@ Amr::bldFineLevels (Real strt_time)
     amrex::Error("cannot create more than one new level at a time");
 
    finest_level = new_finest;
-   FORT_OVERRIDE_FINEST_LEVEL(&finest_level);
+   fort_override_finest_level(&finest_level);
 
    if (new_grid_places[new_finest].size()<1) {
     std::cout << "IN bldFineLevels\n";

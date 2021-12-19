@@ -3492,7 +3492,7 @@ void NavierStokes::init_gradu_tensorALL(
   Vector<int> scompBC_map;
    // desc_lstGHOST.setComponent(State_Type, ...
    // "set_tensor_bc", tensor_pc_interp 
-   // FORT_EXTRAPFILL
+   // fort_extrapfill
    // (i.e. the coarse/fine BC and physical BC will be low order)
 
   int scomp_extrap=0;
@@ -5831,7 +5831,7 @@ void NavierStokes::init_gravity_potential() {
    }
 
     // set_extrap_bc(bc,phys_bc)
-    // FORT_EXTRAPFILL
+    // fort_extrapfill
     // pc_interp or sem_interp
    Vector<int> scompBC_map;
    scompBC_map.resize(2);
@@ -8584,7 +8584,7 @@ void NavierStokes::build_masksem(int mask_sweep) {
  scompBC_map.resize(1);
  scompBC_map[0]=1+AMREX_SPACEDIM+nmat*ngeom_recon;
   // std::string maskextrap_str="maskSEMextrap"
-  // FORT_EXTRAPFILL
+  // fort_extrapfill
   // mask_sem_interp (MASKINTERPPC)
   // idx,ngrow,scomp,ncomp,index,scompBC_map
  PCINTERP_fill_borders(MASKSEM_MF,1,0,1,State_Type,scompBC_map);

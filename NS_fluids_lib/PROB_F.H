@@ -8,7 +8,6 @@
 #    define FORT_ADDNOISE    addnoise
 #    define FORT_UMACFILL    umacfill
 #    define FORT_XDMACFILL   xdmacfill
-#    define FORT_X_EXTRAPFILL x_extrapfill
 #    define FORT_VELFILL     velfill
 #    define FORT_GROUP_VELFILL group_velfill
 #    define FORT_SOLVFILL    solvfill
@@ -19,8 +18,6 @@
 #    define FORT_TENSORFILL   tensorfill
 #    define FORT_GROUP_TENSORFILL group_tensorfill
 #    define FORT_SCALARFILL  scalarfill
-#    define FORT_EXTRAPFILL  extrapfill
-#    define FORT_GROUP_EXTRAPFILL group_extrapfill
 #    define FORT_MOFFILL     moffill
 #    define FORT_EXTMOFFILL  extmoffill
 #    define FORT_GROUP_MOFFILL group_moffill
@@ -35,7 +32,6 @@
 #    define FORT_ADDNOISE    ADDNOISE
 #    define FORT_UMACFILL    UMACFILL
 #    define FORT_XDMACFILL   XDMACFILL
-#    define FORT_X_EXTRAPFILL X_EXTRAPFILL
 #    define FORT_VELFILL     VELFILL
 #    define FORT_GROUP_VELFILL GROUP_VELFILL
 #    define FORT_SOLVFILL    SOLVFILL
@@ -46,8 +42,6 @@
 #    define FORT_TENSORFILL   TENSORFILL
 #    define FORT_GROUP_TENSORFILL GROUP_TENSORFILL
 #    define FORT_SCALARFILL  SCALARFILL
-#    define FORT_EXTRAPFILL  EXTRAPFILL
-#    define FORT_GROUP_EXTRAPFILL GROUP_EXTRAPFILL
 #    define FORT_MOFFILL     MOFFILL
 #    define FORT_EXTMOFFILL  EXTMOFFILL
 #    define FORT_GROUP_MOFFILL GROUP_MOFFILL
@@ -62,7 +56,6 @@
 #    define FORT_ADDNOISE    addnoise
 #    define FORT_UMACFILL    umacfill
 #    define FORT_XDMACFILL   xdmacfill
-#    define FORT_X_EXTRAPFILL x_extrapfill
 #    define FORT_VELFILL     velfill
 #    define FORT_GROUP_VELFILL group_velfill
 #    define FORT_SOLVFILL    solvfill
@@ -73,8 +66,6 @@
 #    define FORT_TENSORFILL   tensorfill
 #    define FORT_GROUP_TENSORFILL group_tensorfill
 #    define FORT_SCALARFILL  scalarfill
-#    define FORT_EXTRAPFILL  extrapfill
-#    define FORT_GROUP_EXTRAPFILL group_extrapfill
 #    define FORT_MOFFILL     moffill
 #    define FORT_EXTMOFFILL  extmoffill
 #    define FORT_GROUP_MOFFILL group_moffill
@@ -88,7 +79,6 @@
 #    define FORT_ADDNOISE    addnoise_
 #    define FORT_UMACFILL    umacfill_
 #    define FORT_XDMACFILL   xdmacfill_
-#    define FORT_X_EXTRAPFILL x_extrapfill_
 #    define FORT_VELFILL     velfill_
 #    define FORT_GROUP_VELFILL group_velfill_
 #    define FORT_SOLVFILL    solvfill_
@@ -99,8 +89,6 @@
 #    define FORT_TENSORFILL   tensorfill_
 #    define FORT_GROUP_TENSORFILL group_tensorfill_
 #    define FORT_SCALARFILL  scalarfill_
-#    define FORT_EXTRAPFILL  extrapfill_
-#    define FORT_GROUP_EXTRAPFILL group_extrapfill_
 #    define FORT_MOFFILL     moffill_
 #    define FORT_EXTMOFFILL  extmoffill_
 #    define FORT_GROUP_MOFFILL group_moffill_
@@ -308,7 +296,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_EXTRAPFILL (
+     void fort_extrapfill (
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -317,7 +305,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_GROUP_EXTRAPFILL (
+     void fort_group_extrapfill (
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -465,7 +453,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_X_EXTRAPFILL (
+     void fort_x_extrapfill (
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),

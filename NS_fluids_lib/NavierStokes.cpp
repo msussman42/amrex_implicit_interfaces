@@ -8658,9 +8658,9 @@ void NavierStokes::ns_header_msg_level(
    // idx,ngrow,scomp,ncomp,index,scompBC_map
    // InterpBordersGHOST is ultimately called.
    // dest_lstGHOST for Solid_State_Type defaults to pc_interp.
-   // scompBC_map==0 corresponds to extrap_bc, pc_interp and FORT_EXTRAPFILL
+   // scompBC_map==0 corresponds to extrap_bc, pc_interp and fort_extrapfill
    // scompBC_map==1,2,3 corresponds to x or y or z vel_extrap_bc, pc_interp 
-   //   and FORT_EXTRAPFILL
+   //   and fort_extrapfill
    // nFSI=nparts * (vel + LS + temp + flag + force)
    for (int partid=0;partid<nparts;partid++) {
     int ibase=partid*nFSI_sub;
@@ -10213,7 +10213,7 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
   Vector<int> scompBC_map;
    // desc_lstGHOST.setComponent(Tensor_Type, ...
    // "set_tensor_bc", tensor_pc_interp 
-   // FORT_EXTRAPFILL
+   // fort_extrapfill
    // (i.e. the coarse/fine BC and physical BC will be low order)
   scompBC_map.resize(1);
   scompBC_map[0]=scomp_extrap;
@@ -10526,7 +10526,7 @@ void NavierStokes::make_viscoelastic_tensorALL(int im) {
   Vector<int> scompBC_map;
    // desc_lstGHOST.setComponent(Tensor_Type, ...
    // "set_tensor_bc", tensor_pc_interp 
-   // FORT_EXTRAPFILL
+   // fort_extrapfill
    // (i.e. the coarse/fine BC and physical BC will be low order)
   scompBC_map.resize(1);
   scompBC_map[0]=scomp_extrap;
@@ -20717,7 +20717,7 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,int caller_id) {
   Real slablow=0.0;
   Real slabhigh=1.0;
   int slab_dt_type=parent->get_slab_dt_type();
-  FORT_GL_SLAB(time_array.dataPtr(),
+  fort_gl_slab(time_array.dataPtr(),
                &slab_dt_type,
                &ns_time_order,
                &slablow,&slabhigh);
@@ -24291,7 +24291,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
   // idx,scomp,ncomp,index,scompBC_map
   // FillCoarsePatchGHOST is ultimately called.
   // dest_lstGHOST for State_Type defaults to pc_interp.
-  // scompBC_map==0 corresponds to pc_interp and FORT_EXTRAPFILL
+  // scompBC_map==0 corresponds to pc_interp and fort_extrapfill
   dist_touch_coarse_mf=
    new MultiFab(grids,dmap,nmat,0,
     MFInfo().SetTag("dist_touch_coarse_mf"),FArrayBoxFactory());

@@ -149,7 +149,7 @@ StateData::define (
      amrex::Error("dt invalid");
     }
 
-    FORT_GL_SLAB(time_array.dataPtr(),&StateData_slab_dt_type,
+    fort_gl_slab(time_array.dataPtr(),&StateData_slab_dt_type,
                  &bfact_time_order,&slablow,&slabhigh);
 
     if (do_scale_time==1) {
@@ -507,7 +507,7 @@ StateData::setTimeLevel (Real time,Real& dt)
   amrex::Error("dt invalid");
  }
 
- FORT_GL_SLAB(time_array.dataPtr(),&StateData_slab_dt_type,
+ fort_gl_slab(time_array.dataPtr(),&StateData_slab_dt_type,
               &bfact_time_order,&slablow,&slabhigh);
 
  if (do_scale_time==1) {

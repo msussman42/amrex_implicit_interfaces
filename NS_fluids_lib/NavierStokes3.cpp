@@ -5022,13 +5022,13 @@ int ilev;
 
  *color_count=colormax[coarsest_level];
 
-  // FORT_EXTRAPFILL, pc_interp
+  // fort_extrapfill, pc_interp
  Vector<int> scompBC_map;
  scompBC_map.resize(1);
  scompBC_map[0]=0;
 
   // ngrow=1 scomp=0 ncomp=1 
-  // FORT_EXTRAPFILL, pc_interp
+  // fort_extrapfill, pc_interp
  PCINTERP_fill_bordersALL(idx_color,1,0,1,State_Type,scompBC_map);
 
  if (verbose>0)
@@ -6518,7 +6518,7 @@ NavierStokes::ColorSumALL(
   TypeALL(idx_type,type_flag,zero_diag_flag);
 
   // color_count=number of colors
-  // ngrow=1, FORT_EXTRAPFILL, pc_interp for COLOR_MF
+  // ngrow=1, fort_extrapfill, pc_interp for COLOR_MF
   color_variable(coarsest_level,
    idx_color,idx_type,&color_count,type_flag,zero_diag_flag);
 
