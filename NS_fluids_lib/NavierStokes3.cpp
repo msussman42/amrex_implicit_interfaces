@@ -2888,10 +2888,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         amrex::Error("ngrow_make_distance!=3");
 
         // first nten components correspond to the status.
-       int ncomp_per_burning=AMREX_SPACEDIM;
-       int ncomp_per_tsat=2;
-       int nburning=nten*(ncomp_per_burning+1);
-       int ntsat=nten*(ncomp_per_tsat+1);
+       int ncomp_per_burning=EXTRAP_PER_BURNING;
+       int ncomp_per_tsat=EXTRAP_PER_TSAT;
+       int nburning=EXTRAP_NCOMP_BURNING;
+       int ntsat=EXTRAP_NCOMP_TSAT;
 
 	// SATURATION_TEMP_MF is passed to the following fortran
         // routines:

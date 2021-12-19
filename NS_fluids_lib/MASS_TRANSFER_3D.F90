@@ -17,6 +17,7 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 
+#include "EXTRAP_COMP.H"
 #include "MASS_TRANSFER_F.H"
 
 
@@ -166,10 +167,10 @@ stop
       REAL_T, external   :: exact_temperature
 #endif
 
-      ncomp_per_tsat=2
+      ncomp_per_tsat=EXTRAP_PER_TSAT
       tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
 
-      if (ntsat.eq.nten*(1+ncomp_per_tsat)) then
+      if (ntsat.eq.EXTRAP_NCOMP_TSAT) then
        ! do nothing
       else
        print *,"ntsat invalid"
@@ -1359,8 +1360,8 @@ stop
       REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
       REAL_T local_data_out
 
-      ncomp_per_tsat=2
-      if (ntsat.eq.nten*(1+ncomp_per_tsat)) then
+      ncomp_per_tsat=EXTRAP_PER_TSAT
+      if (ntsat.eq.EXTRAP_NCOMP_TSAT) then
        ! do nothing
       else
        print *,"ntsat invalid"
@@ -3310,8 +3311,8 @@ stop
        print *,"nten invalid"
        stop
       endif
-      ncomp_per_burning=SDIM
-      if (nburning.eq.nten*(ncomp_per_burning+1)) then
+      ncomp_per_burning=EXTRAP_PER_BURNING
+      if (nburning.eq.EXTRAP_NCOMP_BURNING) then
        ! do nothing
       else
        print *,"nburning invalid"
@@ -3870,7 +3871,7 @@ stop
 
       recon_ncomp=nmat*ngeom_recon
 
-      ncomp_per_tsat=2
+      ncomp_per_tsat=EXTRAP_PER_TSAT
 
       if (ngeom_raw.ne.SDIM+1) then
        print *,"ngeom_raw invalid"
@@ -3956,7 +3957,7 @@ stop
        ! components go:
        ! T_gamma_1,Y_gamma_1,
        ! T_gamma_2,Y_gamma_2, ....
-      if (ntsat.eq.nten*(1+ncomp_per_tsat)) then
+      if (ntsat.eq.EXTRAP_NCOMP_TSAT) then
        ! do nothing
       else
        print *,"ntsat invalid"
@@ -6501,6 +6502,7 @@ stop
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
       REAL_T, target, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T im,im_opp
       INTEGER_T iten,ireverse,sign_local
@@ -6529,11 +6531,12 @@ stop
       nhalf=3
 
       vel_ptr=>vel
+      LS_ptr=>LS
 
       if (velflag.eq.1) then
-       ncomp_per=SDIM
+       ncomp_per=EXTRAP_PER_BURNING
       else if (velflag.eq.0) then
-       ncomp_per=2 ! interface temperature, mass fraction
+       ncomp_per=EXTRAP_PER_TSAT ! interface temperature, mass fraction
       else
        print *,"velflag invalid"
        stop
@@ -6584,7 +6587,7 @@ stop
       extensionwidth=dxmaxLS*ngrow_make_distance 
 
       call checkbound_array(fablo,fabhi,vel_ptr,ngrow_make_distance,-1,1250)
-      call checkbound_array(fablo,fabhi,LS,ngrow,-1,1250)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1,1250)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -6798,6 +6801,305 @@ stop
 
       return 
       end subroutine fort_extend_burning_vel
+
+        ! ngrow corresponds to ngrow_distance
+      subroutine fort_extend_drag( &
+        level, &
+        finest_level, &
+        xlo,dx, &
+        nmat, &
+        nten, &
+        ncomp, &
+        ngrow, &
+        tilelo,tilehi, &
+        fablo,fabhi, &
+        bfact, &
+        drag,DIMS(drag), &
+        LS,DIMS(LS)) &  
+      bind(c,name='fort_extend_drag')
+
+      use probcommon_module
+      use global_utility_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level 
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+
+      INTEGER_T, intent(in) :: DIMDEC(drag)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+
+      REAL_T, target, intent(inout) :: drag(DIMV(drag),ncomp)
+      REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, target, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+
+      INTEGER_T im
+      INTEGER_T i,j,k,dir
+      INTEGER_T i_sp,j_sp,k_sp
+      INTEGER_T sten_lo(3)
+      INTEGER_T sten_hi(3)
+      INTEGER_T indexcp(SDIM)
+      INTEGER_T tag_local
+      REAL_T rtag_local
+
+      REAL_T xijk(-3:3,SDIM)
+      REAL_T xcp(SDIM)
+      REAL_T xsp(-3:3,SDIM)
+      REAL_T nrm(SDIM)
+      REAL_T weight,total_weight
+      REAL_T vel_sum(SDIM)
+      REAL_T dxmax,dxmaxLS,eps,extensionwidth,LL
+      REAL_T ls_local(nmat)
+      INTEGER_T nten_test
+      INTEGER_T scomp,nhalf
+
+      nhalf=3
+
+      drag_ptr=>drag
+      LS_ptr=>LS
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid118"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid in extend_drag"
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+      if (ngrow.ne.4) then
+       print *,"expecting ngrow==4 in fort_extend_drag"
+       stop
+      endif
+      if (ngrow_make_distance.ne.3) then
+       print *,"expecting ngrow_make_distance==3 in fort_extend_drag"
+       stop
+      endif
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      nten_test=num_interfaces
+      if (nten_test.ne.nten) then
+       print *,"nten invalid extend_drag nten, nten_test ",nten,nten_test
+       stop
+      endif
+      if (ncomp.eq.N_DRAG) then
+       ! do nothing
+      else
+       print *,"ncomp invalid"
+       stop
+      endif
+
+      call get_dxmax(dx,bfact,dxmax)
+      call get_dxmaxLS(dx,bfact,dxmaxLS)
+ 
+       ! Guard against division zero in the weight calculation
+      eps=dxmaxLS*1.0E-4
+
+      extensionwidth=dxmaxLS*ngrow_make_distance 
+
+      call checkbound_array(fablo,fabhi,drag_ptr,ngrow_make_distance,-1,1250)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1,1250)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+       ! im is the material on which a force is applied.
+      do im=1,nmat
+  
+       ! iterate over domain and check tag
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+        rtag_local=drag(D_DECL(i,j,k),DRAGCOMP_FLAG+im)
+        tag_local=NINT(rtag_local) 
+         ! tag_local==0 if drag (flux) not yet init.
+        if ((tag_local.eq.0).and.(rtag_local.eq.zero)) then
+              ! if close enough to both materials
+              if (max(abs(ls_local(im_source)),abs(ls_local(im_dest))).le. &
+                  extensionwidth) then
+               ! Project a point in normal direction of 
+               ! the level set function with least magnitude
+               call gridsten_level(xijk,i,j,k,level,nhalf)
+
+               if ((ls_local(im_source).ge.zero).and. &
+                   (ls_local(im_dest).le.zero)) then
+                do dir=1,SDIM
+                 nrm(dir)=LS(D_DECL(i,j,k),nmat+(im_dest-1)*SDIM+dir)
+                 xcp(dir)=xijk(0,dir)-ls_local(im_dest)*nrm(dir)
+                enddo ! dir
+               else if ((ls_local(im_dest).ge.zero).and. &
+                        (ls_local(im_source).le.zero)) then
+                do dir=1,SDIM
+                 nrm(dir)=LS(D_DECL(i,j,k),nmat+(im_source-1)*SDIM+dir)
+                 xcp(dir)=xijk(0,dir)-ls_local(im_source)*nrm(dir)
+                enddo ! dir
+               else if (abs(ls_local(im_source)).le. &
+                        abs(ls_local(im_dest))) then
+
+                ! closest point to "dest" material is farther
+                ! from the "source" material closest point, but
+                ! most importantly the "dest" material closest 
+                ! point is at the triple point.
+                ! ALSO: this procedure is more stable since if 
+                ! ls_source perturbed slightly from positive to negative,
+                ! then the algorithm to find the closest point will
+                ! not change.
+                do dir=1,SDIM
+                 nrm(dir)=LS(D_DECL(i,j,k),nmat+(im_dest-1)*SDIM+dir)
+                 xcp(dir)=xijk(0,dir)-ls_local(im_dest)*nrm(dir)
+                enddo ! dir
+               else if (abs(ls_local(im_dest)).le. &
+                        abs(ls_local(im_source))) then
+
+                ! closest point to "source" material is farther
+                ! from the "dest" material closest point, but
+                ! most importantly the "source" material closest 
+                ! point is at the triple point.
+                ! ALSO: this procedure is more stable since if 
+                ! ls_dest perturbed slightly from positive to negative,
+                ! then the algorithm to find the closest point will
+                ! not change.
+                do dir=1,SDIM
+                 nrm(dir)=LS(D_DECL(i,j,k),nmat+(im_source-1)*SDIM+dir)
+                 xcp(dir)=xijk(0,dir)-ls_local(im_source)*nrm(dir)
+                enddo ! dir
+               else
+                print *,"ls_local bust"
+                stop
+               endif
+
+               sten_lo(3)=0
+               sten_hi(3)=0
+               call containing_cell(bfact,dx,xlo,fablo,xcp,indexcp)
+               do dir=1,SDIM
+                sten_lo(dir)=indexcp(dir)-1
+                if (sten_lo(dir).lt.fablo(dir)-ngrow_make_distance) then
+                 sten_lo(dir)=fablo(dir)-ngrow_make_distance
+                endif
+                sten_hi(dir)=indexcp(dir)+1
+                if (sten_hi(dir).gt.fabhi(dir)+ngrow_make_distance) then
+                 sten_hi(dir)=fabhi(dir)+ngrow_make_distance
+                endif
+               enddo ! dir=1..sdim
+
+               do dir=1,ncomp_per
+                vel_sum(dir)=zero
+               enddo
+
+               total_weight = zero
+
+               ! gather support point/weights
+               do i_sp = sten_lo(1),sten_hi(1)
+               do j_sp = sten_lo(2),sten_hi(2)
+               do k_sp = sten_lo(3),sten_hi(3)
+                rtag_local=vel(D_DECL(i_sp,j_sp,k_sp),iten) 
+                tag_local=NINT(rtag_local) 
+
+                if ((tag_local.eq.sign_local).and. &
+                    (rtag_local.eq.sign_local)) then
+                 call gridsten_level(xsp,i_sp,j_sp,k_sp,level,nhalf)
+
+                 weight=zero
+                 do dir=1,SDIM
+                  weight = weight + (xsp(0,dir)-xcp(dir))**two
+                 enddo
+                 weight=sqrt(weight)
+                 weight =one/((weight+eps)**four)
+                 total_weight = total_weight+weight
+                 do dir=1,ncomp_per
+                  scomp=nten+(iten-1)*ncomp_per+dir
+                  vel_sum(dir) = vel_sum(dir)+ &
+                   weight*vel(D_DECL(i_sp,j_sp,k_sp),scomp)
+                 enddo
+                else if ((tag_local.eq.0).and.(rtag_local.eq.zero)) then
+                 ! do nothing
+                else if ((abs(tag_local).eq.2).and. &
+                         (abs(rtag_local).eq.two)) then
+                 ! do nothing (this is a newly extended rate)
+                else if ((tag_local.eq.-sign_local).and. &
+                         (rtag_local.eq.-sign_local)) then
+                 ! do nothing (this is opposite sign)
+                else
+                 print *,"tag_local or rtag_local invalid1:", &
+                    tag_local,rtag_local
+                 stop
+                endif
+               enddo
+               enddo
+               enddo ! i_sp,j_sp,k_sp
+
+               if (total_weight.gt.zero) then
+                do dir=1,ncomp_per
+                 scomp=nten+(iten-1)*ncomp_per+dir
+                 vel(D_DECL(i,j,k),scomp)=vel_sum(dir)/total_weight
+                enddo
+                vel(D_DECL(i,j,k),iten)=two*sign_local
+               else if (total_weight.eq.zero) then
+                ! do nothing
+               else
+                print *,"total_weight invalid"
+                stop
+               endif
+              endif ! min(|ls_w|,|ls_i|)<extension width
+             else if ((tag_local.eq.1).and.(rtag_local.eq.one)) then
+              ! do nothing
+             else if ((tag_local.eq.-1).and.(rtag_local.eq.-one)) then
+              ! do nothing
+             else
+              print *,"tag_local or rtag_local invalid2:", &
+                 tag_local,rtag_local
+              print *,"i,j,k ",i,j,k
+              print *,"LL= ",LL
+              print *,"iten=",iten
+              print *,"im,im_opp,ireverse,im_source,im_dest ", &
+               im,im_opp,ireverse,im_source,im_dest
+              print *,"raw tag data ",vel(D_DECL(i,j,k),iten)
+              print *,"level,finest_level ",level,finest_level
+              print *,"nmat,nten,nburning,ngrow ",nmat,nten,nburning,ngrow
+              stop
+             endif
+            else
+             print *,"im_dest invalid"
+             stop
+            endif
+
+           else if (is_rigid(nmat,im_local).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid(nmat,im_local) invalid"
+            stop
+           endif
+          enddo ! k
+          enddo ! j
+          enddo ! i
+         else if (LL.eq.zero) then
+          ! do nothing
+         else
+          print *,"LL bust"
+          stop
+         endif 
+        enddo ! ireverse=0..1
+       enddo ! im_opp=im+1..nmat
+      enddo ! im=1..nmat-1
+
+      return 
+      end subroutine fort_extend_burning_vel
+
 
  
       ! vof,ref centroid,order,slope,intercept  x nmat
@@ -7307,15 +7609,15 @@ stop
        print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
        stop
       endif
-      ncomp_per_burning=SDIM
-      if (nburning.eq.nten*(ncomp_per_burning+1)) then
+      ncomp_per_burning=EXTRAP_PER_BURNING
+      if (nburning.eq.EXTRAP_NCOMP_BURNING) then
        ! do nothing
       else
        print *,"nburning invalid"
        stop
       endif
-      ncomp_per_tsat=2 ! interface temperature, mass fraction
-      if (ntsat.eq.nten*(ncomp_per_tsat+1)) then
+      ncomp_per_tsat=EXTRAP_PER_TSAT ! interface temperature, mass fraction
+      if (ntsat.eq.EXTRAP_NCOMP_TSAT) then
        ! do nothing
       else
        print *,"ntsat invalid"
@@ -7328,13 +7630,14 @@ stop
        print *,"num_state_material=",num_state_material
        stop
       endif
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif
       
-      if (nstate.eq.(SDIM+1)+nmat* &
-          (num_state_material+ngeom_raw)+1) then
+      if (nstate.eq.STATE_NCOMP) then
        ! do nothing
       else 
        print *,"nstate invalid"

@@ -586,9 +586,8 @@ void NavierStokes::combine_state_variable(
   debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
  }
 
- int ncomp_per_tsat=2;
- int ntsat=nten*(ncomp_per_tsat+1);
-
+ int ncomp_per_tsat=EXTRAP_PER_TSAT;
+ int ntsat=EXTRAP_NCOMP_TSAT;
 
  MultiFab* LEVEL_COMBINE=nullptr;
 

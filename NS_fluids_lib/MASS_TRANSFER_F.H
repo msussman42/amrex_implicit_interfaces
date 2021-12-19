@@ -174,6 +174,20 @@ extern "C"
     Real* burnvel,AMREX_ARLIM_P(burnvello),AMREX_ARLIM_P(burnvelhi), 
     Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi));
 
+   void fort_extend_drag(
+    int* level,
+    int* finest_level,
+    const Real* xlo,const Real* dx,
+    int* nmat,
+    int* nten,
+    int* ncomp,
+    int* ngrow,
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact,
+    Real* drag,AMREX_ARLIM_P(draglo),AMREX_ARLIM_P(draghi), 
+    Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi));
+
 }
 
 }/* namespace amrex */
