@@ -1169,6 +1169,7 @@ stop
       REAL_T rburnstat
       INTEGER_T ncomp_per
       INTEGER_T ncomp_expect
+      INTEGER_T drag_type,drag_im
 
       if (velflag.eq.0) then
        ncomp_per=EXTRAP_PER_TSAT ! interface temperature and mass fraction
@@ -1301,7 +1302,7 @@ stop
                  stop
                 endif
                endif
-              enddo ! dir
+              enddo ! dir=1..sdim
 
               if ((velflag.eq.0).or &
                   (velflag.eq.1)) then
@@ -1482,9 +1483,18 @@ stop
              do bcomp=1,nburning
               drag_type=fort_drag_type(bcomp,drag_im)
               if (drag_im+1.eq.im) then 
-               if ((drag_type.ge.0).and.(drag_type.lt.DRAG_TYPE_NEXT)) then
+               if ((drag_type.ge.0).and. &
+                   (drag_type.lt.DRAG_TYPE_NEXT).and. &
+                   (drag_type.ne.DRAG_TYPE_FLAG)) then
                 fburn(D_DECL(ifine,jfine,kfine),bcomp)= &
                   burn_fine(bcomp,iflag)/n_burn_material(im,iflag)
+               else if (drag_type.eq.DRAG_TYPE_FLAG) then
+                if (bcomp.eq.DRAGCOMP_FLAG+im) then
+                 ! do nothing
+                else
+                 print *,"bcomp or get_drag_type invalid"
+                 stop
+                endif
                else
                 print *,"drag_type invalid"
                 stop
