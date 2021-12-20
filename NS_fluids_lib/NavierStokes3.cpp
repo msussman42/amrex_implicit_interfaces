@@ -1836,8 +1836,7 @@ void NavierStokes::init_splitting_force_SDC() {
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
   int nmat=num_materials;
-  int nstate=(AMREX_SPACEDIM+1)+
-    nmat*(num_state_material+ngeom_raw)+1;
+  int nstate=STATE_NCOMP;
   if (nstate!=S_new.nComp())
    amrex::Error("nstate invalid");
 
@@ -5351,8 +5350,7 @@ NavierStokes::ColorSum(
   amrex::Error("mdot_complement->nGrow() invalid");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- int nstate=(AMREX_SPACEDIM+1)+
-  nmat*(num_state_material+ngeom_raw)+1;
+ int nstate=STATE_NCOMP;
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
@@ -5641,8 +5639,7 @@ NavierStokes::SumRegions(
  MultiFab& Vmac_new=get_new_data(Umac_Type+1,slab_step+1);
  MultiFab& Wmac_new=get_new_data(Umac_Type+AMREX_SPACEDIM-1,slab_step+1);
 
- int nstate=(AMREX_SPACEDIM+1)+
-  nmat*(num_state_material+ngeom_raw)+1;
+ int nstate=STATE_NCOMP;
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
@@ -12210,7 +12207,7 @@ void NavierStokes::veldiffuseALL() {
  int nmat=num_materials;
  int finest_level=parent->finestLevel();
 
- int dencomp=(AMREX_SPACEDIM+1);
+ int dencomp=STATECOMP_STATES;
  int nden=nmat*num_state_material;
 
  int save_enable_spectral=enable_spectral;
@@ -13037,8 +13034,7 @@ void NavierStokes::APPLY_VISCOUS_HEATING(int source_mf) {
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
 
- int nstate=(AMREX_SPACEDIM+1)+
-  nmat*(num_state_material+ngeom_raw)+1;
+ int nstate=STATE_NCOMP;
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
  if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
@@ -13152,8 +13148,7 @@ void NavierStokes::INCREMENT_REGISTERS(int source_mf,int caller_id) {
  int nmat=num_materials;
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int nstate=S_new.nComp();
- if (nstate!=(AMREX_SPACEDIM+1)+
-             nmat*(num_state_material+ngeom_raw)+1)
+ if (nstate!=STATE_NCOMP)
   amrex::Error("nstate invalid");
 
  new_localMF(REGISTER_CURRENT_MF,nsolve,1,-1);

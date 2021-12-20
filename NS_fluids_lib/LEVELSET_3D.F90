@@ -12,6 +12,7 @@
 
 ! N_EXTRA_REAL.H is in the amrlib directory.
 #include "N_EXTRA_REAL.H"
+#include "EXTRAP_COMP.H"
 #include "LEVEL_F.H"
 
 #define nsum 64
@@ -6685,8 +6686,7 @@ stop
                     if (original_density.gt.zero) then
                      updated_density=original_density* &
                          (one+dt*dt*density_factor*mdot_total/blob_volume)
-                     dencomp=(SDIM+1)+ &
-                         (im-1)*num_state_material+1
+                     dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
                      if (updated_density.gt.zero) then
                       snew(D_DECL(i,j,k),dencomp)=updated_density
                      else
@@ -11140,7 +11140,7 @@ stop
          if (is_compressible_mat(im).eq.0) then
           ! do nothing
          else if (is_compressible_mat(im).eq.1) then
-          vofcomp=(SDIM+1)+nmat*num_state_material+(im-1)*ngeom_raw+1
+          vofcomp=STATECOMP_MOF+(im-1)*ngeom_raw+1
           vof=state(D_DECL(i,j,k),vofcomp)
           if ((vof.ge.-VOFTOL).and.(vof.le.one+VOFTOL)) then
 
@@ -11151,7 +11151,7 @@ stop
             do dir=1,SDIM
              KE=KE+half*(state(D_DECL(i,j,k),dir)**2)
             enddo
-            dencomp=(SDIM+1)+(im-1)*num_state_material+1
+            dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
             rho=state(D_DECL(i,j,k),dencomp)
             TEMPERATURE=state(D_DECL(i,j,k),dencomp+1)
             if (rho.gt.zero) then

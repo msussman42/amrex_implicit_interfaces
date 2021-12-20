@@ -913,7 +913,7 @@ stop
           ! den,mom_den,configuration tensor
          do ivar_gb=1,nmat*num_state_material+ &
               nmat+ & !mom_den
-              num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE
+              num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE
           index3d=index3d+1
           index2d=index2d+1
           zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
@@ -2149,7 +2149,7 @@ END SUBROUTINE SIMP
        stop
       endif
       if (elastic_ncomp.eq. &
-          num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+SDIM) then
+          num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE+SDIM) then
        ! do nothing
       else
        print *,"elastic_ncomp invalid"
@@ -6588,7 +6588,7 @@ END SUBROUTINE SIMP
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: visco(DIMV(visco), &
-        FORT_NUM_TENSOR_TYPE*num_materials_viscoelastic) 
+         ENUM_NUM_TENSOR_TYPE*num_materials_viscoelastic) 
       REAL_T, pointer :: visco_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)

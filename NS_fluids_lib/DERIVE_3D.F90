@@ -740,7 +740,7 @@ stop
       REAL_T, intent(in), target :: eosdata(DIMV(eosdata), &
               nmat*num_state_material)
       REAL_T, pointer :: eosdata_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in), target :: tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k
@@ -1761,8 +1761,8 @@ stop
         print *,"num_materials_viscoelastic.le.0:fort_dermagtrace"
         stop
        endif
-       if (ncomp_tensor.ne.FORT_NUM_TENSOR_TYPE) then
-        print *,"ncomp_tensor.ne.FORT_NUM_TENSOR_TYPE"
+       if (ncomp_tensor.ne.ENUM_NUM_TENSOR_TYPE) then
+        print *,"ncomp_tensor.ne.ENUM_NUM_TENSOR_TYPE"
         stop
        endif
       else if (fort_is_eulerian_elastic_model(elastic_viscosity(im+1), &
@@ -2295,13 +2295,13 @@ stop
        print *,"gravdir invalid"
        stop
       endif
-      if (FORT_NUM_TENSOR_TYPE.ne.2*SDIM) then
-       print *,"FORT_NUM_TENSOR_TYPE invalid"
+      if (ENUM_NUM_TENSOR_TYPE.ne.2*SDIM) then
+       print *,"ENUM_NUM_TENSOR_TYPE invalid"
        stop
       endif
       if ((num_materials_viscoelastic.ge.1).and. &
           (num_materials_viscoelastic.le.nmat)) then
-       if (FORT_NUM_TENSOR_TYPE*num_materials_viscoelastic.ne.ntenvisco) then
+       if (ENUM_NUM_TENSOR_TYPE*num_materials_viscoelastic.ne.ntenvisco) then
         print *,"ntenvisco invalid1"
         stop
        endif
@@ -2753,7 +2753,7 @@ stop
                partid=partid+1
               enddo
               if (partid.le.num_materials_viscoelastic) then
-               viscbase=(partid-1)*FORT_NUM_TENSOR_TYPE
+               viscbase=(partid-1)*ENUM_NUM_TENSOR_TYPE
                Q(1,1)=viscoten(D_DECL(icell,jcell,kcell),viscbase+1)
                Q(1,2)=viscoten(D_DECL(icell,jcell,kcell),viscbase+2)
                Q(2,2)=viscoten(D_DECL(icell,jcell,kcell),viscbase+3)
@@ -3183,10 +3183,8 @@ stop
              ! make dist_substrate>0 outside the substrate
            dist_substrate=-dist_substrate
 
-           vofcomp=(SDIM+1)+ &
-             nmat*num_state_material+(im-1)*ngeom_raw+1
-           dencomp=(SDIM+1)+ &
-             (im-1)*num_state_material+1
+           vofcomp=STATECOMP_MOF+(im-1)*ngeom_raw+1
+           dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
            temperature=snew(D_DECL(i,j,k),dencomp+1) 
            vfrac=snew(D_DECL(i,j,k),vofcomp)
            if (vfrac.ge.half) then
@@ -3277,10 +3275,8 @@ stop
             ! make dist_substrate>0 outside the substrate
            dist_substrate=-dist_substrate
 
-           vofcomp=(SDIM+1)+ &
-             nmat*num_state_material+(im-1)*ngeom_raw+1
-           dencomp=(SDIM+1)+ &
-             (im-1)*num_state_material+1
+           vofcomp=STATECOMP_MOF+(im-1)*ngeom_raw+1
+           dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
            temperature=snew(D_DECL(i,j,k),dencomp+1) 
            vfrac=snew(D_DECL(i,j,k),vofcomp)
            if (vfrac.ge.half) then
@@ -3412,8 +3408,7 @@ stop
        vfrac=snew(D_DECL(i,j,k),vofcomp)
        if (vfrac.ge.half) then
         do im=1,nmat
-         dencomp=(SDIM+1)+ &
-           (im-1)*num_state_material+1
+         dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
          snew(D_DECL(i,j,k),dencomp+1)=TSAT
         enddo
        endif
