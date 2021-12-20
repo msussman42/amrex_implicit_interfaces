@@ -6978,19 +6978,20 @@ stop
             weight=sqrt(weight)
             weight =one/((weight+eps)**four)
             total_weight = total_weight+weight
-            do drag_comp=1,ncomp
+            do drag_comp=0,ncomp-1
              drag_type=fort_drag_type(drag_comp,drag_im)
              if (drag_im+1.eq.im) then
               if ((drag_type.ge.0).and. &
                   (drag_type.lt.DRAG_TYPE_NEXT).and. &
                   (drag_type.ne.DRAG_TYPE_FLAG)) then 
-               drag_sum(drag_comp) = drag_sum(drag_comp)+ &
-                 weight*drag_local(drag_comp)
+               drag_sum(drag_comp+1) = drag_sum(drag_comp+1)+ &
+                 weight*drag_local(drag_comp+1)
               else if (drag_type.eq.DRAG_TYPE_FLAG) then
-               if (drag_comp.eq.DRAGCOMP_FLAG+im) then
+               if (drag_comp+1.eq.DRAGCOMP_FLAG+im) then
                 ! do nothing
                else
-                print *,"drag_comp invalid"
+                print *,"drag_comp invalid MASS_TRANSFER (1), drag_comp=", &
+                   drag_comp
                 stop
                endif
               else
@@ -7003,7 +7004,7 @@ stop
               print *,"drag_im invalid"
               stop
              endif
-            enddo ! do drag_comp=1,ncomp
+            enddo ! do drag_comp=0,ncomp-1
            else if ((tag_local.eq.0).and.(rtag_local.eq.zero)) then
             ! do nothing
            else if ((tag_local.eq.2).and.(rtag_local.eq.two)) then
@@ -7018,18 +7019,20 @@ stop
           enddo ! i_sp,j_sp,k_sp
 
           if (total_weight.gt.zero) then
-           do drag_comp=1,ncomp
+           do drag_comp=0,ncomp-1
             drag_type=fort_drag_type(drag_comp,drag_im)
             if (drag_im+1.eq.im) then
              if ((drag_type.ge.0).and. &
                  (drag_type.lt.DRAG_TYPE_NEXT).and. &
                  (drag_type.ne.DRAG_TYPE_FLAG)) then 
-              drag(D_DECL(i,j,k),drag_comp)=drag_sum(drag_comp)/total_weight
+              drag(D_DECL(i,j,k),drag_comp+1)=drag_sum(drag_comp+1)/ &
+                      total_weight
              else if (drag_type.eq.DRAG_TYPE_FLAG) then
-              if (drag_comp.eq.DRAGCOMP_FLAG+im) then
+              if (drag_comp+1.eq.DRAGCOMP_FLAG+im) then
                ! do nothing
               else
-               print *,"drag_comp invalid"
+               print *,"drag_comp invalid MASS_TRANSFER (2), drag_comp=", &
+                   drag_comp
                stop
               endif
              else
@@ -7042,7 +7045,7 @@ stop
              print *,"drag_im invalid"
              stop
             endif
-           enddo ! do drag_comp=1,ncomp
+           enddo ! do drag_comp=0,ncomp-1
            drag(D_DECL(i,j,k),DRAGCOMP_FLAG+im)=two
           else if (total_weight.eq.zero) then
            ! do nothing

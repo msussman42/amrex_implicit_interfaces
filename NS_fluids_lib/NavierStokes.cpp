@@ -1324,6 +1324,7 @@ void fortran_parameters() {
  Vector<Real> geometry_prob_hi;
  Vector<int> geometry_is_periodic;
  int geometry_is_any_periodic;
+   //read_geometry_raw is declared in NavierStokes.cpp
  read_geometry_raw(geometry_coord,geometry_prob_lo,geometry_prob_hi,
 		 geometry_is_periodic,geometry_is_any_periodic);
 
