@@ -1643,8 +1643,6 @@ contains
 
       end subroutine wallfunc_general
 
-
-
       subroutine interp_from_fluid( &
        LOW, &
        x_fluid, &

@@ -6521,6 +6521,7 @@ stop
       REAL_T nrm(SDIM)
       REAL_T weight,total_weight
       REAL_T vel_sum(SDIM)
+      REAL_T vel_local
       REAL_T dxmax,dxmaxLS,eps,extensionwidth,LL
       REAL_T ls_local(nmat)
       INTEGER_T im_local
@@ -6690,13 +6691,7 @@ stop
                call containing_cell(bfact,dx,xlo,fablo,xcp,indexcp)
                do dir=1,SDIM
                 sten_lo(dir)=indexcp(dir)-1
-                if (sten_lo(dir).lt.fablo(dir)-ngrow_make_distance) then
-                 sten_lo(dir)=fablo(dir)-ngrow_make_distance
-                endif
                 sten_hi(dir)=indexcp(dir)+1
-                if (sten_hi(dir).gt.fabhi(dir)+ngrow_make_distance) then
-                 sten_hi(dir)=fabhi(dir)+ngrow_make_distance
-                endif
                enddo ! dir=1..sdim
 
                do dir=1,ncomp_per
@@ -6709,7 +6704,7 @@ stop
                do i_sp = sten_lo(1),sten_hi(1)
                do j_sp = sten_lo(2),sten_hi(2)
                do k_sp = sten_lo(3),sten_hi(3)
-                rtag_local=vel(D_DECL(i_sp,j_sp,k_sp),iten) 
+                call safe_data(i_sp,j_sp,k_sp,iten,vel_ptr,rtag_local)
                 tag_local=NINT(rtag_local) 
 
                 if ((tag_local.eq.sign_local).and. &
@@ -6725,8 +6720,8 @@ stop
                  total_weight = total_weight+weight
                  do dir=1,ncomp_per
                   scomp=nten+(iten-1)*ncomp_per+dir
-                  vel_sum(dir) = vel_sum(dir)+ &
-                   weight*vel(D_DECL(i_sp,j_sp,k_sp),scomp)
+                  call safe_data(i_sp,j_sp,k_sp,scomp,vel_ptr,vel_local)
+                  vel_sum(dir) = vel_sum(dir)+weight*vel_local 
                  enddo
                 else if ((tag_local.eq.0).and.(rtag_local.eq.zero)) then
                  ! do nothing
@@ -6845,7 +6840,11 @@ stop
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T im
+      INTEGER_T im_local
       INTEGER_T i,j,k,dir
+      INTEGER_T drag_comp
+      INTEGER_T drag_im
+      INTEGER_T drag_type
       INTEGER_T i_sp,j_sp,k_sp
       INTEGER_T sten_lo(3)
       INTEGER_T sten_hi(3)
@@ -6858,11 +6857,12 @@ stop
       REAL_T xsp(-3:3,SDIM)
       REAL_T nrm(SDIM)
       REAL_T weight,total_weight
-      REAL_T vel_sum(SDIM)
-      REAL_T dxmax,dxmaxLS,eps,extensionwidth,LL
+      REAL_T drag_sum(ncomp)
+      REAL_T drag_local(ncomp)
+      REAL_T dxmax,dxmaxLS,eps,extensionwidth
       REAL_T ls_local(nmat)
       INTEGER_T nten_test
-      INTEGER_T scomp,nhalf
+      INTEGER_T nhalf
 
       nhalf=3
 
@@ -6925,180 +6925,155 @@ stop
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+        do im_local=1,nmat
+         ls_local(im_local)=LS(D_DECL(i,j,k),im_local)
+        enddo
         rtag_local=drag(D_DECL(i,j,k),DRAGCOMP_FLAG+im)
         tag_local=NINT(rtag_local) 
          ! tag_local==0 if drag (flux) not yet init.
         if ((tag_local.eq.0).and.(rtag_local.eq.zero)) then
-              ! if close enough to both materials
-              if (max(abs(ls_local(im_source)),abs(ls_local(im_dest))).le. &
-                  extensionwidth) then
-               ! Project a point in normal direction of 
-               ! the level set function with least magnitude
-               call gridsten_level(xijk,i,j,k,level,nhalf)
+         ! if close enough to force recipient interface.
+         if (abs(ls_local(im)).le.extensionwidth) then
+          ! Project a point in normal direction of 
+          ! the recipient level set function interface.
+          call gridsten_level(xijk,i,j,k,level,nhalf)
+          do dir=1,SDIM
+           nrm(dir)=LS(D_DECL(i,j,k),nmat+(im-1)*SDIM+dir)
+           xcp(dir)=xijk(0,dir)-ls_local(im)*nrm(dir)
+          enddo ! dir
 
-               if ((ls_local(im_source).ge.zero).and. &
-                   (ls_local(im_dest).le.zero)) then
-                do dir=1,SDIM
-                 nrm(dir)=LS(D_DECL(i,j,k),nmat+(im_dest-1)*SDIM+dir)
-                 xcp(dir)=xijk(0,dir)-ls_local(im_dest)*nrm(dir)
-                enddo ! dir
-               else if ((ls_local(im_dest).ge.zero).and. &
-                        (ls_local(im_source).le.zero)) then
-                do dir=1,SDIM
-                 nrm(dir)=LS(D_DECL(i,j,k),nmat+(im_source-1)*SDIM+dir)
-                 xcp(dir)=xijk(0,dir)-ls_local(im_source)*nrm(dir)
-                enddo ! dir
-               else if (abs(ls_local(im_source)).le. &
-                        abs(ls_local(im_dest))) then
+          sten_lo(3)=0
+          sten_hi(3)=0
+          call containing_cell(bfact,dx,xlo,fablo,xcp,indexcp)
+          do dir=1,SDIM
+           sten_lo(dir)=indexcp(dir)-1
+           sten_hi(dir)=indexcp(dir)+1
+          enddo ! dir=1..sdim
 
-                ! closest point to "dest" material is farther
-                ! from the "source" material closest point, but
-                ! most importantly the "dest" material closest 
-                ! point is at the triple point.
-                ! ALSO: this procedure is more stable since if 
-                ! ls_source perturbed slightly from positive to negative,
-                ! then the algorithm to find the closest point will
-                ! not change.
-                do dir=1,SDIM
-                 nrm(dir)=LS(D_DECL(i,j,k),nmat+(im_dest-1)*SDIM+dir)
-                 xcp(dir)=xijk(0,dir)-ls_local(im_dest)*nrm(dir)
-                enddo ! dir
-               else if (abs(ls_local(im_dest)).le. &
-                        abs(ls_local(im_source))) then
+          do drag_comp=1,ncomp
+           drag_sum(drag_comp)=zero
+          enddo
 
-                ! closest point to "source" material is farther
-                ! from the "dest" material closest point, but
-                ! most importantly the "source" material closest 
-                ! point is at the triple point.
-                ! ALSO: this procedure is more stable since if 
-                ! ls_dest perturbed slightly from positive to negative,
-                ! then the algorithm to find the closest point will
-                ! not change.
-                do dir=1,SDIM
-                 nrm(dir)=LS(D_DECL(i,j,k),nmat+(im_source-1)*SDIM+dir)
-                 xcp(dir)=xijk(0,dir)-ls_local(im_source)*nrm(dir)
-                enddo ! dir
-               else
-                print *,"ls_local bust"
-                stop
-               endif
+          total_weight = zero
 
-               sten_lo(3)=0
-               sten_hi(3)=0
-               call containing_cell(bfact,dx,xlo,fablo,xcp,indexcp)
-               do dir=1,SDIM
-                sten_lo(dir)=indexcp(dir)-1
-                if (sten_lo(dir).lt.fablo(dir)-ngrow_make_distance) then
-                 sten_lo(dir)=fablo(dir)-ngrow_make_distance
-                endif
-                sten_hi(dir)=indexcp(dir)+1
-                if (sten_hi(dir).gt.fabhi(dir)+ngrow_make_distance) then
-                 sten_hi(dir)=fabhi(dir)+ngrow_make_distance
-                endif
-               enddo ! dir=1..sdim
+          ! gather support point/weights
+          do i_sp = sten_lo(1),sten_hi(1)
+          do j_sp = sten_lo(2),sten_hi(2)
+          do k_sp = sten_lo(3),sten_hi(3)
+           do drag_comp=1,ncomp
+            call safe_data(i_sp,j_sp,k_sp,drag_comp,drag_ptr, &
+              drag_local(drag_comp))
+           enddo
+           rtag_local=drag_local(DRAGCOMP_FLAG+im) 
+           tag_local=NINT(rtag_local) 
 
-               do dir=1,ncomp_per
-                vel_sum(dir)=zero
-               enddo
+           if ((tag_local.eq.1).and. &
+               (rtag_local.eq.one)) then
+            call gridsten_level(xsp,i_sp,j_sp,k_sp,level,nhalf)
 
-               total_weight = zero
-
-               ! gather support point/weights
-               do i_sp = sten_lo(1),sten_hi(1)
-               do j_sp = sten_lo(2),sten_hi(2)
-               do k_sp = sten_lo(3),sten_hi(3)
-                rtag_local=vel(D_DECL(i_sp,j_sp,k_sp),iten) 
-                tag_local=NINT(rtag_local) 
-
-                if ((tag_local.eq.sign_local).and. &
-                    (rtag_local.eq.sign_local)) then
-                 call gridsten_level(xsp,i_sp,j_sp,k_sp,level,nhalf)
-
-                 weight=zero
-                 do dir=1,SDIM
-                  weight = weight + (xsp(0,dir)-xcp(dir))**two
-                 enddo
-                 weight=sqrt(weight)
-                 weight =one/((weight+eps)**four)
-                 total_weight = total_weight+weight
-                 do dir=1,ncomp_per
-                  scomp=nten+(iten-1)*ncomp_per+dir
-                  vel_sum(dir) = vel_sum(dir)+ &
-                   weight*vel(D_DECL(i_sp,j_sp,k_sp),scomp)
-                 enddo
-                else if ((tag_local.eq.0).and.(rtag_local.eq.zero)) then
-                 ! do nothing
-                else if ((abs(tag_local).eq.2).and. &
-                         (abs(rtag_local).eq.two)) then
-                 ! do nothing (this is a newly extended rate)
-                else if ((tag_local.eq.-sign_local).and. &
-                         (rtag_local.eq.-sign_local)) then
-                 ! do nothing (this is opposite sign)
-                else
-                 print *,"tag_local or rtag_local invalid1:", &
-                    tag_local,rtag_local
-                 stop
-                endif
-               enddo
-               enddo
-               enddo ! i_sp,j_sp,k_sp
-
-               if (total_weight.gt.zero) then
-                do dir=1,ncomp_per
-                 scomp=nten+(iten-1)*ncomp_per+dir
-                 vel(D_DECL(i,j,k),scomp)=vel_sum(dir)/total_weight
-                enddo
-                vel(D_DECL(i,j,k),iten)=two*sign_local
-               else if (total_weight.eq.zero) then
+            weight=zero
+            do dir=1,SDIM
+             weight = weight + (xsp(0,dir)-xcp(dir))**two
+            enddo
+            weight=sqrt(weight)
+            weight =one/((weight+eps)**four)
+            total_weight = total_weight+weight
+            do drag_comp=1,ncomp
+             drag_type=fort_drag_type(drag_comp,drag_im)
+             if (drag_im+1.eq.im) then
+              if ((drag_type.ge.0).and. &
+                  (drag_type.lt.DRAG_TYPE_NEXT).and. &
+                  (drag_type.ne.DRAG_TYPE_FLAG)) then 
+               drag_sum(drag_comp) = drag_sum(drag_comp)+ &
+                 weight*drag_local(drag_comp)
+              else if (drag_type.eq.DRAG_TYPE_FLAG) then
+               if (drag_comp.eq.DRAGCOMP_FLAG+im) then
                 ! do nothing
                else
-                print *,"total_weight invalid"
+                print *,"drag_comp invalid"
                 stop
                endif
-              endif ! min(|ls_w|,|ls_i|)<extension width
-             else if ((tag_local.eq.1).and.(rtag_local.eq.one)) then
-              ! do nothing
-             else if ((tag_local.eq.-1).and.(rtag_local.eq.-one)) then
+              else
+               print *,"drag_type invalid"
+               stop
+              endif
+             else if ((drag_im.ge.0).and.(drag_im.lt.nmat)) then
               ! do nothing
              else
-              print *,"tag_local or rtag_local invalid2:", &
-                 tag_local,rtag_local
-              print *,"i,j,k ",i,j,k
-              print *,"LL= ",LL
-              print *,"iten=",iten
-              print *,"im,im_opp,ireverse,im_source,im_dest ", &
-               im,im_opp,ireverse,im_source,im_dest
-              print *,"raw tag data ",vel(D_DECL(i,j,k),iten)
-              print *,"level,finest_level ",level,finest_level
-              print *,"nmat,nten,nburning,ngrow ",nmat,nten,nburning,ngrow
+              print *,"drag_im invalid"
               stop
              endif
-            else
-             print *,"im_dest invalid"
-             stop
-            endif
-
-           else if (is_rigid(nmat,im_local).eq.1) then
+            enddo ! do drag_comp=1,ncomp
+           else if ((tag_local.eq.0).and.(rtag_local.eq.zero)) then
             ! do nothing
+           else if ((tag_local.eq.2).and.(rtag_local.eq.two)) then
+            ! do nothing (this is a newly extended drag)
            else
-            print *,"is_rigid(nmat,im_local) invalid"
+            print *,"tag_local or rtag_local invalid1:", &
+               tag_local,rtag_local
             stop
            endif
-          enddo ! k
-          enddo ! j
-          enddo ! i
-         else if (LL.eq.zero) then
+          enddo
+          enddo
+          enddo ! i_sp,j_sp,k_sp
+
+          if (total_weight.gt.zero) then
+           do drag_comp=1,ncomp
+            drag_type=fort_drag_type(drag_comp,drag_im)
+            if (drag_im+1.eq.im) then
+             if ((drag_type.ge.0).and. &
+                 (drag_type.lt.DRAG_TYPE_NEXT).and. &
+                 (drag_type.ne.DRAG_TYPE_FLAG)) then 
+              drag(D_DECL(i,j,k),drag_comp)=drag_sum(drag_comp)/total_weight
+             else if (drag_type.eq.DRAG_TYPE_FLAG) then
+              if (drag_comp.eq.DRAGCOMP_FLAG+im) then
+               ! do nothing
+              else
+               print *,"drag_comp invalid"
+               stop
+              endif
+             else
+              print *,"drag_type invalid"
+              stop
+             endif
+            else if ((drag_im.ge.0).and.(drag_im.lt.nmat)) then
+             ! do nothing
+            else
+             print *,"drag_im invalid"
+             stop
+            endif
+           enddo ! do drag_comp=1,ncomp
+           drag(D_DECL(i,j,k),DRAGCOMP_FLAG+im)=two
+          else if (total_weight.eq.zero) then
+           ! do nothing
+          else
+           print *,"total_weight invalid"
+           stop
+          endif
+         else if (abs(ls_local(im)).gt.extensionwidth) then
           ! do nothing
          else
-          print *,"LL bust"
+          print *,"ls_local(im) invalid"
           stop
-         endif 
-        enddo ! ireverse=0..1
-       enddo ! im_opp=im+1..nmat
-      enddo ! im=1..nmat-1
+         endif
+        else if ((tag_local.eq.1).and.(rtag_local.eq.one)) then
+         ! do nothing
+        else
+         print *,"tag_local or rtag_local invalid2:", &
+           tag_local,rtag_local
+         print *,"i,j,k ",i,j,k
+         print *,"level,finest_level ",level,finest_level
+         print *,"nmat,nten,nburning,ngrow ",nmat,nten,nburning,ngrow
+         stop
+        endif
+
+       enddo ! k
+       enddo ! j
+       enddo ! i
+      enddo !im=1,nmat
 
       return 
-      end subroutine fort_extend_burning_vel
+      end subroutine fort_extend_drag
 
 
  
