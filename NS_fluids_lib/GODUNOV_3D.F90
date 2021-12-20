@@ -6335,7 +6335,7 @@ stop
       REAL_T, pointer :: DeDTinverse_ptr(D_DECL(:,:,:))
       REAL_T, intent(inout),target :: vischeat(DIMV(vischeat))
       REAL_T, pointer :: vischeat_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: tensor(DIMV(tensor),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in),target :: tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: gradu(DIMV(gradu),ntensor)
       REAL_T, pointer :: gradu_ptr(D_DECL(:,:,:),:)
@@ -8436,7 +8436,7 @@ stop
       REAL_T, intent(in), target :: zdfab(DIMV(zdfab),1)
       REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
       REAL_T, intent(inout), target :: tensor(DIMV(tensor), &
-              FORT_NUM_TENSOR_TYPE)
+              ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in) :: elastic_viscosity,etaS
@@ -8476,10 +8476,10 @@ stop
 
       tensor_ptr=>tensor
 
-      if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
+      if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
        ! do nothing
       else
-       print *,"FORT_NUM_TENSOR_TYPE invalid"
+       print *,"ENUM_NUM_TENSOR_TYPE invalid"
        stop
       endif
 
@@ -8856,10 +8856,10 @@ stop
       REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
       REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: tensor(DIMV(tensor), &
-              FORT_NUM_TENSOR_TYPE)
+              ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out), target :: tensorMAC(DIMV(tensorMAC), &
-              FORT_NUM_TENSOR_TYPE)
+              ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: tensorMAC_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in) :: elastic_viscosity,etaS
@@ -8898,10 +8898,10 @@ stop
 
       tensorMAC_ptr=>tensorMAC
 
-      if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
+      if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
        ! do nothing
       else
-       print *,"FORT_NUM_TENSOR_TYPE invalid"
+       print *,"ENUM_NUM_TENSOR_TYPE invalid"
        stop
       endif
 
@@ -9165,7 +9165,7 @@ stop
 #endif
        else if (interp_Q_to_flux.eq.1) then
 
-        do itensor=1,FORT_NUM_TENSOR_TYPE
+        do itensor=1,ENUM_NUM_TENSOR_TYPE
 
          data_in%disp_data=>tensor
          data_in%dir_deriv=-1
@@ -9179,7 +9179,7 @@ stop
          call deriv_from_grid_util(data_in,data_out)
 
          tensorMAC(D_DECL(i,j,k),itensor)=cell_data_deriv(1)
-        enddo ! itensor=1..FORT_NUM_TENSOR_TYPE
+        enddo ! itensor=1..ENUM_NUM_TENSOR_TYPE
        else
         print *,"interp_Q_to_flux invalid"
         stop
@@ -9526,8 +9526,7 @@ stop
           xlo,dx,i,j,k, &
           bfact,level, &
           volcell,cencell,SDIM)
-         vofcomp=(SDIM+1)+nmat*num_state_material+ &
-            (im_part-1)*ngeom_raw
+         vofcomp=STATECOMP_MOF+(im_part-1)*ngeom_raw
 
          if (volume_frac.lt.zero) then
           print *,"volume_frac.lt.zero"
@@ -9633,10 +9632,10 @@ stop
       REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(out), target :: tnew(DIMV(tnew),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(out), target :: tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: tnew_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: told(DIMV(told),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(in), target :: told(DIMV(told),ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: told_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: xdisp(DIMV(xdisp))
@@ -9792,7 +9791,7 @@ stop
         level, &          ! 0<=level<=finest_level
         finest_level, &
         xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
-        FORT_NUM_TENSOR_TYPE, & !ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
+        ENUM_NUM_TENSOR_TYPE, & !ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
         nmat, &
         tnew_ptr, &       ! FAB that holds elastic tensor, Q, when complete
         xdisp_ptr, &      
@@ -10245,7 +10244,7 @@ stop
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
 
-      REAL_T, intent(inout), target :: tnew(DIMV(tnew),FORT_NUM_TENSOR_TYPE)
+      REAL_T, intent(inout), target :: tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: tnew_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T :: i,j,k
@@ -14476,7 +14475,7 @@ stop
        stop
       endif
 
-      if (ntensor.eq.num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE) then
+      if (ntensor.eq.num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) then
        ! do nothing
       else
        print *,"ntensor invalid"
@@ -14637,10 +14636,10 @@ stop
        print *,"NUM_CELL_ELASTIC invalid"
        stop
       endif 
-      if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
+      if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
        ! do nothing
       else
-       print *,"FORT_NUM_TENSOR_TYPE invalid"
+       print *,"ENUM_NUM_TENSOR_TYPE invalid"
        stop
       endif 
 
@@ -15728,8 +15727,8 @@ stop
 
                if (imap.le.num_materials_viscoelastic) then
 
-                do istate=1,FORT_NUM_TENSOR_TYPE
-                 statecomp_data=(imap-1)*FORT_NUM_TENSOR_TYPE+istate
+                do istate=1,ENUM_NUM_TENSOR_TYPE
+                 statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE+istate
                  ! configuration tensor is stored at the cell centers, not the
                  ! corresponding material centroid.
                  donate_data= &
@@ -15737,7 +15736,7 @@ stop
                  veldata(itensor_base+statecomp_data)= &
                   veldata(itensor_base+statecomp_data)+ &
                   LS_voltotal_depart*donate_data 
-                enddo !istate=1..FORT_NUM_TENSOR_TYPE
+                enddo !istate=1..ENUM_NUM_TENSOR_TYPE
 
                else 
                 print *,"imap invalid"
@@ -16009,8 +16008,8 @@ stop
 
             if (imap.le.num_materials_viscoelastic) then
 
-             do istate=1,FORT_NUM_TENSOR_TYPE
-              statecomp_data=(imap-1)*FORT_NUM_TENSOR_TYPE+istate
+             do istate=1,ENUM_NUM_TENSOR_TYPE
+              statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE+istate
               if (voltotal_depart.gt.zero) then
                tennew_hold(statecomp_data)= &
                  veldata(itensor_base+statecomp_data)/voltotal_depart
@@ -16019,7 +16018,7 @@ stop
                stop
               endif 
  
-             enddo !istate=1..FORT_NUM_TENSOR_TYPE
+             enddo !istate=1..ENUM_NUM_TENSOR_TYPE
 
             else 
              print *,"imap invalid"
@@ -16235,7 +16234,7 @@ stop
                 do ispecies=1,num_species_var
                  speccomp_data=(im-1)*num_state_material+num_state_base+ &
                     ispecies
-                  !dencomp=(SDIM+1)
+                  !dencomp=STATECOMP_STATES
                  massfrac_parm(ispecies)= &
                     snew_hold(dencomp+speccomp_data)
                  if (massfrac_parm(ispecies).ge.zero) then
@@ -16338,11 +16337,11 @@ stop
             enddo
             if (imap.le.num_materials_viscoelastic) then
 
-             do istate=1,FORT_NUM_TENSOR_TYPE
-              statecomp_data=(imap-1)*FORT_NUM_TENSOR_TYPE+istate
+             do istate=1,ENUM_NUM_TENSOR_TYPE
+              statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE+istate
               tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
                tennew_hold(statecomp_data)
-             enddo !istate=1..FORT_NUM_TENSOR_TYPE
+             enddo !istate=1..ENUM_NUM_TENSOR_TYPE
 
             else 
              print *,"imap invalid"
@@ -16909,8 +16908,7 @@ stop
          endif
          cell_vfrac(im)=local_volume
 
-         dencomp=(SDIM+1)+ &
-             (im-1)*num_state_material+1
+         dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
          test_density=state(D_DECL(i,j,k),dencomp)
          if (test_density.le.zero) then
           print *,"test_density invalid"
@@ -17262,8 +17260,7 @@ stop
              ! check for Tgamma or Ygamma boundary condition.
 
             do im_crit=1,nmat
-             dencomp=(SDIM+1)+ &
-              (im_crit-1)*num_state_material+1
+             dencomp=STATECOMP_STATES+(im_crit-1)*num_state_material+1
              Tcenter(im_crit)=cellfab(D_DECL(i,j,k),scomp(im_crit)+1)
              if (Tcenter(im_crit).ge.zero) then
               ! do nothing
@@ -19990,22 +19987,22 @@ stop
 
       REAL_T, intent(in), target :: MACFLUX_CC( &
              DIMV(MACFLUX_CC), &
-             FORT_NUM_TENSOR_TYPE)
+             ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: MACFLUX_CC_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: MACFLUX_XY( &
              DIMV(MACFLUX_XY), &
-             FORT_NUM_TENSOR_TYPE)
+             ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: MACFLUX_XY_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: MACFLUX_XZ( &
              DIMV(MACFLUX_XZ), &
-             FORT_NUM_TENSOR_TYPE)
+             ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: MACFLUX_XZ_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: MACFLUX_YZ( &
              DIMV(MACFLUX_YZ), &
-             FORT_NUM_TENSOR_TYPE)
+             ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: MACFLUX_YZ_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
@@ -20102,7 +20099,7 @@ stop
       INTEGER_T iflux,jflux,kflux
       INTEGER_T iadj,jadj,kadj
       INTEGER_T itensor
-      REAL_T local_tensor_data(FORT_NUM_TENSOR_TYPE)
+      REAL_T local_tensor_data(ENUM_NUM_TENSOR_TYPE)
 
       UMACNEW_ptr=>UMACNEW
 
@@ -20127,10 +20124,10 @@ stop
        fablo_local(dir_local)=fablo(dir_local)
        fabhi_local(dir_local)=fabhi(dir_local)
       enddo
-      if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
+      if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
        ! do nothing
       else
-       print *,"FORT_NUM_TENSOR_TYPE invalid"
+       print *,"ENUM_NUM_TENSOR_TYPE invalid"
        stop
       endif
 
@@ -20371,7 +20368,7 @@ stop
 
          call box_type_to_grid_type(grid_type_flux,box_type_flux)
        
-         do itensor=1,FORT_NUM_TENSOR_TYPE
+         do itensor=1,ENUM_NUM_TENSOR_TYPE
           if (grid_type_flux.eq.-1) then
            grid_type_sanity=grid_type_CC
            local_tensor_data(itensor)= &
@@ -20392,7 +20389,7 @@ stop
            print *,"grid_type_flux invalid"
            stop
           endif
-         enddo ! itensor=1..FORT_NUM_TENSOR_TYPE
+         enddo ! itensor=1..ENUM_NUM_TENSOR_TYPE
 
          if (grid_type_flux.eq.grid_type_sanity) then
           ! do nothing

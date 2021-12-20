@@ -315,8 +315,6 @@ implicit none
 
       INTEGER_T, PARAMETER :: ngrow_make_distance=3
 
-      INTEGER_T, PARAMETER :: FORT_NUM_TENSOR_TYPE=2*SDIM
-
       REAL_T, PARAMETER :: GAMMA_SIMPLE_PARMS=1.4
 
          ! R=CP-CV

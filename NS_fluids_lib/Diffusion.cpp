@@ -203,8 +203,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  MultiFab* Un=localMF[idx_vel];
 
  MultiFab& U_new=get_new_data(State_Type,slab_step+1);
- int nstate=(AMREX_SPACEDIM+1)+
-  nmat*(num_state_material+ngeom_raw)+1;
+ int nstate=STATE_NCOMP;
  if (U_new.nComp()!=nstate) 
   amrex::Error("U_new.nComp()!=nstate");
 
@@ -491,8 +490,7 @@ void NavierStokes::combine_state_variable(
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
  if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1)");
- int nstate=(AMREX_SPACEDIM+1)+
-            nmat*(num_state_material+ngeom_raw)+1;
+ int nstate=STATE_NCOMP;
  if (S_new.nComp()!=nstate)
   amrex::Error("(S_new.nComp()!=nstate)");
 
@@ -1073,8 +1071,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
- int nstate=(AMREX_SPACEDIM+1)+
-   nmat*(num_state_material+ngeom_raw)+1;
+ int nstate=STATE_NCOMP;
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 

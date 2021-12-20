@@ -146,7 +146,7 @@ stop
        nmat*plot_sdim+ & ! ls slope
        nmat*num_state_material+ & ! den 
        nmat+ & ! mom_den
-       num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE+ &
+       num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE+ &
        plot_sdim+ & ! displacement
        nmat+ & ! visc
        nmat+ & ! conduct
@@ -436,7 +436,7 @@ stop
          endif
         enddo
 
-        do ispec=1,FORT_NUM_TENSOR_TYPE
+        do ispec=1,ENUM_NUM_TENSOR_TYPE
 
          write(specstr,'(I2)') ispec
          do i=1,2
@@ -21559,8 +21559,8 @@ end subroutine RatePhaseChange
        ! F>VOFTOL_REDIST
       VOFTOL_NUCLEATE=VOFTOL_REDIST*two
 
-      denbase=(SDIM+1)
-      mofbase=denbase+nmat*num_state_material
+      denbase=STATECOMP_STATES
+      mofbase=STATECOMP_MOF
       im_dest=nucleate_in%im_dest
       im_source=nucleate_in%im_source
       vofcomp=mofbase+(im_dest-1)*ngeom_raw+1
@@ -28405,10 +28405,10 @@ end subroutine initialize2d
        stop
       endif
 
-      if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
+      if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
        ! do nothing
       else
-       print *,"FORT_NUM_TENSOR_TYPE invalid"
+       print *,"ENUM_NUM_TENSOR_TYPE invalid"
        stop
       endif
       if (grid_type.eq.-1) then
@@ -28424,13 +28424,13 @@ end subroutine initialize2d
       endif
        ! c++ index
       icomplo=0
-      icomphi=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE
+      icomphi=num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE
       if ((scomp.lt.icomplo).or.(scomp.ge.icomphi)) then
        print *,"scomp out of range in tensor fill"
        stop
       endif
 
-      ipart=(scomp-icomplo)/FORT_NUM_TENSOR_TYPE+1
+      ipart=(scomp-icomplo)/ENUM_NUM_TENSOR_TYPE+1
       if ((ipart.lt.1).or. &
           (ipart.gt.num_materials_viscoelastic)) then
        print *,"ipart out of range:FORT_TENSORFILL"
@@ -28869,10 +28869,10 @@ end subroutine initialize2d
       
       nhalf=3
 
-      if (FORT_NUM_TENSOR_TYPE.eq.2*SDIM) then
+      if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
        ! do nothing
       else
-       print *,"FORT_NUM_TENSOR_TYPE invalid"
+       print *,"ENUM_NUM_TENSOR_TYPE invalid"
        stop
       endif
       if (grid_type.eq.-1) then
@@ -28882,7 +28882,7 @@ end subroutine initialize2d
        stop
       endif
 
-      max_ncomp=num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE
+      max_ncomp=num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE
 
       check_scomp=0
       check_ncomp=0
@@ -28901,7 +28901,7 @@ end subroutine initialize2d
        print *,"scomp=",scomp
        print *,"ncomp=",ncomp
        print *,"num_materials_viscoelastic=",num_materials_viscoelastic
-       print *,"FORT_NUM_TENSOR_TYPE= ",FORT_NUM_TENSOR_TYPE
+       print *,"ENUM_NUM_TENSOR_TYPE= ",ENUM_NUM_TENSOR_TYPE
        print *,"level=",level
        print *,"fort_finest_level=",fort_finest_level
        stop
@@ -28956,14 +28956,14 @@ end subroutine initialize2d
        if (scomp.eq.0) then
  
         do ipart=1,num_materials_viscoelastic
-        do istate=1,FORT_NUM_TENSOR_TYPE
+        do istate=1,ENUM_NUM_TENSOR_TYPE
 
          icomp_total=icomp_total+1
 
          if ((icomp_total.ge.1).and. &
              (icomp_total.le.ncomp).and. &
              (icomp_total.le. &
-              num_materials_viscoelastic*FORT_NUM_TENSOR_TYPE)) then
+              num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE)) then
 
           im=fort_im_elastic_map(ipart)+1
 
@@ -29652,10 +29652,10 @@ end subroutine initialize2d
        endif
        max_levelstack=adapt_quad_depth
 
-       ipresbase=SDIM
+       ipresbase=STATECOMP_PRES
        impres=1
-       idenbase=(SDIM+1)
-       imofbase=idenbase+nmat*num_state_material
+       idenbase=STATECOMP_STATES
+       imofbase=STATECOMP_MOF
        ierr=imofbase+nmat*ngeom_raw+1
        if (nc.ne.ierr) then
         print *,"nc invalid"

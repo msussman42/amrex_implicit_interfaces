@@ -9,6 +9,7 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 
+#include "EXTRAP_COMP.H"
 #include "DIFFUSION_F.H"
 
 #if (AMREX_SPACEDIM==3)
@@ -485,7 +486,7 @@ stop
            print *,"localF out of range"
            stop
           endif
-          dencomp=(SDIM+1)+(im-1)*num_state_material+1
+          dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
           if (constant_density_all_time(im).eq.1) then
            rho_base=fort_denconst(im)
           else if (constant_density_all_time(im).eq.0) then

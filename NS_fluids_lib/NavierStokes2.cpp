@@ -3080,13 +3080,13 @@ void NavierStokes::VELMAC_TO_CELLALL(
      AMREX_SPACEDIM,State_Type,scompBC_map);
   } else if (vel_or_disp==1) { // displacement
 
-   if (NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
+   if (ENUM_NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
     // do nothing
    } else
-    amrex::Error("NUM_TENSOR_TYPE invalid");
+    amrex::Error("ENUM_NUM_TENSOR_TYPE invalid");
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-    scompBC_map[dir]=NUM_TENSOR_TYPE+dir+ncghost_state-ncghost_elastic;
+    scompBC_map[dir]=EXTRAPCOMP_ELASTIC+ENUM_NUM_TENSOR_TYPE+dir;
 
     // there is no cell centered displacement, so PCINTERP_fill_bordersALL
     // must be called instead of GetStateFromLocalALL
@@ -3518,7 +3518,7 @@ void NavierStokes::init_gradu_tensorALL(
    amrex::Error("irow or icol invalid");
 
   scompBC_map.resize(1);
-  scompBC_map[0]=scomp_extrap+ncghost_state-ncghost_elastic;
+  scompBC_map[0]=EXTRAPCOMP_ELASTIC+scomp_extrap;
    // idx,ngrow,scomp,ncomp,index,scompBC_map
   PCINTERP_fill_bordersALL(idx_cell,1,i,1,State_Type,scompBC_map);
 
@@ -5403,8 +5403,7 @@ void NavierStokes::solid_temperature() {
  int nmat=num_materials;
 
  MultiFab &S_new = get_new_data(State_Type,slab_step+1);
- int nstate=(AMREX_SPACEDIM+1)+
-  nmat*(num_state_material+ngeom_raw)+1;
+ int nstate=STATE_NCOMP;
  if (S_new.nComp()!=nstate) 
   amrex::Error("S_new.nComp()!=nstate");
 
@@ -5524,8 +5523,7 @@ void NavierStokes::increment_potential_force() {
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int nstate=S_new.nComp();
- if (nstate!=(AMREX_SPACEDIM+1)+
-     nmat*(num_state_material+ngeom_raw)+1)
+ if (nstate!=STATE_NCOMP)
   amrex::Error("nstate invalid");
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
@@ -6392,8 +6390,8 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  MultiFab &LS_new = get_new_data(LS_Type,slab_step+1);
  int nmat=num_materials;
  int nten=num_interfaces;
- int scomp_mofvars=(AMREX_SPACEDIM+1)+nmat*num_state_material;
- int dencomp=(AMREX_SPACEDIM+1);
+ int scomp_mofvars=STATECOMP_MOF;
+ int dencomp=STATECOMP_STATES;
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,6001);
@@ -6639,7 +6637,7 @@ void NavierStokes::move_particles(
   const int* domlo = domain.loVect();
   const int* domhi = domain.hiVect();
 
-  int scomp_mofvars=AMREX_SPACEDIM+1+nmat*num_state_material;
+  int scomp_mofvars=STATECOMP_MOF;
   Vector<int> dombc(2*AMREX_SPACEDIM);
   const BCRec& descbc = get_desc_lst()[State_Type].getBC(scomp_mofvars);
   const int* b_rec=descbc.vect();
@@ -6804,9 +6802,8 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
  MultiFab &S_new = get_new_data(State_Type,slab_step+1);
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
  int nmat=num_materials;
- int scomp_mofvars=(AMREX_SPACEDIM+1)+
-  nmat*num_state_material;
- int nc=scomp_mofvars+nmat*ngeom_raw+1;
+ int scomp_mofvars=STATECOMP_MOF;
+ int nc=STATE_NCOMP;
  if (nc!=S_new.nComp())
   amrex::Error("nc invalid in truncate_VOF");
  if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
@@ -7372,7 +7369,7 @@ void NavierStokes::output_zones(
 
    int elastic_ncomp=viscoelasticmf->nComp();
    if (elastic_ncomp==
-       num_materials_viscoelastic*NUM_TENSOR_TYPE+AMREX_SPACEDIM) {
+       num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE+AMREX_SPACEDIM) {
     // do nothing
    } else
     amrex::Error("elastic_ncomp invalid");
@@ -8227,8 +8224,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
  int nmat=num_materials;
  int nten=num_interfaces;
 
- int scomp_mofvars=(AMREX_SPACEDIM+1)+
-  nmat*num_state_material;
+ int scomp_mofvars=STATECOMP_MOF;
 
  Vector< Vector<int> > total_calls;
  Vector< Vector<int> > total_iterations;
@@ -8498,8 +8494,7 @@ void NavierStokes::build_masksem(int mask_sweep) {
    spectral_cells_level[tid][im]=0.0;
  }
 
- int scomp_mofvars=(AMREX_SPACEDIM+1)+
-   nmat*num_state_material;
+ int scomp_mofvars=STATECOMP_MOF;
 
  MultiFab* vofmat=new MultiFab(grids,dmap,nmat,0,
   MFInfo().SetTag("vofmat"),FArrayBoxFactory());
@@ -8780,11 +8775,10 @@ void NavierStokes::init_pressure_error_indicator() {
 	MFInfo().SetTag("vortmf"),FArrayBoxFactory());
  const Real* dx = geom.CellSize();
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- int scomp_mofvars=(AMREX_SPACEDIM+1)+
-   nmat*num_state_material;
- int scomp_error=scomp_mofvars+nmat*ngeom_raw;
- if (scomp_error!=S_new.nComp()-1)
-  amrex::Error("scomp_error invalid");
+ int scomp_mofvars=STATECOMP_MOF;
+ int scomp_error=STATECOMP_ERR;
+ if (STATE_NCOMP!=S_new.nComp())
+  amrex::Error("S_new.nComp() mismatch");
 
  MultiFab* velmf=getState(1,0,AMREX_SPACEDIM,cur_time_slab);
 
@@ -9377,7 +9371,7 @@ void NavierStokes::getStateVISC() {
      (num_materials_viscoelastic<=nmat)) {
 
   tensor=getStateTensor(ngrow,0,
-    num_materials_viscoelastic*NUM_TENSOR_TYPE,cur_time_slab);
+    num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE,cur_time_slab);
 
  } else if (num_materials_viscoelastic==0) {
 	 // do nothing
@@ -9404,7 +9398,7 @@ void NavierStokes::getStateVISC() {
     partid++;
    }
    if (partid<im_elastic_map.size()) {
-    scomp_tensor=partid*NUM_TENSOR_TYPE;
+    scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE;
    } else
     amrex::Error("partid could not be found: getStateVISC");
      
@@ -9854,9 +9848,9 @@ void NavierStokes::getState_tracemag(int idx) {
      partid++;
     }
     if (partid<im_elastic_map.size()) {
-     int scomp_tensor=partid*NUM_TENSOR_TYPE;
+     int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE;
       //ngrow=1
-     tensor=getStateTensor(1,scomp_tensor,NUM_TENSOR_TYPE,cur_time_slab);
+     tensor=getStateTensor(1,scomp_tensor,ENUM_NUM_TENSOR_TYPE,cur_time_slab);
      allocate_tensor=1;
     } else
      amrex::Error("partid could not be found: getState_tracemag");
