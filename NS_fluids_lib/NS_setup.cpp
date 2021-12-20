@@ -1696,7 +1696,7 @@ NavierStokes::variableSetUp ()
 
     for (int drag_comp=0;drag_comp<N_DRAG;drag_comp++) {
      int drag_im=-1;
-     int drag_type=fort_drag_type(drag_comp,drag_im);
+     int drag_type=fort_drag_type(&drag_comp,&drag_im);
 
      if ((drag_im>=0)&&
          (drag_im<num_materials)&&

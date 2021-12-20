@@ -26,6 +26,8 @@ stop
 
       module interp_module
 
+      contains
+
       subroutine fort_override_finest_level(cc_finest_level) &
       bind(c,name='fort_override_finest_level')
 
@@ -1304,7 +1306,7 @@ stop
                endif
               enddo ! dir=1..sdim
 
-              if ((velflag.eq.0).or &
+              if ((velflag.eq.0).or. &
                   (velflag.eq.1)) then
 
                do iten=1,nten
@@ -1422,7 +1424,7 @@ stop
 
        if (n_overlap.ge.1) then
 
-        if ((velflag.eq.0).or &
+        if ((velflag.eq.0).or. &
             (velflag.eq.1)) then
 
          do iten=1,nten

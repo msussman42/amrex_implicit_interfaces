@@ -10,7 +10,7 @@
 #include "AMReX_ArrayLim.H"
 
 #include "INTEGRATED_QUANTITY.H"
-#include "DRAG_COMP.H"
+#include "EXTRAP_COMP.H"
 #include "DERIVE_F.H"
 #include "PROB_F.H"
 

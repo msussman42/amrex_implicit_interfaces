@@ -12,7 +12,7 @@
 ! N_EXTRA_REAL.H is in the amrlib directory.
 #include "N_EXTRA_REAL.H"
 #include "INTEGRATED_QUANTITY.H"
-#include "DRAG_COMP.H"
+#include "EXTRAP_COMP.H"
 #include "NAVIERSTOKES_F.H"
 
 #if (AMREX_SPACEDIM==3)

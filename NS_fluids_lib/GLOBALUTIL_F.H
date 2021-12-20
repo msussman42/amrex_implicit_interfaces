@@ -21,6 +21,10 @@ extern "C"
 	int* nmat,
 	int* im);  // 1<=im<=nmat
 
+   int fort_drag_type(
+    int* drag_comp,//0..NDRAG-1
+    int* drag_im); //0..nmat-1
+
 }
 
 }/* namespace amrex */

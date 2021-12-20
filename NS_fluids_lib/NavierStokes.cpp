@@ -534,10 +534,10 @@ int  NavierStokes::num_materials_viscoelastic=0;
 
 int  NavierStokes::NUM_CELL_ELASTIC=0;
 
-int  NavierStokes::num_state_material=SpeciesVar; // den,T
-int  NavierStokes::num_state_base=SpeciesVar; // den,T
+int  NavierStokes::num_state_material=ENUM_SPECIESVAR; // den,T
+int  NavierStokes::num_state_base=ENUM_SPECIESVAR; // den,T
 int  NavierStokes::ngeom_raw=AMREX_SPACEDIM+1;
-int  NavierStokes::ngeom_recon=NUM_MOF_VAR;
+int  NavierStokes::ngeom_recon=ENUM_NUM_MOF_VAR;
 
 // vel, pres, num_state_material x nmat, ngeom_raw x nmat, error ind
 int  NavierStokes::State_Type=0;
@@ -1566,10 +1566,10 @@ void fortran_parameters() {
  int num_interfaces=0;
  int num_materials_viscoelastic_temp=0;
 
- int num_state_material=SpeciesVar;  // den,T
- int num_state_base=SpeciesVar;  // den,T
+ int num_state_material=ENUM_SPECIESVAR;  // den,T
+ int num_state_base=ENUM_SPECIESVAR;  // den,T
  int ngeom_raw=AMREX_SPACEDIM+1;
- int ngeom_recon=NUM_MOF_VAR;
+ int ngeom_recon=ENUM_NUM_MOF_VAR;
 
  pp.get("num_materials",num_materials);
  if ((num_materials<2)||(num_materials>999))
@@ -1601,8 +1601,8 @@ void fortran_parameters() {
  if (num_species_var<0)
   amrex::Error("num species var invalid");
 
- num_state_base=SpeciesVar;  // den,Temperature
- num_state_material=SpeciesVar;  // den,Temperature
+ num_state_base=ENUM_SPECIESVAR;   // den,Temperature
+ num_state_material=ENUM_SPECIESVAR;  // den,Temperature
  num_state_material+=num_species_var;
 
  Vector<Real> elastic_viscosity_temp;
@@ -3373,8 +3373,8 @@ NavierStokes::read_params ()
         (MOF_DEBUG_RECON!=2))
      amrex::Error("mof debug recon invalid in navierstokes");
 
-    num_state_base=SpeciesVar;  // den,Temperature
-    num_state_material=SpeciesVar;  // den,Temperature
+    num_state_base=ENUM_SPECIESVAR;  // den,Temperature
+    num_state_material=ENUM_SPECIESVAR;  // den,Temperature
     num_state_material+=num_species_var;
 
     stiffPINF.resize(nmat);
@@ -12524,8 +12524,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  int nmat=num_materials;
  int nten=num_interfaces;
  int nden=nmat*num_state_material;
- int ncomp_per_burning=EXTRAP_PER_BURNING;
- int ncomp_per_tsat=EXTRAP_PER_TSAT;
  int nburning=EXTRAP_NCOMP_BURNING;
  int ntsat=EXTRAP_NCOMP_TSAT;
  int nstate=STATE_NCOMP;
@@ -13449,6 +13447,7 @@ NavierStokes::level_DRAG_extend() {
   amrex::Error("level invalid level_DRAG_extend");
 
  int nmat=num_materials;
+ int nten=num_interfaces;
 
  const Real* dx = geom.CellSize();
 
@@ -13561,7 +13560,7 @@ NavierStokes::level_DRAG_extend() {
  for (int imdest=0;imdest<ncomp;imdest++)
   scompBC_map[imdest]=extend_start_pos+imdest;
 
- PCINTERP_fill_borders(local_mf,ngrow_make_distance,
+ PCINTERP_fill_borders(DRAG_MF,ngrow_make_distance,
    0,ncomp,State_Type,scompBC_map);
 
  if (1==0) {
@@ -13767,9 +13766,6 @@ NavierStokes::level_phase_change_convert(
  } else
   amrex::Error("level_phase_change_convert: invalid parameters");
  
- int ncomp_per_burning=EXTRAP_PER_BURNING;
- int ncomp_per_tsat=EXTRAP_PER_TSAT;
-
   // first nten components are the status
  int nburning=EXTRAP_NCOMP_BURNING;
  int ntsat=EXTRAP_NCOMP_TSAT;
@@ -15128,7 +15124,6 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 
  int nsolve=1;
 
- int ncomp_per_tsat=EXTRAP_PER_TSAT;
  int ntsat=EXTRAP_NCOMP_TSAT;
 
  if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
@@ -17402,7 +17397,7 @@ void NavierStokes::GetDragALL() {
      //do nothing
     }
     int drag_im=-1;
-    int drag_type=fort_drag_type(iq,drag_im);
+    int drag_type=fort_drag_type(&iq,&drag_im);
 
     std::cout << "GetDragALL  iq= " << iq << " drag_im(0..nmat-1)= " <<
 	    drag_im << " drag_type= " << drag_type <<
@@ -22996,8 +22991,6 @@ NavierStokes::level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine,
 
  int nmat=num_materials;
  int nten=num_interfaces;
- int ncomp_per_burning=EXTRAP_PER_BURNING;
- int ncomp_per_tsat=EXTRAP_PER_TSAT;
  int nburning=EXTRAP_NCOMP_BURNING;
  int ntsat=EXTRAP_NCOMP_TSAT;
  int scomp=0;
@@ -23621,7 +23614,6 @@ void NavierStokes::avgDownError() {
   crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
  }
 
- int nmat=num_materials;
  int scomp_error=STATECOMP_ERR;
  if (S_crse.nComp()!=STATE_NCOMP)
   amrex::Error("S_crse.nComp()!=STATE_NCOMP");
@@ -23782,7 +23774,6 @@ MultiFab* NavierStokes::getState (
   int ngrow, int  scomp,
   int ncomp, Real time) {
 
- int nmat=num_materials;
  int scomp_mofvars=STATECOMP_MOF;
  int scomp_error=STATECOMP_ERR;
 

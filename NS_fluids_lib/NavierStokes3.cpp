@@ -2887,8 +2887,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         amrex::Error("ngrow_make_distance!=3");
 
         // first nten components correspond to the status.
-       int ncomp_per_burning=EXTRAP_PER_BURNING;
-       int ncomp_per_tsat=EXTRAP_PER_TSAT;
        int nburning=EXTRAP_NCOMP_BURNING;
        int ntsat=EXTRAP_NCOMP_TSAT;
 
@@ -7749,8 +7747,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
 // called from NavierStokes::multiphase_project
 void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  
- int nmat=num_materials;
-
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
@@ -13145,7 +13141,6 @@ void NavierStokes::INCREMENT_REGISTERS(int source_mf,int caller_id) {
 
  int nsolve=AMREX_SPACEDIM;
 
- int nmat=num_materials;
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int nstate=S_new.nComp();
  if (nstate!=STATE_NCOMP)
