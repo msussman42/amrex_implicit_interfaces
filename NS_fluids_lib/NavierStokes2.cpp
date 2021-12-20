@@ -598,10 +598,6 @@ void NavierStokes::avgDownBURNING_localMF(
   int burnvel_MF,int TSAT_MF) {
 
  int finest_level=parent->finestLevel();
- int nmat=num_materials;
- int nten=num_interfaces;
- int ncomp_per_burning=EXTRAP_PER_BURNING;
- int ncomp_per_tsat=EXTRAP_PER_TSAT;
  int nburning=EXTRAP_NCOMP_BURNING;
  int ntsat=EXTRAP_NCOMP_TSAT;
 
@@ -8775,10 +8771,9 @@ void NavierStokes::init_pressure_error_indicator() {
 	MFInfo().SetTag("vortmf"),FArrayBoxFactory());
  const Real* dx = geom.CellSize();
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- int scomp_mofvars=STATECOMP_MOF;
  int scomp_error=STATECOMP_ERR;
  if (STATE_NCOMP!=S_new.nComp())
-  amrex::Error("S_new.nComp() mismatch");
+  amrex::Error("STATE_NCOMP!=S_new.nComp()");
 
  MultiFab* velmf=getState(1,0,AMREX_SPACEDIM,cur_time_slab);
 

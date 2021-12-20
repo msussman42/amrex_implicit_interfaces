@@ -7063,7 +7063,7 @@ stop
            tag_local,rtag_local
          print *,"i,j,k ",i,j,k
          print *,"level,finest_level ",level,finest_level
-         print *,"nmat,nten,nburning,ngrow ",nmat,nten,nburning,ngrow
+         print *,"nmat,nten,ngrow ",nmat,nten,ngrow
          stop
         endif
 

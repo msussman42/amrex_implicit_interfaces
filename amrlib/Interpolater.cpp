@@ -370,9 +370,9 @@ BurnVelInterp::interp (Real time,
  const Real* dxf = fine_geom.CellSize();
  const Real* dxc = crse_geom.CellSize();
 
- int nmat=burnvel_nmat;
- int nten=burnvel_nten;
- int ncomp_check=nten+nten*burnvel_ncomp_per;
+ int num_materials=burnvel_nmat;
+ int num_interfaces=burnvel_nten;
+ int ncomp_check=num_interfaces+num_interfaces*burnvel_ncomp_per;
  if (burnvel_ncomp_per==0)
   ncomp_check=N_DRAG;
 
@@ -398,11 +398,11 @@ BurnVelInterp::interp (Real time,
  } else
   amrex::Error("crse.nComp() or fine.nComp() invalid");
 
- if (nten!=((nmat-1)*(nmat-1)+nmat-1)/2) 
-  amrex::Error("nten invalid");
+ if (num_interfaces!=((num_materials-1)*(num_materials-1)+num_materials-1)/2) 
+  amrex::Error("num_interfaces invalid");
 
- if (nmat<1)
-  amrex::Error("nmat invalid in burnvel interp");
+ if (num_materials<1)
+  amrex::Error("num_materials invalid in burnvel interp");
 
  if (ncomp!=ncomp_check) {
   std::cout << "ncomp " << ncomp << '\n';
@@ -420,8 +420,8 @@ BurnVelInterp::interp (Real time,
   lo,hi,
   prob_lo,
   dxf,dxc,
-  &nmat,
-  &nten,
+  &num_materials,
+  &num_interfaces,
   &ncomp,
   &levelc,&levelf,
   &bfactc,&bfactf);
