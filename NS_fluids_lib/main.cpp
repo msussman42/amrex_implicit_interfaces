@@ -45,7 +45,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, 12/20/21, 14:00pm on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, 12/20/21, 16:30pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
@@ -108,6 +108,8 @@ main (int   argc,
             "Exiting because neither max_step nor stop_time is non-negative.");
     }
 
+    fortran_parameters();
+
       // 1. call AmrMesh()
       //   a. AmrMesh() calls Geometry::Setup() 
       //     (rb==nullptr, coord=-1, is_per=nullptr)
@@ -120,8 +122,6 @@ main (int   argc,
     Amr* amrptr = new Amr();
 
     amrex::ParallelDescriptor::Barrier();
-
-    fortran_parameters();
 
       // Amr::init 
     amrptr->init(strt_time,stop_time);

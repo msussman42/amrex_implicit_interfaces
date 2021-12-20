@@ -10913,8 +10913,8 @@ END SUBROUTINE SIMP
                         (drag_im.lt.num_materials)) then
                      if (drag_im.eq.im_test-1) then
                       if (drag_type.ne.DRAG_TYPE_FLAG) then
-                       crse_value(local_comp)=crse_value(local_comp)+ &
-                         volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
+                       crse_value(local_comp+1)=crse_value(local_comp+1)+ &
+                        volall*fine(D_DECL(ifine,jfine,kfine),local_comp+1)
                       else if (drag_type.eq.DRAG_TYPE_FLAG) then
                        ! do nothing
                       else
@@ -10989,7 +10989,7 @@ END SUBROUTINE SIMP
                  (drag_im.lt.num_materials)) then
               if (drag_im.eq.im_test-1) then
                if (drag_type.ne.DRAG_TYPE_FLAG) then
-                crse(D_DECL(ic,jc,kc),local_comp)=zero
+                crse(D_DECL(ic,jc,kc),local_comp+1)=zero
                else if (drag_type.eq.DRAG_TYPE_FLAG) then
                 ! do nothing
                else
@@ -11023,8 +11023,8 @@ END SUBROUTINE SIMP
                   (drag_im.lt.num_materials)) then
                if (drag_im.eq.im_test-1) then
                 if (drag_type.ne.DRAG_TYPE_FLAG) then
-                 crse(D_DECL(ic,jc,kc),local_comp)= &
-                   crse_value(local_comp)/velwt(im_test)
+                 crse(D_DECL(ic,jc,kc),local_comp+1)= &
+                   crse_value(local_comp+1)/velwt(im_test)
                 else if (drag_type.eq.DRAG_TYPE_FLAG) then
                  ! do nothing
                 else

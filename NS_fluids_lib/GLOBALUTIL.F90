@@ -12825,9 +12825,29 @@ end subroutine dynamic_contact_angle
       INTEGER_T, intent(out) :: drag_im
       INTEGER_T fort_drag_type
       INTEGER_T drag_mod
+      INTEGER_T nten_test
 
       drag_im=-1
       fort_drag_type=-1
+
+      if (num_materials.ge.2) then
+       ! do nothing
+      else
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:12838"
+       print *,"expecting num_materials>=2 num_materials=",num_materials
+       stop
+      endif
+      nten_test=((num_materials-1)*(num_materials-1)+num_materials-1)/2
+      if (num_interfaces.eq.nten_test) then
+       ! do nothing
+      else
+       print *,"num_interfaces.ne.nten_test"
+       print *,"num_interfaces= ",num_interfaces
+       print *,"nten_test= ",nten_test
+       stop
+      endif
 
       if ((drag_comp.ge.0).and. &
           (drag_comp.lt.DRAGCOMP_FORCE)) then
@@ -13066,7 +13086,7 @@ end subroutine dynamic_contact_angle
        drag_im=drag_comp-DRAGCOMP_FLAG
        fort_drag_type=DRAG_TYPE_FLAG
       else
-       print *,"drag_comp invalid"
+       print *,"drag_comp invalid GLOBALUTIL, drag_comp=",drag_comp
        stop
       endif
 
