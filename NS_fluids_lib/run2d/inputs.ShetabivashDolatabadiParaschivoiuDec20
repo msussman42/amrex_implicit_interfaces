@@ -84,6 +84,9 @@ ns.gravity        = -9.8 # m/s^2
 #can be used instead (simulation would run 100 times faster, giving similar
 #freezing times?).  
 ns.fixed_dt_scales=0.0 0.0 0.0
+
+ns.vof_height_function=0
+
 #
 #
 # 1. on the substrate (if there is ice):
@@ -126,6 +129,8 @@ ns.fixed_dt_scales=0.0 0.0 0.0
 
 # LG,LI,LS,IG,GS,SI 
 #ns.tension, Ohta setting, December 20:
+#(since sigma_LI=0 then sin(theta_G)=0 => theta_G=0 or pi, either case leads
+#to transient behavior, such as what was observed computationally)
 ns.tension=0.0729 0 0.0256 0.0729 0.0729 0.0523 
 #ns.tension, Sussman setting, December 20:
 # LG,LI,LS,IG,GS,SI 
