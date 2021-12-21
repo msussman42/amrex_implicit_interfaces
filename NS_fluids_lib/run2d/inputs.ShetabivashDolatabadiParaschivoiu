@@ -103,7 +103,7 @@ ns.gravity        = -9.8 # m/s^2
 # sigma_{SI}=sigma_{IG}(1-cos(theta_I_substrate))=0.0239 N/m
 # material 1=liquid 2=gas  3=ice 4=solid
 # 12,13,14,23,24,34
-# LG,LI,LS,IG,GS,SI  (LS not used)
+# LG,LI,LS,IG,GS,SI 
 #advection, surface tension, gravity
 #Note: if gravity turned off, then surface tension force can be significantly
 #reduced so that advection and freezing time steps
