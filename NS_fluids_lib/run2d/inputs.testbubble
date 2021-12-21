@@ -56,11 +56,6 @@ ns.initial_cg_cycles=1
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 amr.n_cell    = 32 64
 amr.max_level = 1  # default 1
-# 0=never adapt   2=if radius< 2 * dx then adapt
-# -1=always adapt
-# An interface changing phase will always be adapted
-# to the finest possible level.
-# Triple junctions will always be adapted to the finest possible level.
 ns.ns_tiling=false
 
 # 0- 1 level 1- 2 levels  2- 3 levels
@@ -85,11 +80,14 @@ amr.grid_eff        = 0.8   #  MO improve efficiency
 amr.n_proper=1  # default is 1
 #amr.blocking_factor = 8 4 4 4     # 8 for GPU
 amr.blocking_factor = 8 8 4 4     # 8 for GPU
-amr.space_blocking_factor = 4 2 1 1  # 4 2 1 1
+amr.space_blocking_factor = 1 1 1 1  # 4 2 1 1
+#amr.space_blocking_factor = 4 2 1 1  # 4 2 1 1
 #amr.space_blocking_factor = 4 4 1 1
+amr.time_blocking_factor=1
 #amr.time_blocking_factor=2
-amr.time_blocking_factor=4  # 4
-ns.enable_spectral=1  # enable_spectral=0 or 1
+#amr.time_blocking_factor=4  # 4
+ns.enable_spectral=0  # enable_spectral=0 or 1
+#ns.enable_spectral=1  # enable_spectral=0 or 1
 ns.viscous_enable_spectral=0
 #  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
 amr.check_int       = 50  # default 50
