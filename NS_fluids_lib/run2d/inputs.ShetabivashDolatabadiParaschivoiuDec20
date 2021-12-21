@@ -59,7 +59,7 @@ amr.blocking_factor = 8 8 8 8  # block factor in grid generation
 amr.check_int       = 500   
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 10 # 200 (was 500)
+amr.plot_int        = 200 # 200 (was 500)
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 1024
@@ -100,7 +100,6 @@ ns.fixed_dt_scales=0.0 0.0 0.0
 #   sigma_{LG}(1-cos(theta_L_substrate))=sigma_{SL}
 # 3. at the triple point:
 #   sin(theta_I)/sigma_{LG}=sin(theta_L)/sigma_{IG}=sin(theta_G)/sigma_{LI}
-#   theta_I=90 degrees
 #
 # material 1=liquid 2=gas  3=ice 4=solid
 # 12,13,14,23,24,34

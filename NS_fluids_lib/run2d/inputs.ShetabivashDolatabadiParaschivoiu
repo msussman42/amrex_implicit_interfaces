@@ -93,17 +93,9 @@ ns.gravity        = -9.8 # m/s^2
 #   sigma_{LG}(1-cos(theta_L_substrate))=sigma_{SL}
 # 3. at the triple point:
 #   sin(theta_I)/sigma_{LG}=sin(theta_L)/sigma_{IG}=sin(theta_G)/sigma_{LI}
-#   theta_I=90 degrees
-# sigma_{LG}=0.0729N/m
-# theta_{L}=73.6 degrees * (270/180)=110.4 degrees
-# theta_{L}+theta_{G}=270
-# theta_{G}=159.6 degrees
-# sigma_{IG}=sigma_{LG}*sin(theta_{L})/sin(90)=0.0683 N/m
-# sigma_{IL}=sigma_{LG}*sin(theta_{G})/sin(90)=0.0254 N/m
-# sigma_{SI}=sigma_{IG}(1-cos(theta_I_substrate))=0.0239 N/m
-# material 1=liquid 2=gas  3=ice 4=solid
-# 12,13,14,23,24,34
+#
 # LG,LI,LS,IG,GS,SI 
+#
 #advection, surface tension, gravity
 #Note: if gravity turned off, then surface tension force can be significantly
 #reduced so that advection and freezing time steps
