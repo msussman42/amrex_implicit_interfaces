@@ -9062,10 +9062,10 @@ void NavierStokes::post_restart() {
    } else if (level_ncomp_PC>0) {
 
     for (int PC_index=0;PC_index<level_ncomp_PC;PC_index++) {
-     new_dataPC[i][PC_index]=
+     AmrLevel0_new_dataPC[i][PC_index]=
         new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
      for (int ns=0;ns<num_SoA_var;ns++)
-      new_dataPC[i][PC_index]->AddRealComp(true);
+      AmrLevel0_new_dataPC[i][PC_index]->AddRealComp(true);
      
      int raw_index=level_ncomp_PC * i + PC_index;
      std::string Part_name="FusionPart";
@@ -9081,7 +9081,7 @@ void NavierStokes::post_restart() {
         FullPathName << " Part_name= " << Part_name << '\n';
      }
 
-     new_dataPC[i][PC_index]->Restart(FullPathName,Part_name);
+     AmrLevel0_new_dataPC[i][PC_index]->Restart(FullPathName,Part_name);
     } // PC_index=0..level_ncomp_PC-1 
 
    } else

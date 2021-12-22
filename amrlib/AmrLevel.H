@@ -298,7 +298,7 @@ public:
 
     Vector<
         Vector<PLS_ParticleContainerType*>
-          > new_dataPC;
+          > AmrLevel0_new_dataPC;
 
     //
 protected:
