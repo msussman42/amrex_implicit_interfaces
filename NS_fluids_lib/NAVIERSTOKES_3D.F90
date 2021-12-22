@@ -11209,10 +11209,9 @@ END SUBROUTINE SIMP
         write(compfilename,'(A14)') 'COARSEDATA.tec'
         print *,"compfilename ",compfilename
         open(unit=11,file=compfilename)
-!       The title is not output anymore.
-!        read(11,*) techeader_str1  ! title
-        read(11,*) techeader_str2  ! variables
-        read(11,*) techeader_str3  ! zone map, SOLUTIONTIME, STRANDID
+        read(11,*) techeader_str1  ! variables
+        read(11,*) techeader_str2  ! zone map
+        read(11,*) techeader_str3  ! SOLUTIONTIME, STRANDID
 
         do k=gridlo(3),gridhi(3)
         do j=gridlo(2),gridhi(2)
@@ -11276,10 +11275,7 @@ END SUBROUTINE SIMP
 
        strandid=1
 
-!      The title is not output in the standalone code, so it will not be
-!      output here either.  IMPORTANT: we do not try to read the title 
-!      anymore in the code above (do_input.eq.1).
-!       write(11,*) '"uniform data"'
+       ! LINE 1: VARIABLES
 
        ! x,u,p,den,T,Y1..Yn,mag vort,LS
        if (SDIM.eq.2) then
@@ -11325,6 +11321,8 @@ END SUBROUTINE SIMP
         endif
        enddo ! im=1..nmat
 
+       ! LINE 2: ZONE MAP
+
        if (SDIM.eq.2) then
         write(11,*)'zone i=',visual_ncell(1)+1, &
                    ' j=',visual_ncell(SDIM)+1, &
@@ -11338,6 +11336,8 @@ END SUBROUTINE SIMP
         print *,"dimension bust"
         stop
        endif
+
+       ! LINE 3: SOLUTIONTIME, STRANDID
 
        write(11,*) ' SOLUTIONTIME=',time,' STRANDID=',strandid
 
