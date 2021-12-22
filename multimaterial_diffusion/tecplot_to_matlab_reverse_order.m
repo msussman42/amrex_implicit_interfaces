@@ -65,6 +65,7 @@ while (ok_to_continue==1)
  time_strand=strrep(time_strand,'STRANDID=',' ')
  time_strand_char=char(time_strand)
  time_strand_vals=str2num(time_strand_char)
+ time_real=time_strand_vals(1,1)
  strand_id_int=round(time_strand_vals(1,2))
 
  imax=ij_dimen(1,1)

@@ -3388,6 +3388,8 @@
          hiy-loy+2,' f=point'
         write(11,*) 'SOLUTIONTIME=',out_time," STRANDID=",strandid
 
+         ! THIS ORDER WOULD BE INCORRECT FOR OUTPUT TO BINARY.
+         ! i should be the inner loop and j the outer.
         do i=lox,hix+1
         do j=loy,hiy+1
          xpoint=i*h
@@ -3562,6 +3564,8 @@
          hiy-loy+3,' f=point'
         write(11,*) 'SOLUTIONTIME=',out_time," STRANDID=",strandid
 
+         ! THIS ORDER WOULD BE INCORRECT FOR OUTPUT TO BINARY.
+         ! i should be the inner loop and j the outer.
         do i=lox-1,hix+1
         do j=loy-1,hiy+1
          xpoint=(i+0.5d0)*h
