@@ -9042,6 +9042,53 @@ void NavierStokes::post_restart() {
    // inside of post_restart
  if (level==0) {
 
+  // e.g. chkfile=./chk<nsteps>
+  std::string chkfile=parent->theRestartFile();
+  std::string Level_string = amrex::Concatenate("Level_", level, 1);
+  std::string FullPath = chkfile;
+  if (!FullPath.empty() && FullPath[FullPath.length()-1] != '/') {
+   FullPath += '/';
+  }
+  FullPath += Level_string;
+
+  std::string FullPathName=FullPath;
+  int time_order=parent->Time_blockingFactor();
+  int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+
+  for (int i=0;i<=time_order;i++) {
+
+   if (level_ncomp_PC==0) {
+    // do nothing
+   } else if (level_ncomp_PC>0) {
+
+    for (int PC_index=0;PC_index<level_ncomp_PC;PC_index++) {
+     new_dataPC[i][PC_index]=
+        new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
+     for (int ns=0;ns<num_SoA_var;ns++)
+      new_dataPC[i][PC_index]->AddRealComp(true);
+     
+     int raw_index=level_ncomp_PC * i + PC_index;
+     std::string Part_name="FusionPart";
+     std::stringstream raw_string_stream(std::stringstream::in |
+         std::stringstream::out);
+     raw_string_stream << raw_index;
+     std::string raw_string=raw_string_stream.str();
+     Part_name+=raw_string;
+
+     if (ParallelDescriptor::IOProcessor()) {
+      std::cout << "Restarting particle container, time_slab i= " <<
+        i << " PC_index= " << PC_index << " FullPathName= " <<
+        FullPathName << " Part_name= " << Part_name << '\n';
+     }
+
+     new_dataPC[i][PC_index]->Restart(FullPathName,Part_name);
+    } // PC_index=0..level_ncomp_PC-1 
+
+   } else
+    amrex::Error("level_ncomp_PC invalid");
+
+  }//for (int i=0;i<=time_order;i++) 
+
   int post_init_flag=2; // post_restart
 
   prepare_post_process(post_init_flag);

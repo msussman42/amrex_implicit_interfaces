@@ -11275,7 +11275,9 @@ END SUBROUTINE SIMP
 
        strandid=1
 
-       write(11,*) '"uniform data"'
+!      The title is not output in the standalone code, so it will not be
+!      output here either.
+!       write(11,*) '"uniform data"'
 
        ! x,u,p,den,T,Y1..Yn,mag vort,LS
        if (SDIM.eq.2) then
@@ -11324,20 +11326,18 @@ END SUBROUTINE SIMP
        if (SDIM.eq.2) then
         write(11,*)'zone i=',visual_ncell(1)+1, &
                    ' j=',visual_ncell(SDIM)+1, &
-                   ' f=point ', &
-                   ' SOLUTIONTIME=',time, &
-                   ' STRANDID=',strandid
+                   ' f=point '
        else if (SDIM.eq.3) then
         write(11,*)'zone i=',visual_ncell(1)+1, &
                    ' j=',visual_ncell(2)+1, &
                    ' k=',visual_ncell(SDIM)+1, &
-                   ' f=point ', &
-                   ' SOLUTIONTIME=',time, &
-                   ' STRANDID=',strandid
+                   ' f=point '
        else
         print *,"dimension bust"
         stop
        endif
+
+       write(11,*) ' SOLUTIONTIME=',time,' STRANDID=',strandid
 
        do k=gridlo(3),gridhi(3)
        do j=gridlo(2),gridhi(2)
