@@ -4153,9 +4153,9 @@ END SUBROUTINE SIMP
          do j=0,hi_index_shift(2)
          do i=0,hi_index_shift(1)
           write(11) zone_gb(iz_gb)%var(ivar_gb,i,j,k)
-         enddo
-         enddo
-         enddo
+         enddo ! i
+         enddo ! j
+         enddo ! k
         enddo
 
         deallocate(zone_gb(iz_gb)%var)
@@ -11209,9 +11209,10 @@ END SUBROUTINE SIMP
         write(compfilename,'(A14)') 'COARSEDATA.tec'
         print *,"compfilename ",compfilename
         open(unit=11,file=compfilename)
-        read(11,*) techeader_str1  ! title
+!       The title is not output anymore.
+!        read(11,*) techeader_str1  ! title
         read(11,*) techeader_str2  ! variables
-        read(11,*) techeader_str3  ! zone map
+        read(11,*) techeader_str3  ! zone map, SOLUTIONTIME, STRANDID
 
         do k=gridlo(3),gridhi(3)
         do j=gridlo(2),gridhi(2)
@@ -11276,7 +11277,8 @@ END SUBROUTINE SIMP
        strandid=1
 
 !      The title is not output in the standalone code, so it will not be
-!      output here either.
+!      output here either.  IMPORTANT: we do not try to read the title 
+!      anymore in the code above (do_input.eq.1).
 !       write(11,*) '"uniform data"'
 
        ! x,u,p,den,T,Y1..Yn,mag vort,LS
