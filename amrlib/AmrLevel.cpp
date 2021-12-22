@@ -247,23 +247,12 @@ AmrLevel::restart (Amr&          papa,
        // do nothing
       } else if (level_ncomp_PC>0) {
 
+       //The actual particle data will be read from the restart file
+       //later (in NavierStokes.cpp) when "post_restart" is called.
+       //Particle data needs the AMR hierarchy to already be built before
+       //being read from the restart file and redistributed appropriately.
        new_dataPC[i].resize(level_ncomp_PC);
-       for (int PC_index=0;PC_index<level_ncomp_PC;PC_index++) {
-        new_dataPC[i][PC_index]=
-         new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
-	for (int ns=0;ns<num_SoA_var;ns++)
- 	 new_dataPC[i][PC_index]->AddRealComp(true);
-      
-        int raw_index=level_ncomp_PC * i + PC_index;
-        std::string Part_name="FusionPart";
-        std::stringstream raw_string_stream(std::stringstream::in |
-            std::stringstream::out);
-        raw_string_stream << raw_index;
-        std::string raw_string=raw_string_stream.str();
-        Part_name+=raw_string;
-        new_dataPC[i][PC_index]->Restart(FullPathName,Part_name);
-       } // PC_index=0..level_ncomp_PC-1 
-
+       
       } else
        amrex::Error("level_ncomp_PC invalid");
 

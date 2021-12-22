@@ -289,6 +289,17 @@ public:
 
     Vector< Vector< FSI_container_class > > new_data_FSI;
 
+     // 
+     // ARRAY OF STRUCTURES: x,y,z, particle id, cpu are base 
+     // STRUCTURE OF ARRAYS: no base
+     //
+    using PLS_ParticleContainerType=
+            AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+
+    Vector<
+        Vector<PLS_ParticleContainerType*>
+          > new_dataPC;
+
     //
 protected:
     //
@@ -320,17 +331,6 @@ protected:
     Vector<StateData> state;           // Array of state data.
 
     BoxArray m_AreaNotToTag;
-
-     // 
-     // ARRAY OF STRUCTURES: x,y,z, particle id, cpu are base 
-     // STRUCTURE OF ARRAYS: no base
-     //
-    using PLS_ParticleContainerType=
-            AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
-
-    Vector<
-        Vector<PLS_ParticleContainerType*>
-          > new_dataPC;
 
 private:
     //
