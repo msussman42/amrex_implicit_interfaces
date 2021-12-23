@@ -1083,21 +1083,6 @@ int NavierStokes::viscous_maxiter = 1;
 int NavierStokes::always_use_bicgstab = 0;
 Real NavierStokes::total_advance_time=0.0;
 
-int NavierStokes::curv_index=0;
-int NavierStokes::pforce_index=1;
-int NavierStokes::faceden_index=2;
-int NavierStokes::facecut_index=3;
-int NavierStokes::icefacecut_index=4;
-int NavierStokes::icemask_index=5;
-int NavierStokes::facevisc_index=6;
-int NavierStokes::faceheat_index=7;
-int NavierStokes::facevel_index=8;
-int NavierStokes::facespecies_index=9;
-int NavierStokes::smoothing_index=10;
-int NavierStokes::massface_index=11;
-int NavierStokes::vofface_index=12;
-int NavierStokes::ncphys=13;
-
 void extra_circle_parameters(
  Real& xblob2,Real& yblob2,Real& zblob2,Real& radblob2,
  Real& xblob3,Real& yblob3,Real& zblob3,Real& radblob3,
@@ -3352,11 +3337,6 @@ NavierStokes::read_params ()
     pp.get("num_species_var",num_species_var);
     if ((num_species_var<0)||(num_species_var>999))
      amrex::Error("num species var invalid");
-
-    smoothing_index=facespecies_index+num_species_var;
-    massface_index=smoothing_index+1;
-    vofface_index=massface_index+2*num_materials;
-    ncphys=vofface_index+2*num_materials;
 
     MOFITERMAX=DEFAULT_MOFITERMAX;
     pp.query("MOFITERMAX",MOFITERMAX);
@@ -11262,12 +11242,9 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // faceden_index=1/rho
      // declared in: GODUNOV_3D.F90
     fort_semdeltaforce_face(
      &dir,
-     &faceden_index,
-     &ncphys,
      xlo,dx,
      deltafab.dataPtr(deltacomp),
      ARLIM(deltafab.loVect()),ARLIM(deltafab.hiVect()),
@@ -16149,17 +16126,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &visc_coef, //beta
       &visc_coef,
       &local_enable_spectral,
-      &fluxvel_index,
-      &fluxden_index,
-      &facevel_index,
-      &facecut_index,
-      &icefacecut_index,
-      &curv_index,
-      &pforce_index,
-      &faceden_index,
-      &icemask_index,
-      &massface_index,
-      &vofface_index,
       &nfluxSEM, // ncphys (nflux for advection)
       constant_density_all_time.dataPtr(),
       denbc.dataPtr(),  // presbc

@@ -13375,17 +13375,6 @@ stop
        beta, &
        visc_coef, &
        enable_spectral, &
-       fluxvel_index, &  
-       fluxden_index, &  
-       facevel_index, &  
-       facecut_index, &
-       icefacecut_index, &
-       curv_index, &
-       pforce_index, &
-       faceden_index, &  
-       icemask_index, &
-       massface_index, &
-       vofface_index, &
        ncphys, &  ! nflux for advection
        constant_density_all_time, &
        presbc_in, &  ! denbc for advection
@@ -13465,17 +13454,6 @@ stop
       INTEGER_T, intent(in) :: enable_spectral
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: fluxvel_index 
-      INTEGER_T, intent(in) :: fluxden_index 
-      INTEGER_T, intent(in) :: facevel_index 
-      INTEGER_T, intent(in) :: facecut_index
-      INTEGER_T, intent(in) :: icefacecut_index
-      INTEGER_T, intent(in) :: curv_index
-      INTEGER_T, intent(in) :: pforce_index
-      INTEGER_T, intent(in) :: faceden_index 
-      INTEGER_T, intent(in) :: icemask_index
-      INTEGER_T, intent(in) :: massface_index
-      INTEGER_T, intent(in) :: vofface_index
       INTEGER_T, intent(in) :: ncphys  ! nflux for advection
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
       REAL_T, intent(in) :: dt
@@ -13811,14 +13789,14 @@ stop
         stop
        endif
 
-       if (ncphys.ne.vofface_index+2*nmat) then
+       if (ncphys.ne.FACECOMP_NCOMP) then
         print *,"ncphys invalid"
         stop
        endif
 
       else if (operation_flag.eq.1) then ! P^{cell->mac}
        
-       if (ncphys.ne.vofface_index+2*nmat) then
+       if (ncphys.ne.FACECOMP_NCOMP) then
         print *,"ncphys invalid"
         stop
        endif
@@ -13835,7 +13813,7 @@ stop
 
       else if (operation_flag.eq.2) then !potential gradient, surface tension
 
-       if (ncphys.ne.vofface_index+2*nmat) then
+       if (ncphys.ne.FACECOMP_NCOMP) then
         print *,"ncphys invalid"
         stop
        endif
@@ -13857,42 +13835,27 @@ stop
         stop
        endif
 
-       if (ncphys.ne.vofface_index+2*nmat) then
+       if (ncphys.ne.FACECOMP_NCOMP) then
         print *,"ncphys invalid"
         stop
        endif
 
       else if (operation_flag.eq.6) then
 
-       if (ncphys.ne.vofface_index+2*nmat) then
+       if (ncphys.ne.FACECOMP_NCOMP) then
         print *,"ncphys invalid"
         stop
        endif
 
       else if (operation_flag.eq.11) then
 
-       if (ncphys.ne.vofface_index+2*nmat) then
+       if (ncphys.ne.FACECOMP_NCOMP) then
         print *,"ncphys invalid"
         stop
        endif
 
       else 
        print *,"operation_flag invalid11:",operation_flag
-       stop
-      endif
-
-      ! indexes start at 0
-      if ((curv_index.ne.0).or. &
-          (pforce_index.ne.1).or. &
-          (facecut_index.ne.3).or. &
-          (icefacecut_index.ne.4).or. &
-          (icemask_index.ne.5).or. &
-          (facevel_index.ne.8).or. &
-          (faceden_index.ne.2).or. &
-          (vofface_index.ne.massface_index+2*nmat).or. &
-          (fluxvel_index.ne.0).or. &
-          (fluxden_index.ne.SDIM)) then
-       print *,"face_index bust 2"
        stop
       endif
 
@@ -14387,7 +14350,7 @@ stop
 
            do side=1,2
             do im=1,nmat
-             local_volume=local_face(vofface_index+2*(im-1)+side)
+             local_volume=local_face(FACECOMP_VOFFACE+2*(im-1)+side)
              volface=volface+local_volume
              if (is_prescribed(nmat,im).eq.0) then
               not_prescribed_volface=not_prescribed_volface+local_volume
@@ -14424,18 +14387,18 @@ stop
            fluid_volface=fluid_volface/volface
            not_prescribed_volface=not_prescribed_volface/volface
 
-           if ((local_face(facecut_index+1).ge.zero).and. &
-               (local_face(facecut_index+1).le.half)) then
+           if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
+               (local_face(FACECOMP_FACECUT+1).le.half)) then
             fluid_volface=zero
             not_prescribed_volface=zero
-           else if ((local_face(facecut_index+1).ge.half).and. &
-                    (local_face(facecut_index+1).le.one)) then
+           else if ((local_face(FACECOMP_FACECUT+1).ge.half).and. &
+                    (local_face(FACECOMP_FACECUT+1).le.one)) then
             fluid_volface= &
-             min(fluid_volface,local_face(facecut_index+1))
+             min(fluid_volface,local_face(FACECOMP_FACECUT+1))
             not_prescribed_volface= &
-             min(not_prescribed_volface,local_face(facecut_index+1))
+             min(not_prescribed_volface,local_face(FACECOMP_FACECUT+1))
            else
-            print *,"local_face(facecut_index+1) invalid"
+            print *,"local_face(FACECOMP_FACECUT+1) invalid"
             stop
            endif
          
@@ -14513,12 +14476,12 @@ stop
                     (face_velocity_override.eq.0)) then
 
             test_current_icefacecut= &
-                 xface(D_DECL(i,j,k),icefacecut_index+1)
+                 xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
           
             if ((test_current_icefacecut.ge.zero).and. &
                 (test_current_icefacecut.le.one)) then
 
-             test_current_icemask=xface(D_DECL(i,j,k),icemask_index+1)
+             test_current_icemask=xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
 
              if ((test_current_icemask.eq.zero).or. &
                  (test_current_icemask.eq.one)) then
@@ -14532,7 +14495,7 @@ stop
                partid_check=0
                do im=1,nmat
 
-                DMface=local_face(massface_index+2*(im-1)+side)
+                DMface=local_face(FACECOMP_MASSFACE+2*(im-1)+side)
                 if (DMface.gt.zero) then
                  ! do nothing
                 else if (DMface.eq.zero) then
@@ -14857,7 +14820,7 @@ stop
           at_coarse_fine_wallC=0
 
           use_face_pres=1 ! use div(up)
-          solid_velocity=local_face(facevel_index+1)
+          solid_velocity=local_face(FACECOMP_FACEVEL+1)
 
           face_velocity_override=0
 
@@ -14920,8 +14883,8 @@ stop
            stop
           endif
 
-          if ((local_face(facecut_index+1).ge.zero).and. &
-              (local_face(facecut_index+1).le.half)) then
+          if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
+              (local_face(FACECOMP_FACECUT+1).le.half)) then
            AFACE=zero
           else if ((local_face(facecut_index+1).ge.half).and. &
                    (local_face(facecut_index+1).le.one)) then

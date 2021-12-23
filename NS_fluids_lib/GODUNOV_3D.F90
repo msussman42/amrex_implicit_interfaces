@@ -7386,8 +7386,6 @@ stop
 
       subroutine fort_semdeltaforce_face( &
        dir, &
-       faceden_index, &
-       ncphys, &
        xlo,dx,  &
        deltafab,DIMS(deltafab), &
        maskSEM,DIMS(maskSEM), &
@@ -7402,8 +7400,6 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: dir
-      INTEGER_T, intent(in) :: faceden_index
-      INTEGER_T, intent(in) :: ncphys
       INTEGER_T, intent(in) :: level
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       INTEGER_T :: i,j,k
@@ -7420,7 +7416,7 @@ stop
       REAL_T, pointer :: deltafab_ptr(D_DECL(:,:,:))
       REAL_T, intent(in),target :: maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in),target :: xface(DIMV(xface),FACECOMP_NCOMP)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout),target :: xmac(DIMV(xmac))
       REAL_T, pointer :: xmac_ptr(D_DECL(:,:,:))
@@ -7432,14 +7428,6 @@ stop
 
       if (bfact.lt.1) then
        print *,"bfact invalid55"
-       stop
-      endif
-      if (faceden_index.ne.2) then
-       print *,"faceden_index invalid"
-       stop
-      endif
-      if (ncphys.lt.faceden_index+1) then
-       print *,"ncphys invalid"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -7508,7 +7496,7 @@ stop
 
         xmac(D_DECL(i,j,k))= &
           xmac(D_DECL(i,j,k))- &
-          xface(D_DECL(i,j,k),faceden_index+1)* &
+          xface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)* &
           deltafab(D_DECL(i,j,k))
 
        else if ((maskleft.eq.0).and.(maskright.eq.0)) then
