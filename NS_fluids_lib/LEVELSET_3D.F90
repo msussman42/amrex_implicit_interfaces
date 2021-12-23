@@ -18562,9 +18562,10 @@ stop
       do while ((current_link.ge.1).and.(current_link.le.Np))
        do dir=1,SDIM
         xpart(dir)=accum_PARM%particles(current_link)%pos(dir)
-        xfoot(dir)=accum_PARM%particles(current_link)%extra_state(dir)
+        xfoot(dir)= &
+          accum_PARM%particles(current_link)%extra_state(N_EXTRA_REAL_x0+dir)
         velpart(dir)= &
-            accum_PARM%particles(current_link)%extra_state(SDIM+1+dir)
+          accum_PARM%particles(current_link)%extra_state(N_EXTRA_REAL_u+dir)
        enddo 
 
        if (accum_PARM%append_flag.eq.0) then
@@ -18883,7 +18884,6 @@ stop
       INTEGER_T, allocatable, dimension(:,:) :: sub_particle_data
       INTEGER_T, allocatable, dimension(:) :: sort_data_id
       REAL_T, allocatable, dimension(:) :: sort_data_time
-      REAL_T, allocatable, dimension(:) :: sort_data_radius
       INTEGER_T sub_iter
       INTEGER_T cell_iter
       INTEGER_T isub_test
@@ -18895,7 +18895,6 @@ stop
       INTEGER_T temp_id
       INTEGER_T local_mask
       REAL_T temp_time
-      REAL_T temp_radius
 
       cell_particle_count_ptr=>cell_particle_count
       mfiner_ptr=>mfiner
@@ -19071,7 +19070,6 @@ stop
           if (local_count.ge.1) then
 
            if (local_count.gt.particle_max_per_nsubdivide) then
-            allocate(sort_data_radius(local_count))
             allocate(sort_data_time(local_count))
             allocate(sort_data_id(local_count))
             sub_iter=0
@@ -19087,9 +19085,8 @@ stop
                sub_iter=sub_iter+1
                sort_data_id(sub_iter)=current_link                     
                sort_data_time(sub_iter)= &
-                  particles(current_link)%extra_state(2*SDIM+4) 
-               sort_data_radius(sub_iter)= &
-                  particles(current_link)%extra_state(SDIM+1) 
+                 particles(current_link)% &
+                 extra_state(N_EXTRA_REAL_INSERT_TIME+1) 
               else if ((SDIM.eq.3).and.(ksub_test.ne.ksub)) then
                ! do nothing
               else
@@ -19116,9 +19113,6 @@ stop
                 temp_time=sort_data_time(ibubble)
                 sort_data_time(ibubble)=sort_data_time(ibubble+1)
                 sort_data_time(ibubble+1)=temp_time
-                temp_radius=sort_data_radius(ibubble)
-                sort_data_radius(ibubble)=sort_data_radius(ibubble+1)
-                sort_data_radius(ibubble+1)=temp_radius
                 bubble_change=1
                endif
               enddo ! ibubble=1..local_count-bubble_iter-1
@@ -19141,7 +19135,6 @@ stop
              stop
             endif    
             deallocate(sort_data_time)
-            deallocate(sort_data_radius)
             deallocate(sort_data_id)
            else if ((local_count.ge.1).and. &
                     (local_count.le.particle_max_per_nsubdivide)) then
@@ -19184,10 +19177,9 @@ stop
             ibase=(Np_append_test-1)*single_particle_size
             do dir=1,SDIM
              new_particles(ibase+dir)=xsub(dir)
-             new_particles(ibase+SDIM+dir)=x_foot_sub(dir)
+             new_particles(ibase+SDIM+N_EXTRA_REAL_X0+dir)=x_foot_sub(dir)
              new_particles(ibase+SDIM+N_EXTRA_REAL_u+dir)=vel_sub(dir)
             enddo
-            new_particles(ibase+SDIM+N_EXTRA_REAL_r+1)=one !stub for radius
             new_particles(ibase+SDIM+N_EXTRA_REAL_den+1)=one !stub for density
             new_particles(ibase+SDIM+N_EXTRA_REAL_T+1)=zero !stub for temp.
             new_particles(ibase+SDIM+N_EXTRA_REAL_INSERT_TIME+1)=cur_time_slab
@@ -19852,12 +19844,14 @@ stop
        mass_part=zero
        local_relaxation_time=-one
 
-       density_part=particles(interior_ID)%extra_state(2*SDIM+2)
+       density_part= &
+        particles(interior_ID)%extra_state(N_EXTRA_REAL_DEN+1)
        if (density_part.gt.zero) then
         if (particle_volume.gt.zero) then
          mass_part=density_part*particle_volume
          do dir=1,SDIM
-          vel_part(dir)=particles(interior_ID)%extra_state(SDIM+1+dir)
+          vel_part(dir)= &
+            particles(interior_ID)%extra_state(N_EXTRA_REAL_u+dir)
           if (abs(vel_part(dir))*dt.le.dx(dir)) then
            ! do nothing
           else
@@ -19959,10 +19953,9 @@ stop
 
        if (LS_clamped.ge.zero) then
 
-         ! (x0,y0,z0,r,u,v,w,den,T,insert time,
-         !  type_molecule,type_atom) is extra. 
         do dir=1,SDIM
-         particles(interior_ID)%extra_state(SDIM+1+dir)=vel_clamped(dir)
+         particles(interior_ID)%extra_state(N_EXTRA_REAL_u+dir)= &
+              vel_clamped(dir)
         enddo
 
        else if (LS_clamped.lt.zero) then
@@ -19984,7 +19977,7 @@ stop
         if ((wt_lagrangian.ge.zero).and. &
             (wt_lagrangian.le.one)) then
          do dir=1,SDIM
-          particles(interior_ID)%extra_state(SDIM+1+dir)= &
+          particles(interior_ID)%extra_state(N_EXTRA_REAL_u+dir)= &
             wt_lagrangian*vel_part(dir)+ &
             (one-wt_lagrangian)*u_last(dir)
          enddo
@@ -20006,8 +19999,8 @@ stop
            particles(interior_ID)%pos(dir)= &
              wrap_pos+ &
              (probhi_arr(dir)-problo_arr(dir))
-           particles(interior_ID)%extra_state(dir)= &
-             particles(interior_ID)%extra_state(dir)+ &
+           particles(interior_ID)%extra_state(N_EXTRA_REAL_X0+dir)= &
+             particles(interior_ID)%extra_state(N_EXTRA_REAL_X0+dir)+ &
              (probhi_arr(dir)-problo_arr(dir))
           else
            print *,"expecting both dombc_lo and dombc_hi to be INT_DIR"
@@ -20027,8 +20020,8 @@ stop
            particles(interior_ID)%pos(dir)= &
              wrap_pos- &
              (probhi_arr(dir)-problo_arr(dir))
-           particles(interior_ID)%extra_state(dir)= &
-             particles(interior_ID)%extra_state(dir)- &
+           particles(interior_ID)%extra_state(N_EXTRA_REAL_X0+dir)= &
+             particles(interior_ID)%extra_state(N_EXTRA_REAL_X0+dir)- &
              (probhi_arr(dir)-problo_arr(dir))
           else
            print *,"expecting both dombc_lo and dombc_hi to be INT_DIR"

@@ -8,6 +8,7 @@ Structure of Array components can be added real time.
 #endif
 
 #define N_EXTRA_REAL (2*AMREX_SPACEDIM+3)
+#define N_EXTRA_REAL_X0 (0)
 #define N_EXTRA_REAL_u (AMREX_SPACEDIM)
 #define N_EXTRA_REAL_den (2*AMREX_SPACEDIM)
 #define N_EXTRA_REAL_T   (2*AMREX_SPACEDIM+1)

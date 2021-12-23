@@ -14323,12 +14323,10 @@ END SUBROUTINE SIMP
       write(cenfilename37,'(A29,A3,A5)') cennamestr29,levstr,gridstr
       print *,"cenfilename37 ",cenfilename37
 
-      ! (x0,y0,z0,r,u,v,w,den,T,
-      !  insert time,type_molecule,type_atom) is extra. 
-      if (N_EXTRA_REAL.eq.2*SDIM+6) then
+      if (N_EXTRA_REAL.eq.2*SDIM+3) then
        ! do nothing
       else
-       print *,"N_EXTRA_REAL invalid"
+       print *,"N_EXTRA_REAL unexpected value"
        stop
       endif
 
@@ -14349,7 +14347,7 @@ END SUBROUTINE SIMP
         ! displacement
        do dir=1,SDIM
         write(12,'(E25.16)',ADVANCE="NO") &
-           xref(dir)-particles(ipart_counter)%extra_state(dir)
+         xref(dir)-particles(ipart_counter)%extra_state(N_EXTRA_REAL_X0+dir)
        enddo
        do dir=1,N_EXTRA_REAL
         if (dir.lt.N_EXTRA_REAL) then
@@ -14455,9 +14453,7 @@ END SUBROUTINE SIMP
         print *,"newcenfilename21 ",newcenfilename21
         open(unit=12,file=newcenfilename21)
 
-        ! (x0,y0,z0,r,u,v,w,den,T,
-        !  insert time,type_molecule,type_atom) is extra. 
-        if (N_EXTRA_REAL.eq.2*SDIM+6) then
+        if (N_EXTRA_REAL.eq.2*SDIM+3) then
          ! do nothing
         else
          print *,"N_EXTRA_REAL invalid"
@@ -14468,14 +14464,14 @@ END SUBROUTINE SIMP
          write(12,*) 'TITLE = "3D particles" '
          write(12,'(A25)',ADVANCE="NO") 'VARIABLES = "X", "Y", "Z"'
          write(12,'(A24)',ADVANCE="NO") ',"xdisp","ydisp","zdisp"'
-         write(12,'(A34)',ADVANCE="NO") ',"x0","y0","z0","DIST","u","v","w"'
-         write(12,*) ',"den","T","time add","vortx","vorty","vortz","TYP" ' 
+         write(12,'(A34)',ADVANCE="NO") ',"x0","y0","z0","u","v","w"'
+         write(12,*) ',"den","T","time add" ' 
         else if (SDIM.eq.2) then
          write(12,*) 'TITLE = "2D particles" '
          write(12,'(A20)',ADVANCE="NO") 'VARIABLES = "X", "Y"'
          write(12,'(A16)',ADVANCE="NO") ',"xdisp","ydisp"'
-         write(12,'(A25)',ADVANCE="NO") ',"x0","y0","DIST","u","v"'
-         write(12,*) ',"den","T","time add","vortx","vortz","TYP" ' 
+         write(12,'(A25)',ADVANCE="NO") ',"x0","y0","u","v"'
+         write(12,*) ',"den","T","time add" ' 
         else
          print *,"dimension bust"
          stop

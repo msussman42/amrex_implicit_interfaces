@@ -22319,8 +22319,7 @@ stop
 
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
-         ! (x0,y0,z0,r,u,v,w,den,T,
-         !  insert time,type_molecule,type_atom) is extra. 
+         ! (x0,y0,z0,u,v,w,den,T,insert time) is extra. 
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
@@ -22439,10 +22438,11 @@ stop
        if (accum_PARM%Npart.ge.0) then
         do dir=1,SDIM
          xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
-         xpartfoot(dir)=accum_PARM%particles(interior_ID)%extra_state(dir)
+         xpartfoot(dir)= &
+           accum_PARM%particles(interior_ID)%extra_state(N_EXTRA_REAL_X0+dir)
          xdisp(dir)=xpart(dir)-xpartfoot(dir)
          velpart(dir)= &
-          accum_PARM%particles(interior_ID)%extra_state(SDIM+1+dir)
+          accum_PARM%particles(interior_ID)%extra_state(N_EXTRA_REAL_u+dir)
         enddo ! dir=1..sdim
 
         data_in%xtarget=>xpart
@@ -22929,7 +22929,8 @@ stop
        if (accum_PARM%Npart.ge.0) then
         do dir=1,SDIM
          xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
-         xpartfoot(dir)=accum_PARM%particles(interior_ID)%extra_state(dir)
+         xpartfoot(dir)= &
+           accum_PARM%particles(interior_ID)%extra_state(N_EXTRA_REAL_X0+dir)
          xdisp(dir)=xpart(dir)-xpartfoot(dir)
         enddo
 
