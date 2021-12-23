@@ -2370,21 +2370,6 @@ protected:
     static int  num_divu_outer_sweeps;
     static int  debug_dot_product;
 
-    static int curv_index;
-    static int pforce_index;
-    static int faceden_index;
-    static int facecut_index;
-    static int icefacecut_index;
-    static int icemask_index;
-    static int facevisc_index;
-    static int faceheat_index;
-    static int facevel_index;
-    static int facespecies_index;
-    static int smoothing_index;
-    static int massface_index;
-    static int vofface_index;
-    static int ncphys;
-
     static Vector<Real> NS_coflow_Z;
     static Vector<Real> NS_coflow_R_of_Z;
 

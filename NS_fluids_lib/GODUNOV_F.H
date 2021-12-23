@@ -109,8 +109,6 @@ extern "C"
 
    void fort_semdeltaforce_face(
     int* dir,
-    int* faceden_index,
-    int* ncphys,
     const Real* xlo,const Real* dx,
     Real* deltafab,AMREX_ARLIM_P(deltafablo),AMREX_ARLIM_P(deltafabhi),
     Real* maskSEMfab,AMREX_ARLIM_P(maskSEMfablo),AMREX_ARLIM_P(maskSEMfabhi),
