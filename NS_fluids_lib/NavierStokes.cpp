@@ -10900,9 +10900,6 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
 		                  &viscoelastic_model[im])==1) {
      // declared in: GODUNOV_3D.F90
      fort_tensorheat(
-      &massface_index,
-      &vofface_index,
-      &ncphys,
       &ntensor,
       &nstate,
       xlo,dx,
@@ -15061,12 +15058,6 @@ NavierStokes::level_init_icemask() {
     // declared in: GODUNOV_3D.F90
    fort_init_icemask( 
     &cur_time_slab,
-    &facecut_index,
-    &icefacecut_index,
-    &icemask_index,
-    &massface_index,
-    &vofface_index,
-    &ncphys,
     &level,&finest_level,
     &nmat,&nten,
     latent_heat.dataPtr(),
@@ -15115,14 +15106,14 @@ NavierStokes::level_init_icemask() {
 // else if adjust_temperature==0,
 //  coeffMF=c1+c2
 // else if adjust_temperature==-1,
-//  faceheat_index component of FACE_VAR_MF
+//  FACECOMP_FACEHEAT component of FACE_VAR_MF
 //
 // for mass fraction:
 // (rho Y)_t + div (rho u Y) = div rho D grad Y
 // since rho_t + div (rho u)=0,
 // rho (Y_t + u dot grad Y)=div rho D grad Y
 // "rho D" coefficient is in FACE_VAR_MF,
-//   facespecies_index ... facespecies_index+num_species_var-1
+//   FACECOMP_FACESPECIES ... FACECOMP_FACESPECIES+num_species_var-1
 // "1/rho" coefficient is in CELL_DEN_MF 
 
 void
@@ -15188,7 +15179,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 
  if (is_phasechange==1) {
   if (project_option==2) { // thermal conduction
-   face_comp_index=faceheat_index;
+   face_comp_index=FACECOMP_FACEHEAT;
    for (int im=0;im<2*nten;im++) {
     if (latent_heat[im]!=0.0) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
@@ -15204,7 +15195,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
    } // im=0..2 nten-1
   } else if ((project_option>=100)&&  
 	     (project_option<100+num_species_var)) { //mass fraction
-   face_comp_index=facespecies_index+project_option-100;
+   face_comp_index=FACECOMP_FACESPECIES+project_option-100;
    for (int im=0;im<2*nten;im++) {
     if (latent_heat[im]!=0.0) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
@@ -15535,9 +15526,12 @@ NavierStokes::heat_source_term_flux_source() {
     denfab.dataPtr(),
     ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
     volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
-    heatx.dataPtr(faceheat_index),ARLIM(heatx.loVect()),ARLIM(heatx.hiVect()),
-    heaty.dataPtr(faceheat_index),ARLIM(heaty.loVect()),ARLIM(heaty.hiVect()),
-    heatz.dataPtr(faceheat_index),ARLIM(heatz.loVect()),ARLIM(heatz.hiVect()),
+    heatx.dataPtr(FACECOMP_FACEHEAT), 
+    ARLIM(heatx.loVect()),ARLIM(heatx.hiVect()),
+    heaty.dataPtr(FACECOMP_FACEHEAT),
+    ARLIM(heaty.loVect()),ARLIM(heaty.hiVect()),
+    heatz.dataPtr(FACECOMP_FACEHEAT),
+    ARLIM(heatz.loVect()),ARLIM(heatz.hiVect()),
     areax.dataPtr(),ARLIM(areax.loVect()),ARLIM(areax.hiVect()),
     areay.dataPtr(),ARLIM(areay.loVect()),ARLIM(areay.hiVect()),
     areaz.dataPtr(),ARLIM(areaz.loVect()),ARLIM(areaz.hiVect()) );
@@ -15939,9 +15933,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
   int project_option_visc=3;
 
-  int fluxvel_index=0;
-  int fluxden_index=AMREX_SPACEDIM;
-
   const Real* dx = geom.CellSize();
   const Box& domain = geom.Domain();
   const int* domlo = domain.loVect(); 
@@ -16306,17 +16297,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &finest_level,
       &project_option_visc,
       &local_enable_spectral,
-      &fluxvel_index,
-      &fluxden_index,
-      &facevel_index,
-      &facecut_index,
-      &icefacecut_index,
-      &curv_index,
-      &pforce_index,
-      &faceden_index,  // 1/rho
-      &icemask_index,
-      &massface_index,
-      &vofface_index,
       &nfluxSEM, // ncphys
       velbc.dataPtr(),
       denbc.dataPtr(),  // presbc
@@ -17705,9 +17685,6 @@ NavierStokes::GetDrag(int isweep) {
    mufab.dataPtr(),ARLIM(mufab.loVect()),ARLIM(mufab.hiVect()),
    mu_mat_fab.dataPtr(),
    ARLIM(mu_mat_fab.loVect()),ARLIM(mu_mat_fab.hiVect()),
-   &facevisc_index,
-   &faceheat_index,
-   &ncphys,
    xlo,dx,
    solxfab.dataPtr(),
    ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
@@ -18204,7 +18181,7 @@ NavierStokes::dotSumONES_size(int project_option,
   amrex::Error("result_sum or result_flag have invalid size");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2); // faceden_index has MAC density
+  debug_ngrow(FACE_VAR_MF+dir,0,2); 
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,0,51);
@@ -18367,7 +18344,7 @@ NavierStokes::dotSumONES(int project_option,
   amrex::Error("result_sum has invalid size");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2); // faceden_index has MAC density
+  debug_ngrow(FACE_VAR_MF+dir,0,2); 
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(index_MF,0,51);
@@ -18517,7 +18494,7 @@ NavierStokes::mf_combine_ones_level(int project_option,
  bool use_tiling=ns_tiling;
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2); // faceden_index has MAC density
+  debug_ngrow(FACE_VAR_MF+dir,0,2); 
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(index_MF,0,51);
