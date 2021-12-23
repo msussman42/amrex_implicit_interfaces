@@ -1570,7 +1570,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,3);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  debug_ngrow(FACE_VAR_MF+dir,0,101); // faceden_index has the MAC density
+  debug_ngrow(FACE_VAR_MF+dir,0,101); 
 
   MultiFab& UMAC_new=get_new_data(Umac_Type+dir,slab_step+1);
   if (UMAC_new.nGrow()==0) {
@@ -1692,11 +1692,6 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
      &dir, // dir=0,1,..sdim-1  
      &ncomp_visc, 
      &visc_coef,
-     &facevisc_index,
-     &faceden_index,
-     &massface_index,
-     &vofface_index,
-     &ncphys,
      velbc.dataPtr(),
      &dt_slab,
      &cur_time_slab,
@@ -1836,9 +1831,6 @@ void NavierStokes::apply_cell_pressure_gradient(
 
  VOF_Recon_resize(1,SLOPE_RECON_MF);
  debug_ngrow(SLOPE_RECON_MF,1,118);
-
- int fluxvel_index=0;
- int fluxden_index=AMREX_SPACEDIM;
 
  const Box& domain = geom.Domain();
  const int* domlo = domain.loVect();
@@ -2179,17 +2171,6 @@ void NavierStokes::apply_cell_pressure_gradient(
     &finest_level,
     &project_option,
     &local_enable_spectral,
-    &fluxvel_index,
-    &fluxden_index,
-    &facevel_index,
-    &facecut_index,
-    &icefacecut_index,
-    &curv_index,
-    &pforce_index,
-    &faceden_index,
-    &icemask_index,
-    &massface_index,
-    &vofface_index,
     &ncphys,
     velbc.dataPtr(),
     presbc.dataPtr(), 
@@ -2656,9 +2637,6 @@ void NavierStokes::increment_face_velocity(
  resize_maskfiner(1,MASKCOEF_MF);
  resize_mask_nbr(1);
 
- int fluxvel_index=0;
- int fluxden_index=AMREX_SPACEDIM;
-
  const Real* dx = geom.CellSize();
 
  const Box& domain = geom.Domain();
@@ -3097,9 +3075,6 @@ void NavierStokes::VELMAC_TO_CELL(
 
  int nsolve=1;
 
- int fluxvel_index=0;
- int fluxden_index=AMREX_SPACEDIM;
-
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
@@ -3326,17 +3301,6 @@ void NavierStokes::VELMAC_TO_CELL(
    &finest_level,
    &project_option,
    &local_enable_spectral, //0 if interp displacement to CELLS.
-   &fluxvel_index,
-   &fluxden_index,
-   &facevel_index,
-   &facecut_index,
-   &icefacecut_index,
-   &curv_index,
-   &pforce_index,
-   &faceden_index,
-   &icemask_index,
-   &massface_index,
-   &vofface_index,
    &ncphys,
    velbc.dataPtr(),
    velbc.dataPtr(), // presbc
@@ -4309,10 +4273,6 @@ void NavierStokes::apply_pressure_grad(
      xflux.dataPtr(),ARLIM(xflux.loVect()),ARLIM(xflux.hiVect()),
      xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
      reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-     &facevisc_index,
-     &vofface_index,
-     &massface_index,
-     &ncphys,
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,
@@ -4407,9 +4367,6 @@ void NavierStokes::apply_pressure_grad(
    dombcpres[m]=b_rec[m];
 
   resize_levelsetLO(2,LEVELPC_MF);
-
-  int fluxvel_index=0;
-  int fluxden_index=AMREX_SPACEDIM;
 
   allocate_flux_register(operation_flag);
   if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM)
@@ -4767,9 +4724,9 @@ void NavierStokes::make_physics_varsALL(int project_option,
    // average down from ilev+1 to ilev.
   
     // idxMF,scomp,ncomp,start_dir,ndir
-  ns_level.avgDownEdge_localMF(FACE_VAR_MF,facecut_index,1,0,
+  ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACECUT,1,0,
 		  AMREX_SPACEDIM,0,6);
-  ns_level.avgDownEdge_localMF(FACE_VAR_MF,icefacecut_index,1,0,
+  ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ICEFACECUT,1,0,
 		  AMREX_SPACEDIM,0,7);
 
   int spectral_override=0;
@@ -4788,36 +4745,30 @@ void NavierStokes::make_physics_varsALL(int project_option,
   } else
    amrex::Error("projection_enable_spectral invalid");
 
-  ns_level.avgDownEdge_localMF(FACE_VAR_MF,faceden_index,1,0,AMREX_SPACEDIM,
-   spectral_override,8);
+  ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEDEN,1,0,
+	  AMREX_SPACEDIM,spectral_override,8);
 
-  ns_level.avgDownEdge_localMF(FACE_VAR_MF,facevisc_index,1,0,AMREX_SPACEDIM,
-   0,9);
-  ns_level.avgDownEdge_localMF(FACE_VAR_MF,faceheat_index,1,0,AMREX_SPACEDIM,
-   0,10);
+  ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEVISC,1,0,
+          AMREX_SPACEDIM,0,9);
+  ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEHEAT,1,0,
+	  AMREX_SPACEDIM,0,10);
   if (num_species_var>0) {
-   ns_level.avgDownEdge_localMF(FACE_VAR_MF,facespecies_index,
+   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACESPECIES,
       num_species_var,0,AMREX_SPACEDIM,0,11);
   }
 
    // spectral_override==0
-  ns_level.avgDownEdge_localMF(FACE_VAR_MF,smoothing_index,1,0,AMREX_SPACEDIM,
-   0,12);
+  ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_SMOOTHING,
+	1,0,AMREX_SPACEDIM,0,12);
 
  }  // ilev=finest_level ... level
 
  if (1==0) {
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     // filenames: "FACE_VAR<stuff>.plt" (MAC data)
-    // curv_index,pforce_index (unused for now),
-    // faceden_index,facecut_index,
-    // icefacecut_index=4,icemask_index,facevisc_index,
-    // faceheat_index,facevel_index,facespecies_index,
-    // smoothing_index,
-    // massface_index,vofface_index
    writeSanityCheckData(
     "FACE_VAR",
-    "in: make_physics_varsALL, FACE_VAR_MF",//faceden_index=2 facevisc_index=6
+    "in: make_physics_varsALL, FACE_VAR_MF",
     caller_id,
     localMF[FACE_VAR_MF+dir]->nComp(),
     FACE_VAR_MF+dir,
@@ -5215,20 +5166,6 @@ void NavierStokes::make_physics_vars(int project_option) {
     viscconst_interface.dataPtr(),
     heatviscconst_interface.dataPtr(),
     speciesviscconst_interface.dataPtr(),
-    &curv_index,
-    &pforce_index,
-    &faceden_index,
-    &facecut_index,
-    &icefacecut_index,
-    &icemask_index,
-    &facevisc_index,
-    &faceheat_index,
-    &facevel_index,
-    &facespecies_index,
-    &smoothing_index,
-    &massface_index,
-    &vofface_index,
-    &ncphys,
     latent_heat.dataPtr(),
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
@@ -5342,7 +5279,7 @@ void NavierStokes::make_physics_vars(int project_option) {
      std::cout << "output of face_var_mf dir= " << dir << '\n';
      int interior_only=0;
      FArrayBox& curvfab=(*localMF[FACE_VAR_MF+dir])[mfi];
-     tecplot_debug(curvfab,xlo,fablo,fabhi,dx,dir,0,curv_index,
+     tecplot_debug(curvfab,xlo,fablo,fabhi,dx,dir,0,FACECOMP_CURV,
       1,interior_only);
     } // mfi
     ns_reconcile_d_num(147);
@@ -5562,10 +5499,6 @@ void NavierStokes::increment_potential_force() {
      &angular_velocity,
      &level,
      &finest_level,
-     &facecut_index,
-     &icefacecut_index,
-     &vofface_index,
-     &ncphys,
      &nmat,
      &nstate,
      tilelo,tilehi,
@@ -5882,9 +5815,6 @@ void NavierStokes::process_potential_force_face() {
  debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
  debug_ngrow(SLOPE_RECON_MF,1,130);
-
- int fluxvel_index=0;
- int fluxden_index=AMREX_SPACEDIM;
 
  int pcomp=AMREX_SPACEDIM;
 
@@ -9215,7 +9145,7 @@ void NavierStokes::scale_variables(int scale_flag) {
   }
   Umac_new.mult(vel_factor,0,nsolve,0);
   Umac_old.mult(vel_factor,0,nsolve,0);
-  localMF[FACE_VAR_MF+dir]->mult(vel_factor,facevel_index,1,0);
+  localMF[FACE_VAR_MF+dir]->mult(vel_factor,FACECOMP_FACEVEL,1,0);
   localMF[FSI_GHOST_MAC_MF+dir]->mult(vel_factor,0,nparts_def*AMREX_SPACEDIM,0);
  } // dir
 

@@ -1656,9 +1656,6 @@ void NavierStokes::apply_div(
  } else
   amrex::Error("homflag invalid");
 
- int fluxvel_index=0;
- int fluxden_index=AMREX_SPACEDIM;
-
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,250);
  debug_ngrow(FACE_VAR_MF,0,251);
@@ -1812,17 +1809,6 @@ void NavierStokes::apply_div(
    &finest_level,
    &project_option,
    &local_enable_spectral,
-   &fluxvel_index,
-   &fluxden_index,
-   &facevel_index,
-   &facecut_index,
-   &icefacecut_index,
-   &curv_index,
-   &pforce_index,
-   &faceden_index,
-   &icemask_index,
-   &massface_index,
-   &vofface_index,
    &ncphys,
    velbc.dataPtr(),
    presbc.dataPtr(), 
@@ -2300,9 +2286,6 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
  int nten=num_interfaces;
  int nsolve=1;
 
- int fluxvel_index=0;
- int fluxden_index=AMREX_SPACEDIM;
-
  MultiFab* velmac[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   velmac[dir]=getStateMAC(Umac_Type,0,dir,0,nsolve,cur_time_slab);
@@ -2417,17 +2400,6 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
     &finest_level,
     &project_option,
     &local_enable_spectral,
-    &fluxvel_index,
-    &fluxden_index,
-    &facevel_index,
-    &facecut_index,
-    &icefacecut_index,
-    &curv_index,
-    &pforce_index,
-    &faceden_index,
-    &icemask_index,
-    &massface_index,
-    &vofface_index,
     &ncphys,
     velbc.dataPtr(),
     velbc.dataPtr(), // presbc

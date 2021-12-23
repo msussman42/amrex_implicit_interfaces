@@ -45,9 +45,6 @@ extern "C"
     Real* mf,AMREX_ARLIM_P(mflo),AMREX_ARLIM_P(mfhi));
 
    void fort_tensorheat(
-    int* massface_index,
-    int* vofface_index,
-    int* ncphys,
     int* ntensor,
     int* nstate,
     const Real* xlo,const Real* dx,
@@ -56,7 +53,7 @@ extern "C"
     Real* zface,AMREX_ARLIM_P(zfacelo),AMREX_ARLIM_P(zfacehi),
     Real* lsfab,AMREX_ARLIM_P(lsfablo),AMREX_ARLIM_P(lsfabhi),
     Real* DeDTinverse,
-   AMREX_ARLIM_P(DeDTinverselo),AMREX_ARLIM_P(DeDTinversehi),
+    AMREX_ARLIM_P(DeDTinverselo),AMREX_ARLIM_P(DeDTinversehi),
     Real* vischeat,AMREX_ARLIM_P(vischeatlo),AMREX_ARLIM_P(vischeathi),
     Real* tenfab,AMREX_ARLIM_P(tenfablo),AMREX_ARLIM_P(tenfabhi),
     Real* gradufab,AMREX_ARLIM_P(gradufablo),AMREX_ARLIM_P(gradufabhi),
@@ -671,12 +668,6 @@ extern "C"
 
    void fort_init_icemask(
     Real* time,
-    int* facecut_index,
-    int* icefacecut_index,
-    int* icemask_index,
-    int* massface_index,
-    int* vofface_index,
-    int* ncphys,
     int* level,int* finest_level,
     int* nmat,int* nten,
     Real* latent_heat,
@@ -981,10 +972,6 @@ extern "C"
      Real* xflux,AMREX_ARLIM_P(xfluxlo),AMREX_ARLIM_P(xfluxhi),
      Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
      Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi), 
-     int* facevisc_index,
-     int* vofface_index,
-     int* massface_index,
-     int* ncphys,
      const int* tilelo,const int* tilehi, 
      const int* fablo,const int* fabhi, 
      int* bfact,
@@ -1004,11 +991,6 @@ extern "C"
      int* dir, //0..sdim-1
      int* ncomp_visc,
      Real* visc_coef, 
-     int* facevisc_index,
-     int* faceden_index,
-     int* massface_index,
-     int* vofface_index,
-     int* ncphys_index,
      int* velbc,
      Real* dt,
      Real* cur_time,

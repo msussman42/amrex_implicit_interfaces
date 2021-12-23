@@ -999,7 +999,7 @@ stop
             ! notes: 
             !  viscoelastic_coeff*visc_coef down below.
             !  dd_group=dd*visc_coef in PROB.F90 
-            !  xflux*=-dt * visc_coef * facevisc_index in CROSSTERM
+            !  xflux*=-dt * visc_coef * FACECOMP_FACEVISC in CROSSTERM
            if (mu.ge.zero) then
             if (elastic_regularization.ge.zero) then
              mu=mu+dt*elastic_regularization*bulk_modulus  
@@ -1963,9 +1963,6 @@ stop
        cvisc,DIMS(cvisc), &
        c_mat_visc, &
        DIMS(c_mat_visc), &
-       facevisc_index, &
-       faceheat_index, &
-       ncphys, &
        xlo,dx, &
        solxfab,DIMS(solxfab), &
        solyfab,DIMS(solyfab), &
@@ -1998,10 +1995,6 @@ stop
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
 
       INTEGER_T, intent(in) :: ntensor
-
-      INTEGER_T, intent(in) :: facevisc_index
-      INTEGER_T, intent(in) :: faceheat_index
-      INTEGER_T, intent(in) :: ncphys
 
       INTEGER_T, intent(in) :: isweep
       REAL_T, intent(in) :: globalsum(N_DRAG)
@@ -2066,11 +2059,11 @@ stop
       REAL_T, intent(in),target :: areaz(DIMV(areaz))
       REAL_T, pointer :: areaz_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in),target :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in),target :: xface(DIMV(xface),FACECOMP_NCOMP)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: yface(DIMV(yface),ncphys)
+      REAL_T, intent(in),target :: yface(DIMV(yface),FACECOMP_NCOMP)
       REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: zface(DIMV(zface),ncphys)
+      REAL_T, intent(in),target :: zface(DIMV(zface),FACECOMP_NCOMP)
       REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in),target :: cvisc(DIMV(cvisc))
@@ -2309,16 +2302,6 @@ stop
        ! do nothing
       else
        print *,"num_materials_viscoelastic invalid: fort_getdrag"
-       stop
-      endif
-       ! indexes start at 0
-      if ((facevisc_index.ne.6).or. &
-          (faceheat_index.ne.7)) then
-       print *,"face_index bust 10"
-       stop
-      endif
-      if (ncphys.lt.8) then
-       print *,"ncphys invalid"
        stop
       endif
 

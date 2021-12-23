@@ -8032,20 +8032,6 @@ stop
        visc_interface, &
        heatvisc_interface, &
        speciesvisc_interface, &
-       curv_index, &
-       pforce_index, &
-       faceden_index, &
-       facecut_index, &
-       icefacecut_index, &
-       icemask_index, &
-       facevisc_index, &
-       faceheat_index, &
-       facevel_index, &
-       facespecies_index, &
-       smoothing_index, &
-       massface_index, &
-       vofface_index, &
-       ncphys, &
        latent_heat, &
        freezing_model, &
        distribute_from_target, &
@@ -8126,20 +8112,6 @@ stop
       INTEGER_T, intent(in) :: isweep
       INTEGER_T, intent(in) :: nrefine_vof
       INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: curv_index
-      INTEGER_T, intent(in) :: pforce_index
-      INTEGER_T, intent(in) :: faceden_index
-      INTEGER_T, intent(in) :: facecut_index
-      INTEGER_T, intent(in) :: icefacecut_index
-      INTEGER_T, intent(in) :: icemask_index
-      INTEGER_T, intent(in) :: facevisc_index
-      INTEGER_T, intent(in) :: faceheat_index
-      INTEGER_T, intent(in) :: facevel_index
-      INTEGER_T, intent(in) :: facespecies_index
-      INTEGER_T, intent(in) :: smoothing_index
-      INTEGER_T, intent(in) :: massface_index
-      INTEGER_T, intent(in) :: vofface_index
-      INTEGER_T, intent(in) :: ncphys
 
       INTEGER_T, intent(in) :: solidheat_flag
       REAL_T, intent(in) :: microlayer_size(nmat)
@@ -8192,11 +8164,11 @@ stop
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: masknbr(DIMV(masknbr),4)
       REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(out), target :: xface(DIMV(xface),FACECOMP_NCOMP)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: yface(DIMV(yface),ncphys)
+      REAL_T, intent(out), target :: yface(DIMV(yface),FACECOMP_NCOMP)
       REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: zface(DIMV(zface),ncphys)
+      REAL_T, intent(out), target :: zface(DIMV(zface),FACECOMP_NCOMP)
       REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: curv(DIMV(curv),num_curv) 
       REAL_T, pointer :: curv_ptr(D_DECL(:,:,:),:)
@@ -8313,7 +8285,7 @@ stop
       REAL_T localheatvisc_minus(nmat)
       INTEGER_T implus_majority,imminus_majority
 
-      REAL_T local_face(ncphys)
+      REAL_T local_face(FACECOMP_NCOMP)
       REAL_T local_volumes(2,nmat)
       REAL_T local_masses(2,nmat)
       INTEGER_T igridlo(3),igridhi(3)
@@ -8490,29 +8462,6 @@ stop
       if (ngeom_raw.ne.SDIM+1) then
        print *,"ngeom_raw invalid init phys vars "
        print *,"ngeom_raw= ",ngeom_raw
-       stop
-      endif
-      if (curv_index.ne.0) then
-       print *,"curv_index invalid"
-       stop
-      endif
-      if ((pforce_index.ne.1).or. &
-          (faceden_index.ne.2).or. &
-          (facecut_index.ne.3).or. &
-          (icefacecut_index.ne.4).or. &
-          (icemask_index.ne.5).or. &
-          (facevisc_index.ne.6).or. &
-          (faceheat_index.ne.7).or. &
-          (facevel_index.ne.8).or. &
-          (facespecies_index.ne.9).or. &
-          (smoothing_index.ne.facespecies_index+num_species_var).or. &
-          (massface_index.ne.smoothing_index+1).or. &
-          (vofface_index.ne.massface_index+2*nmat)) then
-       print *,"face_index bust 4"
-       stop
-      endif
-      if (ncphys.ne.vofface_index+2*nmat) then
-       print *,"ncphys invalid"
        stop
       endif
 
@@ -8725,7 +8674,7 @@ stop
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
          igridlo,igridhi,0,veldir,16) 
 
-          ! first init xface,yface,zface (vofface_index+1,...)
+          ! first init xface,yface,zface 
           ! then follow with the rest...
         do i=igridlo(1),igridhi(1)
         do j=igridlo(2),igridhi(2)
@@ -8747,10 +8696,10 @@ stop
          endif
 
           ! in: fort_init_physics_vars
-         local_face(icemask_index+1)=one
-         local_face(curv_index+1)=zero
-         local_face(pforce_index+1)=zero
-         local_face(facevel_index+1)=zero
+         local_face(FACECOMP_ICEMASK+1)=one
+         local_face(FACECOMP_CURV+1)=zero
+         local_face(FACECOMP_PFORCE+1)=zero
+         local_face(FACECOMP_FACEVEL+1)=zero
 
           ! veldir=0..sdim-1
          call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,veldir,21)
@@ -8805,9 +8754,9 @@ stop
 
          do iside=0,1
          do im=1,nmat
-          local_face(vofface_index+2*(im-1)+iside+1)= &
+          local_face(FACECOMP_VOFFACE+2*(im-1)+iside+1)= &
             local_volumes(iside+1,im)
-          local_face(massface_index+2*(im-1)+iside+1)= &
+          local_face(FACECOMP_MASSFACE+2*(im-1)+iside+1)= &
             local_masses(iside+1,im)
          enddo ! im=1..nmat
          enddo ! iside=0..1
@@ -9002,13 +8951,7 @@ stop
             print *,"is_solid_face invalid(2) is_solid_face= ",is_solid_face
             print *,"tid=",tid
             print *,"isweep=",isweep
-            print *,"curv_index=",curv_index
-            print *,"pforce_index=",pforce_index
-            print *,"faceden_index=",faceden_index
-            print *,"facecut_index=",facecut_index
-            print *,"massface_index=",massface_index
-            print *,"vofface_index=",vofface_index
-            print *,"ncphys=",ncphys
+            print *,"FACECOMP_NCOMP=",FACECOMP_NCOMP
             print *,"solidheat_flag=",solidheat_flag
             print *,"time=",time
             print *,"dt=",dt
@@ -9091,11 +9034,11 @@ stop
           endif
 
           if (velbclo.eq.REFLECT_ODD) then
-           local_face(facevel_index+1)=zero
+           local_face(FACECOMP_FACEVEL+1)=zero
           else if (velbclo.eq.EXT_DIR) then
            iside=1
            call velbc_override(time,veldir+1,iside,veldir+1, &
-            local_face(facevel_index+1), &
+            local_face(FACECOMP_FACEVEL+1), &
             xstenMAC,nhalf,dx,bfact)
            noslip_wall=1
           else if ((velbclo.eq.INT_DIR).or. &
@@ -9132,11 +9075,11 @@ stop
           endif
 
           if (velbchi.eq.REFLECT_ODD) then
-           local_face(facevel_index+1)=zero
+           local_face(FACECOMP_FACEVEL+1)=zero
           else if (velbchi.eq.EXT_DIR) then
            iside=2
            call velbc_override(time,veldir+1,iside,veldir+1, &
-            local_face(facevel_index+1), &
+            local_face(FACECOMP_FACEVEL+1), &
             xstenMAC,nhalf,dx,bfact)
            noslip_wall=1
           else if ((velbchi.eq.INT_DIR).or. &
@@ -9158,7 +9101,7 @@ stop
 
          if (is_prescribed_face.eq.1) then
           if (is_solid_face.eq.1) then
-           local_face(facevel_index+1)=solid_velocity
+           local_face(FACECOMP_FACEVEL+1)=solid_velocity
           else
            print *,"is_solid_face invalid 3 ",is_solid_face
            stop
@@ -9688,7 +9631,7 @@ stop
           is_zero_visc=0
           do iside=0,1
           do im=1,nmat
-           voldepart=local_face(vofface_index+2*(im-1)+iside+1)
+           voldepart=local_face(FACECOMP_VOFFACE+2*(im-1)+iside+1)
            voltotal=voltotal+voldepart
            FFACE(im)=FFACE(im)+voldepart
            if (iside.eq.0) then
@@ -10008,12 +9951,11 @@ stop
          do iside=0,1
          do im=1,nmat
 
-           ! vofface_index=11  2 * nmat components
-          voldepart=local_face(vofface_index+2*(im-1)+iside+1)
+          voldepart=local_face(FACECOMP_VOFFACE+2*(im-1)+iside+1)
           voltotal=voltotal+voldepart
           FFACE(im)=FFACE(im)+voldepart
           mass_total=mass_total+  &
-           local_face(massface_index+2*(im-1)+iside+1)
+           local_face(FACECOMP_MASSFACE+2*(im-1)+iside+1)
           
          enddo
          enddo ! iside=0..1
@@ -10040,7 +9982,7 @@ stop
 
          density_for_mass_fraction_diffusion=mass_total/voltotal
 
-         local_face(faceden_index+1)=one/density_for_mass_fraction_diffusion
+         local_face(FACECOMP_FACEDEN+1)=one/density_for_mass_fraction_diffusion
 
          do im=1,nmat
           do im_opp=im+1,nmat
@@ -10050,7 +9992,7 @@ stop
             if (den_interface(iten).eq.zero) then
              ! do nothing
             else if (den_interface(iten).gt.zero) then
-             local_face(faceden_index+1)=one/den_interface(iten)
+             local_face(FACECOMP_FACEDEN+1)=one/den_interface(iten)
             else
              print *,"den_interface invalid"
              stop
@@ -10065,10 +10007,10 @@ stop
           enddo ! im_opp=im+1..nmat
          enddo ! im=1..nmat
 
-         local_face(facevisc_index+1)=facevisc_local
-         local_face(faceheat_index+1)=faceheat_local
+         local_face(FACECOMP_FACEVISC+1)=facevisc_local
+         local_face(FACECOMP_FACEHEAT+1)=faceheat_local
          do imspec=1,num_species_var
-          local_face(facespecies_index+imspec)= &
+          local_face(FACECOMP_FACESPECIES+imspec)= &
             density_for_mass_fraction_diffusion*facespecies_local(imspec)
          enddo
 
@@ -10082,7 +10024,7 @@ stop
           stop
          endif
 
-         local_face(smoothing_index+1)=smoothing_local
+         local_face(FACECOMP_SMOOTHING+1)=smoothing_local
 
 
           ! mask_boundary=1 at left neumann boundary
@@ -10099,18 +10041,18 @@ stop
           stop
          endif  
 
-         local_face(icefacecut_index+1)=one
+         local_face(FACECOMP_ICEFACECUT+1)=one
 
-! local_face(facecut_index+1)=0.0 if presbc=REFLECT_EVEN,LO_EXTRAP
-! local_face(facecut_index+1)=0.0 if face has adjoining
+! local_face(FACECOMP_FACECUT+1)=0.0 if presbc=REFLECT_EVEN,LO_EXTRAP
+! local_face(FACECOMP_FACECUT+1)=0.0 if face has adjoining
 !  prescribed solid.
          if (wall_flag_face.eq.0) then
-          local_face(facecut_index+1)=one
+          local_face(FACECOMP_FACECUT+1)=one
          else if ((wall_flag_face.ge.1).and. &
                   (wall_flag_face.le.nmat)) then
-          local_face(facecut_index+1)=zero
+          local_face(FACECOMP_FACECUT+1)=zero
          else if (wall_flag_face.eq.nmat+1) then
-          local_face(facecut_index+1)=zero
+          local_face(FACECOMP_FACECUT+1)=zero
          else
           print *,"wall_flag_face invalid"
           stop
@@ -10151,20 +10093,20 @@ stop
           stop
          endif
 
-         local_face(curv_index+1)=zero
-         local_face(pforce_index+1)=zero
+         local_face(FACECOMP_CURV+1)=zero
+         local_face(FACECOMP_PFORCE+1)=zero
 
-         if (local_face(facecut_index+1).lt.zero) then
-          print *,"local_face(facecut_index+1).lt.zero"
+         if (local_face(FACECOMP_FACECUT+1).lt.zero) then
+          print *,"local_face(ACECOMP_FACECUT+1).lt.zero"
           stop
-         else if ((local_face(facecut_index+1).ge.zero).and. &
-                  (local_face(facecut_index+1).le.half)) then
+         else if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
+                  (local_face(FACECOMP_FACECUT+1).le.half)) then
           ! do nothing
          else if (zeroradius_flag.eq.1) then
           ! do nothing
          else if ((zeroradius_flag.eq.0).and. &
-                  (local_face(facecut_index+1).ge.half).and. &
-                  (local_face(facecut_index+1).le.one)) then
+                  (local_face(FACECOMP_FACECUT+1).ge.half).and. &
+                  (local_face(FACECOMP_FACECUT+1).le.one)) then
 
           if (gradh_tension.ne.zero) then
 
@@ -10180,8 +10122,8 @@ stop
            if (LS_consistent_tension.eq.1) then
 
             if (is_solid_face.eq.1) then
-             local_face(curv_index+1)=zero
-             local_face(pforce_index+1)=zero
+             local_face(FACECOMP_CURV+1)=zero
+             local_face(FACECOMP_PFORCE+1)=zero
             else if (is_solid_face.eq.0) then
              icurv=(iten_tension-1)*(SDIM+5)
 
@@ -10326,47 +10268,47 @@ stop
                endif 
                 
                if (curv_interp_flag.eq.0) then
-                local_face(curv_index+1)=wtL*curvL(2)+wtR*curvR(2)
+                local_face(FACECOMP_CURV+1)=wtL*curvL(2)+wtR*curvR(2)
                else if (curv_interp_flag.eq.1) then   
                 if (wtL.gt.wtR) then
-                 local_face(curv_index+1)=curvL(1)
+                 local_face(FACECOMP_CURV+1)=curvL(1)
                 else if (wtR.gt.wtL) then
-                 local_face(curv_index+1)=curvR(1)
+                 local_face(FACECOMP_CURV+1)=curvR(1)
                 else 
-                 local_face(curv_index+1)=wtL*curvL(1)+wtR*curvR(1)
+                 local_face(FACECOMP_CURV+1)=wtL*curvL(1)+wtR*curvR(1)
                 endif
                else if (curv_interp_flag.eq.2) then
-                local_face(curv_index+1)=curvL(1)
+                local_face(FACECOMP_CURV+1)=curvL(1)
                else if (curv_interp_flag.eq.3) then
-                local_face(curv_index+1)=curvR(1)
+                local_face(FACECOMP_CURV+1)=curvR(1)
                else if (curv_interp_flag.eq.4) then
-                local_face(curv_index+1)=wtL*curvL(1)+wtR*curvR(1)
+                local_face(FACECOMP_CURV+1)=wtL*curvL(1)+wtR*curvR(1)
                else if (curv_interp_flag.eq.5) then
                 if (wtL.gt.wtR) then
-                 local_face(curv_index+1)=curvL(2)
+                 local_face(FACECOMP_CURV+1)=curvL(2)
                 else if (wtR.gt.wtL) then
-                 local_face(curv_index+1)=curvR(2)
+                 local_face(FACECOMP_CURV+1)=curvR(2)
                 else 
-                 local_face(curv_index+1)=wtL*curvL(2)+wtR*curvR(2)
+                 local_face(FACECOMP_CURV+1)=wtL*curvL(2)+wtR*curvR(2)
                 endif
                else
                 print *,"curv_interp_flag invalid"
                 stop
                endif
 
-               if (curv_min.gt.local_face(curv_index+1)) then
-                curv_min=local_face(curv_index+1)
+               if (curv_min.gt.local_face(FACECOMP_CURV+1)) then
+                curv_min=local_face(FACECOMP_CURV+1)
                endif
-               if (curv_max.lt.local_face(curv_index+1)) then
-                curv_max=local_face(curv_index+1)
+               if (curv_max.lt.local_face(FACECOMP_CURV+1)) then
+                curv_max=local_face(FACECOMP_CURV+1)
                endif
 
                if (wtL.gt.wtR) then
-                local_face(pforce_index+1)=curvL(3)
+                local_face(FACECOMP_PFORCE+1)=curvL(3)
                else if (wtR.gt.wtL) then
-                local_face(pforce_index+1)=curvR(3)
+                local_face(FACECOMP_PFORCE+1)=curvR(3)
                else 
-                local_face(pforce_index+1)=wtL*curvL(3)+wtR*curvR(3)
+                local_face(FACECOMP_PFORCE+1)=wtL*curvL(3)+wtR*curvR(3)
                endif
 
               else if (project_option.eq.11) then ! FSI_material_exists last
@@ -10412,11 +10354,11 @@ stop
           endif
 
          else
-          print *,"zeroradius_flag or local_face(facecut_index+1) invalid"
+          print *,"zeroradius_flag or local_face(FACECOMP_FACECUT+1) invalid"
           stop
          endif 
 
-         do im=1,ncphys
+         do im=1,FACECOMP_NCOMP
           if (veldir.eq.0) then
            xface(D_DECL(i,j,k),im)=local_face(im)
           else if (veldir.eq.1) then
@@ -10427,7 +10369,7 @@ stop
            print *,"veldir invalid"
            stop
           endif
-         enddo  ! im=1,ncphys
+         enddo  ! im=1,FACECOMP_NCOMP
 
         enddo
         enddo
@@ -10619,9 +10561,9 @@ stop
        j=1
        k=0
        do i=fablo(1),fabhi(1)+1
-        comparemassface(i,1)=xface(D_DECL(i,j,k),massface_index+1)/dx(2)
-        comparemassface(i,2)=xface(D_DECL(i,j,k),massface_index+2)/dx(2)
-        comparedenface(i,1)=one/xface(D_DECL(i,j,k),faceden_index+1)
+        comparemassface(i,1)=xface(D_DECL(i,j,k),FACECOMP_MASSFACE+1)/dx(2)
+        comparemassface(i,2)=xface(D_DECL(i,j,k),FACECOMP_MASSFACE+2)/dx(2)
+        comparedenface(i,1)=one/xface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)
        enddo
        call compare_sanity(comparemassface,1,2,3)
        call compare_sanity(comparedenface,1,1,4)
@@ -11263,17 +11205,6 @@ stop
        finest_level, &
        project_option, &
        enable_spectral, &
-       fluxvel_index, &
-       fluxden_index, &
-       facevel_index, &
-       facecut_index, &
-       icefacecut_index, &
-       curv_index, &
-       pforce_index, &
-       faceden_index, &
-       icemask_index, &
-       massface_index, &
-       vofface_index, &
        ncphys, &
        velbc_in, &
        presbc_in, &
@@ -11352,17 +11283,6 @@ stop
       INTEGER_T, intent(in) :: homflag
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: project_option
-      INTEGER_T, intent(in) :: fluxvel_index
-      INTEGER_T, intent(in) :: fluxden_index
-      INTEGER_T, intent(in) :: facevel_index
-      INTEGER_T, intent(in) :: facecut_index
-      INTEGER_T, intent(in) :: icefacecut_index
-      INTEGER_T, intent(in) :: curv_index
-      INTEGER_T, intent(in) :: pforce_index
-      INTEGER_T, intent(in) :: faceden_index
-      INTEGER_T, intent(in) :: icemask_index
-      INTEGER_T, intent(in) :: massface_index
-      INTEGER_T, intent(in) :: vofface_index
       INTEGER_T, intent(in) :: ncphys
       INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: presbc_in(SDIM,2)
@@ -11664,21 +11584,6 @@ stop
        endif
       enddo ! im=1..nmat
  
-      ! indexes start at 0
-      if ((curv_index.ne.0).or. &
-          (pforce_index.ne.1).or. &
-          (facecut_index.ne.3).or. &
-          (icefacecut_index.ne.4).or. &
-          (icemask_index.ne.5).or. &
-          (facevel_index.ne.8).or. &
-          (faceden_index.ne.2).or. &
-          (vofface_index.ne.massface_index+2*nmat).or. &
-          (fluxvel_index.ne.0).or. &
-          (fluxden_index.ne.SDIM)) then
-       print *,"face_index bust 2"
-       stop
-      endif
-
       ! mac -> cell in solver (apply_cell_pressure_gradient) or VELMAC_TO_CELL
       if ((operation_flag.eq.103).or. & ! velocity
           (operation_flag.eq.104).or. & ! velocity increment
@@ -11695,7 +11600,7 @@ stop
         print *,"ncomp_dendest invalid"
         stop
        endif
-       if (ncphys.ne.vofface_index+2*nmat) then
+       if (ncphys.ne.FACECOMP_NCOMP) then
         print *,"ncphys invalid"
         stop
        endif
@@ -11727,7 +11632,7 @@ stop
         print *,"ncomp_dendest invalid"
         stop
        endif
-       if (ncphys.ne.vofface_index+2*nmat) then
+       if (ncphys.ne.FACECOMP_NCOMP) then
         print *,"ncphys invalid"
         stop
        endif
@@ -11757,7 +11662,7 @@ stop
         print *,"ncomp_dendest invalid"
         stop
        endif
-       if (ncphys.ne.vofface_index+2*nmat) then
+       if (ncphys.ne.FACECOMP_NCOMP) then
         print *,"ncphys invalid"
         stop
        endif
@@ -11788,7 +11693,7 @@ stop
         print *,"ncomp_dendest invalid"
         stop
        endif
-       if (ncphys.eq.vofface_index+2*nmat) then
+       if (ncphys.eq.FACECOMP_NCOMP) then
         ! do nothing
        else
         print *,"ncphys invalid"
@@ -12549,9 +12454,9 @@ stop
           mass_side(side)=zero
           do im=1,nmat 
            if (side.eq.1) then  ! left half of cell
-            sidecomp=massface_index+2*(im-1)+2
+            sidecomp=FACECOMP_MASSFACE+2*(im-1)+2
            else if (side.eq.2) then ! right half of cell
-            sidecomp=massface_index+2*(im-1)+1
+            sidecomp=FACECOMP_MASSFACE+2*(im-1)+1
            else
             print *,"side invalid"
             stop
@@ -12774,9 +12679,9 @@ stop
           mass_side(side)=zero
           do im=1,nmat 
            if (side.eq.1) then  ! left half of cell
-            sidecomp=massface_index+2*(im-1)+2
+            sidecomp=FACECOMP_MASSFACE+2*(im-1)+2
            else if (side.eq.2) then ! right half of cell
-            sidecomp=massface_index+2*(im-1)+1
+            sidecomp=FACECOMP_MASSFACE+2*(im-1)+1
            else
             print *,"side invalid"
             stop
@@ -14886,11 +14791,12 @@ stop
           if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
               (local_face(FACECOMP_FACECUT+1).le.half)) then
            AFACE=zero
-          else if ((local_face(facecut_index+1).ge.half).and. &
-                   (local_face(facecut_index+1).le.one)) then
-           AFACE=local_face(facecut_index+1)*local_face(icefacecut_index+1)
+          else if ((local_face(FACECOMP_FACECUT+1).ge.half).and. &
+                   (local_face(FACECOMP_FACECUT+1).le.one)) then
+           AFACE=local_face(FACECOMP_FACECUT+1)* &
+                 local_face(FACECOMP_ICEFACECUT+1)
           else
-           print *,"local_face(facecut_index+1) invalid"
+           print *,"local_face(FACECOMP_FACECUT+1) invalid"
            stop
           endif
 
@@ -14921,16 +14827,15 @@ stop
            stop
           endif
 
-          if (local_face(icemask_index+1).eq.zero) then
+          if (local_face(FACECOMP_ICEMASK+1).eq.zero) then
            use_face_pres=0 ! do not use div(up)
-          else if (local_face(icemask_index+1).eq.one) then
+          else if (local_face(FACECOMP_ICEMASK+1).eq.one) then
            ! do nothing
           else
            print *,"icemask invalid in fort_cell_to_mac"
            print *,"This is the p^CELL->MAC operation"
            print *,"operation_flag (=1) = ",operation_flag
-           print *,"icemask_index= ",icemask_index
-           print *,"icemask= ",local_face(icemask_index+1)
+           print *,"FACECOMP_ICEMASK= ",FACECOMP_ICEMASK
            stop
           endif
 
@@ -14994,9 +14899,9 @@ stop
            vol_local(side)=zero
            do im=1,nmat
             mass(side)=mass(side)+ &
-             local_face(massface_index+2*(im-1)+side)
+             local_face(FACECOMP_MASSFACE+2*(im-1)+side)
             vol_local(side)=vol_local(side)+ &
-             local_face(vofface_index+2*(im-1)+side)
+             local_face(FACECOMP_VOFFACE+2*(im-1)+side)
            enddo 
            if (mass(side).lt.zero) then
             print *,"mass(side) invalid"
@@ -15189,7 +15094,7 @@ stop
            stop
           endif
 
-          AFACE=local_face(facecut_index+1)
+          AFACE=local_face(FACECOMP_FACECUT+1)
           if ((AFACE.ge.zero).and.(AFACE.le.half)) then
            AFACE=zero
           else if ((AFACE.ge.half).and.(AFACE.le.one)) then
@@ -15199,7 +15104,7 @@ stop
            stop 
           endif
 
-          AFACE_ICE=local_face(icefacecut_index+1)
+          AFACE_ICE=local_face(FACECOMP_ICEFACECUT+1)
           if ((AFACE_ICE.ge.zero).and.(AFACE_ICE.le.one)) then
            ! do nothing
           else
@@ -15218,9 +15123,9 @@ stop
            vol_local(side)=zero
            do im=1,nmat
             mass(side)=mass(side)+ &
-             local_face(massface_index+2*(im-1)+side)
+             local_face(FACECOMP_MASSFACE+2*(im-1)+side)
             vol_local(side)=vol_local(side)+ &
-             local_face(vofface_index+2*(im-1)+side)
+             local_face(FACECOMP_VOFFACE+2*(im-1)+side)
            enddo 
            if (mass(side).lt.zero) then
             print *,"mass(side) invalid"
@@ -15306,22 +15211,22 @@ stop
 
              ! in: fort_cell_to_mac, operation_flag=2,
              !     surface tension on MAC grid ...
-            local_tension_force=tension_scaled*local_face(curv_index+1)
+            local_tension_force=tension_scaled*local_face(FACECOMP_CURV+1)
 
              ! pgrad_tension is combined with pgrad_gravity at the very end.
             pgrad_tension=-(local_tension_force+ &
-                    pforce_scaled*local_face(pforce_index+1))*gradh
+                    pforce_scaled*local_face(FACECOMP_PFORCE+1))*gradh
             pgrad_tension=dt*pgrad_tension/hx
-            if ((local_face(facecut_index+1).ge.zero).and. &
-                (local_face(facecut_index+1).le.half)) then
+            if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
+                (local_face(FACECOMP_FACECUT+1).le.half)) then
              pgrad_tension=zero
-            else if ((local_face(facecut_index+1).ge.half).and. &
-                     (local_face(facecut_index+1).le.one)) then
+            else if ((local_face(FACECOMP_FACECUT+1).ge.half).and. &
+                     (local_face(FACECOMP_FACECUT+1).le.one)) then
              pgrad_tension=pgrad_tension* &
-              local_face(facecut_index+1)* &
-              local_face(faceden_index+1)
+              local_face(FACECOMP_FACECUT+1)* &
+              local_face(FACECOMP_FACEDEN+1)
             else
-             print *,"local_face(facecut_index+1) invalid"
+             print *,"local_face(FACECOMP_FACECUT+1) invalid"
              stop
             endif
 

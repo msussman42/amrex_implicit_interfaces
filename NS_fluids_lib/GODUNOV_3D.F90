@@ -1053,10 +1053,6 @@ stop
        xflux,DIMS(xflux), &
        xface,DIMS(xface), &
        recon,DIMS(recon), &  
-       facevisc_index, &
-       vofface_index, &
-       massface_index, &
-       ncphys, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -1085,10 +1081,6 @@ stop
       INTEGER_T, intent(in) :: operation_flag
       INTEGER_T, intent(in) :: enable_spectral
       INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: facevisc_index
-      INTEGER_T, intent(in) :: massface_index
-      INTEGER_T, intent(in) :: vofface_index
-      INTEGER_T, intent(in) :: ncphys
       INTEGER_T, intent(in) :: homflag
       INTEGER_T :: nc
       INTEGER_T, intent(in) :: uncoupled_viscosity
@@ -1143,7 +1135,7 @@ stop
       REAL_T, intent(out), target :: xflux(DIMV(xflux),nsolve)  ! u
       REAL_T, pointer :: xflux_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in), target :: xface(DIMV(xface),FACECOMP_NCOMP)
 
       REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
 
@@ -1317,17 +1309,6 @@ stop
        stop
       endif
 
-       ! indexes start at 0
-      if ((facevisc_index.ne.6).or. &
-          (vofface_index.ne.massface_index+2*nmat)) then
-       print *,"face_index bust 8"
-       stop
-      endif
-      if (ncphys.ne.vofface_index+2*nmat) then
-       print *,"ncphys invalid"
-       stop
-      endif
-
       do im=1,nmat
        if (fort_denconst(im).le.zero) then
         print *,"denconst invalid"
@@ -1479,7 +1460,7 @@ stop
          km1=k-kk
 
          do im=1,2*nmat
-          massF(im)=xface(D_DECL(i,j,k),massface_index+im)
+          massF(im)=xface(D_DECL(i,j,k),FACECOMP_MASSFACE+im)
          enddo
          do im=1,nmat
           massfrac(im)=zero
@@ -2409,7 +2390,7 @@ stop
           stop
          endif
 
-         visc_constant=visc_coef*xface(D_DECL(i,j,k),facevisc_index+1)
+         visc_constant=visc_coef*xface(D_DECL(i,j,k),FACECOMP_FACEVISC+1)
          if (visc_constant.lt.zero) then
           print *,"visc_constant cannot be negative"
           stop
@@ -5051,7 +5032,7 @@ stop
 
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x nmat
-        ! icemask_index component initialized to 1 in "init_physics_vars"
+        ! FACECOMP_ICEMASK component initialized to 1 in "init_physics_vars"
         ! if nmat=2, nten=1
         ! if nmat=3, nten=3    12 13 23
         ! if nmat=4, nten=6    12 13 14 23 24 34
@@ -5294,12 +5275,6 @@ stop
         !     NavierStokes::make_physics_varsALL
       subroutine fort_init_icemask( &
        time, &
-       facecut_index, &
-       icefacecut_index, &
-       icemask_index, &
-       massface_index, &
-       vofface_index, &
-       ncphys, &
        level,finest_level, &
        nmat,nten, &
        latent_heat, &
@@ -5324,12 +5299,6 @@ stop
       IMPLICIT NONE
 
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: facecut_index
-      INTEGER_T, intent(in) :: icefacecut_index
-      INTEGER_T, intent(in) :: icemask_index
-      INTEGER_T, intent(in) :: massface_index
-      INTEGER_T, intent(in) :: vofface_index
-      INTEGER_T, intent(in) :: ncphys
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: nmat,nten
       REAL_T, intent(in) :: latent_heat(2*nten)
@@ -5351,11 +5320,11 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(recon)
       REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(inout), target :: xface(DIMV(xface),FACECOMP_NCOMP)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: yface(DIMV(yface),ncphys)
+      REAL_T, intent(inout), target :: yface(DIMV(yface),FACECOMP_NCOMP)
       REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: zface(DIMV(zface),ncphys)
+      REAL_T, intent(inout), target :: zface(DIMV(zface),FACECOMP_NCOMP)
       REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: LSnew(DIMV(LSnew),nmat)
       REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
@@ -5420,27 +5389,6 @@ stop
       endif
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
-       stop
-      endif
-
-      if (vofface_index.ne.massface_index+2*nmat) then
-       print *,"face_index bust 1"
-       stop
-      endif
-      if (icemask_index.ne.5) then
-       print *,"icemask_index bust"
-       stop
-      endif
-      if (facecut_index.ne.3) then
-       print *,"facecut_index bust"
-       stop
-      endif
-      if (icefacecut_index.ne.4) then
-       print *,"icefacecut_index bust"
-       stop
-      endif
-      if (ncphys.ne.vofface_index+2*nmat) then
-       print *,"ncphys invalid"
        stop
       endif
 
@@ -5594,14 +5542,14 @@ stop
          endif
 
          if (dir.eq.0) then
-          ice_test=xface(D_DECL(i,j,k),icemask_index+1)
-          cut_test=xface(D_DECL(i,j,k),icefacecut_index+1)
+          ice_test=xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
+          cut_test=xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
          else if (dir.eq.1) then
-          ice_test=yface(D_DECL(i,j,k),icemask_index+1)
-          cut_test=yface(D_DECL(i,j,k),icefacecut_index+1)
+          ice_test=yface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
+          cut_test=yface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
          else if ((dir.eq.2).and.(SDIM.eq.3)) then
-          ice_test=zface(D_DECL(i,j,k),icemask_index+1)
-          cut_test=zface(D_DECL(i,j,k),icefacecut_index+1)
+          ice_test=zface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
+          cut_test=zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
          else
           print *,"dir invalid init_icemask 2"
           stop
@@ -5625,14 +5573,14 @@ stop
          endif
   
          if (dir.eq.0) then
-          xface(D_DECL(i,j,k),icefacecut_index+1)=icefacecut
-          xface(D_DECL(i,j,k),icemask_index+1)=icemask
+          xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)=icefacecut
+          xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)=icemask
          else if (dir.eq.1) then
-          yface(D_DECL(i,j,k),icefacecut_index+1)=icefacecut
-          yface(D_DECL(i,j,k),icemask_index+1)=icemask
+          yface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)=icefacecut
+          yface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)=icemask
          else if ((dir.eq.2).and.(SDIM.eq.3)) then
-          zface(D_DECL(i,j,k),icefacecut_index+1)=icefacecut
-          zface(D_DECL(i,j,k),icemask_index+1)=icemask
+          zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)=icefacecut
+          zface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)=icemask
          else
           print *,"dir invalid init_icemask 3"
           stop
@@ -6276,9 +6224,6 @@ stop
          ! 1=T11 2=T12 3=T22 4=T33 5=T13 6=T23
          ! rhoinverse is 1/den
       subroutine fort_tensorheat( &
-       massface_index, &
-       vofface_index, &
-       ncphys, &
        ntensor, &
        nstate, &
        xlo,dx,  &
@@ -6303,9 +6248,6 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: massface_index
-      INTEGER_T, intent(in) :: vofface_index
-      INTEGER_T, intent(in) :: ncphys
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: im_parm
       INTEGER_T, intent(in) :: nden,nstate,level
@@ -6323,9 +6265,9 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in),target :: xface(DIMV(xface),ncphys)
-      REAL_T, intent(in),target :: yface(DIMV(yface),ncphys)
-      REAL_T, intent(in),target :: zface(DIMV(zface),ncphys)
+      REAL_T, intent(in),target :: xface(DIMV(xface),FACECOMP_NCOMP)
+      REAL_T, intent(in),target :: yface(DIMV(yface),FACECOMP_NCOMP)
+      REAL_T, intent(in),target :: zface(DIMV(zface),FACECOMP_NCOMP)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
       REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
       REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
@@ -6364,15 +6306,6 @@ stop
        stop
       endif
 
-      if (ncphys.ne.vofface_index+2*nmat) then
-       print *,"ncphys invalid"
-       stop
-      endif
-      if (vofface_index.ne.massface_index+2*nmat) then
-       print *,"vofface_index or massface_index invalid"
-       stop
-      endif
-     
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
        stop
@@ -19895,11 +19828,6 @@ stop
        force_dir, & ! 0..sdim-1
        ncomp_visc, &
        visc_coef, &
-       facevisc_index, &
-       faceden_index, &
-       massface_index, &
-       vofface_index, &
-       ncphys, &
        velbc, &
        dt, &
        cur_time, &
@@ -19949,11 +19877,6 @@ stop
       INTEGER_T, intent(in) :: force_dir  
       INTEGER_T, intent(in) :: ncomp_visc
       REAL_T, intent(in) :: visc_coef
-      INTEGER_T, intent(in) :: facevisc_index
-      INTEGER_T, intent(in) :: faceden_index
-      INTEGER_T, intent(in) :: massface_index
-      INTEGER_T, intent(in) :: vofface_index
-      INTEGER_T, intent(in) :: ncphys
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM) 
       REAL_T, intent(in) :: dt 
       REAL_T, intent(in) :: cur_time
@@ -20005,8 +19928,7 @@ stop
       REAL_T, target, intent(in) :: levelpc(DIMV(levelpc),nmat*(1+SDIM))
       REAL_T, pointer :: levelpc_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: xfacefab(DIMV(xfacefab), &
-              vofface_index+2*nmat)
+      REAL_T, intent(in), target :: xfacefab(DIMV(xfacefab),FACECOMP_NCOMP)
       REAL_T, pointer :: xfacefab_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(inout), target :: UMACNEW(DIMV(UMACNEW))
@@ -20850,7 +20772,7 @@ stop
          endif
 
          do dir_XD=1,SDIM
-          deninv=xfacefab(D_DECL(i,j,k),faceden_index+1)
+          deninv=xfacefab(D_DECL(i,j,k),FACECOMP_FACEDEN+1)
 
           if (deninv.ge.zero) then 
            if (abs(force(dir_XD)).lt.OVERFLOW_CUTOFF) then

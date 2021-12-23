@@ -9899,10 +9899,6 @@ END SUBROUTINE SIMP
        angular_velocity, &
        level, &
        finest_level, &
-       facecut_index, &
-       icefacecut_index, &
-       vofface_index, &
-       ncphys, &
        nmat, &
        nstate, &
        tilelo,tilehi, &
@@ -9928,10 +9924,6 @@ END SUBROUTINE SIMP
       REAL_T, intent(in) :: angular_velocity
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: facecut_index
-      INTEGER_T, intent(in) :: icefacecut_index
-      INTEGER_T, intent(in) :: vofface_index
-      INTEGER_T, intent(in) :: ncphys
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nstate
       INTEGER_T, intent(in) :: dir
@@ -9946,7 +9938,7 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: DIMDEC(macnew)
       INTEGER_T, intent(in) :: DIMDEC(facegrav)
 
-      REAL_T, intent(in),target :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in),target :: xface(DIMV(xface),FACECOMP_NCOMP)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon) 
@@ -9999,18 +9991,6 @@ END SUBROUTINE SIMP
        print *,"num_state_base invalid"
        stop
       endif
-      if (facecut_index.ne.3) then
-       print *,"facecut_index invalid"
-       stop
-      endif
-      if (icefacecut_index.ne.4) then
-       print *,"icefacecut_index invalid"
-       stop
-      endif
-      if (ncphys.ne.vofface_index+2*nmat) then
-       print *,"ncphys invalid"
-       stop
-      endif
       if ((gravity_dir_parm.lt.1).or.(gravity_dir_parm.gt.SDIM)) then
        print *,"gravity dir invalid addgravity"
        stop
@@ -10056,7 +10036,7 @@ END SUBROUTINE SIMP
 
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir,16)
 
-       local_cut=xface(D_DECL(i,j,k),facecut_index+1)
+       local_cut=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
        if ((local_cut.ge.zero).and.(local_cut.le.half)) then
         local_cut=zero
        else if ((local_cut.ge.half).and.(local_cut.le.one)) then
