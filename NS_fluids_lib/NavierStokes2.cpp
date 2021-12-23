@@ -402,6 +402,7 @@ void NavierStokes::getStateVISC_ALL() {
 } // end subroutine getStateVISC_ALL 
 
 //called from: NavierStokes::init_FSI_GHOST_MAC_MF_ALL
+//CELL_CONDUCTIVITY_MATERIAL_MF is deleted in ::Geometry_cleanup()
 void NavierStokes::getStateCONDUCTIVITY_ALL() {
 
  if (level!=0)
@@ -4667,7 +4668,7 @@ void NavierStokes::init_gradu_tensor_and_material_visc_ALL() {
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
   //ngrow=1
- getStateVISC_ALL(); //we are in make_physics_varsALL 
+ getStateVISC_ALL(); //we are in:init_gradu_tensor_and_material_visc_ALL
 
 } // end subroutine init_gradu_tensor_and_material_visc_ALL
 
@@ -9286,9 +9287,8 @@ void NavierStokes::scale_variables(int scale_flag) {
 void NavierStokes::getStateVISC() {
 
  int ngrow=1;
- int idx=CELL_VISC_MATERIAL_MF;
 
- delete_localMF_if_exist(idx,1);
+ delete_localMF_if_exist(CELL_VISC_MATERIAL_MF,1);
 
  int finest_level=parent->finestLevel();
 
@@ -9354,7 +9354,7 @@ void NavierStokes::getStateVISC() {
 
  } // im=0..nmat-1
 
- new_localMF(idx,ncomp_visc,ngrow,-1); // sets values to 0.0
+ new_localMF(CELL_VISC_MATERIAL_MF,ncomp_visc,ngrow,-1);//sets values to 0.0
 
  MultiFab* vel=getState(ngrow+1,0,AMREX_SPACEDIM,cur_time_slab);
 
@@ -9504,7 +9504,7 @@ void NavierStokes::getStateVISC() {
 
    FArrayBox& gammadot=(*gammadot_mf)[mfi];
 
-   FArrayBox& viscfab=(*localMF[idx])[mfi];
+   FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
 
    FArrayBox& velfab=(*vel)[mfi];
    FArrayBox& eosfab=(*EOSdata)[mfi];
@@ -9588,7 +9588,7 @@ void NavierStokes::getStateVISC() {
 
     FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
 
-    FArrayBox& viscfab=(*localMF[idx])[mfi];
+    FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
 
     FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
     if (cellten.nComp()!=ntensor)
@@ -9608,8 +9608,7 @@ void NavierStokes::getStateVISC() {
 
       // declared in: DERIVE_3D.F90
       // WALE model, "viscconst_eddy_wall", "viscconst_eddy_bulk",
-      // effects are added to "viscfab"
-      // (idx==CELL_VISC_MATERIAL_MF)
+      // effects are added to "viscfab" (CELL_VISC_MATERIAL_MF)
     fort_derturbvisc(
       &les_model[im],
       &level,
@@ -9663,12 +9662,12 @@ void NavierStokes::getStateVISC() {
 }  // end subroutine getStateVISC
 
 
+//CELL_CONDUCTIVITY_MATERIAL_MF is deleted in ::Geometry_cleanup()
 void NavierStokes::getStateCONDUCTIVITY() {
 
- int idx=CELL_CONDUCTIVITY_MATERIAL_MF;
  int ngrow=1;
 
- delete_localMF_if_exist(idx,1);
+ delete_localMF_if_exist(CELL_CONDUCTIVITY_MATERIAL_MF,1);
 
  int finest_level=parent->finestLevel();
 
@@ -9681,7 +9680,7 @@ void NavierStokes::getStateCONDUCTIVITY() {
  if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
- new_localMF(idx,nmat,ngrow,-1); // sets values to 0.0
+ new_localMF(CELL_CONDUCTIVITY_MATERIAL_MF,nmat,ngrow,-1);//sets values to 0.0
 
  MultiFab* EOSdata=getStateDen(ngrow+2,cur_time_slab);
  const Real* dx = geom.CellSize();
@@ -9709,7 +9708,7 @@ void NavierStokes::getStateCONDUCTIVITY() {
 
    const Real* xlo = grid_loc[gridno].lo();
 
-   FArrayBox& conductivity_fab=(*localMF[idx])[mfi];
+   FArrayBox& conductivity_fab=(*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
 
    FArrayBox& eosfab=(*EOSdata)[mfi];
 
