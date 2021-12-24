@@ -15572,9 +15572,6 @@ stop
        finest_level, &
        nsolve, &
        local_face_index, &
-       facecut_index, &
-       icefacecut_index, &
-       ncphys, &
        nmat, &
        xlo,dx, &
        offdiagcheck, &
@@ -15611,9 +15608,6 @@ stop
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nsolve
       INTEGER_T, intent(in) :: local_face_index
-      INTEGER_T, intent(in) :: facecut_index
-      INTEGER_T, intent(in) :: icefacecut_index
-      INTEGER_T, intent(in) :: ncphys
       REAL_T, intent(in) :: visc_coef
       INTEGER_T, intent(in) :: uncoupled_viscosity
       INTEGER_T, intent(in) :: project_option
@@ -15649,11 +15643,11 @@ stop
       REAL_T, pointer :: yfwt_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out),target :: zfwt(DIMV(zfwt),nsolve)
       REAL_T, pointer :: zfwt_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in),target :: xface(DIMV(xface),FACECOMP_NCOMP)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: yface(DIMV(yface),ncphys)
+      REAL_T, intent(in),target :: yface(DIMV(yface),FACECOMP_NCOMP)
       REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: zface(DIMV(zface),ncphys)
+      REAL_T, intent(in),target :: zface(DIMV(zface),FACECOMP_NCOMP)
       REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
@@ -15682,14 +15676,9 @@ stop
       endif
 
        ! indexes start at 0
-      if ((facecut_index.ne.3).or. &
-          (icefacecut_index.ne.4).or. &
-          (local_face_index+1.gt.ncphys)) then
-       print *,"face_index bust 6"
-       stop
-      endif
-      if (ncphys.lt.8) then
-       print *,"ncphys invalid"
+       if ((local_face_index.ge.FACECOMP_NCOMP).or. &
+           (local_face_index.lt.0)) then
+       print *,"local_face_index invalid"
        stop
       endif
       if (bfact.lt.1) then
@@ -15765,11 +15754,11 @@ stop
         do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
   
-          ! projection: dedge is 1/rho  (faceden_index) 
-          ! viscosity: dedge is facevisc_index  ( mu )
-          ! temperature: dedge is faceheat_index( k )
-          ! species: dedge is facespecies_index ( rho D )
-          ! smoothing: dedge is smoothing_index ( =1 in bulk, =0 interface(s) )
+          ! projection: dedge is 1/rho  (FACECOMP_FACEDEN) 
+          ! viscosity: dedge is FACECOMP_FACEVISC  ( mu )
+          ! temperature: dedge is FACECOMP_FACEHEAT( k )
+          ! species: dedge is FACECOMP_FACESPECIES ( rho D )
+          ! smoothing: dedge is FACECOMP_SMOOTHING (=1 in bulk,=0 interface(s))
 
           if (dir.eq.0) then
            inorm=i
@@ -15834,14 +15823,14 @@ stop
             endif
 
             if (dir.eq.0) then
-             cc=xface(D_DECL(i,j,k),facecut_index+1)
-             cc_ice=xface(D_DECL(i,j,k),icefacecut_index+1)
+             cc=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
+             cc_ice=xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
             else if (dir.eq.1) then
-             cc=yface(D_DECL(i,j,k),facecut_index+1)
-             cc_ice=yface(D_DECL(i,j,k),icefacecut_index+1)
+             cc=yface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
+             cc_ice=yface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
             else if ((dir.eq.2).and.(SDIM.eq.3)) then
-             cc=zface(D_DECL(i,j,k),facecut_index+1)
-             cc_ice=zface(D_DECL(i,j,k),icefacecut_index+1)
+             cc=zface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
+             cc_ice=zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
             else
              print *,"dir invalid buildfacewt"
              stop

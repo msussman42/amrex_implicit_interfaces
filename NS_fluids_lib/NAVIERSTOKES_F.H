@@ -9,7 +9,6 @@
 #    define FORT_PRESSURE_INDICATOR pressure_indicator
 #    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
-#    define FORT_FLUIDSOLIDCOR    fluidsolidcor
 #    define FORT_MOFAVGDOWN  mofavgdown
 #    define FORT_ERRORAVGDOWN erroravgdown
 #    define FORT_AVGDOWN     avgdown
@@ -26,7 +25,6 @@
 #    define FORT_ZALESAK_CELL ZALESAK_CELL
 #    define FORT_EDGEAVGDOWN EDGEAVGDOWN
 #    define FORT_VOFFLUX_CORRECT VOFFLUX_CORRECT
-#    define FORT_FLUIDSOLIDCOR    FLUIDSOLIDCOR
 #    define FORT_MOFAVGDOWN  MOFAVGDOWN
 #    define FORT_ERRORAVGDOWN ERRORAVGDOWN
 #    define FORT_AVGDOWN     AVGDOWN
@@ -42,7 +40,6 @@
 #    define FORT_PRESSURE_INDICATOR pressure_indicator
 #    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
-#    define FORT_FLUIDSOLIDCOR    fluidsolidcor
 #    define FORT_MOFAVGDOWN  mofavgdown
 #    define FORT_ERRORAVGDOWN erroravgdown
 #    define FORT_AVGDOWN     avgdown
@@ -57,7 +54,6 @@
 #    define FORT_PRESSURE_INDICATOR pressure_indicator_
 #    define FORT_ZALESAK_CELL zalesak_cell_
 #    define FORT_EDGEAVGDOWN edgeavgdown_
-#    define FORT_FLUIDSOLIDCOR    fluidsolidcor_
 #    define FORT_MOFAVGDOWN  mofavgdown_
 #    define FORT_ERRORAVGDOWN erroravgdown_
 #    define FORT_AVGDOWN     avgdown_
@@ -508,14 +504,11 @@ extern "C" {
       Real* facegrav,AMREX_ARLIM_P(facegravlo),AMREX_ARLIM_P(facegravhi) );
 
 
-    void FORT_FLUIDSOLIDCOR(
+    void fort_fluidsolidcor(
       int* level,
       int* finest_level,
       int* velcomp,
       int* nsolve,
-      int* facecut_index,
-      int* icefacecut_index,
-      int* ncphys,
       int* project_option,
       const int* tilelo,const int* tilehi,
       const int* fablo,const int* fabhi,int* bfact,
