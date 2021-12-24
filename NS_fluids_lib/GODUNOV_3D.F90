@@ -5266,7 +5266,7 @@ stop
 
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x nmat
-        ! icemask_index component initialized to 1 in "init_physics_vars"
+        ! FACECOMP_ICEMASK component initialized to 1 in "init_physics_vars"
         ! if nmat=2, nten=1
         ! if nmat=3, nten=3    12 13 23
         ! if nmat=4, nten=6    12 13 14 23 24 34
@@ -17739,11 +17739,6 @@ stop
       subroutine fort_combinevelface( &
        tid, &
        hflag, &
-       facecut_index, &
-       icefacecut_index, &
-       vofface_index, &
-       massface_index, &
-       ncphys, &
        nmat, &
        nparts, &
        nparts_def, &
@@ -17774,11 +17769,6 @@ stop
 
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: hflag
-      INTEGER_T, intent(in) :: facecut_index
-      INTEGER_T, intent(in) :: icefacecut_index
-      INTEGER_T, intent(in) :: massface_index
-      INTEGER_T, intent(in) :: vofface_index
-      INTEGER_T, intent(in) :: ncphys
 
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nparts
@@ -17810,7 +17800,7 @@ stop
       REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout),target :: mac(DIMV(mac))
       REAL_T, pointer :: mac_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: xface(DIMV(xface),ncphys)
+      REAL_T, intent(in),target :: xface(DIMV(xface),FACECOMP_NCOMP)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: LS(DIMV(LS),nmat*(SDIM+1))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
@@ -17922,18 +17912,6 @@ stop
       endif
       if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
        print *,"nparts_def invalid FORT_COMBINEVELFACE"
-       stop
-      endif
-
-       ! indexes start at 0
-      if ((facecut_index.ne.3).or. &
-          (icefacecut_index.ne.4).or. &
-          (vofface_index.ne.massface_index+2*nmat)) then
-       print *,"face_index bust 1"
-       stop
-      endif
-      if (ncphys.ne.vofface_index+2*nmat) then
-       print *,"ncphys invalid"
        stop
       endif
 
@@ -18097,8 +18075,8 @@ stop
           face_vfrac_cell(im)=face_vfrac_cell(im)+local_volume
           total_vol_face_cell=total_vol_face_cell+local_volume
 
-          local_volume=xface(D_DECL(i,j,k),vofface_index+2*(im-1)+side)
-          local_mass=xface(D_DECL(i,j,k),massface_index+2*(im-1)+side)
+          local_volume=xface(D_DECL(i,j,k),FACECOMP_VOFFACE+2*(im-1)+side)
+          local_mass=xface(D_DECL(i,j,k),FACECOMP_MASSFACE+2*(im-1)+side)
 
           total_vol_face=total_vol_face+local_volume
           if (is_prescribed(nmat,im).eq.0) then
@@ -18242,7 +18220,7 @@ stop
          is_solid_face=2
         else if ((fluid_vfrac_face.ge.VOFTOL_AREAFRAC).and. &
                  (fluid_vfrac_face.le.one+VOFTOL)) then
-         xface_local=xface(D_DECL(i,j,k),facecut_index+1)
+         xface_local=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
          if ((xface_local.ge.zero).and.(xface_local.le.half)) then
           xface_local=zero
           is_solid_face=3

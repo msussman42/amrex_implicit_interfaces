@@ -749,11 +749,6 @@ void NavierStokes::combine_state_variable(
      fort_combinevelface(
       &tid_current,
       &hflag,
-      &facecut_index,
-      &icefacecut_index,
-      &vofface_index,
-      &massface_index,
-      &ncphys,
       &nmat,
       &nparts,
       &nparts_def,

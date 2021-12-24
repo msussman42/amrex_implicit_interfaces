@@ -571,15 +571,14 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
  
-   // FORT_INIT_MASK_SING is in MACOPERATOR_3D.F90
+   // fort_init_mask_sing is declared in MACOPERATOR_3D.F90
    // initializes MASK_DIV_RESIDUAL and MASK_RESIDUAL
-  FORT_INIT_MASK_SING(
+  fort_init_mask_sing(
     &level,
     &finest_level,
     &nsolve,
     &nmat,
     &project_option,
-    &ncphys,
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
     yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
     zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
@@ -715,7 +714,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     int tid_current=ns_thread();
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    FORT_DIVIDEDX(
+    fort_dividedx(
      &nsolve,
      bxfab.dataPtr(),ARLIM(bxfab.loVect()),ARLIM(bxfab.hiVect()),
      tilelo,tilehi,
@@ -734,7 +733,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   // the finest mglib level (lev=0) down to the coarsest 
   // (lev=MG_numlevels_var-1)
   //
-  // buildMatrix calls FORT_BUILDMAT
+  // buildMatrix calls fort_buildmat (mglib directory)
  mac_op->generateCoefficients();
 
  if (thread_class::nthreads<1)
@@ -774,7 +773,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     &nsolve,
     &nmat,
     &project_option,
-    &ncphys,
     alpha.dataPtr(),
     ARLIM(alpha.loVect()),ARLIM(alpha.hiVect()),
     diagfab.dataPtr(),
@@ -835,7 +833,7 @@ NavierStokes::restore_active_pressure(int save_mf) {
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // defined in MACOPERATOR_3D.F90
-  FORT_RESTORE_PRES(
+  fort_restore_pres(
    offdiagcheck.dataPtr(),
    ARLIM(offdiagcheck.loVect()),ARLIM(offdiagcheck.hiVect()),
    savepres.dataPtr(),
@@ -972,7 +970,7 @@ NavierStokes::AllinterpScalarMAC(
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
   for (int veldir=0;veldir<nsolve;veldir++) {
-   FORT_INTERPMAC(
+   fort_interpmac(
     &bfact,&bfact_f,
     fine_fab.dataPtr(veldir),
     ARLIM(fine_fab.loVect()),ARLIM(fine_fab.hiVect()),
@@ -1229,8 +1227,8 @@ void NavierStokes::DiagInverse(
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
   for (int veldir=0;veldir<nsolve;veldir++) {
-    // FORT_DIAGINV is in NAVIERSTOKES_3D.F90
-   FORT_DIAGINV(
+    // fort_diaginv is declared in NAVIERSTOKES_3D.F90
+   fort_diaginv(
     diagfab.dataPtr(veldir),
     ARLIM(diagfab.loVect()),ARLIM(diagfab.hiVect()),
     residfab.dataPtr(veldir),ARLIM(residfab.loVect()),ARLIM(residfab.hiVect()),
@@ -2105,7 +2103,7 @@ void NavierStokes::update_SEM_forces(int project_option,
   // f=-div k grad T                     (project_option==2) or
   // f=grad p (MAC)                      (project_option==0) 
   // NavierStokes::update_SEM_delta_force (NavierStokes.cpp)
-  // calls: FORT_UPDATESEMFORCE
+  // calls: fort_updatesemforce
   // does not look at enable_spectral
  if ((update_spectral+update_stable>=1)&&
      (update_spectral+update_stable<=2)) {

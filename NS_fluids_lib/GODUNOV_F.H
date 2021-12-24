@@ -920,11 +920,6 @@ extern "C"
    void fort_combinevelface(
      int* tid,
      int* hflag,
-     int* facecut_index,
-     int* icefacecut_index,
-     int* vofface_index,
-     int* massface_index,
-     int* ncphys,
      int* nmat,
      int* nparts,
      int* nparts_def,

@@ -2,29 +2,8 @@
 #define _MACOPERATOR_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_INIT_MASK_SING init_mask_sing
-#    define FORT_DIVIDEDX      dividedx
-#    define FORT_INTERPMAC     interpmac
-#    define FORT_RESTORE_PRES  restore_pres
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_INIT_MASK_SING INIT_MASK_SING
-#    define FORT_DIVIDEDX      DIVIDEDX
-#    define FORT_INTERPMAC     INTERPMAC
-#    define FORT_RESTORE_PRES  RESTORE_PRES
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_INIT_MASK_SING init_mask_sing
-#    define FORT_DIVIDEDX      dividedx
-#    define FORT_INTERPMAC     interpmac
-#    define FORT_RESTORE_PRES  restore_pres
-#  else
-#    define FORT_INIT_MASK_SING init_mask_sing_
-#    define FORT_DIVIDEDX      dividedx_
-#    define FORT_INTERPMAC     interpmac_
-#    define FORT_RESTORE_PRES  restore_pres_
-#  endif
-#endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -46,13 +25,12 @@ extern "C"
      const Real* xlo,const Real* dx,
      int* dir);
 
-   void FORT_INIT_MASK_SING (
+   void fort_init_mask_sing (
      int* level,
      int* finest_level,
      int* nsolve,
      int* nmat,
      int* project_option,
-     int* ncphys,
      Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi), 
      Real* yface,AMREX_ARLIM_P(yfacelo),AMREX_ARLIM_P(yfacehi), 
      Real* zface,AMREX_ARLIM_P(zfacelo),AMREX_ARLIM_P(zfacehi), 
@@ -82,7 +60,6 @@ extern "C"
      int* nsolve,
      int* nmat,
      int* project_option,
-     int* ncphys,
      Real* alpha,
      AMREX_ARLIM_P(alphalo),AMREX_ARLIM_P(alphahi),
      Real* diag_reg, 
@@ -94,7 +71,7 @@ extern "C"
      const int* fablo, const int* fabhi,
      int* bfact);
 
-    void FORT_DIVIDEDX(
+    void fort_dividedx(
      int* nsolve,
      Real* bx,AMREX_ARLIM_P(bxlo),AMREX_ARLIM_P(bxhi),
      const int* tilelo, const int* tilehi,
@@ -116,7 +93,7 @@ extern "C"
      const Real* xlo,const Real* dx,
      int* dir);
 
-    void FORT_INTERPMAC(
+    void fort_interpmac(
         int* bfact,int* bfact_f,
         Real* fine,AMREX_ARLIM_P(fine_lo),AMREX_ARLIM_P(fine_hi),
         const Real* crse,AMREX_ARLIM_P(crse_lo),AMREX_ARLIM_P(crse_hi),
@@ -151,7 +128,7 @@ extern "C"
        int* rzflag,
        int* solidheat_flag);
 
-    void FORT_RESTORE_PRES(
+    void fort_restore_pres(
         Real* offdiagcheck,
 	AMREX_ARLIM_P(offdiagchecklo),AMREX_ARLIM_P(offdiagcheckhi),
         Real* savepres,AMREX_ARLIM_P(savepreslo),AMREX_ARLIM_P(savepreshi),
