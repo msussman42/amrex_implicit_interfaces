@@ -3138,7 +3138,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      //  after reinitialization)
     init_FSI_GHOST_MAC_MF_ALL(4);
 
-// At this stage, variables are not scaled, so facevel_index will have
+// At this stage, variables are not scaled, so FACECOMP_FACEVEL will have
 // to be scaled later.
     debug_memory();
     make_physics_varsALL(project_option,post_restart_flag,6); 
@@ -7535,10 +7535,10 @@ void NavierStokes::allocate_FACE_WEIGHT(
  } // gridno
 
  int GFM_flag=0;
- int adjust_temperature=-1;  // adjust faceheat_index
+ int adjust_temperature=-1;  // adjust STATECOMP_FACEHEAT
  int nten=num_interfaces;
 
-  // adjust faceheat_index if thermal diffusion
+  // adjust STATECOMP_FACEHEAT if thermal diffusion
   // and phase change using sharp interface method.
  if (project_option==2) { 
 
@@ -7607,21 +7607,21 @@ void NavierStokes::allocate_FACE_WEIGHT(
  } // dir
  new_localMF(OFF_DIAG_CHECK_MF,nsolve,0,-1);
 
- int local_face_index=faceden_index;  // 1/rho
+ int local_face_index=STATECOMP_FACEDEN;  // 1/rho
  if (project_option_projection(project_option)==1) {
-  local_face_index=faceden_index;  // 1/rho
+  local_face_index=STATECOMP_FACEDEN;  // 1/rho
  } else if (project_option==12) {  // pressure extension
    // 1/rho (only used in eval_face_coeff for sanity check purposes)
-  local_face_index=faceden_index;  
+  local_face_index=STATECOMP_FACEDEN;  
  } else if (project_option==2) {
-  local_face_index=faceheat_index; // thermal conductivity "k"
+  local_face_index=STATECOMP_FACEHEAT; // thermal conductivity "k"
  } else if (project_option==3) {
-  local_face_index=facevisc_index; // viscosity "mu"
+  local_face_index=STATECOMP_FACEVISC; // viscosity "mu"
  } else if ((project_option>=100)&&
             (project_option<100+num_species_var)) { // rho D
-  local_face_index=facespecies_index+project_option-100;
+  local_face_index=STATECOMP_FACESPECIES+project_option-100;
  } else if (project_option==200) {
-  local_face_index=smoothing_index;
+  local_face_index=STATECOMP_SMOOTHING;
  } else
   amrex::Error("project_option invalid allocate_FACE_WEIGHT");
 
@@ -7678,16 +7678,13 @@ void NavierStokes::allocate_FACE_WEIGHT(
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // BUILDFACEWT is declared in LEVELSET_3D.F90
+   // fort_buildfacewt is declared in LEVELSET_3D.F90
    fort_buildfacewt(
     &facewt_iter,
     &level,
     &finest_level,
     &nsolve,
     &local_face_index,
-    &facecut_index,
-    &icefacecut_index,
-    &ncphys,
     &nmat,
     xlo,dx,
     offdiagcheck.dataPtr(),
@@ -8201,15 +8198,11 @@ void NavierStokes::correct_velocity(
 
   for (int velcomp=0;velcomp<nsolve;velcomp++) {
 
-    // in: NAVIERSTOKES_3D.F90
-   FORT_FLUIDSOLIDCOR(
+    // declared in: NAVIERSTOKES_3D.F90
+   fort_fluidsolidcor(
     &level,
     &finest_level,
     &velcomp,
-    &nsolve,
-    &facecut_index,
-    &icefacecut_index,
-    &ncphys,
     &project_option,
     tilelo,tilehi,
     fablo,fabhi,&bfact,

@@ -11053,6 +11053,368 @@ END SUBROUTINE SIMP
       end subroutine fort_avgdown_drag
 
 
+       ! updatevelALL called from: NavierStokes::multiphase_project
+       ! mac_update is called from: NavierStokes::updatevelALL
+       ! correct_velocity called from: NavierStokes::multiphase_project
+       ! correct_velocity called from: NavierStokes::relaxLEVEL
+       ! correct_velocity called from: NavierStokes::residual_correction_form
+       ! correct_velocity called from: NavierStokes::mac_update
+       ! called from: NavierStokes::correct_velocity (NavierStokes3.cpp)
+      subroutine fort_fluidsolidcor( &
+       level, &
+       finest_level, &
+       velcomp, &
+       nsolve, &
+       project_option, &
+       tilelo,tilehi, &
+       fablo,fabhi,bfact, &
+       presbc_in, &
+       maskcov,DIMS(maskcov), &
+       xface,DIMS(xface), &
+       yface,DIMS(yface), &
+       zface,DIMS(zface), &
+       xgp,DIMS(xgp), &
+       ygp,DIMS(ygp), &
+       zgp,DIMS(zgp), &
+       xsrc,DIMS(xsrc), &
+       ysrc,DIMS(ysrc), &
+       zsrc,DIMS(zsrc), &
+       xdest,DIMS(xdest), &
+       ydest,DIMS(ydest), &
+       zdest,DIMS(zdest), &
+       xlo,dx,cur_time,nmat) &
+      bind(c,name='fort_fluidsolidcor')
+
+      use global_utility_module
+      use probcommon_module
+      use probf90_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, intent(in) :: velcomp
+      INTEGER_T :: veldir
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: project_option
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(xface)
+      INTEGER_T, intent(in) :: DIMDEC(yface)
+      INTEGER_T, intent(in) :: DIMDEC(zface)
+      INTEGER_T, intent(in) :: DIMDEC(xgp)
+      INTEGER_T, intent(in) :: DIMDEC(ygp)
+      INTEGER_T, intent(in) :: DIMDEC(zgp)
+      INTEGER_T, intent(in) :: DIMDEC(xsrc)
+      INTEGER_T, intent(in) :: DIMDEC(ysrc)
+      INTEGER_T, intent(in) :: DIMDEC(zsrc)
+      INTEGER_T, intent(in) :: DIMDEC(xdest)
+      INTEGER_T, intent(in) :: DIMDEC(ydest)
+      INTEGER_T, intent(in) :: DIMDEC(zdest)
+
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T :: dir
+      INTEGER_T, intent(in) :: presbc_in(SDIM,2,nsolve)
+
+      REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: xface(DIMV(xface),FACECOMP_NCOMP)
+      REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: yface(DIMV(yface),FACECOMP_NCOMP)
+      REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: zface(DIMV(zface),FACECOMP_NCOMP)
+      REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(in), target :: xgp(DIMV(xgp))
+      REAL_T, pointer :: xgp_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: ygp(DIMV(ygp))
+      REAL_T, pointer :: ygp_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: zgp(DIMV(zgp))
+      REAL_T, pointer :: zgp_ptr(D_DECL(:,:,:))
+
+      REAL_T, intent(in), target :: xsrc(DIMV(xsrc))
+      REAL_T, pointer :: xsrc_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: ysrc(DIMV(ysrc))
+      REAL_T, pointer :: ysrc_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: zsrc(DIMV(zsrc))
+      REAL_T, pointer :: zsrc_ptr(D_DECL(:,:,:))
+
+      REAL_T, intent(out), target :: xdest(DIMV(xdest))
+      REAL_T, pointer :: xdest_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out), target :: ydest(DIMV(ydest))
+      REAL_T, pointer :: ydest_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out), target :: zdest(DIMV(zdest))
+      REAL_T, pointer :: zdest_ptr(D_DECL(:,:,:))
+
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in) :: cur_time
+ 
+      INTEGER_T i,j,k
+      INTEGER_T ii,jj,kk
+      REAL_T local_dest,local_src,local_gp
+      REAL_T AL
+      REAL_T AL_ice
+      REAL_T local_dd,local_visc_coef,cc_group,local_dd_group
+      INTEGER_T local_uncoupled_viscosity
+      INTEGER_T icrit,side,bccrit
+      INTEGER_T bc_comp
+      REAL_T local_wt(nsolve)
+      INTEGER_T caller_id
+      REAL_T maskleft,maskright
+      INTEGER_T maskface
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if ((level.ge.0).and.(level.le.finest_level)) then
+       ! do nothing
+      else
+       print *,"level invalid"
+       stop
+      endif
+
+      if (project_option_is_validF(project_option).eq.1) then
+       ! do nothing
+      else
+       print *,"project_option invalid fluid solid cor"
+       stop
+      endif 
+      if (bfact.lt.1) then
+       print *,"bfact invalid161"
+       stop
+      endif
+ 
+      maskcov_ptr=>maskcov
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,268)
+
+      xface_ptr=>xface
+      yface_ptr=>yface
+      zface_ptr=>zface
+      call checkbound_array(fablo,fabhi,xface_ptr,0,0,268)
+      call checkbound_array(fablo,fabhi,yface_ptr,0,1,269)
+      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,270)
+
+      xgp_ptr=>xgp
+      ygp_ptr=>ygp
+      zgp_ptr=>zgp
+      call checkbound_array1(fablo,fabhi,xgp_ptr,0,0,2333)
+      call checkbound_array1(fablo,fabhi,ygp_ptr,0,1,2334)
+      call checkbound_array1(fablo,fabhi,zgp_ptr,0,SDIM-1,2335)
+
+      xsrc_ptr=>xsrc
+      ysrc_ptr=>ysrc
+      zsrc_ptr=>zsrc
+      call checkbound_array1(fablo,fabhi,xsrc_ptr,0,0,2336)
+      call checkbound_array1(fablo,fabhi,ysrc_ptr,0,1,2337)
+      call checkbound_array1(fablo,fabhi,zsrc_ptr,0,SDIM-1,2338)
+
+      xdest_ptr=>xdest
+      ydest_ptr=>ydest
+      zdest_ptr=>zdest
+      call checkbound_array1(fablo,fabhi,xdest_ptr,0,0,2339)
+      call checkbound_array1(fablo,fabhi,ydest_ptr,0,1,2340)
+      call checkbound_array1(fablo,fabhi,zdest_ptr,0,SDIM-1,2341)
+
+      do dir=0,SDIM-1
+       ii=0
+       jj=0
+       kk=0
+       if (dir.eq.0) then
+        ii=1
+       else if (dir.eq.1) then
+        jj=1
+       else if ((dir.eq.2).and.(SDIM.eq.3)) then
+        kk=1
+       else
+        print *,"dir out of range in fort_fluidsolidcor"
+        stop
+       endif
+
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,8)
+
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+
+         maskleft=maskcov(D_DECL(i-ii,j-jj,k-kk))
+         maskright=maskcov(D_DECL(i,j,k))
+         if ((maskleft.eq.one).and.(maskright.eq.one)) then
+          maskface=1
+         else if ((maskleft.eq.one).and.(maskright.eq.zero)) then
+          maskface=0
+         else if ((maskleft.eq.zero).and.(maskright.eq.one)) then
+          maskface=0
+         else if ((maskleft.eq.zero).and.(maskright.eq.zero)) then
+          maskface=0
+         else
+          print *,"maskleft or maskright invalid"
+          stop
+         endif
+
+         if (dir.eq.0) then
+          local_dest=xdest(D_DECL(i,j,k))
+          local_src=xsrc(D_DECL(i,j,k))
+          local_gp=xgp(D_DECL(i,j,k))
+          AL=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
+          AL_ice=xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+          icrit=i
+         else if (dir.eq.1) then
+          local_dest=ydest(D_DECL(i,j,k))
+          local_src=ysrc(D_DECL(i,j,k))
+          local_gp=ygp(D_DECL(i,j,k))
+          AL=yface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
+          AL_ice=yface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+          icrit=j
+         else if ((dir.eq.2).and.(SDIM.eq.3)) then
+          local_dest=zdest(D_DECL(i,j,k))
+          local_src=zsrc(D_DECL(i,j,k))
+          local_gp=zgp(D_DECL(i,j,k))
+          AL=zface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
+          AL_ice=zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+          icrit=k
+         else
+          print *,"dir invalid fluid solid cor"
+          stop
+         endif
+
+         if (project_option_singular_possibleF(project_option).eq.1) then
+          if ((nsolve.eq.1).and.(velcomp.eq.0)) then
+           veldir=1
+           bc_comp=1
+          else
+           print *,"nsolve, or velcomp invalid"
+           stop
+          endif
+         else if ((project_option.eq.2).or. & ! thermal diffusion
+                  ((project_option.ge.100).and. & ! species
+                   (project_option.lt.100+num_species_var)).or. &
+                  (project_option.eq.200)) then ! smoothing
+          if ((nsolve.eq.1).and. &
+              (velcomp.eq.0)) then
+           veldir=1
+           bc_comp=1
+          else
+           print *,"nsolve,or velcomp invalid"
+           stop
+          endif
+         else if (project_option.eq.3) then ! viscosity
+          if ((nsolve.eq.SDIM).and. &
+              (velcomp.ge.0).and. &
+              (velcomp.lt.SDIM)) then
+           veldir=velcomp+1
+           bc_comp=veldir
+          else
+           print *,"nsolve,or velcomp invalid"
+           stop
+          endif
+         else
+          print *,"project_option invalid"
+          stop
+         endif
+
+         local_dd=one
+         local_visc_coef=one
+         local_uncoupled_viscosity=1
+
+         side=0
+         if (icrit.eq.fablo(dir+1)) then
+          side=1
+         else if (icrit.eq.fabhi(dir+1)+1) then
+          side=2
+         else if ((icrit.gt.fablo(dir+1)).and. &
+                  (icrit.lt.fabhi(dir+1)+1)) then
+          ! do nothing
+         else
+          print *,"icrit invalid"
+          stop
+         endif
+
+         bccrit=0
+         if ((side.eq.1).or.(side.eq.2)) then 
+          bccrit=presbc_in(dir+1,side,bc_comp)
+         else if (side.eq.0) then
+          ! do nothing
+         else
+          print *,"side invalid"
+          stop
+         endif
+
+          ! declared in: PROB.F90
+         caller_id=2
+         call eval_face_coeff( &
+           caller_id, &
+           level,finest_level, &
+           AL,AL_ice,cc_group, &
+           local_dd,local_dd_group, &
+           local_visc_coef, &
+           nsolve,dir,veldir,project_option, &
+           local_uncoupled_viscosity,side,bccrit,local_wt)
+
+         if (local_wt(veldir).ge.zero) then
+
+          if (local_wt(veldir).eq.zero) then
+           if ((local_gp.eq.zero).or.(maskface.eq.0).or.(1.eq.0)) then
+            local_dest=local_src
+           else if ((local_gp.ne.zero).and.(maskface.eq.1)) then
+            print *,"local_gp invalid"
+            print *,"local_gp ",local_gp
+            print *,"level,finest_level ",level,finest_level
+            print *,"AL,AL_ice,cc_group ",AL,AL_ice,cc_group
+            print *,"veldir=",veldir
+            print *,"local_wt(veldir) ",local_wt(veldir)
+            print *,"local_dd,local_dd_group ",local_dd,local_dd_group
+            print *,"dir,project_option,side,bccrit ", &
+                dir,project_option,side,bccrit
+            print *,"int_dir=",INT_DIR
+            print *,"ext_dir=",EXT_DIR
+            print *,"reflect_odd=",REFLECT_ODD
+            print *,"reflect_even=",REFLECT_EVEN
+            print *,"foextrap=",FOEXTRAP
+            stop
+           else
+            print *,"local_gp or maskface bust"
+            print *,"local_gp ",local_gp
+            print *,"maskface ",maskface
+            stop
+           endif
+          else if (local_wt(veldir).gt.zero) then
+           local_dest=local_src+local_gp
+          else
+           print *,"local_wt(veldir) invalid (fluidsolidcor):",local_wt(veldir)
+           print *,"cc_group=",cc_group
+           stop
+          endif
+
+          if (dir.eq.0) then
+           xdest(D_DECL(i,j,k))=local_dest
+          else if (dir.eq.1) then
+           ydest(D_DECL(i,j,k))=local_dest
+          else if ((dir.eq.2).and.(SDIM.eq.3)) then
+           zdest(D_DECL(i,j,k))=local_dest
+          else
+           print *,"dir invalid fluid solid cor 2"
+           stop
+          endif
+
+         else
+          print *,"local_wt(veldir) invalid"
+          print *,"local_wt(veldir)=",local_wt(veldir)
+          stop
+         endif
+
+       enddo
+       enddo
+       enddo
+      enddo ! dir
+
+      return
+      end subroutine fort_fluidsolidcor
+
+
+
       end module navierstokesf90_module
 
       subroutine FORT_IO_COMPARE( &
@@ -13123,358 +13485,6 @@ END SUBROUTINE SIMP
        return
        end subroutine FORT_DIAGINV
 
-
-       ! updatevelALL called from: NavierStokes::multiphase_project
-       ! mac_update is called from: NavierStokes::updatevelALL
-       ! correct_velocity called from: NavierStokes::multiphase_project
-       ! correct_velocity called from: NavierStokes::relaxLEVEL
-       ! correct_velocity called from: NavierStokes::residual_correction_form
-       ! correct_velocity called from: NavierStokes::mac_update
-       ! called from: NavierStokes::correct_velocity (NavierStokes3.cpp)
-      subroutine FORT_FLUIDSOLIDCOR( &
-       level, &
-       finest_level, &
-       velcomp, &
-       nsolve, &
-       facecut_index, &
-       icefacecut_index, &
-       ncphys, &
-       project_option, &
-       tilelo,tilehi, &
-       fablo,fabhi,bfact, &
-       presbc_in, &
-       maskcov,DIMS(maskcov), &
-       xface,DIMS(xface), &
-       yface,DIMS(yface), &
-       zface,DIMS(zface), &
-       xgp,DIMS(xgp), &
-       ygp,DIMS(ygp), &
-       zgp,DIMS(zgp), &
-       xsrc,DIMS(xsrc), &
-       ysrc,DIMS(ysrc), &
-       zsrc,DIMS(zsrc), &
-       xdest,DIMS(xdest), &
-       ydest,DIMS(ydest), &
-       zdest,DIMS(zdest), &
-       xlo,dx,cur_time,nmat)
-
-      use global_utility_module
-      use probcommon_module
-      use probf90_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: velcomp
-      INTEGER_T :: veldir
-      INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: facecut_index
-      INTEGER_T, intent(in) :: icefacecut_index
-      INTEGER_T, intent(in) :: ncphys
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: project_option
-      INTEGER_T, intent(in) :: DIMDEC(maskcov)
-      INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(yface)
-      INTEGER_T, intent(in) :: DIMDEC(zface)
-      INTEGER_T, intent(in) :: DIMDEC(xgp)
-      INTEGER_T, intent(in) :: DIMDEC(ygp)
-      INTEGER_T, intent(in) :: DIMDEC(zgp)
-      INTEGER_T, intent(in) :: DIMDEC(xsrc)
-      INTEGER_T, intent(in) :: DIMDEC(ysrc)
-      INTEGER_T, intent(in) :: DIMDEC(zsrc)
-      INTEGER_T, intent(in) :: DIMDEC(xdest)
-      INTEGER_T, intent(in) :: DIMDEC(ydest)
-      INTEGER_T, intent(in) :: DIMDEC(zdest)
-
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T :: dir
-      INTEGER_T, intent(in) :: presbc_in(SDIM,2,nsolve)
-
-      REAL_T, intent(in) :: maskcov(DIMV(maskcov))
-      REAL_T, intent(in) :: xface(DIMV(xface),ncphys)
-      REAL_T, intent(in) :: yface(DIMV(yface),ncphys)
-      REAL_T, intent(in) :: zface(DIMV(zface),ncphys)
-
-      REAL_T, intent(in) :: xgp(DIMV(xgp))
-      REAL_T, intent(in) :: ygp(DIMV(ygp))
-      REAL_T, intent(in) :: zgp(DIMV(zgp))
-
-      REAL_T, intent(in) :: xsrc(DIMV(xsrc))
-      REAL_T, intent(in) :: ysrc(DIMV(ysrc))
-      REAL_T, intent(in) :: zsrc(DIMV(zsrc))
-
-      REAL_T, intent(out) :: xdest(DIMV(xdest))
-      REAL_T, intent(out) :: ydest(DIMV(ydest))
-      REAL_T, intent(out) :: zdest(DIMV(zdest))
-
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      REAL_T, intent(in) :: cur_time
- 
-      INTEGER_T i,j,k
-      INTEGER_T ii,jj,kk
-      REAL_T local_dest,local_src,local_gp
-      REAL_T AL
-      REAL_T AL_ice
-      REAL_T local_dd,local_visc_coef,cc_group,local_dd_group
-      INTEGER_T local_uncoupled_viscosity
-      INTEGER_T icrit,side,bccrit
-      INTEGER_T bc_comp
-      REAL_T local_wt(nsolve)
-      INTEGER_T caller_id
-      REAL_T maskleft,maskright
-      INTEGER_T maskface
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if ((level.ge.0).and.(level.le.finest_level)) then
-       ! do nothing
-      else
-       print *,"level invalid"
-       stop
-      endif
-
-       ! indexes start at 0
-      if (facecut_index.ne.3) then
-       print *,"facecut_index bust"
-       stop
-      endif
-      if (icefacecut_index.ne.4) then
-       print *,"icefacecut_index bust"
-       stop
-      endif
-      if (ncphys.lt.9) then
-       print *,"ncphys invalid"
-       stop
-      endif
-      if (project_option_is_validF(project_option).eq.1) then
-       ! do nothing
-      else
-       print *,"project_option invalid fluid solid cor"
-       stop
-      endif 
-      if (bfact.lt.1) then
-       print *,"bfact invalid161"
-       stop
-      endif
-
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,268)
-
-      call checkbound(fablo,fabhi,DIMS(xface),0,0,268)
-      call checkbound(fablo,fabhi,DIMS(yface),0,1,269)
-      call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,270)
-
-      call checkbound(fablo,fabhi,DIMS(xgp),0,0,2333)
-      call checkbound(fablo,fabhi,DIMS(ygp),0,1,2334)
-      call checkbound(fablo,fabhi,DIMS(zgp),0,SDIM-1,2335)
-
-      call checkbound(fablo,fabhi,DIMS(xsrc),0,0,2336)
-      call checkbound(fablo,fabhi,DIMS(ysrc),0,1,2337)
-      call checkbound(fablo,fabhi,DIMS(zsrc),0,SDIM-1,2338)
-
-      call checkbound(fablo,fabhi,DIMS(xdest),0,0,2339)
-      call checkbound(fablo,fabhi,DIMS(ydest),0,1,2340)
-      call checkbound(fablo,fabhi,DIMS(zdest),0,SDIM-1,2341)
-
-      do dir=0,SDIM-1
-       ii=0
-       jj=0
-       kk=0
-       if (dir.eq.0) then
-        ii=1
-       else if (dir.eq.1) then
-        jj=1
-       else if ((dir.eq.2).and.(SDIM.eq.3)) then
-        kk=1
-       else
-        print *,"dir out of range in FLUIDSOLIDCOR"
-        stop
-       endif
-
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,8)
-
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
-       do k=growlo(3),growhi(3)
-
-         maskleft=maskcov(D_DECL(i-ii,j-jj,k-kk))
-         maskright=maskcov(D_DECL(i,j,k))
-         if ((maskleft.eq.one).and.(maskright.eq.one)) then
-          maskface=1
-         else if ((maskleft.eq.one).and.(maskright.eq.zero)) then
-          maskface=0
-         else if ((maskleft.eq.zero).and.(maskright.eq.one)) then
-          maskface=0
-         else if ((maskleft.eq.zero).and.(maskright.eq.zero)) then
-          maskface=0
-         else
-          print *,"maskleft or maskright invalid"
-          stop
-         endif
-
-         if (dir.eq.0) then
-          local_dest=xdest(D_DECL(i,j,k))
-          local_src=xsrc(D_DECL(i,j,k))
-          local_gp=xgp(D_DECL(i,j,k))
-          AL=xface(D_DECL(i,j,k),facecut_index+1)
-          AL_ice=xface(D_DECL(i,j,k),icefacecut_index+1)
-          icrit=i
-         else if (dir.eq.1) then
-          local_dest=ydest(D_DECL(i,j,k))
-          local_src=ysrc(D_DECL(i,j,k))
-          local_gp=ygp(D_DECL(i,j,k))
-          AL=yface(D_DECL(i,j,k),facecut_index+1)
-          AL_ice=yface(D_DECL(i,j,k),icefacecut_index+1)
-          icrit=j
-         else if ((dir.eq.2).and.(SDIM.eq.3)) then
-          local_dest=zdest(D_DECL(i,j,k))
-          local_src=zsrc(D_DECL(i,j,k))
-          local_gp=zgp(D_DECL(i,j,k))
-          AL=zface(D_DECL(i,j,k),facecut_index+1)
-          AL_ice=zface(D_DECL(i,j,k),icefacecut_index+1)
-          icrit=k
-         else
-          print *,"dir invalid fluid solid cor"
-          stop
-         endif
-
-         if (project_option_singular_possibleF(project_option).eq.1) then
-          if ((nsolve.eq.1).and.(velcomp.eq.0)) then
-           veldir=1
-           bc_comp=1
-          else
-           print *,"nsolve, or velcomp invalid"
-           stop
-          endif
-         else if ((project_option.eq.2).or. & ! thermal diffusion
-                  ((project_option.ge.100).and. & ! species
-                   (project_option.lt.100+num_species_var)).or. &
-                  (project_option.eq.200)) then ! smoothing
-          if ((nsolve.eq.1).and. &
-              (velcomp.eq.0)) then
-           veldir=1
-           bc_comp=1
-          else
-           print *,"nsolve,or velcomp invalid"
-           stop
-          endif
-         else if (project_option.eq.3) then ! viscosity
-          if ((nsolve.eq.SDIM).and. &
-              (velcomp.ge.0).and. &
-              (velcomp.lt.SDIM)) then
-           veldir=velcomp+1
-           bc_comp=veldir
-          else
-           print *,"nsolve,or velcomp invalid"
-           stop
-          endif
-         else
-          print *,"project_option invalid"
-          stop
-         endif
-
-         local_dd=one
-         local_visc_coef=one
-         local_uncoupled_viscosity=1
-
-         side=0
-         if (icrit.eq.fablo(dir+1)) then
-          side=1
-         else if (icrit.eq.fabhi(dir+1)+1) then
-          side=2
-         else if ((icrit.gt.fablo(dir+1)).and. &
-                  (icrit.lt.fabhi(dir+1)+1)) then
-          ! do nothing
-         else
-          print *,"icrit invalid"
-          stop
-         endif
-
-         bccrit=0
-         if ((side.eq.1).or.(side.eq.2)) then 
-          bccrit=presbc_in(dir+1,side,bc_comp)
-         else if (side.eq.0) then
-          ! do nothing
-         else
-          print *,"side invalid"
-          stop
-         endif
-
-          ! declared in: PROB.F90
-         caller_id=2
-         call eval_face_coeff( &
-           caller_id, &
-           level,finest_level, &
-           AL,AL_ice,cc_group, &
-           local_dd,local_dd_group, &
-           local_visc_coef, &
-           nsolve,dir,veldir,project_option, &
-           local_uncoupled_viscosity,side,bccrit,local_wt)
-
-         if (local_wt(veldir).ge.zero) then
-
-          if (local_wt(veldir).eq.zero) then
-           if ((local_gp.eq.zero).or.(maskface.eq.0).or.(1.eq.0)) then
-            local_dest=local_src
-           else if ((local_gp.ne.zero).and.(maskface.eq.1)) then
-            print *,"local_gp invalid"
-            print *,"local_gp ",local_gp
-            print *,"level,finest_level ",level,finest_level
-            print *,"AL,AL_ice,cc_group ",AL,AL_ice,cc_group
-            print *,"veldir=",veldir
-            print *,"local_wt(veldir) ",local_wt(veldir)
-            print *,"local_dd,local_dd_group ",local_dd,local_dd_group
-            print *,"dir,project_option,side,bccrit ", &
-                dir,project_option,side,bccrit
-            print *,"int_dir=",INT_DIR
-            print *,"ext_dir=",EXT_DIR
-            print *,"reflect_odd=",REFLECT_ODD
-            print *,"reflect_even=",REFLECT_EVEN
-            print *,"foextrap=",FOEXTRAP
-            stop
-           else
-            print *,"local_gp or maskface bust"
-            print *,"local_gp ",local_gp
-            print *,"maskface ",maskface
-            stop
-           endif
-          else if (local_wt(veldir).gt.zero) then
-           local_dest=local_src+local_gp
-          else
-           print *,"local_wt(veldir) invalid (fluidsolidcor):",local_wt(veldir)
-           print *,"cc_group=",cc_group
-           stop
-          endif
-
-          if (dir.eq.0) then
-           xdest(D_DECL(i,j,k))=local_dest
-          else if (dir.eq.1) then
-           ydest(D_DECL(i,j,k))=local_dest
-          else if ((dir.eq.2).and.(SDIM.eq.3)) then
-           zdest(D_DECL(i,j,k))=local_dest
-          else
-           print *,"dir invalid fluid solid cor 2"
-           stop
-          endif
-
-         else
-          print *,"local_wt(veldir) invalid"
-          print *,"local_wt(veldir)=",local_wt(veldir)
-          stop
-         endif
-
-       enddo
-       enddo
-       enddo
-      enddo ! dir
-
-      return
-      end subroutine FORT_FLUIDSOLIDCOR
 
 
 ! the error is set to zero in advection.  Then
