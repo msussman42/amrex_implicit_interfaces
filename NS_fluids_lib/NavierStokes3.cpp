@@ -3731,7 +3731,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           ncomp);
 
          // HOfab=grad p (MAC)
-         // calls: UPDATESEMFORCE in GODUNOV_3D.F90
+         // calls: fort_updatesemforce declared in GODUNOV_3D.F90
         update_SEM_forcesALL(project_option_op,PRESPC2_MF,
          update_spectralF,update_stableF);
 
@@ -3795,7 +3795,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           ncomp);
 
         // HOfab=-div(k grad T)
-        // calls: UPDATESEMFORCE in GODUNOV_3D.F90
+        // calls: fort_updatesemforce declared in GODUNOV_3D.F90
         if ((viscous_enable_spectral==1)||  // SEM space and time
             (viscous_enable_spectral==3)) { // SEM time
          update_SEM_forcesALL(project_option_op,BOUSSINESQ_TEMP_MF,
@@ -3806,7 +3806,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          amrex::Error("viscous_enable_spectral invalid");
 
         // HOfab=-div(2 mu D)-HOOP_FORCE_MARK_MF
-        // calls: UPDATESEMFORCE in GODUNOV_3D.F90
+        // calls: fort_updatesemforce declared in GODUNOV_3D.F90
         update_stableF=0;
         project_option_op=3;  // viscosity project option
 
@@ -3836,7 +3836,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          HOOP_FORCE_MARK_MF,update_state);
 
         // HOfab=-div(2 mu D)-HOOP_FORCE_MARK_MF
-        // calls: UPDATESEMFORCE in GODUNOV_3D.F90
+        // calls: fort_updatesemforce declared in GODUNOV_3D.F90
         if ((viscous_enable_spectral==1)||   // SEM space and time
             (viscous_enable_spectral==3)) {  // SEM time
          update_SEM_forcesALL(project_option_op,REGISTER_MARK_MF,
@@ -9690,15 +9690,10 @@ void NavierStokes::multiphase_project(int project_option) {
 
      for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
       // filenames: "FACE_VAR<stuff>.plt" (MAC data)
-      // curv_index,pforce_index (unused for now),
-      // faceden_index,facecut_index,
-      // icefacecut_index=4,icemask_index,facevisc_index,
-      // faceheat_index,facevel_index,facespecies_index,
-      // smoothing_index,
-      // massface_index,vofface_index
+      // see: " FACECOMP_< ... > " in EXTRAP_COMP.H
       writeSanityCheckData(
        "FACE_VAR",
-       "project_option==0:FACE_VAR_MF",//faceden_index=2 facevisc_index=6
+       "project_option==0:FACE_VAR_MF",
        caller_id,
        localMF[FACE_VAR_MF+dir]->nComp(),
        FACE_VAR_MF+dir,
@@ -9885,9 +9880,9 @@ void NavierStokes::multiphase_project(int project_option) {
    // or is FSI_rigid (FSI_flag==5) then velocity is
    // overwritten.
    // In GODUNOV_3D.F90, FORT_INIT_ICEMASK,
-   // "icefacecut_index" is initialized by calling get_icemask
+   // "FACECOMP_ICEFACECUT" is initialized by calling get_icemask
    // and if "im_FSI_rigid==im_primary" for one of a faces'
-   // adjoining cells for example, then, icefacecut_index=0.0
+   // adjoining cells for example, then, FACECOMP_ICEFACECUT=0.0
    //
 
   increment_face_velocityALL(
@@ -12408,7 +12403,7 @@ void NavierStokes::veldiffuseALL() {
 
   if (ns_time_order>=2) {
 
-   // UPDATESEMFORCE:
+   // fort_updatesemforce declared in GODUNOV_3D.F90:
    // HOFAB=-div(2 mu D) - HOOP_FORCE_MARK_MF (update_state=0 at end of
    //                                          NavierStokes::do_the_advance)
    // unew=unew-(1/rho)(int (HOFAB) - dt (LOFAB))
@@ -12554,7 +12549,7 @@ void NavierStokes::veldiffuseALL() {
   int update_spectralF=0;
   int update_stableF=1;
    // LOfab=-div(k grad T)
-   // calls: UPDATESEMFORCE in GODUNOV_3D.F90
+   // calls: fort_updatesemforce declared in GODUNOV_3D.F90:
   if ((viscous_enable_spectral==1)||  // SEM space and time
       (viscous_enable_spectral==3)) { // SEM time
    update_SEM_forcesALL(project_option_temperature,PRESPC2_MF,
@@ -12568,7 +12563,7 @@ void NavierStokes::veldiffuseALL() {
 
 
    // LOfab=-div(2 mu D)-HOOP_FORCE_MARK_MF
-   // calls: UPDATESEMFORCE in GODUNOV_3D.F90
+   // calls: fort_updatesemforce declared in GODUNOV_3D.F90:
   if ((viscous_enable_spectral==1)||   // SEM space and time
       (viscous_enable_spectral==3)) {  // SEM time
    update_SEM_forcesALL(vel_project_option,VISCHEAT_SOURCE_MF,
