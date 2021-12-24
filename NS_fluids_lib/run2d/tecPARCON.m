@@ -64,12 +64,16 @@ while (ok_to_continue==1)
 
   arow=1
   for np=1:number_particles
-   xpart=A.data(arow,1)
-   ypart=A.data(arow,2)
+   xpart=A.data(arow,1);
+   ypart=A.data(arow,2);
    arow=arow+1;
    % plot the particle here ...
+   plot3(np,xpart,ypart,'*')
+   hold on
   end
-  
+  xlabel('number particles')
+  ylabel('x position')
+  zlabel('y position')
  end
 end
  
