@@ -78,5 +78,13 @@ interface temperature and interface mass fraction.
 #define FACECOMP_NEXT (FACECOMP_VOFFACE+2*num_materials)
 #define FACECOMP_NCOMP (FACECOMP_NEXT)
 
+#define SOLVETYPE_PRES 0
+#define SOLVETYPE_INITPROJ 1
+#define SOLVETYPE_HEAT 2
+#define SOLVETYPE_VISC 3
+#define SOLVETYPE_PRESCOR 11
+#define SOLVETYPE_PRESEXTRAP 12
+#define SOLVETYPE_SPEC 100
+#define SOLVETYPE_SMOOTH 200
 
 #endif

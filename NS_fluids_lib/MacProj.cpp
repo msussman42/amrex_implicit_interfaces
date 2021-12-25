@@ -72,18 +72,18 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   // do nothing
   
- } else if (project_option==12) {  // extension project
+ } else if (project_option==SOLVETYPE_PRESEXTRAP) {  
 
   // do nothing
 
- } else if (project_option==3) {  // viscosity
+ } else if (project_option==SOLVETYPE_VISC) {  
 
   // do nothing
   
- } else if ((project_option==2)||     // thermal diffusion
-            ((project_option>=100)&&  // species
-             (project_option<100+num_species_var))||
-            (project_option==200)) {  // smooth temperature
+ } else if ((project_option==SOLVETYPE_HEAT)||  
+            ((project_option>=SOLVETYPE_SPEC)&& 
+             (project_option<SOLVETYPE_SPEC+num_species_var))||
+            (project_option==SOLVETYPE_SMOOTH)) { 
 
   // do nothing
   
@@ -122,7 +122,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  Real dt_diffuse=dt_slab;
 
- if (project_option==2) { // temperature diffusion
+ if (project_option==SOLVETYPE_HEAT) { 
   if (lower_slab_time==0.0) {
    if (SDC_outer_sweeps!=0)
     amrex::Error("SDC_outer_sweeps invalid");
@@ -137,7 +137,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    // do nothing
   } else
    amrex::Error("lower_slab_time invalid");
- } // project_option==2 (temperature diffusion)
+ } // project_option==SOLVETYPE_HEAT 
 
  const Real* dx = geom.CellSize();
  const BoxArray& gridparm=grids;
@@ -363,7 +363,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  int nten=num_interfaces;
 
   // alpha T - div beta grad T = f
- if (project_option==2) {
+ if (project_option==SOLVETYPE_HEAT) {
 
   if (is_phasechange==1) {
     // alphanovolume=(rho cv/(dt*fact))+(1/vol) sum_face Aface k_m/(theta dx)
@@ -386,8 +386,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    amrex::Error("is_phasechange invalid");
  }
 
- if ((project_option>=100)&&
-     (project_option<100+num_species_var)) {
+ if ((project_option>=SOLVETYPE_SPEC)&&
+     (project_option<SOLVETYPE_SPEC+num_species_var)) {
 
   if (is_phasechange==1) {
 
@@ -400,7 +400,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   	   latent_heat[im])==1) {
        int ispec=mass_fraction_id[im];
        if ((ispec>=1)&&(ispec<=num_species_var)) {
-        if (ispec==project_option-100+1) {
+        if (ispec==project_option-SOLVETYPE_SPEC+1) {
          GFM_flag=1;
         }
        } else
@@ -629,10 +629,10 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   if (localMF[BXCOEFNOAREA_MF+dir]->nComp()!=nsolve) 
    amrex::Error("localMF[BXCOEFNOAREA_MF+dir]->nComp() invalid");
 
-   // if project_option==0,
-   //    project_option==1,
-   //    project_option==11,  FSI_material_exists last project
-   //    project_option==12,  extension project
+   // if project_option==SOLVETYPE_PRES,
+   //    project_option==SOLVETYPE_INITPROJ,
+   //    project_option==SOLVETYPE_PRESCOR,
+   //    project_option==SOLVETYPE_PRESEXTRAP,  
   if (project_option_singular_possible(project_option)==1) {
 
    if (thread_class::nthreads<1)
@@ -1869,11 +1869,12 @@ void NavierStokes::apply_div(
 } // subroutine apply_div
 
 
-// if temperature: -div(k grad T) (project_option==2)
-// if viscosity  : -div(2 mu D)-HOOP_FORCE_MARK_MF (project_option==3)
+// if temperature: -div(k grad T) (project_option==SOLVETYPE_HEAT)
+// if viscosity  : -div(2 mu D)-HOOP_FORCE_MARK_MF 
+//  (project_option==SOLVETYPE_VISC)
 // called from: NavierStokes::do_the_advance
 //              NavierStokes::veldiffuseALL
-// called if project_option==0,2,3
+// called if project_option==SOLVETYPE_PRES,SOLVETYPE_HEAT,SOLVETYPE_VISC
 void NavierStokes::update_SEM_forcesALL(int project_option,
  int idx_source,int update_spectral,int update_stable) {
 
@@ -1888,27 +1889,27 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
 
  int finest_level=parent->finestLevel();
 
- if ((project_option==0)||   // GP_DEST_FACE
-     (project_option==3)) {  // viscosity
+ if ((project_option==SOLVETYPE_PRES)||   // GP_DEST_FACE
+     (project_option==SOLVETYPE_VISC)) {  
   //do nothing
- } else if (project_option==2) {  // thermal diffusion
+ } else if (project_option==SOLVETYPE_HEAT) {  
   //do nothing
  } else
   amrex::Error("project_option invalid67");
 
  int nsolve=1;
- if (project_option==0) { // grad p
+ if (project_option==SOLVETYPE_PRES) { // grad p
   nsolve=1;
- } else if (project_option==2) { // -div(k grad T)
+ } else if (project_option==SOLVETYPE_HEAT) { // -div(k grad T)
   nsolve=1;
- } else if (project_option==3) { // -div(2 mu D)-HOOP_FORCE_MARK_MF
+ } else if (project_option==SOLVETYPE_VISC) { //-div(2 mu D)-HOOP_FORCE_MARK_MF
   nsolve=AMREX_SPACEDIM;
  } else
   amrex::Error("project_option invalid68"); 
 
- if ((project_option==0)||   // grad p
-     (project_option==2)||   // -div(k grad T)
-     (project_option==3)) {  // -div(2 mu D)-HOOP_FORCE_MARK_MF
+ if ((project_option==SOLVETYPE_PRES)||   // grad p
+     (project_option==SOLVETYPE_HEAT)||   // -div(k grad T)
+     (project_option==SOLVETYPE_VISC)) {  //-div(2 mu D)-HOOP_FORCE_MARK_MF
 
    // allocate and initialize to 0.0
   allocate_MAC_velocityALL(nsolve,UMAC_MF);
@@ -1954,9 +1955,9 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
     idx_source,update_spectral,update_stable);
  }
 
- if ((project_option==0)||  // grad p
-     (project_option==2)||  // -div(k grad T)
-     (project_option==3)) { // -div(2 mu D)-HOOP_FORCE_MARK_MF
+ if ((project_option==SOLVETYPE_PRES)||  // grad p
+     (project_option==SOLVETYPE_HEAT)||  // -div(k grad T)
+     (project_option==SOLVETYPE_VISC)) { //-div(2 mu D)-HOOP_FORCE_MARK_MF
 
   deallocate_maccoefALL(project_option);
 
@@ -1982,7 +1983,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
 
 } // subroutine update_SEM_forcesALL
 
-// called if project_option==0,2,3
+// called if project_option==SOLVETYPE_PRES,SOLVETYPE_HEAT,SOLVETYPE_VISC
 void NavierStokes::update_SEM_forces(int project_option,
  int idx_source,int update_spectral,int update_stable) {
 
@@ -1997,10 +1998,10 @@ void NavierStokes::update_SEM_forces(int project_option,
  } else
   amrex::Error("SDC_outer_sweeps invalid update_SEM_forces");
 
- if ((project_option==0)||   // grad p face
-     (project_option==3)) {  // viscosity
+ if ((project_option==SOLVETYPE_PRES)||   // grad p face
+     (project_option==SOLVETYPE_VISC)) {  
   //do nothing
- } else if (project_option==2) { // thermal diffusion
+ } else if (project_option==SOLVETYPE_HEAT) { 
   //do nothing
  } else
   amrex::Error("project_option invalid71");
@@ -2009,18 +2010,18 @@ void NavierStokes::update_SEM_forces(int project_option,
  int local_idx_div=MACDIV_MF;
  
  int nsolve=1;
- if (project_option==0) { // grad p
+ if (project_option==SOLVETYPE_PRES) { // grad p
   nsolve=1;
- } else if (project_option==2) { // -div(k grad T)
+ } else if (project_option==SOLVETYPE_HEAT) { // -div(k grad T)
   nsolve=1;
- } else if (project_option==3) { // -div(2 mu D)-HOOP_FORCE_MARK_MF
+ } else if (project_option==SOLVETYPE_VISC) { //-div(2 mu D)-HOOP_FORCE_MARK_MF
   nsolve=AMREX_SPACEDIM;
  } else
   amrex::Error("project_option invalid72"); 
 
- if ((project_option==0)||   // grad p
-     (project_option==2)||   // -div(k grad T)
-     (project_option==3)) {  // -div(2 mu D)-HOOP_FORCE_MARK_MF
+ if ((project_option==SOLVETYPE_PRES)||   // grad p
+     (project_option==SOLVETYPE_HEAT)||   // -div(k grad T)
+     (project_option==SOLVETYPE_VISC)) {  //-div(2 mu D)-HOOP_FORCE_MARK_MF
 
   if (localMF_grow[MACDIV_MF]==-1) {
    new_localMF(MACDIV_MF,nsolve,0,-1);
@@ -2029,12 +2030,12 @@ void NavierStokes::update_SEM_forces(int project_option,
 
   int homflag=0;
 
-  if ((project_option==2)||  // thermal diffusion
-      (project_option==3)) { // viscosity
+  if ((project_option==SOLVETYPE_HEAT)||  
+      (project_option==SOLVETYPE_VISC)) { 
 
    // note: dt_slab=1 in update_SEM_forcesALL
-   // UMAC=-dt_slab k grad T  (project_option=2)
-   // UMAC=-dt_slab 2 mu D  (project_option=3)
+   // UMAC=-dt_slab k grad T  (project_option==SOLVETYPE_HEAT)
+   // UMAC=-dt_slab 2 mu D  (project_option==SOLVETYPE_VISC)
    int energyflag=0;
    int simple_AMR_BC_flag=0;
    int simple_AMR_BC_flag_viscosity=0;
@@ -2065,7 +2066,7 @@ void NavierStokes::update_SEM_forces(int project_option,
     UMAC_MF,
     nsolve);
 
-  } else if (project_option==0) {
+  } else if (project_option==SOLVETYPE_PRES) {
 
    // energyflag=2: 
    //   get grad p instead of \pm dt grad p/rho
@@ -2094,9 +2095,9 @@ void NavierStokes::update_SEM_forces(int project_option,
  } else
   amrex::Error("project_option invalid74");
 
-  // f=-div 2 mu D - HOOP_FORCE_MARK_MF  (project_option==3) or
-  // f=-div k grad T                     (project_option==2) or
-  // f=grad p (MAC)                      (project_option==0) 
+  // f=-div 2 mu D - HOOP_FORCE_MARK_MF  (project_option==SOLVETYPE_VISC) or
+  // f=-div k grad T                     (project_option==SOLVETYPE_HEAT) or
+  // f=grad p (MAC)                      (project_option==SOLVETYPE_PRES) 
   // NavierStokes::update_SEM_delta_force (NavierStokes.cpp)
   // calls: fort_updatesemforce
   // does not look at enable_spectral
@@ -2109,9 +2110,9 @@ void NavierStokes::update_SEM_forces(int project_option,
  } else
   amrex::Error("update_spectral+update_stable invalid");
 
- if ((project_option==0)||  // grad p
-     (project_option==2)||  // -div(k grad T)
-     (project_option==3)) { // -div(2 mu D)-HOOP_FORCE_MARK_MF
+ if ((project_option==SOLVETYPE_PRES)||  // grad p
+     (project_option==SOLVETYPE_HEAT)||  // -div(k grad T)
+     (project_option==SOLVETYPE_VISC)) { // -div(2 mu D)-HOOP_FORCE_MARK_MF
 
   delete_localMF(MACDIV_MF,1);
 
@@ -2123,7 +2124,8 @@ void NavierStokes::update_SEM_forces(int project_option,
 // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol=
 //                          -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol=
 // if incompressible: DIV_new=MDOT_MF dt/vol
-// called from NavierStokes::multiphase_project if project_option==11
+// called from NavierStokes::multiphase_project if 
+//   project_option==SOLVETYPE_PRESCOR
 // and called from NavierStokes::do_the_advance if advance_status==1.
 void NavierStokes::ADVECT_DIV_ALL() {
 
@@ -2364,7 +2366,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
 
    int operation_flag=110;
    int energyflag=0;
-   int project_option=0;
+   int project_option=SOLVETYPE_PRES;
    int homflag=0; // default
    int local_enable_spectral=enable_spectral;
 
