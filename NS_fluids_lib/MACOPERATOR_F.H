@@ -98,8 +98,7 @@ extern "C"
         Real* fine,AMREX_ARLIM_P(fine_lo),AMREX_ARLIM_P(fine_hi),
         const Real* crse,AMREX_ARLIM_P(crse_lo),AMREX_ARLIM_P(crse_hi),
         const int *tlo, const int *thi,
-        Real* cdiag,AMREX_ARLIM_P(cdiag_lo),AMREX_ARLIM_P(cdiag_hi),
-        Real* fdiag,AMREX_ARLIM_P(fdiag_lo),AMREX_ARLIM_P(fdiag_hi));
+        Real* cdiag,AMREX_ARLIM_P(cdiag_lo),AMREX_ARLIM_P(cdiag_hi));
 
     void fort_scalarcoeff(
        int* nsolve,

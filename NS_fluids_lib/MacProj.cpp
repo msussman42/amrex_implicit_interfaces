@@ -893,7 +893,7 @@ NavierStokes::AllinterpScalarMAC(
   MultiFab* coarsedata,MultiFab* finedata,
   BoxArray& cgridscen,BoxArray& fgridscen,
   DistributionMapping& fdmap,
-  MultiFab* cdiagsing,MultiFab* fdiagsing,
+  MultiFab* cdiagsing,
   int nsolve,int project_option) {
 
  if (project_option_momeqn(project_option)==1) {
@@ -913,8 +913,7 @@ NavierStokes::AllinterpScalarMAC(
 
  if ((coarsedata->nComp()!=nsolve)||
      (finedata->nComp()!=nsolve)||
-     (cdiagsing->nComp()!=1)||
-     (fdiagsing->nComp()!=1))
+     (cdiagsing->nComp()!=1))
   amrex::Error("invalid ncomp");
 
  BoxArray crse_cen_fine_BA(fgridscen.size());
@@ -964,7 +963,6 @@ NavierStokes::AllinterpScalarMAC(
   FArrayBox& fine_fab = S_fine[mfi];
 
   FArrayBox& cdiagfab=crse_diagsing_fine[mfi];
-  FArrayBox& fdiagfab=(*fdiagsing)[mfi];
 
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
@@ -978,9 +976,7 @@ NavierStokes::AllinterpScalarMAC(
     ARLIM(crse_fab.loVect()),ARLIM(crse_fab.hiVect()),
     cbox.loVect(),cbox.hiVect(),
     cdiagfab.dataPtr(0),
-    ARLIM(cdiagfab.loVect()),ARLIM(cdiagfab.hiVect()),
-    fdiagfab.dataPtr(0),
-    ARLIM(fdiagfab.loVect()),ARLIM(fdiagfab.hiVect()));  
+    ARLIM(cdiagfab.loVect()),ARLIM(cdiagfab.hiVect()));
   } // veldir=0..nsolve-1
  }   // mfi
 } //omp
@@ -1005,7 +1001,6 @@ NavierStokes::interpScalarMAC(MultiFab* coarsedata,MultiFab* finedata,
     cgridscen,fgridscen,
     fdmap,
     coarse_lev.localMF[MASK_RESIDUAL_MF],
-    localMF[MASK_RESIDUAL_MF],
     nsolve,project_option);
 
 }  // subroutine interpScalarMAC
