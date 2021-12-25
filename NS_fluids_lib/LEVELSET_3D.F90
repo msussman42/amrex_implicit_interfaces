@@ -9957,7 +9957,7 @@ stop
           mass_total=mass_total+  &
            local_face(FACECOMP_MASSFACE+2*(im-1)+iside+1)
           
-         enddo
+         enddo ! im=1..nmat
          enddo ! iside=0..1
 
          if ((mass_total.le.zero).or. &
@@ -10024,7 +10024,7 @@ stop
           stop
          endif
 
-         local_face(FACECOMP_SMOOTHING+1)=smoothing_local
+         local_face(FACECOMP_FACESMOOTH+1)=smoothing_local
 
 
           ! mask_boundary=1 at left neumann boundary
@@ -10096,8 +10096,17 @@ stop
          local_face(FACECOMP_CURV+1)=zero
          local_face(FACECOMP_PFORCE+1)=zero
 
+         if (local_face(FACECOMP_FACECUT+1).ge.zero) then
+          ! do nothing
+         else
+          print *,"local_face(FACECOMP_FACECUT+1) invalid"
+          print *,"local_face(FACECOMP_FACECUT+1)=", &
+            local_face(FACECOMP_FACECUT+1)
+          stop
+         endif
+
          if (local_face(FACECOMP_FACECUT+1).lt.zero) then
-          print *,"local_face(ACECOMP_FACECUT+1).lt.zero"
+          print *,"local_face(FACECOMP_FACECUT+1).lt.zero"
           stop
          else if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
                   (local_face(FACECOMP_FACECUT+1).le.half)) then
@@ -10274,8 +10283,11 @@ stop
                  local_face(FACECOMP_CURV+1)=curvL(1)
                 else if (wtR.gt.wtL) then
                  local_face(FACECOMP_CURV+1)=curvR(1)
-                else 
+                else if (wtR.eq.wtL) then
                  local_face(FACECOMP_CURV+1)=wtL*curvL(1)+wtR*curvR(1)
+                else
+                 print *,"wtR or wtL is NaN"
+                 stop
                 endif
                else if (curv_interp_flag.eq.2) then
                 local_face(FACECOMP_CURV+1)=curvL(1)
@@ -10288,8 +10300,11 @@ stop
                  local_face(FACECOMP_CURV+1)=curvL(2)
                 else if (wtR.gt.wtL) then
                  local_face(FACECOMP_CURV+1)=curvR(2)
-                else 
+                else if (wtR.eq.wtL) then
                  local_face(FACECOMP_CURV+1)=wtL*curvL(2)+wtR*curvR(2)
+                else
+                 print *,"wtR or wtL is NaN"
+                 stop
                 endif
                else
                 print *,"curv_interp_flag invalid"
@@ -10307,8 +10322,11 @@ stop
                 local_face(FACECOMP_PFORCE+1)=curvL(3)
                else if (wtR.gt.wtL) then
                 local_face(FACECOMP_PFORCE+1)=curvR(3)
-               else 
+               else if (wtR.eq.wtL) then
                 local_face(FACECOMP_PFORCE+1)=wtL*curvL(3)+wtR*curvR(3)
+               else
+                print *,"wtR or wtL is NaN"
+                stop
                endif
 
               else if (project_option.eq.11) then ! FSI_material_exists last
@@ -15754,11 +15772,12 @@ stop
         do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
   
-          ! projection: dedge is 1/rho  (FACECOMP_FACEDEN) 
-          ! viscosity: dedge is FACECOMP_FACEVISC  ( mu )
-          ! temperature: dedge is FACECOMP_FACEHEAT( k )
-          ! species: dedge is FACECOMP_FACESPECIES ( rho D )
-          ! smoothing: dedge is FACECOMP_SMOOTHING (=1 in bulk,=0 interface(s))
+          ! projection: dedge is 1/rho  (FACECOMP_FACEDEN component c++) 
+          ! viscosity: dedge is FACECOMP_FACEVISC component c++ ( mu )
+          ! temperature: dedge is FACECOMP_FACEHEAT component c++ ( k )
+          ! species: dedge is FACECOMP_FACESPECIES component c++ ( rho D )
+          ! smoothing: dedge is FACECOMP_FACESMOOTH component c++
+          ! (=1 in bulk,=0 interface(s))
 
           if (dir.eq.0) then
            inorm=i

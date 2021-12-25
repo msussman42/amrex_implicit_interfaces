@@ -4758,7 +4758,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
   }
 
    // spectral_override==0
-  ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_SMOOTHING,
+  ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACESMOOTH,
 	1,0,AMREX_SPACEDIM,0,12);
 
  }  // ilev=finest_level ... level
@@ -4799,7 +4799,7 @@ void NavierStokes::allocate_physics_vars() {
  int nmat=num_materials;
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  new_localMF_if_not_exist(FACE_VAR_MF+dir,ncphys,0,dir);
+  new_localMF_if_not_exist(FACE_VAR_MF+dir,FACECOMP_NCOMP,0,dir);
  }
 
   // ncomp,ngrow,dir

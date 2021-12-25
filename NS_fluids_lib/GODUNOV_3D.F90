@@ -5032,7 +5032,8 @@ stop
 
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x nmat
-        ! FACECOMP_ICEMASK component initialized to 1 in "init_physics_vars"
+        ! FACECOMP_ICEMASK component c++ initialized to one
+        !   in "init_physics_vars"
         ! if nmat=2, nten=1
         ! if nmat=3, nten=3    12 13 23
         ! if nmat=4, nten=6    12 13 14 23 24 34
@@ -5266,7 +5267,8 @@ stop
 
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x nmat
-        ! FACECOMP_ICEMASK component initialized to 1 in "init_physics_vars"
+        ! FACECOMP_ICEMASK component c++ initialized to one
+        !   in "init_physics_vars"
         ! if nmat=2, nten=1
         ! if nmat=3, nten=3    12 13 23
         ! if nmat=4, nten=6    12 13 14 23 24 34
@@ -18075,6 +18077,7 @@ stop
           face_vfrac_cell(im)=face_vfrac_cell(im)+local_volume
           total_vol_face_cell=total_vol_face_cell+local_volume
 
+           !side=1,2
           local_volume=xface(D_DECL(i,j,k),FACECOMP_VOFFACE+2*(im-1)+side)
           local_mass=xface(D_DECL(i,j,k),FACECOMP_MASSFACE+2*(im-1)+side)
 
