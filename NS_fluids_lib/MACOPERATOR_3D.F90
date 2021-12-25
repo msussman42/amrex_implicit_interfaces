@@ -1184,7 +1184,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(fdata)
       INTEGER_T, intent(in) :: DIMDEC(cdata)
       INTEGER_T, intent(in) :: DIMDEC(cdiag)
-      INTEGER_T, intent(in) :: DIMDEC(fdiag)
       INTEGER_T, intent(in) :: lo(AMREX_SPACEDIM)
       INTEGER_T, intent(in) :: hi(AMREX_SPACEDIM)
       INTEGER_T lof(SDIM),hif(SDIM)
