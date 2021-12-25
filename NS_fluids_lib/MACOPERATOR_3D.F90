@@ -638,8 +638,8 @@ stop
 
          local_diag=offdiagcheck(D_DECL(i,j,k),1)
 
-          !if FACECOMP_FACECUT>0 then facecut_extend=0
-          !if FACECOMP_FACECUT=0 then facecut_extend=1
+          !if FACECOMP_FACECUT component (c++) >0 then facecut_extend=0
+          !if FACECOMP_FACECUT component (c++) =0 then facecut_extend=1
           !i.e. if both adjoining cells are fluid, then
           !facecut_extend=0, otherwise, if at least
           !one adjoining cell is solid, then 

@@ -15106,14 +15106,14 @@ NavierStokes::level_init_icemask() {
 // else if adjust_temperature==0,
 //  coeffMF=c1+c2
 // else if adjust_temperature==-1,
-//  FACECOMP_FACEHEAT component of FACE_VAR_MF
+//  FACECOMP_FACEHEAT component of FACE_VAR_MF (c++)
 //
 // for mass fraction:
 // (rho Y)_t + div (rho u Y) = div rho D grad Y
 // since rho_t + div (rho u)=0,
 // rho (Y_t + u dot grad Y)=div rho D grad Y
 // "rho D" coefficient is in FACE_VAR_MF,
-//   FACECOMP_FACESPECIES ... FACECOMP_FACESPECIES+num_species_var-1
+//   FACECOMP_FACESPECIES ... FACECOMP_FACESPECIES+num_species_var-1 (c++)
 // "1/rho" coefficient is in CELL_DEN_MF 
 
 void

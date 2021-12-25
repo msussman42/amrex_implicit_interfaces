@@ -3138,8 +3138,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      //  after reinitialization)
     init_FSI_GHOST_MAC_MF_ALL(4);
 
-// At this stage, variables are not scaled, so FACECOMP_FACEVEL will have
-// to be scaled later.
+// At this stage, variables are not scaled, so FACECOMP_FACEVEL component (c++)
+// will have to be scaled later.
     debug_memory();
     make_physics_varsALL(project_option,post_restart_flag,6); 
     delete_array(CELLTENSOR_MF);
@@ -9880,9 +9880,11 @@ void NavierStokes::multiphase_project(int project_option) {
    // or is FSI_rigid (FSI_flag==5) then velocity is
    // overwritten.
    // In GODUNOV_3D.F90, FORT_INIT_ICEMASK,
-   // "FACECOMP_ICEFACECUT" is initialized by calling get_icemask
+   // "FACECOMP_ICEFACECUT" component (c++)
+   // is initialized by calling get_icemask
    // and if "im_FSI_rigid==im_primary" for one of a faces'
-   // adjoining cells for example, then, FACECOMP_ICEFACECUT=0.0
+   // adjoining cells for example, then, 
+   // FACECOMP_ICEFACECUT component (c++) =0.0
    //
 
   increment_face_velocityALL(

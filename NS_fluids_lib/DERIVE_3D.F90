@@ -999,7 +999,8 @@ stop
             ! notes: 
             !  viscoelastic_coeff*visc_coef down below.
             !  dd_group=dd*visc_coef in PROB.F90 
-            !  xflux*=-dt * visc_coef * FACECOMP_FACEVISC in CROSSTERM
+            !  xflux*=-dt * visc_coef * (FACECOMP_FACEVISC component (c++))
+            !    in CROSSTERM
            if (mu.ge.zero) then
             if (elastic_regularization.ge.zero) then
              mu=mu+dt*elastic_regularization*bulk_modulus  
