@@ -1758,9 +1758,9 @@ void NavierStokes::apply_cell_pressure_gradient(
  } else
   amrex::Error("SDC_outer_sweeps invalid apply_cell_pressure_gradient");
 
- if ((project_option==0)||
-     (project_option==1)||
-     (project_option==11)) {  //FSI_material_exists (last project)
+ if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_INITPROJ)||
+     (project_option==SOLVETYPE_PRESCOR)) {  
   // do nothing
  } else
   amrex::Error("project_option invalid20");
@@ -2454,7 +2454,8 @@ void NavierStokes::increment_face_velocityALL(
 //   (iii) (unew^{c})^{c->f} in compressible regions.
 //   (iv) usolid in solid regions
 // called from: post_init_state, do_the_advance, multiphase_project
-// (when project_option==0,1,10,11,13), APPLY_REGISTERS, INCREMENT_REGISTERS
+// (when project_option==SOLVETYPE_PRES,SOLVETYPE_INITPROJ,
+//  SOLVETYPE_PRESCOR), APPLY_REGISTERS, INCREMENT_REGISTERS
 // called from NavierStokes::increment_face_velocityALL
 void NavierStokes::increment_face_velocity(
  int interp_option,
@@ -2508,8 +2509,8 @@ void NavierStokes::increment_face_velocity(
   } else
    amrex::Error("idx_velcell invalid");
 
-  if ((project_option==0)||
-      (project_option==1)) {
+  if ((project_option==SOLVETYPE_PRES)||
+      (project_option==SOLVETYPE_INITPROJ)) {
    // do nothing
   } else
    amrex::Error("project_option invalid21");
@@ -2527,15 +2528,15 @@ void NavierStokes::increment_face_velocity(
   } else
    amrex::Error("idx_velcell invalid");
 
-  if (project_option==11) {  //FSI_material_exists last project
+  if (project_option==SOLVETYPE_PRESCOR) {  
 
    if (num_colors>=1) {
     // do nothing
    } else
     amrex::Error("blobdata or num_colors invalid");
 
-  } else if ((project_option==0)||
-             (project_option==1)) {
+  } else if ((project_option==SOLVETYPE_PRES)||
+             (project_option==SOLVETYPE_INITPROJ)) {
    // do nothing
   } else
    amrex::Error("project_option invalid22");
@@ -2558,7 +2559,7 @@ void NavierStokes::increment_face_velocity(
   } else
    amrex::Error("idx_velcell invalid");
 
-  if (project_option==3) {  // viscosity
+  if (project_option==SOLVETYPE_VISC) {  
    operation_flag=5;
   } else
    amrex::Error("project_option invalid23");
@@ -2577,8 +2578,8 @@ void NavierStokes::increment_face_velocity(
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
    debug_ngrow(ADVECT_REGISTER_FACE_MF+dir,0,111);
 
-  if ((project_option==0)||
-      (project_option==1)) {
+  if ((project_option==SOLVETYPE_PRES)||
+      (project_option==SOLVETYPE_INITPROJ)) {
    operation_flag=11;
   } else
    amrex::Error("project_option invalid25");
@@ -3269,7 +3270,7 @@ void NavierStokes::VELMAC_TO_CELL(
   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
   int energyflag=0;
-  int project_option=0;
+  int project_option=SOLVETYPE_PRES;
   int homflag=0; // default
 
   int ncomp_denold=volfab.nComp();
@@ -4113,8 +4114,7 @@ void NavierStokes::apply_pressure_grad(
    amrex::Error("gp_mf boxarrays do not match");
  } // dir=0..sdim-1
 
-  // viscosity 
- if (project_option==3) {
+ if (project_option==SOLVETYPE_VISC) {
 
   if (nsolve!=AMREX_SPACEDIM)
    amrex::Error("nsolve invalid30");
@@ -4551,7 +4551,7 @@ void NavierStokes::apply_pressure_grad(
   synchronize_flux_register(operation_flag,spectral_loop);
   } // spectral_loop
 
-  if (project_option==2) { // thermal conduction
+  if (project_option==SOLVETYPE_HEAT) { 
    if (homflag==0) {
     // inhomogeneous Neumann BC for thermal conduction
     viscous_boundary_fluxes(
@@ -4607,8 +4607,8 @@ void NavierStokes::make_physics_varsALL(int project_option,
  if (level!=0)
   amrex::Error("level invalid make_physics_varsALL");
 
- if ((project_option==0)||
-     (project_option==1)) {
+ if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_INITPROJ)) {
   // do nothing
  } else
   amrex::Error("project_option invalid make_physics_varsALL");
@@ -4895,8 +4895,8 @@ void NavierStokes::make_physics_vars(int project_option) {
   // x nten
  int num_curv=nten*(AMREX_SPACEDIM+5); 
 
- if ((project_option==0)||
-     (project_option==1)) {
+ if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_INITPROJ)) {
   // do nothing
  } else
   amrex::Error("project_option invalid make_physics_vars");
@@ -5521,7 +5521,7 @@ void NavierStokes::increment_potential_force() {
 } // increment_potential_force
 
 // called from multiphase_project when 
-// project_option==0 
+// project_option==SOLVETYPE_PRES 
 void NavierStokes::deallocate_potential_forceALL() {
 
  int finest_level=parent->finestLevel();
@@ -5533,7 +5533,7 @@ void NavierStokes::deallocate_potential_forceALL() {
 } // deallocate_potential_forceALL
 
 // called from multiphase_project when 
-// project_option==0 
+// project_option==SOLVETYPE_PRES 
 void NavierStokes::process_potential_forceALL() {
 
  int finest_level=parent->finestLevel();
@@ -5924,7 +5924,7 @@ void NavierStokes::process_potential_force_face() {
     amrex::Error("CoordSys bust 21");
 
    int local_energyflag=0;
-   int local_project_option=0;
+   int local_project_option=SOLVETYPE_PRES;
    int local_enable_spectral=enable_spectral;
 
    int simple_AMR_BC_flag=1;
@@ -8613,7 +8613,7 @@ MultiFab* NavierStokes::derive_EOS_pressure(Vector<int> local_material_type) {
 } // subroutine derive_EOS_pressure()
 
 // in NavierStokes::multiphase_project when:
-// project_option==0 
+// project_option==SOLVETYPE_PRES 
 //  and homflag=0,
 //  the following commands are given:
 //  for ilev=finest ... coarsest,
@@ -8802,7 +8802,7 @@ void NavierStokes::init_pressure_error_indicator() {
 
 } // subroutine init_pressure_error_indicator
 
-// if project_option==0:
+// if project_option==SOLVETYPE_PRES:
 // 1. calculates p(rho^n+1,e_advect) and puts it in 2nd component
 //    of cell_sound.
 //    Equation of state to be used depends on vofPC
@@ -8811,7 +8811,7 @@ void NavierStokes::init_pressure_error_indicator() {
 // 3. in incompressible regions, p=0
 //
 // div_hold=(pnew-pold)/(rho c^2 dt) + dt mdot/vol
-// if project_option==11
+// if project_option==SOLVETYPE_PRESCOR
 // 1. div_hold*vol/dt is put in localMF[DIFFUSIONRHS_MF] in incomp parts
 // 2. div_hold/(csound_hold*dt) is put in the 2nd component of cell_sound where
 //    there are compressible materials.
@@ -8885,10 +8885,10 @@ void NavierStokes::init_advective_pressure(int project_option) {
  if (ncomp[0]!=1)
   amrex::Error("ncomp[0] invalid");
   
- if (project_option==0) {
+ if (project_option==SOLVETYPE_PRES) {
   if (state_index!=State_Type)
    amrex::Error("state_index invalid");
- } else if (project_option==11) { //FSI_material_exists last project
+ } else if (project_option==SOLVETYPE_PRESCOR) { 
   if (state_index!=DIV_Type)
    amrex::Error("state_index invalid");
  } else
@@ -8899,9 +8899,9 @@ void NavierStokes::init_advective_pressure(int project_option) {
 
   // CELL_SOUND_MF
   // coeff_avg,padvect_avg 
- if (project_option==0) {
+ if (project_option==SOLVETYPE_PRES) {
   // do nothing
- } else if (project_option==11) { //FSI_material_exists last project
+ } else if (project_option==SOLVETYPE_PRESCOR) { 
    // dst,src,scomp,dcomp,ncomp,ngrow
   int sc=scomp[0];
   if (sc==0) {

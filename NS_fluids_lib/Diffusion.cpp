@@ -319,10 +319,10 @@ void NavierStokes::viscous_boundary_fluxes(
   int nmat=num_materials;
   int nten=num_interfaces;
 
-  if (project_option==3) { // viscosity
+  if (project_option==SOLVETYPE_VISC) { 
    if (nsolve!=AMREX_SPACEDIM)
     amrex::Error("nsolve invalid");
-  } else if (project_option==2) { // thermal diffusion
+  } else if (project_option==SOLVETYPE_HEAT) { 
    if (nsolve!=1)
     amrex::Error("nsolve invalid");
   } else
@@ -446,10 +446,10 @@ void NavierStokes::viscous_boundary_fluxes(
 
 } // subroutine viscous_boundary_fluxes
 
-// project_option = 0 (flux var=mac velocity)
-// project_option = 2 (temp)
-// project_option = 3 (cell centered velocity) 
-// project_option = 100,... (species)
+// project_option = SOLVETYPE_PRES (flux var=mac velocity)
+// project_option = SOLVETYPE_HEAT (temp)
+// project_option = SOLVETYPE_VISC (cell centered velocity) 
+// project_option = SOLVETYPE_VISC,... (species)
 // combine_flag==0 (FVM -> GFM) (T[im]=T_interp im=1..nmat)
 // combine_flag==1 (GFM -> FVM)
 // combine_flag==2 (combine if vfrac<VOFTOL)
@@ -469,15 +469,15 @@ void NavierStokes::combine_state_variable(
 
  int nmat=num_materials;
 
- if ((project_option==0)||  // mac velocity
-     (project_option==3)) { // cell velocity
+ if ((project_option==SOLVETYPE_PRES)||  // mac velocity
+     (project_option==SOLVETYPE_VISC)) { // cell velocity
   if (interface_cond_avail==0) {
    // do nothing
   } else
    amrex::Error("interface_cond_avail invalid");
- } else if ((project_option==2)||   // temperature
-            ((project_option>=100)&&
-             (project_option<100+num_species_var))) { // mass fraction
+ } else if ((project_option==SOLVETYPE_HEAT)||   
+            ((project_option>=SOLVETYPE_SPEC)&&
+             (project_option<SOLVETYPE_SPEC+num_species_var))) {//mass fraction
   if ((interface_cond_avail==0)||
       (interface_cond_avail==1)) {
    // do nothing
@@ -506,26 +506,26 @@ void NavierStokes::combine_state_variable(
  int num_materials_combine=1;
 
  int nsolve=1;
- if ((project_option==1)||   // initial projection
-     (project_option==11)) { // FSI_material_exists (last project)
+ if ((project_option==SOLVETYPE_INITPROJ)||   
+     (project_option==SOLVETYPE_PRESCOR)) { 
   amrex::Error("project_option invalid in combine_state_variable");
- } else if (project_option==0) {    // regular projection
+ } else if (project_option==SOLVETYPE_PRES) {    // regular projection
   nsolve=1;
   if (combine_flag!=2)
    amrex::Error("combine_flag invalid");
   num_materials_combine=1;
   if (update_flux!=1)
    amrex::Error("update_flux invalid");
- } else if (project_option==2) { // thermal conduction
+ } else if (project_option==SOLVETYPE_HEAT) { 
   nsolve=1;
   num_materials_combine=nmat;
- } else if (project_option==3) { // viscosity
+ } else if (project_option==SOLVETYPE_VISC) { 
   nsolve=AMREX_SPACEDIM;
   if (combine_flag!=2)  //combine if vfrac<VOFTOL
    amrex::Error("combine_flag invalid");
   num_materials_combine=1;
- } else if ((project_option>=100)&&
-            (project_option<100+num_species_var)) { // species diffusion
+ } else if ((project_option>=SOLVETYPE_SPEC)&&
+            (project_option<SOLVETYPE_SPEC+num_species_var)) { 
   nsolve=1;
   num_materials_combine=nmat;
  } else
@@ -688,7 +688,7 @@ void NavierStokes::combine_state_variable(
   } else
    amrex::Error("combine_flag invalid");
 
-  if (project_option==0) { // mac velocity
+  if (project_option==SOLVETYPE_PRES) { // mac velocity
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
@@ -698,7 +698,7 @@ void NavierStokes::combine_state_variable(
 
     if (combine_idx==-1) {
 
-     if (project_option==0) {
+     if (project_option==SOLVETYPE_PRES) {
       face_mf=&get_new_data(Umac_Type+dir,slab_step+1);
      } else
       amrex::Error("project_option invalid82");
@@ -1048,7 +1048,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  }
  int homflag=0;
  int energyflag=0;
- int project_option=3; // viscosity
+ int project_option=SOLVETYPE_VISC; 
  int simple_AMR_BC_flag=1; 
  int simple_AMR_BC_flag_viscosity=1; 
  apply_pressure_grad(
