@@ -113,7 +113,7 @@ stop
       REAL_T, intent(out), target :: maskres(DIMV(maskres))
       REAL_T, pointer :: maskres_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: mdot(DIMV(mdot),nsolve)
-      REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:),:)
        ! coeff * areafrac * areaface / (dxfrac*dx)
       REAL_T, intent(in), target :: bx(DIMV(bx),nsolve) 
       REAL_T, pointer :: bx_ptr(D_DECL(:,:,:),:)
@@ -155,26 +155,40 @@ stop
        print *,"level invalid nsgenerate"
        stop
       endif
-FIX ME + fix other "FORT" routines (bind, target, ptr, =>, checkbound_array, 
-      call checkbound(fablo,fabhi,DIMS(xface),0,0,244)
-      call checkbound(fablo,fabhi,DIMS(yface),0,1,244)
-      call checkbound(fablo,fabhi,DIMS(zface),0,SDIM-1,244)
+
+      xface_ptr=>xface
+      yface_ptr=>yface
+      zface_ptr=>zface
+      call checkbound_array(fablo,fabhi,xface_ptr,0,0,244)
+      call checkbound_array(fablo,fabhi,yface_ptr,0,1,244)
+      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,244)
        ! ONES_MF in c++
-      call checkbound(fablo,fabhi,DIMS(masksolv),0,-1,140)
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,140)
-      call checkbound(fablo,fabhi,DIMS(alpha),0,-1,140)
-      call checkbound(fablo,fabhi,DIMS(offdiagcheck),0,-1,140)
-      call checkbound(fablo,fabhi, &
-       DIMS(maskdivres), &
-       0,-1,140)
-      call checkbound(fablo,fabhi,DIMS(maskres),0,-1,140)
-      call checkbound(fablo,fabhi,DIMS(mdot),0,-1,140)
-      call checkbound(fablo,fabhi,DIMS(bx),0,0,140)
-      call checkbound(fablo,fabhi,DIMS(by),0,1,140)
-      call checkbound(fablo,fabhi,DIMS(bz),0,AMREX_SPACEDIM-1,140)
-      call checkbound(fablo,fabhi,DIMS(fwtx),0,0,140)
-      call checkbound(fablo,fabhi,DIMS(fwty),0,1,140)
-      call checkbound(fablo,fabhi,DIMS(fwtz),0,AMREX_SPACEDIM-1,140)
+      masksolv_ptr=>masksolv
+      maskcov_ptr=>maskcov
+      call checkbound_array1(fablo,fabhi,masksolv_ptr,0,-1,140)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,140)
+      alpha_ptr=>alpha
+      call checkbound_array(fablo,fabhi,alpha_ptr,0,-1,140)
+      offdiagcheck_ptr=>offdiagcheck
+      call checkbound_array(fablo,fabhi,offdiagcheck_ptr,0,-1,140)
+      maskdivres_ptr=>maskdivres
+      call checkbound_array1(fablo,fabhi,maskdivres_ptr,0,-1,140)
+      maskres_ptr=>maskres
+      call checkbound_array1(fablo,fabhi,maskres_ptr,0,-1,140)
+      mdot_ptr=>mdot
+      call checkbound_array(fablo,fabhi,mdot_ptr,0,-1,140)
+      bx_ptr=>bx
+      by_ptr=>by
+      bz_ptr=>bz
+      call checkbound_array(fablo,fabhi,bx_ptr,0,0,140)
+      call checkbound_array(fablo,fabhi,by_ptr,0,1,140)
+      call checkbound_array(fablo,fabhi,bz_ptr,0,AMREX_SPACEDIM-1,140)
+      fwtx_ptr=>fwtx
+      fwty_ptr=>fwty
+      fwtz_ptr=>fwtz
+      call checkbound_array(fablo,fabhi,fwtx_ptr,0,0,140)
+      call checkbound_array(fablo,fabhi,fwty_ptr,0,1,140)
+      call checkbound_array(fablo,fabhi,fwtz_ptr,0,AMREX_SPACEDIM-1,140)
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -813,7 +827,7 @@ FIX ME + fix other "FORT" routines (bind, target, ptr, =>, checkbound_array,
        end subroutine fort_scalarcoeff
 
 
-       subroutine FORT_RESTORE_PRES( &
+       subroutine fort_restore_pres( &
          offdiagcheck, &
          DIMS(offdiagcheck), &
          savepres,DIMS(savepres), &
@@ -822,7 +836,9 @@ FIX ME + fix other "FORT" routines (bind, target, ptr, =>, checkbound_array,
          fablo,fabhi, &
          bfact, &
          level, &
-         finest_level)
+         finest_level) &
+       bind(c,name='fort_restore_pres')
+
        use global_utility_module
        IMPLICIT NONE
  
@@ -836,16 +852,23 @@ FIX ME + fix other "FORT" routines (bind, target, ptr, =>, checkbound_array,
        INTEGER_T, intent(in) :: DIMDEC(savepres)
        INTEGER_T, intent(in) :: DIMDEC(newpres)
 
-       REAL_T, intent(in) :: offdiagcheck(DIMV(offdiagcheck))
-       REAL_T, intent(in) :: savepres(DIMV(savepres))
-       REAL_T, intent(out) :: newpres(DIMV(newpres))
+       REAL_T, intent(in),target :: offdiagcheck(DIMV(offdiagcheck))
+       REAL_T, pointer :: offdiagcheck_ptr(D_DECL(:,:,:))
+
+       REAL_T, intent(in),target :: savepres(DIMV(savepres))
+       REAL_T, pointer :: savepres_ptr(D_DECL(:,:,:))
+       REAL_T, intent(out),target :: newpres(DIMV(newpres))
+       REAL_T, pointer :: newpres_ptr(D_DECL(:,:,:))
 
        INTEGER_T i,j,k
        REAL_T local_diag
 
-       call checkbound(fablo,fabhi,DIMS(offdiagcheck),0,-1,33)
-       call checkbound(fablo,fabhi,DIMS(savepres),0,-1,33)
-       call checkbound(fablo,fabhi,DIMS(newpres),0,-1,33)
+       offdiagcheck_ptr=>offdiagcheck
+       savepres_ptr=>savepres
+       newpres_ptr=>newpres
+       call checkbound_array1(fablo,fabhi,offdiagcheck_ptr,0,-1,33)
+       call checkbound_array1(fablo,fabhi,savepres_ptr,0,-1,33)
+       call checkbound_array1(fablo,fabhi,newpres_ptr,0,-1,33)
 
        if (bfact.lt.1) then
         print *,"bfact too small"
@@ -882,15 +905,17 @@ FIX ME + fix other "FORT" routines (bind, target, ptr, =>, checkbound_array,
        enddo
  
        return
-       end subroutine FORT_RESTORE_PRES
+       end subroutine fort_restore_pres
 
-       subroutine FORT_DIVIDEDX ( &
+       subroutine fort_dividedx( &
          nsolve, &
          bx,DIMS(bx), &
          tilelo,tilehi, &
          fablo,fabhi, &
          bfact,level, &
-         xlo,dx,dir)
+         xlo,dx,dir) &
+       bind(c,name='fort_dividedx')
+
        use global_utility_module
        IMPLICIT NONE
  
@@ -901,7 +926,8 @@ FIX ME + fix other "FORT" routines (bind, target, ptr, =>, checkbound_array,
        INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T :: growlo(3),growhi(3)
        INTEGER_T, intent(in) :: bfact
-       REAL_T, intent(inout) :: bx(DIMV(bx),nsolve)
+       REAL_T, intent(inout),target :: bx(DIMV(bx),nsolve)
+       REAL_T, pointer :: bx_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
        INTEGER_T i,j,k,n
@@ -927,7 +953,8 @@ FIX ME + fix other "FORT" routines (bind, target, ptr, =>, checkbound_array,
         print *,"dir invalid dividedx"
         stop
        endif
-       call checkbound(fablo,fabhi,DIMS(bx),0,dir,33)
+       bx_ptr=>bx
+       call checkbound_array(fablo,fabhi,bx_ptr,0,dir,33)
 
        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi, &
                0,dir,13) 
@@ -966,7 +993,7 @@ FIX ME + fix other "FORT" routines (bind, target, ptr, =>, checkbound_array,
        enddo
  
        return
-       end subroutine FORT_DIVIDEDX
+       end subroutine fort_dividedx
 
 
        subroutine fort_regularize_bx( &
@@ -1144,29 +1171,32 @@ FIX ME + fix other "FORT" routines (bind, target, ptr, =>, checkbound_array,
        return
        end subroutine fort_mult_facewt
 
-      subroutine FORT_INTERPMAC( &
+      subroutine fort_interpmac( &
         bfact,bfact_f, &
-        f, DIMS(f), &
-        c, DIMS(c), &
+        fdata, DIMS(fdata), &
+        cdata, DIMS(cdata), &
         lo, hi,  &
-        cdiag,DIMS(cdiag), &
-        fdiag,DIMS(fdiag) )
+        cdiag,DIMS(cdiag) ) &
+      bind(c,name='fort_interpmac')
+
       use global_utility_module
       IMPLICIT NONE
-      INTEGER_T DIMDEC(f)
-      INTEGER_T DIMDEC(c)
-      INTEGER_T DIMDEC(cdiag)
-      INTEGER_T DIMDEC(fdiag)
-      INTEGER_T lo(AMREX_SPACEDIM)
-      INTEGER_T hi(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: DIMDEC(fdata)
+      INTEGER_T, intent(in) :: DIMDEC(cdata)
+      INTEGER_T, intent(in) :: DIMDEC(cdiag)
+      INTEGER_T, intent(in) :: DIMDEC(fdiag)
+      INTEGER_T, intent(in) :: lo(AMREX_SPACEDIM)
+      INTEGER_T, intent(in) :: hi(AMREX_SPACEDIM)
       INTEGER_T lof(SDIM),hif(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T f(DIMV(f))
-      REAL_T c(DIMV(c))
-      REAL_T cdiag(DIMV(cdiag))
-      REAL_T fdiag(DIMV(fdiag))
-      INTEGER_T bfact,bfact_f
+      REAL_T, intent(inout),target :: fdata(DIMV(fdata))
+      REAL_T, pointer :: fdata_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: cdata(DIMV(cdata))
+      REAL_T, pointer :: cdata_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: cdiag(DIMV(cdiag))
+      REAL_T, pointer :: cdiag_ptr(D_DECL(:,:,:))
+      INTEGER_T, intent(in) :: bfact,bfact_f
 
       INTEGER_T ic,jc,kc,ifine,jfine,kfine
       INTEGER_T cvalid,dir
@@ -1191,9 +1221,12 @@ FIX ME + fix other "FORT" routines (bind, target, ptr, =>, checkbound_array,
        hif(dir)=2*(hi(dir)+1)-1
       enddo
 
-      call checkbound(lo,hi,DIMS(c),0,-1,140)
-      call checkbound(lof,hif,DIMS(f),0,-1,140)
-      call checkbound(lo,hi,DIMS(cdiag),0,-1,140)
+      cdata_ptr=>cdata
+      fdata_ptr=>fdata
+      cdiag_ptr=>cdiag
+      call checkbound_array1(lo,hi,cdata_ptr,0,-1,140)
+      call checkbound_array1(lof,hif,fdata_ptr,0,-1,140)
+      call checkbound_array1(lo,hi,cdiag_ptr,0,-1,140)
 
       call growntilebox(lof,hif,lof,hif,growlo,growhi,0) 
  
@@ -1230,7 +1263,7 @@ FIX ME + fix other "FORT" routines (bind, target, ptr, =>, checkbound_array,
               do dir=2,SDIM
                volall=volall*wt(dir)
               enddo
-              fine_value=fine_value+volall*c(D_DECL(ic,jc,kc))
+              fine_value=fine_value+volall*cdata(D_DECL(ic,jc,kc))
               voltotal=voltotal+volall
              endif
             endif
@@ -1242,7 +1275,8 @@ FIX ME + fix other "FORT" routines (bind, target, ptr, =>, checkbound_array,
 
        if (voltotal.gt.zero) then
         fine_value=fine_value/voltotal
-        f(D_DECL(ifine,jfine,kfine))=f(D_DECL(ifine,jfine,kfine))+fine_value  
+        fdata(D_DECL(ifine,jfine,kfine))= &
+           fdata(D_DECL(ifine,jfine,kfine))+fine_value  
        else if (voltotal.eq.zero) then
         ! do nothing
        else
@@ -1255,8 +1289,7 @@ FIX ME + fix other "FORT" routines (bind, target, ptr, =>, checkbound_array,
       end do ! kfine
 
       return
-      end subroutine FORT_INTERPMAC
-
+      end subroutine fort_interpmac
 
 
 ! maskcov=1 outside domain and on fine-fine ghost cells

@@ -803,7 +803,7 @@ protected:
       MultiFab* coarsedata,MultiFab* finedata,
       BoxArray& cgridscen,BoxArray& fgridscen,
       DistributionMapping& fdmap,
-      MultiFab* cdiagsing,MultiFab* fdiagsing,
+      MultiFab* cdiagsing,
       int nsolve,int project_option);
     void interpScalarMAC(MultiFab* coarsedata,MultiFab* finedata,
       int nsolve,int project_option);
