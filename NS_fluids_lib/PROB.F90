@@ -13493,11 +13493,11 @@ END SUBROUTINE Adist
 
       else if (operation_flag.eq.7) then ! advection
 
-       if (ncomp_xp.ne.SDIM+1) then
+       if (ncomp_xp.ne.NFLUXSEM) then
         print *,"ncomp_xp invalid(11) ",ncomp_xp
         stop
        endif
-       if (ncomp_xgp.ne.SDIM+1) then
+       if (ncomp_xgp.ne.NFLUXSEM) then
         print *,"ncomp_xgp invalid2"
         stop
        endif
@@ -13505,14 +13505,14 @@ END SUBROUTINE Adist
         print *,"energyflag invalid"
         stop
        endif
-       if (ncfluxreg.ne.SDIM*(SDIM+1)) then
+       if (ncfluxreg.ne.SDIM*NFLUXSEM) then
         print *,"ncfluxreg invalid operation_flag.eq.7"
         stop
        endif
        if ((scomp.ne.1).or. &
            (dcomp.ne.1).or. &
            (ncomp_dest.ne.ncphys).or. &
-           (ncphys.ne.SDIM+1).or. &
+           (ncphys.ne.NFLUXSEM).or. &
            (ncomp_source.ne.SDIM).or. &
            (scomp_bc.ne.1)) then
         print *,"parameters invalid for op=7"
@@ -13892,7 +13892,7 @@ END SUBROUTINE Adist
 
             templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
-            if ((nc.ge.1).and.(nc.le.SDIM)) then
+            if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then
              ! u_{i+1/2}S_{i+1/2}-u_{i-1/2}S_{i-1/2}=
              ! (S_{i+1/2}+S_{i-1/2})(u_{i+1/2}-u_{i-1/2})/2 +
              ! (u_{i+1/2}+u_{i-1/2})(S_{i+1/2}-S_{i-1/2})/2
@@ -13901,7 +13901,7 @@ END SUBROUTINE Adist
                vel(D_DECL(ic,jc,kc),nc)   ! velocity
 
              ! I(umac) dot grad T
-            else if (nc.eq.SDIM+1) then 
+            else if (nc.eq.SEM_T+1) then 
              local_data_side(side)=templocal ! temperature
             else
              print *,"nc invalid"
@@ -14035,7 +14035,7 @@ END SUBROUTINE Adist
              stop
             endif
 
-            if ((nc.ge.1).and.(nc.le.SDIM)) then ! velocity
+            if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then ! velocity
 
              if (velbc_in(dir,side,nc).eq.REFLECT_EVEN) then
               local_bctype(side)=3 ! reflect
@@ -14067,8 +14067,8 @@ END SUBROUTINE Adist
               print *,"velbc_in is corrupt"
               stop
              endif
-
-            else if (nc.eq.SDIM+1) then ! temperature
+FIX ME
+            else if (nc.eq.SEM_T+1) then ! temperature
 
              if (presbc_in(dir,side,ibase+2).eq.REFLECT_EVEN) then
               local_bctype(side)=3 ! reflect even
