@@ -5401,31 +5401,28 @@ NavierStokes::read_params ()
      }
     }  // if IO processor
 
-    int project_option_tol=0;
-    set_local_tolerances(project_option_tol);
+    set_local_tolerances(SOLVETYPE_PRES);
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "project_option_tol(regular project)= " << 
-	     project_option_tol << '\n';
+	     SOLVETYPE_PRES << '\n';
      std::cout << "save_mac_abs_tol= " << save_mac_abs_tol << '\n';
      std::cout << "save_atol_b= " << save_atol_b << '\n';
      std::cout << "save_min_rel_error= " << save_min_rel_error << '\n';
     }
 
-    project_option_tol=2;
-    set_local_tolerances(project_option_tol);
+    set_local_tolerances(SOLVETYPE_HEAT);
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "project_option_tol(thermal)= " << 
-	     project_option_tol << '\n';
+	     SOLVETYPE_HEAT << '\n';
      std::cout << "save_mac_abs_tol= " << save_mac_abs_tol << '\n';
      std::cout << "save_atol_b= " << save_atol_b << '\n';
      std::cout << "save_min_rel_error= " << save_min_rel_error << '\n';
     }
 
-    project_option_tol=3;
-    set_local_tolerances(project_option_tol);
+    set_local_tolerances(SOLVETYPE_VISC);
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "project_option_tol(viscosity)= " << 
-	     project_option_tol << '\n';
+	     SOLVETYPE_VISC << '\n';
      std::cout << "save_mac_abs_tol= " << save_mac_abs_tol << '\n';
      std::cout << "save_atol_b= " << save_atol_b << '\n';
      std::cout << "save_min_rel_error= " << save_min_rel_error << '\n';
@@ -5817,7 +5814,7 @@ NavierStokes::get_mm_scomp_solver(
  if (project_option_pressure(project_option)==1) {
 
   if (num_materials_combine==1) { 
-   scomp[0]=AMREX_SPACEDIM;
+   scomp[0]=STATECOMP_PRES;
    ncomp[0]=nsolveMM; 
    state_index=State_Type;
   } else
@@ -5844,7 +5841,7 @@ NavierStokes::get_mm_scomp_solver(
  } else if (project_option==SOLVETYPE_VISC) { 
 
   if (num_materials_combine==1) { 
-   scomp[0]=0;
+   scomp[0]=STATECOMP_VEL;
    ncomp[0]=nsolveMM; 
    state_index=State_Type;
   } else

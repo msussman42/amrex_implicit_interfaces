@@ -968,15 +968,15 @@ stop
        stop
       endif
 
-      if (project_option.eq.2) then ! thermal diffusion
+      if (project_option.eq.SOLVETYPE_HEAT) then ! thermal diffusion
        if (LS1.ge.zero) then ! center cell owned by im_source
         heatcoeff=thermal_k(im_source)
        else  ! center cell owned by im_dest
         heatcoeff=thermal_k(im_dest)
        endif
-      else if ((project_option.ge.100).and. & ! species diffusion
-               (project_option.lt.100+num_species_var)) then
-       ispec=project_option-100
+      else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species diffusion
+               (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+       ispec=project_option-SOLVETYPE_SPEC
        if (LS1.ge.zero) then ! center cell owned by im_source
         heatcoeff=fort_speciesviscconst(ispec*nmat+im_source)*den
        else ! center cell owned by im_dest
@@ -1239,7 +1239,7 @@ stop
       mdata_ptr=>mdata
       tdata_ptr=>tdata
 
-      project_option=3
+      project_option=SOLVETYPE_VISC
 
       if (bfact.ge.1) then
        ! do nothing
@@ -7252,8 +7252,8 @@ stop
        print *,"nstate_SDC invalid"
        stop
       endif
-      if ((project_option.eq.2).or. &
-          (project_option.eq.3)) then
+      if ((project_option.eq.SOLVETYPE_HEAT).or. &
+          (project_option.eq.SOLVETYPE_VISC)) then
        ! do nothing
       else
        print *,"project_option invalid"
@@ -7280,7 +7280,7 @@ stop
        if ((local_maskSEM.ge.1).and. &
            (local_maskSEM.le.nmat)) then
 
-        if (project_option.eq.3) then ! viscosity
+        if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
 
          do veldir=1,SDIM
           velnew(D_DECL(i,j,k),veldir)= &
@@ -7289,7 +7289,7 @@ stop
             deltafab(D_DECL(i,j,k),veldir)
          enddo ! veldir=1..sdim
 
-        else if (project_option.eq.2) then ! thermal conduction
+        else if (project_option.eq.SOLVETYPE_HEAT) then ! thermal conduction
 
          isrc=1
 
@@ -7556,8 +7556,8 @@ stop
        print *,"nstate_SDC invalid"
        stop
       endif
-      if ((project_option.eq.2).or. & !thermal conductivity
-          (project_option.eq.3)) then !viscosity
+      if ((project_option.eq.SOLVETYPE_HEAT).or. & !thermal conductivity
+          (project_option.eq.SOLVETYPE_VISC)) then !viscosity
        ! do nothing
       else
        print *,"project_option invalid"
@@ -7588,7 +7588,7 @@ stop
        if ((local_maskSEM.ge.1).and. &
            (local_maskSEM.le.nmat)) then
 
-        if (project_option.eq.3) then !viscosity
+        if (project_option.eq.SOLVETYPE_VISC) then !viscosity
 
          do veldir=1,SDIM
 
@@ -7627,7 +7627,7 @@ stop
           endif
          enddo ! veldir=1..sdim
 
-        else if (project_option.eq.2) then  ! temperature diffusion
+        else if (project_option.eq.SOLVETYPE_HEAT) then  ! temperature diffusion
 
          velcomp=1
 
@@ -7738,12 +7738,12 @@ stop
       INTEGER_T ii,jj,kk
       INTEGER_T im_crit
 
-      if (project_option.eq.0) then
+      if (project_option.eq.SOLVETYPE_PRES) then
        ! do nothing
-      else if (project_option.eq.2) then ! thermal diffusion
+      else if (project_option.eq.SOLVETYPE_HEAT) then ! thermal diffusion
        print *,"thermal diffusion force is only cell centered"
        stop
-      else if (project_option.eq.3) then ! viscosity
+      else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
        print *,"viscosity force is only cell centered"
        stop
       else
@@ -10280,13 +10280,13 @@ stop
        ! adjust_temperature==1  modify temperature (Snew and coeff)
        ! adjust_temperature==0  modify coefficient (coeff)
        ! adjust_temperature==-1 modify heatx,heaty,heatz
-       ! if project_option==2:
+       ! if project_option==SOLVETYPE_HEAT:
        !  heatxyz correspond to thermal diffusivity
-       ! else if project_option>=100:
+       ! else if project_option>=SOLVETYPE_SPEC:
        !  heatxyz correspond to rho D
        !
       subroutine fort_stefansolver( &
-       project_option, & ! 2=thermal diffusion or 100...100+num_species_var-1
+       project_option, & 
        solidheat_flag, & ! 0=diffuse in solid 1=dirichlet 2=Neumann
        microlayer_size, & ! 1..nmat
        microlayer_substrate, & ! 1..nmat
@@ -10575,10 +10575,10 @@ stop
        endif
       enddo ! im=1..nmat
 
-      if (project_option.eq.2) then ! thermal diffusion
+      if (project_option.eq.SOLVETYPE_HEAT) then ! thermal diffusion
        T_or_Y_min_sanity=zero
-      else if ((project_option.ge.100).and. & ! species diffusion
-               (project_option.le.100+num_species_var-1)) then
+      else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species diffusion
+               (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
        T_or_Y_min_sanity=zero
       else
        print *,"project_option invalid"
@@ -10811,7 +10811,7 @@ stop
                ! local_freezing_model=7 (Cavitation)
                if (is_GFM_freezing_modelF(local_freezing_model).eq.1) then 
 
-                if (project_option.eq.2) then
+                if (project_option.eq.SOLVETYPE_HEAT) then
                    ! default Tgamma
                  Tgamma=saturation_temp(iten+ireverse*nten)
                  TorYgamma_BC=Tgamma
@@ -10829,8 +10829,8 @@ stop
                   print *,"saturation temperature must be positive2"
                   stop
                  endif
-                else if ((project_option.ge.100).and. &
-                         (project_option.lt.100+num_species_var)) then
+                else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                         (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
                  Tgamma=saturation_temp(iten+ireverse*nten)
                  TorYgamma_BC=one
                  if (Tgamma.gt.zero) then
@@ -11073,10 +11073,10 @@ stop
          endif
 
          original_coeff=one/(dt*SWEPTFACTOR)
-         if (project_option.eq.2) then
+         if (project_option.eq.SOLVETYPE_HEAT) then
           original_coeff=original_coeff/over_cv
-         else if ((project_option.ge.100).and. &
-                  (project_option.lt.100+num_species_var)) then
+         else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                  (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
           original_coeff=original_coeff/over_den
          else
           print *,"project_option invalid"
@@ -11100,10 +11100,10 @@ stop
          local_freezing_model=freezing_model(iten+ireverse*nten)
          distribute_from_targ=distribute_from_target(iten+ireverse*nten)
 
-         if (project_option.eq.2) then
+         if (project_option.eq.SOLVETYPE_HEAT) then
           TorYgamma_BC=saturation_temp(iten+ireverse*nten)
-         else if ((project_option.ge.100).and. &
-                  (project_option.lt.100+num_species_var)) then
+         else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                  (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
           TorYgamma_BC=one
          else
           print *,"project_option invalid"
@@ -11244,10 +11244,10 @@ stop
                        (one-theta)*xsten(0,dir_inner)
               enddo
 
-              if (project_option.eq.2) then
+              if (project_option.eq.SOLVETYPE_HEAT) then
                tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
-              else if ((project_option.ge.100).and. &
-                       (project_option.lt.100+num_species_var)) then
+              else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                       (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
                tsat_comp=nten+(iten-1)*ncomp_per_tsat+2
               else
                print *,"project_option invalid"
@@ -11331,13 +11331,14 @@ stop
                       (original_coeff+delta_coeff) 
 
              do im_adjust=1,nmat
-              if (project_option.eq.2) then
-               tcomp=(SDIM+1)+ &
+              if (project_option.eq.SOLVETYPE_HEAT) then
+               tcomp=STATECOMP_STATES+ &
                 (im_adjust-1)*num_state_material+2
-              else if ((project_option.ge.100).and. &
-                       (project_option.le.100+num_species_var-1)) then
-               tcomp=(SDIM+1)+ &
-                (im_adjust-1)*num_state_material+3+project_option-100
+              else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                       (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+               tcomp=STATECOMP_STATES+ &
+                (im_adjust-1)*num_state_material+3+project_option- &
+                SOLVETYPE_SPEC
               else
                print *,"project_option invalid"
                stop
@@ -16352,8 +16353,8 @@ stop
       ! combine_flag==0 (FVM -> GFM)
       ! combine_flag==1 (GFM -> FVM)
       ! combine_flag==2 (combine if vfrac<VOFTOL)
-      ! project_option==3 (cell centered velocity)
-      ! project_option==0 (MAC velocity - COMBINEVELFACE is called)
+      ! project_option==SOLVETYPE_VISC (cell centered velocity)
+      ! project_option==SOLVETYPE_PRES (MAC velocity - COMBINEVELFACE is called)
       subroutine fort_combinevel( &
        tid, &
        hflag, &
@@ -16671,10 +16672,10 @@ stop
 
       if (combine_idx.eq.-1) then
 
-       if (project_option.eq.0) then
-        print *,"project_option==0 not allowed here"
+       if (project_option.eq.SOLVETYPE_PRES) then
+        print *,"project_option==SOLVETYPE_PRES not allowed here"
         stop
-       else if (project_option.eq.2) then ! thermal conduction
+       else if (project_option.eq.SOLVETYPE_HEAT) then ! thermal conduction
         if (scomp_size.ne.nmat) then
          print *,"scomp_size invalid"
          stop
@@ -16690,7 +16691,7 @@ stop
           stop
          endif
         enddo ! im=1..nmat
-       else if (project_option.eq.3) then  ! viscosity
+       else if (project_option.eq.SOLVETYPE_VISC) then  ! viscosity
         if (scomp(1).ne.0) then
          print *,"scomp invalid"
          stop
@@ -16703,8 +16704,8 @@ stop
          print *,"scomp_size invalid"
          stop
         endif
-       else if ((project_option.ge.100).and. &
-                (project_option.le.100+num_species_var-1)) then
+       else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
         if (scomp_size.ne.nmat) then
          print *,"scomp_size invalid"
          stop
@@ -16714,8 +16715,8 @@ stop
           print *,"ncomp invalid39"
           stop
          endif
-         if (scomp(im).ne.(SDIM+1)+ &
-             (im-1)*num_state_material+2+project_option-100) then
+         if (scomp(im).ne.STATECOMP_STATES+ &
+             (im-1)*num_state_material+2+project_option-SOLVETYPE_SPEC) then
           print *,"scomp invalid"
           stop
          endif
@@ -17003,7 +17004,7 @@ stop
          stop
         endif
 
-        if (project_option.eq.3) then ! viscosity
+        if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
 
          if (combine_flag.eq.2) then !combine if vfrac<VOFTOL
 
@@ -17115,9 +17116,9 @@ stop
           stop
          endif
   
-        else if ((project_option.eq.2).or. &     ! temperature
-                 ((project_option.ge.100).and. & ! species
-                  (project_option.le.100+num_species_var-1))) then
+        else if ((project_option.eq.SOLVETYPE_HEAT).or. &     ! temperature
+                 ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
+                  (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
 
          do im=1,nmat
 
@@ -17191,10 +17192,10 @@ stop
               print *,"Tcenter(im_crit) invalid"
               stop
              endif
-             if (project_option.eq.2) then
+             if (project_option.eq.SOLVETYPE_HEAT) then
               thermal_state(im_crit)=Tcenter(im_crit)
-             else if ((project_option.ge.100).and. & ! species
-                      (project_option.le.100+num_species_var-1)) then
+             else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
+                      (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
               thermal_state(im_crit)= &
                  state(D_DECL(i,j,k),dencomp+1)
              else
@@ -17269,10 +17270,10 @@ stop
                        stop
                       endif
 
-                      if (project_option.eq.2) then
+                      if (project_option.eq.SOLVETYPE_HEAT) then
                        ! do nothing
-                      else if ((project_option.ge.100).and. &
-                               (project_option.lt.100+num_species_var)) then
+                      else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                               (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
                        if ((Tgamma_STATUS.eq.1).or.(Tgamma_STATUS.eq.2)) then
                         if (is_multi_component_evapF(local_freezing_model, &
                          Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten),&
@@ -17283,7 +17284,7 @@ stop
                          Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten),&
                          LL).eq.1) then
                          ispec=mass_fraction_id(iten+ireverse*nten)
-                         if (ispec.eq.project_option-100+1) then
+                         if (ispec.eq.project_option-SOLVETYPE_SPEC+1) then
                           ! do nothing
                          else if ((ispec.ge.1).and. &
                                   (ispec.le.num_species_var)) then
@@ -17309,7 +17310,7 @@ stop
 
                       if ((Tgamma_STATUS.eq.1).or.(Tgamma_STATUS.eq.2)) then
 
-                       if (project_option.eq.2) then
+                       if (project_option.eq.SOLVETYPE_HEAT) then
                         ! default Tgamma
                         Tgamma=saturation_temp(iten+ireverse*nten)
                         TorYgamma_BC=Tgamma
@@ -17327,8 +17328,8 @@ stop
                          print *,"saturation temperature must be positive2"
                          stop
                         endif
-                       else if ((project_option.ge.100).and. &
-                                (project_option.lt.100+num_species_var)) then
+                       else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                                (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
                         Tgamma=saturation_temp(iten+ireverse*nten)
                         TorYgamma_BC=one
                         if (Tgamma.gt.zero) then
@@ -17448,9 +17449,9 @@ stop
             do k1=k1lo,k1hi
              test_temp=cellfab(D_DECL(i+i1,j+j1,k+k1),scomp(im)+1)
 
-             if ((project_option.eq.2).or. & ! thermal combine
-                 ((project_option.ge.100).and. &
-                  (project_option.le.100+num_species_var-1))) then
+             if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal combine
+                 ((project_option.ge.SOLVETYPE_SPEC).and. &
+                  (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
 
               if (hflag.eq.0) then
 
@@ -19562,7 +19563,7 @@ stop
               scomp_bc=1
               operation_flag=6  ! evaluate tensor values
               energyflag=0
-              project_option_vel=3
+              project_option_vel=SOLVETYPE_VISC
               def_dt=one
 
                ! in: fort_face_gradients
@@ -19686,7 +19687,7 @@ stop
               ncomp_dendest=ntensor
               ncomp_cterm=ntensor
               operation_flag=105  ! interpolate grad u from MAC to CELL
-              project_option_vel=3
+              project_option_vel=SOLVETYPE_VISC
               energyflag=0
               def_dt=one
 

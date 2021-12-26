@@ -1166,7 +1166,7 @@ END SUBROUTINE SIMP
 !    Equation of state to be used depends on cvof (tessellating vfracs)
 ! 3. pressure=0.0 in incompressible regions
 !
-! if project_option==11, mdot=0.0 (on input) (mdot corresponds
+! if project_option==SOLVETYPE_PRESCOR, mdot=0.0 (on input) (mdot corresponds
 ! to localMF[DIFFUSIONRHS_MF])
 !
 ! velocity scale: V
@@ -1307,8 +1307,8 @@ END SUBROUTINE SIMP
        print *,"pressure_select_criterion invalid"
        stop
       endif
-      if ((project_option.eq.0).or. &
-          (project_option.eq.11)) then !FSI_material_exists last project
+      if ((project_option.eq.SOLVETYPE_PRES).or. &
+          (project_option.eq.SOLVETYPE_PRESCOR)) then 
        ! do nothing
       else
        print *,"project_option invalid advective pressure"
@@ -1415,12 +1415,12 @@ END SUBROUTINE SIMP
         endif
 
 
-        if ((project_option.eq.0).or. &
-            (project_option.eq.11)) then !FSI_material_exists last project
+        if ((project_option.eq.SOLVETYPE_PRES).or. &
+            (project_option.eq.SOLVETYPE_PRESCOR)) then 
 
-         if (project_option.eq.0) then
+         if (project_option.eq.SOLVETYPE_PRES) then
           div_hold=zero
-         else if (project_option.eq.11) then !FSI_material_exists 2nd project
+         else if (project_option.eq.SOLVETYPE_PRESCOR) then 
            ! coeff_avg,p_avg
            ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
           div_hold=csnd(D_DECL(i,j,k),2)   ! pavg (copied from 1st component
@@ -1430,7 +1430,8 @@ END SUBROUTINE SIMP
            ! init_advective_pressure called from
            !   NavierStokes::multiphase_project
            ! mdot passed from localMF[DIFFUSIONRHS_MF]
-           ! project_option==11 => FSI_material_exists (2nd project)
+           ! project_option==SOLVETYPE_PRESCOR => 
+           !  FSI_material_exists (2nd project)
           if (mdot(D_DECL(i,j,k)).eq.zero) then
            ! do nothing
           else
@@ -1652,11 +1653,11 @@ END SUBROUTINE SIMP
 
            csnd(D_DECL(i,j,k),1)=zero  ! coeff
            csnd(D_DECL(i,j,k),2)=zero  ! padvect
-           if (project_option.eq.11) then ! FSI_material_exists (last project)
+           if (project_option.eq.SOLVETYPE_PRESCOR) then 
             ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
             ! mdot corresponds to localMF[DIFFUSIONRHS_MF]
             mdot(D_DECL(i,j,k))=local_volume*div_hold/dt
-           else if (project_option.eq.0) then
+           else if (project_option.eq.SOLVETYPE_PRES) then
             ! do nothing
            else
             print *,"project_option invalid"
@@ -1701,7 +1702,7 @@ END SUBROUTINE SIMP
              stop
             endif
 
-            if (project_option.eq.11) then !FSI_material_exists (2nd project)
+            if (project_option.eq.SOLVETYPE_PRESCOR) then 
 
              if (csound_hold.eq.zero) then ! incomp
               csnd(D_DECL(i,j,k),2)=zero ! padvect
@@ -1720,7 +1721,7 @@ END SUBROUTINE SIMP
               stop
              endif
 
-            else if (project_option.eq.0) then
+            else if (project_option.eq.SOLVETYPE_PRES) then
              ! do nothing
             else
              print *,"project_option invalid"
@@ -1732,11 +1733,11 @@ END SUBROUTINE SIMP
 
             csnd(D_DECL(i,j,k),1)=zero ! coeff
             csnd(D_DECL(i,j,k),2)=zero ! padvect
-            if (project_option.eq.11) then !FSI_material_exists last project
+            if (project_option.eq.SOLVETYPE_PRESCOR) then 
               ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
               ! localMF[DIFFUSIONRHS_MF]
              mdot(D_DECL(i,j,k))=div_hold*local_volume/dt 
-            else if (project_option.eq.0) then
+            else if (project_option.eq.SOLVETYPE_PRES) then
              ! do nothing
             else
              print *,"project_option invalid"
@@ -8941,7 +8942,7 @@ END SUBROUTINE SIMP
         print *,"nsolve invalid"
         stop
        endif
-       if (project_option.eq.3) then
+       if (project_option.eq.SOLVETYPE_VISC) then
         if (nsolve.eq.SDIM) then
          ! do nothing
         else
@@ -9058,7 +9059,7 @@ END SUBROUTINE SIMP
              ! do nothing
             else if ((side.eq.1).or.(side.eq.2)) then
              local_bc=presbc(dir_local,side)
-             if (project_option.eq.12) then ! pressure extrapolation
+             if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
               ! do nothing (all bcs are Neumann)
              else if &
                (project_option_singular_possibleF(project_option).eq.1) then
@@ -9183,7 +9184,7 @@ END SUBROUTINE SIMP
         print *,"nsolve invalid"
         stop
        endif
-       if (project_option.eq.3) then
+       if (project_option.eq.SOLVETYPE_VISC) then
         print *,"fort_sumdot_ones should not be called for viscosity"
         stop
         if (nsolve.eq.SDIM) then
@@ -9311,7 +9312,7 @@ END SUBROUTINE SIMP
              ! do nothing
             else if ((side.eq.1).or.(side.eq.2)) then
              local_bc=presbc(dir_local,side)
-             if (project_option.eq.12) then ! pressure extrapolation
+             if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
               ! do nothing (all bcs are Neumann)
              else if &
                (project_option_singular_possibleF(project_option).eq.1) then
@@ -9446,7 +9447,7 @@ END SUBROUTINE SIMP
         print *,"nsolve invalid"
         stop
        endif
-       if (project_option.eq.3) then
+       if (project_option.eq.SOLVETYPE_VISC) then
         if (nsolve.eq.SDIM) then
          ! do nothing
         else
@@ -9595,7 +9596,7 @@ END SUBROUTINE SIMP
              ! do nothing
             else if ((side.eq.1).or.(side.eq.2)) then
              local_bc=presbc(dir_local,side)
-             if (project_option.eq.12) then ! pressure extrapolation
+             if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
               ! do nothing (all bcs are Neumann)
              else if &
                (project_option_singular_possibleF(project_option).eq.1) then
@@ -11288,10 +11289,10 @@ END SUBROUTINE SIMP
            print *,"nsolve, or velcomp invalid"
            stop
           endif
-         else if ((project_option.eq.2).or. & ! thermal diffusion
-                  ((project_option.ge.100).and. & ! species
-                   (project_option.lt.100+num_species_var)).or. &
-                  (project_option.eq.200)) then ! smoothing
+         else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
+                  ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
+                   (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. &
+                  (project_option.eq.SOLVETYPE_SMOOTH)) then ! smoothing
           if ((nsolve.eq.1).and. &
               (velcomp.eq.0)) then
            veldir=1
@@ -11300,7 +11301,7 @@ END SUBROUTINE SIMP
            print *,"nsolve,or velcomp invalid"
            stop
           endif
-         else if (project_option.eq.3) then ! viscosity
+         else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
           if ((nsolve.eq.SDIM).and. &
               (velcomp.ge.0).and. &
               (velcomp.lt.SDIM)) then
