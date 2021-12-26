@@ -12177,8 +12177,6 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
  } else
   amrex::Error("invert_gravity invalid");
 
- int scomp_pres=AMREX_SPACEDIM;
-
  for (int im=0;im<nmat;im++) {
 
   if (DrhoDT[im]==0.0) {
@@ -12221,7 +12219,7 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
     int bfact=parent->Space_blockingFactor(level);
 
     const Real* xlo = grid_loc[gridno].lo();
-    Vector<int> presbc=getBCArray(State_Type,gridno,scomp_pres,1);
+    Vector<int> presbc=getBCArray(State_Type,gridno,STATECOMP_PRES,1);
     FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
     FArrayBox& masknbrfab=(*localMF[MASK_NBR_MF])[mfi];
     FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
@@ -13669,8 +13667,7 @@ NavierStokes::level_phase_change_convertALL() {
        // spectral_override==0 => always low order.
       ns_level.avgDown(LS_Type,0,nmat,0);
       ns_level.MOFavgDown();
-      int scomp_den=(AMREX_SPACEDIM+1);
-      ns_level.avgDown(State_Type,scomp_den,num_state_material*nmat,1);
+      ns_level.avgDown(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
      } // ilev=finest_level ... level
 
      if (i_phase_change+1<n_phase_change) {
@@ -17128,8 +17125,7 @@ NavierStokes::split_scalar_advection() {
   MOFavgDown();
      // velocity and pressure
   avgDown(State_Type,0,(AMREX_SPACEDIM+1),1);
-  int scomp_den=(AMREX_SPACEDIM+1);
-  avgDown(State_Type,scomp_den,num_state_material*nmat,1);
+  avgDown(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
   if ((num_materials_viscoelastic>=1)&&
       (num_materials_viscoelastic<=nmat)) {
     // spectral_override==0 => always low order
@@ -22846,12 +22842,10 @@ NavierStokes::post_init_state () {
   amrex::Error("post_init_pressure_solve or is_zalesak() invalid");
  } 
 
- int scomp_pres=AMREX_SPACEDIM;
- int scomp_den=(AMREX_SPACEDIM+1);
  for (int ilev=finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.avgDown(State_Type,scomp_pres,1,1);
-  ns_level.avgDown(State_Type,scomp_den,num_state_material*nmat,1);
+  ns_level.avgDown(State_Type,STATECOMP_PRES,1,1);
+  ns_level.avgDown(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
  } // ilev
 
  delete_array(MASKCOEF_MF);

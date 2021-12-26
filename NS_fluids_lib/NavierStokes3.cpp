@@ -490,8 +490,7 @@ void NavierStokes::nonlinear_advection() {
      // spectral_override==1 => order derived from "enable_spectral"
     avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
      // "state" (all materials)
-    int scomp_den=(AMREX_SPACEDIM+1);
-    avgDownALL(State_Type,scomp_den,num_state_material*nmat,1);
+    avgDownALL(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=nmat)) {
      avgDownALL_TENSOR();
@@ -1065,8 +1064,7 @@ Real NavierStokes::advance(Real time,Real dt) {
     // velocity and pressure
    avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
     // "state" (all materials)
-   int scomp_den=(AMREX_SPACEDIM+1);
-   avgDownALL(State_Type,scomp_den,num_state_material*nmat,1);
+   avgDownALL(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
     // expected "DIV" 
    avgDownALL(DIV_Type,0,1,1);
 
@@ -2140,8 +2138,7 @@ void NavierStokes::SEM_advectALL(int source_term) {
     } // ilev=finest_level ... level
 
     avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
-    int scomp_den=(AMREX_SPACEDIM+1);
-    avgDownALL(State_Type,scomp_den,num_state_material*nmat,1);
+    avgDownALL(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
 
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
@@ -2775,8 +2772,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         NavierStokes& ns_level=getLevel(ilev);
         ns_level.avgDown(LS_Type,0,nmat,0);
         ns_level.MOFavgDown();
-        int scomp_den=(AMREX_SPACEDIM+1);
-        ns_level.avgDown(State_Type,scomp_den,num_state_material*nmat,1);
+        ns_level.avgDown(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
        }  // ilev=finest_level ... level  
 
        if (1==0) {
@@ -2863,10 +2859,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       // velocity and pressure
     avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
 
-    int scomp_den=(AMREX_SPACEDIM+1);
-
      // den,denA,(total E)/rho,temp,pres,...
-    avgDownALL(State_Type,scomp_den,num_state_material*nmat,1);  
+    avgDownALL(State_Type,STATECOMP_STATES,num_state_material*nmat,1);  
     debug_memory();
 
     double start_phys_time=ParallelDescriptor::second();
@@ -7504,14 +7498,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
      bcpres_array[ibase+j]=pbc;
 
      if (project_option_singular_possible(project_option)==1) {
-
-      if (project_option==PRESEXTRAP) { 
-       // do nothing
-      } else if (project_option_singular_possible(project_option)==1) {
-       // do nothing
-      } else
-       amrex::Error("project_option became corrupt");
-
+      // do nothing
      } else if (project_option_singular_possible(project_option)==0) {
       // do nothing
      } else
@@ -7524,10 +7511,10 @@ void NavierStokes::allocate_FACE_WEIGHT(
  } // gridno
 
  int GFM_flag=0;
- int adjust_temperature=-1;  // adjust STATECOMP_FACEHEAT
+ int adjust_temperature=-1;  // adjust FACECOMP_FACEHEAT
  int nten=num_interfaces;
 
-  // adjust STATECOMP_FACEHEAT if thermal diffusion
+  // adjust FACECOMP_FACEHEAT if thermal diffusion
   // and phase change using sharp interface method.
  if (project_option==SOLVETYPE_HEAT) { 
 
@@ -7596,21 +7583,21 @@ void NavierStokes::allocate_FACE_WEIGHT(
  } // dir
  new_localMF(OFF_DIAG_CHECK_MF,nsolve,0,-1);
 
- int local_face_index=STATECOMP_FACEDEN;  // 1/rho
+ int local_face_index=FACECOMP_FACEDEN;  // 1/rho
  if (project_option_projection(project_option)==1) {
-  local_face_index=STATECOMP_FACEDEN;  // 1/rho
+  local_face_index=FACECOMP_FACEDEN;  // 1/rho
  } else if (project_option==PRESEXTRAP) { 
    // 1/rho (only used in eval_face_coeff for sanity check purposes)
-  local_face_index=STATECOMP_FACEDEN;  
+  local_face_index=FACECOMP_FACEDEN;  
  } else if (project_option==SOLVETYPE_HEAT) {
-  local_face_index=STATECOMP_FACEHEAT; 
+  local_face_index=FACECOMP_FACEHEAT; 
  } else if (project_option==SOLVETYPE_VISC) {
-  local_face_index=STATECOMP_FACEVISC; 
+  local_face_index=FACECOMP_FACEVISC; 
  } else if ((project_option>=SOLVETYPE_SPEC)&&
             (project_option<SOLVETYPE_SPEC+num_species_var)) { // rho D
-  local_face_index=STATECOMP_FACESPECIES+project_option-SOLVETYPE_SPEC;
+  local_face_index=FACECOMP_FACESPECIES+project_option-SOLVETYPE_SPEC;
  } else if (project_option==SOLVETYPE_SMOOTH) {
-  local_face_index=STATECOMP_SMOOTHING;
+  local_face_index=FACECOMP_FACESMOOTH;
  } else
   amrex::Error("project_option invalid allocate_FACE_WEIGHT");
 
@@ -8006,8 +7993,6 @@ void NavierStokes::overwrite_outflow() {
  
  bool use_tiling=ns_tiling;
 
- int scomp_pres=AMREX_SPACEDIM;
-
  const Real* dx = geom.CellSize();
  const Real* prob_lo   = geom.ProbLo();
  const Real* prob_hi   = geom.ProbHi();
@@ -8041,7 +8026,7 @@ void NavierStokes::overwrite_outflow() {
     FArrayBox& vel=U_new[mfi];
     FArrayBox& velmac=Umac_new[mfi];
  
-    Vector<int> presbc=getBCArray(State_Type,gridno,scomp_pres,1);
+    Vector<int> presbc=getBCArray(State_Type,gridno,STATECOMP_PRES,1);
 
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -9469,14 +9454,13 @@ void NavierStokes::multiphase_project(int project_option) {
   // do nothing
  } else if ((project_option>=SOLVETYPE_SPEC)&&
 	    (project_option<SOLVETYPE_SPEC+num_species_var)) { 
-  // do nothing
+  override_enable_spectral(0); // always low order
  } else if (project_option==SOLVETYPE_SMOOTH) { 
   override_enable_spectral(0); // always low order
  } else
   amrex::Error("project_option invalid43");
 
  int energyflag=0;
- int scomp_den=(AMREX_SPACEDIM+1);
 
  if (project_option_momeqn(project_option)==1) {
   //do nothing
@@ -9939,8 +9923,7 @@ void NavierStokes::multiphase_project(int project_option) {
   } else if (project_option_projection(project_option)==1) {
 
    if ((project_option==SOLVETYPE_PRES)|| 
-       (project_option==SOLVETYPE_PRESCOR)|| 
-       (project_option==SOLVETYPE_INITPROJ)) {  // initial_project
+       (project_option==SOLVETYPE_PRESCOR)) {
     // do nothing
    } else
     amrex::Error("project_option invalid");
@@ -11630,7 +11613,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
       // velocity and pressure
     ns_level.avgDown(State_Type,0,(AMREX_SPACEDIM+1),1);
-    ns_level.avgDown(State_Type,scomp_den,num_state_material*nmat,1);
+    ns_level.avgDown(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
 
    } else if (project_option==SOLVETYPE_INITPROJ) {
     ns_level.avgDown(State_Type,0,AMREX_SPACEDIM,1);
@@ -11689,8 +11672,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
  override_enable_spectral(save_enable_spectral);
 
-  // project_option tells whether pressure (0,1), 
-  // temperature (2), velocity (3,4,5), or species.
  cpp_overridepbc(0,project_option);
 
  if (project_option==PRESEXTRAP) { 
@@ -13356,8 +13337,7 @@ void NavierStokes::zalesakVEL() {
  const int* domhi = domain.hiVect();
 
  MultiFab& U_new=get_new_data(State_Type,slab_step+1);
- int scomp_pres=AMREX_SPACEDIM;
- U_new.setVal(0.0,scomp_pres,1,1);
+ U_new.setVal(0.0,STATECOMP_PRES,1,1);
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
