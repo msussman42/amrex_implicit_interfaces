@@ -344,12 +344,8 @@ void NavierStokes::viscous_boundary_fluxes(
 
   resize_metrics(1);
  
-   // den,T
-  int dcomp=(AMREX_SPACEDIM+1);
-  int tcomp=dcomp+1;
-
   Vector<int> temp_dombc(2*AMREX_SPACEDIM);
-  const BCRec& descbc = get_desc_lst()[State_Type].getBC(tcomp);
+  const BCRec& descbc = get_desc_lst()[State_Type].getBC(STATECOMP_STATES+1);
   const int* b_rec=descbc.vect();
   for (int m=0;m<2*AMREX_SPACEDIM;m++)
    temp_dombc[m]=b_rec[m];
@@ -395,7 +391,7 @@ void NavierStokes::viscous_boundary_fluxes(
     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
     Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
-    Vector<int> tempbc=getBCArray(State_Type,gridno,tcomp,1);
+    Vector<int> tempbc=getBCArray(State_Type,gridno,STATECOMP_STATES+1,1);
 
     int tid_current=0;
 #ifdef _OPENMP

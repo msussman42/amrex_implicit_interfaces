@@ -214,8 +214,6 @@ namespace amrex{
 
 #define CELL_VELOCITY_MF 200
 
-// nfluxSEM=sdim + 1
-// nstate_SDC= nfluxSEM + 1 (thermal conduction) + sdim (viscosity) 
 #define spectralF_MF 201
 #define spectralF_GP_MF 202
 
@@ -1590,8 +1588,6 @@ protected:
 
     static int profile_debug;
 
-    static int nfluxSEM;
-    static int nstate_SDC;
     static int ns_time_order;
      // before: get_old_data  now: get_new_data(slab_step)
      // before: get_new_data  now: get_new_data(slab_step+1)

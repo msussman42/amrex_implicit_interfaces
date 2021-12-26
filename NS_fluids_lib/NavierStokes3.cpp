@@ -650,9 +650,8 @@ void NavierStokes::allocate_SDC() {
      (enable_spectral==1)||   // spectral in space and time
      (enable_spectral==2)) {  // spectral in space only
 
-   // I-scheme,thermal conduction, viscosity
   if (localMF_grow[stableF_MF]==-1) {
-   new_localMF(stableF_MF,nstate_SDC*ns_time_order,0,-1);
+   new_localMF(stableF_MF,NSTATE_SDC*ns_time_order,0,-1);
   } else
    amrex::Error("localMF_grow[stableF_MF] invalid");
 
@@ -660,7 +659,7 @@ void NavierStokes::allocate_SDC() {
    new_localMF(stableF_GP_MF+dir,ns_time_order,0,dir);
 
   if (localMF_grow[spectralF_MF]==-1) {
-   new_localMF(spectralF_MF,nstate_SDC*(ns_time_order+1),0,-1);
+   new_localMF(spectralF_MF,NSTATE_SDC*(ns_time_order+1),0,-1);
   } else
    amrex::Error("localMF_grow[spectralF_MF] invalid");
 
@@ -668,7 +667,7 @@ void NavierStokes::allocate_SDC() {
    new_localMF(spectralF_GP_MF+dir,(ns_time_order+1),0,dir);
 
   if (localMF_grow[delta_MF]==-1) {
-   new_localMF(delta_MF,nstate_SDC*ns_time_order,0,-1);
+   new_localMF(delta_MF,NSTATE_SDC*ns_time_order,0,-1);
   } else
    amrex::Error("localMF_grow[delta_MF] invalid");
 
@@ -927,7 +926,7 @@ void NavierStokes::init_delta_SDC() {
      (enable_spectral==2)) {  // spectral in space only
 
   if (SDC_outer_sweeps==0) {
-   setVal_localMF(delta_MF,0.0,0,nstate_SDC*ns_time_order,0);
+   setVal_localMF(delta_MF,0.0,0,NSTATE_SDC*ns_time_order,0);
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
     setVal_localMF(delta_GP_MF+dir,0.0,0,ns_time_order,0);
   } else if ((SDC_outer_sweeps>0)&&
@@ -936,19 +935,19 @@ void NavierStokes::init_delta_SDC() {
   } else
    amrex::Error("SDC_outer_sweeps invalid");
 
-  setVal_localMF(stableF_MF,0.0,0,nstate_SDC*ns_time_order,0);
+  setVal_localMF(stableF_MF,0.0,0,NSTATE_SDC*ns_time_order,0);
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
    setVal_localMF(stableF_GP_MF+dir,0.0,0,ns_time_order,0);
 
   int scomp=0;
-  int ncomp=nstate_SDC*(ns_time_order+1);
+  int ncomp=NSTATE_SDC*(ns_time_order+1);
   int scompGP=0;
   int ncompGP=ns_time_order+1;
 
   if ((SDC_outer_sweeps>0)&&
       (SDC_outer_sweeps<ns_time_order)) {
    // do not zap F(t^n) data.
-   scomp=nstate_SDC;
+   scomp=NSTATE_SDC;
    ncomp-=scomp;
    scompGP=1;
    ncompGP-=scompGP;
@@ -1870,9 +1869,9 @@ void NavierStokes::init_splitting_force_SDC() {
    int LOncomp=LOfab.nComp();
    int delta_ncomp=deltafab.nComp();
 
-   if ((HOncomp!=(ns_time_order+1)*nstate_SDC)||
-       (LOncomp!=ns_time_order*nstate_SDC)||
-       (delta_ncomp!=ns_time_order*nstate_SDC))
+   if ((HOncomp!=(ns_time_order+1)*NSTATE_SDC)||
+       (LOncomp!=ns_time_order*NSTATE_SDC)||
+       (delta_ncomp!=ns_time_order*NSTATE_SDC))
     amrex::Error("HOncomp, LOncomp, or delta_ncomp invalid");
 
    int tid_current=ns_thread();
@@ -1880,13 +1879,12 @@ void NavierStokes::init_splitting_force_SDC() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    //declared in: GODUNOV_3D.F90
    fort_sdc_time_quad(
     &HOncomp,
     &LOncomp,
     &delta_ncomp,
     &nstate,
-    &nfluxSEM,
-    &nstate_SDC,
     &nmat,
     xlo,dx,
     deltafab.dataPtr(),
@@ -1947,14 +1945,13 @@ void NavierStokes::init_splitting_force_SDC() {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+     //declared in: GODUNOV_3D.F90
     fort_sdc_time_quad_face(
      &dir,
      &HOncomp,
      &LOncomp,
      &delta_ncomp,
      &nstate,
-     &nfluxSEM,
-     &nstate_SDC,
      &nmat,
      xlo,dx,
      deltafab.dataPtr(),
@@ -2078,12 +2075,12 @@ void NavierStokes::SEM_advectALL(int source_term) {
      ns_level.getState_localMF(VELADVECT_MF,1,0,
       AMREX_SPACEDIM,advect_time_slab); 
      for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-      ns_level.new_localMF(AMRSYNC_PRES_MF+dir,nfluxSEM,0,dir);
-      ns_level.setVal_localMF(AMRSYNC_PRES_MF+dir,1.0e+40,0,nfluxSEM,0);
-      ns_level.new_localMF(CONSERVE_FLUXES_MF+dir,nfluxSEM,0,dir);
-      ns_level.setVal_localMF(CONSERVE_FLUXES_MF+dir,1.0e+40,0,nfluxSEM,0);
-      ns_level.new_localMF(COARSE_FINE_FLUX_MF+dir,nfluxSEM,0,dir);
-      ns_level.setVal_localMF(COARSE_FINE_FLUX_MF+dir,1.0e+40,0,nfluxSEM,0);
+      ns_level.new_localMF(AMRSYNC_PRES_MF+dir,NFLUXSEM,0,dir);
+      ns_level.setVal_localMF(AMRSYNC_PRES_MF+dir,1.0e+40,0,NFLUXSEM,0);
+      ns_level.new_localMF(CONSERVE_FLUXES_MF+dir,NFLUXSEM,0,dir);
+      ns_level.setVal_localMF(CONSERVE_FLUXES_MF+dir,1.0e+40,0,NFLUXSEM,0);
+      ns_level.new_localMF(COARSE_FINE_FLUX_MF+dir,NFLUXSEM,0,dir);
+      ns_level.setVal_localMF(COARSE_FINE_FLUX_MF+dir,1.0e+40,0,NFLUXSEM,0);
      } // dir=0..sdim-1
      ns_level.resize_levelsetLO(2,LEVELPC_MF);
      ns_level.VOF_Recon_resize(1,SLOPE_RECON_MF);
@@ -12429,7 +12426,7 @@ void NavierStokes::veldiffuseALL() {
 
    // HOFAB=-div k grad T 
    // Tnew=Tnew-(1/(rho cv))(int (HOFAB) - dt (LOFAB))
-   // call to fort_semdeltaforce with dcomp=slab_step*nstate_SDC+nfluxSEM
+   // call to fort_semdeltaforce with dcomp=slab_step*NSTATE_SDC+SEMDIFFUSE_T
  if ((SDC_outer_sweeps>0)&&
      (SDC_outer_sweeps<ns_time_order)&&
      (divu_outer_sweeps+1==num_divu_outer_sweeps)) {

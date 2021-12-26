@@ -30996,7 +30996,7 @@ end subroutine initialize2d
           endif
 
           if (dir.eq.0) then
-           tcomp=(SDIM+1)+ &
+           tcomp=STATECOMP_STATES+ &
             (im-1)*num_state_material+2
            Snew(D_DECL(i,j,k),tcomp)= &
             Snew(D_DECL(i,j,k),tcomp)+ &

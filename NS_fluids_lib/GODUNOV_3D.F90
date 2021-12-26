@@ -6320,8 +6320,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (nstate.ne.(SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
@@ -6579,8 +6578,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (nstate.ne.(SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
@@ -6819,8 +6817,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (nstate.ne.(SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
@@ -7006,8 +7003,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (nstate.ne.(SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
@@ -7165,8 +7161,6 @@ stop
          ! rhoinverse is 1/den
       subroutine fort_semdeltaforce( &
        nstate, &
-       nfluxSEM, &
-       nstate_SDC, &
        nmat, &
        project_option, &
        xlo,dx,  &
@@ -7187,8 +7181,6 @@ stop
 
 
       INTEGER_T, intent(in) :: nmat,nstate
-      INTEGER_T, intent(in) :: nfluxSEM
-      INTEGER_T, intent(in) :: nstate_SDC
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: level
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
@@ -7203,7 +7195,7 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in),target :: deltafab(DIMV(deltafab),nstate_SDC)
+      REAL_T, intent(in),target :: deltafab(DIMV(deltafab),NSTATE_SDC)
       REAL_T, pointer :: deltafab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
@@ -7230,8 +7222,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (nstate.ne.(SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
@@ -7239,17 +7230,6 @@ stop
        ! do nothing
       else
        print *,"dt invalid"
-       stop
-      endif
-      if (nfluxSEM.ne.SDIM+1) then
-       print *,"nfluxSEM invalid sem delta force"
-       stop
-      endif
-       ! (1) I scheme
-       ! (2) temperature conduction
-       ! (3) viscosity
-      if (nstate_SDC.ne.nfluxSEM+1+SDIM) then
-       print *,"nstate_SDC invalid"
        stop
       endif
       if ((project_option.eq.SOLVETYPE_HEAT).or. &
@@ -7294,7 +7274,7 @@ stop
          isrc=1
 
          do im=1,nmat 
-          idst=(SDIM+1)+ &
+          idst=STATECOMP_STATES+ &
            (im-1)*num_state_material+2
           velnew(D_DECL(i,j,k),idst)= &
            velnew(D_DECL(i,j,k),idst)- &
@@ -7463,8 +7443,6 @@ stop
        update_spectral, &
        update_stable, &
        nstate, &
-       nfluxSEM, &
-       nstate_SDC, &
        nmat, &
        project_option, &
        xlo,dx,  &
@@ -7487,8 +7465,6 @@ stop
       INTEGER_T, intent(in) :: update_spectral
       INTEGER_T, intent(in) :: update_stable
       INTEGER_T, intent(in) :: nmat,nstate
-      INTEGER_T, intent(in) :: nfluxSEM
-      INTEGER_T, intent(in) :: nstate_SDC
       INTEGER_T, intent(in) :: project_option,level
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(divfab)
@@ -7504,9 +7480,9 @@ stop
       REAL_T, pointer :: divfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: hoopfab(DIMV(hoopfab),nsolve)
       REAL_T, pointer :: hoopfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout),target :: HOfab(DIMV(HOfab),nstate_SDC)
+      REAL_T, intent(inout),target :: HOfab(DIMV(HOfab),NSTATE_SDC)
       REAL_T, pointer :: HOfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout),target :: LOfab(DIMV(LOfab),nstate_SDC)
+      REAL_T, intent(inout),target :: LOfab(DIMV(LOfab),NSTATE_SDC)
       REAL_T, pointer :: LOfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
@@ -7536,24 +7512,12 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (nstate.ne.(SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
       if (dt.ne.one) then
        print *,"dt invalid"
-       stop
-      endif
-      if (nfluxSEM.ne.SDIM+1) then
-       print *,"nfluxSEM invalid update sem force"
-       stop
-      endif
-       ! (1) I scheme
-       ! (2) thermal conductivity
-       ! (3) viscosity
-      if (nstate_SDC.ne.nfluxSEM+1+SDIM) then
-       print *,"nstate_SDC invalid"
        stop
       endif
       if ((project_option.eq.SOLVETYPE_HEAT).or. & !thermal conductivity
@@ -7599,7 +7563,7 @@ stop
            endif
            ! I-scheme,thermal conduction,viscosity (-div(2 mu D)-force)
            ! HOfab=-div 2 mu D-HOOP_FORCE_MARK_MF
-           HOfab(D_DECL(i,j,k),nfluxSEM+1+veldir)= &
+           HOfab(D_DECL(i,j,k),SEMDIFFUSE_U+veldir)= &
             divfab(D_DECL(i,j,k),veldir)- &
             hoopfab(D_DECL(i,j,k),veldir)
           else if (update_spectral.eq.0) then
@@ -7616,7 +7580,7 @@ stop
            endif
            ! I-scheme,thermal conduction,viscosity (-div(2 mu D)-force)
            ! LOfab=-div 2 mu D-HOOP_FORCE_MARK_MF
-           LOfab(D_DECL(i,j,k),nfluxSEM+1+veldir)= &
+           LOfab(D_DECL(i,j,k),SEMDIFFUSE_U+veldir)= &
             divfab(D_DECL(i,j,k),veldir)- &
             hoopfab(D_DECL(i,j,k),veldir)
           else if (update_stable.eq.0) then
@@ -7639,7 +7603,7 @@ stop
 
           ! I-scheme,thermal conduction,viscosity
           ! HOfab=-div k grad T
-          HOfab(D_DECL(i,j,k),nfluxSEM+1)= &
+          HOfab(D_DECL(i,j,k),SEMDIFFUSE_T+1)= &
            divfab(D_DECL(i,j,k),velcomp)
          else if (update_spectral.eq.0) then
           ! do nothing
@@ -7656,7 +7620,7 @@ stop
 
           ! I-scheme,thermal conduction,viscosity
           ! LOfab=-div k grad T
-          LOfab(D_DECL(i,j,k),nfluxSEM+1)= &
+          LOfab(D_DECL(i,j,k),SEMDIFFUSE_T+1)= &
            divfab(D_DECL(i,j,k),velcomp)
          else if (update_stable.eq.0) then
           ! do nothing
@@ -7881,8 +7845,6 @@ stop
        LOncomp, &
        delta_ncomp, &
        nstate, &
-       nfluxSEM, &
-       nstate_SDC, &
        nmat, &
        xlo,dx,  &
        deltafab,DIMS(deltafab), &
@@ -7904,8 +7866,6 @@ stop
       INTEGER_T, intent(in) :: LOncomp
       INTEGER_T, intent(in) :: delta_ncomp
       INTEGER_T, intent(in) :: nmat,nstate
-      INTEGER_T, intent(in) :: nfluxSEM
-      INTEGER_T, intent(in) :: nstate_SDC
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
@@ -7951,8 +7911,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (nstate.ne.(SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
@@ -7960,24 +7919,15 @@ stop
        print *,"dt invalid"
        stop
       endif
-      if (nfluxSEM.ne.SDIM+1) then
-       print *,"nfluxSEM invalid sdc time quad:",nfluxSEM
-       stop
-      endif 
-       ! I-scheme, thermal conduction, viscosity (-div (2 mu D)-force)
-      if (nstate_SDC.ne.nfluxSEM+1+SDIM) then
-       print *,"nstate_SDC invalid"
-       stop
-      endif
-      if (HOncomp.ne.nstate_SDC*(bfact_time_order+1)) then
+      if (HOncomp.ne.NSTATE_SDC*(bfact_time_order+1)) then
        print *,"HOncomp invalid"
        stop
       endif
-      if (LOncomp.ne.nstate_SDC*bfact_time_order) then
+      if (LOncomp.ne.NSTATE_SDC*bfact_time_order) then
        print *,"LOncomp invalid"
        stop
       endif
-      if (delta_ncomp.ne.nstate_SDC*bfact_time_order) then
+      if (delta_ncomp.ne.NSTATE_SDC*bfact_time_order) then
        print *,"delta_ncomp invalid"
        stop
       endif
@@ -8043,8 +7993,8 @@ stop
        endif
 
        do slab_step=1,bfact_time_order
-        ibase=(slab_step-1)*nstate_SDC
-        do icomp=1,nstate_SDC
+        ibase=(slab_step-1)*NSTATE_SDC
+        do icomp=1,NSTATE_SDC
          deltafab(D_DECL(i,j,k),ibase+icomp)=zero
         enddo
        enddo
@@ -8056,12 +8006,12 @@ stop
 
         do slab_step=1,bfact_time_order
 
-         ibase=(slab_step-1)*nstate_SDC
+         ibase=(slab_step-1)*NSTATE_SDC
 
-         do icomp=1,nstate_SDC
+         do icomp=1,NSTATE_SDC
            force_integral=zero
            do jstencil=0,bfact_time_order
-            ibase2=jstencil*nstate_SDC+icomp
+            ibase2=jstencil*NSTATE_SDC+icomp
             force_integral=force_integral+ &
              GQwsQUAD(jstencil,slab_step)* &
              HOfab(D_DECL(i,j,k),ibase2)
@@ -8071,7 +8021,7 @@ stop
            deltafab(D_DECL(i,j,k),ibase+icomp)= &
             force_integral*dt_sub/two- &
             dt_sub*LOfab(D_DECL(i,j,k),ibase+icomp)
-         enddo ! icomp=1..nstate_SDC
+         enddo ! icomp=1..NSTATE_SDC
 
         enddo ! slab_step
 
@@ -8093,8 +8043,6 @@ stop
        LOncomp, &
        delta_ncomp, &
        nstate, &
-       nfluxSEM, &
-       nstate_SDC, &
        nmat, &
        xlo,dx,  &
        deltafab,DIMS(deltafab), &
@@ -8117,8 +8065,6 @@ stop
       INTEGER_T, intent(in) :: LOncomp
       INTEGER_T, intent(in) :: delta_ncomp
       INTEGER_T, intent(in) :: nmat,nstate
-      INTEGER_T, intent(in) :: nfluxSEM
-      INTEGER_T, intent(in) :: nstate_SDC
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
@@ -8164,22 +8110,12 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (nstate.ne.(SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
       if (dt.le.zero) then
        print *,"dt invalid"
-       stop
-      endif
-      if (nfluxSEM.ne.SDIM+1) then
-       print *,"nfluxSEM invalid sdc time quad face: ",nfluxSEM
-       stop
-      endif
-       ! I-scheme, thermal conductivity, viscosity (-div(2 mu D)-force)
-      if (nstate_SDC.ne.nfluxSEM+1+SDIM) then
-       print *,"nstate_SDC invalid:",nstate_SDC
        stop
       endif
       if (HOncomp.ne.(bfact_time_order+1)) then
@@ -9165,8 +9101,7 @@ stop
        print *,"bfact too small"
        stop
       endif
-      if (nstate.ne.(SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
@@ -9305,8 +9240,7 @@ stop
        print *,"bfact too small"
        stop
       endif
-      if (nstate.ne.(SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
@@ -11505,9 +11439,7 @@ stop
        print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
        stop
       endif
-      if (nstate.ne. &
-          (SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
@@ -11660,7 +11592,7 @@ stop
 
           heat_source_term=flux_sign*dt*over_cv*aface*heat_flux/local_vol
 
-          tcomp=(SDIM+1)+2
+          tcomp=STATECOMP_STATES+2
 
           Snew(D_DECL(i,j,k),tcomp)= &
            Snew(D_DECL(i,j,k),tcomp)+heat_source_term
@@ -20895,7 +20827,6 @@ stop
       REAL_T :: LS_RIGHT(nmat)
       REAL_T, target :: xsten(-3:3,SDIM)
       INTEGER_T nhalf
-      INTEGER_T nstate_test
       type(assimilate_parm_type) :: assimilate_parm
       type(assimilate_out_parm_type) :: assimilate_out_parm
       INTEGER_T cell_flag
@@ -20927,12 +20858,9 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      nstate_test=(SDIM+1)+ &
-        nmat*(num_state_material+ngeom_raw)+1
-      if (nstate.ne.nstate_test) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid in GODUNOV_3D.F90 "
        print *,"nstate=",nstate
-       print *,"nstate_test=",nstate_test
        stop
       endif
       if ((nparts.ge.0).and.(nparts.le.nmat)) then 
@@ -22138,8 +22066,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (nstate.ne.(SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
