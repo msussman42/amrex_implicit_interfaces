@@ -12803,7 +12803,7 @@ stop
 
               ibase=(im-1)*num_state_material
            
-               ! dendest is Snewfab.dataPtr(scomp_den) 
+               ! dendest is Snewfab.dataPtr(STATECOMP_STATES) 
 
               rho=dendest(D_DECL(i,j,k),ibase+1)
               TEMPERATURE=dendest(D_DECL(i,j,k),ibase+2)

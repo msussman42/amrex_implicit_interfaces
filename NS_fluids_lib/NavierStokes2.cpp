@@ -1872,12 +1872,11 @@ void NavierStokes::apply_cell_pressure_gradient(
  if (ncomp_check!=nsolve)
   amrex::Error("invalid ncomp");
 
- int scomp_den=(AMREX_SPACEDIM+1);
  int nden=nmat*num_state_material;
 
  int nvof=nmat*ngeom_raw;
  int nstate=S_new.nComp();
- if (nstate!=scomp_den+nden+nvof+1)
+ if (nstate!=SCOMP_NCOMP)
   amrex::Error("invalid ncomp in cell pressure gradient routine");
 
  //interpolate pressure from cell to MAC grid.
@@ -2137,7 +2136,7 @@ void NavierStokes::apply_cell_pressure_gradient(
 
    int ncomp_denold=presfab.nComp();
    int ncomp_veldest=Snewfab.nComp();
-   int ncomp_dendest=Snewfab.nComp()-scomp_den;
+   int ncomp_dendest=Snewfab.nComp()-STATECOMP_STATES;
 
    Real local_dt_slab=dt_slab;
    if (operation_flag_interp_macvel==103) {//103 (mac_vel->cell_vel)
@@ -2198,8 +2197,7 @@ void NavierStokes::apply_cell_pressure_gradient(
     ARLIM(divupfab.loVect()),ARLIM(divupfab.hiVect()),
     Snewfab.dataPtr(),
     ARLIM(Snewfab.loVect()),ARLIM(Snewfab.hiVect()), // veldest
-     // scomp_den=(AMREX_SPACEDIM+1);
-    Snewfab.dataPtr(scomp_den),
+    Snewfab.dataPtr(STATECOMP_STATES),
     ARLIM(Snewfab.loVect()),ARLIM(Snewfab.hiVect()), // dendest
     maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
@@ -4946,8 +4944,6 @@ void NavierStokes::make_physics_vars(int project_option) {
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- int scomp_pres=AMREX_SPACEDIM;
-
   // in: make_physics_vars
  allocate_physics_vars();
 
@@ -5098,7 +5094,7 @@ void NavierStokes::make_physics_vars(int project_option) {
    const Real* xlo = grid_loc[gridno].lo();
 
 // face_frac=0 if presbc<> interior or exterior dirichlet.
-   Vector<int> presbc=getBCArray(State_Type,gridno,scomp_pres,1);
+   Vector<int> presbc=getBCArray(State_Type,gridno,STATECOMP_PRES,1);
    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
    // mask=tag if not covered by level+1 or outside the domain.
@@ -9024,8 +9020,7 @@ MultiFab* NavierStokes::getStatePres(int ngrow,Real time) {
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- int scomp_pres=AMREX_SPACEDIM;
- MultiFab* mf=getState(ngrow,scomp_pres,1,time);
+ MultiFab* mf=getState(ngrow,STATECOMP_PRES,1,time);
  return mf;
 
 }  // subroutine getStatePres
@@ -9128,8 +9123,7 @@ void NavierStokes::scale_variables(int scale_flag) {
 
  nsolve=1;
 
- int scomp_pres=AMREX_SPACEDIM;
- S_new.mult(pres_factor,scomp_pres,nsolve,0);
+ S_new.mult(pres_factor,STATECOMP_PRES,nsolve,0);
 
   // DIV_new contains -dt (pnew-padv)/(rho c^2 dt^2) + MDOT_MF dt/vol
  DIV_new.mult(vel_factor,0,nsolve,0);
