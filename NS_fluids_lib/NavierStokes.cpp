@@ -5836,7 +5836,7 @@ NavierStokes::get_mm_scomp_solver(
 
   // u,v,w,p,den1,T1,...
   for (int im=0;im<nlist;im++) {
-   scomp[im]=(AMREX_SPACEDIM+1)+im*num_state_material+1;
+   scomp[im]=STATECOMP_STATES+im*num_state_material+1;
    ncomp[im]=1;
   }
   state_index=State_Type;
