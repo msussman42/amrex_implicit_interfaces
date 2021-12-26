@@ -829,7 +829,7 @@ stop
       if (1.eq.0) then
        if ((probtype.eq.26).and. &
            (axis_dir.eq.11).and. & ! BCG smooth test with periodic BC
-           (project_option.eq.3).and. &
+           (project_option.eq.SOLVETYPE_VISC).and. &
            (SDIM.eq.2)) then
          ! u=-f_sinx * f_cosy
          ! v=f_cosx  * f_siny
@@ -1023,7 +1023,7 @@ stop
          print *,"VOLTERM invalid"
          stop
         endif
-        if (project_option.eq.3) then
+        if (project_option.eq.SOLVETYPE_VISC) then
          CC_check=VOLTERM/dt
          if (abs(CC-CC_check).le.1.0D-10*CC_check) then
           ! do nothing
@@ -12904,11 +12904,11 @@ END SUBROUTINE Adist
 
        if (project_option_projectionF(project_option).eq.1) then
 
-        if (project_option.eq.0) then !regular pressure projection
+        if (project_option.eq.SOLVETYPE_PRES) then !regular pressure projection
          cc_group=cc
-        else if (project_option.eq.1) then ! initial projection
+        else if (project_option.eq.SOLVETYPE_INITPROJ) then ! initial projection
          cc_group=cc*cc_ice
-        else if (project_option.eq.11) then !FSI_material_exists final project
+        else if (project_option.eq.SOLVETYPE_PRESCOR) then 
          cc_group=cc*cc_ice
         else
          print *,"project_option invalid"
@@ -12960,7 +12960,7 @@ END SUBROUTINE Adist
          stop
         endif
 
-       else if (project_option.eq.12) then ! pressure extrapolation
+       else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
 
         if (nsolve.ne.1) then
          print *,"nsolve invalid for pressure extrapolation"
@@ -13011,9 +13011,9 @@ END SUBROUTINE Adist
          stop
         endif
 
-       else if ((project_option.eq.2).or. & ! temperature
-                ((project_option.ge.100).and. & ! species
-                 (project_option.lt.100+num_species_var))) then
+       else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! temperature
+                ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
+                 (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
 
         if (nsolve.ne.1) then
          print *,"nsolve invalid for temperature/species"
@@ -13049,7 +13049,7 @@ END SUBROUTINE Adist
          print *,"project_option=",project_option
          stop
         endif
-       else if (project_option.eq.200) then ! smoothing 
+       else if (project_option.eq.SOLVETYPE_SMOOTH) then ! smoothing 
         if (nsolve.ne.1) then
          print *,"nsolve invalid for smoothing"
          stop
@@ -13086,7 +13086,7 @@ END SUBROUTINE Adist
          stop
         endif
 
-       else if (project_option.eq.3) then ! viscosity
+       else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
         if (nsolve.ne.SDIM) then
          print *,"nsolve invalid for viscosity"
          stop
@@ -13455,7 +13455,7 @@ END SUBROUTINE Adist
         print *,"energyflag invalid"
         stop
        endif
-       if (project_option.ne.3) then
+       if (project_option.ne.SOLVETYPE_VISC) then
         print *,"project_option invalid"
         stop
        endif
@@ -15560,7 +15560,7 @@ END SUBROUTINE Adist
         print *,"energyflag invalid"
         stop
        endif
-       if (project_option.ne.3) then
+       if (project_option.ne.SOLVETYPE_VISC) then
         print *,"project_option invalid"
         stop
        endif
@@ -15600,26 +15600,26 @@ END SUBROUTINE Adist
          print *,"ncomp invalid2"
          stop
         endif
-       else if (project_option.eq.12) then ! extension project
+       else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
         print *,"extension project should be low order"
         stop
-       else if (project_option.eq.3) then ! viscosity
+       else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
         if (ncomp.ne.SDIM) then
          print *,"ncomp invalid3"
          stop
         endif
-       else if (project_option.eq.2) then ! thermal conduction
+       else if (project_option.eq.SOLVETYPE_HEAT) then ! thermal conduction
         if (ncomp.ne.1) then
          print *,"ncomp invalid4"
          stop
         endif
-       else if ((project_option.ge.100).and. &
-                (project_option.lt.100+num_species_var)) then
+       else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
         if (ncomp.ne.1) then
          print *,"ncomp invalid5"
          stop
         endif
-       else if (project_option.eq.200) then ! smoothing
+       else if (project_option.eq.SOLVETYPE_SMOOTH) then ! smoothing
         if (ncomp.ne.1) then
          print *,"ncomp invalid4"
          stop
@@ -16461,8 +16461,9 @@ END SUBROUTINE Adist
              endif
             endif
 
-             ! divu=-dt VOLTERM * div(k grad T)  project_option==2
-             ! divu=-dt VOLTERM * visc_coef div(2 mu D) project_option==3
+             ! divu=-dt VOLTERM * div(k grad T)  project_option==SOLVETYPE_HEAT
+             ! divu=-dt VOLTERM * visc_coef div(2 mu D) 
+             !   project_option==SOLVETYPE_VISC
              ! use_dt=1 dir=-1
              ! use_HO=1
              ! enable_spectral=1
@@ -25458,7 +25459,7 @@ end subroutine initialize2d
          print *,"homflag invalid in override pbc"
          stop
         endif
-       else if (project_option.eq.3) then ! viscosity
+       else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
         if (homflag.eq.0) then
          vel_homflag=0
         else if (homflag.eq.1) then
@@ -25467,7 +25468,7 @@ end subroutine initialize2d
          print *,"homflag invalid in override pbc 2"
          stop
         endif
-       else if (project_option.eq.2) then  ! temperature
+       else if (project_option.eq.SOLVETYPE_HEAT) then  ! temperature
         if (homflag.eq.0) then
          temp_homflag=0
         else if (homflag.eq.1) then
@@ -25476,7 +25477,7 @@ end subroutine initialize2d
          print *,"homflag invalid in override pbc 3"
          stop
         endif
-       else if (project_option.eq.200) then  ! smoothing, but used temp. var
+       else if (project_option.eq.SOLVETYPE_SMOOTH) then  
         if (homflag.eq.0) then
          temp_homflag=0
         else if (homflag.eq.1) then
@@ -25485,8 +25486,8 @@ end subroutine initialize2d
          print *,"homflag invalid in override pbc 3"
          stop
         endif
-       else if ((project_option.ge.100).and. &
-                (project_option.lt.100+num_species_var)) then
+       else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
         if (homflag.eq.0) then
          species_homflag=0
         else if (homflag.eq.1) then
@@ -26644,12 +26645,12 @@ end subroutine initialize2d
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
           growloMAC,growhiMAC,0,dir,4) 
 
-      if (project_option.eq.3) then ! viscosity
+      if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
        if (nsolve.ne.AMREX_SPACEDIM) then
         print *,"nsolve invalid"
         stop
        endif
-      else if (project_option.eq.2) then !thermal conduction
+      else if (project_option.eq.SOLVETYPE_HEAT) then !thermal conduction
        if (nsolve.ne.1) then
         print *,"nsolve invalid"
         stop
@@ -26659,9 +26660,9 @@ end subroutine initialize2d
        stop
       endif
       
-      if (project_option.eq.3) then ! viscosity
+      if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
        ! do nothing
-      else if (project_option.eq.2) then ! thermal conduction
+      else if (project_option.eq.SOLVETYPE_HEAT) then ! thermal conduction
 
        do im=1,nmat
 

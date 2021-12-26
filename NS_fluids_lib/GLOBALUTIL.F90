@@ -22816,16 +22816,16 @@ IMPLICIT NONE
 
 INTEGER_T, intent(in) :: project_option
 
- if ((project_option.eq.0).or. & ! regular project
-     (project_option.eq.1).or. & ! initial project
-     (project_option.eq.11).or.& ! FSI_material_exists (last project)
-     (project_option.eq.12).or.& ! pressure extrapolation
-     (project_option.eq.3)) then ! viscosity
+ if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
+     (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
+     (project_option.eq.SOLVETYPE_PRESCOR).or.& 
+     (project_option.eq.SOLVETYPE_PRESEXTRAP).or.& ! pressure extrapolation
+     (project_option.eq.SOLVETYPE_VISC)) then ! viscosity
   project_option_momeqnF=1
- else if ((project_option.eq.2).or. & ! thermal diffusion
-          ((project_option.ge.100).and. & ! species
-           (project_option.lt.100+num_species_var)).or. &
-          (project_option.eq.200)) then ! smooth temperature
+ else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
+          ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. &
+          (project_option.eq.SOLVETYPE_SMOOTH)) then ! smooth temperature
   project_option_momeqnF=0
  else
   print *,"project_option invalid"
@@ -22842,16 +22842,16 @@ IMPLICIT NONE
 
 INTEGER_T, intent(in) :: project_option
 
- if ((project_option.eq.0).or. & ! regular project
-     (project_option.eq.1).or. & ! initial project
-     (project_option.eq.11).or. & !FSI_material_exists (last project)
-     (project_option.eq.12)) then ! pressure extension
+ if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
+     (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
+     (project_option.eq.SOLVETYPE_PRESCOR).or. & 
+     (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extension
   project_option_singular_possibleF=1
- else if ((project_option.eq.2).or. & ! thermal diffusion
-          (project_option.eq.3).or. & ! viscosity
-          ((project_option.ge.100).and. &
-           (project_option.lt.100+num_species_var)).or. & !species
-          (project_option.eq.200)) then !smoothing
+ else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
+          (project_option.eq.SOLVETYPE_VISC).or. & ! viscosity
+          ((project_option.ge.SOLVETYPE_SPEC).and. &
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. & !species
+          (project_option.eq.SOLVETYPE_SMOOTH)) then !smoothing
   project_option_singular_possibleF=0
  else
   print *,"project_option invalid"
@@ -22867,16 +22867,16 @@ IMPLICIT NONE
 
 INTEGER_T, intent(in) :: project_option
 
- if ((project_option.eq.0).or. & ! regular project
-     (project_option.eq.1).or. & ! initial project
-     (project_option.eq.11).or. & ! FSI_material_exists (last project)
-     (project_option.eq.12)) then ! pressure extension
+ if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
+     (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
+     (project_option.eq.SOLVETYPE_PRESCOR).or. & 
+     (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extension
   project_option_olddata_neededF=0
- else if ((project_option.eq.2).or. & ! thermal diffusion
-          (project_option.eq.3).or. & ! viscosity
-          ((project_option.ge.100).and. &
-           (project_option.lt.100+num_species_var)).or. & !species
-          (project_option.eq.200)) then !smoothing
+ else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
+          (project_option.eq.SOLVETYPE_VISC).or. & ! viscosity
+          ((project_option.ge.SOLVETYPE_SPEC).and. &
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. & !species
+          (project_option.eq.SOLVETYPE_SMOOTH)) then !smoothing
   project_option_olddata_neededF=1
  else 
   print *,"project_option invalid"
@@ -22892,16 +22892,16 @@ IMPLICIT NONE
 
 INTEGER_T, intent(in) :: project_option
 
- if ((project_option.eq.0).or. &
-     (project_option.eq.1).or. &
-     (project_option.eq.12)) then ! pressure extrapolation
+ if ((project_option.eq.SOLVETYPE_PRES).or. &
+     (project_option.eq.SOLVETYPE_INITPROJ).or. &
+     (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extrapolation
   project_option_pressureF=1
- else if ((project_option.eq.11).or. & ! FSI_material_exists (last project)
-          (project_option.eq.2).or. &  ! temperature
-          (project_option.eq.3).or. &  ! viscosity
-          ((project_option.ge.100).and. &
-           (project_option.lt.100+num_species_var)).or. & ! species
-          (project_option.eq.200)) then ! smoothing of temperature
+ else if ((project_option.eq.SOLVETYPE_PRESCOR).or. & 
+          (project_option.eq.SOLVETYPE_HEAT).or. &  ! temperature
+          (project_option.eq.SOLVETYPE_VISC).or. &  ! viscosity
+          ((project_option.ge.SOLVETYPE_SPEC).and. &
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. & ! species
+          (project_option.eq.SOLVETYPE_SMOOTH)) then ! smoothing of temperature
   project_option_pressureF=0
  else
   print *,"project_option invalid"
@@ -22918,16 +22918,16 @@ IMPLICIT NONE
 
 INTEGER_T, intent(in) :: project_option
 
- if ((project_option.eq.0).or. & ! regular project
-     (project_option.eq.11).or. & !FSI_material_exists last project
-     (project_option.eq.12)) then ! pressure extrapolation
+ if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
+     (project_option.eq.SOLVETYPE_PRESCOR).or. & 
+     (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extrapolation
   project_option_needs_scalingF=1
- else if ((project_option.eq.1).or. & ! initial project
-          (project_option.eq.2).or. &  ! temperature
-          (project_option.eq.3).or. &  ! viscosity
-          ((project_option.ge.100).and. &
-           (project_option.lt.100+num_species_var)).or. & ! species
-          (project_option.eq.200)) then ! smoothing of temperature
+ else if ((project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
+          (project_option.eq.SOLVETYPE_HEAT).or. &  ! temperature
+          (project_option.eq.SOLVETYPE_VISC).or. &  ! viscosity
+          ((project_option.ge.SOLVETYPE_SPEC).and. &
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. & ! species
+          (project_option.eq.SOLVETYPE_SMOOTH)) then ! smoothing of temperature
   project_option_needs_scalingF=0
  else
   print *,"project_option invalid"
@@ -22944,16 +22944,16 @@ IMPLICIT NONE
 
 INTEGER_T, intent(in) :: project_option
 
- if ((project_option.eq.0).or. & ! regular project
-     (project_option.eq.11).or. & !FSI_material_exists last project
-     (project_option.eq.1)) then ! initial_project
+ if ((project_option.eq.SOLVETYPE_PRES).or. & 
+     (project_option.eq.SOLVETYPE_PRESCOR).or. & 
+     (project_option.eq.SOLVETYPE_INITPROJ)) then ! initial_project
   project_option_projectionF=1
- else if ((project_option.eq.12).or. & ! pressure extrapolation
-          (project_option.eq.2).or. &  ! temperature
-          (project_option.eq.3).or. &  ! viscosity
-          ((project_option.ge.100).and. &
-           (project_option.lt.100+num_species_var)).or. & ! species
-          (project_option.eq.200)) then ! smoothing of temperature
+ else if ((project_option.eq.SOLVETYPE_PRESEXTRAP).or. & 
+          (project_option.eq.SOLVETYPE_HEAT).or. &  ! temperature
+          (project_option.eq.SOLVETYPE_VISC).or. &  ! viscosity
+          ((project_option.ge.SOLVETYPE_SPEC).and. &
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. & ! species
+          (project_option.eq.SOLVETYPE_SMOOTH)) then ! smoothing of temperature
   project_option_projectionF=0
  else
   print *,"project_option invalid"

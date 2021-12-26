@@ -8442,8 +8442,8 @@ stop
        stop
       endif
 
-      if ((project_option.eq.0).or. &
-          (project_option.eq.1)) then
+      if ((project_option.eq.SOLVETYPE_PRES).or. &
+          (project_option.eq.SOLVETYPE_INITPROJ)) then
        ! do nothing
       else
        print *,"project_option invalid PHYSVARS"
@@ -10138,8 +10138,8 @@ stop
 
              if ((level.ge.0).and.(level.le.finest_level)) then
 
-              if ((project_option.eq.0).or. &
-                  (project_option.eq.1)) then
+              if ((project_option.eq.SOLVETYPE_PRES).or. &
+                  (project_option.eq.SOLVETYPE_INITPROJ)) then
 
                 ! curv_cellHT
                 ! curv_cellFD
@@ -10329,7 +10329,7 @@ stop
                 stop
                endif
 
-              else if (project_option.eq.11) then ! FSI_material_exists last
+              else if (project_option.eq.SOLVETYPE_PRESCOR) then 
                print *,"fort_init_physics_vars should not be called here"
                stop
               else
@@ -12095,7 +12095,7 @@ stop
            divu=zero
           else if (MSKDV.gt.zero) then
 
-            ! if project_option==0,
+            ! if project_option==SOLVETYPE_PRES,
             !  div (1/rho) grad p = div ustar/dt
             ! 
             ! AXR,AXL,AYR,AYL,AZR,AZL are face areas.
@@ -12114,8 +12114,9 @@ stop
            stop
           endif
 
-           ! divu=-dt VOLTERM * div(k grad T)  project_option==2
-           ! divu=-dt VOLTERM * visc_coef div(2 mu D) project_option==3
+           ! divu=-dt VOLTERM * div(k grad T)  project_option==SOLVETYPE_HEAT
+           ! divu=-dt VOLTERM * visc_coef div(2 mu D) 
+           !   project_option==SOLVETYPE_VISC
            ! use_dt=1 dir=-1
            ! use_HO=0
            ! uncoupled_viscosity=1
@@ -12771,7 +12772,7 @@ stop
         rhs(D_DECL(i,j,k),1)=zero
 
          ! update the total energy in compressible cells (regular project)
-        if (project_option.eq.0) then
+        if (project_option.eq.SOLVETYPE_PRES) then
 
          if (use_face_pres_cen.eq.0) then
 
@@ -12900,9 +12901,9 @@ stop
           stop
          endif
 
-        else if (project_option.eq.1) then
+        else if (project_option.eq.SOLVETYPE_INITPROJ) then
          ! do nothing if initial project
-        else if (project_option.eq.11) then !FSI_material_exists 2nd project
+        else if (project_option.eq.SOLVETYPE_PRESCOR) then 
          ! do nothing if rigid body project
         else
          print *,"project_option invalid edge pressure 5"
@@ -13234,7 +13235,7 @@ stop
       endif
 
       if (DO_SANITY_CHECK.eq.1) then
-       if ((project_option.eq.0).and. &
+       if ((project_option.eq.SOLVETYPE_PRES).and. &
            (operation_flag.eq.3)) then
         call CISL_projection(dt,divu_outer_sweeps+1)
         allocate(comparepface(fablo(1)-1:fabhi(1)+1,5))
@@ -13262,7 +13263,7 @@ stop
         deallocate(comparepface)
         deallocate(comparevelface)
         deallocate(comparestate)
-       endif ! project_option=0 dir=0
+       endif ! project_option==SOLVETYPE_PRES dir=0
       endif  ! do_sanity_check=true
  
       return
@@ -14544,7 +14545,7 @@ stop
               endif
 
               if (num_colors.eq.0) then
-               if (project_option.eq.11) then !FSI_material_exists last proj
+               if (project_option.eq.SOLVETYPE_PRESCOR) then 
                 print *,"project_option invalid"
                 stop
                endif
@@ -14874,7 +14875,7 @@ stop
            stop
           endif
 
-          if ((project_option.eq.1).or. &
+          if ((project_option.eq.SOLVETYPE_INITPROJ).or. &
               (COARSE_FINE_VELAVG.eq.1)) then
             ! at least 1 side is covered
            if ((mask_covered(1).eq.0).or. &
@@ -14887,8 +14888,8 @@ stop
             print *,"mask_covered invalid"
             stop
            endif
-          else if (((project_option.eq.0).or. &
-                    (project_option.eq.11)).and. &!FSI_material_exists last
+          else if (((project_option.eq.SOLVETYPE_PRES).or. &
+                    (project_option.eq.SOLVETYPE_PRESCOR)).and. &
                    (COARSE_FINE_VELAVG.eq.0)) then
            ! both sides are covered
            if ((mask_covered(1).eq.0).and. &
@@ -15812,16 +15813,16 @@ stop
 
           if (project_option_projectionF(project_option).eq.1) then
            !do nothing
-          else if (project_option.eq.12) then ! pressure extrapolation
+          else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
            !do nothing
-          else if (project_option.eq.2) then ! temperature
+          else if (project_option.eq.SOLVETYPE_HEAT) then ! temperature
            !do nothing
-          else if (project_option.eq.200) then ! smoothing
+          else if (project_option.eq.SOLVETYPE_SMOOTH) then ! smoothing
            !do nothing
-          else if ((project_option.ge.100).and. &
-                   (project_option.lt.100+num_species_var)) then 
+          else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                   (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then 
            !do nothing
-          else if (project_option.eq.3) then ! viscosity
+          else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
            !do nothing
           else
            print *,"project_option invalid"
@@ -15907,7 +15908,7 @@ stop
             if (DEBUG_THERMAL_COEFF.eq.1) then
              if ((j.eq.32).or.(j.eq.96)) then
               if (i.ge.25) then
-               if (project_option.eq.2) then
+               if (project_option.eq.SOLVETYPE_HEAT) then
                 print *,"i,j,dir,HEATCOEFF ",i,j,dir,local_wt(veldir)
                endif
               endif

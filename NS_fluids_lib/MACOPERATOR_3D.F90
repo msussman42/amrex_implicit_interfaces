@@ -629,7 +629,7 @@ stop
 
          local_cterm(1)=c2(D_DECL(i,j,k),1) ! 1/(rho c^2 dt^2)
 
-        else if (project_option.eq.12) then ! pressure extension
+        else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
 
          if (nsolve.ne.1) then
           print *,"nsolveMM invalid 150"
@@ -663,7 +663,7 @@ stop
           stop
          endif
 
-        else if (project_option.eq.2) then  ! temperature diffusion
+        else if (project_option.eq.SOLVETYPE_HEAT) then ! temperature diffusion
 
          if (dt.gt.zero) then
           ! do nothing
@@ -718,7 +718,7 @@ stop
           endif
          endif
 
-        else if (project_option.eq.200) then  ! smoothing
+        else if (project_option.eq.SOLVETYPE_SMOOTH) then  ! smoothing
 
          if (dt.gt.zero) then
           ! do nothing
@@ -729,7 +729,7 @@ stop
 
          local_cterm(1)=one/dt ! den cv / dt
 
-        else if (project_option.eq.3) then ! viscosity
+        else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
 
          if (nsolve.ne.SDIM) then
           print *,"nsolve invalid21"
@@ -787,8 +787,8 @@ stop
           ! vel=velsolid in solid, so cterm>>1 there.
           local_cterm(velcomp)=local_cterm(velcomp)*prescribed_mask
          enddo ! veldir=0..nsolve-1
-        else if ((project_option.ge.100).and. &
-                 (project_option.lt.100+num_species_var)) then
+        else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                 (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
          if (dt.gt.zero) then
           ! do nothing
          else
