@@ -698,15 +698,9 @@ void NavierStokes::avgDown_and_Copy_localMF(
  if (operation_flag==7) {  // advection 
   ncomp_den=nmat*num_state_material;
   ncomp_vel=AMREX_SPACEDIM;
-  ncomp_flux=nfluxSEM;
+  ncomp_flux=NFLUXSEM;
   scomp_flux=0;
-  ncomp_flux_use=nfluxSEM;
-
-  if (nfluxSEM==AMREX_SPACEDIM+1) {
-   // do nothing
-  } else
-   amrex::Error("nfluxSEM invalid");
-
+  ncomp_flux_use=NFLUXSEM;
  } else if ((operation_flag==3)|| // u cell to MAC
             (operation_flag==5)|| // uMAC=uMAC+beta * diff_reg
 	    (operation_flag==11)) {
@@ -959,15 +953,9 @@ void NavierStokes::interp_and_Copy_localMF(
  } else if (operation_flag==7) {  // advection 
   ncomp_den=nmat*num_state_material;
   ncomp_vel=AMREX_SPACEDIM;
-  ncomp_flux=nfluxSEM;
+  ncomp_flux=NFLUXSEM;
   scomp_flux=0;
-  ncomp_flux_use=nfluxSEM;
-
-  if (nfluxSEM==AMREX_SPACEDIM+1) {
-   // do nothing
-  } else
-   amrex::Error("nfluxSEM invalid");
-
+  ncomp_flux_use=NFLUXSEM;
  } else if ((operation_flag==3)|| // u cell to MAC
             (operation_flag==5)|| // uMAC=uMAC+beta * diff_reg
 	    (operation_flag==11)) {
@@ -1292,7 +1280,7 @@ void NavierStokes::interp_flux_localMF(
 
  int finest_level=parent->finestLevel();
 
- int ncomp_flux=nfluxSEM;
+ int ncomp_flux=NFLUXSEM;
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   if (localMF[AREA_MF+dir]->boxArray()!=
@@ -5330,7 +5318,6 @@ void NavierStokes::solid_temperature() {
   } else if ((solidheat_flag==1)||  // dirichlet at solid/fluid
              (solidheat_flag==2)) { // neumann at solid/fluid
 
-   int dcomp=(AMREX_SPACEDIM+1);
    int nden=nmat*num_state_material;
 
    if (thread_class::nthreads<1)
@@ -5378,7 +5365,7 @@ void NavierStokes::solid_temperature() {
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,
-     snewfab.dataPtr(dcomp),
+     snewfab.dataPtr(STATECOMP_STATES),
      ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
      lsnewfab.dataPtr(),
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
@@ -6596,8 +6583,7 @@ void NavierStokes::move_particles(
 
    int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL;
 
-   int dcomp=AMREX_SPACEDIM+1;
-   Vector<int> denbc=getBCArray(State_Type,gridno,dcomp,
+   Vector<int> denbc=getBCArray(State_Type,gridno,STATECOMP_STATES,
       nmat*num_state_material);
    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 

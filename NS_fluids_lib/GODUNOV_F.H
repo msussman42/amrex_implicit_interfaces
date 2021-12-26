@@ -86,8 +86,6 @@ extern "C"
 
    void fort_semdeltaforce(
     int* nstate,
-    int* nfluxSEM,
-    int* nstate_SDC,
     int* nmat,
     int* project_option,
     const Real* xlo,const Real* dx,
@@ -123,8 +121,6 @@ extern "C"
     int* update_spectral,
     int* update_stable,
     int* nstate,
-    int* nfluxSEM,
-    int* nstate_SDC,
     int* nmat,
     int* project_option,
     const Real* xlo,const Real* dx,
@@ -160,8 +156,6 @@ extern "C"
    void fort_sdc_time_quad(
     int* HOncomp,int* LOncomp,int* delta_ncomp,
     int* nstate,
-    int* nfluxSEM,
-    int* nstate_SDC,
     int* nmat,
     const Real* xlo,const Real* dx,
     Real* delta,AMREX_ARLIM_P(deltalo),AMREX_ARLIM_P(deltahi),
@@ -181,8 +175,6 @@ extern "C"
     int* LOncomp,
     int* delta_ncomp,
     int* nstate,
-    int* nfluxSEM,
-    int* nstate_SDC,
     int* nmat,
     const Real* xlo,const Real* dx,
     Real* delta,AMREX_ARLIM_P(deltalo),AMREX_ARLIM_P(deltahi),

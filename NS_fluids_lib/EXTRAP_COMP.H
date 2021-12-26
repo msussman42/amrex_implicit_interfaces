@@ -87,4 +87,17 @@ interface temperature and interface mass fraction.
 #define SOLVETYPE_SPEC 100
 #define SOLVETYPE_SMOOTH 200
 
+#define SEM_U 0
+#define SEM_V 1
+#define SEM_W (AMREX_SPACEDIM-1)
+#define SEM_T (SEM_W+1)
+#define SEM_NEXT (SEM_T+1)
+#define NFLUXSEM (SEM_NEXT)
+
+#define SEMADVECT 0
+#define SEMDIFFUSE_T (SEMADVECT+NFLUXSEM)
+#define SEMDIFFUSE_U (SEMDIFFUSE_T+1)
+#define SEMPROCESS_NEXT (SEMDIFFUSE_U+AMREX_SPACEDIM)
+#define NSTATE_SDC (SEMPROCESS_NEXT)
+
 #endif

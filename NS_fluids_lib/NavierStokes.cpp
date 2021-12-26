@@ -1,11 +1,3 @@
-// I-scheme,thermal conduction,viscosity
-// nstate_SDC (c++ and fortran)
-// =nfluxSEM+1+AMREX_SPACEDIM
-// nfluxSEM (c++ and fortran)
-// =AMREX_SPACEDIM+1
-// Pressure gradient correction terms are on the MAC grid.
-//
-//keywords: nfluxSEM, nstate_SDC, 
 //SEM_scalar_advection, MASKSEM_MF,deltacomp,make_SEM_delta_force,
 //fort_updatesemforce, SEM_MAC_TO_CELL, SEM_CELL_TO_MAC
 //
@@ -209,8 +201,6 @@ bool NavierStokes::ns_tiling=false;
 
 int NavierStokes::POLYGON_LIST_MAX=1000;
 
-int  NavierStokes::nfluxSEM=0;
-int  NavierStokes::nstate_SDC=0;
 int  NavierStokes::ns_time_order=1; // time_blocking_factor
 int  NavierStokes::slab_step=0;
 int  NavierStokes::SDC_outer_sweeps=0;
@@ -9996,11 +9986,6 @@ NavierStokes::SDC_setup_step() {
  if ((nmat<1)||(nmat>1000))
   amrex::Error("nmat out of range");
 
-  //velocity, temperature
- nfluxSEM=AMREX_SPACEDIM+1;
-  //I-scheme,thermal conduction,viscosity
- nstate_SDC=nfluxSEM+1+AMREX_SPACEDIM;
-
  ns_time_order=parent->Time_blockingFactor();
 
  if ((SDC_outer_sweeps<0)||
@@ -11156,9 +11141,9 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
    FArrayBox& deltafab=(*localMF[delta_MF])[mfi];
    int deltacomp=0;
    if (project_option==SOLVETYPE_VISC) { 
-    deltacomp=slab_step*nstate_SDC+nfluxSEM+1;
+    deltacomp=slab_step*NSTATE_SDC+SEMDIFFUSE_U;
    } else if (project_option==SOLVETYPE_HEAT) { 
-    deltacomp=slab_step*nstate_SDC+nfluxSEM;
+    deltacomp=slab_step*NSTATE_SDC+SEMDIFFUSE_T;
    } else if (project_option==SOLVETYPE_PRES) { 
     amrex::Error("SEM pressure gradient correction on MAC grid");
    } else
@@ -11176,8 +11161,6 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
    // declared in: GODUNOV_3D.F90
    fort_semdeltaforce(
     &nstate,
-    &nfluxSEM,
-    &nstate_SDC,
     &nmat,
     &project_option,
     xlo,dx,
@@ -11653,13 +11636,13 @@ void NavierStokes::update_SEM_delta_force(
    if (slab_step==-1)
     HOcomp=0;
    else if ((slab_step>=0)&&(slab_step<ns_time_order))
-    HOcomp=nstate_SDC*(slab_step+1);
+    HOcomp=NSTATE_SDC*(slab_step+1);
    else
     amrex::Error("slab_step invalid");
 
    if (update_stable==1) {
     if ((slab_step>=0)&&(slab_step<ns_time_order))
-     LOcomp=nstate_SDC*slab_step;
+     LOcomp=NSTATE_SDC*slab_step;
     else
      amrex::Error("slab_step invalid");
    } else if (update_stable==0) {
@@ -11680,8 +11663,6 @@ void NavierStokes::update_SEM_delta_force(
     &update_spectral,
     &update_stable,
     &nstate,
-    &nfluxSEM,
-    &nstate_SDC,
     &nmat,
     &project_option,
     xlo,dx,
@@ -15745,7 +15726,7 @@ NavierStokes::allocate_flux_register(int operation_flag) {
  if (operation_flag==11) {
   ncfluxreg=AMREX_SPACEDIM;
  } else if (operation_flag==7) {  // advection
-  ncfluxreg=AMREX_SPACEDIM*nfluxSEM;
+  ncfluxreg=AMREX_SPACEDIM*NFLUXSEM;
  } else if (operation_flag==2) { 
   ncfluxreg=AMREX_SPACEDIM; // (grad pressure_potential)_mac
  } else if (operation_flag==3) { // ucell -> umac
@@ -15837,10 +15818,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
  Vector<Real> blob_array;
  blob_array.resize(1);
  int blob_array_size=blob_array.size();
-
-  // velocity, temperature
- if (nfluxSEM!=AMREX_SPACEDIM+1)
-  amrex::Error("nfluxSEM!=AMREX_SPACEDIM+1");
 
  if ((SDC_outer_sweeps>=0)&&(SDC_outer_sweeps<ns_time_order)) {
   // do nothing
@@ -15946,7 +15923,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
   if (init_fluxes==1) {
 
    int operation_flag=7;
-   if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM*nfluxSEM)
+   if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM*NFLUXSEM)
     amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid8");
 
 // flux variables: average down in the tangential direction 
@@ -16050,15 +16027,14 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
 
      Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
-     int dcomp=(AMREX_SPACEDIM+1);
-     Vector<int> denbc=getBCArray(State_Type,gridno,dcomp,
+     Vector<int> denbc=getBCArray(State_Type,gridno,STATECOMP_STATES,
       nmat*num_state_material);
 
      int energyflag=0;
      int local_enable_spectral=enable_spectral;
      int simple_AMR_BC_flag=0;
-     int ncomp_xp=nfluxSEM;
-     int ncomp_xgp=nfluxSEM;
+     int ncomp_xp=NFLUXSEM;
+     int ncomp_xgp=NFLUXSEM;
      int ncomp_mgoni=denfab.nComp();
 
      int tid_current=ns_thread();
@@ -16099,6 +16075,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      // advect: rho u, rho, temperature (non conservatively)
      // fort_cell_to_mac in LEVELSET_3D.F90
      int nsolve=1; //unused here
+     int ncphys_proxy=NFLUXSEM;
+
      fort_cell_to_mac(
       &ncomp_mgoni,
       &ncomp_xp,
@@ -16112,7 +16090,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &visc_coef, //beta
       &visc_coef,
       &local_enable_spectral,
-      &nfluxSEM, // ncphys (nflux for advection)
+      &ncphys_proxy, // ncphys (NFLUXSEM)
       constant_density_all_time.dataPtr(),
       denbc.dataPtr(),  // presbc
       velbc.dataPtr(),  
@@ -16184,7 +16162,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
     MultiFab& S_new=get_new_data(State_Type,slab_step+1);
     MultiFab& S_old=get_new_data(State_Type,slab_step);
 
-    MultiFab* rhs=new MultiFab(grids,dmap,nfluxSEM,0,
+    MultiFab* rhs=new MultiFab(grids,dmap,NFLUXSEM,0,
 		  MFInfo().SetTag("rhs"),FArrayBoxFactory());
 
     if (thread_class::nthreads<1)
@@ -16248,31 +16226,32 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       deltacomp=0;
      } else if (source_term==0) {
       if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-       deltacomp=slab_step*nstate_SDC;
+       deltacomp=slab_step*NSTATE_SDC;
       } else
        amrex::Error("slab_step invalid");
      } else
       amrex::Error("source_term invalid");
 
      Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
-     int dcomp=(AMREX_SPACEDIM+1);
-     Vector<int> denbc=getBCArray(State_Type,gridno,dcomp,
+     Vector<int> denbc=getBCArray(State_Type,gridno,STATECOMP_STATES,
       nmat*num_state_material);
 
      int operation_flag=107; // advection
      int energyflag=advect_iter;
-     int nsolve=nfluxSEM;
+     int nsolve=NFLUXSEM;
      int homflag=source_term;
      int local_enable_spectral=projection_enable_spectral;
 
      int ncomp_denold=nmat*num_state_material;
      int ncomp_veldest=snewfab.nComp();
-     int ncomp_dendest=snewfab.nComp()-dcomp;
+     int ncomp_dendest=snewfab.nComp()-STATECOMP_STATES;
 
      int tid_current=ns_thread();
      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
       amrex::Error("tid_current invalid");
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+     int ncphys_proxy=NFLUXSEM;
 
       // called from: NavierStokes::SEM_scalar_advection
      fort_mac_to_cell(
@@ -16292,7 +16271,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &finest_level,
       &project_option_visc,
       &local_enable_spectral,
-      &nfluxSEM, // ncphys
+      &ncphys_proxy, // ncphys (NFLUXSEM)
       velbc.dataPtr(),
       denbc.dataPtr(),  // presbc
       &prev_time_slab, 
@@ -16318,7 +16297,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       rhsfab.dataPtr(),ARLIM(rhsfab.loVect()),ARLIM(rhsfab.hiVect()),
       snewfab.dataPtr(), // veldest
       ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-      snewfab.dataPtr(dcomp), // dendest
+      snewfab.dataPtr(STATECOMP_STATES), // dendest
       ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
       maskfab.dataPtr(), // mask=1.0 fine/fine   0.0=coarse/fine
       ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
@@ -16338,7 +16317,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       ARLIM(deltafab.loVect()),ARLIM(deltafab.hiVect()),
       rhsfab.dataPtr(), // pold
       ARLIM(rhsfab.loVect()),ARLIM(rhsfab.hiVect()),
-      S_old_fab.dataPtr(dcomp), // denold
+      S_old_fab.dataPtr(STATECOMP_STATES), // denold
       ARLIM(S_old_fab.loVect()),ARLIM(S_old_fab.hiVect()),
       S_old_fab.dataPtr(), // ustar
       ARLIM(S_old_fab.loVect()),ARLIM(S_old_fab.hiVect()),
@@ -16376,9 +16355,9 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
       if ((advect_iter==1)&&
           (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
-       int deltacomp=slab_step*nstate_SDC;
+       int deltacomp=slab_step*NSTATE_SDC;
         // dest,src,srccomp,dstcomp,ncomp,ngrow
-       MultiFab::Copy(*localMF[stableF_MF],*rhs,0,deltacomp,nfluxSEM,0);
+       MultiFab::Copy(*localMF[stableF_MF],*rhs,0,deltacomp,NFLUXSEM,0);
       } else if (advect_iter==0) {
        // do nothing
       } else
@@ -16396,8 +16375,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      } 
 
      if ((slab_step>=0)&&(slab_step<=ns_time_order)) {
-      int deltacomp=slab_step*nstate_SDC;
-      MultiFab::Copy(*localMF[spectralF_MF],*rhs,0,deltacomp,nfluxSEM,0);
+      int deltacomp=slab_step*NSTATE_SDC;
+      MultiFab::Copy(*localMF[spectralF_MF],*rhs,0,deltacomp,NFLUXSEM,0);
      } else
       amrex::Error("slab_step invalid");
 
