@@ -11732,22 +11732,21 @@ stop
 
       else if (operation_flag.eq.107) then ! advection
 
-       if (ncomp_veldest.eq. &
-           (SDIM+1)+nmat*(num_state_material+ngeom_raw)+1) then
+       if (ncomp_veldest.eq.STATE_NCOMP) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
         stop
        endif
-       if (ncomp_dendest.eq.ncomp_veldest-(SDIM+1)) then
+       if (ncomp_dendest.eq.ncomp_veldest-STATECOMP_STATES) then
         ! do nothing
        else
         print *,"ncomp_dendest invalid"
         stop
        endif
 
-       if ((nsolve.ne.SDIM+1).or. &
-           (ncphys.ne.SDIM+1)) then
+       if ((nsolve.ne.NFLUXSEM).or. &
+           (ncphys.ne.NFLUXSEM)) then
         print *,"nsolve or ncphys invalid"
         stop
        endif
@@ -13025,7 +13024,7 @@ stop
               dcomp=1
               ncomp=ncphys
               ncomp_xvel=nsolve
-              ncomp_cterm=SDIM+num_state_base
+              ncomp_cterm=NFLUXSEM
              else
               print *,"operation_flag invalid9"
               stop
@@ -13690,16 +13689,16 @@ stop
         stop
        endif
 
-       if (ncomp_xp.ne.SDIM+1) then
+       if (ncomp_xp.ne.NFLUXSEM) then
         print *,"ncomp_xp invalid(2) ",ncomp_xp
         stop
        endif
-       if (ncomp_xgp.ne.SDIM+1) then
+       if (ncomp_xgp.ne.NFLUXSEM) then
         print *,"ncomp_xp invalid(3) ",ncomp_xp
         stop
        endif
        
-       if (ncphys.ne.SDIM+1) then
+       if (ncphys.ne.NFLUXSEM) then
         print *,"ncphys invalid"
         stop
        endif
@@ -14207,7 +14206,7 @@ stop
            templocal=den(D_DECL(idonate,jdonate,kdonate),ibase+2) 
 
            do nc=1,ncphys
-            if ((nc.ge.1).and.(nc.le.SDIM)) then
+            if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then
              velcomp=nc
              if (at_RZ_face.eq.1) then
               local_face(nc)=zero
@@ -14218,7 +14217,7 @@ stop
               print *,"at_RZ_face invalid"
               stop
              endif
-            else if (nc.eq.SDIM+1) then
+            else if (nc.eq.SEM_T+1) then
              local_face(nc)=templocal 
              local_face(nc)=local_face(nc)*test_velocity_FACE
             else
@@ -15306,7 +15305,7 @@ stop
 
          if (operation_flag.eq.7) then ! advection
 
-          if (ncphys.ne.SDIM+1) then
+          if (ncphys.ne.NFLUXSEM) then
            print *,"ncphys invalid"
            stop
           endif
