@@ -2308,6 +2308,7 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
+      FIX ME STORE the STRESS NOT THE FORCE.
        ! first sweep - find the mass and centroid of materials
       if (isweep.eq.0) then
  
@@ -2481,6 +2482,9 @@ stop
        enddo  ! icell,jcell,kcell (cells - body forces and torques (buoancy) )
 
         ! cells - pressure, viscosity, viscoelastic
+        ! if im_primary<>im_test,
+        !  then a force is applied from (icell,jcell,kcell) to a 
+        !  neighor "im_test" cell.
        do icell=growlo(1),growhi(1)
        do jcell=growlo(2),growhi(2)
        do kcell=growlo(3),growhi(3)
@@ -2845,8 +2849,8 @@ stop
               viscous_localtorque(SDIM)=viscous_rcross(2)!x-z plane of rotation
               viscous0_localtorque(SDIM)= &
                       viscous0_rcross(2)!x-z plane of rotation
-              visco_localtorque(SDIM)=visco_rcross(2) ! x-z plane of rotation
-              pressure_localtorque(SDIM)=pressure_rcross(2) !x-z plane of rotation
+              visco_localtorque(SDIM)=visco_rcross(2) ! x-z plane rotation
+              pressure_localtorque(SDIM)=pressure_rcross(2)!x-z plane rotation
              endif
 
 ! units of watts: W=J/s=N m/s
