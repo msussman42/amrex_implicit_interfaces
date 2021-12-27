@@ -1209,6 +1209,8 @@ protected:
     void getState_tracemag_ALL(int idx);
     void getState_tracemag(int idx);
 
+    static void print_project_option(int project_option);
+
     void output_triangles();
 
       //declared in: NavierStokes2.cpp
@@ -2016,8 +2018,6 @@ protected:
     static int BLB_PRES;
 
     static int ngrowFSI;//should be 3
-     //should be 9=velocity+LS+temperature+flag+force (3D)
-    static int nFSI_sub;
     static Vector<int> im_solid_map; //nparts components, in range 0..nmat-1
     static Vector<int> im_elastic_map;
 

@@ -9058,7 +9058,6 @@ stop
        partid, &
        ngrowFSI, &
        nFSI, &
-       nFSI_sub, &
        xlo,dx, &
        snew,DIMS(snew), &
        fsi,DIMS(fsi), &
@@ -9075,7 +9074,6 @@ stop
       INTEGER_T, intent(in) :: partid
       INTEGER_T, intent(in) :: ngrowFSI
       INTEGER_T, intent(in) :: nFSI
-      INTEGER_T, intent(in) :: nFSI_sub
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nstate
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
@@ -9109,7 +9107,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (nFSI.ne.nparts*nFSI_sub) then
+      if (nFSI.ne.nparts*NCOMP_FSI) then
        print *,"nFSI invalid"
        stop
       endif
@@ -9125,11 +9123,6 @@ stop
        print *,"partid invalid"
        stop
       endif
-       !velocity + LS + temperature + flag + force
-      if (nFSI_sub.ne.9) then
-       print *,"nFSI_sub invalid"
-       stop
-      endif
       if ((im_part.lt.0).or. &
           (im_part.ge.nmat).or. &
           (is_lag_part(nmat,im_part+1).ne.1)) then
@@ -9142,17 +9135,16 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      ibase=partid*nFSI_sub
+      ibase=partid*NCOMP_FSI
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-        ! nmat x (velocity + LS + temperature + flag + force)
-       LS=fsi(D_DECL(i,j,k),ibase+4)
+       LS=fsi(D_DECL(i,j,k),ibase+FSI_LEVELSET+1)
        if (LS.ge.zero) then
         do dir=1,SDIM
-         snew(D_DECL(i,j,k),dir)=fsi(D_DECL(i,j,k),ibase+dir)
+         snew(D_DECL(i,j,k),dir)=fsi(D_DECL(i,j,k),ibase+FSI_VELOCITY+dir)
         enddo
        else if (LS.le.zero) then
         ! do nothing
@@ -9172,7 +9164,6 @@ stop
        level, &
        finest_level, &
        nFSI, &
-       nFSI_sub, &
        nparts, &
        ngrowFSI, &
        im_solid_map, &
@@ -9194,7 +9185,6 @@ stop
       INTEGER_T, intent(in) :: level 
       INTEGER_T, intent(in) :: finest_level 
       INTEGER_T, intent(in) :: nFSI
-      INTEGER_T, intent(in) :: nFSI_sub
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: ngrowFSI
       INTEGER_T, intent(in) :: im_solid_map(nparts)
@@ -9248,12 +9238,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-       !velocity + LS + temperature + flag + force
-      if (nFSI_sub.ne.9) then
-       print *,"nFSI_sub invalid"
-       stop
-      endif
-      if (nFSI.ne.nparts*nFSI_sub) then
+      if (nFSI.ne.nparts*NCOMP_FSI) then
        print *,"nFSI invalid"
        stop
       endif
@@ -9313,13 +9298,12 @@ stop
           stop
          endif
 
-         ! nparts x (vel+LS+temperature+flag+force)
-         ibase=(partid-1)*nFSI_sub
+         ibase=(partid-1)*NCOMP_FSI
          do i1=-1,1
          do j1=-1,1
          do k1=k1lo,k1hi
           ldata(D_DECL(i1+2,j1+2,k1+2))= &
-            fsi(D_DECL(i+i1,j+j1,k+k1),ibase+4)
+            fsi(D_DECL(i+i1,j+j1,k+k1),ibase+FSI_LEVELSET+1)
          enddo 
          enddo 
          enddo  ! i1,j1,k1=-1..1
@@ -9373,7 +9357,7 @@ stop
           lsnew(D_DECL(i,j,k),nmat+(im_part-1)*SDIM+dir)=nrm(dir)
          enddo
  
-         LS_center=fsi(D_DECL(i,j,k),ibase+4)
+         LS_center=fsi(D_DECL(i,j,k),ibase+FSI_LEVELSET+1)
 
          call getvolume( &
           bfact,dx,xsten,nhalf, &

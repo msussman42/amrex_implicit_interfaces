@@ -100,4 +100,12 @@ interface temperature and interface mass fraction.
 #define SEMPROCESS_NEXT (SEMDIFFUSE_U+AMREX_SPACEDIM)
 #define NSTATE_SDC (SEMPROCESS_NEXT)
 
+#define FSI_VELOCITY 0
+#define FSI_LEVELSET (FSI_VELOCITY+3)
+#define FSI_TEMPERATURE (FSI_LEVELSET+1)
+#define FSI_EXTRAP_FLAG (FSI_TEMPERATURE+1)
+#define FSI_FORCE (FSI_EXTRAP_FLAG+1)
+#define FSI_NEXT (FSI_FORCE+3)
+#define NCOMP_FSI (FSI_NEXT)
+
 #endif

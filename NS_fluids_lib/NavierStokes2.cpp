@@ -4022,7 +4022,7 @@ void NavierStokes::apply_pressure_grad(
 
  if (localMF[pboth_mf]->nComp()!=nsolve) {
   std::cout << "nsolve=" << nsolve << '\n';
-  std::cout << "project_option= " << project_option << '\n';
+  print_project_option(project_option);
   std::cout << "pboth ngrow= " << localMF[pboth_mf]->nGrow() << '\n';
   std::cout << "pboth ncomp= " << localMF[pboth_mf]->nComp() << '\n';
   amrex::Error("nsolve invalid28");
