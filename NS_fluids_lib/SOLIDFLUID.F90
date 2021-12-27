@@ -18,6 +18,7 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 
+#include "EXTRAP_COMP.H"
 #include "SOLIDFLUID_F.H"
 
       module solidfluid_module
@@ -241,7 +242,6 @@
         maskfiner, &
         DIMS(maskfiner), &
         nFSI, &
-        nFSI_sub, &
         ngrowFSI, &
         nparts, &
         im_solid_map, & ! type: 0..nmat-1
@@ -321,7 +321,6 @@
       INTEGER_T, intent(in) :: FSI_operation
       INTEGER_T, intent(in) :: FSI_sub_operation
       INTEGER_T, intent(in) :: nFSI
-      INTEGER_T, intent(in) :: nFSI_sub
       INTEGER_T, intent(in) :: ngrowFSI
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: im_solid_map(nparts)
@@ -504,13 +503,8 @@
        stop
       endif
  
-       ! nparts x (velocity + LS + temperature + flag + force)
-      if (nFSI.ne.nparts*nFSI_sub) then 
+      if (nFSI.ne.nparts*NCOMP_FSI) then 
        print *,"nFSI invalid"
-       stop
-      endif
-      if (nFSI_sub.ne.9) then 
-       print *,"nFSI_sub invalid 1 fort_headermsg: ",nFSI_sub
        stop
       endif
   
@@ -696,13 +690,7 @@
         print *,"CTML_FSI_INIT.ne.1"
         stop
        endif
-        ! (velocity + LS + temperature + flag + force)
-       if (nFSI_sub.ne.9) then 
-        print *,"nFSI_sub invalid fort headermsg 2: ",nFSI_sub
-        stop
-       endif
-       ! nparts x (velocity + LS + temperature + flag + force)
-       if (nFSI.ne.nparts*nFSI_sub) then 
+       if (nFSI.ne.nparts*NCOMP_FSI) then 
         print *,"nFSI invalid"
         stop
        endif
@@ -759,25 +747,29 @@
          call gridsten_level(xsten,i2d,j2d,k2d,level,nhalf)
 
          do partid=1,nparts
-          ibase=(partid-1)*nFSI_sub
-          FSIdata3D(i,j,k,ibase+4)=FSIdata(D_DECL(i2d,j2d,k2d),ibase+4) !LS
-          FSIdata3D(i,j,k,ibase+5)=FSIdata(D_DECL(i2d,j2d,k2d),ibase+5) !T
-          FSIdata3D(i,j,k,ibase+6)=FSIdata(D_DECL(i2d,j2d,k2d),ibase+6) !flag
+          ibase=(partid-1)*NCOMP_FSI
+          FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)= &
+            FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_LEVELSET+1) !LS
+          FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)= &
+            FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_TEMPERATURE+1) !T
+          FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)= &
+            FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_EXTRAP_FLAG+1) !flag
           do dir=1,3
            if (xmap3D(dir).eq.0) then
             vel3D(dir)=zero
            else if ((xmap3D(dir).eq.1).or. &
                     (xmap3D(dir).eq.2)) then
-            vel3D(dir)=FSIdata(D_DECL(i2d,j2d,k2d),ibase+xmap3D(dir))
+            vel3D(dir)= &
+             FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_VELOCITY+xmap3D(dir))
            else
             print *,"xmap3D(dir) invalid"
             stop
            endif
-           FSIdata3D(i,j,k,ibase+dir)=vel3D(dir)
+           FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel3D(dir)
           enddo ! dir=1..3
           do dir=1,3
-           FSIdata3D(i,j,k,ibase+6+dir)= &
-             FSIdata(D_DECL(i2d,j2d,k2d),ibase+6+dir) !force
+           FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)= &
+             FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_FORCE+dir) !force
           enddo
          enddo ! partid=1,nparts
           
@@ -866,7 +858,6 @@
            ngrowFSI, &
            nmat, &
            nFSI, &
-           nFSI_sub, &
            FSI_operation, &
            touch_flag, &
            h_small, &
@@ -922,13 +913,8 @@
          ! mask2==1 => (i,j,k) in the interior of the tile.
          ! mask1==0 => (i,j,k) in coarse/fine ghost cell
         if ((mask1.eq.0).or.(mask2.eq.1)) then
-         ! nparts x (velocity + LS + temperature + flag + force)
-         if (nFSI.ne.nparts*nFSI_sub) then 
+         if (nFSI.ne.nparts*NCOMP_FSI) then 
           print *,"nFSI invalid"
-          stop
-         endif
-         if (nFSI_sub.ne.9) then 
-          print *,"nFSI_sub invalid fort headermsg 3: ",nFSI_sub
           stop
          endif
 
@@ -955,28 +941,28 @@
            endif
           enddo ! dir=1..3
           do partid=1,nparts
-           ibase=(partid-1)*nFSI_sub
-           FSIdata(D_DECL(i,j,k),ibase+4)= &
-            FSIdata3D(idx(1),idx(2),idx(3),ibase+4) ! LS
-           FSIdata(D_DECL(i,j,k),ibase+5)= &
-            FSIdata3D(idx(1),idx(2),idx(3),ibase+5) ! T
-           FSIdata(D_DECL(i,j,k),ibase+6)= &
-            FSIdata3D(idx(1),idx(2),idx(3),ibase+6) ! flag
+           ibase=(partid-1)*NCOMP_FSI
+           FSIdata(D_DECL(i,j,k),ibase+FSI_LEVELSET+1)= &
+            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_LEVELSET+1) ! LS
+           FSIdata(D_DECL(i,j,k),ibase+FSI_TEMPERATURE+1)= &
+            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_TEMPERATURE+1) ! T
+           FSIdata(D_DECL(i,j,k),ibase+FSI_EXTRAP_FLAG+1)= &
+            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_EXTRAP_FLAG+1) ! flag
            do dir=1,3
             if (xmap3D(dir).eq.0) then
-             FSIdata(D_DECL(i,j,k),ibase+3)=zero
+             FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+3)=zero
             else if ((xmap3D(dir).eq.1).or. &
                      (xmap3D(dir).eq.2)) then
-             FSIdata(D_DECL(i,j,k),ibase+xmap3D(dir))= &
-              FSIdata3D(idx(1),idx(2),idx(3),ibase+dir) 
+             FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+xmap3D(dir))= &
+              FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_VELOCITY+dir) 
             else
              print *,"xmap3D(dir) invalid"
              stop
             endif
            enddo ! dir=1..3
            do dir=1,3
-            FSIdata(D_DECL(i,j,k),ibase+6+dir)=  &
-             FSIdata3D(idx(1),idx(2),idx(3),ibase+6+dir) ! force
+            FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+dir)=  &
+             FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_FORCE+dir) ! force
            enddo
           enddo ! partid=1..nparts
          else
@@ -1170,7 +1156,6 @@
             ngrowFSI, &
             nmat, &
             nFSI, &
-            nFSI_sub, &
             FSI_operation, &
             cur_time, &
             problo3D,probhi3D, &

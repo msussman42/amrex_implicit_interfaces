@@ -681,7 +681,6 @@ int NavierStokes::BLB_MASS=-32767;
 int NavierStokes::BLB_PRES=-32767;
 
 int NavierStokes::ngrowFSI=3;
-int NavierStokes::nFSI_sub=9; //velocity+LS+temperature+flag+force (3D)
 Vector<int> NavierStokes::im_solid_map; //nparts components, in range 0..nmat-1
 Vector<int> NavierStokes::im_elastic_map; 
 
@@ -5447,7 +5446,6 @@ NavierStokes::read_params ()
 
 } // end subroutine read_params()
 
-
 NavierStokes::NavierStokes ()
 {
     Geometry_setup();
@@ -6714,6 +6712,39 @@ void NavierStokes::create_fortran_grid_struct(Real cur_time,Real dt) {
 
 } // end subroutine create_fortran_grid_struct
 
+void NavierStokes::print_project_option(int project_option) {
+
+ if (project_option==SOLVETYPE_PRES) {
+  std::cout << "project_option= " << project_option << " (SOLVETYPE_PRES) \n";
+ } else if (project_option==SOLVETYPE_INITPROJ) {
+  std::cout << "project_option= " << project_option << 
+    " (SOLVETYPE_INITPROJ) \n";
+ } else if (project_option==SOLVETYPE_HEAT) {
+  std::cout << "project_option= " << project_option << 
+    " (SOLVETYPE_HEAT) \n";
+ } else if (project_option==SOLVETYPE_VISC) {
+  std::cout << "project_option= " << project_option << 
+    " (SOLVETYPE_VISC) \n";
+ } else if (project_option==SOLVETYPE_PRESCOR) {
+  std::cout << "project_option= " << project_option << 
+    " (SOLVETYPE_PRESCOR) \n";
+ } else if (project_option==SOLVETYPE_PRESEXTRAP) {
+  std::cout << "project_option= " << project_option << 
+    " (SOLVETYPE_PRESEXTRAP) \n";
+ } else if (project_option==SOLVETYPE_SMOOTH) {
+  std::cout << "project_option= " << project_option << 
+    " (SOLVETYPE_SMOOTH) \n";
+ } else if ((project_option>=SOLVETYPE_SPEC)&&
+            (project_option<SOLVETYPE_SPEC+num_species_var)) {
+  std::cout << "project_option= " << project_option << 
+    " (SOLVETYPE_SPEC) \n";
+ } else {
+  std::cout << "project_option= " << project_option << 
+    " (INVALID) \n";
+  amrex::Error("project_option invalid");
+ }
+
+} // end subroutine print_project_option
 
 void NavierStokes::init_FSI_GHOST_MAC_MF_ALL_predict() {
 
@@ -7349,10 +7380,7 @@ void NavierStokes::resize_FSI_MF() {
  if (nparts==0) {
   // do nothing
  } else if ((nparts>=1)&&(nparts<=nmat)) {
-   //velocity+LS+temperature+flag+force (3D)
-  if (nFSI_sub!=9)
-   amrex::Error("nFSI_sub invalid");
-  int nFSI=nparts*nFSI_sub;
+  int nFSI=nparts*NCOMP_FSI;
   if (localMF[FSI_MF]->nComp()!=nFSI)
    amrex::Error("localMF[FSI_MF]->nComp()!=nFSI");
   if (localMF[FSI_MF]->nGrow()==0) {
@@ -7391,10 +7419,7 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
   // do nothing
  } else if ((nparts>=1)&&(nparts<=nmat)) {
 
-  // nparts x (velocity + LS + temperature + flag+force)   3D
-  if (nFSI_sub!=9)
-   amrex::Error("nFSI_sub invalid");
-  int nFSI=nparts*nFSI_sub;
+  int nFSI=nparts*NCOMP_FSI;
   if (ngrowFSI!=3)
    amrex::Error("ngrowFSI invalid");
 
@@ -7403,12 +7428,12 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
   new_localMF(FSI_MF,nFSI,ngrowFSI,-1);
 
   for (int partid=0;partid<nparts;partid++) {
-   int ibase=partid*nFSI_sub;
-   setVal_localMF(FSI_MF,0.0,ibase,3,ngrowFSI); // velocity
-   setVal_localMF(FSI_MF,-99999.0,ibase+3,1,ngrowFSI); // LS
-   setVal_localMF(FSI_MF,0.0,ibase+4,1,ngrowFSI); // temperature
-   setVal_localMF(FSI_MF,0.0,ibase+5,1,ngrowFSI); // mask
-   setVal_localMF(FSI_MF,0.0,ibase+6,3,ngrowFSI); // force
+   int ibase=partid*NCOMP_FSI;
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_VELOCITY,3,ngrowFSI); // velocity
+   setVal_localMF(FSI_MF,-99999.0,ibase+FSI_LEVELSET,1,ngrowFSI); // LS
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_TEMPERATURE,1,ngrowFSI); // temperature
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_EXTRAP_FLAG,1,ngrowFSI); // mask
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_FORCE,3,ngrowFSI); // force
   } // partid=0..nparts-1
 
   if (read_from_CAD()==1) {
@@ -7484,7 +7509,6 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
    fort_initdatasolid(
      &nmat,
      &nparts,
-     &nFSI_sub,
      &nFSI,
      &ngrowFSI,
      im_solid_map.dataPtr(),
@@ -7504,8 +7528,9 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
   if (Solid_new.nComp()!=nparts*AMREX_SPACEDIM)
    amrex::Error("Solid_new.nComp()!=nparts*AMREX_SPACEDIM");
   for (int partid=0;partid<nparts;partid++) {
-   int ibase=partid*nFSI_sub;
-   MultiFab::Copy(Solid_new,*localMF[FSI_MF],ibase,partid*AMREX_SPACEDIM,
+   int ibase=partid*NCOMP_FSI;
+   MultiFab::Copy(Solid_new,*localMF[FSI_MF],ibase+FSI_VELOCITY,
+     partid*AMREX_SPACEDIM,
      AMREX_SPACEDIM,0);
   } // partid=0..nparts-1
 
@@ -7541,11 +7566,7 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
   if (nstate!=S_new.nComp())
    amrex::Error("nstate invalid");
 
-   // nparts x (velocity + LS + temperature + flag + force) 3D
-  if (nFSI_sub!=9)
-   amrex::Error("nFSI_sub invalid");
-
-  int nFSI=nparts*nFSI_sub;
+  int nFSI=nparts*NCOMP_FSI;
   if (localMF[FSI_MF]->nComp()!=nFSI)
    amrex::Error("localMF[FSI_MF]->nComp()!=nFSI");
   
@@ -7590,7 +7611,6 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
      &partid, 
      &ngrowFSI, 
      &nFSI, 
-     &nFSI_sub, 
      xlo,dx,
      snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
      fsifab.dataPtr(),ARLIM(fsifab.loVect()),ARLIM(fsifab.hiVect()),
@@ -7636,15 +7656,12 @@ void NavierStokes::build_moment_from_FSILS() {
  if (LS_new.nComp()!=nmat*(1+AMREX_SPACEDIM))
   amrex::Error("LS_new.nComp()!=nmat*(1+AMREX_SPACEDIM)");
 
-   // nparts x (velocity + LS + temperature + flag + force)
- if (nFSI_sub!=9)
-  amrex::Error("nFSI_sub invalid");
  if (ngrowFSI!=3)
   amrex::Error("ngrowFSI!=3");
  int nparts=im_solid_map.size();
  if ((nparts<1)||(nparts>nmat))
   amrex::Error("nparts invalid");
- int nFSI=nparts*nFSI_sub;
+ int nFSI=nparts*NCOMP_FSI;
  if (localMF[FSI_MF]->nComp()!=nFSI)
   amrex::Error("localMF[FSI_MF]->nComp()!=nFSI");
  debug_ngrow(FSI_MF,ngrowFSI,1);
@@ -7685,7 +7702,6 @@ void NavierStokes::build_moment_from_FSILS() {
     &level,
     &finest_level,
     &nFSI, 
-    &nFSI_sub, 
     &nparts,
     &ngrowFSI, 
     im_solid_map.dataPtr(),
@@ -7705,9 +7721,6 @@ void NavierStokes::build_moment_from_FSILS() {
 // called from: ns_header_msg_level,initData ()
 void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 
- // nparts x (velocity + LS + temperature + flag + force)
- if (nFSI_sub!=9)
-  amrex::Error("nFSI_sub invalid");
  if (ngrowFSI!=3)
   amrex::Error("ngrowFSI invalid");
 
@@ -7729,7 +7742,6 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
   int nstate=STATE_NCOMP;
-  int dencomp=STATECOMP_STATES;
   if (nstate!=S_new.nComp())
    amrex::Error("nstate invalid");
 
@@ -7740,10 +7752,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
   MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
   if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
    amrex::Error("LS_new invalid ncomp");
-   //velocity+LS+temperature+flag+force (3D)
-  if (nFSI_sub!=9)
-   amrex::Error("nFSI_sub invalid");
-  int nFSI=nparts*nFSI_sub;
+  int nFSI=nparts*NCOMP_FSI;
   if (localMF[FSI_MF]->nComp()!=nFSI)
    amrex::Error("localMF[FSI_MF]->nComp()!=nFSI");
 
@@ -7759,7 +7768,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
        (FSI_flag[im_part]==6)|| //initial ice from CAD file
        (FSI_flag[im_part]==7)) {//initial fluid from CAD file 
 
-    int ibase=partid*nFSI_sub;
+    int ibase=partid*NCOMP_FSI;
 
     int ok_to_modify_EUL=1;
     if ((FSI_flag[im_part]==6)||  //initial ice from CAD file
@@ -7784,19 +7793,20 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
      copy_velocity_on_sign(partid);
      // Solid velocity
      //ngrow=0
-     MultiFab::Copy(Solid_new,*localMF[FSI_MF],ibase,partid*AMREX_SPACEDIM,
+     MultiFab::Copy(Solid_new,*localMF[FSI_MF],
+      ibase+FSI_VELOCITY,partid*AMREX_SPACEDIM,
       AMREX_SPACEDIM,0);
       // LS
       //ngrow=0
-     MultiFab::Copy(LS_new,*localMF[FSI_MF],ibase+3,im_part,1,0);
+     MultiFab::Copy(LS_new,*localMF[FSI_MF],ibase+FSI_LEVELSET,im_part,1,0);
       // temperature
      if (solidheat_flag==0) { // diffuse in solid
       // do nothing
      } else if ((solidheat_flag==1)||  //dirichlet
                 (solidheat_flag==2)) { //neumann
        //ngrow=0
-      MultiFab::Copy(S_new,*localMF[FSI_MF],ibase+4,
-       dencomp+im_part*num_state_material+1,1,0);
+      MultiFab::Copy(S_new,*localMF[FSI_MF],ibase+FSI_TEMPERATURE,
+       STATECOMP_STATES+im_part*num_state_material+1,1,0);
      } else
       amrex::Error("solidheat_flag invalid"); 
 
@@ -7911,7 +7921,6 @@ void NavierStokes::ns_header_msg_level(
 
  int nmat=num_materials;
  int scomp_mofvars=STATECOMP_MOF;
- int dencomp=STATECOMP_STATES;
   
  const int max_level = parent->maxLevel();
  int finest_level=parent->finestLevel();
@@ -8090,10 +8099,7 @@ void NavierStokes::ns_header_msg_level(
    num_elements_list[im]=FSI_input[im].num_elements;
   }
 
-   //velocity+LS+temperature+flag+force (3D)
-  if (nFSI_sub!=9)
-   amrex::Error("nFSI_sub invalid");
-  int nFSI=nparts*nFSI_sub;
+  int nFSI=nparts*NCOMP_FSI;
 
   if ((FSI_operation==0)||  // initialize nodes
       (FSI_operation==1)) { // update node locations
@@ -8200,7 +8206,6 @@ void NavierStokes::ns_header_msg_level(
       FSIfab.dataPtr(), // mfiner spot
       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
       &nFSI,
-      &nFSI_sub,
       &ngrowFSI_unitfab,
       &nparts,
       im_solid_map.dataPtr(),
@@ -8405,7 +8410,7 @@ void NavierStokes::ns_header_msg_level(
         MultiFab* new_coarse_thermal=new MultiFab(grids,dmap,1,0,
 	    MFInfo().SetTag("new_coarse_thermal"),FArrayBoxFactory());
         dcomp=0;
-        int scomp_thermal=dencomp+im_part*num_state_material+1;
+        int scomp_thermal=STATECOMP_STATES+im_part*num_state_material+1;
         //ncomp==1
         FillCoarsePatch(*new_coarse_thermal,dcomp,cur_time,State_Type,
          scomp_thermal,1,debug_fillpatch);
@@ -8457,30 +8462,29 @@ void NavierStokes::ns_header_msg_level(
    // FSI_MF allocated in FSI_make_distance
    // all components of FSI_MF are initialized to zero except for LS.
    // LS component of FSI_MF is init to -99999
-   // nparts x (velocity + LS + temperature + flag + force)
    for (int partid=0;partid<nparts;partid++) {
 
     int im_part=im_solid_map[partid];
     if ((im_part<0)||(im_part>=nmat))
      amrex::Error("im_part invalid");
 
-    int ibase=partid*nFSI_sub;
+    int ibase=partid*NCOMP_FSI;
      // velocity
     MultiFab::Copy(*localMF[FSI_MF],*solidmf,partid*AMREX_SPACEDIM,
-      ibase,AMREX_SPACEDIM,ngrowFSI);
+      ibase+FSI_VELOCITY,AMREX_SPACEDIM,ngrowFSI);
      // LS  
     MultiFab::Copy(*localMF[FSI_MF],*LSMF,im_part,
-      ibase+3,1,ngrowFSI);
+      ibase+FSI_LEVELSET,1,ngrowFSI);
      // temperature
     MultiFab::Copy(*localMF[FSI_MF],*denmf,im_part*num_state_material+1,
-      ibase+4,1,ngrowFSI);
+      ibase+FSI_TEMPERATURE,1,ngrowFSI);
 
      // flag (mask)
     if (FSI_operation==2) {
 
      if ((level>0)||
          ((level==0)&&(cur_time>0.0))) {
-      setVal_localMF(FSI_MF,10.0,ibase+5,1,ngrowFSI); 
+      setVal_localMF(FSI_MF,10.0,ibase+FSI_EXTRAP_FLAG,1,ngrowFSI); 
      } else if ((level==0)&&(cur_time==0.0)) {
       // do nothing
      } else
@@ -8582,7 +8586,6 @@ void NavierStokes::ns_header_msg_level(
      mnbrfab.dataPtr(), // mfiner spot
      ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
      &nFSI,
-     &nFSI_sub,
      &ngrowFSI,
      &nparts,
      im_solid_map.dataPtr(),
@@ -8620,21 +8623,24 @@ void NavierStokes::ns_header_msg_level(
    // scompBC_map==0 corresponds to extrap_bc, pc_interp and fort_extrapfill
    // scompBC_map==1,2,3 corresponds to x or y or z vel_extrap_bc, pc_interp 
    //   and fort_extrapfill
-   // nFSI=nparts * (vel + LS + temp + flag + force)
+   // nFSI=nparts * NCOMP_FSI
    for (int partid=0;partid<nparts;partid++) {
-    int ibase=partid*nFSI_sub;
+    int ibase=partid*NCOMP_FSI;
     Vector<int> scompBC_map;
     scompBC_map.resize(AMREX_SPACEDIM); 
     for (int dir=0;dir<AMREX_SPACEDIM;dir++)
      scompBC_map[dir]=dir+1;
 
+    FIX ME
     // This routine interpolates from coarser levels.
-    PCINTERP_fill_borders(FSI_MF,ngrowFSI,ibase,
+    PCINTERP_fill_borders(FSI_MF,ngrowFSI,ibase+FSI_VELOCITY,
      AMREX_SPACEDIM,Solid_State_Type,scompBC_map);
 
-    for (int i=AMREX_SPACEDIM;i<nFSI_sub;i++) {
+    for (int i=AMREX_SPACEDIM;i<NCOMP_FSI;i++) {
      scompBC_map.resize(1); 
      scompBC_map[0]=0;
+
+     FIX ME
      PCINTERP_fill_borders(FSI_MF,ngrowFSI,ibase+i,
       1,Solid_State_Type,scompBC_map);
     } // i=AMREX_SPACEDIM  ... nFSI_sub-1
@@ -9207,7 +9213,6 @@ NavierStokes::initData () {
   // velocity,pres,state x nmat,interface variables x nmat, error ind
  MultiFab& S_new = get_new_data(State_Type,slab_step+1);
  int nc=S_new.nComp();
- int dencomp=STATECOMP_STATES;
  int nc_expect=STATE_NCOMP;
  if (nc!=nc_expect)
   amrex::Error("nc invalid in initdata");
@@ -9355,7 +9360,7 @@ NavierStokes::initData () {
   if (1==0) {
    FArrayBox& snewfab=S_new[mfi];
    int interior_only=1;
-   tecplot_debug(snewfab,xlo,fablo,fabhi,dx,-1,0,dencomp, 
+   tecplot_debug(snewfab,xlo,fablo,fabhi,dx,-1,0,STATECOMP_STATES, 
     nmat*num_state_material,interior_only); 
   }
  } //mfi
@@ -9492,7 +9497,6 @@ void NavierStokes::init_boundary() {
 
  int nmat=num_materials;
  int mofcomp=STATECOMP_MOF;
- int dencomp=STATECOMP_STATES;
  int nden=nmat*num_state_material;
 
  for (int k=0;k<nstate;k++) {
@@ -9506,7 +9510,7 @@ void NavierStokes::init_boundary() {
    MultiFab::Copy(S_new,*velmf,0,0,(AMREX_SPACEDIM+1),1);
    delete velmf;
    MultiFab* denmf=getStateDen(1,cur_time_slab);  
-   MultiFab::Copy(S_new,*denmf,0,dencomp,nden,1);
+   MultiFab::Copy(S_new,*denmf,0,STATECOMP_STATES,nden,1);
    delete denmf;
   } else if (k==Umac_Type) {
    // do nothing
@@ -11287,7 +11291,6 @@ void NavierStokes::make_heat_source() {
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
- int dencomp=STATECOMP_STATES;
  int nden=nmat*num_state_material;
 
  const Real* dx = geom.CellSize();
@@ -11350,7 +11353,7 @@ void NavierStokes::make_heat_source() {
    ARLIM(rhoinversefab.loVect()),ARLIM(rhoinversefab.hiVect()),
    DeDTinversefab.dataPtr(),
    ARLIM(DeDTinversefab.loVect()),ARLIM(DeDTinversefab.hiVect()),
-   snewfab.dataPtr(dencomp),
+   snewfab.dataPtr(STATECOMP_STATES),
    ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
    lsfab.dataPtr(),
    ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
@@ -11481,7 +11484,7 @@ void NavierStokes::update_SEM_delta_force(
   // do nothing
  } else {
   std::cout << "ns_time_order= " << ns_time_order << '\n';
-  std::cout << "project_option= " << project_option << '\n';
+  print_project_option(project_option);
   std::cout << "update_spectral= " << update_spectral << '\n';
   std::cout << "update_stable= " << update_stable << '\n';
   amrex::Error("enable_spectral invalid in update_SEM_delta_force");
@@ -11520,7 +11523,7 @@ void NavierStokes::update_SEM_delta_force(
   if (nsolve!=1)
    amrex::Error("nsolve invalid");
   if (localMF[idx_div]->nComp()!=1) {
-   std::cout << "project_option = " << project_option << '\n';
+   print_project_option(project_option);
    std::cout << "idx_div = " << idx_div << '\n';
    std::cout << "nsolve = " << nsolve << '\n';
    std::cout << "localMF ncomp= " <<
@@ -11532,7 +11535,7 @@ void NavierStokes::update_SEM_delta_force(
   if (nsolve!=AMREX_SPACEDIM)
    amrex::Error("nsolve invalid");
   if (localMF[idx_div]->nComp()!=nsolve) {
-   std::cout << "project_option = " << project_option << '\n';
+   print_project_option(project_option);
    std::cout << "idx_div = " << idx_div << '\n';
    std::cout << "nsolve = " << nsolve << '\n';
    std::cout << "localMF ncomp= " <<
@@ -11540,7 +11543,7 @@ void NavierStokes::update_SEM_delta_force(
    amrex::Error("localMF[idx_div]->nComp() invalid");
   }
   if (localMF[idx_hoop]->nComp()!=nsolve) {
-   std::cout << "project_option = " << project_option << '\n';
+   print_project_option(project_option);
    std::cout << "idx_hoop = " << idx_hoop << '\n';
    std::cout << "nsolve = " << nsolve << '\n';
    std::cout << "localMF ncomp= " <<
@@ -17871,7 +17874,7 @@ void NavierStokes::project_right_hand_side(
 
   } else if (at_least_one_active==0) {
    std::cout << "index_MF = " << index_MF << '\n';
-   std::cout << "project_option = " << project_option << '\n';
+   print_project_option(project_option);
    std::cout << "color_ONES_count = " << color_ONES_count << '\n';
    for (int icolor=0;icolor<color_ONES_count;icolor++) {
     std::cout << "prj_rhs,icolor="<<icolor<<" ones_sum_global="<<
@@ -21275,7 +21278,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
    status=0;
    if (1==0) {
     std::cout << "caller_id= " << caller_id << '\n';
-    std::cout << "project_option= " << project_option << '\n';
+    print_project_option(project_option);
     std::cout << "mg_level= " << mg_level << '\n';
     std::cout << "relative_error= " << relative_error << '\n';
     std::cout << "beta= " << beta << '\n';
@@ -21289,7 +21292,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
   status=0;
   if ((norm_delta_y!=0.0)||(1==0)) {
    std::cout << "caller_id= " << caller_id << '\n';
-   std::cout << "project_option= " << project_option << '\n';
+   print_project_option(project_option);
    std::cout << "mg_level= " << mg_level << '\n';
    std::cout << "beta= " << beta << '\n';
    std::cout << "norm_y= " << norm_y << '\n';

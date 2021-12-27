@@ -8995,9 +8995,10 @@ void NavierStokes::multiphase_GMRES_preconditioner(
 
     if (verbose>0) {
      if (ParallelDescriptor::IOProcessor()) {
-      std::cout << "GMRES project_option= " << project_option <<
+      std::cout << "GMRES ... " <<
              " nsolve= " << nsolve <<
              " loop j= " << j << " m= " << m << '\n';
+      print_project_option(project_option);
      }
     }  // verbose>0
 
@@ -9568,8 +9569,7 @@ void NavierStokes::multiphase_project(int project_option) {
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << " ---------------------------------------------- \n";
-   std::cout << " ELLIPTIC SOLVE project_option= " <<
-    project_option << '\n';
+   print_project_option(project_option);
    std::cout << " divu_outer_sweeps= " << divu_outer_sweeps << '\n';
    std::cout << " SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
    std::cout << " ns_time_order= " << ns_time_order << '\n';
@@ -9799,8 +9799,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
    if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "END: color_variable, multiphase_project " <<
-	          "project_option= " << project_option << '\n';
+     std::cout << "END: color_variable, multiphase_project\n";
+     print_project_option(project_option);
     }
    }
 
@@ -10151,8 +10151,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "iwt:0=denface 1=cutface 2=desing. 3=sing";
-   std::cout << "project_option= " << project_option << '\n';
+   std::cout << "iwt:0=denface 1=cutface 2=desing. 3=sing\n";
+   print_project_option(project_option);
    for (int iwt=0;iwt<4;iwt++) {
     std::cout << "iwt= " << iwt << " min " << 
       min_face_wt[0][iwt] << " max " <<
@@ -10181,7 +10181,7 @@ void NavierStokes::multiphase_project(int project_option) {
    if (ParallelDescriptor::IOProcessor()) {
     std::cout << "LEVEL PROJECT from level=" << level << " to level=" <<
       ' ' << finest_level << '\n';
-    std::cout << "PROJECT OPTION=" << project_option << '\n';
+    print_project_option(project_option);
     std::cout << "NSOLVE=" << nsolve << '\n';
    }
  }
@@ -11045,8 +11045,8 @@ void NavierStokes::multiphase_project(int project_option) {
 	   error_history[vcycle][1] << ' ' <<
 	   error_history[vcycle][2] << ' ' <<
 	   error_history[vcycle][3] << '\n';
-          std::cout << "RESTARTING: project_option= " << 
-	         project_option << '\n';
+	  print_project_option(project_option);
+	  std::cout << "END SOLVER RESTARTING NOTIFICATION\n";
          }
 	} else if (verbose==0) {
 	 // do nothing
@@ -11110,7 +11110,7 @@ void NavierStokes::multiphase_project(int project_option) {
           local_presmooth << '\n';
        std::cout << "local_postsmooth overflow " << 
           local_postsmooth << '\n';
-       std::cout << "->project_option= " << project_option << '\n';
+       print_project_option(project_option);
        for (int ehist=0;ehist<error_history.size();ehist++) {
         std::cout << "vcycle " << ehist << 
          " error_history[vcycle][0,1,2,3] " <<
@@ -11186,7 +11186,7 @@ void NavierStokes::multiphase_project(int project_option) {
      std::cout << "WARNING: vcycle too big, multilevel_maxcycle=" <<
       multilevel_maxcycle << '\n';
      std::cout << "->MyProc()= " << ParallelDescriptor::MyProc() << "\n";
-     std::cout << "->project_option= " << project_option << '\n';
+     print_project_option(project_option);
      std::cout << "->error_n= " << error_n << '\n';
      std::cout << "->cg_loop_max= " << cg_loop_max << '\n';
      std::cout << "->ERROR HISTORY " << cg_loop_max << '\n';
@@ -11377,7 +11377,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
     if (verbose>0) {
      if (ParallelDescriptor::IOProcessor()) {
-      std::cout << "project_option= " << project_option << '\n';
+      print_project_option(project_option);
       std::cout << "bicgstab_num_outer_iterSOLVER,E,rAr_E,Ar_E " << 
        bicgstab_num_outer_iterSOLVER << ' ' << outer_error << 
        ' ' << rAr_outer_error << 
@@ -11451,8 +11451,8 @@ void NavierStokes::multiphase_project(int project_option) {
   if (ParallelDescriptor::IOProcessor()) {
    Real avg_iter=number_vcycles_all_solver_calls[project_option]/
                 number_solver_calls[project_option];
-   std::cout << "SOLVER STATISTICS  TIME, project_option = " <<
-          cur_time_slab << " " << project_option << '\n';
+   std::cout << "SOLVER STATISTICS  TIME = " << cur_time_slab << '\n';
+   print_project_option(project_option);
    std::cout << "project_option= " << project_option <<
           " SDC_outer_sweeps= " << SDC_outer_sweeps <<
           " slab_step= " << slab_step << '\n';

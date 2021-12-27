@@ -2589,8 +2589,8 @@ void NavierStokes::adjust_tolerance(Real& error0,Real& error0_max,
     save_mac_abs_tol=1.01*save_min_rel_error*error0_max;
     save_atol_b=1.01*bot_rel_error*error0_max;
     if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "adjusting the tolerance project_option=" << 
-       project_option << '\n';
+     std::cout << "adjusting the tolerance \n";
+     print_project_option(project_option);
      std::cout << "save_min_rel_error, error0_max " << 
        save_min_rel_error << ' ' <<
        error0_max << '\n';

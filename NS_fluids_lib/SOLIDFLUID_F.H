@@ -59,7 +59,6 @@ namespace amrex{
      Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
      Real* maskfiner,AMREX_ARLIM_P(maskfinerlo),AMREX_ARLIM_P(maskfinerhi),
      int* nFSI,
-     int* nFSI_sub,
      int* ngrowFSI,
      int* nparts,
      int* im_solid_map,

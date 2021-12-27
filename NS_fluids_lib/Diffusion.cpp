@@ -546,7 +546,7 @@ void NavierStokes::combine_state_variable(
   std::cout << "nsolve= " << nsolve << '\n';
   std::cout << "num_materials_combine= " << num_materials_combine << '\n';
   std::cout << "ncomp_check= " << ncomp_check << '\n';
-  std::cout << "project_option= " << project_option << '\n';
+  print_project_option(project_option);
   std::cout << "scomp.size " << scomp.size() << '\n';
   std::cout << "ncomp.size " << ncomp.size() << '\n';
   std::cout << "scomp[0] " << scomp[0] << '\n';
