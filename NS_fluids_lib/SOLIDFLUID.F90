@@ -365,6 +365,7 @@
       REAL_T problo3D(3),probhi3D(3)
       REAL_T dx3D(3)
       REAL_T vel3D(3)
+      REAL_T force3D(3)
       INTEGER_T, intent(in) :: velbc(SDIM,2)
       INTEGER_T, intent(in) :: vofbc(SDIM,2)
       INTEGER_T xmap3D(3)
@@ -719,8 +720,8 @@
          enddo
         else if (SDIM.eq.2) then
          k2d=0
-          ! dir is the coordinant on the 3D grid
-          ! xmap3D(dir) is the coordinant on the 2D grid
+          ! dir is the coordinate on the 3D grid
+          ! xmap3D(dir) is the coordinate on the 2D grid
           ! idx(1)=i  idx(2)=j   idx(3) unused
          do dir=1,3
           if (xmap3D(dir).eq.0) then
@@ -754,23 +755,25 @@
             FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_TEMPERATURE+1) !T
           FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)= &
             FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_EXTRAP_FLAG+1) !flag
+          ! dir is the coordinate on the 3D grid
+          ! xmap3D(dir) is the coordinate on the 2D grid
           do dir=1,3
            if (xmap3D(dir).eq.0) then
             vel3D(dir)=zero
+            force3D(dir)=zero
            else if ((xmap3D(dir).eq.1).or. &
                     (xmap3D(dir).eq.2)) then
             vel3D(dir)= &
              FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_VELOCITY+xmap3D(dir))
+            force3D(dir)= &
+             FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_FORCE+xmap3D(dir))
            else
             print *,"xmap3D(dir) invalid"
             stop
            endif
            FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel3D(dir)
+           FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=force3D(dir)
           enddo ! dir=1..3
-          do dir=1,3
-           FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)= &
-             FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_FORCE+dir) !force
-          enddo
          enddo ! partid=1,nparts
           
          do nc=1,2
@@ -923,6 +926,9 @@
            FSIdata(D_DECL(i,j,k),nc)=FSIdata3D(i,j,k,nc)
           enddo
          else if (SDIM.eq.2) then
+          ! dir is the coordinate on the 3D grid
+          ! xmap3D(dir) is the coordinate on the 2D grid
+          ! idx is the 3d index.
           do dir=1,3
            if (xmap3D(dir).eq.0) then
             idx(dir)=0
@@ -951,19 +957,18 @@
            do dir=1,3
             if (xmap3D(dir).eq.0) then
              FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+3)=zero
+             FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+3)=zero
             else if ((xmap3D(dir).eq.1).or. &
                      (xmap3D(dir).eq.2)) then
              FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+xmap3D(dir))= &
               FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_VELOCITY+dir) 
+             FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+xmap3D(dir))= &
+              FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_FORCE+dir) 
             else
              print *,"xmap3D(dir) invalid"
              stop
             endif
            enddo ! dir=1..3
-           do dir=1,3
-            FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+dir)=  &
-             FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_FORCE+dir) ! force
-           enddo
           enddo ! partid=1..nparts
          else
           print *,"dimension bust"
@@ -985,6 +990,7 @@
        deallocate(FSIdata3D)
        deallocate(masknbr3D)
 
+       FIX ME, TRANSFER STRESS BACK AND FORTH, NOT THE FORCE.
       else if (FSI_operation.eq.4) then ! copy Eul fluid vel/pres to solid
 
        isout=1 ! verbose on in sci_clsvof.F90
