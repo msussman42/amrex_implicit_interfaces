@@ -10047,9 +10047,9 @@ end subroutine dynamic_contact_angle
       if (operation_flag.eq.7) then ! advection
 
        do i1=0,bfact
-        if ((nc.ge.1).and.(nc.le.SDIM)) then
+        if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then
          dest_interp(i1)=dest_interp(i1)*vel(i1)
-        else if (nc.eq.SDIM+1) then ! temperature
+        else if (nc.eq.SEM_T+1) then ! temperature
          dest_interp(i1)=dest_interp(i1)*vel(i1)
         else
          print *,"nc invalid in lineGRAD"

@@ -14067,7 +14067,7 @@ END SUBROUTINE Adist
               print *,"velbc_in is corrupt"
               stop
              endif
-FIX ME
+
             else if (nc.eq.SEM_T+1) then ! temperature
 
              if (presbc_in(dir,side,ibase+2).eq.REFLECT_EVEN) then
@@ -14240,12 +14240,12 @@ FIX ME
 
             if (simple_AMR_BC_flag.eq.0) then
              local_bctype(side)=bctype_tag
-             templocal=xp(D_DECL(iface_out,jface_out,kface_out),SDIM+1)
+             templocal=xp(D_DECL(iface_out,jface_out,kface_out),SEM_T+1)
 
-             if ((nc.ge.1).and.(nc.le.SDIM)) then
+             if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then
               local_data_side(side)= &
                xp(D_DECL(iface_out,jface_out,kface_out),nc)
-             else if (nc.eq.SDIM+1) then ! temperature
+             else if (nc.eq.SEM_T+1) then ! temperature
               local_data_side(side)=templocal
              else
               print *,"nc invalid"
@@ -14255,10 +14255,10 @@ FIX ME
 
              templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
-             if ((nc.ge.1).and.(nc.le.SDIM)) then
+             if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then
               local_data_side(side)= &
                vel(D_DECL(ic,jc,kc),nc) 
-             else if (nc.eq.SDIM+1) then ! temperature
+             else if (nc.eq.SEM_T+1) then ! temperature
               local_data_side(side)=templocal
              else
               print *,"nc invalid"
@@ -14515,12 +14515,12 @@ FIX ME
            templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
             ! u dot grad u = div(umac u)-u div umac
-           if ((nc.ge.1).and.(nc.le.SDIM)) then ! velocity
+           if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then ! velocity
 
             local_data(isten+1)= &
               vel(D_DECL(ic,jc,kc),nc) 
 
-           else if (nc.eq.SDIM+1) then ! temperature
+           else if (nc.eq.SEM_T+1) then ! temperature
 
             local_data(isten+1)=templocal
 
@@ -14835,12 +14835,12 @@ FIX ME
 
             if (shared_face.eq.0) then
 
-             if ((nc.ge.1).and.(nc.le.SDIM)) then ! u * velocity 
+             if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then ! u * velocity 
 
               xface(D_DECL(ic,jc,kc),nc)=local_interp(isten+1)
 
                ! temperature
-             else if (nc.eq.SDIM+1) then ! u * temperature
+             else if (nc.eq.SEM_T+1) then ! u * temperature
 
               xface(D_DECL(ic,jc,kc),nc)=local_interp(isten+1)
 
@@ -15796,14 +15796,13 @@ FIX ME
         stop
        endif 
 
-       if (ncomp_veldest.eq. &
-           (SDIM+1)+nmat*(num_state_material+ngeom_raw)+1) then
+       if (ncomp_veldest.eq.STATE_NCOMP) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
         stop
        endif
-       if (ncomp_dendest.eq.ncomp_veldest-(SDIM+1)) then
+       if (ncomp_dendest.eq.ncomp_veldest-STATECOMP_STATES) then
         ! do nothing
        else
         print *,"ncomp_dendest invalid"
@@ -15816,7 +15815,7 @@ FIX ME
         stop
        endif
 
-       if (ncomp.eq.SDIM+1) then
+       if (ncomp.eq.NFLUXSEM) then
         ! do nothing
        else
         print *,"ncomp invalid7"
@@ -15984,9 +15983,9 @@ FIX ME
          if (operation_flag.eq.105) then ! interp grad U^T to cell.
           local_data(isten+1)=xvel(D_DECL(ic,jc,kc),scomp+nc-1)
          else if (operation_flag.eq.107) then ! advection
-          if ((nc.ge.1).and.(nc.le.SDIM)) then
+          if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then
            local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! u * umac 
-          else if (nc.eq.SDIM+1) then
+          else if (nc.eq.SEM_T+1) then
            local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! temperature * umac
           else
            print *,"nc invalid"
@@ -16180,7 +16179,7 @@ FIX ME
          bfact,maskSEM,dx(dir_main))
 
         if (operation_flag.eq.107) then !advection
-         if ((nc.ge.1).and.(nc.le.SDIM+1)) then
+         if ((nc.ge.SEM_U+1).and.(nc.le.SEM_T+1)) then
           call line_MAC_TO_CELL(local_vel_data, &
            local_vel_cell,local_vel_div, &
            bfact,maskSEM,dx(dir_main))
@@ -16277,10 +16276,10 @@ FIX ME
             ! temperature = div (umac T) - T div(u)
             ! mdotcell corresponds to VELADVECT_MF in the caller.
             ! maskdivres corresponds to DEN_RECON_MF in the caller.
-           if ((nc.ge.1).and.(nc.le.SDIM)) then ! velocity
+           if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then ! velocity
             local_div(isten+1)=local_div(isten+1)- &
              mdotcell(D_DECL(ic,jc,kc),nc)*local_vel_div_div(isten+1)
-           else if (nc.eq.SDIM+1) then ! temperature
+           else if (nc.eq.SEM_T+1) then ! temperature
             local_div(isten+1)=local_div(isten+1)- & 
              maskdivres(D_DECL(ic,jc,kc),ibase+2)*local_vel_div_div(isten+1)
            else
