@@ -320,7 +320,7 @@ Real NavierStokes::change_max_init = 1.1;
 Vector<Real> NavierStokes::NS_coflow_Z; 
 Vector<Real> NavierStokes::NS_coflow_R_of_Z; 
 
-Vector<Real> NavierStokes::NS_drag_integrated_quantities; 
+Vector<Real> NavierStokes::NS_DRAG_integrated_quantities; 
 Vector<Real> NavierStokes::NS_sumdata; 
 Vector<int> NavierStokes::NS_sumdata_type; 
 Vector<int> NavierStokes::NS_sumdata_sweep; 
@@ -2210,9 +2210,9 @@ NavierStokes::read_geometry ()
 void
 NavierStokes::setup_integrated_quantities() {
 
- NS_drag_integrated_quantities.resize(N_DRAG); 
- for (int iq=0;iq<N_DRAG;iq++) {
-  NS_drag_integrated_quantities[iq]=0.0;
+ NS_DRAG_integrated_quantities.resize(N_DRAG_IQ); 
+ for (int iq=0;iq<N_DRAG_IQ;iq++) {
+  NS_DRAG_integrated_quantities[iq]=0.0;
  }
 
  NS_sumdata.resize(IQ_TOTAL_SUM_COMP);
@@ -17266,7 +17266,7 @@ void NavierStokes::GetDragALL() {
 // r_axis=(x-x_{COM})_{axis}  y_axis=y-(y dot e_axis)e_axis
 // torque_axis=integral r_axis x (div sigma + rho g)=
 //   integral_boundary r_axis x sigma dot n + integral r_axis x rho g
-// NS_drag_integrated_quantities: see <DRAG_COMP.H>
+// NS_DRAG_integrated_quantities: see <DRAG_COMP.H>
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
@@ -17330,56 +17330,56 @@ void NavierStokes::GetDragALL() {
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "DRAGCOMP num_materials=" << num_materials << '\n';
-   for (int iq=0;iq<N_DRAG;iq++) {
-    if (iq==DRAGCOMP_BODYFORCE) {
-     std::cout << "DRAGCOMP_BODYFORCE 3xnum_materials\n";
-    } else if (iq==DRAGCOMP_FORCE) {
-     std::cout << "DRAGCOMP_FORCE 3xnum_materials\n";
-    } else if (iq==DRAGCOMP_PFORCE) {
-     std::cout << "DRAGCOMP_PFORCE 3xnum_materials\n";
-    } else if (iq==DRAGCOMP_VISCOUSFORCE) {
-     std::cout << "DRAGCOMP_VISCOUSFORCE 3xnum_materials\n";
-    } else if (iq==DRAGCOMP_VISCOUS0FORCE) {
-     std::cout << "DRAGCOMP_VISCOUS0FORCE 3xnum_materials\n";
-    } else if (iq==DRAGCOMP_VISCOFORCE) {
-     std::cout << "DRAGCOMP_VISCOFORCE 3xnum_materials\n";
-    } else if (iq==DRAGCOMP_BODYTORQUE) {
-     std::cout << "DRAGCOMP_BODYTORQUE 3xnum_materials\n";
-    } else if (iq==DRAGCOMP_TORQUE) {
-     std::cout << "DRAGCOMP_TORQUE 3xnum_materials\n";
-    } else if (iq==DRAGCOMP_PTORQUE) {
-     std::cout << "DRAGCOMP_PTORQUE 3xnum_materials\n";
-    } else if (iq==DRAGCOMP_VISCOUSTORQUE) {
-     std::cout << "DRAGCOMP_VISCOUSTORQUE 3xnum_materials\n";
-    } else if (iq==DRAGCOMP_VISCOUS0TORQUE) {
-     std::cout << "DRAGCOMP_VISCOUS0TORQUE 3xnum_materials\n";
-    } else if (iq==DRAGCOMP_VISCOTORQUE) {
-     std::cout << "DRAGCOMP_VISCOTORQUE 3xnum_materials\n";
-    } else if (iq==DRAGCOMP_COM) {
-     std::cout << "DRAGCOMP_COM 3xnum_materials\n";
-    } else if (iq==DRAGCOMP_MOMINERTIA) {
-     std::cout << "DRAGCOMP_MOMINERTIA 3xnum_materials\n";
-    } else if (iq==DRAGCOMP_MASS) {
+   for (int iq=0;iq<N_DRAG_IQ;iq++) {
+    if (iq==DRAGCOMP_IQ_BODYFORCE) {
+     std::cout << "DRAGCOMP_IQ_BODYFORCE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_IQ_FORCE) {
+     std::cout << "DRAGCOMP_IQ_FORCE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_IQ_PFORCE) {
+     std::cout << "DRAGCOMP_IQ_PFORCE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_IQ_VISCOUSFORCE) {
+     std::cout << "DRAGCOMP_IQ_VISCOUSFORCE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_IQ_VISCOUS0FORCE) {
+     std::cout << "DRAGCOMP_IQ_VISCOUS0FORCE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_IQ_VISCOFORCE) {
+     std::cout << "DRAGCOMP_IQ_VISCOFORCE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_IQ_BODYTORQUE) {
+     std::cout << "DRAGCOMP_IQ_BODYTORQUE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_IQ_TORQUE) {
+     std::cout << "DRAGCOMP_IQ_TORQUE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_IQ_PTORQUE) {
+     std::cout << "DRAGCOMP_IQ_PTORQUE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_IQ_VISCOUSTORQUE) {
+     std::cout << "DRAGCOMP_IQ_VISCOUSTORQUE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_IQ_VISCOUS0TORQUE) {
+     std::cout << "DRAGCOMP_IQ_VISCOUS0TORQUE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_IQ_VISCOTORQUE) {
+     std::cout << "DRAGCOMP_IQ_VISCOTORQUE 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_IQ_COM) {
+     std::cout << "DRAGCOMP_IQ_COM 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_IQ_MOMINERTIA) {
+     std::cout << "DRAGCOMP_IQ_MOMINERTIA 3xnum_materials\n";
+    } else if (iq==DRAGCOMP_IQ_MASS) {
      std::cout << "DRAGCOMP_MASS num_materials\n";
-    } else if (iq==DRAGCOMP_PERIM) {
+    } else if (iq==DRAGCOMP_IQ_PERIM) {
      std::cout << "DRAGCOMP_PERIM num_materials\n";
     } else {
      //do nothing
     }
     int drag_im=-1;
-    int drag_type=fort_drag_type(&iq,&drag_im);
+    int drag_type=fort_drag_IQ_type(&iq,&drag_im);
 
     std::cout << "GetDragALL  iq= " << iq << " drag_im(0..nmat-1)= " <<
 	    drag_im << " drag_type= " << drag_type <<
-     " NS_drag_integrated_quantities= " <<
-     NS_drag_integrated_quantities[iq] << '\n';
+     " NS_DRAG_integrated_quantities= " <<
+     NS_DRAG_integrated_quantities[iq] << '\n';
    }
    for (int im=0;im<num_materials;im++) {
-    Real mass=NS_drag_integrated_quantities[DRAGCOMP_MASS+im];
+    Real mass=NS_DRAG_integrated_quantities[DRAGCOMP_IQ_MASS+im];
     if (mass>0.0) {
      for (int idir=0;idir<3;idir++) {
       std::cout << "COM im,idir= " << im << ' ' << idir << " COM= " <<
-        NS_drag_integrated_quantities[DRAGCOMP_COM+im*3+idir]/mass << '\n';
+        NS_DRAG_integrated_quantities[DRAGCOMP_IQ_COM+im*3+idir]/mass << '\n';
      } //idir=0,1,2
     } //mass>0.0
 
@@ -17471,15 +17471,15 @@ NavierStokes::GetDrag(int isweep) {
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
- if (NS_drag_integrated_quantities.size()!=N_DRAG)
-  amrex::Error("NS_drag_integrated_quantities invalid size");
+ if (NS_DRAG_integrated_quantities.size()!=N_DRAG_IQ)
+  amrex::Error("NS_DRAG_integrated_quantities invalid size");
  
  Vector< Vector<Real> > local_integrated_quantities;
  local_integrated_quantities.resize(thread_class::nthreads);
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
-  local_integrated_quantities[tid].resize(N_DRAG);
-  for (int iq=0;iq<N_DRAG;iq++)
+  local_integrated_quantities[tid].resize(N_DRAG_IQ);
+  for (int iq=0;iq<N_DRAG_IQ;iq++)
    local_integrated_quantities[tid][iq]=0.0;
  } // tid
 
@@ -17634,7 +17634,7 @@ NavierStokes::GetDrag(int isweep) {
    // fort_getdrag is declared in: DERIVE_3D.F90
   fort_getdrag(
    &isweep,
-   NS_drag_integrated_quantities.dataPtr(),
+   NS_DRAG_integrated_quantities.dataPtr(),
    local_integrated_quantities[tid_current].dataPtr(),
    &gravity_normalized,
    &gravity_dir,
@@ -17683,12 +17683,12 @@ NavierStokes::GetDrag(int isweep) {
 } // omp
  ns_reconcile_d_num(100);
 
- int iqstart=DRAGCOMP_FORCE;
- int iqend=N_DRAG;
+ int iqstart=DRAGCOMP_IQ_BODYFORCE;
+ int iqend=N_DRAG_IQ;
  if (isweep==0) {
-  iqstart=DRAGCOMP_COM;
+  iqstart=DRAGCOMP_IQ_COM;
  } else if (isweep==1) {
-  iqend=DRAGCOMP_COM;
+  iqend=DRAGCOMP_IQ_COM;
  } else
   amrex::Error("isweep invalid");
 
@@ -17702,7 +17702,7 @@ NavierStokes::GetDrag(int isweep) {
 
  for (int iq=iqstart;iq<iqend;iq++) {
   ParallelDescriptor::ReduceRealSum(local_integrated_quantities[0][iq]);
-  NS_drag_integrated_quantities[iq]+=local_integrated_quantities[0][iq];
+  NS_DRAG_integrated_quantities[iq]+=local_integrated_quantities[0][iq];
  }
 
  combine_flag=2;

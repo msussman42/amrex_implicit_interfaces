@@ -1998,8 +1998,8 @@ stop
       INTEGER_T, intent(in) :: ntensor
 
       INTEGER_T, intent(in) :: isweep
-      REAL_T, intent(in) :: globalsum(N_DRAG)
-      REAL_T, intent(inout) :: localsum(N_DRAG)
+      REAL_T, intent(in) :: globalsum(N_DRAG_IQ)
+      REAL_T, intent(inout) :: localsum(N_DRAG_IQ)
       REAL_T, intent(in) :: gravity_normalized
       INTEGER_T, intent(in) :: gravdir
       INTEGER_T, intent(in) :: ntenvisco
@@ -2114,6 +2114,11 @@ stop
       REAL_T viscous_stress_load(3)
       REAL_T viscous0_stress_load(3)
       REAL_T visco_stress_load(3)
+
+      REAL_T pressure_stress_tensor(3,3)
+      REAL_T viscous_stress_tensor(3,3)
+      REAL_T viscous0_stress_tensor(3,3)
+      REAL_T visco_stress_tensor(3,3)
 
       REAL_T xsten(-3:3,SDIM)
       REAL_T xsten_face(-3:3,SDIM)
@@ -2308,7 +2313,6 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      FIX ME STORE the STRESS NOT THE FORCE.
        ! first sweep - find the mass and centroid of materials
       if (isweep.eq.0) then
  
@@ -2330,11 +2334,11 @@ stop
           dencomp=(im_test-1)*num_state_material+1
           mass=den(D_DECL(icell,jcell,kcell),dencomp)*volgrid* &
            slrecon(D_DECL(icell,jcell,kcell),vofcomp)
-          localsum(DRAGCOMP_MASS+im_test)= &
-             localsum(DRAGCOMP_MASS+im_test)+mass
+          localsum(DRAGCOMP_IQ_MASS+im_test)= &
+             localsum(DRAGCOMP_IQ_MASS+im_test)+mass
           do dir=1,SDIM
-           localsum(DRAGCOMP_COM+3*(im_test-1)+dir)= &
-            localsum(DRAGCOMP_COM+3*(im_test-1)+dir)+ &
+           localsum(DRAGCOMP_IQ_COM+3*(im_test-1)+dir)= &
+            localsum(DRAGCOMP_IQ_COM+3*(im_test-1)+dir)+ &
              mass* &
              (slrecon(D_DECL(icell,jcell,kcell),vofcomp+dir)+cengrid(dir))
           enddo ! dir=1..sdim
@@ -2355,7 +2359,7 @@ stop
         ! im_test is the material on which a force/torque is applied.
        do im_test=1,nmat
 
-        mass=globalsum(DRAGCOMP_MASS+im_test)
+        mass=globalsum(DRAGCOMP_IQ_MASS+im_test)
         if (mass.lt.zero) then
          print *,"mass cannot be negative  im_test,mass=",im_test,mass
          stop
@@ -2368,7 +2372,8 @@ stop
          enddo
         else if (mass.gt.zero) then
          do dir=1,SDIM
-          global_centroid(dir)=globalsum(DRAGCOMP_COM+3*(im_test-1)+dir)/mass
+          global_centroid(dir)= &
+            globalsum(DRAGCOMP_IQ_COM+3*(im_test-1)+dir)/mass
          enddo
          if (levelrz.eq.0) then
           ! do nothing
@@ -2425,12 +2430,9 @@ stop
           endif 
 
           do dir=1,SDIM
-           ibase=DRAGCOMP_BODYFORCE+3*(im_test-1)+dir
+           ibase=DRAGCOMP_IQ_BODYFORCE+3*(im_test-1)+dir
 
            localsum(ibase)=localsum(ibase)+gravvector(dir)
-
-           drag(D_DECL(icell,jcell,kcell),ibase)= &
-             drag(D_DECL(icell,jcell,kcell),ibase)+gravvector(dir)
           enddo
 
           ! torque=r cross F
@@ -2447,7 +2449,7 @@ stop
            grav_localtorque(SDIM)=rcross(2) ! x-z plane of rotation
           endif
 
-          ibase=DRAGCOMP_MOMINERTIA+3*(im_test-1)
+          ibase=DRAGCOMP_IQ_MOMINERTIA+3*(im_test-1)
           localsum(ibase+1)=localsum(ibase+1)+ &
             (rvec(1)**2+rvec(2)**2)*mass ! x-y
           dirend=1
@@ -2459,13 +2461,11 @@ stop
            dirend=3
           endif
  
-          ibase=DRAGCOMP_BODYTORQUE+3*(im_test-1)
+          ibase=DRAGCOMP_IQ_BODYTORQUE+3*(im_test-1)
           do dir=1,dirend
 
            localsum(ibase+dir)=localsum(ibase+dir)+grav_localtorque(dir)
 
-           drag(D_DECL(icell,jcell,kcell),ibase+dir)= &
-             drag(D_DECL(icell,jcell,kcell),ibase+dir)+grav_localtorque(dir)
           enddo
 
          else if (mask_cell.eq.0) then
@@ -2612,9 +2612,6 @@ stop
              ibase=DRAGCOMP_PERIM_VECTOR+3*(im_test-1)
              drag(D_DECL(icell,jcell,kcell),ibase+facedir)= &
                      facearea*nsolid(facedir)
-
-             localsum(ibase+facedir)=localsum(ibase+facedir)+ &
-               facearea*nsolid(facedir)
 
               !facedir=1..sdim
              call gridstenMAC(xsten_face,xlo,imac,jmac,kmac,fablo,bfact, &
@@ -2783,6 +2780,23 @@ stop
              endif
 
              do j1=1,3
+             do i1=1,3
+
+              viscous0_stress_tensor(i1,j1)=mu_0*visc_coef* &
+                 (gradu(i1,j1)+gradu(j1,i1))
+              viscous_stress_tensor(i1,j1)=mu_non_ambient*visc_coef* &
+                 (gradu(i1,j1)+gradu(j1,i1))
+              visco_stress_tensor(i1,j1)=Q(i1,j1)
+
+              pressure_stress_tensor(i1,j1)=zero
+              if (i1.eq.j1) then
+               pressure_stress_tensor(i1,j1)=presmag
+              endif
+
+             enddo !i1
+             enddo !j1
+
+             do j1=1,3
               viscous_stress_load(j1)=zero
               viscous0_stress_load(j1)=zero
               visco_stress_load(j1)=zero
@@ -2791,15 +2805,13 @@ stop
               do i1=1,3
                viscous0_stress_load(j1)= &
                  viscous0_stress_load(j1)- &
-                   mu_0*visc_coef* &
-                   (gradu(i1,j1)+gradu(j1,i1))*nsolid(i1)
+                   viscous0_stress_tensor(i1,j1)*nsolid(i1)
                viscous_stress_load(j1)= &
                  viscous_stress_load(j1)- &
-                   mu_non_ambient*visc_coef* &
-                   (gradu(i1,j1)+gradu(j1,i1))*nsolid(i1)
+                   viscous_stress_tensor(i1,j1)*nsolid(i1)
                visco_stress_load(j1)= &
                  visco_stress_load(j1)- &
-                  Q(i1,j1)*nsolid(i1)
+                  visco_stress_tensor(i1,j1)*nsolid(i1)
               enddo ! i1=1,3
 
               pressure_load(j1)=presmag*nsolid(j1)*facearea
@@ -2812,7 +2824,7 @@ stop
 ! across a domain boundary.
 
              do dir=1,SDIM
-              rvec(dir)=xsten_face(0,dir)-global_centroid(dir)
+              rvec(dir)=xsten(0,dir)-global_centroid(dir)
              enddo
              if (SDIM.eq.2) then
               rvec(3)=zero
@@ -2821,6 +2833,11 @@ stop
               visco_stress_load(3)=zero
               pressure_load(3)=zero
              endif
+
+             ibase=DRAGCOMP_TORQUE_ARM+3*(im_test-1)
+             do dir=1,SDIM
+              drag(D_DECL(icell,jcell,kcell),ibase+dir)=rvec(dir)
+             enddo
 
              call crossprod(rvec,visco_stress_load,visco_rcross)
              call crossprod(rvec,viscous0_stress_load,viscous0_rcross)
@@ -2864,52 +2881,58 @@ stop
 ! so for gear problem, scale torque by 2 pi abs(vinletgas)/60
 
               ! im_test is the material on which a force/torque is applied.
+
+             do dir=1,6
+
+              call stress_index(dir,i1,j1)
+              ibase=DRAGCOMP_STRESS+6*(im_test-1)+dir
+              drag(D_DECL(icell,jcell,kcell),ibase)= &
+                      pressure_stress_tensor(i1,j1)+
+                      viscous_stress_tensor(i1,j1)+
+                      visco_stress_tensor(i1,j1)
+
+              ibase=DRAGCOMP_PSTRESS+6*(im_test-1)+dir
+              drag(D_DECL(icell,jcell,kcell),ibase)= &
+                 pressure_stress_tensor(i1,j1)
+
+              ibase=DRAGCOMP_VISCOUSSTRESS+6*(im_test-1)+dir
+              drag(D_DECL(icell,jcell,kcell),ibase)= &
+                 viscous_stress_tensor(i1,j1)
+
+              ibase=DRAGCOMP_VISCOUS0STRESS+6*(im_test-1)+dir
+              drag(D_DECL(icell,jcell,kcell),ibase)= &
+                 viscous0_stress_tensor(i1,j1)
+
+              ibase=DRAGCOMP_VISCOSTRESS+6*(im_test-1)+dir
+              drag(D_DECL(icell,jcell,kcell),ibase)= &
+                 visco_stress_tensor(i1,j1)
+
+             enddo ! dir=1..6
+
              do dir=1,SDIM
-              ibase=DRAGCOMP_FORCE+3*(im_test-1)+dir
-
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
-               drag(D_DECL(icell,jcell,kcell),ibase)+ &
-               pressure_load(dir)+ &
-               viscous_stress_load(dir)+ &
-               visco_stress_load(dir)
+              ibase=DRAGCOMP_IQ_FORCE+3*(im_test-1)+dir
 
               localsum(ibase)=localsum(ibase)+ &
                pressure_load(dir)+ &
                viscous_stress_load(dir)+ &
                visco_stress_load(dir)
 
-              ibase=DRAGCOMP_PFORCE+3*(im_test-1)+dir
-
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
-               drag(D_DECL(icell,jcell,kcell),ibase)+ &
-               pressure_load(dir)
+              ibase=DRAGCOMP_IQ_PFORCE+3*(im_test-1)+dir
 
               localsum(ibase)=localsum(ibase)+ &
                pressure_load(dir)
 
-              ibase=DRAGCOMP_VISCOUSFORCE+3*(im_test-1)+dir
-
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
-               drag(D_DECL(icell,jcell,kcell),ibase)+ &
-               viscous_stress_load(dir)
+              ibase=DRAGCOMP_IQ_VISCOUSFORCE+3*(im_test-1)+dir
 
               localsum(ibase)=localsum(ibase)+ &
                viscous_stress_load(dir)
 
-              ibase=DRAGCOMP_VISCOUS0FORCE+3*(im_test-1)+dir
-
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
-               drag(D_DECL(icell,jcell,kcell),ibase)+ &
-               viscous0_stress_load(dir)
+              ibase=DRAGCOMP_IQ_VISCOUS0FORCE+3*(im_test-1)+dir
 
               localsum(ibase)=localsum(ibase)+ &
                viscous0_stress_load(dir)
 
-              ibase=DRAGCOMP_VISCOFORCE+3*(im_test-1)+dir
-
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
-               drag(D_DECL(icell,jcell,kcell),ibase)+ &
-               visco_stress_load(dir)
+              ibase=DRAGCOMP_IQ_VISCOFORCE+3*(im_test-1)+dir
 
               localsum(ibase)=localsum(ibase)+ &
                visco_stress_load(dir)
@@ -2923,61 +2946,38 @@ stop
 
              do dir=1,dirend
 
-              ibase=DRAGCOMP_TORQUE+3*(im_test-1)+dir
-
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
-               drag(D_DECL(icell,jcell,kcell),ibase)+ &
-               pressure_localtorque(dir)+ &
-               viscous_localtorque(dir)+ &
-               visco_localtorque(dir)
+              ibase=DRAGCOMP_IQ_TORQUE+3*(im_test-1)+dir
 
               localsum(ibase)=localsum(ibase)+ &
                pressure_localtorque(dir)+ &
                viscous_localtorque(dir)+ &
                visco_localtorque(dir)
 
-              ibase=DRAGCOMP_PTORQUE+3*(im_test-1)+dir
-
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
-               drag(D_DECL(icell,jcell,kcell),ibase)+ &
-               pressure_localtorque(dir)
+              ibase=DRAGCOMP_IQ_PTORQUE+3*(im_test-1)+dir
 
               localsum(ibase)=localsum(ibase)+ &
                pressure_localtorque(dir)
 
-              ibase=DRAGCOMP_VISCOUSTORQUE+3*(im_test-1)+dir
-
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
-               drag(D_DECL(icell,jcell,kcell),ibase)+ &
-               viscous_localtorque(dir)
+              ibase=DRAGCOMP_IQ_VISCOUSTORQUE+3*(im_test-1)+dir
 
               localsum(ibase)=localsum(ibase)+ &
                viscous_localtorque(dir)
 
-              ibase=DRAGCOMP_VISCOUS0TORQUE+3*(im_test-1)+dir
-
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
-               drag(D_DECL(icell,jcell,kcell),ibase)+ &
-               viscous0_localtorque(dir)
+              ibase=DRAGCOMP_IQ_VISCOUS0TORQUE+3*(im_test-1)+dir
 
               localsum(ibase)=localsum(ibase)+ &
                viscous0_localtorque(dir)
 
-              ibase=DRAGCOMP_VISCOTORQUE+3*(im_test-1)+dir
-
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
-               drag(D_DECL(icell,jcell,kcell),ibase)+ &
-               visco_localtorque(dir)
+              ibase=DRAGCOMP_IQ_VISCOTORQUE+3*(im_test-1)+dir
 
               localsum(ibase)=localsum(ibase)+ &
                visco_localtorque(dir)
 
              enddo ! dir=1..dirend
 
-             ibase=DRAGCOMP_PERIM+im_test
-             drag(D_DECL(icell,jcell,kcell),ibase)= &
-              drag(D_DECL(icell,jcell,kcell),ibase)+facearea
+             FIX ME TODO: pass DRAGCOMP_IQ stuff to fort_summass, pass stress back and forth not pressure or force to the FSI routines.
 
+             ibase=DRAGCOMP_IQ_PERIM+im_test
              localsum(ibase)=localsum(ibase)+facearea
 
             else if (equal_opposite_force.eq.1) then
