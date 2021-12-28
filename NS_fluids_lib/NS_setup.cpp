@@ -2847,19 +2847,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
     local_counter++;
    }
   }
-
-
-  local_counter=0;
-  for (int im=0;im<nmat;im++) {
-   for (int dir=0;dir<3;dir++) {
-    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
-     " DIR= " << dir << " STEP_PERIM_VECTOR " <<
-     NS_sumdata[IQ_STEP_PERIM_VECTOR_SUM_COMP+local_counter] << '\n';
-    local_counter++;
-   }
-  }
-
-
+FIX ME
   for (int im=0;im<nmat;im++) {
    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
     " STEP_PERIM " <<

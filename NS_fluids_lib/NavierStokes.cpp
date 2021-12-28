@@ -21526,7 +21526,8 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
  if (fast_mode==0) {
   GetDragALL();
  } else if (fast_mode==1) {
-  // do nothing
+  // do nothing (need, e.g., maximum temperature in the wall which can be
+  // computed without drag information)
  } else
   amrex::Error("fast_mode invalid");
 
@@ -21590,6 +21591,51 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
   }  // isweep=0
  } //for (int isweep=0;isweep<2;isweep++) 
 
+ local_comp=0;
+ for (int im=0;im<nmat;im++) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   int idest=IQ_BODYDRAG_SUM_COMP+local_comp;
+   int isource=DRAGCOMP_IQ_BODYFORCE+local_comp
+   NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
+   idest=IQ_BODYTORQUE_SUM_COMP+local_comp;
+   isource=DRAGCOMP_IQ_BODYTORQUE+local_comp;
+   NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
+   idest=IQ_DRAG_SUM_COMP+local_comp;
+   isource=DRAGCOMP_IQ_FORCE+local_comp;
+   NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
+   idest=IQ_PDRAG_SUM_COMP+local_comp;
+   isource=DRAGCOMP_IQ_PFORCE+local_comp;
+   NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
+   idest=IQ_VISCOUSDRAG_SUM_COMP+local_comp;
+   isource=DRAGCOMP_IQ_VISCOUSFORCE+local_comp;
+   NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
+   idest=IQ_VISCOUS0DRAG_SUM_COMP+local_comp;
+   isource=DRAGCOMP_IQ_VISCOUS0FORCE+local_comp;
+   NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
+   idest=IQ_VISCODRAG_SUM_COMP+local_comp;
+   isource=DRAGCOMP_IQ_VISCOFORCE+local_comp;
+   NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
+
+   idest=IQ_TORQUE_SUM_COMP+local_comp;
+   isource=DRAGCOMP_IQ_TORQUE+local_comp;
+   NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
+   idest=IQ_PTORQUE_SUM_COMP+local_comp;
+   isource=DRAGCOMP_IQ_PTORQUE+local_comp;
+   NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
+   idest=IQ_VISCOUSTORQUE_SUM_COMP+local_comp;
+   isource=DRAGCOMP_IQ_VISCOUSTORQUE+local_comp;
+   NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
+   idest=IQ_VISCOUS0TORQUE_SUM_COMP+local_comp;
+   isource=DRAGCOMP_IQ_VISCOUS0TORQUE+local_comp;
+   NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
+   idest=IQ_VISCOTORQUE_SUM_COMP+local_comp;
+   isource=DRAGCOMP_IQ_VISCOTORQUE+local_comp;
+   NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
+
+   local_comp++;
+  } // dir=0 .. sdim-1
+ } // im=0 .. nmat-1
+FIX ME
  if (num_cells>0) {
   if (ParallelDescriptor::IOProcessor()) {
    fort_coflow(
