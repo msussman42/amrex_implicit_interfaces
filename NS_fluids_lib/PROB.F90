@@ -25534,7 +25534,6 @@ end subroutine initialize2d
       subroutine fort_initdatasolid( &
        nmat, &
        nparts, &
-       nFSI_sub, &
        nFSI, &
        ngrowFSI, &
        im_solid_map, &
@@ -25554,7 +25553,6 @@ end subroutine initialize2d
 
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: nFSI_sub
       INTEGER_T, intent(in) :: nFSI
       INTEGER_T, intent(in) :: ngrowFSI
       INTEGER_T, intent(in) :: im_solid_map(nparts)
@@ -25590,13 +25588,8 @@ end subroutine initialize2d
        print *,"nparts invalid"
        stop
       endif
-       !velocity + LS + temperature + flag + force
-      if (nFSI_sub.ne.9) then
-       print *,"nFSI_sub.ne.9"
-       stop
-      endif
-      if (nFSI.ne.nparts*nFSI_sub) then
-       print *,"nFSI.ne.nparts*nFSI_sub"
+      if (nFSI.ne.nparts*NCOMP_FSI) then
+       print *,"nFSI.ne.nparts*NCOMP_FSI"
        stop
       endif
       if (ngrowFSI.ne.3) then
@@ -25644,7 +25637,7 @@ end subroutine initialize2d
          stop
         endif
 
-        ibase=(partid-1)*nFSI_sub
+        ibase=(partid-1)*NCOMP_FSI
 
         if (is_lag_part(nmat,im).eq.1) then
 
@@ -25654,10 +25647,10 @@ end subroutine initialize2d
           call velsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM),vel,time,im,dx)
           call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
            temp_solid_mat,time,im)
-          solid(D_DECL(i,j,k),ibase+4)=distsolid
-          solid(D_DECL(i,j,k),ibase+5)=temp_solid_mat
+          solid(D_DECL(i,j,k),ibase+FSI_LEVELSET+1)=distsolid
+          solid(D_DECL(i,j,k),ibase+FSI_TEMPERATURE+1)=temp_solid_mat
           do dir=1,SDIM
-           solid(D_DECL(i,j,k),ibase+dir)=vel(dir)
+           solid(D_DECL(i,j,k),ibase+FSI_VELOCITY+dir)=vel(dir)
           enddo
          else if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
                   (FSI_flag(im).eq.4).or. & ! CTML FSI Goldstein et al

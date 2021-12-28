@@ -7190,21 +7190,6 @@ END SUBROUTINE SIMP
           volgrid*vel(D_DECL(i,j,k),prescomp) 
          local_result(idest+2)=local_result(idest+2)+volgrid
         endif
-FIX ME
-        do im=1,nmat
-         drag_flag=NINT(drag(D_DECL(i,j,k),DRAGCOMP_FLAG+im))
-         if (drag_flag.eq.1) then
-          idest=IQ_STEP_PERIM_SUM_COMP+im
-          local_result(idest)=local_result(idest)+ &
-           drag(D_DECL(i,j,k),DRAGCOMP_PERIM+im)
-         else if ((drag_flag.eq.0).or. &
-                  (drag_flag.eq.2)) then
-          ! do nothing
-         else
-          print *,"drag_flag invalid"
-          stop
-         endif
-        enddo ! im=1..nmat
 
         do im=1,nmat
 

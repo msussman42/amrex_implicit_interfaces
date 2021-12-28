@@ -2847,7 +2847,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
     local_counter++;
    }
   }
-FIX ME
+
   for (int im=0;im<nmat;im++) {
    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
     " STEP_PERIM " <<

@@ -97,7 +97,8 @@ interface temperature and interface mass fraction.
 #define FSI_TEMPERATURE (FSI_LEVELSET+1)
 #define FSI_EXTRAP_FLAG (FSI_TEMPERATURE+1)
 #define FSI_FORCE (FSI_EXTRAP_FLAG+1)
-#define FSI_NEXT (FSI_FORCE+3)
+#define FSI_STRESS (FSI_FORCE+3)
+#define FSI_NEXT (FSI_STRESS+6)
 #define NCOMP_FSI (FSI_NEXT)
 
 #endif

@@ -7434,6 +7434,7 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
    setVal_localMF(FSI_MF,0.0,ibase+FSI_TEMPERATURE,1,ngrowFSI); // temperature
    setVal_localMF(FSI_MF,0.0,ibase+FSI_EXTRAP_FLAG,1,ngrowFSI); // mask
    setVal_localMF(FSI_MF,0.0,ibase+FSI_FORCE,3,ngrowFSI); // force
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_STRESS,6,ngrowFSI); // stress
   } // partid=0..nparts-1
 
   if (read_from_CAD()==1) {
@@ -8631,16 +8632,14 @@ void NavierStokes::ns_header_msg_level(
     for (int dir=0;dir<AMREX_SPACEDIM;dir++)
      scompBC_map[dir]=dir+1;
 
-    FIX ME
     // This routine interpolates from coarser levels.
     PCINTERP_fill_borders(FSI_MF,ngrowFSI,ibase+FSI_VELOCITY,
      AMREX_SPACEDIM,Solid_State_Type,scompBC_map);
 
-    for (int i=AMREX_SPACEDIM;i<NCOMP_FSI;i++) {
+    for (int i=FSI_LEVELSET;i<NCOMP_FSI;i++) {
      scompBC_map.resize(1); 
      scompBC_map[0]=0;
 
-     FIX ME
      PCINTERP_fill_borders(FSI_MF,ngrowFSI,ibase+i,
       1,Solid_State_Type,scompBC_map);
     } // i=AMREX_SPACEDIM  ... nFSI_sub-1
@@ -8775,7 +8774,6 @@ void NavierStokes::ns_header_msg_level(
      FSIfab.dataPtr(), // mfiner spot
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      &nFSI,
-     &nFSI_sub,
      &ngrowFSI_unitfab,
      &nparts,
      im_solid_map.dataPtr(),
@@ -8877,7 +8875,6 @@ void NavierStokes::ns_header_msg_level(
       mfinerfab.dataPtr(),
       ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()),
       &nFSI,
-      &nFSI_sub,
       &ngrowFSI,
       &nparts,
       im_solid_map.dataPtr(),
@@ -21635,7 +21632,15 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
    local_comp++;
   } // dir=0 .. sdim-1
  } // im=0 .. nmat-1
-FIX ME
+
+ for (int im=0;im<nmat;im++) {
+
+  idest=IQ_STEP_PERIM_SUM_COMP+im;
+  isource=DRAGCOMP_IQ_PERIM+im;
+  NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
+
+ } // im=0 .. nmat-1
+
  if (num_cells>0) {
   if (ParallelDescriptor::IOProcessor()) {
    fort_coflow(
@@ -25363,11 +25368,9 @@ NavierStokes::ctml_fsi_transfer_force() {
  if ((nparts<1)||(nparts>nmat))
   amrex::Error("nparts invalid");
 
- if (nFSI_sub!=9)
-  amrex::Error("nFSI_sub invalid");
  if (ngrowFSI!=3)
   amrex::Error("ngrowFSI invalid");
- int nFSI=nparts*nFSI_sub;
+ int nFSI=nparts*NCOMP_FSI;
 
  debug_ngrow(FSI_MF,0,1);
  if (localMF[FSI_MF]->nComp()!=nFSI)
@@ -25414,8 +25417,7 @@ NavierStokes::ctml_fsi_transfer_force() {
 
         FArrayBox& snewfab=S_new[mfi];
         FArrayBox& forcefab=(*localMF[FSI_MF])[mfi];
-         // nparts x (velocity + LS + temperature + flag + force)
-        int ibase=partid*nFSI_sub+6;
+        int ibase=partid*NCOMP_FSI+FSI_FORCE;
 
          // declared in: CTMLFSI.F90
          // velocity is incremented with the force stored in FSI_MF.
