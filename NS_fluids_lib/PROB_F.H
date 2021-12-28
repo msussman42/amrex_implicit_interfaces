@@ -183,7 +183,6 @@ namespace amrex{
      void fort_initdatasolid(
       int* nmat,
       int* nparts,
-      int* nFSI_sub,
       int* nFSI,
       int* ngrowFSI,
       int* im_solid_map,
