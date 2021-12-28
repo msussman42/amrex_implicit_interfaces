@@ -2431,7 +2431,6 @@ stop
 
           do dir=1,SDIM
            ibase=DRAGCOMP_IQ_BODYFORCE+3*(im_test-1)+dir
-
            localsum(ibase)=localsum(ibase)+gravvector(dir)
           enddo
 
@@ -2463,9 +2462,7 @@ stop
  
           ibase=DRAGCOMP_IQ_BODYTORQUE+3*(im_test-1)
           do dir=1,dirend
-
            localsum(ibase+dir)=localsum(ibase+dir)+grav_localtorque(dir)
-
           enddo
 
          else if (mask_cell.eq.0) then
@@ -2974,8 +2971,6 @@ stop
                visco_localtorque(dir)
 
              enddo ! dir=1..dirend
-
-             FIX ME TODO: pass DRAGCOMP_IQ stuff to fort_summass, pass stress back and forth not pressure or force to the FSI routines.
 
              ibase=DRAGCOMP_IQ_PERIM+im_test
              localsum(ibase)=localsum(ibase)+facearea
