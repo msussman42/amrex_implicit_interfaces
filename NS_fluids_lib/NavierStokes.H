@@ -2369,7 +2369,7 @@ protected:
     static Vector<Real> NS_coflow_Z;
     static Vector<Real> NS_coflow_R_of_Z;
 
-    static Vector<Real> NS_drag_integrated_quantities;
+    static Vector<Real> NS_DRAG_integrated_quantities;
     static Vector<Real> NS_sumdata;
     static Vector<int> NS_sumdata_type;
     static Vector<int> NS_sumdata_sweep;

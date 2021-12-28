@@ -25,6 +25,9 @@ extern "C"
     int* drag_comp,//0..NDRAG-1
     int* drag_im); //0..nmat-1
 
+   int fort_drag_IQ_type(
+    int* drag_comp,//0..NDRAG_IQ-1
+    int* drag_im); //0..nmat-1
 }
 
 }/* namespace amrex */

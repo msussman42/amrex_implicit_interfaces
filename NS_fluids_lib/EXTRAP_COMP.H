@@ -3,14 +3,6 @@
 
 #include <DRAG_COMP.H>
 
-#define ENUM_T11 (0)
-#define ENUM_T12 (1)
-#define ENUM_T22 (2)
-#define ENUM_T33 (3)
-#define ENUM_T13 (4)
-#define ENUM_T23 (5)
-#define ENUM_NUM_TENSOR_TYPE (2*AMREX_SPACEDIM)
-
 #define ENUM_XVEL (0)
 #define ENUM_YVEL (1)
 #define ENUM_ZVEL (2)

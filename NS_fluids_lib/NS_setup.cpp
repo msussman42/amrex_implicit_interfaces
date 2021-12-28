@@ -1730,16 +1730,33 @@ NavierStokes::variableSetUp ()
 
       DRAG_names[drag_comp]=status_str;
 
-      if (drag_type==DRAG_TYPE_UFORCE) {
+      if (drag_type==DRAG_TYPE_UVEC) {
        set_x_vel_extrap_bc(DRAG_bcs[drag_comp],phys_bc);
-      } else if (drag_type==DRAG_TYPE_VFORCE) {
+      } else if (drag_type==DRAG_TYPE_VVEC) {
        set_y_vel_extrap_bc(DRAG_bcs[drag_comp],phys_bc);
-      } else if (drag_type==DRAG_TYPE_WFORCE) {
+      } else if (drag_type==DRAG_TYPE_WVEC) {
        set_z_vel_extrap_bc(DRAG_bcs[drag_comp],phys_bc);
       } else if (drag_type==DRAG_TYPE_FLAG) {
        set_extrap_bc(DRAG_bcs[drag_comp],phys_bc);
       } else if (drag_type==DRAG_TYPE_SCALAR) {
        set_extrap_bc(DRAG_bcs[drag_comp],phys_bc);
+      } else if (drag_type==DRAG_TYPE_T11) {
+       set_tensor_bc(DRAG_bcs[drag_comp],phys_bc,0,0);
+      } else if (drag_type==DRAG_TYPE_T12) {
+       set_tensor_bc(DRAG_bcs[drag_comp],phys_bc,0,1);
+      } else if (drag_type==DRAG_TYPE_T22) {
+       set_tensor_bc(DRAG_bcs[drag_comp],phys_bc,1,1);
+      } else if (drag_type==DRAG_TYPE_T33) {
+       if (AMREX_SPACEDIM==2) {
+        set_hoop_bc(DRAG_bcs[drag_comp],phys_bc); 
+       } else if (AMREX_SPACEDIM==3) {
+        set_tensor_bc(DRAG_bcs[drag_comp],phys_bc,2,2);
+       } else
+        amrex::Error("AMREX_SPACEDIM invalid");
+      } else if (drag_type==DRAG_TYPE_T13) {
+       set_tensor_bc(DRAG_bcs[drag_comp],phys_bc,0,AMREX_SPACEDIM-1);
+      } else if (drag_type==DRAG_TYPE_T23) {
+       set_tensor_bc(DRAG_bcs[drag_comp],phys_bc,1,AMREX_SPACEDIM-1);
       } else
        amrex::Error("drag_type invalid");
      } else
