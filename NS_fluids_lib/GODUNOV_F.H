@@ -2,17 +2,8 @@
 #define _GODUNOV_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_HEATADVANCE  heatadvance
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_HEATADVANCE  HEATADVANCE
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_HEATADVANCE  heatadvance
-#  else
-#    define FORT_HEATADVANCE  heatadvance_
-#  endif
-#  endif
 
 #include <AMReX_ArrayLim.H>
 #include <AMReX_BLFort.H>
@@ -1084,7 +1075,7 @@ extern "C"
      const Real* dt,int* irz,
      int* nmat,int* nden);
 
-   void FORT_HEATADVANCE(
+   void fort_heatadvance(
      int* level,
      int* finest_level,
      Real* cur_time,

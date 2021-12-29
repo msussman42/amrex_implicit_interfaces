@@ -5169,7 +5169,7 @@ void NavierStokes::make_physics_vars(int project_option) {
     cavitation_vapor_density.dataPtr(),
     constant_density_all_time.dataPtr(),
     &cur_time_slab,
-    &dt_slab, //calling FORT_INIT_PHYSICS_VARS
+    &dt_slab, //calling fort_init_physics_vars
     &project_option,
     problo,probhi,
     &visc_coef,
@@ -6124,7 +6124,7 @@ void NavierStokes::metrics_data(int ngrow) {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  FORT_METRICS(
+  fort_metrics(
    xlo,dx,
    areax.dataPtr(),ARLIM(areax.loVect()),ARLIM(areax.hiVect()),
    areay.dataPtr(),ARLIM(areay.loVect()),ARLIM(areay.hiVect()),
@@ -6733,7 +6733,7 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
 // default: tessellating fluid => default==1
 //          non-tesselating or tesselating solid => default==0
 //  in: LEVELSET_3D.F90
-   FORT_PURGEFLOTSAM(
+   fort_purgeflotsam(
      local_delta_mass[tid_current].dataPtr(),
      truncate_volume_fractions.dataPtr(),
      &truncate_thickness, 
@@ -8762,7 +8762,7 @@ void NavierStokes::init_pressure_error_indicator() {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  FORT_PRESSURE_INDICATOR(
+  fort_pressure_indicator(
    &pressure_error_flag,
    vorterr.dataPtr(),
    pressure_error_cutoff.dataPtr(),
@@ -9026,7 +9026,7 @@ void NavierStokes::scale_variablesALL() {
 
  int finest_level = parent->finestLevel();
   // in: PROB.F90
- FORT_SETFORTSCALES(&projection_pressure_scale,
+ fort_setfortscales(&projection_pressure_scale,
    &projection_velocity_scale);
 
  dt_slab*=projection_velocity_scale;
@@ -9047,7 +9047,7 @@ void NavierStokes::unscale_variablesALL() {
 
  int finest_level = parent->finestLevel();
  Real dummy_scale=1.0;
- FORT_SETFORTSCALES(&dummy_scale,&dummy_scale);
+ fort_setfortscales(&dummy_scale,&dummy_scale);
 
  dt_slab/=projection_velocity_scale;
 

@@ -6,50 +6,8 @@
 */
 
 #ifdef BL_LANG_FORT
-#    define FORT_PRESSURE_INDICATOR pressure_indicator
-#    define FORT_EDGEAVGDOWN edgeavgdown
-#    define FORT_MOFAVGDOWN  mofavgdown
-#    define FORT_ERRORAVGDOWN erroravgdown
-#    define FORT_AVGDOWN     avgdown
-#    define FORT_AVGDOWN_LOW avgdown_low
-#    define FORT_AVGDOWN_TAG avgdown_tag
-#    define FORT_AVGDOWN_CURV avgdown_curv
-#    define FORT_METRICS metrics
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_PRESSURE_INDICATOR PRESSURE_INDICATOR
-#    define FORT_EDGEAVGDOWN EDGEAVGDOWN
-#    define FORT_VOFFLUX_CORRECT VOFFLUX_CORRECT
-#    define FORT_MOFAVGDOWN  MOFAVGDOWN
-#    define FORT_ERRORAVGDOWN ERRORAVGDOWN
-#    define FORT_AVGDOWN     AVGDOWN
-#    define FORT_AVGDOWN_LOW AVGDOWN_LOW
-#    define FORT_AVGDOWN_TAG AVGDOWN_TAG
-#    define FORT_AVGDOWN_CURV AVGDOWN_CURV
-#    define FORT_METRICS METRICS
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_PRESSURE_INDICATOR pressure_indicator
-#    define FORT_EDGEAVGDOWN edgeavgdown
-#    define FORT_MOFAVGDOWN  mofavgdown
-#    define FORT_ERRORAVGDOWN erroravgdown
-#    define FORT_AVGDOWN     avgdown
-#    define FORT_AVGDOWN_LOW avgdown_low
-#    define FORT_AVGDOWN_TAG avgdown_tag
-#    define FORT_AVGDOWN_CURV avgdown_curv
-#    define FORT_METRICS metrics
-#  else
-#    define FORT_PRESSURE_INDICATOR pressure_indicator_
-#    define FORT_EDGEAVGDOWN edgeavgdown_
-#    define FORT_MOFAVGDOWN  mofavgdown_
-#    define FORT_ERRORAVGDOWN erroravgdown_
-#    define FORT_AVGDOWN     avgdown_
-#    define FORT_AVGDOWN_LOW avgdown_low_
-#    define FORT_AVGDOWN_TAG avgdown_tag_
-#    define FORT_AVGDOWN_CURV avgdown_curv_
-#    define FORT_METRICS metrics_
-#  endif
-#  endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -107,7 +65,7 @@ extern "C" {
      int* nden);
 
 
-    void FORT_PRESSURE_INDICATOR(
+    void fort_pressure_indicator(
      int* pressure_error_flag,
      Real* vorterr,
      Real* pressure_error_cutoff,
@@ -243,7 +201,7 @@ extern "C" {
       Real* angular_velocity,
       int* isweep);
 
-    void FORT_METRICS(
+    void fort_metrics(
          const Real* xlo,const Real* dx,
          Real* areax,AMREX_ARLIM_P(areaxlo),AMREX_ARLIM_P(areaxhi),
          Real* areay,AMREX_ARLIM_P(areaylo),AMREX_ARLIM_P(areayhi),
@@ -255,7 +213,7 @@ extern "C" {
          int* level,
          int* ngrow,int* rzflag);
 
-    void FORT_EDGEAVGDOWN(
+    void fort_edgeavgdown(
        int* enable_spectral,
        int* finest_level,
        int* spectral_override,
@@ -273,7 +231,7 @@ extern "C" {
        int* ncomp);
     
 
-    void FORT_AVGDOWN(
+    void fort_avgdown(
       int* enable_spectral,
       int* finest_level,
       int* spectral_override,
@@ -383,7 +341,7 @@ extern "C" {
       const Real* masknbr,AMREX_ARLIM_P(masknbr_lo),AMREX_ARLIM_P(masknbr_hi),
       int* presbc);
 
-    void FORT_AVGDOWN_LOW(
+    void fort_avgdown_low(
       const Real* problo,
       const Real* dxf,
       int* level_c,int* level_f,
@@ -395,7 +353,7 @@ extern "C" {
       const int* lo, const int* hi,
       const int* lof, const int* hif);
 
-    void FORT_AVGDOWN_TAG(
+    void fort_avgdown_tag(
       const Real* problo,
       const Real* dxf,
       int* level_c,int* level_f,
@@ -437,7 +395,7 @@ extern "C" {
       const int* lof, const int* hif);
 
 
-    void FORT_AVGDOWN_CURV(
+    void fort_avgdown_curv(
       const Real* problo,
       const Real* dxf,
       int* level_c,int* level_f,
@@ -449,7 +407,7 @@ extern "C" {
       const int* lo, const int* hi,
       const int* lof, const int* hif);
 
-    void FORT_MOFAVGDOWN(
+    void fort_mofavgdown(
       Real* time,
       const Real* problo,
       const Real* dxc,
@@ -460,7 +418,7 @@ extern "C" {
       const int* lo, const int* hi,
       int* nmat);
 
-    void FORT_ERRORAVGDOWN(
+    void fort_erroravgdown(
       const Real* problo,
       const Real* dxf,
       int* bfact_c,int* bfact_f,
