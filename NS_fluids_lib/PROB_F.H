@@ -2,10 +2,6 @@
 #define _PROB_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_SET_PERIODIC_VAR set_periodic_var
-#    define FORT_SETFORTSCALES setfortscales
-#    define FORT_FORCEVELOCITY forcevelocity
-#    define FORT_ADDNOISE    addnoise
 #    define FORT_UMACFILL    umacfill
 #    define FORT_XDMACFILL   xdmacfill
 #    define FORT_VELFILL     velfill
@@ -26,10 +22,6 @@
 #    define FORT_GROUP_LS_HO_FILL group_ls_ho_fill
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_SET_PERIODIC_VAR SET_PERIODIC_VAR
-#    define FORT_SETFORTSCALES SETFORTSCALES
-#    define FORT_FORCEVELOCITY FORCEVELOCITY
-#    define FORT_ADDNOISE    ADDNOISE
 #    define FORT_UMACFILL    UMACFILL
 #    define FORT_XDMACFILL   XDMACFILL
 #    define FORT_VELFILL     VELFILL
@@ -50,10 +42,6 @@
 #    define FORT_GROUP_LS_HO_FILL GROUP_LS_HO_FILL
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_SET_PERIODIC_VAR set_periodic_var
-#    define FORT_SETFORTSCALES setfortscales
-#    define FORT_FORCEVELOCITY forcevelocity
-#    define FORT_ADDNOISE    addnoise
 #    define FORT_UMACFILL    umacfill
 #    define FORT_XDMACFILL   xdmacfill
 #    define FORT_VELFILL     velfill
@@ -73,10 +61,6 @@
 #    define FORT_LS_HO_FILL ls_ho_fill
 #    define FORT_GROUP_LS_HO_FILL group_ls_ho_fill
 #  else
-#    define FORT_SET_PERIODIC_VAR set_periodic_var_
-#    define FORT_SETFORTSCALES setfortscales_
-#    define FORT_FORCEVELOCITY forcevelocity_
-#    define FORT_ADDNOISE    addnoise_
 #    define FORT_UMACFILL    umacfill_
 #    define FORT_XDMACFILL   xdmacfill_
 #    define FORT_VELFILL     velfill_
@@ -105,9 +89,9 @@ namespace amrex{
   extern "C" {
      void fort_flush_fortran();
 
-     void FORT_SET_PERIODIC_VAR(int* periodic_flag);
+     void fort_set_periodic_var(int* periodic_flag);
 
-     void FORT_SETFORTSCALES(Real* pressure_scale,
+     void fort_setfortscales(Real* pressure_scale,
        Real* velocity_scale);
 
 
@@ -147,7 +131,7 @@ namespace amrex{
       Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
       const Real* dx,const Real* xlo, const Real* xhi);
 
-     void FORT_ADDNOISE(
+     void fort_addnoise(
       int* dir,
       Real* angular_velocity,
       int* perturbation_mode,
@@ -225,7 +209,7 @@ namespace amrex{
       Real* xcoarseblocks,Real* ycoarseblocks,Real* zcoarseblocks,
       Real* rxcoarseblocks,Real* rycoarseblocks,Real* rzcoarseblocks);
 
-     void FORT_FORCEVELOCITY(
+     void fort_forcevelocity(
       const Real* prob_lo,const Real* prob_hi,
       Real* vel, AMREX_ARLIM_P(vel_lo), AMREX_ARLIM_P(vel_hi),
       Real* velmac, AMREX_ARLIM_P(velmac_lo), AMREX_ARLIM_P(velmac_hi),

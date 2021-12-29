@@ -150,7 +150,7 @@ NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
   FArrayBox& maskfab=(*fine_lev.localMF[MASKSEM_MF])[mfi];
 
    // declared in: NAVIERSTOKES_3D.F90
-  FORT_EDGEAVGDOWN(
+  fort_edgeavgdown(
    &enable_spectral,
    &finest_level,
    &spectral_override,
@@ -1489,7 +1489,7 @@ NavierStokes::recalesce_temperature(int im_source) {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  FORT_RESET_TEMPERATURE(
+  fort_reset_temperature(
    &im_source,
    &TSAT,
    snewfab.dataPtr(),
@@ -1600,7 +1600,7 @@ NavierStokes::process_recalesce_data(
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  FORT_INTEGRATE_RECALESCE(
+  fort_integrate_recalesce(
    &isweep,
    integrated_quantities.dataPtr(),
    local_integrated_quantities.dataPtr(),
@@ -2721,7 +2721,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         recalesce_state_new.resize(recalesce_num_state*nmat);
         parent->recalesce_get_state(recalesce_state_old,nmat);
 
-        FORT_INITRECALESCE(
+        fort_initrecalesce(
          recalesce_material.dataPtr(),
          recalesce_state_old.dataPtr(),
          &recalesce_num_state,&nmat);
@@ -2998,7 +2998,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          // BC are well defined.
          // sets the burning velocity flag from 0 to 2 if
          // foot of characteristic within range.
-	 // calls FORT_EXTEND_BURNING_VEL
+	 // calls fort_extend_burning_vel
        for (int ilev=level;ilev<=finest_level;ilev++) {
         NavierStokes& ns_level=getLevel(ilev);
         ns_level.level_phase_change_rate_extend();
@@ -3257,11 +3257,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       if (mass_transfer_active==1) {
 
        // 1. modifies localMF[JUMP_STRENGTH_MF] (size 2 * nten)
-       //    a) FORT_TAGEXPANSION
-       //    b) FORT_DISTRIBUTEEXPANSION
-       //    c) FORT_CLEAREXPANSION
-       //    d) FORT_INITJUMPTERM ( modifies localMF[MDOT_MF] )
-       //    e) FORT_GETCOLORSUM (twice)
+       //    a) fort_tagexpansion
+       //    b) fort_distributeexpansion
+       //    c) fort_clearexpansion
+       //    d) fort_initjumpterm ( modifies localMF[MDOT_MF] )
+       //    e) fort_getcolorsum (twice)
        phase_change_redistributeALL();
 
        delete_array(JUMP_STRENGTH_MF);
@@ -3499,7 +3499,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           // If incompressible: DIV_new=MDOT_MF dt/vol
           // If one of the adjoining cells of a face are in the 
           // "flexible solid," then the face coefficient = 0. 
-          // See: FORT_BUILDFACEWT, FACE_VAR_MF
+          // See: fort_buildfacewt, FACE_VAR_MF
          multiphase_project(SOLVETYPE_PRESCOR);
 
         } else if (FSI_material_exists()==0) {
@@ -4074,7 +4074,7 @@ void NavierStokes::correct_colors(
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // in: LEVELSET_3D.F90
-  FORT_LEVELRECOLOR(
+  fort_levelrecolor(
    colorfab.dataPtr(),
    ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
    xlo,dx,
@@ -4196,7 +4196,7 @@ void NavierStokes::assign_colors(
     // colors only assigned where mask=1
     // only valid cells are investigated.
     // in: LEVELSET_3D.F90
-   FORT_COLORFILL(
+   fort_colorfill(
      maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
      typefab.dataPtr(),ARLIM(typefab.loVect()),ARLIM(typefab.hiVect()),
      colorfab.dataPtr(),ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
@@ -4345,7 +4345,7 @@ void NavierStokes::avgDownColor(int idx_color,int idx_type) {
   const FArrayBox& typef=(*fine_lev.localMF[idx_type])[gridno];
   const FArrayBox& typec=type_coarse_fine[gridno];
 
-  FORT_AVGDOWNCOLOR(
+  fort_avgdowncolor(
     prob_lo,dxf, 
     &bfact_f,&bfact,
     xlo_fine,dx,
@@ -4461,7 +4461,7 @@ MultiFab* NavierStokes::CopyFineToCoarseColor(
 
   FArrayBox & maskfinefab=(*maskfinemf)[mfi];
   
-  FORT_COPYFINECOARSECOLOR(
+  fort_copyfinecoarsecolor(
     prob_lo,dxf,&bfact_f,&bfact,
     xlo_fine,dx,
     c_dat,ARLIM(clo),ARLIM(chi),
@@ -4803,7 +4803,7 @@ void NavierStokes::sync_colors(
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: LEVELSET_3D.F90
-   FORT_GRIDRECOLOR(
+   fort_gridrecolor(
     maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     colorfab.dataPtr(),ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
     xlo,dx,
@@ -4889,7 +4889,7 @@ void NavierStokes::sync_colors(
     FArrayBox& maskfab=(*maskmf)[mfi];
     FArrayBox& colorfab=(*fine_coarse_color)[mfi];
      // in: LEVELSET_3D.F90
-    FORT_LEVELCOLORINIT(
+    fort_levelcolorinit(
      maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
      colorfab.dataPtr(),ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
      xlo,dx,
@@ -7286,7 +7286,7 @@ NavierStokes::Type_level(
    // declared in: LEVELSET_3D.F90
    //  for each cell,
    //   if is_rigid(nmat,im)==1 and LS>=0 then type=im
-  FORT_GETTYPEFAB(
+  fort_gettypefab(
    source_fab.dataPtr(),
    ARLIM(source_fab.loVect()),ARLIM(source_fab.hiVect()),
    typefab.dataPtr(),ARLIM(typefab.loVect()),ARLIM(typefab.hiVect()),
@@ -7797,7 +7797,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
     // T^new=T^* += dt A Q/(rho cv V) 
     // in: allocate_project_variables
     // NavierStokes::heat_source_term_flux_source  (in:NavierStokes.cpp)
-    // heat_source_term_flux_source calls GODUNOV_3D::FORT_HEATSOURCE_FACE
+    // heat_source_term_flux_source calls GODUNOV_3D::fort_heatsource_face
   heat_source_term_flux_source();
 
   if (is_phasechange==1) {
@@ -8040,7 +8040,7 @@ void NavierStokes::overwrite_outflow() {
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      // in: PROB.F90
-    FORT_FORCEVELOCITY(
+    fort_forcevelocity(
       prob_lo,prob_hi,
       vel.dataPtr(),ARLIM(vel.loVect()),ARLIM(vel.hiVect()),
       velmac.dataPtr(),ARLIM(velmac.loVect()),ARLIM(velmac.hiVect()),
@@ -8491,7 +8491,7 @@ void NavierStokes::relaxLEVEL(
   BoxArray& cgridscen=ns_coarse.grids;
   for (int veldir=0;veldir<nsolve;veldir++) {
     // average down from level to level-1.
-    // calls FORT_AVERAGE which is low order.
+    // calls fort_average which is low order.
    ns_coarse.Allaverage(  
     residmf_coarse,residmf,
     cgridscen,fgridscen,
@@ -9849,7 +9849,7 @@ void NavierStokes::multiphase_project(int project_option) {
    // left cell or right cell has ice (FSI_flag==3,6)
    // or is FSI_rigid (FSI_flag==5) then velocity is
    // overwritten.
-   // In GODUNOV_3D.F90, FORT_INIT_ICEMASK,
+   // In GODUNOV_3D.F90, fort_init_icemask,
    // "FACECOMP_ICEFACECUT" component (c++)
    // is initialized by calling get_icemask
    // and if "im_FSI_rigid==im_primary" for one of a faces'
@@ -9957,7 +9957,7 @@ void NavierStokes::multiphase_project(int project_option) {
    amrex::Error("project_option_projection invalid 49");
 
    // in: multiphase_project
-   // calls FORT_BUILDFACEWT
+   // calls fort_buidfacewt
    // BUILDFACEWT updates static variables min_face_wt and max_face_wt
    // max_face_wt[0][1] has max of (1/rho) or (visc_coef*mu) or (k) or (D)
   ns_level.allocate_FACE_WEIGHT(nsolve,project_option);
@@ -10057,7 +10057,7 @@ void NavierStokes::multiphase_project(int project_option) {
     //
     //  i.e.
     //  
-    // calls:FORT_SCALARCOEFF,FORT_MULT_FACEWT,FORT_DIVIDEDX,FORT_NSGENERATE
+    // calls:fort_scalarcoeff,fort_mult_facewt, fort_dividedx, fort_nsgenerate
     // initializes arrays holding the diagonal, ONES_MF, ONES_GROW_MF.
  int create_hierarchy=0;
  allocate_maccoefALL(project_option,nsolve,create_hierarchy);
@@ -11684,7 +11684,7 @@ void NavierStokes::multiphase_project(int project_option) {
  if (project_option==SOLVETYPE_PRESEXTRAP) { 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
-    // in: MacProj.cpp (calls FORT_RESTORE_PRES)
+    // in: MacProj.cpp (calls fort_restore_pres)
    ns_level.restore_active_pressure(PRESSURE_SAVE_MF);
    int pcomp=AMREX_SPACEDIM;
    ns_level.avgDown(State_Type,pcomp,1,1); // average from ilev+1 to ilev
@@ -12198,7 +12198,7 @@ void NavierStokes::veldiffuseALL() {
 
   // MEHDI VAHAB HEAT SOURCE
   // NavierStokes.cpp: void NavierStokes::make_heat_source()
-  // make_heat_source calls GODUNOV_3D.F90::FORT_HEATSOURCE which
+  // make_heat_source calls GODUNOV_3D.F90::fort_heatsource which
   // calls PROB.F90::get_local_heat_source
   // if not supermesh algorithm, then the same temperature 
   // increment is added to all of the materials.
@@ -13017,7 +13017,7 @@ void NavierStokes::APPLY_VISCOUS_HEATING(int source_mf) {
 
    // in: GODUNOV_3D.F90
    // snew=TNEW+du
-  FORT_HEATADVANCE(
+  fort_heatadvance(
     &level,
     &finest_level,
     &cur_time_slab,

@@ -2,59 +2,8 @@
 #define _LEVEL_F_H_ 
 
 #ifdef BL_LANG_FORT
-#    define FORT_CELLFACEINIT cellfaceinit
-#    define FORT_NEUMANNEXTRAP neumannextrap
-#    define FORT_PURGEFLOTSAM purgeflotsam
-#    define FORT_INITRECALESCE initrecalesce
-#    define FORT_GETTYPEFAB gettypefab
-#    define FORT_LEVELRECOLOR levelrecolor
-#    define FORT_COLORFILL colorfill
-#    define FORT_GRIDRECOLOR gridrecolor
-#    define FORT_LEVELCOLORINIT levelcolorinit
-#    define FORT_AVGDOWNCOLOR avgdowncolor
-#    define FORT_COPYFINECOARSECOLOR copyfinecoarsecolor
 
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_CELLFACEINIT CELLFACEINIT
-#    define FORT_NEUMANNEXTRAP NEUMANNEXTRAP
-#    define FORT_PURGEFLOTSAM PURGEFLOTSAM
-#    define FORT_INITSUPERELASTIC INITSUPERELASTIC
-#    define FORT_INITRECALESCE INITRECALESCE
-#    define FORT_GETTYPEFAB GETTYPEFAB
-#    define FORT_LEVELRECOLOR LEVELRECOLOR
-#    define FORT_COLORFILL COLORFILL
-#    define FORT_GRIDRECOLOR GRIDRECOLOR
-#    define FORT_LEVELCOLORINIT LEVELCOLORINIT
-#    define FORT_AVGDOWNCOLOR AVGDOWNCOLOR
-#    define FORT_COPYFINECOARSECOLOR COPYFINECOARSECOLOR
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_CELLFACEINIT cellfaceinit
-#    define FORT_NEUMANNEXTRAP neumannextrap
-#    define FORT_PURGEFLOTSAM purgeflotsam
-#    define FORT_INITRECALESCE initrecalesce
-#    define FORT_GETTYPEFAB gettypefab
-#    define FORT_LEVELRECOLOR levelrecolor
-#    define FORT_COLORFILL colorfill
-#    define FORT_GRIDRECOLOR gridrecolor
-#    define FORT_LEVELCOLORINIT levelcolorinit
-#    define FORT_AVGDOWNCOLOR avgdowncolor
-#    define FORT_COPYFINECOARSECOLOR copyfinecoarsecolor
-#  else
-#    define FORT_CELLFACEINIT cellfaceinit_
-#    define FORT_NEUMANNEXTRAP neumannextrap_
-#    define FORT_PURGEFLOTSAM purgeflotsam_
-#    define FORT_INITRECALESCE initrecalesce_
-#    define FORT_GETTYPEFAB gettypefab_
-#    define FORT_LEVELRECOLOR levelrecolor_
-#    define FORT_COLORFILL colorfill_
-#    define FORT_GRIDRECOLOR gridrecolor_
-#    define FORT_LEVELCOLORINIT levelcolorinit_
-#    define FORT_AVGDOWNCOLOR avgdowncolor_
-#    define FORT_COPYFINECOARSECOLOR copyfinecoarsecolor_
-#  endif
-#  endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -62,7 +11,7 @@ namespace amrex{
 
   extern "C" {
 
-    void FORT_GETTYPEFAB(
+    void fort_gettypefab(
      const Real* source_fab,
      AMREX_ARLIM_P(source_fablo),AMREX_ARLIM_P(source_fabhi),
      const Real* typefab,AMREX_ARLIM_P(typefablo),AMREX_ARLIM_P(typefabhi),
@@ -174,7 +123,7 @@ namespace amrex{
        int* material_type_lowmach);
 
 
-    void FORT_LEVELRECOLOR(
+    void fort_levelrecolor(
      Real* color,AMREX_ARLIM_P(colorlo),AMREX_ARLIM_P(colorhi),
      const Real* xlo,const Real* dx,
      const int* tilelo,const int* tilehi,
@@ -182,7 +131,7 @@ namespace amrex{
      int* domaincolormap,
      int* max_colors_level,int* level,int* base_level,int* arrsize);
 
-    void FORT_GRIDRECOLOR(
+    void fort_gridrecolor(
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      Real* color,AMREX_ARLIM_P(colorlo),AMREX_ARLIM_P(colorhi),
      const Real* xlo,const Real* dx,
@@ -193,7 +142,7 @@ namespace amrex{
      int* max_colors_grid,
      int* number_grids,int* arrsize);
 
-    void FORT_COLORFILL(
+    void fort_colorfill(
      const Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      const Real* typefab,AMREX_ARLIM_P(typefablo),AMREX_ARLIM_P(typefabhi),
      const Real* color,AMREX_ARLIM_P(colorlo),AMREX_ARLIM_P(colorhi),
@@ -202,7 +151,7 @@ namespace amrex{
      int* color_per_grid,const int* gridno,int* max_colors_grid,
      int* typedim);
 
-    void FORT_LEVELCOLORINIT(
+    void fort_levelcolorinit(
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      Real* color,AMREX_ARLIM_P(colorlo),AMREX_ARLIM_P(colorhi),
      const Real* xlo,const Real* dx,
@@ -213,7 +162,7 @@ namespace amrex{
      int* max_colors_level,
      int* arrsize,int* check_corners);
 
-    void FORT_AVGDOWNCOLOR(
+    void fort_avgdowncolor(
      const Real* prob_lo,
      const Real* dxf,
      int* bfact_f,int* bfact,
@@ -225,7 +174,7 @@ namespace amrex{
      const Real* typec,AMREX_ARLIM_P(typec_lo),AMREX_ARLIM_P(typec_hi),
      const int* clo,const int* chi);
 
-    void FORT_COPYFINECOARSECOLOR(
+    void fort_copyfinecoarsecolor(
      const Real* prob_lo,
      const Real* dxf,
      int* bfact_f,int* bfact,
@@ -239,7 +188,7 @@ namespace amrex{
      int* zero_diag_flag);
     
 
-    void FORT_NEUMANNEXTRAP(
+    void fort_neumannextrap(
      const int* lo,const int* hi,
      const Real* ls,AMREX_ARLIM_P(lslo),AMREX_ARLIM_P(lshi),
      int* bc,int* dombc,
@@ -280,7 +229,7 @@ namespace amrex{
        int* constant_density_all_time);
 
 
-     void FORT_PURGEFLOTSAM(
+     void fort_purgeflotsam(
        Real* delta_mass,
        int* truncate_volume_fractions,
        Real* truncate_thickness,
@@ -294,7 +243,7 @@ namespace amrex{
        const Real* xlo,const Real* dx, 
        int* nmat);
 
-     void FORT_INITRECALESCE(
+     void fort_initrecalesce(
        int* recalesce_material,
        Real* recalesce_state_old,
        int* recalesce_num_state,int* nmat);
@@ -586,7 +535,7 @@ namespace amrex{
        int* nmat);
 
 
-     void FORT_CELLFACEINIT(
+     void fort_cellfaceinit(
        int* tid,
        int* tessellate,
        int* nten,

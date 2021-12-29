@@ -2622,7 +2622,7 @@ NavierStokes::read_params ()
     } else
      amrex::Error("geometry_is_any_periodic invalid");
 
-    FORT_SET_PERIODIC_VAR(geometry_is_periodic.dataPtr());
+    fort_set_periodic_var(geometry_is_periodic.dataPtr());
 
     for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
      if (geometry_is_periodic[dir]==0) {
@@ -9211,7 +9211,7 @@ NavierStokes::initData () {
 
     // this must be done before the volume fractions, centroids, and
     // level set function are initialized.
-  FORT_INITRECALESCE(
+  fort_initrecalesce(
    recalesce_material.dataPtr(),
    recalesce_state_old.dataPtr(),
    &recalesce_num_state,&nmat); 
@@ -11446,7 +11446,7 @@ void NavierStokes::add_perturbation() {
    MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
    FArrayBox& macfab=Umac_new[mfi];
 
-   FORT_ADDNOISE(
+   fort_addnoise(
     &dir,
     &angular_velocity,
     &perturbation_mode,
@@ -21798,7 +21798,7 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
    // declared in: DERIVE_3D.F90
-  FORT_MAXPRESVEL(
+  fort_maxpresvel(
    &minpresA[tid_current],
    &maxpresA[tid_current],
    &maxvelA[tid_current],
@@ -22989,7 +22989,7 @@ NavierStokes::level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine) {
   const int* fine_fablo=fine_fabgrid.loVect();
   const int* fine_fabhi=fine_fabgrid.hiVect();
 
-  FORT_AVGDOWN_TAG(
+  fort_avgdown_tag(
    prob_lo,
    dxf,
    &level,&f_level,
@@ -23311,7 +23311,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
   const int* fine_fablo=fine_fabgrid.loVect();
   const int* fine_fabhi=fine_fabgrid.hiVect();
 
-  FORT_AVGDOWN_CURV(
+  fort_avgdown_curv(
    prob_lo,
    dxf,
    &level,&f_level,
@@ -23434,7 +23434,7 @@ NavierStokes::avgDown(MultiFab& S_crse,MultiFab& S_fine,
 
   } else if (spectral_override==0) {
 
-   FORT_AVGDOWN_LOW(
+   fort_avgdown_low(
     prob_lo,
     dxf,
     &level,&f_level,
@@ -23587,7 +23587,7 @@ void NavierStokes::MOFavgDown() {
   int bfact_c=parent->Space_blockingFactor(level);
   int bfact_f=parent->Space_blockingFactor(f_level);
 
-  FORT_MOFAVGDOWN(
+  fort_mofavgdown(
    &cur_time_slab,
    prob_lo,
    dxc,
@@ -23685,7 +23685,7 @@ void NavierStokes::avgDownError() {
   int bfact_c=parent->Space_blockingFactor(level);
   int bfact_f=parent->Space_blockingFactor(f_level);
 
-  FORT_ERRORAVGDOWN(
+  fort_erroravgdown(
    prob_lo,
    dxf,
    &bfact_c,&bfact_f,
@@ -25046,7 +25046,7 @@ NavierStokes::makeCellFrac(
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // in: LEVELSET_3D.F90
-   FORT_CELLFACEINIT( 
+   fort_cellfaceinit( 
     &tid_current,
     &tessellate,  // = 0,1, or 3
     &nten,

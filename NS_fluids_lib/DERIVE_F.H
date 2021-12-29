@@ -7,25 +7,8 @@
 */
 
 #ifdef BL_LANG_FORT
-#    define FORT_MAXPRESVEL maxpresvel 
-#    define FORT_INTEGRATE_RECALESCE integrate_recalesce
-#    define FORT_RESET_TEMPERATURE reset_temperature
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_MAXPRESVEL MAXPRESVEL
-#    define FORT_INTEGRATE_RECALESCE INTEGRATE_RECALESCE
-#    define FORT_RESET_TEMPERATURE RESET_TEMPERATURE
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_MAXPRESVEL maxpresvel 
-#    define FORT_INTEGRATE_RECALESCE integrate_recalesce
-#    define FORT_RESET_TEMPERATURE reset_temperature
-#  else
-#    define FORT_MAXPRESVEL maxpresvel_ 
-#    define FORT_INTEGRATE_RECALESCE integrate_recalesce_
-#    define FORT_RESET_TEMPERATURE reset_temperature_
-#  endif
-#  endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -119,7 +102,7 @@ extern "C" {
       int* im_solid_map);
 
 
-     void FORT_INTEGRATE_RECALESCE(
+     void fort_integrate_recalesce(
       int* isweep,
       Real* globalsum,Real* localsum,
       int* recalesce_material,
@@ -136,7 +119,7 @@ extern "C" {
       int* level,int* finest_level);
 
 
-     void FORT_RESET_TEMPERATURE(
+     void fort_reset_temperature(
       int* im_source,
       Real* TSAT,
       Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
@@ -150,7 +133,7 @@ extern "C" {
       int* level,int* finest_level);
 
 
-     void FORT_MAXPRESVEL(
+     void fort_maxpresvel(
        Real* minpres,
        Real* maxpres,
        Real* maxvel,

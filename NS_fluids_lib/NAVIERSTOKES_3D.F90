@@ -11410,8 +11410,6 @@ END SUBROUTINE SIMP
        return
        end subroutine fort_diaginv
 
-      end module navierstokesf90_module
-
       subroutine fort_io_compare( &
        nmat, &
        nsteps, &
@@ -12430,7 +12428,7 @@ END SUBROUTINE SIMP
       return
       end subroutine fort_avgdown
 
-      subroutine FORT_AVGDOWN_LOW( &
+      subroutine fort_avgdown_low( &
        problo, &
        dxf, &
        level_c,level_f, &
@@ -12557,12 +12555,12 @@ END SUBROUTINE SIMP
       enddo ! ic,jc,kc
 
       return
-      end subroutine FORT_AVGDOWN_LOW
+      end subroutine fort_avgdown_low
 
        ! NavierStokes::level_phase_change_redistribute
        ! NavierStokes::avgDown_tag_localMF
        ! NavierStokes::level_avgDown_tag
-      subroutine FORT_AVGDOWN_TAG( &
+      subroutine fort_avgdown_tag( &
        problo, &
        dxf, &
        level_c,level_f, &
@@ -12724,13 +12722,13 @@ END SUBROUTINE SIMP
       enddo ! ic,jc,kc
 
       return
-      end subroutine FORT_AVGDOWN_TAG
+      end subroutine fort_avgdown_tag
 
         ! icurv=(iten-1)*(5+SDIM)
         ! dir=1..sdim
         ! side=-1 or 1
         ! curvfab(D_DECL(i,j,k),icurv+4+SDIM)=dir*side
-      subroutine FORT_AVGDOWN_CURV( &
+      subroutine fort_avgdown_curv( &
        problo, &
        dxf, &
        level_c,level_f, &
@@ -12932,10 +12930,10 @@ END SUBROUTINE SIMP
       enddo ! ic,jc,kc
 
       return
-      end subroutine FORT_AVGDOWN_CURV
+      end subroutine fort_avgdown_curv
 
 
-      subroutine FORT_MOFAVGDOWN ( &
+      subroutine fort_mof_avgdown ( &
        time, &
        problo, &
        dxc, &
@@ -13317,10 +13315,10 @@ END SUBROUTINE SIMP
       enddo ! ic,jc,kc
 
       return
-      end subroutine FORT_MOFAVGDOWN
+      end subroutine fort_mof_avgdown
 
 
-      subroutine FORT_ERRORAVGDOWN ( &
+      subroutine fort_erroravgdown ( &
        problo, &
        dxf, &
        bfact_c,bfact_f, &
@@ -13419,14 +13417,14 @@ END SUBROUTINE SIMP
       enddo ! ic,jc,kc
 
       return
-      end subroutine FORT_ERRORAVGDOWN
+      end subroutine fort_erroravgdown
 
 
 
 ! the error is set to zero in advection.  Then
 ! the error is updated when the slopes are recomputed.
 ! this routine is called after the last slope computation of the time step.
-      subroutine FORT_PRESSURE_INDICATOR( &
+      subroutine fort_pressure_indicator( &
         pressure_error_flag, &
         vorterr, &
         pressure_error_cutoff, &
@@ -13611,12 +13609,12 @@ END SUBROUTINE SIMP
       enddo  ! i,j,k
 
       return
-      end subroutine FORT_PRESSURE_INDICATOR
+      end subroutine fort_pressure_indicator
 
 
 
        ! spectral_override==0 => always low order
-      subroutine FORT_EDGEAVGDOWN( &
+      subroutine fort_edgeavgdown( &
        enable_spectral, &
        finest_level, &
        spectral_override, &
@@ -14019,10 +14017,10 @@ END SUBROUTINE SIMP
       deallocate(ffine)
 
       return
-      end subroutine FORT_EDGEAVGDOWN
+      end subroutine fort_edgeavgdown
 
 
-      subroutine FORT_METRICS( &
+      subroutine fort_metrics( &
        xlo,dx, &
        areax,DIMS(areax), &
        areay,DIMS(areay), &
@@ -14152,7 +14150,9 @@ END SUBROUTINE SIMP
       enddo ! dir=0..sdim-1 
 
       return
-      end subroutine FORT_METRICS
+      end subroutine fort_metrics
+
+      end module navierstokesf90_module
 
       module OUTPUT_PC_module
 
