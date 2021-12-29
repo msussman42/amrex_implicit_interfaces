@@ -1860,11 +1860,8 @@ void NavierStokes::apply_cell_pressure_gradient(
  if (ncomp_check!=nsolve)
   amrex::Error("invalid ncomp");
 
- int nden=nmat*num_state_material;
-
- int nvof=nmat*ngeom_raw;
  int nstate=S_new.nComp();
- if (nstate!=SCOMP_NCOMP)
+ if (nstate!=STATE_NCOMP)
   amrex::Error("invalid ncomp in cell pressure gradient routine");
 
  //interpolate pressure from cell to MAC grid.
@@ -1953,6 +1950,8 @@ void NavierStokes::apply_cell_pressure_gradient(
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+ 
+   int ncphys_proxy=FACECOMP_NCOMP;
 
    // in apply_cell_pressure_gradient: p^CELL -> p^MAC 
    // AMR transfer data is in the 3rd component of xp.
@@ -1969,7 +1968,7 @@ void NavierStokes::apply_cell_pressure_gradient(
     &beta,
     &visc_coef,
     &local_enable_spectral,
-    &ncphys,
+    &ncphys_proxy,
     constant_density_all_time.dataPtr(),
     presbc.dataPtr(),
     velbc.dataPtr(),
@@ -2140,6 +2139,8 @@ void NavierStokes::apply_cell_pressure_gradient(
    } else
     amrex::Error("operation_flag_interp_macvel invalid");
 
+   int ncphys_proxy=FACECOMP_NCOMP;
+
    fort_mac_to_cell(
     &ns_time_order,
     &divu_outer_sweeps,
@@ -2158,7 +2159,7 @@ void NavierStokes::apply_cell_pressure_gradient(
     &finest_level,
     &project_option,
     &local_enable_spectral,
-    &ncphys,
+    &ncphys_proxy,
     velbc.dataPtr(),
     presbc.dataPtr(), 
     &cur_time_slab, 
@@ -2807,6 +2808,8 @@ void NavierStokes::increment_face_velocity(
        amrex::Error("tid_current invalid");
       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+      int ncphys_proxy=FACECOMP_NCOMP;
+
       // in increment_face_velocity
       fort_cell_to_mac(
        &ncomp_mgoni,
@@ -2821,7 +2824,7 @@ void NavierStokes::increment_face_velocity(
        &beta,
        &visc_coef,
        &local_enable_spectral,
-       &ncphys,
+       &ncphys_proxy,
        constant_density_all_time.dataPtr(),
        velbc.dataPtr(),  // presbc
        velbc.dataPtr(),  
@@ -3268,6 +3271,8 @@ void NavierStokes::VELMAC_TO_CELL(
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+  int ncphys_proxy=FACECOMP_NCOMP;
+
    // we are in VELMAC_TO_CELL
    // fort_mac_to_cell is declared in LEVELSET_3D.F90
   fort_mac_to_cell(
@@ -3288,7 +3293,7 @@ void NavierStokes::VELMAC_TO_CELL(
    &finest_level,
    &project_option,
    &local_enable_spectral, //0 if interp displacement to CELLS.
-   &ncphys,
+   &ncphys_proxy,
    velbc.dataPtr(),
    velbc.dataPtr(), // presbc
    &cur_time_slab,
@@ -4454,6 +4459,8 @@ void NavierStokes::apply_pressure_grad(
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    int ncphys_proxy=FACECOMP_NCOMP;
+
     // -grad p * FACE_WEIGHT * dt
     // in: apply_pressure_grad
     fort_cell_to_mac(
@@ -4469,7 +4476,7 @@ void NavierStokes::apply_pressure_grad(
      &beta,
      &visc_coef,
      &local_enable_spectral,
-     &ncphys,
+     &ncphys_proxy,
      constant_density_all_time.dataPtr(),
      presbc.dataPtr(),
      velbc.dataPtr(),
@@ -4739,7 +4746,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEHEAT,1,0,
 	  AMREX_SPACEDIM,0,10);
   if (num_species_var>0) {
-   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACESPECIES,
+   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACESPEC,
       num_species_var,0,AMREX_SPACEDIM,0,11);
   }
 
@@ -5929,6 +5936,7 @@ void NavierStokes::process_potential_force_face() {
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+   int ncphys_proxy=FACECOMP_NCOMP;
 
    // process_potential_force_face 
    fort_cell_to_mac( 
@@ -5944,7 +5952,7 @@ void NavierStokes::process_potential_force_face() {
     &beta,
     &visc_coef,
     &local_enable_spectral,
-    &ncphys,
+    &ncphys_proxy,
     constant_density_all_time.dataPtr(),
     presbc.dataPtr(),
     velbc.dataPtr(),

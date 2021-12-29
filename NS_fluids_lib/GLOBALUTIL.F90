@@ -21,7 +21,7 @@ print *,"dimension bust"
 stop
 #endif
 
-#include "DRAG_COMP.H"
+#include "EXTRAP_COMP.H"
 
 
       module LagrangeInterpolationPolynomial
@@ -1244,6 +1244,37 @@ REAL_T :: MOF_PI=zero
 
 contains
 
+      subroutine stress_index(one_dim_index,i,j)
+      implicit none
+
+      INTEGER_T, intent(in) :: one_dim_index
+      INTEGER_T, intent(out) :: i
+      INTEGER_T, intent(out) :: j
+
+      if (one_dim_index.eq.1) then
+       i=1
+       j=1
+      else if (one_dim_index.eq.2) then
+       i=1
+       j=2
+      else if (one_dim_index.eq.3) then
+       i=2
+       j=2
+      else if (one_dim_index.eq.4) then
+       i=3
+       j=3
+      else if (one_dim_index.eq.5) then
+       i=1
+       j=3
+      else if (one_dim_index.eq.6) then
+       i=2
+       j=3
+      else
+       print *,"one_dim_index invalid"
+       stop
+      endif
+
+      end subroutine stress_index
 
       function wallfunc(u_tau,u,y,K,B,rho_w,mu_w) result(f)
       implicit none

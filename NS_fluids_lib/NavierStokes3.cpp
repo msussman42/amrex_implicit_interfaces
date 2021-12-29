@@ -523,7 +523,7 @@ void NavierStokes::nonlinear_advection() {
  } // ilev=level..finest_level
 
 // 0. if read_from_CAD==1
-//   (a) copy eulerian velocity and/or force to lagrangian.
+//   (a) copy eulerian velocity and stress to lagrangian.
 //   (b) update Lagrangian node positions
 //   (c) convert Lagrangian position, velocity, temperature, and
 //       force (if CTML) to Eulerian.
@@ -535,6 +535,15 @@ void NavierStokes::nonlinear_advection() {
 //    c. extrapolate F,X,LS from fluid regions into solid regions.
 
  if (read_from_CAD()==1) {
+
+  int caller_id=40;
+  init_FSI_GHOST_MAC_MF_ALL(caller_id);
+
+  int post_init_flag=20;
+  int fast_mode=0;
+  setup_integrated_quantities();
+  volWgtSumALL(post_init_flag,fast_mode);
+
   int iter=0;
   int FSI_operation=4; // eul vel t=cur_time_slab -> structure vel
   int FSI_sub_operation=0;
@@ -7583,7 +7592,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
  int local_face_index=FACECOMP_FACEDEN;  // 1/rho
  if (project_option_projection(project_option)==1) {
   local_face_index=FACECOMP_FACEDEN;  // 1/rho
- } else if (project_option==PRESEXTRAP) { 
+ } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
    // 1/rho (only used in eval_face_coeff for sanity check purposes)
   local_face_index=FACECOMP_FACEDEN;  
  } else if (project_option==SOLVETYPE_HEAT) {
@@ -7592,7 +7601,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
   local_face_index=FACECOMP_FACEVISC; 
  } else if ((project_option>=SOLVETYPE_SPEC)&&
             (project_option<SOLVETYPE_SPEC+num_species_var)) { // rho D
-  local_face_index=FACECOMP_FACESPECIES+project_option-SOLVETYPE_SPEC;
+  local_face_index=FACECOMP_FACESPEC+project_option-SOLVETYPE_SPEC;
  } else if (project_option==SOLVETYPE_SMOOTH) {
   local_face_index=FACECOMP_FACESMOOTH;
  } else
@@ -8174,6 +8183,7 @@ void NavierStokes::correct_velocity(
     &level,
     &finest_level,
     &velcomp,
+    &nsolve,
     &project_option,
     tilelo,tilehi,
     fablo,fabhi,&bfact,
@@ -9478,7 +9488,7 @@ void NavierStokes::multiphase_project(int project_option) {
    // do nothing
   } else
    amrex::Error("project_option invalid 45"); 
- } else if (project_option==PRESEXTRAP) { 
+ } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
   // do nothing
  } else if (project_option==SOLVETYPE_HEAT) { 
   // do nothing
@@ -9545,7 +9555,7 @@ void NavierStokes::multiphase_project(int project_option) {
     // diffusionRHS=0.0 UMAC=0 project_option==SOLVETYPE_VISC 
     // diffusionRHS=0.0 UMAC=0 project_option==SOLVETYPE_SPEC ...
     // diffusionRHS=0.0 if project_option==SOLVETYPE_PRESCOR 
-    // diffusionRHS=0.0 if project_option==PRESEXTRAP 
+    // diffusionRHS=0.0 if project_option==SOLVETYPE_PRESEXTRAP 
     // (DIV_Type contents cannot be zapped because it is needed for
     //  initializing CELL_SOUND_MF, DIFFUSIONRHS if 
     //  project_option==SOLVETYPE_PRESCOR)
@@ -11512,7 +11522,7 @@ void NavierStokes::multiphase_project(int project_option) {
  if ((project_option==SOLVETYPE_INITPROJ)||  
      (project_option==SOLVETYPE_PRESCOR)) { 
   homflag_dual_time=1;
- } else if (project_option==PRESEXTRAP) { 
+ } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
   homflag_dual_time=0;
  } else if ((project_option==SOLVETYPE_PRES)|| 
             (project_option==SOLVETYPE_HEAT)) { 
@@ -11671,7 +11681,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
  cpp_overridepbc(0,project_option);
 
- if (project_option==PRESEXTRAP) { 
+ if (project_option==SOLVETYPE_PRESEXTRAP) { 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
     // in: MacProj.cpp (calls FORT_RESTORE_PRES)

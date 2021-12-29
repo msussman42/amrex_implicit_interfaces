@@ -9,6 +9,7 @@
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
+#include "EXTRAP_COMP.H"
 
 #define element_buffer_tol 0.01d0
 
@@ -8310,8 +8311,7 @@ IMPLICIT NONE
 return
 end subroutine CLSVOF_FILLCONTAINER
 
-! nFSI==nparts*nFSI_sub
-! nparts x (vel + LS + temperature + flag + force)
+! nFSI==nparts*NCOMP_FSI
 ! mask=0 prior to entry
 ! mask=1 velocity is init from fine lev, but sign is not
 ! mask=2 both sign and velocity are init on fine lev
@@ -8334,7 +8334,6 @@ subroutine CLSVOF_InitBox(  &
   ngrowFSI, &
   nmat, &
   nFSI, &
-  nFSI_sub, &
   FSI_operation, &
   touch_flag, &
   h_small, &
@@ -8368,9 +8367,8 @@ IMPLICIT NONE
   INTEGER_T :: nparts
   INTEGER_T :: part_id
   INTEGER_T :: ngrowFSI
-  INTEGER_T :: nmat
-  INTEGER_T :: nFSI
-  INTEGER_T :: nFSI_sub
+  INTEGER_T, intent(in) :: nmat
+  INTEGER_T, intent(in) :: nFSI
   INTEGER_T :: FSI_operation
   INTEGER_T :: touch_flag
   INTEGER_T :: numtouch
@@ -8417,8 +8415,7 @@ IMPLICIT NONE
   REAL_T :: dotprod
   REAL_T :: unsigned_mindist  ! unsigned
   REAL_T :: weighttotal,distwt,weight
-    ! (vel + LS + temperature + flag + force)
-  REAL_T, dimension(nFSI_sub) :: weight_top 
+  REAL_T, dimension(NCOMP_FSI) :: weight_top 
   REAL_T :: weight_bot
   REAL_T, dimension(3) :: minnode,maxnode
   REAL_T, dimension(3) :: xx
@@ -8449,8 +8446,8 @@ IMPLICIT NONE
   INTEGER_T mminus,mplus
   REAL_T xminus,xplus
   REAL_T LSsign,LSMINUS,LSPLUS
-  REAL_T data_minus(nFSI_sub)
-  REAL_T data_plus(nFSI_sub)
+  REAL_T data_minus(NCOMP_FSI)
+  REAL_T data_plus(NCOMP_FSI)
   INTEGER_T sign_status_changed
   INTEGER_T num_elements
   INTEGER_T num_elements_container
@@ -8627,14 +8624,8 @@ IMPLICIT NONE
     stop
    endif
 
-    ! nparts x (vel + LS + temperature + flag + force)
-
-   if (nFSI.ne.nparts*nFSI_sub) then
+   if (nFSI.ne.nparts*NCOMP_FSI) then
     print *,"nFSI invalid"
-    stop
-   endif
-   if (nFSI_sub.ne.9) then
-    print *,"nFSI_sub invalid CLSVOF_InitBox: ",nFSI_sub
     stop
    endif
    if ((nparts.lt.1).or.(nparts.ge.nmat)) then
@@ -8642,7 +8633,7 @@ IMPLICIT NONE
     stop
    endif
 
-   ibase=(part_id-1)*nFSI_sub
+   ibase=(part_id-1)*NCOMP_FSI
 
    if ((touch_flag.ne.0).and.(touch_flag.ne.1)) then
     print *,"touch_flag invalid"
@@ -8858,8 +8849,8 @@ IMPLICIT NONE
             xx,part_id,time,dxBB,force_weight,force_vector)
            ! nparts x (vel + LS + temperature + flag + force)
            do dir=1,3
-            FSIdata3D(i,j,k,ibase+6+dir)=  &
-              FSIdata3D(i,j,k,ibase+6+dir)+ &
+            FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=  &
+              FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)+ &
               dt*force_weight*force_vector(dir)
            enddo 
           enddo ! inode=1,nodes_per_elem
@@ -9124,16 +9115,15 @@ IMPLICIT NONE
 
          modify_vel=0
 
-         ! nmat x (vel + LS + temperature + flag + force)
-         ls_local=FSIdata3D(i,j,k,ibase+4)
-         mask_local=NINT(FSIdata3D(i,j,k,ibase+6))
+         ls_local=FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)
+         mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
          do dir=1,3
-          vel_local(dir)=FSIdata3D(i,j,k,ibase+dir)
+          vel_local(dir)=FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)
          enddo
          do dir=1,3
-          force_local(dir)=FSIdata3D(i,j,k,ibase+6+dir)
+          force_local(dir)=FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)
          enddo
-         temp_local=FSIdata3D(i,j,k,ibase+5)
+         temp_local=FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)
 
          if ((mask_local.eq.0).or. &
              (mask_local.eq.10).or. &
@@ -9295,11 +9285,10 @@ IMPLICIT NONE
           stop
          endif 
 
-         ! nparts x (vel + LS + temperature + flag + force)
-         FSIdata3D(i,j,k,ibase+4)=ls_local
-         FSIdata3D(i,j,k,ibase+6)=mask_local
+         FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local
+         FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=mask_local
          do dir=1,3
-          FSIdata3D(i,j,k,ibase+dir)=vel_local(dir)
+          FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel_local(dir)
          enddo 
          if (CTML_force_model.eq.2) then !pres-vel
           print *,"CTML_force_model.eq.2 not supported"
@@ -9310,7 +9299,7 @@ IMPLICIT NONE
           print *,"CTML_force_model invalid"
           stop
          endif
-         FSIdata3D(i,j,k,ibase+5)=temp_local
+         FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)=temp_local
 
         else if ((mask1.eq.1).and.(mask2.eq.0)) then
          ! do nothing
@@ -9383,9 +9372,8 @@ IMPLICIT NONE
      !  coarse/fine ghost cell.
      if ((mask1.eq.0).or.(mask2.eq.1)) then
 
-      ! nparts x (vel + LS + temperature + flag + force)
-      ls_local=FSIdata3D(i,j,k,ibase+4)
-      mask_local=NINT(FSIdata3D(i,j,k,ibase+6))
+      ls_local=FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)
+      mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
 
       if (mask_local.eq.0) then
        ls_local=8.0*dx3D(1)
@@ -9440,9 +9428,8 @@ IMPLICIT NONE
        stop
       endif
 
-      ! nparts x (vel + LS + temperature + flag + force)
-      FSIdata3D(i,j,k,ibase+4)=ls_local
-      FSIdata3D(i,j,k,ibase+6)=mask_local
+      FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local
+      FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=mask_local
 
      else if ((mask1.eq.1).and.(mask2.eq.0)) then
       ! do nothing
@@ -9471,9 +9458,8 @@ IMPLICIT NONE
      !  coarse/fine ghost cell.
      if ((mask1.eq.0).or.(mask2.eq.1)) then
 
-      ! nparts x (vel + LS + temperature + flag + force)
-      ls_local=FSIdata3D(i,j,k,ibase+4)
-      mask_local=NINT(FSIdata3D(i,j,k,ibase+6))
+      ls_local=FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)
+      mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
       if (mask_local.eq.103) then   !doubly wetted, d init
        ls_local=ls_local+wallthick*dx3D(1)
       else if (mask_local.eq.3) then !doubly wetted, d not init
@@ -9545,7 +9531,7 @@ IMPLICIT NONE
        print *,"invert_solid_levelset invalid"
        stop
       endif
-      FSIdata3D(i,j,k,ibase+4)=ls_local
+      FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local
 
       if (sign_valid(mask_local).eq.1) then
        if (ls_local.lt.LSMIN_debug) then
@@ -9688,9 +9674,8 @@ IMPLICIT NONE
        !  coarse/fine ghost cell.
        if ((mask1.eq.0).or.(mask2.eq.1)) then
 
-        ! nparts x (vel + LS + temperature + flag + force)
-        mask_local=NINT(old_FSIdata(i,j,k,ibase+6))
-        ls_local=old_FSIdata(i,j,k,ibase+4)
+        mask_local=NINT(old_FSIdata(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
+        ls_local=old_FSIdata(i,j,k,ibase+FSI_LEVELSET+1)
         new_mask_local=mask_local
 
         do dir=1,3
@@ -9726,8 +9711,7 @@ IMPLICIT NONE
            mminus=0
           else if ((i_norm.gt.FSI_growlo(dir)).and. &
                    (i_norm.le.FSI_growhi(dir))) then
-           ! nparts x (vel + LS + temperature + flag + force)
-           do nc=1,nFSI_sub
+           do nc=1,NCOMP_FSI
             data_minus(nc)=old_FSIdata(i-ii,j-jj,k-kk,ibase+nc)
            enddo
            mminus=NINT(data_minus(6))
@@ -9742,8 +9726,7 @@ IMPLICIT NONE
            mplus=0
           else if ((i_norm.ge.FSI_growlo(dir)).and. &
                    (i_norm.lt.FSI_growhi(dir))) then
-           ! nparts x (vel + LS + temperature + flag + force)
-           do nc=1,nFSI_sub
+           do nc=1,NCOMP_FSI
             data_plus(nc)=old_FSIdata(i+ii,j+jj,k+kk,ibase+nc)
            enddo
            mplus=NINT(data_plus(6))
@@ -9857,14 +9840,7 @@ IMPLICIT NONE
 
          if (vel_valid(mask_local).eq.0) then 
 
-          ! (vel + LS + temperature + flag + force)
-          if (nFSI_sub.ne.9) then
-           print *,"nFSI_sub.ne.9"
-           stop
-          endif
-
-          ! (vel + LS + temperature + flag + force)
-          do dir=1,nFSI_sub
+          do dir=1,NCOMP_FSI
            weight_top(dir)=zero
           enddo
           weight_bot=zero
@@ -9874,7 +9850,7 @@ IMPLICIT NONE
            if ((i+i1.ge.FSI_growlo(1)).and.(i+i1.le.FSI_growhi(1)).and. &
                (j+j1.ge.FSI_growlo(2)).and.(j+j1.le.FSI_growhi(2)).and. &
                (k+k1.ge.FSI_growlo(3)).and.(k+k1.le.FSI_growhi(3))) then
-            mask_node=NINT(old_FSIdata(i+i1,j+j1,k+k1,ibase+6))
+            mask_node=NINT(old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_EXTRAP_FLAG+1))
             if (vel_valid(mask_node).eq.1) then
              weight=zero
              do dir=1,3
@@ -9886,18 +9862,17 @@ IMPLICIT NONE
               stop
              endif
              weight=one/weight
-             ! nparts x (vel + LS + temperature + flag + force)
              do dir=1,3
-              weight_top(dir)=weight_top(dir)+ &
-               old_FSIdata(i+i1,j+j1,k+k1,ibase+dir)*weight
+              weight_top(FSI_VELOCITY+dir)=weight_top(FSI_VELOCITY+dir)+ &
+               old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_VELOCITY+dir)*weight
              enddo
               ! temperature
-             weight_top(5)=weight_top(5)+ &
-               old_FSIdata(i+i1,j+j1,k+k1,ibase+5)*weight
+             weight_top(FSI_TEMPERATURE+1)=weight_top(FSI_TEMPERATURE+1)+ &
+               old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_TEMPERATURE+1)*weight
               ! force
              do dir=1,3
-              weight_top(6+dir)=weight_top(6+dir)+ &
-               old_FSIdata(i+i1,j+j1,k+k1,ibase+6+dir)*weight
+              weight_top(FSI_FORCE+dir)=weight_top(FSI_FORCE+dir)+ &
+               old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_FORCE+dir)*weight
              enddo
      
              weight_bot=weight_bot+weight
@@ -9912,12 +9887,13 @@ IMPLICIT NONE
           enddo
           enddo ! i1,j1,k1
           if (weight_bot.gt.zero) then
-           ! (vel + LS + temperature + flag + force)
            do dir=1,3
-            FSIdata3D(i,j,k,ibase+dir)=weight_top(dir)/weight_bot
+            FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)= &
+                    weight_top(FSI_VELOCITY+dir)/weight_bot
            enddo
-           FSIdata3D(i,j,k,ibase+5)=weight_top(5)/weight_bot
-           if (CTML_force_model.eq.2) then ! pres vel
+           FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)= &
+                   weight_top(FSI_TEMPERATURE+1)/weight_bot
+           if (CTML_force_model.eq.2) then 
             print *,"CTML_force_model.eq.2 not supported"
             stop
            else if (CTML_force_model.eq.0) then ! Goldstein et al
@@ -9930,11 +9906,12 @@ IMPLICIT NONE
            if (sweepmax.eq.1) then
             ! do nothing
            else if (sweepmax.eq.2) then
-            ! (vel + LS + temperature + flag + force)
             do dir=1,3
-             old_FSIdata(i,j,k,ibase+dir)=weight_top(dir)/weight_bot
+             old_FSIdata(i,j,k,ibase+FSI_VELOCITY+dir)= &
+                     weight_top(FSI_VELOCITY+dir)/weight_bot
             enddo
-            old_FSIdata(i,j,k,ibase+5)=weight_top(5)/weight_bot
+            old_FSIdata(i,j,k,ibase+FSI_TEMPERATURE+1)= &
+                    weight_top(FSI_TEMPERATURE+1)/weight_bot
             if (CTML_force_model.eq.2) then ! pres-vel
              print *,"CTML_force_model.eq.2 not supported"
              stop
@@ -9979,15 +9956,14 @@ IMPLICIT NONE
          stop
         endif
 
-        ! (vel + LS + temperature + flag + force)
-        FSIdata3D(i,j,k,ibase+6)=new_mask_local 
-        FSIdata3D(i,j,k,ibase+4)=ls_local 
+        FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=new_mask_local 
+        FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local 
 
         if (sweepmax.eq.1) then
          ! do nothing
         else if (sweepmax.eq.2) then
-         old_FSIdata(i,j,k,ibase+6)=new_mask_local 
-         old_FSIdata(i,j,k,ibase+4)=ls_local 
+         old_FSIdata(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=new_mask_local 
+         old_FSIdata(i,j,k,ibase+FSI_LEVELSET+1)=ls_local 
         else
          print *,"sweepmax invalid"
          stop
@@ -10065,7 +10041,6 @@ end subroutine CLSVOF_InitBox
        ngrowFSI, &
        nmat, &
        nFSI, &
-       nFSI_sub, &
        FSI_operation, &
        time, &
        problo3D,probhi3D, &
@@ -10077,6 +10052,7 @@ end subroutine CLSVOF_InitBox
        growlo3D,growhi3D, &
        xdata3D, &
        veldata3D, &
+       stressdata3D, &
        masknbr3D, &
        maskfiner3D, &
        DIMS3D(FSIdata3D), &
@@ -10098,7 +10074,6 @@ end subroutine CLSVOF_InitBox
       INTEGER_T :: ngrowFSI
       INTEGER_T :: nmat
       INTEGER_T :: nFSI
-      INTEGER_T :: nFSI_sub
       INTEGER_T :: FSI_operation
       REAL_T :: time
       REAL_T problo3D(3)
@@ -10109,9 +10084,10 @@ end subroutine CLSVOF_InitBox
       INTEGER_T FSI_lo(3),FSI_hi(3)
       INTEGER_T FSI_growlo(3),FSI_growhi(3)
       INTEGER_T growlo3D(3),growhi3D(3)
-      INTEGER_T DIMDEC3D(FSIdata3D)
+      INTEGER_T, intent(in) :: DIMDEC3D(FSIdata3D)
       REAL_T xdata3D(DIMV3D(FSIdata3D),3)
-      REAL_T veldata3D(DIMV3D(FSIdata3D),3)
+      REAL_T, intent(in) :: veldata3D(DIMV3D(FSIdata3D),3)
+      REAL_T, intent(in) :: stressdata3D(DIMV3D(FSIdata3D),6*nmat)
       REAL_T masknbr3D(DIMV3D(FSIdata3D),2)
       REAL_T maskfiner3D(DIMV3D(FSIdata3D))
 
@@ -10262,14 +10238,8 @@ end subroutine CLSVOF_InitBox
         stop
        endif
 
-        ! nparts x (vel + LS + temperature + flag + force)
-
-       if (nFSI.ne.nparts*nFSI_sub) then
+       if (nFSI.ne.nparts*NCOMP_FSI) then
         print *,"nFSI invalid"
-        stop
-       endif
-       if (nFSI_sub.ne.9) then
-        print *,"nFSI_sub invalid CLSVOF_Copy_To_LAG: ",nFSI_sub
         stop
        endif
        if ((nparts.lt.1).or.(nparts.ge.nmat)) then

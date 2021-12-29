@@ -186,7 +186,7 @@
        !FSI_operation=1  update node locations
        !FSI_operation=2  make distance in narrow band
        !FSI_operation=3  update the sign.
-       !FSI_operation=4  copy eul fluid vel/pres to solid
+       !FSI_operation=4  copy eul fluid vel to solid
        !  FSI_sub_operation.eq.0 (clear lagrangian data)
        !  FSI_sub_operation.eq.1 (actual copy)
        !  FSI_sub_operation.eq.2 (sync lag data)
@@ -237,6 +237,8 @@
         DIMS(FSIdata), &
         velfab, &
         DIMS(velfab), &
+        drag, &
+        DIMS(drag), &
         masknbr, &
         DIMS(masknbr), &
         maskfiner, &
@@ -340,13 +342,16 @@
       INTEGER_T isout
       INTEGER_T, intent(in) :: DIMDEC(FSIdata)  ! velfab if FSI_operation==4
       INTEGER_T, intent(in) :: DIMDEC(velfab) 
+      INTEGER_T, intent(in) :: DIMDEC(drag) 
       INTEGER_T, intent(in) :: DIMDEC(masknbr) 
       INTEGER_T, intent(in) :: DIMDEC(maskfiner) 
         ! velfab if FSI_operation==4
       REAL_T, intent(inout), target :: FSIdata(DIMV(FSIdata),nFSI) 
       REAL_T, pointer :: FSIdata_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM+1)
+      REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM)
       REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: drag(DIMV(drag),N_DRAG)
+      REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: masknbr(DIMV(masknbr),2)
       REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: maskfiner(DIMV(maskfiner),4)
@@ -382,6 +387,7 @@
       INTEGER_T DIMDEC3D(FSIdata3D)
       REAL_T, allocatable :: FSIdata3D(:,:,:,:)
       REAL_T, allocatable :: veldata3D(:,:,:,:)
+      REAL_T, allocatable :: stressdata3D(:,:,:,:)
       REAL_T, allocatable :: xdata3D(:,:,:,:)
       REAL_T, allocatable :: masknbr3D(:,:,:,:)
       REAL_T, allocatable :: maskfiner3D(:,:,:)
@@ -512,6 +518,8 @@
       call checkbound_array(fablo,fabhi,FSIdata_ptr,ngrowFSI,-1,2910)
       velfab_ptr=>velfab
       call checkbound_array(fablo,fabhi,velfab_ptr,ngrowFSI,-1,2910)
+      drag_ptr=>drag
+      call checkbound_array(fablo,fabhi,drag_ptr,ngrowFSI,-1,2910)
       masknbr_ptr=>masknbr
       call checkbound_array(fablo,fabhi,masknbr_ptr,ngrowFSI,-1,2910)
       maskfiner_ptr=>maskfiner
@@ -990,8 +998,7 @@
        deallocate(FSIdata3D)
        deallocate(masknbr3D)
 
-       FIX ME, TRANSFER STRESS BACK AND FORTH, NOT THE FORCE.
-      else if (FSI_operation.eq.4) then ! copy Eul fluid vel/pres to solid
+      else if (FSI_operation.eq.4) then ! copy Eul fluid vel/stress to solid
 
        isout=1 ! verbose on in sci_clsvof.F90
 
@@ -1003,7 +1010,8 @@
        if (FSI_sub_operation.eq.0) then
         call CLSVOF_clear_lag_data(ioproc,isout)
        else if (FSI_sub_operation.eq.1) then 
-        allocate(veldata3D(DIMV3D(FSIdata3D),4)) ! 3+1
+        allocate(veldata3D(DIMV3D(FSIdata3D),3)) 
+        allocate(stressdata3D(DIMV3D(FSIdata3D),6*nmat)) 
         allocate(xdata3D(DIMV3D(FSIdata3D),3))
         allocate(masknbr3D(DIMV3D(FSIdata3D),2))
         allocate(maskfiner3D(DIMV3D(FSIdata3D)))
@@ -1017,8 +1025,12 @@
 
          if (SDIM.eq.3) then
           call gridsten_level(xsten,i,j,k,level,nhalf)
-          do dir=1,SDIM+1
+          do dir=1,SDIM
            veldata3D(i,j,k,dir)=velfab(D_DECL(i,j,k),dir)
+          enddo
+          do dir=1,6*nmat
+           stressdata3D(i,j,k,dir)=drag(D_DECL(i,j,k), &
+             DRAGCOMP_PSTRESS+dir)
           enddo
           do dir=1,SDIM
            xdata3D(i,j,k,dir)=xsten(0,dir)
@@ -1068,7 +1080,10 @@
            endif
            veldata3D(i,j,k,dir)=vel3D(dir)
           enddo ! dir=1..3
-          veldata3D(i,j,k,4)=velfab(D_DECL(i2d,j2d,k2d),SDIM+1)
+          do dir=1,6*nmat
+           stressdata3D(i,j,k,dir)=drag(D_DECL(i2d,j2d,k2d), &
+             DRAGCOMP_PSTRESS+dir)
+          enddo
 
           do nc=1,2
            masknbr3D(i,j,k,nc)=masknbr(D_DECL(i2d,j2d,k2d),nc)
@@ -1173,6 +1188,7 @@
             growlo3D,growhi3D, &
             xdata3D, &
             veldata3D, &
+            stressdata3D, &
             masknbr3D, &
             maskfiner3D, &
             DIMS3D(FSIdata3D), &
@@ -1201,6 +1217,7 @@
 
         deallocate(xdata3D)
         deallocate(veldata3D)
+        deallocate(stressdata3D)
         deallocate(masknbr3D)
         deallocate(maskfiner3D)
 

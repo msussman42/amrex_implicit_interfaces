@@ -6901,6 +6901,9 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
 //
 //  NavierStokes::prepare_post_process (caller_id=2)
 //
+//  NavierStokes::nonlinear_advection (caller_id=40)
+//    (if read_from_CAD()==1)
+//
 void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
 
  int finest_level=parent->finestLevel();
@@ -7835,14 +7838,14 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 //FSI_operation=2  make distance in narrow band
 //  (nparts x (vel, LS, Temp, flag, force)
 //FSI_operation=3  update the sign.
-//FSI_operation=4  copy Eulerian velocity and/or pressure to lag.
+//FSI_operation=4  copy Eulerian velocity and stress to lag.
 //
 // note for CTML algorithm (FSI_flag==4):
 // 1. copy Eulerian velocity to Lagrangian velocity.
 // 2. update node locations
 // 3. copy Lagrangian Force to Eulerian Force and update Eulerian velocity.
 // note for CTML algorithm (FSI_flag==8):
-// 1. copy Eulerian force to Lagrangian force.
+// 1. copy Eulerian stress to Lagrangian stress.
 // 2. update node locations
 // 3. copy Lagrangian velocity to Eulerian velocity.
 void NavierStokes::ns_header_msg_level(
@@ -8201,6 +8204,8 @@ void NavierStokes::ns_header_msg_level(
       FSIfab.dataPtr(), // placeholder
       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
       FSIfab.dataPtr(), // velfab spot
+      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+      FSIfab.dataPtr(), // drag spot
       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
       FSIfab.dataPtr(), // mnbrfab spot
       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
@@ -8582,6 +8587,8 @@ void NavierStokes::ns_header_msg_level(
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      FSIfab.dataPtr(), // velfab spot
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSIfab.dataPtr(), // drag spot
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      mnbrfab.dataPtr(),
      ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
      mnbrfab.dataPtr(), // mfiner spot
@@ -8642,7 +8649,7 @@ void NavierStokes::ns_header_msg_level(
 
      PCINTERP_fill_borders(FSI_MF,ngrowFSI,ibase+i,
       1,Solid_State_Type,scompBC_map);
-    } // i=AMREX_SPACEDIM  ... nFSI_sub-1
+    } // for (int i=FSI_LEVELSET;i<NCOMP_FSI;i++)
    } // partid=0..nparts-1
 
     // 1. copy_velocity_on_sign
@@ -8657,7 +8664,7 @@ void NavierStokes::ns_header_msg_level(
    delete denmf;
    delete LSMF;
 
-   //copy Eulerian velocity or pressure to Lagrangian velocity or pressure
+   //copy Eulerian velocity and stress to Lagrangian velocity and stress
   } else if (FSI_operation==4) { 
 
    elements_generated=1;
@@ -8680,6 +8687,11 @@ void NavierStokes::ns_header_msg_level(
    resize_maskfiner(ngrowFSI,MASKCOEF_MF);
    debug_ngrow(MASKCOEF_MF,ngrowFSI,28);
 
+   if (localMF[DRAG_MF]->nGrow()!=ngrow_make_distance)
+    amrex::Error("localMF[DRAG_MF] incorrect ngrow");
+   if (localMF[DRAG_MF]->nComp()!=N_DRAG)
+    amrex::Error("localMF[DRAG_MF] incorrect ncomp");
+
    if ((FSI_sub_operation==0)|| //init VELADVECT_MF, fortran grid structure,...
        (FSI_sub_operation==2)) {//delete VELADVECT_MF
 
@@ -8688,7 +8700,7 @@ void NavierStokes::ns_header_msg_level(
      // (INTP_CORONA = 1) in UTIL_BOUNDARY_FORCE_FSI.F90
      if (ngrowFSI!=3)
       amrex::Error("ngrowFSI invalid");
-     getState_localMF(VELADVECT_MF,ngrowFSI,0,AMREX_SPACEDIM+1,cur_time); 
+     getState_localMF(VELADVECT_MF,ngrowFSI,0,AMREX_SPACEDIM,cur_time); 
 
       // in: NavierStokes::ns_header_msg_level
      create_fortran_grid_struct(cur_time,dt);
@@ -8769,6 +8781,8 @@ void NavierStokes::ns_header_msg_level(
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      FSIfab.dataPtr(), // velfab spot
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSIfab.dataPtr(), // drag spot
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      FSIfab.dataPtr(), // mnbrfab spot
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      FSIfab.dataPtr(), // mfiner spot
@@ -8812,6 +8826,7 @@ void NavierStokes::ns_header_msg_level(
      const Real* xlo = grid_loc[gridno].lo();
      FArrayBox& FSIfab=(*localMF[VELADVECT_MF])[mfi]; // placeholder
      FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi]; // ngrowFSI ghost cells
+     FArrayBox& dragfab=(*localMF[DRAG_MF])[mfi]; // ngrow_make_dist ghost cells
      FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
      FArrayBox& mfinerfab=(*localMF[MASKCOEF_MF])[mfi];
 
@@ -8854,7 +8869,7 @@ void NavierStokes::ns_header_msg_level(
       FSI_output[im_index].force_list.dataPtr(),
       FSI_output[im_index].mass_list.dataPtr(),
       FSI_output[im_index].temperature_list.dataPtr(),
-      &FSI_operation, //4 (copy eul. fluid vel/pres to lag. solid vel/pres)
+      &FSI_operation, //4 (copy eul. fluid vel/stress to lag. solid vel/stress)
       &FSI_sub_operation, // 1 
       tilelo,tilehi,
       fablo,fabhi,
@@ -8870,6 +8885,8 @@ void NavierStokes::ns_header_msg_level(
       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
       velfab.dataPtr(), // ngrowFSI ghost cells VELADVECT_MF
       ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+      dragfab.dataPtr(), // ngrow_make_distance ghost cells DRAG_MF
+      ARLIM(dragfab.loVect()),ARLIM(dragfab.hiVect()),
       mnbrfab.dataPtr(),
       ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
       mfinerfab.dataPtr(),
@@ -15088,7 +15105,7 @@ NavierStokes::level_init_icemask() {
 // since rho_t + div (rho u)=0,
 // rho (Y_t + u dot grad Y)=div rho D grad Y
 // "rho D" coefficient is in FACE_VAR_MF,
-//   FACECOMP_FACESPECIES ... FACECOMP_FACESPECIES+num_species_var-1 (c++)
+//   FACECOMP_FACESPEC ... FACECOMP_FACESPEC+num_species_var-1 (c++)
 // "1/rho" coefficient is in CELL_DEN_MF 
 
 void
@@ -15170,7 +15187,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
    } // im=0..2 nten-1
   } else if ((project_option>=SOLVETYPE_SPEC)&&  
 	     (project_option<SOLVETYPE_SPEC+num_species_var)) { //mass fraction
-   face_comp_index=FACECOMP_FACESPECIES+project_option-SOLVETYPE_SPEC;
+   face_comp_index=FACECOMP_FACESPEC+project_option-SOLVETYPE_SPEC;
    for (int im=0;im<2*nten;im++) {
     if (latent_heat[im]!=0.0) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
@@ -21275,7 +21292,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
    status=0;
    if (1==0) {
     std::cout << "caller_id= " << caller_id << '\n';
-    print_project_option(project_option);
+    std::cout << "project_option= " << project_option << '\n';
     std::cout << "mg_level= " << mg_level << '\n';
     std::cout << "relative_error= " << relative_error << '\n';
     std::cout << "beta= " << beta << '\n';
@@ -21289,7 +21306,7 @@ void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
   status=0;
   if ((norm_delta_y!=0.0)||(1==0)) {
    std::cout << "caller_id= " << caller_id << '\n';
-   print_project_option(project_option);
+   std::cout << "project_option= " << project_option << '\n';
    std::cout << "mg_level= " << mg_level << '\n';
    std::cout << "beta= " << beta << '\n';
    std::cout << "norm_y= " << norm_y << '\n';
@@ -21380,6 +21397,7 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
 // post_init_flag==1  if sum_integrated_quantities called from post_init
 // post_init_flag==2  if sum_integrated_quantities called from post_restart
 // post_init_flag==10 if called from init_FSI_GHOST_MAC_MF_ALL
+// post_init_flag==20 if called from nonlinear_advection
 void
 NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
 
@@ -21429,6 +21447,9 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
   } else
    amrex::Error("expecting fast_mode==1");
 
+ } else if (post_init_flag==20) { //this routine called from
+	                          //NavierStokes::nonlinear_advection()
+  // do nothing
  } else
   amrex::Error("post_init_flag invalid 20982");
 
@@ -21588,11 +21609,11 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
   }  // isweep=0
  } //for (int isweep=0;isweep<2;isweep++) 
 
- local_comp=0;
+ int local_comp=0;
  for (int im=0;im<nmat;im++) {
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    int idest=IQ_BODYDRAG_SUM_COMP+local_comp;
-   int isource=DRAGCOMP_IQ_BODYFORCE+local_comp
+   int isource=DRAGCOMP_IQ_BODYFORCE+local_comp;
    NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
    idest=IQ_BODYTORQUE_SUM_COMP+local_comp;
    isource=DRAGCOMP_IQ_BODYTORQUE+local_comp;
@@ -21635,8 +21656,8 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
 
  for (int im=0;im<nmat;im++) {
 
-  idest=IQ_STEP_PERIM_SUM_COMP+im;
-  isource=DRAGCOMP_IQ_PERIM+im;
+  int idest=IQ_STEP_PERIM_SUM_COMP+im;
+  int isource=DRAGCOMP_IQ_PERIM+im;
   NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
 
  } // im=0 .. nmat-1
