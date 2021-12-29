@@ -13374,7 +13374,7 @@ void NavierStokes::zalesakVEL() {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // takes into consideration global_velocity_scale
-   FORT_ZALESAK_CELL(
+   fort_zalesak_cell(
     xlo,dx,
     velfab.dataPtr(),
     domlo,domhi,

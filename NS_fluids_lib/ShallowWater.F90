@@ -10,6 +10,7 @@
 #include "AMReX_ArrayLim.H"
 
 #include "ShallowWater_F.H"
+#include "EXTRAP_COMP.H"
 
 #if (AMREX_SPACEDIM==3)
 #define SDIM 3
@@ -155,7 +156,6 @@ stop
       INTEGER_T normdir
       INTEGER_T nmat
       INTEGER_T nstate
-      INTEGER_T nstate_test
       INTEGER_T nflux
       INTEGER_T nflux_test
       REAL_T xcell_cen(SDIM)
@@ -182,22 +182,19 @@ stop
        stop
       endif 
 
-      nstate_test=(SDIM+1)+nmat*num_state_material+ &
-       nmat*ngeom_raw+1
-      nflux_test=nstate_test+nmat*(SDIM+1)
+      nflux_test=STATE_NCOMP+nmat*(SDIM+1)
 
       if (nflux.ne.nflux_test) then
        print *,"nflux invalid"
        stop
       endif
-      if (nstate.ne.nstate_test) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif 
-      igeom=(AMREX_SPACEDIM+1)+nmat*num_state_material
-      ithermal=(AMREX_SPACEDIM+1)
-      ils=(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
-       nmat*ngeom_raw+1
+      igeom=STATECOMP_MOF
+      ithermal=STATECOMP_STATES
+      ils=STATE_NCOMP
 
       total_mass=zero
       total_temperature=zero
@@ -280,7 +277,6 @@ stop
       INTEGER_T nflux
       INTEGER_T nflux_test
       INTEGER_T nstate
-      INTEGER_T nstate_test
       REAL_T xcell_cen(SDIM)
       REAL_T primitive(nflux) 
       REAL_T conserve(nflux) 
@@ -301,15 +297,13 @@ stop
       REAL_T total_kinetic_energy
     
 
-      nstate_test=(SDIM+1)+nmat*num_state_material+ &
-       nmat*ngeom_raw+1
-      nflux_test=nstate_test+nmat*(SDIM+1)
+      nflux_test=STATE_NCOMP+nmat*(SDIM+1)
 
       if (nflux.ne.nflux_test) then
        print *,"nflux invalid"
        stop
       endif
-      if (nstate.ne.nstate_test) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
@@ -318,10 +312,9 @@ stop
        stop
       endif
  
-      igeom=(AMREX_SPACEDIM+1)+nmat*num_state_material
-      ithermal=(AMREX_SPACEDIM+1)
-      ils=(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
-       nmat*ngeom_raw+1
+      igeom=STATECOMP_MOF
+      ithermal=STATECOMP_STATES
+      ils=STATE_NCOMP
 
       total_mass=zero
       total_temperature=zero
@@ -415,7 +408,6 @@ stop
       INTEGER_T nflux
       INTEGER_T nflux_test
       INTEGER_T nstate
-      INTEGER_T nstate_test
       REAL_T normal_vel
       REAL_T state(nflux)
       REAL_T conserve(nflux)
@@ -443,15 +435,13 @@ stop
        stop
       endif
 
-      nstate_test=(SDIM+1)+nmat*num_state_material+ &
-       nmat*ngeom_raw+1
-      nflux_test=nstate_test+nmat*(SDIM+1)
+      nflux_test=STATE_NCOMP+nmat*(SDIM+1)
 
       if (nflux.ne.nflux_test) then
        print *,"nflux invalid"
        stop
       endif
-      if (nstate.ne.nstate_test) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
@@ -460,10 +450,9 @@ stop
        flux(dir)=zero
       enddo
 
-      igeom=(AMREX_SPACEDIM+1)+nmat*num_state_material
-      ithermal=(AMREX_SPACEDIM+1)
-      ils=(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
-       nmat*ngeom_raw+1
+      igeom=STATECOMP_MOF
+      ithermal=STATECOMP_STATES
+      ils=STATE_NCOMP
 
       call convert_to_conserve(state,conserve,total_mass, &
          nstate,nflux,xcell_cen,nmat,normdir)
@@ -536,7 +525,6 @@ stop
       INTEGER_T nflux
       INTEGER_T nflux_test
       INTEGER_T nstate
-      INTEGER_T nstate_test
       REAL_T xcell_cen_left(SDIM)
       REAL_T xcell_cen_right(SDIM)
       REAL_T uLeft(nflux)
@@ -555,14 +543,12 @@ stop
       INTEGER_T n
 
     
-      nstate_test=(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
-       nmat*ngeom_raw+1
-      nflux_test=nstate_test+nmat*(SDIM+1)
+      nflux_test=STATE_NCOMP+nmat*(SDIM+1)
       if (nflux.ne.nflux_test) then
        print *,"nflux invalid"
        stop
       endif
-      if (nstate.ne.nstate_test) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
@@ -592,10 +578,8 @@ stop
       return
       end subroutine shallow_water_LLF
 
-      end module shallowwater_module
-
  
-      subroutine FORT_FEED_FORWARD_ADVECT( &
+      subroutine fort_feed_forward_advect( &
        init_fluxes, &
        normdir, & ! 0..sdim-1
        nflux_feed_forward, & 
@@ -624,62 +608,75 @@ stop
        level, &
        finest_level, &
        domlo,domhi, &
-       nmat)
+       nmat) &
+      bind(c,name='fort_feed_forward_advect')
+
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
       use probf90_module
       use probcommon_module
-      use shallowwater_module
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T init_fluxes
-      INTEGER_T normdir
-      INTEGER_T nflux_feed_forward
-      INTEGER_T nflux_test
-      INTEGER_T nstate
-      INTEGER_T nstate_test
-      INTEGER_T velbc_in(nstate)
-      INTEGER_T slab_step
-      REAL_T dt
-      REAL_T time
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
-      INTEGER_T DIMDEC(mask)
-      INTEGER_T DIMDEC(maskcoef)
-      INTEGER_T DIMDEC(ax)
-      INTEGER_T DIMDEC(vol)
-      INTEGER_T DIMDEC(xflux)
-      INTEGER_T DIMDEC(velfab)
-      INTEGER_T DIMDEC(lsfab)
-      INTEGER_T DIMDEC(snew)
-      INTEGER_T DIMDEC(sold)
-      INTEGER_T DIMDEC(lsnew)
-      INTEGER_T DIMDEC(lsold)
-      INTEGER_T DIMDEC(xmacnew)
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: init_fluxes
+      INTEGER_T, intent(in) :: normdir
+      INTEGER_T, intent(in) :: nflux_feed_forward
+      INTEGER_T, intent(in) :: nstate
+      INTEGER_T, intent(in) :: velbc_in(nstate)
+      INTEGER_T, intent(in) :: slab_step
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: DIMDEC(maskcoef)
+      INTEGER_T, intent(in) :: DIMDEC(ax)
+      INTEGER_T, intent(in) :: DIMDEC(vol)
+      INTEGER_T, intent(in) :: DIMDEC(xflux)
+      INTEGER_T, intent(in) :: DIMDEC(velfab)
+      INTEGER_T, intent(in) :: DIMDEC(lsfab)
+      INTEGER_T, intent(in) :: DIMDEC(snew)
+      INTEGER_T, intent(in) :: DIMDEC(sold)
+      INTEGER_T, intent(in) :: DIMDEC(lsnew)
+      INTEGER_T, intent(in) :: DIMDEC(lsold)
+      INTEGER_T, intent(in) :: DIMDEC(xmacnew)
 
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      INTEGER_T domlo(SDIM),domhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
 
-      REAL_T mask(DIMV(mask))
-      REAL_T maskcoef(DIMV(maskcoef))
+      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: maskcoef(DIMV(maskcoef))
+      REAL_T, pointer :: maskcoef_ptr(D_DECL(:,:,:))
 
-      REAL_T ax(DIMV(ax))
-      REAL_T vol(DIMV(vol))
-      REAL_T xflux(DIMV(xflux),nflux_feed_forward)
-      REAL_T velfab(DIMV(velfab),nstate)
-      REAL_T lsfab(DIMV(lsfab),(SDIM+1)*nmat)
-      REAL_T snew(DIMV(snew),nstate)
-      REAL_T sold(DIMV(sold),nstate)
-      REAL_T lsnew(DIMV(lsnew),(SDIM+1)*nmat)
-      REAL_T lsold(DIMV(lsold),(SDIM+1)*nmat)
-      REAL_T xmacnew(DIMV(xmacnew))
+      REAL_T, intent(in),target :: ax(DIMV(ax))
+      REAL_T, pointer :: ax_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: vol(DIMV(vol))
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout),target :: xflux(DIMV(xflux),nflux_feed_forward)
+      REAL_T, pointer :: xflux_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: velfab(DIMV(velfab),nstate)
+      REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: lsfab(DIMV(lsfab),(SDIM+1)*nmat)
+      REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: snew(DIMV(snew),nstate)
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: sold(DIMV(sold),nstate)
+      REAL_T, pointer :: sold_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: lsnew(DIMV(lsnew),(SDIM+1)*nmat)
+      REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: lsold(DIMV(lsold),(SDIM+1)*nmat)
+      REAL_T, pointer :: lsold_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: xmacnew(DIMV(xmacnew))
+      REAL_T, pointer :: xmacnew_ptr(D_DECL(:,:,:))
+
+      INTEGER_T nflux_test
 
       INTEGER_T i,j,k,ii,jj,kk,veldir
       INTEGER_T nhalf
@@ -727,10 +724,8 @@ stop
        stop
       endif
 
-      nstate_test=(SDIM+1)+nmat*num_state_material+ &
-       nmat*ngeom_raw+1
-      nflux_test=nstate_test+nmat*(SDIM+1)
-      if (nstate.ne.nstate_test) then
+      nflux_test=STATE_NCOMP+nmat*(SDIM+1)
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
@@ -740,31 +735,42 @@ stop
       endif
 
       if ((slab_step.lt.0).or.(slab_step.ge.bfact_time_order)) then
-       print *,"slab_step invalid FORT_FEED_FORWARD_ADVECT"
+       print *,"slab_step invalid fort_feed_forward_advect"
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(mask),1,-1,234)
-      call checkbound(fablo,fabhi,DIMS(maskcoef),1,-1,234)
+      mask_ptr=>mask
+      maskcoef_ptr=>maskcoef
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,234)
+      call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1,234)
 
-      call checkbound(fablo,fabhi,DIMS(ax),0,normdir,231)
-      call checkbound(fablo,fabhi,DIMS(vol),1,-1,234)
+      ax_ptr=>ax
+      vol_ptr=>vol
+      call checkbound_array1(fablo,fabhi,ax_ptr,0,normdir,231)
+      call checkbound_array1(fablo,fabhi,vol_ptr,1,-1,234)
 
-      call checkbound(fablo,fabhi,DIMS(xflux),0,normdir,263)
+      xflux_ptr=>xflux
+      call checkbound_array(fablo,fabhi,xflux_ptr,0,normdir,263)
 
-      call checkbound(fablo,fabhi,DIMS(velfab),1,-1,234)
-      call checkbound(fablo,fabhi,DIMS(lsfab),1,-1,234)
+      velfab_ptr=>velfab
+      lsfab_ptr=>lsfab
+      call checkbound_array(fablo,fabhi,velfab_ptr,1,-1,234)
+      call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1,234)
 
-      call checkbound(fablo,fabhi,DIMS(snew),1,-1,234)
-      call checkbound(fablo,fabhi,DIMS(sold),1,-1,234)
-      call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,234)
-      call checkbound(fablo,fabhi,DIMS(lsold),1,-1,234)
-      call checkbound(fablo,fabhi,DIMS(xmacnew),0,normdir,264)
+      snew_ptr=>snew
+      sold_ptr=>sold
+      lsnew_ptr=>lsnew
+      lsold_ptr=>lsold
+      xmacnew_ptr=>xmacnew
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,234)
+      call checkbound_array(fablo,fabhi,sold_ptr,1,-1,234)
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,234)
+      call checkbound_array(fablo,fabhi,lsold_ptr,1,-1,234)
+      call checkbound_array1(fablo,fabhi,xmacnew_ptr,0,normdir,264)
 
-      igeom=(AMREX_SPACEDIM+1)+nmat*num_state_material
-      ithermal=(AMREX_SPACEDIM+1)
-      ils=(AMREX_SPACEDIM+1)+nmat*num_state_material+ &
-       nmat*ngeom_raw+1
+      igeom=STATECOMP_MOF
+      ithermal=STATECOMP_STATES
+      ils=STATE_NCOMP
 
       ii=0
       jj=0
@@ -776,7 +782,7 @@ stop
       else if ((normdir.eq.2).and.(SDIM.eq.3)) then
        kk=1
       else
-       print *,"normdir out of range in FORT_FEED_FORWARD_ADVECT"
+       print *,"normdir out of range in fort_feed_forward_advect"
        stop
       endif 
 
@@ -1073,4 +1079,6 @@ stop
       endif
 
       return
-      end subroutine FORT_FEED_FORWARD_ADVECT
+      end subroutine fort_feed_forward_advect
+
+      end module shallowwater_module
