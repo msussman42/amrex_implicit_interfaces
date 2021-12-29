@@ -56,6 +56,7 @@ namespace amrex{
      const int* vofbc,
      Real* FSIdata,AMREX_ARLIM_P(FSIdatalo),AMREX_ARLIM_P(FSIdatahi),
      Real* veldata,AMREX_ARLIM_P(veldatalo),AMREX_ARLIM_P(veldatahi),
+     Real* drag,AMREX_ARLIM_P(draglo),AMREX_ARLIM_P(draghi),
      Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
      Real* maskfiner,AMREX_ARLIM_P(maskfinerlo),AMREX_ARLIM_P(maskfinerhi),
      int* nFSI,

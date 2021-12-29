@@ -1783,6 +1783,8 @@ void NavierStokes::apply_div(
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+  int ncphys_proxy=FACECOMP_NCOMP;
+
    // in: NavierStokes::apply_div
    // fort_mac_to_cell declared in: LEVELSET_3D.F90
   fort_mac_to_cell(
@@ -1802,7 +1804,7 @@ void NavierStokes::apply_div(
    &finest_level,
    &project_option,
    &local_enable_spectral,
-   &ncphys,
+   &ncphys_proxy,
    velbc.dataPtr(),
    presbc.dataPtr(), 
    &cur_time_slab, 
@@ -2377,6 +2379,8 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
    int tid_current=ns_thread();
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   int ncphys_proxy=FACECOMP_NCOMP;
+
     // in: NavierStokes::getStateDIV
    fort_mac_to_cell(
     &ns_time_order,
@@ -2395,7 +2399,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
     &finest_level,
     &project_option,
     &local_enable_spectral,
-    &ncphys,
+    &ncphys_proxy,
     velbc.dataPtr(),
     velbc.dataPtr(), // presbc
     &cur_time_slab, 

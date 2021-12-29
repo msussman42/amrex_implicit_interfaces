@@ -748,6 +748,7 @@ stop
       INTEGER_T flagcomp
       REAL_T bterm,pterm
       INTEGER_T numstatetest,ii,jj
+      INTEGER_T dir_local
       REAL_T Q(3,3)
       REAL_T traceA,modtime,viscoelastic_coeff
       REAL_T bulk_modulus
@@ -1092,14 +1093,10 @@ stop
            Q(ii,jj)=zero
           enddo
           enddo
-          Q(1,1)=tensor(D_DECL(i,j,k),1)
-          Q(1,2)=tensor(D_DECL(i,j,k),2)
-          Q(2,2)=tensor(D_DECL(i,j,k),3)
-          Q(3,3)=tensor(D_DECL(i,j,k),4)
-#if (AMREX_SPACEDIM==3)
-          Q(1,3)=tensor(D_DECL(i,j,k),5)
-          Q(2,3)=tensor(D_DECL(i,j,k),6)
-#endif
+          do dir_local=1,2*AMREX_SPACEDIM
+           call stress_index(dir_local,ii,jj)
+           Q(ii,jj)=tensor(D_DECL(i,j,k),dir_local)
+          enddo
           Q(2,1)=Q(1,2)
           Q(3,1)=Q(1,3)
           Q(3,2)=Q(2,3)
@@ -2884,8 +2881,8 @@ stop
               call stress_index(dir,i1,j1)
               ibase=DRAGCOMP_STRESS+6*(im_test-1)+dir
               drag(D_DECL(icell,jcell,kcell),ibase)= &
-                      pressure_stress_tensor(i1,j1)+
-                      viscous_stress_tensor(i1,j1)+
+                      pressure_stress_tensor(i1,j1)+ &
+                      viscous_stress_tensor(i1,j1)+ &
                       visco_stress_tensor(i1,j1)
 
               ibase=DRAGCOMP_PSTRESS+6*(im_test-1)+dir

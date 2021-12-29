@@ -2166,8 +2166,6 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
  } else
   amrex::Error("visual_drag_plot_int invalid");
 
- delete_array(DRAG_MF);
-
  ParallelDescriptor::Barrier();
 
  Real minpres,maxpres;

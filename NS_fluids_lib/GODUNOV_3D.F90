@@ -6429,14 +6429,10 @@ stop
         Q(ii,jj)=zero
        enddo
        enddo
-       Q(1,1)=tensor(D_DECL(i,j,k),1)
-       Q(1,2)=tensor(D_DECL(i,j,k),2)
-       Q(2,2)=tensor(D_DECL(i,j,k),3)
-       Q(3,3)=tensor(D_DECL(i,j,k),4)
-#if (AMREX_SPACEDIM==3)
-       Q(1,3)=tensor(D_DECL(i,j,k),5)
-       Q(2,3)=tensor(D_DECL(i,j,k),6)
-#endif
+       do dir=1,2*AMREX_SPACEDIM
+        call stress_index(dir,ii,jj)
+        Q(ii,jj)=tensor(D_DECL(i,j,k),dir)
+       enddo
        Q(2,1)=Q(1,2)
        Q(3,1)=Q(1,3)
        Q(3,2)=Q(2,3)
@@ -8416,14 +8412,10 @@ stop
         Q(ii,jj)=zero
        enddo
        enddo
-       Q(1,1)=tensor(D_DECL(i,j,k),1)
-       Q(1,2)=tensor(D_DECL(i,j,k),2)
-       Q(2,2)=tensor(D_DECL(i,j,k),3)
-       Q(3,3)=tensor(D_DECL(i,j,k),4)
-#if (AMREX_SPACEDIM==3)
-       Q(1,3)=tensor(D_DECL(i,j,k),5)
-       Q(2,3)=tensor(D_DECL(i,j,k),6)
-#endif
+       do dir_local=1,2*AMREX_SPACEDIM
+        call stress_index(dir_local,ii,jj)
+        Q(ii,jj)=tensor(D_DECL(i,j,k),dir_local)
+       enddo
        Q(2,1)=Q(1,2)
        Q(3,1)=Q(1,3)
        Q(3,2)=Q(2,3)
@@ -8640,14 +8632,10 @@ stop
        enddo
        enddo
 
-       tensor(D_DECL(i,j,k),1)=TQ(1,1)
-       tensor(D_DECL(i,j,k),2)=TQ(1,2)
-       tensor(D_DECL(i,j,k),3)=TQ(2,2)
-       tensor(D_DECL(i,j,k),4)=TQ(3,3)
-#if (AMREX_SPACEDIM==3)
-       tensor(D_DECL(i,j,k),5)=TQ(1,3)
-       tensor(D_DECL(i,j,k),6)=TQ(2,3)
-#endif
+       do dir_local=1,2*AMREX_SPACEDIM
+        call stress_index(dir_local,ii,jj)
+        tensor(D_DECL(i,j,k),dir_local)=TQ(ii,jj)
+       enddo
       enddo
       enddo
       enddo
@@ -9014,14 +9002,10 @@ stop
          TQ(ii,jj)=Q(ii,jj)*cell_data_deriv(1)
         enddo
         enddo
-        tensorMAC(D_DECL(i,j,k),1)=TQ(1,1)
-        tensorMAC(D_DECL(i,j,k),2)=TQ(1,2)
-        tensorMAC(D_DECL(i,j,k),3)=TQ(2,2)
-        tensorMAC(D_DECL(i,j,k),4)=TQ(3,3)
-#if (AMREX_SPACEDIM==3)
-        tensorMAC(D_DECL(i,j,k),5)=TQ(1,3)
-        tensorMAC(D_DECL(i,j,k),6)=TQ(2,3)
-#endif
+        do dir_local=1,2*AMREX_SPACEDIM
+         call stress_index(dir_local,ii,jj)
+         tensorMAC(D_DECL(i,j,k),dir_local)=TQ(ii,jj)
+        enddo
        else if (interp_Q_to_flux.eq.1) then
 
         do itensor=1,ENUM_NUM_TENSOR_TYPE
@@ -9512,6 +9496,8 @@ stop
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
+      INTEGER_T dir_local
+
       INTEGER_T im_elastic
 
       nhalf=3
@@ -9696,15 +9682,10 @@ stop
          Q(ii,jj)=zero
        enddo
        enddo
-
-       Q(1,1)=told(D_DECL(i,j,k),1)
-       Q(1,2)=told(D_DECL(i,j,k),2)
-       Q(2,2)=told(D_DECL(i,j,k),3)
-       Q(3,3)=told(D_DECL(i,j,k),4)
-#if (AMREX_SPACEDIM==3)
-       Q(1,3)=told(D_DECL(i,j,k),5)
-       Q(2,3)=told(D_DECL(i,j,k),6)
-#endif
+       do dir_local=1,2*AMREX_SPACEDIM
+        call stress_index(dir_local,ii,jj)
+        Q(ii,jj)=told(D_DECL(i,j,k),dir_local)
+       enddo
        Q(2,1)=Q(1,2)
        Q(3,1)=Q(1,3)
        Q(3,2)=Q(2,3)
@@ -9797,14 +9778,10 @@ stop
          Q(ii,jj)=zero
         enddo
         enddo
-        Q(1,1)=tnew(D_DECL(i,j,k),1)
-        Q(1,2)=tnew(D_DECL(i,j,k),2)
-        Q(2,2)=tnew(D_DECL(i,j,k),3)
-        Q(3,3)=tnew(D_DECL(i,j,k),4)
-#if (AMREX_SPACEDIM==3)
-        Q(1,3)=tnew(D_DECL(i,j,k),5)
-        Q(2,3)=tnew(D_DECL(i,j,k),6)
-#endif
+        do dir_local=1,2*AMREX_SPACEDIM
+         call stress_index(dir_local,ii,jj)
+         Q(ii,jj)=tnew(D_DECL(i,j,k),dir_local)
+        enddo
         Q(2,1)=Q(1,2)
         Q(3,1)=Q(1,3)
         Q(3,2)=Q(2,3)
@@ -10043,14 +10020,10 @@ stop
         stop
        endif
 
-       tnew(D_DECL(i,j,k),1)=Q(1,1)
-       tnew(D_DECL(i,j,k),2)=Q(1,2)
-       tnew(D_DECL(i,j,k),3)=Q(2,2)
-       tnew(D_DECL(i,j,k),4)=Q(3,3)
-#if (AMREX_SPACEDIM==3)
-       tnew(D_DECL(i,j,k),5)=Q(1,3)
-       tnew(D_DECL(i,j,k),6)=Q(2,3)
-#endif
+       do dir_local=1,2*AMREX_SPACEDIM
+        call stress_index(dir_local,ii,jj)
+        tnew(D_DECL(i,j,k),dir_local)=Q(ii,jj)
+       enddo
 
       enddo
       enddo
@@ -22245,7 +22218,7 @@ stop
            accum_PARM%particles(interior_ID)%extra_state(N_EXTRA_REAL_X0+dir)
          xdisp(dir)=xpart(dir)-xpartfoot(dir)
          velpart(dir)= &
-          accum_PARM%particles(interior_ID)%extra_state(N_EXTRA_REAL_u+dir)
+          accum_PARM%particles(interior_ID)%extra_state(N_EXTRA_REAL_U+dir)
         enddo ! dir=1..sdim
 
         data_in%xtarget=>xpart

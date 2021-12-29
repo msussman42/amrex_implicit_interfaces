@@ -10010,7 +10010,7 @@ stop
          local_face(FACECOMP_FACEVISC+1)=facevisc_local
          local_face(FACECOMP_FACEHEAT+1)=faceheat_local
          do imspec=1,num_species_var
-          local_face(FACECOMP_FACESPECIES+imspec)= &
+          local_face(FACECOMP_FACESPEC+imspec)= &
             density_for_mass_fraction_diffusion*facespecies_local(imspec)
          enddo
 
@@ -15775,7 +15775,7 @@ stop
           ! projection: dedge is 1/rho  (FACECOMP_FACEDEN component c++) 
           ! viscosity: dedge is FACECOMP_FACEVISC component c++ ( mu )
           ! temperature: dedge is FACECOMP_FACEHEAT component c++ ( k )
-          ! species: dedge is FACECOMP_FACESPECIES component c++ ( rho D )
+          ! species: dedge is FACECOMP_FACESPEC component c++ ( rho D )
           ! smoothing: dedge is FACECOMP_FACESMOOTH component c++
           ! (=1 in bulk,=0 interface(s))
 
@@ -18439,9 +18439,9 @@ stop
        do dir=1,SDIM
         xpart(dir)=accum_PARM%particles(current_link)%pos(dir)
         xfoot(dir)= &
-          accum_PARM%particles(current_link)%extra_state(N_EXTRA_REAL_x0+dir)
+          accum_PARM%particles(current_link)%extra_state(N_EXTRA_REAL_X0+dir)
         velpart(dir)= &
-          accum_PARM%particles(current_link)%extra_state(N_EXTRA_REAL_u+dir)
+          accum_PARM%particles(current_link)%extra_state(N_EXTRA_REAL_U+dir)
        enddo 
 
        if (accum_PARM%append_flag.eq.0) then
@@ -19054,9 +19054,9 @@ stop
             do dir=1,SDIM
              new_particles(ibase+dir)=xsub(dir)
              new_particles(ibase+SDIM+N_EXTRA_REAL_X0+dir)=x_foot_sub(dir)
-             new_particles(ibase+SDIM+N_EXTRA_REAL_u+dir)=vel_sub(dir)
+             new_particles(ibase+SDIM+N_EXTRA_REAL_U+dir)=vel_sub(dir)
             enddo
-            new_particles(ibase+SDIM+N_EXTRA_REAL_den+1)=one !stub for density
+            new_particles(ibase+SDIM+N_EXTRA_REAL_DEN+1)=one !stub for density
             new_particles(ibase+SDIM+N_EXTRA_REAL_T+1)=zero !stub for temp.
             new_particles(ibase+SDIM+N_EXTRA_REAL_INSERT_TIME+1)=cur_time_slab
            else
@@ -19727,7 +19727,7 @@ stop
          mass_part=density_part*particle_volume
          do dir=1,SDIM
           vel_part(dir)= &
-            particles(interior_ID)%extra_state(N_EXTRA_REAL_u+dir)
+            particles(interior_ID)%extra_state(N_EXTRA_REAL_U+dir)
           if (abs(vel_part(dir))*dt.le.dx(dir)) then
            ! do nothing
           else
@@ -19830,7 +19830,7 @@ stop
        if (LS_clamped.ge.zero) then
 
         do dir=1,SDIM
-         particles(interior_ID)%extra_state(N_EXTRA_REAL_u+dir)= &
+         particles(interior_ID)%extra_state(N_EXTRA_REAL_U+dir)= &
               vel_clamped(dir)
         enddo
 
@@ -19853,7 +19853,7 @@ stop
         if ((wt_lagrangian.ge.zero).and. &
             (wt_lagrangian.le.one)) then
          do dir=1,SDIM
-          particles(interior_ID)%extra_state(N_EXTRA_REAL_u+dir)= &
+          particles(interior_ID)%extra_state(N_EXTRA_REAL_U+dir)= &
             wt_lagrangian*vel_part(dir)+ &
             (one-wt_lagrangian)*u_last(dir)
          enddo

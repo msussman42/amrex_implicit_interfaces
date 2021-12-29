@@ -6597,7 +6597,6 @@ END SUBROUTINE SIMP
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
       INTEGER_T dir
-      INTEGER_T local_comp
       INTEGER_T im
       INTEGER_T im_primary
       INTEGER_T vofcomp
@@ -6615,8 +6614,6 @@ END SUBROUTINE SIMP
       REAL_T volgrid,distbound
       REAL_T cengrid(SDIM)
       REAL_T xboundary(SDIM)
-
-      INTEGER_T drag_flag
 
       INTEGER_T isrc,idest
       INTEGER_T iside
@@ -11322,6 +11319,96 @@ END SUBROUTINE SIMP
       end subroutine fort_fluidsolidcor
 
 
+       subroutine fort_diaginv( &
+        diag_reg, &
+        DIMS(diag_reg), &
+        resid, DIMS(resid), &
+        xnew, DIMS(xnew), &
+        xold, DIMS(xold), &
+        mask, DIMS(mask), &
+        tilelo,tilehi, &
+        fablo,fabhi,bfact ) &
+       bind(c,name='fort_diaginv')
+
+       use global_utility_module
+
+       IMPLICIT NONE
+
+       REAL_T :: local_diag
+       INTEGER_T, intent(in) :: bfact
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T :: growlo(3),growhi(3)
+       INTEGER_T, intent(in) :: DIMDEC(diag_reg)
+       INTEGER_T, intent(in) :: DIMDEC(resid)
+       INTEGER_T, intent(in) :: DIMDEC(xnew)
+       INTEGER_T, intent(in) :: DIMDEC(xold)
+       INTEGER_T, intent(in) :: DIMDEC(mask)
+       REAL_T, intent(in),target :: diag_reg(DIMV(diag_reg))
+       REAL_T, pointer :: diag_reg_ptr(D_DECL(:,:,:))
+       REAL_T, intent(in),target :: resid(DIMV(resid))
+       REAL_T, pointer :: resid_ptr(D_DECL(:,:,:))
+       REAL_T, intent(out),target :: xnew(DIMV(xnew))
+       REAL_T, pointer :: xnew_ptr(D_DECL(:,:,:))
+       REAL_T, intent(in),target :: xold(DIMV(xold))
+       REAL_T, pointer :: xold_ptr(D_DECL(:,:,:))
+       REAL_T, intent(in),target :: mask(DIMV(mask))
+       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+
+       INTEGER_T i,j,k
+
+       if (bfact.lt.1) then
+        print *,"bfact invalid158"
+        stop
+       endif
+
+       mask_ptr=>mask
+       diag_reg_ptr=>diag_reg
+       xnew_ptr=>xnew
+       xold_ptr=>xold
+       resid_ptr=>resid
+       call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,414) 
+       call checkbound_array1(fablo,fabhi,diag_reg_ptr,0,-1,415) 
+       call checkbound_array1(fablo,fabhi,xnew_ptr,1,-1,416) 
+       call checkbound_array1(fablo,fabhi,xold_ptr,1,-1,417) 
+       call checkbound_array1(fablo,fabhi,resid_ptr,0,-1,417) 
+
+       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+
+        ! mask=tag if not covered by level+1 or outside the domain.
+        if (mask(D_DECL(i,j,k)).eq.one) then
+
+         if (diag_reg(D_DECL(i,j,k)).eq.zero) then
+          print *,"diag_reg invalid 1"
+          stop
+         else if (diag_reg(D_DECL(i,j,k)).gt.zero) then
+          local_diag=diag_reg(D_DECL(i,j,k))
+         else
+          print *,"diag invalid 2"
+          stop
+         endif
+
+         xnew(D_DECL(i,j,k))=xold(D_DECL(i,j,k))+ &
+           resid(D_DECL(i,j,k))/local_diag
+
+        else if (mask(D_DECL(i,j,k)).eq.zero) then
+
+         xnew(D_DECL(i,j,k))=xold(D_DECL(i,j,k))
+
+        else 
+         print *,"mask invalid"
+         stop
+        endif
+
+       enddo
+       enddo
+       enddo
+
+       return
+       end subroutine fort_diaginv
 
       end module navierstokesf90_module
 
@@ -13312,86 +13399,6 @@ END SUBROUTINE SIMP
 
       return
       end subroutine FORT_ERRORAVGDOWN
-
-       subroutine FORT_DIAGINV( &
-        diag_reg, &
-        DIMS(diag_reg), &
-        resid, DIMS(resid), &
-        xnew, DIMS(xnew), &
-        xold, DIMS(xold), &
-        mask, DIMS(mask), &
-        tilelo,tilehi, &
-        fablo,fabhi,bfact )
-
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       REAL_T :: local_diag
-       INTEGER_T, intent(in) :: bfact
-       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-       INTEGER_T :: growlo(3),growhi(3)
-       INTEGER_T, intent(in) :: DIMDEC(diag_reg)
-       INTEGER_T, intent(in) :: DIMDEC(resid)
-       INTEGER_T, intent(in) :: DIMDEC(xnew)
-       INTEGER_T, intent(in) :: DIMDEC(xold)
-       INTEGER_T, intent(in) :: DIMDEC(mask)
-       REAL_T, intent(in) ::  diag_reg(DIMV(diag_reg))
-       REAL_T, intent(in) ::  resid(DIMV(resid))
-       REAL_T, intent(out) :: xnew(DIMV(xnew))
-       REAL_T, intent(in) ::  xold(DIMV(xold))
-       REAL_T, intent(in) ::  mask(DIMV(mask))
-
-       INTEGER_T i,j,k
-
-       if (bfact.lt.1) then
-        print *,"bfact invalid158"
-        stop
-       endif
-
-       call checkbound(fablo,fabhi,DIMS(mask),1,-1,414) 
-       call checkbound(fablo,fabhi,DIMS(diag_reg),0,-1,415) 
-       call checkbound(fablo,fabhi,DIMS(xnew),1,-1,416) 
-       call checkbound(fablo,fabhi,DIMS(xold),1,-1,417) 
-       call checkbound(fablo,fabhi,DIMS(resid),0,-1,417) 
-
-       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
-       do k=growlo(3),growhi(3)
-
-        ! mask=tag if not covered by level+1 or outside the domain.
-        if (mask(D_DECL(i,j,k)).eq.one) then
-
-         if (diag_reg(D_DECL(i,j,k)).eq.zero) then
-          print *,"diag_reg invalid 1"
-          stop
-         else if (diag_reg(D_DECL(i,j,k)).gt.zero) then
-          local_diag=diag_reg(D_DECL(i,j,k))
-         else
-          print *,"diag invalid 2"
-          stop
-         endif
-
-         xnew(D_DECL(i,j,k))=xold(D_DECL(i,j,k))+ &
-           resid(D_DECL(i,j,k))/local_diag
-
-        else if (mask(D_DECL(i,j,k)).eq.zero) then
-
-         xnew(D_DECL(i,j,k))=xold(D_DECL(i,j,k))
-
-        else 
-         print *,"mask invalid"
-         stop
-        endif
-
-       enddo
-       enddo
-       enddo
-
-       return
-       end subroutine FORT_DIAGINV
 
 
 

@@ -15,7 +15,6 @@
 #    define FORT_AVGDOWN_LOW avgdown_low
 #    define FORT_AVGDOWN_TAG avgdown_tag
 #    define FORT_AVGDOWN_CURV avgdown_curv
-#    define FORT_DIAGINV     diaginv
 #    define FORT_OUTPUTSLICE outputslice
 #    define FORT_IO_COMPARE io_compare
 #    define FORT_METRICS metrics
@@ -31,7 +30,6 @@
 #    define FORT_AVGDOWN_LOW AVGDOWN_LOW
 #    define FORT_AVGDOWN_TAG AVGDOWN_TAG
 #    define FORT_AVGDOWN_CURV AVGDOWN_CURV
-#    define FORT_DIAGINV     DIAGINV
 #    define FORT_OUTPUTSLICE OUTPUTSLICE
 #    define FORT_IO_COMPARE IO_COMPARE
 #    define FORT_METRICS METRICS
@@ -46,7 +44,6 @@
 #    define FORT_AVGDOWN_LOW avgdown_low
 #    define FORT_AVGDOWN_TAG avgdown_tag
 #    define FORT_AVGDOWN_CURV avgdown_curv
-#    define FORT_DIAGINV     diaginv
 #    define FORT_OUTPUTSLICE outputslice
 #    define FORT_IO_COMPARE io_compare
 #    define FORT_METRICS metrics
@@ -60,7 +57,6 @@
 #    define FORT_AVGDOWN_LOW avgdown_low_
 #    define FORT_AVGDOWN_TAG avgdown_tag_
 #    define FORT_AVGDOWN_CURV avgdown_curv_
-#    define FORT_DIAGINV     diaginv_
 #    define FORT_OUTPUTSLICE outputslice_
 #    define FORT_IO_COMPARE io_compare_
 #    define FORT_METRICS metrics_
@@ -718,7 +714,7 @@ extern "C" {
      const int* fablo,const int* fabhi,int* bfact,
      int* nsolve);
 
-    void FORT_DIAGINV(
+    void fort_diaginv(
       const Real* diagfab, 
       AMREX_ARLIM_P(diagfablo),AMREX_ARLIM_P(diagfabhi),
       const Real* resid,AMREX_ARLIM_P(residlo),AMREX_ARLIM_P(residhi),
