@@ -7,7 +7,6 @@
 
 #ifdef BL_LANG_FORT
 #    define FORT_PRESSURE_INDICATOR pressure_indicator
-#    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
 #    define FORT_MOFAVGDOWN  mofavgdown
 #    define FORT_ERRORAVGDOWN erroravgdown
@@ -15,13 +14,10 @@
 #    define FORT_AVGDOWN_LOW avgdown_low
 #    define FORT_AVGDOWN_TAG avgdown_tag
 #    define FORT_AVGDOWN_CURV avgdown_curv
-#    define FORT_OUTPUTSLICE outputslice
-#    define FORT_IO_COMPARE io_compare
 #    define FORT_METRICS metrics
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
 #    define FORT_PRESSURE_INDICATOR PRESSURE_INDICATOR
-#    define FORT_ZALESAK_CELL ZALESAK_CELL
 #    define FORT_EDGEAVGDOWN EDGEAVGDOWN
 #    define FORT_VOFFLUX_CORRECT VOFFLUX_CORRECT
 #    define FORT_MOFAVGDOWN  MOFAVGDOWN
@@ -30,13 +26,10 @@
 #    define FORT_AVGDOWN_LOW AVGDOWN_LOW
 #    define FORT_AVGDOWN_TAG AVGDOWN_TAG
 #    define FORT_AVGDOWN_CURV AVGDOWN_CURV
-#    define FORT_OUTPUTSLICE OUTPUTSLICE
-#    define FORT_IO_COMPARE IO_COMPARE
 #    define FORT_METRICS METRICS
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
 #    define FORT_PRESSURE_INDICATOR pressure_indicator
-#    define FORT_ZALESAK_CELL zalesak_cell
 #    define FORT_EDGEAVGDOWN edgeavgdown
 #    define FORT_MOFAVGDOWN  mofavgdown
 #    define FORT_ERRORAVGDOWN erroravgdown
@@ -44,12 +37,9 @@
 #    define FORT_AVGDOWN_LOW avgdown_low
 #    define FORT_AVGDOWN_TAG avgdown_tag
 #    define FORT_AVGDOWN_CURV avgdown_curv
-#    define FORT_OUTPUTSLICE outputslice
-#    define FORT_IO_COMPARE io_compare
 #    define FORT_METRICS metrics
 #  else
 #    define FORT_PRESSURE_INDICATOR pressure_indicator_
-#    define FORT_ZALESAK_CELL zalesak_cell_
 #    define FORT_EDGEAVGDOWN edgeavgdown_
 #    define FORT_MOFAVGDOWN  mofavgdown_
 #    define FORT_ERRORAVGDOWN erroravgdown_
@@ -57,8 +47,6 @@
 #    define FORT_AVGDOWN_LOW avgdown_low_
 #    define FORT_AVGDOWN_TAG avgdown_tag_
 #    define FORT_AVGDOWN_CURV avgdown_curv_
-#    define FORT_OUTPUTSLICE outputslice_
-#    define FORT_IO_COMPARE io_compare_
 #    define FORT_METRICS metrics_
 #  endif
 #  endif
@@ -213,10 +201,10 @@ extern "C" {
      int* im_solid_map);
 
 
-    void FORT_OUTPUTSLICE(Real* time,int* nsteps,int* sliceint,
+    void fort_outputslice(Real* time,int* nsteps,int* sliceint,
      Real* slice_data,int* nslice,int* nstate_slice);
 
-    void FORT_IO_COMPARE(
+    void fort_io_compare(
      int* nmat,
      int* nsteps,
      int* do_input,
@@ -229,14 +217,15 @@ extern "C" {
      const int* vislo,const int* vishi,
      int* visual_ncomp);
  
-    void FORT_ZALESAK_CELL(
-       const Real* xlo,const Real* dx,
-       Real* u,const int* domlo,const int* domhi,
-       const int* tilelo,const int* tilehi,
-       const int* fablo,const int* fabhi,
-       int* bfact,
-       int* level,
-      AMREX_ARLIM_P(ulo),AMREX_ARLIM_P(uhi),const Real* time);
+    void fort_zalesak_cell(
+      const Real* xlo,const Real* dx,
+      Real* u,const int* domlo,const int* domhi,
+      const int* tilelo,const int* tilehi,
+      const int* fablo,const int* fabhi,
+      int* bfact,
+      int* level,
+      AMREX_ARLIM_P(ulo),AMREX_ARLIM_P(uhi),
+      const Real* time);
 
     void fort_init_potential(
       int* nmat,

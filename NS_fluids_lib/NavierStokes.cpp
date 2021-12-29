@@ -19539,7 +19539,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
   if (ParallelDescriptor::IOProcessor()) {
    int do_input=1;
-   FORT_IO_COMPARE(
+   fort_io_compare(
     &nmat,
     &nsteps,
     &do_input,
@@ -19796,7 +19796,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
   if (do_slice==1) {
    if ((slice_dir>=0)&&(slice_dir<AMREX_SPACEDIM)) {
-    FORT_OUTPUTSLICE(&cur_time_slab,&nsteps,&sliceint,
+    fort_outputslice(&cur_time_slab,&nsteps,&sliceint,
      slice_data.dataPtr(),&nslice,&nstate_slice);
    } else
     amrex::Error("slice_dir invalid");
@@ -19811,7 +19811,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    // the data file name is uniform??????.tec
    // X,Y,Z,U,V,W,pres,density,T,Y1,..,Yn,MGVORT,LS01,...,LS_m
   int do_input=0; 
-  FORT_IO_COMPARE(
+  fort_io_compare(
    &nmat,
    &nsteps,
    &do_input,
@@ -23415,7 +23415,7 @@ NavierStokes::avgDown(MultiFab& S_crse,MultiFab& S_fine,
   if (spectral_override==1) {
 
    FArrayBox& maskfab=(*fine_lev.localMF[MASKSEM_MF])[mfi];
-   FORT_AVGDOWN( 
+   fort_avgdown( 
     &enable_spectral,
     &finest_level,
     &spectral_override,

@@ -2,17 +2,8 @@
 #define _SHALLOWWATER_F_H_ 
 
 #ifdef BL_LANG_FORT
-#    define FORT_FEED_FORWARD_ADVECT feed_forward_advect
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_FEED_FORWARD_ADVECT FEED_FORWARD_ADVECT
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_FEED_FORWARD_ADVECT feed_forward_advect
-#  else
-#    define FORT_FEED_FORWARD_ADVECT feed_forward_advect_
-#  endif
-#  endif
 
 #include <AMReX_ArrayLim.H>
 
@@ -20,7 +11,7 @@ namespace amrex{
 
   extern "C" {
 
-      void FORT_FEED_FORWARD_ADVECT(
+      void fort_feed_forward_advect(
         int* init_fluxes,
         int* nsolveMM_FACE,
         int* dir,

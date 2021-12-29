@@ -11412,7 +11412,7 @@ END SUBROUTINE SIMP
 
       end module navierstokesf90_module
 
-      subroutine FORT_IO_COMPARE( &
+      subroutine fort_io_compare( &
        nmat, &
        nsteps, &
        do_input, &
@@ -11421,27 +11421,34 @@ END SUBROUTINE SIMP
        fabin,DIMS(fabin), &
        fabout,DIMS(fabout), &
        vislo,vishi, &
-       visual_ncomp)
+       visual_ncomp) &
+      bind(c,name='fort_io_compare')
+
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      INTEGER_T nsteps
-      INTEGER_T do_input
-      INTEGER_T visual_compare
-      REAL_T time
-      INTEGER_T visual_ncomp
-      INTEGER_T vislo(SDIM),vishi(SDIM) 
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nsteps
+      INTEGER_T, intent(in) :: do_input
+      INTEGER_T, intent(in) :: visual_compare
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: visual_ncomp
+      INTEGER_T, intent(in) :: vislo(SDIM),vishi(SDIM) 
+
+      INTEGER_T, intent(in) :: DIMDEC(fabin)
+      INTEGER_T, intent(in) :: DIMDEC(fabout)
+       ! x,u,p,den,T,Y1..Yn,mag vort,LS
+      REAL_T, intent(inout),target :: fabout(DIMV(fabout),visual_ncomp) 
+      REAL_T, pointer :: fabout_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: fabin(DIMV(fabin),visual_ncomp)
+      REAL_T, pointer :: fabin_ptr(D_DECL(:,:,:),:)
+
+      REAL_T problo(SDIM),probhi(SDIM)
+
       INTEGER_T visual_ncell(SDIM)
       REAL_T visual_dx(SDIM)
       INTEGER_T gridlo(3),gridhi(3) 
-      INTEGER_T DIMDEC(fabin)
-      INTEGER_T DIMDEC(fabout)
-       ! x,u,p,den,T,Y1..Yn,mag vort,LS
-      REAL_T fabout(DIMV(fabout),visual_ncomp) 
-      REAL_T fabin(DIMV(fabin),visual_ncomp)
-      REAL_T problo(SDIM),probhi(SDIM)
       INTEGER_T i,j,k
       INTEGER_T im
       INTEGER_T dir
@@ -11531,13 +11538,16 @@ END SUBROUTINE SIMP
        endif
       enddo ! dir=1..sdim
 
-      call checkbound(vislo,vishi,DIMS(fabout),0,0,411)
-      call checkbound(vislo,vishi,DIMS(fabout),0,1,411)
-      call checkbound(vislo,vishi,DIMS(fabout),0,SDIM-1,411)
+      fabout_ptr=>fabout
+      fabin_ptr=>fabin
 
-      call checkbound(vislo,vishi,DIMS(fabin),0,0,411)
-      call checkbound(vislo,vishi,DIMS(fabin),0,1,411)
-      call checkbound(vislo,vishi,DIMS(fabin),0,SDIM-1,411)
+      call checkbound_array(vislo,vishi,fabout_ptr,0,0,411)
+      call checkbound_array(vislo,vishi,fabout_ptr,0,1,411)
+      call checkbound_array(vislo,vishi,fabout_ptr,0,SDIM-1,411)
+
+      call checkbound_array(vislo,vishi,fabin_ptr,0,0,411)
+      call checkbound_array(vislo,vishi,fabin_ptr,0,1,411)
+      call checkbound_array(vislo,vishi,fabin_ptr,0,SDIM-1,411)
 
       if (do_input.eq.1) then
 
@@ -11894,15 +11904,18 @@ END SUBROUTINE SIMP
       endif
      
       return
-      end subroutine FORT_IO_COMPARE
+      end subroutine fort_io_compare
 
-      subroutine FORT_OUTPUTSLICE( &
-       time,nsteps,sliceint,slice_data,nslice,nstate_slice)
+      subroutine fort_outputslice( &
+       time,nsteps,sliceint,slice_data,nslice,nstate_slice) &
+      bind(c,name='fort_outputslice')
       IMPLICIT NONE
 
-      REAL_T time
-      INTEGER_T nsteps,nslice,nstate_slice,n,sliceint,strandid
-      REAL_T slice_data(nslice*nstate_slice)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: nsteps,nslice,nstate_slice,sliceint
+      REAL_T, intent(in) :: slice_data(nslice*nstate_slice)
+      INTEGER_T strandid
+      INTEGER_T n
       INTEGER_T i
       character*6 stepstr
       character*11 sfilename
@@ -11964,9 +11977,9 @@ END SUBROUTINE SIMP
 
       close(11)
       return
-      end
+      end subroutine fort_outputslice
 
-      subroutine FORT_ZALESAK_CELL( &
+      subroutine fort_zalesak_cell( &
         xlo,dx, &
         u,domlo,domhi, &
         tilelo,tilehi, &
@@ -11974,21 +11987,23 @@ END SUBROUTINE SIMP
         bfact, &
         level, &
         DIMS(u), &
-        time)
+        time) &
+      bind(c,name='fort_zalesak_cell')
 
       use global_utility_module
       use probf90_module
 
       IMPLICIT NONE
-      INTEGER_T bfact,level
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact,level
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
-      INTEGER_T domlo(SDIM), domhi(SDIM)
-      INTEGER_T DIMDEC(u)
-      REAL_T u(DIMV(u),SDIM)
-      REAL_T time
-      REAL_T xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: domlo(SDIM), domhi(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(u)
+      REAL_T, intent(inout),target :: u(DIMV(u),SDIM)
+      REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k,dir
       REAL_T xx(SDIM)
@@ -12002,7 +12017,8 @@ END SUBROUTINE SIMP
        stop
       endif
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1) 
-      call checkbound(fablo,fabhi,DIMS(u),1,-1,411) 
+      u_ptr=>u
+      call checkbound_array(fablo,fabhi,u_ptr,1,-1,411) 
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -12038,7 +12054,7 @@ END SUBROUTINE SIMP
          call zalesakww(u(D_DECL(i,j,k),SDIM),xx(1),xx(2),xx(SDIM),time,dx)
         endif
        else
-        print *,"invalid probtype for ZALESAK_CELL"
+        print *,"invalid probtype for fort_zalesak_cell"
        endif
 
        do dir=1,SDIM
@@ -12050,10 +12066,10 @@ END SUBROUTINE SIMP
       enddo
 
       return 
-      end subroutine FORT_ZALESAK_CELL
+      end subroutine fort_zalesak_cell
 
        ! spectral_override==0 => always do low order
-      subroutine FORT_AVGDOWN( &
+      subroutine fort_avgdown( &
        enable_spectral, &
        finest_level, &
        spectral_override, &
@@ -12067,12 +12083,12 @@ END SUBROUTINE SIMP
        fine,DIMS(fine), &
        mask,DIMS(mask), &
        lo,hi, &
-       lof,hif) 
+       lof,hif) &
+      bind(c,name='fort_avgdown')
 
       use global_utility_module
       use geometry_intersect_module
       use probcommon_module
-      use navierstokesf90_module
 
       IMPLICIT NONE
 
@@ -12096,9 +12112,12 @@ END SUBROUTINE SIMP
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
       INTEGER_T mstenlo(3), mstenhi(3)
-      REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
-      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
+      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out),target :: crse(DIMV(crse),ncomp)
+      REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: fine(DIMV(fine),ncomp)
+      REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T flochi(SDIM)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
@@ -12166,9 +12185,12 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      call checkbound(lo,hi,DIMS(crse),0,-1,411)
-      call checkbound(lof,hif,DIMS(fine),0,-1,411)
-      call checkbound(lof,hif,DIMS(mask),1,-1,411)
+      crse_ptr=>crse
+      fine_ptr=>fine
+      mask_ptr=>mask
+      call checkbound_array(lo,hi,crse_ptr,0,-1,411)
+      call checkbound_array(lof,hif,fine_ptr,0,-1,411)
+      call checkbound_array1(lof,hif,mask_ptr,1,-1,411)
 
       grid_type=-1  ! ggg  (Gauss in all directions)
 
@@ -12406,8 +12428,7 @@ END SUBROUTINE SIMP
       deallocate(ffine)
 
       return
-      end subroutine FORT_AVGDOWN
-
+      end subroutine fort_avgdown
 
       subroutine FORT_AVGDOWN_LOW( &
        problo, &
