@@ -12438,12 +12438,12 @@ END SUBROUTINE SIMP
        crse,DIMS(crse), &
        fine,DIMS(fine), &
        lo,hi, &
-       lof,hif) 
+       lof,hif) &
+      bind(c,name='fort_avgdown_low')
 
       use global_utility_module
       use geometry_intersect_module
       use probcommon_module
-      use navierstokesf90_module
 
       IMPLICIT NONE
 
@@ -12462,8 +12462,10 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
-      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
+      REAL_T, intent(out),target :: crse(DIMV(crse),ncomp)
+      REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: fine(DIMV(fine),ncomp)
+      REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
       INTEGER_T n
@@ -12497,8 +12499,10 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      call checkbound(lo,hi,DIMS(crse),0,-1,411)
-      call checkbound(lof,hif,DIMS(fine),0,-1,411)
+      crse_ptr=>crse
+      fine_ptr=>fine
+      call checkbound_array(lo,hi,crse_ptr,0,-1,411)
+      call checkbound_array(lof,hif,fine_ptr,0,-1,411)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
@@ -12570,12 +12574,12 @@ END SUBROUTINE SIMP
        crse,DIMS(crse), &
        fine,DIMS(fine), &
        lo,hi, &
-       lof,hif) 
+       lof,hif) &
+      bind(c,name='fort_avgdown_tag')
 
       use global_utility_module
       use geometry_intersect_module
       use probcommon_module
-      use navierstokesf90_module
 
       IMPLICIT NONE
 
@@ -12594,8 +12598,10 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
-      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
+      REAL_T, intent(out),target :: crse(DIMV(crse),ncomp)
+      REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: fine(DIMV(fine),ncomp)
+      REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
       INTEGER_T n
@@ -12632,8 +12638,10 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      call checkbound(lo,hi,DIMS(crse),0,-1,411)
-      call checkbound(lof,hif,DIMS(fine),0,-1,411)
+      crse_ptr=>crse
+      fine_ptr=>fine
+      call checkbound_array(lo,hi,crse_ptr,0,-1,411)
+      call checkbound_array(lof,hif,fine_ptr,0,-1,411)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
@@ -12738,12 +12746,12 @@ END SUBROUTINE SIMP
        crse,DIMS(crse), &
        fine,DIMS(fine), &
        lo,hi, &
-       lof,hif) 
+       lof,hif) &
+      bind(c,name='fort_avgdown_curv')
 
       use global_utility_module
       use geometry_intersect_module
       use probcommon_module
-      use navierstokesf90_module
 
       IMPLICIT NONE
 
@@ -12763,8 +12771,10 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, intent(out) :: crse(DIMV(crse),ncomp)
-      REAL_T, intent(in) :: fine(DIMV(fine),ncomp)
+      REAL_T, intent(out),target :: crse(DIMV(crse),ncomp)
+      REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: fine(DIMV(fine),ncomp)
+      REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
       INTEGER_T dir2
@@ -12813,8 +12823,10 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      call checkbound(lo,hi,DIMS(crse),0,-1,411)
-      call checkbound(lof,hif,DIMS(fine),0,-1,411)
+      crse_ptr=>crse
+      fine_ptr=>fine
+      call checkbound_array(lo,hi,crse_ptr,0,-1,411)
+      call checkbound_array(lof,hif,fine_ptr,0,-1,411)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
@@ -12941,7 +12953,8 @@ END SUBROUTINE SIMP
        bfact_c,bfact_f, &
        crse,DIMS(crse), &
        fine,DIMS(fine), &
-       lo,hi,nmat)
+       lo,hi,nmat) &
+      bind(c,name='fort_mof_avgdown')
 
       use global_utility_module
       use geometry_intersect_module
@@ -12958,8 +12971,10 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T  growlo(3),growhi(3)
       INTEGER_T  stenlo(3),stenhi(3)
-      REAL_T, intent(out) :: crse(DIMV(crse),nmat*ngeom_raw)
-      REAL_T, intent(in) :: fine(DIMV(fine),nmat*ngeom_raw)
+      REAL_T, intent(out),target :: crse(DIMV(crse),nmat*ngeom_raw)
+      REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: fine(DIMV(fine),nmat*ngeom_raw)
+      REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T ifine,jfine,kfine
       INTEGER_T ic,jc,kc
       INTEGER_T dir
@@ -13023,7 +13038,9 @@ END SUBROUTINE SIMP
 
       nmax=POLYGON_LIST_MAX ! in: MOFAVGDOWN
 
-      if (time.lt.zero) then
+      if (time.ge.zero) then
+       ! do nothing
+      else
        print *,"time invalid"
        stop
       endif
@@ -13046,6 +13063,10 @@ END SUBROUTINE SIMP
       enddo
       nhalf=3
       nhalfgrid=1
+
+      crse_ptr=>crse
+      fine_ptr=>fine
+      call checkbound_array(lo,hi,crse_ptr,0,-1,411)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
@@ -13324,7 +13345,8 @@ END SUBROUTINE SIMP
        bfact_c,bfact_f, &
        crse,DIMS(crse), &
        fine,DIMS(fine), &
-       lo,hi)
+       lo,hi) &
+      bind(c,name='fort_erroravgdown')
 
       use global_utility_module
       use geometry_intersect_module
@@ -13338,8 +13360,10 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, intent(out) :: crse(DIMV(crse))
-      REAL_T, intent(in) :: fine(DIMV(fine))
+      REAL_T, intent(out),target :: crse(DIMV(crse))
+      REAL_T, pointer :: crse_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: fine(DIMV(fine))
+      REAL_T, pointer :: fine_ptr(D_DECL(:,:,:))
       INTEGER_T i,j,k,ic,jc,kc
       REAL_T, intent(in) :: problo(SDIM),dxf(SDIM)
  
@@ -13357,6 +13381,9 @@ END SUBROUTINE SIMP
        print *,"bfact_c invalid"
        stop
       endif
+      crse_ptr=>crse
+      fine_ptr=>fine
+      call checkbound_array(lo,hi,crse_ptr,0,-1,411)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
@@ -13441,7 +13468,8 @@ END SUBROUTINE SIMP
         bfact, &
         level,  &
         finest_level,  &
-        nmat)
+        nmat) &
+      bind(c,name='fort_pressure_indicator')
 
       use global_utility_module
       use probf90_module
@@ -13449,32 +13477,39 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T level
-      INTEGER_T finest_level
-      INTEGER_T nmat
-      INTEGER_T pressure_error_flag
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: pressure_error_flag
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
 
-      REAL_T vorterr(nmat)
-      REAL_T pressure_error_cutoff(nmat)
-      REAL_T temperature_error_cutoff(nmat)
-      INTEGER_T DIMDEC(maskcov)
-      INTEGER_T DIMDEC(errnew)
-      INTEGER_T DIMDEC(slrecon)
-      INTEGER_T DIMDEC(den)
-      INTEGER_T DIMDEC(vort)
-      INTEGER_T DIMDEC(pres)
-      REAL_T maskcov(DIMV(maskcov))
-      REAL_T errnew(DIMV(errnew))
-      REAL_T den(DIMV(den),nmat*num_state_material)
-      REAL_T slrecon(DIMV(slrecon),nmat*ngeom_recon)
-      REAL_T vort(DIMV(vort))
-      REAL_T pres(DIMV(pres))
+      REAL_T, intent(in) :: vorterr(nmat)
+      REAL_T, intent(in) :: pressure_error_cutoff(nmat)
+      REAL_T, intent(in) :: temperature_error_cutoff(nmat)
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(errnew)
+      INTEGER_T, intent(in) :: DIMDEC(slrecon)
+      INTEGER_T, intent(in) :: DIMDEC(den)
+      INTEGER_T, intent(in) :: DIMDEC(vort)
+      INTEGER_T, intent(in) :: DIMDEC(pres)
+      REAL_T, intent(in),target :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout),target :: errnew(DIMV(errnew))
+      REAL_T, pointer :: errnew_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: den(DIMV(den),nmat*num_state_material)
+      REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: slrecon(DIMV(slrecon),nmat*ngeom_recon)
+      REAL_T, pointer :: slrecon_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: vort(DIMV(vort))
+      REAL_T, pointer :: vort_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: pres(DIMV(pres))
+      REAL_T, pointer :: pres_ptr(D_DECL(:,:,:))
+
       INTEGER_T i,j,k,im
       REAL_T vfrac(nmat)
       REAL_T pres_array(D_DECL(3,3,3))
@@ -13506,12 +13541,19 @@ END SUBROUTINE SIMP
        print *,"pressure_error_flag invalid"
        stop
       endif
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,44)
-      call checkbound(fablo,fabhi,DIMS(slrecon),1,-1,44)
-      call checkbound(fablo,fabhi,DIMS(errnew),1,-1,44)
-      call checkbound(fablo,fabhi,DIMS(den),1,-1,44)
-      call checkbound(fablo,fabhi,DIMS(vort),0,-1,44)
-      call checkbound(fablo,fabhi,DIMS(pres),1,-1,44)
+      maskcov_ptr=>maskcov
+      errnew_ptr=>errnew
+      den_ptr=>den
+      slrecon_ptr=>slrecon
+      vort_ptr=>vort
+      pres_ptr=>pres
+
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,44)
+      call checkbound_array(fablo,fabhi,slrecon_ptr,1,-1,44)
+      call checkbound_array1(fablo,fabhi,errnew_ptr,1,-1,44)
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1,44)
+      call checkbound_array1(fablo,fabhi,vort_ptr,0,-1,44)
+      call checkbound_array1(fablo,fabhi,pres_ptr,1,-1,44)
 
       if (SDIM.eq.3) then
        kstencil_lo=-1
@@ -13629,9 +13671,9 @@ END SUBROUTINE SIMP
        mask,DIMS(mask), &
        loc,hic, &
        lof,hif, &
-       ncomp)
+       ncomp) &
+      bind(c,name='fort_edgeavgdown')
 
-      use navierstokesf90_module
       use global_utility_module
       use probcommon_module
 
@@ -13649,8 +13691,8 @@ END SUBROUTINE SIMP
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xlo_fine(SDIM)
       INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: DIMDEC(c)
-      INTEGER_T, intent(in) :: DIMDEC(f)
+      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, intent(in) :: DIMDEC(fine)
       INTEGER_T, intent(in) :: DIMDEC(mask)
       INTEGER_T, intent(in) :: loc(SDIM), hic(SDIM)  ! cell centered
       INTEGER_T, intent(in) :: lof(SDIM), hif(SDIM)  ! cell centered
@@ -13659,9 +13701,13 @@ END SUBROUTINE SIMP
       INTEGER_T mstenlo(3), mstenhi(3)
       INTEGER_T, intent(in) :: grid_type
       INTEGER_T dir2
-      REAL_T, intent(out) :: crse(DIMV(c),ncomp)
-      REAL_T, intent(in) :: fine(DIMV(f),ncomp)
-      REAL_T, intent(in) :: mask(DIMV(mask))
+      REAL_T, intent(out),target :: crse(DIMV(crse),ncomp)
+      REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: fine(DIMV(fine),ncomp)
+      REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+
       INTEGER_T flochi(SDIM)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
@@ -13755,9 +13801,13 @@ END SUBROUTINE SIMP
 
       allocate(ffine(D_DECL(0:flochi(1),0:flochi(2),0:flochi(3)),ncomp))
 
-      call checkbound(loc,hic,DIMS(c),0,grid_type,1301)
-      call checkbound(lof,hif,DIMS(f),0,grid_type,1301)
-      call checkbound(lof,hif,DIMS(mask),1,-1,1301)
+      crse_ptr=>crse
+      fine_ptr=>fine
+      mask_ptr=>mask
+
+      call checkbound_array(loc,hic,crse_ptr,0,grid_type,1301)
+      call checkbound_array(lof,hif,fine_ptr,0,grid_type,1301)
+      call checkbound_array1(lof,hif,mask_ptr,1,-1,1301)
 
       call growntileboxMAC(loc,hic,loc,hic,growlo,growhi,0,grid_type,9)
 
@@ -14029,7 +14079,8 @@ END SUBROUTINE SIMP
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact,level, &
-       ngrow,rzflag)
+       ngrow,rzflag) &
+      bind(c,name='fort_metrics')
 
       use global_utility_module
       use probcommon_module
@@ -14047,10 +14098,14 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: DIMDEC(areay)
       INTEGER_T, intent(in) :: DIMDEC(areaz)
       
-      REAL_T, intent(out) :: vol(DIMV(vol))
-      REAL_T, intent(out) :: areax(DIMV(areax))
-      REAL_T, intent(out) :: areay(DIMV(areay))
-      REAL_T, intent(out) :: areaz(DIMV(areaz))
+      REAL_T, intent(out),target :: vol(DIMV(vol))
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
+      REAL_T, intent(out),target :: areax(DIMV(areax))
+      REAL_T, intent(out),target :: areay(DIMV(areay))
+      REAL_T, intent(out),target :: areaz(DIMV(areaz))
+      REAL_T, pointer :: areax_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: areay_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: areaz_ptr(D_DECL(:,:,:))
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k,dir
@@ -14075,10 +14130,14 @@ END SUBROUTINE SIMP
         stop
        endif
       endif
-      call checkbound(fablo,fabhi,DIMS(vol),ngrow,-1,1301)
-      call checkbound(fablo,fabhi,DIMS(areax),ngrow,0,1301)
-      call checkbound(fablo,fabhi,DIMS(areay),ngrow,1,1301)
-      call checkbound(fablo,fabhi,DIMS(areaz),ngrow,SDIM-1,1301)
+      vol_ptr=>vol
+      areax_ptr=>areax
+      areay_ptr=>areay
+      areaz_ptr=>areaz
+      call checkbound_array1(fablo,fabhi,vol_ptr,ngrow,-1,1301)
+      call checkbound_array1(fablo,fabhi,areax_ptr,ngrow,0,1301)
+      call checkbound_array1(fablo,fabhi,areay_ptr,ngrow,1,1301)
+      call checkbound_array1(fablo,fabhi,areaz_ptr,ngrow,SDIM-1,1301)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow)
       do i=growlo(1),growhi(1)
