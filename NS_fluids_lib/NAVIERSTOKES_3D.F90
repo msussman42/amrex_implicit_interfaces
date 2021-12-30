@@ -12942,7 +12942,7 @@ END SUBROUTINE SIMP
       end subroutine fort_avgdown_curv
 
 
-      subroutine fort_mof_avgdown ( &
+      subroutine fort_mofavgdown ( &
        time, &
        problo, &
        dxc, &
@@ -12951,7 +12951,7 @@ END SUBROUTINE SIMP
        crse,DIMS(crse), &
        fine,DIMS(fine), &
        lo,hi,nmat) &
-      bind(c,name='fort_mof_avgdown')
+      bind(c,name='fort_mofavgdown')
 
       use global_utility_module
       use geometry_intersect_module
@@ -13333,7 +13333,7 @@ END SUBROUTINE SIMP
       enddo ! ic,jc,kc
 
       return
-      end subroutine fort_mof_avgdown
+      end subroutine fort_mofavgdown
 
 
       subroutine fort_erroravgdown ( &
@@ -13380,7 +13380,7 @@ END SUBROUTINE SIMP
       endif
       crse_ptr=>crse
       fine_ptr=>fine
-      call checkbound_array(lo,hi,crse_ptr,0,-1,411)
+      call checkbound_array1(lo,hi,crse_ptr,0,-1,411)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
@@ -13663,8 +13663,8 @@ END SUBROUTINE SIMP
        bfact_c,bfact_f, &
        xlo_fine,dx, &
        grid_type, &
-       crse,DIMS(c), &
-       fine,DIMS(f), &
+       crse,DIMS(crse), &
+       fine,DIMS(fine), &
        mask,DIMS(mask), &
        loc,hic, &
        lof,hif, &

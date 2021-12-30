@@ -3020,7 +3020,7 @@ stop
        velbc, &
        time, &
        num_integrate,nmat,ncomp_state, &
-       level,finest_level)
+       level,finest_level) &
       bind(c,name='fort_integrate_recalesce')
 
       use global_utility_module
@@ -3039,7 +3039,7 @@ stop
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
-      INTEGER_T, intent(in) :: growlo(3), growhi(3)
+      INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: DIMDEC(mask)
@@ -3323,12 +3323,12 @@ stop
       REAL_T, intent(in) :: time,TSAT
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
-      INTEGER_T, intent(in) :: growlo(3), growhi(3)
+      INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: DIMDEC(snew)
 
-      REAL_T, intent(inout) :: snew(DIMV(snew),ncomp_state)
+      REAL_T, intent(inout),target :: snew(DIMV(snew),ncomp_state)
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
