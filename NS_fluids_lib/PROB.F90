@@ -88,11 +88,12 @@ stop
       use probcommon_module_types
       use probcommon_module
 
-      REAL_T lowerdiag(1000),upperdiag(1000),diag(1000),soln(1000)
-      REAL_T rhs(1000)
-      REAL_T xlodiss,xhidiss,dtdiss,posdiss,concentration
-      REAL_T concen1,concen2,theta
-      INTEGER_T ndiss,ispace
+      REAL_T lowerdiag_initdata(1000),upperdiag_initdata(1000)
+      REAL_T diag_initdata(1000),soln_initdata(1000)
+      REAL_T rhs_initdata(1000)
+      REAL_T xlodiss_initdata,xhidiss_initdata
+      REAL_T dtdiss_initdata,posdiss_initdata
+      INTEGER_T ndiss_initdata,ispace_initdata
 
       contains
 
@@ -25547,7 +25548,6 @@ end subroutine initialize2d
        dx,xlo,xhi) &
       bind(c,name='fort_initdatasolid')
 
-      use probf90_module
       use global_distance_module
       use global_utility_module
 
@@ -25692,7 +25692,6 @@ end subroutine initialize2d
        dx,xlo) &
       bind(c,name='fort_initsolidtemp')
 
-      use probf90_module
       use global_utility_module
       use global_distance_module
 
@@ -26265,6 +26264,8 @@ end subroutine initialize2d
          distribute_from_target, &
          saturation_temp, &
          dx)
+       use global_utility_module
+       use supercooled_exact_sol
        IMPLICIT NONE
 
        INTEGER_T, intent(in) :: nmat,nten,nc
@@ -26305,27 +26306,28 @@ end subroutine initialize2d
        endif
 
        if (probtype.eq.802) then ! dissolution
-        xlodiss=zero
-        xhidiss=radblob
-        ndiss=NINT(radblob/dx(SDIM))-1
-        if (ndiss.ge.1000) then
-         print *,"ndiss too big"
+        xlodiss_initdata=zero
+        xhidiss_initdata=radblob
+        ndiss_initdata=NINT(radblob/dx(SDIM))-1
+        if (ndiss_initdata.ge.1000) then
+         print *,"ndiss_initdata too big"
          stop
         endif
-        xhidiss=ndiss*dx(SDIM)
-        dtdiss=one
+        xhidiss_initdata=ndiss_initdata*dx(SDIM)
+        dtdiss_initdata=one
 
-        do ispace=1,ndiss-1 
-         lowerdiag(ispace)=denfact/(dx(SDIM)**2)
-         upperdiag(ispace)=denfact/(dx(SDIM)**2)
-         diag(ispace)=-lowerdiag(ispace)-upperdiag(ispace)-1.0/dtdiss
-         rhs(ispace)=zero
-         if (ispace.eq.1) then
-          rhs(ispace)=rhs(ispace)-lowerdiag(ispace)
+        do ispace_initdata=1,ndiss_initdata-1 
+         lowerdiag_initdata(ispace_initdata)=denfact/(dx(SDIM)**2)
+         upperdiag_initdata(ispace_initdata)=denfact/(dx(SDIM)**2)
+         diag_initdata(ispace_initdata)=-lowerdiag_initdata(ispace_initdata)-upperdiag_initdata(ispace_initdata)-1.0/dtdiss_initdata
+         rhs_initdata(ispace_initdata)=zero
+         if (ispace_initdata.eq.1) then
+          rhs_initdata(ispace_initdata)=rhs_initdata(ispace_initdata)-lowerdiag_initdata(ispace_initdata)
          endif
         enddo
          ! in: GLOBALUTIL.F90
-        call tridiag_solve(lowerdiag,upperdiag,diag,ndiss-1,rhs,soln)
+        call tridiag_solve(lowerdiag_initdata,upperdiag_initdata, &
+                diag_initdata,ndiss_initdata-1,rhs_initdata,soln_initdata)
        endif  ! probtype=802
 
        do ireverse=0,1
@@ -26806,6 +26808,9 @@ end subroutine initialize2d
        INTEGER_T from_boundary_hydrostatic
        INTEGER_T nhalf_box
        INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
+       REAL_T theta_initdata
+       REAL_T concentration_initdata
+      REAL_T concen1_initdata,concen2_initdata
 
        nhalf_box=1
 
@@ -27694,28 +27699,30 @@ end subroutine initialize2d
           endif ! (probtype.eq.801).and.(axis_dir.eq.3)
 
           if (probtype.eq.802) then ! dissolution
-           scalc(ibase+2)=two   ! T (concentration)
-           call vapordist(xsten,nhalf,dx,bfact,posdiss)
-           if (posdiss.le.zero) then
-            concentration=two
-           else if (posdiss.ge.xhidiss-two*dx(SDIM)) then
-            concentration=one
+           scalc(ibase+2)=two   ! T (concentration_initdata)
+           call vapordist(xsten,nhalf,dx,bfact,posdiss_initdata)
+           if (posdiss_initdata.le.zero) then
+            concentration_initdata=two
+           else if (posdiss_initdata.ge.xhidiss_initdata-two*dx(SDIM)) then
+            concentration_initdata=one
            else
-            ispace=NINT(posdiss/dx(SDIM)-half)
-            if (ispace.eq.0) then
-             concen1=two
-             concen2=soln(ispace+1)+one
-            else if (ispace.ge.ndiss-2) then
-             concen1=soln(ispace)+one
-             concen2=one
+            ispace_initdata=NINT(posdiss_initdata/dx(SDIM)-half)
+            if (ispace_initdata.eq.0) then
+             concen1_initdata=two
+             concen2_initdata=soln_initdata(ispace_initdata+1)+one
+            else if (ispace_initdata.ge.ndiss_initdata-2) then
+             concen1_initdata=soln_initdata(ispace_initdata)+one
+             concen2_initdata=one
             else
-             concen1=soln(ispace)+one
-             concen2=soln(ispace+1)+one
+             concen1_initdata=soln_initdata(ispace_initdata)+one
+             concen2_initdata=soln_initdata(ispace_initdata+1)+one
             endif
-            theta=(posdiss-ispace*dx(SDIM))/dx(SDIM)
-            concentration=(one-theta)*concen1+theta*concen2
+            theta_initdata=(posdiss_initdata-ispace_initdata*dx(SDIM))/dx(SDIM)
+            concentration_initdata= &
+               (one-theta_initdata)*concen1_initdata+ &
+               theta_initdata*concen2_initdata
            endif
-           scalc(ibase+2)=concentration   ! T (concentration)
+           scalc(ibase+2)=concentration_initdata   ! T (concentration_initdata)
           endif ! 802 (dissolution)
 
            ! in: subroutine fort_initdata
@@ -28080,7 +28087,7 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: DIMDEC(MAC)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: growlo(3),growhi(3)
+      INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(inout),target :: Snew(DIMV(Snew),nstate)
       REAL_T, pointer :: Snew_ptr(D_DECL(:,:,:),:)

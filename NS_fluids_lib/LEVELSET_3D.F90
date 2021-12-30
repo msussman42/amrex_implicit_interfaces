@@ -2919,7 +2919,7 @@ stop
          rz_flag, &
          xlo,dx, &
          time,ngrow, &
-         nmat,ncellfrac)
+         nmat,ncellfrac) &
       bind(c,name='fort_cellfaceinit')
 
       use global_utility_module
@@ -7694,7 +7694,7 @@ stop
       mask_ptr=>mask
       color_ptr=>color
       call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,4000)
-      call checkbound_array1(fablo,fabhi,color_ptr,1,-1,4000)
+      call checkbound_array(fablo,fabhi,color_ptr,1,-1,4000)
 
       if (bfact.lt.1) then
        print *,"bfact invalid95"
@@ -17610,7 +17610,7 @@ stop
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: delta_mass(nmat)
+      REAL_T, intent(inout) :: delta_mass(nmat)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(vofnew)
       INTEGER_T, intent(in) :: DIMDEC(LS)
@@ -17623,7 +17623,7 @@ stop
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: growlo(3),growhi(3)
+      INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(in) :: truncate_thickness
 
