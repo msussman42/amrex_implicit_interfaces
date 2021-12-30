@@ -3006,9 +3006,7 @@ stop
       return
       end subroutine fort_getdrag
 
-      end module derive_module
-
-      subroutine FORT_INTEGRATE_RECALESCE( &
+      subroutine fort_integrate_recalesce( &
        isweep, &
        globalsum, &
        localsum, &
@@ -3023,6 +3021,7 @@ stop
        time, &
        num_integrate,nmat,ncomp_state, &
        level,finest_level)
+      bind(c,name='fort_integrate_recalesce')
 
       use global_utility_module
       use geometry_intersect_module
@@ -3030,29 +3029,30 @@ stop
       use probf90_module
       use godunov_module
 
-
       IMPLICIT NONE
 
-      INTEGER_T isweep,num_integrate,nmat
-      INTEGER_T ncomp_state,level,finest_level
-      INTEGER_T ncomp_state_test
-      INTEGER_T recalesce_material_in(nmat)
-      REAL_T globalsum(num_integrate*nmat)
-      REAL_T localsum(num_integrate*nmat)
-      REAL_T time
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
-      INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact
-      INTEGER_T velbc(SDIM,2,SDIM)
-      INTEGER_T DIMDEC(mask)
-      INTEGER_T DIMDEC(snew)
-      INTEGER_T DIMDEC(vol)
+      INTEGER_T, intent(in) :: isweep,num_integrate,nmat
+      INTEGER_T, intent(in) :: ncomp_state,level,finest_level
+      INTEGER_T, intent(in) :: recalesce_material_in(nmat)
+      REAL_T, intent(in) :: globalsum(num_integrate*nmat)
+      REAL_T, intent(inout) :: localsum(num_integrate*nmat)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, intent(in) :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, intent(in) :: DIMDEC(snew)
+      INTEGER_T, intent(in) :: DIMDEC(vol)
 
-      REAL_T mask(DIMV(mask))
-      REAL_T snew(DIMV(snew),ncomp_state)
-      REAL_T vol(DIMV(vol))
-      REAL_T xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: snew(DIMV(snew),ncomp_state)
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: vol(DIMV(vol))
+      REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k,im
       INTEGER_T ibase
@@ -3067,9 +3067,12 @@ stop
       REAL_T mu
       INTEGER_T im_ice
 
-      call checkbound(fablo,fabhi,DIMS(mask),0,-1,1255)
-      call checkbound(fablo,fabhi,DIMS(snew),0,-1,12561)
-      call checkbound(fablo,fabhi,DIMS(vol),0,-1,6608)
+      mask_ptr=>mask
+      snew_ptr=>snew
+      vol_ptr=>vol
+      call checkbound_array1(fablo,fabhi,mask_ptr,0,-1,1255)
+      call checkbound_array(fablo,fabhi,snew_ptr,0,-1,12561)
+      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1,6608)
 
       nhalf=1
 
@@ -3081,9 +3084,7 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      ncomp_state_test=(SDIM+1)+ &
-       nmat*(num_state_material+ngeom_raw)+1
-      if (ncomp_state.ne.ncomp_state_test) then
+      if (ncomp_state.ne.STATE_NCOMP) then
        print *,"ncomp_state invalid"
        stop
       endif
@@ -3293,11 +3294,9 @@ stop
       endif
 
       return
-      end subroutine FORT_INTEGRATE_RECALESCE
+      end subroutine fort_integrate_recalesce
 
-
-
-      subroutine FORT_RESET_TEMPERATURE( &
+      subroutine fort_reset_temperature( &
        im_source, &
        TSAT, &
        snew,DIMS(snew), & 
@@ -3307,7 +3306,8 @@ stop
        velbc, &
        time, &
        nmat,ncomp_state, &
-       level,finest_level)
+       level,finest_level) &
+      bind(c,name='fort_reset_temperature')
 
       use global_utility_module
       use geometry_intersect_module
@@ -3318,34 +3318,33 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T im_source,nmat
-      INTEGER_T ncomp_state,level,finest_level
-      INTEGER_T ncomp_state_test
-      REAL_T time,TSAT
-      INTEGER_T tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T fablo(SDIM), fabhi(SDIM)
-      INTEGER_T growlo(3), growhi(3)
-      INTEGER_T bfact
-      INTEGER_T velbc(SDIM,2,SDIM)
-      INTEGER_T DIMDEC(snew)
+      INTEGER_T, intent(in) :: im_source,nmat
+      INTEGER_T, intent(in) :: ncomp_state,level,finest_level
+      REAL_T, intent(in) :: time,TSAT
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, intent(in) :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(snew)
 
-      REAL_T snew(DIMV(snew),ncomp_state)
-      REAL_T xlo(SDIM),dx(SDIM)
+      REAL_T, intent(inout) :: snew(DIMV(snew),ncomp_state)
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k,im
       INTEGER_T dencomp,vofcomp
       REAL_T vfrac
       REAL_T mu
 
-      call checkbound(fablo,fabhi,DIMS(snew),0,-1,12562)
+      snew_ptr=>snew
+      call checkbound_array(fablo,fabhi,snew_ptr,0,-1,12562)
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
        stop
       endif
-      ncomp_state_test=(SDIM+1)+ &
-       nmat*(num_state_material+ngeom_raw)+1
-      if (ncomp_state.ne.ncomp_state_test) then
+      if (ncomp_state.ne.STATE_NCOMP) then
        print *,"ncomp_state invalid"
        stop
       endif
@@ -3377,6 +3376,7 @@ stop
        print *,"TSAT invalid in fort_reset_temperature"
        stop
       endif
+
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
       do i=growlo(1),growhi(1)
@@ -3397,10 +3397,9 @@ stop
       enddo  
 
       return
-      end subroutine FORT_RESET_TEMPERATURE
+      end subroutine fort_reset_temperature
 
-
-      subroutine FORT_MAXPRESVEL( &
+      subroutine fort_maxpresvel( &
         minpres, &
         maxpres, &
         maxvel, &
@@ -3412,7 +3411,8 @@ stop
         vely,DIMS(vely), &
         velz,DIMS(velz), &
         tilelo,tilehi, &
-        fablo,fabhi,bfact)
+        fablo,fabhi,bfact) &
+      bind(c,name='fort_maxpresvel')
 
       use global_utility_module
       use probcommon_module
@@ -3431,11 +3431,17 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(vely)
       INTEGER_T, intent(in) :: DIMDEC(velz)
 
-      REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(in) :: vel(DIMV(vel),(SDIM+1))
-      REAL_T, intent(in) :: velx(DIMV(velx))
-      REAL_T, intent(in) :: vely(DIMV(vely))
-      REAL_T, intent(in) :: velz(DIMV(velz))
+      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+
+      REAL_T, intent(in),target :: vel(DIMV(vel),(SDIM+1))
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: velx(DIMV(velx))
+      REAL_T, pointer :: velx_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: vely(DIMV(vely))
+      REAL_T, pointer :: vely_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: velz(DIMV(velz))
+      REAL_T, pointer :: velz_ptr(D_DECL(:,:,:))
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T dir
@@ -3448,11 +3454,16 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(mask),0,-1,6609)
-      call checkbound(fablo,fabhi,DIMS(vel),0,-1,6610)
-      call checkbound(fablo,fabhi,DIMS(velx),0,0,6610)
-      call checkbound(fablo,fabhi,DIMS(vely),0,1,6610)
-      call checkbound(fablo,fabhi,DIMS(velz),0,SDIM-1,6610)
+      mask_ptr=>mask
+      vel_ptr=>vel
+      velx_ptr=>velx
+      vely_ptr=>vely
+      velz_ptr=>velz
+      call checkbound_array1(fablo,fabhi,mask_ptr,0,-1,6609)
+      call checkbound_array(fablo,fabhi,vel_ptr,0,-1,6610)
+      call checkbound_array1(fablo,fabhi,velx_ptr,0,0,6610)
+      call checkbound_array1(fablo,fabhi,vely_ptr,0,1,6610)
+      call checkbound_array1(fablo,fabhi,velz_ptr,0,SDIM-1,6610)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
@@ -3511,6 +3522,7 @@ stop
       enddo
 
       return
-      end subroutine FORT_MAXPRESVEL
+      end subroutine fort_maxpresvel
 
+      end module derive_module
 

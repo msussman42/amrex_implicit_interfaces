@@ -2728,8 +2728,6 @@ stop
       end subroutine initheightLS
 
 
-      end module levelset_module
-
 
       subroutine fort_l1_distance( &
        level, &
@@ -2747,7 +2745,6 @@ stop
 
       use global_utility_module
       use probcommon_module
-      use levelset_module
 
       IMPLICIT NONE
 
@@ -2908,7 +2905,7 @@ stop
        ! interface, find areas and volumes, then check for the difference 
        ! in volumes divided by eps times the area.
        ! 
-      subroutine FORT_CELLFACEINIT( &
+      subroutine fort_cellfaceinit( &
          tid, &
          tessellate, &  ! = 0,1, or 3
          nten, &
@@ -2923,13 +2920,13 @@ stop
          xlo,dx, &
          time,ngrow, &
          nmat,ncellfrac)
+      bind(c,name='fort_cellfaceinit')
 
       use global_utility_module
       use global_distance_module
       use probcommon_module
       use geometry_intersect_module
       use MOF_routines_module
-      use levelset_module
 
       IMPLICIT NONE
 
@@ -2945,9 +2942,12 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(maskfab)
       INTEGER_T, intent(in) :: DIMDEC(vofrecon)
 
-      REAL_T, intent(out) :: cface(DIMV(cface),ncellfrac)
-      REAL_T, intent(in) :: maskfab(DIMV(maskfab),2)
-      REAL_T, intent(in) :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(out),target :: cface(DIMV(cface),ncellfrac)
+      REAL_T, pointer :: cface_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: maskfab(DIMV(maskfab),2)
+      REAL_T, pointer :: maskfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, pointer :: vofrecon_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -3065,9 +3065,12 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(cface),ngrow,-1,2893)
-      call checkbound(fablo,fabhi,DIMS(maskfab),ngrow,-1,2894)
-      call checkbound(fablo,fabhi,DIMS(vofrecon),ngrow,-1,2895)
+      cface_ptr=>cface
+      maskfab_ptr=>maskfab
+      vofrecon_ptr=>vofrecon
+      call checkbound_array(fablo,fabhi,cface_ptr,ngrow,-1,2893)
+      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow,-1,2894)
+      call checkbound_array(fablo,fabhi,vofrecon_ptr,ngrow,-1,2895)
       
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -3798,7 +3801,7 @@ stop
       enddo  !i,j,k 
 
       return
-      end subroutine FORT_CELLFACEINIT
+      end subroutine fort_cellfaceinit
 
 
       subroutine fort_curvstrip( &
@@ -3840,7 +3843,6 @@ stop
       use global_distance_module
       use probcommon_module
       use MOF_routines_module
-      use levelset_module
 
       IMPLICIT NONE
 
@@ -4860,7 +4862,7 @@ stop
       return
       end subroutine fort_curvstrip
 
-      subroutine FORT_GETTYPEFAB( &
+      subroutine fort_gettypefab( &
        source_fab, &
        DIMS(source_fab), &
        typefab, &
@@ -4872,7 +4874,9 @@ stop
        nmat, &
        ncomp_type, &
        ncomp_source, &
-       zero_diag_flag)
+       zero_diag_flag) &
+      bind(c,name='fort_gettypefab')
+
       use probf90_module
       use global_utility_module
  
@@ -4895,8 +4899,11 @@ stop
       INTEGER_T, intent(in) ::  DIMDEC(source_fab)
       INTEGER_T, intent(in) ::  DIMDEC(typefab)
 
-      REAL_T, intent(in) :: source_fab(DIMV(source_fab),ncomp_source)
-      REAL_T, intent(out) :: typefab(DIMV(typefab))
+      REAL_T, intent(in),target :: source_fab(DIMV(source_fab),ncomp_source)
+      REAL_T, pointer :: source_fab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out),target :: typefab(DIMV(typefab))
+      REAL_T, pointer :: typefab_ptr(D_DECL(:,:,:))
+
       INTEGER_T i,j,k,im,base_type
 
 
@@ -4939,12 +4946,10 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi, &
-       DIMS(source_fab), &
-       1,-1,4001)
-      call checkbound(fablo,fabhi, &
-       DIMS(typefab), &
-       1,-1,4001)
+      source_fab_ptr=>source_fab
+      typefab_ptr=>typefab
+      call checkbound_array(fablo,fabhi,source_fab_ptr,1,-1,4001)
+      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1,4001)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1) 
       do i=growlo(1),growhi(1)
@@ -5005,7 +5010,7 @@ stop
       enddo
 
       return
-      end subroutine FORT_GETTYPEFAB
+      end subroutine fort_gettypefab
 
       subroutine fort_getcolorsum( &
        tid_current, &
@@ -5082,7 +5087,6 @@ stop
       INTEGER_T, intent(in) :: tid_current
       INTEGER_T, intent(in) :: operation_flag
       INTEGER_T, intent(in) :: nstate
-      INTEGER_T :: nstate_test
       INTEGER_T, intent(in) :: sweep_num
       INTEGER_T, intent(in) :: tessellate
       INTEGER_T, intent(in) :: nface,nface_dst,ncellfrac
@@ -5347,12 +5351,10 @@ stop
        stop
       endif
 
-      nstate_test=(SDIM+1)+ &
-        nmat*(num_state_material+ngeom_raw)+1
-      if (nstate.ne.nstate_test) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid in LEVELSET_3D.F90 "
        print *,"nstate=",nstate
-       print *,"nstate_test=",nstate_test
+       print *,"STATE_NCOMP=",STATE_NCOMP
        stop
       endif
 
@@ -7266,8 +7268,7 @@ stop
       end subroutine fort_get_lowmach_divu
 
 
-
-      subroutine FORT_LEVELRECOLOR( &
+      subroutine fort_levelrecolor( &
         color, &
         DIMS(color), &
         xlo,dx, &
@@ -7275,7 +7276,9 @@ stop
         fablo,fabhi,bfact, &
         domaincolormap, &
         max_colors_level, &
-        level,base_level,arrsize)
+        level,base_level,arrsize) &
+      bind(c,name='fort_levelrecolor')
+
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
@@ -7291,12 +7294,13 @@ stop
       INTEGER_T, intent(in) :: max_colors_level
       INTEGER_T, intent(in) :: level,base_level,arrsize
       INTEGER_T, intent(in) :: domaincolormap(arrsize)
-      REAL_T, intent(inout) :: color(DIMV(color))
+      REAL_T, intent(inout),target :: color(DIMV(color))
+      REAL_T, pointer :: color_ptr(D_DECL(:,:,:))
+
       INTEGER_T  i, j, k, m, icolor
 
-      call checkbound(fablo,fabhi, &
-       DIMS(color), &
-       1,-1,4000)
+      color_ptr=>color
+      call checkbound_array1(fablo,fabhi,color_ptr,1,-1,4000)
 
       if (bfact.lt.1) then
        print *,"bfact invalid93"
@@ -7325,17 +7329,18 @@ stop
       enddo
 
       return
-      end
+      end subroutine fort_levelrecolor
 
-
-      subroutine FORT_COLORFILL( &
+      subroutine fort_colorfill( &
        mask,DIMS(mask), &
        typefab,DIMS(typefab), &
        color,DIMS(color), &
        ijk,DIMS(ijk), &
        lo,hi, &
        ipass,number_grids,color_per_grid, &
-       gridno,max_colors_grid,typedim)
+       gridno,max_colors_grid,typedim) &
+      bind(c,name='fort_colorfill')
+
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
@@ -7352,20 +7357,29 @@ stop
       INTEGER_T, intent(in) :: gridno
       INTEGER_T, intent(in) :: max_colors_grid
 
-      REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(in) :: typefab(DIMV(typefab))
-      REAL_T, intent(inout) :: color(DIMV(color))
-      INTEGER_T, intent(inout) :: ijk(DIMV(ijk),SDIM)
+      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: typefab(DIMV(typefab))
+      REAL_T, pointer :: typefab_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout),target :: color(DIMV(color))
+      REAL_T, pointer :: color_ptr(D_DECL(:,:,:))
+      INTEGER_T, intent(inout),target :: ijk(DIMV(ijk),SDIM)
+      INTEGER_T, pointer :: ijk_ptr(D_DECL(:,:,:),:)
+
       INTEGER_T i,j,k,icolor,i1,j1,k1
       INTEGER_T istack,ii,jj,kk
       INTEGER_T iprime,jprime,kprime,base_type,test_type
       INTEGER_T ilocal,jlocal,klocal
       INTEGER_T k1lo,k1hi
 
-      call checkbound(lo,hi,DIMS(mask),0,-1,4001)
-      call checkbound(lo,hi,DIMS(typefab),0,-1,4001)
-      call checkbound(lo,hi,DIMS(color),0,-1,4001)
-      call checkbound(lo,hi,DIMS(ijk),0,-1,4001)
+      mask_ptr=>mask
+      typefab_ptr=>typefab
+      color_ptr=>color
+      ijk_ptr=>ijk
+      call checkbound_array1(lo,hi,mask_ptr,0,-1,4001)
+      call checkbound_array1(lo,hi,typefab_ptr,0,-1,4001)
+      call checkbound_array1(lo,hi,color_ptr,0,-1,4001)
+      call checkbound_array_INTEGER(lo,hi,ijk_ptr,0,-1,4001)
 
       if (gridno.ge.number_grids) then
        print *,"number_grids invalid"
@@ -7561,10 +7575,10 @@ stop
       enddo
 
       return
-      end subroutine FORT_COLORFILL
+      end subroutine fort_colorfill
 
 
-      subroutine FORT_GRIDRECOLOR( &
+      subroutine fort_gridrecolor( &
        mask, &
        DIMS(mask), &
        color, &
@@ -7573,7 +7587,8 @@ stop
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
        levelcolormap,max_colors_grid,number_grids, &
-       arrsize)
+       arrsize) &
+      bind(c,name='fort_gridrecolor')
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
@@ -7588,16 +7603,18 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(color)
       INTEGER_T, intent(in) :: max_colors_grid,number_grids,arrsize
       INTEGER_T, intent(in) :: levelcolormap(arrsize)
-      REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(inout) :: color(DIMV(color))
+      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout),target :: color(DIMV(color))
+      REAL_T, pointer :: color_ptr(D_DECL(:,:,:))
+
       INTEGER_T i,j,k,icolor,testsize
 
-      call checkbound(fablo,fabhi, &
-       DIMS(mask), &
-       1,-1,4000)
-      call checkbound(fablo,fabhi, &
-       DIMS(color), &
-       1,-1,4000)
+      mask_ptr=>mask
+      color_ptr=>color
+
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,4000)
+      call checkbound_array1(fablo,fabhi,color_ptr,1,-1,4000)
 
       if (bfact.lt.1) then
        print *,"bfact invalid94"
@@ -7634,11 +7651,10 @@ stop
       enddo
            
       return
-      end subroutine FORT_GRIDRECOLOR
-
+      end subroutine fort_gridrecolor
 
 ! components are: color1,type1,color2,type2,color3,type3
-      subroutine FORT_LEVELCOLORINIT( &
+      subroutine fort_levelcolorinit( &
         mask,DIMS(mask), &
         color,DIMS(color), &
         xlo,dx, &
@@ -7646,7 +7662,9 @@ stop
         fablo,fabhi,bfact, &
         level_color, &
         max_colors_level, &
-        arrsize,check_corners)
+        arrsize,check_corners) &
+      bind(c,name='fort_levelcolorinit')
+
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
@@ -7662,16 +7680,21 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(color)
       INTEGER_T, intent(in) :: max_colors_level,arrsize
       INTEGER_T, intent(out) :: level_color(arrsize,arrsize)
-      REAL_T, intent(in) :: mask(DIMV(mask))
-      REAL_T, intent(in) :: color(DIMV(color),6)
+      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: color(DIMV(color),6)
+      REAL_T, pointer :: color_ptr(D_DECL(:,:,:),:)
+
       INTEGER_T i,j,k,icolor,jcolor,testsize
       INTEGER_T k1lo,k1hi
       INTEGER_T ii,jj,kk,base_type,near_type
       INTEGER_T nbase,nbase2
       REAL_T mask2
 
-      call checkbound(fablo,fabhi,DIMS(mask),1,-1,4000)
-      call checkbound(fablo,fabhi,DIMS(color),1,-1,4000)
+      mask_ptr=>mask
+      color_ptr=>color
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,4000)
+      call checkbound_array1(fablo,fabhi,color_ptr,1,-1,4000)
 
       if (bfact.lt.1) then
        print *,"bfact invalid95"
@@ -7770,9 +7793,9 @@ stop
       enddo
            
       return
-      end subroutine FORT_LEVELCOLORINIT
+      end subroutine fort_levelcolorinit
 
-      subroutine FORT_AVGDOWNCOLOR( &
+      subroutine fort_avgdowncolor( &
         problo,dxf, &
         bfact_f,bfact, &
         xlo_fine,dx, &
@@ -7780,26 +7803,32 @@ stop
         fine,DIMS(fine), &
         typef,DIMS(typef), &
         typec,DIMS(typec), &
-        clo,chi)
+        clo,chi) &
+      bind(c,name='fort_avgdowncolor')
       use global_utility_module
       IMPLICIT NONE
 
-      REAL_T problo(SDIM)
-      REAL_T dxf(SDIM)
-      INTEGER_T bfact_f,bfact
-      REAL_T xlo_fine(SDIM)
-      REAL_T dx(SDIM)
-      INTEGER_T  clo(SDIM),chi(SDIM)
+      REAL_T, intent(in) :: problo(SDIM)
+      REAL_T, intent(in) :: dxf(SDIM)
+      INTEGER_T, intent(in) :: bfact_f,bfact
+      REAL_T, intent(in) :: xlo_fine(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) ::  clo(SDIM),chi(SDIM)
       INTEGER_T  growlo(3),growhi(3)
       INTEGER_T  stenlo(3),stenhi(3)
-      INTEGER_T  DIMDEC(crse)
-      INTEGER_T  DIMDEC(fine)
-      INTEGER_T  DIMDEC(typef)
-      INTEGER_T  DIMDEC(typec)
-      REAL_T crse(DIMV(crse))
-      REAL_T fine(DIMV(fine))
-      REAL_T typef(DIMV(typef))
-      REAL_T typec(DIMV(typec))
+      INTEGER_T, intent(in) ::  DIMDEC(crse)
+      INTEGER_T, intent(in) ::  DIMDEC(fine)
+      INTEGER_T, intent(in) ::  DIMDEC(typef)
+      INTEGER_T, intent(in) ::  DIMDEC(typec)
+      REAL_T, intent(inout),target :: crse(DIMV(crse))
+      REAL_T, pointer :: crse_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: fine(DIMV(fine))
+      REAL_T, pointer :: fine_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: typef(DIMV(typef))
+      REAL_T, pointer :: typef_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: typec(DIMV(typec))
+      REAL_T, pointer :: typec_ptr(D_DECL(:,:,:))
+
       INTEGER_T icolor
       INTEGER_T  i, j, k, ic, jc, kc
       INTEGER_T  coarse_type,fine_type
@@ -7821,8 +7850,13 @@ stop
       endif
 
 
-      call checkbound(clo,chi,DIMS(crse),0,-1,410)
-      call checkbound(clo,chi,DIMS(typec),0,-1,410)
+      crse_ptr=>crse
+      fine_ptr=>fine 
+      typef_ptr=>typef
+      typec_ptr=>typec
+
+      call checkbound_array1(clo,chi,crse_ptr,0,-1,410)
+      call checkbound_array1(clo,chi,typec_ptr,0,-1,410)
  
       call growntilebox(clo,chi,clo,chi,growlo,growhi,0) 
       do ic=growlo(1),growhi(1)
@@ -7858,18 +7892,20 @@ stop
       enddo ! ic,jc,kc
 
       return
-      end subroutine FORT_AVGDOWNCOLOR
+      end subroutine fort_avgdowncolor
 
 
 ! components are: color1,type1,color2,type2,color3,type3
-      subroutine FORT_COPYFINECOARSECOLOR( &
+      subroutine fort_copyfinecoarsecolor( &
         problo,dxf,bfact_f,bfact,xlo_fine,dx, &
         crse,DIMS(crse), &
         fine,DIMS(fine), &
         typef,DIMS(typef), &
         maskf,DIMS(maskf), &
         clo,chi,flo,fhi, &
-        zero_diag_flag)
+        zero_diag_flag) &
+      bind(c,name='fort_copyfinecoarsecolor')
+
       use global_utility_module
       use probf90_module
       IMPLICIT NONE
@@ -7888,10 +7924,16 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(fine)
       INTEGER_T, intent(in) :: DIMDEC(typef)
       INTEGER_T, intent(in) :: DIMDEC(maskf)
-      REAL_T, intent(out) :: crse(DIMV(crse),6)
-      REAL_T, intent(in) :: fine(DIMV(fine))
-      REAL_T, intent(in) :: typef(DIMV(typef))
-      REAL_T, intent(in) :: maskf(DIMV(maskf))
+
+      REAL_T, intent(out),target :: crse(DIMV(crse),6)
+      REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: fine(DIMV(fine))
+      REAL_T, pointer :: fine_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: typef(DIMV(typef))
+      REAL_T, pointer :: typef_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in),target :: maskf(DIMV(maskf))
+      REAL_T, pointer :: maskf_ptr(D_DECL(:,:,:))
+
       INTEGER_T i, j, k, ic, jc, kc,n
       INTEGER_T fine_type,fine_color
       INTEGER_T icrse,jcrse,alreadyhit,crse_color,crse_type
@@ -7926,10 +7968,15 @@ stop
        stop
       endif
 
-      call checkbound(clo,chi,DIMS(crse),0,-1,410)
-      call checkbound(flo,fhi,DIMS(fine),0,-1,410)
-      call checkbound(flo,fhi,DIMS(typef),0,-1,410)
-      call checkbound(flo,fhi,DIMS(maskf),0,-1,410)
+      crse_ptr=>crse
+      fine_ptr=>fine
+      typef_ptr=>typef
+      maskf_ptr=>maskf
+
+      call checkbound_array(clo,chi,crse_ptr,0,-1,410)
+      call checkbound_array1(flo,fhi,fine_ptr,0,-1,410)
+      call checkbound_array1(flo,fhi,typef_ptr,0,-1,410)
+      call checkbound_array1(flo,fhi,maskf_ptr,0,-1,410)
  
       call growntilebox(clo,chi,clo,chi,growlo,growhi,0) 
       do ic=growlo(1),growhi(1)
@@ -8006,7 +8053,7 @@ stop
       enddo ! ic,jc,kc
 
       return
-      end subroutine FORT_COPYFINECOARSECOLOR
+      end subroutine fort_copyfinecoarsecolor
 
 
 
@@ -8093,7 +8140,6 @@ stop
       bind(c,name='fort_init_physics_vars')
       use global_utility_module
       use probf90_module
-      use levelset_module
       use godunov_module
       use geometry_intersect_module
       use MOF_routines_module
@@ -10646,9 +10692,12 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(vofF)
       INTEGER_T, intent(in) :: DIMDEC(massF)
       REAL_T, intent(in), target :: slope(DIMV(slope),nmat*ngeom_recon) 
+      REAL_T, pointer :: slope_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: denstate(DIMV(denstate), &
               nmat*num_state_material) 
+      REAL_T, pointer :: denstate_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat) 
+      REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out), target :: vofF(DIMV(vofF),nrefine_vof)
       REAL_T, pointer :: vofF_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out), target :: massF(DIMV(massF),nrefine_vof)
@@ -10689,6 +10738,10 @@ stop
       REAL_T xsten_recon(-1:1,SDIM)
       REAL_T xsten_donate(-1:1,SDIM)
       REAL_T mu
+
+      slope_ptr=>slope
+      denstate_ptr=>denstate
+      mom_den_ptr=>mom_den
 
       vofF_ptr=>vofF
       massF_ptr=>massF
@@ -10747,9 +10800,9 @@ stop
 
       nmax=POLYGON_LIST_MAX ! in: BUILD_SEMIREFINEVOF
 
-      call checkbound_array(fablo,fabhi,slope,ngrow_refine,-1,219)
-      call checkbound_array(fablo,fabhi,denstate,ngrow_refine,-1,223)
-      call checkbound_array(fablo,fabhi,mom_den,ngrow_refine,-1,223)
+      call checkbound_array(fablo,fabhi,slope_ptr,ngrow_refine,-1,219)
+      call checkbound_array(fablo,fabhi,denstate_ptr,ngrow_refine,-1,223)
+      call checkbound_array(fablo,fabhi,mom_den_ptr,ngrow_refine,-1,223)
       call checkbound_array(fablo,fabhi,vofF_ptr,ngrow_refine,-1,227)
       call checkbound_array(fablo,fabhi,massF_ptr,ngrow_refine,-1,227)
 
@@ -16041,7 +16094,6 @@ stop
       use probf90_module
       use geometry_intersect_module
       use MOF_routines_module
-      use levelset_module
 
       IMPLICIT NONE
 
@@ -17530,7 +17582,7 @@ stop
       end subroutine fort_renormalize_prescribe
 
 
-      subroutine FORT_PURGEFLOTSAM( &
+      subroutine fort_purgeflotsam( &
        delta_mass, &
        truncate_volume_fractions, &
        truncate_thickness, &
@@ -17541,7 +17593,9 @@ stop
        maskcov,DIMS(maskcov), &
        vofnew,DIMS(vofnew), &
        LS,DIMS(LS), &
-       xlo,dx,nmat)
+       xlo,dx,nmat) &
+      bind(c,name='fort_purgeflotsam')
+
       use global_utility_module
       use probcommon_module
       use geometry_intersect_module
@@ -17550,28 +17604,32 @@ stop
       IMPLICIT NONE
 
 
-      INTEGER_T level,finest_level
+      INTEGER_T, intent(in) :: level,finest_level
 
-      REAL_T time
-      REAL_T xlo(SDIM)
-      REAL_T dx(SDIM)
-      INTEGER_T nmat
-      REAL_T delta_mass(nmat)
-      INTEGER_T DIMDEC(maskcov)
-      INTEGER_T DIMDEC(vofnew)
-      INTEGER_T DIMDEC(LS)
-      INTEGER_T truncate_volume_fractions(nmat)
-      REAL_T  maskcov(DIMV(maskcov))
-      REAL_T  vofnew(DIMV(vofnew),nmat*ngeom_raw)
-      REAL_T  LS(DIMV(LS),nmat)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, intent(in) :: nmat
+      REAL_T, intent(in) :: delta_mass(nmat)
+      INTEGER_T, intent(in) :: DIMDEC(maskcov)
+      INTEGER_T, intent(in) :: DIMDEC(vofnew)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: truncate_volume_fractions(nmat)
+      REAL_T, intent(in),target :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout),target :: vofnew(DIMV(vofnew),nmat*ngeom_raw)
+      REAL_T, pointer :: vofnew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target ::  LS(DIMV(LS),nmat)
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: truncate_thickness
+
       INTEGER_T i,j,k,dir
       INTEGER_T im,im2,imcrit
       INTEGER_T vofcomprecon,vofcompraw
-      REAL_T truncate_thickness
 
       REAL_T mofdata(nmat*ngeom_recon)
       REAL_T volmat(nmat)
@@ -17626,9 +17684,12 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(maskcov),1,-1,26)
-      call checkbound(fablo,fabhi,DIMS(vofnew),1,-1,26)
-      call checkbound(fablo,fabhi,DIMS(LS),1,-1,26)
+      maskcov_ptr=>maskcov
+      vofnew_ptr=>vofnew
+      LS_ptr=>LS
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,26)
+      call checkbound_array(fablo,fabhi,vofnew_ptr,1,-1,26)
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,26)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -17790,24 +17851,24 @@ stop
       enddo
 
       return
-      end subroutine FORT_PURGEFLOTSAM
+      end subroutine fort_purgeflotsam
 
-
-
-      subroutine FORT_INITRECALESCE( &
+      subroutine fort_initrecalesce( &
        recalesce_material_in, &
        recalesce_state_old_in, &
-       recalesce_num_state_in,nmat)
+       recalesce_num_state_in,nmat) &
+      bind(c,name='fort_initrecalesce')
+
       use probcommon_module
       use probf90_module
 
       IMPLICIT NONE
 
 
-      INTEGER_T recalesce_num_state_in,nmat
+      INTEGER_T, intent(in) :: recalesce_num_state_in,nmat
       INTEGER_T i
-      INTEGER_T recalesce_material_in(nmat)
-      REAL_T recalesce_state_old_in(recalesce_num_state*nmat)
+      INTEGER_T, intent(in) :: recalesce_material_in(nmat)
+      REAL_T, intent(in) :: recalesce_state_old_in(recalesce_num_state*nmat)
 
       if (nmat.ne.num_materials) then
        print *,"nmat bust"
@@ -17830,7 +17891,10 @@ stop
       enddo
 
       return
-      end subroutine FORT_INITRECALESCE
+      end subroutine fort_initrecalesce
+
+      end module levelset_module
+
 
       module FSI_PC_LS_module
 
