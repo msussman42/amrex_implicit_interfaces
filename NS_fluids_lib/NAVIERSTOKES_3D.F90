@@ -7786,7 +7786,6 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: tid_current
       INTEGER_T, intent(in) :: isweep ! isweep=0 or 1
       INTEGER_T, intent(in) :: nstate
-      INTEGER_T :: nstate_test
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -7931,12 +7930,10 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      nstate_test=(SDIM+1)+ &
-        nmat*(num_state_material+ngeom_raw)+1
-      if (nstate.ne.nstate_test) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid in NAVIERSTOKES_3D.F90 "
        print *,"nstate=",nstate
-       print *,"nstate_test=",nstate_test
+       print *,"STATE_NCOMP=",STATE_NCOMP
        stop
       endif
 

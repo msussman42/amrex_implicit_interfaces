@@ -5475,7 +5475,7 @@ stop
          enddo
 
           ! get_icemask defined in PROB.F90
-          ! in: FORT_INIT_ICEMASK
+          ! in: fort_init_icemask
          call get_icemask( &
           xmac, &
           time, &
@@ -5491,7 +5491,7 @@ stop
           nmat,nten)
 
           ! get_icemask defined in PROB.F90
-          ! in: FORT_INIT_ICEMASK
+          ! in: fort_init_icemask
          call get_icemask( &
           xmac, &
           time, &
@@ -14547,7 +14547,7 @@ stop
        stop
       endif
 
-       ! the band thickness in FORT_ADVECTIVE_PRESSURE is 2 * DXMAXLS
+       ! the band thickness in fort_advective_pressure is 2 * DXMAXLS
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=DXMAXLS
 
@@ -17799,11 +17799,11 @@ stop
       endif
 
       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid FORT_COMBINEVELFACE"
+       print *,"nparts invalid fort_combinevelface"
        stop
       endif
       if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
-       print *,"nparts_def invalid FORT_COMBINEVELFACE"
+       print *,"nparts_def invalid fort_combinevelface"
        stop
       endif
 
@@ -21933,11 +21933,9 @@ stop
       return
       end subroutine fort_build_masksem
 
-      end module godunov_module
-
 
        ! called from: NavierStokes3.cpp
-      subroutine FORT_HEATADVANCE( &
+      subroutine fort_heatadvance( &
        level, &
        finest_level, &
        cur_time, &
@@ -21955,7 +21953,9 @@ stop
        lsnew,DIMS(lsnew), &
        du,DIMS(du), &
        tilelo,tilehi, &
-       fablo,fabhi,bfact)
+       fablo,fabhi,bfact) &
+      bind(c,name='fort_heatadvance')
+
       use probcommon_module
       use global_utility_module
       use probf90_module
@@ -21989,12 +21989,19 @@ stop
       INTEGER_T :: ibase
       INTEGER_T :: velcomp
 
-      REAL_T, intent(in) :: solxfab(DIMV(solxfab),nparts_def*SDIM)
-      REAL_T, intent(in) :: solyfab(DIMV(solyfab),nparts_def*SDIM)
-      REAL_T, intent(in) :: solzfab(DIMV(solzfab),nparts_def*SDIM)
-      REAL_T, intent(inout) :: snew(DIMV(snew),nstate)
-      REAL_T, intent(in) :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
-      REAL_T, intent(in) :: du(DIMV(du),nsolve)
+      REAL_T, intent(in),target :: solxfab(DIMV(solxfab),nparts_def*SDIM)
+      REAL_T, intent(in),target :: solyfab(DIMV(solyfab),nparts_def*SDIM)
+      REAL_T, intent(in),target :: solzfab(DIMV(solzfab),nparts_def*SDIM)
+      REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: solyfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(inout),target :: snew(DIMV(snew),nstate)
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
+      REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: du(DIMV(du),nsolve)
+      REAL_T, pointer :: du_ptr(D_DECL(:,:,:),:)
 
       REAL_T Tforce,new_temperature,TEMPERATURE
       REAL_T xclamped(SDIM)
@@ -22037,12 +22044,19 @@ stop
        stop
       endif
 
-      call checkbound(fablo,fabhi,DIMS(solxfab),0,0,1251)
-      call checkbound(fablo,fabhi,DIMS(solyfab),0,1,1251)
-      call checkbound(fablo,fabhi,DIMS(solzfab),0,SDIM-1,1251)
-      call checkbound(fablo,fabhi,DIMS(snew),1,-1,1251)
-      call checkbound(fablo,fabhi,DIMS(lsnew),1,-1,1251)
-      call checkbound(fablo,fabhi,DIMS(du),0,-1,1251)
+      solxfab_ptr=>solxfab
+      solyfab_ptr=>solyfab
+      solzfab_ptr=>solzfab
+      snew_ptr=>snew
+      lsnew_ptr=>lsnew
+      du_ptr=>du
+
+      call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,1251)
+      call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,1251)
+      call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1,1251)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,1251)
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,1251)
+      call checkbound_array(fablo,fabhi,du_ptr,0,-1,1251)
      
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
  
@@ -22083,7 +22097,9 @@ stop
       enddo
   
       return 
-      end subroutine FORT_HEATADVANCE
+      end subroutine fort_heatadvance
+
+      end module godunov_module
 
       module FSI_PC_module
 

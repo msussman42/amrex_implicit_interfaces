@@ -88,6 +88,12 @@ stop
       use probcommon_module_types
       use probcommon_module
 
+      REAL_T lowerdiag(1000),upperdiag(1000),diag(1000),soln(1000)
+      REAL_T rhs(1000)
+      REAL_T xlodiss,xhidiss,dtdiss,posdiss,concentration
+      REAL_T concen1,concen2,theta
+      INTEGER_T ndiss,ispace
+
       contains
 
       subroutine get_nwrite(plot_sdim,nwrite)
@@ -1468,8 +1474,8 @@ stop
        ! MEHDI VAHAB HEAT SOURCE
        ! T^new=T^* + dt * (Q)/(rho cv)
        ! Q units: J/(m^3 s)
-       ! called from: GODUNOV_3D.F90, subroutine FORT_HEATSOURCE
-       ! in FORT_HEATSOURCE:
+       ! called from: GODUNOV_3D.F90, subroutine fort_heatsource
+       ! in fort_heatsource:
        ! T_local(im)=T_local(im)+ &
        !   dt*DeDTinverse(D_DECL(i,j,k),1)*heat_source_total  im=1..nmat
 
@@ -3415,7 +3421,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 ! pres_in comes from the pressure computed from the compressible
 ! projection method, not the equation of state.
 ! err=max(err,VOFTOL)
-! this routine called from: FORT_PRESSURE_INDICATOR
+! this routine called from: fort_pressure_indicator
       subroutine EOS_error_ind( &
        pressure_error_flag, &
        xsten,nhalf,bfact, &
@@ -3430,16 +3436,17 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T imattype,pressure_error_flag,nhalf,bfact
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T vort
-      REAL_T pres_in(D_DECL(3,3,3))
-      REAL_T temp_in(D_DECL(3,3,3))
-      REAL_T err
+      INTEGER_T, intent(in) :: imattype,pressure_error_flag,nhalf,bfact
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: vort
+      REAL_T, intent(in) :: pres_in(D_DECL(3,3,3))
+      REAL_T, intent(in) :: temp_in(D_DECL(3,3,3))
+      REAL_T, intent(inout) :: err
+      REAL_T, intent(in) :: vorterr
+      REAL_T, intent(in) :: pressure_cutoff
+      REAL_T, intent(in) :: temperature_cutoff
+
       REAL_T atmos_pres,atmos_den
-      REAL_T vorterr
-      REAL_T pressure_cutoff
-      REAL_T temperature_cutoff
       REAL_T pres_scale
       REAL_T pres_test
       REAL_T xpos(SDIM)
@@ -6131,7 +6138,7 @@ END SUBROUTINE Adist
 
        ! called from SLOPERECON and INITDATA
        ! (note see NavierStokes::init_pressure_error_indicator() too,
-       !  which calls FORT_PRESSURE_INDICATOR, which calls
+       !  which calls fort_pressure_indicator, which calls
        !  EOS_error_ind)
       subroutine calc_error_indicator( &
         level, &
@@ -21477,7 +21484,6 @@ end subroutine RatePhaseChange
       type(nucleation_parm_type_input), intent(in) :: nucleate_in
       type(nucleation_parm_type_inout), intent(inout) :: nucleate_out
       INTEGER_T nmat
-      INTEGER_T nstate_test
       REAL_T VOFTOL_NUCLEATE
       INTEGER_T i,j,k
       INTEGER_T denbase
@@ -21540,9 +21546,7 @@ end subroutine RatePhaseChange
         nucleate_in%pres_eos,1,-1,1301)
       nmat=nucleate_in%nmat
 
-      nstate_test=(SDIM+1)+ &
-              nmat*(num_state_material+ngeom_raw)+1
-      if (nucleate_in%nstate.eq.nstate_test) then
+      if (nucleate_in%nstate.eq.STATE_NCOMP) then
        ! do nothing
       else
        print *,"nstate invalid"
@@ -25383,12 +25387,10 @@ end subroutine initialize2d
       return
       end subroutine fort_extrapfill
 
- 
-       end module probf90_module
 
-
-       subroutine FORT_SETFORTSCALES(pressure_scale, &
-        velocity_scale)
+       subroutine fort_setfortscales(pressure_scale, &
+        velocity_scale) &
+       bind(c,name='fort_setfortscales')
 
        use probcommon_module
 
@@ -25417,7 +25419,7 @@ end subroutine initialize2d
        global_velocity_scale=velocity_scale
 
        return
-       end subroutine FORT_SETFORTSCALES
+       end subroutine fort_setfortscales
 
        subroutine fort_overridelsbc(homflag) &
        bind(c,name='fort_overridelsbc')
@@ -25511,12 +25513,12 @@ end subroutine initialize2d
 
        end subroutine fort_flush_fortran
 
-       subroutine FORT_SET_PERIODIC_VAR(periodic_in)
-       use probf90_module
+       subroutine fort_set_periodic_var(periodic_in) &
+       bind(c,name='fort_set_periodic_var')
 
        IMPLICIT NONE
 
-       INTEGER_T periodic_in(SDIM)
+       INTEGER_T, intent(in) :: periodic_in(SDIM)
        INTEGER_T dir
 
        do dir=1,SDIM
@@ -25528,7 +25530,7 @@ end subroutine initialize2d
         endif
        enddo
 
-       end subroutine FORT_SET_PERIODIC_VAR
+       end subroutine fort_set_periodic_var
      
 
       subroutine fort_initdatasolid( &
@@ -25843,6 +25845,4132 @@ end subroutine initialize2d
       return
       end subroutine fort_initsolidtemp
 
+
+       ! grad= -dt k grad S 
+       ! called from: NavierStokes::viscous_boundary_fluxes
+       ! which is called from: NavierStokes::apply_pressure_grad
+      subroutine fort_viscfluxfill( &
+       macrolayer_size, &
+       microlayer_substrate, &
+       microlayer_temperature_substrate, &
+       latent_heat, &
+       freezing_model, &
+       saturation_temp, &
+       nsolve, &
+       dir, &
+       xlo,dx, &
+       velbc, &
+       tempbc, &
+       temp_dombc, &
+       LS,DIMS(LS), &
+       area,DIMS(area), &
+       xflux,DIMS(xflux), &
+       tilelo,tilehi, &
+       fablo,fabhi,bfact, &
+       domlo,domhi, &
+       dt, &
+       nmat, &
+       nten, &
+       solidheat_flag, &
+       project_option, &
+       time) &
+      bind(c,name='fort_viscfluxfill')
+
+      use filcc_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: nsolve
+      INTEGER_T, intent(in) :: dir
+      INTEGER_T dir2
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nten
+      INTEGER_T nten_test
+      INTEGER_T, intent(in) :: solidheat_flag
+      INTEGER_T, intent(in) :: project_option
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(area)
+      INTEGER_T, intent(in) :: DIMDEC(xflux)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T growloMAC(3),growhiMAC(3)
+      INTEGER_T growlo_strip(3),growhi_strip(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(in), target :: LS(DIMV(LS),nmat*(SDIM+1))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: area(DIMV(area))
+      REAL_T, pointer :: area_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: xflux(DIMV(xflux),nsolve)
+      REAL_T, pointer :: xflux_ptr(D_DECL(:,:,:),:)
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
+      INTEGER_T, intent(in) :: tempbc(SDIM,2)
+      INTEGER_T, intent(in) :: temp_dombc(SDIM,2)
+      REAL_T, intent(in) :: macrolayer_size(nmat)
+      INTEGER_T, intent(in) :: microlayer_substrate(nmat)
+      REAL_T, intent(in) :: microlayer_temperature_substrate(nmat)
+      REAL_T, intent(in) :: latent_heat(2*nten)
+      INTEGER_T, intent(in) :: freezing_model(2*nten)
+      REAL_T, intent(in) :: saturation_temp(2*nten)
+
+      INTEGER_T i,j,k,ii,jj,kk
+      INTEGER_T side
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+      REAL_T dist
+      REAL_T LSleft,LSright
+      REAL_T nn
+      REAL_T tempflux
+      REAL_T xflux_local
+      INTEGER_T im,im1,im2,ireverse
+      INTEGER_T im_solid_tempflux
+      REAL_T LL,TSAT,TSUPER,thermal_layer
+      INTEGER_T local_freezing_model,heat_flux_model,iten
+
+      im_solid_tempflux=im_solid_primary()
+ 
+      nhalf=3 
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+ 
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+      if (time.lt.zero) then
+       print *,"time invalid"
+       stop
+      endif
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      nten_test=num_interfaces
+      if (nten_test.ne.nten) then
+       print *,"nten invalid viscfluxfill nten nten test", &
+        nten,nten_test
+       stop
+      endif
+
+      if ((solidheat_flag.lt.0).or. &
+          (solidheat_flag.gt.2)) then
+       print *,"solidheat_flag invalid"
+       stop
+      endif
+
+      if ((dir.lt.0).or.(dir.ge.SDIM)) then
+       print *,"dir invalid viscfluxfill"
+       stop
+      endif
+
+      if (dt.lt.zero) then
+       print *,"dt invalid"
+       stop
+      endif
+
+      LS_ptr=>LS
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1302)
+      area_ptr=>area
+      call checkbound_array1(fablo,fabhi,area_ptr,0,dir,1303)
+      xflux_ptr=>xflux
+      call checkbound_array(fablo,fabhi,xflux_ptr,0,dir,1304)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+          growloMAC,growhiMAC,0,dir,4) 
+
+      if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
+       if (nsolve.ne.AMREX_SPACEDIM) then
+        print *,"nsolve invalid"
+        stop
+       endif
+      else if (project_option.eq.SOLVETYPE_HEAT) then !thermal conduction
+       if (nsolve.ne.1) then
+        print *,"nsolve invalid"
+        stop
+       endif
+      else
+       print *,"project_option not supported"
+       stop
+      endif
+      
+      if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
+       ! do nothing
+      else if (project_option.eq.SOLVETYPE_HEAT) then ! thermal conduction
+
+       do im=1,nmat
+
+        if (is_rigid(nmat,im).eq.0) then
+         ! do nothing
+        else if (is_rigid(nmat,im).eq.1) then
+
+         if ((im_solid_tempflux.lt.1).or. &
+             (im_solid_tempflux.gt.nmat)) then
+          print *,"im_solid_tempflux invalid"
+          stop
+         endif
+      
+         ! 0=diffuse in solid
+         ! 1=dirichlet
+         ! 2=neumann (insulating or heat flux source/sink)
+         if (solidheat_flag.eq.2) then
+
+          heat_flux_model=0
+
+          do ireverse=0,1
+          do im1=1,nmat-1
+          do im2=im1+1,nmat
+           call get_iten(im1,im2,iten,nmat)
+           LL=latent_heat(iten+ireverse*nten)
+           local_freezing_model=freezing_model(iten+ireverse*nten)
+           TSAT=saturation_temp(iten+ireverse*nten)
+
+           if ((LL.ne.zero).and. &
+               (local_freezing_model.eq.0).and. &
+               ((microlayer_substrate(im1).eq.im).or. &
+                (microlayer_substrate(im2).eq.im))) then
+            heat_flux_model=1
+            if (microlayer_substrate(im1).eq.im) then
+             TSUPER=microlayer_temperature_substrate(im1)
+             thermal_layer=macrolayer_size(im1) 
+             if ((TSUPER.le.zero).or.(thermal_layer.le.zero)) then
+              print *,"TSUPER or thermal_layer invalid"
+              stop
+             endif
+              ! -k dT/dx * n
+              ! case 1: solid left, fluid right  n=-1
+              !   dT/dx=TSAT-TSUPER  
+              ! case 2: solid right, fluid left, n=1
+              !   dT/dx=TSUPER-TSAT 
+             tempflux=-fort_heatviscconst(im1)*(TSUPER-TSAT)/thermal_layer
+            else if (microlayer_substrate(im2).eq.im) then
+             TSUPER=microlayer_temperature_substrate(im2)
+             thermal_layer=macrolayer_size(im2)
+             if ((TSUPER.le.zero).or.(thermal_layer.le.zero)) then
+              print *,"TSUPER or thermal_layer invalid"
+              stop
+             endif
+              ! -k dT/dx * n
+              ! case 1: solid left, fluid right  n=-1
+              !   dT/dx=TSAT-TSUPER  
+              ! case 2: solid right, fluid left, n=1
+              !   dT/dx=TSUPER-TSAT 
+             tempflux=-fort_heatviscconst(im2)*(TSUPER-TSAT)/thermal_layer
+            else
+             print *,"microlayer_substrate invalid"
+             stop
+            endif
+           else if ((LL.eq.zero).or. &
+                    (local_freezing_model.gt.0).or. &
+                    ((microlayer_substrate(im1).ne.im).and. &
+                     (microlayer_substrate(im2).ne.im))) then
+            ! do nothing
+           else
+            print *,"LL, local_freezing_model, or microlayer_substrate invalid"
+            stop
+           endif
+          enddo ! im2
+          enddo ! im1
+          enddo ! ireverse
+
+          ii=0
+          jj=0
+          kk=0
+          if (dir.eq.0) then
+           ii=1
+          else if (dir.eq.1) then
+           jj=1
+          else if ((dir.eq.2).and.(SDIM.eq.3)) then
+           kk=1
+          else
+           print *,"dir invalid viscfluxfill 2"
+           stop
+          endif
+
+          do i=growloMAC(1),growhiMAC(1)
+          do j=growloMAC(2),growhiMAC(2)
+          do k=growloMAC(3),growhiMAC(3)
+           ! dir=0..sdim-1
+           call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir,6)
+
+           LSleft=LS(D_DECL(i-ii,j-jj,k-kk),im)
+           LSright=LS(D_DECL(i,j,k),im)
+            ! n points from from fluid to solid
+            ! Neumann BC approximation assumes that the
+            ! interface has a staircase (rasterized) reconstruction.
+           if ((LSright.ge.zero).and.(LSleft.lt.zero)) then
+            nn=one
+           else if ((LSleft.ge.zero).and.(LSright.lt.zero)) then
+            nn=-one
+           else
+            nn=zero
+           endif
+
+             ! flux is -k dt grad T
+             ! tempfluxsolid returns Q=-k dT/dx * n  (Q>0 => cooling)
+             ! n points from fluid to solid
+             ! solid on left and fluid on right => n=-1
+             ! code should return Q dt n
+             ! units of Q are (erg/(cm s Kelvin)) kelvin/cm=
+             ! erg/(cm^2 s)
+           if (LSleft*LSright.le.zero) then
+
+            if (heat_flux_model.eq.0) then
+
+             call tempfluxsolid(xsten(0,1), &
+              xsten(0,2), &
+              xsten(0,SDIM), &
+              tempflux,time,dir)
+
+             xflux_local=dt*tempflux*nn
+
+            else if (heat_flux_model.eq.1) then
+             ! 
+             ! tempflux=-k (TSUPER-TSAT)/thermal_layer=-k dT/dx n
+             xflux_local=dt*tempflux*nn
+            else
+             print *,"heat_flux_model invalid"
+             stop
+            endif
+
+            xflux(D_DECL(i,j,k),1)=xflux_local
+ 
+           else if (LSleft*LSright.ge.zero) then
+            ! do nothing
+           else
+            print *,"LSleft or LSright bust"
+            stop
+           endif
+
+          enddo
+          enddo
+          enddo
+
+         ! 0=diffuse in solid
+         ! 1=dirichlet
+         ! 2=neumann 
+         else if ((solidheat_flag.eq.0).or. &
+                  (solidheat_flag.eq.1)) then
+          ! do nothing
+         else
+          print *,"solidheat_flag invalid"
+          stop
+         endif
+
+        else
+         print *,"is_rigid invalid PROB.F90"
+         stop
+        endif
+    
+       enddo ! im=1..nmat
+ 
+       do dir2=1,3
+        growlo_strip(dir2)=growloMAC(dir2) 
+        growhi_strip(dir2)=growhiMAC(dir2) 
+       enddo
+
+       side=1
+       if ((temp_dombc(dir+1,side).eq.FOEXTRAP).and. &
+           (tilelo(dir+1).eq.domlo(dir+1))) then
+
+        growhi_strip(dir+1)=growlo_strip(dir+1)
+
+        do i=growlo_strip(1),growhi_strip(1) 
+        do j=growlo_strip(2),growhi_strip(2) 
+        do k=growlo_strip(3),growhi_strip(3) 
+
+         ! do nothing - no problems yet with a prescribed heat flux at
+         ! the bottom
+
+        enddo
+        enddo
+        enddo
+       endif  ! side==1 case (left side)
+
+       do dir2=1,3
+        growlo_strip(dir2)=growloMAC(dir2) 
+        growhi_strip(dir2)=growhiMAC(dir2) 
+       enddo
+
+       side=2
+       if ((temp_dombc(dir+1,side).eq.FOEXTRAP).and. &
+           (tilehi(dir+1).eq.domhi(dir+1))) then
+
+        growlo_strip(dir+1)=growhi_strip(dir+1)
+
+        do i=growlo_strip(1),growhi_strip(1) 
+        do j=growlo_strip(2),growhi_strip(2) 
+        do k=growlo_strip(3),growhi_strip(3) 
+
+         ! dir=0..sdim-1
+         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir,7)
+
+         ! cooling disk (top wall side==2)
+         ! in order to cool from the top, q=-k grad T>0
+         ! q=-k (TCOLD-T_ROOM)>0
+         if ((probtype.eq.601).and. &
+             (side.eq.2).and. &
+             (dir.eq.SDIM-1)) then
+
+          if (SDIM.eq.3) then
+           dist=sqrt((xsten(0,1)-xblob)**2+(xsten(0,2)-yblob)**2)-radblob
+          else if (SDIM.eq.2) then
+           dist=abs(xsten(0,1))-radblob
+          else
+           print *,"dimension bust"
+           stop
+          endif
+
+          ! Q=- k grad T 
+          ! k grad T<0 => Q>0
+          if (dist.le.zero) then
+           if (radblob2.le.zero) then
+            print *,"cooling Q should be positive"
+            stop
+           endif
+           xflux_local=dt*radblob2
+          else
+           xflux_local=zero
+          endif
+
+          xflux(D_DECL(i,j,k),1)=xflux_local
+
+         endif ! cooling disk
+
+        enddo
+        enddo
+        enddo
+       endif  ! side==2 case (right side)
+
+      else
+       print *,"project_option not supported"
+       stop
+      endif  
+
+      return
+      end subroutine fort_viscfluxfill
+
+
+       subroutine init_initdata(nmat,nten,nc, &
+         latent_heat, &
+         freezing_model, &
+         distribute_from_target, &
+         saturation_temp, &
+         dx)
+       IMPLICIT NONE
+
+       INTEGER_T, intent(in) :: nmat,nten,nc
+       INTEGER_T nc_expect
+       INTEGER_T nten_test
+       REAL_T, intent(in) :: dx(SDIM)
+       REAL_T, intent(in) :: latent_heat(2*nten)
+       INTEGER_T, intent(in) :: freezing_model(2*nten)
+       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+       REAL_T, intent(in) :: saturation_temp(2*nten)
+       REAL_T lmSt
+
+       INTEGER_T ireverse,im,im_opp,iten,local_freezing_model
+       INTEGER_T im_source,im_dest
+       REAL_T LL,TSAT
+       REAL_T cp_source,k_source,TDIFF,rho_source,rho_dest
+       REAL_T T_extreme
+       REAL_T den_ratio
+       INTEGER_T im_solid_initdata
+
+       im_solid_initdata=im_solid_primary()
+
+       if (nmat.ne.num_materials) then
+        print *,"nmat invalid"
+        stop
+       endif
+       nten_test=num_interfaces
+       if (nten_test.ne.nten) then
+        print *,"nten invalid initdata nten nten test", &
+          nten,nten_test
+        stop
+       endif
+       nc_expect=(SDIM+1)+ &
+        nmat*num_state_material+nmat*ngeom_raw+1
+       if (nc.ne.nc_expect) then
+        print *,"fort: nc invalid"
+        stop
+       endif
+
+       if (probtype.eq.802) then ! dissolution
+        xlodiss=zero
+        xhidiss=radblob
+        ndiss=NINT(radblob/dx(SDIM))-1
+        if (ndiss.ge.1000) then
+         print *,"ndiss too big"
+         stop
+        endif
+        xhidiss=ndiss*dx(SDIM)
+        dtdiss=one
+
+        do ispace=1,ndiss-1 
+         lowerdiag(ispace)=denfact/(dx(SDIM)**2)
+         upperdiag(ispace)=denfact/(dx(SDIM)**2)
+         diag(ispace)=-lowerdiag(ispace)-upperdiag(ispace)-1.0/dtdiss
+         rhs(ispace)=zero
+         if (ispace.eq.1) then
+          rhs(ispace)=rhs(ispace)-lowerdiag(ispace)
+         endif
+        enddo
+         ! in: GLOBALUTIL.F90
+        call tridiag_solve(lowerdiag,upperdiag,diag,ndiss-1,rhs,soln)
+       endif  ! probtype=802
+
+       do ireverse=0,1
+       do im=1,nmat-1
+       do im_opp=im+1,nmat
+        if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
+         print *,"im or im_opp bust 8"
+         stop
+        endif
+        call get_iten(im,im_opp,iten,nmat)
+        LL=latent_heat(iten+ireverse*nten)
+        local_freezing_model=freezing_model(iten+ireverse*nten)
+        TSAT=saturation_temp(iten+ireverse*nten)
+        if (is_hydrate_freezing_modelF(local_freezing_model).eq.1) then 
+         if (num_species_var.eq.1) then
+          ! do nothing
+         else
+          print *,"must define species var if hydrate model"
+          stop
+         endif
+        else if (is_hydrate_freezing_modelF(local_freezing_model).eq.0) then 
+         ! do nothing
+        else
+         print *,"is_hydrate_freezing_modelF invalid"
+         stop
+        endif
+
+        fort_alpha(iten+ireverse*nten)=zero
+        fort_beta(iten+ireverse*nten)=zero
+        fort_expansion_factor(iten+ireverse*nten)=zero
+        fort_stefan_number(iten+ireverse*nten)=zero
+        fort_jacob_number(iten+ireverse*nten)=zero
+        fort_time_radblob(iten+ireverse*nten)=zero
+
+        if ((is_rigid(nmat,im).eq.1).or. &
+            (is_rigid(nmat,im_opp).eq.1)) then
+         ! do nothing
+        else if (LL.ne.zero) then
+
+         if (ireverse.eq.0) then
+          im_source=im
+          im_dest=im_opp
+         else if (ireverse.eq.1) then
+          im_source=im_opp
+          im_dest=im
+         else
+          print *,"ireverse invalid"
+          stop
+         endif
+          ! we find the rate for the "sucking" problem which
+          ! has a thin thermal layer (interface moves towards the source).
+         cp_source=get_user_stiffCP(im_source) ! J/Kelvin
+         k_source=get_user_heatviscconst(im_source) ! W/(m Kelvin)
+
+          ! in: init_initdata
+         if ((im_source.ge.1).and.(im_source.le.nmat).and. &
+             (im_dest.ge.1).and.(im_dest.le.nmat)) then
+          T_extreme=fort_tempconst(im_source)
+          if (fort_tempconst(im_dest).gt.T_extreme) then
+           T_extreme=fort_tempconst(im_dest)
+          endif
+          if ((im_solid_initdata.ge.1).and. &
+              (im_solid_initdata.le.nmat)) then
+           if (fort_tempconst(im_solid_initdata).gt.T_extreme) then
+            T_extreme=fort_tempconst(im_solid_initdata)
+           endif
+          else if (im_solid_initdata.eq.0) then
+           ! do nothing
+          else
+           print *,"im_solid_initdata invalid"
+           stop
+          endif
+         else
+          print *,"im_source or im_dest invalid"
+          stop
+         endif
+ 
+         TDIFF=abs(T_extreme-TSAT)
+
+         rho_source=fort_denconst(im_source) ! kg/m^3 
+         rho_dest=fort_denconst(im_dest) ! kg/m^3 
+         den_ratio=max(rho_dest,rho_source)/min(rho_dest,rho_source)
+         if ((den_ratio.gt.1.0D+5).or.(den_ratio.lt.one)) then
+          print *,"den_ratio invalid"
+          stop
+         endif
+
+         if (distribute_from_target(iten+ireverse*nten).eq.0) then
+          fort_expansion_factor(iten+ireverse*nten)=one-rho_dest/rho_source
+         else if (distribute_from_target(iten+ireverse*nten).eq.1) then
+          fort_expansion_factor(iten+ireverse*nten)=one-rho_source/rho_dest
+         else
+          print *,"distribute_from_target invalid"
+          stop
+         endif
+
+
+         ! (W/(m Kelvin))/((kg/m^3)(J/(kg Kelvin)))
+         ! (J/(s m Kelvin))/((1/m^3)(J/Kelvin))
+         ! (1/(s m))/(1/m^3)
+         ! (1/(s))/(1/m^2)=m^2/s
+         fort_alpha(iten+ireverse*nten)=k_source/(rho_source*cp_source) 
+
+         ! (J/(kg Kelvin)) Kelvin/(J/kg)=1
+         fort_stefan_number(iten+ireverse*nten)=cp_source*TDIFF/abs(LL)
+        
+         fort_jacob_number(iten+ireverse*nten)=(rho_source/rho_dest)* &
+            fort_stefan_number(iten+ireverse*nten)
+
+         ! solidification
+         ! circular freeze.
+         if (den_ratio.lt.10.0) then
+          call find_lambda(lmSt,fort_stefan_number(iten+ireverse*nten))
+
+         ! spherical boiling
+         else if (den_ratio.ge.10.0) then
+
+          call find_beta(lmSt,den_ratio,fort_jacob_number(iten+ireverse*nten))
+
+         else
+          print *,"den_ratio bust"
+          stop
+         endif
+
+         fort_beta(iten+ireverse*nten)=lmSt
+
+          ! sqrt(alpha time_radblob)*two*lmSt=radblob 
+         call solidification_front_time(lmSt, &
+          fort_alpha(iten+ireverse*nten), &
+          fort_time_radblob(iten+ireverse*nten), &
+          radblob)
+
+         print *,"iten,ireverse ",iten,ireverse
+         print *,"im_source,im_dest ",im_source,im_dest 
+         print *,"fort_expansion_factor= ", &
+          fort_expansion_factor(iten+ireverse*nten)
+         print *,"distribute_from_target= ", &
+          distribute_from_target(iten+ireverse*nten)
+         print *,"den_ratio= ",den_ratio
+         print *,"Stefan_number= ",fort_stefan_number(iten+ireverse*nten)
+         print *,"Jacob_number= ",fort_jacob_number(iten+ireverse*nten)
+         print *,"lmSt= ",lmSt
+         print *,"alpha= ",fort_alpha(iten+ireverse*nten)
+         print *,"beta= ",fort_beta(iten+ireverse*nten)
+         print *,"time_radblob is the time for the front to grow from"
+         print *,"r=0 to r=radblob"
+         print *,"time_radblob=",fort_time_radblob(iten+ireverse*nten)
+         print *,"radius doubling time=4 * time_radblob - time_radblob=", &
+          three*fort_time_radblob(iten+ireverse*nten)
+         print *,"front location: 2 beta sqrt(alpha t) "
+        else if (LL.eq.zero) then
+         ! do nothing
+        else
+         print *,"LL invalid"
+         stop
+        endif
+       enddo ! im_opp
+       enddo ! im
+       enddo ! ireverse
+
+       return
+       end subroutine init_initdata
+
+
+       subroutine fort_initgridmap( &
+        max_level, &
+        bfact_space_level, & 
+        bfact_grid_level, & 
+        domlo,domhi, &
+        dx, &
+        problo,probhi) &
+       bind(c,name='fort_initgridmap')
+
+       use global_utility_module
+       use supercooled_exact_sol
+
+       IMPLICIT NONE
+
+       INTEGER_T, intent(in) :: max_level
+       INTEGER_T, intent(in) :: bfact_space_level(0:max_level)
+       INTEGER_T, intent(in) :: bfact_grid_level(0:max_level)
+       INTEGER_T, intent(in) :: domlo(SDIM)
+       INTEGER_T, intent(in) :: domhi(SDIM)
+       REAL_T, intent(in) :: dx(SDIM)
+       REAL_T, intent(in) :: problo(SDIM)
+       REAL_T, intent(in) :: probhi(SDIM)
+       REAL_T xsten(-1:1)
+       INTEGER_T nhalf
+       INTEGER_T bfactmax
+       INTEGER_T ilev,max_ncell,dir,inode,i
+       INTEGER_T ncell(SDIM)
+       REAL_T dxlevel(SDIM)
+       INTEGER_T domlo_level(SDIM)
+       INTEGER_T domhi_level(SDIM)
+
+       nhalf=1
+
+       if (max_level.lt.0) then
+        print *,"max_level invalid"
+        stop
+       endif
+
+       bfactmax=0
+       do ilev=0,max_level
+        if ((bfact_space_level(ilev).lt.1).or. &
+            (bfact_grid_level(ilev).lt.2)) then
+         print *,"bfact invalid200 in initgridmap"
+         stop
+        endif
+        if (bfact_space_level(ilev).gt.bfactmax) then
+         bfactmax=bfact_space_level(ilev)
+        endif
+        if (bfact_grid_level(ilev).gt.bfactmax) then
+         bfactmax=bfact_grid_level(ilev)
+        endif
+       enddo ! ilev
+
+       max_ncell=0
+       do dir=1,SDIM
+        if (domlo(dir).ne.0) then
+         print *,"domlo invalid"
+         stop
+        endif
+        ncell(dir)=domhi(dir)-domlo(dir)+1
+        if (ncell(dir).lt.2) then
+         print *,"ncell invalid"
+         stop
+        endif
+        if (ncell(dir).gt.max_ncell) then
+         max_ncell=ncell(dir)
+        endif
+       enddo ! dir
+
+       if (max_ncell.lt.2) then
+        print *,"max_ncell invalid"
+        stop
+       endif
+
+       do ilev=1,max_level
+        max_ncell=max_ncell*2
+       enddo
+
+       if (bfactmax.lt.8) then
+        bfactmax=8
+       endif
+
+       if (grid_cache_allocated.eq.0) then
+
+        cache_index_low=-4*bfactmax
+        cache_index_high=2*max_ncell+4*bfactmax
+        cache_max_level=max_level
+
+        print *,"allocate grid_cache"
+        do dir=1,SDIM
+         print *,"dir,domlo,domhi ",dir,domlo(dir),domhi(dir)
+         print *,"dir,problo,probhi ",dir,problo(dir),probhi(dir)
+         print *,"dir,dx ",dir,dx(dir)
+        enddo
+        print *,"cache_index_low ",cache_index_low
+        print *,"cache_index_high ",cache_index_high
+        print *,"bfactmax,max_ncell ",bfactmax,max_ncell
+
+        allocate(grid_cache(0:cache_max_level, &
+         cache_index_low:cache_index_high,SDIM))
+
+        do dir=1,SDIM
+         dxlevel(dir)=dx(dir)
+         domlo_level(dir)=domlo(dir)
+         domhi_level(dir)=domhi(dir)
+        enddo
+
+        do ilev=0,cache_max_level
+         do dir=1,SDIM
+          if (domlo_level(dir).ne.0) then
+           print *,"domlo_level invalid"
+           stop
+          endif
+          do i=domlo_level(dir)-2*bfactmax,domhi_level(dir)+2*bfactmax
+           inode=2*i
+           if ((inode.lt.cache_index_low).or. &
+               (inode+1.gt.cache_index_high)) then
+            print *,"icell outside of cache range"
+            stop
+           endif
+           call gridsten1D(xsten,problo,i,domlo, &
+            bfact_space_level(ilev),dxlevel,dir,nhalf) 
+           grid_cache(ilev,inode,dir)=xsten(0)
+           grid_cache(ilev,inode+1,dir)=xsten(1)
+           if (1.eq.0) then
+            print *,"lev,inode,dir,x,xnxt ",ilev,inode,dir,xsten(0),xsten(1)
+           endif
+          enddo ! i
+         enddo ! dir
+         do dir=1,SDIM
+          dxlevel(dir)=half*dxlevel(dir)
+          domlo_level(dir)=2*domlo_level(dir)
+          domhi_level(dir)=2*(domhi_level(dir)+1)-1
+         enddo
+        enddo !ilev
+
+       else if (grid_cache_allocated.eq.1) then
+        ! do nothing
+       else
+        print *,"grid_cache_allocated invalid"
+        stop
+       endif
+
+       grid_cache_allocated=1
+
+       return
+       end subroutine fort_initgridmap
+
+       subroutine fort_initdata_alloc( &
+        nmat,nten,nc, &
+        latent_heat, &
+        freezing_model, &
+        distribute_from_target, &
+        saturation_temp, &
+        dx) &
+       bind(c,name='fort_initdata_alloc')
+
+       use supercooled_exact_sol
+       use global_utility_module
+       IMPLICIT NONE
+
+       INTEGER_T, intent(in) :: nmat,nten,nc
+       REAL_T, intent(in) :: dx(SDIM)
+       REAL_T, intent(in) :: latent_heat(2*nten)
+       INTEGER_T, intent(in) :: freezing_model(2*nten)
+       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+       REAL_T, intent(in) :: saturation_temp(2*nten)
+
+       call init_initdata(nmat,nten,nc, &
+        latent_heat, &
+        freezing_model, &
+        distribute_from_target, &
+        saturation_temp, &
+        dx)
+
+       return
+       end subroutine fort_initdata_alloc
+
+       subroutine fort_initdata( &
+        tid, &
+        adapt_quad_depth, &
+        level,max_level, &
+        time, &
+        tilelo,tilehi, &
+        fablo,fabhi, &
+        bfact, &
+        nc, &
+        nmat, &
+        nten, &
+        latent_heat, &
+        saturation_temp, &
+        scal,DIMS(scal), &
+        LS,DIMS(LS), &
+        dx,xlo,xhi) &
+       bind(c,name='fort_initdata')
+
+       use MOF_routines_module
+       use geometry_intersect_module
+       use hydrateReactor_module
+       use supercooled_exact_sol
+       use unimaterialChannel_module
+       use global_utility_module
+       use global_distance_module
+       use shockdrop
+       use marangoni
+       use CISL_SANITY_MODULE
+       use USERDEF_module
+       use CAV3D_module
+       use HELIX_module
+       use TSPRAY_module
+       use CAV2Dstep_module
+       use ZEYU_droplet_impact_module
+       use rigid_FSI_module
+       use sinking_particle_module
+       use stackvolume_module
+
+       IMPLICIT NONE
+
+       INTEGER_T, intent(in) :: nmat
+       INTEGER_T, intent(in) :: adapt_quad_depth,tid
+       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T growlo(3),growhi(3)
+       INTEGER_T, intent(in) :: bfact
+       INTEGER_T, intent(in) :: level,max_level
+       INTEGER_T, intent(in) :: nc
+       INTEGER_T, intent(in) :: nten
+       INTEGER_T imls
+       INTEGER_T impres
+       REAL_T, intent(in) :: latent_heat(2*nten)
+       REAL_T, intent(in) :: saturation_temp(2*nten)
+       REAL_T, intent(in) :: time
+       INTEGER_T, intent(in) :: DIMDEC(scal)
+       INTEGER_T, intent(in) :: DIMDEC(LS)
+
+       REAL_T, intent(inout), target :: scal(DIMV(scal),nc)
+       REAL_T, pointer :: scal_ptr(D_DECL(:,:,:),:)
+
+       REAL_T, intent(inout), target :: LS(DIMV(LS),nmat*(1+SDIM))
+       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+
+       REAL_T, intent(in) :: dx(SDIM)
+       REAL_T, intent(in) :: xlo(SDIM), xhi(SDIM)
+       INTEGER_T idenbase,imofbase
+       INTEGER_T ierr
+       INTEGER_T ibase
+       INTEGER_T ic,jc,kc,n,im
+       INTEGER_T dir
+       REAL_T, dimension(:,:), allocatable :: comparestate
+       REAL_T vfracsum_test
+
+       REAL_T fluiddata(nmat,2*SDIM+2)
+       REAL_T mofdata(nmat*ngeom_recon)
+       REAL_T distbatch(nmat)
+       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
+       REAL_T err
+       REAL_T vofdark(nmat)
+       REAL_T voflight(nmat)
+       REAL_T cendark(nmat,SDIM)
+       REAL_T cenlight(nmat,SDIM)
+
+       INTEGER_T nhalf,nhalf2,nmax
+       REAL_T xsten(-3:3,SDIM)
+       REAL_T xsten2(-1:1,SDIM)
+
+       INTEGER_T i1,j1,k1,k1lo,k1hi
+       REAL_T xpos(SDIM)
+       REAL_T scalc(nc)
+       REAL_T LSc(nmat*(1+SDIM))
+       REAL_T x,y,z,rr
+       REAL_T volcell
+       REAL_T cencell(SDIM)
+       INTEGER_T ipresbase
+       
+       REAL_T debug_vfrac_sum
+       REAL_T vel(SDIM)
+       REAL_T temp,dens,ccnt,test_gamma,test_pres
+       REAL_T distsolid
+       INTEGER_T nten_test
+
+       REAL_T den_jwl_left,den_jwl_right
+       REAL_T temp_jwl_left,temp_jwl_right
+       REAL_T e_jwl_left,e_jwl_right
+       REAL_T p_jwl_left,p_jwl_right
+       REAL_T u_jwl_left,u_jwl_right
+       REAL_T xshock
+       REAL_T den_jwl,denroom,e_jwl,e_room,eps_benard
+       REAL_T gamma_jwl
+       REAL_T p_hyd,p_jwl,p_room,preshydro,rhohydro
+       REAL_T temp_jwl,temp_slope,temproom,u_jwl
+       REAL_T water_temp
+       INTEGER_T imattype,isten
+       INTEGER_T max_levelstack
+       INTEGER_T vofcomp_raw
+       INTEGER_T vofcomp_recon
+       REAL_T jumpval
+       REAL_T voflist(nmat)
+
+       INTEGER_T im_source,im_dest,ireverse,iten
+       REAL_T L_ice_melt,TSAT,T_EXTREME,cp_melt,k_melt,rstefan
+       REAL_T T_FIELD
+       REAL_T den_ratio
+       REAL_T dxmaxLS
+       INTEGER_T im_solid_initdata
+       REAL_T lsnormal(nmat,SDIM)
+       INTEGER_T lsnormal_valid(nmat)
+       REAL_T ls_intercept(nmat)
+       INTEGER_T doubly_flag
+       REAL_T local_state(nmat*num_state_material)
+       REAL_T massfrac_parm(num_species_var+1)
+       INTEGER_T local_ibase
+       INTEGER_T tessellate
+       INTEGER_T bcflag
+       INTEGER_T from_boundary_hydrostatic
+       INTEGER_T nhalf_box
+       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
+
+       nhalf_box=1
+
+       scal_ptr=>scal
+       LS_ptr=>LS
+
+       from_boundary_hydrostatic=0
+
+       tessellate=0
+
+       bcflag=0
+
+       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
+        print *,"tid invalid"
+        stop
+       endif
+
+       if ((time.ge.zero).and.(time.le.1.0D+20)) then
+        ! do nothing
+       else if (time.ge.1.0D+20) then
+        print *,"WARNING time.ge.1.0D+20 in initdata"
+       else if (time.lt.zero) then
+        print *,"time invalid in initdata"
+        stop
+       else
+        print *,"time bust in initdata"
+        stop
+       endif
+
+       call get_dxmaxLS(dx,bfact,dxmaxLS)
+
+       im_solid_initdata=im_solid_primary()
+
+       nmax=POLYGON_LIST_MAX ! in: fort_initdata
+       nhalf=3
+       nhalf2=1
+
+       if (bfact.lt.1) then
+        print *,"bfact too small"
+        stop
+       endif
+       if ((adapt_quad_depth.lt.1).or.(adapt_quad_depth.gt.10)) then
+        print *,"adapt_quad_depth invalid"
+        stop
+       endif
+       max_levelstack=adapt_quad_depth
+
+       ipresbase=STATECOMP_PRES
+       impres=1
+       idenbase=STATECOMP_STATES
+       imofbase=STATECOMP_MOF
+       ierr=imofbase+nmat*ngeom_raw+1
+       if (nc.ne.ierr) then
+        print *,"nc invalid"
+        stop
+       endif
+       nten_test=num_interfaces
+       if (nten_test.ne.nten) then
+        print *,"nten invalid initdata nten nten test", &
+          nten,nten_test
+        stop
+       endif
+       if (nmat.ne.num_materials) then
+        print *,"nmat invalid"
+        stop
+       endif
+       if (nc.ne.ierr) then
+        print *,"scal invalid"
+        stop
+       endif
+      
+       if (num_state_base.ne.2) then
+        print *,"num_state_base invalid"
+        stop
+       endif
+
+       call checkbound_array(fablo,fabhi,scal_ptr,1,-1,1304)
+       call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1305)
+
+       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+       if (SDIM.eq.2) then
+        k1lo=0
+        k1hi=0
+       else if (SDIM.eq.3) then
+        k1lo=-1
+        k1hi=1
+       else
+        print *,"dimension bust"
+        stop
+       endif
+
+       do ic=growlo(1),growhi(1)
+       do jc=growlo(2),growhi(2)
+       do kc=growlo(3),growhi(3)
+        
+        do n=1,nc
+         scalc(n)=zero
+        enddo
+        do imls=1,nmat*(1+SDIM)
+         LSc(imls)=zero
+        enddo
+        volcell=zero
+        do dir=1,SDIM
+         cencell(dir)=zero
+        enddo
+
+        call gridsten(xsten,xlo,ic,jc,kc,fablo,bfact,dx,nhalf)
+
+        x=xsten(0,1)
+        y=xsten(0,2)
+        z=xsten(0,SDIM)
+
+        do dir=1,SDIM
+         xpos(dir)=xsten(0,dir)
+        enddo
+
+        call Box_volumeFAST(bfact,dx,xsten,nhalf,volcell,cencell,SDIM)
+
+        scalc(ipresbase+1)=zero
+
+        if (is_in_probtype_list().eq.1) then
+
+         call SUB_LS(xpos,time,distbatch,num_materials)
+             ! bcflag=0 (calling from fort_initdata)
+         call SUB_STATE(xpos,time,distbatch,local_state, &
+                 bcflag,num_materials,num_state_material)
+         do im=1,nmat
+          ibase=idenbase+(im-1)*num_state_material
+          local_ibase=(im-1)*num_state_material
+          scalc(ibase+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+          ! species
+          do n=1,num_species_var
+           scalc(ibase+num_state_base+n)= &
+            local_state(local_ibase+num_state_base+n)
+           if (scalc(ibase+num_state_base+n).ge.zero) then
+            ! do nothing
+           else
+            print *,"mass fraction cannot be negative"
+            stop
+           endif
+          enddo
+
+          if (scalc(ibase+1).gt.zero) then
+           ! do nothing
+          else
+           print *,"density invalid probtype==421 "
+           print *,"im,ibase,nmat ",im,ibase,nmat
+           print *,"density=",scalc(ibase+1)
+           stop
+          endif
+
+          if (scalc(ibase+2).gt.zero) then
+           ! do nothing
+          else
+           print *,"temperature invalid probtype==421 "
+           print *,"im,ibase,nmat ",im,ibase,nmat
+           print *,"temperature=",scalc(ibase+1)
+           stop
+          endif
+
+         enddo ! im=1..nmat
+         call SUB_PRES(xpos,time,distbatch,p_hyd,num_materials)
+         scalc(ipresbase+impres)=p_hyd
+
+         if (p_hyd.ge.zero) then
+          ! do nothing
+         else
+          print *,"p_hyd invalid"
+          print *,"probtype=",probtype
+          print *,"p_hyd=",p_hyd
+          stop
+         endif
+
+        else if (probtype.eq.411) then
+
+         call CAV3D_LS(xpos,time,distbatch)
+         call CAV3D_STATE(xpos,time,distbatch,local_state)
+         do im=1,nmat
+          ibase=idenbase+(im-1)*num_state_material
+          local_ibase=(im-1)*num_state_material
+          scalc(ibase+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+           ! species
+          do n=1,num_species_var
+           scalc(ibase+num_state_base+n)= &
+            local_state(local_ibase+num_state_base+n)
+          enddo
+         enddo ! im=1..nmat
+         call CAV3D_PRES(xpos,time,distbatch,p_hyd)
+         scalc(ipresbase+impres)=p_hyd
+
+        else if (probtype.eq.401) then
+
+         call HELIX_LS(xpos,time,distbatch)
+         call HELIX_STATE(xpos,time,distbatch,local_state)
+         do im=1,nmat
+          ibase=idenbase+(im-1)*num_state_material
+          local_ibase=(im-1)*num_state_material
+          scalc(ibase+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+           ! species
+          do n=1,num_species_var
+           scalc(ibase+num_state_base+n)= &
+            local_state(local_ibase+num_state_base+n)
+          enddo
+         enddo ! im=1..nmat
+         call HELIX_PRES(xpos,time,distbatch,p_hyd)
+         scalc(ipresbase+impres)=p_hyd
+
+        else if (probtype.eq.402) then
+
+         call TSPRAY_LS(xpos,time,distbatch)
+         call TSPRAY_STATE(xpos,time,distbatch,local_state)
+         do im=1,nmat
+          ibase=idenbase+(im-1)*num_state_material
+          local_ibase=(im-1)*num_state_material
+          scalc(ibase+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+           ! species
+          do n=1,num_species_var
+           scalc(ibase+num_state_base+n)= &
+            local_state(local_ibase+num_state_base+n)
+          enddo
+         enddo ! im=1..nmat
+         call TSPRAY_PRES(xpos,time,distbatch,p_hyd)
+         scalc(ipresbase+impres)=p_hyd
+
+        else if (probtype.eq.412) then ! step
+
+         call CAV2Dstep_LS(xpos,time,distbatch)
+         call CAV2Dstep_STATE(xpos,time,distbatch,local_state)
+         do im=1,nmat
+          ibase=idenbase+(im-1)*num_state_material
+          local_ibase=(im-1)*num_state_material
+          scalc(ibase+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+          ! species
+          do n=1,num_species_var
+           scalc(ibase+num_state_base+n)= &
+            local_state(local_ibase+num_state_base+n)
+          enddo
+         enddo ! im=1..nmat
+         call CAV2Dstep_PRES(xpos,time,distbatch,p_hyd)
+         scalc(ipresbase+impres)=p_hyd
+
+        else if (probtype.eq.413) then ! zeyu
+
+         call ZEYU_droplet_impact_LS(xpos,time,distbatch)
+         call ZEYU_droplet_impact_STATE(xpos,time,distbatch,local_state)
+         do im=1,nmat
+          ibase=idenbase+(im-1)*num_state_material
+          local_ibase=(im-1)*num_state_material
+          scalc(ibase+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+          ! species
+          do n=1,num_species_var
+           scalc(ibase+num_state_base+n)= &
+            local_state(local_ibase+num_state_base+n)
+          enddo
+         enddo ! im=1..nmat
+         call ZEYU_droplet_impact_PRES(xpos,time,distbatch,p_hyd)
+         scalc(ipresbase+impres)=p_hyd
+
+        else if (probtype.eq.533) then
+
+         call rigid_FSI_LS(xpos,time,distbatch)
+         call rigid_FSI_STATE(xpos,time,distbatch,local_state)
+         do im=1,nmat
+          ibase=idenbase+(im-1)*num_state_material
+          local_ibase=(im-1)*num_state_material
+          scalc(ibase+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+           ! species
+          do n=1,num_species_var
+           scalc(ibase+num_state_base+n)= &
+            local_state(local_ibase+num_state_base+n)
+          enddo
+         enddo ! im=1..nmat
+         call rigid_FSI_PRES(xpos,time,distbatch,p_hyd)
+         scalc(ipresbase+impres)=p_hyd
+
+        else if (probtype.eq.534) then
+
+         call sinking_FSI_LS(xpos,time,distbatch)
+         call sinking_FSI_STATE(xpos,time,distbatch,local_state)
+         do im=1,nmat
+          ibase=idenbase+(im-1)*num_state_material
+          local_ibase=(im-1)*num_state_material
+          scalc(ibase+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+           ! species
+          do n=1,num_species_var
+           scalc(ibase+num_state_base+n)= &
+            local_state(local_ibase+num_state_base+n)
+          enddo
+         enddo ! im=1..nmat
+         call sinking_FSI_PRES(xpos,time,distbatch,p_hyd)
+         scalc(ipresbase+impres)=p_hyd
+
+        else if (probtype.eq.311) then ! user defined
+
+         call USERDEF_LS(xpos,time,distbatch)
+         call USERDEF_STATE(xpos,time,distbatch,local_state)
+         do im=1,nmat
+          ibase=idenbase+(im-1)*num_state_material
+          local_ibase=(im-1)*num_state_material
+          scalc(ibase+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+           ! species
+          do n=1,num_species_var
+           scalc(ibase+num_state_base+n)= &
+            local_state(local_ibase+num_state_base+n)
+          enddo
+         enddo ! im=1..nmat
+         call USERDEF_PRES(xpos,time,distbatch,p_hyd)
+         scalc(ipresbase+impres)=p_hyd
+
+        else
+
+         do im=1,nmat
+
+          ibase=idenbase+(im-1)*num_state_material
+
+          scalc(ibase+1)=fort_denconst(im)  ! den
+          scalc(ibase+2)=fort_initial_temperature(im)  ! temperature
+     
+          do n=1,num_species_var
+           scalc(ibase+num_state_base+n)= &
+            fort_speciesconst((n-1)*nmat+im)
+          enddo
+
+          if (probtype.eq.82) then ! annulus
+           ! fort_tempconst(1) is the inner wall temperature
+           ! twall is the outer wall temperature
+           ! see: subroutine thermal_offset
+           scalc(ibase+2)=fort_initial_temperature(1)
+          endif
+
+           ! in: INITDATA
+          if (probtype.eq.26) then ! swirl if axis_dir=0 or 1.
+
+           if (axis_dir.eq.10) then ! BCG test
+            scalc(ibase+2)=fort_initial_temperature(1)
+           else if (axis_dir.eq.11) then ! BCG periodic test
+            scalc(ibase+2)=fort_initial_temperature(1)
+           else if ((axis_dir.ge.0).and. & !swirl,vortex confinement
+                    (axis_dir.le.5)) then
+            doubly_flag=1
+            if (SDIM.eq.2) then
+             if ((axis_dir.eq.0).or. & ! swirl
+                 (axis_dir.eq.1)) then
+              rr=y
+             else if ((axis_dir.eq.2).or. & ! vortex confinement
+                      (axis_dir.eq.3)) then
+              rr=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
+              doubly_flag=0
+             else
+              print *,"axis_dir invalid"
+              stop
+             endif
+            else if (SDIM.eq.3) then
+             if ((axis_dir.ge.0).and. & !swirl or vortex confinement
+                 (axis_dir.le.3)) then
+              if (adv_dir.eq.3) then ! vortex confinement
+               rr=y
+              else if (adv_dir.eq.2) then ! vortex confinement
+               rr=z
+              else if (adv_dir.eq.1) then ! swirl
+               rr=z
+              else
+               print *,"adv_dir invalid probtype==26 (11)"
+               stop
+              endif
+             else if ((axis_dir.eq.4).or. & ! vortex confinement.
+                      (axis_dir.eq.5)) then
+              rr=sqrt((x-xblob)**2+(y-yblob)**2+(z-zblob)**2)-radblob
+              doubly_flag=0
+             else
+              print *,"axis_dir invalid"
+              stop
+             endif
+            else
+             print *,"dimension bust"
+             stop
+            endif
+            if (doubly_flag.eq.1) then
+             if (rr.le.half) then
+              jumpval=tanh( (rr-one/four)*30.0 )
+             else
+              jumpval=tanh( (three/four-rr)*30.0 )
+             endif
+            else if (doubly_flag.eq.0) then
+             jumpval=tanh(30.0*rr)
+            else
+             print *,"doubly_flag invalid"
+             stop
+            endif
+
+            jumpval=(jumpval+one)/two
+            scalc(ibase+2)=jumpval*fort_initial_temperature(1)+ &
+             (one-jumpval)*fort_initial_temperature(2)
+  
+           else
+            print *,"axis_dir invalid"
+            stop
+           endif
+
+          endif ! probtype==26
+
+            ! 2B from Wardlaws list
+          if ((probtype.eq.36).and.(axis_dir.eq.2).and. &
+              (SDIM.eq.2)) then
+           if (im.eq.1) then
+            call tait_hydrostatic_pressure_density(xpos, &
+             rhohydro,preshydro,from_boundary_hydrostatic)
+            scalc(ibase+1)=rhohydro
+           else if (im.eq.2) then
+            e_jwl=4.2814D+10
+            den_jwl=1.63D0
+            call init_massfrac_parm(den_jwl,massfrac_parm,im)
+            call TEMPERATURE_material(den_jwl,massfrac_parm, &
+             temp_jwl,e_jwl, &
+             fort_material_type(im),im)
+            scalc(ibase+1)=den_jwl
+            scalc(ibase+2)=temp_jwl
+           endif
+          endif  ! probtype=36
+           ! initial temperature for boiling cavity problem
+          if (probtype.eq.710) then
+           ! water phase
+           if (im.eq.1) then
+             ! bcflag=0 (calling from fort_initdata)
+            call outside_temperature(time,x,y,z,water_temp,im,0)
+            scalc(ibase+2)=water_temp  
+           endif ! im=1
+          endif
+
+           ! initial temperature for melting ice block on a substrate.
+          if (probtype.eq.59) then
+
+           if (nmat.lt.4) then
+            print *,"nmat too small for melting ice on substrate"
+            stop
+           endif
+           ! substrate (initial temperature)
+           if (im.eq.4) then
+            ! bcflag=0 (calling from fort_initdata)
+            call outside_temperature(time,x,y,z,water_temp,im,0)
+            scalc(ibase+2)=water_temp
+           endif
+
+          endif ! probtype.eq.59
+
+           ! Benard instability problem initdata
+           ! density above is a filler; density will be
+           ! replaced by rho(T,z) after "nonlinear_advection"
+           ! (correct_density)
+          if (probtype.eq.603) then
+           if (z.gt.yblob) then
+            water_temp=fort_initial_temperature(1) 
+           else if (z.gt.zero) then 
+            temp_slope=-radblob2/yblob
+            if (SDIM.eq.2) then
+             eps_benard=radblob*cos(two*Pi*x/xblob)*four*y*(yblob-y)/(yblob**2) 
+            else if (SDIM.eq.3) then
+             eps_benard=cos(two*Pi*(x-problox)/xblob)* &
+                cos(two*Pi*(y-probloy)/xblob)* &
+                radblob*four*z*(yblob-z)/(yblob**2)
+            else
+             print *,"dimension bust"
+             stop
+            endif
+
+            water_temp=radblob2+fort_initial_temperature(1)+ &
+              temp_slope*(z+eps_benard)
+           else
+            water_temp=radblob2+fort_initial_temperature(1)
+           endif
+           scalc(ibase+2)=water_temp  ! temperature
+          endif  ! probtype=603
+
+          if ((probtype.eq.1).and. &
+              ((axis_dir.eq.150).or. &
+               (axis_dir.eq.151))) then
+    
+           if (im.eq.2) then ! air
+            call shockdrop_pressure(x,y,z,p_jwl, &
+             xblob,yblob,zblob,radblob,zblob2,axis_dir)
+            call shockdrop_gas_density(x,y,z,den_jwl, &
+             xblob,yblob,zblob,radblob,zblob2,axis_dir)
+            call shockdrop_velocity(x,y,z,vel, &
+             xblob,yblob,zblob,radblob,zblob2,axis_dir)
+            u_jwl=vel(SDIM)
+            test_gamma=one+R_AIR_PARMS/CV_AIR_PARMS
+            if (abs(test_gamma-shockdrop_gamma).gt.1.0E-8) then
+             print *,"shockdrop_gamma inconsistent with mattype=5 parms"
+             print *,"test_gamma=",test_gamma
+             print *,"shockdrop_gamma=",shockdrop_gamma
+             stop
+            endif 
+            call general_hydrostatic_pressure(test_pres)
+            if (abs(test_pres-shockdrop_P)/test_pres.gt.1.0E-8) then
+             print *,"shockdrop_P inconsistent w/ general_hydrostatic_pressure"
+             stop
+            endif
+            if (fort_material_type(2).ne.5) then
+             print *,"only material_type=5 supported for gas for this problem"
+             stop
+            endif
+            e_jwl=p_jwl/((shockdrop_gamma-one)*den_jwl)
+            call init_massfrac_parm(den_jwl,massfrac_parm,im)
+            call TEMPERATURE_material(den_jwl,massfrac_parm, &
+             temp_jwl,e_jwl, &
+             fort_material_type(im),im)
+            scalc(ibase+1)=den_jwl
+            scalc(ibase+2)=temp_jwl
+           else if (im.eq.1) then ! water
+            ! do nothing (use fort_denconst and fort_initial_temperature)
+           else
+            print *,"im invalid83"
+            stop
+           endif
+
+          endif  ! shockdrop
+
+           ! shock tube problems
+           ! do not use material_type=5 (EOS_air),
+           ! use material_type=18 instead.
+           ! (results should be similar though)
+          if ((probtype.eq.92).or.(probtype.eq.93)) then
+           gamma_jwl=1.4
+
+           if (axis_dir.eq.0) then  ! Sod shock tube
+            den_jwl_left=one
+            den_jwl_right=0.125
+            p_jwl_left=one
+            p_jwl_right=0.1
+            u_jwl_left=zero
+            u_jwl_right=zero
+            xshock=half
+           else if (axis_dir.eq.1) then ! strong shock tube
+            den_jwl_left=one
+            den_jwl_right=0.125
+            p_jwl_left=1.0D+10
+            p_jwl_right=0.1
+            u_jwl_left=zero
+            u_jwl_right=zero
+            xshock=half
+           else if (axis_dir.eq.2) then ! shock turbulence interaction
+            den_jwl_left=3.857148
+            den_jwl_right=one+0.2d0*sin(five*x-five)
+            p_jwl_left=10.333333
+            p_jwl_right=one
+            u_jwl_left=2.629369
+            u_jwl_right=zero
+            xshock=one
+           else if (axis_dir.eq.3) then ! mach>4
+            den_jwl_left=10.0
+            den_jwl_right=1.0
+            p_jwl_left=10.0*(1.4-1.0)
+            p_jwl_right=(1.4-1.0)
+            u_jwl_left=5.0
+            u_jwl_right=zero
+            xshock=one
+            ! Kadioglu, Sussman, Osher, Wright, Kang (smooth test problem)
+           else if (axis_dir.eq.4) then 
+            u_jwl_left=zero
+            u_jwl_right=zero
+            if (adv_dir.eq.1) then
+             rr=x
+            else if (adv_dir.eq.2) then
+             rr=y
+            else if ((adv_dir.eq.3).and.(SDIM.eq.3)) then
+             rr=z
+            else
+             print *,"adv_dir invalid probtype==92,93 (12)"
+             stop
+            endif
+            p_jwl_left=(1.0D+6)+60.0*cos(two*Pi*rr)+100.0*sin(four*Pi*rr)
+            p_jwl_right=p_jwl_left
+            den_jwl_left=fort_denconst(2)*((p_jwl/1.0D+6)**(one/gamma_jwl))
+            den_jwl_right=den_jwl_left
+            xshock=one
+           else 
+            print *,"axis_dir invalid probtype=92 or 93"
+            stop
+           endif
+           if ((axis_dir.eq.0).or. &
+               (axis_dir.eq.1).or. &
+               (axis_dir.eq.2).or. &
+               (axis_dir.eq.3)) then
+            e_jwl_left=p_jwl_left/((gamma_jwl-one)*den_jwl_left)
+            e_jwl_right=p_jwl_right/((gamma_jwl-one)*den_jwl_right)
+            call init_massfrac_parm(den_jwl_left,massfrac_parm,im)
+            call TEMPERATURE_material(den_jwl_left,massfrac_parm, &
+             temp_jwl_left,e_jwl_left, &
+             fort_material_type(im),im)
+            call init_massfrac_parm(den_jwl_right,massfrac_parm,im)
+            call TEMPERATURE_material(den_jwl_right,massfrac_parm, &
+             temp_jwl_right, &
+             e_jwl_right,fort_material_type(im),im)
+           else if (axis_dir.eq.4) then
+            temp_jwl_left=fort_initial_temperature(1)
+            temp_jwl_right=temp_jwl_left
+           else
+            print *,"axis_dir invalid"
+            stop
+           endif
+           if (probtype.eq.92) then
+            if (x.le.xshock) then
+             den_jwl=den_jwl_left 
+             temp_jwl=temp_jwl_left 
+            else if (x.gt.xshock) then
+             den_jwl=den_jwl_right
+             temp_jwl=temp_jwl_right
+            else
+             print *,"x invalid"
+             stop
+            endif
+           else if (probtype.eq.93) then
+            if (xblob.lt.xshock) then
+             if (im.eq.1) then
+              den_jwl=den_jwl_left
+              temp_jwl=temp_jwl_left 
+             else if (im.eq.2) then
+              if (x.le.xshock) then
+               den_jwl=den_jwl_left
+               temp_jwl=temp_jwl_left 
+              else if (x.gt.xshock) then
+               den_jwl=den_jwl_right
+               temp_jwl=temp_jwl_right
+              else
+               print *,"x invalid"
+               stop
+              endif
+             else
+              print *,"im invalid84"
+              stop
+             endif
+            else if (xblob.gt.xshock) then
+             if (im.eq.1) then
+              if (x.le.xshock) then
+               den_jwl=den_jwl_left
+               temp_jwl=temp_jwl_left 
+              else if (x.gt.xshock) then
+               den_jwl=den_jwl_right
+               temp_jwl=temp_jwl_right
+              else
+               print *,"x invalid"
+               stop
+              endif
+             else if (im.eq.2) then
+              den_jwl=den_jwl_right
+              temp_jwl=temp_jwl_right
+             else
+              print *,"im invalid85"
+              stop
+             endif
+            else if (xblob.eq.xshock) then 
+             if (im.eq.1) then
+              den_jwl=den_jwl_left
+             else if (im.eq.2) then
+              den_jwl=den_jwl_right
+             else
+              print *,"im invalid86"
+              stop
+             endif
+             if (x.le.xshock) then
+              temp_jwl=temp_jwl_left 
+             else if (x.gt.xshock) then
+              temp_jwl=temp_jwl_right
+             else
+              print *,"x invalid"
+              stop
+             endif
+            else
+             print *,"xblob or xshock invalid"
+             stop
+            endif
+           else 
+            print *,"probtype invalid"
+            stop
+           endif
+
+           scalc(ibase+1)=den_jwl
+           scalc(ibase+2)=temp_jwl
+
+          endif ! probtype=92 or 93 (shock tube test problems)
+
+           ! in: fort_initdata
+           ! material=1 is TAIT EOS
+          if (fort_material_type(1).eq.13) then
+           if (im.eq.1) then
+
+            call tait_hydrostatic_pressure_density(xpos, &
+             rhohydro,preshydro,from_boundary_hydrostatic)
+            scalc(ibase+1)=rhohydro
+
+           endif  ! im=1
+          endif ! material_type(1)=13
+
+           ! 2E from Wardlaw's list (bubble jetting) 
+           ! in: initdata
+          if ((probtype.eq.42).and.(axis_dir.eq.1)) then
+           if (im.eq.1) then
+
+            call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
+                    from_boundary_hydrostatic)
+            scalc(ibase+1)=rhohydro
+   
+           else if (im.eq.2) then
+            e_jwl=4.2945D+10
+            den_jwl=1.63D0
+            call init_massfrac_parm(den_jwl,massfrac_parm,im)
+            call TEMPERATURE_material(den_jwl,massfrac_parm, &
+             temp_jwl,e_jwl, &
+             fort_material_type(im),im)
+
+            scalc(ibase+1)=den_jwl     ! density
+            scalc(ibase+2)=temp_jwl
+           endif
+          endif  ! probtype=42 axis_dir=1 (bubble jetting)
+
+          ! Marangoni (heat pipe) test problem
+          ! flag=0 
+          if ((probtype.eq.36).and.(axis_dir.eq.10)) then
+           call position_Temp(0,radblob,radblob2,x,y,z,temp_jwl)
+           scalc(ibase+2)=temp_jwl
+          endif
+
+           ! in: initdata
+          if (probtype.eq.46) then ! cavitation
+
+           if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
+            if (im.eq.1) then ! water
+
+             call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
+                     from_boundary_hydrostatic)
+             scalc(ibase+1)=rhohydro
+
+            else if (im.eq.2) then ! jwl
+             e_jwl=4.2945D+10
+             den_jwl=1.63D0
+             call init_massfrac_parm(den_jwl,massfrac_parm,im)
+             call TEMPERATURE_material(den_jwl,massfrac_parm, &
+              temp_jwl,e_jwl, &
+              fort_material_type(im),im)
+
+             scalc(ibase+1)=den_jwl     ! density
+             scalc(ibase+2)=temp_jwl
+            else if (im.eq.3) then  ! air
+             call general_hydrostatic_pressure(p_hyd)
+             den_jwl=fort_denconst(im)
+             temp_jwl=fort_initial_temperature(im)
+             call init_massfrac_parm(den_jwl,massfrac_parm,im)
+             call INTERNAL_material(den_jwl,massfrac_parm, &
+              temp_jwl,e_jwl, &
+              fort_material_type(im),im)
+             call EOS_material(den_jwl,massfrac_parm, &
+              e_jwl,p_jwl, &
+              fort_material_type(im),im)
+             temp_jwl=temp_jwl*p_hyd/p_jwl
+        
+             scalc(ibase+1)=den_jwl
+             scalc(ibase+2)=temp_jwl
+
+            endif
+           else if (axis_dir.eq.10) then
+            if (im.eq.1) then ! water
+             call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
+                     from_boundary_hydrostatic)
+             scalc(ibase+1)=rhohydro
+            endif
+           else if (axis_dir.eq.20) then
+            !do nothing (CODY ESTEBE created test problem,fort_denconst(im) ok)
+           else
+            print *,"axis_dir invalid"
+            stop
+           endif
+          endif  ! probtype=46 (cavitation)
+
+
+           ! (initdata) shock injection with nozzle and pressure BC
+          if ((probtype.eq.53).and.(axis_dir.eq.2)) then
+
+           denroom=fort_denconst(im)
+           temproom=fort_initial_temperature(im)  ! room temp
+
+           if (im.eq.1) then  ! liquid
+            scalc(ibase+1)=denroom
+           else if (im.eq.2) then  ! gas
+            scalc(ibase+1)=denroom
+            imattype=fort_material_type(im)
+
+            if (imattype.eq.0) then
+             ! do nothing
+            else if (imattype.gt.0) then
+
+             call init_massfrac_parm(denroom,massfrac_parm,im)
+             call INTERNAL_material(denroom,massfrac_parm, &
+              temproom,e_room, &
+              imattype,im)
+             call EOS_material(denroom,massfrac_parm, &
+               e_room,p_room,imattype,im)
+             call general_hydrostatic_pressure(p_hyd)
+             temproom=temproom*p_hyd/p_room
+             e_room=e_room*p_hyd/p_room
+             scalc(ibase+2)=temproom  ! temperature
+            else 
+             print *,"imattype invalid fort_initdata"
+             stop
+            endif
+
+           endif
+
+           ! shock injection JICF with compressible gas.
+          else if ((probtype.eq.53).and.(fort_material_type(2).gt.0)) then
+
+           call general_hydrostatic_pressure(p_hyd)
+           scalc(ipresbase+impres)=p_hyd
+
+          else if ((probtype.eq.530).and. &
+                   (axis_dir.eq.1).and. &
+                   (fort_material_type(2).gt.0).and. &
+                   (SDIM.eq.3)) then
+           call general_hydrostatic_pressure(p_hyd)
+           scalc(ipresbase+impres)=p_hyd
+          endif
+
+          ! circular freezing disk
+          ! or spherical boiling
+          if ((probtype.eq.801).and.(axis_dir.eq.3)) then 
+   
+           im_source=1
+           im_dest=2
+           ireverse=0
+           call get_iten(im_source,im_dest,iten,nmat)
+           L_ice_melt=abs(latent_heat(iten+ireverse*nten))
+           TSAT=saturation_temp(iten+ireverse*nten)
+           T_EXTREME=fort_initial_temperature(im_source)
+           cp_melt=get_user_stiffCP(im_source) ! J/Kelvin
+           k_melt=get_user_heatviscconst(im_source) ! W/(m Kelvin)
+  
+           if (SDIM.eq.2) then
+            rstefan=sqrt((x-xblob)**2+(y-yblob)**2)
+           else
+            rstefan=sqrt((x-xblob)**2+(y-yblob)**2+(z-zblob)**2)
+           endif
+           if (rstefan.le.radblob) then
+            T_FIELD=TSAT
+           else
+            den_ratio=max(fort_denconst(im_dest),fort_denconst(im_source))/ &
+                      min(fort_denconst(im_dest),fort_denconst(im_source))
+
+            if (den_ratio.lt.10.0d0) then 
+             call liquid_temperature( &
+              fort_beta(iten+ireverse*nten), & ! lmSt
+              T_EXTREME, &
+              L_ice_melt, &
+              cp_melt, &
+              fort_stefan_number(iten+ireverse*nten), &
+              rstefan, &
+              fort_time_radblob(iten+ireverse*nten), &
+              k_melt, &
+              T_FIELD)
+            else if (den_ratio.ge.10.0) then
+             call superheat_temperature( &
+              fort_alpha(iten+ireverse*nten), &
+              fort_beta(iten+ireverse*nten), &
+              den_ratio, &
+              T_EXTREME, &
+              fort_jacob_number(iten+ireverse*nten), &
+              TSAT, &
+              rstefan, &
+              fort_time_radblob(iten+ireverse*nten), &
+              T_FIELD)
+            else
+             print *,"for_expansion_factor invalid"
+             stop
+            endif
+           endif
+           scalc(ibase+2)=T_FIELD
+
+          endif ! (probtype.eq.801).and.(axis_dir.eq.3)
+
+          if (probtype.eq.802) then ! dissolution
+           scalc(ibase+2)=two   ! T (concentration)
+           call vapordist(xsten,nhalf,dx,bfact,posdiss)
+           if (posdiss.le.zero) then
+            concentration=two
+           else if (posdiss.ge.xhidiss-two*dx(SDIM)) then
+            concentration=one
+           else
+            ispace=NINT(posdiss/dx(SDIM)-half)
+            if (ispace.eq.0) then
+             concen1=two
+             concen2=soln(ispace+1)+one
+            else if (ispace.ge.ndiss-2) then
+             concen1=soln(ispace)+one
+             concen2=one
+            else
+             concen1=soln(ispace)+one
+             concen2=soln(ispace+1)+one
+            endif
+            theta=(posdiss-ispace*dx(SDIM))/dx(SDIM)
+            concentration=(one-theta)*concen1+theta*concen2
+           endif
+           scalc(ibase+2)=concentration   ! T (concentration)
+          endif ! 802 (dissolution)
+
+           ! in: subroutine fort_initdata
+           ! hydrates
+          if (probtype.eq.199) then
+           if (nmat.ne.3) then
+            print *,"3 materials for hydrate reactor"
+            stop
+           endif
+           if (num_species_var.ne.1) then
+            print *,"num_species_var should be 1"
+            stop
+           endif
+           if (im.eq.1) then
+            call INIT_STATE_WATER(x,y,z,time,vel,temp,dens,ccnt) 
+           else if (im.eq.2) then
+            call INIT_STATE_GAS(x,y,z,time,vel,temp,dens,ccnt) 
+           else if (im.eq.3) then
+            call INIT_STATE_HYDRATE(x,y,z,time,vel,temp,dens,ccnt) 
+           else
+            print *,"im invalid87"
+            stop
+           endif
+
+            ! density comes from the inputs file.
+           scalc(ibase+2)=temp
+           scalc(ibase+3)=ccnt
+
+           ! in: subroutine fort_initdata
+          else if (probtype.eq.220) then
+           ! do nothing, density and tempearture are set from the input file
+           ! in the beginning of the loop on im. NO INIT_STATE_*** is called
+
+           ! in: subroutine fort_initdata
+          else if ((probtype.eq.299).or. &
+                   (probtype.eq.301)) then !melting (initial temperature field)
+
+           temp=fort_initial_temperature(im)
+           scalc(ibase+2)=temp
+
+          endif  
+
+         enddo  ! im=1..nmat
+
+        endif ! if (probtype.eq.user_def_probtype) then ... else ... endif
+
+        call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat,time)
+        do im=1,nmat
+         if (is_rigid(nmat,im).eq.1) then
+          if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
+              (FSI_flag(im).eq.8).or. & ! CTML FSI pres vel
+              (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al
+           distbatch(im)=LS(D_DECL(ic,jc,kc),im)
+          else if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
+           ! do nothing
+          else
+           print *,"FSI_flag(im) invalid"
+           stop
+          endif
+         else if (is_rigid(nmat,im).eq.0) then
+          ! do nothing
+         else
+          print *,"is_rigid(nmat,im) invalid"
+          stop
+         endif
+        enddo ! im=1..nmat
+
+         ! in: fort_initdata
+        call stackvolume_batch(xsten,nhalf,dx,bfact,fluiddata,nmat, &
+         0,max_levelstack,materialdist_batch,time)
+        call extract_vof_cen_batch(fluiddata,vofdark,voflight, &
+         cendark,cenlight,nmat)
+
+         ! Rayleigh-Taylor, checkerboard test
+        if (probtype.eq.602) then
+         if ((xblob.ge.1.0D+5).and.(radblob.le.0.001*dx(1))) then
+          if (nmat.ne.2) then
+           print *,"nmat invalid"
+           stop
+          endif
+          dir=2
+          im=1
+          cendark(im,dir)=0.25*dx(2)
+          im=2
+          cendark(im,dir)=-0.25*dx(2)
+          dir=1
+          im=1
+          cendark(im,dir)=0.1*dx(1)
+          im=2
+          cendark(im,dir)=-0.1*dx(2)
+         endif
+        endif ! Rayleigh-Taylor checkerboard test
+
+        debug_vfrac_sum=zero
+
+        do imls=1,nmat
+         LSc(imls)=distbatch(imls)
+        enddo
+
+        do im=1,nmat
+
+         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
+
+         scalc(vofcomp_raw)=vofdark(im)
+          ! centroid relative to centroid of cell; not cell center.
+         do dir=1,SDIM
+          scalc(vofcomp_raw+dir)=cendark(im,dir)
+         enddo
+
+         if (is_rigid(nmat,im).eq.0) then
+          debug_vfrac_sum=debug_vfrac_sum+vofdark(im)
+         else if (is_rigid(nmat,im).eq.1) then
+          if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
+              (FSI_flag(im).eq.8).or. & ! CTML FSI pres vel
+              (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al
+           scalc(vofcomp_raw)=scal(D_DECL(ic,jc,kc),vofcomp_raw)
+           do dir=1,SDIM 
+            scalc(vofcomp_raw+dir)=scal(D_DECL(ic,jc,kc),vofcomp_raw+dir)
+           enddo
+          else if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
+           ! do nothing
+          else
+           print *,"FSI_flag invalid"
+           stop
+          endif
+         else
+          print *,"is_rigid(nmat,im) invalid"
+          stop
+         endif
+
+        enddo  ! im=1..nmat
+        
+        if (debug_vfrac_sum.le.half) then
+         print *,"WARNING in 'process_initdata'"
+         print *,"debug_vfrac_sum= ",debug_vfrac_sum
+         print *,"ic,jc,kc,x,y,z ",ic,jc,kc,x,y,z
+         print *,"time=",time
+         do im=1,nmat
+          print *,"im,vofdark ",im,vofdark(im)
+          print *,"im,distbatch ",im,distbatch(im)
+         enddo
+         call materialdistsolid(x,y,z,distsolid,time,im_solid_initdata)
+         if ((FSI_flag(im_solid_initdata).eq.2).or. & ! prescribed solid (CAD)
+             (FSI_flag(im_solid_initdata).eq.8).or. & ! CTML FSI pres vel
+             (FSI_flag(im_solid_initdata).eq.4)) then ! CTML FSI Goldstein
+          distsolid=LS(D_DECL(ic,jc,kc),im_solid_initdata)
+         endif
+         print *,"result of materialdistsolid: distsolid=",distsolid
+
+         print *,"adjusting the volume fraction of the 1st material"
+         im=1
+         if (is_rigid(nmat,im).ne.0) then
+          print *,"is_rigid(nmat,im).ne.0"
+          stop
+         endif
+         vofdark(im)=vofdark(im)+one-debug_vfrac_sum
+         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
+         scalc(vofcomp_raw)=vofdark(im)
+        endif
+
+        do i1=-1,1
+        do j1=-1,1
+        do k1=k1lo,k1hi
+
+         do isten=-nhalf2,nhalf2
+          dir=1
+          xsten2(isten,dir)=xsten(isten+2*i1,dir)
+          dir=2
+          xsten2(isten,dir)=xsten(isten+2*j1,dir)
+          if (SDIM.eq.3) then
+           dir=SDIM
+           xsten2(isten,dir)=xsten(isten+2*k1,dir)
+          endif
+         enddo ! isten
+         call materialdist_batch(xsten2,nhalf2,dx,bfact,distbatch,nmat,time)
+         do im=1,nmat
+          if (is_rigid(nmat,im).eq.1) then
+           if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
+               (FSI_flag(im).eq.8).or. & ! CTML FSI pres vel
+               (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al.
+            distbatch(im)=LS(D_DECL(ic+i1,jc+j1,kc+k1),im)
+           else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
+            ! do nothing
+           else
+            print *,"FSI_Flag(im) invalid"
+            stop
+           endif
+          else if (is_rigid(nmat,im).eq.0) then
+           ! do nothing
+          else
+           print *,"is_rigid invalid PROB.F90"
+           stop
+          endif 
+          LS_stencil(D_DECL(i1,j1,k1),im)=distbatch(im)
+         enddo
+
+        enddo
+        enddo
+        enddo ! i1,j1,k1 = -1..1
+
+        do im=1,nmat
+         vofcomp_recon=(im-1)*ngeom_recon+1
+         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
+         mofdata(vofcomp_recon)=scalc(vofcomp_raw)
+         mofdata(vofcomp_recon+SDIM+1)=zero ! order
+         mofdata(vofcomp_recon+2*SDIM+2)=zero ! intercept
+         do dir=1,SDIM
+          mofdata(vofcomp_recon+dir)=scalc(vofcomp_raw+dir) ! centroid
+          mofdata(vofcomp_recon+SDIM+dir+1)=zero ! slope
+         enddo
+        enddo  ! im=1..nmat
+
+        ! sum F_fluid=1  sum F_solid <= 1
+        call make_vfrac_sum_ok_base( &
+          cmofsten, &
+          xsten,nhalf,nhalf_box, &
+          bfact,dx, &
+          tessellate, &  ! =0
+          mofdata,nmat,SDIM,201)
+
+        do im=1,nmat
+         vofcomp_recon=(im-1)*ngeom_recon+1
+         voflist(im)=mofdata(vofcomp_recon)
+        enddo
+
+        call calc_error_indicator( &
+         level,max_level, &
+         xsten,nhalf,dx,bfact, &
+         voflist, &
+         LS_stencil, &
+         nmat,nten, &
+         err,time)
+
+        scalc(nc)=err
+
+        if (volcell.le.zero) then
+         print *,"volcell invalid in INITDATA: ",volcell
+         stop
+        endif 
+
+        vfracsum_test=zero
+        do im=1,nmat
+         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
+         if (is_rigid(nmat,im).eq.0) then
+          vfracsum_test=vfracsum_test+scalc(vofcomp_raw)
+         else if (is_rigid(nmat,im).eq.1) then
+          ! do nothing
+         else
+          print *,"is_rigid(nmat,im) invalid"
+          stop
+         endif
+        enddo !im=1..nmat
+
+        if ((vfracsum_test.le.half).or.(vfracsum_test.gt.1.5)) then
+         print *,"FAILED: vfracsum_test= ",vfracsum_test
+         do im=1,nmat
+          vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
+          print *,"im,vfrac ",im,scalc(vofcomp_raw)
+          print *,"im,LS ",im,LSc(im)
+         enddo
+         print *,"level,max_level ",level,max_level
+         print *,"x,y,z= ",x,y,z
+         print *,"dx,dy,dz= ",dx(1),dx(2),dx(SDIM)
+         print *,"ic,jc,kc= ",ic,jc,kc
+         print *,"radblob,radblob2,radblob3,radblob4 ", &
+           radblob,radblob2,radblob3,radblob4
+         print *,"xblob,yblob,zblob ",xblob,yblob,zblob
+         print *,"probtype ",probtype
+         stop
+        endif
+
+        do imls=1,nmat 
+         call find_cut_geom_slope_CLSVOF( &
+          LS_stencil, &
+          lsnormal, &
+          lsnormal_valid, &
+          ls_intercept, &
+          bfact,dx,xsten,nhalf, &
+          imls, &
+          dxmaxLS, &
+          nmat,SDIM)
+
+         if (lsnormal_valid(imls).eq.1) then
+          do dir=1,SDIM
+           LSc(nmat+SDIM*(imls-1)+dir)=lsnormal(imls,dir)
+          enddo
+         else if (lsnormal_valid(imls).eq.0) then
+          ! do nothing
+         else
+          print *,"lsnormal_valid invalid"
+          stop
+         endif
+        enddo !imls=1..nmat 
+
+        do im=1,nmat
+         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
+         scalc(vofcomp_raw)=voflist(im)
+        enddo ! im=1..nmat
+
+        do n=1,nc
+         scal(D_DECL(ic,jc,kc),n)=scalc(n)
+        enddo
+        do imls=1,nmat*(1+SDIM)
+         LS(D_DECL(ic,jc,kc),imls)=LSc(imls)
+        enddo
+
+       enddo
+       enddo
+       enddo ! ic,jc,kc
+
+       if (DO_SANITY_CHECK.eq.1) then
+        call init_sanity(fablo(1),fabhi(1))
+        allocate(comparestate(fablo(1)-1:fabhi(1)+1,5))
+        jc=1
+        kc=0
+        do ic=fablo(1),fabhi(1)
+         comparestate(ic,2)=scal(D_DECL(ic,jc,kc),idenbase+1)
+         comparestate(ic,3)=scal(D_DECL(ic,jc,kc),idenbase+2)
+        enddo
+        call compare_sanity(comparestate,2,2,1)
+        deallocate(comparestate)
+       endif
+
+       return
+       end subroutine fort_initdata
+
+       subroutine fort_addnoise( &
+        dir, &
+        angular_velocity, &
+        perturbation_mode, &
+        perturbation_eps_temp, &
+        perturbation_eps_vel, &
+        nstate, &
+        nmat, &
+        xlo,dx,  &
+        Snew,DIMS(Snew), &
+        LSnew,DIMS(LSnew), &
+        MAC,DIMS(MAC), &
+        tilelo,tilehi, &
+        fablo,fabhi, &
+        bfact, &
+        level, &
+        finest_level) &
+       bind(c,name='fort_addnoise')
+
+       use global_utility_module
+
+       IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: dir
+      REAL_T, intent(in) :: angular_velocity
+      INTEGER_T, intent(in) :: perturbation_mode
+      REAL_T, intent(in) :: perturbation_eps_temp
+      REAL_T, intent(in) :: perturbation_eps_vel
+      INTEGER_T, intent(in) :: nstate
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(Snew)
+      INTEGER_T, intent(in) :: DIMDEC(LSnew)
+      INTEGER_T, intent(in) :: DIMDEC(MAC)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(inout),target :: Snew(DIMV(Snew),nstate)
+      REAL_T, pointer :: Snew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: LSnew(DIMV(LSnew),nmat)
+      REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: MAC(DIMV(MAC))
+      REAL_T, pointer :: MAC_ptr(D_DECL(:,:,:))
+
+
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+      INTEGER_T i,j,k,ii,jj,kk,dir2,im,velcomp,tcomp
+      REAL_T problo_arr(SDIM)
+      REAL_T probhi_arr(SDIM)
+      REAL_T sinprod
+
+      nhalf=3
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if (nstate.ne.STATE_NCOMP) then
+       print *,"nstate invalid"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid add noise"
+       stop
+      endif
+
+      problo_arr(1)=problox
+      problo_arr(2)=probloy
+      probhi_arr(1)=probhix
+      probhi_arr(2)=probhiy
+      if (SDIM.eq.3) then
+       problo_arr(SDIM)=probloz
+       probhi_arr(SDIM)=probhiz
+      endif
+
+      ii=0
+      jj=0
+      kk=0
+      if (dir.eq.0) then
+       ii=1
+      else if (dir.eq.1) then
+       jj=1
+      else if ((dir.eq.2).and.(SDIM.eq.3)) then
+       kk=1
+      else
+       print *,"dir invalid in addnoise "
+       stop
+      endif
+
+      Snew_ptr=>Snew
+      LSnew_ptr=>LSnew
+      MAC_ptr=>MAC
+
+      call checkbound_array(fablo,fabhi,Snew_ptr,1,-1,7)
+      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1,7)
+      call checkbound_array1(fablo,fabhi,MAC_ptr,0,dir,7)
+
+      if (perturbation_mode.le.0) then
+       print *,"perturbation_mode invalid"
+       stop
+      endif 
+      if (perturbation_mode.gt.1024) then
+       print *,"perturbation_mode too large"
+       stop
+      endif 
+      if (perturbation_eps_temp.lt.zero) then
+       print *,"perturbation_eps_temp invalid"
+       stop
+      endif 
+      if (perturbation_eps_vel.lt.zero) then
+       print *,"perturbation_eps_vel invalid"
+       stop
+      endif 
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+
+       sinprod=one
+       do dir2=1,SDIM
+        if (probhi_arr(dir2).le.problo_arr(dir2)) then
+         print *,"probhi_arr invalid"
+         stop
+        endif
+        sinprod=sinprod*sin(two*Pi*perturbation_mode* &
+          (xsten(0,dir2)-problo_arr(dir2))/ &
+          (probhi_arr(dir2)-problo_arr(dir2)))
+       enddo ! dir2
+
+       if (probtype.eq.82) then ! annulus
+
+        if (SDIM.ne.3) then
+         print *,"annulus is a 3d problem"
+         stop
+        endif
+
+        if ((levelrz.eq.0).or.(levelrz.eq.3)) then
+
+         do im=1,nmat
+         
+          if (im.eq.1) then
+           velcomp=dir+1
+           Snew(D_DECL(i,j,k),velcomp)= &
+            Snew(D_DECL(i,j,k),velcomp)+ &
+            perturbation_eps_vel*probhi_arr(1)*angular_velocity*sinprod
+          endif
+
+          if (dir.eq.0) then
+           tcomp=STATECOMP_STATES+ &
+            (im-1)*num_state_material+2
+           Snew(D_DECL(i,j,k),tcomp)= &
+            Snew(D_DECL(i,j,k),tcomp)+ &
+            perturbation_eps_temp*(twall-fort_tempconst(1))*sinprod
+          else if ((dir.eq.1).or.(dir.eq.SDIM-1)) then
+           ! do nothing
+          else
+           print *,"dir invalid add noise"
+           stop
+          endif
+     
+         enddo ! im=1..nmat 
+
+        else
+         print *,"levelrz invalid probtype==82"
+         stop
+        endif 
+
+       else
+        print *,"probtype invalid"
+        stop
+       endif
+         
+      enddo
+      enddo
+      enddo ! i,j,k
+
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,5) 
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+        ! dir=0..sdim-1
+       call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir,12)
+
+       sinprod=one
+       do dir2=1,SDIM
+        if (probhi_arr(dir2).le.problo_arr(dir2)) then
+         print *,"probhi_arr invalid"
+         stop
+        endif
+        sinprod=sinprod*sin(two*Pi*perturbation_mode* &
+          (xsten(0,dir2)-problo_arr(dir2))/ &
+          (probhi_arr(dir2)-problo_arr(dir2)))
+       enddo
+
+       if (probtype.eq.82) then ! annulus
+
+        if (SDIM.ne.3) then
+         print *,"annulus is a 3d problem"
+         stop
+        endif
+
+        if ((levelrz.eq.0).or.(levelrz.eq.3)) then
+
+         MAC(D_DECL(i,j,k))=MAC(D_DECL(i,j,k))+ &
+           perturbation_eps_vel*probhi_arr(1)*angular_velocity*sinprod
+
+        else
+         print *,"levelrz invalid probtype==82"
+         stop
+        endif 
+
+       else
+        print *,"probtype invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo ! i,j,k
+
+      return
+      end subroutine fort_addnoise
+
+      subroutine fort_init_regions_list( &
+       constant_density_all_time, &
+       num_materials_in, &
+       num_threads_in) &
+      bind(c,name='fort_init_regions_list')
+
+      use probcommon_module
+      use geometry_intersect_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: num_materials_in
+      INTEGER_T, intent(in) :: num_threads_in
+      INTEGER_T, intent(in) :: constant_density_all_time(num_materials_in)
+      INTEGER_T :: im
+      INTEGER_T :: iregion
+      INTEGER_T :: ithread
+      INTEGER_T :: dir
+
+      if (num_materials_in.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"num_materials_in invalid"
+       stop
+      endif
+      if (num_threads_in.eq.geom_nthreads) then
+       ! do nothing
+      else
+       print *,"num_threads_in invalid"
+       stop
+      endif
+      do im=1,num_materials
+       if ((constant_density_all_time(im).eq.0).or. &
+           (constant_density_all_time(im).eq.1)) then
+        ! do nothing
+       else
+        print *,"constant_density_all_time(im) invalid"
+        stop
+       endif
+      enddo ! im=1..num_materials
+
+      number_of_source_regions=0
+
+      call SUB_INIT_REGIONS_LIST( &
+       constant_density_all_time, &
+       num_materials_in, &
+       num_threads_in)
+
+      if (number_of_source_regions.eq.0) then
+       ! do nothing
+      else if (number_of_source_regions.gt.0) then
+       do ithread=1,num_threads_in
+
+        do iregion=1,number_of_source_regions
+         regions_list(iregion,ithread)%region_material_id= &
+           regions_list(iregion,0)%region_material_id
+
+         regions_list(iregion,ithread)%region_dt= &
+           regions_list(iregion,0)%region_dt
+
+         regions_list(iregion,ithread)%region_mass_flux= &
+           regions_list(iregion,0)%region_mass_flux
+
+         regions_list(iregion,ithread)%region_volume_flux= &
+           regions_list(iregion,0)%region_volume_flux
+
+         regions_list(iregion,ithread)%region_temperature_prescribe= &
+           regions_list(iregion,0)%region_temperature_prescribe
+
+         do dir=1,SDIM
+          regions_list(iregion,ithread)%region_velocity_prescribe(dir)= &
+           regions_list(iregion,0)%region_velocity_prescribe(dir)
+         enddo
+
+         regions_list(iregion,ithread)%region_energy_flux= &
+           regions_list(iregion,0)%region_energy_flux
+
+         regions_list(iregion,ithread)%region_volume_raster= &
+           regions_list(iregion,0)%region_volume_raster
+
+         regions_list(iregion,ithread)%region_volume= &
+           regions_list(iregion,0)%region_volume
+         regions_list(iregion,ithread)%region_mass= &
+           regions_list(iregion,0)%region_mass
+         regions_list(iregion,ithread)%region_energy= &
+           regions_list(iregion,0)%region_energy
+         regions_list(iregion,ithread)%region_energy_per_kelvin= &
+           regions_list(iregion,0)%region_energy_per_kelvin
+         regions_list(iregion,ithread)%region_volume_after= &
+           regions_list(iregion,0)%region_volume_after
+         regions_list(iregion,ithread)%region_mass_after= &
+           regions_list(iregion,0)%region_mass_after
+         regions_list(iregion,ithread)%region_energy_after= &
+           regions_list(iregion,0)%region_energy_after
+
+        enddo ! iregion=1,number_of_source_regions
+
+       enddo ! ithread=1..num_threads_in
+      else
+       print *,"number_of_source_regions invalid"
+       stop
+      endif
+
+      end subroutine fort_init_regions_list
+
+      subroutine fort_delete_regions_list(ioproc) &
+      bind(c,name='fort_delete_regions_list')
+
+      use probcommon_module
+      use geometry_intersect_module
+      IMPLICIT NONE
+      INTEGER_T, intent(in) :: ioproc
+      INTEGER_T lower_bound(2)
+      INTEGER_T upper_bound(2)
+      INTEGER_T iregions
+      INTEGER_T dir
+
+      call SUB_DELETE_REGIONS_LIST()
+
+      if (number_of_source_regions.eq.0) then
+       ! do nothing
+      else if (number_of_source_regions.gt.0) then
+       lower_bound=LBOUND(regions_list)
+       upper_bound=UBOUND(regions_list)
+       if ((lower_bound(1).eq.1).and. &
+           (lower_bound(2).eq.0).and. &
+           (upper_bound(1).eq.number_of_source_regions).and. &
+           (upper_bound(2).eq.number_of_threads_regions)) then
+
+        if (ioproc.eq.1) then
+         do iregions=1,number_of_source_regions
+
+          if (regions_list(iregions,0)%region_dt.gt.zero) then
+           ! do nothing
+          else
+           print *,"region_dt must be positive"
+           stop
+          endif
+
+          print *,"iregions=",iregions
+          print *,"regions_list(iregions,0)%region_material_id ", &
+            regions_list(iregions,0)%region_material_id
+          print *,"regions_list(iregions,0)%region_dt ", &
+            regions_list(iregions,0)%region_dt
+          print *,"regions_list(iregions,0)%region_mass_after ", &
+            regions_list(iregions,0)%region_mass_after
+          print *,"regions_list(iregions,0)%region_volume_after ", &
+            regions_list(iregions,0)%region_volume_after
+          print *,"regions_list(iregions,0)%region_energy_after ", &
+            regions_list(iregions,0)%region_energy_after
+
+          print *,"regions_list(iregions,0)%region_mass_flux ", &
+            regions_list(iregions,0)%region_mass_flux
+          print *,"regions_list(iregions,0)%region_volume_flux ", &
+            regions_list(iregions,0)%region_volume_flux
+
+          print *,"regions_list(iregions,0)%region_temperature_prescribe ", &
+            regions_list(iregions,0)%region_temperature_prescribe
+          do dir=1,SDIM
+           print *,"dir,region_velocity_prescribe ", &
+            dir,regions_list(iregions,0)%region_velocity_prescribe(dir)
+          enddo
+
+          print *,"regions_list(iregions,0)%region_energy_flux ", &
+            regions_list(iregions,0)%region_energy_flux
+
+          print *,"regions_list(iregions,0)%region_mass_flux measured: ", &
+            (regions_list(iregions,0)%region_mass_after- &
+             regions_list(iregions,0)%region_mass)/ &
+            regions_list(iregions,0)%region_dt
+
+          print *,"regions_list(iregions,0)%region_volume_flux measured: ", &
+            (regions_list(iregions,0)%region_volume_after- &
+             regions_list(iregions,0)%region_volume)/ &
+            regions_list(iregions,0)%region_dt
+
+          print *,"regions_list(iregions,0)%region_energy_flux measured: ", &
+            (regions_list(iregions,0)%region_energy_after- &
+             regions_list(iregions,0)%region_energy)/ &
+            regions_list(iregions,0)%region_dt
+
+         enddo ! do iregions=1,number_of_source_regions
+        else if (ioproc.eq.0) then
+         ! do nothing
+        else
+         print *,"ioproc invalid"
+         stop
+        endif
+
+        deallocate(regions_list)
+       else
+        print *,"lower_bound or upper_bound invalid"
+        stop
+       endif
+      else
+       print *,"number_of_source_regions invalid"
+       stop
+      endif
+
+      end subroutine fort_delete_regions_list
+
+      subroutine fort_initvelocity( &
+        level,time, &
+        tilelo,tilehi, &
+        fablo,fabhi,bfact, &
+        vel,DIMS(vel), &
+        dx,xlo,xhi, &
+        Re,We,RGASRWATER) &
+      bind(c,name='fort_initvelocity')
+
+      use global_distance_module
+      use global_utility_module
+      use hydrateReactor_module
+      use unimaterialChannel_module
+      use River
+      use shockdrop
+      use USERDEF_module
+      use CAV3D_module
+      use HELIX_module
+      use TSPRAY_module
+      use CAV2Dstep_module
+      use ZEYU_droplet_impact_module
+      use rigid_FSI_module
+      use sinking_particle_module
+
+      IMPLICIT NONE
+
+      REAL_T, intent(out) :: Re,We,RGASRWATER
+      REAL_T kterm,velperturb
+      REAL_T ktermx,velperturbx
+
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      REAL_T, intent(in) :: time, dx(SDIM)
+      REAL_T, intent(in) :: xlo(SDIM), xhi(SDIM)
+
+      REAL_T, intent(out), target :: vel(DIMV(vel),SDIM)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
+
+!     ::::: local variables
+      INTEGER_T i,j,k
+      REAL_T x,y,z
+      REAL_T x_vel,y_vel,z_vel,dist
+      REAL_T xx_vel,yy_vel,zz_vel
+      REAL_T xtemp,ytemp,ztemp
+      REAL_T ytop,radcross,rtest
+      REAL_T outer_rad,areacross,radshrink
+      REAL_T velcell(SDIM)
+      REAL_T cenbc(num_materials,SDIM)
+      REAL_T vfracbatch(num_materials)
+      INTEGER_T nmat,nten
+      REAL_T drat
+      REAL_T temp,dens,ccnt
+      REAL_T xsten(-3:3,SDIM)
+      REAL_T xvec(SDIM)
+      INTEGER_T dir
+      INTEGER_T nhalf
+      REAL_T jumpval,alpha
+
+      REAL_T, allocatable, dimension(:) :: distbatch
+      INTEGER_T velsolid_flag
+ 
+      nhalf=3
+
+      vel_ptr=>vel
+
+      if (bfact.lt.1) then
+       print *,"bfact too small"
+       stop
+      endif 
+
+      velsolid_flag=0
+
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,1308)
+
+      nmat=num_materials
+      nten=num_interfaces
+
+      allocate(distbatch(nmat))
+
+      if (time.ne.zero) then
+       print *,"time should be zero in initvelocity"
+       stop
+      endif
+
+      call default_rampvel(time,xx_vel,yy_vel,zz_vel)
+
+      if (adv_vel.ne.zero) then
+        print *,"adv_dir,adv_vel ",adv_dir,adv_vel
+      endif
+
+      if (SDIM.eq.2) then
+
+! shear (initvelocity)
+      if (probtype.eq.1) then
+        if (axis_dir.eq.0) then
+         print *,"newtonian liquid"
+        else if ((axis_dir.gt.0).and.(axis_dir.le.7)) then
+         print *,"shear thinning liquid"
+        else if (axis_dir.eq.11) then
+         print *,"viscoelastic outer fluid"
+        else if (axis_dir.eq.12) then
+         print *,"viscoelastic drop"
+        else if (axis_dir.eq.140) then
+         print *,"droplets head on problem vinletgas=initial velocity"
+        else if (axis_dir.eq.141) then
+         print *,"diff. droplets head on problem vinletgas=initial velocity"
+        else if (axis_dir.eq.13) then
+         print *,"middle earth flow"
+        else if (axis_dir.eq.14) then
+         print *,"droplet collision problem vinletgas=initial velocity"
+        else if (axis_dir.eq.15) then
+         print *,"test problem from Zuzio et al"
+        else if (axis_dir.eq.150) then
+         print *,"shock drop interaction problem"
+        else if (axis_dir.eq.151) then
+         print *,"shock column interaction problem"
+        else
+         print *,"axis_dir invalid probtype=1"
+         stop
+        endif
+! bubble
+      else if (probtype.eq.2) then
+       if ((axis_dir.lt.0).or.(axis_dir.gt.7)) then
+        print *,"axis_dir out of range in initbubble"
+        stop
+       else if (axis_dir.eq.0) then
+        print *,"Newtonian liquid being computed...."
+       else
+        print *,"non-newtonian generalized cross carreau model liquid"
+        print *,"axis_dir=",axis_dir
+       endif
+! capillary
+      else if ((probtype.eq.3).or. &
+               (probtype.eq.41)) then
+       print *,"2D pipe problem or rayleigh capillary break up test problem"
+      else if (probtype.eq.4) then
+       print *,"wavenumber is xblob : ",xblob
+       print *,"y=radblob*cos(xblob*pi*x), xblob=2 for rt"
+       print *,"xx_vel,yy_vel ",xx_vel,yy_vel
+! gas burst
+      else if (probtype.eq.8) then
+       print *,"INITIALIZING RZ (axisym) GAS BURST PROBLEM "
+      else if (probtype.eq.14) then
+       print *,"this probtype obsolete"
+       stop
+! jetting 
+      else if (probtype.eq.22) then
+       print *,"jetting obselete"
+! standing wave problem
+      else if (probtype.eq.23) then
+       print *,"standing wave problem (NOT r-z)"
+       print *,"wavelen is xblob : ",xblob
+       print *,"perturbation is radblob ",radblob
+       print *,"base amplitude is yblob ",yblob
+       print *,"y=yblob+radblob*cos(2pi x/xblob)"
+       print *,"levelset < 0 in gas, levelset >0 in liquid"
+       print *,"vfrac = 0 in gas, vfrac =1 in liquid"
+! hanging
+      else if (probtype.eq.25) then
+       print *,"hanging drop problem or bubble column problem"
+       print *,"axis_dir=1..11 if bubble column, axis_dir: ",axis_dir
+       print *,"radius of orifice is radblob: ",radblob
+       print *,"if axis_dir>0, zblob = height of column=",zblob
+       print *,"if axis_dir=0 zblob = radius preejected fluid=",zblob
+       print *,"do not set zblob<0"
+       print *,"advbot = rate water poured in =",advbot
+       print *,"xblob should be 0, xblob=",xblob
+       if (xblob.ne.0.0) then
+        stop
+       endif
+       print *,"yblob=y value of inflow, yblob=",yblob
+    
+       if ((axis_dir.gt.11).or.(axis_dir.lt.0)) then
+        print *,"axis_dir out of range for probtype=25"
+       endif
+       if ((axis_dir.gt.0).and.(zblob.le.zero)) then
+        print *,"zblob should be positive for bubble column problem"
+        stop
+       endif 
+! shed
+      else if ((probtype.eq.30).or.(probtype.eq.32).or. &
+               (probtype.eq.33).or.(probtype.eq.34) ) then
+       print *,"probtype=30 means half circle, probtype=32 means full"
+       print *,"probtype=33 means drop on a slope"
+       print *,"probtype=34 means capillary tube"
+       print *,"probtype=",probtype
+! meniscus
+      else if (probtype.eq.35) then
+       print *,"radblob is NID/2 radblob= ",radblob
+       print *,"yblob is NPT  yblob= ",yblob
+       print *,"in 3d, xblob is domain base size xblob= ",xblob
+      else if (probtype.eq.39) then
+       print *,"standing wave problem (NOT r-z)"
+       print *,"wavelen is xblob : ",xblob
+       print *,"perturbation is radblob ",radblob
+       print *,"base amplitude is yblob ",yblob
+       print *,"y=yblob+radblob*cos(2pi x/xblob)"
+       print *,"levelset < 0 in gas, levelset >0 in liquid"
+       print *,"vfrac = 0 in gas, vfrac =1 in liquid"
+      else if (probtype.eq.40) then
+       if (adv_dir .eq. 1) then
+         print *,"translation in x-direction with adv_vel=",adv_vel
+       else if (adv_dir .eq. 2) then
+         print *,"translation in y-direction with adv_vel=",adv_vel
+       else if (adv_dir.eq.3) then
+         print *,"translation in x and y-direction with adv_vel=",adv_vel
+       else if (adv_dir.eq.4) then
+         print *,"solid body rotation with adv_vel=",adv_vel
+       else if (adv_dir.eq.5) then
+         print *,"stretching with adv_vel=",adv_vel
+       else
+         write(6,*) "error: initvortpatch: adv_dir = ",adv_dir
+         stop
+       endif
+! overturn
+      else if (probtype.eq.45) then
+       ytop=0.5
+       print *,"using ytop=.5"
+      endif
+
+
+      else if (SDIM.eq.3) then
+
+! shear (initvelocity)
+      if (probtype.eq.1) then
+        if (axis_dir.eq.0) then
+         print *,"newtonian liquid"
+        else if ((axis_dir.gt.0).and.(axis_dir.le.7)) then
+         print *,"shear thinning liquid"
+        else if (axis_dir.eq.11) then
+         print *,"LS<0 inside of drop (gas) and LS>0 outside drop (liquid)" 
+        else if (axis_dir.eq.12) then
+         print *,"viscoelastic drop (LS>0 inside, LS<0 outside)"
+        else if (axis_dir.eq.13) then
+         print *,"middle earth flow"
+        else if (axis_dir.eq.14) then
+         print *,"droplet collision problem vinletgas=initial velocity"
+        else if (axis_dir.eq.15) then
+         print *,"Zuzio test problem"
+        else if (axis_dir.eq.150) then
+         print *,"shock drop interaction problem"
+        else if (axis_dir.eq.151) then
+         print *,"shock column interaction problem"
+        else
+         print *,"axis_dir invalid shear probtype axis_dir ", &
+          probtype,axis_dir
+         stop
+        endif
+! bubble
+      else if (probtype.eq.2) then
+       if ((axis_dir.lt.0).or.(axis_dir.gt.7)) then
+        print *,"axis_dir out of range in initbubble"
+        stop
+       else if (axis_dir.eq.0) then
+        print *,"Newtonian liquid being computed...."
+       else
+        print *,"non-newtonian generalized cross carreau model liquid"
+        print *,"axis_dir=",axis_dir
+       endif
+! pipe
+      else if (probtype.eq.41) then
+
+       if (axis_dir.eq.5) then
+        ! do nothing
+       else
+        print *,"pipe problem setup should be modified in 3d"
+        stop
+       endif
+
+      else if (probtype.eq.4) then
+       print *,"wavenumber is xblob : ",xblob
+       print *,"y=radblob*cos(xblob*pi*x), xblob=2 for rt"
+       print *,"xx_vel,yy_vel ",xx_vel,yy_vel
+! splash
+      else if (probtype.eq.7) then
+       print *,"this probtype obsolete"
+       stop
+! gas burst
+      else if (probtype.eq.18) then
+       print *,"not a 3d problem"
+       stop
+! jetting 
+      else if (probtype.eq.22) then
+       print *,"jetting obselete"
+! standing wave problem
+      else if (probtype.eq.23) then
+       print *,"standing wave problem (NOT r-z)"
+       print *,"wavelen is xblob : ",xblob
+       print *,"perturbation is radblob ",radblob
+       print *,"base amplitude is yblob ",yblob
+       print *,"y=yblob+radblob*cos(2pi x/xblob)"
+       print *,"levelset < 0 in gas, levelset >0 in liquid"
+       print *,"vfrac = 0 in gas, vfrac =1 in liquid"
+! hanging
+      else if (probtype.eq.25) then
+       print *,"hanging drop problem or bubble column problem"
+       print *,"axis_dir=1..11 if bubble column, axis_dir: ",axis_dir
+       print *,"radius of orifice is radblob: ",radblob
+       print *,"is axis_dir>0, zblob = height of column=",zblob
+       print *,"otherwise zblob = radius preejected fluid=",zblob
+       print *,"do not set zblob<0"
+       print *,"advbot = rate water poured in =",advbot
+       print *,"xblob should be 0, xblob=",xblob
+       if (xblob.ne.0.0) then
+        stop
+       endif
+       print *,"yblob=y value of inflow, yblob=",yblob
+    
+       if ((axis_dir.gt.11).or.(axis_dir.lt.0)) then
+        print *,"axis_dir out of range in inithanging"
+       endif
+       if ((axis_dir.gt.0).and.(zblob.lt.zero)) then
+        print *,"zblob should be non-negative for bubble column problem"
+        stop
+       endif 
+! shed
+      else if ((probtype.eq.30).or.(probtype.eq.32).or. &
+               (probtype.eq.33).or.(probtype.eq.34) ) then
+       print *,"probtype=30 means half circle, probtype=32 means full"
+       print *,"probtype=33 means drop on a slope"
+       print *,"probtype=34 means capillary tube"
+       print *,"probtype=",probtype
+! meniscus
+      else if (probtype.eq.35) then
+       print *,"radblob is NID/2 radblob= ",radblob
+       print *,"yblob is NPT  yblob= ",yblob
+       print *,"in 3d, xblob is domain base size xblob= ",xblob
+      else if (probtype.eq.39) then
+       print *,"standing wave problem (NOT r-z)"
+       print *,"wavelen is xblob : ",xblob
+       print *,"perturbation is radblob ",radblob
+       print *,"base amplitude is yblob ",yblob
+       print *,"y=yblob+radblob*cos(2pi x/xblob)"
+       print *,"levelset < 0 in gas, levelset >0 in liquid"
+       print *,"vfrac = 0 in gas, vfrac =1 in liquid"
+! overturn
+      else if (probtype.eq.45) then
+       ytop=0.5
+       print *,"using ytop=.5"
+      endif
+
+      else
+       print *,"dimension bust"
+       stop
+      endif
+
+      if (1.eq.0) then
+       print *,"xx_vel= ",xx_vel 
+       print *,"yy_vel= ",yy_vel 
+       print *,"zz_vel= ",zz_vel 
+      endif
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+        x_vel=xx_vel
+        y_vel=yy_vel
+        z_vel=zz_vel
+
+        call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+
+        x=xsten(0,1)
+        y=xsten(0,2)
+        z=xsten(0,SDIM)
+        do dir=1,SDIM
+         xvec(dir)=xsten(0,dir)
+        enddo
+
+        if (is_in_probtype_list().eq.1) then
+
+         call SUB_LS(xvec,time,distbatch,num_materials)
+          ! pass dx
+         call SUB_VEL(xvec,time,distbatch,velcell, &
+          velsolid_flag,dx,num_materials)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+        else if (probtype.eq.411) then
+         call CAV3D_LS(xvec,time,distbatch)
+         call CAV3D_VEL(xvec,time,distbatch,velcell,velsolid_flag)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+        else if (probtype.eq.401) then
+         call HELIX_LS(xvec,time,distbatch)
+         call HELIX_VEL(xvec,time,distbatch,velcell,velsolid_flag)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+        else if (probtype.eq.402) then
+         call TSPRAY_LS(xvec,time,distbatch)
+         call TSPRAY_VEL(xvec,time,distbatch,velcell,velsolid_flag)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+        else if (probtype.eq.412) then ! step
+         call CAV2Dstep_LS(xvec,time,distbatch)
+         call CAV2Dstep_VEL(xvec,time,distbatch,velcell,velsolid_flag)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+        else if (probtype.eq.413) then ! ZEYU droplet impact
+         call ZEYU_droplet_impact_LS(xvec,time,distbatch)
+          ! pass dx
+         call ZEYU_droplet_impact_LS_VEL(xvec,time,distbatch,velcell, &
+          velsolid_flag,dx)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+        else if (probtype.eq.533) then
+         call rigid_FSI_LS(xvec,time,distbatch)
+         call rigid_FSI_VEL(xvec,time,distbatch,velcell,velsolid_flag)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+        else if (probtype.eq.534) then
+         call sinking_FSI_LS(xvec,time,distbatch)
+         call sinking_FSI_VEL(xvec,time,distbatch,velcell,velsolid_flag)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+        else if (probtype.eq.311) then ! user defined example
+         call USERDEF_LS(xvec,time,distbatch)
+         call USERDEF_VEL(xvec,time,distbatch,velcell,velsolid_flag)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+        else if (probtype.eq.82) then ! annulus (2D or 3D) (in initvelocity)
+         x_vel=zero
+         y_vel=zero
+         z_vel=zero
+
+         ! HYDRATE  (in initvelocity)
+        else if (probtype.eq.199) then
+         call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat,time)
+         if (distbatch(1).ge.zero) then
+          call INIT_STATE_WATER(x,y,z,time,velcell,temp,dens,ccnt)
+         else if (distbatch(2).ge.zero) then
+          call INIT_STATE_GAS(x,y,z,time,velcell,temp,dens,ccnt)
+         else
+          call INIT_STATE_HYDRATE(x,y,z,time,velcell,temp,dens,ccnt)
+         endif
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+         ! in: fort_initvelocity
+        else if (probtype.eq.220) then
+         call UNIMAT_INIT_VEL(x,y,z,velcell)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+        else if ((probtype.eq.299).or. &
+                 (probtype.eq.301)) then ! melting, initial velocity
+
+         x_vel=zero
+         y_vel=zero
+         z_vel=zero
+
+        else if (probtype.eq.209) then  ! river
+
+         call RiverVelocity(x,y,z,velcell,axis_dir,probloz,probhiz)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+          ! Zuzio, initvelocity
+        else if ((probtype.eq.1).and.(axis_dir.eq.15)) then 
+         x_vel=zero
+         y_vel=zero
+         z_vel=zero
+        else if ((probtype.eq.1).and. &
+                 ((axis_dir.eq.150).or. &
+                  (axis_dir.eq.151))) then
+         call shockdrop_velocity(x,y,z,velcell, &
+          xblob,yblob,zblob,radblob,zblob2,axis_dir)
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+        else if (probtype.eq.31) then  ! translating circle or sphere
+         call circleuu(velcell(1),x,y,z)
+         call circlevv(velcell(2),x,y,z)
+         if (SDIM.eq.3) then
+          call circleww(velcell(SDIM),x,y,z)
+         endif
+         x_vel=velcell(1)
+         y_vel=velcell(2)
+         z_vel=velcell(SDIM)
+
+         ! Marioff injector
+        else if (probtype.eq.537) then
+          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
+          x_vel=velcell(1)
+          y_vel=velcell(2)
+          z_vel=velcell(SDIM)
+
+        else if (probtype.eq.710) then
+           x_vel=zero
+           y_vel=zero
+           z_vel=zero
+
+          ! in "initvelocity":
+          ! melting ice block on substrate.
+        else if (probtype.eq.59) then
+          x_vel=zero
+          y_vel=zero
+          z_vel=zero
+
+        else if (probtype.eq.201) then ! stratified bubble (initvelocity)
+
+         if (advbot.eq.zero) then
+          ! do nothing
+         else
+          x_vel=zero
+          y_vel=zero
+          z_vel=zero
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+          if (vfracbatch(2).gt.zero) then
+           if (SDIM.eq.2) then
+            y_vel=-abs(advbot)
+           else if (SDIM.eq.3) then
+            z_vel=-abs(advbot)
+           else
+            print *,"dimension bust"
+            stop
+           endif
+          endif
+         endif ! advbot <> 0
+
+         ! shock tube problems (initvelocity)
+        else if ((probtype.eq.92).or.(probtype.eq.93)) then 
+         x_vel=zero
+         y_vel=zero
+         z_vel=zero
+         if (axis_dir.eq.0) then ! Sod shock tube
+          if (x.le.half) then
+           x_vel=zero
+          else
+           x_vel=zero
+          endif
+         else if (axis_dir.eq.1) then ! strong shock tube
+          if (x.le.half) then
+           x_vel=zero
+          else
+           x_vel=zero
+          endif
+         else if (axis_dir.eq.2) then ! shock-turbulence
+          if (x.le.one) then
+           x_vel=2.629369
+          else
+           x_vel=zero
+          endif
+         else if (axis_dir.eq.3) then ! mach>4
+          if (x.le.one) then
+           x_vel=5.0
+          else
+           x_vel=zero
+          endif
+         else if (axis_dir.eq.4)  then ! smooth problem
+          x_vel=zero
+          y_vel=zero
+          z_vel=zero
+         else
+          print *,"axis_dir invalid probtype=92"
+          stop
+         endif
+
+        else if (SDIM.eq.2) then
+
+
+         if (probtype.eq.801.and.axis_dir.eq.3) then ! convective evaporation
+          if(sqrt( (x-xblob)**2+(y-yblob)**2 ).lt.radblob) then
+            x_vel=zero
+          endif
+
+           ! dissolution initial velocity
+         else if (probtype.eq.802) then
+          x_vel=zero
+          y_vel=zero
+          call vapordist(xsten,nhalf,dx,bfact,dist)
+          if (dist.gt.radblob) then
+           dist=radblob
+          endif
+          if (dist.ge.half*dx(SDIM)) then
+           kterm=two*Pi*yblob2*y/(two*radblob)
+           velperturb=one+radblob2*cos(kterm)
+           ktermx=two*Pi*yblob2*x/(two*radblob)
+           velperturbx=one+radblob2*cos(ktermx)
+           if (1.eq.0) then
+            x_vel=1.5*adv_vel*velperturb*velperturbx* &
+               (one-(dist/radblob)**2)
+           else
+            x_vel=adv_vel*velperturb*velperturbx  ! plug flow
+           endif
+           y_vel=adv_vel*radblob2*cos(kterm)*cos(ktermx)
+          endif
+         else if (probtype.eq.602) then  ! Rayleigh Taylor
+          x_vel=zero
+          y_vel=zero
+         else if ((probtype.eq.1).and.(axis_dir.lt.150)) then
+          if (axis_dir.eq.11) then
+           x_vel=vinletgas*(y/yblob-one)
+          else if (axis_dir.eq.14) then
+           dist=radblob-sqrt((x-xblob)**2+(y-yblob)**2)
+           if (dist.ge.zero) then
+             x_vel=zero
+             y_vel=vinletgas
+           endif
+          else if ((axis_dir.eq.140).or.(axis_dir.eq.141)) then
+           dist=max(-sqrt( (x-xblob)**2 + (y-yblob)**2 )+radblob, &
+                    -sqrt( (x-xblob)**2 + (y-yblob2)**2 )+radblob)
+
+           if (dist.ge.zero) then
+             x_vel=zero
+             if( y > half*(yblob+yblob2))then
+              y_vel=-abs(vinletgas)
+             else
+              y_vel=abs(vinletgas)
+             endif
+           endif
+          else if ((axis_dir.eq.12).and.(adv_dir.eq.1).and. &
+                   (vinletgas.eq.zero)) then
+           x_vel=zero  ! no velocity in the droplet at t=0
+          endif
+         else if (probtype.eq.531) then ! falling sphere - INIT_VELOCITY
+          x_vel=zero
+          y_vel=zero
+! Reiber problem
+         else if (probtype.eq.540) then
+          call get_Rieber_velocity(xsten,nhalf,bfact,dx,velcell)
+          y_vel=velcell(SDIM)
+         else if (probtype.eq.17) then  ! drop collide of diesel and water
+! vb-vt=1
+! vb db + vt dt=0
+! -vt dt/db - vt = 1
+! vt=-1/(dt/db + 1)
+! vb=1+vt=dt/db / (1+dt/db)
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+          drat=fort_denconst(3)/fort_denconst(1)  ! dt/db
+          if (vfracbatch(1).gt.zero) then  ! diesel on bottom
+           y_vel=drat/(one+drat)
+          else if (vfracbatch(3).gt.zero) then  ! water on top
+           y_vel=-one/(one+drat)
+          else
+           y_vel=zero
+          endif  
+         else if (probtype.eq.18) then  ! drop collide same material
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+          if (vfracbatch(1).gt.zero) then
+           if (y.gt.zero) then
+            y_vel=-half
+           else
+            y_vel=half
+           endif
+          else
+           y_vel=zero
+          endif
+         else if (probtype.eq.51) then ! oscillating column
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+          if (vfracbatch(1).gt.zero) then
+           x_vel=adv_vel
+          else
+           x_vel=zero
+          endif
+         else if (probtype.eq.102) then ! nozzle
+          if (yblob3.le.zero) then
+           print *,"yblob3 invalid"
+           stop
+          endif
+          x_vel=zero
+          y_vel=zero 
+           ! liquid nozzle: 0<y<yblob+yblob2
+          if (y.le.yblob+yblob2) then
+           outer_rad=radblob3-y*(radblob3-radblob4)/yblob3 
+           areacross=Pi*(outer_rad**2-radblob5**2)
+           if ((x.ge.radblob5).and.(x.le.outer_rad)) then
+            y_vel=advbot*1000.0/areacross
+           endif 
+           ! gas nozzle: 0<y<yblob3
+          else if (y.le.yblob3) then
+           outer_rad=radblob3-y*(radblob3-radblob4)/yblob3
+           areacross=Pi*outer_rad**2
+           if (x.le.outer_rad) then
+            y_vel=advbot*1000.0/areacross
+           endif
+          else  ! expansion region
+           radshrink=radblob7**2-radblob5**2
+           if (radshrink.le.zero) then
+            print *,"radshrink invalid"
+            stop
+           endif
+           radshrink=sqrt(radshrink)
+           outer_rad=radblob4+ &
+             (y-yblob3)*(radshrink-radblob4)/(probhiy-yblob3)
+           areacross=Pi*outer_rad**2
+           if (x.le.outer_rad) then
+            y_vel=advbot*1000.0/areacross
+           endif
+          endif 
+! microfluidics problem initial velocity at t=0
+         else if (probtype.eq.5700) then
+          x_vel=zero
+          y_vel=zero
+!         z_vel=zero
+
+           ! in: fort_initvelocity (2D)
+         else if ((probtype.eq.3).or. &
+                  (probtype.eq.41)) then
+
+          if ((axis_dir.eq.0).or. &
+              (axis_dir.eq.1).or. &
+              (axis_dir.eq.2).or. &
+              (axis_dir.eq.3)) then
+           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)
+           x_vel=velcell(1)
+           y_vel=velcell(2)
+
+           ! in: fort_initvelocity (2D)
+          else if (axis_dir.eq.5) then
+           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)
+           x_vel=velcell(1)
+           y_vel=velcell(2)
+!          z_vel=zero
+          else if (axis_dir.eq.4) then
+
+           if (1.eq.0) then
+            call get_pipe_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat) 
+            if (vfracbatch(1).gt.zero) then
+             dist=half
+            else
+             dist=-half
+            endif
+           else
+            call inletpipedist(x,y,z,nmat,distbatch)   
+            dist=distbatch(1)
+           endif
+  
+           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)  ! time=0
+           y_vel=velcell(2)
+           x_vel=zero
+          else
+           print *,"axis_dir invalid initvel axis_dir=",axis_dir
+           stop
+          endif
+
+! rotate
+         else if (probtype.eq.5) then
+          print *,"this problem obsolete"
+          stop
+! oilexpel
+         else if (probtype.eq.16) then
+          if ((y.gt.yblob).and.(x.le.xblob+radblob)) then
+           y_vel = -abs(advbot)
+          endif
+         else if (probtype.eq.23) then
+          call vapordist(xsten,nhalf,dx,bfact,dist)
+          if (dist.ge.zero) then
+           x_vel=zero
+           y_vel=zero
+          endif
+! validate
+         else if (probtype.eq.24) then
+          x_vel=-sin(Pi*x)*sin(Pi*x)*sin(two*Pi*y)
+          y_vel=sin(Pi*y)*sin(Pi*y)*sin(two*Pi*x)
+         else if (probtype.eq.25) then  ! in initvelocity
+          if (axis_dir.eq.0) then
+           if ((y.gt.yblob).and.(x.le.xblob+radblob)) then
+            y_vel = -abs(advbot)
+           endif
+          endif
+! swirl 2D, in: fort_initvelocity
+         else if (probtype.eq.26) then
+
+          if ((axis_dir.eq.0).or. & !swirl
+              (axis_dir.eq.1)) then
+
+           if (y.le.half) then
+            x_vel=tanh( (y-one/four)*30.0 )
+           else
+            x_vel=tanh( (three/four-y)*30.0 )
+           endif
+           y_vel=0.05*sin(two*Pi*x)
+
+          else if ((axis_dir.eq.2).or. & !vortex confinement
+                   (axis_dir.eq.3)) then
+
+           dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
+           jumpval=tanh(30.0*dist)
+           jumpval=(jumpval+one)/two
+           alpha=(one-jumpval)*vinletgas
+           x_vel=alpha*(y-yblob)
+           y_vel=-alpha*(x-xblob)
+           if ((adv_dir.eq.1).or.(adv_dir.eq.3)) then
+            x_vel=x_vel+adv_vel
+           endif
+           if ((adv_dir.eq.2).or.(adv_dir.eq.3)) then
+            y_vel=y_vel+adv_vel
+           endif
+          else if (axis_dir.eq.10) then !BCG homogeneous bc
+           x_vel=-(sin(Pi*x)**2)*sin(two*Pi*y)
+           y_vel=sin(two*Pi*x)*(sin(Pi*y)**2)
+          else if (axis_dir.eq.11) then  ! 2D BCG periodic
+           x_vel=-sin(two*Pi*x)*cos(two*Pi*y)
+           y_vel=cos(two*Pi*x)*sin(two*Pi*y)
+           if ((adv_dir.eq.1).or.(adv_dir.eq.3)) then
+            x_vel=x_vel+adv_vel
+           endif
+           if ((adv_dir.eq.2).or.(adv_dir.eq.3)) then
+            y_vel=y_vel+adv_vel
+           endif
+          else
+           print *,"axix_dir invalid"
+           stop
+          endif
+             
+         else if (probtype.eq.28) then ! 2D prescribed motion
+          call zalesakuu(x_vel,x,y,z,zero,dx)
+          call zalesakvv(y_vel,x,y,z,zero,dx)
+         else if (probtype.eq.29) then
+          call deformuu(x_vel,x,y,zero,dx)
+          call deformvv(y_vel,x,y,zero,dx)
+         else if (probtype.eq.202) then  ! liquid lens
+          ! do nothing (adv_vel used above if prescribed)
+         else if (probtype.eq.36) then ! bubble 2D
+          if ((axis_dir.eq.2).or.(axis_dir.eq.4)) then
+           x_vel=zero
+           y_vel=zero
+          endif
+          if ((xblob10.gt.zero).and. &
+              (yblob10.ne.zero)) then
+           y_vel=x*yblob10/xblob10
+          endif
+         else if (probtype.eq.37) then
+          ! do nothing
+         else if (probtype.eq.11) then
+          print *,"cavitation with outflow top is deleted"
+          stop
+
+          ! in: fort_initvelocity (2D section)
+         else if (probtype.eq.42) then
+          ! do nothing - bubble jetting 2D
+         else if (probtype.eq.46) then
+          if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
+           ! do nothing cavitation 2D, jwl
+          else if (axis_dir.eq.10) then
+           if (1.eq.0) then
+            call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+            if (vfracbatch(nmat).gt.zero) then ! sphere
+             y_vel=advbot
+            else
+             y_vel=zero
+            endif
+           endif
+          else if (axis_dir.eq.20) then
+           x_vel=adv_vel
+           y_vel=zero
+          else
+           print *,"axis_dir invalid"
+           stop
+          endif
+! kh
+         else if (probtype.eq.38) then
+          call vapordist(xsten,nhalf,dx,bfact,dist)
+          if (dist.lt.zero) then
+           y_vel=-x_vel*radblob*two*Pi*sin(two*Pi*x/xblob)/xblob
+          else
+           x_vel=zero
+           y_vel=zero
+          endif
+! vstanding
+         else if (probtype.eq.39) then
+          if (axis_dir.eq.0) then
+           x_vel=zero
+           y_vel=zero
+          else
+           print *,"this problem obsolete"
+           stop
+          endif
+! vortpatch
+         else if (probtype.eq.40) then
+          x_vel=zero
+          y_vel=zero
+! overturn
+         else if (probtype.eq.45) then
+          print *,"this probtype obsolete"
+          stop
+! paddle
+         else if (probtype.eq.50) then
+          if (y.lt.zblob) then
+           x_vel=zero
+          endif
+         else if (probtype.eq.58) then
+          x_vel=zero
+! jetbend
+         else if (probtype.eq.53) then
+          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
+          x_vel=velcell(1)
+          y_vel=velcell(2)
+! 2d diesel injector w/needle
+         else if ((probtype.eq.538).or.(probtype.eq.541)) then
+          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
+          x_vel=velcell(1)
+          y_vel=velcell(2)
+! supersonic nozzle: fort_initvelocity
+         else if (probtype.eq.539) then
+          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
+          x_vel=velcell(1)
+          y_vel=velcell(2)
+         else if (probtype.eq.532) then ! imp jets from sides (initvelocity)
+          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
+          x_vel=velcell(1)
+          y_vel=velcell(2)
+
+! 3D jet coaxial
+         else if (probtype.eq.72) then
+          call vapordist(xsten,nhalf,dx,bfact,dist)
+          if (dist.ge.zero) then
+           x_vel=advbot
+          else
+           x_vel=adv_vel
+          endif
+! milkdrop
+         else if (probtype.eq.61) then
+          if (sqrt( (x-xblob)**2+(y-yblob)**2 ).le.radblob) then
+           if (axis_dir.eq.1) then
+            y_vel=-one
+           endif
+          endif
+! nozzle
+         else if ((probtype.eq.63).or.(probtype.eq.64)) then
+          call nozzlerad(z,radcross,zero)
+          if (x.gt.radcross) then
+           y_vel=zero
+          else
+           y_vel=y_vel*(xblob10**2/radcross**2)
+          endif
+! pulse
+         else if (probtype.eq.66) then
+          xtemp=sqrt(three*radblob/(four*zblob*zblob*zblob))
+          x_vel=sqrt(9.8*zblob)*(radblob/zblob)/(cosh(xtemp*x)**2)
+          y_vel=sqrt(three*9.8*zblob)*((radblob/zblob)**(1.5))* &
+            (y/zblob)*tanh(xtemp*x)/(cosh(xtemp*x)**2)
+         else if (probtype.eq.110) then
+          call get_bump_velocity(xsten,nhalf,dx,bfact,x_vel,time)
+          y_vel=zero
+         else if (probtype.eq.701) then
+          ! flapping wing, init_velocity, do nothing: x_vel=adv_vel
+         endif
+
+        else if (SDIM.eq.3) then
+
+         if ((probtype.eq.1).and.(axis_dir.lt.150)) then
+          if ((axis_dir.eq.11).or.(axis_dir.eq.12)) then
+           if (zblob.gt.zero) then
+            x_vel=vinletgas*(z/zblob-one)
+           else if (zblob.eq.zero) then
+            if (probhiz.le.zero) then
+             print *,"probhiz invalid"
+             stop
+            endif
+            x_vel=vinletgas*z/probhiz
+           else
+            print *,"parameters invalid for shear problem"
+            stop
+           endif
+
+           if (xblob10.eq.one) then
+            if (zblob.gt.zero) then
+             x_vel=radblob10+(vinletgas-radblob10)*z/(two*zblob)
+            else
+             if (radblob10.ne.zero) then
+              print *,"zero velocity at axis of symmetry"
+             endif
+             if (zblob10.eq.zero) then
+              print *,"zblob10 should be domain height"
+              stop
+             endif
+             x_vel=vinletgas*z/zblob10
+            endif
+           endif
+          else if (axis_dir.eq.14) then
+           dist=radblob-sqrt((x-xblob)**2+(y-yblob)**2)
+           if (dist.ge.zero) then
+            x_vel=zero
+            y_vel=vinletgas
+           endif
+          endif
+
+! pipe setup at t=0
+! in: fort_initvelocity, 3D
+         else if (probtype.eq.41) then
+          if (axis_dir.eq.5) then
+           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)
+           x_vel=velcell(1)
+           y_vel=velcell(2)
+           z_vel=velcell(SDIM)
+          else
+           print *,"this problem not ready for 3d yet"
+           stop
+          endif
+
+! wave
+         else if (probtype.eq.13) then
+          print *,"option obsolete"
+          stop
+         else if (probtype.eq.14) then
+          print *,"option obsolete"
+          stop
+         else if (probtype.eq.16) then
+          if ((y.gt.yblob).and.(x.le.xblob+radblob)) then
+           y_vel = -abs(advbot)
+          endif
+         else if (probtype.eq.23) then
+          print *,"this option called in error"
+          stop
+! validate
+         else if (probtype.eq.24) then
+          x_vel=-sin(Pi*x)*sin(Pi*x)*sin(two*Pi*y)
+          y_vel=sin(Pi*y)*sin(Pi*y)*sin(two*Pi*x)
+         else if (probtype.eq.25) then
+          if (axis_dir.eq.0) then
+           if ((y.gt.yblob).and.(x.le.xblob+radblob)) then
+            y_vel = -abs(advbot)
+           endif
+          endif
+! swirl 3D
+         else if (probtype.eq.26) then 
+
+          if ((axis_dir.eq.0).or. & !swirl
+              (axis_dir.eq.1)) then
+           ! x-y
+           if (adv_dir.eq.3) then
+            if (y.le.half) then
+             x_vel=tanh( (y-one/four)*30.0 )
+            else
+             x_vel=tanh( (three/four-y)*30.0 )
+            endif
+            y_vel=0.05*sin(two*Pi*x)
+            z_vel=zero
+           ! x-z
+           else if (adv_dir.eq.2) then
+            if (z.le.half) then
+             x_vel=tanh( (z-one/four)*30.0 )
+            else
+             x_vel=tanh( (three/four-z)*30.0 )
+            endif
+            z_vel=0.05*sin(two*Pi*x)
+            y_vel=zero
+           ! y-z
+           else if (adv_dir.eq.1) then
+            if (z.le.half) then
+             y_vel=tanh( (z-one/four)*30.0 )
+            else
+             y_vel=tanh( (three/four-z)*30.0 )
+            endif
+            z_vel=0.05*sin(two*Pi*y)
+            x_vel=zero
+           else
+            print *,"adv_dir invalid probtype==26 (13)"
+            stop
+           endif
+
+          else if ((axis_dir.eq.2).or. & !vortex confinement 3D
+                   (axis_dir.eq.3)) then
+
+           dist=sqrt((x-xblob)**2+(y-yblob)**2+(z-zblob)**2)-radblob
+           jumpval=tanh(30.0*dist)
+           jumpval=(jumpval+one)/two
+           alpha=(one-jumpval)*vinletgas
+           x_vel=alpha*(y-yblob)
+           y_vel=-alpha*(x-xblob)
+           if ((adv_dir.eq.1).or.(adv_dir.eq.4)) then
+            x_vel=x_vel+adv_vel
+           endif
+           if ((adv_dir.eq.2).or.(adv_dir.eq.4)) then
+            y_vel=y_vel+adv_vel
+           endif
+           if ((adv_dir.eq.3).or.(adv_dir.eq.4)) then
+            z_vel=z_vel+adv_vel
+           endif
+
+          else if (axis_dir.eq.11) then ! 3D BCG periodic
+
+           if ((probhix.eq.one).and. &
+               (probhiy.eq.one).and. &
+               (probhiz.eq.half)) then
+            x_vel=-sin(two*Pi*x)*cos(two*Pi*y)
+            y_vel=cos(two*Pi*x)*sin(two*Pi*y)
+            z_vel=zero
+           else if ((probhix.eq.one).and. &
+                    (probhiy.eq.half).and. &
+                    (probhiz.eq.one)) then
+            x_vel=-sin(two*Pi*x)*cos(two*Pi*z)
+            z_vel=cos(two*Pi*x)*sin(two*Pi*z)
+            y_vel=zero
+           else if ((probhix.eq.half).and. &
+                    (probhiy.eq.one).and. &
+                    (probhiz.eq.one)) then
+            y_vel=-sin(two*Pi*y)*cos(two*Pi*z)
+            z_vel=cos(two*Pi*y)*sin(two*Pi*z)
+            x_vel=zero
+           else
+            print *,"probhi x,y, or z invalid"
+            stop
+           endif
+
+           if ((adv_dir.eq.1).or.(adv_dir.eq.4).or. &
+               (adv_dir.eq.5).or.(adv_dir.eq.7)) then
+            x_vel=x_vel+adv_vel
+           endif
+           if ((adv_dir.eq.2).or.(adv_dir.eq.4).or. &
+               (adv_dir.eq.6).or.(adv_dir.eq.7)) then
+            y_vel=y_vel+adv_vel
+           endif
+           if ((adv_dir.eq.3).or.(adv_dir.eq.5).or. &
+               (adv_dir.eq.6).or.(adv_dir.eq.7)) then
+            z_vel=z_vel+adv_vel
+           endif
+
+          else
+           print *,"axix_dir invalid"
+           stop
+          endif
+
+         else if (probtype.eq.28) then
+          call zalesakuu(x_vel,x,y,z,zero,dx)
+          call zalesakvv(y_vel,x,y,z,zero,dx)
+          call zalesakww(z_vel,x,y,z,zero,dx)
+         else if (probtype.eq.29) then
+          call deform3duu(x_vel,x,y,z,zero,dx)
+          call deform3dvv(y_vel,x,y,z,zero,dx)
+          call deform3dww(z_vel,x,y,z,zero,dx)
+! vbubble - this routine is initvelocity
+         else if (probtype.eq.36) then ! bubble 3D
+          if ((axis_dir.eq.2).or.(axis_dir.eq.4)) then
+           x_vel=zero
+           y_vel=zero
+           z_vel=zero
+          endif
+
+          if ((xblob10.gt.zero).and. &
+              ((yblob9.ne.zero).or.(yblob10.ne.zero))) then
+           if (probhix-problox.le.zero) then
+            print *,"probhix or problox invalid"
+            stop
+           endif
+           z_vel=yblob9+(x-problox)*(yblob10-yblob9)/(probhix-problox)
+          endif
+         else if (probtype.eq.37) then
+          ! do nothing
+
+          ! in: fort_initvelocity (3D section)
+         else if (probtype.eq.42) then
+          ! do nothing: bubble jetting 3D
+         else if (probtype.eq.46) then
+          ! do nothing: cavitation 3D
+! kh
+         else if (probtype.eq.38) then
+          call vapordist(xsten,nhalf,dx,bfact,dist)
+          if (dist.lt.zero) then
+           y_vel=-x_vel*radblob*two*Pi*sin(two*Pi*x/xblob)/xblob
+          else
+           x_vel=zero
+           y_vel=zero
+          endif
+! vstanding
+         else if (probtype.eq.39) then
+          print *,"this problem obsolete"
+          stop
+! vortpatch
+         else if (probtype.eq.40) then
+          x_vel=zero
+          y_vel=zero
+! overturn
+         else if (probtype.eq.45) then
+          print *,"this problem obsolete" 
+          stop
+! paddle
+         else if (probtype.eq.50) then
+          if ((z.lt.zblob-radblob).or.(z.gt.zblob+radblob).or. &
+              (y.lt.yblob-radblob).or.(y.gt.yblob+radblob)) then
+           x_vel=zero
+          endif
+! bering
+         else if (probtype.eq.51) then
+          x_vel=zero
+         else if (probtype.eq.58) then
+          x_vel=zero
+         else if (probtype.eq.5501) then ! drop hitting rough surface
+          if (axis_dir.ne.0) then
+           print *,"axis_dir invalid"
+           stop
+          endif
+          x_vel=zero
+          y_vel=zero
+          z_vel=zero
+           ! initialize velocity of droplet only
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+          if (vfracbatch(1).gt.zero) then
+           z_vel=-abs(advbot)
+          endif
+! microfluidics problem initial velocity at t=0
+         else if (probtype.eq.5700) then
+          x_vel=zero
+          y_vel=zero
+          z_vel=zero
+! airblast with coaxial air flow  at t=0
+         else if (probtype.eq.529) then
+          x_vel=zero
+          y_vel=zero
+          z_vel=zero
+! jetbend at t=0
+         else if (probtype.eq.53) then
+          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
+          x_vel=velcell(1)
+          y_vel=velcell(2)
+          z_vel=velcell(SDIM)
+! impinging jets - AIAA 2008-4847
+         else if (probtype.eq.530) then
+          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
+          x_vel=velcell(1)
+          y_vel=velcell(2)
+          z_vel=velcell(SDIM)
+         else if (probtype.eq.532) then ! imp jets from sides (initvelocity)
+          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
+          x_vel=velcell(1)
+          y_vel=velcell(2)
+          z_vel=velcell(SDIM)
+         else if (probtype.eq.536) then
+          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
+          x_vel=velcell(1)
+          y_vel=velcell(2)
+          z_vel=velcell(SDIM)
+
+          ! initvelocity
+          ! 3D diesel injector w/needle
+         else if ((probtype.eq.538).or.(probtype.eq.541)) then
+          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
+          x_vel=velcell(1)
+          y_vel=velcell(2)
+          z_vel=velcell(SDIM)
+
+! Reiber problem
+         else if (probtype.eq.540) then
+          call get_Rieber_velocity(xsten,nhalf,bfact,dx,velcell)
+          z_vel=velcell(SDIM)
+
+! ysl 05/12/14
+         else if (probtype.eq.17) then  ! drop collide of diesel and water
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+          drat=fort_denconst(3)/fort_denconst(1)  ! dt/db
+          if (vfracbatch(1).gt.zero) then  ! diesel on bottom
+           y_vel=drat/(one+drat)
+          else if (vfracbatch(3).gt.zero) then  ! water on top
+           y_vel=-one/(one+drat)
+          else
+           y_vel=zero
+          endif
+         else if (probtype.eq.18) then  ! drop collide same material
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+          if (vfracbatch(1).gt.zero) then
+           if (y.gt.zero) then
+            y_vel=-half
+           else
+            y_vel=half
+           endif
+          else
+           y_vel=zero
+          endif
+
+! milkdrop (initvelocity)
+         else if ((probtype.eq.61).or.(probtype.eq.64)) then
+          dist=sqrt( (x-xblob)**2+(y-yblob)**2+(z-zblob)**2 )-radblob
+          if (dist.le.half*dx(SDIM)) then
+           if (axis_dir.eq.1) then
+            z_vel=-one
+           else if (axis_dir.eq.2) then
+            z_vel=vinletgas
+           else
+            print *,"axis_dir invalid"
+            stop
+           endif
+          endif
+! nozzle
+         else if (probtype.eq.63) then
+          call nozzlerad(z,radcross,zero)
+          rtest=sqrt(x**2+y**2)
+          if (rtest.gt.radcross) then
+           z_vel=zero
+          else
+           z_vel = z_vel*(xblob10**2/radcross**2)
+          endif
+! coffee
+         else if (probtype.eq.65) then
+! center of whirlpool is (xtemp,ytemp) = (5,5); strength = radblob5
+          xtemp = (xlo(1)+xhi(1))/2.0
+          ytemp = (xlo(2)+xhi(2))/2.0
+          ztemp = (ytemp-y)*(ytemp-y)+(x-xtemp)*(x-xtemp)+one
+          x_vel = radblob5*(ytemp-y)/ztemp
+          y_vel = radblob5*(x-xtemp)/ztemp
+          if (z.gt.zblob3) then
+           x_vel = zero
+           y_vel = zero
+          endif
+
+! pulse
+         else if (probtype.eq.66) then
+          xtemp=sqrt(three*radblob/(four*zblob*zblob*zblob))
+          x_vel=sqrt(9.8*zblob)*(radblob/zblob)/(cosh(xtemp*x)**2)
+          y_vel=zero
+          z_vel=sqrt(three*9.8*zblob)*((radblob/zblob)**(1.5))* &
+            (z/zblob)*tanh(xtemp*x)/(cosh(xtemp*x)**2)
+! gear
+         else if (probtype.eq.563) then
+          if (levelrz.eq.0) then
+           if (radblob.gt.zero) then
+            call cylinderdist(y,z,x,yblob,zblob,radblob,xblob-radblob, &
+              xblob+radblob,dist)
+            dist=-dist
+            if (dist.ge.zero) then
+             x_vel=advbot
+            endif
+           endif
+          else 
+           print *,"levelrz invalid probtype = 563"
+           stop
+          endif
+         else if (probtype.eq.701) then
+          ! flapping wing, init_velocity, do nothing: x_vel=adv_vel
+         endif
+
+        else
+         print *,"dimension bust"
+         stop
+        endif
+
+        vel(D_DECL(i,j,k),1) = x_vel
+        vel(D_DECL(i,j,k),2) = y_vel
+        if (SDIM.eq.3) then
+         vel(D_DECL(i,j,k),SDIM) = z_vel
+        endif
+
+      enddo
+      enddo
+      enddo
+
+      deallocate(distbatch)
+
+      return
+      end subroutine fort_initvelocity
+
+      subroutine fort_forcevelocity( &
+        problo,probhi, &
+        vel,DIMS(vel), &
+        velmac,DIMS(velmac), &
+        dir, &
+        xlo,dx, &
+        tilelo,tilehi, &
+        fablo,fabhi, &
+        bfact, &
+        time, &
+        presbc_array, &
+        outflow_velocity_buffer_size) & !(1,1),(2,1),(3,1),(1,2),(2,2),(3,2)
+      bind(c,name='fort_forcevelocity')
+
+      use global_utility_module
+
+      IMPLICIT NONE
+      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(velmac)
+      INTEGER_T, intent(in) :: dir
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
+      REAL_T, intent(inout),target :: vel(DIMV(vel),SDIM)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout),target :: velmac(DIMV(velmac))
+      REAL_T, pointer :: velmac_ptr(D_DECL(:,:,:))
+      INTEGER_T, intent(in) :: presbc_array(SDIM,2)
+      REAL_T, intent(in) :: outflow_velocity_buffer_size(2*SDIM)
+      REAL_T vel_in
+
+      INTEGER_T i,j,k,ii,jj,kk
+      INTEGER_T dirloc
+      REAL_T xsten(-1:1,SDIM)
+      REAL_T xsten_cell(SDIM)
+      INTEGER_T nhalf
+      INTEGER_T nmat
+      INTEGER_T velcomp
+
+      nhalf=1
+
+      nmat=num_materials
+
+      if ((dir.lt.0).or.(dir.ge.SDIM)) then
+       print *,"dir invalid forcevelocity"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"fact invalid"
+       stop
+      endif
+ 
+      ii=0
+      jj=0
+      kk=0
+      if (dir.eq.0) then
+       ii=1
+      else if (dir.eq.1) then
+       jj=1
+      else if ((dir.eq.2).and.(SDIM.eq.3)) then
+       kk=1
+      else
+       print *,"dir invalid forcevelocity 2"
+       stop
+      endif
+
+      vel_ptr=>vel
+      velmac_ptr=>velmac
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,2400)
+      call checkbound_array1(fablo,fabhi,velmac_ptr,0,dir,2400)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+       call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+       do dirloc=1,SDIM
+        xsten_cell(dirloc)=xsten(0,dirloc)
+       enddo
+       velcomp=dir+1
+       vel_in=vel(D_DECL(i,j,k),velcomp)*global_velocity_scale
+       call vel_freestream( &
+        xsten_cell, &
+        dir,vel_in,time, &
+        presbc_array, &
+        outflow_velocity_buffer_size, &
+        problo,probhi)
+       vel(D_DECL(i,j,k),velcomp)=vel_in/global_velocity_scale
+      enddo
+      enddo
+      enddo
+
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+         growlo,growhi,0,dir,6) 
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+       call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir,13)
+       do dirloc=1,SDIM
+        xsten_cell(dirloc)=xsten(0,dirloc)
+       enddo
+       vel_in=velmac(D_DECL(i,j,k))*global_velocity_scale
+       call vel_freestream( &
+         xsten_cell, &
+         dir,vel_in,time, &
+         presbc_array, &
+         outflow_velocity_buffer_size, &
+         problo,probhi)
+       velmac(D_DECL(i,j,k))=vel_in/global_velocity_scale
+      enddo
+      enddo
+      enddo
+
+      return
+      end subroutine fort_forcevelocity
+
+      end module probf90_module
 
       subroutine FORT_VELFILL ( &
        grid_type, &
@@ -26494,419 +30622,6 @@ end subroutine initialize2d
       return
       end subroutine FORT_GROUP_SOLVFILL
 
-
-       ! grad= -dt k grad S 
-       ! called from: NavierStokes::viscous_boundary_fluxes
-       ! which is called from: NavierStokes::apply_pressure_grad
-      subroutine fort_viscfluxfill( &
-       macrolayer_size, &
-       microlayer_substrate, &
-       microlayer_temperature_substrate, &
-       latent_heat, &
-       freezing_model, &
-       saturation_temp, &
-       nsolve, &
-       dir, &
-       xlo,dx, &
-       velbc, &
-       tempbc, &
-       temp_dombc, &
-       LS,DIMS(LS), &
-       area,DIMS(area), &
-       xflux,DIMS(xflux), &
-       tilelo,tilehi, &
-       fablo,fabhi,bfact, &
-       domlo,domhi, &
-       dt, &
-       nmat, &
-       nten, &
-       solidheat_flag, &
-       project_option, &
-       time) &
-      bind(c,name='fort_viscfluxfill')
-
-      use filcc_module
-      use probf90_module
-      use global_utility_module
-
-      IMPLICIT NONE
-
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: dir
-      INTEGER_T dir2
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
-      INTEGER_T nten_test
-      INTEGER_T, intent(in) :: solidheat_flag
-      INTEGER_T, intent(in) :: project_option
-      INTEGER_T, intent(in) :: DIMDEC(LS)
-      INTEGER_T, intent(in) :: DIMDEC(area)
-      INTEGER_T, intent(in) :: DIMDEC(xflux)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T growloMAC(3),growhiMAC(3)
-      INTEGER_T growlo_strip(3),growhi_strip(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(in), target :: LS(DIMV(LS),nmat*(SDIM+1))
-      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: area(DIMV(area))
-      REAL_T, pointer :: area_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: xflux(DIMV(xflux),nsolve)
-      REAL_T, pointer :: xflux_ptr(D_DECL(:,:,:),:)
-      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
-      INTEGER_T, intent(in) :: tempbc(SDIM,2)
-      INTEGER_T, intent(in) :: temp_dombc(SDIM,2)
-      REAL_T, intent(in) :: macrolayer_size(nmat)
-      INTEGER_T, intent(in) :: microlayer_substrate(nmat)
-      REAL_T, intent(in) :: microlayer_temperature_substrate(nmat)
-      REAL_T, intent(in) :: latent_heat(2*nten)
-      INTEGER_T, intent(in) :: freezing_model(2*nten)
-      REAL_T, intent(in) :: saturation_temp(2*nten)
-
-      INTEGER_T i,j,k,ii,jj,kk
-      INTEGER_T side
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
-      REAL_T dist
-      REAL_T LSleft,LSright
-      REAL_T nn
-      REAL_T tempflux
-      REAL_T xflux_local
-      INTEGER_T im,im1,im2,ireverse
-      INTEGER_T im_solid_tempflux
-      REAL_T LL,TSAT,TSUPER,thermal_layer
-      INTEGER_T local_freezing_model,heat_flux_model,iten
-
-      im_solid_tempflux=im_solid_primary()
- 
-      nhalf=3 
-      if (bfact.lt.1) then
-       print *,"bfact invalid200"
-       stop
-      endif
- 
-      if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
-       stop
-      endif
-      if (time.lt.zero) then
-       print *,"time invalid"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid viscfluxfill nten nten test", &
-        nten,nten_test
-       stop
-      endif
-
-      if ((solidheat_flag.lt.0).or. &
-          (solidheat_flag.gt.2)) then
-       print *,"solidheat_flag invalid"
-       stop
-      endif
-
-      if ((dir.lt.0).or.(dir.ge.SDIM)) then
-       print *,"dir invalid viscfluxfill"
-       stop
-      endif
-
-      if (dt.lt.zero) then
-       print *,"dt invalid"
-       stop
-      endif
-
-      LS_ptr=>LS
-      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1302)
-      area_ptr=>area
-      call checkbound_array1(fablo,fabhi,area_ptr,0,dir,1303)
-      xflux_ptr=>xflux
-      call checkbound_array(fablo,fabhi,xflux_ptr,0,dir,1304)
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-          growloMAC,growhiMAC,0,dir,4) 
-
-      if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
-       if (nsolve.ne.AMREX_SPACEDIM) then
-        print *,"nsolve invalid"
-        stop
-       endif
-      else if (project_option.eq.SOLVETYPE_HEAT) then !thermal conduction
-       if (nsolve.ne.1) then
-        print *,"nsolve invalid"
-        stop
-       endif
-      else
-       print *,"project_option not supported"
-       stop
-      endif
-      
-      if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
-       ! do nothing
-      else if (project_option.eq.SOLVETYPE_HEAT) then ! thermal conduction
-
-       do im=1,nmat
-
-        if (is_rigid(nmat,im).eq.0) then
-         ! do nothing
-        else if (is_rigid(nmat,im).eq.1) then
-
-         if ((im_solid_tempflux.lt.1).or. &
-             (im_solid_tempflux.gt.nmat)) then
-          print *,"im_solid_tempflux invalid"
-          stop
-         endif
-      
-         ! 0=diffuse in solid
-         ! 1=dirichlet
-         ! 2=neumann (insulating or heat flux source/sink)
-         if (solidheat_flag.eq.2) then
-
-          heat_flux_model=0
-
-          do ireverse=0,1
-          do im1=1,nmat-1
-          do im2=im1+1,nmat
-           call get_iten(im1,im2,iten,nmat)
-           LL=latent_heat(iten+ireverse*nten)
-           local_freezing_model=freezing_model(iten+ireverse*nten)
-           TSAT=saturation_temp(iten+ireverse*nten)
-
-           if ((LL.ne.zero).and. &
-               (local_freezing_model.eq.0).and. &
-               ((microlayer_substrate(im1).eq.im).or. &
-                (microlayer_substrate(im2).eq.im))) then
-            heat_flux_model=1
-            if (microlayer_substrate(im1).eq.im) then
-             TSUPER=microlayer_temperature_substrate(im1)
-             thermal_layer=macrolayer_size(im1) 
-             if ((TSUPER.le.zero).or.(thermal_layer.le.zero)) then
-              print *,"TSUPER or thermal_layer invalid"
-              stop
-             endif
-              ! -k dT/dx * n
-              ! case 1: solid left, fluid right  n=-1
-              !   dT/dx=TSAT-TSUPER  
-              ! case 2: solid right, fluid left, n=1
-              !   dT/dx=TSUPER-TSAT 
-             tempflux=-fort_heatviscconst(im1)*(TSUPER-TSAT)/thermal_layer
-            else if (microlayer_substrate(im2).eq.im) then
-             TSUPER=microlayer_temperature_substrate(im2)
-             thermal_layer=macrolayer_size(im2)
-             if ((TSUPER.le.zero).or.(thermal_layer.le.zero)) then
-              print *,"TSUPER or thermal_layer invalid"
-              stop
-             endif
-              ! -k dT/dx * n
-              ! case 1: solid left, fluid right  n=-1
-              !   dT/dx=TSAT-TSUPER  
-              ! case 2: solid right, fluid left, n=1
-              !   dT/dx=TSUPER-TSAT 
-             tempflux=-fort_heatviscconst(im2)*(TSUPER-TSAT)/thermal_layer
-            else
-             print *,"microlayer_substrate invalid"
-             stop
-            endif
-           else if ((LL.eq.zero).or. &
-                    (local_freezing_model.gt.0).or. &
-                    ((microlayer_substrate(im1).ne.im).and. &
-                     (microlayer_substrate(im2).ne.im))) then
-            ! do nothing
-           else
-            print *,"LL, local_freezing_model, or microlayer_substrate invalid"
-            stop
-           endif
-          enddo ! im2
-          enddo ! im1
-          enddo ! ireverse
-
-          ii=0
-          jj=0
-          kk=0
-          if (dir.eq.0) then
-           ii=1
-          else if (dir.eq.1) then
-           jj=1
-          else if ((dir.eq.2).and.(SDIM.eq.3)) then
-           kk=1
-          else
-           print *,"dir invalid viscfluxfill 2"
-           stop
-          endif
-
-          do i=growloMAC(1),growhiMAC(1)
-          do j=growloMAC(2),growhiMAC(2)
-          do k=growloMAC(3),growhiMAC(3)
-           ! dir=0..sdim-1
-           call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir,6)
-
-           LSleft=LS(D_DECL(i-ii,j-jj,k-kk),im)
-           LSright=LS(D_DECL(i,j,k),im)
-            ! n points from from fluid to solid
-            ! Neumann BC approximation assumes that the
-            ! interface has a staircase (rasterized) reconstruction.
-           if ((LSright.ge.zero).and.(LSleft.lt.zero)) then
-            nn=one
-           else if ((LSleft.ge.zero).and.(LSright.lt.zero)) then
-            nn=-one
-           else
-            nn=zero
-           endif
-
-             ! flux is -k dt grad T
-             ! tempfluxsolid returns Q=-k dT/dx * n  (Q>0 => cooling)
-             ! n points from fluid to solid
-             ! solid on left and fluid on right => n=-1
-             ! code should return Q dt n
-             ! units of Q are (erg/(cm s Kelvin)) kelvin/cm=
-             ! erg/(cm^2 s)
-           if (LSleft*LSright.le.zero) then
-
-            if (heat_flux_model.eq.0) then
-
-             call tempfluxsolid(xsten(0,1), &
-              xsten(0,2), &
-              xsten(0,SDIM), &
-              tempflux,time,dir)
-
-             xflux_local=dt*tempflux*nn
-
-            else if (heat_flux_model.eq.1) then
-             ! 
-             ! tempflux=-k (TSUPER-TSAT)/thermal_layer=-k dT/dx n
-             xflux_local=dt*tempflux*nn
-            else
-             print *,"heat_flux_model invalid"
-             stop
-            endif
-
-            xflux(D_DECL(i,j,k),1)=xflux_local
- 
-           else if (LSleft*LSright.ge.zero) then
-            ! do nothing
-           else
-            print *,"LSleft or LSright bust"
-            stop
-           endif
-
-          enddo
-          enddo
-          enddo
-
-         ! 0=diffuse in solid
-         ! 1=dirichlet
-         ! 2=neumann 
-         else if ((solidheat_flag.eq.0).or. &
-                  (solidheat_flag.eq.1)) then
-          ! do nothing
-         else
-          print *,"solidheat_flag invalid"
-          stop
-         endif
-
-        else
-         print *,"is_rigid invalid PROB.F90"
-         stop
-        endif
-    
-       enddo ! im=1..nmat
- 
-       do dir2=1,3
-        growlo_strip(dir2)=growloMAC(dir2) 
-        growhi_strip(dir2)=growhiMAC(dir2) 
-       enddo
-
-       side=1
-       if ((temp_dombc(dir+1,side).eq.FOEXTRAP).and. &
-           (tilelo(dir+1).eq.domlo(dir+1))) then
-
-        growhi_strip(dir+1)=growlo_strip(dir+1)
-
-        do i=growlo_strip(1),growhi_strip(1) 
-        do j=growlo_strip(2),growhi_strip(2) 
-        do k=growlo_strip(3),growhi_strip(3) 
-
-         ! do nothing - no problems yet with a prescribed heat flux at
-         ! the bottom
-
-        enddo
-        enddo
-        enddo
-       endif  ! side==1 case (left side)
-
-       do dir2=1,3
-        growlo_strip(dir2)=growloMAC(dir2) 
-        growhi_strip(dir2)=growhiMAC(dir2) 
-       enddo
-
-       side=2
-       if ((temp_dombc(dir+1,side).eq.FOEXTRAP).and. &
-           (tilehi(dir+1).eq.domhi(dir+1))) then
-
-        growlo_strip(dir+1)=growhi_strip(dir+1)
-
-        do i=growlo_strip(1),growhi_strip(1) 
-        do j=growlo_strip(2),growhi_strip(2) 
-        do k=growlo_strip(3),growhi_strip(3) 
-
-         ! dir=0..sdim-1
-         call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir,7)
-
-         ! cooling disk (top wall side==2)
-         ! in order to cool from the top, q=-k grad T>0
-         ! q=-k (TCOLD-T_ROOM)>0
-         if ((probtype.eq.601).and. &
-             (side.eq.2).and. &
-             (dir.eq.SDIM-1)) then
-
-          if (SDIM.eq.3) then
-           dist=sqrt((xsten(0,1)-xblob)**2+(xsten(0,2)-yblob)**2)-radblob
-          else if (SDIM.eq.2) then
-           dist=abs(xsten(0,1))-radblob
-          else
-           print *,"dimension bust"
-           stop
-          endif
-
-          ! Q=- k grad T 
-          ! k grad T<0 => Q>0
-          if (dist.le.zero) then
-           if (radblob2.le.zero) then
-            print *,"cooling Q should be positive"
-            stop
-           endif
-           xflux_local=dt*radblob2
-          else
-           xflux_local=zero
-          endif
-
-          xflux(D_DECL(i,j,k),1)=xflux_local
-
-         endif ! cooling disk
-
-        enddo
-        enddo
-        enddo
-       endif  ! side==2 case (right side)
-
-      else
-       print *,"project_option not supported"
-       stop
-      endif  
-
-      return
-      end subroutine fort_viscfluxfill
 
 
       subroutine FORT_UMACFILL ( &
@@ -29034,3719 +32749,4 @@ end subroutine initialize2d
       return
       end subroutine FORT_GROUP_TENSORFILL
 
-       module initdata_module
-       use supercooled_exact_sol
-       use probf90_module
-       use global_utility_module
-
-       implicit none
-
-       REAL_T lowerdiag(1000),upperdiag(1000),diag(1000),soln(1000)
-       REAL_T rhs(1000)
-       REAL_T xlodiss,xhidiss,dtdiss,posdiss,concentration
-       REAL_T concen1,concen2,theta
-       INTEGER_T ndiss,ispace
-
-       contains
-
-       subroutine init_initdata(nmat,nten,nc, &
-         latent_heat, &
-         freezing_model, &
-         distribute_from_target, &
-         saturation_temp, &
-         dx)
-       IMPLICIT NONE
-
-       INTEGER_T, intent(in) :: nmat,nten,nc
-       INTEGER_T nc_expect
-       INTEGER_T nten_test
-       REAL_T, intent(in) :: dx(SDIM)
-       REAL_T, intent(in) :: latent_heat(2*nten)
-       INTEGER_T, intent(in) :: freezing_model(2*nten)
-       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
-       REAL_T, intent(in) :: saturation_temp(2*nten)
-       REAL_T lmSt
-
-       INTEGER_T ireverse,im,im_opp,iten,local_freezing_model
-       INTEGER_T im_source,im_dest
-       REAL_T LL,TSAT
-       REAL_T cp_source,k_source,TDIFF,rho_source,rho_dest
-       REAL_T T_extreme
-       REAL_T den_ratio
-       INTEGER_T im_solid_initdata
-
-       im_solid_initdata=im_solid_primary()
-
-       if (nmat.ne.num_materials) then
-        print *,"nmat invalid"
-        stop
-       endif
-       nten_test=num_interfaces
-       if (nten_test.ne.nten) then
-        print *,"nten invalid initdata nten nten test", &
-          nten,nten_test
-        stop
-       endif
-       nc_expect=(SDIM+1)+ &
-        nmat*num_state_material+nmat*ngeom_raw+1
-       if (nc.ne.nc_expect) then
-        print *,"fort: nc invalid"
-        stop
-       endif
-
-       if (probtype.eq.802) then ! dissolution
-        xlodiss=zero
-        xhidiss=radblob
-        ndiss=NINT(radblob/dx(SDIM))-1
-        if (ndiss.ge.1000) then
-         print *,"ndiss too big"
-         stop
-        endif
-        xhidiss=ndiss*dx(SDIM)
-        dtdiss=one
-
-        do ispace=1,ndiss-1 
-         lowerdiag(ispace)=denfact/(dx(SDIM)**2)
-         upperdiag(ispace)=denfact/(dx(SDIM)**2)
-         diag(ispace)=-lowerdiag(ispace)-upperdiag(ispace)-1.0/dtdiss
-         rhs(ispace)=zero
-         if (ispace.eq.1) then
-          rhs(ispace)=rhs(ispace)-lowerdiag(ispace)
-         endif
-        enddo
-         ! in: GLOBALUTIL.F90
-        call tridiag_solve(lowerdiag,upperdiag,diag,ndiss-1,rhs,soln)
-       endif  ! probtype=802
-
-       do ireverse=0,1
-       do im=1,nmat-1
-       do im_opp=im+1,nmat
-        if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
-         print *,"im or im_opp bust 8"
-         stop
-        endif
-        call get_iten(im,im_opp,iten,nmat)
-        LL=latent_heat(iten+ireverse*nten)
-        local_freezing_model=freezing_model(iten+ireverse*nten)
-        TSAT=saturation_temp(iten+ireverse*nten)
-        if (is_hydrate_freezing_modelF(local_freezing_model).eq.1) then 
-         if (num_species_var.eq.1) then
-          ! do nothing
-         else
-          print *,"must define species var if hydrate model"
-          stop
-         endif
-        else if (is_hydrate_freezing_modelF(local_freezing_model).eq.0) then 
-         ! do nothing
-        else
-         print *,"is_hydrate_freezing_modelF invalid"
-         stop
-        endif
-
-        fort_alpha(iten+ireverse*nten)=zero
-        fort_beta(iten+ireverse*nten)=zero
-        fort_expansion_factor(iten+ireverse*nten)=zero
-        fort_stefan_number(iten+ireverse*nten)=zero
-        fort_jacob_number(iten+ireverse*nten)=zero
-        fort_time_radblob(iten+ireverse*nten)=zero
-
-        if ((is_rigid(nmat,im).eq.1).or. &
-            (is_rigid(nmat,im_opp).eq.1)) then
-         ! do nothing
-        else if (LL.ne.zero) then
-
-         if (ireverse.eq.0) then
-          im_source=im
-          im_dest=im_opp
-         else if (ireverse.eq.1) then
-          im_source=im_opp
-          im_dest=im
-         else
-          print *,"ireverse invalid"
-          stop
-         endif
-          ! we find the rate for the "sucking" problem which
-          ! has a thin thermal layer (interface moves towards the source).
-         cp_source=get_user_stiffCP(im_source) ! J/Kelvin
-         k_source=get_user_heatviscconst(im_source) ! W/(m Kelvin)
-
-          ! in: init_initdata
-         if ((im_source.ge.1).and.(im_source.le.nmat).and. &
-             (im_dest.ge.1).and.(im_dest.le.nmat)) then
-          T_extreme=fort_tempconst(im_source)
-          if (fort_tempconst(im_dest).gt.T_extreme) then
-           T_extreme=fort_tempconst(im_dest)
-          endif
-          if ((im_solid_initdata.ge.1).and. &
-              (im_solid_initdata.le.nmat)) then
-           if (fort_tempconst(im_solid_initdata).gt.T_extreme) then
-            T_extreme=fort_tempconst(im_solid_initdata)
-           endif
-          else if (im_solid_initdata.eq.0) then
-           ! do nothing
-          else
-           print *,"im_solid_initdata invalid"
-           stop
-          endif
-         else
-          print *,"im_source or im_dest invalid"
-          stop
-         endif
- 
-         TDIFF=abs(T_extreme-TSAT)
-
-         rho_source=fort_denconst(im_source) ! kg/m^3 
-         rho_dest=fort_denconst(im_dest) ! kg/m^3 
-         den_ratio=max(rho_dest,rho_source)/min(rho_dest,rho_source)
-         if ((den_ratio.gt.1.0D+5).or.(den_ratio.lt.one)) then
-          print *,"den_ratio invalid"
-          stop
-         endif
-
-         if (distribute_from_target(iten+ireverse*nten).eq.0) then
-          fort_expansion_factor(iten+ireverse*nten)=one-rho_dest/rho_source
-         else if (distribute_from_target(iten+ireverse*nten).eq.1) then
-          fort_expansion_factor(iten+ireverse*nten)=one-rho_source/rho_dest
-         else
-          print *,"distribute_from_target invalid"
-          stop
-         endif
-
-
-         ! (W/(m Kelvin))/((kg/m^3)(J/(kg Kelvin)))
-         ! (J/(s m Kelvin))/((1/m^3)(J/Kelvin))
-         ! (1/(s m))/(1/m^3)
-         ! (1/(s))/(1/m^2)=m^2/s
-         fort_alpha(iten+ireverse*nten)=k_source/(rho_source*cp_source) 
-
-         ! (J/(kg Kelvin)) Kelvin/(J/kg)=1
-         fort_stefan_number(iten+ireverse*nten)=cp_source*TDIFF/abs(LL)
-        
-         fort_jacob_number(iten+ireverse*nten)=(rho_source/rho_dest)* &
-            fort_stefan_number(iten+ireverse*nten)
-
-         ! solidification
-         ! circular freeze.
-         if (den_ratio.lt.10.0) then
-          call find_lambda(lmSt,fort_stefan_number(iten+ireverse*nten))
-
-         ! spherical boiling
-         else if (den_ratio.ge.10.0) then
-
-          call find_beta(lmSt,den_ratio,fort_jacob_number(iten+ireverse*nten))
-
-         else
-          print *,"den_ratio bust"
-          stop
-         endif
-
-         fort_beta(iten+ireverse*nten)=lmSt
-
-          ! sqrt(alpha time_radblob)*two*lmSt=radblob 
-         call solidification_front_time(lmSt, &
-          fort_alpha(iten+ireverse*nten), &
-          fort_time_radblob(iten+ireverse*nten), &
-          radblob)
-
-         print *,"iten,ireverse ",iten,ireverse
-         print *,"im_source,im_dest ",im_source,im_dest 
-         print *,"fort_expansion_factor= ", &
-          fort_expansion_factor(iten+ireverse*nten)
-         print *,"distribute_from_target= ", &
-          distribute_from_target(iten+ireverse*nten)
-         print *,"den_ratio= ",den_ratio
-         print *,"Stefan_number= ",fort_stefan_number(iten+ireverse*nten)
-         print *,"Jacob_number= ",fort_jacob_number(iten+ireverse*nten)
-         print *,"lmSt= ",lmSt
-         print *,"alpha= ",fort_alpha(iten+ireverse*nten)
-         print *,"beta= ",fort_beta(iten+ireverse*nten)
-         print *,"time_radblob is the time for the front to grow from"
-         print *,"r=0 to r=radblob"
-         print *,"time_radblob=",fort_time_radblob(iten+ireverse*nten)
-         print *,"radius doubling time=4 * time_radblob - time_radblob=", &
-          three*fort_time_radblob(iten+ireverse*nten)
-         print *,"front location: 2 beta sqrt(alpha t) "
-        else if (LL.eq.zero) then
-         ! do nothing
-        else
-         print *,"LL invalid"
-         stop
-        endif
-       enddo ! im_opp
-       enddo ! im
-       enddo ! ireverse
-
-       return
-       end subroutine init_initdata
-
-
-       end module initdata_module
-
-       subroutine fort_initgridmap( &
-        max_level, &
-        bfact_space_level, & 
-        bfact_grid_level, & 
-        domlo,domhi, &
-        dx, &
-        problo,probhi) &
-       bind(c,name='fort_initgridmap')
-
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-       INTEGER_T, intent(in) :: max_level
-       INTEGER_T, intent(in) :: bfact_space_level(0:max_level)
-       INTEGER_T, intent(in) :: bfact_grid_level(0:max_level)
-       INTEGER_T, intent(in) :: domlo(SDIM)
-       INTEGER_T, intent(in) :: domhi(SDIM)
-       REAL_T, intent(in) :: dx(SDIM)
-       REAL_T, intent(in) :: problo(SDIM)
-       REAL_T, intent(in) :: probhi(SDIM)
-       REAL_T xsten(-1:1)
-       INTEGER_T nhalf
-       INTEGER_T bfactmax
-       INTEGER_T ilev,max_ncell,dir,inode,i
-       INTEGER_T ncell(SDIM)
-       REAL_T dxlevel(SDIM)
-       INTEGER_T domlo_level(SDIM)
-       INTEGER_T domhi_level(SDIM)
-
-       nhalf=1
-
-       if (max_level.lt.0) then
-        print *,"max_level invalid"
-        stop
-       endif
-
-       bfactmax=0
-       do ilev=0,max_level
-        if ((bfact_space_level(ilev).lt.1).or. &
-            (bfact_grid_level(ilev).lt.2)) then
-         print *,"bfact invalid200 in initgridmap"
-         stop
-        endif
-        if (bfact_space_level(ilev).gt.bfactmax) then
-         bfactmax=bfact_space_level(ilev)
-        endif
-        if (bfact_grid_level(ilev).gt.bfactmax) then
-         bfactmax=bfact_grid_level(ilev)
-        endif
-       enddo ! ilev
-
-       max_ncell=0
-       do dir=1,SDIM
-        if (domlo(dir).ne.0) then
-         print *,"domlo invalid"
-         stop
-        endif
-        ncell(dir)=domhi(dir)-domlo(dir)+1
-        if (ncell(dir).lt.2) then
-         print *,"ncell invalid"
-         stop
-        endif
-        if (ncell(dir).gt.max_ncell) then
-         max_ncell=ncell(dir)
-        endif
-       enddo ! dir
-
-       if (max_ncell.lt.2) then
-        print *,"max_ncell invalid"
-        stop
-       endif
-
-       do ilev=1,max_level
-        max_ncell=max_ncell*2
-       enddo
-
-       if (bfactmax.lt.8) then
-        bfactmax=8
-       endif
-
-       if (grid_cache_allocated.eq.0) then
-
-        cache_index_low=-4*bfactmax
-        cache_index_high=2*max_ncell+4*bfactmax
-        cache_max_level=max_level
-
-        print *,"allocate grid_cache"
-        do dir=1,SDIM
-         print *,"dir,domlo,domhi ",dir,domlo(dir),domhi(dir)
-         print *,"dir,problo,probhi ",dir,problo(dir),probhi(dir)
-         print *,"dir,dx ",dir,dx(dir)
-        enddo
-        print *,"cache_index_low ",cache_index_low
-        print *,"cache_index_high ",cache_index_high
-        print *,"bfactmax,max_ncell ",bfactmax,max_ncell
-
-        allocate(grid_cache(0:cache_max_level, &
-         cache_index_low:cache_index_high,SDIM))
-
-        do dir=1,SDIM
-         dxlevel(dir)=dx(dir)
-         domlo_level(dir)=domlo(dir)
-         domhi_level(dir)=domhi(dir)
-        enddo
-
-        do ilev=0,cache_max_level
-         do dir=1,SDIM
-          if (domlo_level(dir).ne.0) then
-           print *,"domlo_level invalid"
-           stop
-          endif
-          do i=domlo_level(dir)-2*bfactmax,domhi_level(dir)+2*bfactmax
-           inode=2*i
-           if ((inode.lt.cache_index_low).or. &
-               (inode+1.gt.cache_index_high)) then
-            print *,"icell outside of cache range"
-            stop
-           endif
-           call gridsten1D(xsten,problo,i,domlo, &
-            bfact_space_level(ilev),dxlevel,dir,nhalf) 
-           grid_cache(ilev,inode,dir)=xsten(0)
-           grid_cache(ilev,inode+1,dir)=xsten(1)
-           if (1.eq.0) then
-            print *,"lev,inode,dir,x,xnxt ",ilev,inode,dir,xsten(0),xsten(1)
-           endif
-          enddo ! i
-         enddo ! dir
-         do dir=1,SDIM
-          dxlevel(dir)=half*dxlevel(dir)
-          domlo_level(dir)=2*domlo_level(dir)
-          domhi_level(dir)=2*(domhi_level(dir)+1)-1
-         enddo
-        enddo !ilev
-
-       else if (grid_cache_allocated.eq.1) then
-        ! do nothing
-       else
-        print *,"grid_cache_allocated invalid"
-        stop
-       endif
-
-       grid_cache_allocated=1
-
-       return
-       end subroutine fort_initgridmap
-
-       subroutine fort_initdata_alloc( &
-        nmat,nten,nc, &
-        latent_heat, &
-        freezing_model, &
-        distribute_from_target, &
-        saturation_temp, &
-        dx) &
-       bind(c,name='fort_initdata_alloc')
-
-       use initdata_module
-       IMPLICIT NONE
-
-       INTEGER_T, intent(in) :: nmat,nten,nc
-       REAL_T, intent(in) :: dx(SDIM)
-       REAL_T, intent(in) :: latent_heat(2*nten)
-       INTEGER_T, intent(in) :: freezing_model(2*nten)
-       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
-       REAL_T, intent(in) :: saturation_temp(2*nten)
-
-       call init_initdata(nmat,nten,nc, &
-        latent_heat, &
-        freezing_model, &
-        distribute_from_target, &
-        saturation_temp, &
-        dx)
-
-       return
-       end subroutine fort_initdata_alloc
-
-       subroutine fort_initdata( &
-        tid, &
-        adapt_quad_depth, &
-        level,max_level, &
-        time, &
-        tilelo,tilehi, &
-        fablo,fabhi, &
-        bfact, &
-        nc, &
-        nmat, &
-        nten, &
-        latent_heat, &
-        saturation_temp, &
-        scal,DIMS(scal), &
-        LS,DIMS(LS), &
-        dx,xlo,xhi) &
-       bind(c,name='fort_initdata')
-
-       use MOF_routines_module
-       use geometry_intersect_module
-       use hydrateReactor_module
-       use unimaterialChannel_module
-       use initdata_module
-       use probf90_module
-       use global_utility_module
-       use global_distance_module
-       use shockdrop
-       use marangoni
-       use CISL_SANITY_MODULE
-       use USERDEF_module
-       use CAV3D_module
-       use HELIX_module
-       use TSPRAY_module
-       use CAV2Dstep_module
-       use ZEYU_droplet_impact_module
-       use rigid_FSI_module
-       use sinking_particle_module
-       use stackvolume_module
-
-       IMPLICIT NONE
-
-       INTEGER_T, intent(in) :: nmat
-       INTEGER_T, intent(in) :: adapt_quad_depth,tid
-       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-       INTEGER_T growlo(3),growhi(3)
-       INTEGER_T, intent(in) :: bfact
-       INTEGER_T, intent(in) :: level,max_level
-       INTEGER_T, intent(in) :: nc
-       INTEGER_T, intent(in) :: nten
-       INTEGER_T imls
-       INTEGER_T impres
-       REAL_T, intent(in) :: latent_heat(2*nten)
-       REAL_T, intent(in) :: saturation_temp(2*nten)
-       REAL_T, intent(in) :: time
-       INTEGER_T, intent(in) :: DIMDEC(scal)
-       INTEGER_T, intent(in) :: DIMDEC(LS)
-
-       REAL_T, intent(inout), target :: scal(DIMV(scal),nc)
-       REAL_T, pointer :: scal_ptr(D_DECL(:,:,:),:)
-
-       REAL_T, intent(inout), target :: LS(DIMV(LS),nmat*(1+SDIM))
-       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-
-       REAL_T, intent(in) :: dx(SDIM)
-       REAL_T, intent(in) :: xlo(SDIM), xhi(SDIM)
-       INTEGER_T idenbase,imofbase
-       INTEGER_T ierr
-       INTEGER_T ibase
-       INTEGER_T ic,jc,kc,n,im
-       INTEGER_T dir
-       REAL_T, dimension(:,:), allocatable :: comparestate
-       REAL_T vfracsum_test
-
-       REAL_T fluiddata(nmat,2*SDIM+2)
-       REAL_T mofdata(nmat*ngeom_recon)
-       REAL_T distbatch(nmat)
-       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
-       REAL_T err
-       REAL_T vofdark(nmat)
-       REAL_T voflight(nmat)
-       REAL_T cendark(nmat,SDIM)
-       REAL_T cenlight(nmat,SDIM)
-
-       INTEGER_T nhalf,nhalf2,nmax
-       REAL_T xsten(-3:3,SDIM)
-       REAL_T xsten2(-1:1,SDIM)
-
-       INTEGER_T i1,j1,k1,k1lo,k1hi
-       REAL_T xpos(SDIM)
-       REAL_T scalc(nc)
-       REAL_T LSc(nmat*(1+SDIM))
-       REAL_T x,y,z,rr
-       REAL_T volcell
-       REAL_T cencell(SDIM)
-       INTEGER_T ipresbase
-       
-       REAL_T debug_vfrac_sum
-       REAL_T vel(SDIM)
-       REAL_T temp,dens,ccnt,test_gamma,test_pres
-       REAL_T distsolid
-       INTEGER_T nten_test
-
-       REAL_T den_jwl_left,den_jwl_right
-       REAL_T temp_jwl_left,temp_jwl_right
-       REAL_T e_jwl_left,e_jwl_right
-       REAL_T p_jwl_left,p_jwl_right
-       REAL_T u_jwl_left,u_jwl_right
-       REAL_T xshock
-       REAL_T den_jwl,denroom,e_jwl,e_room,eps_benard
-       REAL_T gamma_jwl
-       REAL_T p_hyd,p_jwl,p_room,preshydro,rhohydro
-       REAL_T temp_jwl,temp_slope,temproom,u_jwl
-       REAL_T water_temp
-       INTEGER_T imattype,isten
-       INTEGER_T max_levelstack
-       INTEGER_T vofcomp_raw
-       INTEGER_T vofcomp_recon
-       REAL_T jumpval
-       REAL_T voflist(nmat)
-
-       INTEGER_T im_source,im_dest,ireverse,iten
-       REAL_T L_ice_melt,TSAT,T_EXTREME,cp_melt,k_melt,rstefan
-       REAL_T T_FIELD
-       REAL_T den_ratio
-       REAL_T dxmaxLS
-       INTEGER_T im_solid_initdata
-       REAL_T lsnormal(nmat,SDIM)
-       INTEGER_T lsnormal_valid(nmat)
-       REAL_T ls_intercept(nmat)
-       INTEGER_T doubly_flag
-       REAL_T local_state(nmat*num_state_material)
-       REAL_T massfrac_parm(num_species_var+1)
-       INTEGER_T local_ibase
-       INTEGER_T tessellate
-       INTEGER_T bcflag
-       INTEGER_T from_boundary_hydrostatic
-       INTEGER_T nhalf_box
-       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
-
-       nhalf_box=1
-
-       scal_ptr=>scal
-       LS_ptr=>LS
-
-       from_boundary_hydrostatic=0
-
-       tessellate=0
-
-       bcflag=0
-
-       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
-        print *,"tid invalid"
-        stop
-       endif
-
-       if ((time.ge.zero).and.(time.le.1.0D+20)) then
-        ! do nothing
-       else if (time.ge.1.0D+20) then
-        print *,"WARNING time.ge.1.0D+20 in initdata"
-       else if (time.lt.zero) then
-        print *,"time invalid in initdata"
-        stop
-       else
-        print *,"time bust in initdata"
-        stop
-       endif
-
-       call get_dxmaxLS(dx,bfact,dxmaxLS)
-
-       im_solid_initdata=im_solid_primary()
-
-       nmax=POLYGON_LIST_MAX ! in: fort_initdata
-       nhalf=3
-       nhalf2=1
-
-       if (bfact.lt.1) then
-        print *,"bfact too small"
-        stop
-       endif
-       if ((adapt_quad_depth.lt.1).or.(adapt_quad_depth.gt.10)) then
-        print *,"adapt_quad_depth invalid"
-        stop
-       endif
-       max_levelstack=adapt_quad_depth
-
-       ipresbase=STATECOMP_PRES
-       impres=1
-       idenbase=STATECOMP_STATES
-       imofbase=STATECOMP_MOF
-       ierr=imofbase+nmat*ngeom_raw+1
-       if (nc.ne.ierr) then
-        print *,"nc invalid"
-        stop
-       endif
-       nten_test=num_interfaces
-       if (nten_test.ne.nten) then
-        print *,"nten invalid initdata nten nten test", &
-          nten,nten_test
-        stop
-       endif
-       if (nmat.ne.num_materials) then
-        print *,"nmat invalid"
-        stop
-       endif
-       if (nc.ne.ierr) then
-        print *,"scal invalid"
-        stop
-       endif
-      
-       if (num_state_base.ne.2) then
-        print *,"num_state_base invalid"
-        stop
-       endif
-
-       call checkbound_array(fablo,fabhi,scal_ptr,1,-1,1304)
-       call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1305)
-
-       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-
-       if (SDIM.eq.2) then
-        k1lo=0
-        k1hi=0
-       else if (SDIM.eq.3) then
-        k1lo=-1
-        k1hi=1
-       else
-        print *,"dimension bust"
-        stop
-       endif
-
-       do ic=growlo(1),growhi(1)
-       do jc=growlo(2),growhi(2)
-       do kc=growlo(3),growhi(3)
-        
-        do n=1,nc
-         scalc(n)=zero
-        enddo
-        do imls=1,nmat*(1+SDIM)
-         LSc(imls)=zero
-        enddo
-        volcell=zero
-        do dir=1,SDIM
-         cencell(dir)=zero
-        enddo
-
-        call gridsten(xsten,xlo,ic,jc,kc,fablo,bfact,dx,nhalf)
-
-        x=xsten(0,1)
-        y=xsten(0,2)
-        z=xsten(0,SDIM)
-
-        do dir=1,SDIM
-         xpos(dir)=xsten(0,dir)
-        enddo
-
-        call Box_volumeFAST(bfact,dx,xsten,nhalf,volcell,cencell,SDIM)
-
-        scalc(ipresbase+1)=zero
-
-        if (is_in_probtype_list().eq.1) then
-
-         call SUB_LS(xpos,time,distbatch,num_materials)
-             ! bcflag=0 (calling from fort_initdata)
-         call SUB_STATE(xpos,time,distbatch,local_state, &
-                 bcflag,num_materials,num_state_material)
-         do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
-          local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
-          ! species
-          do n=1,num_species_var
-           scalc(ibase+num_state_base+n)= &
-            local_state(local_ibase+num_state_base+n)
-           if (scalc(ibase+num_state_base+n).ge.zero) then
-            ! do nothing
-           else
-            print *,"mass fraction cannot be negative"
-            stop
-           endif
-          enddo
-
-          if (scalc(ibase+1).gt.zero) then
-           ! do nothing
-          else
-           print *,"density invalid probtype==421 "
-           print *,"im,ibase,nmat ",im,ibase,nmat
-           print *,"density=",scalc(ibase+1)
-           stop
-          endif
-
-          if (scalc(ibase+2).gt.zero) then
-           ! do nothing
-          else
-           print *,"temperature invalid probtype==421 "
-           print *,"im,ibase,nmat ",im,ibase,nmat
-           print *,"temperature=",scalc(ibase+1)
-           stop
-          endif
-
-         enddo ! im=1..nmat
-         call SUB_PRES(xpos,time,distbatch,p_hyd,num_materials)
-         scalc(ipresbase+impres)=p_hyd
-
-         if (p_hyd.ge.zero) then
-          ! do nothing
-         else
-          print *,"p_hyd invalid"
-          print *,"probtype=",probtype
-          print *,"p_hyd=",p_hyd
-          stop
-         endif
-
-        else if (probtype.eq.411) then
-
-         call CAV3D_LS(xpos,time,distbatch)
-         call CAV3D_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
-          local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
-           ! species
-          do n=1,num_species_var
-           scalc(ibase+num_state_base+n)= &
-            local_state(local_ibase+num_state_base+n)
-          enddo
-         enddo ! im=1..nmat
-         call CAV3D_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
-
-        else if (probtype.eq.401) then
-
-         call HELIX_LS(xpos,time,distbatch)
-         call HELIX_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
-          local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
-           ! species
-          do n=1,num_species_var
-           scalc(ibase+num_state_base+n)= &
-            local_state(local_ibase+num_state_base+n)
-          enddo
-         enddo ! im=1..nmat
-         call HELIX_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
-
-        else if (probtype.eq.402) then
-
-         call TSPRAY_LS(xpos,time,distbatch)
-         call TSPRAY_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
-          local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
-           ! species
-          do n=1,num_species_var
-           scalc(ibase+num_state_base+n)= &
-            local_state(local_ibase+num_state_base+n)
-          enddo
-         enddo ! im=1..nmat
-         call TSPRAY_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
-
-        else if (probtype.eq.412) then ! step
-
-         call CAV2Dstep_LS(xpos,time,distbatch)
-         call CAV2Dstep_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
-          local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
-          ! species
-          do n=1,num_species_var
-           scalc(ibase+num_state_base+n)= &
-            local_state(local_ibase+num_state_base+n)
-          enddo
-         enddo ! im=1..nmat
-         call CAV2Dstep_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
-
-        else if (probtype.eq.413) then ! zeyu
-
-         call ZEYU_droplet_impact_LS(xpos,time,distbatch)
-         call ZEYU_droplet_impact_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
-          local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
-          ! species
-          do n=1,num_species_var
-           scalc(ibase+num_state_base+n)= &
-            local_state(local_ibase+num_state_base+n)
-          enddo
-         enddo ! im=1..nmat
-         call ZEYU_droplet_impact_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
-
-        else if (probtype.eq.533) then
-
-         call rigid_FSI_LS(xpos,time,distbatch)
-         call rigid_FSI_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
-          local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
-           ! species
-          do n=1,num_species_var
-           scalc(ibase+num_state_base+n)= &
-            local_state(local_ibase+num_state_base+n)
-          enddo
-         enddo ! im=1..nmat
-         call rigid_FSI_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
-
-        else if (probtype.eq.534) then
-
-         call sinking_FSI_LS(xpos,time,distbatch)
-         call sinking_FSI_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
-          local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
-           ! species
-          do n=1,num_species_var
-           scalc(ibase+num_state_base+n)= &
-            local_state(local_ibase+num_state_base+n)
-          enddo
-         enddo ! im=1..nmat
-         call sinking_FSI_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
-
-        else if (probtype.eq.311) then ! user defined
-
-         call USERDEF_LS(xpos,time,distbatch)
-         call USERDEF_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
-          local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
-           ! species
-          do n=1,num_species_var
-           scalc(ibase+num_state_base+n)= &
-            local_state(local_ibase+num_state_base+n)
-          enddo
-         enddo ! im=1..nmat
-         call USERDEF_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
-
-        else
-
-         do im=1,nmat
-
-          ibase=idenbase+(im-1)*num_state_material
-
-          scalc(ibase+1)=fort_denconst(im)  ! den
-          scalc(ibase+2)=fort_initial_temperature(im)  ! temperature
-     
-          do n=1,num_species_var
-           scalc(ibase+num_state_base+n)= &
-            fort_speciesconst((n-1)*nmat+im)
-          enddo
-
-          if (probtype.eq.82) then ! annulus
-           ! fort_tempconst(1) is the inner wall temperature
-           ! twall is the outer wall temperature
-           ! see: subroutine thermal_offset
-           scalc(ibase+2)=fort_initial_temperature(1)
-          endif
-
-           ! in: INITDATA
-          if (probtype.eq.26) then ! swirl if axis_dir=0 or 1.
-
-           if (axis_dir.eq.10) then ! BCG test
-            scalc(ibase+2)=fort_initial_temperature(1)
-           else if (axis_dir.eq.11) then ! BCG periodic test
-            scalc(ibase+2)=fort_initial_temperature(1)
-           else if ((axis_dir.ge.0).and. & !swirl,vortex confinement
-                    (axis_dir.le.5)) then
-            doubly_flag=1
-            if (SDIM.eq.2) then
-             if ((axis_dir.eq.0).or. & ! swirl
-                 (axis_dir.eq.1)) then
-              rr=y
-             else if ((axis_dir.eq.2).or. & ! vortex confinement
-                      (axis_dir.eq.3)) then
-              rr=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
-              doubly_flag=0
-             else
-              print *,"axis_dir invalid"
-              stop
-             endif
-            else if (SDIM.eq.3) then
-             if ((axis_dir.ge.0).and. & !swirl or vortex confinement
-                 (axis_dir.le.3)) then
-              if (adv_dir.eq.3) then ! vortex confinement
-               rr=y
-              else if (adv_dir.eq.2) then ! vortex confinement
-               rr=z
-              else if (adv_dir.eq.1) then ! swirl
-               rr=z
-              else
-               print *,"adv_dir invalid probtype==26 (11)"
-               stop
-              endif
-             else if ((axis_dir.eq.4).or. & ! vortex confinement.
-                      (axis_dir.eq.5)) then
-              rr=sqrt((x-xblob)**2+(y-yblob)**2+(z-zblob)**2)-radblob
-              doubly_flag=0
-             else
-              print *,"axis_dir invalid"
-              stop
-             endif
-            else
-             print *,"dimension bust"
-             stop
-            endif
-            if (doubly_flag.eq.1) then
-             if (rr.le.half) then
-              jumpval=tanh( (rr-one/four)*30.0 )
-             else
-              jumpval=tanh( (three/four-rr)*30.0 )
-             endif
-            else if (doubly_flag.eq.0) then
-             jumpval=tanh(30.0*rr)
-            else
-             print *,"doubly_flag invalid"
-             stop
-            endif
-
-            jumpval=(jumpval+one)/two
-            scalc(ibase+2)=jumpval*fort_initial_temperature(1)+ &
-             (one-jumpval)*fort_initial_temperature(2)
-  
-           else
-            print *,"axis_dir invalid"
-            stop
-           endif
-
-          endif ! probtype==26
-
-            ! 2B from Wardlaws list
-          if ((probtype.eq.36).and.(axis_dir.eq.2).and. &
-              (SDIM.eq.2)) then
-           if (im.eq.1) then
-            call tait_hydrostatic_pressure_density(xpos, &
-             rhohydro,preshydro,from_boundary_hydrostatic)
-            scalc(ibase+1)=rhohydro
-           else if (im.eq.2) then
-            e_jwl=4.2814D+10
-            den_jwl=1.63D0
-            call init_massfrac_parm(den_jwl,massfrac_parm,im)
-            call TEMPERATURE_material(den_jwl,massfrac_parm, &
-             temp_jwl,e_jwl, &
-             fort_material_type(im),im)
-            scalc(ibase+1)=den_jwl
-            scalc(ibase+2)=temp_jwl
-           endif
-          endif  ! probtype=36
-           ! initial temperature for boiling cavity problem
-          if (probtype.eq.710) then
-           ! water phase
-           if (im.eq.1) then
-             ! bcflag=0 (calling from fort_initdata)
-            call outside_temperature(time,x,y,z,water_temp,im,0)
-            scalc(ibase+2)=water_temp  
-           endif ! im=1
-          endif
-
-           ! initial temperature for melting ice block on a substrate.
-          if (probtype.eq.59) then
-
-           if (nmat.lt.4) then
-            print *,"nmat too small for melting ice on substrate"
-            stop
-           endif
-           ! substrate (initial temperature)
-           if (im.eq.4) then
-            ! bcflag=0 (calling from fort_initdata)
-            call outside_temperature(time,x,y,z,water_temp,im,0)
-            scalc(ibase+2)=water_temp
-           endif
-
-          endif ! probtype.eq.59
-
-           ! Benard instability problem initdata
-           ! density above is a filler; density will be
-           ! replaced by rho(T,z) after "nonlinear_advection"
-           ! (correct_density)
-          if (probtype.eq.603) then
-           if (z.gt.yblob) then
-            water_temp=fort_initial_temperature(1) 
-           else if (z.gt.zero) then 
-            temp_slope=-radblob2/yblob
-            if (SDIM.eq.2) then
-             eps_benard=radblob*cos(two*Pi*x/xblob)*four*y*(yblob-y)/(yblob**2) 
-            else if (SDIM.eq.3) then
-             eps_benard=cos(two*Pi*(x-problox)/xblob)* &
-                cos(two*Pi*(y-probloy)/xblob)* &
-                radblob*four*z*(yblob-z)/(yblob**2)
-            else
-             print *,"dimension bust"
-             stop
-            endif
-
-            water_temp=radblob2+fort_initial_temperature(1)+ &
-              temp_slope*(z+eps_benard)
-           else
-            water_temp=radblob2+fort_initial_temperature(1)
-           endif
-           scalc(ibase+2)=water_temp  ! temperature
-          endif  ! probtype=603
-
-          if ((probtype.eq.1).and. &
-              ((axis_dir.eq.150).or. &
-               (axis_dir.eq.151))) then
-    
-           if (im.eq.2) then ! air
-            call shockdrop_pressure(x,y,z,p_jwl, &
-             xblob,yblob,zblob,radblob,zblob2,axis_dir)
-            call shockdrop_gas_density(x,y,z,den_jwl, &
-             xblob,yblob,zblob,radblob,zblob2,axis_dir)
-            call shockdrop_velocity(x,y,z,vel, &
-             xblob,yblob,zblob,radblob,zblob2,axis_dir)
-            u_jwl=vel(SDIM)
-            test_gamma=one+R_AIR_PARMS/CV_AIR_PARMS
-            if (abs(test_gamma-shockdrop_gamma).gt.1.0E-8) then
-             print *,"shockdrop_gamma inconsistent with mattype=5 parms"
-             print *,"test_gamma=",test_gamma
-             print *,"shockdrop_gamma=",shockdrop_gamma
-             stop
-            endif 
-            call general_hydrostatic_pressure(test_pres)
-            if (abs(test_pres-shockdrop_P)/test_pres.gt.1.0E-8) then
-             print *,"shockdrop_P inconsistent w/ general_hydrostatic_pressure"
-             stop
-            endif
-            if (fort_material_type(2).ne.5) then
-             print *,"only material_type=5 supported for gas for this problem"
-             stop
-            endif
-            e_jwl=p_jwl/((shockdrop_gamma-one)*den_jwl)
-            call init_massfrac_parm(den_jwl,massfrac_parm,im)
-            call TEMPERATURE_material(den_jwl,massfrac_parm, &
-             temp_jwl,e_jwl, &
-             fort_material_type(im),im)
-            scalc(ibase+1)=den_jwl
-            scalc(ibase+2)=temp_jwl
-           else if (im.eq.1) then ! water
-            ! do nothing (use fort_denconst and fort_initial_temperature)
-           else
-            print *,"im invalid83"
-            stop
-           endif
-
-          endif  ! shockdrop
-
-           ! shock tube problems
-           ! do not use material_type=5 (EOS_air),
-           ! use material_type=18 instead.
-           ! (results should be similar though)
-          if ((probtype.eq.92).or.(probtype.eq.93)) then
-           gamma_jwl=1.4
-
-           if (axis_dir.eq.0) then  ! Sod shock tube
-            den_jwl_left=one
-            den_jwl_right=0.125
-            p_jwl_left=one
-            p_jwl_right=0.1
-            u_jwl_left=zero
-            u_jwl_right=zero
-            xshock=half
-           else if (axis_dir.eq.1) then ! strong shock tube
-            den_jwl_left=one
-            den_jwl_right=0.125
-            p_jwl_left=1.0D+10
-            p_jwl_right=0.1
-            u_jwl_left=zero
-            u_jwl_right=zero
-            xshock=half
-           else if (axis_dir.eq.2) then ! shock turbulence interaction
-            den_jwl_left=3.857148
-            den_jwl_right=one+0.2d0*sin(five*x-five)
-            p_jwl_left=10.333333
-            p_jwl_right=one
-            u_jwl_left=2.629369
-            u_jwl_right=zero
-            xshock=one
-           else if (axis_dir.eq.3) then ! mach>4
-            den_jwl_left=10.0
-            den_jwl_right=1.0
-            p_jwl_left=10.0*(1.4-1.0)
-            p_jwl_right=(1.4-1.0)
-            u_jwl_left=5.0
-            u_jwl_right=zero
-            xshock=one
-            ! Kadioglu, Sussman, Osher, Wright, Kang (smooth test problem)
-           else if (axis_dir.eq.4) then 
-            u_jwl_left=zero
-            u_jwl_right=zero
-            if (adv_dir.eq.1) then
-             rr=x
-            else if (adv_dir.eq.2) then
-             rr=y
-            else if ((adv_dir.eq.3).and.(SDIM.eq.3)) then
-             rr=z
-            else
-             print *,"adv_dir invalid probtype==92,93 (12)"
-             stop
-            endif
-            p_jwl_left=(1.0D+6)+60.0*cos(two*Pi*rr)+100.0*sin(four*Pi*rr)
-            p_jwl_right=p_jwl_left
-            den_jwl_left=fort_denconst(2)*((p_jwl/1.0D+6)**(one/gamma_jwl))
-            den_jwl_right=den_jwl_left
-            xshock=one
-           else 
-            print *,"axis_dir invalid probtype=92 or 93"
-            stop
-           endif
-           if ((axis_dir.eq.0).or. &
-               (axis_dir.eq.1).or. &
-               (axis_dir.eq.2).or. &
-               (axis_dir.eq.3)) then
-            e_jwl_left=p_jwl_left/((gamma_jwl-one)*den_jwl_left)
-            e_jwl_right=p_jwl_right/((gamma_jwl-one)*den_jwl_right)
-            call init_massfrac_parm(den_jwl_left,massfrac_parm,im)
-            call TEMPERATURE_material(den_jwl_left,massfrac_parm, &
-             temp_jwl_left,e_jwl_left, &
-             fort_material_type(im),im)
-            call init_massfrac_parm(den_jwl_right,massfrac_parm,im)
-            call TEMPERATURE_material(den_jwl_right,massfrac_parm, &
-             temp_jwl_right, &
-             e_jwl_right,fort_material_type(im),im)
-           else if (axis_dir.eq.4) then
-            temp_jwl_left=fort_initial_temperature(1)
-            temp_jwl_right=temp_jwl_left
-           else
-            print *,"axis_dir invalid"
-            stop
-           endif
-           if (probtype.eq.92) then
-            if (x.le.xshock) then
-             den_jwl=den_jwl_left 
-             temp_jwl=temp_jwl_left 
-            else if (x.gt.xshock) then
-             den_jwl=den_jwl_right
-             temp_jwl=temp_jwl_right
-            else
-             print *,"x invalid"
-             stop
-            endif
-           else if (probtype.eq.93) then
-            if (xblob.lt.xshock) then
-             if (im.eq.1) then
-              den_jwl=den_jwl_left
-              temp_jwl=temp_jwl_left 
-             else if (im.eq.2) then
-              if (x.le.xshock) then
-               den_jwl=den_jwl_left
-               temp_jwl=temp_jwl_left 
-              else if (x.gt.xshock) then
-               den_jwl=den_jwl_right
-               temp_jwl=temp_jwl_right
-              else
-               print *,"x invalid"
-               stop
-              endif
-             else
-              print *,"im invalid84"
-              stop
-             endif
-            else if (xblob.gt.xshock) then
-             if (im.eq.1) then
-              if (x.le.xshock) then
-               den_jwl=den_jwl_left
-               temp_jwl=temp_jwl_left 
-              else if (x.gt.xshock) then
-               den_jwl=den_jwl_right
-               temp_jwl=temp_jwl_right
-              else
-               print *,"x invalid"
-               stop
-              endif
-             else if (im.eq.2) then
-              den_jwl=den_jwl_right
-              temp_jwl=temp_jwl_right
-             else
-              print *,"im invalid85"
-              stop
-             endif
-            else if (xblob.eq.xshock) then 
-             if (im.eq.1) then
-              den_jwl=den_jwl_left
-             else if (im.eq.2) then
-              den_jwl=den_jwl_right
-             else
-              print *,"im invalid86"
-              stop
-             endif
-             if (x.le.xshock) then
-              temp_jwl=temp_jwl_left 
-             else if (x.gt.xshock) then
-              temp_jwl=temp_jwl_right
-             else
-              print *,"x invalid"
-              stop
-             endif
-            else
-             print *,"xblob or xshock invalid"
-             stop
-            endif
-           else 
-            print *,"probtype invalid"
-            stop
-           endif
-
-           scalc(ibase+1)=den_jwl
-           scalc(ibase+2)=temp_jwl
-
-          endif ! probtype=92 or 93 (shock tube test problems)
-
-           ! in: fort_initdata
-           ! material=1 is TAIT EOS
-          if (fort_material_type(1).eq.13) then
-           if (im.eq.1) then
-
-            call tait_hydrostatic_pressure_density(xpos, &
-             rhohydro,preshydro,from_boundary_hydrostatic)
-            scalc(ibase+1)=rhohydro
-
-           endif  ! im=1
-          endif ! material_type(1)=13
-
-           ! 2E from Wardlaw's list (bubble jetting) 
-           ! in: initdata
-          if ((probtype.eq.42).and.(axis_dir.eq.1)) then
-           if (im.eq.1) then
-
-            call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
-                    from_boundary_hydrostatic)
-            scalc(ibase+1)=rhohydro
-   
-           else if (im.eq.2) then
-            e_jwl=4.2945D+10
-            den_jwl=1.63D0
-            call init_massfrac_parm(den_jwl,massfrac_parm,im)
-            call TEMPERATURE_material(den_jwl,massfrac_parm, &
-             temp_jwl,e_jwl, &
-             fort_material_type(im),im)
-
-            scalc(ibase+1)=den_jwl     ! density
-            scalc(ibase+2)=temp_jwl
-           endif
-          endif  ! probtype=42 axis_dir=1 (bubble jetting)
-
-          ! Marangoni (heat pipe) test problem
-          ! flag=0 
-          if ((probtype.eq.36).and.(axis_dir.eq.10)) then
-           call position_Temp(0,radblob,radblob2,x,y,z,temp_jwl)
-           scalc(ibase+2)=temp_jwl
-          endif
-
-           ! in: initdata
-          if (probtype.eq.46) then ! cavitation
-
-           if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
-            if (im.eq.1) then ! water
-
-             call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
-                     from_boundary_hydrostatic)
-             scalc(ibase+1)=rhohydro
-
-            else if (im.eq.2) then ! jwl
-             e_jwl=4.2945D+10
-             den_jwl=1.63D0
-             call init_massfrac_parm(den_jwl,massfrac_parm,im)
-             call TEMPERATURE_material(den_jwl,massfrac_parm, &
-              temp_jwl,e_jwl, &
-              fort_material_type(im),im)
-
-             scalc(ibase+1)=den_jwl     ! density
-             scalc(ibase+2)=temp_jwl
-            else if (im.eq.3) then  ! air
-             call general_hydrostatic_pressure(p_hyd)
-             den_jwl=fort_denconst(im)
-             temp_jwl=fort_initial_temperature(im)
-             call init_massfrac_parm(den_jwl,massfrac_parm,im)
-             call INTERNAL_material(den_jwl,massfrac_parm, &
-              temp_jwl,e_jwl, &
-              fort_material_type(im),im)
-             call EOS_material(den_jwl,massfrac_parm, &
-              e_jwl,p_jwl, &
-              fort_material_type(im),im)
-             temp_jwl=temp_jwl*p_hyd/p_jwl
-        
-             scalc(ibase+1)=den_jwl
-             scalc(ibase+2)=temp_jwl
-
-            endif
-           else if (axis_dir.eq.10) then
-            if (im.eq.1) then ! water
-             call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
-                     from_boundary_hydrostatic)
-             scalc(ibase+1)=rhohydro
-            endif
-           else if (axis_dir.eq.20) then
-            !do nothing (CODY ESTEBE created test problem,fort_denconst(im) ok)
-           else
-            print *,"axis_dir invalid"
-            stop
-           endif
-          endif  ! probtype=46 (cavitation)
-
-
-           ! (initdata) shock injection with nozzle and pressure BC
-          if ((probtype.eq.53).and.(axis_dir.eq.2)) then
-
-           denroom=fort_denconst(im)
-           temproom=fort_initial_temperature(im)  ! room temp
-
-           if (im.eq.1) then  ! liquid
-            scalc(ibase+1)=denroom
-           else if (im.eq.2) then  ! gas
-            scalc(ibase+1)=denroom
-            imattype=fort_material_type(im)
-
-            if (imattype.eq.0) then
-             ! do nothing
-            else if (imattype.gt.0) then
-
-             call init_massfrac_parm(denroom,massfrac_parm,im)
-             call INTERNAL_material(denroom,massfrac_parm, &
-              temproom,e_room, &
-              imattype,im)
-             call EOS_material(denroom,massfrac_parm, &
-               e_room,p_room,imattype,im)
-             call general_hydrostatic_pressure(p_hyd)
-             temproom=temproom*p_hyd/p_room
-             e_room=e_room*p_hyd/p_room
-             scalc(ibase+2)=temproom  ! temperature
-            else 
-             print *,"imattype invalid fort_initdata"
-             stop
-            endif
-
-           endif
-
-           ! shock injection JICF with compressible gas.
-          else if ((probtype.eq.53).and.(fort_material_type(2).gt.0)) then
-
-           call general_hydrostatic_pressure(p_hyd)
-           scalc(ipresbase+impres)=p_hyd
-
-          else if ((probtype.eq.530).and. &
-                   (axis_dir.eq.1).and. &
-                   (fort_material_type(2).gt.0).and. &
-                   (SDIM.eq.3)) then
-           call general_hydrostatic_pressure(p_hyd)
-           scalc(ipresbase+impres)=p_hyd
-          endif
-
-          ! circular freezing disk
-          ! or spherical boiling
-          if ((probtype.eq.801).and.(axis_dir.eq.3)) then 
-   
-           im_source=1
-           im_dest=2
-           ireverse=0
-           call get_iten(im_source,im_dest,iten,nmat)
-           L_ice_melt=abs(latent_heat(iten+ireverse*nten))
-           TSAT=saturation_temp(iten+ireverse*nten)
-           T_EXTREME=fort_initial_temperature(im_source)
-           cp_melt=get_user_stiffCP(im_source) ! J/Kelvin
-           k_melt=get_user_heatviscconst(im_source) ! W/(m Kelvin)
-  
-           if (SDIM.eq.2) then
-            rstefan=sqrt((x-xblob)**2+(y-yblob)**2)
-           else
-            rstefan=sqrt((x-xblob)**2+(y-yblob)**2+(z-zblob)**2)
-           endif
-           if (rstefan.le.radblob) then
-            T_FIELD=TSAT
-           else
-            den_ratio=max(fort_denconst(im_dest),fort_denconst(im_source))/ &
-                      min(fort_denconst(im_dest),fort_denconst(im_source))
-
-            if (den_ratio.lt.10.0d0) then 
-             call liquid_temperature( &
-              fort_beta(iten+ireverse*nten), & ! lmSt
-              T_EXTREME, &
-              L_ice_melt, &
-              cp_melt, &
-              fort_stefan_number(iten+ireverse*nten), &
-              rstefan, &
-              fort_time_radblob(iten+ireverse*nten), &
-              k_melt, &
-              T_FIELD)
-            else if (den_ratio.ge.10.0) then
-             call superheat_temperature( &
-              fort_alpha(iten+ireverse*nten), &
-              fort_beta(iten+ireverse*nten), &
-              den_ratio, &
-              T_EXTREME, &
-              fort_jacob_number(iten+ireverse*nten), &
-              TSAT, &
-              rstefan, &
-              fort_time_radblob(iten+ireverse*nten), &
-              T_FIELD)
-            else
-             print *,"for_expansion_factor invalid"
-             stop
-            endif
-           endif
-           scalc(ibase+2)=T_FIELD
-
-          endif ! (probtype.eq.801).and.(axis_dir.eq.3)
-
-          if (probtype.eq.802) then ! dissolution
-           scalc(ibase+2)=two   ! T (concentration)
-           call vapordist(xsten,nhalf,dx,bfact,posdiss)
-           if (posdiss.le.zero) then
-            concentration=two
-           else if (posdiss.ge.xhidiss-two*dx(SDIM)) then
-            concentration=one
-           else
-            ispace=NINT(posdiss/dx(SDIM)-half)
-            if (ispace.eq.0) then
-             concen1=two
-             concen2=soln(ispace+1)+one
-            else if (ispace.ge.ndiss-2) then
-             concen1=soln(ispace)+one
-             concen2=one
-            else
-             concen1=soln(ispace)+one
-             concen2=soln(ispace+1)+one
-            endif
-            theta=(posdiss-ispace*dx(SDIM))/dx(SDIM)
-            concentration=(one-theta)*concen1+theta*concen2
-           endif
-           scalc(ibase+2)=concentration   ! T (concentration)
-          endif ! 802 (dissolution)
-
-           ! in: subroutine fort_initdata
-           ! hydrates
-          if (probtype.eq.199) then
-           if (nmat.ne.3) then
-            print *,"3 materials for hydrate reactor"
-            stop
-           endif
-           if (num_species_var.ne.1) then
-            print *,"num_species_var should be 1"
-            stop
-           endif
-           if (im.eq.1) then
-            call INIT_STATE_WATER(x,y,z,time,vel,temp,dens,ccnt) 
-           else if (im.eq.2) then
-            call INIT_STATE_GAS(x,y,z,time,vel,temp,dens,ccnt) 
-           else if (im.eq.3) then
-            call INIT_STATE_HYDRATE(x,y,z,time,vel,temp,dens,ccnt) 
-           else
-            print *,"im invalid87"
-            stop
-           endif
-
-            ! density comes from the inputs file.
-           scalc(ibase+2)=temp
-           scalc(ibase+3)=ccnt
-
-           ! in: subroutine fort_initdata
-          else if (probtype.eq.220) then
-           ! do nothing, density and tempearture are set from the input file
-           ! in the beginning of the loop on im. NO INIT_STATE_*** is called
-
-           ! in: subroutine fort_initdata
-          else if ((probtype.eq.299).or. &
-                   (probtype.eq.301)) then !melting (initial temperature field)
-
-           temp=fort_initial_temperature(im)
-           scalc(ibase+2)=temp
-
-          endif  
-
-         enddo  ! im=1..nmat
-
-        endif ! if (probtype.eq.user_def_probtype) then ... else ... endif
-
-        call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat,time)
-        do im=1,nmat
-         if (is_rigid(nmat,im).eq.1) then
-          if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
-              (FSI_flag(im).eq.8).or. & ! CTML FSI pres vel
-              (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al
-           distbatch(im)=LS(D_DECL(ic,jc,kc),im)
-          else if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
-           ! do nothing
-          else
-           print *,"FSI_flag(im) invalid"
-           stop
-          endif
-         else if (is_rigid(nmat,im).eq.0) then
-          ! do nothing
-         else
-          print *,"is_rigid(nmat,im) invalid"
-          stop
-         endif
-        enddo ! im=1..nmat
-
-         ! in: fort_initdata
-        call stackvolume_batch(xsten,nhalf,dx,bfact,fluiddata,nmat, &
-         0,max_levelstack,materialdist_batch,time)
-        call extract_vof_cen_batch(fluiddata,vofdark,voflight, &
-         cendark,cenlight,nmat)
-
-         ! Rayleigh-Taylor, checkerboard test
-        if (probtype.eq.602) then
-         if ((xblob.ge.1.0D+5).and.(radblob.le.0.001*dx(1))) then
-          if (nmat.ne.2) then
-           print *,"nmat invalid"
-           stop
-          endif
-          dir=2
-          im=1
-          cendark(im,dir)=0.25*dx(2)
-          im=2
-          cendark(im,dir)=-0.25*dx(2)
-          dir=1
-          im=1
-          cendark(im,dir)=0.1*dx(1)
-          im=2
-          cendark(im,dir)=-0.1*dx(2)
-         endif
-        endif ! Rayleigh-Taylor checkerboard test
-
-        debug_vfrac_sum=zero
-
-        do imls=1,nmat
-         LSc(imls)=distbatch(imls)
-        enddo
-
-        do im=1,nmat
-
-         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
-
-         scalc(vofcomp_raw)=vofdark(im)
-          ! centroid relative to centroid of cell; not cell center.
-         do dir=1,SDIM
-          scalc(vofcomp_raw+dir)=cendark(im,dir)
-         enddo
-
-         if (is_rigid(nmat,im).eq.0) then
-          debug_vfrac_sum=debug_vfrac_sum+vofdark(im)
-         else if (is_rigid(nmat,im).eq.1) then
-          if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
-              (FSI_flag(im).eq.8).or. & ! CTML FSI pres vel
-              (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al
-           scalc(vofcomp_raw)=scal(D_DECL(ic,jc,kc),vofcomp_raw)
-           do dir=1,SDIM 
-            scalc(vofcomp_raw+dir)=scal(D_DECL(ic,jc,kc),vofcomp_raw+dir)
-           enddo
-          else if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
-           ! do nothing
-          else
-           print *,"FSI_flag invalid"
-           stop
-          endif
-         else
-          print *,"is_rigid(nmat,im) invalid"
-          stop
-         endif
-
-        enddo  ! im=1..nmat
-        
-        if (debug_vfrac_sum.le.half) then
-         print *,"WARNING in 'process_initdata'"
-         print *,"debug_vfrac_sum= ",debug_vfrac_sum
-         print *,"ic,jc,kc,x,y,z ",ic,jc,kc,x,y,z
-         print *,"time=",time
-         do im=1,nmat
-          print *,"im,vofdark ",im,vofdark(im)
-          print *,"im,distbatch ",im,distbatch(im)
-         enddo
-         call materialdistsolid(x,y,z,distsolid,time,im_solid_initdata)
-         if ((FSI_flag(im_solid_initdata).eq.2).or. & ! prescribed solid (CAD)
-             (FSI_flag(im_solid_initdata).eq.8).or. & ! CTML FSI pres vel
-             (FSI_flag(im_solid_initdata).eq.4)) then ! CTML FSI Goldstein
-          distsolid=LS(D_DECL(ic,jc,kc),im_solid_initdata)
-         endif
-         print *,"result of materialdistsolid: distsolid=",distsolid
-
-         print *,"adjusting the volume fraction of the 1st material"
-         im=1
-         if (is_rigid(nmat,im).ne.0) then
-          print *,"is_rigid(nmat,im).ne.0"
-          stop
-         endif
-         vofdark(im)=vofdark(im)+one-debug_vfrac_sum
-         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
-         scalc(vofcomp_raw)=vofdark(im)
-        endif
-
-        do i1=-1,1
-        do j1=-1,1
-        do k1=k1lo,k1hi
-
-         do isten=-nhalf2,nhalf2
-          dir=1
-          xsten2(isten,dir)=xsten(isten+2*i1,dir)
-          dir=2
-          xsten2(isten,dir)=xsten(isten+2*j1,dir)
-          if (SDIM.eq.3) then
-           dir=SDIM
-           xsten2(isten,dir)=xsten(isten+2*k1,dir)
-          endif
-         enddo ! isten
-         call materialdist_batch(xsten2,nhalf2,dx,bfact,distbatch,nmat,time)
-         do im=1,nmat
-          if (is_rigid(nmat,im).eq.1) then
-           if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
-               (FSI_flag(im).eq.8).or. & ! CTML FSI pres vel
-               (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al.
-            distbatch(im)=LS(D_DECL(ic+i1,jc+j1,kc+k1),im)
-           else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
-            ! do nothing
-           else
-            print *,"FSI_Flag(im) invalid"
-            stop
-           endif
-          else if (is_rigid(nmat,im).eq.0) then
-           ! do nothing
-          else
-           print *,"is_rigid invalid PROB.F90"
-           stop
-          endif 
-          LS_stencil(D_DECL(i1,j1,k1),im)=distbatch(im)
-         enddo
-
-        enddo
-        enddo
-        enddo ! i1,j1,k1 = -1..1
-
-        do im=1,nmat
-         vofcomp_recon=(im-1)*ngeom_recon+1
-         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
-         mofdata(vofcomp_recon)=scalc(vofcomp_raw)
-         mofdata(vofcomp_recon+SDIM+1)=zero ! order
-         mofdata(vofcomp_recon+2*SDIM+2)=zero ! intercept
-         do dir=1,SDIM
-          mofdata(vofcomp_recon+dir)=scalc(vofcomp_raw+dir) ! centroid
-          mofdata(vofcomp_recon+SDIM+dir+1)=zero ! slope
-         enddo
-        enddo  ! im=1..nmat
-
-        ! sum F_fluid=1  sum F_solid <= 1
-        call make_vfrac_sum_ok_base( &
-          cmofsten, &
-          xsten,nhalf,nhalf_box, &
-          bfact,dx, &
-          tessellate, &  ! =0
-          mofdata,nmat,SDIM,201)
-
-        do im=1,nmat
-         vofcomp_recon=(im-1)*ngeom_recon+1
-         voflist(im)=mofdata(vofcomp_recon)
-        enddo
-
-        call calc_error_indicator( &
-         level,max_level, &
-         xsten,nhalf,dx,bfact, &
-         voflist, &
-         LS_stencil, &
-         nmat,nten, &
-         err,time)
-
-        scalc(nc)=err
-
-        if (volcell.le.zero) then
-         print *,"volcell invalid in INITDATA: ",volcell
-         stop
-        endif 
-
-        vfracsum_test=zero
-        do im=1,nmat
-         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
-         if (is_rigid(nmat,im).eq.0) then
-          vfracsum_test=vfracsum_test+scalc(vofcomp_raw)
-         else if (is_rigid(nmat,im).eq.1) then
-          ! do nothing
-         else
-          print *,"is_rigid(nmat,im) invalid"
-          stop
-         endif
-        enddo !im=1..nmat
-
-        if ((vfracsum_test.le.half).or.(vfracsum_test.gt.1.5)) then
-         print *,"FAILED: vfracsum_test= ",vfracsum_test
-         do im=1,nmat
-          vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
-          print *,"im,vfrac ",im,scalc(vofcomp_raw)
-          print *,"im,LS ",im,LSc(im)
-         enddo
-         print *,"level,max_level ",level,max_level
-         print *,"x,y,z= ",x,y,z
-         print *,"dx,dy,dz= ",dx(1),dx(2),dx(SDIM)
-         print *,"ic,jc,kc= ",ic,jc,kc
-         print *,"radblob,radblob2,radblob3,radblob4 ", &
-           radblob,radblob2,radblob3,radblob4
-         print *,"xblob,yblob,zblob ",xblob,yblob,zblob
-         print *,"probtype ",probtype
-         stop
-        endif
-
-        do imls=1,nmat 
-         call find_cut_geom_slope_CLSVOF( &
-          LS_stencil, &
-          lsnormal, &
-          lsnormal_valid, &
-          ls_intercept, &
-          bfact,dx,xsten,nhalf, &
-          imls, &
-          dxmaxLS, &
-          nmat,SDIM)
-
-         if (lsnormal_valid(imls).eq.1) then
-          do dir=1,SDIM
-           LSc(nmat+SDIM*(imls-1)+dir)=lsnormal(imls,dir)
-          enddo
-         else if (lsnormal_valid(imls).eq.0) then
-          ! do nothing
-         else
-          print *,"lsnormal_valid invalid"
-          stop
-         endif
-        enddo !imls=1..nmat 
-
-        do im=1,nmat
-         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
-         scalc(vofcomp_raw)=voflist(im)
-        enddo ! im=1..nmat
-
-        do n=1,nc
-         scal(D_DECL(ic,jc,kc),n)=scalc(n)
-        enddo
-        do imls=1,nmat*(1+SDIM)
-         LS(D_DECL(ic,jc,kc),imls)=LSc(imls)
-        enddo
-
-       enddo
-       enddo
-       enddo ! ic,jc,kc
-
-       if (DO_SANITY_CHECK.eq.1) then
-        call init_sanity(fablo(1),fabhi(1))
-        allocate(comparestate(fablo(1)-1:fabhi(1)+1,5))
-        jc=1
-        kc=0
-        do ic=fablo(1),fabhi(1)
-         comparestate(ic,2)=scal(D_DECL(ic,jc,kc),idenbase+1)
-         comparestate(ic,3)=scal(D_DECL(ic,jc,kc),idenbase+2)
-        enddo
-        call compare_sanity(comparestate,2,2,1)
-        deallocate(comparestate)
-       endif
-
-       return
-       end subroutine fort_initdata
-
-       subroutine FORT_ADDNOISE( &
-        dir, &
-        angular_velocity, &
-        perturbation_mode, &
-        perturbation_eps_temp, &
-        perturbation_eps_vel, &
-        nstate, &
-        nmat, &
-        xlo,dx,  &
-        Snew,DIMS(Snew), &
-        LSnew,DIMS(LSnew), &
-        MAC,DIMS(MAC), &
-        tilelo,tilehi, &
-        fablo,fabhi, &
-        bfact, &
-        level, &
-        finest_level)
-       use probf90_module
-       use global_utility_module
-
-       IMPLICIT NONE
-
-      INTEGER_T dir
-      REAL_T angular_velocity
-      INTEGER_T perturbation_mode
-      REAL_T perturbation_eps_temp
-      REAL_T perturbation_eps_vel
-      INTEGER_T nstate
-      INTEGER_T nmat
-      INTEGER_T level
-      INTEGER_T finest_level
-      REAL_T xlo(SDIM),dx(SDIM)
-      INTEGER_T DIMDEC(Snew)
-      INTEGER_T DIMDEC(LSnew)
-      INTEGER_T DIMDEC(MAC)
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T Snew(DIMV(Snew),nstate)
-      REAL_T LSnew(DIMV(LSnew),nmat)
-      REAL_T MAC(DIMV(MAC))
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
-      INTEGER_T i,j,k,ii,jj,kk,dir2,im,velcomp,tcomp
-      REAL_T problo_arr(SDIM)
-      REAL_T probhi_arr(SDIM)
-      REAL_T sinprod
-
-      nhalf=3
-
-      if (bfact.lt.1) then
-       print *,"bfact invalid200"
-       stop
-      endif
-      if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if (nstate.ne.(SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
-       print *,"nstate invalid"
-       stop
-      endif
-      if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid add noise"
-       stop
-      endif
-
-      problo_arr(1)=problox
-      problo_arr(2)=probloy
-      probhi_arr(1)=probhix
-      probhi_arr(2)=probhiy
-      if (SDIM.eq.3) then
-       problo_arr(SDIM)=probloz
-       probhi_arr(SDIM)=probhiz
-      endif
-
-      ii=0
-      jj=0
-      kk=0
-      if (dir.eq.0) then
-       ii=1
-      else if (dir.eq.1) then
-       jj=1
-      else if ((dir.eq.2).and.(SDIM.eq.3)) then
-       kk=1
-      else
-       print *,"dir invalid in addnoise "
-       stop
-      endif
-
-      call checkbound(fablo,fabhi,DIMS(Snew),1,-1,7)
-      call checkbound(fablo,fabhi,DIMS(LSnew),1,-1,7)
-      call checkbound(fablo,fabhi,DIMS(MAC),0,dir,7)
-
-      if (perturbation_mode.le.0) then
-       print *,"perturbation_mode invalid"
-       stop
-      endif 
-      if (perturbation_mode.gt.1024) then
-       print *,"perturbation_mode too large"
-       stop
-      endif 
-      if (perturbation_eps_temp.lt.zero) then
-       print *,"perturbation_eps_temp invalid"
-       stop
-      endif 
-      if (perturbation_eps_vel.lt.zero) then
-       print *,"perturbation_eps_vel invalid"
-       stop
-      endif 
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-       call gridsten_level(xsten,i,j,k,level,nhalf)
-
-       sinprod=one
-       do dir2=1,SDIM
-        if (probhi_arr(dir2).le.problo_arr(dir2)) then
-         print *,"probhi_arr invalid"
-         stop
-        endif
-        sinprod=sinprod*sin(two*Pi*perturbation_mode* &
-          (xsten(0,dir2)-problo_arr(dir2))/ &
-          (probhi_arr(dir2)-problo_arr(dir2)))
-       enddo ! dir2
-
-       if (probtype.eq.82) then ! annulus
-
-        if (SDIM.ne.3) then
-         print *,"annulus is a 3d problem"
-         stop
-        endif
-
-        if ((levelrz.eq.0).or.(levelrz.eq.3)) then
-
-         do im=1,nmat
-         
-          if (im.eq.1) then
-           velcomp=dir+1
-           Snew(D_DECL(i,j,k),velcomp)= &
-            Snew(D_DECL(i,j,k),velcomp)+ &
-            perturbation_eps_vel*probhi_arr(1)*angular_velocity*sinprod
-          endif
-
-          if (dir.eq.0) then
-           tcomp=STATECOMP_STATES+ &
-            (im-1)*num_state_material+2
-           Snew(D_DECL(i,j,k),tcomp)= &
-            Snew(D_DECL(i,j,k),tcomp)+ &
-            perturbation_eps_temp*(twall-fort_tempconst(1))*sinprod
-          else if ((dir.eq.1).or.(dir.eq.SDIM-1)) then
-           ! do nothing
-          else
-           print *,"dir invalid add noise"
-           stop
-          endif
-     
-         enddo ! im=1..nmat 
-
-        else
-         print *,"levelrz invalid probtype==82"
-         stop
-        endif 
-
-       else
-        print *,"probtype invalid"
-        stop
-       endif
-         
-      enddo
-      enddo
-      enddo ! i,j,k
-
-      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,5) 
-
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-        ! dir=0..sdim-1
-       call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir,12)
-
-       sinprod=one
-       do dir2=1,SDIM
-        if (probhi_arr(dir2).le.problo_arr(dir2)) then
-         print *,"probhi_arr invalid"
-         stop
-        endif
-        sinprod=sinprod*sin(two*Pi*perturbation_mode* &
-          (xsten(0,dir2)-problo_arr(dir2))/ &
-          (probhi_arr(dir2)-problo_arr(dir2)))
-       enddo
-
-       if (probtype.eq.82) then ! annulus
-
-        if (SDIM.ne.3) then
-         print *,"annulus is a 3d problem"
-         stop
-        endif
-
-        if ((levelrz.eq.0).or.(levelrz.eq.3)) then
-
-         MAC(D_DECL(i,j,k))=MAC(D_DECL(i,j,k))+ &
-           perturbation_eps_vel*probhi_arr(1)*angular_velocity*sinprod
-
-        else
-         print *,"levelrz invalid probtype==82"
-         stop
-        endif 
-
-       else
-        print *,"probtype invalid"
-        stop
-       endif
-
-      enddo
-      enddo
-      enddo ! i,j,k
-
-      return
-      end subroutine FORT_ADDNOISE
-
-      subroutine fort_init_regions_list( &
-       constant_density_all_time, &
-       num_materials_in, &
-       num_threads_in) &
-      bind(c,name='fort_init_regions_list')
-
-      use probcommon_module
-      use geometry_intersect_module
-
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: num_materials_in
-      INTEGER_T, intent(in) :: num_threads_in
-      INTEGER_T, intent(in) :: constant_density_all_time(num_materials_in)
-      INTEGER_T :: im
-      INTEGER_T :: iregion
-      INTEGER_T :: ithread
-      INTEGER_T :: dir
-
-      if (num_materials_in.eq.num_materials) then
-       ! do nothing
-      else
-       print *,"num_materials_in invalid"
-       stop
-      endif
-      if (num_threads_in.eq.geom_nthreads) then
-       ! do nothing
-      else
-       print *,"num_threads_in invalid"
-       stop
-      endif
-      do im=1,num_materials
-       if ((constant_density_all_time(im).eq.0).or. &
-           (constant_density_all_time(im).eq.1)) then
-        ! do nothing
-       else
-        print *,"constant_density_all_time(im) invalid"
-        stop
-       endif
-      enddo ! im=1..num_materials
-
-      number_of_source_regions=0
-
-      call SUB_INIT_REGIONS_LIST( &
-       constant_density_all_time, &
-       num_materials_in, &
-       num_threads_in)
-
-      if (number_of_source_regions.eq.0) then
-       ! do nothing
-      else if (number_of_source_regions.gt.0) then
-       do ithread=1,num_threads_in
-
-        do iregion=1,number_of_source_regions
-         regions_list(iregion,ithread)%region_material_id= &
-           regions_list(iregion,0)%region_material_id
-
-         regions_list(iregion,ithread)%region_dt= &
-           regions_list(iregion,0)%region_dt
-
-         regions_list(iregion,ithread)%region_mass_flux= &
-           regions_list(iregion,0)%region_mass_flux
-
-         regions_list(iregion,ithread)%region_volume_flux= &
-           regions_list(iregion,0)%region_volume_flux
-
-         regions_list(iregion,ithread)%region_temperature_prescribe= &
-           regions_list(iregion,0)%region_temperature_prescribe
-
-         do dir=1,SDIM
-          regions_list(iregion,ithread)%region_velocity_prescribe(dir)= &
-           regions_list(iregion,0)%region_velocity_prescribe(dir)
-         enddo
-
-         regions_list(iregion,ithread)%region_energy_flux= &
-           regions_list(iregion,0)%region_energy_flux
-
-         regions_list(iregion,ithread)%region_volume_raster= &
-           regions_list(iregion,0)%region_volume_raster
-
-         regions_list(iregion,ithread)%region_volume= &
-           regions_list(iregion,0)%region_volume
-         regions_list(iregion,ithread)%region_mass= &
-           regions_list(iregion,0)%region_mass
-         regions_list(iregion,ithread)%region_energy= &
-           regions_list(iregion,0)%region_energy
-         regions_list(iregion,ithread)%region_energy_per_kelvin= &
-           regions_list(iregion,0)%region_energy_per_kelvin
-         regions_list(iregion,ithread)%region_volume_after= &
-           regions_list(iregion,0)%region_volume_after
-         regions_list(iregion,ithread)%region_mass_after= &
-           regions_list(iregion,0)%region_mass_after
-         regions_list(iregion,ithread)%region_energy_after= &
-           regions_list(iregion,0)%region_energy_after
-
-        enddo ! iregion=1,number_of_source_regions
-
-       enddo ! ithread=1..num_threads_in
-      else
-       print *,"number_of_source_regions invalid"
-       stop
-      endif
-
-      end subroutine fort_init_regions_list
-
-      subroutine fort_delete_regions_list(ioproc) &
-      bind(c,name='fort_delete_regions_list')
-
-      use probcommon_module
-      use geometry_intersect_module
-      IMPLICIT NONE
-      INTEGER_T, intent(in) :: ioproc
-      INTEGER_T lower_bound(2)
-      INTEGER_T upper_bound(2)
-      INTEGER_T iregions
-      INTEGER_T dir
-
-      call SUB_DELETE_REGIONS_LIST()
-
-      if (number_of_source_regions.eq.0) then
-       ! do nothing
-      else if (number_of_source_regions.gt.0) then
-       lower_bound=LBOUND(regions_list)
-       upper_bound=UBOUND(regions_list)
-       if ((lower_bound(1).eq.1).and. &
-           (lower_bound(2).eq.0).and. &
-           (upper_bound(1).eq.number_of_source_regions).and. &
-           (upper_bound(2).eq.number_of_threads_regions)) then
-
-        if (ioproc.eq.1) then
-         do iregions=1,number_of_source_regions
-
-          if (regions_list(iregions,0)%region_dt.gt.zero) then
-           ! do nothing
-          else
-           print *,"region_dt must be positive"
-           stop
-          endif
-
-          print *,"iregions=",iregions
-          print *,"regions_list(iregions,0)%region_material_id ", &
-            regions_list(iregions,0)%region_material_id
-          print *,"regions_list(iregions,0)%region_dt ", &
-            regions_list(iregions,0)%region_dt
-          print *,"regions_list(iregions,0)%region_mass_after ", &
-            regions_list(iregions,0)%region_mass_after
-          print *,"regions_list(iregions,0)%region_volume_after ", &
-            regions_list(iregions,0)%region_volume_after
-          print *,"regions_list(iregions,0)%region_energy_after ", &
-            regions_list(iregions,0)%region_energy_after
-
-          print *,"regions_list(iregions,0)%region_mass_flux ", &
-            regions_list(iregions,0)%region_mass_flux
-          print *,"regions_list(iregions,0)%region_volume_flux ", &
-            regions_list(iregions,0)%region_volume_flux
-
-          print *,"regions_list(iregions,0)%region_temperature_prescribe ", &
-            regions_list(iregions,0)%region_temperature_prescribe
-          do dir=1,SDIM
-           print *,"dir,region_velocity_prescribe ", &
-            dir,regions_list(iregions,0)%region_velocity_prescribe(dir)
-          enddo
-
-          print *,"regions_list(iregions,0)%region_energy_flux ", &
-            regions_list(iregions,0)%region_energy_flux
-
-          print *,"regions_list(iregions,0)%region_mass_flux measured: ", &
-            (regions_list(iregions,0)%region_mass_after- &
-             regions_list(iregions,0)%region_mass)/ &
-            regions_list(iregions,0)%region_dt
-
-          print *,"regions_list(iregions,0)%region_volume_flux measured: ", &
-            (regions_list(iregions,0)%region_volume_after- &
-             regions_list(iregions,0)%region_volume)/ &
-            regions_list(iregions,0)%region_dt
-
-          print *,"regions_list(iregions,0)%region_energy_flux measured: ", &
-            (regions_list(iregions,0)%region_energy_after- &
-             regions_list(iregions,0)%region_energy)/ &
-            regions_list(iregions,0)%region_dt
-
-         enddo ! do iregions=1,number_of_source_regions
-        else if (ioproc.eq.0) then
-         ! do nothing
-        else
-         print *,"ioproc invalid"
-         stop
-        endif
-
-        deallocate(regions_list)
-       else
-        print *,"lower_bound or upper_bound invalid"
-        stop
-       endif
-      else
-       print *,"number_of_source_regions invalid"
-       stop
-      endif
-
-      end subroutine fort_delete_regions_list
-
-      subroutine fort_initvelocity( &
-        level,time, &
-        tilelo,tilehi, &
-        fablo,fabhi,bfact, &
-        vel,DIMS(vel), &
-        dx,xlo,xhi, &
-        Re,We,RGASRWATER) &
-      bind(c,name='fort_initvelocity')
-
-      use probf90_module
-      use global_distance_module
-      use global_utility_module
-      use hydrateReactor_module
-      use unimaterialChannel_module
-      use River
-      use shockdrop
-      use USERDEF_module
-      use CAV3D_module
-      use HELIX_module
-      use TSPRAY_module
-      use CAV2Dstep_module
-      use ZEYU_droplet_impact_module
-      use rigid_FSI_module
-      use sinking_particle_module
-
-      IMPLICIT NONE
-
-      REAL_T, intent(out) :: Re,We,RGASRWATER
-      REAL_T kterm,velperturb
-      REAL_T ktermx,velperturbx
-
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(vel)
-      REAL_T, intent(in) :: time, dx(SDIM)
-      REAL_T, intent(in) :: xlo(SDIM), xhi(SDIM)
-
-      REAL_T, intent(out), target :: vel(DIMV(vel),SDIM)
-      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
-
-!     ::::: local variables
-      INTEGER_T i,j,k
-      REAL_T x,y,z
-      REAL_T x_vel,y_vel,z_vel,dist
-      REAL_T xx_vel,yy_vel,zz_vel
-      REAL_T xtemp,ytemp,ztemp
-      REAL_T ytop,radcross,rtest
-      REAL_T outer_rad,areacross,radshrink
-      REAL_T velcell(SDIM)
-      REAL_T cenbc(num_materials,SDIM)
-      REAL_T vfracbatch(num_materials)
-      INTEGER_T nmat,nten
-      REAL_T drat
-      REAL_T temp,dens,ccnt
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T xvec(SDIM)
-      INTEGER_T dir
-      INTEGER_T nhalf
-      REAL_T jumpval,alpha
-
-      REAL_T, allocatable, dimension(:) :: distbatch
-      INTEGER_T velsolid_flag
- 
-      nhalf=3
-
-      vel_ptr=>vel
-
-      if (bfact.lt.1) then
-       print *,"bfact too small"
-       stop
-      endif 
-
-      velsolid_flag=0
-
-      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,1308)
-
-      nmat=num_materials
-      nten=num_interfaces
-
-      allocate(distbatch(nmat))
-
-      if (time.ne.zero) then
-       print *,"time should be zero in initvelocity"
-       stop
-      endif
-
-      call default_rampvel(time,xx_vel,yy_vel,zz_vel)
-
-      if (adv_vel.ne.zero) then
-        print *,"adv_dir,adv_vel ",adv_dir,adv_vel
-      endif
-
-      if (SDIM.eq.2) then
-
-! shear (initvelocity)
-      if (probtype.eq.1) then
-        if (axis_dir.eq.0) then
-         print *,"newtonian liquid"
-        else if ((axis_dir.gt.0).and.(axis_dir.le.7)) then
-         print *,"shear thinning liquid"
-        else if (axis_dir.eq.11) then
-         print *,"viscoelastic outer fluid"
-        else if (axis_dir.eq.12) then
-         print *,"viscoelastic drop"
-        else if (axis_dir.eq.140) then
-         print *,"droplets head on problem vinletgas=initial velocity"
-        else if (axis_dir.eq.141) then
-         print *,"diff. droplets head on problem vinletgas=initial velocity"
-        else if (axis_dir.eq.13) then
-         print *,"middle earth flow"
-        else if (axis_dir.eq.14) then
-         print *,"droplet collision problem vinletgas=initial velocity"
-        else if (axis_dir.eq.15) then
-         print *,"test problem from Zuzio et al"
-        else if (axis_dir.eq.150) then
-         print *,"shock drop interaction problem"
-        else if (axis_dir.eq.151) then
-         print *,"shock column interaction problem"
-        else
-         print *,"axis_dir invalid probtype=1"
-         stop
-        endif
-! bubble
-      else if (probtype.eq.2) then
-       if ((axis_dir.lt.0).or.(axis_dir.gt.7)) then
-        print *,"axis_dir out of range in initbubble"
-        stop
-       else if (axis_dir.eq.0) then
-        print *,"Newtonian liquid being computed...."
-       else
-        print *,"non-newtonian generalized cross carreau model liquid"
-        print *,"axis_dir=",axis_dir
-       endif
-! capillary
-      else if ((probtype.eq.3).or. &
-               (probtype.eq.41)) then
-       print *,"2D pipe problem or rayleigh capillary break up test problem"
-      else if (probtype.eq.4) then
-       print *,"wavenumber is xblob : ",xblob
-       print *,"y=radblob*cos(xblob*pi*x), xblob=2 for rt"
-       print *,"xx_vel,yy_vel ",xx_vel,yy_vel
-! gas burst
-      else if (probtype.eq.8) then
-       print *,"INITIALIZING RZ (axisym) GAS BURST PROBLEM "
-      else if (probtype.eq.14) then
-       print *,"this probtype obsolete"
-       stop
-! jetting 
-      else if (probtype.eq.22) then
-       print *,"jetting obselete"
-! standing wave problem
-      else if (probtype.eq.23) then
-       print *,"standing wave problem (NOT r-z)"
-       print *,"wavelen is xblob : ",xblob
-       print *,"perturbation is radblob ",radblob
-       print *,"base amplitude is yblob ",yblob
-       print *,"y=yblob+radblob*cos(2pi x/xblob)"
-       print *,"levelset < 0 in gas, levelset >0 in liquid"
-       print *,"vfrac = 0 in gas, vfrac =1 in liquid"
-! hanging
-      else if (probtype.eq.25) then
-       print *,"hanging drop problem or bubble column problem"
-       print *,"axis_dir=1..11 if bubble column, axis_dir: ",axis_dir
-       print *,"radius of orifice is radblob: ",radblob
-       print *,"if axis_dir>0, zblob = height of column=",zblob
-       print *,"if axis_dir=0 zblob = radius preejected fluid=",zblob
-       print *,"do not set zblob<0"
-       print *,"advbot = rate water poured in =",advbot
-       print *,"xblob should be 0, xblob=",xblob
-       if (xblob.ne.0.0) then
-        stop
-       endif
-       print *,"yblob=y value of inflow, yblob=",yblob
-    
-       if ((axis_dir.gt.11).or.(axis_dir.lt.0)) then
-        print *,"axis_dir out of range for probtype=25"
-       endif
-       if ((axis_dir.gt.0).and.(zblob.le.zero)) then
-        print *,"zblob should be positive for bubble column problem"
-        stop
-       endif 
-! shed
-      else if ((probtype.eq.30).or.(probtype.eq.32).or. &
-               (probtype.eq.33).or.(probtype.eq.34) ) then
-       print *,"probtype=30 means half circle, probtype=32 means full"
-       print *,"probtype=33 means drop on a slope"
-       print *,"probtype=34 means capillary tube"
-       print *,"probtype=",probtype
-! meniscus
-      else if (probtype.eq.35) then
-       print *,"radblob is NID/2 radblob= ",radblob
-       print *,"yblob is NPT  yblob= ",yblob
-       print *,"in 3d, xblob is domain base size xblob= ",xblob
-      else if (probtype.eq.39) then
-       print *,"standing wave problem (NOT r-z)"
-       print *,"wavelen is xblob : ",xblob
-       print *,"perturbation is radblob ",radblob
-       print *,"base amplitude is yblob ",yblob
-       print *,"y=yblob+radblob*cos(2pi x/xblob)"
-       print *,"levelset < 0 in gas, levelset >0 in liquid"
-       print *,"vfrac = 0 in gas, vfrac =1 in liquid"
-      else if (probtype.eq.40) then
-       if (adv_dir .eq. 1) then
-         print *,"translation in x-direction with adv_vel=",adv_vel
-       else if (adv_dir .eq. 2) then
-         print *,"translation in y-direction with adv_vel=",adv_vel
-       else if (adv_dir.eq.3) then
-         print *,"translation in x and y-direction with adv_vel=",adv_vel
-       else if (adv_dir.eq.4) then
-         print *,"solid body rotation with adv_vel=",adv_vel
-       else if (adv_dir.eq.5) then
-         print *,"stretching with adv_vel=",adv_vel
-       else
-         write(6,*) "error: initvortpatch: adv_dir = ",adv_dir
-         stop
-       endif
-! overturn
-      else if (probtype.eq.45) then
-       ytop=0.5
-       print *,"using ytop=.5"
-      endif
-
-
-      else if (SDIM.eq.3) then
-
-! shear (initvelocity)
-      if (probtype.eq.1) then
-        if (axis_dir.eq.0) then
-         print *,"newtonian liquid"
-        else if ((axis_dir.gt.0).and.(axis_dir.le.7)) then
-         print *,"shear thinning liquid"
-        else if (axis_dir.eq.11) then
-         print *,"LS<0 inside of drop (gas) and LS>0 outside drop (liquid)" 
-        else if (axis_dir.eq.12) then
-         print *,"viscoelastic drop (LS>0 inside, LS<0 outside)"
-        else if (axis_dir.eq.13) then
-         print *,"middle earth flow"
-        else if (axis_dir.eq.14) then
-         print *,"droplet collision problem vinletgas=initial velocity"
-        else if (axis_dir.eq.15) then
-         print *,"Zuzio test problem"
-        else if (axis_dir.eq.150) then
-         print *,"shock drop interaction problem"
-        else if (axis_dir.eq.151) then
-         print *,"shock column interaction problem"
-        else
-         print *,"axis_dir invalid shear probtype axis_dir ", &
-          probtype,axis_dir
-         stop
-        endif
-! bubble
-      else if (probtype.eq.2) then
-       if ((axis_dir.lt.0).or.(axis_dir.gt.7)) then
-        print *,"axis_dir out of range in initbubble"
-        stop
-       else if (axis_dir.eq.0) then
-        print *,"Newtonian liquid being computed...."
-       else
-        print *,"non-newtonian generalized cross carreau model liquid"
-        print *,"axis_dir=",axis_dir
-       endif
-! pipe
-      else if (probtype.eq.41) then
-
-       if (axis_dir.eq.5) then
-        ! do nothing
-       else
-        print *,"pipe problem setup should be modified in 3d"
-        stop
-       endif
-
-      else if (probtype.eq.4) then
-       print *,"wavenumber is xblob : ",xblob
-       print *,"y=radblob*cos(xblob*pi*x), xblob=2 for rt"
-       print *,"xx_vel,yy_vel ",xx_vel,yy_vel
-! splash
-      else if (probtype.eq.7) then
-       print *,"this probtype obsolete"
-       stop
-! gas burst
-      else if (probtype.eq.18) then
-       print *,"not a 3d problem"
-       stop
-! jetting 
-      else if (probtype.eq.22) then
-       print *,"jetting obselete"
-! standing wave problem
-      else if (probtype.eq.23) then
-       print *,"standing wave problem (NOT r-z)"
-       print *,"wavelen is xblob : ",xblob
-       print *,"perturbation is radblob ",radblob
-       print *,"base amplitude is yblob ",yblob
-       print *,"y=yblob+radblob*cos(2pi x/xblob)"
-       print *,"levelset < 0 in gas, levelset >0 in liquid"
-       print *,"vfrac = 0 in gas, vfrac =1 in liquid"
-! hanging
-      else if (probtype.eq.25) then
-       print *,"hanging drop problem or bubble column problem"
-       print *,"axis_dir=1..11 if bubble column, axis_dir: ",axis_dir
-       print *,"radius of orifice is radblob: ",radblob
-       print *,"is axis_dir>0, zblob = height of column=",zblob
-       print *,"otherwise zblob = radius preejected fluid=",zblob
-       print *,"do not set zblob<0"
-       print *,"advbot = rate water poured in =",advbot
-       print *,"xblob should be 0, xblob=",xblob
-       if (xblob.ne.0.0) then
-        stop
-       endif
-       print *,"yblob=y value of inflow, yblob=",yblob
-    
-       if ((axis_dir.gt.11).or.(axis_dir.lt.0)) then
-        print *,"axis_dir out of range in inithanging"
-       endif
-       if ((axis_dir.gt.0).and.(zblob.lt.zero)) then
-        print *,"zblob should be non-negative for bubble column problem"
-        stop
-       endif 
-! shed
-      else if ((probtype.eq.30).or.(probtype.eq.32).or. &
-               (probtype.eq.33).or.(probtype.eq.34) ) then
-       print *,"probtype=30 means half circle, probtype=32 means full"
-       print *,"probtype=33 means drop on a slope"
-       print *,"probtype=34 means capillary tube"
-       print *,"probtype=",probtype
-! meniscus
-      else if (probtype.eq.35) then
-       print *,"radblob is NID/2 radblob= ",radblob
-       print *,"yblob is NPT  yblob= ",yblob
-       print *,"in 3d, xblob is domain base size xblob= ",xblob
-      else if (probtype.eq.39) then
-       print *,"standing wave problem (NOT r-z)"
-       print *,"wavelen is xblob : ",xblob
-       print *,"perturbation is radblob ",radblob
-       print *,"base amplitude is yblob ",yblob
-       print *,"y=yblob+radblob*cos(2pi x/xblob)"
-       print *,"levelset < 0 in gas, levelset >0 in liquid"
-       print *,"vfrac = 0 in gas, vfrac =1 in liquid"
-! overturn
-      else if (probtype.eq.45) then
-       ytop=0.5
-       print *,"using ytop=.5"
-      endif
-
-      else
-       print *,"dimension bust"
-       stop
-      endif
-
-      if (1.eq.0) then
-       print *,"xx_vel= ",xx_vel 
-       print *,"yy_vel= ",yy_vel 
-       print *,"zz_vel= ",zz_vel 
-      endif
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-        x_vel=xx_vel
-        y_vel=yy_vel
-        z_vel=zz_vel
-
-        call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
-
-        x=xsten(0,1)
-        y=xsten(0,2)
-        z=xsten(0,SDIM)
-        do dir=1,SDIM
-         xvec(dir)=xsten(0,dir)
-        enddo
-
-        if (is_in_probtype_list().eq.1) then
-
-         call SUB_LS(xvec,time,distbatch,num_materials)
-          ! pass dx
-         call SUB_VEL(xvec,time,distbatch,velcell, &
-          velsolid_flag,dx,num_materials)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-        else if (probtype.eq.411) then
-         call CAV3D_LS(xvec,time,distbatch)
-         call CAV3D_VEL(xvec,time,distbatch,velcell,velsolid_flag)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-        else if (probtype.eq.401) then
-         call HELIX_LS(xvec,time,distbatch)
-         call HELIX_VEL(xvec,time,distbatch,velcell,velsolid_flag)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-        else if (probtype.eq.402) then
-         call TSPRAY_LS(xvec,time,distbatch)
-         call TSPRAY_VEL(xvec,time,distbatch,velcell,velsolid_flag)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-        else if (probtype.eq.412) then ! step
-         call CAV2Dstep_LS(xvec,time,distbatch)
-         call CAV2Dstep_VEL(xvec,time,distbatch,velcell,velsolid_flag)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-        else if (probtype.eq.413) then ! ZEYU droplet impact
-         call ZEYU_droplet_impact_LS(xvec,time,distbatch)
-          ! pass dx
-         call ZEYU_droplet_impact_LS_VEL(xvec,time,distbatch,velcell, &
-          velsolid_flag,dx)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-        else if (probtype.eq.533) then
-         call rigid_FSI_LS(xvec,time,distbatch)
-         call rigid_FSI_VEL(xvec,time,distbatch,velcell,velsolid_flag)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-        else if (probtype.eq.534) then
-         call sinking_FSI_LS(xvec,time,distbatch)
-         call sinking_FSI_VEL(xvec,time,distbatch,velcell,velsolid_flag)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-        else if (probtype.eq.311) then ! user defined example
-         call USERDEF_LS(xvec,time,distbatch)
-         call USERDEF_VEL(xvec,time,distbatch,velcell,velsolid_flag)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-        else if (probtype.eq.82) then ! annulus (2D or 3D) (in initvelocity)
-         x_vel=zero
-         y_vel=zero
-         z_vel=zero
-
-         ! HYDRATE  (in initvelocity)
-        else if (probtype.eq.199) then
-         call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat,time)
-         if (distbatch(1).ge.zero) then
-          call INIT_STATE_WATER(x,y,z,time,velcell,temp,dens,ccnt)
-         else if (distbatch(2).ge.zero) then
-          call INIT_STATE_GAS(x,y,z,time,velcell,temp,dens,ccnt)
-         else
-          call INIT_STATE_HYDRATE(x,y,z,time,velcell,temp,dens,ccnt)
-         endif
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-         ! in: fort_initvelocity
-        else if (probtype.eq.220) then
-         call UNIMAT_INIT_VEL(x,y,z,velcell)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-        else if ((probtype.eq.299).or. &
-                 (probtype.eq.301)) then ! melting, initial velocity
-
-         x_vel=zero
-         y_vel=zero
-         z_vel=zero
-
-        else if (probtype.eq.209) then  ! river
-
-         call RiverVelocity(x,y,z,velcell,axis_dir,probloz,probhiz)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-          ! Zuzio, initvelocity
-        else if ((probtype.eq.1).and.(axis_dir.eq.15)) then 
-         x_vel=zero
-         y_vel=zero
-         z_vel=zero
-        else if ((probtype.eq.1).and. &
-                 ((axis_dir.eq.150).or. &
-                  (axis_dir.eq.151))) then
-         call shockdrop_velocity(x,y,z,velcell, &
-          xblob,yblob,zblob,radblob,zblob2,axis_dir)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-        else if (probtype.eq.31) then  ! translating circle or sphere
-         call circleuu(velcell(1),x,y,z)
-         call circlevv(velcell(2),x,y,z)
-         if (SDIM.eq.3) then
-          call circleww(velcell(SDIM),x,y,z)
-         endif
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-         ! Marioff injector
-        else if (probtype.eq.537) then
-          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
-          x_vel=velcell(1)
-          y_vel=velcell(2)
-          z_vel=velcell(SDIM)
-
-        else if (probtype.eq.710) then
-           x_vel=zero
-           y_vel=zero
-           z_vel=zero
-
-          ! in "initvelocity":
-          ! melting ice block on substrate.
-        else if (probtype.eq.59) then
-          x_vel=zero
-          y_vel=zero
-          z_vel=zero
-
-        else if (probtype.eq.201) then ! stratified bubble (initvelocity)
-
-         if (advbot.eq.zero) then
-          ! do nothing
-         else
-          x_vel=zero
-          y_vel=zero
-          z_vel=zero
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
-          if (vfracbatch(2).gt.zero) then
-           if (SDIM.eq.2) then
-            y_vel=-abs(advbot)
-           else if (SDIM.eq.3) then
-            z_vel=-abs(advbot)
-           else
-            print *,"dimension bust"
-            stop
-           endif
-          endif
-         endif ! advbot <> 0
-
-         ! shock tube problems (initvelocity)
-        else if ((probtype.eq.92).or.(probtype.eq.93)) then 
-         x_vel=zero
-         y_vel=zero
-         z_vel=zero
-         if (axis_dir.eq.0) then ! Sod shock tube
-          if (x.le.half) then
-           x_vel=zero
-          else
-           x_vel=zero
-          endif
-         else if (axis_dir.eq.1) then ! strong shock tube
-          if (x.le.half) then
-           x_vel=zero
-          else
-           x_vel=zero
-          endif
-         else if (axis_dir.eq.2) then ! shock-turbulence
-          if (x.le.one) then
-           x_vel=2.629369
-          else
-           x_vel=zero
-          endif
-         else if (axis_dir.eq.3) then ! mach>4
-          if (x.le.one) then
-           x_vel=5.0
-          else
-           x_vel=zero
-          endif
-         else if (axis_dir.eq.4)  then ! smooth problem
-          x_vel=zero
-          y_vel=zero
-          z_vel=zero
-         else
-          print *,"axis_dir invalid probtype=92"
-          stop
-         endif
-
-        else if (SDIM.eq.2) then
-
-
-         if (probtype.eq.801.and.axis_dir.eq.3) then ! convective evaporation
-          if(sqrt( (x-xblob)**2+(y-yblob)**2 ).lt.radblob) then
-            x_vel=zero
-          endif
-
-           ! dissolution initial velocity
-         else if (probtype.eq.802) then
-          x_vel=zero
-          y_vel=zero
-          call vapordist(xsten,nhalf,dx,bfact,dist)
-          if (dist.gt.radblob) then
-           dist=radblob
-          endif
-          if (dist.ge.half*dx(SDIM)) then
-           kterm=two*Pi*yblob2*y/(two*radblob)
-           velperturb=one+radblob2*cos(kterm)
-           ktermx=two*Pi*yblob2*x/(two*radblob)
-           velperturbx=one+radblob2*cos(ktermx)
-           if (1.eq.0) then
-            x_vel=1.5*adv_vel*velperturb*velperturbx* &
-               (one-(dist/radblob)**2)
-           else
-            x_vel=adv_vel*velperturb*velperturbx  ! plug flow
-           endif
-           y_vel=adv_vel*radblob2*cos(kterm)*cos(ktermx)
-          endif
-         else if (probtype.eq.602) then  ! Rayleigh Taylor
-          x_vel=zero
-          y_vel=zero
-         else if ((probtype.eq.1).and.(axis_dir.lt.150)) then
-          if (axis_dir.eq.11) then
-           x_vel=vinletgas*(y/yblob-one)
-          else if (axis_dir.eq.14) then
-           dist=radblob-sqrt((x-xblob)**2+(y-yblob)**2)
-           if (dist.ge.zero) then
-             x_vel=zero
-             y_vel=vinletgas
-           endif
-          else if ((axis_dir.eq.140).or.(axis_dir.eq.141)) then
-           dist=max(-sqrt( (x-xblob)**2 + (y-yblob)**2 )+radblob, &
-                    -sqrt( (x-xblob)**2 + (y-yblob2)**2 )+radblob)
-
-           if (dist.ge.zero) then
-             x_vel=zero
-             if( y > half*(yblob+yblob2))then
-              y_vel=-abs(vinletgas)
-             else
-              y_vel=abs(vinletgas)
-             endif
-           endif
-          else if ((axis_dir.eq.12).and.(adv_dir.eq.1).and. &
-                   (vinletgas.eq.zero)) then
-           x_vel=zero  ! no velocity in the droplet at t=0
-          endif
-         else if (probtype.eq.531) then ! falling sphere - INIT_VELOCITY
-          x_vel=zero
-          y_vel=zero
-! Reiber problem
-         else if (probtype.eq.540) then
-          call get_Rieber_velocity(xsten,nhalf,bfact,dx,velcell)
-          y_vel=velcell(SDIM)
-         else if (probtype.eq.17) then  ! drop collide of diesel and water
-! vb-vt=1
-! vb db + vt dt=0
-! -vt dt/db - vt = 1
-! vt=-1/(dt/db + 1)
-! vb=1+vt=dt/db / (1+dt/db)
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
-          drat=fort_denconst(3)/fort_denconst(1)  ! dt/db
-          if (vfracbatch(1).gt.zero) then  ! diesel on bottom
-           y_vel=drat/(one+drat)
-          else if (vfracbatch(3).gt.zero) then  ! water on top
-           y_vel=-one/(one+drat)
-          else
-           y_vel=zero
-          endif  
-         else if (probtype.eq.18) then  ! drop collide same material
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
-          if (vfracbatch(1).gt.zero) then
-           if (y.gt.zero) then
-            y_vel=-half
-           else
-            y_vel=half
-           endif
-          else
-           y_vel=zero
-          endif
-         else if (probtype.eq.51) then ! oscillating column
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
-          if (vfracbatch(1).gt.zero) then
-           x_vel=adv_vel
-          else
-           x_vel=zero
-          endif
-         else if (probtype.eq.102) then ! nozzle
-          if (yblob3.le.zero) then
-           print *,"yblob3 invalid"
-           stop
-          endif
-          x_vel=zero
-          y_vel=zero 
-           ! liquid nozzle: 0<y<yblob+yblob2
-          if (y.le.yblob+yblob2) then
-           outer_rad=radblob3-y*(radblob3-radblob4)/yblob3 
-           areacross=Pi*(outer_rad**2-radblob5**2)
-           if ((x.ge.radblob5).and.(x.le.outer_rad)) then
-            y_vel=advbot*1000.0/areacross
-           endif 
-           ! gas nozzle: 0<y<yblob3
-          else if (y.le.yblob3) then
-           outer_rad=radblob3-y*(radblob3-radblob4)/yblob3
-           areacross=Pi*outer_rad**2
-           if (x.le.outer_rad) then
-            y_vel=advbot*1000.0/areacross
-           endif
-          else  ! expansion region
-           radshrink=radblob7**2-radblob5**2
-           if (radshrink.le.zero) then
-            print *,"radshrink invalid"
-            stop
-           endif
-           radshrink=sqrt(radshrink)
-           outer_rad=radblob4+ &
-             (y-yblob3)*(radshrink-radblob4)/(probhiy-yblob3)
-           areacross=Pi*outer_rad**2
-           if (x.le.outer_rad) then
-            y_vel=advbot*1000.0/areacross
-           endif
-          endif 
-! microfluidics problem initial velocity at t=0
-         else if (probtype.eq.5700) then
-          x_vel=zero
-          y_vel=zero
-!         z_vel=zero
-
-           ! in: fort_initvelocity (2D)
-         else if ((probtype.eq.3).or. &
-                  (probtype.eq.41)) then
-
-          if ((axis_dir.eq.0).or. &
-              (axis_dir.eq.1).or. &
-              (axis_dir.eq.2).or. &
-              (axis_dir.eq.3)) then
-           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)
-           x_vel=velcell(1)
-           y_vel=velcell(2)
-
-           ! in: fort_initvelocity (2D)
-          else if (axis_dir.eq.5) then
-           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)
-           x_vel=velcell(1)
-           y_vel=velcell(2)
-!          z_vel=zero
-          else if (axis_dir.eq.4) then
-
-           if (1.eq.0) then
-            call get_pipe_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat) 
-            if (vfracbatch(1).gt.zero) then
-             dist=half
-            else
-             dist=-half
-            endif
-           else
-            call inletpipedist(x,y,z,nmat,distbatch)   
-            dist=distbatch(1)
-           endif
-  
-           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)  ! time=0
-           y_vel=velcell(2)
-           x_vel=zero
-          else
-           print *,"axis_dir invalid initvel axis_dir=",axis_dir
-           stop
-          endif
-
-! rotate
-         else if (probtype.eq.5) then
-          print *,"this problem obsolete"
-          stop
-! oilexpel
-         else if (probtype.eq.16) then
-          if ((y.gt.yblob).and.(x.le.xblob+radblob)) then
-           y_vel = -abs(advbot)
-          endif
-         else if (probtype.eq.23) then
-          call vapordist(xsten,nhalf,dx,bfact,dist)
-          if (dist.ge.zero) then
-           x_vel=zero
-           y_vel=zero
-          endif
-! validate
-         else if (probtype.eq.24) then
-          x_vel=-sin(Pi*x)*sin(Pi*x)*sin(two*Pi*y)
-          y_vel=sin(Pi*y)*sin(Pi*y)*sin(two*Pi*x)
-         else if (probtype.eq.25) then  ! in initvelocity
-          if (axis_dir.eq.0) then
-           if ((y.gt.yblob).and.(x.le.xblob+radblob)) then
-            y_vel = -abs(advbot)
-           endif
-          endif
-! swirl 2D, in: fort_initvelocity
-         else if (probtype.eq.26) then
-
-          if ((axis_dir.eq.0).or. & !swirl
-              (axis_dir.eq.1)) then
-
-           if (y.le.half) then
-            x_vel=tanh( (y-one/four)*30.0 )
-           else
-            x_vel=tanh( (three/four-y)*30.0 )
-           endif
-           y_vel=0.05*sin(two*Pi*x)
-
-          else if ((axis_dir.eq.2).or. & !vortex confinement
-                   (axis_dir.eq.3)) then
-
-           dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
-           jumpval=tanh(30.0*dist)
-           jumpval=(jumpval+one)/two
-           alpha=(one-jumpval)*vinletgas
-           x_vel=alpha*(y-yblob)
-           y_vel=-alpha*(x-xblob)
-           if ((adv_dir.eq.1).or.(adv_dir.eq.3)) then
-            x_vel=x_vel+adv_vel
-           endif
-           if ((adv_dir.eq.2).or.(adv_dir.eq.3)) then
-            y_vel=y_vel+adv_vel
-           endif
-          else if (axis_dir.eq.10) then !BCG homogeneous bc
-           x_vel=-(sin(Pi*x)**2)*sin(two*Pi*y)
-           y_vel=sin(two*Pi*x)*(sin(Pi*y)**2)
-          else if (axis_dir.eq.11) then  ! 2D BCG periodic
-           x_vel=-sin(two*Pi*x)*cos(two*Pi*y)
-           y_vel=cos(two*Pi*x)*sin(two*Pi*y)
-           if ((adv_dir.eq.1).or.(adv_dir.eq.3)) then
-            x_vel=x_vel+adv_vel
-           endif
-           if ((adv_dir.eq.2).or.(adv_dir.eq.3)) then
-            y_vel=y_vel+adv_vel
-           endif
-          else
-           print *,"axix_dir invalid"
-           stop
-          endif
-             
-         else if (probtype.eq.28) then ! 2D prescribed motion
-          call zalesakuu(x_vel,x,y,z,zero,dx)
-          call zalesakvv(y_vel,x,y,z,zero,dx)
-         else if (probtype.eq.29) then
-          call deformuu(x_vel,x,y,zero,dx)
-          call deformvv(y_vel,x,y,zero,dx)
-         else if (probtype.eq.202) then  ! liquid lens
-          ! do nothing (adv_vel used above if prescribed)
-         else if (probtype.eq.36) then ! bubble 2D
-          if ((axis_dir.eq.2).or.(axis_dir.eq.4)) then
-           x_vel=zero
-           y_vel=zero
-          endif
-          if ((xblob10.gt.zero).and. &
-              (yblob10.ne.zero)) then
-           y_vel=x*yblob10/xblob10
-          endif
-         else if (probtype.eq.37) then
-          ! do nothing
-         else if (probtype.eq.11) then
-          print *,"cavitation with outflow top is deleted"
-          stop
-
-          ! in: fort_initvelocity (2D section)
-         else if (probtype.eq.42) then
-          ! do nothing - bubble jetting 2D
-         else if (probtype.eq.46) then
-          if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
-           ! do nothing cavitation 2D, jwl
-          else if (axis_dir.eq.10) then
-           if (1.eq.0) then
-            call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
-            if (vfracbatch(nmat).gt.zero) then ! sphere
-             y_vel=advbot
-            else
-             y_vel=zero
-            endif
-           endif
-          else if (axis_dir.eq.20) then
-           x_vel=adv_vel
-           y_vel=zero
-          else
-           print *,"axis_dir invalid"
-           stop
-          endif
-! kh
-         else if (probtype.eq.38) then
-          call vapordist(xsten,nhalf,dx,bfact,dist)
-          if (dist.lt.zero) then
-           y_vel=-x_vel*radblob*two*Pi*sin(two*Pi*x/xblob)/xblob
-          else
-           x_vel=zero
-           y_vel=zero
-          endif
-! vstanding
-         else if (probtype.eq.39) then
-          if (axis_dir.eq.0) then
-           x_vel=zero
-           y_vel=zero
-          else
-           print *,"this problem obsolete"
-           stop
-          endif
-! vortpatch
-         else if (probtype.eq.40) then
-          x_vel=zero
-          y_vel=zero
-! overturn
-         else if (probtype.eq.45) then
-          print *,"this probtype obsolete"
-          stop
-! paddle
-         else if (probtype.eq.50) then
-          if (y.lt.zblob) then
-           x_vel=zero
-          endif
-         else if (probtype.eq.58) then
-          x_vel=zero
-! jetbend
-         else if (probtype.eq.53) then
-          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
-          x_vel=velcell(1)
-          y_vel=velcell(2)
-! 2d diesel injector w/needle
-         else if ((probtype.eq.538).or.(probtype.eq.541)) then
-          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
-          x_vel=velcell(1)
-          y_vel=velcell(2)
-! supersonic nozzle: fort_initvelocity
-         else if (probtype.eq.539) then
-          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
-          x_vel=velcell(1)
-          y_vel=velcell(2)
-         else if (probtype.eq.532) then ! imp jets from sides (initvelocity)
-          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
-          x_vel=velcell(1)
-          y_vel=velcell(2)
-
-! 3D jet coaxial
-         else if (probtype.eq.72) then
-          call vapordist(xsten,nhalf,dx,bfact,dist)
-          if (dist.ge.zero) then
-           x_vel=advbot
-          else
-           x_vel=adv_vel
-          endif
-! milkdrop
-         else if (probtype.eq.61) then
-          if (sqrt( (x-xblob)**2+(y-yblob)**2 ).le.radblob) then
-           if (axis_dir.eq.1) then
-            y_vel=-one
-           endif
-          endif
-! nozzle
-         else if ((probtype.eq.63).or.(probtype.eq.64)) then
-          call nozzlerad(z,radcross,zero)
-          if (x.gt.radcross) then
-           y_vel=zero
-          else
-           y_vel=y_vel*(xblob10**2/radcross**2)
-          endif
-! pulse
-         else if (probtype.eq.66) then
-          xtemp=sqrt(three*radblob/(four*zblob*zblob*zblob))
-          x_vel=sqrt(9.8*zblob)*(radblob/zblob)/(cosh(xtemp*x)**2)
-          y_vel=sqrt(three*9.8*zblob)*((radblob/zblob)**(1.5))* &
-            (y/zblob)*tanh(xtemp*x)/(cosh(xtemp*x)**2)
-         else if (probtype.eq.110) then
-          call get_bump_velocity(xsten,nhalf,dx,bfact,x_vel,time)
-          y_vel=zero
-         else if (probtype.eq.701) then
-          ! flapping wing, init_velocity, do nothing: x_vel=adv_vel
-         endif
-
-        else if (SDIM.eq.3) then
-
-         if ((probtype.eq.1).and.(axis_dir.lt.150)) then
-          if ((axis_dir.eq.11).or.(axis_dir.eq.12)) then
-           if (zblob.gt.zero) then
-            x_vel=vinletgas*(z/zblob-one)
-           else if (zblob.eq.zero) then
-            if (probhiz.le.zero) then
-             print *,"probhiz invalid"
-             stop
-            endif
-            x_vel=vinletgas*z/probhiz
-           else
-            print *,"parameters invalid for shear problem"
-            stop
-           endif
-
-           if (xblob10.eq.one) then
-            if (zblob.gt.zero) then
-             x_vel=radblob10+(vinletgas-radblob10)*z/(two*zblob)
-            else
-             if (radblob10.ne.zero) then
-              print *,"zero velocity at axis of symmetry"
-             endif
-             if (zblob10.eq.zero) then
-              print *,"zblob10 should be domain height"
-              stop
-             endif
-             x_vel=vinletgas*z/zblob10
-            endif
-           endif
-          else if (axis_dir.eq.14) then
-           dist=radblob-sqrt((x-xblob)**2+(y-yblob)**2)
-           if (dist.ge.zero) then
-            x_vel=zero
-            y_vel=vinletgas
-           endif
-          endif
-
-! pipe setup at t=0
-! in: fort_initvelocity, 3D
-         else if (probtype.eq.41) then
-          if (axis_dir.eq.5) then
-           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)
-           x_vel=velcell(1)
-           y_vel=velcell(2)
-           z_vel=velcell(SDIM)
-          else
-           print *,"this problem not ready for 3d yet"
-           stop
-          endif
-
-! wave
-         else if (probtype.eq.13) then
-          print *,"option obsolete"
-          stop
-         else if (probtype.eq.14) then
-          print *,"option obsolete"
-          stop
-         else if (probtype.eq.16) then
-          if ((y.gt.yblob).and.(x.le.xblob+radblob)) then
-           y_vel = -abs(advbot)
-          endif
-         else if (probtype.eq.23) then
-          print *,"this option called in error"
-          stop
-! validate
-         else if (probtype.eq.24) then
-          x_vel=-sin(Pi*x)*sin(Pi*x)*sin(two*Pi*y)
-          y_vel=sin(Pi*y)*sin(Pi*y)*sin(two*Pi*x)
-         else if (probtype.eq.25) then
-          if (axis_dir.eq.0) then
-           if ((y.gt.yblob).and.(x.le.xblob+radblob)) then
-            y_vel = -abs(advbot)
-           endif
-          endif
-! swirl 3D
-         else if (probtype.eq.26) then 
-
-          if ((axis_dir.eq.0).or. & !swirl
-              (axis_dir.eq.1)) then
-           ! x-y
-           if (adv_dir.eq.3) then
-            if (y.le.half) then
-             x_vel=tanh( (y-one/four)*30.0 )
-            else
-             x_vel=tanh( (three/four-y)*30.0 )
-            endif
-            y_vel=0.05*sin(two*Pi*x)
-            z_vel=zero
-           ! x-z
-           else if (adv_dir.eq.2) then
-            if (z.le.half) then
-             x_vel=tanh( (z-one/four)*30.0 )
-            else
-             x_vel=tanh( (three/four-z)*30.0 )
-            endif
-            z_vel=0.05*sin(two*Pi*x)
-            y_vel=zero
-           ! y-z
-           else if (adv_dir.eq.1) then
-            if (z.le.half) then
-             y_vel=tanh( (z-one/four)*30.0 )
-            else
-             y_vel=tanh( (three/four-z)*30.0 )
-            endif
-            z_vel=0.05*sin(two*Pi*y)
-            x_vel=zero
-           else
-            print *,"adv_dir invalid probtype==26 (13)"
-            stop
-           endif
-
-          else if ((axis_dir.eq.2).or. & !vortex confinement 3D
-                   (axis_dir.eq.3)) then
-
-           dist=sqrt((x-xblob)**2+(y-yblob)**2+(z-zblob)**2)-radblob
-           jumpval=tanh(30.0*dist)
-           jumpval=(jumpval+one)/two
-           alpha=(one-jumpval)*vinletgas
-           x_vel=alpha*(y-yblob)
-           y_vel=-alpha*(x-xblob)
-           if ((adv_dir.eq.1).or.(adv_dir.eq.4)) then
-            x_vel=x_vel+adv_vel
-           endif
-           if ((adv_dir.eq.2).or.(adv_dir.eq.4)) then
-            y_vel=y_vel+adv_vel
-           endif
-           if ((adv_dir.eq.3).or.(adv_dir.eq.4)) then
-            z_vel=z_vel+adv_vel
-           endif
-
-          else if (axis_dir.eq.11) then ! 3D BCG periodic
-
-           if ((probhix.eq.one).and. &
-               (probhiy.eq.one).and. &
-               (probhiz.eq.half)) then
-            x_vel=-sin(two*Pi*x)*cos(two*Pi*y)
-            y_vel=cos(two*Pi*x)*sin(two*Pi*y)
-            z_vel=zero
-           else if ((probhix.eq.one).and. &
-                    (probhiy.eq.half).and. &
-                    (probhiz.eq.one)) then
-            x_vel=-sin(two*Pi*x)*cos(two*Pi*z)
-            z_vel=cos(two*Pi*x)*sin(two*Pi*z)
-            y_vel=zero
-           else if ((probhix.eq.half).and. &
-                    (probhiy.eq.one).and. &
-                    (probhiz.eq.one)) then
-            y_vel=-sin(two*Pi*y)*cos(two*Pi*z)
-            z_vel=cos(two*Pi*y)*sin(two*Pi*z)
-            x_vel=zero
-           else
-            print *,"probhi x,y, or z invalid"
-            stop
-           endif
-
-           if ((adv_dir.eq.1).or.(adv_dir.eq.4).or. &
-               (adv_dir.eq.5).or.(adv_dir.eq.7)) then
-            x_vel=x_vel+adv_vel
-           endif
-           if ((adv_dir.eq.2).or.(adv_dir.eq.4).or. &
-               (adv_dir.eq.6).or.(adv_dir.eq.7)) then
-            y_vel=y_vel+adv_vel
-           endif
-           if ((adv_dir.eq.3).or.(adv_dir.eq.5).or. &
-               (adv_dir.eq.6).or.(adv_dir.eq.7)) then
-            z_vel=z_vel+adv_vel
-           endif
-
-          else
-           print *,"axix_dir invalid"
-           stop
-          endif
-
-         else if (probtype.eq.28) then
-          call zalesakuu(x_vel,x,y,z,zero,dx)
-          call zalesakvv(y_vel,x,y,z,zero,dx)
-          call zalesakww(z_vel,x,y,z,zero,dx)
-         else if (probtype.eq.29) then
-          call deform3duu(x_vel,x,y,z,zero,dx)
-          call deform3dvv(y_vel,x,y,z,zero,dx)
-          call deform3dww(z_vel,x,y,z,zero,dx)
-! vbubble - this routine is initvelocity
-         else if (probtype.eq.36) then ! bubble 3D
-          if ((axis_dir.eq.2).or.(axis_dir.eq.4)) then
-           x_vel=zero
-           y_vel=zero
-           z_vel=zero
-          endif
-
-          if ((xblob10.gt.zero).and. &
-              ((yblob9.ne.zero).or.(yblob10.ne.zero))) then
-           if (probhix-problox.le.zero) then
-            print *,"probhix or problox invalid"
-            stop
-           endif
-           z_vel=yblob9+(x-problox)*(yblob10-yblob9)/(probhix-problox)
-          endif
-         else if (probtype.eq.37) then
-          ! do nothing
-
-          ! in: fort_initvelocity (3D section)
-         else if (probtype.eq.42) then
-          ! do nothing: bubble jetting 3D
-         else if (probtype.eq.46) then
-          ! do nothing: cavitation 3D
-! kh
-         else if (probtype.eq.38) then
-          call vapordist(xsten,nhalf,dx,bfact,dist)
-          if (dist.lt.zero) then
-           y_vel=-x_vel*radblob*two*Pi*sin(two*Pi*x/xblob)/xblob
-          else
-           x_vel=zero
-           y_vel=zero
-          endif
-! vstanding
-         else if (probtype.eq.39) then
-          print *,"this problem obsolete"
-          stop
-! vortpatch
-         else if (probtype.eq.40) then
-          x_vel=zero
-          y_vel=zero
-! overturn
-         else if (probtype.eq.45) then
-          print *,"this problem obsolete" 
-          stop
-! paddle
-         else if (probtype.eq.50) then
-          if ((z.lt.zblob-radblob).or.(z.gt.zblob+radblob).or. &
-              (y.lt.yblob-radblob).or.(y.gt.yblob+radblob)) then
-           x_vel=zero
-          endif
-! bering
-         else if (probtype.eq.51) then
-          x_vel=zero
-         else if (probtype.eq.58) then
-          x_vel=zero
-         else if (probtype.eq.5501) then ! drop hitting rough surface
-          if (axis_dir.ne.0) then
-           print *,"axis_dir invalid"
-           stop
-          endif
-          x_vel=zero
-          y_vel=zero
-          z_vel=zero
-           ! initialize velocity of droplet only
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
-          if (vfracbatch(1).gt.zero) then
-           z_vel=-abs(advbot)
-          endif
-! microfluidics problem initial velocity at t=0
-         else if (probtype.eq.5700) then
-          x_vel=zero
-          y_vel=zero
-          z_vel=zero
-! airblast with coaxial air flow  at t=0
-         else if (probtype.eq.529) then
-          x_vel=zero
-          y_vel=zero
-          z_vel=zero
-! jetbend at t=0
-         else if (probtype.eq.53) then
-          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
-          x_vel=velcell(1)
-          y_vel=velcell(2)
-          z_vel=velcell(SDIM)
-! impinging jets - AIAA 2008-4847
-         else if (probtype.eq.530) then
-          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
-          x_vel=velcell(1)
-          y_vel=velcell(2)
-          z_vel=velcell(SDIM)
-         else if (probtype.eq.532) then ! imp jets from sides (initvelocity)
-          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
-          x_vel=velcell(1)
-          y_vel=velcell(2)
-          z_vel=velcell(SDIM)
-         else if (probtype.eq.536) then
-          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
-          x_vel=velcell(1)
-          y_vel=velcell(2)
-          z_vel=velcell(SDIM)
-
-          ! initvelocity
-          ! 3D diesel injector w/needle
-         else if ((probtype.eq.538).or.(probtype.eq.541)) then
-          call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
-          x_vel=velcell(1)
-          y_vel=velcell(2)
-          z_vel=velcell(SDIM)
-
-! Reiber problem
-         else if (probtype.eq.540) then
-          call get_Rieber_velocity(xsten,nhalf,bfact,dx,velcell)
-          z_vel=velcell(SDIM)
-
-! ysl 05/12/14
-         else if (probtype.eq.17) then  ! drop collide of diesel and water
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
-          drat=fort_denconst(3)/fort_denconst(1)  ! dt/db
-          if (vfracbatch(1).gt.zero) then  ! diesel on bottom
-           y_vel=drat/(one+drat)
-          else if (vfracbatch(3).gt.zero) then  ! water on top
-           y_vel=-one/(one+drat)
-          else
-           y_vel=zero
-          endif
-         else if (probtype.eq.18) then  ! drop collide same material
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
-          if (vfracbatch(1).gt.zero) then
-           if (y.gt.zero) then
-            y_vel=-half
-           else
-            y_vel=half
-           endif
-          else
-           y_vel=zero
-          endif
-
-! milkdrop (initvelocity)
-         else if ((probtype.eq.61).or.(probtype.eq.64)) then
-          dist=sqrt( (x-xblob)**2+(y-yblob)**2+(z-zblob)**2 )-radblob
-          if (dist.le.half*dx(SDIM)) then
-           if (axis_dir.eq.1) then
-            z_vel=-one
-           else if (axis_dir.eq.2) then
-            z_vel=vinletgas
-           else
-            print *,"axis_dir invalid"
-            stop
-           endif
-          endif
-! nozzle
-         else if (probtype.eq.63) then
-          call nozzlerad(z,radcross,zero)
-          rtest=sqrt(x**2+y**2)
-          if (rtest.gt.radcross) then
-           z_vel=zero
-          else
-           z_vel = z_vel*(xblob10**2/radcross**2)
-          endif
-! coffee
-         else if (probtype.eq.65) then
-! center of whirlpool is (xtemp,ytemp) = (5,5); strength = radblob5
-          xtemp = (xlo(1)+xhi(1))/2.0
-          ytemp = (xlo(2)+xhi(2))/2.0
-          ztemp = (ytemp-y)*(ytemp-y)+(x-xtemp)*(x-xtemp)+one
-          x_vel = radblob5*(ytemp-y)/ztemp
-          y_vel = radblob5*(x-xtemp)/ztemp
-          if (z.gt.zblob3) then
-           x_vel = zero
-           y_vel = zero
-          endif
-
-! pulse
-         else if (probtype.eq.66) then
-          xtemp=sqrt(three*radblob/(four*zblob*zblob*zblob))
-          x_vel=sqrt(9.8*zblob)*(radblob/zblob)/(cosh(xtemp*x)**2)
-          y_vel=zero
-          z_vel=sqrt(three*9.8*zblob)*((radblob/zblob)**(1.5))* &
-            (z/zblob)*tanh(xtemp*x)/(cosh(xtemp*x)**2)
-! gear
-         else if (probtype.eq.563) then
-          if (levelrz.eq.0) then
-           if (radblob.gt.zero) then
-            call cylinderdist(y,z,x,yblob,zblob,radblob,xblob-radblob, &
-              xblob+radblob,dist)
-            dist=-dist
-            if (dist.ge.zero) then
-             x_vel=advbot
-            endif
-           endif
-          else 
-           print *,"levelrz invalid probtype = 563"
-           stop
-          endif
-         else if (probtype.eq.701) then
-          ! flapping wing, init_velocity, do nothing: x_vel=adv_vel
-         endif
-
-        else
-         print *,"dimension bust"
-         stop
-        endif
-
-        vel(D_DECL(i,j,k),1) = x_vel
-        vel(D_DECL(i,j,k),2) = y_vel
-        if (SDIM.eq.3) then
-         vel(D_DECL(i,j,k),SDIM) = z_vel
-        endif
-
-      enddo
-      enddo
-      enddo
-
-      deallocate(distbatch)
-
-      return
-      end subroutine fort_initvelocity
-
-      subroutine FORT_FORCEVELOCITY( &
-        problo,probhi, &
-        vel,DIMS(vel), &
-        velmac,DIMS(velmac), &
-        dir, &
-        xlo,dx, &
-        tilelo,tilehi, &
-        fablo,fabhi, &
-        bfact, &
-        time, &
-        presbc_array, &
-        outflow_velocity_buffer_size) !(1,1),(2,1),(3,1),(1,2),(2,2),(3,2)
-
-      use probf90_module
-      use global_utility_module
-
-      IMPLICIT NONE
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: DIMDEC(vel)
-      INTEGER_T, intent(in) :: DIMDEC(velmac)
-      INTEGER_T, intent(in) :: dir
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: time
-      REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
-      REAL_T, intent(inout) :: vel(DIMV(vel),SDIM)
-      REAL_T, intent(inout) :: velmac(DIMV(velmac))
-      INTEGER_T, intent(in) :: presbc_array(SDIM,2)
-      REAL_T, intent(in) :: outflow_velocity_buffer_size(2*SDIM)
-      REAL_T vel_in
-
-      INTEGER_T i,j,k,ii,jj,kk
-      INTEGER_T dirloc
-      REAL_T xsten(-1:1,SDIM)
-      REAL_T xsten_cell(SDIM)
-      INTEGER_T nhalf
-      INTEGER_T nmat
-      INTEGER_T velcomp
-
-      nhalf=1
-
-      nmat=num_materials
-
-      if ((dir.lt.0).or.(dir.ge.SDIM)) then
-       print *,"dir invalid forcevelocity"
-       stop
-      endif
-      if (bfact.lt.1) then
-       print *,"fact invalid"
-       stop
-      endif
- 
-      ii=0
-      jj=0
-      kk=0
-      if (dir.eq.0) then
-       ii=1
-      else if (dir.eq.1) then
-       jj=1
-      else if ((dir.eq.2).and.(SDIM.eq.3)) then
-       kk=1
-      else
-       print *,"dir invalid forcevelocity 2"
-       stop
-      endif
-
-      call checkbound(fablo,fabhi,DIMS(vel),1,-1,2400)
-      call checkbound(fablo,fabhi,DIMS(velmac),0,dir,2400)
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-       call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
-       do dirloc=1,SDIM
-        xsten_cell(dirloc)=xsten(0,dirloc)
-       enddo
-       velcomp=dir+1
-       vel_in=vel(D_DECL(i,j,k),velcomp)*global_velocity_scale
-       call vel_freestream( &
-        xsten_cell, &
-        dir,vel_in,time, &
-        presbc_array, &
-        outflow_velocity_buffer_size, &
-        problo,probhi)
-       vel(D_DECL(i,j,k),velcomp)=vel_in/global_velocity_scale
-      enddo
-      enddo
-      enddo
-
-      call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-         growlo,growhi,0,dir,6) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-       call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir,13)
-       do dirloc=1,SDIM
-        xsten_cell(dirloc)=xsten(0,dirloc)
-       enddo
-       vel_in=velmac(D_DECL(i,j,k))*global_velocity_scale
-       call vel_freestream( &
-         xsten_cell, &
-         dir,vel_in,time, &
-         presbc_array, &
-         outflow_velocity_buffer_size, &
-         problo,probhi)
-       velmac(D_DECL(i,j,k))=vel_in/global_velocity_scale
-      enddo
-      enddo
-      enddo
-
-      return
-      end subroutine FORT_FORCEVELOCITY
 
