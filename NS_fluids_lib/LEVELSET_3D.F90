@@ -15752,6 +15752,16 @@ stop
        print *,"local_face_index invalid"
        stop
       endif
+      if ((local_face_index.eq.FACECOMP_FACEDEN).or. &
+          (local_face_index.eq.FACECOMP_FACEHEAT).or. &
+          (local_face_index.eq. &
+           FACECOMP_FACESPEC+project_option-SOLVETYPE_SPEC)) then
+       ! do nothing
+      else
+       print *,"local_face_index invalid"
+       stop
+      endif
+
       if (bfact.lt.1) then
        print *,"bfact invalid101"
        stop
