@@ -15749,16 +15749,22 @@ stop
        ! indexes start at 0
        if ((local_face_index.ge.FACECOMP_NCOMP).or. &
            (local_face_index.lt.0)) then
-       print *,"local_face_index invalid"
+       print *,"local_face_index invalid1"
+       print *,"local_face_index=",local_face_index
+       print *,"FACECOMP_NCOMP=",FACECOMP_NCOMP
        stop
       endif
       if ((local_face_index.eq.FACECOMP_FACEDEN).or. &
           (local_face_index.eq.FACECOMP_FACEHEAT).or. &
+          (local_face_index.eq.FACECOMP_FACEVISC).or. &
+          (local_face_index.eq.FACECOMP_FACESMOOTH).or. &
           (local_face_index.eq. &
            FACECOMP_FACESPEC+project_option-SOLVETYPE_SPEC)) then
        ! do nothing
       else
-       print *,"local_face_index invalid"
+       print *,"local_face_index invalid2"
+       print *,"local_face_index=",local_face_index
+       print *,"FACECOMP_NCOMP=",FACECOMP_NCOMP
        stop
       endif
 
