@@ -21644,7 +21644,7 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
 
  int local_comp=0;
  for (int im=0;im<nmat;im++) {
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  for (int dir=0;dir<3;dir++) {
    int idest=IQ_BODYDRAG_SUM_COMP+local_comp;
    int isource=DRAGCOMP_IQ_BODYFORCE+local_comp;
    NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
@@ -21684,7 +21684,7 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
    NS_sumdata[idest]=NS_DRAG_integrated_quantities[isource];
 
    local_comp++;
-  } // dir=0 .. sdim-1
+  } // dir=0 ... 2
  } // im=0 .. nmat-1
 
  for (int im=0;im<nmat;im++) {

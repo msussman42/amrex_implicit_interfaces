@@ -2171,6 +2171,12 @@ stop
        print *,"level invalid fort_getdrag"
        stop
       endif
+      if (nmat.eq.num_materials) then
+       ! do nothing
+      else
+       print *,"nmat<>num_materials"
+       stop
+      endif
 
       nhalf=3
       nmax=POLYGON_LIST_MAX  ! in: fort_getdrag
@@ -2279,10 +2285,6 @@ stop
         stop
        endif
       enddo
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (rzflag.eq.0) then
        ! do nothing
       else if (rzflag.eq.1) then
