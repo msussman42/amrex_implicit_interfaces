@@ -1939,6 +1939,9 @@ stop
        ! 1<=gravity_dir<=dim
        ! see DRAG_COMP.H
       subroutine fort_getdrag( &
+       tid, &
+       level, &
+       finest_level, &
        isweep, &
        globalsum, &
        globalsum_sweep, &
@@ -1988,6 +1991,10 @@ stop
       use godunov_module
 
       IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
 
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_def
@@ -2158,8 +2165,15 @@ stop
       REAL_T mofdata(nmat*ngeom_recon)
       REAL_T mofdata_tess(nmat*ngeom_recon)
       INTEGER_T local_tessellate
+      INTEGER_T nmax
+
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid fort_getdrag"
+       stop
+      endif
 
       nhalf=3
+      nmax=POLYGON_LIST_MAX  ! in: fort_getdrag
 
       tdata_ptr=>tdata
       viscoten_ptr=>viscoten
@@ -2315,8 +2329,6 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      FIX ME DOUBLE CHECK THIS
-
        ! first sweep - find the mass and centroid of materials
       if (isweep.eq.0) then
        ! do nothing
@@ -2354,7 +2366,7 @@ stop
           stop
          endif
         else
-         print *,"mass bust"
+         print *,"mass=NaN"
          stop
         endif
        enddo ! im_test=1..nmat
@@ -2397,10 +2409,11 @@ stop
          drag(D_DECL(icell,jcell,kcell),dir)=zero
         enddo
 
+        mask_cell=NINT(mask(D_DECL(icell,jcell,kcell)))
+        if (mask_cell.eq.1) then
+
          ! im_test is the material on which a force/torque is applied.
-        do im_test=1,nmat
-         mask_cell=NINT(mask(D_DECL(icell,jcell,kcell)))
-         if (mask_cell.eq.1) then
+         do im_test=1,nmat
           vofcomp=(im_test-1)*ngeom_recon+1
           dencomp=(im_test-1)*num_state_material+1
           mass=den(D_DECL(icell,jcell,kcell),dencomp)*volgrid* & 
@@ -2422,29 +2435,32 @@ stop
             stop
            endif
           enddo ! dir=1..sdim
-         else if (mask_cell.eq.0) then
-          ! do nothing
-         else
-          print *,"mask_cell invalid"
-          stop
-         endif 
-        enddo ! im_test=1..nmat
+
+         enddo ! im_test=1..nmat
+
+        else if (mask_cell.eq.0) then
+         ! do nothing
+        else
+         print *,"mask_cell invalid"
+         stop
+        endif 
 
        else if (isweep.eq.1) then ! above, mass and centroid
 
-        ! force=integral body forces + integral_boundary tau dot n dA
-        !  tau=-pI + 2 mu D + mu_p f(A)/lambda  \tilde{Q} 
-        ! buoyancy force (body forces within the materials).
-        ! Also, update the moment of inertia integral.
+        mask_cell=NINT(mask(D_DECL(icell,jcell,kcell)))
+        if (mask_cell.eq.1) then
 
-        ! DRAGCOMP_FLAG not changed when accumulating the body forces
-        ! within materials.
+         ! force=integral body forces + integral_boundary tau dot n dA
+         !  tau=-pI + 2 mu D + mu_p f(A)/lambda  \tilde{Q} 
+         ! buoyancy force (body forces within the materials).
+         ! Also, update the moment of inertia integral.
 
+         ! DRAGCOMP_FLAG not changed when accumulating the body forces
+         ! within materials.
+ 
          ! calculate the forces exerted on material "im_test"
          ! i.e. im_test is the material on which a force/torque is applied.
-        do im_test=1,nmat
-         mask_cell=NINT(mask(D_DECL(icell,jcell,kcell)))
-         if (mask_cell.eq.1) then
+         do im_test=1,nmat
           vofcomp=(im_test-1)*ngeom_recon+1
           dencomp=(im_test-1)*num_state_material+1
           mass=den(D_DECL(icell,jcell,kcell),dencomp)*volgrid* &
@@ -2496,26 +2512,10 @@ stop
            localsum(ibase+dir)=localsum(ibase+dir)+grav_localtorque(dir)
           enddo
 
-         else if (mask_cell.eq.0) then
-          ! do nothing
-         else
-          print *,"mask_cell invalid"
-          stop
-         endif 
-
-        enddo ! im_test=1..nmat
-
-        ! cells - pressure, viscosity, viscoelastic
-        ! if im_primary<>im_test,
-        !  then a force is applied from (icell,jcell,kcell) to a 
-        !  neighor "im_test" cell.
-
-        mask_cell=NINT(mask(D_DECL(icell,jcell,kcell)))
-
-        if (mask_cell.eq.1) then
-
-          ! im_test is the material on which a given force/torque is applied.
-         do im_test=1,nmat
+          ! cells - pressure, viscosity, viscoelastic
+          ! if im_primary<>im_test,
+          !  then a force is applied from (icell,jcell,kcell) to a 
+          !  neighbor "im_test" cell.
 
           do im=1,nmat
            ls_sort(im)=levelpc(D_DECL(icell,jcell,kcell),im)
@@ -2527,7 +2527,9 @@ stop
 
           if (im_primary.eq.im_test) then
            ! do nothing
-          else if (im_primary.ne.im_test) then
+          else if ((im_primary.ne.im_test).and. &
+                   (im_primary.ge.1).and. &
+                   (im_primary.le.nmat)) then
 
            volume=vol(D_DECL(icell,jcell,kcell))
            presmag=pres(D_DECL(icell,jcell,kcell))
@@ -2757,16 +2759,10 @@ stop
               enddo
               if (partid.le.num_materials_viscoelastic) then
                viscbase=(partid-1)*ENUM_NUM_TENSOR_TYPE
-               Q(1,1)=viscoten(D_DECL(icell,jcell,kcell),viscbase+1)
-               Q(1,2)=viscoten(D_DECL(icell,jcell,kcell),viscbase+2)
-               Q(2,2)=viscoten(D_DECL(icell,jcell,kcell),viscbase+3)
-               Q(3,3)=viscoten(D_DECL(icell,jcell,kcell),viscbase+4)
-               Q(1,3)=zero
-               Q(2,3)=zero
-#if (AMREX_SPACEDIM==3)
-               Q(1,3)=viscoten(D_DECL(icell,jcell,kcell),viscbase+5)
-               Q(2,3)=viscoten(D_DECL(icell,jcell,kcell),viscbase+6)
-#endif
+               do dir=1,ENUM_NUM_TENSOR_TYPE
+                call stress_index(dir,i1,j1)
+                Q(i1,j1)=viscoten(D_DECL(icell,jcell,kcell),viscbase+dir)
+               enddo
                Q(2,1)=Q(1,2)
                Q(3,1)=Q(1,3)
                Q(3,2)=Q(2,3)

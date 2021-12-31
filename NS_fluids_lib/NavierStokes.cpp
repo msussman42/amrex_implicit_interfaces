@@ -17419,7 +17419,13 @@ void NavierStokes::GetDragALL() {
 void
 NavierStokes::GetDrag(int isweep) {
 
+ bool use_tiling=ns_tiling;
  int bfact=parent->Space_blockingFactor(level);
+ int finest_level=parent->finestLevel();
+ if ((level<=finest_level)&&(level>=0)) {
+  // do nothing
+ } else
+  amrex::Error("level or finest_level invalid");
 
  int nmat=num_materials;
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
@@ -17596,7 +17602,7 @@ NavierStokes::GetDrag(int isweep) {
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*localMF[DRAG_MF],false); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*localMF[DRAG_MF],use_tiling); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
   const Box& tilegrid = mfi.tilebox();
@@ -17660,6 +17666,9 @@ NavierStokes::GetDrag(int isweep) {
    // considered.
    // fort_getdrag is declared in: DERIVE_3D.F90
   fort_getdrag(
+   &tid_current,
+   &level,
+   &finest_level,
    &isweep,
    NS_DRAG_integrated_quantities.dataPtr(),
    NS_DRAG_integrated_quantities_sweep.dataPtr(),
