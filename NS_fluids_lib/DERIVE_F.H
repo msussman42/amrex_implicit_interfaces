@@ -61,6 +61,9 @@ extern "C" {
        Real* elastic_viscosity);
 
      void fort_getdrag(
+      int* tid,
+      int* level,
+      int* finest_level,
       int* isweep,
       Real* globalsum,
       int* globalsum_sweep,

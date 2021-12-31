@@ -6429,7 +6429,7 @@ stop
         Q(ii,jj)=zero
        enddo
        enddo
-       do dir=1,2*AMREX_SPACEDIM
+       do dir=1,ENUM_NUM_TENSOR_TYPE
         call stress_index(dir,ii,jj)
         Q(ii,jj)=tensor(D_DECL(i,j,k),dir)
        enddo
@@ -8412,7 +8412,7 @@ stop
         Q(ii,jj)=zero
        enddo
        enddo
-       do dir_local=1,2*AMREX_SPACEDIM
+       do dir_local=1,ENUM_NUM_TENSOR_TYPE
         call stress_index(dir_local,ii,jj)
         Q(ii,jj)=tensor(D_DECL(i,j,k),dir_local)
        enddo
@@ -8632,7 +8632,7 @@ stop
        enddo
        enddo
 
-       do dir_local=1,2*AMREX_SPACEDIM
+       do dir_local=1,ENUM_NUM_TENSOR_TYPE
         call stress_index(dir_local,ii,jj)
         tensor(D_DECL(i,j,k),dir_local)=TQ(ii,jj)
        enddo
@@ -9002,7 +9002,7 @@ stop
          TQ(ii,jj)=Q(ii,jj)*cell_data_deriv(1)
         enddo
         enddo
-        do dir_local=1,2*AMREX_SPACEDIM
+        do dir_local=1,ENUM_NUM_TENSOR_TYPE
          call stress_index(dir_local,ii,jj)
          tensorMAC(D_DECL(i,j,k),dir_local)=TQ(ii,jj)
         enddo
@@ -9682,7 +9682,7 @@ stop
          Q(ii,jj)=zero
        enddo
        enddo
-       do dir_local=1,2*AMREX_SPACEDIM
+       do dir_local=1,ENUM_NUM_TENSOR_TYPE
         call stress_index(dir_local,ii,jj)
         Q(ii,jj)=told(D_DECL(i,j,k),dir_local)
        enddo
@@ -9778,7 +9778,7 @@ stop
          Q(ii,jj)=zero
         enddo
         enddo
-        do dir_local=1,2*AMREX_SPACEDIM
+        do dir_local=1,ENUM_NUM_TENSOR_TYPE
          call stress_index(dir_local,ii,jj)
          Q(ii,jj)=tnew(D_DECL(i,j,k),dir_local)
         enddo
@@ -10020,7 +10020,7 @@ stop
         stop
        endif
 
-       do dir_local=1,2*AMREX_SPACEDIM
+       do dir_local=1,ENUM_NUM_TENSOR_TYPE
         call stress_index(dir_local,ii,jj)
         tnew(D_DECL(i,j,k),dir_local)=Q(ii,jj)
        enddo

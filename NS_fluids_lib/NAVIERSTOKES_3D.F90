@@ -6665,6 +6665,11 @@ END SUBROUTINE SIMP
 
       ncomp_sum_int_user12=ncomp_sum_int_user1+ncomp_sum_int_user2
 
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid fort_summass"
+       stop
+      endif
+
       nhalf=3
       nmax=POLYGON_LIST_MAX  ! in: fort_summass
 

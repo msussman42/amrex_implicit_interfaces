@@ -22952,7 +22952,9 @@ if (im_primary.eq.0) then
    endif
  enddo !im=1..nmat
 
-else if (is_rigid_local(im_primary).eq.1) then
+else if ((im_primary.ge.1).and. &
+         (im_primary.le.nmat).and. &
+         (is_rigid_local(im_primary).eq.1)) then
  ! do nothing
 else
  print *,"is_rigid or im_primary invalid"
