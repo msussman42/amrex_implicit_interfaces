@@ -1941,6 +1941,7 @@ stop
       subroutine fort_getdrag( &
        isweep, &
        globalsum, &
+       globalsum_sweep, &
        localsum, &
        gravity_normalized, &
        gravdir, &
@@ -1996,6 +1997,7 @@ stop
 
       INTEGER_T, intent(in) :: isweep
       REAL_T, intent(in) :: globalsum(N_DRAG_IQ)
+      INTEGER_T, intent(in) :: globalsum_sweep(N_DRAG_IQ)
       REAL_T, intent(inout) :: localsum(N_DRAG_IQ)
       REAL_T, intent(in) :: gravity_normalized
       INTEGER_T, intent(in) :: gravdir
@@ -2153,6 +2155,9 @@ stop
       REAL_T delx
       INTEGER_T partid
       INTEGER_T ibase
+      REAL_T mofdata(nmat*ngeom_recon)
+      REAL_T mofdata_tess(nmat*ngeom_recon)
+      INTEGER_T local_tessellate
 
       nhalf=3
 
@@ -2310,52 +2315,14 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
+      FIX ME DOUBLE CHECK THIS
+
        ! first sweep - find the mass and centroid of materials
       if (isweep.eq.0) then
- 
-       do icell=growlo(1),growhi(1)
-       do jcell=growlo(2),growhi(2)
-       do kcell=growlo(3),growhi(3)
-        do dir=1,N_DRAG
-         drag(D_DECL(icell,jcell,kcell),dir)=zero
-        enddo
-
-         ! im_test is the material on which a force/torque is applied.
-        do im_test=1,nmat
-         mask_cell=NINT(mask(D_DECL(icell,jcell,kcell)))
-         if (mask_cell.eq.1) then
-          call gridsten(xsten,xlo,icell,jcell,kcell,fablo,bfact,dx,nhalf)
-          call Box_volumeFAST(bfact,dx,xsten,nhalf, &
-           volgrid,cengrid,SDIM)
-          vofcomp=(im_test-1)*ngeom_recon+1
-          dencomp=(im_test-1)*num_state_material+1
-          mass=den(D_DECL(icell,jcell,kcell),dencomp)*volgrid* &
-           slrecon(D_DECL(icell,jcell,kcell),vofcomp)
-          localsum(DRAGCOMP_IQ_MASS+im_test)= &
-             localsum(DRAGCOMP_IQ_MASS+im_test)+mass
-          do dir=1,SDIM
-           localsum(DRAGCOMP_IQ_COM+3*(im_test-1)+dir)= &
-            localsum(DRAGCOMP_IQ_COM+3*(im_test-1)+dir)+ &
-             mass* &
-             (slrecon(D_DECL(icell,jcell,kcell),vofcomp+dir)+cengrid(dir))
-          enddo ! dir=1..sdim
-         else if (mask_cell.eq.0) then
-          ! do nothing
-         else
-          print *,"mask_cell invalid"
-          stop
-         endif 
-        enddo ! im_test=1..nmat
-
-       enddo
-       enddo
-       enddo  ! isweep=0 centroids
-
-      else if (isweep.eq.1) then ! above, mass and centroid
-
+       ! do nothing
+      else if (isweep.eq.1) then 
         ! im_test is the material on which a force/torque is applied.
        do im_test=1,nmat
-
         mass=globalsum(DRAGCOMP_IQ_MASS+im_test)
         if (mass.lt.zero) then
          print *,"mass cannot be negative  im_test,mass=",im_test,mass
@@ -2370,7 +2337,7 @@ stop
         else if (mass.gt.zero) then
          do dir=1,SDIM
           global_centroid(dir)= &
-            globalsum(DRAGCOMP_IQ_COM+3*(im_test-1)+dir)/mass
+           globalsum(DRAGCOMP_IQ_COM+3*(im_test-1)+dir)/mass
          enddo
          if (levelrz.eq.0) then
           ! do nothing
@@ -2391,7 +2358,80 @@ stop
          stop
         endif
        enddo ! im_test=1..nmat
-    
+      else
+       print *,"isweep invalid"
+       stop
+      endif
+
+      do icell=growlo(1),growhi(1)
+      do jcell=growlo(2),growhi(2)
+      do kcell=growlo(3),growhi(3)
+
+       do dir=1,nmat*ngeom_recon
+        mofdata(dir)=slrecon(D_DECL(icell,jcell,kcell),dir)
+        mofdata_tess(dir)=mofdata(dir)
+       enddo
+       call gridsten(xsten,xlo,icell,jcell,kcell,fablo,bfact,dx,nhalf)
+       call Box_volumeFAST(bfact,dx,xsten,nhalf, &
+        volgrid,cengrid,SDIM)
+
+        ! before (mofdata): fluids tessellate
+        ! after  (mofdata): fluids and solids tessellate
+       local_tessellate=1
+       call multi_get_volume_tessellate( &
+         local_tessellate, &
+         bfact, &
+         dx,xsten,nhalf, &
+         mofdata_tess, &
+         geom_xtetlist(1,1,1,tid+1), &
+         nmax, &
+         nmax, &
+         nmat, &
+         SDIM, &
+         101)
+
+       ! first sweep - find the mass and centroid of materials
+       if (isweep.eq.0) then
+ 
+        do dir=1,N_DRAG
+         drag(D_DECL(icell,jcell,kcell),dir)=zero
+        enddo
+
+         ! im_test is the material on which a force/torque is applied.
+        do im_test=1,nmat
+         mask_cell=NINT(mask(D_DECL(icell,jcell,kcell)))
+         if (mask_cell.eq.1) then
+          vofcomp=(im_test-1)*ngeom_recon+1
+          dencomp=(im_test-1)*num_state_material+1
+          mass=den(D_DECL(icell,jcell,kcell),dencomp)*volgrid* & 
+                  mofdata_tess(vofcomp)
+          if (globalsum_sweep(DRAGCOMP_IQ_MASS+im_test).eq.0) then
+           localsum(DRAGCOMP_IQ_MASS+im_test)= &
+             localsum(DRAGCOMP_IQ_MASS+im_test)+mass
+          else
+           print *,"globalsum_sweep invalid"
+           stop
+          endif
+          do dir=1,SDIM
+           if (globalsum_sweep(DRAGCOMP_IQ_COM+3*(im_test-1)+dir).eq.0) then
+            localsum(DRAGCOMP_IQ_COM+3*(im_test-1)+dir)= &
+             localsum(DRAGCOMP_IQ_COM+3*(im_test-1)+dir)+ &
+              mass*(mofdata_tess(vofcomp+dir)+cengrid(dir))
+           else
+            print *,"globalsum_sweep invalid"
+            stop
+           endif
+          enddo ! dir=1..sdim
+         else if (mask_cell.eq.0) then
+          ! do nothing
+         else
+          print *,"mask_cell invalid"
+          stop
+         endif 
+        enddo ! im_test=1..nmat
+
+       else if (isweep.eq.1) then ! above, mass and centroid
+
         ! force=integral body forces + integral_boundary tau dot n dA
         !  tau=-pI + 2 mu D + mu_p f(A)/lambda  \tilde{Q} 
         ! buoyancy force (body forces within the materials).
@@ -2399,25 +2439,19 @@ stop
 
         ! DRAGCOMP_FLAG not changed when accumulating the body forces
         ! within materials.
-       do icell=growlo(1),growhi(1)
-       do jcell=growlo(2),growhi(2)
-       do kcell=growlo(3),growhi(3)
 
          ! calculate the forces exerted on material "im_test"
          ! i.e. im_test is the material on which a force/torque is applied.
         do im_test=1,nmat
          mask_cell=NINT(mask(D_DECL(icell,jcell,kcell)))
          if (mask_cell.eq.1) then
-          call gridsten(xsten,xlo,icell,jcell,kcell,fablo,bfact,dx,nhalf)
-          call Box_volumeFAST(bfact,dx,xsten,nhalf, &
-           volgrid,cengrid,SDIM)
           vofcomp=(im_test-1)*ngeom_recon+1
           dencomp=(im_test-1)*num_state_material+1
           mass=den(D_DECL(icell,jcell,kcell),dencomp)*volgrid* &
-           slrecon(D_DECL(icell,jcell,kcell),vofcomp)
+           mofdata_tess(vofcomp)
           do dir=1,SDIM
            gravvector(dir)=zero
-           rvec(dir)=slrecon(D_DECL(icell,jcell,kcell),vofcomp+dir)+ &
+           rvec(dir)=mofdata_tess(vofcomp+dir)+ &
             cengrid(dir)-global_centroid(dir)
           enddo
           gravvector(gravdir)=-mass*gravity_normalized
@@ -2471,17 +2505,10 @@ stop
 
         enddo ! im_test=1..nmat
 
-       enddo
-       enddo
-       enddo  ! icell,jcell,kcell (cells - body forces and torques (buoancy) )
-
         ! cells - pressure, viscosity, viscoelastic
         ! if im_primary<>im_test,
         !  then a force is applied from (icell,jcell,kcell) to a 
         !  neighor "im_test" cell.
-       do icell=growlo(1),growhi(1)
-       do jcell=growlo(2),growhi(2)
-       do kcell=growlo(3),growhi(3)
 
         mask_cell=NINT(mask(D_DECL(icell,jcell,kcell)))
 
@@ -2501,9 +2528,6 @@ stop
           if (im_primary.eq.im_test) then
            ! do nothing
           else if (im_primary.ne.im_test) then
-
-           call gridsten(xsten,xlo, &
-            icell,jcell,kcell,fablo,bfact,dx,nhalf)
 
            volume=vol(D_DECL(icell,jcell,kcell))
            presmag=pres(D_DECL(icell,jcell,kcell))
@@ -2994,14 +3018,14 @@ stop
          stop
         endif
 
-       enddo
-       enddo
-       enddo  ! icell,jcell,kcell
+       else
+        print *,"isweep invalid"
+        stop
+       endif
 
-      else
-       print *,"isweep invalid"
-       stop
-      endif
+      enddo
+      enddo
+      enddo  ! icell,jcell,kcell
 
       return
       end subroutine fort_getdrag

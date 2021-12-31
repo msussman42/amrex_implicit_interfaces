@@ -62,7 +62,9 @@ extern "C" {
 
      void fort_getdrag(
       int* isweep,
-      Real* globalsum,Real* localsum,
+      Real* globalsum,
+      int* globalsum_sweep,
+      Real* localsum,
       Real* gravity_normalized,
       int* gravdir,
       int* ntenvisco,

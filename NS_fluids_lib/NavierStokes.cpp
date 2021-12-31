@@ -321,6 +321,8 @@ Vector<Real> NavierStokes::NS_coflow_Z;
 Vector<Real> NavierStokes::NS_coflow_R_of_Z; 
 
 Vector<Real> NavierStokes::NS_DRAG_integrated_quantities; 
+Vector<int> NavierStokes::NS_DRAG_integrated_quantities_sweep;
+
 Vector<Real> NavierStokes::NS_sumdata; 
 Vector<int> NavierStokes::NS_sumdata_type; 
 Vector<int> NavierStokes::NS_sumdata_sweep; 
@@ -2211,8 +2213,17 @@ void
 NavierStokes::setup_integrated_quantities() {
 
  NS_DRAG_integrated_quantities.resize(N_DRAG_IQ); 
+ NS_DRAG_integrated_quantities_sweep.resize(N_DRAG_IQ); 
  for (int iq=0;iq<N_DRAG_IQ;iq++) {
   NS_DRAG_integrated_quantities[iq]=0.0;
+  NS_DRAG_integrated_quantities_sweep[iq]=1;  // update second sweep
+ }
+ for (int iq=DRAGCOMP_IQ_COM;
+      iq<DRAGCOMP_IQ_COM+3*num_materials;iq++) {
+  NS_DRAG_integrated_quantities_sweep[iq]=0;  // update first sweep
+ }
+ for (int iq=DRAGCOMP_IQ_MASS;iq<DRAGCOMP_IQ_MASS+num_materials;iq++) {
+  NS_DRAG_integrated_quantities_sweep[iq]=0;  // update first sweep
  }
 
  NS_sumdata.resize(IQ_TOTAL_SUM_COMP);
@@ -17487,6 +17498,8 @@ NavierStokes::GetDrag(int isweep) {
 
  if (NS_DRAG_integrated_quantities.size()!=N_DRAG_IQ)
   amrex::Error("NS_DRAG_integrated_quantities invalid size");
+ if (NS_DRAG_integrated_quantities_sweep.size()!=N_DRAG_IQ)
+  amrex::Error("NS_DRAG_integrated_quantities_sweep invalid size");
  
  Vector< Vector<Real> > local_integrated_quantities;
  local_integrated_quantities.resize(thread_class::nthreads);
@@ -17649,6 +17662,7 @@ NavierStokes::GetDrag(int isweep) {
   fort_getdrag(
    &isweep,
    NS_DRAG_integrated_quantities.dataPtr(),
+   NS_DRAG_integrated_quantities_sweep.dataPtr(),
    local_integrated_quantities[tid_current].dataPtr(),
    &gravity_normalized,
    &gravity_dir,
@@ -17697,27 +17711,37 @@ NavierStokes::GetDrag(int isweep) {
 } // omp
  ns_reconcile_d_num(100);
 
- int iqstart=DRAGCOMP_IQ_BODYFORCE;
- int iqend=N_DRAG_IQ;
- if (isweep==0) {
-  iqstart=DRAGCOMP_IQ_COM;
- } else if (isweep==1) {
-  iqend=DRAGCOMP_IQ_COM;
- } else
-  amrex::Error("isweep invalid");
-
  for (int tid=1;tid<thread_class::nthreads;tid++) {
-  for (int iq=iqstart;iq<iqend;iq++) {
-   local_integrated_quantities[0][iq]+=local_integrated_quantities[tid][iq];
-  }
+  for (int iq=0;iq<N_DRAG_IQ;iq++) {
+   if ((isweep==0)&&(NS_DRAG_integrated_quantities_sweep[iq]==0)) {
+    local_integrated_quantities[0][iq]+=local_integrated_quantities[tid][iq];
+   } else if ((isweep==1)&&(NS_DRAG_integrated_quantities_sweep[iq]==1)) {
+    local_integrated_quantities[0][iq]+=local_integrated_quantities[tid][iq];
+   } else if ((isweep==0)&&(NS_DRAG_integrated_quantities_sweep[iq]==1)) {
+    // do nothing
+   } else if ((isweep==1)&&(NS_DRAG_integrated_quantities_sweep[iq]==0)) {
+    // do nothing
+   } else
+    amrex::Error("isweep or drag isweep error");
+  } // iq
  } // tid
 
  ParallelDescriptor::Barrier();
 
- for (int iq=iqstart;iq<iqend;iq++) {
-  ParallelDescriptor::ReduceRealSum(local_integrated_quantities[0][iq]);
-  NS_DRAG_integrated_quantities[iq]+=local_integrated_quantities[0][iq];
- }
+ for (int iq=0;iq<N_DRAG_IQ;iq++) {
+  if ((isweep==0)&&(NS_DRAG_integrated_quantities_sweep[iq]==0)) {
+   ParallelDescriptor::ReduceRealSum(local_integrated_quantities[0][iq]);
+   NS_DRAG_integrated_quantities[iq]+=local_integrated_quantities[0][iq];
+  } else if ((isweep==1)&&(NS_DRAG_integrated_quantities_sweep[iq]==1)) {
+   ParallelDescriptor::ReduceRealSum(local_integrated_quantities[0][iq]);
+   NS_DRAG_integrated_quantities[iq]+=local_integrated_quantities[0][iq];
+  } else if ((isweep==0)&&(NS_DRAG_integrated_quantities_sweep[iq]==1)) {
+   // do nothing
+  } else if ((isweep==1)&&(NS_DRAG_integrated_quantities_sweep[iq]==0)) {
+   // do nothing
+  } else
+   amrex::Error("isweep or drag isweep error");
+ } // iq
 
  combine_flag=2;
  hflag=0;
