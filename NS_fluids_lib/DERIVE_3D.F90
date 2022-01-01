@@ -2140,7 +2140,7 @@ stop
       INTEGER_T im_test
       INTEGER_T im_primary
       INTEGER_T im_side
-      REAL_T volgrid,mass
+      REAL_T volgrid,mass,local_density
       REAL_T cengrid(SDIM)
       REAL_T global_centroid(SDIM)
       REAL_T rvec(3),gravvector(3),rcross(3)
@@ -2386,8 +2386,13 @@ stop
         mofdata_tess(dir)=mofdata(dir)
        enddo
        call gridsten(xsten,xlo,icell,jcell,kcell,fablo,bfact,dx,nhalf)
-       call Box_volumeFAST(bfact,dx,xsten,nhalf, &
-        volgrid,cengrid,SDIM)
+       call Box_volumeFAST(bfact,dx,xsten,nhalf,volgrid,cengrid,SDIM)
+       if (volgrid.gt.zero) then
+        ! do nothing
+       else
+        print *,"volgrid invalid"
+        stop
+       endif
 
         ! before (mofdata): fluids tessellate
         ! after  (mofdata): fluids and solids tessellate
@@ -2418,8 +2423,14 @@ stop
          do im_test=1,nmat
           vofcomp=(im_test-1)*ngeom_recon+1
           dencomp=(im_test-1)*num_state_material+1
-          mass=den(D_DECL(icell,jcell,kcell),dencomp)*volgrid* & 
-                  mofdata_tess(vofcomp)
+          local_density=den(D_DECL(icell,jcell,kcell),dencomp)
+          if (local_density.gt.zero) then
+           ! do nothing
+          else
+           print *,"local_density invalid"
+           stop
+          endif
+          mass=local_density*volgrid*mofdata_tess(vofcomp)
           if (globalsum_sweep(DRAGCOMP_IQ_MASS+im_test).eq.0) then
            localsum(DRAGCOMP_IQ_MASS+im_test)= &
              localsum(DRAGCOMP_IQ_MASS+im_test)+mass
@@ -2465,8 +2476,14 @@ stop
          do im_test=1,nmat
           vofcomp=(im_test-1)*ngeom_recon+1
           dencomp=(im_test-1)*num_state_material+1
-          mass=den(D_DECL(icell,jcell,kcell),dencomp)*volgrid* &
-           mofdata_tess(vofcomp)
+          local_density=den(D_DECL(icell,jcell,kcell),dencomp)
+          if (local_density.gt.zero) then
+           ! do nothing
+          else
+           print *,"local_density invalid"
+           stop
+          endif
+          mass=local_density*volgrid*mofdata_tess(vofcomp)
           do dir=1,SDIM
            gravvector(dir)=zero
            rvec(dir)=mofdata_tess(vofcomp+dir)+ &
@@ -2534,6 +2551,12 @@ stop
                    (im_primary.le.nmat)) then
 
            volume=vol(D_DECL(icell,jcell,kcell))
+           if (volume.gt.zero) then
+            ! do nothing
+           else
+            print *,"volume invalid"
+            stop
+           endif
            presmag=pres(D_DECL(icell,jcell,kcell))
 
             ! check if im_test is a neighbor.
@@ -2585,6 +2608,12 @@ stop
                facearea=areaz(D_DECL(imac,jmac,kmac))
               else
                print *,"facedir invalid"
+               stop
+              endif
+              if (facearea.ge.zero) then
+               ! do nothing
+              else
+               print *,"facearea invalid"
                stop
               endif
 
