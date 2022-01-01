@@ -2102,6 +2102,7 @@ stop
       INTEGER_T imac,jmac,kmac
       INTEGER_T i_face,j_face,k_face
       INTEGER_T i_side,j_side,k_side
+      INTEGER_T i_side_visc,j_side_visc,k_side_visc
       INTEGER_T ii_visc,jj_visc,kk_visc
       INTEGER_T dir
       INTEGER_T veldir
@@ -2138,8 +2139,7 @@ stop
       INTEGER_T im_visc
       INTEGER_T im_test
       INTEGER_T im_primary
-      INTEGER_T im_side(2)
-      INTEGER_T equal_opposite_force
+      INTEGER_T im_side
       REAL_T volgrid,mass
       REAL_T cengrid(SDIM)
       REAL_T global_centroid(SDIM)
@@ -2566,325 +2566,294 @@ stop
               print *,"side_cell invalid"
               stop
              endif
-             do im=1,nmat
-              ls_side(im)=levelpc(D_DECL(i_side,j_side,k_side),im)
-             enddo
-             call get_primary_material(ls_side,nmat,im_side(side_cell+1))
-            enddo !side_cell=0..1
-           
-            equal_opposite_force=1
-
-            if ((im_side(1).eq.im_test).and. &
-                (im_side(2).eq.im_test)) then
-             ! do nothing - both adjoining cells in the forced material
-            else if ((im_side(1).ne.im_test).and. &
-                     (im_side(2).ne.im_test)) then
-             ! do nothing - both adjoining cells not in forced material.
-            else if ( ((im_side(1).eq.im_test).and. &
-                       (im_side(2).ne.im_test)).or. &
-                      ((im_side(1).ne.im_test).and. &
-                       (im_side(2).eq.im_test)) ) then
-             equal_opposite_force=0
-            else
-             print *,"im_side became corrupt"
-             stop
-            endif
-
-            if (equal_opposite_force.eq.0) then
-
-             if (im_side(1).eq.im_test) then
-              side_cell=0
-             else if (im_side(2).eq.im_test) then
-              side_cell=1
-             else
-              print *,"im_side became corrupt"
-              stop
-             endif
-
              imac=icell+side_cell*ii
              jmac=jcell+side_cell*jj
              kmac=kcell+side_cell*kk
 
-             if (facedir.eq.1) then
-              facearea=areax(D_DECL(imac,jmac,kmac))
-             else if (facedir.eq.2) then
-              facearea=areay(D_DECL(imac,jmac,kmac))
-             else if ((facedir.eq.3).and.(SDIM.eq.3)) then
-              facearea=areaz(D_DECL(imac,jmac,kmac))
-             else
-              print *,"facedir invalid"
-              stop
-             endif
-
-              ! nsolid points into the forced material
-             do dir=1,3
-              nsolid(dir)=zero
+             do im=1,nmat
+              ls_side(im)=levelpc(D_DECL(i_side,j_side,k_side),im)
              enddo
-             if (side_cell.eq.0) then
-              nsolid(facedir)=-one
-             else if (side_cell.eq.1) then
-              nsolid(facedir)=one
-             else 
-              print *,"side_cell invalid"
-              stop
-             endif
+             call get_primary_material(ls_side,nmat,im_side)
 
-             drag(D_DECL(icell,jcell,kcell),DRAGCOMP_FLAG+im_test)=1
+             if (im_side.eq.im_test) then
 
-             ibase=DRAGCOMP_PERIM_VECTOR+3*(im_test-1)
-             drag(D_DECL(icell,jcell,kcell),ibase+facedir)= &
-                     facearea*nsolid(facedir)
-
-              !facedir=1..sdim
-             call gridstenMAC(xsten_face,xlo,imac,jmac,kmac,fablo,bfact, &
-               dx,nhalf,facedir-1,91)
-
-             ! im_primary is the forcing fluid at cell (icell,jcell,kcell) 
-             ! which is applying a force/torque to im_test.
-             do dir_visc=1,SDIM
-              ii_visc=0
-              jj_visc=0
-              kk_visc=0
-              if (dir_visc.eq.1) then
-               ii_visc=1
-              else if (dir_visc.eq.2) then
-               jj_visc=1
-              else if ((dir_visc.eq.3).and.(SDIM.eq.3)) then
-               kk_visc=1
+              if (facedir.eq.1) then
+               facearea=areax(D_DECL(imac,jmac,kmac))
+              else if (facedir.eq.2) then
+               facearea=areay(D_DECL(imac,jmac,kmac))
+              else if ((facedir.eq.3).and.(SDIM.eq.3)) then
+               facearea=areaz(D_DECL(imac,jmac,kmac))
               else
-               print *,"dir_visc invalid"
+               print *,"facedir invalid"
                stop
               endif
 
-              do side_visc=1,2
+              ! nsolid points into the forced material
+              do dir=1,3
+               nsolid(dir)=zero
+              enddo
+              if (side_cell.eq.0) then
+               nsolid(facedir)=-one
+              else if (side_cell.eq.1) then
+               nsolid(facedir)=one
+              else 
+               print *,"side_cell invalid"
+               stop
+              endif
 
-               if (side_visc.eq.1) then
-                i_side=icell-ii_visc
-                j_side=jcell-jj_visc
-                k_side=kcell-kk_visc
-                i_face=icell
-                j_face=jcell
-                k_face=kcell
-               else if (side_visc.eq.2) then
-                i_side=icell+ii_visc
-                j_side=jcell+jj_visc
-                k_side=kcell+kk_visc
-                i_face=icell+ii_visc
-                j_face=jcell+jj_visc
-                k_face=kcell+kk_visc
+              drag(D_DECL(icell,jcell,kcell),DRAGCOMP_FLAG+im_test)=1
+
+              !facedir=1..sdim
+              call gridstenMAC(xsten_face,xlo,imac,jmac,kmac,fablo,bfact, &
+               dx,nhalf,facedir-1,91)
+
+              ! im_primary is the forcing fluid at cell (icell,jcell,kcell) 
+              ! which is applying a force/torque to im_test.
+              do dir_visc=1,SDIM
+               ii_visc=0
+               jj_visc=0
+               kk_visc=0
+               if (dir_visc.eq.1) then
+                ii_visc=1
+               else if (dir_visc.eq.2) then
+                jj_visc=1
+               else if ((dir_visc.eq.3).and.(SDIM.eq.3)) then
+                kk_visc=1
                else
-                print *,"side_visc invalid"
+                print *,"dir_visc invalid"
                 stop
                endif
-              
-               do im=1,nmat
-                ls_visc(im)=levelpc(D_DECL(i_side,j_side,k_side),im)
-               enddo
-               call get_primary_material(ls_visc,nmat,im_visc)
-               if (is_rigid(nmat,im_visc).eq.1) then
 
-                partid=0
-                do im=1,im_visc-1
-                 if (is_lag_part(nmat,im).eq.1) then
-                  partid=partid+1
-                 endif
-                enddo
-                if (im_solid_map(partid+1)+1.ne.im_visc) then
-                 print *,"im_solid_map(partid+1)+1.ne.im_visc"
+               do side_visc=1,2
+
+                if (side_visc.eq.1) then
+                 i_side_visc=icell-ii_visc
+                 j_side_visc=jcell-jj_visc
+                 k_side_visc=kcell-kk_visc
+                 i_face=icell
+                 j_face=jcell
+                 k_face=kcell
+                else if (side_visc.eq.2) then
+                 i_side_visc=icell+ii_visc
+                 j_side_visc=jcell+jj_visc
+                 k_side_visc=kcell+kk_visc
+                 i_face=icell+ii_visc
+                 j_face=jcell+jj_visc
+                 k_face=kcell+kk_visc
+                else
+                 print *,"side_visc invalid"
                  stop
                 endif
-                ibase=partid*SDIM
-                do dir=1,SDIM
-                 if (dir_visc.eq.1) then
-                  vel6point(dir_visc,side_visc,dir)= &
-                   solxfab(D_DECL(i_face,j_face,k_face),ibase+dir)
-                 else if (dir_visc.eq.2) then
-                  vel6point(dir_visc,side_visc,dir)= &
-                   solyfab(D_DECL(i_face,j_face,k_face),ibase+dir)
-                 else if ((dir_visc.eq.3).and.(SDIM.eq.3)) then
-                  vel6point(dir_visc,side_visc,dir)= &
-                   solzfab(D_DECL(i_face,j_face,k_face),ibase+dir)
-                 else
-                  print *,"dir_visc invalid"
+              
+                do im=1,nmat
+                 ls_visc(im)= &
+                    levelpc(D_DECL(i_side_visc,j_side_visc,k_side_visc),im)
+                enddo
+                call get_primary_material(ls_visc,nmat,im_visc)
+                if (is_rigid(nmat,im_visc).eq.1) then
+
+                 partid=0
+                 do im=1,im_visc-1
+                  if (is_lag_part(nmat,im).eq.1) then
+                   partid=partid+1
+                  endif
+                 enddo
+                 if (im_solid_map(partid+1)+1.ne.im_visc) then
+                  print *,"im_solid_map(partid+1)+1.ne.im_visc"
                   stop
                  endif
-                enddo ! dir=1..sdim
+                 ibase=partid*SDIM
+                 do dir=1,SDIM
+                  if (dir_visc.eq.1) then
+                   vel6point(dir_visc,side_visc,dir)= &
+                    solxfab(D_DECL(i_face,j_face,k_face),ibase+dir)
+                  else if (dir_visc.eq.2) then
+                   vel6point(dir_visc,side_visc,dir)= &
+                    solyfab(D_DECL(i_face,j_face,k_face),ibase+dir)
+                  else if ((dir_visc.eq.3).and.(SDIM.eq.3)) then
+                   vel6point(dir_visc,side_visc,dir)= &
+                    solzfab(D_DECL(i_face,j_face,k_face),ibase+dir)
+                  else
+                   print *,"dir_visc invalid"
+                   stop
+                  endif
+                 enddo ! dir=1..sdim
 
-               else if (is_rigid(nmat,im_visc).eq.0) then
-                do dir=1,SDIM
-                 vel6point(dir_visc,side_visc,dir)= &
+                else if (is_rigid(nmat,im_visc).eq.0) then
+                 do dir=1,SDIM
+                  vel6point(dir_visc,side_visc,dir)= &
                    half*(vel(D_DECL(icell,jcell,kcell),dir)+ &
-                         vel(D_DECL(i_side,j_side,k_side),dir))
-                enddo
-               else
-                print *,"is_rigid(nmat,im_visc) invalid"
-                stop
-               endif
+                         vel(D_DECL(i_side_visc,j_side_visc,k_side_visc),dir))
+                 enddo
+                else
+                 print *,"is_rigid(nmat,im_visc) invalid"
+                 stop
+                endif
 
-              enddo ! side_visc=1,2
-             enddo ! dir_visc=1..sdim
+               enddo ! side_visc=1,2
+              enddo ! dir_visc=1..sdim
                       
-             do veldir=1,3
-              do dir=1,3
-               gradu(veldir,dir)=zero
+              do veldir=1,3
+               do dir=1,3
+                gradu(veldir,dir)=zero
+               enddo
               enddo
-             enddo
 
-             do veldir=1,SDIM
-              do dir=1,SDIM
-               delx=xsten(1,dir)-xsten(-1,dir)
-               if (delx.gt.zero) then
-                gradu(veldir,dir)= &
-                 (vel6point(dir,2,veldir)-vel6point(dir,1,veldir))/delx
-               else
-                print *,"delx invalid"
-                stop
-               endif
-              enddo ! dir=1..sdim
-             enddo ! veldir=1..sdim 
+              do veldir=1,SDIM
+               do dir=1,SDIM
+                delx=xsten(1,dir)-xsten(-1,dir)
+                if (delx.gt.zero) then
+                 gradu(veldir,dir)= &
+                  (vel6point(dir,2,veldir)-vel6point(dir,1,veldir))/delx
+                else
+                 print *,"delx invalid"
+                 stop
+                endif
+               enddo ! dir=1..sdim
+              enddo ! veldir=1..sdim 
 
-             do j1=1,3
-             do i1=1,3
-              Q(i1,j1)=zero
-             enddo
-             enddo
+              do j1=1,3
+              do i1=1,3
+               Q(i1,j1)=zero
+              enddo
+              enddo
 
               ! if the forcing fluid "im_primary" is a viscoelastic material,
               ! then the viscoelastic force onto "im_test" must be considered.
-             if (fort_is_eulerian_elastic_model( &
+              if (fort_is_eulerian_elastic_model( &
                    fort_elastic_viscosity(im_primary), &
                    fort_viscoelastic_model(im_primary)).eq.1) then 
-              partid=1
-              do while ((fort_im_elastic_map(partid)+1.ne.im_primary).and. &
-                        (partid.le.num_materials_viscoelastic))
-               partid=partid+1
-              enddo
-              if (partid.le.num_materials_viscoelastic) then
-               viscbase=(partid-1)*ENUM_NUM_TENSOR_TYPE
-               do dir=1,ENUM_NUM_TENSOR_TYPE
-                call stress_index(dir,i1,j1)
-                Q(i1,j1)=viscoten(D_DECL(icell,jcell,kcell),viscbase+dir)
+               partid=1
+               do while ((fort_im_elastic_map(partid)+1.ne.im_primary).and. &
+                         (partid.le.num_materials_viscoelastic))
+                partid=partid+1
                enddo
-               Q(2,1)=Q(1,2)
-               Q(3,1)=Q(1,3)
-               Q(3,2)=Q(2,3)
-              else
-               print *,"partid invalid in fort_getdrag"
-               stop
-              endif
-             else if (fort_is_eulerian_elastic_model( &
+               if (partid.le.num_materials_viscoelastic) then
+                viscbase=(partid-1)*ENUM_NUM_TENSOR_TYPE
+                do dir=1,ENUM_NUM_TENSOR_TYPE
+                 call stress_index(dir,i1,j1)
+                 Q(i1,j1)=viscoten(D_DECL(icell,jcell,kcell),viscbase+dir)
+                enddo
+                Q(2,1)=Q(1,2)
+                Q(3,1)=Q(1,3)
+                Q(3,2)=Q(2,3)
+               else
+                print *,"partid invalid in fort_getdrag"
+                stop
+               endif
+              else if (fort_is_eulerian_elastic_model( &
                        fort_elastic_viscosity(im_primary), &
                        fort_viscoelastic_model(im_primary)).eq.0) then 
-              ! do nothing
-             else
-              print *,"fort_is_eulerian_elastic_model invalid"
-              stop
-             endif
+               ! do nothing
+              else
+               print *,"fort_is_eulerian_elastic_model invalid"
+               stop
+              endif
 
-             mu_0=get_user_viscconst(im_primary, &
+              mu_0=get_user_viscconst(im_primary, &
                fort_denconst(im_primary),fort_tempconst(im_primary))
               ! c_mat_visc is initialized in NavierStokes2.cpp: getStateVISC,
               ! getStateVISC_ALL.  "c_mat_visc" includes WALE model and
               ! "viscconst_eddy_wall" effects.
-             mu_non_ambient= &
+              mu_non_ambient= &
                c_mat_visc(D_DECL(icell,jcell,kcell),im_primary)
-             if ((mu_0.ge.zero).and.(mu_non_ambient.ge.zero)) then
-              ! do nothing
-             else
-              print *,"mu_0 or mu_non_ambient invalid"
-              stop
-             endif
-
-             do j1=1,3
-             do i1=1,3
-
-              viscous0_stress_tensor(i1,j1)=mu_0*visc_coef* &
-                 (gradu(i1,j1)+gradu(j1,i1))
-              viscous_stress_tensor(i1,j1)=mu_non_ambient*visc_coef* &
-                 (gradu(i1,j1)+gradu(j1,i1))
-              visco_stress_tensor(i1,j1)=Q(i1,j1)
-
-              pressure_stress_tensor(i1,j1)=zero
-              if (i1.eq.j1) then
-               pressure_stress_tensor(i1,j1)=presmag
+              if ((mu_0.ge.zero).and.(mu_non_ambient.ge.zero)) then
+               ! do nothing
+              else
+               print *,"mu_0 or mu_non_ambient invalid"
+               stop
               endif
 
-             enddo !i1
-             enddo !j1
-
-             do j1=1,3
-              viscous_stress_load(j1)=zero
-              viscous0_stress_load(j1)=zero
-              visco_stress_load(j1)=zero
-              pressure_load(j1)=zero
-
+              do j1=1,3
               do i1=1,3
-               viscous0_stress_load(j1)= &
+
+               viscous0_stress_tensor(i1,j1)=mu_0*visc_coef* &
+                 (gradu(i1,j1)+gradu(j1,i1))
+               viscous_stress_tensor(i1,j1)=mu_non_ambient*visc_coef* &
+                 (gradu(i1,j1)+gradu(j1,i1))
+               visco_stress_tensor(i1,j1)=Q(i1,j1)
+
+               pressure_stress_tensor(i1,j1)=zero
+               if (i1.eq.j1) then
+                pressure_stress_tensor(i1,j1)=presmag
+               endif
+
+              enddo !i1
+              enddo !j1
+
+              do j1=1,3
+               viscous_stress_load(j1)=zero
+               viscous0_stress_load(j1)=zero
+               visco_stress_load(j1)=zero
+               pressure_load(j1)=zero
+
+               do i1=1,3
+                viscous0_stress_load(j1)= &
                  viscous0_stress_load(j1)- &
                    viscous0_stress_tensor(i1,j1)*nsolid(i1)
-               viscous_stress_load(j1)= &
+                viscous_stress_load(j1)= &
                  viscous_stress_load(j1)- &
                    viscous_stress_tensor(i1,j1)*nsolid(i1)
-               visco_stress_load(j1)= &
+                visco_stress_load(j1)= &
                  visco_stress_load(j1)- &
                   visco_stress_tensor(i1,j1)*nsolid(i1)
-              enddo ! i1=1,3
+               enddo ! i1=1,3
 
-              pressure_load(j1)=presmag*nsolid(j1)*facearea
-              viscous0_stress_load(j1)=viscous0_stress_load(j1)*facearea
-              viscous_stress_load(j1)=viscous_stress_load(j1)*facearea
-              visco_stress_load(j1)=visco_stress_load(j1)*facearea
-             enddo ! j1=1,3
+               pressure_load(j1)=presmag*nsolid(j1)*facearea
+               viscous0_stress_load(j1)=viscous0_stress_load(j1)*facearea
+               viscous_stress_load(j1)=viscous_stress_load(j1)*facearea
+               visco_stress_load(j1)=visco_stress_load(j1)*facearea
+              enddo ! j1=1,3
 
 ! global_centroid will be incorrect if the solid geometry is reflected
 ! across a domain boundary.
 
-             do dir=1,SDIM
-              rvec(dir)=xsten(0,dir)-global_centroid(dir)
-             enddo
-             if (SDIM.eq.2) then
-              rvec(3)=zero
-              viscous_stress_load(3)=zero
-              viscous0_stress_load(3)=zero
-              visco_stress_load(3)=zero
-              pressure_load(3)=zero
-             endif
+              do dir=1,SDIM
+               rvec(dir)=xsten(0,dir)-global_centroid(dir)
+              enddo
+              if (SDIM.eq.2) then
+               rvec(3)=zero
+               viscous_stress_load(3)=zero
+               viscous0_stress_load(3)=zero
+               visco_stress_load(3)=zero
+               pressure_load(3)=zero
+              endif
 
-             ibase=DRAGCOMP_TORQUE_ARM+3*(im_test-1)
-             do dir=1,SDIM
-              drag(D_DECL(icell,jcell,kcell),ibase+dir)=rvec(dir)
-             enddo
+              ibase=DRAGCOMP_TORQUE_ARM+3*(im_test-1)
+              do dir=1,SDIM
+               drag(D_DECL(icell,jcell,kcell),ibase+dir)=rvec(dir)
+              enddo
 
-             call crossprod(rvec,visco_stress_load,visco_rcross)
-             call crossprod(rvec,viscous0_stress_load,viscous0_rcross)
-             call crossprod(rvec,viscous_stress_load,viscous_rcross)
-             call crossprod(rvec,pressure_load,pressure_rcross)
+              call crossprod(rvec,visco_stress_load,visco_rcross)
+              call crossprod(rvec,viscous0_stress_load,viscous0_rcross)
+              call crossprod(rvec,viscous_stress_load,viscous_rcross)
+              call crossprod(rvec,pressure_load,pressure_rcross)
 
-             do dir=1,SDIM
-              viscous_localtorque(dir)=zero
-              viscous0_localtorque(dir)=zero
-              visco_localtorque(dir)=zero
-              pressure_localtorque(dir)=zero
-             enddo
+              do dir=1,SDIM
+               viscous_localtorque(dir)=zero
+               viscous0_localtorque(dir)=zero
+               visco_localtorque(dir)=zero
+               pressure_localtorque(dir)=zero
+              enddo
 
-             viscous_localtorque(1)=viscous_rcross(3) ! x-y plane of rotation
-             viscous0_localtorque(1)=viscous0_rcross(3) ! x-y plane of rotation
-             visco_localtorque(1)=visco_rcross(3) ! x-y plane of rotation
-             pressure_localtorque(1)=pressure_rcross(3) ! x-y plane of rotation
+              viscous_localtorque(1)=viscous_rcross(3) ! x-y plane of rotation
+              viscous0_localtorque(1)=viscous0_rcross(3) ! x-y plane of rotation
+              visco_localtorque(1)=visco_rcross(3) ! x-y plane of rotation
+              pressure_localtorque(1)=pressure_rcross(3) ! x-y plane of rotation
 
-             if (SDIM.eq.3) then
+              if (SDIM.eq.3) then
 
-              viscous_localtorque(2)=viscous_rcross(1) !y-z plane of rotation
-              viscous0_localtorque(2)=viscous0_rcross(1)!y-z plane of rotation
-              visco_localtorque(2)=visco_rcross(1) ! y-z plane of rotation
-              pressure_localtorque(2)=pressure_rcross(1) !y-z plane of rotation
+               viscous_localtorque(2)=viscous_rcross(1) !y-z plane of rotation
+               viscous0_localtorque(2)=viscous0_rcross(1)!y-z plane of rotation
+               visco_localtorque(2)=visco_rcross(1) ! y-z plane of rotation
+               pressure_localtorque(2)=pressure_rcross(1) !y-z plane of rotation
 
-              viscous_localtorque(SDIM)=viscous_rcross(2)!x-z plane of rotation
-              viscous0_localtorque(SDIM)= &
+               viscous_localtorque(SDIM)=viscous_rcross(2)!x-z plane of rotation
+               viscous0_localtorque(SDIM)= &
                       viscous0_rcross(2)!x-z plane of rotation
-              visco_localtorque(SDIM)=visco_rcross(2) ! x-z plane rotation
-              pressure_localtorque(SDIM)=pressure_rcross(2)!x-z plane rotation
-             endif
+               visco_localtorque(SDIM)=visco_rcross(2) ! x-z plane rotation
+               pressure_localtorque(SDIM)=pressure_rcross(2)!x-z plane rotation
+              endif
 
 ! units of watts: W=J/s=N m/s
 ! r=(x,0,z)
@@ -2898,110 +2867,114 @@ stop
 
               ! im_test is the material on which a force/torque is applied.
 
-             do dir=1,6
+              do dir=1,6
 
-              call stress_index(dir,i1,j1)
-              ibase=DRAGCOMP_STRESS+6*(im_test-1)+dir
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
-                      pressure_stress_tensor(i1,j1)+ &
-                      viscous_stress_tensor(i1,j1)+ &
-                      visco_stress_tensor(i1,j1)
+               call stress_index(dir,i1,j1)
+               ibase=DRAGCOMP_STRESS+6*(im_test-1)+dir
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
+                     pressure_stress_tensor(i1,j1)+ &
+                     viscous_stress_tensor(i1,j1)+ &
+                     visco_stress_tensor(i1,j1)
 
-              ibase=DRAGCOMP_PSTRESS+6*(im_test-1)+dir
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
+               ibase=DRAGCOMP_PSTRESS+6*(im_test-1)+dir
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
                  pressure_stress_tensor(i1,j1)
 
-              ibase=DRAGCOMP_VISCOUSSTRESS+6*(im_test-1)+dir
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
+               ibase=DRAGCOMP_VISCOUSSTRESS+6*(im_test-1)+dir
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
                  viscous_stress_tensor(i1,j1)
 
-              ibase=DRAGCOMP_VISCOUS0STRESS+6*(im_test-1)+dir
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
+               ibase=DRAGCOMP_VISCOUS0STRESS+6*(im_test-1)+dir
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
                  viscous0_stress_tensor(i1,j1)
 
-              ibase=DRAGCOMP_VISCOSTRESS+6*(im_test-1)+dir
-              drag(D_DECL(icell,jcell,kcell),ibase)= &
+               ibase=DRAGCOMP_VISCOSTRESS+6*(im_test-1)+dir
+               drag(D_DECL(icell,jcell,kcell),ibase)= &
                  visco_stress_tensor(i1,j1)
 
-             enddo ! dir=1..6
+              enddo ! dir=1..6
 
-             do dir=1,SDIM
-              ibase=DRAGCOMP_IQ_FORCE+3*(im_test-1)+dir
+              do dir=1,SDIM
+               ibase=DRAGCOMP_IQ_FORCE+3*(im_test-1)+dir
 
-              localsum(ibase)=localsum(ibase)+ &
-               pressure_load(dir)+ &
-               viscous_stress_load(dir)+ &
-               visco_stress_load(dir)
+               localsum(ibase)=localsum(ibase)+ &
+                pressure_load(dir)+ &
+                viscous_stress_load(dir)+ &
+                visco_stress_load(dir)
 
-              ibase=DRAGCOMP_IQ_PFORCE+3*(im_test-1)+dir
+               ibase=DRAGCOMP_IQ_PFORCE+3*(im_test-1)+dir
 
-              localsum(ibase)=localsum(ibase)+ &
-               pressure_load(dir)
+               localsum(ibase)=localsum(ibase)+ &
+                pressure_load(dir)
 
-              ibase=DRAGCOMP_IQ_VISCOUSFORCE+3*(im_test-1)+dir
+               ibase=DRAGCOMP_IQ_VISCOUSFORCE+3*(im_test-1)+dir
 
-              localsum(ibase)=localsum(ibase)+ &
-               viscous_stress_load(dir)
+               localsum(ibase)=localsum(ibase)+ &
+                viscous_stress_load(dir)
 
-              ibase=DRAGCOMP_IQ_VISCOUS0FORCE+3*(im_test-1)+dir
+               ibase=DRAGCOMP_IQ_VISCOUS0FORCE+3*(im_test-1)+dir
 
-              localsum(ibase)=localsum(ibase)+ &
-               viscous0_stress_load(dir)
+               localsum(ibase)=localsum(ibase)+ &
+                viscous0_stress_load(dir)
 
-              ibase=DRAGCOMP_IQ_VISCOFORCE+3*(im_test-1)+dir
+               ibase=DRAGCOMP_IQ_VISCOFORCE+3*(im_test-1)+dir
 
-              localsum(ibase)=localsum(ibase)+ &
-               visco_stress_load(dir)
+               localsum(ibase)=localsum(ibase)+ &
+                visco_stress_load(dir)
 
-             enddo ! dir=1..sdim
+              enddo ! dir=1..sdim
 
-             dirend=1
-             if (SDIM.eq.3) then
-              dirend=3
+              dirend=1
+              if (SDIM.eq.3) then
+               dirend=3
+              endif
+
+              do dir=1,dirend
+
+               ibase=DRAGCOMP_IQ_TORQUE+3*(im_test-1)+dir
+
+               localsum(ibase)=localsum(ibase)+ &
+                pressure_localtorque(dir)+ &
+                viscous_localtorque(dir)+ &
+                visco_localtorque(dir)
+
+               ibase=DRAGCOMP_IQ_PTORQUE+3*(im_test-1)+dir
+
+               localsum(ibase)=localsum(ibase)+ &
+                pressure_localtorque(dir)
+
+               ibase=DRAGCOMP_IQ_VISCOUSTORQUE+3*(im_test-1)+dir
+
+               localsum(ibase)=localsum(ibase)+ &
+                viscous_localtorque(dir)
+
+               ibase=DRAGCOMP_IQ_VISCOUS0TORQUE+3*(im_test-1)+dir
+
+               localsum(ibase)=localsum(ibase)+ &
+                viscous0_localtorque(dir)
+
+               ibase=DRAGCOMP_IQ_VISCOTORQUE+3*(im_test-1)+dir
+
+               localsum(ibase)=localsum(ibase)+ &
+                visco_localtorque(dir)
+
+              enddo ! dir=1..dirend
+
+              ibase=DRAGCOMP_IQ_PERIM+im_test
+              localsum(ibase)=localsum(ibase)+facearea
+
+             else if ((im_side.ne.im_test).and. &
+                      (im_side.ge.1).and. &
+                      (im_side.le.nmat)) then
+              ! do nothing
+             else
+              print *,"im_side invalid"
+              stop
              endif
 
-             do dir=1,dirend
-
-              ibase=DRAGCOMP_IQ_TORQUE+3*(im_test-1)+dir
-
-              localsum(ibase)=localsum(ibase)+ &
-               pressure_localtorque(dir)+ &
-               viscous_localtorque(dir)+ &
-               visco_localtorque(dir)
-
-              ibase=DRAGCOMP_IQ_PTORQUE+3*(im_test-1)+dir
-
-              localsum(ibase)=localsum(ibase)+ &
-               pressure_localtorque(dir)
-
-              ibase=DRAGCOMP_IQ_VISCOUSTORQUE+3*(im_test-1)+dir
-
-              localsum(ibase)=localsum(ibase)+ &
-               viscous_localtorque(dir)
-
-              ibase=DRAGCOMP_IQ_VISCOUS0TORQUE+3*(im_test-1)+dir
-
-              localsum(ibase)=localsum(ibase)+ &
-               viscous0_localtorque(dir)
-
-              ibase=DRAGCOMP_IQ_VISCOTORQUE+3*(im_test-1)+dir
-
-              localsum(ibase)=localsum(ibase)+ &
-               visco_localtorque(dir)
-
-             enddo ! dir=1..dirend
-
-             ibase=DRAGCOMP_IQ_PERIM+im_test
-             localsum(ibase)=localsum(ibase)+facearea
-
-            else if (equal_opposite_force.eq.1) then
-             ! do nothing
-            else
-             print *,"equal_opposite_force became corrupt"
-              stop
-            endif
-
+            enddo ! side_cell=0,1
            enddo ! facedir=1..sdim
+
           else
            print *,"im_primary or im_test corruption"
            stop

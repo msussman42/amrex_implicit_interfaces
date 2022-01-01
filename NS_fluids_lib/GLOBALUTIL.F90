@@ -13244,7 +13244,7 @@ end subroutine dynamic_contact_angle
        endif
 
       else if ((drag_comp.ge.DRAGCOMP_VISCOSTRESS).and. &
-               (drag_comp.lt.DRAGCOMP_PERIM_VECTOR)) then
+               (drag_comp.lt.DRAGCOMP_TORQUE_ARM)) then
        drag_mod=drag_comp-DRAGCOMP_VISCOSTRESS
        drag_im=drag_mod/6
        drag_mod=MOD(drag_mod,6)
@@ -13261,21 +13261,6 @@ end subroutine dynamic_contact_angle
         fort_drag_type=DRAG_TYPE_T13
        else if (drag_mod.eq.5) then
         fort_drag_type=DRAG_TYPE_T23
-       else
-        print *,"drag_mod invalid"
-        stop
-       endif
-      else if ((drag_comp.ge.DRAGCOMP_PERIM_VECTOR).and. &
-               (drag_comp.lt.DRAGCOMP_TORQUE_ARM)) then
-       drag_mod=drag_comp-DRAGCOMP_PERIM_VECTOR
-       drag_im=drag_mod/3
-       drag_mod=MOD(drag_mod,3)
-       if (drag_mod.eq.0) then
-        fort_drag_type=DRAG_TYPE_UVEC
-       else if (drag_mod.eq.1) then
-        fort_drag_type=DRAG_TYPE_VVEC
-       else if (drag_mod.eq.2) then
-        fort_drag_type=DRAG_TYPE_WVEC
        else
         print *,"drag_mod invalid"
         stop
