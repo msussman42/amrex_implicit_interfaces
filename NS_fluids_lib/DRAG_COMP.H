@@ -60,8 +60,7 @@ stress applied to a given material "im_test" is stored.
 #define DRAGCOMP_VISCOUS0STRESS (DRAGCOMP_VISCOUSSTRESS+6*num_materials)
 #define DRAGCOMP_VISCOSTRESS (DRAGCOMP_VISCOUS0STRESS+6*num_materials)
 
-#define DRAGCOMP_PERIM_VECTOR (DRAGCOMP_VISCOSTRESS+6*num_materials)
-#define DRAGCOMP_TORQUE_ARM (DRAGCOMP_PERIM_VECTOR+3*num_materials)
+#define DRAGCOMP_TORQUE_ARM (DRAGCOMP_VISCOSTRESS+6*num_materials)
 #if (0)
 DRAGCOMP_FLAG=0 => drag uninitialized
 DRAGCOMP_FLAG=1 => drag initialized
