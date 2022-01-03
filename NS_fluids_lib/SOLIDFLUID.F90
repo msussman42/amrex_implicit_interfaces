@@ -1016,6 +1016,10 @@
         allocate(masknbr3D(DIMV3D(FSIdata3D),2))
         allocate(maskfiner3D(DIMV3D(FSIdata3D)))
 
+         ! ngrowFSI ghost cells
+         ! in 3D:
+         ! FSI_lo3D,FSI_hi3D = tilelo,tilehi
+         ! FSI_growlo3D,FSI_growhi3D = grow(FSI_lo3D,FSI_hi3D,ngrowFSI)
         do i=FSI_growlo3D(1),FSI_growhi3D(1)
         do j=FSI_growlo3D(2),FSI_growhi3D(2)
         do k=FSI_growlo3D(3),FSI_growhi3D(3)
@@ -1080,6 +1084,15 @@
            endif
            veldata3D(i,j,k,dir)=vel3D(dir)
           enddo ! dir=1..3
+          do im_local=1,nmat
+           ibase=DRAGCOMP_PSTRESS+6*(im_local-1)
+           do dir=1,6
+            call stress_index(dir,istress,jstress)
+            stress_2d(istress,jstress)= &
+               drag(D_DECL(i2d,j2d,k2d),ibase+dir)
+           enddo
+          enddo ! im_local=1..nmat
+FIX ME
           do dir=1,6*nmat
            stressdata3D(i,j,k,dir)=drag(D_DECL(i2d,j2d,k2d), &
              DRAGCOMP_PSTRESS+dir)
