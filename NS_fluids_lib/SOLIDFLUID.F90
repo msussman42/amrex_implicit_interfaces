@@ -398,6 +398,9 @@
       INTEGER_T nhalf
       INTEGER_T lev77
       INTEGER_T im_local
+      INTEGER_T istress,jstress
+      REAL_T stress_2d(3,3)
+      REAL_T stress_3d(3,3)
  
       nhalf=3
 
@@ -1028,6 +1031,7 @@
          idx(3)=k
 
          if (SDIM.eq.3) then
+
           call gridsten_level(xsten,i,j,k,level,nhalf)
           do dir=1,SDIM
            veldata3D(i,j,k,dir)=velfab(D_DECL(i,j,k),dir)
@@ -1043,7 +1047,9 @@
            masknbr3D(i,j,k,nc)=masknbr(D_DECL(i,j,k),nc)
           enddo
           maskfiner3D(i,j,k)=maskfiner(D_DECL(i,j,k),1)
+
          else if (SDIM.eq.2) then
+
           k2d=0
           ! dir is the coordinant on the 3D grid
           ! xmap3D(dir) is the coordinant on the 2D grid
@@ -1060,6 +1066,7 @@
             stop
            endif
           enddo ! dir=1..3
+
           if ((i2d.lt.tilelo(1)-ngrowFSI).or. &
               (i2d.gt.tilehi(1)+ngrowFSI)) then
            print *,"i2d out of range"
@@ -1084,19 +1091,55 @@
            endif
            veldata3D(i,j,k,dir)=vel3D(dir)
           enddo ! dir=1..3
+
           do im_local=1,nmat
            ibase=DRAGCOMP_PSTRESS+6*(im_local-1)
+           do istress=1,3
+           do jstress=1,3
+            stress_2d(istress,jstress)=zero
+           enddo
+           enddo
            do dir=1,6
             call stress_index(dir,istress,jstress)
             stress_2d(istress,jstress)= &
                drag(D_DECL(i2d,j2d,k2d),ibase+dir)
            enddo
+           stress_2d(2,1)=stress_2d(1,2)
+           stress_2d(3,1)=stress_2d(1,3)
+           stress_2d(3,2)=stress_2d(2,3)
+            ! istress,jstress correspond to 3D stress
+            ! xmap3D(istress),xmap3D(jstress) correspond to 2D stress
+           do istress=1,3
+            if (xmap3D(istress).eq.0) then
+             do jstress=1,3
+              stress_3d(istress,jstress)=zero
+             enddo
+            else if ((xmap3D(istress).eq.1).or. &
+                     (xmap3D(istress).eq.2)) then
+             do jstress=1,3
+              if (xmap3D(jstress).eq.0) then
+               stress_3d(istress,jstress)=zero
+              else if ((xmap3D(jstress).eq.1).or. &
+                       (xmap3D(jstress).eq.2)) then
+               stress_3d(istress,jstress)= &
+                   stress_2d(xmap3D(istress),xmap3D(jstress))
+              else
+               print *,"xmap3D(jstress) invalid"
+               stop
+              endif
+             enddo ! jstress=1,3
+            else
+             print *,"xmap3D(istress) invalid"
+             stop
+            endif
+           enddo ! istress=1,3
+
+           do dir=1,6
+            call stress_index(dir,istress,jstress)
+            stressdata3D(i,j,k,ibase+dir)=stress_3d(istress,jstress)
+           enddo
+
           enddo ! im_local=1..nmat
-FIX ME
-          do dir=1,6*nmat
-           stressdata3D(i,j,k,dir)=drag(D_DECL(i2d,j2d,k2d), &
-             DRAGCOMP_PSTRESS+dir)
-          enddo
 
           do nc=1,2
            masknbr3D(i,j,k,nc)=masknbr(D_DECL(i2d,j2d,k2d),nc)
