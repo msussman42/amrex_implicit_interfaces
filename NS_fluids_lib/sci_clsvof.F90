@@ -8379,6 +8379,8 @@ subroutine CLSVOF_InitBox(  &
   xmap3D, &
   xslice3D, &
   dx3D, &
+  xlo3D_tile, &
+  xhi3D_tile, &
   FSI_lo,FSI_hi, &
   FSI_growlo,FSI_growhi, &
   growlo3D,growhi3D, &
@@ -8395,38 +8397,40 @@ use CTML_module
 
 IMPLICIT NONE
 
-  INTEGER_T :: iter
-  INTEGER_T :: sdim_AMR
-  INTEGER_T :: lev77
-  INTEGER_T :: tid
-  INTEGER_T :: tilenum
-  INTEGER_T :: im_part
-  INTEGER_T :: nparts
-  INTEGER_T :: part_id
-  INTEGER_T :: ngrowFSI
+  INTEGER_T, intent(in) :: iter
+  INTEGER_T, intent(in) :: :: sdim_AMR
+  INTEGER_T, intent(in) :: :: lev77
+  INTEGER_T, intent(in) :: :: tid
+  INTEGER_T, intent(in) :: :: tilenum
+  INTEGER_T, intent(in) :: :: im_part
+  INTEGER_T, intent(in) :: :: nparts
+  INTEGER_T, intent(in) :: :: part_id
+  INTEGER_T, intent(in) :: :: ngrowFSI
   INTEGER_T, intent(in) :: nmat
   INTEGER_T, intent(in) :: nFSI
-  INTEGER_T :: FSI_operation
-  INTEGER_T :: touch_flag
+  INTEGER_T, intent(in) :: FSI_operation
+  INTEGER_T, intent(inout) :: touch_flag
   INTEGER_T :: numtouch
   REAL_T, intent(in) :: h_small
-  REAL_T :: time,dt
-  REAL_T problo3D(3)
-  REAL_T probhi3D(3)
-  INTEGER_T xmap3D(3)
-  REAL_T xslice3D(3)
-  REAL_T dx3D(3)
-  INTEGER_T FSI_lo(3),FSI_hi(3)
-  INTEGER_T FSI_growlo(3),FSI_growhi(3)
-  INTEGER_T growlo3D(3),growhi3D(3)
-  INTEGER_T DIMDEC3D(FSIdata3D)
-  REAL_T xdata3D(DIMV3D(FSIdata3D),3)
-  REAL_T FSIdata3D(DIMV3D(FSIdata3D),nFSI)
-  REAL_T masknbr3D(DIMV3D(FSIdata3D),2)
+  REAL_T, intent(in) :: time,dt
+  REAL_T, intent(in) :: problo3D(3)
+  REAL_T, intent(in) :: probhi3D(3)
+  INTEGER_T, intent(in) :: xmap3D(3)
+  REAL_T, intent(in) :: xslice3D(3)
+  REAL_T, intent(in) :: dx3D(3)
+  REAL_T, intent(in) :: xlo3D_tile(3)
+  REAL_T, intent(in) :: xhi3D_tile(3)
+  INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
+  INTEGER_T, intent(in) :: FSI_growlo(3),FSI_growhi(3)
+  INTEGER_T, intent(in) :: growlo3D(3),growhi3D(3)
+  INTEGER_T, intent(in) :: DIMDEC3D(FSIdata3D)
+  REAL_T, intent(in) :: xdata3D(DIMV3D(FSIdata3D),3)
+  REAL_T, intent(inout) :: FSIdata3D(DIMV3D(FSIdata3D),nFSI)
+  REAL_T, intent(in) :: masknbr3D(DIMV3D(FSIdata3D),2)
   REAL_T, dimension(:,:,:,:), allocatable :: old_FSIdata
 
-  INTEGER_T CTML_force_model
-  INTEGER_T ioproc,isout
+  INTEGER_T, intent(in) :: CTML_force_model
+  INTEGER_T, intent(in) :: ioproc,isout
 
   REAL_T dxBB(3) ! set in find_grid_bounding_box
 
@@ -8440,7 +8444,7 @@ IMPLICIT NONE
   REAL_T, dimension(3) :: xfoot
   REAL_T, dimension(3) :: xelem
   REAL_T, dimension(3) :: xtarget
-  INTEGER_T, dimension(3) :: gridlo,gridhi,gridlen
+  INTEGER_T, dimension(3) :: gridloBB,gridhiBB,gridlenBB
   INTEGER_T :: i,j,k
   INTEGER_T :: i1,j1,k1
   INTEGER_T :: inplane
@@ -8578,14 +8582,25 @@ IMPLICIT NONE
     print *,"tilehi3D(tid+1,tilenum+1,dir).ne.FSI_hi(dir)"
     stop
    endif 
-   if (FSI_growlo(dir).ge.FSI_lo(dir)) then
+   if (FSI_growlo(dir).lt.FSI_lo(dir)) then
+    ! do nothing
+   else
     print *,"FSI_growlo(dir) invalid"
     stop
    endif
-   if (FSI_growhi(dir).le.FSI_hi(dir)) then
+   if (FSI_growhi(dir).gt.FSI_hi(dir)) then
+    ! do nothing
+   else
     print *,"FSI_growhi(dir) invalid"
     stop
    endif
+   if (xlo3D_tile(dir).lt.xhi3D_tile(dir)) then
+    ! do nothing
+   else
+    print *,"xlo3D_tile(dir).lt.xhi3D_tile(dir) violated"
+    stop
+   endif
+
   enddo ! dir=1..3
 
   ctml_part_id=CTML_partid_map(part_id)
@@ -8819,7 +8834,7 @@ IMPLICIT NONE
        growlo3D,growhi3D, &
        xdata3D, &
        DIMS3D(FSIdata3D), &
-       gridlo,gridhi,dxBB) 
+       gridloBB,gridhiBB,dxBB) 
 
      do dir=1,3
       if (abs(dxBB(dir)-dx3D(dir)).gt.element_buffer_tol*dxBB(dir)) then
@@ -8831,7 +8846,7 @@ IMPLICIT NONE
      if (1.eq.0) then
       print *,"ielem=",ielem
       do dir=1,3
-       print *,"dir,gridlo,gridhi ",dir,gridlo(dir),gridhi(dir)
+       print *,"dir,gridloBB,gridhiBB ",dir,gridloBB(dir),gridhiBB(dir)
       enddo
      endif
 
@@ -8839,15 +8854,15 @@ IMPLICIT NONE
 
       in_the_interior=1
       do dir=1,3
-       gridlen(dir)=gridhi(dir)-gridlo(dir)+1
-       if ((gridlen(dir).ge.0).and. &
-           (gridlen(dir).lt.2*local_iband)) then
+       gridlenBB(dir)=gridhiBB(dir)-gridloBB(dir)+1
+       if ((gridlenBB(dir).ge.0).and. &
+           (gridlenBB(dir).lt.2*local_iband)) then
         in_the_interior=0
-       else if ((gridlen(dir).ge.2*local_iband).and. &
-                (gridlen(dir).le.2048)) then
+       else if ((gridlenBB(dir).ge.2*local_iband).and. &
+                (gridlenBB(dir).le.2048)) then
         ! do nothing
        else
-        print *,"gridlen(dir) invalid"
+        print *,"gridlenBB(dir) invalid"
         stop
        endif
       enddo ! dir=1..3
@@ -8856,10 +8871,10 @@ IMPLICIT NONE
 
        ! LOOP through bounding box of the element.
        ! this code is thread safe
-       ! gridlo,gridhi restricted to growlo3D and growhi3D 
-      do i=gridlo(1),gridhi(1)
-      do j=gridlo(2),gridhi(2)
-      do k=gridlo(3),gridhi(3)
+       ! gridloBB,gridhiBB restricted to growlo3D and growhi3D 
+      do i=gridloBB(1),gridhiBB(1)
+      do j=gridloBB(2),gridhiBB(2)
+      do k=gridloBB(3),gridhiBB(3)
 
         ! BEFORE: restrict (i,j,k) to growlo3D and growhi3D
    
@@ -9354,7 +9369,7 @@ IMPLICIT NONE
        endif 
       enddo
       enddo
-      enddo ! i,j,k=gridlo..gridhi
+      enddo ! i,j,k=gridloBB..gridhiBB
 
       if (1.eq.0) then
        if (in_the_interior.eq.1) then
@@ -9362,8 +9377,8 @@ IMPLICIT NONE
          print *,"used_for_trial.eq.0"
          print '(A8,3(f9.3))',"minnode ",minnode(1),minnode(2),minnode(3)
          print '(A8,3(f9.3))',"maxnode ",maxnode(1),maxnode(2),maxnode(3)
-         print '(A7,3(I10))',"gridlo ",gridlo(1),gridlo(2),gridlo(3)
-         print '(A7,3(I10))',"gridhi ",gridhi(1),gridhi(2),gridhi(3)
+         print '(A7,3(I10))',"gridloBB ",gridloBB(1),gridloBB(2),gridloBB(3)
+         print '(A7,3(I10))',"gridhiBB ",gridhiBB(1),gridhiBB(2),gridhiBB(3)
          print '(A6,3(f9.3))',"xelem ",xelem(1),xelem(2),xelem(3)
          print '(A5,3(f9.3))',"xnot ",xnot(1),xnot(2),xnot(3)
          print '(A7,3(f9.3))',"normal ",normal(1),normal(2),normal(3)
@@ -11320,23 +11335,23 @@ subroutine find_grid_bounding_box( &
  growlo3D,growhi3D,  &
  xdata3D, &
  DIMS3D(xdata3D), &
- gridlo,gridhi,dxBB)
+ gridloBB,gridhiBB,dxBB)
 IMPLICIT NONE
 
- INTEGER_T part_id
- INTEGER_T null_intersection
- REAL_T minnode(3),maxnode(3)
- INTEGER_T FSI_lo(3),FSI_hi(3)
- INTEGER_T FSI_growlo(3),FSI_growhi(3)
- INTEGER_T growlo3D(3),growhi3D(3)
- INTEGER_T DIMDEC3D(xdata3D)
- REAL_T xdata3D(DIMV3D(xdata3D),3)
- INTEGER_T gridlo(3),gridhi(3)
+ INTEGER_T, intent(in) :: part_id
+ INTEGER_T, intent(out) :: null_intersection
+ REAL_T, intent(in) :: minnode(3),maxnode(3)
+ INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
+ INTEGER_T, intent(in) :: FSI_growlo(3),FSI_growhi(3)
+ INTEGER_T, intent(in) :: growlo3D(3),growhi3D(3)
+ INTEGER_T, intent(in) :: DIMDEC3D(xdata3D)
+ REAL_T, intent(in) :: xdata3D(DIMV3D(xdata3D),3)
+ INTEGER_T, intent(out) :: gridloBB(3),gridhiBB(3)
+ REAL_T, intent(out) :: dxBB(3)
  INTEGER_T dir
  INTEGER_T ii,jj,kk
  INTEGER_T i,j,k,incr,iter
  REAL_T xcontrol,xcost
- REAL_T dxBB(3)
  REAL_T xlo(3),xhi(3)
  INTEGER_T ngrow,ngrowtest
  INTEGER_T local_iband
@@ -11429,25 +11444,25 @@ IMPLICIT NONE
    j=FSI_lo(2)
    k=FSI_lo(3)
 
-   gridlo(dir)=NINT( (minnode(dir)-xlo(dir))/dxBB(dir)-half+FSI_lo(dir) )
-   if (gridlo(dir).lt.growlo3D(dir)) then
-    gridlo(dir)=growlo3D(dir)
+   gridloBB(dir)=NINT( (minnode(dir)-xlo(dir))/dxBB(dir)-half+FSI_lo(dir) )
+   if (gridloBB(dir).lt.growlo3D(dir)) then
+    gridloBB(dir)=growlo3D(dir)
    endif
-   if (gridlo(dir).gt.growhi3D(dir)) then
-    gridlo(dir)=growhi3D(dir)
+   if (gridloBB(dir).gt.growhi3D(dir)) then
+    gridloBB(dir)=growhi3D(dir)
     null_intersection=1
    endif
 
    if (null_intersection.eq.0) then
 
-    incr=gridlo(dir)-FSI_lo(dir)
+    incr=gridloBB(dir)-FSI_lo(dir)
     xcontrol=xdata3D(i+ii*incr,j+jj*incr,k+kk*incr,dir)
     xcost=minnode(dir)-local_iband*dxBB(dir)
     iter=0
-    do while ((gridlo(dir).gt.growlo3D(dir)).and. &
+    do while ((gridloBB(dir).gt.growlo3D(dir)).and. &
               (xcontrol.gt.xcost))
-     gridlo(dir)=gridlo(dir)-1
-     incr=gridlo(dir)-FSI_lo(dir)
+     gridloBB(dir)=gridloBB(dir)-1
+     incr=gridloBB(dir)-FSI_lo(dir)
      xcontrol=xdata3D(i+ii*incr,j+jj*incr,k+kk*incr,dir)
      iter=iter+1
      if (iter.gt.FSI_growhi(dir)-FSI_growlo(dir)+1) then
@@ -11456,25 +11471,25 @@ IMPLICIT NONE
      endif
     enddo
   
-    gridhi(dir)=NINT( (maxnode(dir)-xlo(dir))/dxBB(dir)-half+FSI_lo(dir) )
-    if (gridhi(dir).gt.growhi3D(dir)) then
-     gridhi(dir)=growhi3D(dir)
+    gridhiBB(dir)=NINT( (maxnode(dir)-xlo(dir))/dxBB(dir)-half+FSI_lo(dir) )
+    if (gridhiBB(dir).gt.growhi3D(dir)) then
+     gridhiBB(dir)=growhi3D(dir)
     endif
-    if (gridhi(dir).lt.growlo3D(dir)) then
-     gridhi(dir)=growlo3D(dir)
+    if (gridhiBB(dir).lt.growlo3D(dir)) then
+     gridhiBB(dir)=growlo3D(dir)
      null_intersection=1
     endif
 
     if (null_intersection.eq.0) then
 
-     incr=gridhi(dir)-FSI_lo(dir)
+     incr=gridhiBB(dir)-FSI_lo(dir)
      xcontrol=xdata3D(i+ii*incr,j+jj*incr,k+kk*incr,dir)
      xcost=maxnode(dir)+local_iband*dxBB(dir)
      iter=0
-     do while ((gridhi(dir).lt.growhi3D(dir)).and. &
+     do while ((gridhiBB(dir).lt.growhi3D(dir)).and. &
                (xcontrol.lt.xcost))
-      gridhi(dir)=gridhi(dir)+1
-      incr=gridhi(dir)-FSI_lo(dir)
+      gridhiBB(dir)=gridhiBB(dir)+1
+      incr=gridhiBB(dir)-FSI_lo(dir)
       xcontrol=xdata3D(i+ii*incr,j+jj*incr,k+kk*incr,dir)
       iter=iter+1
       if (iter.gt.FSI_growhi(dir)-FSI_growlo(dir)+1) then
