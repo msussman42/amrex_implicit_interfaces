@@ -686,6 +686,8 @@ int NavierStokes::ngrowFSI=3;
 Vector<int> NavierStokes::im_solid_map; //nparts components, in range 0..nmat-1
 Vector<int> NavierStokes::im_elastic_map; 
 
+Vector<Real> NavierStoks::FSI_force_integral;
+
 int NavierStokes::ngrow_expansion=2;
  
 Real NavierStokes::real_number_of_cells=0.0; 
@@ -3068,6 +3070,8 @@ NavierStokes::read_params ()
       amrex::Error("ns_is_lag_part invalid");
     }  // im=0..nmat-1
     im_solid_map.resize(nparts);
+
+    FSI_force_integral.resize(3*num_materials);
 
     if (CTML_FSI_numsolids!=CTML_FSI_numsolids_test)
      amrex::Error("CTML_FSI_numsolids!=CTML_FSI_numsolids_test");
@@ -7850,6 +7854,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 //  (nparts x (vel, LS, Temp, flag, force)
 //FSI_operation=3  update the sign.
 //FSI_operation=4  copy Eulerian velocity and stress to lag.
+//FSI_operation=5  find integral_{membrane} F_membrane dA.
 //
 // note for CTML algorithm (FSI_flag==4):
 // 1. copy Eulerian velocity to Lagrangian velocity.
@@ -7897,6 +7902,13 @@ void NavierStokes::ns_header_msg_level(
   } else
    amrex::Error("CTML_FSI_flagC() invalid");
 
+  //FSI_operation=5  find integral_{membrane} F_membrane dA.
+ } else if (FSI_operation==5) { 
+  if (iter!=0)
+   amrex::Error("iter invalid");
+  if (FSI_sub_operation!=0)
+   amrex::Error("FSI_sub_operation!=0");
+ 
   //make distance in narrow band
  } else if (FSI_operation==2) { 
   if (iter!=0)
@@ -8001,6 +8013,11 @@ void NavierStokes::ns_header_msg_level(
    amrex::Error("level invalid");
   }
 
+  //FSI_operation=5  find integral_{membrane} F_membrane dA.
+ } else if (FSI_operation==5) {
+
+  elements_generated=1;
+
   //make distance in narrow band
  } else if (FSI_operation==2) {
 
@@ -8090,6 +8107,10 @@ void NavierStokes::ns_header_msg_level(
     // do nothing
    } else
     amrex::Error("level invalid");
+
+   //FSI_operation=5  find integral_{membrane} F_membrane dA.
+  } else if (FSI_operation==5) {
+   // do nothing
 
    //make distance in narrow band
   } else if (FSI_operation==2) {
@@ -8222,6 +8243,7 @@ void NavierStokes::ns_header_msg_level(
       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
       FSIfab.dataPtr(), // mfiner spot
       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+      FSI_force_integral.dataPtr(),
       &nFSI,
       &ngrowFSI_unitfab,
       &nparts,
@@ -8299,6 +8321,109 @@ void NavierStokes::ns_header_msg_level(
    elements_generated=1;
 
    CTML_FSI_init=1;
+
+   //FSI_operation=5  find integral_{membrane} F_membrane dA.
+  } else if (FSI_operation==5) {
+
+   if (FSI_sub_operation!=0)
+    amrex::Error("FSI_sub_operation!=0");
+
+   int ngrowFSI_unitfab=0;
+   IntVect unitlo(D_DECL(0,0,0));
+   IntVect unithi(D_DECL(0,0,0));
+    // construct cell-centered type box
+   Box unitbox(unitlo,unithi);
+
+   const int* tilelo=unitbox.loVect();
+   const int* tilehi=unitbox.hiVect();
+   const int* fablo=unitbox.loVect();
+   const int* fabhi=unitbox.hiVect();
+
+   FArrayBox FSIfab(unitbox,nFSI);
+
+   Vector<int> velbc;
+   velbc.resize(AMREX_SPACEDIM*2*AMREX_SPACEDIM);
+   for (int i=0;i<velbc.size();i++)
+    velbc[i]=0;
+   Vector<int> vofbc;
+   vofbc.resize(2*AMREX_SPACEDIM);
+   for (int i=0;i<vofbc.size();i++)
+    vofbc[i]=0;
+
+   int tid=0;
+   int gridno=0;
+
+    // declared in SOLIDFLUID.F90
+   fort_headermsg(
+     &tid,
+     &num_tiles_on_thread_proc[tid],
+     &gridno,
+     &thread_class::nthreads,
+     &level,
+     &finest_level,
+     &max_level,
+     &im_critical, // =0 (default; 0<=im<=nmat-1)
+     num_nodes_list.dataPtr(),
+     num_elements_list.dataPtr(),
+     &FSI_input[im_index].num_nodes,
+     &FSI_input[im_index].num_elements,
+     FSI_input[im_index].node_list.dataPtr(),
+     FSI_input[im_index].element_list.dataPtr(),
+     FSI_input[im_index].displacement_list.dataPtr(),
+     FSI_input[im_index].velocity_halftime_list.dataPtr(),
+     FSI_input[im_index].velocity_list.dataPtr(),
+     FSI_input[im_index].force_list.dataPtr(),
+     FSI_input[im_index].mass_list.dataPtr(),
+     FSI_input[im_index].temperature_list.dataPtr(),
+     &FSI_output[im_index].num_nodes,
+     &FSI_output[im_index].num_elements,
+     FSI_output[im_index].node_list.dataPtr(),
+     FSI_output[im_index].element_list.dataPtr(),
+     FSI_output[im_index].displacement_list.dataPtr(),
+     FSI_output[im_index].velocity_halftime_list.dataPtr(),
+     FSI_output[im_index].velocity_list.dataPtr(),
+     FSI_output[im_index].force_list.dataPtr(),
+     FSI_output[im_index].mass_list.dataPtr(),
+     FSI_output[im_index].temperature_list.dataPtr(),
+     &FSI_operation, // 5 (integral of F_membrane dA)
+     &FSI_sub_operation, // 0
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     problo,
+     problen, 
+     dx_max_level, 
+     problo,
+     probhi, 
+     velbc.dataPtr(),  
+     vofbc.dataPtr(), 
+     FSIfab.dataPtr(), // placeholder
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSIfab.dataPtr(), // velfab spot
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSIfab.dataPtr(), // drag spot
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSIfab.dataPtr(), // mnbrfab spot
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSIfab.dataPtr(), // mfiner spot
+     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSI_force_integral.dataPtr(),
+     &nFSI,
+     &ngrowFSI_unitfab,
+     &nparts,
+     im_solid_map.dataPtr(),
+     &h_small,
+     &cur_time, 
+     &dt, 
+     FSI_refine_factor.dataPtr(),
+     FSI_bounding_box_ngrow.dataPtr(),
+     &FSI_touch_flag[tid],
+     &CTML_FSI_init,
+     CTML_force_model.dataPtr(),
+     &iter,
+     &current_step,
+     &plot_interval,
+     &ioproc);
 
   } else if ((FSI_operation==2)||  // make distance in narrow band
              (FSI_operation==3)) { // update the sign
@@ -8604,6 +8729,7 @@ void NavierStokes::ns_header_msg_level(
      ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
      mnbrfab.dataPtr(), // mfiner spot
      ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
+     FSI_force_integral.dataPtr(),
      &nFSI,
      &ngrowFSI,
      &nparts,
@@ -8803,6 +8929,7 @@ void NavierStokes::ns_header_msg_level(
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      FSIfab.dataPtr(), // mfiner spot
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+     FSI_force_integral.dataPtr(),
      &nFSI,
      &ngrowFSI_unitfab,
      &nparts,
@@ -8907,6 +9034,7 @@ void NavierStokes::ns_header_msg_level(
       ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
       mfinerfab.dataPtr(),
       ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()),
+      FSI_force_integral.dataPtr(),
       &nFSI,
       &ngrowFSI,
       &nparts,

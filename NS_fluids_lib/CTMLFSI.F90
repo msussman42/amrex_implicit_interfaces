@@ -25,27 +25,6 @@ stop
 
       contains
 
-      subroutine CTML_DELTA(idir,dist_scale,df)
-      use dummy_module
-
-      IMPLICIT NONE
-
-      INTEGER_T idir
-      REAL_T dist_scale
-      REAL_T df
-
-      if ((idir.ge.1).and.(idir.le.SDIM)) then
-        ! dummy_module declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
-        ! deltao_fun declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
-       call deltao_fun(dtypeDelta(idir),dist_scale,df)
-      else
-       print *,"idir invalid"
-       stop
-      endif
-
-      return
-      end subroutine CTML_DELTA
-
       subroutine CTML_INIT_SOLID(&
        dx_max_level,&
        prob_lo,&

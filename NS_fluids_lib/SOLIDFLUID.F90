@@ -187,6 +187,7 @@
        !FSI_operation=2  make distance in narrow band
        !FSI_operation=3  update the sign.
        !FSI_operation=4  copy eul fluid vel to solid
+       !FSI_operation=5  find integral_{membrane} F_membrane dA.
        !  FSI_sub_operation.eq.0 (clear lagrangian data)
        !  FSI_sub_operation.eq.1 (actual copy)
        !  FSI_sub_operation.eq.2 (sync lag data)
@@ -243,6 +244,7 @@
         DIMS(masknbr), &
         maskfiner, &
         DIMS(maskfiner), &
+        FSI_force_integral, &
         nFSI, &
         ngrowFSI, &
         nparts, &
@@ -367,6 +369,9 @@
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: dx_max_level(SDIM)
       REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
+
+      REAL_T, intent(inout) :: FSI_force_integral(3*num_materials)
+
       REAL_T problo3D(3),probhi3D(3)
       REAL_T dx3D(3)
       REAL_T vel3D(3)

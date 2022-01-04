@@ -59,6 +59,7 @@ namespace amrex{
      Real* drag,AMREX_ARLIM_P(draglo),AMREX_ARLIM_P(draghi),
      Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
      Real* maskfiner,AMREX_ARLIM_P(maskfinerlo),AMREX_ARLIM_P(maskfinerhi),
+     Real* FSI_force_integral,
      int* nFSI,
      int* ngrowFSI,
      int* nparts,
