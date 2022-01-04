@@ -6078,155 +6078,6 @@ end subroutine advance_solid
 ! --------------------  SOLID ADVANCE STUFF ENDS HERE --------------
 
 
-! calls CTML_DELTA or hsprime
-! called from: CLSVOF_InitBox
-! xc is the center of a (3D) grid cell.
-! This routine is called for all cell centers within 3 cells 
-! (bounding_box_ngrow) of the "(minnode,maxnode)" box that frames the
-! given element.   So, it is essential that the support radius of CTML_DELTA
-! and hsprime be less than or equal to 3 (bounding_box_ngrow)
-subroutine check_force_weightBIG( &
-  xmap3D,inode,ielem, &
-  xc,part_id,time,dx, &
-  force_weight,force_vector)
-use global_utility_module
-#ifdef MVAHABFSI
-use CTML_module
-#endif
-IMPLICIT NONE
-
-INTEGER_T, dimension(3), intent(in) :: xmap3D
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: inode,ielem
-REAL_T, intent(in) :: time 
-REAL_T, dimension(3), intent(out) :: force_vector
-REAL_T, dimension(3), intent(in) :: dx
-REAL_T, dimension(3), intent(in) :: xc ! a point on the Eulerian grid.
-REAL_T, intent(out) :: force_weight
-REAL_T, dimension(3) :: xtarget
-REAL_T, dimension(3) :: xfoot
-REAL_T, dimension(3) :: velparm
-INTEGER_T nmat,nodes_per_elem,Node_repeat_count
-INTEGER_T dir
-INTEGER_T inode_raw
-REAL_T dist_scale,df,support_size,line_mass
-INTEGER_T CTML_DEBUG_Mass
-
- CTML_DEBUG_Mass=0
-
- nmat=num_materials
-
- if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
-  print *,"part_id invalid"
-  stop
- endif
- if (FSI(part_id)%partID.ne.part_id) then
-  print *,"FSI(part_id)%partID.ne.part_id"
-  stop
- endif
- if (time.lt.zero) then
-  print *,"time invalid"
-  stop
- endif
-
- nodes_per_elem=FSI(part_id)%ElemDataBIG(1,ielem)
-
- if (nodes_per_elem.ne.3) then
-  print *,"nodes_per_elem invalid"
-  stop
- endif
- if ((inode.lt.1).or.(inode.gt.nodes_per_elem)) then
-  print *,"inode invalid"
-  stop
- endif
-
- inode_raw=FSI(part_id)%IntElemBIG(inode,ielem)
- if ((inode_raw.lt.1).or.(inode_raw.gt.FSI(part_id)%NumNodesBIG)) then
-  print *,"inode_raw invalid"
-  stop
- endif
-
- do dir=1,3
-  if (dx(dir).le.zero) then
-   print *,"dx invalid"
-   stop
-  endif
-  xfoot(dir)=FSI(part_id)%NodeBIG(dir,inode_raw)
-  velparm(dir)=zero
- enddo ! dir=1..3
- call get_target_from_foot(xfoot,xtarget, &
-   velparm,time,part_id)
-
- Node_repeat_count=FSI(part_id)%ElemNodeCountBIG(inode_raw)
-
- if (Node_repeat_count.ge.1) then
-
-  if (CTML_DEBUG_Mass.eq.1) then
-   print *,"inode,ielem,xc,xtarget,Node_repeat_count"
-   print *,inode,ielem,xc(1),xc(2),xc(3), &
-           xtarget(1),xtarget(2),xtarget(3),node_repeat_count
-  endif
-  force_weight=one
-  do dir=1,3
-
-    ! xc is a grid cell center coordinate
-    ! xtarget is a Lagrangian node in the neighborhood of xc.
-   if ((xmap3D(dir).eq.1).or. &
-       (xmap3D(dir).eq.2).or. &
-       (xmap3D(dir).eq.AMREX_SPACEDIM)) then
-    dist_scale=abs(xc(dir)-xtarget(dir))/dx(dir)
-    if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4 or 8
-#ifdef MVAHABFSI
-     call CTML_DELTA(dir,dist_scale,df)
-#else
-     print *,"define MVAHABFSI"
-     stop
-#endif
-    else if (CTML_FSI_flagF(nmat).eq.0) then
-     support_size=two
-     df=hsprime(dist_scale,support_size)
-    else
-     print *,"CTML_FSI_flagF(nmat) invalid"
-     stop
-    endif 
-    if (df.ge.zero) then
-     force_weight=force_weight*df/dx(dir)
-    else
-     print *,"df invalid"
-     stop
-    endif
-    if (CTML_DEBUG_Mass.eq.1) then
-     print *,"dir,xmap3D(dir),dist_scale ", &
-         dir,xmap3D(dir),dist_scale
-    endif
-   else if ((xmap3D(dir).eq.0).and.(AMREX_SPACEDIM.eq.2)) then
-    ! do nothing
-   else
-    print *,"xmap3D(dir) invalid"
-    stop
-   endif
- 
-   force_vector(dir)=FSI(part_id)%NodeForceBIG(dir,inode_raw)
-   if (CTML_DEBUG_Mass.eq.1) then
-    print *,"dir,force_vector(dir) ",dir,force_vector(dir)
-   endif
-  enddo ! dir=1..3
- 
-  line_mass=FSI(part_id)%NodeMassBIG(inode_raw)
-  force_weight=force_weight*line_mass/Node_repeat_count
-  if (CTML_DEBUG_Mass.eq.1) then
-   print *,"line_mass,force_weight ",line_mass,force_weight
-  endif
- else
-  print *,"Node_repeat_count invalid"
-  stop
- endif
-  
-return
-end subroutine check_force_weightBIG
-
-
-
 subroutine checkinpointBIG(xclosest,normal_closest, &
   inode,elemnum, &
   unsigned_mindist, &
@@ -8433,6 +8284,8 @@ IMPLICIT NONE
   INTEGER_T, intent(in) :: ioproc,isout
 
   REAL_T dxBB(3) ! set in find_grid_bounding_box
+  REAL_T dxBB_min
+  REAL_T delta_cutoff
 
   INTEGER_T :: ielem
   INTEGER_T :: ielem_container
@@ -8836,6 +8689,14 @@ IMPLICIT NONE
        DIMS3D(FSIdata3D), &
        gridloBB,gridhiBB,dxBB) 
 
+     dxBB_min=dxBB(1)
+     do dir=1,3
+      if (dxBB(dir).lt.dxBB_min) then
+       dxBB_min=dxBB(dir)
+      endif
+     enddo
+     delta_cutoff=3*dxBB_min
+
      do dir=1,3
       if (abs(dxBB(dir)-dx3D(dir)).gt.element_buffer_tol*dxBB(dir)) then
        print *,"abs(dxBB(dir)-dx3D(dir)).gt.element_buffer_tol*dxBB(dir)"
@@ -8894,26 +8755,6 @@ IMPLICIT NONE
           xx(dir)=xdata3D(i,j,k,dir)
          enddo
 
-         if (CTML_force_model.eq.0) then !Goldstein et al
-          do inode=1,nodes_per_elem
-            ! calls either CTML_DELTA or hsprime
-           call check_force_weightBIG(xmap3D,inode,ielem, &
-            xx,part_id,time,dxBB,force_weight,force_vector)
-           ! nparts x (vel + LS + temperature + flag + force)
-           do dir=1,3
-            FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=  &
-              FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)+ &
-              dt*force_weight*force_vector(dir)
-           enddo 
-          enddo ! inode=1,nodes_per_elem
-         else if (CTML_force_model.eq.2) then
-          print *,"CTML_force_model.eq.2 not supported"
-          stop
-         else
-          print *,"CTML_force_model invalid"
-          stop
-         endif
-        
          ! normal points from solid to fluid
          dotprod=0.0 
          do dir=1,3
@@ -9341,16 +9182,15 @@ IMPLICIT NONE
          FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=mask_local
          do dir=1,3
           FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel_local(dir)
+           ! the Eulerian force will be corrected later so that
+           ! integral F_membrane dA = integral F_fluid_cor delta dV
+           ! F_fluid_cor=
+           !   F_fluid * (integral F_membrane dA)/
+           !             (integral F_fluid delta dV)
+          FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)= &
+              force_local(dir)*dt* &
+              hsprime(ls_local,delta_cutoff)
          enddo 
-         if (CTML_force_model.eq.2) then !pres-vel
-          print *,"CTML_force_model.eq.2 not supported"
-          stop
-         else if (CTML_force_model.eq.0) then ! Goldstein et al.
-          ! do nothing
-         else
-          print *,"CTML_force_model invalid"
-          stop
-         endif
          FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)=temp_local
 
         else if ((mask1.eq.1).and.(mask2.eq.0)) then
@@ -9955,6 +9795,8 @@ IMPLICIT NONE
             stop
            endif
 
+            ! FORCE is not extended!
+
            if (sweepmax.eq.1) then
             ! do nothing
            else if (sweepmax.eq.2) then
@@ -10425,20 +10267,8 @@ FIX ME
                (xmap3D(dir).eq.2).or. &
                (xmap3D(dir).eq.sdim_AMR)) then
             dist_scale=abs(xdata3D(i,j,k,dir)-xnot(dir))/dxBB(dir)
-            if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4,8
-#ifdef MVAHABFSI
-             call CTML_DELTA(dir,dist_scale,df)
-#else
-             print *,"define MVAHABFSI"
-             stop
-#endif
-            else if (CTML_FSI_flagF(nmat).eq.0) then
-             support_size=two
-             df=hsprime(dist_scale,support_size)
-            else
-             print *,"CTML_FSI_flagF(nmat) invalid"
-             stop
-            endif 
+            support_size=two
+            df=hsprime(dist_scale,support_size)
             wt=wt*df
            else if ((xmap3D(dir).eq.0).and.(sdim_AMR.eq.2)) then
             ! do nothing

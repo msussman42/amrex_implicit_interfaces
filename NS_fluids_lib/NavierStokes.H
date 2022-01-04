@@ -2021,6 +2021,8 @@ protected:
     static Vector<int> im_solid_map; //nparts components, in range 0..nmat-1
     static Vector<int> im_elastic_map;
 
+    static Vector<Real> FSI_force_integral;
+
     static int ngrow_expansion;  // should always be 2
     static int prescribe_temperature_outflow;
 
