@@ -877,7 +877,7 @@
             stop
            endif 
           enddo ! dir=1..3
-           ! in: sci_clsvof.F90
+           ! declared in: sci_clsvof.F90
           call CLSVOF_InitBox( &
            iter, &
            SDIM, &
@@ -899,6 +899,8 @@
            xmap3D, &
            xslice3D, &
            dx3D, &
+           xlo3D_tile, &
+           xhi3D_tile, &
            FSI_lo3D,FSI_hi3D, &
            FSI_growlo3D,FSI_growhi3D, &
            growlo3D,growhi3D, &
