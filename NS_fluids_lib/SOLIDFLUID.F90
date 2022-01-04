@@ -401,6 +401,8 @@
       INTEGER_T istress,jstress
       REAL_T stress_2d(3,3)
       REAL_T stress_3d(3,3)
+      REAL_T xlo3D_tile(3)
+      REAL_T xhi3D_tile(3)
  
       nhalf=3
 
@@ -554,6 +556,10 @@
          dx3D(dir)=dx_max_level(1)
          FSI_lo3D(dir)=0
          FSI_hi3D(dir)=0
+
+         xlo3D_tile(dir)=xslice3D(dir)-half*dx3D(dir)
+         xhi3D_tile(dir)=xlo3D_tile(dir)+dx3D(dir)
+
          growlo3D(dir)=-ngrowFSI
          growhi3D(dir)=ngrowFSI
         else if ((xmap3D(dir).ge.1).and. &
@@ -563,6 +569,12 @@
          probhi3D(dir)=probhi(xmap3D(dir))
          FSI_lo3D(dir)=tilelo(xmap3D(dir))
          FSI_hi3D(dir)=tilehi(xmap3D(dir))
+
+         xlo3D_tile(dir)=xlo(xmap3D(dir))+ &
+           dx3D(dir)*(FSI_lo3D(dir)-fablo(xmap3D(dir)))
+         xhi3D_tile(dir)=xlo3D_tile(dir)+ &
+           dx3D(dir)*(FSI_hi3D(dir)-FSI_lo3D(dir)+1)
+
          growlo3D(dir)=growlo(xmap3D(dir))
          growhi3D(dir)=growhi(xmap3D(dir))
         else
@@ -577,6 +589,12 @@
         dx3D(dir)=dx(dir)
         FSI_lo3D(dir)=tilelo(dir)
         FSI_hi3D(dir)=tilehi(dir)
+
+        xlo3D_tile(dir)=xlo(dir)+ &
+          dx3D(dir)*(FSI_lo3D(dir)-fablo(dir))
+        xhi3D_tile(dir)=xlo3D_tile(dir)+ &
+          dx3D(dir)*(FSI_hi3D(dir)-FSI_lo3D(dir)+1)
+
         growlo3D(dir)=growlo(dir)
         growhi3D(dir)=growhi(dir)
        enddo ! dir=1..SDIM

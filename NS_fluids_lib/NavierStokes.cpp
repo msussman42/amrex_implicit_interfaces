@@ -8703,6 +8703,11 @@ void NavierStokes::ns_header_msg_level(
    if (localMF[DRAG_MF]->nComp()!=N_DRAG)
     amrex::Error("localMF[DRAG_MF] incorrect ncomp");
 
+    // FSI_sub_operation==0: call headermsg => call CLSVOF_clear_lag_data
+    // FSI_sub_operation==1: call headermsg => call CLSVOF_Copy_To_LAG
+    //  for data blocks owned by a given node.
+    // FSI_sub_operation==2: call headermsg => call CLSVOF_sync_lag_data
+    //
    if ((FSI_sub_operation==0)|| //init VELADVECT_MF, fortran grid structure,...
        (FSI_sub_operation==2)) {//delete VELADVECT_MF
 

@@ -6770,7 +6770,7 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T :: ioproc,isout
+INTEGER_T, intent(in) :: ioproc,isout
 INTEGER_T :: nmat
 INTEGER_T :: part_id
 INTEGER_T :: ctml_part_id
@@ -6831,14 +6831,14 @@ INTEGER_T :: dir,inode,num_nodes
       FSI(part_id)%NodeVel(dir,inode)=zero
       FSI(part_id)%NodeVel_old(dir,inode)=zero
       FSI(part_id)%NodeVel_new(dir,inode)=zero
-     enddo
+     enddo ! dir=1,3
      FSI(part_id)%NodeMass(inode)=one
      FSI(part_id)%NodeDensity(inode)=one
      do dir=1,3
       FSI(part_id)%NodeForce(dir,inode)=zero
       FSI(part_id)%NodeForce_old(dir,inode)=zero
       FSI(part_id)%NodeForce_new(dir,inode)=zero
-     enddo
+     enddo ! dir=1,3
     enddo ! inode=1..num_nodes
    else if ((ctml_part_id.eq.0).and. &
             (fsi_part_id.eq.0)) then
@@ -6859,8 +6859,14 @@ return
 end subroutine CLSVOF_clear_lag_data
 
 
-! called from fort_headermsg when FSI_operation==4 and FSI_sub_operation==2
+! called from fort_headermsg when FSI_operation==4 and 
+! FSI_sub_operation==2
 ! isout==1 => verbose
+! NOTE: headermsg when FSI_operation==4 and FSI_sub_operation==1
+! (which calls CLSVOF_Copy_To_LAG)
+! is called only for those blocks associated with a given node.
+! It is the job of this routine to insure that all nodes have all
+! the Lagrangian information.
 subroutine CLSVOF_sync_lag_data(ioproc,isout)
 use global_utility_module
 #ifdef MVAHABFSI
@@ -6872,11 +6878,13 @@ use mpi
 
 IMPLICIT NONE
 
-INTEGER_T :: ioproc,isout
+INTEGER_T, intent(in) :: ioproc,isout
 INTEGER_T :: ierr1
 INTEGER_T :: nmat
 double precision, dimension(:), allocatable :: sync_velocity
 double precision, dimension(:), allocatable :: temp_velocity
+double precision, dimension(:), allocatable :: sync_force
+double precision, dimension(:), allocatable :: temp_force
 
 INTEGER_T part_id
 INTEGER_T ctml_part_id
@@ -6903,21 +6911,35 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
     sync_dim=num_nodes*3
     allocate(sync_velocity(sync_dim))
     allocate(temp_velocity(sync_dim))
+
+    allocate(sync_force(sync_dim))
+    allocate(temp_force(sync_dim))
+
     do inode=1,num_nodes
     do dir=1,3
      sync_velocity(3*(inode-1)+dir)=FSI(part_id)%NodeVel(dir,inode)
      temp_velocity(3*(inode-1)+dir)=zero
+
+     sync_force(3*(inode-1)+dir)=FSI(part_id)%NodeForce(dir,inode)
+     temp_force(3*(inode-1)+dir)=zero
     enddo
     enddo
     ierr1=0
 #if (mpi_activate==1)
     call MPI_BARRIER(MPI_COMM_WORLD,ierr1)
+     ! sync_velocity is input
+     ! temp_velocity is output
     call MPI_ALLREDUCE(sync_velocity,temp_velocity,sync_dim, &
+     MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr1)
+     ! sync_force is input
+     ! temp_force is output
+    call MPI_ALLREDUCE(sync_force,temp_force,sync_dim, &
      MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr1)
     call MPI_BARRIER(MPI_COMM_WORLD,ierr1)
     do inode=1,num_nodes
     do dir=1,3
      sync_velocity(3*(inode-1)+dir)=temp_velocity(3*(inode-1)+dir)
+     sync_force(3*(inode-1)+dir)=temp_force(3*(inode-1)+dir)
     enddo
     enddo
 #elif (mpi_activate==0)
@@ -6931,11 +6953,18 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
      FSI(part_id)%NodeVel(dir,inode)=sync_velocity(3*(inode-1)+dir)
      FSI(part_id)%NodeVel_old(dir,inode)=sync_velocity(3*(inode-1)+dir)
      FSI(part_id)%NodeVel_new(dir,inode)=sync_velocity(3*(inode-1)+dir)
+
+     FSI(part_id)%NodeForce(dir,inode)=sync_force(3*(inode-1)+dir)
+     FSI(part_id)%NodeForce_old(dir,inode)=sync_force(3*(inode-1)+dir)
+     FSI(part_id)%NodeForce_new(dir,inode)=sync_force(3*(inode-1)+dir)
     enddo
     enddo
 
     deallocate(sync_velocity)
     deallocate(temp_velocity)
+
+    deallocate(sync_force)
+    deallocate(temp_force)
 
     if ((ctml_part_id.ge.1).and. &
         (ctml_part_id.le.CTML_NPARTS)) then
@@ -6944,6 +6973,8 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
       do dir=1,AMREX_SPACEDIM
        ctml_fib_vel(ctml_part_id,inode_fiber,dir)= &
         FSI(part_id)%NodeVel(dir,inode)
+       ctml_fib_frc(ctml_part_id,inode_fiber,dir)= &
+        FSI(part_id)%NodeForce(dir,inode)
       enddo
      enddo
     else if (ctml_part_id.eq.0) then
@@ -7468,18 +7499,18 @@ subroutine check_overlap(part_id,ielem,time,minnode,maxnode, &
  tid,tilenum,dx3D,lev77,interior_flag,overlap,isweep)
 IMPLICIT NONE
 
-INTEGER_T part_id
-INTEGER_T tid,tilenum
-INTEGER_T ielem
-INTEGER_T lev77
-INTEGER_T interior_flag
-INTEGER_T overlap
-INTEGER_T isweep
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: tid,tilenum
+INTEGER_T, intent(in) :: ielem
+INTEGER_T, intent(in) :: lev77
+INTEGER_T, intent(out) :: interior_flag
+INTEGER_T, intent(out) :: overlap
+INTEGER_T, intent(in) :: isweep
+REAL_T, intent(in) :: time
+REAL_T, intent(in) :: dx3D(3)
+REAL_T, intent(in) :: minnode(3)
+REAL_T, intent(in) :: maxnode(3)
 INTEGER_T local_nelems
-REAL_T time
-REAL_T dx3D(3)
-REAL_T minnode(3)
-REAL_T maxnode(3)
 INTEGER_T dir
 INTEGER_T tilelo,tilehi
 REAL_T xlo,xhi
@@ -7542,7 +7573,9 @@ REAL_T local_buffer(3)
    tilelo=contain_elem(lev77)%tilelo3D(tid,tilenum,dir) 
    tilehi=contain_elem(lev77)%tilehi3D(tid,tilenum,dir) 
    xhi=xlo+dx3D(dir)*(tilehi-tilelo+1)
-   if (xhi.le.xlo) then
+   if (xhi.gt.xlo) then
+    ! do nothing
+   else
     print *,"xhi.le.xlo"
     stop
    endif
@@ -7556,7 +7589,9 @@ REAL_T local_buffer(3)
        (maxnode(dir).gt.xhi-local_buffer(dir))) then
     interior_flag=0
    endif
-   if (minnode(dir).gt.maxnode(dir)) then
+   if (minnode(dir).le.maxnode(dir)) then
+    ! do nothing
+   else
     print *,"minnode(dir).gt.maxnode(dir)"
     stop
    endif
@@ -7599,15 +7634,15 @@ subroutine check_overlap_nodeBIG(part_id,inode,time, &
  tid,tilenum,dx3D,lev77,overlap)
 IMPLICIT NONE
 
-INTEGER_T part_id
-INTEGER_T tid,tilenum
-INTEGER_T inode
-INTEGER_T lev77
-INTEGER_T overlap
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: tid,tilenum
+INTEGER_T, intent(in) :: inode
+INTEGER_T, intent(in) :: lev77
+INTEGER_T, intent(out) :: overlap
+REAL_T, intent(in) :: time
+REAL_T, intent(in) :: dx3D(3)
+REAL_T, intent(in) :: minnode(3)
 INTEGER_T local_nnodes
-REAL_T time
-REAL_T dx3D(3)
-REAL_T minnode(3)
 INTEGER_T dir
 INTEGER_T tilelo,tilehi
 REAL_T xlo,xhi
@@ -7653,7 +7688,9 @@ REAL_T xlo,xhi
     tilelo=contain_elem(lev77)%tilelo3D(tid,tilenum,dir) 
     tilehi=contain_elem(lev77)%tilehi3D(tid,tilenum,dir) 
     xhi=xlo+dx3D(dir)*(tilehi-tilelo+1)
-    if (xhi.le.xlo) then
+    if (xhi.gt.xlo) then
+     ! do nothing
+    else
      print *,"xhi.le.xlo"
      stop
     endif
@@ -10029,7 +10066,12 @@ IMPLICIT NONE
 return
 end subroutine CLSVOF_InitBox
 
-
+        ! called from fort_headermsg when FSI_operation==4 and
+        ! FSI_sub_operation==1.
+        ! This routine is called only for those blocks associated with a 
+        ! given node.
+        ! CLSVOF_sync_lag_data must be called later in order to synchronize
+        ! all of the Lagrangian data across all of the nodes.
       subroutine CLSVOF_Copy_To_LAG(  &
        sdim_AMR, &
        lev77, &
@@ -10064,34 +10106,34 @@ end subroutine CLSVOF_InitBox
 
        IMPLICIT NONE
 
-      INTEGER_T :: sdim_AMR
-      INTEGER_T :: lev77
-      INTEGER_T :: tid
-      INTEGER_T :: tilenum
-      INTEGER_T :: im_part
-      INTEGER_T :: nparts
-      INTEGER_T :: part_id
-      INTEGER_T :: ngrowFSI
-      INTEGER_T :: nmat
-      INTEGER_T :: nFSI
-      INTEGER_T :: FSI_operation
-      REAL_T :: time
-      REAL_T problo3D(3)
-      REAL_T probhi3D(3)
-      INTEGER_T xmap3D(3)
-      REAL_T xslice3D(3)
-      REAL_T dx3D(3)
-      INTEGER_T FSI_lo(3),FSI_hi(3)
-      INTEGER_T FSI_growlo(3),FSI_growhi(3)
-      INTEGER_T growlo3D(3),growhi3D(3)
+      INTEGER_T, intent(in) :: sdim_AMR
+      INTEGER_T, intent(in) :: lev77
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: tilenum
+      INTEGER_T, intent(in) :: im_part
+      INTEGER_T, intent(in) :: nparts
+      INTEGER_T, intent(in) :: part_id
+      INTEGER_T, intent(in) :: ngrowFSI
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: nFSI
+      INTEGER_T, intent(in) :: FSI_operation
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: problo3D(3)
+      REAL_T, intent(in) :: probhi3D(3)
+      INTEGER_T, intent(in) :: xmap3D(3)
+      REAL_T, intent(in) :: xslice3D(3)
+      REAL_T, intent(in) :: dx3D(3)
+      INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
+      INTEGER_T, intent(in) :: FSI_growlo(3),FSI_growhi(3)
+      INTEGER_T, intent(in) :: growlo3D(3),growhi3D(3)
       INTEGER_T, intent(in) :: DIMDEC3D(FSIdata3D)
-      REAL_T xdata3D(DIMV3D(FSIdata3D),3)
+      REAL_T, intent(in) :: xdata3D(DIMV3D(FSIdata3D),3)
       REAL_T, intent(in) :: veldata3D(DIMV3D(FSIdata3D),3)
       REAL_T, intent(in) :: stressdata3D(DIMV3D(FSIdata3D),6*nmat)
-      REAL_T masknbr3D(DIMV3D(FSIdata3D),2)
-      REAL_T maskfiner3D(DIMV3D(FSIdata3D))
+      REAL_T, intent(in) :: masknbr3D(DIMV3D(FSIdata3D),2)
+      REAL_T, intent(in) :: maskfiner3D(DIMV3D(FSIdata3D))
 
-      INTEGER_T ioproc,isout
+      INTEGER_T, intent(in) :: ioproc,isout
 
       REAL_T dxBB(3) ! set in find_grid_bounding_box_node
 
@@ -10344,6 +10386,16 @@ end subroutine CLSVOF_InitBox
         local_mask=NINT(maskfiner3D(idx(1),idx(2),idx(3)))
 
         if (local_mask.eq.1) then
+
+         inside_interior_box=1
+         do dir=1,3
+          if ((xmap3D(dir).eq.1).or. &
+              (xmap3D(dir).eq.2).or. &
+              (xmap3D(dir).eq.sdim_AMR)) then
+           if (xnot(dir).lt.
+FIX ME
+
+
          total_weight=zero
          do dir=1,3
           total_vel(dir)=zero
@@ -10389,6 +10441,7 @@ end subroutine CLSVOF_InitBox
          enddo
          enddo
          if (total_weight.gt.zero) then
+           !NodeVel used in CLSVOF_sync_lag_data 
           do dir=1,3
            FSI(part_id)%NodeVel(dir,inode)=total_vel(dir)/total_weight
           enddo
