@@ -737,9 +737,11 @@
        do i=FSI_growlo3D(1),FSI_growhi3D(1)
        do j=FSI_growlo3D(2),FSI_growhi3D(2)
        do k=FSI_growlo3D(3),FSI_growhi3D(3)
+
         idx(1)=i
         idx(2)=j
         idx(3)=k
+
         i2d=i
         j2d=j
         k2d=k
@@ -782,10 +784,13 @@
          print *,"j2d out of range"
          stop
         endif
+
         call gridsten_level(xsten,i2d,j2d,k2d,level,nhalf)
 
         do partid=1,nparts
+
          ibase=(partid-1)*NCOMP_FSI
+
          FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)= &
           FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_LEVELSET+1) !LS
          FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)= &
@@ -798,7 +803,7 @@
          do dir=1,3
           if (SDIM.eq.3) then
            vel3D(dir)= &
-            FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_VELOCITY+xmap3D(dir))
+            FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+dir)
           else if (SDIM.eq.2) then
            if (xmap3D(dir).eq.0) then
             vel3D(dir)=zero
@@ -823,6 +828,7 @@
           FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=zero
          enddo
          FSIdata3D(i,j,k,ibase+FSI_SIZE)=zero
+
         enddo ! partid=1,nparts
           
         do nc=1,2
@@ -848,6 +854,7 @@
           stop
          endif
         enddo ! dir=1..3
+
        enddo !k
        enddo !j
        enddo !i
@@ -970,6 +977,7 @@
          ! mask2==1 => (i,j,k) in the interior of the tile.
          ! mask1==0 => (i,j,k) in coarse/fine ghost cell
         if ((mask1.eq.0).or.(mask2.eq.1)) then
+
          if (nFSI.ne.nparts*NCOMP_FSI) then 
           print *,"nFSI invalid"
           stop
@@ -978,6 +986,7 @@
          ! dir is the coordinate on the 3D grid
          ! xmap3D(dir) is the coordinate on the 2D grid
          ! idx is the 3d index.
+         ! (i,j,k) is the 2D index.
          if (SDIM.eq.3) then
           idx(1)=i
           idx(2)=j
@@ -1000,6 +1009,8 @@
           stop
          endif
 
+         ! idx is the 3d index.
+         ! (i,j,k) is the 2D index.
          do dir=1,3
           if ((idx(dir).lt.FSI_growlo3D(dir)).or. &
               (idx(dir).gt.FSI_growhi3D(dir))) then
@@ -1030,10 +1041,10 @@
           do dir=1,3
            if (SDIM.eq.3) then
             FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+dir)= &
-              FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_VELOCITY+dir) 
+             FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir) 
             if (FSI_operation.eq.2) then
              FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+dir)= &
-              FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_FORCE+dir) 
+              FSIdata3D(i,j,k,ibase+FSI_FORCE+dir) 
             else if (FSI_operation.eq.3) then
              ! do nothing
             else
@@ -1061,12 +1072,12 @@
              print *,"xmap3D(dir) invalid"
              stop
             endif
-           enddo ! dir=1..3
-          enddo ! partid=1..nparts
-         else
-          print *,"dimension bust"
-          stop
-         endif 
+           else
+            print *,"SDIM invalid"
+            stop
+           endif
+          enddo ! dir=1..3
+         enddo ! partid=1..nparts
  
         else if ((mask1.eq.1).and.(mask2.eq.0)) then
          ! do nothing
@@ -1321,6 +1332,8 @@
             xmap3D, &
             xslice3D, &
             dx3D, &
+            xlo3D_tile, &
+            xhi3D_tile, &
             FSI_lo3D,FSI_hi3D, &
             FSI_growlo3D,FSI_growhi3D, &
             growlo3D,growhi3D, &
