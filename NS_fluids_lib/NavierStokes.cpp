@@ -686,7 +686,7 @@ int NavierStokes::ngrowFSI=3;
 Vector<int> NavierStokes::im_solid_map; //nparts components, in range 0..nmat-1
 Vector<int> NavierStokes::im_elastic_map; 
 
-Vector<Real> NavierStoks::FSI_force_integral;
+Vector<Real> NavierStokes::FSI_force_integral;
 
 int NavierStokes::ngrow_expansion=2;
  

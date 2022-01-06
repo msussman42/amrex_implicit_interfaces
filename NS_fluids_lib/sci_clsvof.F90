@@ -24,6 +24,9 @@
 #define CTMLoverflow (1.0D+20)
 #define CTMLunderflow (1.0D-20)
 
+#define BoundingBoxRadNode 2
+#define BoundingBoxRadCell 3
+
 #ifdef BL_USE_MPI
 #define mpi_activate 1
 #else
@@ -7379,7 +7382,8 @@ REAL_T local_buffer(3)
  endif
  local_iband=FSI(part_id)%bounding_box_ngrow
  local_max_side=FSI(part_id)%max_side_len_refined
- if ((local_iband.eq.3).and.(local_max_side.gt.zero)) then
+ if ((local_iband.eq.BoundingBoxRadCell).and. &
+     (local_max_side.gt.zero)) then
   do dir=1,3
    local_buffer(dir)=local_iband*dx3D(dir)+local_max_side
   enddo
@@ -8416,7 +8420,7 @@ IMPLICIT NONE
   endif
 
   local_iband=FSI(part_id)%bounding_box_ngrow
-  if (local_iband.eq.3) then
+  if (local_iband.eq.BoundingBoxRadCell) then
    ! do nothing
   else
    print *,"local_iband invalid"
@@ -9935,6 +9939,8 @@ end subroutine CLSVOF_InitBox
        xmap3D, &
        xslice3D, &
        dx3D, &
+       xlo3D_tile, &
+       xhi3D_tile, &
        FSI_lo,FSI_hi, &
        FSI_growlo,FSI_growhi, &
        growlo3D,growhi3D, &
@@ -9969,6 +9975,8 @@ end subroutine CLSVOF_InitBox
       INTEGER_T, intent(in) :: xmap3D(3)
       REAL_T, intent(in) :: xslice3D(3)
       REAL_T, intent(in) :: dx3D(3)
+      REAL_T, intent(in) :: xlo3D_tile(3)
+      REAL_T, intent(in) :: xhi3D_tile(3)
       INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
       INTEGER_T, intent(in) :: FSI_growlo(3),FSI_growhi(3)
       INTEGER_T, intent(in) :: growlo3D(3),growhi3D(3)
@@ -9987,7 +9995,7 @@ end subroutine CLSVOF_InitBox
       INTEGER_T :: inode_container
       REAL_T, dimension(3) :: xnot
       REAL_T, dimension(3) :: xnode
-      INTEGER_T, dimension(3) :: gridlo,gridhi
+      INTEGER_T, dimension(3) :: gridloBB,gridhiBB
       INTEGER_T :: i,j,k
       INTEGER_T, dimension(3) :: idx
       REAL_T, dimension(3) :: velparm
@@ -10001,6 +10009,7 @@ end subroutine CLSVOF_InitBox
       INTEGER_T debug_all
       INTEGER_T ctml_part_id
       INTEGER_T fsi_part_id
+      INTEGER_T inside_interior_box
 
       debug_all=0
 
@@ -10205,7 +10214,7 @@ end subroutine CLSVOF_InitBox
          growlo3D,growhi3D, &
          xdata3D, &
          DIMS3D(FSIdata3D), &
-         gridlo,gridhi,dxBB) 
+         gridloBB,gridhiBB,dxBB) 
 
         do dir=1,3
          if (abs(dxBB(dir)-dx3D(dir)).gt.element_buffer_tol*dxBB(dir)) then
@@ -10217,14 +10226,14 @@ end subroutine CLSVOF_InitBox
         if (1.eq.0) then
          print *,"inode=",inode
          do dir=1,3
-          print *,"dir,gridlo,gridhi ",dir,gridlo(dir),gridhi(dir)
+          print *,"dir,gridloBB,gridhiBB ",dir,gridloBB(dir),gridhiBB(dir)
          enddo
         endif
 
         do dir=1,3
-         idx(dir)=(gridhi(dir)+gridlo(dir))/2
-         if (gridhi(dir)-gridlo(dir).ne.4) then
-          print *,"gridhi(dir)-gridlo(dir).ne.4"
+         idx(dir)=(gridhiBB(dir)+gridloBB(dir))/2
+         if (gridhiBB(dir)-gridloBB(dir).ne.2*BoundingBoxRadNode) then
+          print *,"gridhiBB(dir)-gridloBB(dir).ne.2*BoundingBoxRad"
           stop
          endif
         enddo
@@ -10235,52 +10244,95 @@ end subroutine CLSVOF_InitBox
 
          inside_interior_box=1
          do dir=1,3
-          if ((xmap3D(dir).eq.1).or. &
-              (xmap3D(dir).eq.2).or. &
-              (xmap3D(dir).eq.sdim_AMR)) then
-           if (xnot(dir).lt.
-FIX ME
+          if (sdim_AMR.eq.3) then
+           if ((xnot(dir).lt.xhi3D_tile(dir)).and. &
+               (xnot(dir).ge.xlo3D_tile(dir))) then
+            ! do nothing
+           else if ((xnot(dir).ge.xhi3D_tile(dir)).or. &
+                    (xnot(dir).lt.xlo3D_tile(dir))) then
+            inside_interior_box=0
+           else
+            print *,"xnot,xlo3d, or xhibc NaN"
+            stop
+           endif
+          else if (sdim_AMR.eq.2) then
+           if (xmap3D(dir).eq.0) then
+            ! do nothing
+           else if ((xmap3D(dir).eq.1).or. &
+                    (xmap3D(dir).eq.2)) then
+            if ((xnot(dir).lt.xhi3D_tile(dir)).and. &
+                (xnot(dir).ge.xlo3D_tile(dir))) then
+             ! do nothing
+            else if ((xnot(dir).ge.xhi3D_tile(dir)).or. &
+                     (xnot(dir).lt.xlo3D_tile(dir))) then
+             inside_interior_box=0
+            else
+             print *,"xnot,xlo3d, or xhibc NaN"
+             stop
+            endif
+           else
+            print *,"xmap3D invalid"
+            stop
+           endif
+          else
+           print *,"sdim_AMR invalid"
+           stop
+          endif
+         enddo ! dir=1,3
 
+         if (inside_interior_box.eq.1) then
 
-         total_weight=zero
-         do dir=1,3
-          total_vel(dir)=zero
-         enddo
-         do i=gridlo(1),gridhi(1)
-         do j=gridlo(2),gridhi(2)
-         do k=gridlo(3),gridhi(3)
-          wt=one
+          total_weight=zero
           do dir=1,3
-
-           if ((xmap3D(dir).eq.1).or. &
-               (xmap3D(dir).eq.2).or. &
-               (xmap3D(dir).eq.sdim_AMR)) then
+           total_vel(dir)=zero
+          enddo
+          do i=gridloBB(1),gridhiBB(1)
+          do j=gridloBB(2),gridhiBB(2)
+          do k=gridloBB(3),gridhiBB(3)
+           wt=one
+           do dir=1,3
             dist_scale=abs(xdata3D(i,j,k,dir)-xnot(dir))/dxBB(dir)
             support_size=two
             df=hsprime(dist_scale,support_size)
-            wt=wt*df
-           else if ((xmap3D(dir).eq.0).and.(sdim_AMR.eq.2)) then
-            ! do nothing
-           else
-            print *,"xmap3D(dir) invalid"
-            stop
-           endif
+            if (sdim_AMR.eq.3) then
+             wt=wt*df
+            else if (sdim_AMR.eq.2) then
+             if (xmap3D(dir).eq.0) then
+              ! do nothing
+             else if ((xmap3D(dir).eq.1).or. &
+                      (xmap3D(dir).eq.2)) then
+              wt=wt*df
+             else
+              print *,"xmap3D invalid"
+              stop
+             endif
+            else
+             print *,"sdim_AMR invalid"
+             stop
+            endif
 
-          enddo ! dir=1..3
-          total_weight=total_weight+wt
-          do dir=1,3
-           total_vel(dir)=total_vel(dir)+wt*veldata3D(i,j,k,dir)
+           enddo ! dir=1..3
+
+           total_weight=total_weight+wt
+           do dir=1,3
+            total_vel(dir)=total_vel(dir)+wt*veldata3D(i,j,k,dir)
+           enddo
           enddo
-         enddo
-         enddo
-         enddo
-         if (total_weight.gt.zero) then
+          enddo
+          enddo
+          if (total_weight.gt.zero) then
            !NodeVel used in CLSVOF_sync_lag_data 
-          do dir=1,3
-           FSI(part_id)%NodeVel(dir,inode)=total_vel(dir)/total_weight
-          enddo
+           do dir=1,3
+            FSI(part_id)%NodeVel(dir,inode)=total_vel(dir)/total_weight
+           enddo
+          else
+           print *,"total_weight invalid"
+           stop
+          endif
+         else if (inside_interior_box.eq.0) then
+          ! do nothing
          else
-          print *,"total_weight invalid"
+          print *,"inside_interior_box invalid"
           stop
          endif
         else if (local_mask.eq.0) then
@@ -11181,7 +11233,7 @@ IMPLICIT NONE
  endif
 
  local_iband=FSI(part_id)%bounding_box_ngrow
- if (local_iband.ne.3) then
+ if (local_iband.ne.BoundingBoxRadCell) then
   print *,"local_iband invalid"
   stop
  endif
@@ -11349,26 +11401,26 @@ subroutine find_grid_bounding_box_node( &
  growlo3D,growhi3D,  &
  xdata3D, &
  DIMS3D(xdata3D), &
- gridlo,gridhi,dxBB)
+ gridloBB,gridhiBB,dxBB)
 IMPLICIT NONE
 
- REAL_T xnot(3)
- INTEGER_T FSI_lo(3),FSI_hi(3)
- INTEGER_T FSI_growlo(3),FSI_growhi(3)
- INTEGER_T growlo3D(3),growhi3D(3)
- INTEGER_T DIMDEC3D(xdata3D)
- REAL_T xdata3D(DIMV3D(xdata3D),3)
- INTEGER_T gridlo(3),gridhi(3)
+ REAL_T, intent(in) :: xnot(3)
+ INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
+ INTEGER_T, intent(in) :: FSI_growlo(3),FSI_growhi(3)
+ INTEGER_T, intent(in) :: growlo3D(3),growhi3D(3)
+ INTEGER_T, intent(in) :: DIMDEC3D(xdata3D)
+ REAL_T, intent(in) :: xdata3D(DIMV3D(xdata3D),3)
+ INTEGER_T, intent(out) :: gridloBB(3),gridhiBB(3)
+ REAL_T, intent(out) :: dxBB(3)
  INTEGER_T dir,dirloc
  INTEGER_T idx(3),idxL(3),idxR(3)
  INTEGER_T iter,change
  REAL_T dist,distL,distR
- REAL_T dxBB(3)
  REAL_T xlo(3),xhi(3)
  INTEGER_T ngrow,ngrowtest
  INTEGER_T interp_support
 
- interp_support=2
+ interp_support=BoundingBoxRadNode
 
  ngrow=0
  do dir=1,3
@@ -11428,21 +11480,21 @@ IMPLICIT NONE
    stop
   endif
   if (xnot(dir).le.xlo(dir)+VOFTOL*dxBB(dir)) then
-   gridlo(dir)=FSI_lo(dir)
+   gridloBB(dir)=FSI_lo(dir)
   else if (xnot(dir).ge.xhi(dir)-VOFTOL*dxBB(dir)) then
-   gridlo(dir)=FSI_hi(dir)
+   gridloBB(dir)=FSI_hi(dir)
   else if ((xnot(dir).ge.xlo(dir)).and. &
            (xnot(dir).le.xhi(dir))) then
-   gridlo(dir)=NINT( (xnot(dir)-xlo(dir))/dxBB(dir)-half+FSI_lo(dir) )
-   if ((gridlo(dir).lt.FSI_lo(dir)).or. &
-       (gridlo(dir).gt.FSI_hi(dir))) then
+   gridloBB(dir)=NINT( (xnot(dir)-xlo(dir))/dxBB(dir)-half+FSI_lo(dir) )
+   if ((gridloBB(dir).lt.FSI_lo(dir)).or. &
+       (gridloBB(dir).gt.FSI_hi(dir))) then
     print *,"node should be within grid interior"
     stop
    endif
    do dirloc=1,3
     idx(dirloc)=FSI_lo(dirloc)
    enddo
-   idx(dir)=gridlo(dir)
+   idx(dir)=gridloBB(dir)
    dist=abs(xdata3D(idx(1),idx(2),idx(3),dir)-xnot(dir)) 
    change=1
    iter=0
@@ -11480,14 +11532,14 @@ IMPLICIT NONE
      stop
     endif
    enddo ! while (change==1)
-   gridlo(dir)=idx(dir)
+   gridloBB(dir)=idx(dir)
   else
    print *,"xnot(dir) invalid"
    stop
   endif
 
-  gridhi(dir)=gridlo(dir)+interp_support 
-  gridlo(dir)=gridlo(dir)-interp_support 
+  gridhiBB(dir)=gridloBB(dir)+interp_support 
+  gridloBB(dir)=gridloBB(dir)-interp_support 
 
  enddo  ! dir=1..sdim
 
