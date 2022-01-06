@@ -3071,7 +3071,7 @@ NavierStokes::read_params ()
     }  // im=0..nmat-1
     im_solid_map.resize(nparts);
 
-    FSI_force_integral.resize(3*num_materials);
+    FSI_force_integral.resize(NCOMP_FSI*num_materials);
 
     if (CTML_FSI_numsolids!=CTML_FSI_numsolids_test)
      amrex::Error("CTML_FSI_numsolids!=CTML_FSI_numsolids_test");
@@ -7452,6 +7452,7 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
    setVal_localMF(FSI_MF,0.0,ibase+FSI_TEMPERATURE,1,ngrowFSI); // temperature
    setVal_localMF(FSI_MF,0.0,ibase+FSI_EXTRAP_FLAG,1,ngrowFSI); // mask
    setVal_localMF(FSI_MF,0.0,ibase+FSI_FORCE,3,ngrowFSI); // force
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_SIZE,1,ngrowFSI); //perimeter(doubly w.)
    setVal_localMF(FSI_MF,0.0,ibase+FSI_STRESS,6,ngrowFSI); // stress
   } // partid=0..nparts-1
 
@@ -8385,7 +8386,7 @@ void NavierStokes::ns_header_msg_level(
      FSI_output[im_index].force_list.dataPtr(),
      FSI_output[im_index].mass_list.dataPtr(),
      FSI_output[im_index].temperature_list.dataPtr(),
-     &FSI_operation, // 5 (integral of F_membrane dA)
+     &FSI_operation, // 5 (integral of F_membrane dA, perimeter if double w.)
      &FSI_sub_operation, // 0
      tilelo,tilehi,
      fablo,fabhi,

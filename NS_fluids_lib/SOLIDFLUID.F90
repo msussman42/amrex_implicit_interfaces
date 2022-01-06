@@ -370,12 +370,12 @@
       REAL_T, intent(in) :: dx_max_level(SDIM)
       REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
 
-      REAL_T, intent(inout) :: FSI_force_integral(3*num_materials)
+      REAL_T, intent(inout) :: &
+        FSI_force_integral(NCOMP_FSI*num_materials)
 
       REAL_T problo3D(3),probhi3D(3)
       REAL_T dx3D(3)
       REAL_T vel3D(3)
-      REAL_T force3D(3)
       INTEGER_T, intent(in) :: velbc(SDIM,2)
       INTEGER_T, intent(in) :: vofbc(SDIM,2)
       INTEGER_T xmap3D(3)
@@ -794,19 +794,17 @@
           do dir=1,3
            if (xmap3D(dir).eq.0) then
             vel3D(dir)=zero
-            force3D(dir)=zero
            else if ((xmap3D(dir).eq.1).or. &
                     (xmap3D(dir).eq.2)) then
             vel3D(dir)= &
              FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_VELOCITY+xmap3D(dir))
-            force3D(dir)= &
-             FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_FORCE+xmap3D(dir))
            else
             print *,"xmap3D(dir) invalid"
             stop
            endif
+            !FSI_FORCE and FSI_SIZE should be initialized to zero.
+            !FSI_VELOCITY, on the other hand, needs to be extrapolated.
            FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel3D(dir)
-           FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=force3D(dir)
           enddo ! dir=1..3
          enddo ! partid=1,nparts
           
@@ -990,6 +988,8 @@
             FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_TEMPERATURE+1) ! T
            FSIdata(D_DECL(i,j,k),ibase+FSI_EXTRAP_FLAG+1)= &
             FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_EXTRAP_FLAG+1) ! flag
+           FSIdata(D_DECL(i,j,k),ibase+FSI_SIZE+1)= &
+            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_SIZE+1)!perim if doubly w. 
            do dir=1,3
             if (xmap3D(dir).eq.0) then
              FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+3)=zero
