@@ -8249,14 +8249,14 @@ use CTML_module
 IMPLICIT NONE
 
   INTEGER_T, intent(in) :: iter
-  INTEGER_T, intent(in) :: :: sdim_AMR
-  INTEGER_T, intent(in) :: :: lev77
-  INTEGER_T, intent(in) :: :: tid
-  INTEGER_T, intent(in) :: :: tilenum
-  INTEGER_T, intent(in) :: :: im_part
-  INTEGER_T, intent(in) :: :: nparts
-  INTEGER_T, intent(in) :: :: part_id
-  INTEGER_T, intent(in) :: :: ngrowFSI
+  INTEGER_T, intent(in) :: sdim_AMR
+  INTEGER_T, intent(in) :: lev77
+  INTEGER_T, intent(in) :: tid
+  INTEGER_T, intent(in) :: tilenum
+  INTEGER_T, intent(in) :: im_part
+  INTEGER_T, intent(in) :: nparts
+  INTEGER_T, intent(in) :: part_id
+  INTEGER_T, intent(in) :: ngrowFSI
   INTEGER_T, intent(in) :: nmat
   INTEGER_T, intent(in) :: nFSI
   INTEGER_T, intent(in) :: FSI_operation
@@ -8695,7 +8695,7 @@ IMPLICIT NONE
        dxBB_min=dxBB(dir)
       endif
      enddo
-     delta_cutoff=3*dxBB_min
+     delta_cutoff=3.0d0*dxBB_min
 
      do dir=1,3
       if (abs(dxBB(dir)-dx3D(dir)).gt.element_buffer_tol*dxBB(dir)) then
@@ -9116,9 +9116,9 @@ IMPLICIT NONE
              ! xx is grid coordinate 
             if (CTML_DEBUG_Mass.eq.1) then
              print *,"inode,ielem,xtarget,xx,massparm ", &
-                  inode,ielem, &
-                  xtarget(1),xtarget(2),xtarget(3), &  
-                  xx(1),xx(2),xx(3),massparm
+               inode,ielem, &
+               xtarget(1),xtarget(2),xtarget(3), &  
+               xx(1),xx(2),xx(3),massparm
             endif
             distwt=0.0d0
             do dir=1,3

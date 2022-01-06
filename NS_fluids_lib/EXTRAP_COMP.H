@@ -98,7 +98,11 @@ interface temperature and interface mass fraction.
 #define FSI_EXTRAP_FLAG (FSI_TEMPERATURE+1)
 #define FSI_FORCE (FSI_EXTRAP_FLAG+1)
 #define FSI_STRESS (FSI_FORCE+3)
-#define FSI_NEXT (FSI_STRESS+6)
+#if (0)
+FSI_SIZE=area if doubly wetted, SIZE=volume otherwise
+#endif
+#define FSI_SIZE (FSI_STRESS+6)
+#define FSI_NEXT (FSI_SIZE+1)
 #define NCOMP_FSI (FSI_NEXT)
 
 #endif
