@@ -8303,7 +8303,6 @@ IMPLICIT NONE
   INTEGER_T :: inplane
   REAL_T :: wallthick
   REAL_T, dimension(3) :: velparm
-  REAL_T, dimension(6) :: forceparm
   REAL_T :: massparm
   INTEGER_T :: dir
   REAL_T :: dotprod
@@ -8330,7 +8329,7 @@ IMPLICIT NONE
   INTEGER_T mask_local,mask_node
   INTEGER_T new_mask_local
   REAL_T, dimension(3) :: vel_local
-  REAL_T, dimension(6) :: force_local
+  REAL_T, dimension(3) :: force_local
   REAL_T temp_local
   INTEGER_T nc
   INTEGER_T sign_defined
@@ -9013,9 +9012,6 @@ IMPLICIT NONE
          do dir=1,3
           vel_local(dir)=FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)
          enddo
-         do dir=1,3
-          force_local(dir)=FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)
-         enddo
          temp_local=FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)
 
          if ((mask_local.eq.0).or. &
@@ -9106,9 +9102,6 @@ IMPLICIT NONE
              print *,"massparm invalid"
              stop
             endif
-            do dir=1,3
-             forceparm(dir)=FSI(part_id)%NodeForceBIG(dir,nodeptr)
-            enddo
             call get_target_from_foot(xfoot,xtarget, &
              velparm,time,part_id)
    
@@ -9182,15 +9175,16 @@ IMPLICIT NONE
          FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=mask_local
          do dir=1,3
           FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel_local(dir)
-           ! the Eulerian force will be corrected later so that
-           ! integral F_membrane dA = integral F_fluid_cor delta dV
-           ! F_fluid_cor=
-           !   F_fluid * (integral F_membrane dA)/
-           !             (integral F_fluid delta dV)
-          FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)= &
-              force_local(dir)*dt* &
-              hsprime(ls_local,delta_cutoff)
+           ! the Eulerian force will be corrected later so that:
+           ! a) integral 1 dA = integral delta dV
+           !  delta_cor=
+           !   delta * (integral 1 dA)/
+           !           (integral 1 delta dV)
+           ! b) integral F_lag dA=integral delta_cor F_cor dV
+           !    F_cor=F+c
+          FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=force_local(dir)*dt
          enddo 
+         FSIdata3D(i,j,k,ibase+FSI_SIZE+1)=hsprime(ls_local,delta_cutoff)
          FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)=temp_local
 
         else if ((mask1.eq.1).and.(mask2.eq.0)) then
@@ -9761,11 +9755,6 @@ IMPLICIT NONE
               ! temperature
              weight_top(FSI_TEMPERATURE+1)=weight_top(FSI_TEMPERATURE+1)+ &
                old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_TEMPERATURE+1)*weight
-              ! force
-             do dir=1,3
-              weight_top(FSI_FORCE+dir)=weight_top(FSI_FORCE+dir)+ &
-               old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_FORCE+dir)*weight
-             enddo
      
              weight_bot=weight_bot+weight
             else if (vel_valid(mask_node).eq.0) then

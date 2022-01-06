@@ -740,18 +740,16 @@
         idx(1)=i
         idx(2)=j
         idx(3)=k
+        i2d=i
+        j2d=j
+        k2d=k
 
         if (SDIM.eq.3) then
-         call gridsten_level(xsten,i,j,k,level,nhalf)
-         do nc=1,nFSI
-          FSIdata3D(i,j,k,nc)=FSIdata(D_DECL(i,j,k),nc)
-         enddo
-         do dir=1,SDIM
-          xdata3D(i,j,k,dir)=xsten(0,dir)
-         enddo
-         do nc=1,2
-          masknbr3D(i,j,k,nc)=masknbr(D_DECL(i,j,k),nc)
-         enddo
+         if ((k2d.lt.tilelo(SDIM)-ngrowFSI).or. &
+             (k2d.gt.tilehi(SDIM)+ngrowFSI)) then
+          print *,"k2d out of range"
+          stop
+         endif
         else if (SDIM.eq.2) then
          k2d=0
           ! dir is the coordinate on the 3D grid
@@ -769,29 +767,39 @@
            stop
           endif
          enddo ! dir=1..3
-         if ((i2d.lt.tilelo(1)-ngrowFSI).or. &
-             (i2d.gt.tilehi(1)+ngrowFSI)) then
-          print *,"i2d out of range"
-          stop
-         endif
-         if ((j2d.lt.tilelo(2)-ngrowFSI).or. &
-             (j2d.gt.tilehi(2)+ngrowFSI)) then
-          print *,"j2d out of range"
-          stop
-         endif
-         call gridsten_level(xsten,i2d,j2d,k2d,level,nhalf)
+        else
+         print *,"dimension bust"
+         stop
+        endif
 
-         do partid=1,nparts
-          ibase=(partid-1)*NCOMP_FSI
-          FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)= &
-            FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_LEVELSET+1) !LS
-          FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)= &
-            FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_TEMPERATURE+1) !T
-          FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)= &
-            FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_EXTRAP_FLAG+1) !flag
-          ! dir is the coordinate on the 3D grid
-          ! xmap3D(dir) is the coordinate on the 2D grid
-          do dir=1,3
+        if ((i2d.lt.tilelo(1)-ngrowFSI).or. &
+            (i2d.gt.tilehi(1)+ngrowFSI)) then
+         print *,"i2d out of range"
+         stop
+        endif
+        if ((j2d.lt.tilelo(2)-ngrowFSI).or. &
+            (j2d.gt.tilehi(2)+ngrowFSI)) then
+         print *,"j2d out of range"
+         stop
+        endif
+        call gridsten_level(xsten,i2d,j2d,k2d,level,nhalf)
+
+        do partid=1,nparts
+         ibase=(partid-1)*NCOMP_FSI
+         FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)= &
+          FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_LEVELSET+1) !LS
+         FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)= &
+          FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_TEMPERATURE+1) !T
+         FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)= &
+          FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_EXTRAP_FLAG+1) !flag
+
+         ! dir is the coordinate on the 3D grid
+         ! xmap3D(dir) is the coordinate on the 2D grid
+         do dir=1,3
+          if (SDIM.eq.3) then
+           vel3D(dir)= &
+            FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_VELOCITY+xmap3D(dir))
+          else if (SDIM.eq.2) then
            if (xmap3D(dir).eq.0) then
             vel3D(dir)=zero
            else if ((xmap3D(dir).eq.1).or. &
@@ -802,16 +810,29 @@
             print *,"xmap3D(dir) invalid"
             stop
            endif
-            !FSI_FORCE and FSI_SIZE should be initialized to zero.
-            !FSI_VELOCITY, on the other hand, needs to be extrapolated.
-           FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel3D(dir)
-          enddo ! dir=1..3
-         enddo ! partid=1,nparts
-          
-         do nc=1,2
-          masknbr3D(i,j,k,nc)=masknbr(D_DECL(i2d,j2d,k2d),nc)
-         enddo
+          else
+           print *,"dimension bust"
+           stop
+          endif
+           !FSI_FORCE and FSI_SIZE should be initialized to zero.
+           !FSI_VELOCITY, on the other hand, needs to be extrapolated.
+          FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel3D(dir)
+         enddo ! dir=1..3
+
          do dir=1,3
+          FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=zero
+         enddo
+         FSIdata3D(i,j,k,ibase+FSI_SIZE)=zero
+        enddo ! partid=1,nparts
+          
+        do nc=1,2
+         masknbr3D(i,j,k,nc)=masknbr(D_DECL(i2d,j2d,k2d),nc)
+        enddo
+
+        do dir=1,3
+         if (SDIM.eq.3) then
+          xdata3D(i,j,k,dir)=xsten(0,dir)
+         else if (SDIM.eq.2) then
           if (xmap3D(dir).eq.0) then
            xdata3D(i,j,k,dir)=xslice3D(dir)+idx(dir)*dx_max_level(1)
           else if (xmap3D(dir).eq.1) then 
@@ -822,11 +843,11 @@
            print *,"xmap3D invalid"
            stop
           endif
-         enddo ! dir=1..3
-        else
-         print *,"dimension bust"
-         stop
-        endif 
+         else
+          print *,"dimension bust"
+          stop
+         endif
+        enddo ! dir=1..3
        enddo !k
        enddo !j
        enddo !i
@@ -937,7 +958,6 @@
 
         ! update ngrowFSI grow layers of FSIdata that do not overlap
         ! with another tile.
-        ! nparts x (velocity + LS + temperature + flag)
         ! PCINTERP_fill_borders interpolates from coarser levels so
         ! that we only have to traverse interior values here.
        do i=tilelo3D(1),tilehi3D(1)
@@ -955,14 +975,14 @@
           stop
          endif
 
+         ! dir is the coordinate on the 3D grid
+         ! xmap3D(dir) is the coordinate on the 2D grid
+         ! idx is the 3d index.
          if (SDIM.eq.3) then
-          do nc=1,nFSI
-           FSIdata(D_DECL(i,j,k),nc)=FSIdata3D(i,j,k,nc)
-          enddo
+          idx(1)=i
+          idx(2)=j
+          idx(SDIM)=k
          else if (SDIM.eq.2) then
-          ! dir is the coordinate on the 3D grid
-          ! xmap3D(dir) is the coordinate on the 2D grid
-          ! idx is the 3d index.
           do dir=1,3
            if (xmap3D(dir).eq.0) then
             idx(dir)=0
@@ -974,23 +994,53 @@
             print *,"xmap3D invalid"
             stop
            endif
-           if ((idx(dir).lt.FSI_growlo3D(dir)).or. &
-               (idx(dir).gt.FSI_growhi3D(dir))) then
-            print *,"idx(dir) out of range"
-            stop
-           endif
-          enddo ! dir=1..3
-          do partid=1,nparts
-           ibase=(partid-1)*NCOMP_FSI
-           FSIdata(D_DECL(i,j,k),ibase+FSI_LEVELSET+1)= &
-            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_LEVELSET+1) ! LS
-           FSIdata(D_DECL(i,j,k),ibase+FSI_TEMPERATURE+1)= &
-            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_TEMPERATURE+1) ! T
-           FSIdata(D_DECL(i,j,k),ibase+FSI_EXTRAP_FLAG+1)= &
-            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_EXTRAP_FLAG+1) ! flag
+          enddo
+         else
+          print *,"SDIM invalid"
+          stop
+         endif
+
+         do dir=1,3
+          if ((idx(dir).lt.FSI_growlo3D(dir)).or. &
+              (idx(dir).gt.FSI_growhi3D(dir))) then
+           print *,"idx(dir) out of range"
+           stop
+          endif
+         enddo ! dir=1..3
+
+         do partid=1,nparts
+          ibase=(partid-1)*NCOMP_FSI
+          FSIdata(D_DECL(i,j,k),ibase+FSI_LEVELSET+1)= &
+           FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_LEVELSET+1) ! LS
+          FSIdata(D_DECL(i,j,k),ibase+FSI_TEMPERATURE+1)= &
+           FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_TEMPERATURE+1) ! T
+          FSIdata(D_DECL(i,j,k),ibase+FSI_EXTRAP_FLAG+1)= &
+           FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_EXTRAP_FLAG+1) ! flag
+
+          if (FSI_operation.eq.2) then
            FSIdata(D_DECL(i,j,k),ibase+FSI_SIZE+1)= &
-            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_SIZE+1)!perim if doubly w. 
-           do dir=1,3
+            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_SIZE+1)!perim(2D)
+          else if (FSI_operation.eq.3) then
+           ! do nothing
+          else
+           print *,"FSI_operation invalid"
+           stop
+          endif
+
+          do dir=1,3
+           if (SDIM.eq.3) then
+            FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+dir)= &
+              FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_VELOCITY+dir) 
+            if (FSI_operation.eq.2) then
+             FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+dir)= &
+              FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_FORCE+dir) 
+            else if (FSI_operation.eq.3) then
+             ! do nothing
+            else
+             print *,"FSI_operation invalid"
+             stop
+            endif
+           else if (SDIM.eq.2) then
             if (xmap3D(dir).eq.0) then
              FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+3)=zero
              FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+3)=zero
@@ -998,8 +1048,15 @@
                      (xmap3D(dir).eq.2)) then
              FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+xmap3D(dir))= &
               FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_VELOCITY+dir) 
-             FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+xmap3D(dir))= &
-              FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_FORCE+dir) 
+             if (FSI_operation.eq.2) then
+              FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+xmap3D(dir))= &
+               FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_FORCE+dir) 
+             else if (FSI_operation.eq.3) then
+              ! do nothing
+             else
+              print *,"FSI_operation invalid"
+              stop
+             endif
             else
              print *,"xmap3D(dir) invalid"
              stop
