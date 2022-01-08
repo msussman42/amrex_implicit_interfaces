@@ -9040,7 +9040,7 @@ stop
        im_part, &
        nparts, &
        partid, &
-       ngrowFSI, &
+       ngrow_make_distance, &
        nFSI, &
        xlo,dx, &
        snew,DIMS(snew), &
@@ -9056,7 +9056,7 @@ stop
       INTEGER_T, intent(in) :: im_part
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: partid
-      INTEGER_T, intent(in) :: ngrowFSI
+      INTEGER_T, intent(in) :: ngrow_make_distance
       INTEGER_T, intent(in) :: nFSI
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nstate
@@ -9095,8 +9095,8 @@ stop
        print *,"nFSI invalid"
        stop
       endif
-      if (ngrowFSI.ne.3) then
-       print *,"ngrowFSI.ne.3"
+      if (ngrow_make_distance.ne.3) then
+       print *,"ngrow_make_distance.ne.3"
        stop
       endif
       if ((nparts.lt.1).or.(nparts.gt.nmat)) then
@@ -9115,7 +9115,7 @@ stop
       endif
 
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1,8)
-      call checkbound_array(fablo,fabhi,fsi_ptr,ngrowFSI,-1,8)
+      call checkbound_array(fablo,fabhi,fsi_ptr,ngrow_make_distance,-1,8)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -9149,7 +9149,7 @@ stop
        finest_level, &
        nFSI, &
        nparts, &
-       ngrowFSI, &
+       ngrow_make_distance, &
        im_solid_map, &
        xlo,dx, &
        snew,DIMS(snew), &
@@ -9170,7 +9170,7 @@ stop
       INTEGER_T, intent(in) :: finest_level 
       INTEGER_T, intent(in) :: nFSI
       INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: ngrowFSI
+      INTEGER_T, intent(in) :: ngrow_make_distance
       INTEGER_T, intent(in) :: im_solid_map(nparts)
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nstate
@@ -9230,8 +9230,8 @@ stop
        print *,"nparts invalid fort_build_moment"
        stop
       endif
-      if (ngrowFSI.ne.3) then
-       print *,"ngrowFSI invalid"
+      if (ngrow_make_distance.ne.3) then
+       print *,"ngrow_make_distance invalid"
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
@@ -9244,7 +9244,7 @@ stop
       snew_ptr=>snew
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1,8)
       fsi_ptr=>fsi
-      call checkbound_array(fablo,fabhi,fsi_ptr,ngrowFSI,-1,8)
+      call checkbound_array(fablo,fabhi,fsi_ptr,ngrow_make_distance,-1,8)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 

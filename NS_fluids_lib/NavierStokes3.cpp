@@ -550,7 +550,7 @@ void NavierStokes::nonlinear_advection() {
   for (FSI_sub_operation=0;FSI_sub_operation<3;FSI_sub_operation++) {
    for (int ilev=level;ilev<=finest_level;ilev++) {
     NavierStokes& ns_level=getLevel(ilev);
-    ns_level.resize_mask_nbr(ngrowFSI);
+    ns_level.resize_mask_nbr(ngrow_make_distance);
     ns_level.ns_header_msg_level(
       FSI_operation, //=4
       FSI_sub_operation,
@@ -11466,6 +11466,10 @@ void NavierStokes::multiphase_project(int project_option) {
    std::cout << "project_option= " << project_option <<
           " SDC_outer_sweeps= " << SDC_outer_sweeps <<
           " slab_step= " << slab_step << '\n';
+   std::cout << "project_option= " << project_option <<
+	  " error0= " << error0 <<
+	  " Ar_error0= " << Ar_error0 <<
+	  " rAr_error0= " << rAr_error0 << '\n';
 
    Real avg_outer_error=outer_error_all_solver_calls[project_option]/
                 number_solver_calls[project_option];

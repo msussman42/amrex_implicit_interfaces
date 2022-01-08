@@ -25538,7 +25538,7 @@ end subroutine initialize2d
        nmat, &
        nparts, &
        nFSI, &
-       ngrowFSI, &
+       ngrow_make_distance, &
        im_solid_map, &
        time, &
        tilelo,tilehi, &
@@ -25556,7 +25556,7 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nFSI
-      INTEGER_T, intent(in) :: ngrowFSI
+      INTEGER_T, intent(in) :: ngrow_make_distance
       INTEGER_T, intent(in) :: im_solid_map(nparts)
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -25594,8 +25594,8 @@ end subroutine initialize2d
        print *,"nFSI.ne.nparts*NCOMP_FSI"
        stop
       endif
-      if (ngrowFSI.ne.3) then
-       print *,"ngrowFSI invalid"
+      if (ngrow_make_distance.ne.3) then
+       print *,"ngrow_make_distance invalid"
        stop
       endif
 
@@ -25617,13 +25617,14 @@ end subroutine initialize2d
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,solid_ptr,ngrowFSI,-1,1301)
+      call checkbound_array(fablo,fabhi,solid_ptr,ngrow_make_distance,-1,1301)
 
       if ((adv_dir.lt.1).or.(adv_dir.gt.2*SDIM+1)) then
        print *,"adv_dir invalid initdatasolid (10)"
        stop
       endif
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrowFSI) 
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi, &
+              ngrow_make_distance) 
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)

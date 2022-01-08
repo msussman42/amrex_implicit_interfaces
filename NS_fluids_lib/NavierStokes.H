@@ -2017,7 +2017,6 @@ protected:
     static int BLB_MASS;
     static int BLB_PRES;
 
-    static int ngrowFSI;//should be 3
     static Vector<int> im_solid_map; //nparts components, in range 0..nmat-1
     static Vector<int> im_elastic_map;
 

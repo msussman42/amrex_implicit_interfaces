@@ -8223,7 +8223,7 @@ subroutine CLSVOF_InitBox(  &
   im_part, &
   nparts, &
   part_id, &
-  ngrowFSI, &
+  ngrow_make_distance, &
   nmat, &
   nFSI, &
   FSI_operation, &
@@ -8260,7 +8260,7 @@ IMPLICIT NONE
   INTEGER_T, intent(in) :: im_part
   INTEGER_T, intent(in) :: nparts
   INTEGER_T, intent(in) :: part_id
-  INTEGER_T, intent(in) :: ngrowFSI
+  INTEGER_T, intent(in) :: ngrow_make_distance
   INTEGER_T, intent(in) :: nmat
   INTEGER_T, intent(in) :: nFSI
   INTEGER_T, intent(in) :: FSI_operation
@@ -8551,14 +8551,14 @@ IMPLICIT NONE
     print *,"FSI_operation invalid"
     stop
    endif
-   if (ngrowFSI.ne.3) then
-    print *,"ngrowFSI invalid"
+   if (ngrow_make_distance.ne.3) then
+    print *,"ngrow_make_distance invalid"
     stop
    endif
 
    call checkbound3D(FSI_lo,FSI_hi, &
     DIMS3D(FSIdata3D), &
-    ngrowFSI,-1,521)
+    ngrow_make_distance,-1,521)
 
    mask_debug=0
    LSMIN_debug=1.0D+10
@@ -9471,10 +9471,10 @@ IMPLICIT NONE
 
     numtouch=0
 
-    if ((iter.ge.0).and.(iter.le.ngrowFSI)) then
+    if ((iter.ge.0).and.(iter.le.ngrow_make_distance)) then
      dirmax=1
      sweepmax=1
-    else if (iter.gt.ngrowFSI) then
+    else if (iter.gt.ngrow_make_distance) then
      dirmax=6
      sweepmax=2
     else
@@ -9930,7 +9930,7 @@ end subroutine CLSVOF_InitBox
        im_part, &
        nparts, &
        part_id, &
-       ngrowFSI, &
+       ngrow_make_distance, &
        nmat, &
        nFSI, &
        FSI_operation, &
@@ -9965,7 +9965,7 @@ end subroutine CLSVOF_InitBox
       INTEGER_T, intent(in) :: im_part
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: part_id
-      INTEGER_T, intent(in) :: ngrowFSI
+      INTEGER_T, intent(in) :: ngrow_make_distance
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nFSI
       INTEGER_T, intent(in) :: FSI_operation
@@ -10148,14 +10148,14 @@ end subroutine CLSVOF_InitBox
         print *,"FSI_operation invalid"
         stop
        endif
-       if (ngrowFSI.ne.3) then
-        print *,"ngrowFSI invalid"
+       if (ngrow_make_distance.ne.3) then
+        print *,"ngrow_make_distance invalid"
         stop
        endif
 
        call checkbound3D(FSI_lo,FSI_hi, &
         DIMS3D(FSIdata3D), &
-        ngrowFSI,-1,521)
+        ngrow_make_distance,-1,521)
 
        num_nodes_container=contain_elem(lev77)% &
                            level_node_data(tid+1,part_id,tilenum+1)% &
