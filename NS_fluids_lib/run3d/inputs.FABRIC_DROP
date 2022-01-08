@@ -150,8 +150,8 @@ ns.hi_bc          = 0 0 2
 # multigrid class
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-cg.maxiter = 9000
-mg.bot_atol = 1.0e-12
+cg.maxiter = 1000 #was 9000 SUSSMAN SOLVER TUNING
+mg.bot_atol = 1.0e-8 #was 1.0e-12 SUSSMAN SOLVER TUNING
 mg.rtol_b = -0.01
 Lp.v = 1
 
@@ -172,7 +172,7 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
-mac.mac_abs_tol    = 1.0e-10
+mac.mac_abs_tol    = 1.0e-7 #was 1.0e-10 SUSSMAN SOLVER TUNING
 
 
 # select single or double precision of FAB output data

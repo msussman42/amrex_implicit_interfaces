@@ -682,7 +682,6 @@ int NavierStokes::BLB_CELLVOL_CNT=-32767;
 int NavierStokes::BLB_MASS=-32767;
 int NavierStokes::BLB_PRES=-32767;
 
-int NavierStokes::ngrowFSI=3;
 Vector<int> NavierStokes::im_solid_map; //nparts components, in range 0..nmat-1
 Vector<int> NavierStokes::im_elastic_map; 
 
@@ -4851,18 +4850,6 @@ NavierStokes::read_params ()
     if (normal_probe_size!=1)
      amrex::Error("normal_probe_size invalid");
    
-    pp.query("ngrow_distance",ngrow_distance);
-    if (ngrow_distance!=4)
-     amrex::Error("ngrow_distance invalid");
-
-    pp.query("ngrowFSI",ngrowFSI);
-    if (ngrowFSI!=3)
-     amrex::Error("ngrowFSI invalid");
-
-    pp.query("ngrow_expansion",ngrow_expansion);
-    if (ngrow_expansion!=2)
-     amrex::Error("ngrow_expansion invalid");
-
     mof_error_ordering=0; 
     pp.query("mof_error_ordering",mof_error_ordering);
     if ((mof_error_ordering!=0)&&
@@ -4963,8 +4950,6 @@ NavierStokes::read_params ()
       ngrow_make_distance << '\n';
      std::cout << "ngrow_distance= " << 
       ngrow_distance << '\n';
-     std::cout << "ngrowFSI= " << 
-      ngrowFSI << '\n';
      std::cout << "ngrow_expansion= " << 
       ngrow_expansion << '\n';
      std::cout << "normal_probe_size= " << 
@@ -7438,22 +7423,21 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
  } else if ((nparts>=1)&&(nparts<=nmat)) {
 
   int nFSI=nparts*NCOMP_FSI;
-  if (ngrowFSI!=3)
-   amrex::Error("ngrowFSI invalid");
 
   delete_localMF_if_exist(FSI_MF,1);
 
-  new_localMF(FSI_MF,nFSI,ngrowFSI,-1);
+  new_localMF(FSI_MF,nFSI,ngrow_make_distance,-1);
 
   for (int partid=0;partid<nparts;partid++) {
    int ibase=partid*NCOMP_FSI;
-   setVal_localMF(FSI_MF,0.0,ibase+FSI_VELOCITY,3,ngrowFSI); // velocity
-   setVal_localMF(FSI_MF,-99999.0,ibase+FSI_LEVELSET,1,ngrowFSI); // LS
-   setVal_localMF(FSI_MF,0.0,ibase+FSI_TEMPERATURE,1,ngrowFSI); // temperature
-   setVal_localMF(FSI_MF,0.0,ibase+FSI_EXTRAP_FLAG,1,ngrowFSI); // mask
-   setVal_localMF(FSI_MF,0.0,ibase+FSI_FORCE,3,ngrowFSI); // force
-   setVal_localMF(FSI_MF,0.0,ibase+FSI_SIZE,1,ngrowFSI); //perimeter(2D)
-   setVal_localMF(FSI_MF,0.0,ibase+FSI_STRESS,6,ngrowFSI); // stress
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_VELOCITY,3,ngrow_make_distance); 
+   setVal_localMF(FSI_MF,-99999.0,ibase+FSI_LEVELSET,1,ngrow_make_distance);
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_TEMPERATURE,1,ngrow_make_distance);
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_EXTRAP_FLAG,1,ngrow_make_distance);
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_FORCE,3,ngrow_make_distance);
+    // perimeter in 2D
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_SIZE,1,ngrow_make_distance);
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_STRESS,6,ngrow_make_distance);
   } // partid=0..nparts-1
 
   if (read_from_CAD()==1) {
@@ -7471,7 +7455,7 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
    int iter=0; // touch_flag=0
    int FSI_operation=2;  // make distance in narrow band
    int FSI_sub_operation=0;
-   resize_mask_nbr(ngrowFSI);
+   resize_mask_nbr(ngrow_make_distance);
     // in: FSI_make_distance
     // 1.FillCoarsePatch
     // 2.traverse lagrangian elements belonging to each tile and update
@@ -7530,7 +7514,7 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
      &nmat,
      &nparts,
      &nFSI,
-     &ngrowFSI,
+     &ngrow_make_distance,
      im_solid_map.dataPtr(),
      &cur_time,
      tilelo,tilehi,
@@ -7570,7 +7554,7 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
   amrex::Error("nparts invalid");
  if ((partid<0)||(partid>=nparts))
   amrex::Error("partid invalid");
- debug_ngrow(FSI_MF,ngrowFSI,1);
+ debug_ngrow(FSI_MF,ngrow_make_distance,1);
 
  int im_part=im_solid_map[partid];
  if ((im_part<0)||(im_part>=nmat))
@@ -7629,7 +7613,7 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
      &im_part, 
      &nparts,
      &partid, 
-     &ngrowFSI, 
+     &ngrow_make_distance, 
      &nFSI, 
      xlo,dx,
      snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
@@ -7676,15 +7660,15 @@ void NavierStokes::build_moment_from_FSILS() {
  if (LS_new.nComp()!=nmat*(1+AMREX_SPACEDIM))
   amrex::Error("LS_new.nComp()!=nmat*(1+AMREX_SPACEDIM)");
 
- if (ngrowFSI!=3)
-  amrex::Error("ngrowFSI!=3");
+ if (ngrow_make_distance!=3)
+  amrex::Error("ngrow_make_distance!=3");
  int nparts=im_solid_map.size();
  if ((nparts<1)||(nparts>nmat))
   amrex::Error("nparts invalid");
  int nFSI=nparts*NCOMP_FSI;
  if (localMF[FSI_MF]->nComp()!=nFSI)
   amrex::Error("localMF[FSI_MF]->nComp()!=nFSI");
- debug_ngrow(FSI_MF,ngrowFSI,1);
+ debug_ngrow(FSI_MF,ngrow_make_distance,1);
   
  bool use_tiling=ns_tiling;
 
@@ -7723,7 +7707,7 @@ void NavierStokes::build_moment_from_FSILS() {
     &finest_level,
     &nFSI, 
     &nparts,
-    &ngrowFSI, 
+    &ngrow_make_distance, 
     im_solid_map.dataPtr(),
     xlo,dx,
     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
@@ -7741,8 +7725,8 @@ void NavierStokes::build_moment_from_FSILS() {
 // called from: ns_header_msg_level,initData ()
 void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 
- if (ngrowFSI!=3)
-  amrex::Error("ngrowFSI invalid");
+ if (ngrow_make_distance!=3)
+  amrex::Error("ngrow_make_distance invalid");
 
  int nmat=num_materials;
  int nparts=im_solid_map.size();
@@ -7758,7 +7742,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 
   if ((nparts<1)||(nparts>nmat))
    amrex::Error("nparts invalid");
-  debug_ngrow(FSI_MF,ngrowFSI,1);
+  debug_ngrow(FSI_MF,ngrow_make_distance,1);
 
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
   int nstate=STATE_NCOMP;
@@ -8145,7 +8129,7 @@ void NavierStokes::ns_header_msg_level(
     amrex::Error("FSI_sub_operation!=0");
 
    if (elements_generated==0) {
-    int ngrowFSI_unitfab=0;
+    int ngrow_make_distance_unitfab=0;
     IntVect unitlo(D_DECL(0,0,0));
     IntVect unithi(D_DECL(0,0,0));
      // construct cell-centered type box
@@ -8246,7 +8230,7 @@ void NavierStokes::ns_header_msg_level(
       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
       FSI_force_integral.dataPtr(),
       &nFSI,
-      &ngrowFSI_unitfab,
+      &ngrow_make_distance_unitfab,
       &nparts,
       im_solid_map.dataPtr(),
       &h_small,
@@ -8329,7 +8313,7 @@ void NavierStokes::ns_header_msg_level(
    if (FSI_sub_operation!=0)
     amrex::Error("FSI_sub_operation!=0");
 
-   int ngrowFSI_unitfab=0;
+   int ngrow_make_distance_unitfab=0;
    IntVect unitlo(D_DECL(0,0,0));
    IntVect unithi(D_DECL(0,0,0));
     // construct cell-centered type box
@@ -8410,7 +8394,7 @@ void NavierStokes::ns_header_msg_level(
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      FSI_force_integral.dataPtr(),
      &nFSI,
-     &ngrowFSI_unitfab,
+     &ngrow_make_distance_unitfab,
      &nparts,
      im_solid_map.dataPtr(),
      &h_small,
@@ -8435,9 +8419,9 @@ void NavierStokes::ns_header_msg_level(
    elements_generated=1;
 
     // FSI_MF allocated in FSI_make_distance
-   if (ngrowFSI!=3)
-    amrex::Error("ngrowFSI invalid");
-   debug_ngrow(FSI_MF,ngrowFSI,1);
+   if (ngrow_make_distance!=3)
+    amrex::Error("ngrow_make_distance invalid");
+   debug_ngrow(FSI_MF,ngrow_make_distance,1);
    if (localMF[FSI_MF]->nComp()!=nFSI)
     amrex::Error("localMF[FSI_MF]->nComp() invalid");
 
@@ -8595,12 +8579,12 @@ void NavierStokes::ns_header_msg_level(
    } else
     amrex::Error("FSI_operation invalid");
 
-   MultiFab* solidmf=getStateSolid(ngrowFSI,0,
+   MultiFab* solidmf=getStateSolid(ngrow_make_distance,0,
      nparts*AMREX_SPACEDIM,cur_time);
-   MultiFab* denmf=getStateDen(ngrowFSI,cur_time);  
-   MultiFab* LSMF=getStateDist(ngrowFSI,cur_time,2);
-   if (LSMF->nGrow()!=ngrowFSI)
-    amrex::Error("LSMF->nGrow()!=ngrow_distance");
+   MultiFab* denmf=getStateDen(ngrow_make_distance,cur_time);  
+   MultiFab* LSMF=getStateDist(ngrow_make_distance,cur_time,2);
+   if (LSMF->nGrow()!=ngrow_make_distance)
+    amrex::Error("LSMF->nGrow()!=ngrow_make_distance");
 
    // FSI_MF allocated in FSI_make_distance
    // all components of FSI_MF are initialized to zero except for LS.
@@ -8614,20 +8598,20 @@ void NavierStokes::ns_header_msg_level(
     int ibase=partid*NCOMP_FSI;
      // velocity
     MultiFab::Copy(*localMF[FSI_MF],*solidmf,partid*AMREX_SPACEDIM,
-      ibase+FSI_VELOCITY,AMREX_SPACEDIM,ngrowFSI);
+      ibase+FSI_VELOCITY,AMREX_SPACEDIM,ngrow_make_distance);
      // LS  
     MultiFab::Copy(*localMF[FSI_MF],*LSMF,im_part,
-      ibase+FSI_LEVELSET,1,ngrowFSI);
+      ibase+FSI_LEVELSET,1,ngrow_make_distance);
      // temperature
     MultiFab::Copy(*localMF[FSI_MF],*denmf,im_part*num_state_material+1,
-      ibase+FSI_TEMPERATURE,1,ngrowFSI);
+      ibase+FSI_TEMPERATURE,1,ngrow_make_distance);
 
      // flag (mask)
     if (FSI_operation==2) {
 
      if ((level>0)||
          ((level==0)&&(cur_time>0.0))) {
-      setVal_localMF(FSI_MF,10.0,ibase+FSI_EXTRAP_FLAG,1,ngrowFSI); 
+      setVal_localMF(FSI_MF,10.0,ibase+FSI_EXTRAP_FLAG,1,ngrow_make_distance); 
      } else if ((level==0)&&(cur_time==0.0)) {
       // do nothing
      } else
@@ -8644,8 +8628,8 @@ void NavierStokes::ns_header_msg_level(
    // (2) =1 interior  =0 otherwise
    // (3) =1 interior+ngrow-1  =0 otherwise
    // (4) =1 interior+ngrow    =0 otherwise
-   resize_mask_nbr(ngrowFSI);
-   debug_ngrow(MASK_NBR_MF,ngrowFSI,2);
+   resize_mask_nbr(ngrow_make_distance);
+   debug_ngrow(MASK_NBR_MF,ngrow_make_distance,2);
  
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
@@ -8732,7 +8716,7 @@ void NavierStokes::ns_header_msg_level(
      ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
      FSI_force_integral.dataPtr(),
      &nFSI,
-     &ngrowFSI,
+     &ngrow_make_distance,
      &nparts,
      im_solid_map.dataPtr(),
      &h_small,
@@ -8778,14 +8762,14 @@ void NavierStokes::ns_header_msg_level(
      scompBC_map[dir]=dir+1;
 
     // This routine interpolates from coarser levels.
-    PCINTERP_fill_borders(FSI_MF,ngrowFSI,ibase+FSI_VELOCITY,
+    PCINTERP_fill_borders(FSI_MF,ngrow_make_distance,ibase+FSI_VELOCITY,
      AMREX_SPACEDIM,Solid_State_Type,scompBC_map);
 
     for (int i=FSI_LEVELSET;i<NCOMP_FSI;i++) {
      scompBC_map.resize(1); 
      scompBC_map[0]=0;
 
-     PCINTERP_fill_borders(FSI_MF,ngrowFSI,ibase+i,
+     PCINTERP_fill_borders(FSI_MF,ngrow_make_distance,ibase+i,
       1,Solid_State_Type,scompBC_map);
     } // for (int i=FSI_LEVELSET;i<NCOMP_FSI;i++)
    } // partid=0..nparts-1
@@ -8806,8 +8790,8 @@ void NavierStokes::ns_header_msg_level(
   } else if (FSI_operation==4) { 
 
    elements_generated=1;
-   if (ngrowFSI!=3)
-    amrex::Error("ngrowFSI invalid");
+   if (ngrow_make_distance!=3)
+    amrex::Error("ngrow_make_distance invalid");
    if ((FSI_sub_operation!=0)&&
        (FSI_sub_operation!=1)&&
        (FSI_sub_operation!=2))
@@ -8817,13 +8801,13 @@ void NavierStokes::ns_header_msg_level(
    // (2) =1 interior  =0 otherwise
    // (3) =1 interior+ngrow-1  =0 otherwise
    // (4) =1 interior+ngrow    =0 otherwise
-   resize_mask_nbr(ngrowFSI);
-   debug_ngrow(MASK_NBR_MF,ngrowFSI,2);
+   resize_mask_nbr(ngrow_make_distance);
+   debug_ngrow(MASK_NBR_MF,ngrow_make_distance,2);
    // mask=1 if not covered or if outside the domain.
    // NavierStokes::maskfiner_localMF
    // NavierStokes::maskfiner
-   resize_maskfiner(ngrowFSI,MASKCOEF_MF);
-   debug_ngrow(MASKCOEF_MF,ngrowFSI,28);
+   resize_maskfiner(ngrow_make_distance,MASKCOEF_MF);
+   debug_ngrow(MASKCOEF_MF,ngrow_make_distance,28);
 
    if (localMF[DRAG_MF]->nGrow()!=ngrow_make_distance)
     amrex::Error("localMF[DRAG_MF] incorrect ngrow");
@@ -8841,9 +8825,9 @@ void NavierStokes::ns_header_msg_level(
     if (FSI_sub_operation==0) {
      // Two layers of ghost cells are needed if
      // (INTP_CORONA = 1) in UTIL_BOUNDARY_FORCE_FSI.F90
-     if (ngrowFSI!=3)
-      amrex::Error("ngrowFSI invalid");
-     getState_localMF(VELADVECT_MF,ngrowFSI,0,AMREX_SPACEDIM,cur_time); 
+     if (ngrow_make_distance!=3)
+      amrex::Error("ngrow_make_distance invalid");
+     getState_localMF(VELADVECT_MF,ngrow_make_distance,0,AMREX_SPACEDIM,cur_time); 
 
       // in: NavierStokes::ns_header_msg_level
      create_fortran_grid_struct(cur_time,dt);
@@ -8852,7 +8836,7 @@ void NavierStokes::ns_header_msg_level(
     } else
      amrex::Error("FSI_sub_operation invalid");
 
-    int ngrowFSI_unitfab=0;
+    int ngrow_make_distance_unitfab=0;
     IntVect unitlo(D_DECL(0,0,0));
     IntVect unithi(D_DECL(0,0,0));
      // construct cell-centered type box
@@ -8932,7 +8916,7 @@ void NavierStokes::ns_header_msg_level(
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      FSI_force_integral.dataPtr(),
      &nFSI,
-     &ngrowFSI_unitfab,
+     &ngrow_make_distance_unitfab,
      &nparts,
      im_solid_map.dataPtr(),
      &h_small,
@@ -8969,7 +8953,7 @@ void NavierStokes::ns_header_msg_level(
      const int* fabhi=fabgrid.hiVect();
      const Real* xlo = grid_loc[gridno].lo();
      FArrayBox& FSIfab=(*localMF[VELADVECT_MF])[mfi]; // placeholder
-     FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi]; // ngrowFSI ghost cells
+     FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi]; // ngrow_make_distance ghost cells
      FArrayBox& dragfab=(*localMF[DRAG_MF])[mfi]; // ngrow_make_dist ghost cells
      FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
      FArrayBox& mfinerfab=(*localMF[MASKCOEF_MF])[mfi];
@@ -9027,7 +9011,7 @@ void NavierStokes::ns_header_msg_level(
       vofbc.dataPtr(), 
       FSIfab.dataPtr(), // placeholder
       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-      velfab.dataPtr(), // ngrowFSI ghost cells VELADVECT_MF
+      velfab.dataPtr(), // ngrow_make_distance ghost cells VELADVECT_MF
       ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
       dragfab.dataPtr(), // ngrow_make_distance ghost cells DRAG_MF
       ARLIM(dragfab.loVect()),ARLIM(dragfab.hiVect()),
@@ -9037,7 +9021,7 @@ void NavierStokes::ns_header_msg_level(
       ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()),
       FSI_force_integral.dataPtr(),
       &nFSI,
-      &ngrowFSI,
+      &ngrow_make_distance,
       &nparts,
       im_solid_map.dataPtr(),
       &h_small,
@@ -25556,8 +25540,8 @@ NavierStokes::ctml_fsi_transfer_force() {
  if ((nparts<1)||(nparts>nmat))
   amrex::Error("nparts invalid");
 
- if (ngrowFSI!=3)
-  amrex::Error("ngrowFSI invalid");
+ if (ngrow_make_distance!=3)
+  amrex::Error("ngrow_make_distance invalid");
  int nFSI=nparts*NCOMP_FSI;
 
  debug_ngrow(FSI_MF,0,1);
