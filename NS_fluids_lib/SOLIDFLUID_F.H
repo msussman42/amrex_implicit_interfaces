@@ -61,7 +61,7 @@ namespace amrex{
      Real* maskfiner,AMREX_ARLIM_P(maskfinerlo),AMREX_ARLIM_P(maskfinerhi),
      Real* FSI_force_integral,
      int* nFSI,
-     int* ngrow_make_distance,
+     int* ngrow_make_distance_in,
      int* nparts,
      int* im_solid_map,
      Real* h_small,

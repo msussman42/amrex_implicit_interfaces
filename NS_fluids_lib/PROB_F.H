@@ -168,7 +168,7 @@ namespace amrex{
       int* nmat,
       int* nparts,
       int* nFSI,
-      int* ngrow_make_distance,
+      int* ngrow_make_distance_in,
       int* im_solid_map,
       Real* time,
       const int* tilelo,const int* tilehi,

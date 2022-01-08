@@ -246,7 +246,7 @@
         DIMS(maskfiner), &
         FSI_force_integral, &
         nFSI, &
-        ngrow_make_distance, &
+        ngrow_make_distance_in, &
         nparts, &
         im_solid_map, & ! type: 0..nmat-1
         h_small, &  ! smallest mesh size from the max_level.
@@ -325,7 +325,7 @@
       INTEGER_T, intent(in) :: FSI_operation
       INTEGER_T, intent(in) :: FSI_sub_operation
       INTEGER_T, intent(in) :: nFSI
-      INTEGER_T, intent(in) :: ngrow_make_distance
+      INTEGER_T, intent(in) :: ngrow_make_distance_in
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: im_solid_map(nparts)
       INTEGER_T nmat
@@ -456,8 +456,34 @@
        print *,"ioproc invalid"
        stop
       endif
-      if ((ngrow_make_distance.ne.3).and.(ngrow_make_distance.ne.0)) then
+      if (ngrow_make_distance.ne.3) then
        print *,"ngrow_make_distance invalid"
+       stop
+      endif
+      if ((FSI_operation.eq.0).or. &  ! initialize node locations
+          (FSI_operation.eq.1)) then  ! update node locations
+       if (ngrow_make_distance_in.ne.0) then
+        print *,"ngrow_make_distance_in invalid"
+        stop
+       endif
+      else if (FSI_operation.eq.5) then ! find perimeter of solid object
+       if (ngrow_make_distance_in.ne.0) then
+        print *,"ngrow_make_distance_in invalid"
+        stop
+       endif
+      else if ((FSI_operation.eq.2).or. & ! make distance in narrow band
+               (FSI_operation.eq.3)) then ! update the sign
+       if (ngrow_make_distance_in.ne.3) then
+        print *,"ngrow_make_distance_in invalid"
+        stop
+       endif
+      else if (FSI_operation.eq.4) then ! copy Eul fluid vel/stress to solid
+       if (ngrow_make_distance_in.ne.3) then
+        print *,"ngrow_make_distance_in invalid"
+        stop
+       endif
+      else
+       print *,"FSI_operation invalid"
        stop
       endif
       if (h_small.le.zero) then
@@ -525,20 +551,25 @@
        stop
       endif
   
-      call checkbound_array(fablo,fabhi,FSIdata_ptr,ngrow_make_distance,-1,2910)
+      call checkbound_array(fablo,fabhi,FSIdata_ptr, &
+        ngrow_make_distance_in,-1,2910)
       velfab_ptr=>velfab
-      call checkbound_array(fablo,fabhi,velfab_ptr,ngrow_make_distance,-1,2910)
+      call checkbound_array(fablo,fabhi,velfab_ptr, &
+        ngrow_make_distance_in,-1,2910)
       drag_ptr=>drag
-      call checkbound_array(fablo,fabhi,drag_ptr,ngrow_make_distance,-1,2910)
+      call checkbound_array(fablo,fabhi,drag_ptr, &
+        ngrow_make_distance_in,-1,2910)
       masknbr_ptr=>masknbr
-      call checkbound_array(fablo,fabhi,masknbr_ptr,ngrow_make_distance,-1,2910)
+      call checkbound_array(fablo,fabhi,masknbr_ptr, &
+        ngrow_make_distance_in,-1,2910)
       maskfiner_ptr=>maskfiner
-      call checkbound_array(fablo,fabhi,maskfiner_ptr,ngrow_make_distance,-1,2910)
+      call checkbound_array(fablo,fabhi,maskfiner_ptr, &
+       ngrow_make_distance_in,-1,2910)
 
       ! update ngrow_make_distance grow layers of FSIdata that do not overlap
       ! with another tile.
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
-       growlo,growhi,ngrow_make_distance)
+       growlo,growhi,ngrow_make_distance_in)
        ! since PCINTERP_fill_borders interpolates from coarser levels, 
        ! we only have to traverse interior values.
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
@@ -565,8 +596,8 @@
          xlo3D_tile(dir)=xslice3D(dir)-half*dx3D(dir)
          xhi3D_tile(dir)=xlo3D_tile(dir)+dx3D(dir)
 
-         growlo3D(dir)=-ngrow_make_distance
-         growhi3D(dir)=ngrow_make_distance
+         growlo3D(dir)=-ngrow_make_distance_in
+         growhi3D(dir)=ngrow_make_distance_in
         else if ((xmap3D(dir).ge.1).and. &
                  (xmap3D(dir).le.2)) then
          dx3D(dir)=dx(xmap3D(dir))
@@ -610,8 +641,8 @@
       endif
 
       do dir=1,3
-       FSI_growlo3D(dir)=FSI_lo3D(dir)-ngrow_make_distance
-       FSI_growhi3D(dir)=FSI_hi3D(dir)+ngrow_make_distance
+       FSI_growlo3D(dir)=FSI_lo3D(dir)-ngrow_make_distance_in
+       FSI_growhi3D(dir)=FSI_hi3D(dir)+ngrow_make_distance_in
       enddo
 
       ARG3D_L1(FSIdata3D)=FSI_growlo3D(1)
@@ -747,8 +778,8 @@
         k2d=k
 
         if (SDIM.eq.3) then
-         if ((k2d.lt.tilelo(SDIM)-ngrow_make_distance).or. &
-             (k2d.gt.tilehi(SDIM)+ngrow_make_distance)) then
+         if ((k2d.lt.tilelo(SDIM)-ngrow_make_distance_in).or. &
+             (k2d.gt.tilehi(SDIM)+ngrow_make_distance_in)) then
           print *,"k2d out of range"
           stop
          endif
@@ -774,13 +805,13 @@
          stop
         endif
 
-        if ((i2d.lt.tilelo(1)-ngrow_make_distance).or. &
-            (i2d.gt.tilehi(1)+ngrow_make_distance)) then
+        if ((i2d.lt.tilelo(1)-ngrow_make_distance_in).or. &
+            (i2d.gt.tilehi(1)+ngrow_make_distance_in)) then
          print *,"i2d out of range"
          stop
         endif
-        if ((j2d.lt.tilelo(2)-ngrow_make_distance).or. &
-            (j2d.gt.tilehi(2)+ngrow_make_distance)) then
+        if ((j2d.lt.tilelo(2)-ngrow_make_distance_in).or. &
+            (j2d.gt.tilehi(2)+ngrow_make_distance_in)) then
          print *,"j2d out of range"
          stop
         endif
@@ -1115,7 +1146,8 @@
          ! ngrow_make_distance ghost cells
          ! in 3D:
          ! FSI_lo3D,FSI_hi3D = tilelo,tilehi
-         ! FSI_growlo3D,FSI_growhi3D = grow(FSI_lo3D,FSI_hi3D,ngrow_make_distance)
+         ! FSI_growlo3D,FSI_growhi3D = 
+         !   grow(FSI_lo3D,FSI_hi3D,ngrow_make_distance)
         do i=FSI_growlo3D(1),FSI_growhi3D(1)
         do j=FSI_growlo3D(2),FSI_growhi3D(2)
         do k=FSI_growlo3D(3),FSI_growhi3D(3)
