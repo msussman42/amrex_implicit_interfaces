@@ -9040,7 +9040,7 @@ stop
        im_part, &
        nparts, &
        partid, &
-       ngrow_make_distance, &
+       ngrow_make_distance_in, &
        nFSI, &
        xlo,dx, &
        snew,DIMS(snew), &
@@ -9056,7 +9056,7 @@ stop
       INTEGER_T, intent(in) :: im_part
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: partid
-      INTEGER_T, intent(in) :: ngrow_make_distance
+      INTEGER_T, intent(in) :: ngrow_make_distance_in
       INTEGER_T, intent(in) :: nFSI
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nstate
@@ -9097,6 +9097,10 @@ stop
       endif
       if (ngrow_make_distance.ne.3) then
        print *,"ngrow_make_distance.ne.3"
+       stop
+      endif
+      if (ngrow_make_distance_in.ne.3) then
+       print *,"ngrow_make_distance_in.ne.3"
        stop
       endif
       if ((nparts.lt.1).or.(nparts.gt.nmat)) then
@@ -9149,7 +9153,7 @@ stop
        finest_level, &
        nFSI, &
        nparts, &
-       ngrow_make_distance, &
+       ngrow_make_distance_in, &
        im_solid_map, &
        xlo,dx, &
        snew,DIMS(snew), &
@@ -9170,7 +9174,7 @@ stop
       INTEGER_T, intent(in) :: finest_level 
       INTEGER_T, intent(in) :: nFSI
       INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: ngrow_make_distance
+      INTEGER_T, intent(in) :: ngrow_make_distance_in
       INTEGER_T, intent(in) :: im_solid_map(nparts)
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nstate
@@ -9232,6 +9236,10 @@ stop
       endif
       if (ngrow_make_distance.ne.3) then
        print *,"ngrow_make_distance invalid"
+       stop
+      endif
+      if (ngrow_make_distance_in.ne.3) then
+       print *,"ngrow_make_distance_in invalid"
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then

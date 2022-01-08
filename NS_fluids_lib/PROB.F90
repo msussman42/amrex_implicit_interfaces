@@ -25538,7 +25538,7 @@ end subroutine initialize2d
        nmat, &
        nparts, &
        nFSI, &
-       ngrow_make_distance, &
+       ngrow_make_distance_in, &
        im_solid_map, &
        time, &
        tilelo,tilehi, &
@@ -25556,7 +25556,7 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nFSI
-      INTEGER_T, intent(in) :: ngrow_make_distance
+      INTEGER_T, intent(in) :: ngrow_make_distance_in
       INTEGER_T, intent(in) :: im_solid_map(nparts)
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -25596,6 +25596,10 @@ end subroutine initialize2d
       endif
       if (ngrow_make_distance.ne.3) then
        print *,"ngrow_make_distance invalid"
+       stop
+      endif
+      if (ngrow_make_distance_in.ne.3) then
+       print *,"ngrow_make_distance_in invalid"
        stop
       endif
 
