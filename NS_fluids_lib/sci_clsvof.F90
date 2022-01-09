@@ -8390,7 +8390,8 @@ IMPLICIT NONE
   REAL_T, intent(in), pointer :: xdata3D(:,:,:,:)
   REAL_T, intent(in), pointer :: FSIdata3D(:,:,:,:)
   REAL_T, intent(in), pointer :: masknbr3D(:,:,:,:)
-  REAL_T, dimension(:,:,:,:), allocatable :: old_FSIdata
+  REAL_T, allocatable, target :: old_FSIdata(:,:,:,:)
+  REAL_T, pointer :: old_FSIdata_ptr(:,:,:,:)
 
   INTEGER_T, intent(in) :: CTML_force_model
   INTEGER_T, intent(in) :: ioproc,isout
@@ -9566,9 +9567,12 @@ IMPLICIT NONE
          FSI_growlo(1):FSI_growhi(1), &
          FSI_growlo(2):FSI_growhi(2), &
          FSI_growlo(3):FSI_growhi(3), &
-         nFSI)
+         nFSI))
+
+    old_FSIdata_ptr=>old_FSIdata
+
     call checkbound3D_array(FSI_lo,FSI_hi, &
-     old_FSIdata, &
+     old_FSIdata_ptr, &
      ngrow_make_distance,-1,521)
 
     do i=FSI_growlo(1),FSI_growhi(1)
@@ -10268,8 +10272,20 @@ end subroutine CLSVOF_InitBox
         stop
        endif
 
-       call checkbound3D(FSI_lo,FSI_hi, &
-        DIMS3D(FSIdata3D), &
+       call checkbound3D_array(FSI_lo,FSI_hi, &
+        xdata3D, &
+        ngrow_make_distance,-1,521)
+       call checkbound3D_array(FSI_lo,FSI_hi, &
+        veldata3D, &
+        ngrow_make_distance,-1,521)
+       call checkbound3D_array(FSI_lo,FSI_hi, &
+        stressdata3D, &
+        ngrow_make_distance,-1,521)
+       call checkbound3D_array(FSI_lo,FSI_hi, &
+        masknbr3D, &
+        ngrow_make_distance,-1,521)
+       call checkbound3D_array(FSI_lo,FSI_hi, &
+        maskfiner3D, &
         ngrow_make_distance,-1,521)
 
        num_nodes_container=contain_elem(lev77)% &
