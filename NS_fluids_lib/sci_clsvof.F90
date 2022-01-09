@@ -181,9 +181,9 @@ contains
       ngrow,dir,id)
       IMPLICIT NONE
 
-      INTEGER_T lo(3), hi(3)
-      INTEGER_T DIMDEC3D(data)
-      INTEGER_T ngrow,dir,id
+      INTEGER_T, intent(in) :: lo(3), hi(3)
+      INTEGER_T, intent(in) :: DIMDEC3D(data)
+      INTEGER_T, intent(in) :: ngrow,dir,id
 
       INTEGER_T ii(3)
 
@@ -244,6 +244,116 @@ contains
 
       return
       end subroutine checkbound3D
+
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      subroutine grid_type_to_box_type3D(grid_type,box_type)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(out) :: box_type(3)
+      INTEGER_T dir
+
+      do dir=1,3
+       box_type(dir)=0  ! default to CELL
+      enddo
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else if ((grid_type.ge.0).and. &
+               (grid_type.lt.3)) then
+       box_type(grid_type+1)=1  ! NODE
+      else if (grid_type.eq.3) then
+       box_type(1)=1 ! NODE
+       box_type(2)=1 ! NODE
+      else if (grid_type.eq.4) then
+       box_type(1)=1 ! NODE
+       box_type(3)=1 ! NODE
+      else if (grid_type.eq.5) then
+       box_type(2)=1 ! NODE
+       box_type(3)=1 ! NODE
+      else
+       print *,"grid_type invalid"
+       stop
+      endif
+     
+      return 
+      end subroutine grid_type_to_box_type3D
+
+
+      subroutine checkbound3D_array(lo,hi, &
+      data_array, &
+      ngrow,grid_type,id)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: lo(3), hi(3)
+       ! intent(in) means the pointer cannot be reassigned.
+       ! The data itself inherits the intent attribute from the
+       ! target.
+      REAL_T, intent(in), pointer :: data_array(:,:,:,:)
+      INTEGER_T, intent(in) :: ngrow,grid_type,id
+
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      INTEGER_T box_type(3)
+
+      INTEGER_T hidata(4)
+      INTEGER_T lodata(4)
+      INTEGER_T dir2
+
+      hidata=UBOUND(data_array)
+      lodata=LBOUND(data_array)
+
+      do dir2=1,3
+       if (lodata(dir2).gt.hidata(dir2)) then
+        print *,"swapped bounds in checkbound 3d id=",id
+        print *,"dir2=",dir2
+        stop
+       endif
+       box_type(dir2)=0
+      enddo
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      call grid_type_to_box_type3D(grid_type,box_type)
+
+      do dir2=1,3
+       if (lo(dir2).lt.0) then
+        print *,"lo invalid in checkbound3D_array id=",id
+        print *,"dir2,dataxlo ",dir2,lodata(dir2)
+        print *,"dir2,dataxhi ",dir2,hidata(dir2)
+        print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
+        print *,"dir2,hi,ngrow ",dir2,hi(dir2),ngrow
+        print *,"grid_type=",grid_type
+        stop
+       endif
+      enddo
+
+      if (ngrow.lt.0) then
+       print *,"ngrow invalid in checkbound3D_array"
+       stop
+      endif
+      if (id.lt.0) then
+       print *,"id invalid in checkbound3D_array"
+       stop
+      endif
+
+      do dir2=1,3
+
+       if (lodata(dir2).gt.lo(dir2)-ngrow) then
+        print *,"lo mismatch id=",id
+        print *,"dir2=",dir2
+        stop
+       endif
+       if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
+        print *,"hi mismatch id=",id
+        print *,"dir2=",dir2
+        stop
+       endif
+
+      enddo ! dir2=1..3
+
+      return
+      end subroutine checkbound3D_array
+
 
 ! called from:
 !   initinjector,initflapping,init_from_cas,init_gingerbread2D,
@@ -8242,7 +8352,6 @@ subroutine CLSVOF_InitBox(  &
   xdata3D, &
   FSIdata3D, &
   masknbr3D, &
-  DIMS3D(FSIdata3D), &
   CTML_force_model, &
   ioproc,isout)
 use global_utility_module
@@ -8278,10 +8387,9 @@ IMPLICIT NONE
   INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
   INTEGER_T, intent(in) :: FSI_growlo(3),FSI_growhi(3)
   INTEGER_T, intent(in) :: growlo3D(3),growhi3D(3)
-  INTEGER_T, intent(in) :: DIMDEC3D(FSIdata3D)
-  REAL_T, intent(in) :: xdata3D(DIMV3D(FSIdata3D),3)
-  REAL_T, intent(inout) :: FSIdata3D(DIMV3D(FSIdata3D),nFSI)
-  REAL_T, intent(in) :: masknbr3D(DIMV3D(FSIdata3D),2)
+  REAL_T, intent(in), pointer :: xdata3D(:,:,:,:)
+  REAL_T, intent(in), pointer :: FSIdata3D(:,:,:,:)
+  REAL_T, intent(in), pointer :: masknbr3D(:,:,:,:)
   REAL_T, dimension(:,:,:,:), allocatable :: old_FSIdata
 
   INTEGER_T, intent(in) :: CTML_force_model
@@ -8556,8 +8664,14 @@ IMPLICIT NONE
     stop
    endif
 
-   call checkbound3D(FSI_lo,FSI_hi, &
-    DIMS3D(FSIdata3D), &
+   call checkbound3D_array(FSI_lo,FSI_hi, &
+    FSIdata3D, &
+    ngrow_make_distance,-1,521)
+   call checkbound3D_array(FSI_lo,FSI_hi, &
+    xdata3D, &
+    ngrow_make_distance,-1,521)
+   call checkbound3D_array(FSI_lo,FSI_hi, &
+    masknbr3D, &
     ngrow_make_distance,-1,521)
 
    mask_debug=0
@@ -8570,7 +8684,6 @@ IMPLICIT NONE
     !
     ! in NavierStokes::FSI_make_distance FSI_MF is initialized as
     ! follows:
-    ! nparts x (vel + LS + temperature + flag + force)
     ! velocity=0.0
     ! LS=-99999
     ! temperature=0.0
@@ -8689,7 +8802,6 @@ IMPLICIT NONE
        FSI_growlo,FSI_growhi, &
        growlo3D,growhi3D, &
        xdata3D, &
-       DIMS3D(FSIdata3D), &
        gridloBB,gridhiBB,dxBB) 
 
      dxBB_min=dxBB(1)
@@ -8740,8 +8852,6 @@ IMPLICIT NONE
       do j=gridloBB(2),gridhiBB(2)
       do k=gridloBB(3),gridhiBB(3)
 
-        ! BEFORE: restrict (i,j,k) to growlo3D and growhi3D
-   
        if ((i.ge.FSI_lo(1)).and.(i.le.FSI_hi(1)).and. &
            (j.ge.FSI_lo(2)).and.(j.le.FSI_hi(2)).and. &
            (k.ge.FSI_lo(3)).and.(k.le.FSI_hi(3))) then
@@ -9452,7 +9562,14 @@ IMPLICIT NONE
 
    else if (FSI_operation.eq.3) then
 
-    allocate(old_FSIdata(DIMV3D(FSIdata3D),nFSI))
+    allocate(old_FSIdata( &
+         FSI_growlo(1):FSI_growhi(1), &
+         FSI_growlo(2):FSI_growhi(2), &
+         FSI_growlo(3):FSI_growhi(3), &
+         nFSI)
+    call checkbound3D_array(FSI_lo,FSI_hi, &
+     old_FSIdata, &
+     ngrow_make_distance,-1,521)
 
     do i=FSI_growlo(1),FSI_growhi(1)
     do j=FSI_growlo(2),FSI_growhi(2)
@@ -9715,7 +9832,7 @@ IMPLICIT NONE
            stop
           endif
 
-         enddo ! dir=1..sdim
+         enddo ! dir=1..3
         
          if (sign_status_changed.eq.1) then 
           new_mask_local=2
@@ -9949,7 +10066,6 @@ end subroutine CLSVOF_InitBox
        stressdata3D, &
        masknbr3D, &
        maskfiner3D, &
-       DIMS3D(FSIdata3D), &
        ioproc,isout)
        use global_utility_module
 #ifdef MVAHABFSI
@@ -9980,12 +10096,11 @@ end subroutine CLSVOF_InitBox
       INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
       INTEGER_T, intent(in) :: FSI_growlo(3),FSI_growhi(3)
       INTEGER_T, intent(in) :: growlo3D(3),growhi3D(3)
-      INTEGER_T, intent(in) :: DIMDEC3D(FSIdata3D)
-      REAL_T, intent(in) :: xdata3D(DIMV3D(FSIdata3D),3)
-      REAL_T, intent(in) :: veldata3D(DIMV3D(FSIdata3D),3)
-      REAL_T, intent(in) :: stressdata3D(DIMV3D(FSIdata3D),6*nmat)
-      REAL_T, intent(in) :: masknbr3D(DIMV3D(FSIdata3D),2)
-      REAL_T, intent(in) :: maskfiner3D(DIMV3D(FSIdata3D))
+      REAL_T, intent(in), pointer :: xdata3D(:,:,:,:)
+      REAL_T, intent(in), pointer :: veldata3D(:,:,:,:)
+      REAL_T, intent(in), pointer :: stressdata3D(:,:,:,:)
+      REAL_T, intent(in), pointer :: masknbr3D(:,:,:,:)
+      REAL_T, intent(in), pointer :: maskfiner3D(:,:,:,:)
 
       INTEGER_T, intent(in) :: ioproc,isout
 
@@ -10213,7 +10328,6 @@ end subroutine CLSVOF_InitBox
          FSI_growlo,FSI_growhi, &
          growlo3D,growhi3D, &
          xdata3D, &
-         DIMS3D(FSIdata3D), &
          gridloBB,gridhiBB,dxBB) 
 
         do dir=1,3
@@ -10238,7 +10352,7 @@ end subroutine CLSVOF_InitBox
          endif
         enddo
 
-        local_mask=NINT(maskfiner3D(idx(1),idx(2),idx(3)))
+        local_mask=NINT(maskfiner3D(idx(1),idx(2),idx(3),1))
 
         if (local_mask.eq.1) then
 
@@ -11205,7 +11319,6 @@ subroutine find_grid_bounding_box( &
  FSI_growlo,FSI_growhi,  &
  growlo3D,growhi3D,  &
  xdata3D, &
- DIMS3D(xdata3D), &
  gridloBB,gridhiBB,dxBB)
 IMPLICIT NONE
 
@@ -11215,8 +11328,7 @@ IMPLICIT NONE
  INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
  INTEGER_T, intent(in) :: FSI_growlo(3),FSI_growhi(3)
  INTEGER_T, intent(in) :: growlo3D(3),growhi3D(3)
- INTEGER_T, intent(in) :: DIMDEC3D(xdata3D)
- REAL_T, intent(in) :: xdata3D(DIMV3D(xdata3D),3)
+ REAL_T, intent(in), pointer :: xdata3D(:,:,:,:)
  INTEGER_T, intent(out) :: gridloBB(3),gridhiBB(3)
  REAL_T, intent(out) :: dxBB(3)
  INTEGER_T dir
@@ -11258,8 +11370,8 @@ IMPLICIT NONE
   endif
  enddo ! dir=1..3
 
- call checkbound3D(FSI_lo,FSI_hi, &
-  DIMS3D(xdata3D), &
+ call checkbound3D_array(FSI_lo,FSI_hi, &
+  xdata3D, &
   ngrow,-1,123)
 
  do dir=1,3
@@ -11400,7 +11512,6 @@ subroutine find_grid_bounding_box_node( &
  FSI_growlo,FSI_growhi,  &
  growlo3D,growhi3D,  &
  xdata3D, &
- DIMS3D(xdata3D), &
  gridloBB,gridhiBB,dxBB)
 IMPLICIT NONE
 
@@ -11408,8 +11519,7 @@ IMPLICIT NONE
  INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
  INTEGER_T, intent(in) :: FSI_growlo(3),FSI_growhi(3)
  INTEGER_T, intent(in) :: growlo3D(3),growhi3D(3)
- INTEGER_T, intent(in) :: DIMDEC3D(xdata3D)
- REAL_T, intent(in) :: xdata3D(DIMV3D(xdata3D),3)
+ REAL_T, intent(in), pointer :: xdata3D(:,:,:,:)
  INTEGER_T, intent(out) :: gridloBB(3),gridhiBB(3)
  REAL_T, intent(out) :: dxBB(3)
  INTEGER_T dir,dirloc
@@ -11442,8 +11552,8 @@ IMPLICIT NONE
   endif
  enddo ! dir=1..3
 
- call checkbound3D(FSI_lo,FSI_hi, &
-  DIMS3D(xdata3D), &
+ call checkbound3D_array(FSI_lo,FSI_hi, &
+  xdata3D, &
   ngrow,-1,123)
 
  do dir=1,3
