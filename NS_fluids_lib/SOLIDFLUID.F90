@@ -390,12 +390,18 @@
       INTEGER_T FSI_lo3D(3),FSI_hi3D(3)
       INTEGER_T FSI_growlo3D(3),FSI_growhi3D(3)
       INTEGER_T DIMDEC3D(FSIdata3D)
-      REAL_T, allocatable :: FSIdata3D(:,:,:,:)
-      REAL_T, allocatable :: veldata3D(:,:,:,:)
-      REAL_T, allocatable :: stressdata3D(:,:,:,:)
-      REAL_T, allocatable :: xdata3D(:,:,:,:)
-      REAL_T, allocatable :: masknbr3D(:,:,:,:)
-      REAL_T, allocatable :: maskfiner3D(:,:,:,:)
+      REAL_T, allocatable,target :: FSIdata3D(:,:,:,:)
+      REAL_T, pointer :: FSIdata3D_ptr(:,:,:,:)
+      REAL_T, allocatable,target :: veldata3D(:,:,:,:)
+      REAL_T, pointer :: veldata3D_ptr(:,:,:,:)
+      REAL_T, allocatable,target :: stressdata3D(:,:,:,:)
+      REAL_T, pointer :: stressdata3D_ptr(:,:,:,:)
+      REAL_T, allocatable,target :: xdata3D(:,:,:,:)
+      REAL_T, pointer :: xdata3D_ptr(:,:,:,:)
+      REAL_T, allocatable,target :: masknbr3D(:,:,:,:)
+      REAL_T, pointer :: masknbr3D_ptr(:,:,:,:)
+      REAL_T, allocatable,target :: maskfiner3D(:,:,:,:)
+      REAL_T, pointer :: maskfiner3D_ptr(:,:,:,:)
       INTEGER_T mask1,mask2
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T ibase
@@ -762,8 +768,11 @@
        endif
  
        allocate(FSIdata3D(DIMV3D(FSIdata3D),nFSI))
+       FSIdata3D_ptr=>FSIdata3D
        allocate(xdata3D(DIMV3D(FSIdata3D),3))
+       xdata3D_ptr=>xdata3D
        allocate(masknbr3D(DIMV3D(FSIdata3D),2))
+       masknbr3D_ptr=>masknbr3D
 
        do i=FSI_growlo3D(1),FSI_growhi3D(1)
        do j=FSI_growlo3D(2),FSI_growhi3D(2)
@@ -966,9 +975,9 @@
            FSI_lo3D,FSI_hi3D, &
            FSI_growlo3D,FSI_growhi3D, &
            growlo3D,growhi3D, &
-           xdata3D, &
-           FSIdata3D, &
-           masknbr3D, &
+           xdata3D_ptr, &
+           FSIdata3D_ptr, &
+           masknbr3D_ptr, &
            CTML_force_model(im_part), &
            ioproc,isout)
 
@@ -1137,10 +1146,15 @@
         call CLSVOF_clear_lag_data(ioproc,isout)
        else if (FSI_sub_operation.eq.1) then 
         allocate(veldata3D(DIMV3D(FSIdata3D),3)) 
+        veldata3D_ptr=>veldata3D
         allocate(stressdata3D(DIMV3D(FSIdata3D),6*nmat)) 
+        stressdata3D_ptr=>stressdata3D
         allocate(xdata3D(DIMV3D(FSIdata3D),3))
+        xdata3D_ptr=>xdata3D
         allocate(masknbr3D(DIMV3D(FSIdata3D),2))
+        masknbr3D_ptr=>masknbr3D
         allocate(maskfiner3D(DIMV3D(FSIdata3D),1))
+        maskfiner3D_ptr=>maskfiner3D
 
          ! ngrow_make_distance ghost cells
          ! in 3D:
@@ -1368,11 +1382,11 @@
             FSI_lo3D,FSI_hi3D, &
             FSI_growlo3D,FSI_growhi3D, &
             growlo3D,growhi3D, &
-            xdata3D, &
-            veldata3D, &
-            stressdata3D, &
-            masknbr3D, &
-            maskfiner3D, &
+            xdata3D_ptr, &
+            veldata3D_ptr, &
+            stressdata3D_ptr, &
+            masknbr3D_ptr, &
+            maskfiner3D_ptr, &
             ioproc,isout)
 
           else if (FSI_flag(im_part).eq.1) then !prescribed solid(EUL)
