@@ -395,7 +395,7 @@
       REAL_T, allocatable :: stressdata3D(:,:,:,:)
       REAL_T, allocatable :: xdata3D(:,:,:,:)
       REAL_T, allocatable :: masknbr3D(:,:,:,:)
-      REAL_T, allocatable :: maskfiner3D(:,:,:)
+      REAL_T, allocatable :: maskfiner3D(:,:,:,:)
       INTEGER_T mask1,mask2
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T ibase
@@ -969,7 +969,6 @@
            xdata3D, &
            FSIdata3D, &
            masknbr3D, &
-           DIMS3D(FSIdata3D), &
            CTML_force_model(im_part), &
            ioproc,isout)
 
@@ -1141,7 +1140,7 @@
         allocate(stressdata3D(DIMV3D(FSIdata3D),6*nmat)) 
         allocate(xdata3D(DIMV3D(FSIdata3D),3))
         allocate(masknbr3D(DIMV3D(FSIdata3D),2))
-        allocate(maskfiner3D(DIMV3D(FSIdata3D)))
+        allocate(maskfiner3D(DIMV3D(FSIdata3D),1))
 
          ! ngrow_make_distance ghost cells
          ! in 3D:
@@ -1171,7 +1170,7 @@
           do nc=1,2
            masknbr3D(i,j,k,nc)=masknbr(D_DECL(i,j,k),nc)
           enddo
-          maskfiner3D(i,j,k)=maskfiner(D_DECL(i,j,k),1)
+          maskfiner3D(i,j,k,1)=maskfiner(D_DECL(i,j,k),1)
 
          else if (SDIM.eq.2) then
 
@@ -1269,7 +1268,7 @@
           do nc=1,2
            masknbr3D(i,j,k,nc)=masknbr(D_DECL(i2d,j2d,k2d),nc)
           enddo
-          maskfiner3D(i,j,k)=maskfiner(D_DECL(i2d,j2d,k2d),1)
+          maskfiner3D(i,j,k,1)=maskfiner(D_DECL(i2d,j2d,k2d),1)
           do dir=1,3
            if (xmap3D(dir).eq.0) then
             xdata3D(i,j,k,dir)=xslice3D(dir)+idx(dir)*dx_max_level(1)
@@ -1374,7 +1373,6 @@
             stressdata3D, &
             masknbr3D, &
             maskfiner3D, &
-            DIMS3D(FSIdata3D), &
             ioproc,isout)
 
           else if (FSI_flag(im_part).eq.1) then !prescribed solid(EUL)
