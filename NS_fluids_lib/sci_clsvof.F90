@@ -94,6 +94,8 @@ type mesh_type
  REAL_T, pointer :: Node_new(:,:)
  REAL_T, pointer :: Node_current(:,:)
  REAL_T, pointer :: NodeVel(:,:)
+ INTEGER_T, pointer :: ElemNodeCount(:)
+ REAL_T, pointer :: NodeNormal(:,:) !NodeNormal(dir,inode)
  REAL_T, pointer :: NodeVel_old(:,:)
  REAL_T, pointer :: NodeVel_new(:,:)
  REAL_T, pointer :: NodeForce(:,:)
@@ -421,6 +423,8 @@ REAL_T dilated_time
    allocate(FSI(part_id)%Node(3,FSI(part_id)%NumNodes))
    allocate(FSI(part_id)%NodeVel(3,FSI(part_id)%NumNodes))
    allocate(FSI(part_id)%NodeForce(3,FSI(part_id)%NumNodes))
+   allocate(FSI(part_id)%NodeNormal(3,FSI(part_id)%NumNodes))
+   allocate(FSI(part_id)%ElemNodeCount(FSI(part_id)%NumNodes))
    allocate(FSI(part_id)%NodeTemp(FSI(part_id)%NumNodes))
   else if (ifirst.eq.0) then
    ! do nothing
@@ -850,13 +854,13 @@ subroutine generate_new_triangles(initflag,problo,probhi, &
   part_id,ioproc,isout,h_small)
 IMPLICIT NONE
 
-INTEGER_T :: part_id
-REAL_T problo(3),probhi(3)
-INTEGER_T :: initflag,ioproc,isout
+INTEGER_T, intent(in) :: part_id
+REAL_T, intent(in) :: problo(3),probhi(3)
+INTEGER_T, intent(in) :: initflag,ioproc,isout
+REAL_T, intent(in) :: h_small
 INTEGER_T :: ielem,nodes_per_elem,inode,i,dir
 INTEGER_T :: new_NumIntElems
 REAL_T :: generate_time
-REAL_T, intent(in) :: h_small
 REAL_T, dimension(3) :: x1,x2,x3
 REAL_T, dimension(3) :: vel1,vel2,vel3
 REAL_T, dimension(6) :: force1,force2,force3,forcesplit
@@ -913,6 +917,43 @@ INTEGER_T :: local_refine_factor
    print *,"in generate_new_triangles..."
   endif
  endif
+
+! UPDATE NODENORMAL ON ORIGINAL LAGRANGIAN GRID --------------
+
+ do inode=1,FSI(part_id)%NumNodes
+  do dir=1,3
+   FSI(part_id)%NodeNormal(dir,inode)=0.0
+  enddo
+  FSI(part_id)%ElemNodeCount(inode)=0
+ enddo ! inode=1,FSI(part_id)%NumNodes
+
+ do ielem=1,FSI(part_id)%NumIntElems
+  nodes_per_elem=FSI(part_id)%ElemData(1,ielem)
+  if (nodes_per_elem.lt.3) then
+   print *,"nodes_per_elem<3 not supported"
+   stop
+  endif
+  call scinormal(ielem,normal,part_id,generate_time)
+  do i=1,nodes_per_elem
+   inode=FSI(part_id)%IntElem(i,ielem)
+   do dir=1,3
+    FSI(part_id)%NodeNormal(dir,inode)= &
+      FSI(part_id)%NodeNormal(dir,inode)+normal(dir)
+   enddo
+   FSI(part_id)%ElemNodeCount(inode)= &
+     FSI(part_id)%ElemNodeCount(inode)+1
+  enddo ! i=1,nodes_per_elem
+ enddo ! do ielem=1,FSI(part_id)%NumIntElems
+
+ do inode=1,FSI(part_id)%NumNodes
+  normal_cnt=FSI(part_id)%ElemNodeCount(inode)
+  if (normal_cnt.gt.0) then
+   do dir=1,3
+    FSI(part_id)%NodeNormal(dir,inode)= &
+     FSI(part_id)%NodeNormal(dir,inode)/normal_cnt
+   enddo
+  endif
+ enddo
 
 ! START OF LAGRANGIAN REFINEMENT SECTION ---------------------
 
@@ -1528,7 +1569,7 @@ INTEGER_T :: local_refine_factor
    FSI(part_id)%ElemDataXnotBIG(dir,ielem)= &
     FSI(part_id)%ElemDataXnotBIG(dir,ielem)/3.0
   enddo
- enddo
+ enddo ! do ielem=1,FSI(part_id)%NumIntElemsBIG
 
  do inode=1,FSI(part_id)%NumNodesBIG
   normal_cnt=FSI(part_id)%ElemNodeCountBIG(inode)
@@ -2025,6 +2066,8 @@ INTEGER_T :: local_elements
 
     allocate(FSI(part_id)%Node(3,FSI(part_id)%NumNodes))
     allocate(FSI(part_id)%NodeVel(3,FSI(part_id)%NumNodes))
+    allocate(FSI(part_id)%NodeNormal(3,FSI(part_id)%NumNodes))
+    allocate(FSI(part_id)%ElemNodeCount(FSI(part_id)%NumNodes))
     allocate(FSI(part_id)%NodeForce(3,FSI(part_id)%NumNodes))
     allocate(FSI(part_id)%NodeTemp(FSI(part_id)%NumNodes))
    else
@@ -6583,7 +6626,7 @@ end subroutine checkinplaneBIG
 subroutine scinormalBIG(elemnum,normal,part_id,time)
 IMPLICIT NONE
 
-INTEGER_T :: part_id
+INTEGER_T, intent(in) :: part_id
 INTEGER_T, intent(in) :: elemnum
 REAL_T, dimension(3), intent(out) :: normal
 REAL_T, intent(in) :: time
@@ -6607,7 +6650,9 @@ INTEGER_T :: local_normal_invert
   print *,"FSI(part_id)%partID.ne.part_id"
   stop
  endif
- if (time.lt.zero) then
+ if (time.ge.zero) then
+  ! do nothing
+ else
   print *,"time invalid"
   stop
  endif
@@ -6670,6 +6715,105 @@ INTEGER_T :: local_normal_invert
 
 return
 end subroutine scinormalBIG
+
+
+! normal points from solid to fluid
+! solid nodes are ordered clockwise when viewed from the fluid.
+! for 2d problems, it is assumed that the 3rd node is equal to the 2nd
+! node, except that the 3rd node extends OUT of the paper. (positive z)
+subroutine scinormal(elemnum,normal,part_id,time)
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: elemnum
+REAL_T, dimension(3), intent(out) :: normal
+REAL_T, intent(in) :: time
+INTEGER_T :: nodes_per_elem
+REAL_T, dimension(3,3) :: nodesave
+REAL_T, dimension(3) :: nodeavg
+REAL_T, dimension(3) :: xfoot
+REAL_T, dimension(3) :: xtarget
+REAL_T, dimension(3) :: velparm
+REAL_T, dimension(2,3) :: vec
+REAL_T :: dist
+INTEGER_T :: i
+INTEGER_T :: dir
+INTEGER_T :: local_normal_invert
+
+ if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+  print *,"part_id invalid"
+  stop
+ endif
+ if (FSI(part_id)%partID.ne.part_id) then
+  print *,"FSI(part_id)%partID.ne.part_id"
+  stop
+ endif
+ if (time.ge.zero) then
+  ! do nothing
+ else
+  print *,"time invalid"
+  stop
+ endif
+
+ nodes_per_elem=FSI(part_id)%ElemData(1,elemnum)
+ if (nodes_per_elem.lt.3) then
+  print *,"nodes_per_elem<3 not supported"
+  stop
+ endif
+
+ do dir=1,3
+  nodeavg(dir)=0.0
+ enddo
+
+ do i=1,3
+  do dir=1,3
+   xfoot(dir)=FSI(part_id)%Node(dir,FSI(part_id)%IntElem(i,elemnum))
+   velparm(dir)=zero
+  enddo
+   FIX ME (use BIG?)
+  call get_target_from_foot(xfoot,xtarget, &
+      velparm,time,part_id)
+
+  do dir=1,3
+   nodesave(i,dir)=xtarget(dir)
+   nodeavg(dir)=nodeavg(dir)+nodesave(i,dir)
+  enddo
+ enddo ! i=1..3
+
+ do dir=1,3
+  nodeavg(dir)=nodeavg(dir)/3.0
+ enddo
+
+ do i=1,2
+  do dir=1,3
+   vec(i,dir)=nodesave(i+1,dir)-nodesave(i,dir)
+  enddo
+ enddo
+
+ normal(1)=vec(1,2)*vec(2,3)-vec(1,3)*vec(2,2)
+ normal(2)=vec(1,3)*vec(2,1)-vec(1,1)*vec(2,3)
+ normal(3)=vec(1,1)*vec(2,2)-vec(2,1)*vec(1,2)
+
+ dist=sqrt(normal(1)**2+normal(2)**2+normal(3)**2)
+ if (dist.gt.1.0e-15) then
+  do dir=1,3
+   normal(dir)=normal(dir)/dist
+  enddo
+ endif
+
+ local_normal_invert=normal_invert
+
+ if (local_normal_invert.eq.1) then
+  do dir=1,3
+   normal(dir)=-normal(dir)
+  enddo
+ else if (local_normal_invert.ne.0) then
+  print *,"local_normal_invert must be 0 or 1"
+  stop
+ endif
+
+return
+end subroutine scinormal
 
 
 subroutine sciarea(elemnum,area,part_id)
@@ -7107,6 +7251,7 @@ INTEGER_T idir,ielem,inode
 
     im_solid_mapF(part_id)=im_solid_map_in(part_id)
     im_part=im_solid_mapF(part_id)+1
+
     if (CTML_FSI_mat(nmat,im_part).eq.1) then ! FSI_flag==4,8
      ctml_part_id=ctml_part_id+1
      CTML_partid_map(part_id)=ctml_part_id
@@ -7116,6 +7261,7 @@ INTEGER_T idir,ielem,inode
      print *,"CTML_FSI_mat(nmat,im_part) invalid"
      stop
     endif
+
     if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid (CAD)
         (FSI_flag(im_part).eq.6).or. & ! prescribed ice (CAD)
         (FSI_flag(im_part).eq.7)) then ! prescribed fluid (CAD)
@@ -7221,9 +7367,10 @@ INTEGER_T idir,ielem,inode
      print *,"CTML_FSI_INIT invalid"
      stop
     endif
+
     do part_id=1,TOTAL_NPARTS
      im_part=im_solid_mapF(part_id)+1
-     if (CTML_FSI_mat(nmat,im_part).eq.1) then
+     if (CTML_FSI_mat(nmat,im_part).eq.1) then !FSI_flag==4,8
       FSI(part_id)%deforming_part=1
       FSI(part_id)%CTML_flag=1
       num_nodes_list(im_part)=ctml_max_n_fib_nodes
@@ -7327,6 +7474,7 @@ INTEGER_T idir,ielem,inode
        print *,"FSI_refine_factor(im_part) invalid"
        stop
       endif 
+
       if (FSI_bounding_box_ngrow(im_part).eq.3) then
        FSI(part_id)%bounding_box_ngrow=FSI_bounding_box_ngrow(im_part)
       else
@@ -7344,8 +7492,10 @@ INTEGER_T idir,ielem,inode
 
       ! ReadHeader
       initflag=1
+       !NodeNormal(dir,inode) and NodeNormalBIG initialized here.
       call generate_new_triangles(initflag,problo,probhi, &
        part_id,ioproc,isout,h_small)
+
      else if ((FSI_partid_map(part_id).eq.0).and. &
               (CTML_partid_map(part_id).eq.0)) then
       ! do nothing
@@ -7366,7 +7516,7 @@ INTEGER_T idir,ielem,inode
    ctml_part_id=0
    do part_id=1,TOTAL_NPARTS
     im_part=im_solid_mapF(part_id)+1
-    if (CTML_FSI_mat(nmat,im_part).eq.1) then
+    if (CTML_FSI_mat(nmat,im_part).eq.1) then !FSI_flag==4,8
      ctml_part_id=ctml_part_id+1
      if (CTML_partid_map(part_id).eq.ctml_part_id) then
       if (im_part.eq.im_critical+1) then
@@ -11800,7 +11950,7 @@ INTEGER_T :: idir,ielem,im_part
     ctml_part_id=0
     do part_id=1,TOTAL_NPARTS
      im_part=im_solid_mapF(part_id)+1
-     if (CTML_FSI_mat(nmat,im_part).eq.1) then
+     if (CTML_FSI_mat(nmat,im_part).eq.1) then !FSI_flag==4,8
       ctml_part_id=ctml_part_id+1
       if (CTML_partid_map(part_id).eq.ctml_part_id) then
        if (im_part.eq.-im_critical-1) then
@@ -12051,6 +12201,7 @@ INTEGER_T :: idir,ielem,im_part
       if (FSI(part_id)%deforming_part.eq.0) then
        ! do nothing
       else if (FSI(part_id)%deforming_part.eq.1) then
+        !NodeNormal(dir,inode) and NodeNormalBIG initialized here.
        call generate_new_triangles(initflag,problo,probhi, &
         part_id,ioproc,isout,h_small)
       else
@@ -12074,7 +12225,7 @@ INTEGER_T :: idir,ielem,im_part
     ctml_part_id=0
     do part_id=1,TOTAL_NPARTS
      im_part=im_solid_mapF(part_id)+1
-     if (CTML_FSI_mat(nmat,im_part).eq.1) then
+     if (CTML_FSI_mat(nmat,im_part).eq.1) then !FSI_flag==4,8
       ctml_part_id=ctml_part_id+1
       if (CTML_partid_map(part_id).eq.ctml_part_id) then
        if (im_part.eq.im_critical+1) then
