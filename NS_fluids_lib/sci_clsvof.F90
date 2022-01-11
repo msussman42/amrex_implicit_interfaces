@@ -887,6 +887,7 @@ INTEGER_T :: node1,node2,node3
 INTEGER_T :: n_lag_levels
 INTEGER_T :: save_n_elems,save_n_nodes
 INTEGER_T :: local_refine_factor
+REAL_T    :: mag
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
   print *,"part_id invalid"
@@ -948,10 +949,24 @@ INTEGER_T :: local_refine_factor
  do inode=1,FSI(part_id)%NumNodes
   normal_cnt=FSI(part_id)%ElemNodeCount(inode)
   if (normal_cnt.gt.0) then
+   mag=zero
    do dir=1,3
     FSI(part_id)%NodeNormal(dir,inode)= &
      FSI(part_id)%NodeNormal(dir,inode)/normal_cnt
-   enddo
+    mag=mag+FSI(part_id)%NodeNormal(dir,inode)**2
+   enddo ! dir=1,3
+   mag=sqrt(mag)
+   if (mag.gt.zero) then
+    do dir=1,3
+     FSI(part_id)%NodeNormal(dir,inode)= &
+       FSI(part_id)%NodeNormal(dir,inode)/mag
+    enddo
+   else if (mag.eq.zero) then
+    ! do nothing
+   else
+    print *,"mag invalid"
+    stop
+   endif 
   else if (normal_cnt.eq.0) then
    do dir=1,3
     if (FSI(part_id)%NodeNormal(dir,inode).eq.zero) then
@@ -1586,10 +1601,24 @@ INTEGER_T :: local_refine_factor
  do inode=1,FSI(part_id)%NumNodesBIG
   normal_cnt=FSI(part_id)%ElemNodeCountBIG(inode)
   if (normal_cnt.gt.0) then
+   mag=zero
    do dir=1,3
     FSI(part_id)%NodeNormalBIG(dir,inode)= &
      FSI(part_id)%NodeNormalBIG(dir,inode)/normal_cnt
-   enddo
+    mag=mag+FSI(part_id)%NodeNormalBIG(dir,inode)**2
+   enddo ! dir=1,3
+   mag=sqrt(mag)
+   if (mag.gt.zero) then
+    do dir=1,3
+     FSI(part_id)%NodeNormalBIG(dir,inode)= &
+       FSI(part_id)%NodeNormalBIG(dir,inode)/mag
+    enddo
+   else if (mag.eq.zero) then
+    ! do nothing
+   else
+    print *,"mag invalid"
+    stop
+   endif 
   else if (normal_cnt.eq.0) then
    do dir=1,3
     if (FSI(part_id)%NodeNormalBIG(dir,inode).eq.zero) then
@@ -10303,6 +10332,7 @@ end subroutine CLSVOF_InitBox
       INTEGER_T ctml_part_id
       INTEGER_T fsi_part_id
       INTEGER_T inside_interior_box
+      REAL_T dx3D_min
 
       debug_all=0
 
@@ -10345,6 +10375,13 @@ end subroutine CLSVOF_InitBox
        print *,"contain_elem(lev77)%max_num_tiles_on_thread3D_proc bad"
        stop
       endif
+
+      dx3D_min=dx3D(1)
+      do dir=1,3
+       if (dx3D(dir).lt.dx3Dmin) then
+        dx3Dmin=dx3D(dir)
+       endif
+      enddo
 
       do dir=1,3
        if (contain_elem(lev77)%tilelo3D(tid+1,tilenum+1,dir).ne. &
@@ -10592,7 +10629,13 @@ end subroutine CLSVOF_InitBox
           enddo
           do idoubly=1,2
            if (idoubly.eq.1) then
-            
+            xprobe(dir)=xnot(dir)-dx3Dmin*local_node_normal(dir)
+           else if (idoubly.eq.2) then 
+            xprobe(dir)=xnot(dir)+dx3Dmin*local_node_normal(dir)
+           else 
+            print *,"idoubly invalid"
+            stop
+           endif
 
 
           total_weight=zero
