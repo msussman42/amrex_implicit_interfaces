@@ -6081,7 +6081,8 @@ end subroutine dynamic_contact_angle
       subroutine arctan2(y,x,angle)
       IMPLICIT NONE
 
-      REAL_T y,x,angle
+      REAL_T, intent(in) :: y,x
+      REAL_T, intent(out) :: angle
 
       if (MOF_PI.eq.zero) then
        MOF_PI=four*atan(one)
@@ -6130,7 +6131,8 @@ end subroutine dynamic_contact_angle
       subroutine minmod(x,y,z)
       IMPLICIT NONE
       
-      REAL_T x,y,z
+      REAL_T, intent(in) :: x,y
+      REAL_T, intent(out) :: z
 
       if (x*y.le.zero) then
        z=zero
@@ -6148,10 +6150,10 @@ end subroutine dynamic_contact_angle
 
       IMPLICIT NONE
 
-      REAL_T vol
-      REAL_T xlo1(SDIM),xhi1(SDIM)
-      REAL_T xlo2(SDIM),xhi2(SDIM)
-      REAL_T xloint(SDIM),xhiint(SDIM)
+      REAL_T, intent(out) :: vol
+      REAL_T, intent(in) :: xlo1(SDIM),xhi1(SDIM)
+      REAL_T, intent(in) :: xlo2(SDIM),xhi2(SDIM)
+      REAL_T, intent(out) :: xloint(SDIM),xhiint(SDIM)
       REAL_T vol1,vol2
       INTEGER_T dir
 
@@ -6205,8 +6207,8 @@ end subroutine dynamic_contact_angle
 
       IMPLICIT NONE
 
-      REAL_T x(SDIM)
-      REAL_T xT(SDIM)
+      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(out) :: xT(SDIM)
       INTEGER_T dir
      
       do dir=1,SDIM
