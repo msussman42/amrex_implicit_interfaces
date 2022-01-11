@@ -649,7 +649,7 @@ REAL_T dilated_time
 
 ! MARK: displacement taken into account elsewhere.
 ! do not want to change the node positions since it will
-! effect what happens in generate_new_triangles.
+! effect what happens in post_process_nodes_elements.
 
       if (probtype.eq.538) then
        FSI(part_id)%Node(dir,inode)=FSI(part_id)%Node_old(dir,inode)
@@ -850,7 +850,7 @@ INTEGER_T :: dir
 end subroutine get_new_half_vols
 
 ! split triangles so that size is no bigger than "h_small"
-subroutine generate_new_triangles(initflag,problo,probhi, &
+subroutine post_process_nodes_elements(initflag,problo,probhi, &
   part_id,ioproc,isout,h_small)
 IMPLICIT NONE
 
@@ -914,7 +914,7 @@ INTEGER_T :: local_refine_factor
 
  if ((initflag.eq.1).and.(isout.eq.1)) then
   if (ioproc.eq.1) then
-   print *,"in generate_new_triangles..."
+   print *,"in post_process_nodes_elements..."
   endif
  endif
 
@@ -952,6 +952,18 @@ INTEGER_T :: local_refine_factor
     FSI(part_id)%NodeNormal(dir,inode)= &
      FSI(part_id)%NodeNormal(dir,inode)/normal_cnt
    enddo
+  else if (normal_cnt.eq.0) then
+   do dir=1,3
+    if (FSI(part_id)%NodeNormal(dir,inode).eq.zero) then
+     ! do nothing
+    else
+     print *,"FSI(part_id)%NodeNormal(dir,inode) invalid"
+     stop
+    endif
+   enddo
+  else
+   print *,"normal_cnt invalid"
+   stop
   endif
  enddo
 
@@ -1462,7 +1474,7 @@ INTEGER_T :: local_refine_factor
  FSI(part_id)%NumNodesBIG=multi_lag(n_lag_levels)%n_nodes
  FSI(part_id)%NumIntElemsBIG=multi_lag(n_lag_levels)%n_elems
 
-  ! in: generate_new_triangles
+  ! in: post_process_nodes_elements
  if (initflag.eq.0) then 
   deallocate(FSI(part_id)%NodeBIG)
   deallocate(FSI(part_id)%NodeVelBIG)
@@ -1479,7 +1491,7 @@ INTEGER_T :: local_refine_factor
 
  endif
 
-  ! in: generate_new_triangles
+  ! in: post_process_nodes_elements
  allocate(FSI(part_id)%NodeBIG(3,FSI(part_id)%NumNodesBIG))
  allocate(FSI(part_id)%NodeNormalBIG(3,FSI(part_id)%NumNodesBIG))
  allocate(FSI(part_id)%NodeVelBIG(3,FSI(part_id)%NumNodesBIG))
@@ -1499,7 +1511,7 @@ INTEGER_T :: local_refine_factor
    FSI(part_id)%NumIntElemsBIG
  endif
 
-  ! in: generate_new_triangles
+  ! in: post_process_nodes_elements
  do ielem=1,FSI(part_id)%NumIntElemsBIG
   do dir=1,4
    FSI(part_id)%IntElemBIG(dir,ielem)= &
@@ -1510,7 +1522,7 @@ INTEGER_T :: local_refine_factor
    FSI(part_id)%ElemDataBIG(dir,ielem)=multi_lag(n_lag_levels)%elemdt(dir,ielem)
   enddo
  enddo
-  ! in: generate_new_triangles
+  ! in: post_process_nodes_elements
  do inode=1,FSI(part_id)%NumNodesBIG
   do dir=1,3
    FSI(part_id)%NodeNormalBIG(dir,inode)=0.0
@@ -1578,6 +1590,18 @@ INTEGER_T :: local_refine_factor
     FSI(part_id)%NodeNormalBIG(dir,inode)= &
      FSI(part_id)%NodeNormalBIG(dir,inode)/normal_cnt
    enddo
+  else if (normal_cnt.eq.0) then
+   do dir=1,3
+    if (FSI(part_id)%NodeNormalBIG(dir,inode).eq.zero) then
+     ! do nothing
+    else
+     print *,"FSI(part_id)%NodeNormalBIG(dir,inode) invalid"
+     stop
+    endif
+   enddo
+  else
+   print *,"normal_cnt invalid"
+   stop
   endif
  enddo
 
@@ -1663,7 +1687,7 @@ INTEGER_T :: local_refine_factor
 ! END OF LAGRANGIAN REFINEMENT SECTION -----------------------
 
 return
-end subroutine generate_new_triangles
+end subroutine post_process_nodes_elements
 
 
 subroutine scihandoffset(ofs,time)
@@ -5081,7 +5105,7 @@ return
 end subroutine internal_inflow_geominit
 
 
-! overall_solid_advance and generate_new_triangles called every geom_interval
+! overall_solid_advance and post_process_nodes_elements called every geom_interval
 ! time.
 ! This routine will be called just once at the very beginning or upon
 ! restart.
@@ -5831,7 +5855,7 @@ INTEGER_T :: local_part_id
 return
 end subroutine initship
 
-! if probtype==701,538,541 then generate_new_triangles is not needed.
+! if probtype==701,538,541 then post_process_nodes_elements is not needed.
 subroutine overall_solid_advance(CLSVOF_curtime,CLSVOF_dt, &
   part_id,ioproc,isout)
 IMPLICIT NONE
@@ -6770,7 +6794,7 @@ INTEGER_T :: local_normal_invert
    xfoot(dir)=FSI(part_id)%Node(dir,FSI(part_id)%IntElem(i,elemnum))
    velparm(dir)=zero
   enddo
-   FIX ME (use BIG?)
+
   call get_target_from_foot(xfoot,xtarget, &
       velparm,time,part_id)
 
@@ -7493,7 +7517,7 @@ INTEGER_T idir,ielem,inode
       ! ReadHeader
       initflag=1
        !NodeNormal(dir,inode) and NodeNormalBIG initialized here.
-      call generate_new_triangles(initflag,problo,probhi, &
+      call post_process_nodes_elements(initflag,problo,probhi, &
        part_id,ioproc,isout,h_small)
 
      else if ((FSI_partid_map(part_id).eq.0).and. &
@@ -7569,7 +7593,7 @@ end subroutine CLSVOF_ReadHeader
 INTEGER_T function sign_valid(mask)
 IMPLICIT NONE
 
-INTEGER_T mask
+INTEGER_T, intent(in) :: mask
 
 if ((mask.eq.2).or. &  !singly wetted, sign and velocity init
     (mask.eq.3).or. &  !doubly wetted, sign and velocity init
@@ -7850,11 +7874,11 @@ end subroutine check_overlap_nodeBIG
 subroutine get_minmax_nodeBIG(part_id,ielem,time,minnode,maxnode)
 IMPLICIT NONE
 
-INTEGER_T part_id
-INTEGER_T ielem
-REAL_T time
-REAL_T minnode(3)
-REAL_T maxnode(3)
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: ielem
+REAL_T, intent(in) :: time
+REAL_T, intent(out) :: minnode(3)
+REAL_T, intent(out) :: maxnode(3)
 INTEGER_T inode,dir,node_id
 REAL_T nodetest
 REAL_T xtarget(3)
@@ -7918,10 +7942,10 @@ end subroutine get_minmax_nodeBIG
 subroutine get_contained_nodeBIG(part_id,inode,time,minnode)
 IMPLICIT NONE
 
-INTEGER_T part_id
-INTEGER_T inode
-REAL_T time
-REAL_T minnode(3)
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: inode
+REAL_T, intent(in) :: time
+REAL_T, intent(out) :: minnode(3)
 INTEGER_T dir
 REAL_T xtarget(3)
 REAL_T xfoot(3)
@@ -7965,15 +7989,15 @@ use global_utility_module
 
 IMPLICIT NONE
 
- INTEGER_T lev77
- INTEGER_T sci_max_level
- INTEGER_T nthread_parm
- REAL_T dx3D(3)
- INTEGER_T part_id
- INTEGER_T im_part
- INTEGER_T nmat
- REAL_T cur_time
- REAL_T dt
+ INTEGER_T, intent(in) :: lev77
+ INTEGER_T, intent(in) :: sci_max_level
+ INTEGER_T, intent(in) :: nthread_parm
+ REAL_T, intent(in) :: dx3D(3)
+ INTEGER_T, intent(in) :: part_id
+ INTEGER_T, intent(in) :: im_part
+ INTEGER_T, intent(in) :: nmat
+ REAL_T, intent(in) :: cur_time
+ REAL_T, intent(in) :: dt
 
  INTEGER_T interior_flag
  INTEGER_T overlap
@@ -10562,6 +10586,15 @@ end subroutine CLSVOF_InitBox
 
          if (inside_interior_box.eq.1) then
 
+          do dir=1,3
+           force_doubly(dir)=zero
+           local_node_normal(dir)=FSI(part_id)%NodeNormal(dir,inode)
+          enddo
+          do idoubly=1,2
+           if (idoubly.eq.1) then
+            
+
+
           total_weight=zero
           do dir=1,3
            total_vel(dir)=zero
@@ -10638,12 +10671,15 @@ end subroutine CLSVOF_InitBox
 
       subroutine flappingKinematics(numMotion,motionPara,r,t)
       IMPLICIT NONE
-      INTEGER_T numMotion
+      INTEGER_T, intent(in) :: numMotion
+      REAL_T, intent(in) :: motionPara(11,numMotion)
+      REAL_T, intent(out) :: r(3,4)
+      REAL_T, intent(in) :: t
       REAL_T xPoint(3,numMotion),vTan(3,numMotion)
-      REAL_T x0(3),v(3),motionPara(11,numMotion)
+      REAL_T x0(3),v(3)
       REAL_T vNorm,theta,thetaMag,fTheta,phiTheta,theta0
-      REAL_T t,hMag,fH,phiH,h0,ct,st
-      REAL_T r(3,4),r1(3,4),r2(3,4)
+      REAL_T hMag,fH,phiH,h0,ct,st
+      REAL_T r1(3,4),r2(3,4)
       INTEGER_T motionType
       INTEGER_T rotateAlongALine,translateAlongALine
       INTEGER_T i,j,k,iMotion
@@ -11141,12 +11177,12 @@ end subroutine CLSVOF_InitBox
 
       IMPLICIT NONE
 
-      INTEGER_T part_id
-      REAL_T velparm(3)
-      REAL_T time
+      INTEGER_T, intent(in) :: part_id
+      REAL_T, intent(out) :: velparm(3)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(out) :: xtarget(3)
+      REAL_T, intent(in) :: xfoot(3)
       INTEGER_T dir
-      REAL_T xtarget(3)
-      REAL_T xfoot(3)
       REAL_T xtargetsave(3)
       REAL_T xfootsave(3)
       REAL_T RPM,alpha,RR,radgear,theta
@@ -12202,7 +12238,7 @@ INTEGER_T :: idir,ielem,im_part
        ! do nothing
       else if (FSI(part_id)%deforming_part.eq.1) then
         !NodeNormal(dir,inode) and NodeNormalBIG initialized here.
-       call generate_new_triangles(initflag,problo,probhi, &
+       call post_process_nodes_elements(initflag,problo,probhi, &
         part_id,ioproc,isout,h_small)
       else
        print *,"FSI(part_id)%deforming_part invalid"

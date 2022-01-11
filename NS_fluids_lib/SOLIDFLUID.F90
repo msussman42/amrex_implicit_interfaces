@@ -51,7 +51,9 @@
         print *,"probhi(dir)-problo(dir).le.zero"
         stop
        endif
-       if (dx_max_level(dir).le.zero) then
+       if (dx_max_level(dir).gt.zero) then
+        ! do nothing
+       else
         print *,"dx_max_level(dir).le.zero"
         stop
        endif
@@ -182,7 +184,7 @@
       module solidfluid_cpp_module
       contains
 
-       !FSI_operation=0  initialize node locations; generate_new_triangles
+       !FSI_operation=0  initialize node locations; post_process_nodes_elements
        !FSI_operation=1  update node locations
        !FSI_operation=2  make distance in narrow band
        !FSI_operation=3  update the sign.
@@ -497,7 +499,9 @@
        stop
       endif
       do dir=1,SDIM
-       if (dx_max_level(dir).le.zero) then
+       if (dx_max_level(dir).gt.zero) then
+        ! do nothing
+       else
         print *,"dx_max_level(dir).le.zero"
         stop
        endif
