@@ -10312,12 +10312,15 @@ end subroutine CLSVOF_InitBox
       INTEGER_T, intent(in) :: ioproc,isout
 
       REAL_T dxBB(3) ! set in find_grid_bounding_box_node
+      REAL_T dxBB_probe(3) ! set in find_grid_bounding_box_node
 
       INTEGER_T :: inode
       INTEGER_T :: inode_container
       REAL_T, dimension(3) :: xnot
+      REAL_T, dimension(3) :: xprobe
       REAL_T, dimension(3) :: xnode
       INTEGER_T, dimension(3) :: gridloBB,gridhiBB
+      INTEGER_T, dimension(3) :: gridloBB_probe,gridhiBB_probe
       INTEGER_T :: i,j,k
       INTEGER_T, dimension(3) :: idx
       REAL_T, dimension(3) :: velparm
@@ -10333,6 +10336,8 @@ end subroutine CLSVOF_InitBox
       INTEGER_T fsi_part_id
       INTEGER_T inside_interior_box
       REAL_T dx3D_min
+      REAL_T probe_size
+      REAL_T null_probe_size
 
       debug_all=0
 
@@ -10382,6 +10387,8 @@ end subroutine CLSVOF_InitBox
         dx3Dmin=dx3D(dir)
        endif
       enddo
+      probe_size=one
+      null_probe_size=zero
 
       do dir=1,3
        if (contain_elem(lev77)%tilelo3D(tid+1,tilenum+1,dir).ne. &
@@ -10550,10 +10557,11 @@ end subroutine CLSVOF_InitBox
         endif
 
         call find_grid_bounding_box_node( &
+         ngrow_make_distance, &
+         null_probe_size, &
          xnot, &
          FSI_lo,FSI_hi, &
          FSI_growlo,FSI_growhi, &
-         growlo3D,growhi3D, &
          xdata3D, &
          gridloBB,gridhiBB,dxBB) 
 
@@ -10629,13 +10637,23 @@ end subroutine CLSVOF_InitBox
           enddo
           do idoubly=1,2
            if (idoubly.eq.1) then
-            xprobe(dir)=xnot(dir)-dx3Dmin*local_node_normal(dir)
+            xprobe(dir)=xnot(dir)-probe_size*dx3Dmin*local_node_normal(dir)
            else if (idoubly.eq.2) then 
-            xprobe(dir)=xnot(dir)+dx3Dmin*local_node_normal(dir)
+            xprobe(dir)=xnot(dir)+probe_size*dx3Dmin*local_node_normal(dir)
            else 
             print *,"idoubly invalid"
             stop
            endif
+
+           call find_grid_bounding_box_node( &
+            ngrow_make_distance, &
+            probe_size, &
+            xprobe, &
+            FSI_lo,FSI_hi, &
+            FSI_growlo,FSI_growhi, &
+            xdata3D, &
+            gridloBB_probe,gridhiBB_probe,dxBB_probe) 
+
 
 
           total_weight=zero
@@ -10645,6 +10663,9 @@ end subroutine CLSVOF_InitBox
           do i=gridloBB(1),gridhiBB(1)
           do j=gridloBB(2),gridhiBB(2)
           do k=gridloBB(3),gridhiBB(3)
+
+          FIX ME USE SAFE DATA WHERE POSSIBLE
+
            wt=one
            do dir=1,3
             dist_scale=abs(xdata3D(i,j,k,dir)-xnot(dir))/dxBB(dir)
@@ -11752,18 +11773,20 @@ end subroutine find_grid_bounding_box
 
 
 subroutine find_grid_bounding_box_node( &
+ ngrow_make_distance, &
+ probe_size, &
  xnot, &
  FSI_lo,FSI_hi, &
  FSI_growlo,FSI_growhi,  &
- growlo3D,growhi3D,  &
  xdata3D, &
  gridloBB,gridhiBB,dxBB)
 IMPLICIT NONE
 
+ INTEGER_T, intent(in) :: ngrow_make_distance
+ REAL_T, intent(in) :: probe_size
  REAL_T, intent(in) :: xnot(3)
  INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
  INTEGER_T, intent(in) :: FSI_growlo(3),FSI_growhi(3)
- INTEGER_T, intent(in) :: growlo3D(3),growhi3D(3)
  REAL_T, intent(in), pointer :: xdata3D(:,:,:,:)
  INTEGER_T, intent(out) :: gridloBB(3),gridhiBB(3)
  REAL_T, intent(out) :: dxBB(3)
@@ -11772,34 +11795,49 @@ IMPLICIT NONE
  INTEGER_T iter,change
  REAL_T dist,distL,distR
  REAL_T xlo(3),xhi(3)
- INTEGER_T ngrow,ngrowtest
+ INTEGER_T ngrowtest
  INTEGER_T interp_support
+ INTEGER_T i_probe_size
+
+ if (ngrow_make_distance.ne.3) then
+  print *,"ngrow_make_distance invalid"
+  stop
+ endif
+
+ i_probe_size=NINT(probe_size)
+ if ((i_probe_size.eq.0).or. &
+     (i_probe_size.eq.1)) then
+  ! do nothing
+ else
+  print *,"i_probe_size invalid"
+  stop
+ endif
+ if ((probe_size.eq.zero).or. &
+     (probe_size.eq.one)) then
+  ! do nothing
+ else
+  print *,"probe_size invalid"
+  stop
+ endif
+
+ call checkbound3D_array(FSI_lo,FSI_hi, &
+   xdata3D, &
+   ngrow_make_distance,-1,521)
 
  interp_support=BoundingBoxRadNode
 
- ngrow=0
  do dir=1,3
   ngrowtest=FSI_lo(dir)-FSI_growlo(dir)
-  if ((ngrowtest.lt.0).or.(ngrowtest.gt.4)) then
+  if (ngrowtest.ne.ngrow_make_distance) then
    print *,"ngrowtest invalid1 ",ngrowtest
    stop
   endif
-  if (ngrowtest.gt.ngrow) then
-   ngrow=ngrowtest
-  endif
   ngrowtest=FSI_growhi(dir)-FSI_hi(dir)
-  if ((ngrowtest.lt.0).or.(ngrowtest.gt.4)) then
+  if (ngrowtest.ne.ngrow_make_distance) then
    print *,"ngrowtest invalid2 ",ngrowtest
    stop
   endif
-  if (ngrowtest.gt.ngrow) then
-   ngrow=ngrowtest
-  endif
  enddo ! dir=1..3
-
- call checkbound3D_array(FSI_lo,FSI_hi, &
-  xdata3D, &
-  ngrow,-1,123)
 
  do dir=1,3
   do dirloc=1,3
@@ -11826,24 +11864,28 @@ IMPLICIT NONE
 
  do dir=1,3
 
-  if (xnot(dir).lt.xlo(dir)-VOFTOL*dxBB(dir)) then
+  if (xnot(dir).lt.xlo(dir)-(VOFTOL+probe_size)*dxBB(dir)) then
    print *,"node should be within grid interior"
    stop
   endif
-  if (xnot(dir).gt.xhi(dir)+VOFTOL*dxBB(dir)) then
+  if (xnot(dir).gt.xhi(dir)+(VOFTOL+probe_size)*dxBB(dir)) then
    print *,"node should be within grid interior"
    stop
   endif
-  if (xnot(dir).le.xlo(dir)+VOFTOL*dxBB(dir)) then
-   gridloBB(dir)=FSI_lo(dir)
-  else if (xnot(dir).ge.xhi(dir)-VOFTOL*dxBB(dir)) then
-   gridloBB(dir)=FSI_hi(dir)
-  else if ((xnot(dir).ge.xlo(dir)).and. &
-           (xnot(dir).le.xhi(dir))) then
+  if (xnot(dir).le.xlo(dir)+(VOFTOL-probe_size)*dxBB(dir)) then
+   gridloBB(dir)=FSI_lo(dir)-i_probe_size
+  else if (xnot(dir).ge.xhi(dir)-(VOFTOL-probe_size)*dxBB(dir)) then
+   gridloBB(dir)=FSI_hi(dir)+i_probe_size
+  else if ((xnot(dir).ge.xlo(dir)-probe_size*dxBB(dir)).and. &
+           (xnot(dir).le.xhi(dir)+probe_size*dxBB(dir))) then
+      ! for evenly spaced points:
+      ! x=xlo+(i-ilo+1/2)*dx
+      ! (x-xlo)/dx -1/2 = i-ilo
+      ! i=ilo+(x-xlo)/dx -1/2
    gridloBB(dir)=NINT( (xnot(dir)-xlo(dir))/dxBB(dir)-half+FSI_lo(dir) )
-   if ((gridloBB(dir).lt.FSI_lo(dir)).or. &
-       (gridloBB(dir).gt.FSI_hi(dir))) then
-    print *,"node should be within grid interior"
+   if ((gridloBB(dir).lt.FSI_lo(dir)-i_probe_size).or. &
+       (gridloBB(dir).gt.FSI_hi(dir)+i_probe_size)) then
+    print *,"node should be within (probe biased) grid interior"
     stop
    endif
    do dirloc=1,3
@@ -11860,30 +11902,38 @@ IMPLICIT NONE
     enddo
     idxL(dir)=idx(dir)-1
     idxR(dir)=idx(dir)+1
-    distL=abs(xdata3D(idxL(1),idxL(2),idxL(3),dir)-xnot(dir))
-    distR=abs(xdata3D(idxR(1),idxR(2),idxR(3),dir)-xnot(dir))
-    if ((distL.le.dist).and.(distR.le.dist)) then
-     print *,"distL or distR invalid"
-     stop
-    endif
-    if (distL.lt.dist) then
-     change=1
-     dist=distL
-     idx(dir)=idx(dir)-1
-    else if (distR.lt.dist) then
-     change=1
-     dist=distR
-     idx(dir)=idx(dir)+1
-    else if ((distL.ge.dist).and. &
-             (distR.ge.dist)) then
-     change=0
+    if ((idxL(dir).ge.FSI_growlo(dir)).and. &
+        (idxL(dir).le.FSI_growhi(dir)).and. &
+        (idxR(dir).ge.FSI_growlo(dir)).and. &
+        (idxR(dir).le.FSI_growhi(dir))) then
+     distL=abs(xdata3D(idxL(1),idxL(2),idxL(3),dir)-xnot(dir))
+     distR=abs(xdata3D(idxR(1),idxR(2),idxR(3),dir)-xnot(dir))
+     if ((distL.le.dist).and.(distR.le.dist)) then
+      print *,"distL or distR invalid"
+      stop
+     endif
+     if (distL.lt.dist) then
+      change=1
+      dist=distL
+      idx(dir)=idx(dir)-1
+     else if (distR.lt.dist) then
+      change=1
+      dist=distR
+      idx(dir)=idx(dir)+1
+     else if ((distL.ge.dist).and. &
+              (distR.ge.dist)) then
+      change=0
+     else
+      print *,"distL or distR invalid"
+      stop
+     endif
     else
-     print *,"distL or distR invalid"
+     print *,"idxL or idxR out of range"
      stop
     endif
     iter=iter+1
-    if (iter.gt.FSI_hi(dir)-FSI_lo(dir)+1) then
-     print *,"iter.gt.FSI_hi(dir)-FSI_lo(dir)+1"
+    if (iter.gt.FSI_hi(dir)-FSI_lo(dir)+1+2*i_probe_size) then
+     print *,"iter.gt.FSI_hi(dir)-FSI_lo(dir)+1+2*i_probe_size"
      stop
     endif
    enddo ! while (change==1)
