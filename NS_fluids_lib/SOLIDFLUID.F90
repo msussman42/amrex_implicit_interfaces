@@ -396,8 +396,13 @@
       REAL_T, pointer :: FSIdata3D_ptr(:,:,:,:)
       REAL_T, allocatable,target :: veldata3D(:,:,:,:)
       REAL_T, pointer :: veldata3D_ptr(:,:,:,:)
+
       REAL_T, allocatable,target :: stressdata3D(:,:,:,:)
       REAL_T, pointer :: stressdata3D_ptr(:,:,:,:)
+
+      REAL_T, allocatable,target :: stressflag3D(:,:,:,:)
+      REAL_T, pointer :: stressflag3D_ptr(:,:,:,:)
+
       REAL_T, allocatable,target :: xdata3D(:,:,:,:)
       REAL_T, pointer :: xdata3D_ptr(:,:,:,:)
       REAL_T, allocatable,target :: masknbr3D(:,:,:,:)
@@ -1151,8 +1156,13 @@
        else if (FSI_sub_operation.eq.1) then 
         allocate(veldata3D(DIMV3D(FSIdata3D),3)) 
         veldata3D_ptr=>veldata3D
+
         allocate(stressdata3D(DIMV3D(FSIdata3D),6*nmat)) 
         stressdata3D_ptr=>stressdata3D
+
+        allocate(stressflag3D(DIMV3D(FSIdata3D),nmat)) 
+        stressflag3D_ptr=>stressflag3D
+
         allocate(xdata3D(DIMV3D(FSIdata3D),3))
         xdata3D_ptr=>xdata3D
         allocate(masknbr3D(DIMV3D(FSIdata3D),2))
@@ -1181,6 +1191,10 @@
           do dir=1,6*nmat
            stressdata3D(i,j,k,dir)=drag(D_DECL(i,j,k), &
              DRAGCOMP_PSTRESS+dir)
+          enddo
+          do dir=1,nmat
+           stressflag3D(i,j,k,dir)=drag(D_DECL(i,j,k), &
+             DRAGCOMP_FLAG+dir)
           enddo
           do dir=1,SDIM
            xdata3D(i,j,k,dir)=xsten(0,dir)
@@ -1235,7 +1249,7 @@
           enddo ! dir=1..3
 
           do im_local=1,nmat
-           ibase=DRAGCOMP_PSTRESS+6*(im_local-1)
+           ibase=6*(im_local-1)
            do istress=1,3
            do jstress=1,3
             stress_2d(istress,jstress)=zero
@@ -1244,7 +1258,7 @@
            do dir=1,6
             call stress_index(dir,istress,jstress)
             stress_2d(istress,jstress)= &
-               drag(D_DECL(i2d,j2d,k2d),ibase+dir)
+               drag(D_DECL(i2d,j2d,k2d),DRAGCOMP_PSTRESS+ibase+dir)
            enddo
            stress_2d(2,1)=stress_2d(1,2)
            stress_2d(3,1)=stress_2d(1,3)
@@ -1278,8 +1292,12 @@
 
            do dir=1,6
             call stress_index(dir,istress,jstress)
-            stressdata3D(i,j,k,ibase+dir)=stress_3d(istress,jstress)
+            stressdata3D(i,j,k,ibase+dir)= &
+               stress_3d(istress,jstress)
            enddo
+
+           stressflag3D(i,j,k,im_local)=drag(D_DECL(i2d,j2d,k2d), &
+                 DRAGCOMP_FLAG+im_local)
 
           enddo ! im_local=1..nmat
 
@@ -1389,6 +1407,7 @@
             xdata3D_ptr, &
             veldata3D_ptr, &
             stressdata3D_ptr, &
+            stressflag3D_ptr, &
             masknbr3D_ptr, &
             maskfiner3D_ptr, &
             ioproc,isout)
@@ -1417,6 +1436,7 @@
         deallocate(xdata3D)
         deallocate(veldata3D)
         deallocate(stressdata3D)
+        deallocate(stressflag3D)
         deallocate(masknbr3D)
         deallocate(maskfiner3D)
 

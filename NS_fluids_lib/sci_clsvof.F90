@@ -356,6 +356,34 @@ contains
       return
       end subroutine checkbound3D_array
 
+      subroutine safe_data3D(i,j,k,n,datafab,data_out)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: i,j,k,n
+      REAL_T, intent(in), pointer :: datafab(:,:,:,:)
+      REAL_T, intent(out) :: data_out
+      INTEGER_T datalo,datahi
+      INTEGER_T dir
+      INTEGER_T idata(3)
+
+      idata(1)=i
+      idata(2)=j
+      idata(3)=k
+      do dir=1,3
+       datalo=LBOUND(datafab,dir)
+       datahi=UBOUND(datafab,dir)
+       if (idata(dir).lt.datalo) then
+        idata(dir)=datalo
+       endif
+       if (idata(dir).gt.datahi) then
+        idata(dir)=datahi
+       endif
+      enddo ! dir=1..3
+      data_out=datafab(idata(1),idata(2),idata(3),n)
+
+      return
+      end subroutine safe_data3D
+
 
 ! called from:
 !   initinjector,initflapping,init_from_cas,init_gingerbread2D,
@@ -8678,8 +8706,6 @@ IMPLICIT NONE
   INTEGER_T inverse_index(3)
   INTEGER_T imap,jmap,kmap
   INTEGER_T null_intersection
-  REAL_T force_weight
-  REAL_T force_vector(3)
   INTEGER_T ctml_part_id
   INTEGER_T fsi_part_id
   INTEGER_T local_iband
@@ -9502,6 +9528,9 @@ IMPLICIT NONE
            !    F_cor=F+c
           FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=force_local(dir)*dt
          enddo 
+          ! FIX ME: delta function must be corrected so that
+          ! perimeter measured from Eulerian and Lagrangian perspectives
+          ! match.  (total forces should match too?)
          FSIdata3D(i,j,k,ibase+FSI_SIZE+1)=hsprime(ls_local,delta_cutoff)
          FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)=temp_local
 
@@ -10251,7 +10280,7 @@ end subroutine CLSVOF_InitBox
        lev77, &
        tid, &
        tilenum, &
-       im_part, &
+       im_part, & ! 1..nmat
        nparts, &
        part_id, &
        ngrow_make_distance, &
@@ -10271,6 +10300,7 @@ end subroutine CLSVOF_InitBox
        xdata3D, &
        veldata3D, &
        stressdata3D, &
+       stressflag3D, &
        masknbr3D, &
        maskfiner3D, &
        ioproc,isout)
@@ -10285,7 +10315,7 @@ end subroutine CLSVOF_InitBox
       INTEGER_T, intent(in) :: lev77
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: tilenum
-      INTEGER_T, intent(in) :: im_part
+      INTEGER_T, intent(in) :: im_part ! 1..nmat
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: part_id
       INTEGER_T, intent(in) :: ngrow_make_distance
@@ -10306,6 +10336,7 @@ end subroutine CLSVOF_InitBox
       REAL_T, intent(in), pointer :: xdata3D(:,:,:,:)
       REAL_T, intent(in), pointer :: veldata3D(:,:,:,:)
       REAL_T, intent(in), pointer :: stressdata3D(:,:,:,:)
+      REAL_T, intent(in), pointer :: stressflag3D(:,:,:,:)
       REAL_T, intent(in), pointer :: masknbr3D(:,:,:,:)
       REAL_T, intent(in), pointer :: maskfiner3D(:,:,:,:)
 
@@ -10338,6 +10369,15 @@ end subroutine CLSVOF_InitBox
       REAL_T dx3D_min
       REAL_T probe_size
       REAL_T null_probe_size
+      REAL_T sign_normal
+      REAL_T data_out
+      REAL_T total_stress(6)
+      REAL_T NodeStress(6)
+      REAL_T local_node_normal(3)
+      INTEGER_T idoubly
+      INTEGER_T istress,jstress
+      REAL_T stress_3d(3,3)
+      REAL_T local_force(3)
 
       debug_all=0
 
@@ -10383,8 +10423,8 @@ end subroutine CLSVOF_InitBox
 
       dx3D_min=dx3D(1)
       do dir=1,3
-       if (dx3D(dir).lt.dx3Dmin) then
-        dx3Dmin=dx3D(dir)
+       if (dx3D(dir).lt.dx3D_min) then
+        dx3D_min=dx3D(dir)
        endif
       enddo
       probe_size=one
@@ -10498,6 +10538,9 @@ end subroutine CLSVOF_InitBox
         ngrow_make_distance,-1,521)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         stressdata3D, &
+        ngrow_make_distance,-1,521)
+       call checkbound3D_array(FSI_lo,FSI_hi, &
+        stressflag3D, &
         ngrow_make_distance,-1,521)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         masknbr3D, &
@@ -10632,18 +10675,26 @@ end subroutine CLSVOF_InitBox
          if (inside_interior_box.eq.1) then
 
           do dir=1,3
-           force_doubly(dir)=zero
            local_node_normal(dir)=FSI(part_id)%NodeNormal(dir,inode)
           enddo
+
+          do dir=1,3
+           FSI(part_id)%NodeForce(dir,inode)=zero
+          enddo
+
           do idoubly=1,2
+
            if (idoubly.eq.1) then
-            xprobe(dir)=xnot(dir)-probe_size*dx3Dmin*local_node_normal(dir)
+            sign_normal=-one
            else if (idoubly.eq.2) then 
-            xprobe(dir)=xnot(dir)+probe_size*dx3Dmin*local_node_normal(dir)
+            sign_normal=one
            else 
             print *,"idoubly invalid"
             stop
            endif
+
+           xprobe(dir)=xnot(dir)+ &
+             sign_normal*probe_size*dx3D_min*local_node_normal(dir)
 
            call find_grid_bounding_box_node( &
             ngrow_make_distance, &
@@ -10654,7 +10705,91 @@ end subroutine CLSVOF_InitBox
             xdata3D, &
             gridloBB_probe,gridhiBB_probe,dxBB_probe) 
 
+           total_weight=zero
+           do dir=1,6
+            total_stress(dir)=zero
+           enddo
+           do i=gridloBB_probe(1),gridhiBB_probe(1)
+           do j=gridloBB_probe(2),gridhiBB_probe(2)
+           do k=gridloBB_probe(3),gridhiBB_probe(3)
+            wt=one
+            do dir=1,3
+             call safe_data3D(i,j,k,dir,xdata3D,data_out)
+             dist_scale=abs(data_out-xprobe(dir))/dxBB_probe(dir)
+             support_size=two
+             df=hsprime(dist_scale,support_size)
+             if (sdim_AMR.eq.3) then
+              wt=wt*df
+             else if (sdim_AMR.eq.2) then
+              if (xmap3D(dir).eq.0) then
+               ! do nothing
+              else if ((xmap3D(dir).eq.1).or. &
+                       (xmap3D(dir).eq.2)) then
+               wt=wt*df
+              else
+               print *,"xmap3D invalid"
+               stop
+              endif
+             else
+              print *,"sdim_AMR invalid"
+              stop
+             endif
 
+            enddo ! dir=1..3
+
+            call safe_data3D(i,j,k,im_part,stressflag3D,data_out)
+            if (data_out.eq.zero) then
+             wt=zero
+            else if (data_out.eq.one) then ! drag initialized
+             ! do nothing
+            else if (data_out.eq.two) then ! drag extended
+             ! do nothing
+            else
+             print *,"data_out (stressflag3D) invalid"
+             stop
+            endif
+
+            total_weight=total_weight+wt
+            do dir=1,6
+             call safe_data3D(i,j,k,6*(im_part-1)+dir,stressdata3D,data_out)
+             total_stress(dir)=total_stress(dir)+wt*data_out
+            enddo
+           enddo
+           enddo
+           enddo
+           if (total_weight.gt.zero) then
+            do dir=1,6
+             NodeStress(dir)=total_stress(dir)/total_weight
+             call stress_index(dir,istress,jstress)
+             stress_3d(istress,jstress)=NodeStress(dir)
+            enddo
+            stress_3d(2,1)=stress_3d(1,2)
+            stress_3d(3,1)=stress_3d(1,3)
+            stress_3d(3,2)=stress_3d(2,3)
+            do dir=1,3
+             local_force(dir)=zero
+            enddo
+            do istress=1,3
+             do jstress=1,3
+              local_force(istress)=local_force(istress)+ &
+                sign_normal*local_node_normal(jstress)* &
+                stress_3d(istress,jstress) 
+             enddo
+            enddo
+
+             !NodeForce used in CLSVOF_sync_lag_data 
+            do dir=1,3
+             FSI(part_id)%NodeForce(dir,inode)= &
+               FSI(part_id)%NodeForce(dir,inode)+ &
+               local_force(dir)
+            enddo
+
+           else
+            print *,"total_weight invalid"
+            stop
+           endif
+
+          enddo ! idoubly=1,2
 
           total_weight=zero
           do dir=1,3
@@ -10663,12 +10798,10 @@ end subroutine CLSVOF_InitBox
           do i=gridloBB(1),gridhiBB(1)
           do j=gridloBB(2),gridhiBB(2)
           do k=gridloBB(3),gridhiBB(3)
-
-          FIX ME USE SAFE DATA WHERE POSSIBLE
-
            wt=one
            do dir=1,3
-            dist_scale=abs(xdata3D(i,j,k,dir)-xnot(dir))/dxBB(dir)
+            call safe_data3D(i,j,k,dir,xdata3D,data_out)
+            dist_scale=abs(data_out-xnot(dir))/dxBB(dir)
             support_size=two
             df=hsprime(dist_scale,support_size)
             if (sdim_AMR.eq.3) then
@@ -10692,7 +10825,8 @@ end subroutine CLSVOF_InitBox
 
            total_weight=total_weight+wt
            do dir=1,3
-            total_vel(dir)=total_vel(dir)+wt*veldata3D(i,j,k,dir)
+            call safe_data3D(i,j,k,dir,veldata3D,data_out)
+            total_vel(dir)=total_vel(dir)+wt*data_out
            enddo
           enddo
           enddo
@@ -10706,6 +10840,7 @@ end subroutine CLSVOF_InitBox
            print *,"total_weight invalid"
            stop
           endif
+
          else if (inside_interior_box.eq.0) then
           ! do nothing
          else
@@ -11245,7 +11380,7 @@ end subroutine CLSVOF_InitBox
       REAL_T, intent(out) :: velparm(3)
       REAL_T, intent(in) :: time
       REAL_T, intent(out) :: xtarget(3)
-      REAL_T, intent(in) :: xfoot(3)
+      REAL_T, intent(inout) :: xfoot(3)
       INTEGER_T dir
       REAL_T xtargetsave(3)
       REAL_T xfootsave(3)
