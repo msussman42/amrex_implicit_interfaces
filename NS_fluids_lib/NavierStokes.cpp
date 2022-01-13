@@ -12999,8 +12999,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   VOF_Recon_resize(normal_probe_size+3,SLOPE_RECON_MF);
   debug_ixType(SLOPE_RECON_MF,-1,SLOPE_RECON_MF);
 
-  int ngrow_dest=ngrow_distance-1;
-
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
   thread_class::init_d_numPts(LS_new.boxArray().d_numPts());
@@ -13043,7 +13041,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     &nmat,
     &nten,
     &n_normal,
-    &ngrow_dest);
+    &ngrow_make_distance);
   } // mfi
 } // omp
   ns_reconcile_d_num(70);
@@ -13078,9 +13076,9 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // the normals fab has ngrow_dest+1 ghost cells
-    //    growntileboxNODE(ngrow_dest)
-    // the curvature fab should have ngrow_dest ghost cells.
+    // the normals fab has ngrow_make_distance+1 ghost cells
+    //    growntileboxNODE(ngrow_make_distance)
+    // the curvature fab should have ngrow_make_distance ghost cells.
    int height_function_flag=0;
    fort_node_to_cell( 
     &level,
@@ -13100,7 +13098,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     &nmat,
     &nten,
     &n_normal,
-    &ngrow_dest);
+    &ngrow_make_distance);
   } // mfi
 } // omp
   ns_reconcile_d_num(70);

@@ -1497,7 +1497,7 @@ stop
        xlo, &
        xtarget, &
        lo,hi, &
-       data, &
+       data_in, &
        CURV_OUT)
       use global_utility_module
       IMPLICIT NONE
@@ -1515,7 +1515,7 @@ stop
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
        ! first nmat+nten components are curvatures
        ! second nmat+nten components are status (0=bad 1=good)
-      REAL_T, pointer, intent(in) :: data(D_DECL(:,:,:),:)
+      REAL_T, pointer, intent(in) :: data_in(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: CURV_OUT
 
       INTEGER_T k1lo,k1hi
@@ -1584,7 +1584,7 @@ stop
 
        call gridsten_level(xsten,isten,jsten,ksten,level,nhalf)
 
-       local_data_fab=>data
+       local_data_fab=>data_in
        call safe_data(isten,jsten,ksten,nmat+nten+curv_comp, &
            local_data_fab,local_data_out)
        CURV_FLAG=NINT(local_data_out)
