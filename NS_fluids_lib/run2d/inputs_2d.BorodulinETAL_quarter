@@ -52,6 +52,8 @@ ns.initial_cg_cycles=10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
 ns.num_materials=2 # 1: liquid 2: air 
+#num_species_var=1 Palmore and Desjardins
+#num_species_var=0 Kassemi
 ns.num_species_var=1 # evaporation (each material will have a "vapor" "amount")
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=15
@@ -77,7 +79,7 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
 amr.n_cell=32 32 # convergence 32 x 32 coarsest
-amr.max_level = 2
+amr.max_level = 0
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
 # 0- 1 level 1- 2 levels  2- 3 levels
@@ -122,6 +124,7 @@ ns.gravity        = 0.0   # cgs
 #ns.tension=1.0e-3  # 72.8 cgs  (cap wave speed for:1.0e-3 is 1.4)
 ns.tension=1.0e-5  
 ns.vof_height_function=1
+#vapor: CP-CV=0.2857143e+7
 ns.stiffCP= 4.1855e+7  1.0e+7   # erg/(g K) CODY ~ C_pL, C_pG
 ns.stiffCV= 4.1855e+7 7142857.1428571437
 #12 then reverse 21 
@@ -129,6 +132,9 @@ ns.stiffCV= 4.1855e+7 7142857.1428571437
 #ns.latent_heat = 2.26e+10 0.0  #2.26E+6 J/kg
 ns.latent_heat = 2.1e+10 0.0  #2.26E+6 J/kg
 # (1x10^6)J/kg = (1x10^10)cm^2/s^2
+# V_I=uL dot nlv - mdot/rhoL nlv  distribute_from_target=0
+# V_I=uV dot nvl - mdot/rhoV nvl  distribute_from_target=1
+#
 # 0=distribute to the destination material (def)
 # 1=distribute to the source material.
 ns.distribute_from_target = 0 0 # 2 * num_interfaces components
@@ -165,9 +171,11 @@ ns.adv_vel=0.0 # keep 0.0
 ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction   
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.material_type=0 0 
+#vapor: stiffCP-stiffCV=0.2857143e+7
 #gamma=1.4d0  C_pG=1.0d+7   gamma=Cp/Cv  e=Cv T
 #for material_type==5, these values are hardwired:
 #CP-CV=0.287D+7  CV=0.72D+7  GAMMA=CP/CV=1.39861
+#EOS_air(rho,internal_energy,pressure)
 ns.material_type_evap=0 5 
 ns.material_type_lowmach=0 5 
 ns.material_type_visual=0 5 
