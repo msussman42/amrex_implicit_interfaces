@@ -79,7 +79,7 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
 amr.n_cell=32 32 # convergence 32 x 32 coarsest
-amr.max_level = 0
+amr.max_level = 2
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
 # 0- 1 level 1- 2 levels  2- 3 levels
