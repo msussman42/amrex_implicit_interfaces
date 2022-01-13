@@ -896,7 +896,7 @@ protected:
     void copy_blobdata(Vector<blobclass>& dest_blobdata,
        Vector<blobclass>& source_blobdata);
 
-    void build_NRM_FD_MF(int fd_mf,int ls_mf, int ngrow);
+    void build_NRM_FD_MF(int fd_mf,int ls_mf);
 
     void level_phase_change_convert(
       int im_outer,int im_opp_outer,

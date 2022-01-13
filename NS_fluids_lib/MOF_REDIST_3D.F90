@@ -313,8 +313,18 @@ stop
        print *,"level invalid in fort_fd_normal"
        stop
       endif
-      call checkbound_array(fablo,fabhi,LS_new_ptr,1,-1,2871)
-      call checkbound_array(fablo,fabhi,LS_NRM_FD_ptr,0,-1,312)
+
+      if (ngrow_make_distance.eq.3) then
+       ! do nothing
+      else
+       print *,"ngrow_make_distance invalid"
+       stop
+      endif
+
+      call checkbound_array(fablo,fabhi,LS_new_ptr, &
+              ngrow_make_distance+1,-1,2871)
+      call checkbound_array(fablo,fabhi,LS_NRM_FD_ptr, &
+              ngrow_make_distance+1,-1,312)
       if (nmat.eq.num_materials) then
        ! do nothing
       else
@@ -472,8 +482,8 @@ stop
        finest_level, &
        LS_new, &
        DIMS(LS_new), &
-       LS_NRM_FD, &
-       DIMS(LS_NRM_FD), &
+       FD_NRM_ND_fab, &
+       DIMS(FD_NRM_ND_fab), &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -481,7 +491,7 @@ stop
        nmat, &
        nten, &
        n_normal, &
-       ngrow_dest) &
+       ngrow_make_distance_in) &
       bind(c,name='fort_fd_node_normal')
 
       use global_utility_module
@@ -494,12 +504,12 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: n_normal
-      INTEGER_T, intent(in) :: ngrow_dest
+      INTEGER_T, intent(in) :: ngrow_make_distance_in
       INTEGER_T, intent(in) :: DIMDEC(LS_new)
-      INTEGER_T, intent(in) :: DIMDEC(LS_NRM_FD)
+      INTEGER_T, intent(in) :: DIMDEC(FD_NRM_ND_fab)
       REAL_T, intent(in), target :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
-      REAL_T, intent(out), target :: LS_NRM_FD(DIMV(LS_NRM_FD),n_normal)
-      REAL_T, pointer :: LS_NRM_FD_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: FD_NRM_ND_fab(DIMV(FD_NRM_ND_fab),n_normal)
+      REAL_T, pointer :: FD_NRM_ND_fab_ptr(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -525,7 +535,7 @@ stop
 
       nhalf=3 
 
-      LS_NRM_FD_ptr=>LS_NRM_FD
+      FD_NRM_ND_fab_ptr=>FD_NRM_ND_fab
 
       if (bfact.ge.1) then
        ! do nothing
@@ -544,21 +554,26 @@ stop
        print *,"nten invalid fd_node_normal nten nten_test ",nten,nten_test
        stop
       endif
+
+      if (ngrow_make_distance.ne.3) then
+       print *,"ngrow_make_distance.ne.3"
+       stop
+      endif
+      if (ngrow_make_distance_in.ne.3) then
+       print *,"ngrow_make_distance_in.ne.3"
+       stop
+      endif
+
       n_normal_test=(SDIM+1)*(nten+nmat)
       if (n_normal_test.ne.n_normal) then
        print *,"n_normal invalid fd_node_normal n_normal ",n_normal
        stop
       endif
  
-      if (ngrow_dest.ge.0) then
-       ! do nothing
-      else
-       print *,"ngrow_dest invalid"
-       stop
-      endif
-      
-      call checkbound_array(fablo,fabhi,LS_new,ngrow_dest+1,-1,2873)
-      call checkbound_array(fablo,fabhi,LS_NRM_FD_ptr,ngrow_dest+1,-1,2874)
+      call checkbound_array(fablo,fabhi,LS_new, &
+        ngrow_make_distance+1,-1,2873)
+      call checkbound_array(fablo,fabhi,FD_NRM_ND_fab_ptr, &
+        ngrow_make_distance+1,-1,2874)
       if (nmat.eq.num_materials) then
        ! do nothing
       else
@@ -600,7 +615,7 @@ stop
       endif
 
       call growntileboxNODE(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,ngrow_dest)
+        growlo,growhi,ngrow_make_distance)
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -688,9 +703,9 @@ stop
         endif
         ibase=(im-1)*(SDIM+1)
         do dir=1,SDIM
-         LS_NRM_FD(D_DECL(i,j,k),ibase+dir)=local_normal(dir)
+         FD_NRM_ND_fab(D_DECL(i,j,k),ibase+dir)=local_normal(dir)
         enddo 
-        LS_NRM_FD(D_DECL(i,j,k),ibase+SDIM+1)=local_mag
+        FD_NRM_ND_fab(D_DECL(i,j,k),ibase+SDIM+1)=local_mag
        enddo ! im=1..nmat+nten
 
       enddo
@@ -708,8 +723,8 @@ stop
        DIMS(F_new), &
        LS_new, &
        DIMS(LS_new), &
-       LS_NRM_FD, &
-       DIMS(LS_NRM_FD), &
+       FD_NRM_ND_fab, &
+       DIMS(FD_NRM_ND_fab), &
        CURV_CELL, &
        DIMS(CURV_CELL), &
        tilelo,tilehi, &
@@ -719,7 +734,7 @@ stop
        nmat, &
        nten, &
        n_normal, &
-       ngrow_nrm) &
+       ngrow_make_distance_in) &
       bind(c,name='fort_node_to_cell')
 
       use global_utility_module
@@ -734,14 +749,14 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: n_normal
-      INTEGER_T, intent(in) :: ngrow_nrm
+      INTEGER_T, intent(in) :: ngrow_make_distance_in
       INTEGER_T, intent(in) :: DIMDEC(LS_new)
       INTEGER_T, intent(in) :: DIMDEC(F_new)
-      INTEGER_T, intent(in) :: DIMDEC(LS_NRM_FD)
+      INTEGER_T, intent(in) :: DIMDEC(FD_NRM_ND_fab)
       INTEGER_T, intent(in) :: DIMDEC(CURV_CELL)
       REAL_T, intent(in), target :: F_new(DIMV(F_new),nmat)
       REAL_T, intent(in), target :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
-      REAL_T, intent(in), target :: LS_NRM_FD(DIMV(LS_NRM_FD),n_normal)
+      REAL_T, intent(in), target :: FD_NRM_ND_fab(DIMV(FD_NRM_ND_fab),n_normal)
        ! first nmat+nten components are curvature
        ! second nmat+nten components are status (0=bad 1=good)
       REAL_T, intent(out), target ::  &
@@ -799,6 +814,16 @@ stop
        print *,"level invalid in fort_node_to_cell"
        stop
       endif
+
+      if (ngrow_make_distance.ne.3) then
+       print *,"ngrow_make_distance.ne.3"
+       stop
+      endif
+      if (ngrow_make_distance_in.ne.3) then
+       print *,"ngrow_make_distance_in.ne.3"
+       stop
+      endif
+
       nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid node_to_cell nten nten_test ",nten,nten_test
@@ -810,17 +835,12 @@ stop
        stop
       endif
  
-      if (ngrow_nrm.ge.0) then
-       ! do nothing
-      else
-       print *,"ngrow_nrm invalid"
-       stop
-      endif
-      
-      call checkbound_array(fablo,fabhi,F_new,ngrow_nrm+1,-1,2875)
-      call checkbound_array(fablo,fabhi,LS_new,ngrow_nrm+1,-1,2875)
-      call checkbound_array(fablo,fabhi,LS_NRM_FD,ngrow_nrm+1,-1,2876)
-      call checkbound_array(fablo,fabhi,CURV_CELL_ptr,ngrow_nrm,-1,2877)
+      call checkbound_array(fablo,fabhi,F_new,ngrow_make_distance+1,-1,2875)
+      call checkbound_array(fablo,fabhi,LS_new,ngrow_make_distance+1,-1,2875)
+      call checkbound_array(fablo,fabhi,FD_NRM_ND_fab, &
+              ngrow_make_distance+1,-1,2876)
+      call checkbound_array(fablo,fabhi,CURV_CELL_ptr, &
+              ngrow_make_distance,-1,2877)
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -870,7 +890,7 @@ stop
       endif
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,ngrow_nrm)
+        growlo,growhi,ngrow_make_distance)
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -935,8 +955,8 @@ stop
           do i1=0,1
           do j1=0,1
           do k1=0,k1hi
-           local_normal(dir)=LS_NRM_FD(D_DECL(i+i1,j+j1,k+k1),ibase+dir)
-           local_mag=LS_NRM_FD(D_DECL(i+i1,j+j1,k+k1),ibase+SDIM+1)
+           local_normal(dir)=FD_NRM_ND_fab(D_DECL(i+i1,j+j1,k+k1),ibase+dir)
+           local_mag=FD_NRM_ND_fab(D_DECL(i+i1,j+j1,k+k1),ibase+SDIM+1)
            if (local_mag.gt.zero) then
             ! do nothing
            else if (local_mag.eq.zero) then

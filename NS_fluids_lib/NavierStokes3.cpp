@@ -2961,8 +2961,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        for (int ilev=level;ilev<=finest_level;ilev++) {
         NavierStokes& ns_level=getLevel(ilev);
-        ns_level.new_localMF(LS_NRM_FD_MF,nmat*AMREX_SPACEDIM,1,-1);
-	ns_level.build_NRM_FD_MF(LS_NRM_FD_MF,HOLD_LS_DATA_MF,1);
+        ns_level.new_localMF(LS_NRM_FD_MF,nmat*AMREX_SPACEDIM,
+			ngrow_distance,-1);
+	ns_level.build_NRM_FD_MF(LS_NRM_FD_MF,HOLD_LS_DATA_MF);
        }
 
         // initialize TEMPERATURE_SMOOTH_MF

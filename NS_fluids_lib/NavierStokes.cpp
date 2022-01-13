@@ -7105,7 +7105,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history) {
   amrex::Error("localMF[LS_NRM_CP_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
 
  new_localMF(LS_NRM_FD_GNBC_MF,nmat*AMREX_SPACEDIM,ngrow_distance,-1);
- build_NRM_FD_MF(LS_NRM_FD_GNBC_MF,LS_NRM_CP_MF,ngrow_distance);
+ build_NRM_FD_MF(LS_NRM_FD_GNBC_MF,LS_NRM_CP_MF);
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) { 
 
@@ -11204,7 +11204,7 @@ void NavierStokes::ns_reconcile_d_num(int caller_id) {
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
  thread_class::reconcile_d_numPts(caller_id);
 
-}
+} // end subroutine ns_reconcile_d_num
 
 int NavierStokes::ns_thread() {
  
@@ -11216,7 +11216,7 @@ int NavierStokes::ns_thread() {
   amrex::Error("tid invalid");
 
  return tid;
-}
+}  // end subroutine ns_thread()
 
 // add correction term to velocity and/or temperature
 // called from:
@@ -11390,7 +11390,7 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
   amrex::Error("project_option invalid in make_SEM_delta_force");
  } 
 
-}   // subroutine make_SEM_delta_force
+}   // end subroutine make_SEM_delta_force
 
 
 // MEHDI VAHAB HEAT SOURCE
@@ -11514,7 +11514,7 @@ void NavierStokes::make_heat_source() {
 } // omp
  ns_reconcile_d_num(60);
 
-}   // subroutine make_heat_source
+}   // end subroutine make_heat_source
 
 
 
@@ -11600,7 +11600,7 @@ void NavierStokes::add_perturbation() {
 } // omp
  ns_reconcile_d_num(61);
 
-}   // subroutine add_perturbation
+}   // end subroutine add_perturbation
 
 // called from: update_SEM_forces
 // update_SEM_forces is called from: update_SEM_forcesALL
@@ -11923,7 +11923,7 @@ void NavierStokes::update_SEM_delta_force(
   amrex::Error("project_option invalid9");
  } 
 
-} // subroutine update_SEM_delta_force
+} // end subroutine update_SEM_delta_force
 
 // called from:
 //  NavierStokes::tensor_advection_updateALL()  (NavierStokes3.cpp)
@@ -12243,7 +12243,7 @@ void NavierStokes::tensor_advection_update() {
 
  } // im=0..nmat-1
 
-}   // subroutine tensor_advection_update
+}   // end subroutine tensor_advection_update
 
 // non-conservative correction to density.
 // if override_density(im)==1,
@@ -12398,7 +12398,7 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
 
  delete EOSdata;
 
-} // subroutine getStateMOM_DEN
+} // end subroutine getStateMOM_DEN
 
 // check that fine grids align with coarse elements and that
 // fine grid dimensions are perfectly divisible by the fine order.
@@ -12466,7 +12466,7 @@ void NavierStokes::check_grid_places() {
 
  } // gridno
 
-} // subroutine check_grid_places
+} // end subroutine check_grid_places
 
 
 void 
@@ -12496,7 +12496,7 @@ NavierStokes::prepare_mask_nbr(int ngrow) {
  localMF[MASK_NBR_MF]->setVal(1.0,2,1,ngrow-1);
  localMF[MASK_NBR_MF]->setVal(1.0,3,1,ngrow);
 
-} // subroutine prepare_mask_nbr()
+} // end subroutine prepare_mask_nbr()
 
 void 
 NavierStokes::prepare_displacement(int mac_grow) {
@@ -12987,7 +12987,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
   debug_ixType(HOLD_LS_DATA_MF,-1,HOLD_LS_DATA_MF);
 
-  debug_ngrow(LS_NRM_FD_MF,1,30);
+  debug_ngrow(LS_NRM_FD_MF,ngrow_distance,30);
   if (localMF[LS_NRM_FD_MF]->nComp()!=nmat*AMREX_SPACEDIM) 
    amrex::Error("localMF[LS_NRM_FD_MF]->nComp() invalid");
   debug_ixType(LS_NRM_FD_MF,-1,LS_NRM_FD_MF);
@@ -12998,6 +12998,14 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    // normal_probe_size=1
   VOF_Recon_resize(normal_probe_size+3,SLOPE_RECON_MF);
   debug_ixType(SLOPE_RECON_MF,-1,SLOPE_RECON_MF);
+
+  MultiFab* hold_F_data_mf=new MultiFab(grids,dmap,nmat,normal_probe_size+3,
+     MFInfo().SetTag("hold_F_data_mf"),FArrayBoxFactory());
+
+  for (int im=0;im<nmat;im++) {
+   MultiFab::Copy(*hold_F_data_mf,*localMF[SLOPE_RECON_MF],
+     im*ngeom_recon,im,1,normal_probe_size+3);
+  }
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -13021,20 +13029,22 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    const Real* xlo = grid_loc[gridno].lo();
 
    FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
-   FArrayBox& nrmFDfab=(*localMF[FD_NRM_ND_MF])[mfi];
+   FArrayBox& FD_NRM_ND_fab=(*localMF[FD_NRM_ND_MF])[mfi];
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    // fort_fd_node_normal is declared in: MOF_REDIST_3D.F90
    fort_fd_node_normal( 
     &level,
     &finest_level,
     lsfab.dataPtr(),
     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-    nrmFDfab.dataPtr(),
-    ARLIM(nrmFDfab.loVect()),ARLIM(nrmFDfab.hiVect()),
+    FD_NRM_ND_fab.dataPtr(),
+    ARLIM(FD_NRM_ND_fab.loVect()),
+    ARLIM(FD_NRM_ND_fab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
     xlo,dx,
@@ -13067,8 +13077,9 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
    const Real* xlo = grid_loc[gridno].lo();
 
+   FArrayBox& F_fab=(*hold_F_data_mf)[mfi];
    FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
-   FArrayBox& nrmFDfab=(*localMF[FD_NRM_ND_MF])[mfi];
+   FArrayBox& FD_NRM_ND_fab=(*localMF[FD_NRM_ND_MF])[mfi];
    FArrayBox& curvfab=(*localMF[FD_CURV_CELL_MF])[mfi];
 
    int tid_current=ns_thread();
@@ -13079,17 +13090,19 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     // the normals fab has ngrow_make_distance+1 ghost cells
     //    growntileboxNODE(ngrow_make_distance)
     // the curvature fab should have ngrow_make_distance ghost cells.
+    // fort_node_to_cell is declared in: MOF_REDIST_3D.F90
    int height_function_flag=0;
    fort_node_to_cell( 
     &level,
     &finest_level,
     &height_function_flag,
+    F_fab.dataPtr(),
+    ARLIM(F_fab.loVect()),ARLIM(F_fab.hiVect()),
     lsfab.dataPtr(),
     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-    lsfab.dataPtr(),
-    ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-    nrmFDfab.dataPtr(),
-    ARLIM(nrmFDfab.loVect()),ARLIM(nrmFDfab.hiVect()),
+    FD_NRM_ND_fab.dataPtr(),
+    ARLIM(FD_NRM_ND_fab.loVect()),
+    ARLIM(FD_NRM_ND_fab.hiVect()),
     curvfab.dataPtr(),
     ARLIM(curvfab.loVect()),ARLIM(curvfab.hiVect()),
     tilelo,tilehi,
@@ -13104,6 +13117,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   ns_reconcile_d_num(70);
 
   localMF[FD_CURV_CELL_MF]->FillBoundary(geom.periodicity());
+
+  delete hold_F_data_mf;
 
  } else if (nucleation_flag==1) {
   // do nothing
@@ -13159,7 +13174,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    if (nucleation_flag==0) {
 
     FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
-    FArrayBox& nrmFDfab=(*localMF[LS_NRM_FD_MF])[mfi];
+    FArrayBox& LS_NRM_FD_fab=(*localMF[LS_NRM_FD_MF])[mfi];
 
     FArrayBox& burnvelfab=(*localMF[BURNING_VELOCITY_MF])[mfi];
     if (burnvelfab.nComp()!=nburning)
@@ -13271,7 +13286,9 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
      lsnewfab.dataPtr(),ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-     nrmFDfab.dataPtr(),ARLIM(nrmFDfab.loVect()),ARLIM(nrmFDfab.hiVect()),
+     LS_NRM_FD_fab.dataPtr(),
+     ARLIM(LS_NRM_FD_fab.loVect()),
+     ARLIM(LS_NRM_FD_fab.hiVect()),
      eosfab.dataPtr(),ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
      reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
      presfab.dataPtr(),ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
@@ -13365,7 +13382,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      snewfab.dataPtr(),
      ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-     lsnewfab.dataPtr(), //nrmFDfab
+     lsnewfab.dataPtr(), //LS_NRM_FD_fab
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      eosfab.dataPtr(),ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
      lsnewfab.dataPtr(), //reconfab
@@ -13388,7 +13405,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  delete presmf;
  delete pres_eos_mf;
 
-} // subroutine level_phase_change_rate
+} // end subroutine level_phase_change_rate
 
 
 
@@ -24257,30 +24274,34 @@ NavierStokes::makeStateDistALL(int keep_all_interfaces) {
 // (prior to level_phase_change_rate) and
 // called from: NavierStokes::init_FSI_GHOST_MAC_MF
 void 
-NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf,int ngrow) {
+NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf) {
 
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
  const Real* dx = geom.CellSize();
 
- if (ngrow>=0) {
-  if ((localMF[fd_mf]->nGrow()>=ngrow)&&
-      (localMF[ls_mf]->nGrow()>=ngrow)) {
-   if ((localMF[fd_mf]->nComp()==nmat*AMREX_SPACEDIM)&&
-       (localMF[ls_mf]->nComp()==nmat*(AMREX_SPACEDIM+1))) {
-    MultiFab::Copy(*localMF[fd_mf],*localMF[ls_mf],nmat,0,
-		    nmat*AMREX_SPACEDIM,ngrow);
+ if (ngrow_distance==4) {
+  // do nothing
+ } else
+  amrex::Error("ngrow_distance invalid");
 
-    if (thread_class::nthreads<1)
-     amrex::Error("thread_class::nthreads invalid");
-    thread_class::init_d_numPts(localMF[fd_mf]->boxArray().d_numPts());
+ if ((localMF[fd_mf]->nGrow()>=ngrow_distance)&&
+     (localMF[ls_mf]->nGrow()>=ngrow_distance)) {
+  if ((localMF[fd_mf]->nComp()==nmat*AMREX_SPACEDIM)&&
+      (localMF[ls_mf]->nComp()==nmat*(AMREX_SPACEDIM+1))) {
+   MultiFab::Copy(*localMF[fd_mf],*localMF[ls_mf],nmat,0,
+	    nmat*AMREX_SPACEDIM,ngrow_distance);
+
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(localMF[fd_mf]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-    for (MFIter mfi(*localMF[fd_mf],use_tiling); mfi.isValid(); ++mfi) {
+   for (MFIter mfi(*localMF[fd_mf],use_tiling); mfi.isValid(); ++mfi) {
      BL_ASSERT(grids[mfi.index()] == mfi.validbox());
      const int gridno = mfi.index();
      const Box& tilegrid = mfi.tilebox();
@@ -24314,19 +24335,17 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf,int ngrow) {
       &bfact,
       xlo,dx,
       &nmat);
-    } // mfi
+   } // mfi
 } // omp
-    ns_reconcile_d_num(114);
+   ns_reconcile_d_num(114);
 
-    localMF[fd_mf]->FillBoundary(geom.periodicity()); 
-   } else
-    amrex::Error("fd_mf or ls_mf nComp() invalid");
+   localMF[fd_mf]->FillBoundary(geom.periodicity()); 
   } else
-   amrex::Error("fd_mf or ls_mf nGrow() invalid");
+    amrex::Error("fd_mf or ls_mf nComp() invalid");
  } else
-  amrex::Error("ngrow invalid");
+  amrex::Error("fd_mf or ls_mf nGrow() invalid");
 			 
-} // subroutine build_NRM_FD_MF
+} // end subroutine build_NRM_FD_MF
 
 void
 NavierStokes::makeStateDist(int keep_all_interfaces) {
