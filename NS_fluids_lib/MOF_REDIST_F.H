@@ -36,7 +36,7 @@ namespace amrex{
        int* nmat,
        int* nten,
        int* n_normal,
-       int* ngrow_dest);
+       int* ngrow_make_distance);
 
      void fort_node_to_cell(
        int* level,
@@ -53,7 +53,7 @@ namespace amrex{
        int* nmat,
        int* nten,
        int* n_normal,
-       int* ngrow_nrm);
+       int* ngrow_make_distance);
 
 
      void fort_levelstrip(

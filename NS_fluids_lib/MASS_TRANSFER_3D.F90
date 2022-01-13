@@ -7660,7 +7660,7 @@ stop
        call checkbound_array(fablo,fabhi,recon_ptr,ngrow,-1,1251)
        call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1,1252)
        LS_slopes_FD_ptr=>LS_slopes_FD
-       call checkbound_array(fablo,fabhi,LS_slopes_FD_ptr,1,-1,1253)
+       call checkbound_array(fablo,fabhi,LS_slopes_FD_ptr,ngrow,-1,1253)
 
       else if (nucleation_flag.eq.1) then
        ! do nothing
