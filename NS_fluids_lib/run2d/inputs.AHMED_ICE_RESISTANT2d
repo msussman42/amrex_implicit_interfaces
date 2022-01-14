@@ -5,9 +5,12 @@ stop_time = 10
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
+# axis_dir=0
 geometry.coord_sys      = 1        # 0 => XYZ, 1 => RZ
-geometry.prob_lo=0.0 0.0    # RZ
-geometry.prob_hi=0.2 0.6  # cm RZ
+#geometry.coord_sys      = 0        # axis_dir=1,2
+geometry.prob_lo=0.0 0.0    # XYZ
+geometry.prob_hi=0.2 0.6  # cm XYZ axis_dir=0
+geometry.prob_hi=0.4 0.6  # cm XYZ axis_dir=1,2
 ns.slice_dir=1
 ns.xslice=0.0 0.0 0.0
 ns.EILE_flag=-1
@@ -20,7 +23,8 @@ ns.initial_project_cycles=5   # initial jacobi iterations
 ns.initial_cg_cycles=10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0e+6
-ns.num_materials=4 # 1: liquid 2: air 3: lubricant 4: substrate  
+ns.num_materials=4 # 1:liquid 2:air 3:lubricant 4:substrate axis_dir=0 or 2
+#ns.num_materials=3 # 1:liquid 2:air 3:substrate axis_dir=1
 ns.num_species_var=0 #  no evaporation
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=15
@@ -45,7 +49,8 @@ Lp.v = 0
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
-amr.n_cell=32 96  # RZ
+amr.n_cell=16 48  # XYZ  axis_dir=0
+#amr.n_cell=32 48  # XYZ  axis_dir=1,2
 amr.max_level = 1 # max_level=1 for production runs
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
@@ -82,7 +87,8 @@ ns.gravity        = -980.0   # cgs
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 1=water 2=gas  3=lubricant  4=substrate 
 # 12,13,14   23,24  3,4 
-ns.tension=72.8 24.8 128.6 34.0 72.8 61.2
+ns.tension=72.8 24.8 128.6 34.0 72.8 61.2 # axis_dir=0 or 2
+#ns.tension=72.8 128.6 72.8 # axis_dir=1  12,13,23
 # contact angle for water drop on substrate: 140 degrees
 # theta=theta_{water,substrate}
 # sigma_{ws}+sigma_{aw}cos(theta) = sigma_{as}
@@ -92,58 +98,91 @@ ns.tension=72.8 24.8 128.6 34.0 72.8 61.2
 # theta=theta_{lubricant,substrate}
 # sigma_{lub,sub}+sigma_{lub,air}cos(theta)=sigma_{air,substrate}
 # sigma_{lub,sub}=72.8-34.0cos(70)=61.2
-ns.stiffCP= 4.1855e+7  1.0e+7 2.108e+7 0.385e+7  # erg/(g K)
+ns.stiffCP= 4.1855e+7  1.0e+7 2.108e+7 0.385e+7  # erg/(g K) axis_dir=0,2
+#ns.stiffCP= 4.1855e+7  1.0e+7 0.385e+7  # erg/(g K) axis_dir=1
 ns.latent_heat = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
 ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
 ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
 ns.saturation_temp = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 #ns.fixed_dt	  = 0.01     # hardwire dt
-#There are over 300 oil parcels to have statistics for in 3D,
+#There are over 300 oil parcels to have statistics for,
 #so recommended sum_interval>1
 ns.sum_interval   = 10      # timesteps between computing mass 
 
-# initial ice block on heated substrate.
-# probtype=414
+# axis_dir=0 => drop falling vertically with given velocity onto a 
+# oil lubricated substrate.
+# 4 materials: liquid, air, lubricant, substrate
+# (xblob,yblob,zblob,radblob) describe initial drop geometry.
+# adv_vel = initially downward velocity of the drop.  adv_dir=sdim
+#
+# axis_dir=1 => drop falling at an angle with given velocity onto a 
+# non-lubricated surface with horizontal air flow.
+# 3 materials: liquid, vapor, substrate
+# (xblob,yblob,zblob,radblob) describe initial drop geometry.
+# Initial velocity of drop: (xblob3,yblob3,zblob3)  (sign important)
+# adv_vel = velocity of air flowing into the domain from the xlo position.
+# adv_dir=1
+#
+# axis_dir=2 => drop falling at an angle with given velocity onto a 
+# lubricated surface with horizontal air flow.
+# 4 materials: liquid, air, oil, substrate
+# (xblob,yblob,zblob,radblob) describe initial drop geometry.
+# Initial velocity of drop: (xblob3,yblob3,zblob3)  (sign important)
+# adv_vel = velocity of air flowing into the domain from the xlo position.
+# adv_dir=1
+#
 ns.axis_dir=0   
 ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=1.57
 ns.vinletgas=0.0
 ns.twall=263  # not used
 ns.advbot=0.0  
-ns.adv_vel=155.0 # cm/s initial falling downwards speed
-ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction   
+ns.adv_vel=155.0 # cm/s initial falling downwards speed (axis_dir=0)
+#ns.adv_vel=100.0 # cm/s air flow from left to right (axis_dir=1,2)
+ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction (axis_dir=0)  
+#ns.adv_dir=1 # axis_dir=1 or 2.
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
-ns.material_type=0 0 0 999
-ns.heatviscconst=58000.0 2400.0 218000.0 38600000.0 # dimensional
+ns.material_type=0 0 0 999 # axis_dir=0 or 2
+#ns.material_type=0 0 999 # axis_dir=1
+ns.heatviscconst=58000.0 2400.0 218000.0 38600000.0 # axis_dir=0,2
+#ns.heatviscconst=58000.0 2400.0 38600000.0 # axis_dir=1
 # 12 13 14 23 24 34  
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 #evaporation: water vapor is solute, air is solvent units: cm^2/s
 #C_t + u dot grad C = div alpha laplacian C ?
-ns.speciesviscconst=0.0 0.282 0.0 0.0
+ns.speciesviscconst=0.0 0.0 0.0 0.0
 # 1=water 2=gas  3=oil  4=substrate 
 ns.speciesconst=0.0 0.0 0.0 0.0
 # 1=water 2=gas  3=oil  4=substrate 
-ns.viscconst=0.018 0.00017 1.0 10.0 # dimensional
+ns.viscconst=0.018 0.00017 1.0 10.0 # axis_dir=0,2
+#ns.viscconst=0.018 0.00017 10.0 # axis_dir=1
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
 ns.added_weight=1.0 1.0 1.0 1.0
 ns.elastic_time=0.0 0.0 0.0 0.0
-ns.denconst=1.0 0.001 0.95 8.96
-ns.FSI_flag=0 0 0 1 
+ns.denconst=1.0 0.001 0.95 8.96 # axis_dir=0,2
+#ns.denconst=1.0 0.001 8.96 # axis_dir=1
+ns.FSI_flag=0 0 0 1  # axis_dir=0,2
+#ns.FSI_flag=0 0 1  # axis_dir=1
 ns.recalesce_flag=0 0 0 0
 # solidheat_flag=0=>diffuse in solid 
 # solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=0  
 # 1=water 2=gas  3=ice  4=substrate 
-ns.tempconst=273.0 273.0 273.0 353.0  
+ns.tempconst=273.0 273.0 273.0 353.0  #axis_dir=0,2
+#ns.tempconst=273.0 273.0 353.0  #axis_dir=1
 ns.initial_temperature=273.0 273.0 273.0 273.0  # dimensionless
-ns.xblob=0.0
+ns.xblob=0.0  # axis_dir=0  
+#ns.xblob=0.0  # axis_dir=1 or 2
 ns.yblob=0.18
 ns.zblob=0.18
 ns.radblob=0.06 
 ns.zblob2=0.1    #zblob2 is the altitude of the oil layer
+ns.xblob3=50.0
+ns.yblob3=-155.0
+ns.zblob3=-155.0
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=425
@@ -161,10 +200,14 @@ ns.output_drop_distribution=1
 # 2=dirichlet at inflow and walls.
 # 3=dirichlet at inflow, outflow, and walls.
 ns.prescribe_temperature_outflow=3
+# axis_dir=0
 ns.lo_bc          = 3 5  # XYZ
 ns.hi_bc          = 2 2  # XYZ
-ns.species_lo_bc  = 3 5  # XYZ
-ns.species_hi_bc  = 2 2  # XYZ
+# axis_dir=1,2
+#ns.lo_bc          = 1 5  # XYZ
+#ns.hi_bc          = 2 5  # XYZ
+ns.species_lo_bc  = 2 2 5  # XYZ
+ns.species_hi_bc  = 2 2 2  # XYZ
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
