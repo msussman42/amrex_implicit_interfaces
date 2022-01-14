@@ -79,7 +79,7 @@ amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
 amr.n_cell=32 32 # convergence 32 x 32 coarsest
-amr.max_level = 2
+amr.max_level = 2 # max_level=4 is finest level tried so far.
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
 # 0- 1 level 1- 2 levels  2- 3 levels
@@ -88,7 +88,7 @@ amr.n_error_buf     = 4 4 4 4   # number of buffer cells in error est
 amr.grid_eff        = 0.8   # what constitutes an efficient grid
 ns.ns_tiling=false
 amr.blocking_factor = 8 8 8 8   # block factor in grid generation
-amr.space_blocking_factor = 1 1 1 1   # this is the SEM space order
+amr.space_blocking_factor = 1 1 1 1 1   # this is the SEM space order
 amr.time_blocking_factor=1 # SEM time order
 ns.enable_spectral=0  # enable_spectral=0 or 1
 ns.viscous_enable_spectral=0 # set this to be the same as enable_spectral
@@ -98,6 +98,7 @@ amr.plot_int        = 1000
 #amr.plot_int        = 1000 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
+#amr.max_grid_size   = 128 #HPC
 amr.max_grid_size   = 1024
 amr.file_name_digits=7
 #amr.restart         = chk0119700
@@ -253,7 +254,7 @@ ns.probtype=424
 ns.ncomp_sum_int_user1=0 # level set,Tgas,Ygas,velocity errors
 
 #ns.mem_debug = 1
-ns.v = 1
+#ns.v = 1
 ns.output_drop_distribution=1
 #ns.show_mem=1
 #ns.d = 1
