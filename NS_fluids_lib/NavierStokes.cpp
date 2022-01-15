@@ -6761,6 +6761,11 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
  int nparts=im_solid_map.size();
  bool use_tiling=ns_tiling;
 
+ if (ngrow_distance==4) {
+  // do nothing
+ } else
+  amrex::Error("ngrow_distance invalid");
+
  int nparts_ghost=nparts;
  int ghost_state_type=Solid_State_Type;
  if (nparts==0) {
@@ -6790,24 +6795,22 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
- int ngrow_law_of_wall=1;
-
  MultiFab* solid_vel_mf;
  if (nparts==0) {
   if (nparts_ghost==1) {
-   solid_vel_mf=getState(ngrow_law_of_wall,0,AMREX_SPACEDIM,
+   solid_vel_mf=getState(ngrow_distance,0,AMREX_SPACEDIM,
     cur_time_slab);
   } else
    amrex::Error("nparts_ghost invalid");
  } else if (nparts>0) {
-  solid_vel_mf=getStateSolid(ngrow_law_of_wall,0,
+  solid_vel_mf=getStateSolid(ngrow_distance,0,
     nparts*AMREX_SPACEDIM,cur_time_slab);
  } else
   amrex::Error("nparts invalid");
 
   // velocity and pressure
- MultiFab* fluid_vel_mf=getState(ngrow_law_of_wall,0,AMREX_SPACEDIM+1,
-    cur_time_slab);
+ MultiFab* fluid_vel_mf=getState(ngrow_distance,STATECOMP_VEL,
+   STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) { 
 
@@ -6834,8 +6837,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
 
     const Real* xlo = grid_loc[gridno].lo();
 
-    FArrayBox& fluidvelfab=(*fluid_vel_mf)[mfi]; //ngrow_law_of_wall=1
-    FArrayBox& solidvelfab=(*solid_vel_mf)[mfi]; //ngrow_law_of_wall=1
+    FArrayBox& fluidvelfab=(*fluid_vel_mf)[mfi]; //ngrow_distance=4
+    FArrayBox& solidvelfab=(*solid_vel_mf)[mfi]; //ngrow_distance=4
     FArrayBox& ghostsolidvelfab=(*localMF[FSI_GHOST_MAC_MF+data_dir])[mfi]; 
 
     int tid_current=ns_thread();
@@ -6846,7 +6849,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
      im_solid_map.dataPtr(),
      &level,
      &finest_level,
-     &ngrow_law_of_wall,
+     &ngrow_distance,
      &nmat,
      &nparts,
      &nparts_ghost,
@@ -7054,32 +7057,36 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history) {
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
+ if (ngrow_distance==4) {
+  // do nothing
+ } else
+  amrex::Error("ngrow_distance invalid");
+
   // usolid_law_of_the_wall,
   // uimage raster,usolid raster,angle_ACT_cell
  int nhistory_sub=3*AMREX_SPACEDIM+1;
  int nhistory=nparts_ghost*nhistory_sub;
- int ngrow_law_of_wall=4;
 
  MultiFab* solid_vel_mf;
  if (nparts==0) {
   if (nparts_ghost==1) {
-   solid_vel_mf=getState(ngrow_law_of_wall,0,AMREX_SPACEDIM,
+   solid_vel_mf=getState(ngrow_distance,0,AMREX_SPACEDIM,
     cur_time_slab);
   } else
    amrex::Error("nparts_ghost invalid");
  } else if (nparts>0) {
-  solid_vel_mf=getStateSolid(ngrow_law_of_wall,0,
+  solid_vel_mf=getStateSolid(ngrow_distance,0,
     nparts*AMREX_SPACEDIM,cur_time_slab);
  } else
   amrex::Error("nparts invalid");
 
   // velocity and pressure
- MultiFab* fluid_vel_mf=getState(ngrow_law_of_wall,0,AMREX_SPACEDIM+1,
-    cur_time_slab);
+ MultiFab* fluid_vel_mf=getState(ngrow_distance,STATECOMP_VEL,
+   STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
 
   // temperature and density for all of the materials.
  int nden=nmat*num_state_material;
- MultiFab* state_var_mf=getStateDen(ngrow_law_of_wall,cur_time_slab);
+ MultiFab* state_var_mf=getStateDen(ngrow_distance,cur_time_slab);
  if (state_var_mf->nComp()==nden) {
   // do nothing
  } else
@@ -7146,9 +7153,9 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history) {
     FArrayBox& lsCPfab=(*localMF[LS_NRM_CP_MF])[mfi];
     FArrayBox& lsFDfab=(*localMF[LS_NRM_FD_GNBC_MF])[mfi];
 
-    FArrayBox& statefab=(*state_var_mf)[mfi]; //ngrow_law_of_wall=4
-    FArrayBox& fluidvelfab=(*fluid_vel_mf)[mfi]; //ngrow_law_of_wall=4
-    FArrayBox& solidvelfab=(*solid_vel_mf)[mfi]; //ngrow_law_of_wall=4
+    FArrayBox& statefab=(*state_var_mf)[mfi]; //ngrow_distance=4
+    FArrayBox& fluidvelfab=(*fluid_vel_mf)[mfi]; //ngrow_distance=4
+    FArrayBox& solidvelfab=(*solid_vel_mf)[mfi]; //ngrow_distance=4
     FArrayBox& ghostsolidvelfab=(*localMF[FSI_GHOST_MAC_MF+data_dir])[mfi]; 
 
     FArrayBox& histfab=(*localMF[HISTORY_MAC_MF+data_dir])[mfi]; 
@@ -7194,7 +7201,6 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history) {
      im_solid_map.dataPtr(),
      &level,
      &finest_level,
-     &ngrow_law_of_wall,
      &ngrow_distance,
      &nmat,
      &nparts,

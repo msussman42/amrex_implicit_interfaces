@@ -2729,178 +2729,6 @@ stop
 
 
 
-      subroutine fort_l1_distance( &
-       level, &
-       finest_level, &
-       maskfab,DIMS(maskfab), &
-       lsfab,DIMS(lsfab), &
-       l1lsfab,DIMS(l1lsfab), &
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       bfact, &
-       xlo,dx, &
-       ngrow_distance, &
-       nmat) &
-      bind(c,name='fort_l1_distance')
-
-      use global_utility_module
-      use probcommon_module
-
-      IMPLICIT NONE
-
-      INTEGER_T level,finest_level
-      INTEGER_T nmat,ngrow_distance
-      INTEGER_T DIMDEC(maskfab)
-      INTEGER_T DIMDEC(lsfab)
-      INTEGER_T DIMDEC(l1lsfab)
-
-      REAL_T, intent(in), target :: maskfab(DIMV(maskfab),4)
-      REAL_T, pointer :: maskfab_ptr(D_DECL(:,:,:),:)
-
-      REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat)
-      REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
-
-      REAL_T, intent(out), target :: l1lsfab(DIMV(lsfab),nmat)
-      REAL_T, pointer :: l1lsfab_ptr(D_DECL(:,:,:),:)
-
-      INTEGER_T tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T bfact
-      REAL_T xlo(SDIM),dx(SDIM)
-
-      INTEGER_T i,j,k,i1,j1,k1
-      INTEGER_T im,im_primary,im_opp
-      INTEGER_T klosten,khisten
-      REAL_T LS_center(nmat)
-      REAL_T LS_opp(nmat)
-      INTEGER_T radmin(nmat)
-      INTEGER_T radcurrent
-
-      if (bfact.lt.1) then
-       print *,"bfact invalid86"
-       stop
-      endif
-
-      if ((level.gt.finest_level).or.(level.lt.0)) then
-       print *,"level invalid in levelstrip"
-       stop
-      endif
-
-      if (ngrow_distance.ne.4) then
-       print *,"ngrow_distance<>4 error in L1_DISTANCE"
-       stop
-      endif
-
-      maskfab_ptr=>maskfab
-      lsfab_ptr=>lsfab
-      l1lsfab_ptr=>l1lsfab
-
-      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow_distance,-1,2870)
-      call checkbound_array(fablo,fabhi,lsfab_ptr,ngrow_distance,-1,2871)
-      call checkbound_array(fablo,fabhi,l1lsfab_ptr,ngrow_distance,-1,2872)
-      
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-
-      if (SDIM.eq.3) then
-       klosten=-ngrow_distance
-       khisten=ngrow_distance
-      else if (SDIM.eq.2) then
-       klosten=0
-       khisten=0
-      else
-       print *,"dimension bust"
-       stop
-      endif
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,0)
- 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-       do im=1,nmat
-        LS_center(im)=lsfab(D_DECL(i,j,k),im)
-        radmin(im)=ngrow_distance+1
-       enddo
-       call get_primary_material(LS_center,nmat,im_primary)
-       do i1=-ngrow_distance,ngrow_distance
-       do j1=-ngrow_distance,ngrow_distance
-       do k1=klosten,khisten
-
-        radcurrent=abs(i1)
-        if (radcurrent.lt.abs(j1)) then
-         radcurrent=abs(j1)
-        endif
-        if (radcurrent.lt.abs(k1)) then
-         radcurrent=abs(k1)
-        endif
-
-        if (radcurrent.eq.0) then
-
-         ! do nothing
-
-        else if ((radcurrent.ge.1).and. &
-                 (radcurrent.le.ngrow_distance)) then 
-
-         do im=1,nmat
-          LS_opp(im)=lsfab(D_DECL(i+i1,j+j1,k+k1),im)
-         enddo
-         call get_primary_material(LS_opp,nmat,im_opp)
-         do im=1,nmat
-          if (((im.eq.im_primary).and. &
-               (im.ne.im_opp)).or. &
-              ((im.eq.im_opp).and. &
-               (im.ne.im_primary))) then
-           if (radmin(im).eq.ngrow_distance+1) then
-            radmin(im)=radcurrent 
-           else if (radmin(im).gt.radcurrent) then
-            radmin(im)=radcurrent
-           else if ((radmin(im).ge.1).and. &
-                    (radmin(im).le.radcurrent)) then
-            ! do nothing
-           else
-            print *,"radmin invalid"
-            stop
-           endif
-          endif
-         enddo ! im=1..nmat
-
-        else
-         print *,"radcurrent invalid"
-         stop
-        endif
-       enddo
-       enddo
-       enddo ! i1,j1,k1
-
-       do im=1,nmat
-        if ((radmin(im).ge.1).and. &
-            (radmin(im).le.ngrow_distance+1)) then
-         if (im.eq.im_primary) then
-          ! do nothing
-         else if (im.ne.im_primary) then
-          radmin(im)=-radmin(im)
-         endif
-        else
-         print *,"radmin(im) invalid"
-         stop
-        endif
-        l1lsfab(D_DECL(i,j,k),im)=radmin(im)
-       enddo ! im=1..nmat
-
-      enddo
-      enddo
-      enddo
-
-      return
-      end subroutine fort_l1_distance
-
-
        ! for finding areas internal to a cell, perturb each internal 
        ! interface, find areas and volumes, then check for the difference 
        ! in volumes divided by eps times the area.
@@ -3835,7 +3663,7 @@ stop
        visc_coef, &
        nmat,nten, & 
        num_curv, &
-       ngrow_distance, &
+       ngrow_distance_in, &
        RD) &
       bind(c,name='fort_curvstrip')
 
@@ -3852,7 +3680,7 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nten
-      INTEGER_T, intent(in) :: ngrow_distance
+      INTEGER_T, intent(in) :: ngrow_distance_in
       INTEGER_T, intent(in) :: RD
       INTEGER_T, intent(in) :: num_curv
       INTEGER_T icurv
@@ -4005,6 +3833,10 @@ stop
     
       if (ngrow_distance.ne.4) then
        print *,"ngrow_distance invalid in curvstrip"
+       stop
+      endif 
+      if (ngrow_distance_in.ne.4) then
+       print *,"ngrow_distance_in invalid in curvstrip"
        stop
       endif 
       if (RD.ne.4) then
@@ -16102,7 +15934,7 @@ stop
        num_LS_extrap, &
        num_LS_extrap_iter, &
        LS_extrap_iter, &
-       ngrow_distance, &
+       ngrow_distance_in, &
        constant_density_all_time) &
       bind(c,name='fort_renormalize_prescribe')
       use global_utility_module
@@ -16115,7 +15947,7 @@ stop
 
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: solidheat_flag
-      INTEGER_T, intent(in) :: ngrow_distance
+      INTEGER_T, intent(in) :: ngrow_distance_in
 
       INTEGER_T, intent(in) :: renormalize_only
       INTEGER_T, intent(inout) :: num_LS_extrap
@@ -16331,6 +16163,12 @@ stop
        print *,"ngrow_distance invalid"
        stop
       endif
+      if (ngrow_distance_in.eq.4) then
+       ! do nothing
+      else
+       print *,"ngrow_distance_in invalid"
+       stop
+      endif
 
       if (solidheat_flag.eq.0) then 
        !do nothing (heat conduction in solid)
@@ -16474,7 +16312,7 @@ stop
       maskcov_ptr=>maskcov
       call checkbound_array1(fablo,fabhi,maskcov_ptr,0,-1,26)
       LS_ptr=>LS
-      call checkbound_array(fablo,fabhi,LS,ngrow_distance,-1,26)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1,26)
       state_mof_ptr=>state_mof
       call checkbound_array(fablo,fabhi,state_mof_ptr,1,-1,26)
       vel_ptr=>vel

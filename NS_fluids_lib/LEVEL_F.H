@@ -521,20 +521,6 @@ namespace amrex{
         int* project_option);
 
 
-     void fort_l1_distance(
-       int* level,
-       int* finest_level,
-       Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
-       Real* lsfab,AMREX_ARLIM_P(lsfablo),AMREX_ARLIM_P(lsfabhi),
-       Real* l1lsfab,AMREX_ARLIM_P(l1lsfablo),AMREX_ARLIM_P(l1lsfabhi),
-       const int* tilelo,const int* tilehi,
-       const int* fablo,const int* fabhi,
-       int* bfact,
-       const Real* xlo,const Real* dx,
-       int* ngrowLS,
-       int* nmat);
-
-
      void fort_cellfaceinit(
        int* tid,
        int* tessellate,

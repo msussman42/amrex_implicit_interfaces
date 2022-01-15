@@ -5041,7 +5041,7 @@ stop
        mdotplus, &
        mdotminus, &
        mdotcount, &
-       ngrow_expansion, &
+       ngrow_expansion_in, &
        time, &
        level,finest_level, &
        nmat,nten, &
@@ -5070,7 +5070,7 @@ stop
       REAL_T, intent(inout) :: mdotplus
       REAL_T, intent(inout) :: mdotminus
       REAL_T, intent(inout) :: mdotcount
-      INTEGER_T, intent(in) :: ngrow_expansion
+      INTEGER_T, intent(in) :: ngrow_expansion_in
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: nmat,nten
@@ -5092,10 +5092,13 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(mdot)
       INTEGER_T, intent(in) :: DIMDEC(LSnew)
       REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: JUMPFAB(DIMV(JUMPFAB),2*nten)
+      REAL_T, pointer :: JUMPFAB_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: mdot(DIMV(mdot))
       REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: LSnew(DIMV(LSnew),nmat)
+      REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k
       INTEGER_T im,im_opp,ireverse,iten
@@ -5119,7 +5122,13 @@ stop
        print *,"ngrow_expansion invalid"
        stop
       endif
-      if (time.lt.zero) then
+      if (ngrow_expansion_in.ne.2) then
+       print *,"ngrow_expansion_in invalid"
+       stop
+      endif
+      if (time.ge.zero) then
+       ! do nothing
+      else
        print *,"time invalid"
        stop
       endif
@@ -5179,10 +5188,13 @@ stop
        enddo ! im_opp
       enddo ! im
 
-      call checkbound_array1(fablo,fabhi,maskcov,1,-1,1264)
-      call checkbound_array(fablo,fabhi,JUMPFAB,ngrow_expansion,-1,1268)
+      maskcov_ptr=>maskcov
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,1264)
+      JUMPFAB_ptr=>JUMPFAB
+      call checkbound_array(fablo,fabhi,JUMPFAB_ptr,ngrow_expansion,-1,1268)
       call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,1269)
-      call checkbound_array(fablo,fabhi,LSnew,1,-1,1270)
+      LSnew_ptr=>LSnew
+      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1,1270)
  
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -11605,8 +11617,7 @@ stop
        im_solid_map, &
        level, &
        finest_level, &
-       ngrow_law_of_wall, &
-       ngrow_distance, &
+       ngrow_distance_in, &
        nmat, &
        nparts, &
        nparts_ghost, &
@@ -11639,8 +11650,7 @@ stop
       INTEGER_T, intent(in) :: data_dir
       INTEGER_T, intent(in) :: nhistory
       INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: ngrow_law_of_wall
-      INTEGER_T, intent(in) :: ngrow_distance
+      INTEGER_T, intent(in) :: ngrow_distance_in
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: NS_sumdata_size
       INTEGER_T, intent(in) :: law_of_the_wall(nmat)
@@ -11760,10 +11770,10 @@ stop
        print *,"ngrow_distance invalid"
        stop
       endif
-      if (ngrow_law_of_wall.eq.4) then
+      if (ngrow_distance_in.eq.4) then
        ! do nothing
       else
-       print *,"ngrow_law_of_wall invalid"
+       print *,"ngrow_distance_in invalid"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -11887,18 +11897,15 @@ stop
       LSFD_ptr=>LSFD
       call checkbound_array(fablo,fabhi,LSFD_ptr,ngrow_distance,-1,1252)
       state_ptr=>state
-      call checkbound_array(fablo,fabhi,state_ptr,ngrow_law_of_wall,-1,1253)
+      call checkbound_array(fablo,fabhi,state_ptr,ngrow_distance,-1,1253)
       ufluid_ptr=>ufluid
-      call checkbound_array(fablo,fabhi,ufluid_ptr,ngrow_law_of_wall,-1,1254)
+      call checkbound_array(fablo,fabhi,ufluid_ptr,ngrow_distance,-1,1254)
       usolid_ptr=>usolid
-      call checkbound_array(fablo,fabhi,usolid_ptr,ngrow_law_of_wall,-1,1255)
+      call checkbound_array(fablo,fabhi,usolid_ptr,ngrow_distance,-1,1255)
       ughost_ptr=>ughost
       call checkbound_array(fablo,fabhi,ughost_ptr,0,data_dir,1255)
       history_dat_ptr=>history_dat
       call checkbound_array(fablo,fabhi,history_dat_ptr,0,data_dir,1255)
-
-      law_of_wall_parm%ngrow_distance=ngrow_distance
-      law_of_wall_parm%ngrow_law_of_wall=ngrow_law_of_wall
 
       law_of_wall_parm%visc_coef=visc_coef
       law_of_wall_parm%time=time
@@ -12261,7 +12268,7 @@ stop
        im_solid_map, &
        level, &
        finest_level, &
-       ngrow_law_of_wall, &
+       ngrow_distance_in, &
        nmat, &
        nparts, &
        nparts_ghost, &
@@ -12282,7 +12289,7 @@ stop
 
       INTEGER_T, intent(in) :: data_dir
       INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: ngrow_law_of_wall
+      INTEGER_T, intent(in) :: ngrow_distance_in
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_ghost
@@ -12327,12 +12334,19 @@ stop
        print *,"num_state_base invalid"
        stop
       endif
-      if (ngrow_law_of_wall.eq.1) then
+      if (ngrow_distance_in.eq.4) then
        ! do nothing
       else
-       print *,"ngrow_law_of_wall invalid"
+       print *,"ngrow_distance_in invalid"
        stop
       endif
+      if (ngrow_distance.eq.4) then
+       ! do nothing
+      else
+       print *,"ngrow_distance invalid"
+       stop
+      endif
+
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
        stop
@@ -12393,9 +12407,9 @@ stop
       endif
 
       ufluid_ptr=>ufluid
-      call checkbound_array(fablo,fabhi,ufluid_ptr,ngrow_law_of_wall,-1,1254)
+      call checkbound_array(fablo,fabhi,ufluid_ptr,ngrow_distance,-1,1254)
       usolid_ptr=>usolid
-      call checkbound_array(fablo,fabhi,usolid_ptr,ngrow_law_of_wall,-1,1255)
+      call checkbound_array(fablo,fabhi,usolid_ptr,ngrow_distance,-1,1255)
       ughost_ptr=>ughost
       call checkbound_array(fablo,fabhi,ughost_ptr,0,data_dir,1255)
 
@@ -12450,7 +12464,7 @@ stop
       latent_heat, &
       freezing_model, &
       distribute_from_target, &
-      ngrow_expansion, &
+      ngrow_expansion_in, &
       time, &
       vofbc, &
       expect_mdot_sign, &
@@ -12481,7 +12495,7 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: ngrow_expansion
+      INTEGER_T, intent(in) :: ngrow_expansion_in
       REAL_T, intent(in) :: time
       REAL_T, intent(inout) :: mdot_sum
       REAL_T, intent(inout) :: mdot_sum_comp
@@ -12511,14 +12525,19 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(recon)
       REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
       REAL_T, intent(out), target :: tag(DIMV(tag))
       REAL_T, pointer :: tag_ptr(D_DECL(:,:,:))
       REAL_T, intent(out), target :: tag_comp(DIMV(tag_comp))
       REAL_T, pointer :: tag_comp_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: expan(DIMV(expan),2*nten)
+      REAL_T, pointer :: expan_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: expan_comp(DIMV(expan_comp),2*nten)
+      REAL_T, pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T local_freezing_model
       INTEGER_T vofbc(SDIM,2)
@@ -12550,12 +12569,18 @@ stop
 
       !! Sanity checks
 
-      if (time.lt.zero) then
+      if (time.ge.zero) then
+       ! do nothing
+      else
        print *,"time invalid"
        stop
       endif
       if (ngrow_expansion.ne.2) then
        print *,"ngrow_expansion invalid"
+       stop
+      endif
+      if (ngrow_expansion_in.ne.2) then
+       print *,"ngrow_expansion_in invalid"
        stop
       endif
 
@@ -12598,13 +12623,25 @@ stop
        stop
       endif
 
-      call checkbound_array1(fablo,fabhi,maskcov,1,-1,1272)
-      call checkbound_array(fablo,fabhi,LS,1,-1,1272)
-      call checkbound_array(fablo,fabhi,recon,1,-1,1273)
-      call checkbound_array(fablo,fabhi,expan,ngrow_expansion,-1,1274)
-      call checkbound_array(fablo,fabhi,expan_comp,ngrow_expansion,-1,1274)
-      call checkbound_array1(fablo,fabhi,tag_ptr,2*ngrow_expansion,-1,1275)
-      call checkbound_array1(fablo,fabhi,tag_comp_ptr,2*ngrow_expansion,-1,1275)
+      if (ngrow_distance.eq.4) then
+       ! do nothing
+      else
+       print *,"ngrow_distance invalid"
+       stop
+      endif
+
+      maskcov_ptr=>maskcov
+      LS_ptr=>LS
+      recon_ptr=>recon
+      expan_ptr=>expan
+      expan_comp_ptr=>expan_comp
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,1272)
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1272)
+      call checkbound_array(fablo,fabhi,recon_ptr,1,-1,1273)
+      call checkbound_array(fablo,fabhi,expan_ptr,ngrow_expansion,-1,1274)
+      call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_expansion,-1,1274)
+      call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1,1275)
+      call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1,1275)
 
       local_freezing_model=freezing_model(indexEXP+1)
       if (is_valid_freezing_modelF(local_freezing_model).eq.1) then
@@ -12917,7 +12954,7 @@ stop
       ! tag = 2 -> receving cell
       ! tag = 0 -> non of above
       subroutine fort_distributeexpansion(&
-       ngrow_expansion, &
+       ngrow_expansion_in, &
        im_source, &
        im_dest, &
        indexEXP, &
@@ -12946,7 +12983,8 @@ stop
 
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: im_source,im_dest,indexEXP,ngrow_expansion
+       INTEGER_T, intent(in) :: im_source,im_dest,indexEXP
+       INTEGER_T, intent(in) :: ngrow_expansion_in
        INTEGER_T, intent(in) :: level,finest_level
        INTEGER_T, intent(in) :: nmat,nten
        INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -12965,9 +13003,13 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(expan)
        INTEGER_T, intent(in) :: DIMDEC(expan_comp)
        REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
        REAL_T, intent(in), target :: LS(DIMV(LS),nmat)
+       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in), target :: tag(DIMV(tag))
+       REAL_T, pointer :: tag_ptr(D_DECL(:,:,:))
        REAL_T, intent(in), target :: tag_comp(DIMV(tag_comp))
+       REAL_T, pointer :: tag_comp_ptr(D_DECL(:,:,:))
        REAL_T, intent(inout), target :: expan(DIMV(expan),2*nten)
        REAL_T, pointer :: expan_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(inout), target :: expan_comp(DIMV(expan_comp),2*nten)
@@ -13006,6 +13048,10 @@ stop
         print *,"ngrow_expansion invalid"
         stop
        endif
+       if (ngrow_expansion_in.ne.2) then
+        print *,"ngrow_expansion_in invalid"
+        stop
+       endif
        if ((im_source.ge.1).and.(im_source.le.nmat)) then
         ! do nothing
        else
@@ -13035,13 +13081,23 @@ stop
         print *,"bfact too small"
         stop
        endif
+       if (ngrow_distance.eq.4) then
+        ! do nothing
+       else
+        print *,"ngrow_distance invalid"
+        stop
+       endif
 
-       call checkbound_array1(fablo,fabhi,maskcov,1,-1,1272)
-       call checkbound_array(fablo,fabhi,LS,2*ngrow_expansion,-1,1272)
+       maskcov_ptr=>maskcov
+       LS_ptr=>LS
+       tag_ptr=>tag
+       tag_comp_ptr=>tag_comp
+       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,1272)
+       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1,1272)
        call checkbound_array(fablo,fabhi,expan_ptr,ngrow_expansion,-1,122)
        call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_expansion,-1,122)
-       call checkbound_array1(fablo,fabhi,tag,2*ngrow_expansion,-1,122)
-       call checkbound_array1(fablo,fabhi,tag_comp,2*ngrow_expansion,-1,122)
+       call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1,122)
+       call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1,122)
 
        ! Iterate over the box
        do i=growlo(1),growhi(1)
@@ -13438,7 +13494,7 @@ stop
       ! tag = 2 -> receving cell
       ! tag = 0 -> non of above
       subroutine fort_clearexpansion(&
-       ngrow_expansion, &
+       ngrow_expansion_in, &
        mdot_sum, &
        mdot_lost, &
        mdot_sum_comp, &
@@ -13469,7 +13525,7 @@ stop
 
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: ngrow_expansion
+       INTEGER_T, intent(in) :: ngrow_expansion_in
        REAL_T, intent(inout) :: mdot_sum,mdot_lost
        REAL_T, intent(inout) :: mdot_sum_comp,mdot_lost_comp
        INTEGER_T, intent(in) :: im_source,im_dest,indexEXP
@@ -13489,8 +13545,11 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(expan)
        INTEGER_T, intent(in) :: DIMDEC(expan_comp)
        REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
        REAL_T, intent(in), target :: tag(DIMV(tag))
+       REAL_T, pointer :: tag_ptr(D_DECL(:,:,:))
        REAL_T, intent(in), target :: tag_comp(DIMV(tag_comp))
+       REAL_T, pointer :: tag_comp_ptr(D_DECL(:,:,:))
        REAL_T, intent(inout), target :: expan(DIMV(expan),2*nten)
        REAL_T, pointer :: expan_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(inout), target :: expan_comp(DIMV(expan_comp),2*nten)
@@ -13513,6 +13572,10 @@ stop
        !! Sanity checks
        if (ngrow_expansion.ne.2) then
         print *,"ngrow_expansion invalid"
+        stop
+       endif
+       if (ngrow_expansion_in.ne.2) then
+        print *,"ngrow_expansion_in invalid"
         stop
        endif
        if ((im_source.ge.1).and.(im_source.le.nmat)) then
@@ -13544,12 +13607,21 @@ stop
         print *,"bfact too small"
         stop
        endif
+       if (ngrow_distance.eq.4) then
+        ! do nothing
+       else
+        print *,"ngrow_distance invalid"
+        stop
+       endif
 
-       call checkbound_array1(fablo,fabhi,maskcov,1,-1,122)
+       maskcov_ptr=>maskcov
+       tag_ptr=>tag
+       tag_comp_ptr=>tag_comp
+       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,122)
        call checkbound_array(fablo,fabhi,expan_ptr,ngrow_expansion,-1,122)
        call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_expansion,-1,122)
-       call checkbound_array1(fablo,fabhi,tag,2*ngrow_expansion,-1,122)
-       call checkbound_array1(fablo,fabhi,tag_comp,2*ngrow_expansion,-1,122)
+       call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1,122)
+       call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1,122)
 
        ! Iterate over the box
        do i=growlo(1),growhi(1)

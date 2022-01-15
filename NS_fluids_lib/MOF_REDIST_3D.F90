@@ -1288,7 +1288,7 @@ stop
          rz_flag, &
          xlo,dx, &
          time, &
-         ngrow_distance, &
+         ngrow_distance_in, &
          nmat,nten, &
          nstar, &
          nface, &
@@ -1311,7 +1311,7 @@ stop
       INTEGER_T, intent(in) :: nface
       INTEGER_T, intent(in) :: nface_dst
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: ngrow_distance
+      INTEGER_T, intent(in) :: ngrow_distance_in
       REAL_T, intent(inout) :: minLS(nmat)
       REAL_T, intent(inout) :: maxLS(nmat)
       REAL_T, intent(in) :: max_problen
@@ -1332,21 +1332,32 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(crsedist)
 
       REAL_T, intent(in), target :: maskfab(DIMV(maskfab),4)
+      REAL_T, pointer :: maskfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: facepairX(DIMV(facepairX),nface_dst)
+      REAL_T, pointer :: facepairX_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: facepairY(DIMV(facepairY),nface_dst)
+      REAL_T, pointer :: facepairY_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: facepairZ(DIMV(facepairZ),nface_dst)
+      REAL_T, pointer :: facepairZ_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: facefab(DIMV(facefab),nface)
+      REAL_T, pointer :: facefab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: facetest(DIMV(facetest),nmat*SDIM)
+      REAL_T, pointer :: facetest_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: stenfab(DIMV(stenfab),nstar)
+      REAL_T, pointer :: stenfab_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, pointer :: vofrecon_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: origdist(DIMV(origdist),nmat*(1+SDIM))
+      REAL_T, pointer :: origdist_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: newfab(DIMV(newfab),nmat*(1+SDIM))
       REAL_T, pointer :: newfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: touchfab(DIMV(touchfab),nmat)
       REAL_T, pointer :: touchfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: crsetouch(DIMV(crsetouch),nmat)
+      REAL_T, pointer :: crsetouch_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: crsedist(DIMV(crsedist),nmat*(1+SDIM))
+      REAL_T, pointer :: crsedist_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -1509,6 +1520,10 @@ stop
        print *,"ngrow_distance<>4 error in levelstrip"
        stop
       endif
+      if (ngrow_distance_in.ne.4) then
+       print *,"ngrow_distance_in<>4 error in levelstrip"
+       stop
+      endif
       if (ngrow_make_distance.ne.3) then
        print *,"ngrow_make_distance<>3 error in levelstrip"
        stop
@@ -1525,19 +1540,33 @@ stop
        endif
       enddo !im=1..nmat
 
-      call checkbound_array(fablo,fabhi,maskfab,ngrow_distance,-1,2878)
-      call checkbound_array(fablo,fabhi,facepairX,ngrow_distance,0,1871)
-      call checkbound_array(fablo,fabhi,facepairY,ngrow_distance,1,1871)
-      call checkbound_array(fablo,fabhi,facepairZ,ngrow_distance,SDIM-1,1871)
-      call checkbound_array(fablo,fabhi,facefab,ngrow_distance,-1,1871)
-      call checkbound_array(fablo,fabhi,facetest,ngrow_distance,-1,1872)
-      call checkbound_array(fablo,fabhi,stenfab,ngrow_distance,-1,1873)
-      call checkbound_array(fablo,fabhi,vofrecon,ngrow_distance,-1,1874)
-      call checkbound_array(fablo,fabhi,origdist,ngrow_distance,-1,1875)
+      maskfab_ptr=>maskfab
+      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow_distance,-1,2878)
+      facepairX_ptr=>facepairX
+      facepairY_ptr=>facepairY
+      facepairZ_ptr=>facepairZ
+      call checkbound_array(fablo,fabhi,facepairX_ptr, &
+        ngrow_distance,0,1871)
+      call checkbound_array(fablo,fabhi,facepairY_ptr, &
+        ngrow_distance,1,1871)
+      call checkbound_array(fablo,fabhi,facepairZ_ptr, &
+        ngrow_distance,SDIM-1,1871)
+      facefab_ptr=>facefab
+      call checkbound_array(fablo,fabhi,facefab_ptr,ngrow_distance,-1,1871)
+      facetest_ptr=>facetest
+      call checkbound_array(fablo,fabhi,facetest_ptr,ngrow_distance,-1,1872)
+      stenfab_ptr=>stenfab
+      call checkbound_array(fablo,fabhi,stenfab_ptr,ngrow_distance,-1,1873)
+      vofrecon_ptr=>vofrecon
+      call checkbound_array(fablo,fabhi,vofrecon_ptr,ngrow_distance,-1,1874)
+      origdist_ptr=>origdist
+      call checkbound_array(fablo,fabhi,origdist_ptr,ngrow_distance,-1,1875)
       call checkbound_array(fablo,fabhi,newfab_ptr,1,-1,1876)
       call checkbound_array(fablo,fabhi,touchfab_ptr,0,-1,1876)
-      call checkbound_array(fablo,fabhi,crsetouch,0,-1,1876)
-      call checkbound_array(fablo,fabhi,crsedist,0,-1,1876)
+      crsetouch_ptr=>crsetouch
+      crsedist_ptr=>crsedist
+      call checkbound_array(fablo,fabhi,crsetouch_ptr,0,-1,1876)
+      call checkbound_array(fablo,fabhi,crsedist_ptr,0,-1,1876)
       
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -2664,7 +2693,8 @@ stop
        fablo,fabhi,bfact, &
        rz_flag, &
        xlo,dx, &
-       time,ngrow_distance, &
+       time, &
+       ngrow_distance_in, &
        nmat,nstar) &
       bind(c,name='fort_steninit')
 
@@ -2678,7 +2708,8 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nstar
-      INTEGER_T, intent(in) :: nmat,ngrow_distance
+      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, intent(in) :: ngrow_distance_in
       INTEGER_T, intent(in) :: DIMDEC(stenfab)
       INTEGER_T, intent(in) :: DIMDEC(maskfab)
       INTEGER_T, intent(in) :: DIMDEC(vofrecon)
@@ -2687,7 +2718,9 @@ stop
       REAL_T, pointer :: stenfab_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: maskfab(DIMV(maskfab),2)
+      REAL_T, pointer :: maskfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, pointer :: vofrecon_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -2746,10 +2779,16 @@ stop
        print *,"ngrow_distance<>4 error in steninit"
        stop
       endif
+      if (ngrow_distance_in.ne.4) then
+       print *,"ngrow_distance_in<>4 error in steninit"
+       stop
+      endif
 
       call checkbound_array(fablo,fabhi,stenfab_ptr,ngrow_distance,-1,2877)
-      call checkbound_array(fablo,fabhi,maskfab,ngrow_distance,-1,2878)
-      call checkbound_array(fablo,fabhi,vofrecon,ngrow_distance,-1,2879)
+      maskfab_ptr=>maskfab
+      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow_distance,-1,2878)
+      vofrecon_ptr=>vofrecon
+      call checkbound_array(fablo,fabhi,vofrecon_ptr,ngrow_distance,-1,2879)
       
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
