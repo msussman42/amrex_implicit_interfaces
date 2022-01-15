@@ -24,8 +24,6 @@ module probcommon_module_types
 
 
       type law_of_wall_parm_type
-      INTEGER_T :: ngrow_distance
-      INTEGER_T :: ngrow_law_of_wall
       INTEGER_T :: level
       INTEGER_T :: finest_level
       INTEGER_T :: bfact
@@ -314,6 +312,8 @@ implicit none
       REAL_T, PARAMETER :: GNBC_RADIUS=2.0d0
 
       INTEGER_T, PARAMETER :: ngrow_make_distance=3
+      INTEGER_T, PARAMETER :: ngrow_distance=4
+      INTEGER_T, PARAMETER :: ngrow_expansion=2
 
       REAL_T, PARAMETER :: GAMMA_SIMPLE_PARMS=1.4
 
