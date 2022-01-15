@@ -888,7 +888,6 @@ Vector<int> NavierStokes::constant_volume_mdot; // 1..2*nten
 Vector<int> NavierStokes::constant_density_all_time; // 1..nmat, def=1
 
 int NavierStokes::is_phasechange=0;
-int NavierStokes::normal_probe_size=1;
 // 0=dirichlet at inflow
 // 1=dirichlet at inflow and outflow
 // 2=dirichlet at inflow and walls.
@@ -4846,10 +4845,6 @@ NavierStokes::read_params ()
       amrex::Error("im invalid 4542");
     } // i=0..num_species_var-1
 
-    pp.query("normal_probe_size",normal_probe_size);
-    if (normal_probe_size!=1)
-     amrex::Error("normal_probe_size invalid");
-   
     mof_error_ordering=0; 
     pp.query("mof_error_ordering",mof_error_ordering);
     if ((mof_error_ordering!=0)&&
@@ -4952,8 +4947,6 @@ NavierStokes::read_params ()
       ngrow_distance << '\n';
      std::cout << "ngrow_expansion= " << 
       ngrow_expansion << '\n';
-     std::cout << "normal_probe_size= " << 
-      normal_probe_size << '\n';
      std::cout << "prescribe_temperature_outflow= " << 
       prescribe_temperature_outflow << '\n';
      std::cout << "solidheat_flag= " << solidheat_flag << '\n';
@@ -12650,6 +12643,11 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   probhi[dir]=geom.ProbHi(dir);
  }
 
+ if (ngrow_distance==4) {
+  // do nothing
+ } else
+  amrex::Error("expecting (ngrow_distance==4)");
+
  int rz_flag=0;
  if (geom.IsRZ())
   rz_flag=1;
@@ -12689,7 +12687,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  } // dir=0..sdim-1
 
   // in: level_phase_change_rate()
- getStateDen_localMF(DEN_RECON_MF,normal_probe_size+3,cur_time_slab);
+ getStateDen_localMF(DEN_RECON_MF,ngrow_distance,cur_time_slab);
 
  if (localMF[DEN_RECON_MF]->nComp()!=nden)
   amrex::Error("DEN_RECON_MF invalid ncomp");
@@ -12705,7 +12703,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  } else
   amrex::Error("nucleation_flag invalid");
 
- debug_ngrow(local_temperature_smooth_mf,normal_probe_size+3,28); 
+ debug_ngrow(local_temperature_smooth_mf,ngrow_distance,28); 
  debug_ixType(local_temperature_smooth_mf,-1,local_temperature_smooth_mf);
 
  if (localMF[local_temperature_smooth_mf]->nComp()>=nmat) {
@@ -12745,8 +12743,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  } else
   amrex::Error("nucleation_flag invalid");
 
- MultiFab* presmf=
-  getState(normal_probe_size+3,AMREX_SPACEDIM,
+ MultiFab* presmf=getState(ngrow_distance,STATECOMP_PRES,
            1,cur_time_slab);
  debug_ixType_raw(presmf,-1,0);
 
@@ -12981,7 +12978,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    amrex::Error("localMF[FD_CURV_CELL_MF] incorrect ngrow");
   debug_ixType(FD_CURV_CELL_MF,-1,FD_CURV_CELL_MF);
 
-  debug_ngrow(HOLD_LS_DATA_MF,normal_probe_size+3,30);
   debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
   if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM)) 
    amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
@@ -12995,16 +12991,15 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   debug_ngrow(MDOT_MF,0,355);
   debug_ixType(MDOT_MF,-1,MDOT_MF);
 
-   // normal_probe_size=1
-  VOF_Recon_resize(normal_probe_size+3,SLOPE_RECON_MF);
+  VOF_Recon_resize(ngrow_distance,SLOPE_RECON_MF);
   debug_ixType(SLOPE_RECON_MF,-1,SLOPE_RECON_MF);
 
-  MultiFab* hold_F_data_mf=new MultiFab(grids,dmap,nmat,normal_probe_size+3,
+  MultiFab* hold_F_data_mf=new MultiFab(grids,dmap,nmat,ngrow_distance,
      MFInfo().SetTag("hold_F_data_mf"),FArrayBoxFactory());
 
   for (int im=0;im<nmat;im++) {
    MultiFab::Copy(*hold_F_data_mf,*localMF[SLOPE_RECON_MF],
-     im*ngeom_recon,im,1,normal_probe_size+3);
+     im*ngeom_recon,im,1,ngrow_distance);
   }
 
   if (thread_class::nthreads<1)
@@ -13213,7 +13208,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      &stefan_flag,
      &level,
      &finest_level,
-     &normal_probe_size,
      &ngrow_distance,
      &nstate,
      &nmat,
@@ -13306,7 +13300,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      &stefan_flag,
      &level,
      &finest_level,
-     &normal_probe_size,
      &ngrow_distance,
      &nstate,
      &nmat,
@@ -13440,13 +13433,15 @@ NavierStokes::level_phase_change_rate_extend() {
 
  if (ngrow_make_distance!=3)
   amrex::Error("expecting ngrow_make_distance==3");
+ if (ngrow_distance!=4)
+  amrex::Error("expecting ngrow_distance==4");
 
  if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_make_distance)
   amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
  if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_make_distance)
   amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
 
- debug_ngrow(HOLD_LS_DATA_MF,normal_probe_size+3,30);
+ debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM)) 
   amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
 
@@ -13535,10 +13530,6 @@ NavierStokes::level_phase_change_rate_extend() {
     amrex::Error("burnvelfab.nComp() invalid");
    }
 
-   int ngrow=normal_probe_size+3;
-   if (ngrow!=4)
-    amrex::Error("expecting ngrow==4");
-
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
@@ -13557,7 +13548,7 @@ NavierStokes::level_phase_change_rate_extend() {
     &nmat,
     &nten,
     &ncomp,
-    &ngrow,
+    &ngrow_distance,
     latent_heat.dataPtr(),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
@@ -13906,6 +13897,11 @@ NavierStokes::level_phase_change_convert(
  } else
   amrex::Error("expecting ngrow_expansion==2");
 
+ if (ngrow_distance==4) {
+  // do nothing
+ } else
+  amrex::Error("expecting ngrow_distance==4");
+
  int nmat=num_materials;
  int nten=num_interfaces;
 
@@ -14072,7 +14068,6 @@ NavierStokes::level_phase_change_convert(
      &bfact, 
      velbc.dataPtr(),
      &dt_slab,
-     &normal_probe_size,
      nodevelfab.dataPtr(),
      ARLIM(nodevelfab.loVect()),ARLIM(nodevelfab.hiVect()),
      burnvelfab.dataPtr(),
@@ -14109,7 +14104,7 @@ NavierStokes::level_phase_change_convert(
   amrex::Error("i_phase_change invalid");
   
 
- VOF_Recon_resize(normal_probe_size+3,SLOPE_RECON_MF);
+ VOF_Recon_resize(ngrow_distance,SLOPE_RECON_MF);
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -14179,7 +14174,6 @@ NavierStokes::level_phase_change_convert(
     &im_opp_outer,
     &ngrow_expansion,
     &level,&finest_level,
-    &normal_probe_size,
     &nmat,
     &nten,
     &nden,

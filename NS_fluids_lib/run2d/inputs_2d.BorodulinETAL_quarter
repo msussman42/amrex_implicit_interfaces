@@ -145,7 +145,6 @@ ns.constant_density_all_time=1 1 # expansion 1..nmat
 ns.constant_volume_mdot=0 0 # expansion 1..2 nten
 #ns.constant_volume_mdot=-1 0 # sealed
 #evap: freezing_model=6 Palmore and Desjardins 
-ns.constrain_normal_probe_for_evap=0
 ns.freezing_model=6 0
 # 1..2*nten
 ns.Tanasawa_or_Schrage_or_Kassemi= 0 0 # 3=Kassemi 0=Palmore and Desjardins
