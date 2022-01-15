@@ -3520,7 +3520,7 @@ stop
        tid, &
        im_outer, &     ! im_outer and im_opp_outer define an interface
        im_opp_outer, & ! between im_outer and im_opp_outer.
-       ngrow_expansion, &
+       ngrow_expansion_in, &
        level,finest_level, &
        nmat, &
        nten, &
@@ -3579,7 +3579,7 @@ stop
       INTEGER_T, intent(in) :: im_opp_outer
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: ngrow_expansion
+      INTEGER_T, intent(in) :: ngrow_expansion_in
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nden
@@ -3892,6 +3892,10 @@ stop
 
       if (ngrow_expansion.ne.2) then
        print *,"ngrow_expansion invalid"
+       stop
+      endif
+      if (ngrow_expansion_in.ne.2) then
+       print *,"ngrow_expansion_in invalid"
        stop
       endif
       if (ngrow_distance.ne.4) then
@@ -7105,7 +7109,7 @@ stop
        stefan_flag, &  ! do not update LSnew if stefan_flag==0
        level, &
        finest_level, &
-       ngrow_distance, &
+       ngrow_distance_in, &
        nstate, &
        nmat, &
        nten, &
@@ -7202,7 +7206,7 @@ stop
       INTEGER_T :: user_override_TI_YI
       INTEGER_T :: probe_ok
       REAL_T :: microscale_probe_size
-      INTEGER_T, intent(in) :: ngrow_distance
+      INTEGER_T, intent(in) :: ngrow_distance_in
       INTEGER_T, intent(in) :: nstate
       INTEGER_T, target, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
@@ -7555,6 +7559,10 @@ stop
 
       if (ngrow_distance.ne.4) then
        print *,"expecting ngrow_distance==4 in fort_ratemasschange"
+       stop
+      endif
+      if (ngrow_distance_in.ne.4) then
+       print *,"expecting ngrow_distance_in==4 in fort_ratemasschange"
        stop
       endif
 
