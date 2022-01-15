@@ -13901,6 +13901,11 @@ NavierStokes::level_phase_change_convert(
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid level_phase_change_convert");
 
+ if (ngrow_expansion==2) {
+  // do nothing
+ } else
+  amrex::Error("expecting ngrow_expansion==2");
+
  int nmat=num_materials;
  int nten=num_interfaces;
 
@@ -14293,10 +14298,20 @@ NavierStokes::phase_change_redistributeALL() {
  int nmat=num_materials;
  int nten=num_interfaces;
 
+ if (ngrow_expansion==2) {
+  // do nothing
+ } else
+  amrex::Error("expecting ngrow_expansion==2");
+
+ if (ngrow_distance==4) {
+  // do nothing
+ } else
+  amrex::Error("expecting ngrow_distance==4");
+
  int finest_level=parent->finestLevel();
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.getStateDist_localMF(LSNEW_MF,2*ngrow_expansion,cur_time_slab,4);
+  ns_level.getStateDist_localMF(LSNEW_MF,ngrow_distance,cur_time_slab,4);
  }
 
  mdotplus.resize(thread_class::nthreads);
@@ -14371,11 +14386,11 @@ NavierStokes::phase_change_redistributeALL() {
       mdot_lost_complement[tid]=0.0;
      }
 
-     allocate_array(2*ngrow_expansion,1,-1,donorflag_MF);
-     setVal_array(2*ngrow_expansion,1,0.0,donorflag_MF);
+     allocate_array(ngrow_distance,1,-1,donorflag_MF);
+     setVal_array(ngrow_distance,1,0.0,donorflag_MF);
 
-     allocate_array(2*ngrow_expansion,1,-1,donorflag_complement_MF);
-     setVal_array(2*ngrow_expansion,1,0.0,donorflag_complement_MF);
+     allocate_array(ngrow_distance,1,-1,donorflag_complement_MF);
+     setVal_array(ngrow_distance,1,0.0,donorflag_complement_MF);
 
       // isweep==0: fort_tagexpansion
       // isweep==1: fort_distributeexpansion
@@ -14644,6 +14659,16 @@ NavierStokes::level_phase_change_redistribute(
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid level_phase_change_redistribute");
 
+ if (ngrow_expansion==2) {
+  // do nothing
+ } else
+  amrex::Error("expecting ngrow_expansion==2");
+
+ if (ngrow_distance==4) {
+  // do nothing
+ } else
+  amrex::Error("expecting ngrow_distance==4");
+
  int nmat=num_materials;
  int nten=num_interfaces;
  int scomp_mofvars=STATECOMP_MOF;
@@ -14661,7 +14686,7 @@ NavierStokes::level_phase_change_redistribute(
  
  if (localMF[LSNEW_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM))
   amrex::Error("localMF[LSNEW_MF]->nComp() invalid");
- debug_ngrow(LSNEW_MF,2*ngrow_expansion,6001);
+ debug_ngrow(LSNEW_MF,ngrow_distance,6001);
 
  const Real* dx = geom.CellSize();
 
@@ -14672,12 +14697,12 @@ NavierStokes::level_phase_change_redistribute(
 
  if ((isweep==0)||(isweep==1)||(isweep==2)) {
 
-  if (localMF[donorflag_MF]->nGrow()!=2*ngrow_expansion)
+  if (localMF[donorflag_MF]->nGrow()!=ngrow_distance)
    amrex::Error("localMF[donorflag_MF]->ngrow() invalid");
   if (localMF[donorflag_MF]->nComp()!=1)
    amrex::Error("localMF[donorflag_MF]->nComp() invalid");
 
-  if (localMF[donorflag_complement_MF]->nGrow()!=2*ngrow_expansion)
+  if (localMF[donorflag_complement_MF]->nGrow()!=ngrow_distance)
    amrex::Error("localMF[donorflag_complement_MF]->ngrow() invalid");
   if (localMF[donorflag_complement_MF]->nComp()!=1)
    amrex::Error("localMF[donorflag_complement_MF]->nComp() invalid");
