@@ -254,8 +254,6 @@ ns.Tanasawa_or_Schrage_or_Kassemi=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 # NO EVAPORATION
 ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
 
-
-ns.constrain_normal_probe_for_evap=0
 #vapor from "12" evaporation is dumped into species 1 within the air.
 #EVAPORATION:
 #ns.mass_fraction_id=1 0 0 0 0 0 0 0 0 0 0 0

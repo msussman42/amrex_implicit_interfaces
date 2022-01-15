@@ -2879,6 +2879,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         amrex::Error("ngrow_expansion!=2");
        if (ngrow_make_distance!=3)
         amrex::Error("ngrow_make_distance!=3");
+       if (ngrow_distance!=4)
+        amrex::Error("ngrow_distance!=4");
 
         // first nten components correspond to the status.
        int nburning=EXTRAP_NCOMP_BURNING;
@@ -2957,7 +2959,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        allocate_levelsetLO_ALL(ngrow_distance,HOLD_LS_DATA_MF);
        if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
         amrex::Error("hold_LS_DATA_MF (nComp()) !=nmat*(AMREX_SPACEDIM+1)");
-       debug_ngrow(HOLD_LS_DATA_MF,normal_probe_size+3,30);
+       debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
 
        for (int ilev=level;ilev<=finest_level;ilev++) {
         NavierStokes& ns_level=getLevel(ilev);
@@ -11780,7 +11782,7 @@ void NavierStokes::multiphase_project(int project_option) {
    // data at time = cur_time_slab
   getState_localMF_listALL(
     TEMPERATURE_SMOOTH_MF,
-    normal_probe_size+3,
+    ngrow_distance,
     state_index_thermal,
     scomp_thermal,
     ncomp_thermal);

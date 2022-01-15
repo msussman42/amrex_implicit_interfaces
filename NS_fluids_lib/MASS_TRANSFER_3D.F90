@@ -3239,7 +3239,6 @@ stop
        bfact, &
        velbc, &
        dt, &
-       normal_probe_size, &
        unode,DIMS(unode), &
        ucell,DIMS(ucell), &
        oldLS,DIMS(oldLS), &
@@ -3257,7 +3256,6 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nburning
-      INTEGER_T, intent(in) :: normal_probe_size
       INTEGER_T ncomp_per_burning
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -3273,7 +3271,9 @@ stop
       REAL_T, pointer :: unode_ptr(D_DECL(:,:,:),:)
 
       REAL_T, target, intent(in) ::  ucell(DIMV(ucell),nburning) 
+      REAL_T, pointer :: ucell_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: oldLS(DIMV(oldLS),nmat*(1+SDIM))
+      REAL_T, pointer :: oldLS_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
 
@@ -3296,6 +3296,8 @@ stop
       nhalf=3
 
       unode_ptr=>unode
+      ucell_ptr=>ucell
+      oldLS_ptr=>oldLS
 
       if (bfact.lt.1) then
        print *,"bfact invalid117"
@@ -3338,11 +3340,6 @@ stop
        stop
       endif
 
-      if (normal_probe_size.ne.1) then
-       print *,"normal_probe_size invalid"
-       stop
-      endif
-
       if (levelrz.eq.0) then
        ! do nothing
       else if (levelrz.eq.1) then
@@ -3357,12 +3354,20 @@ stop
        stop
       endif
        
+      if (ngrow_distance.eq.4) then
+       ! do nothing
+      else
+       print *,"ngrow_distance invalid"
+       stop
+      endif
 
       call checkbound_array(fablo,fabhi,unode_ptr,1,-1,12)
-      call checkbound_array(fablo,fabhi,ucell,1,-1,12)
-      call checkbound_array(fablo,fabhi,oldLS,normal_probe_size+3,-1,1257)
+      call checkbound_array(fablo,fabhi,ucell_ptr,1,-1,12)
+      call checkbound_array(fablo,fabhi,oldLS_ptr,ngrow_distance,-1,1257)
 
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif
@@ -3517,7 +3522,6 @@ stop
        im_opp_outer, & ! between im_outer and im_opp_outer.
        ngrow_expansion, &
        level,finest_level, &
-       normal_probe_size, &
        nmat, &
        nten, &
        nden, &
@@ -3576,7 +3580,6 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: ngrow_expansion
-      INTEGER_T, intent(in) :: normal_probe_size
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nden
@@ -3891,6 +3894,10 @@ stop
        print *,"ngrow_expansion invalid"
        stop
       endif
+      if (ngrow_distance.ne.4) then
+       print *,"ngrow_distance invalid"
+       stop
+      endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid in convert_material"
@@ -3898,10 +3905,6 @@ stop
       endif
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
-       stop
-      endif
-      if (normal_probe_size.ne.1) then
-       print *,"normal_probe_size invalid"
        stop
       endif
       if (bfact.lt.1) then
@@ -4061,7 +4064,7 @@ stop
 
       call checkbound_array(fablo,fabhi,JUMPFAB_ptr,ngrow_expansion,-1,1256)
       call checkbound_array(fablo,fabhi,TgammaFAB_ptr,ngrow_expansion,-1,1256)
-      call checkbound_array(fablo,fabhi,LSold_ptr,normal_probe_size+3,-1,1257)
+      call checkbound_array(fablo,fabhi,LSold_ptr,ngrow_distance,-1,1257)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1,1258)
       call checkbound_array(fablo,fabhi,recon_ptr,1,-1,1259)
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1,1261)
@@ -6457,8 +6460,6 @@ stop
       return
       end subroutine fort_convertmaterial
 
-
-        ! ngrow corresponds to normal_probe_size+3
       subroutine fort_extend_burning_vel( &
         velflag, &
         level, &
@@ -7104,7 +7105,6 @@ stop
        stefan_flag, &  ! do not update LSnew if stefan_flag==0
        level, &
        finest_level, &
-       normal_probe_size, &
        ngrow_distance, &
        nstate, &
        nmat, &
@@ -7201,7 +7201,6 @@ stop
       INTEGER_T :: local_probe_constrain
       INTEGER_T :: user_override_TI_YI
       INTEGER_T :: probe_ok
-      INTEGER_T, intent(in) :: normal_probe_size
       REAL_T :: microscale_probe_size
       INTEGER_T, intent(in) :: ngrow_distance
       INTEGER_T, intent(in) :: nstate
@@ -7334,7 +7333,6 @@ stop
       INTEGER_T im_substrate_source
       INTEGER_T im_substrate_dest
       INTEGER_T, target :: im_source,im_dest
-      INTEGER_T, target :: ngrow
       INTEGER_T nten_test
       INTEGER_T, target :: tcomp_source
       INTEGER_T, target :: tcomp_dest
@@ -7536,10 +7534,6 @@ stop
        print *,"num_state_base invalid"
        stop
       endif
-      if (normal_probe_size.ne.1) then
-       print *,"normal_probe_size invalid"
-       stop
-      endif
 
       microscale_probe_size=1.0D-2
 
@@ -7559,17 +7553,8 @@ stop
        stop
       endif
 
-      ngrow=normal_probe_size+3
-
       if (ngrow_distance.ne.4) then
        print *,"expecting ngrow_distance==4 in fort_ratemasschange"
-       stop
-      endif
-
-      if (ngrow.ne.ngrow_distance) then
-       print *,"ngrow or ngrow_distance invalid in fort_ratemasschange"
-       print *,"ngrow=",ngrow
-       print *,"ngrow_distance=",ngrow_distance
        stop
       endif
 
@@ -7625,8 +7610,8 @@ stop
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,1251)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1,1253)
       call checkbound_array(fablo,fabhi,Snew_ptr,1,-1,1253)
-      call checkbound_array(fablo,fabhi,EOS_ptr,ngrow,-1,1254)
-      call checkbound_array1(fablo,fabhi,pres_ptr,ngrow,-1,1255)
+      call checkbound_array(fablo,fabhi,EOS_ptr,ngrow_distance,-1,1254)
+      call checkbound_array1(fablo,fabhi,pres_ptr,ngrow_distance,-1,1255)
       call checkbound_array1(fablo,fabhi,pres_eos_ptr,1,-1,1255)
 
 
@@ -7657,10 +7642,11 @@ stop
         ngrow_make_distance,-1,1250)
 
        recon_ptr=>recon
-       call checkbound_array(fablo,fabhi,recon_ptr,ngrow,-1,1251)
-       call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1,1252)
+       call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1,1251)
+       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1,1252)
        LS_slopes_FD_ptr=>LS_slopes_FD
-       call checkbound_array(fablo,fabhi,LS_slopes_FD_ptr,ngrow,-1,1253)
+       call checkbound_array(fablo,fabhi,LS_slopes_FD_ptr, &
+               ngrow_distance,-1,1253)
 
       else if (nucleation_flag.eq.1) then
        ! do nothing
@@ -7992,11 +7978,10 @@ stop
                    nrmPROBE(dir)=nrmCP(dir)
 
                     ! normal_probe_factor=1/2 or 1
-                    ! normal_probe_size=1
                    xdst(dir)=xI(dir)- &
-                    normal_probe_factor*normal_probe_size*dxmin*nrmPROBE(dir) 
+                    normal_probe_factor*dxmin*nrmPROBE(dir) 
                    xsrc(dir)=xI(dir)+ &
-                    normal_probe_factor*normal_probe_size*dxmin*nrmPROBE(dir)
+                    normal_probe_factor*dxmin*nrmPROBE(dir)
                    xdst_micro(dir)=xI(dir)- &
                     microscale_probe_size*dxmin*nrmPROBE(dir) 
                    xsrc_micro(dir)=xI(dir)+ &
@@ -8013,9 +7998,9 @@ stop
 
                    xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
                    xdst(dir)=xI(dir)+ &
-                      normal_probe_factor*normal_probe_size*dxmin*nrmPROBE(dir) 
+                      normal_probe_factor*dxmin*nrmPROBE(dir) 
                    xsrc(dir)=xI(dir)- &
-                      normal_probe_factor*normal_probe_size*dxmin*nrmPROBE(dir)
+                      normal_probe_factor*dxmin*nrmPROBE(dir)
                    xdst_micro(dir)=xI(dir)+ &
                       microscale_probe_size*dxmin*nrmPROBE(dir) 
                    xsrc_micro(dir)=xI(dir)- &
