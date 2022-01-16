@@ -25343,7 +25343,8 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
   else
    amrex::Error("project_option invalid makeStateCurv");
 
-  MultiFab* CL_velocity=getState(2,0,(AMREX_SPACEDIM+1),cl_time);
+  MultiFab* CL_velocity=getState(2,STATECOMP_VEL,
+     STATE_NCOMP_VEL+STATE_NCOMP_PRES,cl_time);
   MultiFab* den=getStateDen(2,cl_time);
   if (den->nComp()!=nmat*num_state_material)
    amrex::Error("invalid ncomp for den");

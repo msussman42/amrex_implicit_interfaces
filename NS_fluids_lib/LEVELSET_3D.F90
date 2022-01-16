@@ -3910,9 +3910,9 @@ stop
       maskcov_ptr=>maskcov
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,2896)
       LSPC_ptr=>LSPC
-      call checkbound_array(fablo,fabhi,LSPC_ptr,RD,-1,2897)
+      call checkbound_array(fablo,fabhi,LSPC_ptr,ngrow_distance,-1,2897)
       recon_ptr=>recon
-      call checkbound_array(fablo,fabhi,recon_ptr,RD,-1,2898)
+      call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1,2898)
       masknbr_ptr=>masknbr
       call checkbound_array(fablo,fabhi,masknbr_ptr,1,-1,2899)
       curvfab_ptr=>curvfab
@@ -4305,6 +4305,7 @@ stop
               istenhi(dirloc)=1
              enddo
 FIX ME ALWAYS HAVE mask2=1
+i.e. use safedata(always) + finite diff curv if mask2=0.
              if (mask2.eq.0) then ! mask2==0 => not interior cell 
               RD_HEIGHT=ngrow_distance-1
              else if (mask2.eq.1) then ! mask2==1 => interior cell
