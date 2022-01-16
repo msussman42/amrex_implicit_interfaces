@@ -660,7 +660,6 @@ int  NavierStokes::bicgstab_max_num_outer_iter=60;
 Real NavierStokes::projection_pressure_scale=1.0;
 Real NavierStokes::projection_velocity_scale=1.0;
 
-int NavierStokes::curv_stencil_height=4; 
 int NavierStokes::ngrow_distance=4;
 int NavierStokes::ngrow_make_distance=3;
 
@@ -3313,11 +3312,6 @@ NavierStokes::read_params ()
 
     pp.get("twall",twall);
 
-    pp.query("curv_stencil_height",curv_stencil_height);
-    if (curv_stencil_height!=4)
-     amrex::Error("must have curv_stencil_height==4");
-
-
     pp.query("bicgstab_max_num_outer_iter",bicgstab_max_num_outer_iter);
 
     pp.query("EILE_flag",EILE_flag);
@@ -5279,8 +5273,6 @@ NavierStokes::read_params ()
 
      std::cout << "post_init_pressure_solve " << 
        post_init_pressure_solve << '\n';
-
-     std::cout << "curv_stencil_height " << curv_stencil_height << '\n';
 
      std::cout << "projection_pressure_scale " << 
        projection_pressure_scale << '\n';
@@ -12473,8 +12465,6 @@ NavierStokes::prepare_mask_nbr(int ngrow) {
 
  if (ngrow_distance!=4)
   amrex::Error("ngrow_distance invalid");
- if (curv_stencil_height!=ngrow_distance)
-  amrex::Error("curv_stencil_height invalid");
 
  if ((ngrow<1)||(ngrow>ngrow_distance))
   amrex::Error("ngrow invalid");
@@ -25289,9 +25279,6 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
  else
   amrex::Error("CoordSys bust 9");
 
- if (curv_stencil_height!=4)
-  amrex::Error("curv_stencil_height invalid");
-
  if (ngrow_distance!=4)
   amrex::Error("ngrow_distance invalid");
 
@@ -25453,8 +25440,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
      &visc_coef,
      &nmat,&nten,
      &num_curv,
-     &ngrow_distance,
-     &curv_stencil_height);
+     &ngrow_distance);
   } // mfi
 } //omp
   ns_reconcile_d_num(123);
@@ -25479,9 +25465,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
 
     std::cout << "c++ level,finest_level " << level << ' ' <<
      finest_level << '\n';
-    std::cout << "c++ ngrow,csten " << ngrow_distance << ' ' <<
-     curv_stencil_height << ' ' << '\n';
-
+    std::cout << "c++ ngrow_distance " << ngrow_distance << '\n';
     std::cout << "curv_min_local(HT)= " << curv_min_local[0] << '\n';
     std::cout << "curv_max_local(HT)= " << curv_max_local[0] << '\n';
 

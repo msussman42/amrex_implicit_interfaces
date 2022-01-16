@@ -329,7 +329,6 @@ stop
 
       subroutine initpforce( &
         bfact,dx,xsten0, &
-        RD,RDx,RD_HEIGHT, &
         time, &
         lsdata, &
         dir,nmat, &
@@ -338,20 +337,24 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T bfact
-      INTEGER_T RD,RDx,RD_HEIGHT
-      REAL_T dx(SDIM)
-      REAL_T xsten0(-RDx:RDx,SDIM)
-      REAL_T time
-      INTEGER_T nmat,im,im_opp
-      INTEGER_T dir
-      REAL_T lsdata( &
-       D_DECL(-RD:RD,-RD:RD,-RD:RD),nmat)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: xsten0( &
+        -(2*ngrow_distance+1):(2*ngrow_distance+1), &
+        SDIM)
+      REAL_T, intent(in) :: time
+      INTEGER_T, intent(in) :: nmat,im,im_opp
+      INTEGER_T, intent(in) :: dir
+      REAL_T, intent(in) :: lsdata( &
+        D_DECL(-ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance), &
+        nmat)
 
-      REAL_T pforce
+      REAL_T, intent(out) :: pforce
 
       INTEGER_T is_pforce_probtype
-      REAL_T columnLS(-RD:RD)
+      REAL_T columnLS(-ngrow_distance:ngrow_distance)
       INTEGER_T icolumn
       REAL_T n1d
       REAL_T col_ht_LS
@@ -377,20 +380,12 @@ stop
 
       if (is_pforce_probtype.eq.1) then
 
-       if (RD.lt.4) then
-        print *,"RD invalid in initpforce RD=",RD
+       if (ngrow_distance.ne.4) then
+        print *,"ngrow_distance invalid in initpforce"
         stop
        endif
-       if (RD_HEIGHT.lt.3) then
-        print *,"RD_HEIGHT invalid ",RD_HEIGHT
-        stop
-       endif
-       if (RD_HEIGHT.lt.RD-1) then
-        print *,"RD_HEIGHT<RD-1 RD_HEIGHT= ",RD_HEIGHT
-        stop
-       endif
-       if (RDx.ne.2*RD+1) then
-        print *,"RDx invalid"
+       if (ngrow_make_distance.ne.3) then
+        print *,"ngrow_make_distance invalid in initpforce"
         stop
        endif
 
@@ -416,7 +411,7 @@ stop
         stop
        endif
 
-       do icolumn=-RD_HEIGHT,RD_HEIGHT
+       do icolumn=-ngrow_distance,ngrow_distance
 
         if (dir.eq.0) then
          columnLS(icolumn)=lsdata(D_DECL(icolumn,0,0),im)- &
@@ -444,7 +439,6 @@ stop
         local_vof_height, & !=0
         crossing_status, &
         bfact,dx,xsten0, &
-        RD,RDx,RD_HEIGHT, &
         columnLS, &
         columnLS, &
         col_ht_LS, &
@@ -634,8 +628,7 @@ stop
         im3, &
         nmat, &
         visc_coef,nten, &
-        im,im_opp,iten, &
-        RD,RDx,RD_HEIGHT)
+        im,im_opp,iten)
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
@@ -659,7 +652,6 @@ stop
       INTEGER_T :: im3_present_node
       INTEGER_T, intent(in) :: iten
       INTEGER_T :: iten_test
-      INTEGER_T, intent(in) :: RD,RDx,RD_HEIGHT
       REAL_T, intent(in) :: visc_coef
       REAL_T user_tension(nten)
       REAL_T, intent(in) :: dx(SDIM)
@@ -673,18 +665,25 @@ stop
  
       INTEGER_T dir2
 
-      REAL_T columnLS(-RD:RD)
-      REAL_T columnVOF(-RD:RD)
+      REAL_T columnLS(-ngrow_distance:ngrow_distance)
+      REAL_T columnVOF(-ngrow_distance:ngrow_distance)
 
       REAL_T lsdata( &
-       D_DECL(-RD:RD,-RD:RD,-RD:RD))  
+        D_DECL(-ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance))
       REAL_T vofdata( &
-       D_DECL(-RD:RD,-RD:RD,-RD:RD))  
+        D_DECL(-ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance))
 
       REAL_T htfunc_LS(-1:1,-1:1)
       REAL_T htfunc_VOF(-1:1,-1:1)
 
-      REAL_T, intent(in) :: xsten(-RDx:RDx,SDIM)
+      REAL_T, intent(in) :: xsten( &
+       -(2*ngrow_distance+1):(2*ngrow_distance+1), &
+       SDIM))
+              
       REAL_T xsten_curv(-2:2,SDIM)
 
       REAL_T, intent(in) :: velsten( &
@@ -694,10 +693,16 @@ stop
        D_DECL(-1:1,-1:1,-1:1),nmat)
 
       REAL_T, intent(in) :: lssten( &
-       D_DECL(-RD:RD,-RD:RD,-RD:RD),nmat)
+        D_DECL(-ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance), &
+        nmat)
 
       REAL_T, intent(in) :: vofsten( &
-       D_DECL(-RD:RD,-RD:RD,-RD:RD),nmat)
+        D_DECL(-ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance), &
+        nmat)
 
       REAL_T, intent(in) :: nrmsten( &
        D_DECL(-1:1,-1:1,-1:1),SDIM*nmat)
@@ -790,7 +795,10 @@ stop
       REAL_T RR
       REAL_T dnrm(SDIM)
       REAL_T dxsten(SDIM)
-      INTEGER_T im_primary_sten(D_DECL(-RD:RD,-RD:RD,-RD:RD))
+      INTEGER_T im_primary_sten( &
+        D_DECL(-ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance))
 
       INTEGER_T crossing_status
       INTEGER_T overall_crossing_status
@@ -842,6 +850,9 @@ stop
       REAL_T dr
       REAL_T h_of_z,hprime_of_z,hdprime_of_z
       REAL_T hprime_of_r,hdprime_of_r
+      INTEGER_T nhalf_height ! in: initheightLS
+
+      nhalf_height=2*ngrow_distance+1 
 
       call get_dxmax(dx,bfact,dxmax)
       call get_dxmaxLS(dx,bfact,dxmaxLS)
@@ -888,16 +899,12 @@ stop
        print *,"bfact invalid85"
        stop
       endif
-      if (RD.ne.4) then
-       print *,"expecting RD=4=ngrow_distance in initheightLS RD=",RD
+      if (ngrow_distance.ne.4) then
+       print *,"expecting ngrow_distance=4 in initheightLS"
        stop
       endif
-      if (RDx.ne.2*RD+1) then
-       print *,"RDx invalid"
-       stop
-      endif
-      if ((RD_HEIGHT.ne.RD).and.(RD_HEIGHT.ne.RD-1)) then
-       print *,"RD_HEIGHT not RD or RD-1. RD_HEIGHT= ",RD_HEIGHT
+      if (ngrow_make_distance.ne.3) then
+       print *,"expecting ngrow_make_distance=3 in initheightLS"
        stop
       endif
       if (nmat.ne.num_materials) then
@@ -938,8 +945,8 @@ stop
       if (SDIM.eq.3) then
        klo_sten_short=-1
        khi_sten_short=1
-       klo_sten_ht=-RD_HEIGHT
-       khi_sten_ht=RD_HEIGHT
+       klo_sten_ht=-ngrow_distance
+       khi_sten_ht=ngrow_distance
       else if (SDIM.eq.2) then
        klo_sten_short=0
        khi_sten_short=0
@@ -986,7 +993,6 @@ stop
        print *,"ii,jj,kk ",ii,jj,kk
        print *,"time= ",time
        print *,"im,im_opp,iten ",im,im_opp,iten
-       print *,"RD,RDx,RD_HEIGHT ",RD,RDx,RD_HEIGHT
        stop
       endif 
 
@@ -1047,7 +1053,7 @@ stop
        ! centroid in absolute coordinate system
        ! returns a volume fraction
       call getvolume( &
-       bfact,dx,xsten,RDx, &
+       bfact,dx,xsten,nhalf_height, &
        LS1_save,volpos,facearea, &
        cenpos,areacentroid,VOFTOL,SDIM)
 
@@ -1154,8 +1160,8 @@ stop
 
       im3=0
       LSMAX=-1.0D+10
-      do i=-RD_HEIGHT,RD_HEIGHT
-      do j=-RD_HEIGHT,RD_HEIGHT
+      do i=-ngrow_distance,ngrow_distance
+      do j=-ngrow_distance,ngrow_distance
       do k=klo_sten_ht,khi_sten_ht
 
        do imhold=1,nmat
@@ -1199,7 +1205,7 @@ stop
        endif ! abs(i)<=1 abs(j)<=1 abs(k)<=1
       enddo
       enddo
-      enddo ! i,j,k (-RD_HEIGHT .. RD_HEIGHT)
+      enddo ! i,j,k (-ngrow_distance .. ngrow_distance)
      
       cos_angle=zero
       sin_angle=zero
@@ -1305,14 +1311,14 @@ stop
        stop
       endif
 
-      lmin=-RD_HEIGHT
-      lmax=RD_HEIGHT
+      lmin=-ngrow_distance
+      lmax=ngrow_distance
 
       if ((levelrz.eq.1).or.(levelrz.eq.3)) then
        if (dircrit.eq.1) then ! horizontal column
         do while (xsten(2*lmin,dircrit).lt.zero)
          lmin=lmin+1
-         if (2*lmin.gt.RDx) then
+         if (2*lmin.gt.2*ngrow_distance+1) then
           print *,"lmin too big"
           stop
          endif
@@ -1358,7 +1364,7 @@ stop
         stop
        endif
         
-       do kheight=-RD_HEIGHT,RD_HEIGHT
+       do kheight=-ngrow_distance,ngrow_distance
 
         if (dircrit.eq.1) then
          icell=kheight
@@ -1387,7 +1393,6 @@ stop
         vof_height_function, &
         crossing_status, &
         bfact,dx,xsten, &
-        RD,RDx,RD_HEIGHT, &
         columnLS, &
         columnVOF, &
         col_ht_LS, &
@@ -3663,8 +3668,7 @@ stop
        visc_coef, &
        nmat,nten, & 
        num_curv, &
-       ngrow_distance_in, &
-       RD) &
+       ngrow_distance_in) &
       bind(c,name='fort_curvstrip')
 
       use global_utility_module
@@ -3681,7 +3685,6 @@ stop
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: ngrow_distance_in
-      INTEGER_T, intent(in) :: RD
       INTEGER_T, intent(in) :: num_curv
       INTEGER_T icurv
       INTEGER_T, intent(in) :: nmat
@@ -3808,11 +3811,15 @@ stop
        D_DECL(-1:1,-1:1,-1:1),nmat)
 
       REAL_T lssten( &
-        D_DECL(-RD:RD,-RD:RD,-RD:RD), &
+        D_DECL(-ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance), &
         nmat)
 
       REAL_T vofsten( &
-        D_DECL(-RD:RD,-RD:RD,-RD:RD), &
+        D_DECL(-ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance, &
+               -ngrow_distance:ngrow_distance), &
         nmat)
 
       REAL_T, dimension(:,:), allocatable :: xsten0
@@ -3824,8 +3831,7 @@ stop
       INTEGER_T side_index
 
       INTEGER_T nhalf
-      INTEGER_T RDx
-      INTEGER_T RD_HEIGHT
+      INTEGER_T nhalf_height ! in: fort_curvstrip
       INTEGER_T mask1,mask2
       INTEGER_T local_mask
       INTEGER_T ihist
@@ -3839,19 +3845,12 @@ stop
        print *,"ngrow_distance_in invalid in curvstrip"
        stop
       endif 
-      if (RD.ne.4) then
-       print *,"RD invalid in curvstrip"
-       stop
-      endif
-      if (RD.ne.ngrow_distance) then
-       print *,"expecting RD==ngrow_distance"
-       stop
-      endif
-      RDx=2*RD+1
  
       nhalf=3
       allocate(xsten0(-nhalf:nhalf,SDIM))
-      allocate(xsten_curv(-RDx:RDx,SDIM))
+      allocate(xsten_curv( &
+       -(2*ngrow_distance+1):(2*ngrow_distance+1), &
+       SDIM))
  
       if (bfact.lt.1) then
        print *,"bfact invalid90"
@@ -4305,7 +4304,7 @@ stop
               istenlo(dirloc)=-1
               istenhi(dirloc)=1
              enddo
-
+FIX ME ALWAYS HAVE mask2=1
              if (mask2.eq.0) then ! mask2==0 => not interior cell 
               RD_HEIGHT=ngrow_distance-1
              else if (mask2.eq.1) then ! mask2==1 => interior cell
@@ -4318,11 +4317,12 @@ stop
              LSstenlo(3)=0
              LSstenhi(3)=0
              do dirloc=1,SDIM
-              LSstenlo(dirloc)=-RD_HEIGHT
-              LSstenhi(dirloc)=RD_HEIGHT
+              LSstenlo(dirloc)=-ngrow_distance
+              LSstenhi(dirloc)=ngrow_distance
              enddo
-    
-             call gridsten_level(xsten_curv,i,j,k,level,RDx)
+   
+             nhalf_height=2*ngrow_distance+1 
+             call gridsten_level(xsten_curv,i,j,k,level,nhalf_height)
 
              ! get normals at the cell center.
              do inormal=1,SDIM*nmat
@@ -4487,7 +4487,7 @@ stop
                im_majority,im_opp,im_main,im_main_opp
              endif
 
-             ! i1,j1,k1=-RD_HEIGHT..RD_HEIGHT
+             ! i1,j1,k1=-ngrow_distance ... ngrow_distance
              do i1=LSstenlo(1),LSstenhi(1)
              do j1=LSstenlo(2),LSstenhi(2)
              do k1=LSstenlo(3),LSstenhi(3)
@@ -4496,9 +4496,9 @@ stop
                do inormal=1,SDIM*nmat
                 nrm_local(inormal)=LSPC(D_DECL(i+i1,j+j1,k+k1),nmat+inormal)
                enddo
-              else if ((abs(i1).le.RD_HEIGHT).and. &
-                       (abs(j1).le.RD_HEIGHT).and. &
-                       (abs(k1).le.RD_HEIGHT)) then
+              else if ((abs(i1).le.ngrow_distance).and. &
+                       (abs(j1).le.ngrow_distance).and. &
+                       (abs(k1).le.ngrow_distance)) then
                ! do nothing
               else
                print *,"i1,j1, or k1 invalid"
@@ -4542,9 +4542,9 @@ stop
                  inormal=(im_curv-1)*SDIM+dirloc
                  nrmsten(D_DECL(i1,j1,k1),inormal)=nrm_mat(dirloc)
                 enddo
-               else if ((abs(i1).le.RD_HEIGHT).and. &
-                        (abs(j1).le.RD_HEIGHT).and. &
-                        (abs(k1).le.RD_HEIGHT)) then
+               else if ((abs(i1).le.ngrow_distance).and. &
+                        (abs(j1).le.ngrow_distance).and. &
+                        (abs(k1).le.ngrow_distance)) then
                 ! do nothing
                else
                 print *,"i1,j1, or k1 invalid"
@@ -4607,20 +4607,17 @@ stop
               im3, &
               nmat, &
               visc_coef,nten, &
-              im_main,im_main_opp,iten, &
-              RD,RDx,RD_HEIGHT)
+              im_main,im_main_opp,iten)
 
              if (DEBUG_CURVATURE.eq.1) then
               print *,"i,j,k,dircrossing,sidestar,nrm ", &
                i,j,k,dircrossing,sidestar, &
                nrm_center(1),nrm_center(2),nrm_center(SDIM)
-              print *,"RD,RDx,RD_HEIGHT ",RD,RDx,RD_HEIGHT
               print *,"curv_cellHT,curv_cellFD ",curv_cellHT,curv_cellFD
              endif
           
              call initpforce( &
               bfact,dx,xsten0, &
-              RD,RDx,RD_HEIGHT, &
               time, &
               lssten, &
               dircrossing-1,nmat, &

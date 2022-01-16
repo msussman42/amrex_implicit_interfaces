@@ -5240,8 +5240,7 @@ void NavierStokes::make_physics_vars(int project_option) {
    std::cout << "make_physics_vars \n";
    std::cout << "c++ level,finest_level " << level << ' ' <<
      finest_level << '\n';
-   std::cout << "c++ ngrow,csten " << ngrow_distance << ' ' <<
-     curv_stencil_height << ' ' << '\n';
+   std::cout << "c++ ngrow_distance " << ngrow_distance << '\n';
 
    std::cout << "local_curv_min= " << local_curv_min[0] << '\n';
    std::cout << "local_curv_max= " << local_curv_max[0] << '\n';

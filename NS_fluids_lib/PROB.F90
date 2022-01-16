@@ -20470,7 +20470,8 @@ END SUBROUTINE Adist
       subroutine pressure_force(x,t,pforce)
       IMPLICIT NONE
 
-      REAL_T x,t,pforce
+      REAL_T, intent(in) :: x,t
+      REAL_T, intent(out) :: pforce
       REAL_T t_stopforce
       REAL_T h,mu,t_startup,wavelen
       REAL_T factor,factor_test,k

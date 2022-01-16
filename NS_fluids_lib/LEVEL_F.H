@@ -569,8 +569,7 @@ namespace amrex{
        Real* visc_coef,
        int* nmat,int* nten,
        int* num_curv,
-       int* ngrow_distance,
-       int* curv_sten);
+       int* ngrow_distance);
 
      void fort_init_particle_container(
         Real* particles_weight_XD,
