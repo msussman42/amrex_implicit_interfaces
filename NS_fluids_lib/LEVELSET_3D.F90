@@ -682,7 +682,7 @@ stop
 
       REAL_T, intent(in) :: xsten( &
        -(2*ngrow_distance+1):(2*ngrow_distance+1), &
-       SDIM))
+       SDIM)
               
       REAL_T xsten_curv(-2:2,SDIM)
 
@@ -3681,6 +3681,7 @@ stop
       INTEGER_T, intent(in) :: nhistory
       INTEGER_T, intent(in) :: post_restart_flag
       INTEGER_T, intent(in) :: vof_height_function
+      INTEGER_T :: vof_height_function_local
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nten
@@ -4304,12 +4305,13 @@ stop
               istenlo(dirloc)=-1
               istenhi(dirloc)=1
              enddo
-FIX ME ALWAYS HAVE mask2=1
-i.e. use safedata(always) + finite diff curv if mask2=0.
+
+             vof_height_function_local=vof_height_function
+
              if (mask2.eq.0) then ! mask2==0 => not interior cell 
-              RD_HEIGHT=ngrow_distance-1
+              vof_height_function_local=0
              else if (mask2.eq.1) then ! mask2==1 => interior cell
-              RD_HEIGHT=RD
+              ! do nothing
              else
               print *,"mask2 invalid"
               stop
@@ -4493,26 +4495,20 @@ i.e. use safedata(always) + finite diff curv if mask2=0.
              do j1=LSstenlo(2),LSstenhi(2)
              do k1=LSstenlo(3),LSstenhi(3)
 
-              if ((abs(i1).le.1).and.(abs(j1).le.1).and.(abs(k1).le.1)) then
-               do inormal=1,SDIM*nmat
-                nrm_local(inormal)=LSPC(D_DECL(i+i1,j+j1,k+k1),nmat+inormal)
-               enddo
-              else if ((abs(i1).le.ngrow_distance).and. &
-                       (abs(j1).le.ngrow_distance).and. &
-                       (abs(k1).le.ngrow_distance)) then
-               ! do nothing
-              else
-               print *,"i1,j1, or k1 invalid"
-               stop
-              endif
+              do inormal=1,SDIM*nmat
+               call safe_data(i+i1,j+j1,k+k1,nmat+inormal, &
+                 LSPC_ptr,nrm_local(inormal))
+              enddo
 
               do im_curv=1,nmat
-               LSCEN_hold(im_curv)=LSPC(D_DECL(i+i1,j+j1,k+k1),im_curv)
+               call safe_data(i+i1,j+j1,k+k1,im_curv, &
+                 LSPC_ptr,LSCEN_hold(im_curv))
                vofcomp=(im_curv-1)*ngeom_recon+1
-               vofsten(D_DECL(i1,j1,k1),im_curv)= &
-                  recon(D_DECL(i+i1,j+j1,k+k1),vofcomp)
+               call safe_data(i+i1,j+j1,k+k1,vofcomp, &
+                 recon_ptr, &
+                 vofsten(D_DECL(i1,j1,k1),im_curv))
+              enddo !im_curv=1..nmat
 
-              enddo
               call FIX_LS_tessellate(LSCEN_hold,LSCEN_hold_fixed,nmat)
  
               do im_curv=1,nmat
@@ -4556,7 +4552,7 @@ i.e. use safedata(always) + finite diff curv if mask2=0.
 
              enddo
              enddo
-             enddo ! i1,j1,k1 (init nrmsten and lssten)
+             enddo ! i1,j1,k1=LSstenlo,LSstenhi (init nrmsten,lssten,vofsten)
  
              ! i1,j1,k1=-1..1
              do i1=istenlo(1),istenhi(1)
@@ -4581,7 +4577,7 @@ i.e. use safedata(always) + finite diff curv if mask2=0.
              ! tension used to find contact angle (scaling not 
              ! necessary)
              call initheightLS( &
-              vof_height_function, &
+              vof_height_function_local, &
               i,j,k, &
               level, &
               finest_level, &

@@ -764,8 +764,11 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(FD_NRM_ND_fab)
       INTEGER_T, intent(in) :: DIMDEC(CURV_CELL)
       REAL_T, intent(in), target :: F_new(DIMV(F_new),nmat)
+      REAL_T, pointer :: F_new_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
+      REAL_T, pointer :: LS_new_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: FD_NRM_ND_fab(DIMV(FD_NRM_ND_fab),n_normal)
+      REAL_T, pointer :: FD_NRM_ND_fab_ptr(D_DECL(:,:,:),:)
        ! first nmat+nten components are curvature
        ! second nmat+nten components are status (0=bad 1=good)
       REAL_T, intent(out), target ::  &
@@ -807,6 +810,8 @@ stop
       REAL_T, dimension(nmat,-3:3,-3:3) :: vf_curv
       REAL_T, dimension(nmat,-3:3,-3:3) :: ls_curv
       INTEGER_T ngrow_null
+      REAL_T curv_LS
+      REAL_T curv_VOF
 
       ngrow_null=0
       nhalf=3 
@@ -849,10 +854,13 @@ stop
        print *,"n_normal invalid node_to_cell n_normal ",n_normal
        stop
       endif
- 
-      call checkbound_array(fablo,fabhi,F_new,ngrow_distance,-1,2875)
-      call checkbound_array(fablo,fabhi,LS_new,ngrow_distance,-1,2875)
-      call checkbound_array(fablo,fabhi,FD_NRM_ND_fab, &
+
+      F_new_ptr=>F_new 
+      call checkbound_array(fablo,fabhi,F_new_ptr,ngrow_distance,-1,2875)
+      LS_new_ptr=>LS_new 
+      call checkbound_array(fablo,fabhi,LS_new_ptr,ngrow_distance,-1,2875)
+      FD_NRM_ND_fab_ptr=>FD_NRM_ND_fab
+      call checkbound_array(fablo,fabhi,FD_NRM_ND_fab_ptr, &
               ngrow_distance,-1,2876)
       call checkbound_array(fablo,fabhi,CURV_CELL_ptr, &
               ngrow_make_distance,-1,2877)
@@ -974,6 +982,126 @@ stop
          print *,"im invalid 112"
          stop
         endif
+
+        do dir=1,SDIM
+         local_curv(dir)=zero
+        enddo
+
+        ibase=(im-1)*(SDIM+1)
+
+        do dir=1,SDIM
+         do i1=0,1
+         do j1=0,1
+         do k1=0,k1hi
+          local_normal(dir)=FD_NRM_ND_fab(D_DECL(i+i1,j+j1,k+k1),ibase+dir)
+          local_mag=FD_NRM_ND_fab(D_DECL(i+i1,j+j1,k+k1),ibase+SDIM+1)
+          if (local_mag.gt.zero) then
+           ! do nothing
+          else if (local_mag.eq.zero) then
+           local_status=0
+          else
+           print *,"local_mag invalid"
+           stop
+          endif
+
+          sign_nm=one
+          if (((dir.eq.1).and.(i1.eq.0)).or. &
+              ((dir.eq.2).and.(j1.eq.0)).or. &
+              ((dir.eq.3).and.(SDIM.eq.3).and.(k1.eq.0))) then
+           sign_nm=-one
+          endif
+          RR=one
+          if (levelrz.eq.0) then
+           ! do nothing
+          else if (levelrz.eq.1) then
+           if (dir.eq.1) then
+            RR=xsten(2*i1-1,dir)
+            if (RR.lt.zero) then
+             RR=zero
+            endif
+           endif
+          else if (levelrz.eq.3) then
+           if (dir.eq.1) then
+            RR=xsten(2*i1-1,dir)
+            if (RR.lt.zero) then
+             RR=zero
+            endif
+           endif
+          else
+           print *,"dir invalid"
+           stop
+          endif
+
+          local_curv(dir)=local_curv(dir)+sign_nm*RR*local_normal(dir)
+         enddo !  k1
+         enddo !  j1
+         enddo !  i1
+         xplus=xsten(1,dir)
+         xminus=xsten(-1,dir)
+         xmiddle=xsten(0,dir)
+         if ((xplus.gt.xminus).and. &
+             (xplus.gt.xmiddle).and. &
+             (xmiddle.gt.xminus)) then
+          local_curv(dir)=local_curv(dir)/(denom_factor*(xplus-xminus))
+         else
+          print *,"xplus or xminus invalid"
+          stop
+         endif
+         RR=one
+         if (levelrz.eq.0) then
+          RR=one
+         else if (levelrz.eq.1) then
+          RR=one
+          if (dir.eq.1) then
+           if (xmiddle.le.zero) then
+            local_curv(dir)=zero
+           else if (xmiddle.gt.zero) then
+            RR=xmiddle
+           else
+            print *,"xmiddle invalid"
+            stop
+           endif
+          endif
+         else if (levelrz.eq.3) then
+          RR=one
+          if (dir.eq.1) then
+           if (xmiddle.le.zero) then
+            local_curv(dir)=zero
+           else if (xmiddle.gt.zero) then
+            RR=xmiddle
+           else
+            print *,"xmiddle invalid"
+            stop
+           endif
+          endif
+          if (dir.eq.2) then ! theta direction
+           if (xsten(0,1).le.zero) then
+            local_curv(dir)=zero
+           else if (xsten(0,1).gt.zero) then
+            RR=xsten(0,1)
+           else
+            print *,"xsten(0,1) invalid"
+            stop
+           endif
+          endif 
+         else
+          print *,"levelrz invalid"
+          stop
+         endif
+         local_curv(dir)=local_curv(dir)/RR
+        enddo ! dir=1..sdim 
+
+        total_curv=zero
+        do dir=1,SDIM
+         total_curv=total_curv+local_curv(dir)
+        enddo
+        curv_LS=total_curv
+
+         FIX ME, check VOF function for regularity ....
+
+
+
+
 
 
        if (height_function_flag.eq.0) then
