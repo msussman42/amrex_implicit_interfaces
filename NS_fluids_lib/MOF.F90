@@ -12122,7 +12122,6 @@ contains
        vof_height_function, &
        crossing_status, &
        bfact,dx,xsten0, &
-       csten,csten_x,csten_HT, &
        lsdata, &
        vofdata, &
        ht_from_LS, &
@@ -12139,12 +12138,15 @@ contains
       INTEGER_T, intent(in) :: vof_height_function
       INTEGER_T, intent(out) :: crossing_status
       INTEGER_T, intent(in) :: sdim
-      INTEGER_T, intent(in) :: csten,csten_x,csten_HT
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(in) :: dx(sdim)
-      REAL_T, intent(in) :: xsten0(-csten_x:csten_x,sdim)
-      REAL_T, intent(in) :: lsdata(-csten:csten)
-      REAL_T, intent(in) :: vofdata(-csten:csten)
+      REAL_T, intent(in) :: xsten0( &
+        -(2*ngrow_distance+1):(2*ngrow_distance+1), &
+        sdim)
+      REAL_T, intent(in) :: lsdata( &
+        -ngrow_distance:ngrow_distance)
+      REAL_T, intent(in) :: vofdata( &
+        -ngrow_distance:ngrow_distance)
       REAL_T, intent(out) :: ht_from_LS
       REAL_T, intent(out) :: ht_from_VOF
       REAL_T, intent(in) :: n1d
@@ -12162,22 +12164,18 @@ contains
       REAL_T X_AT_ABS_LSMIN,ABS_LSMIN,LSTEST
 
       REAL_T ls1,ls2,x1,x2,slope
-      REAL_T charfn(-csten:csten)
+      REAL_T charfn(-ngrow_distance:ngrow_distance)
       REAL_T LS
       REAL_T vof_top_sum,vof_bot_sum
       REAL_T dr,dz,volcell,vof_crit
       REAL_T dx_norm,dx_tan1,dx_tan2
 
-      if (csten_x.ne.2*csten+1) then
-       print *,"csten_x invalid"
+      if (ngrow_distance.ne.4) then
+       print *,"ngrow_distance invalid"
        stop
       endif
-      if (csten.lt.4) then
-       print *,"csten invalid csten=",csten 
-       stop
-      endif
-      if (csten_HT.lt.3) then
-       print *,"csten_HT invalid ",csten_HT
+      if (ngrow_make_distance.ne.3) then
+       print *,"ngrow_make_distance invalid"
        stop
       endif
       if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
@@ -12216,13 +12214,13 @@ contains
        stop
       endif
 
-      lmin=-csten_HT
-      lmax=csten_HT
+      lmin=-ngrow_distance
+      lmax=ngrow_distance
       if ((levelrz.eq.1).or.(levelrz.eq.3)) then
        if (dircrit.eq.1) then ! horizontal column
         do while (xsten0(2*lmin,dircrit).lt.zero)
          lmin=lmin+1
-         if (2*lmin.gt.csten_x) then
+         if (2*lmin.gt.2*ngrow_distance+1) then
           print *,"lmin too big"
           stop
          endif
@@ -12264,7 +12262,7 @@ contains
 
        ! n1d>0 if LS>0 material on top and LS<0 material on bottom.
        ! n1d<0 otherwise
-      do l=0,csten_HT-1
+      do l=0,ngrow_make_distance
 
         ! first check upper half of stencil for a crossing
        if ((crossing_status.eq.0).and.(l+1.le.lmax)) then 
@@ -12313,7 +12311,7 @@ contains
          endif
         endif   
        endif
-      enddo ! l=0,csten_HT-1
+      enddo ! l=0,ngrow_make_distance
 
 
          ! given volume for column, find the interface.

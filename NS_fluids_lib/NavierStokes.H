@@ -1698,7 +1698,6 @@ protected:
     //
     static Real init_shrink;   // reduction factor of first esimated timestep
     static Real cfl;           // desired maximum cfl
-    static int  curv_stencil_height; // should be 4
 
     static int  MOF_TURN_OFF_LS;
     static int  MOF_DEBUG_RECON;
