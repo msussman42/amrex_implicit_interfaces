@@ -563,17 +563,20 @@ stop
        print *,"ngrow_make_distance_in.ne.3"
        stop
       endif
-
+      if (ngrow_distance.ne.4) then
+       print *,"ngrow_distance.ne.4"
+       stop
+      endif
       n_normal_test=(SDIM+1)*(nten+nmat)
       if (n_normal_test.ne.n_normal) then
        print *,"n_normal invalid fd_node_normal n_normal ",n_normal
        stop
       endif
  
-      call checkbound_array(fablo,fabhi,LS_new, &
-        ngrow_make_distance+1,-1,2873)
+      call checkbound_array(fablo,fabhi,LS_new,ngrow_distance,-1,2873)
       call checkbound_array(fablo,fabhi,FD_NRM_ND_fab_ptr, &
-        ngrow_make_distance+1,-1,2874)
+              ngrow_distance,-1,2874)
+
       if (nmat.eq.num_materials) then
        ! do nothing
       else
@@ -715,6 +718,12 @@ stop
       return
       end subroutine fort_fd_node_normal
 
+       ! since the following command is issued after this command:
+       ! "localMF[FD_CURV_CELL_MF]->FillBoundary(geom.periodicity());"
+       ! we zero out "CURV_CELL" in the ghost cells.  i.e. the status
+       ! should be 0 ("invalid") at coarse/fine borders and domain
+       ! borders.  At fine-fine borders, the status should be corrected
+       ! after the FillBoundary command.
       subroutine fort_node_to_cell( &
        level, &
        finest_level, &
@@ -797,7 +806,9 @@ stop
       INTEGER_T curv_valid
       REAL_T, dimension(nmat,-3:3,-3:3) :: vf_curv
       REAL_T, dimension(nmat,-3:3,-3:3) :: ls_curv
+      INTEGER_T ngrow_null
 
+      ngrow_null=0
       nhalf=3 
 
       CURV_CELL_ptr=>CURV_CELL
@@ -823,6 +834,10 @@ stop
        print *,"ngrow_make_distance_in.ne.3"
        stop
       endif
+      if (ngrow_distance.ne.4) then
+       print *,"ngrow_distance invalid"
+       stop
+      endif
 
       nten_test=num_interfaces
       if (nten_test.ne.nten) then
@@ -835,10 +850,10 @@ stop
        stop
       endif
  
-      call checkbound_array(fablo,fabhi,F_new,ngrow_make_distance+1,-1,2875)
-      call checkbound_array(fablo,fabhi,LS_new,ngrow_make_distance+1,-1,2875)
+      call checkbound_array(fablo,fabhi,F_new,ngrow_distance,-1,2875)
+      call checkbound_array(fablo,fabhi,LS_new,ngrow_distance,-1,2875)
       call checkbound_array(fablo,fabhi,FD_NRM_ND_fab, &
-              ngrow_make_distance+1,-1,2876)
+              ngrow_distance,-1,2876)
       call checkbound_array(fablo,fabhi,CURV_CELL_ptr, &
               ngrow_make_distance,-1,2877)
 
@@ -895,56 +910,75 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+       ! first nmat+nten components are curvature
+       ! second nmat+nten components are status (0=bad 1=good)
+       do im=1,2*(nmat+nten)
+        CURV_CELL(D_DECL(i,j,k),im)=zero
+       enddo
+      enddo
+      enddo
+      enddo
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,ngrow_null)
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+       ! first nmat+nten components are curvature
+       ! second nmat+nten components are status (0=bad 1=good)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
-       if (height_function_flag.eq.0) then
+       do im=1,nmat+nten
 
-        do im=1,nmat+nten
+        do im_local=1,nmat
+         local_LS(im_local)=LS_new(D_DECL(i,j,k),im_local)
+        enddo
+        call get_primary_material(local_LS,nmat,im_primary)
+        call get_secondary_material(local_LS,nmat,im_primary,im_secondary)
+        local_status=1
 
-         do im_local=1,nmat
-          local_LS(im_local)=LS_new(D_DECL(i,j,k),im_local)
-         enddo
-         call get_primary_material(local_LS,nmat,im_primary)
-         call get_secondary_material(local_LS,nmat,im_primary,im_secondary)
-
-         local_status=1
-         if ((im.ge.1).and.(im.le.nmat)) then
-          if ((im.ne.im_primary).and. &
-              (im.ne.im_secondary)) then
-           local_status=0
-          endif
-          if (is_rigid(nmat,im).eq.1) then
+        if ((im.ge.1).and.(im.le.nmat)) then
+         if ((im.ne.im_primary).and. &
+             (im.ne.im_secondary)) then
+          local_status=0
+         endif
+         if (is_rigid(nmat,im).eq.1) then
+          ! do nothing
+         else if (is_rigid(nmat,im).eq.0) then
+          if (is_rigid(nmat,im_primary).eq.0) then
            ! do nothing
-          else if (is_rigid(nmat,im).eq.0) then
-           if (is_rigid(nmat,im_primary).eq.0) then
-            ! do nothing
-           else if (is_rigid(nmat,im_primary).eq.1) then
-            local_status=0
-           else
-            print *,"is_rigid(nmat,im_primary) invalid"
-            stop
-           endif
+          else if (is_rigid(nmat,im_primary).eq.1) then
+           local_status=0
           else
-           print *,"is_rigid(nmat,im) invalid"
+           print *,"is_rigid(nmat,im_primary) invalid"
            stop
           endif
-         else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
-          iten=im-nmat
-          call get_inverse_iten(im1,im2,iten,nmat)
-          if ((im1.ne.im_primary).and. &
-              (im1.ne.im_secondary)) then
-           local_status=0
-          endif
-          if ((im2.ne.im_primary).and. &
-              (im2.ne.im_secondary)) then
-           local_status=0
-          endif
          else
-          print *,"im invalid 112"
+          print *,"is_rigid(nmat,im) invalid"
           stop
          endif
-        
+        else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
+         iten=im-nmat
+         call get_inverse_iten(im1,im2,iten,nmat)
+         if ((im1.ne.im_primary).and. &
+             (im1.ne.im_secondary)) then
+          local_status=0
+         endif
+         if ((im2.ne.im_primary).and. &
+             (im2.ne.im_secondary)) then
+          local_status=0
+         endif
+        else
+         print *,"im invalid 112"
+         stop
+        endif
+
+
+       if (height_function_flag.eq.0) then
+
+
          do dir=1,SDIM
           local_curv(dir)=zero
          enddo
