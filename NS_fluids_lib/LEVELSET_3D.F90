@@ -346,9 +346,9 @@ stop
       INTEGER_T, intent(in) :: nmat,im,im_opp
       INTEGER_T, intent(in) :: dir
       REAL_T, intent(in) :: lsdata( &
-        D_DECL(-ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance), &
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance, &
         nmat)
 
       REAL_T, intent(out) :: pforce
@@ -414,14 +414,14 @@ stop
        do icolumn=-ngrow_distance,ngrow_distance
 
         if (dir.eq.0) then
-         columnLS(icolumn)=lsdata(D_DECL(icolumn,0,0),im)- &
-                           lsdata(D_DECL(icolumn,0,0),im_opp)
+         columnLS(icolumn)=lsdata(icolumn,0,0,im)- &
+                           lsdata(icolumn,0,0,im_opp)
         else if (dir.eq.1) then
-         columnLS(icolumn)=lsdata(D_DECL(0,icolumn,0),im)- &
-                           lsdata(D_DECL(0,icolumn,0),im_opp)
+         columnLS(icolumn)=lsdata(0,icolumn,0,im)- &
+                           lsdata(0,icolumn,0,im_opp)
         else if ((dir.eq.2).and.(SDIM.eq.3)) then
-         columnLS(icolumn)=lsdata(D_DECL(0,0,icolumn),im)- &
-                           lsdata(D_DECL(0,0,icolumn),im_opp)
+         columnLS(icolumn)=lsdata(0,0,icolumn,im)- &
+                           lsdata(0,0,icolumn,im_opp)
         else
          print *,"dir invalid initpforce"
          stop
@@ -669,13 +669,13 @@ stop
       REAL_T columnVOF(-ngrow_distance:ngrow_distance)
 
       REAL_T lsdata( &
-        D_DECL(-ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance))
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance)
       REAL_T vofdata( &
-        D_DECL(-ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance))
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance)
 
       REAL_T htfunc_LS(-1:1,-1:1)
       REAL_T htfunc_VOF(-1:1,-1:1)
@@ -687,25 +687,25 @@ stop
       REAL_T xsten_curv(-2:2,SDIM)
 
       REAL_T, intent(in) :: velsten( &
-       D_DECL(-1:1,-1:1,-1:1),SDIM)
+       -1:1,-1:1,-1:1,SDIM)
 
       REAL_T, intent(in) :: mgoni_temp( &
-       D_DECL(-1:1,-1:1,-1:1),nmat)
+       -1:1,-1:1,-1:1,nmat)
 
       REAL_T, intent(in) :: lssten( &
-        D_DECL(-ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance), &
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance, &
         nmat)
 
       REAL_T, intent(in) :: vofsten( &
-        D_DECL(-ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance), &
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance, &
         nmat)
 
       REAL_T, intent(in) :: nrmsten( &
-       D_DECL(-1:1,-1:1,-1:1),SDIM*nmat)
+       -1:1,-1:1,-1:1,SDIM*nmat)
 
       REAL_T, intent(in) :: nrmcenter(SDIM*nmat)
       REAL_T nrmtest(SDIM*nmat)
@@ -796,9 +796,9 @@ stop
       REAL_T dnrm(SDIM)
       REAL_T dxsten(SDIM)
       INTEGER_T im_primary_sten( &
-        D_DECL(-ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance))
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance)
 
       INTEGER_T crossing_status
       INTEGER_T overall_crossing_status
@@ -972,8 +972,8 @@ stop
       endif
 
       do im_sort=1,nmat
-       LS_CENTER(im_sort)=lssten(D_DECL(0,0,0),im_sort)
-       LS_OPP(im_sort)=lssten(D_DECL(ii,jj,kk),im_sort)
+       LS_CENTER(im_sort)=lssten(0,0,0,im_sort)
+       LS_OPP(im_sort)=lssten(ii,jj,kk,im_sort)
       enddo
 
       if (LS_CENTER(im).ge.zero) then
@@ -1027,7 +1027,7 @@ stop
       endif
 
       do im_sort=1,nmat
-       temperature_cen(im_sort)=mgoni_temp(D_DECL(0,0,0),im_sort)
+       temperature_cen(im_sort)=mgoni_temp(0,0,0,im_sort)
       enddo
 
       call get_user_tension(xcenter,time, &
@@ -1043,7 +1043,7 @@ stop
       do j=-1,1
       do k=klo_sten_short,khi_sten_short
        do imhold=1,nmat
-        LSTEST(imhold)=lssten(D_DECL(i,j,k),imhold)
+        LSTEST(imhold)=lssten(i,j,k,imhold)
        enddo
        call get_LS_extend(LSTEST,nmat,iten,LS1_save(D_DECL(i,j,k)))
       enddo
@@ -1112,10 +1112,10 @@ stop
         endif 
 
         gradT(dir2)=( &
-         mgoni_temp(D_DECL(iofs,jofs,kofs),im)+ &
-         mgoni_temp(D_DECL(iofs,jofs,kofs),im_opp)- &
-         mgoni_temp(D_DECL(-iofs,-jofs,-kofs),im)- &
-         mgoni_temp(D_DECL(-iofs,-jofs,-kofs),im_opp))/ &
+         mgoni_temp(iofs,jofs,kofs,im)+ &
+         mgoni_temp(iofs,jofs,kofs,im_opp)- &
+         mgoni_temp(-iofs,-jofs,-kofs,im)- &
+         mgoni_temp(-iofs,-jofs,-kofs,im_opp))/ &
          (two*RR*(xsten(2,dir2)-xsten(-2,dir2)))
 
         dotprod=dotprod+ &
@@ -1165,15 +1165,15 @@ stop
       do k=klo_sten_ht,khi_sten_ht
 
        do imhold=1,nmat
-        LSTEST(imhold)=lssten(D_DECL(i,j,k),imhold)
-        VOFTEST(imhold)=vofsten(D_DECL(i,j,k),imhold)
+        LSTEST(imhold)=lssten(i,j,k,imhold)
+        VOFTEST(imhold)=vofsten(i,j,k,imhold)
        enddo
         ! declared in GLOBALUTIL.F90
-       call get_LS_extend(LSTEST,nmat,iten,lsdata(D_DECL(i,j,k)))
-       call get_VOF_extend(VOFTEST,nmat,iten,vofdata(D_DECL(i,j,k)))
+       call get_LS_extend(LSTEST,nmat,iten,lsdata(i,j,k))
+       call get_VOF_extend(VOFTEST,nmat,iten,vofdata(i,j,k))
 
        call get_primary_material(LSTEST,nmat,imhold)
-       im_primary_sten(D_DECL(i,j,k))=imhold
+       im_primary_sten(i,j,k)=imhold
 
        if ((abs(i).le.1).and.(abs(j).le.1).and.(abs(k).le.1)) then
   
@@ -1258,7 +1258,7 @@ stop
 ! normal points towards "im"
 ! n=grad LS/|grad LS|
 
-      imhold=im_primary_sten(D_DECL(0,0,0))
+      imhold=im_primary_sten(0,0,0)
       do dir2=1,SDIM
        if (imhold.eq.im) then
         nfluid(dir2)=-nrmcenter(SDIM*(im_opp-1)+dir2)
@@ -1383,8 +1383,22 @@ stop
          stop
         endif
 
-        columnLS(kheight)=lsdata(D_DECL(icell,jcell,kcell))
-        columnVOF(kheight)=vofdata(D_DECL(icell,jcell,kcell))
+        if (SDIM.eq.2) then
+         if (kcell.eq.0) then
+          ! do nothing
+         else
+          print *,"expecting kcell=0"
+          stop
+         endif
+        else if (SDIM.eq.3) then
+         ! do nothing
+        else
+         print *,"SDIM invalid"
+         stop
+        endif 
+
+        columnLS(kheight)=lsdata(icell,jcell,kcell)
+        columnVOF(kheight)=vofdata(icell,jcell,kcell)
           
        enddo ! kheight
 
@@ -1936,7 +1950,7 @@ stop
       do k=klo_sten_short,khi_sten_short 
 
        do im_sort=1,nmat
-        LSTEST(im_sort)=lssten(D_DECL(i,j,k),im_sort) 
+        LSTEST(im_sort)=lssten(i,j,k,im_sort) 
        enddo
 
        ! nfluid is a normal to the im,im_opp interface
@@ -1945,7 +1959,7 @@ stop
        do imhold=1,nmat
         do dir2=1,SDIM
          nrmtest(SDIM*(imhold-1)+dir2)= &
-           nrmsten(D_DECL(i,j,k),SDIM*(imhold-1)+dir2)
+           nrmsten(i,j,k,SDIM*(imhold-1)+dir2)
         enddo
        enddo ! imhold
 
@@ -1979,7 +1993,7 @@ stop
 
          ! nsolid points into the solid
          do dir2=1,SDIM
-          nsolid(dir2)=nrmsten(D_DECL(i,j,k),SDIM*(im3-1)+dir2)
+          nsolid(dir2)=nrmsten(i,j,k,SDIM*(im3-1)+dir2)
          enddo
          RR=one
          call prepare_normal(nsolid,RR,mag)
@@ -2013,7 +2027,7 @@ stop
        endif
 
        do dir2=1,SDIM
-        nfluid(dir2)=nrmsten(D_DECL(i,j,k),SDIM*(im-1)+dir2)
+        nfluid(dir2)=nrmsten(i,j,k,SDIM*(im-1)+dir2)
        enddo
        RR=one
        call prepare_normal(nfluid,RR,mag)
@@ -2032,7 +2046,7 @@ stop
        enddo
 
        do dir2=1,SDIM
-        nfluid(dir2)=nrmsten(D_DECL(i,j,k),SDIM*(im_opp-1)+dir2)
+        nfluid(dir2)=nrmsten(i,j,k,SDIM*(im_opp-1)+dir2)
        enddo
        RR=one
        call prepare_normal(nfluid,RR,mag)
@@ -2094,7 +2108,7 @@ stop
            do k2=klo_sten_short,khi_sten_short
 
             ! positive in the solid/ice
-            LSTEST_EXTEND=lssten(D_DECL(i2,j2,k2),im3)
+            LSTEST_EXTEND=lssten(i2,j2,k2,im3)
   
             if (LSTEST_EXTEND.lt.zero) then
              wt=one
@@ -2105,7 +2119,7 @@ stop
 
             udotn=zero
             do dir2=1,SDIM
-             udotn=udotn+velsten(D_DECL(i2,j2,k2),dir2)*nproject(dir2)
+             udotn=udotn+velsten(i2,j2,k2,dir2)*nproject(dir2)
             enddo
             totaludotn=totaludotn+wt*udotn
            enddo
@@ -2329,7 +2343,7 @@ stop
       do k=klo_sten_short,khi_sten_short
 
        do imhold=1,nmat
-        LSTEST(imhold)=lssten(D_DECL(i,j,k),imhold)
+        LSTEST(imhold)=lssten(i,j,k,imhold)
        enddo
 
        ! FTEN=gamma1 K1 grad H1 + gamma2 K2 grad H2=
@@ -2416,7 +2430,7 @@ stop
       do j=-1,1
       do k=klo_sten_short,khi_sten_short
 
-       imhold=im_primary_sten(D_DECL(i,j,k))
+       imhold=im_primary_sten(i,j,k)
 
        do dir2=1,SDIM 
         n1=ncurv1_save(D_DECL(i,j,k),dir2)
@@ -2521,7 +2535,20 @@ stop
 
         enddo ! dir2
 
-        imhold=im_primary_sten(D_DECL(i,j,k))
+        if (SDIM.eq.2) then
+         if (k.eq.0) then
+          ! do nothing
+         else
+          print *,"k invalid"
+          stop
+         endif
+        else if (SDIM.eq.3) then
+         ! do nothing
+        else
+         print *,"dimension bust"
+         stop
+        endif
+        imhold=im_primary_sten(i,j,k)
         if (imhold.eq.im3) then
          im3_present_node=1
         else if ((imhold.ne.im3).and. &
@@ -3802,25 +3829,18 @@ stop
       REAL_T LS_STAR_FIXED(-1:1,SDIM,nmat)
       INTEGER_T im_star_majority(-1:1,SDIM)
 
-      REAL_T velsten( &
-       D_DECL(-1:1,-1:1,-1:1),SDIM)
-
-      REAL_T nrmsten( &
-       D_DECL(-1:1,-1:1,-1:1),SDIM*nmat)
-
-      REAL_T mgoni_temp( &
-       D_DECL(-1:1,-1:1,-1:1),nmat)
-
+      REAL_T velsten(-1:1,-1:1,-1:1,SDIM)
+      REAL_T nrmsten(-1:1,-1:1,-1:1,SDIM*nmat)
+      REAL_T mgoni_temp(-1:1,-1:1,-1:1,nmat)
       REAL_T lssten( &
-        D_DECL(-ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance), &
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance, &
         nmat)
-
       REAL_T vofsten( &
-        D_DECL(-ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance, &
-               -ngrow_distance:ngrow_distance), &
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance, &
+        -ngrow_distance:ngrow_distance, &
         nmat)
 
       REAL_T, dimension(:,:), allocatable :: xsten0
@@ -4506,14 +4526,14 @@ stop
                vofcomp=(im_curv-1)*ngeom_recon+1
                call safe_data(i+i1,j+j1,k+k1,vofcomp, &
                  recon_ptr, &
-                 vofsten(D_DECL(i1,j1,k1),im_curv))
+                 vofsten(i1,j1,k1,im_curv))
               enddo !im_curv=1..nmat
 
               call FIX_LS_tessellate(LSCEN_hold,LSCEN_hold_fixed,nmat)
  
               do im_curv=1,nmat
 
-               lssten(D_DECL(i1,j1,k1),im_curv)=LSCEN_hold_fixed(im_curv)
+               lssten(i1,j1,k1,im_curv)=LSCEN_hold_fixed(im_curv)
 
                if ((abs(i1).le.1).and.(abs(j1).le.1).and.(abs(k1).le.1)) then
                 do dirloc=1,SDIM
@@ -4537,7 +4557,7 @@ stop
                 call prepare_normal(nrm_mat,RR,mag)
                 do dirloc=1,SDIM
                  inormal=(im_curv-1)*SDIM+dirloc
-                 nrmsten(D_DECL(i1,j1,k1),inormal)=nrm_mat(dirloc)
+                 nrmsten(i1,j1,k1,inormal)=nrm_mat(dirloc)
                 enddo
                else if ((abs(i1).le.ngrow_distance).and. &
                         (abs(j1).le.ngrow_distance).and. &
@@ -4560,13 +4580,13 @@ stop
              do k1=istenlo(3),istenhi(3)
 
               do dirloc=1,SDIM
-               velsten(D_DECL(i1,j1,k1),dirloc)= &
+               velsten(i1,j1,k1,dirloc)= &
                 velfab(D_DECL(i+i1,j+j1,k+k1),dirloc)
               enddo
 
               do im_curv=1,nmat
                itemperature=(im_curv-1)*num_state_material+2
-               mgoni_temp(D_DECL(i1,j1,k1),im_curv)= &
+               mgoni_temp(i1,j1,k1,im_curv)= &
                 denfab(D_DECL(i+i1,j+j1,k+k1),itemperature)
               enddo
   
