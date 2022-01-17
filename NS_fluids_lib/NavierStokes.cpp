@@ -12626,7 +12626,7 @@ NavierStokes::prepare_displacement(int mac_grow) {
 
  localMF[CELL_VELOCITY_MF]->FillBoundary(geom.periodicity());
 
-}  // prepare_displacement
+}  // end subroutine prepare_displacement
 
 void
 NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
@@ -12643,6 +12643,11 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   // do nothing
  } else
   amrex::Error("expecting (ngrow_distance==4)");
+
+ if (ngrow_make_distance==3) {
+  // do nothing
+ } else
+  amrex::Error("expecting (ngrow_make_distance==3)");
 
  int rz_flag=0;
  if (geom.IsRZ())
@@ -12964,7 +12969,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
   if (localMF[FD_NRM_ND_MF]->nComp()!=n_normal)
    amrex::Error("localMF[FD_NRM_ND_MF]->nComp()!=n_normal");
-  if (localMF[FD_NRM_ND_MF]->nGrow()!=ngrow_make_distance+1)
+  if (localMF[FD_NRM_ND_MF]->nGrow()!=ngrow_distance)
    amrex::Error("localMF[FD_NRM_ND_MF] incorrect ngrow");
   debug_ixType(FD_NRM_ND_MF,-1,FD_NRM_ND_MF);
   
@@ -12989,14 +12994,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
   VOF_Recon_resize(ngrow_distance,SLOPE_RECON_MF);
   debug_ixType(SLOPE_RECON_MF,-1,SLOPE_RECON_MF);
-
-  MultiFab* hold_F_data_mf=new MultiFab(grids,dmap,nmat,ngrow_distance,
-     MFInfo().SetTag("hold_F_data_mf"),FArrayBoxFactory());
-
-  for (int im=0;im<nmat;im++) {
-   MultiFab::Copy(*hold_F_data_mf,*localMF[SLOPE_RECON_MF],
-     im*ngeom_recon,im,1,ngrow_distance);
-  }
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -13068,7 +13065,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
    const Real* xlo = grid_loc[gridno].lo();
 
-   FArrayBox& F_fab=(*hold_F_data_mf)[mfi];
+   FArrayBox& F_fab=(*localMF[SLOPE_RECON_MF])[mfi];
    FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
    FArrayBox& FD_NRM_ND_fab=(*localMF[FD_NRM_ND_MF])[mfi];
    FArrayBox& curvfab=(*localMF[FD_CURV_CELL_MF])[mfi];
@@ -13084,6 +13081,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     // fort_node_to_cell is declared in: MOF_REDIST_3D.F90
    int height_function_flag=0;
    fort_node_to_cell( 
+    &tid_current,
     &level,
     &finest_level,
     &height_function_flag,
@@ -13109,8 +13107,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   ns_reconcile_d_num(70);
 
   localMF[FD_CURV_CELL_MF]->FillBoundary(geom.periodicity());
-
-  delete hold_F_data_mf;
 
  } else if (nucleation_flag==1) {
   // do nothing

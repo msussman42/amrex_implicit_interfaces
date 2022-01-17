@@ -19297,10 +19297,15 @@ contains
 
        ! before (mofdata): fluids tessellate, solids are embedded.
        ! after  (mofdata): fluids and solids tessellate
-       ! if tessellate_in==1:
+       ! note if tessellate_in==1:
        !  The slope of fluid material whose volume fraction changes from
        !  one to less than one is initialized from a solid slope.
        !  The "order" for this fluid is set to nmat.
+       ! note if tessellate_in==3:
+       !  if solid material(s) dominate the cell, then F_solid_raster=1
+       !  and F_fluid=0.
+       !  if fluid material(s) dominate the cell, then F_solid=0,
+       !  sum F_fluid=1
       subroutine multi_get_volume_tessellate( &
        tessellate_in, & ! =1 or 3
        bfact,dx,xsten0,nhalf0, &

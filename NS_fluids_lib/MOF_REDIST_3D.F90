@@ -726,10 +726,11 @@ stop
        ! after the FillBoundary command.
        ! "fort_node_to_cell" is called after "fort_fd_node_normal"
       subroutine fort_node_to_cell( &
+       tid_current, &
        level, &
        finest_level, &
        height_function_flag, &  ! 1=> use height function 0 => use FD
-       F_new, &  !F_new(i,j,k,im)  im=1..nmat
+       F_new, &  !F_new(i,j,k,im)  im=1..nmat*ngeom_recon
        DIMS(F_new), &
        LS_new, &
        DIMS(LS_new), &
@@ -749,11 +750,12 @@ stop
 
       use global_utility_module
       use probcommon_module
+      use geometry_intersect_module
       use MOF_routines_module
-      use height_method_module
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: tid_current
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: height_function_flag
       INTEGER_T, intent(in) :: nmat
@@ -764,8 +766,10 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(F_new)
       INTEGER_T, intent(in) :: DIMDEC(FD_NRM_ND_fab)
       INTEGER_T, intent(in) :: DIMDEC(CURV_CELL)
-      REAL_T, intent(in), target :: F_new(DIMV(F_new),nmat)
+      REAL_T, intent(in), target :: F_new(DIMV(F_new),nmat*ngeom_recon)
       REAL_T, pointer :: F_new_ptr(D_DECL(:,:,:),:)
+      REAL_T, allocatable, target :: F_tess(D_DECL(:,:,:),:)
+      REAL_T, pointer :: F_tess_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
       REAL_T, pointer :: LS_new_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: FD_NRM_ND_fab(DIMV(FD_NRM_ND_fab),n_normal)
@@ -813,9 +817,19 @@ stop
       INTEGER_T ngrow_null
       REAL_T curv_LS
       REAL_T curv_VOF
+      REAL_T mofdata(nmat*ngeom_recon)
+      INTEGER_T tessellate
+      INTEGER_T caller_id
+      INTEGER_T nmax
+
+      if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
+       print *,"tid_current invalid"
+       stop
+      endif
 
       ngrow_null=0
       nhalf=3 
+      nmax=POLYGON_LIST_MAX ! in: fort_node_to_cell
 
       CURV_CELL_ptr=>CURV_CELL
 
@@ -912,6 +926,56 @@ stop
        print *,"dimension bust"
        stop
       endif
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,ngrow_distance)
+
+      allocate(F_tess(D_DECL(growlo(1):growhi(1), &
+          growlo(2):growhi(2), &
+          growlo(SDIM):growhi(SDIM)), &
+          1:nmat*ngeom_recon))
+      F_tess_ptr=>F_tess
+      call checkbound_array(tilelo,tilehi,F_tess_ptr,ngrow_distance,-1,2875)
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+       call gridsten_level(xsten,i,j,k,level,nhalf)
+
+       do im=1,nmat*ngeom_recon
+        mofdata(im)=F_new(D_DECL(i,j,k),im)
+       enddo
+
+       ! before (mofdata): fluids tessellate, solids are embedded.
+       ! after  (mofdata): fluids and solids tessellate
+       ! if tessellate==3:
+       !  if solid material(s) dominate the cell, then F_solid_raster=1
+       !  and F_fluid=0.
+       !  if fluid material(s) dominate the cell, then F_solid=0,
+       !  sum F_fluid=1
+       tessellate=3
+
+       caller_id=15
+       call multi_get_volume_tessellate( &
+         tessellate, & ! =1 or 3
+         bfact, &
+         dx, &
+         xsten,nhalf, &
+         mofdata, &
+         geom_xtetlist(1,1,1,tid_current+1), &
+         nmax, &
+         nmax, &
+         nmat, &
+         SDIM, &
+         caller_id)
+
+       do im=1,nmat*ngeom_recon
+        F_tess(D_DECL(i,j,k),im)=mofdata(im)
+       enddo
+
+      enddo
+      enddo
+      enddo
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow_make_distance)
@@ -1097,8 +1161,6 @@ stop
          total_curv=total_curv+local_curv(dir)
         enddo
         curv_LS=total_curv
-
-         FIX ME, check VOF function for regularity ....
 
          ! MAKE SURE F is TESSELLATING (stair case, rasterized)
          ! for 1<=im<=nmat, use F_m,  L_m=F_m-1/2, 
@@ -1431,6 +1493,8 @@ stop
       enddo
       enddo
       enddo  !i,j,k 
+
+      deallocate(F_tess)
 
       return
       end subroutine fort_node_to_cell

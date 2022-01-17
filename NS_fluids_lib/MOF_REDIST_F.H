@@ -39,6 +39,7 @@ namespace amrex{
        int* ngrow_make_distance);
 
      void fort_node_to_cell(
+       int* tid_current,
        int* level,
        int* finest_level,
        int* height_function_flag,
