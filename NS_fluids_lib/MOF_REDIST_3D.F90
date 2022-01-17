@@ -718,12 +718,13 @@ stop
       return
       end subroutine fort_fd_node_normal
 
-       ! since the following command is issued after this command:
-       ! "localMF[FD_CURV_CELL_MF]->FillBoundary(geom.periodicity());"
+       ! since the FillBoundary command is issued after this command,
+       ! "localMF[FD_CURV_CELL_MF]->FillBoundary(geom.periodicity());",
        ! we zero out "CURV_CELL" in the ghost cells.  i.e. the status
        ! should be 0 ("invalid") at coarse/fine borders and domain
        ! borders.  At fine-fine borders, the status should be corrected
        ! after the FillBoundary command.
+       ! "fort_node_to_cell" is called after "fort_fd_node_normal"
       subroutine fort_node_to_cell( &
        level, &
        finest_level, &
@@ -1099,7 +1100,23 @@ stop
 
          FIX ME, check VOF function for regularity ....
 
-
+         ! MAKE SURE F is TESSELLATING (stair case, rasterized)
+         ! for 1<=im<=nmat, use F_m,  L_m=F_m-1/2, 
+         !   L_m should change sign in the "cross" stencil.
+         !   L_m should be primary or secondary in the center,
+         !   and center should not be dominated by an "is_rigid" material.
+         ! for nmat+1<=im<=nmat+nten:
+         !  iten=im-nmat
+         !  iten => m1,m2
+         !  use (F_m1-F_m2+1)/2,L_m1=(1/2)((F_m1-1/2)-(F_m2-1/2))=(F_m1-F_m2)/2
+         !   L_m1 should change sign in the "cross" stencil.
+         !   both L_m1 and L_m2 should be primary or secondary in the center,
+         ! If a height function curvature can be succesfully computed
+         ! (assuming hypothetically that X-Y or X-Y-Z coordinates are used)
+         ! then no need to limit the interface temperature for evaporation or
+         ! condensation, otherwise the interface temperature (for evap or 
+         ! or condensation) must be limited. 
+ 
 
 
 
@@ -1367,6 +1384,7 @@ stop
 
           if (curv_valid.eq.1) then
 
+            ! declared in heightfunctioncurvature.F90
            call get_curvature_heightf(nmat,ls_curv,vf_curv,dx(1), &
               kappa,curv_valid)
 
