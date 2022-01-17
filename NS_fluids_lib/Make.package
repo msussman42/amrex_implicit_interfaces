@@ -23,7 +23,6 @@ CEXE_sources += Zeyu_Matrix_Functions.cpp
 CEXE_headers += Zeyu_Matrix_Functions.H 
 
 F90EXE_headers += \
-  heightfunctioncurvature.F90 \
   level_set_extrapolation.F90 \
   specfun.F90 \
   tetrahedron_keast_rule.F90 \
@@ -65,7 +64,6 @@ F90EXE_headers += \
  
 F90EXE_sources += \
   FILCC_3D.F90 \
-  heightfunctioncurvature.F90 \
   level_set_extrapolation.F90 \
   specfun.F90 \
   tetrahedron_keast_rule.F90 \
