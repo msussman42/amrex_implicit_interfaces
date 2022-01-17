@@ -718,6 +718,90 @@ stop
       return
       end subroutine fort_fd_node_normal
 
+      subroutine simple_htfunc_sum( &
+        stenlo,stenhi,vofsten, &
+        localsum,sign_change_dir, &
+        num_sign_changes_plus, &
+        num_sign_changes_minus)
+
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: stenlo(3)
+      INTEGER_T, intent(in) :: stenhi(3)
+      REAL_T, intent(in), &
+              dimension(-ngrow_distance:ngrow_distance, &
+                -ngrow_distance:ngrow_distance, &
+                -ngrow_distance:ngrow_distance) :: vofsten
+      REAL_T, intent(out) :: localsum
+      INTEGER_T, intent(in) :: sign_change_dir
+      INTEGER_T, intent(out) :: num_sign_changes_plus
+      INTEGER_T, intent(out) :: num_sign_changes_minus
+      INTEGER_T :: i1,j1,k1
+      INTEGER_T :: dir
+      INTEGER_T :: ibase(3),itop(3)
+      REAL_T LS_base,LS_top
+
+      num_sign_changes_plus=0
+      num_sign_changes_minus=0
+      localsum=zero
+      do i1=stenlo(1),stenhi(1)
+      do j1=stenlo(2),stenhi(2)
+      do k1=stenlo(3),stenhi(3)
+       ibase(1)=i1
+       ibase(2)=j1
+       ibase(3)=k1
+       localsum=localsum+vofsten(i1,j1,k1)
+       if (sign_change_dir.eq.0) then
+        ! do nothing
+       else if ((sign_change_dir.ge.1).and. &
+                (sign_change_dir.le.SDIM)) then 
+        do dir=1,3
+         itop(dir)=ibase(dir)
+        enddo
+        itop(sign_change_dir)=itop(sign_change_dir)+1
+        if (itop(sign_change_dir).le.ngrow_distance) then
+         LS_base=vofsten(i1,j1,k1)-half
+         LS_top=vofsten(itop(1),itop(2),itop(3))-half
+         if ((LS_base.le.zero).and. &
+             (LS_top.ge.zero).and. &
+             (LS_base.lt.LS_top)) then
+          num_sign_changes_plus=num_sign_changes_plus+1
+         else if ((LS_base.ge.zero).and. &
+                  (LS_top.le.zero).and. &
+                  (LS_base.gt.LS_top)) then
+          num_sign_changes_minus=num_sign_changes_minus+1
+         else if ((LS_base.eq.zero).and. &
+                  (LS_top.eq.zero)) then
+          num_sign_changes_plus=num_sign_changes_plus+1
+          num_sign_changes_minus=num_sign_changes_minus+1
+         else if ((LS_base.gt.zero).and. &
+                  (LS_top.gt.zero)) then
+          ! do nothing
+         else if ((LS_base.lt.zero).and. &
+                  (LS_top.lt.zero)) then
+          ! do nothing
+         else
+          print *,"LS_base or LS_top invalid"
+          stop
+         endif
+        else if (itop(sign_change_dir).eq.ngrow_distance+1) then
+         ! do nothing
+        else
+         print *,"itop(sign_change_dir) invalid"
+         stop
+        endif
+       else
+        print *,"sign_change_dir invalid"
+        stop
+       endif
+      enddo !k1
+      enddo !j1
+      enddo !i1
+
+      end subroutine simple_htfunc_sum
+
+
        ! since the FillBoundary command is issued after this command,
        ! "localMF[FD_CURV_CELL_MF]->FillBoundary(geom.periodicity());",
        ! we zero out "CURV_CELL" in the ghost cells.  i.e. the status
@@ -768,8 +852,11 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(CURV_CELL)
       REAL_T, intent(in), target :: F_new(DIMV(F_new),nmat*ngeom_recon)
       REAL_T, pointer :: F_new_ptr(D_DECL(:,:,:),:)
+
       REAL_T, allocatable, target :: F_tess(D_DECL(:,:,:),:)
       REAL_T, pointer :: F_tess_ptr(D_DECL(:,:,:),:)
+      INTEGER_T DIMDEC(F_tess)
+
       REAL_T, intent(in), target :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
       REAL_T, pointer :: LS_new_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: FD_NRM_ND_fab(DIMV(FD_NRM_ND_fab),n_normal)
@@ -792,6 +879,7 @@ stop
       INTEGER_T k1hi
       INTEGER_T i,j,k
       INTEGER_T i1,j1,k1
+      INTEGER_T ii,jj,kk
       INTEGER_T im
       INTEGER_T im_local
       INTEGER_T im1,im2
@@ -799,6 +887,8 @@ stop
       INTEGER_T iten
       INTEGER_T ibase
       INTEGER_T dir
+      INTEGER_T dirloc
+      INTEGER_T side
       REAL_T local_curv(SDIM)
       REAL_T local_normal(SDIM)
       REAL_T local_mag
@@ -808,21 +898,37 @@ stop
       REAL_T total_curv
       INTEGER_T local_status
       REAL_T local_LS(nmat)
-      REAL_T F_local
-      REAL_T LS_local
-      REAL_T, dimension(D_DECL(-ngrow_distance:ngrow_distance, &
+      REAL_T, dimension(-ngrow_distance:ngrow_distance, &
                 -ngrow_distance:ngrow_distance, &
-                -ngrow_distance:ngrow_distance)) :: vofsten
-      REAL_T, dimension(D_DECL(-ngrow_distance:ngrow_distance, &
+                -ngrow_distance:ngrow_distance) :: vofsten
+      REAL_T, dimension(-ngrow_distance:ngrow_distance, &
                 -ngrow_distance:ngrow_distance, &
-                -ngrow_distance:ngrow_distance)) :: lssten
+                -ngrow_distance:ngrow_distance) :: lssten
       INTEGER_T ngrow_null
       REAL_T curv_LS
       REAL_T curv_VOF
+      REAL_T curv_choice
       REAL_T mofdata(nmat*ngeom_recon)
       INTEGER_T tessellate
       INTEGER_T caller_id
       INTEGER_T nmax
+      INTEGER_T LSstenlo(3),LSstenhi(3)
+      INTEGER_T HTstenlo(3),HTstenhi(3)
+      REAL_T vof_local(nmat)
+      REAL_T slopesum(SDIM,-1:1)
+      REAL_T localsum
+      INTEGER_T sign_change
+      INTEGER_T num_sign_changes
+      INTEGER_T num_sign_changes_plus
+      INTEGER_T num_sign_changes_minus
+      INTEGER_T total_num_sign_changes_plus
+      INTEGER_T total_num_sign_changes_minus
+      INTEGER_T normal_dir
+      REAL_T normal_max
+      REAL_T normal_test(SDIM)
+      INTEGER_T sign_change_dir
+      INTEGER_T vofcomp
+
 
       if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
@@ -932,10 +1038,13 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow_distance)
 
-      allocate(F_tess(D_DECL(growlo(1):growhi(1), &
-          growlo(2):growhi(2), &
-          growlo(SDIM):growhi(SDIM)), &
-          1:nmat*ngeom_recon))
+       ! input: growlo,growhi
+       ! output: DIMS(F_tess)
+      call box_to_dim( &
+        DIMS(F_tess), &
+        growlo,growhi)
+      allocate(F_tess(DIMV(F_tess),nmat*ngeom_recon))
+      
       F_tess_ptr=>F_tess
       call checkbound_array(tilelo,tilehi,F_tess_ptr,ngrow_distance,-1,2875)
 
@@ -1192,29 +1301,29 @@ stop
         do i1=LSstenlo(1),LSstenhi(1)
         do j1=LSstenlo(2),LSstenhi(2)
         do k1=LSstenlo(3),LSstenhi(3)
-         do im_curv=1,nmat
-          vofcomp=(im_curv-1)*ngeom_recon+1
+         do im_local=1,nmat
+          vofcomp=(im_local-1)*ngeom_recon+1
           call safe_data(i+i1,j+j1,k+k1,vofcomp, &
             F_tess_ptr, &
-            vof_local(im_curv))
+            vof_local(im_local))
          enddo
          if ((im.ge.1).and.(im.le.nmat)) then
-          vofsten(D_DECL(i1,j1,k1))=vof_local(im)
-          lssten(D_DECL(i1,j1,k1))=vof_local(im)-half
+          vofsten(i1,j1,k1)=vof_local(im)
+          lssten(i1,j1,k1)=vof_local(im)-half
          else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
           iten=im-nmat
           call get_inverse_iten(im1,im2,iten,nmat)
-          vofsten(D_DECL(i1,j1,k1))= &
+          vofsten(i1,j1,k1)= &
              half*(vof_local(im1)-vof_local(im2)+one) 
-          lssten(D_DECL(i1,j1,k1))= &
+          lssten(i1,j1,k1)= &
              half*(vof_local(im1)-vof_local(im2))
          else
           print *,"im invalid"
           stop
          endif 
-        enddo
-        enddo
-        enddo
+        enddo !k1
+        enddo !j1
+        enddo !i1
 
         ! check for sign change in cross stencil
         sign_change=0
@@ -1235,11 +1344,11 @@ stop
           stop
          endif
          do side=-1,1,2
-          if (lssten(D_DECL(0,0,0))* &
-              lssten(D_DECL(ii*side,jj*side,kk*side)).le.zero) then
+          if (lssten(0,0,0)* &
+              lssten(ii*side,jj*side,kk*side).le.zero) then
               sign_change=sign_change+1
-          else if (lssten(D_DECL(0,0,0))* &
-                   lssten(D_DECL(ii*side,jj*side,kk*side)).gt.zero) then
+          else if (lssten(0,0,0)* &
+                   lssten(ii*side,jj*side,kk*side).gt.zero) then
            !do nothing
           else
            print *,"lssten bust"
@@ -1251,10 +1360,13 @@ stop
            HTstenlo(dirloc)=-1
            HTstenhi(dirloc)=1
           enddo
-          HTstenlo(dir)=0
-          HTstenhi(dir)=0
+          HTstenlo(dir)=side
+          HTstenhi(dir)=side
+          sign_change_dir=0
           call simple_htfunc_sum(HTstenlo,HTstenhi,vofsten, &
-                  slopesum(dir,side),num_sign_changes)
+            slopesum(dir,side),sign_change_dir, &
+            num_sign_changes_plus, &
+            num_sign_changes_minus)
          enddo ! side=-1,1,2
          normal_test(dir)=abs(slopesum(dir,1)-slopesum(dir,-1))
          if (normal_test(dir).gt.normal_max) then
@@ -1282,6 +1394,10 @@ stop
           enddo
           LSstenlo(normal_dir)=0
           LSstenhi(normal_dir)=0
+
+          total_num_sign_changes_plus=0
+          total_num_sign_changes_minus=0
+
           do i1=LSstenlo(1),LSstenhi(1)
           do j1=LSstenlo(2),LSstenhi(2)
           do k1=LSstenlo(3),LSstenhi(3)
@@ -1291,11 +1407,21 @@ stop
            HTstenhi(2)=j1
            HTstenlo(3)=k1
            HTstenhi(3)=k1
-           HTstenlo(normal_dir)=-ngrow_dist
-           HTstenhi(normal_dir)=ngrow_dist
+           HTstenlo(normal_dir)=-ngrow_distance
+           HTstenhi(normal_dir)=ngrow_distance
          
+           sign_change_dir=normal_dir
            call simple_htfunc_sum(HTstenlo,HTstenhi,vofsten, &
-                  local_sum,num_sign_changes)
+                  localsum,sign_change_dir, &
+                  num_sign_changes_plus, &
+                  num_sign_changes_minus)
+           total_num_sign_changes_plus= &
+             total_num_sign_changes_plus+num_sign_changes_plus
+           total_num_sign_changes_minus= &
+             total_num_sign_changes_minus+num_sign_changes_minus
+
+           num_sign_changes= &
+               num_sign_changes_plus+num_sign_changes_minus
            if (num_sign_changes.eq.1) then
             ! do nothing
            else if ((num_sign_changes.eq.0).or. &
@@ -1305,9 +1431,24 @@ stop
             print *,"num_sign_changes invalid"
             stop
            endif
-          enddo
-          enddo
-          enddo
+          enddo !k1
+          enddo !j1
+          enddo !i1
+
+          if ((total_num_sign_changes_plus.gt.0).and. &
+              (total_num_sign_changes_minus.gt.0)) then
+           local_status=0
+          else if ((total_num_sign_changes_plus.eq.0).and. &
+                   (total_num_sign_changes_minus.gt.0)) then
+           ! do nothing
+          else if ((total_num_sign_changes_minus.eq.0).and. &
+                   (total_num_sign_changes_plus.gt.0)) then
+           ! do nothing
+          else
+           print *,"total_num_sign_changes invalid"
+           stop
+          endif
+
          else
           print *,"normal_dir invalid"
           stop
