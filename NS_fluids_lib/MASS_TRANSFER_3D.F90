@@ -413,7 +413,9 @@ stop
        stop
       endif
        ! was TEMPERATURE_FLOOR
-      if (TSAT.lt.DATA_FLOOR) then
+      if (TSAT.ge.DATA_FLOOR) then
+       ! do nothing
+      else
        print *,"TSAT invalid in center_centroid_interchange"
        print *,"TSAT=",TSAT
        stop
@@ -612,7 +614,9 @@ stop
        enddo
 
        if (tsat_flag.eq.1) then
-        if (T_avg.lt.DATA_FLOOR) then
+        if (T_avg.ge.DATA_FLOOR) then
+         ! do nothing
+        else
          print *,"T_avg invalid"
          print *,"T_avg=",T_avg
          stop
@@ -707,7 +711,9 @@ stop
          T_hold=TMAX
         endif
         if (tsat_flag.eq.1) then
-         if (T_hold.lt.zero) then
+         if (T_hold.ge.zero) then
+          ! do nothing
+         else
           print *,"temperature underflow in center_centroid_interchange"
           print *,"xI ",xI(1),xI(2),xI(SDIM)
           print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
@@ -2243,12 +2249,15 @@ stop
         POUT%T_probe(iprobe), & !T_probe constrained by T_I
         PROBE_PARMS%debugrate)
 
-       if (POUT%T_probe(iprobe).lt.zero) then
+       if (POUT%T_probe(iprobe).ge.zero) then
+        ! do nothing
+       else
         print *,"T_probe went negative"
         print *,"T_probe ",POUT%T_probe(iprobe)
         stop
        endif
 
+        ! the least squares interpolant is limited by the stencil values.
        call interpfabFWEIGHT( &
         PROBE_PARMS%bfact, &
         PROBE_PARMS%level, &
@@ -2265,7 +2274,9 @@ stop
         PROBE_PARMS%recon, &
         T_probe_no_constrain)
 
-       if (T_probe_no_constrain.lt.zero) then
+       if (T_probe_no_constrain.ge.zero) then
+        ! do nothing
+       else
         print *,"T_probe_no_constrain went negative"
         print *,"T_probe_no_constrain ",T_probe_no_constrain
         stop
@@ -2430,6 +2441,7 @@ stop
 
         LS_pos_probe_counter=LS_pos_probe_counter+1
 
+         ! check for NaN
         call grad_probe_sanity( &
          PROBE_PARMS%xI, &
          xtarget_probe, &
@@ -2437,6 +2449,7 @@ stop
          T_I, &
          PROBE_PARMS%LL)
 
+         ! check for NaN
         call grad_probe_sanity( &
          PROBE_PARMS%xI, &
          xtarget_probe, &
@@ -2592,9 +2605,11 @@ stop
         PROBE_PARMS%fabhi, &
         PROBE_PARMS%EOS, &
         PROBE_PARMS%recon, &
-        POUT%T_probe_raw(iprobe))
+        POUT%T_probe_raw(iprobe)) ! T_probe_raw same as T_probe_no_constrain
 
-       if (POUT%T_probe_raw(iprobe).lt.zero) then
+       if (POUT%T_probe_raw(iprobe).ge.zero) then
+        ! do nothing
+       else
         print *,"T_probe_raw went negative"
         print *,"T_probe_raw ",POUT%T_probe_raw(iprobe)
         stop
@@ -2619,7 +2634,9 @@ stop
          PROBE_PARMS%recon, &
          POUT%T_probe_raw_smooth(iprobe))
 
-        if (POUT%T_probe_raw_smooth(iprobe).lt.zero) then
+        if (POUT%T_probe_raw_smooth(iprobe).ge.zero) then
+         ! do nothing
+        else
          print *,"T_probe_raw_smooth went negative"
          print *,"T_probe_raw_smooth ",POUT%T_probe_raw_smooth(iprobe)
          stop
@@ -2742,6 +2759,65 @@ stop
  
       return
       end subroutine probe_interpolation
+
+
+      subroutine apply_TI_limiter( &
+       TI_min,TI_max, &
+       PROBE_PARMS, &
+       T_I,Y_I, &
+       POUT)
+      use global_utility_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      REAL_T, intent(inout) :: TI_min,TI_max 
+      type(probe_parm_type), intent(in) :: PROBE_PARMS
+      REAL_T, intent(inout) :: T_I
+      REAL_T, intent(inout) :: Y_I
+      type(probe_out_type), intent(in) :: POUT
+      REAL_T :: local_TI_min,local_TI_max 
+      INTEGER_T :: iprobe
+
+      if ((Y_I.ge.zero).and.(Y_I.le.one)) then
+       ! do nothing
+      else
+       print *,"Y_I out of range"
+       print *,"Y_I= ",Y_I
+       stop
+      endif
+      if ((T_I.ge.zero).and.(T_I.le.1.0D+99)) then
+       ! do nothing
+      else
+       print *,"T_I out of range in apply_TI_limiter"
+       print *,"T_I= ",T_I
+       print *,"Y_I= ",Y_I
+       stop
+      endif
+
+      local_TI_min=POUT%T_probe(1)
+      local_TI_max=POUT%T_probe(1)
+
+      if (POUT%T_probe(2).lt.local_TI_min) then
+       local_TI_min=POUT%T_probe(2)
+      endif
+      if (POUT%T_probe(2).gt.local_TI_max) then
+       local_TI_max=POUT%T_probe(2)
+      endif
+
+      do iprobe=1,2 ! iprobe=1 source    iprobe=2 dest
+
+       if (POUT%T_I_interp(iprobe).lt.local_TI_min) then
+        local_TI_min=POUT%T_I_interp(iprobe)
+       endif
+       if (POUT%T_I_interp(iprobe).gt.local_TI_max) then
+        local_TI_max=POUT%T_I_interp(iprobe)
+       endif
+
+      enddo ! iprobe=1,2
+
+      return
+      end subroutine apply_TI_limiter
 
       subroutine mdot_from_Y_probe( &
        probe_ok, &
@@ -8415,11 +8491,13 @@ stop
 
                  if ((interp_valid_flag_initial(1).eq.1).and. &
                      (interp_valid_flag_initial(2).eq.1)) then
-                  ! do nothing (valid probe on both sides of Gamma)
+                  ! do nothing (valid grid probe on both sides of Gamma)
                  else if ((interp_valid_flag_initial(1).eq.0).or. &
                           (interp_valid_flag_initial(1).eq.2).or. &
                           (interp_valid_flag_initial(2).eq.0).or. &
                           (interp_valid_flag_initial(2).eq.2)) then
+                   ! flag=0 =>neither grid probe or supermesh probe are valid
+                   ! flag=2 =>grid probe invalid; supermesh probe is valid
                   interface_resolved=0
                  else
                   print *,"interp_valid_flag_initial invalid"
@@ -8498,7 +8576,8 @@ stop
                   endif
  
                  else if (local_probe_constrain.eq.1) then
-                  ! do nothing (interface temperature does not vary)
+                  ! do nothing; interface temperature does not depend on
+                  ! probe values.
                  else
                   print *,"local_probe_constrain invalid"
                   stop
