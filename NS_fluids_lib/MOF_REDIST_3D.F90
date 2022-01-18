@@ -763,20 +763,20 @@ stop
         if (itop(sign_change_dir).le.ngrow_distance) then
          LS_base=vofsten(i1,j1,k1)-half
          LS_top=vofsten(itop(1),itop(2),itop(3))-half
-         if ((LS_base.le.zero).and. &
+         if ((LS_base.lt.zero).and. &
              (LS_top.ge.zero).and. &
              (LS_base.lt.LS_top)) then
           num_sign_changes_plus=num_sign_changes_plus+1
          else if ((LS_base.ge.zero).and. &
-                  (LS_top.le.zero).and. &
+                  (LS_top.lt.zero).and. &
                   (LS_base.gt.LS_top)) then
           num_sign_changes_minus=num_sign_changes_minus+1
          else if ((LS_base.eq.zero).and. &
                   (LS_top.eq.zero)) then
           num_sign_changes_plus=num_sign_changes_plus+1
           num_sign_changes_minus=num_sign_changes_minus+1
-         else if ((LS_base.gt.zero).and. &
-                  (LS_top.gt.zero)) then
+         else if ((LS_base.ge.zero).and. &
+                  (LS_top.ge.zero)) then
           ! do nothing
          else if ((LS_base.lt.zero).and. &
                   (LS_top.lt.zero)) then
