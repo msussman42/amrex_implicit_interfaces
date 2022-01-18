@@ -2783,7 +2783,7 @@ stop
 
        !iprobe=1 source
        !iprobe=2 dest
-       if (probe_ok.eq.1) then
+       if (probe_ok.eq.1) then ! probes do not depend on TI
         ! do nothing
        else if (probe_ok.eq.0) then
         call probe_interpolation( &
@@ -2982,7 +2982,7 @@ stop
 
        if ((D_MASS.ge.zero).and.(den_G.gt.zero)) then
 
-        if (probe_ok.eq.1) then
+        if (probe_ok.eq.1) then ! probes do not depend on TI
          ! do nothing
         else if (probe_ok.eq.0) then
          !iprobe=1 source
@@ -8096,8 +8096,10 @@ stop
                   stop
                  endif
 
+                  ! interp_status=1 success
+                  ! interp_status=0 no proper stencil available
                  call interpfab_curv( &
-                  interp_status, &
+                  interp_status, & !interp_status=0 if CURV_weight==0.0
                   nmat+iten, &
                   nten, &
                   nmat, &
@@ -8371,7 +8373,11 @@ stop
                   print *,"hardwire_flag(ireverse) invalid"
                   stop
                  endif
-              
+             
+                  ! initially probe_ok==0 since the probe values have
+                  ! never been calculated at this point.
+                  ! if local_probe_constrain==0, then the probes do not
+                  ! have to be calculated again. 
                  probe_ok=0
  
                  !iprobe=1 source
@@ -8394,11 +8400,29 @@ stop
                  endif
 
                  if (local_probe_constrain.eq.0) then
-                  probe_ok=1
+                  probe_ok=1 ! do not have to recompute the probes
                  else if (local_probe_constrain.eq.1) then
-                  probe_ok=0
+                  probe_ok=0 ! probes depend on TI, so they must be recalc.
                  else
                   print *,"local_probe_constrain invalid"
+                  stop
+                 endif
+
+                 interp_valid_flag_initial(1)=POUT%interp_valid_flag(1)
+                 interp_valid_flag_initial(2)=POUT%interp_valid_flag(2)
+
+                 interface_resolved=1
+
+                 if ((interp_valid_flag_initial(1).eq.1).and. &
+                     (interp_valid_flag_initial(2).eq.1)) then
+                  ! do nothing (valid probe on both sides of Gamma)
+                 else if ((interp_valid_flag_initial(1).eq.0).or. &
+                          (interp_valid_flag_initial(1).eq.2).or. &
+                          (interp_valid_flag_initial(2).eq.0).or. &
+                          (interp_valid_flag_initial(2).eq.2)) then
+                  interface_resolved=0
+                 else
+                  print *,"interp_valid_flag_initial invalid"
                   stop
                  endif
 
@@ -8441,21 +8465,42 @@ stop
                   stop
                  endif
 
-                 interp_valid_flag_initial(1)=POUT%interp_valid_flag(1)
-                 interp_valid_flag_initial(2)=POUT%interp_valid_flag(2)
+                 if (local_probe_constrain.eq.0) then
+                  if ((interface_resolved.eq.1).and. &
+                      (interp_status.eq.1)) then
+                   ! do nothing
+                  else if ((interface_resolved.eq.0).or. &
+                           (interp_status.eq.0)) then
+                   if (hardwire_flag(ireverse).eq.0) then
+                    if (user_override_TI_YI.eq.0) then
+                     call apply_TI_limiter( &
+                      TI_min,TI_max, &
+                      PROBE_PARMS, &
+                      local_Tsat(ireverse), &
+                      Y_predict, &
+                      POUT)
+                    else if (user_override_TI_YI.eq.1) then
+                     ! do nothing
+                    else
+                     print *,"user_override_TI_YI invalid"
+                     stop
+                    endif
 
-                 interface_resolved=1
-
-                 if ((interp_valid_flag_initial(1).eq.1).and. &
-                     (interp_valid_flag_initial(2).eq.1)) then
-                  ! do nothing (valid probe on both sides of Gamma)
-                 else if ((interp_valid_flag_initial(1).eq.0).or. &
-                          (interp_valid_flag_initial(1).eq.2).or. &
-                          (interp_valid_flag_initial(2).eq.0).or. &
-                          (interp_valid_flag_initial(2).eq.2)) then
-                  interface_resolved=0
+                   else if (hardwire_flag(ireverse).eq.1) then
+                    ! do nothing
+                   else
+                    print *,"hardwire_flag(ireverse) invalid"
+                    stop
+                   endif
+                  else
+                   print *,"interface_resolved or interp_status invalid"
+                   stop
+                  endif
+ 
+                 else if (local_probe_constrain.eq.1) then
+                  ! do nothing (interface temperature does not vary)
                  else
-                  print *,"interp_valid_flag_initial invalid"
+                  print *,"local_probe_constrain invalid"
                   stop
                  endif
 
@@ -8503,8 +8548,8 @@ stop
                   !iprobe=1 source
                   !iprobe=2 dest
                   if (probe_ok.eq.1) then
-                   ! do nothing
-                  else if (probe_ok.eq.0) then
+                   ! do nothing (probes do not depend on TI)
+                  else if (probe_ok.eq.0) then ! probes depend on TI
                    call probe_interpolation( &
                     PROBE_PARMS, &
                     TSAT_predict, &
@@ -9045,7 +9090,7 @@ stop
 
                      if (hardwire_flag(ireverse).eq.0) then
 
-                         ! Kassemi
+                       ! Kassemi
                       if (fully_saturated.eq.2) then
 
                        T_gamma_c=half*(T_gamma_a+T_gamma_b)
@@ -9305,7 +9350,7 @@ stop
                              (interp_status.eq.0)) then
                      delta_Tsat=zero
                     else
-                     print *,"interface_resolved or TSAT_iter invalid"
+                     print *,"interface_resolved or interp_status invalid"
                      stop
                     endif
 
