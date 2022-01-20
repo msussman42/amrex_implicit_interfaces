@@ -7184,6 +7184,62 @@ stop
       return 
       end subroutine fort_extend_drag
 
+      subroutine add_to_TI_YI( &
+        T_history,Y_history,VEL_history, &
+        mdot_diff_history, &
+        TI_YI_ptr, &
+        TI_YI_counter, &
+        TI_YI_best_guess_index)
+      IMPLICIT NONE
+      REAL_T, intent(in), pointer :: TI_YI_ptr(:,:)
+      INTEGER_T, intent(inout) :: TI_YI_counter
+      INTEGER_T, intent(inout) :: TI_YI_best_guess_index
+      REAL_T, intent(in) :: T_history
+      REAL_T, intent(in) :: Y_history
+      REAL_T, intent(in) :: VEL_history
+      REAL_T, intent(in) :: mdot_diff_history
+     
+      if (TI_YI_counter.ge.MAX_TI_YI_logfile) then
+       print *,"TI_YI_counter too large"
+       stop
+      else if ((TI_YI_counter.ge.0).and. &
+               (TI_YI_counter.lt.MAX_TI_YI_logfile)) then
+       if ((TI_YI_best_guess_index.ge.0).and. &
+           (TI_YI_best_guess_index.le.TI_YI_counter)) then
+        TI_YI_counter=TI_YI_counter+1
+        TI_YI_ptr(TI_YI_counter,1)=T_history
+        TI_YI_ptr(TI_YI_counter,2)=Y_history
+        TI_YI_ptr(TI_YI_counter,3)=VEL_history
+        TI_YI_ptr(TI_YI_counter,4)=mdot_diff_history
+        if (TI_YI_best_guess_index.eq.0) then
+         TI_YI_best_guess_index=TI_YI_counter
+        else if ((TI_YI_best_guess_index.ge.1).and. &
+                 (TI_YI_best_guess_index.le.TI_YI_counter-1)) then
+         if (abs(mdot_diff_history).lt. &
+             abs(TI_YI_ptr(TI_YI_best_guess_index,4))) then
+          TI_YI_best_guess_index=TI_YI_counter
+         else if (abs(mdot_diff_history).ge. &
+                  abs(TI_YI_ptr(TI_YI_best_guess_index,4))) then
+          ! do nothing
+         else
+          print *,"mdot_diff_history or TI_YI_ptr is NaN"
+          stop
+         endif
+        else
+         print *,"TI_YI_best_guess_index invalid"
+         stop
+        endif
+       else
+        print *,"TI_YI_best_guess_index invalid"
+        stop
+       endif
+      else
+       print *,"TI_YI_counter invalid"
+       stop
+      endif
+
+      end subroutine add_to_TI_YI
+
       subroutine advance_TY_gamma( &
         TSAT_Y_PARMS, &
         POUT, &
@@ -7466,6 +7522,12 @@ stop
       INTEGER_T, target, intent(in) :: finest_level
       INTEGER_T :: local_probe_constrain
       INTEGER_T :: user_override_TI_YI
+
+      REAL_T, target :: TI_YI(MAX_TI_YI_logfile+1,4) !T,Y,VEL,mdot_diff
+      REAL_T, pointer :: TI_YI_ptr(:,:)
+      INTEGER_T :: TI_YI_counter
+      INTEGER_T :: TI_YI_best_guess_index
+
       INTEGER_T :: probe_ok
       REAL_T :: microscale_probe_size
       INTEGER_T, intent(in) :: ngrow_distance_in
@@ -7719,6 +7781,8 @@ stop
 #endif
 
       nhalf=3
+
+      TI_YI_ptr=>TI_YI
 
       maskcov_ptr=>maskcov
       conductstate_ptr=>conductstate
@@ -8786,6 +8850,7 @@ stop
                  TSAT_converge=0
 
                  TI_YI_counter=0
+                 TI_YI_best_guess_index=0
 
 !    local_freezing_model=4  Tanasawa or Schrage
 !    local_freezing_model=5  fully saturated evaporation?
