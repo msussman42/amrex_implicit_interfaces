@@ -2823,11 +2823,11 @@ stop
        TI_max=local_TI_max
       endif
 
-      if (TI.lt.TI_min) then
-       TI=TI_min
+      if (T_I.lt.TI_min) then
+       T_I=TI_min
       endif
-      if (TI.gt.TI_max) then
-       TI=TI_max
+      if (T_I.gt.TI_max) then
+       T_I=TI_max
       endif
       if (TI_min.le.TI_max) then
        ! do nothing
@@ -7258,6 +7258,8 @@ stop
         T_gamma_a,T_gamma_b,T_gamma_c, &
         Y_gamma_a,Y_gamma_b,Y_gamma_c, &
         X_gamma_a,X_gamma_b,X_gamma_c)
+      use global_utility_module
+      use mass_transfer_module
       IMPLICIT NONE
 
       REAL_T, intent(inout) :: X_gamma_a,X_gamma_b,X_gamma_c
@@ -7281,6 +7283,9 @@ stop
       type(probe_out_type), intent(inout) :: POUT
       REAL_T X_history
       REAL_T T_history,Y_history,mdot_diff_history
+      REAL_T mdot_diff_a
+      REAL_T mdot_diff_b
+      REAL_T mdot_diff_c
 
       if (trial_and_error.eq.0) then
        T_gamma_c=half*(T_gamma_a+T_gamma_b)
@@ -7527,6 +7532,7 @@ stop
       REAL_T, pointer :: TI_YI_ptr(:,:)
       INTEGER_T :: TI_YI_counter
       INTEGER_T :: TI_YI_best_guess_index
+      INTEGER_T :: trial_and_error
 
       INTEGER_T :: probe_ok
       REAL_T :: microscale_probe_size
@@ -7765,7 +7771,6 @@ stop
       REAL_T T_gamma_a,T_gamma_b,T_gamma_c
       REAL_T T_gamma_a_init,T_gamma_b_init
       REAL_T Y_gamma_a_init,Y_gamma_b_init
-      REAL_T mdot_diff_a,mdot_diff_b,mdot_diff_c
       INTEGER_T fully_saturated
       REAL_T mdotT_debug
       REAL_T mdotY_top_debug,mdotY_bot_debug,mdotY_debug
@@ -9463,6 +9468,7 @@ stop
 
                        ! Palmore and Desjardins, Y=X=1
                        if (fully_saturated.eq.1) then 
+
                         trial_and_error=0
                         Y_interface_min=one
                         Y_predict=one
@@ -9495,16 +9501,20 @@ stop
                                 (POUT%Y_probe(iprobe_vapor).ge. &
                                  one-Y_TOLERANCE).and. &
                                 (POUT%Y_probe(iprobe_vapor).le.one)) then
+
                         trial_and_error=0
                         Y_interface_min=one
                         Y_predict=one
                         TSAT_correct=local_Tsat(ireverse)
+
                        else if ((fully_saturated.eq.0).and. &
                                 (TSAT_Y_PARMS%D_MASS.eq.zero)) then
+
                         trial_and_error=0
                         Y_interface_min=one
                         Y_predict=one
                         TSAT_correct=local_Tsat(ireverse)
+
                        else if ((fully_saturated.eq.0).and. &
                                 (POUT%Y_probe(iprobe_vapor).le. &
                                  one-Y_TOLERANCE).and. &
@@ -9669,7 +9679,7 @@ stop
                   TSAT_predict=TSAT_correct
 
                   if (TSAT_iter.eq.0) then
-                    TSAT_INIT_ERR=TSAT_ERR
+                   TSAT_INIT_ERR=TSAT_ERR
                   endif
 
                   if (1.eq.0) then
@@ -9748,6 +9758,26 @@ stop
                  enddo ! do while (TSAT_converge.eq.0)
 
                  if (POUT%at_interface.eq.1) then
+
+                  if (TSAT_iter.eq.1) then
+                   ! check nothing
+                  else if (TSAT_iter.gt.1) then
+                   if (TSAT_iter-1.eq.TI_YI_counter) then
+                    if (abs(TSAT_correct-TI_YI(TI_YI_best_guess_index,1)).le. &
+                        TSAT_ERR/4.0d0) then
+                     ! do nothing
+                    else
+                     print *,"best guess too far from bisection method guess"
+                     stop
+                    endif
+                   else
+                    print *,"TSAT_iter-1.eq.TI_YI_counter failed"
+                    stop
+                   endif
+                  else
+                   print *,"TSAT_iter invalid"
+                   stop
+                  endif
 
                   Y_predict_hold(ireverse)=Y_predict
                   local_Tsat(ireverse)=TSAT_correct
