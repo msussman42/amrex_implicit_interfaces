@@ -20764,6 +20764,7 @@ stop
       return 
       end subroutine fort_mac_elastic_force
 
+        ! NavierStokes::init_boundary() called prior to this routine.
         ! called from NavierStokes.cpp
         ! put ns.wall_slip_weight=0.5 for example in the inputs file.
         ! ns.wall_slip_weight=0.0 => do not strengthen the slip BC
@@ -20785,8 +20786,8 @@ stop
        xlo,dx, &
        dt, &
        time, & ! cur_time
-       LS_state,DIMS(LS_state), &
-       state,DIMS(state), &
+       LS_state,DIMS(LS_state), & ! state data
+       state,DIMS(state), &       ! state data
        macx,DIMS(macx), &
        macy,DIMS(macy), &
        macz,DIMS(macz), &
@@ -20990,6 +20991,7 @@ stop
        assimilate_parm%dxmin=dx(SDIM)
       endif
        
+      assimilate_out_parm%LS_state=>LS_state
       assimilate_out_parm%state=>state
       assimilate_out_parm%macx=>macx
       assimilate_out_parm%macy=>macy

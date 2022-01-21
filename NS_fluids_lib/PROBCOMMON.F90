@@ -149,6 +149,7 @@ module probcommon_module_types
 
       type assimilate_out_parm_type
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state ! nstate comp.
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS_state
       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: macx
       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: macy
       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: macz
