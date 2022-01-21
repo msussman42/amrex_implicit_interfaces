@@ -1,3 +1,4 @@
+#AHMED_ICE_RESISTANT.F90
 max_step  = 200000    # maximum timestep
 #max_step  = 2    # maximum timestep
 
@@ -183,6 +184,17 @@ ns.zblob2=0.1    #zblob2 is the altitude of the oil layer
 ns.xblob3=50.0
 ns.yblob3=-155.0
 ns.zblob3=-155.0
+# dimensions of drops added after the fact.
+ns.xblob4=0.0
+ns.yblob4=0.0
+ns.zblob4=0.0
+ns.radblob4=0.0
+# velocity of drops added after the fact.
+ns.xblob5=0.0
+ns.yblob5=0.0
+ns.zblob5=0.0
+# period of drops added after the fact, starting at t=radblob5
+ns.radblob5=0.0
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=425

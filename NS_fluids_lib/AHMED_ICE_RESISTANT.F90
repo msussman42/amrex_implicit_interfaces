@@ -49,8 +49,20 @@ REAL_T, intent(out) :: Phi !LS dist, Phi>0 in the substrate
 REAL_T :: yhalf,xshift
 REAL_T :: local_time
 INTEGER_T :: im
+INTEGER_T :: expected_nmat
 
-if ((num_materials.eq.4).and.(probtype.eq.425)) then
+if (axis_dir.eq.0) then
+ expected_nmat=4
+else if (axis_dir.eq.1) then
+ expected_nmat=3
+else if (axis_dir.eq.2) then
+ expected_nmat=4
+else
+ print *,"axis_dir invalid"
+ stop
+endif
+
+if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
  local_time=zero
  im=num_materials
  if (SDIM.eq.2) then
@@ -85,6 +97,7 @@ REAL_T, intent(in) :: t
 REAL_T, intent(out) :: LS(nmat)
 REAL_T :: ice_vertical
 REAL_T :: substrate_height
+INTEGER_T :: expected_nmat
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -93,7 +106,18 @@ REAL_T :: substrate_height
    stop
   endif
 
-if ((num_materials.eq.4).and.(probtype.eq.425)) then
+if (axis_dir.eq.0) then
+ expected_nmat=4
+else if (axis_dir.eq.1) then
+ expected_nmat=3
+else if (axis_dir.eq.2) then
+ expected_nmat=4
+else
+ print *,"axis_dir invalid"
+ stop
+endif
+
+if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
   ! fluids tessellate the domain, substrate is embedded.
 
   ! water is material 1
@@ -107,13 +131,20 @@ if ((num_materials.eq.4).and.(probtype.eq.425)) then
   stop
  endif
 
+ if ((axis_dir.eq.0).or.(axis_dir.eq.2)) then
   ! oil is material 3
   ! zblob2 is the altitude of the oil layer
- LS(3)=zblob2-x(SDIM)
+  LS(3)=zblob2-x(SDIM)
   ! air
- LS(2)=-(max(LS(1),LS(3)))
+  LS(2)=-(max(LS(1),LS(3)))
+ else if (axis_dir.eq.1) then
+  LS(2)=-LS(1)
+ else
+  print *,"axis_dir invalid"
+  stop
+ endif
 
- call AHMED_substrateLS(x,LS(4))
+ call AHMED_substrateLS(x,LS(num_materials))
 else
  print *,"num_materials or probtype invalid"
  stop
@@ -163,12 +194,41 @@ INTEGER_T, intent(in) :: velsolid_flag
   do dir=1,SDIM
    VEL(dir)=zero
   enddo
-  if (LS(1).ge.-dx(1)) then
-   VEL(SDIM)=-abs(adv_vel)
-  else if (LS(1).le.-dx(1)) then
-   ! do nothing
+
+  if (axis_dir.eq.0) then
+
+   if (LS(1).ge.-dx(1)) then
+    VEL(SDIM)=-abs(adv_vel)
+   else if (LS(1).le.-dx(1)) then
+    ! do nothing
+   else
+    print *,"LS(1) invalid"
+    stop
+   endif
+
+  else if ((axis_dir.eq.1).or. &
+           (axis_dir.eq.2)) then
+   VEL(1)=adv_vel
+
+   if (LS(1).ge.-dx(1)) then
+    VEL(SDIM)=-abs(adv_vel)
+   else if (LS(1).le.-dx(1)) then
+    VEL(1)=xblob3
+    if (SDIM.eq.2) then
+     VEL(SDIM)=yblob3
+    else if (SDIM.eq.3) then
+     VEL(SDIM)=zblob3
+    else
+     print *,"SDIM invalid"
+     stop
+    endif
+   else
+    print *,"LS(1) invalid"
+    stop
+   endif
+
   else
-   print *,"LS(1) invalid"
+   print *,"axis_dir invalid"
    stop
   endif
 
@@ -215,6 +275,7 @@ REAL_T, intent(in) :: t
 REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
+INTEGER_T :: expected_nmat
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -228,7 +289,19 @@ else
  print *,"nstate_mat invalid"
  stop
 endif
-if ((num_materials.eq.4).and. &
+
+if (axis_dir.eq.0) then
+ expected_nmat=4
+else if (axis_dir.eq.1) then
+ expected_nmat=3
+else if (axis_dir.eq.2) then
+ expected_nmat=4
+else
+ print *,"axis_dir invalid"
+ stop
+endif
+
+if ((num_materials.eq.expected_nmat).and. &
     (num_state_material.ge.2).and. & ! density, temperature, vapor spec
     (probtype.eq.425)) then
  do im=1,num_materials
@@ -434,6 +507,7 @@ REAL_T, intent(in) :: den(nmat)
 REAL_T, intent(in) :: CV(nmat)
 REAL_T, intent(in) :: dt
 REAL_T, intent(out) :: heat_source
+INTEGER_T :: expected_nmat
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -442,7 +516,19 @@ else
  stop
 endif
 
-if ((num_materials.eq.4).and.(probtype.eq.425)) then
+if (axis_dir.eq.0) then
+ expected_nmat=4
+else if (axis_dir.eq.1) then
+ expected_nmat=3
+else if (axis_dir.eq.2) then
+ expected_nmat=4
+else
+ print *,"axis_dir invalid"
+ stop
+endif
+
+if ((num_materials.eq.expected_nmat).and. &
+    (probtype.eq.425)) then
  heat_source=zero
 else
  print *,"num_materials or probtype invalid"
