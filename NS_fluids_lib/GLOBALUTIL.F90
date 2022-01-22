@@ -5919,6 +5919,23 @@ end subroutine dynamic_contact_angle
       return
       end subroutine checkbound_int_array1
 
+      subroutine analyze_heights( &
+        htfunc_LS, &
+        htfunc_VOF, &
+        xsten_grow, &
+        nhalf_grow, &
+        itan,jtan, &
+        curvHT_LS, &
+        curvHT_VOF, &
+        normal_dir, &
+        xcenter, &
+        n1d)
+
+
+      end subroutine analyze_heights
+       
+
+
 ! find reconstruction from cell averaged data.
 ! point value lives at the center of the cell in 3D.
       subroutine minmod3D(data,xpos,slopes,intercept)

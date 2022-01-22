@@ -873,6 +873,13 @@ stop
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       REAL_T xsten(-3:3,SDIM)
+      REAL_T xsten_grow(-(2*ngrow_distance+1):(2*ngrow_distance+1),SDIM)
+
+      REAL_T dx_col(SDIM)
+      REAL_T x_col(SDIM)
+      REAL_T x_col_avg(SDIM)
+
+      INTEGER_T nhalf_grow
       INTEGER_T nten_test
       INTEGER_T n_normal_test
       INTEGER_T nhalf
@@ -888,6 +895,7 @@ stop
       INTEGER_T ibase
       INTEGER_T dir
       INTEGER_T dirloc
+      INTEGER_T dir2
       INTEGER_T side
       REAL_T local_curv(SDIM)
       REAL_T local_normal(SDIM)
@@ -937,6 +945,8 @@ stop
 
       ngrow_null=0
       nhalf=3 
+      nhalf_grow=2*ngrow_distance+1
+ 
       nmax=POLYGON_LIST_MAX ! in: fort_node_to_cell
 
       CURV_CELL_ptr=>CURV_CELL
@@ -1113,6 +1123,7 @@ stop
        ! second nmat+nten components are status (0=bad 1=good)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
+       call gridsten_level(xsten_grow,i,j,k,level,nhalf_grow)
 
        do im=1,nmat+nten
 
@@ -1368,7 +1379,34 @@ stop
             num_sign_changes_plus, &
             num_sign_changes_minus)
          enddo ! side=-1,1,2
+
          normal_test(dir)=abs(slopesum(dir,1)-slopesum(dir,-1))
+
+         if (dir.eq.1) then
+          if (levelrz.eq.0) then
+           ! do nothing
+          else if ((levelrz.eq.1).or.(levelrz.eq.3)) then
+
+           if (xsten_grow(-2*ngrow_distance,1).lt.zero) then
+            normal_test(dir)=zero
+           else if (xsten_grow(-2*ngrow_distance,1).ge.zero) then
+            ! do nothing
+           else
+            print *,"xsten_grow is NaN"
+            stop
+           endif
+
+          else
+           print *,"levelrz invalid"
+           stop
+          endif
+         else if ((dir.eq.2).or.(dir.eq.SDIM)) then
+          ! do nothing
+         else
+          print *,"dir invalid"
+          stop
+         endif
+
          if (normal_test(dir).gt.normal_max) then
           normal_max=normal_test(dir)
           normal_dir=dir
@@ -1423,7 +1461,122 @@ stop
            num_sign_changes= &
                num_sign_changes_plus+num_sign_changes_minus
            if (num_sign_changes.eq.1) then
-            ! do nothing
+            if ((height_function_flag.eq.0).or. &
+                (local_status.eq.0)) then
+             ! do nothing
+            else if ((height_function_flag.eq.1).and. &
+                     (local_status.eq.1)) then
+
+             do ivert=-ngrow_distance,ngrow_distance
+              icol=i1  
+              jcol=j1  
+              kcol=k1  
+
+              if (normal_dir.eq.1) then
+               icol=ivert
+               iwidth=jcol
+               jwidth=kcol
+               itan=2
+               jtan=3
+              else if (normal_dir.eq.2) then
+               jcol=ivert
+               iwidth=icol
+               jwidth=kcol
+               itan=1
+               jtan=3
+              else if ((normal_dir.eq.3).and.(SDIM.eq.3)) then
+               kcol=ivert
+               iwidth=icol
+               jwidth=jcol
+               itan=1
+               jtan=2
+              else
+               print *,"normal_dir invalid"
+               stop
+              endif
+              ls_column(ivert)=lssten(icol,jcol,kcol)
+              vof_column(ivert)=vofsten(icol,jcol,kcol)
+             enddo !ivert=-ngrow_distance,ngrow_distance
+
+             if (num_sign_changes_plus.eq.1) then
+              n1d=1
+             else if (num_sign_changes_minus.eq.1) then
+              n1d=-1
+             else
+              print *,"num_sign_changes bust"
+              stop
+             endif
+       
+             iwidthnew=iwidth
+        
+             if (levelrz.eq.0) then
+              ! do nothing
+             else if (levelrz.eq.1) then
+              if (SDIM.ne.2) then
+               print *,"dimension bust"
+               stop
+              endif
+              if (itan.eq.1) then ! vertical columns
+               if (iwidth.eq.-1) then
+                if (xsten_grow(2*iwidth,1).le.zero) then
+                 iwidthnew=0
+                endif
+               endif
+              endif
+             else if (levelrz.eq.3) then
+              if (xsten_grow(-2,1).le.zero) then
+               print *,"xsten_grow cannot be negative for levelrz==3"
+               stop
+              endif
+             else
+              print *,"levelrz invalid node_to_cell"
+              stop
+             endif
+       
+             do dir2=1,SDIM
+              x_col(dir2)=xsten_grow(0,dir2)
+              x_col_avg(dir2)=half*(xsten_grow(1,dir2)+xsten_grow(-1,dir2))
+              dx_col(dir2)=xsten_grow(1,dir2)-xsten_grow(-1,dir2)
+             enddo
+             x_col(itan)=xsten_grow(2*iwidthnew,itan)
+             x_col(jtan)=xsten_grow(2*jwidth,jtan)
+             dx_col(itan)=xsten_grow(2*iwidthnew+1,itan)- &
+                          xsten_grow(2*iwidthnew-1,itan)
+             dx_col(jtan)=xsten_grow(2*jwidth+1,jtan)- &
+                          xsten_grow(2*jwidth-1,jtan)
+             x_col_avg(itan)=half*(xsten_grow(2*iwidthnew+1,itan)+ &
+                                   xsten_grow(2*iwidthnew-1,itan))
+             x_col_avg(jtan)=half*(xsten_grow(2*jwidth+1,jtan)+ &
+                                   xsten_grow(2*jwidth-1,jtan))
+
+             call get_col_ht_LS( &
+              height_function_flag, &
+              crossing_status, &  !crossing_status=1=>success
+              bfact, &
+              dx, &
+              xsten_grow, &
+              dx_col, &
+              x_col, &
+              x_col_avg, &
+              ls_column, & 
+              vof_column, & 
+              col_ht_LS, &
+              col_ht_VOF, &
+              normal_dir, &
+              n1d, & !n1d==1=>im on top,n1d==-1 => im on bot
+              nmat, &
+              SDIM)
+
+             if (crossing_status.eq.0) then
+              local_status=0
+             else if (crossing_status.eq.1) then
+              htfunc_LS(iwidth,jwidth)=col_ht_LS
+              htfunc_VOF(iwidth,jwidth)=col_ht_VOF
+             else
+              print *,"crossing_status invalid"
+              stop
+             endif
+
            else if ((num_sign_changes.eq.0).or. &
                     (num_sign_changes.gt.1)) then
             local_status=0
@@ -1463,9 +1616,20 @@ stop
          curv_choice=curv_LS
         else if ((height_function_flag.eq.1).and. &
                  (local_status.eq.1)) then
+         call analyze_heights( &
+          htfunc_LS, &
+          htfunc_VOF, &
+          xsten_grow, &
+          nhalf_grow, &
+          itan,jtan, &
+          curvHT_LS, &
+          curvHT_VOF, &
+          normal_dir, &
+          xcenter, &
+          n1d)
+
+         curv_VOF=curvHT_VOF
          curv_choice=curv_VOF
-         print *,"height_function_flag==1 N/A, use initheightLS later"
-         stop
         else
          print *,"height_function_flag or local_status invalid"
          stop

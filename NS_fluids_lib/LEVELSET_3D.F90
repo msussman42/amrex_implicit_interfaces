@@ -357,11 +357,17 @@ stop
       REAL_T columnLS(-ngrow_distance:ngrow_distance)
       INTEGER_T icolumn
       REAL_T n1d
+
+      REAL_T dx_col(SDIM)
+      REAL_T x_col(SDIM)
+      REAL_T x_col_avg(SDIM)
+
       REAL_T col_ht_LS
       REAL_T col_ht_VOF
       REAL_T xforce
       INTEGER_T crossing_status
       INTEGER_T local_vof_height
+      INTEGER_T dir2
 
       local_vof_height=0
 
@@ -435,10 +441,21 @@ stop
         n1d=-one  ! "im" material on bottom
        endif
 
+       do dir2=1,SDIM
+        x_col(dir2)=xsten0(0,dir2)
+        x_col_avg(dir2)=half*(xsten0(1,dir2)+xsten0(-1,dir2))
+        dx_col(dir2)=xsten0(1,dir2)-xsten0(-1,dir2)
+       enddo
+
        call get_col_ht_LS( &
         local_vof_height, & !=0
         crossing_status, &
-        bfact,dx,xsten0, &
+        bfact, &
+        dx, &
+        xsten0, &
+        dx_col, &
+        x_col, &
+        x_col_avg, &
         columnLS, &
         columnLS, &
         col_ht_LS, &
@@ -732,6 +749,10 @@ stop
       REAL_T hxy
       REAL_T arclen,arclenx,arcleny,arclenr,g,gx,gy,gr
 
+      REAL_T dx_col(SDIM)
+      REAL_T x_col(SDIM)
+      REAL_T x_col_avg(SDIM)
+     
       REAL_T col_ht_LS
       REAL_T col_ht_VOF
 
@@ -1363,7 +1384,21 @@ stop
         print *,"levelrz invalid initheight ls 4"
         stop
        endif
-        
+       
+       do dir2=1,SDIM
+        x_col(dir2)=xsten(0,dir2)
+        x_col_avg(dir2)=half*(xsten(1,dir2)+xsten(-1,dir2))
+        dx_col(dir2)=xsten(1,dir2)-xsten(-1,dir2)
+       enddo
+       x_col(itan)=xsten(2*iwidthnew,itan)
+       x_col(jtan)=xsten(2*jwidth,jtan)
+       dx_col(itan)=xsten(2*iwidthnew+1,itan)-xsten(2*iwidthnew-1,itan)
+       dx_col(jtan)=xsten(2*jwidth+1,jtan)-xsten(2*jwidth-1,jtan)
+       x_col_avg(itan)=half*(xsten(2*iwidthnew+1,itan)+ &
+                             xsten(2*iwidthnew-1,itan))
+       x_col_avg(jtan)=half*(xsten(2*jwidth+1,jtan)+ &
+                             xsten(2*jwidth-1,jtan))
+ 
        do kheight=-ngrow_distance,ngrow_distance
 
         if (dircrit.eq.1) then
@@ -1406,12 +1441,17 @@ stop
        call get_col_ht_LS( &
         vof_height_function, &
         crossing_status, &
-        bfact,dx,xsten, &
+        bfact, &
+        dx, &
+        xsten, &
+        dx_col, &
+        x_col, &
+        x_col_avg, &
         columnLS, &
         columnVOF, &
         col_ht_LS, &
         col_ht_VOF, &
-        dircrit, &
+        dircrit, & ! 1<=dircrit<=SDIM
         n1d, & ! n1d==1 => im material on top, n1d==-1 => im on bottom.
         nmat, &
         SDIM)
