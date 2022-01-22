@@ -2918,6 +2918,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ns_level.setVal_localMF(FD_NRM_ND_MF,0.0,0,
           n_normal,ngrow_make_distance+1);
 
+         // first nmat+nten components are curvature
+         // second nmat+nten components are status (0=bad 1=good)
         ns_level.new_localMF(FD_CURV_CELL_MF,2*(nmat+nten),
           ngrow_make_distance,-1);
         ns_level.setVal_localMF(FD_CURV_CELL_MF,0.0,0,
@@ -3039,7 +3041,19 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
            -1,  // data_dir==-1 (cell centered)
            parent->levelSteps(0)); 
 
-	 }
+	  caller_id=3;
+           //BURNVEL<stuff>.plt (visit can open binary tecplot files)
+          writeSanityCheckData(
+           "CURV_CELL",
+           "FD_CURV_CELL_MF:curv:1..nmat+nten stat:nmat+nten+1..2(nmat+nsten)",
+           caller_id,
+           localMF[FD_CURV_CELL_MF]->nComp(), 
+           FD_CURV_CELL_MF,
+           -1,  // State_Type==-1 
+           -1,  // data_dir==-1 (cell centered)
+           parent->levelSteps(0)); 
+
+	 } // (ratio==nsteps+1) {
 	} else if (very_last_sweep==0) {
 	 // do nothing
 	} else
