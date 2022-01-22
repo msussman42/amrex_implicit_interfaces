@@ -123,6 +123,9 @@ else ifeq ($(gcc_major_version),11)
 #SUSSMAN
 else ifeq ($(gcc_major_version),12)
   CXXFLAGS += -std=c++14
+#SUSSMAN
+else ifeq ($(gcc_major_version),13)
+  CXXFLAGS += -std=c++14
 endif
 CFLAGS     += -std=gnu99
 
