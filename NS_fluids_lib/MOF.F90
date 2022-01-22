@@ -12121,7 +12121,12 @@ contains
       subroutine get_col_ht_LS( &
        vof_height_function, &
        crossing_status, &
-       bfact,dx,xsten0, &
+       bfact, &
+       dx, &
+       xsten0, &
+       dx_col, &
+       x_col, &
+       x_col_avg, &
        lsdata, &
        vofdata, &
        ht_from_LS, &
@@ -12143,6 +12148,9 @@ contains
       REAL_T, intent(in) :: xsten0( &
         -(2*ngrow_distance+1):(2*ngrow_distance+1), &
         sdim)
+      REAL_T, intent(in) :: dx_col(sdim)
+      REAL_T, intent(in) :: x_col(sdim)
+      REAL_T, intent(in) :: x_col_avg(sdim)
       REAL_T, intent(in) :: lsdata( &
         -ngrow_distance:ngrow_distance)
       REAL_T, intent(in) :: vofdata( &
@@ -12191,12 +12199,28 @@ contains
         print *,"sdim invalid"
         stop
        endif
-       if (xsten0(0,1).le.zero) then
+       if (x_col(1).gt.zero) then
+        ! do nothing
+       else
+        print *,"cannot have r<0"
+        stop
+       endif
+       if (x_col_avg(1).gt.zero) then
+        ! do nothing
+       else
         print *,"cannot have r<0"
         stop
        endif
       else if (levelrz.eq.3) then
-       if (xsten0(0,1).le.zero) then
+       if (x_col(1).gt.zero) then
+        ! do nothing
+       else
+        print *,"cannot have r<0"
+        stop
+       endif
+       if (x_col_avg(1).gt.zero) then
+        ! do nothing
+       else
         print *,"cannot have r<0"
         stop
        endif
@@ -12386,7 +12410,7 @@ contains
            if (dircrit.eq.1) then ! horizontal column
 
             dr=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
-            dz=xsten0(1,2)-xsten0(-1,2)
+            dz=dx_col(2)
             if ((dz.gt.zero).and.(dr.gt.zero)) then
              volcell=Pi*(xsten0(2*l_vof-1,dircrit)+ &
                          xsten0(2*l_vof+1,dircrit))*dz*dr
@@ -12398,9 +12422,9 @@ contains
            else if (dircrit.eq.2) then ! vertical column
 
             dz=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
-            dr=xsten0(1,1)-xsten0(-1,1)
+            dr=dx_col(1)
             if ((dz.gt.zero).and.(dr.gt.zero)) then
-             volcell=Pi*(xsten0(-1,1)+xsten0(1,1))*dz*dr
+             volcell=Pi*two*x_col_avg(1)*dz*dr
             else
              print *,"dz or dr invalid"
              stop
@@ -12417,7 +12441,7 @@ contains
 
             if (dircrit.eq.1) then ! horizontal column
              dr=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
-             dz=xsten0(1,2)-xsten0(-1,2)
+             dz=dx_col(2)
              if ((dz.gt.zero).and.(dr.gt.zero)) then
               volcell=dz*dr
              else
@@ -12427,7 +12451,7 @@ contains
             else if (dircrit.eq.2) then ! vertical column
 
              dz=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
-             dr=xsten0(1,1)-xsten0(-1,1)
+             dr=dx_col(1)
              if ((dz.gt.zero).and.(dr.gt.zero)) then
               volcell=dz*dr
              else
@@ -12444,14 +12468,14 @@ contains
             dx_norm=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
             if (dx_norm.gt.zero) then
              if (dircrit.eq.1) then ! horizontal column
-              dx_tan1=xsten0(1,2)-xsten0(-1,2)
-              dx_tan2=xsten0(1,SDIM)-xsten0(-1,SDIM)
+              dx_tan1=dx_col(2)
+              dx_tan2=dx_col(SDIM)
              else if (dircrit.eq.2) then ! vertical column
-              dx_tan1=xsten0(1,1)-xsten0(-1,1)
-              dx_tan2=xsten0(1,SDIM)-xsten0(-1,SDIM)
+              dx_tan1=dx_col(1)
+              dx_tan2=dx_col(SDIM)
              else if ((dircrit.eq.3).and.(SDIM.eq.3)) then
-              dx_tan1=xsten0(1,1)-xsten0(-1,1)
-              dx_tan2=xsten0(1,2)-xsten0(-1,2)
+              dx_tan1=dx_col(1)
+              dx_tan2=dx_col(2)
              else
               print *,"dircrit invalid"
               stop
@@ -12492,7 +12516,7 @@ contains
             vof_ratio_ht_power=2
             current_xbottom=zero
             dr=xsten0(2*lmin-1,dircrit)-current_xbottom
-            dz=xsten0(1,2)-xsten0(-1,2)
+            dz=dx_col(2)
             if ((dz.gt.zero).and.(dr.ge.zero)) then
              volcell=Pi*(xsten0(2*lmin-1,dircrit)+ &
                          current_xbottom)*dr*dz
@@ -12507,9 +12531,9 @@ contains
           else if (dircrit.eq.2) then ! vertical column
 
            dz=xsten0(2*lmin-1,dircrit)-current_xbottom
-           dr=xsten0(1,1)-xsten0(-1,1)
+           dr=dx_col(1)
            if ((dz.ge.zero).and.(dr.gt.zero)) then
-            volcell=Pi*(xsten0(-1,1)+xsten0(1,1))*dz*dr
+            volcell=two*Pi*x_col_avg(1)*dz*dr
            else
             print *,"dz or dr invalid"
             stop
@@ -12526,7 +12550,7 @@ contains
 
            if (dircrit.eq.1) then ! horizontal column
             dr=xsten0(2*lmin-1,dircrit)-current_xbottom
-            dz=xsten0(1,2)-xsten0(-1,2)
+            dz=dx_col(2)
             if ((dz.gt.zero).and.(dr.ge.zero)) then
              volcell=dr*dz
             else
@@ -12535,7 +12559,7 @@ contains
             endif
            else if (dircrit.eq.2) then ! vertical column
             dz=xsten0(2*lmin-1,dircrit)-current_xbottom
-            dr=xsten0(1,1)-xsten0(-1,1)
+            dr=dx_col(1)
             if ((dz.ge.zero).and.(dr.gt.zero)) then
              volcell=dz*dr
             else
@@ -12552,14 +12576,14 @@ contains
            dx_norm=xsten0(2*lmin-1,dircrit)-current_xbottom
            if (dx_norm.ge.zero) then
             if (dircrit.eq.1) then ! horizontal column
-             dx_tan1=xsten0(1,2)-xsten0(-1,2)
-             dx_tan2=xsten0(1,SDIM)-xsten0(-1,SDIM)
+             dx_tan1=dx_col(2)
+             dx_tan2=dx_col(SDIM)
             else if (dircrit.eq.2) then ! vertical column
-             dx_tan1=xsten0(1,1)-xsten0(-1,1)
-             dx_tan2=xsten0(1,SDIM)-xsten0(-1,SDIM)
+             dx_tan1=dx_col(1)
+             dx_tan2=dx_col(SDIM)
             else if ((dircrit.eq.3).and.(SDIM.eq.3)) then
-             dx_tan1=xsten0(1,1)-xsten0(-1,1)
-             dx_tan2=xsten0(1,2)-xsten0(-1,2)
+             dx_tan1=dx_col(1)
+             dx_tan2=dx_col(2)
             else
              print *,"dircrit invalid"
              stop
@@ -12592,7 +12616,7 @@ contains
            ht_from_VOF= &
              vof_top_sum*(xtop-current_xbottom)/vof_bot_sum+current_xbottom
           else if (vof_ratio_ht_power.eq.2) then
-           dr=xsten0(1,1)-xsten0(-1,1)
+           dr=dx_col(1)
            ht_from_VOF=(xtop**2)*vof_top_sum/vof_bot_sum
            if (ht_from_VOF.ge.zero) then
             ht_from_VOF=sqrt(ht_from_VOF)
