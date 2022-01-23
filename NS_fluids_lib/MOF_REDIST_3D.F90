@@ -859,7 +859,8 @@ stop
 
       REAL_T, intent(in), target :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
       REAL_T, pointer :: LS_new_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: FD_NRM_ND_fab(DIMV(FD_NRM_ND_fab),n_normal)
+      REAL_T, intent(in), target :: &
+              FD_NRM_ND_fab(DIMV(FD_NRM_ND_fab),n_normal)
       REAL_T, pointer :: FD_NRM_ND_fab_ptr(D_DECL(:,:,:),:)
        ! first nmat+nten components are curvature
        ! second nmat+nten components are status (0=bad 1=good)
@@ -906,6 +907,7 @@ stop
       REAL_T denom_factor
       REAL_T total_curv
       INTEGER_T local_status
+      INTEGER_T crossing_status
       REAL_T local_LS(nmat)
       REAL_T, dimension(-ngrow_distance:ngrow_distance, &
                 -ngrow_distance:ngrow_distance, &
@@ -939,6 +941,16 @@ stop
       INTEGER_T vofcomp
       REAL_T htfunc_LS(-1:1,-1:1)
       REAL_T htfunc_VOF(-1:1,-1:1)
+      REAL_T col_ht_LS
+      REAL_T col_ht_VOF
+      INTEGER_T icol,jcol,kcol
+      INTEGER_T ivert,itan,jtan
+      INTEGER_T iwidth
+      INTEGER_T iwidthnew
+      INTEGER_T jwidth
+      REAL_T n1d
+      REAL_T ls_column(-ngrow_distance:ngrow_distance)
+      REAL_T vof_column(-ngrow_distance:ngrow_distance)
 
       if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
@@ -1455,9 +1467,9 @@ stop
          
            sign_change_dir=normal_dir
            call simple_htfunc_sum(HTstenlo,HTstenhi,vofsten, &
-                  localsum,sign_change_dir, &
-                  num_sign_changes_plus, &
-                  num_sign_changes_minus)
+             localsum,sign_change_dir, &
+             num_sign_changes_plus, &
+             num_sign_changes_minus)
            total_num_sign_changes_plus= &
              total_num_sign_changes_plus+num_sign_changes_plus
            total_num_sign_changes_minus= &
@@ -1581,6 +1593,10 @@ stop
               print *,"crossing_status invalid"
               stop
              endif
+            else
+             print *,"height_function_flag or local_status invalid"
+             stop
+            endif
 
            else if ((num_sign_changes.eq.0).or. &
                     (num_sign_changes.gt.1)) then
@@ -1589,6 +1605,7 @@ stop
             print *,"num_sign_changes invalid"
             stop
            endif
+
           enddo !k1
           enddo !j1
           enddo !i1
