@@ -1142,6 +1142,9 @@ stop
         xcenter(dir)=xsten(0,dir)
        enddo
 
+        ! fort_ratemasschange will not consider cells in which
+        ! (is_rigid(nmat,im_primary).eq.0) 
+        !
        do im=1,nmat+nten
 
         do im_local=1,nmat
@@ -1149,514 +1152,575 @@ stop
         enddo
         call get_primary_material(local_LS,nmat,im_primary)
         call get_secondary_material(local_LS,nmat,im_primary,im_secondary)
+
         local_status=1
 
-        if ((im.ge.1).and.(im.le.nmat)) then
-         if ((im.ne.im_primary).and. &
-             (im.ne.im_secondary)) then
-          local_status=0
-         endif
-         if (is_rigid(nmat,im).eq.1) then
-          ! do nothing
-         else if (is_rigid(nmat,im).eq.0) then
-          if (is_rigid(nmat,im_primary).eq.0) then
-           ! do nothing
-          else if (is_rigid(nmat,im_primary).eq.1) then
-           local_status=0
-          else
-           print *,"is_rigid(nmat,im_primary) invalid"
-           stop
-          endif
-         else
-          print *,"is_rigid(nmat,im) invalid"
-          stop
-         endif
-        else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
-         iten=im-nmat
-         call get_inverse_iten(im1,im2,iten,nmat)
-         if ((im1.ne.im_primary).and. &
-             (im1.ne.im_secondary)) then
-          local_status=0
-         endif
-         if ((im2.ne.im_primary).and. &
-             (im2.ne.im_secondary)) then
-          local_status=0
-         endif
-        else
-         print *,"im invalid 112"
-         stop
-        endif
+        if (is_rigid(nmat,im_primary).eq.1) then
 
-        do dir=1,SDIM
-         local_curv(dir)=zero
-        enddo
+         local_status=0
 
-        ibase=(im-1)*(SDIM+1)
+        else if (is_rigid(nmat,im_primary).eq.0) then
 
-        do dir=1,SDIM
-         do i1=0,1
-         do j1=0,1
-         do k1=0,k1hi
-          local_normal(dir)=FD_NRM_ND_fab(D_DECL(i+i1,j+j1,k+k1),ibase+dir)
-          local_mag=FD_NRM_ND_fab(D_DECL(i+i1,j+j1,k+k1),ibase+SDIM+1)
-          if (local_mag.gt.zero) then
-           ! do nothing
-          else if (local_mag.eq.zero) then
-           local_status=0
-          else
-           print *,"local_mag invalid"
-           stop
-          endif
-
-          sign_nm=one
-          if (((dir.eq.1).and.(i1.eq.0)).or. &
-              ((dir.eq.2).and.(j1.eq.0)).or. &
-              ((dir.eq.3).and.(SDIM.eq.3).and.(k1.eq.0))) then
-           sign_nm=-one
-          endif
-          RR=one
-          if (levelrz.eq.0) then
-           ! do nothing
-          else if (levelrz.eq.1) then
-           if (dir.eq.1) then
-            RR=xsten(2*i1-1,dir)
-            if (RR.lt.zero) then
-             RR=zero
-            endif
-           endif
-          else if (levelrz.eq.3) then
-           if (dir.eq.1) then
-            RR=xsten(2*i1-1,dir)
-            if (RR.lt.zero) then
-             RR=zero
-            endif
-           endif
-          else
-           print *,"dir invalid"
-           stop
-          endif
-
-          local_curv(dir)=local_curv(dir)+sign_nm*RR*local_normal(dir)
-         enddo !  k1
-         enddo !  j1
-         enddo !  i1
-         xplus=xsten(1,dir)
-         xminus=xsten(-1,dir)
-         xmiddle=xsten(0,dir)
-         if ((xplus.gt.xminus).and. &
-             (xplus.gt.xmiddle).and. &
-             (xmiddle.gt.xminus)) then
-          local_curv(dir)=local_curv(dir)/(denom_factor*(xplus-xminus))
-         else
-          print *,"xplus or xminus invalid"
-          stop
-         endif
-         RR=one
-         if (levelrz.eq.0) then
-          RR=one
-         else if (levelrz.eq.1) then
-          RR=one
-          if (dir.eq.1) then
-           if (xmiddle.le.zero) then
-            local_curv(dir)=zero
-           else if (xmiddle.gt.zero) then
-            RR=xmiddle
-           else
-            print *,"xmiddle invalid"
-            stop
-           endif
-          endif
-         else if (levelrz.eq.3) then
-          RR=one
-          if (dir.eq.1) then
-           if (xmiddle.le.zero) then
-            local_curv(dir)=zero
-           else if (xmiddle.gt.zero) then
-            RR=xmiddle
-           else
-            print *,"xmiddle invalid"
-            stop
-           endif
-          endif
-          if (dir.eq.2) then ! theta direction
-           if (xsten(0,1).le.zero) then
-            local_curv(dir)=zero
-           else if (xsten(0,1).gt.zero) then
-            RR=xsten(0,1)
-           else
-            print *,"xsten(0,1) invalid"
-            stop
-           endif
-          endif 
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
-         local_curv(dir)=local_curv(dir)/RR
-        enddo ! dir=1..sdim 
-
-        total_curv=zero
-        do dir=1,SDIM
-         total_curv=total_curv+local_curv(dir)
-        enddo
-        curv_LS=total_curv
-        curv_VOF=total_curv
-
-         ! for 1<=im<=nmat, use F_m,  L_m=F_m-1/2, 
-         !   L_m should change sign in the "cross" stencil.
-         !   L_m should be primary or secondary in the center,
-         !   and center should not be dominated by an "is_rigid" material.
-         ! for nmat+1<=im<=nmat+nten:
-         !  iten=im-nmat
-         !  iten => m1,m2
-         !  use (F_m1-F_m2+1)/2,L_m1=(1/2)((F_m1-1/2)-(F_m2-1/2))=(F_m1-F_m2)/2
-         !   L_m1 should change sign in the "cross" stencil.
-         !   both L_m1 and L_m2 should be primary or secondary in the center,
-         ! If a height function curvature can be succesfully computed
-         ! (assuming hypothetically that X-Y or X-Y-Z coordinates are used)
-         ! then no need to limit the interface temperature for evaporation or
-         ! condensation, otherwise the interface temperature (for evap or 
-         ! or condensation) must be limited. 
- 
-        LSstenlo(3)=0
-        LSstenhi(3)=0
-        do dir=1,SDIM
-         LSstenlo(dir)=-ngrow_distance
-         LSstenhi(dir)=ngrow_distance
-        enddo
-
-        ! i1,j1,k1=-ngrow_distance ... ngrow_distance
-        do i1=LSstenlo(1),LSstenhi(1)
-        do j1=LSstenlo(2),LSstenhi(2)
-        do k1=LSstenlo(3),LSstenhi(3)
-         do im_local=1,nmat
-          vofcomp=(im_local-1)*ngeom_recon+1
-          call safe_data(i+i1,j+j1,k+k1,vofcomp, &
-            F_tess_ptr, &
-            vof_local(im_local))
-         enddo
          if ((im.ge.1).and.(im.le.nmat)) then
-          vofsten(i1,j1,k1)=vof_local(im)
-          lssten(i1,j1,k1)=vof_local(im)-half
+
+          if (is_rigid(nmat,im).eq.1) then
+
+           local_status=0
+
+          else if (is_rigid(nmat,im).eq.0) then
+
+           if ((im.ne.im_primary).and. &
+               (im.ne.im_secondary)) then
+            local_status=0
+           endif
+
+          else
+           print *,"is_rigid(nmat,im) invalid"
+           stop
+          endif
+
          else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
+
           iten=im-nmat
           call get_inverse_iten(im1,im2,iten,nmat)
-          vofsten(i1,j1,k1)= &
-             half*(vof_local(im1)-vof_local(im2)+one) 
-          lssten(i1,j1,k1)= &
-             half*(vof_local(im1)-vof_local(im2))
-         else
-          print *,"im invalid"
-          stop
-         endif 
-        enddo !k1
-        enddo !j1
-        enddo !i1
+          if (is_rigid(nmat,im1).eq.1) then
+           local_status=0
+          else if (is_rigid(nmat,im1).eq.0) then
+           if (is_rigid(nmat,im2).eq.1) then
+            local_status=0
+           else if (is_rigid(nmat,im2).eq.0) then
+           
+            if ((im1.ne.im_primary).and. &
+                (im1.ne.im_secondary)) then
+             local_status=0
+            endif
+            if ((im2.ne.im_primary).and. &
+                (im2.ne.im_secondary)) then
+             local_status=0
+            endif
 
-        ! check for sign change in cross stencil
-        sign_change=0
-        normal_max=zero
-        normal_dir=0
-        do dir=1,SDIM
-         ii=0
-         jj=0
-         kk=0
-         if (dir.eq.1) then
-          ii=1
-         else if (dir.eq.2) then
-          jj=1
-         else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
-          kk=1
-         else
-          print *,"dir invalid"
-          stop
-         endif
-         do side=-1,1,2
-          if (lssten(0,0,0)* &
-              lssten(ii*side,jj*side,kk*side).le.zero) then
-              sign_change=sign_change+1
-          else if (lssten(0,0,0)* &
-                   lssten(ii*side,jj*side,kk*side).gt.zero) then
-           !do nothing
-          else
-           print *,"lssten bust"
-           stop
-          endif
-          HTstenlo(3)=0
-          HTstenhi(3)=0
-          do dirloc=1,SDIM
-           HTstenlo(dirloc)=-1
-           HTstenhi(dirloc)=1
-          enddo
-          HTstenlo(dir)=side
-          HTstenhi(dir)=side
-          sign_change_dir=0
-          call simple_htfunc_sum(HTstenlo,HTstenhi,vofsten, &
-            slopesum(dir,side),sign_change_dir, &
-            num_sign_changes_plus, &
-            num_sign_changes_minus)
-         enddo ! side=-1,1,2
-
-         normal_test(dir)=abs(slopesum(dir,1)-slopesum(dir,-1))
-
-         if (dir.eq.1) then
-          if (levelrz.eq.0) then
-           ! do nothing
-          else if ((levelrz.eq.1).or.(levelrz.eq.3)) then
-
-           if (xsten_grow(-2*ngrow_distance,1).lt.zero) then
-            normal_test(dir)=zero
-           else if (xsten_grow(-2*ngrow_distance,1).ge.zero) then
-            ! do nothing
            else
-            print *,"xsten_grow is NaN"
+            print *,"is_rigid(nmat,im2) invalid"
             stop
            endif
 
           else
-           print *,"levelrz invalid"
+           print *,"is_rigid(nmat,im1) invalid"
            stop
           endif
-         else if ((dir.eq.2).or.(dir.eq.SDIM)) then
-          ! do nothing
+
          else
-          print *,"dir invalid"
+          print *,"im invalid 112"
           stop
          endif
 
-         if (normal_test(dir).gt.normal_max) then
-          normal_max=normal_test(dir)
-          normal_dir=dir
-         else if (normal_test(dir).le.normal_max) then
+         if (local_status.eq.0) then
+
           ! do nothing
-         else
-          print *,"normal_test invalid"
-          stop
-         endif
-        enddo ! dir=1..sdim
-        if (sign_change.eq.0) then
-         local_status=0
-        endif
-        if (normal_max.eq.zero) then
-         local_status=0
-        else if (normal_max.gt.zero) then
-         if ((normal_dir.ge.1).and.(normal_dir.le.SDIM)) then
-          LSstenlo(3)=0
-          LSstenhi(3)=0
+
+         else if (local_status.eq.1) then
+
           do dir=1,SDIM
-           LSstenlo(dir)=-1
-           LSstenhi(dir)=1
+           local_curv(dir)=zero
           enddo
-          LSstenlo(normal_dir)=0
-          LSstenhi(normal_dir)=0
 
-          total_num_sign_changes_plus=0
-          total_num_sign_changes_minus=0
+          ibase=(im-1)*(SDIM+1)
 
-          do i1=LSstenlo(1),LSstenhi(1)
-          do j1=LSstenlo(2),LSstenhi(2)
-          do k1=LSstenlo(3),LSstenhi(3)
-           HTstenlo(1)=i1
-           HTstenhi(1)=i1
-           HTstenlo(2)=j1
-           HTstenhi(2)=j1
-           HTstenlo(3)=k1
-           HTstenhi(3)=k1
-           HTstenlo(normal_dir)=-ngrow_distance
-           HTstenhi(normal_dir)=ngrow_distance
-         
-           sign_change_dir=normal_dir
-           call simple_htfunc_sum(HTstenlo,HTstenhi,vofsten, &
-             localsum,sign_change_dir, &
-             num_sign_changes_plus, &
-             num_sign_changes_minus)
-           total_num_sign_changes_plus= &
-             total_num_sign_changes_plus+num_sign_changes_plus
-           total_num_sign_changes_minus= &
-             total_num_sign_changes_minus+num_sign_changes_minus
-
-           num_sign_changes= &
-               num_sign_changes_plus+num_sign_changes_minus
-           if (num_sign_changes.eq.1) then
-            if ((height_function_flag.eq.0).or. &
-                (local_status.eq.0)) then
+          do dir=1,SDIM
+           do i1=0,1
+           do j1=0,1
+           do k1=0,k1hi
+            local_normal(dir)=FD_NRM_ND_fab(D_DECL(i+i1,j+j1,k+k1),ibase+dir)
+            local_mag=FD_NRM_ND_fab(D_DECL(i+i1,j+j1,k+k1),ibase+SDIM+1)
+            if (local_mag.gt.zero) then
              ! do nothing
-            else if ((height_function_flag.eq.1).and. &
-                     (local_status.eq.1)) then
-
-             do ivert=-ngrow_distance,ngrow_distance
-              icol=i1  
-              jcol=j1  
-              kcol=k1  
-
-              if (normal_dir.eq.1) then
-               icol=ivert
-               iwidth=jcol
-               jwidth=kcol
-               itan=2
-               jtan=3
-              else if (normal_dir.eq.2) then
-               jcol=ivert
-               iwidth=icol
-               jwidth=kcol
-               itan=1
-               jtan=3
-              else if ((normal_dir.eq.3).and.(SDIM.eq.3)) then
-               kcol=ivert
-               iwidth=icol
-               jwidth=jcol
-               itan=1
-               jtan=2
-              else
-               print *,"normal_dir invalid"
-               stop
-              endif
-              ls_column(ivert)=lssten(icol,jcol,kcol)
-              vof_column(ivert)=vofsten(icol,jcol,kcol)
-             enddo !ivert=-ngrow_distance,ngrow_distance
-
-             if (num_sign_changes_plus.eq.1) then
-              n1d=one
-             else if (num_sign_changes_minus.eq.1) then
-              n1d=-one
-             else
-              print *,"num_sign_changes bust"
-              stop
-             endif
-       
-             iwidthnew=iwidth
-        
-             if (levelrz.eq.0) then
-              ! do nothing
-             else if (levelrz.eq.1) then
-              if (SDIM.ne.2) then
-               print *,"dimension bust"
-               stop
-              endif
-              if (itan.eq.1) then ! vertical columns
-               if (iwidth.eq.-1) then
-                if (xsten_grow(2*iwidth,1).le.zero) then
-                 iwidthnew=0
-                endif
-               endif
-              endif
-             else if (levelrz.eq.3) then
-              if (xsten_grow(-2,1).le.zero) then
-               print *,"xsten_grow cannot be negative for levelrz==3"
-               stop
-              endif
-             else
-              print *,"levelrz invalid node_to_cell"
-              stop
-             endif
-       
-             do dir2=1,SDIM
-              x_col(dir2)=xsten_grow(0,dir2)
-              x_col_avg(dir2)=half*(xsten_grow(1,dir2)+xsten_grow(-1,dir2))
-              dx_col(dir2)=xsten_grow(1,dir2)-xsten_grow(-1,dir2)
-             enddo
-             x_col(itan)=xsten_grow(2*iwidthnew,itan)
-             x_col(jtan)=xsten_grow(2*jwidth,jtan)
-             dx_col(itan)=xsten_grow(2*iwidthnew+1,itan)- &
-                          xsten_grow(2*iwidthnew-1,itan)
-             dx_col(jtan)=xsten_grow(2*jwidth+1,jtan)- &
-                          xsten_grow(2*jwidth-1,jtan)
-             x_col_avg(itan)=half*(xsten_grow(2*iwidthnew+1,itan)+ &
-                                   xsten_grow(2*iwidthnew-1,itan))
-             x_col_avg(jtan)=half*(xsten_grow(2*jwidth+1,jtan)+ &
-                                   xsten_grow(2*jwidth-1,jtan))
-
-             call get_col_ht_LS( &
-              height_function_flag, &
-              crossing_status, &  !crossing_status=1=>success
-              bfact, &
-              dx, &
-              xsten_grow, &
-              dx_col, &
-              x_col, &
-              x_col_avg, &
-              ls_column, & 
-              vof_column, & 
-              col_ht_LS, &
-              col_ht_VOF, &
-              normal_dir, &
-              n1d, & !n1d==1.0d0=>im on top,n1d==-1.0d0 => im on bot
-              nmat, &
-              SDIM)
-
-             if (crossing_status.eq.0) then
-              local_status=0
-             else if (crossing_status.eq.1) then
-              htfunc_LS(iwidth,jwidth)=col_ht_LS
-              htfunc_VOF(iwidth,jwidth)=col_ht_VOF
-             else
-              print *,"crossing_status invalid"
-              stop
-             endif
+            else if (local_mag.eq.zero) then
+             local_status=0
             else
-             print *,"height_function_flag or local_status invalid"
+             print *,"local_mag invalid"
              stop
             endif
 
-           else if ((num_sign_changes.eq.0).or. &
-                    (num_sign_changes.gt.1)) then
-            local_status=0
+            sign_nm=one
+            if (((dir.eq.1).and.(i1.eq.0)).or. &
+                ((dir.eq.2).and.(j1.eq.0)).or. &
+                ((dir.eq.3).and.(SDIM.eq.3).and.(k1.eq.0))) then
+             sign_nm=-one
+            endif
+            RR=one
+            if (levelrz.eq.0) then
+             ! do nothing
+            else if (levelrz.eq.1) then
+             if (dir.eq.1) then
+              RR=xsten(2*i1-1,dir)
+              if (RR.lt.zero) then
+               RR=zero
+              endif
+             endif
+            else if (levelrz.eq.3) then
+             if (dir.eq.1) then
+              RR=xsten(2*i1-1,dir)
+              if (RR.lt.zero) then
+               RR=zero
+              endif
+             endif
+            else
+             print *,"dir invalid"
+             stop
+            endif
+
+            local_curv(dir)=local_curv(dir)+sign_nm*RR*local_normal(dir)
+           enddo !  k1
+           enddo !  j1
+           enddo !  i1
+           xplus=xsten(1,dir)
+           xminus=xsten(-1,dir)
+           xmiddle=xsten(0,dir)
+           if ((xplus.gt.xminus).and. &
+               (xplus.gt.xmiddle).and. &
+               (xmiddle.gt.xminus)) then
+            local_curv(dir)=local_curv(dir)/(denom_factor*(xplus-xminus))
            else
-            print *,"num_sign_changes invalid"
+            print *,"xplus or xminus invalid"
             stop
            endif
+           RR=one
+           if (levelrz.eq.0) then
+            RR=one
+           else if (levelrz.eq.1) then
+            RR=one
+            if (dir.eq.1) then
+             if (xmiddle.le.zero) then
+              local_curv(dir)=zero
+             else if (xmiddle.gt.zero) then
+              RR=xmiddle
+             else
+              print *,"xmiddle invalid"
+              stop
+             endif
+            endif
+           else if (levelrz.eq.3) then
+            RR=one
+            if (dir.eq.1) then
+             if (xmiddle.le.zero) then
+              local_curv(dir)=zero
+             else if (xmiddle.gt.zero) then
+              RR=xmiddle
+             else
+              print *,"xmiddle invalid"
+              stop
+             endif
+            endif
+            if (dir.eq.2) then ! theta direction
+             if (xsten(0,1).le.zero) then
+              local_curv(dir)=zero
+             else if (xsten(0,1).gt.zero) then
+              RR=xsten(0,1)
+             else
+              print *,"xsten(0,1) invalid"
+              stop
+             endif
+            endif 
+           else
+            print *,"levelrz invalid"
+            stop
+           endif
+           local_curv(dir)=local_curv(dir)/RR
+          enddo ! dir=1..sdim 
 
+          total_curv=zero
+          do dir=1,SDIM
+           total_curv=total_curv+local_curv(dir)
+          enddo
+          curv_LS=total_curv
+          curv_VOF=total_curv
+
+           ! for 1<=im<=nmat, use F_m,  L_m=F_m-1/2, 
+           !   L_m should change sign in the "cross" stencil.
+           !   L_m should be primary or secondary in the center,
+           !   and center should not be dominated by an "is_rigid" material.
+           ! for nmat+1<=im<=nmat+nten:
+           !  iten=im-nmat
+           !  iten => m1,m2
+           !  use 
+           !(F_m1-F_m2+1)/2,L_m1=(1/2)((F_m1-1/2)-(F_m2-1/2))=(F_m1-F_m2)/2
+           !   L_m1 should change sign in the "cross" stencil.
+           !   both L_m1 and L_m2 should be primary or secondary in the center,
+           ! If a height function curvature can be succesfully computed
+           ! (assuming hypothetically that X-Y or X-Y-Z coordinates are used)
+           ! then no need to limit the interface temperature for evaporation or
+           ! condensation, otherwise the interface temperature (for evap or 
+           ! or condensation) must be limited. 
+   
+          LSstenlo(3)=0
+          LSstenhi(3)=0
+          do dir=1,SDIM
+           LSstenlo(dir)=-ngrow_distance
+           LSstenhi(dir)=ngrow_distance
+          enddo
+
+          ! i1,j1,k1=-ngrow_distance ... ngrow_distance
+          do i1=LSstenlo(1),LSstenhi(1)
+          do j1=LSstenlo(2),LSstenhi(2)
+          do k1=LSstenlo(3),LSstenhi(3)
+           do im_local=1,nmat
+            vofcomp=(im_local-1)*ngeom_recon+1
+             ! we do not look at the tessellating volume fractions since
+             ! we need the curvature near embedded walls.
+            call safe_data(i+i1,j+j1,k+k1,vofcomp, &
+              F_new_ptr, &
+              vof_local(im_local))
+           enddo
+           if ((im.ge.1).and.(im.le.nmat)) then
+            vofsten(i1,j1,k1)=vof_local(im)
+            lssten(i1,j1,k1)=vof_local(im)-half
+           else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
+            iten=im-nmat
+            call get_inverse_iten(im1,im2,iten,nmat)
+            vofsten(i1,j1,k1)= &
+               half*(vof_local(im1)-vof_local(im2)+one) 
+            lssten(i1,j1,k1)= &
+               half*(vof_local(im1)-vof_local(im2))
+           else
+            print *,"im invalid"
+            stop
+           endif 
           enddo !k1
           enddo !j1
           enddo !i1
 
-          if ((total_num_sign_changes_plus.gt.0).and. &
-              (total_num_sign_changes_minus.gt.0)) then
+          ! check for sign change in cross stencil
+          sign_change=0
+          normal_max=zero
+          normal_dir=0
+          do dir=1,SDIM
+           ii=0
+           jj=0
+           kk=0
+           if (dir.eq.1) then
+            ii=1
+           else if (dir.eq.2) then
+            jj=1
+           else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
+            kk=1
+           else
+            print *,"dir invalid"
+            stop
+           endif
+           do side=-1,1,2
+            if (lssten(0,0,0)* &
+                lssten(ii*side,jj*side,kk*side).le.zero) then
+                sign_change=sign_change+1
+            else if (lssten(0,0,0)* &
+                     lssten(ii*side,jj*side,kk*side).gt.zero) then
+             !do nothing
+            else
+             print *,"lssten bust"
+             stop
+            endif
+            HTstenlo(3)=0
+            HTstenhi(3)=0
+            do dirloc=1,SDIM
+             HTstenlo(dirloc)=-1
+             HTstenhi(dirloc)=1
+            enddo
+            HTstenlo(dir)=side
+            HTstenhi(dir)=side
+            sign_change_dir=0
+            call simple_htfunc_sum(HTstenlo,HTstenhi,vofsten, &
+              slopesum(dir,side),sign_change_dir, &
+              num_sign_changes_plus, &
+              num_sign_changes_minus)
+           enddo ! side=-1,1,2
+
+           normal_test(dir)=abs(slopesum(dir,1)-slopesum(dir,-1))
+
+           if (dir.eq.1) then
+            if (levelrz.eq.0) then
+             ! do nothing
+            else if ((levelrz.eq.1).or.(levelrz.eq.3)) then
+
+             if (xsten_grow(-2*ngrow_distance,1).lt.zero) then
+              normal_test(dir)=zero
+             else if (xsten_grow(-2*ngrow_distance,1).ge.zero) then
+              ! do nothing
+             else
+              print *,"xsten_grow is NaN"
+              stop
+             endif
+
+            else
+             print *,"levelrz invalid"
+             stop
+            endif
+           else if ((dir.eq.2).or.(dir.eq.SDIM)) then
+            ! do nothing
+           else
+            print *,"dir invalid"
+            stop
+           endif
+
+           if (normal_test(dir).gt.normal_max) then
+            normal_max=normal_test(dir)
+            normal_dir=dir
+           else if (normal_test(dir).le.normal_max) then
+            ! do nothing
+           else
+            print *,"normal_test invalid"
+            stop
+           endif
+          enddo ! dir=1..sdim
+          if (sign_change.eq.0) then
            local_status=0
-          else if ((total_num_sign_changes_plus.eq.0).and. &
-                   (total_num_sign_changes_minus.gt.0)) then
-           ! do nothing
-          else if ((total_num_sign_changes_minus.eq.0).and. &
-                   (total_num_sign_changes_plus.gt.0)) then
-           ! do nothing
+          endif
+          if (normal_max.eq.zero) then
+           local_status=0
+          else if (normal_max.gt.zero) then
+           if ((normal_dir.ge.1).and.(normal_dir.le.SDIM)) then
+            LSstenlo(3)=0
+            LSstenhi(3)=0
+            do dir=1,SDIM
+             LSstenlo(dir)=-1
+             LSstenhi(dir)=1
+            enddo
+            LSstenlo(normal_dir)=0
+            LSstenhi(normal_dir)=0
+
+            total_num_sign_changes_plus=0
+            total_num_sign_changes_minus=0
+
+            do i1=LSstenlo(1),LSstenhi(1)
+            do j1=LSstenlo(2),LSstenhi(2)
+            do k1=LSstenlo(3),LSstenhi(3)
+             HTstenlo(1)=i1
+             HTstenhi(1)=i1
+             HTstenlo(2)=j1
+             HTstenhi(2)=j1
+             HTstenlo(3)=k1
+             HTstenhi(3)=k1
+             HTstenlo(normal_dir)=-ngrow_distance
+             HTstenhi(normal_dir)=ngrow_distance
+           
+             sign_change_dir=normal_dir
+             call simple_htfunc_sum(HTstenlo,HTstenhi,vofsten, &
+               localsum,sign_change_dir, &
+               num_sign_changes_plus, &
+               num_sign_changes_minus)
+             total_num_sign_changes_plus= &
+               total_num_sign_changes_plus+num_sign_changes_plus
+             total_num_sign_changes_minus= &
+               total_num_sign_changes_minus+num_sign_changes_minus
+
+             num_sign_changes= &
+                 num_sign_changes_plus+num_sign_changes_minus
+             if (num_sign_changes.eq.1) then
+              if ((height_function_flag.eq.0).or. &
+                  (local_status.eq.0)) then
+               ! do nothing
+              else if ((height_function_flag.eq.1).and. &
+                       (local_status.eq.1)) then
+
+               do ivert=-ngrow_distance,ngrow_distance
+                icol=i1  
+                jcol=j1  
+                kcol=k1  
+
+                if (normal_dir.eq.1) then
+                 icol=ivert
+                 iwidth=jcol
+                 jwidth=kcol
+                 itan=2
+                 jtan=3
+                else if (normal_dir.eq.2) then
+                 jcol=ivert
+                 iwidth=icol
+                 jwidth=kcol
+                 itan=1
+                 jtan=3
+                else if ((normal_dir.eq.3).and.(SDIM.eq.3)) then
+                 kcol=ivert
+                 iwidth=icol
+                 jwidth=jcol
+                 itan=1
+                 jtan=2
+                else
+                 print *,"normal_dir invalid"
+                 stop
+                endif
+                ls_column(ivert)=lssten(icol,jcol,kcol)
+                vof_column(ivert)=vofsten(icol,jcol,kcol)
+               enddo !ivert=-ngrow_distance,ngrow_distance
+
+               if (num_sign_changes_plus.eq.1) then
+                n1d=one
+               else if (num_sign_changes_minus.eq.1) then
+                n1d=-one
+               else
+                print *,"num_sign_changes bust"
+                stop
+               endif
+         
+               iwidthnew=iwidth
+          
+               if (levelrz.eq.0) then
+                ! do nothing
+               else if (levelrz.eq.1) then
+                if (SDIM.ne.2) then
+                 print *,"dimension bust"
+                 stop
+                endif
+                if (itan.eq.1) then ! vertical columns
+                 if (iwidth.eq.-1) then
+                  if (xsten_grow(2*iwidth,1).le.zero) then
+                   iwidthnew=0
+                  endif
+                 endif
+                endif
+               else if (levelrz.eq.3) then
+                if (xsten_grow(-2,1).le.zero) then
+                 print *,"xsten_grow cannot be negative for levelrz==3"
+                 stop
+                endif
+               else
+                print *,"levelrz invalid node_to_cell"
+                stop
+               endif
+         
+               do dir2=1,SDIM
+                x_col(dir2)=xsten_grow(0,dir2)
+                x_col_avg(dir2)=half*(xsten_grow(1,dir2)+xsten_grow(-1,dir2))
+                dx_col(dir2)=xsten_grow(1,dir2)-xsten_grow(-1,dir2)
+               enddo
+               x_col(itan)=xsten_grow(2*iwidthnew,itan)
+               dx_col(itan)=xsten_grow(2*iwidthnew+1,itan)- &
+                            xsten_grow(2*iwidthnew-1,itan)
+               x_col_avg(itan)=half*(xsten_grow(2*iwidthnew+1,itan)+ &
+                                     xsten_grow(2*iwidthnew-1,itan))
+
+               if ((SDIM.eq.3).or. &
+                   ((SDIM.eq.2).and.(jtan.ge.1).and.(jtan.le.SDIM))) then
+                x_col(jtan)=xsten_grow(2*jwidth,jtan)
+                dx_col(jtan)=xsten_grow(2*jwidth+1,jtan)- &
+                             xsten_grow(2*jwidth-1,jtan)
+                x_col_avg(jtan)=half*(xsten_grow(2*jwidth+1,jtan)+ &
+                                      xsten_grow(2*jwidth-1,jtan))
+               else if ((SDIM.eq.2).and.(jtan.eq.3)) then
+                !do nothing
+               else
+                print *,"sdim or jtan invalid"
+                stop
+               endif
+
+               call get_col_ht_LS( &
+                height_function_flag, &
+                crossing_status, &  !crossing_status=1=>success
+                bfact, &
+                dx, &
+                xsten_grow, &
+                dx_col, &
+                x_col, &
+                x_col_avg, &
+                ls_column, & 
+                vof_column, & 
+                col_ht_LS, &
+                col_ht_VOF, &
+                normal_dir, &
+                n1d, & !n1d==1.0d0=>im on top,n1d==-1.0d0 => im on bot
+                nmat, &
+                SDIM)
+
+               if (crossing_status.eq.0) then
+                local_status=0
+               else if (crossing_status.eq.1) then
+                htfunc_LS(iwidth,jwidth)=col_ht_LS
+                htfunc_VOF(iwidth,jwidth)=col_ht_VOF
+               else
+                print *,"crossing_status invalid"
+                stop
+               endif
+              else
+               print *,"height_function_flag or local_status invalid"
+               stop
+              endif
+
+             else if ((num_sign_changes.eq.0).or. &
+                      (num_sign_changes.gt.1)) then
+              local_status=0
+             else
+              print *,"num_sign_changes invalid"
+              stop
+             endif
+
+            enddo !k1
+            enddo !j1
+            enddo !i1
+
+            if ((total_num_sign_changes_plus.gt.0).and. &
+                (total_num_sign_changes_minus.gt.0)) then
+             local_status=0
+            else if ((total_num_sign_changes_plus.eq.0).and. &
+                     (total_num_sign_changes_minus.gt.0)) then
+             ! do nothing
+            else if ((total_num_sign_changes_minus.eq.0).and. &
+                     (total_num_sign_changes_plus.gt.0)) then
+             ! do nothing
+            else
+             print *,"total_num_sign_changes invalid"
+             stop
+            endif
+
+           else
+            print *,"normal_dir invalid"
+            stop
+           endif
           else
-           print *,"total_num_sign_changes invalid"
+           print *,"normal_max invalid"
+           stop
+          endif
+
+          if ((height_function_flag.eq.0).or. &
+              (local_status.eq.0)) then
+           curv_choice=curv_LS
+          else if ((height_function_flag.eq.1).and. &
+                   (local_status.eq.1)) then
+           call analyze_heights( &
+            htfunc_LS, &
+            htfunc_VOF, &
+            xsten_grow, &
+            nhalf_grow, &
+            itan,jtan, &
+            curv_LS, &
+            curv_VOF, &
+            curv_choice, &
+            normal_dir, &
+            xcenter, &
+            n1d, &
+            local_status, &
+            height_function_flag)
+          else
+           print *,"height_function_flag or local_status invalid"
            stop
           endif
 
          else
-          print *,"normal_dir invalid"
+          print *,"local_status invalid"
           stop
          endif
+
         else
-         print *,"normal_max invalid"
+         print *,"is_rigid(nmat,im_primary) invalid"
          stop
         endif
-
-        if ((height_function_flag.eq.0).or. &
-            (local_status.eq.0)) then
-         curv_choice=curv_LS
-        else if ((height_function_flag.eq.1).and. &
-                 (local_status.eq.1)) then
-         call analyze_heights( &
-          htfunc_LS, &
-          htfunc_VOF, &
-          xsten_grow, &
-          nhalf_grow, &
-          itan,jtan, &
-          curv_LS, &
-          curv_VOF, &
-          curv_choice, &
-          normal_dir, &
-          xcenter, &
-          n1d, &
-          local_status, &
-          height_function_flag)
+ 
+        if (local_status.eq.0) then
+         curv_choice=zero
+        else if (local_status.eq.1) then
+         ! do nothing
         else
-         print *,"height_function_flag or local_status invalid"
+         print *,"local_status invalid"
          stop
         endif
-
+ 
         CURV_CELL(D_DECL(i,j,k),im)=curv_choice
         CURV_CELL(D_DECL(i,j,k),nmat+nten+im)=local_status
 
