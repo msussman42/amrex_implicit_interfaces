@@ -6053,6 +6053,10 @@ end subroutine dynamic_contact_angle
         n1d, &
         overall_crossing_status, &
         vof_height_function)
+      use probcommon_module
+
+      IMPLICIT NONE
+
       INTEGER_T, intent(in) :: overall_crossing_status
       INTEGER_T, intent(in) :: vof_height_function
       REAL_T, intent(in) :: htfunc_LS(-1:1,-1:1)
@@ -6093,6 +6097,7 @@ end subroutine dynamic_contact_angle
       REAL_T dr
       REAL_T h_of_z,hprime_of_z,hdprime_of_z
       REAL_T hprime_of_r,hdprime_of_r
+      INTEGER_T dir2
 
       if (nhalf.eq.2*ngrow_distance+1) then
        ! do nothing

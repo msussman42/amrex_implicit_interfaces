@@ -13079,7 +13079,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     //    growntileboxNODE(ngrow_make_distance)
     // the curvature fab should have ngrow_make_distance ghost cells.
     // fort_node_to_cell is declared in: MOF_REDIST_3D.F90
-   int height_function_flag=0;
+   int height_function_flag=1;
    fort_node_to_cell( 
     &tid_current,
     &level,

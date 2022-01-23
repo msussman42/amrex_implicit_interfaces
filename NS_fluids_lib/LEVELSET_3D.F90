@@ -651,6 +651,7 @@ stop
       REAL_T LSTEST_EXTEND
       REAL_T LSMAX
       REAL_T mag,mag1,mag2,mag3
+      REAL_T gx
 
       REAL_T nperp(SDIM) 
       REAL_T nghost(SDIM) 
@@ -1349,6 +1350,7 @@ stop
         itan,jtan, &
         curvHT_LS, &
         curvHT_VOF, &
+        curvHT_choice, &
         dircrit, &
         xcenter, &
         n1d, &
