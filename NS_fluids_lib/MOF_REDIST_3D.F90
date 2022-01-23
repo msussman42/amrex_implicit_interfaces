@@ -874,6 +874,7 @@ stop
 
       REAL_T xsten(-3:3,SDIM)
       REAL_T xsten_grow(-(2*ngrow_distance+1):(2*ngrow_distance+1),SDIM)
+      REAL_T xcenter(SDIM)
 
       REAL_T dx_col(SDIM)
       REAL_T x_col(SDIM)
@@ -936,7 +937,8 @@ stop
       REAL_T normal_test(SDIM)
       INTEGER_T sign_change_dir
       INTEGER_T vofcomp
-
+      REAL_T htfunc_LS(-1:1,-1:1)
+      REAL_T htfunc_VOF(-1:1,-1:1)
 
       if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
@@ -1124,6 +1126,9 @@ stop
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
        call gridsten_level(xsten_grow,i,j,k,level,nhalf_grow)
+       do dir=1,SDIM
+        xcenter(dir)=xsten(0,dir)
+       enddo
 
        do im=1,nmat+nten
 
@@ -1499,9 +1504,9 @@ stop
              enddo !ivert=-ngrow_distance,ngrow_distance
 
              if (num_sign_changes_plus.eq.1) then
-              n1d=1
+              n1d=one
              else if (num_sign_changes_minus.eq.1) then
-              n1d=-1
+              n1d=-one
              else
               print *,"num_sign_changes bust"
               stop
@@ -1563,7 +1568,7 @@ stop
               col_ht_LS, &
               col_ht_VOF, &
               normal_dir, &
-              n1d, & !n1d==1=>im on top,n1d==-1 => im on bot
+              n1d, & !n1d==1.0d0=>im on top,n1d==-1.0d0 => im on bot
               nmat, &
               SDIM)
 
@@ -1622,14 +1627,14 @@ stop
           xsten_grow, &
           nhalf_grow, &
           itan,jtan, &
-          curvHT_LS, &
-          curvHT_VOF, &
+          curv_LS, &
+          curv_VOF, &
+          curv_choice, &
           normal_dir, &
           xcenter, &
-          n1d)
-
-         curv_VOF=curvHT_VOF
-         curv_choice=curv_VOF
+          n1d, &
+          local_status, &
+          height_function_flag)
         else
          print *,"height_function_flag or local_status invalid"
          stop
