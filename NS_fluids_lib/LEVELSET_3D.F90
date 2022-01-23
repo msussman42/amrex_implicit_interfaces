@@ -1247,13 +1247,22 @@ stop
         dx_col(dir2)=xsten(1,dir2)-xsten(-1,dir2)
        enddo
        x_col(itan)=xsten(2*iwidthnew,itan)
-       x_col(jtan)=xsten(2*jwidth,jtan)
        dx_col(itan)=xsten(2*iwidthnew+1,itan)-xsten(2*iwidthnew-1,itan)
-       dx_col(jtan)=xsten(2*jwidth+1,jtan)-xsten(2*jwidth-1,jtan)
        x_col_avg(itan)=half*(xsten(2*iwidthnew+1,itan)+ &
                              xsten(2*iwidthnew-1,itan))
-       x_col_avg(jtan)=half*(xsten(2*jwidth+1,jtan)+ &
-                             xsten(2*jwidth-1,jtan))
+
+       if ((SDIM.eq.3).or. &
+           ((SDIM.eq.2).and.(jtan.ge.1).and.(jtan.le.SDIM))) then
+        x_col(jtan)=xsten(2*jwidth,jtan)
+        dx_col(jtan)=xsten(2*jwidth+1,jtan)-xsten(2*jwidth-1,jtan)
+        x_col_avg(jtan)=half*(xsten(2*jwidth+1,jtan)+ &
+                              xsten(2*jwidth-1,jtan))
+       else if ((SDIM.eq.2).and.(jtan.eq.3)) then
+        !do nothing
+       else
+        print *,"sdim or jtan invalid"
+        stop
+       endif
  
        do kheight=-ngrow_distance,ngrow_distance
 
