@@ -7533,6 +7533,7 @@ stop
       INTEGER_T :: TI_YI_counter
       INTEGER_T :: TI_YI_best_guess_index
       INTEGER_T :: trial_and_error
+      INTEGER_T :: TI_YI_loop
 
       INTEGER_T :: probe_ok
       REAL_T :: microscale_probe_size
@@ -9716,7 +9717,7 @@ stop
                     TSAT_converge=1
                    endif
                    if (TSAT_iter.gt.1) then
-                    if (TSAT_err.lt.EVAPORATION_TOL*TSAT_INIT_ERR) then
+                    if (TSAT_ERR.lt.EVAPORATION_TOL*TSAT_INIT_ERR) then
                      TSAT_converge=1
                     endif
                    endif
@@ -9762,16 +9763,32 @@ stop
                   if (TSAT_iter.eq.1) then
                    ! check nothing
                   else if (TSAT_iter.gt.1) then
-                   if (TSAT_iter-1.eq.TI_YI_counter) then
+                   if (TSAT_iter.eq.TI_YI_counter) then
                     if (abs(TSAT_correct-TI_YI(TI_YI_best_guess_index,1)).le. &
-                        TSAT_ERR/4.0d0) then
+                        4.0d0*TSAT_ERR) then
                      ! do nothing
                     else
                      print *,"best guess too far from bisection method guess"
+                     print *,"TSAT_correct=",TSAT_correct
+                     print *,"TI_YI(TI_YI_best_guess_index,1)=", &
+                       TI_YI(TI_YI_best_guess_index,1)
+                     print *,"TI_YI_best_guess_index=", &
+                       TI_YI_best_guess_index
+                     do TI_YI_loop=1,TI_YI_counter
+                      print *,"TI_YI idx,T,Y,VEL,mdotdiff ", &
+                       TI_YI_loop, &
+                       TI_YI(TI_YI_loop,1), & 
+                       TI_YI(TI_YI_loop,2), & 
+                       TI_YI(TI_YI_loop,3), & 
+                       TI_YI(TI_YI_loop,4)
+                     enddo
+
                      stop
                     endif
                    else
-                    print *,"TSAT_iter-1.eq.TI_YI_counter failed"
+                    print *,"TSAT_iter.eq.TI_YI_counter failed"
+                    print *,"TSAT_iter=",TSAT_iter
+                    print *,"TI_YI_counter=",TI_YI_counter
                     stop
                    endif
                   else

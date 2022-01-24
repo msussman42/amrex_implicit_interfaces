@@ -1516,7 +1516,7 @@ stop
              if (num_sign_changes.eq.1) then
               if ((height_function_flag.eq.0).or. &
                   (local_status.eq.0)) then
-               ! do nothing
+               ! do nothing (curv_LS, curv_VOF = total_curv above)
               else if ((height_function_flag.eq.1).and. &
                        (local_status.eq.1)) then
 
@@ -1657,6 +1657,9 @@ stop
 
             if ((total_num_sign_changes_plus.gt.0).and. &
                 (total_num_sign_changes_minus.gt.0)) then
+             local_status=0
+            else if ((total_num_sign_changes_plus.eq.0).and. &
+                     (total_num_sign_changes_minus.eq.0)) then
              local_status=0
             else if ((total_num_sign_changes_plus.eq.0).and. &
                      (total_num_sign_changes_minus.gt.0)) then
