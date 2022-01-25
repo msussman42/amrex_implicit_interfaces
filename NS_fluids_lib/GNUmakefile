@@ -3,6 +3,9 @@
 #     new files.
 # git rm $(git ls-files --deleted)
 # git clone https://github.com/AMReX-Codes/amrex.git
+# For post processing:
+# git clone https://github.com/AMReX-Codes/amrex.git
+# git clone https://github.com/AMReX-Combustion/PeleAnalysis.git 
 AMREX_HOME = ../amrex-master
 MOF_HOME = ..
 
