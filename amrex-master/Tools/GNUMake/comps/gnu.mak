@@ -41,6 +41,8 @@ ifeq ($(EXPORT_DYNAMIC),TRUE)
 endif
 
 gcc_major_ge_8 = $(shell expr $(gcc_major_version) \>= 8)
+#SUSSMAN
+gcc_major_ge_10 = $(shell expr $(gcc_major_version) \>= 10)
 
 ifeq ($(THREAD_SANITIZER),TRUE)
   GENERIC_GNU_FLAGS += -fsanitize=thread
@@ -118,13 +120,8 @@ ifeq ($(gcc_major_version),4)
   CXXFLAGS += -std=c++11
 else ifeq ($(gcc_major_version),5)
   CXXFLAGS += -std=c++14
-else ifeq ($(gcc_major_version),11)
-  CXXFLAGS += -std=c++14
 #SUSSMAN
-else ifeq ($(gcc_major_version),12)
-  CXXFLAGS += -std=c++14
-#SUSSMAN
-else ifeq ($(gcc_major_version),13)
+else ifeq ($(gcc_major_ge_10),1)
   CXXFLAGS += -std=c++14
 endif
 CFLAGS     += -std=gnu99

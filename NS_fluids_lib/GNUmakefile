@@ -15,6 +15,7 @@ USE_ASSERTION = TRUE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
 DIM       = 2
+iPAD_ISH = FALSE
 CYGWIN    = FALSE
 CYGWIN_ZENBOOK = FALSE
 MEHDI_VAHAB_FSI = FALSE
@@ -60,6 +61,20 @@ CTML_FBC = FALSE
 # 12. vim
 # 13. emacs
 # 14. procps (search)  (corresponds to "top")
+#
+# iPAD iSH:
+# iPAD_ISH=TRUE
+#  iSH packages needed:
+#  1. apk add vim
+#  2. apk add build-base
+#  3. apk add curl
+#  4. apk add gfortran
+#  5. apk add openssh
+#  6. apk add python3
+#  7. apk add perl
+#  8. apk add gdb
+#  9. apk add texlive
+#
 # heaviside: scl enable devtoolset-2 python27 bash
 # bromwich or compute1: scl enable devtoolset-8 bash
 # Bromwich PGI:
@@ -81,6 +96,8 @@ CTML_FBC = FALSE
 #    expressions during compilation.
 COMP	  = g++
 FCOMP = gfortran
+PYTHONCOMP = python
+
 # total view:
 #  1. ssh -YX sussman@hpc-login.rcc.fsu.edu (44 not 57)
 #  2. module load gnu openmpi  (can I leave out the /8.2.1-4.0.0 ?)
@@ -135,6 +152,10 @@ ifeq ($(BL_NO_FORT),TRUE)
   CPPFLAGS += -DBL_NO_FORT
 endif
 
+ifeq ($(iPAD_ISH),TRUE)
+ PYTHONCOMP = python3
+ HOSTNAME = unknown
+endif
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs 
 
@@ -151,6 +172,14 @@ ifeq ($(CYGWIN_ZENBOOK),TRUE)
  F90FLAGS+=-DCYGWINZENBOOK
 endif
 
+ifeq ($(iPAD_ISH),TRUE)
+ CPPFLAGS+=-DIPAD_ISH
+ CXXFLAGS+=-DIPAD_ISH
+ CFLAGS+=-DIPAD_ISH
+ FFLAGS+=-DIPAD_ISH
+ F90FLAGS+=-DIPAD_ISH
+endif
+
 ifeq ($(MEHDI_VAHAB_FSI),TRUE)
  CPPFLAGS+=-DMVAHABFSI
  CXXFLAGS+=-DMVAHABFSI
@@ -158,6 +187,8 @@ ifeq ($(MEHDI_VAHAB_FSI),TRUE)
  FFLAGS+=-DMVAHABFSI
  F90FLAGS+=-DMVAHABFSI
 endif
+
+
 ifeq ($(CTML_FIB),TRUE)
  CPPFLAGS+=-DINCLUDE_FIB
  FFLAGS+=-DINCLUDE_FIB
