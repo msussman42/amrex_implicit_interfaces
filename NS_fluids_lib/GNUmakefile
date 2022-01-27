@@ -96,7 +96,7 @@ CTML_FBC = FALSE
 #    expressions during compilation.
 COMP	  = g++
 FCOMP = gfortran
-PYTHONCOMP = python
+PYTHON = python
 
 # total view:
 #  1. ssh -YX sussman@hpc-login.rcc.fsu.edu (44 not 57)
@@ -153,7 +153,7 @@ ifeq ($(BL_NO_FORT),TRUE)
 endif
 
 ifeq ($(iPAD_ISH),TRUE)
- PYTHONCOMP = python3
+ PYTHON = python3
  HOSTNAME = unknown
 endif
 

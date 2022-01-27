@@ -44,8 +44,11 @@
 #include <omp.h>
 #endif
 
+//SUSSMAN
+#ifndef IPAD_ISH
 #if defined(__APPLE__)
 #include <xmmintrin.h>
+#endif
 #endif
 
 #include <cstdio>
@@ -101,12 +104,15 @@ namespace {
     SignalHandler prev_handler_sigint;
     SignalHandler prev_handler_sigabrt;
     SignalHandler prev_handler_sigfpe;
+//SUSSMAN
+#ifndef IPAD_ISH
 #if defined(__linux__)
     int           prev_fpe_excepts;
     int           curr_fpe_excepts;
 #elif defined(__APPLE__)
     unsigned int  prev_fpe_mask;
     unsigned int  curr_fpe_excepts;
+#endif
 #endif
 }
 
@@ -490,6 +496,8 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
             pp.query("fpe_trap_zero", divbyzero);
             pp.query("fpe_trap_overflow", overflow);
 
+//SUSSMAN
+#ifndef IPAD_ISH
 #if defined(__linux__)
             curr_fpe_excepts = 0;
             if (invalid)   curr_fpe_excepts |= FE_INVALID;
@@ -514,6 +522,7 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
                 _MM_SET_EXCEPTION_MASK(prev_fpe_mask & ~curr_fpe_excepts);
                 prev_handler_sigfpe = signal(SIGFPE,  BLBackTrace::handler);
 	    }
+#endif
 #endif
         }
     }
@@ -662,6 +671,7 @@ amrex::Finalize (amrex::AMReX* pamrex)
         if (prev_handler_sigint != SIG_ERR) signal(SIGINT, prev_handler_sigint);
         if (prev_handler_sigabrt != SIG_ERR) signal(SIGABRT, prev_handler_sigabrt);
         if (prev_handler_sigfpe != SIG_ERR) signal(SIGFPE, prev_handler_sigfpe);
+#ifndef IPAD_ISH
 #if defined(__linux__)
 #if !defined(__PGI) || (__PGIC__ >= 16)
         if (curr_fpe_excepts != 0) {
@@ -673,6 +683,7 @@ amrex::Finalize (amrex::AMReX* pamrex)
 	if (curr_fpe_excepts != 0u) {
             _MM_SET_EXCEPTION_MASK(prev_fpe_mask);
 	}
+#endif
 #endif
     }
 #endif

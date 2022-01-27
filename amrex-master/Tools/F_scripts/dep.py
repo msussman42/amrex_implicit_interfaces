@@ -1,6 +1,6 @@
-#!/usr/bin/env $(PYTHONCOMP)
+#!/usr/bin/env $(PYTHON)
 #
-#SUSSMAN: USE PYTHONCOMP
+#SUSSMAN: USE PYTHON
 #
 # automatically generate Makefile dependencies for Fortran 90 source.
 #
