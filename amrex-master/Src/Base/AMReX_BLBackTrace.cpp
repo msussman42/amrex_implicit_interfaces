@@ -18,6 +18,8 @@
 #include <csignal>
 #include <cfenv>
 
+//SUSSMAN
+#ifndef IPAD_ISH
 #if defined(AMREX_EXPORT_DYNAMIC) && defined(__APPLE__)
 #include <cxxabi.h>
 #include <dlfcn.h>
@@ -25,10 +27,14 @@
 #elif defined(__linux__)
 #define AMREX_BACKTRACE_SUPPORTED 1
 #endif
+#endif
 
+//SUSSMAN
+#ifndef IPAD_ISH
 #ifndef _WIN32
 #include <execinfo.h>
 #include <unistd.h>
+#endif
 #endif
 
 namespace amrex {
@@ -163,6 +169,9 @@ namespace {
 void
 BLBackTrace::print_backtrace_info (FILE* f)
 {
+//SUSSMAN
+#ifndef IPAD_ISH
+
 #ifdef AMREX_BACKTRACE_SUPPORTED
 
     const int nbuf = 64;
@@ -288,6 +297,8 @@ BLBackTrace::print_backtrace_info (FILE* f)
             fprintf(f, "%2d: %s\n", i, line.c_str());
         }
     }
+
+#endif
 
 #endif
 

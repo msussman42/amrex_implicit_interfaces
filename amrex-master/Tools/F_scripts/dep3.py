@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #SUSSMAN: 
-#this file (dep.py) used when PYTHONCOMP=python
-#(dep3.py) used when PYTHONCOMP=python3
+#this file (dep3.py) used when PYTHONCOMP=python3
+#(dep.py) used when PYTHONCOMP=python
 #
 #
 # automatically generate Makefile dependencies for Fortran 90 source.
@@ -16,7 +16,7 @@
 #      easily see them.  Usually this is a case of the regex not
 #      capturing how the module is defined
 #
-#   -- add `--debug` to the `dep.py` commandline (e.g., in
+#   -- add `--debug` to the `dep3.py` commandline (e.g., in
 #      `C_mk/Make.rules`).  This will output a file called
 #      `dependencies.out` that shows details about what files are
 #      parsed, what modules they define, and what modules they require.
@@ -30,7 +30,7 @@ from __future__ import print_function
 import sys
 
 if sys.version_info < (2, 7):
-    sys.exit("ERROR: need python 2.7 or later for dep.py")
+    sys.exit("ERROR: need python 2.7 or later for dep3.py")
 
 if sys.version[0] == "2":
     reload(sys)
@@ -294,4 +294,4 @@ if __name__ == "__main__":
         doit(prefix_pass, args.search_path.split(), args.files, cpp_pass, debug=args.debug)
     except:
         # something went wrong
-        print("$(error something went wrong in dep.py.  Remake, adding the option 'DEP_CHECK_OPTS=--debug' to your make command and examine the 'dependencies.out' file)")
+        print("$(error something went wrong in dep3.py.  Remake, adding the option 'DEP_CHECK_OPTS=--debug' to your make command and examine the 'dependencies.out' file)")

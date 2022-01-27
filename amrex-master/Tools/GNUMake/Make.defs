@@ -1,9 +1,9 @@
 #SUSSMAN
 # Check python version
-ifndef PYTHON
-  PYTHON=python
+ifndef PYTHONCOMP
+  PYTHONCOMP=python
 endif
-my_python_version := $(word 2, $(shell $(PYTHON) --version 2>&1))
+my_python_version := $(word 2, $(shell $(PYTHONCOMP) --version 2>&1))
 ifneq ($(firstword $(sort 2.7 $(my_python_version))), 2.7)
   $(error Python >= 2.7 required! Your version is $(my_python_version))
 endif
