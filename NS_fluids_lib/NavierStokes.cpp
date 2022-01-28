@@ -14450,9 +14450,9 @@ NavierStokes::phase_change_redistributeALL() {
  int idx_mdot=JUMP_STRENGTH_MF;
  int idx_mdot_complement=JUMP_STRENGTH_COMPLEMENT_MF;
  int tessellate=3;
- int operation_flag=0; 
+ int operation_flag=OP_GATHER_MDOT; 
  ColorSumALL(
-  operation_flag, // =0
+  operation_flag, // =OP_GATHER_MDOT
   tessellate,  //=3
   coarsest_level,
   color_count,
@@ -14468,10 +14468,10 @@ NavierStokes::phase_change_redistributeALL() {
   mdot_comp_data_redistribute
   );
 
- operation_flag=1; // scatter to mdot or density
+ operation_flag=OP_SCATTER_MDOT; // scatter to mdot or density
 
  ColorSumALL(
-  operation_flag, //=1
+  operation_flag, //=OP_SCATTER_MDOT
   tessellate,  //=3
   coarsest_level,
   color_count,
@@ -15874,8 +15874,7 @@ void
 NavierStokes::synchronize_flux_register(int operation_flag,
  int spectral_loop) {
 
- if ((operation_flag<0)||(operation_flag>11))
-  amrex::Error("operation_flag invalid2");
+ fort_check_operation_flag_MAC(&operation_flag);
  
  if (spectral_loop+1==end_spectral_loop()) {
   delete_localMF(SEM_FLUXREG_MF,1);
@@ -15896,23 +15895,24 @@ NavierStokes::allocate_flux_register(int operation_flag) {
   //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
   //   (iii) (unew^{c})^{c->f}  compressible regions.
   //   (iv) usolid in solid regions
- if (operation_flag==11) {
+ if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) {
   ncfluxreg=AMREX_SPACEDIM;
- } else if (operation_flag==7) {  // advection
+ } else if (operation_flag==OP_ISCHEME_MAC) {  // advection
   ncfluxreg=AMREX_SPACEDIM*NFLUXSEM;
- } else if (operation_flag==2) { 
+ } else if (operation_flag==OP_POTGRAD_SURF_TEN_TO_MAC) { 
   ncfluxreg=AMREX_SPACEDIM; // (grad pressure_potential)_mac
- } else if (operation_flag==3) { // ucell -> umac
+ } else if (operation_flag==OP_UNEW_CELL_TO_MAC) { // ucell -> umac
   ncfluxreg=AMREX_SPACEDIM;
- } else if (operation_flag==4) { // umac -> umac
+ } else if (operation_flag==OP_UNEW_USOL_MAC_TO_MAC) { // umac -> umac
   ncfluxreg=AMREX_SPACEDIM;
- } else if (operation_flag==5) { // umac -> umac+beta F^cell->mac
+  // umac -> umac+beta F^cell->mac
+ } else if (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC) { 
   ncfluxreg=AMREX_SPACEDIM;
- } else if (operation_flag==6) { // grad U
+ } else if (operation_flag==OP_UGRAD_MAC) { // grad U
   ncfluxreg=AMREX_SPACEDIM*AMREX_SPACEDIM;
- } else if (operation_flag==0) { // grad p
+ } else if (operation_flag==OP_PRESGRAD_MAC) { // grad p
   ncfluxreg=AMREX_SPACEDIM;
- } else if (operation_flag==8) { // grad U (for crossterm)
+ } else if (operation_flag==OP_UGRAD_COUPLING_MAC) { // grad U (for crossterm)
   ncfluxreg=AMREX_SPACEDIM*AMREX_SPACEDIM;
  } else
   amrex::Error("operation_flag invalid3");
@@ -16095,7 +16095,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
   if (init_fluxes==1) {
 
-   int operation_flag=7;
+   int operation_flag=OP_ISCHEME_MAC;
    if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM*NFLUXSEM)
     amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid8");
 
@@ -16258,7 +16258,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &nsolve,
       &tileloop,
       &dir,
-      &operation_flag, // 7
+      &operation_flag, // OP_ISCHEME_MAC
       &energyflag,
       &visc_coef, //beta
       &visc_coef,
@@ -22951,10 +22951,10 @@ NavierStokes::post_init_state () {
  int coarsest_level=0;
  int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
  int tessellate=1;
- int operation_flag=0;
+ int operation_flag=OP_GATHER_MDOT;
 
  ColorSumALL(
-  operation_flag, //=0
+  operation_flag, //=OP_GATHER_MDOT
   tessellate,  //=1
   coarsest_level,
   color_count,

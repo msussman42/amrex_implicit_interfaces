@@ -28,6 +28,9 @@ extern "C"
    int fort_drag_IQ_type(
     int* drag_comp,//0..NDRAG_IQ-1
     int* drag_im); //0..nmat-1
+
+   void fort_check_operation_flag_MAC(int* operation_flag);
+
 }
 
 }/* namespace amrex */

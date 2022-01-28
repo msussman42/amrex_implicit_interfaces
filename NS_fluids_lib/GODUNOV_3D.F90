@@ -1033,7 +1033,7 @@ stop
        nsolve, &
        tileloop, &
        dir, &  ! dir=1..sdim
-       operation_flag, & ! 8
+       operation_flag, & ! OP_UGRAD_COUPLING_MAC
        enable_spectral, &
        spectral_loop, &
        ncfluxreg, &
@@ -1260,7 +1260,7 @@ stop
        print *,"enable_spectral invalid crossterm"
        stop
       endif
-      if (operation_flag.ne.8) then
+      if (operation_flag.ne.OP_UGRAD_COUPLING_MAC) then
        print *,"operation_flag invalid5"
        stop
       endif
@@ -1918,7 +1918,7 @@ stop
                  bfact, &
                  dx(dir), &
                  x_sep, &
-                 operation_flag) ! operation_flag==8
+                 operation_flag) ! operation_flag==OP_UGRAD_COUPLING_MAC
 
                 do isten=0,bfact
 
@@ -19530,7 +19530,7 @@ stop
               ncomp_xgp=ntensor
               ncomp_xp=SDIM ! number of amrsync components
               scomp_bc=1
-              operation_flag=6  ! evaluate tensor values
+              operation_flag=OP_UGRAD_MAC  ! evaluate tensor values
               energyflag=0
               project_option_vel=SOLVETYPE_VISC
               def_dt=one
@@ -19544,7 +19544,7 @@ stop
                level, &
                finest_level, &
                nmat, &
-               operation_flag, &  ! 6
+               operation_flag, &  ! OP_UGRAD_MAC
                energyflag, &
                project_option_vel, &
                SEM_upwind, &

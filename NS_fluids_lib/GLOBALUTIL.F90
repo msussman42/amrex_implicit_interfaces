@@ -7192,6 +7192,30 @@ end subroutine dynamic_contact_angle
       return
       end subroutine cramers_rule
 
+      subroutine fort_check_operation_flag_MAC(operation_flag) &
+      bind(c,name='fort_check_operation_flag_MAC')
+
+      IMPLICIT NONE
+      INTEGER_T, intent(in) :: operation_flag
+
+      if ((operation_flag.eq.OP_PRESGRAD_MAC).or. &
+          (operation_flag.eq.OP_PRES_CELL_TO_MAC).or. &
+          (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC).or. &
+          (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
+          (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. &
+          (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. &
+          (operation_flag.eq.OP_UGRAD_MAC).or. &
+          (operation_flag.eq.OP_ISCHEME_MAC).or. &
+          (operation_flag.eq.OP_UGRAD_COUPLING_MAC).or. &
+          (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then
+       ! do nothing
+      else
+       print *,"operation_flag invalid"
+       stop
+      endif
+
+      return
+      end subroutine fort_check_operation_flag_MAC
 
       subroutine get_iten(im1,im2,iten,nmat)
       IMPLICIT NONE
@@ -10289,10 +10313,8 @@ end subroutine dynamic_contact_angle
       REAL_T PLINE2(0:bfact+1)
       INTEGER_T AMR_boundary_flag
 
-      if ((operation_flag.lt.0).or.(operation_flag.gt.11)) then
-       print *,"operation_flag invalid1"
-       stop
-      endif
+      call fort_check_operation_flag_MAC(operation_flag)
+
       if ((dir.lt.1).or.(dir.gt.SDIM)) then
        print *,"dir invalid lineGRAD"
        stop
@@ -10318,7 +10340,7 @@ end subroutine dynamic_contact_angle
        endif
       else if (levelrz_in.eq.3) then
 
-       if (operation_flag.eq.6) then ! tensor derivatives
+       if (operation_flag.eq.OP_UGRAD_MAC) then ! tensor derivatives
 
         if ((nc.lt.1).or. &
             (nc.gt.SDIM)) then
@@ -10326,19 +10348,19 @@ end subroutine dynamic_contact_angle
          stop
         endif
 
-       else if (operation_flag.eq.0) then ! grad p_MAC
+       else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! grad p_MAC
         ! do nothing
-       else if (operation_flag.eq.2) then ! grad ppot_MAC/rho_pot_MAC
+       else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
         ! do nothing
-       else if (operation_flag.eq.3) then ! u^{Cell->Mac}
+       else if (operation_flag.eq.OP_UNEW_CELL_TO_MAC) then ! u^{Cell->Mac}
         ! do nothing
-       else if (operation_flag.eq.5) then ! u^MAC=u^MAC+(DU)^{cell->mac}
+       else if (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC) then 
         ! do nothing
-       else if (operation_flag.eq.11) then!u^MAC=u^MAC+(DU)^{cell->mac}
+       else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then
         ! do nothing
-       else if (operation_flag.eq.7) then ! advection
+       else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
         ! do nothing
-       else if (operation_flag.eq.8) then ! coupling
+       else if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then ! coupling
         ! do nothing
        else
         print *,"operation_flag invalid2"
@@ -10710,7 +10732,7 @@ end subroutine dynamic_contact_angle
       call deriv_change_basis(bfact+1,bfact,PLINE2,dest_grad, &
         wMAT_extend,yGL_extend,yGL,dx_element)
 
-      if (operation_flag.eq.7) then ! advection
+      if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
 
        do i1=0,bfact
         if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then
@@ -10724,23 +10746,23 @@ end subroutine dynamic_contact_angle
         dest_grad(i1)=zero
        enddo ! i1=0..bfact
 
-      else if (operation_flag.eq.0) then ! grad p_MAC
+      else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! grad p_MAC
         ! do nothing
-      else if (operation_flag.eq.2) then ! grad ppot_MAC/rho_pot_MAC
+      else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
         ! do nothing
-      else if (operation_flag.eq.3) then ! u^{Cell->Mac}
+      else if (operation_flag.eq.OP_UNEW_CELL_TO_MAC) then ! u^{Cell->Mac}
         ! do nothing
-      else if (operation_flag.eq.5) then ! u^MAC=u^MAC+(DU)^{cell->mac}
+      else if (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC) then 
         ! do nothing
       else if (operation_flag.ge.6) then ! rate of strain
 
        ! do nothing
 
-      else if (operation_flag.eq.11) then
+      else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then
 
        ! do nothing
 
-      else if (operation_flag.eq.8) then ! coupling terms
+      else if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then ! coupling terms
 
        ! do nothing
 
@@ -10773,19 +10795,19 @@ end subroutine dynamic_contact_angle
           endif
          endif 
 
-        else if (operation_flag.eq.0) then ! grad p_MAC
+        else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! grad p_MAC
          ! do nothing
-        else if (operation_flag.eq.2) then ! grad ppot_MAC/rho_pot_MAC
+        else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
          ! do nothing
-        else if (operation_flag.eq.3) then ! u^{Cell->Mac}
+        else if (operation_flag.eq.OP_UNEW_CELL_TO_MAC) then ! u^{Cell->Mac}
          ! do nothing
-        else if (operation_flag.eq.5) then ! u^MAC=u^MAC+(DU)^{cell->mac}
+        else if (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC) then 
          ! do nothing
-        else if (operation_flag.eq.11) then
+        else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then
          ! do nothing
-        else if (operation_flag.eq.7) then
+        else if (operation_flag.eq.OP_ISCHEME_MAC) then
          ! do nothing (advection)
-        else if (operation_flag.eq.8) then
+        else if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then
          ! do nothing (coupling)
         else
          print *,"operation_flag invalid4"

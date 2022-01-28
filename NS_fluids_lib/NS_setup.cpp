@@ -2194,11 +2194,11 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   int coarsest_level=0;
   int tessellate=1;
   int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
-  int operation_flag=0;
+  int operation_flag=OP_GATHER_MDOT;
 
    // declared in NavierStokes3.cpp
   ColorSumALL(
-    operation_flag, // =0
+    operation_flag, // =OP_GATHER_MDOT
     tessellate, // =1
     coarsest_level,
     color_count,

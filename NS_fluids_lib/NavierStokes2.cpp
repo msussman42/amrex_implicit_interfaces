@@ -695,27 +695,27 @@ void NavierStokes::avgDown_and_Copy_localMF(
  int scomp_flux=0;
  int ncomp_flux_use=0;
 
- if (operation_flag==7) {  // advection 
+ if (operation_flag==OP_ISCHEME_MAC) {  // advection 
   ncomp_den=nmat*num_state_material;
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=NFLUXSEM;
   scomp_flux=0;
   ncomp_flux_use=NFLUXSEM;
- } else if ((operation_flag==3)|| // u cell to MAC
-            (operation_flag==5)|| // uMAC=uMAC+beta * diff_reg
-	    (operation_flag==11)) {
+ } else if ((operation_flag==OP_UNEW_CELL_TO_MAC)|| 
+            (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC)||
+	    (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC)) {
   ncomp_den=AMREX_SPACEDIM;
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=1;
   scomp_flux=0;
   ncomp_flux_use=1;
- } else if (operation_flag==0) { //grad p
+ } else if (operation_flag==OP_PRESGRAD_MAC) { //grad p
   ncomp_den=1;
   ncomp_vel=1;
   ncomp_flux=1;
   scomp_flux=0;
   ncomp_flux_use=1;
- } else if (operation_flag==8) {  // viscous flux
+ } else if (operation_flag==OP_UGRAD_COUPLING_MAC) {  
   ncomp_den=AMREX_SPACEDIM;
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=AMREX_SPACEDIM;
@@ -944,27 +944,27 @@ void NavierStokes::interp_and_Copy_localMF(
  int ncomp_flux_use=0;
 
 
- if (operation_flag==8) {  // viscosity
+ if (operation_flag==OP_UGRAD_COUPLING_MAC) {  // viscosity
   ncomp_den=AMREX_SPACEDIM;
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=AMREX_SPACEDIM;
   scomp_flux=0;
   ncomp_flux_use=AMREX_SPACEDIM;
- } else if (operation_flag==7) {  // advection 
+ } else if (operation_flag==OP_ISCHEME_MAC) {  // advection 
   ncomp_den=nmat*num_state_material;
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=NFLUXSEM;
   scomp_flux=0;
   ncomp_flux_use=NFLUXSEM;
- } else if ((operation_flag==3)|| // u cell to MAC
-            (operation_flag==5)|| // uMAC=uMAC+beta * diff_reg
-	    (operation_flag==11)) {
+ } else if ((operation_flag==OP_UNEW_CELL_TO_MAC)||
+            (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC)|| 
+	    (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC)) {
   ncomp_den=AMREX_SPACEDIM;
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=1;
   scomp_flux=0;
   ncomp_flux_use=1;
- } else if (operation_flag==0) {
+ } else if (operation_flag==OP_PRESGRAD_MAC) {
   ncomp_den=1;
   ncomp_vel=1;
   ncomp_flux=1;
@@ -1865,7 +1865,7 @@ void NavierStokes::apply_cell_pressure_gradient(
   amrex::Error("invalid ncomp in cell pressure gradient routine");
 
  //interpolate pressure from cell to MAC grid.
- int operation_flag_interp_pres=1; 
+ int operation_flag_interp_pres=OP_PRES_CELL_TO_MAC; 
  int spectral_loop=0;
  int tileloop=0;
 
@@ -1963,7 +1963,7 @@ void NavierStokes::apply_cell_pressure_gradient(
     &nsolve,
     &tileloop,
     &dir,
-    &operation_flag_interp_pres, //1
+    &operation_flag_interp_pres, //OP_PRES_CELL_TO_MAC
     &local_energyflag,
     &beta,
     &visc_coef,
@@ -2483,7 +2483,7 @@ void NavierStokes::increment_face_velocity(
  } else
   amrex::Error("num_colors invalid");
 
- int operation_flag=3;
+ int operation_flag=OP_UNEW_CELL_TO_MAC;
 
  int primary_vel_data=-1;
  int secondary_vel_data=-1;
@@ -2505,7 +2505,7 @@ void NavierStokes::increment_face_velocity(
   if (beta!=0.0)
    amrex::Error("beta invalid");
 
-  operation_flag=3;
+  operation_flag=OP_UNEW_CELL_TO_MAC;
 
  } else if (interp_option==1) { // unew^{f}=unew^{f}
 
@@ -2531,7 +2531,7 @@ void NavierStokes::increment_face_velocity(
   if (beta!=0.0)
    amrex::Error("beta invalid");
 
-  operation_flag=4;
+  operation_flag=OP_UNEW_USOL_MAC_TO_MAC;
 
  } else if (interp_option==2) {//unew^{f}=unew^{f}+beta*diffuse_register^{c->f}
 
@@ -2547,7 +2547,7 @@ void NavierStokes::increment_face_velocity(
    amrex::Error("idx_velcell invalid");
 
   if (project_option==SOLVETYPE_VISC) {  
-   operation_flag=5;
+   operation_flag=OP_UMAC_PLUS_VISC_CELL_TO_MAC;
   } else
    amrex::Error("project_option invalid23");
 
@@ -2567,7 +2567,7 @@ void NavierStokes::increment_face_velocity(
 
   if ((project_option==SOLVETYPE_PRES)||
       (project_option==SOLVETYPE_INITPROJ)) {
-   operation_flag=11;
+   operation_flag=OP_U_COMP_CELL_MAC_TO_MAC;
   } else
    amrex::Error("project_option invalid25");
 
@@ -2702,7 +2702,7 @@ void NavierStokes::increment_face_velocity(
    MultiFab* Umac_old;
    MultiFab* U_old;
 
-   if (interp_option==4) { // operation_flag==11
+   if (interp_option==4) { // operation_flag==OP_U_COMP_CELL_MAC_TO_MAC
     Umac_old=localMF[ADVECT_REGISTER_FACE_MF+dir];
     U_old=localMF[ADVECT_REGISTER_MF];
    } else if ((interp_option==0)|| //operation_flag==3
@@ -3914,7 +3914,7 @@ void NavierStokes::init_gradu_tensor(
  int clear_phys_boundary=3;
  Real tag=1.0;
  MultiFab* mask3=maskfiner(1,tag,clear_phys_boundary);  
- int operation_flag=6; // evaluate tensor values
+ int operation_flag=OP_UGRAD_MAC; // evaluate tensor values
 
  if ((localMF_grow[idx_face]>=0)||
      (localMF_grow[idx_cell]>=0)||
@@ -4110,7 +4110,7 @@ void NavierStokes::apply_pressure_grad(
   if (nsolve!=AMREX_SPACEDIM)
    amrex::Error("nsolve invalid30");
 
-  int operation_flag=8;
+  int operation_flag=OP_UGRAD_COUPLING_MAC;
 
   if (simple_AMR_BC_flag_viscosity==0) {
 
@@ -4235,7 +4235,7 @@ void NavierStokes::apply_pressure_grad(
      &nsolve,
      &tileloop,
      &dir,
-     &operation_flag, // 8
+     &operation_flag, // OP_UGRAD_COUPLING_MAC
      &local_enable_spectral,
      &spectral_loop,
      &ncfluxreg,
@@ -4335,7 +4335,7 @@ void NavierStokes::apply_pressure_grad(
   blob_array.resize(1);
   int blob_array_size=blob_array.size();
 
-  int operation_flag=0;
+  int operation_flag=OP_PRESGRAD_MAC;
 
   if (nsolve!=1)
    amrex::Error("nsolve invalid32");
@@ -4471,7 +4471,7 @@ void NavierStokes::apply_pressure_grad(
      &nsolve,
      &tileloop,
      &dir,
-     &operation_flag, // 0
+     &operation_flag, // OP_PRESGRAD_MAC
      &energyflag,
      &beta,
      &visc_coef,
@@ -5752,7 +5752,7 @@ void NavierStokes::process_potential_force_face() {
 
  int finest_level=parent->finestLevel();
 
- int operation_flag=2;
+ int operation_flag=OP_POTGRAD_SURF_TEN_TO_MAC;
  
  bool use_tiling=ns_tiling;
 
@@ -5946,7 +5946,7 @@ void NavierStokes::process_potential_force_face() {
     &nsolve,
     &tileloop,
     &dir,
-    &operation_flag, //2
+    &operation_flag, //OP_POTGRAD_SURF_TEN_TO_MAC
     &local_energyflag,
     &beta,
     &visc_coef,

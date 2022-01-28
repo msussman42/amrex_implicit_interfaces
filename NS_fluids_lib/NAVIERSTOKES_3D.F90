@@ -4291,7 +4291,7 @@ END SUBROUTINE SIMP
 
       nmat=num_materials
 
-      if (operation_flag.eq.7) then ! advection
+      if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
        if (ncomp_vel.ne.SDIM) then
         print *,"ncomp_vel invalid"
         stop
@@ -4304,9 +4304,9 @@ END SUBROUTINE SIMP
         print *,"ncomp_flux invalid"
         stop
        endif
-      else if ((operation_flag.eq.3).or. & !u cell to MAC
-               (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
-               (operation_flag.eq.11)) then 
+      else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u cell to MAC
+               (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & !UMAC=UMAC+beta diff_reg
+               (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
        if (ncomp_vel.ne.AMREX_SPACEDIM) then
         print *,"ncomp_vel invalid"
         stop
@@ -4319,7 +4319,7 @@ END SUBROUTINE SIMP
         print *,"ncomp_flux invalid"
         stop
        endif
-      else if (operation_flag.eq.0) then ! grad p
+      else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! grad p
        if (ncomp_vel.ne.1) then
         print *,"ncomp_vel invalid"
         stop
@@ -4725,7 +4725,7 @@ END SUBROUTINE SIMP
               print *,"n invalid"
               stop
              endif
-            else if (operation_flag.eq.7) then ! advection
+            else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
              if ((n.ge.1).and.(n.le.SDIM)) then ! velocity
               fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),n)
              else if (n.eq.SDIM+1) then !temperature
@@ -4735,16 +4735,16 @@ END SUBROUTINE SIMP
               print *,"n invalid"
               stop
              endif
-            else if ((operation_flag.eq.3).or. & !u cell to MAC
-                     (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
-                     (operation_flag.eq.11)) then 
+            else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u cell to MAC
+                     (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & !UMAC=UMAC+beta diff_reg
+                     (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
              if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
               fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),dir+1)
              else
               print *,"dir invalid"
               stop
              endif
-            else if (operation_flag.eq.0) then
+            else if (operation_flag.eq.OP_PRESGRAD_MAC) then
              if (n.eq.1) then
               fine_data=den_fine(D_DECL(istrip,jstrip,kstrip),1)
              else
@@ -4849,7 +4849,7 @@ END SUBROUTINE SIMP
                    print *,"n invalid"
                    stop
                   endif
-                 else if (operation_flag.eq.7) then ! advection
+                 else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
                   if ((n.ge.1).and.(n.le.SDIM)) then ! velocity
                    fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),n)
                   else if (n.eq.SDIM+1) then ! temperature
@@ -4859,16 +4859,16 @@ END SUBROUTINE SIMP
                    print *,"n invalid"
                    stop
                   endif
-                 else if ((operation_flag.eq.3).or. & !u cell to MAC
-                          (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
-                          (operation_flag.eq.11)) then 
+                 else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u cell to MAC
+                          (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & !UMAC=UMAC+beta diff_reg
+                          (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
                   if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                    fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),dir+1)
                   else
                    print *,"dir invalid"
                    stop
                   endif
-                 else if (operation_flag.eq.0) then
+                 else if (operation_flag.eq.OP_PRESGRAD_MAC) then
                   if (n.eq.1) then
                    fine_data=den_fine(D_DECL(istrip,jstrip,kstrip),1)
                   else
@@ -5053,7 +5053,7 @@ END SUBROUTINE SIMP
         print *,"ncomp_flux invalid viscosity"
         stop
        endif
-      else if (operation_flag.eq.7) then ! advection
+      else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
        if (ncomp_vel.ne.SDIM) then
         print *,"ncomp_vel invalid"
         stop
@@ -5066,9 +5066,9 @@ END SUBROUTINE SIMP
         print *,"ncomp_flux invalid"
         stop
        endif
-      else if ((operation_flag.eq.3).or. & !u cell to MAC
-               (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
-               (operation_flag.eq.11)) then 
+      else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u cell to MAC
+               (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & !UMAC=UMAC+beta diff_reg
+               (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
        if (ncomp_vel.ne.AMREX_SPACEDIM) then
         print *,"ncomp_vel invalid"
         stop
@@ -5081,7 +5081,7 @@ END SUBROUTINE SIMP
         print *,"ncomp_flux invalid"
         stop
        endif
-      else if (operation_flag.eq.0) then
+      else if (operation_flag.eq.OP_PRESGRAD_MAC) then
        if (ncomp_vel.ne.1) then
         print *,"ncomp_vel invalid"
         stop
@@ -5479,7 +5479,7 @@ END SUBROUTINE SIMP
                 print *,"n invalid viscosity"
                 stop
                endif
-              else if (operation_flag.eq.7) then ! advection
+              else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
                if ((n.ge.1).and.(n.le.SDIM)) then ! velocity
                 crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),n)
                else if (n.eq.SDIM+1) then ! temperature
@@ -5489,16 +5489,16 @@ END SUBROUTINE SIMP
                 print *,"n invalid"
                 stop
                endif
-              else if ((operation_flag.eq.3).or. & !u cell to MAC
-                       (operation_flag.eq.5).or. & !UMAC=UMAC+beta diff_reg
-                       (operation_flag.eq.11)) then 
+              else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u cell to MAC
+                       (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & !UMAC=UMAC+beta diff_reg
+                       (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
                if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                 crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),dir+1)
                else
                 print *,"dir invalid"
                 stop
                endif
-              else if (operation_flag.eq.0) then
+              else if (operation_flag.eq.OP_PRESGRAD_MAC) then
                if (n.eq.1) then
                 crse_data=den_crse(D_DECL(istrip,jstrip,kstrip),1)
                else
@@ -5601,7 +5601,7 @@ END SUBROUTINE SIMP
                      print *,"n invalid"
                      stop
                     endif
-                   else if (operation_flag.eq.7) then ! advection
+                   else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
                     if ((n.ge.1).and.(n.le.SDIM)) then ! velocity
                      crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),n)
                     else if (n.eq.SDIM+1) then ! temperature
@@ -5611,16 +5611,17 @@ END SUBROUTINE SIMP
                      print *,"n invalid"
                      stop
                     endif
-                   else if ((operation_flag.eq.3).or. &!u cell to MAC
-                            (operation_flag.eq.5).or. &!UMAC=UMAC+beta diff_reg
-                            (operation_flag.eq.11)) then 
+                   else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
+                            (operation_flag.eq. &
+                             OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. &
+                            (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
                     if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                      crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),dir+1)
                     else
                      print *,"dir invalid"
                      stop
                     endif
-                   else if (operation_flag.eq.0) then
+                   else if (operation_flag.eq.OP_PRESGRAD_MAC) then
                     if (n.eq.1) then
                      crse_data=den_crse(D_DECL(istrip,jstrip,kstrip),1)
                     else

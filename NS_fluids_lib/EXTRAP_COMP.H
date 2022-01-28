@@ -108,4 +108,18 @@ FSI_SIZE=area
 #define FSI_NEXT (FSI_SIZE+1)
 #define NCOMP_FSI (FSI_NEXT)
 
+#define OP_PRESGRAD_MAC (0)
+#define OP_PRES_CELL_TO_MAC (1)
+#define OP_POTGRAD_SURF_TEN_TO_MAC (2)
+#define OP_UNEW_CELL_TO_MAC (3)
+#define OP_UNEW_USOL_MAC_TO_MAC (4)
+#define OP_UMAC_PLUS_VISC_CELL_TO_MAC (5)
+#define OP_UGRAD_MAC (6)
+#define OP_ISCHEME_MAC (7)
+#define OP_UGRAD_COUPLING_MAC (8)
+#define OP_U_COMP_CELL_MAC_TO_MAC (11)
+
+#define OP_GATHER_MDOT (0)
+#define OP_SCATTER_MDOT (1)
+
 #endif

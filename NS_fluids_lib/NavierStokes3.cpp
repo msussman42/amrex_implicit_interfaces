@@ -2007,7 +2007,7 @@ void NavierStokes::SEM_advectALL(int source_term) {
       (enable_spectral==2)||
       (ns_time_order>=2)) {
 
-   int operation_flag=7;
+   int operation_flag=OP_ISCHEME_MAC;
 
    int SEM_end_spectral_loop=2;
    if ((enable_spectral==1)||(enable_spectral==2)) {
@@ -2753,10 +2753,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        tessellate=1;
        int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
-       int operation_flag=0;
+       int operation_flag=OP_GATHER_MDOT;
 
        ColorSumALL( 
-         operation_flag, //=0
+         operation_flag, //=OP_GATHER_MDOT
          tessellate, //=1
          coarsest_level,
          color_count,
@@ -3451,12 +3451,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         int local_coarsest_level=0;
         int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
         int local_tessellate=3;
-        int operation_flag=0; // allocate TYPE_MF,COLOR_MF
+        int operation_flag=OP_GATHER_MDOT; // allocate TYPE_MF,COLOR_MF
 
          // for each blob, find sum_{F>=1/2} pressure * vol and
 	// sum_{F>=1/2} vol.
         ColorSumALL(
-         operation_flag, // =0
+         operation_flag, // =OP_GATHER_MDOT
          local_tessellate, //=3
          local_coarsest_level,
          local_color_count,
@@ -5044,8 +5044,8 @@ int ilev;
 } // subroutine color_variable
 
 
-//operation_flag==1 => scatter data collected when operation_flag==0 to mdot
-//  or density.
+//operation_flag==1 OP_SCATTER_MDOT => scatter data collected when 
+//operation_flag==0 (OP_GATHER_MDOT) to mdot or density.
 void
 NavierStokes::ColorSum(
  int operation_flag, //=0 or 1
@@ -5133,7 +5133,7 @@ NavierStokes::ColorSum(
  } else
   amrex::Error("ncomp_mdot invalid"); 
 
- if (operation_flag==0) {
+ if (operation_flag==OP_GATHER_MDOT) {
 
   for (int i=0;i<num_colors;i++) {
    clear_blobdata(i,level_blobdata);
@@ -5145,7 +5145,7 @@ NavierStokes::ColorSum(
    }
   } // i=0..num_colors-1
 
- } else if (operation_flag==1) {
+ } else if (operation_flag==OP_SCATTER_MDOT) {
 
   if (sweep_num==0) {
    if (ncomp_mdot>=1) {
@@ -5166,7 +5166,7 @@ NavierStokes::ColorSum(
    amrex::Error("sweep_num invalid");
 
  } else
-  amrex::Error("operation_flag invalid");
+  amrex::Error("operation_flag invalid ::ColorSum");
 
  int blob_array_size=num_colors*num_elements_blobclass;
 
@@ -5239,9 +5239,9 @@ NavierStokes::ColorSum(
    level_mdot_comp_redistribute_array[tid][i]=0.0;
   }
 
-  if (operation_flag==0) {
+  if (operation_flag==OP_GATHER_MDOT) {
    // do nothing
-  } else if (operation_flag==1) {
+  } else if (operation_flag==OP_SCATTER_MDOT) {
    
    counter=0;
    mdot_counter=0;
@@ -5489,7 +5489,7 @@ NavierStokes::ColorSum(
 } // omp
  ns_reconcile_d_num(182);
 
- if (operation_flag==0) {
+ if (operation_flag==OP_GATHER_MDOT) {
 
   for (int tid=1;tid<thread_class::nthreads;tid++) {
    for (int i=0;i<blob_array_size;i++) {
@@ -5505,7 +5505,7 @@ NavierStokes::ColorSum(
    }
   } // tid
 
- } else if (operation_flag==1) {
+ } else if (operation_flag==OP_SCATTER_MDOT) {
 
   for (int tid=1;tid<thread_class::nthreads;tid++) {
    for (int i=0;i<mdot_array_size;i++) {
@@ -5521,7 +5521,7 @@ NavierStokes::ColorSum(
  
  ParallelDescriptor::Barrier();
 
- if (operation_flag==0) {
+ if (operation_flag==OP_GATHER_MDOT) {
 
   for (int i=0;i<blob_array_size;i++) 
    ParallelDescriptor::ReduceRealSum(level_blob_array[0][i]);
@@ -5556,7 +5556,7 @@ NavierStokes::ColorSum(
    amrex::Error("mdot_counter invalid in ColorSum3");
   }
 
- } else if (operation_flag==1) {
+ } else if (operation_flag==OP_SCATTER_MDOT) {
 
   for (int i=0;i<mdot_array_size;i++) {
    ParallelDescriptor::ReduceRealSum(level_mdot_redistribute_array[0][i]);
@@ -5584,9 +5584,9 @@ NavierStokes::ColorSum(
 
  delete mask;
 
- if ((sweep_num==0)&&(operation_flag==0)) {
+ if ((sweep_num==0)&&(operation_flag==OP_GATHER_MDOT)) {
   // do nothing
- } else if ((sweep_num==1)||(operation_flag==1)) {
+ } else if ((sweep_num==1)||(operation_flag==OP_SCATTER_MDOT)) {
   delete_localMF(LS_COLORSUM_MF,1);
   delete_localMF(DEN_COLORSUM_MF,1);
   delete_localMF(VEL_COLORSUM_MF,1);
@@ -6481,8 +6481,8 @@ void NavierStokes::clear_blobdata(int i,Vector<blobclass>& blobdata) {
 
 } // end subroutine clear_blobdata
 
-//operation_flag==1 => scatter data collected when operation_flag==0 to mdot
-//  or density.
+//operation_flag==1 (OP_SCATTER_MDOT) => scatter data collected when 
+//operation_flag==0 (OP_GATHER_MDOT) to mdot or density.
 void
 NavierStokes::ColorSumALL(
  int operation_flag, // =0 or 1
@@ -6509,7 +6509,7 @@ NavierStokes::ColorSumALL(
  if (level!=0)
   amrex::Error("level=0 in ColorSumALL");
 
- if (operation_flag==0) {
+ if (operation_flag==OP_GATHER_MDOT) {
 
   // type_flag[im]=1 if material im exists in the domain.
   // type_mf(i,j,k)=im if material im dominates cell (i,j,k)
@@ -6523,7 +6523,7 @@ NavierStokes::ColorSumALL(
   color_variable(coarsest_level,
    idx_color,idx_type,&color_count,type_flag,zero_diag_flag);
 
- } else if (operation_flag==1) {
+ } else if (operation_flag==OP_SCATTER_MDOT) {
 
   // do nothing
 
@@ -6580,7 +6580,7 @@ NavierStokes::ColorSumALL(
  } else
   amrex::Error("idx_mdot invalid");
 
- if (operation_flag==0) {
+ if (operation_flag==OP_GATHER_MDOT) {
 
   blobdata.resize(color_count);
   mdot_data.resize(color_count);
@@ -6613,7 +6613,7 @@ NavierStokes::ColorSumALL(
 
   }  // i=0..color_count-1
 
- } else if (operation_flag==1) {
+ } else if (operation_flag==OP_SCATTER_MDOT) {
 
   // do nothing
 
@@ -6665,9 +6665,9 @@ NavierStokes::ColorSumALL(
 
  int num_sweeps=2;
 
- if (operation_flag==0) {
+ if (operation_flag==OP_GATHER_MDOT) {
   // do nothing
- } else if (operation_flag==1) { 
+ } else if (operation_flag==OP_SCATTER_MDOT) { 
    // (dest,source)
   copy_blobdata(level_blobdata,blobdata);
 
@@ -6731,7 +6731,7 @@ NavierStokes::ColorSumALL(
     level_mdot_comp_data_redistribute
     );
 
-   if (operation_flag==0) {
+   if (operation_flag==OP_GATHER_MDOT) {
 
     if (sweep_num==0) {
 
@@ -6776,7 +6776,7 @@ NavierStokes::ColorSumALL(
     } else
      amrex::Error("sweep_num invalid");
 
-   } else if (operation_flag==1) { //blobdata not updated for this case.
+   } else if (operation_flag==OP_SCATTER_MDOT) { //blobdata not updated.
 
     if (sweep_num==0) {
 
@@ -6805,14 +6805,14 @@ NavierStokes::ColorSumALL(
      }  // i=0..color_count-1
 
     } else
-     amrex::Error("sweep_num invalid for operation_flag==1 case");
+     amrex::Error("sweep_num invalid for operation_flag==OP_SCATTER_MDOT");
 
    } else
     amrex::Error("operation_flag invalid");
 
   } // ilev=coarsest_level..finest_level
 
-  if (operation_flag==0) {
+  if (operation_flag==OP_GATHER_MDOT) {
 
    if (sweep_num==0) {
 
@@ -7090,7 +7090,7 @@ NavierStokes::ColorSumALL(
    } else
     amrex::Error("sweep_num invalid");
 
-  } else if (operation_flag==1) {
+  } else if (operation_flag==OP_SCATTER_MDOT) {
    // do nothing
   } else
    amrex::Error("operation_flag invalid");
@@ -9801,9 +9801,9 @@ void NavierStokes::multiphase_project(int project_option) {
    int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
 
    int tessellate=1;
-   int operation_flag=0;
+   int operation_flag=OP_GATHER_MDOT;
    ColorSumALL(
-     operation_flag, // =0
+     operation_flag, // =OP_GATHER_MDOT
      tessellate, //=1
      coarsest_level,
      color_count,
@@ -13085,7 +13085,7 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
  Real beta=1.0;
  Vector<blobclass> blobdata;
 
-  // operation_flag==5 (interp_option==2)
+  // operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC (interp_option==2)
   // unew^f=unew^f+beta * REGISTER_CURRENT_MF^{c->f}
  increment_face_velocityALL(
    interp_option,
