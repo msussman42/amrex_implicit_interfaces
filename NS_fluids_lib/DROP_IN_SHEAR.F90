@@ -1092,7 +1092,7 @@ if ((num_materials.eq.2).and. &
    endif
  
    r_exact=(probhix-(xblob+radblob))/5.0d0
-   tcrit=assimilate_in%time  ! cur_time_slab
+   tcrit=assimilate_in%cur_time  ! cur_time_slab
 
    if (rr.ge.probhix-xblob-r_exact) then
     call drop_analytical_solution(tcrit,xcrit,D_gamma,T_exact,Y_exact, &

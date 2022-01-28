@@ -9,6 +9,7 @@
 #include "AMReX_BC_TYPES.H"
 
 #include "AMReX_ArrayLim.H"
+#include "EXTRAP_COMP.H"
 
 
 #if (AMREX_SPACEDIM==3)
@@ -537,5 +538,178 @@ endif
 
 return
 end subroutine AHMED_ICE_RESISTANT_HEATSOURCE
+
+
+subroutine AHMED_ICE_RESISTANT_ASSIMILATE( &
+     assimilate_in,assimilate_out, &
+     i,j,k,cell_flag)
+use probcommon_module
+IMPLICIT NONE
+
+type(assimilate_parm_type), intent(in) :: assimilate_in
+type(assimilate_out_parm_type), intent(inout) :: assimilate_out
+INTEGER_T, intent(in) :: i,j,k,cell_flag
+
+INTEGER_T :: nmat,nstate,nstate_test
+REAL_T :: xcrit(SDIM)
+REAL_T :: LS_normal(SDIM)
+REAL_T :: LS_test
+REAL_T :: t_upper,t_lower
+REAL_T :: mag
+REAL_T :: LS_seed,LS_seed_buffer
+
+INTEGER_T :: number_intervals
+INTEGER_T :: dir
+INTEGER_T :: im
+REAL_T VEL_DROP(SDIM)
+
+
+nmat=assimilate_in%nmat
+nstate=assimilate_in%nstate
+
+nstate_test=STATE_NCOMP
+if (nstate.eq.nstate_test) then
+ ! do nothing
+else
+ print *,"nstate invalid"
+ print *,"nstate=",nstate
+ print *,"nstate_test=",nstate_test
+ stop
+endif
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+if ((num_materials.ge.3).and. &
+    (num_state_material.ge.2).and. & 
+    (probtype.eq.425)) then
+ do dir=1,SDIM
+  xcrit(dir)=assimilate_in%xsten(0,dir)
+ enddo
+ t_upper=assimilate_in%cur_time  ! cur_time_slab
+ t_lower=t_upper-assimilate_in%dt
+ if (t_lower.lt.t_upper) then
+  if (t_lower.ge.-VOFTOL) then
+   ! do nothing
+  else
+   print *,"t_lower invalid"
+   stop
+  endif
+  if (radblob5.gt.zero) then
+   number_intervals=0
+   do while (number_intervals*radblob5.le.t_lower)
+    number_intervals=number_intervals+1
+   enddo
+   if (number_intervals*radblob5.gt.t_lower) then
+    if (number_intervals*radblob5.le.t_upper) then
+     if (SDIM.eq.2) then
+      mag=sqrt((xcrit(1)-xblob4)**2+(xcrit(2)-yblob4)**2)
+     else if (SDIM.eq.3) then
+      mag=sqrt((xcrit(1)-xblob4)**2+(xcrit(2)-yblob4)**2+ &
+               (xcrit(SDIM)-zblob4)**2)
+     else
+      print *,"dimension problem"
+      stop
+     endif
+     LS_seed=radblob4-mag
+     LS_seed_buffer=LS_seed+three*assimilate_in%dx(1)
+     if (LS_seed_buffer.ge.zero) then
+
+      do dir=1,SDIM
+       LS_normal(dir)=zero
+      enddo
+      if (mag.gt.zero) then
+       LS_normal(1)=(xblob4-xcrit(1))/mag
+       LS_normal(2)=(yblob4-xcrit(2))/mag
+       if (SDIM.eq.3) then
+        LS_normal(SDIM)=(zblob4-xcrit(SDIM))/mag
+       endif
+      else if (mag.eq.zero) then
+       ! do nothing
+      else
+       print *,"mag invalid"
+       stop
+      endif
+      VEL_DROP(1)=xblob5
+      VEL_DROP(2)=yblob5
+      if (SDIM.eq.3) then
+       VEL_DROP(SDIM)=zblob5
+      endif
+      if (cell_flag.eq.0) then ! MAC GRID X
+       assimilate_out%macx(D_DECL(i,j,k))=VEL_DROP(1)
+      else if (cell_flag.eq.1) then ! MAC GRID Y
+       assimilate_out%macy(D_DECL(i,j,k))=VEL_DROP(2)
+      else if ((cell_flag.eq.2).and.(SDIM.eq.3)) then ! MAC GRID Z
+       assimilate_out%macz(D_DECL(i,j,k))=VEL_DROP(SDIM)
+      else if (cell_flag.eq.-1) then
+       do dir=1,SDIM
+        assimilate_out%state(D_DECL(i,j,k),dir)=VEL_DROP(dir)
+       enddo
+       assimilate_out%LS_state(D_DECL(i,j,k),1)=LS_seed
+       assimilate_out%LS_state(D_DECL(i,j,k),2)=-LS_seed
+       do dir=1,SDIM
+        assimilate_out%LS_state(D_DECL(i,j,k), &
+                num_materials+dir)=LS_normal(dir)
+        assimilate_out%LS_state(D_DECL(i,j,k), &
+                num_materials+SDIM+dir)=-LS_normal(dir)
+       enddo
+       do im=2,num_materials
+        LS_test=assimilate_out%LS_state(D_DECL(i,j,k),im)
+        if (LS_test.ge.LS_seed-three*assimilate_in%dx(1)) then
+         LS_test=-abs(LS_seed)-three*assimilate_in%dx(1)
+         do dir=1,SDIM
+          assimilate_out%LS_state(D_DECL(i,j,k), &
+                num_materials+(im-1)*SDIM+dir)=zero
+         enddo
+        else if (LS_test.lt.-LS_seed) then
+         ! do nothing
+        else
+         print *,"LS_test or LS_seed invalid"
+         stop
+        endif
+       enddo
+      else 
+       print *,"cell_flag invalid"
+       stop
+      endif
+     else if (LS_seed_buffer.lt.zero) then
+      ! do nothing
+     else
+      print *,"LS_seed_buffer is NaN"
+      stop
+     endif
+    else if (number_intervals*radblob5.gt.t_upper) then
+     ! do nothing
+    else
+     print *,"radblob5 or t_upper is NaN"
+     stop
+    endif 
+   else
+    print *,"statement failed:(number_intervals*radblob5.gt.t_lower)"
+    stop
+   endif 
+  else if (radblob5.eq.zero) then
+   !do nothing
+  else
+   print *,"radblob5 invalid"
+   stop
+  endif
+ else if (t_lower.eq.t_upper) then
+  ! do nothing
+ else
+  print *,"t_lower or t_upper invalid"
+  stop
+ endif
+else
+ print *,"num_materials,num_state_material, or probtype invalid"
+ stop
+endif
+
+return
+end subroutine AHMED_ICE_RESISTANT_ASSIMILATE
+
 
 end module AHMED_ICE_RESISTANT_module
