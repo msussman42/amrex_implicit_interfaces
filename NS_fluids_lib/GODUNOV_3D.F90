@@ -20764,8 +20764,10 @@ stop
       return 
       end subroutine fort_mac_elastic_force
 
-        ! NavierStokes::init_boundary() called prior to this routine.
-        ! called from NavierStokes.cpp
+        ! NavierStokes::veldiffuseALL() (NavierStokes3.cpp)
+        ! NavierStokes::assimilate_state_data() (NavierStokes.cpp)
+        !     NavierStokes::init_boundary() 
+        !     fort_assimilate_statedata(...)
         ! put ns.wall_slip_weight=0.5 for example in the inputs file.
         ! ns.wall_slip_weight=0.0 => do not strengthen the slip BC
         ! ns.wall_slip_weight=1.0 => strongest imposition of slip BC
@@ -20785,7 +20787,7 @@ stop
        fablo,fabhi,bfact, &
        xlo,dx, &
        dt, &
-       time, & ! cur_time
+       cur_time, & ! cur_time
        LS_state,DIMS(LS_state), & ! state data
        state,DIMS(state), &       ! state data
        macx,DIMS(macx), &
@@ -20818,7 +20820,7 @@ stop
       REAL_T, intent(in), target :: xlo(SDIM)
       REAL_T, intent(in), target :: dx(SDIM)
       REAL_T, intent(in) :: dt
-      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: cur_time
       INTEGER_T, intent(in) :: DIMDEC(LS_state)
       INTEGER_T, intent(in) :: DIMDEC(state)
       INTEGER_T, intent(in) :: DIMDEC(macx)
@@ -20929,10 +20931,10 @@ stop
        print *,"dt invalid"
        stop
       endif 
-      if (time.ge.zero) then
+      if (cur_time.ge.zero) then
        ! do nothing
       else
-       print *,"time invalid"
+       print *,"cur_time invalid"
        stop
       endif 
       do im=1,nmat
@@ -20964,7 +20966,7 @@ stop
       ughostz_ptr=>ughostz
       call checkbound_array(fablo,fabhi,ughostz_ptr,0,SDIM-1,1255)
 
-      assimilate_parm%time=time
+      assimilate_parm%cur_time=cur_time
       assimilate_parm%dt=dt
       assimilate_parm%nhalf=nhalf
       assimilate_parm%nstate=nstate

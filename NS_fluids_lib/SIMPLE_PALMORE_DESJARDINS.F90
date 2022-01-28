@@ -621,7 +621,7 @@ if ((num_materials.eq.2).and. &
     (probtype.eq.2002)) then
  x_exact=probhix/8.0d0
  xcrit=assimilate_in%xsten(0,1)
- tcrit=assimilate_in%time  ! cur_time_slab
+ tcrit=assimilate_in%cur_time  ! cur_time_slab
  if ((xcrit.le.x_exact).or. &
      (xcrit.ge.probhix-x_exact)) then
   if (cell_flag.eq.0) then ! MAC GRID X

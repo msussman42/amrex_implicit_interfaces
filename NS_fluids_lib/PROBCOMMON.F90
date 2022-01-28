@@ -134,7 +134,7 @@ module probcommon_module_types
       INTEGER_T :: nstate
       INTEGER_T :: nhalf
       INTEGER_T :: nmat
-      REAL_T :: time
+      REAL_T :: cur_time
       REAL_T :: dt
       REAL_T, pointer :: dx(:)
       REAL_T, pointer :: xsten(:,:)
