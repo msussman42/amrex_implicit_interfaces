@@ -13449,7 +13449,7 @@ END SUBROUTINE Adist
        stop
       endif
 
-      if (operation_flag.eq.6) then ! tensor
+      if (operation_flag.eq.OP_UGRAD_MAC) then ! tensor
 
        if (ncomp_xgp.ne.ntensor) then
         print *,"ncomp_xgp invalid1"
@@ -13499,7 +13499,7 @@ END SUBROUTINE Adist
         stop
        endif
 
-      else if (operation_flag.eq.7) then ! advection
+      else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
 
        if (ncomp_xp.ne.NFLUXSEM) then
         print *,"ncomp_xp invalid(11) ",ncomp_xp
@@ -13514,7 +13514,7 @@ END SUBROUTINE Adist
         stop
        endif
        if (ncfluxreg.ne.SDIM*NFLUXSEM) then
-        print *,"ncfluxreg invalid operation_flag.eq.7"
+        print *,"ncfluxreg invalid operation_flag.eq.OP_ISCHEME_MAC"
         stop
        endif
        if ((scomp.ne.1).or. &
@@ -13533,7 +13533,7 @@ END SUBROUTINE Adist
         stop
        endif
 
-      else if (operation_flag.eq.0) then ! grad p
+      else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! grad p
 
        if (ncomp_xgp.ne.1) then
         print *,"ncomp_xgp invalid3"
@@ -13555,7 +13555,7 @@ END SUBROUTINE Adist
         stop
        endif
 
-      else if (operation_flag.eq.2) then ! grad ppot
+      else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then ! grad ppot
 
        if (ncomp_xgp.ne.1) then
         print *,"ncomp_xgp invalid5"
@@ -13583,9 +13583,9 @@ END SUBROUTINE Adist
         stop
        endif
 
-      else if ((operation_flag.eq.3).or. & !unew^CELL->MAC
-               (operation_flag.eq.11).or. &!unew^MAC,CELL DIFF->MAC
-               (operation_flag.eq.5)) then !umac=umac+beta diff^CELL->MAC
+      else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !unew^CELL->MAC
+               (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. &
+               (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then 
 
        if (ncomp_xgp.ne.1) then
         print *,"ncomp_xgp invalid7"
@@ -13773,7 +13773,7 @@ END SUBROUTINE Adist
               endif
              else if ((testbc.eq.INT_DIR).and.(dir2.ne.dir)) then
               nbr_outside_domain_flag(side)=0
-              if (operation_flag.eq.6) then
+              if (operation_flag.eq.OP_UGRAD_MAC) then
                ! do nothing (we expect this case for grad U)
               else
                print *,"operation_flag invalid"
@@ -13834,7 +13834,7 @@ END SUBROUTINE Adist
               endif
              else if ((testbc.eq.INT_DIR).and.(dir2.ne.dir)) then
               nbr_outside_domain_flag(side)=0
-              if (operation_flag.eq.6) then
+              if (operation_flag.eq.OP_UGRAD_MAC) then
                ! do nothing (we expect this case for grad U)
               else
                print *,"operation_flag invalid"
@@ -13896,7 +13896,7 @@ END SUBROUTINE Adist
            jc=j_out
            kc=k_out
 
-           if (operation_flag.eq.7) then ! advection (values outside elem)
+           if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection (values outside elem)
 
             templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
@@ -13916,7 +13916,7 @@ END SUBROUTINE Adist
              stop
             endif
 
-           else if (operation_flag.eq.6) then ! tensor derivatives
+           else if (operation_flag.eq.OP_UGRAD_MAC) then ! tensor derivatives
 
             if ((nc.ge.1).and.(nc.le.SDIM)) then
              local_data_side(side)=vel(D_DECL(ic,jc,kc),nc)
@@ -13925,7 +13925,7 @@ END SUBROUTINE Adist
              stop
             endif
 
-           else if (operation_flag.eq.0) then ! MAC pressure gradient
+           else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! MAC pressure gradient
             if (nc.eq.1) then
              if (scomp.eq.1) then
               local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
@@ -13937,7 +13937,7 @@ END SUBROUTINE Adist
              print *,"nc invalid"
              stop
             endif
-           else if (operation_flag.eq.2) then ! MAC potential grad
+           else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
             if (nc.eq.1) then
              if (scomp.eq.1) then
               local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
@@ -13958,9 +13958,9 @@ END SUBROUTINE Adist
              print *,"nc invalid"
              stop
             endif
-           else if ((operation_flag.eq.3).or. & !unew^CELL->MAC
-                    (operation_flag.eq.11).or. &!unew^MAC,CELL DIFF->MAC
-                    (operation_flag.eq.5)) then !umac=umac+beta diff^CELL->MAC
+           else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
+                    (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. &
+                    (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then 
 
             if (nc.eq.1) then
              if (scomp.eq.dir) then
@@ -13990,7 +13990,7 @@ END SUBROUTINE Adist
             stop
            endif
 
-           if (operation_flag.eq.6) then ! grad U
+           if (operation_flag.eq.OP_UGRAD_MAC) then ! grad U
 
             if (velbc_in(dir,side,nc).eq.REFLECT_EVEN) then
              local_bctype(side)=3 ! reflect even
@@ -14010,9 +14010,9 @@ END SUBROUTINE Adist
              stop
             endif
 
-           else if ((operation_flag.eq.3).or. & ! U cell to MAC
-                    (operation_flag.eq.11).or. &! UMAC=UMAC+(DU cell to MAC)
-                    (operation_flag.eq.5)) then ! UMAC=UMAC+(DU cell to MAC)
+           else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
+                    (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. &
+                    (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then 
 
             if (velbc_in(dir,side,scomp_bc).eq.REFLECT_EVEN) then
              local_bctype(side)=3 ! reflect even
@@ -14031,7 +14031,7 @@ END SUBROUTINE Adist
              stop
             endif
 
-           else if (operation_flag.eq.7) then ! advection (bc's)
+           else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection (bc's)
 
              ! normal points out of the computational domain.
             if (side.eq.1) then
@@ -14110,8 +14110,8 @@ END SUBROUTINE Adist
              stop
             endif
 
-           else if ((operation_flag.eq.0).or. & ! pressure grad on MAC
-                    (operation_flag.eq.2)) then ! potential grad and value
+           else if ((operation_flag.eq.OP_PRESGRAD_MAC).or. & 
+                    (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC)) then 
 
             if (presbc_in(dir,side,1).eq.REFLECT_EVEN) then
              local_bctype(side)=3 ! reflect even
@@ -14244,7 +14244,7 @@ END SUBROUTINE Adist
             stop
            endif
 
-           if (operation_flag.eq.7) then ! advection
+           if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
 
             if (simple_AMR_BC_flag.eq.0) then
              local_bctype(side)=bctype_tag
@@ -14301,7 +14301,7 @@ END SUBROUTINE Adist
              stop
             endif
 
-           else if (operation_flag.eq.6) then ! tensor derivatives
+           else if (operation_flag.eq.OP_UGRAD_MAC) then ! tensor derivatives
 
             local_AMR_BC_flag=simple_AMR_BC_flag
 
@@ -14342,7 +14342,7 @@ END SUBROUTINE Adist
              stop
             endif
 
-           else if (operation_flag.eq.0) then ! MAC pressure gradient
+           else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! MAC pressure gradient
 
             if (simple_AMR_BC_flag.eq.0) then
              local_bctype(side)=bctype_tag
@@ -14375,7 +14375,7 @@ END SUBROUTINE Adist
              stop
             endif
 
-           else if (operation_flag.eq.2) then ! MAC potential grad
+           else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
 
             if (simple_AMR_BC_flag.eq.1) then
 
@@ -14406,9 +14406,9 @@ END SUBROUTINE Adist
              stop
             endif
 
-           else if ((operation_flag.eq.3).or. & !unew^CELL->MAC
-                    (operation_flag.eq.11).or. &!unew^MAC,CELL DIFF->MAC
-                    (operation_flag.eq.5)) then !umac=umac+beta diff^CELL->MAC
+           else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
+                    (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. &
+                    (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then 
             if (simple_AMR_BC_flag.eq.0) then
              local_bctype(side)=bctype_tag
              if (nc.eq.1) then
@@ -14474,7 +14474,7 @@ END SUBROUTINE Adist
            ic,jc,kc, &
            fablo,bfact,dx,nhalf)
 
-          if (operation_flag.eq.6) then ! face grad U
+          if (operation_flag.eq.OP_UGRAD_MAC) then ! face grad U
 
            if ((nc.ge.1).and.(nc.le.SDIM)) then
             local_data(isten+1)=vel(D_DECL(ic,jc,kc),nc)
@@ -14483,9 +14483,9 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if ((operation_flag.eq.3).or. & !unew^CELL->MAC
-                   (operation_flag.eq.11).or. &!unew^MAC,CELL DIFF->MAC
-                   (operation_flag.eq.5)) then !umac=umac+beta diff^CELL->MAC
+          else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
+                   (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. &
+                   (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then
 
            if (nc.eq.1) then
             if (scomp.eq.dir) then
@@ -14499,7 +14499,7 @@ END SUBROUTINE Adist
             stop
            endif
          
-          else if (operation_flag.eq.0) then ! pressure grad on MAC
+          else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! pressure grad on MAC
 
            if (nc.eq.1) then
             local_data(isten+1)=pres(D_DECL(ic,jc,kc),1)
@@ -14508,7 +14508,7 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if (operation_flag.eq.2) then !potential grad/den and value
+          else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
 
            if (nc.eq.1) then
             local_data(isten+1)=pres(D_DECL(ic,jc,kc),1)
@@ -14518,7 +14518,7 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if (operation_flag.eq.7) then ! advection (values inside elem)
+          else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection (values inside elem)
 
            templocal=den(D_DECL(ic,jc,kc),ibase+2)
 
@@ -14561,7 +14561,7 @@ END SUBROUTINE Adist
 
          if (spectral_loop.eq.0) then
 
-          ! if operation_flag.eq.7 (advection), then
+          ! if operation_flag.eq.OP_ISCHEME_MAC (advection), then
           ! velocity/temperature flux 
           ! will be multiplied by umac (local_vel) in
           ! lineGRAD.
@@ -14582,7 +14582,7 @@ END SUBROUTINE Adist
            x_sep, &
            operation_flag)
 
-          if (operation_flag.eq.2) then !need den. for potential gradient term
+          if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
 
            do side=1,2
             local_bcval_den(side)=one  ! will not be used since "extrap" bc.
@@ -14605,13 +14605,13 @@ END SUBROUTINE Adist
             dx(dir), &
             x_sep, &
             operation_flag)
-          else if ((operation_flag.eq.0).or. & !grad p_MAC
-                   (operation_flag.eq.3).or. & !u^{c->mac}
-                   (operation_flag.eq.5).or. & !u^mac+du^{c->mac}
-                   (operation_flag.eq.6).or. & !rate of strain
-                   (operation_flag.eq.7).or. & !advection
-                   (operation_flag.eq.8).or. & !coupling
-                   (operation_flag.eq.11)) then!u^mac+du^{c->mac}
+          else if ((operation_flag.eq.OP_PRESGRAD_MAC).or. & !grad p_MAC
+                   (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u^{c->mac}
+                   (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & !u^mac+du^{c->mac}
+                   (operation_flag.eq.OP_UGRAD_MAC).or. & !rate of strain
+                   (operation_flag.eq.OP_ISCHEME_MAC).or. & !advection
+                   (operation_flag.eq.OP_UGRAD_COUPLING_MAC).or. & !coupling
+                   (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then
            ! do nothing
           else
            print *,"operation_flag invalid24"
@@ -14712,7 +14712,7 @@ END SUBROUTINE Adist
 
           mask_out=1
 
-          if (operation_flag.eq.7) then ! advection
+          if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
            do dir2=1,SDIM
             if (dir2.ne.dir) then
              if ((index_opp(dir2).lt.fablo(dir2)).or. &
@@ -14785,13 +14785,13 @@ END SUBROUTINE Adist
            ! from outside the domain.
            ! maskCF==0 at coarse/fine   maskCF==1 at fine/fine
 
-          else if ((operation_flag.eq.0).or. & !grad p_MAC
-                   (operation_flag.eq.2).or. & !grad ppot_MAC/rho_mac
-                   (operation_flag.eq.3).or. & !u^{c->mac}
-                   (operation_flag.eq.5).or. & !u^mac+du^{c->mac}
-                   (operation_flag.eq.6).or. & !rate of strain
-                   (operation_flag.eq.8).or. & !coupling
-                   (operation_flag.eq.11)) then!u^mac+du^{c->mac}
+          else if ((operation_flag.eq.OP_PRESGRAD_MAC).or. & !grad p_MAC
+                   (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC).or. & 
+                   (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u^{c->mac}
+                   (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
+                   (operation_flag.eq.OP_UGRAD_MAC).or. & !rate of strain
+                   (operation_flag.eq.OP_UGRAD_COUPLING_MAC).or. & !coupling
+                   (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then
 
            do dir2=1,SDIM
             if ((index_opp(dir2).lt.fablo(dir2)).or. &
@@ -14837,7 +14837,7 @@ END SUBROUTINE Adist
            stop
           endif
 
-          if (operation_flag.eq.7) then ! advection
+          if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
 
            if (spectral_loop.eq.0) then
 
@@ -14948,7 +14948,7 @@ END SUBROUTINE Adist
            endif
 
            ! tensor derivatives
-          else if (operation_flag.eq.6) then 
+          else if (operation_flag.eq.OP_UGRAD_MAC) then 
 
            if (spectral_loop.eq.0) then
 
@@ -14997,7 +14997,7 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if (operation_flag.eq.0) then ! MAC pressure gradient
+          else if (operation_flag.eq.OP_PRESGRAD_MAC) then 
 
            if (ncfluxreg.ne.SDIM) then
             print *,"ncfluxreg invalid5 ",ncfluxreg
@@ -15096,7 +15096,7 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if (operation_flag.eq.2) then ! potential grad 
+          else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
 
            ! potential pressure gradient/den 
            if (ncfluxreg.ne.SDIM) then
@@ -15161,7 +15161,7 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if (operation_flag.eq.3) then   !unew^CELL->MAC
+          else if (operation_flag.eq.OP_UNEW_CELL_TO_MAC) then   
 
            if (ncfluxreg.ne.SDIM) then
             print *,"ncfluxreg invalid8 ",ncfluxreg
@@ -15213,7 +15213,7 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if (operation_flag.eq.11) then ! uold^MAC+(DU)^CELL->MAC
+          else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then 
 
            if (ncfluxreg.ne.SDIM) then
             print *,"ncfluxreg invalid8 ",ncfluxreg
@@ -15266,7 +15266,7 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if (operation_flag.eq.5) then ! UMAC=UMAC+beta (DU)^CELL->MAC
+          else if (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC) then 
 
            if (ncfluxreg.ne.SDIM) then
             print *,"ncfluxreg invalid9 ",ncfluxreg
