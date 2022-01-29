@@ -22988,12 +22988,12 @@ NavierStokes::post_init_state () {
   // in post_init_state (project_option==SOLVETYPE_INITPROJ)
   // if project_option==SOLVETYPE_INITPROJ, then the velocity in the ice
   // is overwritten with a projected rigid body velocity.
- int interp_option=0;
+ int operation_flag=OP_UNEW_CELL_TO_MAC;
  int idx_velcell=-1;
  Real beta=0.0;
 
  increment_face_velocityALL(
-   interp_option,project_option,
+   operation_flag,project_option,
    idx_velcell,beta,blobdata); 
 
  delete_array(TYPE_MF);

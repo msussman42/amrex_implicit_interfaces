@@ -2198,7 +2198,6 @@ void NavierStokes::advance_MAC_velocity(int project_option) {
  int idx_velcell=-1;
  Real beta=0.0;
 
- // interp_option==4:
  // unew^{f}=
  // (i) unew^{f} in incompressible non-solid regions
  // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 
@@ -2207,12 +2206,12 @@ void NavierStokes::advance_MAC_velocity(int project_option) {
  //      (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
  // (iii) (unew^{c})^{c->f} in compressible regions.
  // (iii) usolid in solid regions
- int interp_option=4;  
+ int operation_flag=OP_U_COMP_CELL_MAC_TO_MAC;  
 
  Vector<blobclass> blobdata;
 
  increment_face_velocityALL(
-   interp_option,project_option,
+   operation_flag,project_option,
    idx_velcell,beta,blobdata);
 
 } // end subroutine advance_MAC_velocity()
@@ -3313,13 +3312,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        } // ilev=finest_level ... level
 
         // unew^{f} = unew^{c->f}
-       int interp_option=0;
+       int operation_flag=OP_UNEW_CELL_TO_MAC;
        int idx_velcell=-1;
 
        Real beta_local=0.0;
        Vector<blobclass> local_blobdata;
        increment_face_velocityALL(
-         interp_option,
+         operation_flag,
          SOLVETYPE_INITPROJ,
          idx_velcell,beta_local,local_blobdata);
 
@@ -9838,7 +9837,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   int idx_velcell=-1;
 
-  int interp_option=0;
+  int operation_flag=OP_UNEW_CELL_TO_MAC;
   Real beta=0.0;
 
   if (nsolve!=1)
@@ -9847,10 +9846,10 @@ void NavierStokes::multiphase_project(int project_option) {
   if ((project_option==SOLVETYPE_PRES)||
       (project_option==SOLVETYPE_PRESCOR)) { 
    // unew^{f} = unew^{f} 
-   interp_option=1;
+   operation_flag=OP_UNEW_SOL_MAC_TO_MAC;
   } else if (project_option==SOLVETYPE_INITPROJ) {
    //unew^{f} = unew^{c->f}
-   interp_option=0;
+   operation_flag=OP_UNEW_CELL_TO_MAC;
   } else 
    amrex::Error("project_option invalid47");
 
@@ -9875,7 +9874,8 @@ void NavierStokes::multiphase_project(int project_option) {
    //
 
   increment_face_velocityALL(
-    interp_option,project_option,
+    operation_flag,
+    project_option,
     idx_velcell,beta,blobdata); 
 
   if (project_option==SOLVETYPE_PRESCOR) {
@@ -13081,14 +13081,14 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf,int caller_id) {
 
   // unew^f=unew^f+beta * diffuse_register^{c->f}
   // in: INCREMENT_REGISTERS_ALL
- int interp_option=2;
+ int operation_flag=OP_UMAC_PLUS_VISC_CELL_TO_MAC;
  Real beta=1.0;
  Vector<blobclass> blobdata;
 
-  // operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC (interp_option==2)
+  // operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC 
   // unew^f=unew^f+beta * REGISTER_CURRENT_MF^{c->f}
  increment_face_velocityALL(
-   interp_option,
+   operation_flag,
    SOLVETYPE_VISC,
    REGISTER_CURRENT_MF,beta,blobdata);
 

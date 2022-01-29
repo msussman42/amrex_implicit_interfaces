@@ -10587,15 +10587,22 @@ stop
       return
       end subroutine fort_inc_temp
 
-
+       ! OP_RHS_CELL
        ! operation_flag=100 (right hand side for solver)
+       ! OP_DIV_CELL
        ! operation_flag=110 (divergence)
+       ! OP_VEL_MAC_TO_CELL
        ! operation_flag=103 (mac -> cell velocity in solver or MAC_TO_CELL)
-       ! operation_flag=104 (mac increment -> cell velocity increment)
-       ! operation_flag=101 (copy u^{mac->cell} to u^{cell},
-       !                     div(up) or p div u or rho div u)
+       ! OP_FORCE_MAC_TO_CELL 
+       ! operation_flag=104 (mac force (vel increment) -> 
+       !                     cell force (vel increment))
+       ! OP_VEL_DIVUP_TO_CELL
+       ! operation_flag=101 (copy u^{mac->cell} to u^{cell}, div(up) )
+       ! OP_GRADU_MAC_TO_CELL
        ! operation_flag=105 (from face_gradients, interp grad U^T)
+       ! OP_ISCHEME_CELL 
        ! operation_flag=107 (advection)
+       ! OP_XDISP_MAC_TO_CELL
        ! operation_flag=113 (mac -> cell displacement in MAC_TO_CELL)
       subroutine fort_mac_to_cell( &
        ns_time_order, &
@@ -13843,7 +13850,6 @@ stop
                  stop
                 endif
 
-                 !interp_option==0 
                  !primary_vel_data=CURRENT_CELL_VEL_MF; 
                  !secondary_vel_data=CURRENT_CELL_VEL_MF; 
                 if (operation_flag.eq.OP_UNEW_CELL_TO_MAC) then ! cell -> MAC
@@ -13851,18 +13857,16 @@ stop
                  primary_velmaterial=vel(D_DECL(ic,jc,kc),velcomp)
                  secondary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp)
 
-                 !interp_option==1 
                  !primary_vel_data=CURRENT_CELL_VEL_MF; 
                  !secondary_vel_data=CURRENT_CELL_VEL_MF; 
-                else if (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC) then ! mac -> MAC
+                else if (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC) then 
                  velcomp=1
                  primary_velmaterial=local_vel_MAC
                  secondary_velmaterial=local_vel_MAC
 
-                 !interp_option==2
                  !primary_vel_data=idx_velcell;  // increment
                  !secondary_vel_data=CURRENT_CELL_VEL_MF; 
-                else if (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC) then ! MAC+=(cell->MAC)
+                else if (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC) then
                  velcomp=dir+1
                   ! local_vel_MAC=xvel
                   ! local_vel_old_MAC=xgp (a copy of xvel)
@@ -13875,11 +13879,10 @@ stop
                   stop
                  endif
 
-                 !interp_option==4
                  !called after advection to update u^{advect,MAC}
                  !primary_vel_data=DELTA_CELL_VEL_MF; 
                  !secondary_vel_data=CURRENT_CELL_VEL_MF; 
-                else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then ! cell diff,MAC -> MAC
+                else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then 
                  if (local_compressible.eq.0) then
                   velcomp=1
                   primary_velmaterial=local_vel_MAC ! UMAC^{ADVECT}
