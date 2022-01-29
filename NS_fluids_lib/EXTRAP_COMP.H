@@ -131,4 +131,18 @@ FSI_SIZE=area
 #define OP_ISCHEME_CELL (107)
 #define OP_XDISP_MAC_TO_CELL (113)
 
+#define SUB_OP_DEFAULT 0
+
+#define SUB_OP_FOR_SDC 2
+#define SUB_OP_FOR_MAIN 0
+
+#define SUB_OP_THERMAL_INCOMP 0
+#define SUB_OP_THERMAL_COMP 1
+
+#define SUB_OP_SDC_LOW_TIME 1
+#define SUB_OP_SDC_ISCHEME 0
+
+#define SUB_OP_ISCHEME_PREDICT 0
+#define SUB_OP_ISCHEME_CORRECT 1
+
 #endif

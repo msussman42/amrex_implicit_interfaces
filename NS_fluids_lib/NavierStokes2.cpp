@@ -1838,8 +1838,8 @@ void NavierStokes::apply_cell_pressure_gradient(
  MultiFab* ustar;
 
  MultiFab* divup;
- if ((energyflag==0)|| //do not update the energy
-     (energyflag==1)) {//update the energy
+ if ((energyflag==SUB_OP_THERMAL_INCOMP)|| //do not update the energy
+     (energyflag==SUB_OP_THERMAL_COMP)) {//update the energy
   ustar=getState(1,0,AMREX_SPACEDIM,cur_time_slab);
   divup=new MultiFab(grids,dmap,nsolve,0,
    MFInfo().SetTag("divup"),FArrayBoxFactory());
@@ -1939,7 +1939,7 @@ void NavierStokes::apply_cell_pressure_gradient(
    else
     amrex::Error("CoordSys bust 21");
 
-   int local_energyflag=0;
+   int local_energyflag=SUB_OP_DEFAULT;
    int local_enable_spectral=0;
    int simple_AMR_BC_flag=0;
    int ncomp_xp=2+nsolve;
@@ -2105,12 +2105,12 @@ void NavierStokes::apply_cell_pressure_gradient(
    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
    int local_enable_spectral=enable_spectral;
-   int operation_flag_interp_macvel;
+   int operation_flag_interp_macvel=-1;
    if (isweep==1) {
-    operation_flag_interp_macvel=103; // mac velocity -> cell velocity
+    operation_flag_interp_macvel=OP_VEL_MAC_TO_CELL; 
     local_enable_spectral=enable_spectral;
    } else if (isweep==2) {
-    operation_flag_interp_macvel=101; // div(up) (low order only)
+    operation_flag_interp_macvel=OP_VEL_DIVUP_TO_CELL;
     local_enable_spectral=0;
    } else {
     operation_flag_interp_macvel=-1; 
@@ -2126,9 +2126,9 @@ void NavierStokes::apply_cell_pressure_gradient(
    int ncomp_dendest=Snewfab.nComp()-STATECOMP_STATES;
 
    Real local_dt_slab=dt_slab;
-   if (operation_flag_interp_macvel==103) {//103 (mac_vel->cell_vel)
+   if (operation_flag_interp_macvel==OP_VEL_MAC_TO_CELL) {
     //do nothing
-   } else if (operation_flag_interp_macvel==101) {//101 div(up) 
+   } else if (operation_flag_interp_macvel==OP_VEL_DIVUP_TO_CELL) { 
     if (hold_dt_factors[0]==1.0) {
      // do nothing
     } else if ((hold_dt_factors[0]>0.0)&&
@@ -2145,7 +2145,8 @@ void NavierStokes::apply_cell_pressure_gradient(
     &ns_time_order,
     &divu_outer_sweeps,
     &num_divu_outer_sweeps,
-    // 103 (mac_vel->cell_vel) or 101 ( div(up) low order only)
+    // OP_VEL_MAC_TO_CELL (mac_vel->cell_vel) or 
+    // OP_VEL_DIVUP_TO_CELL ( div(up) low order only)
     &operation_flag_interp_macvel, 
     &energyflag,
     constant_density_all_time.dataPtr(),
@@ -2226,8 +2227,8 @@ void NavierStokes::apply_cell_pressure_gradient(
 
  }  // isweep=1,2
 
- if ((energyflag==0)||
-     (energyflag==1)) {
+ if ((energyflag==SUB_OP_THERMAL_INCOMP)||
+     (energyflag==SUB_OP_THERMAL_COMP)) {
   save_to_macvel_state(idx_umac);
   delete divup; // div(up) is discarded.
   delete ustar;
@@ -2792,7 +2793,7 @@ void NavierStokes::increment_face_velocity(
       else
        amrex::Error("CoordSys bust 20");
 
-      int energyflag=0;
+      int energyflag=SUB_OP_DEFAULT;
       int local_enable_spectral=enable_spectral;
       int simple_AMR_BC_flag=0;
       int ncomp_xp=1;
@@ -3127,14 +3128,14 @@ void NavierStokes::VELMAC_TO_CELL(
 
  if (vel_or_disp==0) { //mac velocity (not the increment)
   MAC_state_idx=Umac_Type;
-  operation_flag=103;
+  operation_flag=OP_VEL_MAC_TO_CELL;
  } else if (vel_or_disp==-1) { //mac velocity increment
   MAC_state_idx=Umac_Type;
-  operation_flag=104;
+  operation_flag=OP_FORCE_MAC_TO_CELL;
   local_enable_spectral=0;
  } else if (vel_or_disp==1) { //displacement
   MAC_state_idx=XDmac_Type;
-  operation_flag=113;
+  operation_flag=OP_XDISP_MAC_TO_CELL;
   local_enable_spectral=0;
  } else 
   amrex::Error("vel_or_disp invalid");
@@ -3254,7 +3255,7 @@ void NavierStokes::VELMAC_TO_CELL(
 
   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
 
-  int energyflag=0;
+  int energyflag=SUB_OP_DEFAULT;
   int project_option=SOLVETYPE_PRES;
   int homflag=0; // default
 
@@ -3275,7 +3276,9 @@ void NavierStokes::VELMAC_TO_CELL(
    &ns_time_order,
    &divu_outer_sweeps,
    &num_divu_outer_sweeps,
-   // operation_flag=103,104 (mac_vel -> cell_vel) or 113 (disp)
+   // operation_flag=OP_VEL_MAC_TO_CELL, or
+   // operation_flag=OP_FORCE_MAC_TO_CELL, or
+   // OP_XDISP_MAC_TO_CELL
    &operation_flag, 
    &energyflag,
    constant_density_all_time.dataPtr(),
@@ -4016,7 +4019,8 @@ void NavierStokes::apply_pressure_grad(
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- if ((energyflag!=0)&&(energyflag!=2))
+ if ((energyflag!=SUB_OP_FOR_MAIN)&&
+     (energyflag!=SUB_OP_FOR_SDC))
   amrex::Error("energyflag invalid");
 
  debug_ngrow(pboth_mf,1,845);
@@ -5908,7 +5912,7 @@ void NavierStokes::process_potential_force_face() {
    else
     amrex::Error("CoordSys bust 21");
 
-   int local_energyflag=0;
+   int local_energyflag=SUB_OP_DEFAULT;
    int local_project_option=SOLVETYPE_PRES;
    int local_enable_spectral=enable_spectral;
 

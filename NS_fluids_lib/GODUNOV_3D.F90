@@ -19531,7 +19531,7 @@ stop
               ncomp_xp=SDIM ! number of amrsync components
               scomp_bc=1
               operation_flag=OP_UGRAD_MAC  ! evaluate tensor values
-              energyflag=0
+              energyflag=SUB_OP_DEFAULT
               project_option_vel=SOLVETYPE_VISC
               def_dt=one
 
@@ -19657,7 +19657,7 @@ stop
               ncomp_cterm=ntensor
               operation_flag=105  ! interpolate grad u from MAC to CELL
               project_option_vel=SOLVETYPE_VISC
-              energyflag=0
+              energyflag=SUB_OP_DEFAULT
               def_dt=one
 
                ! 1<=dir<=sdim
