@@ -9846,7 +9846,7 @@ void NavierStokes::multiphase_project(int project_option) {
   if ((project_option==SOLVETYPE_PRES)||
       (project_option==SOLVETYPE_PRESCOR)) { 
    // unew^{f} = unew^{f} 
-   operation_flag=OP_UNEW_SOL_MAC_TO_MAC;
+   operation_flag=OP_UNEW_USOL_MAC_TO_MAC;
   } else if (project_option==SOLVETYPE_INITPROJ) {
    //unew^{f} = unew^{c->f}
    operation_flag=OP_UNEW_CELL_TO_MAC;
