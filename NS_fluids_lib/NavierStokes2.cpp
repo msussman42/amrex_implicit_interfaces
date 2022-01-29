@@ -2385,7 +2385,7 @@ void NavierStokes::make_MAC_velocity_consistent() {
 // ucell_new=ucell+old + force_cell
 //
 void NavierStokes::increment_face_velocityALL(
- int interp_option,
+ int operation_flag,
  int project_option,
  int idx_velcell,
  Real beta,
@@ -2403,20 +2403,20 @@ void NavierStokes::increment_face_velocityALL(
 
  make_MAC_velocity_consistentALL();
 
-  // interp_option=4 
   //  unew^{f} = 
   //   (i) unew^{f} in incompressible non-solid regions
   //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions
   //   (iii) (unew^{c})^{c->f} in compressible regions.
   //   (iv) usolid in solid regions
- if (interp_option==4) {
+ if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) {
   minusALL(1,AMREX_SPACEDIM,DELTA_CELL_VEL_MF,ADVECT_REGISTER_MF);
  }
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.increment_face_velocity(
-    interp_option,project_option,
+    operation_flag,
+    project_option,
     idx_velcell,
     beta,blobdata); 
    // avgDownMacState, getStateMAC to fill EXT_DIR BC.
@@ -2432,10 +2432,11 @@ void NavierStokes::increment_face_velocityALL(
 
 } // end subroutine increment_face_velocityALL
 
-// interp_option=0 unew^{f} = unew^{c->f} 
-// interp_option=1 unew^{f} = unew^{f} in fluid  (=usolid in solid)
-// interp_option=2 unew^{f} = unew^{f} + beta * diffuse_register^{c->f}
-// interp_option=4 unew^{f} = 
+// OP_UNEW_CELL_TO_MAC unew^{f} = unew^{c->f} 
+// OP_UNEW_SOL_MAC_TO_MAC unew^{f} = unew^{f} in fluid  (=usolid in solid)
+// OP_UMAC_PLUS_VISC_CELL_TO_MAC 
+//   unew^{f} = unew^{f} + beta * diffuse_register^{c->f}
+// OP_U_COMP_CELL_MAC_TO_MAC unew^{f} = 
 //   (i) unew^{f} in incompressible non-solid regions
 //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
 //   (iii) (unew^{c})^{c->f} in compressible regions.
@@ -2445,7 +2446,7 @@ void NavierStokes::increment_face_velocityALL(
 //  SOLVETYPE_PRESCOR), APPLY_REGISTERS, INCREMENT_REGISTERS
 // called from NavierStokes::increment_face_velocityALL
 void NavierStokes::increment_face_velocity(
- int interp_option,
+ int operation_flag,
  int project_option,
  int idx_velcell,
  Real beta,
@@ -2483,12 +2484,10 @@ void NavierStokes::increment_face_velocity(
  } else
   amrex::Error("num_colors invalid");
 
- int operation_flag=OP_UNEW_CELL_TO_MAC;
-
  int primary_vel_data=-1;
  int secondary_vel_data=-1;
 
- if (interp_option==0) { // unew^{f} = unew^{c->f}
+ if (operation_flag==OP_UNEW_CELL_TO_MAC) { // unew^{f} = unew^{c->f}
 
   if (idx_velcell==-1) {
    primary_vel_data=CURRENT_CELL_VEL_MF; 
@@ -2505,9 +2504,7 @@ void NavierStokes::increment_face_velocity(
   if (beta!=0.0)
    amrex::Error("beta invalid");
 
-  operation_flag=OP_UNEW_CELL_TO_MAC;
-
- } else if (interp_option==1) { // unew^{f}=unew^{f}
+ } else if (operation_flag==OP_UNEW_SOL_MAC_TO_MAC) { // unew^{f}=unew^{f}
 
   if (idx_velcell==-1) {
    primary_vel_data=CURRENT_CELL_VEL_MF; 
@@ -2531,9 +2528,8 @@ void NavierStokes::increment_face_velocity(
   if (beta!=0.0)
    amrex::Error("beta invalid");
 
-  operation_flag=OP_UNEW_USOL_MAC_TO_MAC;
-
- } else if (interp_option==2) {//unew^{f}=unew^{f}+beta*diffuse_register^{c->f}
+  //unew^{f}=unew^{f}+beta*diffuse_register^{c->f}
+ } else if (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC) {
 
   if (idx_velcell>=0) {
 
@@ -2547,19 +2543,19 @@ void NavierStokes::increment_face_velocity(
    amrex::Error("idx_velcell invalid");
 
   if (project_option==SOLVETYPE_VISC) {  
-   operation_flag=OP_UMAC_PLUS_VISC_CELL_TO_MAC;
+   //do nothing
   } else
    amrex::Error("project_option invalid23");
 
   if ((beta!=1.0)&&(beta!=-1.0))
    amrex::Error("beta invalid");
 
-  // interp_option=4 unew^{f} = 
+  // unew^{f} = 
   //   (i) unew^{f} in incompressible non-solid regions
   //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
   //   (iii) (unew^{c})^{c->f} in compressible regions
   //   (iv) usolid in solid regions
- } else if (interp_option==4) {
+ } else if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) {
 
   debug_ngrow(ADVECT_REGISTER_MF,1,2000);
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
@@ -2567,7 +2563,7 @@ void NavierStokes::increment_face_velocity(
 
   if ((project_option==SOLVETYPE_PRES)||
       (project_option==SOLVETYPE_INITPROJ)) {
-   operation_flag=OP_U_COMP_CELL_MAC_TO_MAC;
+   // do nothing
   } else
    amrex::Error("project_option invalid25");
 
@@ -2578,7 +2574,7 @@ void NavierStokes::increment_face_velocity(
    amrex::Error("idx_velcell invalid");
    
  } else
-  amrex::Error("interp_option invalid");
+  amrex::Error("operation_flag invalid");
 
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>nmat))
@@ -2661,9 +2657,9 @@ void NavierStokes::increment_face_velocity(
    amrex::Error("AMRSYNC_VEL boxarray does not match");
  }
 
- if ((interp_option==0)||
-     (interp_option==2)||
-     (interp_option==4)) {
+ if ((operation_flag==OP_UNEW_CELL_TO_MAC)||
+     (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC)||
+     (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC)) {
 
   if (level<finest_level) {
    avgDown_and_Copy_localMF(
@@ -2688,10 +2684,10 @@ void NavierStokes::increment_face_velocity(
    amrex::Error("level invalid15");
 
   // unew^{f} = unew^{f} in fluid (=usolid in solid)
- } else if (interp_option==1) {
+ } else if (operation_flag==OP_UNEW_SOL_MAC_TO_MAC) {
   // do nothing
  } else
-  amrex::Error("interp_option invalid");
+  amrex::Error("operation_flag invalid");
 
  for (int spectral_loop=0;spectral_loop<end_spectral_loop();spectral_loop++) {
 
@@ -2702,12 +2698,12 @@ void NavierStokes::increment_face_velocity(
    MultiFab* Umac_old;
    MultiFab* U_old;
 
-   if (interp_option==4) { // operation_flag==OP_U_COMP_CELL_MAC_TO_MAC
+   if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) { 
     Umac_old=localMF[ADVECT_REGISTER_FACE_MF+dir];
     U_old=localMF[ADVECT_REGISTER_MF];
-   } else if ((interp_option==0)|| //operation_flag==3
-              (interp_option==1)|| //operation_flag==4
-              (interp_option==2)) {//operation_flag==5
+   } else if ((operation_flag==OP_UNEW_CELL_TO_MAC)|| 
+              (operation_flag==OP_UNEW_SOL_MAC_TO_MAC)|| 
+              (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC)) {
 
     int ncomp_MAC=Umac_new.nComp();
     Umac_old=getStateMAC(Umac_Type,0,dir,0,ncomp_MAC,cur_time_slab); 
@@ -2718,7 +2714,7 @@ void NavierStokes::increment_face_velocity(
 
     U_old=localMF[CURRENT_CELL_VEL_MF];
    } else
-    amrex::Error("interp_option invalid");
+    amrex::Error("operation_flag invalid");
 
     // if low order, then nothing done when tileloop==1
    for (int tileloop=0;tileloop<=1;tileloop++) {
@@ -2889,14 +2885,14 @@ void NavierStokes::increment_face_velocity(
     ns_reconcile_d_num(134);
    } // tileloop
 
-   if (interp_option==4) {
+   if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) { 
     // do nothing
-   } else if ((interp_option==0)|| 
-              (interp_option==1)||
-              (interp_option==2)) {
+   } else if ((operation_flag==OP_UNEW_CELL_TO_MAC)|| 
+              (operation_flag==OP_UNEW_SOL_MAC_TO_MAC)|| 
+              (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC)) {
     delete Umac_old;
    } else
-    amrex::Error("interp_option invalid");
+    amrex::Error("operation_flag invalid");
 
   } // dir=0..sdim-1
 

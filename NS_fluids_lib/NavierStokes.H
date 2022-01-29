@@ -1400,14 +1400,14 @@ void apply_pressure_grad(
 
      // unew^f=unew^f + beta * localMF[idx_velcell]
     void increment_face_velocity(
-      int interp_option,
+      int operation_flag,
       int project_option,
       int idx_velcell,
       Real beta,
       Vector<blobclass> blobdata);
 
     void increment_face_velocityALL(
-      int interp_option,
+      int operation_flag,
       int project_option,
       int idx_velcell,
       Real beta,

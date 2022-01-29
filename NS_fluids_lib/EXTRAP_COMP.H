@@ -122,4 +122,13 @@ FSI_SIZE=area
 #define OP_GATHER_MDOT (0)
 #define OP_SCATTER_MDOT (1)
 
+#define OP_RHS_CELL (100)
+#define OP_DIV_CELL (110)
+#define OP_VEL_MAC_TO_CELL (103)
+#define OP_FORCE_MAC_TO_CELL (104)
+#define OP_VEL_DIVUP_TO_CELL (101)
+#define OP_GRADU_MAC_TO_CELL (105)
+#define OP_ISCHEME_CELL (107)
+#define OP_XDISP_MAC_TO_CELL (113)
+
 #endif
