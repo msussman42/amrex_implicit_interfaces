@@ -1988,8 +1988,10 @@ void NavierStokes::init_splitting_force_SDC() {
 
 } // subroutine init_splitting_force_SDC
 
-//source_term==1 => compute F(t^{n+k/order})
-//source_term==0 => compute F(t^{n+k/order,*})
+//source_term==1=SUB_OP_SDC_LOW_TIME => compute F(t^{n+k/order})
+//source_term==0=SUB_OP_SDC_ISCHEME  => compute 
+//  (a) F(t^{n+k/order,(0)})  (SUB_OP_ISCHEME_PREDICT)
+//  (b) F(t^{n+k/order,(1)})  (SUB_OP_ISCHEME_CORRECT)
 void NavierStokes::SEM_advectALL(int source_term) {
 
  if (stokes_flow==0) {
@@ -2024,9 +2026,9 @@ void NavierStokes::SEM_advectALL(int source_term) {
    prescribed_vel_time_slab=prev_time_slab;
    vel_time_slab=prev_time_slab;
 
-   if (source_term==1) {
+   if (source_term==SUB_OP_SDC_LOW_TIME) {
     vel_time_slab=prev_time_slab;
-   } else if (source_term==0) {
+   } else if (source_term==SUB_OP_SDC_ISCHEME) {
     if (divu_outer_sweeps==0) 
      vel_time_slab=prev_time_slab;
     else if (divu_outer_sweeps>0)
@@ -2056,21 +2058,21 @@ void NavierStokes::SEM_advectALL(int source_term) {
    } //ilev=finest_level ... level
 
    int advect_iter_max=2;
-   if (source_term==1) {
+   if (source_term==SUB_OP_SDC_LOW_TIME) {
     advect_iter_max=1;
-   } else if (source_term==0) {
+   } else if (source_term==SUB_OP_SDC_ISCHEME) {
     advect_iter_max=2;
    } else
     amrex::Error("advect_iter_max invalid");
   
    for (advect_iter=0;advect_iter<advect_iter_max;advect_iter++) {
 
-    if (source_term==1) { 
+    if (source_term==SUB_OP_SDC_LOW_TIME) { 
      advect_time_slab=prev_time_slab;
-    } else if (source_term==0) {
-     if (advect_iter==0) {
+    } else if (source_term==SUB_OP_SDC_ISCHEME) {
+     if (advect_iter==SUB_OP_ISCHEME_PREDICT) {
       advect_time_slab=prev_time_slab;
-     } else if (advect_iter==1) {
+     } else if (advect_iter==SUB_OP_ISCHEME_CORRECT) {
       advect_time_slab=cur_time_slab;
      } else
       amrex::Error("advect_iter invalid");
@@ -2586,7 +2588,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       double start_SEMADV_time=ParallelDescriptor::second();
 
-      int source_term=1;
+      int source_term=SUB_OP_SDC_LOW_TIME;
+
       if ((slab_step>=0)&&(slab_step<=ns_time_order)) {
 
         // SEM_advectALL starts off by using the prev_time_slab data.
@@ -2607,7 +2610,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       } // ((slab_step>=0)&&(slab_step<=ns_time_order))
 
        // SEM_advectALL starts off by using the prev_time_slab data.
-      source_term=0;
+      source_term=SUB_OP_SDC_ISCHEME;
       if ((slab_step>=0)&&(slab_step<ns_time_order)) {
        SEM_advectALL(source_term);
       }
@@ -8432,7 +8435,7 @@ void NavierStokes::relaxLEVEL(
    // gradpedge= -dt * grad p * denedgebc * densolidedgebc =
    //            -dt * grad p * face_weight_stable
   int homflag_down_V2=1;
-  int energyflag=0;
+  int energyflag=SUB_OP_FOR_MAIN;
 
     // we must have 
     // simple_AMR_BC_flag=1 and
@@ -9484,7 +9487,7 @@ void NavierStokes::multiphase_project(int project_option) {
  } else
   amrex::Error("project_option invalid43");
 
- int energyflag=0;
+ int energyflag=SUB_OP_FOR_MAIN;
 
  if (project_option_momeqn(project_option)==1) {
   //do nothing
@@ -10040,7 +10043,7 @@ void NavierStokes::multiphase_project(int project_option) {
  bprof.start();
 #endif
 
- energyflag=0;
+ energyflag=SUB_OP_FOR_MAIN;
  int homflag_residual_correction_form=0; 
 
  if ((project_option==SOLVETYPE_PRESCOR)|| 
@@ -11264,7 +11267,7 @@ void NavierStokes::multiphase_project(int project_option) {
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
      int homflag_outer_iter_pressure2=1;
-     energyflag=0; // energyflag=2 => GRADPEDGE=gradp
+     energyflag=SUB_OP_FOR_MAIN; // energyflag=SUB_OP_FOR_SDC=>GRADPEDGE=gradp
       // GRADPEDGE=-dt gradp/rho
      int simple_AMR_BC_flag=0;
      int simple_AMR_BC_flag_viscosity=0;

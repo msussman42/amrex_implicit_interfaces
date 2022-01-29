@@ -10631,7 +10631,7 @@ stop
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
-       xp,DIMS(xp), &  !xvel_save if operation_flag==104
+       xp,DIMS(xp), &  !xvel_save if operation_flag==OP_FORCE_MAC_TO_CELL
        yp,DIMS(yp), &  !yvel_save  "          "
        zp,DIMS(zp), &  !zvel_save  "          "
        xvel,DIMS(xvel), &
@@ -10659,8 +10659,8 @@ stop
        denold,DIMS(denold), &
        ustar,DIMS(ustar), &
        recon,DIMS(recon), &
-       mdotcell,DIMS(mdotcell), & !VELADVECT_MF if operation_flag=107
-       maskdivres,DIMS(maskdivres), & !DEN_RECON_MF if operation_flag=107
+       mdotcell,DIMS(mdotcell), & !VELADVECT_MF if OP_ISCHEME_CELL
+       maskdivres,DIMS(maskdivres), & !DEN_RECON_MF if OP_ISCHEME_CELL
        maskres,DIMS(maskres), &
        SDC_outer_sweeps, &
        homflag, &
@@ -10802,10 +10802,10 @@ stop
       REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: &
-       mdotcell(DIMV(mdotcell),nsolve) !VELADVECT_MF operation_flag=107
+       mdotcell(DIMV(mdotcell),nsolve) !VELADVECT_MF if OP_ISCHEME_CELL
       REAL_T, pointer :: mdotcell_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: &
-       maskdivres(DIMV(maskdivres),ncomp_dendest) !DEN_RECON_MF op_flag=107
+       maskdivres(DIMV(maskdivres),ncomp_dendest) !DEN_RECON_MF OP_ISCHEME_CELL
       REAL_T, pointer :: maskdivres_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: maskres(DIMV(maskres))
       REAL_T, pointer :: maskres_ptr(D_DECL(:,:,:))
@@ -11001,9 +11001,9 @@ stop
       enddo ! im=1..nmat
  
       ! mac -> cell in solver (apply_cell_pressure_gradient) or VELMAC_TO_CELL
-      if ((operation_flag.eq.103).or. & ! velocity
-          (operation_flag.eq.104).or. & ! velocity increment
-          (operation_flag.eq.113)) then ! displacement
+      if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
+          (operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. & ! velocity increment
+          (operation_flag.eq.OP_XDISP_MAC_TO_CELL)) then ! displacement
        if (ncomp_veldest.ge.SDIM) then
         ! do nothing
        else
@@ -11032,8 +11032,8 @@ stop
         stop
        endif
 
-       ! div(up), p div u, or, rho div u
-      else if (operation_flag.eq.101) then 
+       ! div(up)
+      else if (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) then 
  
        if (ncomp_veldest.ge. &
            SDIM+num_state_material*nmat) then
@@ -11064,7 +11064,7 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.100) then ! rhs of solver
+      else if (operation_flag.eq.OP_RHS_CELL) then ! rhs of solver
 
        if (ncomp_veldest.eq.nsolve) then
         ! do nothing
@@ -11095,7 +11095,7 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.110) then ! divergence
+      else if (operation_flag.eq.OP_DIV_CELL) then ! divergence
 
        if (ncomp_veldest.eq.1) then
         ! do nothing
@@ -11128,7 +11128,7 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.107) then ! advection
+      else if (operation_flag.eq.OP_ISCHEME_CELL) then ! advection
 
        if (ncomp_veldest.eq.STATE_NCOMP) then
         ! do nothing
@@ -11161,9 +11161,9 @@ stop
        stop
       endif
 
-      if (operation_flag.eq.100) then  ! rhs for solver
+      if (operation_flag.eq.OP_RHS_CELL) then  ! rhs for solver
 
-       if (energyflag.eq.0) then
+       if (energyflag.eq.SUB_OP_DEFAULT) then
         ! do nothing
        else
         print *,"energyflag invalid"
@@ -11176,9 +11176,9 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.110) then ! divergence
+      else if (operation_flag.eq.OP_DIV_CELL) then ! divergence
 
-       if (energyflag.eq.0) then
+       if (energyflag.eq.SUB_OP_DEFAULT) then
         ! do nothing
        else
         print *,"energyflag invalid"
@@ -11198,9 +11198,9 @@ stop
        endif
 
        ! umac->ucell in solver or VELMAC_TO_CELL
-      else if ((operation_flag.eq.103).or. & ! velocity
-               (operation_flag.eq.104).or. & ! velocity increment
-               (operation_flag.eq.113)) then ! displacement
+      else if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
+               (operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. & 
+               (operation_flag.eq.OP_XDISP_MAC_TO_CELL)) then ! displacement
 
        if (homflag.eq.0) then
         ! do nothing
@@ -11208,8 +11208,8 @@ stop
         print *,"homflag invalid"
         stop
        endif
-       if ((energyflag.ne.0).and. &
-           (energyflag.ne.1)) then
+       if ((energyflag.ne.SUB_OP_THERMAL_INCOMP).and. &
+           (energyflag.ne.SUB_OP_THERMAL_COMP)) then
         print *,"energyflag invalid"
         stop
        endif
@@ -11219,14 +11219,13 @@ stop
        endif
 
         ! copy u^{mac->cell} to u^{cell}, div(up),
-        ! p div u, rho div u
-      else if (operation_flag.eq.101) then 
+      else if (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) then 
        if (homflag.ne.0) then
         print *,"homflag invalid"
         stop
        endif
-       if ((energyflag.ne.0).and. & ! update u^{cell}, do not use div(up) 
-           (energyflag.ne.1)) then  ! update u^{cell}, use div(up)
+       if ((energyflag.ne.SUB_OP_THERMAL_INCOMP).and. &!yes u^{cell},no div(up) 
+           (energyflag.ne.SUB_OP_THERMAL_COMP)) then !yes u^{cell},yes div(up)
         print *,"energyflag invalid"
         stop
        endif
@@ -11235,15 +11234,17 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.107) then ! advection
+      else if (operation_flag.eq.OP_ISCHEME_CELL) then ! advection
 
         ! "source_term" 
-       if ((homflag.ne.0).and.(homflag.ne.1)) then
+       if ((homflag.ne.SUB_OP_SDC_ISCHEME).and. &
+           (homflag.ne.SUB_OP_SDC_LOW_TIME)) then
         print *,"homflag invalid in mac to cell homflag=",homflag
         stop
        endif
         ! "advect_iter"
-       if ((energyflag.ne.0).and.(energyflag.ne.1)) then
+       if ((energyflag.ne.SUB_OP_ISCHEME_PREDICT).and. &
+           (energyflag.ne.SUB_OP_ISCHEME_CORRECT)) then
         print *,"energyflag invalid"
         stop
        endif
@@ -11376,7 +11377,7 @@ stop
         stop
        endif
 
-       if (operation_flag.eq.110) then ! DIV
+       if (operation_flag.eq.OP_DIV_CELL) then ! DIV
 
         divu= &
          AXR*xvel(D_DECL(i+1,j,k),1)-  &
@@ -11391,7 +11392,7 @@ stop
         divu=divu/VOLTERM
         rhs(D_DECL(i,j,k),1)=divu
 
-       else if (operation_flag.eq.100) then ! RHS
+       else if (operation_flag.eq.OP_RHS_CELL) then ! RHS
 
         ! (cterm)*p-vol grad dot grad p/rho=-vol div u/dt + mdot +
         !    cterm * p^adv 
@@ -11612,16 +11613,16 @@ stop
         endif
 
        ! mac -> cell in solver (apply_cell_pressure_gradient) or VELMAC_TO_CELL
-       else if ((operation_flag.eq.103).or. & ! velocity
-                (operation_flag.eq.104).or. & ! velocity increment
-                (operation_flag.eq.113)) then ! displacement
+       else if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
+                (operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. & 
+                (operation_flag.eq.OP_XDISP_MAC_TO_CELL)) then ! displacement
 
          ! LS>0 if clamped
-        if ((operation_flag.eq.103).or. & ! velocity
-            (operation_flag.eq.104)) then ! velocity increment
+        if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & !velocity
+            (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then !velocity increment
          call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
                 vel_clamped,temperature_clamped)
-        else if (operation_flag.eq.113) then ! displacement
+        else if (operation_flag.eq.OP_XDISP_MAC_TO_CELL) then ! displacement
          LS_clamped=-9999.0
         else
          print *,"operation_flag invalid:",operation_flag
@@ -11788,11 +11789,11 @@ stop
           if (dir.eq.0) then
            uface(side)=xvel(D_DECL(iface,jface,kface),1)
            save_uface(side)=xp(D_DECL(iface,jface,kface),1)
-           if ((operation_flag.eq.103).or. & ! velocity
-               (operation_flag.eq.104)) then ! velocity increment
+           if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
+               (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then 
             ufacesolid(side)=solxfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
-           else if (operation_flag.eq.113) then ! displacement
+           else if (operation_flag.eq.OP_XDISP_MAC_TO_CELL) then ! displacement
             ufacesolid(side)=uface(side)
            else
             print *,"operation_flag invalid"
@@ -11839,11 +11840,11 @@ stop
           else if (dir.eq.1) then
            uface(side)=yvel(D_DECL(iface,jface,kface),1)
            save_uface(side)=yp(D_DECL(iface,jface,kface),1)
-           if ((operation_flag.eq.103).or. & ! velocity
-               (operation_flag.eq.104)) then ! velocity increment
+           if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
+               (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then 
             ufacesolid(side)=solyfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
-           else if (operation_flag.eq.113) then ! displacement
+           else if (operation_flag.eq.OP_XDISP_MAC_TO_CELL) then ! displacement
             ufacesolid(side)=uface(side)
            else
             print *,"operation_flag invalid"
@@ -11852,11 +11853,11 @@ stop
           else if ((dir.eq.2).and.(SDIM.eq.3)) then
            uface(side)=zvel(D_DECL(iface,jface,kface),1)
            save_uface(side)=zp(D_DECL(iface,jface,kface),1)
-           if ((operation_flag.eq.103).or. & ! velocity
-               (operation_flag.eq.104)) then ! velocity increment
+           if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
+               (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then 
             ufacesolid(side)=solzfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
-           else if (operation_flag.eq.113) then ! displacement
+           else if (operation_flag.eq.OP_XDISP_MAC_TO_CELL) then ! displacement
             ufacesolid(side)=uface(side)
            else
             print *,"operation_flag invalid"
@@ -11906,10 +11907,10 @@ stop
             (mass_side(1)*ufacesolid(1)+ &
              mass_side(2)*ufacesolid(2))/masscell
           else if (cell_velocity_override.eq.0) then
-           if ((operation_flag.eq.103).or. & ! velocity
-               (operation_flag.eq.113)) then ! displacement
+           if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
+               (operation_flag.eq.OP_XDISP_MAC_TO_CELL)) then ! displacement
             weight_prev=zero
-           else if (operation_flag.eq.104) then ! velocity increment
+           else if (operation_flag.eq.OP_FORCE_MAC_TO_CELL) then 
             uface(1)=uface(1)-save_uface(1)
             uface(2)=uface(2)-save_uface(2)
             weight_prev=one
@@ -11941,7 +11942,7 @@ stop
 
         ! use_face_pres.eq.1   ! div(up) ok
         ! in: fort_mac_to_cell
-       else if (operation_flag.eq.101) then ! (grad p)_CELL, div(up)
+       else if (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) then ! div(up)
 
          ! LS>0 if clamped
         call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
@@ -11995,12 +11996,12 @@ stop
           else if (abs(vfrac(im)).le.VOFTOL) then
            ! do nothing
           else
-           print *,"vfrac(im) invalid (1) fort_mac_to_cell op_flag==101"
+           print *,"vfrac(im) invalid (1)fort_mac_to_cell OP_VEL_DIVUP_TO_CELL"
            stop
           endif 
          enddo ! im=1..nmat
         else
-         print *,"vfrac_embedded invalid (1) fort_mac_to_cell op_flag==101"
+         print *,"vfrac_embedded inv(1)fort_mac_to_cell OP_VEL_DIVUP_TO_CELL"
          stop
         endif 
 
@@ -12142,9 +12143,9 @@ stop
           stop
          endif
         
-         if (energyflag.eq.0) then
+         if (energyflag.eq.SUB_OP_THERMAL_INCOMP) then
           ! do nothing
-         else if (energyflag.eq.1) then
+         else if (energyflag.eq.SUB_OP_THERMAL_COMP) then
 
           Eforce_conservative=Eforce_conservative- &
             dt*(aface(2)*uface(2)*pres_face(2)- &
@@ -12156,7 +12157,7 @@ stop
           stop
          endif
 
-        enddo ! dir=0..sdim-1 (operation_flag.eq.101)  (grad p)_CELL, div(up)
+        enddo ! dir=0..sdim-1 (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) div(up)
 
         if ((use_face_pres_cen.eq.0).or. &
             (use_face_pres_cen.eq.1)) then 
@@ -12181,7 +12182,7 @@ stop
           rhs(D_DECL(i,j,k),1)=Eforce_conservative
 
            ! update the temperature
-          if (energyflag.eq.1) then 
+          if (energyflag.eq.SUB_OP_THERMAL_COMP) then 
 
            do im=1,nmat
 
@@ -12285,7 +12286,8 @@ stop
             endif 
            enddo ! im=1..nmat
 
-          else if (energyflag.eq.0) then ! do not update temperature
+           !do not update temperature
+          else if (energyflag.eq.SUB_OP_THERMAL_INCOMP) then
            ! do nothing
           else
            print *,"energyflag invalid" 
@@ -12307,7 +12309,7 @@ stop
          stop
         endif
 
-       else if (operation_flag.eq.107) then ! advection
+       else if (operation_flag.eq.OP_ISCHEME_CELL) then ! advection
         ! low order approximation: CISL or sem_mac_to_cell
         ! high order approximation: sem_mac_to_cell
        else
@@ -12326,7 +12328,7 @@ stop
        !     calculated in SEM_MAC_TO_CELL (PROB.F90) regardless of the
        !     order.
       high_order_time_advection=0
-      if (operation_flag.eq.107) then ! advection
+      if (operation_flag.eq.OP_ISCHEME_CELL) then ! advection
        if ((ns_time_order.ge.2).and. &
            (ns_time_order.le.32)) then
         high_order_time_advection=1
@@ -12388,14 +12390,14 @@ stop
             do jelem=elemlo(2),elemhi(2)
             do kelem=elemlo(3),elemhi(3)
           
-             if (operation_flag.eq.100) then ! RHS for solver
+             if (operation_flag.eq.OP_RHS_CELL) then ! RHS for solver
               scomp=1
               scomp_bc=dir+1
               dcomp=1
               ncomp=nsolve
               ncomp_xvel=nsolve
               ncomp_cterm=nsolve
-             else if (operation_flag.eq.110) then ! divergence
+             else if (operation_flag.eq.OP_DIV_CELL) then ! divergence
               scomp=1
               scomp_bc=dir+1
               dcomp=1
@@ -12403,20 +12405,20 @@ stop
               ncomp_xvel=nsolve
               ncomp_cterm=1
              ! MAC->CELL in solver or VELMAC_to_CELL
-             else if (operation_flag.eq.103) then  ! velocity
+             else if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then  ! velocity
               scomp=1
               scomp_bc=dir+1
               dcomp=dir+1
               ncomp=1
               ncomp_xvel=nsolve
               ncomp_cterm=1
-             else if (operation_flag.eq.104) then  ! velocity increment
+             else if (operation_flag.eq.OP_FORCE_MAC_TO_CELL) then  
               ! do nothing
-             else if (operation_flag.eq.113) then  ! displacement
+             else if (operation_flag.eq.OP_XDISP_MAC_TO_CELL) then!displacement
               ! do nothing
-             else if (operation_flag.eq.101) then ! div(up)
+             else if (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) then ! div(up)
               ! do nothing
-             else if (operation_flag.eq.107) then ! advection
+             else if (operation_flag.eq.OP_ISCHEME_CELL) then ! advection
               scomp=1
               scomp_bc=1
               dcomp=1
@@ -12428,14 +12430,14 @@ stop
               stop
              endif
              
-             if ((operation_flag.eq.113).or. & ! displacement
-                 (operation_flag.eq.104).or. & ! velocity increment
-                 (operation_flag.eq.101)) then !div(up) 
+             if ((operation_flag.eq.OP_XDISP_MAC_TO_CELL).or. & ! displacement
+                 (operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. & 
+                 (operation_flag.eq.OP_VEL_DIVUP_TO_CELL)) then !div(up) 
                  ! do nothing
-             else if ((operation_flag.eq.100).or. & ! RHS for solver
-                      (operation_flag.eq.110).or. & ! divergence
-                      (operation_flag.eq.103).or. & ! MAC -> CELL
-                      (operation_flag.eq.107)) then ! advection
+             else if ((operation_flag.eq.OP_RHS_CELL).or. & ! RHS for solver
+                      (operation_flag.eq.OP_DIV_CELL).or. & ! divergence
+                      (operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & 
+                      (operation_flag.eq.OP_ISCHEME_CELL)) then ! advection
 
               if (dir.eq.0) then 
 
@@ -12475,8 +12477,8 @@ stop
                 xvel_ptr, &
                 maskcoef_ptr, & ! 1=not covered, 0=covered
                 cterm_ptr, &
-                mdotcell_ptr, & !VELADVECT_MF, operation_flag==107
-                maskdivres_ptr, & !DEN_RECON_MF, operation_flag==107
+                mdotcell_ptr, & !VELADVECT_MF, OP_ISCHEME_CELL
+                maskdivres_ptr, & !DEN_RECON_MF, OP_ISCHEME_CELL
                 pold_ptr, &
                 denold_ptr, &
                 ustar_ptr, &
@@ -12522,8 +12524,8 @@ stop
                 yvel_ptr, &
                 maskcoef_ptr, & ! 1=not covered, 0=covered
                 cterm_ptr, &
-                mdotcell_ptr, & !VELADVECT_MF, operation_flag==107
-                maskdivres_ptr, & !DEN_RECON_MF, operation_flag==107
+                mdotcell_ptr, & !VELADVECT_MF, OP_ISCHEME_CELL
+                maskdivres_ptr, & !DEN_RECON_MF, OP_ISCHEME_CELL
                 pold_ptr, &
                 denold_ptr, &
                 ustar_ptr, &
@@ -12569,8 +12571,8 @@ stop
                 zvel_ptr, &
                 maskcoef_ptr, & ! 1=not covered, 0=covered
                 cterm_ptr, &
-                mdotcell_ptr, & !VELADVECT_MF, operation_flag==107
-                maskdivres_ptr, & !DEN_RECON_MF, operation_flag==107
+                mdotcell_ptr, & !VELADVECT_MF, OP_ISCHEME_CELL
+                maskdivres_ptr, & !DEN_RECON_MF, OP_ISCHEME_CELL
                 pold_ptr, &
                 denold_ptr, &
                 ustar_ptr, &
@@ -13190,12 +13192,12 @@ stop
       endif
 
       if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then ! p^CELL->MAC
-       if (energyflag.ne.0) then
+       if (energyflag.ne.SUB_OP_DEFAULT) then
         print *,"energyflag invalid"
         stop
        endif
-      else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then !(grd ppot/den)_MAC
-       if (energyflag.ne.0) then
+      else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
+       if (energyflag.ne.SUB_OP_DEFAULT) then
         print *,"energyflag invalid"
         stop
        endif
@@ -13207,7 +13209,7 @@ stop
                (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. & 
                (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
                (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
-       if (energyflag.ne.0) then
+       if (energyflag.ne.SUB_OP_DEFAULT) then
         print *,"energyflag invalid"
         stop
        endif
@@ -13218,13 +13220,14 @@ stop
         stop
        endif
       else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! (grad p)_MAC
-       if ((energyflag.ne.0).and.(energyflag.ne.2)) then
+       if ((energyflag.ne.SUB_OP_FOR_MAIN).and. &
+           (energyflag.ne.SUB_OP_FOR_SDC)) then
         print *,"energyflag invalid"
         stop
        endif
       else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
 
-       if (energyflag.ne.0) then
+       if (energyflag.ne.SUB_OP_DEFAULT) then
         print *,"energyflag invalid"
         stop
        endif
@@ -14668,8 +14671,8 @@ stop
            ! hydrostatic pressure gradient on the MAC grid
           pgrad_gravity=(pplus-pminus)/(hx*cutedge)
 
-          ! -dt k (grad p)_MAC (energyflag=0)
-          ! (grad p)_MAC (energyflag=2)
+          ! -dt k (grad p)_MAC (energyflag=SUB_OP_FOR_MAIN)
+          ! (grad p)_MAC (energyflag=SUB_OP_FOR_SDC)
          else if (operation_flag.eq.OP_PRESGRAD_MAC) then 
         
            ! xcut=(*localMF[FACE_WEIGHT_MF+dir])[mfi] 
@@ -14684,11 +14687,11 @@ stop
           pminus=pres(D_DECL(im1,jm1,km1),1)
 
             ! regular solver or SDC viscosity or thermal flux.
-          if (energyflag.eq.0) then  
+          if (energyflag.eq.SUB_OP_FOR_MAIN) then  
            pgrad=-dt*cutedge*(pplus-pminus)/hx
 
            ! for SDC pressure gradient
-          else if (energyflag.eq.2) then  
+          else if (energyflag.eq.SUB_OP_FOR_SDC) then  
            pgrad=(pplus-pminus)/hx
 
           else

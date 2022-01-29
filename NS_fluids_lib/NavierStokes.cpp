@@ -15948,14 +15948,16 @@ NavierStokes::end_spectral_loop() {
  
 } // end_spectral_loop
 
-//source_term==1 => compute F(t^{n+k/order})
-//source_term==0 => compute F(t^{n+k/order,*})
+//source_term==1==SUB_OP_SDC_LOW_TIME => compute F(t^{n+k/order})
+//source_term==0==SUB_OP_SDC_ISCHEME => 
+// compute F(t^{n+k/order,(0)})  SUB_OP_ISCHEME_PREDICT
+// compute F(t^{n+k/order,(1)})  SUB_OP_ISCHEME_CORRECT
 //
 // first: NavierStokes::nonlinear_advection() is called
 // second: NavierStokes::SEM_advectALL is called
 // This routine is called from  NavierStokes::SEM_advectALL
 //
-// for advect_iter=0 ... 1 (source_term==0)
+// for advect_iter=0 ... 1 (source_term==0==SUB_OP_SDC_ISCHEME)
 //
 //  DEN_RECON_MF, VELADVECT_MF init at time advect_time_slab
 // 
@@ -15997,14 +15999,16 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
  } else
   amrex::Error("SDC_outer_sweeps invalid");
 
- if (source_term==1) {
+ if (source_term==SUB_OP_SDC_LOW_TIME) {
 
-  if (advect_iter!=0)
+  if (advect_iter!=SUB_OP_ISCHEME_PREDICT)
    amrex::Error("advect_iter invalid");
 
- } else if (source_term==0) {
+ } else if (source_term==SUB_OP_SDC_ISCHEME) {
 
-  // do nothing
+  if ((advect_iter!=SUB_OP_ISCHEME_PREDICT)&&
+      (advect_iter!=SUB_OP_ISCHEME_CORRECT))
+   amrex::Error("advect_iter invalid");
   
  } else
   amrex::Error("source_term invalid");
@@ -16203,7 +16207,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      Vector<int> denbc=getBCArray(State_Type,gridno,STATECOMP_STATES,
       nmat*num_state_material);
 
-     int energyflag=0;
+     int energyflag=SUB_OP_DEFAULT;
      int local_enable_spectral=enable_spectral;
      int simple_AMR_BC_flag=0;
      int ncomp_xp=NFLUXSEM;
@@ -16395,9 +16399,9 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
      FArrayBox& deltafab=(*localMF[delta_MF])[mfi];
      int deltacomp=0;
-     if (source_term==1) {
+     if (source_term==SUB_OP_SDC_LOW_TIME) {
       deltacomp=0;
-     } else if (source_term==0) {
+     } else if (source_term==SUB_OP_SDC_ISCHEME) {
       if ((slab_step>=0)&&(slab_step<ns_time_order)) {
        deltacomp=slab_step*NSTATE_SDC;
       } else
@@ -16409,7 +16413,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      Vector<int> denbc=getBCArray(State_Type,gridno,STATECOMP_STATES,
       nmat*num_state_material);
 
-     int operation_flag=107; // advection
+     int operation_flag=OP_ISCHEME_CELL; // advection
      int energyflag=advect_iter;
      int nsolve=NFLUXSEM;
      int homflag=source_term;
@@ -16431,7 +16435,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &ns_time_order,
       &divu_outer_sweeps,
       &num_divu_outer_sweeps,
-      &operation_flag, // 107=advection
+      &operation_flag, // 107=OP_ISCHEME_CELL=advection
       &energyflag,
       constant_density_all_time.dataPtr(),
       &nmat,
@@ -16522,24 +16526,28 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
     ns_reconcile_d_num(85);
 
     // rhs=div(uF)  
-    if (source_term==0) {
+    if (source_term==SUB_OP_SDC_ISCHEME) {
 
      if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
-      if ((advect_iter==1)&&
+      if ((advect_iter==SUB_OP_ISCHEME_CORRECT)&&
           (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
        int deltacomp=slab_step*NSTATE_SDC;
         // dest,src,srccomp,dstcomp,ncomp,ngrow
        MultiFab::Copy(*localMF[stableF_MF],*rhs,0,deltacomp,NFLUXSEM,0);
-      } else if (advect_iter==0) {
+      } else if ((advect_iter==SUB_OP_ISCHEME_CORRECT)&&
+                 (divu_outer_sweeps+1>=1)&&
+                 (divu_outer_sweeps+1<num_divu_outer_sweeps)) {
+       // do nothing
+      } else if (advect_iter==SUB_OP_ISCHEME_PREDICT) {
        // do nothing
       } else
        amrex::Error("advect_iter invalid");
 
      } else
-      amrex::Error("source_term invalid");
+      amrex::Error("slab_step invalid");
 
-    } else if (source_term==1) {
+    } else if (source_term==SUB_OP_SDC_LOW_TIME) {
 
      if ((slab_step==0)&&(SDC_outer_sweeps==0)) {
       // this is ok: F_advect(t^n)

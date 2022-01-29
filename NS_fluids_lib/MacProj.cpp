@@ -1294,7 +1294,7 @@ void NavierStokes::applyALL(
 
    // gradpedge=-dt W grad p
   int homflag=1;
-  int energyflag=0;
+  int energyflag=SUB_OP_FOR_MAIN;
   int simple_AMR_BC_flag=0;
   int simple_AMR_BC_flag_viscosity=0;
   ns_level.apply_pressure_grad(
@@ -1508,7 +1508,7 @@ void NavierStokes::applyGradALL(
   int project_option,int idx_phi,int nsolve) {
 
  int homflag=1;
- int energyflag=0;
+ int energyflag=SUB_OP_FOR_MAIN;
  int finest_level=parent->finestLevel();
  if (level!=0)
   amrex::Error("level invalid applyGradALL");
@@ -1772,8 +1772,8 @@ void NavierStokes::apply_div(
 //     (a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2}+...)/dt+diffusionRHS
 //
 
-  int operation_flag=100;
-  int energyflag=0; // not used when operation_flag==100
+  int operation_flag=OP_RHS_CELL;
+  int energyflag=SUB_OP_DEFAULT; // not used when operation_flag==100
   int local_enable_spectral=enable_spectral;
 
   int ncomp_denold=nsolve;
@@ -1791,7 +1791,7 @@ void NavierStokes::apply_div(
    &ns_time_order, 
    &divu_outer_sweeps, 
    &num_divu_outer_sweeps, 
-   &operation_flag,  // operation_flag=100 (RHS)
+   &operation_flag,  //operation_flag=100=OP_RHS_CELL
    &energyflag,
    constant_density_all_time.dataPtr(),
    &nmat,
@@ -2038,7 +2038,7 @@ void NavierStokes::update_SEM_forces(int project_option,
    // note: dt_slab=1 in update_SEM_forcesALL
    // UMAC=-dt_slab k grad T  (project_option==SOLVETYPE_HEAT)
    // UMAC=-dt_slab 2 mu D  (project_option==SOLVETYPE_VISC)
-   int energyflag=0;
+   int energyflag=SUB_OP_FOR_MAIN;
    int simple_AMR_BC_flag=0;
    int simple_AMR_BC_flag_viscosity=0;
    apply_pressure_grad(
@@ -2070,9 +2070,8 @@ void NavierStokes::update_SEM_forces(int project_option,
 
   } else if (project_option==SOLVETYPE_PRES) {
 
-   // energyflag=2: 
    //   get grad p instead of \pm dt grad p/rho
-   int energyflag=2;
+   int energyflag=SUB_OP_FOR_SDC;
 
    // GP_DEST_FACE=grad p instead of -dt grad p/rho
    int simple_AMR_BC_flag=0;
@@ -2366,8 +2365,8 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
 //
 
 
-   int operation_flag=110;
-   int energyflag=0;
+   int operation_flag=OP_DIV_CELL;
+   int energyflag=SUB_OP_DEFAULT;
    int project_option=SOLVETYPE_PRES;
    int homflag=0; // default
    int local_enable_spectral=enable_spectral;
@@ -2386,7 +2385,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
     &ns_time_order,
     &divu_outer_sweeps,
     &num_divu_outer_sweeps,
-    &operation_flag, // operation_flag==110 (div u)
+    &operation_flag, // operation_flag==110=OP_DIV_CELL
     &energyflag,
     constant_density_all_time.dataPtr(),
     &nmat,

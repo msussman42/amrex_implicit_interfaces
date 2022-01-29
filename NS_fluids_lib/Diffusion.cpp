@@ -1043,7 +1043,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
   setVal_localMF(CONSERVE_FLUXES_MF+dir,0.0,0,nsolve,0);
  }
  int homflag=0;
- int energyflag=0;
+ int energyflag=SUB_OP_FOR_MAIN;
  int project_option=SOLVETYPE_VISC; 
  int simple_AMR_BC_flag=1; 
  int simple_AMR_BC_flag_viscosity=1; 
