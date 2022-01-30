@@ -1451,7 +1451,7 @@ NavierStokes::recalesce_temperature(int im_source) {
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int ncomp_state=S_new.nComp();
- if (ncomp_state!=(AMREX_SPACEDIM+1)+
+ if (ncomp_state!=STATECOMP_STATES+
      nmat*(num_state_material+ngeom_raw)+1)
   amrex::Error("ncomp_state invalid");
 
@@ -1544,7 +1544,7 @@ NavierStokes::process_recalesce_data(
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int ncomp_state=S_new.nComp();
- if (ncomp_state!=(AMREX_SPACEDIM+1)+
+ if (ncomp_state!=STATECOMP_STATES+
      nmat*(num_state_material+ngeom_raw)+1)
   amrex::Error("ncomp_state invalid");
 

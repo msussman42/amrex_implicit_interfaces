@@ -5806,7 +5806,7 @@ NavierStokes::get_mm_scomp_solver(
 
   // u,v,w,p,den1,T1,...
   for (int im=0;im<nlist;im++) {
-   scomp[im]=STATECOMP_STATES+im*num_state_material+1;
+   scomp[im]=STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR;
    ncomp[im]=1;
   }
   state_index=State_Type;
@@ -5824,6 +5824,12 @@ NavierStokes::get_mm_scomp_solver(
             (project_option<SOLVETYPE_SPEC+num_species_var)) { 
 
   for (int im=0;im<nlist;im++) {
+
+   if (ENUM_SPECIESVAR==num_state_base) {
+    // do nothing
+   } else
+    amrex::Error("ENUM_SPECIES_VAR invalid");
+
    scomp[im]=STATECOMP_STATES+
      im*num_state_material+num_state_base+project_option-SOLVETYPE_SPEC;
    ncomp[im]=1;
@@ -5835,7 +5841,7 @@ NavierStokes::get_mm_scomp_solver(
   // all BCs must be insulating
   // u,v,w,p,den1,T1,...
   for (int im=0;im<nlist;im++) {
-   scomp[im]=STATECOMP_STATES+im*num_state_material+1;
+   scomp[im]=STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR;
    ncomp[im]=1;
   }
   state_index=State_Type;
@@ -7801,7 +7807,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
                 (solidheat_flag==2)) { //neumann
        //ngrow=0
       MultiFab::Copy(S_new,*localMF[FSI_MF],ibase+FSI_TEMPERATURE,
-       STATECOMP_STATES+im_part*num_state_material+1,1,0);
+       STATECOMP_STATES+im_part*num_state_material+ENUM_TEMPERATUREVAR,1,0);
      } else
       amrex::Error("solidheat_flag invalid"); 
 
@@ -8528,7 +8534,8 @@ void NavierStokes::ns_header_msg_level(
         MultiFab* new_coarse_thermal=new MultiFab(grids,dmap,1,0,
 	    MFInfo().SetTag("new_coarse_thermal"),FArrayBoxFactory());
         dcomp=0;
-        int scomp_thermal=STATECOMP_STATES+im_part*num_state_material+1;
+        int scomp_thermal=STATECOMP_STATES+im_part*num_state_material+ 
+		ENUM_TEMPERATUREVAR;
         //ncomp==1
         FillCoarsePatch(*new_coarse_thermal,dcomp,cur_time,State_Type,
          scomp_thermal,1,debug_fillpatch);
@@ -8594,7 +8601,8 @@ void NavierStokes::ns_header_msg_level(
     MultiFab::Copy(*localMF[FSI_MF],*LSMF,im_part,
       ibase+FSI_LEVELSET,1,ngrow_make_distance);
      // temperature
-    MultiFab::Copy(*localMF[FSI_MF],*denmf,im_part*num_state_material+1,
+    MultiFab::Copy(*localMF[FSI_MF],*denmf,
+      im_part*num_state_material+ENUM_TEMPERATUREVAR,
       ibase+FSI_TEMPERATURE,1,ngrow_make_distance);
 
      // flag (mask)
@@ -13811,7 +13819,7 @@ NavierStokes::level_phase_change_convertALL() {
        scompBC_map.resize(1);
        debug_ngrow(DEN_RECON_MF,1,30);
        int dstcomp=(im_current-1)*num_state_material;
-       int srccomp=(im_current-1)*num_state_material+(AMREX_SPACEDIM+1);
+       int srccomp=STATECOMP_STATES+(im_current-1)*num_state_material;
        // density
        // spectral_override==0 => always low order
        avgDown_localMF_ALL(DEN_RECON_MF,dstcomp,1,1);
@@ -14250,7 +14258,7 @@ NavierStokes::level_phase_change_convert(
    MultiFab::Copy(*localMF[HOLD_LS_DATA_MF],LS_new,
 		  im_current-1,im_current-1,1,0);
    int dstcomp=(im_current-1)*num_state_material;
-   int srccomp=(im_current-1)*num_state_material+(AMREX_SPACEDIM+1);
+   int srccomp=STATECOMP_STATES+(im_current-1)*num_state_material;
    // density
    MultiFab::Copy(*localMF[DEN_RECON_MF],S_new,
 		  srccomp,dstcomp,1,0);
@@ -16637,7 +16645,7 @@ NavierStokes::split_scalar_advection() {
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int ncomp_state=S_new.nComp();
- if (ncomp_state!=(AMREX_SPACEDIM+1)+
+ if (ncomp_state!=STATECOMP_STATES+
      nmat*(num_state_material+ngeom_raw)+1)
   amrex::Error("ncomp_state invalid");
 
@@ -16917,14 +16925,14 @@ NavierStokes::split_scalar_advection() {
    scomp_init=(AMREX_SPACEDIM+1)+im*num_state_material;
    ncomp_init=num_state_material;
    S_new.setVal(0.0,scomp_init,ncomp_init,1);
-   scomp_init=(AMREX_SPACEDIM+1)+nmat*num_state_material+
+   scomp_init=STATECOMP_STATES+nmat*num_state_material+
      im*ngeom_raw;
    ncomp_init=ngeom_raw;
    S_new.setVal(0.0,scomp_init,ncomp_init,1);
    LS_new.setVal(0.0,im,1,1);
   } else if (ns_is_rigid(im)==1) {
    if (solidheat_flag==0) {  // thermal diffuse in solid (default)
-    scomp_init=(AMREX_SPACEDIM+1)+im*num_state_material+1;
+    scomp_init=STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR;
     ncomp_init=1;
     S_new.setVal(0.0,scomp_init,ncomp_init,1);
    } else if (solidheat_flag==2) { // Neumann

@@ -3490,10 +3490,10 @@ stop
           stop
          endif
          dcompsrc=(im_source-1)*num_state_material+1
-         tcompsrc=(im_source-1)*num_state_material+2
+         tcompsrc=(im_source-1)*num_state_material+1+ENUM_TEMPERATUREVAR
          vofcompsrc=(im_source-1)*ngeom_raw+1 
          dcompdst=(im_dest-1)*num_state_material+1
-         tcompdst=(im_dest-1)*num_state_material+2
+         tcompdst=(im_dest-1)*num_state_material+1+ENUM_TEMPERATUREVAR
          vofcompdst=(im_dest-1)*ngeom_raw+1 
 
          ispec=mass_fraction_id(iten+ireverse*nten)
@@ -3789,10 +3789,11 @@ stop
          call init_massfrac_parm(density_left,massfrac_parm_left,im_primaryL)
          do ispec=1,num_species_var
           massfrac_parm_left(ispec)= &
-            den(D_DECL(i-ii,j-jj,k-kk),ibase+2+ispec)
+           den(D_DECL(i-ii,j-jj,k-kk),ibase+ENUM_SPECIESVAR+ispec)
          enddo
 
-         temperature_left=den(D_DECL(i-ii,j-jj,k-kk),ibase+2)
+         temperature_left=den(D_DECL(i-ii,j-jj,k-kk), &
+                 ibase+ENUM_TEMPERATUREVAR+1)
          call INTERNAL_material(density_left,massfrac_parm_left, &
           temperature_left, &
           internal_energy_left, &
@@ -3828,10 +3829,10 @@ stop
          call init_massfrac_parm(density_right,massfrac_parm_right,im_primaryR)
          do ispec=1,num_species_var
           massfrac_parm_right(ispec)= &
-            den(D_DECL(i,j,k),ibase+2+ispec)
+             den(D_DECL(i,j,k),ibase+ENUM_SPECIESVAR+ispec)
          enddo
 
-         temperature_right=den(D_DECL(i,j,k),ibase+2)
+         temperature_right=den(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1)
          call INTERNAL_material(density_right,massfrac_parm_right, &
           temperature_right, &
           internal_energy_right, &
@@ -4967,7 +4968,7 @@ stop
           dencomp=(im-1)*num_state_material+istate
           conserve(D_DECL(i,j,k),iden_base+dencomp)=dencore(im)
           istate=istate+1
-         else if (istate.eq.2) then ! Temperature
+         else if (istate.eq.ENUM_TEMPERATUREVAR+1) then ! Temperature
           tempcomp=(im-1)*num_state_material+istate
           local_temperature=den(D_DECL(i,j,k),tempcomp)
           if (is_compressible_mat(im).eq.0) then
@@ -7064,7 +7065,7 @@ stop
         VFRAC(im)=recon(D_DECL(i,j,k),vofcomp) 
         dencomp=(im-1)*num_state_material+1
         den_local(im)=Tnew(D_DECL(i,j,k),dencomp)
-        T_local(im)=Tnew(D_DECL(i,j,k),dencomp+1)
+        T_local(im)=Tnew(D_DECL(i,j,k),dencomp+ENUM_TEMPERATUREVAR)
         if ((VFRAC(im).ge.-VOFTOL).and. &
             (VFRAC(im).le.one+VOFTOL)) then
          ! do nothing
@@ -7155,7 +7156,7 @@ stop
         endif
 
         dencomp=(im-1)*num_state_material+1
-        Tnew(D_DECL(i,j,k),dencomp+1)=T_local(im)
+        Tnew(D_DECL(i,j,k),dencomp+ENUM_TEMPERATUREVAR)=T_local(im)
        enddo ! im=1..nmat
 
       enddo
@@ -7283,7 +7284,7 @@ stop
 
          do im=1,nmat 
           idst=STATECOMP_STATES+ &
-           (im-1)*num_state_material+2
+            (im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
           velnew(D_DECL(i,j,k),idst)= &
            velnew(D_DECL(i,j,k),idst)- &
            DeDTinverse(D_DECL(i,j,k))*deltafab(D_DECL(i,j,k),isrc)
@@ -11244,12 +11245,14 @@ stop
              do im_adjust=1,nmat
               if (project_option.eq.SOLVETYPE_HEAT) then
                tcomp=STATECOMP_STATES+ &
-                (im_adjust-1)*num_state_material+2
+                (im_adjust-1)*num_state_material+ &
+                ENUM_TEMPERATUREVAR+1
               else if ((project_option.ge.SOLVETYPE_SPEC).and. &
                        (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
                tcomp=STATECOMP_STATES+ &
-                (im_adjust-1)*num_state_material+3+project_option- &
-                SOLVETYPE_SPEC
+                 (im_adjust-1)*num_state_material+ &
+                 ENUM_SPECIESVAR+1+ &
+                 project_option-SOLVETYPE_SPEC
               else
                print *,"project_option invalid"
                stop
@@ -12056,10 +12059,12 @@ stop
               im_fluid) 
              temperature_image= &
                 state(D_DECL(iside_probe,jside_probe,kside_probe), &
-                     (im_primary_left-1)*num_state_material+2)
+                     (im_primary_left-1)*num_state_material+ &
+                     ENUM_TEMPERATUREVAR+1)
              temperature_wall= &
                 state(D_DECL(isideSOLID,jsideSOLID,ksideSOLID), &
-                     (im_solid-1)*num_state_material+2)
+                     (im_solid-1)*num_state_material+ &
+                     ENUM_TEMPERATUREVAR+1)
              temperature_wall_max= &
                NS_sumdata(IQ_MAXSTATE_SUM_COMP+2*(im_solid-1)+2)
             else if ((is_rigid(nmat,im_primary_left).eq.1).or. &
@@ -12107,10 +12112,12 @@ stop
               im_fluid) 
              temperature_image= &
                 state(D_DECL(iside_probe,jside_probe,kside_probe), &
-                     (im_primary_right-1)*num_state_material+2)
+                     (im_primary_right-1)*num_state_material+ &
+                     ENUM_TEMPERATUREVAR+1)
              temperature_wall= &
                 state(D_DECL(isideSOLID,jsideSOLID,ksideSOLID), &
-                     (im_solid-1)*num_state_material+2)
+                     (im_solid-1)*num_state_material+ &
+                     ENUM_TEMPERATUREVAR+1)
              temperature_wall_max= &
                NS_sumdata(IQ_MAXSTATE_SUM_COMP+2*(im_solid-1)+2)
             else if ((is_rigid(nmat,im_primary_right).eq.1).or. &
@@ -13738,7 +13745,7 @@ stop
       REAL_T, dimension(:,:), allocatable :: comparestate
 
       nmat=num_materials
-      if (nc.ne.(SDIM+1)+ &
+      if (nc.ne.STATECOMP_STATES+ &
           nmat*(num_state_material+ngeom_raw)+1) then
        print *,"nc invalid in sod sanity"
        stop
@@ -14323,7 +14330,7 @@ stop
        stop
       endif
  
-      if (ncomp_state.ne.(SDIM+1)+ &
+      if (ncomp_state.ne.STATECOMP_STATES+ &
           nmat*(num_state_material+ngeom_raw)+1) then
        print *,"ncomp_state invalid"
        stop
@@ -14472,7 +14479,7 @@ stop
        stop
       endif
 
-      if (dencomp.ne.SDIM+1) then
+      if (dencomp.ne.STATECOMP_STATES) then
        print *,"dencomp invalid"
        stop
       endif
@@ -15590,8 +15597,10 @@ stop
                veldata(iden_base+statecomp_data)+ & 
                multi_volume_grid(im)*donate_data
 
-              if (istate.eq.2) then
-               if (veldata(iden_base+statecomp_data).lt.zero) then
+              if (istate.eq.ENUM_TEMPERATUREVAR+1) then
+               if (veldata(iden_base+statecomp_data).ge.zero) then
+                ! do nothing
+               else
                 print *,"energy became negative "
                 print *,"im,comp2 ",im,iden_base+statecomp_data
                 print *,"current donated value ", &
@@ -15790,7 +15799,7 @@ stop
          endif
    
          ! pressure
-         statecomp_data=SDIM+1
+         statecomp_data=STATECOMP_PRES+1
          snew_hold(statecomp_data)= &
            velfab(D_DECL(icrse,jcrse,kcrse),statecomp_data)
 
@@ -15852,6 +15861,7 @@ stop
            constant_density_all_time, &
            massdepart,im,nmat, &
            dencore(im))
+            !dencomp=STATECOMP_STATES
           istate=dencomp+(im-1)*num_state_material+1
           if (dencore(im).gt.zero) then
            ! do nothing
@@ -16018,11 +16028,12 @@ stop
            if (istate.eq.1) then
             ! do nothing, density updated above
             istate=istate+1
-           else if (istate.eq.2) then 
+           else if (istate.eq.ENUM_TEMPERATUREVAR+1) then 
 
             do ispecies=1,num_species_var
              speccomp_data=(im-1)*num_state_material+num_state_base+ &
                ispecies
+              !dencomp=STATECOMP_STATES
              if (no_material_flag.eq.1) then ! no material (im)
               snew_hold(dencomp+speccomp_data)=zero
              else if (no_material_flag.eq.0) then
@@ -16178,7 +16189,7 @@ stop
          enddo  ! im=1..nmat
 
 
-         do istate=1,(SDIM+1)
+         do istate=1,STATECOMP_STATES
           snew(D_DECL(icrse,jcrse,kcrse),istate)=snew_hold(istate)
          enddo
 
@@ -16187,12 +16198,14 @@ stop
          do im=1,nmat
           if (is_rigid(nmat,im).eq.0) then
            do istate=1,num_state_material
+            !dencomp=STATECOMP_STATES
             statecomp_data=dencomp+(im-1)*num_state_material+istate
             snew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
               snew_hold(statecomp_data)
            enddo ! istate=1..num_state_material
 
            do igeom=1,ngeom_raw
+            !dencomp=STATECOMP_STATES
             statecomp_data=dencomp+ &
               nmat*num_state_material+ &
               (im-1)*ngeom_raw+igeom
@@ -16202,7 +16215,9 @@ stop
           else if (is_rigid(nmat,im).eq.1) then
 
            if (solidheat_flag.eq.0) then ! diffuse in solid
-            tempcomp_data=dencomp+(im-1)*num_state_material+2
+            !dencomp=STATECOMP_STATES
+            tempcomp_data=dencomp+(im-1)*num_state_material+ &
+              ENUM_TEMPERATUREVAR+1
             snew(D_DECL(icrse,jcrse,kcrse),tempcomp_data)= &
               snew_hold(tempcomp_data)
            else if (solidheat_flag.eq.2) then ! neumann
@@ -16613,7 +16628,7 @@ stop
        stop
       endif
 
-      if (nstate_main.ne.(SDIM+1)+ &
+      if (nstate_main.ne.STATECOMP_STATES+ &
           nmat*(num_state_material+ngeom_raw)+1) then
        print *,"nstate_main invalid"
        stop
@@ -16654,8 +16669,8 @@ stop
           print *,"ncomp invalid37"
           stop
          endif
-         if (scomp(im).ne.(SDIM+1)+ &
-             (im-1)*num_state_material+1) then
+         if (scomp(im).ne.STATECOMP_STATES+ &
+             (im-1)*num_state_material+ENUM_TEMPERATUREVAR) then
           print *,"scomp invalid"
           stop
          endif
@@ -16685,7 +16700,9 @@ stop
           stop
          endif
          if (scomp(im).ne.STATECOMP_STATES+ &
-             (im-1)*num_state_material+2+project_option-SOLVETYPE_SPEC) then
+             (im-1)*num_state_material+ &
+             ENUM_SPECIESVAR+ &
+             project_option-SOLVETYPE_SPEC) then
           print *,"scomp invalid"
           stop
          endif
@@ -16803,7 +16820,9 @@ stop
 
          dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
          test_density=state(D_DECL(i,j,k),dencomp)
-         if (test_density.le.zero) then
+         if (test_density.gt.zero) then
+          ! do nothing
+         else
           print *,"test_density invalid"
           stop
          endif
@@ -22158,9 +22177,11 @@ stop
              vel_clamped,temperature_clamped)
 
        do im=1,nmat
-        ibase=(SDIM+1)+(im-1)*num_state_material
-        TEMPERATURE=snew(D_DECL(i,j,k),ibase+2)
-        if (TEMPERATURE.le.zero) then
+        ibase=STATECOMP_STATES+(im-1)*num_state_material
+        TEMPERATURE=snew(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1)
+        if (TEMPERATURE.gt.zero) then
+         ! do nothing
+        else
           print *,"HEATADVANCE: temperature must be positive"
           print *,"i,j,k,im ",i,j,k,im
           print *,"TEMPERATURE= ",TEMPERATURE
@@ -22173,7 +22194,7 @@ stop
         if (new_temperature.le.zero) then
          new_temperature=TEMPERATURE
         endif
-        snew(D_DECL(i,j,k),ibase+2)=new_temperature
+        snew(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1)=new_temperature
        enddo ! im = 1..nmat
 
       enddo
