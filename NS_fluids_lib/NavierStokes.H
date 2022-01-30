@@ -1093,7 +1093,7 @@ protected:
     void SumRegions(int isweep); //isweep = 0 or 1
 
     void ColorSum(
-     int operation_flag, // =0 or 1
+     int operation_flag, // OP_GATHER_MDOT or OP_SCATTER_MDOT
      int tessellate, // =1 or 3
      int sweep_num,
      int ncomp_mdot_alloc,
@@ -1113,7 +1113,7 @@ protected:
      );
 
     void ColorSumALL(
-     int operation_flag, // =0 or 1
+     int operation_flag, // OP_GATHER_MDOT or OP_SCATTER_MDOT
      int tessellate,  // =1 or 3
      int coarsest_level,
      int& color_count,

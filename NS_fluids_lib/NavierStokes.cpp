@@ -16500,9 +16500,9 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       ARLIM(S_old_fab.loVect()),ARLIM(S_old_fab.hiVect()),
       slopefab.dataPtr(), // recon
       ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
-      velfab.dataPtr(), // operation_flag==107, mdot
+      velfab.dataPtr(), // OP_ISCHEME_CELL, mdot
       ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-      denfab.dataPtr(), // operation_flag==107, maskdivres
+      denfab.dataPtr(), // OP_ISCHEME_CELL, maskdivres
       ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
       S_old_fab.dataPtr(), // maskres
       ARLIM(S_old_fab.loVect()),ARLIM(S_old_fab.hiVect()),

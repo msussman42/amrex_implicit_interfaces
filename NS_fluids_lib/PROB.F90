@@ -13168,20 +13168,30 @@ END SUBROUTINE Adist
       return
       end subroutine eval_face_coeff
 
+! OP_PRESGRAD_MAC (0)
 ! operation_flag=0  pressure gradient on MAC grid
+! OP_POTGRAD_SURF_TEN_TO_MAC (2)
 ! operation_flag=2  potential gradient on MAC grid, 
 !                   surface tension on MAC grid
+! OP_UNEW_CELL_TO_MAC (3)
 ! operation_flag=3  unew^MAC=unew^CELL->MAC
+! OP_UNEW_USOL_MAC_TO_MAC (4)
 ! operation_flag=4  unew^MAC=uSOLID^MAC or uFLUID^MAC (not used here)
+! OP_UMAC_PLUS_VISC_CELL_TO_MAC (5)
 ! operation_flag=5  unew^MAC=unew^MAC+beta diffuse_ref^CELL->MAC
+! OP_UGRAD_MAC (6)
 ! operation_flag=6  evaluate tensor values.
 !   (called from FACE_GRADIENTS)
+! OP_ISCHEME_MAC (7)
 ! operation_flag=7  advection.
+! OP_UGRAD_COUPLING_MAC (8)
 ! operation_flag=8  reserved for coupling terms in CROSSTERM
-!   (SEM_CELL_TO_MAC not called with operation_flag==8)
+!   (SEM_CELL_TO_MAC not called with 
+!    operation_flag==OP_UGRAD_COUPLING_MAC)
+! OP_U_COMP_CELL_MAC_TO_MAC (11)
 ! operation_flag=11 unew^MAC=uold^MAC +(unew^cell-uold^cell)^{cell->MAC}
       subroutine SEM_CELL_TO_MAC( &
-       ncomp_xp, &  ! number of amrsync components if op=0,3,5,6,7,9,10,11
+       ncomp_xp, & !number of amrsync components if op=0,3,5,6,7,9,10,11
        simple_AMR_BC_flag_in, &
        level, &
        finest_level, &
@@ -13219,7 +13229,9 @@ END SUBROUTINE Adist
        pres, & 
        den, & 
        xface, & 
-       xgp, &  ! holds Umac_old if operation_flag==5 or 11.
+       ! Umac_old if OP_UMAC_PLUS_VISC_CELL_TO_MAC or 
+       !             OP_U_COMP_CELL_MAC_TO_MAC 
+       xgp, &  
        xcut, & 
        xp, &  ! holds amrsync if op==0,3,5,6,7,9,10,11
        xvel, & 
@@ -13678,7 +13690,7 @@ END SUBROUTINE Adist
        stop
       endif
 
-       ! ncomp_dest=SDIM if operation_flag==6  (du/dn, dv/dn, dw/dn)
+       ! ncomp_dest=SDIM if OP_UGRAD_MAC  (du/dn, dv/dn, dw/dn)
       do nc=1,ncomp_dest
 
         ! do nothing if element is not a spectral element

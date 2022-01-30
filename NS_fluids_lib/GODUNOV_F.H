@@ -926,7 +926,7 @@ extern "C"
      int* nsolve,
      int* tileloop,
      int* dir,
-     int* operation_flag, // 8
+     int* operation_flag, // OP_UGRAD_COUPLING_MAC
      int* enable_spectral,
      int* spectral_loop,
      int* ncfluxreg,

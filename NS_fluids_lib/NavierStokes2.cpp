@@ -2816,7 +2816,10 @@ void NavierStokes::increment_face_velocity(
        &nsolve,
        &tileloop,
        &dir,
-       &operation_flag, // 3,4,5, or 11
+        //OP_UNEW_CELL_TO_MAC,OP_UNEW_USOL_MAC_TO_MAC,
+	//OP_UMAC_PLUS_VISC_CELL_TO_MAC, or
+	//OP_U_COMP_CELL_MAC_TO_MAC
+       &operation_flag, 
        &energyflag,
        &beta,
        &visc_coef,

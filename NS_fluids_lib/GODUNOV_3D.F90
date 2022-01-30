@@ -19655,7 +19655,7 @@ stop
               ncomp_veldest=ntensor
               ncomp_dendest=ntensor
               ncomp_cterm=ntensor
-              operation_flag=105  ! interpolate grad u from MAC to CELL
+              operation_flag=OP_GRADU_MAC_TO_CELL 
               project_option_vel=SOLVETYPE_VISC
               energyflag=SUB_OP_DEFAULT
               def_dt=one
@@ -19672,7 +19672,7 @@ stop
                level, &
                finest_level, &
                nmat, &
-               operation_flag, & ! operation_flag==105
+               operation_flag, & ! operation_flag==OP_GRADU_MAC_TO_CELL
                project_option_vel, &
                energyflag, &
                energyflag, & ! homflag
