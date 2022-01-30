@@ -2938,7 +2938,7 @@ void NavierStokes::increment_KE(Real beta) {
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
- int ncomp_state=(AMREX_SPACEDIM+1)+nmat*num_state_material+
+ int ncomp_state=STATECOMP_STATES+nmat*num_state_material+
   nmat*ngeom_raw+1;
  if (ncomp_state!=S_new.nComp()) 
   amrex::Error("ncomp_state!=S_new.nComp()"); 
@@ -9004,7 +9004,7 @@ MultiFab* NavierStokes::getStateDen(int ngrow,Real time) {
 
  int nmat=num_materials;
  int ncomp=nmat*num_state_material;
- int scomp=(AMREX_SPACEDIM+1);
+ int scomp=STATECOMP_STATES;
  MultiFab* mf=getState(ngrow,scomp,ncomp,time);
  return mf;
 

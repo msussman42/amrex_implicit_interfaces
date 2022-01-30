@@ -13908,9 +13908,10 @@ END SUBROUTINE Adist
            jc=j_out
            kc=k_out
 
-           if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection (values outside elem)
+             !advection(values outside elem)
+           if (operation_flag.eq.OP_ISCHEME_MAC) then
 
-            templocal=den(D_DECL(ic,jc,kc),ibase+2)
+            templocal=den(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1)
 
             if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then
              ! u_{i+1/2}S_{i+1/2}-u_{i-1/2}S_{i-1/2}=
@@ -14090,20 +14091,25 @@ END SUBROUTINE Adist
 
             else if (nc.eq.SEM_T+1) then ! temperature
 
-             if (presbc_in(dir,side,ibase+2).eq.REFLECT_EVEN) then
+             if (presbc_in(dir,side,ibase+ENUM_TEMPERATUREVAR+1).eq. &
+                 REFLECT_EVEN) then
               local_bctype(side)=3 ! reflect even
               local_bcval(side)=zero 
-             else if (presbc_in(dir,side,ibase+2).eq.FOEXTRAP) then
+             else if (presbc_in(dir,side,ibase+ENUM_TEMPERATUREVAR+1).eq. &
+                      FOEXTRAP) then
               local_bctype(side)=2 ! neumann
               local_bcval(side)=zero 
-             else if (presbc_in(dir,side,ibase+2).eq.REFLECT_ODD) then
+             else if (presbc_in(dir,side,ibase+ENUM_TEMPERATUREVAR+1).eq. &
+                      REFLECT_ODD) then
               print *,"cannot have reflect odd BC for temperature"
               stop
               local_bctype(side)=4
               local_bcval(side)=zero 
-             else if (presbc_in(dir,side,ibase+2).eq.EXT_DIR) then
+             else if (presbc_in(dir,side,ibase+ENUM_TEMPERATUREVAR+1).eq. &
+                      EXT_DIR) then
               if (udotn_boundary.lt.zero) then
-               templocal=den(D_DECL(i_out,j_out,k_out),ibase+2)
+               templocal=den(D_DECL(i_out,j_out,k_out), &
+                 ibase+ENUM_TEMPERATUREVAR+1)
                local_bctype(side)=1 ! dirichlet
                local_bcval(side)=templocal
               else if (udotn_boundary.ge.zero) then
@@ -14273,7 +14279,7 @@ END SUBROUTINE Adist
              endif
             else if (simple_AMR_BC_flag.eq.1) then
 
-             templocal=den(D_DECL(ic,jc,kc),ibase+2)
+             templocal=den(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1)
 
              if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then
               local_data_side(side)= &
@@ -14306,8 +14312,8 @@ END SUBROUTINE Adist
              print *,"level ",level
              print *,"finest_level ",finest_level
              print *,"bfact,bfact_c,bfact_f ",bfact,bfact_c,bfact_f
-             print *,"den(D_DECL(ic,jc,kc),ibase+2) ", &
-               den(D_DECL(ic,jc,kc),ibase+2)
+             print *,"den(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1) ", &
+                den(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1)
              print *,"ibase= ",ibase
              print *,"cen_maskSEM= ",cen_maskSEM
              stop
@@ -14530,9 +14536,10 @@ END SUBROUTINE Adist
             stop
            endif
 
-          else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection (values inside elem)
+           !advection(values inside elem)
+          else if (operation_flag.eq.OP_ISCHEME_MAC) then
 
-           templocal=den(D_DECL(ic,jc,kc),ibase+2)
+           templocal=den(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1)
 
             ! u dot grad u = div(umac u)-u div umac
            if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then ! velocity
@@ -16307,7 +16314,8 @@ END SUBROUTINE Adist
              mdotcell(D_DECL(ic,jc,kc),nc)*local_vel_div_div(isten+1)
            else if (nc.eq.SEM_T+1) then ! temperature
             local_div(isten+1)=local_div(isten+1)- & 
-             maskdivres(D_DECL(ic,jc,kc),ibase+2)*local_vel_div_div(isten+1)
+             maskdivres(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1)* &
+             local_vel_div_div(isten+1)
            else
             print *,"nc invalid"
             stop
@@ -16365,8 +16373,8 @@ END SUBROUTINE Adist
               vel_new(nc2)=mom_new
              enddo ! nc2=1..sdim
 
-             T_old=denold(D_DECL(ic,jc,kc),ibase+2)
-             T_new=T_old-dt*divflux(SDIM+1)
+             T_old=denold(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1)
+             T_new=T_old-dt*divflux(SEM_T+1)
 
                ! SDC correction term: temperature
              if ((ns_time_order.ge.2).and. &
@@ -16375,7 +16383,7 @@ END SUBROUTINE Adist
                  (SDC_outer_sweeps.gt.0).and. &
                  (divu_outer_sweeps+1.eq.num_divu_outer_sweeps)) then
                 ! cterm corresponds to (*localMF[delta_MF])[mfi]
-              T_new=T_new-cterm(D_DECL(ic,jc,kc),SDIM+1)
+              T_new=T_new-cterm(D_DECL(ic,jc,kc),SEM_T+1)
              else if ((ns_time_order.eq.1).or. &
                       (advect_iter.eq.SUB_OP_ISCHEME_PREDICT).or. &
                       (SDC_outer_sweeps.eq.0).or. &
@@ -16398,8 +16406,8 @@ END SUBROUTINE Adist
              else
               print *,"T_new underflow"
               print *,"dt=",dt
-              print *,"divflux (u dot grad T)= ",divflux(SDIM+1)
-              print *,"cterm= ",cterm(D_DECL(ic,jc,kc),SDIM+1)
+              print *,"divflux (u dot grad T)= ",divflux(SEM_T+1)
+              print *,"cterm= ",cterm(D_DECL(ic,jc,kc),SEM_T+1)
               print *,"energyflag (advect_iter) =",energyflag
               print *,"ic,jc,kc ",ic,jc,kc
               stop
@@ -16408,7 +16416,7 @@ END SUBROUTINE Adist
              do nc2=1,SDIM
               veldest(D_DECL(ic,jc,kc),nc2)=vel_new(nc2)
              enddo ! nc2
-             dendest(D_DECL(ic,jc,kc),ibase+2)=T_new
+             dendest(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1)=T_new
 
             else
              print *,"source_term invalid"
