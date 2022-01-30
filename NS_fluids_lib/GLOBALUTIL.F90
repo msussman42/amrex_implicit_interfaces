@@ -10754,18 +10754,12 @@ end subroutine dynamic_contact_angle
         ! do nothing
       else if (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC) then 
         ! do nothing
-      else if (operation_flag.ge.6) then ! rate of strain
-
+      else if (operation_flag.eq.OP_UGRAD_MAC) then ! rate of strain
        ! do nothing
-
       else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then
-
        ! do nothing
-
       else if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then ! coupling terms
-
        ! do nothing
-
       else
        print *,"operation_flag invalid3"
        stop
@@ -10782,7 +10776,7 @@ end subroutine dynamic_contact_angle
         endif
        else if (levelrz_in.eq.3) then
 
-        if (operation_flag.eq.6) then
+        if (operation_flag.eq.OP_UGRAD_MAC) then
 
          if ((nc.lt.1).or.(nc.gt.SDIM)) then
           print *,"nc invalid"

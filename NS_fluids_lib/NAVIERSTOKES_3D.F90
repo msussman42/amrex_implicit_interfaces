@@ -4332,7 +4332,7 @@ END SUBROUTINE SIMP
         print *,"ncomp_flux invalid"
         stop
        endif
-      else if (operation_flag.eq.8) then ! viscosity
+      else if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then !viscosity
        if (ncomp_vel.ne.SDIM) then
         print *,"ncomp_vel invalid visc"
         stop
@@ -4718,7 +4718,7 @@ END SUBROUTINE SIMP
 
            do n=1,ncomp_flux
 
-            if (operation_flag.eq.8) then ! viscosity
+            if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then ! viscosity
              if ((n.ge.1).and.(n.le.SDIM)) then
               fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),n)
              else
@@ -4842,7 +4842,7 @@ END SUBROUTINE SIMP
 
                 do n = 1, ncomp_flux
 
-                 if (operation_flag.eq.8) then ! viscosity
+                 if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then ! viscosity
                   if ((n.ge.1).and.(n.le.SDIM)) then
                    fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),n)
                   else
@@ -5040,7 +5040,7 @@ END SUBROUTINE SIMP
 
       nmat=num_materials
 
-      if (operation_flag.eq.8) then ! viscosity
+      if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then ! viscosity
        if (ncomp_vel.ne.SDIM) then
         print *,"ncomp_vel invalid viscosity"
         stop
@@ -5472,7 +5472,7 @@ END SUBROUTINE SIMP
 
              do n=1,ncomp_flux
 
-              if (operation_flag.eq.8) then ! viscosity
+              if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then ! viscosity
                if ((n.ge.1).and.(n.le.SDIM)) then
                 crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),n)
                else
@@ -5594,7 +5594,7 @@ END SUBROUTINE SIMP
 
                   do n = 1, ncomp_flux
 
-                   if (operation_flag.eq.8) then ! viscosity
+                   if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then !viscosity
                     if ((n.ge.1).and.(n.le.SDIM)) then
                      crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),n)
                     else

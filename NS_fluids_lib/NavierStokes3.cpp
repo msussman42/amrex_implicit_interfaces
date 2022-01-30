@@ -5050,7 +5050,7 @@ int ilev;
 //operation_flag==0 (OP_GATHER_MDOT) to mdot or density.
 void
 NavierStokes::ColorSum(
- int operation_flag, //=0 or 1
+ int operation_flag, //OP_GATHER_MDOT or OP_SCATTER_MDOT
  int tessellate,  // =1 or 3
  int sweep_num,
  int ncomp_mdot_alloc,
@@ -6487,7 +6487,7 @@ void NavierStokes::clear_blobdata(int i,Vector<blobclass>& blobdata) {
 //operation_flag==0 (OP_GATHER_MDOT) to mdot or density.
 void
 NavierStokes::ColorSumALL(
- int operation_flag, // =0 or 1
+ int operation_flag, //OP_GATHER_MDOT or OP_SCATTER_MDOT
  int tessellate,  // 1 or 3
  int coarsest_level,
  int& color_count,
@@ -6714,7 +6714,7 @@ NavierStokes::ColorSumALL(
    }
 
    ns_level.ColorSum(
-    operation_flag, // =0 or 1
+    operation_flag, // OP_GATHER_MDOT or OP_SCATTER_MDOT
     tessellate,  // =1 or 3
     sweep_num,
     ncomp_mdot_alloc,
@@ -9864,7 +9864,9 @@ void NavierStokes::multiphase_project(int project_option) {
    //       (one-test_current_icefacecut)*uedge_rigid
    //
    // In LEVELSET_3D.F90, fort_cell_to_mac,
-   // operation_flag=3,4,5,10,11, num_colors.gt.0, if either
+   // operation_flag=OP_UNEW_CELL_TO_MAC, OP_UNEW_USOL_MAC_TO_MAC,
+   // OP_UMAC_PLUS_VISC_CELL_TO_MAC, or OP_U_COMP_CELL_MAC_TO_MAC,
+   //  num_colors.gt.0, if either
    // left cell or right cell has ice (FSI_flag==3,6)
    // or is FSI_rigid (FSI_flag==5) then velocity is
    // overwritten.

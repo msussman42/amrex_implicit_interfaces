@@ -4835,7 +4835,7 @@ stop
          if (sweep_num.eq.0) then
 
           if (level_blobtypedata(icolor).ne.base_type) then
-           print *,"type problems in fort_getcolorsum operation_flag==1"
+           print *,"type problems fort_getcolorsum OP_SCATTER_MDOT"
            print *,"level,finest_level ",level,finest_level
            print *,"num_colors= ",num_colors
            print *,"current blobtype ",level_blobtypedata(icolor)
@@ -12697,7 +12697,7 @@ stop
 
       subroutine fort_cell_to_mac( &
        ncomp_mgoni, &
-       ncomp_xp, & !local_MF[AMRSYNC_PRES_MF]->nComp() if operation_flag==0
+       ncomp_xp, & !local_MF[AMRSYNC_PRES_MF]->nComp() OP_PRESGRAD_MAC
        ncomp_xgp, &
        simple_AMR_BC_flag, &
        nsolve, &
@@ -12727,13 +12727,18 @@ stop
        xcut,DIMS(xcut), &   ! coeff*areafrac
        xface,DIMS(xface), &  ! xflux for advection
        recon,DIMS(recon), &  
-       xgp,DIMS(xgp), & ! holds Umac_old if operation_flag==5 or 11
-       xp,DIMS(xp), & ! holds AMRSYNC_PRES if operation_flag==0
+       ! Umac_old if:
+       !  OP_UMAC_PLUS_VISC_CELL_TO_MAC or
+       !  OP_U_COMP_CELL_MAC_TO_MAC
+       xgp,DIMS(xgp), & 
+       xp,DIMS(xp), & ! holds AMRSYNC_PRES if OP_PRESGRAD_MAC
        xvel,DIMS(xvel), &
        vel,DIMS(vel), & !primary_velfab coming from increment_face_vel
-       pres,DIMS(pres), & ! holds U_old(dir) if operation_flag==11
+       pres,DIMS(pres), & ! U_old(dir) if OP_U_COMP_CELL_MAC_TO_MAC
        den,DIMS(den), &
-        ! secondary_velfab if operation_flag=3,4,5,or 10
+        ! secondary_velfab if 
+        !  OP_UNEW_CELL_TO_MAC, OP_UNEW_USOL_MAC_TO_MAC,
+        !  OP_UMAC_PLUS_VISC_CELL_TO_MAC, or OP_U_COMP_CELL_MAC_TO_MAC
        mgoni,DIMS(mgoni), &!DIMS(dat)=datxlo,datxhi,datylo,datyhi,datzlo,datzhi
        colorfab,DIMS(colorfab), &
        typefab,DIMS(typefab), &
@@ -12845,7 +12850,8 @@ stop
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
-       !holds Umac_old if operation_flag==5 or 11
+       !holds Umac_old if 
+       ! OP_UMAC_PLUS_VISC_CELL_TO_MAC or OP_U_COMP_CELL_MAC_TO_MAC
       REAL_T, intent(inout), target :: xgp(DIMV(xgp),ncomp_xgp) 
       REAL_T, pointer :: xgp_ptr(D_DECL(:,:,:),:)
 
@@ -12859,7 +12865,7 @@ stop
       REAL_T, pointer :: xvel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
-       ! holds U_old if operation_flag==11
+       ! holds U_old(dir) if OP_U_COMP_CELL_MAC_TO_MAC
       REAL_T, intent(in), target :: pres(DIMV(pres),1)
       REAL_T, pointer :: pres_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: den(DIMV(den),nmat*num_state_material)
@@ -12879,7 +12885,7 @@ stop
       REAL_T pgrad_tension
       REAL_T gradh
       REAL_T dplus,dminus
-       ! operation_flag==1: (1)use_face_pres,(2) grid flag, 2+1
+       !OP_PRES_CELL_TO_MAC (1)use_face_pres,(2) grid flag, 2+1
       REAL_T plocal(2+nsolve)
       INTEGER_T im1,jm1,km1
       INTEGER_T im,im_opp,im_heat,tcomp,iten
@@ -13138,7 +13144,8 @@ stop
         stop
        endif
 
-      else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then !potential gradient, surface tension
+       !potential gradient, surface tension
+      else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
 
        if (ncphys.ne.FACECOMP_NCOMP) then
         print *,"ncphys invalid"
@@ -13153,7 +13160,7 @@ stop
 
       else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
                (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. &
-               (operation_flag.le.5)) then
+               (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then
 
        if (ncomp_mgoni.eq.SDIM) then
         ! do nothing
@@ -14628,7 +14635,7 @@ stop
             call get_scaled_tension(user_tension(iten),tension_scaled)
             call get_scaled_pforce(pforce_scaled)
 
-             ! in: fort_cell_to_mac, operation_flag=2,
+             ! in: fort_cell_to_mac, OP_POTGRAD_SURF_TEN_TO_MAC,
              !     surface tension on MAC grid ...
             local_tension_force=tension_scaled*local_face(FACECOMP_CURV+1)
 
@@ -14773,7 +14780,7 @@ stop
        ! second: high order gradients
       else if (tileloop.eq.1) then
 
-        ! operation_flag=4  unew^MAC=uSOLID^MAC or uFLUID^MAC
+        ! unew^MAC=uSOLID^MAC or uFLUID^MAC
        if (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC) then
         ! do nothing
        else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then 
@@ -14919,7 +14926,9 @@ stop
                pres_ptr, &
                den_ptr, &
                xface_ptr, &
-               xgp_ptr, & ! holds Umac_old if operation_flag==5 or 11.
+               ! Umac_old if: OP_UMAC_PLUS_VISC_CELL_TO_MAC, or
+               !              OP_U_COMP_CELL_MAC_TO_MAC
+               xgp_ptr, & 
                xcut_ptr, &   ! coeff*areafrac
                xp_ptr, &
                xvel_ptr, &
