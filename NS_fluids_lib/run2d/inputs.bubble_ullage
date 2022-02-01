@@ -118,9 +118,9 @@ amr.regrid_int      = 1     # How often to regrid
 amr.max_grid_size   = 128   # 128 is optimal for MPI in 2D
 
 # Note: (max_level+1) values needed
-amr.n_error_buf     = 2 2 # number of buffer cells in error est 
-amr.blocking_factor = 8 4 # block factor in grid generation
-ns.nblocks=1
+amr.n_error_buf     = 4 4 4 4 4 # number of buffer cells in error est 
+amr.blocking_factor = 8 8 8 8 8 # block factor in grid generation
+ns.nblocks=0 # we should do 2nd order on coarse meshes!
 ns.xblocks=0.0
 ns.yblocks=0.0
 ns.zblocks=0.0
