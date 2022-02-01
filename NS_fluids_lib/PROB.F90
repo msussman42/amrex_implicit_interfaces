@@ -97,72 +97,6 @@ stop
 
       contains
 
-      subroutine get_nwrite(plot_sdim,nwrite)
-      use global_utility_module
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: plot_sdim
-      INTEGER_T, intent(out) :: nwrite
-      INTEGER_T nmat,nten
-      INTEGER_T nparts,nparts_def
-      INTEGER_T im
-
-      if ((plot_sdim.ne.2).and.(plot_sdim.ne.3)) then
-       print *,"plot_sdim invalid"
-       stop
-      endif
-      if (plot_sdim.ge.SDIM) then
-       ! do nothing
-      else
-       print *,"expecting plot_sdim>=sdim in get_nwrite"
-       stop
-      endif
-
-      nmat=num_materials
-      nten=num_interfaces
-
-      nparts=0
-      do im=1,nmat
-       if (is_lag_part(nmat,im).eq.1) then
-        nparts=nparts+1
-       else if (is_lag_part(nmat,im).eq.0) then
-        ! do nothing
-       else
-        print *,"is_lag_part(nmat,im) invalid"
-        stop
-       endif
-      enddo !im=1..nmat
-
-      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid in get_nwrite"
-       stop
-      endif
-      nparts_def=nparts
-      if (nparts_def.eq.0) then
-       nparts_def=1
-      endif
-      if ((nparts_def.lt.1).or.(nparts_def.ge.nmat)) then
-       print *,"nparts_def invalid"
-       stop
-      endif
-
-      nwrite= &
-       plot_sdim+plot_sdim+ & ! xpos,vel
-       5+ & !pmg,peos,div,divdat,mach
-       nmat+nmat+ & ! vfrac,ls
-       nmat*plot_sdim+ & ! ls slope
-       nmat*num_state_material+ & ! den 
-       nmat+ & ! mom_den
-       num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE+ &
-       plot_sdim+ & ! displacement
-       nmat+ & ! visc
-       nmat+ & ! conduct
-       5*nmat+ &  ! trace vars and vorticity
-       plot_sdim  ! elastic force
-
-      return
-      end subroutine get_nwrite
-
       subroutine dumpstring_headers(plot_sdim)
       use global_utility_module
       IMPLICIT NONE
@@ -174,6 +108,8 @@ stop
       character*2 matstropp
       INTEGER_T ih,im,ispec,imls,im_opp,dir,i,nmat,nten
       INTEGER_T nparts,nparts_def,partid
+      INTEGER_T plot_sdim_macro
+      INTEGER_T test_nwrite
 
       if ((plot_sdim.ne.2).and.(plot_sdim.ne.3)) then
        print *,"plot_sdim invalid"
@@ -185,6 +121,7 @@ stop
        print *,"expecting plot_sdim>=sdim in dumpstring_headers"
        stop
       endif
+      plot_sdim_macro=plot_sdim
 
       nmat=num_materials
       nten=num_interfaces
@@ -214,47 +151,61 @@ stop
        stop
       endif
 
+      test_nwrite=0
+
       Varname='X'
       call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
+
       Varname='Y'
       call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
 
       if (plot_sdim.eq.3) then
        Varname='Z'
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
       endif
 
       Varname='x_velocity' 
       call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
       Varname='y_velocity'
       call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
 
       if (plot_sdim.eq.3) then
        Varname='z_velocity'
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
       endif
 
        ! multigrid pressure  "PRES_MG"
       Varname='PRES_MG'
       call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
 
        ! EOS pressure: "PRES_EOS"
       Varname='PRES_EOS'
       call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
 
        ! Divergence derived from the velocity: "DIV"
        ! see MacProj.cpp: NavierStokes::getStateDIV_ALL
       Varname='DIV_DERIVED'
       call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
 
        ! expected divergence: "DIV_EXPECT"
        ! see NavierStokes.cpp: NavierStokes::getStateDIV_DATA
        ! "DIV_Type"
       Varname='DIV_EXPECT'
       call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
 
       Varname='MACH'
       call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
 
        !VFRACS 
       do im=1,nmat
@@ -274,6 +225,7 @@ stop
         ih=ih+1
        enddo
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
       enddo  ! im (volume fractions)
 
         ! levelset
@@ -306,6 +258,7 @@ stop
         ih=ih+1
        enddo
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
       enddo  ! imls (levelset variables)
 
        ! levelset normals
@@ -349,6 +302,7 @@ stop
          ih=ih+1
         enddo
         call dumpstring(Varname)
+        test_nwrite=test_nwrite+1
        enddo  ! dir=1..plot_sdim
       enddo  ! imls (levelset normal variables)
 
@@ -371,6 +325,7 @@ stop
         ih=ih+1
        enddo
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
 
         ! temperature
        ih=1
@@ -381,6 +336,7 @@ stop
         ih=ih+1
        enddo
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
 
        do ispec=1,num_species_var
 
@@ -405,6 +361,7 @@ stop
          ih=ih+1
         enddo
         call dumpstring(Varname)
+        test_nwrite=test_nwrite+1
    
        enddo  ! ispec=1..num_species_var
 
@@ -430,6 +387,7 @@ stop
         ih=ih+1
        enddo
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
 
       enddo  ! im=1..nmat mom_den
 
@@ -466,6 +424,7 @@ stop
           ih=ih+1
          enddo
          call dumpstring(Varname)
+         test_nwrite=test_nwrite+1
 
         enddo  ! ispec=1..num_tensor_type
        else
@@ -476,12 +435,15 @@ stop
 
       Varname='x_displace'
       call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
       Varname='y_displace'
       call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
 
       if (plot_sdim.eq.3) then
        Varname='z_displace'
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
       endif
 
        ! viscosity
@@ -501,6 +463,7 @@ stop
         ih=ih+1
        enddo
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
       enddo  ! im (viscosity variables)
 
        ! thermal conductivity
@@ -520,6 +483,7 @@ stop
         ih=ih+1
        enddo
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
       enddo  ! im (thermal conductivity variables)
 
 
@@ -542,6 +506,7 @@ stop
         ih=ih+1
        enddo
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
 
        ih=1
        Varname='TR'
@@ -551,6 +516,7 @@ stop
         ih=ih+1
        enddo
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
 
        ih=1
        Varname='TRT'
@@ -560,6 +526,7 @@ stop
         ih=ih+1
        enddo
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
 
        ih=1
        Varname='TRTF'
@@ -569,6 +536,7 @@ stop
         ih=ih+1
        enddo
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
 
        ih=1
        Varname='VORT'
@@ -578,17 +546,28 @@ stop
         ih=ih+1
        enddo
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
 
       enddo  ! im (trace variables)
 
       Varname='x_ELSTCFORCE'
       call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
       Varname='y_ELSTCFORCE'
       call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
 
       if (plot_sdim.eq.3) then
        Varname='z_ELSTCFORCE'
        call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
+      endif
+
+      if (test_nwrite.eq.PLOTCOMP_NCOMP) then
+       ! do nothing
+      else
+       print *,"test_nwrite != PLOTCOMP_NCOMP"
+       stop
       endif
 
       return

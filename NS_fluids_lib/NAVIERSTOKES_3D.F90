@@ -462,6 +462,7 @@ stop
       type(zone2d_t), dimension(:), allocatable :: zone2d_gb
 
       REAL_T theta,rr,zz,xx,yy,ur,uz,ux,uy
+      INTEGER_T plot_sdim_macro
 
       if (plot_sdim.ne.3) then
        print *,"plot_sdim invalid"
@@ -501,9 +502,11 @@ stop
        stop
       endif
 
-       ! get_nwrite is declared in PROB.F90
-      call get_nwrite(SDIM,nwrite2d)
-      call get_nwrite(plot_sdim,nwrite3d)
+      plot_sdim_macro=SDIM
+      nwrite2d=PLOTCOMP_NCOMP
+
+      plot_sdim_macro=plot_sdim
+      nwrite3d=PLOTCOMP_NCOMP
 
       if (num_levels.ne.finest_level+1) then
        print *,"num_levels invalid"
@@ -655,6 +658,7 @@ stop
       write(11) nwrite3d
 
       ! Variable names: zones_revolve
+      ! dumpstring_headers is declared in PROB.F90
       call dumpstring_headers(plot_sdim)
 
        ! Zones
@@ -890,6 +894,13 @@ stop
             zone2d_gb(iz_gb)%var(index2d,i,j)
          enddo
 
+         if (index3d.eq.PLOTCOMP_LS) then
+          ! do nothing
+         else
+          print *,"(index3d.ne.PLOTCOMP_LS)"
+          stop
+         endif
+
           ! ls
          do ivar_gb=1,nmat
           index3d=index3d+1
@@ -910,6 +921,13 @@ stop
           index2d=index2d+SDIM
          enddo !ivar_gp=1..nmat
 
+         if (index3d.eq.PLOTCOMP_SCALARS) then
+          ! do nothing
+         else
+          print *,"(index3d.ne.PLOTCOMP_SCALARS)"
+          stop
+         endif
+
           ! den,mom_den,configuration tensor
          do ivar_gb=1,nmat*num_state_material+ &
               nmat+ & !mom_den
@@ -919,6 +937,13 @@ stop
           zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
             zone2d_gb(iz_gb)%var(index2d,i,j)
          enddo ! do ivar_gb=1,nmat*num_state_material+nmat+viscoelastic stuff
+
+         if (index3d.eq.PLOTCOMP_XDISP) then
+          ! do nothing
+         else
+          print *,"(index3d.ne.PLOTCOMP_XDISP)"
+          stop
+         endif
 
           ! displacement
          ur=zone2d_gb(iz_gb)%var(index2d+1,i,j)
@@ -931,6 +956,13 @@ stop
          index3d=index3d+plot_sdim
          index2d=index2d+SDIM
 
+         if (index3d.eq.PLOTCOMP_VISC) then
+          ! do nothing
+         else
+          print *,"(index3d.ne.PLOTCOMP_VISC)"
+          stop
+         endif
+
           ! visc,conduct,trace
          do ivar_gb=1,nmat+nmat+5*nmat
           index3d=index3d+1
@@ -938,6 +970,13 @@ stop
           zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
             zone2d_gb(iz_gb)%var(index2d,i,j)
          enddo
+
+         if (index3d.eq.PLOTCOMP_F_ELASTIC_X) then
+          ! do nothing
+         else
+          print *,"(index3d.ne.PLOTCOMP_F_ELASTIC_X)"
+          stop
+         endif
 
           ! elastic force
          ur=zone2d_gb(iz_gb)%var(index2d+1,i,j)
@@ -1012,8 +1051,6 @@ stop
      
       return
       end subroutine zones_revolve
-
-
 
       subroutine project_tangent(vel,nn)
       IMPLICIT NONE
@@ -2121,6 +2158,7 @@ END SUBROUTINE SIMP
       INTEGER_T current_index
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T ispec
+      INTEGER_T plot_sdim_macro
 
       caller_id=3
 
@@ -2128,6 +2166,8 @@ END SUBROUTINE SIMP
       nmax=POLYGON_LIST_MAX ! in: fort_cellgrid
       bfact_finest=2
       INTERP_TOL=1.0E-4
+
+      plot_sdim_macro=SDIM
 
       debug_slice=0
 
@@ -2880,6 +2920,13 @@ END SUBROUTINE SIMP
 
         scomp=scomp+SDIM
 
+        if (scomp.eq.PLOTCOMP_XVEL) then
+         ! do nothing
+        else
+         print *,"(scomp.ne.PLOTCOMP_XVEL)"
+         stop
+        endif
+
         do dir=1,SDIM
          velmat(dir)=velnd(dir)
          velmatT(dir)=velmat(dir)
@@ -2892,6 +2939,13 @@ END SUBROUTINE SIMP
         enddo
         scomp=scomp+SDIM
   
+        if (scomp.eq.PLOTCOMP_PRES) then
+         ! do nothing
+        else
+         print *,"(scomp.ne.PLOTCOMP_PRES)"
+         stop
+        endif
+
           ! this is pressure from the projection.
         writend(scomp+1)=velnd(SDIM+1)
         scomp=scomp+1
@@ -2908,6 +2962,13 @@ END SUBROUTINE SIMP
 
         writend(scomp+1)=machnd
         scomp=scomp+1
+
+        if (scomp.eq.PLOTCOMP_VFRAC) then
+         ! do nothing
+        else
+         print *,"(scomp.ne.PLOTCOMP_VFRAC)"
+         stop
+        endif
 
         do iw=1,nmat
          writend(scomp+iw)=vofnd(iw)
@@ -2943,15 +3004,36 @@ END SUBROUTINE SIMP
 
         scomp=scomp+num_state_material*nmat+nmat
 
+        if (scomp.eq.PLOTCOMP_CONFIG_TENSOR) then
+         ! do nothing
+        else
+         print *,"(scomp.ne.PLOTCOMP_CONFIG_TENSOR)"
+         stop
+        endif
+
         do iw=1,elastic_ncomp
          writend(scomp+iw)=elasticnd(iw) 
         enddo
         scomp=scomp+elastic_ncomp
 
+        if (scomp.eq.PLOTCOMP_VISC) then
+         ! do nothing
+        else
+         print *,"(scomp.ne.PLOTCOMP_VISC)"
+         stop
+        endif
+
         do iw=1,nmat
          writend(scomp+iw)=viscnd(iw)
         enddo
         scomp=scomp+nmat
+
+        if (scomp.eq.PLOTCOMP_THERMALCOND) then
+         ! do nothing
+        else
+         print *,"(scomp.ne.PLOTCOMP_THERMALCOND)"
+         stop
+        endif
 
         do iw=1,nmat
          writend(scomp+iw)=conductnd(iw)
@@ -2963,10 +3045,24 @@ END SUBROUTINE SIMP
         enddo
         scomp=scomp+5*nmat
 
+        if (scomp.eq.PLOTCOMP_F_ELASTIC_X) then
+         ! do nothing
+        else
+         print *,"(scomp.ne.PLOTCOMP_F_ELASTIC_X)"
+         stop
+        endif
+
         do iw=1,SDIM
          writend(scomp+iw)=elasticforcend(iw)
         enddo
         scomp=scomp+SDIM
+
+        if (scomp.eq.PLOTCOMP_NCOMP) then
+         ! do nothing
+        else
+         print *,"(scomp.ne.PLOTCOMP_NCOMP)"
+         stop
+        endif
 
 ! pgf90 will automatically break up lines if they exceed 80 chars.
 ! a format must be specified.  e.g. '(D25.16)' or '(E25.16)'
@@ -3642,6 +3738,8 @@ END SUBROUTINE SIMP
       return
       end subroutine fort_memstatus
 
+       ! fort_combinezones is called after calls to:
+       !  fort_cellgrid
       subroutine fort_combinezones( &
        total_number_grids, &
        grids_per_level_array, &
@@ -3715,9 +3813,12 @@ END SUBROUTINE SIMP
       end type zone_t
       type(zone_t), dimension(:), allocatable :: zone_gb
 
-      INTEGER_T plot_sdim,klo_plot,khi_plot
+      INTEGER_T plot_sdim
+      INTEGER_T plot_sdim_macro
+      INTEGER_T klo_plot,khi_plot
 
       plot_sdim=SDIM
+      plot_sdim_macro=SDIM
 
       if ((levelrz.eq.0).or.(levelrz.eq.3)) then
        if (visual_revolve.ne.0) then
@@ -3761,7 +3862,7 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      call get_nwrite(plot_sdim,nwrite)
+      nwrite=PLOTCOMP_NCOMP
 
       if (num_levels.ne.finest_level+1) then
        print *,"num_levels invalid"
