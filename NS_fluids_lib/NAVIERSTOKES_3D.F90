@@ -1968,7 +1968,9 @@ END SUBROUTINE SIMP
        nstate_slice,slice_dir, &
        xslice, &
        dxfinest, &
-       do_plot,do_slice) &
+       do_plot, &
+       do_slice, &
+       visual_nddata_format) &
       bind(c,name='fort_cellgrid')
 
       use global_utility_module
@@ -1980,7 +1982,9 @@ END SUBROUTINE SIMP
 
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: do_plot,do_slice
+      INTEGER_T, intent(in) :: do_plot
+      INTEGER_T, intent(in) :: do_slice
+      INTEGER_T, intent(in) :: visual_nddata_format
 
         ! nstate_slice=x,y,z,xvel,yvel,zvel,PMG,PEOS,den,Temp,KE
         ! (value of material with LS>0)
@@ -2364,14 +2368,6 @@ END SUBROUTINE SIMP
           gridstr(i:i)='0'
          endif
        enddo
-       write(filename32,'(A14,A10,A3,A5)') &
-          './temptecplot/','tempnddata',levstr,gridstr
-       print *,"filename32 ",filename32
-
-       open(unit=11,file=filename32)
-       do dir=1,SDIM
-        write(11,*) lo(dir),hi(dir)
-       enddo
 
        igridlo(3)=0
        igridhi(3)=0
@@ -2391,6 +2387,30 @@ END SUBROUTINE SIMP
         igridlo(dir)=lo(dir)
         igridhi(dir)=hi(dir)+1
        enddo
+
+       write(filename32,'(A14,A10,A3,A5)') &
+         './temptecplot/','tempnddata',levstr,gridstr
+
+       if ((visual_nddata_format.eq.0).or. &
+           (visual_nddata_format.eq.2)) then
+
+        print *,"filename32 ",filename32
+
+        open(unit=11,file=filename32)
+        do dir=1,SDIM
+         write(11,*) lo(dir),hi(dir)
+        enddo
+
+       else if (visual_nddata_format.eq.1) then
+
+        print *,"ignoring box for nddata*.tec output (lo123,hi123): ", &
+         igridlo(1),igridlo(2),igridlo(3), &
+         igridhi(1),igridhi(2),igridhi(3)
+
+       else
+        print *,"visual_nddata_format invalid"
+        stop
+       endif
 
         ! the order k,j,i is IMPORTANT.
        do k=igridlo(3),igridhi(3) 
@@ -3073,25 +3093,44 @@ END SUBROUTINE SIMP
           print *,"debug_slice: iw,i,j,k,writend ",iw,i,j,k,writend(iw)
          enddo
         endif
+
+        if ((visual_nddata_format.eq.0).or. &
+            (visual_nddata_format.eq.2)) then
   
-        do iw=1,scomp
-         if (iw.lt.scomp) then
-!         write(11,'(D25.16)',ADVANCE="NO") writend(iw)
-          write(11,'(E25.16)',ADVANCE="NO") writend(iw)
-         else if (iw.eq.scomp) then
-!         write(11,'(D25.16)') writend(iw)
-          write(11,'(E25.16)') writend(iw)
-         else
-          print *,"iw invalid"
-          stop
-         endif
-        enddo
+         do iw=1,scomp
+          if (iw.lt.scomp) then
+!          write(11,'(D25.16)',ADVANCE="NO") writend(iw)
+           write(11,'(E25.16)',ADVANCE="NO") writend(iw)
+          else if (iw.eq.scomp) then
+!          write(11,'(D25.16)') writend(iw)
+           write(11,'(E25.16)') writend(iw)
+          else
+           print *,"iw invalid"
+           stop
+          endif
+         enddo ! iw=1..scomp
+
+        else if (visual_nddata_format.eq.1) then
+         ! do nothing
+        else
+         print *,"visual_nddata_format invalid"
+         stop
+        endif
 
        enddo  ! i=igridlo(1),igridhi(1)
        enddo  ! j=igridlo(2),igridhi(2)
        enddo  ! k=igridlo(3),igridhi(3)  (main output loop to "AMR" grid)
 
-       close(11)
+       if ((visual_nddata_format.eq.0).or. &
+           (visual_nddata_format.eq.2)) then
+        close(11)
+       else if (visual_nddata_format.eq.1) then
+        ! do nothing
+       else
+        print *,"visual_nddata_format invalid"
+        stop
+       endif
+
       else if (do_plot.eq.0) then
        ! do nothing
       else

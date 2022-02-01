@@ -180,6 +180,13 @@ stop
        test_nwrite=test_nwrite+1
       endif
 
+      if (test_nwrite.eq.PLOTCOMP_PRES) then
+       ! do nothing
+      else
+       print *,"(test_nwrite.ne.PLOTCOMP_PRES)"
+       stop
+      endif
+
        ! multigrid pressure  "PRES_MG"
       Varname='PRES_MG'
       call dumpstring(Varname)
@@ -207,6 +214,13 @@ stop
       call dumpstring(Varname)
       test_nwrite=test_nwrite+1
 
+      if (test_nwrite.eq.PLOTCOMP_VFRAC) then
+       ! do nothing
+      else
+       print *,"(test_nwrite.ne.PLOTCOMP_VFRAC)"
+       stop
+      endif
+
        !VFRACS 
       do im=1,nmat
 
@@ -227,6 +241,13 @@ stop
        call dumpstring(Varname)
        test_nwrite=test_nwrite+1
       enddo  ! im (volume fractions)
+
+      if (test_nwrite.eq.PLOTCOMP_LS) then
+       ! do nothing
+      else
+       print *,"(test_nwrite.ne.PLOTCOMP_LS)"
+       stop
+      endif
 
         ! levelset
       do imls=1,nmat
@@ -306,6 +327,13 @@ stop
        enddo  ! dir=1..plot_sdim
       enddo  ! imls (levelset normal variables)
 
+      if (test_nwrite.eq.PLOTCOMP_SCALARS) then
+       ! do nothing
+      else
+       print *,"(test_nwrite.ne.PLOTCOMP_SCALARS)"
+       stop
+      endif
+
        ! density, temperature, mass fractions
       do im=1,nmat
 
@@ -367,6 +395,12 @@ stop
 
       enddo  ! im (state variables)
 
+      if (test_nwrite.eq.PLOTCOMP_MOMDEN) then
+       ! do nothing
+      else
+       print *,"(test_nwrite.ne.PLOTCOMP_MOMDEN)"
+       stop
+      endif
 
        ! mom_density
       do im=1,nmat
@@ -433,6 +467,13 @@ stop
        endif
       enddo ! partid=1..num_materials_viscoelastic 
 
+      if (test_nwrite.eq.PLOTCOMP_XDISP) then
+       ! do nothing
+      else
+       print *,"(test_nwrite.ne.PLOTCOMP_XDISP)"
+       stop
+      endif
+
       Varname='x_displace'
       call dumpstring(Varname)
       test_nwrite=test_nwrite+1
@@ -444,6 +485,13 @@ stop
        Varname='z_displace'
        call dumpstring(Varname)
        test_nwrite=test_nwrite+1
+      endif
+
+      if (test_nwrite.eq.PLOTCOMP_VISC) then
+       ! do nothing
+      else
+       print *,"(test_nwrite.ne.PLOTCOMP_VISC)"
+       stop
       endif
 
        ! viscosity
@@ -486,6 +534,12 @@ stop
        test_nwrite=test_nwrite+1
       enddo  ! im (thermal conductivity variables)
 
+      if (test_nwrite.eq.PLOTCOMP_TRACE_A_VORT) then
+       ! do nothing
+      else
+       print *,"(test_nwrite.ne.PLOTCOMP_TRACE_A_VORT)"
+       stop
+      endif
 
        ! gamma_dot, TR(A), TR(A)*shear thinning factor, TR(A)*thin*f(A),
        ! vorticity
@@ -549,6 +603,13 @@ stop
        test_nwrite=test_nwrite+1
 
       enddo  ! im (trace variables)
+
+      if (test_nwrite.eq.PLOTCOMP_F_ELASTIC_X) then
+       ! do nothing
+      else
+       print *,"(test_nwrite.ne.PLOTCOMP_F_ELASTIC_X)"
+       stop
+      endif
 
       Varname='x_ELSTCFORCE'
       call dumpstring(Varname)

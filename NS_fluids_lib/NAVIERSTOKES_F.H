@@ -135,7 +135,9 @@ extern "C" {
      Real* slice_data,int* nslice,
      int* nstate_slice,int* slice_dir,
      Real* xslice,const Real* dxfinest,
-     int* do_plot,int* do_slice);
+     int* do_plot,
+     int* do_slice,
+     int* visual_nddata_format);
  
     void fort_memstatus(int* procnum);
 
