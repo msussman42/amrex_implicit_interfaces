@@ -165,6 +165,8 @@ namespace amrex{
 #define DINVERSE_MF 139
 #define TENSOR_RHS_MF 140
 
+#define MULTIFAB_TOWER_PLT_MF 141
+
 #define HOOP_FORCE_MARK_MF 142
 #define BOUSSINESQ_TEMP_MF 143
 
@@ -2107,6 +2109,10 @@ protected:
     static int visual_divergence_plot_int; //def=0
     static int visual_WALLVEL_plot_int; //def=0
     static int visual_drag_plot_int; //def=0
+    //0=tecplot only
+    //1=plt file only
+    //2=both tecplot and plt file format.
+    static int visual_nddata_format; //def=0
 
     static Vector<int> visual_ncell;
     static int visual_compare;

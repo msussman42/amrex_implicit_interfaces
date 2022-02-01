@@ -7497,7 +7497,9 @@ void NavierStokes::output_zones(
      &nstate_slice,&slice_dir,
      xslice.dataPtr(),
      dxfinest,
-     &do_plot,&do_slice);
+     &do_plot,
+     &do_slice,
+     &visual_nddata_format);
    }  // mfi
    ns_reconcile_d_num(157);
 

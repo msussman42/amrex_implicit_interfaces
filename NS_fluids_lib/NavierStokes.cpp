@@ -429,6 +429,11 @@ int  NavierStokes::visual_buoyancy_plot_int=0;
 int  NavierStokes::visual_divergence_plot_int=0; 
 int  NavierStokes::visual_WALLVEL_plot_int=0; 
 int  NavierStokes::visual_drag_plot_int=0; 
+//default: tecplot only
+//0=tecplot only
+//1=plt file only
+//2=both tecplot and plt file format.
+int  NavierStokes::visual_nddata_format=0;  
 
 int NavierStokes::visual_compare=0; 
 Vector<int> NavierStokes::visual_ncell;
@@ -2918,6 +2923,7 @@ NavierStokes::read_params ()
     pp.query("visual_divergence_plot_int",visual_divergence_plot_int);
     pp.query("visual_WALLVEL_plot_int",visual_WALLVEL_plot_int);
     pp.query("visual_drag_plot_int",visual_drag_plot_int);
+    pp.query("visual_nddata_format",visual_nddata_format);
 
     if ((visual_tessellate_vfrac!=0)&&
         (visual_tessellate_vfrac!=1)&&
@@ -5340,6 +5346,8 @@ NavierStokes::read_params ()
 	     visual_WALLVEL_plot_int << '\n';
      std::cout << "visual_drag_plot_int " << 
 	     visual_drag_plot_int << '\n';
+     std::cout << "visual_nddata_format " << 
+	     visual_nddata_format << '\n';
 
      std::cout << "visual_compare " << visual_compare << '\n';
      for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -19557,6 +19565,10 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   slice_data[i]=-1.0e+30;
 
   // in: NavierStokes::writeTECPLOT_File
+  //
+ int plot_sdim_macro=AMREX_SPACEDIM;
+ allocate_array(1,PLOTCOMP_NCOMP,-1,MULTIFAB_TOWER_PLT_MF);
+
  allocate_levelsetLO_ALL(1,LEVELPC_MF);
 
 // HOLD_VELOCITY_DATA_MF not already allocated,
@@ -19565,12 +19577,6 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  if (localMF_grow[HOLD_VELOCITY_DATA_MF]!=-1)
   amrex::Error("localMF_grow[HOLD_VELOCITY_DATA_MF] invalid");
 
-  //Note possible AMR repositories:
-  //AMReX - block structured
-  //SAMRAI
-  //Dr. Donna Calhoun => improved ClawPack which only stores necessary DOF.
-  //Oct-Tree => Gerris, Basilisk
-  //Wavelet Adaptive => "AWESOME" (Oleg Vasilyev, was at U. Colorado) 
   //Algorithm for getting the elastic force for plotting purposes:
   //a) save the state velocity
   //b) call vel_elastic_ALL:  u=u+ dt F_elastic
@@ -19965,24 +19971,39 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    amrex::Error("nparts invalid");
 
   if (do_plot==1) {
-   fort_combinezones(
-    &total_number_grids,
-    grids_per_level_array.dataPtr(),
-    levels_array.dataPtr(),
-    bfact_array.dataPtr(),
-    gridno_array.dataPtr(),
-    gridlo_array.dataPtr(),
-    gridhi_array.dataPtr(),
-    &tecplot_finest_level,
-    &nsteps,
-    &num_levels,
-    &cur_time_slab,
-    &visual_revolve,
-    &plotint,
-    &nmat, 
-    &nparts,
-    &nparts_def,
-    im_solid_map_ptr);
+
+   if ((visual_nddata_format==0)||(visual_nddata_format==2)) {
+    fort_combinezones(
+     &total_number_grids,
+     grids_per_level_array.dataPtr(),
+     levels_array.dataPtr(),
+     bfact_array.dataPtr(),
+     gridno_array.dataPtr(),
+     gridlo_array.dataPtr(),
+     gridhi_array.dataPtr(),
+     &tecplot_finest_level,
+     &nsteps,
+     &num_levels,
+     &cur_time_slab,
+     &visual_revolve,
+     &plotint,
+     &nmat, 
+     &nparts,
+     &nparts_def,
+     im_solid_map_ptr);
+   } else if (visual_nddata_format==1) {
+    // do nothing
+   } else {
+    amrex::Error("visual_nddata_format invalid");
+   }
+
+   if ((visual_nddata_format==1)||(visual_nddata_format==2)) {
+   
+   } else if (visual_nddata_format==0) {
+    // do nothing
+   } else {
+    amrex::Error("visual_nddata_format invalid");
+   }
   } else if (do_plot==0) {
    // do nothing
   } else
@@ -20035,6 +20056,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     0,0,AMREX_SPACEDIM,1);
   ns_level.delete_localMF(HOLD_VELOCITY_DATA_MF,1);
  }  // ilev
+
+ delete_array(MULTIFAB_TOWER_PLT_MF);
 
  delete_array(VISUAL_XDISP_MAC_CELL_MF);
 
