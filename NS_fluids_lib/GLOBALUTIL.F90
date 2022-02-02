@@ -15047,6 +15047,37 @@ end subroutine dynamic_contact_angle
       return
       end subroutine patterned_substrates
 
+! dist>0 outside of cylinder
+      subroutine cylinderdist(x,y,z,xcen,ycen,rad,zmin,zmax,dist)
+      IMPLICIT NONE
+    
+      REAL_T, intent(in) :: x,y,z,xcen,ycen,rad
+      REAL_T, intent(out) :: dist
+      REAL_T, intent(in) :: zmin,zmax
+
+      if (zmin.ge.zmax-1.0E-10) then 
+       print *,"invalid parameters ",zmin,zmax
+       stop
+      endif
+      dist=sqrt((x-xcen)**2+(y-ycen)**2)-rad
+      if (z.ge.zmax) then
+       if (dist.le.zero) then
+        dist=z-zmax
+       else
+        dist=sqrt(dist**2+(z-zmax)**2)
+       endif
+      else if (z.le.zmin) then
+       if (dist.le.zero) then
+        dist=zmin-z
+       else
+        dist=sqrt(dist**2+(zmin-z)**2)
+       endif
+      endif
+
+      return 
+      end subroutine cylinderdist
+
+
        ! negative on the inside of the square
       subroutine squaredist(x,y,xlo,xhi,ylo,yhi,dist)
       IMPLICIT NONE

@@ -37,7 +37,7 @@ REAL_T :: TANK_MK_HEIGHT
 REAL_T :: TANK_MK_INTERFACE_LOCATION
 ! Tank speherical end radius
 REAL_T :: TANK_MK_END_RADIUS
-! Tank speherical end curvature center (0,C_z)
+! Tank spherical end curvature center (0,C_z)
 REAL_T :: TANK_MK_END_CENTER
 ! Heater flux
 REAL_T :: TANK_MK_HEATER_WATTS
@@ -168,7 +168,7 @@ contains
 
   REAL_T, intent(in) :: x(SDIM)
   REAL_T, intent(out) :: LS
-  REAL_T :: xlo,xhi,ylo,yhi
+  REAL_T :: xlo,xhi,ylo,yhi,xcen
 
   if ((TANK_MK_NOZZLE_RAD.gt.0.0d0).and. &
       (TANK_MK_NOZZLE_BASE.lt.0.0d0).and. &
@@ -176,11 +176,20 @@ contains
       (TANK_MK_NOZZLE_THICK_OUTLET.gt.0.0d0)) then
    xlo=-TANK_MK_NOZZLE_RAD
    xhi=TANK_MK_NOZZLE_RAD
+   xcen=zero
    ! "TANK_MK_HEIGHT" term insures nozzle is flush against the
    ! bottom of the tank.
    ylo=TANK_MK_NOZZLE_BASE-TANK_MK_HEIGHT
    yhi=TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT
-   call squaredist(x(1),x(2),xlo,xhi,ylo,yhi,LS)
+   if (SDIM.eq.2) then
+    call squaredist(x(1),x(SDIM),xlo,xhi,ylo,yhi,LS)
+   else if (SDIM.eq.3) then
+    call cylinderdist(x(1),x(2),x(SDIM),xcen,xcen,xhi,ylo,yhi,LS)
+   else
+    print *,"sdim invalid"
+    stop
+   endif
+
    LS=-LS !now, LS>0 in the nozzle.
   else
    print *,"CRYOGENIC_TANK_MK_LS_NOZZLE parameter problem"
@@ -229,7 +238,7 @@ contains
    else if (TANK_MK_INTERFACE_RADIUS.gt.0.0d0) then
     if (SDIM.eq.2) then
      LS(1)=sqrt((x(1)-TANK_MK_BUBBLE_X)**2+&
-                (x(2)-TANK_MK_BUBBLE_Y)**2)&
+                (x(SDIM)-TANK_MK_BUBBLE_Y)**2)&
                -TANK_MK_INTERFACE_RADIUS
     else if (SDIM.eq.3) then 
      LS(1)=sqrt((x(1)-TANK_MK_BUBBLE_X)**2+&
@@ -292,16 +301,26 @@ contains
   REAL_T shell_center
   REAL_T r_crit
   REAL_T z_crit
+  REAL_T r_cyl
 
-  zdiff=x(2)-TANK_MK_END_CENTER
+  zdiff=x(SDIM)-TANK_MK_END_CENTER
+
+  if (SDIM.eq.2) then
+   r_cyl=abs(x(1))
+  else if (SDIM.eq.3) then
+   r_cyl=sqrt(x(1)**2+x(2)**2)
+  else
+   print *,"sdim invalid"
+   stop
+  endif
 
   if (zdiff.le.0.0d0) then
    LS=-TANK_MK_END_RADIUS
   else if (zdiff.gt.0.0d0) then
-   angle_end_center=atan(abs(x(1))/zdiff)
+   angle_end_center=atan(r_cyl/zdiff)
    if ((angle_end_center.ge.0.0d0).and. &
        (angle_end_center.lt.0.5d0*Pi)) then
-    shell_R=sqrt(x(1)**2+zdiff**2)
+    shell_R=sqrt(r_cyl**2+zdiff**2)
     shell_center=TANK_MK_END_RADIUS-0.5d0*TANK_MK_HEATER_THICK
 
     if (caller_id.eq.1) then
@@ -325,7 +344,7 @@ contains
       if ((r_crit.gt.0.0d0).and.(z_crit.gt.0.0d0).and. &
           (r_crit.le.TANK_MK_END_RADIUS).and. &
           (z_crit.le.TANK_MK_END_RADIUS)) then
-       LS=-sqrt( (abs(x(1))-r_crit)**2+(zdiff-z_crit)**2 )
+       LS=-sqrt( (r_cyl-r_crit)**2+(zdiff-z_crit)**2 )
       else
        print *,"r_crit or z_crit invalid"
        stop
@@ -772,22 +791,22 @@ if(fort_material_type(2).eq.0) then
   ! Flat open top x_2: TANK_MK_HEIGHT/two
   ! Known pressure(P_1) at top (outflow_pressure)
   ! P_2=P_1 + rho*g*(z_1-z_2)  [g>0]
-  if (x(2).ge.TANK_MK_INTERFACE_LOCATION) then
+  if (x(SDIM).ge.TANK_MK_INTERFACE_LOCATION) then
    PRES=TANK_MK_INITIAL_PRESSURE+&
-       fort_denconst(2)*(TANK_MK_HEIGHT/two-x(2))*(abs(gravity)) 
-  elseif (x(2).lt.TANK_MK_INTERFACE_LOCATION) then
+       fort_denconst(2)*(TANK_MK_HEIGHT/two-x(SDIM))*(abs(gravity)) 
+  elseif (x(SDIM).lt.TANK_MK_INTERFACE_LOCATION) then
    PRES=TANK_MK_INITIAL_PRESSURE+&
        fort_denconst(2)*(TANK_MK_HEIGHT/two-TANK_MK_INTERFACE_LOCATION)* &
        (abs(gravity))+ &
-       fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(2))*(abs(gravity))
+       fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(SDIM))*(abs(gravity))
   else
-   print *,"x(2) is invalid in CRYOGENIC_TANK_MK_PRES!"
+   print *,"x(SDIM) is invalid in CRYOGENIC_TANK_MK_PRES!"
    stop
   endif
 
  else if (simple_hyd_p.eq.1) then
   rho_hyd=fort_denconst(1)
-  PRES=-abs(gravity)*rho_hyd*(x(2)-probhiy-probhiy)
+  PRES=-abs(gravity)*rho_hyd*(x(SDIM)-probhiy-probhiy)
  else
   print *,"simple_hyd_p invalid"
   stop
@@ -797,18 +816,18 @@ elseif (fort_material_type(2).eq.TANK_MK_MATERIAL_TYPE) then
  ! Known pressure(P_1) at top (based on given density and temperature)
  ! P_2=P_1 * exp(g*(z_1-z_2)/(R_sp*T_0))  [g>0]
  rho_hyd=fort_denconst(2)
- if (x(2).ge.TANK_MK_INTERFACE_LOCATION) then
+ if (x(SDIM).ge.TANK_MK_INTERFACE_LOCATION) then
   PRES=TANK_MK_INITIAL_PRESSURE*&
-       exp((TANK_MK_END_CENTER+TANK_MK_END_RADIUS-x(2))*abs(gravity)/&
+       exp((TANK_MK_END_CENTER+TANK_MK_END_RADIUS-x(SDIM))*abs(gravity)/&
            (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2)))
- elseif (x(2).lt.TANK_MK_INTERFACE_LOCATION) then
+ elseif (x(SDIM).lt.TANK_MK_INTERFACE_LOCATION) then
   PRES=TANK_MK_INITIAL_PRESSURE*&
        exp((TANK_MK_END_CENTER+TANK_MK_END_RADIUS-TANK_MK_INTERFACE_LOCATION)*&
             abs(gravity)/&
            (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2)))+&
-       fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(2))*(abs(gravity))
+       fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(SDIM))*(abs(gravity))
  else
-  print *,"x(2) is invalid in CRYOGENIC_TANK_MK_PRES!"
+  print *,"x(SDIM) is invalid in CRYOGENIC_TANK_MK_PRES!"
   stop
  endif
 else
@@ -1441,6 +1460,16 @@ REAL_T, intent(out) :: charfn_out
 REAL_T :: TANK_MK_R_WIDTH
 REAL_T :: shell_R,shell_center,LS_SHELL,LS_A,LS_nozzle,zdiff
 INTEGER_T :: caller_id
+REAL_T :: r_cyl
+
+ if (SDIM.eq.2) then
+  r_cyl=abs(x(1))
+ else if (SDIM.eq.3) then
+  r_cyl=sqrt(x(1)**2+x(2)**2)
+ else
+  print *,"sdim invalid"
+  stop
+ endif
 
 if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
@@ -1448,15 +1477,15 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   TANK_MK_R_WIDTH=TANK_MK_HEATER_R-TANK_MK_HEATER_R_LOW
   if (TANK_MK_R_WIDTH.gt.0.0d0) then
    if (region_id.eq.1) then
-    if ((abs(x(1)).le.TANK_MK_HEATER_R).and.&
-        (abs(x(1)).ge.TANK_MK_HEATER_R_LOW).and.&
-        (x(2).ge.TANK_MK_HEATER_LOW).and.&
-        (x(2).le.TANK_MK_HEATER_HIGH)) then
+    if ((r_cyl.le.TANK_MK_HEATER_R).and.&
+        (r_cyl.ge.TANK_MK_HEATER_R_LOW).and.&
+        (x(SDIM).ge.TANK_MK_HEATER_LOW).and.&
+        (x(SDIM).le.TANK_MK_HEATER_HIGH)) then
      charfn_out=one
-    else if ((abs(x(1)).gt.TANK_MK_HEATER_R).or. &
-             (abs(x(1)).lt.TANK_MK_HEATER_R_LOW).or. &
-             (x(2).lt.TANK_MK_HEATER_LOW).or. &
-             (x(2).gt.TANK_MK_HEATER_HIGH)) then
+    else if ((r_cyl.gt.TANK_MK_HEATER_R).or. &
+             (r_cyl.lt.TANK_MK_HEATER_R_LOW).or. &
+             (x(SDIM).lt.TANK_MK_HEATER_LOW).or. &
+             (x(SDIM).gt.TANK_MK_HEATER_HIGH)) then
      charfn_out=0.0d0
     else
      print *,"position bust"
@@ -1489,9 +1518,9 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
        (TANK_MK_NOZZLE_BASE.lt.0.0d0).and. &
        (TANK_MK_NOZZLE_HT.gt.0.0d0).and. &
        (TANK_MK_NOZZLE_THICK_OUTLET.gt.0.0d0)) then
-    if ((abs(x(1)).le.TANK_MK_NOZZLE_RAD).and. &
-        (x(2).gt.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT).and. &
-        (x(2).le.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT+ &
+    if ((r_cyl.le.TANK_MK_NOZZLE_RAD).and. &
+        (x(SDIM).gt.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT).and. &
+        (x(SDIM).le.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT+ &
                  TANK_MK_NOZZLE_THICK_OUTLET)) then
      charfn_out=one
     else
@@ -1509,14 +1538,14 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
     if ((TANK_MK_END_CENTER.gt.0.0d0).and. &
         (TANK_MK_HEATER_THICK.gt.0.0d0).and. &
         (TANK_MK_END_RADIUS.gt.0.0d0)) then
-     zdiff=x(2)+TANK_MK_END_CENTER
+     zdiff=x(SDIM)+TANK_MK_END_CENTER
      if (zdiff.ge.0.0d0) then
       charfn_out=0.0d0
      else if (zdiff.le.-TANK_MK_END_RADIUS) then
       charfn_out=0.0d0
      else if ((zdiff.lt.0.0d0).and. &
               (zdiff.gt.-TANK_MK_END_RADIUS)) then
-      shell_R=sqrt(x(1)**2+zdiff**2)
+      shell_R=sqrt(r_cyl**2+zdiff**2)
       shell_center=TANK_MK_END_RADIUS-0.5d0*TANK_MK_HEATER_THICK
       LS_SHELL=0.5d0*TANK_MK_HEATER_THICK-abs(shell_R-shell_center)
       if (LS_SHELL.ge.0.0d0) then
@@ -1594,6 +1623,16 @@ INTEGER_T :: turb_flag
 
 REAL_T :: LS_A
 INTEGER_T :: caller_id
+REAL_T :: r_cyl
+
+ if (SDIM.eq.2) then
+  r_cyl=abs(x(1))
+ else if (SDIM.eq.3) then
+  r_cyl=sqrt(x(1)**2+x(2)**2)
+ else
+  print *,"sdim invalid"
+  stop
+ endif
 
 if (probtype.eq.423) then
  ! do nothing
@@ -1623,14 +1662,14 @@ if ((im.ge.1).and.(im.le.num_materials)) then
   if (im.eq.2) then ! vapor
    ! do nothing
   else if ((im.eq.1).or.(im.eq.3)) then ! liquid or solid
-   if ((abs(x(1)).le.TANK_MK_HEATER_R).and.&
-       (abs(x(1)).ge.TANK_MK_HEATER_R_LOW-dx(1)).and.&
-       (x(2).ge.TANK_MK_HEATER_LOW).and.&
-       (x(2).le.TANK_MK_HEATER_HIGH)) then
+   if ((r_cyl.le.TANK_MK_HEATER_R).and.&
+       (r_cyl.ge.TANK_MK_HEATER_R_LOW-dx(1)).and.&
+       (x(SDIM).ge.TANK_MK_HEATER_LOW).and.&
+       (x(SDIM).le.TANK_MK_HEATER_HIGH)) then
     thermal_k=fort_heatviscconst(im)* &
       max(one,dx(1)/fort_thermal_microlayer_size(im))
-   else if ((abs(x(2)).ge.TANK_MK_INSULATE_THICK+TANK_MK_HEIGHT/2.0d0).or. &
-            (abs(x(1)).ge.TANK_MK_INSULATE_R_HIGH)) then
+   else if ((abs(x(SDIM)).ge.TANK_MK_INSULATE_THICK+TANK_MK_HEIGHT/2.0d0).or. &
+            (r_cyl.ge.TANK_MK_INSULATE_R_HIGH)) then
     if (im.eq.3) then
      thermal_k=0.0d0
     else if (im.eq.1) then
@@ -1639,8 +1678,8 @@ if ((im.ge.1).and.(im.le.num_materials)) then
      print *,"im invalid"
      stop
     endif
-   else if ((abs(x(2)).le.TANK_MK_HEIGHT/2.0d0).and. &
-            (abs(x(1)).ge.TANK_MK_INSULATE_R)) then
+   else if ((abs(x(SDIM)).le.TANK_MK_HEIGHT/2.0d0).and. &
+            (r_cyl.ge.TANK_MK_INSULATE_R)) then
     if (im.eq.3) then
      thermal_k=0.0d0
     else if (im.eq.1) then
@@ -1677,7 +1716,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
      stop
     endif
     xi=x(SDIM)-TANK_MK_HEATER_LOW
-    R=x(1)
+    R=r_cyl
     if ((xi.gt.0.0d0).and. &
         (xi.le.TANK_MK_HEATER_WALL_MODEL).and. &
         (nrm(1).eq.-one).and. &
