@@ -7441,10 +7441,12 @@ void NavierStokes::output_zones(
      FArrayBox& conductfab=(*conductmfminus)[mfi];
      FArrayBox& magtracefab=(*magtracemfminus)[mfi];
      FArrayBox& elasticforcefab=(*elasticforcemfminus)[mfi];
+     int ncomp_tower=elasticforcefab.nComp();
 
        // declared in: NAVIERSTOKES_3D.F90
      fort_cellgrid(
       &plot_grid_type,
+      &ncomp_tower,
       &tid_current,
       &bfact,
       visual_fab_output.dataPtr(),
@@ -7474,6 +7476,8 @@ void NavierStokes::output_zones(
       magtracefab.dataPtr(),
       ARLIM(magtracefab.loVect()),ARLIM(magtracefab.hiVect()),
       elasticforcefab.dataPtr(),
+      ARLIM(elasticforcefab.loVect()),ARLIM(elasticforcefab.hiVect()),
+      elasticforcefab.dataPtr(), //towerfab
       ARLIM(elasticforcefab.loVect()),ARLIM(elasticforcefab.hiVect()),
       prob_lo,
       prob_hi,
@@ -7585,6 +7589,8 @@ void NavierStokes::output_zones(
  
     MultiFab* elasticforcemfminus=elasticforcemf;
     check_for_NAN(elasticforcemfminus,20);
+
+    MultiFab* towermf=localMF[MULTIFAB_TOWER_PLT_MF];
  
     ParallelDescriptor::Barrier();
 
@@ -7647,9 +7653,13 @@ void NavierStokes::output_zones(
      FArrayBox& magtracefab=(*magtracemfminus)[mfi];
      FArrayBox& elasticforcefab=(*elasticforcemfminus)[mfi];
 
+     FArrayBox& towerfab=(*towermf)[mfi];
+     int ncomp_tower=towerfab.nComp();
+
        // declared in: NAVIERSTOKES_3D.F90
      fort_cellgrid(
       &plot_grid_type,
+      &ncomp_tower,
       &tid_current,
       &bfact,
       visual_fab_output.dataPtr(),
@@ -7680,6 +7690,8 @@ void NavierStokes::output_zones(
       ARLIM(magtracefab.loVect()),ARLIM(magtracefab.hiVect()),
       elasticforcefab.dataPtr(),
       ARLIM(elasticforcefab.loVect()),ARLIM(elasticforcefab.hiVect()),
+      towerfab.dataPtr(), //towerfab
+      ARLIM(towerfab.loVect()),ARLIM(towerfab.hiVect()),
       prob_lo,
       prob_hi,
       dx,
@@ -7706,22 +7718,6 @@ void NavierStokes::output_zones(
     }  // mfi
 } //omp
     ns_reconcile_d_num(157);
-
-    delete viscoelasticmfminus;
-
-    delete maskSEM_minus;
-    delete velmfminus;
-    delete vofmfminus;
-    delete presmfminus;
-    delete divmfminus;
-    delete div_data_minus;
-    delete denmfminus;
-    delete mom_denmfminus;
-    delete lsdistmfminus;
-    delete viscmfminus;
-    delete conductmfminus;
-    delete magtracemfminus;
-    delete elasticforcemfminus;
 
    } else if (grids_per_level_local==0) {
   
