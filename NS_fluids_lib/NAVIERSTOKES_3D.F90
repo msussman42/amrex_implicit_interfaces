@@ -1929,6 +1929,7 @@ END SUBROUTINE SIMP
        ! called from: NavierStokes2.cpp
       subroutine fort_cellgrid( &
        plot_grid_type, &
+       ncomp_tower, &
        tid, &
        bfact, &
        fabout,DIMS(fabout), &
@@ -1950,6 +1951,8 @@ END SUBROUTINE SIMP
        trace,DIMS(trace), &
        elasticforce, &
        DIMS(elasticforce), &
+       towerfab, &
+       DIMS(towerfab), &
        problo, &
        probhi, &
        dx, &
@@ -1983,6 +1986,7 @@ END SUBROUTINE SIMP
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: plot_grid_type
+      INTEGER_T, intent(in) :: ncomp_tower
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: do_plot
@@ -2022,6 +2026,7 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: DIMDEC(conduct)
       INTEGER_T, intent(in) :: DIMDEC(trace)
       INTEGER_T, intent(in) :: DIMDEC(elasticforce)
+      INTEGER_T, intent(in) :: DIMDEC(towerfab)
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: gridno
@@ -2054,6 +2059,8 @@ END SUBROUTINE SIMP
       REAL_T, pointer :: trace_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: elasticforce(DIMV(elasticforce),SDIM)
       REAL_T, pointer :: elasticforce_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(inout), target :: towerfab(DIMV(towerfab),ncomp_tower)
+      REAL_T, pointer :: towerfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: lsdist(DIMV(lsdist),(SDIM+1)*nmat)
       REAL_T, pointer :: lsdist_ptr(D_DECL(:,:,:),:)
       REAL_T xposnd(SDIM)
@@ -2110,6 +2117,8 @@ END SUBROUTINE SIMP
       REAL_T sumweight,localwt,int_xlo,int_xhi
       REAL_T sumweightLS,localwtLS,wt_denom
       INTEGER_T vofcomp
+      INTEGER_T i1lo,i1hi
+      INTEGER_T j1lo,j1hi
       INTEGER_T k1lo,k1hi
       INTEGER_T igridlo(3),igridhi(3)
       INTEGER_T stenlo(3),stenhi(3)
@@ -2240,29 +2249,48 @@ END SUBROUTINE SIMP
        print *,"bfact too small"
        stop
       endif
-      igridlo(3)=0
-      igridhi(3)=0
-      iproblo(3)=0
-      do dir=1,SDIM
-       igridlo(dir)=lo(dir)-1
-       igridhi(dir)=hi(dir)+1
-       iproblo(dir)=0
-      enddo
+
+      if (plot_grid_type.eq.0) then
+       igridlo(3)=0
+       igridhi(3)=0
+       iproblo(3)=0
+       do dir=1,SDIM
+        igridlo(dir)=lo(dir)-1
+        igridhi(dir)=hi(dir)+1
+        iproblo(dir)=0
+       enddo
+      else if (plot_grid_type.eq.1) then
+       call growntilebox(tilelo,tilehi,lo,hi,igridlo,igridhi,1)
+      else
+       print *,"plot_grid_type invalid"
+       stop
+      endif
+
        ! input: igridlo,igridhi
        ! output: DIMS(plt)
       call box_to_dim( &
         DIMS(plt), &
         igridlo,igridhi)
- 
-      allocate(plotfab(DIMV(plt),nstate_slice))
+
       allocate(reconfab(DIMV(plt),nmat*ngeom_recon))
+
+      if (plot_grid_type.eq.0) then
+
+       allocate(plotfab(DIMV(plt),nstate_slice))
  
-      call checkbound_array(vislo,vishi,fabout_ptr,0,0,411)
-      call checkbound_array(vislo,vishi,fabout_ptr,0,1,411)
-      call checkbound_array(vislo,vishi,fabout_ptr,0,SDIM-1,411)
+       call checkbound_array(vislo,vishi,fabout_ptr,0,0,411)
+       call checkbound_array(vislo,vishi,fabout_ptr,0,1,411)
+       call checkbound_array(vislo,vishi,fabout_ptr,0,SDIM-1,411)
        ! x,u,p,den,T,Y1..Yn,mag vort,LS
-      if (visual_ncomp.ne.2*SDIM+3+num_species_var+1+nmat) then
-       print *,"visual_ncomp invalid" 
+       if (visual_ncomp.ne.2*SDIM+3+num_species_var+1+nmat) then
+        print *,"visual_ncomp invalid" 
+        stop
+       endif
+
+      else if (plot_grid_type.eq.1) then
+       ! do nothing
+      else
+       print *,"plot_grid_type invalid"
        stop
       endif
 
@@ -2294,6 +2322,8 @@ END SUBROUTINE SIMP
       call checkbound_array(lo,hi,trace_ptr,1,-1,411)
       elasticforce_ptr=>elasticforce
       call checkbound_array(lo,hi,elasticforce_ptr,1,-1,411)
+      towerfab_ptr=>towerfab
+      call checkbound_array(lo,hi,towerfab_ptr,1,-1,411)
       vel_ptr=>vel
       call checkbound_array(lo,hi,vel_ptr,1,-1,411)
       vof_ptr=>vof
@@ -2324,8 +2354,17 @@ END SUBROUTINE SIMP
       do k=igridlo(3),igridhi(3) 
       do j=igridlo(2),igridhi(2) 
       do i=igridlo(1),igridhi(1) 
+
+       if (plot_grid_type.eq.0) then
          ! iproblo=0
-       call gridsten(xsten,problo,i,j,k,iproblo,bfact,dx,nhalf)
+        call gridsten(xsten,problo,i,j,k,iproblo,bfact,dx,nhalf)
+       else if (plot_grid_type.eq.1) then
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+       else
+        print *,"plot_grid_type invalid"
+        stop
+       endif
+
        do dir=1,nmat*ngeom_recon
         mofdata(dir)=vof(D_DECL(i,j,k),dir)
        enddo
@@ -2373,30 +2412,54 @@ END SUBROUTINE SIMP
          endif
        enddo
 
-       igridlo(3)=0
-       igridhi(3)=0
+       if (plot_grid_type.eq.0) then
 
-       if (SDIM.eq.3) then
-        k1lo=0
-        k1hi=1
-       else if (SDIM.eq.2) then
+        igridlo(3)=0
+        igridhi(3)=0
+
+        i1lo=0
+        i1hi=1
+
+        j1lo=0
+        j1hi=1
+
+        if (SDIM.eq.3) then
+         k1lo=0
+         k1hi=1
+        else if (SDIM.eq.2) then
+         k1lo=0
+         k1hi=0
+        else
+         print *,"dimension bust"
+         stop
+        endif
+
+        do dir=1,SDIM
+         igridlo(dir)=lo(dir)
+         igridhi(dir)=hi(dir)+1
+        enddo
+
+       else if (plot_grid_type.eq.1) then
+        i1lo=0
+        i1hi=0
+
+        j1lo=0
+        j1hi=0
+
         k1lo=0
         k1hi=0
+
+        call growntilebox(tilelo,tilehi,lo,hi,igridlo,igridhi,1)
        else
-        print *,"dimension bust"
+        print *,"plot_grid_type invalid"
         stop
        endif
-
-       do dir=1,SDIM
-        igridlo(dir)=lo(dir)
-        igridhi(dir)=hi(dir)+1
-       enddo
 
        write(filename32,'(A14,A10,A3,A5)') &
          './temptecplot/','tempnddata',levstr,gridstr
 
-       if ((visual_nddata_format.eq.0).or. &
-           (visual_nddata_format.eq.2)) then
+       if ((visual_nddata_format.eq.0).and. &
+           (plot_grid_type.eq.0)) then
 
         print *,"filename32 ",filename32
 
@@ -2405,14 +2468,15 @@ END SUBROUTINE SIMP
          write(11,*) lo(dir),hi(dir)
         enddo
 
-       else if (visual_nddata_format.eq.1) then
+       else if ((visual_nddata_format.ne.0).or. &
+                (plot_grid_type.eq.1)) then
 
         print *,"ignoring box for nddata*.tec output (lo123,hi123): ", &
          igridlo(1),igridlo(2),igridlo(3), &
          igridhi(1),igridhi(2),igridhi(3)
 
        else
-        print *,"visual_nddata_format invalid"
+        print *,"visual_nddata_format or plot_grid_type invalid"
         stop
        endif
 
@@ -2421,8 +2485,16 @@ END SUBROUTINE SIMP
        do j=igridlo(2),igridhi(2) 
        do i=igridlo(1),igridhi(1) 
 
+        if (plot_grid_type.eq.0) then
           ! iproblo=0
-        call gridstenND(xstenND,problo,i,j,k,iproblo,bfact,dx,nhalf)
+         call gridstenND(xstenND,problo,i,j,k,iproblo,bfact,dx,nhalf)
+        else if (plot_grid_type.eq.1) then
+         call gridsten_level(xstenND,i,j,k,level,nhalf)
+        else
+         print *,"plot_grid_type invalid"
+         stop
+        endif
+
         do dir=1,SDIM
          dxleft=xstenND(0,dir)-xstenND(-1,dir)
          dxright=xstenND(1,dir)-xstenND(0,dir)
@@ -2509,8 +2581,8 @@ END SUBROUTINE SIMP
         icell(2)=j
         icell(3)=k
 
-        do i1=0,1
-        do j1=0,1
+        do i1=i1lo,i1hi
+        do j1=j1lo,j1hi
         do k1=k1lo,k1hi
 
          dir=1
@@ -2531,56 +2603,75 @@ END SUBROUTINE SIMP
           endif
          endif
 
+         if (plot_grid_type.eq.0) then
           ! iproblo=0
-         call gridsten(xsten,problo,i-i1,j-j1,k-k1,iproblo,bfact,dx,nhalf)
+          call gridsten(xsten,problo,i-i1,j-j1,k-k1,iproblo,bfact,dx,nhalf)
+         else if (plot_grid_type.eq.1) then
+          call gridsten_level(xsten,i,j,k,level,nhalf)
+         else
+          print *,"plot_grid_type invalid"
+          stop
+         endif
          
          localwt=one  ! area of intersection of node CV with given cell CV
          localwtLS=one
 
-         do dir=1,SDIM
-          dxleft=xsten(0,dir)-xsten(-1,dir)
-          dxright=xsten(1,dir)-xsten(0,dir)
+         if (plot_grid_type.eq.0) then
+
+          do dir=1,SDIM
+           dxleft=xsten(0,dir)-xsten(-1,dir)
+           dxright=xsten(1,dir)-xsten(0,dir)
           
-          if (bfact.eq.1) then
-           if (abs(dxleft-dxright).gt.VOFTOL*dx(dir)) then
-            print *,"xsten invalid"
+           if (bfact.eq.1) then
+            if (abs(dxleft-dxright).gt.VOFTOL*dx(dir)) then
+             print *,"xsten invalid"
+             stop
+            endif
+           else if (bfact.gt.1) then
+            if ((dxleft.le.zero).or.(dxright.le.zero)) then
+             print *,"xsten invalid"
+             stop
+            endif
+           else
+            print *,"bfact invalid153"
             stop
            endif
-          else if (bfact.gt.1) then
-           if ((dxleft.le.zero).or.(dxright.le.zero)) then
-            print *,"xsten invalid"
+
+            ! used for LS interpolation (bilinear interp)
+           wt_denom=abs(xsten(0,dir)-xstenND(0,dir))
+           if (wt_denom.le.VOFTOL*dx(dir)) then
+            print *,"wt_denom invalid"
             stop
            endif
+
+           int_xlo=max(xstenND(-1,dir),xsten(-1,dir)) 
+           int_xhi=min(xstenND(1,dir),xsten(1,dir)) 
+           if (int_xhi.gt.int_xlo) then
+            localwt=localwt*(int_xhi-int_xlo)
+           else
+            localwt=zero
+           endif
+
+           localwtLS=localwtLS*(one/wt_denom)
+
+          enddo ! dir=1..sdim
+
+          if (localwt.gt.zero) then
+           ! do nothing
           else
-           print *,"bfact invalid153"
+           print *,"localwt invalid"
            stop
           endif
-
-           ! used for LS interpolation (bilinear interp)
-          wt_denom=abs(xsten(0,dir)-xstenND(0,dir))
-          if (wt_denom.le.VOFTOL*dx(dir)) then
-           print *,"wt_denom invalid"
+          if (localwtLS.gt.zero) then
+           ! do nothing
+          else
+           print *,"localwtLS invalid"
            stop
           endif
-
-          int_xlo=max(xstenND(-1,dir),xsten(-1,dir)) 
-          int_xhi=min(xstenND(1,dir),xsten(1,dir)) 
-          if (int_xhi.gt.int_xlo) then
-           localwt=localwt*(int_xhi-int_xlo)
-          else
-           localwt=zero
-          endif
-
-          localwtLS=localwtLS*(one/wt_denom)
-
-         enddo ! dir=1..sdim
-
-         if (localwt.le.zero) then
-          print *,"localwt invalid"
-          stop
-         endif
-         if (localwtLS.le.zero) then
-          print *,"localwtLS invalid"
+         else if (plot_grid_type.eq.1) then
+          ! do nothing
+         else
+          print *,"plot_grid_type invalid"
           stop
          endif
 
@@ -2662,11 +2753,15 @@ END SUBROUTINE SIMP
         enddo ! j1
         enddo ! i1
 
-        if (sumweight.le.zero) then
+        if (sumweight.gt.zero) then
+         ! do nothing
+        else
          print *,"sumweight invalid"
          stop
         endif
-        if (sumweightLS.le.zero) then
+        if (sumweightLS.gt.zero) then
+         ! do nothing
+        else
          print *,"sumweightLS invalid"
          stop
         endif
@@ -2706,218 +2801,227 @@ END SUBROUTINE SIMP
          lsdistnd(dir)=lsdistnd(dir)/sumweightLS
         enddo
 
-        if (bfact.eq.1) then
-         ! do nothing
- 
-         ! if high order, and in the bulk, we use SEM interpolation
-         ! to get values at the nodes.
-        else if (bfact.gt.1) then
-         local_maskSEM= &
-          NINT(maskSEM(D_DECL(icell(1),icell(2),icell(3))))
-         if ((local_maskSEM.ge.1).and. &
-             (local_maskSEM.le.nmat)) then
+        if (plot_grid_type.eq.0) then
 
-           ! iproblo=0
-          call gridsten(xsten,problo,icell(1),icell(2),icell(3), &
-            iproblo,bfact,dx,nhalf)
-          do dir=1,SDIM
-           xcrit(dir)=xstenND(0,dir)
-          enddo
-          do dir=1,SDIM
-           if (xcrit(dir).le.xsten(-1,dir)) then
-            xcrit(dir)=xsten(-1,dir)+1.0E-14*dx(dir)
-           endif
-           if (xcrit(dir).ge.xsten(1,dir)) then
-            xcrit(dir)=xsten(1,dir)-1.0E-14*dx(dir)
-           endif
-          enddo
+         if (bfact.eq.1) then
+          ! do nothing
+  
+          ! if high order, and in the bulk, we use SEM interpolation
+          ! to get values at the nodes.
+         else if (bfact.gt.1) then
+          local_maskSEM= &
+           NINT(maskSEM(D_DECL(icell(1),icell(2),icell(3))))
+          if ((local_maskSEM.ge.1).and. &
+              (local_maskSEM.le.nmat)) then
 
-          ! find stencil for surrounding spectral element.
-          stenlo(3)=0
-          stenhi(3)=0
-          do dir2=1,SDIM
-           dxelem=dx(dir2)*bfact
-           stenlo_index=NINT( (xsten(0,dir2)-problo(dir2))/dxelem-half )
-           stenlo(dir2)=bfact*stenlo_index
-           stenhi(dir2)=stenlo(dir2)+bfact-1
-           if ((icell(dir2).lt.stenlo(dir2)).or. &
-               (icell(dir2).gt.stenhi(dir2))) then
-            print *,"SEM stencil should contain cell"
-            print *,"dir2,icell(dir2),stenlo(dir2),stenhi(dir2) ", &
-             dir2,icell(dir2),stenlo(dir2),stenhi(dir2)
-            print *,"xcrit(dir2) ",xcrit(dir2)
-            print *,"xsten(-1,dir2) ",xsten(-1,dir2)
-            print *,"xsten(0,dir2) ",xsten(0,dir2)
-            print *,"xsten(1,dir2) ",xsten(1,dir2)
-            stop
-           endif
-          enddo ! dir2=1..sdim
-
-          iSEM=stenlo(1) 
-          jSEM=stenlo(2) 
-          kSEM=stenlo(SDIM) 
-
-          ! lower left hand corner of element stencil.
-          ! iproblo=0
-          call gridstenND(xsten_corner,problo,iSEM,jSEM,kSEM,iproblo,bfact, &
-            dx,nhalf)
-
-          do dir2=1,SDIM
-
-           if (abs(xsten_corner(0,dir2)).le.1.0D+20) then
-            xcrit(dir2)=xcrit(dir2)-xsten_corner(0,dir2)
-
-            if ((xcrit(dir2).ge.-INTERP_TOL*dx(dir2)).and. &
-                (xcrit(dir2).lt.(INTERP_TOL+bfact)*dx(dir2))) then
-             ! do nothing
-            else
-             print *,"xcrit out of bounds fort_cellgrid"
-             print *,"dir2,xcrit,xsten_corner ",dir2,xcrit(dir2), &
-              xsten_corner(0,dir2)
-             stop
-            endif
-           else
-            print *,"xsten_corner invalid" 
-            stop
-           endif
-
-          enddo ! dir2=1..sdim
-
-           ! x,u,p,den,T,Y1..Yn,mag vort,LS
-          if (visual_ncomp.ne.2*SDIM+3+num_species_var+1+nmat) then
-           print *,"visual_ncomp invalid" 
-           stop
-          endif
-          ncomp_SEM=visual_ncomp-SDIM
-          VORT_comp_SEM=SDIM+3+num_species_var+1
-          do n=1,ncomp_SEM
-           SEM_value(n)=zero
-          enddo
-          grid_type=-1  ! ggg  (Gauss in all directions)
-          do dir2=1,SDIM
-           SEMhi(dir2)=bfact-1
-          enddo
-
-          allocate(SEMloc(D_DECL(0:SEMhi(1),0:SEMhi(2),0:SEMhi(SDIM)), &
-                          ncomp_SEM))
-
-          do iSEM=stenlo(1),stenhi(1)
-          do jSEM=stenlo(2),stenhi(2)
-          do kSEM=stenlo(3),stenhi(3)
-           ilocal=iSEM-stenlo(1)
-           jlocal=jSEM-stenlo(2)
-           klocal=kSEM-stenlo(3)
-           do im=1,nmat
-            local_LS_data(im)=lsdist(D_DECL(iSEM,jSEM,kSEM),im)
+            ! iproblo=0
+           call gridsten(xsten,problo,icell(1),icell(2),icell(3), &
+             iproblo,bfact,dx,nhalf)
+           do dir=1,SDIM
+            xcrit(dir)=xstenND(0,dir)
            enddo
-           call get_primary_material(local_LS_data,nmat,im_crit_SEM)
+           do dir=1,SDIM
+            if (xcrit(dir).le.xsten(-1,dir)) then
+             xcrit(dir)=xsten(-1,dir)+1.0E-14*dx(dir)
+            endif
+            if (xcrit(dir).ge.xsten(1,dir)) then
+             xcrit(dir)=xsten(1,dir)-1.0E-14*dx(dir)
+            endif
+           enddo
 
-            ! velocity and pressure
-           do dir=1,SDIM+1
-            local_data=vel(D_DECL(iSEM,jSEM,kSEM),dir)
-            if (abs(local_data).lt.1.0D+20) then
-             SEMloc(D_DECL(ilocal,jlocal,klocal),dir)=local_data
-            else
-             print *,"abs(local_data) overflow1"
+           ! find stencil for surrounding spectral element.
+           stenlo(3)=0
+           stenhi(3)=0
+           do dir2=1,SDIM
+            dxelem=dx(dir2)*bfact
+            stenlo_index=NINT( (xsten(0,dir2)-problo(dir2))/dxelem-half )
+            stenlo(dir2)=bfact*stenlo_index
+            stenhi(dir2)=stenlo(dir2)+bfact-1
+            if ((icell(dir2).lt.stenlo(dir2)).or. &
+                (icell(dir2).gt.stenhi(dir2))) then
+             print *,"SEM stencil should contain cell"
+             print *,"dir2,icell(dir2),stenlo(dir2),stenhi(dir2) ", &
+              dir2,icell(dir2),stenlo(dir2),stenhi(dir2)
+             print *,"xcrit(dir2) ",xcrit(dir2)
+             print *,"xsten(-1,dir2) ",xsten(-1,dir2)
+             print *,"xsten(0,dir2) ",xsten(0,dir2)
+             print *,"xsten(1,dir2) ",xsten(1,dir2)
              stop
             endif
-           enddo ! dir=1..sdim+1
+           enddo ! dir2=1..sdim
 
-           do dir=1,2+num_species_var
-            local_data=den(D_DECL(iSEM,jSEM,kSEM), &
-              (im_crit_SEM-1)*num_state_material+dir)
-            if (abs(local_data).lt.1.0D+20) then
-             SEMloc(D_DECL(ilocal,jlocal,klocal),SDIM+1+dir)=local_data
+           iSEM=stenlo(1) 
+           jSEM=stenlo(2) 
+           kSEM=stenlo(SDIM) 
+
+           ! lower left hand corner of element stencil.
+           ! iproblo=0
+           call gridstenND(xsten_corner,problo,iSEM,jSEM,kSEM,iproblo,bfact, &
+             dx,nhalf)
+
+           do dir2=1,SDIM
+
+            if (abs(xsten_corner(0,dir2)).le.1.0D+20) then
+             xcrit(dir2)=xcrit(dir2)-xsten_corner(0,dir2)
+
+             if ((xcrit(dir2).ge.-INTERP_TOL*dx(dir2)).and. &
+                 (xcrit(dir2).lt.(INTERP_TOL+bfact)*dx(dir2))) then
+              ! do nothing
+             else
+              print *,"xcrit out of bounds fort_cellgrid"
+              print *,"dir2,xcrit,xsten_corner ",dir2,xcrit(dir2), &
+               xsten_corner(0,dir2)
+              stop
+             endif
             else
-             print *,"abs(local_data) overflow1"
+             print *,"xsten_corner invalid" 
              stop
             endif
-           enddo ! dir=1..2+num_species_var
 
-           local_data=trace(D_DECL(iSEM,jSEM,kSEM),(local_maskSEM-1)*5+5)
-           if (VORT_comp_SEM.eq.SDIM+3+num_species_var+1) then
-            if (abs(local_data).lt.1.0D+20) then
-             SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM)=local_data
-            else
-             print *,"abs(local_data) overflow2"
-             stop
-            endif
-           else
-            print *,"VORT_comp_SEM invalid"
+           enddo ! dir2=1..sdim
+
+            ! x,u,p,den,T,Y1..Yn,mag vort,LS
+           if (visual_ncomp.ne.2*SDIM+3+num_species_var+1+nmat) then
+            print *,"visual_ncomp invalid" 
             stop
            endif
-            ! we interpolate the LS using SEM, but we discard the interpolated
-            ! value.
-           do im=1,nmat
-            if (abs(local_LS_data(im)).lt.1.0D+20) then
-             SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM+im)= &
-               local_LS_data(im)
+           ncomp_SEM=visual_ncomp-SDIM
+           VORT_comp_SEM=SDIM+3+num_species_var+1
+           do n=1,ncomp_SEM
+            SEM_value(n)=zero
+           enddo
+           grid_type=-1  ! ggg  (Gauss in all directions)
+           do dir2=1,SDIM
+            SEMhi(dir2)=bfact-1
+           enddo
+
+           allocate(SEMloc(D_DECL(0:SEMhi(1),0:SEMhi(2),0:SEMhi(SDIM)), &
+                           ncomp_SEM))
+
+           do iSEM=stenlo(1),stenhi(1)
+           do jSEM=stenlo(2),stenhi(2)
+           do kSEM=stenlo(3),stenhi(3)
+            ilocal=iSEM-stenlo(1)
+            jlocal=jSEM-stenlo(2)
+            klocal=kSEM-stenlo(3)
+            do im=1,nmat
+             local_LS_data(im)=lsdist(D_DECL(iSEM,jSEM,kSEM),im)
+            enddo
+            call get_primary_material(local_LS_data,nmat,im_crit_SEM)
+
+             ! velocity and pressure
+            do dir=1,SDIM+1
+             local_data=vel(D_DECL(iSEM,jSEM,kSEM),dir)
+             if (abs(local_data).lt.1.0D+20) then
+              SEMloc(D_DECL(ilocal,jlocal,klocal),dir)=local_data
+             else
+              print *,"abs(local_data) overflow1"
+              stop
+             endif
+            enddo ! dir=1..sdim+1
+
+            do dir=1,2+num_species_var
+             local_data=den(D_DECL(iSEM,jSEM,kSEM), &
+               (im_crit_SEM-1)*num_state_material+dir)
+             if (abs(local_data).lt.1.0D+20) then
+              SEMloc(D_DECL(ilocal,jlocal,klocal),SDIM+1+dir)=local_data
+             else
+              print *,"abs(local_data) overflow1"
+              stop
+             endif
+            enddo ! dir=1..2+num_species_var
+
+            local_data=trace(D_DECL(iSEM,jSEM,kSEM),(local_maskSEM-1)*5+5)
+            if (VORT_comp_SEM.eq.SDIM+3+num_species_var+1) then
+             if (abs(local_data).lt.1.0D+20) then
+              SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM)=local_data
+             else
+              print *,"abs(local_data) overflow2"
+              stop
+             endif
             else
-             print *,"abs(local_data) overflow25"
+             print *,"VORT_comp_SEM invalid"
              stop
             endif
-           enddo ! im=1..nmat
-            
-          enddo ! kSEM
-          enddo ! jSEM
-          enddo ! iSEM
+             ! we interpolate the LS using SEM, but we discard the interpolated
+             ! value.
+            do im=1,nmat
+             if (abs(local_LS_data(im)).lt.1.0D+20) then
+              SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM+im)= &
+                local_LS_data(im)
+             else
+              print *,"abs(local_data) overflow25"
+              stop
+             endif
+            enddo ! im=1..nmat
+             
+           enddo ! kSEM
+           enddo ! jSEM
+           enddo ! iSEM
 
-          call SEM_INTERP_ELEMENT( &
-           ncomp_SEM,bfact,grid_type, &
-           SEMhi,dx,xcrit,SEMloc,SEM_value,caller_id)
+           call SEM_INTERP_ELEMENT( &
+            ncomp_SEM,bfact,grid_type, &
+            SEMhi,dx,xcrit,SEMloc,SEM_value,caller_id)
 
-          deallocate(SEMloc)
+           deallocate(SEMloc)
 
-           ! WE ARE IN THE BULK HERE, CAN USE SEM INTERPOLATION
-          do dir=1,SDIM
-           if (abs(SEM_value(dir)).lt.1.0D+20) then
-            velnd(dir)=SEM_value(dir)
+            ! WE ARE IN THE BULK HERE, CAN USE SEM INTERPOLATION
+           do dir=1,SDIM
+            if (abs(SEM_value(dir)).lt.1.0D+20) then
+             velnd(dir)=SEM_value(dir)
+            else 
+             print *,"abs(SEM_value(dir)) overflow"
+             print *,"i,j,k,level,finest_level,dir ", &
+              i,j,k,level,finest_level,dir 
+             print *,"stenlo ",stenlo(1),stenlo(2),stenlo(3)
+             print *,"stenhi ",stenhi(1),stenhi(2),stenhi(3)
+             print *,"lo ",lo(1),lo(2),lo(SDIM)
+             print *,"hi ",hi(1),hi(2),hi(SDIM)
+             print *,"SEM_value(dir) ",SEM_value(dir)
+             stop
+            endif
+           enddo ! dir=1..sdim
+           presnd=SEM_value(SDIM+1)
+           if (visual_ncomp-SDIM.ne.SDIM+3+num_state_material+1+nmat) then
+            print *,"incorrect visual_ncomp"
+            stop
+           endif
+           if (ncomp_SEM.ne.SDIM+3+num_state_material+1+nmat) then
+            print *,"incorrect ncomp_SEM"
+            stop
+           endif
+           if (abs(SEM_value(VORT_comp_SEM)).lt.1.0D+20) then
+            tracend((local_maskSEM-1)*5+5)=SEM_value(VORT_comp_SEM)
            else 
-            print *,"abs(SEM_value(dir)) overflow"
-            print *,"i,j,k,level,finest_level,dir ", &
-             i,j,k,level,finest_level,dir 
+            print *,"abs(SEM_value(sdim+1)) overflow"
+            print *,"i,j,k,level,finest_level ", &
+             i,j,k,level,finest_level
             print *,"stenlo ",stenlo(1),stenlo(2),stenlo(3)
             print *,"stenhi ",stenhi(1),stenhi(2),stenhi(3)
             print *,"lo ",lo(1),lo(2),lo(SDIM)
             print *,"hi ",hi(1),hi(2),hi(SDIM)
-            print *,"SEM_value(dir) ",SEM_value(dir)
+            print *,"SEM_value(VORT_comp_SEM) ",SEM_value(VORT_comp_SEM)
             stop
            endif
-          enddo ! dir=1..sdim
-          presnd=SEM_value(SDIM+1)
-          if (visual_ncomp-SDIM.ne.SDIM+3+num_state_material+1+nmat) then
-           print *,"incorrect visual_ncomp"
+           do dir=1,2+num_species_var
+            dennd(dir)=SEM_value(SDIM+1+dir)
+           enddo
+          else if (local_maskSEM.eq.0) then
+           ! do nothing
+          else
+           print *,"local_maskSEM invalid"
            stop
           endif
-          if (ncomp_SEM.ne.SDIM+3+num_state_material+1+nmat) then
-           print *,"incorrect ncomp_SEM"
-           stop
-          endif
-          if (abs(SEM_value(VORT_comp_SEM)).lt.1.0D+20) then
-           tracend((local_maskSEM-1)*5+5)=SEM_value(VORT_comp_SEM)
-          else 
-           print *,"abs(SEM_value(sdim+1)) overflow"
-           print *,"i,j,k,level,finest_level ", &
-            i,j,k,level,finest_level
-           print *,"stenlo ",stenlo(1),stenlo(2),stenlo(3)
-           print *,"stenhi ",stenhi(1),stenhi(2),stenhi(3)
-           print *,"lo ",lo(1),lo(2),lo(SDIM)
-           print *,"hi ",hi(1),hi(2),hi(SDIM)
-           print *,"SEM_value(VORT_comp_SEM) ",SEM_value(VORT_comp_SEM)
-           stop
-          endif
-          do dir=1,2+num_species_var
-           dennd(dir)=SEM_value(SDIM+1+dir)
-          enddo
-         else if (local_maskSEM.eq.0) then
-          ! do nothing
+
          else
-          print *,"local_maskSEM invalid"
+          print *,"bfact invalid154"
           stop
          endif
 
+        else if (plot_grid_type.eq.1) then
+         ! do nothing
         else
-         print *,"bfact invalid154"
+         print *,"plot_grid_type invalid"
          stop
         endif
 
@@ -3098,8 +3202,8 @@ END SUBROUTINE SIMP
          enddo
         endif
 
-        if ((visual_nddata_format.eq.0).or. &
-            (visual_nddata_format.eq.2)) then
+        if ((visual_nddata_format.eq.0).and. &
+            (plot_grid_type.eq.0)) then
   
          do iw=1,scomp
           if (iw.lt.scomp) then
@@ -3114,10 +3218,32 @@ END SUBROUTINE SIMP
           endif
          enddo ! iw=1..scomp
 
-        else if (visual_nddata_format.eq.1) then
-         ! do nothing
+        else if ((visual_nddata_format.ne.0).or. &
+                 (plot_grid_type.eq.1)) then
+         if (plot_grid_type.eq.0) then
+          ! do nothing
+         else if (plot_grid_type.eq.1) then
+          if (ncomp_tower.eq.PLOTCOMP_NCOMP) then
+           ! do nothing
+          else
+           print *,"(ncomp_tower.ne.PLOTCOMP_NCOMP)"
+           stop
+          endif
+          if (scomp.ne.ncomp_tower) then
+           print *,"(scomp.ne.ncomp_tower)"
+           stop
+          endif
+
+          do iw=1,scomp
+           towerfab(D_DECL(i,j,k),iw)=writend(iw)
+          enddo        
+         else
+          print *,"plot_grid_type invalid"
+          stop
+         endif
+
         else
-         print *,"visual_nddata_format invalid"
+         print *,"visual_nddata_format or plot_grid_type invalid"
          stop
         endif
 
@@ -3125,13 +3251,14 @@ END SUBROUTINE SIMP
        enddo  ! j=igridlo(2),igridhi(2)
        enddo  ! k=igridlo(3),igridhi(3)  (main output loop to "AMR" grid)
 
-       if ((visual_nddata_format.eq.0).or. &
-           (visual_nddata_format.eq.2)) then
+       if ((visual_nddata_format.eq.0).and. &
+           (plot_grid_type.eq.0)) then
         close(11)
-       else if (visual_nddata_format.eq.1) then
+       else if ((visual_nddata_format.ne.0).or. &
+                (plot_grid_type.eq.1)) then
         ! do nothing
        else
-        print *,"visual_nddata_format invalid"
+        print *,"visual_nddata_format or plot_grid_type invalid"
         stop
        endif
 
@@ -3142,530 +3269,540 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      if (do_slice.eq.1) then
+      if (plot_grid_type.eq.0) then
 
-       if ((slice_dir.ge.0).and.(slice_dir.lt.SDIM)) then
+       if (do_slice.eq.1) then
 
-        igridlo(3)=0
-        igridhi(3)=0
-        do dir=1,SDIM
-         igridlo(dir)=lo(dir)-1
-         igridhi(dir)=hi(dir)+1
-        enddo
+        if ((slice_dir.ge.0).and.(slice_dir.lt.SDIM)) then
 
-        do i=igridlo(1),igridhi(1) 
-        do j=igridlo(2),igridhi(2) 
-        do k=igridlo(3),igridhi(3) 
+         igridlo(3)=0
+         igridhi(3)=0
+         do dir=1,SDIM
+          igridlo(dir)=lo(dir)-1
+          igridhi(dir)=hi(dir)+1
+         enddo
+
+         do i=igridlo(1),igridhi(1) 
+         do j=igridlo(2),igridhi(2) 
+         do k=igridlo(3),igridhi(3) 
+            ! iproblo=0
+          call gridsten(xsten,problo,i,j,k,iproblo,bfact,dx,nhalf)
+          do dir=1,SDIM
+           xposnd(dir)=xsten(0,dir)
+          enddo
+
+          do iw=1,SDIM
+           plotfab(D_DECL(i,j,k),iw)=xposnd(iw)
+          enddo
+
+          do dir=1,nmat
+           lsdistnd(dir)=lsdist(D_DECL(i,j,k),dir)
+          enddo
+
+           ! primary material w.r.t. both fluids and solids.
+          call get_primary_material(lsdistnd,nmat,im_crit)
+
+          do dir=1,(SDIM+1)
+           velnd(dir)=vel(D_DECL(i,j,k),dir)
+          enddo
+
+          dir=SDIM+1
+          plotfab(D_DECL(i,j,k),2*SDIM+1)=velnd(dir) ! pressure from solver
+
+          presnd=pres(D_DECL(i,j,k))
+          divnd=div(D_DECL(i,j,k))
+
+          plotfab(D_DECL(i,j,k),2*SDIM+2)=presnd
+          plotfab(D_DECL(i,j,k),2*SDIM+3)=divnd
+
+          do dir=1,num_state_material*nmat
+           dennd(dir)=den(D_DECL(i,j,k),dir)
+          enddo
+
+          denslice=dennd((im_crit-1)*num_state_material+1)
+          tempslice=dennd((im_crit-1)*num_state_material+2)
+          call init_massfrac_parm(denslice,massfrac_parm,im_crit)
+          do ispec=1,num_species_var
+           massfrac_parm(ispec)=dennd((im_crit-1)*num_state_material+2+ispec)
+          enddo
+          call INTERNAL_material(denslice,massfrac_parm, &
+            tempslice,eslice, &
+            fort_material_type(im_crit),im_crit)
+          KEslice=denslice*eslice
+
+          do dir=1,SDIM
+           iw=dir
+           plotfab(D_DECL(i,j,k),SDIM+dir)=velnd(iw)
+           KEslice=KEslice+half*denslice*(velnd(iw)**2)
+          enddo ! dir
+
+          plotfab(D_DECL(i,j,k),2*AMREX_SPACEDIM+4)=denslice
+          plotfab(D_DECL(i,j,k),2*AMREX_SPACEDIM+5)=tempslice
+          plotfab(D_DECL(i,j,k),2*AMREX_SPACEDIM+6)=KEslice
+         enddo ! k
+         enddo ! j
+         enddo ! i
+
+         igridlo(3)=0
+         igridhi(3)=0
+         do dir=1,SDIM
+          igridlo(dir)=lo(dir)-1
+          igridhi(dir)=hi(dir)+1
+         enddo
+
            ! iproblo=0
-         call gridsten(xsten,problo,i,j,k,iproblo,bfact,dx,nhalf)
+         inbox=1
+         call gridsten(xsten_fablo,problo,lo(1)-1,lo(2)-1,lo(SDIM)-1, &
+          iproblo,bfact,dx,nhalf)
+         call gridsten(xsten_fabhi,problo,hi(1)+1,hi(2)+1,hi(SDIM)+1, &
+          iproblo,bfact,dx,nhalf)
          do dir=1,SDIM
-          xposnd(dir)=xsten(0,dir)
+          xfablo(dir)=xsten_fablo(0,dir)
+          xfabhi(dir)=xsten_fabhi(0,dir)
          enddo
-
-         do iw=1,SDIM
-          plotfab(D_DECL(i,j,k),iw)=xposnd(iw)
-         enddo
-
-         do dir=1,nmat
-          lsdistnd(dir)=lsdist(D_DECL(i,j,k),dir)
-         enddo
-
-          ! primary material w.r.t. both fluids and solids.
-         call get_primary_material(lsdistnd,nmat,im_crit)
-
-         do dir=1,(SDIM+1)
-          velnd(dir)=vel(D_DECL(i,j,k),dir)
-         enddo
-
-         dir=SDIM+1
-         plotfab(D_DECL(i,j,k),2*SDIM+1)=velnd(dir) ! pressure from solver
-
-         presnd=pres(D_DECL(i,j,k))
-         divnd=div(D_DECL(i,j,k))
-
-         plotfab(D_DECL(i,j,k),2*SDIM+2)=presnd
-         plotfab(D_DECL(i,j,k),2*SDIM+3)=divnd
-
-         do dir=1,num_state_material*nmat
-          dennd(dir)=den(D_DECL(i,j,k),dir)
-         enddo
-
-         denslice=dennd((im_crit-1)*num_state_material+1)
-         tempslice=dennd((im_crit-1)*num_state_material+2)
-         call init_massfrac_parm(denslice,massfrac_parm,im_crit)
-         do ispec=1,num_species_var
-          massfrac_parm(ispec)=dennd((im_crit-1)*num_state_material+2+ispec)
-         enddo
-         call INTERNAL_material(denslice,massfrac_parm, &
-           tempslice,eslice, &
-           fort_material_type(im_crit),im_crit)
-         KEslice=denslice*eslice
-
-         do dir=1,SDIM
-          iw=dir
-          plotfab(D_DECL(i,j,k),SDIM+dir)=velnd(iw)
-          KEslice=KEslice+half*denslice*(velnd(iw)**2)
-         enddo ! dir
-
-         plotfab(D_DECL(i,j,k),2*AMREX_SPACEDIM+4)=denslice
-         plotfab(D_DECL(i,j,k),2*AMREX_SPACEDIM+5)=tempslice
-         plotfab(D_DECL(i,j,k),2*AMREX_SPACEDIM+6)=KEslice
-        enddo ! k
-        enddo ! j
-        enddo ! i
-
-        igridlo(3)=0
-        igridhi(3)=0
-        do dir=1,SDIM
-         igridlo(dir)=lo(dir)-1
-         igridhi(dir)=hi(dir)+1
-        enddo
-
-          ! iproblo=0
-        inbox=1
-        call gridsten(xsten_fablo,problo,lo(1)-1,lo(2)-1,lo(SDIM)-1, &
-         iproblo,bfact,dx,nhalf)
-        call gridsten(xsten_fabhi,problo,hi(1)+1,hi(2)+1,hi(SDIM)+1, &
-         iproblo,bfact,dx,nhalf)
-        do dir=1,SDIM
-         xfablo(dir)=xsten_fablo(0,dir)
-         xfabhi(dir)=xsten_fabhi(0,dir)
-        enddo
-
-        do dir=1,SDIM
-         if (slice_dir+1.ne.dir) then
-          if ((xslice(dir).lt.xfablo(dir)-VOFTOL*dx(dir)).or. &
-              (xslice(dir).gt.xfabhi(dir)+VOFTOL*dx(dir))) then
-           inbox=0
-          else
-              ! iproblo=0
-           do i=lo(dir)-1,hi(dir)
-            call gridsten1D(xsten1D,problo,i,iproblo,bfact,dx,dir,nhalf)
-            xposnd(dir)=xsten1D(0)
-            if ((xslice(dir).ge.xsten1D(0)-VOFTOL*dx(dir)).and. &
-                (xslice(dir).le.xsten1D(2)+VOFTOL*dx(dir))) then
-             igridlo(dir)=i
-             igridhi(dir)=i+1
-            endif
-           enddo ! i
-          endif ! in the box
-         endif ! tangential direction
-        enddo ! dir  (finding igridlo,igridhi a thin box)
-
-        if (inbox.eq.1) then
 
          do dir=1,SDIM
           if (slice_dir+1.ne.dir) then
-           if (igridhi(dir)-igridlo(dir).ne.1) then
-            print *,"slice: igridhi or igridlo not initialized correctly"
-            stop
-           endif
-          endif
-         enddo ! dir
-
-         dir=slice_dir+1
-          ! nslice=domhi+3
-         do i=-1,nslice-2
-           ! iproblo=0
-          call gridsten1D(xsten1D_finest,problo,i,iproblo, &
-            bfact_finest,dxfinest,dir,nhalf)
-          x1D=xsten1D_finest(0)
-
-          if (debug_slice.eq.1) then
-           print *,"x1D= ",x1D
-          endif
-
-          if ((x1D.ge.xfablo(dir)-VOFTOL*dx(dir)).and. &
-              (x1D.le.xfabhi(dir)+VOFTOL*dx(dir))) then
-           inbox=0
-
-            ! find bounding interval in the dir=slice_dir+1 direction.
-           do j=lo(dir)-1,hi(dir)
-             ! iproblo=0
-            call gridsten1D(xsten1D,problo,j,iproblo,bfact,dx,dir,nhalf)
-            xposnd(dir)=xsten1D(0)
-            if ((x1D.ge.xsten1D(0)-VOFTOL*dx(dir)).and. &
-                (x1D.le.xsten1D(2)+VOFTOL*dx(dir))) then
-             igridlo(dir)=j
-             igridhi(dir)=j+1
-             inbox=1
-            endif
-           enddo ! j
-
-           if (inbox.eq.1) then
-
-            do n=1,nstate_slice
-             i1=igridlo(1)
-             j1=igridlo(2)
-             k1=igridlo(3)
-             if (debug_slice.eq.1) then
-              print *,"i1,j1,k1 ",i1,j1,k1
-             endif
-             xc(dir)=x1D
-             theta(3)=zero
-             do dir2=1,SDIM
-              if (dir2.ne.dir) then
-               xc(dir2)=xslice(dir2)
-              endif
-               ! iproblo=0
-              call gridsten1D(xsten1DL,problo,igridlo(dir2), &
-                iproblo,bfact,dx,dir2,nhalf)
-              xstenlo(dir2)=xsten1DL(0)
-              xstenhi(dir2)=xsten1DL(2)
-       
-              if (xc(dir2).le.xstenlo(dir2)) then
-               theta(dir2)=zero
-              else if (xc(dir2).ge.xstenhi(dir2)) then
-               theta(dir2)=one
-              else 
-               theta(dir2)=(xc(dir2)-xstenlo(dir2))/ &
-                 (xstenhi(dir2)-xstenlo(dir2))
-              endif
-             enddo  ! dir2
-             do ii=0,1
-             do jj=0,1
-              psten(ii,jj)= &
-               (one-theta(3))*plotfab(D_DECL(i1+ii,j1+jj,k1),n)+ &
-               theta(3)*plotfab(D_DECL(i1+ii,j1+jj,k1+1),n)
-             enddo
-             enddo
-             do ii=0,1
-              psten1D(ii)=(one-theta(2))*psten(ii,0)+theta(2)*psten(ii,1)
-             enddo
-             slice_data((i+1)*nstate_slice+n)= &
-              (one-theta(1))*psten1D(0)+theta(1)*psten1D(1) 
-            enddo ! n
-
-           else if (inbox.eq.0) then
-            ! do nothing
+           if ((xslice(dir).lt.xfablo(dir)-VOFTOL*dx(dir)).or. &
+               (xslice(dir).gt.xfabhi(dir)+VOFTOL*dx(dir))) then
+            inbox=0
            else
-            print *,"inbox invalid"
-            stop
-           endif 
+               ! iproblo=0
+            do i=lo(dir)-1,hi(dir)
+             call gridsten1D(xsten1D,problo,i,iproblo,bfact,dx,dir,nhalf)
+             xposnd(dir)=xsten1D(0)
+             if ((xslice(dir).ge.xsten1D(0)-VOFTOL*dx(dir)).and. &
+                 (xslice(dir).le.xsten1D(2)+VOFTOL*dx(dir))) then
+              igridlo(dir)=i
+              igridhi(dir)=i+1
+             endif
+            enddo ! i
+           endif ! in the box
+          endif ! tangential direction
+         enddo ! dir  (finding igridlo,igridhi a thin box)
 
-          endif ! x1D in the box?
+         if (inbox.eq.1) then
 
-         enddo ! i
-
-        endif ! inbox=1
-
-       else
-        print *,"slice_dir invalid"
-        stop
-       endif
-      else if (do_slice.eq.0) then
-       ! do nothing
-      else
-       print *,"do_slice invalid"
-       stop
-      endif
-
-       ! interpolation to uniform grid
-
-      igridlo(3)=0
-      igridhi(3)=0
-      do dir=1,SDIM
-       igridlo(dir)=lo(dir)
-       igridhi(dir)=hi(dir)
-      enddo
-
-      do dir=1,SDIM
-       visual_ncell(dir)=vishi(dir)-vislo(dir)+1
-       if (visual_ncell(dir).ge.1) then
-        visual_dx(dir)=(probhi(dir)-problo(dir))/visual_ncell(dir)
-        if (visual_dx(dir).gt.zero) then
-         ! do nothing
-        else
-         print *,"visual_dx invalid"
-         stop
-        endif
-       else
-        print *,"visual_ncell invalid"
-        stop
-       endif
-      enddo ! dir=1..sdim
-
-      do i=igridlo(1),igridhi(1) 
-      do j=igridlo(2),igridhi(2) 
-      do k=igridlo(3),igridhi(3) 
-        ! iproblo=0
-       call gridsten(xsten,problo,i,j,k,iproblo,bfact,dx,nhalf)
-       icritlo(3)=0
-       icrithi(3)=0
-       do dir=1,SDIM
-        icrit(dir)=NINT((xsten(0,dir)-problo(dir))/visual_dx(dir))
-        icritlo(dir)=icrit(dir)-1
-        xcrit(dir)=icritlo(dir)*visual_dx(dir)+problo(dir)
-        do while (xcrit(dir).gt.xsten(-1,dir)-visual_dx(dir)*VOFTOL) 
-         icritlo(dir)=icritlo(dir)-1
-         xcrit(dir)=xcrit(dir)-visual_dx(dir)
-        enddo
-        icrithi(dir)=icrit(dir)+1
-        xcrit(dir)=icrithi(dir)*visual_dx(dir)+problo(dir)
-        do while (xcrit(dir).lt.xsten(1,dir)+visual_dx(dir)*VOFTOL) 
-         icrithi(dir)=icrithi(dir)+1
-         xcrit(dir)=xcrit(dir)+visual_dx(dir)
-        enddo
-       enddo ! dir=1..sdim
-       do ic=icritlo(1),icrithi(1)
-       do jc=icritlo(2),icrithi(2)
-       do kc=icritlo(3),icrithi(3)
-        dir=1
-        xcrit(dir)=problo(dir)+ic*visual_dx(dir) 
-        dir=2
-        xcrit(dir)=problo(dir)+jc*visual_dx(dir) 
-        if (SDIM.eq.3) then 
-         dir=SDIM
-         xcrit(dir)=problo(dir)+kc*visual_dx(dir) 
-        endif
-        inbox=1
-        do dir=1,SDIM
-         if ((xcrit(dir).lt.xsten(-1,dir)-visual_dx(dir)*VOFTOL).or. &
-             (xcrit(dir).gt.xsten(1,dir)+visual_dx(dir)*VOFTOL)) then
-          inbox=0
-         endif
-        enddo
-        if (inbox.eq.1) then
-         icell(1)=i
-         icell(2)=j
-         icell(3)=k
-
-         do dir=1,SDIM
-          localfab(dir)=xcrit(dir)
-         enddo
-
-         icell_lo(3)=0
-         icell_hi(3)=0
-         do dir=1,SDIM
-          if (xcrit(dir).lt.xsten(0,dir)) then
-           icell_lo(dir)=icell(dir)-1
-           xstenlo(dir)=xsten(-2,dir)
-           xstenhi(dir)=xsten(0,dir)
-          else
-           icell_lo(dir)=icell(dir)
-           xstenlo(dir)=xsten(0,dir)
-           xstenhi(dir)=xsten(2,dir)
-          endif
-          icell_hi(dir)=icell_lo(dir)+1
-         enddo
-
-         do dir=SDIM+1,visual_ncomp
-          localfab(dir)=zero
-         enddo
-
-         sumweight=zero
-         do iBL=icell_lo(1),icell_hi(1)
-         do jBL=icell_lo(2),icell_hi(2)
-         do kBL=icell_lo(3),icell_hi(3)
-          localwt=one
           do dir=1,SDIM
-           if (xstenhi(dir)-xstenlo(dir).gt.zero) then
-            theta(dir)=(xcrit(dir)-xstenlo(dir))/ &
-             (xstenhi(dir)-xstenlo(dir))
-            if ((theta(dir).ge.-VOFTOL).and. &
-                (theta(dir).le.one+VOFTOL)) then
-             if (theta(dir).lt.zero) then
-              theta(dir)=zero
-             endif
-             if (theta(dir).gt.one) then
-              theta(dir)=one
-             endif
-             localwt=localwt*(one-theta(dir))
-            else
-             print *,"theta invalid"
+           if (slice_dir+1.ne.dir) then
+            if (igridhi(dir)-igridlo(dir).ne.1) then
+             print *,"slice: igridhi or igridlo not initialized correctly"
              stop
             endif
-           else
-            print *,"xstenhi or xstenlo invalid"
-            stop
            endif
-          enddo ! dir=1..sdim
-          do dir=1,nmat
-           lsdistnd(dir)=lsdist(D_DECL(iBL,jBL,kBL),dir)
-          enddo
-           ! primary material w.r.t. both fluids and solids.
-          call get_primary_material(lsdistnd,nmat,im_crit)
-          do dir=1,SDIM+1
-           vel_uniform(dir)=vel(D_DECL(iBL,jBL,kBL),dir)
-          enddo
-          do dir=1,2+num_species_var
-           vel_uniform(SDIM+1+dir)=den(D_DECL(iBL,jBL,kBL), &
-               (im_crit-1)*num_state_material+dir)
-          enddo
+          enddo ! dir
 
-          current_index=SDIM
-          do dir=1,SDIM+1+2+num_species_var
-           localfab(SDIM+dir)=localfab(SDIM+dir)+ &
-              localwt*vel_uniform(dir)
-           current_index=current_index+1
-          enddo
-          ! 1. \dot{gamma}
-          ! 2. Tr(A) if viscoelastic
-          !    \dot{gamma} o.t.
-          ! 3. Tr(A) (liquid viscosity - etaS)/etaP  if FENE-CR+Carreau
-          !    Tr(A) if FENE-CR
-          !    \dot{gamma} o.t.
-          ! 4. (3) * f(A)  if viscoelastic
-          !    \dot{gamma} o.t.
-          ! 5. vorticity magnitude.
-          localfab(current_index+1)=localfab(current_index+1)+ &
-              localwt*trace(D_DECL(iBL,jBL,kBL),5)
-          do im=1,nmat
-           localfab(current_index+1+im)=localfab(current_index+1+im)+ &
-              localwt*lsdistnd(im)
-          enddo
+          dir=slice_dir+1
+           ! nslice=domhi+3
+          do i=-1,nslice-2
+            ! iproblo=0
+           call gridsten1D(xsten1D_finest,problo,i,iproblo, &
+             bfact_finest,dxfinest,dir,nhalf)
+           x1D=xsten1D_finest(0)
 
-          sumweight=sumweight+localwt
-         enddo !kBL
-         enddo !jBL
-         enddo !iBL
-         if (sumweight.gt.zero) then
-          do dir=1,visual_ncomp-SDIM
-           localfab(SDIM+dir)=localfab(SDIM+dir)/sumweight
-          enddo
+           if (debug_slice.eq.1) then
+            print *,"x1D= ",x1D
+           endif
+
+           if ((x1D.ge.xfablo(dir)-VOFTOL*dx(dir)).and. &
+               (x1D.le.xfabhi(dir)+VOFTOL*dx(dir))) then
+            inbox=0
+
+             ! find bounding interval in the dir=slice_dir+1 direction.
+            do j=lo(dir)-1,hi(dir)
+              ! iproblo=0
+             call gridsten1D(xsten1D,problo,j,iproblo,bfact,dx,dir,nhalf)
+             xposnd(dir)=xsten1D(0)
+             if ((x1D.ge.xsten1D(0)-VOFTOL*dx(dir)).and. &
+                 (x1D.le.xsten1D(2)+VOFTOL*dx(dir))) then
+              igridlo(dir)=j
+              igridhi(dir)=j+1
+              inbox=1
+             endif
+            enddo ! j
+
+            if (inbox.eq.1) then
+
+             do n=1,nstate_slice
+              i1=igridlo(1)
+              j1=igridlo(2)
+              k1=igridlo(3)
+              if (debug_slice.eq.1) then
+               print *,"i1,j1,k1 ",i1,j1,k1
+              endif
+              xc(dir)=x1D
+              theta(3)=zero
+              do dir2=1,SDIM
+               if (dir2.ne.dir) then
+                xc(dir2)=xslice(dir2)
+               endif
+                ! iproblo=0
+               call gridsten1D(xsten1DL,problo,igridlo(dir2), &
+                 iproblo,bfact,dx,dir2,nhalf)
+               xstenlo(dir2)=xsten1DL(0)
+               xstenhi(dir2)=xsten1DL(2)
+        
+               if (xc(dir2).le.xstenlo(dir2)) then
+                theta(dir2)=zero
+               else if (xc(dir2).ge.xstenhi(dir2)) then
+                theta(dir2)=one
+               else 
+                theta(dir2)=(xc(dir2)-xstenlo(dir2))/ &
+                  (xstenhi(dir2)-xstenlo(dir2))
+               endif
+              enddo  ! dir2
+              do ii=0,1
+              do jj=0,1
+               psten(ii,jj)= &
+                (one-theta(3))*plotfab(D_DECL(i1+ii,j1+jj,k1),n)+ &
+                theta(3)*plotfab(D_DECL(i1+ii,j1+jj,k1+1),n)
+              enddo
+              enddo
+              do ii=0,1
+               psten1D(ii)=(one-theta(2))*psten(ii,0)+theta(2)*psten(ii,1)
+              enddo
+              slice_data((i+1)*nstate_slice+n)= &
+               (one-theta(1))*psten1D(0)+theta(1)*psten1D(1) 
+             enddo ! n
+
+            else if (inbox.eq.0) then
+             ! do nothing
+            else
+             print *,"inbox invalid"
+             stop
+            endif 
+
+           endif ! x1D in the box?
+
+          enddo ! i
+
+         endif ! inbox=1
+
+        else
+         print *,"slice_dir invalid"
+         stop
+        endif
+       else if (do_slice.eq.0) then
+        ! do nothing
+       else
+        print *,"do_slice invalid"
+        stop
+       endif
+
+        ! interpolation to uniform grid
+
+       igridlo(3)=0
+       igridhi(3)=0
+       do dir=1,SDIM
+        igridlo(dir)=lo(dir)
+        igridhi(dir)=hi(dir)
+       enddo
+
+       do dir=1,SDIM
+        visual_ncell(dir)=vishi(dir)-vislo(dir)+1
+        if (visual_ncell(dir).ge.1) then
+         visual_dx(dir)=(probhi(dir)-problo(dir))/visual_ncell(dir)
+         if (visual_dx(dir).gt.zero) then
+          ! do nothing
          else
-          print *,"sumweight invalid"
+          print *,"visual_dx invalid"
           stop
          endif
-         if (bfact.eq.1) then
-          ! do nothing
-         else if (bfact.gt.1) then
+        else
+         print *,"visual_ncell invalid"
+         stop
+        endif
+       enddo ! dir=1..sdim
+
+       do i=igridlo(1),igridhi(1) 
+       do j=igridlo(2),igridhi(2) 
+       do k=igridlo(3),igridhi(3) 
+         ! iproblo=0
+        call gridsten(xsten,problo,i,j,k,iproblo,bfact,dx,nhalf)
+        icritlo(3)=0
+        icrithi(3)=0
+        do dir=1,SDIM
+         icrit(dir)=NINT((xsten(0,dir)-problo(dir))/visual_dx(dir))
+         icritlo(dir)=icrit(dir)-1
+         xcrit(dir)=icritlo(dir)*visual_dx(dir)+problo(dir)
+         do while (xcrit(dir).gt.xsten(-1,dir)-visual_dx(dir)*VOFTOL) 
+          icritlo(dir)=icritlo(dir)-1
+          xcrit(dir)=xcrit(dir)-visual_dx(dir)
+         enddo
+         icrithi(dir)=icrit(dir)+1
+         xcrit(dir)=icrithi(dir)*visual_dx(dir)+problo(dir)
+         do while (xcrit(dir).lt.xsten(1,dir)+visual_dx(dir)*VOFTOL) 
+          icrithi(dir)=icrithi(dir)+1
+          xcrit(dir)=xcrit(dir)+visual_dx(dir)
+         enddo
+        enddo ! dir=1..sdim
+        do ic=icritlo(1),icrithi(1)
+        do jc=icritlo(2),icrithi(2)
+        do kc=icritlo(3),icrithi(3)
+         dir=1
+         xcrit(dir)=problo(dir)+ic*visual_dx(dir) 
+         dir=2
+         xcrit(dir)=problo(dir)+jc*visual_dx(dir) 
+         if (SDIM.eq.3) then 
+          dir=SDIM
+          xcrit(dir)=problo(dir)+kc*visual_dx(dir) 
+         endif
+         inbox=1
+         do dir=1,SDIM
+          if ((xcrit(dir).lt.xsten(-1,dir)-visual_dx(dir)*VOFTOL).or. &
+              (xcrit(dir).gt.xsten(1,dir)+visual_dx(dir)*VOFTOL)) then
+           inbox=0
+          endif
+         enddo
+         if (inbox.eq.1) then
+          icell(1)=i
+          icell(2)=j
+          icell(3)=k
+
           do dir=1,SDIM
-           if (xcrit(dir).le.xsten(-1,dir)) then
-            xcrit(dir)=xsten(-1,dir)+1.0E-14*visual_dx(dir)
-           endif
-           if (xcrit(dir).ge.xsten(1,dir)) then
-            xcrit(dir)=xsten(1,dir)-1.0E-14*visual_dx(dir)
-           endif
-          enddo ! dir=1..sdim
-
-          ! find stencil for surrounding spectral element.
-          stenlo(3)=0
-          stenhi(3)=0
-          do dir2=1,SDIM
-           dxelem=dx(dir2)*bfact
-           stenlo_index=NINT( (xsten(0,dir2)-problo(dir2))/dxelem-half )
-           stenlo(dir2)=bfact*stenlo_index
-           stenhi(dir2)=stenlo(dir2)+bfact-1
-           if ((icell(dir2).lt.stenlo(dir2)).or. &
-               (icell(dir2).gt.stenhi(dir2))) then
-            print *,"SEM stencil should contain cell"
-            print *,"dir2,icell(dir2),stenlo(dir2),stenhi(dir2) ", &
-             dir2,icell(dir2),stenlo(dir2),stenhi(dir2)
-            print *,"xcrit(dir2) ",xcrit(dir2)
-            print *,"xsten(-1,dir2) ",xsten(-1,dir2)
-            print *,"xsten(0,dir2) ",xsten(0,dir2)
-            print *,"xsten(1,dir2) ",xsten(1,dir2)
-            stop
-           endif
-          enddo ! dir2=1..sdim
-
-          iSEM=stenlo(1) 
-          jSEM=stenlo(2) 
-          kSEM=stenlo(SDIM) 
-
-          ! lower left hand corner of element stencil.
-          ! iproblo=0
-          call gridstenND(xstenND,problo,iSEM,jSEM,kSEM,iproblo,bfact, &
-            dx,nhalf)
-
-          do dir2=1,SDIM
-
-           xcrit(dir2)=xcrit(dir2)-xstenND(0,dir2)
-
-           if ((xcrit(dir2).lt.-INTERP_TOL*dx(dir2)).or. &
-               (xcrit(dir2).gt.(INTERP_TOL+bfact)*dx(dir2))) then
-            print *,"xcrit out of bounds fort_cellgrid"
-            stop
-           endif
-
-          enddo ! dir2=1..sdim
-
-          ncomp_SEM=visual_ncomp-SDIM
-          VORT_comp_SEM=SDIM+3+num_species_var+1
-
-          do n=1,ncomp_SEM
-           SEM_value(n)=zero
-          enddo
-          grid_type=-1  ! ggg  (Gauss in all directions)
-          do dir2=1,SDIM
-           SEMhi(dir2)=bfact-1
+           localfab(dir)=xcrit(dir)
           enddo
 
-          allocate(SEMloc(D_DECL(0:SEMhi(1),0:SEMhi(2),0:SEMhi(SDIM)), &
-                          ncomp_SEM))
+          icell_lo(3)=0
+          icell_hi(3)=0
+          do dir=1,SDIM
+           if (xcrit(dir).lt.xsten(0,dir)) then
+            icell_lo(dir)=icell(dir)-1
+            xstenlo(dir)=xsten(-2,dir)
+            xstenhi(dir)=xsten(0,dir)
+           else
+            icell_lo(dir)=icell(dir)
+            xstenlo(dir)=xsten(0,dir)
+            xstenhi(dir)=xsten(2,dir)
+           endif
+           icell_hi(dir)=icell_lo(dir)+1
+          enddo
 
-          do iSEM=stenlo(1),stenhi(1)
-          do jSEM=stenlo(2),stenhi(2)
-          do kSEM=stenlo(3),stenhi(3)
-           ilocal=iSEM-stenlo(1)
-           jlocal=jSEM-stenlo(2)
-           klocal=kSEM-stenlo(3)
+          do dir=SDIM+1,visual_ncomp
+           localfab(dir)=zero
+          enddo
 
+          sumweight=zero
+          do iBL=icell_lo(1),icell_hi(1)
+          do jBL=icell_lo(2),icell_hi(2)
+          do kBL=icell_lo(3),icell_hi(3)
+           localwt=one
+           do dir=1,SDIM
+            if (xstenhi(dir)-xstenlo(dir).gt.zero) then
+             theta(dir)=(xcrit(dir)-xstenlo(dir))/ &
+              (xstenhi(dir)-xstenlo(dir))
+             if ((theta(dir).ge.-VOFTOL).and. &
+                 (theta(dir).le.one+VOFTOL)) then
+              if (theta(dir).lt.zero) then
+               theta(dir)=zero
+              endif
+              if (theta(dir).gt.one) then
+               theta(dir)=one
+              endif
+              localwt=localwt*(one-theta(dir))
+             else
+              print *,"theta invalid"
+              stop
+             endif
+            else
+             print *,"xstenhi or xstenlo invalid"
+             stop
+            endif
+           enddo ! dir=1..sdim
            do dir=1,nmat
-            lsdistnd(dir)=lsdist(D_DECL(iSEM,jSEM,kSEM),dir)
+            lsdistnd(dir)=lsdist(D_DECL(iBL,jBL,kBL),dir)
            enddo
             ! primary material w.r.t. both fluids and solids.
            call get_primary_material(lsdistnd,nmat,im_crit)
-
            do dir=1,SDIM+1
-            vel_uniform(dir)=vel(D_DECL(iSEM,jSEM,kSEM),dir)
+            vel_uniform(dir)=vel(D_DECL(iBL,jBL,kBL),dir)
            enddo
            do dir=1,2+num_species_var
-            vel_uniform(SDIM+1+dir)=den(D_DECL(iSEM,jSEM,kSEM), &
-               (im_crit-1)*num_state_material+dir)
+            vel_uniform(SDIM+1+dir)=den(D_DECL(iBL,jBL,kBL), &
+                (im_crit-1)*num_state_material+dir)
            enddo
 
-           do n=1,SDIM+1+2+num_species_var
-            SEMloc(D_DECL(ilocal,jlocal,klocal),n)= &
-             vel_uniform(n)
+           current_index=SDIM
+           do dir=1,SDIM+1+2+num_species_var
+            localfab(SDIM+dir)=localfab(SDIM+dir)+ &
+               localwt*vel_uniform(dir)
+            current_index=current_index+1
            enddo
-           SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM)= &
-            trace(D_DECL(iSEM,jSEM,kSEM),5)
+           ! 1. \dot{gamma}
+           ! 2. Tr(A) if viscoelastic
+           !    \dot{gamma} o.t.
+           ! 3. Tr(A) (liquid viscosity - etaS)/etaP  if FENE-CR+Carreau
+           !    Tr(A) if FENE-CR
+           !    \dot{gamma} o.t.
+           ! 4. (3) * f(A)  if viscoelastic
+           !    \dot{gamma} o.t.
+           ! 5. vorticity magnitude.
+           localfab(current_index+1)=localfab(current_index+1)+ &
+               localwt*trace(D_DECL(iBL,jBL,kBL),5)
            do im=1,nmat
-            SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM+im)= &
-             lsdistnd(im)
+            localfab(current_index+1+im)=localfab(current_index+1+im)+ &
+               localwt*lsdistnd(im)
            enddo
-          enddo
-          enddo
+
+           sumweight=sumweight+localwt
+          enddo !kBL
+          enddo !jBL
+          enddo !iBL
+          if (sumweight.gt.zero) then
+           do dir=1,visual_ncomp-SDIM
+            localfab(SDIM+dir)=localfab(SDIM+dir)/sumweight
+           enddo
+          else
+           print *,"sumweight invalid"
+           stop
+          endif
+          if (bfact.eq.1) then
+           ! do nothing
+          else if (bfact.gt.1) then
+           do dir=1,SDIM
+            if (xcrit(dir).le.xsten(-1,dir)) then
+             xcrit(dir)=xsten(-1,dir)+1.0E-14*visual_dx(dir)
+            endif
+            if (xcrit(dir).ge.xsten(1,dir)) then
+             xcrit(dir)=xsten(1,dir)-1.0E-14*visual_dx(dir)
+            endif
+           enddo ! dir=1..sdim
+
+           ! find stencil for surrounding spectral element.
+           stenlo(3)=0
+           stenhi(3)=0
+           do dir2=1,SDIM
+            dxelem=dx(dir2)*bfact
+            stenlo_index=NINT( (xsten(0,dir2)-problo(dir2))/dxelem-half )
+            stenlo(dir2)=bfact*stenlo_index
+            stenhi(dir2)=stenlo(dir2)+bfact-1
+            if ((icell(dir2).lt.stenlo(dir2)).or. &
+                (icell(dir2).gt.stenhi(dir2))) then
+             print *,"SEM stencil should contain cell"
+             print *,"dir2,icell(dir2),stenlo(dir2),stenhi(dir2) ", &
+              dir2,icell(dir2),stenlo(dir2),stenhi(dir2)
+             print *,"xcrit(dir2) ",xcrit(dir2)
+             print *,"xsten(-1,dir2) ",xsten(-1,dir2)
+             print *,"xsten(0,dir2) ",xsten(0,dir2)
+             print *,"xsten(1,dir2) ",xsten(1,dir2)
+             stop
+            endif
+           enddo ! dir2=1..sdim
+
+           iSEM=stenlo(1) 
+           jSEM=stenlo(2) 
+           kSEM=stenlo(SDIM) 
+
+           ! lower left hand corner of element stencil.
+           ! iproblo=0
+           call gridstenND(xstenND,problo,iSEM,jSEM,kSEM,iproblo,bfact, &
+             dx,nhalf)
+
+           do dir2=1,SDIM
+
+            xcrit(dir2)=xcrit(dir2)-xstenND(0,dir2)
+
+            if ((xcrit(dir2).lt.-INTERP_TOL*dx(dir2)).or. &
+                (xcrit(dir2).gt.(INTERP_TOL+bfact)*dx(dir2))) then
+             print *,"xcrit out of bounds fort_cellgrid"
+             stop
+            endif
+
+           enddo ! dir2=1..sdim
+
+           ncomp_SEM=visual_ncomp-SDIM
+           VORT_comp_SEM=SDIM+3+num_species_var+1
+
+           do n=1,ncomp_SEM
+            SEM_value(n)=zero
+           enddo
+           grid_type=-1  ! ggg  (Gauss in all directions)
+           do dir2=1,SDIM
+            SEMhi(dir2)=bfact-1
+           enddo
+
+           allocate(SEMloc(D_DECL(0:SEMhi(1),0:SEMhi(2),0:SEMhi(SDIM)), &
+                           ncomp_SEM))
+
+           do iSEM=stenlo(1),stenhi(1)
+           do jSEM=stenlo(2),stenhi(2)
+           do kSEM=stenlo(3),stenhi(3)
+            ilocal=iSEM-stenlo(1)
+            jlocal=jSEM-stenlo(2)
+            klocal=kSEM-stenlo(3)
+
+            do dir=1,nmat
+             lsdistnd(dir)=lsdist(D_DECL(iSEM,jSEM,kSEM),dir)
+            enddo
+             ! primary material w.r.t. both fluids and solids.
+            call get_primary_material(lsdistnd,nmat,im_crit)
+
+            do dir=1,SDIM+1
+             vel_uniform(dir)=vel(D_DECL(iSEM,jSEM,kSEM),dir)
+            enddo
+            do dir=1,2+num_species_var
+             vel_uniform(SDIM+1+dir)=den(D_DECL(iSEM,jSEM,kSEM), &
+                (im_crit-1)*num_state_material+dir)
+            enddo
+
+            do n=1,SDIM+1+2+num_species_var
+             SEMloc(D_DECL(ilocal,jlocal,klocal),n)= &
+              vel_uniform(n)
+            enddo
+            SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM)= &
+             trace(D_DECL(iSEM,jSEM,kSEM),5)
+            do im=1,nmat
+             SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM+im)= &
+              lsdistnd(im)
+            enddo
+           enddo
+           enddo
+           enddo
+
+           caller_id=4
+           call SEM_INTERP_ELEMENT( &
+            ncomp_SEM,bfact,grid_type, &
+            SEMhi,dx,xcrit,SEMloc,SEM_value,caller_id)
+
+           deallocate(SEMloc)
+
+            ! we discard the SEM interpolated values of lsdist.
+           do dir=SDIM+1,visual_ncomp-nmat
+            localfab(dir)=SEM_value(dir-SDIM)
+           enddo
+
+          else
+           print *,"bfact invalid155"
+           stop
+          endif
+
+          do dir=1,visual_ncomp
+           fabout(D_DECL(ic,jc,kc),dir)=localfab(dir)
           enddo
 
-          caller_id=4
-          call SEM_INTERP_ELEMENT( &
-           ncomp_SEM,bfact,grid_type, &
-           SEMhi,dx,xcrit,SEMloc,SEM_value,caller_id)
-
-          deallocate(SEMloc)
-
-           ! we discard the SEM interpolated values of lsdist.
-          do dir=SDIM+1,visual_ncomp-nmat
-           localfab(dir)=SEM_value(dir-SDIM)
-          enddo
-
+         else if (inbox.eq.0) then
+          ! do nothing
          else
-          print *,"bfact invalid155"
+          print *,"inbox invalid"
           stop
          endif
+        enddo ! kc
+        enddo ! jc
+        enddo ! ic (visit all the uniform cells that overlap the "AMR" cells)
 
-         do dir=1,visual_ncomp
-          fabout(D_DECL(ic,jc,kc),dir)=localfab(dir)
-         enddo
+       enddo ! igridlo(3) .. igridhi(3)
+       enddo ! igridlo(2) .. igridhi(2)
+       enddo ! igridlo(1) .. igridhi(1)
 
-        else if (inbox.eq.0) then
-         ! do nothing
-        else
-         print *,"inbox invalid"
-         stop
-        endif
-       enddo ! kc
-       enddo ! jc
-       enddo ! ic (visit all the uniform cells that overlap the "AMR" cells)
+       deallocate(plotfab)
 
-      enddo ! igridlo(3) .. igridhi(3)
-      enddo ! igridlo(2) .. igridhi(2)
-      enddo ! igridlo(1) .. igridhi(1)
+      else if (plot_grid_type.eq.1) then
+       ! do nothing
+      else
+       print *,"plot_grid_type invalid"
+       stop
+      endif
 
-      deallocate(plotfab)
       deallocate(reconfab)
  
       return

@@ -96,9 +96,11 @@ extern "C" {
 
     void fort_cellgrid(
      int* plot_grid_type,
+     int* ncomp_tower,
      int* tid,
      int* bfact,
-     Real* fabout,AMREX_ARLIM_P(faboutlo),AMREX_ARLIM_P(fabouthi),
+     Real* fabout,
+     AMREX_ARLIM_P(faboutlo),AMREX_ARLIM_P(fabouthi),
      const int* vislo,const int* vishi,
      int* visual_ncomp,
      Real* maskSEM,AMREX_ARLIM_P(maskSEMlo),AMREX_ARLIM_P(maskSEMhi),
@@ -119,6 +121,8 @@ extern "C" {
      Real* elasticforce,
      AMREX_ARLIM_P(elasticforcelo),
      AMREX_ARLIM_P(elasticforcehi),
+     Real* towerfab,
+     AMREX_ARLIM_P(towerfablo),AMREX_ARLIM_P(towerfabhi),
      const Real* problo,
      const Real* probhi,
      const Real* dx,
