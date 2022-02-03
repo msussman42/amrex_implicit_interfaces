@@ -1928,6 +1928,7 @@ END SUBROUTINE SIMP
 
        ! called from: NavierStokes2.cpp
       subroutine fort_cellgrid( &
+       plot_grid_type, &
        tid, &
        bfact, &
        fabout,DIMS(fabout), &
@@ -1952,6 +1953,7 @@ END SUBROUTINE SIMP
        problo, &
        probhi, &
        dx, &
+       tilelo,tilehi, &
        lo,hi, &
        level, &
        finest_level, &
@@ -1980,6 +1982,7 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: plot_grid_type
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: do_plot
@@ -2002,6 +2005,7 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: visual_tessellate_vfrac
       INTEGER_T, intent(in) :: visual_ncomp
       INTEGER_T, intent(in) :: vislo(SDIM), vishi(SDIM)
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM), hi(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(fabout)
       INTEGER_T, intent(in) :: DIMDEC(maskSEM)

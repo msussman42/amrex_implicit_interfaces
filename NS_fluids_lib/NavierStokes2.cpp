@@ -7084,9 +7084,10 @@ void NavierStokes::check_for_NAN(MultiFab* mf,int id) {
   warning_cutoff);  
 
  std::fflush(NULL);
-} // subroutine check_for_NAN
+} // end subroutine check_for_NAN
 
 void NavierStokes::output_zones(
+   int plot_grid_type,
    FArrayBox& visual_fab_output,
    Box& visual_domain,
    int visual_ncomp,
@@ -7167,364 +7168,570 @@ void NavierStokes::output_zones(
  if (tecplot_max_level<tecplot_finest_level)
   tecplot_finest_level=tecplot_max_level;
 
+ NavierStokes& ns_finest=getLevel(tecplot_finest_level);
+ const Real* dxfinest = ns_finest.geom.CellSize();
+
+ // x,y,z,xvel,yvel,zvel,PMG,PEOS,div,den,Temp,KE
+ // (value of material with LS>0)
+ int nslice=0;
+ int nstate_slice=2*AMREX_SPACEDIM+6; 
+
+ if ((slice_dir>=0)&&(slice_dir<AMREX_SPACEDIM)) {
+  const Box& domain_finest = ns_finest.geom.Domain();
+  const int* domlo_finest = domain_finest.loVect();
+  const int* domhi_finest = domain_finest.hiVect();
+  nslice=domhi_finest[slice_dir]-domlo_finest[slice_dir]+3;
+ } else
+  amrex::Error("slice_dir invalid");
+
+ int elastic_ncomp=viscoelasticmf->nComp();
+ if (elastic_ncomp==
+     num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE+AMREX_SPACEDIM) {
+  // do nothing
+ } else
+  amrex::Error("elastic_ncomp invalid");
+
+ check_for_NAN(localMF[MASKSEM_MF],1);
+ check_for_NAN(velmf,1);
+ check_for_NAN(localMF[SLOPE_RECON_MF],2); // id==2
+ check_for_NAN(presmf,3);
+ check_for_NAN(divmf,4);
+ check_for_NAN(div_data,5);
+ check_for_NAN(denmf,6);
+ check_for_NAN(mom_denmf,6);
+ check_for_NAN(viscoelasticmf,6);
+ check_for_NAN(lsdistmf,7);
+ check_for_NAN(viscmf,9);
+ check_for_NAN(conductmf,9);
+ check_for_NAN(magtracemf,10);
+ check_for_NAN(elasticforcemf,10);
+ int bfact=parent->Space_blockingFactor(level);
+
  if (level<=tecplot_finest_level) {
 
-  BoxArray cgrids(grids);
-  BoxList cgrids_list(cgrids);
+  if (plot_grid_type==0) {
 
-  if (level<tecplot_finest_level) {
-   NavierStokes& ns_finer=getLevel(level+1);
-   BoxArray fgrids(ns_finer.grids);
-   fgrids.coarsen(2);
-   const Box& domain=geom.Domain();
-   BoxList fgrids_list(fgrids);
-   BoxList fgrids_complement=amrex::complementIn(domain,fgrids_list);
-   cgrids_list.intersect(fgrids_complement);
-  } // level<tecplot_finest_level
+   BoxArray cgrids(grids);
+   BoxList cgrids_list(cgrids);
 
-  BoxArray cgrids_minusBA_temp(cgrids_list);
-  grids_per_level=cgrids_minusBA_temp.size();
-  cgrids_minusBA=cgrids_minusBA_temp;
+   if (level<tecplot_finest_level) {
+    NavierStokes& ns_finer=getLevel(level+1);
+    BoxArray fgrids(ns_finer.grids);
+    fgrids.coarsen(2);
+    const Box& domain=geom.Domain();
+    BoxList fgrids_list(fgrids);
+    BoxList fgrids_complement=amrex::complementIn(domain,fgrids_list);
+    cgrids_list.intersect(fgrids_complement);
+   } // level<tecplot_finest_level
 
-  if (level==tecplot_finest_level) {
-   if (grids.size()!=grids_per_level)
-    amrex::Error("grids_per_level incorrect");
-  }
+   BoxArray cgrids_minusBA_temp(cgrids_list);
+   grids_per_level=cgrids_minusBA_temp.size();
+   cgrids_minusBA=cgrids_minusBA_temp;
 
-  NavierStokes& ns_finest=getLevel(tecplot_finest_level);
-  const Real* dxfinest = ns_finest.geom.CellSize();
+   if (level==tecplot_finest_level) {
+    if (grids.size()!=grids_per_level)
+     amrex::Error("grids_per_level incorrect");
+   }
 
-   // x,y,z,xvel,yvel,zvel,PMG,PEOS,div,den,Temp,KE
-   // (value of material with LS>0)
-  int nslice=0;
-  int nstate_slice=2*AMREX_SPACEDIM+6; 
- 
-  if ((slice_dir>=0)&&(slice_dir<AMREX_SPACEDIM)) {
-   const Box& domain_finest = ns_finest.geom.Domain();
-   const int* domlo_finest = domain_finest.loVect();
-   const int* domhi_finest = domain_finest.hiVect();
-   nslice=domhi_finest[slice_dir]-domlo_finest[slice_dir]+3;
-  } else
-   amrex::Error("slice_dir invalid");
+   if (grids_per_level>0) {
 
-  if (grids_per_level>0) {
+    DistributionMapping cgrids_minus_map(cgrids_minusBA);
 
-   DistributionMapping cgrids_minus_map(cgrids_minusBA);
+    MultiFab* maskSEM_minus=new MultiFab(cgrids_minusBA,cgrids_minus_map,1,0,
+     MFInfo().SetTag("maskSEM_minus"),FArrayBoxFactory());
 
-   MultiFab* maskSEM_minus=new MultiFab(cgrids_minusBA,cgrids_minus_map,1,0,
-    MFInfo().SetTag("maskSEM_minus"),FArrayBoxFactory());
+    MultiFab* velmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+     (AMREX_SPACEDIM+1),1,
+     MFInfo().SetTag("velmfminus"),FArrayBoxFactory());
 
-   MultiFab* velmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
-    (AMREX_SPACEDIM+1),1,
-    MFInfo().SetTag("velmfminus"),FArrayBoxFactory());
-
-   MultiFab* vofmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+    MultiFab* vofmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      nmat*ngeom_recon,1,
      MFInfo().SetTag("vofminus"),FArrayBoxFactory());
 
-   MultiFab* presmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+    MultiFab* presmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      1,1,
      MFInfo().SetTag("presmfminus"),FArrayBoxFactory());
 
-   MultiFab* divmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+    MultiFab* divmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      1,1,
      MFInfo().SetTag("divmfminus"),FArrayBoxFactory());
 
-   MultiFab* div_data_minus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+    MultiFab* div_data_minus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      1,1,
      MFInfo().SetTag("div_data_minus"),FArrayBoxFactory());
 
-   MultiFab* denmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+    MultiFab* denmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      nden,1,
      MFInfo().SetTag("denmfminus"),FArrayBoxFactory());
 
-   MultiFab* mom_denmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+    MultiFab* mom_denmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      nmat,1,
      MFInfo().SetTag("mom_denmfminus"),FArrayBoxFactory());
 
-   int elastic_ncomp=viscoelasticmf->nComp();
-   if (elastic_ncomp==
-       num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE+AMREX_SPACEDIM) {
-    // do nothing
-   } else
-    amrex::Error("elastic_ncomp invalid");
+    MultiFab* viscoelasticmfminus=
+     new MultiFab(cgrids_minusBA,cgrids_minus_map,
+      elastic_ncomp,1,
+      MFInfo().SetTag("viscoelasticmfminus"),FArrayBoxFactory());
 
-   MultiFab* viscoelasticmfminus=
-    new MultiFab(cgrids_minusBA,cgrids_minus_map,
-     elastic_ncomp,1,
-     MFInfo().SetTag("viscoelasticmfminus"),FArrayBoxFactory());
+    MultiFab* lsdistmfminus=
+     new MultiFab(cgrids_minusBA,cgrids_minus_map,
+ 	 nmat*(AMREX_SPACEDIM+1),1,
+         MFInfo().SetTag("lsdistmfminus"),FArrayBoxFactory());
 
-   MultiFab* lsdistmfminus=
-    new MultiFab(cgrids_minusBA,cgrids_minus_map,
-	nmat*(AMREX_SPACEDIM+1),1,
-        MFInfo().SetTag("lsdistmfminus"),FArrayBoxFactory());
-
-   MultiFab* viscmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+    MultiFab* viscmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      nmat,1,
      MFInfo().SetTag("viscmfminus"),FArrayBoxFactory());
 
-   MultiFab* conductmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+    MultiFab* conductmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      nmat,1,
      MFInfo().SetTag("conductmfminus"),FArrayBoxFactory());
 
-   MultiFab* magtracemfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+    MultiFab* magtracemfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      5*nmat,1,
      MFInfo().SetTag("magtracemfminus"),FArrayBoxFactory());
 
-   MultiFab* elasticforcemfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+    MultiFab* elasticforcemfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      AMREX_SPACEDIM,1,
      MFInfo().SetTag("elasticforcemfminus"),FArrayBoxFactory());
 
-   ParallelDescriptor::Barrier();
+    ParallelDescriptor::Barrier();
 
      // FabArray.H     
      // scomp,dcomp,ncomp,s_nghost,d_nghost
-   maskSEM_minus->ParallelCopy(*localMF[MASKSEM_MF],0,0,
-    1,0,0,geom.periodicity());
+    maskSEM_minus->ParallelCopy(*localMF[MASKSEM_MF],0,0,
+     1,0,0,geom.periodicity());
 
-   check_for_NAN(localMF[MASKSEM_MF],1);
-   check_for_NAN(maskSEM_minus,11);
+    check_for_NAN(maskSEM_minus,11);
 
      // FabArray.H     
      // scomp,dcomp,ncomp,s_nghost,d_nghost
-   velmfminus->ParallelCopy(*velmf,0,0,
-    (AMREX_SPACEDIM+1),1,1,geom.periodicity());
+    velmfminus->ParallelCopy(*velmf,0,0,
+     (AMREX_SPACEDIM+1),1,1,geom.periodicity());
 
-   check_for_NAN(velmf,1);
-   check_for_NAN(velmfminus,11);
+    check_for_NAN(velmfminus,11);
  
-   vofmfminus->ParallelCopy(*localMF[SLOPE_RECON_MF],0,0,
-    nmat*ngeom_recon,1,1,geom.periodicity());
+    vofmfminus->ParallelCopy(*localMF[SLOPE_RECON_MF],0,0,
+     nmat*ngeom_recon,1,1,geom.periodicity());
 
-   check_for_NAN(localMF[SLOPE_RECON_MF],2); // id==2
-   check_for_NAN(vofmfminus,12);
-
-   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   presmfminus->ParallelCopy(*presmf,0,0,1,
-		   1,1,geom.periodicity()); 
-
-   check_for_NAN(presmf,3);
-   check_for_NAN(presmfminus,13);
-
-   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   divmfminus->ParallelCopy(*divmf,0,0,1,
-		   1,1,geom.periodicity()); 
-
-   check_for_NAN(divmf,4);
-   check_for_NAN(divmfminus,14);
-
-   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   div_data_minus->ParallelCopy(*div_data,0,0,1,
-		   1,1,geom.periodicity()); 
-
-   check_for_NAN(div_data,5);
-   check_for_NAN(div_data_minus,15);
-
-   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   denmfminus->ParallelCopy(*denmf,0,0,nden,
-		   1,1,geom.periodicity()); 
-
-   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   mom_denmfminus->ParallelCopy(*mom_denmf,0,0,nmat,
-		   1,1,geom.periodicity()); 
-
-   check_for_NAN(denmf,6);
-   check_for_NAN(denmfminus,16);
-   check_for_NAN(mom_denmf,6);
-   check_for_NAN(mom_denmfminus,16);
+    check_for_NAN(vofmfminus,12);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   viscoelasticmfminus->ParallelCopy(*viscoelasticmf,0,0,
+    presmfminus->ParallelCopy(*presmf,0,0,1,
+		   1,1,geom.periodicity()); 
+
+    check_for_NAN(presmfminus,13);
+
+    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+    divmfminus->ParallelCopy(*divmf,0,0,1,
+		   1,1,geom.periodicity()); 
+
+    check_for_NAN(divmfminus,14);
+
+    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+    div_data_minus->ParallelCopy(*div_data,0,0,1,
+		   1,1,geom.periodicity()); 
+
+    check_for_NAN(div_data_minus,15);
+
+    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+    denmfminus->ParallelCopy(*denmf,0,0,nden,
+		   1,1,geom.periodicity()); 
+
+    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+    mom_denmfminus->ParallelCopy(*mom_denmf,0,0,nmat,
+		   1,1,geom.periodicity()); 
+
+    check_for_NAN(denmfminus,16);
+    check_for_NAN(mom_denmfminus,16);
+
+     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+    viscoelasticmfminus->ParallelCopy(*viscoelasticmf,0,0,
      elastic_ncomp,
      1,1,geom.periodicity()); 
-   check_for_NAN(viscoelasticmf,6);
-   check_for_NAN(viscoelasticmfminus,16);
+    check_for_NAN(viscoelasticmfminus,16);
 
-   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   lsdistmfminus->ParallelCopy(*lsdistmf,0,0,nmat*(1+AMREX_SPACEDIM),
+    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+    lsdistmfminus->ParallelCopy(*lsdistmf,0,0,nmat*(1+AMREX_SPACEDIM),
      1,1,geom.periodicity()); 
 
-   check_for_NAN(lsdistmf,7);
-   check_for_NAN(lsdistmfminus,18);
+    check_for_NAN(lsdistmfminus,18);
 
-   if (1==0) {
-    int visc_ncomp=viscmf->nComp();
-    int visc_ngrow=viscmf->nGrow();
-    const BoxArray mfBA=viscmf->boxArray();
-    std::cout << "viscmf ncomp= " << visc_ncomp << '\n';
-    std::cout << "viscmf ngrow= " << visc_ngrow << '\n';
-    std::cout << "viscmf BA= " << mfBA << '\n';
-   }
-
-   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   viscmfminus->ParallelCopy(*viscmf,0,0,nmat,
+    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+    viscmfminus->ParallelCopy(*viscmf,0,0,nmat,
 		   1,1,geom.periodicity()); 
 
-   check_for_NAN(viscmf,9);
-   check_for_NAN(viscmfminus,19);
+    check_for_NAN(viscmfminus,19);
 
-   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   conductmfminus->ParallelCopy(*conductmf,0,0,nmat,
+    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+    conductmfminus->ParallelCopy(*conductmf,0,0,nmat,
                    1,1,geom.periodicity());
 
-   check_for_NAN(conductmf,9);
-   check_for_NAN(conductmfminus,19);
+    check_for_NAN(conductmfminus,19);
 
-   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   magtracemfminus->ParallelCopy(*magtracemf,0,0,5*nmat,
+    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+    magtracemfminus->ParallelCopy(*magtracemf,0,0,5*nmat,
 		   1,1,geom.periodicity()); 
 
-   check_for_NAN(magtracemf,10);
-   check_for_NAN(magtracemfminus,20);
+    check_for_NAN(magtracemfminus,20);
  
-   ParallelDescriptor::Barrier();
+    ParallelDescriptor::Barrier();
 
-   // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-   elasticforcemfminus->ParallelCopy(*elasticforcemf,0,0,AMREX_SPACEDIM,
+    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+    elasticforcemfminus->ParallelCopy(*elasticforcemf,0,0,AMREX_SPACEDIM,
 		   1,1,geom.periodicity()); 
 
-   check_for_NAN(elasticforcemf,10);
-   check_for_NAN(elasticforcemfminus,20);
+    check_for_NAN(elasticforcemfminus,20);
  
-   ParallelDescriptor::Barrier();
+    ParallelDescriptor::Barrier();
 
-   int bfact=parent->Space_blockingFactor(level);
 
-   if (thread_class::nthreads<1)
-    amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(velmfminus->boxArray().d_numPts());
+    if (thread_class::nthreads<1)
+     amrex::Error("thread_class::nthreads invalid");
+    thread_class::init_d_numPts(velmfminus->boxArray().d_numPts());
 
-// cannot do openmp here until each thread has its own
-// file handle.  Also, the update to visual_fab_output is not thread safe.
-// MFIter (const FabArrayBase& fabarray,unsigned char flags_=0) ,
-// is no tiling.
-   for (MFIter mfi(*velmfminus,false); mfi.isValid(); ++mfi) {
+ // cannot do openmp here until each thread has its own
+ // file handle.  Also, the update to visual_fab_output is not thread safe.
+ // MFIter (const FabArrayBase& fabarray,unsigned char flags_=0) ,
+ // is no tiling.
+    for (MFIter mfi(*velmfminus,false); mfi.isValid(); ++mfi) {
 
-    if (cgrids_minusBA[mfi.index()] != mfi.validbox())
-     amrex::Error("cgrids_minusBA[mfi.index()] != mfi.validbox()");
+     if (cgrids_minusBA[mfi.index()] != mfi.validbox())
+      amrex::Error("cgrids_minusBA[mfi.index()] != mfi.validbox()");
 
-    const Box& tilegrid = mfi.tilebox();
+     const Box& tilegrid = mfi.tilebox();
 
-    int tid_current=ns_thread();
-    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-     amrex::Error("tid_current invalid");
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+     int tid_current=ns_thread();
+     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+      amrex::Error("tid_current invalid");
+     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    const int gridno = mfi.index();
+     const int gridno = mfi.index();
 
-    // cgrids_minusBA=grids at finest level.
-    const Box& fabgrid = cgrids_minusBA[gridno];
+     // cgrids_minusBA=grids at finest level.
+     const Box& fabgrid = cgrids_minusBA[gridno];
 
-    const int* lo=fabgrid.loVect();
-    const int* hi=fabgrid.hiVect();
+     const int* lo=fabgrid.loVect();
+     const int* hi=fabgrid.hiVect();
 
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-     if (lo[dir]%bfact!=0)
-      amrex::Error("lo not divisible by bfact");
-     if ((hi[dir]+1)%bfact!=0)
-      amrex::Error("hi+1 not divisible by bfact");
- 
-    } // dir
-
-    if (level==tecplot_finest_level) {
-     if (cgrids_minusBA[gridno]!=grids[gridno])
-      amrex::Error("box mismatch1");
-    } // level=tecplot_finest_level
-
-    FArrayBox& maskSEMfab=(*maskSEM_minus)[mfi];
-    FArrayBox& velfab=(*velmfminus)[mfi];
-    FArrayBox& voffab=(*vofmfminus)[mfi];
-    FArrayBox& presfab=(*presmfminus)[mfi];
-    FArrayBox& divfab=(*divmfminus)[mfi];
-    FArrayBox& div_data_fab=(*div_data_minus)[mfi];
-    FArrayBox& denfab=(*denmfminus)[mfi];
-    FArrayBox& mom_denfab=(*mom_denmfminus)[mfi];
-    FArrayBox& elasticfab=(*viscoelasticmfminus)[mfi];
-    FArrayBox& lsdistfab=(*lsdistmfminus)[mfi];
-    FArrayBox& viscfab=(*viscmfminus)[mfi];
-    FArrayBox& conductfab=(*conductmfminus)[mfi];
-    FArrayBox& magtracefab=(*magtracemfminus)[mfi];
-    FArrayBox& elasticforcefab=(*elasticforcemfminus)[mfi];
-
-      // in: NAVIERSTOKES_3D.F90
-    fort_cellgrid(
-     &tid_current,
-     &bfact,
-     visual_fab_output.dataPtr(),
-     ARLIM(visual_fab_output.loVect()),
-     ARLIM(visual_fab_output.hiVect()),
-     visual_domain.loVect(),
-     visual_domain.hiVect(),
-     &visual_ncomp,
-     maskSEMfab.dataPtr(),
-     ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
-     velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-     voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
-     presfab.dataPtr(),ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
-     divfab.dataPtr(),ARLIM(divfab.loVect()),ARLIM(divfab.hiVect()),
-     div_data_fab.dataPtr(),
-     ARLIM(div_data_fab.loVect()),ARLIM(div_data_fab.hiVect()),
-     denfab.dataPtr(),
-     ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
-     mom_denfab.dataPtr(),
-     ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
-     elasticfab.dataPtr(),
-     ARLIM(elasticfab.loVect()),ARLIM(elasticfab.hiVect()),
-     lsdistfab.dataPtr(),ARLIM(lsdistfab.loVect()),ARLIM(lsdistfab.hiVect()),
-     viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
-     conductfab.dataPtr(),ARLIM(conductfab.loVect()),ARLIM(conductfab.hiVect()),
-     magtracefab.dataPtr(),
-     ARLIM(magtracefab.loVect()),ARLIM(magtracefab.hiVect()),
-     elasticforcefab.dataPtr(),
-     ARLIM(elasticforcefab.loVect()),ARLIM(elasticforcefab.hiVect()),
-     prob_lo,
-     prob_hi,
-     dx,
-     lo,hi,
-     &level,
-     &finest_level,
-     &gridno,
-     &visual_tessellate_vfrac,  // = 0,1,3
-     &rzflag,
-     &nmat,
-     &nparts,
-     &nparts_def,
-     im_solid_map_ptr,
-     &elastic_ncomp,
-     slice_data,
-     &nslice,
-     &nstate_slice,&slice_dir,
-     xslice.dataPtr(),
-     dxfinest,
-     &do_plot,
-     &do_slice,
-     &visual_nddata_format);
-   }  // mfi
-   ns_reconcile_d_num(157);
-
-   delete viscoelasticmfminus;
-
-   delete maskSEM_minus;
-   delete velmfminus;
-   delete vofmfminus;
-   delete presmfminus;
-   delete divmfminus;
-   delete div_data_minus;
-   delete denmfminus;
-   delete mom_denmfminus;
-   delete lsdistmfminus;
-   delete viscmfminus;
-   delete conductmfminus;
-   delete magtracemfminus;
-   delete elasticforcemfminus;
-
-  } else if (grids_per_level==0) {
+      if (lo[dir]%bfact!=0)
+       amrex::Error("lo not divisible by bfact");
+      if ((hi[dir]+1)%bfact!=0)
+       amrex::Error("hi+1 not divisible by bfact");
   
-   // do nothing
+     } // dir
 
-  } else 
-   amrex::Error("grids_per_level is corrupt");
+     if (level==tecplot_finest_level) {
+      if (cgrids_minusBA[gridno]!=grids[gridno])
+       amrex::Error("box mismatch1");
+     } // level=tecplot_finest_level
+
+     FArrayBox& maskSEMfab=(*maskSEM_minus)[mfi];
+     FArrayBox& velfab=(*velmfminus)[mfi];
+     FArrayBox& voffab=(*vofmfminus)[mfi];
+     FArrayBox& presfab=(*presmfminus)[mfi];
+     FArrayBox& divfab=(*divmfminus)[mfi];
+     FArrayBox& div_data_fab=(*div_data_minus)[mfi];
+     FArrayBox& denfab=(*denmfminus)[mfi];
+     FArrayBox& mom_denfab=(*mom_denmfminus)[mfi];
+     FArrayBox& elasticfab=(*viscoelasticmfminus)[mfi];
+     FArrayBox& lsdistfab=(*lsdistmfminus)[mfi];
+     FArrayBox& viscfab=(*viscmfminus)[mfi];
+     FArrayBox& conductfab=(*conductmfminus)[mfi];
+     FArrayBox& magtracefab=(*magtracemfminus)[mfi];
+     FArrayBox& elasticforcefab=(*elasticforcemfminus)[mfi];
+
+       // declared in: NAVIERSTOKES_3D.F90
+     fort_cellgrid(
+      &plot_grid_type,
+      &tid_current,
+      &bfact,
+      visual_fab_output.dataPtr(),
+      ARLIM(visual_fab_output.loVect()),
+      ARLIM(visual_fab_output.hiVect()),
+      visual_domain.loVect(),
+      visual_domain.hiVect(),
+      &visual_ncomp,
+      maskSEMfab.dataPtr(),
+      ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
+      velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+      voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
+      presfab.dataPtr(),ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
+      divfab.dataPtr(),ARLIM(divfab.loVect()),ARLIM(divfab.hiVect()),
+      div_data_fab.dataPtr(),
+      ARLIM(div_data_fab.loVect()),ARLIM(div_data_fab.hiVect()),
+      denfab.dataPtr(),
+      ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+      mom_denfab.dataPtr(),
+      ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
+      elasticfab.dataPtr(),
+      ARLIM(elasticfab.loVect()),ARLIM(elasticfab.hiVect()),
+      lsdistfab.dataPtr(),ARLIM(lsdistfab.loVect()),ARLIM(lsdistfab.hiVect()),
+      viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+      conductfab.dataPtr(),
+      ARLIM(conductfab.loVect()),ARLIM(conductfab.hiVect()),
+      magtracefab.dataPtr(),
+      ARLIM(magtracefab.loVect()),ARLIM(magtracefab.hiVect()),
+      elasticforcefab.dataPtr(),
+      ARLIM(elasticforcefab.loVect()),ARLIM(elasticforcefab.hiVect()),
+      prob_lo,
+      prob_hi,
+      dx,
+      lo,hi, //tilelo,tilehi
+      lo,hi,
+      &level,
+      &finest_level,
+      &gridno,
+      &visual_tessellate_vfrac,  // = 0,1,3
+      &rzflag,
+      &nmat,
+      &nparts,
+      &nparts_def,
+      im_solid_map_ptr,
+      &elastic_ncomp,
+      slice_data,
+      &nslice,
+      &nstate_slice,&slice_dir,
+      xslice.dataPtr(),
+      dxfinest,
+      &do_plot,
+      &do_slice,
+      &visual_nddata_format);
+    }  // mfi
+    ns_reconcile_d_num(157);
+
+    delete viscoelasticmfminus;
+
+    delete maskSEM_minus;
+    delete velmfminus;
+    delete vofmfminus;
+    delete presmfminus;
+    delete divmfminus;
+    delete div_data_minus;
+    delete denmfminus;
+    delete mom_denmfminus;
+    delete lsdistmfminus;
+    delete viscmfminus;
+    delete conductmfminus;
+    delete magtracemfminus;
+    delete elasticforcemfminus;
+
+   } else if (grids_per_level==0) {
+  
+    // do nothing
+
+   } else 
+    amrex::Error("grids_per_level is corrupt");
+
+  } else if (plot_grid_type==1) {
+
+   BoxArray cgrids(grids);
+   BoxList cgrids_list(cgrids);
+
+   BoxArray cgrids_minusBA_temp(cgrids_list);
+   int grids_per_level_local=cgrids_minusBA_temp.size();
+   BoxArray cgrids_minusBA_local;
+   cgrids_minusBA_local=cgrids_minusBA_temp;
+
+   if (grids.size()!=grids_per_level_local) {
+    amrex::Error("grids_per_level_local incorrect");
+   }
+
+   if (grids_per_level_local>0) {
+
+    DistributionMapping cgrids_minus_map(cgrids_minusBA_local);
+
+    ParallelDescriptor::Barrier();
+
+    MultiFab* maskSEM_minus=localMF[MASKSEM_MF];
+    check_for_NAN(maskSEM_minus,11);
+
+    MultiFab* velmfminus=velmf;
+    check_for_NAN(velmfminus,11);
+ 
+    MultiFab* vofmfminus=localMF[SLOPE_RECON_MF];
+    check_for_NAN(vofmfminus,12);
+
+    MultiFab* presmfminus=presmf;
+    check_for_NAN(presmfminus,13);
+
+    MultiFab* divmfminus=divmf;
+    check_for_NAN(divmfminus,14);
+
+    MultiFab* div_data_minus=div_data;
+    check_for_NAN(div_data_minus,15);
+
+    MultiFab* denmfminus=denmf;
+    MultiFab* mom_denmfminus=mom_denmf;
+
+    check_for_NAN(denmfminus,16);
+    check_for_NAN(mom_denmfminus,16);
+
+    MultiFab* viscoelasticmfminus=viscoelasticmf;
+    check_for_NAN(viscoelasticmfminus,16);
+
+    MultiFab* lsdistmfminus=lsdistmf;
+    check_for_NAN(lsdistmfminus,18);
+
+    MultiFab* viscmfminus=viscmf;
+    check_for_NAN(viscmfminus,19);
+
+    MultiFab* conductmfminus=conductmf;
+    check_for_NAN(conductmfminus,19);
+
+    MultiFab* magtracemfminus=magtracemf;
+    check_for_NAN(magtracemfminus,20);
+ 
+    MultiFab* elasticforcemfminus=elasticforcemf;
+    check_for_NAN(elasticforcemfminus,20);
+ 
+    ParallelDescriptor::Barrier();
+
+    if (thread_class::nthreads<1)
+     amrex::Error("thread_class::nthreads invalid");
+    thread_class::init_d_numPts(velmfminus->boxArray().d_numPts());
+
+    bool use_tiling=ns_tiling;
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+    for (MFIter mfi(*velmfminus,use_tiling); mfi.isValid(); ++mfi) {
+
+     if (cgrids_minusBA_local[mfi.index()] != mfi.validbox())
+      amrex::Error("cgrids_minusBA_local[mfi.index()] != mfi.validbox()");
+
+     const Box& tilegrid = mfi.tilebox();
+
+     int tid_current=ns_thread();
+     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+      amrex::Error("tid_current invalid");
+     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+     const int gridno = mfi.index();
+
+     const int* tilelo=tilegrid.loVect();
+     const int* tilehi=tilegrid.hiVect();
+
+     // cgrids_minusBA_local=grids
+     const Box& fabgrid = cgrids_minusBA_local[gridno];
+
+     const int* lo=fabgrid.loVect();
+     const int* hi=fabgrid.hiVect();
+
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+
+      if (lo[dir]%bfact!=0)
+       amrex::Error("lo not divisible by bfact");
+      if ((hi[dir]+1)%bfact!=0)
+       amrex::Error("hi+1 not divisible by bfact");
+  
+     } // dir
+
+     if (cgrids_minusBA_local[gridno]!=grids[gridno])
+      amrex::Error("box mismatch1");
+
+     FArrayBox& maskSEMfab=(*maskSEM_minus)[mfi];
+     FArrayBox& velfab=(*velmfminus)[mfi];
+     FArrayBox& voffab=(*vofmfminus)[mfi];
+     FArrayBox& presfab=(*presmfminus)[mfi];
+     FArrayBox& divfab=(*divmfminus)[mfi];
+     FArrayBox& div_data_fab=(*div_data_minus)[mfi];
+     FArrayBox& denfab=(*denmfminus)[mfi];
+     FArrayBox& mom_denfab=(*mom_denmfminus)[mfi];
+     FArrayBox& elasticfab=(*viscoelasticmfminus)[mfi];
+     FArrayBox& lsdistfab=(*lsdistmfminus)[mfi];
+     FArrayBox& viscfab=(*viscmfminus)[mfi];
+     FArrayBox& conductfab=(*conductmfminus)[mfi];
+     FArrayBox& magtracefab=(*magtracemfminus)[mfi];
+     FArrayBox& elasticforcefab=(*elasticforcemfminus)[mfi];
+
+       // declared in: NAVIERSTOKES_3D.F90
+     fort_cellgrid(
+      &plot_grid_type,
+      &tid_current,
+      &bfact,
+      visual_fab_output.dataPtr(),
+      ARLIM(visual_fab_output.loVect()),
+      ARLIM(visual_fab_output.hiVect()),
+      visual_domain.loVect(),
+      visual_domain.hiVect(),
+      &visual_ncomp,
+      maskSEMfab.dataPtr(),
+      ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
+      velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
+      voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
+      presfab.dataPtr(),ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
+      divfab.dataPtr(),ARLIM(divfab.loVect()),ARLIM(divfab.hiVect()),
+      div_data_fab.dataPtr(),
+      ARLIM(div_data_fab.loVect()),ARLIM(div_data_fab.hiVect()),
+      denfab.dataPtr(),
+      ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+      mom_denfab.dataPtr(),
+      ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
+      elasticfab.dataPtr(),
+      ARLIM(elasticfab.loVect()),ARLIM(elasticfab.hiVect()),
+      lsdistfab.dataPtr(),ARLIM(lsdistfab.loVect()),ARLIM(lsdistfab.hiVect()),
+      viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+      conductfab.dataPtr(),
+      ARLIM(conductfab.loVect()),ARLIM(conductfab.hiVect()),
+      magtracefab.dataPtr(),
+      ARLIM(magtracefab.loVect()),ARLIM(magtracefab.hiVect()),
+      elasticforcefab.dataPtr(),
+      ARLIM(elasticforcefab.loVect()),ARLIM(elasticforcefab.hiVect()),
+      prob_lo,
+      prob_hi,
+      dx,
+      tilelo,tilehi,
+      lo,hi,
+      &level,
+      &finest_level,
+      &gridno,
+      &visual_tessellate_vfrac,  // = 0,1,3
+      &rzflag,
+      &nmat,
+      &nparts,
+      &nparts_def,
+      im_solid_map_ptr,
+      &elastic_ncomp,
+      slice_data,
+      &nslice,
+      &nstate_slice,&slice_dir,
+      xslice.dataPtr(),
+      dxfinest,
+      &do_plot,
+      &do_slice,
+      &visual_nddata_format);
+    }  // mfi
+} //omp
+    ns_reconcile_d_num(157);
+
+    delete viscoelasticmfminus;
+
+    delete maskSEM_minus;
+    delete velmfminus;
+    delete vofmfminus;
+    delete presmfminus;
+    delete divmfminus;
+    delete div_data_minus;
+    delete denmfminus;
+    delete mom_denmfminus;
+    delete lsdistmfminus;
+    delete viscmfminus;
+    delete conductmfminus;
+    delete magtracemfminus;
+    delete elasticforcemfminus;
+
+   } else if (grids_per_level_local==0) {
+  
+    amrex::Error("grids_per_level_local cannot be 0");
+
+   } else 
+    amrex::Error("grids_per_level_local is corrupt");
+
+  } else
+   amrex::Error("plot_grid_type invalid");
 
  } else if (level<=finest_level) {
 
@@ -7534,7 +7741,7 @@ void NavierStokes::output_zones(
   amrex::Error("level invalid output_zones");
  }
 
-}  // subroutine output_zones
+}  // end subroutine output_zones
 
 
 // data_dir=-1 cell centered data
@@ -7718,7 +7925,7 @@ void NavierStokes::Sanity_output_zones(
   amrex::Error("level invalid Sanity_output_zones");
  }
 
-}  // subroutine Sanity_output_zones
+}  // end subroutine Sanity_output_zones
 
 
 // spectral_override==0 => always low order
