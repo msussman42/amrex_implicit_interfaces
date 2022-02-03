@@ -1217,6 +1217,7 @@ protected:
 
       //declared in: NavierStokes2.cpp
     void output_zones(
+      int plot_grid_type,
       FArrayBox& visual_fab_output,
       Box& visual_domain,
       int visual_ncomp,
@@ -2109,9 +2110,9 @@ protected:
     static int visual_divergence_plot_int; //def=0
     static int visual_WALLVEL_plot_int; //def=0
     static int visual_drag_plot_int; //def=0
-    //0=tecplot only
-    //1=plt file only
-    //2=both tecplot and plt file format.
+    //0=tecplot nodes
+    //1=plt file cells
+    //2=tecplot cells (piecewise constant reconstruction).
     static int visual_nddata_format; //def=0
 
     static Vector<int> visual_ncell;

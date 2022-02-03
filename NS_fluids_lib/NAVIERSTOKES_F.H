@@ -95,6 +95,7 @@ extern "C" {
      Real* coflow_R_of_Z);
 
     void fort_cellgrid(
+     int* plot_grid_type,
      int* tid,
      int* bfact,
      Real* fabout,AMREX_ARLIM_P(faboutlo),AMREX_ARLIM_P(fabouthi),
@@ -121,6 +122,7 @@ extern "C" {
      const Real* problo,
      const Real* probhi,
      const Real* dx,
+     const int* tilelo,const int* tilehi,
      const int* lo,const int* hi,
      const int* level,
      const int* finest_level,

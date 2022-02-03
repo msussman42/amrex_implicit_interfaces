@@ -429,10 +429,10 @@ int  NavierStokes::visual_buoyancy_plot_int=0;
 int  NavierStokes::visual_divergence_plot_int=0; 
 int  NavierStokes::visual_WALLVEL_plot_int=0; 
 int  NavierStokes::visual_drag_plot_int=0; 
-//default: tecplot only
-//0=tecplot only
-//1=plt file only
-//2=both tecplot and plt file format.
+//default: tecplot nodes
+//0=tecplot nodes
+//1=plt file cells
+//2=tecplot cells (piecewise constant reconstruction).
 int  NavierStokes::visual_nddata_format=0;  
 
 int NavierStokes::visual_compare=0; 
@@ -19848,26 +19848,31 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     *ns_level.localMF[VISUAL_XDISP_MAC_CELL_MF],0,
     NUM_CELL_ELASTIC,AMREX_SPACEDIM,1); 
 
-  ns_level.output_zones(
-   visual_fab_output,
-   visual_domain,
-   visual_ncomp,
-   velmf,
-   presmf,
-   ns_level.localMF[MACDIV_MF],
-   div_data,
-   denmf,
-   ns_level.localMF[MOM_DEN_MF],
-   viscoelasticmf,
-   lsdist,
-   ns_level.localMF[CELL_VISC_MATERIAL_MF],
-   ns_level.localMF[CELL_CONDUCTIVITY_MATERIAL_MF],
-   ns_level.localMF[MAGTRACE_MF],
-   ns_level.localMF[CELL_ELASTIC_FORCE_MF],
-   grids_per_level_array[ilev],
-   cgrids_minusBA_array[ilev],
-   slice_data.dataPtr(), 
-   do_plot,do_slice);
+  for (int plot_grid_type=0;plot_grid_type<=1;plot_grid_type++) {
+
+   ns_level.output_zones(
+    plot_grid_type,
+    visual_fab_output,
+    visual_domain,
+    visual_ncomp,
+    velmf,
+    presmf,
+    ns_level.localMF[MACDIV_MF],
+    div_data,
+    denmf,
+    ns_level.localMF[MOM_DEN_MF],
+    viscoelasticmf,
+    lsdist,
+    ns_level.localMF[CELL_VISC_MATERIAL_MF],
+    ns_level.localMF[CELL_CONDUCTIVITY_MATERIAL_MF],
+    ns_level.localMF[MAGTRACE_MF],
+    ns_level.localMF[CELL_ELASTIC_FORCE_MF],
+    grids_per_level_array[ilev],
+    cgrids_minusBA_array[ilev],
+    slice_data.dataPtr(), 
+    do_plot,do_slice);
+
+  } //for (int plot_grid_type=0;plot_grid_type<=1;plot_grid_type++) 
 
   if ((slice_dir>=0)&&(slice_dir<AMREX_SPACEDIM)) {
    for (int i=0;i<nslice*nstate_slice;i++)
@@ -19971,8 +19976,10 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    amrex::Error("nparts invalid");
 
   if (do_plot==1) {
+ 
+    //0=tecplot nodes
+   if (visual_nddata_format==0) {
 
-   if ((visual_nddata_format==0)||(visual_nddata_format==2)) {
     fort_combinezones(
      &total_number_grids,
      grids_per_level_array.dataPtr(),
@@ -19991,16 +19998,13 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
      &nparts,
      &nparts_def,
      im_solid_map_ptr);
-   } else if (visual_nddata_format==1) {
-    // do nothing
-   } else {
-    amrex::Error("visual_nddata_format invalid");
-   }
 
-   if ((visual_nddata_format==1)||(visual_nddata_format==2)) {
+    //1=plt file cells
+   } else if (visual_nddata_format==1) {
    
-   } else if (visual_nddata_format==0) {
-    // do nothing
+    //2=tecplot cells (piecewise constant reconstruction).
+   } else if (visual_nddata_format==2) {
+
    } else {
     amrex::Error("visual_nddata_format invalid");
    }
