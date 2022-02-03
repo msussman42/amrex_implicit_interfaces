@@ -45,6 +45,7 @@ extern "C" {
 
     void fort_cellgrid_sanity(
      int* tid,
+     int* data_id,
      int* data_dir,
      int* bfact,
      int* ncomp,

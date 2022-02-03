@@ -7889,6 +7889,7 @@ void NavierStokes::Sanity_output_zones(
      // declared in: TECPLOTUTIL.F90
     fort_cellgrid_sanity(
      &tid_current,
+     &data_id,
      &data_dir,
      &bfact,
      &ncomp,
