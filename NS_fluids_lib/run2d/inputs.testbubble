@@ -107,6 +107,7 @@ mac.visc_abs_tol    = 1.0e-5
 
 ns.visual_compare=0  # if 1, then compare to COARSEDATA.tec 
 ns.visual_ncell=64 128
+ns.visual_nddata_format=0
 
 ns.cfl            = 0.25    
 ns.init_shrink    = 0.1  

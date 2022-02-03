@@ -71,6 +71,7 @@ stop
       REAL*4 ZONEMARKER,EOHMARKER
       integer*4 :: iz_gb,ivar_gb
       integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
+      INTEGER_T strandid
 
       ! define zone structure
       type zone_t
@@ -209,10 +210,12 @@ stop
        ! Zone name
       Zonename = "ZONE"
       call dumpstring(Zonename)
- 
+
+      strandid=0
+
       write(11) -1   ! Parent Zone
-      write(11) 0    ! StrandID
-      write(11) time ! Solution time
+      write(11) strandid    ! StrandID
+      write(11) round_time(time) ! Solution time
       write(11) -1   ! Not used. Set to -1
       write(11) 0    ! Zone Type
       write(11) 0    ! Specify Var Location. 0 = Don't specify, 
@@ -1123,8 +1126,8 @@ stop
         strandid=1
  
         write(11) -1   ! Parent Zone
-        write(11) 0    ! StrandID
-        write(11) time ! Solution time
+        write(11) strandid    ! StrandID
+        write(11) round_time(time) ! Solution time
         write(11) -1   ! Not used. Set to -1
         write(11) 0    ! Zone Type
         write(11) 0    ! Specify Var Location. 0 = Don't specify, 
