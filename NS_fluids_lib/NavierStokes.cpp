@@ -19494,6 +19494,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
+ int plot_sdim_macro=AMREX_SPACEDIM;
+
   // uses "slope_recon" 
  if (do_plot==1) {
   writeInterfaceReconstruction();
@@ -19565,8 +19567,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   slice_data[i]=-1.0e+30;
 
   // in: NavierStokes::writeTECPLOT_File
-  //
- int plot_sdim_macro=AMREX_SPACEDIM;
+  // (plot_sdim_macro declared up above)
  allocate_array(1,PLOTCOMP_NCOMP,-1,MULTIFAB_TOWER_PLT_MF);
 
  allocate_levelsetLO_ALL(1,LEVELPC_MF);
@@ -20004,6 +20005,23 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    
     //2=tecplot cells (piecewise constant reconstruction).
    } else if (visual_nddata_format==2) {
+     //plot_sdim_macro declared up above.
+    int ncomp_plot=PLOTCOMP_NCOMP;
+    if (localMF[MULTIFAB_TOWER_PLT_MF]->nComp()==ncomp_plot) {
+     // do nothing
+    } else
+     amrex::Error("localMF[MULTIFAB_TOWER_PLT_MF]->nComp()!=PLOTCOMP_NCOMP");
+
+    int data_dir=-1;
+    writeSanityCheckData(
+     "nddata_piecewise_const",
+     "nddata_piecewise_const",
+     MULTIFAB_TOWER_PLT_MF, //data_id
+     ncomp_plot,
+     MULTIFAB_TOWER_PLT_MF,
+     -1, //State_Type==-1
+     data_dir,
+     nsteps);
 
    } else {
     amrex::Error("visual_nddata_format invalid");
@@ -20260,7 +20278,7 @@ void NavierStokes::writeSanityCheckData(
   
   int num_levels=tecplot_finest_level+1;
 
-   // in: NAVIERSTOKES_3D.F90
+   // declared in: TECPLOTUTIL.F90
   fort_combinezones_sanity(
     root_char_array,
     &n_root,

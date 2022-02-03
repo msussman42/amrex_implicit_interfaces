@@ -11,6 +11,9 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 
+#include "EXTRAP_COMP.H"
+#include "TOWER_MF_CODES.H"
+
 #include "TECPLOTUTIL_F.H"
 
 #if (AMREX_SPACEDIM==3)
@@ -329,6 +332,7 @@ stop
 
       subroutine fort_cellgrid_sanity( &
        tid, &
+       data_id, &
        data_dir, & ! data_dir=-1,0..sdim,3,4,5
        bfact, &
        ncomp, &
@@ -349,6 +353,7 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: data_id
       INTEGER_T, intent(in) :: data_dir
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: ncomp
@@ -394,8 +399,11 @@ stop
       REAL_T dxleft,dxright
       INTEGER_T local_nd
       INTEGER_T box_type(SDIM)
+      INTEGER_T plot_sdim_macro
 
       nhalf=3
+
+      plot_sdim_macro=SDIM
 
       if (tid.ge.0) then
        ! do nothing
@@ -673,6 +681,15 @@ stop
 
              scomp=scomp+ncomp 
 
+             if (data_id.eq.MULTIFAB_TOWER_PLT_MF) then
+              if (ncomp.eq.PLOTCOMP_NCOMP) then
+               ! do nothing
+              else
+               print *,"ncomp.ne.PLOTCOMP_NCOMP fort_cellgrid_sanity"
+               stop
+              endif
+             endif
+
              do iw=1,scomp
               if (iw.lt.scomp) then
 !              write(11,'(D25.16)',ADVANCE="NO") writend(iw)
@@ -789,13 +806,17 @@ stop
       end type zone_t
       type(zone_t), dimension(:), allocatable :: zone_gb
 
-      INTEGER_T plot_sdim,klo_plot,khi_plot
+      INTEGER_T plot_sdim
+      INTEGER_T plot_sdim_macro
+      INTEGER_T klo_plot,khi_plot
+      INTEGER_T add_sub_cells
 
 ! Guibo
       INTEGER_T sysret
 
 
       plot_sdim=SDIM
+      plot_sdim_macro=SDIM
 
       if ((levelrz.eq.0).or.(levelrz.eq.3)) then
        if (visual_revolve.ne.0) then
@@ -823,6 +844,14 @@ stop
       endif
 
       nwrite=plot_sdim+ncomp
+      if (data_id.eq.MULTIFAB_TOWER_PLT_MF) then
+       if (ncomp.eq.PLOTCOMP_NCOMP) then
+        ! do nothing
+       else
+        print *,"ncomp.ne.PLOTCOMP_NCOMP fort_combinezones_sanity"
+        stop
+       endif
+      endif
 
       if (num_levels.ne.finest_level+1) then
        print *,"num_levels invalid"
@@ -1076,7 +1105,12 @@ stop
        write(11) nwrite
 
        ! Variable names: combinezones_sanity
-       call dumpstring_headers_sanity(plot_sdim,ncomp)
+       if (data_id.eq.MULTIFAB_TOWER_PLT_MF) then
+        add_sub_cells=plot_sdim
+        call dumpstring_headers(plot_sdim,add_sub_cells)
+       else
+        call dumpstring_headers_sanity(plot_sdim,ncomp)
+       endif
 
         ! Zones
        do iz_gb=1,nzones_gb
@@ -1393,6 +1427,7 @@ stop
 
       call fort_cellgrid_sanity( &
        tid_local, &
+       data_id, &
        data_dir, &
        bfact, &
        ncomp, &

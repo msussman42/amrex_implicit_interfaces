@@ -463,6 +463,7 @@ stop
 
       REAL_T theta,rr,zz,xx,yy,ur,uz,ux,uy
       INTEGER_T plot_sdim_macro
+      INTEGER_T add_sub_cells
 
       if (plot_sdim.ne.3) then
        print *,"plot_sdim invalid"
@@ -658,8 +659,9 @@ stop
       write(11) nwrite3d
 
       ! Variable names: zones_revolve
-      ! dumpstring_headers is declared in PROB.F90
-      call dumpstring_headers(plot_sdim)
+      ! dumpstring_headers is declared in GLOBALUTIL.F90
+      add_sub_cells=0
+      call dumpstring_headers(plot_sdim,add_sub_cells)
 
        ! Zones
       do iz_gb=1,nzones_gb
@@ -3996,6 +3998,7 @@ END SUBROUTINE SIMP
       INTEGER_T plot_sdim
       INTEGER_T plot_sdim_macro
       INTEGER_T klo_plot,khi_plot
+      INTEGER_T add_sub_cells
 
       plot_sdim=SDIM
       plot_sdim_macro=SDIM
@@ -4233,7 +4236,8 @@ END SUBROUTINE SIMP
        write(11) nwrite
 
        ! Variable names: combinezones
-       call dumpstring_headers(plot_sdim)
+       add_sub_cells=0
+       call dumpstring_headers(plot_sdim,add_sub_cells)
 
         ! Zones
        do iz_gb=1,nzones_gb
