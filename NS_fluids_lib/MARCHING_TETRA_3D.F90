@@ -622,9 +622,9 @@ stop
       allocate(reconlocal(DIMV(plt),nmat*ngeom_recon))
       reconlocal_ptr=>reconlocal
 
-      call checkbound_array(fablo,fabhi,reconlocal_ptr,1,-1,411)
-      call checkbound_array(fablo,fabhi,recon_ptr,1,-1,411)
-      call checkbound_array1(fablo,fabhi,mask_ptr,0,-1,411)
+      call checkbound_array(fablo,fabhi,reconlocal_ptr,1,-1,4111)
+      call checkbound_array(fablo,fabhi,recon_ptr,1,-1,4112)
+      call checkbound_array1(fablo,fabhi,mask_ptr,0,-1,4113)
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -1021,6 +1021,7 @@ stop
        arrdim,time,plotint) &
       bind(c,name='fort_combinetriangles')
       use probcommon_module
+      use global_utility_module
 
       IMPLICIT NONE
 
@@ -1155,12 +1156,12 @@ stop
         if (SDIM.eq.3) then
 !        write(11,'(A33,D25.16,A10,I10)')  &
          write(11,'(A33,E25.16,A10,I10)')  &
-          'ZONETYPE=FETRIANGLE SOLUTIONTIME=',time, &
+          'ZONETYPE=FETRIANGLE SOLUTIONTIME=',round_time(time), &
           " STRANDID=",strandid
         else if (SDIM.eq.2) then
 !        write(11,'(A32,D25.16,A10,I10)')  &
          write(11,'(A32,E25.16,A10,I10)')  &
-          'ZONETYPE=FELINESEG SOLUTIONTIME=',time, &
+          'ZONETYPE=FELINESEG SOLUTIONTIME=',round_time(time), &
           " STRANDID=",strandid
         else
          print *,"dimension bust"
@@ -1193,7 +1194,7 @@ stop
 !       write(12,'(A19,I14,A26,D25.16,A10,I10)') & 
         write(12,'(A19,I14,A26,E25.16,A10,I10)') & 
           'ZONE F="POINT", I= ', nparticles,  &
-          ', J=1, K=1, SOLUTIONTIME= ',time,' STRANDID=',strandid
+          ', J=1, K=1, SOLUTIONTIME= ',round_time(time),' STRANDID=',strandid
 
        endif  !ipass=1
 
@@ -1429,8 +1430,8 @@ stop
       mask_ptr=>mask
 
       imaxtri=200
-      call checkbound_array1(lo,hi,levelset_ptr,1,-1,411)
-      call checkbound_array1(lo,hi,mask_ptr,0,-1,411)
+      call checkbound_array1(lo,hi,levelset_ptr,1,-1,4114)
+      call checkbound_array1(lo,hi,mask_ptr,0,-1,4115)
 
       valu=zero
 
@@ -1759,10 +1760,10 @@ stop
        stop
       endif
 
-      call checkbound_array1(fablo,fabhi,ls_old_ptr,ngrow,-1,411)
-      call checkbound_array1(fablo,fabhi,ls_new_ptr,0,-1,411)
-      call checkbound_array(fablo,fabhi,ls_grad_new_ptr,0,-1,411)
-      call checkbound_array1(fablo,fabhi,mask_ptr,0,-1,411)
+      call checkbound_array1(fablo,fabhi,ls_old_ptr,ngrow,-1,4116)
+      call checkbound_array1(fablo,fabhi,ls_new_ptr,0,-1,4117)
+      call checkbound_array(fablo,fabhi,ls_grad_new_ptr,0,-1,4118)
+      call checkbound_array1(fablo,fabhi,mask_ptr,0,-1,4119)
 
         ! ok for 2D or 3D
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 

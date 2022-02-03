@@ -16169,11 +16169,11 @@ end subroutine dynamic_contact_angle
        Zonename = "ZONE"
        call dumpstring(Zonename)
 
-       strandid=1    
+       strandid=0
 
        write(11) -1   ! Parent Zone
-       write(11) 0    ! StrandID
-       write(11) time ! Solution time
+       write(11) strandid    ! StrandID
+       write(11) round_time(time) ! Solution time
        write(11) -1   ! Not used. Set to -1
        write(11) 0    ! Zone Type
        write(11) 0    ! Specify Var Location. 0 = Don't specify, 
@@ -24484,6 +24484,57 @@ INTEGER_T, intent(in) :: freezing_model
  endif
 
 end function is_valid_freezing_modelF
+
+! this has to do base 10 rounding in such a way 
+! so that the ascii output matches the floating point
+! output.
+REAL_T function round_time(time)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: time
+INTEGER_T :: int_time
+INTEGER_T :: power
+INTEGER_T :: i
+REAL_T :: local_time
+
+round_time=time
+if (time.lt.zero) then
+ print *,"time cannot be negative in round_time ",time
+ stop
+else if (time.eq.zero) then
+ round_time=time
+else if (time.gt.zero) then
+ power=0
+ local_time=time
+ do while (local_time.lt.one)
+  local_time=local_time*ten
+  power=power-1
+ enddo
+ do while (local_time.gt.one)
+  local_time=local_time/ten
+  power=power+1
+ enddo
+ do i=1,7
+  local_time=local_time*ten
+  power=power-1
+ enddo 
+ int_time=NINT(local_time)
+ local_time=int_time
+ do while (power.lt.0)
+  local_time=local_time/ten
+  power=power+1
+ enddo
+ do while (power.gt.0)
+  local_time=local_time*ten
+  power=power-1
+ enddo
+ round_time=local_time
+else
+ print *,"time is NaN"
+ stop
+endif
+
+end function round_time
 
 INTEGER_T function is_multi_component_evapF(freezing_model, &
    evap_flag,latent_heat) 
