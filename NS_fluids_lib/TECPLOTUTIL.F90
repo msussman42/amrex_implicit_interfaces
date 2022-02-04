@@ -214,7 +214,7 @@ stop
       strandid=0
 
       write(11) -1   ! Parent Zone
-      write(11) strandid    ! StrandID
+      write(11) 0    ! StrandID (this does not work)
       write(11) round_time(time) ! Solution time
       write(11) -1   ! Not used. Set to -1
       write(11) 0    ! Zone Type
@@ -1126,7 +1126,7 @@ stop
         strandid=1
  
         write(11) -1   ! Parent Zone
-        write(11) strandid    ! StrandID
+        write(11) 0    ! StrandID (this does not work)
         write(11) round_time(time) ! Solution time
         write(11) -1   ! Not used. Set to -1
         write(11) 0    ! Zone Type
