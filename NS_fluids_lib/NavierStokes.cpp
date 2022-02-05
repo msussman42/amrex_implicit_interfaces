@@ -20,6 +20,7 @@
 #include <AMReX_ArrayLim.H>
 #include <AMReX_Utility.H>
 #include <AMReX_TagBox.H>
+#include <AMReX_PlotFileUtil.H>
 
 /* 
   Narrow Band WENO LEVEL SET METHOD:
@@ -20002,7 +20003,42 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
     //1=plt file cells
    } else if (visual_nddata_format==1) {
-   
+
+    int ncomp_plot=PLOTCOMP_NCOMP;
+    if (localMF[MULTIFAB_TOWER_PLT_MF]->nComp()==ncomp_plot) {
+     // do nothing
+    } else
+     amrex::Error("localMF[MULTIFAB_TOWER_PLT_MF]->nComp()!=PLOTCOMP_NCOMP");
+
+    Vector<const MultiFab*> mf_tower;
+    mf_tower.resize(tecplot_finest_level+1);
+    Vector<std::string> varnames;
+    varnames.resize(ncomp_plot);
+    const Vector<Geometry>& ns_geom=parent->Geom();
+    Vector<IntVect> ref_ratio;
+    ref_ratio.resize(tecplot_finest_level+1);
+    Vector<int> level_steps;
+    level_steps.resize(tecplot_finest_level+1);
+
+    for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+     NavierStokes& ns_level=getLevel(ilev);
+     mf_tower[ilev]=ns_level.localMF[MULTIFAB_TOWER_PLT_MF];
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+      ref_ratio[ilev][dir]=2;
+     }
+     level_steps[ilev]=nsteps;
+    } 
+
+    std::string plotfilename="nddataPLT"; 
+    WriteMultiLevelPlotfile(plotfilename,
+      tecplot_finest_level+1, //nlevels
+      mf_tower,
+      varnames,
+      ns_geom,   
+      cur_time_slab,
+      level_steps,
+      ref_ratio);
+
     //2=tecplot cells (piecewise constant reconstruction).
    } else if (visual_nddata_format==2) {
      //plot_sdim_macro declared up above.
