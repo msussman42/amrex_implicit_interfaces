@@ -20348,7 +20348,15 @@ void NavierStokes::writeSanityCheckData(
 
 } // subroutine writeSanityCheckData
 
-
+// 1. coarseTimeStep
+// 2. timeStep
+//     a. advance
+//         i. CopyNewToOld
+//         ii. setTimeLevel(time+dt_AMR,dt_AMR)
+//     b. level_steps++
+// 3. cumtime += dt_AMR
+// 4. if (level_steps[0] % plot_int == 0)
+//     writePlotFile
 void
 NavierStokes::writePlotFile (
   int do_plot,int do_slice,
