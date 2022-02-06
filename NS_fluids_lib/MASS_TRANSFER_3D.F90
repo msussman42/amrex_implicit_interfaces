@@ -7778,6 +7778,8 @@ stop
       REAL_T TEMP_PROBE_source
       REAL_T TEMP_PROBE_dest
 
+      INTEGER_T debug_limiter
+
       REAL_T massfrac_parm(num_species_var+1)
       REAL_T Pvapor_probe
       REAL_T internal_energy
@@ -8288,6 +8290,13 @@ stop
 
                local_Tsat(ireverse)=saturation_temp(iten+ireverse*nten)
                local_Tsat_base(ireverse)=saturation_temp(iten+ireverse*nten)
+
+               debug_limiter=0
+               if ((level.eq.finest_level).and. &
+                   (im_source.eq.1).and.(im_dest.eq.2).and. &
+                   (i.eq.1).and.(j.eq.432).and.(1.eq.1)) then
+                debug_limiter=1
+               endif
 
                found_path=0
 
@@ -8848,6 +8857,19 @@ stop
                  TSAT_predict=local_Tsat(ireverse)
 
                  TSAT_correct=TSAT_predict
+
+                 if (debug_limiter.eq.1) then
+                  print *,"debug_limiter=1 (1) "
+                  print *,"i,j,k,bfact,level,finest_level,im_source,im_dest ",&
+                    i,j,k,bfact, &
+                    level,finest_level,im_source,im_dest
+                  print *,"ireverse, local_probe_constrain ",ireverse, &
+                   local_probe_constrain
+                  print *,"interp_status,interface_resolved ",interp_status, &
+                   interface_resolved
+                  print *,"TI_min,TI_max,local_Tsat(ireverse) ", &
+                   TI_min,TI_max,local_Tsat(ireverse) 
+                 endif
 
                  VEL_predict=zero
                  VEL_correct=zero
@@ -9763,6 +9785,24 @@ stop
                   if (TSAT_iter.eq.1) then
                    ! check nothing
                   else if (TSAT_iter.gt.1) then
+
+                   if (debug_limiter.eq.1) then
+                    print *,"debug_limiter=1 (2) "
+                    print *,"TSAT_correct=",TSAT_correct
+                    print *,"TI_YI(TI_YI_best_guess_index,1)=", &
+                      TI_YI(TI_YI_best_guess_index,1)
+                    print *,"TI_YI_best_guess_index=", &
+                      TI_YI_best_guess_index
+                    do TI_YI_loop=1,TI_YI_counter
+                     print *,"TI_YI idx,T,Y,VEL,mdotdiff ", &
+                      TI_YI_loop, &
+                      TI_YI(TI_YI_loop,1), & 
+                      TI_YI(TI_YI_loop,2), & 
+                      TI_YI(TI_YI_loop,3), & 
+                      TI_YI(TI_YI_loop,4)
+                    enddo
+                   endif
+
                    if (TSAT_iter.eq.TI_YI_counter) then
                     if (abs(TSAT_correct-TI_YI(TI_YI_best_guess_index,1)).le. &
                         4.0d0*TSAT_ERR) then
