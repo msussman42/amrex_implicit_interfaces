@@ -2472,9 +2472,11 @@ END SUBROUTINE SIMP
        else if ((visual_nddata_format.ne.0).or. &
                 (plot_grid_type.eq.1)) then
 
-        print *,"ignoring box for nddata*.tec output (lo123,hi123): ", &
-         igridlo(1),igridlo(2),igridlo(3), &
-         igridhi(1),igridhi(2),igridhi(3)
+        if (1.eq.0) then
+         print *,"ignoring box for nddata*.tec output (lo123,hi123): ", &
+          igridlo(1),igridlo(2),igridlo(3), &
+          igridhi(1),igridhi(2),igridhi(3)
+        endif
 
        else
         print *,"visual_nddata_format or plot_grid_type invalid"
