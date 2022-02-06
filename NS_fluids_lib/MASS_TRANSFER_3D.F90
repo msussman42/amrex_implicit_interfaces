@@ -94,6 +94,7 @@ stop
       REAL_T :: dxprobe_target(2)
       INTEGER_T :: interp_valid_flag(2)
       INTEGER_T :: at_interface
+      INTEGER_T :: probe_ok_gradient(2)
       end type probe_out_type
 
       type TSAT_MASS_FRAC_parm_type
@@ -434,7 +435,9 @@ stop
 
        !   T(x)=T(xbase) + grad T dot (x-xbase)
       do dir=1,SDIM
-       if (dx(dir).le.zero) then
+       if (dx(dir).gt.zero) then 
+        ! do nothing
+       else
         print *,"dx(dir) invalid"
         stop
        endif
@@ -547,7 +550,9 @@ stop
          do dir=1,SDIM
           dist=dist+(xlive(dir)-xtarget(dir))**2/(dx(1)**2)
          enddo ! dir
-         if (dist.le.zero) then
+         if (dist.gt.zero) then
+          ! do nothing
+         else
           print *,"dist invalid"
           stop
          endif
@@ -556,7 +561,9 @@ stop
           ! do nothing
          else if ((tsat_flag.eq.1).or. &
                   (tsat_flag.eq.0)) then
-          if (VF.le.zero) then
+          if (VF.gt.zero) then
+           ! do nothing
+          else
            print *,"VF invalid"
            stop
           endif
@@ -571,7 +578,9 @@ stop
          stop
         endif
 
-        if (wt_local.le.zero) then
+        if (wt_local.gt.zero) then
+         ! do nothing
+        else
          print *,"wt_local invalid"
          stop
         endif
@@ -1049,7 +1058,9 @@ stop
         mag=mag+nrm(dir)**2
        enddo
        mag=sqrt(mag)
-       if (mag.le.zero) then
+       if (mag.gt.zero) then
+        ! do nothing
+       else
         print *,"mag invalid 1"
         stop
        endif
@@ -1871,6 +1882,7 @@ stop
        recon, &
        dest, &
        dxprobe_target, &
+       material_found_in_cell, &
        VOF_pos_probe_counter, &
        use_supermesh)
       use global_utility_module
@@ -1895,6 +1907,7 @@ stop
       REAL_T, pointer, intent(in) :: recon(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: dest
       REAL_T, intent(inout) :: dxprobe_target !interpfab_filament_probe
+      INTEGER_T, intent(out) :: material_found_in_cell
       INTEGER_T, intent(inout) :: VOF_pos_probe_counter
       INTEGER_T, intent(in) :: use_supermesh
 
@@ -1911,7 +1924,6 @@ stop
       REAL_T VF_sten
       REAL_T XC_sten(SDIM)
       REAL_T mag
-      INTEGER_T material_found_in_cell
       REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
       REAL_T local_data_out
 
@@ -2024,7 +2036,7 @@ stop
       if (material_found_in_cell.eq.1) then
        ! do nothing
       else if (material_found_in_cell.eq.0) then
-       dest=Tsat
+       dest=T_sten
        dxprobe_target=zero
        do dir=1,SDIM
         dxprobe_target=dxprobe_target+(xtarget(dir)-xI(dir))**2
@@ -2086,6 +2098,7 @@ stop
       REAL_T dist_probe_sanity
       INTEGER_T imls
       INTEGER_T dir
+      INTEGER_T material_found_in_cell
       INTEGER_T mtype
       REAL_T LSPROBE(num_materials)
       REAL_T F_tess(num_materials)
@@ -2134,6 +2147,8 @@ stop
        F_tess)
 
       do iprobe=1,2 ! iprobe=1 source    iprobe=2 dest
+
+       POUT%probe_ok_gradient(iprobe)=1
 
        if (iprobe.eq.1) then ! source
         do dir=1,SDIM
@@ -2258,6 +2273,9 @@ stop
        endif
 
         ! the least squares interpolant is limited by the stencil values.
+        ! interpfabFWEIGHT calls center_centroid_interchange with
+        ! cc_flag=0 (centroid->target), tsat_flag=0,nsolve=1,Tsat=293
+        ! (placeholder).
        call interpfabFWEIGHT( &
         PROBE_PARMS%bfact, &
         PROBE_PARMS%level, &
@@ -2463,6 +2481,9 @@ stop
                 (im_primary_probe(iprobe).le. &
                 PROBE_PARMS%nmat)) then
 
+        POUT%probe_ok_gradient(iprobe)=0
+
+FIX ME
         ! default value for T_probe
         POUT%T_probe(iprobe)=T_I
         ! default value for Y_probe
@@ -2511,8 +2532,18 @@ stop
           PROBE_PARMS%recon, &
           POUT%T_probe(iprobe), &
           POUT%dxprobe_target(iprobe), &
+          material_found_in_cell, &
           VOF_pos_probe_counter, &
           PROBE_PARMS%use_supermesh)
+
+         if (material_found_in_cell.eq.0) then
+          POUT%probe_ok_gradient(iprobe)=0
+         else if (material_found_in_cell.eq.1) then
+          POUT%probe_ok_gradient(iprobe)=1
+         else
+          print *,"material_found_in_cell invalid"
+          stop
+         endif
 
          if (DEBUG_TRIPLE.eq.1) then
           if ((DEBUG_I.eq.PROBE_PARMS%i).and. &
@@ -2544,6 +2575,7 @@ stop
            PROBE_PARMS%recon, &
            POUT%Y_probe(iprobe), &
            POUT%dxprobe_target(iprobe), &
+           material_found_in_cell, &
            dummy_VOF_pos_probe_counter, &
            PROBE_PARMS%use_supermesh)
 
@@ -8869,6 +8901,14 @@ stop
                    interface_resolved
                   print *,"TI_min,TI_max,local_Tsat(ireverse) ", &
                    TI_min,TI_max,local_Tsat(ireverse) 
+                  print *,"hardwire_flag(ireverse) ",hardwire_flag(ireverse)
+                  print *,"user_override_TI_YI ",user_override_TI_YI
+                  print *,"T_I_interp(1) ",POUT%T_I_interp(1)
+                  print *,"T_I_interp(2) ",POUT%T_I_interp(2)
+                  print *,"T_probe(1) ",POUT%T_probe(1)
+                  print *,"T_probe(2) ",POUT%T_probe(2)
+                  print *,"POUT%interp_valid_flag(1) ",POUT%interp_valid_flag(1)
+                  print *,"POUT%interp_valid_flag(2) ",POUT%interp_valid_flag(2)
                  endif
 
                  VEL_predict=zero
