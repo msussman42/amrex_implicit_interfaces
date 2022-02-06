@@ -2685,6 +2685,14 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       if (mass_transfer_active==1) {
 
+       if (1==0) {
+        int basestep_debug=nStep();
+        parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
+        std::cout << "press any number then enter: before nucleate_bubbles\n";
+        int n_input;
+        std::cin >> n_input;
+       }
+
 	// CREATE SEEDS, NUCLEATION.
        for (int ilev=level;ilev<=finest_level;ilev++) {
         int nucleation_flag=1;
@@ -2743,14 +2751,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         delta_mass[tid][im]=0.0;
        } // tid
 
-       if (1==0) {
-        int basestep_debug=nStep();
-        parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
-        std::cout << "press any number then enter: before nucleate_bubbles\n";
-        int n_input;
-        std::cin >> n_input;
-       }
-
        ParallelDescriptor::Barrier();
 
        tessellate=1;
@@ -2783,14 +2783,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ns_level.avgDown(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
        }  // ilev=finest_level ... level  
 
-       if (1==0) {
-        int basestep_debug=nStep();
-        parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
-        std::cout << "press any number then enter: after nucleate_bubbles\n";
-        int n_input;
-        std::cin >> n_input;
-       }
-
        if (verbose>0) {
         if (ParallelDescriptor::IOProcessor()) {
          for (int im=0;im<nmat;im++) {
@@ -2812,6 +2804,14 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        make_physics_varsALL(SOLVETYPE_PRES,post_restart_flag,5); 
        delete_array(CELLTENSOR_MF);
        delete_array(FACETENSOR_MF);
+
+       if (1==0) {
+        int basestep_debug=nStep();
+        parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
+        std::cout << "press any number then enter: after nucleate_bubbles\n";
+        int n_input;
+        std::cin >> n_input;
+       }
 
       } else if (mass_transfer_active==0) {
 
