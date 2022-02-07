@@ -2483,12 +2483,6 @@ stop
 
         POUT%probe_ok_gradient(iprobe)=0
 
-FIX ME
-        ! default value for T_probe
-        POUT%T_probe(iprobe)=T_I
-        ! default value for Y_probe
-        POUT%Y_probe(iprobe)=Y_I
-
         call get_secondary_material(LSPROBE, &
          PROBE_PARMS%nmat, &
          im_primary_probe(iprobe), &
@@ -2579,7 +2573,6 @@ FIX ME
            dummy_VOF_pos_probe_counter, &
            PROBE_PARMS%use_supermesh)
 
-
           if ((POUT%Y_probe(iprobe).ge.-VOFTOL).and. &
               (POUT%Y_probe(iprobe).le.zero)) then
            POUT%Y_probe(iprobe)=zero
@@ -2606,8 +2599,7 @@ FIX ME
                   im_target_probe(iprobe)).or. &
                  (LSPROBE(im_target_probe(iprobe)).le. &
                   -dist_probe_sanity)) then
-         POUT%T_probe(iprobe)=T_I
-         POUT%Y_probe(iprobe)=Y_I
+         POUT%probe_ok_gradient(iprobe)=0
         else
          print *,"probe parameters bust"
          stop
@@ -2948,7 +2940,14 @@ FIX ME
           den_G=TSAT_Y_PARMS%den_G
           if ((D_MASS.gt.zero).and.(den_G.gt.zero)) then
 
-           mdotY_top=Y_gamma-POUT%Y_probe(iprobe_vapor)
+           if (POUT%probe_ok_gradient(iprobe_vapor).eq.1) then
+            mdotY_top=Y_gamma-POUT%Y_probe(iprobe_vapor)
+           else if (POUT%probe_ok_gradient(iprobe_vapor).eq.0) then
+            mdotY_top=zero
+           else
+            print *,"POUT%probe_ok_gradient(iprobe_vapor) invalid"
+            stop
+           endif
            mdotY_top=den_G*D_MASS*mdotY_top/ &
                   POUT%dxprobe_target(iprobe_vapor)
            mdotY_bot=one-Y_gamma
@@ -3022,6 +3021,7 @@ FIX ME
              TSAT_Y_PARMS%universal_gas_constant_R, &
              Pgamma, &
              Pvapor_probe, &
+             POUT%probe_ok_gradient(iprobe_vapor), &
              T_gamma, &
              Tvapor_probe, &
              mdotY)
@@ -3077,6 +3077,7 @@ FIX ME
       REAL_T den_G
       REAL_T YI_min
       REAL_T wt(2)
+      REAL_T probediff(2)
       INTEGER_T iprobe
 
       YI_min=TSAT_Y_PARMS%YI_min
@@ -3155,8 +3156,25 @@ FIX ME
           TEMP_PROBE_dest=POUT%T_probe(2)
 
           if (wt(1)+wt(2).gt.zero) then
-           mdotT=wt(1)*(POUT%T_probe(1)-T_gamma)+ &
-                 wt(2)*(POUT%T_probe(2)-T_gamma)
+           probediff(1)=POUT%T_probe(1)-T_gamma
+           probediff(2)=POUT%T_probe(2)-T_gamma
+           if (POUT%probe_ok_gradient(1).eq.1) then
+            ! do nothing
+           else if (POUT%probe_ok_gradient(1).eq.0) then
+            probediff(1)=zero
+           else 
+            print *,"probe_ok_gradient invalid"
+            stop
+           endif
+           if (POUT%probe_ok_gradient(2).eq.1) then
+            ! do nothing
+           else if (POUT%probe_ok_gradient(2).eq.0) then
+            probediff(2)=zero
+           else 
+            print *,"probe_ok_gradient invalid"
+            stop
+           endif
+           mdotT=wt(1)*probediff(1)+wt(2)*probediff(2)
           else
            print *,"expecting wt(1)+wt(2) to be positive"
            stop
@@ -8828,6 +8846,8 @@ FIX ME
                     thermal_k_physical_base(2), & ! ksrc,kdst
                     POUT%T_probe(1), & ! source
                     POUT%T_probe(2), & ! dest
+                    POUT%probe_ok_gradient(1), & ! source
+                    POUT%probe_ok_gradient(2), & ! dest
                     LL(ireverse), &
                     POUT%dxprobe_target(1), & ! source
                     POUT%dxprobe_target(2), & ! dest
@@ -9372,6 +9392,8 @@ FIX ME
                      thermal_k_physical_base, &
                      POUT%T_probe(1), & ! source
                      POUT%T_probe(2), & ! dest
+                     POUT%probe_ok_gradient(1), & ! source
+                     POUT%probe_ok_gradient(2), & ! dest
                      POUT%dxprobe_target(1), & ! source
                      POUT%dxprobe_target(2), & ! dest
                      LL(ireverse), &
@@ -9409,6 +9431,8 @@ FIX ME
                      thermal_k_physical_base(2), & ! ksrc,kdst
                      POUT%T_probe(1), & ! source
                      POUT%T_probe(2), & ! dest
+                     POUT%probe_ok_gradient(1), & ! source
+                     POUT%probe_ok_gradient(2), & ! dest
                      TSAT_predict, &
                      POUT%T_I_interp(1), & !source
                      POUT%T_I_interp(2), & !dest
@@ -9439,6 +9463,22 @@ FIX ME
                    if (local_freezing_model.eq.0) then
                      DTsrc=POUT%T_probe(1)-TSAT_predict
                      DTdst=POUT%T_probe(2)-TSAT_predict
+                     if (POUT%probe_ok_gradient(1).eq.1) then
+                      ! do nothing
+                     else if (POUT%probe_ok_gradient(1).eq.0) then
+                      DTsrc=zero
+                     else
+                      print *,"POUT%probe_ok_gradient(1) invalid"
+                      stop
+                     endif
+                     if (POUT%probe_ok_gradient(2).eq.1) then
+                      ! do nothing
+                     else if (POUT%probe_ok_gradient(2).eq.0) then
+                      DTdst=zero
+                     else
+                      print *,"POUT%probe_ok_gradient(2) invalid"
+                      stop
+                     endif
                      velsrc=thermal_k_model_correct(1)*DTsrc/ &
                        (LL(ireverse)*POUT%dxprobe_target(1))
                      veldst=thermal_k_model_correct(2)*DTdst/ &
