@@ -872,6 +872,8 @@ subroutine STUB_INTERFACE_TEMPERATURE( &
   kdst_physical, &
   T_probe_src, &
   T_probe_dst, &
+  probe_ok_gradient_src, &
+  probe_ok_gradient_dst, &
   LL, &
   dxprobe_src, &
   dxprobe_dst, &
@@ -901,6 +903,8 @@ REAL_T, intent(in) :: ksrc_physical
 REAL_T, intent(in) :: kdst_physical
 REAL_T, intent(in) :: T_probe_src
 REAL_T, intent(in) :: T_probe_dst
+INTEGER_T, intent(in) :: probe_ok_gradient_src
+INTEGER_T, intent(in) :: probe_ok_gradient_dst
 REAL_T, intent(in) :: LL
 REAL_T, intent(in) :: dxprobe_src
 REAL_T, intent(in) :: dxprobe_dst
@@ -925,6 +929,8 @@ subroutine STUB_MDOT( &
   kdst_physical, &
   T_probe_src, &
   T_probe_dst, &
+  probe_ok_gradient_src, &
+  probe_ok_gradient_dst, &
   TI, &
   LL, &
   dxprobe_src, &
@@ -950,6 +956,8 @@ REAL_T, intent(in) :: ksrc_physical
 REAL_T, intent(in) :: kdst_physical
 REAL_T, intent(in) :: T_probe_src
 REAL_T, intent(in) :: T_probe_dst
+INTEGER_T, intent(in) :: probe_ok_gradient_src
+INTEGER_T, intent(in) :: probe_ok_gradient_dst
 REAL_T, intent(in) :: LL
 REAL_T, intent(in) :: dxprobe_src
 REAL_T, intent(in) :: dxprobe_dst
@@ -963,6 +971,23 @@ else if (interface_mass_transfer_model.eq.999) then
  mdot_override=1
  DTsrc=T_probe_src-TI
  DTdst=T_probe_dst-TI
+ if (probe_ok_gradient_src.eq.1) then
+  ! do nothing
+ else if (probe_ok_gradient_src.eq.0) then
+  DTsrc=zero
+ else
+  print *,"probe_ok_gradient_src invalid"
+  stop
+ endif
+ if (probe_ok_gradient_dst.eq.1) then
+  ! do nothing
+ else if (probe_ok_gradient_dst.eq.0) then
+  DTdst=zero
+ else
+  print *,"probe_ok_gradient_dst invalid"
+  stop
+ endif
+
  mdotsrc=ksrc_derived*DTsrc/(LL*dxprobe_src)
  mdotdst=kdst_derived*DTdst/(LL*dxprobe_dst)
  mdotsum=mdotsrc+mdotdst
@@ -995,6 +1020,8 @@ subroutine STUB_K_EFFECTIVE( &
   k_physical_base, &
   T_probe_src, &
   T_probe_dst, &
+  probe_ok_gradient_src, &
+  probe_ok_gradient_dst, &
   dxprobe_src, &
   dxprobe_dst, &
   LL, &
@@ -1015,6 +1042,8 @@ REAL_T, intent(inout) :: k_model_correct(2) ! src,dst
 REAL_T, intent(in) :: k_physical_base(2) ! src, dst
 REAL_T, intent(in) :: T_probe_src
 REAL_T, intent(in) :: T_probe_dst
+INTEGER_T, intent(in) :: probe_ok_gradient_src
+INTEGER_T, intent(in) :: probe_ok_gradient_dst
 REAL_T, intent(in) :: LL
 REAL_T, intent(in) :: dxprobe_src
 REAL_T, intent(in) :: dxprobe_dst

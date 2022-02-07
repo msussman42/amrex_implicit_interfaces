@@ -2197,6 +2197,8 @@ subroutine CRYOGENIC_TANK_MK_K_EFFECTIVE( &
   k_physical_base, &
   T_probe_src, &
   T_probe_dst, &
+  probe_ok_gradient_src, &
+  probe_ok_gradient_dst, &
   dxprobe_src, &
   dxprobe_dst, &
   LL, &
@@ -2217,6 +2219,8 @@ REAL_T, intent(inout) :: k_model_correct(2) ! src,dst
 REAL_T, intent(in) :: k_physical_base(2) ! src, dst
 REAL_T, intent(in) :: T_probe_src
 REAL_T, intent(in) :: T_probe_dst
+INTEGER_T, intent(in) :: probe_ok_gradient_src
+INTEGER_T, intent(in) :: probe_ok_gradient_dst
 REAL_T, intent(in) :: LL
 REAL_T, intent(in) :: dxprobe_src
 REAL_T, intent(in) :: dxprobe_dst

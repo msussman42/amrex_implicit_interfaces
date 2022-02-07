@@ -2868,6 +2868,8 @@ stop
       REAL_T denmax
       REAL_T USTEFAN,USTEFAN_hold
       REAL_T LS1,LS2,Tsrc,Tdst,Dsrc,Ddst,Csrc,Cdst,delta
+      INTEGER_T probe_ok_gradient_src
+      INTEGER_T probe_ok_gradient_dst
       REAL_T VOFsrc,VOFdst
       REAL_T LL
       INTEGER_T velcomp
@@ -3558,6 +3560,8 @@ stop
            
            Tsrc=den(D_DECL(icell,jcell,kcell),tcompsrc)
            Tdst=den(D_DECL(icell,jcell,kcell),tcompdst)
+           probe_ok_gradient_src=1
+           probe_ok_gradient_dst=1
            Tsrcalt=den(D_DECL(ialt,jalt,kalt),tcompsrc)
            Tdstalt=den(D_DECL(ialt,jalt,kalt),tcompdst)
            Dsrc=den(D_DECL(icell,jcell,kcell),dcompsrc)
@@ -3684,6 +3688,8 @@ stop
               ksource_physical, &
               kdest_physical, &
               Tsrc,Tdst, &
+              probe_ok_gradient_src, &
+              probe_ok_gradient_dst, &
               TSAT, &
               Tsrcalt,Tdstalt, &
               LL, &

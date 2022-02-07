@@ -649,6 +649,8 @@ implicit none
         kdst_physical, &
         T_probe_src, &
         T_probe_dst, &
+        probe_ok_gradient_src, &
+        probe_ok_gradient_dst, &
         LL, &
         dxprobe_src, &
         dxprobe_dst, &
@@ -675,6 +677,8 @@ implicit none
       REAL_T, intent(in) :: kdst_physical
       REAL_T, intent(in) :: T_probe_src
       REAL_T, intent(in) :: T_probe_dst
+      INTEGER_T, intent(in) :: probe_ok_gradient_src
+      INTEGER_T, intent(in) :: probe_ok_gradient_dst
       REAL_T, intent(in) :: LL
       REAL_T, intent(in) :: dxprobe_src
       REAL_T, intent(in) :: dxprobe_dst
@@ -698,6 +702,8 @@ implicit none
         kdst_physical, &
         T_probe_src, &
         T_probe_dst, &
+        probe_ok_gradient_src, &
+        probe_ok_gradient_dst, &
         TI, &
         LL, &
         dxprobe_src, &
@@ -720,6 +726,8 @@ implicit none
       REAL_T, intent(in) :: kdst_physical
       REAL_T, intent(in) :: T_probe_src
       REAL_T, intent(in) :: T_probe_dst
+      INTEGER_T, intent(in) :: probe_ok_gradient_src
+      INTEGER_T, intent(in) :: probe_ok_gradient_dst
       REAL_T, intent(in) :: LL
       REAL_T, intent(in) :: dxprobe_src
       REAL_T, intent(in) :: dxprobe_dst
@@ -737,6 +745,8 @@ implicit none
         k_physical_base, &
         T_probe_src, &
         T_probe_dst, &
+        probe_ok_gradient_src, &
+        probe_ok_gradient_dst, &
         dxprobe_src, &
         dxprobe_dst, &
         LL, &
@@ -754,6 +764,8 @@ implicit none
       REAL_T, intent(in) :: k_physical_base(2) ! src, dst
       REAL_T, intent(in) :: T_probe_src
       REAL_T, intent(in) :: T_probe_dst
+      INTEGER_T, intent(in) :: probe_ok_gradient_src
+      INTEGER_T, intent(in) :: probe_ok_gradient_dst
       REAL_T, intent(in) :: LL
       REAL_T, intent(in) :: dxprobe_src
       REAL_T, intent(in) :: dxprobe_dst
