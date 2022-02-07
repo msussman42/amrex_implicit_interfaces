@@ -8342,10 +8342,12 @@ stop
                local_Tsat_base(ireverse)=saturation_temp(iten+ireverse*nten)
 
                debug_limiter=0
-               if ((level.eq.finest_level).and. &
-                   (im_source.eq.1).and.(im_dest.eq.2).and. &
-                   (i.eq.1).and.(j.eq.432).and.(1.eq.1)) then
-                debug_limiter=1
+               if (1.eq.0) then
+                if ((level.eq.finest_level).and. &
+                    (im_source.eq.1).and.(im_dest.eq.2).and. &
+                    (i.eq.1).and.(j.eq.432)) then
+                 debug_limiter=1
+                endif
                endif
 
                found_path=0
