@@ -84,7 +84,7 @@ ns.xblob2           = 0.0
 ns.yblob2           = 0.0
 ns.zblob2           = 0.051
 
-ns.xblob4 	    = 0.127 # End cap radius 
+ns.xblob4 	    = 0.127 # End cap radius TANK_MK_END_RADIUS
 
 #TANK_MK_END_CENTER=yblob4
 #top of cylindrical section: z=0.102/2
