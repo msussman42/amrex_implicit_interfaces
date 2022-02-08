@@ -448,10 +448,10 @@ REAL_T function SOLID_TOP_HALF_DIST(P)
  
  if (SDIM.eq.2) then
   R=abs(P(1))
-  Z=abs(P(2))
+  Z=abs(P(SDIM))
  elseif (SDIM.eq.3) then
-  R=abs(sqrt(P(1)**2+P(SDIM)**2))
-  Z=abs(P(2))
+  R=abs(sqrt(P(1)**2+P(2)**2))
+  Z=abs(P(SDIM))
  else
   print *,"Dimension bust at DIST_FINITE_CYLINDER"
   stop
@@ -466,7 +466,7 @@ REAL_T function SOLID_TOP_HALF_DIST(P)
     SOLID_TOP_HALF_DIST=R-TANK_MK_RADIUS
    else
     D1 = TANK_MK_RADIUS - R
-    D2 = TANK_MK_HEIGHT/2.0-Z
+    D2 = TANK_MK_HEIGHT/2.0d0-Z
     if (D1.lt.D2) then
      SOLID_TOP_HALF_DIST=-D1
     else
@@ -475,10 +475,10 @@ REAL_T function SOLID_TOP_HALF_DIST(P)
    endif
   else 
    if (R.le.TANK_MK_RADIUS) then
-    SOLID_TOP_HALF_DIST=Z-TANK_MK_HEIGHT/2.0
+    SOLID_TOP_HALF_DIST=Z-TANK_MK_HEIGHT/2.0d0
    else
     SOLID_TOP_HALF_DIST= &
-     sqrt( (Z-TANK_MK_HEIGHT/2.0)**2+ &
+     sqrt( (Z-TANK_MK_HEIGHT/2.0d0)**2+ &
            (R-TANK_MK_RADIUS)**2 )
    endif
   endif
@@ -501,13 +501,13 @@ REAL_T function SOLID_TOP_HALF_DIST(P)
     SOLID_TOP_HALF_DIST = -min(D1,D2)
    elseif (R.gt.TANK_MK_RADIUS) then
     ! Out of the tank
-    if(Z.le.TANK_MK_HEIGHT/2) then
+    if(Z.le.TANK_MK_HEIGHT/2.0d0) then
      ! Below the cap base line
      SOLID_TOP_HALF_DIST = R - TANK_MK_RADIUS
     elseif (Z.gt.TANK_MK_HEIGHT/2) then
      ! Above the cap baseline
      SOLID_TOP_HALF_DIST = &
-      sqrt((R-TANK_MK_RADIUS)**2 + (Z-TANK_MK_HEIGHT/2)**2)
+      sqrt((R-TANK_MK_RADIUS)**2 + (Z-TANK_MK_HEIGHT/2.0d0)**2)
     else
      print *,"Z invalid!"
      stop
@@ -527,7 +527,7 @@ REAL_T function SOLID_TOP_HALF_DIST(P)
      D1 = TANK_MK_RADIUS - R
     elseif (Z.gt.TANK_MK_HEIGHT/2) then
      ! Above the cap baseline
-     D1 = sqrt((R-TANK_MK_RADIUS)**2 + (Z-TANK_MK_HEIGHT/2)**2)
+     D1 = sqrt((R-TANK_MK_RADIUS)**2 + (Z-TANK_MK_HEIGHT/2.0d0)**2)
     else
      print *,"Z invalid!"
      stop
