@@ -20036,7 +20036,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     std::string plotfilename="nddataPLT"; 
     plotfilename+=steps_string;
 
-    icomp=0;
+    int icomp=0;
     varnames[icomp]="X";
     icomp++;
     varnames[icomp]="Y";
@@ -20087,6 +20087,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
       std::stringstream::out);
      im_string_stream << std::setw(2) << std::setfill('0') << im+1;
      std::string im_string=im_string_stream.str();
+     std::string im_opp_string=im_string_stream.str();
      icomp++;
      varnames[icomp]="x_normal"+im_string+im_opp_string;
      icomp++;
@@ -20096,6 +20097,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
       varnames[icomp]="z_normal"+im_string+im_opp_string;
      }
     }
+
     if (icomp+1==PLOTCOMP_SCALARS) {
      // do nothing
     } else
@@ -20148,6 +20150,69 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
       amrex::Error("im invalid");
     } //partid
 
+    if (icomp+1==PLOTCOMP_XDISP) {
+     // do nothing
+    } else
+     amrex::Error("icomp+1!=PLOTCOMP_XDISP");
+
+    icomp++;
+    varnames[icomp]="x_displace";
+    icomp++;
+    varnames[icomp]="y_displace";
+    if (AMREX_SPACEDIM==3) {
+     icomp++;
+     varnames[icomp]="z_displace";
+    }
+    for (int im=0;im<num_materials;im++) {
+     std::stringstream im_string_stream(std::stringstream::in |
+      std::stringstream::out);
+     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+     std::string im_string=im_string_stream.str();
+     icomp++;
+     varnames[icomp]="MU"+im_string;
+    }
+    for (int im=0;im<num_materials;im++) {
+     std::stringstream im_string_stream(std::stringstream::in |
+      std::stringstream::out);
+     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+     std::string im_string=im_string_stream.str();
+     icomp++;
+     varnames[icomp]="K_THERMAL"+im_string;
+    }
+    for (int im=0;im<num_materials;im++) {
+     std::stringstream im_string_stream(std::stringstream::in |
+      std::stringstream::out);
+     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+     std::string im_string=im_string_stream.str();
+     icomp++;
+     varnames[icomp]="DT"+im_string;
+     icomp++;
+     varnames[icomp]="TR"+im_string;
+     icomp++;
+     varnames[icomp]="TRT"+im_string;
+     icomp++;
+     varnames[icomp]="TRTF"+im_string;
+     icomp++;
+     varnames[icomp]="VORT"+im_string;
+    }
+
+    if (icomp+1==PLOTCOMP_F_ELASTIC_X) {
+     // do nothing
+    } else
+     amrex::Error("icomp+1!=PLOTCOMP_F_ELASTIC_X");
+
+    icomp++;
+    varnames[icomp]="X_ELSTCFORCE";
+    icomp++;
+    varnames[icomp]="Y_ELSTCFORCE";
+    if (AMREX_SPACEDIM==3) {
+     icomp++;
+     varnames[icomp]="Z_ELSTCFORCE";
+    }
+    if (icomp+1==PLOTCOMP_NCOMP) {
+     // do nothing
+    } else
+     amrex::Error("icomp+1!=PLOTCOMP_NCOMP");
 
     WriteMultiLevelPlotfile(plotfilename,
       tecplot_finest_level+1, //nlevels
