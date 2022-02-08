@@ -20028,8 +20028,127 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
      }
      level_steps[ilev]=nsteps;
     } 
+    std::stringstream steps_string_stream(std::stringstream::in |
+      std::stringstream::out);
+    steps_string_stream << std::setw(8) << std::setfill('0') << nsteps;
+    std::string steps_string=steps_string_stream.str();
 
     std::string plotfilename="nddataPLT"; 
+    plotfilename+=steps_string;
+
+    icomp=0;
+    varnames[icomp]="X";
+    icomp++;
+    varnames[icomp]="Y";
+    if (AMREX_SPACEDIM==3) {
+     icomp++;
+     varnames[icomp]="Z";
+    }
+    icomp++;
+    varnames[icomp]="x_velocity";
+    icomp++;
+    varnames[icomp]="y_velocity";
+    if (AMREX_SPACEDIM==3) {
+     icomp++;
+     varnames[icomp]="z_velocity";
+    }
+    icomp++;
+    varnames[icomp]="PRES_MG";
+    icomp++;
+    varnames[icomp]="PRES_EOS";
+    icomp++;
+    varnames[icomp]="DIV_DERIVED";
+    icomp++;
+    varnames[icomp]="DIV_EXPECT";
+    icomp++;
+    varnames[icomp]="MACH";
+
+    for (int im=0;im<num_materials;im++) {
+     std::stringstream im_string_stream(std::stringstream::in |
+      std::stringstream::out);
+     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+     std::string im_string=im_string_stream.str();
+     icomp++;
+     varnames[icomp]="F"+im_string;
+    }
+
+    for (int im=0;im<num_materials;im++) {
+     std::stringstream im_string_stream(std::stringstream::in |
+      std::stringstream::out);
+     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+     std::string im_string=im_string_stream.str();
+     std::string im_opp_string=im_string_stream.str();
+     icomp++;
+     varnames[icomp]="L"+im_string+im_opp_string;
+    }
+
+    for (int im=0;im<num_materials;im++) {
+     std::stringstream im_string_stream(std::stringstream::in |
+      std::stringstream::out);
+     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+     std::string im_string=im_string_stream.str();
+     icomp++;
+     varnames[icomp]="x_normal"+im_string+im_opp_string;
+     icomp++;
+     varnames[icomp]="y_normal"+im_string+im_opp_string;
+     if (AMREX_SPACEDIM==3) {
+      icomp++;
+      varnames[icomp]="z_normal"+im_string+im_opp_string;
+     }
+    }
+    if (icomp+1==PLOTCOMP_SCALARS) {
+     // do nothing
+    } else
+     amrex::Error("icomp+1!=PLOTCOMP_SCALARS");
+
+    for (int im=0;im<num_materials;im++) {
+     std::stringstream im_string_stream(std::stringstream::in |
+      std::stringstream::out);
+     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+     std::string im_string=im_string_stream.str();
+     icomp++;
+     varnames[icomp]="D"+im_string;
+     icomp++;
+     varnames[icomp]="T"+im_string;
+
+     for (int ispec=0;ispec<num_species_var;ispec++) {
+      std::stringstream ispec_string_stream(std::stringstream::in |
+       std::stringstream::out);
+      ispec_string_stream << std::setw(2) << std::setfill('0') << ispec+1;
+      std::string ispec_string=ispec_string_stream.str();
+      icomp++;
+      varnames[icomp]="S"+ispec_string+"-"+im_string;
+     }
+    }
+
+    for (int im=0;im<num_materials;im++) {
+     std::stringstream im_string_stream(std::stringstream::in |
+      std::stringstream::out);
+     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+     std::string im_string=im_string_stream.str();
+     icomp++;
+     varnames[icomp]="MOMDEN"+im_string;
+    }
+    for (int partid=0;partid<num_materials_viscoelastic;partid++) {
+     int im=im_elastic_map[partid];
+     if ((im>=0)&&(im<num_materials)) {
+      std::stringstream im_string_stream(std::stringstream::in |
+       std::stringstream::out);
+      im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+      std::string im_string=im_string_stream.str();
+      for (int ispec=0;ispec<ENUM_NUM_TENSOR_TYPE;ispec++) {
+       std::stringstream ispec_string_stream(std::stringstream::in |
+        std::stringstream::out);
+       ispec_string_stream << std::setw(2) << std::setfill('0') << ispec+1;
+       std::string ispec_string=ispec_string_stream.str();
+       icomp++;
+       varnames[icomp]="CT"+ispec_string+"-"+im_string;
+      } //ispec
+     } else
+      amrex::Error("im invalid");
+    } //partid
+
+
     WriteMultiLevelPlotfile(plotfilename,
       tecplot_finest_level+1, //nlevels
       mf_tower,
