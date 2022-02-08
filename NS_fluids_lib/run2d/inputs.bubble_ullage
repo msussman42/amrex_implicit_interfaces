@@ -75,6 +75,9 @@ ns.xblob            = 0.127 # Tank cavity radius (TPCE) 0.254/2 meters
 ns.yblob            = 0.102 # Height of Cylindrical part 10.2 cm
 ns.zblob            = 0.0    # Interface location 
 ns.radblob          = 0.0    # Not used
+ns.radblob3 = 0.005  #TANK_MK_NOZZLE_RAD
+ns.radblob4 = 0.01   #TANK_MK_HEATER_THICK
+ns.radblob5 = 0.005  #TANK_MK_NOZZLE_THICK_OUTLET
 # volume of spherical ullage=0.17 * 0.01375=(4/3)pi r^3
 ns.radblob2         = 0.082   # radius of spherical ullage
 ns.xblob2           = 0.0
