@@ -8379,7 +8379,7 @@ END SUBROUTINE SIMP
               else if (volume_new.eq.zero) then
                ! do nothing
               else
-               print *,"volume_new invalid"
+               print *,"volume_new invalid (1)",volume_new
                print *,"iregions=",iregions
                print *,"tid_current=",tid_current
                print *,"region_volume ",region_volume
@@ -8631,7 +8631,13 @@ END SUBROUTINE SIMP
                if (volume_new.eq.zero) then
                 ! do nothing
                else
-                print *,"volume_new invalid"
+                print *,"volume_new invalid (2)",volume_new
+                print *,"iregions=",iregions
+                print *,"tid_current=",tid_current
+                print *,"region_volume ",region_volume
+                print *,"region_volume_flux ",region_volume_flux
+                print *,"dt ",dt
+                print *,"im ",im
                 stop
                endif
               else

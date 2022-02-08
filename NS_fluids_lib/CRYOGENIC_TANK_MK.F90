@@ -113,12 +113,36 @@ contains
    ! TPCE
   else if (axis_dir.eq.1) then ! heater on top
    TANK_MK_HEATER_WALL_MODEL = 0.0
-   TANK_MK_HEATER_THICK     = 0.01d0
+   if (radblob4.gt.0.0d0) then
+!   TANK_MK_HEATER_THICK = 0.01d0
+    TANK_MK_HEATER_THICK = radblob4
+   else
+    print *,"init radblob4 to be TANK_MK_HEATER_THICK "
+    print *,"currently radblob4=",radblob4
+    stop
+   endif
+
    TANK_MK_HEATER_TOTAL_ANGLE = 30.0d0*Pi/180.0d0
 
-   TANK_MK_NOZZLE_RAD=0.005D0  !dx coarsest =0.0015625, "1cm diameter."
+   if (radblob3.gt.0.0d0) then
+!   TANK_MK_NOZZLE_RAD=0.005D0  !dx coarsest =0.0015625, "1cm diameter."
+    TANK_MK_NOZZLE_RAD=radblob3
+   else
+    print *,"init radblob3 to be TANK_MK_NOZZLE_RAD "
+    print *,"currently radblob3=",radblob3
+    stop
+   endif
+
    TANK_MK_NOZZLE_HT=0.064D0
-   TANK_MK_NOZZLE_THICK_OUTLET=0.005d0
+   if (radblob5.gt.0.0d0) then
+!   TANK_MK_NOZZLE_THICK_OUTLET=0.005d0
+    TANK_MK_NOZZLE_THICK_OUTLET=radblob5
+   else
+    print *,"init radblob5 to be TANK_MK_NOZZLE_THICK_OUTLET "
+    print *,"currently radblob5=",radblob5
+    stop
+   endif
+
    TANK_MK_NOZZLE_BASE=-half*TANK_MK_HEIGHT-TANK_MK_END_RADIUS
 
   else
