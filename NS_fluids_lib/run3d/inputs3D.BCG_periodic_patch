@@ -43,8 +43,6 @@ amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 2 2 2 2 2 2  
 amr.grid_eff        = 0.75 
 
-#  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
-
 ns.ns_tiling=false
 #fabarray.mfiter_tile_size=32 32
 amr.blocking_factor = 8 8
