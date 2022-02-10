@@ -1730,7 +1730,7 @@ stop
       endif
 
       return
-      end subroutine
+      end subroutine boatparms
 
       subroutine boatdist(x,y,z,dist)
       IMPLICIT NONE
@@ -2607,6 +2607,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        uy=-alpha*fx*gyp
        vx=alpha*fy*gxp
        vort=abs(uy-vx)
+      else if ((probtype.eq.26).and. &
+               (axis_dir.eq.12)) then ! buoyancy test
+       print *,"get_vortex_info should not have been called:buoyancy"
+       stop
       else
        print *,"get_vortex_info should not have been called"
        stop
@@ -2677,6 +2681,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          vel_err=vel_err+(vel_expect(dir)-vel(dir))**2
         enddo
         vel_err=sqrt(vel_err)
+       else if (axis_dir.eq.12) then !buoyancy test.
+        ! do nothing
        else
         print *,"axis_dir invalid"
         stop
@@ -9896,8 +9902,10 @@ END SUBROUTINE Adist
          ! do nothing
         else if (axis_dir.eq.11) then ! inputs.BCG_periodic
          ! do nothing
+        else if (axis_dir.eq.12) then ! inputs.buoyancy
+         ! do nothing
         else
-         print *,"axis_dir 0, 1,2,3,10, or 11 expected"
+         print *,"axis_dir 0, 1,2,3,10, 11 or 12 expected"
          stop
         endif
 ! natural convection in triangular enclosure
@@ -10250,8 +10258,10 @@ END SUBROUTINE Adist
          dist=sqrt((x-xblob)**2+(y-yblob)**2+(z-zblob)**2)-radblob
         else if (axis_dir.eq.11) then ! BCG smooth test, periodic
          ! do nothing
+        else if (axis_dir.eq.12) then ! buoyancy test, periodic
+         ! do nothing
         else
-         print *,"axis_dir 0,1,2,3,4,5, or 11 expected"
+         print *,"axis_dir 0,1,2,3,4,5,11 or 12 expected"
          stop
         endif
 ! rotating annulus (vapordist 3D)
@@ -16300,9 +16310,9 @@ END SUBROUTINE Adist
 
         ! velbc_override
        else if ((probtype.eq.26).and. &
-                ((axis_dir.eq.10).or. &  ! BCG test
-                 (axis_dir.eq.11))) then ! BCG_periodic test  
-                                         ! (should not come here)
+                ((axis_dir.eq.10).or. & ! BCG test
+                 (axis_dir.eq.11).or. & !BCG_periodic test (shouldn't be hear)
+                 (axis_dir.eq.12))) then!buoyancy test 
         do dir2=1,SDIM
          velcell(dir2)=zero
         enddo
@@ -26573,8 +26583,8 @@ end subroutine initialize2d
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+          scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+ENUM_TEMPERATUREVAR+1)=local_state(local_ibase+2) 
            ! species
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
@@ -26591,8 +26601,8 @@ end subroutine initialize2d
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+          scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+ENUM_TEMPERATUREVAR+1)=local_state(local_ibase+2) 
            ! species
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
@@ -26609,8 +26619,8 @@ end subroutine initialize2d
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+          scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+1) ! density
+          scalc(ibase+ENUM_TEMPERATUREVAR+1)=local_state(local_ibase+2) 
           ! species
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
@@ -26698,8 +26708,8 @@ end subroutine initialize2d
 
           ibase=idenbase+(im-1)*num_state_material
 
-          scalc(ibase+1)=fort_denconst(im)  ! den
-          scalc(ibase+2)=fort_initial_temperature(im)  ! temperature
+          scalc(ibase+ENUM_DENVAR+1)=fort_denconst(im)  ! den
+          scalc(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) 
      
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
@@ -26710,16 +26720,19 @@ end subroutine initialize2d
            ! fort_tempconst(1) is the inner wall temperature
            ! twall is the outer wall temperature
            ! see: subroutine thermal_offset
-           scalc(ibase+2)=fort_initial_temperature(1)
+           scalc(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(1)
           endif
 
            ! in: INITDATA
           if (probtype.eq.26) then ! swirl if axis_dir=0 or 1.
 
            if (axis_dir.eq.10) then ! BCG test
-            scalc(ibase+2)=fort_initial_temperature(1)
+            scalc(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(1)
            else if (axis_dir.eq.11) then ! BCG periodic test
-            scalc(ibase+2)=fort_initial_temperature(1)
+            scalc(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(1)
+           else if (axis_dir.eq.12) then ! buoyancy test
+            scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
+               fort_initial_temperature(1)+radblob2*xpos(SDIM)
            else if ((axis_dir.ge.0).and. & !swirl,vortex confinement
                     (axis_dir.le.5)) then
             doubly_flag=1
