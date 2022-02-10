@@ -88,7 +88,6 @@ amr.time_blocking_factor=1
 ns.enable_spectral=0  # enable_spectral=0 or 1
 #ns.enable_spectral=1  # enable_spectral=0 or 1
 ns.viscous_enable_spectral=0
-#  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
 amr.check_int       = 50  # default 50
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 10  # default 10

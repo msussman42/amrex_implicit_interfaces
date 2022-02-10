@@ -86,7 +86,6 @@ amr.blocking_factor = 8 8 8 8 8      # block factor in grid generation
 # reduces to first order.
 amr.space_blocking_factor = 1 1 1 1 1
 amr.time_blocking_factor=1
-#  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
 ns.enable_spectral=0  # enable_spectral=0 or 1 (advection, pressure grad are
                       #  high order in space and time.
 ns.viscous_enable_spectral=0

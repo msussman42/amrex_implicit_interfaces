@@ -56,7 +56,6 @@ amr.max_level = 1
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4 4   # number of buffer cells in error est
 amr.grid_eff        = 0.95   # what constitutes an efficient grid
-#  grad dot (u_GL u_GG) - u_GG div u_GL, no sync project
 ns.enable_spectral=0  # set this to 1 for space time spectral element
 ns.viscous_enable_spectral=0
 amr.n_proper=1  # default is 1
