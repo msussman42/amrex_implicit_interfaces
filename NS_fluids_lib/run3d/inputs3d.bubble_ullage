@@ -124,7 +124,8 @@ amr.n_cell          = 64 64 64 # 16 cores compute1
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
-amr.max_grid_size   = 16   # 128 is optimal for MPI in 2D
+amr.max_grid_size   = 32   # 128 is optimal for MPI in 2D
+amr.regrid_on_restart=1
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 4 4 4 4 4 # number of buffer cells in error est 
@@ -421,11 +422,11 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 200
-mg.bot_atol = 1.0e-8
+mg.bot_atol = 1.0e-6
 mg.rtol_b = -0.01
 Lp.v = 1
 
-mac.mac_abs_tol=1.0e-8
+mac.mac_abs_tol=1.0e-6
 
 ns.pressure_error_cutoff=0.0 0.0 0.0
 
