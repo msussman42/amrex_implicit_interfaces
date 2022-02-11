@@ -16311,7 +16311,7 @@ END SUBROUTINE Adist
         ! velbc_override
        else if ((probtype.eq.26).and. &
                 ((axis_dir.eq.10).or. & ! BCG test
-                 (axis_dir.eq.11).or. & !BCG_periodic test (shouldn't be hear)
+                 (axis_dir.eq.11).or. & !BCG_periodic test (shouldn't be here)
                  (axis_dir.eq.12))) then!buoyancy test 
         do dir2=1,SDIM
          velcell(dir2)=zero
@@ -26513,8 +26513,10 @@ end subroutine initialize2d
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+          scalc(ibase+ENUM_DENVAR+1)= &
+            local_state(local_ibase+ENUM_DENVAR+1) ! density
+          scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
+            local_state(local_ibase+ENUM_TEMPERATUREVAR+1) 
           ! species
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
@@ -26527,7 +26529,7 @@ end subroutine initialize2d
            endif
           enddo
 
-          if (scalc(ibase+1).gt.zero) then
+          if (scalc(ibase+ENUM_DENVAR+1).gt.zero) then
            ! do nothing
           else
            print *,"density invalid probtype==421 "
@@ -26536,7 +26538,7 @@ end subroutine initialize2d
            stop
           endif
 
-          if (scalc(ibase+2).gt.zero) then
+          if (scalc(ibase+ENUM_TEMPERATUREVAR+1).gt.zero) then
            ! do nothing
           else
            print *,"temperature invalid probtype==421 "
@@ -26565,8 +26567,10 @@ end subroutine initialize2d
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+          scalc(ibase+ENUM_DENVAR+1)= &
+              local_state(local_ibase+ENUM_DENVAR+1) ! density
+          scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
+              local_state(local_ibase+ENUM_TEMPERATUREVAR+1) ! temperature
            ! species
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
@@ -26583,8 +26587,9 @@ end subroutine initialize2d
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
-          scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+ENUM_TEMPERATUREVAR+1)=local_state(local_ibase+2) 
+          scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
+          scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
+               local_state(local_ibase+ENUM_TEMPERATUREVAR+1) 
            ! species
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
@@ -26601,8 +26606,9 @@ end subroutine initialize2d
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
-          scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+ENUM_TEMPERATUREVAR+1)=local_state(local_ibase+2) 
+          scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
+          scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
+             local_state(local_ibase+ENUM_TEMPERATUREVAR+1) 
            ! species
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
@@ -26619,8 +26625,9 @@ end subroutine initialize2d
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
-          scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+ENUM_TEMPERATUREVAR+1)=local_state(local_ibase+2) 
+          scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
+          scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
+             local_state(local_ibase+ENUM_TEMPERATUREVAR+1) 
           ! species
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
@@ -26637,8 +26644,9 @@ end subroutine initialize2d
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+          scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
+          scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
+             local_state(local_ibase+ENUM_TEMPERATUREVAR+1) ! temperature
           ! species
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
@@ -26655,8 +26663,9 @@ end subroutine initialize2d
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+          scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
+          scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
+             local_state(local_ibase+ENUM_TEMPERATUREVAR+1) ! temperature
            ! species
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
@@ -26673,8 +26682,9 @@ end subroutine initialize2d
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+          scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
+          scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
+              local_state(local_ibase+ENUM_TEMPERATUREVAR+1) ! temperature
            ! species
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
@@ -26691,8 +26701,9 @@ end subroutine initialize2d
          do im=1,nmat
           ibase=idenbase+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
-          scalc(ibase+1)=local_state(local_ibase+1) ! density
-          scalc(ibase+2)=local_state(local_ibase+2) ! temperature
+          scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
+          scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
+              local_state(local_ibase+ENUM_TEMPERATUREVAR+1) ! temperature
            ! species
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
@@ -26787,7 +26798,8 @@ end subroutine initialize2d
             endif
 
             jumpval=(jumpval+one)/two
-            scalc(ibase+2)=jumpval*fort_initial_temperature(1)+ &
+            scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
+             jumpval*fort_initial_temperature(1)+ &
              (one-jumpval)*fort_initial_temperature(2)
   
            else
@@ -26803,7 +26815,7 @@ end subroutine initialize2d
            if (im.eq.1) then
             call tait_hydrostatic_pressure_density(xpos, &
              rhohydro,preshydro,from_boundary_hydrostatic)
-            scalc(ibase+1)=rhohydro
+            scalc(ibase+ENUM_DENVAR+1)=rhohydro
            else if (im.eq.2) then
             e_jwl=4.2814D+10
             den_jwl=1.63D0
@@ -26811,8 +26823,8 @@ end subroutine initialize2d
             call TEMPERATURE_material(den_jwl,massfrac_parm, &
              temp_jwl,e_jwl, &
              fort_material_type(im),im)
-            scalc(ibase+1)=den_jwl
-            scalc(ibase+2)=temp_jwl
+            scalc(ibase+ENUM_DENVAR+1)=den_jwl
+            scalc(ibase+ENUM_TEMPERATUREVAR+1)=temp_jwl
            endif
           endif  ! probtype=36
            ! initial temperature for boiling cavity problem
@@ -26821,7 +26833,7 @@ end subroutine initialize2d
            if (im.eq.1) then
              ! bcflag=0 (calling from fort_initdata)
             call outside_temperature(time,x,y,z,water_temp,im,0)
-            scalc(ibase+2)=water_temp  
+            scalc(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  
            endif ! im=1
           endif
 
@@ -26836,7 +26848,7 @@ end subroutine initialize2d
            if (im.eq.4) then
             ! bcflag=0 (calling from fort_initdata)
             call outside_temperature(time,x,y,z,water_temp,im,0)
-            scalc(ibase+2)=water_temp
+            scalc(ibase+ENUM_TEMPERATUREVAR+1)=water_temp
            endif
 
           endif ! probtype.eq.59
@@ -26866,7 +26878,7 @@ end subroutine initialize2d
            else
             water_temp=radblob2+fort_initial_temperature(1)
            endif
-           scalc(ibase+2)=water_temp  ! temperature
+           scalc(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  ! temperature
           endif  ! probtype=603
 
           if ((probtype.eq.1).and. &
@@ -26902,8 +26914,8 @@ end subroutine initialize2d
             call TEMPERATURE_material(den_jwl,massfrac_parm, &
              temp_jwl,e_jwl, &
              fort_material_type(im),im)
-            scalc(ibase+1)=den_jwl
-            scalc(ibase+2)=temp_jwl
+            scalc(ibase+ENUM_DENVAR+1)=den_jwl
+            scalc(ibase+ENUM_TEMPERATUREVAR+1)=temp_jwl
            else if (im.eq.1) then ! water
             ! do nothing (use fort_denconst and fort_initial_temperature)
            else
@@ -27072,8 +27084,8 @@ end subroutine initialize2d
             stop
            endif
 
-           scalc(ibase+1)=den_jwl
-           scalc(ibase+2)=temp_jwl
+           scalc(ibase+ENUM_DENVAR+1)=den_jwl
+           scalc(ibase+ENUM_TEMPERATUREVAR+1)=temp_jwl
 
           endif ! probtype=92 or 93 (shock tube test problems)
 
@@ -27084,7 +27096,7 @@ end subroutine initialize2d
 
             call tait_hydrostatic_pressure_density(xpos, &
              rhohydro,preshydro,from_boundary_hydrostatic)
-            scalc(ibase+1)=rhohydro
+            scalc(ibase+ENUM_DENVAR+1)=rhohydro
 
            endif  ! im=1
           endif ! material_type(1)=13
@@ -27096,7 +27108,7 @@ end subroutine initialize2d
 
             call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
                     from_boundary_hydrostatic)
-            scalc(ibase+1)=rhohydro
+            scalc(ibase+ENUM_DENVAR+1)=rhohydro
    
            else if (im.eq.2) then
             e_jwl=4.2945D+10
@@ -27106,8 +27118,8 @@ end subroutine initialize2d
              temp_jwl,e_jwl, &
              fort_material_type(im),im)
 
-            scalc(ibase+1)=den_jwl     ! density
-            scalc(ibase+2)=temp_jwl
+            scalc(ibase+ENUM_DENVAR+1)=den_jwl     ! density
+            scalc(ibase+ENUM_TEMPERATUREVAR+1)=temp_jwl
            endif
           endif  ! probtype=42 axis_dir=1 (bubble jetting)
 
@@ -27115,7 +27127,7 @@ end subroutine initialize2d
           ! flag=0 
           if ((probtype.eq.36).and.(axis_dir.eq.10)) then
            call position_Temp(0,radblob,radblob2,x,y,z,temp_jwl)
-           scalc(ibase+2)=temp_jwl
+           scalc(ibase+ENUM_TEMPERATUREVAR+1)=temp_jwl
           endif
 
            ! in: initdata
@@ -27126,7 +27138,7 @@ end subroutine initialize2d
 
              call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
                      from_boundary_hydrostatic)
-             scalc(ibase+1)=rhohydro
+             scalc(ibase+ENUM_DENVAR+1)=rhohydro
 
             else if (im.eq.2) then ! jwl
              e_jwl=4.2945D+10
@@ -27136,8 +27148,8 @@ end subroutine initialize2d
               temp_jwl,e_jwl, &
               fort_material_type(im),im)
 
-             scalc(ibase+1)=den_jwl     ! density
-             scalc(ibase+2)=temp_jwl
+             scalc(ibase+ENUM_DENVAR+1)=den_jwl     ! density
+             scalc(ibase+ENUM_TEMPERATUREVAR+1)=temp_jwl
             else if (im.eq.3) then  ! air
              call general_hydrostatic_pressure(p_hyd)
              den_jwl=fort_denconst(im)
@@ -27151,15 +27163,15 @@ end subroutine initialize2d
               fort_material_type(im),im)
              temp_jwl=temp_jwl*p_hyd/p_jwl
         
-             scalc(ibase+1)=den_jwl
-             scalc(ibase+2)=temp_jwl
+             scalc(ibase+ENUM_DENVAR+1)=den_jwl
+             scalc(ibase+ENUM_TEMPERATUREVAR+1)=temp_jwl
 
             endif
            else if (axis_dir.eq.10) then
             if (im.eq.1) then ! water
              call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
                      from_boundary_hydrostatic)
-             scalc(ibase+1)=rhohydro
+             scalc(ibase+ENUM_DENVAR+1)=rhohydro
             endif
            else if (axis_dir.eq.20) then
             !do nothing (CODY ESTEBE created test problem,fort_denconst(im) ok)
@@ -27177,9 +27189,9 @@ end subroutine initialize2d
            temproom=fort_initial_temperature(im)  ! room temp
 
            if (im.eq.1) then  ! liquid
-            scalc(ibase+1)=denroom
+            scalc(ibase+ENUM_DENVAR+1)=denroom
            else if (im.eq.2) then  ! gas
-            scalc(ibase+1)=denroom
+            scalc(ibase+ENUM_DENVAR+1)=denroom
             imattype=fort_material_type(im)
 
             if (imattype.eq.0) then
@@ -27195,7 +27207,7 @@ end subroutine initialize2d
              call general_hydrostatic_pressure(p_hyd)
              temproom=temproom*p_hyd/p_room
              e_room=e_room*p_hyd/p_room
-             scalc(ibase+2)=temproom  ! temperature
+             scalc(ibase+ENUM_TEMPERATUREVAR+1)=temproom  ! temperature
             else 
              print *,"imattype invalid fort_initdata"
              stop
@@ -27269,12 +27281,12 @@ end subroutine initialize2d
              stop
             endif
            endif
-           scalc(ibase+2)=T_FIELD
+           scalc(ibase+ENUM_TEMPERATUREVAR+1)=T_FIELD
 
           endif ! (probtype.eq.801).and.(axis_dir.eq.3)
 
           if (probtype.eq.802) then ! dissolution
-           scalc(ibase+2)=two   ! T (concentration_initdata)
+           scalc(ibase+ENUM_TEMPERATUREVAR+1)=two ! T (concentration_initdata)
            call vapordist(xsten,nhalf,dx,bfact,posdiss_initdata)
            if (posdiss_initdata.le.zero) then
             concentration_initdata=two
@@ -27297,7 +27309,8 @@ end subroutine initialize2d
                (one-theta_initdata)*concen1_initdata+ &
                theta_initdata*concen2_initdata
            endif
-           scalc(ibase+2)=concentration_initdata   ! T (concentration_initdata)
+            ! T (concentration_initdata)
+           scalc(ibase+ENUM_TEMPERATUREVAR+1)=concentration_initdata   
           endif ! 802 (dissolution)
 
            ! in: subroutine fort_initdata
@@ -27323,7 +27336,7 @@ end subroutine initialize2d
            endif
 
             ! density comes from the inputs file.
-           scalc(ibase+2)=temp
+           scalc(ibase+ENUM_TEMPERATUREVAR+1)=temp
            scalc(ibase+3)=ccnt
 
            ! in: subroutine fort_initdata
@@ -27336,7 +27349,7 @@ end subroutine initialize2d
                    (probtype.eq.301)) then !melting (initial temperature field)
 
            temp=fort_initial_temperature(im)
-           scalc(ibase+2)=temp
+           scalc(ibase+ENUM_TEMPERATUREVAR+1)=temp
 
           endif  
 
@@ -27614,8 +27627,9 @@ end subroutine initialize2d
         jc=1
         kc=0
         do ic=fablo(1),fabhi(1)
-         comparestate(ic,2)=scal(D_DECL(ic,jc,kc),idenbase+1)
-         comparestate(ic,3)=scal(D_DECL(ic,jc,kc),idenbase+2)
+         comparestate(ic,2)=scal(D_DECL(ic,jc,kc),idenbase+ENUM_DENVAR+1)
+         comparestate(ic,3)= &
+            scal(D_DECL(ic,jc,kc),idenbase+ENUM_TEMPERATUREVAR+1)
         enddo
         call compare_sanity(comparestate,2,2,1)
         deallocate(comparestate)
@@ -28890,8 +28904,11 @@ end subroutine initialize2d
            if ((adv_dir.eq.2).or.(adv_dir.eq.3)) then
             y_vel=y_vel+adv_vel
            endif
+          else if (axis_dir.eq.12) then  ! buoyancy
+           x_vel=0.0
+           y_vel=0.0
           else
-           print *,"axix_dir invalid"
+           print *,"axis_dir invalid"
            stop
           endif
              
@@ -29199,8 +29216,12 @@ end subroutine initialize2d
             z_vel=z_vel+adv_vel
            endif
 
+          else if (axis_dir.eq.12) then ! buoyancy
+           x_vel=zero
+           y_vel=zero
+           z_vel=zero
           else
-           print *,"axix_dir invalid"
+           print *,"axis_dir invalid"
            stop
           endif
 
