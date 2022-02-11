@@ -2992,16 +2992,38 @@ ABecLaplacian::CG_dump_params(
 		MultiFab& mf2,int level) {
 
  if (ParallelDescriptor::IOProcessor()) {
-  std::cout << "level= " << level << '\n';
-  std::cout << "rnorm_init,rnorm,eps_abs,relative_error " <<
+
+  std::cout<<"level= " << level << '\n';
+  std::cout<<"rnorm_init,rnorm,eps_abs,relative_error " <<
    rnorm_init << ' ' << rnorm << ' ' <<  eps_abs << 
    ' ' << relative_error << '\n';
-  std::cout << "Ar_norm_init,Ar_norm,eps_abs,relative_error " <<
-   Ar_norm_init << ' ' << Ar_norm << ' ' <<  eps_abs << 
+
+  Real scale_Ar_norm=Ar_norm;
+  if (Ar_norm_init>0.0) {
+   scale_Ar_norm=Ar_norm*rnorm_init/Ar_norm_init;
+  } else if (Ar_norm_init==0.0) {
+   // do nothing
+  } else
+   amrex::Error("Ar_norm_init invalid");
+
+  std::cout<<"Ar_norm_init,Ar_norm,scale_Ar_norm,eps_abs,relative_error " <<
+   Ar_norm_init << ' ' << Ar_norm << ' ' <<  scale_Ar_norm <<
+   ' ' << eps_abs << 
    ' ' << relative_error << '\n';
-  std::cout << "rAr_norm_init,rAr_norm,eps_abs,relative_error " <<
-   rAr_norm_init << ' ' << rAr_norm << ' ' <<  eps_abs << 
+
+  Real scale_rAr_norm=rAr_norm;
+  if (rAr_norm_init>0.0) {
+   scale_rAr_norm=rAr_norm*rnorm_init/rAr_norm_init;
+  } else if (rAr_norm_init==0.0) {
+   // do nothing
+  } else
+   amrex::Error("rAr_norm_init invalid");
+
+  std::cout<<"rAr_norm_init,rAr_norm,scale_rAr_norm,eps_abs,relative_error "<<
+   rAr_norm_init << ' ' << rAr_norm << ' ' <<  scale_rAr_norm <<
+   ' ' << eps_abs << 
    ' ' << relative_error << '\n';
+
   std::cout << "is_bottom= " << is_bottom << '\n';
   std::cout << "bot_atol= " << bot_atol << '\n';
   std::cout << "usecg_at_bottom= " << usecg_at_bottom << '\n';
@@ -3769,15 +3791,42 @@ ABecLaplacian::CG_solve(
    int dump_size=CG_error_history.size();
    if (nit+1<dump_size)
     dump_size=nit+1;
+   std::cout << "legend: history[0]=Norm history[1]=TOL \n";
+
    for (int ehist=0;ehist<dump_size;ehist++) {
+
     std::cout << "nit " << ehist << " CG_error_history[nit][0,1] " <<
      CG_error_history[ehist][2*coarsefine+0] << ' ' <<
      CG_error_history[ehist][2*coarsefine+1] << '\n';
-    std::cout << "nit " << ehist << " CG_A_error_history[nit][0,1] " <<
-     CG_A_error_history[ehist][2*coarsefine+0] << ' ' <<
+
+    Real Ar_norm_hist=CG_A_error_history[ehist][2*coarsefine+0];
+    Real scale_Ar_norm_hist=Ar_norm_hist;
+    if (Ar_norm_init>0.0) {
+     scale_Ar_norm_hist=Ar_norm_hist*rnorm_init/Ar_norm_init;
+    } else if (Ar_norm_init==0.0) {
+      // do nothing
+    } else
+     amrex::Error("Ar_norm_init invalid");
+
+    std::cout << "nit " << ehist << 
+     " CG_A_error_history:Ar_norm_hist,scale_Ar_norm_hist,tol " <<
+     Ar_norm_hist << ' ' <<
+     scale_Ar_norm_hist << ' ' <<
      CG_A_error_history[ehist][2*coarsefine+1] << '\n';
-    std::cout << "nit " << ehist << " CG_rAr_error_history[nit][0,1] " <<
-     CG_rAr_error_history[ehist][2*coarsefine+0] << ' ' <<
+
+    Real rAr_norm_hist=CG_rAr_error_history[ehist][2*coarsefine+0];
+    Real scale_rAr_norm_hist=rAr_norm_hist;
+    if (rAr_norm_init>0.0) {
+     scale_rAr_norm_hist=rAr_norm_hist*rnorm_init/rAr_norm_init;
+    } else if (rAr_norm_init==0.0) {
+     // do nothing
+    } else
+     amrex::Error("rAr_norm_init invalid");
+
+    std::cout << "nit " << ehist << 
+     " CG_rAr_error_history:rAr_norm_hist,scale_rAr_norm_hist,tol " <<
+     rAr_norm_hist << ' ' <<
+     scale_rAr_norm_hist << ' ' <<
      CG_rAr_error_history[ehist][2*coarsefine+1] << '\n';
    }
   }
@@ -3855,7 +3904,7 @@ ABecLaplacian::CG_solve(
   }
  }
 
-} // subroutine ABecLaplacian::CG_solve
+} // end subroutine ABecLaplacian::CG_solve
 
 // p=z+beta y
 void ABecLaplacian::CG_advance (
