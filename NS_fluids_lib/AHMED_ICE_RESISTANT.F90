@@ -539,6 +539,44 @@ endif
 return
 end subroutine AHMED_ICE_RESISTANT_HEATSOURCE
 
+REAL_T function get_LS_seed(xpos,LS_normal)
+use probcommon_module
+IMPLICIT NONE
+
+REAL_T, intent(in) :: xpos(SDIM)
+REAL_T, intent(out) :: LS_normal(SDIM)
+REAL_T :: mag
+INTEGER_T :: dir
+
+if (SDIM.eq.2) then
+ mag=sqrt((xpos(1)-xblob4)**2+(xpos(2)-yblob4)**2)
+else if (SDIM.eq.3) then
+ mag=sqrt((xpos(1)-xblob4)**2+(xpos(2)-yblob4)**2+ &
+               (xpos(SDIM)-zblob4)**2)
+else
+ print *,"dimension problem"
+ stop
+endif
+get_LS_seed=radblob4-mag
+
+do dir=1,SDIM
+ LS_normal(dir)=zero
+enddo
+
+if (mag.gt.zero) then
+ LS_normal(1)=(xblob4-xpos(1))/mag
+ LS_normal(2)=(yblob4-xpos(2))/mag
+ if (SDIM.eq.3) then
+  LS_normal(SDIM)=(zblob4-xpos(SDIM))/mag
+ endif
+else if (mag.eq.zero) then
+ ! do nothing
+else
+ print *,"mag invalid"
+ stop
+endif
+
+end function get_LS_seed
 
 subroutine AHMED_ICE_RESISTANT_ASSIMILATE( &
      assimilate_in,assimilate_out, &
@@ -555,7 +593,6 @@ REAL_T :: xcrit(SDIM)
 REAL_T :: LS_normal(SDIM)
 REAL_T :: LS_test
 REAL_T :: t_upper,t_lower
-REAL_T :: mag
 REAL_T :: LS_seed,LS_seed_buffer
 
 INTEGER_T :: number_intervals
@@ -605,34 +642,12 @@ if ((num_materials.ge.3).and. &
    enddo
    if (number_intervals*radblob5.gt.t_lower) then
     if (number_intervals*radblob5.le.t_upper) then
-     if (SDIM.eq.2) then
-      mag=sqrt((xcrit(1)-xblob4)**2+(xcrit(2)-yblob4)**2)
-     else if (SDIM.eq.3) then
-      mag=sqrt((xcrit(1)-xblob4)**2+(xcrit(2)-yblob4)**2+ &
-               (xcrit(SDIM)-zblob4)**2)
-     else
-      print *,"dimension problem"
-      stop
-     endif
-     LS_seed=radblob4-mag
+
+     LS_seed=get_LS_seed(xcrit,LS_normal)
+
      LS_seed_buffer=LS_seed+three*assimilate_in%dx(1)
      if (LS_seed_buffer.ge.zero) then
 
-      do dir=1,SDIM
-       LS_normal(dir)=zero
-      enddo
-      if (mag.gt.zero) then
-       LS_normal(1)=(xblob4-xcrit(1))/mag
-       LS_normal(2)=(yblob4-xcrit(2))/mag
-       if (SDIM.eq.3) then
-        LS_normal(SDIM)=(zblob4-xcrit(SDIM))/mag
-       endif
-      else if (mag.eq.zero) then
-       ! do nothing
-      else
-       print *,"mag invalid"
-       stop
-      endif
       VEL_DROP(1)=xblob5
       VEL_DROP(2)=yblob5
       if (SDIM.eq.3) then
