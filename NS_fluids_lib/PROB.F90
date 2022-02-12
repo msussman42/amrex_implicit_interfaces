@@ -6798,38 +6798,38 @@ END SUBROUTINE Adist
         call SUB_STATE(xvec,time,LS,STATE, &
                 bcflag,num_materials,num_state_material)
         ibase=(im-1)*num_state_material
-        temp=STATE(ibase+2) 
+        temp=STATE(ibase+ENUM_TEMPERATUREVAR+1) 
 
        else if (probtype.eq.411) then ! cavitation user defined
         call CAV3D_LS(xvec,time,LS)
         call CAV3D_STATE(xvec,time,LS,STATE)
         ibase=(im-1)*num_state_material
-        temp=STATE(ibase+2) 
+        temp=STATE(ibase+ENUM_TEMPERATUREVAR+1) 
        else if (probtype.eq.401) then ! helix user defined
         call HELIX_LS(xvec,time,LS)
         call HELIX_STATE(xvec,time,LS,STATE)
         ibase=(im-1)*num_state_material
-        temp=STATE(ibase+2) 
+        temp=STATE(ibase+ENUM_TEMPERATUREVAR+1) 
        else if (probtype.eq.402) then  ! thermal spray
         call TSPRAY_LS(xvec,time,LS)
         call TSPRAY_STATE(xvec,time,LS,STATE)
         ibase=(im-1)*num_state_material
-        temp=STATE(ibase+2)
+        temp=STATE(ibase+ENUM_TEMPERATUREVAR+1)
        else if (probtype.eq.412) then ! user defined
         call CAV2Dstep_LS(xvec,time,LS)
         call CAV2Dstep_STATE(xvec,time,LS,STATE)
         ibase=(im-1)*num_state_material
-        temp=STATE(ibase+2)
+        temp=STATE(ibase+ENUM_TEMPERATUREVAR+1)
        else if (probtype.eq.413) then ! Zeyu's gnbc validation case
         call ZEYU_droplet_impact_LS(xvec,time,LS)
         call ZEYU_droplet_impact_STATE(xvec,time,LS,STATE)
         ibase=(im-1)*num_state_material
-        temp=STATE(ibase+2)
+        temp=STATE(ibase+ENUM_TEMPERATUREVAR+1)
        else if (probtype.eq.311) then ! user defined
         call USERDEF_LS(xvec,time,LS)
         call USERDEF_STATE(xvec,time,LS,STATE)
         ibase=(im-1)*num_state_material
-        temp=STATE(ibase+2) 
+        temp=STATE(ibase+ENUM_TEMPERATUREVAR+1) 
        else
         temp=fort_tempconst(im)
        endif
@@ -20672,7 +20672,7 @@ END SUBROUTINE Adist
       endif
     
       return
-      end subroutine
+      end subroutine jettingdist
 
 
          ! stage=-1 (init)
@@ -26534,7 +26534,7 @@ end subroutine initialize2d
           else
            print *,"density invalid probtype==421 "
            print *,"im,ibase,nmat ",im,ibase,nmat
-           print *,"density=",scalc(ibase+1)
+           print *,"density=",scalc(ibase+ENUM_DENVAR+1)
            stop
           endif
 
@@ -26543,7 +26543,7 @@ end subroutine initialize2d
           else
            print *,"temperature invalid probtype==421 "
            print *,"im,ibase,nmat ",im,ibase,nmat
-           print *,"temperature=",scalc(ibase+1)
+           print *,"temperature=",scalc(ibase+ENUM_TEMPERATUREVAR+1)
            stop
           endif
 
@@ -26742,8 +26742,20 @@ end subroutine initialize2d
            else if (axis_dir.eq.11) then ! BCG periodic test
             scalc(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(1)
            else if (axis_dir.eq.12) then ! buoyancy test
-            scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
-               fort_initial_temperature(1)+radblob2*xpos(SDIM)
+            if (xpos(SDIM).le.problo_array(SDIM)) then
+             scalc(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(1)
+            else if (xpos(SDIM).ge.probhi_array(SDIM)) then
+             scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
+               fort_initial_temperature(1)+radblob2*problen_array(SDIM)
+            else if ((xpos(SDIM).gt.problo_array(SDIM)).and. &
+                     (xpos(SDIM).lt.probhi_array(SDIM))) then
+             scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
+               fort_initial_temperature(1)+ &
+               radblob2*(xpos(SDIM)-problo_array(SDIM))
+            else
+             print *,"xpos is NaN"
+             stop
+            endif
            else if ((axis_dir.ge.0).and. & !swirl,vortex confinement
                     (axis_dir.le.5)) then
             doubly_flag=1

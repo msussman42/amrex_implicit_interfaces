@@ -842,13 +842,32 @@ stop
       probleny=probhiy-probloy
       problenz=probhiz-probloz
       
-      if ((problenx.le.zero).or. &
-          (probleny.le.zero).or. &
-          (problenz.le.zero)) then
+      if ((problenx.gt.zero).and. &
+          (probleny.gt.zero).and. &
+          (problenz.gt.zero)) then
+       !do nothing
+      else
        print *,"problenx or probleny or problenz invalid"
        stop
       endif
-      
+     
+      problo_array(1)=problox 
+      problo_array(2)=probloy 
+      problo_array(3)=probloz 
+      probhi_array(1)=probhix 
+      probhi_array(2)=probhiy 
+      probhi_array(3)=probhiz 
+      do local_dir=1,3
+       problen_array(local_dir)= &
+          probhi_array(local_dir)-problo_array(local_dir)
+       if (problen_array(local_dir).gt.zero) then
+        ! do nothing
+       else
+        print *,"problen_array(local_dir) invalid"
+        stop
+       endif
+      enddo ! local_dir=1,3
+
       fort_stop_time=ccstop_time
       
       prescribe_temperature_outflow= &

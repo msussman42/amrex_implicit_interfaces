@@ -31,6 +31,9 @@
       REAL_T problox,probloy,probloz
       REAL_T probhix,probhiy,probhiz
       REAL_T problenx,probleny,problenz
+      REAL_T problo_array(3)
+      REAL_T probhi_array(3)
+      REAL_T problen_array(3)
       INTEGER_T fort_is_periodic(3)
       REAL_T fort_stop_time
       REAL_T fort_energyconst(MAX_NUM_MATERIALS)

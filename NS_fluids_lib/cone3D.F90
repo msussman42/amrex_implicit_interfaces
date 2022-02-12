@@ -9,6 +9,7 @@
 #include "AMReX_BC_TYPES.H"
  
 #include "AMReX_ArrayLim.H"
+#include "EXTRAP_COMP.H"
 
 !!$ in_vel = (xblob10,yblob10,zblob10)
 !!$ shear for input velocity
@@ -538,12 +539,12 @@ if ((num_materials.eq.2).and. &
  do im=1,num_materials
 
   ibase=(im-1)*num_state_material
-  STATE(ibase+1)=fort_denconst(im)
+  STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im)
 
   if (t.eq.zero) then
-   STATE(ibase+2)=fort_initial_temperature(im)
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im)
   else if (t.gt.zero) then
-   STATE(ibase+2)=fort_tempconst(im)
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
   else
    print *,"t invalid"
    stop
