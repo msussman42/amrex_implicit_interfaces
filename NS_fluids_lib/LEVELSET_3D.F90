@@ -12203,8 +12203,8 @@ stop
            
                ! dendest is Snewfab.dataPtr(STATECOMP_STATES) 
 
-              rho=dendest(D_DECL(i,j,k),ibase+1)
-              TEMPERATURE=dendest(D_DECL(i,j,k),ibase+2)
+              rho=dendest(D_DECL(i,j,k),ibase+ENUM_DENVAR+1)
+              TEMPERATURE=dendest(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1)
 
               if (rho.gt.zero) then
                ! do nothing
@@ -12222,7 +12222,7 @@ stop
               call init_massfrac_parm(rho,massfrac_parm,im)
               do ispec=1,num_species_var
                massfrac_parm(ispec)= &
-                dendest(D_DECL(i,j,k),ibase+2+ispec)
+                 dendest(D_DECL(i,j,k),ibase+ENUM_SPECIESVAR+ispec)
                if (massfrac_parm(ispec).ge.zero) then
                 ! do nothing
                else
@@ -12266,7 +12266,8 @@ stop
               endif
 
               if (NEW_TEMPERATURE.gt.zero) then
-               dendest(D_DECL(i,j,k),ibase+2)=NEW_TEMPERATURE
+               dendest(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1)= &
+                       NEW_TEMPERATURE
               else
                print *,"NEW_TEMPERATURE must be positive"
                stop
@@ -12653,8 +12654,8 @@ stop
         do i=fablo(1),fabhi(1)
          comparestate(i,1)=veldest(D_DECL(i,j,k),1)
          ibase=0
-         comparestate(i,2)=dendest(D_DECL(i,j,k),ibase+1)
-         comparestate(i,3)=dendest(D_DECL(i,j,k),ibase+2)
+         comparestate(i,2)=dendest(D_DECL(i,j,k),ibase+ENUM_DENVAR+1)
+         comparestate(i,3)=dendest(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1)
         enddo
         call compare_sanity(comparepface,1,1,5)
         call compare_sanity(comparevelface,1,1,6)
@@ -13594,7 +13595,7 @@ stop
           call get_primary_material(LSupwind,nmat,im)
           if ((im.ge.1).and.(im.le.nmat)) then
            ibase=num_state_material*(im-1) 
-           denlocal=den(D_DECL(idonate,jdonate,kdonate),ibase+1) 
+           denlocal=den(D_DECL(idonate,jdonate,kdonate),ibase+ENUM_DENVAR+1) 
            if (denlocal.gt.zero) then
             ! do nothing
            else
@@ -13615,7 +13616,8 @@ stop
             print *,"constant_density_all_time invalid"
             stop
            endif
-           templocal=den(D_DECL(idonate,jdonate,kdonate),ibase+2) 
+           templocal= &
+             den(D_DECL(idonate,jdonate,kdonate),ibase+ENUM_TEMPERATUREVAR+1) 
 
            do nc=1,ncphys
             if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then

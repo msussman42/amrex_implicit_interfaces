@@ -9,6 +9,7 @@
 #include "AMReX_BC_TYPES.H"
 
 #include "AMReX_ArrayLim.H"
+#include "EXTRAP_COMP.H"
 
 
 #if (AMREX_SPACEDIM==3)
@@ -566,11 +567,11 @@ endif
 if (probtype.eq.424) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
-  STATE(ibase+1)=fort_denconst(im) ! density prescribed in the inputs file.
+  STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) 
   if (t.eq.zero) then
-   STATE(ibase+2)=fort_initial_temperature(im) !initial temperature in inputs
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) 
   else if (t.gt.zero) then
-   STATE(ibase+2)=fort_tempconst(im)
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
   else
    print *,"t invalid"
    stop
@@ -578,7 +579,7 @@ if (probtype.eq.424) then
 
    ! initial species in inputs?
   do n=1,num_species_var
-   STATE(ibase+2+n)=fort_speciesconst((n-1)*num_materials+im)
+   STATE(ibase+ENUM_SPECIESVAR+n)=fort_speciesconst((n-1)*num_materials+im)
   enddo
 
  enddo ! im=1..num_materials
@@ -589,8 +590,8 @@ if (probtype.eq.424) then
       Y_analytical,VEL,LS_analytical,pres_analytical)
    do im=1,num_materials
     ibase=(im-1)*num_state_material
-    STATE(ibase+2)=T_analytical
-    STATE(ibase+3)=Y_analytical
+    STATE(ibase+ENUM_TEMPERATUREVAR+1)=T_analytical
+    STATE(ibase+ENUM_SPECIESVAR+1)=Y_analytical
    enddo
   endif
  else if (axis_dir.eq.1) then
@@ -1118,8 +1119,8 @@ if ((num_materials.eq.2).and. &
      endif
      do im=1,num_materials
       ibase=SDIM+1+(im-1)*num_state_material
-      assimilate_out%state(D_DECL(i,j,k),ibase+2)=T_exact
-      assimilate_out%state(D_DECL(i,j,k),ibase+3)=Y_exact
+      assimilate_out%state(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1)=T_exact
+      assimilate_out%state(D_DECL(i,j,k),ibase+ENUM_SPECIESVAR+1)=Y_exact
      enddo
     else 
      print *,"cell_flag invalid"
