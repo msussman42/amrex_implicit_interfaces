@@ -9,6 +9,7 @@
 #include "AMReX_BC_TYPES.H"
 
 #include "AMReX_ArrayLim.H"
+#include "EXTRAP_COMP.H"
 
 
 #if (AMREX_SPACEDIM==3)
@@ -544,11 +545,11 @@ if ((num_materials.eq.2).and. &
     (probtype.eq.2002)) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
-  STATE(ibase+1)=fort_denconst(im) ! density prescribed in the inputs file.
+  STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) ! density prescribed in the inputs file.
   if (t.eq.zero) then
-   STATE(ibase+2)=fort_initial_temperature(im) !initial temperature in inputs
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) !initial temperature in inputs
   else if (t.gt.zero) then
-   STATE(ibase+2)=fort_tempconst(im)
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
   else
    print *,"t invalid"
    stop
@@ -557,14 +558,14 @@ if ((num_materials.eq.2).and. &
    ! TEMPERATURE
   use_T=1
   call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
-   x(1),t,use_T,STATE(ibase+2),LS_exact,t_physical_init)
+   x(1),t,use_T,STATE(ibase+ENUM_TEMPERATUREVAR+1),LS_exact,t_physical_init)
    ! MASS FRACTION
   use_T=0
   call SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
    x(1),t,use_T,STATE(ibase+3),LS_exact,t_physical_init)
 
   if (im.eq.1) then ! water
-   state(ibase+2)=fort_tempconst(im)
+   state(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
    state(ibase+3)=fort_speciesconst(im)
   endif
 
@@ -654,7 +655,7 @@ if ((num_materials.eq.2).and. &
     if (xcrit.le.x_exact) then
      do im=1,num_materials
       ibase=SDIM+1+(im-1)*num_state_material
-      assimilate_out%state(D_DECL(i,j,k),ibase+2)=local_temp
+      assimilate_out%state(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1)=local_temp
       assimilate_out%state(D_DECL(i,j,k),ibase+3)=local_massfrac
      enddo
     endif

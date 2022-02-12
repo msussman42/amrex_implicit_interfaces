@@ -1511,7 +1511,7 @@ END SUBROUTINE SIMP
 
           if (is_rigid(nmat,im).eq.0) then
 
-           rho(im)=den(D_DECL(i,j,k),ibase+1)  ! regular density
+           rho(im)=den(D_DECL(i,j,k),ibase+ENUM_DENVAR+1)  ! regular density
    
            if (rho(im).gt.zero) then
             ! do nothing
@@ -1521,11 +1521,11 @@ END SUBROUTINE SIMP
            endif
 
             ! temperature after diffusion
-           temperature=den(D_DECL(i,j,k),ibase+2) 
+           temperature=den(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1) 
 
            call init_massfrac_parm(rho(im),massfrac_parm,im)
            do ispec=1,num_species_var
-            massfrac_parm(ispec)=den(D_DECL(i,j,k),ibase+2+ispec)
+            massfrac_parm(ispec)=den(D_DECL(i,j,k),ibase+ENUM_SPECIESVAR+ispec)
            enddo
           
             ! returns e/scale 
@@ -10401,14 +10401,14 @@ END SUBROUTINE SIMP
         if ((local_material_type(im_primary).gt.0).and. &
             (local_material_type(im_primary).le.MAX_NUM_EOS)) then
 
-         rho=den(D_DECL(i,j,k),ibase+1)
+         rho=den(D_DECL(i,j,k),ibase+ENUM_DENVAR+1)
          if (rho.gt.zero) then
           ! do nothing
          else
           print *,"density has gone nonpos"
           stop
          endif
-         TEMP=den(D_DECL(i,j,k),ibase+2)
+         TEMP=den(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1)
          if (TEMP.gt.zero) then
           ! do nothing
          else
@@ -10417,7 +10417,7 @@ END SUBROUTINE SIMP
          endif
          call init_massfrac_parm(rho,massfrac_parm,im_primary)
          do ispec=1,num_species_var
-          massfrac_parm(ispec)=den(D_DECL(i,j,k),ibase+2+ispec)
+          massfrac_parm(ispec)=den(D_DECL(i,j,k),ibase+ENUM_SPECIESVAR+ispec)
          enddo
          ! returns energy/scale
          call INTERNAL_material(rho,massfrac_parm,TEMP, &

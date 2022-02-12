@@ -3788,7 +3788,7 @@ stop
        if (is_rigid(nmat,im_primaryL).eq.0) then
         ibase=(im_primaryL-1)*num_state_material
         density_left= &
-          den(D_DECL(i-ii,j-jj,k-kk),ibase+1)
+           den(D_DECL(i-ii,j-jj,k-kk),ibase+ENUM_DENVAR+1)
 
         if (material_type(im_primaryL).gt.0) then
 
@@ -3828,7 +3828,7 @@ stop
 
        if (is_rigid(nmat,im_primaryR).eq.0) then
         ibase=(im_primaryR-1)*num_state_material
-        density_right=den(D_DECL(i,j,k),ibase+1)
+        density_right=den(D_DECL(i,j,k),ibase+ENUM_DENVAR+1)
 
         if (material_type(im_primaryR).gt.0) then
 

@@ -9,6 +9,7 @@
 #include "AMReX_BC_TYPES.H"
 
 #include "AMReX_ArrayLim.H"
+#include "EXTRAP_COMP.H"
 
 
 #if (AMREX_SPACEDIM==3)
@@ -804,11 +805,11 @@ endif
 if (probtype.eq.55) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
-  STATE(ibase+1)=fort_denconst(im) ! density prescribed in the inputs file.
+  STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) ! density prescribed in the inputs file.
   if (t.eq.zero) then
-   STATE(ibase+2)=fort_initial_temperature(im) !initial temperature in inputs
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) !initial temperature in inputs
   else if (t.gt.zero) then
-   STATE(ibase+2)=fort_tempconst(im)
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
   else
    print *,"t invalid"
    stop
@@ -816,7 +817,7 @@ if (probtype.eq.55) then
 
    ! initial species in inputs?
   do n=1,num_species_var
-   STATE(ibase+2+n)=fort_speciesconst((n-1)*num_materials+im)
+   STATE(ibase+ENUM_SPECIESVAR+n)=fort_speciesconst((n-1)*num_materials+im)
   enddo
 
    ! initial temperature for boiling or freezing
@@ -827,7 +828,7 @@ if (probtype.eq.55) then
    if (im.eq.1) then
     ! bcflag=0 (calling from FORT_INITDATA)
     call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,0)
-    STATE(ibase+2)=water_temp  
+    STATE(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  
    endif ! im=1
   else if (axis_dir.eq.5) then ! freezing drop on substrate
    if (nmat.lt.4) then
@@ -838,7 +839,7 @@ if (probtype.eq.55) then
    if ((im.eq.3).or.(im.eq.4)) then
     ! bcflag=0 (calling from FORT_INITDATA)
     call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,0)
-    STATE(ibase+2)=water_temp  
+    STATE(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  
    endif
   endif
 

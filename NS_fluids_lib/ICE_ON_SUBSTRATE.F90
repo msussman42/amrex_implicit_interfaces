@@ -9,6 +9,7 @@
 #include "AMReX_BC_TYPES.H"
 
 #include "AMReX_ArrayLim.H"
+#include "EXTRAP_COMP.H"
 
 
 #if (AMREX_SPACEDIM==3)
@@ -279,21 +280,21 @@ if ((num_materials.eq.4).and. &
     (probtype.eq.2001)) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
-  STATE(ibase+1)=fort_denconst(im) ! density prescribed in the inputs file.
+  STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) ! density prescribed in the inputs file.
   if (t.eq.zero) then
-   STATE(ibase+2)=fort_initial_temperature(im) !initial temperature in inputs
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) !initial temperature in inputs
   else if (t.gt.zero) then
-   STATE(ibase+2)=fort_tempconst(im)
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
   else
    print *,"t invalid"
    stop
   endif
    ! always assume Dirichlet boundary condition at zlo for temperature.
-  call outside_temperature(t,x(1),x(2),x(SDIM),STATE(ibase+2),im,bcflag)
+  call outside_temperature(t,x(1),x(2),x(SDIM),STATE(ibase+ENUM_TEMPERATUREVAR+1),im,bcflag)
 
    ! initial species in inputs?
   do n=1,num_species_var
-   STATE(ibase+2+n)=fort_speciesconst((n-1)*num_materials+im)
+   STATE(ibase+ENUM_SPECIESVAR+n)=fort_speciesconst((n-1)*num_materials+im)
   enddo
  enddo ! im=1..num_materials
 else

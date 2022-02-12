@@ -9,7 +9,7 @@
 #include "AMReX_BC_TYPES.H"
 
 #include "AMReX_ArrayLim.H"
-
+#include "EXTRAP_COMP.H"
 
 #if (AMREX_SPACEDIM==3)
 #define SDIM 3
@@ -930,43 +930,43 @@ if ((num_materials.eq.3).and. &
   if(im.eq.2) then
    if(fort_material_type(2).eq.0) then
     ! incompressible
-    STATE(ibase+1)=fort_denconst(im)
+    STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im)
    elseif(fort_material_type(2).eq.TANK_MK_MATERIAL_TYPE) then
     ! compressible
     ! rho =P/(R_sp T)
     call CRYOGENIC_TANK_MK_PRES(x,t,LS,pressure,nmat)
-    STATE(ibase+1) = pressure/&
+    STATE(ibase+ENUM_DENVAR+1) = pressure/&
      (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2))
    else
     print *,"material type invalid for density setup!"
     stop
    endif ! material_type
   else if ((im.eq.1).or.(im.eq.3)) then ! liquid or tank walls
-   STATE(ibase+1)=fort_denconst(im)
+   STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im)
   else
    print *,"im invalid 758 ",im
    stop
   endif
   ! temperature
   if (t.eq.0.0d0) then
-   STATE(ibase+2)=fort_initial_temperature(im)
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im)
   else if (t.gt.0.0d0) then
-   STATE(ibase+2)=fort_tempconst(im)
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
   else
    print *,"t invalid"
    stop
   endif
   ! species
   do n=1,num_species_var
-   STATE(ibase+2+n)=fort_speciesconst((n-1)*num_materials+im)
+   STATE(ibase+ENUM_SPECIESVAR+n)=fort_speciesconst((n-1)*num_materials+im)
   enddo
   if (t.eq.0.0d0) then
    if (im.eq.2) then
-    den=STATE(ibase+1)
-    temperature=STATE(ibase+2)
+    den=STATE(ibase+ENUM_DENVAR+1)
+    temperature=STATE(ibase+ENUM_TEMPERATUREVAR+1)
     call init_massfrac_parm(den,massfrac_parm,im)
     do n=1,num_species_var
-     massfrac_parm(n)=STATE(ibase+2+n)
+     massfrac_parm(n)=STATE(ibase+ENUM_SPECIESVAR+n)
     enddo
     call INTERNAL_CRYOGENIC_TANK_MK(den,massfrac_parm, &
      temperature,internal_energy,TANK_MK_MATERIAL_TYPE,im,num_species_var)
