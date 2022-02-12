@@ -1055,14 +1055,8 @@ use probcommon_module
 IMPLICIT NONE
 REAL_T, intent(inout) :: wavelen
 REAL_T :: default_wavelen
-REAL_T :: problen_array(SDIM)
 INTEGER_T :: dir_local
 
- problen_array(1)=problenx
- problen_array(2)=probleny
- if (SDIM.eq.3) then
-  problen_array(SDIM)=problenz
- endif
  default_wavelen=zero
  do dir_local=1,SDIM
   if (gravity_dir.ne.dir_local) then

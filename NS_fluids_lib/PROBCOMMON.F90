@@ -293,6 +293,8 @@ implicit none
 !  fort_heatflux_factor
 ! Added December 16,2021:
 !  num_interfaces
+! Added February 12,2022:
+!  problo_array,probhi_array,problen_array
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
        !nten=num_interfaces=( (nmat-1)*(nmat-1)+nmat-1 )/2
