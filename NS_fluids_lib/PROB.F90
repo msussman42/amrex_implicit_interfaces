@@ -29585,17 +29585,15 @@ end subroutine initialize2d
       return
       end subroutine fort_forcevelocity
 
-      end module probf90_module
-
-      subroutine FORT_VELFILL ( &
+      subroutine fort_velfill( &
        grid_type, &
        level, &
        u,DIMS(u), &
        domlo,domhi,dx, &
-       xlo,time,bc,scomp,ncomp,bfact)
+       xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_velfill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -29739,19 +29737,19 @@ end subroutine initialize2d
       enddo ! dir2
 
       return
-      end subroutine FORT_VELFILL
+      end subroutine fort_velfill
 
        ! gets all components of the velocity at once. 
        ! (for just a single material)
-      subroutine FORT_GROUP_VELFILL ( &
+      subroutine fort_group_velfill( &
        grid_type, &
        level, &
        u,DIMS(u), &
        domlo,domhi,dx, &
-       xlo,time,bc,scomp,ncomp,bfact)
+       xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_group_velfill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -29893,19 +29891,19 @@ end subroutine initialize2d
       enddo ! dir2,side,velcomp
 
       return
-      end subroutine FORT_GROUP_VELFILL
+      end subroutine fort_group_velfill
 
 
        ! associated with Solid_State_Type
-      subroutine FORT_SOLVFILL ( &
+      subroutine fort_solvfill( &
        grid_type, &
        level, &
        u,DIMS(u), &
        domlo,domhi,dx, &
-       xlo,time,bc,scomp,ncomp,bfact)
+       xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_solvfill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -30065,20 +30063,20 @@ end subroutine initialize2d
       enddo ! dir2
 
       return
-      end subroutine FORT_SOLVFILL
+      end subroutine fort_solvfill
 
        ! associated with Solid_State_Type
        ! gets all components of the velocity at once. 
        ! (for just a single material)
-      subroutine FORT_GROUP_SOLVFILL ( &
+      subroutine fort_group_solvfill( &
        grid_type, &
        level, &
        u,DIMS(u), &
        domlo,domhi,dx, &
-       xlo,time,bc,scomp,ncomp,bfact)
+       xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_group_solvfill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -30129,14 +30127,14 @@ end subroutine initialize2d
        endif
       enddo
       if ((nparts.lt.1).or.(nparts.gt.num_materials)) then
-       print *,"nparts invalid GROUP SOLVFILL"
+       print *,"nparts invalid fort_group_solvfill"
        stop
       endif
 
       im_vel=scomp/SDIM
       if ((im_vel.lt.0).or.(im_vel.ge.nparts).or. &
           (im_vel*SDIM.ne.scomp)) then
-       print *,"scomp invalid in group solvfill"
+       print *,"scomp invalid in fort_group_solvfill"
        stop
       endif
       if (ncomp.ne.SDIM) then
@@ -30235,23 +30233,21 @@ end subroutine initialize2d
       enddo ! dir2,side,velcomp
 
       return
-      end subroutine FORT_GROUP_SOLVFILL
+      end subroutine fort_group_solvfill
 
 
-
-      subroutine FORT_UMACFILL ( &
+      subroutine fort_umacfill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact)
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_umacfill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
 
       IMPLICIT NONE
-
 
       INTEGER_T, intent(in) :: grid_type
       INTEGER_T, intent(in) :: scomp,ncomp,bfact,level
@@ -30288,12 +30284,12 @@ end subroutine initialize2d
       endif
 
       if ((scomp.lt.0).or.(scomp+ncomp.gt.1)) then
-       print *,"scomp invalid umacfill"
+       print *,"scomp invalid fort_umacfill"
        stop
       endif
 
       if (ncomp.ne.1) then
-       print *,"ncomp invalid umacfill 13, grid_type=",grid_type
+       print *,"ncomp invalid fort_umacfill 13, grid_type=",grid_type
        stop
       endif
 
@@ -30423,18 +30419,17 @@ end subroutine initialize2d
       enddo ! dir2
 
       return
-      end subroutine FORT_UMACFILL
+      end subroutine fort_umacfill
 
-
-      subroutine FORT_XDMACFILL ( &
+      subroutine fort_xdmacfill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact)
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_xdmacfill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -30473,12 +30468,12 @@ end subroutine initialize2d
 
       if ((scomp.lt.0).or. &
           (scomp+ncomp.gt.1)) then
-       print *,"scomp invalid xdmacfill"
+       print *,"scomp invalid fort_xdmacfill"
        stop
       endif
 
       if (ncomp.ne.1) then
-       print *,"ncomp invalid13 xdmacfill"
+       print *,"ncomp invalid13 fort_xdmacfill"
        stop
       endif
 
@@ -30497,7 +30492,7 @@ end subroutine initialize2d
        velcomp=grid_type+1
        veldir=grid_type
       else
-       print *,"grid_type invalid in xdmacfill"
+       print *,"grid_type invalid in fort_xdmacfill"
        stop
       endif
 
@@ -30607,18 +30602,15 @@ end subroutine initialize2d
       enddo ! dir2
 
       return
-      end subroutine FORT_XDMACFILL
+      end subroutine fort_xdmacfill
 
-      subroutine FORT_MOFFILL ( &
+      subroutine fort_moffill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact)
-
-      use filcc_module
-      use probf90_module
-      use global_utility_module
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_moffill')
 
       IMPLICIT NONE
 
@@ -30630,24 +30622,19 @@ end subroutine initialize2d
       REAL_T, intent(inout) :: u(DIMV(u))
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
-      print *,"this routine should never be called"
+      print *,"fort_moffill should never be called"
       stop
 
       return
-      end subroutine FORT_MOFFILL
+      end subroutine fort_moffill
 
-
-      subroutine FORT_EXTMOFFILL ( &
+      subroutine fort_extmoffill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact)
-
-      use filcc_module
-      use probf90_module
-      use global_utility_module
-      use MOF_routines_module
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_extmoffill')
 
       IMPLICIT NONE
 
@@ -30659,21 +30646,21 @@ end subroutine initialize2d
       REAL_T, intent(inout) :: u(DIMV(u))
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
-      print *,"this routine should never be called"
+      print *,"fort_extmoffill should never be called"
       stop
 
       return
-      end subroutine FORT_EXTMOFFILL
+      end subroutine fort_extmoffill
 
-      subroutine FORT_GROUP_MOFFILL ( &
+      subroutine fort_group_moffill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact)
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_group_moffill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -30819,18 +30806,17 @@ end subroutine initialize2d
       enddo ! dir2
 
       return
-      end subroutine FORT_GROUP_MOFFILL
+      end subroutine fort_group_moffill
 
-
-      subroutine FORT_GROUP_EXTMOFFILL ( &
+      subroutine fort_group_extmoffill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact)
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_group_extmoffill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
@@ -30882,7 +30868,7 @@ end subroutine initialize2d
       INTEGER_T omp_get_thread_num
 #endif
 
-      nmax=POLYGON_LIST_MAX ! in: FORT_GROUP_EXTMOFFILL
+      nmax=POLYGON_LIST_MAX ! in: fort_group_extmoffill
 
       tid=0       
 #ifdef _OPENMP
@@ -30930,11 +30916,11 @@ end subroutine initialize2d
       nmat=num_materials
 
       if (nmat*ngeom_recon.ne.ncomp) then
-       print *,"ncomp invalid mof extended group fill"
+       print *,"ncomp invalid in fort_group_extmoffill"
        stop
       endif
-      if (scomp.ne.1+SDIM) then
-       print *,"scomp invalid in mof extended group fill"
+      if (scomp.ne.EXTRAPCOMP_MOF) then
+       print *,"scomp invalid in fort_group_extmoffill"
        stop
       endif
 
@@ -31097,18 +31083,15 @@ end subroutine initialize2d
       enddo ! dir2
 
       return
-      end subroutine FORT_GROUP_EXTMOFFILL
+      end subroutine fort_group_extmoffill
 
-      subroutine FORT_LS_HO_FILL ( &
+      subroutine fort_ls_ho_fill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact)
-
-      use filcc_module
-      use global_utility_module
-      use probf90_module
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_ls_ho_fill')
 
       IMPLICIT NONE
 
@@ -31120,23 +31103,22 @@ end subroutine initialize2d
       REAL_T, intent(inout) :: u(DIMV(u))
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
-      print *,"LS_HO_FILL should never be called"
-      print *,"GROUP_LS_HO_FILL should be called instead"
+      print *,"fort_ls_ho_fill should never be called"
+      print *,"fort_group_ls_ho_fill should be called instead"
       stop
 
       return
-      end subroutine FORT_LS_HO_FILL
+      end subroutine fort_ls_ho_fill
 
-
-      subroutine FORT_GROUP_LS_HO_FILL ( &
+      subroutine fort_group_ls_ho_fill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact)
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_group_ls_ho_fill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -31200,12 +31182,12 @@ end subroutine initialize2d
       ncomp_ho=(SDIM+1)*nmat
 
       if (ncomp_ho.ne.ncomp) then
-       print *,"ncomp invalid group ls ho fill"
+       print *,"ncomp invalid fort_group_ls_ho_fill"
        stop
       endif
       if ((scomp.ne.SDIM*nmat).and. &  ! called from ghost fill
           (scomp.ne.0)) then           ! called from main fill
-       print *,"scomp invalid group ls ho fill"
+       print *,"scomp invalid fort_group_ls_ho_fill"
        print *,"scomp= ",scomp
        stop
       endif
@@ -31355,19 +31337,18 @@ end subroutine initialize2d
       enddo ! dir2
 
       return
-      end subroutine FORT_GROUP_LS_HO_FILL
-
+      end subroutine fort_group_ls_ho_fill
 
        ! this is for the "errorind" variable.
-      subroutine FORT_SCALARFILL ( &
+      subroutine fort_scalarfill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact)
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_scalarfill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -31410,14 +31391,13 @@ end subroutine initialize2d
       endif
 
       if (ncomp.ne.1) then
-       print *,"ncomp invalid in scalar fill"
+       print *,"ncomp invalid in fort_scalarfill"
        stop
       endif
        ! "errorind" variable.
-      nc=(SDIM+1)+ &
-       num_materials*(num_state_material+ngeom_raw)
+      nc=STATECOMP_ERR
       if (scomp.ne.nc) then
-       print *,"scomp invalid in scalar fill"
+       print *,"scomp invalid in fort_scalarfill"
        stop
       endif
 
@@ -31500,17 +31480,17 @@ end subroutine initialize2d
       enddo ! dir2
 
       return
-      end subroutine FORT_SCALARFILL
+      end subroutine fort_scalarfill
 
-      subroutine FORT_STATEFILL ( &
+      subroutine fort_statefill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact)
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_statefill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -31560,10 +31540,10 @@ end subroutine initialize2d
        stop
       endif
        ! c++ index
-      icomplo=(SDIM+1)
+      icomplo=STATECOMP_STATES
       icomphi=icomplo+num_materials*num_state_material
       if ((scomp.lt.icomplo).or.(scomp.ge.icomphi)) then
-       print *,"scomp out of range in state fill"
+       print *,"scomp out of range in fort_statefill"
        stop
       endif
       im=(scomp-icomplo)/num_state_material+1
@@ -31680,7 +31660,11 @@ end subroutine initialize2d
       enddo ! dir2
 
       return
-      end subroutine FORT_STATEFILL
+      end subroutine fort_statefill
+
+
+      end module probf90_module
+
 
 
       subroutine FORT_TENSORFILL ( &

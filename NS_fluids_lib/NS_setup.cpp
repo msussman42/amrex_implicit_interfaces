@@ -766,7 +766,7 @@ NavierStokes::variableSetUp ()
      //  4. StateDescriptor.cpp (operator(), m_func(...))
      //  5. StateData.cpp (calls to bndryFill)
     std::string u_mac_str="umac"; 
-    desc_lst.setComponent(Umac_Type,0,u_mac_str,bc,FORT_UMACFILL,
+    desc_lst.setComponent(Umac_Type,0,u_mac_str,bc,fort_umacfill,
       &umac_interp);
 
 // Vmac_Type  -------------------------------------------
@@ -779,7 +779,7 @@ NavierStokes::variableSetUp ()
     set_y_vel_bc(bc,phys_bc);
 
     std::string v_mac_str="vmac"; 
-    desc_lst.setComponent(Vmac_Type,0,v_mac_str,bc,FORT_UMACFILL,
+    desc_lst.setComponent(Vmac_Type,0,v_mac_str,bc,fort_umacfill,
       &umac_interp);
 
 // Wmac_Type  -------------------------------------------
@@ -796,7 +796,7 @@ NavierStokes::variableSetUp ()
     set_z_vel_bc(bc,phys_bc);
 
     std::string w_mac_str="wmac";
-    desc_lst.setComponent(Wmac_Type,0,w_mac_str,bc,FORT_UMACFILL,
+    desc_lst.setComponent(Wmac_Type,0,w_mac_str,bc,fort_umacfill,
        &umac_interp);
 #endif
 
@@ -910,8 +910,8 @@ NavierStokes::variableSetUp ()
       set_z_vel_bc(MOFvelocity_bcs_solid[ibase_solid],phys_bc);
 #endif
 
-      StateDescriptor::BndryFunc MOFvelocity_fill_class_solid(FORT_SOLVFILL,
-       FORT_GROUP_SOLVFILL);
+      StateDescriptor::BndryFunc MOFvelocity_fill_class_solid(fort_solvfill,
+       fort_group_solvfill);
 
       desc_lst.setComponent(Solid_State_Type,
        partid*AMREX_SPACEDIM,
@@ -982,14 +982,14 @@ NavierStokes::variableSetUp ()
      // same as x_vel_bc except that EXT_DIR => FOEXTRAP
     set_x_vel_extrap_bc(xd_mac_bcs,phys_bc);
     desc_lst.setComponent(XDmac_Type,0,xd_mac_name,xd_mac_bcs,
-       FORT_XDMACFILL,&xd_mac_interp);
+       fort_xdmacfill,&xd_mac_interp);
 
     std::string yd_mac_name="YDMAC";
     BCRec yd_mac_bcs;
      // same as y_vel_bc except that EXT_DIR => FOEXTRAP
     set_y_vel_extrap_bc(yd_mac_bcs,phys_bc);
     desc_lst.setComponent(YDmac_Type,0,yd_mac_name,yd_mac_bcs,
-       FORT_XDMACFILL,&xd_mac_interp);
+       fort_xdmacfill,&xd_mac_interp);
 
 #if (AMREX_SPACEDIM == 3)
     std::string zd_mac_name="ZDMAC";
@@ -997,7 +997,7 @@ NavierStokes::variableSetUp ()
      // same as z_vel_bc except that EXT_DIR => FOEXTRAP
     set_z_vel_extrap_bc(zd_mac_bcs,phys_bc);
     desc_lst.setComponent(ZDmac_Type,0,zd_mac_name,zd_mac_bcs,
-       FORT_XDMACFILL,&xd_mac_interp);
+       fort_xdmacfill,&xd_mac_interp);
 #endif
 
 // Tensor_Type  -------------------------------------------
@@ -1320,8 +1320,8 @@ NavierStokes::variableSetUp ()
 
      // GROUP_LS_HO_FILL: grouplsBC for components 1..nmat
      //                   extrapBC for components nmat+1..nmat * (sdim+1)
-    StateDescriptor::BndryFunc LS_HO_fill_class(FORT_LS_HO_FILL,
-       FORT_GROUP_LS_HO_FILL);
+    StateDescriptor::BndryFunc LS_HO_fill_class(fort_ls_ho_fill,
+       fort_group_ls_ho_fill);
 
     ls_ho_interp_HIGH_PARM.LSHOInterp_nmat=nmat;
     ls_ho_interp_HIGH_PARM.LSHOInterp_LO=0; // 0=use normals 1=piecewise const 
@@ -1384,8 +1384,8 @@ NavierStokes::variableSetUp ()
 
      // GROUP_LS_HO_FILL: grouplsBC for components 1..nmat
      //                   extrapBC for components nmat+1..nmat * (sdim+1)
-    StateDescriptor::BndryFunc LS_main_fill_class(FORT_LS_HO_FILL,
-       FORT_GROUP_LS_HO_FILL);
+    StateDescriptor::BndryFunc LS_main_fill_class(fort_ls_ho_fill,
+       fort_group_ls_ho_fill);
 
     ls_ho_interp_HIGH_PARM.LSHOInterp_nmat=nmat;
     ls_ho_interp_HIGH_PARM.LSHOInterp_LO=0; // 0=use normals 1=piecewise const 
@@ -1514,8 +1514,8 @@ NavierStokes::variableSetUp ()
 
     }  // im=0..nmat-1  (vfrac, cen, order, slope,int)
 
-    StateDescriptor::BndryFunc EXTMOF_fill_class(FORT_EXTMOFFILL,
-       FORT_GROUP_EXTMOFFILL);
+    StateDescriptor::BndryFunc EXTMOF_fill_class(fort_extmoffill,
+       fort_group_extmoffill);
 
     multi_extmof_interp.multiMOFInterp_nmat=nmat;
     multi_extmof_interp.multiMOFInterp_ngeom_raw=ngeom_raw;
@@ -1816,8 +1816,8 @@ NavierStokes::variableSetUp ()
     set_z_vel_bc(MOFvelocity_bcs[ibase_state],phys_bc);
 #endif
 
-    StateDescriptor::BndryFunc MOFvelocity_fill_class(FORT_VELFILL,
-       FORT_GROUP_VELFILL);
+    StateDescriptor::BndryFunc MOFvelocity_fill_class(fort_velfill,
+       fort_group_velfill);
 
     desc_lst.setComponent(State_Type,0,
       MOFvelocity_names,
@@ -1899,7 +1899,7 @@ NavierStokes::variableSetUp ()
 
     } // im (scalar state variables)
 
-    StateDescriptor::BndryFunc MOFstate_fill_class(FORT_STATEFILL,
+    StateDescriptor::BndryFunc MOFstate_fill_class(fort_statefill,
        FORT_GROUP_STATEFILL);
 
     desc_lst.setComponent(State_Type,
@@ -1964,10 +1964,10 @@ NavierStokes::variableSetUp ()
 
     }  // im  (volume fractions and centroids)
 
-     // GROUP_MOFFILL uses probtype to specify ext_dir.
-     // FORT_MOFFILL should never be called.
-    StateDescriptor::BndryFunc MOF_fill_class(FORT_MOFFILL,
-       FORT_GROUP_MOFFILL);
+     // fort_group_moffill uses probtype to specify ext_dir.
+     // fort_moffill should never be called.
+    StateDescriptor::BndryFunc MOF_fill_class(fort_moffill,
+       fort_group_moffill);
 
     multi_mof_interp.multiMOFInterp_nmat=nmat;
     multi_mof_interp.multiMOFInterp_ngeom_raw=ngeom_raw;
@@ -1978,7 +1978,7 @@ NavierStokes::variableSetUp ()
 
     set_scalar_bc(bc,phys_bc);
     desc_lst.setComponent(State_Type,STATECOMP_ERR,"errorind",bc,
-      FORT_SCALARFILL,&pc_interp_null);
+      fort_scalarfill,&pc_interp_null);
 
 }  // end subroutine variableSetUp
 
