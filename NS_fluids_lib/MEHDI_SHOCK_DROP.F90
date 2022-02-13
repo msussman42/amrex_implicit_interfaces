@@ -141,9 +141,9 @@ if ((num_materials.eq.4).and. &
     (probtype.eq.414)) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
-  STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) ! density prescribed in the inputs file.
+  STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) 
   if (t.eq.zero) then
-   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) !initial temperature in inputs
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) 
   else if (t.gt.zero) then
    STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
   else
@@ -151,7 +151,8 @@ if ((num_materials.eq.4).and. &
    stop
   endif
    ! always assume Dirichlet boundary condition at zlo for temperature.
-  call outside_temperature(t,x(1),x(2),x(SDIM),STATE(ibase+ENUM_TEMPERATUREVAR+1),im,bcflag)
+  call outside_temperature(t,x(1),x(2),x(SDIM), &
+     STATE(ibase+ENUM_TEMPERATUREVAR+1),im,bcflag)
 
    ! initial species in inputs?
   do n=1,num_species_var

@@ -2,83 +2,27 @@
 #define _PROB_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_UMACFILL    umacfill
-#    define FORT_XDMACFILL   xdmacfill
-#    define FORT_VELFILL     velfill
-#    define FORT_GROUP_VELFILL group_velfill
-#    define FORT_SOLVFILL    solvfill
-#    define FORT_GROUP_SOLVFILL group_solvfill
 #    define FORT_PRESSUREFILL  pressurefill
-#    define FORT_STATEFILL   statefill
 #    define FORT_GROUP_STATEFILL group_statefill
 #    define FORT_TENSORFILL   tensorfill
 #    define FORT_GROUP_TENSORFILL group_tensorfill
-#    define FORT_SCALARFILL  scalarfill
-#    define FORT_MOFFILL     moffill
-#    define FORT_EXTMOFFILL  extmoffill
-#    define FORT_GROUP_MOFFILL group_moffill
-#    define FORT_GROUP_EXTMOFFILL group_extmoffill
-#    define FORT_LS_HO_FILL ls_ho_fill
-#    define FORT_GROUP_LS_HO_FILL group_ls_ho_fill
 #else
 #  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_UMACFILL    UMACFILL
-#    define FORT_XDMACFILL   XDMACFILL
-#    define FORT_VELFILL     VELFILL
-#    define FORT_GROUP_VELFILL GROUP_VELFILL
-#    define FORT_SOLVFILL    SOLVFILL
-#    define FORT_GROUP_SOLVFILL GROUP_SOLVFILL
 #    define FORT_PRESSUREFILL  PRESSUREFILL
-#    define FORT_STATEFILL  STATEFILL 
 #    define FORT_GROUP_STATEFILL GROUP_STATEFILL
 #    define FORT_TENSORFILL   TENSORFILL
 #    define FORT_GROUP_TENSORFILL GROUP_TENSORFILL
-#    define FORT_SCALARFILL  SCALARFILL
-#    define FORT_MOFFILL     MOFFILL
-#    define FORT_EXTMOFFILL  EXTMOFFILL
-#    define FORT_GROUP_MOFFILL GROUP_MOFFILL
-#    define FORT_GROUP_EXTMOFFILL GROUP_EXTMOFFILL
-#    define FORT_LS_HO_FILL LS_HO_FILL
-#    define FORT_GROUP_LS_HO_FILL GROUP_LS_HO_FILL
 #  else
 #  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_UMACFILL    umacfill
-#    define FORT_XDMACFILL   xdmacfill
-#    define FORT_VELFILL     velfill
-#    define FORT_GROUP_VELFILL group_velfill
-#    define FORT_SOLVFILL    solvfill
-#    define FORT_GROUP_SOLVFILL group_solvfill
 #    define FORT_PRESSUREFILL  pressurefill
-#    define FORT_STATEFILL  statefill
 #    define FORT_GROUP_STATEFILL group_statefill
 #    define FORT_TENSORFILL   tensorfill
 #    define FORT_GROUP_TENSORFILL group_tensorfill
-#    define FORT_SCALARFILL  scalarfill
-#    define FORT_MOFFILL     moffill
-#    define FORT_EXTMOFFILL  extmoffill
-#    define FORT_GROUP_MOFFILL group_moffill
-#    define FORT_GROUP_EXTMOFFILL group_extmoffill
-#    define FORT_LS_HO_FILL ls_ho_fill
-#    define FORT_GROUP_LS_HO_FILL group_ls_ho_fill
 #  else
-#    define FORT_UMACFILL    umacfill_
-#    define FORT_XDMACFILL   xdmacfill_
-#    define FORT_VELFILL     velfill_
-#    define FORT_GROUP_VELFILL group_velfill_
-#    define FORT_SOLVFILL    solvfill_
-#    define FORT_GROUP_SOLVFILL group_solvfill_
 #    define FORT_PRESSUREFILL  pressurefill_
-#    define FORT_STATEFILL  statefill_
 #    define FORT_GROUP_STATEFILL group_statefill_
 #    define FORT_TENSORFILL   tensorfill_
 #    define FORT_GROUP_TENSORFILL group_tensorfill_
-#    define FORT_SCALARFILL  scalarfill_
-#    define FORT_MOFFILL     moffill_
-#    define FORT_EXTMOFFILL  extmoffill_
-#    define FORT_GROUP_MOFFILL group_moffill_
-#    define FORT_GROUP_EXTMOFFILL group_extmoffill_
-#    define FORT_LS_HO_FILL ls_ho_fill_
-#    define FORT_GROUP_LS_HO_FILL group_ls_ho_fill_
 #  endif
 #  endif
 
@@ -225,7 +169,7 @@ namespace amrex{
       // grd_lo=problo+dx*(datalo-domlo)
       // x=grd_lo+(i-datalo+1/2)dx=problo+dx*(i-domlo+1/2)
 
-     void FORT_STATEFILL (
+     void fort_statefill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -270,7 +214,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_SCALARFILL (
+     void fort_scalarfill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -297,7 +241,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_LS_HO_FILL (
+     void fort_ls_ho_fill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -306,7 +250,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_GROUP_LS_HO_FILL (
+     void fort_group_ls_ho_fill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -315,7 +259,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_MOFFILL (
+     void fort_moffill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -324,7 +268,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_EXTMOFFILL (
+     void fort_extmoffill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -333,7 +277,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_GROUP_MOFFILL (
+     void fort_group_moffill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -342,7 +286,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_GROUP_EXTMOFFILL (
+     void fort_group_extmoffill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -351,7 +295,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_VELFILL (
+     void fort_velfill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -360,7 +304,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_GROUP_VELFILL (
+     void fort_group_velfill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -370,7 +314,7 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact);
 
 
-     void FORT_SOLVFILL (
+     void fort_solvfill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -379,7 +323,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_GROUP_SOLVFILL (
+     void fort_group_solvfill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -418,7 +362,7 @@ namespace amrex{
       int* project_option,
       Real* time);
 
-     void FORT_UMACFILL (
+     void fort_umacfill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -427,7 +371,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_XDMACFILL (
+     void fort_xdmacfill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
