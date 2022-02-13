@@ -792,8 +792,8 @@ end subroutine CRYOGENIC_TANK2_STATE_BC
 ! tildeQ units: J/(m^3 s)
 ! Q = k grad T = W/(m K) K/m = W/m^2= J/(m^2 s)
 ! tildeQ=Q * area/volume
-! called from: GODUNOV_3D.F90, subroutine FORT_HEATSOURCE
-! in FORT_HEATSOURCE:
+! called from: GODUNOV_3D.F90, subroutine fort_heatsource
+! in fort_heatsource:
 ! T_local(im)=T_local(im)+ &
 !   dt*DeDTinverse(D_DECL(i,j,k),1)*heat_source_total  im=1..nmat
 !      (1/V)A_{right} (-q_{right} dot n_right)  => tildeQ corresponds

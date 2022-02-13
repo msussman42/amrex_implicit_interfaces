@@ -31662,20 +31662,15 @@ end subroutine initialize2d
       return
       end subroutine fort_statefill
 
-
-      end module probf90_module
-
-
-
-      subroutine FORT_TENSORFILL ( &
+      subroutine fort_tensorfill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact)
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_tensorfill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -31733,7 +31728,7 @@ end subroutine initialize2d
       icomplo=0
       icomphi=num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE
       if ((scomp.lt.icomplo).or.(scomp.ge.icomphi)) then
-       print *,"scomp out of range in tensor fill"
+       print *,"scomp out of range in fort_tensorfill"
        stop
       endif
 
@@ -31829,23 +31824,22 @@ end subroutine initialize2d
        enddo ! side
        enddo ! dir2
       else
-       print *,"im invalid in TENSORFILL"
+       print *,"im invalid in fort_tensorfill"
        stop
       endif
 
       return
-      end subroutine FORT_TENSORFILL
+      end subroutine fort_tensorfill
 
-
-      subroutine FORT_PRESSUREFILL ( &
+      subroutine fort_pressurefill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact)
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_pressurefill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -31881,8 +31875,8 @@ end subroutine initialize2d
        print *,"ncomp invalid17"
        stop
       endif
-      if ((scomp.ne.SDIM).and.(scomp.ne.0)) then 
-       print *,"scomp invalid pressure fill"
+      if ((scomp.ne.STATECOMP_PRES).and.(scomp.ne.0)) then 
+       print *,"scomp invalid fort_pressurefill"
        stop
       endif
       if (bfact.lt.1) then
@@ -31972,17 +31966,17 @@ end subroutine initialize2d
       enddo ! dir2
 
       return
-      end subroutine FORT_PRESSUREFILL
+      end subroutine fort_pressurefill
 
-      subroutine FORT_GROUP_STATEFILL ( &
+      subroutine fort_group_statefill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
-      xlo,time,bc,scomp,ncomp,bfact)
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_group_statefill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -32012,8 +32006,8 @@ end subroutine initialize2d
       nhalf=3
 
        ! c++ index
-      if (scomp.ne.(SDIM+1)) then
-       print *,"scomp invalid group statefill"
+      if (scomp.ne.STATECOMP_STATES) then
+       print *,"scomp invalid fort_group_statefill"
        stop
       endif
       if (ncomp.ne.num_state_material*num_materials) then
@@ -32133,19 +32127,18 @@ end subroutine initialize2d
       enddo ! dir2
 
       return
-      end subroutine FORT_GROUP_STATEFILL
+      end subroutine fort_group_statefill
 
-
-      subroutine FORT_GROUP_TENSORFILL ( &
+      subroutine fort_group_tensorfill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
       xlo,time,bc, &
-      scomp,ncomp,bfact)
+      scomp,ncomp,bfact) &
+      bind(c,name='fort_group_tensorfill')
 
       use filcc_module
-      use probf90_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -32204,7 +32197,7 @@ end subroutine initialize2d
       if (check_scomp.eq.1) then
        ! do nothing
       else
-       print *,"scomp invalid group tensorfill"
+       print *,"scomp invalid fort_group_tensorfill"
        print *,"scomp=",scomp
        print *,"ncomp=",ncomp
        print *,"num_materials_viscoelastic=",num_materials_viscoelastic
@@ -32346,6 +32339,7 @@ end subroutine initialize2d
       enddo ! dir2
 
       return
-      end subroutine FORT_GROUP_TENSORFILL
+      end subroutine fort_group_tensorfill
 
+      end module probf90_module
 
