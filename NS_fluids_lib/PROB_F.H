@@ -2,29 +2,8 @@
 #define _PROB_F_H_
 
 #ifdef BL_LANG_FORT
-#    define FORT_PRESSUREFILL  pressurefill
-#    define FORT_GROUP_STATEFILL group_statefill
-#    define FORT_TENSORFILL   tensorfill
-#    define FORT_GROUP_TENSORFILL group_tensorfill
+
 #else
-#  ifdef BL_FORT_USE_UPPERCASE
-#    define FORT_PRESSUREFILL  PRESSUREFILL
-#    define FORT_GROUP_STATEFILL GROUP_STATEFILL
-#    define FORT_TENSORFILL   TENSORFILL
-#    define FORT_GROUP_TENSORFILL GROUP_TENSORFILL
-#  else
-#  ifdef BL_FORT_USE_LOWERCASE
-#    define FORT_PRESSUREFILL  pressurefill
-#    define FORT_GROUP_STATEFILL group_statefill
-#    define FORT_TENSORFILL   tensorfill
-#    define FORT_GROUP_TENSORFILL group_tensorfill
-#  else
-#    define FORT_PRESSUREFILL  pressurefill_
-#    define FORT_GROUP_STATEFILL group_statefill_
-#    define FORT_TENSORFILL   tensorfill_
-#    define FORT_GROUP_TENSORFILL group_tensorfill_
-#  endif
-#  endif
 
 #include "AMReX_ArrayLim.H"
 
@@ -178,7 +157,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_TENSORFILL (
+     void fort_tensorfill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -187,7 +166,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_PRESSUREFILL (
+     void fort_pressurefill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -196,7 +175,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact); 
 
-     void FORT_GROUP_STATEFILL (
+     void fort_group_statefill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -205,7 +184,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void FORT_GROUP_TENSORFILL (
+     void fort_group_tensorfill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),

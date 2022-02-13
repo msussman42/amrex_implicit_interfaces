@@ -827,7 +827,7 @@ NavierStokes::variableSetUp ()
     set_pressure_bc(bc,phys_bc_pres);
     std::string div_pres_str="div_pressure";
     desc_lst.setComponent(DIV_Type,0,
-      div_pres_str,bc,FORT_PRESSUREFILL,&sem_interp_DEFAULT);
+      div_pres_str,bc,fort_pressurefill,&sem_interp_DEFAULT);
 
 
 // Solid_State_Type  -------------------------------------------
@@ -1149,8 +1149,8 @@ NavierStokes::variableSetUp ()
 #endif
 
       StateDescriptor::BndryFunc MOFvelocity_fill_class_tensor(
-       FORT_TENSORFILL,
-       FORT_GROUP_TENSORFILL);
+       fort_tensorfill,
+       fort_group_tensorfill);
 
       desc_lst.setComponent(Tensor_Type,
        partid*ENUM_NUM_TENSOR_TYPE,
@@ -1827,7 +1827,7 @@ NavierStokes::variableSetUp ()
     set_pressure_bc(bc,phys_bc_pres);
     std::string pres_str="pressure"; 
     desc_lst.setComponent(State_Type,STATECOMP_PRES,
-      pres_str,bc,FORT_PRESSUREFILL,&sem_interp_DEFAULT);
+      pres_str,bc,fort_pressurefill,&sem_interp_DEFAULT);
 
     Vector<std::string> MOFstate_names;
     MOFstate_names.resize(num_state_material*nmat);
@@ -1900,7 +1900,7 @@ NavierStokes::variableSetUp ()
     } // im (scalar state variables)
 
     StateDescriptor::BndryFunc MOFstate_fill_class(fort_statefill,
-       FORT_GROUP_STATEFILL);
+       fort_group_statefill);
 
     desc_lst.setComponent(State_Type,
      STATECOMP_STATES,
