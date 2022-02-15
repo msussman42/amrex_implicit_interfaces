@@ -4502,7 +4502,8 @@ stop
       REAL_T, pointer :: typefab_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: LS(DIMV(LS),nmat*(1+SDIM))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: VEL(DIMV(VEL),SDIM+1)
+      REAL_T, intent(in), target :: &
+           VEL(DIMV(VEL),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T, pointer :: VEL_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: DEN(DIMV(DEN),nmat*num_state_material)
       REAL_T, pointer :: DEN_ptr(D_DECL(:,:,:),:)
@@ -5401,7 +5402,7 @@ stop
              level_blobdata(ic)=level_blobdata(ic)+one !blob_cell_count
              level_blobdata(ic+1)=level_blobdata(ic+1)+vol !blob_cellvol_count
 
-             pressure_local=VEL(D_DECL(i,j,k),SDIM+1)
+             pressure_local=VEL(D_DECL(i,j,k),STATECOMP_PRES+1)
              if (is_rigid(nmat,im).eq.0) then
 
               if ((fort_material_type(im).ge.1).and. &
@@ -10468,8 +10469,7 @@ stop
        endif
       enddo
 
-      if (ncomp_state.ne.(SDIM+1)+ &
-          nmat*num_state_material+nmat*ngeom_raw+1) then
+      if (ncomp_state.ne.STATE_NCOMP) then
        print *,"ncomp_state invalid"
        stop
       endif
@@ -15510,9 +15510,11 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(lsnew)
       REAL_T, intent(inout),target :: vofnew(DIMV(vofnew),nmat*ngeom_raw)
       REAL_T, pointer :: vofnew_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: vel(DIMV(vel),SDIM+1)
+      REAL_T, intent(in),target :: &
+           vel(DIMV(vel),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out),target :: velnew(DIMV(velnew),SDIM+1)
+      REAL_T, intent(out),target :: &
+           velnew(DIMV(velnew),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T, pointer :: velnew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target ::  &
               LS(DIMV(LS),nmat*(1+SDIM))
@@ -18174,7 +18176,8 @@ stop
       REAL_T, pointer :: yd_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: zd(DIMV(zd)) 
       REAL_T, pointer :: zd_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM+1) 
+      REAL_T, intent(in), target :: &
+           velfab(DIMV(velfab),STATE_NCOMP_VEL+STATE_NCOMP_PRES) 
       REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
       REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
