@@ -3396,7 +3396,9 @@ stop
        print *,"im_source invalid"
        stop
       endif
-      if (TSAT.le.zero) then
+      if (TSAT.gt.zero) then
+       ! do nothing
+      else
        print *,"TSAT invalid in fort_reset_temperature"
        stop
       endif
@@ -3407,8 +3409,7 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
        
-       vofcomp=(SDIM+1)+ &
-          nmat*num_state_material+im_source*ngeom_raw+1
+       vofcomp=STATECOMP_MOF+im_source*ngeom_raw+1
        vfrac=snew(D_DECL(i,j,k),vofcomp)
        if (vfrac.ge.half) then
         do im=1,nmat
@@ -3458,7 +3459,8 @@ stop
       REAL_T, intent(in),target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in),target :: vel(DIMV(vel),(SDIM+1))
+      REAL_T, intent(in),target :: &
+          vel(DIMV(vel),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: velx(DIMV(velx))
       REAL_T, pointer :: velx_ptr(D_DECL(:,:,:))
@@ -3496,11 +3498,11 @@ stop
     
        if (mask(D_DECL(i,j,k)).eq.one) then
 
-        if (vel(D_DECL(i,j,k),SDIM+1).gt.maxpres) then
-          maxpres=vel(D_DECL(i,j,k),SDIM+1)
+        if (vel(D_DECL(i,j,k),STATECOMP_PRES+1).gt.maxpres) then
+          maxpres=vel(D_DECL(i,j,k),STATECOMP_PRES+1)
         endif
-        if (vel(D_DECL(i,j,k),SDIM+1).lt.minpres) then
-          minpres=vel(D_DECL(i,j,k),SDIM+1)
+        if (vel(D_DECL(i,j,k),STATECOMP_PRES+1).lt.minpres) then
+          minpres=vel(D_DECL(i,j,k),STATECOMP_PRES+1)
         endif
         magvel=zero
         magvel_mac=zero

@@ -1059,7 +1059,7 @@ ok_to_overwrite_vel=0
 nmat=assimilate_in%nmat
 nstate=assimilate_in%nstate
 
-nstate_test=(SDIM+1)+nmat*(num_state_material+ngeom_raw)+1
+nstate_test=STATE_NCOMP
 if (nstate.eq.nstate_test) then
  ! do nothing
 else
@@ -1118,7 +1118,7 @@ if ((num_materials.eq.2).and. &
       enddo
      endif
      do im=1,num_materials
-      ibase=SDIM+1+(im-1)*num_state_material
+      ibase=STATECOMP_STATES+(im-1)*num_state_material
       assimilate_out%state(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1)=T_exact
       assimilate_out%state(D_DECL(i,j,k),ibase+ENUM_SPECIESVAR+1)=Y_exact
      enddo

@@ -2825,7 +2825,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(den)
       REAL_T, target, intent(in) :: velmac(DIMV(velmac))
       REAL_T, pointer :: velmac_ptr(D_DECL(:,:,:))
-      REAL_T, target, intent(in) :: velcell(DIMV(velcell),SDIM)
+      REAL_T, target, intent(in) :: velcell(DIMV(velcell),STATE_NCOMP_VEL)
       REAL_T, pointer :: velcell_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: solidfab(DIMV(solidfab),nparts_def*SDIM) 
       REAL_T, pointer :: solidfab_ptr(D_DECL(:,:,:),:)
@@ -11701,7 +11701,8 @@ stop
       REAL_T, intent(in), target :: state(DIMV(state),nden)
       REAL_T, pointer :: state_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: ufluid(DIMV(ufluid),SDIM+1) ! u,v,w,p
+      REAL_T, intent(in), target :: &
+          ufluid(DIMV(ufluid),STATE_NCOMP_VEL+STATE_NCOMP_PRES) ! u,v,w,p
       REAL_T, pointer :: ufluid_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: usolid(DIMV(usolid),nparts_ghost*SDIM) 
@@ -12319,7 +12320,8 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(usolid)
       INTEGER_T, intent(in) :: DIMDEC(ughost)
 
-      REAL_T, intent(in), target :: ufluid(DIMV(ufluid),SDIM+1) ! u,v,w,p
+      REAL_T, intent(in), target :: &
+           ufluid(DIMV(ufluid),STATE_NCOMP_VEL+STATE_NCOMP_PRES) ! u,v,w,p
       REAL_T, pointer :: ufluid_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: usolid(DIMV(usolid),nparts_ghost*SDIM) 
@@ -14029,7 +14031,8 @@ stop
       REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: tensor(DIMV(tensor),ntensor)
       REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM+1)
+      REAL_T, intent(in), target :: &
+           velfab(DIMV(velfab),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
        ! slope data
       REAL_T, intent(in), target :: PLICSLP(DIMV(PLICSLP),recon_ncomp)
@@ -14043,7 +14046,7 @@ stop
       REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
        ! other vars
        ! displacement
-      REAL_T, intent(in), target :: ucell(DIMV(ucell),SDIM)
+      REAL_T, intent(in), target :: ucell(DIMV(ucell),STATE_NCOMP_VEL)
       REAL_T, pointer :: ucell_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: vof0(DIMV(vof0),nmat)
       REAL_T, pointer :: vof0_ptr(D_DECL(:,:,:),:)

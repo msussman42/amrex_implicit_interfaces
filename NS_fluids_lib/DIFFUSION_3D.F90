@@ -237,7 +237,7 @@ stop
 
        nhalf=3
 
-       if (nstate.eq.(SDIM+1)+nmat*(num_state_material+ngeom_raw)+1) then
+       if (nstate.eq.STATE_NCOMP) then
         ! do nothing
        else
         print *,"nstate invalid"
@@ -643,7 +643,7 @@ stop
           endif
          else if (rzflag.eq.3) then
 
-          ut_comp=SDIM+1 ! u_t/r
+          ut_comp=SDIM+1 ! u_theta/r
           ut_over_r=tensor(D_DECL(i,j,k),ut_comp)
           vt_over_r=tensor(D_DECL(i,j,k),ut_comp+1)
 
