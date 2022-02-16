@@ -2037,7 +2037,8 @@ END SUBROUTINE SIMP
       REAL_T, pointer :: fabout_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM+1)
+      REAL_T, intent(in), target :: &
+         vel(DIMV(vel),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: vof(DIMV(vof),nmat*ngeom_recon)
       REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
@@ -2069,10 +2070,10 @@ END SUBROUTINE SIMP
       REAL_T xposndT(SDIM)
       REAL_T machnd
       REAL_T machcell
-      REAL_T velnd(SDIM+1)
+      REAL_T velnd(STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T velmat(SDIM)
       REAL_T velmatT(SDIM)
-      REAL_T velcell(SDIM+1)
+      REAL_T velcell(STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T vofnd(nmat)
       REAL_T vofcell(nmat)
       REAL_T presnd
@@ -2165,7 +2166,7 @@ END SUBROUTINE SIMP
       REAL_T vel_uniform(visual_ncomp)
       REAL_T SEM_value(visual_ncomp-SDIM) ! u,mag vort,LS
       INTEGER_T ncomp_SEM  ! visual_ncomp-SDIM
-       ! SDIM+3+num_species_var+1
+       ! STATE_NCOMP_VEL+STATE_NCOMP_PRES+2+num_species_var+1
       INTEGER_T VORT_comp_SEM 
       INTEGER_T grid_type
       INTEGER_T SEMhi(SDIM)
@@ -2538,7 +2539,7 @@ END SUBROUTINE SIMP
         sumweight=zero
         sumweightLS=zero
 
-        do dir=1,(SDIM+1)
+        do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES
          velnd(dir)=zero
         enddo
         do dir=1,num_state_material*nmat
@@ -2678,10 +2679,10 @@ END SUBROUTINE SIMP
           stop
          endif
 
-         do dir=1,(SDIM+1)
+         do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES
           velcell(dir)=vel(D_DECL(i-i1,j-j1,k-k1),dir)
          enddo
-         do dir=1,(SDIM+1)
+         do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES
           velnd(dir)=velnd(dir)+localwt*velcell(dir)
          enddo
          do dir=1,num_state_material*nmat
@@ -2769,7 +2770,7 @@ END SUBROUTINE SIMP
          stop
         endif
 
-        do dir=1,(SDIM+1)
+        do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES
          velnd(dir)=velnd(dir)/sumweight
         enddo
         do dir=1,5*nmat
@@ -2889,7 +2890,7 @@ END SUBROUTINE SIMP
             stop
            endif
            ncomp_SEM=visual_ncomp-SDIM
-           VORT_comp_SEM=SDIM+3+num_species_var+1
+           VORT_comp_SEM=STATE_NCOMP_VEL+STATE_NCOMP_PRES+2+num_species_var+1
            do n=1,ncomp_SEM
             SEM_value(n)=zero
            enddo
@@ -2913,7 +2914,7 @@ END SUBROUTINE SIMP
             call get_primary_material(local_LS_data,nmat,im_crit_SEM)
 
              ! velocity and pressure
-            do dir=1,SDIM+1
+            do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES
              local_data=vel(D_DECL(iSEM,jSEM,kSEM),dir)
              if (abs(local_data).lt.1.0D+20) then
               SEMloc(D_DECL(ilocal,jlocal,klocal),dir)=local_data
@@ -2927,7 +2928,8 @@ END SUBROUTINE SIMP
              local_data=den(D_DECL(iSEM,jSEM,kSEM), &
                (im_crit_SEM-1)*num_state_material+dir)
              if (abs(local_data).lt.1.0D+20) then
-              SEMloc(D_DECL(ilocal,jlocal,klocal),SDIM+1+dir)=local_data
+              SEMloc(D_DECL(ilocal,jlocal,klocal), &
+                     STATE_NCOMP_VEL+STATE_NCOMP_PRES+dir)=local_data
              else
               print *,"abs(local_data) overflow1"
               stop
@@ -2969,7 +2971,7 @@ END SUBROUTINE SIMP
            deallocate(SEMloc)
 
             ! WE ARE IN THE BULK HERE, CAN USE SEM INTERPOLATION
-           do dir=1,SDIM
+           do dir=1,STATE_NCOMP_VEL
             if (abs(SEM_value(dir)).lt.1.0D+20) then
              velnd(dir)=SEM_value(dir)
             else 
@@ -2983,13 +2985,15 @@ END SUBROUTINE SIMP
              print *,"SEM_value(dir) ",SEM_value(dir)
              stop
             endif
-           enddo ! dir=1..sdim
-           presnd=SEM_value(SDIM+1)
-           if (visual_ncomp-SDIM.ne.SDIM+3+num_state_material+1+nmat) then
+           enddo ! dir=1..STATE_NCOMP_VEL
+           presnd=SEM_value(STATE_NCOMP_VEL+STATE_NCOMP_PRES)
+           if (visual_ncomp-SDIM.ne.STATE_NCOMP_VEL+STATE_NCOMP_PRES+ &
+                 2+num_state_material+1+nmat) then
             print *,"incorrect visual_ncomp"
             stop
            endif
-           if (ncomp_SEM.ne.SDIM+3+num_state_material+1+nmat) then
+           if (ncomp_SEM.ne.STATE_NCOMP_VEL+STATE_NCOMP_PRES+ &
+                 2+num_state_material+1+nmat) then
             print *,"incorrect ncomp_SEM"
             stop
            endif
@@ -3007,7 +3011,7 @@ END SUBROUTINE SIMP
             stop
            endif
            do dir=1,2+num_species_var
-            dennd(dir)=SEM_value(SDIM+1+dir)
+            dennd(dir)=SEM_value(STATE_NCOMP_VEL+STATE_NCOMP_PRES+dir)
            enddo
           else if (local_maskSEM.eq.0) then
            ! do nothing
@@ -3078,7 +3082,7 @@ END SUBROUTINE SIMP
         endif
 
           ! this is pressure from the projection.
-        writend(scomp+1)=velnd(SDIM+1)
+        writend(scomp+1)=velnd(STATE_NCOMP_VEL+STATE_NCOMP_PRES)
         scomp=scomp+1
 
           ! this is EOS pressure
@@ -3305,11 +3309,11 @@ END SUBROUTINE SIMP
            ! primary material w.r.t. both fluids and solids.
           call get_primary_material(lsdistnd,nmat,im_crit)
 
-          do dir=1,(SDIM+1)
+          do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES
            velnd(dir)=vel(D_DECL(i,j,k),dir)
           enddo
 
-          dir=SDIM+1
+          dir=STATE_NCOMP_VEL+STATE_NCOMP_PRES
           plotfab(D_DECL(i,j,k),2*SDIM+1)=velnd(dir) ! pressure from solver
 
           presnd=pres(D_DECL(i,j,k))
@@ -3617,16 +3621,16 @@ END SUBROUTINE SIMP
            enddo
             ! primary material w.r.t. both fluids and solids.
            call get_primary_material(lsdistnd,nmat,im_crit)
-           do dir=1,SDIM+1
+           do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES
             vel_uniform(dir)=vel(D_DECL(iBL,jBL,kBL),dir)
            enddo
            do dir=1,2+num_species_var
-            vel_uniform(SDIM+1+dir)=den(D_DECL(iBL,jBL,kBL), &
-                (im_crit-1)*num_state_material+dir)
+            vel_uniform(STATE_NCOMP_VEL+STATE_NCOMP_PRES+dir)= &
+              den(D_DECL(iBL,jBL,kBL),(im_crit-1)*num_state_material+dir)
            enddo
 
            current_index=SDIM
-           do dir=1,SDIM+1+2+num_species_var
+           do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES+2+num_species_var
             localfab(SDIM+dir)=localfab(SDIM+dir)+ &
                localwt*vel_uniform(dir)
             current_index=current_index+1
@@ -3714,7 +3718,7 @@ END SUBROUTINE SIMP
            enddo ! dir2=1..sdim
 
            ncomp_SEM=visual_ncomp-SDIM
-           VORT_comp_SEM=SDIM+3+num_species_var+1
+           VORT_comp_SEM=STATE_NCOMP_VEL+STATE_NCOMP_PRES+2+num_species_var+1
 
            do n=1,ncomp_SEM
             SEM_value(n)=zero
@@ -3740,15 +3744,15 @@ END SUBROUTINE SIMP
              ! primary material w.r.t. both fluids and solids.
             call get_primary_material(lsdistnd,nmat,im_crit)
 
-            do dir=1,SDIM+1
+            do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES
              vel_uniform(dir)=vel(D_DECL(iSEM,jSEM,kSEM),dir)
             enddo
             do dir=1,2+num_species_var
-             vel_uniform(SDIM+1+dir)=den(D_DECL(iSEM,jSEM,kSEM), &
-                (im_crit-1)*num_state_material+dir)
+             vel_uniform(STATE_NCOMP_VEL+STATE_NCOMP_PRES+dir)= &
+              den(D_DECL(iSEM,jSEM,kSEM),(im_crit-1)*num_state_material+dir)
             enddo
 
-            do n=1,SDIM+1+2+num_species_var
+            do n=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES+2+num_species_var
              SEMloc(D_DECL(ilocal,jlocal,klocal),n)= &
               vel_uniform(n)
             enddo
@@ -4578,7 +4582,7 @@ END SUBROUTINE SIMP
       nmat=num_materials
 
       if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
-       if (ncomp_vel.ne.SDIM) then
+       if (ncomp_vel.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_vel invalid"
         stop
        endif
@@ -4586,18 +4590,18 @@ END SUBROUTINE SIMP
         print *,"ncomp_den invalid"
         stop
        endif
-       if (ncomp_flux.ne.SDIM+1) then
+       if (ncomp_flux.ne.NFLUXSEM) then
         print *,"ncomp_flux invalid"
         stop
        endif
       else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u cell to MAC
                (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & !UMAC=UMAC+beta diff_reg
                (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
-       if (ncomp_vel.ne.AMREX_SPACEDIM) then
+       if (ncomp_vel.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_vel invalid"
         stop
        endif
-       if (ncomp_den.ne.AMREX_SPACEDIM) then
+       if (ncomp_den.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_den invalid"
         stop
        endif
@@ -4619,15 +4623,15 @@ END SUBROUTINE SIMP
         stop
        endif
       else if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then !viscosity
-       if (ncomp_vel.ne.SDIM) then
+       if (ncomp_vel.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_vel invalid visc"
         stop
        endif
-       if (ncomp_den.ne.SDIM) then
+       if (ncomp_den.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_den invalid visc"
         stop
        endif
-       if (ncomp_flux.ne.SDIM) then
+       if (ncomp_flux.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_flux invalid visc"
         stop
        endif
@@ -5014,15 +5018,15 @@ END SUBROUTINE SIMP
             else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
              if ((n.ge.1).and.(n.le.SDIM)) then ! velocity
               fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),n)
-             else if (n.eq.SDIM+1) then !temperature
-              dencomp=(imcrit-1)*num_state_material+1
+             else if (n.eq.SEM_T+1) then !temperature
+              dencomp=(imcrit-1)*num_state_material+ENUM_DENVAR+1
               fine_data=den_fine(D_DECL(istrip,jstrip,kstrip),dencomp+1)
              else
               print *,"n invalid"
               stop
              endif
-            else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u cell to MAC
-                     (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & !UMAC=UMAC+beta diff_reg
+            else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
+                     (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
                      (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
              if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
               fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),dir+1)
@@ -5138,15 +5142,15 @@ END SUBROUTINE SIMP
                  else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
                   if ((n.ge.1).and.(n.le.SDIM)) then ! velocity
                    fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),n)
-                  else if (n.eq.SDIM+1) then ! temperature
-                   dencomp=(imcrit-1)*num_state_material+1
+                  else if (n.eq.SEM_T+1) then ! temperature
+                   dencomp=(imcrit-1)*num_state_material+ENUM_DENVAR+1
                    fine_data=den_fine(D_DECL(istrip,jstrip,kstrip),dencomp+1)
                   else
                    print *,"n invalid"
                    stop
                   endif
-                 else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u cell to MAC
-                          (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & !UMAC=UMAC+beta diff_reg
+                 else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
+                          (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
                           (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
                   if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                    fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),dir+1)
@@ -5327,20 +5331,20 @@ END SUBROUTINE SIMP
       nmat=num_materials
 
       if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then ! viscosity
-       if (ncomp_vel.ne.SDIM) then
+       if (ncomp_vel.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_vel invalid viscosity"
         stop
        endif
-       if (ncomp_den.ne.SDIM) then
+       if (ncomp_den.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_den invalid viscosity"
         stop
        endif
-       if (ncomp_flux.ne.SDIM) then
+       if (ncomp_flux.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_flux invalid viscosity"
         stop
        endif
       else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
-       if (ncomp_vel.ne.SDIM) then
+       if (ncomp_vel.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_vel invalid"
         stop
        endif
@@ -5348,18 +5352,18 @@ END SUBROUTINE SIMP
         print *,"ncomp_den invalid"
         stop
        endif
-       if (ncomp_flux.ne.SDIM+1) then
+       if (ncomp_flux.ne.NFLUXSEM) then
         print *,"ncomp_flux invalid"
         stop
        endif
-      else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u cell to MAC
-               (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & !UMAC=UMAC+beta diff_reg
+      else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
+               (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
                (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
-       if (ncomp_vel.ne.AMREX_SPACEDIM) then
+       if (ncomp_vel.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_vel invalid"
         stop
        endif
-       if (ncomp_den.ne.AMREX_SPACEDIM) then
+       if (ncomp_den.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_den invalid"
         stop
        endif
@@ -5768,15 +5772,15 @@ END SUBROUTINE SIMP
               else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
                if ((n.ge.1).and.(n.le.SDIM)) then ! velocity
                 crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),n)
-               else if (n.eq.SDIM+1) then ! temperature
-                dencomp=(imcrit-1)*num_state_material+1
+               else if (n.eq.SEM_T+1) then ! temperature
+                dencomp=(imcrit-1)*num_state_material+ENUM_DENVAR+1
                 crse_data=den_crse(D_DECL(istrip,jstrip,kstrip),dencomp+1)
                else
                 print *,"n invalid"
                 stop
                endif
-              else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u cell to MAC
-                       (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & !UMAC=UMAC+beta diff_reg
+              else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
+                       (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
                        (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
                if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                 crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),dir+1)
@@ -5890,8 +5894,8 @@ END SUBROUTINE SIMP
                    else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
                     if ((n.ge.1).and.(n.le.SDIM)) then ! velocity
                      crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),n)
-                    else if (n.eq.SDIM+1) then ! temperature
-                     dencomp=(imcrit-1)*num_state_material+1
+                    else if (n.eq.SEM_T+1) then ! temperature
+                     dencomp=(imcrit-1)*num_state_material+ENUM_DENVAR+1
                      crse_data=den_crse(D_DECL(istrip,jstrip,kstrip),dencomp+1)
                     else
                      print *,"n invalid"
@@ -6080,7 +6084,7 @@ END SUBROUTINE SIMP
 
       nmat=num_materials
 
-      if (ncomp_flux.ne.SDIM+1) then
+      if (ncomp_flux.ne.NFLUXSEM) then
        print *,"ncomp_flux invalid"
        stop
       endif
@@ -6491,7 +6495,7 @@ END SUBROUTINE SIMP
                    stop
                   endif
 
-                  do n = 1, ncomp_flux
+                  do n = 1,ncomp_flux
                    crse_data=crse(D_DECL(istrip,jstrip,kstrip),n)
                    fine_value(n) = fine_value(n) + volall*crse_data
                   enddo ! n=1..ncomp_flux
@@ -6872,7 +6876,8 @@ END SUBROUTINE SIMP
       REAL_T, intent(in), target :: den(DIMV(den),den_ncomp)  
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
       ! includes pressure 
-      REAL_T, intent(in), target :: vel(DIMV(vel),(SDIM+1)) 
+      REAL_T, intent(in), target ::  &
+          vel(DIMV(vel),STATE_NCOMP_VEL+STATE_NCOMP_PRES) 
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: visco(DIMV(visco), &
@@ -7465,7 +7470,7 @@ END SUBROUTINE SIMP
          stop
         endif
 
-        prescomp=SDIM+1
+        prescomp=STATECOMP_PRES+1
 
         idest=IQ_LEFT_PRESSURE_SUM_COMP+1
         if (xsten(-1,1).le.problox+VOFTOL*dx(1)) then
@@ -8449,7 +8454,8 @@ END SUBROUTINE SIMP
                     ! do nothing
                    else if ((vfrac.gt.zero).and. &
                             (vfrac.le.one+VOFTOL)) then
-                    snew(D_DECL(i,j,k),SDIM+1+dencomp+1)=temperature_prescribe
+                    snew(D_DECL(i,j,k), &
+                       STATECOMP_STATES+dencomp+1)=temperature_prescribe
                    else
                     print *,"vfrac invalid"
                     stop
@@ -8551,7 +8557,7 @@ END SUBROUTINE SIMP
                stop
               endif
               if (update_density_flag.eq.1) then
-               snew(D_DECL(i,j,k),SDIM+1+dencomp)=density_new
+               snew(D_DECL(i,j,k),STATECOMP_STATES+dencomp)=density_new
               else if (update_density_flag.eq.0) then
                ! do nothing
               else
@@ -8592,7 +8598,8 @@ END SUBROUTINE SIMP
                  endif
                  
                  if (temperature_new.gt.zero) then
-                  snew(D_DECL(i,j,k),SDIM+1+dencomp+1)=temperature_new
+                  snew(D_DECL(i,j,k),STATECOMP_STATES+dencomp+1)= &
+                       temperature_new
                  else
                   print *,"temperature_new invalid"
                   stop
@@ -10178,8 +10185,7 @@ END SUBROUTINE SIMP
        stop
       endif
  
-      if (nstate.ne.(SDIM+1)+ &
-          nmat*(num_state_material+ngeom_raw)+1) then
+      if (nstate.ne.STATE_NCOMP) then
        print *,"nstate invalid"
        stop
       endif
