@@ -2885,7 +2885,8 @@ END SUBROUTINE SIMP
            enddo ! dir2=1..sdim
 
             ! x,u,p,den,T,Y1..Yn,mag vort,LS
-           if (visual_ncomp.ne.2*SDIM+3+num_species_var+1+nmat) then
+           if (visual_ncomp.ne.SDIM+STATE_NCOMP_VEL+STATE_NCOMP_PRES+ &
+                 2+num_species_var+1+nmat) then
             print *,"visual_ncomp invalid" 
             stop
            endif
@@ -2988,12 +2989,12 @@ END SUBROUTINE SIMP
            enddo ! dir=1..STATE_NCOMP_VEL
            presnd=SEM_value(STATE_NCOMP_VEL+STATE_NCOMP_PRES)
            if (visual_ncomp-SDIM.ne.STATE_NCOMP_VEL+STATE_NCOMP_PRES+ &
-                 2+num_state_material+1+nmat) then
+                 2+num_species_var+1+nmat) then
             print *,"incorrect visual_ncomp"
             stop
            endif
            if (ncomp_SEM.ne.STATE_NCOMP_VEL+STATE_NCOMP_PRES+ &
-                 2+num_state_material+1+nmat) then
+                 2+num_species_var+1+nmat) then
             print *,"incorrect ncomp_SEM"
             stop
            endif
