@@ -753,7 +753,7 @@ extern "C"
      Real* density_floor,
      Real* density_ceiling,
      int* solidheat_flag,
-     int* dencomp,int* mofcomp,int* errcomp,
+     int* mofcomp,int* errcomp,
      Real* latent_heat,
      int* freezing_model,
      int* distribute_from_target,

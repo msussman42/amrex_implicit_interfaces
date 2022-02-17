@@ -17025,7 +17025,6 @@ NavierStokes::split_scalar_advection() {
 
   FArrayBox& vof0fab=(*localMF[VOF_PREV_TIME_MF])[mfi];
 
-  int dencomp=STATECOMP_STATES;
   int mofcomp=STATECOMP_MOF;
   int errcomp=STATECOMP_ERR;
 
@@ -17077,7 +17076,7 @@ NavierStokes::split_scalar_advection() {
    density_floor.dataPtr(),
    density_ceiling.dataPtr(),
    &solidheat_flag, //0==diffuse in solid 1==dirichlet 2==neumann
-   &dencomp,&mofcomp,&errcomp,
+   &mofcomp,&errcomp,
    latent_heat.dataPtr(),
    freezing_model.dataPtr(),
    distribute_from_target.dataPtr(),
@@ -19562,7 +19561,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  int nslice=domhi_finest[slice_dir]-domlo_finest[slice_dir]+3;
     // x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,den,Temp,KE
     // (value of material with LS>0)
- int nstate_slice=AMREX_SPACEDIM+AMREX_SPACEDIM+6;
+ int nstate_slice=SLICECOMP_NCOMP;
  slice_data.resize(nslice*nstate_slice);
  for (int i=0;i<nslice*nstate_slice;i++)
   slice_data[i]=-1.0e+30;
@@ -19719,7 +19718,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  visual_fab_hi-=IntVect::TheUnitVector();
  Box visual_domain(visual_fab_lo,visual_fab_hi);
   // x,u,p,den,T,Y1..Yn,mag vort,LS
- int visual_ncomp=2*AMREX_SPACEDIM+3+num_species_var+1+nmat;  
+ int visual_ncomp=VISUALCOMP_NCOMP;  
  FArrayBox visual_fab_output(visual_node_box,visual_ncomp);
  FArrayBox visual_fab_input(visual_node_box,visual_ncomp); 
 
