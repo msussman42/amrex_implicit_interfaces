@@ -488,7 +488,8 @@ void NavierStokes::nonlinear_advection() {
 
      // velocity and pressure
      // spectral_override==1 => order derived from "enable_spectral"
-    avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
+    avgDownALL(State_Type,STATECOMP_VEL,
+       STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
      // "state" (all materials)
     avgDownALL(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
     if ((num_materials_viscoelastic>=1)&&
@@ -622,7 +623,7 @@ void NavierStokes::nonlinear_advection() {
  prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
    local_truncate,caller_id);
 
- avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
+ avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
  if (1==0) {
     // S_new is level 0 data
@@ -1070,7 +1071,7 @@ Real NavierStokes::advance(Real time,Real dt) {
    make_MAC_velocity_consistentALL();
   
     // velocity and pressure
-   avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
+   avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
     // "state" (all materials)
    avgDownALL(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
     // expected "DIV" 
@@ -2145,7 +2146,7 @@ void NavierStokes::SEM_advectALL(int source_term) {
         spectral_loop,tileloop);
     } // ilev=finest_level ... level
 
-    avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
+    avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
     avgDownALL(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
 
     for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -2480,7 +2481,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      MultiFab& S_new=get_new_data(State_Type,slab_step+1);
      FArrayBox& snewfab=S_new[0];
      const Real* dx = geom.CellSize();
-     int scomp_plot=AMREX_SPACEDIM+1;
+     int scomp_plot=STATECOMP_STATES;
      int ncomp_plot=num_state_material*num_materials;
      tecplot_debug(snewfab,xlo,fablo,fabhi,dx,-1,0,
        scomp_plot,ncomp_plot,interior_only);
@@ -2865,7 +2866,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
 
       // velocity and pressure
-    avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
+    avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
      // den,denA,(total E)/rho,temp,pres,...
     avgDownALL(State_Type,STATECOMP_STATES,num_state_material*nmat,1);  
@@ -5302,7 +5303,8 @@ NavierStokes::ColorSum(
   getStateDist_localMF(LS_COLORSUM_MF,1,cur_time_slab,20);
   getStateDen_localMF(DEN_COLORSUM_MF,1,cur_time_slab);
    // velocity + pressure
-  getState_localMF(VEL_COLORSUM_MF,1,0,AMREX_SPACEDIM+1,cur_time_slab);
+  getState_localMF(VEL_COLORSUM_MF,1,STATECOMP_VEL,
+    STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
 
   makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MM_MF,do_face_decomp);
   ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,0);
@@ -5317,8 +5319,8 @@ NavierStokes::ColorSum(
 
  if (localMF[LS_COLORSUM_MF]->nComp()!=(1+AMREX_SPACEDIM)*nmat)
   amrex::Error("localMF[LS_COLORSUM_MF]->nComp()!=(1+AMREX_SPACEDIM)*nmat");
- if (localMF[VEL_COLORSUM_MF]->nComp()!=AMREX_SPACEDIM+1)
-  amrex::Error("localMF[VEL_COLORSUM_MF]->nComp()!=AMREX_SPACEDIM+1");
+ if (localMF[VEL_COLORSUM_MF]->nComp()!=STATE_NCOMP_VEL+STATE_NCOMP_PRES)
+  amrex::Error("localMF[VEL_COLORSUM_MF]->nComp()!=NCOMP_VEL+NCOMP_PRES");
  if (localMF[DEN_COLORSUM_MF]->nComp()!=num_state_material*nmat)
   amrex::Error("localMF[DEN_COLORSUM_MF]->nComp()!=num_state_material*nmat");
 
@@ -11645,7 +11647,8 @@ void NavierStokes::multiphase_project(int project_option) {
     }
 
       // velocity and pressure
-    ns_level.avgDown(State_Type,0,(AMREX_SPACEDIM+1),1);
+    ns_level.avgDown(State_Type,STATECOMP_VEL,
+		STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
     ns_level.avgDown(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
 
    } else if (project_option==SOLVETYPE_INITPROJ) {
@@ -12058,7 +12061,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
    }
 
    // spectral_override==1 => order derived from "enable_spectral"
-   avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
+   avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
    INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,2); 
@@ -12188,7 +12191,7 @@ void NavierStokes::veldiffuseALL() {
  int save_enable_spectral=enable_spectral;
  override_enable_spectral(viscous_enable_spectral);
 
- avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
+ avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
  int convert_temperature=0;
  int convert_species=0;
@@ -12371,7 +12374,7 @@ void NavierStokes::veldiffuseALL() {
  show_norm2_id(REGISTER_MARK_MF,2);
 
    // spectral_override==1 => order derived from "enable_spectral"
- avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
+ avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,3); 
 
@@ -12407,7 +12410,7 @@ void NavierStokes::veldiffuseALL() {
     amrex::Error("viscous_enable_spectral invalid");
 
    // spectral_override==1 => order derived from "enable_spectral"
-   avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
+   avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
    INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,4); 
@@ -12434,7 +12437,7 @@ void NavierStokes::veldiffuseALL() {
  SET_STOKES_MARK(VISCHEAT_SOURCE_MF,107);
 
   // spectral_override==1 => order derived from "enable_spectral"
- avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
+ avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,5); 
@@ -12454,7 +12457,7 @@ void NavierStokes::veldiffuseALL() {
   ns_level.make_marangoni_force();
  } // ilev=finest_level ... level
 
- avgDownALL(State_Type,0,(AMREX_SPACEDIM+1),1);
+ avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,6); 
 
@@ -12749,7 +12752,7 @@ void NavierStokes::veldiffuseALL() {
   ns_level.assimilate_state_data();
  }
 
- avgDownALL(State_Type,0,AMREX_SPACEDIM+1,1);
+ avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
  avgDownALL(State_Type,dencomp,nden,1);
 
   // 1. add dt_gradp_over_rho:  u^* <-- u^* + dt grad p/rho

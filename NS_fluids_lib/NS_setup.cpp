@@ -2260,6 +2260,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
        local_count++;
       }
      }
+       // sort the blobs for a given material from largest volume
+       // to smallest.
      if (local_count!=material_blob_count)
       amrex::Error("local_count!=material_blob_count");
      for (int isort1=0;isort1<material_blob_count;isort1++) {
@@ -2298,12 +2300,17 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
         " diameter= " << gdiam << " perim= " <<
         blobdata[iblob].blob_perim << '\n';
 
+       // surface area in 3D
+       // perimeter in 2D
       for (int imnbr=0;imnbr<nmat;imnbr++) {
        std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
        " im= " << imbase << " imnbr= " << imnbr+1 << 
        " perimnbr= " << 
        blobdata[iblob].blob_perim_mat[imnbr] << '\n';
       } // imnbr=0..nmat-1
+
+       // perimeter in 3D
+       // "pointwise count" in 2D.
       for (int im1=0;im1<nmat;im1++) {
        for (int im2=0;im2<im1;im2++) {
         if ((im1+1!=imbase)&&(im2+1!=imbase)) {

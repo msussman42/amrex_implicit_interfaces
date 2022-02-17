@@ -1128,7 +1128,7 @@ stop
       REAL_T, intent(in), target :: c_tdata(DIMV(c_tdata),ntensor)
 
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
-      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, intent(in), target :: levelpc(DIMV(levelpc),nmat)
       REAL_T, pointer :: levelpc_ptr(D_DECL(:,:,:),:)
 
@@ -4429,7 +4429,7 @@ stop
       REAL_T, pointer :: utemp_ptr(D_DECL(:,:,:))
       REAL_T, intent(inout), target :: unode(DIMV(unode)) 
       REAL_T, pointer :: unode_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: ucell(DIMV(ucell),SDIM) 
+      REAL_T, intent(inout), target :: ucell(DIMV(ucell),STATE_NCOMP_VEL) 
       REAL_T, pointer :: ucell_ptr(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: velbc(SDIM,2)
 
@@ -6760,7 +6760,7 @@ stop
       REAL_T, pointer :: rhoinverse_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: curv(DIMV(curv),num_curv)
       REAL_T, pointer :: curv_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: velnew(DIMV(velnew),SDIM)
+      REAL_T, intent(inout), target :: velnew(DIMV(velnew),STATE_NCOMP_VEL)
       REAL_T, pointer :: velnew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: dt,cur_time
 
@@ -9481,7 +9481,7 @@ stop
        ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
       REAL_T, intent(in), target :: tendata(DIMV(tendata),20)
       REAL_T, pointer :: tendata_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(out), target :: tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE)
@@ -18536,7 +18536,7 @@ stop
       REAL_T, pointer :: tdata_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out), target :: c_tdata(DIMV(c_tdata),ntensor)
       REAL_T, pointer :: c_tdata_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: solidx(DIMV(solidx),nparts_def*SDIM)
       REAL_T, pointer :: solidx_ptr(D_DECL(:,:,:),:)

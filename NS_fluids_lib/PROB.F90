@@ -25870,8 +25870,7 @@ end subroutine initialize2d
           nten,nten_test
         stop
        endif
-       nc_expect=(SDIM+1)+ &
-        nmat*num_state_material+nmat*ngeom_raw+1
+       nc_expect=STATE_NCOMP
        if (nc.ne.nc_expect) then
         print *,"fort: nc invalid"
         stop
@@ -28129,7 +28128,7 @@ end subroutine initialize2d
       REAL_T, intent(in) :: time, dx(SDIM)
       REAL_T, intent(in) :: xlo(SDIM), xhi(SDIM)
 
-      REAL_T, intent(out), target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(out), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
 !     ::::: local variables
@@ -30723,8 +30722,7 @@ end subroutine initialize2d
        print *,"ncomp invalid mof group fill"
        stop
       endif
-      if (scomp.ne.(SDIM+1)+ &
-          nmat*num_state_material) then
+      if (scomp.ne.STATECOMP_MOF) then
        print *,"scomp invalid mof group fill"
        stop
       endif

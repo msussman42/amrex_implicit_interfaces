@@ -6324,7 +6324,8 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
     num_LS_extrap[tid]=0;
    }
 
-   MultiFab* veldata=getState(1,0,(AMREX_SPACEDIM+1),time); 
+   MultiFab* veldata=getState(1,STATECOMP_VEL, 
+		STATE_NCOMP_VEL+STATE_NCOMP_PRES,time); 
    MultiFab* mofdata=getState(1,scomp_mofvars,nmat*ngeom_raw,time);
    MultiFab* dendata=getStateDen(1,time);
    MultiFab* lsdata=getStateDist(ngrow_distance,time,18);
@@ -6336,7 +6337,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
      amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
    }
 
-   if (veldata->nComp()!=(AMREX_SPACEDIM+1))
+   if (veldata->nComp()!=(STATE_NCOMP_VEL+STATE_NCOMP_PRES))
     amrex::Error("veldata incorrect ncomp");
    if (dendata->nComp()!=nmat*num_state_material)
     amrex::Error("dendata incorrect ncomp");
@@ -7241,7 +7242,7 @@ void NavierStokes::output_zones(
      MFInfo().SetTag("maskSEM_minus"),FArrayBoxFactory());
 
     MultiFab* velmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
-     (AMREX_SPACEDIM+1),1,
+     STATE_NCOMP_VEL+STATE_NCOMP_PRES,1,
      MFInfo().SetTag("velmfminus"),FArrayBoxFactory());
 
     MultiFab* vofmfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
@@ -7306,7 +7307,7 @@ void NavierStokes::output_zones(
      // FabArray.H     
      // scomp,dcomp,ncomp,s_nghost,d_nghost
     velmfminus->ParallelCopy(*velmf,0,0,
-     (AMREX_SPACEDIM+1),1,1,geom.periodicity());
+     STATE_NCOMP_VEL+STATE_NCOMP_PRES,1,1,geom.periodicity());
 
     check_for_NAN(velmfminus,11);
  
