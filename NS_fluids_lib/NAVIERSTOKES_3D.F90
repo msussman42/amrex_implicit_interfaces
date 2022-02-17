@@ -1995,7 +1995,8 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: do_slice
       INTEGER_T, intent(in) :: visual_nddata_format
 
-        ! nstate_slice=x,y,z,xvel,yvel,zvel,PMG,PEOS,den,Temp,KE
+        ! nstate_slice=x,y,z,xvel,yvel,zvel,PMG,PEOS,den,Temp,KE=
+        ! SLICECOMP_NCOMP
         ! (value of material with LS>0)
         ! nslice=domhi-domlo+3
       INTEGER_T, intent(in) :: nslice,nstate_slice,slice_dir
@@ -2010,6 +2011,7 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: elastic_ncomp
       INTEGER_T, intent(in) :: visual_tessellate_vfrac
       INTEGER_T, intent(in) :: visual_ncomp
+      INTEGER_T :: visual_ncomp_interp
       INTEGER_T, intent(in) :: vislo(SDIM), vishi(SDIM)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM), hi(SDIM)
@@ -2164,10 +2166,7 @@ END SUBROUTINE SIMP
       REAL_T xcrit(SDIM)
       REAL_T localfab(visual_ncomp)
       REAL_T vel_uniform(visual_ncomp)
-      REAL_T SEM_value(visual_ncomp-SDIM) ! u,mag vort,LS
-      INTEGER_T ncomp_SEM  ! visual_ncomp-SDIM
-       ! STATE_NCOMP_VEL+STATE_NCOMP_PRES+2+num_species_var+1
-      INTEGER_T VORT_comp_SEM 
+      REAL_T SEM_value(visual_ncomp-SDIM) ! u,pmg,den,temp,spec,mag vort,LS
       INTEGER_T grid_type
       INTEGER_T SEMhi(SDIM)
       REAL_T, dimension(D_DECL(:,:,:),:),allocatable :: SEMloc
@@ -2218,7 +2217,7 @@ END SUBROUTINE SIMP
  
         ! nstate_slice=x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,den,Temp,KE
         ! (value of material with LS>0)
-      if (nstate_slice.ne.2*SDIM+6) then
+      if (nstate_slice.ne.SLICECOMP_NCOMP) then
        print *,"nstate_slice invalid in cellgrid"
        print *,"nstate_slice= ",nstate_slice
        stop
@@ -2277,6 +2276,9 @@ END SUBROUTINE SIMP
 
       if (plot_grid_type.eq.0) then
 
+         ! nstate_slice=SLICECOMP_NCOMP
+         ! for the material with LS>0,
+         ! x,y,z,u,v,w,pmg,peos,div,den,T,KE
        allocate(plotfab(DIMV(plt),nstate_slice))
  
        fabout_ptr=>fabout
@@ -2284,10 +2286,11 @@ END SUBROUTINE SIMP
        call checkbound_array(vislo,vishi,fabout_ptr,0,1,41111)
        call checkbound_array(vislo,vishi,fabout_ptr,0,SDIM-1,41112)
        ! x,u,p,den,T,Y1..Yn,mag vort,LS
-       if (visual_ncomp.ne.2*SDIM+3+num_species_var+1+nmat) then
+       if (visual_ncomp.ne.VISUALCOMP_NCOMP) then
         print *,"visual_ncomp invalid" 
         stop
        endif
+       visual_ncomp_interp=visual_ncomp-SDIM
 
        plotfab_ptr=>plotfab
        call checkbound_array(lo,hi,plotfab_ptr,1,-1,41113)
@@ -2885,14 +2888,11 @@ END SUBROUTINE SIMP
            enddo ! dir2=1..sdim
 
             ! x,u,p,den,T,Y1..Yn,mag vort,LS
-           if (visual_ncomp.ne.SDIM+STATE_NCOMP_VEL+STATE_NCOMP_PRES+ &
-                 2+num_species_var+1+nmat) then
+           if (visual_ncomp.ne.VISUALCOMP_NCOMP) then
             print *,"visual_ncomp invalid" 
             stop
            endif
-           ncomp_SEM=visual_ncomp-SDIM
-           VORT_comp_SEM=STATE_NCOMP_VEL+STATE_NCOMP_PRES+2+num_species_var+1
-           do n=1,ncomp_SEM
+           do n=1,visual_ncomp_interp
             SEM_value(n)=zero
            enddo
            grid_type=-1  ! ggg  (Gauss in all directions)
@@ -2901,7 +2901,7 @@ END SUBROUTINE SIMP
            enddo
 
            allocate(SEMloc(D_DECL(0:SEMhi(1),0:SEMhi(2),0:SEMhi(SDIM)), &
-                           ncomp_SEM))
+                           visual_ncomp_interp))
 
            do iSEM=stenlo(1),stenhi(1)
            do jSEM=stenlo(2),stenhi(2)
@@ -2937,23 +2937,20 @@ END SUBROUTINE SIMP
              endif
             enddo ! dir=1..2+num_species_var
 
+              ! mag vorticity component of a derived data structure.
             local_data=trace(D_DECL(iSEM,jSEM,kSEM),(local_maskSEM-1)*5+5)
-            if (VORT_comp_SEM.eq.SDIM+3+num_species_var+1) then
-             if (abs(local_data).lt.1.0D+20) then
-              SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM)=local_data
-             else
-              print *,"abs(local_data) overflow2"
-              stop
-             endif
+            if (abs(local_data).lt.1.0D+20) then
+             SEMloc(D_DECL(ilocal,jlocal,klocal),VISUALCOMP_VORTMAG+1-SDIM)= &
+                 local_data
             else
-             print *,"VORT_comp_SEM invalid"
+             print *,"abs(local_data) overflow2"
              stop
             endif
              ! we interpolate the LS using SEM, but we discard the interpolated
              ! value.
             do im=1,nmat
              if (abs(local_LS_data(im)).lt.1.0D+20) then
-              SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM+im)= &
+              SEMloc(D_DECL(ilocal,jlocal,klocal),VISUALCOMP_LS+im-SDIM)= &
                 local_LS_data(im)
              else
               print *,"abs(local_data) overflow25"
@@ -2966,13 +2963,13 @@ END SUBROUTINE SIMP
            enddo ! iSEM
 
            call SEM_INTERP_ELEMENT( &
-            ncomp_SEM,bfact,grid_type, &
+            visual_ncomp_interp,bfact,grid_type, &
             SEMhi,dx,xcrit,SEMloc,SEM_value,caller_id)
 
            deallocate(SEMloc)
 
             ! WE ARE IN THE BULK HERE, CAN USE SEM INTERPOLATION
-           do dir=1,STATE_NCOMP_VEL
+           do dir=1,SDIM
             if (abs(SEM_value(dir)).lt.1.0D+20) then
              velnd(dir)=SEM_value(dir)
             else 
@@ -2986,20 +2983,19 @@ END SUBROUTINE SIMP
              print *,"SEM_value(dir) ",SEM_value(dir)
              stop
             endif
-           enddo ! dir=1..STATE_NCOMP_VEL
-           presnd=SEM_value(STATE_NCOMP_VEL+STATE_NCOMP_PRES)
-           if (visual_ncomp-SDIM.ne.STATE_NCOMP_VEL+STATE_NCOMP_PRES+ &
-                 2+num_species_var+1+nmat) then
+           enddo ! dir=1..sdim
+           presnd=SEM_value(VISUALCOMP_PMG+1-SDIM)
+           if (visual_ncomp-SDIM.ne.VISUALCOMP_NCOMP-SDIM) then
             print *,"incorrect visual_ncomp"
             stop
            endif
-           if (ncomp_SEM.ne.STATE_NCOMP_VEL+STATE_NCOMP_PRES+ &
-                 2+num_species_var+1+nmat) then
-            print *,"incorrect ncomp_SEM"
+           if (visual_ncomp-SDIM.ne.visual_ncomp_interp) then
+            print *,"incorrect visual_ncomp_interp"
             stop
            endif
-           if (abs(SEM_value(VORT_comp_SEM)).lt.1.0D+20) then
-            tracend((local_maskSEM-1)*5+5)=SEM_value(VORT_comp_SEM)
+           if (abs(SEM_value(VISUALCOMP_VORTMAG+1-SDIM)).lt.1.0D+20) then
+            tracend((local_maskSEM-1)*5+5)= &
+                 SEM_value(VISUALCOMP_VORTMAG+1-SDIM)
            else 
             print *,"abs(SEM_value(sdim+1)) overflow"
             print *,"i,j,k,level,finest_level ", &
@@ -3008,11 +3004,12 @@ END SUBROUTINE SIMP
             print *,"stenhi ",stenhi(1),stenhi(2),stenhi(3)
             print *,"lo ",lo(1),lo(2),lo(SDIM)
             print *,"hi ",hi(1),hi(2),hi(SDIM)
-            print *,"SEM_value(VORT_comp_SEM) ",SEM_value(VORT_comp_SEM)
+            print *,"SEM_value(VISUALCOMP_VORTMAG+1-SDIM) ", &
+                  SEM_value(VISUALCOMP_VORTMAG+1-SDIM)
             stop
            endif
            do dir=1,2+num_species_var
-            dennd(dir)=SEM_value(STATE_NCOMP_VEL+STATE_NCOMP_PRES+dir)
+            dennd(dir)=SEM_value(VISUALCOMP_DEN+dir-SDIM)
            enddo
           else if (local_maskSEM.eq.0) then
            ! do nothing
@@ -3300,7 +3297,7 @@ END SUBROUTINE SIMP
           enddo
 
           do iw=1,SDIM
-           plotfab(D_DECL(i,j,k),iw)=xposnd(iw)
+           plotfab(D_DECL(i,j,k),SLICECOMP_X+iw)=xposnd(iw)
           enddo
 
           do dir=1,nmat
@@ -3314,21 +3311,21 @@ END SUBROUTINE SIMP
            velnd(dir)=vel(D_DECL(i,j,k),dir)
           enddo
 
-          dir=STATE_NCOMP_VEL+STATE_NCOMP_PRES
-          plotfab(D_DECL(i,j,k),2*SDIM+1)=velnd(dir) ! pressure from solver
+          dir=STATE_NCOMP_VEL+1
+          plotfab(D_DECL(i,j,k),SLICECOMP_PMG+1)=velnd(dir)
 
           presnd=pres(D_DECL(i,j,k))
           divnd=div(D_DECL(i,j,k))
 
-          plotfab(D_DECL(i,j,k),2*SDIM+2)=presnd
-          plotfab(D_DECL(i,j,k),2*SDIM+3)=divnd
+          plotfab(D_DECL(i,j,k),SLICECOMP_PEOS+1)=presnd
+          plotfab(D_DECL(i,j,k),SLICECOMP_DIV+1)=divnd
 
           do dir=1,num_state_material*nmat
            dennd(dir)=den(D_DECL(i,j,k),dir)
           enddo
 
-          denslice=dennd((im_crit-1)*num_state_material+1)
-          tempslice=dennd((im_crit-1)*num_state_material+2)
+          denslice=dennd((im_crit-1)*num_state_material+ENUM_DENVAR+1)
+          tempslice=dennd((im_crit-1)*num_state_material+ENUM_TEMPERATUREVAR+1)
           call init_massfrac_parm(denslice,massfrac_parm,im_crit)
           do ispec=1,num_species_var
            massfrac_parm(ispec)=dennd((im_crit-1)*num_state_material+2+ispec)
@@ -3340,13 +3337,13 @@ END SUBROUTINE SIMP
 
           do dir=1,SDIM
            iw=dir
-           plotfab(D_DECL(i,j,k),SDIM+dir)=velnd(iw)
+           plotfab(D_DECL(i,j,k),SLICECOMP_U+dir)=velnd(iw)
            KEslice=KEslice+half*denslice*(velnd(iw)**2)
           enddo ! dir
 
-          plotfab(D_DECL(i,j,k),2*AMREX_SPACEDIM+4)=denslice
-          plotfab(D_DECL(i,j,k),2*AMREX_SPACEDIM+5)=tempslice
-          plotfab(D_DECL(i,j,k),2*AMREX_SPACEDIM+6)=KEslice
+          plotfab(D_DECL(i,j,k),SLICECOMP_DEN+1)=denslice
+          plotfab(D_DECL(i,j,k),SLICECOMP_TEMP+1)=tempslice
+          plotfab(D_DECL(i,j,k),SLICECOMP_KE+1)=KEslice
          enddo ! k
          enddo ! j
          enddo ! i
@@ -3657,7 +3654,7 @@ END SUBROUTINE SIMP
           enddo !jBL
           enddo !iBL
           if (sumweight.gt.zero) then
-           do dir=1,visual_ncomp-SDIM
+           do dir=1,visual_ncomp_interp
             localfab(SDIM+dir)=localfab(SDIM+dir)/sumweight
            enddo
           else
@@ -3718,10 +3715,7 @@ END SUBROUTINE SIMP
 
            enddo ! dir2=1..sdim
 
-           ncomp_SEM=visual_ncomp-SDIM
-           VORT_comp_SEM=STATE_NCOMP_VEL+STATE_NCOMP_PRES+2+num_species_var+1
-
-           do n=1,ncomp_SEM
+           do n=1,visual_ncomp_interp
             SEM_value(n)=zero
            enddo
            grid_type=-1  ! ggg  (Gauss in all directions)
@@ -3730,7 +3724,7 @@ END SUBROUTINE SIMP
            enddo
 
            allocate(SEMloc(D_DECL(0:SEMhi(1),0:SEMhi(2),0:SEMhi(SDIM)), &
-                           ncomp_SEM))
+                           visual_ncomp_interp))
 
            do iSEM=stenlo(1),stenhi(1)
            do jSEM=stenlo(2),stenhi(2)
@@ -3757,10 +3751,10 @@ END SUBROUTINE SIMP
              SEMloc(D_DECL(ilocal,jlocal,klocal),n)= &
               vel_uniform(n)
             enddo
-            SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM)= &
+            SEMloc(D_DECL(ilocal,jlocal,klocal),VISUALCOMP_VORTMAG+1-SDIM)= &
              trace(D_DECL(iSEM,jSEM,kSEM),5)
             do im=1,nmat
-             SEMloc(D_DECL(ilocal,jlocal,klocal),VORT_comp_SEM+im)= &
+             SEMloc(D_DECL(ilocal,jlocal,klocal),VISUALCOMP_LS+im-SDIM)= &
               lsdistnd(im)
             enddo
            enddo
@@ -3769,7 +3763,7 @@ END SUBROUTINE SIMP
 
            caller_id=4
            call SEM_INTERP_ELEMENT( &
-            ncomp_SEM,bfact,grid_type, &
+            visual_ncomp_interp,bfact,grid_type, &
             SEMhi,dx,xcrit,SEMloc,SEM_value,caller_id)
 
            deallocate(SEMloc)
@@ -11787,12 +11781,14 @@ END SUBROUTINE SIMP
       endif
 
        ! x,u,p,den,T,Y1..Yn,mag vort,LS
-      if (visual_ncomp.ne.2*SDIM+3+num_species_var+1+nmat) then
+      if (visual_ncomp.ne.VISUALCOMP_NCOMP) then
        print *,"visual_ncomp invalid" 
        stop
       endif
 
-      if (time.lt.zero) then
+      if (time.ge.zero) then
+       ! do nothing
+      else
        print *,"time invalid"
        stop
       endif
@@ -12035,7 +12031,7 @@ END SUBROUTINE SIMP
 
        if (visual_compare.eq.1) then
 
-        LS_base=visual_ncomp-nmat
+        LS_base=VISUALCOMP_LS
         state_ncomp=visual_ncomp-nmat+1
 
         do n=1,nmat*(visual_ncomp+1)
@@ -12097,7 +12093,7 @@ END SUBROUTINE SIMP
           stop
          endif
 
-         if ((LS_base.eq.visual_ncomp-nmat).and. &
+         if ((LS_base.eq.VISUALCOMP_LS).and. &
              (state_ncomp.eq.visual_ncomp-nmat+1)) then
           do im=1,nmat
            LS_in=local_data_in(LS_base+im)
@@ -12153,7 +12149,7 @@ END SUBROUTINE SIMP
         enddo ! k
 
         if (gridsum_total.ge.1) then
-         if ((LS_base.eq.visual_ncomp-nmat).and. &
+         if ((LS_base.eq.VISUALCOMP_LS).and. &
              (state_ncomp.eq.visual_ncomp-nmat+1)) then
           do im=1,nmat
            if (gridsum(im).gt.0) then
@@ -12224,7 +12220,7 @@ END SUBROUTINE SIMP
 
         ! nstate_slice=x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,den,Temp,KE
         ! (value of material with LS>0)
-      if (nstate_slice.ne.2*SDIM+6) then
+      if (nstate_slice.ne.SLICECOMP_NCOMP) then
        print *,"nstate_slice invalid in outputslice"
        print *,"nstate_slice= ",nstate_slice
        stop

@@ -3491,10 +3491,10 @@ stop
           print *,"ireverse invalid"
           stop
          endif
-         dcompsrc=(im_source-1)*num_state_material+1
+         dcompsrc=(im_source-1)*num_state_material+1+ENUM_DENVAR
          tcompsrc=(im_source-1)*num_state_material+1+ENUM_TEMPERATUREVAR
          vofcompsrc=(im_source-1)*ngeom_raw+1 
-         dcompdst=(im_dest-1)*num_state_material+1
+         dcompdst=(im_dest-1)*num_state_material+1+ENUM_DENVAR
          tcompdst=(im_dest-1)*num_state_material+1+ENUM_TEMPERATUREVAR
          vofcompdst=(im_dest-1)*ngeom_raw+1 
 
@@ -4261,7 +4261,7 @@ stop
         momden(D_DECL(i,j,k),im_parm)=fort_denconst(im_parm)
        else if (mask(D_DECL(i,j,k)).eq.one) then
      
-        dencomp=(im_parm-1)*num_state_material+1
+        dencomp=(im_parm-1)*num_state_material+ENUM_DENVAR+1
 
         if (constant_density_all_time(im_parm).eq.1) then
          rho_base=fort_denconst(im_parm)
@@ -4922,7 +4922,7 @@ stop
        endif
 
        do im=1,nmat
-        istate=1
+        istate=ENUM_DENVAR+1
         dencomp=(im-1)*num_state_material+istate
         dencore(im)=den(D_DECL(i,j,k),dencomp)
         mom_dencore(im)=mom_den(D_DECL(i,j,k),im)
@@ -4970,12 +4970,12 @@ stop
         istate=1
         do while (istate.le.num_state_material)
 
-         if (istate.eq.1) then ! Density
-          dencomp=(im-1)*num_state_material+istate
+         if (istate.eq.ENUM_DENVAR+1) then ! Density
+          dencomp=(im-1)*num_state_material+ENUM_DENVAR+1
           conserve(D_DECL(i,j,k),iden_base+dencomp)=dencore(im)
           istate=istate+1
          else if (istate.eq.ENUM_TEMPERATUREVAR+1) then ! Temperature
-          tempcomp=(im-1)*num_state_material+istate
+          tempcomp=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
           local_temperature=den(D_DECL(i,j,k),tempcomp)
           if (is_compressible_mat(im).eq.0) then
             ! den * T
@@ -7069,9 +7069,9 @@ stop
         LS(im)=lsfab(D_DECL(i,j,k),im)
         vofcomp=(im-1)*ngeom_recon+1
         VFRAC(im)=recon(D_DECL(i,j,k),vofcomp) 
-        dencomp=(im-1)*num_state_material+1
+        dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
         den_local(im)=Tnew(D_DECL(i,j,k),dencomp)
-        T_local(im)=Tnew(D_DECL(i,j,k),dencomp+ENUM_TEMPERATUREVAR)
+        T_local(im)=Tnew(D_DECL(i,j,k),dencomp+1)
         if ((VFRAC(im).ge.-VOFTOL).and. &
             (VFRAC(im).le.one+VOFTOL)) then
          ! do nothing
@@ -7161,8 +7161,8 @@ stop
          endif
         endif
 
-        dencomp=(im-1)*num_state_material+1
-        Tnew(D_DECL(i,j,k),dencomp+ENUM_TEMPERATUREVAR)=T_local(im)
+        dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
+        Tnew(D_DECL(i,j,k),dencomp+1)=T_local(im)
        enddo ! im=1..nmat
 
       enddo
@@ -13878,7 +13878,7 @@ stop
        density_floor, &
        density_ceiling, &
        solidheat_flag, &
-       dencomp,mofcomp,errcomp, & 
+       mofcomp,errcomp, & 
        latent_heat, &
        freezing_model, &
        distribute_from_target, &
@@ -13965,7 +13965,7 @@ stop
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
 
-      INTEGER_T, intent(in) :: dencomp,mofcomp,errcomp
+      INTEGER_T, intent(in) :: mofcomp,errcomp
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T, intent(in) :: dombc(SDIM,2)
       INTEGER_T, intent(in) :: EILE_flag
@@ -14488,11 +14488,7 @@ stop
        stop
       endif
 
-      if (dencomp.ne.STATECOMP_STATES) then
-       print *,"dencomp invalid"
-       stop
-      endif
-      if (mofcomp.ne.dencomp+nmat*num_state_material) then
+      if (mofcomp.ne.STATECOMP_STATES+nmat*num_state_material) then
        print *,"mofcomp invalid"
        stop
       endif
@@ -14580,8 +14576,8 @@ stop
         compareconserve(icrse,3)= &
           conserve(D_DECL(icrse,jcrse,kcrse),iden_base+2)
         comparestate(icrse,1)=snew(D_DECL(icrse,jcrse,kcrse),1)
-        comparestate(icrse,2)=snew(D_DECL(icrse,jcrse,kcrse),dencomp+1)
-        comparestate(icrse,3)=snew(D_DECL(icrse,jcrse,kcrse),dencomp+2)
+        comparestate(icrse,2)=snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_STATES+ENUM_DENVAR+1)
+        comparestate(icrse,3)=snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_STATES+ENUM_TEMPERATUREVAR+1)
        enddo
        call compare_sanity(compareconserve,1,3,2)
        call compare_sanity(comparestate,1,3,1)
@@ -15048,7 +15044,7 @@ stop
                 do im=1,nmat
 
                  ! density
-                 dencomp_data=(im-1)*num_state_material+1
+                 dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
                  donate_data= &
                   conserve(D_DECL(idonate,jdonate,kdonate), &
                            iden_base+dencomp_data) 
@@ -15523,7 +15519,7 @@ stop
 
             do im=1,nmat
              ! density
-             dencomp_data=(im-1)*num_state_material+1
+             dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
               ! conserve is initialized in fort_build_conserve.
               ! donate_density is equal to the density that is stored in the
               ! old state variable.
@@ -15815,7 +15811,7 @@ stop
          ! density
          do im=1,nmat
 
-          dencomp_data=(im-1)*num_state_material+1
+          dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
           massdepart=veldata(iden_base+dencomp_data)
           if (massdepart.ge.zero) then
            ! do nothing
@@ -15870,8 +15866,7 @@ stop
            constant_density_all_time, &
            massdepart,im,nmat, &
            dencore(im))
-            !dencomp=STATECOMP_STATES
-          istate=dencomp+(im-1)*num_state_material+1
+          istate=STATECOMP_STATES+(im-1)*num_state_material+ENUM_DENVAR+1
           if (dencore(im).gt.zero) then
            ! do nothing
           else
@@ -16029,12 +16024,12 @@ stop
           endif
 
            ! in: fort_vfrac_split
-          dencomp_data=(im-1)*num_state_material+1
+          dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
 
           istate=1
           do while (istate.le.num_state_material)
 
-           if (istate.eq.1) then
+           if (istate.eq.ENUM_DENVAR+1) then
             ! do nothing, density updated above
             istate=istate+1
            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then 
@@ -16042,16 +16037,15 @@ stop
             do ispecies=1,num_species_var
              speccomp_data=(im-1)*num_state_material+num_state_base+ &
                ispecies
-              !dencomp=STATECOMP_STATES
              if (no_material_flag.eq.1) then ! no material (im)
-              snew_hold(dencomp+speccomp_data)=zero
+              snew_hold(STATECOMP_STATES+speccomp_data)=zero
              else if (no_material_flag.eq.0) then
               if (is_rigid(nmat,im).eq.1) then ! mass fraction=0 in solids.
-               snew_hold(dencomp+speccomp_data)=zero
+               snew_hold(STATECOMP_STATES+speccomp_data)=zero
               else if (is_rigid(nmat,im).eq.0) then
                massdepart=veldata(iden_base+dencomp_data)
                if (massdepart.gt.zero) then
-                snew_hold(dencomp+speccomp_data)= &
+                snew_hold(STATECOMP_STATES+speccomp_data)= &
                  veldata(iden_base+speccomp_data)/massdepart
                else
                 print *,"massdepart invalid"
@@ -16068,10 +16062,10 @@ stop
 
             enddo ! ispecies=1..num_species_var
 
-            tempcomp_data=(im-1)*num_state_material+istate
+            tempcomp_data=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
 
             if (no_material_flag.eq.1) then
-             snew_hold(dencomp+tempcomp_data)=fort_tempconst(im)
+             snew_hold(STATECOMP_STATES+tempcomp_data)=fort_tempconst(im)
             else if (no_material_flag.eq.0) then
              if (is_rigid(nmat,im).eq.1) then
               if (fort_material_type(im).ne.999) then
@@ -16118,7 +16112,7 @@ stop
                stop
               endif
 
-              snew_hold(dencomp+tempcomp_data)=ETcore
+              snew_hold(STATECOMP_STATES+tempcomp_data)=ETcore
              else if (is_rigid(nmat,im).eq.0) then
               if ((fort_material_type(im).ge.0).and. &
                   (fort_material_type(im).le.MAX_NUM_EOS)) then
@@ -16147,9 +16141,8 @@ stop
                 do ispecies=1,num_species_var
                  speccomp_data=(im-1)*num_state_material+num_state_base+ &
                     ispecies
-                  !dencomp=STATECOMP_STATES
                  massfrac_parm(ispecies)= &
-                    snew_hold(dencomp+speccomp_data)
+                    snew_hold(STATECOMP_STATES+speccomp_data)
                  if (massfrac_parm(ispecies).ge.zero) then
                   ! do nothing
                  else
@@ -16177,7 +16170,7 @@ stop
                print *,"Energy went negative"
                stop
               endif
-              snew_hold(dencomp+tempcomp_data)=ETcore
+              snew_hold(STATECOMP_STATES+tempcomp_data)=ETcore
              else
               print *,"is_rigid invalid GODUNOV_3D.F90"
               stop
@@ -16207,15 +16200,13 @@ stop
          do im=1,nmat
           if (is_rigid(nmat,im).eq.0) then
            do istate=1,num_state_material
-            !dencomp=STATECOMP_STATES
-            statecomp_data=dencomp+(im-1)*num_state_material+istate
+            statecomp_data=STATECOMP_STATES+(im-1)*num_state_material+istate
             snew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
               snew_hold(statecomp_data)
            enddo ! istate=1..num_state_material
 
            do igeom=1,ngeom_raw
-            !dencomp=STATECOMP_STATES
-            statecomp_data=dencomp+ &
+            statecomp_data=STATECOMP_STATES+ &
               nmat*num_state_material+ &
               (im-1)*ngeom_raw+igeom
             snew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
@@ -16224,8 +16215,7 @@ stop
           else if (is_rigid(nmat,im).eq.1) then
 
            if (solidheat_flag.eq.0) then ! diffuse in solid
-            !dencomp=STATECOMP_STATES
-            tempcomp_data=dencomp+(im-1)*num_state_material+ &
+            tempcomp_data=STATECOMP_STATES+(im-1)*num_state_material+ &
               ENUM_TEMPERATUREVAR+1
             snew(D_DECL(icrse,jcrse,kcrse),tempcomp_data)= &
               snew_hold(tempcomp_data)
@@ -16328,8 +16318,8 @@ stop
         compareconserve(icrse,3)= &
           conserve(D_DECL(icrse,jcrse,kcrse),iden_base+2)
         comparestate(icrse,1)=snew(D_DECL(icrse,jcrse,kcrse),1)
-        comparestate(icrse,2)=snew(D_DECL(icrse,jcrse,kcrse),dencomp+1)
-        comparestate(icrse,3)=snew(D_DECL(icrse,jcrse,kcrse),dencomp+2)
+        comparestate(icrse,2)=snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_STATES+ENUM_DENVAR+1)
+        comparestate(icrse,3)=snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_STATES+ENUM_TEMPERATUREVAR+1)
        enddo
        call compare_sanity(compareconserve,1,3,2)
        call compare_sanity(comparestate,1,3,1)
@@ -16827,7 +16817,7 @@ stop
          endif
          cell_vfrac(im)=local_volume
 
-         dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
+         dencomp=STATECOMP_STATES+(im-1)*num_state_material+ENUM_DENVAR+1
          test_density=state(D_DECL(i,j,k),dencomp)
          if (test_density.gt.zero) then
           ! do nothing
@@ -17181,7 +17171,7 @@ stop
              ! check for Tgamma or Ygamma boundary condition.
 
             do im_crit=1,nmat
-             dencomp=STATECOMP_STATES+(im_crit-1)*num_state_material+1
+             dencomp=STATECOMP_STATES+(im_crit-1)*num_state_material+ENUM_DENVAR+1
              Tcenter(im_crit)=cellfab(D_DECL(i,j,k),scomp(im_crit)+1)
              if (Tcenter(im_crit).ge.zero) then
               ! do nothing

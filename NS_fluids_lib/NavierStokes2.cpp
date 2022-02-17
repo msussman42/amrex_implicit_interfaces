@@ -7119,7 +7119,7 @@ void NavierStokes::output_zones(
   amrex::Error("num_state_base invalid");
 
   // x,u,p,den,T,Y1..Yn,mag vort,LS
- if (visual_ncomp==2*AMREX_SPACEDIM+3+num_species_var+1+nmat) {
+ if (visual_ncomp==VISUALCOMP_NCOMP) {
   // do nothing
  } else
   amrex::Error("visual_ncomp invalid");
@@ -7174,7 +7174,7 @@ void NavierStokes::output_zones(
  // x,y,z,xvel,yvel,zvel,PMG,PEOS,div,den,Temp,KE
  // (value of material with LS>0)
  int nslice=0;
- int nstate_slice=2*AMREX_SPACEDIM+6; 
+ int nstate_slice=SLICECOMP_NCOMP; 
 
  if ((slice_dir>=0)&&(slice_dir<AMREX_SPACEDIM)) {
   const Box& domain_finest = ns_finest.geom.Domain();
