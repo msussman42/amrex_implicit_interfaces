@@ -3247,7 +3247,7 @@ stop
       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out),target :: curvfab(DIMV(curvfab),num_curv)
       REAL_T, pointer :: curvfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM)
+      REAL_T, intent(in), target :: velfab(DIMV(velfab),STATE_NCOMP_VEL)
       REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target ::  &
               denfab(DIMV(denfab),nmat*num_state_material)

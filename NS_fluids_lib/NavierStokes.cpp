@@ -226,6 +226,7 @@ int  NavierStokes::debug_fillpatch = 0;
 int  NavierStokes::check_nan    = 0;
 // 1=curv 2=error heat 3=both
 int  NavierStokes::fab_verbose  = 0;
+// ns.output_drop_distribution
 int  NavierStokes::output_drop_distribution = 0;
 int  NavierStokes::extend_pressure_into_solid = 0;
 Real NavierStokes::cfl          = 0.5;
@@ -9657,8 +9658,9 @@ void NavierStokes::init_boundary() {
    MultiFab* vofmf=getState(1,mofcomp,nmat*ngeom_raw,cur_time_slab);
    MultiFab::Copy(S_new,*vofmf,0,mofcomp,nmat*ngeom_raw,1);
    delete vofmf;
-   MultiFab* velmf=getState(1,0,(AMREX_SPACEDIM+1),cur_time_slab);
-   MultiFab::Copy(S_new,*velmf,0,0,(AMREX_SPACEDIM+1),1);
+   MultiFab* velmf=getState(1,STATECOMP_VEL,
+	STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
+   MultiFab::Copy(S_new,*velmf,0,0,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
    delete velmf;
    MultiFab* denmf=getStateDen(1,cur_time_slab);  
    MultiFab::Copy(S_new,*denmf,0,STATECOMP_STATES,nden,1);
@@ -9806,7 +9808,7 @@ NavierStokes::init(
 
     numparts=4;
     scomp_part[0]=0;
-    scomp_part[1]=(AMREX_SPACEDIM+1);
+    scomp_part[1]=STATE_NCOMP_VEL+STATE_NCOMP_PRES;
     scomp_part[2]=scomp_part[1]+nmat*num_state_material;
     scomp_part[3]=scomp_part[2]+nmat*ngeom_raw;
 
@@ -9958,7 +9960,7 @@ NavierStokes::init (const BoxArray& ba_in,
 
     numparts=4;
     scomp_part[0]=0;
-    scomp_part[1]=(AMREX_SPACEDIM+1);
+    scomp_part[1]=STATE_NCOMP_VEL+STATE_NCOMP_PRES;
     scomp_part[2]=scomp_part[1]+nmat*num_state_material;
     scomp_part[3]=scomp_part[2]+nmat*ngeom_raw;
 
@@ -16713,8 +16715,8 @@ NavierStokes::split_scalar_advection() {
  getStateDist_localMF(LS_RECON_MF,1,advect_time_slab,10);
 
    // the pressure from before will be copied to the new pressure.
- getState_localMF(VELADVECT_MF,ngrow,0,
-  (AMREX_SPACEDIM+1),
+ getState_localMF(VELADVECT_MF,ngrow,STATECOMP_VEL,
+  STATE_NCOMP_VEL+STATE_NCOMP_PRES,
   advect_time_slab); 
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -16925,17 +16927,16 @@ NavierStokes::split_scalar_advection() {
   // initialize selected state variables 
 
   // velocity and pressure
- int scomp_init=0;
- int ncomp_init=(AMREX_SPACEDIM+1); 
+ int scomp_init=STATECOMP_VEL;
+ int ncomp_init=STATE_NCOMP_VEL+STATE_NCOMP_PRES; 
  S_new.setVal(0.0,scomp_init,ncomp_init,1);
 
  for (int im=0;im<nmat;im++) {
   if (ns_is_rigid(im)==0) {
-   scomp_init=(AMREX_SPACEDIM+1)+im*num_state_material;
+   scomp_init=STATECOMP_STATES+im*num_state_material;
    ncomp_init=num_state_material;
    S_new.setVal(0.0,scomp_init,ncomp_init,1);
-   scomp_init=STATECOMP_STATES+nmat*num_state_material+
-     im*ngeom_raw;
+   scomp_init=STATECOMP_MOF+im*ngeom_raw;
    ncomp_init=ngeom_raw;
    S_new.setVal(0.0,scomp_init,ncomp_init,1);
    LS_new.setVal(0.0,im,1,1);
@@ -17300,7 +17301,7 @@ NavierStokes::split_scalar_advection() {
   avgDown(LS_Type,0,nmat,0);
   MOFavgDown();
      // velocity and pressure
-  avgDown(State_Type,0,(AMREX_SPACEDIM+1),1);
+  avgDown(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
   avgDown(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
   if ((num_materials_viscoelastic>=1)&&
       (num_materials_viscoelastic<=nmat)) {
@@ -18970,7 +18971,8 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
   amrex::Error("drag ncomp invalid");
 
   // velocity and pressure
- MultiFab* vel=getState(1,0,(AMREX_SPACEDIM+1),upper_slab_time);
+ MultiFab* vel=getState(1,STATECOMP_VEL,
+   STATE_NCOMP_VEL+STATE_NCOMP_PRES,upper_slab_time);
 
  if (NUM_CELL_ELASTIC==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
   //do nothing
@@ -19804,7 +19806,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
   ns_level.debug_ngrow(MACDIV_MF,1,250);
 
-  MultiFab* velmf=ns_level.getState(1,0,AMREX_SPACEDIM+1,cur_time_slab);
+  MultiFab* velmf=ns_level.getState(1,STATECOMP_VEL,
+	STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
   MultiFab* presmf=ns_level.derive_EOS_pressure(material_type_visual); 
   if (presmf->nComp()!=1)
    amrex::Error("presmf has invalid ncomp");
@@ -22198,8 +22201,8 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
  bool use_tiling=ns_tiling;
 
   // ngrow=0  
- MultiFab* vel=getState(0,0,
-   (AMREX_SPACEDIM+1),cur_time_slab);
+ MultiFab* vel=getState(0,STATECOMP_VEL,
+   STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
  MultiFab* velmac[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   velmac[dir]=getStateMAC(Umac_Type,0,dir,0,1,cur_time_slab);
@@ -22918,7 +22921,8 @@ NavierStokes::init_particle_container(int append_flag) {
   if (LSmf->nGrow()!=1)
    amrex::Error("LSmf->nGrow()!=1");
 
-  MultiFab* init_velocity_mf=getState(1,0,AMREX_SPACEDIM+1,cur_time_slab);
+  MultiFab* init_velocity_mf=getState(1,STATECOMP_VEL,
+     STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
 
   NavierStokes& ns_level0=getLevel(0);
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=

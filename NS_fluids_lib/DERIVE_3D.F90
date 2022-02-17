@@ -92,7 +92,7 @@ stop
       REAL_T, pointer :: denstate_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: vof(DIMV(vof),nmat*ngeom_recon)
       REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: visc(DIMV(visc),ncompvisc)
       REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
@@ -465,7 +465,7 @@ stop
       REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)
       REAL_T, pointer :: cellten_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(out), target :: tensordata(DIMV(tensordata),20)
@@ -733,7 +733,7 @@ stop
       REAL_T, intent(out), target :: visc(DIMV(visc),ncompvisc) 
       REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: gammadot(DIMV(gammadot))
       REAL_T, pointer :: gammadot_ptr(D_DECL(:,:,:))
@@ -1682,7 +1682,7 @@ stop
 
       REAL_T, intent(in), target :: den(DIMV(den),ncomp_den)
       REAL_T, intent(in), target :: tensor(DIMV(tensor),ncomp_tensor)
-      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
 
       INTEGER_T im  ! im=0..nmat-1
@@ -2092,7 +2092,7 @@ stop
 
       REAL_T, intent(in),target :: pres(DIMV(pres))
       REAL_T, pointer :: pres_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: vel(DIMV(vel),SDIM)
+      REAL_T, intent(in),target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: drag(DIMV(drag),N_DRAG)
       REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
