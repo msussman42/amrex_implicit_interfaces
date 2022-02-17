@@ -2165,7 +2165,7 @@ END SUBROUTINE SIMP
       REAL_T visual_dx(SDIM)
       REAL_T xcrit(SDIM)
       REAL_T localfab(visual_ncomp)
-      REAL_T vel_uniform(visual_ncomp)
+      REAL_T vel_uniform(visual_ncomp-SDIM)
       REAL_T SEM_value(visual_ncomp-SDIM) ! u,pmg,den,temp,spec,mag vort,LS
       INTEGER_T grid_type
       INTEGER_T SEMhi(SDIM)
@@ -2914,23 +2914,34 @@ END SUBROUTINE SIMP
             enddo
             call get_primary_material(local_LS_data,nmat,im_crit_SEM)
 
-             ! velocity and pressure
-            do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES
+             ! velocity 
+            do dir=1,SDIM
              local_data=vel(D_DECL(iSEM,jSEM,kSEM),dir)
              if (abs(local_data).lt.1.0D+20) then
-              SEMloc(D_DECL(ilocal,jlocal,klocal),dir)=local_data
+              SEMloc(D_DECL(ilocal,jlocal,klocal),VISUALCOMP_U-SDIM+dir)= &
+                  local_data
              else
               print *,"abs(local_data) overflow1"
               stop
              endif
-            enddo ! dir=1..sdim+1
+            enddo ! dir=1..sdim
+    
+             ! pressure
+            local_data=vel(D_DECL(iSEM,jSEM,kSEM),STATE_NCOMP_VEL+1)
+            if (abs(local_data).lt.1.0D+20) then
+             SEMloc(D_DECL(ilocal,jlocal,klocal),VISUALCOMP_PMG+1-SDIM)= &
+                  local_data
+            else
+             print *,"abs(local_data) overflow1"
+             stop
+            endif
 
             do dir=1,2+num_species_var
              local_data=den(D_DECL(iSEM,jSEM,kSEM), &
                (im_crit_SEM-1)*num_state_material+dir)
              if (abs(local_data).lt.1.0D+20) then
               SEMloc(D_DECL(ilocal,jlocal,klocal), &
-                     STATE_NCOMP_VEL+STATE_NCOMP_PRES+dir)=local_data
+                 VISUALCOMP_DEN+dir-SDIM)=local_data
              else
               print *,"abs(local_data) overflow1"
               stop
@@ -2946,6 +2957,7 @@ END SUBROUTINE SIMP
              print *,"abs(local_data) overflow2"
              stop
             endif
+
              ! we interpolate the LS using SEM, but we discard the interpolated
              ! value.
             do im=1,nmat
@@ -3080,7 +3092,7 @@ END SUBROUTINE SIMP
         endif
 
           ! this is pressure from the projection.
-        writend(scomp+1)=velnd(STATE_NCOMP_VEL+STATE_NCOMP_PRES)
+        writend(scomp+1)=velnd(STATE_NCOMP_VEL+1)
         scomp=scomp+1
 
           ! this is EOS pressure
@@ -3619,20 +3631,33 @@ END SUBROUTINE SIMP
            enddo
             ! primary material w.r.t. both fluids and solids.
            call get_primary_material(lsdistnd,nmat,im_crit)
-           do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES
-            vel_uniform(dir)=vel(D_DECL(iBL,jBL,kBL),dir)
+
+           do dir=1,SDIM
+            vel_uniform(VISUALCOMP_U+dir-SDIM)= &
+                vel(D_DECL(iBL,jBL,kBL),dir)
            enddo
+
+           vel_uniform(VISUALCOMP_PMG+1-SDIM)= &
+              vel(D_DECL(iBL,jBL,kBL),STATE_NCOMP_VEL+1)
+
            do dir=1,2+num_species_var
-            vel_uniform(STATE_NCOMP_VEL+STATE_NCOMP_PRES+dir)= &
+            vel_uniform(VISUALCOMP_DEN+dir-SDIM)= &
               den(D_DECL(iBL,jBL,kBL),(im_crit-1)*num_state_material+dir)
            enddo
 
            current_index=SDIM
-           do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES+2+num_species_var
+           do dir=1,VISUALCOMP_VORTMAG-SDIM
             localfab(SDIM+dir)=localfab(SDIM+dir)+ &
                localwt*vel_uniform(dir)
             current_index=current_index+1
            enddo
+           if (current_index.eq.VISUALCOMP_VORTMAG) then
+            ! do nothing
+           else
+            print *,"current_index invalid"
+            stop
+           endif
+
            ! 1. \dot{gamma}
            ! 2. Tr(A) if viscoelastic
            !    \dot{gamma} o.t.
@@ -3645,7 +3670,8 @@ END SUBROUTINE SIMP
            localfab(current_index+1)=localfab(current_index+1)+ &
                localwt*trace(D_DECL(iBL,jBL,kBL),5)
            do im=1,nmat
-            localfab(current_index+1+im)=localfab(current_index+1+im)+ &
+            localfab(VISUALCOMP_LS+im)= &
+               localfab(VISUALCOMP_LS+im)+ &
                localwt*lsdistnd(im)
            enddo
 
@@ -3739,15 +3765,19 @@ END SUBROUTINE SIMP
              ! primary material w.r.t. both fluids and solids.
             call get_primary_material(lsdistnd,nmat,im_crit)
 
-            do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES
-             vel_uniform(dir)=vel(D_DECL(iSEM,jSEM,kSEM),dir)
+            do dir=1,SDIM
+             vel_uniform(VISUALCOMP_U+dir-SDIM)= &
+                   vel(D_DECL(iSEM,jSEM,kSEM),dir)
             enddo
+            vel_uniform(VISUALCOMP_PMG+1-SDIM)= &
+              vel(D_DECL(iSEM,jSEM,kSEM),STATE_NCOMP_VEL+1)
+
             do dir=1,2+num_species_var
-             vel_uniform(STATE_NCOMP_VEL+STATE_NCOMP_PRES+dir)= &
+             vel_uniform(VISUALCOMP_DEN+dir-SDIM)= &
               den(D_DECL(iSEM,jSEM,kSEM),(im_crit-1)*num_state_material+dir)
             enddo
 
-            do n=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES+2+num_species_var
+            do n=1,VISUALCOMP_VORTMAG-SDIM
              SEMloc(D_DECL(ilocal,jlocal,klocal),n)= &
               vel_uniform(n)
             enddo
@@ -4589,8 +4619,8 @@ END SUBROUTINE SIMP
         print *,"ncomp_flux invalid"
         stop
        endif
-      else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u cell to MAC
-               (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & !UMAC=UMAC+beta diff_reg
+      else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
+               (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
                (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
        if (ncomp_vel.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_vel invalid"
