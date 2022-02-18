@@ -583,6 +583,7 @@ subroutine AHMED_ICE_RESISTANT_ASSIMILATE( &
      assimilate_in,assimilate_out, &
      i,j,k,cell_flag)
 use probcommon_module
+use geometry_intersect_module
 IMPLICIT NONE
 
 type(assimilate_parm_type), intent(in) :: assimilate_in
@@ -600,7 +601,16 @@ INTEGER_T :: number_intervals
 INTEGER_T :: dir
 INTEGER_T :: im
 REAL_T VEL_DROP(SDIM)
-
+REAL_T ldata(D_DECL(3,3,3))
+INTEGER_T :: i1,j1,k1,k1lo,k1hi
+REAL_T :: xdata(SDIM)
+REAL_T :: LS_normal_data(SDIM)
+REAL_T :: vfrac_seed
+REAL_T :: volcell
+REAL_T :: facearea_seed
+REAL_T :: centroid_seed(SDIM)
+REAL_T :: cencell(SDIM)
+REAL_T :: areacentroid_seed(SDIM)
 
 nmat=assimilate_in%nmat
 nstate=assimilate_in%nstate
@@ -627,6 +637,12 @@ if ((num_materials.ge.3).and. &
  do dir=1,SDIM
   xcrit(dir)=assimilate_in%xsten(0,dir)
  enddo
+ if (assimilate_in%nhalf.ge.2) then
+  ! do nothing
+ else
+  print *,"(assimilate_in%nhalf.ge.2) violated"
+  stop
+ endif
  t_upper=assimilate_in%cur_time  ! cur_time_slab
  t_lower=t_upper-assimilate_in%dt
  if (t_lower.lt.t_upper) then
@@ -672,6 +688,62 @@ if ((num_materials.ge.3).and. &
         assimilate_out%LS_state(D_DECL(i,j,k), &
                 num_materials+SDIM+dir)=-LS_normal(dir)
        enddo
+       k1lo=0
+       k1hi=0
+       if (SDIM.eq.3) then
+        k1lo=-1
+        k1hi=1
+       else if (SDIM.eq.2) then
+        ! do nothing
+       else
+        print *,"dimension bust"
+        stop
+       endif
+
+       do i1=-1,1
+       do j1=-1,1
+       do k1=k1lo,k1hi
+        xdata(1)=assimilate_in%xsten(2*i1,1)
+        xdata(2)=assimilate_in%xsten(2*j1,2)
+        if (SDIM.eq.3) then
+         xdata(SDIM)=assimilate_in%xsten(2*k1,SDIM)
+        endif
+        ldata(D_DECL(i1+2,j1+2,k1+2))=get_LS_seed(xdata,LS_normal_data)
+       enddo
+       enddo
+       enddo
+       call getvolume( &
+         assimilate_in%bfact, &
+         assimilate_in%dx, &
+         assimilate_in%xsten, &
+         assimilate_in%nhalf, &
+         ldata, &
+         vfrac_seed, &
+         facearea_seed, &
+         centroid_seed, &
+         areacentroid_seed, &
+         VOFTOL, &
+         SDIM)
+       call CISBOX( &
+         assimilate_in%xsten, &
+         assimilate_in%nhalf, &
+         assimilate_in%xlo, &
+         assimilate_in%dx, &
+         i,j,k, &
+         assimilate_in%bfact, &
+         assimilate_in%level, &
+         volcell,cencell,SDIM)
+
+       assimilate_out%state(D_DECL(i,j,k),STATECOMP_MOF+1)=vfrac_seed
+       assimilate_out%state(D_DECL(i,j,k),STATECOMP_MOF+ngeom_raw+1)= &
+               one-vfrac_seed
+       do dir=1,SDIM
+        assimilate_out%state(D_DECL(i,j,k),STATECOMP_MOF+1+dir)= &
+          centroid_seed(dir)-cencell(dir)
+        assimilate_out%state(D_DECL(i,j,k),STATECOMP_MOF+ngeom_raw+1+dir)= &
+          -(centroid_seed(dir)-cencell(dir))
+       enddo
+
        do im=2,num_materials
         LS_test=assimilate_out%LS_state(D_DECL(i,j,k),im)
         if (LS_test.ge.LS_seed-three*assimilate_in%dx(1)) then
