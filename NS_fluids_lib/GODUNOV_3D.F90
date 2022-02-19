@@ -4802,7 +4802,6 @@ stop
       end subroutine fort_velmac_override
 
       subroutine fort_build_conserve( &
-       iden_base, &
        constant_density_all_time, &
        conserve,DIMS(conserve), &
        den, &
@@ -4849,7 +4848,6 @@ stop
       INTEGER_T istate,ispecies
       INTEGER_T dencomp,tempcomp,speccomp
       INTEGER_T veldir
-      INTEGER_T iden_base
       INTEGER_T igridlo(3),igridhi(3)
       REAL_T dencore(nmat)
       REAL_T mom_dencore(nmat)
@@ -4895,11 +4893,6 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         igridlo,igridhi,ngrow)
-
-      if (iden_base.ne.SDIM) then
-       print *,"iden_base invalid"
-       stop
-      endif
 
       do i=igridlo(1),igridhi(1)
       do j=igridlo(2),igridhi(2)
@@ -4972,14 +4965,14 @@ stop
 
          if (istate.eq.ENUM_DENVAR+1) then ! Density
           dencomp=(im-1)*num_state_material+ENUM_DENVAR+1
-          conserve(D_DECL(i,j,k),iden_base+dencomp)=dencore(im)
+          conserve(D_DECL(i,j,k),CISLCOMP_STATES+dencomp)=dencore(im)
           istate=istate+1
          else if (istate.eq.ENUM_TEMPERATUREVAR+1) then ! Temperature
           tempcomp=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
           local_temperature=den(D_DECL(i,j,k),tempcomp)
           if (is_compressible_mat(im).eq.0) then
             ! den * T
-           conserve(D_DECL(i,j,k),iden_base+tempcomp)= &
+           conserve(D_DECL(i,j,k),CISLCOMP_STATES+tempcomp)= &
             dencore(im)*local_temperature
           else if (is_compressible_mat(im).eq.1) then
 
@@ -4998,7 +4991,7 @@ stop
            call INTERNAL_material(dencore(im),massfrac_parm, &
             local_temperature,local_internal, &
             fort_material_type(im),im)
-           conserve(D_DECL(i,j,k),iden_base+tempcomp)= &
+           conserve(D_DECL(i,j,k),CISLCOMP_STATES+tempcomp)= &
              dencore(im)*(KE+local_internal) 
           else
            print *,"is_compressible_mat invalid"
@@ -5010,7 +5003,7 @@ stop
            ! den * Y
           do ispecies=1,num_species_var
            speccomp=(im-1)*num_state_material+num_state_base+ispecies
-           conserve(D_DECL(i,j,k),iden_base+speccomp)= &
+           conserve(D_DECL(i,j,k),CISLCOMP_STATES+speccomp)= &
              dencore(im)*den(D_DECL(i,j,k),speccomp)
            istate=istate+1
           enddo ! ispecies=1..num_species_var
@@ -13925,7 +13918,6 @@ stop
        ngrow, &
        ngrow_mac_old, &
        nc_conserve, &
-       iden_base, &
        nmat, &
        map_forward, &
        recon_ncomp, &
@@ -13934,7 +13926,6 @@ stop
        ntensor, &
        nc_bucket, &
        num_MAC_vectors, & !=2 (fort_vfrac_split)
-       NUM_CELL_ELASTIC, &
        verbose, &
        gridno,ngrid, &
        level, &
@@ -13952,11 +13943,9 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: num_MAC_vectors !=2
-      INTEGER_T, intent(in) :: NUM_CELL_ELASTIC
       INTEGER_T, intent(inout) :: nprocessed
       INTEGER_T, intent(in) :: tid
 
-      INTEGER_T, intent(in) :: iden_base
       INTEGER_T, intent(in) :: nc_conserve
       INTEGER_T, intent(in) :: ngrow,ngrow_mac_old
       INTEGER_T, intent(in) :: solidheat_flag
@@ -14535,7 +14524,8 @@ stop
        print *,"num_MAC_vectors invalid"
        stop
       endif 
-      if (NUM_CELL_ELASTIC.eq.2*SDIM*num_materials_viscoelastic) then
+      if (NUM_CELL_ELASTIC.eq. &
+          ENUM_NUM_TENSOR_TYPE*num_materials_viscoelastic) then
        ! do nothing
       else
        print *,"NUM_CELL_ELASTIC invalid"
@@ -14552,10 +14542,6 @@ stop
        print *,"nc_conserve invalid"
        stop
       endif
-      if (iden_base.ne.SDIM) then
-       print *,"iden_base invalid"
-       stop
-      endif
 
       call checkbound_array(fablo,fabhi,conserve_ptr,ngrow,-1,1238)
      
@@ -14570,14 +14556,18 @@ stop
        do icrse=fablo(1),fabhi(1)
         compareconserve(icrse,1)= &
          conserve(D_DECL(icrse,jcrse,kcrse),1)* &
-         conserve(D_DECL(icrse,jcrse,kcrse),iden_base+1)
+         conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_STATES+ENUM_DENVAR+1)
         compareconserve(icrse,2)= &
-          conserve(D_DECL(icrse,jcrse,kcrse),iden_base+1)
+         conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_STATES+ENUM_DENVAR+1)
         compareconserve(icrse,3)= &
-          conserve(D_DECL(icrse,jcrse,kcrse),iden_base+2)
-        comparestate(icrse,1)=snew(D_DECL(icrse,jcrse,kcrse),1)
-        comparestate(icrse,2)=snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_STATES+ENUM_DENVAR+1)
-        comparestate(icrse,3)=snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_STATES+ENUM_TEMPERATUREVAR+1)
+          conserve(D_DECL(icrse,jcrse,kcrse), &
+                   CISLCOMP_STATES+ENUM_TEMPERATUREVAR+1)
+        comparestate(icrse,1)= &
+           snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_VEL+1)
+        comparestate(icrse,2)= &
+         snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_STATES+ENUM_DENVAR+1)
+        comparestate(icrse,3)= &
+         snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_STATES+ENUM_TEMPERATUREVAR+1)
        enddo
        call compare_sanity(compareconserve,1,3,2)
        call compare_sanity(comparestate,1,3,1)
@@ -14633,11 +14623,6 @@ stop
        conserve_ptr, &
        critical_cutoff_low, &
        critical_cutoff_high)
-
-      if (iden_base.ne.SDIM) then
-       print *,"iden_base invalid"
-       stop
-      endif
 
        ! the band thickness in fort_advective_pressure is 2 * DXMAXLS
       call get_dxmaxLS(dx,bfact,DXMAXLS)
@@ -15047,7 +15032,7 @@ stop
                  dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
                  donate_data= &
                   conserve(D_DECL(idonate,jdonate,kdonate), &
-                           iden_base+dencomp_data) 
+                           CISLCOMP_STATES+dencomp_data) 
                  massdepart_mom=donate_data*added_weight(im)
 
                  if (massdepart_mom.le.zero) then
@@ -15524,7 +15509,8 @@ stop
               ! donate_density is equal to the density that is stored in the
               ! old state variable.
              donate_density= &
-              conserve(D_DECL(idonate,jdonate,kdonate),iden_base+dencomp_data) 
+              conserve(D_DECL(idonate,jdonate,kdonate),
+                       CISLCOMP_STATES+dencomp_data) 
              donate_mom_density= &
               mom_den(D_DECL(idonate,jdonate,kdonate),im) 
              if (donate_density.gt.zero) then
@@ -15576,10 +15562,10 @@ stop
               ! slope is zero.
              massdepart_mom=massdepart_mom*multi_volume_grid(im)
 
-             veldata(iden_mom_base+im)= &
-              veldata(iden_mom_base+im)+massdepart_mom
-             veldata(iden_base+dencomp_data)= &
-              veldata(iden_base+dencomp_data)+massdepart
+             veldata(CISLCOMP_DEN_MOM+im)= &
+              veldata(CISLCOMP_DEN_MOM+im)+massdepart_mom
+             veldata(CISLCOMP_STATES+dencomp_data)= &
+              veldata(CISLCOMP_STATES+dencomp_data)+massdepart
 
              ! skip density,then do energy,scalars,Q, ...
              ! for temperature:
@@ -15596,20 +15582,20 @@ stop
                ! value of density stored in the state variable)
               donate_data= &
                conserve(D_DECL(idonate,jdonate,kdonate), &
-                        iden_base+statecomp_data) 
+                        CISLCOMP_STATES+statecomp_data) 
               
-              veldata(iden_base+statecomp_data)= &
-               veldata(iden_base+statecomp_data)+ & 
+              veldata(CISLCOMP_STATES+statecomp_data)= &
+               veldata(CISLCOMP_STATES+statecomp_data)+ & 
                multi_volume_grid(im)*donate_data
 
               if (istate.eq.ENUM_TEMPERATUREVAR+1) then
-               if (veldata(iden_base+statecomp_data).ge.zero) then
+               if (veldata(CISLCOMP_STATES+statecomp_data).ge.zero) then
                 ! do nothing
                else
                 print *,"energy became negative "
-                print *,"im,comp2 ",im,iden_base+statecomp_data
+                print *,"im,comp2 ",im,CISLCOMP_STATES+statecomp_data
                 print *,"current donated value ", &
-                 veldata(iden_base+statecomp_data)
+                 veldata(CISLCOMP_STATES+statecomp_data)
                 print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse 
                 print *,"idonate,jdonate,kdonate ", &
                  idonate,jdonate,kdonate
@@ -15812,7 +15798,7 @@ stop
          do im=1,nmat
 
           dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
-          massdepart=veldata(iden_base+dencomp_data)
+          massdepart=veldata(CISLCOMP_STATES+dencomp_data)
           if (massdepart.ge.zero) then
            ! do nothing
           else
@@ -16043,10 +16029,10 @@ stop
               if (is_rigid(nmat,im).eq.1) then ! mass fraction=0 in solids.
                snew_hold(STATECOMP_STATES+speccomp_data)=zero
               else if (is_rigid(nmat,im).eq.0) then
-               massdepart=veldata(iden_base+dencomp_data)
+               massdepart=veldata(CISLCOMP_STATES+dencomp_data)
                if (massdepart.gt.zero) then
                 snew_hold(STATECOMP_STATES+speccomp_data)= &
-                 veldata(iden_base+speccomp_data)/massdepart
+                 veldata(CISLCOMP_STATES+speccomp_data)/massdepart
                else
                 print *,"massdepart invalid"
                 stop
@@ -16078,12 +16064,12 @@ stop
               ! solidheat_flag==2 insulating bc at solid-fluid
               if (solidheat_flag.eq.0) then ! diffuse in solid
 
-               massdepart=veldata(iden_base+dencomp_data)
+               massdepart=veldata(CISLCOMP_STATES+dencomp_data)
                if (massdepart.le.zero) then
                 print *,"massdepart invalid"
                 stop
                endif 
-               ETcore=veldata(iden_base+tempcomp_data)/massdepart
+               ETcore=veldata(CISLCOMP_STATES+tempcomp_data)/massdepart
 
               else if (solidheat_flag.eq.2) then ! neumann
 
@@ -16121,7 +16107,7 @@ stop
                print *,"fort_material_type invalid"
                stop
               endif
-              massdepart=veldata(iden_base+dencomp_data)
+              massdepart=veldata(CISLCOMP_STATES+dencomp_data)
               if (massdepart.le.zero) then
                print *,"massdepart invalid"
                stop
@@ -16129,11 +16115,11 @@ stop
               ! integral_omega_depart rho T F_m /
               ! integral_omega_depart rho F_m
               if (is_compressible_mat(im).eq.0) then
-               ETcore=veldata(iden_base+tempcomp_data)/massdepart
+               ETcore=veldata(CISLCOMP_STATES+tempcomp_data)/massdepart
               else if (is_compressible_mat(im).eq.1) then
                ! integral_omega_depart rho (u dot u/2 + c_v T) F_m /
                ! integral_omega_depart rho F_m
-               ETcore=veldata(iden_base+tempcomp_data)/massdepart
+               ETcore=veldata(CISLCOMP_STATES+tempcomp_data)/massdepart
                local_internal=ETcore-KE
                if (local_internal.gt.zero) then
 
@@ -16311,15 +16297,20 @@ stop
        kcrse=0
        do icrse=fablo(1),fabhi(1)
         compareconserve(icrse,1)= &
-          conserve(D_DECL(icrse,jcrse,kcrse),1)* &
-          conserve(D_DECL(icrse,jcrse,kcrse),iden_base+1)
+          conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_VEL+1)* &
+          conserve(D_DECL(icrse,jcrse,kcrse), &
+                   CISLCOMP_STATES+ENUM_DENVAR+1)
         compareconserve(icrse,2)= &
-          conserve(D_DECL(icrse,jcrse,kcrse),iden_base+1)
+          conserve(D_DECL(icrse,jcrse,kcrse), &
+                   CISLCOMP_STATES+ENUM_DENVAR+1)
         compareconserve(icrse,3)= &
-          conserve(D_DECL(icrse,jcrse,kcrse),iden_base+2)
-        comparestate(icrse,1)=snew(D_DECL(icrse,jcrse,kcrse),1)
-        comparestate(icrse,2)=snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_STATES+ENUM_DENVAR+1)
-        comparestate(icrse,3)=snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_STATES+ENUM_TEMPERATUREVAR+1)
+          conserve(D_DECL(icrse,jcrse,kcrse), &
+                   CISLCOMP_STATES+ENUM_TEMPERATUREVAR+1)
+        comparestate(icrse,1)=snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_VEL+1)
+        comparestate(icrse,2)=snew(D_DECL(icrse,jcrse,kcrse), &
+                STATECOMP_STATES+ENUM_DENVAR+1)
+        comparestate(icrse,3)=snew(D_DECL(icrse,jcrse,kcrse), &
+                STATECOMP_STATES+ENUM_TEMPERATUREVAR+1)
        enddo
        call compare_sanity(compareconserve,1,3,2)
        call compare_sanity(comparestate,1,3,1)

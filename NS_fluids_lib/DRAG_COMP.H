@@ -14,6 +14,7 @@ stress applied to a given material "im_test" is stored.
 #define ENUM_T13 (4)
 #define ENUM_T23 (5)
 #define ENUM_NUM_TENSOR_TYPE (2*AMREX_SPACEDIM)
+#define NUM_CELL_ELASTIC (num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE)
 
 #define DRAG_TYPE_T11 (0)
 #define DRAG_TYPE_T12 (1)

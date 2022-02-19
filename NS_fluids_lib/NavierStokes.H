@@ -1864,9 +1864,6 @@ protected:
      // this is set according to store_elastic_data
     static int num_materials_viscoelastic;
 
-     //num_material_elastic*ENUM_NUM_TENSOR_TYPE
-    static int NUM_CELL_ELASTIC; 
-
      // den,denA,E,T,P,species,configuration tensor
     static int num_state_material;
     static int num_state_base;
