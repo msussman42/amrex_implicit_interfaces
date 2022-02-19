@@ -4841,7 +4841,7 @@ stop
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat)
       REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: vel(DIMV(den),SDIM)
+      REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k,im
@@ -4863,7 +4863,7 @@ stop
        print *,"nc_den invalid"
        stop
       endif
-      if (nc_conserve.ne.SDIM+nmat*num_state_material) then
+      if (nc_conserve.ne.CISLCOMP_CONS_NCOMP) then
        print *,"nc_conserve invalid"
        stop
       endif
@@ -14158,8 +14158,6 @@ stop
       INTEGER_T idonatelow
       INTEGER_T idonatehigh
 
-      INTEGER_T itensor_base,imof_base,iLS_base,iFtarget_base
-      INTEGER_T iden_mom_base
 
       REAL_T voltotal_target
       REAL_T voltotal_depart
@@ -14538,7 +14536,7 @@ stop
        stop
       endif 
 
-      if (nc_conserve.ne.SDIM+nmat*num_state_material) then
+      if (nc_conserve.ne.CISLCOMP_CONS_NCOMP) then
        print *,"nc_conserve invalid"
        stop
       endif
@@ -14555,7 +14553,7 @@ stop
        kcrse=0
        do icrse=fablo(1),fabhi(1)
         compareconserve(icrse,1)= &
-         conserve(D_DECL(icrse,jcrse,kcrse),1)* &
+         conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_VEL+1)* &
          conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_STATES+ENUM_DENVAR+1)
         compareconserve(icrse,2)= &
          conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_STATES+ENUM_DENVAR+1)
@@ -14628,12 +14626,7 @@ stop
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=DXMAXLS
 
-      itensor_base=iden_base+nmat*num_state_material
-      imof_base=itensor_base+NUM_CELL_ELASTIC
-      iLS_base=imof_base+nmat*ngeom_raw
-      iFtarget_base=iLS_base+nmat
-      iden_mom_base=iFtarget_base+nmat
-      nc_bucket_test=iden_mom_base+nmat
+      nc_bucket_test=CISLCOMP_NCOMP
       if (nc_bucket_test.ne.nc_bucket) then
        print *,"nc_bucket invalid"
        stop
@@ -14736,7 +14729,7 @@ stop
             enddo
 
             ! veldata(momcomp)  momcomp=(im-1)*sdim+veldir
-            ! veldata(iden_mom_base+im)
+            ! veldata(CISLCOMP_DEN_MOM+im)
             !         icell=-1    icell=0  
             !  imac=-1      imac=0     imac=1
             !    *------------*----------*
@@ -15053,8 +15046,8 @@ stop
 
                  mom2(veldir)=massdepart_mom*donate_data_MAC(veldir,1)
 
-                 veldata(iden_mom_base+im)= &
-                  veldata(iden_mom_base+im)+massdepart_mom
+                 veldata(CISLCOMP_DEN_MOM+im)= &
+                  veldata(CISLCOMP_DEN_MOM+im)+massdepart_mom
 
                  momcomp=(im-1)*SDIM+veldir
                  veldata(momcomp)=veldata(momcomp)+mom2(veldir) 
@@ -15140,21 +15133,21 @@ stop
                 veldata(momcomp)
                xmassside(D_DECL(ipart,jpart,kpart),ibucket)= &
                 xmassside(D_DECL(ipart,jpart,kpart),ibucket)+ &
-                veldata(iden_mom_base+im)
+                veldata(CISLCOMP_DEN_MOM+im)
               else if (veldir.eq.2) then
                ymomside(D_DECL(ipart,jpart,kpart),ibucket)= &
                 ymomside(D_DECL(ipart,jpart,kpart),ibucket)+ &
                 veldata(momcomp)
                ymassside(D_DECL(ipart,jpart,kpart),ibucket)= &
                 ymassside(D_DECL(ipart,jpart,kpart),ibucket)+ &
-                veldata(iden_mom_base+im)
+                veldata(CISLCOMP_DEN_MOM+im)
               else if ((veldir.eq.3).and.(SDIM.eq.3)) then
                zmomside(D_DECL(ipart,jpart,kpart),ibucket)= &
                 zmomside(D_DECL(ipart,jpart,kpart),ibucket)+ &
                 veldata(momcomp)
                zmassside(D_DECL(ipart,jpart,kpart),ibucket)= &
                 zmassside(D_DECL(ipart,jpart,kpart),ibucket)+ &
-                veldata(iden_mom_base+im)
+                veldata(CISLCOMP_DEN_MOM+im)
               else
                print *,"veldir invalid"
                stop
@@ -15509,7 +15502,7 @@ stop
               ! donate_density is equal to the density that is stored in the
               ! old state variable.
              donate_density= &
-              conserve(D_DECL(idonate,jdonate,kdonate),
+              conserve(D_DECL(idonate,jdonate,kdonate), &
                        CISLCOMP_STATES+dencomp_data) 
              donate_mom_density= &
               mom_den(D_DECL(idonate,jdonate,kdonate),im) 
@@ -15626,8 +15619,8 @@ stop
                  ! corresponding material centroid.
                  donate_data= &
                   tensor(D_DECL(idonate,jdonate,kdonate),statecomp_data)
-                 veldata(itensor_base+statecomp_data)= &
-                  veldata(itensor_base+statecomp_data)+ &
+                 veldata(CISLCOMP_TENSOR+statecomp_data)= &
+                  veldata(CISLCOMP_TENSOR+statecomp_data)+ &
                   LS_voltotal_depart*donate_data 
                 enddo !istate=1..ENUM_NUM_TENSOR_TYPE
 
@@ -15653,21 +15646,21 @@ stop
              ! level set function is stored at the cell centers, not the
              ! corresponding material centroid.
              donate_data=LS(D_DECL(idonate,jdonate,kdonate),im) 
-             veldata(iLS_base+im)=veldata(iLS_base+im)+ &
+             veldata(CISLCOMP_LS+im)=veldata(CISLCOMP_LS+im)+ &
               LS_voltotal_depart*donate_data
 
              vofcomp=(im-1)*ngeom_raw+1
              ! material volume from departure (donating) region
-             veldata(imof_base+vofcomp)= &
-              veldata(imof_base+vofcomp)+multi_volume_grid(im)
+             veldata(CISLCOMP_MOF+vofcomp)= &
+              veldata(CISLCOMP_MOF+vofcomp)+multi_volume_grid(im)
              ! material volume from target (accepting) region
-             veldata(iFtarget_base+im)= &
-              veldata(iFtarget_base+im)+multi_volume(im)
+             veldata(CISLCOMP_FTARGET+im)= &
+              veldata(CISLCOMP_FTARGET+im)+multi_volume(im)
 
              ! material centroid from target (accepting) region
              do dir2=1,SDIM
-              veldata(imof_base+vofcomp+dir2)= &
-               veldata(imof_base+vofcomp+dir2)+ &
+              veldata(CISLCOMP_MOF+vofcomp+dir2)= &
+               veldata(CISLCOMP_MOF+vofcomp+dir2)+ &
                multi_volume(im)*multi_cen(dir2,im)
              enddo 
 
@@ -15700,8 +15693,8 @@ stop
          voltotal_target=zero
          do im=1,nmat
           vofcomp=(im-1)*ngeom_raw+1 
-          volmat_target(im)=veldata(iFtarget_base+im)
-          volmat_depart(im)=veldata(imof_base+vofcomp)
+          volmat_target(im)=veldata(CISLCOMP_FTARGET+im)
+          volmat_depart(im)=veldata(CISLCOMP_MOF+vofcomp)
 
           volmat_target_cor(im)=volmat_target(im)
           volmat_depart_cor(im)=volmat_depart(im)
@@ -15763,7 +15756,7 @@ stop
           do dir2=1,SDIM
            if (newvfrac(im).gt.VOFTOL) then
             newcen(dir2,im)= &
-             veldata(imof_base+vofcomp+dir2)/ &
+             veldata(CISLCOMP_MOF+vofcomp+dir2)/ &
              volmat_target(im)- &
              cencell_accept(dir2)
            else
@@ -15877,10 +15870,9 @@ stop
 
          ! levelset function
          ! voltotal_depart=sum_{fluid mat} volmat_depart(im)
-         ! iLS_base=nmat*sdim+nmat*num_state_material+nmat*ngeom_raw
          do im=1,nmat
           if (voltotal_depart.gt.zero) then
-           newLS(im)=veldata(iLS_base+im)/voltotal_depart
+           newLS(im)=veldata(CISLCOMP_LS+im)/voltotal_depart
           else
            print *,"voltotal_depart invalid"
            stop
@@ -15905,7 +15897,7 @@ stop
               statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE+istate
               if (voltotal_depart.gt.zero) then
                tennew_hold(statecomp_data)= &
-                 veldata(itensor_base+statecomp_data)/voltotal_depart
+                 veldata(CISLCOMP_TENSOR+statecomp_data)/voltotal_depart
               else
                print *,"voltotal_depart invalid"
                stop
@@ -15938,7 +15930,7 @@ stop
          totalmass_depart=zero
          do im=1,nmat
           if (is_rigid(nmat,im).eq.0) then
-           massdepart_mom=veldata(iden_mom_base+im)
+           massdepart_mom=veldata(CISLCOMP_DEN_MOM+im)
            totalmass_depart=totalmass_depart+massdepart_mom
           else if (is_rigid(nmat,im).eq.1) then
            ! do nothing
