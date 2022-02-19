@@ -200,7 +200,6 @@ extern "C"
     int* nmat);
 
    void fort_build_conserve(
-    int* iden_base,
     int* constant_density_all_time,
     Real* conserve,AMREX_ARLIM_P(conservelo),AMREX_ARLIM_P(conservehi),
     Real* den,
@@ -803,7 +802,6 @@ extern "C"
      int* ngrow,
      int* ngrow_mac_old,
      int* nc_conserve,
-     int* iden_base,
      int* nmat,
      int* map_forward,
      int* recon_ncomp,
@@ -812,7 +810,6 @@ extern "C"
      int* ntensor,
      int* nc_bucket,
      int* num_MAC_vectors, 
-     int* NUM_CELL_ELASTIC,
      int* verbose,
      const int* gridno,int* ngrid,
      int* level,

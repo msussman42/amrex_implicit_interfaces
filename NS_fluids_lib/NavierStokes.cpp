@@ -516,7 +516,7 @@ int  NavierStokes::num_species_var=0;
 int  NavierStokes::num_SoA_var=0;
 
 // search num_materials,AMREX_SPACEDIM+1,SDIM+1,idenbase,ipres_base,
-//  iden_base,scomp_mofvars,nstate=,scomp_den,pressure_comp,dcomp,
+//  scomp_mofvars,nstate=,scomp_den,pressure_comp,dcomp,
 //  pcomp,tcomp,scomp,scomp_pres,get_mm_scomp_solver,dencomp,scomp_tensor,
 //  im_pres,velcomp,prescomp,flagcomp
 // nfacefrac,ncellfrac,mm_,cellmm,facemm
@@ -530,8 +530,6 @@ int  NavierStokes::ncomp_sum_int_user12=0;
 
 // set using elastic_viscosity, and other criteria
 int  NavierStokes::num_materials_viscoelastic=0;
-
-int  NavierStokes::NUM_CELL_ELASTIC=0;
 
 int  NavierStokes::num_state_material=ENUM_SPECIESVAR; // den,T
 int  NavierStokes::num_state_base=ENUM_SPECIESVAR; // den,T
@@ -3223,8 +3221,6 @@ NavierStokes::read_params ()
      // do nothing
     } else
      amrex::Error("AMREX_SPACEDIM invalid");
-
-    NUM_CELL_ELASTIC=num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE;
 
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=nmat)) {
@@ -16775,7 +16771,6 @@ NavierStokes::split_scalar_advection() {
  MultiFab* conserve=new MultiFab(grids,dmap,nc_conserve,ngrow,
 	MFInfo().SetTag("conserve"),FArrayBoxFactory());
 
- int iden_base=AMREX_SPACEDIM;
  int itensor_base=iden_base+nmat*num_state_material;
  int imof_base=itensor_base+NUM_CELL_ELASTIC;
  int iLS_base=imof_base+nmat*ngeom_raw;
@@ -16813,7 +16808,6 @@ NavierStokes::split_scalar_advection() {
 
     // declared in: GODUNOV_3D.F90
   fort_build_conserve( 
-   &iden_base,
    constant_density_all_time.dataPtr(),
    consfab.dataPtr(),ARLIM(consfab.loVect()),ARLIM(consfab.hiVect()),
    denfab.dataPtr(),
@@ -17138,7 +17132,6 @@ NavierStokes::split_scalar_advection() {
    &ngrow,
    &ngrow_mac_old,
    &nc_conserve,
-   &iden_base,
    &nmat,
    &map_forward_direct_split[normdir_here],
    &vofrecon_ncomp,
@@ -17147,7 +17140,6 @@ NavierStokes::split_scalar_advection() {
    &ntensor,
    &nc_bucket,
    &num_MAC_vectors,
-   &NUM_CELL_ELASTIC,
    &verbose,
    &gridno,&ngrid,
    &level,
