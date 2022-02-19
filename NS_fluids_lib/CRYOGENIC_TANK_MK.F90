@@ -1300,7 +1300,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   T4_probe(1)=0.0d0
   T4_probe(2)=half*TANK_MK_HEIGHT+TANK_MK_END_RADIUS-0.025d0
   im=2 ! vapor
-  dencomp=(im-1)*num_state_material+1
+  dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
   den=GRID_DATA_IN%den(D_DECL(i,j,k),dencomp)
   temperature=GRID_DATA_IN%den(D_DECL(i,j,k),dencomp+1)
   call init_massfrac_parm(den,massfrac_parm,im)

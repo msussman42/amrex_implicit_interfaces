@@ -805,7 +805,6 @@ NavierStokes::restore_active_pressure(int save_mf) {
   amrex::Error("localMF[OFF_DIAG_CHECK_MF]->nComp() invalid");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- int pcomp=AMREX_SPACEDIM;
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -838,7 +837,7 @@ NavierStokes::restore_active_pressure(int save_mf) {
    ARLIM(offdiagcheck.loVect()),ARLIM(offdiagcheck.hiVect()),
    savepres.dataPtr(),
    ARLIM(savepres.loVect()),ARLIM(savepres.hiVect()),
-   newpres.dataPtr(pcomp),
+   newpres.dataPtr(STATECOMP_PRES),
    ARLIM(newpres.loVect()),ARLIM(newpres.hiVect()),
    tilelo,tilehi,
    fablo,fabhi,
@@ -2175,7 +2174,6 @@ void NavierStokes::ADVECT_DIV() {
 
  MultiFab& DIV_new=get_new_data(DIV_Type,slab_step+1);
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- int pcomp=AMREX_SPACEDIM;
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -2219,7 +2217,7 @@ void NavierStokes::ADVECT_DIV() {
    csoundfab.dataPtr(),
    ARLIM(csoundfab.loVect()),ARLIM(csoundfab.hiVect()),
    mdotfab.dataPtr(),ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
-   snewfab.dataPtr(pcomp),
+   snewfab.dataPtr(STATECOMP_PRES),
    ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
    divfab.dataPtr(),
    ARLIM(divfab.loVect()),ARLIM(divfab.hiVect()),

@@ -5254,7 +5254,7 @@ stop
               stop
              endif
 
-             dencomp_probe=(im_probe-1)*num_state_material+1
+             dencomp_probe=(im_probe-1)*num_state_material+1+ENUM_DENVAR
              tcomp_probe=dencomp_probe+1
              if ((mass_frac_id.ge.1).and. &
                  (mass_frac_id.le.num_species_var)) then
@@ -8222,8 +8222,8 @@ stop
               stop
              endif
 
-             dencomp_source=(im_source-1)*num_state_material+1
-             dencomp_dest=(im_dest-1)*num_state_material+1
+             dencomp_source=(im_source-1)*num_state_material+1+ENUM_DENVAR
+             dencomp_dest=(im_dest-1)*num_state_material+1+ENUM_DENVAR
 
              if ((ispec.ge.0).and.(ispec.le.num_species_var)) then
               ! do nothing
@@ -8433,8 +8433,10 @@ stop
                  POUT%Y_I_interp(1)=zero
                  POUT%Y_I_interp(2)=zero ! destination, C_methane_in_hyd
 
-                 tcomp_source=(im_source-1)*num_state_material+2
-                 tcomp_dest=(im_dest-1)*num_state_material+2
+                 tcomp_source=(im_source-1)*num_state_material+ &
+                   ENUM_TEMPERATUREVAR+1
+                 tcomp_dest=(im_dest-1)*num_state_material+ &
+                   ENUM_TEMPERATUREVAR+1
 
                  im_ambient=0
                  Ycomp_source=0

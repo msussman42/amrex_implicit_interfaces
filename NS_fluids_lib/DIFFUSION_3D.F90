@@ -486,7 +486,7 @@ stop
            print *,"localF out of range"
            stop
           endif
-          dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
+          dencomp=STATECOMP_STATES+(im-1)*num_state_material+1+ENUM_DENVAR
           if (constant_density_all_time(im).eq.1) then
            rho_base=fort_denconst(im)
           else if (constant_density_all_time(im).eq.0) then

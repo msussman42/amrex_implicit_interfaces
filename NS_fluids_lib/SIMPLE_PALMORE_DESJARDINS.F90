@@ -978,7 +978,7 @@ if (isweep.eq.0) then
  increment_out1(6)=zero
  if (VOF_analytical.le.VOFTOL) then
   im_crit=2
-  tcomp=(im_crit-1)*num_state_material+2
+  tcomp=(im_crit-1)*num_state_material+ENUM_TEMPERATUREVAR+1
   TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
   increment_out1(3)=GRID_DATA_IN%volgrid* &
           abs(TEMPERATURE_compute-TEMPERATURE_analytical)
@@ -987,7 +987,7 @@ if (isweep.eq.0) then
           abs(Y_compute-Y_analytical)
  else if (VOF_analytical.ge.one-VOFTOL) then
   im_crit=1
-  tcomp=(im_crit-1)*num_state_material+2
+  tcomp=(im_crit-1)*num_state_material+ENUM_TEMPERATUREVAR+1
   TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
   increment_out1(5)=GRID_DATA_IN%volgrid* &
           abs(TEMPERATURE_compute-TEMPERATURE_analytical)

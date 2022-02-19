@@ -11571,7 +11571,7 @@ stop
 
           heat_source_term=flux_sign*dt*over_cv*aface*heat_flux/local_vol
 
-          tcomp=STATECOMP_STATES+2
+          tcomp=STATECOMP_STATES+ENUM_TEMPERATUREVAR+1
 
           Snew(D_DECL(i,j,k),tcomp)= &
            Snew(D_DECL(i,j,k),tcomp)+heat_source_term
@@ -13871,7 +13871,6 @@ stop
        density_floor, &
        density_ceiling, &
        solidheat_flag, &
-       mofcomp,errcomp, & 
        latent_heat, &
        freezing_model, &
        distribute_from_target, &
@@ -13954,7 +13953,6 @@ stop
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
 
-      INTEGER_T, intent(in) :: mofcomp,errcomp
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T, intent(in) :: dombc(SDIM,2)
       INTEGER_T, intent(in) :: EILE_flag
@@ -14472,15 +14470,6 @@ stop
        ! do nothing
       else
        print *,"dt invalid"
-       stop
-      endif
-
-      if (mofcomp.ne.STATECOMP_STATES+nmat*num_state_material) then
-       print *,"mofcomp invalid"
-       stop
-      endif
-      if (errcomp+1.ne.ncomp_state) then
-       print *,"errcomp invalid"
        stop
       endif
 
@@ -15975,9 +15964,9 @@ stop
           KE=half*KE
 
           if (ngeom_raw.eq.SDIM+1) then
-           snew_hold(mofcomp+vofcomp)=newvfrac_cor(im)
+           snew_hold(STATECOMP_MOF+vofcomp)=newvfrac_cor(im)
            do dir2=1,SDIM
-            snew_hold(mofcomp+vofcomp+dir2)=newcen(dir2,im)
+            snew_hold(STATECOMP_MOF+vofcomp+dir2)=newcen(dir2,im)
            enddo
           else
            print *,"ngeom_raw invalid in vfrac split"
