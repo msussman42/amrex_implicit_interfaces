@@ -5047,7 +5047,7 @@ stop
            if (vfrac.gt.one) then
             vfrac=one
            endif
-           dencomp=(im-1)*num_state_material+1
+           dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
            if (constant_density_all_time(im).eq.1) then
             den_mat=fort_denconst(im)
            else if (constant_density_all_time(im).eq.0) then
@@ -5440,7 +5440,7 @@ stop
                ! do nothing
               else if ((local_material_type.ge.1).and. &
                        (local_material_type.le.MAX_NUM_EOS)) then
-               dencomp=(im-1)*num_state_material+1
+               dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
                
                if (constant_density_all_time(im).eq.1) then
                 den_mat=fort_denconst(im)
@@ -5547,7 +5547,7 @@ stop
             endif
 
              ! blob_mass
-            dencomp=(im-1)*num_state_material+1
+            dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
             if (constant_density_all_time(im).eq.1) then
              den_mat=fort_denconst(im)
             else if (constant_density_all_time(im).eq.0) then
@@ -6027,7 +6027,8 @@ stop
                     if (original_density.gt.zero) then
                      updated_density=original_density* &
                          (one+dt*dt*density_factor*mdot_total/blob_volume)
-                     dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
+                     dencomp=STATECOMP_STATES+ &
+                       (im-1)*num_state_material+1+ENUM_DENVAR
                      if (updated_density.gt.zero) then
                       snew(D_DECL(i,j,k),dencomp)=updated_density
                      else
@@ -6401,7 +6402,7 @@ stop
               stop
              endif
 
-             dencomp=(im_primary-1)*num_state_material+1
+             dencomp=(im_primary-1)*num_state_material+1+ENUM_DENVAR
              if (constant_density_all_time(im_primary).eq.1) then
               den_mat=fort_denconst(im_primary)
              else if (constant_density_all_time(im_primary).eq.0) then
@@ -9831,7 +9832,7 @@ stop
 
         do im=1,nmat
 
-         dencomp=(im-1)*num_state_material+1
+         dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
          tempcomp=dencomp+1
 
 !        delta_mass=denstate(D_DECL(i,j,k),dencomp)*volmat(im)
@@ -10266,7 +10267,7 @@ stop
            mass_total_solid=zero
            voltotal_solid=zero 
            do im=1,nmat
-            dencomp=(im-1)*num_state_material+1
+            dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
             den=denstate(D_DECL(i,j,k),dencomp)
             mom_den_local=mom_den(D_DECL(i,j,k),im)
 
@@ -10502,7 +10503,7 @@ stop
             do dir=1,SDIM
              KE=KE+half*(state(D_DECL(i,j,k),dir)**2)
             enddo
-            dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
+            dencomp=STATECOMP_STATES+(im-1)*num_state_material+1+ENUM_DENVAR
             rho=state(D_DECL(i,j,k),dencomp)
             TEMPERATURE=state(D_DECL(i,j,k),dencomp+1)
             if (rho.gt.zero) then
@@ -14624,7 +14625,7 @@ stop
            if (gradh.ne.zero) then
 
             do im_heat=1,nmat
-             tcomp=(im_heat-1)*num_state_material+2
+             tcomp=(im_heat-1)*num_state_material+ENUM_TEMPERATUREVAR+1
              mgoni_temp(im_heat)=half*(mgoni(D_DECL(i,j,k),tcomp)+ &
               mgoni(D_DECL(im1,jm1,km1),tcomp))
             enddo ! im_heat
@@ -15923,8 +15924,8 @@ stop
              istate=1
              do while (istate.le.num_state_material)
 
-              if (istate.eq.1) then
-               dencomp=(im-1)*num_state_material+istate
+              if (istate.eq.1+ENUM_DENVAR) then
+               dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
 
                if (constant_density_all_time(im).eq.1) then 
                 state_stencil(istate)=fort_denconst(im)
@@ -15949,8 +15950,8 @@ stop
                 stop
                endif
                istate=istate+1
-              else if (istate.eq.2) then
-               tempcomp=(im-1)*num_state_material+istate
+              else if (istate.eq.1+ENUM_TEMPERATUREVAR) then
+               tempcomp=(im-1)*num_state_material+1+ENUM_TEMPERATUREVAR
                state_stencil(istate)=den(D_DECL(i+i1,j+j1,k+k1),tempcomp)
                istate=istate+1
               else if ((istate.eq.num_state_base+1).and. &
@@ -16538,7 +16539,7 @@ stop
              endif
              call get_iten(im,im_opp,iten,nmat)
              do im_local=1,nmat
-              dencomp=(im_local-1)*num_state_material+1
+              dencomp=(im_local-1)*num_state_material+1+ENUM_DENVAR
               local_temperature(im_local)=den(D_DECL(i,j,k),dencomp+1)
              enddo
               ! coordinate of (i,j,k)

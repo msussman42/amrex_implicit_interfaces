@@ -5606,7 +5606,6 @@ void NavierStokes::init_gravity_potential() {
   amrex::Error("num_state_base invalid");
 
  int nmat=num_materials;
- int pcomp=AMREX_SPACEDIM;
 
  MultiFab* dendata=getStateDen(1,cur_time_slab);
 
@@ -5616,7 +5615,7 @@ void NavierStokes::init_gravity_potential() {
  const int* domhi = domain.hiVect();
 
  Vector<int> dombcpres(2*AMREX_SPACEDIM);
- const BCRec& descbc = get_desc_lst()[State_Type].getBC(pcomp);
+ const BCRec& descbc = get_desc_lst()[State_Type].getBC(STATECOMP_PRES);
  const int* b_rec=descbc.vect();
  for (int m=0;m<2*AMREX_SPACEDIM;m++)
   dombcpres[m]=b_rec[m];
@@ -5662,7 +5661,7 @@ void NavierStokes::init_gravity_potential() {
     FArrayBox& presdenfab=(*localMF[HYDROSTATIC_PRESDEN_MF])[mfi];
     FArrayBox& statefab=(*dendata)[mfi];
 
-    Vector<int> presbc=getBCArray(State_Type,gridno,pcomp,1);
+    Vector<int> presbc=getBCArray(State_Type,gridno,STATECOMP_PRES,1);
 
     Real local_dt_slab_gravity=dt_slab;
     if (hold_dt_factors[2]==1.0) {
@@ -5808,8 +5807,6 @@ void NavierStokes::process_potential_force_face() {
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
  debug_ngrow(SLOPE_RECON_MF,1,130);
 
- int pcomp=AMREX_SPACEDIM;
-
  MultiFab &S_new = get_new_data(State_Type,slab_step+1);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -5822,7 +5819,7 @@ void NavierStokes::process_potential_force_face() {
  const int* domhi = domain.hiVect();
 
  Vector<int> dombcpres(2*AMREX_SPACEDIM);
- const BCRec& descbc = get_desc_lst()[State_Type].getBC(pcomp);
+ const BCRec& descbc = get_desc_lst()[State_Type].getBC(STATECOMP_PRES);
  const int* b_rec=descbc.vect();
  for (int m=0;m<2*AMREX_SPACEDIM;m++)
   dombcpres[m]=b_rec[m];
@@ -5895,8 +5892,9 @@ void NavierStokes::process_potential_force_face() {
    FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
-   Vector<int> presbc=getBCArray(State_Type,gridno,pcomp,1);
-   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+   Vector<int> presbc=getBCArray(State_Type,gridno,STATECOMP_PRES,1);
+   Vector<int> velbc=getBCArray(State_Type,gridno, 
+                                STATECOMP_VEL,STATE_NCOMP_VEL);
 
    Real beta=0.0;
 
@@ -6266,8 +6264,6 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  MultiFab &LS_new = get_new_data(LS_Type,slab_step+1);
  int nmat=num_materials;
  int nten=num_interfaces;
- int scomp_mofvars=STATECOMP_MOF;
- int dencomp=STATECOMP_STATES;
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,6001);
@@ -6326,7 +6322,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 
    MultiFab* veldata=getState(1,STATECOMP_VEL, 
 		STATE_NCOMP_VEL+STATE_NCOMP_PRES,time); 
-   MultiFab* mofdata=getState(1,scomp_mofvars,nmat*ngeom_raw,time);
+   MultiFab* mofdata=getState(1,STATECOMP_MOF,nmat*ngeom_raw,time);
    MultiFab* dendata=getStateDen(1,time);
    MultiFab* lsdata=getStateDist(ngrow_distance,time,18);
 
@@ -6399,7 +6395,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
       &time,
       tilelo,tilehi,
       fablo,fabhi,&bfact,
-      vofnew.dataPtr(scomp_mofvars),
+      vofnew.dataPtr(STATECOMP_MOF),
       ARLIM(vofnew.loVect()),ARLIM(vofnew.hiVect()),
       solxfab.dataPtr(),
       ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
@@ -6419,7 +6415,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
       ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
       velnew.dataPtr(),
       ARLIM(velnew.loVect()),ARLIM(velnew.hiVect()),
-      dennew.dataPtr(dencomp),
+      dennew.dataPtr(STATECOMP_STATES),
       ARLIM(dennew.loVect()),ARLIM(dennew.hiVect()),
       lsnew.dataPtr(),
       ARLIM(lsnew.loVect()),ARLIM(lsnew.hiVect()),
@@ -6514,9 +6510,8 @@ void NavierStokes::move_particles(
   const int* domlo = domain.loVect();
   const int* domhi = domain.hiVect();
 
-  int scomp_mofvars=STATECOMP_MOF;
   Vector<int> dombc(2*AMREX_SPACEDIM);
-  const BCRec& descbc = get_desc_lst()[State_Type].getBC(scomp_mofvars);
+  const BCRec& descbc = get_desc_lst()[State_Type].getBC(STATECOMP_MOF);
   const int* b_rec=descbc.vect();
   for (int m=0;m<2*AMREX_SPACEDIM;m++)
    dombc[m]=b_rec[m];
@@ -6678,7 +6673,6 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
  MultiFab &S_new = get_new_data(State_Type,slab_step+1);
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
  int nmat=num_materials;
- int scomp_mofvars=STATECOMP_MOF;
  int nc=STATE_NCOMP;
  if (nc!=S_new.nComp())
   amrex::Error("nc invalid in truncate_VOF");
@@ -6746,7 +6740,7 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
      fablo,fabhi,&bfact,
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-     vofnew.dataPtr(scomp_mofvars),
+     vofnew.dataPtr(STATECOMP_MOF),
      ARLIM(vofnew.loVect()),ARLIM(vofnew.hiVect()),
      lsfab.dataPtr(),
      ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
@@ -8306,8 +8300,6 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
  int nmat=num_materials;
  int nten=num_interfaces;
 
- int scomp_mofvars=STATECOMP_MOF;
-
  Vector< Vector<int> > total_calls;
  Vector< Vector<int> > total_iterations;
  total_calls.resize(thread_class::nthreads);
@@ -8338,7 +8330,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
  new_localMF(dest_mf,nmat*ngeom_recon,ngrow,-1);  // sets values to 0.0
 
  delete_localMF_if_exist(VOF_RECON_MF,1);
- getState_localMF(VOF_RECON_MF,1,scomp_mofvars,nmat*ngeom_raw,time);
+ getState_localMF(VOF_RECON_MF,1,STATECOMP_MOF,nmat*ngeom_raw,time);
  for (int im=0;im<nmat;im++) {
   int ibase_raw=im*ngeom_raw;
   int ibase_recon=im*ngeom_recon;
@@ -8392,7 +8384,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
    // (4) =1 interior+ngrow    =0 otherwise
    FArrayBox& masknbr=(*localMF[MASK_NBR_MF])[mfi];
 
-   Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
+   Vector<int> vofbc=getBCArray(State_Type,gridno,STATECOMP_MOF,1);
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -8413,7 +8405,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
     xlo,dx,
     masknbr.dataPtr(),
     ARLIM(masknbr.loVect()),ARLIM(masknbr.hiVect()),
-    snewfab.dataPtr(scomp_mofvars),
+    snewfab.dataPtr(STATECOMP_MOF),
     ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
     vfab.dataPtr(),ARLIM(vfab.loVect()),ARLIM(vfab.hiVect()),
     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
@@ -8576,14 +8568,12 @@ void NavierStokes::build_masksem(int mask_sweep) {
    spectral_cells_level[tid][im]=0.0;
  }
 
- int scomp_mofvars=STATECOMP_MOF;
-
  MultiFab* vofmat=new MultiFab(grids,dmap,nmat,0,
   MFInfo().SetTag("vofmat"),FArrayBoxFactory());
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
  for (int im=0;im<nmat;im++) {
-  int scomp=scomp_mofvars+im*ngeom_raw;
+  int scomp=STATECOMP_MOF+im*ngeom_raw;
   MultiFab::Copy(*vofmat,S_new,scomp,im,1,0);
  }
  const Box& domain = geom.Domain();
@@ -8619,7 +8609,7 @@ void NavierStokes::build_masksem(int mask_sweep) {
   FArrayBox& oldfab=(*old_mask)[mfi];
   FArrayBox& voffab=(*vofmat)[mfi];
 
-  Vector<int> vofbc=getBCArray(State_Type,gridno,scomp_mofvars,1);
+  Vector<int> vofbc=getBCArray(State_Type,gridno,STATECOMP_MOF,1);
 
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))

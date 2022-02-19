@@ -6986,7 +6986,6 @@ END SUBROUTINE SIMP
       INTEGER_T mask_im
       INTEGER_T cell_index,element_index,sub_index
       INTEGER_T velcomp
-      INTEGER_T prescomp
       INTEGER_T nmax
 
       REAL_T LS_LOCAL(nmat)
@@ -7514,18 +7513,16 @@ END SUBROUTINE SIMP
          stop
         endif
 
-        prescomp=STATECOMP_PRES+1
-
         idest=IQ_LEFT_PRESSURE_SUM_COMP+1
         if (xsten(-1,1).le.problox+VOFTOL*dx(1)) then
          local_result(idest)=local_result(idest)+ &
-          volgrid*vel(D_DECL(i,j,k),prescomp) 
+          volgrid*vel(D_DECL(i,j,k),STATECOMP_PRES+1) 
          local_result(idest+2)=local_result(idest+2)+volgrid
         endif
         idest=IQ_LEFT_PRESSURE_SUM_COMP+2
         if (xsten(1,1).ge.probhix-VOFTOL*dx(1)) then
          local_result(idest)=local_result(idest)+ &
-          volgrid*vel(D_DECL(i,j,k),prescomp) 
+          volgrid*vel(D_DECL(i,j,k),STATECOMP_PRES+1) 
          local_result(idest+2)=local_result(idest+2)+volgrid
         endif
 
@@ -8354,7 +8351,7 @@ END SUBROUTINE SIMP
             if ((charfn.eq.zero).or.(charfn.eq.one)) then
 
              imattype=fort_material_type(im)
-             dencomp=(im-1)*num_state_material+1
+             dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
              local_den=DEN(D_DECL(i,j,k),dencomp)
              local_temp=DEN(D_DECL(i,j,k),dencomp+1)
 
@@ -8824,7 +8821,7 @@ END SUBROUTINE SIMP
              if ((charfn.eq.zero).or.(charfn.eq.one)) then
 
               imattype=fort_material_type(im)
-              dencomp=(im-1)*num_state_material+1
+              dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
 
               region_volume_flux=regions_list(iregions,0)%region_volume_flux
               region_volume_raster=regions_list(iregions,0)%region_volume_raster
@@ -10029,9 +10026,9 @@ END SUBROUTINE SIMP
          ! ngrow=1
         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1)
 
-         ! dombcpres=get_desc_lst()[State_Type].getBC(pcomp)
+         ! dombcpres=get_desc_lst()[State_Type].getBC(STATECOMP_PRES)
         bctypepres=dombcpres(dir,side)  
-         ! presbc_arr=getBCArray(State_Type,gridno,pcomp,1)
+         ! presbc_arr=getBCArray(State_Type,gridno,STATECOMP_PRES,1)
         local_bctype=presbc_arr(dir,side) 
 
         exteriorbc=0
@@ -13944,7 +13941,7 @@ END SUBROUTINE SIMP
            ! magnitude away from interfaces
          if (vfrac(im).gt.one-VOFTOL) then
 
-          tcomp=(im-1)*num_state_material+2
+          tcomp=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
 
           if (vorterr(im).lt.zero) then
            print *,"vorterr cannot be negative"

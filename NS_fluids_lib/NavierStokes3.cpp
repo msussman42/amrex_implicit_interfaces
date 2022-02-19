@@ -9409,10 +9409,9 @@ void NavierStokes::multiphase_project(int project_option) {
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
    MultiFab& P_new=ns_level.get_new_data(State_Type,slab_step+1);
-   int pcomp=AMREX_SPACEDIM;
    MultiFab::Copy(
       *ns_level.localMF[PRESSURE_SAVE_MF],
-      P_new,pcomp,0,1,1);
+      P_new,STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
   } // ilev=level ... finest_level
  } else if (project_option==SOLVETYPE_SMOOTH) { 
 
@@ -11715,8 +11714,8 @@ void NavierStokes::multiphase_project(int project_option) {
    NavierStokes& ns_level=getLevel(ilev);
     // in: MacProj.cpp (calls fort_restore_pres)
    ns_level.restore_active_pressure(PRESSURE_SAVE_MF);
-   int pcomp=AMREX_SPACEDIM;
-   ns_level.avgDown(State_Type,pcomp,1,1); // average from ilev+1 to ilev
+    // average from ilev+1 to ilev
+   ns_level.avgDown(State_Type,STATECOMP_PRES,STATE_NCOMP_PRES,1); 
   }
   delete_array(PRESSURE_SAVE_MF);
  }
@@ -12185,7 +12184,6 @@ void NavierStokes::veldiffuseALL() {
  int nmat=num_materials;
  int finest_level=parent->finestLevel();
 
- int dencomp=STATECOMP_STATES;
  int nden=nmat*num_state_material;
 
  int save_enable_spectral=enable_spectral;
@@ -12275,7 +12273,7 @@ void NavierStokes::veldiffuseALL() {
   }
  }  // ilev=finest_level ... level
 
- avgDownALL(State_Type,dencomp,nden,1);
+ avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -12378,7 +12376,7 @@ void NavierStokes::veldiffuseALL() {
 
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,3); 
 
- avgDownALL(State_Type,dencomp,nden,1);
+ avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
   // register_mark=unew
  SET_STOKES_MARK(REGISTER_MARK_MF,104);
@@ -12443,7 +12441,7 @@ void NavierStokes::veldiffuseALL() {
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF,5); 
 
   // spectral_override==1 => not always low order
- avgDownALL(State_Type,dencomp,nden,1);
+ avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
  SET_STOKES_MARK(REGISTER_MARK_MF,108); //register_mark=unew
 
@@ -12485,7 +12483,7 @@ void NavierStokes::veldiffuseALL() {
    } else
     amrex::Error("viscous_enable_spectral invalid");
 
-   avgDownALL(State_Type,dencomp,nden,1);
+   avgDownALL(State_Type,STATECOMP_STATES,nden,1);
   } else
    amrex::Error("ns_time_order invalid");
 
@@ -12498,7 +12496,7 @@ void NavierStokes::veldiffuseALL() {
   amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
 
    // why average down the density here?
- avgDownALL(State_Type,dencomp,nden,1);
+ avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
  multiphase_project(SOLVETYPE_HEAT); // MGP BiCGStab temperature.
 
@@ -12577,13 +12575,13 @@ void NavierStokes::veldiffuseALL() {
    // DY/DT=div (rho D) grad Y/rho
 
    // why average down the density here?
-  avgDownALL(State_Type,dencomp,nden,1);
+  avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
   multiphase_project(SOLVETYPE_SPEC+species_comp); 
 
  } // species_comp=0..num_species_var-1
 
- avgDownALL(State_Type,dencomp,nden,1);
+ avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -12753,7 +12751,7 @@ void NavierStokes::veldiffuseALL() {
  }
 
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
- avgDownALL(State_Type,dencomp,nden,1);
+ avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
   // 1. add dt_gradp_over_rho:  u^* <-- u^* + dt grad p/rho
   // 2. save resulting velocity, u^*, to dt_gradp_over_rho

@@ -192,7 +192,7 @@ stop
       endif
 
        ! density
-      flagcomp=(im-1)*num_state_material+1
+      flagcomp=(im-1)*num_state_material+1+ENUM_DENVAR
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -972,7 +972,7 @@ stop
 
          ! den,T
         if (viscosity_state_model.ge.1) then
-         flagcomp=(im_parm-1)*num_state_material+1
+         flagcomp=(im_parm-1)*num_state_material+1+ENUM_DENVAR
          density=eosdata(D_DECL(i,j,k),flagcomp)
          temperature=eosdata(D_DECL(i,j,k),flagcomp+1)
         else if (viscosity_state_model.eq.0) then
@@ -1424,7 +1424,7 @@ stop
         xvec(dir)=xsten(0,dir)
        enddo
 
-       flagcomp=(im_parm-1)*num_state_material+1
+       flagcomp=(im_parm-1)*num_state_material+1+ENUM_DENVAR
        density=eosdata(D_DECL(i,j,k),flagcomp)
        temperature=eosdata(D_DECL(i,j,k),flagcomp+1)
 
@@ -1536,11 +1536,11 @@ stop
          endif
 
          if (near_interface.eq.1) then
-          flagcomp=(im_solid_crit-1)*num_state_material+1
+          flagcomp=(im_solid_crit-1)*num_state_material+1+ENUM_DENVAR
           temperature_wall=eosdata(D_DECL(isolid,jsolid,ksolid),flagcomp+1)
           temperature_wall_max= &
             NS_sumdata(IQ_MAXSTATE_SUM_COMP+2*(im_solid_crit-1)+2)
-          flagcomp=(im_parm-1)*num_state_material+1
+          flagcomp=(im_parm-1)*num_state_material+1+ENUM_DENVAR
           temperature_probe=eosdata(D_DECL(iprobe,jprobe,kprobe),flagcomp+1)
           thermal_k=get_user_heatviscconst(im_parm)+ &
                fort_heatviscconst_eddy_wall(im_parm)
@@ -2422,7 +2422,7 @@ stop
          ! im_test is the material on which a force/torque is applied.
          do im_test=1,nmat
           vofcomp=(im_test-1)*ngeom_recon+1
-          dencomp=(im_test-1)*num_state_material+1
+          dencomp=(im_test-1)*num_state_material+1+ENUM_DENVAR
           local_density=den(D_DECL(icell,jcell,kcell),dencomp)
           if (local_density.gt.zero) then
            ! do nothing
@@ -2475,7 +2475,7 @@ stop
          ! i.e. im_test is the material on which a force/torque is applied.
          do im_test=1,nmat
           vofcomp=(im_test-1)*ngeom_recon+1
-          dencomp=(im_test-1)*num_state_material+1
+          dencomp=(im_test-1)*num_state_material+1+ENUM_DENVAR
           local_density=den(D_DECL(icell,jcell,kcell),dencomp)
           if (local_density.gt.zero) then
            ! do nothing
@@ -3189,7 +3189,7 @@ stop
            dist_substrate=-dist_substrate
 
            vofcomp=STATECOMP_MOF+(im-1)*ngeom_raw+1
-           dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
+           dencomp=STATECOMP_STATES+(im-1)*num_state_material+1+ENUM_DENVAR
            temperature=snew(D_DECL(i,j,k),dencomp+1) 
            vfrac=snew(D_DECL(i,j,k),vofcomp)
            if (vfrac.ge.half) then
@@ -3281,7 +3281,7 @@ stop
            dist_substrate=-dist_substrate
 
            vofcomp=STATECOMP_MOF+(im-1)*ngeom_raw+1
-           dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
+           dencomp=STATECOMP_STATES+(im-1)*num_state_material+1+ENUM_DENVAR
            temperature=snew(D_DECL(i,j,k),dencomp+1) 
            vfrac=snew(D_DECL(i,j,k),vofcomp)
            if (vfrac.ge.half) then
@@ -3413,7 +3413,7 @@ stop
        vfrac=snew(D_DECL(i,j,k),vofcomp)
        if (vfrac.ge.half) then
         do im=1,nmat
-         dencomp=STATECOMP_STATES+(im-1)*num_state_material+1
+         dencomp=STATECOMP_STATES+(im-1)*num_state_material+1+ENUM_DENVAR
          snew(D_DECL(i,j,k),dencomp+1)=TSAT
         enddo
        endif

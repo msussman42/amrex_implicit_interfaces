@@ -1198,7 +1198,7 @@ if (isweep.eq.0) then
      vel_analytical,LS_VAP_analytical,pres_analytical)
     LS_compute=GRID_DATA_IN%lsfab(D_DECL(i,j,k),2)
     im_crit=2
-    tcomp=(im_crit-1)*num_state_material+2
+    tcomp=(im_crit-1)*num_state_material+ENUM_TEMPERATUREVAR+1
     TEMPERATURE_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp)
     Y_compute=GRID_DATA_IN%den(D_DECL(i,j,k),tcomp+1)
     do dir=1,SDIM

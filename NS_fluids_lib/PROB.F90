@@ -25392,7 +25392,7 @@ end subroutine initialize2d
        if ((FSI_flag(im_solid_crit).eq.2).or. & ! prescribed solid (CAD)
            (FSI_flag(im_solid_crit).eq.4).or. & ! CTML FSI
            (FSI_flag(im_solid_crit).eq.8)) then ! pres-vel coupling
-        tcomp=(im_solid_crit-1)*num_state_material+2  ! den,T
+        tcomp=(im_solid_crit-1)*num_state_material+ENUM_TEMPERATUREVAR+1
         temp_solid_mat=snew(D_DECL(i,j,k),tcomp)
        else if (FSI_flag(im_solid_crit).eq.1) then ! prescribed solid (EUL)
         ! do nothing
@@ -25402,7 +25402,7 @@ end subroutine initialize2d
        endif
 
        do im=1,nmat
-        tcomp=(im-1)*num_state_material+2  ! den,T
+        tcomp=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
         if ((distsolid.ge.zero).or. &
             (im.eq.im_solid_crit)) then
          snew(D_DECL(i,j,k),tcomp)=temp_solid_mat
@@ -26291,7 +26291,6 @@ end subroutine initialize2d
        INTEGER_T, intent(in) :: nc
        INTEGER_T, intent(in) :: nten
        INTEGER_T imls
-       INTEGER_T impres
        REAL_T, intent(in) :: latent_heat(2*nten)
        REAL_T, intent(in) :: saturation_temp(2*nten)
        REAL_T, intent(in) :: time
@@ -26306,8 +26305,6 @@ end subroutine initialize2d
 
        REAL_T, intent(in) :: dx(SDIM)
        REAL_T, intent(in) :: xlo(SDIM), xhi(SDIM)
-       INTEGER_T idenbase,imofbase
-       INTEGER_T ierr
        INTEGER_T ibase
        INTEGER_T ic,jc,kc,n,im
        INTEGER_T dir
@@ -26335,7 +26332,6 @@ end subroutine initialize2d
        REAL_T x,y,z,rr
        REAL_T volcell
        REAL_T cencell(SDIM)
-       INTEGER_T ipresbase
        
        REAL_T debug_vfrac_sum
        REAL_T vel(SDIM)
@@ -26429,12 +26425,7 @@ end subroutine initialize2d
        endif
        max_levelstack=adapt_quad_depth
 
-       ipresbase=STATECOMP_PRES
-       impres=1
-       idenbase=STATECOMP_STATES
-       imofbase=STATECOMP_MOF
-       ierr=imofbase+nmat*ngeom_raw+1
-       if (nc.ne.ierr) then
+       if (nc.ne.STATE_NCOMP) then
         print *,"nc invalid"
         stop
        endif
@@ -26448,7 +26439,7 @@ end subroutine initialize2d
         print *,"nmat invalid"
         stop
        endif
-       if (nc.ne.ierr) then
+       if (nc.ne.STATE_NCOMP) then
         print *,"scal invalid"
         stop
        endif
@@ -26501,7 +26492,7 @@ end subroutine initialize2d
 
         call Box_volumeFAST(bfact,dx,xsten,nhalf,volcell,cencell,SDIM)
 
-        scalc(ipresbase+1)=zero
+        scalc(STATECOMP_PRES+1)=zero
 
         if (is_in_probtype_list().eq.1) then
 
@@ -26510,7 +26501,7 @@ end subroutine initialize2d
          call SUB_STATE(xpos,time,distbatch,local_state, &
                  bcflag,num_materials,num_state_material)
          do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
+          ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)= &
             local_state(local_ibase+ENUM_DENVAR+1) ! density
@@ -26548,7 +26539,7 @@ end subroutine initialize2d
 
          enddo ! im=1..nmat
          call SUB_PRES(xpos,time,distbatch,p_hyd,num_materials)
-         scalc(ipresbase+impres)=p_hyd
+         scalc(STATECOMP_PRES+1)=p_hyd
 
          if (p_hyd.ge.zero) then
           ! do nothing
@@ -26564,7 +26555,7 @@ end subroutine initialize2d
          call CAV3D_LS(xpos,time,distbatch)
          call CAV3D_STATE(xpos,time,distbatch,local_state)
          do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
+          ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)= &
               local_state(local_ibase+ENUM_DENVAR+1) ! density
@@ -26577,14 +26568,14 @@ end subroutine initialize2d
           enddo
          enddo ! im=1..nmat
          call CAV3D_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
+         scalc(STATECOMP_PRES+1)=p_hyd
 
         else if (probtype.eq.401) then
 
          call HELIX_LS(xpos,time,distbatch)
          call HELIX_STATE(xpos,time,distbatch,local_state)
          do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
+          ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
           scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
@@ -26596,14 +26587,14 @@ end subroutine initialize2d
           enddo
          enddo ! im=1..nmat
          call HELIX_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
+         scalc(STATECOMP_PRES+1)=p_hyd
 
         else if (probtype.eq.402) then
 
          call TSPRAY_LS(xpos,time,distbatch)
          call TSPRAY_STATE(xpos,time,distbatch,local_state)
          do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
+          ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
           scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
@@ -26615,14 +26606,14 @@ end subroutine initialize2d
           enddo
          enddo ! im=1..nmat
          call TSPRAY_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
+         scalc(STATECOMP_PRES+1)=p_hyd
 
         else if (probtype.eq.412) then ! step
 
          call CAV2Dstep_LS(xpos,time,distbatch)
          call CAV2Dstep_STATE(xpos,time,distbatch,local_state)
          do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
+          ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
           scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
@@ -26634,14 +26625,14 @@ end subroutine initialize2d
           enddo
          enddo ! im=1..nmat
          call CAV2Dstep_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
+         scalc(STATECOMP_PRES+1)=p_hyd
 
         else if (probtype.eq.413) then ! zeyu
 
          call ZEYU_droplet_impact_LS(xpos,time,distbatch)
          call ZEYU_droplet_impact_STATE(xpos,time,distbatch,local_state)
          do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
+          ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
           scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
@@ -26653,14 +26644,14 @@ end subroutine initialize2d
           enddo
          enddo ! im=1..nmat
          call ZEYU_droplet_impact_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
+         scalc(STATECOMP_PRES+1)=p_hyd
 
         else if (probtype.eq.533) then
 
          call rigid_FSI_LS(xpos,time,distbatch)
          call rigid_FSI_STATE(xpos,time,distbatch,local_state)
          do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
+          ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
           scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
@@ -26672,14 +26663,14 @@ end subroutine initialize2d
           enddo
          enddo ! im=1..nmat
          call rigid_FSI_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
+         scalc(STATECOMP_PRES+1)=p_hyd
 
         else if (probtype.eq.534) then
 
          call sinking_FSI_LS(xpos,time,distbatch)
          call sinking_FSI_STATE(xpos,time,distbatch,local_state)
          do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
+          ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
           scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
@@ -26691,14 +26682,14 @@ end subroutine initialize2d
           enddo
          enddo ! im=1..nmat
          call sinking_FSI_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
+         scalc(STATECOMP_PRES+1)=p_hyd
 
         else if (probtype.eq.311) then ! user defined
 
          call USERDEF_LS(xpos,time,distbatch)
          call USERDEF_STATE(xpos,time,distbatch,local_state)
          do im=1,nmat
-          ibase=idenbase+(im-1)*num_state_material
+          ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
           scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
@@ -26710,13 +26701,13 @@ end subroutine initialize2d
           enddo
          enddo ! im=1..nmat
          call USERDEF_PRES(xpos,time,distbatch,p_hyd)
-         scalc(ipresbase+impres)=p_hyd
+         scalc(STATECOMP_PRES+1)=p_hyd
 
         else
 
          do im=1,nmat
 
-          ibase=idenbase+(im-1)*num_state_material
+          ibase=STATECOMP_STATES+(im-1)*num_state_material
 
           scalc(ibase+ENUM_DENVAR+1)=fort_denconst(im)  ! den
           scalc(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) 
@@ -27230,14 +27221,14 @@ end subroutine initialize2d
           else if ((probtype.eq.53).and.(fort_material_type(2).gt.0)) then
 
            call general_hydrostatic_pressure(p_hyd)
-           scalc(ipresbase+impres)=p_hyd
+           scalc(STATECOMP_PRES+1)=p_hyd
 
           else if ((probtype.eq.530).and. &
                    (axis_dir.eq.1).and. &
                    (fort_material_type(2).gt.0).and. &
                    (SDIM.eq.3)) then
            call general_hydrostatic_pressure(p_hyd)
-           scalc(ipresbase+impres)=p_hyd
+           scalc(STATECOMP_PRES+1)=p_hyd
           endif
 
           ! circular freezing disk
@@ -27423,7 +27414,7 @@ end subroutine initialize2d
 
         do im=1,nmat
 
-         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
+         vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
 
          scalc(vofcomp_raw)=vofdark(im)
           ! centroid relative to centroid of cell; not cell center.
@@ -27478,7 +27469,7 @@ end subroutine initialize2d
           stop
          endif
          vofdark(im)=vofdark(im)+one-debug_vfrac_sum
-         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
+         vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
          scalc(vofcomp_raw)=vofdark(im)
         endif
 
@@ -27524,7 +27515,7 @@ end subroutine initialize2d
 
         do im=1,nmat
          vofcomp_recon=(im-1)*ngeom_recon+1
-         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
+         vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
          mofdata(vofcomp_recon)=scalc(vofcomp_raw)
          mofdata(vofcomp_recon+SDIM+1)=zero ! order
          mofdata(vofcomp_recon+2*SDIM+2)=zero ! intercept
@@ -27564,7 +27555,7 @@ end subroutine initialize2d
 
         vfracsum_test=zero
         do im=1,nmat
-         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
+         vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
          if (is_rigid(nmat,im).eq.0) then
           vfracsum_test=vfracsum_test+scalc(vofcomp_raw)
          else if (is_rigid(nmat,im).eq.1) then
@@ -27578,7 +27569,7 @@ end subroutine initialize2d
         if ((vfracsum_test.le.half).or.(vfracsum_test.gt.1.5)) then
          print *,"FAILED: vfracsum_test= ",vfracsum_test
          do im=1,nmat
-          vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
+          vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
           print *,"im,vfrac ",im,scalc(vofcomp_raw)
           print *,"im,LS ",im,LSc(im)
          enddo
@@ -27617,7 +27608,7 @@ end subroutine initialize2d
         enddo !imls=1..nmat 
 
         do im=1,nmat
-         vofcomp_raw=imofbase+(im-1)*ngeom_raw+1
+         vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
          scalc(vofcomp_raw)=voflist(im)
         enddo ! im=1..nmat
 
@@ -27638,9 +27629,10 @@ end subroutine initialize2d
         jc=1
         kc=0
         do ic=fablo(1),fabhi(1)
-         comparestate(ic,2)=scal(D_DECL(ic,jc,kc),idenbase+ENUM_DENVAR+1)
+         comparestate(ic,2)=scal(D_DECL(ic,jc,kc), &
+            STATECOMP_STATES+ENUM_DENVAR+1)
          comparestate(ic,3)= &
-            scal(D_DECL(ic,jc,kc),idenbase+ENUM_TEMPERATUREVAR+1)
+            scal(D_DECL(ic,jc,kc),STATECOMP_STATES+ENUM_TEMPERATUREVAR+1)
         enddo
         call compare_sanity(comparestate,2,2,1)
         deallocate(comparestate)
@@ -27813,7 +27805,7 @@ end subroutine initialize2d
 
           if (dir.eq.0) then
            tcomp=STATECOMP_STATES+ &
-            (im-1)*num_state_material+2
+            (im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
            Snew(D_DECL(i,j,k),tcomp)= &
             Snew(D_DECL(i,j,k),tcomp)+ &
             perturbation_eps_temp*(twall-fort_tempconst(1))*sinprod
@@ -31550,7 +31542,7 @@ end subroutine initialize2d
        stop
       endif
        ! c++ convention
-      dencomp=icomplo+(im-1)*num_state_material
+      dencomp=icomplo+(im-1)*num_state_material+ENUM_DENVAR
   
        ! fortran convention
       istate=scomp-dencomp+1
