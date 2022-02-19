@@ -16767,16 +16767,11 @@ NavierStokes::split_scalar_advection() {
 
  int ngrid=grids.size();
 
- int nc_conserve=AMREX_SPACEDIM+nmat*num_state_material;
+ int nc_conserve=CISLCOMP_CONS_NCOMP;
  MultiFab* conserve=new MultiFab(grids,dmap,nc_conserve,ngrow,
 	MFInfo().SetTag("conserve"),FArrayBoxFactory());
 
- int itensor_base=iden_base+nmat*num_state_material;
- int imof_base=itensor_base+NUM_CELL_ELASTIC;
- int iLS_base=imof_base+nmat*ngeom_raw;
- int iFtarget_base=iLS_base+nmat;
- int iden_mom_base=iFtarget_base+nmat;
- int nc_bucket=iden_mom_base+nmat;
+ int nc_bucket=CISLCOMP_NCOMP;
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");

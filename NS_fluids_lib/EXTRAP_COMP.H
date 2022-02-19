@@ -206,8 +206,10 @@ FSI_SIZE=area
 #define VISUALCOMP_NCOMP (VISUALCOMP_LS+num_materials)
 
 #define CISLCOMP_VEL 0
-#define CISLCOMP_STATES (AMREX_SPACEDIM)
-#define CISLCOMP_TENSOR (CISLCOMP_STATES+num_materials*num_state_material)
+#define CISLCOMP_STATES (CISLCOMP_VEL+AMREX_SPACEDIM)
+#define CISLCOMP_CONS_NCOMP (CISLCOMP_STATES+num_materials*num_state_material)
+
+#define CISLCOMP_TENSOR (CISLCOMP_CONS_NCOMP)
 #define CISLCOMP_MOF (CISLCOMP_TENSOR+NUM_CELL_ELASTIC)
 #define CISLCOMP_LS (CISLCOMP_MOF+num_materials*ngeom_raw)
 #define CISLCOMP_FTARGET (CISLCOMP_LS+num_materials)
