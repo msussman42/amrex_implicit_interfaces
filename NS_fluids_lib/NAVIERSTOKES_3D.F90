@@ -1936,7 +1936,7 @@ END SUBROUTINE SIMP
        bfact, &
        fabout,DIMS(fabout), &
        vislo,vishi, &
-        ! x,u,p,den,T,Y1..Yn,mag vort,LS
+        ! x,u,pmg,den,T,Y1..Yn,mag vort,LS
        visual_ncomp, & 
        maskSEM,DIMS(maskSEM), &
        vel,DIMS(vel), &
@@ -1971,8 +1971,9 @@ END SUBROUTINE SIMP
        im_solid_map, &
        elastic_ncomp, &
        slice_data, &
-       nslice, &
-       nstate_slice,slice_dir, &
+       nslice, & ! number of nodes in space for the slice
+       nstate_slice, & ! number of data items stored for each slice node.
+       slice_dir, &
        xslice, &
        dxfinest, &
        do_plot, &
@@ -1995,8 +1996,8 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: do_slice
       INTEGER_T, intent(in) :: visual_nddata_format
 
-        ! nstate_slice=x,y,z,xvel,yvel,zvel,PMG,PEOS,den,Temp,KE=
-        ! SLICECOMP_NCOMP
+        ! x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,DEN,TEMP,KE
+        ! nstate_slice=SLICECOMP_NCOMP
         ! (value of material with LS>0)
         ! nslice=domhi-domlo+3
       INTEGER_T, intent(in) :: nslice,nstate_slice,slice_dir
@@ -2010,8 +2011,8 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: im_solid_map(nparts_def) 
       INTEGER_T, intent(in) :: elastic_ncomp
       INTEGER_T, intent(in) :: visual_tessellate_vfrac
+       ! x,u,pmg,den,temp,spec,mag vort,LS
       INTEGER_T, intent(in) :: visual_ncomp
-      INTEGER_T :: visual_ncomp_interp
       INTEGER_T, intent(in) :: vislo(SDIM), vishi(SDIM)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM), hi(SDIM)
@@ -2034,7 +2035,7 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: gridno
-          ! x,u,p,den,T,Y1..Yn,mag vort,LS
+       ! x,u,pmg,den,T,Y1..Yn,mag vort,LS
       REAL_T, intent(out), target :: fabout(DIMV(fabout),visual_ncomp) 
       REAL_T, pointer :: fabout_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
@@ -2164,9 +2165,12 @@ END SUBROUTINE SIMP
       INTEGER_T visual_ncell(SDIM)
       REAL_T visual_dx(SDIM)
       REAL_T xcrit(SDIM)
+       ! x,u,pmg,den,temp,spec,mag vort,LS
       REAL_T localfab(visual_ncomp)
-      REAL_T vel_uniform(visual_ncomp-SDIM)
-      REAL_T SEM_value(visual_ncomp-SDIM) ! u,pmg,den,temp,spec,mag vort,LS
+       ! u,pmg,den,temp,spec,mag vort,LS
+      REAL_T vel_uniform(VISUALCOMP_NCOMP_INTERP)
+       ! u,pmg,den,temp,spec,mag vort,LS
+      REAL_T SEM_value(VISUALCOMP_NCOMP_INTERP) 
       INTEGER_T grid_type
       INTEGER_T SEMhi(SDIM)
       REAL_T, dimension(D_DECL(:,:,:),:),allocatable :: SEMloc
@@ -2215,7 +2219,8 @@ END SUBROUTINE SIMP
       endif
 
  
-        ! nstate_slice=x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,den,Temp,KE
+        ! x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,den,Temp,KE
+        ! nstate_slice
         ! (value of material with LS>0)
       if (nstate_slice.ne.SLICECOMP_NCOMP) then
        print *,"nstate_slice invalid in cellgrid"
@@ -2285,12 +2290,11 @@ END SUBROUTINE SIMP
        call checkbound_array(vislo,vishi,fabout_ptr,0,0,41110)
        call checkbound_array(vislo,vishi,fabout_ptr,0,1,41111)
        call checkbound_array(vislo,vishi,fabout_ptr,0,SDIM-1,41112)
-       ! x,u,p,den,T,Y1..Yn,mag vort,LS
+       ! x,u,pmg,den,T,Y1..Yn,mag vort,LS
        if (visual_ncomp.ne.VISUALCOMP_NCOMP) then
         print *,"visual_ncomp invalid" 
         stop
        endif
-       visual_ncomp_interp=visual_ncomp-SDIM
 
        plotfab_ptr=>plotfab
        call checkbound_array(lo,hi,plotfab_ptr,1,-1,41113)
@@ -2887,12 +2891,16 @@ END SUBROUTINE SIMP
 
            enddo ! dir2=1..sdim
 
-            ! x,u,p,den,T,Y1..Yn,mag vort,LS
+            ! x,u,pmg,den,T,Y1..Yn,mag vort,LS
            if (visual_ncomp.ne.VISUALCOMP_NCOMP) then
             print *,"visual_ncomp invalid" 
             stop
            endif
-           do n=1,visual_ncomp_interp
+           if (visual_ncomp.ne.VISUALCOMP_NCOMP_INTERP+AMREX_SPACEDIM) then
+            print *,"visual_ncomp invalid" 
+            stop
+           endif
+           do n=1,VISUALCOMP_NCOMP_INTERP
             SEM_value(n)=zero
            enddo
            grid_type=-1  ! ggg  (Gauss in all directions)
@@ -2901,7 +2909,7 @@ END SUBROUTINE SIMP
            enddo
 
            allocate(SEMloc(D_DECL(0:SEMhi(1),0:SEMhi(2),0:SEMhi(SDIM)), &
-                           visual_ncomp_interp))
+                           VISUALCOMP_NCOMP_INTERP))
 
            do iSEM=stenlo(1),stenhi(1)
            do jSEM=stenlo(2),stenhi(2)
@@ -2936,7 +2944,7 @@ END SUBROUTINE SIMP
              stop
             endif
 
-            do dir=1,2+num_species_var
+            do dir=1,num_state_base+num_species_var
              local_data=den(D_DECL(iSEM,jSEM,kSEM), &
                (im_crit_SEM-1)*num_state_material+dir)
              if (abs(local_data).lt.1.0D+20) then
@@ -2946,7 +2954,7 @@ END SUBROUTINE SIMP
               print *,"abs(local_data) overflow1"
               stop
              endif
-            enddo ! dir=1..2+num_species_var
+            enddo ! dir=1..num_state_base+num_species_var
 
               ! mag vorticity component of a derived data structure.
             local_data=trace(D_DECL(iSEM,jSEM,kSEM),(local_maskSEM-1)*5+5)
@@ -2975,7 +2983,8 @@ END SUBROUTINE SIMP
            enddo ! iSEM
 
            call SEM_INTERP_ELEMENT( &
-            visual_ncomp_interp,bfact,grid_type, &
+            VISUALCOMP_NCOMP_INTERP, &
+            bfact,grid_type, &
             SEMhi,dx,xcrit,SEMloc,SEM_value,caller_id)
 
            deallocate(SEMloc)
@@ -2997,12 +3006,12 @@ END SUBROUTINE SIMP
             endif
            enddo ! dir=1..sdim
            presnd=SEM_value(VISUALCOMP_PMG+1-SDIM)
-           if (visual_ncomp-SDIM.ne.VISUALCOMP_NCOMP-SDIM) then
+           if (visual_ncomp.ne.VISUALCOMP_NCOMP) then
             print *,"incorrect visual_ncomp"
             stop
            endif
-           if (visual_ncomp-SDIM.ne.visual_ncomp_interp) then
-            print *,"incorrect visual_ncomp_interp"
+           if (visual_ncomp-SDIM.ne.VISUALCOMP_NCOMP_INTERP) then
+            print *,"incorrect visual_ncomp"
             stop
            endif
            if (abs(SEM_value(VISUALCOMP_VORTMAG+1-SDIM)).lt.1.0D+20) then
@@ -3020,7 +3029,7 @@ END SUBROUTINE SIMP
                   SEM_value(VISUALCOMP_VORTMAG+1-SDIM)
             stop
            endif
-           do dir=1,2+num_species_var
+           do dir=1,num_state_base+num_species_var
             dennd(dir)=SEM_value(VISUALCOMP_DEN+dir-SDIM)
            enddo
           else if (local_maskSEM.eq.0) then
@@ -3345,12 +3354,12 @@ END SUBROUTINE SIMP
           call INTERNAL_material(denslice,massfrac_parm, &
             tempslice,eslice, &
             fort_material_type(im_crit),im_crit)
+
           KEslice=denslice*eslice
 
           do dir=1,SDIM
-           iw=dir
-           plotfab(D_DECL(i,j,k),SLICECOMP_U+dir)=velnd(iw)
-           KEslice=KEslice+half*denslice*(velnd(iw)**2)
+           plotfab(D_DECL(i,j,k),SLICECOMP_U+dir)=velnd(dir)
+           KEslice=KEslice+half*denslice*(velnd(dir)**2)
           enddo ! dir
 
           plotfab(D_DECL(i,j,k),SLICECOMP_DEN+1)=denslice
@@ -3480,7 +3489,7 @@ END SUBROUTINE SIMP
               enddo
               slice_data((i+1)*nstate_slice+n)= &
                (one-theta(1))*psten1D(0)+theta(1)*psten1D(1) 
-             enddo ! n
+             enddo ! do n=1,nstate_slice
 
             else if (inbox.eq.0) then
              ! do nothing
@@ -3640,7 +3649,7 @@ END SUBROUTINE SIMP
            vel_uniform(VISUALCOMP_PMG+1-SDIM)= &
               vel(D_DECL(iBL,jBL,kBL),STATE_NCOMP_VEL+1)
 
-           do dir=1,2+num_species_var
+           do dir=1,num_state_base+num_species_var
             vel_uniform(VISUALCOMP_DEN+dir-SDIM)= &
               den(D_DECL(iBL,jBL,kBL),(im_crit-1)*num_state_material+dir)
            enddo
@@ -3680,7 +3689,7 @@ END SUBROUTINE SIMP
           enddo !jBL
           enddo !iBL
           if (sumweight.gt.zero) then
-           do dir=1,visual_ncomp_interp
+           do dir=1,VISUALCOMP_NCOMP_INTERP
             localfab(SDIM+dir)=localfab(SDIM+dir)/sumweight
            enddo
           else
@@ -3741,7 +3750,7 @@ END SUBROUTINE SIMP
 
            enddo ! dir2=1..sdim
 
-           do n=1,visual_ncomp_interp
+           do n=1,VISUALCOMP_NCOMP_INTERP
             SEM_value(n)=zero
            enddo
            grid_type=-1  ! ggg  (Gauss in all directions)
@@ -3750,7 +3759,7 @@ END SUBROUTINE SIMP
            enddo
 
            allocate(SEMloc(D_DECL(0:SEMhi(1),0:SEMhi(2),0:SEMhi(SDIM)), &
-                           visual_ncomp_interp))
+                           VISUALCOMP_NCOMP_INTERP))
 
            do iSEM=stenlo(1),stenhi(1)
            do jSEM=stenlo(2),stenhi(2)
@@ -3793,7 +3802,8 @@ END SUBROUTINE SIMP
 
            caller_id=4
            call SEM_INTERP_ELEMENT( &
-            visual_ncomp_interp,bfact,grid_type, &
+            VISUALCOMP_NCOMP_INTERP, &
+            bfact,grid_type, &
             SEMhi,dx,xcrit,SEMloc,SEM_value,caller_id)
 
            deallocate(SEMloc)
@@ -11778,7 +11788,7 @@ END SUBROUTINE SIMP
 
       INTEGER_T, intent(in) :: DIMDEC(fabin)
       INTEGER_T, intent(in) :: DIMDEC(fabout)
-       ! x,u,p,den,T,Y1..Yn,mag vort,LS
+       ! x,u,pmg,den,T,Y1..Yn,mag vort,LS
       REAL_T, intent(inout),target :: fabout(DIMV(fabout),visual_ncomp) 
       REAL_T, pointer :: fabout_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout),target :: fabin(DIMV(fabin),visual_ncomp)
@@ -11792,13 +11802,13 @@ END SUBROUTINE SIMP
       INTEGER_T i,j,k
       INTEGER_T im
       INTEGER_T dir
-      INTEGER_T n,n_data
+      INTEGER_T n
       INTEGER_T strandid
       INTEGER_T gridsum(nmat)
       INTEGER_T LSgridsum(nmat)
       INTEGER_T gridsum_total
       REAL_T xtest(SDIM)
-       ! x,u,p,den,T,Y1..Yn,mag vort,LS
+       ! x,u,pmg,den,T,Y1..Yn,mag vort,LS,umag
       REAL_T local_data(visual_ncomp+1) 
       REAL_T local_data_in(visual_ncomp+1)
       REAL_T local_data_out(visual_ncomp+1)
@@ -11812,7 +11822,7 @@ END SUBROUTINE SIMP
       REAL_T Linfnorm(nmat*(visual_ncomp+1))
       REAL_T LSnorm(nmat)
       REAL_T LS_in,LS_out
-      INTEGER_T LS_base,state_ncomp,ebase
+      INTEGER_T ebase
       character*2 im_str
       character*6 stepstr
       character*14 compfilename
@@ -11826,9 +11836,14 @@ END SUBROUTINE SIMP
        stop
       endif
 
-       ! x,u,p,den,T,Y1..Yn,mag vort,LS
+       ! x,u,pmg,den,T,Y1..Yn,mag vort,LS
       if (visual_ncomp.ne.VISUALCOMP_NCOMP) then
        print *,"visual_ncomp invalid" 
+       stop
+      endif
+       ! x,u,pmg,den,T,Y1..Yn,mag vort,LS,umag
+      if (visual_ncomp+1.ne.VISUALCOMP_NCOMP_MAGVEL) then
+       print *,"visual_ncomp or VISUALCOMP_NCOMP_MAGVEL invalid" 
        stop
       endif
 
@@ -11966,7 +11981,7 @@ END SUBROUTINE SIMP
 
        ! LINE 1: VARIABLES
 
-       ! x,u,p,den,T,Y1..Yn,mag vort,LS
+       ! x,u,pmg,den,T,Y1..Yn,mag vort,LS
        if (SDIM.eq.2) then
          !61-11+1=51
         write(11,'(A51)',ADVANCE="NO")  &
@@ -12077,17 +12092,14 @@ END SUBROUTINE SIMP
 
        if (visual_compare.eq.1) then
 
-        LS_base=VISUALCOMP_LS
-        state_ncomp=visual_ncomp-nmat+1
-
-        do n=1,nmat*(visual_ncomp+1)
+        do n=1,nmat*(VISUALCOMP_NCOMP_MAGVEL)
          L1norm(n)=zero
          L2norm(n)=zero
          Linfnorm(n)=zero
          icrit(n)=-1
          jcrit(n)=-1
          kcrit(n)=-1
-        enddo ! n=1..nmat*(visual_ncomp+1)
+        enddo ! n=1..nmat*(VISUALCOMP_NCOMP_MAGVEL)
 
         do im=1,nmat
          gridsum(im)=0
@@ -12100,7 +12112,7 @@ END SUBROUTINE SIMP
         do k=gridlo(3),gridhi(3)
         do j=gridlo(2),gridhi(2)
         do i=gridlo(1),gridhi(1)
-          ! x,u,p,den,T,Y1..Yn,mag vort,LS
+          ! x,u,pmg,den,T,Y1..Yn,mag vort,LS
          do n=1,visual_ncomp
           local_data_in(n)=fabin(D_DECL(i,j,k),n)
           local_data_out(n)=fabout(D_DECL(i,j,k),n)
@@ -12122,8 +12134,10 @@ END SUBROUTINE SIMP
           endif 
          enddo ! n=1..visual_ncomp
 
-          ! x,u,p,den,T,Y1..Yn,mag vort,LS
-         n=visual_ncomp+1
+          ! x,u,pmg,den,T,Y1..Yn,mag vort,LS,umag
+         n=VISUALCOMP_MAGVEL+1
+
+          ! velocity magnitude.
          local_data(n)=zero
          do dir=1,SDIM
           local_data(n)=local_data(n)+ &
@@ -12139,95 +12153,78 @@ END SUBROUTINE SIMP
           stop
          endif
 
-         if ((LS_base.eq.VISUALCOMP_LS).and. &
-             (state_ncomp.eq.visual_ncomp-nmat+1)) then
-          do im=1,nmat
-           LS_in=local_data_in(LS_base+im)
-           LS_out=local_data_out(LS_base+im)
-           if ((LS_in.gt.zero).and.(LS_out.gt.zero)) then
-            ebase=(im-1)*state_ncomp
-            do n=1,state_ncomp
-             if (n.lt.state_ncomp) then
-              n_data=n
-             else
-              n_data=visual_ncomp+1
-             endif
-             L1norm(ebase+n)=L1norm(ebase+n)+L1norm_local(n_data)
-             L2norm(ebase+n)=L2norm(ebase+n)+L2norm_local(n_data)
-             if (abs(local_data(n_data)).gt.Linfnorm(ebase+n)) then
-              Linfnorm(ebase+n)=abs(local_data(n_data))
-              icrit(ebase+n)=i
-              jcrit(ebase+n)=j
-              kcrit(ebase+n)=k
-             endif
-            enddo ! n=1..state_ncomp
-            gridsum(im)=gridsum(im)+1
-            gridsum_total=gridsum_total+1
-           else if ((LS_in.le.zero).or.(LS_out.le.zero)) then
-            ! do nothing
-           else
-            print *,"LS_in or LS_out invalid"
-            stop
-           endif
-          enddo ! im=1..nmat
-          do im=1,nmat
-           LS_in=local_data_in(LS_base+im)
-           LS_out=local_data_out(LS_base+im)
-           if ((abs(LS_in).le.visual_dx(1)).or. &
-               (abs(LS_out).le.visual_dx(1))) then
-            LSnorm(im)=LSnorm(im)+abs(local_data(LS_base+im))
-            LSgridsum(im)=LSgridsum(im)+1
-           else if ((abs(LS_in).gt.visual_dx(1)).and. &
-                    (abs(LS_out).gt.visual_dx(1))) then
-            ! do nothing
-           else
-            print *,"LS_in or LS_out invalid"
-            stop
-           endif
-          enddo ! im=1..nmat
-         else
-          print *,"LS_base or state_ncomp became corrupt"
-          stop
-         endif
+         do im=1,nmat
+          LS_in=local_data_in(VISUALCOMP_LS+im)
+          LS_out=local_data_out(VISUALCOMP_LS+im)
+          if ((LS_in.gt.zero).and.(LS_out.gt.zero)) then
+           ebase=(im-1)*(VISUALCOMP_NCOMP_MAGVEL)
+           do n=1,VISUALCOMP_NCOMP_MAGVEL
+            L1norm(ebase+n)=L1norm(ebase+n)+L1norm_local(n)
+            L2norm(ebase+n)=L2norm(ebase+n)+L2norm_local(n)
+            if (abs(local_data(n)).gt.Linfnorm(ebase+n)) then
+             Linfnorm(ebase+n)=abs(local_data(n))
+             icrit(ebase+n)=i
+             jcrit(ebase+n)=j
+             kcrit(ebase+n)=k
+            endif
+           enddo ! n=1..VISUALCOMP_NCOMP_MAGVEL
+           gridsum(im)=gridsum(im)+1
+           gridsum_total=gridsum_total+1
+          else if ((LS_in.le.zero).or.(LS_out.le.zero)) then
+           ! do nothing
+          else
+           print *,"LS_in or LS_out invalid"
+           stop
+          endif
+         enddo ! im=1..nmat
+         do im=1,nmat
+          LS_in=local_data_in(VISUALCOMP_LS+im)
+          LS_out=local_data_out(VISUALCOMP_LS+im)
+          if ((abs(LS_in).le.visual_dx(1)).or. &
+              (abs(LS_out).le.visual_dx(1))) then
+           LSnorm(im)=LSnorm(im)+abs(local_data(VISUALCOMP_LS+im))
+           LSgridsum(im)=LSgridsum(im)+1
+          else if ((abs(LS_in).gt.visual_dx(1)).and. &
+                   (abs(LS_out).gt.visual_dx(1))) then
+           ! do nothing
+          else
+           print *,"LS_in or LS_out invalid"
+           stop
+          endif
+         enddo ! im=1..nmat
           
         enddo ! i
         enddo ! j
         enddo ! k
 
         if (gridsum_total.ge.1) then
-         if ((LS_base.eq.VISUALCOMP_LS).and. &
-             (state_ncomp.eq.visual_ncomp-nmat+1)) then
-          do im=1,nmat
-           if (gridsum(im).gt.0) then
-            ebase=(im-1)*state_ncomp
-            do n=1,state_ncomp
-             L1norm(ebase+n)=L1norm(ebase+n)/gridsum(im)
-             L2norm(ebase+n)=sqrt(L2norm(ebase+n)/gridsum(im))
-             print *,"im,n,cells,L1,L2,Linf,ic,jc,kc ", &
-              im,n,gridsum(im), &
-              L1norm(ebase+n),L2norm(ebase+n),Linfnorm(ebase+n), &
-              icrit(ebase+n),jcrit(ebase+n),kcrit(ebase+n)
-            enddo ! n=1..state_ncomp
-           else if (gridsum(im).eq.0) then
-            ! do nothing
-           else
-            print *,"gridsum invalid"
-            stop
-           endif
-           if (LSgridsum(im).gt.0) then
-            LSnorm(im)=LSnorm(im)/LSgridsum(im)
-            print *,"im,cells,LSnorm ",im,LSgridsum(im),LSnorm(im)
-           else if (LSgridsum(im).eq.0) then
-            ! do nothing
-           else
-            print *,"LSgridsum invalid"
-            stop
-           endif
-          enddo ! im=1..nmat
-         else
-          print *,"LS_base or state_ncomp became corrupt"
-          stop
-         endif
+         do im=1,nmat
+          if (gridsum(im).gt.0) then
+           ebase=(im-1)*(VISUALCOMP_NCOMP_MAGVEL)
+           do n=1,VISUALCOMP_NCOMP_MAGVEL
+            L1norm(ebase+n)=L1norm(ebase+n)/gridsum(im)
+            L2norm(ebase+n)=sqrt(L2norm(ebase+n)/gridsum(im))
+            print *,"im,n,cells,L1,L2,Linf,ic,jc,kc ", &
+             im,n,gridsum(im), &
+             L1norm(ebase+n),L2norm(ebase+n),Linfnorm(ebase+n), &
+             icrit(ebase+n),jcrit(ebase+n),kcrit(ebase+n)
+           enddo ! n=1..VISUALCOMP_NCOMP_MAGVEL
+          else if (gridsum(im).eq.0) then
+           ! do nothing
+          else
+           print *,"gridsum invalid"
+           stop
+          endif
+          if (LSgridsum(im).gt.0) then
+           LSnorm(im)=LSnorm(im)/LSgridsum(im)
+           print *,"im,cells,LSnorm ",im,LSgridsum(im),LSnorm(im)
+          else if (LSgridsum(im).eq.0) then
+           ! do nothing
+          else
+           print *,"LSgridsum invalid"
+           stop
+          endif
+         enddo ! im=1..nmat
         else
          print *,"gridsum_total invalid"
          stop
