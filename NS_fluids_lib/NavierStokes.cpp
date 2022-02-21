@@ -1032,6 +1032,7 @@ int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 // 8 FSI, non-tessellating, force comes from Eulerian code,
 //   velocity comes from Lagrangian code.  link w/Kourosh Shoele
 Vector<int> NavierStokes::FSI_flag; 
+int NavierStokes::FSI_interval=1;
 Vector<int> NavierStokes::FSI_touch_flag; // 0..nthreads-1
 // default: 1
 Vector<int> NavierStokes::FSI_refine_factor; 
@@ -3022,6 +3023,7 @@ NavierStokes::read_params ()
      FSI_bounding_box_ngrow[i]=3;
     }
     pp.queryarr("FSI_flag",FSI_flag,0,nmat);
+    pp.query("FSI_interval",FSI_interval);
     pp.queryarr("FSI_refine_factor",FSI_refine_factor,0,nmat);
     pp.queryarr("FSI_bounding_box_ngrow",FSI_bounding_box_ngrow,0,nmat);
 
@@ -3284,6 +3286,7 @@ NavierStokes::read_params ()
 
      std::cout << "bottom_bottom_tol_factor " <<
        bottom_bottom_tol_factor<<'\n';
+     std::cout << "FSI_interval " << FSI_interval << '\n';
      for (int i=0;i<nmat;i++) {
       std::cout << "i= " << i << " FSI_flag " << FSI_flag[i] << '\n';
       std::cout << "i= " << i << " FSI_refine_factor " << 
@@ -7724,6 +7727,120 @@ void NavierStokes::build_moment_from_FSILS() {
  ns_reconcile_d_num(48);
 
 } // subroutine build_moment_from_FSILS
+
+
+// 1. coarseTimeStep
+// 2. timeStep
+//     a. advance
+//         i. CopyNewToOld
+//         ii. setTimeLevel(time+dt_AMR,dt_AMR)
+//     b. level_steps++
+// 3. cumtime += dt_AMR
+int NavierStokes::ok_copy_FSI_old_to_new() {
+
+ if (level!=0)
+  amrex::Error("level invalid ok_copy_FSI_old_to_new");
+
+ int local_flag=0;
+ if (FSI_interval==1) {
+  local_flag=1;
+ } else if (parent->levelSteps(0)==0) {
+  local_flag=1;
+ } else if (FSI_interval==0) {
+  // do nothing
+ } else if (FSI_interval>=2) {
+  if (parent->levelSteps(0) % FSI_interval == 0)
+   local_flag=1;
+ } else
+  amrex::Error("FSI_interval invalid");
+
+ return local_flag;
+
+} // end subroutine ok_copy_FSI_old_to_new
+
+void NavierStokes::copy_old_FSI_to_new_level() {
+
+ if ((cur_time_slab>0.0)&&(cur_time_slab>prev_time_slab)) {
+  // do nothing
+ } else
+  amrex::Error("expecting cur_time_slab>0, cur_time_slab>prev_time_slab");
+
+ int nparts=im_solid_map.size();
+
+ int nmat=num_materials;
+
+ MultiFab& S_old=get_new_data(State_Type,slab_step);
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ MultiFab* vofmf=getState(1,STATECOMP_MOF,nmat*ngeom_raw,prev_time_slab);
+ MultiFab& LS_old=get_new_data(LS_Type,slab_step);
+ MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
+ MultiFab* lsmf=getStateDist(1,prev_time_slab,3);  
+ MultiFab& Solid_old=get_new_data(Solid_State_Type,slab_step);
+ MultiFab& Solid_new=get_new_data(Solid_State_Type,slab_step+1);
+ MultiFab* velmf=getStateSolid(1,0,nparts*AMREX_SPACEDIM,prev_time_slab);
+
+ for (int partid=0;partid<nparts;partid++) {
+  int im_part=im_solid_map[partid];
+  if ((im_part>=0)&&(im_part<num_materials)) {
+   if ((FSI_flag[im_part]==2)|| //prescribed rigid solid (sci_clsvof.F90)
+       (FSI_flag[im_part]==4)|| //link w/Kourosh Shoele, Goldstein et al
+       (FSI_flag[im_part]==8)) {//link w/Kourosh Shoele, standard coupling
+    MultiFab::Copy(S_old,*vofmf,
+      im_part*ngeom_raw,
+      STATECOMP_MOF+im_part*ngeom_raw,
+      ngeom_raw,1);
+    MultiFab::Copy(S_new,*vofmf,
+      im_part*ngeom_raw,
+      STATECOMP_MOF+im_part*ngeom_raw,
+      ngeom_raw,1);
+    MultiFab::Copy(LS_old,*lsmf,
+      im_part*(1+AMREX_SPACEDIM),
+      im_part*(1+AMREX_SPACEDIM),
+      (1+AMREX_SPACEDIM),1);
+    MultiFab::Copy(LS_new,*lsmf,
+      im_part*(1+AMREX_SPACEDIM),
+      im_part*(1+AMREX_SPACEDIM),
+      (1+AMREX_SPACEDIM),1);
+    MultiFab::Copy(Solid_old,*velmf,
+      partid*AMREX_SPACEDIM,
+      partid*AMREX_SPACEDIM,
+      AMREX_SPACEDIM,1);
+    MultiFab::Copy(Solid_new,*velmf,
+      partid*AMREX_SPACEDIM,
+      partid*AMREX_SPACEDIM,
+      AMREX_SPACEDIM,1);
+   } else if (FSI_flag_valid(im_part)==1) {
+    // do nothing
+   } else
+    amrex::Error("FSI_flag invalid"); 
+  } else
+   amrex::Error("im_part invalid");
+
+ } // (int partid=0;partid<nparts;partid++)
+
+ delete vofmf;
+ delete lsmf;
+ delete velmf;
+
+} // end subroutine copy_old_FSI_to_new_level()
+
+void NavierStokes::copy_old_FSI_to_new() {
+
+ if (level!=0)
+  amrex::Error("level invalid copy_old_FSI_to_new");
+
+ if ((cur_time_slab>0.0)&&(cur_time_slab>prev_time_slab)) {
+  // do nothing
+ } else
+  amrex::Error("expecting cur_time_slab>0, cur_time_slab>prev_time_slab");
+
+ int finest_level=parent->finestLevel();
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.copy_old_FSI_to_new_level();
+ }
+
+} // end subroutine copy_old_FSI_to_new
 
 // called from: ns_header_msg_level,initData ()
 void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
