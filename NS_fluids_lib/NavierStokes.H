@@ -1267,7 +1267,7 @@ void apply_pressure_grad(
     static int CTML_FSI_matC(int im);
     static int FSI_material_exists();
     static int FSI_material_exists_presvel();
-    static int FSI_flag_valid(int im);
+    static int FSI_flag_valid(int im); // 0<=im<nmat
 
     void init_FSI_GHOST_MAC_MF_ALL_predict();
     void init_FSI_GHOST_MAC_MF_predict();
@@ -1291,6 +1291,11 @@ void apply_pressure_grad(
 
     void copy_velocity_on_sign(int partid);
     void Transfer_FSI_To_STATE(Real cur_time);
+
+    void copy_old_FSI_to_new_level();
+    void copy_old_FSI_to_new();
+    int ok_copy_FSI_old_to_new();
+
     void build_moment_from_FSILS();
 
     void ctml_fsi_transfer_force();
@@ -1531,6 +1536,7 @@ protected:
      // 7=fluid, tessellating (initial geometry: sci_clsvof.F90)
      // 8=FSI, non-tessellating link w/Kourosh, pres-vel coupling.
     static Vector<int>  FSI_flag; 
+    static int FSI_interval; //default=1
 
     static int         CTML_FSI_numsolids;
     static Vector<int> CTML_force_model; // 0=Lag force 2=presvel
