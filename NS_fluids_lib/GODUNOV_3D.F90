@@ -9291,11 +9291,8 @@ stop
          print *,"im_part invalid fort_build_moment"
          stop
         endif
-        if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid CAD
-            (FSI_flag(im_part).eq.4).or. & ! CTML FSI Goldstein et al
-            (FSI_flag(im_part).eq.8).or. & ! CTML FSI pres-vel
-            (FSI_flag(im_part).eq.6).or. & ! ice CAD
-            (FSI_flag(im_part).eq.7)) then ! fluid CAD
+
+        if (fort_read_from_CAD(FSI_flag(im_part)).eq.1) then
 
          if (is_lag_part(nmat,im_part).ne.1) then
           print *,"is_lag_part(nmat,im_part).ne.1"
@@ -9399,6 +9396,7 @@ stop
          do dir=1,SDIM
           snew(D_DECL(i,j,k),vofcomp+1+dir)=centroid(dir)-cencell(dir)
          enddo 
+
         else if (FSI_flag(im_part).eq.1) then ! prescribed solid EUL
          ! do nothing
         else
