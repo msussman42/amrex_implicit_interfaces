@@ -614,7 +614,7 @@ void NavierStokes::nonlinear_advection() {
   // in: nonlinear_advection
   // level set function, volume fractions, and centroids are
   // made "consistent" amongst the levels.
-  // in: NavierStokes2.cpp
+  // prescribe_solid_geometryALL is declared in: NavierStokes2.cpp
  renormalize_only=0;
  int local_truncate=1;
  int caller_id=4;

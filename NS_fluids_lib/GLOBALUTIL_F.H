@@ -29,6 +29,9 @@ extern "C"
     int* drag_comp,//0..NDRAG_IQ-1
     int* drag_im); //0..nmat-1
 
+   int fort_read_from_CAD(
+    int* fsi_flag_local);
+
    void fort_check_operation_flag_MAC(int* operation_flag);
 
 }

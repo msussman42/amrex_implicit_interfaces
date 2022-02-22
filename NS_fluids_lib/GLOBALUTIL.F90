@@ -13493,7 +13493,33 @@ end subroutine dynamic_contact_angle
 
       return
       end function is_lag_part
-      
+     
+      function fort_read_from_CAD(fsi_flag_local) &
+      bind(c,name='fort_read_from_CAD')
+      IMPLICIT NONE
+      INTEGER_T, intent(in) :: fsi_flag_local
+      INTEGER_T fort_read_from_CAD
+
+      fort_read_from_CAD=0
+      if ((fsi_flag_local.eq.2).or. & ! prescribed solid CAD
+          (fsi_flag_local.eq.4).or. & ! CTML FSI Goldstein et al
+          (fsi_flag_local.eq.8).or. & ! CTML FSI pres-vel
+          (fsi_flag_local.eq.6).or. & ! ice CAD
+          (fsi_flag_local.eq.7)) then ! fluid CAD
+       fort_read_from_CAD=1
+      else if ((fsi_flag_local.eq.0).or. & ! fluid
+               (fsi_flag_local.eq.1).or. & ! prescribed PROB.F90 rigid material
+               (fsi_flag_local.eq.3).or. & ! ice
+               (fsi_flag_local.eq.5)) then ! FSI rigid
+       ! do nothing
+      else
+       print *,"fsi_flag_local  invalid"
+       stop
+      endif
+
+      return
+      end function fort_read_from_CAD
+
        ! drag_comp>=0 and drag_comp<N_DRAG_IQ
        ! drag_im>=0 and drag_im<num_materials 
        ! drag_type>=0 and drag_type<DRAG_TYPE_IQ_NEXT

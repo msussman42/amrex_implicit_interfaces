@@ -6215,19 +6215,12 @@ int NavierStokes::read_from_CAD() {
  int nmat=num_materials;
  int local_read_from_CAD=0;
  for (int im=0;im<nmat;im++) {
-  if ((FSI_flag[im]==2)||   // prescribed sci_clsvof.F90 rigid material 
-      (FSI_flag[im]==4)||   // FSI CTML sci_clsvof.F90 material
-      (FSI_flag[im]==8)||   // FSI CTML pressure-vel sci_clsvof.F90 material
-      (FSI_flag[im]==6)||   // sci_clsvof.F90 ice
-      (FSI_flag[im]==7)) {  // sci_clsvof.F90 fluid
+  if (fort_read_from_CAD(&FSI_flag[im])==1) {
    local_read_from_CAD=1;
-  } else if ((FSI_flag[im]==0)|| // fluid
-             (FSI_flag[im]==1)|| // prescribed PROB.F90 rigid material
-	     (FSI_flag[im]==3)|| // ice
-	     (FSI_flag[im]==5)) {// FSI rigid
+  } else if (fort_read_from_CAD(&FSI_flag[im])==0) {
    // do nothing
   } else
-   amrex::Error("FSI_flag invalid");
+   amrex::Error("fort_read_from_CAD invalid");
  } // im=0..nmat-1
 
  return local_read_from_CAD;
@@ -7524,6 +7517,7 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
 
     // updates FSI_MF for FSI_flag(im)==1 type materials.
     // (prescribed solid from PROB.F90, not from CAD)
+    // fort_initdatasolid is declared in PROB.F90
    fort_initdatasolid(
      &nmat,
      &nparts,
@@ -7716,6 +7710,9 @@ void NavierStokes::build_moment_from_FSILS() {
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   //fort_build_moment is declared in GODUNOV_3D.F90
+   //only copies from FSI_MF to state data if
+   //fort_read_from_CAD(FSI_flag(im_part)).eq.1) 
   fort_build_moment(
     &level,
     &finest_level,
@@ -7793,7 +7790,7 @@ void NavierStokes::copy_old_FSI_to_new_level() {
    if ((FSI_flag[im_part]==4)|| //link w/Kourosh Shoele, Goldstein et al
        (FSI_flag[im_part]==8)) {//link w/Kourosh Shoele, standard coupling
     amrex::Error("must regenerate Eulerian data each step");
-   } else if ((FSI_flag[im_part]==2){//prescribed rigid solid (sci_clsvof.F90)
+   } else if (FSI_flag[im_part]==2){//prescribed rigid solid (sci_clsvof.F90)
     MultiFab::Copy(S_old,*vofmf,
       im_part*ngeom_raw,
       STATECOMP_MOF+im_part*ngeom_raw,
@@ -8957,7 +8954,9 @@ void NavierStokes::ns_header_msg_level(
      // (INTP_CORONA = 1) in UTIL_BOUNDARY_FORCE_FSI.F90
      if (ngrow_make_distance!=3)
       amrex::Error("ngrow_make_distance invalid");
-     getState_localMF(VELADVECT_MF,ngrow_make_distance,0,AMREX_SPACEDIM,cur_time); 
+     getState_localMF(VELADVECT_MF,ngrow_make_distance,
+		STATECOMP_VEL,STATE_NCOMP_VEL,
+		cur_time); 
 
       // in: NavierStokes::ns_header_msg_level
      create_fortran_grid_struct(cur_time,dt);
@@ -12646,8 +12645,9 @@ NavierStokes::prepare_displacement(int mac_grow) {
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
 
- getState_localMF(CELL_VELOCITY_MF,mac_grow,0,
-  AMREX_SPACEDIM,vel_time_slab);
+ getState_localMF(CELL_VELOCITY_MF,mac_grow,
+  STATECOMP_VEL,STATE_NCOMP_VEL,
+  vel_time_slab);
 
  for (int normdir=0;normdir<AMREX_SPACEDIM;normdir++) {
 
@@ -16832,7 +16832,8 @@ NavierStokes::split_scalar_advection() {
  getStateDist_localMF(LS_RECON_MF,1,advect_time_slab,10);
 
    // the pressure from before will be copied to the new pressure.
- getState_localMF(VELADVECT_MF,ngrow,STATECOMP_VEL,
+ getState_localMF(VELADVECT_MF,ngrow,
+  STATECOMP_VEL,
   STATE_NCOMP_VEL+STATE_NCOMP_PRES,
   advect_time_slab); 
 
@@ -25956,10 +25957,6 @@ NavierStokes::ctml_fsi_transfer_force() {
   amrex::Error("ngrow_make_distance invalid");
  int nFSI=nparts*NCOMP_FSI;
 
- debug_ngrow(FSI_MF,0,1);
- if (localMF[FSI_MF]->nComp()!=nFSI)
-  amrex::Error("localMF[FSI_MF]->nComp() invalid");
-
  for (int partid=0;partid<nparts;partid++) {
 
   int im_part=im_solid_map[partid];
@@ -25976,6 +25973,10 @@ NavierStokes::ctml_fsi_transfer_force() {
       amrex::Error("must regenerate Eulerian data each step");
 
      if (FSI_flag[im_part]==4) {
+
+      debug_ngrow(FSI_MF,0,1);
+      if (localMF[FSI_MF]->nComp()!=nFSI)
+       amrex::Error("localMF[FSI_MF]->nComp() invalid");
 
       if (CTML_force_model[im_part]==0) {
 
