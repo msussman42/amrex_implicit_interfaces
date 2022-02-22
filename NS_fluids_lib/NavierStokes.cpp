@@ -3035,11 +3035,19 @@ NavierStokes::read_params ()
     pp.queryarr("CTML_force_model",CTML_force_model,0,nmat);
     for (int i=0;i<nmat;i++) {
      if (FSI_flag[i]==4) {
+      if (FSI_interval==1) {
+       // do nothing
+      } else
+       amrex::Error("Eulerian data must be refenerated every step");
       if (CTML_force_model[i]==0) {
        // do nothing
       } else
        amrex::Error("CTML_force_model invalid");
      } else if (FSI_flag[i]==8) {
+      if (FSI_interval==1) {
+       // do nothing
+      } else
+       amrex::Error("Eulerian data must be refenerated every step");
       if (CTML_force_model[i]==2) {
        // do nothing
       } else
@@ -7741,16 +7749,16 @@ int NavierStokes::ok_copy_FSI_old_to_new() {
  if (level!=0)
   amrex::Error("level invalid ok_copy_FSI_old_to_new");
 
- int local_flag=0;
- if (FSI_interval==1) {
-  local_flag=1;
- } else if (parent->levelSteps(0)==0) {
-  local_flag=1;
- } else if (FSI_interval==0) {
+ int local_flag=1;
+ if (FSI_interval==1) { //regenerate Eulerian data every time step.
+  local_flag=0; 
+ } else if (parent->levelSteps(0)==0) { //always regenerate at t=0
+  local_flag=0;
+ } else if (FSI_interval==0) { //never regenerate t>0
   // do nothing
- } else if (FSI_interval>=2) {
+ } else if (FSI_interval>=2) { //regenerate every FSI_interval steps.
   if (parent->levelSteps(0) % FSI_interval == 0)
-   local_flag=1;
+   local_flag=0;
  } else
   amrex::Error("FSI_interval invalid");
 
@@ -7782,9 +7790,10 @@ void NavierStokes::copy_old_FSI_to_new_level() {
  for (int partid=0;partid<nparts;partid++) {
   int im_part=im_solid_map[partid];
   if ((im_part>=0)&&(im_part<num_materials)) {
-   if ((FSI_flag[im_part]==2)|| //prescribed rigid solid (sci_clsvof.F90)
-       (FSI_flag[im_part]==4)|| //link w/Kourosh Shoele, Goldstein et al
+   if ((FSI_flag[im_part]==4)|| //link w/Kourosh Shoele, Goldstein et al
        (FSI_flag[im_part]==8)) {//link w/Kourosh Shoele, standard coupling
+    amrex::Error("must regenerate Eulerian data each step");
+   } else if ((FSI_flag[im_part]==2){//prescribed rigid solid (sci_clsvof.F90)
     MultiFab::Copy(S_old,*vofmf,
       im_part*ngeom_raw,
       STATECOMP_MOF+im_part*ngeom_raw,
@@ -25960,6 +25969,11 @@ NavierStokes::ctml_fsi_transfer_force() {
    if (ns_is_rigid(im_part)==1) {
 
     if (CTML_FSI_matC(im_part)==1) {
+
+     if (FSI_interval==1) {
+      // do nothing
+     } else
+      amrex::Error("must regenerate Eulerian data each step");
 
      if (FSI_flag[im_part]==4) {
 
