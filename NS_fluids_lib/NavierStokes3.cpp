@@ -592,8 +592,6 @@ void NavierStokes::nonlinear_advection() {
   ns_level.resize_FSI_MF();
  }
 
-
-
  if (1==0) {
     // S_new is level 0 data
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
