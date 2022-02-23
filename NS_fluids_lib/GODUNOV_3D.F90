@@ -9161,6 +9161,7 @@ stop
       end subroutine fort_copy_vel_on_sign
 
       subroutine fort_build_moment( &
+       cur_time, &
        level, &
        finest_level, &
        nFSI, &
@@ -9182,6 +9183,7 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
+      REAL_T, intent(in) :: cur_time
       INTEGER_T, intent(in) :: level 
       INTEGER_T, intent(in) :: finest_level 
       INTEGER_T, intent(in) :: nFSI
@@ -9223,6 +9225,7 @@ stop
       REAL_T LS_center,mag,delta
       REAL_T nrm(SDIM)
       INTEGER_T vofcomp
+      INTEGER_T ok_to_modify_EUL
 
       nhalf=3
 
@@ -9256,6 +9259,12 @@ stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid 33"
+       stop
+      endif
+      if (cur_time.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time invalid"
        stop
       endif
 
@@ -9299,103 +9308,132 @@ stop
           stop
          endif
 
-         ibase=(partid-1)*NCOMP_FSI
-         do i1=-1,1
-         do j1=-1,1
-         do k1=k1lo,k1hi
-          ldata(D_DECL(i1+2,j1+2,k1+2))= &
-            fsi(D_DECL(i+i1,j+j1,k+k1),ibase+FSI_LEVELSET+1)
-         enddo 
-         enddo 
-         enddo  ! i1,j1,k1=-1..1
-
-         mag=zero
-         do dir=1,SDIM
-          i1=0
-          j1=0
-          k1=0
-          if (dir.eq.1) then
-           i1=1
-          else if (dir.eq.2) then
-           j1=1
-          else if ((dir.eq.3).and.(SDIM.eq.3)) then
-           k1=1
+         ok_to_modify_EUL=1
+         if ((FSI_flag(im_part).eq.6).or. & ! FSI ice, tessellating
+             (FSI_flag(im_part).eq.7)) then ! fluid, tessellating
+          if (cur_time.eq.zero) then
+           ok_to_modify_EUL=1
+          else if (cur_time.gt.zero) then
+           ok_to_modify_EUL=0
           else
-           print *,"dir invalid"
+           print *,"cur_time invalid"
            stop
           endif
-          delta=xsten(2,dir)-xsten(-2,dir)
-          if (delta.le.zero) then
-           print *,"delta invalid delta=",delta
-           print *,"dir=",dir
-           print *,"xsten(2,dir)=",xsten(2,dir)
-           print *,"xsten(-2,dir)=",xsten(-2,dir)
-           print *,"i,j,k ",i,j,k
-           print *,"xlo=",xlo(1),xlo(2),xlo(SDIM)
-           print *,"fablo=",fablo(1),fablo(2),fablo(SDIM)
-           print *,"bfact=",bfact
-           print *,"nhalf=",nhalf
-           print *,"dx=",dx(1),dx(2),dx(SDIM)
-           stop
-          endif
-          nrm(dir)=(ldata(D_DECL(2+i1,2+j1,2+k1))- &
-                    ldata(D_DECL(2-i1,2-j1,2-k1)))/delta
-          mag=mag+nrm(dir)**2
-         enddo ! dir=1..sdim
-         mag=sqrt(mag)
-         if (mag.eq.zero) then
-          nrm(1)=one
-         else if (mag.gt.zero) then
-          do dir=1,SDIM
-           nrm(dir)=nrm(dir)/mag
-          enddo
+         else if ((FSI_flag(im_part).eq.2).or. &!prescribed rigid solid,nontess
+                  (FSI_flag(im_part).eq.8).or. &!FSI CTML pres-vel sci_clsvof
+                  (FSI_flag(im_part).eq.4)) then!FSI CTML Goldstein et al
+          ok_to_modify_EUL=1
          else
-          print *,"mag invalid 6"
+          print *,"FSI_flag invalid"
           stop
          endif
 
-         do dir=1,SDIM
-          lsnew(D_DECL(i,j,k),nmat+(im_part-1)*SDIM+dir)=nrm(dir)
-         enddo
- 
-         LS_center=fsi(D_DECL(i,j,k),ibase+FSI_LEVELSET+1)
+         if (ok_to_modify_EUL.eq.1) then
 
-         call getvolume( &
-          bfact,dx,xsten,nhalf, &
-          ldata,volume_frac,facearea, &
-          centroid,areacentroid,VOFTOL,SDIM)
-         call CISBOX(xsten,nhalf, &
-          xlo,dx,i,j,k, &
-          bfact,level, &
-          volcell,cencell,SDIM)
-         vofcomp=STATECOMP_MOF+(im_part-1)*ngeom_raw
+          ibase=(partid-1)*NCOMP_FSI
+          do i1=-1,1
+          do j1=-1,1
+          do k1=k1lo,k1hi
+           ldata(D_DECL(i1+2,j1+2,k1+2))= &
+             fsi(D_DECL(i+i1,j+j1,k+k1),ibase+FSI_LEVELSET+1)
+          enddo 
+          enddo 
+          enddo  ! i1,j1,k1=-1..1
 
-         if (volume_frac.lt.zero) then
-          print *,"volume_frac.lt.zero"
-          stop
-         else if (volume_frac.le.VOFTOL) then
-          if (LS_center.ge.-VOFTOL*dx(1)) then
-           volume_frac=VOFTOL_SLOPES
+          mag=zero
+          do dir=1,SDIM
+           i1=0
+           j1=0
+           k1=0
+           if (dir.eq.1) then
+            i1=1
+           else if (dir.eq.2) then
+            j1=1
+           else if ((dir.eq.3).and.(SDIM.eq.3)) then
+            k1=1
+           else
+            print *,"dir invalid"
+            stop
+           endif
+           delta=xsten(2,dir)-xsten(-2,dir)
+           if (delta.le.zero) then
+            print *,"delta invalid delta=",delta
+            print *,"dir=",dir
+            print *,"xsten(2,dir)=",xsten(2,dir)
+            print *,"xsten(-2,dir)=",xsten(-2,dir)
+            print *,"i,j,k ",i,j,k
+            print *,"xlo=",xlo(1),xlo(2),xlo(SDIM)
+            print *,"fablo=",fablo(1),fablo(2),fablo(SDIM)
+            print *,"bfact=",bfact
+            print *,"nhalf=",nhalf
+            print *,"dx=",dx(1),dx(2),dx(SDIM)
+            stop
+           endif
+           nrm(dir)=(ldata(D_DECL(2+i1,2+j1,2+k1))- &
+                     ldata(D_DECL(2-i1,2-j1,2-k1)))/delta
+           mag=mag+nrm(dir)**2
+          enddo ! dir=1..sdim
+          mag=sqrt(mag)
+          if (mag.eq.zero) then
+           nrm(1)=one
+          else if (mag.gt.zero) then
+           do dir=1,SDIM
+            nrm(dir)=nrm(dir)/mag
+           enddo
+          else
+           print *,"mag invalid 6"
+           stop
           endif
-         else if (volume_frac.gt.one) then
-          print *,"volume_frac.gt.one"
-          stop
-         else if (volume_frac.ge.one-VOFTOL) then
-          if (LS_center.le.VOFTOL*dx(1)) then
-           volume_frac=one-VOFTOL_SLOPES
+
+          do dir=1,SDIM
+           lsnew(D_DECL(i,j,k),nmat+(im_part-1)*SDIM+dir)=nrm(dir)
+          enddo
+  
+          LS_center=fsi(D_DECL(i,j,k),ibase+FSI_LEVELSET+1)
+
+          call getvolume( &
+           bfact,dx,xsten,nhalf, &
+           ldata,volume_frac,facearea, &
+           centroid,areacentroid,VOFTOL,SDIM)
+          call CISBOX(xsten,nhalf, &
+           xlo,dx,i,j,k, &
+           bfact,level, &
+           volcell,cencell,SDIM)
+          vofcomp=STATECOMP_MOF+(im_part-1)*ngeom_raw
+
+          if (volume_frac.lt.zero) then
+           print *,"volume_frac.lt.zero"
+           stop
+          else if (volume_frac.le.VOFTOL) then
+           if (LS_center.ge.-VOFTOL*dx(1)) then
+            volume_frac=VOFTOL_SLOPES
+           endif
+          else if (volume_frac.gt.one) then
+           print *,"volume_frac.gt.one"
+           stop
+          else if (volume_frac.ge.one-VOFTOL) then
+           if (LS_center.le.VOFTOL*dx(1)) then
+            volume_frac=one-VOFTOL_SLOPES
+           endif
+          else if ((volume_frac.ge.VOFTOL).and. &
+                   (volume_frac.le.one-VOFTOL)) then
+           ! do nothing
+          else
+           print *,"volume_frac invalid"
+           stop
           endif
-         else if ((volume_frac.ge.VOFTOL).and. &
-                  (volume_frac.le.one-VOFTOL)) then
+  
+          snew(D_DECL(i,j,k),vofcomp+1)=volume_frac 
+          do dir=1,SDIM
+           snew(D_DECL(i,j,k),vofcomp+1+dir)=centroid(dir)-cencell(dir)
+          enddo 
+
+         else if (ok_to_modify_EUL.eq.0) then
           ! do nothing
          else
-          print *,"volume_frac invalid"
+          print *,"ok_to_modify_EUL invalid"
           stop
          endif
- 
-         snew(D_DECL(i,j,k),vofcomp+1)=volume_frac 
-         do dir=1,SDIM
-          snew(D_DECL(i,j,k),vofcomp+1+dir)=centroid(dir)-cencell(dir)
-         enddo 
 
         else if (FSI_flag(im_part).eq.1) then ! prescribed solid EUL
          ! do nothing

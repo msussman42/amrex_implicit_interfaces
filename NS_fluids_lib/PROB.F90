@@ -25104,7 +25104,6 @@ end subroutine initialize2d
       subroutine fort_initdatasolid( &
        nmat, &
        nparts, &
-       nFSI, &
        ngrow_make_distance_in, &
        im_solid_map, &
        time, &
@@ -25112,6 +25111,8 @@ end subroutine initialize2d
        fablo,fabhi, &
        bfact, &
        solid,DIMS(solid), &
+       LS,DIMS(LS), &
+       SNEW,DIMS(SNEW), &
        dx,xlo,xhi) &
       bind(c,name='fort_initdatasolid')
 
@@ -25122,7 +25123,6 @@ end subroutine initialize2d
 
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: nFSI
       INTEGER_T, intent(in) :: ngrow_make_distance_in
       INTEGER_T, intent(in) :: im_solid_map(nparts)
       REAL_T, intent(in) :: time
@@ -25131,11 +25131,17 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: bfact
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: DIMDEC(solid)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
+      INTEGER_T, intent(in) :: DIMDEC(SNEW)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xlo(SDIM), xhi(SDIM)
 
-      REAL_T, intent(out), target :: solid(DIMV(solid),nFSI)
+      REAL_T, intent(out), target :: solid(DIMV(solid),nparts*SDIM)
       REAL_T, pointer :: solid_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: LS(DIMV(LS),num_materials*(1+SDIM))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: SNEW(DIMV(SNEW),STATE_NCOMP)
+      REAL_T, pointer :: SNEW_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k,dir
       REAL_T distsolid
@@ -25145,9 +25151,10 @@ end subroutine initialize2d
       INTEGER_T im
       INTEGER_T nhalf
       INTEGER_T partid
-      INTEGER_T ibase
 
       solid_ptr=>solid
+      LS_ptr=>LS
+      SNEW_ptr=>SNEW
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -25155,10 +25162,6 @@ end subroutine initialize2d
       endif
       if ((nparts.lt.1).or.(nparts.ge.nmat)) then
        print *,"nparts invalid"
-       stop
-      endif
-      if (nFSI.ne.nparts*NCOMP_FSI) then
-       print *,"nFSI.ne.nparts*NCOMP_FSI"
        stop
       endif
       if (ngrow_make_distance.ne.3) then
@@ -25188,14 +25191,15 @@ end subroutine initialize2d
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,solid_ptr,ngrow_make_distance,-1,1301)
+      call checkbound_array(fablo,fabhi,solid_ptr,1,-1,1301)
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1301)
+      call checkbound_array(fablo,fabhi,SNEW_ptr,1,-1,1301)
 
       if ((adv_dir.lt.1).or.(adv_dir.gt.2*SDIM+1)) then
        print *,"adv_dir invalid initdatasolid (10)"
        stop
       endif
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi, &
-              ngrow_make_distance) 
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -25211,8 +25215,6 @@ end subroutine initialize2d
          stop
         endif
 
-        ibase=(partid-1)*NCOMP_FSI
-
         if (is_lag_part(nmat,im).eq.1) then
 
          if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
@@ -25221,10 +25223,10 @@ end subroutine initialize2d
           call velsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM),vel,time,im,dx)
           call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
            temp_solid_mat,time,im)
-          solid(D_DECL(i,j,k),ibase+FSI_LEVELSET+1)=distsolid
-          solid(D_DECL(i,j,k),ibase+FSI_TEMPERATURE+1)=temp_solid_mat
+! LSnew,Snew (MOF data) modified in fort_renormalize_prescribe
+!          LS(D_DECL(i,j,k),im)=distsolid
           do dir=1,SDIM
-           solid(D_DECL(i,j,k),ibase+FSI_VELOCITY+dir)=vel(dir)
+           solid(D_DECL(i,j,k),(partid-1)*SDIM+dir)=vel(dir)
           enddo
          else if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
                   (FSI_flag(im).eq.4).or. & ! CTML FSI Goldstein et al
@@ -27454,12 +27456,23 @@ end subroutine initialize2d
           print *,"im,vofdark ",im,vofdark(im)
           print *,"im,distbatch ",im,distbatch(im)
          enddo
-         call materialdistsolid(x,y,z,distsolid,time,im_solid_initdata)
-         if ((FSI_flag(im_solid_initdata).eq.2).or. & ! prescribed solid (CAD)
-             (FSI_flag(im_solid_initdata).eq.8).or. & ! CTML FSI pres vel
-             (FSI_flag(im_solid_initdata).eq.4)) then ! CTML FSI Goldstein
-          distsolid=LS(D_DECL(ic,jc,kc),im_solid_initdata)
+         if ((im_solid_initdata.ge.1).and.(im_solid_initdata.le.nmat)) then
+          call materialdistsolid(x,y,z,distsolid,time,im_solid_initdata)
+          if ((FSI_flag(im_solid_initdata).eq.2).or. &!prescribed solid (CAD)
+              (FSI_flag(im_solid_initdata).eq.8).or. &!CTML FSI pres vel
+              (FSI_flag(im_solid_initdata).eq.4)) then!CTML FSI Goldstein
+           distsolid=LS(D_DECL(ic,jc,kc),im_solid_initdata)
+          else if (FSI_flag(im_solid_initdata).eq.1) then!prescribed solid(EUL)
+           ! do nothing
+          else
+           print *,"FSI_flag invalid"
+           stop
+          endif
+         else
+          print *,"im_solid_initdata invalid"
+          stop
          endif
+
          print *,"result of materialdistsolid: distsolid=",distsolid
 
          print *,"adjusting the volume fraction of the 1st material"

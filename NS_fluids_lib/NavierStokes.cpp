@@ -7413,7 +7413,85 @@ void NavierStokes::resize_FSI_MF() {
 
 } // end subroutine resize_FSI_MF
 
+void NavierStokes::regenerate_from_eulerian(Real cur_time) {
 
+ bool use_tiling=ns_tiling;
+
+ const Real* dx = geom.CellSize();
+
+ int nparts=im_solid_map.size();
+ int nmat=num_materials;
+
+ if ((nparts>=1)&&(nparts<=nmat)) {
+
+  MultiFab& Solid_new = get_new_data(Solid_State_Type,slab_step+1);
+  if (Solid_new.nComp()!=nparts*AMREX_SPACEDIM)
+   amrex::Error("Solid_new.nComp()!=nparts*AMREX_SPACEDIM");
+  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+  if (S_new.nComp()!=STATE_NCOMP)
+   amrex::Error("S_new.nComp()!=STATE_NCOMP");
+  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
+  if (LS_new.nComp()!=nmat*(1+AMREX_SPACEDIM))
+   amrex::Error("LS_new.nComp()!=nmat*(1+AMREX_SPACEDIM)");
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(Solid_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(Solid_new,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+   const Real* xlo = grid_loc[gridno].lo();
+   const Real* xhi = grid_loc[gridno].hi();
+
+   int tid_current=ns_thread();
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   FArrayBox& snewfab=S_new[mfi];
+   FArrayBox& lsnewfab=LS_new[mfi];
+   FArrayBox& solidfab=Solid_new[mfi];
+
+    // updates Solid_new for FSI_flag(im)==1 type materials.
+    // (prescribed solid from PROB.F90, not from CAD)
+    // fort_initdatasolid is declared in PROB.F90
+   fort_initdatasolid(
+     &nmat,
+     &nparts,
+     &ngrow_make_distance,
+     im_solid_map.dataPtr(),
+     &cur_time,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     solidfab.dataPtr(),
+     ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),
+     lsnewfab.dataPtr(),
+     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+     snewfab.dataPtr(),
+     ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+     dx,xlo,xhi);  
+
+  } // mfi
+} // omp
+  ns_reconcile_d_num(46);
+
+ } else if (nparts==0) {
+  // do nothing
+ } else
+  amrex::Error("nparts invalid");
+
+} // end subroutine regenerate_from_eulerian(cur_time)
 
 // create a distance function (velocity and temperature) on this level.
 // calls fill coarse patch if level>0
@@ -7421,6 +7499,11 @@ void NavierStokes::resize_FSI_MF() {
 //              NavierStokes::nonlinear_advection()
 // cur_time=prev_time+dt
 void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
+
+ if (read_from_CAD()==1) {
+  // do nothing
+ } else
+  amrex::Error("expecting read_from_CAD()==1");
 
  int nmat=num_materials;
  int nparts=im_solid_map.size();
@@ -7447,103 +7530,83 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
    setVal_localMF(FSI_MF,0.0,ibase+FSI_STRESS,6,ngrow_make_distance);
   } // partid=0..nparts-1
 
-  if (read_from_CAD()==1) {
 
-    // in: NavierStokes::FSI_make_distance
-    // 1. create lagrangian container data structure within the 
-    //    fortran part that recognizes tiles. 
-    //    (fort_fillcontainer in SOLIDFLUID.F90)
-    // 2. fill the containers with the Lagrangian information.
-    //    (CLSVOF_FILLCONTAINER called from fort_fillcontainer)
-    //    i.e. associate to each tile a set of Lagrangian nodes and elements
-    //    that are located in or very near the tile.
-   create_fortran_grid_struct(cur_time,dt);
+   // in: NavierStokes::FSI_make_distance
+   // 1. create lagrangian container data structure within the 
+   //    fortran part that recognizes tiles. 
+   //    (fort_fillcontainer in SOLIDFLUID.F90)
+   // 2. fill the containers with the Lagrangian information.
+   //    (CLSVOF_FILLCONTAINER called from fort_fillcontainer)
+   //    i.e. associate to each tile a set of Lagrangian nodes and elements
+   //    that are located in or very near the tile.
+  create_fortran_grid_struct(cur_time,dt);
 
-   int iter=0; // touch_flag=0
-   int FSI_operation=2;  // make distance in narrow band
-   int FSI_sub_operation=0;
-   resize_mask_nbr(ngrow_make_distance);
-    // in: FSI_make_distance
-    // 1.FillCoarsePatch
-    // 2.traverse lagrangian elements belonging to each tile and update
-    //   cells within "bounding box" of the element.
+  int iter=0; // touch_flag=0
+  int FSI_operation=2;  // make distance in narrow band
+  int FSI_sub_operation=0;
+  resize_mask_nbr(ngrow_make_distance);
+   // in: FSI_make_distance
+   // 1.FillCoarsePatch
+   // 2.traverse lagrangian elements belonging to each tile and update
+   //   cells within "bounding box" of the element.
+  ns_header_msg_level(FSI_operation,FSI_sub_operation,cur_time,dt,iter);
+  
+  do {
+ 
+   FSI_operation=3; // sign update   
+   FSI_sub_operation=0;
    ns_header_msg_level(FSI_operation,FSI_sub_operation,cur_time,dt,iter);
+   iter++;
   
-   do {
- 
-    FSI_operation=3; // sign update   
-    FSI_sub_operation=0;
-    ns_header_msg_level(FSI_operation,FSI_sub_operation,cur_time,dt,iter);
-    iter++;
-  
-   } while (FSI_touch_flag[0]==1);
+  } while (FSI_touch_flag[0]==1);
 
-   build_moment_from_FSILS();
-
-  } else if (read_from_CAD()==0) {
-   // do nothing
-  } else
-   amrex::Error("read_from_CAD invalid");
- 
-  bool use_tiling=ns_tiling;
-
-  const Real* dx = geom.CellSize();
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(localMF[FSI_MF]->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-  for (MFIter mfi(*localMF[FSI_MF],use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
-   const Real* xlo = grid_loc[gridno].lo();
-   const Real* xhi = grid_loc[gridno].hi();
-
-   FArrayBox& solidfab=(*localMF[FSI_MF])[mfi];
-
-   int tid_current=ns_thread();
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-    // updates FSI_MF for FSI_flag(im)==1 type materials.
-    // (prescribed solid from PROB.F90, not from CAD)
-    // fort_initdatasolid is declared in PROB.F90
-   fort_initdatasolid(
-     &nmat,
-     &nparts,
-     &nFSI,
-     &ngrow_make_distance,
-     im_solid_map.dataPtr(),
-     &cur_time,
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact,
-     solidfab.dataPtr(),
-     ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),
-     dx,xlo,xhi);  
-  } // mfi
-} // omp
-  ns_reconcile_d_num(46);
+  build_moment_from_FSILS(cur_time);
 
    // Solid velocity
   MultiFab& Solid_new = get_new_data(Solid_State_Type,slab_step+1);
   if (Solid_new.nComp()!=nparts*AMREX_SPACEDIM)
    amrex::Error("Solid_new.nComp()!=nparts*AMREX_SPACEDIM");
+
   for (int partid=0;partid<nparts;partid++) {
-   int ibase=partid*NCOMP_FSI;
-   MultiFab::Copy(Solid_new,*localMF[FSI_MF],ibase+FSI_VELOCITY,
-     partid*AMREX_SPACEDIM,
-     AMREX_SPACEDIM,0);
+
+   int im_part=im_solid_map[partid];
+   if ((im_part<0)||(im_part>=nmat))
+    amrex::Error("im_part invalid");
+
+   int ok_to_modify_EUL=1;
+   if ((FSI_flag[im_part]==6)||  //initial ice from CAD file
+       (FSI_flag[im_part]==7)) { //initial fluid from CAD file.
+    if (cur_time==0.0) {
+     ok_to_modify_EUL=1;
+    } else if (cur_time>0.0) {
+     ok_to_modify_EUL=0;
+    } else
+     amrex::Error("cur_time invalid");
+   } else if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid sol.
+              (FSI_flag[im_part]==4)|| //FSI CTML sci_clsvof.F90 Goldstein..
+              (FSI_flag[im_part]==8)) {//FSI CTML sci_clsvof.F90 pres-vel
+    ok_to_modify_EUL=1;
+    // do nothing
+   } else
+    amrex::Error("FSI_flag invalid");
+
+   if (ok_to_modify_EUL==1) {
+
+    if (fort_read_from_CAD(&FSI_flag[im_part])==1) { 
+     int ibase=partid*NCOMP_FSI;
+     MultiFab::Copy(Solid_new,*localMF[FSI_MF],ibase+FSI_VELOCITY,
+      partid*AMREX_SPACEDIM,
+      AMREX_SPACEDIM,0);
+    } else if (FSI_flag[im_part]==1) { // prescribed solid EUL
+     // do nothing
+    } else
+     amrex::Error("FSI_flag invalid");
+
+   } else if (ok_to_modify_EUL==0) {
+    // do nothing
+   } else
+    amrex::Error("ok_to_modify_EUL invalid");
+
   } // partid=0..nparts-1
 
  } else {
@@ -7568,88 +7631,93 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
  if ((im_part<0)||(im_part>=nmat))
   amrex::Error("im_part invalid");
 
- if ((FSI_flag[im_part]==2)|| // prescribed solid CAD
-     (FSI_flag[im_part]==6)|| // ice CAD
-     (FSI_flag[im_part]==8)|| // CTML FSI pres-vel coupling
-     (FSI_flag[im_part]==7)) {// fluid CAD
+ if (fort_read_from_CAD(&FSI_flag[im_part])==1) { 
 
-  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
-  int nstate=STATE_NCOMP;
-  if (nstate!=S_new.nComp())
-   amrex::Error("nstate invalid");
+  if ((FSI_flag[im_part]==2)|| // prescribed solid CAD
+      (FSI_flag[im_part]==6)|| // ice CAD
+      (FSI_flag[im_part]==8)|| // CTML FSI pres-vel coupling
+      (FSI_flag[im_part]==7)) {// fluid CAD
 
-  int nFSI=nparts*NCOMP_FSI;
-  if (localMF[FSI_MF]->nComp()!=nFSI)
-   amrex::Error("localMF[FSI_MF]->nComp()!=nFSI");
+   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+   int nstate=STATE_NCOMP;
+   if (nstate!=S_new.nComp())
+    amrex::Error("nstate invalid");
+
+   int nFSI=nparts*NCOMP_FSI;
+   if (localMF[FSI_MF]->nComp()!=nFSI)
+    amrex::Error("localMF[FSI_MF]->nComp()!=nFSI");
   
-  bool use_tiling=ns_tiling;
+   bool use_tiling=ns_tiling;
 
-  if (ns_is_rigid(im_part)==1) {
+   if (ns_is_rigid(im_part)==1) {
 
-   const Real* dx = geom.CellSize();
+    const Real* dx = geom.CellSize();
 
-   if (thread_class::nthreads<1)
-    amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+    if (thread_class::nthreads<1)
+     amrex::Error("thread_class::nthreads invalid");
+    thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-    const int gridno = mfi.index();
-    const Box& tilegrid = mfi.tilebox();
-    const Box& fabgrid = grids[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
-    int bfact=parent->Space_blockingFactor(level);
+    for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+     const int gridno = mfi.index();
+     const Box& tilegrid = mfi.tilebox();
+     const Box& fabgrid = grids[gridno];
+     const int* tilelo=tilegrid.loVect();
+     const int* tilehi=tilegrid.hiVect();
+     const int* fablo=fabgrid.loVect();
+     const int* fabhi=fabgrid.hiVect();
+     int bfact=parent->Space_blockingFactor(level);
 
-    const Real* xlo = grid_loc[gridno].lo();
+     const Real* xlo = grid_loc[gridno].lo();
 
-    FArrayBox& snewfab=S_new[mfi];
-    FArrayBox& fsifab=(*localMF[FSI_MF])[mfi];
+     FArrayBox& snewfab=S_new[mfi];
+     FArrayBox& fsifab=(*localMF[FSI_MF])[mfi];
 
-    int tid_current=ns_thread();
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+     int tid_current=ns_thread();
+     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      // declared in: GODUNOV_3D.F90
      // copies velocity from fsifab to snewfab if fsifab_LS>0
-    fort_copy_vel_on_sign(
-     &im_part, 
-     &nparts,
-     &partid, 
-     &ngrow_make_distance, 
-     &nFSI, 
-     xlo,dx,
-     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-     fsifab.dataPtr(),ARLIM(fsifab.loVect()),ARLIM(fsifab.hiVect()),
-     tilelo,tilehi,
-     fablo,fabhi,&bfact,
-     &nmat,&nstate);
-   }  // mfi  
+     fort_copy_vel_on_sign(
+      &im_part, 
+      &nparts,
+      &partid, 
+      &ngrow_make_distance, 
+      &nFSI, 
+      xlo,dx,
+      snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+      fsifab.dataPtr(),ARLIM(fsifab.loVect()),ARLIM(fsifab.hiVect()),
+      tilelo,tilehi,
+      fablo,fabhi,&bfact,
+      &nmat,&nstate);
+    }  // mfi  
 }//omp
-   ns_reconcile_d_num(47);
+    ns_reconcile_d_num(47);
 
-  } else if (ns_is_rigid(im_part)==0) {
+   } else if (ns_is_rigid(im_part)==0) {
 
-   // do nothing
+    // do nothing
    
-  } else {
-   amrex::Error("ns_is_rigid invalid");
-  }
+   } else {
+    amrex::Error("ns_is_rigid invalid");
+   }
 
- } else if (FSI_flag[im_part]==4) { // FSI CTML material Goldstein et al
-  // do nothing (CTML)
+  } else if (FSI_flag[im_part]==4) { // FSI CTML material Goldstein et al
+   // do nothing (CTML)
+  } else
+   amrex::Error("FSI_flag[im_part] invalid");
+
  } else
   amrex::Error("FSI_flag[im_part] invalid");
 
 } // subroutine copy_velocity_on_sign
 
 // called from: FSI_make_distance, initData ()
-void NavierStokes::build_moment_from_FSILS() {
+void NavierStokes::build_moment_from_FSILS(Real cur_time) {
 
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
@@ -7659,6 +7727,11 @@ void NavierStokes::build_moment_from_FSILS() {
 
  if (read_from_CAD()!=1)
   amrex::Error("read_from_CAD invalid");
+
+ if (cur_time>=0.0) {
+  // do nothing
+ } else
+  amrex::Error("cur_time invalid");
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
@@ -7714,6 +7787,7 @@ void NavierStokes::build_moment_from_FSILS() {
    //only copies from FSI_MF to state data if
    //fort_read_from_CAD(FSI_flag(im_part)).eq.1) 
   fort_build_moment(
+    &cur_time,
     &level,
     &finest_level,
     &nFSI, 
@@ -7859,103 +7933,97 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
  if ((nparts<0)||(nparts>nmat))
   amrex::Error("nparts invalid");
 
-  //(FSI_flag[im]==2) prescribed sci_clsvof.F90 rigid material 
-  //(FSI_flag[im]==4) FSI CTML sci_clsvof.F90 material
-  //(FSI_flag[im]==8) FSI CTML pressure-vel sci_clsvof.F90 material
-  //(FSI_flag[im]==6) sci_clsvof.F90 ice
-  //(FSI_flag[im]==7) sci_clsvof.F90 fluid
+ //(FSI_flag[im]==2) prescribed sci_clsvof.F90 rigid material 
+ //(FSI_flag[im]==4) FSI CTML sci_clsvof.F90 material
+ //(FSI_flag[im]==8) FSI CTML pressure-vel sci_clsvof.F90 material
+ //(FSI_flag[im]==6) sci_clsvof.F90 ice
+ //(FSI_flag[im]==7) sci_clsvof.F90 fluid
  if (read_from_CAD()==1) {
+  // do nothing
+ } else
+  amrex::Error("expecting read_from_CAD()==1");
 
-  if ((nparts<1)||(nparts>nmat))
-   amrex::Error("nparts invalid");
-  debug_ngrow(FSI_MF,ngrow_make_distance,1);
+ if ((nparts<1)||(nparts>nmat))
+  amrex::Error("nparts invalid");
+ debug_ngrow(FSI_MF,ngrow_make_distance,1);
 
-  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
-  int nstate=STATE_NCOMP;
-  if (nstate!=S_new.nComp())
-   amrex::Error("nstate invalid");
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ int nstate=STATE_NCOMP;
+ if (nstate!=S_new.nComp())
+  amrex::Error("nstate invalid");
 
-  MultiFab& Solid_new = get_new_data(Solid_State_Type,slab_step+1);
-  if (Solid_new.nComp()!=nparts*AMREX_SPACEDIM)
-   amrex::Error("Solid_new.nComp()!=nparts*AMREX_SPACEDIM");
+ MultiFab& Solid_new = get_new_data(Solid_State_Type,slab_step+1);
+ if (Solid_new.nComp()!=nparts*AMREX_SPACEDIM)
+  amrex::Error("Solid_new.nComp()!=nparts*AMREX_SPACEDIM");
 
-  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
-  if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
-   amrex::Error("LS_new invalid ncomp");
-  int nFSI=nparts*NCOMP_FSI;
-  if (localMF[FSI_MF]->nComp()!=nFSI)
-   amrex::Error("localMF[FSI_MF]->nComp()!=nFSI");
+ MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
+ if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
+  amrex::Error("LS_new invalid ncomp");
+ int nFSI=nparts*NCOMP_FSI;
+ if (localMF[FSI_MF]->nComp()!=nFSI)
+  amrex::Error("localMF[FSI_MF]->nComp()!=nFSI");
 
-  for (int partid=0;partid<nparts;partid++) {
+ for (int partid=0;partid<nparts;partid++) {
 
-   int im_part=im_solid_map[partid];
-   if ((im_part<0)||(im_part>=nmat))
-    amrex::Error("im_part invalid");
+  int im_part=im_solid_map[partid];
+  if ((im_part<0)||(im_part>=nmat))
+   amrex::Error("im_part invalid");
 
-   if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid solid 
-       (FSI_flag[im_part]==4)|| //FSI CTML sci_clsvof.F90 solid
-       (FSI_flag[im_part]==8)|| //FSI CTML pres-vel sci_clsvof.F90 solid
-       (FSI_flag[im_part]==6)|| //initial ice from CAD file
-       (FSI_flag[im_part]==7)) {//initial fluid from CAD file 
+  if (fort_read_from_CAD(&FSI_flag[im_part])==1) { 
 
-    int ibase=partid*NCOMP_FSI;
+   int ibase=partid*NCOMP_FSI;
 
-    int ok_to_modify_EUL=1;
-    if ((FSI_flag[im_part]==6)||  //initial ice from CAD file
-        (FSI_flag[im_part]==7)) { //initial fluid from CAD file.
-     if (cur_time==0.0) {
-      ok_to_modify_EUL=1;
-     } else if (cur_time>0.0) {
-      ok_to_modify_EUL=0;
-     } else
-      amrex::Error("cur_time invalid");
-    } else if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid sol.
-               (FSI_flag[im_part]==4)|| //FSI CTML sci_clsvof.F90 Goldstein..
-	       (FSI_flag[im_part]==8)) {//FSI CTML sci_clsvof.F90 pres-vel
+   int ok_to_modify_EUL=1;
+   if ((FSI_flag[im_part]==6)||  //initial ice from CAD file
+       (FSI_flag[im_part]==7)) { //initial fluid from CAD file.
+    if (cur_time==0.0) {
      ok_to_modify_EUL=1;
-     // do nothing
+    } else if (cur_time>0.0) {
+     ok_to_modify_EUL=0;
     } else
-     amrex::Error("FSI_flag invalid");
-
-    if (ok_to_modify_EUL==1) {
-
-      //modifies S_new velocity if FSI_flag=2,6,7,8 (but not 4)
-     copy_velocity_on_sign(partid);
-     // Solid velocity
-     //ngrow=0
-     MultiFab::Copy(Solid_new,*localMF[FSI_MF],
-      ibase+FSI_VELOCITY,partid*AMREX_SPACEDIM,
-      AMREX_SPACEDIM,0);
-      // LS
-      //ngrow=0
-     MultiFab::Copy(LS_new,*localMF[FSI_MF],ibase+FSI_LEVELSET,im_part,1,0);
-      // temperature
-     if (solidheat_flag==0) { // diffuse in solid
-      // do nothing
-     } else if ((solidheat_flag==1)||  //dirichlet
-                (solidheat_flag==2)) { //neumann
-       //ngrow=0
-      MultiFab::Copy(S_new,*localMF[FSI_MF],ibase+FSI_TEMPERATURE,
-       STATECOMP_STATES+im_part*num_state_material+ENUM_TEMPERATUREVAR,1,0);
-     } else
-      amrex::Error("solidheat_flag invalid"); 
-
-    } else if (ok_to_modify_EUL==0) {
-     // do nothing
-    } else
-     amrex::Error("ok_to_modify_EUL invalid");
-
-   } else if (FSI_flag[im_part]==1) { // prescribed PROB.F90 rigid solid
+     amrex::Error("cur_time invalid");
+   } else if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid sol.
+              (FSI_flag[im_part]==4)|| //FSI CTML sci_clsvof.F90 Goldstein..
+              (FSI_flag[im_part]==8)) {//FSI CTML sci_clsvof.F90 pres-vel
+    ok_to_modify_EUL=1;
     // do nothing
    } else
     amrex::Error("FSI_flag invalid");
 
-  } // partid=0..nparts-1
+   if (ok_to_modify_EUL==1) {
 
- } else if (read_from_CAD()==0) {
-  // do nothing
- } else
-  amrex::Error("read_from_CAD invalid");
+     //modifies S_new velocity if FSI_flag=2,6,7,8 (but not 4)
+    copy_velocity_on_sign(partid);
+    // Solid velocity
+    //ngrow=0
+    MultiFab::Copy(Solid_new,*localMF[FSI_MF],
+     ibase+FSI_VELOCITY,partid*AMREX_SPACEDIM,
+     AMREX_SPACEDIM,0);
+     // LS
+     //ngrow=0
+    MultiFab::Copy(LS_new,*localMF[FSI_MF],ibase+FSI_LEVELSET,im_part,1,0);
+     // temperature
+    if (solidheat_flag==0) { // diffuse in solid
+     // do nothing
+    } else if ((solidheat_flag==1)||  //dirichlet
+               (solidheat_flag==2)) { //neumann
+      //ngrow=0
+     MultiFab::Copy(S_new,*localMF[FSI_MF],ibase+FSI_TEMPERATURE,
+      STATECOMP_STATES+im_part*num_state_material+ENUM_TEMPERATUREVAR,1,0);
+    } else
+     amrex::Error("solidheat_flag invalid"); 
+
+   } else if (ok_to_modify_EUL==0) {
+    // do nothing
+   } else
+    amrex::Error("ok_to_modify_EUL invalid");
+
+  } else if (FSI_flag[im_part]==1) { // prescribed PROB.F90 rigid solid
+   // do nothing
+  } else
+   amrex::Error("FSI_flag invalid");
+
+ } // partid=0..nparts-1
 
 }  // subroutine Transfer_FSI_To_STATE
 
@@ -8029,6 +8097,7 @@ void NavierStokes::ns_header_msg_level(
 
   //update the sign.
  } else if (FSI_operation==3) { 
+
   if (iter<0)
    amrex::Error("iter invalid");
   if (FSI_sub_operation!=0)
@@ -8618,12 +8687,8 @@ void NavierStokes::ns_header_msg_level(
 
       if ((im_part<0)||(im_part>=nmat))
        amrex::Error("im_part invalid");
- 
-      if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid solid 
-          (FSI_flag[im_part]==4)|| //FSI CTML sci_clsvof.F90 solid
-          (FSI_flag[im_part]==8)|| //FSI pres-vel sci_clsvof.F90 solid
-	  (FSI_flag[im_part]==6)|| //FSI ice, tessellating
-	  (FSI_flag[im_part]==7)) {//fluid, tessellating 
+
+      if (fort_read_from_CAD(&FSI_flag[im_part])==1) { 
 
        int ok_to_modify_EUL=1;
        if ((FSI_flag[im_part]==6)|| //FSI ice, tessellating 
@@ -9177,8 +9242,6 @@ void NavierStokes::ns_header_msg_level(
   } else
    amrex::Error("FSI_operation invalid");
 
- } else if (read_from_CAD()==0) {
-  // do nothing
  } else
   amrex::Error("read_from_CAD invalid");
 
@@ -9277,12 +9340,17 @@ void NavierStokes::post_restart() {
 
  Real dt_amr=parent->getDt(); // returns dt_AMR
 
- int iter=0;
+ if (read_from_CAD()==1) {
+  int iter=0;
   // in post_restart: initialize node locations; generate_new_triangles
- int FSI_operation=0; 
- int FSI_sub_operation=0; 
- ns_header_msg_level(FSI_operation,FSI_sub_operation,
+  int FSI_operation=0; 
+  int FSI_sub_operation=0; 
+  ns_header_msg_level(FSI_operation,FSI_sub_operation,
    upper_slab_time,dt_amr,iter); 
+ } else if (read_from_CAD()==0) {
+  // do nothing
+ } else
+  amrex::Error("read_from_CAD invalid");
 
    // inside of post_restart
  if (level==0) {
@@ -9546,19 +9614,26 @@ NavierStokes::initData () {
 
  }  // dir=0..sdim-1
 
- int iter=0; // =>  FSI_touch_flag[tid]=0
+ prepare_mask_nbr(1);
+
+ if (read_from_CAD()==1) {
+  int iter=0; // =>  FSI_touch_flag[tid]=0
   // in initData: initialize node locations; generate_new_triangles
- int FSI_operation=0; 
- int FSI_sub_operation=0; 
- ns_header_msg_level(FSI_operation,FSI_sub_operation,
+  int FSI_operation=0; 
+  int FSI_sub_operation=0; 
+  ns_header_msg_level(FSI_operation,FSI_sub_operation,
    upper_slab_time,dt_amr,iter); 
 
   // create a distance function (velocity and temperature) on this level.
   // calls ns_header_msg_level with FSI_operation==2,3
   // ns_header_msg_level calls NavierStokes::Transfer_FSI_To_STATE
- prepare_mask_nbr(1);
-  // in: initData
- FSI_make_distance(upper_slab_time,dt_amr);
+  FSI_make_distance(upper_slab_time,dt_amr);
+ } else if (read_from_CAD()==0) {
+  // do nothing
+ } else
+  amrex::Error("read_from_CAD invalid");
+
+ regenerate_from_eulerian(upper_slab_time);
 
  fort_initdata_alloc(&nmat,&nten,&nc,
   latent_heat.dataPtr(),
@@ -9639,8 +9714,12 @@ NavierStokes::initData () {
 }//omp
  ns_reconcile_d_num(51);
 
- if (read_from_CAD()==1)
-  build_moment_from_FSILS();
+ if (read_from_CAD()==1) {
+  build_moment_from_FSILS(upper_slab_time);
+ } else if (read_from_CAD()==0) {
+  //do nothing
+ } else
+  amrex::Error("read_from_CAD() invalid");
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -9692,12 +9771,17 @@ NavierStokes::initData () {
 }//omp
  ns_reconcile_d_num(52);
 
- // for FSI_flag==2, 4, 8: (prescribed sci_clsvof.F90 rigid material)
- // 1. copy_velocity_on_sign
- // 2. update Solid_new
- // 3. update LS_new
- // 4. update S_new(temperature) (if solidheat_flag==1 or 2)
- Transfer_FSI_To_STATE(upper_slab_time);
+ if (read_from_CAD()==1) {
+  // for FSI_flag==2, 4, 8: (prescribed sci_clsvof.F90 rigid material)
+  // 1. copy_velocity_on_sign
+  // 2. update Solid_new
+  // 3. update LS_new
+  // 4. update S_new(temperature) (if solidheat_flag==1 or 2)
+  Transfer_FSI_To_STATE(upper_slab_time);
+ } else if (read_from_CAD()==0) {
+  // do nothing
+ } else
+  amrex::Error("read_from_CAD invalid");
 
   // if nparts>0,
   //  Initialize FSI_GHOST_MAC_MF from Solid_State_Type
@@ -12623,7 +12707,7 @@ NavierStokes::prepare_mask_nbr(int ngrow) {
  localMF[MASK_NBR_MF]->setVal(1.0,2,1,ngrow-1);
  localMF[MASK_NBR_MF]->setVal(1.0,3,1,ngrow);
 
-} // end subroutine prepare_mask_nbr()
+} // end subroutine prepare_mask_nbr(int ngrow)
 
 void 
 NavierStokes::prepare_displacement(int mac_grow) {

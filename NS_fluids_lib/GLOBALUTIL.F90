@@ -13513,7 +13513,7 @@ end subroutine dynamic_contact_angle
                (fsi_flag_local.eq.5)) then ! FSI rigid
        ! do nothing
       else
-       print *,"fsi_flag_local  invalid"
+       print *,"fsi_flag_local invalid"
        stop
       endif
 

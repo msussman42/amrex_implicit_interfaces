@@ -324,6 +324,7 @@ extern "C"
     int* nmat,int* nstate);
 
    void fort_build_moment(
+    Real* cur_time,
     int* level,
     int* finest_level,
     int* nFSI,
