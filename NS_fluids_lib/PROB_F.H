@@ -90,7 +90,6 @@ namespace amrex{
      void fort_initdatasolid(
       int* nmat,
       int* nparts,
-      int* nFSI,
       int* ngrow_make_distance_in,
       int* im_solid_map,
       Real* time,
@@ -98,6 +97,8 @@ namespace amrex{
       const int* fablo,const int* fabhi,
       int* bfact,
       Real* solid,AMREX_ARLIM_P(solidlo),AMREX_ARLIM_P(solidhi),
+      Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
+      Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
       const Real* dx,const Real* xlo, const Real* xhi);
 
      void fort_initsolidtemp(

@@ -1281,6 +1281,7 @@ void apply_pressure_grad(
 
       //cur_time=prev_time+dt
     void FSI_make_distance(Real cur_time,Real dt);
+    void regenerate_from_eulerian(Real cur_time);
 
     void create_fortran_grid_struct(Real cur_time,Real dt);
 
@@ -1296,7 +1297,7 @@ void apply_pressure_grad(
     void copy_old_FSI_to_new();
     int ok_copy_FSI_old_to_new();
 
-    void build_moment_from_FSILS();
+    void build_moment_from_FSILS(Real cur_time);
 
     void ctml_fsi_transfer_force();
 

@@ -275,6 +275,11 @@ void NavierStokes::nonlinear_advection() {
  if (level!=0)
   amrex::Error("level invalid nonlinear_advection");
 
+ if (cur_time_slab>0.0) {
+  // do nothing
+ } else
+  amrex::Error("cur_time_slab invalid");
+
  int nmat=num_materials;
 
  if ((SDC_outer_sweeps>=0)&&
@@ -545,21 +550,27 @@ void NavierStokes::nonlinear_advection() {
   setup_integrated_quantities();
   volWgtSumALL(post_init_flag,fast_mode);
 
-  int iter=0;
-  int FSI_operation=4; // eul vel t=cur_time_slab -> structure vel
-  int FSI_sub_operation=0;
-  for (FSI_sub_operation=0;FSI_sub_operation<3;FSI_sub_operation++) {
-   for (int ilev=level;ilev<=finest_level;ilev++) {
-    NavierStokes& ns_level=getLevel(ilev);
-    ns_level.resize_mask_nbr(ngrow_make_distance);
-    ns_level.ns_header_msg_level(
+  if (ok_copy_FSI_old_to_new()==1) {
+
+   copy_old_FSI_to_new();
+
+  } else if (ok_copy_FSI_old_to_new()==0) {
+
+   int iter=0;
+   int FSI_operation=4; // eul vel t=cur_time_slab -> structure vel
+   int FSI_sub_operation=0;
+   for (FSI_sub_operation=0;FSI_sub_operation<3;FSI_sub_operation++) {
+    for (int ilev=level;ilev<=finest_level;ilev++) {
+     NavierStokes& ns_level=getLevel(ilev);
+     ns_level.resize_mask_nbr(ngrow_make_distance);
+     ns_level.ns_header_msg_level(
       FSI_operation, //=4
       FSI_sub_operation,
       cur_time_slab,
       dt_slab,
       iter);
-   } // ilev=level..finest_level
-  } // FSI_sub_operation=0,1,2
+    } // ilev=level..finest_level
+   } // FSI_sub_operation=0,1,2
 
    // fort_headermsg (SOLIDFLUID.F90)
    // CLSVOF_ReadNodes (sci_clsvof.F90)
@@ -567,30 +578,36 @@ void NavierStokes::nonlinear_advection() {
    //  a) CTML_SOLVE_SOLID is called from sci_clsvof.F90 
    //     (CTML_SOLVE_SOLID declared in CTMLFSI.F90)
    //  b) tick is called (in ../Vicar3D/distFSI/tick.F)
-  FSI_operation=1; // update node locations
-  FSI_sub_operation=0;
-  ns_header_msg_level(
-   FSI_operation, //=1
-   FSI_sub_operation, //=0
-   cur_time_slab,
-   dt_slab,iter);
+   FSI_operation=1; // update node locations
+   FSI_sub_operation=0;
+   ns_header_msg_level(
+    FSI_operation, //=1
+    FSI_sub_operation, //=0
+    cur_time_slab,
+    dt_slab,iter);
+
+   // convert Lagrangian position, velocity, temperature, and force to
+   // Eulerian.
+   // go from coarsest to finest.
+   for (int ilev=level;ilev<=finest_level;ilev++) {
+    NavierStokes& ns_level=getLevel(ilev);
+    ns_level.FSI_make_distance(cur_time_slab,dt_slab);
+   } // ilev
+
+   for (int ilev=level;ilev<=finest_level;ilev++) {
+    NavierStokes& ns_level=getLevel(ilev);
+    ns_level.resize_FSI_MF();
+   }
+
+  } else
+   amrex::Error("ok_copy_FSI_old_to_new invalid");
+
  } else if (read_from_CAD()==0) {
   // do nothing
  } else
   amrex::Error("read_from_CAD() invalid");
 
- // convert Lagrangian position, velocity, temperature, and force to
- // Eulerian.
- // go from coarsest to finest.
- for (int ilev=level;ilev<=finest_level;ilev++) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.FSI_make_distance(cur_time_slab,dt_slab);
- } // ilev
-
- for (int ilev=level;ilev<=finest_level;ilev++) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.resize_FSI_MF();
- }
+ regenerate_from_eulerian(cur_time_slab);
 
  if (1==0) {
     // S_new is level 0 data
@@ -609,7 +626,6 @@ void NavierStokes::nonlinear_advection() {
    -1, // data_dir==-1
    parent->levelSteps(0)); 
  }
-
 
   // in: nonlinear_advection
   // level set function, volume fractions, and centroids are
