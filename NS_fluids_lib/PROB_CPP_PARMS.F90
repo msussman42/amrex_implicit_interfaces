@@ -447,7 +447,7 @@ stop
       ! 4. create new module file (e.g. by copying an existing module file)
       ! 5. update Make.package accordingly (2 places)
       ! 6. create inputs file
-      probtype_list_size=15
+      probtype_list_size=16
       used_probtypes(1)=2000 ! flexible_plate_impact
       used_probtypes(2)=421  ! CRYOGENIC_TANK1
       used_probtypes(3)=414  ! MITSUHIRO_MELTING
@@ -463,6 +463,7 @@ stop
       used_probtypes(13)=425  ! AHMED_ICE_RESISTANT
       used_probtypes(14)=7001 ! FABRIC_DROP
       used_probtypes(15)=915 ! wavy channel or Tomas
+      used_probtypes(16)=411 ! CAV3D_module
       
       SUB_INIT_MODULE=>INIT_STUB_MODULE
       SUB_LS=>STUB_LS
@@ -501,6 +502,10 @@ stop
       SUB_K_EFFECTIVE=>STUB_K_EFFECTIVE
 
       SUB_reference_wavelen=>STUB_reference_wavelen
+
+      SUB_OPEN_CASFILE=>STUB_OPEN_CASFILE
+      SUB_ORDER_NODES=>STUB_ORDER_NODES
+      SUB_FSI_SLICE=>STUB_FSI_SLICE
 
       if (probtype.eq.421) then
        SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE
@@ -614,6 +619,22 @@ stop
        SUB_PRES_BC=>FABRIC_DROP_PRES_BC
        SUB_STATE_BC=>FABRIC_DROP_STATE_BC
        SUB_HEATSOURCE=>FABRIC_DROP_HEATSOURCE
+
+      else if (probtype.eq.411) then ! cav3D.F90
+       SUB_INIT_MODULE=>INIT_CAV3D_MODULE
+       SUB_LS=>CAV3D_LS
+       SUB_VEL=>CAV3D_VEL
+       SUB_PRES=>CAV3D_PRES
+       SUB_STATE=>CAV3D_STATE
+       SUB_LS_BC=>CAV3D_LS_BC
+       SUB_VEL_BC=>CAV3D_VEL_BC
+       SUB_PRES_BC=>CAV3D_PRES_BC
+       SUB_STATE_BC=>CAV3D_STATE_BC
+       SUB_HEATSOURCE=>CAV3D_HEATSOURCE
+
+       SUB_OPEN_CASFILE=>OPEN_CAV3D_CASFILE
+       SUB_ORDER_NODES=>CAV3D_ORDER_NODES
+       SUB_FSI_SLICE=>CAV3D_SLICE
 
       else if (probtype.eq.425) then
        SUB_INIT_MODULE=>INIT_AHMED_ICE_RESISTANT_MODULE
@@ -1453,10 +1474,6 @@ stop
                 (axis_dir.eq.151))) then
       
        call shockdrop_init()
-      
-      else if (probtype.eq.411) then
-      
-       call INIT_CAV3D_MODULE()
       
       else if (probtype.eq.401) then
       
