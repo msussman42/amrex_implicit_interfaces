@@ -1101,20 +1101,14 @@ stop
 
        if (is_in_probtype_list().eq.1) then
 
-        call SUB_HEATSOURCE(im,VFRAC,time, &
-               x, &
-               xsten, & ! xsten(-nhalf:nhalf,SDIM)
-               nhalf, &
-               TEMPERATURE, &
-               HEAT_SOURCE_OUT(im),DENSITY,CV,dt, &
-               num_materials)
-
-       else if (probtype.eq.411) then
-
-        call CAV3D_HEATSOURCE(im,VFRAC,time, &
-               x, &
-               TEMPERATURE, &
-               HEAT_SOURCE_OUT(im),DENSITY,CV,dt)
+        call SUB_HEATSOURCE( &
+          im,VFRAC,time, &
+          x, &
+          xsten, & ! xsten(-nhalf:nhalf,SDIM)
+          nhalf, &
+          TEMPERATURE, &
+          HEAT_SOURCE_OUT(im),DENSITY,CV,dt, &
+          num_materials)
 
        else if (probtype.eq.401) then
 
