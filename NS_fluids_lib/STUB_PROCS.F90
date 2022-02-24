@@ -650,6 +650,135 @@ REAL_T, intent(in),pointer :: state_ptr(D_DECL(:,:,:),:)
 
 end subroutine STUB_correct_pres_rho_hydrostatic
 
+subroutine STUB_FSI_SLICE(xmap3D,xslice3D,problo3D,probhi3D,dx_slice)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+REAL_T, intent(in) :: dx_slice
+INTEGER_T, intent(inout) :: xmap3D(3)
+REAL_T, intent(inout) :: xslice3D(3)
+REAL_T, intent(out) :: problo3D(3)
+REAL_T, intent(out) :: probhi3D(3)
+
+
+  !CTML_FSI_flagF(num_materials) is declared in GLOBALUTIL.F90
+ if (CTML_FSI_flagF(num_materials).eq.1) then ! FSI_flag==4 or 8
+  xmap3D(1)=1
+  xmap3D(2)=2
+  xmap3D(3)=0
+  xslice3D(3)=zero
+  problo3D(3)=-half*dx_slice
+  probhi3D(3)=half*dx_slice
+ else if (CTML_FSI_flagF(num_materials).eq.0) then
+
+   ! 537 is 6 hole injector
+  if ((probtype.eq.538).or. &
+      (probtype.eq.537).or. &
+      (probtype.eq.541)) then
+   xmap3D(3)=2
+   xmap3D(1)=1
+   xmap3D(2)=0
+   xslice3D(2)=zero
+   problo3D(2)=problo_array(1)
+   probhi3D(2)=probhi_array(1)
+
+    ! injector C
+   if (probtype.eq.541) then
+    if (problo_array(1).ne.zero) then
+     print *,"problo_array(1).ne.zero"
+     stop
+    endif
+    xmap3D(1)=1
+    xmap3D(2)=2
+    xmap3D(3)=0
+    xslice3D(1)=zero
+    xslice3D(2)=zero
+    xslice3D(3)=zero
+    problo3D(3)=-1e-3
+    probhi3D(3)=1e-3
+   endif
+
+  else if (probtype.eq.701) then  ! flapping wing
+   xmap3D(1)=1
+   xmap3D(3)=2
+   xmap3D(2)=0
+   xslice3D(2)=0.05
+   problo3D(2)=-0.1
+   probhi3D(2)=0.2
+  else if(probtype.eq.539) then ! the surface is 3D
+   xmap3D(1)=1
+   xmap3D(2)=2
+   xmap3D(3)=0
+   xslice3D(3)=0.0
+   problo3D(3)=-0.014
+   probhi3D(3)=0.014
+  else if (probtype.eq.9) then ! ship wave
+   xmap3D(1)=1
+   xmap3D(3)=2
+   xmap3D(2)=0
+   xslice3D(2)=0.0
+   problo3D(2)=0.0
+   probhi3D(2)=0.25
+  else if (probtype.eq.5700) then
+   xmap3D(1)=1
+   xmap3D(2)=2
+   xmap3D(3)=0
+   xslice3D(3)=0.31
+   problo3D(3)=0.0
+   probhi3D(3)=0.62
+  else if ((probtype.eq.400).or. &
+           (probtype.eq.406).or. & ! fractal
+           (probtype.eq.404)) then ! gingerbread man or Xue
+   xmap3D(1)=1
+   xmap3D(2)=2
+   xmap3D(3)=0
+   xslice3D(3)=zero
+   problo3D(3)=-half*dx_slice
+   probhi3D(3)=half*dx_slice
+  else if (probtype.eq.401) then ! helix
+   print *,"this geometry has no 2D analogue"
+   stop
+  else if (probtype.eq.415) then ! shock sphere
+   xmap3D(1)=1
+   xmap3D(2)=2
+   xmap3D(3)=0
+   xslice3D(3)=zero
+   problo3D(3)=-half*dx_slice
+   probhi3D(3)=half*dx_slice
+  endif
+
+ else
+  print *,"CTML_FSI_flagF invalid"
+  stop
+ endif 
+
+end subroutine STUB_FSI_SLICE
+
+subroutine STUB_OPEN_CASFILE(part_id,unit_id)
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: unit_id
+
+ print *,"need to define a routine for SUB_OPEN_CASFILE"
+ stop
+
+return
+end subroutine STUB_OPEN_CASFILE
+
+subroutine STUB_ORDER_NODES(nodes,nodemap)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: nodes(3,3) ! dir,nodenum
+INTEGER_T, intent(inout) :: nodemap(3)
+
+ print *,"need to define a routine for SUB_ORDER_NODES"
+ stop
+
+return
+end subroutine STUB_ORDER_NODES
+
+
 subroutine STUB_ASSIMILATE( &
   assimilate_in,assimilate_out,i,j,k,cell_flag)
 use probcommon_module

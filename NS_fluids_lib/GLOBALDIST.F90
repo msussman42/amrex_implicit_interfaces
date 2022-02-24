@@ -1700,7 +1700,6 @@ end subroutine nozzle2d
       use USERDEF_module
       use CAV2Dstep_module
       use ZEYU_droplet_impact_module
-      use CAV3D_module
       use TSPRAY_module
 
       IMPLICIT NONE
@@ -1754,10 +1753,6 @@ end subroutine nozzle2d
        if (is_in_probtype_list().eq.1) then
 
         call SUB_LS(xvec,time,dist_array,num_materials)
-        dist=dist_array(im)
-
-       else if (probtype.eq.411) then ! user defined cavitation problem
-        call CAV3D_LS(xvec,time,dist_array)
         dist=dist_array(im)
 
        else if (probtype.eq.402) then ! user defined thermal spray problem

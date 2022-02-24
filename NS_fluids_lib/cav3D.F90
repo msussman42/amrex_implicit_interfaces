@@ -36,21 +36,29 @@ contains
  end subroutine INIT_CAV3D_MODULE
 
  subroutine OPEN_CAV3D_CASFILE(part_id,unit_id)
+ use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T part_id,unit_id
+ INTEGER_T, intent(in) :: part_id
+ INTEGER_T, intent(in) :: unit_id
  character(40) :: casname
 
- if (part_id.eq.1) then
-  casname="nozzle.cas"
+ if ((num_materials.eq.3).and.(probtype.eq.411)) then
+
+  if (part_id.eq.1) then
+   casname="nozzle.cas"
+  else
+   print *,"part_id invalid"
+   stop
+  endif
+
+  print *,"opening ",casname
+  OPEN(unit=unit_id,file=casname,access='sequential', &
+      form="formatted",status='old')
  else
-  print *,"part_id invalid"
+  print *,"num_materials or probtype invalid"
   stop
  endif
-
- print *,"opening ",casname
- OPEN(unit=unit_id,file=casname,access='sequential', &
-      form="formatted",status='old')
 
  return
  end subroutine OPEN_CAV3D_CASFILE
@@ -65,8 +73,8 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T nodes(3,3) ! dir,nodenum
- INTEGER_T nodemap(3)
+ REAL_T, intent(in) :: nodes(3,3) ! dir,nodenum
+ INTEGER_T, intent(inout) :: nodemap(3)
  REAL_T a(3),b(3),c(3)
  INTEGER_T inode
  INTEGER_T dir
@@ -76,113 +84,120 @@ contains
  REAL_T ncrit
  INTEGER_T swap
 
- do dir=1,3
-  a(dir)=nodes(dir,2)-nodes(dir,1)
-  b(dir)=nodes(dir,3)-nodes(dir,1)
- enddo
- c(1)=a(2)*b(3)-a(3)*b(2)
- c(2)=-(a(1)*b(3)-b(1)*a(3))
- c(3)=a(1)*b(2)-b(1)*a(2)
- mag=zero
- do dir=1,3
-  mag=mag+c(dir)**2
- enddo
- mag=sqrt(mag)
- if (mag.gt.zero) then
+ if ((num_materials.eq.3).and.(probtype.eq.411)) then
+
   do dir=1,3
-   c(dir)=c(dir)/mag
+   a(dir)=nodes(dir,2)-nodes(dir,1)
+   b(dir)=nodes(dir,3)-nodes(dir,1)
   enddo
-  dircrit=1
-  if (abs(c(2)).gt.abs(c(dircrit))) then
-   dircrit=2
-  endif 
-  if (abs(c(3)).gt.abs(c(dircrit))) then
-   dircrit=3
-  endif 
-  xcrit=zero
-  do inode=1,3
-   xcrit=xcrit+nodes(dircrit,inode)
+  c(1)=a(2)*b(3)-a(3)*b(2)
+  c(2)=-(a(1)*b(3)-b(1)*a(3))
+  c(3)=a(1)*b(2)-b(1)*a(2)
+  mag=zero
+  do dir=1,3
+   mag=mag+c(dir)**2
   enddo
-  xcrit=xcrit/three
-  if (dircrit.eq.1) then
-   if (abs(xcrit-5.0).le.VOFTOL) then
-    ncrit=one
-   else if (abs(xcrit+5.0).le.VOFTOL) then
-    ncrit=-one
-   else if (abs(xcrit-4.0).le.VOFTOL) then
-    ncrit=-one
-   else if (abs(xcrit+4.0).le.VOFTOL) then
-    ncrit=one
-   else if (abs(xcrit-2.06D0).le.VOFTOL) then
-    ncrit=one
+  mag=sqrt(mag)
+  if (mag.gt.zero) then
+   do dir=1,3
+    c(dir)=c(dir)/mag
+   enddo
+   dircrit=1
+   if (abs(c(2)).gt.abs(c(dircrit))) then
+    dircrit=2
+   endif 
+   if (abs(c(3)).gt.abs(c(dircrit))) then
+    dircrit=3
+   endif 
+   xcrit=zero
+   do inode=1,3
+    xcrit=xcrit+nodes(dircrit,inode)
+   enddo
+   xcrit=xcrit/three
+   if (dircrit.eq.1) then
+    if (abs(xcrit-5.0).le.VOFTOL) then
+     ncrit=one
+    else if (abs(xcrit+5.0).le.VOFTOL) then
+     ncrit=-one
+    else if (abs(xcrit-4.0).le.VOFTOL) then
+     ncrit=-one
+    else if (abs(xcrit+4.0).le.VOFTOL) then
+     ncrit=one
+    else if (abs(xcrit-2.06D0).le.VOFTOL) then
+     ncrit=one
+    else
+     print *,"xcrit invalid(1) xcrit=",xcrit
+     do inode=1,3
+     do dir=1,3
+      print *,"inode,dir,nodes(dir,inode) ",inode,dir,nodes(dir,inode)
+     enddo
+     enddo
+     do inode=1,3
+      print *,"inode,nodemap(inode) ",inode,nodemap(inode)
+     enddo
+     stop
+    endif
+   else if (dircrit.eq.2) then
+    if (abs(xcrit-0.0).le.VOFTOL) then
+     ncrit=one
+    else if (abs(xcrit+16.0).le.VOFTOL) then
+     ncrit=-one
+    else if (abs(xcrit+8.0).le.VOFTOL) then
+     ncrit=one
+    else
+     print *,"xcrit invalid(2) xcrit=",xcrit
+     do inode=1,3
+     do dir=1,3
+      print *,"inode,dir,nodes(dir,inode) ",inode,dir,nodes(dir,inode)
+     enddo
+     enddo
+     do inode=1,3
+      print *,"inode,nodemap(inode) ",inode,nodemap(inode)
+     enddo
+     stop
+    endif
+   else if (dircrit.eq.3) then
+    if (abs(xcrit-2.0).le.VOFTOL) then
+     ncrit=one
+    else if (abs(xcrit+2.0).le.VOFTOL) then
+     ncrit=-one
+    else if (abs(xcrit+0.97D0).le.VOFTOL) then
+     ncrit=one
+    else if (abs(xcrit-0.97D0).le.VOFTOL) then
+     ncrit=-one
+    else
+     print *,"xcrit invalid(3) xcrit=",xcrit
+     do inode=1,3
+     do dir=1,3
+      print *,"inode,dir,nodes(dir,inode) ",inode,dir,nodes(dir,inode)
+     enddo
+     enddo
+     do inode=1,3
+      print *,"inode,nodemap(inode) ",inode,nodemap(inode)
+     enddo
+     stop
+    endif
    else
-    print *,"xcrit invalid(1) xcrit=",xcrit
-    do inode=1,3
-    do dir=1,3
-     print *,"inode,dir,nodes(dir,inode) ",inode,dir,nodes(dir,inode)
-    enddo
-    enddo
-    do inode=1,3
-     print *,"inode,nodemap(inode) ",inode,nodemap(inode)
-    enddo
+    print *,"dircrit invalid"
     stop
    endif
-  else if (dircrit.eq.2) then
-   if (abs(xcrit-0.0).le.VOFTOL) then
-    ncrit=one
-   else if (abs(xcrit+16.0).le.VOFTOL) then
-    ncrit=-one
-   else if (abs(xcrit+8.0).le.VOFTOL) then
-    ncrit=one
+   if (ncrit*c(dircrit).gt.zero) then
+    ! do nothing
+   else if (ncrit*c(dircrit).lt.zero) then
+    swap=nodemap(1)
+    nodemap(1)=nodemap(3)
+    nodemap(3)=swap
    else
-    print *,"xcrit invalid(2) xcrit=",xcrit
-    do inode=1,3
-    do dir=1,3
-     print *,"inode,dir,nodes(dir,inode) ",inode,dir,nodes(dir,inode)
-    enddo
-    enddo
-    do inode=1,3
-     print *,"inode,nodemap(inode) ",inode,nodemap(inode)
-    enddo
-    stop
-   endif
-  else if (dircrit.eq.3) then
-   if (abs(xcrit-2.0).le.VOFTOL) then
-    ncrit=one
-   else if (abs(xcrit+2.0).le.VOFTOL) then
-    ncrit=-one
-   else if (abs(xcrit+0.97D0).le.VOFTOL) then
-    ncrit=one
-   else if (abs(xcrit-0.97D0).le.VOFTOL) then
-    ncrit=-one
-   else
-    print *,"xcrit invalid(3) xcrit=",xcrit
-    do inode=1,3
-    do dir=1,3
-     print *,"inode,dir,nodes(dir,inode) ",inode,dir,nodes(dir,inode)
-    enddo
-    enddo
-    do inode=1,3
-     print *,"inode,nodemap(inode) ",inode,nodemap(inode)
-    enddo
+    print *,"ncrit or c(dircrit) invalid"
     stop
    endif
   else
-   print *,"dircrit invalid"
+   print *,"mag invalid CAV3D_ORDER_NODES"
    stop
   endif
-  if (ncrit*c(dircrit).gt.zero) then
-   ! do nothing
-  else if (ncrit*c(dircrit).lt.zero) then
-   swap=nodemap(1)
-   nodemap(1)=nodemap(3)
-   nodemap(3)=swap
-  else
-   print *,"ncrit or c(dircrit) invalid"
-   stop
-  endif
+
  else
-  print *,"mag invalid CAV3D_ORDER_NODES"
+  print *,"num_materials or probtype invalid"
   stop
  endif
 
@@ -193,22 +208,29 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T dx_slice
- INTEGER_T xmap3D(3)
- REAL_T xslice3D(3)
- REAL_T problo3D(3)
- REAL_T probhi3D(3)
+ REAL_T, intent(in) :: dx_slice
+ INTEGER_T, intent(inout) :: xmap3D(3)
+ REAL_T, intent(inout) :: xslice3D(3)
+ REAL_T, intent(out) :: problo3D(3)
+ REAL_T, intent(out) :: probhi3D(3)
 
- if (dx_slice.gt.zero) then
-  xmap3D(1)=1
-  xmap3D(2)=2
-  xmap3D(3)=0
+ if ((num_materials.eq.3).and.(probtype.eq.411)) then
 
-  xslice3D(3)=zero
-  problo3D(3)=-half*dx_slice
-  probhi3D(3)=half*dx_slice
+  if (dx_slice.gt.zero) then
+   xmap3D(1)=1
+   xmap3D(2)=2
+   xmap3D(3)=0
+
+   xslice3D(3)=zero
+   problo3D(3)=-half*dx_slice
+   probhi3D(3)=half*dx_slice
+  else
+   print *,"dx_slice invalid"
+   stop
+  endif
+
  else
-  print *,"dx_slice invalid"
+  print *,"num_materials or probtype invalid"
   stop
  endif
 
@@ -216,16 +238,18 @@ contains
  end subroutine CAV3D_SLICE
 
   ! fluids tessellate the domain, solids are immersed. 
- subroutine CAV3D_LS(x,t,LS)
+ subroutine CAV3D_LS(x,t,LS,nmat)
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T x(SDIM)
- REAL_T t
+ INTEGER_T, intent(in) :: nmat
+ REAL_T, intent(in) :: x(SDIM)
+ REAL_T, intent(in) :: t
+ REAL_T, intent(out) :: LS(nmat)
  INTEGER_T im
- REAL_T LS(num_materials)
 
  if ((num_materials.eq.3).and.(probtype.eq.411)) then
+
   do im=1,num_materials
    if (im.eq.1) then !liquid
     LS(im)=99999.0
@@ -246,16 +270,18 @@ contains
  return
  end subroutine CAV3D_LS
 
- subroutine CAV3D_VEL(x,t,LS,VEL,velsolid_flag)
+ subroutine CAV3D_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T x(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T VEL(SDIM)
+ INTEGER_T, intent(in) :: nmat
+ REAL_T, intent(in) :: x(SDIM)
+ REAL_T, intent(in) :: t
+ REAL_T, intent(in) :: dx(SDIM)
+ REAL_T, intent(in) :: LS(nmat)
+ REAL_T, intent(out) :: VEL(SDIM)
+ INTEGER_T, intent(in) :: velsolid_flag
  INTEGER_T dir
- INTEGER_T velsolid_flag
 
  if ((velsolid_flag.eq.0).or. &
      (velsolid_flag.eq.1)) then
@@ -286,14 +312,15 @@ contains
  return 
  end subroutine CAV3D_VEL
 
- subroutine CAV3D_PRES(x,t,LS,PRES)
+ subroutine CAV3D_PRES(x,t,LS,PRES,nmat)
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T x(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T PRES
+ INTEGER_T, intent(in) :: nmat
+ REAL_T, intent(in) :: x(SDIM)
+ REAL_T, intent(in) :: t
+ REAL_T, intent(in) :: LS(nmat)
+ REAL_T, intent(out) :: PRES
  REAL_T ymid
 
  ymid=half*(probloy+probhiy)
@@ -310,14 +337,17 @@ contains
  end subroutine CAV3D_PRES
 
 
- subroutine CAV3D_STATE(x,t,LS,STATE)
+ subroutine CAV3D_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T x(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T STATE(num_materials*num_state_material)
+ INTEGER_T, intent(in) :: bcflag
+ INTEGER_T, intent(in) :: nmat
+ INTEGER_T, intent(in) :: nstate_mat
+ REAL_T, intent(in) :: x(SDIM)
+ REAL_T, intent(in) :: t
+ REAL_T, intent(in) :: LS(nmat)
+ REAL_T, intent(out) :: STATE(nmat*nstate_mat)
  INTEGER_T im,ibase,n
 
  if ((num_materials.eq.3).and. &
@@ -348,21 +378,22 @@ contains
 
   ! dir=1..sdim  side=1..2
  subroutine CAV3D_LS_BC(xwall,xghost,t,LS, &
-    LS_in,dir,side,dx)
+    LS_in,dir,side,dx,nmat)
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T xwall
- REAL_T xghost(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T LS_in(num_materials)
- INTEGER_T dir,side
- REAL_T dx(SDIM)
+ INTEGER_T, intent(in) :: nmat
+ REAL_T, intent(in) :: xwall
+ REAL_T, intent(in) :: xghost(SDIM)
+ REAL_T, intent(in) :: t
+ REAL_T, intent(inout) :: LS(nmat)
+ REAL_T, intent(in) :: LS_in(nmat)
+ INTEGER_T, intent(in) :: dir,side
+ REAL_T, intent(in) :: dx(SDIM)
 
  if ((dir.ge.1).and.(dir.le.SDIM).and. &
      (side.ge.1).and.(side.le.2)) then
-  call CAV3D_LS(xghost,t,LS)
+  call CAV3D_LS(xghost,t,LS,nmat)
  else
   print *,"dir or side invalid"
   stop
@@ -374,18 +405,19 @@ contains
 
   ! dir=1..sdim  side=1..2 veldir=1..sdim
  subroutine CAV3D_VEL_BC(xwall,xghost,t,LS, &
-    VEL,VEL_in,veldir,dir,side,dx)
+    VEL,VEL_in,veldir,dir,side,dx,nmat)
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T xwall
- REAL_T xghost(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T VEL
- REAL_T VEL_in
- INTEGER_T veldir,dir,side
- REAL_T dx(SDIM)
+ INTEGER_T, intent(in) :: nmat
+ REAL_T, intent(in) :: xwall
+ REAL_T, intent(in) :: xghost(SDIM)
+ REAL_T, intent(in) :: t
+ REAL_T, intent(in) :: LS(nmat)
+ REAL_T, intent(inout) :: VEL
+ REAL_T, intent(in) :: VEL_in
+ INTEGER_T, intent(in) :: veldir,dir,side
+ REAL_T, intent(in) :: dx(SDIM)
  REAL_T local_VEL(SDIM)
  INTEGER_T velsolid_flag
 
@@ -394,7 +426,7 @@ contains
      (side.ge.1).and.(side.le.2).and. &
      (veldir.ge.1).and.(veldir.le.SDIM)) then
 
-  call CAV3D_VEL(xghost,t,LS,local_VEL,velsolid_flag)
+  call CAV3D_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
   VEL=local_VEL(veldir)
 
  else
@@ -408,23 +440,24 @@ contains
 
   ! dir=1..sdim  side=1..2
  subroutine CAV3D_PRES_BC(xwall,xghost,t,LS, &
-    PRES,PRES_in,dir,side,dx)
+    PRES,PRES_in,dir,side,dx,nmat)
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T xwall
- REAL_T xghost(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T PRES
- REAL_T PRES_in
- INTEGER_T dir,side
- REAL_T dx(SDIM)
+ INTEGER_T, intent(in) :: nmat
+ REAL_T, intent(in) :: xwall
+ REAL_T, intent(in) :: xghost(SDIM)
+ REAL_T, intent(in) :: t
+ REAL_T, intent(in) :: LS(nmat)
+ REAL_T, intent(inout) :: PRES
+ REAL_T, intent(in) :: PRES_in
+ INTEGER_T, intent(in) :: dir,side
+ REAL_T, intent(in) :: dx(SDIM)
 
  if ((dir.ge.1).and.(dir.le.SDIM).and. &
      (side.ge.1).and.(side.le.2)) then
 
-  call CAV3D_PRES(xghost,t,LS,PRES)
+  call CAV3D_PRES(xghost,t,LS,PRES,nmat)
 
  else
   print *,"dir or side invalid"
@@ -434,30 +467,42 @@ contains
  return
  end subroutine CAV3D_PRES_BC
 
-  ! dir=1..sdim  side=1..2
- subroutine CAV3D_STATE_BC(xwall,xghost,t,LS, &
-    STATE,STATE_merge,STATE_in,im,istate,dir,side,dx)
- use probcommon_module
- IMPLICIT NONE
+ ! dir=1..sdim  side=1..2
+subroutine CAV3D_STATE_BC(xwall,xghost,t,LS, &
+   STATE,STATE_merge,STATE_in,im,istate,dir,side,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
 
- REAL_T xwall
- REAL_T xghost(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T local_STATE(num_materials*num_state_material)
- REAL_T STATE
- REAL_T STATE_merge
- REAL_T STATE_in
- INTEGER_T dir,side
- REAL_T dx(SDIM)
- INTEGER_T istate,im
- INTEGER_T ibase,im_crit,im_loop
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T :: local_STATE(nmat*num_state_material)
+REAL_T, intent(inout) :: STATE
+REAL_T, intent(inout) :: STATE_merge
+REAL_T, intent(in) :: STATE_in
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, intent(in) :: istate,im
+
+INTEGER_T ibase,im_crit,im_loop
+INTEGER_T local_bcflag
+
+ if (nmat.eq.num_materials) then
+  ! do nothing
+ else
+  print *,"nmat invalid"
+  stop
+ endif
+ local_bcflag=1
 
  if ((istate.ge.1).and. &
      (istate.le.num_state_material).and. &
      (im.ge.1).and. &
      (im.le.num_materials)) then
-  call CAV3D_STATE(xghost,t,LS,local_STATE)
+  call CAV3D_STATE(xghost,t,LS,local_STATE,local_bcflag, &
+          nmat,num_state_material)
   ibase=(im-1)*num_state_material
   STATE=local_STATE(ibase+istate)
   im_crit=1

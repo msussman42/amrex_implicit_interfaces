@@ -6441,13 +6441,6 @@ void NavierStokes::create_fortran_grid_struct(Real cur_time,Real dt) {
  if ((level<0)||(level>max_level))
   amrex::Error("level invalid in create_fortran_grid_struct");
 
- Real problo[AMREX_SPACEDIM];
- Real probhi[AMREX_SPACEDIM];
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  problo[dir]=geom.ProbLo(dir);
-  probhi[dir]=geom.ProbHi(dir);
- }
-
  bool use_tiling=ns_tiling;
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
@@ -6707,9 +6700,7 @@ void NavierStokes::create_fortran_grid_struct(Real cur_time,Real dt) {
   &tile_dim, 
   &nmat,
   &nparts,
-  im_solid_map.dataPtr(),
-  problo,
-  probhi);
+  im_solid_map.dataPtr());
 
 } // end subroutine create_fortran_grid_struct
 
@@ -8250,8 +8241,10 @@ void NavierStokes::ns_header_msg_level(
    problo[dir]=geom.ProbLo(dir);
    probhi[dir]=geom.ProbHi(dir);
    problen[dir]=probhi[dir]-problo[dir];
-   if (problen[dir]<=0.0)
-    amrex::Error("problen[dir]<=0.0");
+   if (problen[dir]>0.0) {
+    // do nothing
+   } else
+    amrex::Error("problen[dir] invalid");
   }
 
   Vector<FSI_container_class> FSI_input;
@@ -8410,8 +8403,6 @@ void NavierStokes::ns_header_msg_level(
       problo,
       problen, 
       dx_max_level, 
-      problo,
-      probhi, 
       velbc.dataPtr(),  
       vofbc.dataPtr(), 
       FSIfab.dataPtr(), // placeholder
@@ -8574,8 +8565,6 @@ void NavierStokes::ns_header_msg_level(
      problo,
      problen, 
      dx_max_level, 
-     problo,
-     probhi, 
      velbc.dataPtr(),  
      vofbc.dataPtr(), 
      FSIfab.dataPtr(), // placeholder
@@ -8894,8 +8883,6 @@ void NavierStokes::ns_header_msg_level(
      xlo,
      dx, 
      dx_max_level, 
-     problo,
-     probhi, 
      velbc.dataPtr(),  
      vofbc.dataPtr(), 
      FSIfab.dataPtr(),
@@ -9096,8 +9083,6 @@ void NavierStokes::ns_header_msg_level(
      problo,
      problen, 
      dx_max_level, 
-     problo,
-     probhi, 
      velbc.dataPtr(),  
      vofbc.dataPtr(), 
      FSIfab.dataPtr(), // placeholder
@@ -9201,8 +9186,6 @@ void NavierStokes::ns_header_msg_level(
       xlo,
       dx, 
       dx_max_level, 
-      problo,
-      probhi, 
       velbc.dataPtr(),  
       vofbc.dataPtr(), 
       FSIfab.dataPtr(), // placeholder

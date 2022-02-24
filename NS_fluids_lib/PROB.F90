@@ -998,7 +998,6 @@ stop
       use global_utility_module
       use global_distance_module
       use USERDEF_module
-      use CAV3D_module
       use HELIX_module
       use TSPRAY_module
       use CAV2Dstep_module
@@ -6748,7 +6747,6 @@ END SUBROUTINE Adist
       use global_utility_module
       use probcommon_module
       use USERDEF_module
-      use CAV3D_module
       use HELIX_module
       use TSPRAY_module
       use CAV2Dstep_module
@@ -6794,11 +6792,6 @@ END SUBROUTINE Adist
         ibase=(im-1)*num_state_material
         temp=STATE(ibase+ENUM_TEMPERATUREVAR+1) 
 
-       else if (probtype.eq.411) then ! cavitation user defined
-        call CAV3D_LS(xvec,time,LS)
-        call CAV3D_STATE(xvec,time,LS,STATE)
-        ibase=(im-1)*num_state_material
-        temp=STATE(ibase+ENUM_TEMPERATUREVAR+1) 
        else if (probtype.eq.401) then ! helix user defined
         call HELIX_LS(xvec,time,LS)
         call HELIX_STATE(xvec,time,LS,STATE)
@@ -6984,7 +6977,6 @@ END SUBROUTINE Adist
       use global_distance_module
       use probcommon_module
       use USERDEF_module
-      use CAV3D_module
       use HELIX_module
       use TSPRAY_module
       use CAV2Dstep_module
@@ -7043,11 +7035,6 @@ END SUBROUTINE Adist
         call SUB_LS(xvec,time,LS,num_materials)
         call SUB_VEL(xvec,time,LS,vel,velsolid_flag,dx, &
                 num_materials)
-
-         ! velsolid, no sci_clsvof.F90 
-       else if (probtype.eq.411) then
-        call CAV3D_LS(xvec,time,LS)
-        call CAV3D_VEL(xvec,time,LS,vel,velsolid_flag)
 
        else if (probtype.eq.401) then
         call HELIX_LS(xvec,time,LS)
@@ -7741,7 +7728,6 @@ END SUBROUTINE Adist
       use unimaterialChannel_module
       use River
       use USERDEF_module
-      use CAV3D_module
       use HELIX_module
       use TSPRAY_module
       use CAV2Dstep_module
@@ -7850,8 +7836,6 @@ END SUBROUTINE Adist
 
       if (is_in_probtype_list().eq.1) then
        call SUB_LS(x_in,time,dist,num_materials)
-      else if (probtype.eq.411) then
-       call CAV3D_LS(x_in,time,dist)
       else if (probtype.eq.401) then
        call HELIX_LS(x_in,time,dist)
       else if (probtype.eq.402) then
@@ -11085,10 +11069,6 @@ END SUBROUTINE Adist
        call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
        call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
 
-      else if (probtype.eq.411) then
-       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
-
       else if (probtype.eq.401) then
        call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
        call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
@@ -11680,7 +11660,6 @@ END SUBROUTINE Adist
       use hydrateReactor_module
       use unimaterialChannel_module
       use USERDEF_module
-      use CAV3D_module
       use HELIX_module
       use TSPRAY_module
       use CAV2Dstep_module
@@ -11777,9 +11756,6 @@ END SUBROUTINE Adist
        endif
        call SUB_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx, &
         num_materials)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
-      else if (probtype.eq.411) then
-       call CAV3D_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
        call check_lsbc_extrap(LS,LSWALL,nmat)
       else if (probtype.eq.401) then
        call HELIX_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
@@ -16189,7 +16165,6 @@ END SUBROUTINE Adist
       use River
       use shockdrop
       use USERDEF_module
-      use CAV3D_module
       use HELIX_module
       use TSPRAY_module
       use CAV2Dstep_module
@@ -16264,10 +16239,6 @@ END SUBROUTINE Adist
         call SUB_LS(xvec,time,local_LS,num_materials)
         call SUB_VEL_BC(xwall,xvec,time,local_LS, &
          velcell(veldir),vel,veldir,dir,side,dx,num_materials)
-       else if (probtype.eq.411) then
-        call CAV3D_LS(xvec,time,local_LS)
-        call CAV3D_VEL_BC(xwall,xvec,time,local_LS, &
-         velcell(veldir),vel,veldir,dir,side,dx)
        else if (probtype.eq.401) then
         call HELIX_LS(xvec,time,local_LS)
         call HELIX_VEL_BC(xwall,xvec,time,local_LS, &
@@ -17515,7 +17486,6 @@ END SUBROUTINE Adist
       use River
       use shockdrop
       use USERDEF_module
-      use CAV3D_module
       use HELIX_module
       use TSPRAY_module
       use CAV2Dstep_module
@@ -17613,11 +17583,7 @@ END SUBROUTINE Adist
         call SUB_LS(xpos,time,local_LS,num_materials)
         call SUB_PRES_BC(xwall,xpos,time,local_LS, &
          ADV,ADVwall,dir,side,dx,num_materials)
-       else if (probtype.eq.411) then
 
-        call CAV3D_LS(xpos,time,local_LS)
-        call CAV3D_PRES_BC(xwall,xpos,time,local_LS, &
-          ADV,ADVwall,dir,side,dx)
        else if (probtype.eq.401) then
 
         call HELIX_LS(xpos,time,local_LS)
@@ -18212,7 +18178,6 @@ END SUBROUTINE Adist
       use unimaterialChannel_module
       use marangoni
       use USERDEF_module
-      use CAV3D_module
       use HELIX_module
       use TSPRAY_module
       use CAV2Dstep_module
@@ -18360,12 +18325,6 @@ END SUBROUTINE Adist
         call SUB_LS(xvec,time,local_LS,num_materials)
         call SUB_STATE_BC(xwall,xvec,time,local_LS, &
          ADV,ADV_merge,ADVwall,im,istate,dir,side,dx,num_materials)
-
-       else if (probtype.eq.411) then
-
-        call CAV3D_LS(xvec,time,local_LS)
-        call CAV3D_STATE_BC(xwall,xvec,time,local_LS, &
-          ADV,ADV_merge,ADVwall,im,istate,dir,side,dx) 
 
        else if (probtype.eq.401) then
 
@@ -26266,7 +26225,6 @@ end subroutine initialize2d
        use marangoni
        use CISL_SANITY_MODULE
        use USERDEF_module
-       use CAV3D_module
        use HELIX_module
        use TSPRAY_module
        use CAV2Dstep_module
@@ -26545,26 +26503,6 @@ end subroutine initialize2d
           print *,"p_hyd=",p_hyd
           stop
          endif
-
-        else if (probtype.eq.411) then
-
-         call CAV3D_LS(xpos,time,distbatch)
-         call CAV3D_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
-          ibase=STATECOMP_STATES+(im-1)*num_state_material
-          local_ibase=(im-1)*num_state_material
-          scalc(ibase+ENUM_DENVAR+1)= &
-              local_state(local_ibase+ENUM_DENVAR+1) ! density
-          scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
-              local_state(local_ibase+ENUM_TEMPERATUREVAR+1) ! temperature
-           ! species
-          do n=1,num_species_var
-           scalc(ibase+num_state_base+n)= &
-            local_state(local_ibase+num_state_base+n)
-          enddo
-         enddo ! im=1..nmat
-         call CAV3D_PRES(xpos,time,distbatch,p_hyd)
-         scalc(STATECOMP_PRES+1)=p_hyd
 
         else if (probtype.eq.401) then
 
@@ -28104,7 +28042,6 @@ end subroutine initialize2d
       use River
       use shockdrop
       use USERDEF_module
-      use CAV3D_module
       use HELIX_module
       use TSPRAY_module
       use CAV2Dstep_module
@@ -28469,13 +28406,6 @@ end subroutine initialize2d
           ! pass dx
          call SUB_VEL(xvec,time,distbatch,velcell, &
           velsolid_flag,dx,num_materials)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
-        else if (probtype.eq.411) then
-         call CAV3D_LS(xvec,time,distbatch)
-         call CAV3D_VEL(xvec,time,distbatch,velcell,velsolid_flag)
          x_vel=velcell(1)
          y_vel=velcell(2)
          z_vel=velcell(SDIM)

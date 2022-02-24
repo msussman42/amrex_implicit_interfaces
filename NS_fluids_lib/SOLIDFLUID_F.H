@@ -50,8 +50,6 @@ namespace amrex{
      const Real* xlo,
      const Real* dx,
      Real* dx_max_level,
-     Real* problo,
-     Real* probhi,
      const int* velbc,
      const int* vofbc,
      Real* FSIdata,AMREX_ARLIM_P(FSIdatalo),AMREX_ARLIM_P(FSIdatahi),
@@ -97,9 +95,7 @@ namespace amrex{
      int* tile_dim,
      int* nmat,
      int* nparts,
-     int* im_solid_map,
-     Real* problo,
-     Real* probhi);
+     int* im_solid_map);
 
   };
 

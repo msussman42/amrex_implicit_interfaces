@@ -3,8 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#define STANDALONE 0
-
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_BC_TYPES.H"
@@ -392,7 +390,7 @@ contains
 subroutine init2_FSI(part_id)
 IMPLICIT NONE
 
-INTEGER_T part_id
+INTEGER_T, intent(in) :: part_id
 INTEGER_T inode,dir
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
@@ -430,8 +428,12 @@ end subroutine init2_FSI
 subroutine init3_FSI(part_id,ifirst,do_2nd_part,ioproc,isout)
 IMPLICIT NONE
 
-INTEGER_T part_id
-INTEGER_T inode,dir,ifirst,do_2nd_part,it,ioproc,isout
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: ifirst
+INTEGER_T, intent(in) :: do_2nd_part
+INTEGER_T, intent(in) :: ioproc
+INTEGER_T, intent(in) :: isout
+INTEGER_T inode,dir,it
 REAL_T x,y,z,z0,z90,t,dt,t1,t2,inflowvel
 REAL_T YK,ZK,lift0,lift90
 REAL_T, dimension(3) :: displ1,displ2
@@ -710,8 +712,9 @@ end subroutine init3_FSI
 subroutine init_FSI(part_id,allocate_intelem)
 IMPLICIT NONE
 
-INTEGER_T part_id
-INTEGER_T inode,dir,allocate_intelem
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: allocate_intelem
+INTEGER_T inode,dir
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
   print *,"part_id invalid"
@@ -2727,21 +2730,22 @@ INTEGER_T localElem(4)
 return
 end subroutine initflapping
 
+!called from: overall_solid_advance and overall_solid_init
 subroutine init_from_cas(curtime,dt,ifirst,sdim,istop,istep,ioproc, &
   part_id,isout)
-#if (STANDALONE==0)
-use CAV3D_module
-#endif
+use global_utility_module
 
 IMPLICIT NONE
 
-INTEGER_T :: part_id
-INTEGER_T :: sdim,ifirst,isout
-INTEGER_T :: inode,iface,ioproc
-REAL_T :: curtime,dt
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: sdim,ifirst,isout
+INTEGER_T, intent(in) :: ioproc
+REAL_T, intent(in) :: curtime,dt
+INTEGER_T, intent(in) :: istep,istop
+INTEGER_T :: inode,iface
 REAL_T, dimension(3) :: maxnode,minnode,xval,xval1
 REAL_T, dimension(3) :: maxnodebefore,minnodebefore
-INTEGER_T :: dir,istep,istop
+INTEGER_T :: dir
 
 REAL_T, dimension(3) :: xxblob1,newxxblob1
 REAL_T :: radradblob1
@@ -2787,17 +2791,7 @@ REAL_T :: local_nodes(3,3)  ! dir,node num
    denpaddle=one
    dampingpaddle=zero
 
-   if (probtype.eq.411) then
-#if (STANDALONE==0)
-    call OPEN_CAV3D_CASFILE(part_id,14)
-#else
-    print *,"probtype not recognized in init_from_cas1"
-    stop
-#endif
-   else
-    print *,"probtype not recognized in init_from_cas2"
-    stop
-   endif
+   call SUB_OPEN_CASFILE(part_id,14)
 
    READ(14,*) FSI(part_id)%NumNodes,FSI(part_id)%NumIntElems
    print *,"NumNodes ",FSI(part_id)%NumNodes
@@ -2871,12 +2865,7 @@ REAL_T :: local_nodes(3,3)  ! dir,node num
      enddo
     enddo
 
-#if (STANDALONE==0)
-    call CAV3D_ORDER_NODES(local_nodes,localElem)
-#else
-    print *,"CAV3D not recognized in standalone"
-    stop
-#endif
+    call SUB_ORDER_NODES(local_nodes,localElem)
 
     FSI(part_id)%ElemData(1,iface)=3 ! number of nodes in element
     FSI(part_id)%ElemData(2,iface)=1 ! part number
@@ -5162,8 +5151,8 @@ return
 end subroutine internal_inflow_geominit
 
 
-! overall_solid_advance and post_process_nodes_elements called every geom_interval
-! time.
+! overall_solid_advance and post_process_nodes_elements 
+! called every FSI_interval steps.
 ! This routine will be called just once at the very beginning or upon
 ! restart.
 subroutine gearinit(curtime,dt,ifirst,sdim,istop,istep)
@@ -5912,14 +5901,18 @@ INTEGER_T :: local_part_id
 return
 end subroutine initship
 
+! overall_solid_advance is called from:
+!  CLSVOF_ReadNodes
 ! if probtype==701,538,541 then post_process_nodes_elements is not needed.
 subroutine overall_solid_advance(CLSVOF_curtime,CLSVOF_dt, &
   part_id,ioproc,isout)
 IMPLICIT NONE
 
-INTEGER_T :: part_id    
-INTEGER_T :: ifirst,ioproc,isout
-REAL_T :: CLSVOF_curtime,CLSVOF_dt
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: ioproc
+INTEGER_T, intent(in) :: isout
+REAL_T, intent(in) :: CLSVOF_curtime,CLSVOF_dt
+INTEGER_T :: ifirst
 REAL_T :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
@@ -6014,14 +6007,18 @@ REAL_T :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
 return
 end subroutine overall_solid_advance
 
+! called from CLSVOF_ReadHeader
 subroutine overall_solid_init(CLSVOFtime,ioproc,part_id,isout)
 use global_utility_module
 
 IMPLICIT NONE
 
-INTEGER_T :: part_id
-INTEGER_T :: ifirst,ioproc,isout
-REAL_T :: paddle_pos,paddle_vel,CLSVOFtime,CLSVOF_dt
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: ioproc
+INTEGER_T, intent(in) :: isout
+REAL_T, intent(in) :: CLSVOFtime
+INTEGER_T :: ifirst
+REAL_T :: paddle_pos,paddle_vel,CLSVOF_dt
 REAL_T :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
 INTEGER_T :: nmat
 INTEGER_T :: ctml_part_id
@@ -13157,6 +13154,4 @@ end subroutine CLSVOF_ReadNodes
       END subroutine springs
 
 end module CLSVOFCouplerIO
-
-#undef STANDALONE
 

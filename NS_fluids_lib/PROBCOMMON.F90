@@ -1030,6 +1030,24 @@ implicit none
       INTEGER_T, intent(in) :: i,j,k,cell_flag
       end subroutine TEMPLATE_ASSIMILATE
 
+      subroutine TEMPLATE_FSI_SLICE(xmap3D,xslice3D,problo3D,probhi3D,dx_slice)
+      REAL_T, intent(in) :: dx_slice
+      INTEGER_T, intent(inout) :: xmap3D(3)
+      REAL_T, intent(inout) :: xslice3D(3)
+      REAL_T, intent(out) :: problo3D(3)
+      REAL_T, intent(out) :: probhi3D(3)
+      end subroutine TEMPLATE_FSI_SLICE
+
+      subroutine TEMPLATE_OPEN_CASFILE(part_id,unit_id)
+      INTEGER_T, intent(in) :: part_id
+      INTEGER_T, intent(in) :: unit_id
+      end subroutine TEMPLATE_OPEN_CASFILE
+
+      subroutine TEMPLATE_ORDER_NODES(nodes,nodemap)
+      REAL_T, intent(in) :: nodes(3,3) ! dir,nodenum
+      INTEGER_T, intent(inout) :: nodemap(3)
+      end subroutine TEMPLATE_ORDER_NODES
+
       END INTERFACE
 
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
@@ -1058,6 +1076,10 @@ implicit none
       PROCEDURE(TEMPLATE_microcell_heat_coeff), POINTER :: &
               SUB_microcell_heat_coeff
       PROCEDURE(TEMPLATE_ASSIMILATE), POINTER :: SUB_ASSIMILATE
+
+      PROCEDURE(TEMPLATE_FSI_SLICE), POINTER :: SUB_FSI_SLICE
+      PROCEDURE(TEMPLATE_OPEN_CASFILE), POINTER :: SUB_OPEN_CASFILE
+      PROCEDURE(TEMPLATE_ORDER_NODES), POINTER :: SUB_ORDER_NODES
 
       PROCEDURE(TEMPLATE_wallfunc), POINTER :: SUB_wallfunc
 
