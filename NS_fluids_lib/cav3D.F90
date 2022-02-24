@@ -476,20 +476,29 @@ contains
  return
  end subroutine CAV3D_STATE_BC
 
- subroutine CAV3D_HEATSOURCE(im,VFRAC,time,x,temp, &
-      heat_source,den,CV,dt)
+ subroutine CAV3D_HEATSOURCE( &
+      im,VFRAC,time, &
+      x, &
+      xsten, & ! xsten(-nhalf:nhalf,SDIM)
+      nhalf, &
+      temp, &
+      heat_source,den,CV,dt, &
+      nmat)
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T im
- REAL_T VFRAC(num_materials)
- REAL_T time
- REAL_T x(SDIM)
- REAL_T temp(num_materials)
- REAL_T den(num_materials)
- REAL_T CV(num_materials)
- REAL_T dt
- REAL_T heat_source
+ INTEGER_T, intent(in) :: nmat
+ INTEGER_T, intent(in) :: im
+ REAL_T, intent(in) :: VFRAC(nmat)
+ REAL_T, intent(in) :: time
+ INTEGER_T, intent(in) :: nhalf
+ REAL_T, intent(in) :: x(SDIM)
+ REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+ REAL_T, intent(in) :: temp(nmat)
+ REAL_T, intent(in) :: den(nmat)
+ REAL_T, intent(in) :: CV(nmat)
+ REAL_T, intent(in) :: dt
+ REAL_T, intent(out) :: heat_source
 
  if ((num_materials.eq.3).and.(probtype.eq.411)) then
   heat_source=zero
