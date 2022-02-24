@@ -6806,7 +6806,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
  MultiFab* solid_vel_mf;
  if (nparts==0) {
   if (nparts_ghost==1) {
-   solid_vel_mf=getState(ngrow_distance,0,AMREX_SPACEDIM,
+   solid_vel_mf=getState(ngrow_distance,STATECOMP_VEL,
+    STATE_NCOMP_VEL,
     cur_time_slab);
   } else
    amrex::Error("nparts_ghost invalid");
@@ -6818,7 +6819,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
 
   // velocity and pressure
  MultiFab* fluid_vel_mf=getState(ngrow_distance,STATECOMP_VEL,
-   STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
+   STATE_NCOMP_VEL+STATE_NCOMP_PRES,
+   cur_time_slab);
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) { 
 
