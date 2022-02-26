@@ -167,41 +167,75 @@ REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: VEL(SDIM)
 INTEGER_T dir
 INTEGER_T, intent(in) :: velsolid_flag
+INTEGER_T :: expected_nmat
+INTEGER_T :: assert_oil_velocity
 
-  if (nmat.eq.num_materials) then
+ if (nmat.eq.num_materials) then
+  ! do nothing
+ else
+  print *,"nmat invalid"
+  stop
+ endif
+
+ if ((velsolid_flag.eq.0).or. &
+     (velsolid_flag.eq.1)) then
+  ! do nothing
+ else 
+  print *,"velsolid_flag invalid"
+  stop
+ endif
+
+ do dir=1,SDIM
+  if (dx(dir).gt.zero) then
    ! do nothing
   else
-   print *,"nmat invalid"
+   print *,"dx invalid"
    stop
   endif
+ enddo
 
-  if ((velsolid_flag.eq.0).or. &
-      (velsolid_flag.eq.1)) then
-   ! do nothing
-  else 
-   print *,"velsolid_flag invalid"
-   stop
-  endif
+ if (axis_dir.eq.0) then
+  expected_nmat=4
+ else if (axis_dir.eq.1) then
+  expected_nmat=3
+ else if (axis_dir.eq.2) then
+  expected_nmat=4
+ else
+  print *,"axis_dir invalid"
+  stop
+ endif
 
-  do dir=1,SDIM
-   if (dx(dir).gt.zero) then
-    ! do nothing
-   else
-    print *,"dx invalid"
-    stop
-   endif
-  enddo
+ if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
 
   do dir=1,SDIM
    VEL(dir)=zero
   enddo
 
+  if (axis_dir.eq.1) then
+   assert_oil_velocity=0
+  else if ((axis_dir.eq.0).or. &
+           (axis_dir.eq.2)) then
+   if (LS(3).ge.-dx(SDIM)) then
+    assert_oil_velocity=1
+   else if (LS(3).lt.-dx(SDIM)) then
+    assert_oil_velocity=0
+   else
+    print *,"LS(3) invalid"
+    stop
+   endif
+  else
+   print *,"axis_dir invalid"
+   stop
+  endif
+
   if ((LS(nmat).ge.zero).or. &
-      (velsolid_flag.eq.1)) then
+      (velsolid_flag.eq.1).or. &
+      (assert_oil_velocity.eq.1)) then
    ! do nothing
   else if ((LS(nmat).lt.zero).and. &
-           (velsolid_flag.eq.0)) then
-FIX ME THE VELOCITY IS ZERO IN THE INITIAL LUBRICANT POSITION (ON THE WALL)
+           (velsolid_flag.eq.0).and. &
+           (assert_oil_velocity.eq.0)) then
+
    if (axis_dir.eq.0) then
 
     if (LS(1).ge.-dx(1)) then
@@ -239,9 +273,14 @@ FIX ME THE VELOCITY IS ZERO IN THE INITIAL LUBRICANT POSITION (ON THE WALL)
     stop
    endif
   else
-   print *,"LS or velsolid invalid"
+   print *,"LS, velsolid, or assert_oil_velocity invalid"
    stop
   endif
+
+ else
+  print *,"num_materials or probtype invalid"
+  stop
+ endif
 
 return 
 end subroutine AHMED_ICE_RESISTANT_VEL
@@ -688,7 +727,7 @@ if ((num_materials.ge.3).and. &
        assimilate_out%macz(D_DECL(i,j,k))=VEL_DROP(SDIM)
       else if (cell_flag.eq.-1) then
        do dir=1,SDIM
-        assimilate_out%state(D_DECL(i,j,k),dir)=VEL_DROP(dir)
+        assimilate_out%state(D_DECL(i,j,k),STATECOMP_VEL+dir)=VEL_DROP(dir)
        enddo
        assimilate_out%LS_state(D_DECL(i,j,k),1)=LS_seed
        assimilate_out%LS_state(D_DECL(i,j,k),2)=-LS_seed
@@ -754,21 +793,18 @@ if ((num_materials.ge.3).and. &
           -(centroid_seed(dir)-cencell(dir))
        enddo
 
-       do im=2,num_materials
+       do im=3,num_materials
         LS_test=assimilate_out%LS_state(D_DECL(i,j,k),im)
-        if (LS_test.ge.LS_seed-three*assimilate_in%dx(1)) then
-         LS_test=-abs(LS_seed)-three*assimilate_in%dx(1)
-         do dir=1,SDIM
-          assimilate_out%LS_state(D_DECL(i,j,k), &
-                num_materials+(im-1)*SDIM+dir)=zero
-         enddo
-        else if (LS_test.lt.-LS_seed) then
+         ! oil and substrate should not be near the incoming droplets.
+        if (LS_test.le.-three*assimilate_in%dx(1)) then
          ! do nothing
         else
-         print *,"LS_test or LS_seed invalid"
+         print *,"LS_test invalid LS_test=",LS_test
+         print *,"LS_seed=",LS_seed
          stop
         endif
-       enddo
+       enddo !do im=3,num_materials
+
       else 
        print *,"cell_flag invalid"
        stop
