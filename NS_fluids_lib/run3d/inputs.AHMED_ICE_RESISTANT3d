@@ -213,8 +213,6 @@ ns.hi_bc          = 2 2 2  # XYZ
 # axis_dir=1,2
 #ns.lo_bc          = 1 5 5  # XYZ
 #ns.hi_bc          = 2 5 5  # XYZ
-ns.species_lo_bc  = 2 2 5  # XYZ
-ns.species_hi_bc  = 2 2 2  # XYZ
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry

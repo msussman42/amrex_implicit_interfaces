@@ -196,40 +196,50 @@ INTEGER_T, intent(in) :: velsolid_flag
    VEL(dir)=zero
   enddo
 
-  if (axis_dir.eq.0) then
+  if ((LS(nmat).ge.zero).or. &
+      (velsolid_flag.eq.1)) then
+   ! do nothing
+  else if ((LS(nmat).lt.zero).and. &
+           (velsolid_flag.eq.0)) then
+FIX ME THE VELOCITY IS ZERO IN THE INITIAL LUBRICANT POSITION (ON THE WALL)
+   if (axis_dir.eq.0) then
 
-   if (LS(1).ge.-dx(1)) then
-    VEL(SDIM)=-abs(adv_vel)
-   else if (LS(1).le.-dx(1)) then
-    ! do nothing
-   else
-    print *,"LS(1) invalid"
-    stop
-   endif
-
-  else if ((axis_dir.eq.1).or. &
-           (axis_dir.eq.2)) then
-   VEL(1)=adv_vel
-
-   if (LS(1).ge.-dx(1)) then
-    VEL(SDIM)=-abs(adv_vel)
-   else if (LS(1).le.-dx(1)) then
-    VEL(1)=xblob3
-    if (SDIM.eq.2) then
-     VEL(SDIM)=yblob3
-    else if (SDIM.eq.3) then
-     VEL(SDIM)=zblob3
+    if (LS(1).ge.-dx(1)) then
+     VEL(SDIM)=-abs(adv_vel)
+    else if (LS(1).le.-dx(1)) then
+     ! do nothing
     else
-     print *,"SDIM invalid"
+     print *,"LS(1) invalid"
      stop
     endif
+
+   else if ((axis_dir.eq.1).or. &
+            (axis_dir.eq.2)) then
+    VEL(1)=adv_vel
+
+    if (LS(1).ge.-dx(1)) then
+     VEL(SDIM)=-abs(adv_vel)
+    else if (LS(1).le.-dx(1)) then
+     VEL(1)=xblob3
+     if (SDIM.eq.2) then
+      VEL(SDIM)=yblob3
+     else if (SDIM.eq.3) then
+      VEL(SDIM)=zblob3
+     else
+      print *,"SDIM invalid"
+      stop
+     endif
+    else
+     print *,"LS(1) invalid"
+     stop
+    endif
+
    else
-    print *,"LS(1) invalid"
+    print *,"axis_dir invalid"
     stop
    endif
-
   else
-   print *,"axis_dir invalid"
+   print *,"LS or velsolid invalid"
    stop
   endif
 
