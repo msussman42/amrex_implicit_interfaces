@@ -5,12 +5,10 @@ max_step  = 200000    # maximum timestep
 stop_time = 10  
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
-# set up for bubble
-# axis_dir=0
-geometry.coord_sys      = 1        # 0 => XYZ, 1 => RZ
-#geometry.coord_sys      = 0        # axis_dir=1,2
+#geometry.coord_sys      = 1        # 0 => XYZ, 1 => RZ
+geometry.coord_sys      = 0        # axis_dir=1,2
 geometry.prob_lo=0.0 0.0    # XYZ
-geometry.prob_hi=0.2 0.6  # cm XYZ axis_dir=0
+#geometry.prob_hi=0.2 0.6  # cm XYZ axis_dir=0
 geometry.prob_hi=0.4 0.6  # cm XYZ axis_dir=1,2
 ns.slice_dir=1
 ns.xslice=0.0 0.0 0.0
@@ -49,10 +47,12 @@ Lp.v = 0
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
+#0=tecplot 1=plt file(visit) 2=tecplot piecewise const.
+ns.visual_nddata_format=1  
 
-amr.n_cell=16 48  # XYZ  axis_dir=0
-#amr.n_cell=32 48  # XYZ  axis_dir=1,2
-amr.max_level = 1 # max_level=1 for production runs
+#amr.n_cell=16 48  # XYZ  axis_dir=0
+amr.n_cell=32 48  # XYZ  axis_dir=1,2
+amr.max_level = 0 # max_level=1 for production runs
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
 # 0- 1 level 1- 2 levels  2- 3 levels
@@ -65,7 +65,7 @@ amr.check_int       = 100
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps
-amr.plot_int        = 100 # 100 for production runs
+amr.plot_int        = 10 # 100 for production runs
 #amr.plot_int        = 1000 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -133,16 +133,16 @@ ns.sum_interval   = 10      # timesteps between computing mass
 # adv_vel = velocity of air flowing into the domain from the xlo position.
 # adv_dir=1
 #
-ns.axis_dir=0   
+ns.axis_dir=2   
 ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=1.57
 ns.vinletgas=0.0
 ns.twall=263  # not used
 ns.advbot=0.0  
-ns.adv_vel=155.0 # cm/s initial falling downwards speed (axis_dir=0)
-#ns.adv_vel=100.0 # cm/s air flow from left to right (axis_dir=1,2)
-ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction (axis_dir=0)  
-#ns.adv_dir=1 # axis_dir=1 or 2.
+#ns.adv_vel=155.0 # cm/s initial falling downwards speed (axis_dir=0)
+ns.adv_vel=100.0 # cm/s air flow from left to right (axis_dir=1,2)
+#ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction (axis_dir=0)  
+ns.adv_dir=1 # axis_dir=1 or 2.
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.material_type=0 0 0 999 # axis_dir=0 or 2
 #ns.material_type=0 0 999 # axis_dir=1
@@ -175,26 +175,26 @@ ns.solidheat_flag=0
 ns.tempconst=273.0 273.0 273.0 353.0  #axis_dir=0,2
 #ns.tempconst=273.0 273.0 353.0  #axis_dir=1
 ns.initial_temperature=273.0 273.0 273.0 273.0  # dimensionless
-ns.xblob=0.0  # axis_dir=0  
-#ns.xblob=0.0  # axis_dir=1 or 2
-ns.yblob=0.18
-ns.zblob=0.18
+#ns.xblob=0.0  # axis_dir=0  
+ns.xblob=0.1  # axis_dir=1 or 2 (0<x<0.4  0<y<0.6)
+ns.yblob=0.38
+ns.zblob=0.38
 ns.radblob=0.06 
 ns.zblob2=0.1    #zblob2 is the altitude of the oil layer
 ns.xblob3=50.0
 ns.yblob3=-155.0
 ns.zblob3=-155.0
 # dimensions of drops added after the fact.
-ns.xblob4=0.0
-ns.yblob4=0.0
-ns.zblob4=0.0
-ns.radblob4=0.0
+ns.xblob4=0.1
+ns.yblob4=0.38
+ns.zblob4=0.38
+ns.radblob4=0.06
 # velocity of drops added after the fact.
-ns.xblob5=0.0
-ns.yblob5=0.0
-ns.zblob5=0.0
+ns.xblob5=50.0
+ns.yblob5=-155.0
+ns.zblob5=-155.0
 # period of drops added after the fact, starting at t=radblob5
-ns.radblob5=0.0
+ns.radblob5=0.000625
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=425
@@ -213,13 +213,11 @@ ns.output_drop_distribution=1
 # 3=dirichlet at inflow, outflow, and walls.
 ns.prescribe_temperature_outflow=3
 # axis_dir=0
-ns.lo_bc          = 3 5  # XYZ
-ns.hi_bc          = 2 2  # XYZ
+#ns.lo_bc          = 3 5  # XYZ
+#ns.hi_bc          = 2 2  # XYZ
 # axis_dir=1,2
-#ns.lo_bc          = 1 5  # XYZ
-#ns.hi_bc          = 2 5  # XYZ
-ns.species_lo_bc  = 2 2 5  # XYZ
-ns.species_hi_bc  = 2 2 2  # XYZ
+ns.lo_bc          = 1 5  # XYZ
+ns.hi_bc          = 2 5  # XYZ
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
