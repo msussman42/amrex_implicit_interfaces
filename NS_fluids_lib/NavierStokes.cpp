@@ -8585,8 +8585,8 @@ void NavierStokes::ns_header_msg_level(
      &h_small,
      &cur_time, 
      &dt, 
-     FSI_refine_factor.dataPtr(),
-     FSI_bounding_box_ngrow.dataPtr(),
+     FSI_refine_factor.dataPtr(), // 1,...,nmat
+     FSI_bounding_box_ngrow.dataPtr(), // 1,...,nmat
      &FSI_touch_flag[tid],
      &CTML_FSI_init,
      CTML_force_model.dataPtr(),

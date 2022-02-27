@@ -149,8 +149,8 @@
         h_small, &  ! smallest mesh size from the max_level.
         cur_time, &
         dt, &
-        FSI_refine_factor, &
-        FSI_bounding_box_ngrow, &
+        FSI_refine_factor, & ! 1..nmat
+        FSI_bounding_box_ngrow, & ! 1..nmat
         touch_flag, &
         CTML_FSI_INIT, &
         CTML_force_model, &
@@ -811,11 +811,7 @@
         endif
         if (is_lag_part(nmat,im_part).eq.1) then
 
-         if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid from CAD
-             (FSI_flag(im_part).eq.4).or. & ! CTML FSI Goldstein et al
-             (FSI_flag(im_part).eq.8).or. & ! CTML FSI pres vel
-             (FSI_flag(im_part).eq.6).or. & ! ice from CAD
-             (FSI_flag(im_part).eq.7)) then ! fluid from CAD
+         if (fort_read_from_CAD(FSI_flag(im_part)).eq.1) then
 
           if (container_allocated.ne.1) then
            print *,"container_allocated.ne.1"
