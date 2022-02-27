@@ -41,6 +41,7 @@ namespace amrex{
        const int* solidheat_flag,
        const int* rz_flag,
        const int* FSI_flag,
+       const int* num_local_aux_grids,
        const int* ZEYU_DCA_SELECT,
        const int* invert_solid_levelset,
        const Real* denfact,

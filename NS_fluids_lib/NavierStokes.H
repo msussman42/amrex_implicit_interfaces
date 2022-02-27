@@ -1255,6 +1255,8 @@ void apply_pressure_grad(
 
     void init_regrid_history();
 
+    void init_aux_data();
+
      //cur_time=prev_time+dt
     void ns_header_msg_level(int FSI_operation,int FSI_sub_operation,
       Real cur_time,Real dt,int iter);
@@ -1739,6 +1741,8 @@ protected:
     static Vector<int> im_elastic_map;
 
     static Vector<Real> FSI_force_integral;
+
+    static int num_local_aux_grids; //default is 0
 
     static int ngrow_expansion;  // should always be 2
     static int prescribe_temperature_outflow;

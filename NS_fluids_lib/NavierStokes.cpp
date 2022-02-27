@@ -1033,6 +1033,8 @@ int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 //   velocity comes from Lagrangian code.  link w/Kourosh Shoele
 Vector<int> NavierStokes::FSI_flag; 
 int NavierStokes::FSI_interval=1;
+int NavierStokes::num_local_aux_grids=0;
+
 Vector<int> NavierStokes::FSI_touch_flag; // 0..nthreads-1
 // default: 1
 Vector<int> NavierStokes::FSI_refine_factor; 
@@ -1741,6 +1743,9 @@ void fortran_parameters() {
 
  pp.queryarr("FSI_flag",FSI_flag_temp,0,nmat);
 
+ int num_local_aux_grids_temp=0;
+ pp.query("num_local_aux_grids",num_local_aux_grids_temp);
+
  pp.queryarr("tempcutoff",tempcutofftemp,0,nmat);
  pp.queryarr("tempcutoffmax",tempcutoffmaxtemp,0,nmat);
 
@@ -2010,6 +2015,7 @@ void fortran_parameters() {
 
  const int cc_int_size=sizeof(int);
 
+  // declared in PROB_CPP_PARMS.F90
  fort_override(
   &cc_int_size,
   &ns_max_level,
@@ -2020,6 +2026,7 @@ void fortran_parameters() {
   &solidheat_flag,
   &rz_flag,
   FSI_flag_temp.dataPtr(),
+  &num_local_aux_grids_temp,
   &ZEYU_DCA_SELECT_temp,
   &invert_solid_levelset,
   &denfact,
@@ -3023,6 +3030,7 @@ NavierStokes::read_params ()
      FSI_bounding_box_ngrow[i]=3;
     }
     pp.queryarr("FSI_flag",FSI_flag,0,nmat);
+    pp.query("num_local_aux_grids",num_local_aux_grids);
     pp.query("FSI_interval",FSI_interval);
     pp.queryarr("FSI_refine_factor",FSI_refine_factor,0,nmat);
     pp.queryarr("FSI_bounding_box_ngrow",FSI_bounding_box_ngrow,0,nmat);
@@ -3295,6 +3303,7 @@ NavierStokes::read_params ()
      std::cout << "bottom_bottom_tol_factor " <<
        bottom_bottom_tol_factor<<'\n';
      std::cout << "FSI_interval " << FSI_interval << '\n';
+     std::cout << "num_local_aux_grids " << num_local_aux_grids  << '\n';
      for (int i=0;i<nmat;i++) {
       std::cout << "i= " << i << " FSI_flag " << FSI_flag[i] << '\n';
       std::cout << "i= " << i << " FSI_refine_factor " << 
@@ -8020,6 +8029,21 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 
 }  // subroutine Transfer_FSI_To_STATE
 
+void NavierStokes::init_aux_data() {
+
+ if (level==0) {
+  if (num_local_aux_grids>0) {
+
+  } else if (num_local_aux_grids==0) {
+   // do nothing
+  } else
+   amrex::Error("num_local_aux_grids invalid");
+
+ } else
+  amrex::Error("expecting level==0 in init_aux_data()");
+
+} // end subroutine init_aux_data()
+
 //FSI_operation=0  initialize node locations; generate_new_triangles
 //FSI_operation=1  update node locations
 //FSI_operation=2  make distance in narrow band
@@ -9387,6 +9411,8 @@ void NavierStokes::post_restart() {
 
   }//for (int i=0;i<=time_order;i++) 
 
+  init_aux_data();
+
   int post_init_flag=2; // post_restart
 
   prepare_post_process(post_init_flag);
@@ -9526,6 +9552,8 @@ NavierStokes::initData () {
    recalesce_material.dataPtr(),
    recalesce_state_old.dataPtr(),
    &recalesce_num_state,&nmat); 
+
+  init_aux_data();
 
  } else if ((level>0)&&(level<=max_level)) {
   // do nothing
