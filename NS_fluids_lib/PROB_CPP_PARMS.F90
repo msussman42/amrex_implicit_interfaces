@@ -140,6 +140,7 @@ stop
         ccsolidheat_flag, &
         rz_flag, &
         ccFSI_flag, &
+        ccnum_local_aux_grids, &
         ccZEYU_DCA_SELECT, &
         ccinvert_solid_levelset, &
         ccdenfact, &
@@ -297,6 +298,7 @@ stop
       INTEGER_T, intent(in) :: ccgravity_dir
       INTEGER_T, intent(in) :: ccinvert_gravity
       INTEGER_T, intent(in) :: ccFSI_flag(ccnum_materials)
+      INTEGER_T, intent(in) :: ccnum_local_aux_grids
       INTEGER_T, intent(in) :: ccZEYU_DCA_SELECT
       INTEGER_T, intent(in) :: ccinvert_solid_levelset
       INTEGER_T, intent(in) :: ccprescribe_temperature_outflow
@@ -1034,7 +1036,18 @@ stop
       inflow_pressure=ccinflow_pressure
       outflow_pressure=ccoutflow_pressure
       period_time=ccperiod_time
-      
+     
+      fort_num_local_aux_grids=ccnum_local_aux_grids;
+
+      if (fort_num_local_aux_grids.gt.0) then
+       ALLOCATE(contain_aux(fort_num_local_aux_grids))
+      else if (fort_num_local_aux_grids.eq.0) then
+       ! do nothing
+      else
+       print *,"fort_num_local_aux_grids invalid"
+       stop
+      endif
+
       do im=1,num_materials
       
        fort_material_type(im)=ccmaterial_type(im)
@@ -1608,6 +1621,9 @@ stop
        do im=1,num_materials
         print *,"fort: im,FSI_flag ",im,FSI_flag(im)
        enddo
+
+       print *,"fort: fort_num_local_aux_grids= ",fort_num_local_aux_grids
+
        print *,"fort: invert_solid_levelset ",invert_solid_levelset
        print *,"fort: denfact,velfact,xblob,yblob,zblob ", &
         denfact,velfact,xblob,yblob,zblob

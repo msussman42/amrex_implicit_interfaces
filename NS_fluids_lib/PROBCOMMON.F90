@@ -553,8 +553,8 @@ implicit none
        REAL_T, pointer :: LS3D(:,:,:) ! level set data
       end type aux_contain_type
 
-      INTEGER_T :: n_local_aux_grids=0
-      type(aux_grid_contain_type), dimension(:), allocatable :: contain_aux
+      INTEGER_T :: fort_num_local_aux_grids=0
+      type(aux_contain_type), dimension(:), allocatable :: contain_aux
 
 
       INTEGER_T :: used_probtypes(1000)
