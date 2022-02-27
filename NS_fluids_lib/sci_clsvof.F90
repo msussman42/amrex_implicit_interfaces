@@ -119,8 +119,10 @@ REAL_T :: timeB,tstart,tfinish
 REAL_T :: dtB
 
 type(lag_type), dimension(:), allocatable :: multi_lag
-
 type(mesh_type), dimension(MAX_PARTS) :: FSI
+
+type(lag_type), dimension(:), allocatable :: aux_multi_lag
+type(mesh_type), dimension(:), allocatable :: aux_FSI
 
 INTEGER_T :: normal_invert
 

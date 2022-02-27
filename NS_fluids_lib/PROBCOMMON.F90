@@ -543,6 +543,20 @@ implicit none
        ! level
       INTEGER_T, allocatable, dimension(:) :: level_container_allocated
 
+      type aux_contain_type
+       type(elem_contain_type), pointer :: aux_elem_data
+       type(node_contain_type), pointer :: aux_node_data
+       INTEGER_T, pointer :: lo3D(:)
+       INTEGER_T, pointer :: hi3D(:)
+       REAL_T, pointer :: xlo3D(:)
+       REAL_T, pointer :: dx3D(:)
+       REAL_T, pointer :: LS3D(:,:,:) ! level set data
+      end type aux_contain_type
+
+      INTEGER_T :: n_local_aux_grids=0
+      type(aux_grid_contain_type), dimension(:), allocatable :: contain_aux
+
+
       INTEGER_T :: used_probtypes(1000)
       INTEGER_T :: probtype_list_size
 
