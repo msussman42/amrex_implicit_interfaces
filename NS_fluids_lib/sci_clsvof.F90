@@ -2799,7 +2799,6 @@ REAL_T :: local_nodes(3,3)  ! dir,node num
    print *,"NumNodes ",FSI(part_id)%NumNodes
    print *,"NumIntElems ",FSI(part_id)%NumIntElems
    FSI(part_id)%IntElemDim=3
-   FSI(part_id)%NumIntElems=FSI(part_id)%NumIntElems
 
    if (ifirst.ne.1) then
     print *,"ifirst bust"
@@ -7203,7 +7202,31 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
 return
 end subroutine CLSVOF_sync_lag_data
 
+subroutine CLSVOF_Read_aux_Header(auxcomp)
+use global_utility_module
 
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: auxcomp
+
+ if (auxcomp.eq.1) then
+  allocate(aux_FSI(fort_num_local_aux_grids))
+ else if ((auxcomp.gt.1).and. &
+          (auxcomp.le.fort_num_local_aux_grids)) then
+  ! do nothing
+ else
+  print *,"auxcomp invalid"
+  stop
+ endif
+
+ call SUB_OPEN_AUXFILE(auxcomp,14)
+ READ(14,*) aux_FSI(auxcomp)%NumNodes,aux_FSI(auxcomp)%NumIntElems
+ print *,"NumNodes ",aux_FSI(auxcomp)%NumNodes
+ print *,"NumIntElems ",aux_FSI(auxcomp)%NumIntElems
+ aux_FSI(auxcomp)%IntElemDim=3
+
+return
+end subroutine CLSVOF_Read_aux_Header
 
 ! called from fort_headermsg when FSI_operation==0
 ! fort_headermsg is called from NavierStokes::ns_header_msg_level

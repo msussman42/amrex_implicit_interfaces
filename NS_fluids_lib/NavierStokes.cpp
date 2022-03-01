@@ -8029,11 +8029,13 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 
 }  // subroutine Transfer_FSI_To_STATE
 
+// called from: NavierStokes::post_restart(), NavierStokes::initData() 
 void NavierStokes::init_aux_data() {
 
  if (level==0) {
   if (num_local_aux_grids>0) {
-
+    //fort_init_aux_data() is declared in SOLIDFLUID.F90
+   fort_init_aux_data();
   } else if (num_local_aux_grids==0) {
    // do nothing
   } else
