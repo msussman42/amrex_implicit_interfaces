@@ -506,6 +506,7 @@ stop
       SUB_reference_wavelen=>STUB_reference_wavelen
 
       SUB_OPEN_CASFILE=>STUB_OPEN_CASFILE
+      SUB_OPEN_AUXFILE=>STUB_OPEN_AUXFILE
       SUB_ORDER_NODES=>STUB_ORDER_NODES
       SUB_FSI_SLICE=>STUB_FSI_SLICE
 
