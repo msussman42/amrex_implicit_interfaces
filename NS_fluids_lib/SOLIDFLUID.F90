@@ -1347,6 +1347,36 @@
       return
       end subroutine fort_headermsg
 
+      subroutine fort_init_aux_data() &
+      bind(c,name='fort_init_aux_data')
+      use CLSVOFCouplerIO, only : CLSVOF_Read_aux_Header, &
+       CLSVOF_Init_aux_Box
+      use global_utility_module
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T auxcomp
+      INTEGER_T FSI_operation
+
+      do auxcomp=1,fort_num_local_aux_grids
+
+       call CLSVOF_Read_aux_Header(auxcomp)
+       FSI_operation=2 ! make distance in narrow band
+       iter=0
+       FSI_touch_flag=0
+       call CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
+         FSI_touch_flag)
+       do while (FSI_touch_flag.eq.1)
+        FSI_operation=3 ! sign update
+        call CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
+         FSI_touch_flag)
+        iter=iter+1
+       enddo !do while (FSI_touch_flag.eq.1)
+        
+      enddo ! auxcomp=1,fort_num_local_aux_grids
+
+      return
+      end subroutine fort_init_aux_data
 
       subroutine fort_fillcontainer( &
         level, &
