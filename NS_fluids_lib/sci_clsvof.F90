@@ -705,6 +705,62 @@ REAL_T dilated_time
 return
 end subroutine init3_FSI
 
+subroutine init_FSI_mesh_type(FSI_mesh_type,allocate_intelem)
+type(mesh_type), intent(inout) :: FSI_mesh_type
+INTEGER_T, intent(in) :: allocate_intelem
+INTEGER_T :: inode
+INTEGER_T :: dir
+
+ allocate(FSI_mesh_type%Eul2IntNode(FSI_mesh_type%NumNodes))
+ !(1,iface)=nodes per element (2,iface)=part num (3,iface)=doubly wet flag
+ allocate(FSI_mesh_type%ElemData(flags_per_element,FSI_mesh_type%NumIntElems))
+ if (allocate_intelem.eq.1) then
+  allocate(FSI_mesh_type%IntElem(FSI_mesh_type%IntElemDim, &
+           FSI_mesh_type%NumIntElems))
+ else if (allocate_intelem.eq.0) then
+  ! do nothing
+ else
+  print *,"allocate_intelem invalid"
+  stop
+ endif
+ allocate(FSI_mesh_type%Node_old(3,FSI_mesh_type%NumNodes))
+ allocate(FSI_mesh_type%Node_new(3,FSI_mesh_type%NumNodes))
+ allocate(FSI_mesh_type%Node_current(3,FSI_mesh_type%NumNodes))
+ allocate(FSI_mesh_type%NodeVel_old(3,FSI_mesh_type%NumNodes))
+ allocate(FSI_mesh_type%NodeVel_new(3,FSI_mesh_type%NumNodes))
+ allocate(FSI_mesh_type%NodeForce_old(3,FSI_mesh_type%NumNodes))
+ allocate(FSI_mesh_type%NodeForce_new(3,FSI_mesh_type%NumNodes))
+ allocate(FSI_mesh_type%NodeTemp_old(FSI_mesh_type%NumNodes))
+ allocate(FSI_mesh_type%NodeTemp_new(FSI_mesh_type%NumNodes))
+
+ allocate(FSI_mesh_type%NodeMass(FSI_mesh_type%NumNodes))
+ allocate(FSI_mesh_type%NodeDensity(FSI_mesh_type%NumNodes))
+
+ do inode=1,FSI_mesh_type%NumNodes
+  FSI_mesh_type%Eul2IntNode(inode)=inode
+
+  FSI_mesh_type%NodeMass(inode)=one
+  FSI_mesh_type%NodeDensity(inode)=one
+
+  FSI_mesh_type%NodeTemp_old(inode)=0.0
+  FSI_mesh_type%NodeTemp_new(inode)=0.0
+  do dir=1,3
+   FSI_mesh_type%Node_old(dir,inode)=0.0
+   FSI_mesh_type%Node_new(dir,inode)=0.0
+   FSI_mesh_type%Node_current(dir,inode)=0.0
+   FSI_mesh_type%NodeVel_old(dir,inode)=0.0
+   FSI_mesh_type%NodeVel_new(dir,inode)=0.0
+  enddo
+  do dir=1,3
+   FSI_mesh_type%NodeForce_old(dir,inode)=0.0
+   FSI_mesh_type%NodeForce_new(dir,inode)=0.0
+  enddo
+ enddo ! inode=1,FSI_mesh_type%NumNodes
+
+return
+end subroutine init_FSI_mesh_type
+
+
 ! called from:
 !  CTML_init_sci (prior to CTML_init_sci_node),
 !  initinjector,initflapping,init_from_cas,
@@ -727,48 +783,7 @@ INTEGER_T inode,dir
   stop
  endif
 
- allocate(FSI(part_id)%Eul2IntNode(FSI(part_id)%NumNodes))
- !(1,iface)=nodes per element (2,iface)=part num (3,iface)=doubly wet flag
- allocate(FSI(part_id)%ElemData(flags_per_element,FSI(part_id)%NumIntElems))
- if (allocate_intelem.eq.1) then
-  allocate(FSI(part_id)%IntElem(FSI(part_id)%IntElemDim, &
-           FSI(part_id)%NumIntElems))
- endif
- allocate(FSI(part_id)%Node_old(3,FSI(part_id)%NumNodes))
- allocate(FSI(part_id)%Node_new(3,FSI(part_id)%NumNodes))
- allocate(FSI(part_id)%Node_current(3,FSI(part_id)%NumNodes))
- allocate(FSI(part_id)%NodeVel_old(3,FSI(part_id)%NumNodes))
- allocate(FSI(part_id)%NodeVel_new(3,FSI(part_id)%NumNodes))
- allocate(FSI(part_id)%NodeForce_old(3,FSI(part_id)%NumNodes))
- allocate(FSI(part_id)%NodeForce_new(3,FSI(part_id)%NumNodes))
- allocate(FSI(part_id)%NodeTemp_old(FSI(part_id)%NumNodes))
- allocate(FSI(part_id)%NodeTemp_new(FSI(part_id)%NumNodes))
-
-  ! in: init_FSI
- allocate(FSI(part_id)%NodeMass(FSI(part_id)%NumNodes))
- allocate(FSI(part_id)%NodeDensity(FSI(part_id)%NumNodes))
-
- do inode=1,FSI(part_id)%NumNodes
-  FSI(part_id)%Eul2IntNode(inode)=inode
-
-   ! in: init_FSI
-  FSI(part_id)%NodeMass(inode)=one
-  FSI(part_id)%NodeDensity(inode)=one
-
-  FSI(part_id)%NodeTemp_old(inode)=0.0
-  FSI(part_id)%NodeTemp_new(inode)=0.0
-  do dir=1,3
-   FSI(part_id)%Node_old(dir,inode)=0.0
-   FSI(part_id)%Node_new(dir,inode)=0.0
-   FSI(part_id)%Node_current(dir,inode)=0.0
-   FSI(part_id)%NodeVel_old(dir,inode)=0.0
-   FSI(part_id)%NodeVel_new(dir,inode)=0.0
-  enddo
-  do dir=1,3
-   FSI(part_id)%NodeForce_old(dir,inode)=0.0
-   FSI(part_id)%NodeForce_new(dir,inode)=0.0
-  enddo
- enddo ! inode=1,FSI(part_id)%NumNodes
+ call init_FSI_mesh_type(FSI(part_id),allocate_intelem)
 
 return
 end subroutine init_FSI
@@ -7209,6 +7224,10 @@ IMPLICIT NONE
 
 INTEGER_T, intent(in) :: auxcomp
 
+INTEGER_T :: dir
+INTEGER_T :: inode
+INTEGER_T :: iface
+
  if (auxcomp.eq.1) then
   allocate(aux_FSI(fort_num_local_aux_grids))
  else if ((auxcomp.gt.1).and. &
@@ -7224,6 +7243,89 @@ INTEGER_T, intent(in) :: auxcomp
  print *,"NumNodes ",aux_FSI(auxcomp)%NumNodes
  print *,"NumIntElems ",aux_FSI(auxcomp)%NumIntElems
  aux_FSI(auxcomp)%IntElemDim=3
+ aux_FSI(auxcomp)%partID=auxcomp
+
+ init_FSI_mesh_type(aux_FSI(auxcomp),1)  ! allocate_intelem=1
+
+ do dir=1,3
+  maxnode(dir)=0.0
+  minnode(dir)=0.0
+  maxnodebefore(dir)=-1.0e+10
+  minnodebefore(dir)=1.0e+10
+ enddo
+
+ do inode=1,aux_FSI(auxcomp)%NumNodes
+  READ(14,*) xval(1),xval(2),xval(3)
+  do dir=1,3
+   if ((minnodebefore(dir).gt.xval(dir)).or.(inode.eq.1)) then
+    minnodebefore(dir)=xval(dir)
+   endif
+   if ((maxnodebefore(dir).lt.xval(dir)).or.(inode.eq.1)) then
+    maxnodebefore(dir)=xval(dir)
+   endif
+  enddo ! dir=1..3
+
+  do dir=1,3
+   xval1(dir)=(xval(dir)-xxblob1(dir))/radradblob1 + newxxblob1(dir)
+  enddo
+
+  do dir=1,3
+   if ((minnode(dir).gt.xval1(dir)).or.(inode.eq.1)) then
+    minnode(dir)=xval1(dir)
+   endif
+   if ((maxnode(dir).lt.xval1(dir)).or.(inode.eq.1)) then
+    maxnode(dir)=xval1(dir)
+   endif
+  enddo ! dir
+  
+  do dir=1,3
+   aux_FSI(auxcomp)%Node_old(dir,inode)=xval1(dir)
+   aux_FSI(auxcomp)%Node_new(dir,inode)=xval1(dir)
+  enddo
+    
+ enddo  ! inode=1,NumNodes
+ 
+ do iface=1,aux_FSI(auxcomp)%NumIntElems
+  READ(14,*) localElem(1),localElem(2),localElem(3)
+  do inode=1,3
+   if ((localElem(inode).lt.1).or. &
+       (localElem(inode).gt.aux_FSI(auxcomp)%NumNodes)) then
+    print *,"localElem(inode) out of range"
+    stop
+   endif
+  enddo !inode=1..3
+  if ((localElem(1).eq.localElem(2)).or. &
+      (localElem(1).eq.localElem(3)).or. &
+      (localElem(2).eq.localElem(3))) then
+   print *,"duplicate nodes for triangle"
+   stop
+  endif
+  do dir=1,3
+   do inode=1,3
+    local_nodes(dir,inode)=aux_FSI(auxcomp)%Node_new(dir,localElem(inode))
+   enddo
+  enddo
+
+  aux_FSI(auxcomp)%ElemData(1,iface)=3 ! number of nodes in element
+  aux_FSI(auxcomp)%ElemData(2,iface)=1 ! part number
+  aux_FSI(auxcomp)%ElemData(3,iface)=0 ! singly wetted
+  do dir=1,3
+   aux_FSI(auxcomp)%IntElem(dir,iface)=localElem(dir)
+  enddo
+ enddo  ! iface, looping faces
+ close(14)
+
+ do dir=1,3 
+  print *,"(before)dir,min,max ",dir,minnodebefore(dir),maxnodebefore(dir)
+ enddo
+ do dir=1,3 
+  print *,"(after)dir,min,max ",dir,minnode(dir),maxnode(dir)
+ enddo
+
+ call init2_FSI(part_id)
+
+  ! do_2nd_part=0  
+ call init3_FSI(part_id,ifirst,0,ioproc,isout) 
 
 return
 end subroutine CLSVOF_Read_aux_Header
