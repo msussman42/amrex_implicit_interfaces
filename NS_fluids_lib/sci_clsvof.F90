@@ -393,7 +393,6 @@ subroutine init2_FSI(part_id)
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: part_id
-INTEGER_T inode,dir
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
   print *,"part_id invalid"
@@ -404,24 +403,7 @@ INTEGER_T inode,dir
   stop
  endif
 
- do inode=1,FSI(part_id)%NumNodes
-  do dir=1,3
-   FSI(part_id)%NodeVel_old(dir,inode)=0.0
-  enddo
-  do dir=1,3
-   FSI(part_id)%NodeForce_old(dir,inode)=0.0
-  enddo
-  do dir=1,3
-   FSI(part_id)%Node_current(dir,inode)=FSI(part_id)%Node_new(dir,inode)
-   FSI(part_id)%NodeVel_new(dir,inode)=FSI(part_id)%NodeVel_old(dir,inode)
-  enddo
-  do dir=1,3
-   FSI(part_id)%NodeForce_new(dir,inode)=FSI(part_id)%NodeForce_old(dir,inode)
-  enddo
-   ! in: init2_FSI
-  FSI(part_id)%NodeMass(inode)=one
-  FSI(part_id)%NodeDensity(inode)=one
- enddo  ! inode=1,NumNodes
+ call init2_FSI_mesh_type(FSI(part_id))
 
 return
 end subroutine init2_FSI
@@ -450,40 +432,7 @@ REAL_T dilated_time
    stop
   endif
 
-   ! in: init3_FSI
-  if (ifirst.eq.1) then
-   allocate(FSI(part_id)%Node(3,FSI(part_id)%NumNodes))
-   allocate(FSI(part_id)%NodeVel(3,FSI(part_id)%NumNodes))
-   allocate(FSI(part_id)%NodeForce(3,FSI(part_id)%NumNodes))
-   allocate(FSI(part_id)%NodeNormal(3,FSI(part_id)%NumNodes))
-   allocate(FSI(part_id)%ElemNodeCount(FSI(part_id)%NumNodes))
-   allocate(FSI(part_id)%NodeTemp(FSI(part_id)%NumNodes))
-  else if (ifirst.eq.0) then
-   ! do nothing
-  else
-   print *,"ifirst invalid"
-   stop
-  endif
-
-  do inode=1,FSI(part_id)%NumNodes
-   do dir=1,3
-    FSI(part_id)%Node(dir,inode)=FSI(part_id)%Node_current(dir,inode)
-    FSI(part_id)%NodeVel(dir,inode)=FSI(part_id)%NodeVel_new(dir,inode)
-   enddo
-   do dir=1,3
-    FSI(part_id)%NodeForce(dir,inode)=FSI(part_id)%NodeForce_new(dir,inode)
-   enddo
-    ! in: init3_FSI
-   FSI(part_id)%NodeTemp(inode)=FSI(part_id)%NodeTemp_new(inode)
-  enddo ! inode=1,FSI(part_id)%NumNodes
-
-  do dir=1,3
-   FSI(part_id)%solid_displ(dir)=zero
-   FSI(part_id)%solid_speed(dir)=zero
-  enddo
-
-  FSI(part_id)%soliddrop_displacement=zero
-  FSI(part_id)%soliddrop_speed=zero
+  call init3_FSI_mesh_type(FSI(part_id),ifirst)
 
   if (probtype.eq.531) then
 
@@ -705,6 +654,75 @@ REAL_T dilated_time
 return
 end subroutine init3_FSI
 
+subroutine init3_FSI_mesh_type(FSI_mesh_type,ifirst)
+type(mesh_type), intent(inout) :: FSI_mesh_type
+INTEGER_T, intent(in) :: ifirst
+INTEGER_T :: inode
+INTEGER_T :: dir
+
+ if (ifirst.eq.1) then
+  allocate(FSI_mesh_type%Node(3,FSI_mesh_type%NumNodes))
+  allocate(FSI_mesh_type%NodeVel(3,FSI_mesh_type%NumNodes))
+  allocate(FSI_mesh_type%NodeForce(3,FSI_mesh_type%NumNodes))
+  allocate(FSI_mesh_type%NodeNormal(3,FSI_mesh_type%NumNodes))
+  allocate(FSI_mesh_type%ElemNodeCount(FSI_mesh_type%NumNodes))
+  allocate(FSI_mesh_type%NodeTemp(FSI_mesh_type%NumNodes))
+ else if (ifirst.eq.0) then
+  ! do nothing
+ else
+  print *,"ifirst invalid"
+  stop
+ endif
+
+ do inode=1,FSI_mesh_type%NumNodes
+  do dir=1,3
+   FSI_mesh_type%Node(dir,inode)=FSI_mesh_type%Node_current(dir,inode)
+   FSI_mesh_type%NodeVel(dir,inode)=FSI_mesh_type%NodeVel_new(dir,inode)
+  enddo
+  do dir=1,3
+   FSI_mesh_type%NodeForce(dir,inode)=FSI_mesh_type%NodeForce_new(dir,inode)
+  enddo
+  FSI_mesh_type%NodeTemp(inode)=FSI_mesh_type%NodeTemp_new(inode)
+ enddo ! inode=1,FSI_mesh_type%NumNodes
+
+ do dir=1,3
+  FSI_mesh_type%solid_displ(dir)=zero
+  FSI_mesh_type%solid_speed(dir)=zero
+ enddo
+
+ FSI_mesh_type%soliddrop_displacement=zero
+ FSI_mesh_type%soliddrop_speed=zero
+
+return
+end subroutine init3_FSI_mesh_type
+
+
+subroutine init2_FSI_mesh_type(FSI_mesh_type)
+type(mesh_type), intent(inout) :: FSI_mesh_type
+INTEGER_T :: inode
+INTEGER_T :: dir
+
+ do inode=1,FSI_mesh_type%NumNodes
+  do dir=1,3
+   FSI_mesh_type%NodeVel_old(dir,inode)=0.0
+  enddo
+  do dir=1,3
+   FSI_mesh_type%NodeForce_old(dir,inode)=0.0
+  enddo
+  do dir=1,3
+   FSI_mesh_type%Node_current(dir,inode)=FSI_mesh_type%Node_new(dir,inode)
+   FSI_mesh_type%NodeVel_new(dir,inode)=FSI_mesh_type%NodeVel_old(dir,inode)
+  enddo
+  do dir=1,3
+   FSI_mesh_type%NodeForce_new(dir,inode)=FSI_mesh_type%NodeForce_old(dir,inode)
+  enddo
+  FSI_mesh_type%NodeMass(inode)=one
+  FSI_mesh_type%NodeDensity(inode)=one
+ enddo  ! inode=1,NumNodes
+
+return
+end subroutine init2_FSI_mesh_type
+
 subroutine init_FSI_mesh_type(FSI_mesh_type,allocate_intelem)
 type(mesh_type), intent(inout) :: FSI_mesh_type
 INTEGER_T, intent(in) :: allocate_intelem
@@ -772,7 +790,6 @@ IMPLICIT NONE
 
 INTEGER_T, intent(in) :: part_id
 INTEGER_T, intent(in) :: allocate_intelem
-INTEGER_T inode,dir
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
   print *,"part_id invalid"
@@ -2767,6 +2784,7 @@ INTEGER_T :: dir
 REAL_T, dimension(3) :: xxblob1,newxxblob1
 REAL_T :: radradblob1
 INTEGER_T localElem(3)
+
 REAL_T :: local_nodes(3,3)  ! dir,node num
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
@@ -2796,14 +2814,14 @@ REAL_T :: local_nodes(3,3)  ! dir,node num
   endif
 
   if (ifirst.eq.1) then
-   xxblob1(1)=0.0
-   xxblob1(2)=0.0
-   xxblob1(3)=0.0
+   xxblob1(1)=0.0d0
+   xxblob1(2)=0.0d0
+   xxblob1(3)=0.0d0
 
-   newxxblob1(1)=0.0
-   newxxblob1(2)=0.0
-   newxxblob1(3)=0.0
-   radradblob1=1.0  
+   newxxblob1(1)=0.0d0
+   newxxblob1(2)=0.0d0
+   newxxblob1(3)=0.0d0
+   radradblob1=1.0d0
 
    denpaddle=one
    dampingpaddle=zero
@@ -2823,10 +2841,10 @@ REAL_T :: local_nodes(3,3)  ! dir,node num
    call init_FSI(part_id,1)  ! allocate_intelem=1
 
    do dir=1,3
-    maxnode(dir)=0.0
-    minnode(dir)=0.0
-    maxnodebefore(dir)=-1.0e+10
-    minnodebefore(dir)=1.0e+10
+    maxnode(dir)=0.0d0
+    minnode(dir)=0.0d0
+    maxnodebefore(dir)=-1.0d+10
+    minnodebefore(dir)=1.0d+10
    enddo
 
    do inode=1,FSI(part_id)%NumNodes
@@ -2875,6 +2893,7 @@ REAL_T :: local_nodes(3,3)  ! dir,node num
      print *,"duplicate nodes for triangle"
      stop
     endif
+
     do dir=1,3
      do inode=1,3
       local_nodes(dir,inode)=FSI(part_id)%Node_new(dir,localElem(inode))
@@ -7217,6 +7236,21 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
 return
 end subroutine CLSVOF_sync_lag_data
 
+subroutine CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
+                    FSI_touch_flag)
+use global_utility_module
+
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: FSI_operation
+INTEGER_T, intent(in) :: iter
+INTEGER_T, intent(in) :: auxcomp
+INTEGER_T, intent(in) :: FSI_touch_flag
+
+
+return
+end subroutine CLSVOF_Init_aux_Box
+
 subroutine CLSVOF_Read_aux_Header(auxcomp)
 use global_utility_module
 
@@ -7227,9 +7261,25 @@ INTEGER_T, intent(in) :: auxcomp
 INTEGER_T :: dir
 INTEGER_T :: inode
 INTEGER_T :: iface
+INTEGER_T :: ifirst
+REAL_T, dimension(3) :: maxnode,minnode,xval,xval1
+REAL_T, dimension(3) :: maxnodebefore,minnodebefore
+REAL_T, dimension(3) :: xxblob1,newxxblob1
+REAL_T, dimension(3) :: side_len
+REAL_T :: max_side_len
+INTEGER_T :: dir_max_side
+REAL_T :: radradblob1
+INTEGER_T localElem(3)
+INTEGER_T aux_ncells
+REAL_T :: local_midpoint
+REAL_T :: local_sidelen
+INTEGER_T :: local_ncells
+
+ aux_ncells=64
 
  if (auxcomp.eq.1) then
   allocate(aux_FSI(fort_num_local_aux_grids))
+  allocate(contain_aux(fort_num_local_aux_grids))
  else if ((auxcomp.gt.1).and. &
           (auxcomp.le.fort_num_local_aux_grids)) then
   ! do nothing
@@ -7238,21 +7288,35 @@ INTEGER_T :: iface
   stop
  endif
 
+ xxblob1(1)=0.0d0
+ xxblob1(2)=0.0d0
+ xxblob1(3)=0.0d0
+ newxxblob1(1)=0.0d0
+ newxxblob1(2)=0.0d0
+ newxxblob1(3)=0.0d0
+ radradblob1=1.0d0
+
+ do dir=1,3
+  maxnode(dir)=0.0d0
+  minnode(dir)=0.0d0
+  maxnodebefore(dir)=-1.0d+10
+  minnodebefore(dir)=1.0d+10
+ enddo
+
  call SUB_OPEN_AUXFILE(auxcomp,14)
+
  READ(14,*) aux_FSI(auxcomp)%NumNodes,aux_FSI(auxcomp)%NumIntElems
  print *,"NumNodes ",aux_FSI(auxcomp)%NumNodes
  print *,"NumIntElems ",aux_FSI(auxcomp)%NumIntElems
  aux_FSI(auxcomp)%IntElemDim=3
  aux_FSI(auxcomp)%partID=auxcomp
+ aux_FSI(auxcomp)%flag_2D_to_3D=0
+ aux_FSI(auxcomp)%deforming_part=0
+ aux_FSI(auxcomp)%CTML_flag=0
+ aux_FSI(auxcomp)%refine_factor=1 !refine the lag. mesh if needed.
+ aux_FSI(auxcomp)%bounding_box_ngrow=3
 
- init_FSI_mesh_type(aux_FSI(auxcomp),1)  ! allocate_intelem=1
-
- do dir=1,3
-  maxnode(dir)=0.0
-  minnode(dir)=0.0
-  maxnodebefore(dir)=-1.0e+10
-  minnodebefore(dir)=1.0e+10
- enddo
+ call init_FSI_mesh_type(aux_FSI(auxcomp),1)  ! allocate_intelem=1
 
  do inode=1,aux_FSI(auxcomp)%NumNodes
   READ(14,*) xval(1),xval(2),xval(3)
@@ -7300,11 +7364,6 @@ INTEGER_T :: iface
    print *,"duplicate nodes for triangle"
    stop
   endif
-  do dir=1,3
-   do inode=1,3
-    local_nodes(dir,inode)=aux_FSI(auxcomp)%Node_new(dir,localElem(inode))
-   enddo
-  enddo
 
   aux_FSI(auxcomp)%ElemData(1,iface)=3 ! number of nodes in element
   aux_FSI(auxcomp)%ElemData(2,iface)=1 ! part number
@@ -7322,10 +7381,71 @@ INTEGER_T :: iface
   print *,"(after)dir,min,max ",dir,minnode(dir),maxnode(dir)
  enddo
 
- call init2_FSI(part_id)
+ call init2_FSI_mesh_type(aux_FSI(auxcomp)) 
 
-  ! do_2nd_part=0  
- call init3_FSI(part_id,ifirst,0,ioproc,isout) 
+ ifirst=1
+ call init3_FSI_mesh_type(aux_FSI(auxcomp),ifirst) 
+
+ max_side_len=0.0d0
+ dir_max_side=0
+ do dir=1,3
+  side_len(dir)=maxnode(dir)-minnode(dir)
+  if (side_len(dir).gt.0.0d0) then
+   if (side_len(dir).gt.max_side_len) then
+    dir_max_side=dir
+    max_side_len=side_len(dir)
+   endif
+  else
+   print *,"side_len invalid"
+   stop
+  endif
+ enddo ! dir=1..3
+ if (max_side_len.gt.0.0d0) then
+  contain_aux(auxcomp)%lo3D(dir_max_side)=0
+  contain_aux(auxcomp)%hi3D(dir_max_side)=aux_ncells-1
+  contain_aux(auxcomp)%xlo3D(dir_max_side)= &
+          minnode(dir_max_side)-0.2d0*max_side_len
+  contain_aux(auxcomp)%xhi3D(dir_max_side)= &
+          maxnode(dir_max_side)+0.2d0*max_side_len
+  contain_aux(auxcomp)%dx3D=(contain_aux(auxcomp)%xhi3D(dir_max_side)- &
+                    contain_aux(auxcomp)%xlo3D(dir_max_side))/aux_ncells
+  do dir=1,3
+   if (dir.ne.dir_max_side) then
+    local_ncells=NINT(side_len(dir)*aux_ncells/max_side_len)
+    if (local_ncells.le.aux_ncells) then
+     if (local_ncells.lt.aux_ncells) then
+      local_ncells=local_ncells+1
+     endif
+     if (local_ncells.ge.1) then
+      if (local_ncells.lt.4) then
+       local_ncells=4
+      endif
+      contain_aux(auxcomp)%lo3D(dir)=0
+      contain_aux(auxcomp)%hi3D(dir)=local_ncells-1
+      local_sidelen=local_ncells*contain_aux(auxcomp)%dx3D
+      local_midpoint=0.5d0*(minnode(dir)+maxnode(dir))
+      contain_aux(auxcomp)%xlo3D(dir)=local_midpoint-0.5d0*local_sidelen 
+      contain_aux(auxcomp)%xhi3D(dir)=local_midpoint+0.5d0*local_sidelen 
+     else
+      print *,"local_ncells invalid"
+      stop
+     endif
+    else
+     print *,"local_ncells invalid"
+     stop
+    endif
+   else if (dir.eq.dir_max_side) then
+    ! do nothing
+   else
+    print *,"dir invalid"
+    stop
+   endif
+  enddo ! dir=1..3
+   ! need to allocate LS3D here ...
+ else
+  print *,"max_side_len invalid"
+  stop
+ endif
 
 return
 end subroutine CLSVOF_Read_aux_Header

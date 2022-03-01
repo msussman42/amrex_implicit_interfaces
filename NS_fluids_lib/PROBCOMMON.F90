@@ -544,18 +544,16 @@ implicit none
       INTEGER_T, allocatable, dimension(:) :: level_container_allocated
 
       type aux_contain_type
-       type(elem_contain_type), pointer :: aux_elem_data
-       type(node_contain_type), pointer :: aux_node_data
-       INTEGER_T, pointer :: lo3D(:)
-       INTEGER_T, pointer :: hi3D(:)
-       REAL_T, pointer :: xlo3D(:)
-       REAL_T, pointer :: dx3D(:)
-       REAL_T, pointer :: LS3D(:,:,:) ! level set data
+       INTEGER_T :: lo3D(3)
+       INTEGER_T :: hi3D(3)
+       REAL_T :: xlo3D(3)
+       REAL_T :: xhi3D(3)
+       REAL_T :: dx3D
+       REAL_T, dimension(:,:,:), allocatable :: LS3D ! level set data
       end type aux_contain_type
 
       INTEGER_T :: fort_num_local_aux_grids=0
       type(aux_contain_type), dimension(:), allocatable :: contain_aux
-
 
       INTEGER_T :: used_probtypes(1000)
       INTEGER_T :: probtype_list_size
@@ -1057,6 +1055,11 @@ implicit none
       INTEGER_T, intent(in) :: unit_id
       end subroutine TEMPLATE_OPEN_CASFILE
 
+      subroutine TEMPLATE_OPEN_AUXFILE(part_id,unit_id)
+      INTEGER_T, intent(in) :: part_id
+      INTEGER_T, intent(in) :: unit_id
+      end subroutine TEMPLATE_OPEN_AUXFILE
+
       subroutine TEMPLATE_ORDER_NODES(nodes,nodemap)
       REAL_T, intent(in) :: nodes(3,3) ! dir,nodenum
       INTEGER_T, intent(inout) :: nodemap(3)
@@ -1093,6 +1096,7 @@ implicit none
 
       PROCEDURE(TEMPLATE_FSI_SLICE), POINTER :: SUB_FSI_SLICE
       PROCEDURE(TEMPLATE_OPEN_CASFILE), POINTER :: SUB_OPEN_CASFILE
+      PROCEDURE(TEMPLATE_OPEN_AUXFILE), POINTER :: SUB_OPEN_AUXFILE
       PROCEDURE(TEMPLATE_ORDER_NODES), POINTER :: SUB_ORDER_NODES
 
       PROCEDURE(TEMPLATE_wallfunc), POINTER :: SUB_wallfunc

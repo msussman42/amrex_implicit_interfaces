@@ -1357,6 +1357,8 @@
 
       INTEGER_T auxcomp
       INTEGER_T FSI_operation
+      INTEGER_T FSI_touch_flag
+      INTEGER_T iter
 
       do auxcomp=1,fort_num_local_aux_grids
 

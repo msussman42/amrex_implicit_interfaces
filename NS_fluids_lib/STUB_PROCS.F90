@@ -766,6 +766,20 @@ INTEGER_T, intent(in) :: unit_id
 return
 end subroutine STUB_OPEN_CASFILE
 
+
+subroutine STUB_OPEN_AUXFILE(part_id,unit_id)
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: unit_id
+
+ print *,"need to define a routine for SUB_OPEN_AUXFILE"
+ stop
+
+return
+end subroutine STUB_OPEN_AUXFILE
+
+
 subroutine STUB_ORDER_NODES(nodes,nodemap)
 IMPLICIT NONE
 
