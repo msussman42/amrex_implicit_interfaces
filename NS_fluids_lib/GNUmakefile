@@ -10,11 +10,11 @@ AMREX_HOME = ../amrex-master
 MOF_HOME = ..
 
 PRECISION = DOUBLE
-DEBUG	  = TRUE
+DEBUG	  = FALSE
 USE_ASSERTION = TRUE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
-DIM       = 2
+DIM       = 3
 iPAD_ISH = FALSE
 CYGWIN    = FALSE
 CYGWIN_ZENBOOK = FALSE
@@ -134,11 +134,12 @@ PYTHONCOMP = python
 # bromwich intel:
 # source /usr/local/intel/parallel_studio_xe_2018/psxevars.csh (csh) or
 # source /usr/local/intel/parallel_studio_xe_2018/psxevars.sh (bash)
-#FCOMP = intel
-#COMP = intel
+# NASA SUPERCOMPUTER
+FCOMP = intel
+COMP = intel
 #COMP = PGI 
 #FCOMP = PGI
-USE_MPI = FALSE
+USE_MPI = TRUE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
 USE_OMP = FALSE

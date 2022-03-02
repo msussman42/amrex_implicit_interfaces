@@ -12,6 +12,14 @@ ifeq ($(USE_MPI),TRUE)
   FC  := mpif90
   F90 := mpif90
 
+  ifeq ($(COMP),intel)
+   CXX := icpc
+   CC  := icc
+   FC  := ifort
+   F90 := ifort
+   LIBRARIES += -lmpi
+  endif
+
   ifeq ($(LINK_WITH_FORTRAN_COMPILER),TRUE)
     MPI_OTHER_COMP := $(CXX)
   else
