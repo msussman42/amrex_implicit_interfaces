@@ -819,26 +819,30 @@ return
 end subroutine xdist
 
 
-subroutine xdist_project(x1,x2,part_id,dist_project,dist_actual)
+subroutine xdist_project(x1,x2, &
+      FSI_mesh_type,part_id,max_part_id, &
+      dist_project,dist_actual)
 IMPLICIT NONE
 
+type(mesh_type), intent(in) :: FSI_mesh_type
 INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: max_part_id
 REAL_T, dimension(3),intent(in) :: x1,x2
 REAL_T, intent(out) :: dist_project
 REAL_T, intent(out) :: dist_actual
 INTEGER_T sdim_local
 INTEGER_T dir
 
- if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+ if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
   stop
  endif
- if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+ if (FSI_mesh_type%flag_2D_to_3D.eq.1) then
   sdim_local=2
- else if (FSI(part_id)%flag_2D_to_3D.eq.0) then
+ else if (FSI_mesh_type%flag_2D_to_3D.eq.0) then
   sdim_local=3
  else
-  print *,"FSI(part_id)%flag_2D_to_3D invalid"
+  print *,"FSI_mesh_type%flag_2D_to_3D invalid"
   stop
  endif
  dist_project=zero
@@ -915,11 +919,18 @@ INTEGER_T :: dir
 end subroutine get_new_half_vols
 
 ! split triangles so that size is no bigger than "h_small"
-subroutine post_process_nodes_elements(initflag,problo,probhi, &
-  part_id,ioproc,isout,h_small)
+subroutine post_process_nodes_elements(initflag, &
+  problo,probhi, &
+  FSI_mesh_type, &
+  part_id, &
+  max_part_id, &
+  ioproc,isout,h_small)
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: max_part_id
+type(mesh_type), intent(inout) :: FSI_mesh_type
+
 REAL_T, intent(in) :: problo(3),probhi(3)
 INTEGER_T, intent(in) :: initflag,ioproc,isout
 REAL_T, intent(in) :: h_small
@@ -954,12 +965,12 @@ INTEGER_T :: save_n_elems,save_n_nodes
 INTEGER_T :: local_refine_factor
 REAL_T    :: mag
 
- if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+ if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
   stop
  endif
- if (FSI(part_id)%partID.ne.part_id) then
-  print *,"FSI(part_id)%partID.ne.part_id"
+ if (FSI_mesh_type%partID.ne.part_id) then
+  print *,"FSI_mesh_type%partID.ne.part_id"
   stop
  endif
  if (h_small.gt.zero) then
@@ -976,7 +987,7 @@ REAL_T    :: mag
 
  generate_time=zero
 
- local_refine_factor=FSI(part_id)%refine_factor
+ local_refine_factor=FSI_mesh_type%refine_factor
 
  if ((initflag.eq.1).and.(isout.eq.1)) then
   if (ioproc.eq.1) then
@@ -986,45 +997,47 @@ REAL_T    :: mag
 
 ! UPDATE NODENORMAL ON ORIGINAL LAGRANGIAN GRID --------------
 
- do inode=1,FSI(part_id)%NumNodes
+ do inode=1,FSI_mesh_type%NumNodes
   do dir=1,3
-   FSI(part_id)%NodeNormal(dir,inode)=0.0
+   FSI_mesh_type%NodeNormal(dir,inode)=0.0
   enddo
-  FSI(part_id)%ElemNodeCount(inode)=0
- enddo ! inode=1,FSI(part_id)%NumNodes
+  FSI_mesh_type%ElemNodeCount(inode)=0
+ enddo ! inode=1,FSI_mesh_type%NumNodes
 
- do ielem=1,FSI(part_id)%NumIntElems
-  nodes_per_elem=FSI(part_id)%ElemData(1,ielem)
+ do ielem=1,FSI_mesh_type%NumIntElems
+  nodes_per_elem=FSI_mesh_type%ElemData(1,ielem)
   if (nodes_per_elem.lt.3) then
    print *,"nodes_per_elem<3 not supported"
    stop
   endif
-  call scinormal(ielem,normal,part_id,generate_time)
+  call scinormal(ielem,normal, &
+     FSI_mesh_type,part_id,max_part_id, &
+     generate_time)
   do i=1,nodes_per_elem
-   inode=FSI(part_id)%IntElem(i,ielem)
+   inode=FSI_mesh_type%IntElem(i,ielem)
    do dir=1,3
-    FSI(part_id)%NodeNormal(dir,inode)= &
-      FSI(part_id)%NodeNormal(dir,inode)+normal(dir)
+    FSI_mesh_type%NodeNormal(dir,inode)= &
+      FSI_mesh_type%NodeNormal(dir,inode)+normal(dir)
    enddo
-   FSI(part_id)%ElemNodeCount(inode)= &
-     FSI(part_id)%ElemNodeCount(inode)+1
+   FSI_mesh_type%ElemNodeCount(inode)= &
+     FSI_mesh_type%ElemNodeCount(inode)+1
   enddo ! i=1,nodes_per_elem
- enddo ! do ielem=1,FSI(part_id)%NumIntElems
+ enddo ! do ielem=1,FSI_mesh_type%NumIntElems
 
- do inode=1,FSI(part_id)%NumNodes
-  normal_cnt=FSI(part_id)%ElemNodeCount(inode)
+ do inode=1,FSI_mesh_type%NumNodes
+  normal_cnt=FSI_mesh_type%ElemNodeCount(inode)
   if (normal_cnt.gt.0) then
    mag=zero
    do dir=1,3
-    FSI(part_id)%NodeNormal(dir,inode)= &
-     FSI(part_id)%NodeNormal(dir,inode)/normal_cnt
-    mag=mag+FSI(part_id)%NodeNormal(dir,inode)**2
+    FSI_mesh_type%NodeNormal(dir,inode)= &
+     FSI_mesh_type%NodeNormal(dir,inode)/normal_cnt
+    mag=mag+FSI_mesh_type%NodeNormal(dir,inode)**2
    enddo ! dir=1,3
    mag=sqrt(mag)
    if (mag.gt.zero) then
     do dir=1,3
-     FSI(part_id)%NodeNormal(dir,inode)= &
-       FSI(part_id)%NodeNormal(dir,inode)/mag
+     FSI_mesh_type%NodeNormal(dir,inode)= &
+       FSI_mesh_type%NodeNormal(dir,inode)/mag
     enddo
    else if (mag.eq.zero) then
     ! do nothing
@@ -1034,10 +1047,10 @@ REAL_T    :: mag
    endif 
   else if (normal_cnt.eq.0) then
    do dir=1,3
-    if (FSI(part_id)%NodeNormal(dir,inode).eq.zero) then
+    if (FSI_mesh_type%NodeNormal(dir,inode).eq.zero) then
      ! do nothing
     else
-     print *,"FSI(part_id)%NodeNormal(dir,inode) invalid"
+     print *,"FSI_mesh_type%NodeNormal(dir,inode) invalid"
      stop
     endif
    enddo
@@ -1054,32 +1067,32 @@ REAL_T    :: mag
  first_measure=0
 
  new_NumIntElems=0
- do ielem=1,FSI(part_id)%NumIntElems
-  nodes_per_elem=FSI(part_id)%ElemData(1,ielem)
+ do ielem=1,FSI_mesh_type%NumIntElems
+  nodes_per_elem=FSI_mesh_type%ElemData(1,ielem)
   do isub=0,nodes_per_elem-3
    new_NumIntElems=new_NumIntElems+1
-   node1=FSI(part_id)%IntElem(1,ielem)
-   node2=FSI(part_id)%IntElem(nodes_per_elem-isub-1,ielem)
-   node3=FSI(part_id)%IntElem(nodes_per_elem-isub,ielem)
-   if ((node1.gt.FSI(part_id)%NumNodes).or. &
-       (node2.gt.FSI(part_id)%NumNodes).or. &
-       (node3.gt.FSI(part_id)%NumNodes).or. &
+   node1=FSI_mesh_type%IntElem(1,ielem)
+   node2=FSI_mesh_type%IntElem(nodes_per_elem-isub-1,ielem)
+   node3=FSI_mesh_type%IntElem(nodes_per_elem-isub,ielem)
+   if ((node1.gt.FSI_mesh_type%NumNodes).or. &
+       (node2.gt.FSI_mesh_type%NumNodes).or. &
+       (node3.gt.FSI_mesh_type%NumNodes).or. &
        (node1.lt.1).or. &
        (node2.lt.1).or. &
        (node3.lt.1)) then
     print *,"node1,node2, or node3 invalid ",node1,node2,node3
     print *,"ielem=",ielem
-    print *,"FSI(part_id)%NumNodes ",FSI(part_id)%NumNodes
-    print *,"FSI(part_id)%NumIntElems ",FSI(part_id)%NumIntElems
+    print *,"FSI_mesh_type%NumNodes ",FSI_mesh_type%NumNodes
+    print *,"FSI_mesh_type%NumIntElems ",FSI_mesh_type%NumIntElems
     print *,"nodes_per_elem=",nodes_per_elem
     print *,"part_id=",part_id
     stop
    endif
     
    do dir=1,3
-    x1(dir)=FSI(part_id)%Node(dir,node1)
-    x2(dir)=FSI(part_id)%Node(dir,node2)
-    x3(dir)=FSI(part_id)%Node(dir,node3)
+    x1(dir)=FSI_mesh_type%Node(dir,node1)
+    x2(dir)=FSI_mesh_type%Node(dir,node2)
+    x3(dir)=FSI_mesh_type%Node(dir,node3)
     if ((abs(x1(dir)).lt.CTMLoverflow).and. &
         (abs(x2(dir)).lt.CTMLoverflow).and. &
         (abs(x3(dir)).lt.CTMLoverflow)) then
@@ -1093,9 +1106,15 @@ REAL_T    :: mag
     endif
    enddo ! dir=1..3
 
-   call xdist_project(x1,x2,part_id,d12_2D,d12_3D)
-   call xdist_project(x2,x3,part_id,d23_2D,d23_3D)
-   call xdist_project(x3,x1,part_id,d13_2D,d13_3D)
+   call xdist_project(x1,x2, &
+      FSI_mesh_type,part_id,max_part_id, &
+      d12_2D,d12_3D)
+   call xdist_project(x2,x3, &
+      FSI_mesh_type,part_id,max_part_id, &
+      d23_2D,d23_3D)
+   call xdist_project(x3,x1, &
+      FSI_mesh_type,part_id,max_part_id, &
+      d13_2D,d13_3D)
    if ((d12_3D.ge.CTMLunderflow).and. &
        (d12_3D.le.CTMLoverflow).and. &
        (d23_3D.ge.CTMLunderflow).and. &
@@ -1142,13 +1161,13 @@ REAL_T    :: mag
    endif
 
   enddo ! isub=0..nodes_per_elem-3
- enddo ! ielem=1..FSI(part_id)%NumIntElems
+ enddo ! ielem=1..FSI_mesh_type%NumIntElems
 
- FSI(part_id)%max_side_len=biggest_h  
- FSI(part_id)%min_side_len=smallest_h  
+ FSI_mesh_type%max_side_len=biggest_h  
+ FSI_mesh_type%min_side_len=smallest_h  
  if ((ioproc.eq.1).and.(isout.eq.1)) then
   print *,"part_id,max_side_len,min_side_len ",part_id, &
-   FSI(part_id)%max_side_len,FSI(part_id)%min_side_len
+   FSI_mesh_type%max_side_len,FSI_mesh_type%min_side_len
  endif
 
  if (local_refine_factor.eq.0) then
@@ -1181,52 +1200,54 @@ REAL_T    :: mag
  endif
 
  allocate(multi_lag(n_lag_levels))
- multi_lag(1)%n_nodes=FSI(part_id)%NumNodes
+ multi_lag(1)%n_nodes=FSI_mesh_type%NumNodes
  multi_lag(1)%n_elems=new_NumIntElems
- allocate(multi_lag(1)%nd(3,FSI(part_id)%NumNodes))
- allocate(multi_lag(1)%ndvel(3,FSI(part_id)%NumNodes))
- allocate(multi_lag(1)%ndforce(6,FSI(part_id)%NumNodes))
- allocate(multi_lag(1)%ndmass(FSI(part_id)%NumNodes))
- allocate(multi_lag(1)%nddensity(FSI(part_id)%NumNodes))
- allocate(multi_lag(1)%ndtemp(FSI(part_id)%NumNodes))
+ allocate(multi_lag(1)%nd(3,FSI_mesh_type%NumNodes))
+ allocate(multi_lag(1)%ndvel(3,FSI_mesh_type%NumNodes))
+ allocate(multi_lag(1)%ndforce(6,FSI_mesh_type%NumNodes))
+ allocate(multi_lag(1)%ndmass(FSI_mesh_type%NumNodes))
+ allocate(multi_lag(1)%nddensity(FSI_mesh_type%NumNodes))
+ allocate(multi_lag(1)%ndtemp(FSI_mesh_type%NumNodes))
  allocate(multi_lag(1)%elemdt(3,new_NumIntElems))
  allocate(multi_lag(1)%intelemdt(4,new_NumIntElems))
- do i=1,FSI(part_id)%NumNodes
+ do i=1,FSI_mesh_type%NumNodes
   do dir=1,3
-   multi_lag(1)%nd(dir,i)=FSI(part_id)%Node(dir,i)
-   multi_lag(1)%ndvel(dir,i)=FSI(part_id)%NodeVel(dir,i)
+   multi_lag(1)%nd(dir,i)=FSI_mesh_type%Node(dir,i)
+   multi_lag(1)%ndvel(dir,i)=FSI_mesh_type%NodeVel(dir,i)
   enddo
-  multi_lag(1)%ndmass(i)=FSI(part_id)%NodeMass(i)
-  multi_lag(1)%nddensity(i)=FSI(part_id)%NodeDensity(i)
+  multi_lag(1)%ndmass(i)=FSI_mesh_type%NodeMass(i)
+  multi_lag(1)%nddensity(i)=FSI_mesh_type%NodeDensity(i)
   do dir=1,3
-   multi_lag(1)%ndforce(dir,i)=FSI(part_id)%NodeForce(dir,i)
+   multi_lag(1)%ndforce(dir,i)=FSI_mesh_type%NodeForce(dir,i)
   enddo
-  multi_lag(1)%ndtemp(i)=FSI(part_id)%NodeTemp(i)
+  multi_lag(1)%ndtemp(i)=FSI_mesh_type%NodeTemp(i)
  enddo
   
  new_NumIntElems=0
- do ielem=1,FSI(part_id)%NumIntElems
-  nodes_per_elem=FSI(part_id)%ElemData(1,ielem)
+ do ielem=1,FSI_mesh_type%NumIntElems
+  nodes_per_elem=FSI_mesh_type%ElemData(1,ielem)
   do isub=0,nodes_per_elem-3
    new_NumIntElems=new_NumIntElems+1
-   multi_lag(1)%intelemdt(1,new_NumIntElems)=FSI(part_id)%IntElem(1,ielem)
+   multi_lag(1)%intelemdt(1,new_NumIntElems)=FSI_mesh_type%IntElem(1,ielem)
    multi_lag(1)%intelemdt(2,new_NumIntElems)= &
-     FSI(part_id)%IntElem(nodes_per_elem-isub-1,ielem)
+     FSI_mesh_type%IntElem(nodes_per_elem-isub-1,ielem)
    multi_lag(1)%intelemdt(3,new_NumIntElems)= &
-     FSI(part_id)%IntElem(nodes_per_elem-isub,ielem)
+     FSI_mesh_type%IntElem(nodes_per_elem-isub,ielem)
    multi_lag(1)%intelemdt(4,new_NumIntElems)=ielem
-    ! FSI(part_id)%ElemData(3,ielem) is the doubly wetted flag
+    ! FSI_mesh_type%ElemData(3,ielem) is the doubly wetted flag
    do dir=1,3
-    multi_lag(1)%elemdt(dir,new_NumIntElems)=FSI(part_id)%ElemData(dir,ielem)
+    multi_lag(1)%elemdt(dir,new_NumIntElems)=FSI_mesh_type%ElemData(dir,ielem)
    enddo
     ! always 3 nodes per element for refined surface
    multi_lag(1)%elemdt(1,new_NumIntElems)=3
   enddo ! isub=0..nodes_per_elem-3
- enddo ! ielem=1..FSI(part_id)%NumIntElems
+ enddo ! ielem=1..FSI_mesh_type%NumIntElems
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
-  print *,"numintelems,numnodes ",FSI(part_id)%NumIntElems,FSI(part_id)%NumNodes
-  print *,"numintelems(3node),numnodes ",new_NumIntElems,FSI(part_id)%NumNodes
+  print *,"numintelems,numnodes ", &
+      FSI_mesh_type%NumIntElems,FSI_mesh_type%NumNodes
+  print *,"numintelems(3node),numnodes ", &
+      new_NumIntElems,FSI_mesh_type%NumNodes
  endif
 
  do ilevel=1,n_lag_levels-1
@@ -1291,9 +1312,15 @@ REAL_T    :: mag
     temp1=multi_lag(ilevel)%ndtemp(node1)
     temp2=multi_lag(ilevel)%ndtemp(node2)
     temp3=multi_lag(ilevel)%ndtemp(node3)
-    call xdist_project(x1,x2,part_id,d12_2D,d12_3D)
-    call xdist_project(x2,x3,part_id,d23_2D,d23_3D)
-    call xdist_project(x3,x1,part_id,d13_2D,d13_3D)
+    call xdist_project(x1,x2, &
+      FSI_mesh_type,part_id,max_part_id, &
+      d12_2D,d12_3D)
+    call xdist_project(x2,x3, &
+      FSI_mesh_type,part_id,max_part_id, &
+      d23_2D,d23_3D)
+    call xdist_project(x3,x1, &
+      FSI_mesh_type,part_id,max_part_id, &
+      d13_2D,d13_3D)
 
     if ((local_refine_factor.gt.0).and. &
         (d12_2D.ge.(local_refine_factor-0.01d0)*h_small).and. &
@@ -1315,16 +1342,16 @@ REAL_T    :: mag
        ! 0.5d0 * den12 * (vol1R+vol2L) = mass12
      call get_new_half_vols(x1,x2,xsplit,volL,volR)
 
-     if (FSI(part_id)%CTML_flag.eq.1) then
+     if (FSI_mesh_type%CTML_flag.eq.1) then
       mass_split=0.5d0*den_split*(volL+volR)
       new_massL=mass1-0.5d0*den_split*volL
       new_massR=mass2-0.5d0*den_split*volR
-     else if (FSI(part_id)%CTML_flag.eq.0) then
+     else if (FSI_mesh_type%CTML_flag.eq.0) then
       mass_split=0.5d0*(mass1+mass2)
       new_massL=mass1
       new_massR=mass2
      else
-      print *,"FSI(part_id)%CTML_flag invalid"
+      print *,"FSI_mesh_type%CTML_flag invalid"
       stop
      endif
 
@@ -1393,16 +1420,16 @@ REAL_T    :: mag
 
      call get_new_half_vols(x2,x3,xsplit,volL,volR)
 
-     if (FSI(part_id)%CTML_flag.eq.1) then
+     if (FSI_mesh_type%CTML_flag.eq.1) then
       mass_split=0.5d0*den_split*(volL+volR)
       new_massL=mass2-0.5d0*den_split*volL
       new_massR=mass3-0.5d0*den_split*volR
-     else if (FSI(part_id)%CTML_flag.eq.0) then
+     else if (FSI_mesh_type%CTML_flag.eq.0) then
       mass_split=0.5d0*(mass2+mass3)
       new_massL=mass2
       new_massR=mass3
      else
-      print *,"FSI(part_id)%CTML_flag invalid"
+      print *,"FSI_mesh_type%CTML_flag invalid"
       stop
      endif
 
@@ -1469,16 +1496,16 @@ REAL_T    :: mag
 
      call get_new_half_vols(x1,x3,xsplit,volL,volR)
 
-     if (FSI(part_id)%CTML_flag.eq.1) then
+     if (FSI_mesh_type%CTML_flag.eq.1) then
       mass_split=0.5d0*den_split*(volL+volR)
       new_massL=mass1-0.5d0*den_split*volL
       new_massR=mass3-0.5d0*den_split*volR
-     else if (FSI(part_id)%CTML_flag.eq.0) then
+     else if (FSI_mesh_type%CTML_flag.eq.0) then
       mass_split=0.5d0*(mass1+mass3)
       new_massL=mass1
       new_massR=mass3
      else
-      print *,"FSI(part_id)%CTML_flag invalid"
+      print *,"FSI_mesh_type%CTML_flag invalid"
       stop
      endif
 
@@ -1551,73 +1578,73 @@ REAL_T    :: mag
   endif
  enddo ! ilevel
 
- FSI(part_id)%NumNodesBIG=multi_lag(n_lag_levels)%n_nodes
- FSI(part_id)%NumIntElemsBIG=multi_lag(n_lag_levels)%n_elems
+ FSI_mesh_type%NumNodesBIG=multi_lag(n_lag_levels)%n_nodes
+ FSI_mesh_type%NumIntElemsBIG=multi_lag(n_lag_levels)%n_elems
 
   ! in: post_process_nodes_elements
  if (initflag.eq.0) then 
-  deallocate(FSI(part_id)%NodeBIG)
-  deallocate(FSI(part_id)%NodeVelBIG)
-  deallocate(FSI(part_id)%NodeForceBIG)
-  deallocate(FSI(part_id)%NodeMassBIG)
-  deallocate(FSI(part_id)%NodeDensityBIG)
-  deallocate(FSI(part_id)%NodeTempBIG)
-  deallocate(FSI(part_id)%NodeNormalBIG)
-  deallocate(FSI(part_id)%ElemNodeCountBIG)
+  deallocate(FSI_mesh_type%NodeBIG)
+  deallocate(FSI_mesh_type%NodeVelBIG)
+  deallocate(FSI_mesh_type%NodeForceBIG)
+  deallocate(FSI_mesh_type%NodeMassBIG)
+  deallocate(FSI_mesh_type%NodeDensityBIG)
+  deallocate(FSI_mesh_type%NodeTempBIG)
+  deallocate(FSI_mesh_type%NodeNormalBIG)
+  deallocate(FSI_mesh_type%ElemNodeCountBIG)
 
-  deallocate(FSI(part_id)%ElemDataXnotBIG)
-  deallocate(FSI(part_id)%ElemDataBIG)
-  deallocate(FSI(part_id)%IntElemBIG)
+  deallocate(FSI_mesh_type%ElemDataXnotBIG)
+  deallocate(FSI_mesh_type%ElemDataBIG)
+  deallocate(FSI_mesh_type%IntElemBIG)
 
  endif
 
   ! in: post_process_nodes_elements
- allocate(FSI(part_id)%NodeBIG(3,FSI(part_id)%NumNodesBIG))
- allocate(FSI(part_id)%NodeNormalBIG(3,FSI(part_id)%NumNodesBIG))
- allocate(FSI(part_id)%NodeVelBIG(3,FSI(part_id)%NumNodesBIG))
- allocate(FSI(part_id)%NodeForceBIG(3,FSI(part_id)%NumNodesBIG))
- allocate(FSI(part_id)%NodeMassBIG(FSI(part_id)%NumNodesBIG))
- allocate(FSI(part_id)%NodeDensityBIG(FSI(part_id)%NumNodesBIG))
- allocate(FSI(part_id)%NodeTempBIG(FSI(part_id)%NumNodesBIG))
- allocate(FSI(part_id)%ElemNodeCountBIG(FSI(part_id)%NumNodesBIG))
- allocate(FSI(part_id)%ElemDataXnotBIG(3,FSI(part_id)%NumIntElemsBIG))
- allocate(FSI(part_id)%ElemDataBIG(3,FSI(part_id)%NumIntElemsBIG))
- allocate(FSI(part_id)%IntElemBIG(4,FSI(part_id)%NumIntElemsBIG))
+ allocate(FSI_mesh_type%NodeBIG(3,FSI_mesh_type%NumNodesBIG))
+ allocate(FSI_mesh_type%NodeNormalBIG(3,FSI_mesh_type%NumNodesBIG))
+ allocate(FSI_mesh_type%NodeVelBIG(3,FSI_mesh_type%NumNodesBIG))
+ allocate(FSI_mesh_type%NodeForceBIG(3,FSI_mesh_type%NumNodesBIG))
+ allocate(FSI_mesh_type%NodeMassBIG(FSI_mesh_type%NumNodesBIG))
+ allocate(FSI_mesh_type%NodeDensityBIG(FSI_mesh_type%NumNodesBIG))
+ allocate(FSI_mesh_type%NodeTempBIG(FSI_mesh_type%NumNodesBIG))
+ allocate(FSI_mesh_type%ElemNodeCountBIG(FSI_mesh_type%NumNodesBIG))
+ allocate(FSI_mesh_type%ElemDataXnotBIG(3,FSI_mesh_type%NumIntElemsBIG))
+ allocate(FSI_mesh_type%ElemDataBIG(3,FSI_mesh_type%NumIntElemsBIG))
+ allocate(FSI_mesh_type%IntElemBIG(4,FSI_mesh_type%NumIntElemsBIG))
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
-  print *,"NumNodes, NumIntElems ",FSI(part_id)%NumNodes, &
-   FSI(part_id)%NumIntElems
-  print *,"NumNodesBIG, NumIntElemsBIG ",FSI(part_id)%NumNodesBIG, &
-   FSI(part_id)%NumIntElemsBIG
+  print *,"NumNodes, NumIntElems ",FSI_mesh_type%NumNodes, &
+   FSI_mesh_type%NumIntElems
+  print *,"NumNodesBIG, NumIntElemsBIG ",FSI_mesh_type%NumNodesBIG, &
+   FSI_mesh_type%NumIntElemsBIG
  endif
 
   ! in: post_process_nodes_elements
- do ielem=1,FSI(part_id)%NumIntElemsBIG
+ do ielem=1,FSI_mesh_type%NumIntElemsBIG
   do dir=1,4
-   FSI(part_id)%IntElemBIG(dir,ielem)= &
+   FSI_mesh_type%IntElemBIG(dir,ielem)= &
      multi_lag(n_lag_levels)%intelemdt(dir,ielem)
   enddo
    ! ElemDataBIG(3,ielem) is the doubly wetted flag
   do dir=1,3
-   FSI(part_id)%ElemDataBIG(dir,ielem)=multi_lag(n_lag_levels)%elemdt(dir,ielem)
+   FSI_mesh_type%ElemDataBIG(dir,ielem)=multi_lag(n_lag_levels)%elemdt(dir,ielem)
   enddo
  enddo
   ! in: post_process_nodes_elements
- do inode=1,FSI(part_id)%NumNodesBIG
+ do inode=1,FSI_mesh_type%NumNodesBIG
   do dir=1,3
-   FSI(part_id)%NodeNormalBIG(dir,inode)=0.0
-   FSI(part_id)%NodeBIG(dir,inode)=multi_lag(n_lag_levels)%nd(dir,inode)
-   FSI(part_id)%NodeVelBIG(dir,inode)=multi_lag(n_lag_levels)%ndvel(dir,inode)
+   FSI_mesh_type%NodeNormalBIG(dir,inode)=0.0
+   FSI_mesh_type%NodeBIG(dir,inode)=multi_lag(n_lag_levels)%nd(dir,inode)
+   FSI_mesh_type%NodeVelBIG(dir,inode)=multi_lag(n_lag_levels)%ndvel(dir,inode)
   enddo
   do dir=1,3
-   FSI(part_id)%NodeForceBIG(dir,inode)= &
+   FSI_mesh_type%NodeForceBIG(dir,inode)= &
      multi_lag(n_lag_levels)%ndforce(dir,inode)
   enddo
-  FSI(part_id)%NodeMassBIG(inode)=multi_lag(n_lag_levels)%ndmass(inode)
-  FSI(part_id)%NodeDensityBIG(inode)=multi_lag(n_lag_levels)%nddensity(inode)
-  FSI(part_id)%NodeTempBIG(inode)=multi_lag(n_lag_levels)%ndtemp(inode)
-  FSI(part_id)%ElemNodeCountBIG(inode)=0
- enddo ! inode=1,FSI(part_id)%NumNodesBIG
+  FSI_mesh_type%NodeMassBIG(inode)=multi_lag(n_lag_levels)%ndmass(inode)
+  FSI_mesh_type%NodeDensityBIG(inode)=multi_lag(n_lag_levels)%nddensity(inode)
+  FSI_mesh_type%NodeTempBIG(inode)=multi_lag(n_lag_levels)%ndtemp(inode)
+  FSI_mesh_type%ElemNodeCountBIG(inode)=0
+ enddo ! inode=1,FSI_mesh_type%NumNodesBIG
 
  do i=1,n_lag_levels
   deallocate(multi_lag(i)%intelemdt)
@@ -1635,48 +1662,50 @@ REAL_T    :: mag
   print *,"creating normals for the nodes and Xnot"
  endif
 
- do ielem=1,FSI(part_id)%NumIntElemsBIG
-  nodes_per_elem=FSI(part_id)%ElemDataBIG(1,ielem)
+ do ielem=1,FSI_mesh_type%NumIntElemsBIG
+  nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
   if (nodes_per_elem.ne.3) then
    print *,"nodes_per_elem invalid"
    stop
   endif
   do dir=1,3
-   FSI(part_id)%ElemDataXnotBIG(dir,ielem)=0.0
+   FSI_mesh_type%ElemDataXnotBIG(dir,ielem)=0.0
   enddo
-  call scinormalBIG(ielem,normal,part_id,generate_time)
+  call scinormalBIG(ielem,normal, &
+     FSI_mesh_type,part_id,max_part_id, &
+     generate_time)
   do i=1,nodes_per_elem
-   inode=FSI(part_id)%IntElemBIG(i,ielem)
+   inode=FSI_mesh_type%IntElemBIG(i,ielem)
    do dir=1,3
-    FSI(part_id)%NodeNormalBIG(dir,inode)= &
-      FSI(part_id)%NodeNormalBIG(dir,inode)+normal(dir)
-    FSI(part_id)%ElemDataXnotBIG(dir,ielem)= &
-      FSI(part_id)%ElemDataXnotBIG(dir,ielem)+ &
-      FSI(part_id)%NodeBIG(dir,inode)
+    FSI_mesh_type%NodeNormalBIG(dir,inode)= &
+      FSI_mesh_type%NodeNormalBIG(dir,inode)+normal(dir)
+    FSI_mesh_type%ElemDataXnotBIG(dir,ielem)= &
+      FSI_mesh_type%ElemDataXnotBIG(dir,ielem)+ &
+      FSI_mesh_type%NodeBIG(dir,inode)
    enddo
-   FSI(part_id)%ElemNodeCountBIG(inode)= &
-     FSI(part_id)%ElemNodeCountBIG(inode)+1
+   FSI_mesh_type%ElemNodeCountBIG(inode)= &
+     FSI_mesh_type%ElemNodeCountBIG(inode)+1
   enddo ! i=1,nodes_per_elem
   do dir=1,3
-   FSI(part_id)%ElemDataXnotBIG(dir,ielem)= &
-    FSI(part_id)%ElemDataXnotBIG(dir,ielem)/3.0
+   FSI_mesh_type%ElemDataXnotBIG(dir,ielem)= &
+    FSI_mesh_type%ElemDataXnotBIG(dir,ielem)/3.0
   enddo
- enddo ! do ielem=1,FSI(part_id)%NumIntElemsBIG
+ enddo ! do ielem=1,FSI_mesh_type%NumIntElemsBIG
 
- do inode=1,FSI(part_id)%NumNodesBIG
-  normal_cnt=FSI(part_id)%ElemNodeCountBIG(inode)
+ do inode=1,FSI_mesh_type%NumNodesBIG
+  normal_cnt=FSI_mesh_type%ElemNodeCountBIG(inode)
   if (normal_cnt.gt.0) then
    mag=zero
    do dir=1,3
-    FSI(part_id)%NodeNormalBIG(dir,inode)= &
-     FSI(part_id)%NodeNormalBIG(dir,inode)/normal_cnt
-    mag=mag+FSI(part_id)%NodeNormalBIG(dir,inode)**2
+    FSI_mesh_type%NodeNormalBIG(dir,inode)= &
+     FSI_mesh_type%NodeNormalBIG(dir,inode)/normal_cnt
+    mag=mag+FSI_mesh_type%NodeNormalBIG(dir,inode)**2
    enddo ! dir=1,3
    mag=sqrt(mag)
    if (mag.gt.zero) then
     do dir=1,3
-     FSI(part_id)%NodeNormalBIG(dir,inode)= &
-       FSI(part_id)%NodeNormalBIG(dir,inode)/mag
+     FSI_mesh_type%NodeNormalBIG(dir,inode)= &
+       FSI_mesh_type%NodeNormalBIG(dir,inode)/mag
     enddo
    else if (mag.eq.zero) then
     ! do nothing
@@ -1686,10 +1715,10 @@ REAL_T    :: mag
    endif 
   else if (normal_cnt.eq.0) then
    do dir=1,3
-    if (FSI(part_id)%NodeNormalBIG(dir,inode).eq.zero) then
+    if (FSI_mesh_type%NodeNormalBIG(dir,inode).eq.zero) then
      ! do nothing
     else
-     print *,"FSI(part_id)%NodeNormalBIG(dir,inode) invalid"
+     print *,"FSI_mesh_type%NodeNormalBIG(dir,inode) invalid"
      stop
     endif
    enddo
@@ -1703,19 +1732,19 @@ REAL_T    :: mag
  smallest_h=0.0
  first_measure=0
 
- do ielem=1,FSI(part_id)%NumIntElemsBIG
-  nodes_per_elem=FSI(part_id)%ElemDataBIG(1,ielem)
+ do ielem=1,FSI_mesh_type%NumIntElemsBIG
+  nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
   if (nodes_per_elem.ne.3) then
    print *,"nodes_per_elem invalid"
    stop
   endif
-  node1=FSI(part_id)%IntElemBIG(1,ielem)
-  node2=FSI(part_id)%IntElemBIG(2,ielem)
-  node3=FSI(part_id)%IntElemBIG(3,ielem)
+  node1=FSI_mesh_type%IntElemBIG(1,ielem)
+  node2=FSI_mesh_type%IntElemBIG(2,ielem)
+  node3=FSI_mesh_type%IntElemBIG(3,ielem)
   do dir=1,3
-   x1(dir)=FSI(part_id)%NodeBIG(dir,node1) 
-   x2(dir)=FSI(part_id)%NodeBIG(dir,node2)
-   x3(dir)=FSI(part_id)%NodeBIG(dir,node3)
+   x1(dir)=FSI_mesh_type%NodeBIG(dir,node1) 
+   x2(dir)=FSI_mesh_type%NodeBIG(dir,node2)
+   x3(dir)=FSI_mesh_type%NodeBIG(dir,node3)
 
    if ((abs(x1(dir)).lt.CTMLoverflow).and. &
        (abs(x2(dir)).lt.CTMLoverflow).and. &
@@ -1731,9 +1760,15 @@ REAL_T    :: mag
 
   enddo ! dir=1..3
 
-  call xdist_project(x1,x2,part_id,d12_2D,d12_3D)
-  call xdist_project(x2,x3,part_id,d23_2D,d23_3D)
-  call xdist_project(x3,x1,part_id,d13_2D,d13_3D)
+  call xdist_project(x1,x2, &
+    FSI_mesh_type,part_id,max_part_id, &
+    d12_2D,d12_3D)
+  call xdist_project(x2,x3, &
+    FSI_mesh_type,part_id,max_part_id, &
+    d23_2D,d23_3D)
+  call xdist_project(x3,x1, &
+    FSI_mesh_type,part_id,max_part_id, &
+    d13_2D,d13_3D)
 
   if (first_measure.eq.0) then
    biggest_h=d12_2D
@@ -1761,21 +1796,21 @@ REAL_T    :: mag
    smallest_h=d13_3D
   endif
 
- enddo ! ielem=1..FSI(part_id)%NumIntElemsBIG
+ enddo ! ielem=1..FSI_mesh_type%NumIntElemsBIG
 
- FSI(part_id)%max_side_len_refined=biggest_h  
- FSI(part_id)%min_side_len_refined=smallest_h  
+ FSI_mesh_type%max_side_len_refined=biggest_h  
+ FSI_mesh_type%min_side_len_refined=smallest_h  
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
-  print *,"part_id,flag_2D_to_3D ",part_id,FSI(part_id)%flag_2D_to_3D
+  print *,"part_id,flag_2D_to_3D ",part_id,FSI_mesh_type%flag_2D_to_3D
   print *,"part_id,max_side_len_refined,min_side_len_refined ",part_id, &
-   FSI(part_id)%max_side_len_refined,FSI(part_id)%min_side_len_refined
+   FSI_mesh_type%max_side_len_refined,FSI_mesh_type%min_side_len_refined
   print *,"local_refine_factor ",local_refine_factor
   print *,"h_small ",h_small
  endif
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
-  print*,"in allocate: part ID ",FSI(part_id)%PartID
+  print*,"in allocate: part ID ",FSI_mesh_type%PartID
  endif
 
 ! END OF LAGRANGIAN REFINEMENT SECTION -----------------------
@@ -6350,10 +6385,16 @@ end subroutine advance_solid
 subroutine checkinpointBIG(xclosest,normal_closest, &
   inode,elemnum, &
   unsigned_mindist, &
-  xc,inplane,part_id,time,dx)
+  xc,inplane, &
+  FSI_mesh_type, &
+  part_id, &
+  max_part_id, &
+  time,dx)
 IMPLICIT NONE
 
-INTEGER_T :: part_id
+type(mesh_type), intent(in) :: FSI_mesh_type
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: max_part_id
 INTEGER_T, intent(in) :: inode,elemnum
 INTEGER_T, intent(inout) :: inplane
 REAL_T, intent(in) :: time 
@@ -6372,20 +6413,22 @@ REAL_T, dimension(3) :: xtarget_pert
 REAL_T, dimension(3) :: ntarget
 REAL_T, dimension(3) :: velparm
 
- if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+ if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
   stop
  endif
- if (FSI(part_id)%partID.ne.part_id) then
-  print *,"FSI(part_id)%partID.ne.part_id"
+ if (FSI_mesh_type%partID.ne.part_id) then
+  print *,"FSI_mesh_type%partID.ne.part_id"
   stop
  endif
- if (time.lt.zero) then
+ if (time.ge.zero) then
+  ! do nothing
+ else
   print *,"time invalid"
   stop
  endif
 
- nodes_per_elem=FSI(part_id)%ElemDataBIG(1,elemnum)
+ nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,elemnum)
 
  if (nodes_per_elem.ne.3) then
   print *,"nodes_per_elem invalid"
@@ -6393,26 +6436,37 @@ REAL_T, dimension(3) :: velparm
  endif
 
  do dir=1,3
-  if (dx(dir).le.zero) then
+  if (dx(dir).gt.zero) then
+   ! do nothing
+  else
    print *,"dx invalid"
    stop
   endif
-  xfoot(dir)=FSI(part_id)%NodeBIG(dir,FSI(part_id)%IntElemBIG(inode,elemnum))
+  xfoot(dir)= &
+    FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
   xfoot_pert(dir)=xfoot(dir)+0.1*dx(dir)* &
-    FSI(part_id)%NodeNormalBIG(dir,FSI(part_id)%IntElemBIG(inode,elemnum))
+    FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
   velparm(dir)=zero
  enddo
  call get_target_from_foot(xfoot,xtarget, &
-   velparm,time,part_id)
+   velparm,time, &
+   FSI_mesh_type, &
+   part_id, &
+   max_part_id)
  call get_target_from_foot(xfoot_pert,xtarget_pert, &
-   velparm,time,part_id)
+   velparm,time, &
+   FSI_mesh_type, &
+   part_id, &
+   max_part_id)
  mag=zero
  do dir=1,3
   ntarget(dir)=xtarget_pert(dir)-xtarget(dir)
   mag=mag+ntarget(dir)**2
  enddo
  mag=sqrt(mag)
- if (mag.le.zero) then
+ if (mag.gt.zero) then
+  ! do nothing
+ else
   print *,"mag invalid checkinpointBIG 0"
   stop
  endif
@@ -6426,7 +6480,9 @@ REAL_T, dimension(3) :: velparm
  enddo
 
  call xdist(xtarget,xc,curdist)
- if (curdist.lt.zero) then
+ if (curdist.ge.zero) then
+  ! do nothing
+ else
   print *,"curdist invalid"
   stop
  endif
@@ -6449,10 +6505,16 @@ end subroutine checkinpointBIG
 subroutine checkinlineBIG(xclosest,normal_closest, &
   inode,elemnum, &
   unsigned_mindist, &
-  xc,inplane,part_id,time,dx)
+  xc,inplane, &
+  FSI_mesh_type, &
+  part_id, &
+  max_part_id, &
+  time,dx)
 IMPLICIT NONE
 
-INTEGER_T :: part_id
+type(mesh_type), intent(in) :: FSI_mesh_type
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: max_part_id
 INTEGER_T, intent(in) :: inode,elemnum
 INTEGER_T, intent(inout) :: inplane
 REAL_T, intent(in) :: time 
@@ -6473,48 +6535,60 @@ REAL_T, dimension(3) :: xtarget_pert
 REAL_T, dimension(3) :: ntarget
 REAL_T, dimension(3) :: velparm
 
- if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+ if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
   stop
  endif
- if (FSI(part_id)%partID.ne.part_id) then
-  print *,"FSI(part_id)%partID.ne.part_id"
+ if (FSI_mesh_type%partID.ne.part_id) then
+  print *,"FSI_mesh_type%partID.ne.part_id"
   stop
  endif
- if (time.lt.zero) then
+ if (time.ge.zero) then
+  ! do nothing
+ else
   print *,"time invalid"
   stop
  endif
 
  if ((inode.ge.1).and.(inode.le.2)) then
 
-  nodes_per_elem=FSI(part_id)%ElemDataBIG(1,elemnum)
+  nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,elemnum)
   if (nodes_per_elem.ne.3) then
    print *,"nodes_per_elem invalid"
    stop
   endif
 
   do dir=1,3
-   if (dx(dir).le.zero) then
+   if (dx(dir).gt.zero) then
+    ! do nothing
+   else
     print *,"dx invalid"
     stop
    endif
-   xfoot(dir)=FSI(part_id)%NodeBIG(dir,FSI(part_id)%IntElemBIG(inode,elemnum))
+   xfoot(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
    xfoot_pert(dir)=xfoot(dir)+0.1*dx(dir)* &
-    FSI(part_id)%NodeNormalBIG(dir,FSI(part_id)%IntElemBIG(inode,elemnum))
+    FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
    velparm(dir)=zero
   enddo
   call get_target_from_foot(xfoot,xtarget, &
-    velparm,time,part_id)
+    velparm,time, &
+    FSI_mesh_type, &
+    part_id, &
+    max_part_id)
   call get_target_from_foot(xfoot_pert,xtarget_pert, &
-    velparm,time,part_id)
+    velparm,time, &
+    FSI_mesh_type, &
+    part_id, &
+    max_part_id)
   mag=zero
   do dir=1,3
    ntarget(dir)=xtarget_pert(dir)-xtarget(dir)
    mag=mag+ntarget(dir)**2
   enddo
   mag=sqrt(mag)
-  if (mag.le.zero) then
+  if (mag.gt.zero) then
+   ! do nothing
+  else
    print *,"mag invalid checkinlineBIG 0"
    stop
   endif
@@ -6524,22 +6598,31 @@ REAL_T, dimension(3) :: velparm
   enddo
 
   do dir=1,3
-   xfoot(dir)=FSI(part_id)%NodeBIG(dir,FSI(part_id)%IntElemBIG(inode+1,elemnum))
+   xfoot(dir)= &
+    FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode+1,elemnum))
    xfoot_pert(dir)=xfoot(dir)+0.1*dx(dir)* &
-    FSI(part_id)%NodeNormalBIG(dir,FSI(part_id)%IntElemBIG(inode+1,elemnum))
+    FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inode+1,elemnum))
    velparm(dir)=zero
   enddo
   call get_target_from_foot(xfoot,xtarget, &
-    velparm,time,part_id)
+    velparm,time, &
+    FSI_mesh_type, &
+    part_id, &
+    max_part_id)
   call get_target_from_foot(xfoot_pert,xtarget_pert, &
-    velparm,time,part_id)
+    velparm,time, &
+    FSI_mesh_type, &
+    part_id, &
+    max_part_id)
   mag=zero
   do dir=1,3
    ntarget(dir)=xtarget_pert(dir)-xtarget(dir)
    mag=mag+ntarget(dir)**2
   enddo
   mag=sqrt(mag)
-  if (mag.le.zero) then
+  if (mag.gt.zero) then
+   ! do nothing
+  else
    print *,"mag invalid checkinlineBIG 1"
    stop
   endif
@@ -6569,7 +6652,9 @@ REAL_T, dimension(3) :: velparm
    enddo
 
    call xdist(xnot,xc,curdist)
-   if (curdist.lt.zero) then
+   if (curdist.ge.zero) then
+    ! do nothing
+   else
     print *,"curdist invalid"
     stop
    endif
@@ -6596,10 +6681,16 @@ return
 end subroutine checkinlineBIG
 
 subroutine checkinplaneBIG(xclosest,elemnum,inplane, &
-  minnode,maxnode,element_scale,part_id,time)
+  minnode,maxnode,element_scale, &
+  FSI_mesh_type, &
+  part_id, &
+  max_part_id, &
+  time)
 IMPLICIT NONE
 
-INTEGER_T :: part_id
+type(mesh_type), intent(in) :: FSI_mesh_type
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: max_part_id
 INTEGER_T, intent(in) :: elemnum
 REAL_T, intent(in) :: time
 REAL_T, dimension(3), intent(in) :: minnode,maxnode,xclosest
@@ -6616,20 +6707,22 @@ REAL_T, dimension(3) :: xfoot
 REAL_T, dimension(3) :: xtarget
 REAL_T, dimension(3) :: velparm
 
- if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+ if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
   stop
  endif
- if (FSI(part_id)%partID.ne.part_id) then
-  print *,"FSI(part_id)%partID.ne.part_id"
+ if (FSI_mesh_type%partID.ne.part_id) then
+  print *,"FSI_mesh_type%partID.ne.part_id"
   stop
  endif
- if (time.lt.zero) then
+ if (time.ge.zero) then
+  ! do nothing
+ else
   print *,"time invalid"
   stop
  endif
 
- nodes_per_elem=FSI(part_id)%ElemDataBIG(1,elemnum)
+ nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,elemnum)
  if (nodes_per_elem.ne.3) then
   print *,"nodes_per_elem invalid"
   stop
@@ -6653,11 +6746,14 @@ REAL_T, dimension(3) :: velparm
 
   do i=1,3
    do dir=1,3
-    xfoot(dir)=FSI(part_id)%NodeBIG(dir,FSI(part_id)%IntElemBIG(i,elemnum))
+    xfoot(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(i,elemnum))
     velparm(dir)=zero
    enddo
    call get_target_from_foot(xfoot,xtarget, &
-      velparm,time,part_id)
+      velparm,time, &
+      FSI_mesh_type, &
+      part_id, &
+      max_part_id)
    do dir=1,3
     xnode(i,dir)=xtarget(dir)
    enddo
@@ -6736,10 +6832,14 @@ end subroutine checkinplaneBIG
 ! solid nodes are ordered clockwise when viewed from the fluid.
 ! for 2d problems, it is assumed that the 3rd node is equal to the 2nd
 ! node, except that the 3rd node extends OUT of the paper. (positive z)
-subroutine scinormalBIG(elemnum,normal,part_id,time)
+subroutine scinormalBIG(elemnum,normal, &
+     FSI_mesh_type,part_id,max_part_id, &
+     time)
 IMPLICIT NONE
 
+type(mesh_type), intent(in) :: FSI_mesh_type
 INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: max_part_id
 INTEGER_T, intent(in) :: elemnum
 REAL_T, dimension(3), intent(out) :: normal
 REAL_T, intent(in) :: time
@@ -6755,12 +6855,12 @@ INTEGER_T :: i
 INTEGER_T :: dir
 INTEGER_T :: local_normal_invert
 
- if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+ if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
   stop
  endif
- if (FSI(part_id)%partID.ne.part_id) then
-  print *,"FSI(part_id)%partID.ne.part_id"
+ if (FSI_mesh_type%partID.ne.part_id) then
+  print *,"FSI_mesh_type%partID.ne.part_id"
   stop
  endif
  if (time.ge.zero) then
@@ -6770,7 +6870,7 @@ INTEGER_T :: local_normal_invert
   stop
  endif
 
- nodes_per_elem=FSI(part_id)%ElemDataBIG(1,elemnum)
+ nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,elemnum)
  if (nodes_per_elem.gt.3) then
   print *,"nodes_per_elem>3 not supported"
   stop
@@ -6782,11 +6882,14 @@ INTEGER_T :: local_normal_invert
 
  do i=1,3
   do dir=1,3
-   xfoot(dir)=FSI(part_id)%NodeBIG(dir,FSI(part_id)%IntElemBIG(i,elemnum))
+   xfoot(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(i,elemnum))
    velparm(dir)=zero
   enddo
   call get_target_from_foot(xfoot,xtarget, &
-      velparm,time,part_id)
+      velparm,time, &
+      FSI_mesh_type, &
+      part_id, &
+      max_part_id)
 
   do dir=1,3
    nodesave(i,dir)=xtarget(dir)
@@ -6834,10 +6937,14 @@ end subroutine scinormalBIG
 ! solid nodes are ordered clockwise when viewed from the fluid.
 ! for 2d problems, it is assumed that the 3rd node is equal to the 2nd
 ! node, except that the 3rd node extends OUT of the paper. (positive z)
-subroutine scinormal(elemnum,normal,part_id,time)
+subroutine scinormal(elemnum,normal, &
+    FSI_mesh_type,part_id,max_part_id, &
+    time)
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: max_part_id
+type(mesh_type), intent(in) :: FSI_mesh_type
 INTEGER_T, intent(in) :: elemnum
 REAL_T, dimension(3), intent(out) :: normal
 REAL_T, intent(in) :: time
@@ -6853,12 +6960,12 @@ INTEGER_T :: i
 INTEGER_T :: dir
 INTEGER_T :: local_normal_invert
 
- if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+ if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
   stop
  endif
- if (FSI(part_id)%partID.ne.part_id) then
-  print *,"FSI(part_id)%partID.ne.part_id"
+ if (FSI_mesh_type%partID.ne.part_id) then
+  print *,"FSI_mesh_type%partID.ne.part_id"
   stop
  endif
  if (time.ge.zero) then
@@ -6868,7 +6975,7 @@ INTEGER_T :: local_normal_invert
   stop
  endif
 
- nodes_per_elem=FSI(part_id)%ElemData(1,elemnum)
+ nodes_per_elem=FSI_mesh_type%ElemData(1,elemnum)
  if (nodes_per_elem.lt.3) then
   print *,"nodes_per_elem<3 not supported"
   stop
@@ -6880,12 +6987,15 @@ INTEGER_T :: local_normal_invert
 
  do i=1,3
   do dir=1,3
-   xfoot(dir)=FSI(part_id)%Node(dir,FSI(part_id)%IntElem(i,elemnum))
+   xfoot(dir)=FSI_mesh_type%Node(dir,FSI_mesh_type%IntElem(i,elemnum))
    velparm(dir)=zero
   enddo
 
   call get_target_from_foot(xfoot,xtarget, &
-      velparm,time,part_id)
+      velparm,time, &
+      FSI_mesh_type, &
+      part_id, &
+      max_part_id)
 
   do dir=1,3
    nodesave(i,dir)=xtarget(dir)
@@ -7276,6 +7386,11 @@ REAL_T :: local_sidelen
 INTEGER_T :: local_ncells
 INTEGER_T :: LSLO(3)
 INTEGER_T :: LSHI(3)
+INTEGER_T :: ioproc,isout,initflag
+
+ ioproc=0
+ isout=0
+ initflag=1
 
  aux_ncells=64
 
@@ -7450,11 +7565,18 @@ INTEGER_T :: LSHI(3)
            aux_FSI(auxcomp)%bounding_box_ngrow
   enddo
   allocate(contain_aux(auxcomp)%LS3D(LSLO(1):LSHI(1), &
-          LSLO(2):LSHI(2),LSLO(3):LSHI(3)))
+          LSLO(2):LSHI(2),LSLO(3):LSHI(3),1))
  else
   print *,"max_side_len invalid"
   stop
  endif
+
+ call post_process_nodes_elements(initflag, &
+         contain_aux(auxcomp)%xlo3D, &
+         contain_aux(auxcomp)%xhi3D, &
+         aux_FSI(auxcomp),auxcomp,fort_num_local_aux_grids, &
+         ioproc,isout, &
+         contain_aux(auxcomp)%dx3D)
 
 return
 end subroutine CLSVOF_Read_aux_Header
@@ -7828,7 +7950,8 @@ INTEGER_T idir,ielem,inode
       initflag=1
        !NodeNormal(dir,inode) and NodeNormalBIG initialized here.
       call post_process_nodes_elements(initflag,problo,probhi, &
-       part_id,ioproc,isout,h_small)
+       FSI(part_id),part_id,TOTAL_NPARTS, &
+       ioproc,isout,h_small)
 
      else if ((FSI_partid_map(part_id).eq.0).and. &
               (CTML_partid_map(part_id).eq.0)) then
@@ -8181,10 +8304,16 @@ return
 end subroutine check_overlap_nodeBIG
 
 
-subroutine get_minmax_nodeBIG(part_id,ielem,time,minnode,maxnode)
+subroutine get_minmax_nodeBIG( &
+     FSI_mesh_type, &
+     part_id, &
+     max_part_id, &
+     ielem,time,minnode,maxnode)
 IMPLICIT NONE
 
+type(mesh_type), intent(in) :: FSI_mesh_type
 INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: max_part_id
 INTEGER_T, intent(in) :: ielem
 REAL_T, intent(in) :: time
 REAL_T, intent(out) :: minnode(3)
@@ -8196,13 +8325,13 @@ REAL_T xfoot(3)
 REAL_T velparm(3)
 
  if ((ielem.ge.1).and. &
-     (ielem.le.FSI(part_id)%NumIntElemsBIG)) then
+     (ielem.le.FSI_mesh_type%NumIntElemsBIG)) then
   do inode=1,3
    do dir=1,3
-    node_id=FSI(part_id)%IntElemBIG(inode,ielem)
+    node_id=FSI_mesh_type%IntElemBIG(inode,ielem)
     if ((node_id.ge.1).and. &
-        (node_id.le.FSI(part_id)%NumNodesBIG)) then
-     xfoot(dir)=FSI(part_id)%NodeBIG(dir,node_id)
+        (node_id.le.FSI_mesh_type%NumNodesBIG)) then
+     xfoot(dir)=FSI_mesh_type%NodeBIG(dir,node_id)
      if (abs(xfoot(dir)).le.CTMLoverflow) then
       ! do nothing
      else
@@ -8220,7 +8349,10 @@ REAL_T velparm(3)
     velparm(dir)=zero
    enddo ! dir=1..3
    call get_target_from_foot(xfoot,xtarget, &
-    velparm,time,part_id)
+    velparm,time, &
+    FSI_mesh_type, &
+    part_id, &
+    max_part_id)
    do dir=1,3
     nodetest=xtarget(dir)
     if (abs(nodetest).le.CTMLoverflow) then
@@ -8270,7 +8402,10 @@ REAL_T velparm(3)
    velparm(dir)=zero
   enddo
   call get_target_from_foot(xfoot,xtarget, &
-   velparm,time,part_id)
+   velparm,time, &
+   FSI(part_id), &
+   part_id, &
+   TOTAL_NPARTS)
   do dir=1,3
    minnode(dir)=xtarget(dir)
   enddo ! dir=1..3
@@ -8506,7 +8641,11 @@ IMPLICIT NONE
        if (interior_flag.eq.1) then
         ! do nothing
        else if (interior_flag.eq.0) then
-        call get_minmax_nodeBIG(part_id,ielem,cur_time,minnode,maxnode) 
+        call get_minmax_nodeBIG( &
+                FSI(part_id), &
+                part_id, &
+                TOTAL_NPARTS, &
+                ielem,cur_time,minnode,maxnode) 
         do tid_loop=1,nthread_parm
         do tilenum_loop=1, &
                contain_elem(lev77)%num_tiles_on_thread3D_proc(tid_loop)
@@ -8530,7 +8669,11 @@ IMPLICIT NONE
 
          ! traverse FSI(part_id)%IntElemBIG(inode,ielem)
          ! look at FSI(part_id)%NodeBIG(dir,node_id)
-      call get_minmax_nodeBIG(part_id,ielem,cur_time,minnode,maxnode)
+      call get_minmax_nodeBIG( &
+              FSI(part_id), &
+              part_id, &
+              TOTAL_NPARTS, &
+              ielem,cur_time,minnode,maxnode)
      
       if (ielem.eq.1) then
        tid_predict=0
@@ -9224,7 +9367,10 @@ IMPLICIT NONE
       velparm(dir)=zero
      enddo 
      call get_target_from_foot(xelem,xnot, &
-       velparm,time,part_id)
+       velparm,time, &
+       FSI(part_id), &
+       part_id, &
+       TOTAL_NPARTS)
 
      nodes_per_elem=FSI(part_id)%ElemDataBIG(1,ielem)
      if (nodes_per_elem.lt.3) then
@@ -9235,7 +9381,11 @@ IMPLICIT NONE
      ! phi=n dot (x-xnot)
      ! phi>0 in the fluid
      ! this is the element normal (in contrast to the node normal)
-     call scinormalBIG(ielem,normal,part_id,time)
+     call scinormalBIG(ielem,normal, &
+             FSI(part_id), &
+             part_id, &
+             TOTAL_NPARTS, &
+             time)
 
      if (debug_all.eq.1) then
       print *,"ielem=",ielem
@@ -9250,7 +9400,11 @@ IMPLICIT NONE
       ! get_target_from_foot
       ! minnode and maxnode are needed in order to find the
       ! stencil of surrounding Eulerian cells to lagrangian element (triangle)
-     call get_minmax_nodeBIG(part_id,ielem,time,minnode,maxnode)
+     call get_minmax_nodeBIG( &
+       FSI(part_id), &
+       part_id, &
+       TOTAL_NPARTS, &
+       ielem,time,minnode,maxnode)
       ! sanity check
      do dir=1,3
       test_scale=maxnode(dir)-minnode(dir)
@@ -9278,7 +9432,9 @@ IMPLICIT NONE
     
       ! stencil of surrounding Eulerian cells to lagrangian element (triangle)
      call find_grid_bounding_box( &
+       FSI(part_id), &
        part_id, &
+       TOTAL_NPARTS, &
        null_intersection, &
        minnode,maxnode, &
        FSI_lo,FSI_hi, &
@@ -9377,7 +9533,11 @@ IMPLICIT NONE
          endif
 
          call checkinplaneBIG(xclosest,ielem,inplane, &
-          minnode,maxnode,element_scale,part_id,time)
+          minnode,maxnode,element_scale, &
+          FSI(part_id), &
+          part_id, &
+          TOTAL_NPARTS, &
+          time)
 
 ! investigate using NodeNormalBIG (normal defined at nodes)
          do inode=1,nodes_per_elem
@@ -9385,13 +9545,21 @@ IMPLICIT NONE
           call checkinlineBIG(xclosest,normal_closest, &
            inode,ielem, &
            unsigned_mindist, &
-           xx,inplane,part_id,time,dxBB)
+           xx,inplane, &
+           FSI(part_id), &
+           part_id, &
+           TOTAL_NPARTS, &
+           time,dxBB)
           ! check distance to the nodes of a triangular element.
           ! normal_closest is the element normal.
           call checkinpointBIG(xclosest,normal_closest, &
            inode,ielem, &
            unsigned_mindist, &
-           xx,inplane,part_id,time,dxBB)
+           xx,inplane, &
+           FSI(part_id), &
+           part_id, &
+           TOTAL_NPARTS, &
+           time,dxBB)
          enddo ! inode=1,nodes_per_elem
 
          hitflag=0
@@ -9545,7 +9713,11 @@ IMPLICIT NONE
             enddo  ! dir
 
             call checkinplaneBIG(xcrit,ielem,inplane, &
-             minnode,maxnode,element_scale,part_id,time)
+             minnode,maxnode,element_scale, &
+             FSI(part_id), &
+             part_id, &
+             TOTAL_NPARTS, &
+             time)
 ! totaldist is the distance between xx and xside
 ! testdist  is the distance between xx and xcrit 
 ! xx=center point  xside=stencil point xcrit=crossing point
@@ -9700,7 +9872,10 @@ IMPLICIT NONE
              stop
             endif
             call get_target_from_foot(xfoot,xtarget, &
-             velparm,time,part_id)
+             velparm,time, &
+             FSI(part_id), &
+             part_id, &
+             TOTAL_NPARTS)
    
              ! xtarget is Lagrangian coordinate
              ! xx is grid coordinate 
@@ -10842,7 +11017,10 @@ end subroutine CLSVOF_InitBox
          velparm(dir)=zero
         enddo 
         call get_target_from_foot(xnode,xnot, &
-          velparm,time,part_id)
+          velparm,time, &
+          FSI(part_id), &
+          part_id, &
+          TOTAL_NPARTS)
 
         if (debug_all.eq.1) then
          print *,"inode=",inode
@@ -11624,12 +11802,17 @@ end subroutine CLSVOF_InitBox
        ! if rigid body moves via prescribed mapping, then velparm
        ! is modified.
       subroutine get_target_from_foot(xfoot,xtarget, &
-       velparm,time,part_id)
+       velparm,time, &
+       FSI_mesh_type, &
+       part_id, &
+       max_part_id)
       use global_utility_module
 
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: part_id
+      INTEGER_T, intent(in) :: max_part_id
+      type(mesh_type), intent(in) :: FSI_mesh_type
       REAL_T, intent(out) :: velparm(3)
       REAL_T, intent(in) :: time
       REAL_T, intent(out) :: xtarget(3)
@@ -11650,12 +11833,12 @@ end subroutine CLSVOF_InitBox
       REAL_T flapping_time_plus
 
 
-      if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+      if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
        print *,"part_id invalid"
        stop
       endif
-      if (FSI(part_id)%partID.ne.part_id) then
-       print *,"FSI(part_id)%partID.ne.part_id"
+      if (FSI_mesh_type%partID.ne.part_id) then
+       print *,"FSI_mesh_type%partID.ne.part_id"
        stop
       endif
 
@@ -11854,11 +12037,11 @@ end subroutine CLSVOF_InitBox
 
         xtarget(3)=xtarget(3)-0.01d0
         do dir=1,3
-         xtarget(dir)=xtarget(dir)+FSI(part_id)%solid_displ(dir)
+         xtarget(dir)=xtarget(dir)+FSI_mesh_type%solid_displ(dir)
         enddo
 
         do dir=1,3
-         velparm(dir)=FSI(part_id)%solid_speed(dir)
+         velparm(dir)=FSI_mesh_type%solid_speed(dir)
         enddo
 
        else if (probtype.eq.701) then  ! 2nd flapping wing
@@ -11954,7 +12137,7 @@ end subroutine CLSVOF_InitBox
         ! do nothing: velparm prescribed on input.
        endif  
 
-      else if ((part_id.gt.2).and.(part_id.le.TOTAL_NPARTS)) then
+      else if ((part_id.gt.2).and.(part_id.le.max_part_id)) then
        ! do nothing
       else
        print *,"part_id invalid"
@@ -11966,7 +12149,9 @@ end subroutine CLSVOF_InitBox
 
 
 subroutine find_grid_bounding_box( &
+ FSI_mesh_type, &
  part_id, &
+ max_part_id, &
  null_intersection, &
  minnode,maxnode, &
  FSI_lo,FSI_hi, &
@@ -11976,7 +12161,9 @@ subroutine find_grid_bounding_box( &
  gridloBB,gridhiBB,dxBB)
 IMPLICIT NONE
 
+ type(mesh_type), intent(in) :: FSI_mesh_type
  INTEGER_T, intent(in) :: part_id
+ INTEGER_T, intent(in) :: max_part_id
  INTEGER_T, intent(out) :: null_intersection
  REAL_T, intent(in) :: minnode(3),maxnode(3)
  INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
@@ -11993,12 +12180,12 @@ IMPLICIT NONE
  INTEGER_T ngrow,ngrowtest
  INTEGER_T local_iband
 
- if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+ if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
   stop
  endif
 
- local_iband=FSI(part_id)%bounding_box_ngrow
+ local_iband=FSI_mesh_type%bounding_box_ngrow
  if (local_iband.ne.BoundingBoxRadCell) then
   print *,"local_iband invalid"
   stop
@@ -12720,7 +12907,8 @@ INTEGER_T :: idir,ielem,im_part
       else if (FSI(part_id)%deforming_part.eq.1) then
         !NodeNormal(dir,inode) and NodeNormalBIG initialized here.
        call post_process_nodes_elements(initflag,problo,probhi, &
-        part_id,ioproc,isout,h_small)
+        FSI(part_id),part_id,TOTAL_NPARTS, &
+        ioproc,isout,h_small)
       else
        print *,"FSI(part_id)%deforming_part invalid"
        stop
