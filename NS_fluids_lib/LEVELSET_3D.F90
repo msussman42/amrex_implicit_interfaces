@@ -13451,11 +13451,11 @@ stop
          endif
 
           ! set LSleft, LSright, localLS, xmac
-         if ((operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC).or. & ! potential gradient, surface tension
+         if ((operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC).or. & 
              (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
              (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. &
              (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. &
-             (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. & ! u^MAC,CELL DIFF -> u^MAC
+             (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. & 
              (operation_flag.eq.OP_PRES_CELL_TO_MAC)) then  ! p^CELL->MAC
 
           ! levelPC() has piecewise constant BC at coarse/fine borders.
@@ -13646,10 +13646,10 @@ stop
            stop
           endif
 
-         else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u^MAC=u^CELL->MAC
-                  (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. & !u^MAC=uSOLID^MAC or uFLUID^MAC
-                  (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & !u^MAC=u^MAC+beta diff^CELL->MAC
-                  (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then !u^MAC=u^{CELL DIFF,MAC}->MAC
+         else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
+                  (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. & 
+                  (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
+                  (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
 
           face_velocity_override=0
 
@@ -14726,9 +14726,9 @@ stop
           enddo ! nc
 
          else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u^CELL->MAC
-                  (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. & !u^MAC=uSOLID^MAC or uFLUID^MAC
-                  (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & !u^MAC+beta diff_ref^CELL->MAC
-                  (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then ! u^CELL DIFF,MAC -> MAC
+                  (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. & 
+                  (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
+                  (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
 
           xvel(D_DECL(i,j,k),1)=uedge
   
@@ -14736,7 +14736,7 @@ stop
 
           xgp(D_DECL(i,j,k),1)=pgrad
 
-         else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then ! potential grad+surface tension
+         else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
        
           xgp(D_DECL(i,j,k),1)=pgrad_gravity+pgrad_tension
 
@@ -14789,10 +14789,10 @@ stop
        else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then 
         ! do nothing
        else if ((operation_flag.eq.OP_PRESGRAD_MAC).or. & ! pressure gradient
-                (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC).or. & ! grad ppot/den_pot
+                (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC).or. & 
                 (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & ! vel CELL->MAC
-                (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & ! u^MAC=u^MAC+DU^{C->M}
-                (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or.& !  "        "
+                (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
+                (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or.& 
                 (operation_flag.eq.OP_ISCHEME_MAC)) then ! advection
 
         if ((enable_spectral.eq.1).or. &
@@ -14830,10 +14830,10 @@ stop
                 (maskcov.eq.1)) then
 
              if ((operation_flag.eq.OP_PRESGRAD_MAC).or. & ! pressure gradient
-                 (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC).or. & ! grad ppot/den_pot
+                 (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC).or. & 
                  (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & ! vel CELL->MAC
-                 (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & ! u^MAC=u^MAC+DU^{C->M}
-                 (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or.& !  "        "
+                 (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
+                 (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or.& 
                  (operation_flag.eq.OP_ISCHEME_MAC)) then ! advection
               ! do nothing
              else
@@ -17282,7 +17282,6 @@ stop
 
       module FSI_PC_LS_module
 
-       use iso_c_binding
        use amrex_fort_module, only : amrex_real,amrex_particle_real
        use iso_c_binding, only: c_int
 

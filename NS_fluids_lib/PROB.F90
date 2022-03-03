@@ -28031,8 +28031,7 @@ end subroutine initialize2d
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
         vel,DIMS(vel), &
-        dx,xlo,xhi, &
-        Re,We,RGASRWATER) &
+        dx,xlo,xhi) &
       bind(c,name='fort_initvelocity')
 
       use global_distance_module
@@ -28051,7 +28050,6 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
-      REAL_T, intent(out) :: Re,We,RGASRWATER
       REAL_T kterm,velperturb
       REAL_T ktermx,velperturbx
 

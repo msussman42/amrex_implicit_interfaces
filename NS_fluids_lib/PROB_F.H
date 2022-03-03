@@ -27,8 +27,7 @@ namespace amrex{
       const int* fablo,const int* fabhi,
       int* bfact,
       Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
-      const Real* dx,const Real* xlo, const Real* xhi,
-      Real* Re,Real* We,Real* RGASRWATER);
+      const Real* dx,const Real* xlo, const Real* xhi);
 
      void fort_initdata_alloc(
       int* nmat,int* nten,int* nc,
