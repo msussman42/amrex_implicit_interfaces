@@ -549,7 +549,7 @@ implicit none
        REAL_T :: xlo3D(3)
        REAL_T :: xhi3D(3)
        REAL_T :: dx3D
-       REAL_T, dimension(:,:,:), allocatable :: LS3D ! level set data
+       REAL_T, dimension(:,:,:,:), allocatable :: LS3D ! level set data
       end type aux_contain_type
 
       INTEGER_T :: fort_num_local_aux_grids=0
