@@ -9779,8 +9779,7 @@ NavierStokes::initData () {
    fablo,fabhi,&bfact_space,
    S_new[mfi].dataPtr(),
    ARLIM(s_lo),ARLIM(s_hi),
-   dx,xlo,xhi,
-   &Reynolds,&Weber,&RGASRWATER );
+   dx,xlo,xhi);
 
  } // mfi
 }//omp

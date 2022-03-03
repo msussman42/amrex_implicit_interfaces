@@ -1870,8 +1870,8 @@ INTEGER_T :: ctml_part_id
    radradblob2=1.0
 
    do dir=1,3
-    maxnode(dir)=0.0
-    minnode(dir)=0.0
+    maxnode(dir)=-1.0e+10
+    minnode(dir)=1.0e+10
     maxnodebefore(dir)=-1.0e+10
     minnodebefore(dir)=1.0e+10
    enddo
@@ -2423,8 +2423,8 @@ REAL_T :: radradblob1,radradblob2
     endif  ! ifirst.eq.1
 
     do dir=1,3
-     maxnode(dir)=0.0
-     minnode(dir)=0.0
+     maxnode(dir)=-1.0e+10
+     minnode(dir)=1.0e+10
      maxnodebefore(dir)=-1.0e+10
      minnodebefore(dir)=1.0e+10
     enddo
@@ -2671,8 +2671,8 @@ INTEGER_T localElem(4)
    call init_FSI(part_id,1)  ! allocate_intelem=1
 
    do dir=1,3
-    maxnode(dir)=0.0
-    minnode(dir)=0.0
+    maxnode(dir)=-1.0e+10
+    minnode(dir)=1.0e+10
     maxnodebefore(dir)=-1.0e+10
     minnodebefore(dir)=1.0e+10
    enddo
@@ -2841,8 +2841,8 @@ REAL_T :: local_nodes(3,3)  ! dir,node num
    call init_FSI(part_id,1)  ! allocate_intelem=1
 
    do dir=1,3
-    maxnode(dir)=0.0d0
-    minnode(dir)=0.0d0
+    maxnode(dir)=-1.0e+10
+    minnode(dir)=1.0e+10
     maxnodebefore(dir)=-1.0d+10
     minnodebefore(dir)=1.0d+10
    enddo
@@ -3211,8 +3211,8 @@ INTEGER_T :: stand_alone_flag
    call init_FSI(part_id,1)  ! allocate_intelem=1
 
    do dir=1,3
-    maxnode(dir)=0.0
-    minnode(dir)=0.0
+    maxnode(dir)=-1.0e+10
+    minnode(dir)=1.0e+10
     maxnodebefore(dir)=-1.0e+10
     minnodebefore(dir)=1.0e+10
    enddo
@@ -3414,8 +3414,8 @@ INTEGER_T :: orig_elements,local_elements
    call init_FSI(part_id,1)  ! allocate_intelem=1
 
    do dir=1,3
-    maxnode(dir)=0.0
-    minnode(dir)=0.0
+    maxnode(dir)=-1.0e+10
+    minnode(dir)=1.0e+10
     maxnodebefore(dir)=-1.0e+10
     minnodebefore(dir)=1.0e+10
    enddo
@@ -3651,8 +3651,8 @@ INTEGER_T :: local_part_id
    endif 
 
    do dir=1,3
-    maxnode(dir)=0.0
-    minnode(dir)=0.0
+    maxnode(dir)=-1.0e+10
+    minnode(dir)=1.0e+10
     maxnodebefore(dir)=-1.0e+10
     minnodebefore(dir)=1.0e+10
    enddo
@@ -4260,8 +4260,8 @@ INTEGER_T :: local_part_id
     endif
 
     do dir=1,3
-     maxnode(dir)=0.0
-     minnode(dir)=0.0
+     maxnode(dir)=-1.0e+10
+     minnode(dir)=1.0e+10
      maxnodebefore(dir)=-1.0e+10
      minnodebefore(dir)=1.0e+10
     enddo
@@ -4757,8 +4757,8 @@ INTEGER_T :: local_part_id
    endif
 
    do dir=1,3
-    maxnode(dir)=0.0
-    minnode(dir)=0.0
+    maxnode(dir)=-1.0e+10
+    minnode(dir)=1.0e+10
     maxnodebefore(dir)=-1.0e+10
     minnodebefore(dir)=1.0e+10
    enddo
@@ -5030,8 +5030,8 @@ INTEGER_T :: local_part_id
    endif
 
    do dir=1,3
-    maxnode(dir)=0.0
-    minnode(dir)=0.0
+    maxnode(dir)=-1.0e+10
+    minnode(dir)=1.0e+10
     maxnodebefore(dir)=-1.0e+10
     minnodebefore(dir)=1.0e+10
    enddo
@@ -5245,8 +5245,8 @@ INTEGER_T local_part_id
   call init_FSI(local_part_id,1)
 
   do dir=1,3
-   maxnode(dir)=0.0
-   minnode(dir)=0.0
+   maxnode(dir)=-1.0e+10
+   minnode(dir)=1.0e+10
    maxnodebefore(dir)=-1.0e+10
    minnodebefore(dir)=1.0e+10
   enddo
@@ -5466,8 +5466,8 @@ INTEGER_T :: local_part_id
   endif 
 
   do dir=1,3
-   maxnode(dir)=0.0
-   minnode(dir)=0.0
+   maxnode(dir)=-1.0e+10
+   minnode(dir)=1.0e+10
    maxnodebefore(dir)=-1.0e+10
    minnodebefore(dir)=1.0e+10
   enddo
@@ -5669,8 +5669,8 @@ INTEGER_T :: local_part_id
   call init_FSI(local_part_id,1)
 
   do dir=1,3
-   maxnode(dir)=0.0
-   minnode(dir)=0.0
+   maxnode(dir)=-1.0e+10
+   minnode(dir)=1.0e+10
   enddo
 
   do inode=1,FSI(1)%NumNodes
@@ -5861,8 +5861,8 @@ INTEGER_T :: local_part_id
   call init_FSI(local_part_id,1)
 
   do dir=1,3
-   maxnode(dir)=0.0
-   minnode(dir)=0.0
+   maxnode(dir)=-1.0e+10
+   minnode(dir)=1.0e+10
   enddo
 
   do inode=1,FSI(1)%NumNodes
@@ -7237,7 +7237,7 @@ return
 end subroutine CLSVOF_sync_lag_data
 
 subroutine CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
-                    FSI_touch_flag)
+                FSI_touch_flag)
 use global_utility_module
 
 IMPLICIT NONE
@@ -7274,6 +7274,8 @@ INTEGER_T aux_ncells
 REAL_T :: local_midpoint
 REAL_T :: local_sidelen
 INTEGER_T :: local_ncells
+INTEGER_T :: LSLO(3)
+INTEGER_T :: LSHI(3)
 
  aux_ncells=64
 
@@ -7297,8 +7299,8 @@ INTEGER_T :: local_ncells
  radradblob1=1.0d0
 
  do dir=1,3
-  maxnode(dir)=0.0d0
-  minnode(dir)=0.0d0
+  maxnode(dir)=-1.0e+10
+  minnode(dir)=1.0e+10
   maxnodebefore(dir)=-1.0d+10
   minnodebefore(dir)=1.0d+10
  enddo
@@ -7441,7 +7443,14 @@ INTEGER_T :: local_ncells
     stop
    endif
   enddo ! dir=1..3
-   ! need to allocate LS3D here ...
+  do dir=1,3
+   LSLO(dir)=contain_aux(auxcomp)%lo3D(dir)- &
+           aux_FSI(auxcomp)%bounding_box_ngrow
+   LSHI(dir)=contain_aux(auxcomp)%hi3D(dir)+ &
+           aux_FSI(auxcomp)%bounding_box_ngrow
+  enddo
+  allocate(contain_aux(auxcomp)%LS3D(LSLO(1):LSHI(1), &
+          LSLO(2):LSHI(2),LSLO(3):LSHI(3)))
  else
   print *,"max_side_len invalid"
   stop

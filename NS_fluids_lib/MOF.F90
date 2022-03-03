@@ -16004,7 +16004,7 @@ contains
        bfact,dx, &
        xsten0,nhalf0, & ! phi = n dot (x-x0) + intercept
        mofdata, &
-       xtetlist_in, &     ! within xtetlist_in
+       xtetlist_in, & 
        nlist_alloc_in, &
        nlist_in, &
        multi_volume, &
@@ -16030,7 +16030,7 @@ contains
       INTEGER_T, intent(in) :: tessellate
       INTEGER_T, intent(in) :: nmat,sdim,caller_id,bfact
       INTEGER_T, intent(in) :: nhalf0
-      REAL_T, intent(out) :: xtetlist_in(4,3,nlist_alloc_in)
+      REAL_T, intent(in) :: xtetlist_in(4,3,nlist_alloc_in)
       REAL_T :: xtet(sdim+1,sdim)
       REAL_T, intent(in) :: mofdata(nmat*(2*sdim+3))
       REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim)
