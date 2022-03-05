@@ -19960,7 +19960,11 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     visual_domain.loVect(),
     visual_domain.hiVect(),
     &visual_ncomp);
-  }
+  } else if (! ParallelDescriptor::IOProcessor()) {
+   // do nothing
+  } else
+   amrex::Error("ParallelDescriptor::IOProcessor() invalid");
+
   ParallelDescriptor::Barrier();
 
    // communicate visual_fab_input from the IO proc to all of the
@@ -20057,6 +20061,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
   for (int plot_grid_type=0;plot_grid_type<=1;plot_grid_type++) {
 
+   ParallelDescriptor::Barrier();
+
    ns_level.output_zones(
     plot_grid_type,
     visual_fab_output,
@@ -20078,6 +20084,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     cgrids_minusBA_array[ilev],
     slice_data.dataPtr(), 
     do_plot,do_slice);
+
+   ParallelDescriptor::Barrier();
 
   } //for (int plot_grid_type=0;plot_grid_type<=1;plot_grid_type++) 
 
@@ -20187,6 +20195,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     //0=tecplot nodes
    if (visual_nddata_format==0) {
 
+    ParallelDescriptor::Barrier();
+
     fort_combinezones(
      &total_number_grids,
      grids_per_level_array.dataPtr(),
@@ -20206,8 +20216,22 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
      &nparts_def,
      im_solid_map_ptr);
 
+    ParallelDescriptor::Barrier();
+
     //1=plt file cells
    } else if (visual_nddata_format==1) {
+
+    ParallelDescriptor::Barrier();
+    std::fflush(NULL);
+    if (1==1) {
+     std::cout << 
+      "getting ready to call WriteMultiLevelPlotfile on proc " << 
+        amrex::ParallelDescriptor::MyProc() << "\n";
+     std::cout <<
+      "tecplot_max_level= " << tecplot_max_level << "\n";
+    }
+    std::fflush(NULL);
+    ParallelDescriptor::Barrier();
 
     int ncomp_plot=PLOTCOMP_NCOMP;
     if (localMF[MULTIFAB_TOWER_PLT_MF]->nComp()==ncomp_plot) {
@@ -20428,8 +20452,13 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
       level_steps,
       ref_ratio);
 
+    ParallelDescriptor::Barrier();
+
     //2=tecplot cells (piecewise constant reconstruction).
    } else if (visual_nddata_format==2) {
+
+    ParallelDescriptor::Barrier();
+
      //plot_sdim_macro declared up above.
     int ncomp_plot=PLOTCOMP_NCOMP;
     if (localMF[MULTIFAB_TOWER_PLT_MF]->nComp()==ncomp_plot) {
@@ -20447,6 +20476,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
      -1, //State_Type==-1
      data_dir,
      nsteps);
+
+    ParallelDescriptor::Barrier();
 
    } else {
     amrex::Error("visual_nddata_format invalid");

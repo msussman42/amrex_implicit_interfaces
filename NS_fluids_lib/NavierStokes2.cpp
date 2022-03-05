@@ -7713,7 +7713,9 @@ void NavierStokes::output_zones(
       &visual_nddata_format);
     }  // mfi
 } //omp
+     // declared in: NavierStokes.cpp
     ns_reconcile_d_num(157);
+    ParallelDescriptor::Barrier();
 
    } else if (grids_per_level_local==0) {
   
