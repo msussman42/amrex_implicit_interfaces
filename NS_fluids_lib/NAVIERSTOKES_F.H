@@ -219,6 +219,7 @@ extern "C" {
          const int* fablo,const int* fabhi,
          int* bfact,
          int* level,
+         int* finest_level,
          int* ngrow,int* rzflag);
 
     void fort_edgeavgdown(

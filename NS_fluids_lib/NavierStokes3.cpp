@@ -1040,6 +1040,14 @@ Real NavierStokes::advance(Real time,Real dt) {
     }
    }
 
+   if (1==1) {
+    std::fflush(NULL);
+    int proc=ParallelDescriptor::MyProc();
+    std::cout << "prior to metrics_dataALL on processor=" << proc << '\n';
+    std::fflush(NULL);
+    ParallelDescriptor::Barrier();
+   }
+
     //declared in: NavierStokes2.cpp
    metrics_dataALL(1);  
 

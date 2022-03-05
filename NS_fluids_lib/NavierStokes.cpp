@@ -10455,8 +10455,10 @@ NavierStokes::Geometry_cleanup() {
  for (int i=0;i<MAX_NUM_LOCAL_MF;i++) {
   if (localMF_grow[i]>=0) {
    delete localMF[i];
+   ParallelDescriptor::Barrier();
    localMF_grow[i]=-1;
    localMF[i]=0;
+   ParallelDescriptor::Barrier();
   } else if (localMF_grow[i]==-1) {
    if (localMF[i]==0) {
     // do nothing
