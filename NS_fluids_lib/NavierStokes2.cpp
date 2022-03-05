@@ -6124,6 +6124,7 @@ void NavierStokes::metrics_data(int ngrow) {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   //declared in: NAVIERSTOKES_3D.F90
   fort_metrics(
    xlo,dx,
    areax.dataPtr(),ARLIM(areax.loVect()),ARLIM(areax.hiVect()),

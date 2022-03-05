@@ -7659,10 +7659,10 @@ end subroutine dynamic_contact_angle
       subroutine gridvol(xsten,nhalf,rzflag,vol)
       IMPLICIT NONE
 
-      REAL_T vol
-      INTEGER_T nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      INTEGER_T rzflag
+      REAL_T, intent(out) :: vol
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, intent(in) :: rzflag
       REAL_T RCENTER
 
       if (nhalf.lt.1) then

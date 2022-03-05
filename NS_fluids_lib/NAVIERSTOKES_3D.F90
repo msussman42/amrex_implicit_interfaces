@@ -14421,7 +14421,8 @@ END SUBROUTINE SIMP
        vol,DIMS(vol), &
        tilelo,tilehi, &
        fablo,fabhi, &
-       bfact,level, &
+       bfact, &
+       level, &
        ngrow,rzflag) &
       bind(c,name='fort_metrics')
 

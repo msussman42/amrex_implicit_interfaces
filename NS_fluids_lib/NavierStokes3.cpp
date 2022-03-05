@@ -1040,12 +1040,16 @@ Real NavierStokes::advance(Real time,Real dt) {
     }
    }
 
+    //declared in: NavierStokes2.cpp
    metrics_dataALL(1);  
 
    if (verbose>0) {
+    std::fflush(NULL);
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "initializing masks \n";
     }
+    std::fflush(NULL);
+    ParallelDescriptor::Barrier();
    }
 
    for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -1060,9 +1064,12 @@ Real NavierStokes::advance(Real time,Real dt) {
    build_masksemALL();
 
    if (verbose>0) {
+    std::fflush(NULL);
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "prescribe solid geometry (after regridding) \n";
     }
+    std::fflush(NULL);
+    ParallelDescriptor::Barrier();
    }
 
    if (perturbation_on_restart==1) {
@@ -1101,9 +1108,12 @@ Real NavierStokes::advance(Real time,Real dt) {
       local_truncate,caller_id);
 
    if (verbose>0) {
+    std::fflush(NULL);
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "copy new to old ... \n";
     }
+    std::fflush(NULL);
+    ParallelDescriptor::Barrier();
    }
 
    if (particles_flag==0) {
@@ -2295,10 +2305,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
  double after_init = ParallelDescriptor::second();
  if ((verbose>0)||(show_timings==1)) {
+  std::fflush(NULL);
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "elapsed time in preliminary allocation " << after_init-
         start_advance << '\n';
   }
+  std::fflush(NULL);
+  ParallelDescriptor::Barrier();
  }
 
  int nsteps=parent->levelSteps(0); // nsteps==0 very first step.
@@ -2448,6 +2461,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     amrex::Error("slab_step invalid");
 
    if (verbose>0) {
+    std::fflush(NULL);
     if (ParallelDescriptor::IOProcessor()) {
      for (int iscale=0;iscale<hold_dt_factors.size();iscale++) {
       std::cout << "iscale hold_dt_factors " << iscale << ' ' <<
@@ -2455,6 +2469,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      }
      std::cout << "dt_slab= " << dt_slab << '\n';
     }
+    std::fflush(NULL);
+    ParallelDescriptor::Barrier();
    }
 
    for (int ilev=finest_level;ilev>=level;ilev--) {
