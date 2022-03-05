@@ -14423,6 +14423,7 @@ END SUBROUTINE SIMP
        fablo,fabhi, &
        bfact, &
        level, &
+       finest_level, &
        ngrow,rzflag) &
       bind(c,name='fort_metrics')
 
@@ -14432,6 +14433,7 @@ END SUBROUTINE SIMP
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -14474,6 +14476,21 @@ END SUBROUTINE SIMP
         stop
        endif
       endif
+
+      if (ngrow.ge.0) then
+       ! do nothing
+      else
+       print *,"ngrow invalid in fort_metrics ",ngrow
+       stop
+      endif
+
+      if ((level.ge.0).and.(level.le.finest_level)) then
+       ! do nothing
+      else
+       print *,"level or finest_level invalid ",level,finest_level
+       stop
+      endif
+
       vol_ptr=>vol
       areax_ptr=>areax
       areay_ptr=>areay
