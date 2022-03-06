@@ -427,7 +427,8 @@ stop
 
       INTEGER_T strandid
 
-      INTEGER_T nwrite3d,nwrite2d,index3d,index2d
+      INTEGER_T nwrite3d,nwrite2d
+      INTEGER_T index3d,index2d
 
       character*3 levstr
       character*5 gridstr
@@ -508,6 +509,13 @@ stop
 
       plot_sdim_macro=plot_sdim
       nwrite3d=PLOTCOMP_NCOMP
+
+      if (nwrite3d-nwrite2d.eq.PLOTCOMP_DIFF) then
+       ! do nothing
+      else
+       print *,"nwrite3d-nwrite2d invalid"
+       stop
+      endif
 
       if (num_levels.ne.finest_level+1) then
        print *,"num_levels invalid"
@@ -2182,6 +2190,9 @@ END SUBROUTINE SIMP
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T ispec
       INTEGER_T plot_sdim_macro
+      INTEGER_T nwrite3d
+      INTEGER_T nwrite2d
+
 
       caller_id=3
 
@@ -2189,6 +2200,17 @@ END SUBROUTINE SIMP
       nmax=POLYGON_LIST_MAX ! in: fort_cellgrid
       bfact_finest=2
       INTERP_TOL=1.0E-4
+
+      plot_sdim_macro=2
+      nwrite2d=PLOTCOMP_NCOMP
+      plot_sdim_macro=3
+      nwrite3d=PLOTCOMP_NCOMP
+      if (nwrite3d-nwrite2d.eq.PLOTCOMP_DIFF) then
+       ! do nothing
+      else
+       print *,"nwrite3d-nwrite2d invalid"
+       stop
+      endif
 
       plot_sdim_macro=SDIM
 
@@ -3228,6 +3250,22 @@ END SUBROUTINE SIMP
          enddo
         endif
 
+        if (ncomp_tower.eq.PLOTCOMP_NCOMP) then
+         ! do nothing
+        else
+         print *,"(ncomp_tower.ne.PLOTCOMP_NCOMP)"
+         stop
+        endif
+
+        if (scomp.ne.ncomp_tower) then
+         print *,"(scomp.ne.ncomp_tower)"
+         stop
+        endif
+
+        do iw=1,scomp
+         towerfab(D_DECL(i,j,k),iw)=writend(iw)
+        enddo        
+
         if ((visual_nddata_format.eq.0).and. &
             (plot_grid_type.eq.0)) then
   
@@ -3246,27 +3284,8 @@ END SUBROUTINE SIMP
 
         else if ((visual_nddata_format.ne.0).or. &
                  (plot_grid_type.eq.1)) then
-         if (plot_grid_type.eq.0) then
-          ! do nothing
-         else if (plot_grid_type.eq.1) then
-          if (ncomp_tower.eq.PLOTCOMP_NCOMP) then
-           ! do nothing
-          else
-           print *,"(ncomp_tower.ne.PLOTCOMP_NCOMP)"
-           stop
-          endif
-          if (scomp.ne.ncomp_tower) then
-           print *,"(scomp.ne.ncomp_tower)"
-           stop
-          endif
 
-          do iw=1,scomp
-           towerfab(D_DECL(i,j,k),iw)=writend(iw)
-          enddo        
-         else
-          print *,"plot_grid_type invalid"
-          stop
-         endif
+         ! do nothing
 
         else
          print *,"visual_nddata_format or plot_grid_type invalid"
@@ -4039,6 +4058,18 @@ END SUBROUTINE SIMP
       INTEGER_T plot_sdim_macro
       INTEGER_T klo_plot,khi_plot
       INTEGER_T add_sub_cells
+      INTEGER_T nwrite3d,nwrite2d
+
+      plot_sdim_macro=2
+      nwrite2d=PLOTCOMP_NCOMP
+      plot_sdim_macro=3
+      nwrite3d=PLOTCOMP_NCOMP
+      if (nwrite3d-nwrite2d.eq.PLOTCOMP_DIFF) then
+       ! do nothing
+      else
+       print *,"nwrite3d-nwrite2d invalid"
+       stop
+      endif
 
       plot_sdim=SDIM
       plot_sdim_macro=SDIM
