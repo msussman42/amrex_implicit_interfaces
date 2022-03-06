@@ -6094,6 +6094,16 @@ void NavierStokes::debug_ixType_raw(MultiFab* mf,int grid_type,int counter) {
   std::cout << "counter= " << counter << '\n';
   amrex::Error("mf not ok");
  } else if (mf->ok()) {
+
+  if (1==1) {
+   std::fflush(NULL);
+   int proc=ParallelDescriptor::MyProc();
+   std::cout << "in debug_ixType_raw grid_type= " << grid_type << '\n';
+   std::cout << "in debug_ixType_raw proc= " << proc << '\n';
+   std::fflush(NULL);
+   ParallelDescriptor::Barrier();
+  }
+
   IndexType compare_typ;
   if (grid_type==-1) {
    compare_typ=IndexType::TheCellType();
@@ -6113,7 +6123,16 @@ void NavierStokes::debug_ixType_raw(MultiFab* mf,int grid_type,int counter) {
    amrex::Error("grid_type invalid");
 
   if (mf->boxArray().ixType()==compare_typ) {
-   // do nothing
+
+   if (1==1) {
+    std::fflush(NULL);
+    int proc=ParallelDescriptor::MyProc();
+    std::cout << "in debug_ixType_raw2 grid_type= " << grid_type << '\n';
+    std::cout << "in debug_ixType_raw2 proc= " << proc << '\n';
+    std::fflush(NULL);
+    ParallelDescriptor::Barrier();
+   }
+
   } else
    amrex::Error("mf->boxArray().ixType()!=compare_typ");
 

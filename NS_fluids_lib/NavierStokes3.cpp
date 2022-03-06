@@ -1047,6 +1047,7 @@ Real NavierStokes::advance(Real time,Real dt) {
     std::fflush(NULL);
     ParallelDescriptor::Barrier();
    }
+   amrex::Error("testing plot_int>0 aborting");
 
     //declared in: NavierStokes2.cpp
    metrics_dataALL(1);  
