@@ -11,6 +11,7 @@ MOF_HOME = ..
 
 PRECISION = DOUBLE
 DEBUG	  = TRUE
+FSANITIZER = TRUE
 USE_ASSERTION = TRUE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
@@ -140,7 +141,7 @@ PYTHONCOMP = python
 #COMP = intel
 #COMP = PGI 
 #FCOMP = PGI
-USE_MPI = TRUE
+USE_MPI = FALSE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
 USE_OMP = FALSE
@@ -192,6 +193,9 @@ ifeq ($(MEHDI_VAHAB_FSI),TRUE)
  F90FLAGS+=-DMVAHABFSI
 endif
 
+ifeq ($(FSANITIZER),TRUE)
+#LIBRARY_LOCATIONS+=/usr/local/rh/devtoolset-8/root/usr/lib/gcc/x86_64-redhat-linux/8/32/
+endif
 
 ifeq ($(CTML_FIB),TRUE)
  CPPFLAGS+=-DINCLUDE_FIB
