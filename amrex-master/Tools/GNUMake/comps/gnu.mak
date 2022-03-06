@@ -47,12 +47,20 @@ gcc_major_ge_10 = $(shell expr $(gcc_major_version) \>= 10)
 ifeq ($(THREAD_SANITIZER),TRUE)
   GENERIC_GNU_FLAGS += -fsanitize=thread
 endif
+#SUSSMAN
 ifeq ($(FSANITIZER),TRUE)
-  GENERIC_GNU_FLAGS += -fsanitize=address -fsanitize=undefined
+  GENERIC_GNU_FLAGS += -fsanitize=address
+  GENERIC_GNU_FLAGS += -fsanitize=undefined
   ifeq ($(gcc_major_ge_8),1)
     GENERIC_GNU_FLAGS += -fsanitize=pointer-compare -fsanitize=pointer-subtract
     GENERIC_GNU_FLAGS += -fsanitize=builtin -fsanitize=pointer-overflow
+#    GENERIC_GNU_FLAGS += -fsanitize=thread
+    GENERIC_GNU_FLAGS += -fsanitize=bounds
+#    GENERIC_GNU_FLAGS += -fsanitize=memory
+    GENERIC_GNU_FLAGS += -fsanitize=integer-divide-by-zero
+    GENERIC_GNU_FLAGS += -fsanitize=float-divide-by-zero
   endif
+#  LIBRARIES += -lubsan -lasan
 endif
 
 ifeq ($(USE_OMP),TRUE)
