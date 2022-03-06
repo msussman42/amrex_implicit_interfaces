@@ -14,7 +14,7 @@ DEBUG	  = TRUE
 USE_ASSERTION = TRUE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
-DIM       = 3
+DIM       = 2
 iPAD_ISH = FALSE
 CYGWIN    = FALSE
 CYGWIN_ZENBOOK = FALSE
@@ -130,7 +130,8 @@ PYTHONCOMP = python
 #  "export PYTHONHOME="
 # spear-login.rcc.fsu.edu
 # ifort -g -O0 -traceback -check bounds,uninit,pointers
-#valgrind -v --leak-check=full --show-reachable=yes ./a.out 1> run.out 2> run.err  -Mpreprocess -> pgf95 
+# mpirun -np 2 valgrind -v --leak-check=full --show-reachable=yes --log-file=run.out.%p ../../amr3d.gnu.DEBUG.MPI.ex inputs3d.skirted  1> run.out 2> run.err &
+#
 # bromwich intel:
 # source /usr/local/intel/parallel_studio_xe_2018/psxevars.csh (csh) or
 # source /usr/local/intel/parallel_studio_xe_2018/psxevars.sh (bash)
