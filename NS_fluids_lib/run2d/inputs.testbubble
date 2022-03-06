@@ -1,6 +1,6 @@
 #wait_for_key = 1
 max_step  = 99999     # maximum timestep
-#max_step  =  2    # maximum timestep
+max_step  =  2    # maximum timestep
 stop_time =  0.8  # T=L/U=5.19/62.1=0.0836 10(0.0836)=0.836
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
@@ -32,7 +32,7 @@ mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 400
 Lp.bottom_bottom_tol_factor=0.01
-mg.bot_atol = 1.0e-14 
+mg.bot_atol = 1.0e-10
 mg.visc_bot_atol = 1.0e-10
 mg.rtol_b = -0.01
 #Lp.v = 1
@@ -47,13 +47,13 @@ ns.num_species_var=0
 ns.post_init_pressure_solve=1 
 # EILE_flag=-1 Weymouth and Yue
 # EILE_flag=1 alternate EI-LE
-ns.EILE_flag=1
+ns.EILE_flag=-1
 # 1/c^2  assume mach number 0.01
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3
 ns.initial_cg_cycles=1
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
-amr.n_cell    = 32 64
+amr.n_cell    = 16 32
 amr.max_level = 1  # default 1
 ns.ns_tiling=false
 
@@ -93,7 +93,7 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 10  # default 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 64
+amr.max_grid_size   = 16
 #amr.restart         = chk01000
 amr.plotfile_on_restart=1
 #amr.trace   =1
@@ -101,11 +101,11 @@ amr.plotfile_on_restart=1
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
 
-mac.mac_abs_tol    = 1.0e-12  
-mac.visc_abs_tol    = 1.0e-5
+mac.mac_abs_tol    = 1.0e-8  
+mac.visc_abs_tol    = 1.0e-8
 
 ns.visual_compare=0  # if 1, then compare to COARSEDATA.tec 
-ns.visual_ncell=64 128
+#ns.visual_ncell=64 128
 ns.visual_nddata_format=0
 
 ns.cfl            = 0.25    
