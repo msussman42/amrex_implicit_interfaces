@@ -7293,6 +7293,8 @@ void NavierStokes::output_zones(
    Real* slice_data,
    int do_plot,int do_slice) {
 
+ int plot_sdim_macro=AMREX_SPACEDIM;
+
  const Real* dx = geom.CellSize();
  const Real* prob_lo = geom.ProbLo();
  const Real* prob_hi = geom.ProbHi();
@@ -7479,6 +7481,10 @@ void NavierStokes::output_zones(
      AMREX_SPACEDIM,1,
      MFInfo().SetTag("elasticforcemfminus"),FArrayBoxFactory());
 
+    MultiFab* towermfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+     PLOTCOMP_NCOMP,1,
+     MFInfo().SetTag("towermfminus"),FArrayBoxFactory());
+
     ParallelDescriptor::Barrier();
 
      // FabArray.H     
@@ -7569,6 +7575,11 @@ void NavierStokes::output_zones(
  
     ParallelDescriptor::Barrier();
 
+    towermfminus->setVal(0.0,0,PLOTCOMP_NCOMP,1);
+
+    check_for_NAN(towermfminus,20);
+
+    ParallelDescriptor::Barrier();
 
     if (thread_class::nthreads<1)
      amrex::Error("thread_class::nthreads invalid");
@@ -7626,7 +7637,13 @@ void NavierStokes::output_zones(
      FArrayBox& conductfab=(*conductmfminus)[mfi];
      FArrayBox& magtracefab=(*magtracemfminus)[mfi];
      FArrayBox& elasticforcefab=(*elasticforcemfminus)[mfi];
-     int ncomp_tower=elasticforcefab.nComp();
+
+     FArrayBox& towerfab=(*towermfminus)[mfi];
+     int ncomp_tower=towerfab.nComp();
+     if (ncomp_tower==PLOTCOMP_NCOMP) {
+      // do nothing
+     } else
+      amrex::Error("ncomp_tower!=PLOTCOMP_NCOMP");
 
        // declared in: NAVIERSTOKES_3D.F90
      fort_cellgrid(
@@ -7662,8 +7679,8 @@ void NavierStokes::output_zones(
       ARLIM(magtracefab.loVect()),ARLIM(magtracefab.hiVect()),
       elasticforcefab.dataPtr(),
       ARLIM(elasticforcefab.loVect()),ARLIM(elasticforcefab.hiVect()),
-      elasticforcefab.dataPtr(), //towerfab
-      ARLIM(elasticforcefab.loVect()),ARLIM(elasticforcefab.hiVect()),
+      towerfab.dataPtr(), //towerfab
+      ARLIM(towerfab.loVect()),ARLIM(towerfab.hiVect()),
       prob_lo,
       prob_hi,
       dx,
@@ -7705,6 +7722,8 @@ void NavierStokes::output_zones(
     delete conductmfminus;
     delete magtracemfminus;
     delete elasticforcemfminus;
+
+    delete towermfminus;
 
    } else if (grids_per_level==0) {
   
@@ -7776,6 +7795,7 @@ void NavierStokes::output_zones(
     check_for_NAN(elasticforcemfminus,20);
 
     MultiFab* towermf=localMF[MULTIFAB_TOWER_PLT_MF];
+    check_for_NAN(towermf,20);
  
     ParallelDescriptor::Barrier();
 
@@ -7840,6 +7860,10 @@ void NavierStokes::output_zones(
 
      FArrayBox& towerfab=(*towermf)[mfi];
      int ncomp_tower=towerfab.nComp();
+     if (ncomp_tower==PLOTCOMP_NCOMP) {
+      // do nothing
+     } else
+      amrex::Error("ncomp_tower!=PLOTCOMP_NCOMP");
 
        // declared in: NAVIERSTOKES_3D.F90
      fort_cellgrid(
