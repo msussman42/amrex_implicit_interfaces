@@ -98,11 +98,13 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
 
  if (1==1) {
   std::fflush(NULL);
+  int proc=ParallelDescriptor::MyProc();
   std::cout << "in new_localMF idx_MF= " << idx_MF << '\n';
   std::cout << "in new_localMF ncomp= " << ncomp << '\n';
   std::cout << "in new_localMF ngrow= " << ngrow << '\n';
   std::cout << "in new_localMF grid_type= " << grid_type << '\n';
   std::cout << "in new_localMF level= " << level << '\n';
+  std::cout << "in new_localMF proc= " << proc << '\n';
   std::fflush(NULL);
   ParallelDescriptor::Barrier();
  }
@@ -121,6 +123,21 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
   amrex::Error("ngrow invalid");
 
  BoxArray edge_boxes(grids);
+
+ if (1==1) {
+  std::fflush(NULL);
+  int proc=ParallelDescriptor::MyProc();
+  std::cout << "in new_localMF2 idx_MF= " << idx_MF << '\n';
+  std::cout << "in new_localMF2 ncomp= " << ncomp << '\n';
+  std::cout << "in new_localMF2 ngrow= " << ngrow << '\n';
+  std::cout << "in new_localMF2 grid_type= " << grid_type << '\n';
+  std::cout << "in new_localMF2 level= " << level << '\n';
+  std::cout << "in new_localMF2 proc= " << proc << '\n';
+  std::fflush(NULL);
+  ParallelDescriptor::Barrier();
+ }
+
+
  if (grid_type==-1) {
   // do nothing
  } else if ((grid_type>=0)&&(grid_type<AMREX_SPACEDIM)) {
@@ -138,13 +155,68 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
   amrex::Error("grid_type invalid new_localMF");
 
  ParallelDescriptor::Barrier();
+
+ if (1==1) {
+  std::fflush(NULL);
+  int proc=ParallelDescriptor::MyProc();
+  std::cout << "in new_localMF3 idx_MF= " << idx_MF << '\n';
+  std::cout << "in new_localMF3 ncomp= " << ncomp << '\n';
+  std::cout << "in new_localMF3 ngrow= " << ngrow << '\n';
+  std::cout << "in new_localMF3 grid_type= " << grid_type << '\n';
+  std::cout << "in new_localMF3 level= " << level << '\n';
+  std::cout << "in new_localMF3 proc= " << proc << '\n';
+  std::fflush(NULL);
+  ParallelDescriptor::Barrier();
+ }
  localMF[idx_MF]=new MultiFab(edge_boxes,dmap,ncomp,ngrow,
 	MFInfo().SetTag("localMF[idx_MF]"),FArrayBoxFactory());
+
+ if (1==1) {
+  std::fflush(NULL);
+  int proc=ParallelDescriptor::MyProc();
+  std::cout << "in new_localMF3 idx_MF= " << idx_MF << '\n';
+  std::cout << "in new_localMF3 ncomp= " << ncomp << '\n';
+  std::cout << "in new_localMF3 ngrow= " << ngrow << '\n';
+  std::cout << "in new_localMF3 grid_type= " << grid_type << '\n';
+  std::cout << "in new_localMF3 level= " << level << '\n';
+  std::cout << "in new_localMF3 proc= " << proc << '\n';
+  std::fflush(NULL);
+  ParallelDescriptor::Barrier();
+ }
+
  ParallelDescriptor::Barrier();
  localMF[idx_MF]->setVal(0.0,0,ncomp,ngrow);
  localMF_grow[idx_MF]=ngrow;
+
+ if (1==1) {
+  std::fflush(NULL);
+  int proc=ParallelDescriptor::MyProc();
+  std::cout << "in new_localMF4 idx_MF= " << idx_MF << '\n';
+  std::cout << "in new_localMF4 ncomp= " << ncomp << '\n';
+  std::cout << "in new_localMF4 ngrow= " << ngrow << '\n';
+  std::cout << "in new_localMF4 grid_type= " << grid_type << '\n';
+  std::cout << "in new_localMF4 level= " << level << '\n';
+  std::cout << "in new_localMF4 proc= " << proc << '\n';
+  std::fflush(NULL);
+  ParallelDescriptor::Barrier();
+ }
+
  ParallelDescriptor::Barrier();
+  //declared in: NavierStokes.cpp
  debug_ixType(idx_MF,grid_type,idx_MF);
+
+ if (1==1) {
+  std::fflush(NULL);
+  int proc=ParallelDescriptor::MyProc();
+  std::cout << "in new_localMF5 idx_MF= " << idx_MF << '\n';
+  std::cout << "in new_localMF5 ncomp= " << ncomp << '\n';
+  std::cout << "in new_localMF5 ngrow= " << ngrow << '\n';
+  std::cout << "in new_localMF5 grid_type= " << grid_type << '\n';
+  std::cout << "in new_localMF5 level= " << level << '\n';
+  std::cout << "in new_localMF5 proc= " << proc << '\n';
+  std::fflush(NULL);
+  ParallelDescriptor::Barrier();
+ }
 
 } //end subroutine new_localMF
 
