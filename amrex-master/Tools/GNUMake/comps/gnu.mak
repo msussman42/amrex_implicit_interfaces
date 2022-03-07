@@ -40,26 +40,42 @@ ifeq ($(EXPORT_DYNAMIC),TRUE)
   GENERIC_GNU_FLAGS += -rdynamic -fno-omit-frame-pointer
 endif
 
+#SUSSMAN
+ifeq ($(AMREX_CCOMP),gnu)
+CXXFLAGS =
+CFLAGS   =
+FFLAGS   =
+F90FLAGS =
+endif
+
 gcc_major_ge_8 = $(shell expr $(gcc_major_version) \>= 8)
 #SUSSMAN
 gcc_major_ge_10 = $(shell expr $(gcc_major_version) \>= 10)
 
 ifeq ($(THREAD_SANITIZER),TRUE)
-  CPPFLAGS += -fsanitize=thread
+  CXXFLAGS += -fsanitize=thread
+  CFLAGS += -fsanitize=thread
   LINKFLAGS += -fsanitize=thread
 endif
 #SUSSMAN
 ifeq ($(FSANITIZER),TRUE)
-  CPPFLAGS += -fsanitize=address
-  CPPFLAGS += -fsanitize=undefined
+  CXXFLAGS += -fsanitize=address
+  CXXFLAGS += -fsanitize=undefined
+  CFLAGS += -fsanitize=address
+  CFLAGS += -fsanitize=undefined
   LINKFLAGS += -fsanitize=address
   LINKFLAGS += -fsanitize=undefined
   ifeq ($(gcc_major_ge_8),1)
-    CPPFLAGS += -fsanitize=pointer-compare -fsanitize=pointer-subtract
-    CPPFLAGS += -fsanitize=builtin -fsanitize=pointer-overflow
-    CPPFLAGS += -fsanitize=bounds
-    CPPFLAGS += -fsanitize=integer-divide-by-zero
-    CPPFLAGS += -fsanitize=float-divide-by-zero
+    CXXFLAGS += -fsanitize=pointer-compare -fsanitize=pointer-subtract
+    CXXFLAGS += -fsanitize=builtin -fsanitize=pointer-overflow
+    CXXFLAGS += -fsanitize=bounds
+    CXXFLAGS += -fsanitize=integer-divide-by-zero
+    CXXFLAGS += -fsanitize=float-divide-by-zero
+    CFLAGS += -fsanitize=pointer-compare -fsanitize=pointer-subtract
+    CFLAGS += -fsanitize=builtin -fsanitize=pointer-overflow
+    CFLAGS += -fsanitize=bounds
+    CFLAGS += -fsanitize=integer-divide-by-zero
+    CFLAGS += -fsanitize=float-divide-by-zero
     LINKFLAGS += -fsanitize=pointer-compare -fsanitize=pointer-subtract
     LINKFLAGS += -fsanitize=builtin -fsanitize=pointer-overflow
     LINKFLAGS += -fsanitize=bounds
@@ -81,9 +97,6 @@ ifeq ($(AMREX_CCOMP),gnu)
 
 CXX = g++
 CC  = gcc
-
-CXXFLAGS =
-CFLAGS   =
 
 ########################################################################
 
@@ -157,9 +170,6 @@ ifeq ($(AMREX_FCOMP),gnu)
 
 FC  = gfortran
 F90 = gfortran
-
-FFLAGS   =
-F90FLAGS =
 
 ########################################################################
 
