@@ -20714,6 +20714,7 @@ void NavierStokes::writeSanityCheckData(
 
  ParallelDescriptor::Barrier();
 
+FIX ME MOVE CLOSER TO WHERE NEEDED
  if (ParallelDescriptor::IOProcessor()) {
 
   int total_number_grids=0;
@@ -20755,6 +20756,8 @@ void NavierStokes::writeSanityCheckData(
    amrex::Error("temp_number_grids invalid");
   
   int num_levels=tecplot_finest_level+1;
+
+FIX ME ADD BARRIER THEN WITHIN IF IOPROC ...
 
    // declared in: TECPLOTUTIL.F90
   fort_combinezones_sanity(
