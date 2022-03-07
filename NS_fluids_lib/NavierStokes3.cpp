@@ -1040,7 +1040,7 @@ Real NavierStokes::advance(Real time,Real dt) {
     }
    }
 
-   if (1==1) {
+   if (1==0) {
     std::fflush(NULL);
     int proc=ParallelDescriptor::MyProc();
     std::cout << "prior to metrics_dataALL on processor=" << proc << '\n';
@@ -4016,7 +4016,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     std::cout << "total advance time " << total_advance_time << '\n';
    }
   }
-  if (1==1) {
+  if (1==0) {
    std::cout << "PROC= " << ParallelDescriptor::MyProc() << 
 	   " advance time " << start_advance << '\n';
    std::cout << "PROC= " << ParallelDescriptor::MyProc() <<

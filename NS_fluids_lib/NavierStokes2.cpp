@@ -96,7 +96,7 @@ void NavierStokes::minus_localMF(int idx_dest,int idx_source,
 //grid_type=-1 ... 5
 void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
 
- if (1==1) {
+ if (1==0) {
   std::fflush(NULL);
   int proc=ParallelDescriptor::MyProc();
   std::cout << "in new_localMF idx_MF= " << idx_MF << '\n';
@@ -124,7 +124,7 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
 
  BoxArray edge_boxes(grids);
 
- if (1==1) {
+ if (1==0) {
   std::fflush(NULL);
   int proc=ParallelDescriptor::MyProc();
   std::cout << "in new_localMF2 idx_MF= " << idx_MF << '\n';
@@ -156,7 +156,7 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
 
  ParallelDescriptor::Barrier();
 
- if (1==1) {
+ if (1==0) {
   std::fflush(NULL);
   int proc=ParallelDescriptor::MyProc();
   std::cout << "in new_localMF3 idx_MF= " << idx_MF << '\n';
@@ -171,7 +171,7 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
  localMF[idx_MF]=new MultiFab(edge_boxes,dmap,ncomp,ngrow,
 	MFInfo().SetTag("localMF[idx_MF]"),FArrayBoxFactory());
 
- if (1==1) {
+ if (1==0) {
   std::fflush(NULL);
   int proc=ParallelDescriptor::MyProc();
   std::cout << "in new_localMF3 idx_MF= " << idx_MF << '\n';
@@ -188,7 +188,7 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
  localMF[idx_MF]->setVal(0.0,0,ncomp,ngrow);
  localMF_grow[idx_MF]=ngrow;
 
- if (1==1) {
+ if (1==0) {
   std::fflush(NULL);
   int proc=ParallelDescriptor::MyProc();
   std::cout << "in new_localMF4 idx_MF= " << idx_MF << '\n';
@@ -205,7 +205,7 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
   //declared in: NavierStokes.cpp
  debug_ixType(idx_MF,grid_type,idx_MF);
 
- if (1==1) {
+ if (1==0) {
   std::fflush(NULL);
   int proc=ParallelDescriptor::MyProc();
   std::cout << "in new_localMF5 idx_MF= " << idx_MF << '\n';
@@ -6139,7 +6139,7 @@ void NavierStokes::metrics_data(int ngrow) {
  } else
   amrex::Error("level invalid in metrics_data");
 
- if (1==1) {
+ if (1==0) {
   std::fflush(NULL);
   int proc=ParallelDescriptor::MyProc();
   std::cout << "in metrics_data on processor=" << proc << '\n';
@@ -6157,7 +6157,7 @@ void NavierStokes::metrics_data(int ngrow) {
  delete_localMF_if_exist(VOLUME_MF,1);
  delete_localMF_if_exist(AREA_MF,AMREX_SPACEDIM);
 
- if (1==1) {
+ if (1==0) {
   std::fflush(NULL);
   int proc=ParallelDescriptor::MyProc();
   std::cout << "in metrics_data2 on processor=" << proc << '\n';
@@ -6171,7 +6171,7 @@ void NavierStokes::metrics_data(int ngrow) {
  if (ngrow<0)
   amrex::Error("ngrow too small");
 
- if (1==1) {
+ if (1==0) {
   std::fflush(NULL);
   int proc=ParallelDescriptor::MyProc();
   std::cout << "in metrics_data22 on processor=" << proc << '\n';
@@ -6184,7 +6184,7 @@ void NavierStokes::metrics_data(int ngrow) {
 
  new_localMF(VOLUME_MF,1,ngrow,-1);
 
- if (1==1) {
+ if (1==0) {
   std::fflush(NULL);
   int proc=ParallelDescriptor::MyProc();
   std::cout << "in metrics_data3 on processor=" << proc << '\n';
@@ -6198,7 +6198,7 @@ void NavierStokes::metrics_data(int ngrow) {
   new_localMF(AREA_MF+dir,1,ngrow,dir);
  }
 
- if (1==1) {
+ if (1==0) {
   std::fflush(NULL);
   int proc=ParallelDescriptor::MyProc();
   std::cout << "in metrics_data4 on processor=" << proc << '\n';
@@ -6212,7 +6212,7 @@ void NavierStokes::metrics_data(int ngrow) {
   amrex::Error("thread_class::nthreads invalid");
  const BoxArray mfBA=localMF[VOLUME_MF]->boxArray();
 
- if (1==1) {
+ if (1==0) {
   std::fflush(NULL);
   int proc=ParallelDescriptor::MyProc();
   std::cout << "in metrics_data5 on processor=" << proc << '\n';
@@ -6241,7 +6241,7 @@ void NavierStokes::metrics_data(int ngrow) {
  double local_d_numPts=mfBA.d_numPts();
  thread_class::init_d_numPts(local_d_numPts);
 
- if (1==1) {
+ if (1==0) {
   std::fflush(NULL);
   int proc=ParallelDescriptor::MyProc();
   std::cout << "in metrics_data6 on processor=" << proc << '\n';
@@ -6257,15 +6257,15 @@ void NavierStokes::metrics_data(int ngrow) {
 {
  for (MFIter mfi(*localMF[VOLUME_MF],use_tiling); mfi.isValid();++mfi) {
 
- if (1==1) {
-  std::fflush(NULL);
-  int proc=ParallelDescriptor::MyProc();
-  std::cout << "in metrics_data7 on processor=" << proc << '\n';
-  std::cout << "level= " << level << '\n';
-  std::cout << "finest_level= " << finest_level << '\n';
-  std::cout << "ngrow= " << ngrow << '\n';
-  std::fflush(NULL);
- }
+  if (1==0) {
+   std::fflush(NULL);
+   int proc=ParallelDescriptor::MyProc();
+   std::cout << "in metrics_data7 on processor=" << proc << '\n';
+   std::cout << "level= " << level << '\n';
+   std::cout << "finest_level= " << finest_level << '\n';
+   std::cout << "ngrow= " << ngrow << '\n';
+   std::fflush(NULL);
+  }
   if (grids[mfi.index()] == mfi.validbox()) {
    // do nothing
   } else
@@ -6273,7 +6273,7 @@ void NavierStokes::metrics_data(int ngrow) {
 
   const int gridno = mfi.index();
 
-  if (1==1) {
+  if (1==0) {
    std::fflush(NULL);
    int proc=ParallelDescriptor::MyProc();
    std::cout << "prior to fort_metrics on processor=" << proc << '\n';
@@ -7098,7 +7098,7 @@ void NavierStokes::tecplot_debug(FArrayBox& fabdata,
   std::cout << "PRESS <1> THEN <ENTER> TO CONTINUE \n";
   std::cin >> fake_input;
  }
-}
+} // end subroutine NavierStokes::tecplot_debug
 
 
 
