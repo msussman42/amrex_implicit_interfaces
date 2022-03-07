@@ -6095,7 +6095,7 @@ void NavierStokes::debug_ixType_raw(MultiFab* mf,int grid_type,int counter) {
   amrex::Error("mf not ok");
  } else if (mf->ok()) {
 
-  if (1==1) {
+  if (1==0) {
    std::fflush(NULL);
    int proc=ParallelDescriptor::MyProc();
    std::cout << "in debug_ixType_raw grid_type= " << grid_type << '\n';
@@ -6124,7 +6124,7 @@ void NavierStokes::debug_ixType_raw(MultiFab* mf,int grid_type,int counter) {
 
   if (mf->boxArray().ixType()==compare_typ) {
 
-   if (1==1) {
+   if (1==0) {
     std::fflush(NULL);
     int proc=ParallelDescriptor::MyProc();
     std::cout << "in debug_ixType_raw2 grid_type= " << grid_type << '\n';
@@ -20154,70 +20154,69 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } // j
  } // i 
 
- FIX ME
- if (ParallelDescriptor::IOProcessor()) {
+ int total_number_grids=0;
+ for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+  total_number_grids+=grids_per_level_array[ilev];
+ }
 
-  int total_number_grids=0;
-  for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
-   total_number_grids+=grids_per_level_array[ilev];
-  }
+ Vector<int> levels_array(total_number_grids);
+ Vector<int> bfact_array(total_number_grids);
+ Vector<int> gridno_array(total_number_grids);
+ Vector<int> gridlo_array(AMREX_SPACEDIM*total_number_grids);
+ Vector<int> gridhi_array(AMREX_SPACEDIM*total_number_grids);
 
-  Vector<int> levels_array(total_number_grids);
-  Vector<int> bfact_array(total_number_grids);
-  Vector<int> gridno_array(total_number_grids);
-  Vector<int> gridlo_array(AMREX_SPACEDIM*total_number_grids);
-  Vector<int> gridhi_array(AMREX_SPACEDIM*total_number_grids);
+ int temp_number_grids=0;
+ for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+  BoxArray cgrids_minusBA;
+  cgrids_minusBA=cgrids_minusBA_array[ilev];
+  int bfact=parent->Space_blockingFactor(ilev);
+  for (int igrid=0;igrid<cgrids_minusBA.size();igrid++) {
+   levels_array[temp_number_grids]=ilev; 
+   bfact_array[temp_number_grids]=bfact; 
+   gridno_array[temp_number_grids]=igrid; 
+   const Box& fabgrid = cgrids_minusBA[igrid];
+   const int* lo=fabgrid.loVect();
+   const int* hi=fabgrid.hiVect();
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    gridlo_array[AMREX_SPACEDIM*temp_number_grids+dir]=lo[dir];
+    gridhi_array[AMREX_SPACEDIM*temp_number_grids+dir]=hi[dir];
+   }
+   temp_number_grids++;
+  } // igrid
+ } // ilev
 
-  int temp_number_grids=0;
-  for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
-   BoxArray cgrids_minusBA;
-   cgrids_minusBA=cgrids_minusBA_array[ilev];
-   int bfact=parent->Space_blockingFactor(ilev);
-   for (int igrid=0;igrid<cgrids_minusBA.size();igrid++) {
-    levels_array[temp_number_grids]=ilev; 
-    bfact_array[temp_number_grids]=bfact; 
-    gridno_array[temp_number_grids]=igrid; 
-    const Box& fabgrid = cgrids_minusBA[igrid];
-    const int* lo=fabgrid.loVect();
-    const int* hi=fabgrid.hiVect();
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     gridlo_array[AMREX_SPACEDIM*temp_number_grids+dir]=lo[dir];
-     gridhi_array[AMREX_SPACEDIM*temp_number_grids+dir]=hi[dir];
-    }
-    temp_number_grids++;
-   } // igrid
-  } // ilev
-
-  if (temp_number_grids!=total_number_grids)
-   amrex::Error("temp_number_grids invalid");
-  
-  int num_levels=tecplot_finest_level+1;
-  int plotint=parent->plotInt();
-  int sliceint=parent->sliceInt();
-
-  int nparts=im_solid_map.size();
-  if ((nparts<0)||(nparts>nmat))
-   amrex::Error("nparts invalid");
-  Vector<int> im_solid_map_null;
-  im_solid_map_null.resize(1);
-  im_solid_map_null[0]=0;
-
-  int* im_solid_map_ptr;
-  int nparts_def=nparts;
-  if (nparts==0) {
-   im_solid_map_ptr=im_solid_map_null.dataPtr();
-   nparts_def=1;
-  } else if ((nparts>=1)&&(nparts<=nmat)) {
-   im_solid_map_ptr=im_solid_map.dataPtr();
-  } else
-   amrex::Error("nparts invalid");
-
-  if (do_plot==1) {
+ if (temp_number_grids!=total_number_grids)
+  amrex::Error("temp_number_grids invalid");
  
-    //0=tecplot nodes
-   if (visual_nddata_format==0) {
-FIX ME fort_combinezones on IOproc only...
-    ParallelDescriptor::Barrier();
+ int num_levels=tecplot_finest_level+1;
+ int plotint=parent->plotInt();
+ int sliceint=parent->sliceInt();
+
+ int nparts=im_solid_map.size();
+ if ((nparts<0)||(nparts>nmat))
+  amrex::Error("nparts invalid");
+ Vector<int> im_solid_map_null;
+ im_solid_map_null.resize(1);
+ im_solid_map_null[0]=0;
+
+ int* im_solid_map_ptr;
+ int nparts_def=nparts;
+ if (nparts==0) {
+  im_solid_map_ptr=im_solid_map_null.dataPtr();
+  nparts_def=1;
+ } else if ((nparts>=1)&&(nparts<=nmat)) {
+  im_solid_map_ptr=im_solid_map.dataPtr();
+ } else
+  amrex::Error("nparts invalid");
+
+ if (do_plot==1) {
+ 
+   //0=tecplot nodes
+  if (visual_nddata_format==0) {
+
+   ParallelDescriptor::Barrier();
+
+   if (ParallelDescriptor::IOProcessor()) {
 
     fort_combinezones(
      &total_number_grids,
@@ -20238,294 +20237,308 @@ FIX ME fort_combinezones on IOproc only...
      &nparts_def,
      im_solid_map_ptr);
 
-    ParallelDescriptor::Barrier();
+   } else if (!ParallelDescriptor::IOProcessor()) {
+    // do nothing
+   } else
+    amrex::Error("ParallelDescriptor::IOProcessor() corrupt");
 
-    //1=plt file cells
-   } else if (visual_nddata_format==1) {
+   ParallelDescriptor::Barrier();
 
-    ParallelDescriptor::Barrier();
-    std::fflush(NULL);
-    if (1==1) {
-     std::cout << 
-      "getting ready to call WriteMultiLevelPlotfile on proc " << 
-        amrex::ParallelDescriptor::MyProc() << "\n";
-     std::cout <<
-      "tecplot_max_level= " << tecplot_max_level << "\n";
+   //1=plt file cells
+  } else if (visual_nddata_format==1) {
+
+   ParallelDescriptor::Barrier();
+   std::fflush(NULL);
+   if (1==0) {
+    std::cout << 
+     "getting ready to call WriteMultiLevelPlotfile on proc " << 
+       amrex::ParallelDescriptor::MyProc() << "\n";
+    std::cout <<
+     "tecplot_max_level= " << tecplot_max_level << "\n";
+   }
+   std::fflush(NULL);
+   ParallelDescriptor::Barrier();
+
+   int ncomp_plot=PLOTCOMP_NCOMP;
+   if (localMF[MULTIFAB_TOWER_PLT_MF]->nComp()==ncomp_plot) {
+    // do nothing
+   } else
+    amrex::Error("localMF[MULTIFAB_TOWER_PLT_MF]->nComp()!=PLOTCOMP_NCOMP");
+
+   Vector<const MultiFab*> mf_tower;
+   mf_tower.resize(tecplot_finest_level+1);
+   Vector<std::string> varnames;
+   varnames.resize(ncomp_plot);
+   const Vector<Geometry>& ns_geom=parent->Geom();
+   Vector<IntVect> ref_ratio;
+   ref_ratio.resize(tecplot_finest_level+1);
+   Vector<int> level_steps;
+   level_steps.resize(tecplot_finest_level+1);
+
+   for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+    NavierStokes& ns_level=getLevel(ilev);
+    mf_tower[ilev]=ns_level.localMF[MULTIFAB_TOWER_PLT_MF];
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     ref_ratio[ilev][dir]=2;
     }
-    std::fflush(NULL);
-    ParallelDescriptor::Barrier();
+    level_steps[ilev]=nsteps;
+   } 
+   std::stringstream steps_string_stream(std::stringstream::in |
+     std::stringstream::out);
+   steps_string_stream << std::setw(8) << std::setfill('0') << nsteps;
+   std::string steps_string=steps_string_stream.str();
 
-    int ncomp_plot=PLOTCOMP_NCOMP;
-    if (localMF[MULTIFAB_TOWER_PLT_MF]->nComp()==ncomp_plot) {
-     // do nothing
-    } else
-     amrex::Error("localMF[MULTIFAB_TOWER_PLT_MF]->nComp()!=PLOTCOMP_NCOMP");
+   std::string plotfilename="nddataPLT"; 
+   plotfilename+=steps_string;
 
-    Vector<const MultiFab*> mf_tower;
-    mf_tower.resize(tecplot_finest_level+1);
-    Vector<std::string> varnames;
-    varnames.resize(ncomp_plot);
-    const Vector<Geometry>& ns_geom=parent->Geom();
-    Vector<IntVect> ref_ratio;
-    ref_ratio.resize(tecplot_finest_level+1);
-    Vector<int> level_steps;
-    level_steps.resize(tecplot_finest_level+1);
-
-    for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
-     NavierStokes& ns_level=getLevel(ilev);
-     mf_tower[ilev]=ns_level.localMF[MULTIFAB_TOWER_PLT_MF];
-     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-      ref_ratio[ilev][dir]=2;
-     }
-     level_steps[ilev]=nsteps;
-    } 
-    std::stringstream steps_string_stream(std::stringstream::in |
-      std::stringstream::out);
-    steps_string_stream << std::setw(8) << std::setfill('0') << nsteps;
-    std::string steps_string=steps_string_stream.str();
-
-    std::string plotfilename="nddataPLT"; 
-    plotfilename+=steps_string;
-
-    int icomp=0;
-    varnames[icomp]="X";
+   int icomp=0;
+   varnames[icomp]="X";
+   icomp++;
+   varnames[icomp]="Y";
+   if (AMREX_SPACEDIM==3) {
     icomp++;
-    varnames[icomp]="Y";
+    varnames[icomp]="Z";
+   }
+   icomp++;
+   varnames[icomp]="x_velocity";
+   icomp++;
+   varnames[icomp]="y_velocity";
+   if (AMREX_SPACEDIM==3) {
+    icomp++;
+    varnames[icomp]="z_velocity";
+   }
+   icomp++;
+   varnames[icomp]="PRES_MG";
+   icomp++;
+   varnames[icomp]="PRES_EOS";
+   icomp++;
+   varnames[icomp]="DIV_DERIVED";
+   icomp++;
+   varnames[icomp]="DIV_EXPECT";
+   icomp++;
+   varnames[icomp]="MACH";
+
+   for (int im=0;im<num_materials;im++) {
+    std::stringstream im_string_stream(std::stringstream::in |
+     std::stringstream::out);
+    im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+    std::string im_string=im_string_stream.str();
+    icomp++;
+    varnames[icomp]="F"+im_string;
+   }
+
+   for (int im=0;im<num_materials;im++) {
+    std::stringstream im_string_stream(std::stringstream::in |
+     std::stringstream::out);
+    im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+    std::string im_string=im_string_stream.str();
+    std::string im_opp_string=im_string_stream.str();
+    icomp++;
+    varnames[icomp]="L"+im_string+im_opp_string;
+   }
+
+   for (int im=0;im<num_materials;im++) {
+    std::stringstream im_string_stream(std::stringstream::in |
+     std::stringstream::out);
+    im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+    std::string im_string=im_string_stream.str();
+    std::string im_opp_string=im_string_stream.str();
+    icomp++;
+    varnames[icomp]="x_normal"+im_string+im_opp_string;
+    icomp++;
+    varnames[icomp]="y_normal"+im_string+im_opp_string;
     if (AMREX_SPACEDIM==3) {
      icomp++;
-     varnames[icomp]="Z";
+     varnames[icomp]="z_normal"+im_string+im_opp_string;
     }
-    icomp++;
-    varnames[icomp]="x_velocity";
-    icomp++;
-    varnames[icomp]="y_velocity";
-    if (AMREX_SPACEDIM==3) {
-     icomp++;
-     varnames[icomp]="z_velocity";
-    }
-    icomp++;
-    varnames[icomp]="PRES_MG";
-    icomp++;
-    varnames[icomp]="PRES_EOS";
-    icomp++;
-    varnames[icomp]="DIV_DERIVED";
-    icomp++;
-    varnames[icomp]="DIV_EXPECT";
-    icomp++;
-    varnames[icomp]="MACH";
+   }
 
-    for (int im=0;im<num_materials;im++) {
+   if (icomp+1==PLOTCOMP_SCALARS) {
+    // do nothing
+   } else
+    amrex::Error("icomp+1!=PLOTCOMP_SCALARS");
+
+   for (int im=0;im<num_materials;im++) {
+    std::stringstream im_string_stream(std::stringstream::in |
+     std::stringstream::out);
+    im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+    std::string im_string=im_string_stream.str();
+    icomp++;
+    varnames[icomp]="D"+im_string;
+    icomp++;
+    varnames[icomp]="T"+im_string;
+
+    for (int ispec=0;ispec<num_species_var;ispec++) {
+     std::stringstream ispec_string_stream(std::stringstream::in |
+      std::stringstream::out);
+     ispec_string_stream << std::setw(2) << std::setfill('0') << ispec+1;
+     std::string ispec_string=ispec_string_stream.str();
+     icomp++;
+     varnames[icomp]="S"+ispec_string+"-"+im_string;
+    }
+   }
+
+   for (int im=0;im<num_materials;im++) {
+    std::stringstream im_string_stream(std::stringstream::in |
+     std::stringstream::out);
+    im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+    std::string im_string=im_string_stream.str();
+    icomp++;
+    varnames[icomp]="MOMDEN"+im_string;
+   }
+   for (int partid=0;partid<num_materials_viscoelastic;partid++) {
+    int im=im_elastic_map[partid];
+    if ((im>=0)&&(im<num_materials)) {
      std::stringstream im_string_stream(std::stringstream::in |
       std::stringstream::out);
      im_string_stream << std::setw(2) << std::setfill('0') << im+1;
      std::string im_string=im_string_stream.str();
-     icomp++;
-     varnames[icomp]="F"+im_string;
-    }
-
-    for (int im=0;im<num_materials;im++) {
-     std::stringstream im_string_stream(std::stringstream::in |
-      std::stringstream::out);
-     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
-     std::string im_string=im_string_stream.str();
-     std::string im_opp_string=im_string_stream.str();
-     icomp++;
-     varnames[icomp]="L"+im_string+im_opp_string;
-    }
-
-    for (int im=0;im<num_materials;im++) {
-     std::stringstream im_string_stream(std::stringstream::in |
-      std::stringstream::out);
-     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
-     std::string im_string=im_string_stream.str();
-     std::string im_opp_string=im_string_stream.str();
-     icomp++;
-     varnames[icomp]="x_normal"+im_string+im_opp_string;
-     icomp++;
-     varnames[icomp]="y_normal"+im_string+im_opp_string;
-     if (AMREX_SPACEDIM==3) {
-      icomp++;
-      varnames[icomp]="z_normal"+im_string+im_opp_string;
-     }
-    }
-
-    if (icomp+1==PLOTCOMP_SCALARS) {
-     // do nothing
-    } else
-     amrex::Error("icomp+1!=PLOTCOMP_SCALARS");
-
-    for (int im=0;im<num_materials;im++) {
-     std::stringstream im_string_stream(std::stringstream::in |
-      std::stringstream::out);
-     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
-     std::string im_string=im_string_stream.str();
-     icomp++;
-     varnames[icomp]="D"+im_string;
-     icomp++;
-     varnames[icomp]="T"+im_string;
-
-     for (int ispec=0;ispec<num_species_var;ispec++) {
+     for (int ispec=0;ispec<ENUM_NUM_TENSOR_TYPE;ispec++) {
       std::stringstream ispec_string_stream(std::stringstream::in |
        std::stringstream::out);
       ispec_string_stream << std::setw(2) << std::setfill('0') << ispec+1;
       std::string ispec_string=ispec_string_stream.str();
       icomp++;
-      varnames[icomp]="S"+ispec_string+"-"+im_string;
-     }
-    }
-
-    for (int im=0;im<num_materials;im++) {
-     std::stringstream im_string_stream(std::stringstream::in |
-      std::stringstream::out);
-     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
-     std::string im_string=im_string_stream.str();
-     icomp++;
-     varnames[icomp]="MOMDEN"+im_string;
-    }
-    for (int partid=0;partid<num_materials_viscoelastic;partid++) {
-     int im=im_elastic_map[partid];
-     if ((im>=0)&&(im<num_materials)) {
-      std::stringstream im_string_stream(std::stringstream::in |
-       std::stringstream::out);
-      im_string_stream << std::setw(2) << std::setfill('0') << im+1;
-      std::string im_string=im_string_stream.str();
-      for (int ispec=0;ispec<ENUM_NUM_TENSOR_TYPE;ispec++) {
-       std::stringstream ispec_string_stream(std::stringstream::in |
-        std::stringstream::out);
-       ispec_string_stream << std::setw(2) << std::setfill('0') << ispec+1;
-       std::string ispec_string=ispec_string_stream.str();
-       icomp++;
-       varnames[icomp]="CT"+ispec_string+"-"+im_string;
-      } //ispec
-     } else
-      amrex::Error("im invalid");
-    } //partid
-
-    if (icomp+1==PLOTCOMP_XDISP) {
-     // do nothing
+      varnames[icomp]="CT"+ispec_string+"-"+im_string;
+     } //ispec
     } else
-     amrex::Error("icomp+1!=PLOTCOMP_XDISP");
+     amrex::Error("im invalid");
+   } //partid
 
+   if (icomp+1==PLOTCOMP_XDISP) {
+    // do nothing
+   } else
+    amrex::Error("icomp+1!=PLOTCOMP_XDISP");
+
+   icomp++;
+   varnames[icomp]="x_displace";
+   icomp++;
+   varnames[icomp]="y_displace";
+   if (AMREX_SPACEDIM==3) {
     icomp++;
-    varnames[icomp]="x_displace";
-    icomp++;
-    varnames[icomp]="y_displace";
-    if (AMREX_SPACEDIM==3) {
-     icomp++;
-     varnames[icomp]="z_displace";
-    }
-    for (int im=0;im<num_materials;im++) {
-     std::stringstream im_string_stream(std::stringstream::in |
-      std::stringstream::out);
-     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
-     std::string im_string=im_string_stream.str();
-     icomp++;
-     varnames[icomp]="MU"+im_string;
-    }
-    for (int im=0;im<num_materials;im++) {
-     std::stringstream im_string_stream(std::stringstream::in |
-      std::stringstream::out);
-     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
-     std::string im_string=im_string_stream.str();
-     icomp++;
-     varnames[icomp]="K_THERMAL"+im_string;
-    }
-    for (int im=0;im<num_materials;im++) {
-     std::stringstream im_string_stream(std::stringstream::in |
-      std::stringstream::out);
-     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
-     std::string im_string=im_string_stream.str();
-     icomp++;
-     varnames[icomp]="DT"+im_string;
-     icomp++;
-     varnames[icomp]="TR"+im_string;
-     icomp++;
-     varnames[icomp]="TRT"+im_string;
-     icomp++;
-     varnames[icomp]="TRTF"+im_string;
-     icomp++;
-     varnames[icomp]="VORT"+im_string;
-    }
-
-    if (icomp+1==PLOTCOMP_F_ELASTIC_X) {
-     // do nothing
-    } else
-     amrex::Error("icomp+1!=PLOTCOMP_F_ELASTIC_X");
-
-    icomp++;
-    varnames[icomp]="X_ELSTCFORCE";
-    icomp++;
-    varnames[icomp]="Y_ELSTCFORCE";
-    if (AMREX_SPACEDIM==3) {
-     icomp++;
-     varnames[icomp]="Z_ELSTCFORCE";
-    }
-    if (icomp+1==PLOTCOMP_NCOMP) {
-     // do nothing
-    } else
-     amrex::Error("icomp+1!=PLOTCOMP_NCOMP");
-
-    WriteMultiLevelPlotfile(plotfilename,
-      tecplot_finest_level+1, //nlevels
-      mf_tower,
-      varnames,
-      ns_geom,   
-      cur_time_slab,
-      level_steps,
-      ref_ratio);
-
-    ParallelDescriptor::Barrier();
-
-    //2=tecplot cells (piecewise constant reconstruction).
-   } else if (visual_nddata_format==2) {
-
-    ParallelDescriptor::Barrier();
-
-     //plot_sdim_macro declared up above.
-    int ncomp_plot=PLOTCOMP_NCOMP;
-    if (localMF[MULTIFAB_TOWER_PLT_MF]->nComp()==ncomp_plot) {
-     // do nothing
-    } else
-     amrex::Error("localMF[MULTIFAB_TOWER_PLT_MF]->nComp()!=PLOTCOMP_NCOMP");
-
-    int data_dir=-1;
-    writeSanityCheckData(
-     "nddata_piecewise_const",
-     "nddata_piecewise_const",
-     MULTIFAB_TOWER_PLT_MF, //data_id
-     ncomp_plot,
-     MULTIFAB_TOWER_PLT_MF,
-     -1, //State_Type==-1
-     data_dir,
-     nsteps);
-
-    ParallelDescriptor::Barrier();
-
-   } else {
-    amrex::Error("visual_nddata_format invalid");
+    varnames[icomp]="z_displace";
    }
-  } else if (do_plot==0) {
-   // do nothing
-  } else
-   amrex::Error("do_plot invalid");
+   for (int im=0;im<num_materials;im++) {
+    std::stringstream im_string_stream(std::stringstream::in |
+     std::stringstream::out);
+    im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+    std::string im_string=im_string_stream.str();
+    icomp++;
+    varnames[icomp]="MU"+im_string;
+   }
+   for (int im=0;im<num_materials;im++) {
+    std::stringstream im_string_stream(std::stringstream::in |
+     std::stringstream::out);
+    im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+    std::string im_string=im_string_stream.str();
+    icomp++;
+    varnames[icomp]="K_THERMAL"+im_string;
+   }
+   for (int im=0;im<num_materials;im++) {
+    std::stringstream im_string_stream(std::stringstream::in |
+     std::stringstream::out);
+    im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+    std::string im_string=im_string_stream.str();
+    icomp++;
+    varnames[icomp]="DT"+im_string;
+    icomp++;
+    varnames[icomp]="TR"+im_string;
+    icomp++;
+    varnames[icomp]="TRT"+im_string;
+    icomp++;
+    varnames[icomp]="TRTF"+im_string;
+    icomp++;
+    varnames[icomp]="VORT"+im_string;
+   }
 
-  if (do_slice==1) {
-   if ((slice_dir>=0)&&(slice_dir<AMREX_SPACEDIM)) {
+   if (icomp+1==PLOTCOMP_F_ELASTIC_X) {
+    // do nothing
+   } else
+    amrex::Error("icomp+1!=PLOTCOMP_F_ELASTIC_X");
+
+   icomp++;
+   varnames[icomp]="X_ELSTCFORCE";
+   icomp++;
+   varnames[icomp]="Y_ELSTCFORCE";
+   if (AMREX_SPACEDIM==3) {
+    icomp++;
+    varnames[icomp]="Z_ELSTCFORCE";
+   }
+   if (icomp+1==PLOTCOMP_NCOMP) {
+    // do nothing
+   } else
+    amrex::Error("icomp+1!=PLOTCOMP_NCOMP");
+
+   WriteMultiLevelPlotfile(plotfilename,
+     tecplot_finest_level+1, //nlevels
+     mf_tower,
+     varnames,
+     ns_geom,   
+     cur_time_slab,
+     level_steps,
+     ref_ratio);
+
+   ParallelDescriptor::Barrier();
+
+   //2=tecplot cells (piecewise constant reconstruction).
+  } else if (visual_nddata_format==2) {
+
+   ParallelDescriptor::Barrier();
+
+    //plot_sdim_macro declared up above.
+   int ncomp_plot=PLOTCOMP_NCOMP;
+   if (localMF[MULTIFAB_TOWER_PLT_MF]->nComp()==ncomp_plot) {
+    // do nothing
+   } else
+    amrex::Error("localMF[MULTIFAB_TOWER_PLT_MF]->nComp()!=PLOTCOMP_NCOMP");
+
+   int data_dir=-1;
+   writeSanityCheckData(
+    "nddata_piecewise_const",
+    "nddata_piecewise_const",
+    MULTIFAB_TOWER_PLT_MF, //data_id
+    ncomp_plot,
+    MULTIFAB_TOWER_PLT_MF,
+    -1, //State_Type==-1
+    data_dir,
+    nsteps);
+
+   ParallelDescriptor::Barrier();
+
+  } else {
+   amrex::Error("visual_nddata_format invalid");
+  }
+ } else if (do_plot==0) {
+  // do nothing
+ } else
+  amrex::Error("do_plot invalid");
+
+ if (do_slice==1) {
+  if ((slice_dir>=0)&&(slice_dir<AMREX_SPACEDIM)) {
+   if (ParallelDescriptor::IOProcessor()) {
     fort_outputslice(&cur_time_slab,&nsteps,&sliceint,
      slice_data.dataPtr(),&nslice,&nstate_slice);
+   } else if (!ParallelDescriptor::IOProcessor()) {
+    // do nothing
    } else
-    amrex::Error("slice_dir invalid");
-  } else if (do_slice==0) {
-   // do nothing
+    amrex::Error("ParallelDescriptor::IOProcessor() corrupt");
+   
   } else
-   amrex::Error("do_slice invalid");
+   amrex::Error("slice_dir invalid");
+ } else if (do_slice==0) {
+  // do nothing
+ } else
+  amrex::Error("do_slice invalid");
 
-   // in: NAVIERSTOKES_3D.F90
-   // just output data, no comparison with other data.
-   // "visual_compare" unused here since do_input==0.
-   // the data file name is uniform??????.tec
-   // X,Y,Z,U,V,W,pres,density,T,Y1,..,Yn,MGVORT,LS01,...,LS_m
-  int do_input=0; 
+  // in: NAVIERSTOKES_3D.F90
+  // just output data, no comparison with other data.
+  // "visual_compare" unused here since do_input==0.
+  // the data file name is uniform??????.tec
+  // X,Y,Z,U,V,W,pres,density,T,Y1,..,Yn,MGVORT,LS01,...,LS_m
+ int do_input=0; 
+
+ if (ParallelDescriptor::IOProcessor()) {
+
   fort_io_compare(
    &nmat,
    &nsteps,
@@ -20714,72 +20727,71 @@ void NavierStokes::writeSanityCheckData(
 
  ParallelDescriptor::Barrier();
 
-FIX ME MOVE CLOSER TO WHERE NEEDED
+ int total_number_grids=0;
+ for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+  total_number_grids+=grids_per_level_array[ilev];
+ }
+
+ Vector<int> levels_array(total_number_grids);
+ Vector<int> bfact_array(total_number_grids);
+ Vector<int> gridno_array(total_number_grids);
+ Vector<int> gridlo_array(AMREX_SPACEDIM*total_number_grids);
+ Vector<int> gridhi_array(AMREX_SPACEDIM*total_number_grids);
+
+ int temp_number_grids=0;
+ for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+  BoxArray cgrids_minusBA;
+  cgrids_minusBA=cgrids_minusBA_array[ilev];
+  int bfact=parent->Space_blockingFactor(ilev);
+  for (int igrid=0;igrid<cgrids_minusBA.size();igrid++) {
+   levels_array[temp_number_grids]=ilev; 
+   bfact_array[temp_number_grids]=bfact; 
+   gridno_array[temp_number_grids]=igrid; 
+   const Box& fabgrid = cgrids_minusBA[igrid];
+   const int* lo=fabgrid.loVect();
+   const int* hi=fabgrid.hiVect();
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    gridlo_array[AMREX_SPACEDIM*temp_number_grids+dir]=lo[dir];
+    gridhi_array[AMREX_SPACEDIM*temp_number_grids+dir]=hi[dir];
+   }
+   temp_number_grids++;
+  } // igrid
+ } // ilev=0...tecplot_finest_level
+
+ int n_root=root_string.length();
+ char root_char_array[n_root+1];
+ strcpy(root_char_array,root_string.c_str());
+
+ if (temp_number_grids!=total_number_grids)
+  amrex::Error("temp_number_grids invalid");
+ 
+ int num_levels=tecplot_finest_level+1;
+
+ ParallelDescriptor::Barrier();
+
  if (ParallelDescriptor::IOProcessor()) {
 
-  int total_number_grids=0;
-  for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
-   total_number_grids+=grids_per_level_array[ilev];
-  }
-
-  Vector<int> levels_array(total_number_grids);
-  Vector<int> bfact_array(total_number_grids);
-  Vector<int> gridno_array(total_number_grids);
-  Vector<int> gridlo_array(AMREX_SPACEDIM*total_number_grids);
-  Vector<int> gridhi_array(AMREX_SPACEDIM*total_number_grids);
-
-  int temp_number_grids=0;
-  for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
-   BoxArray cgrids_minusBA;
-   cgrids_minusBA=cgrids_minusBA_array[ilev];
-   int bfact=parent->Space_blockingFactor(ilev);
-   for (int igrid=0;igrid<cgrids_minusBA.size();igrid++) {
-    levels_array[temp_number_grids]=ilev; 
-    bfact_array[temp_number_grids]=bfact; 
-    gridno_array[temp_number_grids]=igrid; 
-    const Box& fabgrid = cgrids_minusBA[igrid];
-    const int* lo=fabgrid.loVect();
-    const int* hi=fabgrid.hiVect();
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     gridlo_array[AMREX_SPACEDIM*temp_number_grids+dir]=lo[dir];
-     gridhi_array[AMREX_SPACEDIM*temp_number_grids+dir]=hi[dir];
-    }
-    temp_number_grids++;
-   } // igrid
-  } // ilev=0...tecplot_finest_level
-
-  int n_root=root_string.length();
-  char root_char_array[n_root+1];
-  strcpy(root_char_array,root_string.c_str());
-
-  if (temp_number_grids!=total_number_grids)
-   amrex::Error("temp_number_grids invalid");
-  
-  int num_levels=tecplot_finest_level+1;
-
-FIX ME ADD BARRIER THEN WITHIN IF IOPROC ...
-
-   // declared in: TECPLOTUTIL.F90
+  // declared in: TECPLOTUTIL.F90
   fort_combinezones_sanity(
-    root_char_array,
-    &n_root,
-    &data_dir,
-    &total_number_grids,
-    grids_per_level_array.dataPtr(),
-    levels_array.dataPtr(),
-    bfact_array.dataPtr(),
-    gridno_array.dataPtr(),
-    gridlo_array.dataPtr(),
-    gridhi_array.dataPtr(),
-    &tecplot_finest_level,
-    &SDC_outer_sweeps,
-    &slab_step,
-    &data_id,
-    &nsteps_actual,
-    &num_levels,
-    &cur_time_slab,
-    &visual_revolve,
-    &ncomp);
+   root_char_array,
+   &n_root,
+   &data_dir,
+   &total_number_grids,
+   grids_per_level_array.dataPtr(),
+   levels_array.dataPtr(),
+   bfact_array.dataPtr(),
+   gridno_array.dataPtr(),
+   gridlo_array.dataPtr(),
+   gridhi_array.dataPtr(),
+   &tecplot_finest_level,
+   &SDC_outer_sweeps,
+   &slab_step,
+   &data_id,
+   &nsteps_actual,
+   &num_levels,
+   &cur_time_slab,
+   &visual_revolve,
+   &ncomp);
 
  } else if (!ParallelDescriptor::IOProcessor()) {
   // do nothing
