@@ -20154,6 +20154,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } // j
  } // i 
 
+ FIX ME
  if (ParallelDescriptor::IOProcessor()) {
 
   int total_number_grids=0;
@@ -20215,7 +20216,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  
     //0=tecplot nodes
    if (visual_nddata_format==0) {
-
+FIX ME fort_combinezones on IOproc only...
     ParallelDescriptor::Barrier();
 
     fort_combinezones(
