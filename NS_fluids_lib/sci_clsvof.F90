@@ -7592,6 +7592,18 @@ INTEGER_T :: ioproc,isout,initflag
   !  (coarse/fine ghost cell or EXT_DIR ghost cell).
   aux_masknbr3D(i,j,k,1)=0
   aux_masknbr3D(i,j,k,2)=0
+
+  do dir=1,3
+   aux_FSIdata3D(i,j,k,FSI_VELOCITY+dir)=0.0d0
+   aux_FSIdata3D(i,j,k,FSI_FORCE+dir)=0.0d0
+  enddo
+  do dir=1,6
+   aux_FSIdata3D(i,j,k,FSI_STRESS+dir)=0.0d0
+  enddo
+  aux_FSIdata3D(i,j,k,FSI_LEVELSET+1)=-99999.0
+  aux_FSIdata3D(i,j,k,FSI_TEMPERATURE+1)=0.0d0
+  aux_FSIdata3D(i,j,k,FSI_EXTRAP_FLAG+1)=0.0d0
+  aux_FSIdata3D(i,j,k,FSI_SIZE+1)=0.0d0
  enddo
  enddo
  enddo

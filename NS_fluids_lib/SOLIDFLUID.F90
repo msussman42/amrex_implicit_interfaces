@@ -913,7 +913,7 @@
         mask2=NINT(masknbr(D_DECL(i,j,k),2))
 
          ! mask2==1 => (i,j,k) in the interior of the tile.
-         ! mask1==0 => (i,j,k) in coarse/fine ghost cell
+         ! mask1==0 => (i,j,k) in coarse/fine or EXT_DIR ghost cell
         if ((mask1.eq.0).or.(mask2.eq.1)) then
 
          if (nFSI.ne.nparts*NCOMP_FSI) then 
