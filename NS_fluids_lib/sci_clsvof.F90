@@ -7566,10 +7566,43 @@ INTEGER_T :: ioproc,isout,initflag
   enddo
   allocate(contain_aux(auxcomp)%LS3D(LSLO(1):LSHI(1), &
           LSLO(2):LSHI(2),LSLO(3):LSHI(3),1))
+  allocate(aux_xdata3D(LSLO(1):LSHI(1), &
+          LSLO(2):LSHI(2),LSLO(3):LSHI(3),3))
+  allocate(aux_FSIdata3D(LSLO(1):LSHI(1), &
+          LSLO(2):LSHI(2),LSLO(3):LSHI(3),nFSI))
+  allocate(aux_masknbr3D(LSLO(1):LSHI(1), &
+          LSLO(2):LSHI(2),LSLO(3):LSHI(3),2))
  else
   print *,"max_side_len invalid"
   stop
  endif
+
+ do i=LSLO(1),LSHI(1)
+ do j=LSLO(2),LSHI(2)
+ do k=LSLO(3),LSHI(3)
+  idx(1)=i
+  idx(2)=j
+  idx(3)=k
+  do dir=1,3
+   aux_xdata3D(i,j,k,dir)=contain_aux(auxcomp)%xlo3D(dir)+ &
+         (idx(dir)+0.5d0)*contain_aux(auxcomp)%dx3D
+  enddo
+  ! mask2==1 if (i,j,k) interior to tile
+  ! mask1==0 if (i,j,k) is exterior to tile and is a
+  !  (coarse/fine ghost cell or EXT_DIR ghost cell).
+  aux_masknbr3D(i,j,k,1)=0
+  aux_masknbr3D(i,j,k,2)=0
+ enddo
+ enddo
+ enddo
+ do i=contain_aux(auxcomp)%lo3D(1),contain_aux(auxcomp)%hi3D(1)
+ do j=contain_aux(auxcomp)%lo3D(2),contain_aux(auxcomp)%hi3D(2)
+ do k=contain_aux(auxcomp)%lo3D(3),contain_aux(auxcomp)%hi3D(3)
+  aux_masknbr3D(i,j,k,1)=1
+  aux_masknbr3D(i,j,k,2)=1
+ enddo
+ enddo
+ enddo
 
  call post_process_nodes_elements(initflag, &
          contain_aux(auxcomp)%xlo3D, &
@@ -8969,7 +9002,6 @@ subroutine CLSVOF_InitBox(  &
   time,dt, &
   problo3D,probhi3D, &
   xmap3D, &
-  xslice3D, &
   dx3D, &
   xlo3D_tile, &
   xhi3D_tile, &
@@ -9007,7 +9039,6 @@ IMPLICIT NONE
   REAL_T, intent(in) :: problo3D(3)
   REAL_T, intent(in) :: probhi3D(3)
   INTEGER_T, intent(in) :: xmap3D(3)
-  REAL_T, intent(in) :: xslice3D(3)
   REAL_T, intent(in) :: dx3D(3)
   REAL_T, intent(in) :: xlo3D_tile(3)
   REAL_T, intent(in) :: xhi3D_tile(3)
@@ -9499,8 +9530,8 @@ IMPLICIT NONE
         mask2=NINT(masknbr3D(i,j,k,2))
 
          ! mask2==1 if (i,j,k) interior to tile
-         ! mask1==0 if (i,j,k) is exterior to tile and is a
-         !  coarse/fine ghost cell.
+         ! mask1==0 if (i,j,k) is exterior to tile and is not a
+         !  fine/fine ghost cell.
         if ((mask1.eq.0).or.(mask2.eq.1)) then
 
          do dir=1,3
@@ -10718,7 +10749,6 @@ end subroutine CLSVOF_InitBox
        time, &
        problo3D,probhi3D, &
        xmap3D, &
-       xslice3D, &
        dx3D, &
        xlo3D_tile, &
        xhi3D_tile, &
@@ -10754,7 +10784,6 @@ end subroutine CLSVOF_InitBox
       REAL_T, intent(in) :: problo3D(3)
       REAL_T, intent(in) :: probhi3D(3)
       INTEGER_T, intent(in) :: xmap3D(3)
-      REAL_T, intent(in) :: xslice3D(3)
       REAL_T, intent(in) :: dx3D(3)
       REAL_T, intent(in) :: xlo3D_tile(3)
       REAL_T, intent(in) :: xhi3D_tile(3)

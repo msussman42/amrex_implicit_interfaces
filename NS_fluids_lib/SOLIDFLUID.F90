@@ -868,7 +868,6 @@
            dt, &
            problo3D,probhi3D, &
            xmap3D, &
-           xslice3D, &
            dx3D, &
            xlo3D_tile, &
            xhi3D_tile, &
@@ -1288,7 +1287,6 @@
             cur_time, &
             problo3D,probhi3D, &
             xmap3D, &
-            xslice3D, &
             dx3D, &
             xlo3D_tile, &
             xhi3D_tile, &
@@ -1374,7 +1372,11 @@
          FSI_touch_flag)
         iter=iter+1
        enddo !do while (FSI_touch_flag.eq.1)
-        
+       
+       deallocate(aux_xdata3D) 
+       deallocate(aux_FSIdata3D) 
+       deallocate(aux_masknbr3D) 
+
       enddo ! auxcomp=1,fort_num_local_aux_grids
 
       return
