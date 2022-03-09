@@ -863,7 +863,6 @@
            nFSI, &
            FSI_operation, &
            touch_flag, &
-           h_small, &
            cur_time, &
            dt, &
            problo3D,probhi3D, &
@@ -1360,6 +1359,9 @@
 
       do auxcomp=1,fort_num_local_aux_grids
 
+        ! CLSVOF_Read_aux_Header is declared in: sci_clsvof.F90
+        !  aux_masknbr3D,aux_FSIdata3D, and aux_xdata3D are 
+        !  allocated and initialized in this routine. 
        call CLSVOF_Read_aux_Header(auxcomp)
        FSI_operation=2 ! make distance in narrow band
        iter=0

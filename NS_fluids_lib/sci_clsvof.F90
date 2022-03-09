@@ -7387,6 +7387,8 @@ INTEGER_T :: local_ncells
 INTEGER_T :: LSLO(3)
 INTEGER_T :: LSHI(3)
 INTEGER_T :: ioproc,isout,initflag
+INTEGER_T :: i,j,k
+INTEGER_T, dimension(3) :: idx
 
  ioproc=0
  isout=0
@@ -7569,7 +7571,7 @@ INTEGER_T :: ioproc,isout,initflag
   allocate(aux_xdata3D(LSLO(1):LSHI(1), &
           LSLO(2):LSHI(2),LSLO(3):LSHI(3),3))
   allocate(aux_FSIdata3D(LSLO(1):LSHI(1), &
-          LSLO(2):LSHI(2),LSLO(3):LSHI(3),nFSI))
+          LSLO(2):LSHI(2),LSLO(3):LSHI(3),NCOMP_FSI))
   allocate(aux_masknbr3D(LSLO(1):LSHI(1), &
           LSLO(2):LSHI(2),LSLO(3):LSHI(3),2))
  else
@@ -8998,32 +9000,32 @@ end subroutine CLSVOF_FILLCONTAINER
 ! called from: SOLIDFLUID.F90
 subroutine CLSVOF_InitBox(  &
   iter, &
-  sdim_AMR, &
-  lev77, &
-  tid, &
-  tilenum, &
-  im_part, &
-  nparts, &
-  part_id, &
-  ngrow_make_distance, &
+  sdim_AMR, & ! =AMREX_SPACEDIM for aux
+  lev77, &    ! =-1 for aux
+  tid, &      ! =0 for aux
+  tilenum, &  ! =0 for aux
+  im_part, &  ! =1...fort_num_local_aux_grids for aux (auxcomp)
+  nparts, &   ! =fort_num_local_aux_grids for aux
+  part_id, &  ! =(auxcomp)
+  ngrow_make_distance, & ! =3 for all cases
   nmat, &
-  nFSI, &
+  nFSI, & ! =NCOMP_FSI (aux)
   FSI_operation, &
   touch_flag, &
-  h_small, &
-  time,dt, &
-  problo3D,probhi3D, &
-  xmap3D, &
+  time, & ! =0 for aux
+  dt, &   ! =1.0 for aux
+  problo3D,probhi3D, & ! unused
+  xmap3D, & ! unused
   dx3D, &
   xlo3D_tile, &
   xhi3D_tile, &
   FSI_lo,FSI_hi, &
   FSI_growlo,FSI_growhi, &
-  growlo3D,growhi3D, &
+  growlo3D,growhi3D, & ! =FSI_growlo,FSI_growhi for aux
   xdata3D, &
   FSIdata3D, &
   masknbr3D, &
-  CTML_force_model, &
+  CTML_force_model, & ! =0 for aux
   ioproc,isout)
 use global_utility_module
 #ifdef MVAHABFSI
@@ -9046,7 +9048,6 @@ IMPLICIT NONE
   INTEGER_T, intent(in) :: FSI_operation
   INTEGER_T, intent(inout) :: touch_flag
   INTEGER_T :: numtouch
-  REAL_T, intent(in) :: h_small
   REAL_T, intent(in) :: time,dt
   REAL_T, intent(in) :: problo3D(3)
   REAL_T, intent(in) :: probhi3D(3)
@@ -9293,7 +9294,6 @@ IMPLICIT NONE
     print *,"FSI_operation=",FSI_operation
     print *,"iter= ",iter
     print *,"touch_flag=",touch_flag
-    print *,"h_small=",h_small
     print *,"time,dt ",time,dt
     print *,"ioproc=",ioproc
     print '(A9,3(f12.6))',"problo3D ",problo3D(1),problo3D(2),problo3D(3)
