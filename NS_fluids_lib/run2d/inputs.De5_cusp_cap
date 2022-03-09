@@ -49,6 +49,7 @@ Lp.v = 0
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
+ns.visual_nddata_format=1
 ns.output_drop_distribution=1
 
 # 3D (quarter domain)
@@ -86,7 +87,7 @@ amr.plot_int        = 50
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
-#amr.restart         = chk0300
+#amr.restart         = chk00900
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
