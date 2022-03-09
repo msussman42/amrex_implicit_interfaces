@@ -12,6 +12,9 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 # 3D (quarter domain)
 geometry.prob_lo   =  0.0 0.0 0.0
 geometry.prob_hi   =  6.0 6.0 60.0    # D* 4 4 20
+# 3D (full domain)
+#geometry.prob_lo   =  -6.0 -6.0 0.0
+#geometry.prob_hi   =  6.0 6.0 60.0    # D* 4 4 20
 # 2D
 #geometry.prob_lo   =  0.0 0.0
 #geometry.prob_hi   =  6.0 60.0    # D* 4 4 20
@@ -49,10 +52,13 @@ Lp.v = 0
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
+ns.visual_nddata_format=1 # 0=tecplot 1=visit
 ns.output_drop_distribution=1
 
 # 3D (quarter domain)
 amr.n_cell    = 16 16 160
+# 3D (full domain)
+#amr.n_cell    = 32 32 160
 # 2D
 #amr.n_cell    = 16 160
 
@@ -194,6 +200,7 @@ ns.Carreau_alpha=2.0 0.0
 ns.Carreau_beta=1.0 0.0
 ns.Carreau_n=0.5 0.0
 
+#TUNABLE
 ns.added_weight=1000.0 1.0
 
 #ns.mem_debug = 1

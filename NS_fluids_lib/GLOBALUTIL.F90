@@ -5006,10 +5006,15 @@ end subroutine dynamic_contact_angle
 
       max_eval_sqr=max(max_eval_sqr,one)
       do i=1,n
-       if (abs(evals_S(i)**2-evals_STS(i)).le.1.0D-12*max_eval_sqr) then
+       if ((abs(evals_S(i)**2-evals_STS(i)).le.1.0D-12*max_eval_sqr).or. &
+           (1.eq.1)) then
         ! do nothing
        else
         print *,"evals_S and evals_STS inconsistent"
+        print *,"max_eval_sqr= ",max_eval_sqr
+        print *,"i,n = ",i,n
+        print *,"evals_S(i)= ",evals_S(i)
+        print *,"evals_STS(i)= ",evals_STS(i)
         stop
        endif
       enddo
