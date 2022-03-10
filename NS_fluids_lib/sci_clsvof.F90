@@ -9019,7 +9019,7 @@ subroutine CLSVOF_InitBox(  &
   dx3D, &
   xlo3D_tile, &
   xhi3D_tile, &
-  FSI_lo,FSI_hi, &
+  FSI_lo,FSI_hi, & ! =contain_aux(part_id)%lo3D, hi3D for aux
   FSI_growlo,FSI_growhi, &
   growlo3D,growhi3D, & ! =FSI_growlo,FSI_growhi for aux
   xdata3D, &
@@ -9150,6 +9150,7 @@ IMPLICIT NONE
   INTEGER_T fsi_part_id
   INTEGER_T local_iband
   INTEGER_T CTML_DEBUG_Mass
+  type(mesh_type) :: FSI_mesh_type
 
   call FLUSH(6)  ! 6=screen
 
@@ -9161,43 +9162,64 @@ IMPLICIT NONE
    print *,"part_id invalid"
    stop
   endif
-  if (nparts.ne.TOTAL_NPARTS) then
-   print *,"nparts.ne.TOTAL_NPARTS"
+
+  if ((tid.lt.0).or.(tilenum.lt.0)) then
+   print *,"tid or tilenum invalid"
    stop
   endif
 
-  if ((lev77.lt.1).or.(tid.lt.0).or.(tilenum.lt.0)) then
-   print *,"lev77 or tid or tilenum invalid"
-   stop
-  endif
-  if (container_allocated.ne.1) then
-   print *,"container_allocated.ne.1"
-   stop
-  endif
-  if (level_container_allocated(lev77).ne.1) then
-   print *,"level_container_allocated(lev77).ne.1"
-   stop
-  endif
+  if (lev77.eq.-1) then ! aux Lagrangian data
 
-  if (contain_elem(lev77)%max_num_tiles_on_thread3D_proc.eq.0) then
-
-   print *,"contain_elem(lev77)%max_num_tiles_on_thread3D_proc=0"
-   stop
-
-  else if (contain_elem(lev77)%max_num_tiles_on_thread3D_proc.gt.0) then
-  
-   if (tilenum+1.gt.contain_elem(lev77)% &
-       num_tiles_on_thread3D_proc(tid+1)) then
-    print *,"tilenum+1.gt.num_tiles_on_thread3D_proc(tid+1)"
+   if (nparts.ne.fort_num_local_aux_grids) then
+    print *,"nparts.ne.fort_num_local_aux_grids"
     stop
    endif
 
+   FSI_mesh_type=aux_FSI(part_id)
+
+  else if (lev77.ge.1) then
+
+   if (nparts.ne.TOTAL_NPARTS) then
+    print *,"nparts.ne.TOTAL_NPARTS"
+    stop
+   endif
+
+   if (container_allocated.ne.1) then
+    print *,"container_allocated.ne.1"
+    stop
+   endif
+
+   if (level_container_allocated(lev77).ne.1) then
+    print *,"level_container_allocated(lev77).ne.1"
+    stop
+   endif
+
+   if (contain_elem(lev77)%max_num_tiles_on_thread3D_proc.eq.0) then
+
+    print *,"contain_elem(lev77)%max_num_tiles_on_thread3D_proc=0"
+    stop
+
+   else if (contain_elem(lev77)%max_num_tiles_on_thread3D_proc.gt.0) then
+  
+    if (tilenum+1.gt.contain_elem(lev77)% &
+        num_tiles_on_thread3D_proc(tid+1)) then
+     print *,"tilenum+1.gt.num_tiles_on_thread3D_proc(tid+1)"
+     stop
+    endif
+
+   else
+    print *,"contain_elem(lev77)%max_num_tiles_on_thread3D_proc bad"
+    stop
+   endif
+
+   FSI_mesh_type=FSI(part_id)
+
   else
-   print *,"contain_elem(lev77)%max_num_tiles_on_thread3D_proc bad"
+   print *,"lev77 invalid"
    stop
   endif
 
-  local_iband=FSI(part_id)%bounding_box_ngrow
+  local_iband=FSI_mesh_type%bounding_box_ngrow
   if (local_iband.eq.BoundingBoxRadCell) then
    ! do nothing
   else
@@ -9206,16 +9228,36 @@ IMPLICIT NONE
   endif
 
   do dir=1,3
-   if (contain_elem(lev77)%tilelo3D(tid+1,tilenum+1,dir).ne. &
-       FSI_lo(dir)) then
-    print *,"tilelo3D(tid+1,tilenum+1,dir).ne.FSI_lo(dir)"
+
+   if (lev77.eq.-1) then
+
+    if (contain_aux(part_id)%lo3D(dir).ne.FSI_lo(dir)) then
+     print *,"contain_aux(part_id)%lo3D(dir).ne.FSI_lo(dir)"
+     stop
+    endif
+    if (contain_aux(part_id)%hi3D(dir).ne.FSI_hi(dir)) then
+     print *,"contain_aux(part_id)%hi3D(dir).ne.FSI_hi(dir)"
+     stop
+    endif
+
+   else if (lev77.ge.1) then
+
+    if (contain_elem(lev77)%tilelo3D(tid+1,tilenum+1,dir).ne. &
+        FSI_lo(dir)) then
+     print *,"tilelo3D(tid+1,tilenum+1,dir).ne.FSI_lo(dir)"
+     stop
+    endif 
+    if (contain_elem(lev77)%tilehi3D(tid+1,tilenum+1,dir).ne. &
+        FSI_hi(dir)) then
+     print *,"tilehi3D(tid+1,tilenum+1,dir).ne.FSI_hi(dir)"
+     stop
+    endif 
+
+   else
+    print *,"lev77 invalid"
     stop
-   endif 
-   if (contain_elem(lev77)%tilehi3D(tid+1,tilenum+1,dir).ne. &
-       FSI_hi(dir)) then
-    print *,"tilehi3D(tid+1,tilenum+1,dir).ne.FSI_hi(dir)"
-    stop
-   endif 
+   endif
+
    if (FSI_growlo(dir).lt.FSI_lo(dir)) then
     ! do nothing
    else
@@ -9237,15 +9279,23 @@ IMPLICIT NONE
 
   enddo ! dir=1..3
 
-  ctml_part_id=CTML_partid_map(part_id)
-  fsi_part_id=FSI_partid_map(part_id)
+  if (lev77.eq.-1) then
+   ctml_part_id=0
+   fsi_part_id=part_id
+  else if (lev77.ge.1) then
+   ctml_part_id=CTML_partid_map(part_id)
+   fsi_part_id=FSI_partid_map(part_id)
+  else
+   print *,"lev77 invalid"
+   stop
+  endif
 
   if (((ctml_part_id.ge.1).and. &
        (ctml_part_id.le.CTML_NPARTS)).or. &
       ((fsi_part_id.ge.1).and. &
        (fsi_part_id.le.FSI_NPARTS))) then
 
-   num_elements=FSI(part_id)%NumIntElemsBIG
+   num_elements=FSI_mesh_type%NumIntElemsBIG
 
    if (num_elements.le.0) then
     print *,"num_elements invalid"
@@ -9263,7 +9313,7 @@ IMPLICIT NONE
     print *,"iter invalid"
     stop
    endif
-   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
+   if ((part_id.lt.1).or.(part_id.gt.nparts)) then
     print *,"part_id invalid"
     stop
    endif
@@ -9271,10 +9321,41 @@ IMPLICIT NONE
     print *,"nmat out of range"
     stop
    endif
-   if ((im_part.lt.1).or.(im_part.gt.nmat)) then
-    print *,"im_part invalid"
+   if (lev77.eq.-1) then
+
+    if (im_part.eq.part_id) then
+     ! do nothing
+    else
+     print *,"im_part invalid"
+     stop
+    endif
+    if (nFSI.ne.NCOMP_FSI) then
+     print *,"nFSI invalid lev77=-1"
+     stop
+    endif
+    ibase=0
+
+   else if (lev77.ge.1) then
+
+    if ((im_part.lt.1).or.(im_part.gt.nmat)) then
+     print *,"im_part invalid"
+     stop
+    endif
+    if (nFSI.ne.nparts*NCOMP_FSI) then
+     print *,"nFSI invalid lev77>=1"
+     stop
+    endif
+    if ((nparts.lt.1).or.(nparts.ge.nmat)) then
+     print *,"nparts invalid"
+     stop
+    endif
+    ibase=(part_id-1)*NCOMP_FSI
+
+   else
+    print *,"lev77 invalid"
     stop
    endif
+
    if ((CTML_force_model.ne.0).and. &  !Goldstein et al
        (CTML_force_model.ne.2)) then   !pres vel
     print *,"CTML_force_model invalid"
@@ -9308,17 +9389,6 @@ IMPLICIT NONE
     print *,"isout invalid1: ",isout
     stop
    endif
-
-   if (nFSI.ne.nparts*NCOMP_FSI) then
-    print *,"nFSI invalid"
-    stop
-   endif
-   if ((nparts.lt.1).or.(nparts.ge.nmat)) then
-    print *,"nparts invalid"
-    stop
-   endif
-
-   ibase=(part_id-1)*NCOMP_FSI
 
    if ((touch_flag.ne.0).and.(touch_flag.ne.1)) then
     print *,"touch_flag invalid"
