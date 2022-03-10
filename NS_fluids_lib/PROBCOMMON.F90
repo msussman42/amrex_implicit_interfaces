@@ -552,9 +552,9 @@ implicit none
        REAL_T, dimension(:,:,:,:), allocatable :: LS3D ! level set data
       end type aux_contain_type
 
-      REAL_T, dimension(:,:,:,:), allocatable :: aux_xdata3D
-      REAL_T, dimension(:,:,:,:), allocatable :: aux_FSIdata3D
-      REAL_T, dimension(:,:,:,:), allocatable :: aux_masknbr3D
+      REAL_T, dimension(:,:,:,:), target, allocatable :: aux_xdata3D
+      REAL_T, dimension(:,:,:,:), target, allocatable :: aux_FSIdata3D
+      REAL_T, dimension(:,:,:,:), target, allocatable :: aux_masknbr3D
 
       INTEGER_T :: fort_num_local_aux_grids=0
       type(aux_contain_type), dimension(:), allocatable :: contain_aux
