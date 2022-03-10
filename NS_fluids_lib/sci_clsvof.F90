@@ -9293,7 +9293,7 @@ IMPLICIT NONE
   if (((ctml_part_id.ge.1).and. &
        (ctml_part_id.le.CTML_NPARTS)).or. &
       ((fsi_part_id.ge.1).and. &
-       (fsi_part_id.le.FSI_NPARTS))) then
+       (fsi_part_id.le.nparts))) then
 
    num_elements=FSI_mesh_type%NumIntElemsBIG
 
@@ -9321,6 +9321,7 @@ IMPLICIT NONE
     print *,"nmat out of range"
     stop
    endif
+
    if (lev77.eq.-1) then
 
     if (im_part.eq.part_id) then
@@ -9367,7 +9368,7 @@ IMPLICIT NONE
    else if (isout.eq.1) then
     print *,"in (START): CLSVOF_InitBox"
     print *,"num_elements(NumIntElemsBIG)=",num_elements
-    print *,"NumIntElems=",FSI(part_id)%NumIntElems
+    print *,"NumIntElems=",FSI_mesh_type%NumIntElems
     print *,"sdim_AMR=",sdim_AMR 
     print *,"im_part=",im_part
     print *,"part_id=",part_id
@@ -9440,9 +9441,16 @@ IMPLICIT NONE
     ! 3. The rest of the (non FSI_flag=2,4,6,7,8) materials are initialized.
    if (FSI_operation.eq.2) then ! make distance in narrow band
 
-    num_elements_container=contain_elem(lev77)% &
-                           level_elem_data(tid+1,part_id,tilenum+1)% &
-                           numElems
+    if (lev77.eq.-1) then
+     num_elements_container=FSI_mesh_type%NumIntElemsBIG
+    else if (lev77.ge.1) then           
+     num_elements_container=contain_elem(lev77)% &
+          level_elem_data(tid+1,part_id,tilenum+1)% &
+          numElems
+    else
+     print *,"lev77 invalid"
+     stop
+    endif
 
     if (isout.eq.0) then
      ! do nothing
@@ -9465,9 +9473,16 @@ IMPLICIT NONE
 
     do ielem_container=1,num_elements_container
 
-     ielem=contain_elem(lev77)% &
+     if (lev77.eq.-1) then
+      ielem=ielem_container
+     else if (lev77.ge.1) then           
+      ielem=contain_elem(lev77)% &
            level_elem_data(tid+1,part_id,tilenum+1)% &
            ElemData(ielem_container)
+     else
+      print *,"lev77 invalid"
+      stop
+     endif
 
      if ((ielem.lt.1).or. &
          (ielem.gt.num_elements)) then
@@ -9476,16 +9491,16 @@ IMPLICIT NONE
      endif
 
      do dir=1,3
-      xelem(dir)=FSI(part_id)%ElemDataXnotBIG(dir,ielem)
+      xelem(dir)=FSI_mesh_type%ElemDataXnotBIG(dir,ielem)
       velparm(dir)=zero
      enddo 
      call get_target_from_foot(xelem,xnot, &
        velparm,time, &
-       FSI(part_id), &
+       FSI_mesh_type, &
        part_id, &
-       TOTAL_NPARTS)
+       nparts)
 
-     nodes_per_elem=FSI(part_id)%ElemDataBIG(1,ielem)
+     nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
      if (nodes_per_elem.lt.3) then
       print *,"elem,nodes_per_elem ",ielem,nodes_per_elem   
       stop
@@ -9495,9 +9510,9 @@ IMPLICIT NONE
      ! phi>0 in the fluid
      ! this is the element normal (in contrast to the node normal)
      call scinormalBIG(ielem,normal, &
-             FSI(part_id), &
+             FSI_mesh_type, &
              part_id, &
-             TOTAL_NPARTS, &
+             nparts, &
              time)
 
      if (debug_all.eq.1) then
@@ -9514,14 +9529,16 @@ IMPLICIT NONE
       ! minnode and maxnode are needed in order to find the
       ! stencil of surrounding Eulerian cells to lagrangian element (triangle)
      call get_minmax_nodeBIG( &
-       FSI(part_id), &
+       FSI_mesh_type, &
        part_id, &
-       TOTAL_NPARTS, &
+       nparts, &
        ielem,time,minnode,maxnode)
       ! sanity check
      do dir=1,3
       test_scale=maxnode(dir)-minnode(dir)
-      if (test_scale.lt.zero) then
+      if (test_scale.ge.zero) then
+       ! do nothing
+      else
        print *,"test_scale.lt.zero"
        print *,"dir,minnode,maxnode,test_scale ",dir,minnode(dir), &
         maxnode(dir),test_scale
@@ -9530,9 +9547,11 @@ IMPLICIT NONE
       endif
      enddo ! dir=1..3
 
-     element_scale=FSI(part_id)%min_side_len_refined
+     element_scale=FSI_mesh_type%min_side_len_refined
 
-     if (element_scale.le.zero) then
+     if (element_scale.gt.zero) then
+      ! do nothing
+     else
       print *,"element_scale.le.zero"
       print *,"part_id= ",part_id
       print *,"ielem= ",ielem
@@ -9545,9 +9564,9 @@ IMPLICIT NONE
     
       ! stencil of surrounding Eulerian cells to lagrangian element (triangle)
      call find_grid_bounding_box( &
-       FSI(part_id), &
+       FSI_mesh_type, &
        part_id, &
-       TOTAL_NPARTS, &
+       nparts, &
        null_intersection, &
        minnode,maxnode, &
        FSI_lo,FSI_hi, &
@@ -9647,9 +9666,9 @@ IMPLICIT NONE
 
          call checkinplaneBIG(xclosest,ielem,inplane, &
           minnode,maxnode,element_scale, &
-          FSI(part_id), &
+          FSI_mesh_type, &
           part_id, &
-          TOTAL_NPARTS, &
+          nparts, &
           time)
 
 ! investigate using NodeNormalBIG (normal defined at nodes)
@@ -9659,9 +9678,9 @@ IMPLICIT NONE
            inode,ielem, &
            unsigned_mindist, &
            xx,inplane, &
-           FSI(part_id), &
+           FSI_mesh_type, &
            part_id, &
-           TOTAL_NPARTS, &
+           nparts, &
            time,dxBB)
           ! check distance to the nodes of a triangular element.
           ! normal_closest is the element normal.
@@ -9669,9 +9688,9 @@ IMPLICIT NONE
            inode,ielem, &
            unsigned_mindist, &
            xx,inplane, &
-           FSI(part_id), &
+           FSI_mesh_type, &
            part_id, &
-           TOTAL_NPARTS, &
+           nparts, &
            time,dxBB)
          enddo ! inode=1,nodes_per_elem
 
@@ -9827,9 +9846,9 @@ IMPLICIT NONE
 
             call checkinplaneBIG(xcrit,ielem,inplane, &
              minnode,maxnode,element_scale, &
-             FSI(part_id), &
+             FSI_mesh_type, &
              part_id, &
-             TOTAL_NPARTS, &
+             nparts, &
              time)
 ! totaldist is the distance between xx and xside
 ! testdist  is the distance between xx and xcrit 
@@ -9904,7 +9923,7 @@ IMPLICIT NONE
 
           if ((ctml_part_id.ge.1).and. &
               (ctml_part_id.le.CTML_NPARTS)) then
-           if (FSI(part_id)%ElemDataBIG(3,ielem).eq.1) then ! doubly wetted
+           if (FSI_mesh_type%ElemDataBIG(3,ielem).eq.1) then ! doubly wetted
             ! do nothing
            else
             print *,"expecting doubly wetted"
@@ -9917,10 +9936,10 @@ IMPLICIT NONE
            stop
           endif
 
-          if (FSI(part_id)%ElemDataBIG(3,ielem).eq.1) then ! doubly wetted
+          if (FSI_mesh_type%ElemDataBIG(3,ielem).eq.1) then ! doubly wetted
            mask_local=103
            ls_local=-unsigned_mindist
-          else if (FSI(part_id)%ElemDataBIG(3,ielem).eq.0) then !singly wetted
+          else if (FSI_mesh_type%ElemDataBIG(3,ielem).eq.0) then!singly wetted
            if (mask_local.eq.0) then
             mask_local=1  ! vel init, sign not.
            else if (mask_local.eq.10) then
@@ -9974,21 +9993,23 @@ IMPLICIT NONE
 
            weighttotal=0.0d0
            do inode=1,nodes_per_elem
-            nodeptr=FSI(part_id)%IntElemBIG(inode,ielem)
+            nodeptr=FSI_mesh_type%IntElemBIG(inode,ielem)
             do dir=1,3
-             xfoot(dir)=FSI(part_id)%NodeBIG(dir,nodeptr)
-             velparm(dir)=FSI(part_id)%NodeVelBIG(dir,nodeptr)
+             xfoot(dir)=FSI_mesh_type%NodeBIG(dir,nodeptr)
+             velparm(dir)=FSI_mesh_type%NodeVelBIG(dir,nodeptr)
             enddo
-            massparm=FSI(part_id)%NodeMassBIG(nodeptr)
-            if (massparm.le.zero) then
+            massparm=FSI_mesh_type%NodeMassBIG(nodeptr)
+            if (massparm.gt.zero) then
+             ! do nothing
+            else
              print *,"massparm invalid"
              stop
             endif
             call get_target_from_foot(xfoot,xtarget, &
              velparm,time, &
-             FSI(part_id), &
+             FSI_mesh_type, &
              part_id, &
-             TOTAL_NPARTS)
+             nparts)
    
              ! xtarget is Lagrangian coordinate
              ! xx is grid coordinate 
@@ -10009,10 +10030,10 @@ IMPLICIT NONE
             enddo
             do dir=1,3
              force_local(dir)=force_local(dir)+ &
-              weight*FSI(part_id)%NodeForceBIG(dir,nodeptr)
+              weight*FSI_mesh_type%NodeForceBIG(dir,nodeptr)
             enddo
             temp_local=temp_local+ & 
-             weight*FSI(part_id)%NodeTempBIG(nodeptr)
+             weight*FSI_mesh_type%NodeTempBIG(nodeptr)
             weighttotal=weighttotal+weight
            enddo ! inode=1..nodes_per_elem
 
@@ -10128,7 +10149,9 @@ IMPLICIT NONE
     enddo ! ielem_container
 
     do dir=1,3
-     if (dx3D(dir).le.zero) then
+     if (dx3D(dir).gt.zero) then
+      ! do nothing
+     else
       print *,"dx3D(dir).le.zero"
       stop
      endif
