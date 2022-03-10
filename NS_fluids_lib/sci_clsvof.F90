@@ -7355,8 +7355,84 @@ IMPLICIT NONE
 INTEGER_T, intent(in) :: FSI_operation
 INTEGER_T, intent(in) :: iter
 INTEGER_T, intent(in) :: auxcomp
-INTEGER_T, intent(in) :: FSI_touch_flag
+INTEGER_T, intent(inout) :: FSI_touch_flag
+INTEGER_T :: lev77_local
+INTEGER_T :: tid_local
+INTEGER_T :: tilenum_local
+INTEGER_T :: ngrow_local
+INTEGER_T :: nFSI_local
+REAL_T :: time_local
+REAL_T :: dt_local
+INTEGER_T :: xmap3D_local(3)
+REAL_T :: dx3D_local(3)
+INTEGER_T :: CTML_force_model_local
+INTEGER_T :: ioproc_local
+INTEGER_T :: isout_local
+INTEGER_T :: sdim_AMR_local
+INTEGER_T :: dir
+INTEGER_T :: LSLO(3),LSHI(3)
+REAL_T, dimension(:,:,:,:), pointer :: aux_xdata3D_ptr
+REAL_T, dimension(:,:,:,:), pointer :: aux_FSIdata3D_ptr
+REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
 
+ aux_xdata3D_ptr=>aux_xdata3D
+ aux_FSIdata3D_ptr=>aux_FSIdata3D
+ aux_masknbr3D_ptr=>aux_masknbr3D
+
+ sdim_AMR_local=AMREX_SPACEDIM
+ lev77_local=-1
+ tid_local=0
+ tilenum_local=0
+ ngrow_local=3
+ nFSI_local=NCOMP_FSI
+ time_local=0.0d0
+ dt_local=1.0d0
+ do dir=1,3
+  xmap3D_local(dir)=dir
+ enddo
+ CTML_force_model_local=0
+ ioproc_local=0
+ isout_local=0
+
+ do dir=1,3
+  LSLO(dir)=contain_aux(auxcomp)%lo3D(dir)- &
+          aux_FSI(auxcomp)%bounding_box_ngrow
+  LSHI(dir)=contain_aux(auxcomp)%hi3D(dir)+ &
+          aux_FSI(auxcomp)%bounding_box_ngrow
+  dx3D_local(dir)=contain_aux(auxcomp)%dx3D
+ enddo
+ call CLSVOF_InitBox( &
+   iter, &
+   sdim_AMR_local, &
+   lev77_local, &
+   tid_local, &
+   tilenum_local, &
+   auxcomp, &
+   fort_num_local_aux_grids, &
+   auxcomp, &
+   ngrow_local, &
+   fort_num_local_aux_grids, &
+   nFSI_local, &
+   FSI_operation, &
+   FSI_touch_flag, &
+   time_local, &
+   dt_local, &
+   contain_aux(auxcomp)%xlo3D, &
+   contain_aux(auxcomp)%xhi3D, &
+   xmap3D_local, &
+   dx3D_local, &
+   contain_aux(auxcomp)%xlo3D, &
+   contain_aux(auxcomp)%xhi3D, &
+   contain_aux(auxcomp)%lo3D, &
+   contain_aux(auxcomp)%hi3D, &
+   LSLO,LSHI, &
+   LSLO,LSHI, &
+   aux_xdata3D_ptr, &
+   aux_FSIdata3D_ptr, &
+   aux_masknbr3D_ptr, &
+   CTML_force_model_local, &
+   ioproc_local, &
+   isout_local)
 
 return
 end subroutine CLSVOF_Init_aux_Box
@@ -9012,7 +9088,7 @@ subroutine CLSVOF_InitBox(  &
   nFSI, & ! =NCOMP_FSI (aux)
   FSI_operation, &
   touch_flag, &
-  time, & ! =0 for aux
+  time, & ! =0.0 for aux
   dt, &   ! =1.0 for aux
   problo3D,probhi3D, & ! unused
   xmap3D, & ! unused

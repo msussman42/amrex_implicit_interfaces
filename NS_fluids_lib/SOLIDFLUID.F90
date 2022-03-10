@@ -1356,6 +1356,9 @@
       INTEGER_T FSI_operation
       INTEGER_T FSI_touch_flag
       INTEGER_T iter
+      INTEGER_T dir
+      INTEGER_T i,j,k
+      INTEGER_T LSLO(3),LSHI(3)
 
       do auxcomp=1,fort_num_local_aux_grids
 
@@ -1374,6 +1377,19 @@
          FSI_touch_flag)
         iter=iter+1
        enddo !do while (FSI_touch_flag.eq.1)
+
+       do dir=1,3
+        LSLO(dir)=contain_aux(auxcomp)%lo3D(dir)-ngrow_make_distance
+        LSHI(dir)=contain_aux(auxcomp)%hi3D(dir)+ngrow_make_distance
+       enddo
+       do i=LSLO(1),LSHI(1)
+       do j=LSLO(2),LSHI(2)
+       do k=LSLO(3),LSHI(3)
+        contain_aux(auxcomp)%LS3D(i,j,k,1)= &
+           aux_FSIdata3D(i,j,k,FSI_LEVELSET+1)
+       enddo
+       enddo
+       enddo
        
        deallocate(aux_xdata3D) 
        deallocate(aux_FSIdata3D) 
