@@ -844,6 +844,20 @@ implicit none
       REAL_T, intent(out) :: LS(nmat)
       end subroutine TEMPLATE_LS
 
+      subroutine TEMPLATE_AUX_DATA(auxcomp,x,LS)
+      INTEGER_T, intent(in) :: auxcomp
+      REAL_T, intent(in) :: x(3)
+      REAL_T, intent(out) :: LS
+      end subroutine TEMPLATE_AUX_DATA
+
+      subroutine TEMPLATE_BOUNDING_BOX_AUX(auxcomp, &
+          minnode,maxnode,LS_FROM_SUBROUTINE)
+      INTEGER_T, intent(in) :: auxcomp
+      REAL_T, intent(inout) :: minnode(3)
+      REAL_T, intent(inout) :: maxnode(3)
+      INTEGER_T, intent(out) :: LS_FROM_SUBROUTINE
+      end subroutine TEMPLATE_BOUNDING_BOX_AUX
+
       subroutine TEMPLATE_clamped_LS(x,t,LS,vel,temperature)
        REAL_T, intent(in) :: x(SDIM)
        REAL_T, intent(in) :: t
@@ -1077,6 +1091,8 @@ implicit none
       PROCEDURE(TEMPLATE_CFL_HELPER), POINTER :: SUB_CFL_HELPER
       PROCEDURE(TEMPLATE_SUMINT), POINTER :: SUB_SUMINT
       PROCEDURE(TEMPLATE_LS), POINTER :: SUB_LS
+      PROCEDURE(TEMPLATE_AUX_DATA), POINTER :: SUB_AUX_DATA
+      PROCEDURE(TEMPLATE_BOUNDING_BOX_AUX), POINTER :: SUB_BOUNDING_BOX_AUX
       PROCEDURE(TEMPLATE_clamped_LS), POINTER :: SUB_clamped_LS_no_scale
       PROCEDURE(TEMPLATE_VEL), POINTER :: SUB_VEL
       PROCEDURE(TEMPLATE_EOS), POINTER :: SUB_EOS

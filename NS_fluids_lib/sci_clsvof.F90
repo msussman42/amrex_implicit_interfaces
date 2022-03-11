@@ -7449,7 +7449,7 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
    do dir=1,3
     aux_xpos(dir)=aux_xdata3D(i,j,k,dir)
    enddo
-   call SUB_AUX_DATA(aux_xpos,aux_FSIdata3D(i,j,k,FSI_LEVELSET+1))
+   call SUB_AUX_DATA(auxcomp,aux_xpos,aux_FSIdata3D(i,j,k,FSI_LEVELSET+1))
   enddo
   enddo
   enddo

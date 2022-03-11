@@ -66,6 +66,39 @@ endif
 return
 end subroutine STUB_CFL_HELPER
 
+subroutine STUB_AUX_DATA(auxcomp,x,LS)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+INTEGER_T, intent(in) :: auxcomp
+REAL_T, intent(in) :: x(3)
+REAL_T, intent(out) :: LS
+
+ print *,"STUB_AUX_DATA should not be called"
+ stop
+
+end subroutine STUB_AUX_DATA
+
+subroutine STUB_BOUNDING_BOX_AUX(auxcomp, &
+    minnode,maxnode,LS_FROM_SUBROUTINE)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+INTEGER_T, intent(in) :: auxcomp
+REAL_T, intent(inout) :: minnode(3)
+REAL_T, intent(inout) :: maxnode(3)
+INTEGER_T, intent(out) :: LS_FROM_SUBROUTINE
+
+ LS_FROM_SUBROUTINE=0
+ if ((auxcomp.ge.1).and.(auxcomp.le.fort_num_local_aux_grids)) then
+  LS_FROM_SUBROUTINE=0
+ else
+  print *,"auxcomp invalid in STUB_BOUNDING_BOX_AUX"
+  stop
+ endif
+
+end subroutine STUB_BOUNDING_BOX_AUX
+
 
  ! fluids tessellate the domain, solids are immersed. 
 subroutine STUB_LS(x,t,LS,nmat)
