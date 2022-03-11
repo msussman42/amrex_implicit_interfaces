@@ -61,6 +61,7 @@ end type lag_type
 type mesh_type
  INTEGER_T :: PartID
  INTEGER_T :: flag_2D_to_3D
+ INTEGER_T :: LS_FROM_SUBROUTINE
  INTEGER_T :: CTML_flag
  INTEGER_T :: refine_factor
  INTEGER_T :: bounding_box_ngrow
@@ -7371,6 +7372,9 @@ INTEGER_T :: isout_local
 INTEGER_T :: sdim_AMR_local
 INTEGER_T :: dir
 INTEGER_T :: LSLO(3),LSHI(3)
+INTEGER_T :: i,j,k
+REAL_T :: aux_xpos(3)
+
 REAL_T, dimension(:,:,:,:), pointer :: aux_xdata3D_ptr
 REAL_T, dimension(:,:,:,:), pointer :: aux_FSIdata3D_ptr
 REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
@@ -7401,7 +7405,10 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
           aux_FSI(auxcomp)%bounding_box_ngrow
   dx3D_local(dir)=contain_aux(auxcomp)%dx3D
  enddo
- call CLSVOF_InitBox( &
+
+ if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
+
+  call CLSVOF_InitBox( &
    iter, &
    sdim_AMR_local, &
    lev77_local, &
@@ -7433,6 +7440,23 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
    CTML_force_model_local, &
    ioproc_local, &
    isout_local)
+
+ else if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.1) then
+  FSI_touch_flag=0
+  do i=LSLO(1),LSHI(1)
+  do j=LSLO(2),LSHI(2)
+  do k=LSLO(3),LSHI(3)
+   do dir=1,3
+    aux_xpos(dir)=aux_xdata3D(i,j,k,dir)
+   enddo
+   call SUB_AUX_DATA(aux_xpos,aux_FSIdata3D(i,j,k,FSI_LEVELSET+1))
+  enddo
+  enddo
+  enddo
+ else
+  print *,"aux_FSI(auxcomp)%LS_FROM_SUBROUTINE invalid"
+  stop
+ endif
 
 return
 end subroutine CLSVOF_Init_aux_Box
@@ -7498,11 +7522,9 @@ INTEGER_T, dimension(3) :: idx
   minnodebefore(dir)=1.0d+10
  enddo
 
- call SUB_OPEN_AUXFILE(auxcomp,14)
+ call SUB_BOUNDING_BOX_AUX(auxcomp,minnode,maxnode, &
+         aux_FSI(auxcomp)%LS_FROM_SUBROUTINE)
 
- READ(14,*) aux_FSI(auxcomp)%NumNodes,aux_FSI(auxcomp)%NumIntElems
- print *,"NumNodes ",aux_FSI(auxcomp)%NumNodes
- print *,"NumIntElems ",aux_FSI(auxcomp)%NumIntElems
  aux_FSI(auxcomp)%IntElemDim=3
  aux_FSI(auxcomp)%partID=auxcomp
  aux_FSI(auxcomp)%flag_2D_to_3D=0
@@ -7511,75 +7533,90 @@ INTEGER_T, dimension(3) :: idx
  aux_FSI(auxcomp)%refine_factor=1 !refine the lag. mesh if needed.
  aux_FSI(auxcomp)%bounding_box_ngrow=3
 
- call init_FSI_mesh_type(aux_FSI(auxcomp),1)  ! allocate_intelem=1
+ if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
 
- do inode=1,aux_FSI(auxcomp)%NumNodes
-  READ(14,*) xval(1),xval(2),xval(3)
-  do dir=1,3
-   if ((minnodebefore(dir).gt.xval(dir)).or.(inode.eq.1)) then
-    minnodebefore(dir)=xval(dir)
-   endif
-   if ((maxnodebefore(dir).lt.xval(dir)).or.(inode.eq.1)) then
-    maxnodebefore(dir)=xval(dir)
-   endif
-  enddo ! dir=1..3
+  call SUB_OPEN_AUXFILE(auxcomp,14)
 
-  do dir=1,3
-   xval1(dir)=(xval(dir)-xxblob1(dir))/radradblob1 + newxxblob1(dir)
-  enddo
+  READ(14,*) aux_FSI(auxcomp)%NumNodes,aux_FSI(auxcomp)%NumIntElems
+  print *,"NumNodes ",aux_FSI(auxcomp)%NumNodes
+  print *,"NumIntElems ",aux_FSI(auxcomp)%NumIntElems
 
-  do dir=1,3
-   if ((minnode(dir).gt.xval1(dir)).or.(inode.eq.1)) then
-    minnode(dir)=xval1(dir)
-   endif
-   if ((maxnode(dir).lt.xval1(dir)).or.(inode.eq.1)) then
-    maxnode(dir)=xval1(dir)
-   endif
-  enddo ! dir
+  call init_FSI_mesh_type(aux_FSI(auxcomp),1)  ! allocate_intelem=1
+
+  do inode=1,aux_FSI(auxcomp)%NumNodes
+   READ(14,*) xval(1),xval(2),xval(3)
+   do dir=1,3
+    if ((minnodebefore(dir).gt.xval(dir)).or.(inode.eq.1)) then
+     minnodebefore(dir)=xval(dir)
+    endif
+    if ((maxnodebefore(dir).lt.xval(dir)).or.(inode.eq.1)) then
+     maxnodebefore(dir)=xval(dir)
+    endif
+   enddo ! dir=1..3
+
+   do dir=1,3
+    xval1(dir)=(xval(dir)-xxblob1(dir))/radradblob1 + newxxblob1(dir)
+   enddo
+
+   do dir=1,3
+    if ((minnode(dir).gt.xval1(dir)).or.(inode.eq.1)) then
+     minnode(dir)=xval1(dir)
+    endif
+    if ((maxnode(dir).lt.xval1(dir)).or.(inode.eq.1)) then
+     maxnode(dir)=xval1(dir)
+    endif
+   enddo ! dir
   
-  do dir=1,3
-   aux_FSI(auxcomp)%Node_old(dir,inode)=xval1(dir)
-   aux_FSI(auxcomp)%Node_new(dir,inode)=xval1(dir)
-  enddo
+   do dir=1,3
+    aux_FSI(auxcomp)%Node_old(dir,inode)=xval1(dir)
+    aux_FSI(auxcomp)%Node_new(dir,inode)=xval1(dir)
+   enddo
     
- enddo  ! inode=1,NumNodes
+  enddo  ! inode=1,NumNodes
  
- do iface=1,aux_FSI(auxcomp)%NumIntElems
-  READ(14,*) localElem(1),localElem(2),localElem(3)
-  do inode=1,3
-   if ((localElem(inode).lt.1).or. &
-       (localElem(inode).gt.aux_FSI(auxcomp)%NumNodes)) then
-    print *,"localElem(inode) out of range"
+  do iface=1,aux_FSI(auxcomp)%NumIntElems
+   READ(14,*) localElem(1),localElem(2),localElem(3)
+   do inode=1,3
+    if ((localElem(inode).lt.1).or. &
+        (localElem(inode).gt.aux_FSI(auxcomp)%NumNodes)) then
+     print *,"localElem(inode) out of range"
+     stop
+    endif
+   enddo !inode=1..3
+   if ((localElem(1).eq.localElem(2)).or. &
+       (localElem(1).eq.localElem(3)).or. &
+       (localElem(2).eq.localElem(3))) then
+    print *,"duplicate nodes for triangle"
     stop
    endif
-  enddo !inode=1..3
-  if ((localElem(1).eq.localElem(2)).or. &
-      (localElem(1).eq.localElem(3)).or. &
-      (localElem(2).eq.localElem(3))) then
-   print *,"duplicate nodes for triangle"
-   stop
-  endif
 
-  aux_FSI(auxcomp)%ElemData(1,iface)=3 ! number of nodes in element
-  aux_FSI(auxcomp)%ElemData(2,iface)=1 ! part number
-  aux_FSI(auxcomp)%ElemData(3,iface)=0 ! singly wetted
-  do dir=1,3
-   aux_FSI(auxcomp)%IntElem(dir,iface)=localElem(dir)
+   aux_FSI(auxcomp)%ElemData(1,iface)=3 ! number of nodes in element
+   aux_FSI(auxcomp)%ElemData(2,iface)=1 ! part number
+   aux_FSI(auxcomp)%ElemData(3,iface)=0 ! singly wetted
+   do dir=1,3
+    aux_FSI(auxcomp)%IntElem(dir,iface)=localElem(dir)
+   enddo
+  enddo  ! iface, looping faces
+  close(14)
+
+  do dir=1,3 
+   print *,"(before)dir,min,max ",dir,minnodebefore(dir),maxnodebefore(dir)
   enddo
- enddo  ! iface, looping faces
- close(14)
+  do dir=1,3 
+   print *,"(after)dir,min,max ",dir,minnode(dir),maxnode(dir)
+  enddo
 
- do dir=1,3 
-  print *,"(before)dir,min,max ",dir,minnodebefore(dir),maxnodebefore(dir)
- enddo
- do dir=1,3 
-  print *,"(after)dir,min,max ",dir,minnode(dir),maxnode(dir)
- enddo
+  call init2_FSI_mesh_type(aux_FSI(auxcomp)) 
 
- call init2_FSI_mesh_type(aux_FSI(auxcomp)) 
+  ifirst=1
+  call init3_FSI_mesh_type(aux_FSI(auxcomp),ifirst) 
 
- ifirst=1
- call init3_FSI_mesh_type(aux_FSI(auxcomp),ifirst) 
+ else if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.1) then
+  ! do nothing
+ else
+  print *,"aux_FSI(auxcomp)%LS_FROM_SUBROUTINE invalid"
+  stop
+ endif 
 
  max_side_len=0.0d0
  dir_max_side=0
@@ -7595,6 +7632,7 @@ INTEGER_T, dimension(3) :: idx
    stop
   endif
  enddo ! dir=1..3
+
  if (max_side_len.gt.0.0d0) then
   contain_aux(auxcomp)%lo3D(dir_max_side)=0
   contain_aux(auxcomp)%hi3D(dir_max_side)=aux_ncells-1
@@ -7694,12 +7732,19 @@ INTEGER_T, dimension(3) :: idx
  enddo
  enddo
 
- call post_process_nodes_elements(initflag, &
+ if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
+  call post_process_nodes_elements(initflag, &
          contain_aux(auxcomp)%xlo3D, &
          contain_aux(auxcomp)%xhi3D, &
          aux_FSI(auxcomp),auxcomp,fort_num_local_aux_grids, &
          ioproc,isout, &
          contain_aux(auxcomp)%dx3D)
+ else if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.1) then
+  ! do nothing
+ else
+  print *,"aux_FSI(auxcomp)%LS_FROM_SUBROUTINE invalid"
+  stop
+ endif 
 
 return
 end subroutine CLSVOF_Read_aux_Header
@@ -8045,6 +8090,7 @@ INTEGER_T idir,ielem,inode
          (CTML_partid_map(part_id).gt.0)) then
   
       FSI(part_id)%PartID=part_id
+      FSI(part_id)%LS_FROM_SUBROUTINE=0
 
       if ((FSI_refine_factor(im_part).ge.0).and. &
           (FSI_refine_factor(im_part).le.100)) then
