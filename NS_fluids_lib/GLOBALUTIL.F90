@@ -12370,7 +12370,50 @@ end subroutine dynamic_contact_angle
 
       return
       end subroutine single_interp_from_grid_util
+ 
+      subroutine bilinear_interp_stencil3D(data_stencil,wt_dist, &
+                      ncomp,data_interp,caller_id)
+      use probcommon_module
+      IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: caller_id
+      INTEGER_T, intent(in) :: ncomp
+      REAL_T, dimension(2,2,2,ncomp), intent(in) :: data_stencil
+      REAL_T, intent(in) :: wt_dist(3)
+      REAL_T, intent(out) :: data_interp(ncomp)
+      INTEGER_T :: dir
+      REAL_T :: c00,c01,c10,c11,c0,c1
+
+      do dir=1,3
+       if ((wt_dist(dir).ge.-VOFTOL).and. &
+           (wt_dist(dir).le.one+VOFTOL)) then
+        ! do nothing
+       else
+        print *,"wt_dist out of range"
+        print *,"dir,wt_dist ",dir,wt_dist(dir)
+        print *,"caller_id= ",caller_id
+        print *,"ncomp= ",ncomp
+        stop
+       endif
+      enddo ! dir=1..3
+
+      do dir=1,ncomp
+       c00 = data_stencil(1,1,1,dir)*(one-wt_dist(1)) + &
+             data_stencil(2,1,1,dir)*wt_dist(1)
+       c01 = data_stencil(1,1,2,dir)*(one-wt_dist(1)) + &
+             data_stencil(2,1,2,dir)*wt_dist(1)
+       c10 = data_stencil(1,2,1,dir)*(one-wt_dist(1)) + &
+             data_stencil(2,2,1,dir)*wt_dist(1)
+       c11 = data_stencil(1,2,2,dir)*(one-wt_dist(1)) + &
+             data_stencil(2,2,2,dir)*wt_dist(1)
+
+       c0 = c00*(one-wt_dist(2))+c10*wt_dist(2)
+       c1 = c01*(one-wt_dist(2))+c11*wt_dist(2)
+    
+       data_interp(dir) = c0*(one-wt_dist(3))+c1*wt_dist(3)
+      enddo ! dir=1..ncomp
+
+      end subroutine bilinear_interp_stencil3D
 
       subroutine bilinear_interp_stencil(data_stencil,wt_dist, &
                       ncomp,data_interp,caller_id)

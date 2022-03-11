@@ -239,6 +239,78 @@ endif
 return
 end subroutine WAVY_INIT_LS
 
+subroutine WAVY_BOUNDING_BOX_AUX(auxcomp, &
+    minnode,maxnode,LS_FROM_SUBROUTINE)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+INTEGER_T, intent(in) :: auxcomp
+REAL_T, intent(inout) :: minnode(3)
+REAL_T, intent(inout) :: maxnode(3)
+INTEGER_T, intent(out) :: LS_FROM_SUBROUTINE
+
+ if (auxcomp.eq.1) then
+  if (axis_dir.eq.1) then
+   if (SDIM.eq.3) then
+    if (num_materials.eq.3) then
+     LS_FROM_SUBROUTINE=1
+    else
+     print *,"num_materials invalid in WAVY_BOUNDING_BOX_AUX"
+     stop
+    endif
+   else
+    print *,"sdim invalid in WAVY_BOUNDING_BOX_AUX"
+    stop
+   endif
+  else
+   print *,"axis_dir invalid in WAVY_BOUNDING_BOX_AUX"
+   stop
+  endif
+
+ else
+  print *,"auxcomp invalid in WAVY_BOUNDING_BOX_AUX"
+  stop
+ endif
+
+
+end subroutine WAVY_BOUNDING_BOX_AUX
+
+subroutine WAVY_AUX_DATA(auxcomp,x,LS)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+INTEGER_T, intent(in) :: auxcomp
+REAL_T, intent(in) :: x(3)
+REAL_T, intent(out) :: LS
+REAL_T :: local_LS(num_materials)
+
+ if (auxcomp.eq.1) then
+  if (axis_dir.eq.1) then
+   if (SDIM.eq.3) then
+    if (num_materials.eq.3) then
+     local_time=0.0d0
+     call WAVY_INIT_LS(x,local_time,local_LS,num_materials)
+     LS=local_LS(num_materials)
+    else
+     print *,"num_materials invalid in WAVY_AUX_DATA"
+     stop
+    endif
+   else
+    print *,"sdim invalid in WAVY_AUX_DATA"
+    stop
+   endif
+  else
+   print *,"axis_dir invalid in WAVY_AUX_DATA"
+   stop
+  endif
+
+ else
+  print *,"auxcomp invalid in WAVY_AUX_DATA"
+  stop
+ endif
+
+end subroutine WAVY_AUX_DATA
+
 subroutine WAVY_INIT_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
