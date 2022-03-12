@@ -12370,7 +12370,48 @@ end subroutine dynamic_contact_angle
 
       return
       end subroutine single_interp_from_grid_util
- 
+
+
+       ! finds the cell that contains "x" 
+      subroutine containing_cell_aux( &
+         auxcomp,x,cell_index)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: auxcomp
+      REAL_T, intent(in) :: x(3)
+      INTEGER_T, intent(out) :: cell_index(3)
+
+      INTEGER_T dir
+
+       ! NINT=nearest int
+      do dir=1,3
+       ! x=(i-lo+1/2)dx+xlo  i=(x-xlo)/dx+lo-1/2
+       cell_index(dir)=NINT( (x(dir)-xlo(dir))/dx(dir)-half )+lo(dir)
+      enddo ! dir=1..sdim
+
+      return
+      end subroutine containing_cell_aux
+
+
+      subroutine interp_from_aux_grid(auxcomp,x,LS)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: auxcomp
+      REAL_T, intent(in) :: x(3)
+      REAL_T, intent(out) :: LS
+      INTEGER_T, dimension(3) :: cell_index
+
+      if ((auxcomp.ge.1).and.(auxcomp.le.fort_num_local_aux_grids)) then
+       call containing_cell_aux(auxcomp,x,cell_index)
+
+      else
+       print *,"auxcomp invalid in interp_from_aux_grid"
+       stop
+      endif
+
+      end subroutine interp_from_aux_grid
+
       subroutine bilinear_interp_stencil3D(data_stencil,wt_dist, &
                       ncomp,data_interp,caller_id)
       use probcommon_module
