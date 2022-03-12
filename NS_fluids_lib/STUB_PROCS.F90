@@ -80,7 +80,7 @@ REAL_T, intent(out) :: LS
 end subroutine STUB_AUX_DATA
 
 subroutine STUB_BOUNDING_BOX_AUX(auxcomp, &
-    minnode,maxnode,LS_FROM_SUBROUTINE)
+    minnode,maxnode,LS_FROM_SUBROUTINE,aux_ncells_max_side)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
@@ -88,8 +88,10 @@ INTEGER_T, intent(in) :: auxcomp
 REAL_T, intent(inout) :: minnode(3)
 REAL_T, intent(inout) :: maxnode(3)
 INTEGER_T, intent(out) :: LS_FROM_SUBROUTINE
+INTEGER_T, intent(out) :: aux_ncells_max_side
 
  LS_FROM_SUBROUTINE=0
+ aux_ncells_max_side=-1
  if ((auxcomp.ge.1).and.(auxcomp.le.fort_num_local_aux_grids)) then
   LS_FROM_SUBROUTINE=0
  else

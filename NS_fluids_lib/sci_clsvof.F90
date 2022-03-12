@@ -7442,6 +7442,7 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
    isout_local)
 
  else if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.1) then
+
   FSI_touch_flag=0
   do i=LSLO(1),LSHI(1)
   do j=LSLO(2),LSHI(2)
@@ -7494,8 +7495,6 @@ INTEGER_T, dimension(3) :: idx
  isout=0
  initflag=1
 
- aux_ncells=64
-
  if (auxcomp.eq.1) then
   allocate(aux_FSI(fort_num_local_aux_grids))
   allocate(contain_aux(fort_num_local_aux_grids))
@@ -7523,7 +7522,10 @@ INTEGER_T, dimension(3) :: idx
  enddo
 
  call SUB_BOUNDING_BOX_AUX(auxcomp,minnode,maxnode, &
-         aux_FSI(auxcomp)%LS_FROM_SUBROUTINE)
+         aux_FSI(auxcomp)%LS_FROM_SUBROUTINE, &
+         contain_aux(auxcomp)%aux_ncells_max_side)
+
+ aux_ncells=contain_aux(auxcomp)%aux_ncells_max_side
 
  aux_FSI(auxcomp)%IntElemDim=3
  aux_FSI(auxcomp)%partID=auxcomp

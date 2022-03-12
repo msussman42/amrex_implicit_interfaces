@@ -121,7 +121,7 @@ REAL_T function DIST_FINITE_CYLHEAD(P,R_cyl,H_bot,H_top)
  endif
 end function DIST_FINITE_CYLHEAD
 
-subroutine WAVY_INIT_LS(x,t,LS,nmat)
+subroutine WAVY_INIT_LS_core(x,t,LS,nmat)
 use probcommon_module
 IMPLICIT NONE
 
@@ -232,6 +232,59 @@ else if (axis_dir.eq.1) then
   stop
  endif
 else
+ print *,"axis_dir invalid in WAVY_INIT_LS_core"
+ stop
+endif
+
+return
+end subroutine WAVY_INIT_LS_core
+
+subroutine WAVY_INIT_LS(x,t,LS,nmat)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(out) :: LS(nmat)
+INTEGER_T im
+INTEGER_T auxcomp
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+if (axis_dir.eq.0) then
+ call WAVY_INIT_LS_core(x,t,LS,nmat)
+else if (axis_dir.eq.1) then
+
+ if (SDIM.eq.3) then
+  if ((num_materials.eq.3).and.(probtype.eq.915)) then
+   do im=1,num_materials 
+    if (im.eq.1) then !water
+     LS(im)=-1000.0
+    elseif(im.eq.2) then
+     LS(im)=1000.0
+    elseif (im.eq.3) then ! solid helix
+     auxcomp=1
+     call interp_from_aux_grid(auxcomp,x,LS(im))
+    else
+     print *,"im invalid, im=",im
+     stop
+    endif
+   enddo ! im=1..num_materials
+  else
+   print *,"num_materials or probtype invalid",num_materials,probtype
+   stop
+  endif
+ else
+  print *,"not setup for this dimension yet dim=",SDIM
+  stop
+ endif
+else
  print *,"axis_dir invalid in WAVY_INIT_LS"
  stop
 endif
@@ -239,8 +292,10 @@ endif
 return
 end subroutine WAVY_INIT_LS
 
+
+
 subroutine WAVY_BOUNDING_BOX_AUX(auxcomp, &
-    minnode,maxnode,LS_FROM_SUBROUTINE)
+    minnode,maxnode,LS_FROM_SUBROUTINE,aux_ncells_max_side)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
@@ -248,12 +303,20 @@ INTEGER_T, intent(in) :: auxcomp
 REAL_T, intent(inout) :: minnode(3)
 REAL_T, intent(inout) :: maxnode(3)
 INTEGER_T, intent(out) :: LS_FROM_SUBROUTINE
+INTEGER_T, intent(out) :: aux_ncells_max_side
 
  if (auxcomp.eq.1) then
   if (axis_dir.eq.1) then
    if (SDIM.eq.3) then
     if (num_materials.eq.3) then
      LS_FROM_SUBROUTINE=1
+     aux_ncells_max_side=100
+     minnode(1)=-0.15
+     maxnode(1)=0.15
+     minnode(2)=-0.15
+     maxnode(2)=0.15
+     minnode(3)=3.925
+     maxnode(3)=6.875
     else
      print *,"num_materials invalid in WAVY_BOUNDING_BOX_AUX"
      stop
@@ -289,7 +352,7 @@ REAL_T :: local_LS(num_materials)
    if (SDIM.eq.3) then
     if (num_materials.eq.3) then
      local_time=0.0d0
-     call WAVY_INIT_LS(x,local_time,local_LS,num_materials)
+     call WAVY_INIT_LS_core(x,local_time,local_LS,num_materials)
      LS=local_LS(num_materials)
     else
      print *,"num_materials invalid in WAVY_AUX_DATA"

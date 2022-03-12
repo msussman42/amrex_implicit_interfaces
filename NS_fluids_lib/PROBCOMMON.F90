@@ -549,6 +549,7 @@ implicit none
        REAL_T :: xlo3D(3)
        REAL_T :: xhi3D(3)
        REAL_T :: dx3D
+       INTEGER_T :: aux_ncells_max_side
        REAL_T, dimension(:,:,:,:), allocatable :: LS3D ! level set data
       end type aux_contain_type
 
@@ -851,11 +852,12 @@ implicit none
       end subroutine TEMPLATE_AUX_DATA
 
       subroutine TEMPLATE_BOUNDING_BOX_AUX(auxcomp, &
-          minnode,maxnode,LS_FROM_SUBROUTINE)
+          minnode,maxnode,LS_FROM_SUBROUTINE,aux_ncells_max_side)
       INTEGER_T, intent(in) :: auxcomp
       REAL_T, intent(inout) :: minnode(3)
       REAL_T, intent(inout) :: maxnode(3)
       INTEGER_T, intent(out) :: LS_FROM_SUBROUTINE
+      INTEGER_T, intent(out) :: aux_ncells_max_side
       end subroutine TEMPLATE_BOUNDING_BOX_AUX
 
       subroutine TEMPLATE_clamped_LS(x,t,LS,vel,temperature)
