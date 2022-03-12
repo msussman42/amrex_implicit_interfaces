@@ -3511,6 +3511,33 @@ end subroutine dynamic_contact_angle
       return
       end subroutine safe_data
 
+      subroutine safe_data3D(i,j,k,n,datafab,data_out)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: i,j,k,n
+      REAL_T, intent(in), pointer :: datafab(:,:,:,:)
+      REAL_T, intent(out) :: data_out
+      INTEGER_T datalo,datahi
+      INTEGER_T dir
+      INTEGER_T idata(3)
+
+      idata(1)=i
+      idata(2)=j
+      idata(3)=k
+      do dir=1,3
+       datalo=LBOUND(datafab,dir)
+       datahi=UBOUND(datafab,dir)
+       if (idata(dir).lt.datalo) then
+        idata(dir)=datalo
+       endif
+       if (idata(dir).gt.datahi) then
+        idata(dir)=datahi
+       endif
+      enddo ! dir=1..3
+      data_out=datafab(idata(1),idata(2),idata(3),n)
+
+      return
+      end subroutine safe_data3D
 
       subroutine safe_data_index(i,j,k,i_safe,j_safe,k_safe,datafab)
       IMPLICIT NONE
@@ -12375,6 +12402,7 @@ end subroutine dynamic_contact_angle
        ! finds the cell that contains "x" 
       subroutine containing_cell_aux( &
          auxcomp,x,cell_index)
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: auxcomp
@@ -12383,11 +12411,17 @@ end subroutine dynamic_contact_angle
 
       INTEGER_T dir
 
+      if ((auxcomp.ge.1).and.(auxcomp.le.fort_num_local_aux_grids)) then
        ! NINT=nearest int
-      do dir=1,3
-       ! x=(i-lo+1/2)dx+xlo  i=(x-xlo)/dx+lo-1/2
-       cell_index(dir)=NINT( (x(dir)-xlo(dir))/dx(dir)-half )+lo(dir)
-      enddo ! dir=1..sdim
+       do dir=1,3
+        ! x=(i-lo+1/2)dx+xlo  i=(x-xlo)/dx+lo-1/2
+        cell_index(dir)=NINT( (x(dir)-contain_aux(auxcomp)%xlo3D(dir))/ &
+          contain_aux(auxcomp)%dx3D-half )+contain_aux(auxcomp)%lo3D(dir)
+       enddo ! dir=1..sdim
+      else
+       print *,"auxcomp invalid in interp_from_aux_grid"
+       stop
+      endif
 
       return
       end subroutine containing_cell_aux
@@ -12401,9 +12435,61 @@ end subroutine dynamic_contact_angle
       REAL_T, intent(in) :: x(3)
       REAL_T, intent(out) :: LS
       INTEGER_T, dimension(3) :: cell_index
+      INTEGER_T, dimension(3) :: cell_lo
+      REAL_T :: local_dx
+      REAL_T :: xgrid
+      REAL_T, dimension(2,2,2,1) :: data_stencil
+      REAL_T :: wt_dist(3)
+      INTEGER_T :: nc
+      REAL_T :: LS_local(1)
+      INTEGER_T :: caller_id
+      INTEGER_T :: dir
+      INTEGER_T :: i,j,k
+      INTEGER_T :: i1,j1,k1
+
+      nc=1
+      caller_id=10
 
       if ((auxcomp.ge.1).and.(auxcomp.le.fort_num_local_aux_grids)) then
        call containing_cell_aux(auxcomp,x,cell_index)
+       local_dx=contain_aux(auxcomp)%dx3D
+       if (local_dx.ge.zero) then
+        do dir=1,3
+         xgrid=contain_aux(auxcomp)%xlo3D(dir)+ &
+          (cell_index(dir)-contain_aux(auxcomp)%lo3D(dir)+half)*local_dx
+         if (x(dir).le.xgrid) then
+          cell_lo(dir)=cell_index(dir)-1
+          wt_dist(dir)=(x(dir)-(xgrid-local_dx))/local_dx
+         else if (x(dir).ge.xgrid) then
+          cell_lo(dir)=cell_index(dir)
+          wt_dist(dir)=(x(dir)-xgrid)/local_dx
+         else
+          print *,"x or xgrid is NaN"
+          stop
+         endif
+        enddo ! dir=1..3
+        do i1=0,1
+        do j1=0,1
+        do k1=0,1
+         dir=1
+         i=cell_lo(dir)+i1
+         dir=2
+         j=cell_lo(dir)+j1
+         dir=3
+         k=cell_lo(dir)+k1
+         call safe_data3D(i,j,k,nc, &
+           contain_aux(auxcomp)%LS3D, &
+           data_stencil(i1+1,j1+1,k1+1,nc))
+        enddo  ! k1
+        enddo  ! j1
+        enddo  ! k1
+        call bilinear_interp_stencil3D(data_stencil,wt_dist,nc, &
+          LS_local(1),caller_id)
+        LS=LS_local(1)
+       else
+        print *,"local_dx invalid"
+        stop
+       endif
 
       else
        print *,"auxcomp invalid in interp_from_aux_grid"

@@ -550,7 +550,7 @@ implicit none
        REAL_T :: xhi3D(3)
        REAL_T :: dx3D
        INTEGER_T :: aux_ncells_max_side
-       REAL_T, dimension(:,:,:,:), allocatable :: LS3D ! level set data
+       REAL_T, dimension(:,:,:,:), pointer :: LS3D ! level set data
       end type aux_contain_type
 
       REAL_T, dimension(:,:,:,:), target, allocatable :: aux_xdata3D

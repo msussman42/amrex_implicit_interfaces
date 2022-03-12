@@ -65,7 +65,7 @@ REAL_T function DIST_FINITE_CYLHEAD(P,R_cyl,H_bot,H_top)
  
  x=P(1)
  y=P(2)
- z=P(3)
+ z=P(SDIM)
 
  r = sqrt(x**2+y**2)
  if((H_bot.le.z).and.(z.le.H_top)) then
@@ -205,18 +205,23 @@ else if (axis_dir.eq.1) then
     elseif(im.eq.2) then
      LS(im)=1000.0
     elseif (im.eq.3) then ! solid helix
-     call GET_ROOT(x(1),x(2),x(3),tt,ss,wvel,yblob5,yblob3,yblob4,Radius-thickness/2.0,Lambdawave,helixlength,scalelength,BodyStart)
-     LS(im)=-(sqrt((x(2)-yblob7)**2+(x(3)-yblob8)**2)-radblob7)  !circle or  cylinder
+     call GET_ROOT(x(1),x(2),x(SDIM), &
+      tt,ss,wvel,yblob5,yblob3,yblob4, &
+      Radius-thickness/2.0d0, &
+      Lambdawave,helixlength,scalelength,BodyStart)
+     LS(im)=-(sqrt((x(2)-yblob7)**2+(x(SDIM)-yblob8)**2)-radblob7) !circle or cylinder
 !    LS(im) = 0.5- sqrt( (cos(tt+t)-x(1))**2 + (sin(tt+t)-x(2))**2 + (tt-x(3))**2 )  !without z velocity
 ! print*, 'tt=',tt
 !print*, 'Radius*cos(tt+yblob4*t)',Radius*cos(tt+yblob4*t)
 !print*, 'Radius*sin(tt+yblob4*t)',Radius*sin(tt+yblob4*t)
 !print*, 'Lambdawave*tt',Lambdawave*tt
-     LStmp1  = thickness/2.0-  &
-          sqrt( ((Radius-thickness/2.0)*cos(tt+yblob4*t)-x(1))**2 &
-              + ((Radius-thickness/2.0)*sin(tt+yblob4*t)-x(2))**2 &
-              + (Lambdawave*tt+wvel*t+BodyStart-x(3))**2 ) 
-     LStmp2  =-DIST_FINITE_CYLHEAD(x(1:3),Radius,HelixLength+BodyStart+wvel*t,HelixLength+cylinderHeight+BodyStart+wvel*t)   !minus or plus
+     LStmp1  = thickness/2.0d0-  &
+          sqrt( ((Radius-thickness/2.0d0)*cos(tt+yblob4*t)-x(1))**2 &
+              + ((Radius-thickness/2.0d0)*sin(tt+yblob4*t)-x(2))**2 &
+              + (Lambdawave*tt+wvel*t+BodyStart-x(SDIM))**2 ) 
+     LStmp2  =-DIST_FINITE_CYLHEAD(x(1:SDIM),Radius, &
+      HelixLength+BodyStart+wvel*t, &
+      HelixLength+cylinderHeight+BodyStart+wvel*t)   !minus or plus
      LS(im) =max(LStmp1,LStmp2)  !check later
     else
      print *,"im invalid, im=",im
@@ -346,6 +351,7 @@ INTEGER_T, intent(in) :: auxcomp
 REAL_T, intent(in) :: x(3)
 REAL_T, intent(out) :: LS
 REAL_T :: local_LS(num_materials)
+REAL_T :: local_time
 
  if (auxcomp.eq.1) then
   if (axis_dir.eq.1) then
@@ -428,34 +434,39 @@ if (axis_dir.eq.0) then ! wavy_channel
  endif
 else if (axis_dir.eq.1) then ! Tomas Solano
 
- do dir=1,SDIM
-  VEL(dir)=zero
- enddo
- im_solid_Tomas=3
- if ((LS(im_solid_Tomas).ge.zero).or. &
-     (velsolid_flag.eq.1)) then
-  if (1.eq.0) then
-   VEL(2)=-x(3)
-   VEL(3)=x(2)
-   VEL(1)=0.0
+ if (SDIM.eq.3) then
+
+  do dir=1,SDIM
+   VEL(dir)=zero
+  enddo
+  im_solid_Tomas=3
+  if ((LS(im_solid_Tomas).ge.zero).or. &
+      (velsolid_flag.eq.1)) then
+   if (1.eq.0) then
+    VEL(2)=-x(SDIM)
+    VEL(SDIM)=x(2)
+    VEL(1)=0.0d0
+   else
+    VEL(1)=-x(2)*yblob4
+    VEL(2)=x(1)*yblob4
+    VEL(SDIM)=yblob7
+   endif
+
+  else if ((LS(im_solid_Tomas).lt.zero).and. &
+           (velsolid_flag.eq.0)) then
+
+   if (1.eq.1) then
+    VEL(adv_dir) = adv_vel
+   else
+    VEL(adv_dir) = zero
+   endif
+
   else
-   VEL(1)=-x(2)*yblob4
-   VEL(2)=x(1)*yblob4
-   VEL(3)=yblob7
+   print *,"LS(im_solid_tomas) bust"
+   stop
   endif
-
-
- else if ((LS(im_solid_Tomas).lt.zero).and. &
-          (velsolid_flag.eq.0)) then
-
-  if (1.eq.1) then
-   VEL(adv_dir) = adv_vel
-  else
-   VEL(adv_dir) = zero
-  endif
-
  else
-  print *,"LS(im_solid_tomas) bust"
+  print *,"expecting 3D if axis_dir.eq.1"
   stop
  endif
 
