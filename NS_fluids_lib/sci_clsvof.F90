@@ -357,35 +357,6 @@ contains
       return
       end subroutine checkbound3D_array
 
-      subroutine safe_data3D(i,j,k,n,datafab,data_out)
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: i,j,k,n
-      REAL_T, intent(in), pointer :: datafab(:,:,:,:)
-      REAL_T, intent(out) :: data_out
-      INTEGER_T datalo,datahi
-      INTEGER_T dir
-      INTEGER_T idata(3)
-
-      idata(1)=i
-      idata(2)=j
-      idata(3)=k
-      do dir=1,3
-       datalo=LBOUND(datafab,dir)
-       datahi=UBOUND(datafab,dir)
-       if (idata(dir).lt.datalo) then
-        idata(dir)=datalo
-       endif
-       if (idata(dir).gt.datahi) then
-        idata(dir)=datahi
-       endif
-      enddo ! dir=1..3
-      data_out=datafab(idata(1),idata(2),idata(3),n)
-
-      return
-      end subroutine safe_data3D
-
-
 ! called from:
 !   initinjector,initflapping,init_from_cas,init_gingerbread2D,
 !   init_helix,initchannel,viorel_sphere_geominit,internal_inflow_geominit,
