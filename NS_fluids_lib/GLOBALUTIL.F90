@@ -12453,7 +12453,7 @@ end subroutine dynamic_contact_angle
       if ((auxcomp.ge.1).and.(auxcomp.le.fort_num_local_aux_grids)) then
        call containing_cell_aux(auxcomp,x,cell_index)
        local_dx=contain_aux(auxcomp)%dx3D
-       if (local_dx.ge.zero) then
+       if (local_dx.gt.zero) then
         do dir=1,3
          xgrid=contain_aux(auxcomp)%xlo3D(dir)+ &
           (cell_index(dir)-contain_aux(auxcomp)%lo3D(dir)+half)*local_dx
