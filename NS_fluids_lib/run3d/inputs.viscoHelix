@@ -32,7 +32,7 @@ ns.MOFITERMAX=15
 #ns.MOF_DEBUG_RECON=0
 
 #continuous_mof=2 => CMOF
-ns.continuous_mof=2  
+ns.continuous_mof=0 #for the structure interfaces it is always MOF anyway.
 
 #ns.mof_error_ordering=0
 #ns.mof_ordering=0 2 0 1 
@@ -67,10 +67,11 @@ amr.plotfile_on_restart=1
 ns.output_drop_distribution=1
 ns.v = 1
 
-amr.n_cell    = 32 32 32    #64 64 64 
-#amr.max_level = 3
-amr.n_cell=16 16 16
-amr.max_level=0
+# for best solver performance, the coarsest level should correspond to
+# the size of 1 parallel block.
+amr.n_cell    = 16 16 16    
+#amr.max_level = 4  # production run (used to be 32^3 + max_level=3)
+amr.max_level=1
 
 fabarray.mfiter_tile_size=16 16 16    #32 32 32  #NEW
 
