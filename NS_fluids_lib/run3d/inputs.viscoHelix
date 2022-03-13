@@ -198,9 +198,15 @@ ns.elastic_viscosity=0.0 11.11000000 0.0 #viscoelastic  11.11
 ns.polymer_factor=0.0 0.32790000 0.0       # parameter, 1/L
 
 #Carreau is ignored for now (FENE-CR)
+#shear thinning factor: (1+(beta gammadot)^alpha)^((n-1)/alpha)
 ns.Carreau_alpha=0.0 2.0 0.0
 ns.Carreau_beta=0.0 0.0 0.0
 ns.Carreau_n=1 1 0.0
+# since the viscosity coefficient is uniform, we can have 
+# uncoupled_viscosity=1.
+# uncoupled_viscosity=0 => div (2 mu D)
+# uncoupled_viscosity=1 => div (mu grad U)
+ns.uncoupled_viscosity=1
 
 #ns.added_weight=1000.0 1.0 1.0
 

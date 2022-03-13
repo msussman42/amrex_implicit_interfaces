@@ -2017,6 +2017,10 @@ stop
                if (isten.eq.bfact) then ! right side of element
 
                 test_maskSEM=NINT(maskSEM(D_DECL(ic,jc,kc)))
+
+                 ! maskcov=1 => cell is on finest possible level.(not cov)
+                 ! maskcov=0 => cell is not on finest possible level.(cov)
+
                 maskcov=NINT(maskcoef(D_DECL(ic,jc,kc)))
 
                 if ((indexmid(dir).gt.fablo(dir)).and. &
