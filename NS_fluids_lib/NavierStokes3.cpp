@@ -33,10 +33,6 @@ namespace amrex{
 // status==0 failure
 extern void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
  int& status,int numelem);
-extern void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
- int m,int m_small,
- int caller_id,int project_option,
- int mg_level,int& status);
 
 // if ncomp_input==-1, then ncomp=S_crse.ncomp()
 // spectral_override==0 => always do low order average down.
@@ -8957,8 +8953,7 @@ void NavierStokes::remove_UMAC_for_solver(int project_option) {
 
 }
 
-void NavierStokes::multiphase_GMRES_preconditioner(
- int gmres_precond_iter,
+void NavierStokes::multiphase_SHELL_preconditioner(
  int project_option,int project_timings,
  int presmooth,int postsmooth,
  int idx_Z,int idx_R,int nsolve) {
@@ -8985,250 +8980,17 @@ void NavierStokes::multiphase_GMRES_preconditioner(
  int change_flag=0;
  project_right_hand_side(idx_R,project_option,change_flag);
 
- if (gmres_precond_iter==0) {
    // Z=M^{-1}R
    // Z=project(Z)
-   // first calls: zeroALL(1,nsolve,idx_Z) 
-  multiphase_preconditioner(
+   // the first command in multiphase_precond: zeroALL(1,nsolve,idx_Z) 
+ multiphase_preconditioner(
    project_option,project_timings,
    presmooth,postsmooth,
    idx_Z,idx_R,nsolve);
- } else if ((gmres_precond_iter>0)&&
-            (gmres_precond_iter<=MAX_GMRES_BUFFER)) {
-  int m=gmres_precond_iter;
 
-  Real beta=0.0;
-  dot_productALL(project_option,idx_R,idx_R,beta,nsolve);
-
-  if (beta>0.0) {
-
-   beta=sqrt(beta);
-
-    // variables initialized to 0.0
-   allocate_array(0,nsolve,-1,GMRES_BUFFER0_V_MF);
-   allocate_array(0,nsolve,-1,GMRES_BUFFER_W_MF);
-
-   Real aa=1.0/beta;
-    // V0=V0+aa R = R/||R||
-   mf_combine(project_option,
-    GMRES_BUFFER0_V_MF,idx_R,aa,GMRES_BUFFER0_V_MF,nsolve); 
-   project_right_hand_side(GMRES_BUFFER0_V_MF,project_option,change_flag);
-
-    // H_j is a j+2 x j+1 matrix  j=0..m-1
-   Real** HH=new Real*[m+1];
-   for (int i=0;i<m+1;i++) { 
-    HH[i]=new Real[m];
-    for (int j=0;j<m;j++) 
-     HH[i][j]=0.0;
-   }
-
-   Real* yy=new Real[m];
-   Real* beta_e1=new Real[2*(m+1)];
-   for (int j=0;j<2*(m+1);j++)
-    beta_e1[j]=0.0;
-   beta_e1[0]=beta;
-
-   int status=1;
-
-   int m_small=m;
-
-    // for Zeyus routine:
-    // inputs: 
-    //   double** HH
-    //   integer HH_rows,HH_cols
-    //   integer HH_sub_rows,HH_sub_cols
-    // Another routine for Zeyu?
-    //   given B=[ H
-    //             G ]
-    //   find min_y ||By -beta e1||
-    // inputs:
-    //   double** B
-    //   integer B_rows,B_cols
-    //   integer B_sub_rows,B_sub_cols
-    //  B will be some kind of m+p x m matrix
-    //  and if the algorithm is slower than O(m^2), then
-    //  no need to code, since a Gaussian elimination solver is already
-    //  available.
-
-
-   for (int i=1;i<m;i++) {
-    // variables initialized to 0.0
-    allocate_array(0,nsolve,-1,GMRES_BUFFER0_V_MF+i);
-   }
-   for (int i=0;i<m;i++) {
-    // variables initialized to 0.0
-    allocate_array(1,nsolve,-1,GMRES_BUFFER0_Z_MF+i);
-   }
-
-   for (int j=0;j<m_small;j++) {
-
-    if (verbose>0) {
-     if (ParallelDescriptor::IOProcessor()) {
-      std::cout << "GMRES ... " <<
-             " nsolve= " << nsolve <<
-             " loop j= " << j << " m= " << m << '\n';
-      print_project_option(project_option);
-     }
-    }  // verbose>0
-
-     // Z=M^{-1}Vj
-     // Z=project(Z)
-     // Vj is a normalized vector
-    multiphase_preconditioner(
-     project_option,project_timings,
-     presmooth,postsmooth,
-     GMRES_BUFFER0_Z_MF+j,
-     GMRES_BUFFER0_V_MF+j,nsolve);
-
-     // W=A Z
-     // 1. (begin)calls project_right_hand_side(Z)
-     // 2. (end)  calls project_right_hand_side(W)
-    applyALL(project_option,
-      GMRES_BUFFER0_Z_MF+j,
-      GMRES_BUFFER_W_MF,nsolve);
-
-    for (int i=0;i<=j;i++) {
-     dot_productALL(project_option,
-      GMRES_BUFFER_W_MF,
-      GMRES_BUFFER0_V_MF+i,HH[i][j],nsolve);
-     aa=-HH[i][j];
-      // W=W+aa Vi
-     mf_combine(project_option,
-      GMRES_BUFFER_W_MF,GMRES_BUFFER0_V_MF+i,aa,GMRES_BUFFER_W_MF,nsolve); 
-     project_right_hand_side(GMRES_BUFFER_W_MF,project_option,change_flag);
-    } // i=0..j
-
-    dot_productALL(project_option,
-      GMRES_BUFFER_W_MF,
-      GMRES_BUFFER_W_MF,HH[j+1][j],nsolve);
-
-    if (HH[j+1][j]>=0.0) {
-     HH[j+1][j]=sqrt(HH[j+1][j]);
-    } else
-     amrex::Error("HH[j+1][j] invalid");
-
-    if (HH[j+1][j]>KRYLOV_NORM_CUTOFF) {
-
-     status=1;
-
-     if ((j>=0)&&(j<m_small)) {
-      caller_id=11;
-      GMRES_MIN_CPP(HH,beta,yy,
-       m,j+1,
-       caller_id,project_option,
-       level,status);
-     } else
-      amrex::Error("j invalid");
-
-     if (status==1) {
-
-      if ((j>=0)&&(j<m-1)) {
-       aa=1.0/HH[j+1][j];
-        // V=V+aa W
-       mf_combine(project_option,
-        GMRES_BUFFER0_V_MF+j+1,
-        GMRES_BUFFER_W_MF,aa,
-        GMRES_BUFFER0_V_MF+j+1,nsolve); 
-       project_right_hand_side(GMRES_BUFFER0_V_MF+j+1,
-       	       project_option,change_flag);
-      } else if (j==m-1) {
-       // do nothing
-      } else
-       amrex::Error("j invalid");
-
-     } else if (status==0) {
-
-      m_small=j;
-
-     } else
-      amrex::Error("status invalid");
-
-    } else if ((HH[j+1][j]>=0.0)&&(HH[j+1][j]<=KRYLOV_NORM_CUTOFF)) {
-     m_small=j; // valid indexes of HH: i1=0..j  i2=0..j-1
-    } else
-     amrex::Error("HH[j+1][j] invalid");
-
-   } // j=0..m_small-1
-  
-   status=1;
-
-   if ((m_small>=1)&&
-       (m_small<=m)) {
-
-    caller_id=1;
-    GMRES_MIN_CPP(HH,beta,yy,
-       m,m_small,
-       caller_id,project_option,
-       level,status);
-
-    if (status==1) {
-     // do nothing
-    } else
-     amrex::Error("expecting status==1 here");
-
-   } else if (m_small==0) {
-
-     // Z=M^{-1}R
-     // first calls: zeroALL(1,nsolve,idx_Z) 
-     // Z=project(Z)
-    multiphase_preconditioner(
-     project_option,project_timings,
-     presmooth,postsmooth,
-     idx_Z,idx_R,nsolve);
-
-   } else {
-    std::cout << "m_small= " << m_small << '\n';
-    amrex::Error("NavierStokes3.cpp m_small invalid");
-   }
-
-   if (status==1) {
-    zeroALL(1,nsolve,idx_Z);
-    for (int j=0;j<m_small;j++) {
-     aa=yy[j];
-      // Z=Z+aa Zj
-     mf_combine(project_option,
-      idx_Z,
-      GMRES_BUFFER0_Z_MF+j,aa,
-      idx_Z,nsolve); 
-    }
-   } else
-    amrex::Error("status invalid");
-
-   for (int i=1;i<m;i++) {
-    delete_array(GMRES_BUFFER0_V_MF+i); 
-   }
-   for (int i=0;i<m;i++) {
-    delete_array(GMRES_BUFFER0_Z_MF+i); 
-   }
-
-   delete [] yy;
-   delete [] beta_e1;
-
-   for (int i=0;i<m+1;i++) 
-    delete [] HH[i];
-   delete [] HH;
-
-   delete_array(GMRES_BUFFER0_V_MF); 
-   delete_array(GMRES_BUFFER_W_MF);
-
-  } else if (beta==0.0) {
-    // Z=M^{-1}R
-    // Z=project(Z)
-   multiphase_preconditioner(
-    project_option,project_timings,
-    presmooth,postsmooth,
-    idx_Z,idx_R,nsolve);
-  } else
-   amrex::Error("beta invalid");
-
- } else {
-  std::cout << "gmres_precond_iter= " << gmres_precond_iter << '\n';
-  std::cout << "nsolve= " << nsolve << '\n';
-  amrex::Error("NavierStokes3.cpp: gmres_precond_iter invalid");
- }
  project_right_hand_side(idx_Z,project_option,change_flag);
 
-} // end subroutine multiphase_GMRES_preconditioner
+} // end subroutine multiphase_SHELL_preconditioner
 
 void NavierStokes::multiphase_preconditioner(
  int project_option,int project_timings,
@@ -10571,7 +10333,6 @@ void NavierStokes::multiphase_project(int project_option) {
       amrex::Error("initial_cg_cycles or cg_loop invalid");
 
      int restart_flag=0;
-     int gmres_precond_iter=gmres_precond_iter_base;
 
      Real dnorm=0.0;
 
@@ -10781,7 +10542,7 @@ void NavierStokes::multiphase_project(int project_option) {
         } else
          amrex::Error("rho1 invalid");
 
-       } else if (BICGSTAB_ACTIVE==1) { //MG-GMRES PCG
+       } else if (BICGSTAB_ACTIVE==1) { //MG PBICGSTAB
 
          // rho1=R0hat dot CGRESID(R0)
          //  =(b-A x0) dot (b-A xn) =
@@ -10867,8 +10628,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
           // Y=M^{-1}P1
 	  // Y=project(Y)
-         multiphase_GMRES_preconditioner(
-          gmres_precond_iter,
+         multiphase_SHELL_preconditioner(
           project_option,project_timings,
           local_presmooth,local_postsmooth,
           bicg_Y_MF,bicg_P1_MF,nsolve);
@@ -10957,8 +10717,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
            // Z=M^{-1}S
 	   // Z=project(Z)
-           multiphase_GMRES_preconditioner(
-            gmres_precond_iter,
+           multiphase_SHELL_preconditioner(
             project_option,project_timings,
             local_presmooth,local_postsmooth,
             Z_MF,bicg_S_MF,nsolve);
@@ -11093,8 +10852,6 @@ void NavierStokes::multiphase_project(int project_option) {
 	         << vcycle << '\n';
           std::cout << "RESTARTING: BICGSTAB_ACTIVE=" << 
            BICGSTAB_ACTIVE << '\n';
-          std::cout << "RESTARTING: gmres_precond_iter= " << 
-           gmres_precond_iter << '\n';
           std::cout << "RESTARTING: local_presmooth= " << 
            local_presmooth << '\n';
           std::cout << "RESTARTING: local_postsmooth= " << 
@@ -11145,12 +10902,7 @@ void NavierStokes::multiphase_project(int project_option) {
       } // meets_tol==0
 
       // top level: BiCGStab  
-      // preconditioner: preconditioned GMRES
-      // GMRES, like CG or BiCGStab, is a Krylov subspace method in which
-      // the solutions is approximated as
-      // sum_i=0^M alpha_i A^{i}r
-      // (r is the residual)
-      // preconditioner for GMRES: multigrid
+      // preconditioner: MG
       // smooth for multigrid: "local_presmooth" iterations of the
       // ILU smoother going down the V-cycle and "local_postsmooth" 
       // iterations going up the V-cycle.
@@ -12456,7 +12208,7 @@ void NavierStokes::veldiffuseALL() {
 
  show_norm2_id(REGISTER_MARK_MF,4);
 
-  //multigrid-GMRES precond. BiCGStab viscosity
+  //multigrid precond. BiCGStab viscosity
  multiphase_project(SOLVETYPE_VISC); 
  SET_STOKES_MARK(VISCHEAT_SOURCE_MF,107);
 

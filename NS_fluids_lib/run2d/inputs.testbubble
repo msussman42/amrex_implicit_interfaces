@@ -1,6 +1,6 @@
 #wait_for_key = 1
 max_step  = 99999     # maximum timestep
-max_step  =  2    # maximum timestep
+#max_step  =  2    # maximum timestep
 stop_time =  0.8  # T=L/U=5.19/62.1=0.0836 10(0.0836)=0.836
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
@@ -51,7 +51,7 @@ ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3
 ns.initial_cg_cycles=1
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
-amr.n_cell    = 16 32
+amr.n_cell    = 32 64
 amr.max_level = 1  # default 1
 ns.ns_tiling=false
 
