@@ -3046,7 +3046,7 @@ NavierStokes::read_params ()
       if (FSI_interval==1) {
        // do nothing
       } else
-       amrex::Error("Eulerian data must be refenerated every step");
+       amrex::Error("Eulerian data must be regenerated every step");
       if (CTML_force_model[i]==0) {
        // do nothing
       } else
@@ -3055,7 +3055,7 @@ NavierStokes::read_params ()
       if (FSI_interval==1) {
        // do nothing
       } else
-       amrex::Error("Eulerian data must be refenerated every step");
+       amrex::Error("Eulerian data must be regenerated every step");
       if (CTML_force_model[i]==2) {
        // do nothing
       } else

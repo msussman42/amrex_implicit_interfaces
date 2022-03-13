@@ -7705,6 +7705,19 @@ INTEGER_T, dimension(3) :: idx
  enddo
  enddo
 
+ print *,"auxcomp,dir_max_side ",auxcomp,dir_max_side
+ print *,"auxcomp,dx3D ",auxcomp,contain_aux(auxcomp)%dx3D
+ do dir=1,3
+  print *,"auxcomp,dir,lo3D,hi3D ", &
+    auxcomp,dir, &
+    contain_aux(auxcomp)%lo3D(dir), &
+    contain_aux(auxcomp)%hi3D(dir)
+  print *,"auxcomp,dir,xlo3D,xhi3D ", &
+    auxcomp,dir, &
+    contain_aux(auxcomp)%xlo3D(dir), &
+    contain_aux(auxcomp)%xhi3D(dir)
+  print *,"auxcomp,dir,LSLO,LSHI ",auxcomp,dir,LSLO(dir),LSHI(dir)
+ enddo
  if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
   call post_process_nodes_elements(initflag, &
          contain_aux(auxcomp)%xlo3D, &
