@@ -1003,8 +1003,6 @@ int  NavierStokes::initial_thermal_cycles=3;
 int  NavierStokes::initial_cg_cycles=5;
 int  NavierStokes::debug_dot_product=0;
 
-int NavierStokes::gmres_precond_iter_base=4; 
-
 int NavierStokes::smooth_type = 0; // 0=GSRB 1=ICRB 2=ILU  3=Jacobi
 int NavierStokes::bottom_smooth_type = 2; // 0=GSRB 1=ICRB 2=ILU 3=Jacobi
 int NavierStokes::global_presmooth = 2;
@@ -3275,8 +3273,6 @@ NavierStokes::read_params ()
       amrex::Error("material_type invalid");
 
     } // i=0..nmat-1
-
-    pp.query("gmres_precond_iter_base",gmres_precond_iter_base);
 
      //smooth_type: 0=GSRB 1=ICRB 2=ILU  3=Jacobi
     ParmParse pplp("Lp");

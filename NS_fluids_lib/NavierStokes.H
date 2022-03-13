@@ -1059,8 +1059,7 @@ void apply_pressure_grad(
      int presmooth,int postsmooth,
      int idx_Z,int idx_R,int nsolve);
 
-    void multiphase_GMRES_preconditioner(
-     int gmres_precond_iter,
+    void multiphase_SHELL_preconditioner(
      int project_option,int project_timings,
      int presmooth,int postsmooth,
      int idx_Z,int idx_R,int nsolve);
@@ -1502,7 +1501,6 @@ protected:
     static int        NUM_SCALARS;      // number of non-velocity components
     static Real       visc_coef; 
 
-    static int gmres_precond_iter_base; // default=4
     static int include_viscous_heating; // default=0
      //smooth_type: 0=GSRB 1=ICRB 2=ILU  3=Jacobi
     static int smooth_type; // Lp.smooth_type def=0 GSRB
