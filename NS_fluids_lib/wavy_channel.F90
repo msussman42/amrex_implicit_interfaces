@@ -246,6 +246,7 @@ end subroutine WAVY_INIT_LS_core
 
 subroutine WAVY_INIT_LS(x,t,LS,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: nmat
