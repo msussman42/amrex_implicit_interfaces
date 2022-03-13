@@ -10621,21 +10621,9 @@ void NavierStokes::multiphase_project(int project_option) {
        } else
         amrex::Error("uncoupled_viscosity invalid");
 
-       if (always_use_bicgstab==1) {
-        BICGSTAB_ACTIVE=1;
-       } else if (always_use_bicgstab==0) {
-        // do nothing
-       } else
-        amrex::Error("always_use_bicgstab invalid");
-
       } else if (project_option_is_valid(project_option)==1) {
 
-       if (always_use_bicgstab==1) {
-        BICGSTAB_ACTIVE=1;
-       } else if (always_use_bicgstab==0) {
-        BICGSTAB_ACTIVE=0;
-       } else
-        amrex::Error("always_use_bicgstab invalid");
+       BICGSTAB_ACTIVE=0;
 
       } else
        amrex::Error("project_option invalid");

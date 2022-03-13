@@ -54,7 +54,7 @@ ns.initial_viscosity_cycles=1 # number of initial jacobi iterations for
 ns.initial_thermal_cycles=1   # number of initial jacobi iterations for
                               # thermal solve.
 ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
-                         # decent sized residual.  The bicgstab algorithm
+                         # decent sized residual.  The iterative algorithm
                          # is restarted after "initial_cg_cycles" steps.
 # 0=GSRB 1=ICRB 2=ILU
 # Lp.smooth_type=2

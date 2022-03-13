@@ -1080,7 +1080,6 @@ Real NavierStokes::mac_abs_tol = 1.0e-10;
 Real NavierStokes::visc_abs_tol = 1.0e-10;
 Real NavierStokes::thermal_abs_tol = 1.0e-10;
 int NavierStokes::viscous_maxiter = 1;
-int NavierStokes::always_use_bicgstab = 0;
 Real NavierStokes::total_advance_time=0.0;
 
 void extra_circle_parameters(
@@ -4547,16 +4546,6 @@ NavierStokes::read_params ()
     if ((viscous_maxiter<1)||(viscous_maxiter>2)) 
      amrex::Error("viscous_maxiter should be 1 or 2");
 
-    pp.query( "always_use_bicgstab",always_use_bicgstab);
-    if ((always_use_bicgstab==0)||
-        (always_use_bicgstab==1)) {
-     // do nothing
-    } else
-     amrex::Error("always_use_bicgstab invalid");
-
-    int cg_abec_use_bicgstab=0;
-    ppcg.query("cg.abec_use_bicgstab", cg_abec_use_bicgstab);
-
     ppmac.query( "mac_abs_tol",mac_abs_tol);
       // mac.visc_abs_tol (not ns.visc_abs_tol)
     ppmac.query( "visc_abs_tol",visc_abs_tol);
@@ -5343,8 +5332,6 @@ NavierStokes::read_params ()
      std::cout << "mac.visc_abs_tol " <<visc_abs_tol<< '\n';
      std::cout << "mac.thermal_abs_tol " <<thermal_abs_tol<< '\n';
      std::cout << "viscous_maxiter " <<viscous_maxiter<< '\n';
-     std::cout << "always_use_bicgstab " <<always_use_bicgstab<< '\n';
-     std::cout << "cg_abec_use_bicgstab " <<cg_abec_use_bicgstab<< '\n';
      std::cout << "project_solver_type " <<project_solver_type<< '\n';
      std::cout << "initial_cg_cycles " <<initial_cg_cycles<< '\n';
      std::cout << "initial_project_cycles " <<initial_project_cycles<< '\n';
