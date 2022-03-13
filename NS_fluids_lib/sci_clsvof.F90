@@ -179,184 +179,6 @@ REAL_T, dimension(:,:), allocatable :: ctml_fib_mass_prev
 contains
 
 
-      subroutine checkbound3D(lo,hi, &
-      DIMS3D(data), &
-      ngrow,dir,id)
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: lo(3), hi(3)
-      INTEGER_T, intent(in) :: DIMDEC3D(data)
-      INTEGER_T, intent(in) :: ngrow,dir,id
-
-      INTEGER_T ii(3)
-
-      INTEGER_T hidata(3)
-      INTEGER_T lodata(3)
-      INTEGER_T dir2
-
-      hidata(1)=ARG3D_H1(data)
-      hidata(2)=ARG3D_H2(data)
-      hidata(3)=ARG3D_H3(data)
-      lodata(1)=ARG3D_L1(data)
-      lodata(2)=ARG3D_L2(data)
-      lodata(3)=ARG3D_L3(data)
-
-      do dir2=1,3
-       if (lodata(dir2).gt.hidata(dir2)) then
-        print *,"swapped bounds in checkbound 3d id=",id
-        print *,"dir2=",dir2
-        stop
-       endif
-       ii(dir2)=0
-      enddo
-      if ((dir.ge.0).and.(dir.lt.3)) then
-       ii(dir+1)=1
-      else if (dir.eq.-1) then
-       ! do nothing
-      else
-       print *,"dir invalid checkbound3d"
-       stop
-      endif
- 
-      if (ngrow.lt.0) then
-       print *,"ngrow invalid in checkbound 3d"
-       stop
-      endif
-      if (id.lt.0) then
-       print *,"id invalid in checkbound 3d"
-       stop
-      endif
-
-      do dir2=1,3
-       if (lo(dir2).lt.0) then
-        print *,"lo invalid in checkbound 3d id=",id
-        print *,"dir2=",dir2
-        stop
-       endif
-       if (lodata(dir2).gt.lo(dir2)-ngrow) then
-        print *,"lo mismatch id=",id
-        print *,"dir2=",dir2
-        stop
-       endif
-       if (hidata(dir2).lt.hi(dir2)+ngrow+ii(dir2)) then
-        print *,"hi mismatch id=",id
-        print *,"dir2=",dir2
-        stop
-       endif
-      enddo ! dir2
-
-      return
-      end subroutine checkbound3D
-
-       ! box_type(dir)=0 => CELL
-       ! box_type(dir)=1 => NODE
-      subroutine grid_type_to_box_type3D(grid_type,box_type)
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: grid_type
-      INTEGER_T, intent(out) :: box_type(3)
-      INTEGER_T dir
-
-      do dir=1,3
-       box_type(dir)=0  ! default to CELL
-      enddo
-      if (grid_type.eq.-1) then
-       ! do nothing
-      else if ((grid_type.ge.0).and. &
-               (grid_type.lt.3)) then
-       box_type(grid_type+1)=1  ! NODE
-      else if (grid_type.eq.3) then
-       box_type(1)=1 ! NODE
-       box_type(2)=1 ! NODE
-      else if (grid_type.eq.4) then
-       box_type(1)=1 ! NODE
-       box_type(3)=1 ! NODE
-      else if (grid_type.eq.5) then
-       box_type(2)=1 ! NODE
-       box_type(3)=1 ! NODE
-      else
-       print *,"grid_type invalid"
-       stop
-      endif
-     
-      return 
-      end subroutine grid_type_to_box_type3D
-
-
-      subroutine checkbound3D_array(lo,hi, &
-      data_array, &
-      ngrow,grid_type,id)
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: lo(3), hi(3)
-       ! intent(in) means the pointer cannot be reassigned.
-       ! The data itself inherits the intent attribute from the
-       ! target.
-      REAL_T, intent(in), pointer :: data_array(:,:,:,:)
-      INTEGER_T, intent(in) :: ngrow,grid_type,id
-
-       ! box_type(dir)=0 => CELL
-       ! box_type(dir)=1 => NODE
-      INTEGER_T box_type(3)
-
-      INTEGER_T hidata(4)
-      INTEGER_T lodata(4)
-      INTEGER_T dir2
-
-      hidata=UBOUND(data_array)
-      lodata=LBOUND(data_array)
-
-      do dir2=1,3
-       if (lodata(dir2).gt.hidata(dir2)) then
-        print *,"swapped bounds in checkbound 3d id=",id
-        print *,"dir2=",dir2
-        stop
-       endif
-       box_type(dir2)=0
-      enddo
-       ! box_type(dir)=0 => CELL
-       ! box_type(dir)=1 => NODE
-      call grid_type_to_box_type3D(grid_type,box_type)
-
-      do dir2=1,3
-       if (lo(dir2).lt.0) then
-        print *,"lo invalid in checkbound3D_array id=",id
-        print *,"dir2,dataxlo ",dir2,lodata(dir2)
-        print *,"dir2,dataxhi ",dir2,hidata(dir2)
-        print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
-        print *,"dir2,hi,ngrow ",dir2,hi(dir2),ngrow
-        print *,"grid_type=",grid_type
-        stop
-       endif
-      enddo
-
-      if (ngrow.lt.0) then
-       print *,"ngrow invalid in checkbound3D_array"
-       stop
-      endif
-      if (id.lt.0) then
-       print *,"id invalid in checkbound3D_array"
-       stop
-      endif
-
-      do dir2=1,3
-
-       if (lodata(dir2).gt.lo(dir2)-ngrow) then
-        print *,"lo mismatch id=",id
-        print *,"dir2=",dir2
-        stop
-       endif
-       if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
-        print *,"hi mismatch id=",id
-        print *,"dir2=",dir2
-        stop
-       endif
-
-      enddo ! dir2=1..3
-
-      return
-      end subroutine checkbound3D_array
-
 ! called from:
 !   initinjector,initflapping,init_from_cas,init_gingerbread2D,
 !   init_helix,initchannel,viorel_sphere_geominit,internal_inflow_geominit,
@@ -12401,6 +12223,8 @@ subroutine find_grid_bounding_box( &
  growlo3D,growhi3D,  &
  xdata3D, &
  gridloBB,gridhiBB,dxBB)
+
+use global_utility_module
 IMPLICIT NONE
 
  type(mesh_type), intent(in) :: FSI_mesh_type
@@ -12597,6 +12421,8 @@ subroutine find_grid_bounding_box_node( &
  FSI_growlo,FSI_growhi,  &
  xdata3D, &
  gridloBB,gridhiBB,dxBB)
+
+use global_utility_module
 IMPLICIT NONE
 
  INTEGER_T, intent(in) :: ngrow_make_distance

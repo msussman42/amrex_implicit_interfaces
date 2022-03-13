@@ -8051,10 +8051,16 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 // called from: NavierStokes::post_restart(), NavierStokes::initData() 
 void NavierStokes::init_aux_data() {
 
+ int ioproc;
+ if (ParallelDescriptor::IOProcessor())
+  ioproc=1;
+ else
+  ioproc=0;
+
  if (level==0) {
   if (num_local_aux_grids>0) {
     //fort_init_aux_data() is declared in SOLIDFLUID.F90
-   fort_init_aux_data();
+   fort_init_aux_data(&ioproc);
   } else if (num_local_aux_grids==0) {
    // do nothing
   } else

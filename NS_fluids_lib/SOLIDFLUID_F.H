@@ -11,7 +11,7 @@ namespace amrex{
 
   extern "C" {
 
-    void fort_init_aux_data();
+    void fort_init_aux_data(int* ioproc);
 
     void fort_headermsg(
      int* tid,

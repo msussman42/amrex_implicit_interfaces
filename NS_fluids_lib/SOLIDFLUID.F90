@@ -1388,9 +1388,14 @@
       write(newfilename,'(A7,A2,A4)') 'auxdata',auxstr,'.plt'
 
       do dir2=1,3
-       plotlo(dir2)=contain_aux(auxcomp)%lo3D(dir2)-3
-       plothi(dir2)=contain_aux(auxcomp)%hi3D(dir2)+3
+       plotlo(dir2)=contain_aux(auxcomp)%lo3D(dir2)-ngrow_make_distance
+       plothi(dir2)=contain_aux(auxcomp)%hi3D(dir2)+ngrow_make_distance
       enddo
+      call checkbound3D_array( &
+        contain_aux(auxcomp)%lo3D, &
+        contain_aux(auxcomp)%hi3D, &
+        contain_aux(auxcomp)%LS3D, &
+        ngrow_make_distance,-1,1113)
 
       nwrite=3+1
 
@@ -1546,7 +1551,7 @@
        ! called from: NavierStokes::init_aux_data()
        ! init_aux_data() called from NavierStokes::post_restart, and
        ! init_aux_data() called from NavierStokes::initData
-      subroutine fort_init_aux_data() &
+      subroutine fort_init_aux_data(ioproc) &
       bind(c,name='fort_init_aux_data')
       use CLSVOFCouplerIO, only : CLSVOF_Read_aux_Header, &
        CLSVOF_Init_aux_Box
@@ -1554,6 +1559,7 @@
       use probcommon_module
       IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: ioproc
       INTEGER_T auxcomp
       INTEGER_T FSI_operation
       INTEGER_T FSI_touch_flag
@@ -1593,8 +1599,13 @@
        enddo
        enddo
       
-       if (1.eq.1) then
+       if (ioproc.eq.1) then
         call fort_aux_tecplot(auxcomp)
+       else if (ioproc.eq.0) then
+        ! do nothing
+       else
+        print *,"ioproc invalid"
+        stop
        endif
  
        deallocate(aux_xdata3D) 

@@ -5515,39 +5515,67 @@ end subroutine dynamic_contact_angle
       return
       end subroutine derive_dist
 
-       ! grid_type=-1..5
-      subroutine checkbound(lo,hi, &
-       DIMS(data), &
-       ngrow,grid_type,id)
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
-      INTEGER_T, intent(in) ::  DIMDEC(data)
-      INTEGER_T, intent(in) ::  ngrow
-      INTEGER_T, intent(in) ::  grid_type
-      INTEGER_T, intent(in) ::  id
 
        ! box_type(dir)=0 => CELL
        ! box_type(dir)=1 => NODE
-      INTEGER_T box_type(SDIM)
+      subroutine grid_type_to_box_type3D(grid_type,box_type)
+      IMPLICIT NONE
 
-      INTEGER_T    hidata(SDIM)
-      INTEGER_T    lodata(SDIM)
-      INTEGER_T    dir2
+      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, intent(out) :: box_type(3)
+      INTEGER_T dir
 
-      hidata(1)=ARG_H1(data)
-      hidata(2)=ARG_H2(data)
-      lodata(1)=ARG_L1(data)
-      lodata(2)=ARG_L2(data)
-#if (AMREX_SPACEDIM==3)
-      hidata(SDIM)=ARG_H3(data)
-      lodata(SDIM)=ARG_L3(data)
-#endif
- 
-      do dir2=1,SDIM
+      do dir=1,3
+       box_type(dir)=0  ! default to CELL
+      enddo
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else if ((grid_type.ge.0).and. &
+               (grid_type.lt.3)) then
+       box_type(grid_type+1)=1  ! NODE
+      else if (grid_type.eq.3) then
+       box_type(1)=1 ! NODE
+       box_type(2)=1 ! NODE
+      else if (grid_type.eq.4) then
+       box_type(1)=1 ! NODE
+       box_type(3)=1 ! NODE
+      else if (grid_type.eq.5) then
+       box_type(2)=1 ! NODE
+       box_type(3)=1 ! NODE
+      else
+       print *,"grid_type invalid"
+       stop
+      endif
+     
+      return 
+      end subroutine grid_type_to_box_type3D
+
+      subroutine checkbound3D_array(lo,hi, &
+      data_array, &
+      ngrow,grid_type,id)
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: lo(3), hi(3)
+       ! intent(in) means the pointer cannot be reassigned.
+       ! The data itself inherits the intent attribute from the
+       ! target.
+      REAL_T, intent(in), pointer :: data_array(:,:,:,:)
+      INTEGER_T, intent(in) :: ngrow,grid_type,id
+
+       ! box_type(dir)=0 => CELL
+       ! box_type(dir)=1 => NODE
+      INTEGER_T box_type(3)
+
+      INTEGER_T hidata(4)
+      INTEGER_T lodata(4)
+      INTEGER_T dir2
+
+      hidata=UBOUND(data_array)
+      lodata=LBOUND(data_array)
+
+      do dir2=1,3
        if (lodata(dir2).gt.hidata(dir2)) then
-        print *,"swapped bounds in checkbound id=",id
-        print *,"grid_type=",grid_type
+        print *,"swapped bounds in checkbound 3d id=",id
         print *,"dir2=",dir2
         stop
        endif
@@ -5555,11 +5583,11 @@ end subroutine dynamic_contact_angle
       enddo
        ! box_type(dir)=0 => CELL
        ! box_type(dir)=1 => NODE
-      call grid_type_to_box_type(grid_type,box_type)
+      call grid_type_to_box_type3D(grid_type,box_type)
 
-      do dir2=1,SDIM
+      do dir2=1,3
        if (lo(dir2).lt.0) then
-        print *,"lo invalid in checkbound id=",id
+        print *,"lo invalid in checkbound3D_array id=",id
         print *,"dir2,dataxlo ",dir2,lodata(dir2)
         print *,"dir2,dataxhi ",dir2,hidata(dir2)
         print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
@@ -5568,41 +5596,33 @@ end subroutine dynamic_contact_angle
         stop
        endif
       enddo
+
       if (ngrow.lt.0) then
-       print *,"ngrow invalid in checkbound"
+       print *,"ngrow invalid in checkbound3D_array"
        stop
       endif
       if (id.lt.0) then
-       print *,"id invalid in checkbound"
+       print *,"id invalid in checkbound3D_array"
        stop
       endif
 
-      do dir2=1,SDIM
+      do dir2=1,3
 
-        if (lodata(dir2).gt.lo(dir2)-ngrow) then
-         print *,"checkbound:lo mismatch id=",id
-         print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
-         print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
-         print *,"dataxlo ",lodata(dir2)
-         print *,"dataxhi ",hidata(dir2)
-         print *,"grid_type=",grid_type
-         print *,"dir2=",dir2
-         stop
-        endif
-        if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
-         print *,"hi mismatch id=",id
-         print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
-         print *,"box_type(dir2) ",box_type(dir2)
-         print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
-         print *,"grid_type=",grid_type
-         print *,"dir2=",dir2
-         stop
-        endif
+       if (lodata(dir2).gt.lo(dir2)-ngrow) then
+        print *,"lo mismatch id=",id
+        print *,"dir2=",dir2
+        stop
+       endif
+       if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
+        print *,"hi mismatch id=",id
+        print *,"dir2=",dir2
+        stop
+       endif
 
-      enddo ! dir2=1..SDIM
+      enddo ! dir2=1..3
 
       return
-      end subroutine checkbound
+      end subroutine checkbound3D_array
 
        ! grid_type=-1..5
       subroutine checkbound_array(lo,hi, &
