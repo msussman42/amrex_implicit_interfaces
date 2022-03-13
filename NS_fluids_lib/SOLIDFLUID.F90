@@ -1344,6 +1344,208 @@
       return
       end subroutine fort_headermsg
 
+      subroutine fort_aux_tecplot(auxcomp)
+
+      use probcommon_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: auxcomp
+      INTEGER_T plotlo(3),plothi(3) 
+      INTEGER_T lo(3),hi(3) 
+
+      INTEGER_T ih
+
+      character*13 newfilename !auxdata ...
+      character*2 auxstr
+
+      INTEGER_T i,j,k,nwrite,dir2
+
+! Guibo
+
+      character*80 Title,Varname,Zonename
+      REAL*4 ZONEMARKER,EOHMARKER
+      integer*4 :: iz_gb,ivar_gb
+      integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
+      INTEGER_T strandid
+
+      ! define zone structure
+      type zone_t
+         real*8, pointer :: var(:,:,:,:)
+      end type zone_t
+      type(zone_t), dimension(:), allocatable :: zone_gb
+
+! Guibo
+
+      write(auxstr,'(I2)') auxcomp
+      do i=1,2
+       if (auxstr(i:i).eq.' ') then
+        auxstr(i:i)='0'
+       endif
+      enddo
+
+      write(newfilename,'(A7,A2,A4)') 'auxdata',auxstr,'.plt'
+
+      do dir2=1,3
+       plotlo(dir2)=contain_aux(auxcomp)%lo3D(dir2)-3
+       plothi(dir2)=contain_aux(auxcomp)%hi3D(dir2)+3
+      enddo
+
+      nwrite=3+1
+
+      print *,"auxdata: ",newfilename
+
+      !--------------------------------------------------
+      ! Determine nzones_gb and allocate zone_gb, lo_gb, hi_gb
+
+      allocate(zone_gb(1))
+      allocate(lo_gb(1,3))
+      allocate(hi_gb(1,3))
+
+      ! Determine lo_gb, hi_gb
+      ! Allocate zone_gb%var later
+      iz_gb=1
+      do dir2=1,3
+       lo_gb(iz_gb,dir2)=plotlo(dir2)
+       hi_gb(iz_gb,dir2)=plothi(dir2)
+      enddo
+
+      !-----------------------------------------------------------
+      ZONEMARKER = 299.0
+      EOHMARKER  = 357.0 
+       !fabdata ...
+      open(unit=11,file=newfilename,form="unformatted",access="stream")
+
+      ! +++++++ HEADER SECTION ++++++
+
+      ! i.  Magic number, Version number
+      write(11) "#!TDV112"
+ 
+      ! ii. Integer value of 1.
+      write(11) 1
+
+      ! iii. Title and variable names.
+      ! File type 0 = FULL,1 = GRID,2 = SOLUTION
+      write(11) 0
+      ! The TITLE
+      Title = "AUX LS data"
+      call dumpstring(Title)
+      ! Number of variables 
+      write(11) nwrite
+
+      ! Variable names.
+      Varname='X'
+      call dumpstring(Varname)
+      Varname='Y'
+      call dumpstring(Varname)
+      Varname='Z'
+      call dumpstring(Varname)
+
+      ih=1
+      Varname='L'
+      ih=ih+1
+      Varname(ih:ih)='S'
+      call dumpstring(Varname)
+
+
+      ! Zones
+      iz_gb=1
+       ! Zone marker. Value = 299.0
+      write(11) ZONEMARKER
+       ! Zone name
+      Zonename = "ZONE"
+      call dumpstring(Zonename)
+
+      strandid=0
+
+      write(11) -1   ! Parent Zone
+      write(11) 0    ! StrandID (this does not work)
+      write(11) 0.0d0 ! Solution time
+      write(11) -1   ! Not used. Set to -1
+      write(11) 0    ! Zone Type
+      write(11) 0    ! Specify Var Location. 0 = Don't specify, 
+                     ! all data is located at the nodes.
+      write(11) 0    ! Are raw local 1-to-1 face neighbors supplied?
+      write(11) 0    ! Number of miscellaneous user-defined  
+                      !face neighbor connections
+
+        ! ----- IMax,JMax,KMax
+      do dir2=1,3
+       write(11) hi_gb(iz_gb,dir2)-lo_gb(iz_gb,dir2)+1
+      enddo
+ 
+      write(11) 0
+
+      write(11) EOHMARKER
+ 
+      ! +++++++ DATA SECTION ++++++
+
+      iz_gb=1
+
+      do dir2=1,3
+       lo(dir2)=lo_gb(iz_gb,dir2)
+       hi(dir2)=hi_gb(iz_gb,dir2)
+      enddo
+
+      allocate(zone_gb(iz_gb)% &
+        var(nwrite,lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+
+       ! order is IMPORTANT.
+      do k=lo(3),hi(3)
+      do j=lo(2),hi(2)
+      do i=lo(1),hi(1)
+
+       do dir2=1,3
+        zone_gb(iz_gb)%var(dir2,i,j,k)=aux_xdata3D(i,j,k,dir2)
+       enddo
+
+       zone_gb(iz_gb)%var(3+1,i,j,k)=contain_aux(auxcomp)%LS3D(i,j,k,1)
+      enddo
+      enddo
+      enddo
+
+
+       ! Zone marker  Value = 299.0
+      write(11) ZONEMARKER
+       ! Data format
+      do i=1,nwrite
+        write(11) 2
+      enddo
+      write(11) 0  ! Has passive variables: 0 = no, 1 = yes.
+      write(11) 0  ! Has variable sharing 0 = no, 1 = yes.
+      write(11) -1 ! Share connectivity list (-1 = no sharing). 
+  
+      do ivar_gb=1,nwrite
+       write(11) minval(zone_gb(1)%var(ivar_gb,:,:,:))
+       write(11) maxval(zone_gb(1)%var(ivar_gb,:,:,:))
+      enddo
+
+       ! order is IMPORTANT
+      do ivar_gb=1,nwrite
+       do k=lo_gb(iz_gb,3),hi_gb(iz_gb,3)
+       do j=lo_gb(iz_gb,2),hi_gb(iz_gb,2)
+       do i=lo_gb(iz_gb,1),hi_gb(iz_gb,1)
+        write(11) zone_gb(iz_gb)%var(ivar_gb,i,j,k)
+       enddo
+       enddo
+       enddo
+      enddo
+
+      deallocate(zone_gb(iz_gb)%var)
+
+      deallocate(zone_gb)
+      deallocate(lo_gb)
+      deallocate(hi_gb)
+
+      close(11)
+      return
+      end subroutine fort_aux_tecplot
+
+
+       ! called from: NavierStokes::init_aux_data()
+       ! init_aux_data() called from NavierStokes::post_restart, and
+       ! init_aux_data() called from NavierStokes::initData
       subroutine fort_init_aux_data() &
       bind(c,name='fort_init_aux_data')
       use CLSVOFCouplerIO, only : CLSVOF_Read_aux_Header, &
@@ -1390,7 +1592,11 @@
        enddo
        enddo
        enddo
-       
+      
+       if (1.eq.1) then
+        call fort_aux_tecplot(auxcomp)
+       endif
+ 
        deallocate(aux_xdata3D) 
        deallocate(aux_FSIdata3D) 
        deallocate(aux_masknbr3D) 
