@@ -253,6 +253,8 @@ INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(out) :: LS(nmat)
+REAL_T :: x3D(3)
+INTEGER_T :: dir
 INTEGER_T im
 INTEGER_T auxcomp
 
@@ -262,6 +264,11 @@ else
  print *,"nmat invalid"
  stop
 endif
+
+do dir=1,SDIM
+ x3D(dir)=x(dir)
+enddo
+x3D(3)=x(SDIM)
 
 if (axis_dir.eq.0) then
  call WAVY_INIT_LS_core(x,t,LS,nmat)
@@ -276,7 +283,7 @@ else if (axis_dir.eq.1) then
      LS(im)=1000.0
     elseif (im.eq.3) then ! solid helix
      auxcomp=1
-     call interp_from_aux_grid(auxcomp,x,LS(im))
+     call interp_from_aux_grid(auxcomp,x3D,LS(im))
     else
      print *,"im invalid, im=",im
      stop
