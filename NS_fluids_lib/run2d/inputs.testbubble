@@ -1,6 +1,6 @@
 #wait_for_key = 1
 max_step  = 99999     # maximum timestep
-#max_step  =  2    # maximum timestep
+#max_step  =  5    # maximum timestep
 stop_time =  0.8  # T=L/U=5.19/62.1=0.0836 10(0.0836)=0.836
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
@@ -91,7 +91,7 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 10  # default 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
+amr.max_grid_size   = 256 16
 #amr.restart         = chk01000
 amr.plotfile_on_restart=1
 #amr.trace   =1
