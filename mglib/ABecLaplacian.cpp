@@ -24,12 +24,8 @@ namespace amrex{
 
 #define profile_solver 0
 
-int ABecLaplacian::abec_use_bicgstab = 0;
-
 int ABecLaplacian::mglib_blocking_factor = 2;
 
-int ABecLaplacian::gmres_max_iter = 64;
-int ABecLaplacian::gmres_precond_iter_base_mg = 4;
 int ABecLaplacian::nghostRHS=0;
 int ABecLaplacian::nghostSOLN=1;
 
@@ -43,11 +39,6 @@ int ABecLaplacian::MG_def_nu_0         = 1;
 int ABecLaplacian::MG_def_nu_f         = 8;
 int ABecLaplacian::MG_def_verbose      = 0;
 int ABecLaplacian::MG_def_nu_b         = 0;
-
-extern void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
- int m,int m_small,
- int caller_id,int project_option,
- int mg_level,int& status);
 
 static
 void
@@ -106,9 +97,9 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
  if (pbdry.nGrow()!=1)
   amrex::Error("pbdry ngrow<>1");
  
- if (inout.nComp()!=nsolve_bicgstab)
+ if (inout.nComp()!=nsolve_ABec)
   amrex::Error("inout.nComp invalid");
- if (pbdry.nComp()!=nsolve_bicgstab)
+ if (pbdry.nComp()!=nsolve_ABec)
   amrex::Error("pbdry.nComp invalid");
 
  inout.FillBoundary(geomarray[level].periodicity());
@@ -117,7 +108,7 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
   // Fill boundary cells.
   //
 
- if (bcpres_array.size()!=gbox[0].size()*AMREX_SPACEDIM*2*nsolve_bicgstab)
+ if (bcpres_array.size()!=gbox[0].size()*AMREX_SPACEDIM*2*nsolve_ABec)
   amrex::Error("bcpres_array size invalid");
 
  if (maskvals[level]->nGrow()!=1)
@@ -167,9 +158,9 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
   const int* fabhi=fabgrid.hiVect();        
 
   Vector<int> bcpres;
-  bcpres.resize(2*AMREX_SPACEDIM*nsolve_bicgstab);
-  int ibase=2*AMREX_SPACEDIM*gridno*nsolve_bicgstab;
-  for (int i=0;i<2*AMREX_SPACEDIM*nsolve_bicgstab;i++)
+  bcpres.resize(2*AMREX_SPACEDIM*nsolve_ABec);
+  int ibase=2*AMREX_SPACEDIM*gridno*nsolve_ABec;
+  for (int i=0;i<2*AMREX_SPACEDIM*nsolve_ABec;i++)
    bcpres[i]=bcpres_array[i+ibase];
   FArrayBox& mfab=(*maskvals[level])[gridno];
   FArrayBox& bfab=pbdry[gridno];
@@ -186,7 +177,7 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
   fort_applybc( 
-   &nsolve_bicgstab,
+   &nsolve_ABec,
    inout[gridno].dataPtr(),
    ARLIM(inout[gridno].loVect()),ARLIM(inout[gridno].hiVect()),
    bfab.dataPtr(),ARLIM(bfab.loVect()),ARLIM(bfab.hiVect()),
@@ -280,7 +271,7 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
 #endif
 
    int nc = residL.nComp();
-   if (nc!=nsolve_bicgstab)
+   if (nc!=nsolve_ABec)
     amrex::Error("nc invalid in residual");
    BL_ASSERT(gbox[level][mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
@@ -308,7 +299,7 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
    fort_residl(
     &level,
     &mg_coarsest_level,
-    &nsolve_bicgstab,
+    &nsolve_ABec,
     ones_FAB.dataPtr(), 
     ARLIM(ones_FAB.loVect()),ARLIM(ones_FAB.hiVect()),
     residL[mfi].dataPtr(), 
@@ -323,7 +314,7 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
      // mask off the residual if the off diagonal entries sum to 0.
    FArrayBox& diagfab=(*MG_CG_diagsumL[level])[mfi];
    FArrayBox& residfab=residL[mfi];
-   residfab.mult(diagfab,tilegrid,0,0,nsolve_bicgstab); 
+   residfab.mult(diagfab,tilegrid,0,0,nsolve_ABec); 
 
 #if (profile_solver==1)
    bprof.stop();
@@ -342,7 +333,7 @@ ABecLaplacian::smooth(MultiFab& solnL,MultiFab& rhsL,
   int smooth_type) {
 
     int nc = solnL.nComp();
-    if (nc!=nsolve_bicgstab)
+    if (nc!=nsolve_ABec)
      amrex::Error("nc invalid in smooth");
     int ngrow_soln=solnL.nGrow();
     int ngrow_rhs=rhsL.nGrow();
@@ -378,7 +369,7 @@ ABecLaplacian::LPnorm(MultiFab &in, int level) const
 #endif
 
  int nc = in.nComp();
- if (nc!=nsolve_bicgstab)
+ if (nc!=nsolve_ABec)
   amrex::Error("nc invalid in norm");
 
  Real mf_norm=0.0;
@@ -463,7 +454,7 @@ ABecLaplacian::makeCoefficients (
  int bfact_fine=bfact_array[flevel];
  int bfact_top=bfact_array[0];
 
- int nComp_expect = nsolve_bicgstab;
+ int nComp_expect = nsolve_ABec;
  if ((avg==0)||(avg==1)) {
   // do nothing
  } else if (avg==2) { // ones_mf variable
@@ -627,7 +618,7 @@ ABecLaplacian::makeCoefficients (
     // declared in LO_3D.F90
     // only interior values are updated (no ghosts updated)
    fort_averagecc(
-     &nsolve_bicgstab,
+     &nsolve_ABec,
      &nComp_expect,
      crse_fine[mfi].dataPtr(), 
      ARLIM(crse_fine[mfi].loVect()),
@@ -735,7 +726,7 @@ ABecLaplacian::buildMatrix() {
     MultiFab& bmf=*bcoefs[level][dir];
 
     int ncomp=bmf.nComp();
-    if (ncomp!=nsolve_bicgstab)
+    if (ncomp!=nsolve_ABec)
      amrex::Error("ncomp invalid");
 
     int ngrow=bmf.nGrow();
@@ -762,7 +753,7 @@ ABecLaplacian::buildMatrix() {
   if (acoefs[level]->nGrow()!=nghostRHS)
    amrex::Error("acoefs[level]->nGrow() invalid");
 
-  if (workcoefs[level]->nComp()==ncwork*nsolve_bicgstab) {
+  if (workcoefs[level]->nComp()==ncwork*nsolve_ABec) {
    // do nothing
   } else
    amrex::Error("workcoefs[level]->nComp() invalid");
@@ -772,7 +763,7 @@ ABecLaplacian::buildMatrix() {
   } else 
    amrex::Error("workcoefs[level]->nGrow() invalid");
 
-  workcoefs[level]->setVal(0.0,0,ncwork*nsolve_bicgstab,nghostSOLN);
+  workcoefs[level]->setVal(0.0,0,ncwork*nsolve_ABec,nghostSOLN);
 
   int bxleftcomp=0;
   int byleftcomp=bxleftcomp+1;
@@ -795,7 +786,7 @@ ABecLaplacian::buildMatrix() {
   int redsolncomp=rhssavecomp+1;
   int blacksolncomp=redsolncomp+1;
 
-  if (workcoefs[level]->nComp()<=blacksolncomp*nsolve_bicgstab)
+  if (workcoefs[level]->nComp()<=blacksolncomp*nsolve_ABec)
    amrex::Error("workcoefs[level] invalid");
 
   int bfact=bfact_array[level];
@@ -806,7 +797,7 @@ ABecLaplacian::buildMatrix() {
 #endif
 
   for (int isweep=0;isweep<4;isweep++) {
-   for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
+   for (int veldir=0;veldir<nsolve_ABec;veldir++) {
 
     if (thread_class::nthreads<1)
      amrex::Error("thread_class::nthreads invalid");
@@ -876,7 +867,7 @@ ABecLaplacian::buildMatrix() {
      fort_buildmat(
       &level, // level==0 is finest
       &veldir,
-      &nsolve_bicgstab,
+      &nsolve_ABec,
       &isweep,
       onesFAB.dataPtr(),
       ARLIM(onesFAB.loVect()),ARLIM(onesFAB.hiVect()),
@@ -918,15 +909,15 @@ ABecLaplacian::buildMatrix() {
     ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
     thread_class::reconcile_d_numPts(5);
 
-   } // veldir=0...nsolve_bicgstab-1
+   } // veldir=0...nsolve_ABec-1
   } // isweep=0..3
 
-  MG_res[level]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-  MG_rhs[level]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-  MG_cor[level]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-  MG_pbdrycoarser[level]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+  MG_res[level]->setVal(0.0,0,nsolve_ABec,nghostRHS);
+  MG_rhs[level]->setVal(0.0,0,nsolve_ABec,nghostRHS);
+  MG_cor[level]->setVal(0.0,0,nsolve_ABec,nghostSOLN);
+  MG_pbdrycoarser[level]->setVal(0.0,0,nsolve_ABec,nghostSOLN);
   if (level == 0) {
-   MG_initialsolution->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+   MG_initialsolution->setVal(0.0,0,nsolve_ABec,nghostSOLN);
   }
 
  } // level=0..MG_numlevels_var-1
@@ -1009,7 +1000,7 @@ ABecLaplacian::ABecLaplacian (
   }
  }
 
- nsolve_bicgstab=nsolve_in; 
+ nsolve_ABec=nsolve_in; 
 
  gbox.resize(MG_numlevels_var);
  dmap_array.resize(MG_numlevels_var);
@@ -1034,17 +1025,7 @@ ABecLaplacian::ABecLaplacian (
  MG_CG_diagsumL.resize(MG_numlevels_var, (MultiFab*)0);
  MG_CG_ones_mf_copy.resize(MG_numlevels_var, (MultiFab*)0);
 
- GMRES_V_MF.resize(gmres_max_iter);
- GMRES_U_MF.resize(gmres_max_iter);
- GMRES_Z_MF.resize(gmres_max_iter);
-
  for (int coarsefine=0;coarsefine<CG_numlevels_var;coarsefine++) {
-  for (int m=0;m<gmres_max_iter;m++) {
-   GMRES_V_MF[m][coarsefine]=(MultiFab*)0;
-   GMRES_U_MF[m][coarsefine]=(MultiFab*)0;
-   GMRES_Z_MF[m][coarsefine]=(MultiFab*)0;
-  }
-  GMRES_W_MF[coarsefine]=(MultiFab*)0;
   CG_delta_sol[coarsefine]=(MultiFab*)0;
   CG_r[coarsefine]=(MultiFab*)0;
   CG_z[coarsefine]=(MultiFab*)0;
@@ -1121,20 +1102,20 @@ ABecLaplacian::ABecLaplacian (
   MG_CG_ones_mf_copy[level]->setVal(1.0,0,1,nghostSOLN);
 
   MG_CG_diagsumL[level]=new MultiFab(gbox[level],dmap_array[level],
-	nsolve_bicgstab,nghostRHS,
+	nsolve_ABec,nghostRHS,
         MFInfo().SetTag("MG_CG_diagsumL"),FArrayBoxFactory());
-  MG_CG_diagsumL[level]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
+  MG_CG_diagsumL[level]->setVal(0.0,0,nsolve_ABec,nghostRHS);
 
   acoefs[level]=new MultiFab(gbox[level],dmap_array[level],
-	nsolve_bicgstab,nghostRHS,
+	nsolve_ABec,nghostRHS,
         MFInfo().SetTag("acoefs"),FArrayBoxFactory());
-  acoefs[level]->setVal(a_def,0,nsolve_bicgstab,nghostRHS);
+  acoefs[level]->setVal(a_def,0,nsolve_ABec,nghostRHS);
 
   int ncomp_work=(AMREX_SPACEDIM*3)+SCALAR_WORK_NCOMP;
   workcoefs[level]=new MultiFab(gbox[level],dmap_array[level],
-    ncomp_work*nsolve_bicgstab,nghostSOLN,
+    ncomp_work*nsolve_ABec,nghostSOLN,
     MFInfo().SetTag("workcoefs"),FArrayBoxFactory());
-  workcoefs[level]->setVal(0.0,0,ncomp_work*nsolve_bicgstab,nghostSOLN);
+  workcoefs[level]->setVal(0.0,0,ncomp_work*nsolve_ABec,nghostSOLN);
 
   laplacian_ones[level]=new MultiFab(gbox[level],dmap_array[level],
 	1,nghostSOLN,
@@ -1142,34 +1123,34 @@ ABecLaplacian::ABecLaplacian (
   laplacian_ones[level]->setVal(1.0,0,1,nghostSOLN);
 
   MG_res[level] = new MultiFab(gbox[level],dmap_array[level],
-	 nsolve_bicgstab,nghostRHS,
+	 nsolve_ABec,nghostRHS,
 	 MFInfo().SetTag("MG_res"),FArrayBoxFactory());
-  MG_res[level]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
+  MG_res[level]->setVal(0.0,0,nsolve_ABec,nghostRHS);
 
   MG_rhs[level] = new MultiFab(gbox[level],dmap_array[level],
-    nsolve_bicgstab,nghostRHS,
+    nsolve_ABec,nghostRHS,
     MFInfo().SetTag("MG_rhs"),FArrayBoxFactory());
-  MG_rhs[level]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
+  MG_rhs[level]->setVal(0.0,0,nsolve_ABec,nghostRHS);
 
   MG_cor[level] = new MultiFab(gbox[level],dmap_array[level],
-    nsolve_bicgstab,nghostSOLN,
+    nsolve_ABec,nghostSOLN,
     MFInfo().SetTag("MG_cor"),FArrayBoxFactory());
-  MG_cor[level]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+  MG_cor[level]->setVal(0.0,0,nsolve_ABec,nghostSOLN);
 
   MG_pbdrycoarser[level] = 
      new MultiFab(gbox[level],dmap_array[level],
-	nsolve_bicgstab,nghostSOLN,
+	nsolve_ABec,nghostSOLN,
 	MFInfo().SetTag("MG_pbdrycoarser"),FArrayBoxFactory());
-  MG_pbdrycoarser[level]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+  MG_pbdrycoarser[level]->setVal(0.0,0,nsolve_ABec,nghostSOLN);
 
   // no ghost cells for edge or node coefficients
   for (int dir = 0; dir < AMREX_SPACEDIM; ++dir) {
    BoxArray edge_boxes(gbox[level]);
    edge_boxes.surroundingNodes(dir);
    bcoefs[level][dir]=new MultiFab(edge_boxes,dmap_array[level],
-     nsolve_bicgstab,0,
+     nsolve_ABec,0,
      MFInfo().SetTag("bcoefs"),FArrayBoxFactory());
-   bcoefs[level][dir]->setVal(b_def,0,nsolve_bicgstab,0);
+   bcoefs[level][dir]->setVal(b_def,0,nsolve_ABec,0);
   }
 
  }  // level=0..MG_numlevels_var-1
@@ -1178,15 +1159,15 @@ ABecLaplacian::ABecLaplacian (
 
  MG_initialsolution = new MultiFab(gbox[finest_mg_level],
    dmap_array[finest_mg_level],
-   nsolve_bicgstab,nghostSOLN,
+   nsolve_ABec,nghostSOLN,
    MFInfo().SetTag("MG_initialsolution"),FArrayBoxFactory());
- MG_initialsolution->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+ MG_initialsolution->setVal(0.0,0,nsolve_ABec,nghostSOLN);
 
  MG_pbdryhom = new MultiFab(gbox[finest_mg_level],
    dmap_array[finest_mg_level],
-   nsolve_bicgstab,nghostSOLN,
+   nsolve_ABec,nghostSOLN,
    MFInfo().SetTag("MG_pbdryhom"),FArrayBoxFactory());
- MG_pbdryhom->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+ MG_pbdryhom->setVal(0.0,0,nsolve_ABec,nghostSOLN);
 
  for (int coarsefine=0;coarsefine<CG_numlevels_var;coarsefine++) {
 
@@ -1198,51 +1179,32 @@ ABecLaplacian::ABecLaplacian (
   } else
    amrex::Error("coarsefine invalid");
 
-  for (int j=0;j<gmres_precond_iter_base_mg;j++) {
-   GMRES_V_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-    nsolve_bicgstab,nghostRHS,
-    MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
-   GMRES_U_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-    nsolve_bicgstab,nghostRHS,
-    MFInfo().SetTag("GMRES_U_MF"),FArrayBoxFactory()); 
-   GMRES_Z_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-    nsolve_bicgstab,nghostSOLN,
-    MFInfo().SetTag("GMRES_Z_MF"),FArrayBoxFactory()); 
-
-   GMRES_V_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-   GMRES_U_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-   GMRES_Z_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-  } //j=0;j<gmres_precond_iter_base_mg
-  GMRES_W_MF[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-   nsolve_bicgstab,nghostRHS,
-   MFInfo().SetTag("GMRES_W_MF"),FArrayBoxFactory());
-
   CG_delta_sol[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-    nsolve_bicgstab,nghostSOLN,
+    nsolve_ABec,nghostSOLN,
     MFInfo().SetTag("CG_delta_sol"),FArrayBoxFactory());
   CG_r[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-    nsolve_bicgstab,nghostRHS,
+    nsolve_ABec,nghostRHS,
     MFInfo().SetTag("CG_r"),FArrayBoxFactory());
   CG_z[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-    nsolve_bicgstab,nghostSOLN,
+    nsolve_ABec,nghostSOLN,
     MFInfo().SetTag("CG_z"),FArrayBoxFactory());
   CG_Av_search[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-    nsolve_bicgstab,nghostRHS,
+    nsolve_ABec,nghostRHS,
     MFInfo().SetTag("CG_Av_search"),FArrayBoxFactory());
   CG_p_search[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-    nsolve_bicgstab,nghostRHS,
+    nsolve_ABec,nghostRHS,
     MFInfo().SetTag("CG_p_search"),FArrayBoxFactory());
   CG_p_search_SOLN[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-    nsolve_bicgstab,nghostSOLN,
+    nsolve_ABec,nghostSOLN,
     MFInfo().SetTag("CG_p_search_SOLN"),FArrayBoxFactory());
   CG_v_search[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-    nsolve_bicgstab,nghostRHS,
+    nsolve_ABec,nghostRHS,
     MFInfo().SetTag("CG_v_search"),FArrayBoxFactory());
   CG_rhs_resid_cor_form[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-    nsolve_bicgstab,nghostRHS,
+    nsolve_ABec,nghostRHS,
     MFInfo().SetTag("CG_rhs_resid_cor_form"),FArrayBoxFactory());
   CG_pbdryhom[coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-    nsolve_bicgstab,nghostSOLN,
+    nsolve_ABec,nghostSOLN,
     MFInfo().SetTag("CG_pbdryhom"),FArrayBoxFactory());
 
  } // coarsefine=0..CG_numlevels_var-1
@@ -1250,7 +1212,6 @@ ABecLaplacian::ABecLaplacian (
 
  ParmParse ppcg("cg");
 
- ppcg.query("abec_use_bicgstab", abec_use_bicgstab);
  ppcg.query("mglib_blocking_factor", mglib_blocking_factor);
  if (mglib_blocking_factor>=2) {
   // do nothing
@@ -1348,16 +1309,6 @@ ABecLaplacian::~ABecLaplacian ()
  MG_pbdryhom=(MultiFab*)0;
 
  for (int coarsefine=0;coarsefine<CG_numlevels_var;coarsefine++) {
-  for (int j=0;j<gmres_precond_iter_base_mg;j++) {
-   delete GMRES_V_MF[j][coarsefine];
-   GMRES_V_MF[j][coarsefine]=(MultiFab*)0;
-   delete GMRES_U_MF[j][coarsefine];
-   GMRES_U_MF[j][coarsefine]=(MultiFab*)0;
-   delete GMRES_Z_MF[j][coarsefine];
-   GMRES_Z_MF[j][coarsefine]=(MultiFab*)0;
-  }
-  delete GMRES_W_MF[coarsefine];
-  GMRES_W_MF[coarsefine]=(MultiFab*)0;
 
   delete CG_delta_sol[coarsefine];
   CG_delta_sol[coarsefine]=(MultiFab*)0;
@@ -1426,11 +1377,11 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  int ncwork=AMREX_SPACEDIM*3+SCALAR_WORK_NCOMP;
 
  int nctest = work.nComp();
- if (nctest!=ncwork*nsolve_bicgstab)
+ if (nctest!=ncwork*nsolve_ABec)
   amrex::Error("ncwork invalid");
 
  int nc = solnL.nComp();
- if (nc!=nsolve_bicgstab)
+ if (nc!=nsolve_ABec)
   amrex::Error("nc bust");
  int ngrow=solnL.nGrow();
  if (ngrow<1)
@@ -1526,7 +1477,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
 
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
+   for (int veldir=0;veldir<nsolve_ABec;veldir++) {
 
 #if (profile_solver==1)
     std::string subname="GSRB";
@@ -1595,7 +1546,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
 #if (profile_solver==1)
     bprof.stop();
 #endif
-   } // veldir=0...nsolve_bicgstab-1
+   } // veldir=0...nsolve_ABec-1
 
    if (gsrb_timing==1) {
     t2 = ParallelDescriptor::second();
@@ -1630,11 +1581,11 @@ ABecLaplacian::Fapply (MultiFab& y,
  int ncwork=AMREX_SPACEDIM*3+SCALAR_WORK_NCOMP;
 
  int nctest = work.nComp();
- if (nctest!=ncwork*nsolve_bicgstab)
+ if (nctest!=ncwork*nsolve_ABec)
   amrex::Error("ncwork invalid");
 
  int nc = y.nComp();
- if (nc!=nsolve_bicgstab)
+ if (nc!=nsolve_ABec)
   amrex::Error("nc bust");
  int ngrow_y=y.nGrow();
  if (ngrow_y!=0) {
@@ -1674,7 +1625,7 @@ ABecLaplacian::Fapply (MultiFab& y,
  int redsolncomp=rhssavecomp+1;
  int blacksolncomp=redsolncomp+1;
 
- if (work.nComp()<=blacksolncomp*nsolve_bicgstab)
+ if (work.nComp()<=blacksolncomp*nsolve_ABec)
   amrex::Error("work.nComp() invalid");
 
  int number_grids=gbox[level].size();
@@ -1712,7 +1663,7 @@ ABecLaplacian::Fapply (MultiFab& y,
 
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
+  for (int veldir=0;veldir<nsolve_ABec;veldir++) {
 
 #if (profile_solver==1)
    std::string subname="ADOTX";
@@ -1762,7 +1713,7 @@ ABecLaplacian::Fapply (MultiFab& y,
 #if (profile_solver==1)
    bprof.stop();
 #endif
-  } // veldir=0..nsolve_bicgstab-1
+  } // veldir=0..nsolve_ABec-1
  } // mfi
 } // omp
 
@@ -1804,7 +1755,7 @@ ABecLaplacian::LP_update (MultiFab& sol,
 
  const BoxArray& gboxlev = gbox[level];
  int ncomp = sol.nComp();
- if (ncomp==nsolve_bicgstab) {
+ if (ncomp==nsolve_ABec) {
   // do nothing
  } else
   amrex::Error("ncomp invalid");
@@ -1845,7 +1796,7 @@ ABecLaplacian::LP_update (MultiFab& sol,
 
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
+  for (int veldir=0;veldir<nsolve_ABec;veldir++) {
 
 #if (profile_solver==1)
    std::string subname="CGUPDATE";
@@ -1881,7 +1832,7 @@ ABecLaplacian::LP_update (MultiFab& sol,
 #if (profile_solver==1)
    bprof.stop();
 #endif
-  } // veldir=0 ... nsolve_bicgstab-1
+  } // veldir=0 ... nsolve_ABec-1
  } // mfi
 } // omp
 
@@ -1958,9 +1909,9 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
 
  const BoxArray& gboxlev = gbox[level_in];
  int ncomp = p_in.nComp();
- if (ncomp!=nsolve_bicgstab)
+ if (ncomp!=nsolve_ABec)
   amrex::Error("ncomp invalid p_in");
- if (w_in.nComp()!=nsolve_bicgstab)
+ if (w_in.nComp()!=nsolve_ABec)
   amrex::Error("ncomp invalid w_in");
 
  if (p_in.boxArray()==w_in.boxArray()) {
@@ -2121,8 +2072,8 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
 
  } else if (laplacian_solvability==1) { // system is singular
 
-  if (nsolve_bicgstab!=1)
-   amrex::Error("nsolve_bicgstab invalid");
+  if (nsolve_ABec!=1)
+   amrex::Error("nsolve_ABec invalid");
 
   if ((rhsL.nComp()==1)&&
       (laplacian_ones[level]->nComp()==1)) {
@@ -2240,7 +2191,7 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
  const MultiFab& bY  = *bcoefs[level][1];
  const MultiFab& bZ  = *bcoefs[level][AMREX_SPACEDIM-1];
  int nc = y.nComp();
- if (nc!=nsolve_bicgstab)
+ if (nc!=nsolve_ABec)
   amrex::Error("nc bust");
 
  int bfact=bfact_array[level];
@@ -2275,7 +2226,7 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
 
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
+  for (int veldir=0;veldir<nsolve_ABec;veldir++) {
 
 #if (profile_solver==1)
    std::string subname="DIAGSUM";
@@ -2361,10 +2312,10 @@ ABecLaplacian::pcg_solve(
  project_null_space(*r_in,level);
 
  // z=K^{-1} r
- z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+ z_in->setVal(0.0,0,nsolve_ABec,nghostSOLN);
  if (use_PCG==0) {
   MultiFab::Copy(*z_in,
-		 *r_in,0,0,nsolve_bicgstab,nghostRHS);
+		 *r_in,0,0,nsolve_ABec,nghostRHS);
  } else if (use_PCG==1) {
   if ((CG_use_mg_precond_at_top==1)&&
       (level==0)&&
@@ -2414,455 +2365,6 @@ ABecLaplacian::pcg_solve(
  }
 
 } // subroutine pcg_solve
-
-
-
-// z=K^{-1}r
-// z=project_null_space(z)
-void
-ABecLaplacian::pcg_MULTI_solve(
-    int gmres_precond_iter,
-    MultiFab* z_in,
-    MultiFab* r_in,
-    Real eps_abs,Real bot_atol,
-    MultiFab* pbdryhom_in,
-    Vector<int> bcpres_array,
-    int usecg_at_bottom,
-    int smooth_type,int bottom_smooth_type,
-    int presmooth,int postsmooth,
-    int use_PCG,
-    int level,
-    int caller_id) {
-
-#if (profile_solver==1)
- std::string subname="ABecLaplacian::pcg_MULTI_solve";
- std::stringstream popt_string_stream(std::stringstream::in |
-      std::stringstream::out);
- popt_string_stream << cfd_project_option;
- std::string profname=subname+popt_string_stream.str();
- profname=profname+"_";
- std::stringstream lev_string_stream(std::stringstream::in |
-      std::stringstream::out);
- lev_string_stream << level;
- profname=profname+lev_string_stream.str();
-
- BLProfiler bprof(profname);
-
- bprof.stop();
-#endif
-
- if (nsolve_bicgstab>=1) {
-  // do nothing
- } else
-  amrex::Error("nsolve_bicgstab invalid");
-
- if (gmres_precond_iter_base_mg>=1) {
-  // do nothing
- } else
-  amrex::Error("gmres_precond_iter_base_mg invalid");
-
- int coarsefine=0;
- if (level==0) {
-  coarsefine=0;
- } else if ((level==MG_numlevels_var-1)&&(CG_numlevels_var==2)) {
-  coarsefine=1;
- } else
-  amrex::Error("level invalid");
-
- project_null_space(*r_in,level);
-
- // z=K^{-1} r
- z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-
- if (gmres_precond_iter==0) {
-   // Z=M^{-1}R
-   // z=project_null_space(z)
-   // first calls: z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN)
-  pcg_solve(
-   z_in,r_in,
-   eps_abs,bot_atol,
-   pbdryhom_in,
-   bcpres_array,
-   usecg_at_bottom,
-   smooth_type,bottom_smooth_type,
-   presmooth,postsmooth,
-   use_PCG,
-   level,1);
-
- } else if ((gmres_precond_iter>0)&&
-            (gmres_precond_iter<=gmres_max_iter)) {
-
-  GMRES_V_MF[0][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-  GMRES_Z_MF[0][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-
-  MultiFab::Copy(*GMRES_V_MF[0][coarsefine],*r_in,
-                 0,0,nsolve_bicgstab,nghostRHS);
-
-  for (int vcycle_iter=0;vcycle_iter<gmres_precond_iter;vcycle_iter++) {
-
-   // Z=M^{-1}R
-   // z=project_null_space(z)
-   pcg_solve(
-    GMRES_Z_MF[0][coarsefine],
-    GMRES_V_MF[0][coarsefine],
-    eps_abs,bot_atol,
-    pbdryhom_in,
-    bcpres_array,
-    usecg_at_bottom,
-    smooth_type,bottom_smooth_type,
-    presmooth,postsmooth,
-    use_PCG,
-    level,1);
-
-   // z_in=_z_in+GMRES_Z_MF
-   // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost
-   z_in->ParallelAdd(*GMRES_Z_MF[0][coarsefine],0,0,nsolve_bicgstab,0,0);
-   project_null_space(*z_in,level);
-   GMRES_Z_MF[0][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-   // resid,rhs,soln
-   residual((*GMRES_V_MF[0][coarsefine]),  // resid
-            (*r_in),  // rhs
-            (*z_in),  // soln
-            level,
-            (*pbdryhom_in),bcpres_array);
-   project_null_space((*GMRES_V_MF[0][coarsefine]),level);
-  } // vcycle_iter=0...gmres_precond_iter-1
- } else
-  amrex::Error("gmres_precond_iter invalid");
-
- project_null_space(*z_in,level);
-
- if (CG_verbose>2) {
-  std::cout << "end of pcg_MULTI_solve level=" << level << '\n';
-  std::cout << "end of pcg_MULTI_solve caller_id=" << caller_id << '\n';
- }
-
-} // subroutine pcg_MULTI_solve
-
-
-
-// z=K^{-1}r
-void
-ABecLaplacian::pcg_GMRES_solve(
-    int gmres_precond_iter,
-    MultiFab* z_in,
-    MultiFab* r_in,
-    Real eps_abs,Real bot_atol,
-    MultiFab* pbdryhom_in,
-    Vector<int> bcpres_array,
-    int usecg_at_bottom,
-    int smooth_type,int bottom_smooth_type,
-    int presmooth,int postsmooth,
-    int use_PCG,
-    int level,
-    int nit) {
-
- int caller_id=0;
-
- if (nsolve_bicgstab>=1) {
-  // do nothing
- } else
-  amrex::Error("nsolve_bicgstab invalid");
-
- if (gmres_precond_iter_base_mg>=1) {
-  // do nothing
- } else
-  amrex::Error("gmres_precond_iter_base_mg invalid");
-
- int coarsefine=0;
- if (level==0) {
-  coarsefine=0;
- } else if ((level==MG_numlevels_var-1)&&(CG_numlevels_var==2)) {
-  coarsefine=1;
- } else
-  amrex::Error("level invalid");
-
- project_null_space((*r_in),level);
-
- // z=K^{-1} r
- z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-
- if (gmres_precond_iter==0) {
-   // Z=M^{-1}R
-   // z=project_null_space(z)
-   // first calls: z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN)
-  pcg_solve(
-   z_in,r_in,
-   eps_abs,bot_atol,
-   pbdryhom_in,
-   bcpres_array,
-   usecg_at_bottom,
-   smooth_type,bottom_smooth_type,
-   presmooth,postsmooth,
-   use_PCG,
-   level,1);
-
- } else if ((gmres_precond_iter>0)&&
-            (gmres_precond_iter<=gmres_max_iter)) {
-
-  int m=gmres_precond_iter;
-
-  Real beta=0.0;
-  LP_dot(*r_in,*r_in,level,beta);
-
-  if (beta>0.0) {
-
-   beta=sqrt(beta);
-
-   GMRES_V_MF[0][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-   GMRES_Z_MF[0][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-
-   Real aa=1.0/beta;
-    // V0=V0+aa R = R/||R||
-   CG_advance((*GMRES_V_MF[0][coarsefine]),aa,
-              (*GMRES_V_MF[0][coarsefine]),(*r_in),level);
-   project_null_space((*GMRES_V_MF[0][coarsefine]),level);
-
-    // H_j is a j+2 x j+1 matrix  j=0..m-1
-   Real** HH=new Real*[m+1];
-   for (int i=0;i<m+1;i++) { 
-    HH[i]=new Real[m];
-    for (int j=0;j<m;j++) 
-     HH[i][j]=0.0;
-   }
-
-   Real* yy=new Real[m];
-   Real* beta_e1=new Real[2*(m+1)];
-   for (int j=0;j<2*(m+1);j++)
-    beta_e1[j]=0.0;
-   beta_e1[0]=beta;
-
-   int status=1;
-
-   int m_small=m;
-
-   for (int j=1;j<m;j++) {
-    if (j>=gmres_precond_iter_base_mg) {
-     GMRES_V_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-      nsolve_bicgstab,nghostRHS,
-      MFInfo().SetTag("GMRES_V_MF"),FArrayBoxFactory()); 
-     GMRES_Z_MF[j][coarsefine]=new MultiFab(gbox[level],dmap_array[level],
-      nsolve_bicgstab,nghostSOLN,
-      MFInfo().SetTag("GMRES_Z_MF"),FArrayBoxFactory()); 
-    }
-
-    GMRES_V_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-    GMRES_Z_MF[j][coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-   } // j=1..m 
-
-   for (int j=0;j<m_small;j++) {
-
-    GMRES_W_MF[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS);
-
-     // Zj=M^{-1}Vj
-     // Z=project_null_space(Z)
-     // Vj is a normalized vector
-    pcg_solve(
-     GMRES_Z_MF[j][coarsefine],
-     GMRES_V_MF[j][coarsefine],
-     eps_abs,bot_atol,
-     pbdryhom_in,
-     bcpres_array,
-     usecg_at_bottom,
-     smooth_type,bottom_smooth_type,
-     presmooth,postsmooth,
-     use_PCG,
-     level,2);
-
-    // w=A Z
-    apply(*GMRES_W_MF[coarsefine],
-         *GMRES_Z_MF[j][coarsefine],
-         level,*pbdryhom_in,bcpres_array);
-    project_null_space(*GMRES_W_MF[coarsefine],level);
-
-    for (int i=0;i<=j;i++) {
-     LP_dot(*GMRES_W_MF[coarsefine],
-            *GMRES_V_MF[i][coarsefine],level,HH[i][j]);
-
-     aa=-HH[i][j];
-      // W=W+aa Vi
-     CG_advance((*GMRES_W_MF[coarsefine]),aa,
-                (*GMRES_W_MF[coarsefine]),
-                (*GMRES_V_MF[i][coarsefine]),level);
-     project_null_space(*GMRES_W_MF[coarsefine],level);
-    } // i=0..j
-
-    LP_dot(*GMRES_W_MF[coarsefine],
-           *GMRES_W_MF[coarsefine],level,HH[j+1][j]);
-
-    if (HH[j+1][j]>=0.0) {
-     HH[j+1][j]=sqrt(HH[j+1][j]);
-    } else
-     amrex::Error("HH[j+1][j] invalid");
-     
-    if (HH[j+1][j]>KRYLOV_NORM_CUTOFF) {
-
-     status=1;
-
-     if ((j>=0)&&(j<m_small)) {
-      caller_id=33;
-      GMRES_MIN_CPP(HH,beta,yy,
-       m,j+1,
-       caller_id,cfd_project_option,
-       level,status);
-     } else
-      amrex::Error("j invalid");
-
-     if (status==1) {
- 
-      if ((j>=0)&&(j<m-1)) {
-       aa=1.0/HH[j+1][j];
-        // V=V+aa W
-       CG_advance((*GMRES_V_MF[j+1][coarsefine]),aa,
-                  (*GMRES_V_MF[j+1][coarsefine]),
-                  (*GMRES_W_MF[coarsefine]),level);
-       project_null_space(*GMRES_V_MF[j+1][coarsefine],level);
-      } else if (j==m-1) {
-       // do nothing
-      } else
-       amrex::Error("j invalid");
-
-     } else if (status==0) {
-
-      m_small=j;
-
-      if (1==0) {
-       std::cout << "j= " << j << " HH[j][j]= " <<
-         HH[j][j] << endl;
-       std::cout << "j= " << j << " HH[j+1][j]= " <<
-         HH[j+1][j] << endl;
-       std::cout << "j= " << j << " beta= " << beta << endl;
-      }
-
-     } else
-      amrex::Error("status invalid");
-
-    } else if ((HH[j+1][j]>=0.0)&&(HH[j+1][j]<=KRYLOV_NORM_CUTOFF)) {
-     m_small=j;
-    } else {
-     std::cout << "HH[j+1][j]= " << HH[j+1][j] << '\n';
-     amrex::Error("HH[j+1][j] invalid");
-    }
-
-   } // j=0..m_small-1
- 
-   status=1;
-
-   if ((m_small>=1)&&
-       (m_small<=m)) {
-
-    caller_id=3;
-    GMRES_MIN_CPP(HH,beta,yy,
-      m,m_small,
-      caller_id,cfd_project_option,
-      level,status);
-
-    if (status==1) {
-     // do nothing
-    } else
-     amrex::Error("expecting status==1 here");
-
-   } else if (m_small==0) {
-
-    // Z=M^{-1}R
-    // Z=project_null_space(Z)
-    // first calls: z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN)
-    pcg_solve(
-     z_in,r_in,
-     eps_abs,bot_atol,
-     pbdryhom_in,
-     bcpres_array,
-     usecg_at_bottom,
-     smooth_type,bottom_smooth_type,
-     presmooth,postsmooth,
-     use_PCG,
-     level,3);
-
-   } else {
-    std::cout << "m_small= " << m_small << '\n';
-    amrex::Error("CGSolver.cpp m_small invalid");
-   }
- 
-   if (status==1) {
-    z_in->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
-    for (int j=0;j<m_small;j++) {
-     aa=yy[j];
-      // Z=Z+aa Zj
-     CG_advance((*z_in),aa,(*z_in),
-                (*GMRES_Z_MF[j][coarsefine]),level);
-     project_null_space((*z_in),level);
-    }
-   } else
-    amrex::Error("status invalid");
-
-   for (int j=gmres_precond_iter_base_mg;j<m;j++) {
-    delete GMRES_V_MF[j][coarsefine];
-    delete GMRES_Z_MF[j][coarsefine];
-    GMRES_V_MF[j][coarsefine]=(MultiFab*)0;
-    GMRES_Z_MF[j][coarsefine]=(MultiFab*)0;
-   }
-
-   delete [] yy;
-   delete [] beta_e1;
-
-   for (int i=0;i<m+1;i++) 
-    delete [] HH[i];
-   delete [] HH;
-
-  } else if (beta==0.0) {
-
-   // Z=M^{-1}R
-   // z=project_null_space(z)
-   pcg_solve(
-    z_in,r_in,
-    eps_abs,bot_atol,
-    pbdryhom_in,
-    bcpres_array,
-    usecg_at_bottom,
-    smooth_type,bottom_smooth_type,
-    presmooth,postsmooth,
-    use_PCG,
-    level,6);
-
-  } else
-   amrex::Error("beta invalid");
-  
- } else {
-  std::cout << "gmres_precond_iter= " << gmres_precond_iter << '\n';
-  std::cout << "level= " << level << '\n';
-  std::cout << "cfd_project_option= " << cfd_project_option << '\n';
-  std::cout << "cfd_mglib_min_coeff_factor= " << 
-	  cfd_mglib_min_coeff_factor << '\n';
-  std::cout << "MG_numlevels_var= " << MG_numlevels_var << '\n';
-  std::cout << "CG_numlevels_var= " << CG_numlevels_var << '\n';
-
-  int dump_size=CG_error_history.size();
-  if (nit+1<dump_size)
-   dump_size=nit+1;
-  for (int ehist=0;ehist<dump_size;ehist++) {
-   std::cout << "nit " << ehist << " CG_error_history coarsefine " <<
-     coarsefine << " rnorm=" <<
-     CG_error_history[ehist][2*coarsefine+0] << " eps_abs=" <<
-     CG_error_history[ehist][2*coarsefine+1] << '\n';
-   std::cout << "nit " << ehist << " CG_A_error_history coarsefine " <<
-     coarsefine << " Ar_norm=" <<
-     CG_A_error_history[ehist][2*coarsefine+0] << " eps_abs=" <<
-     CG_A_error_history[ehist][2*coarsefine+1] << '\n';
-   std::cout << "nit " << ehist << " CG_rAr_error_history coarsefine " <<
-     coarsefine << " rAr_norm=" <<
-     CG_rAr_error_history[ehist][2*coarsefine+0] << " eps_abs=" <<
-     CG_rAr_error_history[ehist][2*coarsefine+1] << '\n';
-  }
-
-  amrex::Error("ABecLaplacian.cpp: gmres_precond_iter invalid");
- }
-
-  // if v in nullspace(A) then we require that the solution satisfies:
-  // z dot v = 0 which will desingularize the matrix system.
-  // (z=z0 + c v,  z dot v=0 => c=-z0 dot v/(v dot v)
- project_null_space((*z_in),level);
-
-} // subroutine pcg_GMRES_solve
 
 void 
 ABecLaplacian::CG_check_for_convergence(
@@ -3037,7 +2539,7 @@ ABecLaplacian::CG_dump_params(
 	  cfd_mglib_min_coeff_factor << '\n';
   std::cout << "laplacian_solvability= " << 
           laplacian_solvability << '\n';
-  std::cout << "nsolve_bicgstab= " << nsolve_bicgstab << '\n';
+  std::cout << "nsolve_ABec= " << nsolve_ABec << '\n';
   std::cout << "gbox[0].size()= " << gbox[0].size() << '\n';
   std::cout << "numLevels()= " << MG_numlevels_var << '\n';
   std::cout << "mf1.boxArray()= " << mf1.boxArray() << '\n';
@@ -3126,10 +2628,10 @@ ABecLaplacian::CG_solve(
  Real relative_error=1.0e-12;
 
  int ncomp = sol.nComp();
- if (ncomp!=nsolve_bicgstab)
+ if (ncomp!=nsolve_ABec)
   amrex::Error("ncomp invalid");
 
- CG_pbdryhom[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+ CG_pbdryhom[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostSOLN);
 
 #if (profile_solver==1)
  bprof.stop();
@@ -3138,9 +2640,9 @@ ABecLaplacian::CG_solve(
  project_null_space(rhs,level);
  project_null_space(sol,level);
 
- CG_rhs_resid_cor_form[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
+ CG_rhs_resid_cor_form[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostRHS); 
  MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
-   rhs,0,0,nsolve_bicgstab,nghostRHS);
+   rhs,0,0,nsolve_ABec,nghostRHS);
 
  if ((CG_verbose>0)||(nsverbose>0)||(1==0))
   if (ParallelDescriptor::IOProcessor())
@@ -3153,14 +2655,14 @@ ABecLaplacian::CG_solve(
  project_null_space((*CG_r[coarsefine]),level);
 
   // put solution and residual in residual correction form
- CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_bicgstab,1);
+ CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_ABec,1);
  MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
-   *CG_r[coarsefine],0,0,nsolve_bicgstab,nghostRHS);
+   *CG_r[coarsefine],0,0,nsolve_ABec,nghostRHS);
 
  Real rnorm = LPnorm(*CG_r[coarsefine], level);
 
  MultiFab::Copy(*CG_p_search_SOLN[coarsefine],
-       *CG_r[coarsefine],0,0,nsolve_bicgstab,0);
+       *CG_r[coarsefine],0,0,nsolve_ABec,0);
  apply(*CG_Av_search[coarsefine],
        *CG_p_search_SOLN[coarsefine],level,
        *CG_pbdryhom[coarsefine],bcpres_array);
@@ -3226,7 +2728,7 @@ ABecLaplacian::CG_solve(
   amrex::Error("CG_use_mg_precond_at_top invalid");
  }
 
- if (CG_z[coarsefine]->nComp()!=nsolve_bicgstab)
+ if (CG_z[coarsefine]->nComp()!=nsolve_ABec)
   amrex::Error("ncomp invalid");
 
  Real beta=0.0;
@@ -3234,13 +2736,12 @@ ABecLaplacian::CG_solve(
  Real rho_old=1.0;
  Real omega=1.0;
  Real alpha=1.0;
- CG_p_search_SOLN[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN); 
- CG_p_search[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
- CG_v_search[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
+ CG_p_search_SOLN[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostSOLN); 
+ CG_p_search[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostRHS); 
+ CG_v_search[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostRHS); 
 
  Real restart_tol=0.0;
  int restart_flag=0;
- int gmres_precond_iter=gmres_precond_iter_base_mg;
 
  int local_presmooth=presmooth;
  int local_postsmooth=postsmooth;
@@ -3288,8 +2789,6 @@ ABecLaplacian::CG_solve(
   }
  }
 
- int local_use_bicgstab=abec_use_bicgstab;
-
  for(nit = 0;((nit < CG_maxiter)&&(error_close_to_zero!=1)); ++nit) {
 
   restart_flag=0;
@@ -3305,7 +2804,7 @@ ABecLaplacian::CG_solve(
   }
 
   MultiFab::Copy(*CG_p_search_SOLN[coarsefine],
-       *CG_r[coarsefine],0,0,nsolve_bicgstab,0);
+       *CG_r[coarsefine],0,0,nsolve_ABec,0);
   apply(*CG_Av_search[coarsefine],
        *CG_p_search_SOLN[coarsefine],level,
        *CG_pbdryhom[coarsefine],bcpres_array);
@@ -3371,11 +2870,9 @@ ABecLaplacian::CG_solve(
    } else
     amrex::Error("nit invalid");
 
-   if (local_use_bicgstab==0) { //MGPCG
-
-    // z=K^{-1} r
-    // z=project_null_space(z)
-    pcg_solve(
+   // z=K^{-1} r
+   // z=project_null_space(z)
+   pcg_solve(
      CG_z[coarsefine],
      CG_r[coarsefine],
      eps_abs,bot_atol,
@@ -3388,9 +2885,9 @@ ABecLaplacian::CG_solve(
      level,nit);
 
      // rho=z dot r
-    LP_dot(*CG_z[coarsefine],*CG_r[coarsefine],level,rho); 
+   LP_dot(*CG_z[coarsefine],*CG_r[coarsefine],level,rho); 
 
-    if (rho>=0.0) {
+   if (rho>=0.0) {
      if (rho_old>restart_tol) {
       beta=rho/rho_old;
        // CG_p_search=0 initially or on restart.
@@ -3401,7 +2898,7 @@ ABecLaplacian::CG_solve(
 
        // Av_search=A*p
       MultiFab::Copy(*CG_p_search_SOLN[coarsefine],
-       *CG_p_search[coarsefine],0,0,nsolve_bicgstab,0);
+       *CG_p_search[coarsefine],0,0,nsolve_ABec,0);
 
       apply(*CG_Av_search[coarsefine],
 	    *CG_p_search_SOLN[coarsefine],level,
@@ -3444,7 +2941,6 @@ ABecLaplacian::CG_solve(
         std::cout << "level (mglib)= " << level << endl;
         std::cout << "mglib_blocking_factor= " << 
           mglib_blocking_factor << endl;
-        std::cout << "local_use_bicgstab= " << local_use_bicgstab << endl;
         std::cout << "smooth_type= " << smooth_type << endl;
         std::cout << "bottom_smooth_type= " << bottom_smooth_type << endl;
         std::cout << "local_presmooth= " << local_presmooth << endl;
@@ -3467,7 +2963,6 @@ ABecLaplacian::CG_solve(
        std::cout << "level (mglib)= " << level << endl;
        std::cout << "mglib_blocking_factor= " << 
          mglib_blocking_factor << endl;
-       std::cout << "local_use_bicgstab= " << local_use_bicgstab << endl;
        std::cout << "smooth_type= " << smooth_type << endl;
        std::cout << "bottom_smooth_type= " << bottom_smooth_type << endl;
        std::cout << "local_presmooth= " << local_presmooth << endl;
@@ -3485,189 +2980,12 @@ ABecLaplacian::CG_solve(
       restart_flag=1;
      } else
       amrex::Error("rho_old invalid");
-    } else if (rho<0.0) {
+   } else if (rho<0.0) {
      restart_flag=1;
-    } else {
+   } else {
      std::cout << "rho= " << rho << '\n';
      amrex::Error("rho invalid mglib, cg");
-    }
-
-   } else if (local_use_bicgstab==1) { //MG-GMRES PCG
-
-     // rho=r0 dot r
-    LP_dot(*CG_rhs_resid_cor_form[coarsefine],*CG_r[coarsefine],level,rho); 
-
-    if (rho>=0.0) {
-     if ((rho_old>restart_tol)&&(omega>restart_tol)) {
-      beta=rho*alpha/(rho_old*omega);
-       // p=p - omega v
-      CG_advance( (*CG_p_search[coarsefine]),-omega,
-        (*CG_p_search[coarsefine]),
-        (*CG_v_search[coarsefine]),level );
-       // p=r + beta p
-      CG_advance( (*CG_p_search[coarsefine]),beta,(*CG_r[coarsefine]),
-               (*CG_p_search[coarsefine]),level );
-      project_null_space((*CG_p_search[coarsefine]),level);
-       // z=K^{-1} p
-       // z=project_null_space(z)
-      pcg_GMRES_solve(
-       gmres_precond_iter,
-       CG_z[coarsefine],
-       CG_p_search[coarsefine],
-       eps_abs,bot_atol,
-       CG_pbdryhom[coarsefine],
-       bcpres_array,
-       usecg_at_bottom,
-       smooth_type,bottom_smooth_type,
-       local_presmooth,local_postsmooth,
-       use_PCG,level,nit);
-       // v_search=A*z 
-      apply(*CG_v_search[coarsefine],
-            *CG_z[coarsefine],level,
-            *CG_pbdryhom[coarsefine],bcpres_array);
-      project_null_space((*CG_v_search[coarsefine]),level);
-     } else if ((rho_old<=restart_tol)||(omega<=restart_tol)) {
-      restart_flag=1;
-     } else
-      amrex::Error("rho_old or omega invalid");
-    } else if (rho<0.0) {
-     restart_flag=1;
-    } else
-     amrex::Error("rho invalid mglib");
-
-    if (restart_flag==0) {
-     LP_dot(*CG_rhs_resid_cor_form[coarsefine],
-            *CG_v_search[coarsefine],level,alpha);
-
-     if (alpha>restart_tol) {
-      alpha=rho/alpha;
-
-       // x=x+alpha z
-      LP_update( (*CG_delta_sol[coarsefine]), alpha, 
-                 (*CG_delta_sol[coarsefine]),
-		 (*CG_z[coarsefine]),level );
-      project_null_space((*CG_delta_sol[coarsefine]),level);
-      residual((*CG_r[coarsefine]),(*CG_rhs_resid_cor_form[coarsefine]),
-        (*CG_delta_sol[coarsefine]),
-	level,
-        *CG_pbdryhom[coarsefine],
-        bcpres_array); 
-      project_null_space((*CG_r[coarsefine]),level);
-
-      rnorm=LPnorm(*CG_r[coarsefine],level);
-      if (rnorm>=0.0) {
-       rnorm=sqrt(rnorm);
-      } else {
-       amrex::Error("rnorm invalid mglib");
-      }
-
-      MultiFab::Copy(*CG_p_search_SOLN[coarsefine],
-       *CG_r[coarsefine],0,0,nsolve_bicgstab,0);
-      apply(*CG_Av_search[coarsefine],
-       *CG_p_search_SOLN[coarsefine],level,
-       *CG_pbdryhom[coarsefine],bcpres_array);
-      project_null_space((*CG_Av_search[coarsefine]),level);
-
-      Ar_norm = LPnorm(*CG_Av_search[coarsefine],level);
-
-      LP_dot(*CG_Av_search[coarsefine],*CG_r[coarsefine],level,rAr_norm); 
-      if (rAr_norm<0.0) {
-       rAr_norm=0.0;
-      } else if (rAr_norm>=0.0) {
-       rAr_norm=sqrt(rAr_norm);
-      } else
-       amrex::Error("rAr_norm invalid");
-
-      CG_check_for_convergence(
-        coarsefine,
-        local_presmooth,local_postsmooth,
-	rnorm,
-	rnorm_init,
-	Ar_norm,
-	Ar_norm_init,
-	rAr_norm,
-	rAr_norm_init,
-	eps_abs,relative_error,nit,
-        error_close_to_zero,level);
-
-      if ((error_close_to_zero==0)||  // tolerances not met.
-          (error_close_to_zero==2)) { // normal tolerance met, nit<nit_min
-       // z=K^{-1} r
-       // z=project_null_space(z)
-       pcg_GMRES_solve(
-        gmres_precond_iter,
-        CG_z[coarsefine],
-	CG_r[coarsefine],
-	eps_abs,bot_atol,
-	CG_pbdryhom[coarsefine],
-	bcpres_array,
-        usecg_at_bottom,
-	smooth_type,bottom_smooth_type,
-        local_presmooth,local_postsmooth,
-	use_PCG,
-	level,nit);
-       // Av_search=A*z
-       apply(*CG_Av_search[coarsefine],
-	     *CG_z[coarsefine],level,
-             *CG_pbdryhom[coarsefine],bcpres_array);
-       project_null_space((*CG_Av_search[coarsefine]),level);
-       Real rAz=0.0;
-       Real zAAz=0.0;
-       // rAz=(Az) dot r =z^T A^T r = z^T A^T K z >=0 if A and K SPD.
-       LP_dot(*CG_Av_search[coarsefine],*CG_r[coarsefine],level,rAz);
-       if (rAz>=0.0) {
-
-        LP_dot(*CG_Av_search[coarsefine],
-               *CG_Av_search[coarsefine],level,zAAz);
-	//Az dot Az >=0 if A SPD
-        if (zAAz>restart_tol) {
-
-         omega=rAz/zAAz;
-	 if (omega>=0.0) {
-	  // do nothing
-	 } else
-	  amrex::Error("omega invalid mglib");
-
-         // x=x+omega z
-         LP_update( (*CG_delta_sol[coarsefine]), omega, 
-                    (*CG_delta_sol[coarsefine]),
-		    (*CG_z[coarsefine]),level );
-         project_null_space((*CG_delta_sol[coarsefine]),level);
-         residual(
-	  (*CG_r[coarsefine]),
-	  (*CG_rhs_resid_cor_form[coarsefine]),
-          (*CG_delta_sol[coarsefine]),
-    	  level,
-          *CG_pbdryhom[coarsefine],
-	  bcpres_array); 
-         project_null_space((*CG_r[coarsefine]),level);
-        } else if ((zAAz>=0.0)&&(zAAz<=restart_tol)) {
-         restart_flag=1;
-	} else if (zAAz<0.0) {
-         restart_flag=1;
-        } else
- 	 amrex::Error("zAAz invalid");
-
-       } else if (rAz<0.0) {
-        restart_flag=1;
-       } else
-        amrex::Error("rAz invalid");
-
-      } else if (error_close_to_zero==1) {
-       // do nothing
-      } else
-       amrex::Error("error_close_to_zero invalid");
-     } else if (alpha<=restart_tol) {
-      restart_flag=1;
-     } else
-      amrex::Error("alpha invalid");
-    } else if (restart_flag==1) {
-     // do nothing
-    } else 
-     amrex::Error("restart_flag invalid");
-
-   } else 
-    amrex::Error("local_use_bicgstab invalid");
+   }
 
    if (restart_flag==1) {
 
@@ -3675,10 +2993,6 @@ ABecLaplacian::CG_solve(
      if (ParallelDescriptor::IOProcessor()) {
       std::cout << "WARNING:RESTARTING: nit= " << nit << '\n';
       std::cout << "WARNING:RESTARTING: level= " << level << '\n';
-      std::cout << "RESTARTING: local_use_bicgstab=" << 
-	      local_use_bicgstab << '\n';
-      std::cout << "RESTARTING: gmres_precond_iter= " << 
-       gmres_precond_iter << '\n';
       std::cout << "RESTARTING: local_presmooth= " <<
         local_presmooth << '\n';
       std::cout << "RESTARTING: local_postsmooth= " <<
@@ -3690,8 +3004,8 @@ ABecLaplacian::CG_solve(
        Ar_norm << '\n';
       std::cout << "RESTARTING: rAr_norm= " << 
        rAr_norm << '\n';
-      std::cout << "RESTARTING: nsolve_bicgstab= " << 
-        nsolve_bicgstab << '\n';
+      std::cout << "RESTARTING: nsolve_ABec= " << 
+        nsolve_ABec << '\n';
      }
     } else if ((CG_verbose==0)&&(nsverbose==0)) {
      // do nothing
@@ -3705,14 +3019,14 @@ ABecLaplacian::CG_solve(
      rho_old=1.0;
      omega=1.0;
      alpha=1.0;
-     CG_p_search[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
-     CG_p_search_SOLN[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN); 
-     CG_v_search[coarsefine]->setVal(0.0,0,nsolve_bicgstab,nghostRHS); 
-     sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_bicgstab,0,0);
+     CG_p_search[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostRHS); 
+     CG_p_search_SOLN[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostSOLN); 
+     CG_v_search[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostRHS); 
+     sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_ABec,0,0);
      project_null_space(sol,level);
-     CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_bicgstab,1);
+     CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_ABec,1);
      MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
-       *CG_r[coarsefine],0,0,nsolve_bicgstab,0);
+       *CG_r[coarsefine],0,0,nsolve_ABec,0);
     } else if (error_close_to_zero==1) {
      amrex::Error("cannot have both restart_flag and error_close_to_zero==1");
     } else
@@ -3728,11 +3042,11 @@ ABecLaplacian::CG_solve(
     } else
      amrex::Error("error_close_to_zero invalid");
 
-    sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_bicgstab,0,0);
+    sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_ABec,0,0);
     project_null_space(sol,level);
-    CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_bicgstab,1);
+    CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_ABec,1);
     MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
-      *CG_r[coarsefine],0,0,nsolve_bicgstab,0);
+      *CG_r[coarsefine],0,0,nsolve_ABec,0);
 
    } else 
     amrex::Error("restart_flag invalid");
@@ -3761,7 +3075,7 @@ ABecLaplacian::CG_solve(
 
   // sol=sol+CG_delta_sol
   // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost
- sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_bicgstab,0,0);
+ sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_ABec,0,0);
  project_null_space(sol,level);
 
  cg_cycles_out=nit;
@@ -3852,7 +3166,7 @@ ABecLaplacian::CG_solve(
   amrex::Error("error_close_to_zero invalid");
  }
 
- if (ncomp!=nsolve_bicgstab)
+ if (ncomp!=nsolve_ABec)
   amrex::Error("ncomp invalid");
 
  if ((CG_verbose>0)||(nsverbose>0)) {
@@ -3867,7 +3181,7 @@ ABecLaplacian::CG_solve(
   }
 
   MultiFab::Copy(*CG_p_search_SOLN[coarsefine],
-       *CG_r[coarsefine],0,0,nsolve_bicgstab,0);
+       *CG_r[coarsefine],0,0,nsolve_ABec,0);
   apply(*CG_Av_search[coarsefine],
        *CG_p_search_SOLN[coarsefine],level,
        *CG_pbdryhom[coarsefine],bcpres_array);
@@ -3919,11 +3233,11 @@ void ABecLaplacian::CG_advance (
     //
     const BoxArray& gbox_local = LPboxArray(level);
     int ncomp = p.nComp();
-    if (ncomp!=nsolve_bicgstab)
+    if (ncomp!=nsolve_ABec)
      amrex::Error("p ncomp invalid");
-    if (z.nComp()!=nsolve_bicgstab)
+    if (z.nComp()!=nsolve_ABec)
      amrex::Error("z ncomp invalid");
-    if (y.nComp()!=nsolve_bicgstab)
+    if (y.nComp()!=nsolve_ABec)
      amrex::Error("y ncomp invalid");
     if ((p.nGrow()!=0)&&(p.nGrow()!=1))
      amrex::Error("p ngrow invalid");
@@ -3968,7 +3282,7 @@ void ABecLaplacian::CG_advance (
 
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
+     for (int veldir=0;veldir<nsolve_ABec;veldir++) {
 
 #if (profile_solver==1)
       std::string subname="CGADVCP";
@@ -4022,7 +3336,7 @@ ABecLaplacian::MG_errorEstimate(int level,
      level,pbdry,bcpres_array);
  MultiFab& resid = *(MG_res[level]);
  int ncomp=resid.nComp();
- if (ncomp!=nsolve_bicgstab)
+ if (ncomp!=nsolve_ABec)
   amrex::Error("ncomp invalid");
 
  Real local_error=sqrt(LPnorm(resid,level));
@@ -4050,7 +3364,7 @@ void ABecLaplacian::MG_residualCorrectionForm (MultiFab& newrhs,
  BLProfiler bprof(profname);
 #endif
 
- if (solnL.nComp()!=nsolve_bicgstab)
+ if (solnL.nComp()!=nsolve_ABec)
   amrex::Error("ncomp invalid");
  if (solnL.nGrow()!=1)
   amrex::Error("solution should have ngrow=1");
@@ -4063,7 +3377,7 @@ void ABecLaplacian::MG_residualCorrectionForm (MultiFab& newrhs,
 #endif
 
  residual(newrhs, oldrhs, solnL, level, pbdry,bcpres_array);
- solnL.setVal(0.0,0,nsolve_bicgstab,1);
+ solnL.setVal(0.0,0,nsolve_ABec,1);
 }
 
 void
@@ -4097,7 +3411,7 @@ ABecLaplacian::MG_solve (int nsverbose,
  MG_residualCorrectionForm(*MG_rhs[level],_rhs,*MG_cor[level],
      _sol,pbdry,bcpres_array,level);
  project_null_space(*MG_rhs[level],level);
- MG_pbdryhom->setVal(0.0,0,nsolve_bicgstab,nghostSOLN);
+ MG_pbdryhom->setVal(0.0,0,nsolve_ABec,nghostSOLN);
 
  MG_solve_(nsverbose,_sol, 
    _eps_abs, _atol_b, 
@@ -4139,7 +3453,7 @@ ABecLaplacian::MG_solve_ (int nsverbose,MultiFab& _sol,
   // absolute err <= _abs_eps
   //
  int ncomp=_sol.nComp();
- if (ncomp!=nsolve_bicgstab)
+ if (ncomp!=nsolve_ABec)
   amrex::Error("ncomp invalid");
 
  const Real error0 = MG_errorEstimate(level,pbdry,bcpres_array);
@@ -4227,7 +3541,7 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
 
 
  int ncomp=solL.nComp();
- if (ncomp!=nsolve_bicgstab)
+ if (ncomp!=nsolve_ABec)
   amrex::Error("ncomp invalid");
 
  int is_bottom=1;
@@ -4306,7 +3620,7 @@ ABecLaplacian::MG_relax (MultiFab& solL,MultiFab& rhsL,
 #endif
 
  int ncomp=solL.nComp();
- if (ncomp!=nsolve_bicgstab)
+ if (ncomp!=nsolve_ABec)
   amrex::Error("ncomp invalid");
 
 #if (profile_solver==1)
@@ -4332,7 +3646,7 @@ ABecLaplacian::MG_relax (MultiFab& solL,MultiFab& rhsL,
   if (!((usecg_at_bottom==0)||(usecg_at_bottom==1)))
    amrex::Error("usecg_at_bottom invalid");
 
-  MG_pbdrycoarser[level+1]->setVal(0.0,0,nsolve_bicgstab,nghostSOLN); 
+  MG_pbdrycoarser[level+1]->setVal(0.0,0,nsolve_ABec,nghostSOLN); 
   for (int i = MG_def_nu_0; i > 0 ; i--) {
    MG_relax(*(MG_cor[level+1]),*(MG_rhs[level+1]),level+1,
     eps_abs,atol_b,usecg_at_bottom,
@@ -4399,7 +3713,7 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
  }
  DistributionMapping crse_dmap=fdmap;
  MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,
-  nsolve_bicgstab,0,
+  nsolve_ABec,0,
   MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
 
  ParallelDescriptor::Barrier();
@@ -4439,11 +3753,11 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
   const Box& tilegrid=mfi.tilebox();
 
   int nc = c.nComp();
-  if ((nc!=nsolve_bicgstab)||
+  if ((nc!=nsolve_ABec)||
       (nc!=f.nComp())||
       (nc!=crse_S_fine.nComp())) {
-   std::cout << "nc,nsolve_bicgstab = " << nc << ' ' << 
-    nsolve_bicgstab << '\n';
+   std::cout << "nc,nsolve_ABec = " << nc << ' ' << 
+    nsolve_ABec << '\n';
    amrex::Error("nc invalid in average");
   }
 
@@ -4460,7 +3774,7 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
 
    // divide by 4 in 2D and 8 in 3D
   int iaverage=1;
-  for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
+  for (int veldir=0;veldir<nsolve_ABec;veldir++) {
     // declared in MG_3D.F90	  
    fort_average(
     coarse_fab.dataPtr(veldir),
@@ -4478,7 +3792,7 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
  thread_class::reconcile_d_numPts(11);
 
- c.copy(crse_S_fine,0,0,nsolve_bicgstab);
+ c.copy(crse_S_fine,0,0,nsolve_ABec);
  ParallelDescriptor::Barrier();
 
 #if (profile_solver==1)
@@ -4532,9 +3846,9 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
  }
 
  DistributionMapping crse_dmap=fdmap;
- MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,nsolve_bicgstab,0,
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,nsolve_ABec,0,
    MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
- crse_S_fine.copy(c,0,0,nsolve_bicgstab);
+ crse_S_fine.copy(c,0,0,nsolve_ABec);
 
  int bfact_coarse=get_bfact_array(clevel);
  int bfact_fine=get_bfact_array(flevel);
@@ -4561,11 +3875,11 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
   const Box& tilegrid=mfi.tilebox();
   const Box& cbox = crse_S_fine_BA[gridno];
   int nc = f.nComp();
-  if ((nc!=nsolve_bicgstab)||
+  if ((nc!=nsolve_ABec)||
       (nc!=c.nComp())||
       (nc!=crse_S_fine.nComp())) {
-   std::cout << "nc,nsolve_bicgstab = " << nc << ' ' << 
-    nsolve_bicgstab << '\n';
+   std::cout << "nc,nsolve_ABec = " << nc << ' ' << 
+    nsolve_ABec << '\n';
    amrex::Error("nc invalid in interpolate");
   }
 
@@ -4583,7 +3897,7 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
 
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  for (int veldir=0;veldir<nsolve_bicgstab;veldir++) {
+  for (int veldir=0;veldir<nsolve_ABec;veldir++) {
     // declared in: MG_3D.F90
    fort_interp(
      &bfact_coarse,&bfact_fine,&bfact_top,

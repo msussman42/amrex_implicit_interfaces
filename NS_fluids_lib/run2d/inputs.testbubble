@@ -37,8 +37,6 @@ mg.visc_bot_atol = 1.0e-10
 mg.rtol_b = -0.01
 #Lp.v = 1
 
-cg.abec_use_bicgstab=0
-ns.always_use_bicgstab=0
 ns.mglib_min_coeff_factor=1000.0
 
 ns.projection_pressure_scale=1.0e+6

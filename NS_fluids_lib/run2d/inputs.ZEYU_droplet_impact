@@ -22,8 +22,6 @@ mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 9000
 ns.post_init_pressure_solve=1  # make sure initial velocity is solonoidal
-cg.abec_use_bicgstab=0  # Multigrid PCG best for bottom solver.
-ns.always_use_bicgstab=0  # Probably PCG best for "main" solver too
                           # once fixes are complete.
                           # note: BICGSTAB must be used for "top" solver
                           # if doing the spectral element method, but 

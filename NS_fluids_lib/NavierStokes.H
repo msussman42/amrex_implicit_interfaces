@@ -2078,7 +2078,6 @@ protected:
     static Real visc_abs_tol;
     static Real thermal_abs_tol;
 
-    static int always_use_bicgstab;
     static int  viscous_maxiter;
     static int  multilevel_maxcycle;
     static int  initial_project_cycles;

@@ -58,7 +58,6 @@ ns.num_divu_outer_sweeps=1
 
 ns.minimum_relative_error=1.0e-22
 
-ns.gmres_precond_iter_base=4
 ns.initial_project_cycles=5   # initial jacobi iterations
 ns.initial_cg_cycles=10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I

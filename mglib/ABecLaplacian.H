@@ -72,32 +72,6 @@ public:
      int level, 
      int caller_id);
 
-    void pcg_MULTI_solve(
-     int gmres_precond_iter,
-     MultiFab* z,MultiFab* r,
-     Real eps_abs,Real bot_atol,
-     MultiFab* pbdryhom,
-     Vector<int> bcpres_array,
-     int usecg_at_bottom,
-     int smooth_type,int bottom_smooth_type,
-     int presmooth,int postsmooth,
-     int use_PCG,
-     int level, 
-     int caller_id);
-
-    void pcg_GMRES_solve(
-     int gmres_precond_iter,
-     MultiFab* z,MultiFab* r,
-     Real eps_abs,Real bot_atol,
-     MultiFab* pbdryhom,
-     Vector<int> bcpres_array,
-     int usecg_at_bottom,
-     int smooth_type,int bottom_smooth_type,
-     int presmooth,int postsmooth,
-     int use_PCG,
-     int level,
-     int nit);
-
     void CG_solve(
       int& cg_cycles_out,
       int nsverbose,int is_bottom,
@@ -266,10 +240,6 @@ protected:
 
  Vector< Array< MultiFab*, AMREX_SPACEDIM> > bcoefs;
 
- Vector< Array< MultiFab*, 2> > GMRES_V_MF;
- Vector< Array< MultiFab*, 2> > GMRES_U_MF;
- Vector< Array< MultiFab*, 2> > GMRES_Z_MF;
- Array< MultiFab*, 2> GMRES_W_MF;
  Array< MultiFab*, 2> CG_delta_sol;
  Array< MultiFab*, 2> CG_r;
  Array< MultiFab*, 2> CG_z;
@@ -291,15 +261,12 @@ protected:
  Vector<MultiFab*> maskvals;
  Vector< Geometry > geomarray;
 
- int nsolve_bicgstab;
+ int nsolve_ABec;
 
 private:
 
-    static int abec_use_bicgstab; // default 0
     static int mglib_blocking_factor;
 
-    static int gmres_max_iter;
-    static int gmres_precond_iter_base_mg;
     static int nghostRHS;
     static int nghostSOLN;
 
@@ -318,11 +285,11 @@ ABecLaplacian::aCoefficients (MultiFab& _a)
 
     if (_a.boxArray() != (acoefs[0])->boxArray())
      amrex::Error("_a and acoefs boxarrays do not match");
-    if (_a.nComp()!=nsolve_bicgstab) 
+    if (_a.nComp()!=nsolve_ABec) 
      amrex::Error("_a has wrong ncomp");
 
      // src,scomp,dcomp,snghost,dnghost
-    acoefs[0]->ParallelCopy(_a,0,0,nsolve_bicgstab,0,0);
+    acoefs[0]->ParallelCopy(_a,0,0,nsolve_ABec,0,0);
 
 } // subroutine aCoefficients
 
@@ -346,11 +313,11 @@ ABecLaplacian::bCoefficients (MultiFab& _b,
     if (_b.boxArray() != (bcoefs[0][dir])->boxArray())
      amrex::Error("_b box arrays do not match");
 
-    if (_b.nComp()!=nsolve_bicgstab) 
+    if (_b.nComp()!=nsolve_ABec) 
      amrex::Error("_b has wrong ncomp");
 
      // src,scomp,dcomp,snghost,dnghost
-    bcoefs[0][dir]->ParallelCopy(_b,0,0,nsolve_bicgstab,0,0);
+    bcoefs[0][dir]->ParallelCopy(_b,0,0,nsolve_ABec,0,0);
 
 } // subroutine bCoefficients
 
