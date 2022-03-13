@@ -1573,16 +1573,16 @@
         ! CLSVOF_Read_aux_Header is declared in: sci_clsvof.F90
         !  aux_masknbr3D,aux_FSIdata3D, and aux_xdata3D are 
         !  allocated and initialized in this routine. 
-       call CLSVOF_Read_aux_Header(auxcomp)
+       call CLSVOF_Read_aux_Header(auxcomp,ioproc)
        FSI_operation=2 ! make distance in narrow band
        iter=0
        FSI_touch_flag=0
        call CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
-         FSI_touch_flag)
+         FSI_touch_flag,ioproc)
        do while (FSI_touch_flag.eq.1)
         FSI_operation=3 ! sign update
         call CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
-         FSI_touch_flag)
+         FSI_touch_flag,ioproc)
         iter=iter+1
        enddo !do while (FSI_touch_flag.eq.1)
 

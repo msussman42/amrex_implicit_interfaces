@@ -941,6 +941,8 @@ Vector<Real> NavierStokes::stiffCP;  // def=4.1855E+7
 Vector<Real> NavierStokes::stiffCV;  // def=4.1855E+7
 Vector<Real> NavierStokes::stiffGAMMA; // def=1.4
 
+// uncoupled_viscosity=0 => div (2 mu D)
+// uncoupled_viscosity=1 => div (mu grad U)
 int NavierStokes::uncoupled_viscosity=0;
 
 Real NavierStokes::angular_velocity=0.0;

@@ -4311,7 +4311,7 @@ void NavierStokes::apply_pressure_grad(
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: GODUNOV_3D.F90
+    // declared in: GODUNOV_3D.F90
     // -dt * visc_coef * viscface * (grad U + grad U^T)
     fort_crossterm(
      &nsolve,

@@ -7141,7 +7141,7 @@ return
 end subroutine CLSVOF_sync_lag_data
 
 subroutine CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
-                FSI_touch_flag)
+                FSI_touch_flag,ioproc)
 use global_utility_module
 
 IMPLICIT NONE
@@ -7149,6 +7149,7 @@ IMPLICIT NONE
 INTEGER_T, intent(in) :: FSI_operation
 INTEGER_T, intent(in) :: iter
 INTEGER_T, intent(in) :: auxcomp
+INTEGER_T, intent(in) :: ioproc
 INTEGER_T, intent(inout) :: FSI_touch_flag
 INTEGER_T :: lev77_local
 INTEGER_T :: tid_local
@@ -7160,7 +7161,6 @@ REAL_T :: dt_local
 INTEGER_T :: xmap3D_local(3)
 REAL_T :: dx3D_local(3)
 INTEGER_T :: CTML_force_model_local
-INTEGER_T :: ioproc_local
 INTEGER_T :: isout_local
 INTEGER_T :: sdim_AMR_local
 INTEGER_T :: dir
@@ -7188,7 +7188,6 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
   xmap3D_local(dir)=dir
  enddo
  CTML_force_model_local=0
- ioproc_local=0
  isout_local=0
 
  do dir=1,3
@@ -7231,7 +7230,7 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
    aux_FSIdata3D_ptr, &
    aux_masknbr3D_ptr, &
    CTML_force_model_local, &
-   ioproc_local, &
+   ioproc, &
    isout_local)
 
  else if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.1) then
@@ -7255,12 +7254,13 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
 return
 end subroutine CLSVOF_Init_aux_Box
 
-subroutine CLSVOF_Read_aux_Header(auxcomp)
+subroutine CLSVOF_Read_aux_Header(auxcomp,ioproc)
 use global_utility_module
 
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: auxcomp
+INTEGER_T, intent(in) :: ioproc
 
 INTEGER_T :: dir
 INTEGER_T :: inode
@@ -7280,11 +7280,11 @@ REAL_T :: local_sidelen
 INTEGER_T :: local_ncells
 INTEGER_T :: LSLO(3)
 INTEGER_T :: LSHI(3)
-INTEGER_T :: ioproc,isout,initflag
+INTEGER_T :: isout
+INTEGER_T :: initflag
 INTEGER_T :: i,j,k
 INTEGER_T, dimension(3) :: idx
 
- ioproc=0
  isout=0
  initflag=1
 
@@ -7333,8 +7333,15 @@ INTEGER_T, dimension(3) :: idx
   call SUB_OPEN_AUXFILE(auxcomp,14)
 
   READ(14,*) aux_FSI(auxcomp)%NumNodes,aux_FSI(auxcomp)%NumIntElems
-  print *,"NumNodes ",aux_FSI(auxcomp)%NumNodes
-  print *,"NumIntElems ",aux_FSI(auxcomp)%NumIntElems
+  if (ioproc.eq.1) then
+   print *,"auxcomp,NumNodes ",auxcomp,aux_FSI(auxcomp)%NumNodes
+   print *,"auxcomp,NumIntElems ",auxcomp,aux_FSI(auxcomp)%NumIntElems
+  else if (ioproc.eq.0) then
+   ! do nothing
+  else
+   print *,"ioproc invalid"
+   stop
+  endif
 
   call init_FSI_mesh_type(aux_FSI(auxcomp),1)  ! allocate_intelem=1
 
@@ -7394,12 +7401,21 @@ INTEGER_T, dimension(3) :: idx
   enddo  ! iface, looping faces
   close(14)
 
-  do dir=1,3 
-   print *,"(before)dir,min,max ",dir,minnodebefore(dir),maxnodebefore(dir)
-  enddo
-  do dir=1,3 
-   print *,"(after)dir,min,max ",dir,minnode(dir),maxnode(dir)
-  enddo
+  if (ioproc.eq.1) then
+   do dir=1,3 
+    print *,"(before)auxcomp,dir,min,max ",auxcomp, &
+            dir,minnodebefore(dir),maxnodebefore(dir)
+   enddo
+   do dir=1,3 
+    print *,"(after)auxcomp,dir,min,max ",auxcomp, &
+            dir,minnode(dir),maxnode(dir)
+   enddo
+  else if (ioproc.eq.0) then
+   ! do nothing
+  else
+   print *,"ioproc invalid"
+   stop
+  endif
 
   call init2_FSI_mesh_type(aux_FSI(auxcomp)) 
 
@@ -7527,19 +7543,27 @@ INTEGER_T, dimension(3) :: idx
  enddo
  enddo
 
- print *,"auxcomp,dir_max_side ",auxcomp,dir_max_side
- print *,"auxcomp,dx3D ",auxcomp,contain_aux(auxcomp)%dx3D
- do dir=1,3
-  print *,"auxcomp,dir,lo3D,hi3D ", &
+ if (ioproc.eq.1) then
+  print *,"auxcomp,dir_max_side ",auxcomp,dir_max_side
+  print *,"auxcomp,dx3D ",auxcomp,contain_aux(auxcomp)%dx3D
+  do dir=1,3
+   print *,"auxcomp,dir,lo3D,hi3D ", &
     auxcomp,dir, &
     contain_aux(auxcomp)%lo3D(dir), &
     contain_aux(auxcomp)%hi3D(dir)
-  print *,"auxcomp,dir,xlo3D,xhi3D ", &
+   print *,"auxcomp,dir,xlo3D,xhi3D ", &
     auxcomp,dir, &
     contain_aux(auxcomp)%xlo3D(dir), &
     contain_aux(auxcomp)%xhi3D(dir)
-  print *,"auxcomp,dir,LSLO,LSHI ",auxcomp,dir,LSLO(dir),LSHI(dir)
- enddo
+   print *,"auxcomp,dir,LSLO,LSHI ",auxcomp,dir,LSLO(dir),LSHI(dir)
+  enddo
+ else if (ioproc.eq.0) then
+  ! do nothing
+ else
+  print *,"ioproc invalid"
+  stop
+ endif
+
  if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
   call post_process_nodes_elements(initflag, &
          contain_aux(auxcomp)%xlo3D, &
