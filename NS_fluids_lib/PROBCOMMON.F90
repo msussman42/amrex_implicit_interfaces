@@ -558,6 +558,7 @@ implicit none
       REAL_T, dimension(:,:,:,:), target, allocatable :: aux_masknbr3D
 
       INTEGER_T :: fort_num_local_aux_grids=0
+      INTEGER_T :: aux_data_allocated=0
       type(aux_contain_type), dimension(:), allocatable :: contain_aux
 
       INTEGER_T :: used_probtypes(1000)
