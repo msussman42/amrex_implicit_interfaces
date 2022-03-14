@@ -6890,16 +6890,20 @@ END SUBROUTINE Adist
       end subroutine dumbbelldist
 
       subroutine override_tagflag(xsten,nhalf,time,rflag,tagflag)
+      use probcommon_module
+      use global_utility_module
       use global_distance_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: nhalf
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T, intent(in) :: time
-      REAL_T, intent(in) :: rflag
+      REAL_T, intent(inout) :: rflag
       INTEGER_T, intent(inout) :: tagflag
       REAL_T radx,radshrink,dist
-      REAL_T x,y,z,delta
+      REAL_T x,y,z
+      REAL_T local_delta(SDIM)
+      INTEGER_T dir
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid override tagflag"
@@ -6908,62 +6912,112 @@ END SUBROUTINE Adist
       x=xsten(0,1)
       y=xsten(0,2)
       z=xsten(0,SDIM)
-      delta=xsten(1,1)-xsten(-1,1)
-      if (delta.gt.zero) then
-       ! do nothing
-      else
-       print *,"delta invalid override_tagflag"
-       stop
-      endif
+      do dir=1,SDIM
+       local_delta(dir)=xsten(1,dir)-xsten(-1,dir)
+       if (local_delta(dir).gt.zero) then
+        ! do nothing
+       else
+        print *,"local_delta invalid override_tagflag"
+        stop
+       endif
+      enddo ! dir=1..sdim
+
+      if (is_in_probtype_list().eq.1) then
+
+       call SUB_OVERRIDE_TAGFLAG(xsten,nhalf,time,rflag,tagflag)
 
        ! bubble formation
-      if ((probtype.eq.25).and.(axis_dir.gt.0).and.(SDIM.eq.2)) then
-       if ( (abs(x-xblob).le.radblob).and.(y.le.zblob) ) then
-        tagflag=1
-       endif
-       if (rflag.eq.one) then
-        tagflag=1
-       else if (rflag.eq.zero) then
+      else if (probtype.eq.25) then
+
+       if ((axis_dir.gt.0).and.(SDIM.eq.2)) then
+        if ( (abs(x-xblob).le.radblob).and.(y.le.zblob) ) then
+         tagflag=1
+        endif
+        if (rflag.eq.one) then
+         tagflag=1
+        else if (rflag.eq.zero) then
+         ! do nothing
+        else
+         print *,"rflag invalid"
+         stop
+        endif
+       else if ((axis_dir.eq.0).or.(SDIM.eq.3)) then
         ! do nothing
        else
-        print *,"rflag invalid"
+        print *,"invalid axis_dir or SDIM"
         stop
        endif
-      endif
 
-      if ((probtype.eq.102).and.(SDIM.eq.2)) then
-       radx=radblob3+y*(radblob4-radblob3)/yblob3  
-       if ((y.le.yblob3).and.(x.ge.radx-delta).and. &
-           (x.le.radx+radblob6+delta)) then
-        tagflag=1
+      else if (probtype.eq.102) then
+
+       if (SDIM.eq.2) then
+        radx=radblob3+y*(radblob4-radblob3)/yblob3  
+        if ((y.le.yblob3).and. &
+            (x.ge.radx-local_delta(1)).and. &
+            (x.le.radx+radblob6+local_delta(1))) then
+         tagflag=1
+        endif
+        if ((y.le.yblob+yblob2).and. &
+            (x.le.radblob5+local_delta(1))) then
+         tagflag=1
+        endif
+        radshrink=radblob7**2-radblob5**2
+        radshrink=sqrt(radshrink)
+        radx=radblob4+(y-yblob3)*(radshrink-radblob4)/(probhiy-yblob3)
+        if ((y.ge.yblob3).and. &
+            (x.ge.radx-local_delta(1)).and. &
+            (x.le.radx+radblob6+local_delta(1))) then
+         tagflag=1
+        endif
+       else if (SDIM.eq.3) then
+        ! do nothing
+       else
+        print *,"dimension bust"
+        stop
        endif
-       if ((y.le.yblob+yblob2).and.(x.le.radblob5+delta)) then
-        tagflag=1
-       endif
-       radshrink=radblob7**2-radblob5**2
-       radshrink=sqrt(radshrink)
-       radx=radblob4+(y-yblob3)*(radshrink-radblob4)/(probhiy-yblob3)
-       if ((y.ge.yblob3).and.(x.ge.radx-delta).and. &
-           (x.le.radx+radblob6+delta)) then
-        tagflag=1
-       endif
-      endif
 
        ! in override_tagflag 
-      if ((probtype.eq.701).and.(axis_dir.eq.2)) then
+      else if (probtype.eq.701) then
+
         ! dist>0 in the airfoil
        call naca_dist(x,y,z,time,dist)
-       if (abs(dist).le.delta) then
+       if (abs(dist).le.local_delta(1)) then
         tagflag=1
-       else if (abs(dist).ge.delta) then
+       else if (abs(dist).ge.local_delta(1)) then
         ! do nothing
        else
-        print *,"dist or delta is NaN"
+        print *,"dist or local_delta is NaN"
         stop
        endif
-       if ((abs(y+0.1).le.0.4).and.(x.le.3.0)) then
+       if ((abs(y+0.1d0).le.0.4d0).and. &
+           (x.le.3.0d0)) then
         tagflag=1
        endif
+
+      else if (probtype.eq.66) then
+
+       if (SDIM.eq.2) then
+        if (xblob2.lt.xblob3) then
+         if ((x.lt.xblob2).or. &
+             (x.gt.xblob3)) then
+          tagflag=0
+          rflag=0.0d0
+         endif
+        endif
+       else if (SDIM.eq.3) then
+        ! do nothing
+       else
+        print *,"dimension bust"
+        stop
+       endif
+
+      else if (probtype.ge.0) then
+
+       ! do nothing
+
+      else
+       print *,"probtype invalid, taxes due April15"
+       stop
       endif 
 
       return
@@ -24274,7 +24328,7 @@ end subroutine initialize2d
 
        if (level.lt.max_level_for_use) then
 
-         ! updates "tagflag"
+         ! updates "tagflag" and/or "rflag"
         call override_tagflag(xsten,nhalf,time,rflag,tagflag)
 
         if (rflag.eq.one) then
@@ -24286,14 +24340,6 @@ end subroutine initialize2d
          stop
         endif
 
-        if ((probtype.eq.66).and.(SDIM.eq.2)) then
-         if (xblob2.lt.xblob3) then
-          if ((x.lt.xblob2).or.(x.gt.xblob3)) then
-           tagflag=0
-          endif
-         endif
-        endif
-       
         if (ractivex.gt.zero) then
          if ((abs(x-xactive).gt.ractivex).or. &
 #if (AMREX_SPACEDIM==3)

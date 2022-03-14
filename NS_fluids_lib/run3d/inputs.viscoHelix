@@ -76,7 +76,7 @@ amr.max_level=1
 fabarray.mfiter_tile_size=16 16 16    #32 32 32  #NEW
 
 amr.regrid_int      = 1       # how often to regrid
-amr.n_error_buf     = 4 4 4 2   # number of buffer cells in error est
+amr.n_error_buf     = 4 4 2 2   # number of buffer cells in error est
 amr.grid_eff        = 0.7   # what constitutes an efficient grid
 ns.ns_tiling=false
 amr.n_proper=1  # default is 1 

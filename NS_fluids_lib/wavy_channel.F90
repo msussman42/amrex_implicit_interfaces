@@ -388,6 +388,52 @@ REAL_T :: local_time
 
 end subroutine WAVY_AUX_DATA
 
+subroutine WAVY_OVERRIDE_TAGFLAG(xsten,nhalf,time,rflag,tagflag)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+INTEGER_T, intent(in) :: nhalf
+REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+REAL_T, intent(in) :: time
+REAL_T, intent(inout) :: rflag
+INTEGER_T, intent(inout) :: tagflag
+REAL_T, dimension(3) :: local_x
+REAL_T, dimension(SDIM) :: local_delta
+INTEGER_T :: dir
+INTEGER_T :: auxcomp
+REAL_T :: LS
+
+if (nhalf.lt.1) then
+ print *,"nhalf invalid wavy override tagflag"
+ stop
+endif
+do dir=1,SDIM
+ local_x(dir)=xsten(0,dir)
+enddo
+local_x(3)=xsten(0,SDIM)
+auxcomp=1
+call WAVY_AUX_DATA(auxcomp,local_x,LS)
+do dir=1,SDIM
+ local_delta(dir)=xsten(1,dir)-xsten(-1,dir)
+ if (local_delta(dir).gt.zero) then
+  ! do nothing
+ else
+  print *,"local_delta invalid wavy_override_tagflag"
+  stop
+ endif
+enddo !dir=1..sdim
+if (abs(LS).le.local_delta(1)) then 
+ rflag=1.0d0
+ tagflag=1
+else if (abs(LS).gt.local_delta(1)) then
+ ! do nothing
+else
+ print *,"bust in wavy_override_tagflag"
+ stop
+endif 
+ 
+end subroutine WAVY_OVERRIDE_TAGFLAG
+
 subroutine WAVY_INIT_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE

@@ -846,6 +846,14 @@ implicit none
       REAL_T, intent(out) :: LS(nmat)
       end subroutine TEMPLATE_LS
 
+      subroutine TEMPLATE_OVERRIDE_TAGFLAG(xsten,nhalf,time,rflag,tagflag)
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(inout) :: rflag
+      INTEGER_T, intent(inout) :: tagflag
+      end subroutine TEMPLATE_OVERRIDE_TAGFLAG
+
       subroutine TEMPLATE_AUX_DATA(auxcomp,x,LS)
       INTEGER_T, intent(in) :: auxcomp
       REAL_T, intent(in) :: x(3)
@@ -1094,6 +1102,7 @@ implicit none
       PROCEDURE(TEMPLATE_CFL_HELPER), POINTER :: SUB_CFL_HELPER
       PROCEDURE(TEMPLATE_SUMINT), POINTER :: SUB_SUMINT
       PROCEDURE(TEMPLATE_LS), POINTER :: SUB_LS
+      PROCEDURE(TEMPLATE_OVERRIDE_TAGFLAG), POINTER :: SUB_OVERRIDE_TAGFLAG
       PROCEDURE(TEMPLATE_AUX_DATA), POINTER :: SUB_AUX_DATA
       PROCEDURE(TEMPLATE_BOUNDING_BOX_AUX), POINTER :: SUB_BOUNDING_BOX_AUX
       PROCEDURE(TEMPLATE_clamped_LS), POINTER :: SUB_clamped_LS_no_scale
