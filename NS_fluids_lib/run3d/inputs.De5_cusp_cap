@@ -69,13 +69,16 @@ amr.max_level = 2
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=16 16 16
 
-amr.n_error_buf     = 4 4 4 4 4 4  # number of buffer cells in error est
-amr.grid_eff        = 0.7   # what constitutes an efficient grid
+#FAST
+amr.n_error_buf     = 4 2 2 2 2 2  # number of buffer cells in error est
+#FAST
+amr.grid_eff        = 0.8   # what constitutes an efficient grid
 
 # The proper nesting buffer of level i cells next to level i+1
 # cells is bf_lev[i]*n_proper. (2*bf_lev[i]=blocking_factor[i])
 amr.n_proper=1  # default is 1
-amr.blocking_factor = 8 8 8 8 8 8 8    # block factor in grid generation
+#FAST
+amr.blocking_factor = 8 8 2    # block factor in grid generation
 # viscoelastic terms are always discretized with the low order 
 # directionally split semi-Lagrangian method. This is to insure
 # positive definiteness of the configuration tensor.  
