@@ -254,9 +254,17 @@ REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(out) :: LS(nmat)
 REAL_T :: x3D(3)
+REAL_T :: x3D_foot(3)
 INTEGER_T :: dir
 INTEGER_T im
 INTEGER_T auxcomp
+
+if (t.ge.0.0d0) then
+ ! do nothing
+else
+ print *,"t invalid"
+ stop
+endif
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -283,7 +291,10 @@ else if (axis_dir.eq.1) then
      LS(im)=1000.0
     elseif (im.eq.3) then ! solid helix
      auxcomp=1
-     call interp_from_aux_grid(auxcomp,x3D,LS(im))
+     x3D_foot(1)=x3D(1)*cos(yblob4*t)+x3D(2)*sin(yblob4*t)
+     x3D_foot(2)=x3D(2)*cos(yblob4*t)-x3D(1)*sin(yblob4*t)
+     x3D_foot(3)=x3D(3)
+     call interp_from_aux_grid(auxcomp,x3D_foot,LS(im))
     else
      print *,"im invalid, im=",im
      stop
