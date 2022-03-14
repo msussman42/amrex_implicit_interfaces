@@ -1,6 +1,6 @@
 max_step  = 8000   # maximum timestep
 #max_step  =  2    # maximum timestep
-stop_time =  300  # maximum problem time
+stop_time =  0.5  # maximum problem time SHORT
 
 # ------------------ Dimention version 08/02/18 ---------------
 # ------------------  INPUTS TO CLASS AMR ---------------------
@@ -9,15 +9,15 @@ stop_time =  300  # maximum problem time
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 # 2D
 #geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
-# 3D (quarter domain)
+# 3D (quarter domain SHORT)
 geometry.prob_lo   =  0.0 0.0 0.0
-geometry.prob_hi   =  6.0 6.0 60.0    # D* 4 4 20
-# 3D (full domain)
+geometry.prob_hi   =  6.0 6.0 30.0    # D* 4 4 10
+# 3D (full domain SHORT)
 #geometry.prob_lo   =  -6.0 -6.0 0.0
-#geometry.prob_hi   =  6.0 6.0 60.0    # D* 4 4 20
-# 2D
+#geometry.prob_hi   =  6.0 6.0 30.0    # D* 4 4 10
+# 2D (SHORT)
 #geometry.prob_lo   =  0.0 0.0
-#geometry.prob_hi   =  6.0 60.0    # D* 4 4 20
+#geometry.prob_hi   =  6.0 30.0    # D* 4 4 10
 
 # 0=Sussman and Puckett algorithm 
 # 1=EILE (default), -1=Weymouth Yue
@@ -55,14 +55,17 @@ amr.plotfile_on_restart=1
 ns.visual_nddata_format=1 # 0=tecplot 1=visit
 ns.output_drop_distribution=1
 
-# 3D (quarter domain)
-amr.n_cell    = 16 16 160
-# 3D (full domain)
-#amr.n_cell    = 32 32 160
-# 2D
-#amr.n_cell    = 16 160
+# 3D (quarter domain SHORT)
+amr.n_cell    = 16 16 80
+# 3D (full domain SHORT)
+#amr.n_cell    = 16 16 40
+# 2D (RZ SHORT)
+#amr.n_cell    = 16 80
 
+# RZ or 3D quarter domain.
 amr.max_level = 2
+# 3D full domain.
+#amr.max_level = 3
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=16 16 16
 
@@ -129,9 +132,9 @@ ns.viscconst=10.0 1.8e-4
 ns.denconst=1.0 1.2e-3
 ns.tempconst=273.0 273.0
 ns.heatviscconst=0.0 0.0
-ns.xblob=0.0 # D*2
+ns.xblob=0.0 # D*2 (RZ, quarter, or full domain)
 
-#3D (quarter domain)
+#3D (quarter domain or full domain)
 ns.yblob=0.0 # D*2
 #2D
 #ns.yblob=2.25 # D*0.75
@@ -208,9 +211,12 @@ ns.added_weight=1000.0 1.0
 #ns.d = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
-#3D
+#3D (quarter domain)
 ns.lo_bc          = 3 3 2
 ns.hi_bc          = 2 2 2
+#3D (full domain)
+#ns.lo_bc          = 2 2 2
+#ns.hi_bc          = 2 2 2
 #2D
 #ns.lo_bc          = 3 2
 #ns.hi_bc          = 2 2
