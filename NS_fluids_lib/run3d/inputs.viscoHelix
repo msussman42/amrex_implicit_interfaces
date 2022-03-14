@@ -117,7 +117,8 @@ ns.visc_coef      = 1.0  # viscosity 1.0 or
 mac.visc_abs_tol   = 1.0e-6
 ns.gravity        =0.0   # gravity or 1/Fr
 
-ns.tension        = 50.0 50.0 50.0    # interfacial tension coefficient or 1/We
+#ns.tension        = 50.0 50.0 50.0    # interfacial tension coefficient or 1/We
+ns.tension = 0.0 0.0 0.0 # there are no interfaces in the initial setup MS
 ns.sum_interval   = 10         # timesteps between computing mass 
 ns.vorterr=0.0 0.0 0.0
 #axis_dir=0 => inputs.wavy_channel
@@ -129,7 +130,8 @@ ns.twall=0.0 # not used
 ns.advbot=0.0
 ns.adv_vel=-0.00354923    #-0.03325 # velocity  KSH3
 
-ns.fixed_dt=0.001
+# MS: this is not needed if tension is made zero.
+#ns.fixed_dt=0.001
 ns.adv_dir=3
 
 # 2D
@@ -150,7 +152,9 @@ ns.xblob=0.0 # D*2
 ns.yblob=0.0 # flag (keep 0)
 ns.yblob2=2.10000000   # r thickness  KSH1
 ns.yblob3=0.21727564     #1.308996939 # pitch angle  KSH2
-ns.yblob4=6.2832     # w rotation
+# x=r * cos(w*t)  dx/dt=-rw sin(w*t)=-w y
+# y=r * sin(w*t)  dy/dt= rw cos(w*t)=w x
+ns.yblob4=6.28318530718 # w rotation (MS note: xvelsol=-y*w yvelsol=x*w)
 ns.yblob5=2.35 # R radius
 ns.yblob7=0.0        #0.00354923 # velocity  KSH3
 ns.yblob8=1.0 # flag (keep 1)
