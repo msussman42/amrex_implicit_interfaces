@@ -1047,7 +1047,12 @@ stop
       fort_num_local_aux_grids=ccnum_local_aux_grids;
 
       if (fort_num_local_aux_grids.gt.0) then
-       ALLOCATE(contain_aux(fort_num_local_aux_grids))
+       if (aux_data_allocated.eq.0) then
+        ALLOCATE(contain_aux(fort_num_local_aux_grids))
+       else
+        print *,"aux_data_allocated invalid"
+        stop
+       endif
       else if (fort_num_local_aux_grids.eq.0) then
        ! do nothing
       else

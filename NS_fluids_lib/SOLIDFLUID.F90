@@ -1568,51 +1568,62 @@
       INTEGER_T i,j,k
       INTEGER_T LSLO(3),LSHI(3)
 
-      do auxcomp=1,fort_num_local_aux_grids
+      if (aux_data_allocated.eq.0) then
 
-        ! CLSVOF_Read_aux_Header is declared in: sci_clsvof.F90
-        !  aux_masknbr3D,aux_FSIdata3D, and aux_xdata3D are 
-        !  allocated and initialized in this routine. 
-       call CLSVOF_Read_aux_Header(auxcomp,ioproc)
-       FSI_operation=2 ! make distance in narrow band
-       iter=0
-       FSI_touch_flag=0
-       call CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
-         FSI_touch_flag,ioproc)
-       do while (FSI_touch_flag.eq.1)
-        FSI_operation=3 ! sign update
+       do auxcomp=1,fort_num_local_aux_grids
+
+         ! CLSVOF_Read_aux_Header is declared in: sci_clsvof.F90
+         !  aux_masknbr3D,aux_FSIdata3D, and aux_xdata3D are 
+         !  allocated and initialized in this routine. 
+        call CLSVOF_Read_aux_Header(auxcomp,ioproc)
+        FSI_operation=2 ! make distance in narrow band
+        iter=0
+        FSI_touch_flag=0
         call CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
-         FSI_touch_flag,ioproc)
-        iter=iter+1
-       enddo !do while (FSI_touch_flag.eq.1)
+          FSI_touch_flag,ioproc)
+        do while (FSI_touch_flag.eq.1)
+         FSI_operation=3 ! sign update
+         call CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
+          FSI_touch_flag,ioproc)
+         iter=iter+1
+        enddo !do while (FSI_touch_flag.eq.1)
 
-       do dir=1,3
-        LSLO(dir)=contain_aux(auxcomp)%lo3D(dir)-ngrow_make_distance
-        LSHI(dir)=contain_aux(auxcomp)%hi3D(dir)+ngrow_make_distance
-       enddo
-       do i=LSLO(1),LSHI(1)
-       do j=LSLO(2),LSHI(2)
-       do k=LSLO(3),LSHI(3)
-        contain_aux(auxcomp)%LS3D(i,j,k,1)= &
-           aux_FSIdata3D(i,j,k,FSI_LEVELSET+1)
-       enddo
-       enddo
-       enddo
-      
-       if (ioproc.eq.1) then
-        call fort_aux_tecplot(auxcomp)
-       else if (ioproc.eq.0) then
-        ! do nothing
-       else
-        print *,"ioproc invalid"
-        stop
-       endif
+        do dir=1,3
+         LSLO(dir)=contain_aux(auxcomp)%lo3D(dir)-ngrow_make_distance
+         LSHI(dir)=contain_aux(auxcomp)%hi3D(dir)+ngrow_make_distance
+        enddo
+        do i=LSLO(1),LSHI(1)
+        do j=LSLO(2),LSHI(2)
+        do k=LSLO(3),LSHI(3)
+         contain_aux(auxcomp)%LS3D(i,j,k,1)= &
+            aux_FSIdata3D(i,j,k,FSI_LEVELSET+1)
+        enddo
+        enddo
+        enddo
+       
+        if (ioproc.eq.1) then
+         call fort_aux_tecplot(auxcomp)
+        else if (ioproc.eq.0) then
+         ! do nothing
+        else
+         print *,"ioproc invalid"
+         stop
+        endif
+  
+        deallocate(aux_xdata3D) 
+        deallocate(aux_FSIdata3D) 
+        deallocate(aux_masknbr3D) 
+
+       enddo ! auxcomp=1,fort_num_local_aux_grids
  
-       deallocate(aux_xdata3D) 
-       deallocate(aux_FSIdata3D) 
-       deallocate(aux_masknbr3D) 
+       aux_data_allocated=1
 
-      enddo ! auxcomp=1,fort_num_local_aux_grids
+      else if (aux_data_allocated.eq.1) then
+       ! do nothing
+      else
+       print *,"aux_data_allocated invalid"
+       stop
+      endif
 
       return
       end subroutine fort_init_aux_data
