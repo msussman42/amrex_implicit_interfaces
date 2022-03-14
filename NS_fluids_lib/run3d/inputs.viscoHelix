@@ -1,4 +1,4 @@
-max_step  = 80000   # maximum timestep
+max_step  = 1000   # maximum timestep
 stop_time =  300  # maximum problem time
 
 #
@@ -70,8 +70,8 @@ ns.v = 1
 # for best solver performance, the coarsest level should correspond to
 # the size of 1 parallel block.
 amr.n_cell    = 16 16 16    
-#amr.max_level = 4  # production run (used to be 32^3 + max_level=3)
-amr.max_level=1
+amr.max_level = 4  # production run (used to be 32^3 + max_level=3)
+#amr.max_level=1
 
 fabarray.mfiter_tile_size=16 16 16    #32 32 32  #NEW
 
@@ -80,19 +80,19 @@ amr.n_error_buf     = 4 4 2 2   # number of buffer cells in error est
 amr.grid_eff        = 0.7   # what constitutes an efficient grid
 ns.ns_tiling=false
 amr.n_proper=1  # default is 1 
-amr.blocking_factor = 8 8 8 2   # block factor in grid generation
+amr.blocking_factor = 8 8 8 8 2   # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1 1 1
 amr.time_blocking_factor=1
 ns.enable_spectral=0
 ns.viscous_enable_spectral=0
 
-amr.check_int       = 100
+amr.check_int       = 20
 amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps
 # Only tecplot format plot files are output; ViSit can read tecplot (there is
 # a ViSit bug for animation of grid based tecplot files that use AMR)
-#amr.plot_int        = 50 # was 100  (plot_int=1 for testing)
-amr.plot_int=1
+amr.plot_int        = 20 # was 100  (plot_int=1 for testing)
+#amr.plot_int=1
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
@@ -114,7 +114,7 @@ ns.init_shrink    = 1.0   # scale back initial timestep
 ns.change_max     = 1.1 
 ns.visc_coef      = 1.0  # viscosity 1.0 or
                          # (eta_solvent/eta_total)*(1/Re(based on eta_total))
-ns.visc_abs_tol   = 1.0e-8
+mac.visc_abs_tol   = 1.0e-6
 ns.gravity        =0.0   # gravity or 1/Fr
 
 ns.tension        = 50.0 50.0 50.0    # interfacial tension coefficient or 1/We
