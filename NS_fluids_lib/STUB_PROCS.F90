@@ -66,6 +66,23 @@ endif
 return
 end subroutine STUB_CFL_HELPER
 
+subroutine STUB_OVERRIDE_TAGFLAG(xsten,nhalf,time,rflag,tagflag)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+INTEGER_T, intent(in) :: nhalf
+REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+REAL_T, intent(in) :: time
+REAL_T, intent(inout) :: rflag
+INTEGER_T, intent(inout) :: tagflag
+
+ if (nhalf.lt.1) then
+  print *,"nhalf invalid stub override tagflag"
+  stop
+ endif
+
+end subroutine STUB_OVERRIDE_TAGFLAG
+
 subroutine STUB_AUX_DATA(auxcomp,x,LS)
 use probcommon_module
 use global_utility_module
