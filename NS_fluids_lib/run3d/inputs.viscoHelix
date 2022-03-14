@@ -7,8 +7,9 @@ stop_time =  300  # maximum problem time
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for helix visco
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
-geometry.prob_lo=-3.0 -3.0 2.0
-geometry.prob_hi=3.0 3.0  8.85
+# MS: dx=dy=dz
+geometry.prob_lo=-3.0 -3.0 2.425
+geometry.prob_hi=3.0 3.0  8.425
 geometry.is_periodic = 0 0 0
 
 # -1=Weymouth Yue
@@ -108,7 +109,8 @@ amr.file_name_digits=7
 ns.dt_cutoff      = 1.0e-11 # level 0 timestep below which we halt
 
 mac.mac_abs_tol    = 1.0e-8  # tolerence for mac projections
-ns.cfl            = 0.05      # cfl number for hyperbolic system
+# MS cfl was .05, now .5
+ns.cfl            = 0.5      # cfl number for hyperbolic system
  
 ns.init_shrink    = 1.0   # scale back initial timestep
 ns.change_max     = 1.1 
