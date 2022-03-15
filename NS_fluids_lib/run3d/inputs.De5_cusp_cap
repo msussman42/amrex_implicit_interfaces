@@ -52,7 +52,7 @@ Lp.v = 0
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
-ns.visual_nddata_format=1 # 0=tecplot 1=visit
+ns.visual_nddata_format=0 # 0=tecplot 1=visit
 ns.output_drop_distribution=1
 
 # 3D (quarter domain SHORT)
@@ -112,7 +112,7 @@ ns.change_max     = 1.1
 ns.visc_coef      = 1.0  # viscosity 1.0 or
                          # (eta_solvent/eta_total)*(1/Re(based on eta_total))
 ns.visc_abs_tol   = 1.0e-8
-ns.gravity        =-980   # gravity or 1/Fr
+ns.gravity        =-980.0   # gravity or 1/Fr
 ns.tension        = 50.0     # interfacial tension coefficient or 1/We
 ns.sum_interval   = 10        # timesteps between computing mass 
 ns.vorterr=0.0 0.0 0.0
