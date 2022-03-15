@@ -152,7 +152,8 @@ ns.xblob=0.0 # D*2
 
 #3D Helix Parameters
 ns.yblob=0.0 # flag (keep 0)
-ns.yblob2=2.10000000   # r thickness  KSH1
+ns.yblob2=2.10000000   # r (tube radius) thickness  KSH1
+#0.217 corresponds to the pitch angle of 12.4 degrees
 ns.yblob3=0.21727564     #1.308996939 # pitch angle  KSH2
 # x=r * cos(w*t)  dx/dt=-rw sin(w*t)=-w y
 # y=r * sin(w*t)  dy/dt= rw cos(w*t)=w x
