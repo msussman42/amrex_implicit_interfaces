@@ -143,7 +143,7 @@ endif
 
 ss=t
 wvel=yblob7
-piin=4.0*atan(1.0) 
+piin=4.0d0*atan(1.0d0) 
 
 if (radblob4.gt.zero) then
  scalelength=radblob4
@@ -208,17 +208,17 @@ else if (axis_dir.eq.1) then
      call GET_ROOT(x(1),x(2),x(SDIM), &
       tt,ss,wvel,yblob5,yblob3,yblob4, &
       Radius-thickness/2.0d0, &
-      Lambdawave,helixlength,scalelength,BodyStart)
+      LambdaWave,helixlength,scalelength,BodyStart)
      LS(im)=-(sqrt((x(2)-yblob7)**2+(x(SDIM)-yblob8)**2)-radblob7) !circle or cylinder
 !    LS(im) = 0.5- sqrt( (cos(tt+t)-x(1))**2 + (sin(tt+t)-x(2))**2 + (tt-x(3))**2 )  !without z velocity
 ! print*, 'tt=',tt
 !print*, 'Radius*cos(tt+yblob4*t)',Radius*cos(tt+yblob4*t)
 !print*, 'Radius*sin(tt+yblob4*t)',Radius*sin(tt+yblob4*t)
-!print*, 'Lambdawave*tt',Lambdawave*tt
+!print*, 'LambdaWave*tt',LambdaWave*tt
      LStmp1  = thickness/2.0d0-  &
           sqrt( ((Radius-thickness/2.0d0)*cos(tt+yblob4*t)-x(1))**2 &
               + ((Radius-thickness/2.0d0)*sin(tt+yblob4*t)-x(2))**2 &
-              + (Lambdawave*tt+wvel*t+BodyStart-x(SDIM))**2 ) 
+              + (LambdaWave*tt+wvel*t+BodyStart-x(SDIM))**2 ) 
      LStmp2  =-DIST_FINITE_CYLHEAD(x(1:SDIM),Radius, &
       HelixLength+BodyStart+wvel*t, &
       HelixLength+cylinderHeight+BodyStart+wvel*t)   !minus or plus
@@ -887,14 +887,14 @@ end module WAVY_Channel_module
 
 !call GET_ROOT(x(1),x(2),x(3),tt,ss,wvel,yblob5,yblob3,yblob4)
 
-SUBROUTINE GET_ROOT(px,py,pz,z,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength,BodyStart)
+SUBROUTINE GET_ROOT(px,py,pz,z,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength,BodyStart)
   
   REAL(KIND=8):: z,ss,wvel,yblob5,yblob3,yblob4
-  REAL(KIND=8) :: Radius,Lambdawave,helixlength,scalelength,BodyStart
+  REAL(KIND=8) :: Radius,LambdaWave,helixlength,scalelength,BodyStart
 INTERFACE
-  FUNCTION F_Tomas(x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength) RESULT(g)
+  FUNCTION F_Tomas(x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength) RESULT(g)
     IMPLICIT NONE
-    REAL(KIND=8),INTENT(IN):: x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength
+    REAL(KIND=8),INTENT(IN):: x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength
     REAL(KIND=8):: g
   END Function F_Tomas
 END INTERFACE    
@@ -909,7 +909,7 @@ END INTERFACE
   REAL(KIND=8), INTENT(IN) :: px,py,pz
   
 !   CALL BrentZeroDouble(a,b,F,px,py,pz,tol,MAXITER,neval,errCode,xZero,fZero)
-  CALL BrentZeroDouble(a,F_Tomas,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength,BodyStart,tol,MAXITER,neval,errCode,xZero,fZero)
+  CALL BrentZeroDouble(a,F_Tomas,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength,BodyStart,tol,MAXITER,neval,errCode,xZero,fZero)
 
 !BrentZeroDouble(x0,F_Tomas,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,tol,maxIter,neval,errCode,xZero,fZero)
 
@@ -920,25 +920,25 @@ END SUBROUTINE GET_ROOT
 !======================================================================================!
 
 !======================================================================================!
-FUNCTION F_Tomas(x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength) RESULT (FReturn)        !Function of which to find zero
+FUNCTION F_Tomas(x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength) RESULT (FReturn)        !Function of which to find zero
 
-  REAL(KIND=8), INTENT(IN) :: x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength
+  REAL(KIND=8), INTENT(IN) :: x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength
   REAL(KIND=8) :: FReturn
 
 !  FReturn=2*px*sin(x+ss)-2*py*cos(x+ss)+2*x-2*pz
-  FReturn=2*Radius*px*sin(x+yblob4*ss)-2*Radius*py*cos(x+yblob4*ss)+2**Lambdawave**2*x+2*Lambdawave*wvel*ss - 2*Lambdawave*pz
+  FReturn=2*Radius*px*sin(x+yblob4*ss)-2*Radius*py*cos(x+yblob4*ss)+2**LambdaWave**2*x+2*LambdaWave*wvel*ss - 2*LambdaWave*pz
   RETURN
 END Function F_Tomas   
 !======================================================================================!
-!        LS(im) = yblob2/2.0/radblob4- sqrt( Radius*cos(tt+yblob4*t)-x(1))**2 + (Radius*sin(tt+yblob4*t)-x(2))**2 + (Lambdawave*tt+wvel*t-x(3))**2 ) 
+!        LS(im) = yblob2/2.0/radblob4- sqrt( Radius*cos(tt+yblob4*t)-x(1))**2 + (Radius*sin(tt+yblob4*t)-x(2))**2 + (LambdaWave*tt+wvel*t-x(3))**2 ) 
 !======================================================================================!
 ! SUBROUTINE
 ! BrentZeroDouble(ax,bx,F,px,py,pz,tol,maxIter,neval,errCode,xZero,fZero)
-SUBROUTINE BrentZeroDouble(x0,F_Tomas,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength,BodyStart,tol,maxIter,neval,errCode,xZero,fZero)
+SUBROUTINE BrentZeroDouble(x0,F_Tomas,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength,BodyStart,tol,maxIter,neval,errCode,xZero,fZero)
 ! PURPOSE - Compute a zero of F in the interval (ax,bx)
 
   ! REAL(KIND=8),INTENT(IN):: ax,bx   ! left and right enKIND=8oints of interval
-  REAL(KIND=8), INTENT(IN) :: x0,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength,BodyStart !initial guess, point in question,time
+  REAL(KIND=8), INTENT(IN) :: x0,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength,BodyStart !initial guess, point in question,time
   REAL(KIND=8),INTENT(IN):: tol     ! desired interval of uncertainity 
   INTEGER,INTENT(IN):: maxIter   ! max number of iterations allowed. 25 is good
   INTEGER,INTENT(OUT):: neval
@@ -947,9 +947,9 @@ SUBROUTINE BrentZeroDouble(x0,F_Tomas,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radi
   REAL(KIND=8),INTENT(OUT):: xZero,fZero ! the last and best value of the zero                                   
       
 INTERFACE
-  FUNCTION F_Tomas(x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength) RESULT(g)
+  FUNCTION F_Tomas(x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength) RESULT(g)
     IMPLICIT NONE
-    REAL(KIND=8),INTENT(IN):: x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength
+    REAL(KIND=8),INTENT(IN):: x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength
     REAL(KIND=8):: g
   END Function F_Tomas
 END INTERFACE    
@@ -971,14 +971,15 @@ END INTERFACE
    min_dist=1e9
    
 !======================================================================================!
-!        LS(im) = yblob2/2.0/radblob4- sqrt( Radius*cos(tt+yblob4*t)-x(1))**2 + (Radius*sin(tt+yblob4*t)-x(2))**2 + (Lambdawave*tt+wvel*t-x(3))**2 ) 
+!        LS(im) = yblob2/2.0/radblob4- sqrt( Radius*cos(tt+yblob4*t)-x(1))**2 + (Radius*sin(tt+yblob4*t)-x(2))**2 + (LambdaWave*tt+wvel*t-x(3))**2 ) 
 !======================================================================================!
+! LambdaWave=(Radius-thickness/2.0)/tan(yblob3)
 
-   Ltotal=helixlength/Lambdawave
+   Ltotal=helixlength/LambdaWave
    DO i=-0,200
      s = (dble(i)/200.0)*Ltotal
 !	 s=s1*cos(yblob3)
-     dist = (Radius*cos(s+yblob4*ss)-px)**2 + (Radius*sin(s+yblob4*ss)-py)**2 + (Lambdawave*s+wvel*ss+BodyStart-pz)**2
+     dist = (Radius*cos(s+yblob4*ss)-px)**2 + (Radius*sin(s+yblob4*ss)-py)**2 + (LambdaWave*s+wvel*ss+BodyStart-pz)**2
      IF(dist.lt.min_dist) THEN
        min_dist=dist
        a = s
@@ -989,7 +990,7 @@ END INTERFACE
    DO i=max(i_min-3,0)*10,min(i_min+3,200)*10
      s = (dble(i)/2000.0)*Ltotal
 !	 s=s1*cos(yblob3)
-     dist = (Radius*cos(s+yblob4*ss)-px)**2 + (Radius*sin(s+yblob4*ss)-py)**2 + (Lambdawave*s+wvel*ss+BodyStart-pz)**2
+     dist = (Radius*cos(s+yblob4*ss)-px)**2 + (Radius*sin(s+yblob4*ss)-py)**2 + (LambdaWave*s+wvel*ss+BodyStart-pz)**2
      IF(dist.lt.min_dist) THEN
        min_dist=dist
        a = s
@@ -1010,13 +1011,13 @@ END INTERFACE
    if (i_min >75) then
         a= (70.0/80.0)*Ltotal
 		b= (80.0/80.0)*Ltotal
-		fa=	F_Tomas(a,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength)
-        fb=	F_Tomas(b,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength)
+		fa=	F_Tomas(a,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength)
+        fb=	F_Tomas(b,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength)
    else if (i_min< 5) then
         a= (0)*Ltotal
 		b= (10.0/80.0)*Ltotal
-		fa=	F_Tomas(a,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength)
-        fb=	F_Tomas(b,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength)
+		fa=	F_Tomas(a,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength)
+        fb=	F_Tomas(b,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength)
 	else
 		
    itest=0
@@ -1029,9 +1030,9 @@ END INTERFACE
 	s_start=s1start !*cos(yblob3)   
 	s_end=s1end  !*cos(yblob3)   
 
-   fa=	F_Tomas(s_start,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength)
+   fa=	F_Tomas(s_start,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength)
    a=s_start
-   fb=	F_Tomas(s_end,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength)
+   fb=	F_Tomas(s_end,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength)
    b=s_end   
    neval=2   
 !        fa = F_Tomas(a,px,py,pz,ss,wvel,yblob5,yblob3,yblob4)
@@ -1128,7 +1129,7 @@ END INTERFACE
      b=b+SIGN(tol1,xm)
    END IF
      
-   fb=F_Tomas(b,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,Lambdawave,helixlength,scalelength)   ! the newest and best value (we hope)
+   fb=F_Tomas(b,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength)   ! the newest and best value (we hope)
    neval=neval+1   ! keep count of the function evaluations
   END DO
   
