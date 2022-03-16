@@ -136,7 +136,7 @@ ns.change_max     = 1.1    # scale back initial timestep
 # viscous force term: rho u_t = visc_coef * div ( 2 mu D)
 # mu corresponds to "viscconst"
 ns.visc_coef      = 1.0  
-ns.visc_abs_tol   = 1.0e-10
+mac.visc_abs_tol   = 1.0e-10
 # NOV 2018 (3 or 4 materials)
 ns.gravity_dir = 2  # 1,2, or 3  (2 in 2D is default)
 ns.gravity        = -9.8 #  dimensional  MKS
