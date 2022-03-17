@@ -806,11 +806,12 @@ REAL_T, intent(out) :: probhi3D(3)
 
 end subroutine STUB_FSI_SLICE
 
-subroutine STUB_OPEN_CASFILE(part_id,unit_id)
+subroutine STUB_OPEN_CASFILE(part_id,unit_id,file_format)
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: part_id
 INTEGER_T, intent(in) :: unit_id
+INTEGER_T, intent(out) :: file_format
 
  print *,"need to define a routine for SUB_OPEN_CASFILE"
  stop
@@ -819,11 +820,12 @@ return
 end subroutine STUB_OPEN_CASFILE
 
 
-subroutine STUB_OPEN_AUXFILE(part_id,unit_id)
+subroutine STUB_OPEN_AUXFILE(part_id,unit_id,file_format)
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: part_id
 INTEGER_T, intent(in) :: unit_id
+INTEGER_T, intent(out) :: file_format
 
  print *,"need to define a routine for SUB_OPEN_AUXFILE"
  stop
