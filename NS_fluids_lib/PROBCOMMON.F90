@@ -1079,14 +1079,16 @@ implicit none
       REAL_T, intent(out) :: probhi3D(3)
       end subroutine TEMPLATE_FSI_SLICE
 
-      subroutine TEMPLATE_OPEN_CASFILE(part_id,unit_id)
+      subroutine TEMPLATE_OPEN_CASFILE(part_id,unit_id,file_format)
       INTEGER_T, intent(in) :: part_id
       INTEGER_T, intent(in) :: unit_id
+      INTEGER_T, intent(out) :: file_format
       end subroutine TEMPLATE_OPEN_CASFILE
 
-      subroutine TEMPLATE_OPEN_AUXFILE(part_id,unit_id)
+      subroutine TEMPLATE_OPEN_AUXFILE(part_id,unit_id,file_format)
       INTEGER_T, intent(in) :: part_id
       INTEGER_T, intent(in) :: unit_id
+      INTEGER_T, intent(out) :: file_format
       end subroutine TEMPLATE_OPEN_AUXFILE
 
       subroutine TEMPLATE_ORDER_NODES(nodes,nodemap)

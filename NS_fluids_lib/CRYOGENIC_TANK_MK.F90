@@ -77,6 +77,54 @@ REAL_T :: TANK_MK_GAS_CV
 
 contains
 
+
+subroutine CRYOGENIC_TANK_MK_OPEN_CASFILE(part_id,unit_id,file_format)
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: unit_id
+INTEGER_T, intent(out) :: file_format
+INTEGER_T :: stat
+
+ if (part_id.ne.1) then
+  print *,"part_id invalid"
+  stop
+ endif
+
+ file_format=1 ! vtk format
+ if (axis_dir.eq.2) then
+  open(unit=unit_id, file= 'tpce_geometry.vtk',status='old',iostat=stat)
+  if (stat.ne.0) then
+   print *,"tpce_geometry.vtk can not be opened"
+   stop
+  endif
+ else
+  print *,"expecting axis_dir.eq.2"
+  stop
+ endif
+
+return
+end subroutine CRYOGENIC_TANK_MK_OPEN_CASFILE
+
+subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE(part_id,unit_id,file_format)
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: unit_id
+INTEGER_T, intent(out) :: file_format
+
+ file_format=1 ! vtk format
+
+ if (axis_dir.eq.2) then
+
+ else
+  print *,"expecting axis_dir.eq.2"
+  stop
+ endif
+
+return
+end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
+
  ! do any initial preparation needed
  subroutine INIT_CRYOGENIC_TANK_MK_MODULE()
   use probcommon_module

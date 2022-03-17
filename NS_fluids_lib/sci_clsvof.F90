@@ -2594,6 +2594,8 @@ return
 end subroutine initflapping
 
 !called from: overall_solid_advance and overall_solid_init
+!"init_from_cas" is the default routine that is called when
+!a probtype is not specifically supported.
 subroutine init_from_cas(curtime,dt,ifirst,sdim,istop,istep,ioproc, &
   part_id,isout)
 use global_utility_module
@@ -2609,12 +2611,22 @@ INTEGER_T :: inode,iface
 REAL_T, dimension(3) :: maxnode,minnode,xval,xval1
 REAL_T, dimension(3) :: maxnodebefore,minnodebefore
 INTEGER_T :: dir
+INTEGER_T :: file_format
 
 REAL_T, dimension(3) :: xxblob1,newxxblob1
 REAL_T :: radradblob1
 INTEGER_T localElem(3)
 
+character(80) :: discard
+character(80) :: points_line
+character(80) :: cells_line
+INTEGER_T :: ivtk,dummy_num_nodes_per_elem
+
 REAL_T :: local_nodes(3,3)  ! dir,node num
+INTEGER_T :: raw_num_nodes
+INTEGER_T :: raw_num_elements
+REAL_T, allocatable :: raw_nodes(:,:)
+INTEGER_T, allocatable :: raw_elements(:,:)
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id invalid"
@@ -2655,19 +2667,15 @@ REAL_T :: local_nodes(3,3)  ! dir,node num
    denpaddle=one
    dampingpaddle=zero
 
-   call SUB_OPEN_CASFILE(part_id,14)
-
-   READ(14,*) FSI(part_id)%NumNodes,FSI(part_id)%NumIntElems
-   print *,"NumNodes ",FSI(part_id)%NumNodes
-   print *,"NumIntElems ",FSI(part_id)%NumIntElems
-   FSI(part_id)%IntElemDim=3
+    !file_format=0 cas format
+    !file_format=1 vtk format
+   call SUB_OPEN_CASFILE(part_id,14,file_format)
 
    if (ifirst.ne.1) then
     print *,"ifirst bust"
     stop
    endif
-
-   call init_FSI(part_id,1)  ! allocate_intelem=1
+   FSI(part_id)%IntElemDim=3
 
    do dir=1,3
     maxnode(dir)=-1.0e+10
@@ -2676,8 +2684,66 @@ REAL_T :: local_nodes(3,3)  ! dir,node num
     minnodebefore(dir)=1.0d+10
    enddo
 
+   if (file_format.eq.0) then ! cas file
+
+    READ(14,*) raw_num_nodes,raw_num_elements
+    allocate(raw_nodes(raw_num_nodes,3))
+    allocate(raw_elements(raw_num_elements,3))
+    do inode=1,raw_num_nodes
+     READ(14,*) raw_nodes(inode,1), &
+          raw_nodes(inode,2),raw_nodes(inode,3)
+    enddo
+    do iface=1,raw_num_elements
+     READ(14,*) raw_elements(iface,1),raw_elements(iface,2), &
+         raw_elements(iface,3)
+    enddo
+
+   else if (file_format.eq.1) then ! vtk file
+
+    do ivtk=1,4
+     read(14,*) discard
+    enddo
+    read(14,'(a6)',advance='no') points_line
+    read(14,*) raw_num_nodes
+
+    allocate(raw_nodes(raw_num_nodes,3))
+    do inode=1,raw_num_nodes
+     READ(14,*) raw_nodes(inode,1), &
+          raw_nodes(inode,2),raw_nodes(inode,3)
+    enddo
+
+    read(14,*) discard,raw_num_elements
+
+    allocate(raw_elements(raw_num_elements,3))
+
+    do iface=1,raw_num_elements
+     READ(14,*) dummy_num_nodes_per_elem, &
+         raw_elements(iface,1), &
+         raw_elements(iface,2), &
+         raw_elements(iface,3)
+     do dir=1,3
+      raw_elements(iface,dir)=raw_elements(iface,dir)+1
+     enddo
+    enddo
+
+   else
+    print *,"file_format invalid"
+    stop
+   endif
+
+   close(14)
+
+   FSI(part_id)%NumNodes=raw_num_nodes
+   FSI(part_id)%NumIntElems=raw_num_elements
+   print *,"NumNodes ",FSI(part_id)%NumNodes
+   print *,"NumIntElems ",FSI(part_id)%NumIntElems
+
+   call init_FSI(part_id,1)  ! allocate_intelem=1
+
    do inode=1,FSI(part_id)%NumNodes
-    READ(14,*) xval(1),xval(2),xval(3)
+    do dir=1,3
+     xval(dir)=raw_nodes(inode,dir)
+    enddo
     do dir=1,3
      if ((minnodebefore(dir).gt.xval(dir)).or.(inode.eq.1)) then
       minnodebefore(dir)=xval(dir)
@@ -2708,7 +2774,9 @@ REAL_T :: local_nodes(3,3)  ! dir,node num
    enddo  ! inode=1,NumNodes
    
    do iface=1,FSI(part_id)%NumIntElems
-    READ(14,*) localElem(1),localElem(2),localElem(3)
+    do dir=1,3
+     localElem(dir)=raw_elements(iface,dir)
+    enddo
     do inode=1,3
      if ((localElem(inode).lt.1).or. &
          (localElem(inode).gt.FSI(part_id)%NumNodes)) then
@@ -2738,7 +2806,9 @@ REAL_T :: local_nodes(3,3)  ! dir,node num
      FSI(part_id)%IntElem(dir,iface)=localElem(dir)
     enddo
    enddo  ! iface, looping faces
-   close(14)
+
+   deallocate(raw_nodes)
+   deallocate(raw_elements)
 
    do dir=1,3 
     print *,"(before)dir,min,max ",dir,minnodebefore(dir),maxnodebefore(dir)
@@ -7282,6 +7352,7 @@ INTEGER_T :: LSLO(3)
 INTEGER_T :: LSHI(3)
 INTEGER_T :: isout
 INTEGER_T :: initflag
+INTEGER_T :: file_format
 INTEGER_T :: i,j,k
 INTEGER_T, dimension(3) :: idx
 
@@ -7331,7 +7402,7 @@ INTEGER_T, dimension(3) :: idx
 
   if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
 
-   call SUB_OPEN_AUXFILE(auxcomp,14)
+   call SUB_OPEN_AUXFILE(auxcomp,14,file_format)
 
    READ(14,*) aux_FSI(auxcomp)%NumNodes,aux_FSI(auxcomp)%NumIntElems
    if (ioproc.eq.1) then

@@ -35,13 +35,16 @@ contains
  return
  end subroutine INIT_CAV3D_MODULE
 
- subroutine OPEN_CAV3D_CASFILE(part_id,unit_id)
+ subroutine OPEN_CAV3D_CASFILE(part_id,unit_id,file_format)
  use probcommon_module
  IMPLICIT NONE
 
  INTEGER_T, intent(in) :: part_id
  INTEGER_T, intent(in) :: unit_id
+ INTEGER_T, intent(out) :: file_format
  character(40) :: casname
+
+ file_format=0
 
  if ((num_materials.eq.3).and.(probtype.eq.411)) then
 
