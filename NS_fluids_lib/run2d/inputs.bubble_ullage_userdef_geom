@@ -53,14 +53,15 @@ ns.material_type_visual = 0 24 999 # visualize Peos(density,e(T))
 
 ns.num_divu_outer_sweeps=1
 
-# Solid defifnition for FSI
+# Solid definition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)
 # 2 => prescribed rigid solid, non-tessellating (sci_clsvof.F90)
-ns.FSI_flag         = 0 0 2
+ns.FSI_flag         = 0 0 2 # tpce_geometry.vtk
 #FSI_interval=0 => only read in geometry at the beginning and copy data
 # from old time to new time.
 #default is FSI_interval=1.
 ns.FSI_interval     = 0 
+ns.num_local_aux_grids=3 #tpce_heatedplate.vtk,tpce_source.vtk,tpce_sink.vtk
 
 # these variables will be available to plug-ins:
 # Coordinate origin is at the center of the tank
