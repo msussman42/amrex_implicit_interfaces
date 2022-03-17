@@ -79,6 +79,7 @@ contains
 
 
 subroutine CRYOGENIC_TANK_MK_OPEN_CASFILE(part_id,unit_id,file_format)
+use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: part_id
@@ -107,6 +108,7 @@ return
 end subroutine CRYOGENIC_TANK_MK_OPEN_CASFILE
 
 subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE(part_id,unit_id,file_format)
+use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: part_id

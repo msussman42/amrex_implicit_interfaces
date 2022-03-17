@@ -2619,7 +2619,6 @@ INTEGER_T localElem(3)
 
 character(80) :: discard
 character(80) :: points_line
-character(80) :: cells_line
 INTEGER_T :: ivtk,dummy_num_nodes_per_elem
 
 REAL_T :: local_nodes(3,3)  ! dir,node num
