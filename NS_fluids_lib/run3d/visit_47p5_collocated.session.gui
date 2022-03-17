@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<Object name="VisIt">
+    <Field name="Version" type="string">3.2.2</Field>
+    <Object name="GUI">
+        <Object name="FileServerList">
+            <Field name="path" type="string">/Users/sussman/amrex_implicit_interfaces/NS_fluids_lib/run3d/helix/collocated_47p5/Case2</Field>
+            <Field name="filter" type="string">*</Field>
+            <Field name="useCurrentDir" type="bool">true</Field>
+            <Field name="automaticFileGrouping" type="bool">true</Field>
+            <Field name="smartFileGrouping" type="bool">true</Field>
+            <Field name="showDotFiles" type="bool">false</Field>
+            <Object name="recentpaths">
+                <Field name="localhost" type="stringVector">"/Users/sussman" "/Users/sussman/amrex_implicit_interfaces" "/Users/sussman/amrex_implicit_interfaces/NS_fluids_lib" "/Users/sussman/amrex_implicit_interfaces/NS_fluids_lib/run3d" "/Users/sussman/amrex_implicit_interfaces/NS_fluids_lib/run3d/helix" "/Users/sussman/amrex_implicit_interfaces/NS_fluids_lib/run3d/helix/collocated_47p5/Case2" </Field>
+            </Object>
+        </Object>
+        <Object name="AppearanceAttributes">
+            <Field name="useSystemDefault" type="bool">true</Field>
+            <Field name="background" type="string">#c0c0c0</Field>
+            <Field name="foreground" type="string">#000000</Field>
+            <Field name="fontName" type="string">Helvetica,12,-1,5,50,0,0,0,0,0</Field>
+            <Field name="style" type="string">macintosh</Field>
+            <Field name="orientation" type="int">0</Field>
+            <Field name="defaultForeground" type="string">#000000</Field>
+            <Field name="defaultBackground" type="string">#ececec</Field>
+            <Field name="defaultFontName" type="string">.AppleSystemUIFont,13,-1,5,50,0,0,0,0,0</Field>
+            <Field name="defaultStyle" type="string">Mac</Field>
+            <Field name="defaultOrientation" type="int">0</Field>
+        </Object>
+        <Field name="postWhenShown" type="bool">false</Field>
+        <Object name="File open">
+            <Field name="x" type="int">272</Field>
+            <Field name="y" type="int">143</Field>
+            <Field name="width" type="int">649</Field>
+            <Field name="height" type="int">480</Field>
+            <Field name="visible" type="bool">false</Field>
+        </Object>
+        <Object name="MainWin">
+            <Field name="x" type="int">94</Field>
+            <Field name="y" type="int">5</Field>
+            <Field name="width" type="int">404</Field>
+            <Field name="height" type="int">618</Field>
+            <Field name="SPLITTER_VALUES_V2" type="floatVector">0 1 </Field>
+        </Object>
+        <Object name="Contour plot attributes">
+            <Field name="x" type="int">413</Field>
+            <Field name="y" type="int">58</Field>
+            <Field name="width" type="int">474</Field>
+            <Field name="height" type="int">566</Field>
+            <Field name="visible" type="bool">false</Field>
+            <Field name="posted" type="bool">false</Field>
+        </Object>
+        <Object name="Mesh plot attributes">
+            <Field name="x" type="int">272</Field>
+            <Field name="y" type="int">76</Field>
+            <Field name="width" type="int">452</Field>
+            <Field name="height" type="int">547</Field>
+            <Field name="visible" type="bool">false</Field>
+            <Field name="posted" type="bool">false</Field>
+        </Object>
+        <Object name="Pseudocolor plot attributes">
+            <Field name="x" type="int">103</Field>
+            <Field name="y" type="int">122</Field>
+            <Field name="width" type="int">502</Field>
+            <Field name="height" type="int">500</Field>
+            <Field name="visible" type="bool">false</Field>
+            <Field name="posted" type="bool">false</Field>
+        </Object>
+        <Object name="ThreeSlice operator attributes">
+            <Field name="x" type="int">424</Field>
+            <Field name="y" type="int">322</Field>
+            <Field name="width" type="int">381</Field>
+            <Field name="height" type="int">220</Field>
+            <Field name="visible" type="bool">false</Field>
+            <Field name="posted" type="bool">false</Field>
+        </Object>
+        <Field name="plotDatabases" type="stringVector">"localhost:/Users/sussman/amrex_implicit_interfaces/NS_fluids_lib/run3d/helix/collocated_47p5/Case2/Header" </Field>
+        <Object name="TimeFormat">
+            <Field name="displayMode" type="string">Cycles</Field>
+            <Field name="precision" type="int">5</Field>
+        </Object>
+        <Field name="showSelectedFiles" type="bool">false</Field>
+        <Field name="allowFileSelectionChange" type="bool">true</Field>
+        <Field name="enableWarningMessagePopups" type="bool">true</Field>
+    </Object>
+</Object>

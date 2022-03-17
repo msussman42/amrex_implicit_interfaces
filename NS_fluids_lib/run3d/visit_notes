@@ -1,0 +1,18 @@
+For Helix problem:
+1. Open Header
+2. uncheck "apply operators to all plots" and "apply subset selections to all 
+plots"
+3. Add Contour, L0303
+    a) Plot attributes - contour - Minimum level=max level=0 N levels=1 
+       single Contour color - apply - make default - dismiss
+4. Add mesh
+    a) Plot attributes - opacity 25 percent - apply - make default - dismiss
+    b) operator attributes - 3 slice - x=0 y=0 z=4.1 apply - make default -
+       dismiss
+4. Add Pseudocolor, CT01
+    a) Plot attributes - pseudo color - minimum level=-.1-.244 
+      - maximum level=0.1-0.244 apply - make default - dismiss 
+    b) operator attributes - 3 slice - x=-3 y=-3 z=4 apply - make default -
+       dismiss
+5. save session
+6. take screenshot file is in Desktop
