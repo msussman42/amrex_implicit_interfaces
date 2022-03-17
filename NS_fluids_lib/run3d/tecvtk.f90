@@ -8,7 +8,6 @@
       real, allocatable :: node_list(:,:)
       character(80) :: discard
       character(80) :: points_line
-      character(80) :: cells_line
 
       print *,"This program reads input.vtk"
       print *,"and outputs an ascii tecplot file: output.plt"
