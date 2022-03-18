@@ -180,7 +180,8 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    TANK_MK_INSULATE_R_HIGH = yblob/2.0d0 !yblob is height of cylindrical part
 
    ! TPCE
-  else if (axis_dir.eq.1) then ! heater on top
+  else if ((axis_dir.eq.1).or. &
+           (axis_dir.eq.2)) then ! heater on top
    TANK_MK_HEATER_WALL_MODEL = 0.0
    if (radblob4.gt.0.0d0) then
 !   TANK_MK_HEATER_THICK = 0.01d0
@@ -348,20 +349,47 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    endif 
    LS(2)=-LS(1)
    ! Solid
-   LS(3)=SOLID_TOP_HALF_DIST(x)
 
-   if (axis_dir.eq.0) then
-    ! do nothing
-   else if (axis_dir.eq.1) then ! TPCE
-    call CRYOGENIC_TANK_MK_LS_NOZZLE(x,nozzle_dist)
-    if (nozzle_dist.gt.LS(3)) then ! nozzle_dist>0 in the nozzle
-     LS(3)=nozzle_dist
+   if ((axis_dir.eq.0).or. &
+       (axis_dir.eq.1)) then
+
+    if (FSI_flag(3).eq.1) then
+     ! do nothing
+    else
+     print *,"expecting FSI_flag(3).eq.1"
+     stop
     endif
-    caller_id=0
-    call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,caller_id) !LS_A>0 in heater
-    if (LS_A.gt.LS(3)) then
-     LS(3)=LS_A
+
+    LS(3)=SOLID_TOP_HALF_DIST(x)
+
+    if (axis_dir.eq.0) then
+     ! do nothing
+    else if (axis_dir.eq.1) then ! TPCE
+     call CRYOGENIC_TANK_MK_LS_NOZZLE(x,nozzle_dist)
+     if (nozzle_dist.gt.LS(3)) then ! nozzle_dist>0 in the nozzle
+      LS(3)=nozzle_dist
+     endif
+     caller_id=0
+     call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,caller_id) !LS_A>0 in heater
+     if (LS_A.gt.LS(3)) then
+      LS(3)=LS_A
+     endif
+    else
+     print *,"axis_dir invalid"
+     stop
     endif
+
+   else if (axis_dir.eq.2) then
+
+    if (FSI_flag(3).eq.2) then
+     ! do nothing
+    else
+     print *,"expecting FSI_flag(3).eq.2"
+     stop
+    endif
+
+    LS(3)=-99999.0
+
    else
     print *,"axis_dir invalid"
     stop

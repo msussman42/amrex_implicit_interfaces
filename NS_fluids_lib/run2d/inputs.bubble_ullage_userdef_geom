@@ -85,6 +85,7 @@ ns.radblob          = 0.0    # Not used
 # ns.radblob3 = 0.01  #TANK_MK_NOZZLE_RAD
 # ns.radblob4 = 0.02  #TANK_MK_HEATER_THICK
 # ns.radblob5 = 0.01  #TANK_MK_NOZZLE_THICK_OUTLET
+# 128^3 grid:
 ns.radblob3 = 0.005  #TANK_MK_NOZZLE_RAD
 ns.radblob4 = 0.01   #TANK_MK_HEATER_THICK
 ns.radblob5 = 0.005  #TANK_MK_NOZZLE_THICK_OUTLET
@@ -135,19 +136,12 @@ amr.max_level       = 1       #2D
 
 amr.regrid_int      = 1     # How often to regrid
 amr.max_grid_size   = 128   # 128 is optimal for MPI in 2D
-#amr.max_grid_size   = 32   # 128 is optimal for MPI in 2D
+#amr.max_grid_size   = 32   # 32 is optimal for MPI in 3D
 amr.regrid_on_restart=1
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 4 4 4 4 4 # number of buffer cells in error est 
 amr.blocking_factor = 8 8 8 8 8 # block factor in grid generation
-ns.nblocks=0 # we should do 2nd order on coarse meshes!
-ns.xblocks=0.0
-ns.yblocks=0.0
-ns.zblocks=0.0
-ns.rxblocks=0.002
-ns.ryblocks=0.2
-ns.rzblocks=0.2
 
 amr.grid_eff        = 0.7  # smaller => less boxes
 
@@ -168,28 +162,27 @@ ns.fixed_dt_scales=0.0 0.0 0.0
 # ----------------------------------------------------------
 # -------- Input/output (IO) -------------------------------
 # ----------------------------------------------------------
-# output file -2=> tecplot -1=> plot files (visit or paraview)
 #ns.visual_buoyancy_plot_int=2000
 #ns.visual_phase_change_plot_int=1
+#visual_nddata_format=1 tecplot
+#visual_nddata_format=2 visit, amrvis
+#visual_nddata_format=3 piecewise constant tecplot
 #ns.visual_nddata_format=2
 
-amr.check_int       = 200     # number of timesteps between checkpoints
-#amr.check_int       = 10     # number of timesteps between checkpoints
-amr.check_file      = chk     # root name of checkpoint file
+amr.check_int       = 200  # number of timesteps between checkpoints 2D
+#amr.check_int       = 40  # number of timesteps between checkpoints 3D
+amr.check_file      = chk  # root name of checkpoint file
 
-ns.slice_dir=1 # y (aka z) direction 2D
-#ns.slice_dir=2 #  z direction 3D
+ns.slice_dir=1 # vertical direction 2D
+#ns.slice_dir=2 # vertical direction 3D
 ns.xslice=0.0000001 0.0 0.0
 #amr.slice_int=2000
-amr.plot_int        = 200   # number of timesteps between plot files (200)
-#amr.plot_int        = 10   # number of timesteps between plot files
-#amr.plot_int        = 1   # number of timesteps between plot files
+amr.plot_int        = 200 # number of timesteps between plot files (2D)
+#amr.plot_int        = 40   # number of timesteps between plot files (3D)
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.output_drop_distribution=1
-ns.sum_interval     = 100    # timesteps between computing mass 
 ns.sum_interval     = 10     # timesteps between computing mass 
-#ns.sum_interval     = 1     # timesteps between computing mass 
 
 amr.grid_log        = grdlog  # name of grid logging file
 
@@ -354,14 +347,14 @@ ns.R_Palmore_Desjardins=8.3144626182 # J/(mol Kelvin)
 # 3=dirichlet at inflow, outflow, and walls.
 ns.prescribe_temperature_outflow=0
 
-ns.lo_bc          = 3 3
-ns.hi_bc          = 3 3
-ns.temperature_lo_bc = 3 3
-ns.temperature_hi_bc = 3 3
-ns.lo_bc          = 3 3 3 #3D
-ns.hi_bc          = 3 3 3 #3D
-ns.temperature_lo_bc = 3 3 3 #3D
-ns.temperature_hi_bc = 3 3 3 #3D
+ns.lo_bc          = 3 3 #2D
+ns.hi_bc          = 3 3 #2D
+ns.temperature_lo_bc = 3 3 #2D
+ns.temperature_hi_bc = 3 3 #2D
+#ns.lo_bc          = 3 3 3 #3D
+#ns.hi_bc          = 3 3 3 #3D
+#ns.temperature_lo_bc = 3 3 3 #3D
+#ns.temperature_hi_bc = 3 3 3 #3D
 
 # -n=use LS with smeared thermal conductivity at material boundaries.
 # n=1,2,3,... (smearing thickness is 2n * Delta x)
@@ -386,7 +379,6 @@ ns.xblob3 = 18.3 # Watts=J/s
 #nozzle outlet velocity (v_n) measured from simulations.
 #nozzle radius is 0.005m
 #To find Dj (diameter of jet at the interface): Tecplot -> insert -> Stream
-#To find Dj: Tecplot -> insert -> Stream
 #Weber number=rho_liq * v_n^2 * r_nozzle^2 /(sigma * Dj)=
 #BREAKUP:
 #(3.35 Liters/min) 1400 * (0.95)^2 * (0.005)^2 /(0.012 * 0.012)=219.0 
@@ -394,13 +386,18 @@ ns.xblob3 = 18.3 # Watts=J/s
 #(1.5 Liters/min) 1400 * (0.42)^2 * (0.005)^2 /(0.012 * 0.012)=43.0
 #BREAKUP:
 #(0.6 Liters/min) 1400 * (0.18)^2 * (0.005)^2 /(0.012 * 0.012)=7.9
+#BREAKUP:
 #(0.3 Liters/min) 1400 * (0.084)^2 * (0.005)^2 /(0.012 * 0.012)=1.7
+#NO BREAKUP:
+#64^3 grid:
+#(0.3 Liters/min) 1400 * (0.015)^2 * (0.01)^2 /(0.012 * 0.024)=0.11
+#NO BREAKUP:
 #(0.1 Liters/min) 1400 * (0.023)^2 * (0.005)^2 /(0.012 * 0.012)=0.13
 #ns.xblob5 = 5.6e-5 # m^3/s  (3.35 Liters/minute) (v_n=0.95 m/s, Dj=0.012)
 #ns.xblob5 = 2.5e-5 # m^3/s  (1.5 Liters/minute) (v_n=0.42 m/s, Dj=0.012)
 #ns.xblob5 = 1.0e-5 # m^3/s  (0.6 Liters/minute) (v_n=0.18 m/s, Dj=0.012)
 #128^3
-#ns.xblob5 = 0.5e-5 # m^3/s  (0.3 Liters/minute) (v_n=0.084 m/s, Dj=0.012)
+ns.xblob5 = 0.5e-5 # m^3/s  (0.3 Liters/minute) (v_n=0.084 m/s, Dj=0.012)
 #ns.xblob5 = 0.166667e-5 # m^3/s  (0.1 Liters/minute) (v_n=0.023 m/s, Dj=0.012)
 #64^3
 #ns.xblob5 = 3.0e-5 # m^3/s  (0.3x6 Liters/minute) (v_n=0.084x6 m/s, Dj=0.024)
