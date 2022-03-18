@@ -87,6 +87,9 @@ INTEGER_T, intent(in) :: unit_id
 INTEGER_T, intent(out) :: file_format
 INTEGER_T :: stat
 
+ print *,"CRYOGENIC_TANK_MK_OPEN_CASFILE should not be called"
+ stop
+
  if (part_id.ne.1) then
   print *,"part_id invalid"
   stop
@@ -107,6 +110,52 @@ INTEGER_T :: stat
 return
 end subroutine CRYOGENIC_TANK_MK_OPEN_CASFILE
 
+subroutine CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX(auxcomp, &
+    minnode,maxnode,LS_FROM_SUBROUTINE,aux_ncells_max_side)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+INTEGER_T, intent(in) :: auxcomp
+REAL_T, intent(inout) :: minnode(3)
+REAL_T, intent(inout) :: maxnode(3)
+INTEGER_T, intent(out) :: LS_FROM_SUBROUTINE
+INTEGER_T, intent(out) :: aux_ncells_max_side
+
+ if ((auxcomp.ge.1).and. &
+     (auxcomp.le.4)) then
+  if (axis_dir.eq.2) then
+   if (num_materials.eq.3) then
+    LS_FROM_SUBROUTINE=0
+    if (auxcomp.eq.1) then
+     aux_ncells_max_side=64
+    else if (auxcomp.eq.2) then
+     aux_ncells_max_side=64
+    else if (auxcomp.eq.3) then
+     aux_ncells_max_side=64
+    else if (auxcomp.eq.4) then
+     aux_ncells_max_side=128
+    else
+     print *,"auxcomp invalid"
+     stop
+    endif
+   else
+    print *,"num_materials invalid in CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX"
+    stop
+   endif
+  else
+   print *,"axis_dir invalid in CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX"
+   stop
+  endif
+
+ else
+  print *,"auxcomp invalid CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX"
+  stop
+ endif
+
+
+end subroutine CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX
+
+
 subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE(part_id,unit_id,file_format)
 use probcommon_module
 IMPLICIT NONE
@@ -120,7 +169,7 @@ INTEGER_T :: stat
 
  if (axis_dir.eq.2) then
 
-  if (fort_num_local_aux_grids.eq.3) then
+  if (fort_num_local_aux_grids.eq.4) then
 
    if (part_id.eq.1) then
     open(unit=unit_id,file= 'tpce_heatedplate.vtk',status='old',iostat=stat)
@@ -128,13 +177,15 @@ INTEGER_T :: stat
     open(unit=unit_id,file= 'tpce_source.vtk',status='old',iostat=stat)
    else if (part_id.eq.3) then
     open(unit=unit_id,file= 'tpce_sink.vtk',status='old',iostat=stat)
+   else if (part_id.eq.4) then
+    open(unit=unit_id, file= 'tpce_geometry.vtk',status='old',iostat=stat)
    else
     print *,"part_id invalid"
     stop
    endif
 
   else
-   print *,"expecting fort_num_local_aux_grids.eq.3"
+   print *,"expecting fort_num_local_aux_grids.eq.4"
    stop
   endif 
 
@@ -314,6 +365,9 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   REAL_T, intent(out) :: LS(nmat)
   REAL_T :: nozzle_dist,LS_A
   INTEGER_T :: caller_id
+  REAL_T :: x3D(3)
+  INTEGER_T auxcomp
+  INTEGER_T dir
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -321,6 +375,16 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    print *,"nmat invalid"
    stop
   endif
+  if (t.ge.0.0d0) then
+   ! do nothing
+  else
+   print *,"t invalid"
+   stop
+  endif
+  do dir=1,SDIM
+   x3D(dir)=x(dir)
+  enddo
+  x3D(3)=x(SDIM)
 
    ! material 1= liquid  (e.g. Freon 113)
    ! material 2= vapor  
@@ -381,14 +445,14 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
 
    else if (axis_dir.eq.2) then
 
-    if (FSI_flag(3).eq.2) then
+    if (FSI_flag(3).eq.1) then
      ! do nothing
     else
-     print *,"expecting FSI_flag(3).eq.2"
+     print *,"expecting FSI_flag(3).eq.1"
      stop
     endif
-
-    LS(3)=-99999.0
+    auxcomp=4
+    call interp_from_aux_grid(auxcomp,x3D,LS(3))
 
    else
     print *,"axis_dir invalid"
@@ -1415,6 +1479,8 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T1_probe(dir))**2
    else if (axis_dir.eq.1) then
     support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T4_probe(dir))**2
+   else if (axis_dir.eq.2) then
+    support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T4_probe(dir))**2
    else
     print *,"axis_dir invalid"
     stop
@@ -1510,7 +1576,8 @@ INTEGER_T :: im,iregion,dir
 
  if (axis_dir.eq.0) then
   number_of_source_regions=1 ! side heater
- else if (axis_dir.eq.1) then
+ else if ((axis_dir.eq.1).or. &
+          (axis_dir.eq.2)) then
   number_of_source_regions=3 ! heater A, inflow, outflow
  else
   print *,"axis_dir invalid"
@@ -1544,7 +1611,8 @@ INTEGER_T :: im,iregion,dir
  if (axis_dir.eq.0) then
   regions_list(1,0)%region_material_id=3
   regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
- else if (axis_dir.eq.1) then
+ else if ((axis_dir.eq.1).or. &
+          (axis_dir.eq.2)) then
   regions_list(1,0)%region_material_id=3
   regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
    ! inflow
@@ -1572,6 +1640,7 @@ end subroutine CRYOGENIC_TANK_MK_INIT_REGIONS_LIST
 
 subroutine CRYOGENIC_TANK_MK_CHARFN_REGION(region_id,x,cur_time,charfn_out)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: region_id
@@ -1582,6 +1651,14 @@ REAL_T :: TANK_MK_R_WIDTH
 REAL_T :: shell_R,shell_center,LS_SHELL,LS_A,LS_nozzle,zdiff
 INTEGER_T :: caller_id
 REAL_T :: r_cyl
+REAL_T :: x3D(3)
+INTEGER_T dir
+INTEGER_T auxcomp
+
+ do dir=1,SDIM
+  x3D(dir)=x(dir)
+ enddo
+ x3D(3)=x(SDIM)
 
  if (SDIM.eq.2) then
   r_cyl=abs(x(1))
@@ -1695,6 +1772,46 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    stop
   endif
 
+ else if (axis_dir.eq.2) then
+
+  if (region_id.eq.1) then ! heater
+   auxcomp=1
+   call interp_from_aux_grid(auxcomp,x3D,LS_A)
+   if (LS_A.ge.0.0d0) then
+    charfn_out=one
+   else if (LS_A.le.0.0d0) then
+    charfn_out=0.0d0
+   else
+    print *,"LS_A invalid"
+    stop
+   endif
+  else if (region_id.eq.2) then ! inflow
+   auxcomp=2
+   call interp_from_aux_grid(auxcomp,x3D,LS_A)
+   if (LS_A.ge.0.0d0) then
+    charfn_out=one
+   else if (LS_A.le.0.0d0) then
+    charfn_out=0.0d0
+   else
+    print *,"LS_A invalid"
+    stop
+   endif
+  else if (region_id.eq.3) then ! outflow
+   auxcomp=3
+   call interp_from_aux_grid(auxcomp,x3D,LS_A)
+   if (LS_A.ge.0.0d0) then
+    charfn_out=one
+   else if (LS_A.le.0.0d0) then
+    charfn_out=0.0d0
+   else
+    print *,"LS_A invalid"
+    stop
+   endif
+  else
+   print *,"region_id invalid"
+   stop
+  endif
+
  else
   print *,"axis_dir invalid"
   stop
@@ -1722,6 +1839,7 @@ subroutine CRYOGENIC_TANK_MK_THERMAL_K(x,dx,cur_time, &
   temperature_probe, &
   nrm) ! nrm points from solid to fluid
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: im
@@ -1745,6 +1863,14 @@ INTEGER_T :: turb_flag
 REAL_T :: LS_A
 INTEGER_T :: caller_id
 REAL_T :: r_cyl
+INTEGER_T :: dir
+REAL_T :: x3D(3)
+INTEGER_T auxcomp
+
+ do dir=1,SDIM
+  x3D(dir)=x(dir)
+ enddo
+ x3D(3)=x(SDIM)
 
  if (SDIM.eq.2) then
   r_cyl=abs(x(1))
@@ -1891,12 +2017,22 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    stop
   endif
 
- else if (axis_dir.eq.1) then !TPCE
+ else if ((axis_dir.eq.1).or. &
+          (axis_dir.eq.2)) then !TPCE
   if (im.eq.2) then ! vapor
    ! do nothing
   else if ((im.eq.1).or.(im.eq.3)) then ! liquid or solid
    caller_id=1
-   call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,caller_id)
+   if (axis_dir.eq.1) then
+    call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,caller_id)
+   else if (axis_dir.eq.2) then
+    auxcomp=1
+    call interp_from_aux_grid(auxcomp,x3D,LS_A)
+   else
+    print *,"axis_dir invalid"
+    stop
+   endif
+
    if (LS_A.gt.-dx(1)) then
     thermal_k=fort_heatviscconst(im)* &
       max(one,dx(1)/fort_thermal_microlayer_size(im))
