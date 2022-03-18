@@ -114,10 +114,29 @@ IMPLICIT NONE
 INTEGER_T, intent(in) :: part_id
 INTEGER_T, intent(in) :: unit_id
 INTEGER_T, intent(out) :: file_format
+INTEGER_T :: stat
 
  file_format=1 ! vtk format
 
  if (axis_dir.eq.2) then
+
+  if (fort_num_local_aux_grids.eq.3) then
+
+   if (part_id.eq.1) then
+    open(unit=unit_id,file= 'tpce_heatedplate.vtk',status='old',iostat=stat)
+   else if (part_id.eq.2) then
+    open(unit=unit_id,file= 'tpce_source.vtk',status='old',iostat=stat)
+   else if (part_id.eq.3) then
+    open(unit=unit_id,file= 'tpce_sink.vtk',status='old',iostat=stat)
+   else
+    print *,"part_id invalid"
+    stop
+   endif
+
+  else
+   print *,"expecting fort_num_local_aux_grids.eq.3"
+   stop
+  endif 
 
  else
   print *,"expecting axis_dir.eq.2"

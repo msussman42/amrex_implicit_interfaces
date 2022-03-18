@@ -7354,6 +7354,13 @@ INTEGER_T :: initflag
 INTEGER_T :: file_format
 INTEGER_T :: i,j,k
 INTEGER_T, dimension(3) :: idx
+character(80) :: discard
+character(80) :: points_line
+INTEGER_T :: ivtk,dummy_num_nodes_per_elem
+INTEGER_T :: raw_num_nodes
+INTEGER_T :: raw_num_elements
+REAL_T, allocatable :: raw_nodes(:,:)
+INTEGER_T, allocatable :: raw_elements(:,:)
 
  isout=0
  initflag=1
@@ -7403,7 +7410,58 @@ INTEGER_T, dimension(3) :: idx
 
    call SUB_OPEN_AUXFILE(auxcomp,14,file_format)
 
-   READ(14,*) aux_FSI(auxcomp)%NumNodes,aux_FSI(auxcomp)%NumIntElems
+   if (file_format.eq.0) then ! cas file
+
+    READ(14,*) raw_num_nodes,raw_num_elements
+    allocate(raw_nodes(raw_num_nodes,3))
+    allocate(raw_elements(raw_num_elements,3))
+    do inode=1,raw_num_nodes
+     READ(14,*) raw_nodes(inode,1), &
+          raw_nodes(inode,2),raw_nodes(inode,3)
+    enddo
+    do iface=1,raw_num_elements
+     READ(14,*) raw_elements(iface,1),raw_elements(iface,2), &
+         raw_elements(iface,3)
+    enddo
+
+   else if (file_format.eq.1) then ! vtk file
+
+    do ivtk=1,4
+     read(14,*) discard
+    enddo
+    read(14,'(a6)',advance='no') points_line
+    read(14,*) raw_num_nodes
+
+    allocate(raw_nodes(raw_num_nodes,3))
+    do inode=1,raw_num_nodes
+     READ(14,*) raw_nodes(inode,1), &
+          raw_nodes(inode,2),raw_nodes(inode,3)
+    enddo
+
+    read(14,*) discard,raw_num_elements
+
+    allocate(raw_elements(raw_num_elements,3))
+
+    do iface=1,raw_num_elements
+     READ(14,*) dummy_num_nodes_per_elem, &
+         raw_elements(iface,1), &
+         raw_elements(iface,2), &
+         raw_elements(iface,3)
+     do dir=1,3
+      raw_elements(iface,dir)=raw_elements(iface,dir)+1
+     enddo
+    enddo
+
+   else
+    print *,"file_format invalid"
+    stop
+   endif
+
+   close(14)
+
+   aux_FSI(auxcomp)%NumNodes=raw_num_nodes
+   aux_FSI(auxcomp)%NumIntElems=raw_num_elements
+
    if (ioproc.eq.1) then
     print *,"auxcomp,NumNodes ",auxcomp,aux_FSI(auxcomp)%NumNodes
     print *,"auxcomp,NumIntElems ",auxcomp,aux_FSI(auxcomp)%NumIntElems
@@ -7417,7 +7475,9 @@ INTEGER_T, dimension(3) :: idx
    call init_FSI_mesh_type(aux_FSI(auxcomp),1)  ! allocate_intelem=1
 
    do inode=1,aux_FSI(auxcomp)%NumNodes
-    READ(14,*) xval(1),xval(2),xval(3)
+    do dir=1,3
+     xval(dir)=raw_nodes(inode,dir)
+    enddo
     do dir=1,3
      if ((minnodebefore(dir).gt.xval(dir)).or.(inode.eq.1)) then
       minnodebefore(dir)=xval(dir)
@@ -7448,7 +7508,9 @@ INTEGER_T, dimension(3) :: idx
    enddo  ! inode=1,NumNodes
   
    do iface=1,aux_FSI(auxcomp)%NumIntElems
-    READ(14,*) localElem(1),localElem(2),localElem(3)
+    do dir=1,3
+     localElem(dir)=raw_elements(iface,dir)
+    enddo
     do inode=1,3
      if ((localElem(inode).lt.1).or. &
          (localElem(inode).gt.aux_FSI(auxcomp)%NumNodes)) then
@@ -7470,7 +7532,9 @@ INTEGER_T, dimension(3) :: idx
      aux_FSI(auxcomp)%IntElem(dir,iface)=localElem(dir)
     enddo
    enddo  ! iface, looping faces
-   close(14)
+
+   deallocate(raw_nodes)
+   deallocate(raw_elements)
 
    if (ioproc.eq.1) then
     do dir=1,3 

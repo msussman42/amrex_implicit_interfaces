@@ -81,16 +81,20 @@ ns.xblob            = 0.127 # Tank cavity radius (TPCE) 0.254/2 meters
 ns.yblob            = 0.102 # Height of Cylindrical part 10.2 cm
 ns.zblob            = 0.0    # Interface location 
 ns.radblob          = 0.0    # Not used
+# 64^3 grid (compute1):
+# ns.radblob3 = 0.01  #TANK_MK_NOZZLE_RAD
+# ns.radblob4 = 0.02  #TANK_MK_HEATER_THICK
+# ns.radblob5 = 0.01  #TANK_MK_NOZZLE_THICK_OUTLET
 ns.radblob3 = 0.005  #TANK_MK_NOZZLE_RAD
 ns.radblob4 = 0.01   #TANK_MK_HEATER_THICK
 ns.radblob5 = 0.005  #TANK_MK_NOZZLE_THICK_OUTLET
 # volume of spherical ullage=0.17 * 0.01375=(4/3)pi r^3
 ns.radblob2         = 0.082   # radius of spherical ullage
 ns.xblob2           = 0.0
-ns.yblob2           = 0.051
+ns.yblob2           = 0.051 # 0.0 if 3D
 ns.zblob2           = 0.051
 
-ns.xblob4 	    = 0.127 # End cap radius 
+ns.xblob4 	    = 0.127 # End cap radius TANK_MK_END_RADIUS
 
 #TANK_MK_END_CENTER=yblob4
 #top of cylindrical section: z=0.102/2
@@ -110,21 +114,29 @@ ns.yblob4	    = 0.051 # Z coord (vert) of the top spherical cap center
 # nozzle thickness=0.4 inches=0.01016 m
 # nozzle length=2.5inches=0.0635 m
 # thermister T4 is 2.5 cm from the very top of the tank.
-geometry.coord_sys  = 1
-geometry.prob_lo    = 0.0  -0.2
-geometry.prob_hi    = 0.2  0.2
-geometry.is_periodic= 0 0
+geometry.coord_sys  = 1 # 2D RZ
+#geometry.coord_sys  = 0 # 3D 
+geometry.prob_lo    = 0.0  -0.2 #2D
+geometry.prob_hi    = 0.2  0.2  #2D
+# geometry.prob_lo    = -0.2  -0.2 -0.2 #3D
+# geometry.prob_hi    = 0.2  0.2 0.2    #3D
+geometry.is_periodic= 0 0 0
 
 ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 
 # dx_coarse=(prob_hi_x-prob_lo_x)/n_cell_x
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.
-amr.n_cell          = 128 256
-amr.max_level       = 1
+amr.n_cell          = 128 256 #2D
+amr.max_level       = 1       #2D
+#amr.n_cell          = 128 128 128 #3D
+#amr.n_cell          = 64 64 64 # 8 cores compute1 #3D
+#amr.max_level       = 0 #3D
 
 amr.regrid_int      = 1     # How often to regrid
 amr.max_grid_size   = 128   # 128 is optimal for MPI in 2D
+#amr.max_grid_size   = 32   # 128 is optimal for MPI in 2D
+amr.regrid_on_restart=1
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 4 4 4 4 4 # number of buffer cells in error est 
@@ -165,8 +177,9 @@ amr.check_int       = 200     # number of timesteps between checkpoints
 #amr.check_int       = 10     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
-ns.slice_dir=1 # y (aka z) direction
-ns.xslice=0.0000001 0.0
+ns.slice_dir=1 # y (aka z) direction 2D
+#ns.slice_dir=2 #  z direction 3D
+ns.xslice=0.0000001 0.0 0.0
 #amr.slice_int=2000
 amr.plot_int        = 200   # number of timesteps between plot files (200)
 #amr.plot_int        = 10   # number of timesteps between plot files
@@ -193,6 +206,7 @@ ns.v=0
 # ----------------------------------------------------------
 ns.gravity          = 0.0
 ns.gravity_dir      = 2 # 1..SDIM
+#ns.gravity_dir      = 3 # 1..SDIM 3D
 ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.
 #override_density=0 if compressible material
 #if incompressible material:
@@ -344,6 +358,10 @@ ns.lo_bc          = 3 3
 ns.hi_bc          = 3 3
 ns.temperature_lo_bc = 3 3
 ns.temperature_hi_bc = 3 3
+ns.lo_bc          = 3 3 3 #3D
+ns.hi_bc          = 3 3 3 #3D
+ns.temperature_lo_bc = 3 3 3 #3D
+ns.temperature_hi_bc = 3 3 3 #3D
 
 # -n=use LS with smeared thermal conductivity at material boundaries.
 # n=1,2,3,... (smearing thickness is 2n * Delta x)
@@ -365,8 +383,9 @@ ns.xblob3 = 18.3 # Watts=J/s
 #Weber number breakup criterion according to Breisacher and Moder 2015:
 #   We<=0.71 => no breakup
 #   We>=4.74 => breakup
-#nozzle velocity (v_n) measured from simulations.
+#nozzle outlet velocity (v_n) measured from simulations.
 #nozzle radius is 0.005m
+#To find Dj (diameter of jet at the interface): Tecplot -> insert -> Stream
 #To find Dj: Tecplot -> insert -> Stream
 #Weber number=rho_liq * v_n^2 * r_nozzle^2 /(sigma * Dj)=
 #BREAKUP:
@@ -380,8 +399,11 @@ ns.xblob3 = 18.3 # Watts=J/s
 #ns.xblob5 = 5.6e-5 # m^3/s  (3.35 Liters/minute) (v_n=0.95 m/s, Dj=0.012)
 #ns.xblob5 = 2.5e-5 # m^3/s  (1.5 Liters/minute) (v_n=0.42 m/s, Dj=0.012)
 #ns.xblob5 = 1.0e-5 # m^3/s  (0.6 Liters/minute) (v_n=0.18 m/s, Dj=0.012)
-ns.xblob5 = 0.5e-5 # m^3/s  (0.3 Liters/minute) (v_n=0.084 m/s, Dj=0.012)
+#128^3
+#ns.xblob5 = 0.5e-5 # m^3/s  (0.3 Liters/minute) (v_n=0.084 m/s, Dj=0.012)
 #ns.xblob5 = 0.166667e-5 # m^3/s  (0.1 Liters/minute) (v_n=0.023 m/s, Dj=0.012)
+#64^3
+#ns.xblob5 = 3.0e-5 # m^3/s  (0.3x6 Liters/minute) (v_n=0.084x6 m/s, Dj=0.024)
 ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 
 # ----------------------------------------------------------
@@ -422,11 +444,13 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 200
-mg.bot_atol = 1.0e-8
+mg.bot_atol = 1.0e-8 #2D
+#mg.bot_atol = 1.0e-6 #3D
 mg.rtol_b = -0.01
 Lp.v = 1
 
-mac.mac_abs_tol=1.0e-8
+mac.mac_abs_tol=1.0e-8  #2D
+#mac.mac_abs_tol=1.0e-6 #3D
 
 ns.pressure_error_cutoff=0.0 0.0 0.0
 
