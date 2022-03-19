@@ -9093,7 +9093,7 @@ end subroutine CLSVOF_FILLCONTAINER
 ! called from: SOLIDFLUID.F90
 subroutine CLSVOF_InitBox(  &
   iter, &
-  sdim_AMR, & ! =AMREX_SPACEDIM for aux
+  sdim_AMR, & ! =AMREX_SPACEDIM for aux (this variable is not used)
   lev77, &    ! =-1 for aux
   tid, &      ! =0 for aux
   tilenum, &  ! =0 for aux
@@ -9128,7 +9128,7 @@ use CTML_module
 IMPLICIT NONE
 
   INTEGER_T, intent(in) :: iter
-  INTEGER_T, intent(in) :: sdim_AMR
+  INTEGER_T, intent(in) :: sdim_AMR ! not used
   INTEGER_T, intent(in) :: lev77
   INTEGER_T, intent(in) :: tid
   INTEGER_T, intent(in) :: tilenum
