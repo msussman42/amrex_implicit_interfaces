@@ -380,7 +380,6 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   INTEGER_T :: caller_id
   REAL_T :: x3D(3)
   INTEGER_T auxcomp
-  INTEGER_T dir
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -1673,7 +1672,6 @@ REAL_T :: shell_R,shell_center,LS_SHELL,LS_A,LS_nozzle,zdiff
 INTEGER_T :: caller_id
 REAL_T :: r_cyl
 REAL_T :: x3D(3)
-INTEGER_T dir
 INTEGER_T auxcomp
 
 
@@ -1892,7 +1890,6 @@ INTEGER_T :: turb_flag
 REAL_T :: LS_A
 INTEGER_T :: caller_id
 REAL_T :: r_cyl
-INTEGER_T :: dir
 REAL_T :: x3D(3)
 INTEGER_T auxcomp
 
