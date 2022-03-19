@@ -40,6 +40,8 @@ use probcommon_module
 
 implicit none
 
+INTEGER_T, PARAMETER :: sci_sdim=3
+
 type lag_type
  INTEGER_T :: n_nodes,n_elems
  REAL_T, pointer :: nd(:,:)    ! nd(dir,node_id) dir=1..3
@@ -110,11 +112,13 @@ type mesh_type
  REAL_T solid_displ(3)
  REAL_T solid_speed(3)
  INTEGER_T deforming_part
+ INTEGER_T normal_invert
+ INTEGER_T exclusive_doubly_wetted
 end type mesh_type
 
 
 INTEGER_T :: use_temp
-INTEGER_T :: istepB,sci_sdim,sci_istop,sci_istep
+INTEGER_T :: istepB,sci_istop,sci_istep
 REAL_T :: sci_curtime,sci_dt
 REAL_T :: timeB,tstart,tfinish
 REAL_T :: dtB
@@ -124,8 +128,6 @@ type(mesh_type), dimension(MAX_PARTS) :: FSI
 
 type(lag_type), dimension(:), allocatable :: aux_multi_lag
 type(mesh_type), dimension(:), allocatable :: aux_FSI
-
-INTEGER_T :: normal_invert
 
 REAL_T :: radradblob,denpaddle,dampingpaddle,TorquePos,TorqueVel,radradblobwall
 REAL_T :: raddust,dendust,adheredust,floordust,tempdust
@@ -143,7 +145,6 @@ REAL_T, Dimension(22) :: whale_angle, whale_timestep
 INTEGER_T whale_cells,whale_counter
 REAL_T whale_counter_real
 REAL_T CLSVOF_whale_time
-INTEGER_T exclusive_doubly_wetted
 
 REAL_T problo_ref(AMREX_SPACEDIM)
 REAL_T probhi_ref(AMREX_SPACEDIM)
@@ -5971,14 +5972,10 @@ INTEGER_T :: fsi_part_id
      ((fsi_part_id.ge.1).and. &
       (fsi_part_id.le.FSI_NPARTS))) then
 
-  normal_invert=0
-  sci_sdim=3    
-  exclusive_doubly_wetted=0
- 
   if ((ctml_part_id.ge.1).and. &
       (ctml_part_id.le.CTML_NPARTS)) then
 
-   exclusive_doubly_wetted=1
+   FSI(part_id)%exclusive_doubly_wetted=1
    sci_curtime=CLSVOFtime  ! modify this if restarting?
    sci_dt=0.0              ! modify this if restarting?
    sci_istop=0
@@ -6000,7 +5997,7 @@ INTEGER_T :: fsi_part_id
    ! note: 5600 dog, 5601 viorel sphere, 5602 internal inflow
    ! heart
    if (probtype.eq.57) then
-    exclusive_doubly_wetted=1
+    FSI(part_id)%exclusive_doubly_wetted=1
    endif
 
 ! sends header message to fluids code
@@ -6070,7 +6067,7 @@ INTEGER_T :: fsi_part_id
        (probtype.eq.58).or.(probtype.eq.562)) then
 ! pregnant whale
     if ((probtype.eq.562).and.(axis_dir.eq.6)) then
-     normal_invert=0
+     FSI(part_id)%normal_invert=0
     endif
     call geominit(sci_curtime,sci_dt,ifirst,sci_sdim,sci_istop,sci_istep)
    else if (probtype.eq.563) then
@@ -6078,11 +6075,11 @@ INTEGER_T :: fsi_part_id
    else if (probtype.eq.5600) then ! dog
     call geominit(sci_curtime,sci_dt,ifirst,sci_sdim,sci_istop,sci_istep)
    else if (probtype.eq.5601) then ! viorel sphere
-    normal_invert=1
+    FSI(part_id)%normal_invert=1
     call viorel_sphere_geominit(sci_curtime,sci_dt,ifirst, &
       sci_sdim,sci_istop,sci_istep)
    else if (probtype.eq.5602) then ! internal inflow
-    normal_invert=1
+    FSI(part_id)%normal_invert=1
     call internal_inflow_geominit(sci_curtime,sci_dt,ifirst, &
       sci_sdim,sci_istop,sci_istep)
    else if (probtype.eq.5700) then ! microfluidics channel
@@ -6781,7 +6778,7 @@ INTEGER_T :: local_normal_invert
   enddo
  endif
 
- local_normal_invert=normal_invert
+ local_normal_invert=FSI_mesh_type%normal_invert
 
  if (local_normal_invert.eq.1) then
   do dir=1,3
@@ -6887,7 +6884,7 @@ INTEGER_T :: local_normal_invert
   enddo
  endif
 
- local_normal_invert=normal_invert
+ local_normal_invert=FSI_mesh_type%normal_invert
 
  if (local_normal_invert.eq.1) then
   do dir=1,3
@@ -7401,6 +7398,8 @@ INTEGER_T, allocatable :: raw_elements(:,:)
   aux_FSI(auxcomp)%IntElemDim=3
   aux_FSI(auxcomp)%partID=auxcomp
   aux_FSI(auxcomp)%flag_2D_to_3D=0
+  aux_FSI(auxcomp)%normal_invert=1
+  aux_FSI(auxcomp)%exclusive_doubly_wetted=0
   aux_FSI(auxcomp)%deforming_part=0
   aux_FSI(auxcomp)%CTML_flag=0
   aux_FSI(auxcomp)%refine_factor=1 !refine the lag. mesh if needed.
@@ -7829,7 +7828,7 @@ INTEGER_T idir,ielem,inode
     print *,"FSI_bounding_box_ngrow(im_sanity_check) invalid"
     stop
    endif
-  enddo
+  enddo ! do im_sanity_check=1,nmat
 
   if ((nparts_in.lt.1).or.(nparts_in.ge.nmat)) then
    print *,"nparts_in invalid"
@@ -7874,6 +7873,8 @@ INTEGER_T idir,ielem,inode
     endif
 
     FSI(part_id)%flag_2D_to_3D=0
+    FSI(part_id)%normal_invert=0
+    FSI(part_id)%exclusive_doubly_wetted=0
 
    enddo ! part_id=1,TOTAL_NPARTS
 
@@ -7964,6 +7965,7 @@ INTEGER_T idir,ielem,inode
     endif
 
     do part_id=1,TOTAL_NPARTS
+
      im_part=im_solid_mapF(part_id)+1
      if (CTML_FSI_mat(nmat,im_part).eq.1) then !FSI_flag==4,8
       FSI(part_id)%deforming_part=1
@@ -10282,7 +10284,7 @@ IMPLICIT NONE
 
       if ((ctml_part_id.ge.1).and. &
           (ctml_part_id.le.CTML_NPARTS)) then
-       if (exclusive_doubly_wetted.eq.1) then
+       if (FSI(part_id)%exclusive_doubly_wetted.eq.1) then
         ! do nothing
        else
         print *,"expecting doubly wetted"
@@ -10295,9 +10297,9 @@ IMPLICIT NONE
        stop
       endif
 
-      if (exclusive_doubly_wetted.eq.0) then
+      if (FSI_mesh_type%exclusive_doubly_wetted.eq.0) then
        ! do nothing
-      else if (exclusive_doubly_wetted.eq.1) then
+      else if (FSI_mesh_type%exclusive_doubly_wetted.eq.1) then
        if (mask_local.eq.3) then
         ! do nothing
        else if (mask_local.eq.103) then
