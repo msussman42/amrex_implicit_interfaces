@@ -7398,6 +7398,14 @@ INTEGER_T, allocatable :: raw_elements(:,:)
   aux_FSI(auxcomp)%IntElemDim=3
   aux_FSI(auxcomp)%partID=auxcomp
   aux_FSI(auxcomp)%flag_2D_to_3D=0
+
+   ! The normals in Cody's vtk files point out of the object (as seen
+   ! from Tecplot: 1. Analyze 2. Calculate Variables 3. Grid K unit normal
+   ! vector.  4. Calculate 5. Close 6. Vector
+   ! Therefore, since the tecplot normals point out of the object,
+   ! one will have the following:
+   ! normal_invert=0 => sign of distance function is positive in the object
+   ! normal_invert=1 => sign of distance function is negative in the object
   aux_FSI(auxcomp)%normal_invert=0
   aux_FSI(auxcomp)%exclusive_doubly_wetted=0
   aux_FSI(auxcomp)%deforming_part=0
@@ -9744,7 +9752,8 @@ IMPLICIT NONE
           normal_closest(dir)=normal(dir)
          enddo
          unsigned_mindist=abs(dotprod)
-         phicenter=dotprod ! phicenter>0 in the fluid
+         ! phicenter>0 in the fluid
+         phicenter=dotprod 
 
          if (debug_all.eq.1) then
           print *,"ielem=",ielem
@@ -9963,6 +9972,7 @@ IMPLICIT NONE
               used_for_trial=1
               if (phicenter.eq.zero) then
                hitsign=zero
+               ! phicenter>0 in the fluid
               else if (phicenter.gt.zero) then
                hitsign=one
               else if (phicenter.lt.zero) then
@@ -10345,14 +10355,14 @@ IMPLICIT NONE
      mask1=NINT(masknbr3D(i,j,k,1))
      mask2=NINT(masknbr3D(i,j,k,2))
 
-     ! mask2==1 if (i,j,k) interior to tile
-     ! mask1==0 if (i,j,k) is exterior to tile and is a
-     !  coarse/fine ghost cell.
+     ! mask2==1 => (i,j,k) interior to tile
+     ! mask1==0 => (i,j,k) in coarse/fine or EXT_DIR 
      if ((mask1.eq.0).or.(mask2.eq.1)) then
 
       ls_local=FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)
       mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
       if (mask_local.eq.103) then   !doubly wetted, d init
+        ! LS > 0 in the thin shell which is the fluid region.
        ls_local=ls_local+wallthick*dx3D(1)
       else if (mask_local.eq.3) then !doubly wetted, d not init
        ! do nothing
@@ -10571,8 +10581,8 @@ IMPLICIT NONE
        mask1=NINT(masknbr3D(i,j,k,1))
        mask2=NINT(masknbr3D(i,j,k,2))
 
-       ! mask2==1 if (i,j,k) interior to tile
-       ! mask1==0 if (i,j,k) is exterior to tile and is a
+       ! mask2==1 => (i,j,k) interior to tile
+       ! mask1==0 => (i,j,k) in coarse/fine or EXT_DIR ghost cell.
        !  coarse/fine ghost cell.
        if ((mask1.eq.0).or.(mask2.eq.1)) then
 
