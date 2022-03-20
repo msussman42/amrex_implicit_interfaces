@@ -1,0 +1,41 @@
+# vtk DataFile Version 2.0
+tpce_heatedplate, Created by Gmsh 4.9.4
+ASCII
+DATASET UNSTRUCTURED_GRID
+POINTS 8 double
+0.09   -0.1    -0.01
+0.1    -0.1    -0.01
+0.1    -0.1     0.01
+0.09   -0.1     0.01
+0.09    0.1    -0.01
+0.1     0.1    -0.01
+0.1     0.1     0.01
+0.09    0.1     0.01
+
+CELLS 12 48
+3 0 1 2
+3 2 3 0
+3 4 7 6
+3 6 5 4
+3 0 4 5
+3 5 1 0
+3 2 6 7
+3 7 3 2
+3 1 5 6
+3 6 2 1
+3 3 7 4
+3 4 0 3
+
+CELL TYPES 12
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5
+5

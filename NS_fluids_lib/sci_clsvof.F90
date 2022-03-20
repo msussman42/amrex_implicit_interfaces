@@ -7398,7 +7398,7 @@ INTEGER_T, allocatable :: raw_elements(:,:)
   aux_FSI(auxcomp)%IntElemDim=3
   aux_FSI(auxcomp)%partID=auxcomp
   aux_FSI(auxcomp)%flag_2D_to_3D=0
-  aux_FSI(auxcomp)%normal_invert=1
+  aux_FSI(auxcomp)%normal_invert=0
   aux_FSI(auxcomp)%exclusive_doubly_wetted=0
   aux_FSI(auxcomp)%deforming_part=0
   aux_FSI(auxcomp)%CTML_flag=0
