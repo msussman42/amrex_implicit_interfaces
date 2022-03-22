@@ -18,7 +18,10 @@
 #define STEPS_DUFFY 800
 #define injG 1
 #define MAX_PARTS 100
+
 #define flags_per_element 3
+#define DOUBLYCOMP 3
+
 #define CTMLoverflow (1.0D+20)
 #define CTMLunderflow (1.0D-20)
 
@@ -53,7 +56,7 @@ type lag_type
  REAL_T, pointer :: ndtemp(:)  ! ndtemp(node_id)
   ! number of nodes in element=elemdt(1,elemid)
   ! part number=elemdt(2,elemid)
-  ! doubly wetted=elemdt(3,elemid)
+  ! doubly wetted=elemdt(DOUBLYCOMP,elemid)
  INTEGER_T, pointer :: elemdt(:,:) 
   ! node_id=intelemdt(1..3,elemid)
   ! original_elem_id=intelemdt(4,elemid)
@@ -525,7 +528,8 @@ INTEGER_T :: inode
 INTEGER_T :: dir
 
  allocate(FSI_mesh_type%Eul2IntNode(FSI_mesh_type%NumNodes))
- !(1,iface)=nodes per element (2,iface)=part num (3,iface)=doubly wet flag
+ !(1,iface)=nodes per element (2,iface)=part num 
+ !(DOUBLYCOMP,iface)=doubly wet flag
  allocate(FSI_mesh_type%ElemData(flags_per_element,FSI_mesh_type%NumIntElems))
  if (allocate_intelem.eq.1) then
   allocate(FSI_mesh_type%IntElem(FSI_mesh_type%IntElemDim, &
@@ -1003,7 +1007,7 @@ REAL_T    :: mag
  allocate(multi_lag(1)%ndmass(FSI_mesh_type%NumNodes))
  allocate(multi_lag(1)%nddensity(FSI_mesh_type%NumNodes))
  allocate(multi_lag(1)%ndtemp(FSI_mesh_type%NumNodes))
- allocate(multi_lag(1)%elemdt(3,new_NumIntElems))
+ allocate(multi_lag(1)%elemdt(flags_per_element,new_NumIntElems))
  allocate(multi_lag(1)%intelemdt(4,new_NumIntElems))
  do i=1,FSI_mesh_type%NumNodes
   do dir=1,3
@@ -1029,8 +1033,8 @@ REAL_T    :: mag
    multi_lag(1)%intelemdt(3,new_NumIntElems)= &
      FSI_mesh_type%IntElem(nodes_per_elem-isub,ielem)
    multi_lag(1)%intelemdt(4,new_NumIntElems)=ielem
-    ! FSI_mesh_type%ElemData(3,ielem) is the doubly wetted flag
-   do dir=1,3
+    ! FSI_mesh_type%ElemData(DOUBLYCOMP,ielem) is the doubly wetted flag
+   do dir=1,flags_per_element
     multi_lag(1)%elemdt(dir,new_NumIntElems)=FSI_mesh_type%ElemData(dir,ielem)
    enddo
     ! always 3 nodes per element for refined surface
@@ -1059,7 +1063,7 @@ REAL_T    :: mag
     allocate(multi_lag(ilevel+1)%ndmass(save_n_nodes))
     allocate(multi_lag(ilevel+1)%nddensity(save_n_nodes))
     allocate(multi_lag(ilevel+1)%ndtemp(save_n_nodes))
-    allocate(multi_lag(ilevel+1)%elemdt(3,save_n_elems))
+    allocate(multi_lag(ilevel+1)%elemdt(flags_per_element,save_n_elems))
     allocate(multi_lag(ilevel+1)%intelemdt(4,save_n_elems))
     do i=1,multi_lag(ilevel)%n_nodes
      do dir=1,3
@@ -1182,8 +1186,8 @@ REAL_T    :: mag
       multi_lag(ilevel+1)%intelemdt(2,esplit-1)=nsplit
       multi_lag(ilevel+1)%intelemdt(3,esplit-1)=node3
       multi_lag(ilevel+1)%intelemdt(4,esplit-1)=base_ielem
-       ! elemdt(3,ielem) is the doubly wetted flag
-      do dir=1,3
+      ! elemdt(DOUBLYCOMP,ielem) is the doubly wetted flag
+      do dir=1,flags_per_element
        multi_lag(ilevel+1)%elemdt(dir,esplit-1)= &
          multi_lag(ilevel)%elemdt(dir,ielem)
       enddo
@@ -1192,8 +1196,8 @@ REAL_T    :: mag
       multi_lag(ilevel+1)%intelemdt(2,esplit)=node2
       multi_lag(ilevel+1)%intelemdt(3,esplit)=node3
       multi_lag(ilevel+1)%intelemdt(4,esplit)=base_ielem
-       ! elemdt(3,ielem) is the doubly wetted flag
-      do dir=1,3
+      ! elemdt(DOUBLYCOMP,ielem) is the doubly wetted flag
+      do dir=1,flags_per_element
        multi_lag(ilevel+1)%elemdt(dir,esplit)= &
          multi_lag(ilevel)%elemdt(dir,ielem)
       enddo
@@ -1403,7 +1407,8 @@ REAL_T    :: mag
  allocate(FSI_mesh_type%NodeTempBIG(FSI_mesh_type%NumNodesBIG))
  allocate(FSI_mesh_type%ElemNodeCountBIG(FSI_mesh_type%NumNodesBIG))
  allocate(FSI_mesh_type%ElemDataXnotBIG(3,FSI_mesh_type%NumIntElemsBIG))
- allocate(FSI_mesh_type%ElemDataBIG(3,FSI_mesh_type%NumIntElemsBIG))
+ allocate(FSI_mesh_type%ElemDataBIG(flags_per_element, &
+          FSI_mesh_type%NumIntElemsBIG))
  allocate(FSI_mesh_type%IntElemBIG(4,FSI_mesh_type%NumIntElemsBIG))
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
@@ -1419,9 +1424,10 @@ REAL_T    :: mag
    FSI_mesh_type%IntElemBIG(dir,ielem)= &
      multi_lag(n_lag_levels)%intelemdt(dir,ielem)
   enddo
-   ! ElemDataBIG(3,ielem) is the doubly wetted flag
-  do dir=1,3
-   FSI_mesh_type%ElemDataBIG(dir,ielem)=multi_lag(n_lag_levels)%elemdt(dir,ielem)
+   ! ElemDataBIG(DOUBLYCOMP,ielem) is the doubly wetted flag
+  do dir=1,flags_per_element
+   FSI_mesh_type%ElemDataBIG(dir,ielem)= &
+       multi_lag(n_lag_levels)%elemdt(dir,ielem)
   enddo
  enddo
   ! in: post_process_nodes_elements
@@ -2037,7 +2043,7 @@ INTEGER_T :: local_elements
 
      FSI(part_id)%ElemData(1,iface)=3   ! number of nodes in element
      FSI(part_id)%ElemData(2,iface)=1   ! part number
-     FSI(part_id)%ElemData(3,iface)=1   ! doubly wetted (0=singly wetted)
+     FSI(part_id)%ElemData(DOUBLYCOMP,iface)=1 !doubly wetted (0=singly wetted)
 
      call convert_2D_to_3D_elements_FSI(part_id,iface)
 
@@ -2317,7 +2323,8 @@ REAL_T :: radradblob1,radradblob2
     do iface=1,FSI(part_id)%NumIntElems
      FSI(part_id)%ElemData(1,iface)=3   ! number of nodes in element
      FSI(part_id)%ElemData(2,iface)=1   ! part number
-     FSI(part_id)%ElemData(3,iface)=0   ! singly wetted (1=doubly wetted)
+     FSI(part_id)%ElemData(DOUBLYCOMP,iface)=0 !singly wetted (1=doubly wetted)
+     call abort_sci_clsvof()
     enddo  ! iface, looping faces
 
     close(14)
@@ -2547,7 +2554,8 @@ INTEGER_T localElem(4)
      endif
      FSI(part_id)%ElemData(1,iface+quad_counter)=3 ! number of nodes in element
      FSI(part_id)%ElemData(2,iface+quad_counter)=1 ! part number
-     FSI(part_id)%ElemData(3,iface+quad_counter)=0 ! singly wetted
+     FSI(part_id)%ElemData(DOUBLYCOMP,iface+quad_counter)=0 ! singly wetted
+     call abort_sci_clsvof()
      if (j1.eq.0) then
       do dir=1,3
        FSI(part_id)%IntElem(dir,iface+quad_counter)=localElem(dir)
@@ -2801,7 +2809,8 @@ INTEGER_T, allocatable :: raw_elements(:,:)
 
     FSI(part_id)%ElemData(1,iface)=3 ! number of nodes in element
     FSI(part_id)%ElemData(2,iface)=1 ! part number
-    FSI(part_id)%ElemData(3,iface)=0 ! singly wetted
+    FSI(part_id)%ElemData(DOUBLYCOMP,iface)=0 ! singly wetted
+    call abort_sci_clsvof()
     do dir=1,3
      FSI(part_id)%IntElem(dir,iface)=localElem(dir)
     enddo
@@ -3180,7 +3189,8 @@ INTEGER_T :: stand_alone_flag
 
     FSI(part_id)%ElemData(1,iface)=3 ! number of nodes in element
     FSI(part_id)%ElemData(2,iface)=1 ! part number
-    FSI(part_id)%ElemData(3,iface)=0 ! singly wetted
+    FSI(part_id)%ElemData(DOUBLYCOMP,iface)=0 ! singly wetted
+    call abort_sci_clsvof()
     do dir=1,3
      FSI(part_id)%IntElem(dir,iface)=localElem(dir)
     enddo
@@ -3387,7 +3397,8 @@ INTEGER_T :: orig_elements,local_elements
 
     FSI(part_id)%ElemData(1,iface)=3 ! number of nodes in element
     FSI(part_id)%ElemData(2,iface)=1 ! part number
-    FSI(part_id)%ElemData(3,iface)=0 ! singly wetted
+    FSI(part_id)%ElemData(DOUBLYCOMP,iface)=0 ! singly wetted
+    call abort_sci_clsvof()
     do dir=1,3
      FSI(part_id)%IntElem(dir,iface)=localElem(dir)
     enddo
@@ -3605,7 +3616,8 @@ INTEGER_T :: local_part_id
      endif
      FSI(1)%ElemData(1,iface+quad_counter)=3   ! number of nodes in element
      FSI(1)%ElemData(2,iface+quad_counter)=1   ! part number
-     FSI(1)%ElemData(3,iface+quad_counter)=0   ! singly wetted
+     FSI(1)%ElemData(DOUBLYCOMP,iface+quad_counter)=0   ! singly wetted
+     call abort_sci_clsvof()
      if (j1.eq.0) then
       do dir=1,3
        FSI(1)%IntElem(dir,iface+quad_counter)=localElem(dir)
@@ -4222,7 +4234,10 @@ INTEGER_T :: local_part_id
       endif
       FSI(1)%ElemData(1,i)=k ! number of nodes in element
       FSI(1)%ElemData(2,i)=1 ! part number
-      FSI(1)%ElemData(3,i)=2 ! singly wetted, but do not call "fill" for these
+      !singly wetted, but do not call "fill" for these?
+      FSI(1)%ElemData(DOUBLYCOMP,i)=2 
+      call abort_sci_clsvof()
+
       do j1=1,k
        READ(141,*) FSI(1)%IntElem(j1,i) 
       enddo
@@ -4421,21 +4436,23 @@ INTEGER_T :: local_part_id
       endif
       FSI(1)%ElemData(1,i+quad_counter)=3   ! number of nodes in element
       FSI(1)%ElemData(2,i+quad_counter)=1   ! part number
-      FSI(1)%ElemData(3,i+quad_counter)=0   ! singly wetted
+      FSI(1)%ElemData(DOUBLYCOMP,i+quad_counter)=0   ! singly wetted
       if (probtype.eq.57) then  ! 57 heart    56 swimmer
-       FSI(1)%ElemData(3,i+quad_counter)=1   ! doubly wetted
+       FSI(1)%ElemData(DOUBLYCOMP,i+quad_counter)=1   ! doubly wetted
       endif
       if ((probtype.eq.56).and.(1.eq.1)) then  ! BOXSWIMMER
-       FSI(1)%ElemData(3,i+quad_counter)=1   ! doubly wetted
+       FSI(1)%ElemData(DOUBLYCOMP,i+quad_counter)=1   ! doubly wetted
       endif
       if (probtype.eq.562) then  ! 562 whale
-       FSI(1)%ElemData(3,i+quad_counter)=0   ! 0=singly wetted 1=doubly wetted
+       FSI(1)%ElemData(DOUBLYCOMP,i+quad_counter)=0 ! 0=singly 1=doubly wetted
        if (axis_dir.eq.6) then
-        FSI(1)%ElemData(3,i+quad_counter)=0 
+        FSI(1)%ElemData(DOUBLYCOMP,i+quad_counter)=0 
        endif
+       call abort_sci_clsvof()
       endif
       if (probtype.eq.5600) then ! dog
-       FSI(1)%ElemData(3,i+quad_counter)=0   ! 0=singly wetted 1=doubly wetted
+       FSI(1)%ElemData(DOUBLYCOMP,i+quad_counter)=0 ! 0=singly 1=doubly wetted
+       call abort_sci_clsvof()
       endif
       if (j1.eq.0) then
        do dir=1,3
@@ -4753,7 +4770,8 @@ INTEGER_T :: local_part_id
      endif
      FSI(1)%ElemData(1,i+quad_counter)=3   ! number of nodes in element
      FSI(1)%ElemData(2,i+quad_counter)=1   ! part number
-     FSI(1)%ElemData(3,i+quad_counter)=0   ! singly wetted (set =1 doubly)
+     FSI(1)%ElemData(DOUBLYCOMP,i+quad_counter)=0 ! singly (=1 doubly wetted)
+     call abort_sci_clsvof()
      if (j1.eq.0) then
       do dir=1,3
        FSI(1)%IntElem(dir,i+quad_counter)=localElem(dir)
@@ -5026,7 +5044,8 @@ INTEGER_T :: local_part_id
      endif
      FSI(1)%ElemData(1,i+quad_counter)=3   ! number of nodes in element
      FSI(1)%ElemData(2,i+quad_counter)=1   ! part number
-     FSI(1)%ElemData(3,i+quad_counter)=0   ! singly wetted (set =1 doubly)
+     FSI(1)%ElemData(DOUBLYCOMP,i+quad_counter)=0 ! singly wetted (=1 doubly)
+     call abort_sci_clsvof()
      if (j1.eq.0) then
       do dir=1,3
        FSI(1)%IntElem(dir,i+quad_counter)=localElem(dir)
@@ -5186,7 +5205,8 @@ INTEGER_T local_part_id
 
    FSI(1)%ElemData(1,i)=3   ! number of nodes in element
    FSI(1)%ElemData(2,i)=1   ! part number
-   FSI(1)%ElemData(3,i)=0   ! singly wetted
+   FSI(1)%ElemData(DOUBLYCOMP,i)=0   ! singly wetted
+   call abort_sci_clsvof()
   enddo  ! i, looping faces
   close(14)
 
@@ -5446,7 +5466,8 @@ INTEGER_T :: local_part_id
   do i=1,FSI(1)%NumIntElems
    FSI(1)%ElemData(1,i)=3   ! number of nodes in element
    FSI(1)%ElemData(2,i)=1   ! part number
-   FSI(1)%ElemData(3,i)=0   ! singly wetted
+   FSI(1)%ElemData(DOUBLYCOMP,i)=0   ! singly wetted
+   call abort_sci_clsvof()
       ! IntElem initialized in runonce
   enddo
  
@@ -5662,10 +5683,10 @@ INTEGER_T :: local_part_id
 
    FSI(1)%ElemData(1,iface)=k   ! number of nodes in element
    FSI(1)%ElemData(2,iface)=1   ! part number
-   FSI(1)%ElemData(3,iface)=0   ! singly wetted
-   FSI(1)%ElemData(3,iface)=1  ! doubly wetted
+   FSI(1)%ElemData(DOUBLYCOMP,iface)=0   ! singly wetted
+   FSI(1)%ElemData(DOUBLYCOMP,iface)=1  ! doubly wetted
    if (iface.gt.FSI(1)%NumIntElemsPaddle) then
-    FSI(1)%ElemData(3,iface)=1  ! doubly wetted
+    FSI(1)%ElemData(DOUBLYCOMP,iface)=1  ! doubly wetted
    endif
   enddo  ! iface, looping faces
 
@@ -5799,14 +5820,15 @@ INTEGER_T :: local_part_id
    FSI(1)%ElemData(1,iface)=3   ! number of nodes in element
    FSI(1)%ElemData(2,iface)=1   ! part number
    if ((axis_dir.eq.1).or.(axis_dir.eq.3)) then
-    FSI(1)%ElemData(3,iface)=0   ! singly wetted
+    FSI(1)%ElemData(DOUBLYCOMP,iface)=0   ! singly wetted
+    call abort_sci_clsvof()
    else if (axis_dir.eq.2) then
-    FSI(1)%ElemData(3,iface)=1   ! doubly wetted
+    FSI(1)%ElemData(DOUBLYCOMP,iface)=1   ! doubly wetted
    else
     print *,"bad axis_dir initship2 probtype,axis_dir ",probtype,axis_dir
     stop
    endif
-!   FSI(1)%ElemData(3,iface)=1   ! doubly wetted
+!   FSI(1)%ElemData(DOUBLYCOMP,iface)=1   ! doubly wetted
 
   enddo  ! iface, looping faces
 
@@ -6068,6 +6090,7 @@ INTEGER_T :: fsi_part_id
 ! pregnant whale
     if ((probtype.eq.562).and.(axis_dir.eq.6)) then
      FSI(part_id)%normal_invert=0
+     call abort_sci_clsvof()
     endif
     call geominit(sci_curtime,sci_dt,ifirst,sci_sdim,sci_istop,sci_istep)
    else if (probtype.eq.563) then
@@ -6078,8 +6101,10 @@ INTEGER_T :: fsi_part_id
     FSI(part_id)%normal_invert=1
     call viorel_sphere_geominit(sci_curtime,sci_dt,ifirst, &
       sci_sdim,sci_istop,sci_istep)
+    call abort_sci_clsvof()
    else if (probtype.eq.5602) then ! internal inflow
     FSI(part_id)%normal_invert=1
+    call abort_sci_clsvof()
     call internal_inflow_geominit(sci_curtime,sci_dt,ifirst, &
       sci_sdim,sci_istop,sci_istep)
    else if (probtype.eq.5700) then ! microfluidics channel
@@ -7403,6 +7428,7 @@ INTEGER_T, allocatable :: raw_elements(:,:)
    ! from Tecplot: 1. Analyze 2. Calculate Variables 3. Grid K unit normal
    ! vector.  4. Calculate 5. Close 6. Vector
    ! Therefore, since the tecplot normals point out of the object,
+   ! the node ordering in elements is clockwise as viewed from the outside.
    ! one will have the following:
    ! normal_invert=0 => sign of distance function is positive in the object
    ! normal_invert=1 => sign of distance function is negative in the object
@@ -7534,7 +7560,7 @@ INTEGER_T, allocatable :: raw_elements(:,:)
 
     aux_FSI(auxcomp)%ElemData(1,iface)=3 ! number of nodes in element
     aux_FSI(auxcomp)%ElemData(2,iface)=1 ! part number
-    aux_FSI(auxcomp)%ElemData(3,iface)=0 ! singly wetted
+    aux_FSI(auxcomp)%ElemData(DOUBLYCOMP,iface)=0 ! singly wetted
     do dir=1,3
      aux_FSI(auxcomp)%IntElem(dir,iface)=localElem(dir)
     enddo
@@ -9095,6 +9121,7 @@ end subroutine CLSVOF_FILLCONTAINER
 ! mask=1 velocity is init from fine lev, but sign is not
 ! mask=2 both sign and velocity are init on fine lev
 ! mask=3 both sign and velocity are init on fine lev (doubly wetted)
+! mask=103 sign, value and velocity are init on fine lev (doubly wetted)
 ! mask=0 neither velocity, sign, or LS are valid.  
 ! mask=10 sign is init from coarse level
 ! mask=11 velocity is init from fine lev, sign is init from coarse level
@@ -10028,7 +10055,7 @@ IMPLICIT NONE
 
           if ((ctml_part_id.ge.1).and. &
               (ctml_part_id.le.CTML_NPARTS)) then
-           if (FSI_mesh_type%ElemDataBIG(3,ielem).eq.1) then ! doubly wetted
+           if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.1) then 
             ! do nothing
            else
             print *,"expecting doubly wetted"
@@ -10041,10 +10068,10 @@ IMPLICIT NONE
            stop
           endif
 
-          if (FSI_mesh_type%ElemDataBIG(3,ielem).eq.1) then ! doubly wetted
+          if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.1) then 
            mask_local=103
            ls_local=-unsigned_mindist
-          else if (FSI_mesh_type%ElemDataBIG(3,ielem).eq.0) then!singly wetted
+          else if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.0) then
            if (mask_local.eq.0) then
             mask_local=1  ! vel init, sign not.
            else if (mask_local.eq.10) then
@@ -10061,12 +10088,12 @@ IMPLICIT NONE
            endif
            if ((mask_local.eq.0).or. &
                (mask_local.eq.1).or. &
-               (mask_local.eq.3).or. &
-               (mask_local.eq.103)) then
+               (mask_local.eq.3).or. &   !was doubly, now singly
+               (mask_local.eq.103)) then !was doubly, now singly
             ls_local=unsigned_mindist
-           else if ((mask_local.eq.10).or. &
-                    (mask_local.eq.11).or. &
-                    (mask_local.eq.2)) then
+           else if ((mask_local.eq.10).or. &!sign,vel from coarse/prevstep
+                    (mask_local.eq.11).or. &!sign from coarse/prevstep vel now
+                    (mask_local.eq.2)) then !sign/vel now
             ls_local=sign_funct(ls_local)*unsigned_mindist 
            else
             print *,"mask_local invalid"
@@ -10344,9 +10371,6 @@ IMPLICIT NONE
     enddo   
     enddo   
 
-! check "invert_solid_levelset"
-! fix for doubly wetted 
-
     wallthick=1.0
     do i=FSI_lo(1),FSI_hi(1)
     do j=FSI_lo(2),FSI_hi(2)
@@ -10379,10 +10403,10 @@ IMPLICIT NONE
 
       if ((ctml_part_id.ge.1).and. &
           (ctml_part_id.le.CTML_NPARTS)) then
-       if (invert_solid_levelset.eq.0) then
+       if (doubly_wetted_solid_inside.eq.1) then
         ! do nothing
        else
-        print *,"expecting invert_solid_levelset==0"
+        print *,"expecting doubly_wetted_solid_inside.eq.1"
         stop
        endif
       else if (ctml_part_id.eq.0) then
@@ -10392,14 +10416,13 @@ IMPLICIT NONE
        stop
       endif
 
-       ! normals default to pointing from solid to fluid (LS>0 in the fluid)
-      if (invert_solid_levelset.eq.0) then
+      if (doubly_wetted_solid_inside.eq.1) then
 
        if (mask_local.eq.2) then ! sign valid for singly wetted
-        ls_local=-ls_local
-       else if (mask_local.eq.3) then ! sign valid for doubly wetted
         ! do nothing
-       else if (mask_local.eq.103) then ! sign valid for doubly wetted
+       else if (mask_local.eq.3) then!sign/vel valid for doubly wetted
+        ! do nothing
+       else if (mask_local.eq.103) then!sign/vel/value valid for doubly wetted
         ! do nothing
        else if ((mask_local.eq.0).or. &
                 (mask_local.eq.10).or. &
@@ -10411,13 +10434,13 @@ IMPLICIT NONE
         stop
        endif
 
-      else if (invert_solid_levelset.eq.1) then
+      else if (doubly_wetted_solid_inside.eq.0) then
 
-       if (mask_local.eq.2) then ! sign valid for singly wetted
+       if (mask_local.eq.2) then!sign valid for singly wetted
         ! do nothing
-       else if (mask_local.eq.3) then ! sign valid for doubly wetted
+       else if (mask_local.eq.3) then!sign/vel valid for doubly wetted
         ls_local=-ls_local
-       else if (mask_local.eq.103) then ! sign valid for doubly wetted
+       else if (mask_local.eq.103) then!sign/vel/value valid for doubly wetted
         ls_local=-ls_local
        else if ((mask_local.eq.0).or. &
                 (mask_local.eq.10).or. &
@@ -10430,7 +10453,7 @@ IMPLICIT NONE
        endif
 
       else
-       print *,"invert_solid_levelset invalid"
+       print *,"doubly_wetted_solid_inside invalid"
        stop
       endif
       FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local

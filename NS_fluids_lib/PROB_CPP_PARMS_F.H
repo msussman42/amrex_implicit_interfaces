@@ -43,7 +43,7 @@ namespace amrex{
        const int* FSI_flag,
        const int* num_local_aux_grids,
        const int* ZEYU_DCA_SELECT,
-       const int* invert_solid_levelset,
+       const int* doubly_wetted_solid_inside,
        const Real* denfact,
        const Real* velfact,
        int* n_sites,

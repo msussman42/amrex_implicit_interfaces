@@ -142,7 +142,7 @@ stop
         ccFSI_flag, &
         ccnum_local_aux_grids, &
         ccZEYU_DCA_SELECT, &
-        ccinvert_solid_levelset, &
+        ccdoubly_wetted_solid_inside, &
         ccdenfact, &
         ccvelfact, &
         ccn_sites, &
@@ -300,7 +300,7 @@ stop
       INTEGER_T, intent(in) :: ccFSI_flag(ccnum_materials)
       INTEGER_T, intent(in) :: ccnum_local_aux_grids
       INTEGER_T, intent(in) :: ccZEYU_DCA_SELECT
-      INTEGER_T, intent(in) :: ccinvert_solid_levelset
+      INTEGER_T, intent(in) :: ccdoubly_wetted_solid_inside
       INTEGER_T, intent(in) :: ccprescribe_temperature_outflow
       INTEGER_T, intent(in) :: ccsolidheat_flag
       INTEGER_T, intent(in) :: rz_flag
@@ -1093,10 +1093,10 @@ stop
       
       fort_ZEYU_DCA_SELECT=ccZEYU_DCA_SELECT
       
-      invert_solid_levelset=ccinvert_solid_levelset
-      if ((invert_solid_levelset.ne.0).and. &
-          (invert_solid_levelset.ne.1)) then
-       print *,"invert_solid_levelset invalid in override"
+      doubly_wetted_solid_inside=ccdoubly_wetted_solid_inside
+      if ((doubly_wetted_solid_inside.ne.0).and. &
+          (doubly_wetted_solid_inside.ne.1)) then
+       print *,"doubly_wetted_solid_inside invalid in override"
        stop
       endif
       
@@ -1643,7 +1643,7 @@ stop
 
        print *,"fort: fort_num_local_aux_grids= ",fort_num_local_aux_grids
 
-       print *,"fort: invert_solid_levelset ",invert_solid_levelset
+       print *,"fort: doubly_wetted_solid_inside ",doubly_wetted_solid_inside
        print *,"fort: denfact,velfact,xblob,yblob,zblob ", &
         denfact,velfact,xblob,yblob,zblob
        print *,"fort: radblob,probtype,adv_dir,adv_vel,axis_dir ", &

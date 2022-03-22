@@ -18,9 +18,9 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0e+4
 ns.num_materials=4
 ns.num_species_var=1
-ns.invert_solid_levelset=0
 ns.post_init_pressure_solve=0 
 ns.MOFITERMAX=15
+ns.doubly_wetted_solid_inside=1  # default
 
 # multigrid class
 mg.verbose = 0

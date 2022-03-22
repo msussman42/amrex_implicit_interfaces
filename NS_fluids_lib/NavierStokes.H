@@ -1513,7 +1513,7 @@ protected:
 
     static Vector<int>  FSI_touch_flag;
     static int         elements_generated;
-    static int         invert_solid_levelset;
+    static int         doubly_wetted_solid_inside; //default=1
      // 0=> u=u_solid if phi_solid>=0
      // 1=> u=u_solid_ghost if phi_solid>=0
      // 2=> GNBC (u=u_solid_ghost if phi_solid>=0)

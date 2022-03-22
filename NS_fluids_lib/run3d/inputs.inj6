@@ -1,7 +1,7 @@
 max_step  =  99999  # maximum timestep
 stop_time =  2.0  # maximum problem time
 ns.FSI_flag=0 0 2
-ns.invert_solid_levelset=1  # this should be 0 for "A" injector
+ns.doubly_wetted_solid_inside=1  # default
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble

@@ -138,7 +138,7 @@
       INTEGER_T levelrz
       INTEGER_T prescribe_temperature_outflow
       INTEGER_T fort_solidheat_flag
-      INTEGER_T invert_solid_levelset
+      INTEGER_T doubly_wetted_solid_inside
       INTEGER_T FSI_flag(MAX_NUM_MATERIALS)
       INTEGER_T fort_material_type(MAX_NUM_MATERIALS)
       INTEGER_T fort_ZEYU_DCA_SELECT
