@@ -2071,6 +2071,17 @@ INTEGER_T :: local_elements
 return
 end subroutine CTML_init_sci
 
+subroutine abort_sci_clsvof()
+IMPLICIT NONE
+
+print *,"normal points from solid to fluid (consistent with tecplot)"
+print *,"solid nodes are ordered clockwise when viewed from the fluid."
+print *,"n=-v1 x v2   v1=node2-node1  v2=node3-node2"
+print *,"initially, hitsign=1 in the fluid but the sign will be"
+print *,"switched so that LS>0 in the solid"
+stop
+return
+end subroutine abort_sci_clsvof
 
 subroutine initinjector(curtime,dt,ifirst,sdim,istop,istep,ioproc, &
   part_id,isout)
@@ -6098,10 +6109,10 @@ INTEGER_T :: fsi_part_id
    else if (probtype.eq.5600) then ! dog
     call geominit(sci_curtime,sci_dt,ifirst,sci_sdim,sci_istop,sci_istep)
    else if (probtype.eq.5601) then ! viorel sphere
-    FSI(part_id)%normal_invert=1
+    FSI(part_id)%normal_invert=0
+    call abort_sci_clsvof()
     call viorel_sphere_geominit(sci_curtime,sci_dt,ifirst, &
       sci_sdim,sci_istop,sci_istep)
-    call abort_sci_clsvof()
    else if (probtype.eq.5602) then ! internal inflow
     FSI(part_id)%normal_invert=1
     call abort_sci_clsvof()
@@ -6713,10 +6724,17 @@ end subroutine checkinplaneBIG
 
 
 
-! normal points from solid to fluid
+! normal points from solid to fluid (consistent with tecplot)
 ! solid nodes are ordered clockwise when viewed from the fluid.
+! n=-v1 x v2   v1=node2-node1  v2=node3-node2
+!
 ! for 2d problems, it is assumed that the 3rd node is equal to the 2nd
 ! node, except that the 3rd node extends OUT of the paper. (positive z)
+! If the nodes are clockwise in the 2d plane, then the extruded object
+! will have nodes oriented counter clockwise when looking from the 
+! outside (fluid).  So the extruded normals point from fluid to solid.
+! If the nodes are counter-clockwise in the 2d plane, then the
+! extruded normals poiint from the solid to the fluid.
 subroutine scinormalBIG(elemnum,normal, &
      FSI_mesh_type,part_id,max_part_id, &
      time)
@@ -6786,6 +6804,12 @@ INTEGER_T :: local_normal_invert
   nodeavg(dir)=nodeavg(dir)/3.0
  enddo
 
+  ! example: (0,0,0), (1,0,0), (1,1,0)  (clockwise looking from the bottom)
+  ! v1=(1,0,0)   v2=(0,1,0)
+  ! v1 x v2 = i   j    k = (0,0,1)  
+  !           1   0    0
+  !           0   1    0
+  ! n=-v1xv2=(0,0,-1)
  do i=1,2
   do dir=1,3
    vec(i,dir)=nodesave(i+1,dir)-nodesave(i,dir)
@@ -6797,10 +6821,17 @@ INTEGER_T :: local_normal_invert
  normal(3)=vec(1,1)*vec(2,2)-vec(2,1)*vec(1,2)
 
  dist=sqrt(normal(1)**2+normal(2)**2+normal(3)**2)
- if (dist.gt.1.0e-15) then
+ if (dist.ge.1.0e-15) then
   do dir=1,3
-   normal(dir)=normal(dir)/dist
+   normal(dir)=-normal(dir)/dist
   enddo
+ else if ((dist.ge.0.0d0).and.(dist.le.1.0E-15)) then
+  do dir=1,3
+   normal(dir)=0.0d0
+  enddo
+ else
+  print *,"dist is NaN"
+  stop
  endif
 
  local_normal_invert=FSI_mesh_type%normal_invert
@@ -6818,10 +6849,17 @@ return
 end subroutine scinormalBIG
 
 
-! normal points from solid to fluid
+! normal points from solid to fluid (consistent with tecplot)
 ! solid nodes are ordered clockwise when viewed from the fluid.
+! n=-v1 x v2   v1=node2-node1  v2=node3-node2
+!
 ! for 2d problems, it is assumed that the 3rd node is equal to the 2nd
 ! node, except that the 3rd node extends OUT of the paper. (positive z)
+! If the nodes are clockwise in the 2d plane, then the extruded object
+! will have nodes oriented counter clockwise when looking from the 
+! outside (fluid).  So the extruded normals point from fluid to solid.
+! If the nodes are counter-clockwise in the 2d plane, then the
+! extruded normals poiint from the solid to the fluid.
 subroutine scinormal(elemnum,normal, &
     FSI_mesh_type,part_id,max_part_id, &
     time)
@@ -6903,10 +6941,17 @@ INTEGER_T :: local_normal_invert
  normal(3)=vec(1,1)*vec(2,2)-vec(2,1)*vec(1,2)
 
  dist=sqrt(normal(1)**2+normal(2)**2+normal(3)**2)
- if (dist.gt.1.0e-15) then
+ if (dist.ge.1.0e-15) then
   do dir=1,3
-   normal(dir)=normal(dir)/dist
+   normal(dir)=-normal(dir)/dist
   enddo
+ else if ((dist.ge.0.0d0).and.(dist.le.1.0E-15)) then
+  do dir=1,3
+   normal(dir)=0.0d0
+  enddo
+ else
+  print *,"dist is NaN"
+  stop
  endif
 
  local_normal_invert=FSI_mesh_type%normal_invert
@@ -7232,7 +7277,7 @@ return
 end subroutine CLSVOF_sync_lag_data
 
 subroutine CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
-                FSI_touch_flag,ioproc)
+                FSI_touch_flag,ioproc,aux_isout)
 use global_utility_module
 
 IMPLICIT NONE
@@ -7241,6 +7286,7 @@ INTEGER_T, intent(in) :: FSI_operation
 INTEGER_T, intent(in) :: iter
 INTEGER_T, intent(in) :: auxcomp
 INTEGER_T, intent(in) :: ioproc
+INTEGER_T, intent(in) :: aux_isout
 INTEGER_T, intent(inout) :: FSI_touch_flag
 INTEGER_T :: lev77_local
 INTEGER_T :: tid_local
@@ -7252,7 +7298,6 @@ REAL_T :: dt_local
 INTEGER_T :: xmap3D_local(3)
 REAL_T :: dx3D_local(3)
 INTEGER_T :: CTML_force_model_local
-INTEGER_T :: isout_local
 INTEGER_T :: sdim_AMR_local
 INTEGER_T :: dir
 INTEGER_T :: LSLO(3),LSHI(3)
@@ -7279,7 +7324,6 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
   xmap3D_local(dir)=dir
  enddo
  CTML_force_model_local=0
- isout_local=0
 
  do dir=1,3
   LSLO(dir)=contain_aux(auxcomp)%lo3D(dir)- &
@@ -7322,7 +7366,16 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
    aux_masknbr3D_ptr, &
    CTML_force_model_local, &
    ioproc, &
-   isout_local)
+   aux_isout)
+
+  if (FSI_operation.eq.2) then
+   FSI_touch_flag=1
+  else if (FSI_operation.eq.3) then
+   ! do nothing
+  else
+   print *,"FSI_operation invalid"
+   stop
+  endif
 
  else if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.1) then
 
@@ -7345,13 +7398,14 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
 return
 end subroutine CLSVOF_Init_aux_Box
 
-subroutine CLSVOF_Read_aux_Header(auxcomp,ioproc)
+subroutine CLSVOF_Read_aux_Header(auxcomp,ioproc,aux_isout)
 use global_utility_module
 
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: auxcomp
 INTEGER_T, intent(in) :: ioproc
+INTEGER_T, intent(in) :: aux_isout
 
 INTEGER_T :: dir
 INTEGER_T :: inode
@@ -7371,7 +7425,6 @@ REAL_T :: local_sidelen
 INTEGER_T :: local_ncells
 INTEGER_T :: LSLO(3)
 INTEGER_T :: LSHI(3)
-INTEGER_T :: isout
 INTEGER_T :: initflag
 INTEGER_T :: file_format
 INTEGER_T :: i,j,k
@@ -7384,7 +7437,6 @@ INTEGER_T :: raw_num_elements
 REAL_T, allocatable :: raw_nodes(:,:)
 INTEGER_T, allocatable :: raw_elements(:,:)
 
- isout=0
  initflag=1
 
  if (aux_data_allocated.eq.0) then
@@ -7436,7 +7488,9 @@ INTEGER_T, allocatable :: raw_elements(:,:)
   aux_FSI(auxcomp)%exclusive_doubly_wetted=0
   aux_FSI(auxcomp)%deforming_part=0
   aux_FSI(auxcomp)%CTML_flag=0
-  aux_FSI(auxcomp)%refine_factor=1 !refine the lag. mesh if needed.
+    !refine_factor=1 => refine the Lagrangian mesh as necessary.
+    !refine_factor=0 => n_lag_levels=2
+  aux_FSI(auxcomp)%refine_factor=1
   aux_FSI(auxcomp)%bounding_box_ngrow=3
 
   if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
@@ -7737,7 +7791,7 @@ INTEGER_T, allocatable :: raw_elements(:,:)
           contain_aux(auxcomp)%xlo3D, &
           contain_aux(auxcomp)%xhi3D, &
           aux_FSI(auxcomp),auxcomp,fort_num_local_aux_grids, &
-          ioproc,isout, &
+          ioproc,aux_isout, &
           contain_aux(auxcomp)%dx3D)
   else if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.1) then
    ! do nothing
@@ -9232,7 +9286,9 @@ IMPLICIT NONE
   REAL_T, dimension(3) :: xside,xcrit
   INTEGER_T :: ii,jj,kk
   INTEGER_T :: hitflag
-  REAL_T :: phiside,phicenter,testdist,hitsign,totaldist
+  REAL_T :: phiside,phicenter,testdist
+  REAL_T :: hitsign
+  REAL_T :: totaldist
 
   INTEGER_T modify_vel
   REAL_T mag_n,mag_n_test,n_dot_x,signtest
@@ -9637,7 +9693,7 @@ IMPLICIT NONE
      endif
      ! normal points from solid to fluid
      ! phi=n dot (x-xnot)
-     ! phi>0 in the fluid
+     ! phi>0 in the fluid (the sign will be switched later)
      ! this is the element normal (in contrast to the node normal)
      call scinormalBIG(ielem,normal, &
              FSI_mesh_type, &
@@ -9770,6 +9826,7 @@ IMPLICIT NONE
          enddo
 
          ! normal points from solid to fluid
+         ! -normal points from fluid to solid
          dotprod=0.0 
          do dir=1,3
           dotprod=dotprod+normal(dir)*(xx(dir)-xnot(dir))
@@ -9779,7 +9836,7 @@ IMPLICIT NONE
           normal_closest(dir)=normal(dir)
          enddo
          unsigned_mindist=abs(dotprod)
-         ! phicenter>0 in the fluid
+         ! phicenter>0 in the fluid (sign will be switched later)
          phicenter=dotprod 
 
          if (debug_all.eq.1) then
@@ -9849,10 +9906,10 @@ IMPLICIT NONE
          enddo ! dir=1..3
 
          ! normal points from solid to fluid
-         ! phi>0 in the fluid
+         ! phi>0 in the fluid (sign will be switched later)
          ! xclosest=xx-phi n
          ! phi n = xx-xclosest
-         ! phi = n dot (xx-xclosest)
+         ! phi = n dot (xx-xclosest) (sign will be switched later)
          if (inplane.eq.1) then
           n_dot_x=zero
           mag_n=zero
@@ -9871,6 +9928,7 @@ IMPLICIT NONE
            mag_n_test=mag_n_test+normal(dir)**2
            !xx=cell center where LS needed
            mag_x=mag_x+(xx(dir)-xclosest(dir))**2 
+           
            n_dot_x=n_dot_x+normal_closest(dir)*(xx(dir)-xclosest(dir))
            signtest=signtest+normal_closest(dir)*normal(dir)
           enddo ! dir=1..3
@@ -9895,9 +9953,9 @@ IMPLICIT NONE
                  used_for_trial=1
                  if (phicenter.eq.zero) then
                   hitsign=zero
-                 else if (phicenter.gt.zero) then ! fluid
+                 else if (phicenter.gt.zero) then ! fluid(sign switched later)
                   hitsign=one
-                 else if (phicenter.lt.zero) then ! solid
+                 else if (phicenter.lt.zero) then ! solid(sign switched later)
                   hitsign=-one
                  else
                   print *,"phicenter bust"
@@ -9957,7 +10015,7 @@ IMPLICIT NONE
 
            ! normal points from solid to fluid
            ! phi=n dot (x-xnot)
-           ! phi>0 in the fluid
+           ! phi>0 in the fluid (sign will be switched later)
            phiside=zero
            do dir=1,3
             phiside=phiside+normal(dir)*(xside(dir)-xnot(dir))
@@ -9999,9 +10057,10 @@ IMPLICIT NONE
               used_for_trial=1
               if (phicenter.eq.zero) then
                hitsign=zero
-               ! phicenter>0 in the fluid
+               ! phicenter>0 in the fluid (sign will be switched later)
               else if (phicenter.gt.zero) then
                hitsign=one
+               ! phicenter<0 in the solid (sign will be switched later)
               else if (phicenter.lt.zero) then
                hitsign=-one
               else
@@ -10101,7 +10160,8 @@ IMPLICIT NONE
            endif 
            if (hitflag.eq.1) then
             mask_local=2  ! sign init
-            ls_local=hitsign*abs(ls_local)
+             ! ls_local now points into the solid
+            ls_local=-hitsign*abs(ls_local)
            else if (hitflag.eq.0) then
             ! do nothing
            else
@@ -10456,6 +10516,7 @@ IMPLICIT NONE
        print *,"doubly_wetted_solid_inside invalid"
        stop
       endif
+
       FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local
 
       if (sign_valid(mask_local).eq.1) then

@@ -7550,7 +7550,7 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
    //    that are located in or very near the tile.
   create_fortran_grid_struct(cur_time,dt);
 
-  int iter=0; // touch_flag=0
+  int iter=0; // iter==0 triggers allocation and FSI_touch_flag=0
   int FSI_operation=2;  // make distance in narrow band
   int FSI_sub_operation=0;
   resize_mask_nbr(ngrow_make_distance);
@@ -9645,7 +9645,7 @@ NavierStokes::initData () {
  prepare_mask_nbr(1);
 
  if (read_from_CAD()==1) {
-  int iter=0; // =>  FSI_touch_flag[tid]=0
+  int iter=0; // iter==0 triggers allocation of touch + FSI_touch_flag[tid]=0
   // in initData: initialize node locations; generate_new_triangles
   int FSI_operation=0; 
   int FSI_sub_operation=0; 
