@@ -1563,6 +1563,7 @@
       INTEGER_T auxcomp
       INTEGER_T FSI_operation
       INTEGER_T FSI_touch_flag
+      INTEGER_T aux_isout
       INTEGER_T iter
       INTEGER_T dir
       INTEGER_T i,j,k
@@ -1572,19 +1573,23 @@
 
        do auxcomp=1,fort_num_local_aux_grids
 
+        aux_isout=1
+
          ! CLSVOF_Read_aux_Header is declared in: sci_clsvof.F90
          !  aux_masknbr3D,aux_FSIdata3D, and aux_xdata3D are 
          !  allocated and initialized in this routine. 
-        call CLSVOF_Read_aux_Header(auxcomp,ioproc)
+        call CLSVOF_Read_aux_Header(auxcomp,ioproc,aux_isout)
+
         FSI_operation=2 ! make distance in narrow band
         iter=0
         FSI_touch_flag=0
         call CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
-          FSI_touch_flag,ioproc)
+          FSI_touch_flag,ioproc,aux_isout)
         do while (FSI_touch_flag.eq.1)
          FSI_operation=3 ! sign update
+         FSI_touch_flag=0
          call CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
-          FSI_touch_flag,ioproc)
+          FSI_touch_flag,ioproc,aux_isout)
          iter=iter+1
         enddo !do while (FSI_touch_flag.eq.1)
 
