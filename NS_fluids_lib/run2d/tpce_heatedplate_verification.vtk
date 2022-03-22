@@ -1,5 +1,5 @@
-# vtk DataFile Version 2.0
-tpce_heatedplate, Created by Gmsh 4.9.4
+# vtk DataFile Version 2.0 clockwise orientation as viewed from outside 
+tpce_heatedplate, Created by Gmsh 4.9.4 (clockwise=>tecplot normals point out)
 ASCII
 DATASET UNSTRUCTURED_GRID
 POINTS 8 double

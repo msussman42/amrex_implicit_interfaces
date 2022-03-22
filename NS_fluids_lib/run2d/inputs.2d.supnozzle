@@ -4,7 +4,7 @@
 max_step  = 99401     # maximum timestep
 stop_time = 1         # maximum problem time
 ns.FSI_flag=0 0 1 # 1=solid prescribed in PROB_[23]D.F90, 2=sci_clsvof.F90
-ns.invert_solid_levelset=1
+ns.doubly_wetted_solid_inside=1 # this is the default
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 #

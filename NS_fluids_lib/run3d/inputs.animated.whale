@@ -10,7 +10,7 @@ geometry.prob_hi   =  2.0  0.5 1.0
 geometry.is_periodic = 0 0 0     
 
 ns.FSI_flag=0 2 # 1=solid from PROB.F90  2=solid from Lagrangian data
-ns.invert_solid_levelset=0
+ns.doubly_wetted_solid_inside=1 # default
 
 mg.verbose = 0
 cg.verbose = 0
