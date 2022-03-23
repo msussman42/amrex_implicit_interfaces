@@ -2075,8 +2075,8 @@ subroutine abort_sci_clsvof()
 IMPLICIT NONE
 
 print *,"normal points from solid to fluid (consistent with tecplot)"
-print *,"solid nodes are ordered clockwise when viewed from the fluid."
-print *,"n=-v1 x v2   v1=node2-node1  v2=node3-node2"
+print *,"solid nodes are ordered counter clockwise when viewed from fluid."
+print *,"n=v1 x v2   v1=node2-node1  v2=node3-node2"
 print *,"initially, hitsign=1 in the fluid but the sign will be"
 print *,"switched so that LS>0 in the solid"
 stop
@@ -6724,17 +6724,34 @@ end subroutine checkinplaneBIG
 
 
 
-! normal points from solid to fluid (consistent with tecplot)
-! solid nodes are ordered clockwise when viewed from the fluid.
-! n=-v1 x v2   v1=node2-node1  v2=node3-node2
+! Note: meshlab is a software that can fix normal orientation.
+! Note: Tecplot normals face out of object if oriented 
+! counter-clockwise looking from outside:
+! example: ZHI FACE:
+! (0,0,1), (1,0,1), (1,1,1)  (counter clockwise looking from the top)
+! v1=x2-x1=(1,0,0)  v2=x3-x2=(0,1,0)
+! v1 x v2 = i   j    k = (0,0,1)  
+!           1   0    0
+!           0   1    0
+! n=v1xv2=(0,0,1)
+!
+! example: YLO FACE:
+! (0,0,0), (1,0,0), (1,0,1)
+! v1=x2-x1=(1,0,0)  v2=x3-x2=(0,0,1)
+! v1xv2= i   j  k
+!        1   0  0
+!        0   0  1  = (0, -1,0)
 !
 ! for 2d problems, it is assumed that the 3rd node is equal to the 2nd
 ! node, except that the 3rd node extends OUT of the paper. (positive z)
-! If the nodes are clockwise in the 2d plane, then the extruded object
-! will have nodes oriented counter clockwise when looking from the 
-! outside (fluid).  So the extruded normals point from fluid to solid.
-! If the nodes are counter-clockwise in the 2d plane, then the
-! extruded normals poiint from the solid to the fluid.
+! If the nodes are counter clockwise in the 2d plane, then the extruded object
+! will have normals pointing out of the object:
+! e.g. (1,1), (0,1) -> (1,1,0), (0,1,0), (0,1,1)
+! v1=(-1,0,0)  v2=(0,0,1)
+! v1xv2= i  j   k
+!        -1 0   0
+!        0  0   1  = (0,1,0)
+!
 subroutine scinormalBIG(elemnum,normal, &
      FSI_mesh_type,part_id,max_part_id, &
      time)
@@ -6804,12 +6821,23 @@ INTEGER_T :: local_normal_invert
   nodeavg(dir)=nodeavg(dir)/3.0
  enddo
 
-  ! example: (0,0,0), (1,0,0), (1,1,0)  (clockwise looking from the bottom)
-  ! v1=(1,0,0)   v2=(0,1,0)
+  ! Note: meshlab is a software that can fix normal orientation.
+  ! Note: Tecplot normals face out of object if oriented 
+  ! counter-clockwise looking from outside:
+  ! example: ZHI FACE:
+  ! (0,0,1), (1,0,1), (1,1,1)  (counter clockwise looking from the top)
+  ! v1=x2-x1=(1,0,0)  v2=x3-x2=(0,1,0)
   ! v1 x v2 = i   j    k = (0,0,1)  
   !           1   0    0
   !           0   1    0
-  ! n=-v1xv2=(0,0,-1)
+  ! n=v1xv2=(0,0,1)
+  !
+  ! example: YLO FACE:
+  ! (0,0,0), (1,0,0), (1,0,1)
+  ! v1=x2-x1=(1,0,0)  v2=x3-x2=(0,0,1)
+  ! v1xv2= i   j  k
+  !        1   0  0
+  !        0   0  1  = (0, -1,0)
  do i=1,2
   do dir=1,3
    vec(i,dir)=nodesave(i+1,dir)-nodesave(i,dir)
@@ -6823,7 +6851,7 @@ INTEGER_T :: local_normal_invert
  dist=sqrt(normal(1)**2+normal(2)**2+normal(3)**2)
  if (dist.ge.1.0e-15) then
   do dir=1,3
-   normal(dir)=-normal(dir)/dist
+   normal(dir)=normal(dir)/dist
   enddo
  else if ((dist.ge.0.0d0).and.(dist.le.1.0E-15)) then
   do dir=1,3
@@ -6849,17 +6877,34 @@ return
 end subroutine scinormalBIG
 
 
-! normal points from solid to fluid (consistent with tecplot)
-! solid nodes are ordered clockwise when viewed from the fluid.
-! n=-v1 x v2   v1=node2-node1  v2=node3-node2
+! Note: meshlab is a software that can fix normal orientation.
+! Note: Tecplot normals face out of object if oriented 
+! counter-clockwise looking from outside:
+! example: ZHI FACE:
+! (0,0,1), (1,0,1), (1,1,1)  (counter clockwise looking from the top)
+! v1=x2-x1=(1,0,0)  v2=x3-x2=(0,1,0)
+! v1 x v2 = i   j    k = (0,0,1)  
+!           1   0    0
+!           0   1    0
+! n=v1xv2=(0,0,1)
+!
+! example: YLO FACE:
+! (0,0,0), (1,0,0), (1,0,1)
+! v1=x2-x1=(1,0,0)  v2=x3-x2=(0,0,1)
+! v1xv2= i   j  k
+!        1   0  0
+!        0   0  1  = (0, -1,0)
 !
 ! for 2d problems, it is assumed that the 3rd node is equal to the 2nd
 ! node, except that the 3rd node extends OUT of the paper. (positive z)
-! If the nodes are clockwise in the 2d plane, then the extruded object
-! will have nodes oriented counter clockwise when looking from the 
-! outside (fluid).  So the extruded normals point from fluid to solid.
-! If the nodes are counter-clockwise in the 2d plane, then the
-! extruded normals poiint from the solid to the fluid.
+! If the nodes are counter clockwise in the 2d plane, then the extruded object
+! will have normals pointing out of the object:
+! e.g. (1,1), (0,1) -> (1,1,0), (0,1,0), (0,1,1)
+! v1=(-1,0,0)  v2=(0,0,1)
+! v1xv2= i  j   k
+!        -1 0   0
+!        0  0   1  = (0,1,0)
+!
 subroutine scinormal(elemnum,normal, &
     FSI_mesh_type,part_id,max_part_id, &
     time)
@@ -6943,7 +6988,7 @@ INTEGER_T :: local_normal_invert
  dist=sqrt(normal(1)**2+normal(2)**2+normal(3)**2)
  if (dist.ge.1.0e-15) then
   do dir=1,3
-   normal(dir)=-normal(dir)/dist
+   normal(dir)=normal(dir)/dist
   enddo
  else if ((dist.ge.0.0d0).and.(dist.le.1.0E-15)) then
   do dir=1,3
@@ -7480,7 +7525,8 @@ INTEGER_T, allocatable :: raw_elements(:,:)
    ! from Tecplot: 1. Analyze 2. Calculate Variables 3. Grid K unit normal
    ! vector.  4. Calculate 5. Close 6. Vector
    ! Therefore, since the tecplot normals point out of the object,
-   ! the node ordering in elements is clockwise as viewed from the outside.
+   ! the node ordering in elements is counter-clockwise as viewed from 
+   ! the outside.
    ! one will have the following:
    ! normal_invert=0 => sign of distance function is positive in the object
    ! normal_invert=1 => sign of distance function is negative in the object
@@ -10160,7 +10206,7 @@ IMPLICIT NONE
            endif 
            if (hitflag.eq.1) then
             mask_local=2  ! sign init
-             ! ls_local now points into the solid
+             ! The "-" below asserts that ls_local now points into the solid
             ls_local=-hitsign*abs(ls_local)
            else if (hitflag.eq.0) then
             ! do nothing
