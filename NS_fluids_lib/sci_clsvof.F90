@@ -11,6 +11,7 @@
 
 #define element_buffer_tol 0.01d0
 #define sign_box_dilate 1.5d0
+#define tecplot_post_process 1
 
 ! 10 seconds for tail to do a full period
 #define WHALE_LENGTH 13.0
@@ -84,7 +85,7 @@ type mesh_type
  INTEGER_T :: NumNodesBIG
  INTEGER_T :: NumIntElemsBIG
  INTEGER_T, pointer :: ElemNodeCountBIG(:)
- REAL_T, pointer :: NodeBIG(:,:)
+ REAL_T, pointer :: NodeBIG(:,:)  ! (3,node_id)
  REAL_T, pointer :: NodeVelBIG(:,:)
  REAL_T, pointer :: NodeForceBIG(:,:)  ! (3,node_id)
  REAL_T, pointer :: NodeDensityBIG(:)
@@ -718,6 +719,151 @@ INTEGER_T :: dir
 
 end subroutine get_new_half_vols
 
+subroutine compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
+                coord_scale,compare_flag)
+IMPLICIT NONE
+type(mesh_type), intent(in) :: FSI_mesh_type
+INTEGER_T, allocatable, intent(in) :: sorted_node_list(:)
+REAL_T, intent(in) :: coord_scale
+INTEGER_T, intent(in) :: jnode
+INTEGER_T, intent(out) :: compare_flag
+REAL_T :: mag
+REAL_T :: nodej(3)
+REAL_T :: nodejp1(3)
+INTEGER_T :: dir
+
+ if (coord_scale.gt.zero) then
+  ! do nothing
+ else
+  print *,"coord_scale invalid"
+  stop
+ endif
+
+ mag=zero
+ do dir=1,3
+  nodej(dir)=FSI_mesh_type%NodeBIG(dir,sorted_node_list(jnode))
+  nodejp1(dir)=FSI_mesh_type%NodeBIG(dir,sorted_node_list(jnode+1))
+
+  mag=mag+(nodej(dir)-nodejp1(dir))**2
+ enddo
+ mag=sqrt(mag)
+ if (mag.le.VOFTOL*coord_scale) then
+  compare_flag=0
+ else if (mag.ge.VOFTOL*coord_scale) then
+  dir=1
+  if (nodej(dir).gt.nodejp1(dir)+VOFTOL*coord_scale) then
+   compare_flag=1
+  else if (nodej(dir).lt.nodejp1(dir)-VOFTOL*coord_scale) then
+   compare_flag=-1
+  else if (abs(nodej(dir)-nodejp1(dir)).le.VOFTOL*coord_scale) then
+   dir=2
+   if (nodej(dir).gt.nodejp1(dir)+VOFTOL*coord_scale) then
+    compare_flag=1
+   else if (nodej(dir).lt.nodejp1(dir)-VOFTOL*coord_scale) then
+    compare_flag=-1
+   else if (abs(nodej(dir)-nodejp1(dir)).le.VOFTOL*coord_scale) then
+    dir=3
+    if (nodej(dir).gt.nodejp1(dir)+VOFTOL*coord_scale) then
+     compare_flag=1
+    else if (nodej(dir).lt.nodejp1(dir)-VOFTOL*coord_scale) then
+     compare_flag=-1
+    else if (abs(nodej(dir)-nodejp1(dir)).le.VOFTOL*coord_scale) then
+     compare_flag=0
+    else
+     print *,"nodej or nodejp1 bust"
+     stop
+    endif
+   else
+    print *,"nodej or nodejp1 bust"
+    stop
+   endif
+  else
+   print *,"nodej or nodejp1 bust"
+   stop
+  endif
+ else
+  print *,"mag invalid"
+  stop
+ endif
+
+end subroutine compare_nodes
+
+subroutine remove_duplicate_nodes(FSI_mesh_type,part_id,max_part_id)
+IMPLICIT NONE
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: max_part_id
+type(mesh_type), intent(inout) :: FSI_mesh_type
+INTEGER_T, allocatable :: sorted_node_list(:)
+INTEGER_T, allocatable :: alternate_node_list(:)
+INTEGER_T :: inode,jnode
+INTEGER_T :: compare_flag
+INTEGER_T :: save_node
+REAL_T :: min_coord
+REAL_T :: max_coord
+REAL_T :: coord_scale
+REAL_T :: test_coord
+INTEGER_T :: dir
+
+ if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
+  print *,"part_id invalid"
+  stop
+ endif
+ if (FSI_mesh_type%partID.ne.part_id) then
+  print *,"FSI_mesh_type%partID.ne.part_id"
+  stop
+ endif
+
+ allocate(sorted_node_list(FSI_mesh_type%NumNodesBIG))
+ allocate(alternate_node_list(FSI_mesh_type%NumNodesBIG))
+
+ do inode=1,FSI_mesh_type%NumNodesBIG
+  sorted_node_list(inode)=inode
+  alternate_node_list(inode)=inode
+ enddo
+
+ min_coord=1.0D+20
+ max_coord=-1.0D+20
+ do inode=1,FSI_mesh_type%NumNodesBIG
+  do dir=1,3
+   test_coord=FSI_mesh_type%NodeBIG(dir,inode)
+   if (test_coord.lt.min_coord) then
+    min_coord=test_coord
+   endif
+   if (test_coord.gt.max_coord) then
+    max_coord=test_coord
+   endif
+  enddo
+ enddo
+ coord_scale=max_coord-min_coord
+ if (coord_scale.gt.zero) then
+  ! do nothing
+ else
+  print *,"coord_scale invalid"
+  stop
+ endif
+
+ do inode=1,FSI_mesh_type%NumNodesBIG-1
+  do jnode=1,FSI_mesh_type%NumNodesBIG-1-inode+1
+   call compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
+          coord_scale,compare_flag)
+   if (compare_flag.eq.1) then ! (j) > (j+1)
+    save_node=sorted_node_list(jnode)
+    sorted_node_list(jnode)=sorted_node_list(jnode+1)
+    sorted_node_list(jnode+1)=save_node
+   else if ((compare_flag.eq.0).or.(compare_flag.eq.-1)) then
+    ! do nothing
+   else
+    print *,"compare_flag invalid"
+    stop
+   endif
+  enddo ! jnode
+ enddo ! inode
+
+ deallocate(sorted_node_list)
+ deallocate(alternate_node_list)
+
+end subroutine remove_duplicate_nodes
+
 ! split triangles so that size is no bigger than "h_small"
 subroutine post_process_nodes_elements(initflag, &
   problo,probhi, &
@@ -764,6 +910,7 @@ INTEGER_T :: n_lag_levels
 INTEGER_T :: save_n_elems,save_n_nodes
 INTEGER_T :: local_refine_factor
 REAL_T    :: mag
+INTEGER_T :: view_refined
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
@@ -858,7 +1005,10 @@ REAL_T    :: mag
    print *,"normal_cnt invalid"
    stop
   endif
- enddo
+ enddo ! do inode=1,FSI_mesh_type%NumNodes
+
+ view_refined=0
+! call tecplot_normals(FSI_mesh_type,part_id,max_part_id,view_refined)
 
 ! START OF LAGRANGIAN REFINEMENT SECTION ---------------------
 
@@ -1464,6 +1614,8 @@ REAL_T    :: mag
   print *,"creating normals for the nodes and Xnot"
  endif
 
+ call remove_duplicate_nodes(FSI_mesh_type,part_id,max_part_id)
+
  do ielem=1,FSI_mesh_type%NumIntElemsBIG
   nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
   if (nodes_per_elem.ne.3) then
@@ -1528,7 +1680,7 @@ REAL_T    :: mag
    print *,"normal_cnt invalid"
    stop
   endif
- enddo
+ enddo ! do inode=1,FSI_mesh_type%NumNodesBIG
 
  biggest_h=0.0
  smallest_h=0.0
@@ -1614,6 +1766,9 @@ REAL_T    :: mag
  if ((ioproc.eq.1).and.(isout.eq.1)) then
   print*,"in allocate: part ID ",FSI_mesh_type%PartID
  endif
+
+ view_refined=1
+! call tecplot_normals(FSI_mesh_type,part_id,max_part_id,view_refined)
 
 ! END OF LAGRANGIAN REFINEMENT SECTION -----------------------
 
