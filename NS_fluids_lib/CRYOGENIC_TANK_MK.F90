@@ -188,7 +188,7 @@ INTEGER_T :: stat
     else if (part_id.eq.4) then
      open(unit=unit_id,file= 'tpce_sink_thick.vtk',status='old',iostat=stat)
     else if (part_id.eq.5) then
-     open(unit=unit_id, file= 'tpce_geometry_thick.vtk',status='old',
+     open(unit=unit_id, file= 'tpce_geometry_thick.vtk',status='old', &
         iostat=stat)
     else
      print *,"part_id invalid"
