@@ -10,6 +10,7 @@
 #include "EXTRAP_COMP.H"
 
 #define element_buffer_tol 0.01d0
+#define sign_box_dilate 1.5d0
 
 ! 10 seconds for tail to do a full period
 #define WHALE_LENGTH 13.0
@@ -6340,7 +6341,7 @@ REAL_T, dimension(3) :: velparm
   endif
   xfoot(dir)= &
     FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
-  xfoot_pert(dir)=xfoot(dir)+0.1*dx(dir)* &
+  xfoot_pert(dir)=xfoot(dir)+0.1*dx(1)* &
     FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
   velparm(dir)=zero
  enddo
@@ -6395,7 +6396,6 @@ REAL_T, dimension(3) :: velparm
 
 return
 end subroutine checkinpointBIG
-
 
 
 subroutine checkinlineBIG(xclosest,normal_closest, &
@@ -6462,7 +6462,7 @@ REAL_T, dimension(3) :: velparm
     stop
    endif
    xfoot(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
-   xfoot_pert(dir)=xfoot(dir)+0.1*dx(dir)* &
+   xfoot_pert(dir)=xfoot(dir)+0.1*dx(1)* &
     FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
    velparm(dir)=zero
   enddo
@@ -6496,7 +6496,7 @@ REAL_T, dimension(3) :: velparm
   do dir=1,3
    xfoot(dir)= &
     FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode+1,elemnum))
-   xfoot_pert(dir)=xfoot(dir)+0.1*dx(dir)* &
+   xfoot_pert(dir)=xfoot(dir)+0.1*dx(1)* &
     FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inode+1,elemnum))
    velparm(dir)=zero
   enddo
@@ -6875,6 +6875,114 @@ INTEGER_T :: local_normal_invert
 
 return
 end subroutine scinormalBIG
+
+
+subroutine scinormalBIG_SMOOTH(elemnum,normal, &
+     FSI_mesh_type,part_id,max_part_id, &
+     time, &
+     dx3D)
+IMPLICIT NONE
+
+type(mesh_type), intent(in) :: FSI_mesh_type
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: max_part_id
+INTEGER_T, intent(in) :: elemnum
+REAL_T, dimension(3), intent(out) :: normal
+REAL_T, intent(in) :: dx3D(3)
+REAL_T, intent(in) :: time
+INTEGER_T :: nodes_per_elem
+REAL_T, dimension(3) :: xfoot
+REAL_T, dimension(3) :: xfoot_pert
+REAL_T, dimension(3) :: xtarget
+REAL_T, dimension(3) :: xtarget_pert
+REAL_T, dimension(3) :: nnode
+REAL_T, dimension(3) :: velparm
+REAL_T :: dist
+INTEGER_T :: inode
+INTEGER_T :: dir
+
+ if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
+  print *,"part_id invalid"
+  stop
+ endif
+ if (FSI_mesh_type%partID.ne.part_id) then
+  print *,"FSI_mesh_type%partID.ne.part_id"
+  stop
+ endif
+ if (time.ge.zero) then
+  ! do nothing
+ else
+  print *,"time invalid"
+  stop
+ endif
+
+ nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,elemnum)
+ if (nodes_per_elem.ne.3) then
+  print *,"nodes_per_elem invalid sci_normalBIG_SMOOTH"
+  stop
+ endif
+
+ do dir=1,3
+  if (dx3D(dir).gt.0.0d0) then
+   ! do nothing
+  else
+   print *,"dx3D invalid sci_normalBIG_SMOOTH"
+   stop
+  endif
+ enddo
+
+ do dir=1,3
+  normal(dir)=0.0d0
+ enddo
+
+ do inode=1,3
+
+  do dir=1,3
+   xfoot(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
+   nnode(dir)=FSI_mesh_type%NodeNormalBIG(dir, &
+                FSI_mesh_type%IntElemBIG(inode,elemnum))
+   xfoot_pert(dir)=xfoot(dir)+0.1*dx3D(1)*nnode(dir)
+   velparm(dir)=zero
+  enddo
+  call get_target_from_foot(xfoot,xtarget, &
+      velparm,time, &
+      FSI_mesh_type, &
+      part_id, &
+      max_part_id)
+  call get_target_from_foot(xfoot_pert,xtarget_pert, &
+    velparm,time, &
+    FSI_mesh_type, &
+    part_id, &
+    max_part_id)
+
+  dist=zero
+  do dir=1,3
+   nnode(dir)=xtarget_pert(dir)-xtarget(dir)
+   dist=dist+nnode(dir)**2
+  enddo
+  dist=sqrt(dist)
+  if (dist.gt.zero) then
+   ! do nothing
+  else
+   print *,"dist invalid scinormalBIG_SMOOTH"
+   stop
+  endif
+  do dir=1,3
+   nnode(dir)=nnode(dir)/dist
+  enddo
+
+  do dir=1,3
+   normal(dir)=normal(dir)+nnode(dir)
+  enddo
+ enddo ! inode=1..3
+
+ do dir=1,3
+  normal(dir)=normal(dir)/3.0d0
+ enddo
+
+return
+end subroutine scinormalBIG_SMOOTH
+
 
 
 ! Note: meshlab is a software that can fix normal orientation.
@@ -7536,7 +7644,7 @@ INTEGER_T, allocatable :: raw_elements(:,:)
   aux_FSI(auxcomp)%CTML_flag=0
     !refine_factor=1 => refine the Lagrangian mesh as necessary.
     !refine_factor=0 => n_lag_levels=2
-  aux_FSI(auxcomp)%refine_factor=0
+  aux_FSI(auxcomp)%refine_factor=1
   aux_FSI(auxcomp)%bounding_box_ngrow=3
 
   if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
@@ -9741,11 +9849,12 @@ IMPLICIT NONE
      ! phi=n dot (x-xnot)
      ! phi>0 in the fluid (the sign will be switched later)
      ! this is the element normal (in contrast to the node normal)
-     call scinormalBIG(ielem,normal, &
+     call scinormalBIG_SMOOTH(ielem,normal, &
              FSI_mesh_type, &
              part_id, &
              nparts, &
-             time)
+             time, &
+             dx3D)
 
      if (debug_all.eq.1) then
       print *,"ielem=",ielem
@@ -9945,7 +10054,15 @@ IMPLICIT NONE
            print *,"dir invalid"
            stop
           endif
-          if (xright(dir).le.xleft(dir)) then
+           !xx-(xx-xdata)*factor=xx(1-factor)+xdata*factor
+           !xx+(xdata-xx)*factor=xx(1-factor)+xdata*factor
+          xleft(dir)=sign_box_dilate*xleft(dir)+ &
+                   (1.0d0-sign_box_dilate)*xx(dir)
+          xright(dir)=sign_box_dilate*xright(dir)+ &
+                   (1.0d0-sign_box_dilate)*xx(dir)
+          if (xright(dir).gt.xleft(dir)) then
+           ! do nothing
+          else
            print *,"xright(dir).le.xleft(dir)"
            stop
           endif
@@ -9969,6 +10086,12 @@ IMPLICIT NONE
            if ((xclosest(dir).lt.xleft(dir)).or. &
                (xclosest(dir).gt.xright(dir))) then
             in_sign_box=0
+           else if ((xclosest(dir).ge.xleft(dir)).and. &
+                    (xclosest(dir).le.xright(dir))) then
+            ! do nothing
+           else
+            print *,"xclosest,xleft, or xright invalid"
+            stop
            endif
            mag_n=mag_n+normal_closest(dir)**2
            mag_n_test=mag_n_test+normal(dir)**2
