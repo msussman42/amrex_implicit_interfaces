@@ -27,6 +27,8 @@ implicit none
 
 INTEGER_T, PARAMETER :: TANK_MK_MATERIAL_TYPE=24
 
+INTEGER_T, PARAMETER :: TANK_MK_AUX_THICK_WALLS=1
+
 INTEGER_T :: dir_x,dir_y,dir_z
 
 !! MIDDLE OF THE TANK IS AT Z=0 
@@ -124,7 +126,7 @@ INTEGER_T, intent(out) :: LS_FROM_SUBROUTINE
 INTEGER_T, intent(out) :: aux_ncells_max_side
 
  if ((auxcomp.ge.1).and. &
-     (auxcomp.le.4)) then
+     (auxcomp.le.5)) then
   if (axis_dir.eq.2) then
    if (num_materials.eq.3) then
     LS_FROM_SUBROUTINE=0
@@ -135,6 +137,8 @@ INTEGER_T, intent(out) :: aux_ncells_max_side
     else if (auxcomp.eq.3) then
      aux_ncells_max_side=64
     else if (auxcomp.eq.4) then
+     aux_ncells_max_side=64
+    else if (auxcomp.eq.5) then
      aux_ncells_max_side=128
     else
      print *,"auxcomp invalid"
@@ -171,23 +175,50 @@ INTEGER_T :: stat
 
  if (axis_dir.eq.2) then
 
-  if (fort_num_local_aux_grids.eq.4) then
+  if (fort_num_local_aux_grids.eq.5) then
 
-   if (part_id.eq.1) then
-    open(unit=unit_id,file= 'tpce_heatedplate.vtk',status='old',iostat=stat)
-   else if (part_id.eq.2) then
-    open(unit=unit_id,file= 'tpce_source.vtk',status='old',iostat=stat)
-   else if (part_id.eq.3) then
-    open(unit=unit_id,file= 'tpce_sink.vtk',status='old',iostat=stat)
-   else if (part_id.eq.4) then
-    open(unit=unit_id, file= 'tpce_geometry.vtk',status='old',iostat=stat)
-   else
-    print *,"part_id invalid"
+   if (TANK_MK_AUX_THICK_WALLS.eq.1) then
+
+    if (part_id.eq.1) then ! top heater
+     open(unit=unit_id,file= 'tpce_heatera_thick.vtk',status='old',iostat=stat)
+    else if (part_id.eq.2) then ! side heater
+     open(unit=unit_id,file= 'tpce_heaterb_thick.vtk',status='old',iostat=stat)
+    else if (part_id.eq.3) then
+     open(unit=unit_id,file= 'tpce_source_thick.vtk',status='old',iostat=stat)
+    else if (part_id.eq.4) then
+     open(unit=unit_id,file= 'tpce_sink_thick.vtk',status='old',iostat=stat)
+    else if (part_id.eq.5) then
+     open(unit=unit_id, file= 'tpce_geometry_thick.vtk',status='old',
+        iostat=stat)
+    else
+     print *,"part_id invalid"
+     stop
+    endif
+
+   else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
+
+    if (part_id.eq.1) then ! top heater
+     open(unit=unit_id,file= 'tpce_heatera.vtk',status='old',iostat=stat)
+    else if (part_id.eq.2) then ! side heater
+     open(unit=unit_id,file= 'tpce_heaterb.vtk',status='old',iostat=stat)
+    else if (part_id.eq.3) then
+     open(unit=unit_id,file= 'tpce_source.vtk',status='old',iostat=stat)
+    else if (part_id.eq.4) then
+     open(unit=unit_id,file= 'tpce_sink.vtk',status='old',iostat=stat)
+    else if (part_id.eq.5) then
+     open(unit=unit_id, file= 'tpce_geometry.vtk',status='old',iostat=stat)
+    else
+     print *,"part_id invalid"
+     stop
+    endif
+
+   else 
+    print *,"TANK_MK_AUX_THICK_WALLS invalid"
     stop
    endif
 
   else
-   print *,"expecting fort_num_local_aux_grids.eq.4"
+   print *,"expecting fort_num_local_aux_grids.eq.5"
    stop
   endif 
 
@@ -471,7 +502,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
      print *,"expecting FSI_flag(3).eq.1"
      stop
     endif
-    auxcomp=4
+    auxcomp=5
     call interp_from_aux_grid(auxcomp,x3D,LS(3))
 
    else
@@ -1801,7 +1832,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
  else if (axis_dir.eq.2) then
 
-  if (region_id.eq.1) then ! heater
+  if (region_id.eq.1) then ! heater A (top)
    auxcomp=1
    call interp_from_aux_grid(auxcomp,x3D,LS_A)
    if (LS_A.ge.0.0d0) then
@@ -1813,7 +1844,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
     stop
    endif
   else if (region_id.eq.2) then ! inflow
-   auxcomp=2
+   auxcomp=3
    call interp_from_aux_grid(auxcomp,x3D,LS_A)
    if (LS_A.ge.0.0d0) then
     charfn_out=one
@@ -1824,7 +1855,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
     stop
    endif
   else if (region_id.eq.3) then ! outflow
-   auxcomp=3
+   auxcomp=4
    call interp_from_aux_grid(auxcomp,x3D,LS_A)
    if (LS_A.ge.0.0d0) then
     charfn_out=one
@@ -2060,7 +2091,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    if (axis_dir.eq.1) then
     call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,caller_id)
    else if (axis_dir.eq.2) then
-    auxcomp=1
+    auxcomp=1 ! heater A (top)
     call interp_from_aux_grid(auxcomp,x3D,LS_A)
    else
     print *,"axis_dir invalid"

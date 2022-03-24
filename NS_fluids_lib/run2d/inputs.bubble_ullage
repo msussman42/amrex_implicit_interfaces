@@ -31,17 +31,17 @@ ns.num_materials    = 3
 # vapor
 ns.num_species_var  = 0
 
-# The grid independent evaporation model for fully saturated gas:
+
 # Clausius Clapyron:
 # P_gamma=P_ref * e^{(1/R)(1/T_ref-1/T_gamma)=P_{CC}(T_gamma)
-# P=density (cp-cv) T  equation of state
+# P=density (cp-cv) T  equation of state in the gas
 # 1. density in the gas and liquid satisfies:
 #    density=density_{0}(time) * (1-beta*(T-T_{0}))
-# 2. find grid independent pressure by diffusing an auxiliary temperature
-#    field for 0<time<time_critical; call the diffused pressure immediately
-#    next to the interface as "P_gamma."
-# 3. solve for T_gamma: P_gamma=P_{CC}(T_gamma)
-# 4. mdot=[k grad T]/L  where T_gamma is the interface temperature.
+# 2. P_gamma=P_{CC}(T_gamma)
+# 3. mdot=[k grad T]/L  where T_gamma is the interface temperature.
+# 4. Kassemi et al 2018:
+#    mdot=(2 sigma/(2-sigma))(M/(2 pi R))^(.5)(P_CC(T_gamma)/T_gamma-
+#     P_eos(T_gamma,rho_vapor)/T_gamma)
 # Material type:
 # 0  => incompressible
 # 24 => compressible 
