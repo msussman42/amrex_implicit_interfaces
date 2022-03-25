@@ -795,7 +795,18 @@ INTEGER_T, intent(in) :: max_part_id
 type(mesh_type), intent(inout) :: FSI_mesh_type
 INTEGER_T, allocatable :: sorted_node_list(:)
 INTEGER_T, allocatable :: alternate_node_list(:)
-INTEGER_T :: inode,jnode
+INTEGER_T, allocatable :: new_node_list(:)
+INTEGER_T, allocatable :: old_node_list(:)
+REAL_T, allocatable :: NodeBIG_local(:,:)
+REAL_T, allocatable :: NodeVelBIG_local(:,:)
+REAL_T, allocatable :: NodeForceBIG_local(:,:)
+REAL_T, allocatable :: NodeDensityBIG_local(:)
+REAL_T, allocatable :: NodeMassBIG_local(:)
+REAL_T, allocatable :: NodeTempBIG_local(:)
+INTEGER_T :: inode,jnode,knode
+INTEGER_T :: ilocal
+INTEGER_T :: ielem
+INTEGER_T :: nodes_per_elem
 INTEGER_T :: compare_flag
 INTEGER_T :: save_node
 REAL_T :: min_coord
@@ -803,6 +814,7 @@ REAL_T :: max_coord
 REAL_T :: coord_scale
 REAL_T :: test_coord
 INTEGER_T :: dir
+INTEGER_T :: num_nodes_local 
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
@@ -815,6 +827,8 @@ INTEGER_T :: dir
 
  allocate(sorted_node_list(FSI_mesh_type%NumNodesBIG))
  allocate(alternate_node_list(FSI_mesh_type%NumNodesBIG))
+ allocate(new_node_list(FSI_mesh_type%NumNodesBIG))
+ allocate(old_node_list(FSI_mesh_type%NumNodesBIG))
 
  do inode=1,FSI_mesh_type%NumNodesBIG
   sorted_node_list(inode)=inode
@@ -859,6 +873,110 @@ INTEGER_T :: dir
   enddo ! jnode
  enddo ! inode
 
+ inode=1
+ knode=1
+ do while (inode.lt.FSI_mesh_type%NumNodesBIG)
+  new_node_list(inode)=knode
+  old_node_list(knode)=inode
+  jnode=inode
+  call compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
+    coord_scale,compare_flag)
+  do while ((compare_flag.eq.0).and. &
+            (jnode.lt.FSI_mesh_type%NumNodesBIG))
+   jnode=jnode+1
+   new_node_list(jnode)=knode
+   alternate_node_list(jnode)=inode
+   if (jnode.lt.FSI_mesh_type%NumNodesBIG) then
+    call compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
+     coord_scale,compare_flag)
+   else
+    compare_flag=0
+   endif
+  enddo
+  inode=jnode+1
+  knode=knode+1
+ enddo
+ if (inode.eq.FSI_mesh_type%NumNodesBIG) then
+  new_node_list(inode)=knode
+  old_node_list(knode)=inode
+  knode=knode+1
+ endif
+ num_nodes_local=knode-1
+ allocate(NodeBIG_local(3,num_nodes_local))
+ allocate(NodeVelBIG_local(3,num_nodes_local))
+ allocate(NodeForceBIG_local(3,num_nodes_local))
+ allocate(NodeDensityBIG_local(num_nodes_local))
+ allocate(NodeMassBIG_local(num_nodes_local))
+ allocate(NodeTempBIG_local(num_nodes_local))
+
+ do ielem=1,FSI_mesh_type%NumIntElemsBIG
+  nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
+  if (nodes_per_elem.ne.3) then
+   print *,"nodes_per_elem.ne.3 not supported"
+   stop
+  endif
+  do ilocal=1,nodes_per_elem
+   inode=FSI_mesh_type%IntElemBIG(ilocal,ielem)
+   FSI_mesh_type%IntElemBIG(ilocal,ielem)=new_node_list(inode)
+  enddo
+ enddo ! do ielem=1,FSI_mesh_type%NumIntElemsBIG
+
+ print *,"removing duplicate nodes"
+ print *,"old nodes ",FSI_mesh_type%NumNodesBIG
+ print *,"new nodes ",num_nodes_local
+
+ do knode=1,num_nodes_local
+  inode=old_node_list(knode)
+  do dir=1,3
+   NodeBIG_local(dir,knode)=FSI_mesh_type%NodeBIG(dir,inode)
+   NodeVelBIG_local(dir,knode)=FSI_mesh_type%NodeVelBIG(dir,inode)
+   NodeForceBIG_local(dir,knode)=FSI_mesh_type%NodeForceBIG(dir,inode)
+  enddo
+  NodeDensityBIG_local(knode)=FSI_mesh_type%NodeDensityBIG(inode)
+  NodeMassBIG_local(knode)=FSI_mesh_type%NodeMassBIG(inode)
+  NodeTempBIG_local(knode)=FSI_mesh_type%NodeTempBIG(inode)
+ enddo !knode=1,num_nodes_local
+
+ deallocate(FSI_mesh_type%NodeBIG)
+ deallocate(FSI_mesh_type%NodeVelBIG)
+ deallocate(FSI_mesh_type%NodeForceBIG)
+ deallocate(FSI_mesh_type%NodeDensityBIG)
+ deallocate(FSI_mesh_type%NodeMassBIG)
+ deallocate(FSI_mesh_type%NodeTempBIG)
+ deallocate(FSI_mesh_type%NodeNormalBIG)
+ deallocate(FSI_mesh_type%ElemNodeCountBIG)
+
+ allocate(FSI_mesh_type%NodeBIG(3,num_nodes_local))
+ allocate(FSI_mesh_type%NodeVelBIG(3,num_nodes_local))
+ allocate(FSI_mesh_type%NodeForceBIG(3,num_nodes_local))
+ allocate(FSI_mesh_type%NodeDensityBIG(num_nodes_local))
+ allocate(FSI_mesh_type%NodeMassBIG(num_nodes_local))
+ allocate(FSI_mesh_type%NodeTempBIG(num_nodes_local))
+ allocate(FSI_mesh_type%NodeNormalBIG(3,num_nodes_local))
+ allocate(FSI_mesh_type%ElemNodeCountBIG(num_nodes_local))
+
+ do knode=1,num_nodes_local
+  do dir=1,3
+   FSI_mesh_type%NodeBIG(dir,knode)=NodeBIG_local(dir,knode)
+   FSI_mesh_type%NodeVelBIG(dir,knode)=NodeVelBIG_local(dir,knode)
+   FSI_mesh_type%NodeForceBIG(dir,knode)=NodeForceBIG_local(dir,knode)
+  enddo
+  FSI_mesh_type%NodeDensityBIG(knode)=NodeDensityBIG_local(knode)
+  FSI_mesh_type%NodeMassBIG(knode)=NodeMassBIG_local(knode)
+  FSI_mesh_type%NodeTempBIG(knode)=NodeTempBIG_local(knode)
+ enddo !knode=1,num_nodes_local
+
+ FSI_mesh_type%NumNodesBIG=num_nodes_local
+
+ deallocate(NodeBIG_local)
+ deallocate(NodeVelBIG_local)
+ deallocate(NodeForceBIG_local)
+ deallocate(NodeDensityBIG_local)
+ deallocate(NodeMassBIG_local)
+ deallocate(NodeTempBIG_local)
+ 
+ deallocate(old_node_list)
+ deallocate(new_node_list)
  deallocate(sorted_node_list)
  deallocate(alternate_node_list)
 
@@ -1609,12 +1727,23 @@ INTEGER_T :: view_refined
   deallocate(multi_lag(i)%ndtemp)
  enddo
  deallocate(multi_lag)
+
+ if ((ioproc.eq.1).and.(isout.eq.1)) then 
+  print *,"prior to remove_duplicate_nodes"
+ endif
  
+ call remove_duplicate_nodes(FSI_mesh_type,part_id,max_part_id)
+
  if ((ioproc.eq.1).and.(isout.eq.1)) then 
   print *,"creating normals for the nodes and Xnot"
  endif
 
- call remove_duplicate_nodes(FSI_mesh_type,part_id,max_part_id)
+ do inode=1,FSI_mesh_type%NumNodesBIG
+  do dir=1,3
+   FSI_mesh_type%NodeNormalBIG(dir,inode)=0.0
+  enddo
+  FSI_mesh_type%ElemNodeCountBIG(inode)=0
+ enddo
 
  do ielem=1,FSI_mesh_type%NumIntElemsBIG
   nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
@@ -10048,7 +10177,7 @@ IMPLICIT NONE
      if (element_scale.gt.zero) then
       ! do nothing
      else
-      print *,"element_scale.le.zero"
+      print *,"element_scale.le.zero: ",element_scale
       print *,"part_id= ",part_id
       print *,"ielem= ",ielem
       print *,"time= ",time
