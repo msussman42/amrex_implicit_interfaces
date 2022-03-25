@@ -788,6 +788,106 @@ INTEGER_T :: dir
 
 end subroutine compare_nodes
 
+subroutine tecplot_normals(FSI_mesh_type,part_id,max_part_id,view_refined)
+IMPLICIT NONE
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: max_part_id
+INTEGER_T, intent(in) :: view_refined
+type(mesh_type), intent(inout) :: FSI_mesh_type
+
+character*2 partstr
+character*16 auxfilename16
+INTEGER_T :: stat
+INTEGER_T :: nodes,cells
+INTEGER_T :: dir
+INTEGER_T :: i
+REAL_T :: xnode(3)
+REAL_T :: nnode(3)
+INTEGER_T :: inode(3)
+
+ if (tecplot_post_process.eq.1) then
+  write(partstr,'(I2)') part_id
+  do i=1,2
+   if (partstr(i:i).eq.' ') then
+    partstr(i:i)='0'
+   endif
+  enddo
+  if (view_refined.eq.1) then
+   write(auxfilename16,'(A10,A2,A4)') 'auxfileBIG',partstr,'.plt'
+  else if (view_refined.eq.0) then
+   write(auxfilename16,'(A10,A2,A4)') 'auxfileREG',partstr,'.plt'
+  else
+   print *,"view_refined invalid"
+   stop
+  endif
+  print *,"auxfilename16 ",auxfilename16
+  open(unit=4, file= auxfilename16,status='unknown',iostat=stat)
+  if (stat.ne.0) then
+   print *,auxfilename16," can not be opened"
+   stop
+  endif
+
+  if (view_refined.eq.1) then
+   nodes=FSI_mesh_type%NumNodesBIG
+   cells=FSI_mesh_type%NumIntElemsBIG
+  else if (view_refined.eq.0) then
+   nodes=FSI_mesh_type%NumNodes
+   cells=FSI_mesh_type%NumIntElems
+  else
+   print *,"view_refined invalid"
+   stop
+  endif
+
+  write(4,*) 'TITLE = "3D surface" '
+  write(4,*) 'VARIABLES = "X", "Y", "Z", "NX", "NY", "NZ" '
+  write(4,*) 'ZONE T="TRIANGLES", N= ', Nodes, ', E= ', &
+        Cells, ', DATAPACKING=POINT, '
+  write(4,*) 'ZONETYPE=FETRIANGLE' 
+
+  do i=1,Nodes
+   if (view_refined.eq.1) then
+    do dir=1,3
+     xnode(dir)=FSI_mesh_type%NodeBIG(dir,i)
+     nnode(dir)=FSI_mesh_type%NodeNormalBIG(dir,i)
+    enddo
+   else if (view_refined.eq.0) then
+    do dir=1,3
+     xnode(dir)=FSI_mesh_type%Node(dir,i)
+     nnode(dir)=FSI_mesh_type%NodeNormal(dir,i)
+    enddo
+   else
+    print *,"view_refined invalid"
+    stop
+   endif
+
+   write(4,*) xnode(1),xnode(2),xnode(3),nnode(1),nnode(2),nnode(3)
+  end do
+  do i=1,Cells
+   if (view_refined.eq.1) then
+    do dir=1,3
+     inode(dir)=FSI_mesh_type%IntElemBIG(dir,i)
+    enddo
+   else if (view_refined.eq.0) then
+    do dir=1,3
+     inode(dir)=FSI_mesh_type%IntElem(dir,i)
+    enddo
+   else
+    print *,"view_refined invalid"
+    stop
+   endif
+   write(4,*) inode(1),inode(2),inode(3)
+  enddo  
+
+  close(4)
+ else if (tecplot_post_process.eq.0) then
+  ! do nothing
+ else
+  print *,"tecplot_post_process invalid"
+  stop
+ endif
+
+end subroutine tecplot_normals
+
 subroutine remove_duplicate_nodes(FSI_mesh_type,part_id,max_part_id)
 IMPLICIT NONE
 INTEGER_T, intent(in) :: part_id
@@ -825,6 +925,8 @@ INTEGER_T :: num_nodes_local
   stop
  endif
 
+ print *,"removing duplicate nodes"
+
  allocate(sorted_node_list(FSI_mesh_type%NumNodesBIG))
  allocate(alternate_node_list(FSI_mesh_type%NumNodesBIG))
  allocate(new_node_list(FSI_mesh_type%NumNodesBIG))
@@ -833,6 +935,8 @@ INTEGER_T :: num_nodes_local
  do inode=1,FSI_mesh_type%NumNodesBIG
   sorted_node_list(inode)=inode
   alternate_node_list(inode)=inode
+  new_node_list(inode)=inode
+  old_node_list(inode)=inode
  enddo
 
  min_coord=1.0D+20
@@ -856,6 +960,10 @@ INTEGER_T :: num_nodes_local
   stop
  endif
 
+ print *,"min_coord: ",min_coord
+ print *,"max_coord: ",max_coord
+ print *,"coord_scale: ",coord_scale
+
  do inode=1,FSI_mesh_type%NumNodesBIG-1
   do jnode=1,FSI_mesh_type%NumNodesBIG-1-inode+1
    call compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
@@ -873,35 +981,68 @@ INTEGER_T :: num_nodes_local
   enddo ! jnode
  enddo ! inode
 
+  ! sanity check
+ do inode=1,FSI_mesh_type%NumNodesBIG-1
+  call compare_nodes(FSI_mesh_type,inode,sorted_node_list, &
+        coord_scale,compare_flag)
+
+  if (compare_flag.eq.1) then ! (j) > (j+1)
+   print *,"list not sorted properly"
+   stop
+  else if ((compare_flag.eq.0).or.(compare_flag.eq.-1)) then
+   ! do nothing
+  else
+   print *,"compare_flag invalid"
+   stop
+  endif
+ enddo ! do inode=1,FSI_mesh_type%NumNodesBIG-1 (sanity check)
+
  inode=1
  knode=1
  do while (inode.lt.FSI_mesh_type%NumNodesBIG)
-  new_node_list(inode)=knode
-  old_node_list(knode)=inode
+  new_node_list(sorted_node_list(inode))=knode
+  old_node_list(knode)=sorted_node_list(inode)
   jnode=inode
   call compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
     coord_scale,compare_flag)
   do while ((compare_flag.eq.0).and. &
             (jnode.lt.FSI_mesh_type%NumNodesBIG))
    jnode=jnode+1
-   new_node_list(jnode)=knode
-   alternate_node_list(jnode)=inode
+   new_node_list(sorted_node_list(jnode))=knode
+   alternate_node_list(sorted_node_list(jnode))=sorted_node_list(inode)
    if (jnode.lt.FSI_mesh_type%NumNodesBIG) then
     call compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
      coord_scale,compare_flag)
-   else
+   else if (jnode.eq.FSI_mesh_type%NumNodesBIG) then
     compare_flag=0
+   else 
+    print *,"jnode invalid"
+    stop
    endif
   enddo
   inode=jnode+1
   knode=knode+1
  enddo
  if (inode.eq.FSI_mesh_type%NumNodesBIG) then
-  new_node_list(inode)=knode
-  old_node_list(knode)=inode
+  new_node_list(sorted_node_list(inode))=knode
+  old_node_list(knode)=sorted_node_list(inode)
+  inode=inode+1
   knode=knode+1
+ else if (inode.eq.FSI_mesh_type%NumNodesBIG+1) then
+  ! do nothing
+ else
+  print *,"inode invalid"
+  stop
  endif
+ if (inode.eq.FSI_mesh_type%NumNodesBIG+1) then
+  ! do nothing
+ else
+  print *,"inode invalid"
+  stop
+ endif
+
  num_nodes_local=knode-1
+
  allocate(NodeBIG_local(3,num_nodes_local))
  allocate(NodeVelBIG_local(3,num_nodes_local))
  allocate(NodeForceBIG_local(3,num_nodes_local))
@@ -921,12 +1062,12 @@ INTEGER_T :: num_nodes_local
   enddo
  enddo ! do ielem=1,FSI_mesh_type%NumIntElemsBIG
 
- print *,"removing duplicate nodes"
  print *,"old nodes ",FSI_mesh_type%NumNodesBIG
  print *,"new nodes ",num_nodes_local
 
  do knode=1,num_nodes_local
   inode=old_node_list(knode)
+
   do dir=1,3
    NodeBIG_local(dir,knode)=FSI_mesh_type%NodeBIG(dir,inode)
    NodeVelBIG_local(dir,knode)=FSI_mesh_type%NodeVelBIG(dir,inode)
@@ -960,10 +1101,12 @@ INTEGER_T :: num_nodes_local
    FSI_mesh_type%NodeBIG(dir,knode)=NodeBIG_local(dir,knode)
    FSI_mesh_type%NodeVelBIG(dir,knode)=NodeVelBIG_local(dir,knode)
    FSI_mesh_type%NodeForceBIG(dir,knode)=NodeForceBIG_local(dir,knode)
+   FSI_mesh_type%NodeNormalBIG(dir,knode)=zero
   enddo
   FSI_mesh_type%NodeDensityBIG(knode)=NodeDensityBIG_local(knode)
   FSI_mesh_type%NodeMassBIG(knode)=NodeMassBIG_local(knode)
   FSI_mesh_type%NodeTempBIG(knode)=NodeTempBIG_local(knode)
+  FSI_mesh_type%ElemNodeCountBIG(knode)=0
  enddo !knode=1,num_nodes_local
 
  FSI_mesh_type%NumNodesBIG=num_nodes_local
@@ -1126,7 +1269,7 @@ INTEGER_T :: view_refined
  enddo ! do inode=1,FSI_mesh_type%NumNodes
 
  view_refined=0
-! call tecplot_normals(FSI_mesh_type,part_id,max_part_id,view_refined)
+ call tecplot_normals(FSI_mesh_type,part_id,max_part_id,view_refined)
 
 ! START OF LAGRANGIAN REFINEMENT SECTION ---------------------
 
@@ -1897,7 +2040,7 @@ INTEGER_T :: view_refined
  endif
 
  view_refined=1
-! call tecplot_normals(FSI_mesh_type,part_id,max_part_id,view_refined)
+ call tecplot_normals(FSI_mesh_type,part_id,max_part_id,view_refined)
 
 ! END OF LAGRANGIAN REFINEMENT SECTION -----------------------
 
