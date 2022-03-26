@@ -6709,7 +6709,8 @@ end subroutine advance_solid
 subroutine checkinpointBIG(xclosest,normal_closest, &
   inode,elemnum, &
   unsigned_mindist, &
-  xc,inplane, &
+  xc, & ! target point at which the signed distance is sought.
+  inplane, &
   FSI_mesh_type, &
   part_id, &
   max_part_id, &
@@ -6727,7 +6728,7 @@ REAL_T, dimension(3), intent(inout) :: normal_closest
 REAL_T, dimension(3), intent(in) :: dx
 REAL_T, dimension(3), intent(in) :: xc
 REAL_T, intent(inout) :: unsigned_mindist
-REAL_T :: curdist,dotprod,mag
+REAL_T :: curdist,mag
 INTEGER_T :: dir
 INTEGER_T :: nodes_per_elem
 REAL_T, dimension(3) :: xfoot
@@ -6798,11 +6799,6 @@ REAL_T, dimension(3) :: velparm
   ntarget(dir)=ntarget(dir)/mag
  enddo
 
- dotprod=0.0
- do dir=1,3
-  dotprod=dotprod+ntarget(dir)*(xc(dir)-xtarget(dir))
- enddo
-
  call xdist(xtarget,xc,curdist)
  if (curdist.ge.zero) then
   ! do nothing
@@ -6828,7 +6824,8 @@ end subroutine checkinpointBIG
 subroutine checkinlineBIG(xclosest,normal_closest, &
   inode,elemnum, &
   unsigned_mindist, &
-  xc,inplane, &
+  xc, &  ! target point at which the signed distance is sought.
+  inplane, &
   FSI_mesh_type, &
   part_id, &
   max_part_id, &
@@ -6848,7 +6845,7 @@ REAL_T, dimension(3), intent(in) :: xc
 REAL_T, dimension(2,3) :: xnode,nnode
 REAL_T, intent(inout) :: unsigned_mindist
 REAL_T, dimension(3) :: xnot,normal
-REAL_T :: dottop,dotbot,t,curdist,dotprod,mag
+REAL_T :: dottop,dotbot,t,curdist,mag
 INTEGER_T :: dir
 INTEGER_T :: nodes_per_elem
 REAL_T, dimension(3) :: xfoot
@@ -6953,7 +6950,15 @@ REAL_T, dimension(3) :: velparm
    nnode(2,dir)=ntarget(dir)/mag
    xnode(2,dir)=xtarget(dir)
   enddo
- 
+
+   ! x(t)=x2+t*(x1-x2)
+   ! C(t)=||x(t)-xc||^2
+   ! C'(t)=0
+   ! (x(t)-xc) dot (x1-x2)=0
+   ! (-(xc-x2)+t(x1-x2)) dot (x1-x2)=0
+   ! t=(xc-x2) dot (x1-x2)/||x1-x2||^2
+   ! since x(t)=x2+t (x1-x2), if t=0 => x=x2
+   ! if t=1 => x=x1
   dottop=zero
   dotbot=zero
   do dir=1,3
@@ -6967,11 +6972,6 @@ REAL_T, dimension(3) :: velparm
    do dir=1,3
     xnot(dir)=t*xnode(1,dir)+(one-t)*xnode(2,dir)
     normal(dir)=t*nnode(1,dir)+(one-t)*nnode(2,dir)
-   enddo
-
-   dotprod=0.0
-   do dir=1,3
-    dotprod=dotprod+normal(dir)*(xc(dir)-xnot(dir))
    enddo
 
    call xdist(xnot,xc,curdist)
@@ -7313,115 +7313,6 @@ INTEGER_T :: local_normal_invert
 
 return
 end subroutine scinormalBIG
-
-
-subroutine scinormalBIG_SMOOTH(elemnum,normal, &
-     FSI_mesh_type,part_id,max_part_id, &
-     time, &
-     dx3D)
-IMPLICIT NONE
-
-type(mesh_type), intent(in) :: FSI_mesh_type
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: max_part_id
-INTEGER_T, intent(in) :: elemnum
-REAL_T, dimension(3), intent(out) :: normal
-REAL_T, intent(in) :: dx3D(3)
-REAL_T, intent(in) :: time
-INTEGER_T :: nodes_per_elem
-REAL_T, dimension(3) :: xfoot
-REAL_T, dimension(3) :: xfoot_pert
-REAL_T, dimension(3) :: xtarget
-REAL_T, dimension(3) :: xtarget_pert
-REAL_T, dimension(3) :: nnode
-REAL_T, dimension(3) :: velparm
-REAL_T :: dist
-INTEGER_T :: inode
-INTEGER_T :: dir
-
- if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
-  print *,"part_id invalid"
-  stop
- endif
- if (FSI_mesh_type%partID.ne.part_id) then
-  print *,"FSI_mesh_type%partID.ne.part_id"
-  stop
- endif
- if (time.ge.zero) then
-  ! do nothing
- else
-  print *,"time invalid"
-  stop
- endif
-
- nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,elemnum)
- if (nodes_per_elem.ne.3) then
-  print *,"nodes_per_elem invalid sci_normalBIG_SMOOTH"
-  stop
- endif
-
- do dir=1,3
-  if (dx3D(dir).gt.0.0d0) then
-   ! do nothing
-  else
-   print *,"dx3D invalid sci_normalBIG_SMOOTH"
-   stop
-  endif
- enddo
-
- do dir=1,3
-  normal(dir)=0.0d0
- enddo
-
- do inode=1,3
-
-  do dir=1,3
-   xfoot(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
-   nnode(dir)=FSI_mesh_type%NodeNormalBIG(dir, &
-                FSI_mesh_type%IntElemBIG(inode,elemnum))
-   xfoot_pert(dir)=xfoot(dir)+0.1*dx3D(1)*nnode(dir)
-   velparm(dir)=zero
-  enddo
-  call get_target_from_foot(xfoot,xtarget, &
-      velparm,time, &
-      FSI_mesh_type, &
-      part_id, &
-      max_part_id)
-  call get_target_from_foot(xfoot_pert,xtarget_pert, &
-    velparm,time, &
-    FSI_mesh_type, &
-    part_id, &
-    max_part_id)
-
-  dist=zero
-  do dir=1,3
-   nnode(dir)=xtarget_pert(dir)-xtarget(dir)
-   dist=dist+nnode(dir)**2
-  enddo
-  dist=sqrt(dist)
-  if (dist.gt.zero) then
-   ! do nothing
-  else
-   print *,"dist invalid scinormalBIG_SMOOTH"
-   stop
-  endif
-  do dir=1,3
-   nnode(dir)=nnode(dir)/dist
-  enddo
-
-  do dir=1,3
-   normal(dir)=normal(dir)+nnode(dir)
-  enddo
- enddo ! inode=1..3
-
- do dir=1,3
-  normal(dir)=normal(dir)/3.0d0
- enddo
-
-return
-end subroutine scinormalBIG_SMOOTH
-
-
 
 ! Note: meshlab is a software that can fix normal orientation.
 ! Note: Tecplot normals face out of object if oriented 
@@ -8342,6 +8233,7 @@ INTEGER_T, allocatable :: raw_elements(:,:)
     aux_FSIdata3D(i,j,k,FSI_STRESS+dir)=0.0d0
    enddo
    aux_FSIdata3D(i,j,k,FSI_LEVELSET+1)=-99999.0
+   aux_FSIdata3D(i,j,k,FSI_SIGN_QUALITY+1)=0.0d0
    aux_FSIdata3D(i,j,k,FSI_TEMPERATURE+1)=0.0d0
    aux_FSIdata3D(i,j,k,FSI_EXTRAP_FLAG+1)=0.0d0
    aux_FSIdata3D(i,j,k,FSI_SIZE+1)=0.0d0
@@ -9878,14 +9770,17 @@ IMPLICIT NONE
   REAL_T, dimension(3) :: xside,xcrit
   INTEGER_T :: ii,jj,kk
   INTEGER_T :: hitflag
-  REAL_T :: phiside,phicenter,testdist
+  REAL_T :: phiside
+  REAL_T :: phicenter
+  REAL_T :: testdist
   REAL_T :: hitsign
   REAL_T :: totaldist
 
   INTEGER_T modify_vel
-  REAL_T mag_n,mag_n_test,n_dot_x,signtest
+  REAL_T mag_n,mag_n_test,n_dot_x
   REAL_T mag_x
   INTEGER_T in_sign_box
+  REAL_T sign_quality
   INTEGER_T ibase
   REAL_T ls_local
   INTEGER_T mask_local,mask_node
@@ -10351,7 +10246,8 @@ IMPLICIT NONE
        FSI_growlo,FSI_growhi, &
        growlo3D,growhi3D, &
        xdata3D, &
-       gridloBB,gridhiBB,dxBB) 
+       gridloBB,gridhiBB, &
+       dxBB) ! for spectral methods, the element size is bfact*dxBB
 
      dxBB_min=dxBB(1)
      do dir=1,3
@@ -10362,7 +10258,9 @@ IMPLICIT NONE
      delta_cutoff=3.0d0*dxBB_min
 
      do dir=1,3
-      if (abs(dxBB(dir)-dx3D(dir)).gt.element_buffer_tol*dxBB(dir)) then
+      if (abs(dxBB(dir)-dx3D(dir)).le.element_buffer_tol*dxBB(dir)) then
+       ! do nothing
+      else
        print *,"abs(dxBB(dir)-dx3D(dir)).gt.element_buffer_tol*dxBB(dir)"
        stop
       endif
@@ -10444,7 +10342,8 @@ IMPLICIT NONE
           endif
          endif
 
-         call checkinplaneBIG(xclosest,ielem,inplane, &
+         call checkinplaneBIG(xclosest,ielem, &
+          inplane, & !inplane=1 if closest point within the element
           minnode,maxnode,element_scale, &
           FSI_mesh_type, &
           part_id, &
@@ -10454,10 +10353,12 @@ IMPLICIT NONE
 ! investigate using NodeNormalBIG (normal defined at nodes)
          do inode=1,nodes_per_elem
           ! check distance to the edges of a triangular element.
-          call checkinlineBIG(xclosest,normal_closest, &
+          call checkinlineBIG(xclosest, &
+           normal_closest, & ! initially the normal of the element.
            inode,ielem, &
            unsigned_mindist, &
-           xx,inplane, &
+           xx, & ! target point at which the signed distance is sought.
+           inplane, &
            FSI_mesh_type, &
            part_id, &
            nparts, &
@@ -10467,7 +10368,8 @@ IMPLICIT NONE
           call checkinpointBIG(xclosest,normal_closest, &
            inode,ielem, &
            unsigned_mindist, &
-           xx,inplane, &
+           xx, & ! target point at which the signed distance is sought.
+           inplane, &
            FSI_mesh_type, &
            part_id, &
            nparts, &
@@ -10515,7 +10417,6 @@ IMPLICIT NONE
           mag_n=zero
           mag_n_test=zero
           mag_x=zero
-          signtest=zero
 
           in_sign_box=1
 
@@ -10536,8 +10437,8 @@ IMPLICIT NONE
            mag_x=mag_x+(xx(dir)-xclosest(dir))**2 
            
            n_dot_x=n_dot_x+normal_closest(dir)*(xx(dir)-xclosest(dir))
-           signtest=signtest+normal_closest(dir)*normal(dir)
           enddo ! dir=1..3
+
           mag_n_test=sqrt(mag_n_test)
           mag_n=sqrt(mag_n)
           mag_x=sqrt(mag_x)
@@ -10546,27 +10447,34 @@ IMPLICIT NONE
            unsigned_mindist=abs(mag_x)
           endif
 
+           ! at this stage, normal points from solid to fluid.
+           ! mag_x=||xx-xclosest||
+           ! mag_n=||normal_closest||
+           ! n dot x=normal_closest dot (xx-xclosest)
+           ! n dot x = mag_x * mag_n * cos(theta)
+
+          sign_quality=zero
+
           if (mag_n.gt.zero) then
            if (mag_n_test.gt.zero) then
             if (mag_x.gt.zero) then
-             if (signtest.gt.zero) then
-              if (signtest/(mag_n*mag_n_test).gt.one/sqrt(two)) then
-               if (abs(n_dot_x)/(mag_n*mag_x).gt.one/sqrt(two)) then
+             sign_quality=abs(n_dot_x)/(mag_n*mag_x)
+             if (sign_quality.gt.zero) then
 
-                if (in_sign_box.eq.1) then
+              if (in_sign_box.eq.1) then
 
-                 hitflag=1
-                 used_for_trial=1
-                 if (phicenter.eq.zero) then
-                  hitsign=zero
-                 else if (phicenter.gt.zero) then ! fluid(sign switched later)
-                  hitsign=one
-                 else if (phicenter.lt.zero) then ! solid(sign switched later)
-                  hitsign=-one
-                 else
-                  print *,"phicenter bust"
-                  stop
-                 endif
+               hitflag=1
+               used_for_trial=1
+               if (phicenter.eq.zero) then
+                hitsign=zero
+               else if (phicenter.gt.zero) then ! fluid(sign switched later)
+                hitsign=one
+               else if (phicenter.lt.zero) then ! solid(sign switched later)
+                hitsign=-one
+               else
+                print *,"phicenter bust"
+                stop
+               endif
     
                 else if (in_sign_box.eq.0) then
                  ! do nothing

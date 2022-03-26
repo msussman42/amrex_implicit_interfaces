@@ -737,6 +737,8 @@
 
          FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)= &
           FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_LEVELSET+1) !LS
+         FSIdata3D(i,j,k,ibase+FSI_SIGN_QUALITY+1)= &
+          FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_SIGN_QUALITY+1) !LS
          FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)= &
           FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_TEMPERATURE+1) !T
          FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)= &
@@ -960,6 +962,8 @@
           ibase=(partid-1)*NCOMP_FSI
           FSIdata(D_DECL(i,j,k),ibase+FSI_LEVELSET+1)= &
            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_LEVELSET+1) ! LS
+          FSIdata(D_DECL(i,j,k),ibase+FSI_SIGN_QUALITY+1)= &
+           FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_SIGN_QUALITY+1) ! LS
           FSIdata(D_DECL(i,j,k),ibase+FSI_TEMPERATURE+1)= &
            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_TEMPERATURE+1) ! T
           FSIdata(D_DECL(i,j,k),ibase+FSI_EXTRAP_FLAG+1)= &
