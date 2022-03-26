@@ -9771,7 +9771,6 @@ IMPLICIT NONE
   INTEGER_T :: ii,jj,kk
   INTEGER_T :: hitflag
   REAL_T :: phiside
-  REAL_T :: phicenter
   REAL_T :: testdist
   REAL_T :: hitsign
   REAL_T :: totaldist
@@ -9781,6 +9780,7 @@ IMPLICIT NONE
   REAL_T mag_x
   INTEGER_T in_sign_box
   REAL_T sign_quality
+  REAL_T sign_quality_local
   INTEGER_T ibase
   REAL_T ls_local
   INTEGER_T mask_local,mask_node
@@ -9808,7 +9808,6 @@ IMPLICIT NONE
   INTEGER_T mask_debug
   INTEGER_T debug_all
   INTEGER_T in_the_interior
-  INTEGER_T used_for_trial
   INTEGER_T mask1,mask2
   INTEGER_T dirmax,sweepmax
   INTEGER_T dir_order,sweep,incr
@@ -10290,8 +10289,6 @@ IMPLICIT NONE
        endif
       enddo ! dir=1..3
 
-      used_for_trial=0
-
        ! LOOP through bounding box of the element.
        ! this code is thread safe
        ! gridloBB,gridhiBB restricted to growlo3D and growhi3D 
@@ -10326,8 +10323,6 @@ IMPLICIT NONE
           normal_closest(dir)=normal(dir)
          enddo
          unsigned_mindist=abs(dotprod)
-         ! phicenter>0 in the fluid (sign will be switched later)
-         phicenter=dotprod 
 
          if (debug_all.eq.1) then
           print *,"ielem=",ielem
@@ -10464,31 +10459,46 @@ IMPLICIT NONE
               if (in_sign_box.eq.1) then
 
                hitflag=1
-               used_for_trial=1
-               if (phicenter.eq.zero) then
-                hitsign=zero
-               else if (phicenter.gt.zero) then ! fluid(sign switched later)
+               if (n_dot_x.gt.zero) then ! fluid(sign switched later)
                 hitsign=one
-               else if (phicenter.lt.zero) then ! solid(sign switched later)
+               else if (n_dot_x.lt.zero) then ! solid(sign switched later)
                 hitsign=-one
                else
-                print *,"phicenter bust"
+                print *,"n_dot_x bust"
                 stop
                endif
     
-                else if (in_sign_box.eq.0) then
-                 ! do nothing
-                else
-                 print *,"in_sign_box invalid"
-                 stop
-                endif
+              else if (in_sign_box.eq.0) then
+               ! do nothing
+              else
+               print *,"in_sign_box invalid"
+               stop
+              endif
 
-               endif  ! abs(n_dot_x) big enough?
-              endif ! signtest big enough?
-             endif ! signtest>0 ?
-            endif ! mag_x>0 ?
-           endif ! mag_n_test>0?
-          endif ! mag_n>0 ?
+             else if (sign_quality.eq.zero) then
+              ! do nothing
+             else
+              print *,"sign_quality invalid"
+              stop
+             endif
+            else if (mag_x.eq.zero) then
+             ! do nothing
+            else
+             print *,"mag_x invalid"
+             stop
+            endif
+           else if (mag_n_test.eq.zero) then
+            ! do nothing
+           else
+            print *,"mag_n_test invalid"
+            stop
+           endif
+          else if (mag_n.eq.zero) then
+           ! do nothing
+          else
+           print *,"mag_n invalid"
+           stop
+          endif
 
          else if (inplane.eq.0) then
           ! do nothing
@@ -10530,24 +10540,27 @@ IMPLICIT NONE
            ! normal points from solid to fluid
            ! phi=n dot (x-xnot)
            ! phi>0 in the fluid (sign will be switched later)
+           n_dot_x=zero
            phiside=zero
            do dir=1,3
+            n_dot_x=n_dot_x+normal(dir)*(xx(dir)-xnot(dir))
             phiside=phiside+normal(dir)*(xside(dir)-xnot(dir))
            enddo
-           if (phiside*phicenter.le.zero) then
+           if (n_dot_x*phiside.le.zero) then
             do dir=1,3
              if (phiside.eq.zero) then
               xcrit(dir)=xside(dir)
-             else if (phicenter.eq.zero) then
+             else if (n_dot_x.eq.zero) then
               xcrit(dir)=xx(dir)
              else
               xcrit(dir)=(abs(phiside)*xx(dir)+ &
-                           abs(phicenter)*xside(dir))/  &
-                          (abs(phicenter)+abs(phiside))
+                           abs(n_dot_x)*xside(dir))/  &
+                          (abs(n_dot_x)+abs(phiside))
              endif
             enddo  ! dir
 
-            call checkinplaneBIG(xcrit,ielem,inplane, &
+            call checkinplaneBIG(xcrit,ielem, &
+             inplane, &
              minnode,maxnode,element_scale, &
              FSI_mesh_type, &
              part_id, &
@@ -10567,18 +10580,18 @@ IMPLICIT NONE
              totaldist=sqrt(totaldist)
              if (testdist.le.unsigned_mindist) then
               unsigned_mindist=testdist
+              sign_quality=one
               hitflag=1
-              used_for_trial=1
-              if (phicenter.eq.zero) then
+              if (n_dot_x.eq.zero) then
                hitsign=zero
-               ! phicenter>0 in the fluid (sign will be switched later)
-              else if (phicenter.gt.zero) then
+               ! n_dot_x>0 in the fluid (sign will be switched later)
+              else if (n_dot_x.gt.zero) then
                hitsign=one
-               ! phicenter<0 in the solid (sign will be switched later)
-              else if (phicenter.lt.zero) then
+               ! n_dot_x<0 in the solid (sign will be switched later)
+              else if (n_dot_x.lt.zero) then
                hitsign=-one
               else
-               print *,"phicenter bust"
+               print *,"n_dot_x bust"
                stop
               endif
              endif
@@ -10605,7 +10618,7 @@ IMPLICIT NONE
              print *,"inplane invalid"
              stop
             endif  ! inplane
-           endif ! phiside x phicenter <= 0
+           endif ! phiside x n_dot_x <= 0
           endif ! abs(ii)+abs(jj)+abs(kk)>0
          enddo 
          enddo 
@@ -10614,15 +10627,81 @@ IMPLICIT NONE
          modify_vel=0
 
          ls_local=FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)
+         sign_quality_local=FSIdata3D(i,j,k,ibase+FSI_SIGN_QUALITY+1)
          mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
          do dir=1,3
           vel_local(dir)=FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)
          enddo
          temp_local=FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)
 
-         if ((mask_local.eq.0).or. &
-             (mask_local.eq.10).or. &
+         if ((mask_local.eq.0).or. &  !no sign or vel info yet.
+             (mask_local.eq.10).or. & !sign,vel from coarse/prevstep
              (unsigned_mindist.lt.abs(ls_local))) then
+
+          if ((mask_local.eq.0).or. &
+              (mask_local.eq.10)) then
+           if (sign_quality_local.eq.zero) then
+            ! do nothing
+           else
+            print *,"sign_quality_local invalid"
+            stop
+           endif
+          else if (mask_local.eq.103) then !doubly wetted, d init
+           if (sign_quality_local.eq.one) then
+            ! do nothing
+           else
+            print *,"sign_quality_local invalid"
+            stop
+           endif
+          else if (mask_local.eq.3) then !doubly wetted, d not init
+           if (sign_quality_local.eq.one) then
+            ! do nothing
+           else
+            print *,"sign_quality_local invalid"
+            stop
+           endif
+          else if (mask_local.eq.11) then !sign from coarse/prevstep vel now
+           if (sign_quality_local.eq.zero) then
+            ! do nothing
+           else
+            print *,"sign_quality_local invalid"
+            stop
+           endif
+          else if (mask_local.eq.1) then !vel init, sign not
+           if (sign_quality_local.eq.zero) then
+            ! do nothing
+           else
+            print *,"sign_quality_local invalid"
+            stop
+           endif
+          else if (mask_local.eq.2) then !vel and sign init
+           if (hitflag.eq.1) then
+            if (unsigned_mindist.lt.abs(ls_local)) then
+             if (abs(ls_local).le.dxBB_min) then
+              ! do nothing
+             else if (abs(ls_local).gt.dxBB_min) then
+              sign_quality_local=zero
+             else
+              print *,"ls_local is NaN"
+              stop
+             endif
+            else if (unsigned_mindist.ge.abs(ls_local)) then
+             ! do nothing
+            else
+             print *,"unsigned mindist is NaN"
+             stop
+            endif
+           else if (hitflag.eq.0) then
+            ! do nothing
+           else
+            print *,"hitflag invalid"
+            stop
+           endif
+
+          else
+           print *,"mask_local invalid"
+           stop
+          endif
 
           modify_vel=1
 
@@ -10644,25 +10723,37 @@ IMPLICIT NONE
           if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.1) then 
            mask_local=103
            ls_local=-unsigned_mindist
+           sign_quality_local=one
+           sign_quality=one
           else if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.0) then
+
+           if (FSI_mesh_type%exclusive_doubly_wetted.eq.0) then
+            ! do nothing
+           else
+            print *,"doubly wetted flags are inconsistent"
+            stop
+           endif
+
+           if ((mask_local.eq.3).or. &   ! was doubly wetted, d not init
+               (mask_local.eq.103)) then ! was doubly wetted, d init
+            mask_local=0
+           endif
+
            if (mask_local.eq.0) then
             mask_local=1  ! vel init, sign not.
            else if (mask_local.eq.10) then
             mask_local=11 ! vel init, coarse sign init
            else if ((mask_local.eq.1).or. &
                     (mask_local.eq.11).or. &
-                    (mask_local.eq.2).or. &
-                    (mask_local.eq.3).or. &
-                    (mask_local.eq.103)) then
+                    (mask_local.eq.2)) then
             ! do nothing
            else
             print *,"mask_local invalid"
             stop
            endif
+
            if ((mask_local.eq.0).or. &
-               (mask_local.eq.1).or. &
-               (mask_local.eq.3).or. &   !was doubly, now singly
-               (mask_local.eq.103)) then !was doubly, now singly
+               (mask_local.eq.1)) then
             ls_local=unsigned_mindist
            else if ((mask_local.eq.10).or. &!sign,vel from coarse/prevstep
                     (mask_local.eq.11).or. &!sign from coarse/prevstep vel now
@@ -10675,7 +10766,15 @@ IMPLICIT NONE
            if (hitflag.eq.1) then
             mask_local=2  ! sign init
              ! The "-" below asserts that ls_local now points into the solid
-            ls_local=-hitsign*abs(ls_local)
+            if (sign_quality.ge.sign_quality_local) then
+             ls_local=-hitsign*abs(ls_local)
+             sign_quality_local=sign_quality
+            else if (sign_quality.lt.sign_quality_local) then
+             ! do nothing
+            else
+             print *,"sign_quality invalid"
+             stop
+            endif
            else if (hitflag.eq.0) then
             ! do nothing
            else
@@ -10784,6 +10883,7 @@ IMPLICIT NONE
          endif 
 
          FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local
+         FSIdata3D(i,j,k,ibase+FSI_SIGN_QUALITY+1)=sign_quality_local
          FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=mask_local
          do dir=1,3
           FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel_local(dir)
@@ -10819,31 +10919,6 @@ IMPLICIT NONE
       enddo
       enddo
       enddo ! i,j,k=gridloBB..gridhiBB
-
-      if (1.eq.0) then
-       if (in_the_interior.eq.1) then
-        if (used_for_trial.eq.0) then
-         print *,"used_for_trial.eq.0"
-         print '(A8,3(f9.3))',"minnode ",minnode(1),minnode(2),minnode(3)
-         print '(A8,3(f9.3))',"maxnode ",maxnode(1),maxnode(2),maxnode(3)
-         print '(A7,3(I10))',"gridloBB ",gridloBB(1),gridloBB(2),gridloBB(3)
-         print '(A7,3(I10))',"gridhiBB ",gridhiBB(1),gridhiBB(2),gridhiBB(3)
-         print '(A6,3(f9.3))',"xelem ",xelem(1),xelem(2),xelem(3)
-         print '(A5,3(f9.3))',"xnot ",xnot(1),xnot(2),xnot(3)
-         print '(A7,3(f9.3))',"normal ",normal(1),normal(2),normal(3)
-        else if (used_for_trial.eq.1) then
-         ! do nothing
-        else
-         print *,"used_for_trial invalid"
-         stop
-        endif
-       else if (in_the_interior.eq.0) then
-        ! do nothing
-       else
-        print *,"in_the_interior invalid"
-        stop
-       endif
-      endif
 
      else if (null_intersection.eq.1) then
       ! do nothing
@@ -10977,7 +11052,8 @@ IMPLICIT NONE
 
       if ((ctml_part_id.ge.1).and. &
           (ctml_part_id.le.CTML_NPARTS)) then
-       if (doubly_wetted_solid_inside.eq.1) then
+
+       if (doubly_wetted_solid_inside.eq.1) then ! default
         ! do nothing
        else
         print *,"expecting doubly_wetted_solid_inside.eq.1"
@@ -10990,7 +11066,7 @@ IMPLICIT NONE
        stop
       endif
 
-      if (doubly_wetted_solid_inside.eq.1) then
+      if (doubly_wetted_solid_inside.eq.1) then ! default
 
        if (mask_local.eq.2) then ! sign valid for singly wetted
         ! do nothing
@@ -11008,7 +11084,7 @@ IMPLICIT NONE
         stop
        endif
 
-      else if (doubly_wetted_solid_inside.eq.0) then
+      else if (doubly_wetted_solid_inside.eq.0) then !fluid region is filament
 
        if (mask_local.eq.2) then!sign valid for singly wetted
         ! do nothing
@@ -11224,8 +11300,8 @@ IMPLICIT NONE
            do nc=1,NCOMP_FSI
             data_minus(nc)=old_FSIdata(i-ii,j-jj,k-kk,ibase+nc)
            enddo
-           mminus=NINT(data_minus(6))
-           LSMINUS=data_minus(4)
+           mminus=NINT(data_minus(FSI_EXTRAP_FLAG+1))
+           LSMINUS=data_minus(FSI_LEVELSET+1)
            xminus=xdata3D(i-ii,j-jj,k-kk,dir)
           else 
            print *,"i_norm invalid"
@@ -11239,8 +11315,8 @@ IMPLICIT NONE
            do nc=1,NCOMP_FSI
             data_plus(nc)=old_FSIdata(i+ii,j+jj,k+kk,ibase+nc)
            enddo
-           mplus=NINT(data_plus(6))
-           LSPLUS=data_plus(4)
+           mplus=NINT(data_plus(FSI_EXTRAP_FLAG+1))
+           LSPLUS=data_plus(FSI_LEVELSET+1)
            xplus=xdata3D(i+ii,j+jj,k+kk,dir)
           else 
            print *,"i_norm invalid"
