@@ -6889,7 +6889,7 @@ REAL_T, dimension(3) :: velparm
     stop
    endif
    xfoot(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
-   xfoot_pert(dir)=xfoot(dir)+0.1*dx(1)* &
+   xfoot_pert(dir)=xfoot(dir)+0.1d0*dx(1)* &
     FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
    velparm(dir)=zero
   enddo
@@ -6923,7 +6923,7 @@ REAL_T, dimension(3) :: velparm
   do dir=1,3
    xfoot(dir)= &
     FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode+1,elemnum))
-   xfoot_pert(dir)=xfoot(dir)+0.1*dx(1)* &
+   xfoot_pert(dir)=xfoot(dir)+0.1d0*dx(1)* &
     FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inode+1,elemnum))
    velparm(dir)=zero
   enddo
@@ -6954,19 +6954,19 @@ REAL_T, dimension(3) :: velparm
    xnode(2,dir)=xtarget(dir)
   enddo
  
-  dottop=0.0
-  dotbot=0.0
+  dottop=zero
+  dotbot=zero
   do dir=1,3
    dottop=dottop+(xnode(2,dir)-xnode(1,dir))*(xnode(2,dir)-xc(dir))
    dotbot=dotbot+(xnode(2,dir)-xnode(1,dir))**2
   enddo
-  dotbot=dotbot+1.0E-14
+  dotbot=dotbot+1.0D-14
   t=dottop/dotbot
   if ((t.ge.-element_buffer_tol).and. &
-      (t.le.1.0+element_buffer_tol)) then
+      (t.le.one+element_buffer_tol)) then
    do dir=1,3
-    xnot(dir)=t*xnode(1,dir)+(1.0-t)*xnode(2,dir)
-    normal(dir)=t*nnode(1,dir)+(1.0-t)*nnode(2,dir)
+    xnot(dir)=t*xnode(1,dir)+(one-t)*xnode(2,dir)
+    normal(dir)=t*nnode(1,dir)+(one-t)*nnode(2,dir)
    enddo
 
    dotprod=0.0
@@ -7019,7 +7019,7 @@ REAL_T, intent(in) :: time
 REAL_T, dimension(3), intent(in) :: minnode,maxnode,xclosest
 REAL_T, intent(in) :: element_scale
 INTEGER_T, intent(out) :: inplane
-REAL_T, dimension(3,3) :: xnode,AA,AI
+REAL_T, dimension(3,3) :: xnode,AA,AINVERSE
 INTEGER_T :: dir,i,j,k
 INTEGER_T :: nodes_per_elem
 REAL_T :: det
@@ -7052,7 +7052,9 @@ REAL_T, dimension(3) :: velparm
  endif
 
  scaled_tol=element_scale*element_buffer_tol
- if (scaled_tol.le.zero) then
+ if (scaled_tol.gt.zero) then
+  ! do nothing
+ else
   print *,"scaled_tol invalid"
   stop
  endif
@@ -7091,7 +7093,7 @@ REAL_T, dimension(3) :: velparm
     ! A (1,0,0) = v1 => first column of A is v1
     ! A (0,1,0) = v2 => second column of A is v2
     ! A (0,0,1) = v1 x v2 => third column of A is v1 x v2
-    ! AI maps from real space back to unit space
+    ! A^{-1} maps from real space back to unit space
 
   do dir=1,3
    v1(dir)=xnode(2,dir)-xnode(1,dir)
@@ -7109,38 +7111,47 @@ REAL_T, dimension(3) :: velparm
   det=AA(1,1)*(AA(2,2)*AA(3,3)-AA(2,3)*AA(3,2))- &
       AA(1,2)*(AA(2,1)*AA(3,3)-AA(2,3)*AA(3,1))+ &
       AA(1,3)*(AA(2,1)*AA(3,2)-AA(2,2)*AA(3,1))
-  if (abs(det).lt.1.0e-15) then
+  if (abs(det).lt.1.0D-15) then
    inplane=0
   else
    det=1.0/det
-   AI(1,1)=+(AA(2,2)*AA(3,3)-AA(2,3)*AA(3,2))
-   AI(2,1)=-(AA(2,1)*AA(3,3)-AA(2,3)*AA(3,1))
-   AI(3,1)=+(AA(2,1)*AA(3,2)-AA(2,2)*AA(3,1))
-   AI(1,2)=-(AA(1,2)*AA(3,3)-AA(3,2)*AA(1,3))
-   AI(2,2)=+(AA(1,1)*AA(3,3)-AA(1,3)*AA(3,1))
-   AI(3,2)=-(AA(1,1)*AA(3,2)-AA(3,1)*AA(1,2))
-   AI(1,3)=+(AA(1,2)*AA(2,3)-AA(2,2)*AA(1,3))
-   AI(2,3)=-(AA(1,1)*AA(2,3)-AA(2,1)*AA(1,3))
-   AI(3,3)=+(AA(1,1)*AA(2,2)-AA(1,2)*AA(2,1))
+   AINVERSE(1,1)=+(AA(2,2)*AA(3,3)-AA(2,3)*AA(3,2))
+   AINVERSE(2,1)=-(AA(2,1)*AA(3,3)-AA(2,3)*AA(3,1))
+   AINVERSE(3,1)=+(AA(2,1)*AA(3,2)-AA(2,2)*AA(3,1))
+   AINVERSE(1,2)=-(AA(1,2)*AA(3,3)-AA(3,2)*AA(1,3))
+   AINVERSE(2,2)=+(AA(1,1)*AA(3,3)-AA(1,3)*AA(3,1))
+   AINVERSE(3,2)=-(AA(1,1)*AA(3,2)-AA(3,1)*AA(1,2))
+   AINVERSE(1,3)=+(AA(1,2)*AA(2,3)-AA(2,2)*AA(1,3))
+   AINVERSE(2,3)=-(AA(1,1)*AA(2,3)-AA(2,1)*AA(1,3))
+   AINVERSE(3,3)=+(AA(1,1)*AA(2,2)-AA(1,2)*AA(2,1))
    do i=1,3
    do j=1,3
-    AI(i,j)=AI(i,j)*det
+    AINVERSE(i,j)=AINVERSE(i,j)*det
    enddo
    enddo
   
    do i=1,3
     tx(i)=0.0
     do k=1,3
-     tx(i)=tx(i)+AI(i,k)*(xclosest(k)-xnode(1,k))
+     tx(i)=tx(i)+AINVERSE(i,k)*(xclosest(k)-xnode(1,k))
     enddo
    enddo
   
    if ((tx(1).lt.-element_buffer_tol).or. &
-       (tx(1).gt.1.0+element_buffer_tol).or. &
+       (tx(1).gt.one+element_buffer_tol).or. &
        (tx(2).lt.-element_buffer_tol).or. &
-       (tx(2).gt.1.0+element_buffer_tol).or. &
-       (tx(1)+tx(2).gt.1.0+element_buffer_tol)) then
+       (tx(2).gt.one+element_buffer_tol).or. &
+       (tx(1)+tx(2).gt.one+element_buffer_tol)) then
     inplane=0
+   else if ((tx(1).ge.-element_buffer_tol).and. &
+            (tx(1).le.one+element_buffer_tol).and. &
+            (tx(2).ge.-element_buffer_tol).and. &
+            (tx(2).le.one+element_buffer_tol).and. &
+            (tx(1)+tx(2).le.one+element_buffer_tol)) then
+    ! do nothing
+   else
+    print *,"checking in triangle bust"
+    stop
    endif
   endif ! det.ne.0
  
@@ -8071,7 +8082,7 @@ INTEGER_T, allocatable :: raw_elements(:,:)
   aux_FSI(auxcomp)%CTML_flag=0
     !refine_factor=1 => refine the Lagrangian mesh as necessary.
     !refine_factor=0 => n_lag_levels=2
-  aux_FSI(auxcomp)%refine_factor=1
+  aux_FSI(auxcomp)%refine_factor=0
   aux_FSI(auxcomp)%bounding_box_ngrow=3
 
   if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
@@ -10276,12 +10287,11 @@ IMPLICIT NONE
      ! phi=n dot (x-xnot)
      ! phi>0 in the fluid (the sign will be switched later)
      ! this is the element normal (in contrast to the node normal)
-     call scinormalBIG_SMOOTH(ielem,normal, &
+     call scinormalBIG(ielem,normal, &
              FSI_mesh_type, &
              part_id, &
              nparts, &
-             time, &
-             dx3D)
+             time)
 
      if (debug_all.eq.1) then
       print *,"ielem=",ielem
@@ -10409,7 +10419,7 @@ IMPLICIT NONE
 
          ! normal points from solid to fluid
          ! -normal points from fluid to solid
-         dotprod=0.0 
+         dotprod=zero
          do dir=1,3
           dotprod=dotprod+normal(dir)*(xx(dir)-xnot(dir))
          enddo
