@@ -1827,7 +1827,7 @@
         call CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
           FSI_touch_flag,ioproc,aux_isout)
 
-        if (1.eq.1) then
+        if (1.eq.0) then
          call fort_aux_tecplot_full(auxcomp,FSI_operation,iter)
         endif
 
@@ -1838,7 +1838,7 @@
           FSI_touch_flag,ioproc,aux_isout)
          iter=iter+1
 
-         if (1.eq.1) then
+         if (1.eq.0) then
           call fort_aux_tecplot_full(auxcomp,FSI_operation,iter)
          endif
 

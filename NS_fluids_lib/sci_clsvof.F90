@@ -10,7 +10,7 @@
 #include "EXTRAP_COMP.H"
 
 #define element_buffer_tol 0.01d0
-#define sign_box_dilate 1.5d0
+#define sign_box_radius 2.0d0
 #define tecplot_post_process 1
 
 ! 10 seconds for tail to do a full period
@@ -10235,6 +10235,7 @@ IMPLICIT NONE
      endif
     
       ! stencil of surrounding Eulerian cells to lagrangian element (triangle)
+      ! BoundingBoxRadCell determines buffer zone.
      call find_grid_bounding_box( &
        FSI_mesh_type, &
        part_id, &
@@ -10388,12 +10389,6 @@ IMPLICIT NONE
            print *,"dir invalid"
            stop
           endif
-           !xx-(xx-xdata)*factor=xx(1-factor)+xdata*factor
-           !xx+(xdata-xx)*factor=xx(1-factor)+xdata*factor
-          xleft(dir)=sign_box_dilate*xleft(dir)+ &
-                   (1.0d0-sign_box_dilate)*xx(dir)
-          xright(dir)=sign_box_dilate*xright(dir)+ &
-                   (1.0d0-sign_box_dilate)*xx(dir)
           if (xright(dir).gt.xleft(dir)) then
            ! do nothing
           else
@@ -10416,14 +10411,13 @@ IMPLICIT NONE
           in_sign_box=1
 
           do dir=1,3
-           if ((xclosest(dir).lt.xleft(dir)).or. &
-               (xclosest(dir).gt.xright(dir))) then
+           if (abs(xclosest(dir)-xx(dir)).gt.sign_box_radius*dxBB(dir)) then
             in_sign_box=0
-           else if ((xclosest(dir).ge.xleft(dir)).and. &
-                    (xclosest(dir).le.xright(dir))) then
-            ! do nothing
+           else if (abs(xclosest(dir)-xx(dir)).le. &
+                    sign_box_radius*dxBB(dir)) then
+            ! do nothing 
            else
-            print *,"xclosest,xleft, or xright invalid"
+            print *,"xclosest or xx invalid"
             stop
            endif
            mag_n=mag_n+normal_closest(dir)**2
@@ -10559,9 +10553,12 @@ IMPLICIT NONE
              endif
             enddo  ! dir
 
-            call checkinplaneBIG(xcrit,ielem, &
+            call checkinplaneBIG( &
+             xcrit, & !is xcrit in the element?
+             ielem, &
              inplane, &
-             minnode,maxnode,element_scale, &
+             minnode,maxnode, &
+             element_scale, &
              FSI_mesh_type, &
              part_id, &
              nparts, &
@@ -10675,29 +10672,7 @@ IMPLICIT NONE
             stop
            endif
           else if (mask_local.eq.2) then !vel and sign init
-           if (hitflag.eq.1) then
-            if (unsigned_mindist.lt.abs(ls_local)) then
-             if (abs(ls_local).le.dxBB_min) then
-              ! do nothing
-             else if (abs(ls_local).gt.dxBB_min) then
-              sign_quality_local=zero
-             else
-              print *,"ls_local is NaN"
-              stop
-             endif
-            else if (unsigned_mindist.ge.abs(ls_local)) then
-             ! do nothing
-            else
-             print *,"unsigned mindist is NaN"
-             stop
-            endif
-           else if (hitflag.eq.0) then
-            ! do nothing
-           else
-            print *,"hitflag invalid"
-            stop
-           endif
-
+           ! do nothing
           else
            print *,"mask_local invalid"
            stop
@@ -10766,15 +10741,8 @@ IMPLICIT NONE
            if (hitflag.eq.1) then
             mask_local=2  ! sign init
              ! The "-" below asserts that ls_local now points into the solid
-            if (sign_quality.ge.sign_quality_local) then
-             ls_local=-hitsign*abs(ls_local)
-             sign_quality_local=sign_quality
-            else if (sign_quality.lt.sign_quality_local) then
-             ! do nothing
-            else
-             print *,"sign_quality invalid"
-             stop
-            endif
+            ls_local=-hitsign*abs(ls_local)
+            sign_quality_local=sign_quality
            else if (hitflag.eq.0) then
             ! do nothing
            else
