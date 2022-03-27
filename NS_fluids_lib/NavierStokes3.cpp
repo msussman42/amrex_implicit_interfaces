@@ -8958,8 +8958,6 @@ void NavierStokes::multiphase_SHELL_preconditioner(
  int presmooth,int postsmooth,
  int idx_Z,int idx_R,int nsolve) {
 
- int caller_id=0;
-
  if (level==0) {
   // do nothing
  } else
