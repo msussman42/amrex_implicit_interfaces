@@ -8027,7 +8027,7 @@ INTEGER_T, allocatable :: raw_elements(:,:)
   aux_FSI(auxcomp)%CTML_flag=0
     !refine_factor=1 => refine the Lagrangian mesh as necessary.
     !refine_factor=0 => n_lag_levels=2
-  aux_FSI(auxcomp)%refine_factor=0
+  aux_FSI(auxcomp)%refine_factor=1
   aux_FSI(auxcomp)%bounding_box_ngrow=3
 
   if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
