@@ -9,6 +9,7 @@
 #include "AMReX_ArrayLim.H"
 #include "EXTRAP_COMP.H"
 
+! was 0.01d0
 #define element_buffer_tol 0.01d0
 #define sign_box_radius 2.0d0
 #define tecplot_post_process 1
@@ -6969,6 +6970,10 @@ REAL_T, dimension(3) :: velparm
   t=dottop/dotbot
   if ((t.ge.-element_buffer_tol).and. &
       (t.le.one+element_buffer_tol)) then
+
+   t=min(t,one)
+   t=max(t,zero)
+
    do dir=1,3
     xnot(dir)=t*xnode(1,dir)+(one-t)*xnode(2,dir)
     normal(dir)=t*nnode(1,dir)+(one-t)*nnode(2,dir)
@@ -6991,7 +6996,13 @@ REAL_T, dimension(3) :: velparm
      normal_closest(dir)=normal(dir)
     enddo
    endif
-  endif ! -tol<=t<=1+tol
+  else if ((t.lt.-element_buffer_tol).or. &
+           (t.gt.one+element_buffer_tol)) then
+   ! do nothing
+  else 
+   print *,"t is NaN"
+   stop
+  endif 
 
  else if (inode.eq.3) then
   ! do nothing
@@ -7052,7 +7063,7 @@ REAL_T, dimension(3) :: velparm
  endif
 
  scaled_tol=element_scale*element_buffer_tol
- if (scaled_tol.gt.zero) then
+ if (scaled_tol.ge.zero) then
   ! do nothing
  else
   print *,"scaled_tol invalid"
@@ -7064,6 +7075,12 @@ REAL_T, dimension(3) :: velparm
   if ((xclosest(dir).lt.minnode(dir)-scaled_tol).or. &
       (xclosest(dir).gt.maxnode(dir)+scaled_tol)) then
    inplane=0
+  else if ((xclosest(dir).ge.minnode(dir)-scaled_tol).and. &
+           (xclosest(dir).le.maxnode(dir)+scaled_tol)) then
+   ! do nothing
+  else
+   print *,"xclosest=NaN"
+   stop
   endif
  enddo
 
@@ -10258,10 +10275,10 @@ IMPLICIT NONE
      delta_cutoff=3.0d0*dxBB_min
 
      do dir=1,3
-      if (abs(dxBB(dir)-dx3D(dir)).le.element_buffer_tol*dxBB(dir)) then
+      if (abs(dxBB(dir)-dx3D(dir)).le.VOFTOL*dxBB(dir)) then
        ! do nothing
       else
-       print *,"abs(dxBB(dir)-dx3D(dir)).gt.element_buffer_tol*dxBB(dir)"
+       print *,"abs(dxBB(dir)-dx3D(dir)).gt.VOFTOL*dxBB(dir)"
        stop
       endif
      enddo ! dir=1..3
@@ -11921,8 +11938,10 @@ end subroutine CLSVOF_InitBox
          gridloBB,gridhiBB,dxBB) 
 
         do dir=1,3
-         if (abs(dxBB(dir)-dx3D(dir)).gt.element_buffer_tol*dxBB(dir)) then
-          print *,"abs(dxBB(dir)-dx3D(dir)).gt.element_buffer_tol*dxBB(dir)"
+         if (abs(dxBB(dir)-dx3D(dir)).le.VOFTOL*dxBB(dir)) then
+          ! do nothing
+         else
+          print *,"abs(dxBB(dir)-dx3D(dir)).gt.VOFTOL*dxBB(dir)"
           stop
          endif
         enddo ! dir=1..3
@@ -13324,11 +13343,15 @@ IMPLICIT NONE
 
  do dir=1,3
 
-  if (xnot(dir).lt.xlo(dir)-(VOFTOL+probe_size)*dxBB(dir)) then
+  if (xnot(dir).ge.xlo(dir)-(VOFTOL+probe_size)*dxBB(dir)) then
+   ! do nothing
+  else
    print *,"node should be within grid interior"
    stop
   endif
-  if (xnot(dir).gt.xhi(dir)+(VOFTOL+probe_size)*dxBB(dir)) then
+  if (xnot(dir).le.xhi(dir)+(VOFTOL+probe_size)*dxBB(dir)) then
+   ! do nothing
+  else
    print *,"node should be within grid interior"
    stop
   endif
