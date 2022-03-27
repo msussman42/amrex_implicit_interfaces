@@ -9,7 +9,6 @@
 #include "AMReX_ArrayLim.H"
 #include "EXTRAP_COMP.H"
 
-! was 0.01d0
 #define element_buffer_tol 0.01d0
 #define sign_box_radius 2.0d0
 #define tecplot_post_process 1
@@ -6707,7 +6706,9 @@ end subroutine advance_solid
 ! --------------------  SOLID ADVANCE STUFF ENDS HERE --------------
 
 
-subroutine checkinpointBIG(xclosest,normal_closest, &
+subroutine checkinpointBIG( &
+  xclosest, &
+  normal_closest, &
   inode,elemnum, &
   unsigned_mindist, &
   xc, & ! target point at which the signed distance is sought.
@@ -6816,13 +6817,21 @@ REAL_T, dimension(3) :: velparm
    xclosest(dir)=xtarget(dir)
    normal_closest(dir)=ntarget(dir)
   enddo
+ else if ((curdist.ge.unsigned_mindist).and. &
+          (inplane.eq.1)) then
+  ! do nothing
+ else
+  print *,"curdist or inplane invalid"
+  stop
  endif
 
 return
 end subroutine checkinpointBIG
 
 
-subroutine checkinlineBIG(xclosest,normal_closest, &
+subroutine checkinlineBIG( &
+  xclosest, &
+  normal_closest, &
   inode,elemnum, &
   unsigned_mindist, &
   xc, &  ! target point at which the signed distance is sought.
@@ -6966,43 +6975,55 @@ REAL_T, dimension(3) :: velparm
    dottop=dottop+(xnode(2,dir)-xnode(1,dir))*(xnode(2,dir)-xc(dir))
    dotbot=dotbot+(xnode(2,dir)-xnode(1,dir))**2
   enddo
-  dotbot=dotbot+1.0D-14
-  t=dottop/dotbot
-  if ((t.ge.-element_buffer_tol).and. &
-      (t.le.one+element_buffer_tol)) then
-
-   t=min(t,one)
-   t=max(t,zero)
-
-   do dir=1,3
-    xnot(dir)=t*xnode(1,dir)+(one-t)*xnode(2,dir)
-    normal(dir)=t*nnode(1,dir)+(one-t)*nnode(2,dir)
-   enddo
-
-   call xdist(xnot,xc,curdist)
-   if (curdist.ge.zero) then
-    ! do nothing
-   else
-    print *,"curdist invalid"
-    stop
-   endif
-
-   if ((curdist.lt.unsigned_mindist).or. &
-       (inplane.eq.0)) then
-    inplane=1
-    unsigned_mindist=curdist
-    do dir=1,3
-     xclosest(dir)=xnot(dir)
-     normal_closest(dir)=normal(dir)
-    enddo
-   endif
-  else if ((t.lt.-element_buffer_tol).or. &
-           (t.gt.one+element_buffer_tol)) then
+  if (dotbot.eq.zero) then
    ! do nothing
-  else 
-   print *,"t is NaN"
+  else if (dotbot.gt.zero) then
+   t=dottop/dotbot
+   if ((t.ge.-element_buffer_tol).and. &
+       (t.le.one+element_buffer_tol)) then
+
+    t=min(t,one-element_buffer_tol)
+    t=max(t,element_buffer_tol)
+
+    do dir=1,3
+     xnot(dir)=t*xnode(1,dir)+(one-t)*xnode(2,dir)
+     normal(dir)=t*nnode(1,dir)+(one-t)*nnode(2,dir)
+    enddo
+
+    call xdist(xnot,xc,curdist)
+    if (curdist.ge.zero) then
+     ! do nothing
+    else
+     print *,"curdist invalid"
+     stop
+    endif
+
+    if ((curdist.lt.unsigned_mindist).or. &
+        (inplane.eq.0)) then
+     inplane=1
+     unsigned_mindist=curdist
+     do dir=1,3
+      xclosest(dir)=xnot(dir)
+      normal_closest(dir)=normal(dir)
+     enddo
+    else if ((curdist.ge.unsigned_mindist).and. &
+             (inplane.eq.1)) then
+     ! do nothing
+    else
+     print *,"curdist or inplane invalid"
+     stop
+    endif
+   else if ((t.lt.-element_buffer_tol).or. &
+            (t.gt.one+element_buffer_tol)) then
+    ! do nothing
+   else 
+    print *,"t is NaN"
+    stop
+   endif 
+  else
+   print *,"dotbot is NaN"
    stop
-  endif 
+  endif
 
  else if (inode.eq.3) then
   ! do nothing
@@ -7014,8 +7035,14 @@ REAL_T, dimension(3) :: velparm
 return
 end subroutine checkinlineBIG
 
-subroutine checkinplaneBIG(xclosest,elemnum,inplane, &
-  minnode,maxnode,element_scale, &
+subroutine checkinplaneBIG( &
+  xc, &  ! target point at which the signed distance is sought.
+  xclosest, &
+  xclosest_project, &
+  normal, &
+  normal_project, &
+  elemnum, &
+  inplane, &
   FSI_mesh_type, &
   part_id, &
   max_part_id, &
@@ -7027,14 +7054,17 @@ INTEGER_T, intent(in) :: part_id
 INTEGER_T, intent(in) :: max_part_id
 INTEGER_T, intent(in) :: elemnum
 REAL_T, intent(in) :: time
-REAL_T, dimension(3), intent(in) :: minnode,maxnode,xclosest
-REAL_T, intent(in) :: element_scale
+REAL_T, dimension(3), intent(in) :: xc
+REAL_T, dimension(3), intent(in) :: xclosest
+REAL_T, dimension(3), intent(out) :: xclosest_project
+REAL_T, dimension(3), intent(in) :: normal
+REAL_T, dimension(3), intent(out) :: normal_project
 INTEGER_T, intent(out) :: inplane
 REAL_T, dimension(3,3) :: xnode,AA,AINVERSE
 INTEGER_T :: dir,i,j,k
 INTEGER_T :: nodes_per_elem
 REAL_T :: det
-REAL_T :: scaled_tol
+REAL_T :: tx_sum,tx_sum_new
 REAL_T, dimension(3) :: tx
 REAL_T, dimension(3) :: v1,v2,v1xv2
 REAL_T, dimension(3) :: xfoot
@@ -7062,117 +7092,124 @@ REAL_T, dimension(3) :: velparm
   stop
  endif
 
- scaled_tol=element_scale*element_buffer_tol
- if (scaled_tol.ge.zero) then
-  ! do nothing
- else
-  print *,"scaled_tol invalid"
-  stop
- endif
-
- inplane=1
  do dir=1,3
-  if ((xclosest(dir).lt.minnode(dir)-scaled_tol).or. &
-      (xclosest(dir).gt.maxnode(dir)+scaled_tol)) then
-   inplane=0
-  else if ((xclosest(dir).ge.minnode(dir)-scaled_tol).and. &
-           (xclosest(dir).le.maxnode(dir)+scaled_tol)) then
-   ! do nothing
-  else
-   print *,"xclosest=NaN"
-   stop
-  endif
+  xclosest_project(dir)=xclosest(dir)
+  normal_project(dir)=normal(dir)
  enddo
 
- if (inplane.eq.1) then
+ inplane=1
 
+ do i=1,3
+  do dir=1,3
+   xfoot(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(i,elemnum))
+   velparm(dir)=zero
+  enddo
+  call get_target_from_foot(xfoot,xtarget, &
+     velparm,time, &
+     FSI_mesh_type, &
+     part_id, &
+     max_part_id)
+  do dir=1,3
+   xnode(i,dir)=xtarget(dir)
+  enddo
+ enddo  ! i=1..3
+
+ ! xnode(1)-xnode(1) is mapped to (0,0,0)
+ ! xnode(2)-xnode(1)=v1 is mapped to (1,0,0)
+ ! xnode(3)-xnode(1)=v2 is mapped to (0,1,0) 
+ ! v1 x v2 is mapped to (0,0,1)
+ ! Let A map from unit space to real space
+ ! A (0,0,0) = (0,0,0)
+ ! A (1,0,0) = v1 => first column of A is v1
+ ! A (0,1,0) = v2 => second column of A is v2
+ ! A (0,0,1) = v1 x v2 => third column of A is v1 x v2
+ ! A^{-1} maps from real space back to unit space
+
+ do dir=1,3
+  v1(dir)=xnode(2,dir)-xnode(1,dir)
+  v2(dir)=xnode(3,dir)-xnode(1,dir)
+ enddo  
+ v1xv2(1)=v1(2)*v2(3)-v1(3)*v2(2)  
+ v1xv2(2)=v1(3)*v2(1)-v1(1)*v2(3)  
+ v1xv2(3)=v1(1)*v2(2)-v1(2)*v2(1)  
+ do dir=1,3
+  AA(dir,1)=v1(dir)
+  AA(dir,2)=v2(dir)
+  AA(dir,3)=v1xv2(dir)
+ enddo
+  
+ det=AA(1,1)*(AA(2,2)*AA(3,3)-AA(2,3)*AA(3,2))- &
+     AA(1,2)*(AA(2,1)*AA(3,3)-AA(2,3)*AA(3,1))+ &
+     AA(1,3)*(AA(2,1)*AA(3,2)-AA(2,2)*AA(3,1))
+ if (abs(det).eq.zero) then
+  inplane=0
+ else if (abs(det).gt.zero) then
+  det=1.0/det
+  AINVERSE(1,1)=+(AA(2,2)*AA(3,3)-AA(2,3)*AA(3,2))
+  AINVERSE(2,1)=-(AA(2,1)*AA(3,3)-AA(2,3)*AA(3,1))
+  AINVERSE(3,1)=+(AA(2,1)*AA(3,2)-AA(2,2)*AA(3,1))
+  AINVERSE(1,2)=-(AA(1,2)*AA(3,3)-AA(3,2)*AA(1,3))
+  AINVERSE(2,2)=+(AA(1,1)*AA(3,3)-AA(1,3)*AA(3,1))
+  AINVERSE(3,2)=-(AA(1,1)*AA(3,2)-AA(3,1)*AA(1,2))
+  AINVERSE(1,3)=+(AA(1,2)*AA(2,3)-AA(2,2)*AA(1,3))
+  AINVERSE(2,3)=-(AA(1,1)*AA(2,3)-AA(2,1)*AA(1,3))
+  AINVERSE(3,3)=+(AA(1,1)*AA(2,2)-AA(1,2)*AA(2,1))
   do i=1,3
-   do dir=1,3
-    xfoot(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(i,elemnum))
-    velparm(dir)=zero
-   enddo
-   call get_target_from_foot(xfoot,xtarget, &
-      velparm,time, &
-      FSI_mesh_type, &
-      part_id, &
-      max_part_id)
-   do dir=1,3
-    xnode(i,dir)=xtarget(dir)
-   enddo
-  enddo  ! i=1..3
-
-    ! xnode(1)-xnode(1) is mapped to (0,0,0)
-    ! xnode(2)-xnode(1)=v1 is mapped to (1,0,0)
-    ! xnode(3)-xnode(1)=v2 is mapped to (0,1,0) 
-    ! v1 x v2 is mapped to (0,0,1)
-    ! Let A map from unit space to real space
-    ! A (0,0,0) = (0,0,0)
-    ! A (1,0,0) = v1 => first column of A is v1
-    ! A (0,1,0) = v2 => second column of A is v2
-    ! A (0,0,1) = v1 x v2 => third column of A is v1 x v2
-    ! A^{-1} maps from real space back to unit space
-
-  do dir=1,3
-   v1(dir)=xnode(2,dir)-xnode(1,dir)
-   v2(dir)=xnode(3,dir)-xnode(1,dir)
-  enddo  
-  v1xv2(1)=v1(2)*v2(3)-v1(3)*v2(2)  
-  v1xv2(2)=v1(3)*v2(1)-v1(1)*v2(3)  
-  v1xv2(3)=v1(1)*v2(2)-v1(2)*v2(1)  
-  do dir=1,3
-   AA(dir,1)=v1(dir)
-   AA(dir,2)=v2(dir)
-   AA(dir,3)=v1xv2(dir)
+  do j=1,3
+   AINVERSE(i,j)=AINVERSE(i,j)*det
+  enddo
   enddo
   
-  det=AA(1,1)*(AA(2,2)*AA(3,3)-AA(2,3)*AA(3,2))- &
-      AA(1,2)*(AA(2,1)*AA(3,3)-AA(2,3)*AA(3,1))+ &
-      AA(1,3)*(AA(2,1)*AA(3,2)-AA(2,2)*AA(3,1))
-  if (abs(det).lt.1.0D-15) then
+  do i=1,3
+   tx(i)=0.0
+   do k=1,3
+    tx(i)=tx(i)+AINVERSE(i,k)*(xclosest(k)-xnode(1,k))
+   enddo
+  enddo
+  
+  if ((tx(1).lt.-element_buffer_tol).or. &
+      (tx(1).gt.one+element_buffer_tol).or. &
+      (tx(2).lt.-element_buffer_tol).or. &
+      (tx(2).gt.one+element_buffer_tol).or. &
+      (tx(1)+tx(2).gt.one+element_buffer_tol)) then
    inplane=0
-  else
-   det=1.0/det
-   AINVERSE(1,1)=+(AA(2,2)*AA(3,3)-AA(2,3)*AA(3,2))
-   AINVERSE(2,1)=-(AA(2,1)*AA(3,3)-AA(2,3)*AA(3,1))
-   AINVERSE(3,1)=+(AA(2,1)*AA(3,2)-AA(2,2)*AA(3,1))
-   AINVERSE(1,2)=-(AA(1,2)*AA(3,3)-AA(3,2)*AA(1,3))
-   AINVERSE(2,2)=+(AA(1,1)*AA(3,3)-AA(1,3)*AA(3,1))
-   AINVERSE(3,2)=-(AA(1,1)*AA(3,2)-AA(3,1)*AA(1,2))
-   AINVERSE(1,3)=+(AA(1,2)*AA(2,3)-AA(2,2)*AA(1,3))
-   AINVERSE(2,3)=-(AA(1,1)*AA(2,3)-AA(2,1)*AA(1,3))
-   AINVERSE(3,3)=+(AA(1,1)*AA(2,2)-AA(1,2)*AA(2,1))
-   do i=1,3
-   do j=1,3
-    AINVERSE(i,j)=AINVERSE(i,j)*det
-   enddo
-   enddo
-  
-   do i=1,3
-    tx(i)=0.0
-    do k=1,3
-     tx(i)=tx(i)+AINVERSE(i,k)*(xclosest(k)-xnode(1,k))
-    enddo
-   enddo
-  
-   if ((tx(1).lt.-element_buffer_tol).or. &
-       (tx(1).gt.one+element_buffer_tol).or. &
-       (tx(2).lt.-element_buffer_tol).or. &
-       (tx(2).gt.one+element_buffer_tol).or. &
-       (tx(1)+tx(2).gt.one+element_buffer_tol)) then
-    inplane=0
-   else if ((tx(1).ge.-element_buffer_tol).and. &
-            (tx(1).le.one+element_buffer_tol).and. &
-            (tx(2).ge.-element_buffer_tol).and. &
-            (tx(2).le.one+element_buffer_tol).and. &
-            (tx(1)+tx(2).le.one+element_buffer_tol)) then
-    ! do nothing
+  else if ((tx(1).ge.-element_buffer_tol).and. &
+           (tx(1).le.one+element_buffer_tol).and. &
+           (tx(2).ge.-element_buffer_tol).and. &
+           (tx(2).le.one+element_buffer_tol).and. &
+           (tx(1)+tx(2).le.one+element_buffer_tol)) then
+   tx(1)=min(tx(1),one-element_buffer_tol)
+   tx(1)=max(tx(1),element_buffer_tol)
+   tx(2)=min(tx(2),one-element_buffer_tol)
+   tx(2)=max(tx(2),element_buffer_tol)
+   tx_sum=tx(1)+tx(2)
+   if (tx_sum.gt.zero) then
+    tx_sum_new=tx_sum
+    tx_sum_new=min(tx_sum_new,one-element_buffer_tol)
+    tx(1)=tx(1)*tx_sum_new/tx_sum
+    tx(2)=tx(2)*tx_sum_new/tx_sum
    else
-    print *,"checking in triangle bust"
+    print *,"tx_sum is NaN"
     stop
    endif
-  endif ! det.ne.0
+   tx(3)=zero
+
+   do i=1,3
+    xclosest_project(i)=xnode(1,i)
+    do k=1,3
+     xclosest_project(i)=xclosest_project(i)+AA(i,k)*tx(k)
+    enddo
+   enddo
+
+  else
+   print *,"checking in triangle bust"
+   stop
+  endif
+ else
+  print *,"det is NaN"
+  stop
+ endif 
  
- endif  ! inplane.eq.1
 
 return
 end subroutine checkinplaneBIG
@@ -9759,9 +9796,13 @@ IMPLICIT NONE
   INTEGER_T :: ielem
   INTEGER_T :: ielem_container
   INTEGER_T :: nodes_per_elem,inode,nodeptr
-  REAL_T, dimension(3) :: xc,xclosest
+  REAL_T, dimension(3) :: xc
+  REAL_T, dimension(3) :: xclosest
+  REAL_T, dimension(3) :: xclosest_project
   REAL_T, dimension(3) :: normal
   REAL_T, dimension(3) :: normal_closest
+  REAL_T, dimension(3) :: ncrit
+  REAL_T, dimension(3) :: ncrit_closest
   REAL_T, dimension(3) :: xnot
   REAL_T, dimension(3) :: xfoot
   REAL_T, dimension(3) :: xelem
@@ -9784,7 +9825,9 @@ IMPLICIT NONE
   REAL_T, dimension(3) :: xcen
   REAL_T, dimension(3) :: xleft
   REAL_T, dimension(3) :: xright
-  REAL_T, dimension(3) :: xside,xcrit
+  REAL_T, dimension(3) :: xside
+  REAL_T, dimension(3) :: xcrit
+  REAL_T, dimension(3) :: xcrit_project
   INTEGER_T :: ii,jj,kk
   INTEGER_T :: hitflag
   REAL_T :: phiside
@@ -9794,6 +9837,7 @@ IMPLICIT NONE
 
   INTEGER_T modify_vel
   REAL_T mag_n,mag_n_test,n_dot_x
+  REAL_T mag_ncrit
   REAL_T mag_x
   INTEGER_T in_sign_box
   REAL_T sign_quality
@@ -10355,9 +10399,14 @@ IMPLICIT NONE
           endif
          endif
 
-         call checkinplaneBIG(xclosest,ielem, &
+         call checkinplaneBIG( &
+          xx, & ! target point at which the signed distance is sought.
+          xclosest, &
+          xclosest_project, &
+          normal, &
+          normal_closest, &
+          ielem, &
           inplane, & !inplane=1 if closest point within the element
-          minnode,maxnode,element_scale, &
           FSI_mesh_type, &
           part_id, &
           nparts, &
@@ -10366,7 +10415,8 @@ IMPLICIT NONE
 ! investigate using NodeNormalBIG (normal defined at nodes)
          do inode=1,nodes_per_elem
           ! check distance to the edges of a triangular element.
-          call checkinlineBIG(xclosest, &
+          call checkinlineBIG( &
+           xclosest_project, &
            normal_closest, & ! initially the normal of the element.
            inode,ielem, &
            unsigned_mindist, &
@@ -10378,7 +10428,9 @@ IMPLICIT NONE
            time,dxBB)
           ! check distance to the nodes of a triangular element.
           ! normal_closest is the element normal.
-          call checkinpointBIG(xclosest,normal_closest, &
+          call checkinpointBIG( &
+           xclosest_project, &
+           normal_closest, &
            inode,ielem, &
            unsigned_mindist, &
            xx, & ! target point at which the signed distance is sought.
@@ -10416,9 +10468,9 @@ IMPLICIT NONE
 
          ! normal points from solid to fluid
          ! phi>0 in the fluid (sign will be switched later)
-         ! xclosest=xx-phi n
-         ! phi n = xx-xclosest
-         ! phi = n dot (xx-xclosest) (sign will be switched later)
+         ! xclosest_project=xx-phi n
+         ! phi n = xx-xclosest_project
+         ! phi = n dot (xx-xclosest_project) (sign will be switched later)
          if (inplane.eq.1) then
           n_dot_x=zero
           mag_n=zero
@@ -10428,21 +10480,23 @@ IMPLICIT NONE
           in_sign_box=1
 
           do dir=1,3
-           if (abs(xclosest(dir)-xx(dir)).gt.sign_box_radius*dxBB(dir)) then
+           if (abs(xclosest_project(dir)-xx(dir)).gt. &
+               sign_box_radius*dxBB(dir)) then
             in_sign_box=0
-           else if (abs(xclosest(dir)-xx(dir)).le. &
+           else if (abs(xclosest_project(dir)-xx(dir)).le. &
                     sign_box_radius*dxBB(dir)) then
             ! do nothing 
            else
-            print *,"xclosest or xx invalid"
+            print *,"xclosest_project or xx invalid"
             stop
            endif
            mag_n=mag_n+normal_closest(dir)**2
            mag_n_test=mag_n_test+normal(dir)**2
            !xx=cell center where LS needed
-           mag_x=mag_x+(xx(dir)-xclosest(dir))**2 
+           mag_x=mag_x+(xx(dir)-xclosest_project(dir))**2 
            
-           n_dot_x=n_dot_x+normal_closest(dir)*(xx(dir)-xclosest(dir))
+           n_dot_x=n_dot_x+ &
+                normal_closest(dir)*(xx(dir)-xclosest_project(dir))
           enddo ! dir=1..3
 
           mag_n_test=sqrt(mag_n_test)
@@ -10454,9 +10508,9 @@ IMPLICIT NONE
           endif
 
            ! at this stage, normal points from solid to fluid.
-           ! mag_x=||xx-xclosest||
+           ! mag_x=||xx-xclosest_project||
            ! mag_n=||normal_closest||
-           ! n dot x=normal_closest dot (xx-xclosest)
+           ! n dot x=normal_closest dot (xx-xclosest_project)
            ! n dot x = mag_x * mag_n * cos(theta)
 
           sign_quality=zero
@@ -10557,25 +10611,56 @@ IMPLICIT NONE
             n_dot_x=n_dot_x+normal(dir)*(xx(dir)-xnot(dir))
             phiside=phiside+normal(dir)*(xside(dir)-xnot(dir))
            enddo
-           if (n_dot_x*phiside.le.zero) then
+           if ((n_dot_x.eq.zero).and. &
+               (phiside.eq.zero)) then
+            ! do nothing
+           else if (n_dot_x*phiside.gt.zero) then
+            ! do nothing
+           else if (n_dot_x*phiside.le.zero) then
+            mag_ncrit=zero
+            do dir=1,3
+             if (n_dot_x.gt.phiside) then
+              ncrit(dir)=(xx(dir)-xside(dir))
+             else if (n_dot_x.lt.phiside) then
+              ncrit(dir)=(xside(dir)-xx(dir))
+             else
+              print *,"n_dot_x or phiside NaN"
+              stop
+             endif
+             mag_ncrit=mag_ncrit+ncrit(dir)**2
+            enddo
+            mag_ncrit=sqrt(mag_ncrit)
+            if (mag_ncrit.gt.zero) then
+             do dir=1,3
+              ncrit(dir)=ncrit(dir)/mag_ncrit
+             enddo
+            else
+             print *,"mag_ncrit is NaN"
+             stop
+            endif
             do dir=1,3
              if (phiside.eq.zero) then
               xcrit(dir)=xside(dir)
              else if (n_dot_x.eq.zero) then
               xcrit(dir)=xx(dir)
-             else
+             else if ((phiside.ne.zero).and.(n_dot_x.ne.zero)) then
               xcrit(dir)=(abs(phiside)*xx(dir)+ &
                            abs(n_dot_x)*xside(dir))/  &
                           (abs(n_dot_x)+abs(phiside))
+             else
+              print *,"phiside or n_dot_x is NaN"
+              stop
              endif
             enddo  ! dir
 
             call checkinplaneBIG( &
+             xx, & ! target point at which the signed distance is sought.
              xcrit, & !is xcrit in the element?
+             xcrit_project, &
+             ncrit, &
+             ncrit_closest, &
              ielem, &
              inplane, &
-             minnode,maxnode, &
-             element_scale, &
              FSI_mesh_type, &
              part_id, &
              nparts, &
@@ -10632,7 +10717,10 @@ IMPLICIT NONE
              print *,"inplane invalid"
              stop
             endif  ! inplane
-           endif ! phiside x n_dot_x <= 0
+           else
+            print *,"n_dot_x or phiside is NaN"
+            stop
+           endif 
           endif ! abs(ii)+abs(jj)+abs(kk)>0
          enddo 
          enddo 
