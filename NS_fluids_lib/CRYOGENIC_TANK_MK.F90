@@ -27,7 +27,7 @@ implicit none
 
 INTEGER_T, PARAMETER :: TANK_MK_MATERIAL_TYPE=24
 
-INTEGER_T, PARAMETER :: TANK_MK_AUX_THICK_WALLS=1
+INTEGER_T, PARAMETER :: TANK_MK_AUX_THICK_WALLS=0
 
 INTEGER_T :: dir_x,dir_y,dir_z
 
@@ -130,20 +130,42 @@ INTEGER_T, intent(out) :: aux_ncells_max_side
   if (axis_dir.eq.2) then
    if (num_materials.eq.3) then
     LS_FROM_SUBROUTINE=0
-    if (auxcomp.eq.1) then
-     aux_ncells_max_side=64
-    else if (auxcomp.eq.2) then
-     aux_ncells_max_side=64
-    else if (auxcomp.eq.3) then
-     aux_ncells_max_side=64
-    else if (auxcomp.eq.4) then
-     aux_ncells_max_side=64
-    else if (auxcomp.eq.5) then
-     aux_ncells_max_side=128
-    else
-     print *,"auxcomp invalid"
+
+    if (TANK_MK_AUX_THICK_WALLS.eq.1) then
+     if (auxcomp.eq.1) then
+      aux_ncells_max_side=64
+     else if (auxcomp.eq.2) then
+      aux_ncells_max_side=64
+     else if (auxcomp.eq.3) then
+      aux_ncells_max_side=64
+     else if (auxcomp.eq.4) then
+      aux_ncells_max_side=64
+     else if (auxcomp.eq.5) then
+      aux_ncells_max_side=128
+     else
+      print *,"auxcomp invalid"
+      stop
+     endif
+    else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
+     if (auxcomp.eq.1) then
+      aux_ncells_max_side=256
+     else if (auxcomp.eq.2) then
+      aux_ncells_max_side=256
+     else if (auxcomp.eq.3) then
+      aux_ncells_max_side=64
+     else if (auxcomp.eq.4) then
+      aux_ncells_max_side=256
+     else if (auxcomp.eq.5) then
+      aux_ncells_max_side=256
+     else
+      print *,"auxcomp invalid"
+      stop
+     endif
+    else 
+     print *,"TANK_MK_AUX_THICK_WALLS invalid"
      stop
     endif
+
    else
     print *,"num_materials invalid in CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX"
     stop
