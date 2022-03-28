@@ -119,11 +119,11 @@ ns.yblob4	    = 0.051 # Z coord (vert) of the top spherical cap center
 # nozzle thickness=0.4 inches=0.01016 m
 # nozzle length=2.5inches=0.0635 m
 # thermister T4 is 2.5 cm from the very top of the tank.
-#geometry.coord_sys  = 1 # 2D RZ
-geometry.coord_sys  = 0 # 2D XY
+geometry.coord_sys  = 1 # 2D RZ
+#geometry.coord_sys  = 0 # 2D XY
 #geometry.coord_sys  = 0 # 3D 
-#geometry.prob_lo    = 0.0  -0.2 #2D RZ
-geometry.prob_lo    = -0.2  -0.2 #2D XY
+geometry.prob_lo    = 0.0  -0.2 #2D RZ
+#geometry.prob_lo    = -0.2  -0.2 #2D XY
 geometry.prob_hi    = 0.2  0.2  #2D
 # geometry.prob_lo    = -0.2  -0.2 -0.2 #3D
 # geometry.prob_hi    = 0.2  0.2 0.2    #3D
@@ -134,8 +134,8 @@ ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 # dx_coarse=(prob_hi_x-prob_lo_x)/n_cell_x
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.
-#amr.n_cell          = 32 64 #2D RZ
-amr.n_cell          = 64 64 #2D XY
+amr.n_cell          = 128 256 #2D RZ
+#amr.n_cell          = 64 64 #2D XY
 amr.max_level       = 1     #2D
 #amr.n_cell          = 128 128 128 #3D
 #amr.n_cell          = 64 64 64 # 8 cores compute1 #3D
