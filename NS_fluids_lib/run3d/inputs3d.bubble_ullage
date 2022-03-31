@@ -155,9 +155,9 @@ ns.fixed_dt_scales=0.0 0.0 0.0
 # ----------------------------------------------------------
 #ns.visual_buoyancy_plot_int=2000
 #ns.visual_phase_change_plot_int=1
-#visual_nddata_format=1 #tecplot
-visual_nddata_format=2 #visit, amrvis
-#visual_nddata_format=3 #piecewise constant tecplot
+#ns.visual_nddata_format=1 #tecplot
+ns.visual_nddata_format=2 #visit, amrvis
+#ns.visual_nddata_format=3 #piecewise constant tecplot
 #ns.visual_nddata_format=2
 
 #amr.check_int       = 200  # number of timesteps between checkpoints 2D
