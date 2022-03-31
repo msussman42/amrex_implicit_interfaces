@@ -15,6 +15,7 @@ stop_time=8000.0
 ns.probtype         = 423
 # variable accessible from plug-in:
 ns.axis_dir         = 1 #heater on top
+# ns.axis_dir         = 2 # user defined geometry files for TPCE
 # for ZBOT:
 # variable for compiling diagnostic output
 # integral of region surrounding T1 in Figure 3 of Barsi and Kassemi, 2013
@@ -110,6 +111,8 @@ ns.yblob4	    = 0.051 # Z coord (vert) of the top spherical cap center
 # nozzle length=2.5inches=0.0635 m
 # thermister T4 is 2.5 cm from the very top of the tank.
 geometry.coord_sys  = 0
+# geometry.coord_sys  = 1 # 2D RZ
+# geometry.coord_sys  = 0 # 2D XY
 geometry.prob_lo    = -0.2  -0.2 -0.2
 geometry.prob_hi    = 0.2  0.2 0.2
 geometry.is_periodic= 0 0 0
@@ -152,9 +155,9 @@ ns.fixed_dt_scales=0.0 0.0 0.0
 # ----------------------------------------------------------
 #ns.visual_buoyancy_plot_int=2000
 #ns.visual_phase_change_plot_int=1
-#visual_nddata_format=1 tecplot
-#visual_nddata_format=2 visit, amrvis
-#visual_nddata_format=3 piecewise constant tecplot
+#visual_nddata_format=1 #tecplot
+visual_nddata_format=2 #visit, amrvis
+#visual_nddata_format=3 #piecewise constant tecplot
 #ns.visual_nddata_format=2
 
 #amr.check_int       = 200  # number of timesteps between checkpoints 2D
