@@ -76,12 +76,14 @@ type mesh_type
  REAL_T :: min_side_len
  REAL_T :: max_side_len_refined
  REAL_T :: min_side_len_refined
- INTEGER_T :: IntElemDim,IntElemDimPaddle,IntElemDimPool
+ INTEGER_T :: IntElemDim ! number of nodes (or edges) per element
+ INTEGER_T :: IntElemDimPaddle
+ INTEGER_T :: IntElemDimPool
  INTEGER_T :: NumNodes,NumNodesPaddle,NumNodesPool
  INTEGER_T :: NumIntElems,NumIntElemsPaddle,NumIntElemsPool
- INTEGER_T, pointer :: ElemData(:,:)
- INTEGER_T, pointer :: IntElem(:,:)
- INTEGER_T, pointer :: Eul2IntNode(:)
+ INTEGER_T, pointer :: ElemData(:,:) !(nflags,nelements)
+ INTEGER_T, pointer :: IntElem(:,:) !(nodes_per_elem,nelements)
+ INTEGER_T, pointer :: EdgeElem(:,:) !(nodes_per_elem,nelements)
  INTEGER_T :: NumNodesBIG
  INTEGER_T :: NumIntElemsBIG
  INTEGER_T, pointer :: ElemNodeCountBIG(:)
@@ -529,12 +531,13 @@ INTEGER_T, intent(in) :: allocate_intelem
 INTEGER_T :: inode
 INTEGER_T :: dir
 
- allocate(FSI_mesh_type%Eul2IntNode(FSI_mesh_type%NumNodes))
  !(1,iface)=nodes per element (2,iface)=part num 
  !(DOUBLYCOMP,iface)=doubly wet flag
  allocate(FSI_mesh_type%ElemData(flags_per_element,FSI_mesh_type%NumIntElems))
  if (allocate_intelem.eq.1) then
   allocate(FSI_mesh_type%IntElem(FSI_mesh_type%IntElemDim, &
+           FSI_mesh_type%NumIntElems))
+  allocate(FSI_mesh_type%EdgeElem(FSI_mesh_type%IntElemDim, &
            FSI_mesh_type%NumIntElems))
  else if (allocate_intelem.eq.0) then
   ! do nothing
@@ -556,7 +559,6 @@ INTEGER_T :: dir
  allocate(FSI_mesh_type%NodeDensity(FSI_mesh_type%NumNodes))
 
  do inode=1,FSI_mesh_type%NumNodes
-  FSI_mesh_type%Eul2IntNode(inode)=inode
 
   FSI_mesh_type%NodeMass(inode)=one
   FSI_mesh_type%NodeDensity(inode)=one
@@ -2439,7 +2441,7 @@ INTEGER_T :: local_elements
     ! in: CTML_init_sci 
    if (ifirst.eq.1) then
 
-    ! allocates and inits: Eul2IntNode,ElemData,IntElem,Node_old,
+    ! allocates and inits: ElemData,IntElem,Node_old,
     !  Node_new,Node_current,NodeVel_old,NodeVel_new,NodeForce_old,
     !  NodeForce_new,NodeTemp_old,NodeTemp_new,NodeMass,NodeDensity
     ! allocate_intelem=1
@@ -3552,7 +3554,7 @@ INTEGER_T :: stand_alone_flag
     stop
    endif
 
-    ! allocates and inits: Eul2IntNode,ElemData,IntElem,Node_old,
+    ! allocates and inits: ElemData,IntElem,Node_old,
     !  Node_new,Node_current,NodeVel_old,NodeVel_new,NodeForce_old,
     !  NodeForce_new,NodeTemp_old,NodeTemp_new,NodeMass,NodeDensity
    call init_FSI(part_id,1)  ! allocate_intelem=1
