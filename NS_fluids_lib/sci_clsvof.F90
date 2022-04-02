@@ -1128,6 +1128,108 @@ INTEGER_T :: num_nodes_local
 
 end subroutine remove_duplicate_nodes
 
+subroutine init_EdgeElem( &
+     FSI_mesh_type,part_id,max_part_id,ioproc,isout,edit_refined_data)
+IMPLICIT NONE
+INTEGER_T, intent(in) :: edit_refined_data
+INTEGER_T, intent(in) :: part_id
+INTEGER_T, intent(in) :: max_part_id
+type(mesh_type), intent(inout) :: FSI_mesh_type
+INTEGER_T, intent(in) :: ioproc,isout
+
+ if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
+  print *,"part_id invalid"
+  stop
+ endif
+ if (FSI_mesh_type%partID.ne.part_id) then
+  print *,"FSI_mesh_type%partID.ne.part_id"
+  stop
+ endif
+ if (edit_refined_data.eq.0) then
+  nelems=FSI_mesh_type%NumIntElems
+  nodes_per_elem=FSI_mesh_type%IntElemDim
+  if (nelems.eq.LBOUND(FSI_mesh_type%IntElem,2)) then
+   ! do nothing
+  else
+   print *,"nelems invalid"
+   stop
+  endif
+  if (nodes_per_elem.eq.LBOUND(FSI_mesh_type%IntElem,1)) then
+   ! do nothing
+  else
+   print *,"nodes_per_elem invalid"
+   stop
+  endif
+ else if (edit_refined_data.eq.1) then
+  nelems=FSI_mesh_type%NumIntElemsBIG
+  nodes_per_elem=3
+  if (nelems.eq.LBOUND(FSI_mesh_type%IntElemBIG,2)) then
+   ! do nothing
+  else
+   print *,"nelems invalid"
+   stop
+  endif
+  if (nodes_per_elem.eq.LBOUND(FSI_mesh_type%IntElemBIG,1)) then
+   ! do nothing
+  else
+   print *,"nodes_per_elem invalid"
+   stop
+  endif
+ else
+  print *,"edit_refined_data invalid"
+  stop
+ endif
+
+ allocate(edge_centroids(3,nodes_per_elem*nelems))
+ allocate(edge_ielem(nodes_per_elem*nelems))
+ edge_id=0
+ do ielem=1,nelems
+  do dir=1,3
+   edge_xval(dir)=zero
+  enddo
+  if (edit_refined_data.eq.0) then
+   local_nodes_per_elem=FSI_mesh_type%ElemData(1,ielem)
+   do inode=1,local_nodes_per_elem
+    do dir=1,3
+     xnode(inode,dir)= &
+         FSI_mesh_type%Node(dir,FSI_mesh_type%IntElem(inode,ielem))
+    enddo
+   enddo
+  else if (edit_refined_data.eq.1) then
+   local_nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
+   if (local_nodes_per_elem.eq.3) then
+    do inode=1,local_nodes_per_elem
+     do dir=1,3
+      xnode(inode,dir)= &
+         FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,ielem))
+     enddo
+    enddo
+   else
+    print *,"local_nodes_per_elem invalid"
+    stop
+   endif
+  else
+   print *,"edit_refined_data invalid"
+   stop
+  endif
+
+  do inode=1,local_nodes_per_elem
+   do dir=1,3
+    edge_xval(dir)=edge_xval(dir)+xnode(inode,dir)
+   enddo
+  enddo
+  do dir=1,3
+   edge_xval(dir)=edge_xval(dir)/local_nodes_per_elem
+  enddo
+  edge_id=edge_id+1
+  do dir=1,3
+   edge_centroids(dir,edge_id)=edge_xval(dir)
+  enddo
+  edge_ielem(edge_id)=ielem
+ enddo !ielem=1,nelems
+
+end subroutine init_EdgeElem
+
 ! split triangles so that size is no bigger than "h_small"
 subroutine post_process_nodes_elements(initflag, &
   problo,probhi, &
@@ -1142,7 +1244,8 @@ INTEGER_T, intent(in) :: max_part_id
 type(mesh_type), intent(inout) :: FSI_mesh_type
 
 REAL_T, intent(in) :: problo(3),probhi(3)
-INTEGER_T, intent(in) :: initflag,ioproc,isout
+INTEGER_T, intent(in) :: initflag
+INTEGER_T, intent(in) :: ioproc,isout
 REAL_T, intent(in) :: h_small
 INTEGER_T :: edit_refined_data
 INTEGER_T :: ielem,nodes_per_elem,inode,i,dir
