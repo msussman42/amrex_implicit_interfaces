@@ -722,17 +722,14 @@ INTEGER_T :: dir
 
 end subroutine get_new_half_vols
 
-subroutine compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
-                coord_scale,compare_flag)
+
+subroutine compare_core(nodej,nodejp1,coord_scale,compare_flag)
 IMPLICIT NONE
-type(mesh_type), intent(in) :: FSI_mesh_type
-INTEGER_T, allocatable, intent(in) :: sorted_node_list(:)
-REAL_T, intent(in) :: coord_scale
-INTEGER_T, intent(in) :: jnode
 INTEGER_T, intent(out) :: compare_flag
+REAL_T, intent(in) :: coord_scale
+REAL_T, intent(in) :: nodej(3)
+REAL_T, intent(in) :: nodejp1(3)
 REAL_T :: mag
-REAL_T :: nodej(3)
-REAL_T :: nodejp1(3)
 INTEGER_T :: dir
 
  if (coord_scale.gt.zero) then
@@ -744,9 +741,6 @@ INTEGER_T :: dir
 
  mag=zero
  do dir=1,3
-  nodej(dir)=FSI_mesh_type%NodeBIG(dir,sorted_node_list(jnode))
-  nodejp1(dir)=FSI_mesh_type%NodeBIG(dir,sorted_node_list(jnode+1))
-
   mag=mag+(nodej(dir)-nodejp1(dir))**2
  enddo
  mag=sqrt(mag)
@@ -788,6 +782,33 @@ INTEGER_T :: dir
   print *,"mag invalid"
   stop
  endif
+
+end subroutine compare_core
+
+subroutine compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
+                coord_scale,compare_flag)
+IMPLICIT NONE
+type(mesh_type), intent(in) :: FSI_mesh_type
+INTEGER_T, allocatable, intent(in) :: sorted_node_list(:)
+REAL_T, intent(in) :: coord_scale
+INTEGER_T, intent(in) :: jnode
+INTEGER_T, intent(out) :: compare_flag
+REAL_T :: nodej(3)
+REAL_T :: nodejp1(3)
+INTEGER_T :: dir
+
+ if (coord_scale.gt.zero) then
+  ! do nothing
+ else
+  print *,"coord_scale invalid"
+  stop
+ endif
+
+ do dir=1,3
+  nodej(dir)=FSI_mesh_type%NodeBIG(dir,sorted_node_list(jnode))
+  nodejp1(dir)=FSI_mesh_type%NodeBIG(dir,sorted_node_list(jnode+1))
+ enddo
+ call compare_core(nodej,nodejp1,coord_scale,compare_flag)
 
 end subroutine compare_nodes
 
@@ -1136,6 +1157,12 @@ INTEGER_T, intent(in) :: part_id
 INTEGER_T, intent(in) :: max_part_id
 type(mesh_type), intent(inout) :: FSI_mesh_type
 INTEGER_T, intent(in) :: ioproc,isout
+INTEGER_T, allocatable :: sorted_edge_list(:)
+INTEGER_T :: compare_flag
+REAL_T :: min_coord
+REAL_T :: max_coord
+REAL_T :: coord_scale
+REAL_T :: test_coord
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
@@ -1182,11 +1209,13 @@ INTEGER_T, intent(in) :: ioproc,isout
 
  allocate(edge_centroids(3,nodes_per_elem*nelems))
  allocate(edge_ielem(nodes_per_elem*nelems))
+ allocate(sorted_edge_list(nodes_per_elem*nelems))
+
+ min_coord=1.0D+20
+ max_coord=-1.0D+20
  edge_id=0
+
  do ielem=1,nelems
-  do dir=1,3
-   edge_xval(dir)=zero
-  enddo
   if (edit_refined_data.eq.0) then
    local_nodes_per_elem=FSI_mesh_type%ElemData(1,ielem)
    do inode=1,local_nodes_per_elem
@@ -1214,19 +1243,128 @@ INTEGER_T, intent(in) :: ioproc,isout
   endif
 
   do inode=1,local_nodes_per_elem
+   inodep1=inode+1
+   if (inodep1.gt.local_nodes_per_elem) then
+    inodep1=1
+   endif
    do dir=1,3
-    edge_xval(dir)=edge_xval(dir)+xnode(inode,dir)
+    edge_xval(dir)=half*(xnode(inode,dir)+xnode(inodep1,dir))
    enddo
-  enddo
-  do dir=1,3
-   edge_xval(dir)=edge_xval(dir)/local_nodes_per_elem
-  enddo
-  edge_id=edge_id+1
-  do dir=1,3
-   edge_centroids(dir,edge_id)=edge_xval(dir)
-  enddo
-  edge_ielem(edge_id)=ielem
+   edge_id=edge_id+1
+   do dir=1,3
+    edge_centroids(dir,edge_id)=edge_xval(dir)
+   enddo
+   edge_ielem(edge_id)=ielem
+   sorted_edge_list(edge_id)=edge_id
+
+   do dir=1,3
+    test_coord=edge_xval(dir)
+    if (test_coord.lt.min_coord) then
+     min_coord=test_coord
+    endif
+    if (test_coord.gt.max_coord) then
+     max_coord=test_coord
+    endif
+   enddo
+  enddo !inode=1,local_nodes_per_elem
  enddo !ielem=1,nelems
+
+ coord_scale=max_coord-min_coord
+ if (coord_scale.gt.zero) then
+  ! do nothing
+ else
+  print *,"coord_scale invalid"
+  stop
+ endif
+ print *,"min_coord(edgelist): ",min_coord
+ print *,"max_coord(edgelist): ",max_coord
+ print *,"coord_scale(edgelist): ",coord_scale
+
+ do iedge=1,edge_id-1
+  do jedge=1,edge_id-1-iedge+1
+   call compare_edges(edge_centroids,jedge,sorted_edge_list, &
+          coord_scale,compare_flag)
+   if (compare_flag.eq.1) then ! (j) > (j+1)
+    save_edge=sorted_edge_list(jedge)
+    sorted_edge_list(jedge)=sorted_edger_list(jedge+1)
+    sorted_edge_list(jedge+1)=save_edge
+   else if ((compare_flag.eq.0).or.(compare_flag.eq.-1)) then
+    ! do nothing
+   else
+    print *,"compare_flag invalid"
+    stop
+   endif
+  enddo ! jedge
+ enddo ! iedge
+
+  ! sanity check
+ do inode=1,FSI_mesh_type%NumNodesBIG-1
+  call compare_edges(FSI_mesh_type,inode,sorted_node_list, &
+        coord_scale,compare_flag)
+
+  if (compare_flag.eq.1) then ! (j) > (j+1)
+   print *,"list not sorted properly"
+   stop
+  else if ((compare_flag.eq.0).or.(compare_flag.eq.-1)) then
+   ! do nothing
+  else
+   print *,"compare_flag invalid"
+   stop
+  endif
+ enddo ! do inode=1,FSI_mesh_type%NumNodesBIG-1 (sanity check)
+
+ inode=1
+ knode=1
+ do while (inode.lt.FSI_mesh_type%NumNodesBIG)
+  new_node_list(sorted_node_list(inode))=knode
+  old_node_list(knode)=sorted_node_list(inode)
+  jnode=inode
+  call compare_edges(FSI_mesh_type,jnode,sorted_node_list, &
+    coord_scale,compare_flag)
+  do while ((compare_flag.eq.0).and. &
+            (jnode.lt.FSI_mesh_type%NumNodesBIG))
+   jnode=jnode+1
+   new_node_list(sorted_node_list(jnode))=knode
+   alternate_node_list(sorted_node_list(jnode))=sorted_node_list(inode)
+   if (jnode.lt.FSI_mesh_type%NumNodesBIG) then
+    call compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
+     coord_scale,compare_flag)
+   else if (jnode.eq.FSI_mesh_type%NumNodesBIG) then
+    compare_flag=0
+   else 
+    print *,"jnode invalid"
+    stop
+   endif
+  enddo
+  inode=jnode+1
+  knode=knode+1
+ enddo
+ if (inode.eq.FSI_mesh_type%NumNodesBIG) then
+  new_node_list(sorted_node_list(inode))=knode
+  old_node_list(knode)=sorted_node_list(inode)
+  inode=inode+1
+  knode=knode+1
+ else if (inode.eq.FSI_mesh_type%NumNodesBIG+1) then
+  ! do nothing
+ else
+  print *,"inode invalid"
+  stop
+ endif
+ if (inode.eq.FSI_mesh_type%NumNodesBIG+1) then
+  ! do nothing
+ else
+  print *,"inode invalid"
+  stop
+ endif
+
+ num_nodes_local=knode-1
+
+
+
+
+ deallocate(edge_centroids)
+ deallocate(edge_ielem)
+ deallocate(sorted_edge_list)
 
 end subroutine init_EdgeElem
 
