@@ -97,6 +97,7 @@ type mesh_type
  REAL_T, pointer :: ElemDataXnotBIG(:,:)
  INTEGER_T, pointer :: ElemDataBIG(:,:)
  INTEGER_T, pointer :: IntElemBIG(:,:) ! IntElemBIG(inode,ielem)
+ INTEGER_T, pointer :: EdgeElemBIG(:,:) ! EdgeElemBIG(inode,ielem)
  REAL_T, pointer :: Node(:,:)  ! Node(dir,inode)
  REAL_T, pointer :: Node_old(:,:)
  REAL_T, pointer :: Node_new(:,:)
@@ -1143,6 +1144,7 @@ type(mesh_type), intent(inout) :: FSI_mesh_type
 REAL_T, intent(in) :: problo(3),probhi(3)
 INTEGER_T, intent(in) :: initflag,ioproc,isout
 REAL_T, intent(in) :: h_small
+INTEGER_T :: edit_refined_data
 INTEGER_T :: ielem,nodes_per_elem,inode,i,dir
 INTEGER_T :: new_NumIntElems
 REAL_T :: generate_time
@@ -1824,6 +1826,7 @@ INTEGER_T :: view_refined
  allocate(FSI_mesh_type%ElemDataBIG(flags_per_element, &
           FSI_mesh_type%NumIntElemsBIG))
  allocate(FSI_mesh_type%IntElemBIG(4,FSI_mesh_type%NumIntElemsBIG))
+ allocate(FSI_mesh_type%EdgeElemBIG(4,FSI_mesh_type%NumIntElemsBIG))
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
   print *,"NumNodes, NumIntElems ",FSI_mesh_type%NumNodes, &
@@ -2028,6 +2031,10 @@ INTEGER_T :: view_refined
 
  FSI_mesh_type%max_side_len_refined=biggest_h  
  FSI_mesh_type%min_side_len_refined=smallest_h  
+
+ edit_refined_data=1
+ call init_EdgeElem(FSI_mesh_type,part_id,max_part_id,ioproc,isout, &
+          edit_refined_data)
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
   print *,"part_id,flag_2D_to_3D ",part_id,FSI_mesh_type%flag_2D_to_3D
@@ -2441,7 +2448,7 @@ INTEGER_T :: local_elements
     ! in: CTML_init_sci 
    if (ifirst.eq.1) then
 
-    ! allocates and inits: ElemData,IntElem,Node_old,
+    ! allocates and inits: ElemData,EdgeElem(just allocates),IntElem,Node_old,
     !  Node_new,Node_current,NodeVel_old,NodeVel_new,NodeForce_old,
     !  NodeForce_new,NodeTemp_old,NodeTemp_new,NodeMass,NodeDensity
     ! allocate_intelem=1
@@ -2459,6 +2466,7 @@ INTEGER_T :: local_elements
     stop
    endif  ! ifirst.eq.1
 
+    ! initialize nodes, elements,... from CTML data.
    call CTML_init_sci_node(ioproc,part_id,isout)
 
    do iface=1,orig_elements
@@ -7945,6 +7953,7 @@ INTEGER_T, intent(in) :: auxcomp
 INTEGER_T, intent(in) :: ioproc
 INTEGER_T, intent(in) :: aux_isout
 
+INTEGER_T :: edit_refined_data
 INTEGER_T :: dir
 INTEGER_T :: inode
 INTEGER_T :: iface
@@ -8327,6 +8336,10 @@ INTEGER_T, allocatable :: raw_elements(:,:)
   endif
 
   if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
+   edit_refined_data=0
+   call init_EdgeElem(aux_FSI(auxcomp),auxcomp,fort_num_local_aux_grids, &
+         ioproc,aux_isout,edit_refined_data)
+
    call post_process_nodes_elements(initflag, &
           contain_aux(auxcomp)%xlo3D, &
           contain_aux(auxcomp)%xhi3D, &
@@ -8433,6 +8446,7 @@ REAL_T, intent(in) :: dx_max_level(AMREX_SPACEDIM)
 REAL_T, intent(in) :: h_small
 REAL_T, intent(in) :: CLSVOFtime
 REAL_T, intent(in) :: problo(3),probhi(3)
+INTEGER_T :: edit_refined_data
 INTEGER_T :: test_NPARTS
 INTEGER_T :: part_id
 INTEGER_T :: nmat
@@ -8716,6 +8730,10 @@ INTEGER_T idir,ielem,inode
       ! CTML_GET_POS_VEL_FORCE_WT (declared in CTMLFSI.F90)
       call overall_solid_init(CLSVOFtime,ioproc,part_id,isout)  
 
+      edit_refined_data=0
+      call init_EdgeElem(FSI(part_id),part_id,TOTAL_NPARTS,ioproc,isout, &
+              edit_refined_data)
+
       ! ReadHeader
       initflag=1
        !NodeNormal(dir,inode) and NodeNormalBIG initialized here.
@@ -8732,6 +8750,7 @@ INTEGER_T idir,ielem,inode
      endif
 
     enddo ! part_id=1..TOTAL_NPARTS
+
    else
     print *,"TOTAL_NPARTS invalid: ",TOTAL_NPARTS
     stop
