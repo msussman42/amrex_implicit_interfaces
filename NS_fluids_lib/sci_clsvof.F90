@@ -793,8 +793,26 @@ REAL_T, intent(out) :: overlap_size
 REAL_T, intent(in) :: coord_scale
 REAL_T, intent(in) :: edgej(6)
 REAL_T, intent(in) :: edgejp1(6)
+REAL_T :: overlap_start,overlap_end
 REAL_T :: mag
+REAL_T :: map_mag
+REAL_T :: mag_offline
+REAL_T :: edgej_mag
+REAL_T :: edgejp1_mag
+INTEGER_T :: mincomp
+INTEGER_T :: maxcomp
 INTEGER_T :: dir
+INTEGER_T :: imat,jmat
+REAL_T :: mapx1(3)
+REAL_T :: vec1(3)
+REAL_T :: vec2(3)
+REAL_T :: vec3(3)
+REAL_T :: x1test(3)
+REAL_T :: x2test(3)
+REAL_T :: x1test_map(3)
+REAL_T :: x2test_map(3)
+REAL_T :: A(3,3)
+REAL_T :: AINV(3,3)
 
  if (coord_scale.gt.zero) then
   ! do nothing
@@ -802,6 +820,8 @@ INTEGER_T :: dir
   print *,"coord_scale invalid"
   stop
  endif
+
+ compare_flag=1
 
   ! y=(x-x1)/||x2-x1|| gets mapped in such a way that 
   ! A y2 = (1 0 0)
@@ -816,55 +836,124 @@ INTEGER_T :: dir
  edgej_mag=sqrt(edgej_mag)
  edgejp1_mag=sqrt(edgejp1_mag)
  if ((edgej_mag.gt.zero).and.(edgejp1_mag.gt.zero)) then
+  if (edgej_mag.ge.edgejp1_mag) then
+   map_mag=edgej_mag
+   do dir=1,3
+    mapx1(dir)=edgej(dir)
+    x1test(dir)=(edgejp1(dir)-mapx1(dir))/map_mag
+    x2test(dir)=(edgejp1(dir+3)-mapx1(dir))/map_mag
+    AINV(dir,1)=(edgej(dir+3)-mapx1(dir))/map_mag
+   enddo
+  else if (edgej_mag.le.edgejp1_mag) then
+   map_mag=edgejp1_mag
+   do dir=1,3
+    mapx1(dir)=edgejp1(dir)
+    x1test(dir)=(edgej(dir)-mapx1(dir))/map_mag
+    x2test(dir)=(edgej(dir+3)-mapx1(dir))/map_mag
+    AINV(dir,1)=(edgejp1(dir+3)-mapx1(dir))/map_mag
+   enddo
+  else
+   print *,"edgej_mag or edgejp1_mag invalid"
+   stop
+  endif
+  maxcomp=1
+  mincomp=1
+  do dir=2,3
+   if (abs(AINV(dir,1)).gt.abs(AINV(maxcomp,1))) then
+    maxcomp=dir
+   endif
+   if (abs(AINV(dir,1)).lt.abs(AINV(mincomp,1))) then
+    mincomp=dir
+   endif
+  enddo
+  if (abs(AINV(maxcomp,1)).gt.zero) then
+   do dir=1,3
+    AINV(dir,2)=zero
+   enddo
+   mag=sqrt(AINV(mincomp,1)**2+AINV(maxcomp,1)**2)
+   if (mag.gt.zero) then
+    AINV(mincomp,2)=AINV(maxcomp,1)/mag
+    AINV(maxcomp,2)=-AINV(mincomp,1)/mag
+    do dir=1,3
+     vec1(dir)=AINV(dir,1)
+     vec2(dir)=AINV(dir,2)
+    enddo
+    call crossprod(vec1,vec2,vec3)
+    do dir=1,3
+     AINV(dir,3)=vec3(dir)
+    enddo
+    do imat=1,3
+    do jmat=1,3
+     A(imat,jmat)=AINV(jmat,imat)
+    enddo
+    enddo
+    mag_offline=zero
+    do imat=1,3
+     x1test_map(imat)=zero 
+     x2test_map(imat)=zero 
+     do jmat=1,3
+      x1test_map(imat)=x1test_map(imat)+A(imat,jmat)*x1test(jmat)
+      x2test_map(imat)=x2test_map(imat)+A(imat,jmat)*x2test(jmat)
+     enddo
+     if (imat.eq.1) then
+      ! do nothing
+     else if ((imat.eq.2).or.(imat.eq.3)) then
+      mag_offline=mag_offline+x1test_map(imat)**2+x2test_map(imat)**2
+     else
+      print *,"imat invalid"
+      stop
+     endif
+    enddo !imat=1..3
+    mag_offline=sqrt(mag_offline)
+    overlap_start=max(zero,min(x1test_map(1),x2test_map(1)))
+    overlap_end=min(one,max(x1test_map(1),x2test_map(1)))
+    overlap_size=max(zero,overlap_end-overlap_start)
 
-
-
-
- mag=zero
- do dir=1,3
-  mag=mag+(nodej(dir)-nodejp1(dir))**2
- enddo
- mag=sqrt(mag)
- if (mag.le.VOFTOL*coord_scale) then
-  compare_flag=0
- else if (mag.ge.VOFTOL*coord_scale) then
-  dir=1
-  if (nodej(dir).gt.nodejp1(dir)+VOFTOL*coord_scale) then
-   compare_flag=1
-  else if (nodej(dir).lt.nodejp1(dir)-VOFTOL*coord_scale) then
-   compare_flag=-1
-  else if (abs(nodej(dir)-nodejp1(dir)).le.VOFTOL*coord_scale) then
-   dir=2
-   if (nodej(dir).gt.nodejp1(dir)+VOFTOL*coord_scale) then
-    compare_flag=1
-   else if (nodej(dir).lt.nodejp1(dir)-VOFTOL*coord_scale) then
-    compare_flag=-1
-   else if (abs(nodej(dir)-nodejp1(dir)).le.VOFTOL*coord_scale) then
-    dir=3
-    if (nodej(dir).gt.nodejp1(dir)+VOFTOL*coord_scale) then
-     compare_flag=1
-    else if (nodej(dir).lt.nodejp1(dir)-VOFTOL*coord_scale) then
-     compare_flag=-1
-    else if (abs(nodej(dir)-nodejp1(dir)).le.VOFTOL*coord_scale) then
+    if ((mag_offline.le.VOFTOL).and. &
+        (mag_offline.ge.zero).and. &
+        (overlap_size.ge.VOFTOL)) then
      compare_flag=0
+    else if ((mag_offline.ge.VOFTOL).or. &
+             (overlap_size.le.VOFTOL)) then
+     if ((overlap_size.ge.zero).and. &
+         (overlap_size.le.VOFTOL)) then
+      do dir=1,3
+       nodej(dir)=half*(edgej(dir)+edgej(dir+3))
+       nodejp1(dir)=half*(edgejp1(dir)+edgejp1(dir+3))
+      enddo
+      call compare_core(nodej,nodejp1,coord_scale,compare_flag)
+      if (compare_flag.eq.0) then
+       compare_flag=1
+      else if (compare_flag.eq.1) then
+       ! do nothing
+      else if (compare_flag.eq.-1) then
+       ! do nothing
+      else
+       print *,"compare_flag invalid"
+       stop
+      endif
+     else
+      print *,"overlap_size invalid"
+      stop
+     endif
     else
-     print *,"nodej or nodejp1 bust"
+     print *,"mag_offline or overlap_size invalid"
      stop
     endif
    else
-    print *,"nodej or nodejp1 bust"
+    print *,"mag invalid"
     stop
    endif
   else
-   print *,"nodej or nodejp1 bust"
+   print *,"abs(AINV(maxcomp,1)) invalid"
    stop
   endif
  else
-  print *,"mag invalid"
+  print *,"edgej_mag or edgejp1_mag invalid"
   stop
  endif
 
-end subroutine compare_core
+end subroutine compare_edge
 
 
 subroutine compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
