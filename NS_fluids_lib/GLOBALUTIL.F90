@@ -4490,7 +4490,8 @@ end subroutine dynamic_contact_angle
       subroutine crossprod2d(a,b,c)
       IMPLICIT NONE
       
-      REAL_T a(SDIM),b(SDIM),c(3)
+      REAL_T, intent(in) :: a(SDIM),b(SDIM)
+      REAL_T, intent(out) :: c(3)
 
       c(1)=zero
       c(2)=zero
@@ -4511,8 +4512,6 @@ end subroutine dynamic_contact_angle
 
       return
       end subroutine crossprod
-
-
 
       subroutine get_crse_index(i,j,k,ic,jc,kc,dir)
       IMPLICIT NONE
