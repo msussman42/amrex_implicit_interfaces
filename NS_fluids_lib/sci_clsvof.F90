@@ -785,6 +785,88 @@ INTEGER_T :: dir
 
 end subroutine compare_core
 
+
+subroutine compare_edge(edgej,edgejp1,coord_scale,compare_flag,overlap_size)
+IMPLICIT NONE
+INTEGER_T, intent(out) :: compare_flag
+REAL_T, intent(out) :: overlap_size
+REAL_T, intent(in) :: coord_scale
+REAL_T, intent(in) :: edgej(6)
+REAL_T, intent(in) :: edgejp1(6)
+REAL_T :: mag
+INTEGER_T :: dir
+
+ if (coord_scale.gt.zero) then
+  ! do nothing
+ else
+  print *,"coord_scale invalid"
+  stop
+ endif
+
+  ! y=(x-x1)/||x2-x1|| gets mapped in such a way that 
+  ! A y2 = (1 0 0)
+  ! AINV (1 0 0)=y2
+  ! first column of AINV is y2
+ edgej_mag=zero
+ edgejp1_mag=zero
+ do dir=1,3
+  edgej_mag=edgej_mag+(edgej(dir)-edgej(dir+3))**2
+  edgejp1_mag=edgejp1_mag+(edgejp1(dir)-edgejp1(dir+3))**2
+ enddo
+ edgej_mag=sqrt(edgej_mag)
+ edgejp1_mag=sqrt(edgejp1_mag)
+ if ((edgej_mag.gt.zero).and.(edgejp1_mag.gt.zero)) then
+
+
+
+
+ mag=zero
+ do dir=1,3
+  mag=mag+(nodej(dir)-nodejp1(dir))**2
+ enddo
+ mag=sqrt(mag)
+ if (mag.le.VOFTOL*coord_scale) then
+  compare_flag=0
+ else if (mag.ge.VOFTOL*coord_scale) then
+  dir=1
+  if (nodej(dir).gt.nodejp1(dir)+VOFTOL*coord_scale) then
+   compare_flag=1
+  else if (nodej(dir).lt.nodejp1(dir)-VOFTOL*coord_scale) then
+   compare_flag=-1
+  else if (abs(nodej(dir)-nodejp1(dir)).le.VOFTOL*coord_scale) then
+   dir=2
+   if (nodej(dir).gt.nodejp1(dir)+VOFTOL*coord_scale) then
+    compare_flag=1
+   else if (nodej(dir).lt.nodejp1(dir)-VOFTOL*coord_scale) then
+    compare_flag=-1
+   else if (abs(nodej(dir)-nodejp1(dir)).le.VOFTOL*coord_scale) then
+    dir=3
+    if (nodej(dir).gt.nodejp1(dir)+VOFTOL*coord_scale) then
+     compare_flag=1
+    else if (nodej(dir).lt.nodejp1(dir)-VOFTOL*coord_scale) then
+     compare_flag=-1
+    else if (abs(nodej(dir)-nodejp1(dir)).le.VOFTOL*coord_scale) then
+     compare_flag=0
+    else
+     print *,"nodej or nodejp1 bust"
+     stop
+    endif
+   else
+    print *,"nodej or nodejp1 bust"
+    stop
+   endif
+  else
+   print *,"nodej or nodejp1 bust"
+   stop
+  endif
+ else
+  print *,"mag invalid"
+  stop
+ endif
+
+end subroutine compare_core
+
+
 subroutine compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
                 coord_scale,compare_flag)
 IMPLICIT NONE
@@ -1158,11 +1240,14 @@ INTEGER_T, intent(in) :: max_part_id
 type(mesh_type), intent(inout) :: FSI_mesh_type
 INTEGER_T, intent(in) :: ioproc,isout
 INTEGER_T, allocatable :: sorted_edge_list(:)
+REAL_T, allocatable :: edge_endpoints(:,:)
+INTEGER_T, allocatable :: edge_ilem(:)
 INTEGER_T :: compare_flag
 REAL_T :: min_coord
 REAL_T :: max_coord
 REAL_T :: coord_scale
 REAL_T :: test_coord
+REAL_T, allocatable :: xnode(:,:)
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
@@ -1207,9 +1292,10 @@ REAL_T :: test_coord
   stop
  endif
 
- allocate(edge_centroids(3,nodes_per_elem*nelems))
+ allocate(edge_endpoints(6,nodes_per_elem*nelems))
  allocate(edge_ielem(nodes_per_elem*nelems))
  allocate(sorted_edge_list(nodes_per_elem*nelems))
+ allocate(xnode(nodes_per_elem,3))
 
  min_coord=1.0D+20
  max_coord=-1.0D+20
@@ -1218,6 +1304,12 @@ REAL_T :: test_coord
  do ielem=1,nelems
   if (edit_refined_data.eq.0) then
    local_nodes_per_elem=FSI_mesh_type%ElemData(1,ielem)
+   if (local_nodes_per_elem.le.nodes_per_elem) then
+    ! do nothing
+   else
+    print *,"local_nodes_per_elem invalid"
+    stop
+   endif
    do inode=1,local_nodes_per_elem
     do dir=1,3
      xnode(inode,dir)= &
@@ -1247,18 +1339,21 @@ REAL_T :: test_coord
    if (inodep1.gt.local_nodes_per_elem) then
     inodep1=1
    endif
-   do dir=1,3
-    edge_xval(dir)=half*(xnode(inode,dir)+xnode(inodep1,dir))
-   enddo
    edge_id=edge_id+1
-   do dir=1,3
-    edge_centroids(dir,edge_id)=edge_xval(dir)
-   enddo
-   edge_ielem(edge_id)=ielem
-   sorted_edge_list(edge_id)=edge_id
+   if ((edge_id.ge.1).and.(edge_id.le.nodes_per_elem*nelems)) then
+    do dir=1,3
+     edge_endpoints(dir,edge_id)=xnode(inode,dir)
+     edge_endpoints(dir+3,edge_id)=xnode(inodep1,dir)
+    enddo
+    edge_ielem(edge_id)=ielem
+    sorted_edge_list(edge_id)=edge_id
+   else
+    print *,"edge_id invalid"
+    stop
+   endif
 
    do dir=1,3
-    test_coord=edge_xval(dir)
+    test_coord=xnode(inode,dir)
     if (test_coord.lt.min_coord) then
      min_coord=test_coord
     endif
@@ -1282,11 +1377,14 @@ REAL_T :: test_coord
 
  do iedge=1,edge_id-1
   do jedge=1,edge_id-1-iedge+1
-   call compare_edges(edge_centroids,jedge,sorted_edge_list, &
-          coord_scale,compare_flag)
+   do dir=1,6
+    edgej(dir)=edge_centroids(dir,sorted_edge_list(jedge))
+    edgejp1(dir)=edge_centroids(dir,sorted_edge_list(jedge+1))
+   enddo
+   call compare_edge(edgej,edgejp1,coord_scale,compare_flag,overlap_size)
    if (compare_flag.eq.1) then ! (j) > (j+1)
     save_edge=sorted_edge_list(jedge)
-    sorted_edge_list(jedge)=sorted_edger_list(jedge+1)
+    sorted_edge_list(jedge)=sorted_edge_list(jedge+1)
     sorted_edge_list(jedge+1)=save_edge
    else if ((compare_flag.eq.0).or.(compare_flag.eq.-1)) then
     ! do nothing
@@ -1365,6 +1463,7 @@ REAL_T :: test_coord
  deallocate(edge_centroids)
  deallocate(edge_ielem)
  deallocate(sorted_edge_list)
+ deallocate(xnode)
 
 end subroutine init_EdgeElem
 
