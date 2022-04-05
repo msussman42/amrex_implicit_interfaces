@@ -61,7 +61,7 @@ type lag_type
   ! doubly wetted=elemdt(DOUBLYCOMP,elemid)
  INTEGER_T, pointer :: elemdt(:,:) 
   ! node_id=intelemdt(1..3,elemid)
-  ! original_elem_id=intelemdt(4,elemid)
+  ! root (parent) element id = intelemdt(4,elemid)
  INTEGER_T, pointer :: intelemdt(:,:) 
 end type lag_type
 
@@ -83,7 +83,8 @@ type mesh_type
  INTEGER_T :: NumIntElems,NumIntElemsPaddle,NumIntElemsPool
  INTEGER_T, pointer :: ElemData(:,:) !(nflags,nelements)
  INTEGER_T, pointer :: IntElem(:,:) !(nodes_per_elem,nelements)
- INTEGER_T, pointer :: EdgeElem(:,:) !(nodes_per_elem,nelements)
+ REAL_T, pointer :: EdgeNormal(:,:) !(3*nodes_per_elem,nelements)
+ REAL_T, pointer :: EdgeWeight(:,:) !(nodes_per_elem,nelements)
  INTEGER_T :: NumNodesBIG
  INTEGER_T :: NumIntElemsBIG
  INTEGER_T, pointer :: ElemNodeCountBIG(:)
@@ -96,8 +97,10 @@ type mesh_type
  REAL_T, pointer :: NodeNormalBIG(:,:)
  REAL_T, pointer :: ElemDataXnotBIG(:,:)
  INTEGER_T, pointer :: ElemDataBIG(:,:)
+  ! root (parent) element id = IntElemBIG(4,elemid)
  INTEGER_T, pointer :: IntElemBIG(:,:) ! IntElemBIG(inode,ielem)
- INTEGER_T, pointer :: EdgeElemBIG(:,:) ! EdgeElemBIG(inode,ielem)
+ REAL_T, pointer :: EdgeNormalBIG(:,:) ! EdgeNormalBIG(3*(inode-1)+dir,ielem)
+ REAL_T, pointer :: EdgeWeightBIG(:,:) ! EdgeWeightBIG(inode,ielem)
  REAL_T, pointer :: Node(:,:)  ! Node(dir,inode)
  REAL_T, pointer :: Node_old(:,:)
  REAL_T, pointer :: Node_new(:,:)
@@ -538,7 +541,9 @@ INTEGER_T :: dir
  if (allocate_intelem.eq.1) then
   allocate(FSI_mesh_type%IntElem(FSI_mesh_type%IntElemDim, &
            FSI_mesh_type%NumIntElems))
-  allocate(FSI_mesh_type%EdgeElem(FSI_mesh_type%IntElemDim, &
+  allocate(FSI_mesh_type%EdgeNormal(3*FSI_mesh_type%IntElemDim, &
+           FSI_mesh_type%NumIntElems))
+  allocate(FSI_mesh_type%EdgeWeight(FSI_mesh_type%IntElemDim, &
            FSI_mesh_type%NumIntElems))
  else if (allocate_intelem.eq.0) then
   ! do nothing
@@ -723,12 +728,13 @@ INTEGER_T :: dir
 end subroutine get_new_half_vols
 
 
-subroutine compare_core(nodej,nodejp1,coord_scale,compare_flag)
+subroutine compare_core(nodej,nodejp1,coord_scale,compare_flag,ncore)
 IMPLICIT NONE
+INTEGER_T, intent(in) :: ncore
 INTEGER_T, intent(out) :: compare_flag
 REAL_T, intent(in) :: coord_scale
-REAL_T, intent(in) :: nodej(3)
-REAL_T, intent(in) :: nodejp1(3)
+REAL_T, intent(in) :: nodej(ncore)
+REAL_T, intent(in) :: nodejp1(ncore)
 REAL_T :: mag
 INTEGER_T :: dir
 
@@ -739,45 +745,37 @@ INTEGER_T :: dir
   stop
  endif
 
+ if ((ncore.eq.3).or.(ncore.eq.6)) then
+  ! do nothing
+ else
+  print *,"ncore invalid"
+  stop
+ endif
  mag=zero
- do dir=1,3
+ do dir=1,ncore
   mag=mag+(nodej(dir)-nodejp1(dir))**2
  enddo
  mag=sqrt(mag)
  if (mag.le.VOFTOL*coord_scale) then
   compare_flag=0
  else if (mag.ge.VOFTOL*coord_scale) then
+  compare_flag=0
   dir=1
-  if (nodej(dir).gt.nodejp1(dir)+VOFTOL*coord_scale) then
-   compare_flag=1
-  else if (nodej(dir).lt.nodejp1(dir)-VOFTOL*coord_scale) then
-   compare_flag=-1
-  else if (abs(nodej(dir)-nodejp1(dir)).le.VOFTOL*coord_scale) then
-   dir=2
+  do while ((compare_flag.eq.0).and.(dir.le.ncore))
+
    if (nodej(dir).gt.nodejp1(dir)+VOFTOL*coord_scale) then
     compare_flag=1
    else if (nodej(dir).lt.nodejp1(dir)-VOFTOL*coord_scale) then
     compare_flag=-1
    else if (abs(nodej(dir)-nodejp1(dir)).le.VOFTOL*coord_scale) then
-    dir=3
-    if (nodej(dir).gt.nodejp1(dir)+VOFTOL*coord_scale) then
-     compare_flag=1
-    else if (nodej(dir).lt.nodejp1(dir)-VOFTOL*coord_scale) then
-     compare_flag=-1
-    else if (abs(nodej(dir)-nodejp1(dir)).le.VOFTOL*coord_scale) then
-     compare_flag=0
-    else
-     print *,"nodej or nodejp1 bust"
-     stop
-    endif
+    ! do nothing
    else
-    print *,"nodej or nodejp1 bust"
+    print *,"nodej or nodejp1 are NaN"
     stop
    endif
-  else
-   print *,"nodej or nodejp1 bust"
-   stop
-  endif
+   dir=dir+1
+
+  enddo !while ((compare_flag.eq.0).and.(dir.le.ncore))
  else
   print *,"mag invalid"
   stop
@@ -820,13 +818,8 @@ REAL_T :: AINV(3,3)
   print *,"coord_scale invalid"
   stop
  endif
+ compare_flag=1 ! default value
 
- compare_flag=1
-
-  ! y=(x-x1)/||x2-x1|| gets mapped in such a way that 
-  ! A y2 = (1 0 0)
-  ! AINV (1 0 0)=y2
-  ! first column of AINV is y2
  edgej_mag=zero
  edgejp1_mag=zero
  do dir=1,3
@@ -836,6 +829,18 @@ REAL_T :: AINV(3,3)
  edgej_mag=sqrt(edgej_mag)
  edgejp1_mag=sqrt(edgejp1_mag)
  if ((edgej_mag.gt.zero).and.(edgejp1_mag.gt.zero)) then
+
+  call compare_core(edgej,edgejp1,coord_scale,compare_flag,6)
+  if (compare_flag.eq.0) then
+
+
+
+
+
+  ! y=(x-x1)/||x2-x1|| gets mapped in such a way that 
+  ! A y2 = (1 0 0)
+  ! AINV (1 0 0)=y2
+  ! first column of AINV is y2
   if (edgej_mag.ge.edgejp1_mag) then
    map_mag=edgej_mag
    do dir=1,3
@@ -1059,6 +1064,7 @@ INTEGER_T :: inode(3)
   end do
   do i=1,Cells
    if (view_refined.eq.1) then
+    ! root (parent) element id = IntElemBIG(4,elemid)
     do dir=1,3
      inode(dir)=FSI_mesh_type%IntElemBIG(dir,i)
     enddo
@@ -1251,6 +1257,7 @@ INTEGER_T :: num_nodes_local
    print *,"nodes_per_elem.ne.3 not supported"
    stop
   endif
+  ! root (parent) element id = IntElemBIG(4,elemid)
   do ilocal=1,nodes_per_elem
    inode=FSI_mesh_type%IntElemBIG(ilocal,ielem)
    FSI_mesh_type%IntElemBIG(ilocal,ielem)=new_node_list(inode)
@@ -1320,7 +1327,7 @@ INTEGER_T :: num_nodes_local
 
 end subroutine remove_duplicate_nodes
 
-subroutine init_EdgeElem( &
+subroutine init_EdgeNormal( &
      FSI_mesh_type,part_id,max_part_id,ioproc,isout,edit_refined_data)
 IMPLICIT NONE
 INTEGER_T, intent(in) :: edit_refined_data
@@ -1349,13 +1356,13 @@ REAL_T, allocatable :: xnode(:,:)
  if (edit_refined_data.eq.0) then
   nelems=FSI_mesh_type%NumIntElems
   nodes_per_elem=FSI_mesh_type%IntElemDim
-  if (nelems.eq.LBOUND(FSI_mesh_type%IntElem,2)) then
+  if (nelems.eq.UBOUND(FSI_mesh_type%IntElem,2)) then
    ! do nothing
   else
    print *,"nelems invalid"
    stop
   endif
-  if (nodes_per_elem.eq.LBOUND(FSI_mesh_type%IntElem,1)) then
+  if (nodes_per_elem.eq.UBOUND(FSI_mesh_type%IntElem,1)) then
    ! do nothing
   else
    print *,"nodes_per_elem invalid"
@@ -1364,13 +1371,14 @@ REAL_T, allocatable :: xnode(:,:)
  else if (edit_refined_data.eq.1) then
   nelems=FSI_mesh_type%NumIntElemsBIG
   nodes_per_elem=3
-  if (nelems.eq.LBOUND(FSI_mesh_type%IntElemBIG,2)) then
+  if (nelems.eq.UBOUND(FSI_mesh_type%IntElemBIG,2)) then
    ! do nothing
   else
    print *,"nelems invalid"
    stop
   endif
-  if (nodes_per_elem.eq.LBOUND(FSI_mesh_type%IntElemBIG,1)) then
+  ! root (parent) element id = IntElemBIG(4,elemid)
+  if (nodes_per_elem+1.eq.UBOUND(FSI_mesh_type%IntElemBIG,1)) then
    ! do nothing
   else
    print *,"nodes_per_elem invalid"
@@ -1392,6 +1400,12 @@ REAL_T, allocatable :: xnode(:,:)
 
  do ielem=1,nelems
   if (edit_refined_data.eq.0) then
+   do dir=1,3*nodes_per_elem
+    FSI_mesh_type%EdgeNormal(dir,ielem)=zero
+   enddo
+   do dir=1,nodes_per_elem
+    FSI_mesh_type%EdgeWeight(dir,ielem)=zero
+   enddo
    local_nodes_per_elem=FSI_mesh_type%ElemData(1,ielem)
    if (local_nodes_per_elem.le.nodes_per_elem) then
     ! do nothing
@@ -1406,6 +1420,12 @@ REAL_T, allocatable :: xnode(:,:)
     enddo
    enddo
   else if (edit_refined_data.eq.1) then
+   do dir=1,3*nodes_per_elem
+    FSI_mesh_type%EdgeNormalBIG(dir,ielem)=zero
+   enddo
+   do dir=1,nodes_per_elem
+    FSI_mesh_type%EdgeWeightBIG(dir,ielem)=zero
+   enddo
    local_nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
    if (local_nodes_per_elem.eq.3) then
     do inode=1,local_nodes_per_elem
@@ -1424,9 +1444,13 @@ REAL_T, allocatable :: xnode(:,:)
   endif
 
   do inode=1,local_nodes_per_elem
-   inodep1=inode+1
-   if (inodep1.gt.local_nodes_per_elem) then
+   if ((inode.ge.1).and.(inode.lt.local_nodes_per_elem)) then
+    inodep1=inode+1
+   else if (inode.eq.local_nodes_per_elem) then
     inodep1=1
+   else
+    print *,"inode invalid"
+    stop
    endif
    edge_id=edge_id+1
    if ((edge_id.ge.1).and.(edge_id.le.nodes_per_elem*nelems)) then
@@ -1485,9 +1509,12 @@ REAL_T, allocatable :: xnode(:,:)
  enddo ! iedge
 
   ! sanity check
- do inode=1,FSI_mesh_type%NumNodesBIG-1
-  call compare_edges(FSI_mesh_type,inode,sorted_node_list, &
-        coord_scale,compare_flag)
+ do iedge=1,edge_id-1
+  do dir=1,6
+   edgej(dir)=edge_centroids(dir,sorted_edge_list(iedge))
+   edgejp1(dir)=edge_centroids(dir,sorted_edge_list(iedge+1))
+  enddo
+  call compare_edge(edgej,edgejp1,coord_scale,compare_flag,overlap_size)
 
   if (compare_flag.eq.1) then ! (j) > (j+1)
    print *,"list not sorted properly"
@@ -1498,7 +1525,7 @@ REAL_T, allocatable :: xnode(:,:)
    print *,"compare_flag invalid"
    stop
   endif
- enddo ! do inode=1,FSI_mesh_type%NumNodesBIG-1 (sanity check)
+ enddo ! do iedge=1,edge_id-1 (sanity check)
 
  inode=1
  knode=1
@@ -1554,7 +1581,7 @@ REAL_T, allocatable :: xnode(:,:)
  deallocate(sorted_edge_list)
  deallocate(xnode)
 
-end subroutine init_EdgeElem
+end subroutine init_EdgeNormal
 
 ! split triangles so that size is no bigger than "h_small"
 subroutine post_process_nodes_elements(initflag, &
@@ -1853,6 +1880,7 @@ INTEGER_T :: view_refined
  allocate(multi_lag(1)%nddensity(FSI_mesh_type%NumNodes))
  allocate(multi_lag(1)%ndtemp(FSI_mesh_type%NumNodes))
  allocate(multi_lag(1)%elemdt(flags_per_element,new_NumIntElems))
+  !root (parent) element id = intelemdt(4,elemid)
  allocate(multi_lag(1)%intelemdt(4,new_NumIntElems))
  do i=1,FSI_mesh_type%NumNodes
   do dir=1,3
@@ -1877,6 +1905,7 @@ INTEGER_T :: view_refined
      FSI_mesh_type%IntElem(nodes_per_elem-isub-1,ielem)
    multi_lag(1)%intelemdt(3,new_NumIntElems)= &
      FSI_mesh_type%IntElem(nodes_per_elem-isub,ielem)
+   ! root (parent) element id = intelemdt(4,elemid)
    multi_lag(1)%intelemdt(4,new_NumIntElems)=ielem
     ! FSI_mesh_type%ElemData(DOUBLYCOMP,ielem) is the doubly wetted flag
    do dir=1,flags_per_element
@@ -1909,6 +1938,7 @@ INTEGER_T :: view_refined
     allocate(multi_lag(ilevel+1)%nddensity(save_n_nodes))
     allocate(multi_lag(ilevel+1)%ndtemp(save_n_nodes))
     allocate(multi_lag(ilevel+1)%elemdt(flags_per_element,save_n_elems))
+     ! root (parent) element id = intelemdt(4,elemid)
     allocate(multi_lag(ilevel+1)%intelemdt(4,save_n_elems))
     do i=1,multi_lag(ilevel)%n_nodes
      do dir=1,3
@@ -2026,10 +2056,12 @@ INTEGER_T :: view_refined
 
       multi_lag(ilevel+1)%ndtemp(nsplit)=tempsplit
 
+      ! root (parent) element id = intelemdt(4,elemid)
       base_ielem=multi_lag(ilevel)%intelemdt(4,ielem)
       multi_lag(ilevel+1)%intelemdt(1,esplit-1)=node1
       multi_lag(ilevel+1)%intelemdt(2,esplit-1)=nsplit
       multi_lag(ilevel+1)%intelemdt(3,esplit-1)=node3
+      ! root (parent) element id = intelemdt(4,elemid)
       multi_lag(ilevel+1)%intelemdt(4,esplit-1)=base_ielem
       ! elemdt(DOUBLYCOMP,ielem) is the doubly wetted flag
       do dir=1,flags_per_element
@@ -2040,6 +2072,7 @@ INTEGER_T :: view_refined
       multi_lag(ilevel+1)%intelemdt(1,esplit)=nsplit
       multi_lag(ilevel+1)%intelemdt(2,esplit)=node2
       multi_lag(ilevel+1)%intelemdt(3,esplit)=node3
+      ! root (parent) element id = intelemdt(4,elemid)
       multi_lag(ilevel+1)%intelemdt(4,esplit)=base_ielem
       ! elemdt(DOUBLYCOMP,ielem) is the doubly wetted flag
       do dir=1,flags_per_element
@@ -2104,6 +2137,7 @@ INTEGER_T :: view_refined
 
       multi_lag(ilevel+1)%ndtemp(nsplit)=tempsplit
 
+      ! root (parent) element id = intelemdt(4,elemid)
       base_ielem=multi_lag(ilevel)%intelemdt(4,ielem)
       multi_lag(ilevel+1)%intelemdt(1,esplit-1)=node1
       multi_lag(ilevel+1)%intelemdt(2,esplit-1)=node2
@@ -2114,6 +2148,7 @@ INTEGER_T :: view_refined
          multi_lag(ilevel)%elemdt(dir,ielem)
       enddo
 
+      ! root (parent) element id = intelemdt(4,elemid)
       multi_lag(ilevel+1)%intelemdt(1,esplit)=nsplit
       multi_lag(ilevel+1)%intelemdt(2,esplit)=node3
       multi_lag(ilevel+1)%intelemdt(3,esplit)=node1
@@ -2180,6 +2215,7 @@ INTEGER_T :: view_refined
 
       multi_lag(ilevel+1)%ndtemp(nsplit)=tempsplit
 
+      ! root (parent) element id = intelemdt(4,elemid)
       base_ielem=multi_lag(ilevel)%intelemdt(4,ielem)
       multi_lag(ilevel+1)%intelemdt(1,esplit-1)=node1
       multi_lag(ilevel+1)%intelemdt(2,esplit-1)=node2
@@ -2190,6 +2226,7 @@ INTEGER_T :: view_refined
          multi_lag(ilevel)%elemdt(dir,ielem)
       enddo
 
+      ! root (parent) element id = intelemdt(4,elemid)
       multi_lag(ilevel+1)%intelemdt(1,esplit)=node2
       multi_lag(ilevel+1)%intelemdt(2,esplit)=node3
       multi_lag(ilevel+1)%intelemdt(3,esplit)=nsplit
@@ -2203,6 +2240,7 @@ INTEGER_T :: view_refined
      multi_lag(ilevel+1)%n_elems=multi_lag(ilevel+1)%n_elems+1
      esplit=multi_lag(ilevel+1)%n_elems
      if (iter.eq.2) then
+      ! root (parent) element id = intelemdt(4,elemid)
       base_ielem=multi_lag(ilevel)%intelemdt(4,ielem)
       multi_lag(ilevel+1)%intelemdt(1,esplit)=node1
       multi_lag(ilevel+1)%intelemdt(2,esplit)=node2
@@ -2239,6 +2277,8 @@ INTEGER_T :: view_refined
   deallocate(FSI_mesh_type%ElemDataXnotBIG)
   deallocate(FSI_mesh_type%ElemDataBIG)
   deallocate(FSI_mesh_type%IntElemBIG)
+  deallocate(FSI_mesh_type%EdgeNormalBIG)
+  deallocate(FSI_mesh_type%EdgeWeightBIG)
 
  endif
 
@@ -2254,8 +2294,10 @@ INTEGER_T :: view_refined
  allocate(FSI_mesh_type%ElemDataXnotBIG(3,FSI_mesh_type%NumIntElemsBIG))
  allocate(FSI_mesh_type%ElemDataBIG(flags_per_element, &
           FSI_mesh_type%NumIntElemsBIG))
+  ! root (parent) element id = IntElemBIG(4,elemid)
  allocate(FSI_mesh_type%IntElemBIG(4,FSI_mesh_type%NumIntElemsBIG))
- allocate(FSI_mesh_type%EdgeElemBIG(4,FSI_mesh_type%NumIntElemsBIG))
+ allocate(FSI_mesh_type%EdgeNormalBIG(9,FSI_mesh_type%NumIntElemsBIG))
+ allocate(FSI_mesh_type%EdgeWeightBIG(3,FSI_mesh_type%NumIntElemsBIG))
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
   print *,"NumNodes, NumIntElems ",FSI_mesh_type%NumNodes, &
@@ -2266,6 +2308,7 @@ INTEGER_T :: view_refined
 
   ! in: post_process_nodes_elements
  do ielem=1,FSI_mesh_type%NumIntElemsBIG
+  ! root (parent) element id = intelemdt(4,elemid)
   do dir=1,4
    FSI_mesh_type%IntElemBIG(dir,ielem)= &
      multi_lag(n_lag_levels)%intelemdt(dir,ielem)
@@ -2462,7 +2505,7 @@ INTEGER_T :: view_refined
  FSI_mesh_type%min_side_len_refined=smallest_h  
 
  edit_refined_data=1
- call init_EdgeElem(FSI_mesh_type,part_id,max_part_id,ioproc,isout, &
+ call init_EdgeNormal(FSI_mesh_type,part_id,max_part_id,ioproc,isout, &
           edit_refined_data)
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
@@ -2877,7 +2920,8 @@ INTEGER_T :: local_elements
     ! in: CTML_init_sci 
    if (ifirst.eq.1) then
 
-    ! allocates and inits: ElemData,EdgeElem(just allocates),IntElem,Node_old,
+    ! allocates and inits: ElemData,EdgeNormal(just allocates),
+    !  EdgeWeight(just allocates),IntElem,Node_old,
     !  Node_new,Node_current,NodeVel_old,NodeVel_new,NodeForce_old,
     !  NodeForce_new,NodeTemp_old,NodeTemp_new,NodeMass,NodeDensity
     ! allocate_intelem=1
@@ -8766,7 +8810,7 @@ INTEGER_T, allocatable :: raw_elements(:,:)
 
   if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
    edit_refined_data=0
-   call init_EdgeElem(aux_FSI(auxcomp),auxcomp,fort_num_local_aux_grids, &
+   call init_EdgeNormal(aux_FSI(auxcomp),auxcomp,fort_num_local_aux_grids, &
          ioproc,aux_isout,edit_refined_data)
 
    call post_process_nodes_elements(initflag, &
@@ -9160,7 +9204,7 @@ INTEGER_T idir,ielem,inode
       call overall_solid_init(CLSVOFtime,ioproc,part_id,isout)  
 
       edit_refined_data=0
-      call init_EdgeElem(FSI(part_id),part_id,TOTAL_NPARTS,ioproc,isout, &
+      call init_EdgeNormal(FSI(part_id),part_id,TOTAL_NPARTS,ioproc,isout, &
               edit_refined_data)
 
       ! ReadHeader
