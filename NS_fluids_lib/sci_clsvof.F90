@@ -83,7 +83,7 @@ type mesh_type
  INTEGER_T :: NumIntElems,NumIntElemsPaddle,NumIntElemsPool
  INTEGER_T, pointer :: ElemData(:,:) !(nflags,nelements)
  INTEGER_T, pointer :: IntElem(:,:) !(nodes_per_elem,nelements)
- !normals of elements on the opposite side of a given edge.
+ !average of adjoining element normals.
  REAL_T, pointer :: EdgeNormal(:,:) !(3*nodes_per_elem,nelements) 
  INTEGER_T, pointer :: EdgeElemId(:,:) !(nodes_per_elem,nelements)
  INTEGER_T :: NumNodesBIG
@@ -100,7 +100,7 @@ type mesh_type
  INTEGER_T, pointer :: ElemDataBIG(:,:)
   ! root (parent) element id = IntElemBIG(4,elemid)
  INTEGER_T, pointer :: IntElemBIG(:,:) ! IntElemBIG(inode,ielem)
- !normals of elements on the opposite side of a given edge.
+ !average of adjoining element normals.
  REAL_T, pointer :: EdgeNormalBIG(:,:) ! EdgeNormalBIG(3*(inode-1)+dir,ielem)
  INTEGER_T, pointer :: EdgeElemIdBIG(:,:) ! EdgeElemIdBIG(inode,ielem)
  REAL_T, pointer :: Node(:,:)  ! Node(dir,inode)
@@ -543,7 +543,7 @@ INTEGER_T :: dir
  if (allocate_intelem.eq.1) then
   allocate(FSI_mesh_type%IntElem(FSI_mesh_type%IntElemDim, &
            FSI_mesh_type%NumIntElems))
-  !normals of elements on the opposite side of a given edge.
+  !average of adjoining element normals.
   allocate(FSI_mesh_type%EdgeNormal(3*FSI_mesh_type%IntElemDim, &
            FSI_mesh_type%NumIntElems))
   allocate(FSI_mesh_type%EdgeElemId(FSI_mesh_type%IntElemDim, &
@@ -1342,8 +1342,10 @@ end subroutine remove_duplicate_nodes
 ! is a "hanging node" which must be removed by either strategically
 ! splitting or merging selective elements.
 subroutine init_EdgeNormal( &
-     FSI_mesh_type,part_id,max_part_id,ioproc,isout,edit_refined_data)
+   FSI_mesh_type,part_id,max_part_id,ioproc,isout,edit_refined_data, &
+   generate_time)
 IMPLICIT NONE
+REAL_T, intent(in) :: generate_time
 INTEGER_T, intent(in) :: edit_refined_data
 INTEGER_T, intent(in) :: part_id
 INTEGER_T, intent(in) :: max_part_id
@@ -1358,6 +1360,10 @@ REAL_T :: max_coord
 REAL_T :: coord_scale
 REAL_T :: test_coord
 REAL_T, allocatable :: xnode(:,:)
+REAL_T :: normal(3)
+REAL_T :: normal_opp(3)
+REAL_T :: local_normal(3)
+REAL_T :: mag
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
@@ -1417,7 +1423,7 @@ REAL_T, allocatable :: xnode(:,:)
  do ielem=1,nelems
   if (edit_refined_data.eq.0) then
    do dir=1,3*nodes_per_elem
-    !normals of elements on the opposite side of a given edge.
+     !average of adjoining element normals.
     FSI_mesh_type%EdgeNormal(dir,ielem)=zero
    enddo
    do dir=1,nodes_per_elem
@@ -1438,7 +1444,7 @@ REAL_T, allocatable :: xnode(:,:)
    enddo
   else if (edit_refined_data.eq.1) then
    do dir=1,3*nodes_per_elem
-    !normals of elements on the opposite side of a given edge.
+    !average of adjoining element normals.
     FSI_mesh_type%EdgeNormalBIG(dir,ielem)=zero
    enddo
    do dir=1,nodes_per_elem
@@ -1560,7 +1566,7 @@ REAL_T, allocatable :: xnode(:,:)
    if (compare_flag.eq.0) then
     jedge=jedge+1
     num_equal=num_equal+1
-   else if ((compare_flag.eq.1).or.(compare_flag.eq.-1)) then
+   else if (compare_flag.eq.-1)then
     ! do nothing
    else
     print *,"compare_flag invalid"
@@ -1600,9 +1606,90 @@ REAL_T, allocatable :: xnode(:,:)
     if ((old_edge_id.eq.0).and.(old_edge_id_opp.eq.0)) then
      FSI_mesh_type%EdgeElemId(inode,ielem)=ielem_opp
      FSI_mesh_type%EdgeElemId(inode,ielem_opp)=ielem
+     call scinormal(ielem,normal, &
+       FSI_mesh_type,part_id,max_part_id, &
+       generate_time)
+     call scinormal(ielem_opp,normal_opp, &
+       FSI_mesh_type,part_id,max_part_id, &
+       generate_time)
+     do dir=1,3
+      local_normal(dir)=half*(normal(dir)+normal_opp(dir))
+     enddo
+
+     mag=zero
+     do dir=1,3
+      mag=mag+local_normal(dir)**2
+     enddo
+     mag=sqrt(mag)
+     if (mag.gt.zero) then
+      do dir=1,3
+       local_normal(dir)=local_normal(dir)/mag
+      enddo
+     else if (mag.eq.zero) then
+      do dir=1,3
+       local_normal(dir)=zero
+      enddo
+     else
+      print *,"mag bust"
+      stop
+     endif
+
+     do dir=1,3
+      FSI_mesh_type%EdgeNormal(3*(inode-1)+dir,ielem)= &
+              local_normal(dir)
+      FSI_mesh_type%EdgeNormal(3*(inode_opp-1)+dir,ielem_opp)= &
+              local_normal(dir)
+     enddo
+    else
+     print *,"old_edge_id or old_edge_id_opp invalid"
+     stop
+    endif
 
    else if (edit_refined_data.eq.1) then
 
+    old_edge_id=FSI_mesh_type%EdgeElemIdBIG(inode,ielem)
+    old_edge_id_opp=FSI_mesh_type%EdgeElemIdBIG(inode_opp,ielem_opp)
+    if ((old_edge_id.eq.0).and.(old_edge_id_opp.eq.0)) then
+     FSI_mesh_type%EdgeElemIdBIG(inode,ielem)=ielem_opp
+     FSI_mesh_type%EdgeElemIdBIG(inode,ielem_opp)=ielem
+     call scinormalBIG(ielem,normal, &
+       FSI_mesh_type,part_id,max_part_id, &
+       generate_time)
+     call scinormalBIG(ielem_opp,normal_opp, &
+       FSI_mesh_type,part_id,max_part_id, &
+       generate_time)
+     do dir=1,3
+      local_normal(dir)=half*(normal(dir)+normal_opp(dir))
+     enddo
+
+     mag=zero
+     do dir=1,3
+      mag=mag+local_normal(dir)**2
+     enddo
+     mag=sqrt(mag)
+     if (mag.gt.zero) then
+      do dir=1,3
+       local_normal(dir)=local_normal(dir)/mag
+      enddo
+     else if (mag.eq.zero) then
+      do dir=1,3
+       local_normal(dir)=zero
+      enddo
+     else
+      print *,"mag bust"
+      stop
+     endif
+
+     do dir=1,3
+      FSI_mesh_type%EdgeNormalBIG(3*(inode-1)+dir,ielem)= &
+              local_normal(dir)
+      FSI_mesh_type%EdgeNormalBIG(3*(inode_opp-1)+dir,ielem_opp)= &
+              local_normal(dir)
+     enddo
+    else
+     print *,"old_edge_id or old_edge_id_opp invalid"
+     stop
+    endif
    else
     print *,"edit_refined_data invalid"
     stop
@@ -1613,54 +1700,7 @@ REAL_T, allocatable :: xnode(:,:)
    stop
   endif
 
- inode=1
- knode=1
- do while (inode.lt.FSI_mesh_type%NumNodesBIG)
-  new_node_list(sorted_node_list(inode))=knode
-  old_node_list(knode)=sorted_node_list(inode)
-  jnode=inode
-  call compare_edges(FSI_mesh_type,jnode,sorted_node_list, &
-    coord_scale,compare_flag)
-  do while ((compare_flag.eq.0).and. &
-            (jnode.lt.FSI_mesh_type%NumNodesBIG))
-   jnode=jnode+1
-   new_node_list(sorted_node_list(jnode))=knode
-   alternate_node_list(sorted_node_list(jnode))=sorted_node_list(inode)
-   if (jnode.lt.FSI_mesh_type%NumNodesBIG) then
-    call compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
-     coord_scale,compare_flag)
-   else if (jnode.eq.FSI_mesh_type%NumNodesBIG) then
-    compare_flag=0
-   else 
-    print *,"jnode invalid"
-    stop
-   endif
-  enddo
-  inode=jnode+1
-  knode=knode+1
- enddo
- if (inode.eq.FSI_mesh_type%NumNodesBIG) then
-  new_node_list(sorted_node_list(inode))=knode
-  old_node_list(knode)=sorted_node_list(inode)
-  inode=inode+1
-  knode=knode+1
- else if (inode.eq.FSI_mesh_type%NumNodesBIG+1) then
-  ! do nothing
- else
-  print *,"inode invalid"
-  stop
- endif
- if (inode.eq.FSI_mesh_type%NumNodesBIG+1) then
-  ! do nothing
- else
-  print *,"inode invalid"
-  stop
- endif
-
- num_nodes_local=knode-1
-
-
-
+ enddo !while (iedge.lt.edge_id)
 
  deallocate(edge_centroids)
  deallocate(edge_ielem)
@@ -2382,7 +2422,7 @@ INTEGER_T :: view_refined
           FSI_mesh_type%NumIntElemsBIG))
   ! root (parent) element id = IntElemBIG(4,elemid)
  allocate(FSI_mesh_type%IntElemBIG(4,FSI_mesh_type%NumIntElemsBIG))
- !normals of elements on the opposite side of a given edge.
+ !average of adjoining element normals.
  allocate(FSI_mesh_type%EdgeNormalBIG(9,FSI_mesh_type%NumIntElemsBIG))
  allocate(FSI_mesh_type%EdgeElemIdBIG(3,FSI_mesh_type%NumIntElemsBIG))
 
@@ -2593,7 +2633,7 @@ INTEGER_T :: view_refined
 
  edit_refined_data=1
  call init_EdgeNormal(FSI_mesh_type,part_id,max_part_id,ioproc,isout, &
-          edit_refined_data)
+          edit_refined_data,generate_time)
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
   print *,"part_id,flag_2D_to_3D ",part_id,FSI_mesh_type%flag_2D_to_3D
@@ -8522,6 +8562,7 @@ REAL_T, dimension(3) :: maxnode,minnode,xval,xval1
 REAL_T, dimension(3) :: maxnodebefore,minnodebefore
 REAL_T, dimension(3) :: xxblob1,newxxblob1
 REAL_T, dimension(3) :: side_len
+REAL_T :: generate_time
 REAL_T :: max_side_len
 INTEGER_T :: dir_max_side
 REAL_T :: radradblob1
@@ -8897,8 +8938,9 @@ INTEGER_T, allocatable :: raw_elements(:,:)
 
   if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
    edit_refined_data=0
+   generate_time=zero
    call init_EdgeNormal(aux_FSI(auxcomp),auxcomp,fort_num_local_aux_grids, &
-         ioproc,aux_isout,edit_refined_data)
+         ioproc,aux_isout,edit_refined_data,generate_time)
 
    call post_process_nodes_elements(initflag, &
           contain_aux(auxcomp)%xlo3D, &
@@ -9017,6 +9059,7 @@ INTEGER_T FSI_refine_factor(num_materials)
 INTEGER_T FSI_bounding_box_ngrow(num_materials)
 INTEGER_T im_sanity_check
 INTEGER_T idir,ielem,inode
+REAL_T generate_time
 
   nmat=num_materials
 
@@ -9291,8 +9334,9 @@ INTEGER_T idir,ielem,inode
       call overall_solid_init(CLSVOFtime,ioproc,part_id,isout)  
 
       edit_refined_data=0
+      generate_time=zero
       call init_EdgeNormal(FSI(part_id),part_id,TOTAL_NPARTS,ioproc,isout, &
-              edit_refined_data)
+              edit_refined_data,generate_time)
 
       ! ReadHeader
       initflag=1
