@@ -83,8 +83,9 @@ type mesh_type
  INTEGER_T :: NumIntElems,NumIntElemsPaddle,NumIntElemsPool
  INTEGER_T, pointer :: ElemData(:,:) !(nflags,nelements)
  INTEGER_T, pointer :: IntElem(:,:) !(nodes_per_elem,nelements)
- REAL_T, pointer :: EdgeNormal(:,:) !(3*nodes_per_elem,nelements)
- REAL_T, pointer :: EdgeWeight(:,:) !(nodes_per_elem,nelements)
+ !normals of elements on the opposite side of a given edge.
+ REAL_T, pointer :: EdgeNormal(:,:) !(3*nodes_per_elem,nelements) 
+ INTEGER_T, pointer :: EdgeElemId(:,:) !(nodes_per_elem,nelements)
  INTEGER_T :: NumNodesBIG
  INTEGER_T :: NumIntElemsBIG
  INTEGER_T, pointer :: ElemNodeCountBIG(:)
@@ -99,8 +100,9 @@ type mesh_type
  INTEGER_T, pointer :: ElemDataBIG(:,:)
   ! root (parent) element id = IntElemBIG(4,elemid)
  INTEGER_T, pointer :: IntElemBIG(:,:) ! IntElemBIG(inode,ielem)
+ !normals of elements on the opposite side of a given edge.
  REAL_T, pointer :: EdgeNormalBIG(:,:) ! EdgeNormalBIG(3*(inode-1)+dir,ielem)
- REAL_T, pointer :: EdgeWeightBIG(:,:) ! EdgeWeightBIG(inode,ielem)
+ INTEGER_T, pointer :: EdgeElemIdBIG(:,:) ! EdgeElemIdBIG(inode,ielem)
  REAL_T, pointer :: Node(:,:)  ! Node(dir,inode)
  REAL_T, pointer :: Node_old(:,:)
  REAL_T, pointer :: Node_new(:,:)
@@ -541,9 +543,10 @@ INTEGER_T :: dir
  if (allocate_intelem.eq.1) then
   allocate(FSI_mesh_type%IntElem(FSI_mesh_type%IntElemDim, &
            FSI_mesh_type%NumIntElems))
+  !normals of elements on the opposite side of a given edge.
   allocate(FSI_mesh_type%EdgeNormal(3*FSI_mesh_type%IntElemDim, &
            FSI_mesh_type%NumIntElems))
-  allocate(FSI_mesh_type%EdgeWeight(FSI_mesh_type%IntElemDim, &
+  allocate(FSI_mesh_type%EdgeElemId(FSI_mesh_type%IntElemDim, &
            FSI_mesh_type%NumIntElems))
  else if (allocate_intelem.eq.0) then
   ! do nothing
@@ -797,6 +800,8 @@ REAL_T :: map_mag
 REAL_T :: mag_offline
 REAL_T :: edgej_mag
 REAL_T :: edgejp1_mag
+REAL_T :: edgej_center(3)
+REAL_T :: edgejp1_center(3)
 INTEGER_T :: mincomp
 INTEGER_T :: maxcomp
 INTEGER_T :: dir
@@ -824,13 +829,15 @@ REAL_T :: AINV(3,3)
  edgejp1_mag=zero
  do dir=1,3
   edgej_mag=edgej_mag+(edgej(dir)-edgej(dir+3))**2
+  edgej_center(dir)=half*(edgej(dir)+edgej(dir+3))
   edgejp1_mag=edgejp1_mag+(edgejp1(dir)-edgejp1(dir+3))**2
+  edgejp1_center(dir)=half*(edgejp1(dir)+edgejp1(dir+3))
  enddo
  edgej_mag=sqrt(edgej_mag)
  edgejp1_mag=sqrt(edgejp1_mag)
  if ((edgej_mag.gt.zero).and.(edgejp1_mag.gt.zero)) then
 
-  call compare_core(edgej,edgejp1,coord_scale,compare_flag,6)
+  call compare_core(edgej_center,edgejp1_center,coord_scale,compare_flag,3)
   if (compare_flag.eq.0) then
    overlap_size=one
   else if ((compare_flag.eq.1).or.(compare_flag.eq.-1)) then
@@ -914,8 +921,16 @@ REAL_T :: AINV(3,3)
 
      if ((mag_offline.le.VOFTOL).and. &
          (mag_offline.ge.zero).and. &
-         (overlap_size.ge.VOFTOL)) then
+         (overlap_size.ge.VOFTOL).and. &
+         (overlap_size.le.one+VOFTOL)) then
       compare_flag=0
+      if (operlap_size.ge.one-VOFTOL) then
+       ! do nothing
+      else
+       print *,"overlap_size not equal to 1"
+       print *,"check for hanging nodes"
+       stop
+      endif
      else if ((mag_offline.ge.VOFTOL).or. &
               (overlap_size.le.VOFTOL)) then
       if ((overlap_size.ge.zero).and. &
@@ -1323,6 +1338,9 @@ INTEGER_T :: num_nodes_local
 
 end subroutine remove_duplicate_nodes
 
+! if an opposite element cannot be found for a given edge, then there
+! is a "hanging node" which must be removed by either strategically
+! splitting or merging selective elements.
 subroutine init_EdgeNormal( &
      FSI_mesh_type,part_id,max_part_id,ioproc,isout,edit_refined_data)
 IMPLICIT NONE
@@ -1387,6 +1405,8 @@ REAL_T, allocatable :: xnode(:,:)
 
  allocate(edge_endpoints(6,nodes_per_elem*nelems))
  allocate(edge_ielem(nodes_per_elem*nelems))
+ ! node id of first point on the edge.
+ allocate(edge_inode(nodes_per_elem*nelems))
  allocate(sorted_edge_list(nodes_per_elem*nelems))
  allocate(xnode(nodes_per_elem,3))
 
@@ -1397,10 +1417,11 @@ REAL_T, allocatable :: xnode(:,:)
  do ielem=1,nelems
   if (edit_refined_data.eq.0) then
    do dir=1,3*nodes_per_elem
+    !normals of elements on the opposite side of a given edge.
     FSI_mesh_type%EdgeNormal(dir,ielem)=zero
    enddo
    do dir=1,nodes_per_elem
-    FSI_mesh_type%EdgeWeight(dir,ielem)=zero
+    FSI_mesh_type%EdgeElemId(dir,ielem)=0
    enddo
    local_nodes_per_elem=FSI_mesh_type%ElemData(1,ielem)
    if (local_nodes_per_elem.le.nodes_per_elem) then
@@ -1417,10 +1438,11 @@ REAL_T, allocatable :: xnode(:,:)
    enddo
   else if (edit_refined_data.eq.1) then
    do dir=1,3*nodes_per_elem
+    !normals of elements on the opposite side of a given edge.
     FSI_mesh_type%EdgeNormalBIG(dir,ielem)=zero
    enddo
    do dir=1,nodes_per_elem
-    FSI_mesh_type%EdgeWeightBIG(dir,ielem)=zero
+    FSI_mesh_type%EdgeElemIdBIG(dir,ielem)=0
    enddo
    local_nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
    if (local_nodes_per_elem.eq.3) then
@@ -1455,6 +1477,7 @@ REAL_T, allocatable :: xnode(:,:)
      edge_endpoints(dir+3,edge_id)=xnode(inodep1,dir)
     enddo
     edge_ielem(edge_id)=ielem
+    edge_inode(edge_id)=inode
     sorted_edge_list(edge_id)=edge_id
    else
     print *,"edge_id invalid"
@@ -1537,7 +1560,7 @@ REAL_T, allocatable :: xnode(:,:)
    if (compare_flag.eq.0) then
     jedge=jedge+1
     num_equal=num_equal+1
-   else if ((compare_flag.eq.1).or(compare_flag.eq.-1)) then
+   else if ((compare_flag.eq.1).or.(compare_flag.eq.-1)) then
     ! do nothing
    else
     print *,"compare_flag invalid"
@@ -1547,11 +1570,48 @@ REAL_T, allocatable :: xnode(:,:)
   while ((compare_flag.eq.0).and.(jedge.lt.edge_id))
 
   if (num_equal.eq.0) then
+   ielem=edge_ielem(sorted_edge_list(iedge))
+   if (edit_refined_data.eq.0) then
+    doubly_flag=FSI_mesh_type%ElemData(DOUBLYCOMP,ielem)
+   else if (edit_refined_data.eq.1) then
+    doubly_flag=FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem)
+   else
+    print *,"edit_refined_data invalid"
+    stop
+   endif
+   if (doubly_flag.eq.1) then
+    ! do nothing
+   else if (doubly_flag.eq.0) then
+    print *,"cannot have a hanging edge for a singly wetted element"
+    stop
+   else
+    print *,"doubly_flag invalid"
+    stop
+   endif
    iedge=iedge+1
-  else if (num_equal.ge.1) then
-   allocate(overlap_table(num_equal,num_equal))
+  else if (num_equal.eq.1) then
+   ielem=edge_ielem(sorted_edge_list(iedge))
+   ielem_opp=edge_ielem(sorted_edge_list(iedge+1))
+   inode=edge_inode(sorted_edge_list(iedge))
+   inode_opp=edge_ielem(sorted_edge_list(iedge+1))
+   if (edit_refined_data.eq.0) then
+    old_edge_id=FSI_mesh_type%EdgeElemId(inode,ielem)
+    old_edge_id_opp=FSI_mesh_type%EdgeElemId(inode_opp,ielem_opp)
+    if ((old_edge_id.eq.0).and.(old_edge_id_opp.eq.0)) then
+     FSI_mesh_type%EdgeElemId(inode,ielem)=ielem_opp
+     FSI_mesh_type%EdgeElemId(inode,ielem_opp)=ielem
 
-          deallocate(overlap_table)
+   else if (edit_refined_data.eq.1) then
+
+   else
+    print *,"edit_refined_data invalid"
+    stop
+   endif
+   iedge=iedge+2
+  else
+   print *,"num_equal invalid"
+   stop
+  endif
 
  inode=1
  knode=1
@@ -2304,7 +2364,7 @@ INTEGER_T :: view_refined
   deallocate(FSI_mesh_type%ElemDataBIG)
   deallocate(FSI_mesh_type%IntElemBIG)
   deallocate(FSI_mesh_type%EdgeNormalBIG)
-  deallocate(FSI_mesh_type%EdgeWeightBIG)
+  deallocate(FSI_mesh_type%EdgeElemIdBIG)
 
  endif
 
@@ -2322,8 +2382,9 @@ INTEGER_T :: view_refined
           FSI_mesh_type%NumIntElemsBIG))
   ! root (parent) element id = IntElemBIG(4,elemid)
  allocate(FSI_mesh_type%IntElemBIG(4,FSI_mesh_type%NumIntElemsBIG))
+ !normals of elements on the opposite side of a given edge.
  allocate(FSI_mesh_type%EdgeNormalBIG(9,FSI_mesh_type%NumIntElemsBIG))
- allocate(FSI_mesh_type%EdgeWeightBIG(3,FSI_mesh_type%NumIntElemsBIG))
+ allocate(FSI_mesh_type%EdgeElemIdBIG(3,FSI_mesh_type%NumIntElemsBIG))
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
   print *,"NumNodes, NumIntElems ",FSI_mesh_type%NumNodes, &
@@ -2947,7 +3008,7 @@ INTEGER_T :: local_elements
    if (ifirst.eq.1) then
 
     ! allocates and inits: ElemData,EdgeNormal(just allocates),
-    !  EdgeWeight(just allocates),IntElem,Node_old,
+    !  EdgeElemId(just allocates),IntElem,Node_old,
     !  Node_new,Node_current,NodeVel_old,NodeVel_new,NodeForce_old,
     !  NodeForce_new,NodeTemp_old,NodeTemp_new,NodeMass,NodeDensity
     ! allocate_intelem=1
