@@ -11645,10 +11645,15 @@ IMPLICIT NONE
              sign_quality=abs(n_dot_x)/(mag_n*mag_x)
 
              if (element_inplane.eq.1) then
-              if (sign_quality.ge.0.9d0) then
+              if (sign_quality.gt.sign_quality_cutoff) then
                ! do nothing
               else
                print *,"sign_quality should be close to 1 if element_inplane"
+               print *,"sign_quality: ",sign_quality
+               print *,"abs(n_dot_x) ",abs(n_dot_x)
+               print *,"mag_n=",mag_n
+               print *,"mag_x=",mag_x
+               print *,"dxBB ",dxBB(1),dxBB(2),dxBB(3)
                stop
               endif
              else if (element_inplane.eq.0) then
