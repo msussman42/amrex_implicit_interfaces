@@ -1741,8 +1741,10 @@
        enddo
 
        zone_gb(iz_gb)%var(3+1,i,j,k)=aux_FSIdata3D(i,j,k,FSI_LEVELSET+1)
-       zone_gb(iz_gb)%var(3+2,i,j,k)=aux_FSIdata3D(i,j,k,FSI_SIGN_QUALITY+1)
-       zone_gb(iz_gb)%var(3+3,i,j,k)=aux_FSIdata3D(i,j,k,FSI_EXTRAP_FLAG+1)
+       zone_gb(iz_gb)%var(3+2,i,j,k)= &
+         aux_FSIdata3D(i,j,k,FSI_SIGN_QUALITY+1)
+       zone_gb(iz_gb)%var(3+3,i,j,k)= &
+         aux_FSIdata3D(i,j,k,FSI_EXTRAP_FLAG+1)
       enddo
       enddo
       enddo

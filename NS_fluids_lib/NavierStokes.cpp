@@ -7533,7 +7533,8 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
    setVal_localMF(FSI_MF,-99999.0,ibase+FSI_LEVELSET,1,ngrow_make_distance);
    setVal_localMF(FSI_MF,0.0,ibase+FSI_SIGN_QUALITY,1,ngrow_make_distance);
    setVal_localMF(FSI_MF,0.0,ibase+FSI_TEMPERATURE,1,ngrow_make_distance);
-   setVal_localMF(FSI_MF,0.0,ibase+FSI_EXTRAP_FLAG,1,ngrow_make_distance);
+   setVal_localMF(FSI_MF,FSI_NOTHING_VALID,
+		  ibase+FSI_EXTRAP_FLAG,1,ngrow_make_distance);
    setVal_localMF(FSI_MF,0.0,ibase+FSI_FORCE,3,ngrow_make_distance);
     // perimeter in 2D
    setVal_localMF(FSI_MF,0.0,ibase+FSI_SIZE,1,ngrow_make_distance);
@@ -8836,7 +8837,8 @@ void NavierStokes::ns_header_msg_level(
 
      if ((level>0)||
          ((level==0)&&(cur_time>0.0))) {
-      setVal_localMF(FSI_MF,10.0,ibase+FSI_EXTRAP_FLAG,1,ngrow_make_distance); 
+      setVal_localMF(FSI_MF,FSI_COARSE_LS_SIGN_VEL_VALID,
+		     ibase+FSI_EXTRAP_FLAG,1,ngrow_make_distance); 
      } else if ((level==0)&&(cur_time==0.0)) {
       // do nothing
      } else
