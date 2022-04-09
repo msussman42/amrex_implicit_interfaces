@@ -4869,7 +4869,9 @@ REAL_T cum_areacentroid(3)
      endif
 
      if (inode.ne.nodedomain+1) then
-      print *,"inode invalid"
+      print *,"inode invalid1"
+      print *,"inode=",inode
+      print *,"nodedomain=",nodedomain
       stop
      endif
 
@@ -7738,7 +7740,9 @@ end subroutine volume_sanity_check
        nodedomain=4*(sdim-1)
 
        if (inode.ne.nodedomain+1) then
-        print *,"inode invalid"
+        print *,"inode invalid2"
+        print *,"inode=",inode
+        print *,"nodedomain=",nodedomain
         stop
        endif
        call intersection_volume( &
@@ -7872,7 +7876,9 @@ end subroutine volume_sanity_check
       nodedomain=4*(sdim-1)
 
       if (inode.ne.nodedomain+1) then
-       print *,"inode invalid"
+       print *,"inode invalid3"
+       print *,"inode=",inode
+       print *,"nodedomain=",nodedomain
        stop
       endif
       call intersection_volume_simple( &
@@ -8017,7 +8023,9 @@ end subroutine volume_sanity_check
       nodedomain=4*(sdim-1)
 
       if (inode.ne.nodedomain+1) then
-       print *,"inode invalid"
+       print *,"inode invalid4"
+       print *,"inode=",inode
+       print *,"nodedomain=",nodedomain
        stop
       endif
       call intersection_volume_and_map( &
@@ -8129,7 +8137,9 @@ end subroutine volume_sanity_check
        endif
 
        if (inode.ne.nodedomain+1) then
-        print *,"inode invalid"
+        print *,"inode invalid5"
+        print *,"inode=",inode
+        print *,"nodedomain=",nodedomain
         stop
        endif
 
@@ -8251,7 +8261,9 @@ end subroutine volume_sanity_check
        endif
 
        if (inode.ne.nodedomain+1) then
-        print *,"inode invalid"
+        print *,"inode invalid6"
+        print *,"inode=",inode
+        print *,"nodedomain=",nodedomain
         stop
        endif
        call intersection_volume( &
