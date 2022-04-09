@@ -114,17 +114,6 @@ INTEGER_T :: stat
 return
 end subroutine CRYOGENIC_TANK_MK_OPEN_CASFILE
 
-subroutine CRYOGENIC_TANK_MK_SIGN_BOUNDING_BOX_AUX(auxcomp,signval)
-use probcommon_module
-IMPLICIT NONE
-INTEGER_T, intent(in) :: auxcomp
-INTEGER_T, intent(out) :: signval
-
-signval=-1
-
-return
-end subroutine CRYOGENIC_TANK_MK_SIGN_BOUNDING_BOX_AUX
-
 subroutine CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX(auxcomp, &
     minnode,maxnode,LS_FROM_SUBROUTINE,aux_ncells_max_side)
 use probcommon_module
