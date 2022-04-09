@@ -86,6 +86,7 @@ type mesh_type
  !average of adjoining element normals.
  REAL_T, pointer :: EdgeNormal(:,:) !(3*nodes_per_elem,nelements) 
  INTEGER_T, pointer :: EdgeElemId(:,:) !(nodes_per_elem,nelements)
+ INTEGER_T, pointer :: EdgeElemIdNode(:,:) !(nodes_per_elem,nelements)
  INTEGER_T :: NumNodesBIG
  INTEGER_T :: NumIntElemsBIG
  INTEGER_T, pointer :: ElemNodeCountBIG(:)
@@ -104,7 +105,8 @@ type mesh_type
  INTEGER_T, pointer :: IntElemBIG(:,:) ! IntElemBIG(inode,ielem)
  !average of adjoining element normals.
  REAL_T, pointer :: EdgeNormalBIG(:,:) ! EdgeNormalBIG(3*(inode-1)+dir,ielem)
- INTEGER_T, pointer :: EdgeElemIdBIG(:,:) ! EdgeElemIdBIG(inode,ielem)
+ INTEGER_T, pointer :: EdgeElemIdBIG(:,:)!EdgeElemIdBIG(inode,ielem)
+ INTEGER_T, pointer :: EdgeElemIdNodeBIG(:,:)!EdgeElemIdNodeBIG(inode,ielem)
  REAL_T, pointer :: Node(:,:)  ! Node(dir,inode)
  REAL_T, pointer :: Node_old(:,:)
  REAL_T, pointer :: Node_new(:,:)
@@ -554,6 +556,8 @@ INTEGER_T :: dir
            FSI_mesh_type%NumIntElems))
   allocate(FSI_mesh_type%EdgeElemId(FSI_mesh_type%IntElemDim, &
            FSI_mesh_type%NumIntElems))
+  allocate(FSI_mesh_type%EdgeElemIdNode(FSI_mesh_type%IntElemDim, &
+           FSI_mesh_type%NumIntElems))
  else if (allocate_intelem.eq.0) then
   ! do nothing
  else
@@ -940,22 +944,46 @@ REAL_T :: AINV(3,3)
       endif
      else if ((mag_offline.ge.VOFTOL).or. &
               (overlap_size.le.VOFTOL)) then
-      if ((overlap_size.ge.zero).and. &
-         (overlap_size.le.VOFTOL)) then
-       if (compare_flag.eq.1) then
-        ! do nothing
-       else if (compare_flag.eq.-1) then
+
+      if (compare_flag.eq.1) then
+       ! do nothing
+      else if (compare_flag.eq.-1) then
+       ! do nothing
+      else
+       print *,"compare_flag invalid"
+       stop
+      endif
+
+      if (mag_offline.ge.VOFTOL) then
+       ! do nothing
+      else if ((mag_offline.le.VOFTOL).and.(mag_offline.ge.zero)) then 
+       if ((overlap_size.ge.zero).and. &
+           (overlap_size.le.VOFTOL)) then
         ! do nothing
        else
-        print *,"compare_flag invalid"
+        print *,"overlap_size invalid1:",overlap_size
+        print *,"overlap_size ",overlap_size
+        print *,"mag_offline ",mag_offline
+        print *,"edgej_mag ",edgej_mag
+        print *,"edgejp1_mag ",edgejp1_mag
+        print *,"edgej ",edgej(1),edgej(2),edgej(3), &
+         edgej(4),edgej(5),edgej(6)
+        print *,"edgejp1 ",edgejp1(1),edgejp1(2),edgejp1(3), &
+         edgejp1(4),edgejp1(5),edgejp1(6)
+        print *,"x1test: ",x1test(1),x1test(2),x1test(3)
+        print *,"x2test: ",x2test(1),x2test(2),x2test(3)
+        print *,"x1test_map: ",x1test_map(1),x1test_map(2),x1test_map(3)
+        print *,"x2test_map: ",x2test_map(1),x2test_map(2),x2test_map(3)
         stop
        endif
       else
-       print *,"overlap_size invalid"
+       print *,"mag_offline invalid"
        stop
       endif
      else
-      print *,"mag_offline or overlap_size invalid"
+      print *,"mag_offline or overlap_size invalid:"
+      print *,"overlap_size ",overlap_size
+      print *,"mag_offline ",mag_offline
       stop
      endif
     else
@@ -1386,6 +1414,55 @@ INTEGER_T :: num_nodes_local
 
 end subroutine remove_duplicate_nodes
 
+subroutine print_edge( &
+ FSI_mesh_type,edit_refined_data,ielem,inode,edge_data)
+IMPLICIT NONE
+INTEGER_T, intent(in) :: edit_refined_data
+type(mesh_type), intent(in) :: FSI_mesh_type
+INTEGER_T, intent(in) :: ielem
+INTEGER_T, intent(in) :: inode
+REAL_T, intent(out) :: edge_data(6)
+INTEGER_T :: inodep1
+INTEGER_T :: local_nodes_per_elem
+INTEGER_T :: dir
+REAL_T :: x1(3)
+REAL_T :: x2(3)
+
+ inodep1=inode+1
+ if (edit_refined_data.eq.0) then
+  local_nodes_per_elem=FSI_mesh_type%ElemData(1,ielem)
+  if (inode.eq.local_nodes_per_elem) then
+   inodep1=1
+  endif 
+  do dir=1,3
+   x1(dir)=FSI_mesh_type%Node(dir,FSI_mesh_type%IntElem(inode,ielem))
+   x2(dir)=FSI_mesh_type%Node(dir,FSI_mesh_type%IntElem(inodep1,ielem))
+  enddo
+ else if (edit_refined_data.eq.1) then
+  local_nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
+  if (inode.eq.local_nodes_per_elem) then
+   inodep1=1
+  endif 
+  do dir=1,3
+   x1(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,ielem))
+   x2(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inodep1,ielem))
+  enddo
+ else
+  print *,"edit_refined_data invalid"
+  stop
+ endif
+ do dir=1,3
+  edge_data(dir)=x1(dir)
+  edge_data(dir+3)=x2(dir)
+ enddo
+
+ print *,"print_edge:"
+ print *,"ielem,inode ",ielem,inode
+ print *,"x1 ",x1(1),x1(2),x1(3)
+ print *,"x2 ",x2(1),x2(2),x2(3)
+
+end subroutine print_edge
+
 ! if an opposite element cannot be found for a given edge, then there
 ! is a "hanging node" which must be removed by either strategically
 ! splitting or merging selective elements.
@@ -1420,6 +1497,8 @@ INTEGER_T :: edge_id
 INTEGER_T :: save_edge
 INTEGER_T :: old_edge_id
 INTEGER_T :: old_edge_id_opp
+INTEGER_T :: old_edge_id_node
+INTEGER_T :: old_edge_id_node_opp
 INTEGER_T :: iedge
 INTEGER_T :: jedge
 INTEGER_T :: ielem
@@ -1433,6 +1512,9 @@ INTEGER_T :: nelems
 INTEGER_T :: num_equal
 REAL_T :: edgej(6)
 REAL_T :: edgejp1(6)
+REAL_T :: old_edge_data(6)
+REAL_T :: cur_edge_data(6)
+REAL_T :: opp_edge_data(6)
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
@@ -1497,6 +1579,7 @@ REAL_T :: edgejp1(6)
    enddo
    do dir=1,nodes_per_elem
     FSI_mesh_type%EdgeElemId(dir,ielem)=0
+    FSI_mesh_type%EdgeElemIdNode(dir,ielem)=0
    enddo
    local_nodes_per_elem=FSI_mesh_type%ElemData(1,ielem)
    if (local_nodes_per_elem.le.nodes_per_elem) then
@@ -1518,6 +1601,7 @@ REAL_T :: edgejp1(6)
    enddo
    do dir=1,nodes_per_elem
     FSI_mesh_type%EdgeElemIdBIG(dir,ielem)=0
+    FSI_mesh_type%EdgeElemIdNodeBIG(dir,ielem)=0
    enddo
    local_nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
    if (local_nodes_per_elem.eq.3) then
@@ -1593,8 +1677,15 @@ REAL_T :: edgejp1(6)
     save_edge=sorted_edge_list(jedge)
     sorted_edge_list(jedge)=sorted_edge_list(jedge+1)
     sorted_edge_list(jedge+1)=save_edge
-   else if ((compare_flag.eq.0).or.(compare_flag.eq.-1)) then
+   else if (compare_flag.eq.-1) then
     ! do nothing
+   else if (compare_flag.eq.0) then
+    ielem=edge_ielem(sorted_edge_list(jedge))
+    ielem_opp=edge_ielem(sorted_edge_list(jedge+1))
+    if (ielem.eq.ielem_opp) then
+     print *,"cannot have two edges from the same element be equal"
+     stop
+    endif 
    else
     print *,"compare_flag invalid"
     stop
@@ -1674,9 +1765,16 @@ REAL_T :: edgejp1(6)
    if (edit_refined_data.eq.0) then
     old_edge_id=FSI_mesh_type%EdgeElemId(inode,ielem)
     old_edge_id_opp=FSI_mesh_type%EdgeElemId(inode_opp,ielem_opp)
-    if ((old_edge_id.eq.0).and.(old_edge_id_opp.eq.0)) then
+    old_edge_id_node=FSI_mesh_type%EdgeElemIdNode(inode,ielem)
+    old_edge_id_node_opp=FSI_mesh_type%EdgeElemIdNode(inode_opp,ielem_opp)
+    if ((old_edge_id.eq.0).and. &
+        (old_edge_id_opp.eq.0).and. &
+        (old_edge_id_node.eq.0).and. &
+        (old_edge_id_node_opp.eq.0)) then
      FSI_mesh_type%EdgeElemId(inode,ielem)=ielem_opp
      FSI_mesh_type%EdgeElemId(inode,ielem_opp)=ielem
+     FSI_mesh_type%EdgeElemIdNode(inode,ielem)=inode_opp
+     FSI_mesh_type%EdgeElemIdNode(inode,ielem_opp)=inode
      call scinormal(ielem,normal, &
        FSI_mesh_type,part_id,max_part_id, &
        generate_time)
@@ -1712,7 +1810,29 @@ REAL_T :: edgejp1(6)
               local_normal(dir)
      enddo
     else
-     print *,"old_edge_id or old_edge_id_opp invalid"
+     print *,"old_edge_id,old_edge_id_opp,old_edge_id_node,node_opp bad0"
+     print *,"old_edge_id ",old_edge_id
+     print *,"old_edge_id_opp ",old_edge_id_opp
+     print *,"old_edge_id_node ",old_edge_id_node
+     print *,"old_edge_id_node_opp ",old_edge_id_node_opp
+     print *,"ielem ",ielem
+     print *,"ielem_opp ",ielem_opp
+     print *,"inode ",inode
+     print *,"inode_opp ",inode_opp
+     call print_edge(FSI_mesh_type,edit_refined_data,old_edge_id, &
+      old_edge_id_node,old_edge_data)
+     call print_edge(FSI_mesh_type,edit_refined_data,ielem,inode,cur_edge_data)
+     call print_edge(FSI_mesh_type,edit_refined_data,ielem_opp,inode_opp, &
+      opp_edge_data)
+     call compare_edge(old_edge_data,cur_edge_data,coord_scale, &
+       compare_flag,overlap_size)
+     print *,"compare_flag old,cur ",compare_flag
+     call compare_edge(cur_edge_data,old_edge_data,coord_scale, &
+       compare_flag,overlap_size)
+     print *,"compare_flag cur,old ",compare_flag
+     call compare_edge(opp_edge_data,cur_edge_data,coord_scale, &
+       compare_flag,overlap_size)
+     print *,"compare_flag opp,cur ",compare_flag
      stop
     endif
 
@@ -1720,9 +1840,16 @@ REAL_T :: edgejp1(6)
 
     old_edge_id=FSI_mesh_type%EdgeElemIdBIG(inode,ielem)
     old_edge_id_opp=FSI_mesh_type%EdgeElemIdBIG(inode_opp,ielem_opp)
-    if ((old_edge_id.eq.0).and.(old_edge_id_opp.eq.0)) then
+    old_edge_id_node=FSI_mesh_type%EdgeElemIdNodeBIG(inode,ielem)
+    old_edge_id_node_opp=FSI_mesh_type%EdgeElemIdNodeBIG(inode_opp,ielem_opp)
+    if ((old_edge_id.eq.0).and. &
+        (old_edge_id_opp.eq.0).and. &
+        (old_edge_id_node.eq.0).and. &
+        (old_edge_id_node_opp.eq.0)) then
      FSI_mesh_type%EdgeElemIdBIG(inode,ielem)=ielem_opp
      FSI_mesh_type%EdgeElemIdBIG(inode,ielem_opp)=ielem
+     FSI_mesh_type%EdgeElemIdNodeBIG(inode,ielem)=inode_opp
+     FSI_mesh_type%EdgeElemIdNodeBIG(inode,ielem_opp)=inode
      call scinormalBIG(ielem,normal, &
        FSI_mesh_type,part_id,max_part_id, &
        generate_time)
@@ -1758,7 +1885,15 @@ REAL_T :: edgejp1(6)
               local_normal(dir)
      enddo
     else
-     print *,"old_edge_id or old_edge_id_opp invalid"
+     print *,"old_edge_id,old_edge_id_opp,old_edge_id_node,node_opp bad1"
+     print *,"old_edge_id ",old_edge_id
+     print *,"old_edge_id_opp ",old_edge_id_opp
+     print *,"old_edge_id_node ",old_edge_id_node
+     print *,"old_edge_id_node_opp ",old_edge_id_node_opp
+     print *,"ielem ",ielem
+     print *,"ielem_opp ",ielem_opp
+     print *,"inode ",inode
+     print *,"inode_opp ",inode_opp
      stop
     endif
    else
@@ -2592,6 +2727,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
   deallocate(FSI_mesh_type%IntElemBIG)
   deallocate(FSI_mesh_type%EdgeNormalBIG)
   deallocate(FSI_mesh_type%EdgeElemIdBIG)
+  deallocate(FSI_mesh_type%EdgeElemIdNodeBIG)
 
  endif
 
@@ -2614,6 +2750,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
  !average of adjoining element normals.
  allocate(FSI_mesh_type%EdgeNormalBIG(9,FSI_mesh_type%NumIntElemsBIG))
  allocate(FSI_mesh_type%EdgeElemIdBIG(3,FSI_mesh_type%NumIntElemsBIG))
+ allocate(FSI_mesh_type%EdgeElemIdNodeBIG(3,FSI_mesh_type%NumIntElemsBIG))
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
   print *,"NumNodes, NumIntElems ",FSI_mesh_type%NumNodes, &
@@ -8966,7 +9103,7 @@ INTEGER_T, allocatable :: raw_elements(:,:)
   aux_FSI(auxcomp)%CTML_flag=0
     !refine_factor=1 => refine the Lagrangian mesh as necessary.
     !refine_factor=0 => n_lag_levels=2
-  aux_FSI(auxcomp)%refine_factor=1
+  aux_FSI(auxcomp)%refine_factor=0
   aux_FSI(auxcomp)%bounding_box_ngrow=3
 
   if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
