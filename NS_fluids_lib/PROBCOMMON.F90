@@ -871,6 +871,18 @@ implicit none
       INTEGER_T, intent(out) :: aux_ncells_max_side
       end subroutine TEMPLATE_BOUNDING_BOX_AUX
 
+      subroutine TEMPLATE_SIGN_BOUNDING_BOX_AUX(auxcomp,signval)
+      INTEGER_T, intent(in) :: auxcomp
+      INTEGER_T, intent(out) :: signval
+      end subroutine TEMPLATE_SIGN_BOUNDING_BOX_AUX
+
+      subroutine TEMPLATE_SEED_AUX(auxcomp,xseed,LS_seed,seedflag)
+      INTEGER_T, intent(in) :: auxcomp
+      REAL_T, intent(in) :: xseed(3)
+      REAL_T, intent(out) :: LS_seed
+      INTEGER_T, intent(out) :: seedflag
+      end subroutine TEMPLATE_SEED_AUX
+
       subroutine TEMPLATE_clamped_LS(x,t,LS,vel,temperature)
        REAL_T, intent(in) :: x(SDIM)
        REAL_T, intent(in) :: t
