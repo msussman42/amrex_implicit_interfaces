@@ -935,11 +935,21 @@ REAL_T :: AINV(3,3)
          (mag_offline.ge.zero).and. &
          (overlap_size.ge.VOFTOL).and. &
          (overlap_size.le.one+VOFTOL)) then
-      compare_flag=0
       if (overlap_size.ge.one-VOFTOL) then
-       ! do nothing
-      else
-       print *,"overlap_size not equal to 1"
+       compare_flag=0
+      else if ((overlap_size.le.one-VOFTOL).and. &
+               (overlap_size.ge.VOFTOL)) then
+
+       if (compare_flag.eq.1) then
+        ! do nothing
+       else if (compare_flag.eq.-1) then
+        ! do nothing
+       else
+        print *,"compare_flag invalid"
+        stop
+       endif
+
+       print *,"WARNING:overlap_size not equal to 1"
        print *,"check for hanging nodes"
        print *,"overlap_size=",overlap_size
        print *,"mag_offline=",mag_offline
@@ -955,6 +965,9 @@ REAL_T :: AINV(3,3)
        print *,"x1test_map: ",x1test_map(1),x1test_map(2),x1test_map(3)
        print *,"x2test_map: ",x2test_map(1),x2test_map(2),x2test_map(3)
 
+       ! stop
+      else
+       print *,"overlap_size invalid"
        stop
       endif
      else if ((mag_offline.ge.VOFTOL).or. &
@@ -1754,9 +1767,21 @@ REAL_T :: opp_edge_data(6)
 
   if (num_equal.eq.0) then
    ielem=edge_ielem(sorted_edge_list(iedge))
+   ielem_opp=ielem
+   inode=edge_inode(sorted_edge_list(iedge))
+   inode_opp=inode
+
    if (edit_refined_data.eq.0) then
+    old_edge_id=FSI_mesh_type%EdgeElemId(inode,ielem)
+    old_edge_id_opp=old_edge_id
+    old_edge_id_node=FSI_mesh_type%EdgeElemIdNode(inode,ielem)
+    old_edge_id_node_opp=old_edge_id_node
     doubly_flag=FSI_mesh_type%ElemData(DOUBLYCOMP,ielem)
    else if (edit_refined_data.eq.1) then
+    old_edge_id=FSI_mesh_type%EdgeElemIdBIG(inode,ielem)
+    old_edge_id_opp=old_edge_id
+    old_edge_id_node=FSI_mesh_type%EdgeElemIdNodeBIG(inode,ielem)
+    old_edge_id_node_opp=old_edge_id_node
     doubly_flag=FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem)
    else
     print *,"edit_refined_data invalid"
@@ -1765,13 +1790,12 @@ REAL_T :: opp_edge_data(6)
    if (doubly_flag.eq.1) then
     ! do nothing
    else if (doubly_flag.eq.0) then
-    print *,"cannot have a hanging edge for a singly wetted element"
-    stop
+    print *,"Warning:cannot have a hanging edge for a singly wetted element"
+!    stop
    else
     print *,"doubly_flag invalid"
     stop
    endif
-   iedge=iedge+1
   else if (num_equal.eq.1) then
    ielem=edge_ielem(sorted_edge_list(iedge))
    ielem_opp=edge_ielem(sorted_edge_list(iedge+1))
@@ -1782,178 +1806,186 @@ REAL_T :: opp_edge_data(6)
     old_edge_id_opp=FSI_mesh_type%EdgeElemId(inode_opp,ielem_opp)
     old_edge_id_node=FSI_mesh_type%EdgeElemIdNode(inode,ielem)
     old_edge_id_node_opp=FSI_mesh_type%EdgeElemIdNode(inode_opp,ielem_opp)
-    if ((old_edge_id.eq.0).and. &
-        (old_edge_id_opp.eq.0).and. &
-        (old_edge_id_node.eq.0).and. &
-        (old_edge_id_node_opp.eq.0)) then
-     FSI_mesh_type%EdgeElemId(inode,ielem)=ielem_opp
-     FSI_mesh_type%EdgeElemId(inode_opp,ielem_opp)=ielem
-     FSI_mesh_type%EdgeElemIdNode(inode,ielem)=inode_opp
-     FSI_mesh_type%EdgeElemIdNode(inode_opp,ielem_opp)=inode
-     call scinormal(ielem,normal, &
-       FSI_mesh_type,part_id,max_part_id, &
-       generate_time)
-     call scinormal(ielem_opp,normal_opp, &
-       FSI_mesh_type,part_id,max_part_id, &
-       generate_time)
-     do dir=1,3
-      local_normal(dir)=half*(normal(dir)+normal_opp(dir))
-     enddo
-
-     mag=zero
-     do dir=1,3
-      mag=mag+local_normal(dir)**2
-     enddo
-     mag=sqrt(mag)
-     if (mag.gt.zero) then
-      do dir=1,3
-       local_normal(dir)=local_normal(dir)/mag
-      enddo
-     else if (mag.eq.zero) then
-      do dir=1,3
-       local_normal(dir)=zero
-      enddo
-     else
-      print *,"mag bust"
-      stop
-     endif
-
-     do dir=1,3
-      FSI_mesh_type%EdgeNormal(3*(inode-1)+dir,ielem)= &
-              local_normal(dir)
-      FSI_mesh_type%EdgeNormal(3*(inode_opp-1)+dir,ielem_opp)= &
-              local_normal(dir)
-     enddo
-
-    else
-     print *,"old_edge_id,old_edge_id_opp,old_edge_id_node,node_opp bad0"
-     print *,"old_edge_id ",old_edge_id
-     print *,"old_edge_id_opp ",old_edge_id_opp
-     print *,"old_edge_id_node ",old_edge_id_node
-     print *,"old_edge_id_node_opp ",old_edge_id_node_opp
-     print *,"ielem ",ielem
-     print *,"ielem_opp ",ielem_opp
-     print *,"inode ",inode
-     print *,"inode_opp ",inode_opp
-     call print_edge(FSI_mesh_type,edit_refined_data,old_edge_id, &
-      old_edge_id_node,old_edge_data)
-     call print_edge(FSI_mesh_type,edit_refined_data,ielem,inode,cur_edge_data)
-     call print_edge(FSI_mesh_type,edit_refined_data,ielem_opp,inode_opp, &
-      opp_edge_data)
-     call compare_edge(old_edge_data,cur_edge_data,coord_scale, &
-       compare_flag,overlap_size)
-     print *,"compare_flag old,cur ",compare_flag
-     call compare_edge(cur_edge_data,old_edge_data,coord_scale, &
-       compare_flag,overlap_size)
-     print *,"compare_flag cur,old ",compare_flag
-     call compare_edge(opp_edge_data,cur_edge_data,coord_scale, &
-       compare_flag,overlap_size)
-     print *,"compare_flag opp,cur ",compare_flag
-     print *,"iedge=",iedge
-     do dir=1,6
-      edgej(dir)=edge_endpoints(dir,sorted_edge_list(iedge))
-      edgejp1(dir)=edge_endpoints(dir,sorted_edge_list(iedge+1))
-      print *,"dir,edgej,edgejp1 ",dir,edgej(dir),edgejp1(dir)
-     enddo
-     stop
-    endif
-
    else if (edit_refined_data.eq.1) then
-
     old_edge_id=FSI_mesh_type%EdgeElemIdBIG(inode,ielem)
     old_edge_id_opp=FSI_mesh_type%EdgeElemIdBIG(inode_opp,ielem_opp)
     old_edge_id_node=FSI_mesh_type%EdgeElemIdNodeBIG(inode,ielem)
     old_edge_id_node_opp=FSI_mesh_type%EdgeElemIdNodeBIG(inode_opp,ielem_opp)
-    if ((old_edge_id.eq.0).and. &
-        (old_edge_id_opp.eq.0).and. &
-        (old_edge_id_node.eq.0).and. &
-        (old_edge_id_node_opp.eq.0)) then
-     FSI_mesh_type%EdgeElemIdBIG(inode,ielem)=ielem_opp
-     FSI_mesh_type%EdgeElemIdBIG(inode_opp,ielem_opp)=ielem
-     FSI_mesh_type%EdgeElemIdNodeBIG(inode,ielem)=inode_opp
-     FSI_mesh_type%EdgeElemIdNodeBIG(inode_opp,ielem_opp)=inode
-     call scinormalBIG(ielem,normal, &
-       FSI_mesh_type,part_id,max_part_id, &
-       generate_time)
-     call scinormalBIG(ielem_opp,normal_opp, &
-       FSI_mesh_type,part_id,max_part_id, &
-       generate_time)
-     do dir=1,3
-      local_normal(dir)=half*(normal(dir)+normal_opp(dir))
-     enddo
-
-     mag=zero
-     do dir=1,3
-      mag=mag+local_normal(dir)**2
-     enddo
-     mag=sqrt(mag)
-     if (mag.gt.zero) then
-      do dir=1,3
-       local_normal(dir)=local_normal(dir)/mag
-      enddo
-     else if (mag.eq.zero) then
-      do dir=1,3
-       local_normal(dir)=zero
-      enddo
-     else
-      print *,"mag bust"
-      stop
-     endif
-
-     do dir=1,3
-      FSI_mesh_type%EdgeNormalBIG(3*(inode-1)+dir,ielem)= &
-              local_normal(dir)
-      FSI_mesh_type%EdgeNormalBIG(3*(inode_opp-1)+dir,ielem_opp)= &
-              local_normal(dir)
-     enddo
-    else
-     print *,"old_edge_id,old_edge_id_opp,old_edge_id_node,node_opp bad1"
-     print *,"old_edge_id ",old_edge_id
-     print *,"old_edge_id_opp ",old_edge_id_opp
-     print *,"old_edge_id_node ",old_edge_id_node
-     print *,"old_edge_id_node_opp ",old_edge_id_node_opp
-     print *,"ielem ",ielem
-     print *,"ielem_opp ",ielem_opp
-     print *,"inode ",inode
-     print *,"inode_opp ",inode_opp
-     do dir=1,6
-      edgej(dir)=edge_endpoints(dir,sorted_edge_list(iedge))
-      edgejp1(dir)=edge_endpoints(dir,sorted_edge_list(iedge+1))
-      print *,"dir,edgej,edgejp1 ",dir,edgej(dir),edgejp1(dir)
-     enddo
-     stop
-    endif
    else
     print *,"edit_refined_data invalid"
     stop
    endif
+  else
+   print *,"num_equal invalid"
+   stop
+  endif
 
-   if (1.eq.1) then
-    print *,"START PAIRING INFO ---------------------------------"
-    print *,"iedge: ",iedge
+  if (edit_refined_data.eq.0) then
+   if ((old_edge_id.eq.0).and. &
+       (old_edge_id_opp.eq.0).and. &
+       (old_edge_id_node.eq.0).and. &
+       (old_edge_id_node_opp.eq.0)) then
+    FSI_mesh_type%EdgeElemId(inode,ielem)=ielem_opp
+    FSI_mesh_type%EdgeElemId(inode_opp,ielem_opp)=ielem
+    FSI_mesh_type%EdgeElemIdNode(inode,ielem)=inode_opp
+    FSI_mesh_type%EdgeElemIdNode(inode_opp,ielem_opp)=inode
+    call scinormal(ielem,normal, &
+      FSI_mesh_type,part_id,max_part_id, &
+      generate_time)
+    call scinormal(ielem_opp,normal_opp, &
+      FSI_mesh_type,part_id,max_part_id, &
+      generate_time)
+    do dir=1,3
+     local_normal(dir)=half*(normal(dir)+normal_opp(dir))
+    enddo
+
+    mag=zero
+    do dir=1,3
+     mag=mag+local_normal(dir)**2
+    enddo
+    mag=sqrt(mag)
+    if (mag.gt.zero) then
+     do dir=1,3
+      local_normal(dir)=local_normal(dir)/mag
+     enddo
+    else if (mag.eq.zero) then
+     do dir=1,3
+      local_normal(dir)=zero
+     enddo
+    else
+     print *,"mag bust"
+     stop
+    endif
+
+    do dir=1,3
+     FSI_mesh_type%EdgeNormal(3*(inode-1)+dir,ielem)= &
+             local_normal(dir)
+     FSI_mesh_type%EdgeNormal(3*(inode_opp-1)+dir,ielem_opp)= &
+             local_normal(dir)
+    enddo
+
+   else
+    print *,"old_edge_id,old_edge_id_opp,old_edge_id_node,node_opp bad0"
+    print *,"old_edge_id ",old_edge_id
+    print *,"old_edge_id_opp ",old_edge_id_opp
+    print *,"old_edge_id_node ",old_edge_id_node
+    print *,"old_edge_id_node_opp ",old_edge_id_node_opp
     print *,"ielem ",ielem
     print *,"ielem_opp ",ielem_opp
     print *,"inode ",inode
     print *,"inode_opp ",inode_opp
+    call print_edge(FSI_mesh_type,edit_refined_data,old_edge_id, &
+     old_edge_id_node,old_edge_data)
     call print_edge(FSI_mesh_type,edit_refined_data,ielem,inode,cur_edge_data)
     call print_edge(FSI_mesh_type,edit_refined_data,ielem_opp,inode_opp, &
      opp_edge_data)
+    call compare_edge(old_edge_data,cur_edge_data,coord_scale, &
+      compare_flag,overlap_size)
+    print *,"compare_flag old,cur ",compare_flag
+    call compare_edge(cur_edge_data,old_edge_data,coord_scale, &
+      compare_flag,overlap_size)
+    print *,"compare_flag cur,old ",compare_flag
     call compare_edge(opp_edge_data,cur_edge_data,coord_scale, &
-     compare_flag,overlap_size)
+      compare_flag,overlap_size)
     print *,"compare_flag opp,cur ",compare_flag
+    print *,"iedge=",iedge
     do dir=1,6
      edgej(dir)=edge_endpoints(dir,sorted_edge_list(iedge))
      edgejp1(dir)=edge_endpoints(dir,sorted_edge_list(iedge+1))
      print *,"dir,edgej,edgejp1 ",dir,edgej(dir),edgejp1(dir)
     enddo
-    print *,"END PAIRING INFO ---------------------------------"
-   endif 
+    stop
+   endif
 
-   iedge=iedge+2
+  else if (edit_refined_data.eq.1) then
+
+   if ((old_edge_id.eq.0).and. &
+       (old_edge_id_opp.eq.0).and. &
+       (old_edge_id_node.eq.0).and. &
+       (old_edge_id_node_opp.eq.0)) then
+    FSI_mesh_type%EdgeElemIdBIG(inode,ielem)=ielem_opp
+    FSI_mesh_type%EdgeElemIdBIG(inode_opp,ielem_opp)=ielem
+    FSI_mesh_type%EdgeElemIdNodeBIG(inode,ielem)=inode_opp
+    FSI_mesh_type%EdgeElemIdNodeBIG(inode_opp,ielem_opp)=inode
+    call scinormalBIG(ielem,normal, &
+      FSI_mesh_type,part_id,max_part_id, &
+      generate_time)
+    call scinormalBIG(ielem_opp,normal_opp, &
+      FSI_mesh_type,part_id,max_part_id, &
+      generate_time)
+    do dir=1,3
+     local_normal(dir)=half*(normal(dir)+normal_opp(dir))
+    enddo
+
+    mag=zero
+    do dir=1,3
+     mag=mag+local_normal(dir)**2
+    enddo
+    mag=sqrt(mag)
+    if (mag.gt.zero) then
+     do dir=1,3
+      local_normal(dir)=local_normal(dir)/mag
+     enddo
+    else if (mag.eq.zero) then
+     do dir=1,3
+      local_normal(dir)=zero
+     enddo
+    else
+     print *,"mag bust"
+     stop
+    endif
+
+    do dir=1,3
+     FSI_mesh_type%EdgeNormalBIG(3*(inode-1)+dir,ielem)= &
+             local_normal(dir)
+     FSI_mesh_type%EdgeNormalBIG(3*(inode_opp-1)+dir,ielem_opp)= &
+             local_normal(dir)
+    enddo
+   else
+    print *,"old_edge_id,old_edge_id_opp,old_edge_id_node,node_opp bad1"
+    print *,"old_edge_id ",old_edge_id
+    print *,"old_edge_id_opp ",old_edge_id_opp
+    print *,"old_edge_id_node ",old_edge_id_node
+    print *,"old_edge_id_node_opp ",old_edge_id_node_opp
+    print *,"ielem ",ielem
+    print *,"ielem_opp ",ielem_opp
+    print *,"inode ",inode
+    print *,"inode_opp ",inode_opp
+    do dir=1,6
+     edgej(dir)=edge_endpoints(dir,sorted_edge_list(iedge))
+     edgejp1(dir)=edge_endpoints(dir,sorted_edge_list(iedge+1))
+     print *,"dir,edgej,edgejp1 ",dir,edgej(dir),edgejp1(dir)
+    enddo
+    stop
+   endif
+
   else
-   print *,"num_equal invalid"
+   print *,"edit_refined_data invalid"
    stop
   endif
+
+  if ((1.eq.1).and.(num_equal.eq.1)) then
+   print *,"START PAIRING INFO ---------------------------------"
+   print *,"iedge: ",iedge
+   print *,"ielem ",ielem
+   print *,"ielem_opp ",ielem_opp
+   print *,"inode ",inode
+   print *,"inode_opp ",inode_opp
+   call print_edge(FSI_mesh_type,edit_refined_data,ielem,inode,cur_edge_data)
+   call print_edge(FSI_mesh_type,edit_refined_data,ielem_opp,inode_opp, &
+    opp_edge_data)
+   call compare_edge(opp_edge_data,cur_edge_data,coord_scale, &
+    compare_flag,overlap_size)
+   print *,"compare_flag opp,cur ",compare_flag
+   do dir=1,6
+    edgej(dir)=edge_endpoints(dir,sorted_edge_list(iedge))
+    edgejp1(dir)=edge_endpoints(dir,sorted_edge_list(iedge+1))
+    print *,"dir,edgej,edgejp1 ",dir,edgej(dir),edgejp1(dir)
+   enddo
+   print *,"END PAIRING INFO ---------------------------------"
+  endif 
+
+  iedge=iedge+num_equal+1
 
  enddo !while (iedge.lt.edge_id)
 
@@ -10938,7 +10970,9 @@ IMPLICIT NONE
   INTEGER_T :: nodes_per_elem,inode,nodeptr
   REAL_T, dimension(3) :: xc
   REAL_T, dimension(3) :: xclosest
+  REAL_T, dimension(3) :: element_xclosest
   REAL_T, dimension(3) :: xclosest_project
+  REAL_T, dimension(3) :: element_normal
   REAL_T, dimension(3) :: normal
   REAL_T, dimension(3) :: normal_closest
   REAL_T, dimension(3) :: ncrit
@@ -10958,6 +10992,7 @@ IMPLICIT NONE
   INTEGER_T :: dir
   REAL_T :: dotprod
   REAL_T :: unsigned_mindist  ! unsigned
+  REAL_T :: element_unsigned_mindist  ! unsigned
   REAL_T :: weighttotal,distwt,weight
   REAL_T, dimension(NCOMP_FSI) :: weight_top 
   REAL_T :: weight_bot
@@ -11354,11 +11389,16 @@ IMPLICIT NONE
      ! phi=n dot (x-xnot)
      ! phi>0 in the fluid (the sign will be switched later)
      ! this is the element normal (in contrast to the node normal)
-     call scinormalBIG(ielem,normal, &
-             FSI_mesh_type, &
-             part_id, &
-             nparts, &
-             time)
+     call scinormalBIG(ielem, &
+       normal, &
+       FSI_mesh_type, &
+       part_id, &
+       nparts, &
+       time)
+
+     do dir=1,3
+      element_normal(dir)=normal(dir)
+     enddo
 
      if (debug_all.eq.1) then
       print *,"ielem=",ielem
@@ -11377,7 +11417,8 @@ IMPLICIT NONE
        FSI_mesh_type, &
        part_id, &
        nparts, &
-       ielem,time,minnode,maxnode)
+       ielem,time, &
+       minnode,maxnode)
       ! sanity check
      do dir=1,3
       test_scale=maxnode(dir)-minnode(dir)
@@ -11494,9 +11535,14 @@ IMPLICIT NONE
          enddo
          do dir=1,3
           xclosest(dir)=xx(dir)-dotprod*normal(dir)
+
+          element_xclosest(dir)=xclosest(dir)
+
           normal_closest(dir)=normal(dir)
          enddo
          unsigned_mindist=abs(dotprod)
+
+         element_unsigned_mindist=unsigned_mindist
 
          if (debug_all.eq.1) then
           print *,"ielem=",ielem
@@ -11515,8 +11561,8 @@ IMPLICIT NONE
           xx, & ! target point at which the signed distance is sought.
           xclosest, &
           xclosest_project, &
-          normal, &
-          normal_closest, &
+          normal, & ! intent(in)
+          normal_closest, & ! intent(out)
           ielem, &
           element_node_edge_inplane, & 
           FSI_mesh_type, &
@@ -11645,13 +11691,28 @@ IMPLICIT NONE
              sign_quality=abs(n_dot_x)/(mag_n*mag_x)
 
              if (element_inplane.eq.1) then
-              if (sign_quality.gt.sign_quality_cutoff) then
+
+              n_dot_x=zero
+              mag_n=zero
+              mag_x=zero
+              do dir=1,3
+               mag_n=mag_n+element_normal(dir)**2
+               mag_x=mag_x+(xx(dir)-element_xclosest(dir))**2 
+               n_dot_x=n_dot_x+ &
+                element_normal(dir)*(xx(dir)-element_xclosest(dir))
+              enddo ! dir=1..3
+
+              mag_n=sqrt(mag_n)
+              mag_x=sqrt(mag_x)
+              sign_quality=abs(n_dot_x)/(mag_n*mag_x)
+
+              if (sign_quality.ge.0.99d0) then
                ! do nothing
               else
                print *,"sign_quality should be close to 1 if element_inplane"
                print *,"sign_quality: ",sign_quality
                print *,"abs(n_dot_x) ",abs(n_dot_x)
-               print *,"mag_n=",mag_n
+               print *,"mag_n (element_normal)=",mag_n
                print *,"mag_x=",mag_x
                print *,"dxBB ",dxBB(1),dxBB(2),dxBB(3)
                stop
@@ -11795,7 +11856,8 @@ IMPLICIT NONE
               xcrit(dir)=xside(dir)
              else if (n_dot_x.eq.zero) then
               xcrit(dir)=xx(dir)
-             else if ((phiside.ne.zero).and.(n_dot_x.ne.zero)) then
+             else if ((phiside.ne.zero).and. &
+                      (n_dot_x.ne.zero)) then
               xcrit(dir)=(abs(phiside)*xx(dir)+ &
                            abs(n_dot_x)*xside(dir))/  &
                           (abs(n_dot_x)+abs(phiside))
