@@ -8062,7 +8062,13 @@ REAL_T, dimension(3) :: velparm
    velparm(dir)=zero
   enddo ! dir=1..3
 
-  adjusted_tol=eul_over_lag_scale*element_buffer_tol
+  if ((eul_over_lag_scale.gt.zero).and. &
+      (eul_over_lag_scale.le.one)) then
+   adjusted_tol=eul_over_lag_scale*element_buffer_tol
+  else
+   print *,"eul_over_lag_scale invalid"
+   stop
+  endif
 
   call get_target_from_foot(xfoot,xtarget, &
     velparm,time, &
@@ -8341,7 +8347,13 @@ REAL_T, dimension(3) :: velparm
    enddo
   enddo
  
-  adjusted_tol=eul_over_lag_scale*element_buffer_tol
+  if ((eul_over_lag_scale.gt.zero).and. &
+      (eul_over_lag_scale.le.one)) then
+   adjusted_tol=eul_over_lag_scale*element_buffer_tol
+  else
+   print *,"eul_over_lag_scale invalid"
+   stop
+  endif
 
   if ((tx(1).lt.-adjusted_tol).or. &
       (tx(1).gt.one+adjusted_tol).or. &
@@ -11699,13 +11711,13 @@ IMPLICIT NONE
 
           if (element_inplane.eq.1) then
            if (abs(element_unsigned_mindist-unsigned_mindist).ge. &
-               element_buffer_tol*10.0d0*dxBB(dir)) then
+               element_buffer_tol*10.0d0*dxBB(1)) then
             print *,"element_unsigned_mindist error"
             print *,"element_unsigned_mindist=",element_unsigned_mindist
             print *,"unsigned_mindist=",unsigned_mindist
             stop
            else if (abs(element_unsigned_mindist-unsigned_mindist).le. &
-                    element_buffer_tol*10.0d0*dxBB(dir)) then
+                    element_buffer_tol*10.0d0*dxBB(1)) then
 
             mag_xproj=zero
             do dir=1,3
