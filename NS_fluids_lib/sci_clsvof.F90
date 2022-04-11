@@ -1199,6 +1199,74 @@ INTEGER_T :: inode(3)
 
 end subroutine tecplot_normals
 
+subroutine TopDownMergeSort(FSI_mesh_type,coord_scale,A,B,n)
+IMPLICIT NONE
+type(mesh_type), intent(in) :: FSI_mesh_type
+REAL_T, intent(in) :: coord_scale
+INTEGER_T, intent(in) :: n
+INTEGER_T, intent(inout) :: A(0:n-1)
+INTEGER_T, intent(inout) :: B(0:n-1)
+
+ call CopyArray(A,0,n,B)
+ call TopDownSplitMerge(FSI_mesh_type,coord_scale,B,0,n,A,n)
+
+end subroutine TopDownMergeSort
+
+
+recursive subroutine TopDownSplitMerge(FSI_mesh_type,coord_scale, &
+ B,iBegin,iEnd,A,n)
+IMPLICIT NONE
+type(mesh_type), intent(in) :: FSI_mesh_type
+REAL_T, intent(in) :: coord_scale
+INTEGER_T, intent(in) :: n
+INTEGER_T, intent(in) :: iBegin
+INTEGER_T, intent(in) :: iEnd
+INTEGER_T, intent(inout) :: A(0:n-1)
+INTEGER_T, intent(inout) :: B(0:n-1)
+INTEGER_T :: iMiddle
+
+ if (iEnd-iBegin.le.1) then
+  ! do nothing
+ else
+  iMiddle=(iEnd+iBegin)/2
+  call TopDownSplitMerge(FSI_mesh_type,coord_scale,A,iBegin,iMiddle,B,n)
+  call TopDownSplitMerge(FSI_mesh_type,coord_scale,A,iMiddle,iEnd,B,n)
+  call TopDownMerge(FSI_mesh_type,coord_scale,B,iBegin,iMiddle,iEnd,A,n)
+
+end subroutine TopDownSplitMerge
+
+
+subroutine TopDownMerge(FSI_mesh_type,coord_scale, &
+ A,iBegin,iMiddle,iEnd,B,n)
+IMPLICIT NONE
+type(mesh_type), intent(in) :: FSI_mesh_type
+REAL_T, intent(in) :: coord_scale
+INTEGER_T, intent(in) :: n
+INTEGER_T, intent(in) :: iBegin
+INTEGER_T, intent(in) :: iMiddle
+INTEGER_T, intent(in) :: iEnd
+INTEGER_T, intent(inout) :: A(0:n-1)
+INTEGER_T, intent(inout) :: B(0:n-1)
+INTEGER_T :: i,j,k
+
+ i=iBegin
+ j=iMiddle
+ k=iBegin
+
+ do while (k.lt.iEnd)
+  if ((i.lt.iMiddle).and.  FIX ME
+ for (k=iBegin
+ if (iEnd-iBegin.le.1) then
+  ! do nothing
+ else
+  iMiddle=(iEnd+iBegin)/2
+  call TopDownSplitMerge(FSI_mesh_type,coord_scale,A,iBegin,iMiddle,B,n)
+  call TopDownSplitMerge(FSI_mesh_type,coord_scale,A,iMiddle,iEnd,B,n)
+  call TopDownMerge(FSI_mesh_type,coord_scale,B,iBegin,iMiddle,iEnd,A,n)
+
+end subroutine TopDownMerge
+
+
 subroutine remove_duplicate_nodes(FSI_mesh_type,part_id,max_part_id)
 IMPLICIT NONE
 INTEGER_T, intent(in) :: part_id
