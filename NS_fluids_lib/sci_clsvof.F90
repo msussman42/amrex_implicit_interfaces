@@ -1036,13 +1036,16 @@ REAL_T :: AINV(3,3)
 end subroutine compare_edge
 
 
-subroutine compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
+subroutine compare_nodes(FSI_mesh_type, &
+                jnode,jnodep1, &
+                sorted_node_list, &
                 coord_scale,compare_flag)
 IMPLICIT NONE
 type(mesh_type), intent(in) :: FSI_mesh_type
 INTEGER_T, allocatable, intent(in) :: sorted_node_list(:)
 REAL_T, intent(in) :: coord_scale
 INTEGER_T, intent(in) :: jnode
+INTEGER_T, intent(in) :: jnodep1
 INTEGER_T, intent(out) :: compare_flag
 REAL_T :: nodej(3)
 REAL_T :: nodejp1(3)
@@ -1057,7 +1060,7 @@ INTEGER_T :: dir
 
  do dir=1,3
   nodej(dir)=FSI_mesh_type%NodeBIG(dir,sorted_node_list(jnode))
-  nodejp1(dir)=FSI_mesh_type%NodeBIG(dir,sorted_node_list(jnode+1))
+  nodejp1(dir)=FSI_mesh_type%NodeBIG(dir,sorted_node_list(jnodep1))
  enddo
  call compare_core(nodej,nodejp1,coord_scale,compare_flag,3)
 
@@ -1204,67 +1207,94 @@ IMPLICIT NONE
 type(mesh_type), intent(in) :: FSI_mesh_type
 REAL_T, intent(in) :: coord_scale
 INTEGER_T, intent(in) :: n
-INTEGER_T, intent(inout) :: A(0:n-1)
-INTEGER_T, intent(inout) :: B(0:n-1)
+INTEGER_T, allocatable, intent(inout) :: A(:)
+INTEGER_T, allocatable, intent(inout) :: B(:)
 
- call CopyArray(A,0,n,B)
- call TopDownSplitMerge(FSI_mesh_type,coord_scale,B,0,n,A,n)
+ call CopyArray(FSI_mesh_type,coord_scale,A,0,n,B)
+ call TopDownSplitMerge(FSI_mesh_type,coord_scale,B,0,n,A)
 
 end subroutine TopDownMergeSort
 
 
 recursive subroutine TopDownSplitMerge(FSI_mesh_type,coord_scale, &
- B,iBegin,iEnd,A,n)
+ B,iBegin,iEnd,A)
 IMPLICIT NONE
 type(mesh_type), intent(in) :: FSI_mesh_type
 REAL_T, intent(in) :: coord_scale
-INTEGER_T, intent(in) :: n
 INTEGER_T, intent(in) :: iBegin
 INTEGER_T, intent(in) :: iEnd
-INTEGER_T, intent(inout) :: A(0:n-1)
-INTEGER_T, intent(inout) :: B(0:n-1)
+INTEGER_T, allocatable, intent(inout) :: A(:)
+INTEGER_T, allocatable, intent(inout) :: B(:)
 INTEGER_T :: iMiddle
 
  if (iEnd-iBegin.le.1) then
   ! do nothing
  else
   iMiddle=(iEnd+iBegin)/2
-  call TopDownSplitMerge(FSI_mesh_type,coord_scale,A,iBegin,iMiddle,B,n)
-  call TopDownSplitMerge(FSI_mesh_type,coord_scale,A,iMiddle,iEnd,B,n)
-  call TopDownMerge(FSI_mesh_type,coord_scale,B,iBegin,iMiddle,iEnd,A,n)
+  call TopDownSplitMerge(FSI_mesh_type,coord_scale,A,iBegin,iMiddle,B)
+  call TopDownSplitMerge(FSI_mesh_type,coord_scale,A,iMiddle,iEnd,B)
+  call TopDownMerge(FSI_mesh_type,coord_scale,B,iBegin,iMiddle,iEnd,A)
+ endif
 
 end subroutine TopDownSplitMerge
 
 
 subroutine TopDownMerge(FSI_mesh_type,coord_scale, &
- A,iBegin,iMiddle,iEnd,B,n)
+ A,iBegin,iMiddle,iEnd,B)
 IMPLICIT NONE
 type(mesh_type), intent(in) :: FSI_mesh_type
 REAL_T, intent(in) :: coord_scale
-INTEGER_T, intent(in) :: n
 INTEGER_T, intent(in) :: iBegin
 INTEGER_T, intent(in) :: iMiddle
 INTEGER_T, intent(in) :: iEnd
-INTEGER_T, intent(inout) :: A(0:n-1)
-INTEGER_T, intent(inout) :: B(0:n-1)
+INTEGER_T, allocatable, intent(inout) :: A(:)
+INTEGER_T, allocatable, intent(inout) :: B(:)
 INTEGER_T :: i,j,k
+INTEGER_T :: compare_flag
 
  i=iBegin
  j=iMiddle
  k=iBegin
 
  do while (k.lt.iEnd)
-  if ((i.lt.iMiddle).and.  FIX ME
- for (k=iBegin
- if (iEnd-iBegin.le.1) then
-  ! do nothing
- else
-  iMiddle=(iEnd+iBegin)/2
-  call TopDownSplitMerge(FSI_mesh_type,coord_scale,A,iBegin,iMiddle,B,n)
-  call TopDownSplitMerge(FSI_mesh_type,coord_scale,A,iMiddle,iEnd,B,n)
-  call TopDownMerge(FSI_mesh_type,coord_scale,B,iBegin,iMiddle,iEnd,A,n)
+   !Ai<Aj compare_flag=-1
+   !Ai>Aj compare_flag=1
+  call compare_nodes(FSI_mesh_type, &
+    i+1,j+1, &
+    A, &
+    coord_scale,compare_flag)
+
+  if ((i.lt.iMiddle).and. &
+      ((j.ge.iEnd).or.(compare_flag.le.0))) then
+   B(k+1)=A(i+1)
+   i=i+1
+  else
+   B(k+1)=A(j+1)
+   j=j+1
+  endif
+  k=k+1 
+ enddo ! do while (k.lt.iEnd)
 
 end subroutine TopDownMerge
+
+
+subroutine CopyArray(FSI_mesh_type,coord_scale, &
+ A,iBegin,iEnd,B)
+IMPLICIT NONE
+type(mesh_type), intent(in) :: FSI_mesh_type
+REAL_T, intent(in) :: coord_scale
+INTEGER_T, intent(in) :: iBegin
+INTEGER_T, intent(in) :: iEnd
+INTEGER_T, allocatable, intent(inout) :: A(:)
+INTEGER_T, allocatable, intent(inout) :: B(:)
+INTEGER_T :: k
+
+ do k=iBegin,iEnd
+  B(k+1)=A(k+1)
+ enddo
+
+end subroutine CopyArray
+
 
 
 subroutine remove_duplicate_nodes(FSI_mesh_type,part_id,max_part_id)
@@ -1273,6 +1303,7 @@ INTEGER_T, intent(in) :: part_id
 INTEGER_T, intent(in) :: max_part_id
 type(mesh_type), intent(inout) :: FSI_mesh_type
 INTEGER_T, allocatable :: sorted_node_list(:)
+INTEGER_T, allocatable :: B_list(:)
 INTEGER_T, allocatable :: alternate_node_list(:)
 INTEGER_T, allocatable :: new_node_list(:)
 INTEGER_T, allocatable :: old_node_list(:)
@@ -1307,12 +1338,14 @@ INTEGER_T :: num_nodes_local
  print *,"removing duplicate nodes"
 
  allocate(sorted_node_list(FSI_mesh_type%NumNodesBIG))
+ allocate(B_list(FSI_mesh_type%NumNodesBIG))
  allocate(alternate_node_list(FSI_mesh_type%NumNodesBIG))
  allocate(new_node_list(FSI_mesh_type%NumNodesBIG))
  allocate(old_node_list(FSI_mesh_type%NumNodesBIG))
 
  do inode=1,FSI_mesh_type%NumNodesBIG
   sorted_node_list(inode)=inode
+  B_list(inode)=inode
   alternate_node_list(inode)=inode
   new_node_list(inode)=inode
   old_node_list(inode)=inode
@@ -1343,26 +1376,36 @@ INTEGER_T :: num_nodes_local
  print *,"max_coord: ",max_coord
  print *,"coord_scale: ",coord_scale
 
- do inode=1,FSI_mesh_type%NumNodesBIG-1
-  do jnode=1,FSI_mesh_type%NumNodesBIG-1-inode+1
-   call compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
+ if (1.eq.0) then
+  do inode=1,FSI_mesh_type%NumNodesBIG-1
+   do jnode=1,FSI_mesh_type%NumNodesBIG-1-inode+1
+    call compare_nodes(FSI_mesh_type, &
+          jnode,jnode+1, &
+          sorted_node_list, &
           coord_scale,compare_flag)
-   if (compare_flag.eq.1) then ! (j) > (j+1)
-    save_node=sorted_node_list(jnode)
-    sorted_node_list(jnode)=sorted_node_list(jnode+1)
-    sorted_node_list(jnode+1)=save_node
-   else if ((compare_flag.eq.0).or.(compare_flag.eq.-1)) then
-    ! do nothing
-   else
-    print *,"compare_flag invalid"
-    stop
-   endif
-  enddo ! jnode
- enddo ! inode
+    if (compare_flag.eq.1) then ! (j) > (j+1)
+     save_node=sorted_node_list(jnode)
+     sorted_node_list(jnode)=sorted_node_list(jnode+1)
+     sorted_node_list(jnode+1)=save_node
+    else if ((compare_flag.eq.0).or.(compare_flag.eq.-1)) then
+     ! do nothing
+    else
+     print *,"compare_flag invalid"
+     stop
+    endif
+   enddo ! jnode
+  enddo ! inode
+ else
+  call TopDownMergeSort(FSI_mesh_type,coord_scale, &
+          sorted_node_list,B_list, &
+          FSI_mesh_type%NumNodesBIG)
+ endif
 
   ! sanity check
  do inode=1,FSI_mesh_type%NumNodesBIG-1
-  call compare_nodes(FSI_mesh_type,inode,sorted_node_list, &
+  call compare_nodes(FSI_mesh_type, &
+        inode,inode+1, &
+        sorted_node_list, &
         coord_scale,compare_flag)
 
   if (compare_flag.eq.1) then ! (j) > (j+1)
@@ -1382,7 +1425,9 @@ INTEGER_T :: num_nodes_local
   new_node_list(sorted_node_list(inode))=knode
   old_node_list(knode)=sorted_node_list(inode)
   jnode=inode
-  call compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
+  call compare_nodes(FSI_mesh_type, &
+    jnode,jnode+1, &
+    sorted_node_list, &
     coord_scale,compare_flag)
   do while ((compare_flag.eq.0).and. &
             (jnode.lt.FSI_mesh_type%NumNodesBIG))
@@ -1390,7 +1435,9 @@ INTEGER_T :: num_nodes_local
    new_node_list(sorted_node_list(jnode))=knode
    alternate_node_list(sorted_node_list(jnode))=sorted_node_list(inode)
    if (jnode.lt.FSI_mesh_type%NumNodesBIG) then
-    call compare_nodes(FSI_mesh_type,jnode,sorted_node_list, &
+    call compare_nodes(FSI_mesh_type, &
+     jnode,jnode+1, &
+     sorted_node_list, &
      coord_scale,compare_flag)
    else if (jnode.eq.FSI_mesh_type%NumNodesBIG) then
     compare_flag=0
@@ -1507,6 +1554,7 @@ INTEGER_T :: num_nodes_local
  deallocate(old_node_list)
  deallocate(new_node_list)
  deallocate(sorted_node_list)
+ deallocate(B_list)
  deallocate(alternate_node_list)
 
 end subroutine remove_duplicate_nodes
