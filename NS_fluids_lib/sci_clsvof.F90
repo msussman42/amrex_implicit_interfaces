@@ -127,6 +127,8 @@ type mesh_type
  REAL_T, pointer :: NodeTemp(:)
  REAL_T, pointer :: NodeTemp_old(:)
  REAL_T, pointer :: NodeTemp_new(:)
+ REAL_T, pointer :: edge_endpoints(:,:)
+ INTEGER_T, pointer :: edge_ielem(:)
  REAL_T soliddrop_displacement
  REAL_T soliddrop_speed
  REAL_T solid_displ(3)
@@ -1202,25 +1204,30 @@ INTEGER_T :: inode(3)
 
 end subroutine tecplot_normals
 
-subroutine TopDownMergeSort(FSI_mesh_type,coord_scale,A,B,n)
+subroutine TopDownMergeSort(FSI_mesh_type,coord_scale,A,B,n, &
+      sort_nodes_flag)
 IMPLICIT NONE
 type(mesh_type), intent(in) :: FSI_mesh_type
 REAL_T, intent(in) :: coord_scale
+INTEGER_T, intent(in) :: sort_nodes_flag
 INTEGER_T, intent(in) :: n
 INTEGER_T, allocatable, intent(inout) :: A(:)
 INTEGER_T, allocatable, intent(inout) :: B(:)
 
+ print *,"in TopDownMergeSort: n,sort_nodes_flag=",n,sort_nodes_flag
+
  call CopyArray(FSI_mesh_type,coord_scale,A,0,n,B)
- call TopDownSplitMerge(FSI_mesh_type,coord_scale,B,0,n,A)
+ call TopDownSplitMerge(FSI_mesh_type,coord_scale,B,0,n,A,sort_nodes_flag)
 
 end subroutine TopDownMergeSort
 
 
 recursive subroutine TopDownSplitMerge(FSI_mesh_type,coord_scale, &
- B,iBegin,iEnd,A)
+ B,iBegin,iEnd,A,sort_nodes_flag)
 IMPLICIT NONE
 type(mesh_type), intent(in) :: FSI_mesh_type
 REAL_T, intent(in) :: coord_scale
+INTEGER_T, intent(in) :: sort_nodes_flag
 INTEGER_T, intent(in) :: iBegin
 INTEGER_T, intent(in) :: iEnd
 INTEGER_T, allocatable, intent(inout) :: A(:)
@@ -1231,19 +1238,23 @@ INTEGER_T :: iMiddle
   ! do nothing
  else
   iMiddle=(iEnd+iBegin)/2
-  call TopDownSplitMerge(FSI_mesh_type,coord_scale,A,iBegin,iMiddle,B)
-  call TopDownSplitMerge(FSI_mesh_type,coord_scale,A,iMiddle,iEnd,B)
-  call TopDownMerge(FSI_mesh_type,coord_scale,B,iBegin,iMiddle,iEnd,A)
+  call TopDownSplitMerge(FSI_mesh_type,coord_scale,A,iBegin,iMiddle,B, &
+    sort_nodes_flag)
+  call TopDownSplitMerge(FSI_mesh_type,coord_scale,A,iMiddle,iEnd,B, &
+    sort_nodes_flag)
+  call TopDownMerge(FSI_mesh_type,coord_scale,B,iBegin,iMiddle,iEnd,A, &
+    sort_nodes_flag)
  endif
 
 end subroutine TopDownSplitMerge
 
 
 subroutine TopDownMerge(FSI_mesh_type,coord_scale, &
- A,iBegin,iMiddle,iEnd,B)
+ A,iBegin,iMiddle,iEnd,B,sort_nodes_flag)
 IMPLICIT NONE
 type(mesh_type), intent(in) :: FSI_mesh_type
 REAL_T, intent(in) :: coord_scale
+INTEGER_T, intent(in) :: sort_nodes_flag
 INTEGER_T, intent(in) :: iBegin
 INTEGER_T, intent(in) :: iMiddle
 INTEGER_T, intent(in) :: iEnd
@@ -1251,6 +1262,11 @@ INTEGER_T, allocatable, intent(inout) :: A(:)
 INTEGER_T, allocatable, intent(inout) :: B(:)
 INTEGER_T :: i,j,k
 INTEGER_T :: compare_flag
+INTEGER_T :: dir
+REAL_T :: edgej(6)
+REAL_T :: edgejp1(6)
+REAL_T :: overlap_size
+INTEGER_T :: ielem,ielem_opp
 
  i=iBegin
  j=iMiddle
@@ -1259,10 +1275,49 @@ INTEGER_T :: compare_flag
  do while (k.lt.iEnd)
    !Ai<Aj compare_flag=-1
    !Ai>Aj compare_flag=1
-  call compare_nodes(FSI_mesh_type, &
-    i+1,j+1, &
-    A, &
-    coord_scale,compare_flag)
+
+  compare_flag=0
+
+  if ((i.lt.iMiddle).and.(j.lt.iEnd)) then
+
+   if (sort_nodes_flag.eq.1) then
+    call compare_nodes(FSI_mesh_type, &
+     i+1,j+1, &
+     A, &
+     coord_scale,compare_flag)
+   else if (sort_nodes_flag.eq.0) then
+    do dir=1,6
+     edgej(dir)=FSI_mesh_type%edge_endpoints(dir,A(i+1))
+     edgejp1(dir)=FSI_mesh_type%edge_endpoints(dir,A(j+1))
+    enddo
+    call compare_edge(edgej,edgejp1,coord_scale,compare_flag,overlap_size)
+    if ((compare_flag.eq.1).or. &
+        (compare_flag.eq.-1)) then
+     ! do nothing
+    else if (compare_flag.eq.0) then
+     ielem=FSI_mesh_type%edge_ielem(A(i+1))
+     ielem_opp=FSI_mesh_type%edge_ielem(A(j+1))
+     if (ielem.eq.ielem_opp) then
+      if (i.ne.j) then
+       print *,"cannot have two edges from the same element be equal"
+       print *,"i,j = ",i,j
+       stop
+      endif 
+     endif 
+    else
+     print *,"compare_flag invalid"
+     stop
+    endif
+   else
+    print *,"sort_nodes_flag invalid"
+    stop
+   endif
+  else if ((i.ge.iMiddle).or.(j.ge.iEnd)) then
+   ! do nothing
+  else
+   print *,"i,j bust"
+   stop
+  endif
 
   if ((i.lt.iMiddle).and. &
       ((j.ge.iEnd).or.(compare_flag.le.0))) then
@@ -1289,7 +1344,7 @@ INTEGER_T, allocatable, intent(inout) :: A(:)
 INTEGER_T, allocatable, intent(inout) :: B(:)
 INTEGER_T :: k
 
- do k=iBegin,iEnd
+ do k=iBegin,iEnd-1
   B(k+1)=A(k+1)
  enddo
 
@@ -1318,6 +1373,7 @@ INTEGER_T :: ilocal
 INTEGER_T :: ielem
 INTEGER_T :: nodes_per_elem
 INTEGER_T :: compare_flag
+INTEGER_T :: sort_nodes_flag
 INTEGER_T :: save_node
 REAL_T :: min_coord
 REAL_T :: max_coord
@@ -1396,9 +1452,11 @@ INTEGER_T :: num_nodes_local
    enddo ! jnode
   enddo ! inode
  else
+  sort_nodes_flag=1
   call TopDownMergeSort(FSI_mesh_type,coord_scale, &
           sorted_node_list,B_list, &
-          FSI_mesh_type%NumNodesBIG)
+          FSI_mesh_type%NumNodesBIG, &
+          sort_nodes_flag)
  endif
 
   ! sanity check
@@ -1622,9 +1680,9 @@ INTEGER_T, intent(in) :: max_part_id
 type(mesh_type), intent(inout) :: FSI_mesh_type
 INTEGER_T, intent(in) :: ioproc,isout
 INTEGER_T, allocatable :: sorted_edge_list(:)
-REAL_T, allocatable :: edge_endpoints(:,:)
-INTEGER_T, allocatable :: edge_ielem(:)
+INTEGER_T, allocatable :: B_list(:)
 INTEGER_T, allocatable :: edge_inode(:)
+INTEGER_T :: sort_nodes_flag
 INTEGER_T :: compare_flag
 REAL_T :: min_coord
 REAL_T :: max_coord
@@ -1705,11 +1763,12 @@ REAL_T :: opp_edge_data(6)
   stop
  endif
 
- allocate(edge_endpoints(6,nodes_per_elem*nelems))
- allocate(edge_ielem(nodes_per_elem*nelems))
+ allocate(FSI_mesh_type%edge_endpoints(6,nodes_per_elem*nelems))
+ allocate(FSI_mesh_type%edge_ielem(nodes_per_elem*nelems))
  ! node id of first point on the edge.
  allocate(edge_inode(nodes_per_elem*nelems))
  allocate(sorted_edge_list(nodes_per_elem*nelems))
+ allocate(B_list(nodes_per_elem*nelems))
  allocate(xnode(nodes_per_elem,3))
 
  min_coord=1.0D+20
@@ -1777,12 +1836,13 @@ REAL_T :: opp_edge_data(6)
    edge_id=edge_id+1
    if ((edge_id.ge.1).and.(edge_id.le.nodes_per_elem*nelems)) then
     do dir=1,3
-     edge_endpoints(dir,edge_id)=xnode(inode,dir)
-     edge_endpoints(dir+3,edge_id)=xnode(inodep1,dir)
+     FSI_mesh_type%edge_endpoints(dir,edge_id)=xnode(inode,dir)
+     FSI_mesh_type%edge_endpoints(dir+3,edge_id)=xnode(inodep1,dir)
     enddo
-    edge_ielem(edge_id)=ielem
+    FSI_mesh_type%edge_ielem(edge_id)=ielem
     edge_inode(edge_id)=inode
     sorted_edge_list(edge_id)=edge_id
+    B_list(edge_id)=edge_id
    else
     print *,"edge_id invalid"
     stop
@@ -1811,38 +1871,46 @@ REAL_T :: opp_edge_data(6)
  print *,"max_coord(edgelist): ",max_coord
  print *,"coord_scale(edgelist): ",coord_scale
 
- do iedge=1,edge_id-1
-  do jedge=1,edge_id-1-iedge+1
-   do dir=1,6
-    edgej(dir)=edge_endpoints(dir,sorted_edge_list(jedge))
-    edgejp1(dir)=edge_endpoints(dir,sorted_edge_list(jedge+1))
-   enddo
-   call compare_edge(edgej,edgejp1,coord_scale,compare_flag,overlap_size)
-   if (compare_flag.eq.1) then ! (j) > (j+1)
-    save_edge=sorted_edge_list(jedge)
-    sorted_edge_list(jedge)=sorted_edge_list(jedge+1)
-    sorted_edge_list(jedge+1)=save_edge
-   else if (compare_flag.eq.-1) then
-    ! do nothing
-   else if (compare_flag.eq.0) then
-    ielem=edge_ielem(sorted_edge_list(jedge))
-    ielem_opp=edge_ielem(sorted_edge_list(jedge+1))
-    if (ielem.eq.ielem_opp) then
-     print *,"cannot have two edges from the same element be equal"
+ if (1.eq.0) then
+  do iedge=1,edge_id-1
+   do jedge=1,edge_id-1-iedge+1
+    do dir=1,6
+     edgej(dir)=FSI_mesh_type%edge_endpoints(dir,sorted_edge_list(jedge))
+     edgejp1(dir)=FSI_mesh_type%edge_endpoints(dir,sorted_edge_list(jedge+1))
+    enddo
+    call compare_edge(edgej,edgejp1,coord_scale,compare_flag,overlap_size)
+    if (compare_flag.eq.1) then ! (j) > (j+1)
+     save_edge=sorted_edge_list(jedge)
+     sorted_edge_list(jedge)=sorted_edge_list(jedge+1)
+     sorted_edge_list(jedge+1)=save_edge
+    else if (compare_flag.eq.-1) then
+     ! do nothing
+    else if (compare_flag.eq.0) then
+     ielem=FSI_mesh_type%edge_ielem(sorted_edge_list(jedge))
+     ielem_opp=FSI_mesh_type%edge_ielem(sorted_edge_list(jedge+1))
+     if (ielem.eq.ielem_opp) then
+      print *,"cannot have two edges from the same element be equal"
+      stop
+     endif 
+    else
+     print *,"compare_flag invalid"
      stop
-    endif 
-   else
-    print *,"compare_flag invalid"
-    stop
-   endif
-  enddo ! jedge
- enddo ! iedge
+    endif
+   enddo ! jedge
+  enddo ! iedge
+ else
+  sort_nodes_flag=0
+  call TopDownMergeSort(FSI_mesh_type,coord_scale, &
+          sorted_edge_list,B_list, &
+          edge_id, &
+          sort_nodes_flag)
+ endif
 
   ! sanity check
  do iedge=1,edge_id-1
   do dir=1,6
-   edgej(dir)=edge_endpoints(dir,sorted_edge_list(iedge))
-   edgejp1(dir)=edge_endpoints(dir,sorted_edge_list(iedge+1))
+   edgej(dir)=FSI_mesh_type%edge_endpoints(dir,sorted_edge_list(iedge))
+   edgejp1(dir)=FSI_mesh_type%edge_endpoints(dir,sorted_edge_list(iedge+1))
   enddo
   call compare_edge(edgej,edgejp1,coord_scale,compare_flag,overlap_size)
 
@@ -1866,8 +1934,8 @@ REAL_T :: opp_edge_data(6)
   do while ((compare_flag.eq.0).and.(jedge.lt.edge_id)) 
 
    do dir=1,6
-    edgej(dir)=edge_endpoints(dir,sorted_edge_list(jedge))
-    edgejp1(dir)=edge_endpoints(dir,sorted_edge_list(jedge+1))
+    edgej(dir)=FSI_mesh_type%edge_endpoints(dir,sorted_edge_list(jedge))
+    edgejp1(dir)=FSI_mesh_type%edge_endpoints(dir,sorted_edge_list(jedge+1))
    enddo
    call compare_edge(edgej,edgejp1,coord_scale,compare_flag,overlap_size)
    if (compare_flag.eq.0) then
@@ -1883,7 +1951,7 @@ REAL_T :: opp_edge_data(6)
   enddo ! do while ((compare_flag.eq.0).and.(jedge.lt.edge_id)) 
 
   if (num_equal.eq.0) then
-   ielem=edge_ielem(sorted_edge_list(iedge))
+   ielem=FSI_mesh_type%edge_ielem(sorted_edge_list(iedge))
    ielem_opp=ielem
    inode=edge_inode(sorted_edge_list(iedge))
    inode_opp=inode
@@ -1915,8 +1983,8 @@ REAL_T :: opp_edge_data(6)
     stop
    endif
   else if (num_equal.eq.1) then
-   ielem=edge_ielem(sorted_edge_list(iedge))
-   ielem_opp=edge_ielem(sorted_edge_list(iedge+1))
+   ielem=FSI_mesh_type%edge_ielem(sorted_edge_list(iedge))
+   ielem_opp=FSI_mesh_type%edge_ielem(sorted_edge_list(iedge+1))
    inode=edge_inode(sorted_edge_list(iedge))
    inode_opp=edge_inode(sorted_edge_list(iedge+1))
    if (edit_refined_data.eq.0) then
@@ -2008,8 +2076,8 @@ REAL_T :: opp_edge_data(6)
     print *,"compare_flag opp,cur ",compare_flag
     print *,"iedge=",iedge
     do dir=1,6
-     edgej(dir)=edge_endpoints(dir,sorted_edge_list(iedge))
-     edgejp1(dir)=edge_endpoints(dir,sorted_edge_list(iedge+1))
+     edgej(dir)=FSI_mesh_type%edge_endpoints(dir,sorted_edge_list(iedge))
+     edgejp1(dir)=FSI_mesh_type%edge_endpoints(dir,sorted_edge_list(iedge+1))
      print *,"dir,edgej,edgejp1 ",dir,edgej(dir),edgejp1(dir)
     enddo
     stop
@@ -2070,8 +2138,8 @@ REAL_T :: opp_edge_data(6)
     print *,"inode ",inode
     print *,"inode_opp ",inode_opp
     do dir=1,6
-     edgej(dir)=edge_endpoints(dir,sorted_edge_list(iedge))
-     edgejp1(dir)=edge_endpoints(dir,sorted_edge_list(iedge+1))
+     edgej(dir)=FSI_mesh_type%edge_endpoints(dir,sorted_edge_list(iedge))
+     edgejp1(dir)=FSI_mesh_type%edge_endpoints(dir,sorted_edge_list(iedge+1))
      print *,"dir,edgej,edgejp1 ",dir,edgej(dir),edgejp1(dir)
     enddo
     stop
@@ -2096,8 +2164,8 @@ REAL_T :: opp_edge_data(6)
     compare_flag,overlap_size)
    print *,"compare_flag opp,cur ",compare_flag
    do dir=1,6
-    edgej(dir)=edge_endpoints(dir,sorted_edge_list(iedge))
-    edgejp1(dir)=edge_endpoints(dir,sorted_edge_list(iedge+1))
+    edgej(dir)=FSI_mesh_type%edge_endpoints(dir,sorted_edge_list(iedge))
+    edgejp1(dir)=FSI_mesh_type%edge_endpoints(dir,sorted_edge_list(iedge+1))
     print *,"dir,edgej,edgejp1 ",dir,edgej(dir),edgejp1(dir)
    enddo
    print *,"END PAIRING INFO ---------------------------------"
@@ -2107,10 +2175,11 @@ REAL_T :: opp_edge_data(6)
 
  enddo !while (iedge.lt.edge_id)
 
- deallocate(edge_endpoints)
- deallocate(edge_ielem)
+ deallocate(FSI_mesh_type%edge_endpoints)
+ deallocate(FSI_mesh_type%edge_ielem)
  deallocate(edge_inode)
  deallocate(sorted_edge_list)
+ deallocate(B_list)
  deallocate(xnode)
 
 end subroutine init_EdgeNormal
