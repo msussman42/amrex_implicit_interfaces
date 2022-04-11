@@ -114,6 +114,149 @@ INTEGER_T :: stat
 return
 end subroutine CRYOGENIC_TANK_MK_OPEN_CASFILE
 
+
+subroutine CRYOGENIC_TANK_MK_OVERRIDE_FSI_SIGN_LS_VEL_TEMP( &
+ xcell,time,LS,VEL,TEMP,MASK,lev77,im_part,part_id)
+use probcommon_module
+use global_utility_module
+REAL_T, intent(in) :: xcell(3)
+REAL_T, intent(in) :: time
+REAL_T, intent(out) :: LS
+REAL_T, intent(out) :: VEL(3)
+REAL_T, intent(out) :: TEMP
+INTEGER_T, intent(out) :: MASK
+INTEGER_T, intent(in) :: lev77 !lev77=-1 for aux, >=0 otherwise.
+INTEGER_T, intent(in) :: im_part
+INTEGER_T, intent(in) :: part_id
+INTEGER_T :: dir
+ if ((lev77.eq.-1).or. &
+     (lev77.ge.1)) then
+  ! do nothing
+ else 
+  print *,"lev77 invalid"
+  stop
+ endif
+
+ MASK=FSI_NOTHING_VALID
+ do dir=1,3
+  VEL(dir)=0.0d0
+ enddo
+ TEMP=293.0d0  ! room temperature (default)
+
+  ! the buffer size for the auxiliary mesh is 0.2*max_side_len on each
+  ! side.
+ if (lev77.eq.-1) then
+  if (part_id.eq.1) then ! heater_a (top heater)
+    ! half the buffer is about 0.01 (~ .2 * .12 /2 = 0.012)
+   if ((xcell(1).le.-0.06d0).or. &
+       (xcell(1).ge.0.06d0).or. &
+       (xcell(2).le.0.142d0).or. &
+       (xcell(2).ge.0.182d0).or. &
+       (xcell(3).le.-0.0465d0).or. &
+       (xcell(3).ge.0.0465d0)) then
+    LS=-0.01
+    MASK=FSI_FINE_SIGN_VEL_VALID 
+   else
+    ! do nothing
+   endif
+  else if (part_id.eq.2) then ! side heater
+   ! half the buffer is about 0.01 (~ .2 * .1 /2 = 0.01)
+   if ((xcell(1).le.0.088d0).or. &
+       (xcell(1).ge.0.11d0).or. &
+       (xcell(2).le.-0.06d0).or. &
+       (xcell(2).ge.0.06d0).or. &
+       (xcell(3).le.-0.047d0).or. &
+       (xcell(3).ge.0.047d0)) then
+    LS=-0.01
+    MASK=FSI_FINE_SIGN_VEL_VALID 
+   else
+    ! do nothing
+   endif
+
+  else if (part_id.eq.3) then ! source
+
+   ! half the buffer is about 0.001 (~ .2 * .01 /2 = 0.001)
+   if ((xcell(1).le.-0.006d0).or. &
+       (xcell(1).ge.0.006d0).or. &
+       (xcell(2).le.-0.1195d0).or. &
+       (xcell(2).ge.0.1133d0).or. &
+       (xcell(3).le.-0.0006d0).or. &
+       (xcell(3).ge.0.0006d0)) then
+    LS=-0.001
+    MASK=FSI_FINE_SIGN_VEL_VALID 
+   else
+    ! do nothing
+   endif
+
+  else if (part_id.eq.4) then ! sink
+
+   ! half the buffer is about 0.024 (~ .2 * .24 /2 = 0.024)
+   if ((xcell(1).le.-0.145d0).or. &
+       (xcell(1).ge.0.145d0).or. &
+       (xcell(2).le.-0.195d0).or. &
+       (xcell(2).ge.-0.02d0).or. &
+       (xcell(3).le.-0.03d0).or. &
+       (xcell(3).ge.0.03d0)) then
+    LS=-0.024
+    MASK=FSI_FINE_SIGN_VEL_VALID 
+   else
+    ! do nothing
+   endif
+
+   ! half the buffer is about 0.024 (~ .2 * .24 /2 = 0.024)
+   if ((xcell(1).ge.-0.074d0).and. &
+       (xcell(1).le.0.074d0).and. &
+       (xcell(2).ge.-0.113d0).and. &
+       (xcell(2).le.10.0d0).and. &
+       (xcell(3).ge.-10.0d0).and. &
+       (xcell(3).le.10.0d0)) then
+    LS=-0.024
+    MASK=FSI_FINE_SIGN_VEL_VALID 
+   else
+    ! do nothing
+   endif
+
+  else if (part_id.eq.5) then ! tank
+
+   ! half the buffer is about 0.038 (~ .2 * .38 /2 = 0.038)
+   if ((xcell(1).le.-0.175d0).or. &
+       (xcell(1).ge.0.175d0).or. &
+       (xcell(2).le.-0.23d0).or. &
+       (xcell(2).ge.0.23d0).or. &
+       (xcell(3).le.-0.175d0).or. &
+       (xcell(3).ge.0.175d0)) then
+    LS=-0.038
+    MASK=FSI_FINE_SIGN_VEL_VALID 
+   else
+    ! do nothing
+   endif
+
+   ! half the buffer is about 0.038 (~ .2 * .38 /2 = 0.038)
+   if ((xcell(1).ge.-0.07d0).and. &
+       (xcell(1).le.0.07d0).and. &
+       (xcell(2).ge.0.0d0).and. &
+       (xcell(2).le.0.05d0).and. &
+       (xcell(3).ge.-0.07d0).and. &
+       (xcell(3).le.0.07d0)) then
+    LS=-0.038
+    MASK=FSI_FINE_SIGN_VEL_VALID 
+   else
+    ! do nothing
+   endif
+
+  else
+   print *,"part_id invalid"
+   stop
+  endif
+
+ else
+  print *,"expecting all parts defined via the aux paradigm"
+  stop
+ endif
+ 
+end subroutine CRYOGENIC_TANK_MK_OVERRIDE_FSI_SIGN_LS_VEL_TEMP
+
+
 subroutine CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX(auxcomp, &
     minnode,maxnode,LS_FROM_SUBROUTINE,aux_ncells_max_side)
 use probcommon_module
@@ -132,7 +275,7 @@ INTEGER_T, intent(out) :: aux_ncells_max_side
     LS_FROM_SUBROUTINE=0
 
     if (TANK_MK_AUX_THICK_WALLS.eq.1) then
-     if (auxcomp.eq.1) then
+     if (auxcomp.eq.1) then ! heater_a (top heater)
       aux_ncells_max_side=64
      else if (auxcomp.eq.2) then
       aux_ncells_max_side=64

@@ -9,6 +9,7 @@
 #include "AMReX_BC_TYPES.H"
 
 #include "AMReX_ArrayLim.H"
+#include "EXTRAP_COMP.H"
 
 
 #if (AMREX_SPACEDIM==3)
@@ -82,6 +83,32 @@ INTEGER_T, intent(inout) :: tagflag
  endif
 
 end subroutine STUB_OVERRIDE_TAGFLAG
+
+subroutine STUB_OVERRIDE_FSI_SIGN_LS_VEL_TEMP( &
+ xcell,time,LS,VEL,TEMP,MASK,lev77,im_part,part_id)
+use probcommon_module
+use global_utility_module
+REAL_T, intent(in) :: xcell(3)
+REAL_T, intent(in) :: time
+REAL_T, intent(out) :: LS
+REAL_T, intent(out) :: VEL(3)
+REAL_T, intent(out) :: TEMP
+INTEGER_T, intent(out) :: MASK
+INTEGER_T, intent(in) :: lev77 !lev77=-1 for aux, >=0 otherwise.
+INTEGER_T, intent(in) :: im_part
+INTEGER_T, intent(in) :: part_id
+
+ if ((lev77.eq.-1).or. &
+     (lev77.ge.1)) then
+  ! do nothing
+ else 
+  print *,"lev77 invalid"
+  stop
+ endif
+
+ MASK=FSI_NOTHING_VALID
+ 
+end subroutine STUB_OVERRIDE_FSI_SIGN_LS_VEL_TEMP
 
 subroutine STUB_AUX_DATA(auxcomp,x,LS)
 use probcommon_module

@@ -862,6 +862,20 @@ implicit none
       REAL_T, intent(out) :: LS
       end subroutine TEMPLATE_AUX_DATA
 
+      subroutine TEMPLATE_OVERRIDE_FSI_SIGN_LS_VEL_TEMP( &
+        xcell,time,LS,VEL,TEMP,MASK,lev77,im_part,part_id)
+      REAL_T, intent(in) :: xcell(3)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(out) :: LS
+      REAL_T, intent(out) :: VEL(3)
+      REAL_T, intent(out) :: TEMP
+      INTEGER_T, intent(out) :: MASK
+      INTEGER_T, intent(in) :: lev77 !lev77=-1 for aux, >=0 otherwise.
+      INTEGER_T, intent(in) :: im_part
+      INTEGER_T, intent(in) :: part_id
+      end subroutine TEMPLATE_OVERRIDE_FSI_SIGN_LS_VEL_TEMP
+
+
       subroutine TEMPLATE_BOUNDING_BOX_AUX(auxcomp, &
           minnode,maxnode,LS_FROM_SUBROUTINE,aux_ncells_max_side)
       INTEGER_T, intent(in) :: auxcomp
@@ -1108,6 +1122,8 @@ implicit none
       PROCEDURE(TEMPLATE_LS), POINTER :: SUB_LS
       PROCEDURE(TEMPLATE_OVERRIDE_TAGFLAG), POINTER :: SUB_OVERRIDE_TAGFLAG
       PROCEDURE(TEMPLATE_AUX_DATA), POINTER :: SUB_AUX_DATA
+      PROCEDURE(TEMPLATE_OVERRIDE_FSI_SIGN_LS_VEL_TEMP), POINTER :: &
+        SUB_OVERRIDE_FSI_SIGN_LS_VEL_TEMP
       PROCEDURE(TEMPLATE_BOUNDING_BOX_AUX), POINTER :: SUB_BOUNDING_BOX_AUX
       PROCEDURE(TEMPLATE_clamped_LS), POINTER :: SUB_clamped_LS_no_scale
       PROCEDURE(TEMPLATE_VEL), POINTER :: SUB_VEL
