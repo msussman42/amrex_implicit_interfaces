@@ -11,7 +11,7 @@
 
 #define element_buffer_tol 0.01d0
 #define sign_box_radius 2.0d0
-#define sign_quality_cutoff 0.01d0
+#define sign_quality_cutoff 0.5d0
 #define tecplot_post_process 1
 
 ! 10 seconds for tail to do a full period
@@ -1966,7 +1966,7 @@ REAL_T :: opp_edge_data(6)
    stop
   endif
 
-  if ((1.eq.1).and.(num_equal.eq.1)) then
+  if ((1.eq.0).and.(num_equal.eq.1)) then
    print *,"START PAIRING INFO ---------------------------------"
    print *,"iedge: ",iedge
    print *,"ielem ",ielem
@@ -8052,7 +8052,7 @@ REAL_T, dimension(3) :: velparm
    xfoot(dir)= &
      FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
 
-   if (1.eq.1) then
+   if (1.eq.0) then
     local_normal= &
      FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
    else
@@ -8103,7 +8103,7 @@ REAL_T, dimension(3) :: velparm
    xfoot(dir)= &
     FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inodep1,elemnum))
 
-   if (1.eq.1) then
+   if (1.eq.0) then
     local_normal= &
      FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inodep1,elemnum))
    else
@@ -9247,7 +9247,7 @@ INTEGER_T, allocatable :: raw_elements(:,:)
   aux_FSI(auxcomp)%CTML_flag=0
     !refine_factor=1 => refine the Lagrangian mesh as necessary.
     !refine_factor=0 => n_lag_levels=2
-  aux_FSI(auxcomp)%refine_factor=0
+  aux_FSI(auxcomp)%refine_factor=1
   aux_FSI(auxcomp)%bounding_box_ngrow=3
 
   if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
@@ -11015,6 +11015,11 @@ IMPLICIT NONE
   INTEGER_T, intent(in) :: CTML_force_model
   INTEGER_T, intent(in) :: ioproc,isout
 
+  REAL_T override_LS
+  REAL_T override_VEL(3)
+  REAL_T override_TEMP
+  INTEGER_T override_MASK
+
   REAL_T dxBB(3) ! set in find_grid_bounding_box
   REAL_T dxBB_min
   REAL_T delta_cutoff
@@ -11769,7 +11774,7 @@ IMPLICIT NONE
            mag_x=mag_x+(xx(dir)-xclosest_project(dir))**2 
            
            n_dot_x=n_dot_x+ &
-                normal_closest(dir)*(xx(dir)-xclosest_project(dir))
+             normal_closest(dir)*(xx(dir)-xclosest_project(dir))
           enddo ! dir=1..3
 
           mag_n_test=sqrt(mag_n_test)
@@ -12598,9 +12603,10 @@ IMPLICIT NONE
        call SUB_OVERRIDE_FSI_SIGN_LS_VEL_TEMP( &
          xcen,time, &
          override_LS, &
-         override_VEL,override_TEMP, &
+         override_VEL, &
+         override_TEMP, &
          override_MASK, &
-         lev77, & !lev77=-1 for aux,>=0 otherwise
+         lev77, & !lev77=-1 for aux,>=1 otherwise
          im_part, &
          part_id)
 
