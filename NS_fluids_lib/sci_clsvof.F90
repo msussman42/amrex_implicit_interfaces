@@ -1432,32 +1432,11 @@ INTEGER_T :: num_nodes_local
  print *,"max_coord: ",max_coord
  print *,"coord_scale: ",coord_scale
 
- if (1.eq.0) then
-  do inode=1,FSI_mesh_type%NumNodesBIG-1
-   do jnode=1,FSI_mesh_type%NumNodesBIG-1-inode+1
-    call compare_nodes(FSI_mesh_type, &
-          jnode,jnode+1, &
-          sorted_node_list, &
-          coord_scale,compare_flag)
-    if (compare_flag.eq.1) then ! (j) > (j+1)
-     save_node=sorted_node_list(jnode)
-     sorted_node_list(jnode)=sorted_node_list(jnode+1)
-     sorted_node_list(jnode+1)=save_node
-    else if ((compare_flag.eq.0).or.(compare_flag.eq.-1)) then
-     ! do nothing
-    else
-     print *,"compare_flag invalid"
-     stop
-    endif
-   enddo ! jnode
-  enddo ! inode
- else
-  sort_nodes_flag=1
-  call TopDownMergeSort(FSI_mesh_type,coord_scale, &
-          sorted_node_list,B_list, &
-          FSI_mesh_type%NumNodesBIG, &
-          sort_nodes_flag)
- endif
+ sort_nodes_flag=1
+ call TopDownMergeSort(FSI_mesh_type,coord_scale, &
+        sorted_node_list,B_list, &
+        FSI_mesh_type%NumNodesBIG, &
+        sort_nodes_flag)
 
   ! sanity check
  do inode=1,FSI_mesh_type%NumNodesBIG-1
@@ -1871,40 +1850,11 @@ REAL_T :: opp_edge_data(6)
  print *,"max_coord(edgelist): ",max_coord
  print *,"coord_scale(edgelist): ",coord_scale
 
- if (1.eq.0) then
-  do iedge=1,edge_id-1
-   do jedge=1,edge_id-1-iedge+1
-    do dir=1,6
-     edgej(dir)=FSI_mesh_type%edge_endpoints(dir,sorted_edge_list(jedge))
-     edgejp1(dir)=FSI_mesh_type%edge_endpoints(dir,sorted_edge_list(jedge+1))
-    enddo
-    call compare_edge(edgej,edgejp1,coord_scale,compare_flag,overlap_size)
-    if (compare_flag.eq.1) then ! (j) > (j+1)
-     save_edge=sorted_edge_list(jedge)
-     sorted_edge_list(jedge)=sorted_edge_list(jedge+1)
-     sorted_edge_list(jedge+1)=save_edge
-    else if (compare_flag.eq.-1) then
-     ! do nothing
-    else if (compare_flag.eq.0) then
-     ielem=FSI_mesh_type%edge_ielem(sorted_edge_list(jedge))
-     ielem_opp=FSI_mesh_type%edge_ielem(sorted_edge_list(jedge+1))
-     if (ielem.eq.ielem_opp) then
-      print *,"cannot have two edges from the same element be equal"
-      stop
-     endif 
-    else
-     print *,"compare_flag invalid"
-     stop
-    endif
-   enddo ! jedge
-  enddo ! iedge
- else
-  sort_nodes_flag=0
-  call TopDownMergeSort(FSI_mesh_type,coord_scale, &
-          sorted_edge_list,B_list, &
-          edge_id, &
-          sort_nodes_flag)
- endif
+ sort_nodes_flag=0
+ call TopDownMergeSort(FSI_mesh_type,coord_scale, &
+        sorted_edge_list,B_list, &
+        edge_id, &
+        sort_nodes_flag)
 
   ! sanity check
  do iedge=1,edge_id-1

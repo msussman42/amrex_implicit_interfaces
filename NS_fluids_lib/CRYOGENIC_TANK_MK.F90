@@ -150,8 +150,8 @@ INTEGER_T :: dir
     ! half the buffer is about 0.01 (~ .2 * .12 /2 = 0.012)
    if ((xcell(1).le.-0.06d0).or. &
        (xcell(1).ge.0.06d0).or. &
-       (xcell(2).le.0.142d0).or. &
-       (xcell(2).ge.0.182d0).or. &
+       (xcell(2).le.0.134d0).or. &
+       (xcell(2).ge.0.188d0).or. &
        (xcell(3).le.-0.0465d0).or. &
        (xcell(3).ge.0.0465d0)) then
     LS=-0.01
@@ -161,10 +161,10 @@ INTEGER_T :: dir
    endif
   else if (part_id.eq.2) then ! side heater
    ! half the buffer is about 0.01 (~ .2 * .1 /2 = 0.01)
-   if ((xcell(1).le.0.088d0).or. &
-       (xcell(1).ge.0.11d0).or. &
-       (xcell(2).le.-0.06d0).or. &
-       (xcell(2).ge.0.06d0).or. &
+   if ((xcell(1).le.0.077d0).or. &
+       (xcell(1).ge.0.117d0).or. &
+       (xcell(2).le.-0.04d0).or. &
+       (xcell(2).ge.0.08d0).or. &
        (xcell(3).le.-0.047d0).or. &
        (xcell(3).ge.0.047d0)) then
     LS=-0.01
@@ -175,14 +175,14 @@ INTEGER_T :: dir
 
   else if (part_id.eq.3) then ! source
 
-   ! half the buffer is about 0.001 (~ .2 * .01 /2 = 0.001)
-   if ((xcell(1).le.-0.006d0).or. &
-       (xcell(1).ge.0.006d0).or. &
-       (xcell(2).le.-0.1195d0).or. &
-       (xcell(2).ge.0.1133d0).or. &
-       (xcell(3).le.-0.0006d0).or. &
-       (xcell(3).ge.0.0006d0)) then
-    LS=-0.001
+   ! half the buffer is about 0.009 (~ .2 * .09 /2 = 0.009)
+   if ((xcell(1).le.-0.024d0).or. &
+       (xcell(1).ge.0.036d0).or. &
+       (xcell(2).le.-0.21d0).or. &
+       (xcell(2).ge.-0.10d0).or. &
+       (xcell(3).le.-0.02d0).or. &
+       (xcell(3).ge.0.02d0)) then
+    LS=-0.009
     MASK=FSI_FINE_SIGN_VEL_VALID 
    else
     ! do nothing
@@ -239,6 +239,21 @@ INTEGER_T :: dir
        (xcell(3).ge.-0.07d0).and. &
        (xcell(3).le.0.07d0)) then
     LS=-0.038
+    MASK=FSI_FINE_SIGN_VEL_VALID 
+   else
+    ! do nothing
+   endif
+
+  else if (part_id.eq.6) then ! nozzle housing
+
+   ! half the buffer is about 0.01(~ .2 * .1 /2 = 0.01)
+   if ((xcell(1).le.-0.044d0).or. &
+       (xcell(1).ge.0.055d0).or. &
+       (xcell(2).le.-0.215d0).or. &
+       (xcell(2).ge.-0.1d0).or. &
+       (xcell(3).le.-0.04d0).or. &
+       (xcell(3).ge.0.04d0)) then
+    LS=-0.004
     MASK=FSI_FINE_SIGN_VEL_VALID 
    else
     ! do nothing
