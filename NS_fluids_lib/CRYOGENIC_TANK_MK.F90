@@ -287,7 +287,7 @@ INTEGER_T, intent(out) :: LS_FROM_SUBROUTINE
 INTEGER_T, intent(out) :: aux_ncells_max_side
 
  if ((auxcomp.ge.1).and. &
-     (auxcomp.le.5)) then
+     (auxcomp.le.6)) then
   if (axis_dir.eq.2) then
    if (num_materials.eq.3) then
     LS_FROM_SUBROUTINE=0
