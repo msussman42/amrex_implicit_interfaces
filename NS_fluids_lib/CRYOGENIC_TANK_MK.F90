@@ -382,7 +382,7 @@ INTEGER_T :: stat
    endif
 
   else
-   print *,"expecting fort_num_local_aux_grids.eq.5"
+   print *,"expecting fort_num_local_aux_grids.eq.6"
    stop
   endif 
 
