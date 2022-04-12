@@ -1374,7 +1374,6 @@ INTEGER_T :: ielem
 INTEGER_T :: nodes_per_elem
 INTEGER_T :: compare_flag
 INTEGER_T :: sort_nodes_flag
-INTEGER_T :: save_node
 REAL_T :: min_coord
 REAL_T :: max_coord
 REAL_T :: coord_scale
@@ -1676,7 +1675,6 @@ REAL_T :: overlap_size
 INTEGER_T :: dir
 INTEGER_T :: doubly_flag
 INTEGER_T :: edge_id
-INTEGER_T :: save_edge
 INTEGER_T :: old_edge_id
 INTEGER_T :: old_edge_id_opp
 INTEGER_T :: old_edge_id_node

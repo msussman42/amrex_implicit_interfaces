@@ -27,7 +27,7 @@ implicit none
 
 INTEGER_T, PARAMETER :: TANK_MK_MATERIAL_TYPE=24
 
-INTEGER_T, PARAMETER :: TANK_MK_AUX_THICK_WALLS=0
+INTEGER_T, PARAMETER :: TANK_MK_AUX_THICK_WALLS=1
 
 INTEGER_T :: dir_x,dir_y,dir_z
 
@@ -146,121 +146,124 @@ INTEGER_T :: dir
   ! the buffer size for the auxiliary mesh is 0.2*max_side_len on each
   ! side.
  if (lev77.eq.-1) then
-  if (part_id.eq.1) then ! heater_a (top heater)
-    ! half the buffer is about 0.01 (~ .2 * .12 /2 = 0.012)
-   if ((xcell(1).le.-0.06d0).or. &
-       (xcell(1).ge.0.06d0).or. &
-       (xcell(2).le.0.134d0).or. &
-       (xcell(2).ge.0.188d0).or. &
-       (xcell(3).le.-0.0465d0).or. &
-       (xcell(3).ge.0.0465d0)) then
-    LS=-0.01
-    MASK=FSI_FINE_SIGN_VEL_VALID 
+
+  if (TANK_MK_AUX_THICK_WALLS.eq.1) then
+
+   if (part_id.eq.1) then ! heater_a (top heater)
+    if ((xcell(1).le.-0.056d0).or. &
+        (xcell(1).ge.0.056d0).or. &
+        (xcell(2).le.0.139d0).or. &
+        (xcell(2).ge.0.183d0).or. &
+        (xcell(3).le.-0.0416d0).or. &
+        (xcell(3).ge.0.0416d0)) then
+     LS=-5.1D-3
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+   else if (part_id.eq.2) then ! side heater
+    if ((xcell(1).le.0.082d0).or. &
+        (xcell(1).ge.0.112d0).or. &
+        (xcell(2).le.-0.0375d0).or. &
+        (xcell(2).ge.0.0775d0).or. &
+        (xcell(3).le.-0.0423d0).or. &
+        (xcell(3).ge.0.0423d0)) then
+     LS=-5.2D-3
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+   else if (part_id.eq.3) then ! source
+
+    if ((xcell(1).le.-0.019d0).or. &
+        (xcell(1).ge.0.030d0).or. &
+        (xcell(2).le.-0.20d0).or. &
+        (xcell(2).ge.-0.11d0).or. &
+        (xcell(3).le.-0.014d0).or. &
+        (xcell(3).ge.0.014d0)) then
+     LS=-0.0043
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+   else if (part_id.eq.4) then ! sink
+
+    if ((xcell(1).le.-0.140d0).or. &
+        (xcell(1).ge.0.140d0).or. &
+        (xcell(2).le.-0.184d0).or. &
+        (xcell(2).ge.-0.038d0).or. &
+        (xcell(3).le.-0.023d0).or. &
+        (xcell(3).ge.0.023d0)) then
+     LS=-0.0127
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+    if ((xcell(1).ge.-0.123d0).and. &
+        (xcell(1).le.0.123d0).and. &
+        (xcell(2).ge.-0.167d0).and. &
+        (xcell(2).le.10.0d0).and. &
+        (xcell(3).ge.-10.0d0).and. &
+        (xcell(3).le.10.0d0)) then
+     LS=-0.0127
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+   else if (part_id.eq.5) then ! tank
+
+    if ((xcell(1).le.-0.17d0).or. &
+        (xcell(1).ge.0.17d0).or. &
+        (xcell(2).le.-0.22d0).or. &
+        (xcell(2).ge.0.22d0).or. &
+        (xcell(3).le.-0.17d0).or. &
+        (xcell(3).ge.0.17d0)) then
+     LS=-0.02
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+    if ((xcell(1).ge.-0.09d0).and. &
+        (xcell(1).le.0.09d0).and. &
+        (xcell(2).ge.-0.14d0).and. &
+        (xcell(2).le.0.14d0).and. &
+        (xcell(3).ge.-0.09d0).and. &
+        (xcell(3).le.0.09d0)) then
+     LS=-0.02
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+   else if (part_id.eq.6) then ! nozzle housing
+
+    if ((xcell(1).le.-0.03896d0).or. &
+        (xcell(1).ge.0.0502d0).or. &
+        (xcell(2).le.-0.210d0).or. &
+        (xcell(2).ge.-0.104d0).or. &
+        (xcell(3).le.-0.0348d0).or. &
+        (xcell(3).ge.0.0348d0)) then
+     LS=-0.0048
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
    else
-    ! do nothing
-   endif
-  else if (part_id.eq.2) then ! side heater
-   ! half the buffer is about 0.01 (~ .2 * .1 /2 = 0.01)
-   if ((xcell(1).le.0.077d0).or. &
-       (xcell(1).ge.0.117d0).or. &
-       (xcell(2).le.-0.04d0).or. &
-       (xcell(2).ge.0.08d0).or. &
-       (xcell(3).le.-0.047d0).or. &
-       (xcell(3).ge.0.047d0)) then
-    LS=-0.01
-    MASK=FSI_FINE_SIGN_VEL_VALID 
-   else
-    ! do nothing
+    print *,"part_id invalid"
+    stop
    endif
 
-  else if (part_id.eq.3) then ! source
-
-   ! half the buffer is about 0.009 (~ .2 * .09 /2 = 0.009)
-   if ((xcell(1).le.-0.024d0).or. &
-       (xcell(1).ge.0.036d0).or. &
-       (xcell(2).le.-0.21d0).or. &
-       (xcell(2).ge.-0.10d0).or. &
-       (xcell(3).le.-0.02d0).or. &
-       (xcell(3).ge.0.02d0)) then
-    LS=-0.009
-    MASK=FSI_FINE_SIGN_VEL_VALID 
-   else
-    ! do nothing
-   endif
-
-  else if (part_id.eq.4) then ! sink
-
-   ! half the buffer is about 0.024 (~ .2 * .24 /2 = 0.024)
-   if ((xcell(1).le.-0.145d0).or. &
-       (xcell(1).ge.0.145d0).or. &
-       (xcell(2).le.-0.195d0).or. &
-       (xcell(2).ge.-0.02d0).or. &
-       (xcell(3).le.-0.03d0).or. &
-       (xcell(3).ge.0.03d0)) then
-    LS=-0.024
-    MASK=FSI_FINE_SIGN_VEL_VALID 
-   else
-    ! do nothing
-   endif
-
-   ! half the buffer is about 0.024 (~ .2 * .24 /2 = 0.024)
-   if ((xcell(1).ge.-0.074d0).and. &
-       (xcell(1).le.0.074d0).and. &
-       (xcell(2).ge.-0.113d0).and. &
-       (xcell(2).le.10.0d0).and. &
-       (xcell(3).ge.-10.0d0).and. &
-       (xcell(3).le.10.0d0)) then
-    LS=-0.024
-    MASK=FSI_FINE_SIGN_VEL_VALID 
-   else
-    ! do nothing
-   endif
-
-  else if (part_id.eq.5) then ! tank
-
-   ! half the buffer is about 0.038 (~ .2 * .38 /2 = 0.038)
-   if ((xcell(1).le.-0.175d0).or. &
-       (xcell(1).ge.0.175d0).or. &
-       (xcell(2).le.-0.23d0).or. &
-       (xcell(2).ge.0.23d0).or. &
-       (xcell(3).le.-0.175d0).or. &
-       (xcell(3).ge.0.175d0)) then
-    LS=-0.038
-    MASK=FSI_FINE_SIGN_VEL_VALID 
-   else
-    ! do nothing
-   endif
-
-   ! half the buffer is about 0.038 (~ .2 * .38 /2 = 0.038)
-   if ((xcell(1).ge.-0.07d0).and. &
-       (xcell(1).le.0.07d0).and. &
-       (xcell(2).ge.0.0d0).and. &
-       (xcell(2).le.0.05d0).and. &
-       (xcell(3).ge.-0.07d0).and. &
-       (xcell(3).le.0.07d0)) then
-    LS=-0.038
-    MASK=FSI_FINE_SIGN_VEL_VALID 
-   else
-    ! do nothing
-   endif
-
-  else if (part_id.eq.6) then ! nozzle housing
-
-   ! half the buffer is about 0.01(~ .2 * .1 /2 = 0.01)
-   if ((xcell(1).le.-0.044d0).or. &
-       (xcell(1).ge.0.055d0).or. &
-       (xcell(2).le.-0.215d0).or. &
-       (xcell(2).ge.-0.1d0).or. &
-       (xcell(3).le.-0.04d0).or. &
-       (xcell(3).ge.0.04d0)) then
-    LS=-0.004
-    MASK=FSI_FINE_SIGN_VEL_VALID 
-   else
-    ! do nothing
-   endif
-
-  else
-   print *,"part_id invalid"
+  else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
+   print *,"test coarse first"
+   stop
+  else 
+   print *,"TANK_MK_AUX_THICK_WALLS invalid"
    stop
   endif
 
@@ -290,35 +293,25 @@ INTEGER_T, intent(out) :: aux_ncells_max_side
     LS_FROM_SUBROUTINE=0
 
     if (TANK_MK_AUX_THICK_WALLS.eq.1) then
-     if (auxcomp.eq.1) then ! heater_a (top heater)
-      aux_ncells_max_side=64
-     else if (auxcomp.eq.2) then
-      aux_ncells_max_side=64
-     else if (auxcomp.eq.3) then
-      aux_ncells_max_side=64
-     else if (auxcomp.eq.4) then
-      aux_ncells_max_side=64
-     else if (auxcomp.eq.5) then
+     if (auxcomp.eq.1) then ! heater a (top heater)
       aux_ncells_max_side=128
+     else if (auxcomp.eq.2) then ! heater b
+      aux_ncells_max_side=128
+     else if (auxcomp.eq.3) then ! source
+      aux_ncells_max_side=64
+     else if (auxcomp.eq.4) then ! sink
+      aux_ncells_max_side=128
+     else if (auxcomp.eq.5) then ! tank
+      aux_ncells_max_side=128
+     else if (auxcomp.eq.6) then ! nozzle
+      aux_ncells_max_side=64
      else
       print *,"auxcomp invalid"
       stop
      endif
     else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
-     if (auxcomp.eq.1) then
-      aux_ncells_max_side=256
-     else if (auxcomp.eq.2) then
-      aux_ncells_max_side=256
-     else if (auxcomp.eq.3) then
-      aux_ncells_max_side=64
-     else if (auxcomp.eq.4) then
-      aux_ncells_max_side=256
-     else if (auxcomp.eq.5) then
-      aux_ncells_max_side=256
-     else
-      print *,"auxcomp invalid"
-      stop
-     endif
+     print *,"test coarse first"
+     stop
     else 
      print *,"TANK_MK_AUX_THICK_WALLS invalid"
      stop
@@ -355,20 +348,23 @@ INTEGER_T :: stat
 
  if (axis_dir.eq.2) then
 
-  if (fort_num_local_aux_grids.eq.5) then
+  if (fort_num_local_aux_grids.eq.6) then
 
    if (TANK_MK_AUX_THICK_WALLS.eq.1) then
 
     if (part_id.eq.1) then ! top heater
-     open(unit=unit_id,file= 'tpce_heatera_thick.vtk',status='old',iostat=stat)
+     open(unit=unit_id,file= 'heatera_coarse.vtk',status='old',iostat=stat)
     else if (part_id.eq.2) then ! side heater
-     open(unit=unit_id,file= 'tpce_heaterb_thick.vtk',status='old',iostat=stat)
+     open(unit=unit_id,file= 'heaterb_coarse.vtk',status='old',iostat=stat)
     else if (part_id.eq.3) then
-     open(unit=unit_id,file= 'tpce_source_thick.vtk',status='old',iostat=stat)
+     open(unit=unit_id,file= 'nozzlesource_coarse.vtk',status='old',iostat=stat)
     else if (part_id.eq.4) then
-     open(unit=unit_id,file= 'tpce_sink_thick.vtk',status='old',iostat=stat)
+     open(unit=unit_id,file= 'sink_coarse.vtk',status='old',iostat=stat)
     else if (part_id.eq.5) then
-     open(unit=unit_id, file= 'tpce_geometry_thick.vtk',status='old', &
+     open(unit=unit_id, file= 'tank_coarse.vtk',status='old', &
+        iostat=stat)
+    else if (part_id.eq.6) then
+     open(unit=unit_id, file= 'nozzle_coarse.vtk',status='old', &
         iostat=stat)
     else
      print *,"part_id invalid"
@@ -377,20 +373,8 @@ INTEGER_T :: stat
 
    else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
 
-    if (part_id.eq.1) then ! top heater
-     open(unit=unit_id,file= 'tpce_heatera.vtk',status='old',iostat=stat)
-    else if (part_id.eq.2) then ! side heater
-     open(unit=unit_id,file= 'tpce_heaterb.vtk',status='old',iostat=stat)
-    else if (part_id.eq.3) then
-     open(unit=unit_id,file= 'tpce_source.vtk',status='old',iostat=stat)
-    else if (part_id.eq.4) then
-     open(unit=unit_id,file= 'tpce_sink.vtk',status='old',iostat=stat)
-    else if (part_id.eq.5) then
-     open(unit=unit_id, file= 'tpce_geometry.vtk',status='old',iostat=stat)
-    else
-     print *,"part_id invalid"
-     stop
-    endif
+    print *,"test coarse version first"
+    stop
 
    else 
     print *,"TANK_MK_AUX_THICK_WALLS invalid"
@@ -591,6 +575,10 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   INTEGER_T :: caller_id
   REAL_T :: x3D(3)
   INTEGER_T auxcomp
+  REAL_T :: LS_heater_a
+  REAL_T :: LS_heater_b
+  REAL_T :: LS_tank
+  REAL_T :: LS_nozzle
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -682,9 +670,18 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
      print *,"expecting FSI_flag(3).eq.1"
      stop
     endif
+    auxcomp=1
+    call interp_from_aux_grid(auxcomp,x3D,LS_heater_a)
+    LS(3)=LS_heater_a
+    auxcomp=2
+    call interp_from_aux_grid(auxcomp,x3D,LS_heater_b)
+    LS(3)=max(LS(3),LS_heater_b)
     auxcomp=5
-    call interp_from_aux_grid(auxcomp,x3D,LS(3))
-
+    call interp_from_aux_grid(auxcomp,x3D,LS_tank)
+    LS(3)=max(LS(3),LS_tank)
+    auxcomp=6
+    call interp_from_aux_grid(auxcomp,x3D,LS_nozzle)
+    LS(3)=max(LS(3),LS_nozzle)
    else
     print *,"axis_dir invalid"
     stop
@@ -1884,6 +1881,7 @@ INTEGER_T :: caller_id
 REAL_T :: r_cyl
 REAL_T :: x3D(3)
 INTEGER_T auxcomp
+REAL_T :: LS_tank(num_materials)
 
 
  x3D(1)=x(dir_x)
@@ -2026,6 +2024,8 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   else if (region_id.eq.2) then ! inflow
    auxcomp=3
    call interp_from_aux_grid(auxcomp,x3D,LS_A)
+   call CRYOGENIC_TANK_MK_LS(x,cur_time,LS_tank,num_materials)
+   LS_A=min(LS_A,-LS_tank(3))
    if (LS_A.ge.0.0d0) then
     charfn_out=one
    else if (LS_A.le.0.0d0) then
@@ -2037,6 +2037,8 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   else if (region_id.eq.3) then ! outflow
    auxcomp=4
    call interp_from_aux_grid(auxcomp,x3D,LS_A)
+   call CRYOGENIC_TANK_MK_LS(x,cur_time,LS_tank,num_materials)
+   LS_A=min(LS_A,-LS_tank(3))
    if (LS_A.ge.0.0d0) then
     charfn_out=one
    else if (LS_A.le.0.0d0) then
