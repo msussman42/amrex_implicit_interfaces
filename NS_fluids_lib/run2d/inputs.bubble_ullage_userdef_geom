@@ -65,7 +65,7 @@ ns.FSI_interval     = 0
 #tpce_heatera.vtk (top), tpce_heaterb.vtk (side),
 #tpce_source.vtk, tpce_sink.vtk, 
 #tpce_geometry.vtk
-ns.num_local_aux_grids=5 
+ns.num_local_aux_grids=6
 
 # these variables will be available to plug-ins:
 # Coordinate origin is at the center of the tank
