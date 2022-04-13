@@ -2294,8 +2294,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
     if (DoublyWettedNode(inode_list).eq.1) then
      ! do nothing
     else
-     print *,"expecting normal_cnt>=3"
-     stop
+     print *,"Warning(crse): expecting normal_cnt>=3; normal_cnt=",normal_cnt
     endif
 
    endif
@@ -2345,8 +2344,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
     if (DoublyWettedNode(inode_list).eq.1) then
      ! do nothing
     else
-     print *,"expecting normal_cnt>=6"
-     stop
+     print *,"Warning(crse): expecting normal_cnt>=6; normal_cnt=",normal_cnt
     endif
 
    endif
@@ -3127,8 +3125,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
     if (DoublyWettedNode(inode_list).eq.1) then
      ! do nothing
     else
-     print *,"expecting normal_cnt>=3"
-     stop
+     print *,"warning(BIG): expecting normal_cnt>=3; normal_cnt=",normal_cnt
     endif
 
    endif
@@ -3175,8 +3172,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
     if (DoublyWettedNode(inode_list).eq.1) then
      ! do nothing
     else
-     print *,"expecting normal_cnt>=6"
-     stop
+     print *,"warning(BIG): expecting normal_cnt>=6, normal_cnt=",normal_cnt
     endif
 
    endif

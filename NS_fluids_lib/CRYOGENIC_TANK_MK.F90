@@ -27,7 +27,9 @@ implicit none
 
 INTEGER_T, PARAMETER :: TANK_MK_MATERIAL_TYPE=24
 
-INTEGER_T, PARAMETER :: TANK_MK_AUX_THICK_WALLS=1
+INTEGER_T, PARAMETER :: TANK_MK_AUX_THICK_WALLS=0
+
+INTEGER_T :: num_aux_expect
 
 INTEGER_T :: dir_x,dir_y,dir_z
 
@@ -260,8 +262,144 @@ INTEGER_T :: dir
    endif
 
   else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
-   print *,"test coarse first"
-   stop
+
+   if (part_id.eq.1) then ! heater_a (top heater)
+    if ((xcell(1).le.-0.05576d0).or. &
+        (xcell(1).ge.0.05576d0).or. &
+        (xcell(2).le.0.147d0).or. &
+        (xcell(2).ge.0.177d0).or. &
+        (xcell(3).le.-0.0416d0).or. &
+        (xcell(3).ge.0.0416d0)) then
+     LS=-5.1D-3
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+   else if (part_id.eq.2) then ! side heater
+    if ((xcell(1).le.0.0926d0).or. &
+        (xcell(1).ge.0.107d0).or. &
+        (xcell(2).le.-0.0575d0).or. &
+        (xcell(2).ge.0.0575d0).or. &
+        (xcell(3).le.-0.0423d0).or. &
+        (xcell(3).ge.0.0423d0)) then
+     LS=-5.2D-3
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+   else if (part_id.eq.3) then ! source
+
+    if ((xcell(1).le.-0.0142d0).or. &
+        (xcell(1).ge.0.0255d0).or. &
+        (xcell(2).le.-0.203d0).or. &
+        (xcell(2).ge.-0.111d0).or. &
+        (xcell(3).le.-0.0092d0).or. &
+        (xcell(3).ge.0.0092d0)) then
+     LS=-0.0043
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+   else if (part_id.eq.4) then ! sink
+
+    if ((xcell(1).le.-0.0142d0).or. &
+        (xcell(1).ge.0.0255d0).or. &
+        (xcell(2).le.-0.2026d0).or. &
+        (xcell(2).ge.-0.111d0).or. &
+        (xcell(3).le.-0.0092d0).or. &
+        (xcell(3).ge.0.0092d0)) then
+     LS=-0.0127
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+    if ((xcell(1).ge.-0.00805d0).and. &
+        (xcell(1).le.0.0193d0).and. &
+        (xcell(2).ge.-0.196d0).and. &
+        (xcell(2).le.10.0d0).and. &
+        (xcell(3).ge.-10.0d0).and. &
+        (xcell(3).le.10.0d0)) then
+     LS=-0.00416
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+   else if (part_id.eq.5) then ! tank
+
+    if ((xcell(1).le.-0.156d0).or. &
+        (xcell(1).ge.0.156d0).or. &
+        (xcell(2).le.-0.207d0).or. &
+        (xcell(2).ge.0.207d0).or. &
+        (xcell(3).le.-0.156d0).or. &
+        (xcell(3).ge.0.156d0)) then
+     LS=-0.02
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+    if ((xcell(1).ge.-0.082d0).and. &
+        (xcell(1).le.0.082d0).and. &
+        (xcell(2).ge.-0.133d0).and. &
+        (xcell(2).le.0.133d0).and. &
+        (xcell(3).ge.-0.0822d0).and. &
+        (xcell(3).le.0.0822d0)) then
+     LS=-0.0188
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+   else if (part_id.eq.6) then ! nozzle housing
+
+    if ((xcell(1).le.-0.01551d0).or. &
+        (xcell(1).ge.0.0268d0).or. &
+        (xcell(2).le.-0.203d0).or. &
+        (xcell(2).ge.-0.1106d0).or. &
+        (xcell(3).le.-0.0105d0).or. &
+        (xcell(3).ge.0.0105d0)) then
+     LS=-0.0042
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+   else if (part_id.eq.7) then ! LAD housing
+
+    if ((xcell(1).le.-0.134d0).or. &
+        (xcell(1).ge.0.134d0).or. &
+        (xcell(2).le.-0.184d0).or. &
+        (xcell(2).ge.-0.0387d0).or. &
+        (xcell(3).le.-0.0236d0).or. &
+        (xcell(3).ge.0.0236d0)) then
+     LS=-0.012
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+    if ((xcell(1).ge.-0.117d0).and. &
+        (xcell(1).le.0.117d0).and. &
+        (xcell(2).ge.-0.167d0).and. &
+        (xcell(2).le.10.0d0).and. &
+        (xcell(3).ge.-10.0d0).and. &
+        (xcell(3).le.10.0d0)) then
+     LS=-0.012
+     MASK=FSI_FINE_SIGN_VEL_VALID 
+    else
+     ! do nothing
+    endif
+
+
+   else
+    print *,"part_id invalid"
+    stop
+   endif
+
   else 
    print *,"TANK_MK_AUX_THICK_WALLS invalid"
    stop
@@ -287,7 +425,7 @@ INTEGER_T, intent(out) :: LS_FROM_SUBROUTINE
 INTEGER_T, intent(out) :: aux_ncells_max_side
 
  if ((auxcomp.ge.1).and. &
-     (auxcomp.le.6)) then
+     (auxcomp.le.num_aux_expect)) then
   if (axis_dir.eq.2) then
    if (num_materials.eq.3) then
     LS_FROM_SUBROUTINE=0
@@ -310,8 +448,25 @@ INTEGER_T, intent(out) :: aux_ncells_max_side
       stop
      endif
     else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
-     print *,"test coarse first"
-     stop
+     if (auxcomp.eq.1) then ! heater a (top heater)
+      aux_ncells_max_side=128
+     else if (auxcomp.eq.2) then ! heater b
+      aux_ncells_max_side=128
+     else if (auxcomp.eq.3) then ! source
+      aux_ncells_max_side=64
+     else if (auxcomp.eq.4) then ! sink
+      aux_ncells_max_side=128
+     else if (auxcomp.eq.5) then ! tank
+      aux_ncells_max_side=256
+     else if (auxcomp.eq.6) then ! nozzle
+      aux_ncells_max_side=128
+     else if (auxcomp.eq.7) then ! LAD housing
+      aux_ncells_max_side=128
+     else
+      print *,"auxcomp invalid"
+      stop
+     endif
+
     else 
      print *,"TANK_MK_AUX_THICK_WALLS invalid"
      stop
@@ -348,7 +503,7 @@ INTEGER_T :: stat
 
  if (axis_dir.eq.2) then
 
-  if (fort_num_local_aux_grids.eq.6) then
+  if (fort_num_local_aux_grids.eq.num_aux_expect) then
 
    if (TANK_MK_AUX_THICK_WALLS.eq.1) then
 
@@ -373,16 +528,35 @@ INTEGER_T :: stat
 
    else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
 
-    print *,"test coarse version first"
-    stop
+    if (part_id.eq.1) then ! top heater
+     open(unit=unit_id,file= 'tpce_heatera.vtk',status='old',iostat=stat)
+    else if (part_id.eq.2) then ! side heater
+     open(unit=unit_id,file= 'tpce_heaterb.vtk',status='old',iostat=stat)
+    else if (part_id.eq.3) then
+     open(unit=unit_id,file= 'nozzle_source_15deg.vtk',status='old',iostat=stat)
+    else if (part_id.eq.4) then
+     open(unit=unit_id,file= 'tpce_sink.vtk',status='old',iostat=stat)
+    else if (part_id.eq.5) then
+     open(unit=unit_id, file= 'tpce_shell.vtk',status='old', &
+        iostat=stat)
+    else if (part_id.eq.6) then
+     open(unit=unit_id, file= 'nozzle_15deg.vtk',status='old', &
+        iostat=stat)
+    else if (part_id.eq.7) then
+     open(unit=unit_id, file= 'tpce_ladhousing.vtk',status='old', &
+        iostat=stat)
 
+    else
+     print *,"part_id invalid"
+     stop
+    endif
    else 
     print *,"TANK_MK_AUX_THICK_WALLS invalid"
     stop
    endif
 
   else
-   print *,"expecting fort_num_local_aux_grids.eq.6"
+   print *,"expecting fort_num_local_aux_grids=",num_aux_expect
    stop
   endif 
 
@@ -398,6 +572,8 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
  subroutine INIT_CRYOGENIC_TANK_MK_MODULE()
   use probcommon_module
   implicit none
+
+  num_aux_expect=0
  
   dir_x=1 
   dir_z=SDIM
@@ -441,6 +617,26 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    ! TPCE
   else if ((axis_dir.eq.1).or. &
            (axis_dir.eq.2)) then ! heater on top
+
+   if (axis_dir.eq.1) then
+    num_aux_expect=0
+   else if (axis_dir.eq.2) then
+
+    if (TANK_MK_AUX_THICK_WALLS.eq.0) then
+     num_aux_expect=7
+    else if (TANK_MK_AUX_THICK_WALLS.eq.1) then
+     num_aux_expect=6
+    else
+     print *,"TANK_MK_AUX_THICK_WALLS invalid"
+     stop
+    endif
+    print *,"TANK_MK_AUX_THICK_WALLS=",TANK_MK_AUX_THICK_WALLS
+    print *,"num_aux_expect ",num_aux_expect
+   else
+    print *,"axis_dir invalid"
+    stop
+   endif
+  
    TANK_MK_HEATER_WALL_MODEL = 0.0
    if (radblob4.gt.0.0d0) then
 !   TANK_MK_HEATER_THICK = 0.01d0
@@ -579,6 +775,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   REAL_T :: LS_heater_b
   REAL_T :: LS_tank
   REAL_T :: LS_nozzle
+  REAL_T :: LS_LAD_housing
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -682,6 +879,9 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
     auxcomp=6
     call interp_from_aux_grid(auxcomp,x3D,LS_nozzle)
     LS(3)=max(LS(3),LS_nozzle)
+    auxcomp=7
+    call interp_from_aux_grid(auxcomp,x3D,LS_LAD_housing)
+    LS(3)=max(LS(3),LS_LAD_housing)
    else
     print *,"axis_dir invalid"
     stop
