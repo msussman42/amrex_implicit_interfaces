@@ -356,12 +356,12 @@ INTEGER_T :: dir
 
    else if (part_id.eq.6) then ! nozzle housing
 
-    if ((xcell(1).le.-0.01551d0).or. &
-        (xcell(1).ge.0.0268d0).or. &
-        (xcell(2).le.-0.203d0).or. &
-        (xcell(2).ge.-0.1106d0).or. &
-        (xcell(3).le.-0.0105d0).or. &
-        (xcell(3).ge.0.0105d0)) then
+    if ((xcell(1).le.-0.02417d0).or. &
+        (xcell(1).ge.0.03542d0).or. &
+        (xcell(2).le.-0.2054d0).or. &
+        (xcell(2).ge.-0.1081d0).or. &
+        (xcell(3).le.-0.0195d0).or. &
+        (xcell(3).ge.0.0195d0)) then
      LS=-0.0042
      MASK=FSI_FINE_SIGN_VEL_VALID 
     else
@@ -540,8 +540,13 @@ INTEGER_T :: stat
      open(unit=unit_id, file= 'tpce_shell.vtk',status='old', &
         iostat=stat)
     else if (part_id.eq.6) then
-     open(unit=unit_id, file= 'nozzle_15deg.vtk',status='old', &
+     if (1.eq.0) then
+      open(unit=unit_id, file= 'nozzle_15deg.vtk',status='old', &
         iostat=stat)
+     else
+      open(unit=unit_id, file= 'nozzle_15deg_01thick.vtk',status='old', &
+        iostat=stat)
+     endif
     else if (part_id.eq.7) then
      open(unit=unit_id, file= 'tpce_ladhousing.vtk',status='old', &
         iostat=stat)
