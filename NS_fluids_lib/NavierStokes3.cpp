@@ -9594,7 +9594,7 @@ void NavierStokes::multiphase_project(int project_option) {
   if (project_option_projection(project_option)==1) { 
    alloc_blobdata=1;
   } else if (project_option_projection(project_option)==0) { 
-   // do nothing
+   amrex::Error("expecting project_option_projection(project_option)==1");
   } else {
    amrex::Error("project_option_projection(project_option)invalid");
   }
@@ -9673,18 +9673,21 @@ void NavierStokes::multiphase_project(int project_option) {
    amrex::Error("project_option invalid47");
 
    // if project_option==SOLVETYPE_PRESCOR 
-   // then the velocity in the ice
+   // then the velocity in the ice or 
+   // damping_coefficient(im)>0 materials
    // is overwritten with a projected rigid body velocity:
    //  a) call get_rigid_velocity
    //  b) uedge=test_current_icefacecut*uedge+ &
    //       (one-test_current_icefacecut)*uedge_rigid
+   //  c) uedge=c * uedge + (1-c) * uedge_rigid
    //
    // In LEVELSET_3D.F90, fort_cell_to_mac,
    // operation_flag=OP_UNEW_CELL_TO_MAC, OP_UNEW_USOL_MAC_TO_MAC,
    // OP_UMAC_PLUS_VISC_CELL_TO_MAC, or OP_U_COMP_CELL_MAC_TO_MAC,
    //  num_colors.gt.0, if either
    // left cell or right cell has ice (FSI_flag==3,6)
-   // or is FSI_rigid (FSI_flag==5) then velocity is
+   // or is FSI_rigid (FSI_flag==5) or 
+   // damping_coefficient(im)>0,  then velocity is
    // overwritten.
    // In GODUNOV_3D.F90, fort_init_icemask,
    // "FACECOMP_ICEFACECUT" component (c++)
