@@ -884,9 +884,16 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
     auxcomp=6
     call interp_from_aux_grid(auxcomp,x3D,LS_nozzle)
     LS(3)=max(LS(3),LS_nozzle)
-    auxcomp=7
-    call interp_from_aux_grid(auxcomp,x3D,LS_LAD_housing)
-    LS(3)=max(LS(3),LS_LAD_housing)
+    if (TANK_MK_AUX_THICK_WALLS.eq.1) then
+     ! do nothing
+    else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
+     auxcomp=7
+     call interp_from_aux_grid(auxcomp,x3D,LS_LAD_housing)
+     LS(3)=max(LS(3),LS_LAD_housing)
+    else 
+     print *,"TANK_MK_AUX_THICK_WALLS invalid"
+     stop
+    endif
    else
     print *,"axis_dir invalid"
     stop
