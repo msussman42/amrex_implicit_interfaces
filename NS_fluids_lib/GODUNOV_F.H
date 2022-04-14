@@ -501,7 +501,7 @@ extern "C"
     int* isweep,
     int* law_of_the_wall,
     Real* wall_slip_weight,
-    Real* damping_coefficient,
+    Real* static_damping_coefficient,
     int* im_solid_map,
     int* level,
     int* finest_level,

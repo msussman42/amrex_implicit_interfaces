@@ -20805,7 +20805,7 @@ stop
        isweep, &
        law_of_the_wall, &
        wall_slip_weight, &
-       damping_coefficient, &
+       static_damping_coefficient, &
        im_solid_map, &
        level, &
        finest_level, &
@@ -20841,7 +20841,7 @@ stop
       INTEGER_T, intent(in) :: law_of_the_wall(nmat)
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_ghost
-      REAL_T, intent(in) :: damping_coefficient(nmat)
+      REAL_T, intent(in) :: static_damping_coefficient(nmat)
       INTEGER_T, intent(in), target :: im_solid_map(nparts_ghost)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
@@ -21171,17 +21171,17 @@ stop
         endif
 
          ! cell centered velocity
-        if (damping_coefficient(im_primary).gt.zero) then
+        if (static_damping_coefficient(im_primary).gt.zero) then
          ! v_t = -mu v =>  v^{n+1} - v^{n} = -mu dt v^{n+1}
          ! v^{n+1}=v^{n}/(1+mu dt)
          do veldir=1,SDIM
           state(D_DECL(i,j,k),veldir)=state(D_DECL(i,j,k),veldir)/ &
-                  (one+damping_coefficient(im_primary)*dt)
+                  (one+static_damping_coefficient(im_primary)*dt)
          enddo
-        else if (damping_coefficient(im_primary).eq.zero) then
+        else if (static_damping_coefficient(im_primary).eq.zero) then
          ! do nothing
         else
-         print *,"damping_coefficient(im_primary) invalid"
+         print *,"static_damping_coefficient(im_primary) invalid"
          stop
         endif
        enddo ! k
@@ -21385,7 +21385,7 @@ stop
          enddo
          call get_primary_material(LS_stencil,nmat,im_stencil)
 
-         local_damping=damping_coefficient(im_stencil)
+         local_damping=static_damping_coefficient(im_stencil)
          if (local_damping.gt.zero) then
           if (cell_flag.eq.0) then
            macx(D_DECL(i,j,k))=macx(D_DECL(i,j,k))/(one+dt*local_damping)
