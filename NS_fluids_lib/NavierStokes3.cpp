@@ -9590,12 +9590,13 @@ void NavierStokes::multiphase_project(int project_option) {
   Vector<int> type_flag;
 
   int alloc_blobdata=0;
-  
-  if ((project_option==SOLVETYPE_PRESCOR)|| 
-      ((project_option==SOLVETYPE_PRES)&&
-       (FSI_material_exists()==1))||
-      (project_option==SOLVETYPE_INITPROJ)) {
+ 
+  if (project_option_projection(project_option)==1) { 
    alloc_blobdata=1;
+  } else if (project_option_projection(project_option)==0) { 
+   // do nothing
+  } else {
+   amrex::Error("project_option_projection(project_option)invalid");
   }
 
   if (alloc_blobdata==1) {
@@ -9633,6 +9634,7 @@ void NavierStokes::multiphase_project(int project_option) {
      mdot_data_redistribute,
      mdot_comp_data_redistribute 
      );
+
    if (color_count!=blobdata.size())
     amrex::Error("color_count!=blobdata.size()");
 
