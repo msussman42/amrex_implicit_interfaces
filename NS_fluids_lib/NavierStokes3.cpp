@@ -3549,7 +3549,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	int im_damping=-1;
 	for (int im=0;im<num_materials;im++) {
  	 if (damping_coefficient[im]>0.0) {
-	  im_damping=im
+	  im_damping=im;
 	 } else if (damping_coefficient[im]==0.0) {
 	  // do nothing
 	 } else
@@ -9696,7 +9696,8 @@ void NavierStokes::multiphase_project(int project_option) {
    // adjoining cells for example, then, 
    // FACECOMP_ICEFACECUT component (c++) =0.0
    //
-
+   // NavierStokes::increment_face_velocityALL is declared in 
+   // NavierStokes2.cpp.
   increment_face_velocityALL(
     operation_flag,
     project_option,

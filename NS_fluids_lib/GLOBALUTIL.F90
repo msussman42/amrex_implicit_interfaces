@@ -4143,7 +4143,6 @@ end subroutine dynamic_contact_angle
       REAL_T, intent(out) :: vel
       REAL_T, intent(in) :: blob_array(blob_array_size)
       INTEGER_T nmat
-      INTEGER_T cen_comp,vel_comp,vol_comp
       INTEGER_T ibase
       INTEGER_T veldir,irow
       REAL_T blob_mass_for_velocity(3)
@@ -4160,24 +4159,20 @@ end subroutine dynamic_contact_angle
 
       FSI_prescribed_flag=0
 
-      cen_comp=BLB_CEN_ACT
-      vel_comp=BLB_VEL 
-      vol_comp=BLB_MASS_VEL
-      
       if ((color.ge.1).and.(color.le.num_colors)) then
 
        if ((dir.ge.1).and.(dir.le.SDIM)) then
 
         ibase=(color-1)*num_elements_blobclass
         do veldir=1,3
-         blob_mass_for_velocity(veldir)=blob_array(ibase+vol_comp+veldir)
+         blob_mass_for_velocity(veldir)=blob_array(ibase+BLB_MASS_VEL+veldir)
         enddo
         do veldir=1,3
          xrigid3D(veldir)=zero
          blob_center(veldir)=zero
         enddo
         do veldir=1,SDIM
-         blob_center(veldir)=blob_array(ibase+cen_comp+veldir)
+         blob_center(veldir)=blob_array(ibase+BLB_CEN_ACT+veldir)
          xrigid3D(veldir)=xrigid(veldir)
         enddo
         do veldir=1,SDIM
@@ -4186,18 +4181,19 @@ end subroutine dynamic_contact_angle
         do irow=1,2*SDIM
          call init_basis(blob_center,xrigid3D,irow,phi_N)
          do veldir=1,SDIM
-          if (blob_mass_for_velocity(2).gt.zero) then ! ice touches a solid.
+           !ice touches a solid
+          if (blob_mass_for_velocity(2).gt.zero) then 
            vel_local(veldir)=vel_local(veldir)+ &
-            blob_array(ibase+vel_comp+2*SDIM+irow)*phi_N(veldir)
+            blob_array(ibase+BLB_VEL+2*SDIM+irow)*phi_N(veldir)
            FSI_prescribed_flag=1
           else if (blob_mass_for_velocity(2).eq.zero) then
            if (blob_mass_for_velocity(1).gt.zero) then
             vel_local(veldir)=vel_local(veldir)+ &
-             blob_array(ibase+vel_comp+irow)*phi_N(veldir)
+             blob_array(ibase+BLB_VEL+irow)*phi_N(veldir)
            else if (blob_mass_for_velocity(1).eq.zero) then
             if (blob_mass_for_velocity(3).gt.zero) then
              vel_local(veldir)=vel_local(veldir)+ &
-              blob_array(ibase+vel_comp+2*(2*SDIM)+irow)*phi_N(veldir)
+              blob_array(ibase+BLB_VEL+2*(2*SDIM)+irow)*phi_N(veldir)
             else if (blob_mass_for_velocity(3).eq.zero) then
              ! do nothing
             else
@@ -13648,6 +13644,41 @@ end subroutine dynamic_contact_angle
       return
       end function is_FSI_rigid
 
+      function is_damped_material(nmat,im)
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T :: is_damped_material
+      INTEGER_T, intent(in) :: nmat,im
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid is_damped_material"
+       print *,"nmat=",nmat
+       print *,"num_materials=",num_materials
+       stop
+      endif
+      if ((im.lt.1).or.(im.gt.nmat)) then
+       print *,"im invalid16"
+       stop
+      endif
+
+      is_damped_material=0
+      if ((is_ice(nmat,im).eq.1).or. &
+          (is_FSI_rigid(nmat,im).eq.1).or. &
+          (fort_damping_coefficient(im).gt.zero)) then
+       is_damped_material=1
+      else if ((is_ice(nmat,im).eq.0).and. &
+               (is_FSI_rigid(nmat,im).eq.0).and. &
+               (fort_damping_coefficient(im).eq.zero)) then
+       is_damped_material=0
+      else
+       print *,"is_ice or is_FSI_rigid or fort_damping_coefficient bad"
+       stop
+      endif
+
+      return
+      end function is_damped_material
 
       function is_lag_part(nmat,im)
       use probcommon_module

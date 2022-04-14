@@ -10225,7 +10225,7 @@ stop
            stop
           endif
  
-          if (check_donate.eq.0) then
+          if (check_donate.eq.0) then !RZ R=0 or RTZ R=0
            do im=1,nmat
 
             if (iside.eq.-1) then
@@ -12984,6 +12984,8 @@ stop
 
       REAL_T test_current_icefacecut
       REAL_T test_current_icemask
+      REAL_T damping_factor
+
       INTEGER_T DEBUG_PRESCRIBED
       REAL_T DEBUG_PRESCRIBED_VEL_TOT
       REAL_T DEBUG_PRESCRIBED_VEL_DEN
@@ -13976,15 +13978,11 @@ stop
                 if ((typeleft.ge.1).and.(typeleft.le.nmat).and. &
                     (typeright.ge.1).and.(typeright.le.nmat)) then
 
-                 if ((is_ice(nmat,typeleft).eq.1).or. &
-                     (is_ice(nmat,typeright).eq.1).or. &
-                     (is_FSI_rigid(nmat,typeleft).eq.1).or. &
-                     (is_FSI_rigid(nmat,typeright).eq.1)) then
+                 if ((is_damped_material(nmat,typeleft).eq.1).or. &
+                     (is_damped_material(nmat,typeright).eq.1)) then
 
-                  if (((is_ice(nmat,typeleft).eq.1).and. &
-                       (is_ice(nmat,typeright).eq.1)).or. &
-                      ((is_FSI_rigid(nmat,typeleft).eq.1).and. &
-                       (is_FSI_rigid(nmat,typeright).eq.1))) then
+                  if ((is_damped_material(nmat,typeleft).eq.1).and. &
+                      (is_damped_material(nmat,typeright).eq.1)) then
                    if (LSleft(typeleft).ge.LSright(typeright)) then  
                     typeface=typeleft
                     colorface=colorleft
@@ -13995,12 +13993,10 @@ stop
                     print *,"LSleft or LSright bust"
                     stop
                    endif
-                  else if ((is_ice(nmat,typeleft).eq.1).or. &
-                           (is_FSI_rigid(nmat,typeleft).eq.1)) then
+                  else if (is_damped_material(nmat,typeleft).eq.1) then
                    typeface=typeleft
                    colorface=colorleft
-                  else if ((is_ice(nmat,typeright).eq.1).or. &
-                           (is_FSI_rigid(nmat,typeright).eq.1)) then
+                  else if (is_damped_material(nmat,typeright).eq.1) then
                    typeface=typeright
                    colorface=colorright
                   else
@@ -14008,10 +14004,9 @@ stop
                    stop
                   endif
 
-                  if ((is_ice(nmat,typeface).eq.1).or. &
-                      (is_FSI_rigid(nmat,typeface).eq.1)) then
+                  if (is_damped_material(nmat,typeface).eq.1) then
                    if ((colorface.ge.1).and.(colorface.le.num_colors)) then
-                     ! in: GLOBALUTIL.F90
+                     ! declared in: GLOBALUTIL.F90
                     call get_rigid_velocity( &
                      FSI_prescribed_flag, &
                      colorface,dir+1,uedge_rigid, &
@@ -14021,6 +14016,24 @@ stop
                     uedge=test_current_icemask*uedge+ &
                           (one-test_current_icemask)*uedge_rigid
 
+                    if (fort_damping_coefficient(typeface).eq.zero) then
+                     ! do nothing
+                    else if (fort_damping_coefficient(typeface).gt.zero) then
+                     damping_factor=one/ &
+                         (one+dt*fort_damping_coefficient(typeface))
+                     if ((damping_factor.ge.zero).and. &
+                         (damping_factor.le.one)) then
+                      uedge=damping_factor*uedge+ &
+                            (one-damping_factor)*uedge_rigid
+                     else
+                      print *,"damping_factor invalid"
+                      stop
+                     endif
+                    else
+                     print *,"fort_damping_coefficient(typeface) invalid"
+                     stop
+                    endif
+       
                    else if (colorface.eq.0) then
                     ! do nothing
                    else
@@ -15295,7 +15308,7 @@ stop
              stop
             endif
 
-             ! in: PROB.F90
+             ! eval_face_coeff is declared in: PROB.F90
             caller_id=1
             call eval_face_coeff( &
              caller_id, &
