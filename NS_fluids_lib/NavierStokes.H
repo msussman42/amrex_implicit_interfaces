@@ -1954,7 +1954,8 @@ protected:
     static Vector<Real> shear_modulus; // elastic parameter
     static Vector<Real> lame_coefficient; // elastic parameter
     static Vector<int> linear_elastic_model; // elastic parameter
-    static Vector<Real> damping_coefficient; // dv/dt = -mu v
+    static Vector<Real> damping_coefficient; // dv/dt = -mu (v-vrigid)
+    static Vector<Real> static_damping_coefficient; // dv/dt = -mu v
 
     // (1/L)   eps=0.01
     // viscoelastic_model=0  FENE CR   trac(A)<L^2 lambda(A)>eps/L^2

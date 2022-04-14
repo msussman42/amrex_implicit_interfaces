@@ -3440,6 +3440,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
        }
 
+        //NavierStokes::Mass_Energy_Sources_SinksALL declared in 
+	//this file: NavierStokes3.cpp
        Mass_Energy_Sources_SinksALL();
 
         // DTDt_MF=T_new - T_advect_MF
@@ -3541,11 +3543,22 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         //    c. pressure gradient
        if (disable_pressure_solve==0) {
  
-	 // FSI_flag=3,6 (ice) or FSI_flag=5 (FSI PROB.F90 rigid material)
-        if (FSI_material_exists()==1) {
+         // MDOT term included
+        multiphase_project(SOLVETYPE_PRES);
 
-          // MDOT term included
-         multiphase_project(SOLVETYPE_PRES);
+	int im_damping=-1;
+	for (int im=0;im<num_materials;im++) {
+ 	 if (damping_coefficient[im]>0.0) {
+	  im_damping=im
+	 } else if (damping_coefficient[im]==0.0) {
+	  // do nothing
+	 } else
+	  amrex::Error("damping_coefficient invalid");
+	}
+
+	 // FSI_flag=3,6 (ice) or FSI_flag=5 (FSI PROB.F90 rigid material)
+        if ((FSI_material_exists()==1)|| 
+            (im_damping>=0)) {
 
           // MDOT term not included, instead 
           // If compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+
@@ -3556,10 +3569,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           // See: fort_buildfacewt, FACE_VAR_MF
          multiphase_project(SOLVETYPE_PRESCOR);
 
-        } else if (FSI_material_exists()==0) {
+        } else if ((FSI_material_exists()==0)&&
+		   (im_damping==-1)) {
 
-         multiphase_project(SOLVETYPE_PRES); 
-
+         // do nothing
+	 
         } else
          amrex::Error("FSI_material_exists invalid");
 
@@ -9187,7 +9201,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
  
   // The independent variable is "DIV_Type"
-  // which means the contents must be saved.
+  // which means the presently stored contents 
+  // of "DIV_TYPE" must be saved.
  if (project_option==SOLVETYPE_PRESCOR) { 
   allocate_array(1,1,-1,DIV_SAVE_MF);
   for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -11727,7 +11742,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
        if (viscoelastic_model[im]==2) {
         interp_Q_to_flux=0;  // 1 is a possible option here
        } else if (fort_is_eulerian_elastic_model(&elastic_viscosity[im],
-			                    &viscoelastic_model[im])==1) {
+                   &viscoelastic_model[im])==1) {
 	interp_Q_to_flux=1;
        } else
         amrex::Error("fort_is_eulerian_elastic_model invalid");
@@ -11804,11 +11819,13 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
    // increment: State_Type+=interp_mac_to_cell(Umac_new-REGISTER_MARK_MAC)
   VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
 
-  if (viscoelastic_force_only==0) {
+   //vel_elastic_ALL called from veldiffuseALL
+  if (viscoelastic_force_only==0) { 
 
     // register_mark=unew
    SET_STOKES_MARK(REGISTER_MARK_MF,101);
 
+   //vel_elastic_ALL called from writeTECPLOT_File
   } else if (viscoelastic_force_only==1) {
    // do nothing
   } else
@@ -11824,6 +11841,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
   amrex::Error("num_materials_viscoelastic invalid");
 
 
+  //vel_elastic_ALL called from veldiffuseALL
  if (viscoelastic_force_only==0) {
 
   if (CTML_FSI_flagC()==1) { //FSI_flag=4 or 8
@@ -11849,6 +11867,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
   } else
    amrex::Error("CTML_FSI_flagC() invalid");
 
+  //vel_elastic_ALL called from writeTECPLOT_File
  } else if (viscoelastic_force_only==1) {
   // do nothing
  } else
@@ -12059,7 +12078,7 @@ void NavierStokes::veldiffuseALL() {
  }
 
   // in: veldiffuseALL
-  // 1. substract dt_gradp_over_rho:
+  // 1. subtract dt_gradp_over_rho:
   //   viscosity: (1) (u^* - u^advect) = dt div 2\mu D/rho - dt grad p/rho
   //              u^advect <-- u^advect - dt grad p/rho then 
   //              solve 

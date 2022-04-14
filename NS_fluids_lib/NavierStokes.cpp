@@ -624,6 +624,7 @@ Vector<Real> NavierStokes::lame_coefficient; // def=0
 Vector<int> NavierStokes::linear_elastic_model; // def=0
 Vector<Real> NavierStokes::shear_modulus; // def=0
 Vector<Real> NavierStokes::damping_coefficient; // def=0
+Vector<Real> NavierStokes::static_damping_coefficient; // def=0
 
 Vector<Real> NavierStokes::Carreau_alpha; // def=1
 Vector<Real> NavierStokes::Carreau_beta; // def=0
@@ -3134,6 +3135,7 @@ NavierStokes::read_params ()
     linear_elastic_model.resize(nmat);
     shear_modulus.resize(nmat);
     damping_coefficient.resize(nmat);
+    static_damping_coefficient.resize(nmat);
     store_elastic_data.resize(nmat);
 
     for (int im=0;im<nmat;im++) {
@@ -3143,6 +3145,7 @@ NavierStokes::read_params ()
      linear_elastic_model[im]=0;
      shear_modulus[im]=0.0;
      damping_coefficient[im]=0.0;
+     static_damping_coefficient[im]=0.0;
      store_elastic_data[im]=0;
     }
     pp.queryarr("elastic_viscosity",elastic_viscosity,0,nmat);
@@ -3165,6 +3168,8 @@ NavierStokes::read_params ()
 
     pp.queryarr("elastic_regularization",elastic_regularization,0,nmat);
     pp.queryarr("damping_coefficient",damping_coefficient,0,nmat);
+    pp.queryarr("static_damping_coefficient",
+		static_damping_coefficient,0,nmat);
     pp.queryarr("lame_coefficient",lame_coefficient,0,nmat);
     pp.queryarr("linear_elastic_model",linear_elastic_model,0,nmat);
     pp.queryarr("shear_modulus",shear_modulus,0,nmat);
@@ -4489,6 +4494,8 @@ NavierStokes::read_params ()
 	      linear_elastic_model[i] << '\n';
       std::cout << "shear_modulus[i]=" << shear_modulus[i] << '\n';
       std::cout << "damping_coefficient[i]=" << damping_coefficient[i] << '\n';
+      std::cout << "static_damping_coefficient[i]=" << 
+	      static_damping_coefficient[i] << '\n';
 
       std::cout << "etaL0=viscconst[i]=" << etaL[i] << '\n';
 
@@ -7353,7 +7360,7 @@ void NavierStokes::assimilate_state_data() {
      &isweep,
      law_of_the_wall.dataPtr(), //currently unused in this routine.
      &wall_slip_weight,
-     damping_coefficient.dataPtr(),
+     static_damping_coefficient.dataPtr(),
      im_solid_map.dataPtr(),
      &level,
      &finest_level,
