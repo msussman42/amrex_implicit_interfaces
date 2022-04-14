@@ -5100,6 +5100,11 @@ void NavierStokes::make_physics_vars(int project_option) {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   // tessellate=3
+   //  If rigid materials dominate the cell, then that cell is considered
+   //  to only have the one dominant rigid material (raster cell).  
+   //  In the non-raster cells, the solids have no volume.
+   //
    // declared in: LEVELSET_3D.F90
   fort_build_semirefinevof(
    &tid_current,

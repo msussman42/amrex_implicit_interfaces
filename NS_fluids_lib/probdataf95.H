@@ -140,6 +140,7 @@
       INTEGER_T fort_solidheat_flag
       INTEGER_T doubly_wetted_solid_inside
       INTEGER_T FSI_flag(MAX_NUM_MATERIALS)
+      REAL_T fort_damping_coefficient(MAX_NUM_MATERIALS)
       INTEGER_T fort_material_type(MAX_NUM_MATERIALS)
       INTEGER_T fort_ZEYU_DCA_SELECT
       INTEGER_T gravity_dir,invert_gravity

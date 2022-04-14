@@ -140,6 +140,7 @@ stop
         ccsolidheat_flag, &
         rz_flag, &
         ccFSI_flag, &
+        ccdamping_coefficient, &
         ccnum_local_aux_grids, &
         ccZEYU_DCA_SELECT, &
         ccdoubly_wetted_solid_inside, &
@@ -298,6 +299,7 @@ stop
       INTEGER_T, intent(in) :: ccgravity_dir
       INTEGER_T, intent(in) :: ccinvert_gravity
       INTEGER_T, intent(in) :: ccFSI_flag(ccnum_materials)
+      REAL_T, intent(in) :: ccdamping_coefficient(ccnum_materials)
       INTEGER_T, intent(in) :: ccnum_local_aux_grids
       INTEGER_T, intent(in) :: ccZEYU_DCA_SELECT
       INTEGER_T, intent(in) :: ccdoubly_wetted_solid_inside
@@ -1073,7 +1075,17 @@ stop
       do im=1,num_materials
       
        fort_material_type(im)=ccmaterial_type(im)
+
        FSI_flag(im)=ccFSI_flag(im)
+
+       fort_damping_coefficient(im)=ccdamping_coefficient(im)
+       if (fort_damping_coefficient(im).ge.zero) then
+        ! do nothing
+       else
+        print *,"fort_damping_coefficient(im) invalid"
+        stop
+       endif
+
        if (fort_material_type(im).eq.0) then
         ! do nothing
        else if (fort_material_type(im).eq.999) then
@@ -1642,6 +1654,8 @@ stop
        print *,"fort: rz ",levelrz
        do im=1,num_materials
         print *,"fort: im,FSI_flag ",im,FSI_flag(im)
+        print *,"fort: im,fort_damping_coefficient ", &
+               im,fort_damping_coefficient(im)
        enddo
 
        print *,"fort: fort_num_local_aux_grids= ",fort_num_local_aux_grids

@@ -295,8 +295,10 @@ implicit none
 !  num_interfaces
 ! Added February 12,2022:
 !  problo_array,probhi_array,problen_array
-! renamed March 22,2023:
+! renamed March 22,2022:
 !  invert_solid_levelset -> doubly_wetted_solid_inside
+! Added April 14, 2022:
+!  fort_damping_coefficient
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
        !nten=num_interfaces=( (nmat-1)*(nmat-1)+nmat-1 )/2

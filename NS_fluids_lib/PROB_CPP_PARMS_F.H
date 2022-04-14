@@ -41,6 +41,7 @@ namespace amrex{
        const int* solidheat_flag,
        const int* rz_flag,
        const int* FSI_flag,
+       const Real* damping_coefficient,
        const int* num_local_aux_grids,
        const int* ZEYU_DCA_SELECT,
        const int* doubly_wetted_solid_inside,

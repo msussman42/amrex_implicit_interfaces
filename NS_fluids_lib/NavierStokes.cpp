@@ -1688,6 +1688,7 @@ void fortran_parameters() {
  Vector<Real> speciesviscconst_temp((num_species_var+1)*nmat);
  Vector<int> material_type_temp(nmat);
  Vector<int> FSI_flag_temp(nmat);
+ Vector<Real> damping_coefficient_temp(nmat);
 
  Vector<Real> Carreau_alpha_temp(nmat);
  Vector<Real> Carreau_beta_temp(nmat);
@@ -1720,6 +1721,7 @@ void fortran_parameters() {
   tempcutofftemp[im]=1.0e-8;
   tempcutoffmaxtemp[im]=1.0e+99;
   FSI_flag_temp[im]=0;
+  damping_coefficient_temp[im]=0.0;
 
   Carreau_alpha_temp[im]=1.0;
   Carreau_beta_temp[im]=0.0;
@@ -1743,6 +1745,7 @@ void fortran_parameters() {
  }
 
  pp.queryarr("FSI_flag",FSI_flag_temp,0,nmat);
+ pp.queryarr("damping_coefficient",damping_coefficient_temp,0,nmat);
 
  int num_local_aux_grids_temp=0;
  pp.query("num_local_aux_grids",num_local_aux_grids_temp);
@@ -1889,6 +1892,11 @@ void fortran_parameters() {
 
  for (int im=0;im<nmat;im++) {
 
+  if (damping_coefficient_temp[im]>=0.0) {
+   // do nothing
+  } else
+   amrex::Error("damping_coefficient_temp[im] invalid");
+
   if (material_type_temp[im]==999) {
 
     // non-tessellating cases.
@@ -2027,6 +2035,7 @@ void fortran_parameters() {
   &solidheat_flag,
   &rz_flag,
   FSI_flag_temp.dataPtr(),
+  damping_coefficient_temp.dataPtr(),
   &num_local_aux_grids_temp,
   &ZEYU_DCA_SELECT_temp,
   &doubly_wetted_solid_inside,
