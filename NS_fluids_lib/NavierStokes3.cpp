@@ -7737,7 +7737,9 @@ void NavierStokes::allocate_FACE_WEIGHT(
     &nsolve,
     &local_face_index,
     &nmat,
-    xlo,dx,
+    xlo,
+    dx,
+    &dt_slab,
     offdiagcheck.dataPtr(),
     ARLIM(offdiagcheck.loVect()),ARLIM(offdiagcheck.hiVect()),
     slopefab.dataPtr(),ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
@@ -8270,7 +8272,9 @@ void NavierStokes::correct_velocity(
     xdest.dataPtr(velcomp),ARLIM(xdest.loVect()),ARLIM(xdest.hiVect()),
     ydest.dataPtr(velcomp),ARLIM(ydest.loVect()),ARLIM(ydest.hiVect()),
     zdest.dataPtr(velcomp),ARLIM(zdest.loVect()),ARLIM(zdest.hiVect()),
-    xlo,dx,
+    xlo,
+    dx,
+    &dt_slab,
     &cur_time_slab,
     &nmat);
   } // velcomp=0..nsolve-1

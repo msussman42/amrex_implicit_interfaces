@@ -478,7 +478,10 @@ extern "C" {
       Real* xdest,AMREX_ARLIM_P(xdestlo),AMREX_ARLIM_P(xdesthi), 
       Real* ydest,AMREX_ARLIM_P(ydestlo),AMREX_ARLIM_P(ydesthi), 
       Real* zdest,AMREX_ARLIM_P(zdestlo),AMREX_ARLIM_P(zdesthi), 
-      const Real* xlo,const Real* dx,Real* cur_time,
+      const Real* xlo,
+      const Real* dx,
+      Real* dt,
+      Real* cur_time,
       int* nmat);
 
     void fort_summass(

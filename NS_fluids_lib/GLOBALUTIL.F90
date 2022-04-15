@@ -13644,6 +13644,48 @@ end subroutine dynamic_contact_angle
       return
       end function is_FSI_rigid
 
+      function get_face_damping_factor( &
+         face_vol,nmat,project_option,dt)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T :: get_face_damping_factor
+
+      INTEGER_T, intent(in) :: nmat,project_option
+      REAL_T, intent(in) :: face_vol(2*nmat)
+      REAL_T, intent(in) :: dt
+      INTEGER_T :: im
+      INTEGER_T :: iside
+      INTEGER_T :: volcomp
+      REAL_T :: max_damping_coeff
+
+      max_damping_coeff=zero
+      do im=1,nmat
+       do iside=1,2
+        volcomp=2*(im-1)+iside
+        if (face_vol(volcomp).eq.zero) then
+         ! do nothing
+        else if (face_vol(volcomp).gt.zero) then
+         max_damping_coeff= &
+          max(max_damping_coeff,fort_damping_coefficient(im))
+        else
+         print *,"face_vol invalid"
+         stop
+        endif
+       enddo !iside=1,2
+      enddo !im=1,nmat
+
+      get_face_damping_factor=1.0
+      if (max_damping_coeff.ge.zero) then
+       get_face_damping_factor=one/(one+max_damping_coeff*dt)
+      else
+       print *,"max_damping_coeff invalid"
+       stop
+      endif
+
+      return
+      end function get_face_damping_factor
+
       function is_damped_material(nmat,im)
       use probcommon_module
 
