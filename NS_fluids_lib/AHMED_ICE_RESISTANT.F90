@@ -52,11 +52,29 @@ REAL_T :: local_time
 INTEGER_T :: im
 INTEGER_T :: expected_nmat
 
+!drop falling vertically with given velocity onto oil lubricated surface
 if (axis_dir.eq.0) then
  expected_nmat=4
+!drop falling at an angle with given velocity onto a 
+!  non-lubricated surface with horizontal air flow.
 else if (axis_dir.eq.1) then
  expected_nmat=3
+!drop falling at an angle with given velocity onto a 
+! lubricated surface with horizontal air flow.
 else if (axis_dir.eq.2) then
+ expected_nmat=4
+!ns.tension liq-air, liq-ice, liq-substrate, air-ice, air-substrate, 
+! ice-substrate
+!thermal conductivity: all materials
+!specific heat: all materials
+!density,viscosity:  "  "
+!latent heat
+!saturation temperature
+!drop falling at an angle with given velocity onto a 
+!  non-lubricated surface with horizontal air flow and 
+!  ice-seed (sheet) on the surface.
+!  im=1 drop, im=2 air, im=3 ice, im=4 substrate
+else if (axis_dir.eq.3) then
  expected_nmat=4
 else
  print *,"axis_dir invalid"

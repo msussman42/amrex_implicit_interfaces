@@ -15017,7 +15017,9 @@ stop
        nsolve, &
        local_face_index, &
        nmat, &
-       xlo,dx, &
+       xlo, &
+       dx, &
+       dt, &
        offdiagcheck, &
        DIMS(offdiagcheck), &
        recon,DIMS(recon), &
@@ -15073,6 +15075,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(zface)
       INTEGER_T, intent(in) :: DIMDEC(mask)
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in) :: dt
       REAL_T, intent(inout),target :: offdiagcheck(DIMV(offdiagcheck),nsolve) 
       REAL_T, pointer :: offdiagcheck_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon) 
@@ -15113,6 +15116,9 @@ stop
       INTEGER_T local_presbc
       REAL_T local_mask
       INTEGER_T caller_id
+      INTEGER_T face_vcomp
+      REAL_T face_vol(2*nmat)
+      REAL_T face_damping_factor
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level or finest_level invalid build face wt"
@@ -15138,6 +15144,13 @@ stop
        print *,"local_face_index invalid2"
        print *,"local_face_index=",local_face_index
        print *,"FACECOMP_NCOMP=",FACECOMP_NCOMP
+       stop
+      endif
+
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
        stop
       endif
 
@@ -15299,22 +15312,40 @@ stop
           
             if (dir.eq.0) then
              dd=xface(D_DECL(i,j,k),local_face_index+1)
+             do face_vcomp=1,2*nmat
+              face_vol(face_vcomp)=xface(D_DECL(i,j,k), &
+                      face_vcomp+FACECOMP_VOFFACE)
+             enddo
             else if (dir.eq.1) then
              dd=yface(D_DECL(i,j,k),local_face_index+1)
+             do face_vcomp=1,2*nmat
+              face_vol(face_vcomp)=yface(D_DECL(i,j,k), &
+                      face_vcomp+FACECOMP_VOFFACE)
+             enddo
             else if ((dir.eq.2).and.(SDIM.eq.3)) then
              dd=zface(D_DECL(i,j,k),local_face_index+1)
+             do face_vcomp=1,2*nmat
+              face_vol(face_vcomp)=zface(D_DECL(i,j,k), &
+                      face_vcomp+FACECOMP_VOFFACE)
+             enddo
             else
              print *,"dir invalid buildfacewt"
              stop
             endif
+ 
+            face_damping_factor=get_face_damping_factor( &
+              face_vol,nmat,project_option,dt)
 
              ! eval_face_coeff is declared in: PROB.F90
+             ! e.g. 1/rho or if damping is active,
+             ! face_damping_factor/rho
             caller_id=1
             call eval_face_coeff( &
              caller_id, &
              level,finest_level, &
              cc,cc_ice,cc_group, &
              dd,dd_group, &
+             face_damping_factor, &
              visc_coef, &
              nsolve,dir,veldir,project_option, &
              uncoupled_viscosity,side,local_presbc,local_wt)

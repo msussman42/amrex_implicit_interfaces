@@ -11370,7 +11370,10 @@ END SUBROUTINE SIMP
        xdest,DIMS(xdest), &
        ydest,DIMS(ydest), &
        zdest,DIMS(zdest), &
-       xlo,dx,cur_time,nmat) &
+       xlo, &
+       dx, &
+       dt, &
+       cur_time,nmat) &
       bind(c,name='fort_fluidsolidcor')
 
       use global_utility_module
@@ -11437,6 +11440,7 @@ END SUBROUTINE SIMP
       REAL_T, pointer :: zdest_ptr(D_DECL(:,:,:))
 
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: cur_time
  
       INTEGER_T i,j,k
@@ -11452,6 +11456,9 @@ END SUBROUTINE SIMP
       INTEGER_T caller_id
       REAL_T maskleft,maskright
       INTEGER_T maskface
+      INTEGER_T face_vcomp
+      REAL_T face_vol(2*nmat)
+      REAL_T face_damping_factor
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -11474,7 +11481,13 @@ END SUBROUTINE SIMP
        print *,"bfact invalid161"
        stop
       endif
- 
+
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
+      endif 
       maskcov_ptr=>maskcov
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,268)
 
@@ -11548,6 +11561,10 @@ END SUBROUTINE SIMP
           local_gp=xgp(D_DECL(i,j,k))
           AL=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
           AL_ice=xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+          do face_vcomp=1,2*nmat
+           face_vol(face_vcomp)=xface(D_DECL(i,j,k), &
+                 face_vcomp+FACECOMP_VOFFACE)
+          enddo
           icrit=i
          else if (dir.eq.1) then
           local_dest=ydest(D_DECL(i,j,k))
@@ -11555,6 +11572,10 @@ END SUBROUTINE SIMP
           local_gp=ygp(D_DECL(i,j,k))
           AL=yface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
           AL_ice=yface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+          do face_vcomp=1,2*nmat
+           face_vol(face_vcomp)=yface(D_DECL(i,j,k), &
+                 face_vcomp+FACECOMP_VOFFACE)
+          enddo
           icrit=j
          else if ((dir.eq.2).and.(SDIM.eq.3)) then
           local_dest=zdest(D_DECL(i,j,k))
@@ -11562,11 +11583,18 @@ END SUBROUTINE SIMP
           local_gp=zgp(D_DECL(i,j,k))
           AL=zface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
           AL_ice=zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+          do face_vcomp=1,2*nmat
+           face_vol(face_vcomp)=zface(D_DECL(i,j,k), &
+                 face_vcomp+FACECOMP_VOFFACE)
+          enddo
           icrit=k
          else
           print *,"dir invalid fluid solid cor"
           stop
          endif
+
+         face_damping_factor=get_face_damping_factor( &
+            face_vol,nmat,project_option,dt)
 
          if (project_option_singular_possibleF(project_option).eq.1) then
           if ((nsolve.eq.1).and.(velcomp.eq.0)) then
@@ -11637,6 +11665,7 @@ END SUBROUTINE SIMP
            level,finest_level, &
            AL,AL_ice,cc_group, &
            local_dd,local_dd_group, &
+           face_damping_factor, &
            local_visc_coef, &
            nsolve,dir,veldir,project_option, &
            local_uncoupled_viscosity,side,bccrit,local_wt)

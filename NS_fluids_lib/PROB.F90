@@ -12370,6 +12370,7 @@ END SUBROUTINE Adist
        level,finest_level, &
        cc,cc_ice,cc_group, &
        dd,dd_group, &
+       face_damping_factor, &
        visc_coef, &
        nsolve,dir,veldir,project_option, &
        uncoupled_viscosity, &
@@ -12384,6 +12385,7 @@ END SUBROUTINE Adist
       REAL_T, intent(in) :: dd
       REAL_T :: ddfactor
       REAL_T, intent(out) :: dd_group
+      REAL_T, intent(in) :: face_damping_factor
       REAL_T, intent(in) :: visc_coef
       INTEGER_T, intent(in) :: nsolve,dir,veldir,project_option
       INTEGER_T, intent(in) :: uncoupled_viscosity
@@ -12397,6 +12399,7 @@ END SUBROUTINE Adist
           (cc_ice.ge.zero).and. &
           (cc_ice.le.one).and. &
           (dd.ge.zero).and. &
+          (face_damping_factor.ge.zero).and. &
           (visc_coef.ge.zero).and. &
           (nsolve.ge.1).and. &
           (veldir.ge.1).and. &
@@ -12454,7 +12457,10 @@ END SUBROUTINE Adist
         else if (project_option.eq.SOLVETYPE_INITPROJ) then ! initial projection
          cc_group=cc*cc_ice
         else if (project_option.eq.SOLVETYPE_PRESCOR) then 
-         cc_group=cc*cc_ice
+          ! cc_ice=0 in ice bulk region
+          ! cc_ice=1 in the mushy zone area and outside the ice.
+          ! face_damping_factor<1 in the mushy zone area.
+         cc_group=cc*cc_ice*face_damping_factor
         else
          print *,"project_option invalid"
          stop
