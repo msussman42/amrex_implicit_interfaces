@@ -132,6 +132,14 @@ ns.sum_interval   = 10      # timesteps between computing mass
 # adv_vel = velocity of air flowing into the domain from the xlo position.
 # adv_dir=1
 #
+# axis_dir=3 => drop falling at an angle with given velocity onto an 
+# iced surface with horizontal air flow.
+# 4 materials: liquid, air, ice, substrate
+# (xblob,yblob,zblob,radblob) describe initial drop geometry.
+# Initial velocity of drop: (xblob3,yblob3,zblob3)  (sign important)
+# adv_vel = velocity of air flowing into the domain from the xlo position.
+# adv_dir=1
+#
 ns.axis_dir=2   
 ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=1.57
@@ -139,9 +147,9 @@ ns.vinletgas=0.0
 ns.twall=263  # not used
 ns.advbot=0.0  
 #ns.adv_vel=155.0 # cm/s initial falling downwards speed (axis_dir=0)
-ns.adv_vel=100.0 # cm/s air flow from left to right (axis_dir=1,2)
+ns.adv_vel=100.0 # cm/s air flow from left to right (axis_dir=1,2,3)
 #ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction (axis_dir=0)  
-ns.adv_dir=1 # axis_dir=1 or 2.
+ns.adv_dir=1 # axis_dir=1,2, or 3.
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.material_type=0 0 0 999 # axis_dir=0 or 2
 #ns.material_type=0 0 999 # axis_dir=1

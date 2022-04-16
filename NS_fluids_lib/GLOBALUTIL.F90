@@ -15151,12 +15151,12 @@ end subroutine dynamic_contact_angle
       return
       end subroutine tridiag_solve
 
-      subroutine patterned_substrates(x,y,z,dist,time,im)
+      subroutine patterned_substrates(x,y,z,dist,time,im_substrate)
       use probcommon_module
       IMPLICIT NONE
 
       REAL_T, intent(in) :: x,y,z,time
-      INTEGER_T, intent(in) :: im
+      INTEGER_T, intent(in) :: im_substrate
       REAL_T, intent(out) :: dist
       REAL_T :: xprime
       REAL_T :: yprime
@@ -15165,8 +15165,9 @@ end subroutine dynamic_contact_angle
       REAL_T :: local_pi
       REAL_T :: pitch,ptb_f,ptb_disbtx,ptb_disbty,ptb_dist,rPillar
 
-      if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid10"
+      if ((im_substrate.lt.1).or. &
+          (im_substrate.gt.num_materials)) then
+       print *,"im_substrate invalid10"
        stop
       endif
 
@@ -15182,7 +15183,7 @@ end subroutine dynamic_contact_angle
        stop
       endif
 
-      if (is_rigid(num_materials,im).ne.1) then
+      if (is_rigid(num_materials,im_substrate).ne.1) then
        print *,"is_rigid invalid GLOBALUTIL.F90"
        stop
       endif
