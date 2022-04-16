@@ -49,7 +49,7 @@ REAL_T, intent(in), dimension(SDIM) :: x !spatial coordinates
 REAL_T, intent(out) :: Phi !LS dist, Phi>0 in the substrate
 REAL_T :: yhalf,xshift
 REAL_T :: local_time
-INTEGER_T :: im
+INTEGER_T :: im_substrate
 INTEGER_T :: expected_nmat
 
 !drop falling vertically with given velocity onto oil lubricated surface
@@ -83,7 +83,7 @@ endif
 
 if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
  local_time=zero
- im=num_materials
+ im_substrate=num_materials
  if (SDIM.eq.2) then
   yhalf=0.2d0
   xshift=x(1)+0.2d0
@@ -96,7 +96,7 @@ if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
  endif
   ! patterned_substrates is declared in GLOBALUTIL.F90.
   ! Phi<0 in the substrate, Phi>0 in the fluid
- call patterned_substrates(xshift,yhalf,x(SDIM),Phi,local_time,im)
+ call patterned_substrates(xshift,yhalf,x(SDIM),Phi,local_time,im_substrate)
  Phi=-Phi
 else
  print *,"num_materials or probtype invalid"
@@ -131,6 +131,8 @@ else if (axis_dir.eq.1) then
  expected_nmat=3
 else if (axis_dir.eq.2) then
  expected_nmat=4
+else if (axis_dir.eq.3) then
+ expected_nmat=4
 else
  print *,"axis_dir invalid"
  stop
@@ -150,7 +152,8 @@ if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
   stop
  endif
 
- if ((axis_dir.eq.0).or.(axis_dir.eq.2)) then
+ if ((axis_dir.eq.0).or. &
+     (axis_dir.eq.2)) then
   ! oil is material 3
   ! zblob2 is the altitude of the oil layer
   LS(3)=zblob2-x(SDIM)
@@ -158,6 +161,11 @@ if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
   LS(2)=-(max(LS(1),LS(3)))
  else if (axis_dir.eq.1) then
   LS(2)=-LS(1)
+ else if (axis_dir.eq.3) then
+  ! zblob2 is the altitude of the ice layer
+  LS(3)=zblob2-x(SDIM)
+  ! air
+  LS(2)=-(max(LS(1),LS(3)))
  else
   print *,"axis_dir invalid"
   stop
@@ -218,6 +226,8 @@ INTEGER_T :: assert_oil_velocity
   expected_nmat=3
  else if (axis_dir.eq.2) then
   expected_nmat=4
+ else if (axis_dir.eq.3) then
+  expected_nmat=4
  else
   print *,"axis_dir invalid"
   stop
@@ -230,11 +240,12 @@ INTEGER_T :: assert_oil_velocity
   enddo
 
   if (axis_dir.eq.1) then
-   assert_oil_velocity=0
+   assert_oil_velocity=0 ! there is no oil or ice.
   else if ((axis_dir.eq.0).or. &
-           (axis_dir.eq.2)) then
+           (axis_dir.eq.2).or. &
+           (axis_dir.eq.3)) then
    if (LS(3).ge.-dx(SDIM)) then
-    assert_oil_velocity=1
+    assert_oil_velocity=1 ! oil/ice vel =0 at inflow wall.
    else if (LS(3).lt.-dx(SDIM)) then
     assert_oil_velocity=0
    else
@@ -249,7 +260,7 @@ INTEGER_T :: assert_oil_velocity
   if ((LS(nmat).ge.zero).or. &
       (velsolid_flag.eq.1).or. &
       (assert_oil_velocity.eq.1)) then
-   ! do nothing
+   ! the current value of "VEL" is used (which is VEL=0)
   else if ((LS(nmat).lt.zero).and. &
            (velsolid_flag.eq.0).and. &
            (assert_oil_velocity.eq.0)) then
@@ -266,12 +277,11 @@ INTEGER_T :: assert_oil_velocity
     endif
 
    else if ((axis_dir.eq.1).or. &
-            (axis_dir.eq.2)) then
+            (axis_dir.eq.2).or. &
+            (axis_dir.eq.3)) then
     VEL(1)=adv_vel
 
-    if (LS(1).ge.-dx(1)) then
-     VEL(SDIM)=-abs(adv_vel)
-    else if (LS(1).le.-dx(1)) then
+    if (LS(1).ge.-dx(1)) then ! near or inside the liquid drop.
      VEL(1)=xblob3
      if (SDIM.eq.2) then
       VEL(SDIM)=yblob3
@@ -281,6 +291,8 @@ INTEGER_T :: assert_oil_velocity
       print *,"SDIM invalid"
       stop
      endif
+    else if (LS(1).le.-dx(1)) then
+     ! do nothing
     else
      print *,"LS(1) invalid"
      stop
@@ -363,6 +375,8 @@ if (axis_dir.eq.0) then
 else if (axis_dir.eq.1) then
  expected_nmat=3
 else if (axis_dir.eq.2) then
+ expected_nmat=4
+else if (axis_dir.eq.3) then
  expected_nmat=4
 else
  print *,"axis_dir invalid"
@@ -590,6 +604,8 @@ if (axis_dir.eq.0) then
 else if (axis_dir.eq.1) then
  expected_nmat=3
 else if (axis_dir.eq.2) then
+ expected_nmat=4
+else if (axis_dir.eq.3) then
  expected_nmat=4
 else
  print *,"axis_dir invalid"
