@@ -161,6 +161,12 @@ ns.material_type=0 0 0 999
 ns.heatviscconst=62 0.62 31 386 # W/(m K)
 # 12 13 14 23 24 34  
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
+# the time step is 7.1e-6 so the damping coefficient was chosen in 
+# order to have a reduction factor per step
+# of about 50 percent in the difference
+# between the ice velocity at the triple point and the associated ice
+# rigid body motion (which is velocity=0)
+ns.damping_coefficient=0.0 0.0 3.5e+6 0.0
 ns.viscconst=0.000557 0.0000279 0.00279 100.0 # dimensional Pa s
 ns.denconst=2580 129 2350 8960
 ns.FSI_flag=0 0 3 1
