@@ -27,13 +27,6 @@ mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 9000
 ns.post_init_pressure_solve=1  # make sure initial velocity is solonoidal
-                          # once fixes are complete.
-                          # note: BICGSTAB must be used for "top" solver
-                          # if doing the spectral element method, but 
-                          # Zeyu's application, does not require space/time
-                          # spectral accuracy.
-                          # top solver: levels 0...max_level
-                          # bottom solver: levels -p,-p+1, ..., 0
 mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
 Lp.v = 1
@@ -204,14 +197,26 @@ ns.zblob=2.5e-3  # (1.5e-3)+(1.0e-3) MKS
 # 0.186/2=0.093 Kensuke
 ns.radblob=1.0e-3 # ZEYU
 ns.xblob2=0.0
-#ns.radblob2=1.0e+10  # plate extends the whole domain 
+# EUL-EUL FSI
 ns.radblob2=2.0e-3  # plate extends 2/3 of the way to the end of the domain. 
-ns.yblob2=1.25e-3  # plate y coordinate
-ns.zblob2=1.25e-3  # plate z coordinate
+ns.yblob2=1.25e-3 # center of plate (plate y coordinate)
+ns.zblob2=1.25e-3 # plate z coordinate
+# EUL-EUL FSI
+ns.radblob3=0.25e-3  # vertical radius of the plate (2D)
+# EUL-EUL FSI
+ns.radblob4=0.25e-3
+# EUL-EUL FSI
+ns.radblob5=0.25e-3  # width of clamped region
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=2000
+# EUL-EUL FSI
+ns.material_type=0 0 0
+# LAG-EUL FSI
 ns.material_type=0 0 999
+# EUL-EUL FSI
+ns.FSI_flag=0 0 0
+# LAG-EUL FSI
 ns.FSI_flag=0 0 8
 ns.heatviscconst=0.0 0.0 0.0
 #ns.viscconst=1.0 0.0156552 1.0 # Yongsheng
@@ -229,6 +234,7 @@ ns.elastic_regularization=0.0 0.0 0.0
 ns.lame_coefficient=0.0 0.0 0.0
 ns.shear_modulus=0.0 0.0 0.0
 ns.linear_elastic_model=0 0 1
+# elastic_time is not used for viscoelastic_model==2 or 3?
 ns.elastic_time=0.0 0.0 1.0e+9
 # viscoelastic_model=0 FENE-CR  f_R=(A-I)/(1-tr(A)/L^2) f_S=f_R
 # viscoelastic_model=1 Oldroyd-B  f_R=(A-I) f_S=f_R
@@ -242,7 +248,10 @@ ns.elastic_time=0.0 0.0 1.0e+9
 # viscoelastic_model=6 Linear PTT 
 #     f_R=(1+Tr(A-I)/L^2)(A-I)
 #     f_S=A-I
-ns.viscoelastic_model=0 0 4
+# LAG-EUL FSI
+#ns.viscoelastic_model=0 0 4
+# EUL-EUL FSI
+ns.viscoelastic_model=0 0 3
 ns.viscconst=8.9e-4 0.0000181 1.0e-3 #  MKS
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng
 ns.denconst=997.0 1.25 1000.0 
