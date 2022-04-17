@@ -4698,7 +4698,7 @@ stop
 
        ! in: fort_getcolorsum
       call get_dxmaxLS(dx,bfact,DXMAXLS)
-      cutoff=two*DXMAXLS
+      cutoff=DXMAXLS
 
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1,6615)
       call checkbound_array(fablo,fabhi,mdot_ptr,0,-1,6615)
@@ -4791,6 +4791,13 @@ stop
          mofdata(im)=VOF(D_DECL(i,j,k),im)
         enddo
 
+         ! tessellate==1:
+         !  input: fluids tessellate, solids embedded 
+         !  output: all materials tessellating 
+         ! tessellate==3:
+         !   a) if solid_vfrac>=1/2 then
+         !        consider cell as F_{im_solid_max}=1
+         !   b) else, only consider fluids.
         if ((tessellate.eq.1).or. &
             (tessellate.eq.3)) then
          caller_id=15
@@ -5197,9 +5204,9 @@ stop
 
            if (operation_flag.eq.OP_GATHER_MDOT) then
 
-             ! im_interior_wt(1) is for projecting velocity deep enough
-             ! into a rigid body onto rigid body motion.
-            if (LScen(im).ge.cutoff) then ! cutoff=2 * DXMAXLS
+             ! im_interior_wt(1): avoid noisy velocity conditions near the
+             ! interface.
+            if (LScen(im).ge.cutoff) then ! cutoff=DXMAXLS
              im_interior_wt(1)=one
             else if (LScen(im).lt.cutoff) then
              im_interior_wt(1)=1.0E-3
@@ -5208,9 +5215,14 @@ stop
              stop
             endif
 
-             ! sum_3x3x3 H(phi_solid)/sum_3x3x3 1
+             ! solid_fraction=1:
+             !  a 3x3x3 stencil cell is dominated by a solid,
+             ! solid_fraction=0:
+             !  otherwise.
             im_interior_wt(2)=solid_fraction
 
+             ! im_interior_wt(3): take into account all material im cells
+             ! including those near the interface.
             if (LScen(im).ge.zero) then
              im_interior_wt(3)=one
             else if (LScen(im).lt.zero) then

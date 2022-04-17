@@ -5795,7 +5795,7 @@ end subroutine volume_sanity_check
 ! of already initialized materials.
 ! tessellate:
 ! 0=fluids tessellate, solids embedded
-! 1=fluids tessellate, solids embedded upon input, but tessellating output
+! 1=fluids tessellate, solids embedded on input, but tessellating output
 ! 2=is_rigid_local is zero for all materials; tessellating slopes on
 !   input and tessellating output for all materials.
 ! 3=if rigid materials dominate the cell, then that cell is considered
