@@ -35,6 +35,7 @@ namespace amrex{
        Real* latent_heat,
        int* distribute_from_target,
        int* constant_density_all_time,
+       Real* cur_time_slab,
        Real* dt,
        const Real* dx,
        const Real* xlo,

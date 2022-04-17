@@ -4359,6 +4359,7 @@ stop
        latent_heat, &
        distribute_from_target, &
        constant_density_all_time, & ! 1..nmat
+       cur_time_slab, &
        dt, &
        dx, &
        xlo, &
@@ -4431,6 +4432,7 @@ stop
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
+      REAL_T, intent(in) :: cur_time_slab
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xlo(SDIM)
@@ -4588,7 +4590,7 @@ stop
       INTEGER_T irow,icol,veltype
       REAL_T DXMAXLS,cutoff
       INTEGER_T i_mdot
-      REAL_T im_interior_wt(3)
+      REAL_T local_interior_wt(3) !weights for BLB_MATRIX
       REAL_T blob_cell_count
       REAL_T blob_cellvol_count
       REAL_T blob_mass
@@ -4630,6 +4632,12 @@ stop
        ! do nothing
       else
        print *,"dt invalid"
+       stop
+      endif
+      if (cur_time_slab.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time_slab invalid"
        stop
       endif
 
@@ -4893,6 +4901,12 @@ stop
         do j1=-1,1
         do k1=k1lo,k1hi
 
+         call gridsten_level(xsten_stencil,i+i1,j+j1,k+k1,level,nhalf)
+
+         do dir=1,SDIM
+          local_VEL(dir)=VEL(D_DECL(i+i1,j+j1,k+k1),dir)
+         enddo
+
          local_solid=0
 
          do im=1,nmat
@@ -4989,6 +5003,21 @@ stop
           stop
          endif
 
+         call SUB_clamped_LS(xsten_stencil,cur_time_slab,LS_clamped, &
+           VEL_clamped,temperature_clamped)
+
+         if (LS_clamped.ge.zero) then
+          do dir=1,SDIM
+           local_VEL(dir)=VEL_clamped(dir)
+          enddo
+          local_solid=1
+         else if (LS_clamped.le.zero) then
+          ! do nothing
+         else
+          print *,"LS_clamped is NaN"
+          stop
+         endif
+
          if (typeside.eq.0) then
           ! do nothing
          else if (typeside.eq.base_type) then
@@ -5013,8 +5042,7 @@ stop
          if (local_solid.eq.1) then
           solid_fraction=solid_fraction+one
           do dir=1,SDIM
-           solid_velocity(dir)=solid_velocity(dir)+ &
-            VEL(D_DECL(i+i1,j+j1,k+k1),dir)
+           solid_velocity(dir)=solid_velocity(dir)+local_VEL(dir)
           enddo
          else if (local_solid.eq.0) then
           ! do nothing
@@ -5204,12 +5232,12 @@ stop
 
            if (operation_flag.eq.OP_GATHER_MDOT) then
 
-             ! im_interior_wt(1): avoid noisy velocity conditions near the
+             ! local_interior_wt(1): avoid noisy velocity conditions near the
              ! interface.
             if (LScen(im).ge.cutoff) then ! cutoff=DXMAXLS
-             im_interior_wt(1)=one
+             local_interior_wt(1)=one
             else if (LScen(im).lt.cutoff) then
-             im_interior_wt(1)=1.0E-3
+             local_interior_wt(1)=1.0E-3
             else
              print *,"LScen(im) invalid"
              stop
@@ -5219,7 +5247,8 @@ stop
              !  a 3x3x3 stencil cell is dominated by a solid,
              ! solid_fraction=0:
              !  otherwise.
-            im_interior_wt(2)=solid_fraction
+FIX ME
+            local_interior_wt(2)=solid_fraction
 
              ! im_interior_wt(3): take into account all material im cells
              ! including those near the interface.
