@@ -4558,6 +4558,7 @@ stop
       REAL_T massfrac_parm(num_species_var+1)
       REAL_T pressure_local
       REAL_T xsten_stencil(-3:3,SDIM)
+      REAL_T xstencil_point(SDIM)
       REAL_T xsten(-3:3,SDIM)
       REAL_T dx_sten(SDIM)
       INTEGER_T nhalf
@@ -5013,7 +5014,11 @@ stop
           stop
          endif
 
-         call SUB_clamped_LS(xsten_stencil,cur_time_slab,LS_clamped, &
+         do dir=1,SDIM
+          xstencil_point(dir)=xsten_stencil(0,dir)
+         enddo
+
+         call SUB_clamped_LS(xstencil_point,cur_time_slab,LS_clamped, &
            VEL_clamped,temperature_clamped)
 
          if (LS_clamped.ge.zero) then

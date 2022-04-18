@@ -117,7 +117,8 @@ if ((num_materials.eq.3).and.(probtype.eq.2000)) then
  call flexible_substrateLS(x,LS(3))
 
  if (LS(2).ge.zero) then
-  LS(2)=min(-LS(1),-LS(3))
+  ! intersection of the complements of the liquid and plate
+  LS(2)=min(-LS(1),-LS(3)) 
  else if (LS(2).le.zero) then
   ! do nothing
  else
@@ -160,6 +161,7 @@ if (probtype.eq.2000) then
   ! do nothing
  else
   print *,"flexible_plate_check_vel_rigid: vel not expected"
+  print *,"t,dir,vel ",t,dir,vel
   stop
  endif
 else
