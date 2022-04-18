@@ -207,17 +207,20 @@ ns.radblob3=0.25e-3  # vertical radius of the plate (2D)
 ns.radblob4=0.25e-3
 # EUL-EUL FSI
 ns.radblob5=0.25e-3  # width of clamped region
+# LAG-EUL FSI
+#ns.radblob5=0.0  # width of clamped region
 ns.denfact=1.0
 ns.velfact=0.0
+#flexible_plate_impact.F90
 ns.probtype=2000
 # EUL-EUL FSI
 ns.material_type=0 0 0
 # LAG-EUL FSI
-ns.material_type=0 0 999
+#ns.material_type=0 0 999
 # EUL-EUL FSI
 ns.FSI_flag=0 0 0
 # LAG-EUL FSI
-ns.FSI_flag=0 0 8
+#ns.FSI_flag=0 0 8
 ns.heatviscconst=0.0 0.0 0.0
 #ns.viscconst=1.0 0.0156552 1.0 # Yongsheng
 #material 1 is water

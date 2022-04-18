@@ -133,6 +133,42 @@ endif
 return
 end subroutine flexible_plate_impact_LS
 
+subroutine flexible_plate_check_vel_rigid(x,t,vel,dir)
+use probcommon_module
+IMPLICIT NONE
+
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: vel
+INTEGER_T, intent(in) :: dir
+
+if (t.ge.0.0d0) then
+ ! do nothing
+else
+ print *,"t invalid"
+ stop
+endif
+if ((dir.ge.1).and.(dir.le.SDIM)) then
+ ! do nothing
+else
+ print *,"dir invalid"
+ stop
+endif
+
+if (probtype.eq.2000) then
+ if (vel.eq.0.0d0) then
+  ! do nothing
+ else
+  print *,"flexible_plate_check_vel_rigid: vel not expected"
+  stop
+ endif
+else
+ print *,"probtype invalid"
+ stop
+endif
+
+return
+end subroutine flexible_plate_check_vel_rigid
 
 subroutine flexible_plate_clamped_LS(x,t,LS,vel,temperature)
 use probcommon_module

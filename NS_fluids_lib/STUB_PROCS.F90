@@ -21,7 +21,6 @@ print *,"dimension bust"
 stop
 #endif
 
-! probtype==55 
 module STUB_module
 
 implicit none                   
@@ -170,6 +169,41 @@ REAL_T, intent(out) :: LS(nmat)
 return
 end subroutine STUB_LS
 
+subroutine STUB_check_vel_rigid(x,t,vel,dir)
+use probcommon_module
+IMPLICIT NONE
+
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: vel
+INTEGER_T, intent(in) :: dir
+
+ if (t.ge.0.0d0) then
+  ! do nothing
+ else
+  print *,"t invalid"
+  stop
+ endif
+ if ((dir.ge.1).and.(dir.le.SDIM)) then
+  ! do nothing
+ else
+  print *,"dir invalid"
+  stop
+ endif
+
+ if (vel.eq.0.0d0) then
+  ! do nothing
+ else if (vel.gt.0.0d0) then
+  ! do nothing
+ else if (vel.lt.0.0d0) then
+  ! do nothing
+ else
+  print *,"STUB_check_vel_rigid: vel not expected"
+  stop
+ endif
+
+return
+end subroutine STUB_check_vel_rigid
 
 subroutine STUB_CLAMPED_LS(x,t,LS,vel,temperature)
 use probcommon_module

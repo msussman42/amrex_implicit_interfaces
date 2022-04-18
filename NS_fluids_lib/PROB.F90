@@ -16199,7 +16199,7 @@ END SUBROUTINE Adist
         if (global_velocity_scale.gt.zero) then
          vel(dir)=vel(dir)/global_velocity_scale
         else
-         print *,"globa_velocity_scale invalid"
+         print *,"global_velocity_scale invalid"
          stop
         endif
        else

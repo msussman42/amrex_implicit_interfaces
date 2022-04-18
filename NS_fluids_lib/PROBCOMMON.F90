@@ -887,6 +887,14 @@ implicit none
       INTEGER_T, intent(out) :: aux_ncells_max_side
       end subroutine TEMPLATE_BOUNDING_BOX_AUX
 
+
+      subroutine TEMPLATE_check_vel_rigid(x,t,vel,dir)
+       REAL_T, intent(in) :: x(SDIM)
+       REAL_T, intent(in) :: t
+       REAL_T, intent(in) :: vel
+       INTEGER_T, intent(in) :: dir
+      end subroutine TEMPLATE_check_vel_rigid
+
       subroutine TEMPLATE_clamped_LS(x,t,LS,vel,temperature)
        REAL_T, intent(in) :: x(SDIM)
        REAL_T, intent(in) :: t
@@ -1127,6 +1135,7 @@ implicit none
       PROCEDURE(TEMPLATE_OVERRIDE_FSI_SIGN_LS_VEL_TEMP), POINTER :: &
         SUB_OVERRIDE_FSI_SIGN_LS_VEL_TEMP
       PROCEDURE(TEMPLATE_BOUNDING_BOX_AUX), POINTER :: SUB_BOUNDING_BOX_AUX
+      PROCEDURE(TEMPLATE_check_vel_rigid), POINTER :: SUB_check_vel_rigid
       PROCEDURE(TEMPLATE_clamped_LS), POINTER :: SUB_clamped_LS_no_scale
       PROCEDURE(TEMPLATE_VEL), POINTER :: SUB_VEL
       PROCEDURE(TEMPLATE_EOS), POINTER :: SUB_EOS

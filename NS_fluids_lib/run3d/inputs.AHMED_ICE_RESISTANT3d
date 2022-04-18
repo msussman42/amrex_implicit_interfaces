@@ -165,6 +165,8 @@ ns.denconst=1.0 0.001 0.95 8.96 # axis_dir=0,2
 #ns.denconst=1.0 0.001 8.96 # axis_dir=1
 ns.FSI_flag=0 0 0 1  # axis_dir=0,2
 #ns.FSI_flag=0 0 1  # axis_dir=1
+#ns.damping_coefficient=0.0 0.0 1.0 0.0 # axis_dir=3
+ns.damping_coefficient=0.0 0.0 0.0 0.0 # axis_dir!=3
 ns.recalesce_flag=0 0 0 0
 # solidheat_flag=0=>diffuse in solid 
 # solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)

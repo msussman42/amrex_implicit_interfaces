@@ -4557,6 +4557,7 @@ stop
       REAL_T internal_energy
       REAL_T massfrac_parm(num_species_var+1)
       REAL_T pressure_local
+      REAL_T xsten_stencil(-3:3,SDIM)
       REAL_T xsten(-3:3,SDIM)
       REAL_T dx_sten(SDIM)
       INTEGER_T nhalf
@@ -4590,7 +4591,16 @@ stop
       INTEGER_T irow,icol,veltype
       REAL_T DXMAXLS,cutoff
       INTEGER_T i_mdot
-      REAL_T local_interior_wt(3) !weights for BLB_MATRIX
+        !weights for BLB_MATRIX:
+        !(1) weight=1 if LS>dx  weight=.001 otherwise
+        !(2) weight=1 if at least one stencil cell is dominated by a solid.
+        !    weight=0 otherwise.
+        !(3) weight=1 if LS>0   weight=.001 otherwise
+      REAL_T local_interior_wt(3) 
+      REAL_T local_VEL(SDIM)
+      REAL_T LS_clamped
+      REAL_T VEL_clamped(SDIM)
+      REAL_T temperature_clamped
       REAL_T blob_cell_count
       REAL_T blob_cellvol_count
       REAL_T blob_mass
@@ -5244,18 +5254,18 @@ stop
             endif
 
              ! solid_fraction=1:
-             !  a 3x3x3 stencil cell is dominated by a solid,
+             !  At least one 3x3x3 stencil cell is dominated by a solid.
              ! solid_fraction=0:
-             !  otherwise.
-FIX ME
+             !  Otherwise.
+
             local_interior_wt(2)=solid_fraction
 
-             ! im_interior_wt(3): take into account all material im cells
+             ! local_interior_wt(3): take into account all material im cells
              ! including those near the interface.
             if (LScen(im).ge.zero) then
-             im_interior_wt(3)=one
+             local_interior_wt(3)=one
             else if (LScen(im).lt.zero) then
-             im_interior_wt(3)=1.0E-3
+             local_interior_wt(3)=1.0E-3
             else
              print *,"LScen(im) invalid"
              stop
@@ -5273,7 +5283,7 @@ FIX ME
                do dir=1,SDIM
                 dotprod=dotprod+phi_row(dir)*phi_col(dir)
                enddo
-               dotprod=dotprod*im_interior_wt(veltype)
+               dotprod=dotprod*local_interior_wt(veltype)
                level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
                ic=ic+1
               enddo ! icol
@@ -5299,7 +5309,7 @@ FIX ME
                endif
               enddo ! dir=1..sdim
 
-              dotprod=dotprod*im_interior_wt(veltype)
+              dotprod=dotprod*local_interior_wt(veltype)
 
               level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
               ic=ic+1
@@ -5319,7 +5329,7 @@ FIX ME
              do dir=1,SDIM
               dotprod=dotprod+phi_row(dir)*fluid_velocity(dir)
              enddo
-             dotprod=dotprod*im_interior_wt(veltype)
+             dotprod=dotprod*local_interior_wt(veltype)
              level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
              ic=ic+1
             enddo ! irow=1..2 * sdim
@@ -5331,7 +5341,7 @@ FIX ME
              do dir=1,SDIM
               dotprod=dotprod+phi_row(dir)**2
              enddo
-             dotprod=dotprod*im_interior_wt(veltype)
+             dotprod=dotprod*local_interior_wt(veltype)
              level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
              ic=ic+1
             enddo ! irow=1..2 * sdim
@@ -5341,13 +5351,13 @@ FIX ME
             do dir=1,SDIM
              dotprod=dotprod+fluid_velocity(dir)**2
             enddo
-            dotprod=dotprod*im_interior_wt(veltype)
+            dotprod=dotprod*local_interior_wt(veltype)
             level_blobdata(ic)=level_blobdata(ic)+half*mass*dotprod
             ic=ic+1
 
              ! blob_mass_for_velocity
             do veltype=1,3
-             dotprod=im_interior_wt(veltype)
+             dotprod=local_interior_wt(veltype)
              level_blobdata(ic)=level_blobdata(ic)+mass*dotprod
              ic=ic+1
             enddo ! veltype=1..3
@@ -14045,6 +14055,9 @@ FIX ME
                    stop
                   endif
 
+                   ! is_ice==1 or
+                   ! is_FSI_rigid==1 or
+                   ! fort_damping_coefficient>0
                   if (is_damped_material(nmat,typeface).eq.1) then
                    if ((colorface.ge.1).and.(colorface.le.num_colors)) then
                      ! declared in: GLOBALUTIL.F90
@@ -14053,6 +14066,7 @@ FIX ME
                      colorface,dir+1,uedge_rigid, &
                      xmac,blob_array, &
                      blob_array_size,num_colors) 
+                    call SUB_check_vel_rigid(xmac,time,uedge_rigid,dir+1)
 
                     uedge=test_current_icemask*uedge+ &
                           (one-test_current_icemask)*uedge_rigid
