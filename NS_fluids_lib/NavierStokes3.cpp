@@ -5094,7 +5094,7 @@ int ilev;
   }
 } // subroutine color_variable
 
-
+//call from NavierStokes::ColorSumALL
 //operation_flag==1 OP_SCATTER_MDOT => scatter data collected when 
 //operation_flag==0 (OP_GATHER_MDOT) to mdot or density.
 void
@@ -7190,7 +7190,7 @@ NavierStokes::ColorSumALL(
      } // im1=0..nmat-1
 
      if (blobvol>0.0) {
-      std::cout << "i,x,y,z " << 
+      std::cout << "i,x,y,z " << i << ' ' <<
        blobdata[i].blob_center_actual[0] << ' ' <<
        blobdata[i].blob_center_actual[1] << ' ' <<
        blobdata[i].blob_center_actual[AMREX_SPACEDIM-1] << '\n';
