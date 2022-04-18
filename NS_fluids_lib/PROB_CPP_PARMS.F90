@@ -496,6 +496,7 @@ stop
       SUB_correct_pres_rho_hydrostatic=>STUB_correct_pres_rho_hydrostatic
       SUB_ASSIMILATE=>STUB_ASSIMILATE
       SUB_SUMINT=>STUB_SUMINT
+      SUB_check_vel_rigid=>STUB_check_vel_rigid
       SUB_clamped_LS_no_scale=>STUB_CLAMPED_LS
 
       SUB_wallfunc=>STUB_wallfunc
@@ -736,6 +737,7 @@ stop
        SUB_STATE_BC=>YAOHONG_INKJET_STATE_BC
       else if (probtype.eq.2000) then
        SUB_INIT_MODULE=>INIT_flexible_plate_impact_MODULE
+       SUB_check_vel_rigid=>flexible_plate_check_vel_rigid
        SUB_clamped_LS_no_scale=>flexible_plate_clamped_LS
        SUB_LS=>flexible_plate_impact_LS
        SUB_VEL=>flexible_plate_impact_VEL
@@ -748,6 +750,7 @@ stop
        SUB_HEATSOURCE=>flexible_plate_impact_HEATSOURCE
       else if (probtype.eq.55) then
        SUB_INIT_MODULE=>INIT_GENERAL_PHASE_CHANGE_MODULE
+       SUB_check_vel_rigid=>GENERAL_PHASE_CHANGE_check_vel_rigid
        SUB_LS=>GENERAL_PHASE_CHANGE_LS
        SUB_VEL=>GENERAL_PHASE_CHANGE_VEL
        SUB_PRES=>GENERAL_PHASE_CHANGE_PRES
