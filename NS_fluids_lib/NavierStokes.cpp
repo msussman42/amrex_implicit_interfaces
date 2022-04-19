@@ -4413,6 +4413,7 @@ NavierStokes::read_params ()
         if (polymer_factor[i]>0.0) {
          // do nothing
         } else {
+         std::cout << "----------------------------------\n";
          std::cout << "need polymer_factor > 0 viscoelastic_model=0,1,5,6\n";
          std::cout << "lambda(A)>0.01/L^2 \n";
          amrex::Error("polymer_factor invalid");
