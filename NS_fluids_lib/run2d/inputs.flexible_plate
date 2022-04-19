@@ -241,6 +241,7 @@ ns.shear_modulus=0.0 0.0 0.0
 ns.linear_elastic_model=0 0 1
 # elastic_time is not used for viscoelastic_model==2 or 3?
 ns.elastic_time=0.0 0.0 1.0e+9
+ns.polymer_factor=0.0 0.0 1.0e-9   # parameter, 1/L
 # viscoelastic_model=0 FENE-CR  f_R=(A-I)/(1-tr(A)/L^2) f_S=f_R
 # viscoelastic_model=1 Oldroyd-B  f_R=(A-I) f_S=f_R
 # viscoelastic_model=2 Q ~ (grad X + grad X^T) 
@@ -256,7 +257,8 @@ ns.elastic_time=0.0 0.0 1.0e+9
 # LAG-EUL FSI
 #ns.viscoelastic_model=0 0 4
 # EUL-EUL FSI
-ns.viscoelastic_model=0 0 3
+#ns.viscoelastic_model=0 0 3
+ns.viscoelastic_model=0 0 0
 ns.viscconst=8.9e-4 0.0000181 1.0e-3 #  MKS
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng
 ns.denconst=997.0 1.25 1000.0 
