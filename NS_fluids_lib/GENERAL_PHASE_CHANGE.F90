@@ -260,6 +260,9 @@ if (probtype.eq.55) then
   ! do nothing
  else
   print *,"GENERAL_PHASE_CHANGE_check_vel_rigid: vel not expected"
+  print *,"x,y,z ",x(1),x(2),x(SDIM)
+  print *,"t ",t
+  print *,"dir,vel ",dir,vel
   stop
  endif
 else

@@ -16634,7 +16634,8 @@ stop
        print *,"hydrate_flag invalid"
        stop
       endif
-      if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
+      if ((nsolve.ne.1).and. &
+          (nsolve.ne.STATE_NCOMP_VEL)) then
        print *,"nsolve invalid"
        stop
       endif
@@ -16687,11 +16688,11 @@ stop
          endif
         enddo ! im=1..nmat
        else if (project_option.eq.SOLVETYPE_VISC) then  ! viscosity
-        if (scomp(1).ne.0) then
+        if (scomp(1).ne.STATECOMP_VEL) then
          print *,"scomp invalid"
          stop
         endif
-        if (ncomp(1).ne.SDIM) then
+        if (ncomp(1).ne.STATE_NCOMP_VEL) then
          print *,"ncomp invalid38"
          stop
         endif
@@ -17007,7 +17008,7 @@ stop
 
          if (combine_flag.eq.2) then !combine if vfrac<VOFTOL
 
-          if (nsolve.ne.SDIM) then
+          if (nsolve.ne.STATE_NCOMP_VEL) then
            print *,"nsolve invalid"
            stop
           endif
@@ -17015,7 +17016,7 @@ stop
            print *,"scomp_size invalid"
            stop
           endif
-          if (scomp(1).ne.0) then
+          if (scomp(1).ne.STATECOMP_VEL) then
            print *,"scomp invalid"
            stop
           endif
