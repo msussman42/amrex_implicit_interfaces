@@ -197,7 +197,7 @@ ns.velfact=0.0
 ns.probtype=55
 
 #ns.mem_debug = 1
-#ns.v = 1
+#ns.v = 2
 ns.output_drop_distribution=1
 #ns.show_mem=1
 #ns.d = 1

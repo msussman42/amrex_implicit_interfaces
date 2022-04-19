@@ -507,8 +507,12 @@ void NavierStokes::combine_state_variable(
   amrex::Error("project_option invalid in combine_state_variable");
  } else if (project_option==SOLVETYPE_PRES) {    // regular projection
   nsolve=1;
-  if (combine_flag!=2)
-   amrex::Error("combine_flag invalid");
+
+  if (combine_flag==2) { //combine if vfrac<VOFTOL
+   // do nothing
+  } else
+   amrex::Error("expecting combine_flag=2 (combine if vfrac<VOFTOL)");
+
   num_materials_combine=1;
   if (update_flux!=1)
    amrex::Error("update_flux invalid");
@@ -517,8 +521,12 @@ void NavierStokes::combine_state_variable(
   num_materials_combine=nmat;
  } else if (project_option==SOLVETYPE_VISC) { 
   nsolve=AMREX_SPACEDIM;
-  if (combine_flag!=2)  //combine if vfrac<VOFTOL
-   amrex::Error("combine_flag invalid");
+
+  if (combine_flag==2) { //combine if vfrac<VOFTOL
+   // do nothing
+  } else
+   amrex::Error("expecting combine_flag=2 (combine if vfrac<VOFTOL)");
+
   num_materials_combine=1;
  } else if ((project_option>=SOLVETYPE_SPEC)&&
             (project_option<SOLVETYPE_SPEC+num_species_var)) { 
@@ -906,7 +914,7 @@ void NavierStokes::combine_state_variable(
    int tid_current=ns_thread();
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: GODUNOV_3D.F90
+    // fort_combinevel is declared in: GODUNOV_3D.F90
    fort_combinevel(
     &tid_current,
     &hflag,

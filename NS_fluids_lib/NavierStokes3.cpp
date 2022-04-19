@@ -3372,7 +3372,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
 	  // declared in: Diffusion.cpp
         ns_level.combine_state_variable(
-         SOLVETYPE_VISC,
+         SOLVETYPE_VISC,  //cell centered velocity
          combine_idx,
          combine_flag,
          hflag,
@@ -3380,7 +3380,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          interface_cond_avail);
         update_flux=1;
         ns_level.combine_state_variable(
-         SOLVETYPE_PRES,
+         SOLVETYPE_PRES, //mac velocity
          combine_idx,
          combine_flag,
          hflag,
@@ -3414,6 +3414,36 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           end_velocity_diff-start_velocity_diff << '\n';
         }
        }
+
+       //The viscous solver might have slightly perturbed the 
+       //velocity in the rigid solid regions, so the velocity
+       //in these regions must be re-prescribed.
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+        int combine_flag=2; // combine if vfrac<VOFTOL
+        int hflag=0; // inhomogeneous option
+        int combine_idx=-1;  // update state variables
+        int update_flux=0;
+        int interface_cond_avail=0;
+
+	  // declared in: Diffusion.cpp
+        ns_level.combine_state_variable(
+         SOLVETYPE_VISC,  //cell centered velocity
+         combine_idx,
+         combine_flag,
+         hflag,
+         update_flux, 
+         interface_cond_avail);
+        update_flux=1;
+        ns_level.combine_state_variable(
+         SOLVETYPE_PRES, //mac velocity
+         combine_idx,
+         combine_flag,
+         hflag,
+         update_flux,
+         interface_cond_avail);
+       } // ilev = finest_level ... level
+
 
        if (1==0) {
           // S_new is level 0 data
