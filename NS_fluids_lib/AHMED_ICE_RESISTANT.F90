@@ -105,6 +105,63 @@ endif
 
 end subroutine AHMED_substrateLS
 
+
+subroutine AHMED_ICE_RESISTANT_check_vel_rigid(x,t,vel,dir)
+use probcommon_module
+IMPLICIT NONE
+
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: vel
+INTEGER_T, intent(in) :: dir
+INTEGER_T :: expected_nmat
+
+if (t.ge.0.0d0) then
+ ! do nothing
+else
+ print *,"t invalid"
+ stop
+endif
+if ((dir.ge.1).and.(dir.le.SDIM)) then
+ ! do nothing
+else
+ print *,"dir invalid"
+ stop
+endif
+
+if (axis_dir.eq.0) then
+ expected_nmat=4
+else if (axis_dir.eq.1) then
+ expected_nmat=3
+else if (axis_dir.eq.2) then
+ expected_nmat=4
+else if (axis_dir.eq.3) then
+ expected_nmat=4
+else
+ print *,"axis_dir invalid"
+ stop
+endif
+
+if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
+ if (vel.eq.0.0d0) then
+  ! do nothing
+ else
+  print *,"AHMED_ICE_RESISTANT_check_vel_rigid: vel not expected"
+  print *,"x,y,z ",x(1),x(2),x(SDIM)
+  print *,"t ",t
+  print *,"dir,vel ",dir,vel
+  print *,"axis_dir ",axis_dir
+  stop
+ endif
+else
+ print *,"num_materials or probtype invalid"
+ stop
+endif
+
+return
+end subroutine AHMED_ICE_RESISTANT_check_vel_rigid
+
+
 subroutine AHMED_ICE_RESISTANT_LS(x,t,LS,nmat)
 use probcommon_module
 use global_utility_module

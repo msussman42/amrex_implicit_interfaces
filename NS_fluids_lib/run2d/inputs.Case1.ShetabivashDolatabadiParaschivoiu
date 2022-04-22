@@ -85,9 +85,6 @@ ns.gravity        = -9.8 # m/s^2
 # sigma_{SG}=sigma_{IG}
 # sigma_{IG}-sigma_{SI}=sigma_{IG}cos(theta_I_substrate)
 # sigma_{IG}(1-cos(theta_I_substrate))=sigma_{SI}
-# on the substrate (if there is supposed to be liquid, but ice seed is
-# there instead):083450104964810870728 DT = 1.7004259712455955982e-07
-
 
 # sigma_{SG}-sigma_{SL}=sigma_{LG}cos(theta_L_substrate)
 # theta_L_substrate=33 degrees
