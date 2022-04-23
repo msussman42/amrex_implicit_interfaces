@@ -54,7 +54,6 @@ ns.slice_dir=1
 ns.xslice=0.0 0.0 0.0
 ns.EILE_flag=-1
 ns.truncate_thickness=2.0
-# 1: liquid 2: air 3: ice 4: substrate
 
 ns.minimum_relative_error=1.0e-22
 
@@ -204,21 +203,12 @@ ns.stiffCP= 4.219e+7  1.0006e+7 2.067e+7 0.385e+7  # erg/(g K)
 # 12 13 14 23 24 34 21 31 41 32 42 43
 # 12=water to air (i.e. vapor is only created within the air)  31=ice to water
 #ns.latent_heat = 2.26e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
-# 0=distribute to the destination material  V=u_source dot n + mdot/rho_source
-# 1=distribute to the source material.      V=u_dest dot n + mdot/rho_dest
-# OTHERWISE, 
+# 0=distribute to the destination material (def)
+#   V=u_source dot n + mdot/rho_source
+# 1=distribute to the source material.      
+#   V=u_dest dot n + mdot/rho_dest
 #12 13 14 23 24 34 21 31 41 32 42 43 (31=>0)
-#distribute to the melt is preferred since it will
-#have less transients in the "solid" ice
-# distribute_from_target=0 => mdot distributed in the melt and the
-# speed is u_{solid} dot n + mdot/rho_{solid}
-
-# NO EVAPORATION:
 ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
-#EVAPORATION: (distribute mdot into the melt for melting, and into the
-# gas for evaporation)
-#ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
-# unnecessary to distribute mdot evenly for liquids or solids; only gases.
 ns.distribute_mdot_evenly=0 0 0 0 0 0 0 0 0 0 0 0
 ns.constant_density_all_time=1 1 1 1 # not sealed 1..nmat
 ns.constant_volume_mdot=0 0 0 0 0 0 0 0 0 0 0 0 # not sealed 1..2 nten
@@ -226,20 +216,30 @@ ns.override_density=0 0 0 0
 
 #1=liquid, 2=air, 3=ice, 4=substrate
 #12 13 14 23 24 34 21 31 41 32 42 43
-#ice converted to liquid  density_liquid=0.85  density_ice=0.950
-#
-
-# 12 13 14 23 24 34 21 31 41 32 42 43
 #NO EVAPORATION:
 #MARK SUSSMAN: CHECK THIS.
 ns.latent_heat = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
-#EVAPORATION: (tried 2.26e+10, but evap rate was quick, 3.0e+10 is a little slower rate)
-#ns.latent_heat = 3.0e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
-
 #evaporation: 
-# freezing_model=0 => stefan law  V=[k grad T dot n]/L
-# 5 = mystery evaporation law
-#evaporation: freezing_model=6 Palmore and Desjardins 
+# freezing_model:
+# 0 = stefan law  V=[k grad T dot n]/L (energy jump model)
+# 1 = mystery source term model
+# 2 = hydrate
+# 3 = wildfires (combustion) ?
+# 4 = Tanasawa model  (no extra species variable required)
+#     rate of evaporation is proportional to 
+#     half*(Tsrc_INT+Tdst_INT)-Tsat  i.e.
+#     rate of evaporation proportional to the present interface temperature
+#     minus some prescribed (constant) saturation temperature.
+#     In near future: Saturation temperature Tsat will depend on liquid, gas,
+#     and vapor state variables.
+# 5 = [k grad T dot n]/L evaporation law
+#     a) species (rho Y)_{t} + div(rho u Y) = div (D rho grad Y)
+#        Y is the mass fraction of vapor within the gas.
+#        rho is the total density of the gas/vapor mixture
+# 6 = Either Villegas etal/Palmore Desjardins model with
+#     species for evaporation/condensation or 
+#     Kassemi hybrid energy jump+Schrage model.
+#ns.freezing_model=6 0 0 0 0 0 0 0 0 0 0 0
 #    freezing_model=6: ns.Tanasawa_or_Schrage_or_Kassemi=3  Kassemi model
 # EVAPORATION or NO EVAPORATION
 ns.Tanasawa_or_Schrage_or_Kassemi=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
@@ -248,15 +248,7 @@ ns.Tanasawa_or_Schrage_or_Kassemi=0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 # NO EVAPORATION
 # MARK SUSSMAN CHECK THIS
 ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
-
-
-ns.constrain_normal_probe_for_evap=0
-#vapor from "12" evaporation is dumped into species 1 within the air.
-#EVAPORATION:
-#ns.mass_fraction_id=1 0 0 0 0 0 0 0 0 0 0 0
-#NO EVAPORATION: 
 ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
-
 # 1->2 liquid-> gas
 # 1->3 liquid->ice 
 # ....
@@ -268,7 +260,6 @@ ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
 #NO EVAPORATION:
 #MARK: CHECK THIS
 ns.saturation_temp = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 273.0 0.0 0.0 0.0 0.0
-# 
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 
@@ -322,7 +313,6 @@ ns.speciesviscconst=0.282 0.282 0.0 0.0
 #https://www.ready.noaa.gov/READYmoistcal.php 
 #initial vapor mass fraction.
 #EVAPORATION or NO EVAPORATION
-#
 ns.speciesconst=7.1e-3 7.1e-3 7.1e-3 7.1e-3 # species 1: 1..num_materials
 ns.molar_mass=18.02 28.9 18.02 18.02 # liquid, ambient,ice,substrate
 # species molar mass (vapor) should be the same as the liquid molar mass.
@@ -354,7 +344,8 @@ ns.recalesce_flag=0 0 0 0
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=0  
 # 1=water 2=gas  3=ice  4=substrate 
-ns.tempconst=273.0 273.0 273.0 323.0  #/home/Fluid16/mohta/amrex_implicit_interfaces-master-3-2D/amrex_implicit_interfaces-master/NS_fluids_lib/run2d/melting/half_hight_raugh
+#/home/Fluid16/mohta/amrex_implicit_interfaces-master-3-2D/amrex_implicit_interfaces-master/NS_fluids_lib/run2d/melting/half_hight_raugh
+ns.tempconst=273.0 273.0 273.0 323.0  
 ns.initial_temperature=273.0 273.0 273.0 323.0  # dimensionless
 # dxcoarse=2/64=1/32
 # RZ
@@ -370,17 +361,19 @@ ns.xblob=0.0  # center of ice block
 ns.yblob=0.0
 ns.zblob=0.425
 ns.xblob2=0.0 # center of surface of heated substrate (xblob2,yblob2)   
-ns.yblob2=0.125 #4 X dxcoarse=4 x (1/32) =  1/8
-ns.zblob2=0.125
+ns.yblob2=0.0
+ns.zblob2=0.125 #4 X dxcoarse=4 x (1/32) =  1/8
 
 ns.radblob2=0.0 # zero degrees incline (radians)
-# thickness of underside of ice block that is already melted
+# ice + water thickness = radblob
+# water thickness = radblob3  usually radblob3 << radlob (initial water
+# is "seed" for starting the melting process)
 #RZ
-#ns.radblob3=0.0625
+#ns.radblob3=0.0625 #water thickness
 #ns.radblob=0.33125 #side length of ice block
 #ns.radblob4=0.290625 #radius of ice block
 #XYZ
-ns.radblob3=0.0625
+ns.radblob3=0.0625 # water thickness
 ns.radblob=0.6625 #side length of ice block
 ns.radblob4=0.3 #radius of ice block
 
