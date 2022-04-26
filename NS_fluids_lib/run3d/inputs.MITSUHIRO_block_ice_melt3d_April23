@@ -64,30 +64,9 @@ ns.projection_pressure_scale=1.0e+6
 # changes to inputs file for evaporation and condensation:
 # 1. ns.num_species_var increased accordingly, 
 # 2. latent_heat liquid,air  positive for evaporation.
-# 3. freezing_model liquid, air = 5
+# 3. freezing_model liquid, air = 6 (Palmore and Desjardins)
 # 4. TSAT liquid,air set accordingly.
 # 5. mass_fraction_id liquid,air set accordingly 1<=id<=num_species_var
-#FUTURE: for ice nucleation at substrate/liquid interface:
-# 1. decrease liquid volume fraction and increase ice volume fraction.
-#    expansion (mdot) source terms are nonzero in the liquid.
-# 2. temperature at the substrate/liquid interface is the saturation
-#    temperature.
-# changes to inputs file:
-# 1. latent_heat substrate,water negative for freezing
-# 2. freezing_model substrate,water = 6
-# 3. TSAT substrate,water set accordingly
-# 4. mass_fraction_id substrate, water set accordingly (material id for ice)
-# FUTURE: for vapor nucleation at substrate/liquid interface:
-# 1. decrease liquid volume fraction and increase vapor volume fraction.
-#    expansion (mdot) source terms are nonzero in the liquid.
-# 2. temperature at the substrate/liquid interface is the saturation
-#    temperature.
-# changes to inputs file:
-# 1. latent_heat substrate,water positive for boiling
-# 2. freezing_model substrate,water = 6
-# 3. TSAT substrate,water set accordingly
-# 4. mass_fraction_id substrate,water set accordingly (material id for vapor)
-#
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: substrate  
 # EVAPORATION or NO EVAPORATION
 ns.num_species_var=1 
@@ -368,14 +347,12 @@ ns.radblob2=0.0 # zero degrees incline (radians)
 # ice + water thickness = radblob
 # water thickness = radblob3  usually radblob3 << radlob (initial water
 # is "seed" for starting the melting process)
-#RZ
-#ns.radblob3=0.0625 #water thickness
-#ns.radblob=0.33125 #side length of ice block
-#ns.radblob4=0.290625 #radius of ice block
-#XYZ
 ns.radblob3=0.0625 # water thickness
-ns.radblob=0.6625 #side length of ice block
 ns.radblob4=0.3 #radius of ice block
+#RZ
+#ns.radblob=0.33125 #side length of ice block
+#XYZ
+ns.radblob=0.6625 #side length of ice block
 
 ns.denfact=1.0
 ns.velfact=0.0
