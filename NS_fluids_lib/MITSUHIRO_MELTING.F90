@@ -114,12 +114,15 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
  endif
  if (abs(substrate_height-(ice_vertical-half*radblob)).gt.VOFTOL) then
   print *,"bottom of original water+ice block must coincide w/substrate"
+  print *,"probtype=",probtype
   print *,"sdim= ",SDIM
   print *,"yblob=",yblob
   print *,"zblob=",zblob
-  print *,"ice_vertical=",ice_vertical
-  print *,"substrate_height=",substrate_height
+  print *,"ice_vertical (yblob if 2d, zblob if 3d)=",ice_vertical
+  print *,"substrate_height (zblob2) =",substrate_height
   print *,"radblob=",radblob
+  print *,"radblob/2=",half*radblob
+  print *,"ice_vertical-radblob/2 ",ice_vertical-half*radblob
   stop
  endif
 
