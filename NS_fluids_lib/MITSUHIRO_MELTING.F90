@@ -48,11 +48,18 @@ REAL_T, intent(out) :: Phi !LS dist, Phi>0 in the substrate
 
 REAL_T substrate_height
 
-if (abs(zblob2-yblob2).le.1.0D-14) then
+if (SDIM.eq.2) then
+ if (abs(zblob2-yblob2).le.1.0D-14) then
+  substrate_height=zblob2  ! substrate thickness
+ else
+  print *,"zblob2 or yblob2 invalid (they should be the same) 2D"
+  print *,"zblob2,yblob2   = ",zblob2,yblob2
+  stop
+ endif
+else if (SDIM.eq.3) then
  substrate_height=zblob2  ! substrate thickness
 else
- print *,"zblob2 or yblob2 invalid (they should be the same)"
- print *,"zblob2,yblob2   = ",zblob2,yblob2
+ print *,"dimension bust"
  stop
 endif
 
@@ -95,10 +102,17 @@ REAL_T :: substrate_height
    stop
   endif
 
-if (abs(zblob2-yblob2).le.1.0D-14) then
+if (SDIM.eq.2) then
+ if (abs(zblob2-yblob2).le.1.0D-14) then
+  substrate_height=zblob2  ! substrate thickness
+ else
+  print *,"zblob2 or yblob2 invalid"
+  stop
+ endif
+else if (SDIM.eq.3) then
  substrate_height=zblob2  ! substrate thickness
 else
- print *,"zblob2 or yblob2 invalid"
+ print *,"dimension bust"
  stop
 endif
 
