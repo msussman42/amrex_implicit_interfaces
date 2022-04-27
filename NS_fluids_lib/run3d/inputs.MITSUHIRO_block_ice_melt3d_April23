@@ -350,9 +350,11 @@ ns.radblob2=0.0 # zero degrees incline (radians)
 ns.radblob3=0.0625 # water thickness
 ns.radblob4=0.3 #radius of ice block
 #RZ
-#ns.radblob=0.33125 #side length of ice block
+#MUST HAVE: yblob-radblob/2=zblob2
+#ns.radblob=0.6 #side length of ice block
 #XYZ
-ns.radblob=0.6625 #side length of ice block
+#MUST HAVE: zblob-radblob/2=zblob2
+ns.radblob=0.6 #side length of ice block
 
 ns.denfact=1.0
 ns.velfact=0.0
