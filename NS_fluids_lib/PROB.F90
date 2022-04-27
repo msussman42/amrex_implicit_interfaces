@@ -7949,6 +7949,10 @@ END SUBROUTINE Adist
        if (SDIM.eq.2) then
         if (abs(yblob2-(yblob-half*radblob)).gt.VOFTOL) then
          print *,"bottom of original ice block must coincide w/substrate"
+         print *,"probtype=",probtype
+         print *,"substrate_height (yblob2) =",yblob2
+         print *,"ice_vertical (yblob if 2d)=",yblob
+         print *,"radblob=",radblob
          stop
         endif
 
