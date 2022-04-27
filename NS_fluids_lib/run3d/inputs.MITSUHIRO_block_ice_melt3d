@@ -300,7 +300,7 @@ ns.species_molar_mass=18.02 # this is vapor molar mass=liquid molar mass
 # of about 50 percent in the difference
 # between the ice velocity at the triple point and the associated ice
 # rigid body motion.
-ns.damping_coefficient=0.0 0.0 2.0e+5 0.0
+ns.damping_coefficient=0.0 0.0 1.0e+4 0.0
 # ice is a very viscous fluid 
 ns.viscconst=0.018 0.00017 10.0 100.0 # dimensional
 # ns.viscconst=0.02 0.0001 1.0 1.0 # dimensional before
