@@ -872,8 +872,10 @@ Vector<int> NavierStokes::spec_material_id_AMBIENT;
 //   distribute_from_target=1 (pressure more accurate in the
 //   liquid regions, also less reliance on dt being uniform, the
 //   destination velocity has smaller magnitude.)
-// for freezing and melting den_dst ~ den_src =>
-//   distribute_from_target=0  ok. 
+// for freezing and melting need to distribute the mdot into
+// the liquid material:
+//   distribute_from_target=0 melting 
+//   distribute_from_target=1 freezing 
 
 Vector<int> NavierStokes::distribute_from_target; // 1..2*nten
 
@@ -3930,19 +3932,35 @@ NavierStokes::read_params ()
 	 if (den_source>max_den)
 	  max_den=den_source;
 
-          // fixed_parm=-1,0, or 1.
-	 if (max_den/min_den<1.0) {
- 	  amrex::Error("max_den or min_den bust");
-	 } else if (max_den/min_den<2.0) {
-          distribute_from_target[iten_local]=0;
-         } else if (den_dest<den_source) {
-            // s= n dot u_dest + mdot/rho_dest
+	 if (max_den/min_den>=1.0) {
+ 	  // do nothing
+	 } else
+	  amrex::Error("max_den or min_den bust");
+
+	 if (is_ice_matC(im_dest)==1) { // freezing
           distribute_from_target[iten_local]=1;
-         } else if (den_source<den_dest) {
-            // s= n dot u_source + mdot/rho_source
+	 } else if (is_ice_matC(im_source)==1) { // melting
           distribute_from_target[iten_local]=0;
-         } else
-          amrex::Error("den_source or den_dest invalid");
+         } else if ((is_ice_matC(im_dest)==0)&&
+   	            (is_ice_matC(im_source)==0)) {
+
+          // fixed_parm=-1,0, or 1.
+ 	  if (max_den/min_den<1.0) {
+ 	   amrex::Error("max_den or min_den bust");
+	  } else if (max_den/min_den<2.0) {
+           distribute_from_target[iten_local]=0;
+          } else if (den_dest<den_source) {
+            // s= n dot u_dest + mdot/rho_dest
+           distribute_from_target[iten_local]=1;
+          } else if (den_source<den_dest) {
+            // s= n dot u_source + mdot/rho_source
+           distribute_from_target[iten_local]=0;
+          } else
+           amrex::Error("den_source or den_dest invalid");
+	 } else {
+	  amrex::Error("is_ice_matC bust");
+	 }
+
         } else
          amrex::Error("den_source or den_dest invalid");
 
