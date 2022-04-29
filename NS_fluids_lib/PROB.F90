@@ -596,9 +596,6 @@ stop
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
 
-      REAL_T H_ICE,H_WATER
-      REAL_T eps_thick
-      REAL_T dxmaxLS
       REAL_T dist_mask_override
       INTEGER_T im_primary
       INTEGER_T im_secondary
@@ -622,14 +619,6 @@ stop
        stop
       endif
 
-      if ((FORT_MUSHY_THICK.ge.one).and. &
-          (FORT_MUSHY_THICK.le.four)) then
-       ! do nothing
-      else
-       print *,"MUSHY_THICK invalid"
-       stop
-      endif
-
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
        stop
@@ -637,18 +626,6 @@ stop
       nten_test=num_interfaces
       if (nten_test.ne.nten) then
        print *,"nten invalid get_icemask nten, nten_test ",nten,nten_test
-       stop
-      endif
-
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
-
-      eps_thick=FORT_MUSHY_THICK*dxmaxLS
-      if (SDIM.eq.2) then
-       eps_thick=eps_thick*sqrt(two)
-      else if (SDIM.eq.3) then
-       eps_thick=eps_thick*sqrt(three)
-      else
-       print *,"dimension bust"
        stop
       endif
 
@@ -837,54 +814,51 @@ stop
 
          if (im_ice.eq.im_dest) then  ! freezing
 
-          if (distribute_from_target(iten+nten*ireverse).eq.0) then
-           ! do nothing (distribute from the liquid to the ice)
-          else if (distribute_from_target(iten+nten*ireverse).eq.1) then
-           eps_thick=zero ! distribute from the ice to the liquid
+          if (distribute_from_target(iten+nten*ireverse).eq.1) then
+           ! do nothing
           else
-           print *,"distribute_from_target(iten+nten*ireverse) bad"
+           print *,"required freezing: "
+           print *,"distribute_from_target(iten+nten*ireverse)=1"
            stop
           endif
 
           ! dist_mask_override>0 in the substrate. (dest is ice)  this routine
           ! tells one whether to force mask=0
           call icemask_override(xtarget,im_source,im_dest,dist_mask_override)
-          if (dist_mask_override.ge.-eps_thick) then
-           if ((dist_mask_override.ge.zero).or. &
-               (im_dest.eq.im_primary)) then
-            icemask=zero  ! mask off this cell.
+
+          if (dist_mask_override.ge.zero) then
+           icemask=zero  ! mask off this cell.
+          else if (dist_mask_override.le.zero) then
+           if (LS(im_ice).ge.zero) then
+            icemask=zero
+           else if (LS(im_ice).le.zero) then
+            icemask=one
            else
-            icemask=one   ! do nothing
+            print *,"LS(im_ice) bust"
+            stop
            endif
           else
-           ! icemask=0 in the bulk ice regions
-           ! icemask=1 in the bulk liquid regions
-           ! icemask=0 in the ice regions away from liquid.
-           ! icemask=1 otherwise
-           H_ICE=hs(LS(im_ice),eps_thick)
-           H_WATER=hs(LS(im_source),eps_thick)
-           icemask=one-H_ICE
-           if (H_ICE.gt.zero) then
-            icemask=icemask*H_WATER
-           endif
+           print *,"dist_mask_override bust"
+           stop
           endif
 
          else if (im_ice.eq.im_source) then ! melting
 
           if (distribute_from_target(iten+nten*ireverse).eq.0) then
-           eps_thick=zero ! dist. from the ice to the liquid
-          else if (distribute_from_target(iten+nten*ireverse).eq.1) then
-           ! do nothing (dist. from the liquid to the ice)
+           ! dist. from the ice to the liquid
           else
-           print *,"distribute_from_target(iten+nten*ireverse) bad"
+           print *,"required melting:"
+           print *,"distribute_from_target(iten+nten*ireverse)=0"
            stop
           endif
 
-          H_ICE=hs(LS(im_ice),eps_thick)
-          H_WATER=hs(LS(im_dest),eps_thick)
-          icemask=one-H_ICE
-          if (H_ICE.gt.zero) then
-           icemask=icemask*H_WATER
+          if (LS(im_ice).ge.zero) then
+           icemask=zero
+          else if (LS(im_ice).le.zero) then
+           icemask=one
+          else
+           print *,"LS(im_ice) bust"
+           stop
           endif
 
          else
@@ -919,7 +893,8 @@ stop
            stop
           endif
          else if (im_ice.eq.im_source) then ! melting
- 
+                 FIX ME DO NOT FORGET TO GET RID OF MUSHY_THICK double check
+                 this routine.
           if ((icemask+ICEFACECUT_EPS.gt.zero).and. &
               (icemask+ICEFACECUT_EPS.lt.one)) then
            icefacecut=icemask+ICEFACECUT_EPS
