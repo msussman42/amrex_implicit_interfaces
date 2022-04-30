@@ -120,7 +120,6 @@ ns.viscconst=1.0 1.0
 #ns.denconst=1.0 0.9  #  FREEZING
 ns.denconst=1.0 1.0  #  FREEZING
 ns.FSI_flag=0 3
-ns.MUSHY_THICK=2.0
 # 0=distribute to destination  1=distribute to source
 ns.distribute_target=0 0 
 #ns.tempconst=373.0 398.0 # stefan problem

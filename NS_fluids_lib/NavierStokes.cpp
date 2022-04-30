@@ -343,7 +343,6 @@ Real NavierStokes::min_velocity_for_dt = 1.0e-12;
 Real NavierStokes::min_stefan_velocity_for_dt = 1.0e-12;
 Real NavierStokes::fixed_dt_velocity = 0.0;
 Real NavierStokes::dt_max       = 1.0e+10;
-Real NavierStokes::MUSHY_THICK  = 2.0;
 Real NavierStokes::gravity      = 0.0;
 Real NavierStokes::gravity_reference_wavelen = 0.0;
 
@@ -1978,9 +1977,6 @@ void fortran_parameters() {
      (solidheat_flag>2))
   amrex::Error("solidheat_flag invalid (fortran_parameters)");
 
- Real MUSHY_THICK=2.0;
- pp.query("MUSHY_THICK",MUSHY_THICK);
-
  Real gravity_temp=0.0; 
  int gravity_dir_temp=AMREX_SPACEDIM;
  int invert_gravity_temp=0;
@@ -2124,7 +2120,6 @@ void fortran_parameters() {
   tension_T0temp.dataPtr(),
   tension_mintemp.dataPtr(),
   prefreeze_tensiontemp.dataPtr(),
-  &MUSHY_THICK,
   &gravity_temp,
   &gravity_dir_temp,
   &invert_gravity_temp,
@@ -2808,9 +2803,6 @@ NavierStokes::read_params ()
     if (thread_class::nthreads<1)
      amrex::Error("thread_class::nthreads invalid ns init");
 
-    MUSHY_THICK=2.0;
-    pp.query("MUSHY_THICK",MUSHY_THICK);
-
     pp.query("gravity",gravity);
     pp.query("gravity_dir",gravity_dir);
     pp.query("invert_gravity",invert_gravity);
@@ -2864,8 +2856,6 @@ NavierStokes::read_params ()
       output_drop_distribution << '\n';
      std::cout << "visc_coef " << visc_coef << '\n';
      std::cout << "include_viscous_heating " << include_viscous_heating << '\n';
-
-     std::cout << "MUSHY_THICK " << MUSHY_THICK << '\n';
 
      std::cout << "gravity " << gravity << '\n';
      std::cout << "gravity_reference_wavelen " << 

@@ -611,14 +611,6 @@ stop
        stop
       endif
 
-      if ((ICEFACECUT_EPS.ge.zero).and. &
-          (ICEFACECUT_EPS.le.0.1)) then
-       ! do nothing
-      else 
-       print *,"ICEFACECUT_EPS out of range"
-       stop
-      endif
-
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
        stop
@@ -636,6 +628,8 @@ stop
 
       if ((im_secondary.ge.1).and. &
           (im_secondary.le.nmat)) then
+        ! get_teriary_material is declared in MOF.F90
+        ! is_rigid(nmat,im_tertiary)=0
        call get_tertiary_material(LS,nmat, &
          im_primary,im_secondary,im_tertiary)
       else
@@ -711,11 +705,17 @@ stop
 
        ireverse=-1
        icemask=zero
-       icefacecut=ICEFACECUT_EPS
+       icefacecut=zero
 
       else if ((im_FSI_rigid.ge.0).and. &
-               (im_FSI_rigid.le.nmat).and. &
-               (im_FSI_rigid.ne.im_primary)) then
+               (im_FSI_rigid.le.nmat)) then
+
+       if (im_FSI_rigid.ne.im_primary) then
+        ! do nothing
+       else
+        print *,"im_FSI_rigid cannot be equal to im_primary here"
+        stop
+       endif
 
         ! either the primary or secondary material is "ice"
        if ((im_ice.ge.1).and.(im_ice.le.nmat)) then 
@@ -773,7 +773,7 @@ stop
          ireverse=-1
          if (is_ice(nmat,im_primary).eq.1) then
           icemask=zero
-          icefacecut=ICEFACECUT_EPS
+          icefacecut=zero
          else if (is_ice(nmat,im_primary).eq.0) then
           icemask=one
           icefacecut=one
@@ -866,39 +866,29 @@ stop
           stop
          endif
 
-         if (icemask.le.-VOFTOL) then
-          print *,"icemask underflow"
-          stop
-         else if ((icemask.ge.-VOFTOL).and.(icemask.le.zero)) then
-          icemask=zero
-         else if ((icemask.ge.zero).and.(icemask.le.one)) then
+         if ((icemask.eq.zero).or.(icemask.eq.one)) then
           ! do nothing
-         else if ((icemask.ge.one).and.(icemask.lt.one+VOFTOL)) then
-          icemask=one
          else
-          print *,"icemask overflow"
+          print *,"icemask invalid"
           stop
          endif
 
          if (im_ice.eq.im_dest) then ! freezing
           if (dist_mask_override.ge.zero) then ! in a substrate
            icefacecut=zero
-          else if ((icemask+ICEFACECUT_EPS.gt.zero).and. &
-                   (icemask+ICEFACECUT_EPS.lt.one)) then
-           icefacecut=icemask+ICEFACECUT_EPS
-          else if (icemask+ICEFACECUT_EPS.ge.one) then
+          else if (icemask.eq.zero) then
+           icefacecut=zero
+          else if (icemask.eq.one) then
            icefacecut=one
           else
            print *,"icemask invalid"
            stop
           endif
          else if (im_ice.eq.im_source) then ! melting
-                 FIX ME DO NOT FORGET TO GET RID OF MUSHY_THICK double check
-                 this routine.
-          if ((icemask+ICEFACECUT_EPS.gt.zero).and. &
-              (icemask+ICEFACECUT_EPS.lt.one)) then
-           icefacecut=icemask+ICEFACECUT_EPS
-          else if (icemask+ICEFACECUT_EPS.ge.one) then
+
+          if (icemask.eq.zero) then
+           icefacecut=zero
+          else if (icemask.eq.one) then
            icefacecut=one
           else
            print *,"icemask invalid"
@@ -925,21 +915,17 @@ stop
        endif
 
       else
-       print *,"im_FSI_rigid invalid"
+       print *,"im_FSI_rigid invalid: ",im_FSI_rigid
        stop
       endif
-   
-      if (icemask.lt.zero) then
-       print *,"icemask invalid"
-       stop
-      else if (icemask.eq.zero) then
+
+      if ((icemask.eq.zero).or.(icemask.eq.one)) then
        ! do nothing
-      else if ((icemask.gt.zero).and.(icemask.le.one)) then
-       icemask=one
       else
        print *,"icemask invalid"
        stop
       endif
+   
       if ((icefacecut.ge.zero).and.(icefacecut.le.one)) then
        ! do nothing
       else

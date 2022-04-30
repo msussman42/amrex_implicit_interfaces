@@ -5396,11 +5396,6 @@ stop
        stop
       endif
 
-      if (FORT_MUSHY_THICK.lt.one) then
-       print *,"FORT_MUSHY_THICK too small"
-       stop
-      endif
-
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid in init_icemask"
        stop
@@ -5529,11 +5524,20 @@ stop
              (icefacecut_left.le.one).and. &
              (icefacecut_right.le.one)) then
 
-          if ((icefacecut_left.le.two*ICEFACECUT_EPS).and. &
-              (icefacecut_right.le.two*ICEFACECUT_EPS)) then
+          if ((icefacecut_left.eq.zero).and. &
+              (icefacecut_right.eq.zero)) then
            icefacecut=zero
+          else if ((icefacecut_left.eq.zero).or. &
+                   (icefacecut_right.eq.zero)) then
+           icefacecut=zero
+          else if ((icefacecut_left.eq.one).and. &
+                   (icefacecut_right.eq.one)) then
+           icefacecut=one
           else
-           icefacecut=min(icefacecut_left,icefacecut_right)
+           print *,"icefacecut_left or icefacecut_right invalid"
+           print *,"icefacecut_left ",icefacecut_left
+           print *,"icefacecut_right ",icefacecut_right
+           stop
           endif
 
          else
@@ -12866,7 +12870,7 @@ stop
            if (local_distribute_from_target(indexEXP+1).eq.0) then
 
             if ((VFRAC(im_dest).lt.half).or. &
-                (ICEMASK.le.zero)) then
+                (ICEMASK.eq.zero)) then
              if (complement_flag.eq.0) then
               tag(D_DECL(i,j,k)) = one ! donor cell
              else if (complement_flag.eq.1) then
@@ -12876,7 +12880,7 @@ stop
               stop
              endif
             else if ((VFRAC(im_dest).ge.half).and. &
-                     (ICEMASK.gt.zero)) then
+                     (ICEMASK.eq.one)) then
              ! do nothing - acceptor cell
             else
              print *,"VFRAC or ICEMASK bust"
@@ -12886,7 +12890,7 @@ stop
            else if (local_distribute_from_target(indexEXP+1).eq.1) then
 
             if ((VFRAC(im_source).lt.half).or. &
-                (ICEMASK.le.zero)) then
+                (ICEMASK.eq.zero)) then
              if (complement_flag.eq.0) then
               tag(D_DECL(i,j,k)) = one ! donor cell
              else if (complement_flag.eq.1) then
@@ -12896,7 +12900,7 @@ stop
               stop
              endif
             else if ((VFRAC(im_source).ge.half).and. &
-                     (ICEMASK.gt.zero)) then
+                     (ICEMASK.eq.one)) then
              ! do nothing - acceptor cell
             else
              print *,"VFRAC or ICEMASK bust"     
@@ -12918,7 +12922,7 @@ stop
           if (local_distribute_from_target(indexEXP+1).eq.0) then
 
            if ((VFRAC(im_dest).ge.half).and. &
-               (ICEMASK.gt.zero)) then
+               (ICEMASK.eq.one)) then
             if (complement_flag.eq.0) then
              tag(D_DECL(i,j,k)) = two ! receiver
             else if (complement_flag.eq.1) then
@@ -12928,7 +12932,7 @@ stop
              stop
             endif
            else if ((VFRAC(im_dest).lt.half).or. &
-                    (ICEMASK.le.zero)) then
+                    (ICEMASK.eq.zero)) then
             ! do nothing - donor cell
            else
             print *,"VFRAC or ICEMASK bust"
@@ -12938,7 +12942,7 @@ stop
           else if (local_distribute_from_target(indexEXP+1).eq.1) then
 
            if ((VFRAC(im_source).ge.half).and. &
-               (ICEMASK.gt.zero)) then
+               (ICEMASK.eq.one)) then
             if (complement_flag.eq.0) then
              tag(D_DECL(i,j,k)) = two ! receiver
             else if (complement_flag.eq.1) then
@@ -12948,7 +12952,7 @@ stop
              stop
             endif
            else if ((VFRAC(im_source).lt.half).or. &
-                    (ICEMASK.le.zero)) then
+                    (ICEMASK.eq.zero)) then
             ! do nothing - donor cell
            else
             print *,"VFRAC or ICEMASK bust"     

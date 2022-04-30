@@ -98,7 +98,6 @@
       REAL_T fort_stiffCV(MAX_NUM_MATERIALS)
       REAL_T fort_stiffGAMMA(MAX_NUM_MATERIALS)
 
-      REAL_T FORT_MUSHY_THICK  ! default==2.0
       REAL_T density_at_depth
       REAL_T global_pressure_scale
       REAL_T global_velocity_scale

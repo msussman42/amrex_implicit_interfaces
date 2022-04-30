@@ -48,7 +48,6 @@ ns.continuous_mof=2
 ns.mof_error_ordering=0
 # water,air,ice,solid
 ns.mof_ordering=0 2 0 1
-ns.MUSHY_THICK=2.0  # default is 2.0
 
 # multigrid class
 mg.verbose = 0
