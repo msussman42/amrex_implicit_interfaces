@@ -575,6 +575,7 @@ stop
         LS, &
         latent_heat, &
         distribute_from_target, &
+        complement_flag, &
         nmat,nten)
       use global_utility_module
       use MOF_routines_module
@@ -595,6 +596,7 @@ stop
       REAL_T, intent(in) :: LS(nmat)
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+      INTEGER_T, intent(in) :: complement_flag
 
       REAL_T dist_mask_override
       INTEGER_T im_primary
@@ -620,6 +622,14 @@ stop
        print *,"nten invalid get_icemask nten, nten_test ",nten,nten_test
        stop
       endif
+
+      if ((complement_flag.eq.0).or.(complement_flag.eq.1)) then
+       ! do nothing
+      else
+       print *,"complement_flag invalid"
+       stop
+      endif
+
 
         ! we are in "get_icemask"
 
