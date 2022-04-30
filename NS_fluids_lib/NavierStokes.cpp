@@ -3891,6 +3891,8 @@ NavierStokes::read_params ()
         int im2=0;
         int im_source=0;
         int im_dest=0;
+	 // get_inverse_iten_cpp declared in NavierStokes2.cpp
+	 // 1<=im1,im2<=nmat
         get_inverse_iten_cpp(im1,im2,iten+1,nmat);
         if (ireverse==0) {
          im_source=im1;  
@@ -3927,12 +3929,12 @@ NavierStokes::read_params ()
 	 } else
 	  amrex::Error("max_den or min_den bust");
 
-	 if (is_ice_matC(im_dest)==1) { // freezing
+	 if (is_ice_matC(im_dest-1)==1) { // freezing
           distribute_from_target[iten_local]=1;
-	 } else if (is_ice_matC(im_source)==1) { // melting
+	 } else if (is_ice_matC(im_source-1)==1) { // melting
           distribute_from_target[iten_local]=0;
-         } else if ((is_ice_matC(im_dest)==0)&&
-   	            (is_ice_matC(im_source)==0)) {
+         } else if ((is_ice_matC(im_dest-1)==0)&&
+   	            (is_ice_matC(im_source-1)==0)) {
 
           // fixed_parm=-1,0, or 1.
  	  if (max_den/min_den<1.0) {

@@ -5349,6 +5349,8 @@ stop
       REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
 
+      INTEGER_T complement_flag
+
       INTEGER_T i,j,k
       INTEGER_T dir
       INTEGER_T dir2
@@ -5485,6 +5487,8 @@ stop
           LSright(im)=LSnew(D_DECL(i,j,k),im)
          enddo
 
+         complement_flag=0
+
           ! get_icemask defined in PROB.F90
           ! in: fort_init_icemask
          call get_icemask( &
@@ -5499,6 +5503,7 @@ stop
           LSleft, &
           latent_heat, &
           distribute_from_target, &
+          complement_flag, &
           nmat,nten)
 
           ! get_icemask defined in PROB.F90
@@ -5515,6 +5520,7 @@ stop
           LSright, &
           latent_heat, &
           distribute_from_target, &
+          complement_flag, &
           nmat,nten)
 
          icemask=min(icemask_left,icemask_right)
@@ -12561,7 +12567,6 @@ stop
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
-      INTEGER_T :: local_distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
@@ -12779,18 +12784,6 @@ stop
         endif
 
         do complement_flag=0,1
-         do iten=1,2*nten
-          local_distribute_from_target(iten)=distribute_from_target(iten)
-          if (complement_flag.eq.0) then
-           ! do nothing
-          else if (complement_flag.eq.1) then
-           local_distribute_from_target(iten)= &
-              1-local_distribute_from_target(iten)
-          else
-           print *,"complement_flag invalid"
-           stop
-          endif
-         enddo ! iten=1..2*nten
 
          im_ice=0
          if (is_ice(nmat,im_dest).eq.1) then
@@ -12824,7 +12817,8 @@ stop
            ireverse, &
            LSCELL, &
            latent_heat, &
-           local_distribute_from_target, &
+           distribute_from_target, &
+           complement_flag, &
            nmat,nten)
 
           if (ireverse.eq.-1) then
@@ -12867,7 +12861,9 @@ stop
 
           if (VDOT.ne.zero) then ! nonzero source
 
-           if (local_distribute_from_target(indexEXP+1).eq.0) then
+           if ( &
+             swap1_0(distribute_from_target(indexEXP+1),complement_flag) &
+             .eq.0) then
 
             if ((VFRAC(im_dest).lt.half).or. &
                 (ICEMASK.eq.zero)) then
@@ -12887,7 +12883,9 @@ stop
              stop      
             endif
 
-           else if (local_distribute_from_target(indexEXP+1).eq.1) then
+           else if ( &
+             swap1_0(distribute_from_target(indexEXP+1),complement_flag) &
+             .eq.1) then
 
             if ((VFRAC(im_source).lt.half).or. &
                 (ICEMASK.eq.zero)) then
@@ -12908,7 +12906,7 @@ stop
             endif
 
            else
-            print *,"local_distribute_from_target(indexEXP+1) invalid"
+            print *,"distribute_from_target(indexEXP+1) invalid"
             stop
            endif
 
@@ -12919,7 +12917,9 @@ stop
            stop
           endif 
 
-          if (local_distribute_from_target(indexEXP+1).eq.0) then
+          if ( &
+            swap1_0(distribute_from_target(indexEXP+1),complement_flag) &
+            .eq.0) then
 
            if ((VFRAC(im_dest).ge.half).and. &
                (ICEMASK.eq.one)) then
@@ -12939,7 +12939,9 @@ stop
             stop      
            endif
  
-          else if (local_distribute_from_target(indexEXP+1).eq.1) then
+          else if ( &
+              swap1_0(distribute_from_target(indexEXP+1),complement_flag) &
+              .eq.1) then
 
            if ((VFRAC(im_source).ge.half).and. &
                (ICEMASK.eq.one)) then
@@ -12960,7 +12962,7 @@ stop
            endif
  
           else
-           print *,"local_distribute_from_target(indexEXP+1) invalid"
+           print *,"distribute_from_target(indexEXP+1) invalid"
            stop
           endif
 

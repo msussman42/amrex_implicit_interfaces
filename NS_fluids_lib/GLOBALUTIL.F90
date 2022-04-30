@@ -13644,6 +13644,31 @@ end subroutine dynamic_contact_angle
       return
       end function is_FSI_rigid
 
+      function swap1_0(in_flag,control_flag)
+      IMPLICIT NONE
+      INTEGER_T :: swap1_0
+      INTEGER_T, intent(in) :: in_flag,control_flag
+
+      if (control_flag.eq.0) then
+       swap1_0=in_flag
+      else if (control_flag.eq.1) then
+       swap1_0=1-in_flag
+      else
+       print *,"control_flag invalid"
+       stop
+      endif
+
+      if ((swap1_0.eq.0).or.(swap1_0.eq.1)) then
+       ! do nothing
+      else
+       print *,"swap1_0 invalid"
+       stop
+      endif
+
+      return
+      end function swap1_0
+
+
       function get_face_damping_factor( &
          face_vol,nmat,project_option,dt)
       use probcommon_module
