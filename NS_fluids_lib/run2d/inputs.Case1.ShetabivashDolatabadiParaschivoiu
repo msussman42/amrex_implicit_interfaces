@@ -30,7 +30,6 @@ ns.continuous_mof=2
 ns.mof_error_ordering=0
 # water,air,ice,solid
 ns.mof_ordering=0 2 0 1
-ns.MUSHY_THICK=2.0  # default is 2.0
 
 # multigrid class
 mg.verbose = 0
@@ -90,19 +89,8 @@ ns.gravity        = -9.8 # m/s^2
 # theta_L_substrate=33 degrees
 # sigma_{SG}=sigma_{LG}
 # sigma_{LG}(1-cos(theta_L_substrate))=sigma_{SL}
-# at the triple point:
-# sin(theta_I)/sigma_{LG}=sin(theta_L)/sigma_{IG}=sin(theta_G)/sigma_{LI}
-# theta_I=97 degrees
-# sigma_{LG}=0.831N/m
-# theta_{L}=95 degrees 
-# theta_{L}+theta_{G}=263
-# theta_{G}=168 degrees
-# sigma_{IG}=sigma_{LG}*sin(theta_{L})/sin(97)=0.83405 N/m
-# sigma_{IL}=sigma_{LG}*sin(theta_{G})/sin(97)=0.17407 N/m
-# sigma_{SI}=sigma_{IG}(1-cos(theta_I_substrate))= N/m
-# sigma_{SI}=sigma_{SG}-sigma_{IG}cos(theta_I_substrate)=0.13150 N/m
-# sigma_{SL}=sigma_{SG}-sigma_{LG}cos(theta_L_substrate)=0.13406 N/m
-# material 1=liquid 2=gas  3=ice 4=solid
+# at the triple point the ice is clamped so the ice is treated as a solid:
+# sigma_{IG}-sigma_{LI}=sigma_{LG}cos(theta_L_substrate)
 # 12,13,14,23,24,34
 # LG,LI,LS,IG,GS,SI  (LS not used)
 #advection, surface tension, gravity

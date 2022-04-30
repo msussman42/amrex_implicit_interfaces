@@ -234,7 +234,6 @@ stop
         cctension_T0, &
         cctension_min, &
         ccprefreeze_tension, &
-        ccMUSHY_THICK, &
         ccgravity, &
         ccgravity_dir, &
         ccinvert_gravity, &
@@ -294,7 +293,6 @@ stop
       INTEGER_T, intent(in) :: ccnum_materials
       
       INTEGER_T, intent(in) :: ccnten
-      REAL_T, intent(in) :: ccMUSHY_THICK
       REAL_T, intent(in) :: ccgravity
       INTEGER_T, intent(in) :: ccgravity_dir
       INTEGER_T, intent(in) :: ccinvert_gravity
@@ -1468,8 +1466,6 @@ stop
        enddo ! iten=1..nten
       endif
       
-      FORT_MUSHY_THICK=ccMUSHY_THICK
-      
       gravity=ccgravity
       gravity_dir=ccgravity_dir
       invert_gravity=ccinvert_gravity
@@ -1622,14 +1618,6 @@ stop
         probhix,probhiy,probhiz
        print *,"fort: problenx,y,z ",problenx,probleny,problenz
       
-       if ((FORT_MUSHY_THICK.ge.one).and. &
-           (FORT_MUSHY_THICK.le.four)) then
-        ! do nothing
-       else
-        print *,"MUSHY_THICK invalid"
-        stop
-       endif
-      
        if ((gravity_dir.lt.1).or.(gravity_dir.gt.SDIM).or. &
            (invert_gravity.lt.0).or.(invert_gravity.gt.1).or. &
            (ls_homflag.lt.0).or.(ls_homflag.gt.1).or. &
@@ -1644,8 +1632,6 @@ stop
         print *,"parameters invalid"
         stop
        endif
-      
-       print *,"fort:MUSHY_THICK ",FORT_MUSHY_THICK
       
        print *,"fort:gravity,gravity_dir,invert_gravity ",gravity, &
         gravity_dir,invert_gravity

@@ -299,6 +299,8 @@ implicit none
 !  invert_solid_levelset -> doubly_wetted_solid_inside
 ! Added April 14, 2022:
 !  fort_damping_coefficient
+! deleted April 30, 2022:
+!  FORT_MUSHY_THICK
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
        !nten=num_interfaces=( (nmat-1)*(nmat-1)+nmat-1 )/2
@@ -369,8 +371,6 @@ implicit none
       INTEGER_T, PARAMETER :: DO_SANITY_CHECK=0
       INTEGER_T, PARAMETER :: COARSE_FINE_VELAVG=1
       REAL_T, PARAMETER :: MASK_FINEST_TOL=1.0D-3
-
-      REAL_T, PARAMETER :: ICEFACECUT_EPS=1.0D-5
 
       REAL_T, PARAMETER :: OVERFLOW_CUTOFF=1.0D+20
 

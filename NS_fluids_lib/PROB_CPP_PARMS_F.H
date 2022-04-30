@@ -147,7 +147,6 @@ namespace amrex{
        Real* tension_T0,
        Real* tension_min,
        Real* prefreeze_tension,
-       Real* FORT_MUSHY_THICK,  // default==2.0
        Real* gravity,
        int* gravity_dir,
        int* invert_gravity,

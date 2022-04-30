@@ -1493,7 +1493,6 @@ protected:
     static int        fab_verbose; // 1=curv 2=error heat 3=both
     static int        output_drop_distribution;
     static int        extend_pressure_into_solid; // default=0
-    static Real       MUSHY_THICK; // default==2.0
     static Real       gravity;
     static Real       gravity_reference_wavelen;
     static int        invert_gravity;
