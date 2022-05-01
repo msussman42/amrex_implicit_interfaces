@@ -73,7 +73,7 @@ ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
 mac.mac_abs_tol    = 1.0e-10
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
-ns.init_shrink    = 1.0      # scale back initial timestep
+ns.init_shrink    = 1.0e-2   # scale back initial timestep
 ns.change_max     = 1.01 
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-8
@@ -89,8 +89,6 @@ ns.gravity        = -9.8 # m/s^2
 # theta_L_substrate=33 degrees
 # sigma_{SG}=sigma_{LG}
 # sigma_{LG}(1-cos(theta_L_substrate))=sigma_{SL}
-# at the triple point the ice is clamped so the ice is treated as a solid:
-# sigma_{IG}-sigma_{LI}=sigma_{LG}cos(theta_L_substrate)
 # 12,13,14,23,24,34
 # LG,LI,LS,IG,GS,SI  (LS not used)
 #advection, surface tension, gravity
@@ -146,13 +144,8 @@ ns.material_type=0 0 0 999
 ns.heatviscconst=62 0.62 31 386 # W/(m K)
 # 12 13 14 23 24 34  
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
-# the time step is 7.1e-6 so the damping coefficient was chosen in 
-# order to have a reduction factor per step
-# of about 50 percent in the difference
-# between the ice velocity at the triple point and the associated ice
-# rigid body motion (which is velocity=0)
-ns.damping_coefficient=0.0 0.0 3.5e+6 0.0
-ns.viscconst=0.000557 0.0000279 0.00279 100.0 # dimensional Pa s
+ns.damping_coefficient=0.0 0.0 0.0 0.0
+ns.viscconst=0.000557 0.0000279 0.0279 100.0 # dimensional Pa s
 ns.denconst=2580 129 2350 8960
 ns.FSI_flag=0 0 3 1
 ns.recalesce_flag=0 0 0 0
