@@ -1476,6 +1476,25 @@ endif
 return
 end subroutine GENERAL_PHASE_CHANGE_nucleation
 
+subroutine GENERAL_PHASE_CHANGE_ICE_SUBSTRATE_DISTANCE( &
+                xtarget,dist)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+REAL_T, intent(in) :: xtarget(SDIM)
+REAL_T, intent(out) :: dist
+
+ if (probtype.eq.55) then
+  ! dist > 0 in the substrate
+  call ice_substrate_distance( &
+    xtarget(1),xtarget(2),xtarget(SDIM),dist)
+ else
+  print *,"expecting probtype.eq.55"
+  stop
+ endif
+
+end subroutine GENERAL_PHASE_CHANGE_ICE_SUBSTRATE_DISTANCE
 
 ! This routine is called from fort_summass which is declared in
 ! NAVIERSTOKES_3D.F90
