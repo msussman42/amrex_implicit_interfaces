@@ -741,6 +741,20 @@ make_seed=0
 return
 end subroutine STUB_nucleation
 
+subroutine STUB_ICE_SUBSTRATE_DISTANCE( &
+                xtarget,dist)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+REAL_T, intent(in) :: xtarget(SDIM)
+REAL_T, intent(out) :: dist
+
+ dist=-9999.0d0
+
+end subroutine STUB_ICE_SUBSTRATE_DISTANCE
+
+
 subroutine STUB_correct_pres_rho_hydrostatic( &
   i,j,k,level, &
   gravity_normalized, &

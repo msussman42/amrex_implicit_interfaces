@@ -607,6 +607,8 @@ stop
       INTEGER_T im_dest,im_source
       INTEGER_T iten
       REAL_T LL(0:1)
+      REAL_T dxmax
+      REAL_T SCALED_MUSHY_THICK
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -630,6 +632,8 @@ stop
        stop
       endif
 
+      call get_dxmax(dx,bfact,dxmax)
+      SCALED_MUSHY_THICK=UNSCALED_MUSHY_THICK*dxmax
 
         ! we are in "get_icemask"
 
@@ -730,6 +734,9 @@ stop
         ! either the primary or secondary material is "ice"
        if ((im_ice.ge.1).and.(im_ice.le.nmat)) then 
 
+         ! if the associated "melt" material
+         ! is not the primary or secondary material,
+         ! then check if it is the tertiary material.
         if ((LL(0).eq.zero).and.(LL(1).eq.zero)) then
          if ((im_tertiary.ge.1).and. &
              (im_tertiary.le.nmat)) then
@@ -779,6 +786,7 @@ stop
          stop
         endif
 
+         ! an associated melt material was not found:
         if ((LL(0).eq.zero).and.(LL(1).eq.zero)) then
          ireverse=-1
          if (is_ice(nmat,im_primary).eq.1) then
@@ -841,6 +849,22 @@ stop
           else if (dist_mask_override.le.zero) then
            if (LS(im_ice).ge.zero) then
             icemask=zero
+            if (LS(im_ice).le.SCALED_MUSHY_THICK) then
+             if (LS(im_source).ge.-SCALED_MUSHY_THICK) then
+              icemask=one
+             else if (LS(im_source).le.-SCALED_MUSHY_THICK) then
+              ! do nothing
+             else
+              print *,"LS(im_source) is NaN"
+              stop
+             endif
+            else if (LS(im_ice).ge.SCALED_MUSHY_THICK) then
+             ! do nothing
+            else
+             print *,"LS(im_ice) is NaN"
+             stop
+            endif
+
            else if (LS(im_ice).le.zero) then
             icemask=one
            else
@@ -7643,9 +7667,10 @@ END SUBROUTINE Adist
 
       IMPLICIT NONE
      
-      REAL_T xtarget(SDIM) 
-      REAL_T dist
-      INTEGER_T nmat,im_source,im_dest
+      REAL_T, intent(in) :: xtarget(SDIM) 
+      REAL_T, intent(out) :: dist
+      INTEGER_T, intent(in) :: im_source,im_dest
+      INTEGER_T nmat
 
       nmat=num_materials
 
@@ -7661,19 +7686,15 @@ END SUBROUTINE Adist
        print *,"is_ice invalid"
        stop
       endif
-      dist=-9999.0
+      dist=-9999.0d0
 
       if (recalesce_material(im_source).eq.0) then
        ! do nothing
       else if ((recalesce_material(im_source).eq.1).or. &
                (recalesce_material(im_source).eq.2)) then
-       
-       if (probtype.eq.55) then
-         ! dist > 0 in the substrate
-        call ice_substrate_distance( &
-         xtarget(1),xtarget(2),xtarget(SDIM),dist)
-       endif  
-   
+      
+       call SUB_ICE_SUBSTRATE_DISTANCE(xtarget,dist)
+
       else 
        print *,"recalesce_material invalid"
        stop

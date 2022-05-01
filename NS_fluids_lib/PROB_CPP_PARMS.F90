@@ -490,6 +490,7 @@ stop
       SUB_microcell_heat_coeff=>STUB_microcell_heat_coeff
       SUB_velfreestream=>STUB_velfreestream
       SUB_nucleation=>STUB_nucleation
+      SUB_ICE_SUBSTRATE_DISTANCE=>STUB_ICE_SUBSTRATE_DISTANCE
       SUB_CFL_HELPER=>STUB_CFL_HELPER
       SUB_correct_pres_rho_hydrostatic=>STUB_correct_pres_rho_hydrostatic
       SUB_ASSIMILATE=>STUB_ASSIMILATE
@@ -762,6 +763,7 @@ stop
        SUB_microcell_heat_coeff=>GENERAL_PHASE_CHANGE_microcell_heat_coeff
        SUB_velfreestream=>GENERAL_PHASE_CHANGE_velfreestream
        SUB_nucleation=>GENERAL_PHASE_CHANGE_nucleation
+       SUB_ICE_SUBSTRATE_DISTANCE=>GENERAL_PHASE_CHANGE_ICE_SUBSTRATE_DISTANCE
        SUB_CFL_HELPER=>GENERAL_PHASE_CHANGE_CFL_HELPER
        SUB_SUMINT=>GENERAL_PHASE_CHANGE_SUMINT ! Nusseltt number
       else
@@ -925,7 +927,9 @@ stop
       n_sites=ccn_sites
       nucleation_init_time=ccnucleation_init_time
       
-      if (nucleation_init_time.lt.zero) then
+      if (nucleation_init_time.ge.zero) then
+       ! do nothing
+      else
        print *,"nucleation_init_time.lt.zero"
        stop
       endif

@@ -301,6 +301,8 @@ implicit none
 !  fort_damping_coefficient
 ! deleted April 30, 2022:
 !  FORT_MUSHY_THICK
+! added May 1, 2022:
+!  UNSCALED_MUSHY_THICK (user definable in fortran plug-in files)
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
        !nten=num_interfaces=( (nmat-1)*(nmat-1)+nmat-1 )/2
@@ -309,6 +311,8 @@ implicit none
       INTEGER_T, PARAMETER :: MAX_NUM_EOS=24
 
 #include "probdataf95.H"
+
+      REAL_T :: UNSCALED_MUSHY_THICK=2.0d0
 
       INTEGER_T, PARAMETER :: DEBUG_EVAPORATION=0
       INTEGER_T, PARAMETER :: EVAPORATION_iter_max=50
@@ -1083,6 +1087,12 @@ implicit none
       type(nucleation_parm_type_input), intent(in) :: nucleate_in
       end subroutine TEMPLATE_nucleation
 
+      subroutine TEMPLATE_ICE_SUBSTRATE_DISTANCE(xtarget,dist)
+      REAL_T, intent(in) :: xtarget(SDIM)
+      REAL_T, intent(out) :: dist
+      end subroutine TEMPLATE_ICE_SUBSTRATE_DISTANCE
+
+
       subroutine TEMPLATE_microcell_heat_coeff(heatcoeff,dx,veldir)
       REAL_T, intent(in) :: dx(SDIM)
       INTEGER_T, intent(in) :: veldir
@@ -1153,6 +1163,8 @@ implicit none
       PROCEDURE(TEMPLATE_EB_heat_source), POINTER :: SUB_EB_heat_source
       PROCEDURE(TEMPLATE_velfreestream), POINTER :: SUB_velfreestream
       PROCEDURE(TEMPLATE_nucleation), POINTER :: SUB_nucleation
+      PROCEDURE(TEMPLATE_ICE_SUBSTRATE_DISTANCE), POINTER :: &
+              SUB_ICE_SUBSTRATE_DISTANCE
       PROCEDURE(TEMPLATE_microcell_heat_coeff), POINTER :: &
               SUB_microcell_heat_coeff
       PROCEDURE(TEMPLATE_ASSIMILATE), POINTER :: SUB_ASSIMILATE
