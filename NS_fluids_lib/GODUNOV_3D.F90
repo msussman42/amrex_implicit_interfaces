@@ -3035,8 +3035,10 @@ stop
        stop
       endif
 
-      if (cfl.le.zero) then
-       print *,"cfl invalid"
+      if (cfl.gt.zero) then
+       ! do nothing
+      else
+       print *,"cfl invalid: ",cfl
        stop
       endif
 
