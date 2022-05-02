@@ -22,7 +22,8 @@ ns.initial_project_cycles=5   # initial jacobi iterations
 ns.initial_cg_cycles=10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0e+6
-ns.num_materials=4 # 1:liquid 2:air 3:lubricant 4:substrate axis_dir=0 or 2
+ns.num_materials=4 # 1:liquid 2:air 3:ice 4:substrate axis_dir=3
+#ns.num_materials=4 # 1:liquid 2:air 3:lubricant 4:substrate axis_dir=0 or 2
 #ns.num_materials=3 # 1:liquid 2:air 3:substrate axis_dir=1
 ns.num_species_var=0 #  no evaporation
 ns.post_init_pressure_solve=1 
@@ -31,8 +32,12 @@ ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=2 # 0=MOF 2=CMOF 
 ns.mof_error_ordering=0
-# water,air,lubricant,substrate
+# water,air,ice,substrate axis_dir=3
 ns.mof_ordering=0 0 0 1 
+# water,air,lubricant,substrate axis_dir=0 or 2
+#ns.mof_ordering=0 0 0 1 
+# water,air,substrate axis_dir=1
+#ns.mof_ordering=0 0 1 
 
 # multigrid class
 mg.verbose = 0
@@ -50,9 +55,9 @@ amr.plotfile_on_restart=1
 #0=tecplot 1=plt file(visit) 2=tecplot piecewise const.
 ns.visual_nddata_format=0
 
-#amr.n_cell=32 32 48  # XYZ
-#amr.n_cell=16 48  # RZ  axis_dir=0
-amr.n_cell=32 48  # XYZ  axis_dir=1,2,3
+#amr.n_cell=32 32 48 # XYZ
+#amr.n_cell=16 48 # RZ axis_dir=0
+amr.n_cell=32 48 # XY axis_dir=1,2,3
 amr.max_level = 0 # max_level=1 for production runs
 # water, gas, ice, substrate
 # 0- 1 level 1- 2 levels  2- 3 levels
@@ -78,6 +83,7 @@ ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
 
 mac.mac_abs_tol    = 1.0e-8
 
+# reduce cfl in order to reduce splitting errors?
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
@@ -178,10 +184,13 @@ ns.twall=263  # not used
 ns.advbot=0.0  
 #ns.adv_vel=155.0 # cm/s initial falling downwards speed (axis_dir=0)
 ns.adv_vel=100.0 # cm/s air flow from left to right (axis_dir=1,2,3)
-#ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction (axis_dir=0)  
-ns.adv_dir=1 # axis_dir=1,2, or 3.
+#ns.adv_dir=3 #3D vertical falling drop (axis_dir=0)
+#ns.adv_dir=2 #2D vertical falling drop (axis_dir=0)
+#ns.adv_dir=1 #axis_dir=1,2,3
+ns.adv_dir=1 
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
-ns.material_type=0 0 0 999 # axis_dir=0 or 2 or 3
+ns.material_type=0 0 0 999 # axis_dir=3 liquid,gas,ice,substrate
+#ns.material_type=0 0 0 999 # axis_dir=0 or 2 liquid,gas,oil,substrate
 #ns.material_type=0 0 999 # axis_dir=1
 #thermal conductivity
 ns.heatviscconst=58000.0 2400.0 218000.0 38600000.0 # axis_dir=0,2,3
@@ -193,8 +202,10 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 ns.speciesviscconst=0.0 0.0 0.0 0.0
 # 1=water 2=gas  3=oil  4=substrate 
 ns.speciesconst=0.0 0.0 0.0 0.0
-# 1=water 2=gas  3=oil  4=substrate 
-ns.viscconst=0.018 0.00017 1.0 10.0 # axis_dir=0,2,3
+#1=water 2=gas  3=ice  4=substrate 
+ns.viscconst=0.018 0.00017 10.0 10.0 # axis_dir=3
+#1=water 2=gas  3=oil  4=substrate 
+#ns.viscconst=0.018 0.00017 10.0 10.0 # axis_dir=0,2
 #ns.viscconst=0.018 0.00017 10.0 # axis_dir=1
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
@@ -205,19 +216,22 @@ ns.denconst=1.0 0.001 0.95 8.96 # axis_dir=0,2,3
 ns.FSI_flag=0 0 3 1  # axis_dir=3
 #ns.FSI_flag=0 0 0 1  # axis_dir=0,2
 #ns.FSI_flag=0 0 1  # axis_dir=1
-ns.damping_coefficient=0.0 0.0 1.0 0.0 # axis_dir=3
+ns.damping_coefficient=0.0 0.0 0.0 0.0 # axis_dir=3
 #ns.damping_coefficient=0.0 0.0 0.0 0.0 # axis_dir!=3
 ns.recalesce_flag=0 0 0 0
 # solidheat_flag=0=>diffuse in solid 
 # solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
 # solidheat_flag=2=>neumann
-ns.solidheat_flag=0  
-# 1=water 2=gas  3=ice  4=substrate 
-ns.tempconst=273.0 273.0 273.0 353.0  #axis_dir=0,2,3
+ns.solidheat_flag=0
+#1=water 2=gas 3=ice 4=substrate 
+ns.tempconst=273.0 273.0 273.0 353.0  #axis_dir=3
+#1=water 2=gas 3=lubricant 4=substrate 
+#ns.tempconst=273.0 273.0 273.0 353.0  #axis_dir=0,2
 #ns.tempconst=273.0 273.0 353.0  #axis_dir=1
+
 ns.initial_temperature=273.0 273.0 273.0 273.0  # dimensionless
-#ns.xblob=0.0  # axis_dir=0  
-ns.xblob=0.1  # axis_dir=1,2,3 (0<x<0.4  0<y<0.6)
+#ns.xblob=0.0 # axis_dir=0 RZ
+ns.xblob=0.1  # axis_dir=1,2,3 (0<x<0.4 0<y<0.6)
 ns.yblob=0.38
 ns.zblob=0.38
 ns.radblob=0.06 
@@ -257,8 +271,8 @@ ns.prescribe_temperature_outflow=3
 #ns.lo_bc          = 3 5  # RZ
 #ns.hi_bc          = 2 2  # RZ
 # axis_dir=1,2,3
-ns.lo_bc          = 1 5  # XYZ
-ns.hi_bc          = 2 5  # XYZ
+ns.lo_bc          = 1 5  # XY
+ns.hi_bc          = 2 5  # XY
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
