@@ -570,7 +570,9 @@ namespace amrex{
        const Real* xlo,const Real* dx,
        Real* time,
        Real* visc_coef,
-       int* nmat,int* nten,
+       Real* triple_point_strength_factor,
+       int* nmat,
+       int* nten,
        int* num_curv,
        int* ngrow_distance);
 
