@@ -1569,7 +1569,7 @@ protected:
     static Vector<Real> tension_T0;
     static Vector<Real> tension_slope;
     static Vector<Real> tension; // 1-2 1-3 1-4 2-3 2-4 3-4
-    static Vector<Real> triple_point_strength_factor;//1-2 1-3 1-4 2-3 2-4 3-4
+    static Real unscaled_min_curvature_radius; //default: 0.0
     static Vector<Real> prefreeze_tension; // 1-2 1-3 1-4 2-3 2-4 3-4
     static Vector<Real> recalesce_model_parameters; // 3*nmat
 
