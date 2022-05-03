@@ -7040,7 +7040,9 @@ end subroutine dynamic_contact_angle
        endif
        delta=delta*RR
 
-       if (delta.le.zero) then
+       if (delta.gt.zero) then
+        ! do nothing
+       else
         print *,"delta invalid in get_dxmax"
         stop
        endif
@@ -7081,7 +7083,9 @@ end subroutine dynamic_contact_angle
         stop
        endif
 
-       if (delta.le.zero) then
+       if (delta.gt.zero) then
+        ! do nothing
+       else
         print *,"delta invalid get_dxmaxLS"
         stop
        endif

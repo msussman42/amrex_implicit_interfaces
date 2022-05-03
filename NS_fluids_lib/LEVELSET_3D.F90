@@ -728,6 +728,9 @@ stop
       REAL_T ZEYU_sigma
       REAL_T angle_im
       REAL_T dist_to_CL
+
+      REAL_T maxcurv
+
       INTEGER_T im_liquid,im_vapor
 
       INTEGER_T nhalf_height ! in: initheightLS
@@ -904,7 +907,7 @@ stop
         stop
        endif
       else
-       print *,"initheightLS: levelrz invalid"
+       print *,"initheightLS: levelrz invalid (a)"
        stop
       endif
 
@@ -923,6 +926,7 @@ stop
        print *,"unscaled_min_curvature_radius invalid"
        stop
       endif
+
       do dir2=1,nten
        if (fort_tension(dir2).ge.zero) then
         ! do nothing
@@ -2085,7 +2089,9 @@ stop
        enddo
        enddo ! i,j,k=cell_lo ... cell_hi
 
-       if (wtnode.le.zero) then
+       if (wtnode.gt.zero) then
+        ! do nothing
+       else
         print *,"wtnode invalid"
         stop
        endif
@@ -2276,6 +2282,41 @@ stop
       do dir2=1,SDIM
        curvFD=curvFD+dnrm(dir2)
       enddo
+
+      if (unscaled_min_curvature_radius.eq.zero) then
+       ! do nothing
+      else if (unscaled_min_curvature_radius.gt.zero) then
+       maxcurv=one/(unscaled_min_curvature_radius*dxmax)
+       if (levelrz.eq.0) then
+        if (SDIM.eq.2) then
+         ! do nothing
+        else if (SDIM.eq.3) then
+         maxcurv=two*maxcurv
+        else
+         print *,"sdim invalid"
+         stop
+        endif     
+       else if ((levelrz.eq.1).or. &
+                (levelrz.eq.3)) then
+        maxcurv=two*maxcurv
+       else
+        print *,"initheightLS: levelrz invalid (b)"
+        stop
+       endif
+       if (curvFD.gt.maxcurv) then
+        curvFD=maxcurv
+       else if (curvFD.lt.-maxcurv) then
+        curvFD=-maxcurv
+       else if (abs(curvFD).le.maxcurv) then
+        ! do nothing
+       else
+        print *,"curvFD is NaN"
+        stop
+       endif
+      else
+       print *,"unscaled_min_curvature_radius invalid"
+       stop
+      endif
 
       if (1.eq.0) then
        print *,"xcenter ",xcenter(1),xcenter(2),xcenter(SDIM)
