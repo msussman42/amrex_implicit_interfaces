@@ -525,7 +525,7 @@ stop
         im3, &
         nmat, &
         visc_coef, &
-        triple_point_strength_factor, &
+        unscaled_min_curvature_radius, &
         nten, &
         im,im_opp,iten)
       use global_utility_module
@@ -552,7 +552,7 @@ stop
       INTEGER_T, intent(in) :: iten
       INTEGER_T :: iten_test
       REAL_T, intent(in) :: visc_coef
-      REAL_T, intent(in) :: triple_point_strength_factor(nten)
+      REAL_T, intent(in) :: unscaled_min_curvature_radius
       REAL_T user_tension(nten)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: vol_sten
@@ -917,14 +917,13 @@ stop
        temperature_cen, &
        nmat,nten,2)
 
-
+      if (unscaled_min_curvature_radius.ge.zero) then
+       ! do nothing
+      else
+       print *,"unscaled_min_curvature_radius invalid"
+       stop
+      endif
       do dir2=1,nten
-       if (triple_point_strength_factor(dir2).gt.zero) then
-        ! do nothing
-       else
-        print *,"triple_point_strength_factor(dir2) invalid"
-        stop
-       endif
        if (fort_tension(dir2).ge.zero) then
         ! do nothing
        else
@@ -972,7 +971,9 @@ stop
       call get_LSNRM_extend(LS_CENTER,nrmcenter,nmat,iten,nfluid)
       RR=one
       call prepare_normal(nfluid,RR,mag)
-      if (mag.le.zero) then
+      if (mag.gt.zero) then
+       ! do nothing
+      else
        print *,"nfluid mag became corrupt"
        stop
       endif
@@ -1451,10 +1452,12 @@ stop
       call prepare_normal(nfluid_def2,RR,mag2) ! im_opp fluid
       call prepare_normal(nfluid_def3,RR,mag3) ! im3 material
 
-      if ((mag1.le.zero).or. &
-          (mag2.le.zero).or. &
-          (mag3.le.zero).or. &
-          (mag.le.zero)) then
+      if ((mag1.gt.zero).and. &
+          (mag2.gt.zero).and. &
+          (mag3.gt.zero).and. &
+          (mag.gt.zero)) then
+       ! do nothing
+      else
        print *,"err:nfluid_def1, nfluid_def2, nfluid_def3, or nfluid_cen"
        print *,"mag1,mag2,mag3,mag=",mag1,mag2,mag3,mag
        print *,"nfluid_def1 associated with material im=",im
@@ -2091,7 +2094,9 @@ stop
 
         dxsten(dir2)=xsten(2*cell_hi(dir2),dir2)- &
                      xsten(2*cell_lo(dir2),dir2)
-        if (dxsten(dir2).le.zero) then
+        if (dxsten(dir2).gt.zero) then
+         ! do nothing
+        else
          print *,"dxsten invalid"
          stop
         endif
@@ -2210,7 +2215,9 @@ stop
       enddo
       enddo  ! inode,jnode,knode=-1,1,2
 
-      if (totalwt.le.zero) then
+      if (totalwt.gt.zero) then
+       ! do nothing
+      else
        print *,"totalwt invalid in initheightLS"
        stop
       endif
@@ -2218,11 +2225,13 @@ stop
        ! dxsten=(xsten(2)+xsten(0))/2-(xsten(-2)+xsten(0))/2=
        !   (xsten(2)-xsten(-2))/2
       do dir2=1,SDIM
-        dxsten(dir2)=xsten_curv(1,dir2)-xsten_curv(-1,dir2)
-        if (dxsten(dir2).le.zero) then
-         print *,"dxsten invalid"
-         stop
-        endif 
+       dxsten(dir2)=xsten_curv(1,dir2)-xsten_curv(-1,dir2)
+       if (dxsten(dir2).gt.zero) then
+        ! do nothing
+       else
+        print *,"dxsten invalid"
+        stop
+       endif 
       enddo ! dir2
 
       do dir2=1,SDIM
@@ -3211,7 +3220,7 @@ stop
        xlo,dx, &
        time, &
        visc_coef, &
-       triple_point_strength_factor, &
+       unscaled_min_curvature_radius, &
        nmat, &
        nten, & 
        num_curv, &
@@ -3237,7 +3246,7 @@ stop
       INTEGER_T icurv
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: visc_coef
-      REAL_T, intent(in) :: triple_point_strength_factor(nten)
+      REAL_T, intent(in) :: unscaled_min_curvature_radius
 
       INTEGER_T, intent(in) :: DIMDEC(history_dat)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
@@ -3420,13 +3429,14 @@ stop
        stop
       endif
 
+      if (unscaled_min_curvature_radius.ge.zero) then
+       ! do nothing
+      else
+       print *,"unscaled_min_curvature radius invalid"
+       stop
+      endif
+
       do i=1,nten
-       if (triple_point_strength_factor(i).gt.zero) then
-        ! do nothing
-       else
-        print *,"triple_point_strength_factor(i) invalid"
-        stop
-       endif
        if (fort_tension(i).ge.zero) then
         ! do nothing
        else
@@ -4161,7 +4171,7 @@ stop
               im3, &
               nmat, &
               visc_coef, &
-              triple_point_strength_factor, &
+              unscaled_min_curvature_radius, &
               nten, &
               im_main,im_main_opp,iten)
 

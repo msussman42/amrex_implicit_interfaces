@@ -705,7 +705,7 @@ Vector<Real> NavierStokes::tension_slope;
 Vector<Real> NavierStokes::tension_min;
 Vector<Real> NavierStokes::tension_T0;
 Vector<Real> NavierStokes::tension;
-Vector<Real> NavierStokes::triple_point_strength_factor;
+Real NavierStokes::unscaled_min_curvature_radius=0.0;
 Vector<Real> NavierStokes::prefreeze_tension;
 Vector<Real> NavierStokes::recalesce_model_parameters;
 
@@ -3505,7 +3505,6 @@ NavierStokes::read_params ()
     constant_density_all_time.resize(nmat);
 
     tension.resize(nten);
-    triple_point_strength_factor.resize(nten);
     tension_slope.resize(nten);
     tension_T0.resize(nten);
     tension_min.resize(nten);
@@ -3782,10 +3781,7 @@ NavierStokes::read_params ()
 
     pp.getarr("tension",tension,0,nten);
 
-    for (int i=0;i<nten;i++) 
-     triple_point_strength_factor[i]=1.0;
-    pp.queryarr("triple_point_strength_factor",triple_point_strength_factor,
-		0,nten);
+    pp.query("unscaled_min_curvature_radius",unscaled_min_curvature_radius);
 
     for (int i=0;i<nten;i++) 
      prefreeze_tension[i]=tension[i];
@@ -5190,6 +5186,9 @@ NavierStokes::read_params ()
 
      std::cout << "R_Palmore_Desjardins " << R_Palmore_Desjardins << '\n';
 
+     std::cout << "unscaled_min_curvature_radius=" << 
+	      unscaled_min_curvature_radius << '\n';
+
      for (int i=0;i<nten;i++) {
       std::cout << "hardwire_T_gamma i=" << i << "  " << 
        hardwire_T_gamma[i] << '\n';
@@ -5280,8 +5279,6 @@ NavierStokes::read_params ()
        distribute_from_target[i+nten] << '\n';
 
       std::cout << "tension i=" << i << "  " << tension[i] << '\n';
-      std::cout << "triple_point_strength_factor i=" << i << "  " << 
-	      triple_point_strength_factor[i] << '\n';
       std::cout << "tension_slope i=" << i << "  " << tension_slope[i] << '\n';
       std::cout << "tension_T0 i=" << i << "  " << tension_T0[i] << '\n';
       std::cout << "tension_min i=" << i << "  " << tension_min[i] << '\n';
@@ -26027,7 +26024,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
      xlo,dx,
      &cur_time_slab,
      &visc_coef,
-     triple_point_strength_factor.dataPtr(),
+     &unscaled_min_curvature_radius,
      &nmat,
      &nten,
      &num_curv,
