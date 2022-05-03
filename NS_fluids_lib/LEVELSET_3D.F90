@@ -524,7 +524,9 @@ stop
         ZEYU_u_cl, &
         im3, &
         nmat, &
-        visc_coef,nten, &
+        visc_coef, &
+        triple_point_strength_factor, &
+        nten, &
         im,im_opp,iten)
       use global_utility_module
       use geometry_intersect_module
@@ -550,6 +552,7 @@ stop
       INTEGER_T, intent(in) :: iten
       INTEGER_T :: iten_test
       REAL_T, intent(in) :: visc_coef
+      REAL_T, intent(in) :: triple_point_strength_factor(nten)
       REAL_T user_tension(nten)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: vol_sten
@@ -809,7 +812,9 @@ stop
        print *,"iten and iten_test differ"
        stop
       endif
-      if (vol_sten.le.zero) then
+      if (vol_sten.gt.zero) then
+       ! do nothing
+      else
        print *,"vol_sten invalid"
        stop
       endif
@@ -911,6 +916,28 @@ stop
        fort_tension,user_tension, &
        temperature_cen, &
        nmat,nten,2)
+
+
+      do dir2=1,nten
+       if (triple_point_strength_factor(dir2).gt.zero) then
+        ! do nothing
+       else
+        print *,"triple_point_strength_factor(dir2) invalid"
+        stop
+       endif
+       if (fort_tension(dir2).ge.zero) then
+        ! do nothing
+       else
+        print *,"fort_tension(dir2) invalid"
+        stop
+       endif
+       if (user_tension(dir2).ge.zero) then
+        ! do nothing
+       else
+        print *,"user_tension(dir2) invalid"
+        stop
+       endif
+      enddo ! dir2=1,nten
 
       do dir2=1,SDIM
        mgoni_force(dir2)=zero
@@ -3184,7 +3211,9 @@ stop
        xlo,dx, &
        time, &
        visc_coef, &
-       nmat,nten, & 
+       triple_point_strength_factor, &
+       nmat, &
+       nten, & 
        num_curv, &
        ngrow_distance_in) &
       bind(c,name='fort_curvstrip')
@@ -3208,6 +3237,7 @@ stop
       INTEGER_T icurv
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: visc_coef
+      REAL_T, intent(in) :: triple_point_strength_factor(nten)
 
       INTEGER_T, intent(in) :: DIMDEC(history_dat)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
@@ -3389,6 +3419,22 @@ stop
        print *,"nten invalid curvstrip nten nten_test ",nten,nten_test
        stop
       endif
+
+      do i=1,nten
+       if (triple_point_strength_factor(i).gt.zero) then
+        ! do nothing
+       else
+        print *,"triple_point_strength_factor(i) invalid"
+        stop
+       endif
+       if (fort_tension(i).ge.zero) then
+        ! do nothing
+       else
+        print *,"fort_tension(i) invalid"
+        stop
+       endif
+      enddo ! i=1,nten
+
       if (nhistory.eq.nten*2) then
        ! do nothing
       else
@@ -4114,7 +4160,9 @@ stop
               ZEYU_u_cl, &
               im3, &
               nmat, &
-              visc_coef,nten, &
+              visc_coef, &
+              triple_point_strength_factor, &
+              nten, &
               im_main,im_main_opp,iten)
 
              if (DEBUG_CURVATURE.eq.1) then
