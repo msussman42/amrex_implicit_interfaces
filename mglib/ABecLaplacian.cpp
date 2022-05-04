@@ -2453,8 +2453,6 @@ ABecLaplacian::CG_check_for_convergence(
   } else
    amrex::Error("error_close_to_zero invalid");
 
-
-
   if ((error_close_to_zero==0)&&
       (base_check==1))
    error_close_to_zero=2;
