@@ -100,7 +100,8 @@ FCOMP = gfortran
 PYTHONCOMP = python
 
 # total view:
-#  1. ssh -YX sussman@hpc-login.rcc.fsu.edu (44 not 57)
+#  1. ssh -YX sussman@hpc-login.rcc.fsu.edu (same password as FSUID)
+#      https://rcc.fsu.edu/manage
 #  2. module load gnu openmpi  (can I leave out the /8.2.1-4.0.0 ?)
 #  2.5 cd multimaterialTV
 #  2.6 get latest code, USE_MPI=TRUE
@@ -122,8 +123,9 @@ PYTHONCOMP = python
 # engineering_q
 # engineering_long
 # hpc-login.rcc.fsu.edu  "module load intel" or 
-#                        "module load gnu openmpi"(44 not 57)
-# sussman + old password (44, repeat once lower, then upper)
+#                        "module load gnu openmpi"
+# sussman + same password as FSUID
+#   https://rcc.fsu.edu/manage
 # bromwich or compute1 GNU MPI:
 #  "module load mpi/openmpi-4-gcc8"
 # csh: command >& out_and_err_file &
