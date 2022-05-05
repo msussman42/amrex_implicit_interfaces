@@ -8744,7 +8744,7 @@ void NavierStokes::jacobi_cycles(
  Real& error_after_all_jacobi_sweeps,
  Real& error0,
  Real& error0_max,
- int bicgstab_num_outer_iterSOLVER,int nsolve) {
+ int krylov_subspace_num_outer_iterSOLVER,int nsolve) {
 
  int finest_level=parent->finestLevel();
 
@@ -8766,8 +8766,8 @@ void NavierStokes::jacobi_cycles(
  } else
   amrex::Error("project_option invalid39");
 
- if (bicgstab_num_outer_iterSOLVER<0)
-  amrex::Error("bicgstab_num_outer_iterSOLVER invalid");
+ if (krylov_subspace_num_outer_iterSOLVER<0)
+  amrex::Error("krylov_subspace_num_outer_iterSOLVER invalid");
 
  allocate_array(0,nsolve,-1,RESID_MF);
 
@@ -8822,7 +8822,7 @@ void NavierStokes::jacobi_cycles(
    if (vcycle_jacobi==0)
     error_at_the_beginning=local_error;
 
-   if (bicgstab_num_outer_iterSOLVER==0) {
+   if (krylov_subspace_num_outer_iterSOLVER==0) {
 
     error0=local_error;
 
@@ -8833,10 +8833,10 @@ void NavierStokes::jacobi_cycles(
     } else
      amrex::Error("call_adjust_tolerance invalid");
 
-   } else if (bicgstab_num_outer_iterSOLVER>0) {
+   } else if (krylov_subspace_num_outer_iterSOLVER>0) {
     // do nothing
    } else
-    amrex::Error("bicgstab_num_outer_iterSOLVER invalid");
+    amrex::Error("krylov_subspace_num_outer_iterSOLVER invalid");
 
   } else if (update_vel==0) { // called as preconditioner
     // do nothing
@@ -9095,7 +9095,7 @@ void NavierStokes::multiphase_preconditioner(
   Real error_after_all_jacobi_sweeps=0.0;
   Real error_n=0.0;
   Real error0_max=0.0;
-  int bicgstab_num_outer_iterSOLVER=0;
+  int krylov_subspace_num_outer_iterSOLVER=0;
 
   int call_adjust_tolerance=0;
 
@@ -9109,7 +9109,7 @@ void NavierStokes::multiphase_preconditioner(
    error_after_all_jacobi_sweeps,
    error_n,    // not modified
    error0_max, // not modified
-   bicgstab_num_outer_iterSOLVER,nsolve);
+   krylov_subspace_num_outer_iterSOLVER,nsolve);
 
 #if (profile_solver==1)
   bprof.stop();
@@ -10075,10 +10075,10 @@ void NavierStokes::multiphase_project(int project_option) {
  }
 
  int vcycle;
- int bicgstab_num_outer_iterSOLVER=0;
+ int krylov_subspace_num_outer_iterSOLVER=0;
  int outer_iter_done=0;
 
- int min_bicgstab_outer_iter=0;
+ int min_krylov_subspace_outer_iter=0;
 
   // initializes diagsing,mask_div_residual,mask_residual,
   // ONES_MF,ONES_GROW_MF
@@ -10092,7 +10092,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
  int total_number_vcycles=0;
 
- bicgstab_num_outer_iterSOLVER=0;
+ krylov_subspace_num_outer_iterSOLVER=0;
  outer_iter_done=0;
  
  lev0_cycles_list.resize(0);
@@ -10102,7 +10102,7 @@ void NavierStokes::multiphase_project(int project_option) {
 #endif
 
  Vector< Array<Real,4> > outer_error_history;
- outer_error_history.resize(bicgstab_max_num_outer_iter+1);
+ outer_error_history.resize(krylov_subspace_max_num_outer_iter+1);
  for (int ehist=0;ehist<outer_error_history.size();ehist++) {
    outer_error_history[ehist][0]=0.0;
    outer_error_history[ehist][1]=0.0;
@@ -10177,7 +10177,7 @@ void NavierStokes::multiphase_project(int project_option) {
     } else
      amrex::Error("project_option invalid52");
 
-    int update_vel=1; // update error0 IF bicgstab_num_outer_iterSOLVER==0
+    int update_vel=1; // update error0 IF krylov_subspace_num_outer_iterSOLVER==0
     int call_adjust_tolerance=1;
 
       // NavierStokes::jacobi_cycles in NavierStokes3.cpp
@@ -10194,7 +10194,7 @@ void NavierStokes::multiphase_project(int project_option) {
       error0, // error after Jacobi iterations IF num_outer_iterSOLVER==0
       error0_max, //max error0 during Jacobi Iterations IF 
                   //(num_outer_iterSOLVER==0)&&(call_adjust_tol==1)
-      bicgstab_num_outer_iterSOLVER,
+      krylov_subspace_num_outer_iterSOLVER,
       nsolve);
 
     error_n=error0; // error after Jacobi iter. IF num_outer_iterSOLVER==0
@@ -10303,14 +10303,14 @@ void NavierStokes::multiphase_project(int project_option) {
      } else
       amrex::Error("Ar_error_n invalid");
 
-     if ((bicgstab_num_outer_iterSOLVER==0)&&(cg_loop==0)) {
+     if ((krylov_subspace_num_outer_iterSOLVER==0)&&(cg_loop==0)) {
       Ar_error0=Ar_error_n;
       rAr_error0=rAr_error_n;
-     } else if ((bicgstab_num_outer_iterSOLVER>0)||
+     } else if ((krylov_subspace_num_outer_iterSOLVER>0)||
       	       (cg_loop==1)) {
       // do nothing
      } else
-      amrex::Error("bicgstab_num_outer_iterSOLVER or cg_loop invalid");
+      amrex::Error("krylov_subspace_num_outer_iterSOLVER or cg_loop invalid");
 
       // if cg_loop==0 then error_n=error0 
       // error0=error after Jacobi iter. IF num_outer_iterSOLVER==0
@@ -11234,18 +11234,18 @@ void NavierStokes::multiphase_project(int project_option) {
 
     Real outer_tol=100.0*save_mac_abs_tol;
 
-    outer_error_history[bicgstab_num_outer_iterSOLVER][0]=outer_error;
-    outer_error_history[bicgstab_num_outer_iterSOLVER][1]=rAr_outer_error;
-    outer_error_history[bicgstab_num_outer_iterSOLVER][2]=Ar_outer_error;
-    outer_error_history[bicgstab_num_outer_iterSOLVER][3]=outer_tol;
+    outer_error_history[krylov_subspace_num_outer_iterSOLVER][0]=outer_error;
+    outer_error_history[krylov_subspace_num_outer_iterSOLVER][1]=rAr_outer_error;
+    outer_error_history[krylov_subspace_num_outer_iterSOLVER][2]=Ar_outer_error;
+    outer_error_history[krylov_subspace_num_outer_iterSOLVER][3]=outer_tol;
 
-    bicgstab_num_outer_iterSOLVER++;
+    krylov_subspace_num_outer_iterSOLVER++;
 
     if (verbose>0) {
      if (ParallelDescriptor::IOProcessor()) {
       print_project_option(project_option);
-      std::cout << "bicgstab_num_outer_iterSOLVER,E,rAr_E,Ar_E " << 
-       bicgstab_num_outer_iterSOLVER << ' ' << outer_error << 
+      std::cout << "krylov_subspace_num_outer_iterSOLVER,E,rAr_E,Ar_E " << 
+       krylov_subspace_num_outer_iterSOLVER << ' ' << outer_error << 
        ' ' << rAr_outer_error << 
        ' ' << Ar_outer_error << '\n';
      }
@@ -11259,17 +11259,17 @@ void NavierStokes::multiphase_project(int project_option) {
              outer_tol,
              outer_iter_done);
 
-    if (bicgstab_num_outer_iterSOLVER>bicgstab_max_num_outer_iter)
+    if (krylov_subspace_num_outer_iterSOLVER>krylov_subspace_max_num_outer_iter)
      outer_iter_done=1;
 
      // We cannot do iterative refinement (see Burden and Faires -
      // iterative techniques in matrix algebra) in this case since:
      // RHSPROJ( div(U - dt grad P) ) <> 
      // RHSPROJ( RHSPROJ(div U)- dt div grad P ) 
-    if (bicgstab_num_outer_iterSOLVER>1)
+    if (krylov_subspace_num_outer_iterSOLVER>1)
      outer_iter_done=1;
 
-    if (bicgstab_num_outer_iterSOLVER<min_bicgstab_outer_iter)
+    if (krylov_subspace_num_outer_iterSOLVER<min_krylov_subspace_outer_iter)
      outer_iter_done=0;
 
 #if (profile_solver==1)

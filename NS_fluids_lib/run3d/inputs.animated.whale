@@ -92,7 +92,6 @@ ns.twall=5.0
 ns.advbot=0.0
 ns.adv_vel=1.0   # problem should always be scaled so this is 1
 ns.adv_dir=1
-ns.viscous_maxiter=1
 ns.viscconst=1.0 1.0
 ns.denconst=1.0 1.0
 ns.heatviscconst=0.0 0.0 

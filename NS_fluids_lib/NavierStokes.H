@@ -1042,7 +1042,7 @@ void apply_pressure_grad(
      Real& error_at_the_beginning,
      Real& error_after_all_jacobi_sweeps,
      Real& error0,Real& error0_max,
-     int bicgstab_num_outer_iterSOLVER,int nsolve);
+     int krylov_subspace_num_outer_iterSOLVER,int nsolve);
 
     void updatevelALL(
      int project_option,
@@ -2016,7 +2016,7 @@ protected:
      // 1=EILE (default), -1=Weymouth Yue
      // 2=always EI   3=always LE
     static int EILE_flag; 
-    static int bicgstab_max_num_outer_iter;
+    static int krylov_subspace_max_num_outer_iter;
     static Real projection_pressure_scale;
     static Real projection_velocity_scale;
 
@@ -2112,8 +2112,8 @@ protected:
     static Real visc_abs_tol;
     static Real thermal_abs_tol;
 
-    static int  viscous_maxiter;
     static int  multilevel_maxcycle;
+    static int  multilevel_restart_period;
     static int  initial_project_cycles;
     static int  initial_viscosity_cycles;
     static int  initial_thermal_cycles;
