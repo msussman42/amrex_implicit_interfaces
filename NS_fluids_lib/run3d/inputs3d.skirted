@@ -118,7 +118,6 @@ ns.heatviscconst=0.0 0.0 0.0 0.0 # INCOMP
 ns.viscconst=12.2447 2.0E-4 0.0 0.0
 ns.denconst=1.0 0.001221 1.0 1.0
 ns.tempconst=293.0 293.0 293.0 293.0
-ns.viscous_maxiter=1
 
 ns.shock_timestep=2 2 # 2 2 INCOMP; 2 2 COMP
 ns.material_type=0 0  # 0 0 if INCOMP; 13 14 COMP 

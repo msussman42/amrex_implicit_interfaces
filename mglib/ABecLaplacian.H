@@ -152,6 +152,7 @@ protected:
       int level);
 
     static int CG_def_maxiter;
+    static int CG_def_restart_period;
     static double CG_def_unstable_criterion;
     static int CG_def_verbose;
 
@@ -159,6 +160,7 @@ protected:
     // The data.
     //
     int        CG_maxiter;  // Current maximum number of allowed iterations.
+    int        CG_restart_period;
     int        CG_verbose;  // Current verbosity level.
     int CG_use_mg_precond_at_top; // Use multigrid as a preconditioner.
 

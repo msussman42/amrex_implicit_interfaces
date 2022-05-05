@@ -661,7 +661,7 @@ Real NavierStokes::twall=0.1;
 // 2=always EI   3=always LE
 int NavierStokes::EILE_flag=1;
 
-int  NavierStokes::bicgstab_max_num_outer_iter=60;
+int  NavierStokes::krylov_subspace_max_num_outer_iter=60;
 Real NavierStokes::projection_pressure_scale=1.0;
 Real NavierStokes::projection_velocity_scale=1.0;
 
@@ -1066,6 +1066,7 @@ Real NavierStokes::visc_coef=0.0;
 int NavierStokes::include_viscous_heating=0;
 
 int NavierStokes::multilevel_maxcycle=200;
+int NavierStokes::multilevel_restart_period=20000;
 
 // mg.bot_atol
 // mg.visc_bot_atol
@@ -1080,7 +1081,6 @@ Real NavierStokes::save_min_rel_error=1.0e-11;
 Real NavierStokes::mac_abs_tol = 1.0e-10;
 Real NavierStokes::visc_abs_tol = 1.0e-10;
 Real NavierStokes::thermal_abs_tol = 1.0e-10;
-int NavierStokes::viscous_maxiter = 1;
 Real NavierStokes::total_advance_time=0.0;
 
 void extra_circle_parameters(
@@ -3343,7 +3343,7 @@ NavierStokes::read_params ()
 
     pp.get("twall",twall);
 
-    pp.query("bicgstab_max_num_outer_iter",bicgstab_max_num_outer_iter);
+    pp.query("krylov_subspace_max_num_outer_iter",krylov_subspace_max_num_outer_iter);
 
     pp.query("EILE_flag",EILE_flag);
 
@@ -4569,13 +4569,15 @@ NavierStokes::read_params ()
     pp.query("outflow_pressure",outflow_pressure);
 
     pp.query( "multilevel_maxcycle",multilevel_maxcycle);
+    pp.query( "multilevel_restart_period",multilevel_restart_period);
+    if ((multilevel_maxcycle>1)&&(multilevel_restart_period>1)) {
+     // do nothing
+    } else
+     amrex::Error("multilevel_maxcycle or multilevel_restart_period bad");
+
 
     ParmParse ppmac("mac");
     ParmParse ppcg("cg");
-
-    pp.query( "viscous_maxiter",viscous_maxiter);
-    if ((viscous_maxiter<1)||(viscous_maxiter>2)) 
-     amrex::Error("viscous_maxiter should be 1 or 2");
 
     ppmac.query( "mac_abs_tol",mac_abs_tol);
       // mac.visc_abs_tol (not ns.visc_abs_tol)
@@ -5349,8 +5351,8 @@ NavierStokes::read_params ()
      } else
       amrex::Error("local_strategy invalid");
 
-     std::cout << "bicgstab_max_num_outer_iter " << 
-       bicgstab_max_num_outer_iter << '\n';
+     std::cout << "krylov_subspace_max_num_outer_iter " << 
+       krylov_subspace_max_num_outer_iter << '\n';
      std::cout << "slipcoeff " << slipcoeff << '\n';
 
      std::cout << "EILE_flag " << EILE_flag << '\n';
@@ -5361,11 +5363,12 @@ NavierStokes::read_params ()
      std::cout << "ractivez " << ractivez << '\n';
      std::cout << "wait_time " << wait_time << '\n';
      std::cout << "multilevel_maxcycle " << multilevel_maxcycle << '\n';
+     std::cout << "multilevel_restart_period " << 
+	     multilevel_restart_period << '\n';
 
      std::cout << "mac.mac_abs_tol " <<mac_abs_tol<< '\n';
      std::cout << "mac.visc_abs_tol " <<visc_abs_tol<< '\n';
      std::cout << "mac.thermal_abs_tol " <<thermal_abs_tol<< '\n';
-     std::cout << "viscous_maxiter " <<viscous_maxiter<< '\n';
      std::cout << "project_solver_type " <<project_solver_type<< '\n';
      std::cout << "initial_cg_cycles " <<initial_cg_cycles<< '\n';
      std::cout << "initial_project_cycles " <<initial_project_cycles<< '\n';

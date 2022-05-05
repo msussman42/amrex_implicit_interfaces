@@ -33,6 +33,7 @@ Real ABecLaplacian::a_def     = 0.0;
 Real ABecLaplacian::b_def     = 1.0;
 
 int ABecLaplacian::CG_def_maxiter = 200;
+int ABecLaplacian::CG_def_restart_period = 2000;
 int ABecLaplacian::CG_def_verbose = 0;
 
 int ABecLaplacian::MG_def_nu_0         = 1;
@@ -987,6 +988,7 @@ ABecLaplacian::ABecLaplacian (
   cfd_max_grid_size[ilev]=ns_max_grid_size[ilev];
 
  CG_maxiter = CG_def_maxiter;
+ CG_restart_period = CG_def_restart_period;
  CG_verbose = CG_def_verbose;
 
  CG_error_history.resize(CG_maxiter);
@@ -1219,12 +1221,14 @@ ABecLaplacian::ABecLaplacian (
   amrex::Error("expecting cg.mglib_blocking_factor>=2");
 
  ppcg.query("maxiter", CG_def_maxiter);
+ ppcg.query("restart_period", CG_def_restart_period);
  ppcg.query("v", CG_def_verbose);
  ppcg.query("verbose", CG_def_verbose);
 
  if (ParallelDescriptor::IOProcessor() && CG_def_verbose) {
   std::cout << "CGSolver settings...\n";
   std::cout << "   CG_def_maxiter   = " << CG_def_maxiter << '\n';
+  std::cout << "   CG_def_restart_period = " << CG_def_restart_period << '\n';
  }
     
  ParmParse ppmg("mg");
