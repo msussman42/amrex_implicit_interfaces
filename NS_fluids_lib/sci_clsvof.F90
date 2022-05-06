@@ -630,20 +630,6 @@ INTEGER_T, intent(in) :: allocate_intelem
 return
 end subroutine init_FSI
 
-subroutine xdist(x1,x2,dist)
-IMPLICIT NONE
- 
-REAL_T, dimension(3),intent(in) :: x1,x2
-REAL_T, intent(out) :: dist
-
- dist=sqrt( (x1(1)-x2(1))**2+ &
-            (x1(2)-x2(2))**2+ &
-            (x1(3)-x2(3))**2 )
-
-return
-end subroutine xdist
-
-
 subroutine xdist_project(x1,x2, &
       FSI_mesh_type,part_id,max_part_id, &
       dist_project,dist_actual)
@@ -8067,7 +8053,7 @@ REAL_T, dimension(3) :: velparm
   ntarget(dir)=ntarget(dir)/mag
  enddo
 
- call xdist(xtarget,xc,curdist)
+ call global_xdist(xtarget,xc,curdist)
  if (curdist.ge.zero) then
   ! do nothing
  else
@@ -8128,7 +8114,7 @@ REAL_T :: local_normal
 REAL_T, dimension(2,3) :: xnode,nnode
 REAL_T, intent(inout) :: unsigned_mindist
 REAL_T, dimension(3) :: xnot,normal
-REAL_T :: dottop,dotbot,t,curdist,mag
+REAL_T :: mag
 INTEGER_T :: dir
 INTEGER_T :: nodes_per_elem
 REAL_T, dimension(3) :: xfoot
@@ -8271,68 +8257,8 @@ REAL_T, dimension(3) :: velparm
    xnode(2,dir)=xtarget(dir)
   enddo
 
-   ! x(t)=x2+t*(x1-x2)
-   ! C(t)=||x(t)-xc||^2
-   ! C'(t)=0
-   ! (x(t)-xc) dot (x1-x2)=0
-   ! (-(xc-x2)+t(x1-x2)) dot (x1-x2)=0
-   ! t=(xc-x2) dot (x1-x2)/||x1-x2||^2
-   ! since x(t)=x2+t (x1-x2), if t=0 => x=x2
-   ! if t=1 => x=x1
-  dottop=zero
-  dotbot=zero
-  do dir=1,3
-   dottop=dottop+(xnode(2,dir)-xnode(1,dir))*(xnode(2,dir)-xc(dir))
-   dotbot=dotbot+(xnode(2,dir)-xnode(1,dir))**2
-  enddo
-  if (dotbot.eq.zero) then
-   ! do nothing
-  else if (dotbot.gt.zero) then
-   t=dottop/dotbot
-   if ((t.ge.-adjusted_tol).and.(t.le.one+adjusted_tol)) then
-
-    t=min(t,one-adjusted_tol)
-    t=max(t,adjusted_tol)
-
-    do dir=1,3
-     xnot(dir)=t*xnode(1,dir)+(one-t)*xnode(2,dir)
-     normal(dir)=t*nnode(1,dir)+(one-t)*nnode(2,dir)
-    enddo
-
-    call xdist(xnot,xc,curdist)
-    if (curdist.ge.zero) then
-     ! do nothing
-    else
-     print *,"curdist invalid"
-     stop
-    endif
-
-    if ((curdist.lt.unsigned_mindist).or. &
-        (inplane.eq.0)) then
-     inplane=1
-     unsigned_mindist=curdist
-     do dir=1,3
-      xclosest(dir)=xnot(dir)
-      normal_closest(dir)=normal(dir)
-     enddo
-    else if ((curdist.ge.unsigned_mindist).and. &
-             (inplane.eq.1)) then
-     ! do nothing
-    else
-     print *,"curdist or inplane invalid"
-     stop
-    endif
-   else if ((t.lt.-adjusted_tol).or. &
-            (t.gt.one+adjusted_tol)) then
-    ! do nothing
-   else 
-    print *,"t is NaN"
-    stop
-   endif 
-  else
-   print *,"dotbot is NaN"
-   stop
-  endif
+  call global_checkinline(nnode,xnode,adjusted_tol,xc, &
+        inplane,unsigned_mindist,xclosest,normal_closest)
 
  else
   print *,"inode invalid in checkinlineBIG"
@@ -8370,14 +8296,8 @@ REAL_T, dimension(3), intent(out) :: xclosest_project
 REAL_T, dimension(3), intent(in) :: normal
 REAL_T, dimension(3), intent(out) :: normal_project
 INTEGER_T, intent(out) :: inplane
-REAL_T, dimension(3,3) :: xnode,AA,AINVERSE
-INTEGER_T :: dir,i,j,k
+INTEGER_T :: dir,i
 INTEGER_T :: nodes_per_elem
-REAL_T :: det
-REAL_T :: tx_sum,tx_sum_new
-REAL_T, dimension(3) :: tx
-REAL_T, dimension(3) :: tx_project
-REAL_T, dimension(3) :: v1,v2,v1xv2
 REAL_T, dimension(3) :: xfoot
 REAL_T, dimension(3) :: xtarget
 REAL_T, dimension(3) :: velparm
@@ -8408,8 +8328,6 @@ REAL_T, dimension(3) :: velparm
   normal_project(dir)=normal(dir)
  enddo
 
- inplane=1
-
  do i=1,3
   do dir=1,3
    xfoot(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(i,elemnum))
@@ -8425,140 +8343,16 @@ REAL_T, dimension(3) :: velparm
   enddo
  enddo  ! i=1..3
 
- ! xnode(1)-xnode(1) is mapped to (0,0,0)
- ! xnode(2)-xnode(1)=v1 is mapped to (1,0,0)
- ! xnode(3)-xnode(1)=v2 is mapped to (0,1,0) 
- ! v1 x v2 is mapped to (0,0,1)
- ! Let A map from unit space to real space
- ! A (0,0,0) = (0,0,0)
- ! A (1,0,0) = v1 => first column of A is v1
- ! A (0,1,0) = v2 => second column of A is v2
- ! A (0,0,1) = v1 x v2 => third column of A is v1 x v2
- ! A^{-1} maps from real space back to unit space
-
- do dir=1,3
-  v1(dir)=xnode(2,dir)-xnode(1,dir)
-  v2(dir)=xnode(3,dir)-xnode(1,dir)
- enddo  
- v1xv2(1)=v1(2)*v2(3)-v1(3)*v2(2)  
- v1xv2(2)=v1(3)*v2(1)-v1(1)*v2(3)  
- v1xv2(3)=v1(1)*v2(2)-v1(2)*v2(1)  
- do dir=1,3
-  AA(dir,1)=v1(dir)
-  AA(dir,2)=v2(dir)
-  AA(dir,3)=v1xv2(dir)
- enddo
-  
- det=AA(1,1)*(AA(2,2)*AA(3,3)-AA(2,3)*AA(3,2))- &
-     AA(1,2)*(AA(2,1)*AA(3,3)-AA(2,3)*AA(3,1))+ &
-     AA(1,3)*(AA(2,1)*AA(3,2)-AA(2,2)*AA(3,1))
- if (abs(det).eq.zero) then
-  inplane=0
- else if (abs(det).gt.zero) then
-  det=1.0/det
-  AINVERSE(1,1)=+(AA(2,2)*AA(3,3)-AA(2,3)*AA(3,2))
-  AINVERSE(2,1)=-(AA(2,1)*AA(3,3)-AA(2,3)*AA(3,1))
-  AINVERSE(3,1)=+(AA(2,1)*AA(3,2)-AA(2,2)*AA(3,1))
-  AINVERSE(1,2)=-(AA(1,2)*AA(3,3)-AA(3,2)*AA(1,3))
-  AINVERSE(2,2)=+(AA(1,1)*AA(3,3)-AA(1,3)*AA(3,1))
-  AINVERSE(3,2)=-(AA(1,1)*AA(3,2)-AA(3,1)*AA(1,2))
-  AINVERSE(1,3)=+(AA(1,2)*AA(2,3)-AA(2,2)*AA(1,3))
-  AINVERSE(2,3)=-(AA(1,1)*AA(2,3)-AA(2,1)*AA(1,3))
-  AINVERSE(3,3)=+(AA(1,1)*AA(2,2)-AA(1,2)*AA(2,1))
-  do i=1,3
-  do j=1,3
-   AINVERSE(i,j)=AINVERSE(i,j)*det
-  enddo
-  enddo
-  
-  do i=1,3
-   tx(i)=0.0
-   do k=1,3
-    tx(i)=tx(i)+AINVERSE(i,k)*(xclosest(k)-xnode(1,k))
-   enddo
-  enddo
- 
-  if ((eul_over_lag_scale.gt.zero).and. &
-      (eul_over_lag_scale.le.one)) then
-   adjusted_tol=eul_over_lag_scale*element_buffer_tol
-  else
-   print *,"eul_over_lag_scale invalid"
-   stop
-  endif
-
-  if ((tx(1).lt.-adjusted_tol).or. &
-      (tx(1).gt.one+adjusted_tol).or. &
-      (tx(2).lt.-adjusted_tol).or. &
-      (tx(2).gt.one+adjusted_tol).or. &
-      (tx(1)+tx(2).gt.one+adjusted_tol)) then
-   inplane=0
-  else if ((tx(1).ge.-adjusted_tol).and. &
-           (tx(1).le.one+adjusted_tol).and. &
-           (tx(2).ge.-adjusted_tol).and. &
-           (tx(2).le.one+adjusted_tol).and. &
-           (tx(1)+tx(2).le.one+adjusted_tol)) then
-
-   if (abs(tx(3)).le.VOFTOL) then
-    ! do nothing
-   else if (abs(tx(3)).ge.VOFTOL) then
-    print *,"something wrong with transformation"
-    stop
-   else
-    print *,"tx(3) is NaN"
-    stop
-   endif
-
-   tx(1)=min(tx(1),one-adjusted_tol)
-   tx(1)=max(tx(1),adjusted_tol)
-   tx(2)=min(tx(2),one-adjusted_tol)
-   tx(2)=max(tx(2),adjusted_tol)
-   tx_sum=tx(1)+tx(2)
-   if (tx_sum.gt.zero) then
-    tx_sum_new=tx_sum
-    tx_sum_new=min(tx_sum_new,one-adjusted_tol)
-    tx(1)=tx(1)*tx_sum_new/tx_sum
-    tx(2)=tx(2)*tx_sum_new/tx_sum
-   else
-    print *,"tx_sum is NaN"
-    stop
-   endif
-   tx(3)=zero
-
-   do i=1,3
-    xclosest_project(i)=xnode(1,i)
-    do k=1,3
-     xclosest_project(i)=xclosest_project(i)+AA(i,k)*tx(k)
-    enddo
-   enddo
-
-   do i=1,3
-    tx_project(i)=0.0
-    do k=1,3
-     tx_project(i)=tx_project(i)+AINVERSE(i,k)*(xclosest_project(k)-xnode(1,k))
-    enddo
-   enddo
-
-   do i=1,3
-    if (abs(tx_project(i)-tx(i)).le.VOFTOL) then
-     ! do nothing
-    else if (abs(tx_project(i)-tx(i)).ge.VOFTOL) then
-     print *,"sanity check failed tx_project and tx differ too much"
-     stop
-    else
-     print *,"tx or tx_project are NaN"
-     stop
-    endif
-   enddo !i=1,3
-
-  else
-   print *,"checking in triangle bust"
-   stop
-  endif
+ if ((eul_over_lag_scale.gt.zero).and. &
+     (eul_over_lag_scale.le.one)) then
+  adjusted_tol=eul_over_lag_scale*element_buffer_tol
  else
-  print *,"det is NaN"
+  print *,"eul_over_lag_scale invalid"
   stop
- endif 
- 
+ endif
+
+ call global_checkinplane(xnode,xclosest,adjusted_tol, &
+         xclosest_project,inplane)
 
 return
 end subroutine checkinplaneBIG

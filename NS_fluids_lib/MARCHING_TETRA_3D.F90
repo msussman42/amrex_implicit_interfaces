@@ -1979,7 +1979,7 @@ stop
               ipoint_p1=1
              endif 
              dist_pij(ipoint)=zero
-             do local_dir=1,SDIM
+             do local_dir=1,3
               dist_pij(ipoint)=dist_pij(ipoint)+ &
                (p_triangle(ipoint,local_dir)- &
                 p_triangle(ipoint_p1,local_dir))**2
@@ -1993,6 +1993,9 @@ stop
             enddo !ipoint=1,3
 
             in_plane=0
+            do local_dir = 1,3
+             n_triangle(local_dir) = zero
+            enddo
             if ((dist_pij(1).ge.degenerate_face_tol).and. &
                 (dist_pij(2).ge.degenerate_face_tol).and. &
                 (dist_pij(3).ge.degenerate_face_tol)) then
@@ -2009,18 +2012,24 @@ stop
              enddo
              call crossprod(tan1,tan2,n_triangle)
 
-             n_magnitude = sqrt(n(1)**2+n(2)**2+n(3)**2)
-             do local_dir = 1,SDIM
-              n(local_dir) = n(local_dir)/n_magnitude 
-             enddo
+             n_magnitude = &
+                sqrt(n_triangle(1)**2+n_triangle(2)**2+n_triangle(3)**2)
+             if (n_magnitude.gt.zero) then
+              do local_dir = 1,3
+               n_triangle(local_dir) = n_triangle(local_dir)/n_magnitude 
+              enddo
+             else
+              print *,"n_magnitude invalid"
+              stop
+             endif
            
              phi_x=zero
- 
-             do local_dir = 1,SDIM
-              phi_x=phi_x+n(local_dir)*(xcc(local_dir)-p1(local_dir))
+             do local_dir = 1,3
+              phi_x=phi_x+ &
+                n_triangle(local_dir)*(xcc(local_dir)-p1(local_dir))
              enddo
             
-             do local_dir = 1,SDIM
+             do local_dir = 1,3
               xcp_0(local_dir) = xcc(local_dir)-phi_x*n(local_dir) 
              enddo
            
@@ -2034,7 +2043,7 @@ stop
              d=zero
              e=zero
              f=zero
-             do local_dir=1,SDIM
+             do local_dir=1,3
               a=a+(p2(local_dir)-p1(local_dir))**2
               b=b+(p2(local_dir)-p1(local_dir))*(p3(local_dir)-p1(local_dir))
               d=d+(p3(local_dir)-p1(local_dir))**2
@@ -2048,7 +2057,7 @@ stop
              u = (d*e-b*f)/detmatrix
              v = (a*f-b*e)/detmatrix
              
-             do local_dir=1,SDIM
+             do local_dir=1,3
               x_cp(local_dir) = (1-u-v)*p1(local_dir) + u*p2(local_dir) + &
                       v*p3(local_dir)
              enddo
@@ -2057,39 +2066,39 @@ stop
              if (u .lt. zero)then
               dot_top=zero
               dot_bot=zero
-              do local_dir=1,SDIM 
+              do local_dir=1,3
                dot_top = dot_top+(xcc(local_dir)-p1(local_dir))* &
                        (p3(local_dir)-p1(local_dir))
                dot_bot = dot_bot+(p3(local_dir)-p1(local_dir))**2
               enddo
               distline = dot_top/dot_bot
-              do local_dir=1,SDIM 
+              do local_dir=1,3
                x_cp(local_dir) = p1(local_dir) + &
                        distline*(p3(local_dir)-p1(local_dir))
               enddo
              elseif (v .lt. zero)then
               dot_top=zero
               dot_bot=zero
-              do local_dir=1,SDIM 
+              do local_dir=1,3
                dot_top = dot_top+ &
                   (xcc(local_dir)-p1(local_dir))*(p2(local_dir)-p1(local_dir))
                dot_bot = dot_bot+(p2(local_dir)-p1(local_dir))**2
               enddo
               distline = dot_top/dot_bot
-              do local_dir=1,SDIM 
+              do local_dir=1,3
                x_cp(local_dir) = p1(local_dir) +  &
                    distline*(p2(local_dir)-p1(local_dir))
               enddo
              elseif (u+v .gt. one)then
               dot_top=zero
               dot_bot=zero
-              do local_dir=1,SDIM 
+              do local_dir=1,3
                dot_top = dot_top+ &
                  (xcc(local_dir)-p2(local_dir))*(p3(local_dir)-p2(local_dir))
                dot_bot = dot_bot+(p3(local_dir)-p2(local_dir))**2
               enddo
               distline = dot_top/dot_bot
-              do local_dir=1,SDIM 
+              do local_dir=1,3
                x_cp(local_dir) = p2(local_dir) + &
                        distline*(p3(local_dir)-p2(local_dir))
               enddo
@@ -2111,12 +2120,12 @@ stop
              do ipoint=1,3 
               if (dist_pij(ipoint).gt.degenerate_face_tol) then
              if (dist_pij(1).le.degenerate_face_tol)then
-              do local_dir=1,SDIM
+              do local_dir=1,3
                pt1(local_dir) = p1(local_dir)
                pt2(local_dir) = p3(local_dir)
               enddo
              else
-              do local_dir=1,SDIM
+              do local_dir=1,3
                pt1(local_dir) = p1(local_dir)
                pt2(local_dir) = p2(local_dir)
               enddo
@@ -2124,7 +2133,7 @@ stop
 
              dot_top=zero
              dot_bot=zero
-             do local_dir=1,SDIM
+             do local_dir=1,3
               dot_top=dot_top+(xcc(local_dir)-pt1(local_dir))* &
                               (pt2(local_dir)-pt1(local_dir))
               dot_bot=dot_bot+(pt2(local_dir)-pt1(local_dir))**2
@@ -2136,14 +2145,14 @@ stop
              if (distline.gt.one) then
               distline=one
              endif
-             do local_dir=1,SDIM
+             do local_dir=1,3
               x_cp(local_dir) = pt1(local_dir) +  &
                 distline*(pt2(local_dir)-pt1(local_dir))
              enddo
             else ! above: degenerate cases
              !closest point on surface and dist between triangle and pt
              !!add in condition for SDIM==3
-             do local_dir = 1,SDIM
+             do local_dir = 1,3
               t1(local_dir) = p2(local_dir)-p1(local_dir)
               t2(local_dir) = p3(local_dir)-p1(local_dir)
              enddo
@@ -2159,17 +2168,17 @@ stop
              n(2) = t1(3)*t2(1)-t1(1)*t2(3)
              n(3) = t1(1)*t2(2)-t1(2)*t2(1)
              n_magnitude = sqrt(n(1)**2+n(2)**2+n(3)**2)
-             do local_dir = 1,SDIM
+             do local_dir = 1,3
               n(local_dir) = n(local_dir)/n_magnitude 
              enddo
            
              phi_x=zero
  
-             do local_dir = 1,SDIM
+             do local_dir = 1,3
               phi_x=phi_x+n(local_dir)*(xcc(local_dir)-p1(local_dir))
              enddo
             
-             do local_dir = 1,SDIM
+             do local_dir = 1,3
               xcp_0(local_dir) = xcc(local_dir)-phi_x*n(local_dir) 
              enddo
            
@@ -2183,7 +2192,7 @@ stop
              d=zero
              e=zero
              f=zero
-             do local_dir=1,SDIM
+             do local_dir=1,3
               a=a+(p2(local_dir)-p1(local_dir))**2
               b=b+(p2(local_dir)-p1(local_dir))*(p3(local_dir)-p1(local_dir))
               d=d+(p3(local_dir)-p1(local_dir))**2
@@ -2197,7 +2206,7 @@ stop
              u = (d*e-b*f)/detmatrix
              v = (a*f-b*e)/detmatrix
              
-             do local_dir=1,SDIM
+             do local_dir=1,3
               x_cp(local_dir) = (1-u-v)*p1(local_dir) + u*p2(local_dir) + &
                       v*p3(local_dir)
              enddo
@@ -2206,39 +2215,39 @@ stop
              if (u .lt. zero)then
               dot_top=zero
               dot_bot=zero
-              do local_dir=1,SDIM 
+              do local_dir=1,3 
                dot_top = dot_top+(xcc(local_dir)-p1(local_dir))* &
                        (p3(local_dir)-p1(local_dir))
                dot_bot = dot_bot+(p3(local_dir)-p1(local_dir))**2
               enddo
               distline = dot_top/dot_bot
-              do local_dir=1,SDIM 
+              do local_dir=1,3
                x_cp(local_dir) = p1(local_dir) + &
                        distline*(p3(local_dir)-p1(local_dir))
               enddo
              elseif (v .lt. zero)then
               dot_top=zero
               dot_bot=zero
-              do local_dir=1,SDIM 
+              do local_dir=1,3
                dot_top = dot_top+ &
                   (xcc(local_dir)-p1(local_dir))*(p2(local_dir)-p1(local_dir))
                dot_bot = dot_bot+(p2(local_dir)-p1(local_dir))**2
               enddo
               distline = dot_top/dot_bot
-              do local_dir=1,SDIM 
+              do local_dir=1,3
                x_cp(local_dir) = p1(local_dir) +  &
                    distline*(p2(local_dir)-p1(local_dir))
               enddo
              elseif (u+v .gt. one)then
               dot_top=zero
               dot_bot=zero
-              do local_dir=1,SDIM 
+              do local_dir=1,3
                dot_top = dot_top+ &
                  (xcc(local_dir)-p2(local_dir))*(p3(local_dir)-p2(local_dir))
                dot_bot = dot_bot+(p3(local_dir)-p2(local_dir))**2
               enddo
               distline = dot_top/dot_bot
-              do local_dir=1,SDIM 
+              do local_dir=1,3
                x_cp(local_dir) = p2(local_dir) + &
                        distline*(p3(local_dir)-p2(local_dir))
               enddo
@@ -2247,7 +2256,7 @@ stop
             endif !endif closest pt
             
             dist_cp=0
-            do local_dir=1,SDIM 
+            do local_dir=1,3
              dist_cp = dist_cp + (xcc(local_dir)-x_cp(local_dir))**2
             enddo
             dist_cp = sqrt(dist_cp)
@@ -2263,7 +2272,7 @@ stop
               print *,"save_LS invalid"
               stop
              endif
-             do local_dir=1,SDIM
+             do local_dir=1,3
               save_x_cp(local_dir)=x_cp(local_dir)
              enddo
             else if (dist_cp.ge.abs(initial_LS)) then
