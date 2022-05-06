@@ -1707,26 +1707,31 @@ stop
       INTEGER_T nhalf
       INTEGER_T kklo,kkhi,nodehi,ngrow_k
       REAL_T degenerate_face_tol
+      REAL_T check_tol
       REAL_T dxmin
-      REAL_T xcc(SDIM)
+      REAL_T xcc(3)
       REAL_T save_LS
       REAL_T initial_LS
-      REAL_T pt1(SDIM)
-      REAL_T pt2(SDIM)
       REAL_T p_triangle(3,3) ! (ipoint,dir)
-      REAL_T x_cp(SDIM)
-      REAL_T xcp_0(SDIM)
+      INTEGER_T in_plane
+      REAL_T xcp_0(3)
+      REAL_T xcp_0_project(3)
       REAL_T dist_pij(3)
-      REAL_T dot_top,dot_bot,distline
       REAL_T tan_vec(2,3)
       REAL_T tan1(3)
       REAL_T tan2(3)
       REAL_T n_triangle(3)
+      REAL_T normal_closest(3)
       REAL_T n_magnitude
       REAL_T phi_x
-      REAL_T a,b,d,e,f,detmatrix,u,v
-      REAL_T dist_cp
       REAL_T save_x_cp(SDIM)
+      INTEGER_T ipoint
+      INTEGER_T ipoint_p1
+      REAL_T xnode_seg(2,3)
+      REAL_T nnode_seg(2,3)
+      REAL_T xnode_point(3)
+      REAL_T dist_point
+      REAL_T unsigned_mindist
     
       if (tid.ge.0) then
        ! do nothing
@@ -1777,6 +1782,14 @@ stop
        do local_dir=1,SDIM
         xcc(local_dir)=xsten(0,local_dir)
        enddo
+       if (SDIM.eq.3) then
+        ! do nothing
+       else if (SDIM.eq.2) then
+        xcc(3)=zero
+       else
+        print *,"sdim invalid"
+        stop
+       endif
 
         ! sweep==0: find closest point for cells in which "ngrow" neighborhood
         !   contains a marching tetrahedra generated interface.
@@ -1993,9 +2006,15 @@ stop
             enddo !ipoint=1,3
 
             in_plane=0
+            check_tol=zero
+
             do local_dir = 1,3
              n_triangle(local_dir) = zero
+             xcp_0(local_dir)=zero
+             xcp_0_project(local_dir)=zero
             enddo
+            unsigned_mindist=1.0D+20
+
             if ((dist_pij(1).ge.degenerate_face_tol).and. &
                 (dist_pij(2).ge.degenerate_face_tol).and. &
                 (dist_pij(3).ge.degenerate_face_tol)) then
@@ -2024,89 +2043,50 @@ stop
              endif
            
              phi_x=zero
-             do local_dir = 1,3
+             do local_dir = 1,SDIM
               phi_x=phi_x+ &
-                n_triangle(local_dir)*(xcc(local_dir)-p1(local_dir))
+                n_triangle(local_dir)*(xcc(local_dir)- &
+                   p_triangle(1,local_dir))
              enddo
             
-             do local_dir = 1,3
-              xcp_0(local_dir) = xcc(local_dir)-phi_x*n(local_dir) 
+             do local_dir = 1,SDIM
+              xcp_0(local_dir) = xcc(local_dir)-phi_x*n_triangle(local_dir) 
              enddo
-           
-             !A = [p2-p1, p3-p1]
-             !b = [xcp_0-p1]
-             !A^TA = [a,b;c,d]
-             !A^Tb = [e;f]
-             ! (A^TA)^-1=(1/det(A^TA))[d,-b;-c,a]
-             a=zero
-             b=zero
-             d=zero
-             e=zero
-             f=zero
+             if (SDIM.eq.2) then
+              xcp_0(3)=zero
+             else if (SDIM.eq.3) then
+              ! do nothing
+             else
+              print *,"sdim invalid"
+              stop
+             endif
+         
              do local_dir=1,3
-              a=a+(p2(local_dir)-p1(local_dir))**2
-              b=b+(p2(local_dir)-p1(local_dir))*(p3(local_dir)-p1(local_dir))
-              d=d+(p3(local_dir)-p1(local_dir))**2
-              e=e+(p2(local_dir)-p1(local_dir))*(xcp_0(local_dir)-p1(local_dir))
-              f=f+(p3(local_dir)-p1(local_dir))*(xcp_0(local_dir)-p1(local_dir))
-             enddo
-              
-             detmatrix = a*d-b*b !c==b
-             
-              ![u;v] = (A^TA)^-1A^Tb = (1/det(A^TA))[d,-b;-c,a][e;f]
-             u = (d*e-b*f)/detmatrix
-             v = (a*f-b*e)/detmatrix
-             
-             do local_dir=1,3
-              x_cp(local_dir) = (1-u-v)*p1(local_dir) + u*p2(local_dir) + &
-                      v*p3(local_dir)
-             enddo
-              !catch cases where x_cp outside of triangle, need to 
-              !find closest pt on edge of triangle instead
-             if (u .lt. zero)then
-              dot_top=zero
-              dot_bot=zero
-              do local_dir=1,3
-               dot_top = dot_top+(xcc(local_dir)-p1(local_dir))* &
-                       (p3(local_dir)-p1(local_dir))
-               dot_bot = dot_bot+(p3(local_dir)-p1(local_dir))**2
+              normal_closest(local_dir)=n_triangle(local_dir)
+             enddo 
+             call global_checkinplane(p_triangle,xcp_0,check_tol, &
+                    xcp_0_project,in_plane)
+
+             if (in_plane.eq.0) then
+              ! do nothing
+             else if (in_plane.eq.1) then
+              unsigned_mindist=zero
+              do local_dir=1,SDIM
+               unsigned_mindist=unsigned_mindist+ &
+                  (xcp_0_project(local_dir)-xcc(local_dir))**2
               enddo
-              distline = dot_top/dot_bot
-              do local_dir=1,3
-               x_cp(local_dir) = p1(local_dir) + &
-                       distline*(p3(local_dir)-p1(local_dir))
-              enddo
-             elseif (v .lt. zero)then
-              dot_top=zero
-              dot_bot=zero
-              do local_dir=1,3
-               dot_top = dot_top+ &
-                  (xcc(local_dir)-p1(local_dir))*(p2(local_dir)-p1(local_dir))
-               dot_bot = dot_bot+(p2(local_dir)-p1(local_dir))**2
-              enddo
-              distline = dot_top/dot_bot
-              do local_dir=1,3
-               x_cp(local_dir) = p1(local_dir) +  &
-                   distline*(p2(local_dir)-p1(local_dir))
-              enddo
-             elseif (u+v .gt. one)then
-              dot_top=zero
-              dot_bot=zero
-              do local_dir=1,3
-               dot_top = dot_top+ &
-                 (xcc(local_dir)-p2(local_dir))*(p3(local_dir)-p2(local_dir))
-               dot_bot = dot_bot+(p3(local_dir)-p2(local_dir))**2
-              enddo
-              distline = dot_top/dot_bot
-              do local_dir=1,3
-               x_cp(local_dir) = p2(local_dir) + &
-                       distline*(p3(local_dir)-p2(local_dir))
-              enddo
+              unsigned_mindist=sqrt(unsigned_mindist)
+             else
+              print *,"in_plane invalid"
+              stop
              endif
 
-
-
-
+             if (unsigned_mindist.ge.zero) then
+              ! do nothing
+             else
+              print *,"unsigned_mindist invalid"
+              stop
+             endif
 
             else if ((dist_pij(1).le.degenerate_face_tol).or. &
                      (dist_pij(2).le.degenerate_face_tol).or. &
@@ -2116,169 +2096,69 @@ stop
              print *,"dist_pij NaN"
              stop
             endif
-
-             do ipoint=1,3 
-              if (dist_pij(ipoint).gt.degenerate_face_tol) then
-             if (dist_pij(1).le.degenerate_face_tol)then
-              do local_dir=1,3
-               pt1(local_dir) = p1(local_dir)
-               pt2(local_dir) = p3(local_dir)
-              enddo
-             else
-              do local_dir=1,3
-               pt1(local_dir) = p1(local_dir)
-               pt2(local_dir) = p2(local_dir)
-              enddo
-             endif
-
-             dot_top=zero
-             dot_bot=zero
+              
+            do ipoint=1,3
+             ipoint_p1=ipoint+1
+             if (ipoint_p1.gt.3) then
+              ipoint_p1=1
+             endif 
              do local_dir=1,3
-              dot_top=dot_top+(xcc(local_dir)-pt1(local_dir))* &
-                              (pt2(local_dir)-pt1(local_dir))
-              dot_bot=dot_bot+(pt2(local_dir)-pt1(local_dir))**2
+              xnode_seg(1,local_dir)=p_triangle(ipoint,local_dir)
+              xnode_seg(2,local_dir)=p_triangle(ipoint_p1,local_dir)
+              nnode_seg(1,local_dir)=n_triangle(local_dir)
+              nnode_seg(2,local_dir)=n_triangle(local_dir)
              enddo
-             distline=dot_top/dot_bot
-             if (distline.lt.zero) then
-              distline=zero
-             endif
-             if (distline.gt.one) then
-              distline=one
-             endif
+
+             call global_checkinline(nnode_seg,xnode_seg,check_tol,xcc, &
+               in_plane,unsigned_mindist,xcp_0_project,normal_closest)
+
              do local_dir=1,3
-              x_cp(local_dir) = pt1(local_dir) +  &
-                distline*(pt2(local_dir)-pt1(local_dir))
+              xnode_point(local_dir)=p_triangle(ipoint,local_dir)
              enddo
-            else ! above: degenerate cases
-             !closest point on surface and dist between triangle and pt
-             !!add in condition for SDIM==3
-             do local_dir = 1,3
-              t1(local_dir) = p2(local_dir)-p1(local_dir)
-              t2(local_dir) = p3(local_dir)-p1(local_dir)
-             enddo
-              ! p3 = p2 in 2D
-              ! t1 = t2 in 2D
-             if (SDIM.eq.3) then
+
+             call global_xdist(xnode_point,xcc,dist_point)
+
+             if (dist_point.ge.zero) then
               ! do nothing
              else
-              print *,"SDIM invalid"
+              print *,"dist_point invalid"
               stop
              endif
-             n(1) = t1(2)*t2(3)-t1(3)*t2(2)
-             n(2) = t1(3)*t2(1)-t1(1)*t2(3)
-             n(3) = t1(1)*t2(2)-t1(2)*t2(1)
-             n_magnitude = sqrt(n(1)**2+n(2)**2+n(3)**2)
-             do local_dir = 1,3
-              n(local_dir) = n(local_dir)/n_magnitude 
-             enddo
-           
-             phi_x=zero
- 
-             do local_dir = 1,3
-              phi_x=phi_x+n(local_dir)*(xcc(local_dir)-p1(local_dir))
-             enddo
-            
-             do local_dir = 1,3
-              xcp_0(local_dir) = xcc(local_dir)-phi_x*n(local_dir) 
-             enddo
-           
-             !A = [p2-p1, p3-p1]
-             !b = [xcp_0-p1]
-             !A^TA = [a,b;c,d]
-             !A^Tb = [e;f]
-             ! (A^TA)^-1=(1/det(A^TA))[d,-b;-c,a]
-             a=zero
-             b=zero
-             d=zero
-             e=zero
-             f=zero
-             do local_dir=1,3
-              a=a+(p2(local_dir)-p1(local_dir))**2
-              b=b+(p2(local_dir)-p1(local_dir))*(p3(local_dir)-p1(local_dir))
-              d=d+(p3(local_dir)-p1(local_dir))**2
-              e=e+(p2(local_dir)-p1(local_dir))*(xcp_0(local_dir)-p1(local_dir))
-              f=f+(p3(local_dir)-p1(local_dir))*(xcp_0(local_dir)-p1(local_dir))
-             enddo
-              
-             detmatrix = a*d-b*b !c==b
-             
-              ![u;v] = (A^TA)^-1A^Tb = (1/det(A^TA))[d,-b;-c,a][e;f]
-             u = (d*e-b*f)/detmatrix
-             v = (a*f-b*e)/detmatrix
-             
-             do local_dir=1,3
-              x_cp(local_dir) = (1-u-v)*p1(local_dir) + u*p2(local_dir) + &
-                      v*p3(local_dir)
-             enddo
-              !catch cases where x_cp outside of triangle, need to 
-              !find closest pt on edge of triangle instead
-             if (u .lt. zero)then
-              dot_top=zero
-              dot_bot=zero
-              do local_dir=1,3 
-               dot_top = dot_top+(xcc(local_dir)-p1(local_dir))* &
-                       (p3(local_dir)-p1(local_dir))
-               dot_bot = dot_bot+(p3(local_dir)-p1(local_dir))**2
-              enddo
-              distline = dot_top/dot_bot
+
+             if ((dist_point.lt.unsigned_mindist).or. &
+                 (in_plane.eq.0)) then
+              in_plane=1
+              unsigned_mindist=dist_point
               do local_dir=1,3
-               x_cp(local_dir) = p1(local_dir) + &
-                       distline*(p3(local_dir)-p1(local_dir))
+               xcp_0_project(local_dir)=xnode_point(local_dir)
               enddo
-             elseif (v .lt. zero)then
-              dot_top=zero
-              dot_bot=zero
-              do local_dir=1,3
-               dot_top = dot_top+ &
-                  (xcc(local_dir)-p1(local_dir))*(p2(local_dir)-p1(local_dir))
-               dot_bot = dot_bot+(p2(local_dir)-p1(local_dir))**2
-              enddo
-              distline = dot_top/dot_bot
-              do local_dir=1,3
-               x_cp(local_dir) = p1(local_dir) +  &
-                   distline*(p2(local_dir)-p1(local_dir))
-              enddo
-             elseif (u+v .gt. one)then
-              dot_top=zero
-              dot_bot=zero
-              do local_dir=1,3
-               dot_top = dot_top+ &
-                 (xcc(local_dir)-p2(local_dir))*(p3(local_dir)-p2(local_dir))
-               dot_bot = dot_bot+(p3(local_dir)-p2(local_dir))**2
-              enddo
-              distline = dot_top/dot_bot
-              do local_dir=1,3
-               x_cp(local_dir) = p2(local_dir) + &
-                       distline*(p3(local_dir)-p2(local_dir))
-              enddo
+             else if ((dist_point.ge.unsigned_mindist).and. &
+                      (in_plane.eq.1)) then
+              ! do nothing
+             else
+              print *,"dist_point or in_plane invalid"
+              stop
              endif
-              
-            endif !endif closest pt
-            
-            dist_cp=0
-            do local_dir=1,3
-             dist_cp = dist_cp + (xcc(local_dir)-x_cp(local_dir))**2
-            enddo
-            dist_cp = sqrt(dist_cp)
-           
+            enddo !ipoint=1,3
+
             ibase=ibase+SDIM 
 
-            if (dist_cp.lt.abs(initial_LS)) then
+            if (unsigned_mindist.lt.abs(initial_LS)) then
              if (save_LS.gt.zero) then
-              initial_LS=dist_cp
+              initial_LS=unsigned_mindist
              else if (save_LS.lt.zero) then
-              initial_LS=-dist_cp
+              initial_LS=-unsigned_mindist
              else
               print *,"save_LS invalid"
               stop
              endif
-             do local_dir=1,3
-              save_x_cp(local_dir)=x_cp(local_dir)
+             do local_dir=1,SDIM
+              save_x_cp(local_dir)=xcp_0_project(local_dir)
              enddo
-            else if (dist_cp.ge.abs(initial_LS)) then
+            else if (unsigned_mindist.ge.abs(initial_LS)) then
              ! do nothing
             else
-             print *,"dist_cp is NaN"
+             print *,"unsigned_mindist is NaN"
              stop
             endif
            enddo ! while (ibase.lt.itri)

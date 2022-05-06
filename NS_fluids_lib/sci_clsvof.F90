@@ -7969,6 +7969,7 @@ subroutine checkinpointBIG( &
   part_id, &
   max_part_id, &
   time,dx)
+use global_utility_module
 IMPLICIT NONE
 
 type(mesh_type), intent(in) :: FSI_mesh_type
@@ -8094,6 +8095,7 @@ subroutine checkinlineBIG( &
   part_id, &
   max_part_id, &
   time,dx)
+use global_utility_module
 IMPLICIT NONE
 
 type(mesh_type), intent(in) :: FSI_mesh_type
@@ -8113,7 +8115,6 @@ INTEGER_T :: inodep1
 REAL_T :: local_normal
 REAL_T, dimension(2,3) :: xnode,nnode
 REAL_T, intent(inout) :: unsigned_mindist
-REAL_T, dimension(3) :: xnot,normal
 REAL_T :: mag
 INTEGER_T :: dir
 INTEGER_T :: nodes_per_elem
@@ -8281,6 +8282,7 @@ subroutine checkinplaneBIG( &
   part_id, &
   max_part_id, &
   time)
+use global_utility_module
 IMPLICIT NONE
 
 type(mesh_type), intent(in) :: FSI_mesh_type
@@ -8301,6 +8303,7 @@ INTEGER_T :: nodes_per_elem
 REAL_T, dimension(3) :: xfoot
 REAL_T, dimension(3) :: xtarget
 REAL_T, dimension(3) :: velparm
+REAL_T, dimension(3,3) :: xnode ! (ipoint,dir)
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
