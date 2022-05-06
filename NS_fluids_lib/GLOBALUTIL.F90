@@ -4509,6 +4509,247 @@ end subroutine dynamic_contact_angle
       return
       end subroutine crossprod
 
+subroutine global_xdist(x1,x2,dist)
+IMPLICIT NONE
+ 
+REAL_T, dimension(3),intent(in) :: x1,x2
+REAL_T, intent(out) :: dist
+
+ dist=sqrt( (x1(1)-x2(1))**2+ &
+            (x1(2)-x2(2))**2+ &
+            (x1(3)-x2(3))**2 )
+
+return
+end subroutine global_xdist
+
+subroutine global_checkinline(nnode,xnode,tol,xc, &
+             inplane,unsigned_mindist,xclosest,normal_closest)
+INTEGER_T, intent(inout) :: inplane
+REAL_T, intent(inout) :: unsigned_mindist
+REAL_T, dimension(3), intent(inout) :: xclosest
+REAL_T, dimension(3), intent(inout) :: normal_closest
+REAL_T, intent(in) :: tol
+REAL_T, dimension(2,3), intent(in) :: xnode,nnode
+REAL_T, dimension(3), intent(in) :: xc
+REAL_T :: dottop,dotbot,t,curdist,mag
+REAL_T, dimension(3) :: xnot,normal
+INTEGER_T :: dir
+
+   ! x(t)=x2+t*(x1-x2)
+   ! C(t)=||x(t)-xc||^2
+   ! C'(t)=0
+   ! (x(t)-xc) dot (x1-x2)=0
+   ! (-(xc-x2)+t(x1-x2)) dot (x1-x2)=0
+   ! t=(xc-x2) dot (x1-x2)/||x1-x2||^2
+   ! since x(t)=x2+t (x1-x2), if t=0 => x=x2
+   ! if t=1 => x=x1
+  dottop=zero
+  dotbot=zero
+  do dir=1,3
+   dottop=dottop+(xnode(2,dir)-xnode(1,dir))*(xnode(2,dir)-xc(dir))
+   dotbot=dotbot+(xnode(2,dir)-xnode(1,dir))**2
+  enddo
+  if (dotbot.eq.zero) then
+   ! do nothing
+  else if (dotbot.gt.zero) then
+   t=dottop/dotbot
+   if ((t.ge.-tol).and.(t.le.one+tol)) then
+
+    t=min(t,one-tol)
+    t=max(t,tol)
+
+    do dir=1,3
+     xnot(dir)=t*xnode(1,dir)+(one-t)*xnode(2,dir)
+     normal(dir)=t*nnode(1,dir)+(one-t)*nnode(2,dir)
+    enddo
+
+    call global_xdist(xnot,xc,curdist)
+    if (curdist.ge.zero) then
+     ! do nothing
+    else
+     print *,"curdist invalid"
+     stop
+    endif
+
+    if ((curdist.lt.unsigned_mindist).or. &
+        (inplane.eq.0)) then
+     inplane=1
+     unsigned_mindist=curdist
+     do dir=1,3
+      xclosest(dir)=xnot(dir)
+      normal_closest(dir)=normal(dir)
+     enddo
+    else if ((curdist.ge.unsigned_mindist).and. &
+             (inplane.eq.1)) then
+     ! do nothing
+    else
+     print *,"curdist or inplane invalid"
+     stop
+    endif
+   else if ((t.lt.-tol).or. &
+            (t.gt.one+tol)) then
+    ! do nothing
+   else 
+    print *,"t is NaN"
+    stop
+   endif 
+  else
+   print *,"dotbot is NaN"
+   stop
+  endif
+
+return
+end subroutine global_checkinline
+
+subroutine global_checkinplane(xnode,xclosest,tol, &
+              xclosest_project,inplane)
+REAL_T, intent(in) :: tol
+REAL_T, dimension(3), intent(in) :: xclosest
+REAL_T, dimension(3), intent(out) :: xclosest_project
+INTEGER_T, intent(out) :: inplane
+REAL_T, dimension(3,3), intent(in) :: xnode
+REAL_T, dimension(3,3) :: AA,AINVERSE
+REAL_T :: det
+REAL_T :: tx_sum,tx_sum_new
+REAL_T, dimension(3) :: tx
+REAL_T, dimension(3) :: tx_project
+REAL_T, dimension(3) :: v1,v2,v1xv2
+INTEGER_T :: dir,i,k
+
+ ! xnode(1)-xnode(1) is mapped to (0,0,0)
+ ! xnode(2)-xnode(1)=v1 is mapped to (1,0,0)
+ ! xnode(3)-xnode(1)=v2 is mapped to (0,1,0) 
+ ! v1 x v2 is mapped to (0,0,1)
+ ! Let A map from unit space to real space
+ ! A (0,0,0) = (0,0,0)
+ ! A (1,0,0) = v1 => first column of A is v1
+ ! A (0,1,0) = v2 => second column of A is v2
+ ! A (0,0,1) = v1 x v2 => third column of A is v1 x v2
+ ! A^{-1} maps from real space back to unit space
+
+ inplane=1
+
+ do dir=1,3
+  v1(dir)=xnode(2,dir)-xnode(1,dir)
+  v2(dir)=xnode(3,dir)-xnode(1,dir)
+ enddo  
+ v1xv2(1)=v1(2)*v2(3)-v1(3)*v2(2)  
+ v1xv2(2)=v1(3)*v2(1)-v1(1)*v2(3)  
+ v1xv2(3)=v1(1)*v2(2)-v1(2)*v2(1)  
+ do dir=1,3
+  AA(dir,1)=v1(dir)
+  AA(dir,2)=v2(dir)
+  AA(dir,3)=v1xv2(dir)
+ enddo
+  
+ det=AA(1,1)*(AA(2,2)*AA(3,3)-AA(2,3)*AA(3,2))- &
+     AA(1,2)*(AA(2,1)*AA(3,3)-AA(2,3)*AA(3,1))+ &
+     AA(1,3)*(AA(2,1)*AA(3,2)-AA(2,2)*AA(3,1))
+
+ if (abs(det).eq.zero) then
+  inplane=0
+ else if (abs(det).gt.zero) then
+  det=1.0/det
+  AINVERSE(1,1)=+(AA(2,2)*AA(3,3)-AA(2,3)*AA(3,2))
+  AINVERSE(2,1)=-(AA(2,1)*AA(3,3)-AA(2,3)*AA(3,1))
+  AINVERSE(3,1)=+(AA(2,1)*AA(3,2)-AA(2,2)*AA(3,1))
+  AINVERSE(1,2)=-(AA(1,2)*AA(3,3)-AA(3,2)*AA(1,3))
+  AINVERSE(2,2)=+(AA(1,1)*AA(3,3)-AA(1,3)*AA(3,1))
+  AINVERSE(3,2)=-(AA(1,1)*AA(3,2)-AA(3,1)*AA(1,2))
+  AINVERSE(1,3)=+(AA(1,2)*AA(2,3)-AA(2,2)*AA(1,3))
+  AINVERSE(2,3)=-(AA(1,1)*AA(2,3)-AA(2,1)*AA(1,3))
+  AINVERSE(3,3)=+(AA(1,1)*AA(2,2)-AA(1,2)*AA(2,1))
+  do i=1,3
+  do j=1,3
+   AINVERSE(i,j)=AINVERSE(i,j)*det
+  enddo
+  enddo
+  
+  do i=1,3
+   tx(i)=0.0
+   do k=1,3
+    tx(i)=tx(i)+AINVERSE(i,k)*(xclosest(k)-xnode(1,k))
+   enddo
+  enddo
+ 
+  if ((tx(1).lt.-tol).or. &
+      (tx(1).gt.one+tol).or. &
+      (tx(2).lt.-tol).or. &
+      (tx(2).gt.one+tol).or. &
+      (tx(1)+tx(2).gt.one+tol)) then
+   inplane=0
+  else if ((tx(1).ge.-tol).and. &
+           (tx(1).le.one+tol).and. &
+           (tx(2).ge.-tol).and. &
+           (tx(2).le.one+tol).and. &
+           (tx(1)+tx(2).le.one+tol)) then
+
+   if (abs(tx(3)).le.VOFTOL) then
+    ! do nothing
+   else if (abs(tx(3)).ge.VOFTOL) then
+    print *,"something wrong with transformation"
+    stop
+   else
+    print *,"tx(3) is NaN"
+    stop
+   endif
+
+   tx(1)=min(tx(1),one-tol)
+   tx(1)=max(tx(1),tol)
+   tx(2)=min(tx(2),one-tol)
+   tx(2)=max(tx(2),tol)
+   tx_sum=tx(1)+tx(2)
+   if (tx_sum.gt.zero) then
+    tx_sum_new=tx_sum
+    tx_sum_new=min(tx_sum_new,one-tol)
+    tx(1)=tx(1)*tx_sum_new/tx_sum
+    tx(2)=tx(2)*tx_sum_new/tx_sum
+   else
+    print *,"tx_sum is NaN"
+    stop
+   endif
+   tx(3)=zero
+
+   do i=1,3
+    xclosest_project(i)=xnode(1,i)
+    do k=1,3
+     xclosest_project(i)=xclosest_project(i)+AA(i,k)*tx(k)
+    enddo
+   enddo
+
+   do i=1,3
+    tx_project(i)=0.0
+    do k=1,3
+     tx_project(i)=tx_project(i)+AINVERSE(i,k)*(xclosest_project(k)-xnode(1,k))
+    enddo
+   enddo
+
+   do i=1,3
+    if (abs(tx_project(i)-tx(i)).le.VOFTOL) then
+     ! do nothing
+    else if (abs(tx_project(i)-tx(i)).ge.VOFTOL) then
+     print *,"sanity check failed tx_project and tx differ too much"
+     stop
+    else
+     print *,"tx or tx_project are NaN"
+     stop
+    endif
+   enddo !i=1,3
+
+  else
+   print *,"checking in triangle bust"
+   stop
+  endif
+ else
+  print *,"det is NaN"
+  stop
+ endif 
+
+return
+end subroutine global_checkinplane
+
+
+
       subroutine get_crse_index(i,j,k,ic,jc,kc,dir)
       IMPLICIT NONE
 
