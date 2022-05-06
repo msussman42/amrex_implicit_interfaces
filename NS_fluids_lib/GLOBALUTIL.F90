@@ -4524,6 +4524,8 @@ end subroutine global_xdist
 
 subroutine global_checkinline(nnode,xnode,tol,xc, &
              inplane,unsigned_mindist,xclosest,normal_closest)
+IMPLICIT NONE
+
 INTEGER_T, intent(inout) :: inplane
 REAL_T, intent(inout) :: unsigned_mindist
 REAL_T, dimension(3), intent(inout) :: xclosest
@@ -4531,7 +4533,7 @@ REAL_T, dimension(3), intent(inout) :: normal_closest
 REAL_T, intent(in) :: tol
 REAL_T, dimension(2,3), intent(in) :: xnode,nnode
 REAL_T, dimension(3), intent(in) :: xc
-REAL_T :: dottop,dotbot,t,curdist,mag
+REAL_T :: dottop,dotbot,t,curdist
 REAL_T, dimension(3) :: xnot,normal
 INTEGER_T :: dir
 
@@ -4603,18 +4605,21 @@ end subroutine global_checkinline
 
 subroutine global_checkinplane(xnode,xclosest,tol, &
               xclosest_project,inplane)
+use probcommon_module
+IMPLICIT NONE
+
 REAL_T, intent(in) :: tol
 REAL_T, dimension(3), intent(in) :: xclosest
 REAL_T, dimension(3), intent(out) :: xclosest_project
 INTEGER_T, intent(out) :: inplane
-REAL_T, dimension(3,3), intent(in) :: xnode
+REAL_T, dimension(3,3), intent(in) :: xnode ! (ipoint,dir)
 REAL_T, dimension(3,3) :: AA,AINVERSE
 REAL_T :: det
 REAL_T :: tx_sum,tx_sum_new
 REAL_T, dimension(3) :: tx
 REAL_T, dimension(3) :: tx_project
 REAL_T, dimension(3) :: v1,v2,v1xv2
-INTEGER_T :: dir,i,k
+INTEGER_T :: dir,i,j,k
 
  ! xnode(1)-xnode(1) is mapped to (0,0,0)
  ! xnode(2)-xnode(1)=v1 is mapped to (1,0,0)

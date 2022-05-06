@@ -22,9 +22,37 @@ stop
 
 module probcommon_module_types
 
+
+      type law_of_wall_parm_type
+      INTEGER_T :: level
+      INTEGER_T :: finest_level
+      INTEGER_T :: bfact
+      INTEGER_T :: nmat
+      INTEGER_T :: nten
+      REAL_T :: visc_coef
+      REAL_T :: time
+      REAL_T :: dt
+      REAL_T, pointer :: usolid_raster(:)
+      REAL_T, pointer :: n_raster(:) ! points to solid
+      REAL_T, pointer :: x_image_raster(:)
+      REAL_T, pointer :: x_probe_raster(:)
+      REAL_T, pointer :: x_projection_raster(:)
+      REAL_T, pointer :: dx(:)
+      REAL_T :: dxmin
+      REAL_T, pointer :: xlo(:)
+      INTEGER_T, pointer :: fablo(:)
+      INTEGER_T, pointer :: fabhi(:)
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LSCP
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LSFD
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state ! nden comp.
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: ufluid
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: usolid
+      end type law_of_wall_parm_type
+
       type user_defined_sum_int_type
        INTEGER_T ncomp_sum_int_user1
        INTEGER_T ncomp_sum_int_user2
+       INTEGER_T ncomp_sum_int_user12
        REAL_T, pointer :: problo(:)      
        REAL_T, pointer :: probhi(:) 
        INTEGER_T :: igrid,jgrid,kgrid
@@ -54,6 +82,7 @@ module probcommon_module_types
         ! density3,temperature3,species1_3,...,species_N_3
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: den
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: vel
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: visco
       end type user_defined_sum_int_type
 
       type nucleation_parm_type_input
@@ -105,7 +134,7 @@ module probcommon_module_types
       INTEGER_T :: nstate
       INTEGER_T :: nhalf
       INTEGER_T :: nmat
-      REAL_T :: time
+      REAL_T :: cur_time
       REAL_T :: dt
       REAL_T, pointer :: dx(:)
       REAL_T, pointer :: xsten(:,:)
@@ -120,6 +149,7 @@ module probcommon_module_types
 
       type assimilate_out_parm_type
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state ! nstate comp.
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS_state
       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: macx
       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: macy
       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: macz
@@ -214,7 +244,7 @@ implicit none
 ! fort_elastic_viscosity added: August 22, 2018
 ! fort_im_elastic_map added: August 22, 2018
 ! num_materials_elastic deleted: August 21, 2018
-! fort_viscconst_eddy added: July 15, 2018
+! fort_viscconst_eddy_wall added: July 15, 2018
 ! fort_initial_temperature added: April 10, 2018
 ! nucleation_init_time added: May 5, 2018
 ! fort_density_floor and fort_density_ceiling added: January 8, 2019
@@ -237,14 +267,52 @@ implicit none
 ! fort_reference_pressure added, July 8.
 ! fort_drhodz deleted, Aug 2.
 ! fort_drhodt renamed to fort_DrhoDT, Aug 2.
+!
+! Added November 4,2021:
+! fort_Carreau_alpha,
+! fort_Carreau_beta,
+! fort_Carreau_n,
+! fort_Carreau_mu_inf,
+! fort_shear_thinning_fluid,
+! fort_polymer_factor,
+! fort_concentration,
+! fort_etaL,
+! fort_etaS,
+! fort_etaP,
+! fort_visc_coef
+! Added November 24,2021:
+!  fort_viscconst_eddy_wall 
+!  fort_viscconst_eddy_bulk
+!  fort_heatviscconst_eddy_wall 
+!  fort_heatviscconst_eddy_bulk
+!  fort_thermal_microlayer_size 
+!  fort_shear_microlayer_size 
+!  fort_buoyancy_microlayer_size 
+!  fort_phasechange_microlayer_size 
+! Added November 30,2021:
+!  fort_heatflux_factor
+! Added December 16,2021:
+!  num_interfaces
+! Added February 12,2022:
+!  problo_array,probhi_array,problen_array
+! renamed March 22,2022:
+!  invert_solid_levelset -> doubly_wetted_solid_inside
+! Added April 14, 2022:
+!  fort_damping_coefficient
+! deleted April 30, 2022:
+!  FORT_MUSHY_THICK
+! added May 1, 2022:
+!  UNSCALED_MUSHY_THICK (user definable in fortran plug-in files)
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
-       !nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
+       !nten=num_interfaces=( (nmat-1)*(nmat-1)+nmat-1 )/2
       INTEGER_T, PARAMETER :: MAX_NUM_INTERFACES=55
       INTEGER_T, PARAMETER :: MAX_NUM_SPECIES=10
       INTEGER_T, PARAMETER :: MAX_NUM_EOS=24
 
 #include "probdataf95.H"
+
+      REAL_T :: UNSCALED_MUSHY_THICK=2.0d0
 
       INTEGER_T, PARAMETER :: DEBUG_EVAPORATION=0
       INTEGER_T, PARAMETER :: EVAPORATION_iter_max=50
@@ -252,13 +320,13 @@ implicit none
 
       INTEGER_T, PARAMETER :: OLD_DODECANE=1
 
-      INTEGER_T, PARAMETER :: DEBUG_DYNAMIC_CONTACT_ANGLE=1
+      INTEGER_T, PARAMETER :: DEBUG_DYNAMIC_CONTACT_ANGLE=0
 
       REAL_T, PARAMETER :: GNBC_RADIUS=2.0d0
 
       INTEGER_T, PARAMETER :: ngrow_make_distance=3
-
-      INTEGER_T, PARAMETER :: FORT_NUM_TENSOR_TYPE=2*SDIM
+      INTEGER_T, PARAMETER :: ngrow_distance=4
+      INTEGER_T, PARAMETER :: ngrow_expansion=2
 
       REAL_T, PARAMETER :: GAMMA_SIMPLE_PARMS=1.4
 
@@ -307,8 +375,6 @@ implicit none
       INTEGER_T, PARAMETER :: DO_SANITY_CHECK=0
       INTEGER_T, PARAMETER :: COARSE_FINE_VELAVG=1
       REAL_T, PARAMETER :: MASK_FINEST_TOL=1.0D-3
-
-      REAL_T, PARAMETER :: ICEFACECUT_EPS=1.0D-5
 
       REAL_T, PARAMETER :: OVERFLOW_CUTOFF=1.0D+20
 
@@ -485,10 +551,71 @@ implicit none
        ! level
       INTEGER_T, allocatable, dimension(:) :: level_container_allocated
 
+      type aux_contain_type
+       INTEGER_T :: lo3D(3)
+       INTEGER_T :: hi3D(3)
+       REAL_T :: xlo3D(3)
+       REAL_T :: xhi3D(3)
+       REAL_T :: dx3D
+       INTEGER_T :: aux_ncells_max_side
+       REAL_T, dimension(:,:,:,:), pointer :: LS3D ! level set data
+      end type aux_contain_type
+
+      REAL_T, dimension(:,:,:,:), target, allocatable :: aux_xdata3D
+      REAL_T, dimension(:,:,:,:), target, allocatable :: aux_FSIdata3D
+      REAL_T, dimension(:,:,:,:), target, allocatable :: aux_masknbr3D
+
+      INTEGER_T :: fort_num_local_aux_grids=0
+      INTEGER_T :: aux_data_allocated=0
+      type(aux_contain_type), dimension(:), allocatable :: contain_aux
+
       INTEGER_T :: used_probtypes(1000)
       INTEGER_T :: probtype_list_size
 
       ABSTRACT INTERFACE
+
+      subroutine TEMPLATE_wallfunc( &
+        dir, & ! =1,2,3
+        data_dir, & ! =0,1,2
+        dxmin, &
+        x_projection_raster, &
+        dx, &
+        n_raster, & ! points to solid
+        u, & !intent(in) uimage_raster_solid_frame(dir)
+        uimage_tngt_mag, & !intent(in) 
+        wall_model_velocity, & ! intent(in)
+        dist_probe, & ! intent(in)
+        dist_fluid, & ! intent(in)
+        temperature_image, & !intent(in) 
+        temperature_wall, & ! intent(in)      
+        temperature_wall_max, & ! intent(in)      
+        viscosity_molecular, & ! intent(in)      
+        viscosity_eddy_wall, & ! intent(in)      
+        y, & !intent(in) distance from image to wall
+        ughost_tngt, & ! intent(out)
+        im_fluid, &  ! intent(in)
+        critical_length) ! intent(in) used for sanity check
+      INTEGER_T, intent(in) :: dir ! 1,2,3
+      INTEGER_T, intent(in) :: data_dir ! 0,1,2
+      REAL_T, intent(in) :: dxmin
+      REAL_T, intent(in), pointer :: x_projection_raster(:)
+      REAL_T, intent(in), pointer :: dx(:)
+      REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
+      INTEGER_T, intent(in) :: im_fluid
+      REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
+      REAL_T, intent(in) :: uimage_tngt_mag
+      REAL_T, intent(in) :: wall_model_velocity
+      REAL_T, intent(in) :: dist_probe
+      REAL_T, intent(in) :: dist_fluid
+      REAL_T, intent(in) :: temperature_image
+      REAL_T, intent(in) :: temperature_wall
+      REAL_T, intent(in) :: temperature_wall_max
+      REAL_T, intent(in) :: viscosity_molecular
+      REAL_T, intent(in) :: viscosity_eddy_wall
+      REAL_T, intent(in) :: y !delta_r
+      REAL_T, intent(in) :: critical_length
+      REAL_T, intent(out) :: ughost_tngt  ! dir direction
+      end subroutine TEMPLATE_wallfunc
 
       subroutine TEMPLATE_INIT_REGIONS_LIST(constant_density_all_time, &
           num_materials_in,num_threads_in)
@@ -504,16 +631,174 @@ implicit none
       REAL_T, intent(out) :: charfn_out
       end subroutine TEMPLATE_CHARFN_REGION
 
-      subroutine TEMPLATE_THERMAL_K(x,dx,cur_time,density,temperature, &
-                      thermal_k,im)
+      subroutine TEMPLATE_THERMAL_K(x,dx,cur_time, &
+        density, &
+        temperature, &
+        thermal_k, &
+        im, &
+        near_interface, &
+        im_solid, &
+        temperature_wall, &
+        temperature_wall_max, &
+        temperature_probe, &
+        nrm) ! nrm points from solid to fluid
       INTEGER_T, intent(in) :: im
+      INTEGER_T, intent(in) :: im_solid
+      INTEGER_T, intent(in) :: near_interface
       REAL_T, intent(in) :: x(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: cur_time
       REAL_T, intent(in) :: density
       REAL_T, intent(in) :: temperature
+      REAL_T, intent(in) :: temperature_wall
+      REAL_T, intent(in) :: temperature_wall_max
+      REAL_T, intent(in) :: temperature_probe
+      REAL_T, intent(in) :: nrm(SDIM) ! nrm points from solid to fluid
       REAL_T, intent(inout) :: thermal_k
       end subroutine TEMPLATE_THERMAL_K
+
+      subroutine TEMPLATE_INTERFACE_TEMPERATURE( &
+        interface_mass_transfer_model, &
+        probe_constrain, &
+        ireverse, &
+        iten, &        
+        xI, &        
+        cur_time, &        
+        prev_time, &        
+        dt, &        
+        TI, &
+        YI, &
+        user_override_TI_YI, &
+        molar_mass, & ! index: 1..nmat
+        species_molar_mass, & ! index: 1..num_species_var
+        ksrc_predict, &
+        kdst_predict, &
+        ksrc_physical, &
+        kdst_physical, &
+        T_probe_src, &
+        T_probe_dst, &
+        probe_ok_gradient_src, &
+        probe_ok_gradient_dst, &
+        LL, &
+        dxprobe_src, &
+        dxprobe_dst, &
+        num_materials_in, &
+        num_species_var_in)
+      INTEGER_T, intent(in) :: interface_mass_transfer_model
+      INTEGER_T, intent(in) :: num_materials_in
+      INTEGER_T, intent(in) :: num_species_var_in
+      INTEGER_T, intent(in) :: probe_constrain
+      INTEGER_T, intent(in) :: ireverse
+      INTEGER_T, intent(in) :: iten
+      REAL_T, intent(in) :: xI(SDIM)
+      REAL_T, intent(in) :: cur_time
+      REAL_T, intent(in) :: prev_time
+      REAL_T, intent(in) :: dt
+      REAL_T, intent(inout) :: TI
+      REAL_T, intent(inout) :: YI
+      INTEGER_T, intent(inout) :: user_override_TI_YI
+      REAL_T, intent(in) :: molar_mass(num_materials_in)
+      REAL_T, intent(in) :: species_molar_mass(num_species_var_in)
+      REAL_T, intent(in) :: ksrc_predict
+      REAL_T, intent(in) :: kdst_predict
+      REAL_T, intent(in) :: ksrc_physical
+      REAL_T, intent(in) :: kdst_physical
+      REAL_T, intent(in) :: T_probe_src
+      REAL_T, intent(in) :: T_probe_dst
+      INTEGER_T, intent(in) :: probe_ok_gradient_src
+      INTEGER_T, intent(in) :: probe_ok_gradient_dst
+      REAL_T, intent(in) :: LL
+      REAL_T, intent(in) :: dxprobe_src
+      REAL_T, intent(in) :: dxprobe_dst
+      end subroutine TEMPLATE_INTERFACE_TEMPERATURE
+
+      subroutine TEMPLATE_MDOT( &
+        num_materials_in, &
+        num_species_var_in, &
+        interface_mass_transfer_model, &
+        xI, & 
+        ispec, &
+        molar_mass, & ! 1..nmat
+        species_molar_mass, & ! 1..num_species_var+1
+        im_source, &
+        im_dest, &
+        mdot, & ! intent(out)
+        mdot_override, & ! intent(inout)
+        ksrc_derived, &
+        kdst_derived, &
+        ksrc_physical, &
+        kdst_physical, &
+        T_probe_src, &
+        T_probe_dst, &
+        probe_ok_gradient_src, &
+        probe_ok_gradient_dst, &
+        TI, &
+        LL, &
+        dxprobe_src, &
+        dxprobe_dst)
+      INTEGER_T, intent(in) :: interface_mass_transfer_model
+      INTEGER_T, intent(in) :: num_materials_in
+      INTEGER_T, intent(in) :: num_species_var_in
+      INTEGER_T, intent(in) :: ispec
+      INTEGER_T, intent(in) :: im_source
+      INTEGER_T, intent(in) :: im_dest
+      REAL_T, intent(in) :: xI(SDIM)
+      REAL_T, intent(in) :: TI
+      REAL_T, intent(in) :: molar_mass(num_materials_in)
+      REAL_T, intent(in) :: species_molar_mass(num_species_var_in+1)
+      REAL_T, intent(out) :: mdot
+      INTEGER_T, intent(inout) :: mdot_override
+      REAL_T, intent(in) :: ksrc_derived
+      REAL_T, intent(in) :: kdst_derived
+      REAL_T, intent(in) :: ksrc_physical
+      REAL_T, intent(in) :: kdst_physical
+      REAL_T, intent(in) :: T_probe_src
+      REAL_T, intent(in) :: T_probe_dst
+      INTEGER_T, intent(in) :: probe_ok_gradient_src
+      INTEGER_T, intent(in) :: probe_ok_gradient_dst
+      REAL_T, intent(in) :: LL
+      REAL_T, intent(in) :: dxprobe_src
+      REAL_T, intent(in) :: dxprobe_dst
+      end subroutine TEMPLATE_MDOT
+
+
+      subroutine TEMPLATE_K_EFFECTIVE( &
+        interface_mass_transfer_model, &
+        ireverse, &
+        iten, &        
+        molar_mass, & ! index: 1..nmat
+        species_molar_mass, & ! index: 1..num_species_var
+        k_model_predict, &
+        k_model_correct, &
+        k_physical_base, &
+        T_probe_src, &
+        T_probe_dst, &
+        probe_ok_gradient_src, &
+        probe_ok_gradient_dst, &
+        dxprobe_src, &
+        dxprobe_dst, &
+        LL, &
+        num_materials_in, &
+        num_species_var_in)
+      INTEGER_T, intent(in) :: interface_mass_transfer_model
+      INTEGER_T, intent(in) :: num_materials_in
+      INTEGER_T, intent(in) :: num_species_var_in
+      INTEGER_T, intent(in) :: ireverse
+      INTEGER_T, intent(in) :: iten
+      REAL_T, intent(in) :: molar_mass(num_materials_in)
+      REAL_T, intent(in) :: species_molar_mass(num_species_var_in)
+      REAL_T, intent(in) :: k_model_predict(2) ! src,dst
+      REAL_T, intent(inout) :: k_model_correct(2) ! src,dst
+      REAL_T, intent(in) :: k_physical_base(2) ! src, dst
+      REAL_T, intent(in) :: T_probe_src
+      REAL_T, intent(in) :: T_probe_dst
+      INTEGER_T, intent(in) :: probe_ok_gradient_src
+      INTEGER_T, intent(in) :: probe_ok_gradient_dst
+      REAL_T, intent(in) :: LL
+      REAL_T, intent(in) :: dxprobe_src
+      REAL_T, intent(in) :: dxprobe_dst
+      end subroutine TEMPLATE_K_EFFECTIVE
+
 
       subroutine TEMPLATE_reference_wavelen(wavelen)
       REAL_T, intent(inout) :: wavelen
@@ -568,6 +853,51 @@ implicit none
       REAL_T, intent(in) :: t
       REAL_T, intent(out) :: LS(nmat)
       end subroutine TEMPLATE_LS
+
+      subroutine TEMPLATE_OVERRIDE_TAGFLAG(xsten,nhalf,time,rflag,tagflag)
+      INTEGER_T, intent(in) :: nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(inout) :: rflag
+      INTEGER_T, intent(inout) :: tagflag
+      end subroutine TEMPLATE_OVERRIDE_TAGFLAG
+
+      subroutine TEMPLATE_AUX_DATA(auxcomp,x,LS)
+      INTEGER_T, intent(in) :: auxcomp
+      REAL_T, intent(in) :: x(3)
+      REAL_T, intent(out) :: LS
+      end subroutine TEMPLATE_AUX_DATA
+
+      subroutine TEMPLATE_OVERRIDE_FSI_SIGN_LS_VEL_TEMP( &
+        xcell,time,LS,VEL,TEMP,MASK,lev77,im_part,part_id)
+      REAL_T, intent(in) :: xcell(3)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(out) :: LS
+      REAL_T, intent(out) :: VEL(3)
+      REAL_T, intent(out) :: TEMP
+      INTEGER_T, intent(out) :: MASK
+      INTEGER_T, intent(in) :: lev77 !lev77=-1 for aux, >=0 otherwise.
+      INTEGER_T, intent(in) :: im_part
+      INTEGER_T, intent(in) :: part_id
+      end subroutine TEMPLATE_OVERRIDE_FSI_SIGN_LS_VEL_TEMP
+
+
+      subroutine TEMPLATE_BOUNDING_BOX_AUX(auxcomp, &
+          minnode,maxnode,LS_FROM_SUBROUTINE,aux_ncells_max_side)
+      INTEGER_T, intent(in) :: auxcomp
+      REAL_T, intent(inout) :: minnode(3)
+      REAL_T, intent(inout) :: maxnode(3)
+      INTEGER_T, intent(out) :: LS_FROM_SUBROUTINE
+      INTEGER_T, intent(out) :: aux_ncells_max_side
+      end subroutine TEMPLATE_BOUNDING_BOX_AUX
+
+
+      subroutine TEMPLATE_check_vel_rigid(x,t,vel,dir)
+       REAL_T, intent(in) :: x(SDIM)
+       REAL_T, intent(in) :: t
+       REAL_T, intent(in) :: vel
+       INTEGER_T, intent(in) :: dir
+      end subroutine TEMPLATE_check_vel_rigid
 
       subroutine TEMPLATE_clamped_LS(x,t,LS,vel,temperature)
        REAL_T, intent(in) :: x(SDIM)
@@ -757,6 +1087,12 @@ implicit none
       type(nucleation_parm_type_input), intent(in) :: nucleate_in
       end subroutine TEMPLATE_nucleation
 
+      subroutine TEMPLATE_ICE_SUBSTRATE_DISTANCE(xtarget,dist)
+      REAL_T, intent(in) :: xtarget(SDIM)
+      REAL_T, intent(out) :: dist
+      end subroutine TEMPLATE_ICE_SUBSTRATE_DISTANCE
+
+
       subroutine TEMPLATE_microcell_heat_coeff(heatcoeff,dx,veldir)
       REAL_T, intent(in) :: dx(SDIM)
       INTEGER_T, intent(in) :: veldir
@@ -771,6 +1107,31 @@ implicit none
       INTEGER_T, intent(in) :: i,j,k,cell_flag
       end subroutine TEMPLATE_ASSIMILATE
 
+      subroutine TEMPLATE_FSI_SLICE(xmap3D,xslice3D,problo3D,probhi3D,dx_slice)
+      REAL_T, intent(in) :: dx_slice
+      INTEGER_T, intent(inout) :: xmap3D(3)
+      REAL_T, intent(inout) :: xslice3D(3)
+      REAL_T, intent(out) :: problo3D(3)
+      REAL_T, intent(out) :: probhi3D(3)
+      end subroutine TEMPLATE_FSI_SLICE
+
+      subroutine TEMPLATE_OPEN_CASFILE(part_id,unit_id,file_format)
+      INTEGER_T, intent(in) :: part_id
+      INTEGER_T, intent(in) :: unit_id
+      INTEGER_T, intent(out) :: file_format
+      end subroutine TEMPLATE_OPEN_CASFILE
+
+      subroutine TEMPLATE_OPEN_AUXFILE(part_id,unit_id,file_format)
+      INTEGER_T, intent(in) :: part_id
+      INTEGER_T, intent(in) :: unit_id
+      INTEGER_T, intent(out) :: file_format
+      end subroutine TEMPLATE_OPEN_AUXFILE
+
+      subroutine TEMPLATE_ORDER_NODES(nodes,nodemap)
+      REAL_T, intent(in) :: nodes(3,3) ! dir,nodenum
+      INTEGER_T, intent(inout) :: nodemap(3)
+      end subroutine TEMPLATE_ORDER_NODES
+
       END INTERFACE
 
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
@@ -779,6 +1140,12 @@ implicit none
       PROCEDURE(TEMPLATE_CFL_HELPER), POINTER :: SUB_CFL_HELPER
       PROCEDURE(TEMPLATE_SUMINT), POINTER :: SUB_SUMINT
       PROCEDURE(TEMPLATE_LS), POINTER :: SUB_LS
+      PROCEDURE(TEMPLATE_OVERRIDE_TAGFLAG), POINTER :: SUB_OVERRIDE_TAGFLAG
+      PROCEDURE(TEMPLATE_AUX_DATA), POINTER :: SUB_AUX_DATA
+      PROCEDURE(TEMPLATE_OVERRIDE_FSI_SIGN_LS_VEL_TEMP), POINTER :: &
+        SUB_OVERRIDE_FSI_SIGN_LS_VEL_TEMP
+      PROCEDURE(TEMPLATE_BOUNDING_BOX_AUX), POINTER :: SUB_BOUNDING_BOX_AUX
+      PROCEDURE(TEMPLATE_check_vel_rigid), POINTER :: SUB_check_vel_rigid
       PROCEDURE(TEMPLATE_clamped_LS), POINTER :: SUB_clamped_LS_no_scale
       PROCEDURE(TEMPLATE_VEL), POINTER :: SUB_VEL
       PROCEDURE(TEMPLATE_EOS), POINTER :: SUB_EOS
@@ -796,9 +1163,18 @@ implicit none
       PROCEDURE(TEMPLATE_EB_heat_source), POINTER :: SUB_EB_heat_source
       PROCEDURE(TEMPLATE_velfreestream), POINTER :: SUB_velfreestream
       PROCEDURE(TEMPLATE_nucleation), POINTER :: SUB_nucleation
+      PROCEDURE(TEMPLATE_ICE_SUBSTRATE_DISTANCE), POINTER :: &
+              SUB_ICE_SUBSTRATE_DISTANCE
       PROCEDURE(TEMPLATE_microcell_heat_coeff), POINTER :: &
               SUB_microcell_heat_coeff
       PROCEDURE(TEMPLATE_ASSIMILATE), POINTER :: SUB_ASSIMILATE
+
+      PROCEDURE(TEMPLATE_FSI_SLICE), POINTER :: SUB_FSI_SLICE
+      PROCEDURE(TEMPLATE_OPEN_CASFILE), POINTER :: SUB_OPEN_CASFILE
+      PROCEDURE(TEMPLATE_OPEN_AUXFILE), POINTER :: SUB_OPEN_AUXFILE
+      PROCEDURE(TEMPLATE_ORDER_NODES), POINTER :: SUB_ORDER_NODES
+
+      PROCEDURE(TEMPLATE_wallfunc), POINTER :: SUB_wallfunc
 
       PROCEDURE(TEMPLATE_INIT_REGIONS_LIST), POINTER :: SUB_INIT_REGIONS_LIST
       PROCEDURE(TEMPLATE_CHARFN_REGION), POINTER :: SUB_CHARFN_REGION
@@ -806,6 +1182,12 @@ implicit none
               SUB_DELETE_REGIONS_LIST
 
       PROCEDURE(TEMPLATE_THERMAL_K), POINTER :: SUB_THERMAL_K
+      PROCEDURE(TEMPLATE_INTERFACE_TEMPERATURE), POINTER :: &
+              SUB_INTERFACE_TEMPERATURE
+      PROCEDURE(TEMPLATE_MDOT), POINTER :: &
+              SUB_MDOT
+      PROCEDURE(TEMPLATE_K_EFFECTIVE), POINTER :: &
+              SUB_K_EFFECTIVE
 
       PROCEDURE(TEMPLATE_reference_wavelen), POINTER :: SUB_reference_wavelen
 

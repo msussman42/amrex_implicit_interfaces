@@ -31,6 +31,9 @@
       REAL_T problox,probloy,probloz
       REAL_T probhix,probhiy,probhiz
       REAL_T problenx,probleny,problenz
+      REAL_T problo_array(3)
+      REAL_T probhi_array(3)
+      REAL_T problen_array(3)
       INTEGER_T fort_is_periodic(3)
       REAL_T fort_stop_time
       REAL_T fort_energyconst(MAX_NUM_MATERIALS)
@@ -45,8 +48,19 @@
       REAL_T fort_density_ceiling(MAX_NUM_MATERIALS)
       REAL_T fort_cavdenconst(MAX_NUM_MATERIALS)
       REAL_T fort_viscconst(MAX_NUM_MATERIALS)
-      REAL_T fort_viscconst_eddy(MAX_NUM_MATERIALS)
+
+      REAL_T fort_viscconst_eddy_wall(MAX_NUM_MATERIALS)
+      REAL_T fort_viscconst_eddy_bulk(MAX_NUM_MATERIALS)
+      REAL_T fort_heatviscconst_eddy_wall(MAX_NUM_MATERIALS)
+      REAL_T fort_heatviscconst_eddy_bulk(MAX_NUM_MATERIALS)
+
+      REAL_T fort_thermal_microlayer_size(MAX_NUM_MATERIALS)
+      REAL_T fort_shear_microlayer_size(MAX_NUM_MATERIALS)
+      REAL_T fort_buoyancy_microlayer_size(MAX_NUM_MATERIALS)
+      REAL_T fort_phasechange_microlayer_size(MAX_NUM_MATERIALS)
+
       INTEGER_T fort_viscosity_state_model(MAX_NUM_MATERIALS)
+      REAL_T fort_heatflux_factor(MAX_NUM_MATERIALS)
       REAL_T fort_heatviscconst(MAX_NUM_MATERIALS)
 
       REAL_T fort_prerecalesce_heatviscconst(MAX_NUM_MATERIALS)
@@ -84,7 +98,6 @@
       REAL_T fort_stiffCV(MAX_NUM_MATERIALS)
       REAL_T fort_stiffGAMMA(MAX_NUM_MATERIALS)
 
-      REAL_T FORT_MUSHY_THICK  ! default==2.0
       REAL_T density_at_depth
       REAL_T global_pressure_scale
       REAL_T global_velocity_scale
@@ -100,17 +113,33 @@
       INTEGER_T fort_linear_elastic_model(MAX_NUM_MATERIALS)
       REAL_T fort_shear_modulus(MAX_NUM_MATERIALS)
       INTEGER_T fort_store_elastic_data(MAX_NUM_MATERIALS)
+
+      REAL_T fort_Carreau_alpha(MAX_NUM_MATERIALS)
+      REAL_T fort_Carreau_beta(MAX_NUM_MATERIALS)
+      REAL_T fort_Carreau_n(MAX_NUM_MATERIALS)
+      REAL_T fort_Carreau_mu_inf(MAX_NUM_MATERIALS)
+      INTEGER_T fort_shear_thinning_fluid(MAX_NUM_MATERIALS)
+      REAL_T fort_polymer_factor(MAX_NUM_MATERIALS)
+      REAL_T fort_concentration(MAX_NUM_MATERIALS)
+      REAL_T fort_etaL(MAX_NUM_MATERIALS)
+      REAL_T fort_etaS(MAX_NUM_MATERIALS)
+      REAL_T fort_etaP(MAX_NUM_MATERIALS)
+
+      REAL_T fort_visc_coef
+
       INTEGER_T num_state_material
       INTEGER_T num_state_base
       INTEGER_T ngeom_raw
       INTEGER_T ngeom_recon
       INTEGER_T num_materials
+      INTEGER_T num_interfaces
       INTEGER_T probtype, adv_dir, axis_dir
       INTEGER_T levelrz
       INTEGER_T prescribe_temperature_outflow
       INTEGER_T fort_solidheat_flag
-      INTEGER_T invert_solid_levelset
+      INTEGER_T doubly_wetted_solid_inside
       INTEGER_T FSI_flag(MAX_NUM_MATERIALS)
+      REAL_T fort_damping_coefficient(MAX_NUM_MATERIALS)
       INTEGER_T fort_material_type(MAX_NUM_MATERIALS)
       INTEGER_T fort_ZEYU_DCA_SELECT
       INTEGER_T gravity_dir,invert_gravity
