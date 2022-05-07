@@ -8638,8 +8638,6 @@ void NavierStokes::relaxLEVEL(
   int usecg_at_bottom=1;
   int temp_meets_tol=0;
   Real error0=0.0;
-  Real A_error0=0.0;
-  Real rAr_error0=0.0;
   Real bottom_bottom_tol=save_atol_b*bottom_bottom_tol_factor;
 
   int lev0_cycles=0;
@@ -8663,8 +8661,6 @@ void NavierStokes::relaxLEVEL(
    bottom_smooth_type,
    presmooth,presmooth,  //postsmooth="presmooth"
    error0,
-   A_error0,
-   rAr_error0,
    apply_lev_cg_solve);
 
 #if (profile_solver==1)
@@ -8699,36 +8695,15 @@ void NavierStokes::relaxLEVEL(
 
 void NavierStokes::check_outer_solver_convergence(
 	Real error_n,Real error0,
-        Real Ar_error_n,Real Ar_error0,
-        Real rAr_error_n,Real rAr_error0,
         Real save_mac_abs_tol_in,
         int& meets_tol) {
 
- if (error_n<save_mac_abs_tol_in) {
+ if (error_n<=save_mac_abs_tol_in) {
   meets_tol=1;
- } else if (Ar_error_n==0.0) {
-  meets_tol=1;
- } else if (rAr_error_n<=0.0) {
-  meets_tol=1;
- } else if ((error_n>0.0)&&
-   	    (Ar_error_n>0.0)&&
-	    (rAr_error_n>0.0)&&
-	    (error0>0.0)&&
-	    (Ar_error0>0.0)&&
-	    (rAr_error0>0.0)) {
-  Real scale_Ar_error_n=Ar_error_n*error0/Ar_error0;
-  Real scale_rAr_error_n=rAr_error_n*error0/rAr_error0;
-  if (scale_Ar_error_n<save_mac_abs_tol_in) {
-   meets_tol=1;
-  } else if (scale_rAr_error_n<save_mac_abs_tol_in) {
-   meets_tol=1;
-  } else if ((scale_Ar_error_n>=save_mac_abs_tol_in)&&
-             (scale_rAr_error_n>=save_mac_abs_tol_in)) {
-   // do nothing
-  } else
-   amrex::Error("scale_Ar_error_n or scale_rAr_error_n invalid");
+ } else if (error_n>=save_mac_abs_tol_in) {
+  // do nothing
  } else
-  amrex::Error("one of error_r,Ar,rAr invalid");
+  amrex::Error("error_n invalid");
 
 } // subroutine check_outer_solver_convergence
 
@@ -10058,10 +10033,6 @@ void NavierStokes::multiphase_project(int project_option) {
  Real error0_max=0.0;
  Real error0=0.0;
  Real error_n=0.0;
- Real rAr_error0=0.0;
- Real rAr_error_n=0.0;
- Real Ar_error0=0.0;
- Real Ar_error_n=0.0;
  Real error_at_the_beginning=0.0;
  Real error_after_all_jacobi_sweeps=0.0;
     
@@ -10101,13 +10072,12 @@ void NavierStokes::multiphase_project(int project_option) {
  bprof.stop();
 #endif
 
- Vector< Array<Real,4> > outer_error_history;
+   // error_n,abs_tol
+ Vector< Array<Real,2> > outer_error_history;
  outer_error_history.resize(krylov_subspace_max_num_outer_iter+1);
  for (int ehist=0;ehist<outer_error_history.size();ehist++) {
    outer_error_history[ehist][0]=0.0;
    outer_error_history[ehist][1]=0.0;
-   outer_error_history[ehist][2]=0.0;
-   outer_error_history[ehist][3]=0.0;
  }
  Real outer_error=0.0;
 
@@ -10238,7 +10208,8 @@ void NavierStokes::multiphase_project(int project_option) {
     } else
      amrex::Error("initial_cg_cycles invalid");
 
-    Vector< Array<Real,4> > error_history;
+      // error_n,abs_tol
+    Vector< Array<Real,2> > error_history;
 
 #if (profile_solver==1)
     bprof.stop();
@@ -10283,42 +10254,12 @@ void NavierStokes::multiphase_project(int project_option) {
      } else
       amrex::Error("local_error_n invalid");
 
-     copyALL(0,nsolve,0,0,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
-       // V1=A P_SOLN
-       // 1. (begin)calls project_right_hand_side(P)
-       // 2. (end)  calls project_right_hand_side(V1)
-     applyALL(project_option,P_SOLN_MF,bicg_V1_MF,nsolve);
-     dot_productALL(project_option,CGRESID_MF,bicg_V1_MF,rAr_error_n,nsolve);
-     dot_productALL(project_option,bicg_V1_MF,bicg_V1_MF,Ar_error_n,nsolve);
-
-     if (rAr_error_n<0.0) {
-      rAr_error_n=0.0;
-     } else if (rAr_error_n>=0.0) {
-      rAr_error_n=sqrt(rAr_error_n);
-     } else
-      amrex::Error("rAr_error_n invalid");
-
-     if (Ar_error_n>=0.0) {
-      Ar_error_n=sqrt(Ar_error_n);
-     } else
-      amrex::Error("Ar_error_n invalid");
-
-     if ((krylov_subspace_num_outer_iterSOLVER==0)&&(cg_loop==0)) {
-      Ar_error0=Ar_error_n;
-      rAr_error0=rAr_error_n;
-     } else if ((krylov_subspace_num_outer_iterSOLVER>0)||
-      	       (cg_loop==1)) {
-      // do nothing
-     } else
-      amrex::Error("krylov_subspace_num_outer_iterSOLVER or cg_loop invalid");
-
       // if cg_loop==0 then error_n=error0 
       // error0=error after Jacobi iter. IF num_outer_iterSOLVER==0
-     check_outer_solver_convergence(error_n,error0,
-             Ar_error_n,Ar_error0,
-             rAr_error_n,rAr_error0,
-             save_mac_abs_tol,
-             meets_tol);
+     check_outer_solver_convergence(
+        error_n,error0,
+        save_mac_abs_tol,
+        meets_tol);
 
      if (cg_loop==0) {
       if (error_after_all_jacobi_sweeps<save_mac_abs_tol) {
@@ -10349,11 +10290,10 @@ void NavierStokes::multiphase_project(int project_option) {
       error_n=local_error_n;
       Real local_tol=1.1*save_mac_abs_tol;
       meets_tol=0;
-      check_outer_solver_convergence(error_n,error0,
-             Ar_error_n,Ar_error0,
-             rAr_error_n,rAr_error0,
-             local_tol,
-             meets_tol);
+      check_outer_solver_convergence(
+        error_n,error0,
+        local_tol,
+        meets_tol);
 
       if (verbose>0) {
        if (ParallelDescriptor::IOProcessor()) {
@@ -10413,8 +10353,6 @@ void NavierStokes::multiphase_project(int project_option) {
      for (int ehist=0;ehist<error_history.size();ehist++) {
       error_history[ehist][0]=0.0;
       error_history[ehist][1]=0.0;
-      error_history[ehist][2]=0.0;
-      error_history[ehist][3]=0.0;
      }
 
 #if (profile_solver==1)
@@ -10462,39 +10400,16 @@ void NavierStokes::multiphase_project(int project_option) {
 
       adjust_tolerance(error_n,error0_max,project_option);
 
-      copyALL(0,nsolve,0,0,P_SOLN_MF,CGRESID_MF); //P_SOLN=CGRESID_MF
-       // V1=A P_SOLN
-       // 1. (begin)calls project_right_hand_side(P)
-       // 2. (end)  calls project_right_hand_side(V1)
-      applyALL(project_option,P_SOLN_MF,bicg_V1_MF,nsolve);
-      dot_productALL(project_option,CGRESID_MF,bicg_V1_MF,rAr_error_n,nsolve);
-      dot_productALL(project_option,bicg_V1_MF,bicg_V1_MF,Ar_error_n,nsolve);
-
-      if (rAr_error_n<0.0) {
-       rAr_error_n=0.0;
-      } else if (rAr_error_n>=0.0) {
-       rAr_error_n=sqrt(rAr_error_n);
-      } else
-       amrex::Error("rAr_error_n invalid");
-
-      if (Ar_error_n>=0.0) {
-       Ar_error_n=sqrt(Ar_error_n);
-      } else
-       amrex::Error("Ar_error_n invalid");
-
       error_history[vcycle][0]=error_n;
-      error_history[vcycle][1]=rAr_error_n;
-      error_history[vcycle][1]=Ar_error_n;
-      error_history[vcycle][3]=save_mac_abs_tol;
+      error_history[vcycle][1]=save_mac_abs_tol;
 
       Real restart_tol=0.0;
       restart_flag=0;
 
-      check_outer_solver_convergence(error_n,error0,
-             Ar_error_n,Ar_error0,
-             rAr_error_n,rAr_error0,
-             save_mac_abs_tol,
-             meets_tol);
+      check_outer_solver_convergence(
+	error_n,error0,
+        save_mac_abs_tol,
+        meets_tol);
 
       if (verbose>0) {
        if (ParallelDescriptor::IOProcessor()) {
@@ -10911,11 +10826,9 @@ void NavierStokes::multiphase_project(int project_option) {
            local_presmooth << '\n';
           std::cout << "RESTARTING: local_postsmooth= " << 
            local_postsmooth << '\n';
-          std::cout << "RESTARTING: error_history[vcycle][0,1,2,3]= " << 
+          std::cout << "RESTARTING: error_history[vcycle][0,1]= " << 
            error_history[vcycle][0] << ' ' <<
-	   error_history[vcycle][1] << ' ' <<
-	   error_history[vcycle][2] << ' ' <<
-	   error_history[vcycle][3] << '\n';
+	   error_history[vcycle][1] << '\n';
 	  print_project_option(project_option);
 	  std::cout << "END SOLVER RESTARTING NOTIFICATION\n";
          }
@@ -10979,19 +10892,15 @@ void NavierStokes::multiphase_project(int project_option) {
        print_project_option(project_option);
        for (int ehist=0;ehist<error_history.size();ehist++) {
         std::cout << "vcycle " << ehist << 
-         " error_history[vcycle][0,1,2,3] " <<
+         " error_history[vcycle][0,1] " <<
          error_history[ehist][0] << ' ' <<
-         error_history[ehist][1] << ' ' <<
-         error_history[ehist][2] << ' ' <<
-         error_history[ehist][3] << '\n';
+         error_history[ehist][1] << '\n';
        }
        for (int ehist=0;ehist<outer_error_history.size();ehist++) {
         std::cout << "outer_iter " << ehist << 
-         " outer_error_history[vcycle][0,1,2,3] " <<
+         " outer_error_history[vcycle][0,1] " <<
          outer_error_history[ehist][0] << ' ' <<
-         outer_error_history[ehist][1] << ' ' <<
-         outer_error_history[ehist][2] << ' ' <<
-         outer_error_history[ehist][3] << '\n';
+         outer_error_history[ehist][1] << '\n';
        }
        amrex::Error("abort:NavierStokes3.cpp,local_pre(post)smooth overflow");
       }
@@ -11058,19 +10967,15 @@ void NavierStokes::multiphase_project(int project_option) {
      std::cout << "->ERROR HISTORY " << cg_loop_max << '\n';
      for (int ehist=0;ehist<error_history.size();ehist++) {
       std::cout << "vcycle " << ehist << 
-       " error_history[vcycle][0,1,2,3] " <<
+       " error_history[vcycle][0,1] " <<
        error_history[ehist][0] << ' ' <<
-       error_history[ehist][1] << ' ' <<
-       error_history[ehist][2] << ' ' <<
-       error_history[ehist][3] << '\n';
+       error_history[ehist][1] << '\n';
      }
      for (int ehist=0;ehist<outer_error_history.size();ehist++) {
       std::cout << "outer_iter " << ehist << 
-       " outer_error_history[vcycle][0,1,2,3] " <<
+       " outer_error_history[vcycle][0,1] " <<
        outer_error_history[ehist][0] << ' ' <<
-       outer_error_history[ehist][1] << ' ' <<
-       outer_error_history[ehist][2] << ' ' <<
-       outer_error_history[ehist][3] << '\n';
+       outer_error_history[ehist][1] << '\n';
      }
     } else if (vcycle>=0) {
      // do nothing
@@ -11171,9 +11076,6 @@ void NavierStokes::multiphase_project(int project_option) {
     allocate_array(0,nsolve,-1,OUTER_RESID_MF);
     allocate_array(0,nsolve,-1,OUTER_MAC_RHS_CRSE_MF);
 
-    allocate_array(1,nsolve,-1,P_SOLN_MF);
-    allocate_array(0,nsolve,-1,bicg_V1_MF);
-
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
      if (ilev<finest_level) {
@@ -11194,39 +11096,12 @@ void NavierStokes::multiphase_project(int project_option) {
     residALL(project_option,OUTER_MAC_RHS_CRSE_MF,
       OUTER_RESID_MF,OUTER_MAC_PHI_CRSE_MF,nsolve);
     outer_error=0.0;
-    Real rAr_outer_error=0.0;
-    Real Ar_outer_error=0.0;
     dot_productALL(project_option,
       OUTER_RESID_MF,OUTER_RESID_MF,outer_error,nsolve);
     if (outer_error>=0.0) {
      outer_error=sqrt(outer_error);
     } else
      amrex::Error("outer_error invalid");
-
-    copyALL(0,nsolve,0,0,P_SOLN_MF,OUTER_RESID_MF); //P_SOLN=OUTER_RESID_MF
-       // V1=A P_SOLN
-       // 1. (begin)calls project_right_hand_side(P)
-       // 2. (end)  calls project_right_hand_side(V1)
-    applyALL(project_option,P_SOLN_MF,bicg_V1_MF,nsolve);
-    dot_productALL(project_option,OUTER_RESID_MF,bicg_V1_MF,
-      	     rAr_outer_error,nsolve);
-    dot_productALL(project_option,bicg_V1_MF,bicg_V1_MF,
-      	     Ar_outer_error,nsolve);
-
-    if (rAr_outer_error<0.0) {
-     rAr_outer_error=0.0;
-    } else if (rAr_outer_error>=0.0) {
-     rAr_outer_error=sqrt(rAr_outer_error);
-    } else
-     amrex::Error("rAr_outer_error invalid");
-
-    if (Ar_outer_error>=0.0) {
-     Ar_outer_error=sqrt(Ar_outer_error);
-    } else
-     amrex::Error("Ar_outer_error invalid");
-
-    delete_array(bicg_V1_MF);
-    delete_array(P_SOLN_MF);
 
     delete_array(OUTER_MAC_RHS_CRSE_MF);
     delete_array(OUTER_MAC_PHI_CRSE_MF);
@@ -11235,9 +11110,7 @@ void NavierStokes::multiphase_project(int project_option) {
     Real outer_tol=100.0*save_mac_abs_tol;
 
     outer_error_history[krylov_subspace_num_outer_iterSOLVER][0]=outer_error;
-    outer_error_history[krylov_subspace_num_outer_iterSOLVER][1]=rAr_outer_error;
-    outer_error_history[krylov_subspace_num_outer_iterSOLVER][2]=Ar_outer_error;
-    outer_error_history[krylov_subspace_num_outer_iterSOLVER][3]=outer_tol;
+    outer_error_history[krylov_subspace_num_outer_iterSOLVER][1]=outer_tol;
 
     krylov_subspace_num_outer_iterSOLVER++;
 
@@ -11253,11 +11126,10 @@ void NavierStokes::multiphase_project(int project_option) {
 
     outer_iter_done=0;
 
-    check_outer_solver_convergence(outer_error,error0,
-             Ar_outer_error,Ar_error0,
-             rAr_outer_error,rAr_error0,
-             outer_tol,
-             outer_iter_done);
+    check_outer_solver_convergence(
+      outer_error,error0,
+      outer_tol,
+      outer_iter_done);
 
     if (krylov_subspace_num_outer_iterSOLVER>krylov_subspace_max_num_outer_iter)
      outer_iter_done=1;
