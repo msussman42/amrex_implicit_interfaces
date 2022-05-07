@@ -1705,13 +1705,15 @@ stop
       REAL_T xsten(-3:3,SDIM)
       REAL_T xsten_local(-3:3,SDIM)
       INTEGER_T nhalf
-      INTEGER_T kklo,kkhi,nodehi,ngrow_k
+      INTEGER_T kklo,kkhi,nodehi
+      INTEGER_T klocal_lo,klocal_hi
       REAL_T degenerate_face_tol
       REAL_T check_tol
       REAL_T dxmin
       REAL_T xcc(3)
       REAL_T save_LS
       REAL_T initial_LS
+      INTEGER_T LS_mod_flag
       REAL_T p_triangle(3,3) ! (ipoint,dir)
       INTEGER_T in_plane
       REAL_T xcp_0(3)
@@ -1799,12 +1801,10 @@ stop
         valu=zero
 
         if (SDIM.eq.3) then
-         ngrow_k=ngrow-1
          kklo=0
          kkhi=1
          nodehi=8
         else if (SDIM.eq.2) then
-         ngrow_k=0
          kklo=0
          kkhi=0
          nodehi=4
@@ -1823,28 +1823,42 @@ stop
          enddo
 
          save_LS=ls_old(D_DECL(i,j,k))
+
          if (save_LS.gt.zero) then
           initial_LS=1.0D+20
          else if (save_LS.lt.zero) then
           initial_LS=-1.0D+20 
          else if (save_LS.eq.zero) then
           initial_LS=zero
-          ls_new(D_DECL(i,j,k))=zero
-          do local_dir=1,SDIM
-           ls_grad_new(D_DECL(i,j,k),local_dir)=zero
-          enddo
          else
           print *,"save_LS is NaN"
           stop
          endif
 
+         ls_new(D_DECL(i,j,k))=initial_LS
+
          if (save_LS.eq.zero) then
           ! do nothing
          else if (save_LS.ne.zero) then
 
-          do ilocal=i-ngrow+1,i+ngrow-1
-          do jlocal=j-ngrow+1,j+ngrow-1
-          do klocal=k-ngrow_k,k+ngrow_k
+          ! initial_LS=\pm 1.0D+20
+
+          LS_mod_flag=0
+
+          if (SDIM.eq.2) then
+           klocal_lo=0
+           klocal_hi=0
+          else if (SDIM.eq.3) then
+           klocal_lo=k-ngrow
+           klocal_hi=k+ngrow-1
+          else
+           print *,"sdim invalid"
+           stop
+          endif
+
+          do ilocal=i-ngrow,i+ngrow-1
+          do jlocal=j-ngrow,j+ngrow-1
+          do klocal=klocal_lo,klocal_hi
 
             ! klocal=0 in 2D
            if (SDIM.eq.2) then
@@ -1861,6 +1875,8 @@ stop
             stop
            endif
 
+             ! (ilocal,jlocal,klocal) corresponds to the lower left hand
+             ! corner.
            call gridsten(xsten_local,xlo,ilocal,jlocal,klocal, &
              fablo,bfact,dx,nhalf)
 
@@ -1885,15 +1901,15 @@ stop
 
              ! initialize xtarget to be the LLL corner of the box.
             do local_dir=1,SDIM
-             xtarget(local_dir)=xsten_local(-1,local_dir)
+             xtarget(local_dir)=xsten_local(0,local_dir)
             enddo
             if (ii.eq.1) then
              local_dir=1 
-             xtarget(local_dir)=xsten_local(1,local_dir)
+             xtarget(local_dir)=xsten_local(2,local_dir)
             endif
             if (jj.eq.1) then
              local_dir=2 
-             xtarget(local_dir)=xsten_local(1,local_dir)
+             xtarget(local_dir)=xsten_local(2,local_dir)
             endif
 
             if (kk.eq.1) then
@@ -1904,7 +1920,7 @@ stop
               stop
              endif
              local_dir=SDIM 
-             xtarget(local_dir)=xsten_local(1,local_dir)
+             xtarget(local_dir)=xsten_local(2,local_dir)
             endif
 
             do local_dir=1,SDIM
@@ -1913,15 +1929,7 @@ stop
 
               ! D_DECL(i,j,k)  => "i,j,k" in 3D
               !                   "i,j" in 2D
-            lnode(ii,jj,kk)=( &
-              ls_old(D_DECL(ilocal+ii-1,jlocal+jj-1,klocal+kk-1))+ &
-              ls_old(D_DECL(ilocal+ii,jlocal+jj-1,klocal+kk-1))+ &
-              ls_old(D_DECL(ilocal+ii-1,jlocal+jj,klocal+kk-1))+ &
-              ls_old(D_DECL(ilocal+ii,jlocal+jj,klocal+kk-1))+ &
-              ls_old(D_DECL(ilocal+ii-1,jlocal+jj-1,klocal+kk))+ &
-              ls_old(D_DECL(ilocal+ii,jlocal+jj-1,klocal+kk))+ &
-              ls_old(D_DECL(ilocal+ii-1,jlocal+jj,klocal+kk))+ &
-              ls_old(D_DECL(ilocal+ii,jlocal+jj,klocal+kk)))/eight
+            lnode(ii,jj,kk)=ls_old(D_DECL(ilocal+ii,jlocal+jj,klocal+kk))
 
            enddo
            enddo
@@ -2155,6 +2163,9 @@ stop
              do local_dir=1,SDIM
               save_x_cp(local_dir)=xcp_0_project(local_dir)
              enddo
+
+             LS_mod_flag=1
+
             else if (unsigned_mindist.ge.abs(initial_LS)) then
              ! do nothing
             else
@@ -2166,26 +2177,36 @@ stop
           enddo !enddo jlocal
           enddo !enddo ilocal
 
-          if (minLS.gt.initial_LS) then
-           minLS=initial_LS
-          endif
-          if (maxLS.lt.initial_LS) then
-           maxLS=initial_LS
-          endif
-          ls_new(D_DECL(i,j,k))=initial_LS
-          if (abs(initial_LS).gt.zero) then
-           do local_dir=1,SDIM
-            ls_grad_new(D_DECL(i,j,k),local_dir)= &
-              (xcc(local_dir)-save_x_cp(local_dir))/initial_LS
-           enddo
-          else if (abs(initial_LS).eq.zero) then
-           do local_dir=1,SDIM
-            ls_grad_new(D_DECL(i,j,k),local_dir)=zero
-           enddo
+          if (LS_mod_flag.eq.1) then
+
+           if (minLS.gt.initial_LS) then
+            minLS=initial_LS
+           endif
+           if (maxLS.lt.initial_LS) then
+            maxLS=initial_LS
+           endif
+           ls_new(D_DECL(i,j,k))=initial_LS
+           if (abs(initial_LS).gt.zero) then
+            do local_dir=1,SDIM
+             ls_grad_new(D_DECL(i,j,k),local_dir)= &
+               (xcc(local_dir)-save_x_cp(local_dir))/initial_LS
+            enddo
+           else if (abs(initial_LS).eq.zero) then
+            do local_dir=1,SDIM
+             ls_grad_new(D_DECL(i,j,k),local_dir)=zero
+            enddo
+           else
+            print *,"initial_LS is NaN"
+            stop
+           endif
+
+          else if (LS_mod_flag.eq.0) then
+           ! do nothing
           else
-           print *,"initial_LS is NaN"
+           print *,"LS_mod_flag invalid"
            stop
           endif
+
          else
           print *,"save_LS is NaN"
           stop
