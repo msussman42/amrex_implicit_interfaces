@@ -1,0 +1,11 @@
+1. contour
+2. operators -> slice
+3. click on the "slice" drop down (from the contour) and update slice
+  operator attributes:
+    select X,Y, or Z Axis.
+
+    origin -> intercept (enter slice value)
+
+    Apply
+
+    redraw

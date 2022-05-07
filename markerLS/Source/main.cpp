@@ -191,6 +191,9 @@ void main_main ()
      phi_distance.FillBoundary(geom.periodicity());
      phi_grad.FillBoundary(geom.periodicity());
      std::cout << "(after) sweep= " << sweep << '\n';
+     std::cout << "minLS= " << minLS << '\n';
+     std::cout << "maxLS= " << maxLS << '\n';
+     std::cout << "Nghost= " << Nghost << '\n';
     } // sweep=0,1
 //    MultiFab::Copy(phi,phi_distance,0,0,1,Nghost);
     MultiFab phi_plot(ba, dm, 2+AMREX_SPACEDIM, Nghost);
