@@ -10277,10 +10277,6 @@ void NavierStokes::multiphase_project(int project_option) {
        if (ParallelDescriptor::IOProcessor()) {
         std::cout << "meets_tol=1 at top of CG or BICGSTAB: error_n=" <<
           error_n << '\n';
-        std::cout << "meets_tol=1 at top of CG or BICGSTAB: Ar_error_n=" <<
-          Ar_error_n << '\n';
-        std::cout << "meets_tol=1 at top of CG or BICGSTAB: rAr_error_n=" <<
-          rAr_error_n << '\n';
         if (cg_loop==0)
          std::cout << "error_after_all_jacobi_sweeps (jacobi method)=" <<
           error_after_all_jacobi_sweeps << '\n';
@@ -10413,9 +10409,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
       if (verbose>0) {
        if (ParallelDescriptor::IOProcessor()) {
-        std::cout << "cg_loop,vcycle,E0,En,rArEn,ArEn " << cg_loop << ' ' <<
-         vcycle << ' ' << error0 << ' ' << error_n << ' ' <<
-         rAr_error_n << ' ' << Ar_error_n << '\n';
+        std::cout << "cg_loop,vcycle,E0,En " << cg_loop << ' ' <<
+         vcycle << ' ' << error0 << ' ' << error_n << '\n';
        }
        std::fflush(NULL);
       } else if ((verbose==0)||(verbose==-1)) {
@@ -11117,10 +11112,8 @@ void NavierStokes::multiphase_project(int project_option) {
     if (verbose>0) {
      if (ParallelDescriptor::IOProcessor()) {
       print_project_option(project_option);
-      std::cout << "krylov_subspace_num_outer_iterSOLVER,E,rAr_E,Ar_E " << 
-       krylov_subspace_num_outer_iterSOLVER << ' ' << outer_error << 
-       ' ' << rAr_outer_error << 
-       ' ' << Ar_outer_error << '\n';
+      std::cout << "krylov_subspace_num_outer_iterSOLVER,E " << 
+       krylov_subspace_num_outer_iterSOLVER << ' ' << outer_error << '\n';
      }
     }
 
@@ -11195,9 +11188,7 @@ void NavierStokes::multiphase_project(int project_option) {
           " SDC_outer_sweeps= " << SDC_outer_sweeps <<
           " slab_step= " << slab_step << '\n';
    std::cout << "project_option= " << project_option <<
-	  " error0= " << error0 <<
-	  " Ar_error0= " << Ar_error0 <<
-	  " rAr_error0= " << rAr_error0 << '\n';
+	  " error0= " << error0 << '\n';
 
    Real avg_outer_error=outer_error_all_solver_calls[project_option]/
                 number_solver_calls[project_option];
