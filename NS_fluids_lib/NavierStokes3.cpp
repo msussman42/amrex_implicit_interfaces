@@ -8363,7 +8363,8 @@ void NavierStokes::residual_correction_form(
 // local_MF[idx_phi]=0 on all levels on input
 void NavierStokes::mg_cycleALL(int presmooth,
  int project_option,
- int idx_rhs,int idx_phi,
+ int idx_rhs,
+ int idx_phi,
  int nsolve) {
 
 #if (profile_solver==1)
@@ -8410,7 +8411,10 @@ void NavierStokes::mg_cycleALL(int presmooth,
  bprof.stop();
 #endif
 
- relaxLEVEL(residmf,idx_rhs,idx_phi,
+ relaxLEVEL(
+   residmf,
+   idx_rhs,
+   idx_phi,
    presmooth,
    project_option,nsolve);
 
@@ -8422,7 +8426,8 @@ void NavierStokes::mg_cycleALL(int presmooth,
 // routine.
 void NavierStokes::relaxLEVEL(
   MultiFab* rhsmf,
-  int idx_rhs,int idx_phi,
+  int idx_rhs,
+  int idx_phi,
   int presmooth,
   int project_option,int nsolve) {
 
@@ -9057,7 +9062,7 @@ void NavierStokes::multiphase_preconditioner(
  bprof.stop();
 #endif
 
-  // PCG
+  // PCG (jacobi preconditioner)
  if (project_solver_type==1) {
 
 #if (profile_solver==1)
@@ -9076,7 +9081,7 @@ void NavierStokes::multiphase_preconditioner(
 
   jacobi_cycles(
    call_adjust_tolerance, //=0
-   smooth_cycles,
+   smooth_cycles, //smooth_cycles=presmooth+postsmooth
    update_vel,  // =0 (i.e. jacobi_cycles used as a preconditioner)
    project_option,
    idx_R,idx_Z,
@@ -9096,7 +9101,9 @@ void NavierStokes::multiphase_preconditioner(
   NavierStokes& ns_finest=getLevel(finest_level);
   ns_finest.mg_cycleALL(presmooth,
   project_option,
-  idx_R,idx_Z,nsolve);
+  idx_R,
+  idx_Z,
+  nsolve);
 
    // MINV=I
  } else if (project_solver_type==2) {
@@ -10380,6 +10387,7 @@ void NavierStokes::multiphase_project(int project_option) {
      } else
       amrex::Error("enable_spectral invalid 3");
 
+     Krylov_checkpoint(error_n,MAC_PHI_CRSE_MF,
      for (vcycle=0;((vcycle<=vcycle_max)&&(meets_tol==0));vcycle++) {
 
 #if (profile_solver==1)
