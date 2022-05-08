@@ -1569,7 +1569,8 @@ void NavierStokes::applyGradALL(
 // (phi=phi_dual)
 //
 void NavierStokes::apply_div(
-  int project_option,int homflag,
+  int project_option,
+  int homflag,
   int idx_phi,
   MultiFab* rhsmf, 
   MultiFab* diffusionRHScell,
