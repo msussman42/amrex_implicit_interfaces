@@ -7471,6 +7471,7 @@ void NavierStokes::TypeALL(int idx_type,Vector<int>& type_flag,
 void NavierStokes::remove_pressure_work_vars() {
 
  delete_localMF(UMACSTAR_MF,AMREX_SPACEDIM);
+ delete_localMF(RESTART_UMACSTAR_MF,AMREX_SPACEDIM);
  delete_localMF(GRADPEDGE_MF,AMREX_SPACEDIM);
  delete_localMF(PEDGE_MF,AMREX_SPACEDIM);
  delete_localMF(AMRSYNC_PRES_MF,AMREX_SPACEDIM);
@@ -8084,6 +8085,7 @@ void NavierStokes::allocate_pressure_work_vars(int nsolve,int project_option) {
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   new_localMF(UMACSTAR_MF+dir,nsolve,0,dir);
+  new_localMF(RESTART_UMACSTAR_MF+dir,nsolve,0,dir);
   new_localMF(GRADPEDGE_MF+dir,nsolve,0,dir);
 
    // PEDGE_MF only used if pressure projection.
@@ -9178,7 +9180,63 @@ void NavierStokes::set_local_tolerances(int project_option) {
 
 } // end subroutine set_local_tolerances
 
-// 
+void NavierStokes::Krylov_checkpoint(
+  int vcycle,
+  Real krylov_error,
+  Real& best_error,
+  int idx_phi,
+  int idx_umac,
+  int& restart_flag) {
+
+ if (level==0) {
+  // do nothing
+ } else
+  amrex::Error("level invalid");
+
+ Real breakdown_factor=1000.0;
+
+ int update_best=0;
+ if (vcycle==-1) {
+  update_best=1;
+  best_error=krylov_error;
+  if (krylov_error>=0.0) {
+   // do nothing
+  } else
+   amrex::Error("krylov_error invalid");
+ } else if (vcycle>=0) {
+  if ((krylov_error>=0.0)&&
+      (krylov_error<best_error)) {
+   update_best=1;
+   best_error=krylov_error;
+  } else if ((krylov_error>=best_error)&&
+             (krylov_error<=breakdown_factor*best_error)) {
+   // do nothing
+  } else if (krylov_error>=breakdown_factor*best_error) {
+   restart_flag=1;
+  } else if (krylov_error<0.0) {
+   amrex::Error("krylov_error must be positive");
+  } else {
+   restart_flag=1; // krylov_error=NaN
+  }
+ } else
+  amrex::Error("vcycle invalid");
+ 
+ int nsolve=localMF[idx_phi]->nComp();
+ if ((nsolve==1)||(nsolve==AMREX_SPACEDIM)) {
+  if (update_best==1) {
+   copyALL(1,nsolve,0,0,RESTART_MAC_PHI_CRSE_MF,idx_phi);
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    copyALL(0,nsolve,0,0,RESTART_UMACSTAR_MF+dir,idx_umac+dir);
+   }
+  } else if (update_best==0) {
+   // do nothing
+  } else
+   amrex::Error("update_best invalid");
+ } else
+  amrex::Error("nsolve invalid");
+    
+} // end subroutine NavierStokes::Krylov_checkpoint
+
 // if project_option==SOLVETYPE_PRES,
 // RHS= -(1/dt)(a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2}+...)+
 //  alpha_{i}poldhold_{i}  + diffusionRHS
@@ -9453,6 +9511,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   // automatically initializes mac_phi_crse_array=0.0
  allocate_independent_var(nsolve,MAC_PHI_CRSE_MF);
+ allocate_independent_var(nsolve,RESTART_MAC_PHI_CRSE_MF);
   // automatically initializes mac_rhs_crse_array=0.0
  allocate_rhs_var(nsolve,MAC_RHS_CRSE_MF);
  
@@ -10154,7 +10213,7 @@ void NavierStokes::multiphase_project(int project_option) {
     } else
      amrex::Error("project_option invalid52");
 
-    int update_vel=1; // update error0 IF krylov_subspace_num_outer_iterSOLVER==0
+    int update_vel=1;//update error0 IF krylov_subspace_num_outer_iterSOLVER==0
     int call_adjust_tolerance=1;
 
       // NavierStokes::jacobi_cycles in NavierStokes3.cpp
@@ -10387,7 +10446,14 @@ void NavierStokes::multiphase_project(int project_option) {
      } else
       amrex::Error("enable_spectral invalid 3");
 
-     Krylov_checkpoint(error_n,MAC_PHI_CRSE_MF,
+     vcycle=-1;
+     Real best_error=0.0;
+
+     Krylov_checkpoint(vcycle,error_n,best_error,
+         MAC_PHI_CRSE_MF,UMACSTAR_MF,restart_flag);
+
+     int multilevel_restart_count=0;
+
      for (vcycle=0;((vcycle<=vcycle_max)&&(meets_tol==0));vcycle++) {
 
 #if (profile_solver==1)
@@ -10407,7 +10473,6 @@ void NavierStokes::multiphase_project(int project_option) {
       error_history[vcycle][0]=error_n;
       error_history[vcycle][1]=save_mac_abs_tol;
 
-      Real restart_tol=0.0;
       restart_flag=0;
 
       check_outer_solver_convergence(
@@ -10424,7 +10489,7 @@ void NavierStokes::multiphase_project(int project_option) {
       } else if ((verbose==0)||(verbose==-1)) {
        // do nothing
       } else
-	 amrex::Error("verbose invalid");
+       amrex::Error("verbose invalid");
 
 #if (profile_solver==1)
       bprof.stop();
@@ -10451,7 +10516,7 @@ void NavierStokes::multiphase_project(int project_option) {
         dot_productALL(project_option,Z_MF,CGRESID_MF,rho1,nsolve);
 
         if (rho1>=0.0) {
-         if (rho0>restart_tol) {
+         if (rho0>0.0) {
           beta=rho1/rho0;
           // P_MF=0 initially or on restart.
           // P_MF=Z_MF + beta P_MF
@@ -10469,7 +10534,7 @@ void NavierStokes::multiphase_project(int project_option) {
           Real pAp=0.0;
           dot_productALL(project_option,P_MF,bicg_V1_MF,pAp,nsolve);
 
-          if (pAp>restart_tol) {
+          if (pAp>0.0) {
            alpha=rho1/pAp;
 
             // mac_phi_crse(U1)=mac_phi_crse+alpha P
@@ -10487,7 +10552,18 @@ void NavierStokes::multiphase_project(int project_option) {
            residALL(project_option,MAC_RHS_CRSE_MF,CGRESID_MF,
             MAC_PHI_CRSE_MF,nsolve);
 
-          } else if ((pAp>=0.0)&&(pAp<=restart_tol)) {
+           Real PCG_error_n=0.0;
+           dot_productALL(project_option,CGRESID_MF,CGRESID_MF,
+             PCG_error_n,nsolve);
+           if (PCG_error_n>=0.0) {
+            PCG_error_n=sqrt(PCG_error_n);
+           } else
+            amrex::Error("PCG_error_n invalid");
+
+           Krylov_checkpoint(vcycle,PCG_error_n,best_error,
+             MAC_PHI_CRSE_MF,UMACSTAR_MF,restart_flag);
+
+          } else if (pAp==0.0) {
            meets_tol=1;
 
            // this case can happen due to round off error when
@@ -10498,7 +10574,7 @@ void NavierStokes::multiphase_project(int project_option) {
            std::cout << "pAp= " << pAp << endl;
            amrex::Error("pAp invalid in main solver");
           }
-         } else if ((rho0>=0.0)&&(rho0<=restart_tol)) {
+         } else if (rho0==0.0) {
           meets_tol=1;
 
           // this case can happen due to round off error when
@@ -10515,7 +10591,7 @@ void NavierStokes::multiphase_project(int project_option) {
         } else
          amrex::Error("rho1 invalid");
 
-       } else if (BICGSTAB_ACTIVE==1) { //MG PBICGSTAB
+       } else if (BICGSTAB_ACTIVE==1) { //MG PRECOND BICGSTAB
 
          // rho1=R0hat dot CGRESID(R0)
          //  =(b-A x0) dot (b-A xn) =
@@ -10540,16 +10616,16 @@ void NavierStokes::multiphase_project(int project_option) {
         } else
          amrex::Error("vcycle invalid");
 
-        if (rho0<=restart_tol) {
+        if (rho0<=0.0) {
          restart_flag=1;
-        } else if (rho0>restart_tol) {
+        } else if (rho0>0.0) {
          // do nothing
         } else
          amrex::Error("rho0 failed Nav3");
 
-        if (w0<=restart_tol) {
+        if (w0<=0.0) {
          restart_flag=1;
-        } else if (w0>restart_tol) {
+        } else if (w0>0.0) {
          // do nothing
         } else
          amrex::Error("w0 failed Nav3");
@@ -10619,9 +10695,9 @@ void NavierStokes::multiphase_project(int project_option) {
 	 //       R0hat dot A M^-1 (R0+beta(P-w0 V0))
          dot_productALL(project_option,bicg_R0hat_MF,bicg_V1_MF,alpha,nsolve);
 
-	 if (alpha<=restart_tol) {
+	 if (alpha<=0.0) {
 	  restart_flag=1;
-	 } else if (alpha>restart_tol) {
+	 } else if (alpha>0.0) {
    	  // do nothing
 	 } else
 	  amrex::Error("alpha failed Nav3");
@@ -10664,6 +10740,9 @@ void NavierStokes::multiphase_project(int project_option) {
            dnorm=sqrt(dnorm);
 	  } else
            amrex::Error("dnorm invalid Nav3");
+
+          Krylov_checkpoint(vcycle,dnorm,best_error,
+             MAC_PHI_CRSE_MF,UMACSTAR_MF,restart_flag);
 
 #if (profile_solver==1)
           bprof.stop();
@@ -10709,10 +10788,9 @@ void NavierStokes::multiphase_project(int project_option) {
 	   // a2 = T dot T = AZ dot AZ >=0.0 
            dot_productALL(project_option,bicg_T_MF,bicg_T_MF,a2,nsolve);
 
-	   if (a2>restart_tol) {
+	   if (a2>0.0) {
    	    // do nothing
-	   } else if ((a2>=0.0)&&(a2<=restart_tol)) {
-//	    restart_flag=1;
+	   } else if (a2==0.0) {
             meets_tol=1;
 	   } else {
 	    amrex::Error("a2 invalid Nav3");
@@ -10721,7 +10799,6 @@ void NavierStokes::multiphase_project(int project_option) {
 	   if (a1>0.0) {
 	    // do nothing
 	   } else if (a1<=0.0) {
-//	    restart_flag=1;
             meets_tol=1;
 	   } else
 	    amrex::Error("a1 invalid");
@@ -10784,6 +10861,9 @@ void NavierStokes::multiphase_project(int project_option) {
 	  } else
 	   amrex::Error("dnorm invalid Nav3");
 
+          Krylov_checkpoint(vcycle,dnorm,best_error,
+             MAC_PHI_CRSE_MF,UMACSTAR_MF,restart_flag);
+
           w0=w1;
           // CGRESID(R0)=R1
           copyALL(0,nsolve,0,0,CGRESID_MF,bicg_R1_MF);
@@ -10811,9 +10891,20 @@ void NavierStokes::multiphase_project(int project_option) {
 
        rho0=rho1;
 
+       multilevel_restart_count++;
+
+       if (multilevel_restart_count>=multilevel_restart_period) {
+        restart_flag=1;
+       } else if (multilevel_restart_count<multilevel_restart_period) {
+        // do nothing
+       } else
+        amrex::Error("multilevel_restart_count invalid");
+
        if (restart_flag==0) {
         // do nothing
        } else if (restart_flag==1) {
+
+        multilevel_restart_count=0;
 
 #if (profile_solver==1)
         bprof.start();
@@ -10821,7 +10912,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
 	if (verbose>0) {
          if (ParallelDescriptor::IOProcessor()) {
-          std::cout << "WARNING:RESTARTING: bicgstab vcycle " 
+          std::cout << "WARNING:RESTARTING: vcycle: " 
 	         << vcycle << '\n';
           std::cout << "RESTARTING: BICGSTAB_ACTIVE=" << 
            BICGSTAB_ACTIVE << '\n';
@@ -10840,6 +10931,11 @@ void NavierStokes::multiphase_project(int project_option) {
 	} else
 	 amrex::Error("verbose invalid");
 
+        copyALL(1,nsolve,0,0,bicg_U0_MF,RESTART_MAC_PHI_CRSE_MF);
+        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+         copyALL(0,nsolve,0,0,UMACSTAR_MF+dir,RESTART_UMACSTAR_MF+dir);
+        }
+
         // CGRESID(R0)=RHS-A U0
 	// 1. (start) calls project_right_hand_side(bicg_U0_MF)
 	// 2. (end)   calls project_right_hand_side(CGRESID_MF)
@@ -10852,7 +10948,12 @@ void NavierStokes::multiphase_project(int project_option) {
         rho0=1.0;
         rho1=1.0;
         alpha=1.0;
+        beta=0.0;
         w0=1.0;
+        w1=0.0;
+        a1=0.0;
+        a2=0.0;
+
 	// dnorm=RESID dot RESID
         dot_productALL(project_option,CGRESID_MF,CGRESID_MF,dnorm,nsolve);
 	if (dnorm>=0.0) {
@@ -11433,6 +11534,7 @@ void NavierStokes::multiphase_project(int project_option) {
  }
 
  delete_array(MAC_PHI_CRSE_MF);
+ delete_array(RESTART_MAC_PHI_CRSE_MF);
  delete_array(MAC_RHS_CRSE_MF);
 
  if (verbose>0)
