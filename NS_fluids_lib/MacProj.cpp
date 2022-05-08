@@ -2513,6 +2513,7 @@ void NavierStokes::mac_project_rhs(int project_option,
 
 }  // mac_project_rhs
 
+// called from: NavierStokes::updatevelALL
 // GRADPEDGE=-dt W grad p
 // UMAC=UMAC+GRADPEDGE
 // pnew+=mac_phi_crse
@@ -2573,7 +2574,7 @@ void NavierStokes::mac_update(MultiFab* mac_phi_crse,int project_option,
 } // subroutine mac_update
 
 // adjust tolerance if too stringent.
-void NavierStokes::adjust_tolerance(Real& error0,Real& error0_max,
+void NavierStokes::adjust_tolerance(Real error0,Real& error0_max,
   int project_option) {
 
  if (project_option_is_valid(project_option)==1) {
