@@ -959,6 +959,65 @@ ABecLaplacian::ABecLaplacian (
  BLProfiler bprof(profname);
 #endif
 
+ ParmParse ppcg("cg");
+
+ ppcg.query("mglib_blocking_factor", mglib_blocking_factor);
+ if (mglib_blocking_factor>=2) {
+  // do nothing
+ } else
+  amrex::Error("expecting cg.mglib_blocking_factor>=2");
+
+ ppcg.query("maxiter", CG_def_maxiter);
+ ppcg.query("restart_period", CG_def_restart_period);
+ ppcg.query("v", CG_def_verbose);
+ ppcg.query("verbose", CG_def_verbose);
+
+ CG_maxiter = CG_def_maxiter;
+ CG_restart_period = CG_def_restart_period;
+ CG_verbose = CG_def_verbose;
+
+ if (ParallelDescriptor::IOProcessor()) {
+  if ((CG_verbose>=1)||
+      (CG_MG_defaults_reported==0)) {
+   std::cout << "CGSolver settings...\n";
+   std::cout << "CG_maxiter   = " << CG_maxiter << '\n';
+   std::cout << "CG_restart_period = "<<CG_restart_period<<'\n';
+  } else if ((CG_verbose==0)&&
+   	     (CG_MG_defaults_reported==1)) {
+   // do nothing
+  } else
+   amrex::Error("CG config vars bad");
+ }
+    
+ ParmParse ppmg("mg");
+
+ ppmg.query("nu_0", MG_def_nu_0);
+ ppmg.query("nu_f", MG_def_nu_f);
+ ppmg.query("v", MG_def_verbose);
+ ppmg.query("verbose", MG_def_verbose);
+ ppmg.query("nu_b", MG_def_nu_b);
+
+ MG_nu_0     = MG_def_nu_0;
+ MG_nu_f     = MG_def_nu_f;
+ MG_verbose  = MG_def_verbose;
+ MG_nu_b     = MG_def_nu_b;
+
+ if (ParallelDescriptor::IOProcessor()) {
+  if ((MG_verbose>=1)||
+      (CG_MG_defaults_reported==0)) {
+   std::cout << "MultiGrid settings...\n";
+   std::cout << " nu_0 = " << MG_nu_0 << '\n';
+   std::cout << " nu_f = " << MG_nu_f << '\n';
+   std::cout << " nu_b = " << MG_nu_b << '\n';
+  } else if ((MG_def_verbose==0)&&
+   	     (CG_MG_defaults_reported==1)) {
+   // do nothing
+  } else
+   amrex::Error("MG config vars bad");
+ }
+
+ CG_MG_defaults_reported=1;
+
  CG_use_mg_precond_at_top=_use_mg_precond_at_top;
 
  if (CG_use_mg_precond_at_top==0) {
@@ -992,10 +1051,6 @@ ABecLaplacian::ABecLaplacian (
  cfd_max_grid_size.resize(ns_max_grid_size.size());
  for (int ilev=0;ilev<ns_max_grid_size.size();ilev++)
   cfd_max_grid_size[ilev]=ns_max_grid_size[ilev];
-
- CG_maxiter = CG_def_maxiter;
- CG_restart_period = CG_def_restart_period;
- CG_verbose = CG_def_verbose;
 
  CG_error_history.resize(CG_maxiter);
  for (int ehist=0;ehist<CG_error_history.size();ehist++) {
@@ -1214,46 +1269,6 @@ ABecLaplacian::ABecLaplacian (
  } // coarsefine=0..CG_numlevels_var-1
 
 
- ParmParse ppcg("cg");
-
- ppcg.query("mglib_blocking_factor", mglib_blocking_factor);
- if (mglib_blocking_factor>=2) {
-  // do nothing
- } else
-  amrex::Error("expecting cg.mglib_blocking_factor>=2");
-
- ppcg.query("maxiter", CG_def_maxiter);
- ppcg.query("restart_period", CG_def_restart_period);
- ppcg.query("v", CG_def_verbose);
- ppcg.query("verbose", CG_def_verbose);
-
- if (ParallelDescriptor::IOProcessor() && CG_def_verbose) {
-  std::cout << "CGSolver settings...\n";
-  std::cout << "   CG_def_maxiter   = " << CG_def_maxiter << '\n';
-  std::cout << "   CG_def_restart_period = " << CG_def_restart_period << '\n';
- }
-    
- ParmParse ppmg("mg");
- ParmParse ppLp("Lp");
-
- ppmg.query("nu_0", MG_def_nu_0);
- ppmg.query("nu_f", MG_def_nu_f);
- ppmg.query("v", MG_def_verbose);
- ppmg.query("verbose", MG_def_verbose);
- ppmg.query("nu_b", MG_def_nu_b);
-
- if ((ParallelDescriptor::IOProcessor())&&(MG_def_verbose)) {
-  std::cout << "MultiGrid settings...\n";
-  std::cout << "   def_nu_0 =         " << MG_def_nu_0         << '\n';
-  std::cout << "   def_nu_f =         " << MG_def_nu_f         << '\n';
-  std::cout << "   def_nu_b =         " << MG_def_nu_b         << '\n';
- }
-
- MG_nu_0         = MG_def_nu_0;
- MG_nu_f         = MG_def_nu_f;
- MG_verbose      = MG_def_verbose;
- MG_nu_b         = MG_def_nu_b;
-
  if ((ParallelDescriptor::IOProcessor())&&(MG_verbose > 2)) {
   std::cout << "MultiGrid: " << MG_numlevels_var
     << " multigrid levels created for this solve" << '\n';
@@ -1271,7 +1286,6 @@ ABecLaplacian::ABecLaplacian (
    std::cout << '\n';
   }
  }
-
 
 #if (profile_solver==1)
  bprof.stop();
