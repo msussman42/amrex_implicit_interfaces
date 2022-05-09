@@ -258,6 +258,8 @@ endif
 if (probtype.eq.55) then
  if (vel.eq.0.0d0) then
   ! do nothing
+ else if (abs(vel).le.1.0D+20) then
+  ! do nothing
  else
   print *,"GENERAL_PHASE_CHANGE_check_vel_rigid: vel not expected"
   print *,"x,y,z ",x(1),x(2),x(SDIM)
