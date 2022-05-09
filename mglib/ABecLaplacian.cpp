@@ -982,6 +982,7 @@ ABecLaplacian::ABecLaplacian (
    std::cout << "CGSolver settings...\n";
    std::cout << "CG_maxiter   = " << CG_maxiter << '\n';
    std::cout << "CG_restart_period = "<<CG_restart_period<<'\n';
+   std::cout << "CG_verbose = "<<CG_verbose<<'\n';
   } else if ((CG_verbose==0)&&
    	     (CG_MG_defaults_reported==1)) {
    // do nothing
@@ -997,10 +998,10 @@ ABecLaplacian::ABecLaplacian (
  ppmg.query("verbose", MG_def_verbose);
  ppmg.query("nu_b", MG_def_nu_b);
 
- MG_nu_0     = MG_def_nu_0;
- MG_nu_f     = MG_def_nu_f;
- MG_verbose  = MG_def_verbose;
- MG_nu_b     = MG_def_nu_b;
+ MG_nu_0    = MG_def_nu_0;
+ MG_nu_f    = MG_def_nu_f;
+ MG_verbose = MG_def_verbose;
+ MG_nu_b    = MG_def_nu_b;
 
  if (ParallelDescriptor::IOProcessor()) {
   if ((MG_verbose>=1)||
@@ -1009,7 +1010,8 @@ ABecLaplacian::ABecLaplacian (
    std::cout << " nu_0 = " << MG_nu_0 << '\n';
    std::cout << " nu_f = " << MG_nu_f << '\n';
    std::cout << " nu_b = " << MG_nu_b << '\n';
-  } else if ((MG_def_verbose==0)&&
+   std::cout << " MG_verbose = "<<MG_verbose<<'\n';
+  } else if ((MG_verbose==0)&&
    	     (CG_MG_defaults_reported==1)) {
    // do nothing
   } else
@@ -1743,6 +1745,9 @@ ABecLaplacian::Fapply (MultiFab& y,
 
 } // end subroutine Fapply
 
+//
+// compute sol=y+alpha p  
+//
 void
 ABecLaplacian::LP_update (MultiFab& sol,
    Real alpha,MultiFab& y,
@@ -1763,9 +1768,9 @@ ABecLaplacian::LP_update (MultiFab& sol,
  BLProfiler bprof(profname);
 #endif
 
-    //
-    // compute sol=y+alpha p  
-    //
+  //
+  // compute sol=y+alpha p  
+  //
  bool use_tiling=cfd_tiling;
 
  if (level>=MG_numlevels_var)
@@ -2388,7 +2393,9 @@ ABecLaplacian::CG_check_for_convergence(
   Real rnorm,
   Real rnorm_init,
   Real eps_abs,
-  Real relative_error,int nit,int& error_close_to_zero,
+  Real relative_error,
+  int nit,
+  int& error_close_to_zero,
   int level) {
 
  if ((coarsefine==0)||
@@ -2416,10 +2423,6 @@ ABecLaplacian::CG_check_for_convergence(
 
   error_close_to_zero=((rnorm<=critical_abs_tol)||
                        (rnorm<=critical_rel_tol*rnorm_init));
-
-  if ((error_close_to_zero==0)&&
-      (base_check==1))
-   error_close_to_zero=2;
 
  } else
   amrex::Error("nit invalid");
@@ -2475,6 +2478,61 @@ ABecLaplacian::CG_dump_params(
  }
 
 } // end subroutine CG_dump_params
+
+void ABecLaplacian::Bottom_Krylov_checkpoint(
+  int vcycle,
+  Real krylov_error,
+  Real& best_error,
+  MultiFab& sol,
+  MultiFab& restart_sol,
+  int& restart_flag) {
+
+ Real breakdown_factor=1000.0;
+
+ int update_best=0;
+ if (vcycle==0) {
+  update_best=1;
+  best_error=krylov_error;
+  if (krylov_error>=0.0) {
+   // do nothing
+  } else
+   amrex::Error("krylov_error invalid");
+ } else if (vcycle>0) {
+  if ((krylov_error>=0.0)&&
+      (krylov_error<best_error)) {
+   update_best=1;
+   best_error=krylov_error;
+  } else if ((krylov_error>=best_error)&&
+             (krylov_error<=breakdown_factor*best_error)) {
+   // do nothing
+  } else if (krylov_error>=breakdown_factor*best_error) {
+   restart_flag=1;
+  } else if (krylov_error<0.0) {
+   amrex::Error("krylov_error must be positive");
+  } else {
+   restart_flag=1; // krylov_error=NaN
+  }
+ } else
+  amrex::Error("vcycle invalid");
+ 
+ int nsolve=sol.nComp();
+ if (nsolve==nsolve_ABec) {
+  if ((sol.nComp()==restart_sol.nComp())&&
+      (sol.boxArray()==restart_sol.boxArray())&&
+      (sol.nGrow()==restart_sol.nGrow())) {
+
+   if (update_best==1) {
+    MultiFab::Copy(restart_sol,sol,0,0,nsolve,sol.nGrow());
+   } else if (update_best==0) {
+    // do nothing
+   } else
+    amrex::Error("update_best invalid");
+  } else
+   amrex::Error("sol and restart_sol mismatch");
+ } else
+  amrex::Error("nsolve invalid");
+    
+} // end subroutine ABecLaplacian::Bottom_Krylov_checkpoint
 
 void
 ABecLaplacian::CG_solve(
@@ -2555,6 +2613,9 @@ ABecLaplacian::CG_solve(
  if (ncomp!=nsolve_ABec)
   amrex::Error("ncomp invalid");
 
+ MultiFab restart_sol(sol.boxArray(),sol.DistributionMap(),
+    sol.nComp(),sol.nGrow());
+
  CG_pbdryhom[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostSOLN);
 
 #if (profile_solver==1)
@@ -2568,7 +2629,7 @@ ABecLaplacian::CG_solve(
  MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
    rhs,0,0,nsolve_ABec,nghostRHS);
 
- if ((CG_verbose>0)||(nsverbose>0)||(1==0))
+ if ((CG_verbose>0)||(nsverbose>0))
   if (ParallelDescriptor::IOProcessor())
    std::cout << "CGSolver: is_bottom= " << is_bottom << '\n';
 
@@ -2579,7 +2640,7 @@ ABecLaplacian::CG_solve(
  project_null_space((*CG_r[coarsefine]),level);
 
   // put solution and residual in residual correction form
- CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_ABec,1);
+ CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostSOLN);
  MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
    *CG_r[coarsefine],0,0,nsolve_ABec,nghostRHS);
 
@@ -2635,7 +2696,6 @@ ABecLaplacian::CG_solve(
  CG_p_search[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostRHS); 
  CG_v_search[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostRHS); 
 
- Real restart_tol=0.0;
  int restart_flag=0;
 
  int local_presmooth=presmooth;
@@ -2648,8 +2708,10 @@ ABecLaplacian::CG_solve(
    local_presmooth,local_postsmooth,
    rnorm,
    rnorm_init,
-   eps_abs,relative_error,nit,
-   error_close_to_zero,level);
+   eps_abs,relative_error,
+   nit,
+   error_close_to_zero,
+   level);
 
  if (ParallelDescriptor::IOProcessor()) {
   if (CG_verbose>1) {
@@ -2674,7 +2736,12 @@ ABecLaplacian::CG_solve(
   }
  }
 
- for(nit = 0;((nit < CG_maxiter)&&(error_close_to_zero!=1)); ++nit) {
+ Real best_error=0.0;
+ int Bottom_restart_count=0;
+
+  //CG_r=CG_rhs_resid_cor_form
+  //CG_delta_sol=0.0
+ for(nit = 0;((nit < CG_maxiter)&&(error_close_to_zero==0)); ++nit) {
 
   restart_flag=0;
 
@@ -2703,11 +2770,15 @@ ABecLaplacian::CG_solve(
    local_presmooth,local_postsmooth,
    rnorm,
    rnorm_init,
-   eps_abs,relative_error,nit,
-   error_close_to_zero,level);
+   eps_abs,relative_error,
+   nit,
+   error_close_to_zero,
+   level);
 
-  if ((error_close_to_zero==0)||  // tolerances not met.
-      (error_close_to_zero==2)) { // normal tolerance met, nit<nit_min
+  if (error_close_to_zero==0) {
+
+   Bottom_Krylov_checkpoint(nit,rnorm,best_error,sol,
+	restart_sol,restart_flag);
 
     // "meets_tol" informs the main solver in NavierStokes3.cpp 
     // whether it needs to continue.
@@ -2738,78 +2809,70 @@ ABecLaplacian::CG_solve(
    LP_dot(*CG_z[coarsefine],*CG_r[coarsefine],level,rho); 
 
    if (rho>=0.0) {
-     if (rho_old>restart_tol) {
-      beta=rho/rho_old;
-       // CG_p_search=0 initially or on restart.
-       // p=z + beta p
-      CG_advance( (*CG_p_search[coarsefine]),beta,(*CG_z[coarsefine]),
-               (*CG_p_search[coarsefine]),level );
-      project_null_space((*CG_p_search[coarsefine]),level);
+    if (rho_old>0.0) {
+     beta=rho/rho_old;
+      // CG_p_search=0 initially or on restart.
+      // p=z + beta p
+     CG_advance( (*CG_p_search[coarsefine]),beta,(*CG_z[coarsefine]),
+              (*CG_p_search[coarsefine]),level );
+     project_null_space((*CG_p_search[coarsefine]),level);
 
-       // Av_search=A*p
+      // Av_search=A*p
+     if ((CG_p_search_SOLN[coarsefine]->nGrow()==nghostSOLN)&&
+         (CG_p_search[coarsefine]->nGrow()==nghostRHS)) {
       MultiFab::Copy(*CG_p_search_SOLN[coarsefine],
-       *CG_p_search[coarsefine],0,0,nsolve_ABec,0);
+       *CG_p_search[coarsefine],0,0,nsolve_ABec,nghostRHS);
+     } else
+      amrex::Error("CG_p_search or CG_p_search_SOLN invalid nGrow()");
 
-      apply(*CG_Av_search[coarsefine],
-	    *CG_p_search_SOLN[coarsefine],level,
-            *CG_pbdryhom[coarsefine],bcpres_array);
-      project_null_space((*CG_Av_search[coarsefine]),level);
+     apply(*CG_Av_search[coarsefine],
+           *CG_p_search_SOLN[coarsefine],level,
+           *CG_pbdryhom[coarsefine],bcpres_array);
+     project_null_space((*CG_Av_search[coarsefine]),level);
 
-      Real pAp=0.0;
-      LP_dot(*CG_p_search[coarsefine],*CG_Av_search[coarsefine],level,pAp);
+     Real pAp=0.0;
+     LP_dot(*CG_p_search[coarsefine],*CG_Av_search[coarsefine],level,pAp);
 
-      if (pAp>=0.0) {
+     if (pAp>=0.0) {
 
-       if (pAp>restart_tol) {
-        alpha=rho/pAp;
-         // x=x+alpha p
-        LP_update( (*CG_delta_sol[coarsefine]), alpha, 
-                   (*CG_delta_sol[coarsefine]),
-        	   (*CG_p_search_SOLN[coarsefine]),level );
-        project_null_space((*CG_delta_sol[coarsefine]),level);
+      if (pAp>0.0) {
+       alpha=rho/pAp;
+        // before: CG_delta_sol=0.0
+        // after: CG_delta_sol has increment.
+        // x=x+alpha p
+       LP_update( (*CG_delta_sol[coarsefine]), alpha, 
+                  (*CG_delta_sol[coarsefine]),
+       	   (*CG_p_search_SOLN[coarsefine]),level );
+       project_null_space((*CG_delta_sol[coarsefine]),level);
 
-        residual(
-         (*CG_r[coarsefine]),
-         (*CG_rhs_resid_cor_form[coarsefine]),
-         (*CG_delta_sol[coarsefine]),
-    	 level,
-         *CG_pbdryhom[coarsefine],
-	 bcpres_array); 
-        project_null_space((*CG_r[coarsefine]),level);
-       } else if ((pAp>=0.0)&&(pAp<=restart_tol)) {
-        restart_flag=1;
-       } else if (pAp<0.0) {
-        restart_flag=1;
-       } else {
-        std::cout << "pAp (1)= " << pAp << endl;
-        std::cout << "laplacian_solvability (all BCs masked off?)= " << 
-          laplacian_solvability << '\n';
-        std::cout << "cfd_level= " << cfd_level << '\n';
-        std::cout << "cfd_project_option= " << cfd_project_option << '\n';
-        std::cout << "cfd_mglib_min_coeff_factor= " << 
-		cfd_mglib_min_coeff_factor << '\n';
-        std::cout << "level (mglib)= " << level << endl;
-        std::cout << "mglib_blocking_factor= " << 
-          mglib_blocking_factor << endl;
-        std::cout << "smooth_type= " << smooth_type << endl;
-        std::cout << "bottom_smooth_type= " << bottom_smooth_type << endl;
-        std::cout << "local_presmooth= " << local_presmooth << endl;
-        std::cout << "local_postsmooth= " << local_postsmooth << endl;
-        std::cout << "use_PCG= " << use_PCG << endl;
-        std::cout << "rnorm= " << rnorm << endl;
-        std::cout << "rnorm_init= " << rnorm_init << endl;
-        std::cout << "nit= " << nit << endl;
-        std::cout << "LPboxArray(level)=" << LPboxArray(level) << endl;
-        amrex::Error("pAp invalid in bottom solver (1) ");
-       }
+       residual(
+        (*CG_r[coarsefine]),
+        (*CG_rhs_resid_cor_form[coarsefine]),
+        (*CG_delta_sol[coarsefine]),
+        level,
+        *CG_pbdryhom[coarsefine],
+        bcpres_array); 
+       project_null_space((*CG_r[coarsefine]),level);
+
+       sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_ABec,
+       		nghostRHS,nghostRHS);
+       project_null_space(sol,level);
+       CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostSOLN);
+       MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
+         *CG_r[coarsefine],0,0,nsolve_ABec,nghostRHS);
+
+      } else if (pAp==0.0) {
+       restart_flag=1;
+      } else if (pAp<0.0) {
+       restart_flag=1;
       } else {
-       std::cout << "pAp (2) = " << pAp << endl;
+       std::cout << "pAp (1)= " << pAp << endl;
        std::cout << "laplacian_solvability (all BCs masked off?)= " << 
          laplacian_solvability << '\n';
        std::cout << "cfd_level= " << cfd_level << '\n';
        std::cout << "cfd_project_option= " << cfd_project_option << '\n';
        std::cout << "cfd_mglib_min_coeff_factor= " << 
-	       cfd_mglib_min_coeff_factor << '\n';
+       	cfd_mglib_min_coeff_factor << '\n';
        std::cout << "level (mglib)= " << level << endl;
        std::cout << "mglib_blocking_factor= " << 
          mglib_blocking_factor << endl;
@@ -2822,14 +2885,37 @@ ABecLaplacian::CG_solve(
        std::cout << "rnorm_init= " << rnorm_init << endl;
        std::cout << "nit= " << nit << endl;
        std::cout << "LPboxArray(level)=" << LPboxArray(level) << endl;
-       amrex::Error("pAp invalid in bottom solver (2) ");
+       amrex::Error("pAp invalid in bottom solver (1) ");
       }
-     } else if ((rho_old>=0.0)&&(rho_old<=restart_tol)) {
-      restart_flag=1;
-     } else if (rho_old<0.0) {
-      restart_flag=1;
+     } else if (pAp<0.0) {
+      std::cout << "pAp (2) = " << pAp << endl;
+      std::cout << "laplacian_solvability (all BCs masked off?)= " << 
+        laplacian_solvability << '\n';
+      std::cout << "cfd_level= " << cfd_level << '\n';
+      std::cout << "cfd_project_option= " << cfd_project_option << '\n';
+      std::cout << "cfd_mglib_min_coeff_factor= " << 
+              cfd_mglib_min_coeff_factor << '\n';
+      std::cout << "level (mglib)= " << level << endl;
+      std::cout << "mglib_blocking_factor= " << 
+        mglib_blocking_factor << endl;
+      std::cout << "smooth_type= " << smooth_type << endl;
+      std::cout << "bottom_smooth_type= " << bottom_smooth_type << endl;
+      std::cout << "local_presmooth= " << local_presmooth << endl;
+      std::cout << "local_postsmooth= " << local_postsmooth << endl;
+      std::cout << "use_PCG= " << use_PCG << endl;
+      std::cout << "rnorm= " << rnorm << endl;
+      std::cout << "rnorm_init= " << rnorm_init << endl;
+      std::cout << "nit= " << nit << endl;
+      std::cout << "LPboxArray(level)=" << LPboxArray(level) << endl;
+      amrex::Error("pAp invalid in bottom solver (2) ");
      } else
-      amrex::Error("rho_old invalid");
+      amrex::Error("pAp is NaN");
+    } else if (rho_old==0.0) {
+     restart_flag=1;
+    } else if (rho_old<0.0) {
+     restart_flag=1;
+    } else
+     amrex::Error("rho_old invalid");
    } else if (rho<0.0) {
      restart_flag=1;
    } else {
@@ -2837,7 +2923,18 @@ ABecLaplacian::CG_solve(
      amrex::Error("rho invalid mglib, cg");
    }
 
+   Bottom_restart_count++;
+
+   if (Bottom_restart_count>=CG_restart_period) {
+    restart_flag=1;
+   } else if (Bottom_restart_count<CG_restart_period) {
+    // do nothing
+   } else
+    amrex::Error("Bottom_restart_count invalid");
+
    if (restart_flag==1) {
+
+    Bottom_restart_count=0;
 
     if ((CG_verbose>0)||(nsverbose>0)) {
      if (ParallelDescriptor::IOProcessor()) {
@@ -2858,8 +2955,7 @@ ABecLaplacian::CG_solve(
     } else
      amrex::Error("CG_verbose or nsverbose invalid");
 
-    if ((error_close_to_zero==0)||  // tolerances not met.
-        (error_close_to_zero==2)) { // normal tolerance met, nit<nit_min
+    if (error_close_to_zero==0) {
      beta=0.0;
      rho=1.0;
      rho_old=1.0;
@@ -2868,11 +2964,13 @@ ABecLaplacian::CG_solve(
      CG_p_search[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostRHS); 
      CG_p_search_SOLN[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostSOLN); 
      CG_v_search[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostRHS); 
-     sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_ABec,0,0);
-     project_null_space(sol,level);
-     CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_ABec,1);
+
+     MultiFab::Copy(sol,restart_sol,0,0,nsolve_ABec,sol.nGrow());
+     residual((*CG_r[coarsefine]),rhs,sol,level,pbdry,bcpres_array);
+     project_null_space(*CG_r[coarsefine],level);
      MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
-       *CG_r[coarsefine],0,0,nsolve_ABec,0);
+       *CG_r[coarsefine],0,0,nsolve_ABec,nghostRHS);
+
     } else if (error_close_to_zero==1) {
      amrex::Error("cannot have both restart_flag and error_close_to_zero==1");
     } else
@@ -2880,19 +2978,12 @@ ABecLaplacian::CG_solve(
 
    } else if (restart_flag==0) {
 
-    if ((error_close_to_zero==0)||  // tolerances not met.
-        (error_close_to_zero==2)) { // normal tolerance met, nit<nit_min
+    if (error_close_to_zero==0) {
      // do nothing
     } else if (error_close_to_zero==1) {
      // do nothing
     } else
      amrex::Error("error_close_to_zero invalid");
-
-    sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_ABec,0,0);
-    project_null_space(sol,level);
-    CG_delta_sol[coarsefine]->setVal(0.0,0,nsolve_ABec,1);
-    MultiFab::Copy(*CG_rhs_resid_cor_form[coarsefine],
-      *CG_r[coarsefine],0,0,nsolve_ABec,0);
 
    } else 
     amrex::Error("restart_flag invalid");
@@ -2917,12 +3008,7 @@ ABecLaplacian::CG_solve(
   } else
    amrex::Error("restart_flag invalid");
 
- }  // end of CGSolver loop
-
-  // sol=sol+CG_delta_sol
-  // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost
- sol.ParallelAdd(*CG_delta_sol[coarsefine],0,0,nsolve_ABec,0,0);
- project_null_space(sol,level);
+ }  // for(nit = 0;((nit < CG_maxiter)&&(error_close_to_zero==0)); ++nit) 
 
  cg_cycles_out=nit;
 
@@ -2942,8 +3028,7 @@ ABecLaplacian::CG_solve(
   }
  }
 
- if ((error_close_to_zero==0)||  // tolerances not met.
-     (error_close_to_zero==2)) { // normal tolerance met, nit<nit_min
+ if (error_close_to_zero==0) {
 
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "Warning: ABecLaplacian:: failed to converge! \n";
