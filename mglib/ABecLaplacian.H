@@ -141,9 +141,10 @@ protected:
       Real relative_error,int nit,int& error_close_to_zero,
       int level);
 
+    static int CG_MG_defaults_reported;
+
     static int CG_def_maxiter;
     static int CG_def_restart_period;
-    static double CG_def_unstable_criterion;
     static int CG_def_verbose;
 
     //
@@ -193,13 +194,13 @@ protected:
     static int MG_def_nu_f;
     static int MG_def_nu_b;
     static int MG_def_verbose;
-    static int MG_def_maxiter_b;
+
     int MG_verbose;
     int MG_numlevels_var;
     int CG_numlevels_var;
-    int MG_nu_0, MG_nu_f;
+    int MG_nu_0;
+    int MG_nu_f;
     int MG_nu_b;
-    int MG_maxiter_b;
 
     MultiFab* MG_initialsolution;
     Vector< MultiFab* > MG_res;
