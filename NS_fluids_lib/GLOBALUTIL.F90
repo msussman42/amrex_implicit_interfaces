@@ -1419,7 +1419,6 @@ contains
       REAL_T :: thermal_conductivity
       REAL_T :: thermal_diffusivity
       REAL_T :: gravity_local
-      REAL_T :: expansion_coefficient
       REAL_T :: Cp
       REAL_T :: u_abs
 
@@ -1463,7 +1462,6 @@ contains
 
       thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
       gravity_local=abs(gravity)
-      expansion_coefficient=fort_DrhoDT(im_fluid) ! units: 1/temperature
 
       if (mu_w.eq.viscosity_molecular) then
        ! do nothing

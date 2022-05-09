@@ -4305,9 +4305,9 @@ stop
            stop
           endif
 
-          density_of_TZ=rho_base+ &
-            rho_base*DrhoDT(im_parm)* &
-            (temperature-fort_tempconst(im_parm))
+          call SUB_UNITLESS_EXPANSION_FACTOR( &
+            im_parm,temperature,fort_tempconst(im_parm),density_of_TZ)
+          density_of_TZ=rho_base*(one+density_of_TZ)
 
           if ((temperature.ge.zero).and. &
               (fort_tempconst(im_parm).ge.zero).and. &
@@ -4336,11 +4336,11 @@ stop
            print *,"fort_tempcutoffmax(im_parm)=",fort_tempcutoffmax(im_parm)
           
            temperature=fort_tempcutoffmax(im_parm)
-  
-           density_of_TZ=rho_base+ &
-            rho_base*DrhoDT(im_parm)* &
-            (temperature-fort_tempconst(im_parm))
 
+           call SUB_UNITLESS_EXPANSION_FACTOR( &
+             im_parm,temperature,fort_tempconst(im_parm),density_of_TZ)
+           density_of_TZ=rho_base*(one+density_of_TZ)
+  
            if (density_of_TZ.gt.zero) then
             ! do nothing
            else

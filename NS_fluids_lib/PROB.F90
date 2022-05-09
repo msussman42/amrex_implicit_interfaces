@@ -2725,7 +2725,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"twall invalid"
         stop
        endif
-       denjump_temp=abs(fort_DrhoDT(1)*(twall-fort_tempconst(1)))
+       call SUB_UNITLESS_EXPANSION_FACTOR(1,twall, &
+          fort_tempconst(1),denjump_temp)
+       denjump_temp=abs(denjump_temp)
        if (denjump_temp.gt.denjump) then
         denjump=denjump_temp
        endif

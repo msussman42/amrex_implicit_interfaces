@@ -12132,6 +12132,7 @@ void NavierStokes::veldiffuseALL() {
   } else if (override_density[im]==1) { // rho=rho(T,Y)
    // check nothing
    
+   //DrhoDT has units of 1/(Degrees Kelvin)
    // Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
   } else if (override_density[im]==2) { 
    // check nothing

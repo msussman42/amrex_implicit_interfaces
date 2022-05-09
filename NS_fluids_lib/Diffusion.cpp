@@ -20,7 +20,9 @@
 #include <cmath>
 
 namespace amrex{
-	
+
+//update_state==1: unp1=unp1/(one+beta f_hoop)
+//update_state==0: unp1=unp1-beta f_hoop	
 void NavierStokes::diffuse_hoopALL(int idx_vel,int idx_thermal,
  int idx_force,int update_state) {
 
@@ -101,6 +103,8 @@ void NavierStokes::diffuse_hoopALL(int idx_vel,int idx_thermal,
    FACETENSOR_MF,
    simple_AMR_BC_flag_viscosity);
 
+//update_state==1: unp1=unp1/(one+beta f_hoop)
+//update_state==0: unp1=unp1-beta f_hoop	
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.diffuse_hoop(idx_vel,idx_thermal,idx_force,update_state);
@@ -111,8 +115,10 @@ void NavierStokes::diffuse_hoopALL(int idx_vel,int idx_thermal,
 
 } // subroutine diffuse_hoopALL
 
-// 1. compute explicit terms: u^* = u^n + dt F1(u^n)
-// 2. compute implicit terms: u^** = u^* + dt F2(u^**)
+//update_state==1: unp1=unp1/(one+beta f_hoop)
+//update_state==0: unp1=unp1-beta f_hoop	
+//update_state==0: compute explicit terms: u^* = u^n + dt F1(u^n)
+//update_state==1: compute implicit terms: u^** = u^* + dt F2(u^**)
 void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  int idx_force,int update_state) {
  

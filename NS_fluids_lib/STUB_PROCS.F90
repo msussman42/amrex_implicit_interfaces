@@ -276,6 +276,42 @@ stop
 return 
 end subroutine STUB_VEL
 
+subroutine STUB_UNITLESS_EXPANSION_FACTOR( &
+  im,temperature,temperature_base,expansion_factor)
+ use probcommon_module
+ use global_utility_module
+ IMPLICIT NONE
+
+ INTEGER_T, intent(in) :: im
+ REAL_T, intent(in) :: temperature
+ REAL_T, intent(in) :: temperature_base
+ REAL_T, intent(out) :: expansion_factor
+
+ if ((im.ge.1).and.(im.le.num_materials)) then
+  if (temperature.gt.zero) then
+   if (fort_DrhoDT(im).le.zero) then
+    if (temperature_base.gt.zero) then
+     expansion_factor=fort_DrhoDT(im)*(temperature-temperature_base)
+    else
+     print *,"temperature_base must be positive"
+     stop
+    endif
+   else
+    print *,"fort_DrhoDT must be nonpositive"
+    stop
+   endif
+  else
+   print *,"temperature must be positive"
+   stop
+  endif
+
+ else
+  print *,"im invalid"
+  stop
+ endif
+
+ return
+end subroutine STUB_UNITLESS_EXPANSION_FACTOR
 
 subroutine EOS_STUB(rho,massfrac_var, &
   internal_energy,pressure, &

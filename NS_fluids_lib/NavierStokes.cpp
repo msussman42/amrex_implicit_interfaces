@@ -949,6 +949,9 @@ Vector<Real> NavierStokes::stiffGAMMA; // def=1.4
 int NavierStokes::uncoupled_viscosity=0;
 
 Real NavierStokes::angular_velocity=0.0;
+
+//Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
+//DrhoDT has units of 1/(Degrees Kelvin)
 Vector<Real> NavierStokes::DrhoDT;  // def=0.0
 
 // 1=>rho=rho(T,Y,z)
@@ -1666,6 +1669,8 @@ void fortran_parameters() {
  Vector<Real> stiffCVtemp(nmat);
  Vector<Real> stiffGAMMAtemp(nmat);
 
+ //Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
+ //DrhoDT has units of 1/(Degrees Kelvin)
  Vector<Real> DrhoDTtemp(nmat);
  Vector<Real> tempcutofftemp(nmat);
  Vector<Real> tempcutoffmaxtemp(nmat);
@@ -1760,6 +1765,8 @@ void fortran_parameters() {
   initial_temperature_temp[im]=tempconst_temp[im];
  pp.queryarr("initial_temperature",initial_temperature_temp,0,nmat);
 
+  //Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
+  //DrhoDT has units of 1/(Degrees Kelvin)
  pp.queryarr("DrhoDT",DrhoDTtemp,0,nmat);
 
  pp.queryarr("stiffPINF",stiffPINFtemp,0,nmat);
@@ -3685,7 +3692,10 @@ NavierStokes::read_params ()
 
     pp.query("uncoupled_viscosity",uncoupled_viscosity);
 
+     //Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
+     //DrhoDT has units of 1/(Degrees Kelvin)
     pp.queryarr("DrhoDT",DrhoDT,0,nmat);
+
     pp.queryarr("override_density",override_density,0,nmat);
 
     pp.getarr("vorterr",vorterr,0,nmat);
@@ -4108,8 +4118,8 @@ NavierStokes::read_params ()
     for (int im=0;im<nmat;im++) {
 
      if ((override_density[im]!=0)&&
-         (override_density[im]!=1)&&
-         (override_density[im]!=2)) {
+         (override_density[im]!=1)&& //rho=rho(T,Y,z)
+         (override_density[im]!=2)) {//Boussinesq approximation
       std::cout << "nmat= " << nmat << '\n';
       std::cout << "im=" << im << " override_density[im]= " <<
 	     override_density[im] << '\n';
@@ -4863,8 +4873,8 @@ NavierStokes::read_params ()
       // check nothing
      } else if ((im>=1)&&(im<=nmat)) {
       if (material_type[im-1]==0) {
-       if ((override_density[im-1]==1)||
-           (override_density[im-1]==2)) {
+       if ((override_density[im-1]==1)|| //rho=rho(T,Y,z)
+           (override_density[im-1]==2)) {//Boussinesq approximation
         // do nothing
        } else if (override_density[im-1]==0) {
 	// do nothing
@@ -12605,8 +12615,8 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
    amrex::Error("DrhoDT[im] invalid");
 
   if ((override_density[im]==0)||
-      (override_density[im]==1)||
-      (override_density[im]==2)) {
+      (override_density[im]==1)|| //rho=rho(T,Y,z)
+      (override_density[im]==2)) {//Boussinesq approximation
    // do nothing
   } else 
    amrex::Error("override_density[im] invalid");
