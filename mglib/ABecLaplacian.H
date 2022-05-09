@@ -125,6 +125,14 @@ public:
 
 protected:
 
+   void Bottom_Krylov_checkpoint(
+     int vcycle,
+     Real krylov_error,
+     Real& best_error,
+     MultiFab& sol,
+     MultiFab& restart_sol,
+     int& restart_flag);
+
     void CG_advance (
        MultiFab& p,
        Real beta,
@@ -138,7 +146,9 @@ protected:
       Real rnorm,
       Real rnorm0,
       Real eps_abs,
-      Real relative_error,int nit,int& error_close_to_zero,
+      Real relative_error,
+      int nit,
+      int& error_close_to_zero,
       int level);
 
     static int CG_MG_defaults_reported;
