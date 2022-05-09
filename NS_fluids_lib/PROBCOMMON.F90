@@ -927,6 +927,13 @@ implicit none
       REAL_T, intent(out) :: pressure
       end subroutine TEMPLATE_EOS
 
+      subroutine TEMPLATE_UNITLESS_EXPANSION_FACTOR( &
+        im,temperature,temperature_base,expansion_factor)
+      INTEGER_T, intent(in) :: im
+      REAL_T, intent(in) :: temperature
+      REAL_T, intent(in) :: temperature_base
+      REAL_T, intent(out) :: expansion_factor
+      end subroutine TEMPLATE_UNITLESS_EXPANSION_FACTOR
 
       subroutine TEMPLATE_dVdT(dVdT,massfrac_var, &
         pressure,temperature, &
@@ -1149,6 +1156,8 @@ implicit none
       PROCEDURE(TEMPLATE_clamped_LS), POINTER :: SUB_clamped_LS_no_scale
       PROCEDURE(TEMPLATE_VEL), POINTER :: SUB_VEL
       PROCEDURE(TEMPLATE_EOS), POINTER :: SUB_EOS
+      PROCEDURE(TEMPLATE_UNITLESS_EXPANSION_FACTOR), POINTER :: &
+              SUB_UNITLESS_EXPANSION_FACTOR
       PROCEDURE(TEMPLATE_dVdT), POINTER :: SUB_dVdT
       PROCEDURE(TEMPLATE_SOUNDSQR), POINTER :: SUB_SOUNDSQR
       PROCEDURE(TEMPLATE_INTERNAL), POINTER :: SUB_INTERNAL

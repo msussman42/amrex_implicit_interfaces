@@ -2062,6 +2062,9 @@ protected:
     static int uncoupled_viscosity;
 
     static Real angular_velocity;
+     
+     //Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
+     //DrhoDT has units of 1/(Degrees Kelvin)
     static Vector<Real> DrhoDT; // default 0.0
 
      //1=>rho=rho(T)

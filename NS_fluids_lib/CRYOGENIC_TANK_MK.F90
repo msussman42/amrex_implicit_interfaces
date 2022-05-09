@@ -2430,9 +2430,12 @@ if ((im.ge.1).and.(im.le.num_materials)) then
         (temperature_wall_max.gt.temperature_probe)) then
      thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
      gravity_local=abs(gravity)
-     expansion_coefficient=abs(fort_DrhoDT(im)) ! units: 1/temperature
-     Gr=gravity_local*expansion_coefficient* &
-       (temperature_wall_max-temperature_probe)*(xi**3.0)/(nu*nu)
+
+     call SUB_UNITLESS_EXPANSION_FACTOR(im,temperature_wall_max, &
+       temperature_probe,expansion_coefficient)
+     expansion_coefficient=abs(expansion_coefficient)
+
+     Gr=gravity_local*expansion_coefficient*(xi**3.0)/(nu*nu)
      Pr=nu/thermal_diffusivity
      Ra=Gr*Pr
 
@@ -2702,13 +2705,15 @@ if ((xi.gt.0.0d0).and. &
 
  thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
  gravity_local=abs(gravity)
- expansion_coefficient=abs(fort_DrhoDT(im_fluid)) ! units: 1/temperature
  Pr=nu/thermal_diffusivity
+
+ call SUB_UNITLESS_EXPANSION_FACTOR(im_fluid,temperature_wall_max, &
+   temperature_image,expansion_coefficient)
+ expansion_coefficient=abs(expansion_coefficient)
 
  if (temperature_wall_max.gt.temperature_image) then
 
-  Gr=gravity_local*expansion_coefficient* &
-    (temperature_wall_max-temperature_image)*(xi**3.0)/(nu*nu)
+  Gr=gravity_local*expansion_coefficient*(xi**3.0)/(nu*nu)
   Ra=Gr*Pr
 
   if(Ra.lt.1.0e+9)then

@@ -225,6 +225,7 @@ stop
        INTEGER_T nhalf
        REAL_T localF
        REAL_T rho_base
+       REAL_T rho_factor
        REAL_T local_temp
        REAL_T DTEMP
        REAL_T cell_density_denom
@@ -532,9 +533,10 @@ stop
             ! DTEMP will have no units after dividing by total density.
             ! fort_tempconst is the temperature of the inner boundary
             ! for the differentially heated rotating annulus problem.
-            DTEMP=DTEMP+ &
-              localF*rho_base* &
-              fort_DrhoDT(im)*(local_temp-fort_tempconst(im))
+            call SUB_UNITLESS_EXPANSION_FACTOR( &
+              im,local_temp,fort_tempconst(im),rho_factor)
+
+            DTEMP=DTEMP+localF*rho_base*rho_factor
 
            else
             print *,"override_density invalid"
