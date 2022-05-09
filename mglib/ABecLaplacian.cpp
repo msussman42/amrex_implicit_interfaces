@@ -24,6 +24,8 @@ namespace amrex{
 
 #define profile_solver 0
 
+// begin static variables
+
 int ABecLaplacian::mglib_blocking_factor = 2;
 
 int ABecLaplacian::nghostRHS=0;
@@ -31,6 +33,8 @@ int ABecLaplacian::nghostSOLN=1;
 
 Real ABecLaplacian::a_def     = 0.0;
 Real ABecLaplacian::b_def     = 1.0;
+
+int ABecLaplacian::CG_MG_defaults_reported = 0;
 
 int ABecLaplacian::CG_def_maxiter = 200;
 int ABecLaplacian::CG_def_restart_period = 2000;
@@ -41,6 +45,8 @@ int ABecLaplacian::MG_def_nu_f         = 8;
 int ABecLaplacian::MG_def_verbose      = 0;
 int ABecLaplacian::MG_def_nu_b         = 0;
 
+// end static variables
+
 static
 void
 Spacer (std::ostream& os, int lev)
@@ -48,7 +54,7 @@ Spacer (std::ostream& os, int lev)
  for (int k = 0; k < lev; k++) {
   os << "   ";
  }
-}
+}  // end subroutine Spacer
 
 // level==0 is the finest level
 void
@@ -57,7 +63,7 @@ ABecLaplacian::apply (MultiFab& out,MultiFab& in,
 
     applyBC(in,level,pbdry,bcpres_array);
     Fapply(out,in,level);
-}
+} // end subroutine apply
 
 
 // level==0 is the finest level
@@ -196,7 +202,7 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
  thread_class::sync_tile_d_numPts();
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
  thread_class::reconcile_d_numPts(2);
-}
+} // end subroutine applyBC
 
 
 void
@@ -326,7 +332,7 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
  thread_class::reconcile_d_numPts(3);
 
-}
+} // end subroutine residual
 
 void
 ABecLaplacian::smooth(MultiFab& solnL,MultiFab& rhsL,
@@ -346,7 +352,7 @@ ABecLaplacian::smooth(MultiFab& solnL,MultiFab& rhsL,
     applyBC(solnL,level,pbdry,bcpres_array);
     Fsmooth(solnL, rhsL, level, smooth_type);
 
-}
+} // end subroutine smooth
 
 // L2 norm
 Real
@@ -385,7 +391,7 @@ ABecLaplacian::LPnorm(MultiFab &in, int level) const
 #endif
 
  return mf_norm;
-}
+}  // end subroutine LPnorm
 
 // level==0 is the finest level
 // level is the coarse level
@@ -674,7 +680,7 @@ ABecLaplacian::makeCoefficients (
  } else
   amrex::Error("avg invalid");
 
-} // subroutine makeCoefficients
+} // end subroutine makeCoefficients
 
 
 // level==0 is the finest level
@@ -1271,7 +1277,7 @@ ABecLaplacian::ABecLaplacian (
  bprof.stop();
 #endif
 
-}
+} // end subroutine ABecLaplacian (the constructor)
 
 ABecLaplacian::~ABecLaplacian ()
 {
@@ -1330,7 +1336,7 @@ ABecLaplacian::~ABecLaplacian ()
   CG_pbdryhom[coarsefine]=(MultiFab*)0;
  } // coarsefine=0..CG_numlevels_var-1
 
-}
+}  // end subroutine ~ABecLaplacian (the destructor)
 
 void
 ABecLaplacian::Fsmooth (MultiFab& solnL,
@@ -1562,7 +1568,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
 
  } // isweep
 
-} // subroutine Fsmooth
+} // end subroutine Fsmooth
 
 // y=Ax
 void
@@ -1723,8 +1729,6 @@ ABecLaplacian::Fapply (MultiFab& y,
 
 } // end subroutine Fapply
 
-
-
 void
 ABecLaplacian::LP_update (MultiFab& sol,
    Real alpha,MultiFab& y,
@@ -1841,7 +1845,6 @@ ABecLaplacian::LP_update (MultiFab& sol,
  thread_class::reconcile_d_numPts(8);
 
 } // end subroutine LP_update
-
 
 void ABecLaplacian::LP_dot(const MultiFab& w_in,
 		           const MultiFab& p_in,
@@ -2042,7 +2045,7 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
 
 #undef profile_dot 
 
-} // subroutine LP_dot
+} // end subroutine LP_dot
 
 // onesCoefficients:
 // =1 
@@ -2176,7 +2179,7 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
  } else
   amrex::Error("laplacian solvability incorrect");
 
-} // subroutine project_null_space
+} // end subroutine project_null_space
 
 
 // off diagonal sum flag 
@@ -2274,8 +2277,6 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
 
 } // end subroutine Fdiagsum
 
-
-
 // z=K^{-1}r
 // z=project_null_space(z)
 void
@@ -2364,7 +2365,7 @@ ABecLaplacian::pcg_solve(
   std::cout << "end of pcg_solve caller_id=" << caller_id << '\n';
  }
 
-} // subroutine pcg_solve
+} // end subroutine pcg_solve
 
 void 
 ABecLaplacian::CG_check_for_convergence(
@@ -2417,7 +2418,7 @@ ABecLaplacian::CG_check_for_convergence(
   }
  }
 
-} // CG_check_for_convergence
+} // end subroutine CG_check_for_convergence
 
 void 
 ABecLaplacian::CG_dump_params(
@@ -3095,7 +3096,7 @@ void ABecLaplacian::CG_advance (
     ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
     thread_class::reconcile_d_numPts(10);
 
-} // end subroutine advance
+} // end subroutine CG_advance
 
 Real
 ABecLaplacian::MG_errorEstimate(int level,
@@ -3147,7 +3148,7 @@ void ABecLaplacian::MG_residualCorrectionForm (MultiFab& newrhs,
 
  residual(newrhs, oldrhs, solnL, level, pbdry,bcpres_array);
  solnL.setVal(0.0,0,nsolve_ABec,1);
-}
+} // end subroutine MG_residualCorrectionForm
 
 void
 ABecLaplacian::MG_solve (int nsverbose,
@@ -3190,7 +3191,7 @@ ABecLaplacian::MG_solve (int nsverbose,
    bottom_smooth_type,
    presmooth,postsmooth);
 
-} // subroutine MG_solve
+} // end subroutine MG_solve
 
 // pbdry will always be identically zero since residual correction form.
 void
@@ -3266,7 +3267,7 @@ ABecLaplacian::MG_solve_ (int nsverbose,MultiFab& _sol,
  _sol.ParallelAdd(*MG_initialsolution,0,0,_sol.nComp(),0,0);
  project_null_space(_sol,level);
 
-}  // subroutine MG_solve_
+}  // end subroutine MG_solve_
 
 int
 ABecLaplacian::MG_numLevels (const Box& local_box) const
@@ -3357,7 +3358,7 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
     local_error0,
     level);
  }
-}
+} // end subroutine MG_coarsestSmooth
 
 
 void
@@ -3430,7 +3431,7 @@ ABecLaplacian::MG_relax (MultiFab& solL,MultiFab& rhsL,
    smooth_type,bottom_smooth_type,
    presmooth,postsmooth);
  }
-} // subroutine MG_relax
+} // end subroutine MG_relax
 
 void
 ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
@@ -3563,7 +3564,7 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
 #if (profile_solver==1)
  bprof.stop();
 #endif
-}  // end subroutine average
+}  // end subroutine MG_average
 
 void
 ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
@@ -3683,7 +3684,7 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
 #if (profile_solver==1)
  bprof.stop();
 #endif
-}  // end subroutine interpolate
+}  // end subroutine MG_interpolate
 
 
 #undef profile_solver
