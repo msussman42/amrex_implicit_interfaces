@@ -2483,6 +2483,7 @@ void ABecLaplacian::Bottom_Krylov_checkpoint(
   int vcycle,
   Real krylov_error,
   Real& best_error,
+  int& best_iter,
   MultiFab& sol,
   MultiFab& restart_sol,
   int& restart_flag) {
@@ -2493,6 +2494,7 @@ void ABecLaplacian::Bottom_Krylov_checkpoint(
  if (vcycle==0) {
   update_best=1;
   best_error=krylov_error;
+  best_iter=vcycle;
   if (krylov_error>=0.0) {
    // do nothing
   } else
@@ -2502,6 +2504,7 @@ void ABecLaplacian::Bottom_Krylov_checkpoint(
       (krylov_error<best_error)) {
    update_best=1;
    best_error=krylov_error;
+   best_iter=vcycle;
   } else if ((krylov_error>=best_error)&&
              (krylov_error<=breakdown_factor*best_error)) {
    // do nothing
@@ -2737,6 +2740,7 @@ ABecLaplacian::CG_solve(
  }
 
  Real best_error=0.0;
+ int best_iter=0;
  int Bottom_restart_count=0;
 
   //CG_r=CG_rhs_resid_cor_form
@@ -2777,7 +2781,7 @@ ABecLaplacian::CG_solve(
 
   if (error_close_to_zero==0) {
 
-   Bottom_Krylov_checkpoint(nit,rnorm,best_error,sol,
+   Bottom_Krylov_checkpoint(nit,rnorm,best_error,best_iter,sol,
 	restart_sol,restart_flag);
 
     // "meets_tol" informs the main solver in NavierStokes3.cpp 
@@ -2947,8 +2951,9 @@ ABecLaplacian::CG_solve(
 
       std::cout << "RESTARTING: rnorm= " << 
        rnorm << '\n';
-      std::cout << "RESTARTING: nsolve_ABec= " << 
-        nsolve_ABec << '\n';
+      std::cout << "RESTARTING: nsolve_ABec= " << nsolve_ABec << '\n';
+      std::cout << "RESTARTING: best_error= " << best_error << '\n';
+      std::cout << "RESTARTING: best_iter= " << best_iter << '\n';
      }
     } else if ((CG_verbose==0)&&(nsverbose==0)) {
      // do nothing
@@ -3016,15 +3021,19 @@ ABecLaplacian::CG_solve(
   if (ParallelDescriptor::IOProcessor()) {
    if (CG_use_mg_precond_at_top==1) {
     if (is_bottom==0)
-     std::cout << "mgpcg (mac) nit (NOBOT)" << nit << '\n';
+     std::cout << "mgpcg(mac)nit,best_error,best_iter(NOBOT)" << nit << 
+	     ' ' << best_error << ' ' << best_iter << '\n';
     else
-     std::cout << "mgpcg (mac) nit (BOT)" << nit << '\n';
+     std::cout << "mgpcg(mac)nit,best_error,best_iter(BOT)" << nit << 
+	     ' ' << best_error << ' ' << best_iter << '\n';
    } else if (CG_use_mg_precond_at_top==0) {
     if (is_bottom==0) {
-     std::cout << "pcg (mac) nit (NOBOT)" << nit << '\n';
+     std::cout << "pcg(mac)nit,best_error,best_iter(NOBOT)" << nit << 
+	     ' ' << best_error << ' ' << best_iter << '\n';
     }
-   } else
+   } else {
     amrex::Error("CG_use_mg_precond_at_top invalid");
+   }
   }
  }
 
@@ -3045,6 +3054,8 @@ ABecLaplacian::CG_solve(
      CG_error_history[ehist][2*coarsefine+1] << '\n';
 
    }
+   std::cout << "nit,best_error,best_iter" << nit << 
+     ' ' << best_error << ' ' << best_iter << '\n';
   }
 
   CG_dump_params(

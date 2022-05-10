@@ -129,6 +129,7 @@ protected:
      int vcycle,
      Real krylov_error,
      Real& best_error,
+     int& best_iter,
      MultiFab& sol,
      MultiFab& restart_sol,
      int& restart_flag);
