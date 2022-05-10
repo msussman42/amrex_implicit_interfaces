@@ -9184,6 +9184,7 @@ void NavierStokes::Krylov_checkpoint(
   int vcycle,
   Real krylov_error,
   Real& best_error,
+  int& best_iter,
   int idx_phi,
   int idx_umac,
   int& restart_flag) {
@@ -9199,6 +9200,7 @@ void NavierStokes::Krylov_checkpoint(
  if (vcycle==-1) {
   update_best=1;
   best_error=krylov_error;
+  best_iter=vcycle;
   if (krylov_error>=0.0) {
    // do nothing
   } else
@@ -9208,6 +9210,7 @@ void NavierStokes::Krylov_checkpoint(
       (krylov_error<best_error)) {
    update_best=1;
    best_error=krylov_error;
+   best_iter=vcycle;
   } else if ((krylov_error>=best_error)&&
              (krylov_error<=breakdown_factor*best_error)) {
    // do nothing
@@ -10147,6 +10150,9 @@ void NavierStokes::multiphase_project(int project_option) {
  }
  Real outer_error=0.0;
 
+ Real best_error=0.0;
+ int best_iter=-1;
+
  while (outer_iter_done==0) {
 
 #if (profile_solver==1)
@@ -10447,9 +10453,10 @@ void NavierStokes::multiphase_project(int project_option) {
       amrex::Error("enable_spectral invalid 3");
 
      vcycle=-1;
-     Real best_error=0.0;
+     best_error=0.0;
+     best_iter=-1;
 
-     Krylov_checkpoint(vcycle,error_n,best_error,
+     Krylov_checkpoint(vcycle,error_n,best_error,best_iter,
          MAC_PHI_CRSE_MF,UMACSTAR_MF,restart_flag);
 
      int multilevel_restart_count=0;
@@ -10560,7 +10567,7 @@ void NavierStokes::multiphase_project(int project_option) {
            } else
             amrex::Error("PCG_error_n invalid");
 
-           Krylov_checkpoint(vcycle,PCG_error_n,best_error,
+           Krylov_checkpoint(vcycle,PCG_error_n,best_error,best_iter,
              MAC_PHI_CRSE_MF,UMACSTAR_MF,restart_flag);
 
           } else if (pAp==0.0) {
@@ -10741,7 +10748,7 @@ void NavierStokes::multiphase_project(int project_option) {
 	  } else
            amrex::Error("dnorm invalid Nav3");
 
-          Krylov_checkpoint(vcycle,dnorm,best_error,
+          Krylov_checkpoint(vcycle,dnorm,best_error,best_iter,
              MAC_PHI_CRSE_MF,UMACSTAR_MF,restart_flag);
 
 #if (profile_solver==1)
@@ -10861,7 +10868,7 @@ void NavierStokes::multiphase_project(int project_option) {
 	  } else
 	   amrex::Error("dnorm invalid Nav3");
 
-          Krylov_checkpoint(vcycle,dnorm,best_error,
+          Krylov_checkpoint(vcycle,dnorm,best_error,best_iter,
              MAC_PHI_CRSE_MF,UMACSTAR_MF,restart_flag);
 
           w0=w1;
@@ -10923,6 +10930,8 @@ void NavierStokes::multiphase_project(int project_option) {
           std::cout << "RESTARTING: error_history[vcycle][0,1]= " << 
            error_history[vcycle][0] << ' ' <<
 	   error_history[vcycle][1] << '\n';
+	  std::cout << "RESTARTING: best_error, best_iter = " <<
+           best_error << ' ' << best_iter << '\n';
 	  print_project_option(project_option);
 	  std::cout << "END SOLVER RESTARTING NOTIFICATION\n";
          }
@@ -10960,6 +10969,15 @@ void NavierStokes::multiphase_project(int project_option) {
          dnorm=sqrt(dnorm);
 	} else
          amrex::Error("dnorm invalid Nav3");
+
+	if (verbose>0) {
+         if (ParallelDescriptor::IOProcessor()) {
+          std::cout << "RESTARTING: dnorm after restart: " << dnorm << '\n';
+         }
+	} else if (verbose==0) {
+	 // do nothing
+	} else
+	 amrex::Error("verbose invalid");
 
         zeroALL(0,nsolve,bicg_V0_MF);
         zeroALL(0,nsolve,P_MF);
@@ -11081,7 +11099,9 @@ void NavierStokes::multiphase_project(int project_option) {
        outer_error_history[ehist][0] << ' ' <<
        outer_error_history[ehist][1] << '\n';
      }
-    } else if (vcycle>=0) {
+     std::cout << " best_error, best_iter = " <<
+           best_error << ' ' << best_iter << '\n';
+    } else if ((vcycle>=0)&&(vcycle<=multilevel_maxcycle)) {
      // do nothing
     } else {
      amrex::Error("vcycle bust");
@@ -11335,6 +11355,10 @@ void NavierStokes::multiphase_project(int project_option) {
    std::cout << "project_option= " << project_option <<
           " TIME= " << cur_time_slab << " local_median_lev0_cycles= " <<
           local_median_lev0_cycles << '\n';
+   std::cout << "project_option= " << project_option <<
+          " TIME= " << cur_time_slab << " best_iter= " << best_iter << '\n';
+   std::cout << "project_option= " << project_option <<
+          " TIME= " << cur_time_slab << " best_error= " << best_error << '\n';
   }
 
  } else
