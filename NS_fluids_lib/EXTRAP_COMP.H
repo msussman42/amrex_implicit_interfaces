@@ -86,8 +86,8 @@ interface temperature and interface mass fraction.
 #define SEM_V 1
 #define SEM_W (AMREX_SPACEDIM-1)
 #define SEM_T (SEM_W+1)
-#define SEM_NEXT (SEM_T+1)
-#define NFLUXSEM (SEM_NEXT)
+#define SEM_FLUX_NEXT (SEM_T+1)
+#define NFLUXSEM (SEM_FLUX_NEXT)
 
 #define SEMADVECT 0
 #define SEMDIFFUSE_T (SEMADVECT+NFLUXSEM)

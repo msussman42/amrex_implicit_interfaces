@@ -933,18 +933,58 @@ void NavierStokes::init_delta_SDC() {
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid init_delta_SDC");
 
+ if (ns_time_order>=1) {
+  // do nothing
+ } else
+  amrex::Error("ns_time_order must be >=1");
+
  if ((ns_time_order==1)&&
-     (enable_spectral==3))
+     (enable_spectral==3)) // SEM time only
   amrex::Error("(ns_time_order==1)&&(enable_spectral==3)");
  if ((ns_time_order>=2)&&
-     ((enable_spectral==0)||
-      (enable_spectral==2)))
+     ((enable_spectral==0)|| // low order space and time
+      (enable_spectral==2))) // SEM space only
   amrex::Error("(ns_time_order>=2)&&(enable_spectral==0 or 2)");
 
- if ((ns_time_order>=2)||
-     (enable_spectral==1)||   // spectral in space and time
-     (enable_spectral==2)) {  // spectral in space only
+ if ((enable_spectral==1)||   // spectral in space and time
+     (enable_spectral==2)||   // spectral in space only
+     (enable_spectral==3)) {  // spectral in time only
 
+  if (localMF[delta_MF]->nComp()==NSTATE_SDC*ns_time_order) {
+   // do nothing
+  } else
+   amrex::Error("localMF[delta_MF]->nComp() invalid");
+
+  if (localMF[stableF_MF]->nComp()==NSTATE_SDC*ns_time_order) {
+   // do nothing
+  } else
+   amrex::Error("localMF[stableF_MF]->nComp() invalid");
+
+  if (localMF[spectralF_MF]->nComp()==NSTATE_SDC*(ns_time_order+1)) {
+   // do nothing
+  } else
+   amrex::Error("localMF[spectralF_MF]->nComp() invalid");
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+
+   if (localMF[delta_GP_MF+dir]->nComp()==ns_time_order) {
+    // do nothing
+   } else
+    amrex::Error("localMF[delta_GP_MF]->nComp() invalid");
+
+   if (localMF[stableF_GP_MF+dir]->nComp()==ns_time_order) {
+    // do nothing
+   } else
+    amrex::Error("localMF[stableF_GP_MF]->nComp() invalid");
+
+   if (localMF[spectralF_GP_MF+dir]->nComp()==ns_time_order+1) {
+    // do nothing
+   } else
+    amrex::Error("localMF[spectralF_GP_MF]->nComp() invalid");
+
+  } //dir=0..sdim-1
+
+   // NSTATE_SDC is a macro declared in EXTRAP_COMP.H
   if (SDC_outer_sweeps==0) {
    setVal_localMF(delta_MF,0.0,0,NSTATE_SDC*ns_time_order,0);
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
