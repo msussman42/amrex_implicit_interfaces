@@ -10437,13 +10437,26 @@ NavierStokes::SDC_setup_step() {
  lower_slab_time=state[State_Type].slabTime(0);
  upper_slab_time=state[State_Type].slabTime(ns_time_order);
  delta_slab_time=upper_slab_time-lower_slab_time;
- if (delta_slab_time<0.0) {
+ if (delta_slab_time>=0.0) {
+  // do nothing
+ } else {
   std::cout << "lower_slab_time= " << lower_slab_time << '\n';
   std::cout << "upper_slab_time= " << upper_slab_time << '\n';
   std::cout << "delta_slab_time= " << delta_slab_time << '\n';
   amrex::Error("delta_slab_time invalid");
  }
- if ((delta_slab_time==0.0)&&(upper_slab_time>0.0)) {
+ if (delta_slab_time>0.0) {
+  // do nothing
+ } else if (delta_slab_time==0.0) {
+  if (upper_slab_time==0.0) {
+   // do nothing
+  } else {
+   std::cout << "lower_slab_time= " << lower_slab_time << '\n';
+   std::cout << "upper_slab_time= " << upper_slab_time << '\n';
+   std::cout << "delta_slab_time= " << delta_slab_time << '\n';
+   amrex::Error("delta_slab_time or upper_slab_time invalid");
+  }
+ } else {
   std::cout << "lower_slab_time= " << lower_slab_time << '\n';
   std::cout << "upper_slab_time= " << upper_slab_time << '\n';
   std::cout << "delta_slab_time= " << delta_slab_time << '\n';
@@ -10459,10 +10472,18 @@ NavierStokes::SDC_setup_step() {
 
    // in: NavierStokes::SDC_setup_step()
   dt_slab=cur_time_slab-prev_time_slab;
-  if (dt_slab<0.0)
+  if (dt_slab>=0.0) {
+   // do nothing
+  } else
    amrex::Error("dt_slab invalid1");
-  if ((dt_slab==0.0)&&(cur_time_slab>0.0))
+
+  if ((dt_slab==0.0)&&(cur_time_slab==0.0)) {
+   // do nothing
+  } else if (dt_slab>0.0) {
+   // do nothing
+  } else {
    amrex::Error("dt_slab invalid2");
+  }
 
  } else if ((slab_step==-1)&&(ns_time_order>=2)) {
   prev_time_slab=lower_slab_time;

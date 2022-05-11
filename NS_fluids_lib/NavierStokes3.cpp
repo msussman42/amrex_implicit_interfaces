@@ -1022,13 +1022,20 @@ Real NavierStokes::advance(Real time,Real dt) {
    SDC_setup_step(); 
 
    if ((time>=0.0)&&(time<=1.0)) {
-    if (std::abs(upper_slab_time-time)>1.0e-12)
+    if (std::abs(upper_slab_time-time)<=1.0e-12) {
+     // do nothing
+    } else {
      amrex::Error("upper_slab_time-time>tol (a)");
+    }
    } else if (time>1.0) {
-    if (std::abs(upper_slab_time-time)>1.0e-12*time)
+    if (std::abs(upper_slab_time-time)<=1.0e-12*time) {
+     // do nothing
+    } else {
      amrex::Error("upper_slab_time-time>tol(time) (b)");
-   } else
+    }
+   } else {
     amrex::Error("time invalid");
+   }
 
    if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
@@ -1154,9 +1161,14 @@ Real NavierStokes::advance(Real time,Real dt) {
     time_scale=upper_slab_time;
    time_scale*=1.0E-10;
 
-   if (std::abs(upper_slab_time-lower_slab_time-dt_new)>time_scale)
+   if (std::abs(upper_slab_time-lower_slab_time-dt_new)<=time_scale) {
+    // do nothing
+   } else
     amrex::Error("SDC_setup_step failed");
-   if (std::abs(lower_slab_time-time)>time_scale)
+
+   if (std::abs(lower_slab_time-time)<=time_scale) {
+    // do nothing
+   } else
     amrex::Error("lower_slab_time set improperly");
 
    do_the_advance(lower_slab_time,dt_new,advance_status);
@@ -2332,8 +2344,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
  Number_CellsALL(real_number_of_cells);
 
  int SDC_outer_sweeps_end=ns_time_order;
- if (lower_slab_time<0.0)
+
+ if (lower_slab_time>=0.0) {
+  // do nothing
+ } else
   amrex::Error("lower_slab_time invalid");
+
  if (lower_slab_time==0.0)
   SDC_outer_sweeps_end=1;
 
@@ -2663,9 +2679,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      } else
       amrex::Error("disable_advection invalid");
 
-    } else if (((enable_spectral==0)||
-  	        (enable_spectral==3))&&
-               (ns_time_order==1)) {
+    } else if (((enable_spectral==0)||  //low order space and time
+  	        (enable_spectral==3))&& //SEM time
+               (ns_time_order==1)) {    //overrides SEM time to false
      // do nothing
     } else
      amrex::Error("enable_spectral or ns_time_order invalid do the advance");
@@ -3248,7 +3264,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       } // ilev=finest_level ... level
 
       Real beta=1.0;
-      int vel_or_disp=0;  // velocity
+      int vel_or_disp=0;// 0=velocity  1=displacement
       int dest_idx=-1;  // update State_Type
 
        // maintain conservation of energy for compressible materials.
@@ -3757,13 +3773,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     if ((ns_time_order>=2)&&(advance_status==1)) {
 
-      if ((enable_spectral==1)||
-	  (enable_spectral==3)) {
+      if ((enable_spectral==1)||  // space-time SEM
+	  (enable_spectral==3)) { // SEM time
        // do nothing
       } else
        amrex::Error("enable_spectral invalid 2");
 
-      if ((viscous_enable_spectral==0)||  // do low order viscosity in time.
+      if ((viscous_enable_spectral==0)||  // low order viscosity space time.
           (viscous_enable_spectral==1)||  // SEM space and time
           (viscous_enable_spectral==3)) { // SEM time
        // do nothing
@@ -3914,9 +3930,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
         allocate_array(1,nsolve,-1,HOOP_FORCE_MARK_MF);
          // update_state==1:
-         //  unp1(1)=unp1(1)/(one+param2*hoop_force_coef)
+         //  unp1(1)=unp1(1)/(one+param2*hoop_force_coef)-dt|g|beta(T-T0)
          // update_state==0:
-         //  unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)
+         //  unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)-dt|g|beta(T-T0)
         int update_state=0;  
         diffuse_hoopALL(REGISTER_MARK_MF,BOUSSINESQ_TEMP_MF,
          HOOP_FORCE_MARK_MF,update_state);
