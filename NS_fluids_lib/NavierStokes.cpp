@@ -16244,7 +16244,7 @@ NavierStokes::allocate_flux_register(int operation_flag) {
  new_localMF(SEM_FLUXREG_MF,ncfluxreg,1,-1);
  setVal_localMF(SEM_FLUXREG_MF,0.0,0,ncfluxreg,1); 
 
-} // subroutine allocate_flux_register
+} // end subroutine allocate_flux_register
 
 int 
 NavierStokes::end_spectral_loop() {
@@ -16270,8 +16270,14 @@ NavierStokes::end_spectral_loop() {
 
  return local_end;
  
-} // end_spectral_loop
+} // end subroutine end_spectral_loop
 
+//source_term==SUB_OP_SDC_LOW_TIME:
+//  slab_step (aka "k") = 0,1,2,...,ns_time_order
+//source_term==SUB_OP_SDC_ISCHEME:
+//  slab_step (aka "k") = 0,1,2,...,ns_time_order-1
+//SDC_outer_sweeps=0...ns_time_order-1
+//
 //source_term==1==SUB_OP_SDC_LOW_TIME => compute F(t^{n+k/order})
 //source_term==0==SUB_OP_SDC_ISCHEME => 
 // compute F(t^{n+k/order,(0)})  SUB_OP_ISCHEME_PREDICT
@@ -16325,10 +16331,20 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
  if (source_term==SUB_OP_SDC_LOW_TIME) {
 
+  if ((slab_step>=0)&&(slab_step<=ns_time_order)) {
+   // do nothing
+  } else
+   amrex::Error("slab_step invalid");
+
   if (advect_iter!=SUB_OP_ISCHEME_PREDICT)
    amrex::Error("advect_iter invalid");
 
  } else if (source_term==SUB_OP_SDC_ISCHEME) {
+
+  if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+   // do nothing
+  } else
+   amrex::Error("slab_step invalid");
 
   if ((advect_iter!=SUB_OP_ISCHEME_PREDICT)&&
       (advect_iter!=SUB_OP_ISCHEME_CORRECT))
@@ -16340,16 +16356,16 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
  int nmat=num_materials;
 
  if ((ns_time_order==1)&&
-     (enable_spectral==3))
+     (enable_spectral==3)) //SEM time only
   amrex::Error("(ns_time_order==1)&&(enable_spectral==3)");
  if ((ns_time_order>=2)&&
-     ((enable_spectral==0)||
-      (enable_spectral==2)))
+     ((enable_spectral==0)|| //low order space and time
+      (enable_spectral==2))) //SEM space only
   amrex::Error("(ns_time_order>=2)&&(enable_spectral==0 or 2)");
 
- if ((enable_spectral==1)||
-     (enable_spectral==2)||
-     (ns_time_order>=2)) {
+ if ((enable_spectral==1)|| //SEM space and time
+     (enable_spectral==2)|| //SEM space only
+     (enable_spectral==3)) {  //SEM time only
 
   int nparts=im_solid_map.size();
   if ((nparts<0)||(nparts>nmat))
@@ -16727,7 +16743,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       deltacomp=0;
      } else if (source_term==SUB_OP_SDC_ISCHEME) {
       if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-       deltacomp=slab_step*NSTATE_SDC;
+       deltacomp=slab_step*NSTATE_SDC+SEMADVECT;
       } else
        amrex::Error("slab_step invalid");
      } else
@@ -16856,7 +16872,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
       if ((advect_iter==SUB_OP_ISCHEME_CORRECT)&&
           (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
-       int deltacomp=slab_step*NSTATE_SDC;
+       int deltacomp=slab_step*NSTATE_SDC+SEMADVECT;
         // dest,src,srccomp,dstcomp,ncomp,ngrow
        MultiFab::Copy(*localMF[stableF_MF],*rhs,0,deltacomp,NFLUXSEM,0);
       } else if ((advect_iter==SUB_OP_ISCHEME_CORRECT)&&
@@ -16880,7 +16896,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      } 
 
      if ((slab_step>=0)&&(slab_step<=ns_time_order)) {
-      int deltacomp=slab_step*NSTATE_SDC;
+      int deltacomp=slab_step*NSTATE_SDC+SEMADVECT;
       MultiFab::Copy(*localMF[spectralF_MF],*rhs,0,deltacomp,NFLUXSEM,0);
      } else
       amrex::Error("slab_step invalid");
@@ -16897,7 +16913,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
    amrex::Error("init_fluxes invalid");
 
  } else
-  amrex::Error("enable_specral or ns_time_order invalid");
+  amrex::Error("enable_specral invalid");
 
 } // subroutine SEM_scalar_advection
 

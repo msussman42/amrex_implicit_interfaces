@@ -2069,11 +2069,22 @@ void NavierStokes::init_splitting_force_SDC() {
 
 } // subroutine init_splitting_force_SDC
 
+//source_term==SUB_OP_SDC_LOW_TIME:
+//  slab_step (aka "k") = 0,1,2,...,ns_time_order
+//source_term==SUB_OP_SDC_ISCHEME:
+//  slab_step (aka "k") = 0,1,2,...,ns_time_order-1
+//SDC_outer_sweeps=0...ns_time_order-1
+//
 //source_term==1=SUB_OP_SDC_LOW_TIME => compute F(t^{n+k/order})
 //source_term==0=SUB_OP_SDC_ISCHEME  => compute 
 //  (a) F(t^{n+k/order,(0)})  (SUB_OP_ISCHEME_PREDICT)
 //  (b) F(t^{n+k/order,(1)})  (SUB_OP_ISCHEME_CORRECT)
 void NavierStokes::SEM_advectALL(int source_term) {
+
+ if ((SDC_outer_sweeps>=0)&&(SDC_outer_sweeps<ns_time_order)) {
+  // do nothing
+ } else
+  amrex::Error("SDC_outer_sweeps invalid");
 
  if (stokes_flow==0) {
 
@@ -2086,16 +2097,18 @@ void NavierStokes::SEM_advectALL(int source_term) {
        (enable_spectral==2)))
    amrex::Error("(ns_time_order>=2)&&(enable_spectral==0 or 2)");
 
-  if ((enable_spectral==1)||
-      (enable_spectral==2)||
-      (ns_time_order>=2)) {
+  if ((enable_spectral==1)|| //SEM space and time
+      (enable_spectral==2)|| //SEM space only
+      (enable_spectral==3)) {//SEM time only
 
    int operation_flag=OP_ISCHEME_MAC;
 
    int SEM_end_spectral_loop=2;
-   if ((enable_spectral==1)||(enable_spectral==2)) {
+   if ((enable_spectral==1)||  //SEM space and time
+       (enable_spectral==2)) { //SEM space only
     SEM_end_spectral_loop=2;
-   } else if ((enable_spectral==0)||(enable_spectral==3)) {
+   } else if ((enable_spectral==0)||  //Low order space and time
+	      (enable_spectral==3)) { //SEM time only
     SEM_end_spectral_loop=1;
    } else {
     std::cout << "enable_spectral= " << enable_spectral << '\n';
@@ -2108,8 +2121,20 @@ void NavierStokes::SEM_advectALL(int source_term) {
    vel_time_slab=prev_time_slab;
 
    if (source_term==SUB_OP_SDC_LOW_TIME) {
+
+    if ((slab_step>=0)&&(slab_step<=ns_time_order)) {
+     // do nothing
+    } else
+     amrex::Error("slab_step invalid");
+
     vel_time_slab=prev_time_slab;
    } else if (source_term==SUB_OP_SDC_ISCHEME) {
+
+    if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+     // do nothing
+    } else
+     amrex::Error("slab_step invalid");
+
     if (divu_outer_sweeps==0) 
      vel_time_slab=prev_time_slab;
     else if (divu_outer_sweeps>0)
@@ -2246,7 +2271,7 @@ void NavierStokes::SEM_advectALL(int source_term) {
    }
 
   } else
-   amrex::Error("enable_spectral or ns_time_order invalid");
+   amrex::Error("enable_spectral invalid");
 
  } else if (stokes_flow==1) {
   // do nothing
@@ -2664,16 +2689,16 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     allocate_levelsetLO_ALL(1,LEVELPC_MF);
 
     if ((ns_time_order==1)&&
-        (enable_spectral==3))
+        (enable_spectral==3)) //SEM time only
      amrex::Error("(ns_time_order==1)&&(enable_spectral==3)");
     if ((ns_time_order>=2)&&
-        ((enable_spectral==0)||
-         (enable_spectral==2)))
+        ((enable_spectral==0)|| // low order space time.
+         (enable_spectral==2))) // SEM space only
      amrex::Error("(ns_time_order>=2)&&(enable_spectral==0 or 2)");
 
     if ((enable_spectral==1)||  // space-time SEM
 	(enable_spectral==2)||  // SEM space
-        (ns_time_order>=2)) {   // SEM time
+        (enable_spectral==3)) { // SEM time
 
      if (disable_advection==0) {
 
@@ -2698,12 +2723,21 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        } else
         amrex::Error("slab_step or SDC_outer_sweeps invalid");
 
-      } // ((slab_step>=0)&&(slab_step<=ns_time_order))
+       // above: ((slab_step>=0)&&(slab_step<=ns_time_order))
+       
+      } else if (slab_step==-1) {
+       // do nothing
+      } else
+       amrex::Error("slab_step invalid");
 
        // SEM_advectALL starts off by using the prev_time_slab data.
       source_term=SUB_OP_SDC_ISCHEME;
       if ((slab_step>=0)&&(slab_step<ns_time_order)) {
        SEM_advectALL(source_term);
+      } else if ((slab_step==-1)||(slab_step==ns_time_order)) {
+       // do nothing
+      } else {
+       amrex::Error("slab_step invalid");
       }
 
       double end_SEMADV_time=ParallelDescriptor::second();
@@ -2719,12 +2753,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      } else
       amrex::Error("disable_advection invalid");
 
-    } else if (((enable_spectral==0)||  //low order space and time
-  	        (enable_spectral==3))&& //SEM time
-               (ns_time_order==1)) {    //overrides SEM time to false
+    } else if (enable_spectral==0) {  //low order space and time
      // do nothing
     } else
-     amrex::Error("enable_spectral or ns_time_order invalid do the advance");
+     amrex::Error("enable_spectral invalid do the advance");
 
       // in: NavierStokes::do_the_advance
       // 0=do not update the error 1=update the error
