@@ -2245,9 +2245,6 @@ void NavierStokes::getStateDIV_ALL(int idx,int ngrow) {
 
  int finest_level=parent->finestLevel();
 
- int save_enable_spectral=enable_spectral;
- override_enable_spectral(projection_enable_spectral);
-
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.getStateDIV(idx,ngrow);
@@ -2255,8 +2252,6 @@ void NavierStokes::getStateDIV_ALL(int idx,int ngrow) {
   int ncomp=ns_level.localMF[idx]->nComp();
   ns_level.avgDown_localMF(idx,scomp,ncomp,0);
  }
-
- override_enable_spectral(save_enable_spectral);
 
 } // subroutine getStateDIV_ALL 
 

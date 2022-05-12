@@ -95,8 +95,6 @@ amr.time_blocking_factor=1
 #amr.time_blocking_factor=4
 ns.enable_spectral=0
 #ns.enable_spectral=1
-ns.viscous_enable_spectral=0
-#ns.projection_enable_spectral=1
 
 amr.plotfile_on_restart=1
 ns.perturbation_on_restart=0

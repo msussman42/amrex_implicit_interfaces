@@ -285,11 +285,9 @@ stop
        stop
       endif
 
-      if ((enable_spectral.eq.1).or. &
-          (enable_spectral.eq.2)) then
+      if (enable_spectral.eq.1) then
        ! do nothing (HO space)
-      else if ((enable_spectral.eq.0).or. &
-               (enable_spectral.eq.3)) then
+      else if (enable_spectral.eq.0) then
        ! do nothing (LO space)
       else
        print *,"enable_spectral invalid"
@@ -414,8 +412,7 @@ stop
          flux_in,flux_exact,flux_err
         if ((bfact.eq.1).or. &
             (use_HO.eq.0).or. &
-            (enable_spectral.eq.0).or. &
-            (enable_spectral.eq.3)) then
+            (enable_spectral.eq.0)) then
          flux_tol=1.0D-2
         else if (bfact.eq.2) then
          flux_tol=1.0D-2

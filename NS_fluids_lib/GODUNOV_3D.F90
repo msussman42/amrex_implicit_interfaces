@@ -1256,7 +1256,7 @@ stop
       endif
 
       if ((enable_spectral.lt.0).or. &
-          (enable_spectral.gt.3)) then
+          (enable_spectral.gt.1)) then
        print *,"enable_spectral invalid crossterm"
        stop
       endif
@@ -1670,8 +1670,7 @@ stop
 
          ! overwrite fluxes in spectral elements 
          ! CROSSTERM -> TO_MAC  (interpolate CELL_TO_MAC)
-        if ((enable_spectral.eq.1).or. &  ! SEM space and time
-            (enable_spectral.eq.2)) then  ! SEM space
+        if (enable_spectral.eq.1) then
 
          if (bfact.ge.2) then
 
@@ -2178,8 +2177,7 @@ stop
           stop
          endif
 
-        else if ((enable_spectral.eq.0).or. &  ! No SEM
-                 (enable_spectral.eq.3)) then  ! SEM time only.
+        else if (enable_spectral.eq.0) then
          ! do nothing
         else
          print *,"enable_spectral invalid"
@@ -2430,8 +2428,7 @@ stop
        ! 2 spectral elements.
       else if (tileloop.eq.3) then 
 
-       if ((enable_spectral.eq.1).or. & ! SEM space and time
-           (enable_spectral.eq.2)) then ! SEM space only
+       if (enable_spectral.eq.1) then
 
         if (bfact.ge.2) then
 
@@ -2678,8 +2675,7 @@ stop
          stop
         endif
 
-       else if ((enable_spectral.eq.0).or. &
-                (enable_spectral.eq.3)) then
+       else if (enable_spectral.eq.0) then
         ! do nothing
        else
         print *,"enable_spectral invalid"
@@ -2987,7 +2983,7 @@ stop
        stop
       endif
       if ((enable_spectral.lt.0).or. &
-          (enable_spectral.gt.3)) then
+          (enable_spectral.gt.1)) then
        print *,"enable_spectral invalid fort_estdt"
        stop
       endif
@@ -3272,8 +3268,7 @@ stop
         stop
        endif
 
-       if ((enable_spectral.eq.1).or. &
-           (enable_spectral.eq.2)) then
+       if (enable_spectral.eq.1) then
         if (bfact.ge.2) then
          hx=dxmin
         else if (bfact.eq.1) then
@@ -3283,8 +3278,6 @@ stop
          stop
         endif
        else if (enable_spectral.eq.0) then
-        ! do nothing
-       else if (enable_spectral.eq.3) then
         ! do nothing
        else
         print *,"enable_spectral invalid"
@@ -3314,8 +3307,7 @@ stop
        uu_estdt=max(uu_estdt,abs(uleftcell))
        uu_estdt=max(uu_estdt,abs(urightcell))
 
-       if ((enable_spectral.eq.1).or. &
-           (enable_spectral.eq.2)) then
+       if (enable_spectral.eq.1) then
         if (bfact.ge.2) then
          velsum=zero
          do dir2=1,SDIM
@@ -3338,8 +3330,7 @@ stop
          print *,"bfact invalid64"
          stop
         endif
-       else if ((enable_spectral.eq.0).or. &
-                (enable_spectral.eq.3)) then
+       else if (enable_spectral.eq.0) then
         ! do nothing
        else
         print *,"enable_spectral invalid"
@@ -18721,7 +18712,7 @@ stop
       endif
 
       if ((enable_spectral.lt.0).or. &
-          (enable_spectral.gt.3)) then
+          (enable_spectral.gt.1)) then
        print *,"enable_spectral invalid face gradients"
        stop
       endif
@@ -19520,8 +19511,7 @@ stop
       endif
 
        ! in: FACE_GRADIENTS
-      if ((enable_spectral.eq.1).or. &  ! SEM space and time
-          (enable_spectral.eq.2)) then  ! SEM space only
+      if (enable_spectral.eq.1) then
 
        if (bfact.ge.2) then
 
@@ -19784,8 +19774,7 @@ stop
         stop
        endif
 
-      else if ((enable_spectral.eq.0).or. &  ! low order
-               (enable_spectral.eq.3)) then  ! SEM time only
+      else if (enable_spectral.eq.0) then
        ! do nothing
       else
        print *,"enable_spectral invalid"
@@ -21432,8 +21421,6 @@ stop
       ! enable_spectral:
       ! 0 - low order
       ! 1 - space/time spectral
-      ! 2 - space spectral only
-      ! 3 - time spectral only
       subroutine fort_build_masksem( &
        spectral_cells_level, &
        mask_sweep, &
@@ -21550,7 +21537,7 @@ stop
       endif
 
       if ((enable_spectral.lt.0).or. &
-          (enable_spectral.gt.3)) then
+          (enable_spectral.gt.1)) then
        print *,"enable_spectral invalid build masksem"
        stop
       endif

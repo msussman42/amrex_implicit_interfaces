@@ -10838,7 +10838,6 @@ stop
       INTEGER_T, intent(in) :: ns_time_order
       INTEGER_T, intent(in) :: divu_outer_sweeps
       INTEGER_T, intent(in) :: num_divu_outer_sweeps
-      INTEGER_T :: high_order_time_advection
       INTEGER_T, intent(in) :: operation_flag
       INTEGER_T, intent(in) :: slab_step
       INTEGER_T, intent(in) :: enable_spectral
@@ -11125,7 +11124,7 @@ stop
       endif
 
       if ((enable_spectral.ge.0).and. &
-          (enable_spectral.le.3)) then
+          (enable_spectral.le.1)) then
        ! do nothing
       else
        print *,"enable_spectral invalid mac_to_cell"
@@ -12478,35 +12477,15 @@ stop
       enddo
       enddo
 
-       ! for advection:
-       !  1. low order fluxes are calculated in fort_cell_to_mac
-       !     and high order fluxes are calculated in SEM_CELL_TO_MAC
-       !  2. divergence term and SDC correction term are both
-       !     calculated in SEM_MAC_TO_CELL (PROB.F90) regardless of the
-       !     order.
-      high_order_time_advection=0
-      if (operation_flag.eq.OP_ISCHEME_CELL) then ! advection
-       if ((ns_time_order.ge.2).and. &
-           (ns_time_order.le.32)) then
-        high_order_time_advection=1
-       else if (ns_time_order.eq.1) then
-        high_order_time_advection=0
-       else
-        print *,"ns_time_order invalid"
-        stop
-       endif
-      endif
       if (ns_time_order.eq.1) then
-       if ((enable_spectral.eq.0).or.(enable_spectral.eq.2)) then
+       if (enable_spectral.eq.0) then
         ! do nothing
        else
         print *,"enable_spectral and ns_time_order are not consistent"
         stop
        endif
       else if ((ns_time_order.ge.2).and.(ns_time_order.le.32)) then
-       if ((enable_spectral.eq.0).or. &  ! disable high order time for visc
-           (enable_spectral.eq.1).or. &
-           (enable_spectral.eq.3)) then
+       if (enable_spectral.eq.1) then
         ! do nothing
        else
         print *,"enable_spectral and ns_time_order are not consistent"
@@ -12518,12 +12497,12 @@ stop
       endif
 
        ! in: fort_mac_to_cell
-      if ((enable_spectral.eq.1).or. &  ! SEM space and time
-          (enable_spectral.eq.2).or. &  ! SEM space
-          (high_order_time_advection.eq.1)) then
+      if (enable_spectral.eq.1) then
 
+        ! The ISCHEME divergence is taken care of in SEM_MAC_TO_CELL
+        ! regardless of "bfact".
        if ((bfact.ge.2).or. &
-           (high_order_time_advection.eq.1)) then
+           ((bfact.eq.1).and.(operation_flag.eq.OP_ISCHEME_CELL))) then
 
         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
@@ -12774,19 +12753,17 @@ stop
         enddo ! i,j,k
 
        else if ((bfact.eq.1).and. &
-                (high_order_time_advection.eq.0)) then
+                (operation_flag.ne.OP_ISCHEME_CELL)) then
         ! do nothing
        else
-        print *,"bfact or high_order_time_advection invalid"
+        print *,"bfact or operation_flag invalid"
         stop
        endif
 
-      else if (((enable_spectral.eq.0).or. &
-                (enable_spectral.eq.3)).and. &
-               (high_order_time_advection.eq.0)) then
+      else if (enable_spectral.eq.0) then
        ! do nothing
       else
-       print *,"enable_spectral or high_order_time_advection invalid"
+       print *,"enable_spectral invalid"
        stop
       endif
 
@@ -13211,7 +13188,7 @@ stop
       endif
  
       if ((enable_spectral.lt.0).or. &
-          (enable_spectral.gt.3)) then
+          (enable_spectral.gt.1)) then
        print *,"enable_spectral invalid cell to mac"
        stop
       endif
@@ -14967,8 +14944,7 @@ stop
                 (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or.& 
                 (operation_flag.eq.OP_ISCHEME_MAC)) then ! advection
 
-        if ((enable_spectral.eq.1).or. & ! SEM space and time
-            (enable_spectral.eq.2)) then ! SEM space only
+        if (enable_spectral.eq.1) then
 
          if (bfact.ge.2) then
 
@@ -15141,8 +15117,7 @@ stop
           stop
          endif
 
-        else if ((enable_spectral.eq.0).or. & !Low order space and time
-                 (enable_spectral.eq.3)) then !SEM time only
+        else if (enable_spectral.eq.0) then
          ! do nothing
         else
          print *,"enable_spectral invalid"

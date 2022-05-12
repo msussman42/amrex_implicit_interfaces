@@ -285,13 +285,7 @@ int  NavierStokes::continuous_mof=2;
 int  NavierStokes::force_cmof_at_triple_junctions=1;
 int  NavierStokes::partial_cmof_stencil_at_walls=1;
 
-// 0  low order space and time
-// 1  SEM space and time
-// 2  SEM space 
-// 3  SEM time
 int  NavierStokes::enable_spectral=0;
-int  NavierStokes::viscous_enable_spectral=0;
-int  NavierStokes::projection_enable_spectral=0;
 int  NavierStokes::SEM_upwind=1;
 // default: tessellating fluid => default==1
 //          non-tessellating or tessellating solid => default==0
@@ -2713,37 +2707,19 @@ NavierStokes::read_params ()
 
     pp.query("enable_spectral",enable_spectral);
 
-    if (enable_spectral==0) {
-     viscous_enable_spectral=0;
-    } else if (enable_spectral==1) {
-     viscous_enable_spectral=0;
-    } else if (enable_spectral==2) {
-     viscous_enable_spectral=0;
-    } else if (enable_spectral==3) {
-     viscous_enable_spectral=0;
-    } else
-     amrex::Error("enable_spectral invalid");
-	
-    projection_enable_spectral=enable_spectral;
-
-    pp.query("viscous_enable_spectral",viscous_enable_spectral);
-    pp.query("projection_enable_spectral",projection_enable_spectral);
-
-    if ((viscous_enable_spectral==1)||  //SEM space and time
-        (viscous_enable_spectral==2)) { //SEM space
+    if (enable_spectral==1) {
 
      if (geometry_is_all_periodic==1) {
       // do nothing
      } else if (geometry_is_all_periodic==0) {
-      amrex::Error("no slip BC not implemented for space order>2");
+      amrex::Warning("no slip BC not implemented for space order>2");
      } else
       amrex::Error("geometry_is_all_periodic invalid");
 
-    } else if ((viscous_enable_spectral==0)||  //2nd space, 1st time
-	       (viscous_enable_spectral==3)) { // 2nd order space, SEM time
+    } else if (enable_spectral==0) {
      // do nothing
     } else
-     amrex::Error("viscous_enable_spectral invalid");
+     amrex::Error("enable_spectral invalid");
 
     pp.query("SEM_upwind",SEM_upwind);
     if (SEM_upwind==1) {
@@ -2872,10 +2848,6 @@ NavierStokes::read_params ()
      std::cout << "gravity_dir " << gravity_dir << '\n';
      std::cout << "cfl " << cfl << '\n';
      std::cout << "enable_spectral " << enable_spectral << '\n';
-     std::cout << "viscous_enable_spectral " << 
-       viscous_enable_spectral << '\n';
-     std::cout << "projection_enable_spectral " << 
-       projection_enable_spectral << '\n';
      std::cout << "SEM_upwind " << SEM_upwind << '\n';
      std::cout << "continuous_mof " << continuous_mof << '\n';
      std::cout << "force_cmof_at_triple_junctions " << 
@@ -5464,20 +5436,16 @@ NavierStokes::read_params ()
      std::cout << "save_min_rel_error= " << save_min_rel_error << '\n';
     }
 
-    if ((projection_enable_spectral>0)||
-        (viscous_enable_spectral>0)||
-        (enable_spectral>0)) {
+    if (enable_spectral==1) {
 
      // do nothing
 
-    } else if ((projection_enable_spectral==0)&&
-               (viscous_enable_spectral==0)&&
-               (enable_spectral==0)) {
+    } else if (enable_spectral==0) {
 
      // do nothing
 
     } else {
-     amrex::Error("enable_spectral vars invalid");
+     amrex::Error("enable_spectral invalid");
     }
      
     if (some_materials_compressible()==1) {
@@ -11939,7 +11907,7 @@ void NavierStokes::update_SEM_delta_force(
  } else
   amrex::Error("ns_time_order invalid");
 
- if ((enable_spectral==1)||(enable_spectral==3)) {
+ if (enable_spectral==1) {
   // do nothing
  } else {
   std::cout << "ns_time_order= " << ns_time_order << '\n';
@@ -16256,14 +16224,14 @@ NavierStokes::end_spectral_loop() {
  int local_end=1;
  int bfact=parent->Space_blockingFactor(level);
 
- if ((enable_spectral==0)||(enable_spectral==3)) {
+ if (enable_spectral==0) {
   local_end=1;
- } else if ((enable_spectral==1)||(enable_spectral==2)) {
-  if (bfact==1)
+ } else if (enable_spectral==1) {
+  if (bfact==1) {
    local_end=1;
-  else if (bfact>=2)
+  } else if (bfact>=2) {
    local_end=2;
-  else
+  } else
    amrex::Error("bfact invalid");
  } else
   amrex::Error("enable_spectral invalid end_spectral_loop() ");
@@ -16355,17 +16323,12 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
  int nmat=num_materials;
 
- if ((ns_time_order==1)&&
-     (enable_spectral==3)) //SEM time only
-  amrex::Error("(ns_time_order==1)&&(enable_spectral==3)");
- if ((ns_time_order>=2)&&
-     ((enable_spectral==0)|| //low order space and time
-      (enable_spectral==2))) //SEM space only
-  amrex::Error("(ns_time_order>=2)&&(enable_spectral==0 or 2)");
+ if ((ns_time_order==1)&&(enable_spectral!=0)) 
+  amrex::Error("(ns_time_order==1)&&(enable_spectral!=0)");
+ if ((ns_time_order>=2)&&(enable_spectral!=1)) 
+  amrex::Error("(ns_time_order>=2)&&(enable_spectral!=1)");
 
- if ((enable_spectral==1)|| //SEM space and time
-     (enable_spectral==2)|| //SEM space only
-     (enable_spectral==3)) {  //SEM time only
+ if (enable_spectral==1) {
 
   int nparts=im_solid_map.size();
   if ((nparts<0)||(nparts>nmat))
@@ -16757,7 +16720,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      int energyflag=advect_iter;
      int nsolve=NFLUXSEM;
      int homflag=source_term;
-     int local_enable_spectral=projection_enable_spectral;
+     int local_enable_spectral=enable_spectral;
 
      int ncomp_denold=nmat*num_state_material;
      int ncomp_veldest=snewfab.nComp();

@@ -77,7 +77,6 @@ amr.space_blocking_factor = 1 1 1 1 1 1
 amr.time_blocking_factor=1
 ns.num_SDC_outer_sweeps=1
 ns.enable_spectral=0
-ns.diffusion_enable_spectral=0
 amr.regrid_int      = 1       # how often to regrid
 amr.check_int       = 5000    # number of timesteps between checkpoints
 amr.check_file      = chk    # root name of checkpoint file

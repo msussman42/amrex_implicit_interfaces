@@ -85,7 +85,6 @@ amr.blocking_factor = 8 8 8 8 2   # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1 1 1
 amr.time_blocking_factor=1
 ns.enable_spectral=0
-ns.viscous_enable_spectral=0
 
 amr.check_int       = 20
 amr.check_file      = chk     # root name of checkpoint file

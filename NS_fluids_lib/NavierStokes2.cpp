@@ -4649,9 +4649,6 @@ void NavierStokes::apply_pressure_grad(
 void NavierStokes::init_gradu_tensor_and_material_visc_ALL() {
 
 
- int save_enable_spectral=enable_spectral;
- override_enable_spectral(viscous_enable_spectral);
-
  // allocate and delete HOLD_VELOCITY_DATA_MF in init_gradu_tensorALL:
  // (since do_alloc==1)
  int simple_AMR_BC_flag_viscosity=1;
@@ -4662,8 +4659,6 @@ void NavierStokes::init_gradu_tensor_and_material_visc_ALL() {
    CELLTENSOR_MF,
    FACETENSOR_MF,
    simple_AMR_BC_flag_viscosity);
-
- override_enable_spectral(save_enable_spectral);
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
   //ngrow=1
@@ -4805,8 +4800,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
 		  AMREX_SPACEDIM,0,7);
 
   int spectral_override=0;
-  if ((projection_enable_spectral==1)||
-      (projection_enable_spectral==2)) {
+  if (enable_spectral==1) {
    if (bfact>=2) {
     spectral_override=1;
    } else if (bfact==1) {
@@ -4814,11 +4808,10 @@ void NavierStokes::make_physics_varsALL(int project_option,
    } else {
     amrex::Error("bfact invalid");
    }
-  } else if ((projection_enable_spectral==0)||
-             (projection_enable_spectral==3)) {
+  } else if (enable_spectral==0) {
    spectral_override=0;
   } else
-   amrex::Error("projection_enable_spectral invalid");
+   amrex::Error("enable_spectral invalid");
 
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEDEN,1,0,
 	  AMREX_SPACEDIM,spectral_override,8);
@@ -5808,7 +5801,7 @@ void NavierStokes::init_gravity_potential() {
    scompBC_map[0]=0;
    scompBC_map[1]=0;
 
-   int extrap_enable_spectral=projection_enable_spectral;
+   int extrap_enable_spectral=enable_spectral;
    override_enable_spectralGHOST(0,1,extrap_enable_spectral);
     //ngrow=1
    PCINTERP_fill_borders(HYDROSTATIC_PRESDEN_MF,1,0,2,
@@ -5917,11 +5910,8 @@ void NavierStokes::process_potential_force_face() {
  if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM)
   amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid7");
 
- if (projection_enable_spectral!=enable_spectral)
-  amrex::Error("projection_enable_spectral!=enable_spectral");
-
-  // enable_spectral=0,3 => end_spectral_loop()=1
-  // enable_spectral=1,2 => end_spectral_loop()=(bfact==1 ? 1:2)
+  // enable_spectral=0 => end_spectral_loop()=1
+  // enable_spectral=1 => end_spectral_loop()=(bfact==1 ? 1:2)
  for (int spectral_loop=0;spectral_loop<end_spectral_loop();spectral_loop++) {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
  for (int tileloop=0;tileloop<=1;tileloop++) {
