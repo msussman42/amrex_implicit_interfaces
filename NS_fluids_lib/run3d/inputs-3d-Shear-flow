@@ -55,7 +55,6 @@ amr.grid_eff        = 0.7   # what constitutes an efficient grid
 amr.blocking_factor = 4 4 4 4  # block factor in grid generation
 
 ns.enable_spectral=0
-ns.viscous_enable_spectral=0
 amr.space_blocking_factor = 1 1 1
 amr.time_blocking_factor=1
 

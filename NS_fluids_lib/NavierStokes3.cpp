@@ -658,17 +658,12 @@ void NavierStokes::nonlinear_advection() {
 
 void NavierStokes::allocate_SDC() {
 
- if ((ns_time_order==1)&&
-     (enable_spectral==3))
-  amrex::Error("(ns_time_order==1)&&(enable_spectral==3)");
- if ((ns_time_order>=2)&&
-     ((enable_spectral==0)||
-      (enable_spectral==2)))
-  amrex::Error("(ns_time_order>=2)&&(enable_spectral==0 or 2)");
+ if ((ns_time_order==1)&&(enable_spectral!=0))
+  amrex::Error("(ns_time_order==1)&&(enable_spectral!=0)");
+ if ((ns_time_order>=2)&&(enable_spectral!=1))
+  amrex::Error("(ns_time_order>=2)&&(enable_spectral!=1)");
 
- if ((ns_time_order>=2)||
-     (enable_spectral==1)||   // spectral in space and time
-     (enable_spectral==2)) {  // spectral in space only
+ if ((ns_time_order>=2)&&(enable_spectral==1)) {
 
   if (localMF_grow[stableF_MF]==-1) {
    new_localMF(stableF_MF,NSTATE_SDC*ns_time_order,0,-1);
@@ -694,9 +689,7 @@ void NavierStokes::allocate_SDC() {
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
    new_localMF(delta_GP_MF+dir,ns_time_order,0,dir);
 
- } else if ((ns_time_order==1)&&
-	    ((enable_spectral==0)||
-	     (enable_spectral==3))) {
+ } else if ((ns_time_order==1)&&(enable_spectral==0)) {
   // do nothing
  } else
   amrex::Error("ns_time_order or enable_spectral invalid");
@@ -706,17 +699,12 @@ void NavierStokes::allocate_SDC() {
 
 void NavierStokes::deallocate_SDC() {
 
- if ((ns_time_order==1)&&
-     (enable_spectral==3))
-  amrex::Error("(ns_time_order==1)&&(enable_spectral==3)");
- if ((ns_time_order>=2)&&
-     ((enable_spectral==0)||
-      (enable_spectral==2)))
-  amrex::Error("(ns_time_order>=2)&&(enable_spectral==0 or 2)");
+ if ((ns_time_order==1)&&(enable_spectral!=0))
+  amrex::Error("(ns_time_order==1)&&(enable_spectral!=0)");
+ if ((ns_time_order>=2)&&(enable_spectral!=1))
+  amrex::Error("(ns_time_order>=2)&&(enable_spectral!=1)");
 
- if ((ns_time_order>=2)||
-     (enable_spectral==1)||   // spectral in space and time
-     (enable_spectral==2)) {  // spectral in space only
+ if ((ns_time_order>=2)&&(enable_spectral==1)) {
 
   if (localMF_grow[spectralF_MF]==0) {
    // do nothing
@@ -742,9 +730,7 @@ void NavierStokes::deallocate_SDC() {
   delete_localMF(delta_MF,1);
   delete_localMF(delta_GP_MF,AMREX_SPACEDIM);
 
- } else if ((ns_time_order==1)&&
-	    ((enable_spectral==0)||
-	     (enable_spectral==3))) {
+ } else if ((ns_time_order==1)&&(enable_spectral==0)) {
   // do nothing
  } else
   amrex::Error("ns_time_order or enable_spectral invalid");
@@ -938,17 +924,12 @@ void NavierStokes::init_delta_SDC() {
  } else
   amrex::Error("ns_time_order must be >=1");
 
- if ((ns_time_order==1)&&
-     (enable_spectral==3)) // SEM time only
-  amrex::Error("(ns_time_order==1)&&(enable_spectral==3)");
- if ((ns_time_order>=2)&&
-     ((enable_spectral==0)|| // low order space and time
-      (enable_spectral==2))) // SEM space only
-  amrex::Error("(ns_time_order>=2)&&(enable_spectral==0 or 2)");
+ if ((ns_time_order==1)&&(enable_spectral!=0))
+  amrex::Error("(ns_time_order==1)&&(enable_spectral!=0)");
+ if ((ns_time_order>=2)&&(enable_spectral!=1))
+  amrex::Error("(ns_time_order>=2)&&(enable_spectral!=1)");
 
- if ((enable_spectral==1)||   // spectral in space and time
-     (enable_spectral==2)||   // spectral in space only
-     (enable_spectral==3)) {  // spectral in time only
+ if ((ns_time_order>=2)&&(enable_spectral==1)) {
 
   if (localMF[delta_MF]->nComp()==NSTATE_SDC*ns_time_order) {
    // do nothing
@@ -1020,9 +1001,7 @@ void NavierStokes::init_delta_SDC() {
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
    setVal_localMF(spectralF_GP_MF+dir,0.0,scompGP,ncompGP,0);
 
- } else if ((ns_time_order==1)&&
-	    ((enable_spectral==0)||
-	     (enable_spectral==3))) {
+ } else if ((ns_time_order==1)&&(enable_spectral==0)) {
   // do nothing
  } else
   amrex::Error("ns_time_order or enable_spectral invalid");
@@ -2089,31 +2068,16 @@ void NavierStokes::SEM_advectALL(int source_term) {
  if (stokes_flow==0) {
 
   int finest_level=parent->finestLevel();
-  if ((ns_time_order==1)&&
-      (enable_spectral==3))
-   amrex::Error("(ns_time_order==1)&&(enable_spectral==3)");
-  if ((ns_time_order>=2)&&
-      ((enable_spectral==0)||
-       (enable_spectral==2)))
-   amrex::Error("(ns_time_order>=2)&&(enable_spectral==0 or 2)");
+  if ((ns_time_order==1)&&(enable_spectral!=0))
+   amrex::Error("(ns_time_order==1)&&(enable_spectral!=0)");
+  if ((ns_time_order>=2)&&(enable_spectral!=1))
+   amrex::Error("(ns_time_order>=2)&&(enable_spectral!=1)");
 
-  if ((enable_spectral==1)|| //SEM space and time
-      (enable_spectral==2)|| //SEM space only
-      (enable_spectral==3)) {//SEM time only
+  if ((ns_time_order>=2)&&(enable_spectral==1)) {
 
    int operation_flag=OP_ISCHEME_MAC;
 
    int SEM_end_spectral_loop=2;
-   if ((enable_spectral==1)||  //SEM space and time
-       (enable_spectral==2)) { //SEM space only
-    SEM_end_spectral_loop=2;
-   } else if ((enable_spectral==0)||  //Low order space and time
-	      (enable_spectral==3)) { //SEM time only
-    SEM_end_spectral_loop=1;
-   } else {
-    std::cout << "enable_spectral= " << enable_spectral << '\n';
-    amrex::Error("enable_spectral invalid 1");
-   }
 
    int nmat=num_materials;
 
@@ -2613,9 +2577,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     if (SEM_VISCOUS_SANITY_CHECK==1) {
      amrex::Warning("SEM_VISCOUS_SANITY_CHECK==1");
 
-     int save_enable_spectral=enable_spectral;
-     override_enable_spectral(viscous_enable_spectral);
-
      int update_placeholder=0;
      Vector<int> scomp;  
      Vector<int> ncomp;  
@@ -2647,7 +2608,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        REGISTER_MARK_MF,
        update_placeholder,update_placeholder);
 
-     override_enable_spectral(save_enable_spectral);
     } else if (SEM_VISCOUS_SANITY_CHECK==0) {
      // do nothing
     } else
@@ -2688,17 +2648,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      // in: NavierStokes::do_the_advance
     allocate_levelsetLO_ALL(1,LEVELPC_MF);
 
-    if ((ns_time_order==1)&&
-        (enable_spectral==3)) //SEM time only
-     amrex::Error("(ns_time_order==1)&&(enable_spectral==3)");
-    if ((ns_time_order>=2)&&
-        ((enable_spectral==0)|| // low order space time.
-         (enable_spectral==2))) // SEM space only
-     amrex::Error("(ns_time_order>=2)&&(enable_spectral==0 or 2)");
+    if ((ns_time_order==1)&&(enable_spectral!=0))
+     amrex::Error("(ns_time_order==1)&&(enable_spectral!=0)");
+    if ((ns_time_order>=2)&&(enable_spectral!=1))
+     amrex::Error("(ns_time_order>=2)&&(enable_spectral!=1)");
 
-    if ((enable_spectral==1)||  // space-time SEM
-	(enable_spectral==2)||  // SEM space
-        (enable_spectral==3)) { // SEM time
+    if ((ns_time_order>=2)&&(enable_spectral==1)) {
 
      if (disable_advection==0) {
 
@@ -2753,10 +2708,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      } else
       amrex::Error("disable_advection invalid");
 
-    } else if (enable_spectral==0) {  //low order space and time
+    } else if ((ns_time_order==1)&&(enable_spectral==0)) {
      // do nothing
     } else
-     amrex::Error("enable_spectral invalid do the advance");
+     amrex::Error("ns_time_order, enable_spectral invalid do the advance");
 
       // in: NavierStokes::do_the_advance
       // 0=do not update the error 1=update the error
@@ -3845,24 +3800,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     if ((ns_time_order>=2)&&(advance_status==1)) {
 
-      if ((enable_spectral==1)||  // space-time SEM
-	  (enable_spectral==3)) { // SEM time
+      if (enable_spectral==1) {
        // do nothing
       } else
        amrex::Error("enable_spectral invalid 2");
-
-      if ((viscous_enable_spectral==0)||  // low order viscosity space time.
-          (viscous_enable_spectral==1)||  // SEM space and time
-          (viscous_enable_spectral==3)) { // SEM time
-       // do nothing
-      } else
-       amrex::Error("viscous_enable_spectral invalid");
-
-      if ((projection_enable_spectral==1)||  // SEM space and time
-          (projection_enable_spectral==3)) { // SEM time
-       // do nothing
-      } else
-       amrex::Error("projection_enable_spectral invalid");
 
       if ((slab_step>=-1)&&(slab_step<ns_time_order)) {
 
@@ -3896,9 +3837,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (ncomp_check!=nsolve)
          amrex::Error("ncomp_check invalid");
 
-        int save_enable_spectral=enable_spectral;
-        override_enable_spectral(projection_enable_spectral);
-
          // data at time = cur_time_slab
         getState_localMF_listALL(
           PRESPC2_MF,1,
@@ -3913,11 +3851,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          PRESPC2_MF,
          update_spectralF,update_stableF);
 
-        override_enable_spectral(save_enable_spectral);
         // end: grad p (MAC)
-
-        save_enable_spectral=enable_spectral;
-        override_enable_spectral(viscous_enable_spectral);
 
 	 //num_materials_combine=1
         get_mm_scomp_solver(
@@ -3970,15 +3904,14 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
         // HOfab=-div(k grad T)
         // calls: fort_updatesemforce declared in GODUNOV_3D.F90
-        if ((viscous_enable_spectral==1)||  // SEM space and time
-            (viscous_enable_spectral==3)) { // SEM time
+        if (enable_spectral==1) {
          update_SEM_forcesALL(SOLVETYPE_HEAT,
           BOUSSINESQ_TEMP_MF,
           update_spectralF,update_stableF);
-        } else if (viscous_enable_spectral==0) {
+        } else if (enable_spectral==0) {
          // do nothing
         } else
-         amrex::Error("viscous_enable_spectral invalid");
+         amrex::Error("enable_spectral invalid");
 
         // HOfab=-div(2 mu D)-HOOP_FORCE_MARK_MF
         // calls: fort_updatesemforce declared in GODUNOV_3D.F90
@@ -4011,17 +3944,14 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
         // HOfab=-div(2 mu D)-HOOP_FORCE_MARK_MF
         // calls: fort_updatesemforce declared in GODUNOV_3D.F90
-        if ((viscous_enable_spectral==1)||   // SEM space and time
-            (viscous_enable_spectral==3)) {  // SEM time
+        if (enable_spectral==1) {
          update_SEM_forcesALL(SOLVETYPE_VISC,
           REGISTER_MARK_MF,
           update_spectralF,update_stableF);
-        } else if (viscous_enable_spectral==0) {
+        } else if (enable_spectral==0) {
          // do nothing
         } else
-         amrex::Error("viscous_enable_spectral invalid");
-
-        override_enable_spectral(save_enable_spectral);
+         amrex::Error("enable_spectral invalid");
 
         delete_array(PRESPC2_MF); // pressure
         delete_array(REGISTER_MARK_MF); // velocity
@@ -8427,7 +8357,7 @@ void NavierStokes::residual_correction_form(
  } else if (project_option_is_valid(project_option)==1) {
 
    // -dt grad p face_weight  
-   // SEM BC if projection_enable_spectral==1,2
+   // SEM BC if enable_spectral==1
   int simple_AMR_BC_flag=0;
   int simple_AMR_BC_flag_viscosity=0;
    // apply_pressure_grad declared in NavierStokes2.cpp
@@ -9453,7 +9383,7 @@ void NavierStokes::multiphase_project(int project_option) {
  int save_enable_spectral=enable_spectral;
 
  if (project_option_projection(project_option)==1) {
-  override_enable_spectral(projection_enable_spectral);
+  override_enable_spectral(enable_spectral);
  } else if (project_option==SOLVETYPE_PRESEXTRAP) {
   override_enable_spectral(0); // always low order
  } else if (project_option==SOLVETYPE_HEAT) { 
@@ -10516,11 +10446,12 @@ void NavierStokes::multiphase_project(int project_option) {
 #endif
 
      int BICGSTAB_ACTIVE=0;
-     if ((enable_spectral==1)||  // SEM space and time
-         (enable_spectral==2)) { // SEM space
+
+     if (enable_spectral==1) {
+
       BICGSTAB_ACTIVE=1;
-     } else if ((enable_spectral==0)||
-                (enable_spectral==3)) {  // SEM time
+
+     } else if (enable_spectral==0) {
 
       if (project_option==SOLVETYPE_VISC) { 
 
@@ -12108,9 +12039,6 @@ void NavierStokes::veldiffuseALL() {
 
  int nden=nmat*num_state_material;
 
- int save_enable_spectral=enable_spectral;
- override_enable_spectral(viscous_enable_spectral);
-
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
  int convert_temperature=0;
@@ -12317,18 +12245,17 @@ void NavierStokes::veldiffuseALL() {
    // HOFAB=-div(2 mu D) - HOOP_FORCE_MARK_MF (update_state=0 at end of
    //                                          NavierStokes::do_the_advance)
    // unew=unew-(1/rho)(int (HOFAB) - dt (LOFAB))
-   if ((viscous_enable_spectral==1)||  // SEM space and time
-       (viscous_enable_spectral==3)) { // SEM time
+   if (enable_spectral==1) {
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
      // calls: fort_semdeltaforce in GODUNOV_3D.F90
      // does not look at: enable_spectral
      ns_level.make_SEM_delta_force(SOLVETYPE_VISC);
     }
-   } else if (viscous_enable_spectral==0) {
+   } else if (enable_spectral==0) {
     // do nothing
    } else
-    amrex::Error("viscous_enable_spectral invalid");
+    amrex::Error("enable_spectral invalid");
 
    // spectral_override==1 => order derived from "enable_spectral"
    avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
@@ -12393,18 +12320,20 @@ void NavierStokes::veldiffuseALL() {
 
   if (ns_time_order>=2) {
 
-   if ((viscous_enable_spectral==1)||   // SEM space and time
-       (viscous_enable_spectral==3)) {  // SEM time
+   if (enable_spectral==1) {
 
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
      // calls: fort_semdeltaforce in GODUNOV_3D.F90
      ns_level.make_SEM_delta_force(SOLVETYPE_HEAT); 
     }
-   } else if (viscous_enable_spectral==0) {
+
+   } else if (enable_spectral==0) {
+
     // do nothing
+    
    } else
-    amrex::Error("viscous_enable_spectral invalid");
+    amrex::Error("enable_spectral invalid");
 
    avgDownALL(State_Type,STATECOMP_STATES,nden,1);
   } else
@@ -12459,28 +12388,26 @@ void NavierStokes::veldiffuseALL() {
   int update_stableF=1;
    // LOfab=-div(k grad T)
    // calls: fort_updatesemforce declared in GODUNOV_3D.F90:
-  if ((viscous_enable_spectral==1)||  // SEM space and time
-      (viscous_enable_spectral==3)) { // SEM time
+  if (enable_spectral==1) {
    update_SEM_forcesALL(SOLVETYPE_HEAT,PRESPC2_MF,
     update_spectralF,update_stableF);
-  } else if (viscous_enable_spectral==0) {
+  } else if (enable_spectral==0) {
    // do nothing
   } else
-   amrex::Error("viscous_enable_spectral invalid");
+   amrex::Error("enable_spectral invalid");
 
   delete_array(PRESPC2_MF);
 
 
    // LOfab=-div(2 mu D)-HOOP_FORCE_MARK_MF
    // calls: fort_updatesemforce declared in GODUNOV_3D.F90:
-  if ((viscous_enable_spectral==1)||   // SEM space and time
-      (viscous_enable_spectral==3)) {  // SEM time
+  if (enable_spectral==1) {
    update_SEM_forcesALL(SOLVETYPE_VISC,VISCHEAT_SOURCE_MF,
     update_spectralF,update_stableF);
-  } else if (viscous_enable_spectral==0) {
+  } else if (enable_spectral==0) {
    // do nothing
   } else
-   amrex::Error("viscous_enable_spectral invalid");
+   amrex::Error("enable_spectral invalid");
 
  } else if ((ns_time_order==1)||
             ((divu_outer_sweeps>=0)&&
@@ -12706,8 +12633,6 @@ void NavierStokes::veldiffuseALL() {
  }  // ilev
 
  delete_array(BOUSSINESQ_TEMP_MF);
-
- override_enable_spectral(save_enable_spectral);
 
 }   // end subroutine veldiffuseALL
 

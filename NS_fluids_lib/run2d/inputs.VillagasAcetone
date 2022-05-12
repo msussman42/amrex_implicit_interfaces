@@ -91,7 +91,6 @@ amr.blocking_factor = 8 8 8 8   # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1   # this is the SEM space order
 amr.time_blocking_factor=1 # SEM time order
 ns.enable_spectral=0  # enable_spectral=0 or 1
-ns.viscous_enable_spectral=0 # set this to be the same as enable_spectral
 amr.check_int       = 1000
 amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps

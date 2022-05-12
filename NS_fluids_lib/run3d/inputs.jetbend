@@ -88,7 +88,6 @@ amr.blocking_factor = 4 4 4 4 4 4  # block factor in grid generation
 amr.space_blocking_factor = 2 2 2 2 2
 amr.time_blocking_factor=2
 ns.enable_spectral=1
-ns.viscous_enable_spectral=0
 
 # number of timesteps between checkpoints
 # IF THIS VALUE IS TOO SMALL, THEN PERFORMANCE WILL BE EFFECTED!

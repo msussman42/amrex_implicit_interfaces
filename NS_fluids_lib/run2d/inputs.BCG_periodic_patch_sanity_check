@@ -50,16 +50,10 @@ amr.space_blocking_factor=2 2
 #amr.space_blocking_factor=2 2
 #amr.time_blocking_factor=2
 #amr.time_blocking_factor=1
-amr.time_blocking_factor=1
+amr.time_blocking_factor=2
 # for SEM, the initial time step is further reduced by 2^{r_time}
 ns.init_shrink    = 0.05 # reduce init dt since grad p not initially known
-# 0  low order space and time
-# 1  SEM space and time
-# 2  SEM space 
-# 3  SEM time
-ns.enable_spectral=2
-#ns.enable_spectral=0
-ns.viscous_enable_spectral=0
+ns.enable_spectral=1
 amr.check_int       = 20      # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 10 

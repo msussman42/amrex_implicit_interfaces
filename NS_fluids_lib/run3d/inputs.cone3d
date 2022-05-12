@@ -76,7 +76,6 @@ amr.space_blocking_factor = 2 2 2 2  # 2nd order in space for all levels.
 amr.time_blocking_factor=2 # 2nd order in time for all levels
 ns.enable_spectral=1  # enable_spectral=0 or 1 (advection, pressure grad are
                       #  high order in space and time.
-ns.viscous_enable_spectral=1 
 amr.check_int       = 4    # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 4       # 10 for debug, 100 for production run? 

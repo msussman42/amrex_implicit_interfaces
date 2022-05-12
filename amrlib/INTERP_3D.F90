@@ -1835,8 +1835,6 @@ stop
       ! enable_spectral:
       ! 0 - low order
       ! 1 - space/time spectral
-      ! 2 - space spectral only
-      ! 3 - time spectral only
       subroutine fort_seminterp ( &
        enable_spectral, &
        dxc,dxf, &
@@ -1963,11 +1961,9 @@ stop
         do_spectral_interp=0
        endif
 
-       if ((enable_spectral.eq.0).or. &
-           (enable_spectral.eq.3)) then
+       if (enable_spectral.eq.0) then
         do_spectral_interp=0
-       else if ((enable_spectral.eq.1).or. &
-                (enable_spectral.eq.2)) then
+       else if (enable_spectral.eq.1) then
         ! do nothing
        else
         print *,"enable_spectral invalid sem interp"
@@ -2241,8 +2237,6 @@ stop
       ! enable_spectral:
       ! 0 - low order
       ! 1 - space/time spectral
-      ! 2 - space spectral only
-      ! 3 - time spectral only
       subroutine fort_edgeinterp( &
        enable_spectral, &
        grid_type, & ! -1...5
@@ -2414,11 +2408,9 @@ stop
         do_spectral_interp=0
        endif
 
-       if ((enable_spectral.eq.0).or. &
-           (enable_spectral.eq.3)) then
+       if (enable_spectral.eq.0) then
         do_spectral_interp=0
-       else if ((enable_spectral.eq.1).or. &
-                (enable_spectral.eq.2)) then
+       else if (enable_spectral.eq.1) then
         ! do nothing
        else
         print *,"enable_spectral invalid edge interp"

@@ -5025,8 +5025,7 @@ END SUBROUTINE SIMP
          voltotal=zero
 
          if ((bfact_f.ge.2).and. &
-             ((enable_spectral.eq.1).or. &
-              (enable_spectral.eq.2)).and. &
+             (enable_spectral.eq.1).and. &
              (testmask.ge.1).and. &
              (testmask.le.nmat)) then
 
@@ -5131,7 +5130,6 @@ END SUBROUTINE SIMP
 
          else if ((bfact_f.eq.1).or. &
                   (enable_spectral.eq.0).or. &
-                  (enable_spectral.eq.3).or. & ! SEM time only
                   (testmask.eq.0)) then
 
           call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
@@ -5789,8 +5787,7 @@ END SUBROUTINE SIMP
            voltotal=zero
 
            if ((bfact_c.ge.2).and. &
-               ((enable_spectral.eq.1).or. &
-                (enable_spectral.eq.2)).and. &
+               (enable_spectral.eq.1).and. &
                (testmask.ge.1).and. &
                (testmask.le.nmat)) then
 
@@ -5895,7 +5892,6 @@ END SUBROUTINE SIMP
 
            else if ((bfact_c.eq.1).or. &
                     (enable_spectral.eq.0).or. &
-                    (enable_spectral.eq.3).or. &
                     (testmask.eq.0)) then
 
             if (side.eq.1) then
@@ -6449,8 +6445,7 @@ END SUBROUTINE SIMP
           voltotal=zero
 
           if ((bfact_c.ge.2).and. &
-              ((enable_spectral.eq.1).or. &
-               (enable_spectral.eq.2)).and. &
+              (enable_spectral.eq.1).and. &
               (testmask.ge.1).and. &
               (testmask.le.nmat)) then
 
@@ -6512,7 +6507,6 @@ END SUBROUTINE SIMP
 
           else if ((bfact_c.eq.1).or. &
                    (enable_spectral.eq.0).or. &
-                   (enable_spectral.eq.3).or. &
                    (testmask.eq.0)) then
 
             if (side.eq.1) then
@@ -12746,8 +12740,7 @@ END SUBROUTINE SIMP
        voltotal=zero
 
        if ((bfact_f.ge.2).and. &
-           ((local_enable_spectral.eq.1).or. &
-            (local_enable_spectral.eq.2)).and. &
+           (local_enable_spectral.eq.1).and. &
            (testmask.ge.1).and. &
            (testmask.le.nmat).and. &
            (spectral_override.eq.1)) then
@@ -12774,7 +12767,6 @@ END SUBROUTINE SIMP
 
        else if ((bfact_f.eq.1).or. &
                 (local_enable_spectral.eq.0).or. &
-                (local_enable_spectral.eq.3).or. &
                 (testmask.eq.0).or. &
                 (spectral_override.eq.0)) then
 
@@ -14327,8 +14319,7 @@ END SUBROUTINE SIMP
        voltotal=zero
 
        if ((bfact_f.ge.2).and. &
-           ((local_enable_spectral.eq.1).or. &
-            (local_enable_spectral.eq.2)).and. &
+           (local_enable_spectral.eq.1).and. &
            (testmask.ge.1).and. &
            (testmask.le.nmat).and. &
            (spectral_override.eq.1)) then
@@ -14362,7 +14353,6 @@ END SUBROUTINE SIMP
 
        else if ((bfact_f.eq.1).or. &
                 (local_enable_spectral.eq.0).or. &
-                (local_enable_spectral.eq.3).or. &
                 (testmask.eq.0).or. &
                 (spectral_override.eq.0)) then
 

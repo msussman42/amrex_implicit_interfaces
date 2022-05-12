@@ -1447,13 +1447,7 @@ protected:
 
     static Real truncate_thickness;  // default is 2.0
 
-    // 0  low order space and time
-    // 1  SEM space and time
-    // 2  SEM space 
-    // 3  SEM time
     static int  enable_spectral;
-    static int  viscous_enable_spectral; // def 0
-    static int  projection_enable_spectral;
     static int  SEM_upwind;
      // continuous_mof = 0 => regular MOF
      // continuous_mof = 2 => CMOF ("continuous MOF ")
