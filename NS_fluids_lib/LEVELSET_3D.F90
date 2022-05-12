@@ -14967,8 +14967,8 @@ stop
                 (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or.& 
                 (operation_flag.eq.OP_ISCHEME_MAC)) then ! advection
 
-        if ((enable_spectral.eq.1).or. &
-            (enable_spectral.eq.2)) then
+        if ((enable_spectral.eq.1).or. & ! SEM space and time
+            (enable_spectral.eq.2)) then ! SEM space only
 
          if (bfact.ge.2) then
 
@@ -15141,8 +15141,8 @@ stop
           stop
          endif
 
-        else if ((enable_spectral.eq.0).or. &
-                 (enable_spectral.eq.3)) then
+        else if ((enable_spectral.eq.0).or. & !Low order space and time
+                 (enable_spectral.eq.3)) then !SEM time only
          ! do nothing
         else
          print *,"enable_spectral invalid"
