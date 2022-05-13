@@ -1868,7 +1868,7 @@ void NavierStokes::apply_div(
 } // omp
  ns_reconcile_d_num(40);
 
-} // subroutine apply_div
+} // end subroutine apply_div
 
 
 // if temperature: -div(k grad T) (project_option==SOLVETYPE_HEAT)
@@ -1885,6 +1885,14 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
   // do nothing
  } else
   amrex::Error("SDC_outer_sweeps invalid update_SEM_forcesALL");
+
+ if (update_stable==1) {
+  if ((slab_step<0)||(slab_step>=ns_time_order))
+   amrex::Error("slab_step invalid");
+ } else if (update_stable==0) {
+  // do nothing
+ } else
+  amrex::Error("update_stable invalid update_SEM_forcesALL");
 
  Real save_dt=dt_slab;
  dt_slab=1.0;
@@ -1983,7 +1991,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
 
  dt_slab=save_dt;
 
-} // subroutine update_SEM_forcesALL
+} // end subroutine update_SEM_forcesALL
 
 // called if project_option==SOLVETYPE_PRES,SOLVETYPE_HEAT,SOLVETYPE_VISC
 void NavierStokes::update_SEM_forces(int project_option,
@@ -1999,6 +2007,14 @@ void NavierStokes::update_SEM_forces(int project_option,
   // do nothing
  } else
   amrex::Error("SDC_outer_sweeps invalid update_SEM_forces");
+
+ if (update_stable==1) {
+  if ((slab_step<0)||(slab_step>=ns_time_order))
+   amrex::Error("slab_step invalid");
+ } else if (update_stable==0) {
+  // do nothing
+ } else
+  amrex::Error("update_stable invalid update sem forces");
 
  if ((project_option==SOLVETYPE_PRES)||   // grad p face
      (project_option==SOLVETYPE_VISC)) {  
@@ -2107,7 +2123,8 @@ void NavierStokes::update_SEM_forces(int project_option,
   update_SEM_delta_force(project_option,
    local_idx_gpmac,
    local_idx_div,
-   update_spectral,update_stable,nsolve);
+   update_spectral,
+   update_stable,nsolve);
  } else
   amrex::Error("update_spectral+update_stable invalid");
 

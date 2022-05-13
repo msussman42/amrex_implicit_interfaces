@@ -11895,7 +11895,8 @@ void NavierStokes::update_SEM_delta_force(
  int project_option,
  int idx_gpmac,
  int idx_div,
- int update_spectral,int update_stable,
+ int update_spectral,
+ int update_stable,
  int nsolve) {
 
  bool use_tiling=ns_tiling;
