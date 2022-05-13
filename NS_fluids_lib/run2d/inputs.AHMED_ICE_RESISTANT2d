@@ -7,7 +7,7 @@ stop_time = 10
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # 0=>XYZ, 1=> RZ
 # XYZ: axis_dir=1,2,3 RZ: axis_dir=0
-geometry.coord_sys      = 0 
+geometry.coord_sys = 0 
 geometry.prob_lo=0.0 0.0    
 #geometry.prob_hi=0.2 0.6  # cm RZ axis_dir=0
 geometry.prob_hi=0.4 0.6  # cm XYZ axis_dir=1,2,3
@@ -92,13 +92,13 @@ mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = -980.0   # cgs
 
 # on the substrate (if there is ice):
-# sigma_{SG}-sigma_{SI}=sigma_{IG}cos(theta_I_substrate)
+# sigma_{SG}-sigma_{SI}=sigma_{IG}cos(theta_I)
 # theta_I_substrate=33 degrees
 # sigma_{SG}=sigma_{IG}
-# sigma_{IG}-sigma_{SI}=sigma_{IG}cos(theta_I_substrate)
+# sigma_{IG}-sigma_{SI}=sigma_{IG}cos(theta_I)
 # sigma_{IG}(1-cos(theta_I_substrate))=sigma_{SI}
 
-# sigma_{SG}-sigma_{SL}=sigma_{LG}cos(theta_L_substrate)
+# sigma_{SG}-sigma_{SL}=sigma_{LG}cos(theta_L)
 # theta_L_substrate=33 degrees
 # sigma_{SG}=sigma_{LG}
 # sigma_{LG}(1-cos(theta_L_substrate))=sigma_{SL}
@@ -123,7 +123,8 @@ ns.gravity        = -980.0   # cgs
 #can be used instead (simulation would run 100 times faster, giving similar
 #freezing times?).  
 
-ns.tension=72.8 24.8 128.6 34.0 72.8 61.2 # axis_dir=0,2,3
+ns.tension=72.8 72.8 72.8 72.8 72.8 72.8 # axis_dir=3
+#ns.tension=72.8 24.8 128.6 34.0 72.8 61.2 # axis_dir=0,2
 #ns.tension=72.8 128.6 72.8 # axis_dir=1  12,13,23
 # contact angle for water drop on substrate: 140 degrees
 # theta=theta_{water,substrate}
@@ -138,7 +139,6 @@ ns.stiffCP= 4.1855e+7  1.0e+7 2.108e+7 0.385e+7  # erg/(g K) axis_dir=0,2,3
 #ns.stiffCP= 4.1855e+7  1.0e+7 0.385e+7  # erg/(g K) axis_dir=1
 ns.latent_heat = 0.0 -1.81e+5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 ns.saturation_temp = 0.0 1683 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-ns.distribute_from_target = 0 0 0 0 0 0 0 0 0 0 0 0
 ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
 ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
 #ns.fixed_dt	  = 0.01     # hardwire dt
@@ -224,12 +224,13 @@ ns.recalesce_flag=0 0 0 0
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=0
 #1=water 2=gas 3=ice 4=substrate 
-ns.tempconst=273.0 273.0 273.0 353.0  #axis_dir=3
+ns.tempconst=1684.0 1684.0 200.0 200.0  #axis_dir=3
 #1=water 2=gas 3=lubricant 4=substrate 
 #ns.tempconst=273.0 273.0 273.0 353.0  #axis_dir=0,2
 #ns.tempconst=273.0 273.0 353.0  #axis_dir=1
 
-ns.initial_temperature=273.0 273.0 273.0 273.0  # dimensionless
+ns.initial_temperature=1684.0 1684.0 200.0 200.0  # axis_dir=3
+#ns.initial_temperature=273.0 273.0 273.0 273.0  # axis_dir=0,1,2
 #ns.xblob=0.0 # axis_dir=0 RZ
 ns.xblob=0.1  # axis_dir=1,2,3 (0<x<0.4 0<y<0.6)
 ns.yblob=0.38
