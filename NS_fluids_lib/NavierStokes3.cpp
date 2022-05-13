@@ -9295,6 +9295,11 @@ void NavierStokes::multiphase_project(int project_option) {
  } else
   amrex::Error("SDC_outer_sweeps invalid multiphase_project");
 
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+  // do nothing
+ } else
+  amrex::Error("slab_step invalid");
+
  const Real* coarse_dx=geom.CellSize();
 
  
@@ -9384,7 +9389,7 @@ void NavierStokes::multiphase_project(int project_option) {
  int save_enable_spectral=enable_spectral;
 
  if (project_option_projection(project_option)==1) {
-  override_enable_spectral(enable_spectral);
+  // do nothing
  } else if (project_option==SOLVETYPE_PRESEXTRAP) {
   override_enable_spectral(0); // always low order
  } else if (project_option==SOLVETYPE_HEAT) { 
@@ -12035,6 +12040,9 @@ void NavierStokes::veldiffuseALL() {
  } else
   amrex::Error("SDC_outer_sweeps invalid");
 
+ if ((slab_step<0)||(slab_step>=ns_time_order))
+  amrex::Error("slab_step invalid");
+
  int nmat=num_materials;
  int finest_level=parent->finestLevel();
 
@@ -12244,8 +12252,9 @@ void NavierStokes::veldiffuseALL() {
   if (ns_time_order>=2) {
 
    // fort_updatesemforce declared in GODUNOV_3D.F90:
-   // HOFAB=-div(2 mu D) - HOOP_FORCE_MARK_MF (update_state=0 at end of
-   //                                          NavierStokes::do_the_advance)
+   // HOFAB=-div(2 mu D) - HOOP_FORCE_MARK_MF 
+   // (update_state=OP_HOOP_BOUSSINESQ_EXPLICIT at end of 
+   //  NavierStokes::do_the_advance)
    // unew=unew-(1/rho)(int (HOFAB) - dt (LOFAB))
    if (enable_spectral==1) {
     for (int ilev=finest_level;ilev>=level;ilev--) {
