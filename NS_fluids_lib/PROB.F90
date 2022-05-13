@@ -15554,6 +15554,7 @@ END SUBROUTINE Adist
          if (operation_flag.eq.OP_GRADU_MAC_TO_CELL) then 
           local_data(isten+1)=xvel(D_DECL(ic,jc,kc),scomp+nc-1)
          else if (operation_flag.eq.OP_ISCHEME_CELL) then ! advection
+           ! u dot grad S=div(uS)-S div(u)
           if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then
            local_data(isten+1)=xface(D_DECL(ic,jc,kc),nc) ! u * umac 
           else if (nc.eq.SEM_T+1) then
@@ -15872,32 +15873,63 @@ END SUBROUTINE Adist
             stop
            endif
 
-           if ((dir_main.eq.SDIM).and.(nc.eq.ncomp)) then
+           if (dir_main.eq.SDIM) then
+
+            if (nc.eq.ncomp) then
       
-            if (source_term.eq.SUB_OP_SDC_LOW_TIME) then 
-             ! do nothing
-            else if (source_term.eq.SUB_OP_SDC_ISCHEME) then
+             if (source_term.eq.SUB_OP_SDC_LOW_TIME) then 
 
-             if ((slab_step.lt.0).or.(slab_step.ge.bfact_time_order)) then
-              print *,"slab_step invalid"
-              stop
-             endif 
+              if ((slab_step.lt.0).or.(slab_step.gt.bfact_time_order)) then
+               print *,"slab_step invalid"
+               stop
+              endif 
 
-             do nc2=1,ncomp
-              divflux(nc2)=divdest(D_DECL(ic,jc,kc),nc2)
-             enddo ! nc2
+             else if (source_term.eq.SUB_OP_SDC_ISCHEME) then
 
-             do nc2=1,SDIM
-              vel_old=ustar(D_DECL(ic,jc,kc),nc2) 
-              mom_new=vel_old-dt*divflux(nc2)
+              if ((slab_step.lt.0).or.(slab_step.ge.bfact_time_order)) then
+               print *,"slab_step invalid"
+               stop
+              endif 
 
-               ! SDC correction term: momentum
+              do nc2=1,ncomp
+               divflux(nc2)=divdest(D_DECL(ic,jc,kc),nc2)
+              enddo ! nc2
+
+              do nc2=1,SDIM
+               vel_old=ustar(D_DECL(ic,jc,kc),nc2) 
+               mom_new=vel_old-dt*divflux(nc2)
+
+                ! SDC correction term: momentum
+               if ((ns_time_order.ge.2).and. &
+                   (ns_time_order.le.32).and. &
+                   (advect_iter.eq.SUB_OP_ISCHEME_CORRECT).and. &
+                   (SDC_outer_sweeps.gt.0).and. &
+                   (divu_outer_sweeps+1.eq.num_divu_outer_sweeps)) then
+                mom_new=mom_new-cterm(D_DECL(ic,jc,kc),nc2)
+               else if ((ns_time_order.eq.1).or. &
+                        (advect_iter.eq.SUB_OP_ISCHEME_PREDICT).or. &
+                        (SDC_outer_sweeps.eq.0).or. &
+                        (divu_outer_sweeps+1.lt.num_divu_outer_sweeps)) then
+                ! do nothing
+               else
+                print *,"ns_time_order, SDC_outer_sweeps, or divu_outer.. bad"
+                stop
+               endif
+
+               vel_new(nc2)=mom_new
+              enddo ! nc2=1..sdim
+
+              T_old=denold(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1)
+              T_new=T_old-dt*divflux(SEM_T+1)
+
+                ! SDC correction term: temperature
               if ((ns_time_order.ge.2).and. &
                   (ns_time_order.le.32).and. &
                   (advect_iter.eq.SUB_OP_ISCHEME_CORRECT).and. &
                   (SDC_outer_sweeps.gt.0).and. &
                   (divu_outer_sweeps+1.eq.num_divu_outer_sweeps)) then
-               mom_new=mom_new-cterm(D_DECL(ic,jc,kc),nc2)
+                 ! cterm corresponds to (*localMF[delta_MF])[mfi]
+               T_new=T_new-cterm(D_DECL(ic,jc,kc),SEM_T+1)
               else if ((ns_time_order.eq.1).or. &
                        (advect_iter.eq.SUB_OP_ISCHEME_PREDICT).or. &
                        (SDC_outer_sweeps.eq.0).or. &
@@ -15908,64 +15940,46 @@ END SUBROUTINE Adist
                stop
               endif
 
-              vel_new(nc2)=mom_new
-             enddo ! nc2=1..sdim
+              if (T_new.lt.fort_tempcutoff(maskSEM)) then
+               T_new=fort_tempcutoff(maskSEM)
+              endif
+              if (T_new.gt.fort_tempcutoffmax(maskSEM)) then
+               T_new=fort_tempcutoffmax(maskSEM)
+              endif 
 
-             T_old=denold(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1)
-             T_new=T_old-dt*divflux(SEM_T+1)
+              if (T_new.gt.zero) then
+               ! do nothing
+              else
+               print *,"T_new underflow"
+               print *,"dt=",dt
+               print *,"divflux (u dot grad T)= ",divflux(SEM_T+1)
+               print *,"cterm= ",cterm(D_DECL(ic,jc,kc),SEM_T+1)
+               print *,"energyflag (advect_iter) =",energyflag
+               print *,"ic,jc,kc ",ic,jc,kc
+               stop
+              endif
 
-               ! SDC correction term: temperature
-             if ((ns_time_order.ge.2).and. &
-                 (ns_time_order.le.32).and. &
-                 (advect_iter.eq.SUB_OP_ISCHEME_CORRECT).and. &
-                 (SDC_outer_sweeps.gt.0).and. &
-                 (divu_outer_sweeps+1.eq.num_divu_outer_sweeps)) then
-                ! cterm corresponds to (*localMF[delta_MF])[mfi]
-              T_new=T_new-cterm(D_DECL(ic,jc,kc),SEM_T+1)
-             else if ((ns_time_order.eq.1).or. &
-                      (advect_iter.eq.SUB_OP_ISCHEME_PREDICT).or. &
-                      (SDC_outer_sweeps.eq.0).or. &
-                      (divu_outer_sweeps+1.lt.num_divu_outer_sweeps)) then
-              ! do nothing
+              do nc2=1,SDIM
+               veldest(D_DECL(ic,jc,kc),nc2)=vel_new(nc2)
+              enddo ! nc2
+              dendest(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1)=T_new
+
              else
-              print *,"ns_time_order, SDC_outer_sweeps, or divu_outer.. bad"
+              print *,"source_term invalid"
               stop
              endif
 
-             if (T_new.lt.fort_tempcutoff(maskSEM)) then
-              T_new=fort_tempcutoff(maskSEM)
-             endif
-             if (T_new.gt.fort_tempcutoffmax(maskSEM)) then
-              T_new=fort_tempcutoffmax(maskSEM)
-             endif 
-
-             if (T_new.gt.zero) then
-              ! do nothing
-             else
-              print *,"T_new underflow"
-              print *,"dt=",dt
-              print *,"divflux (u dot grad T)= ",divflux(SEM_T+1)
-              print *,"cterm= ",cterm(D_DECL(ic,jc,kc),SEM_T+1)
-              print *,"energyflag (advect_iter) =",energyflag
-              print *,"ic,jc,kc ",ic,jc,kc
-              stop
-             endif
-
-             do nc2=1,SDIM
-              veldest(D_DECL(ic,jc,kc),nc2)=vel_new(nc2)
-             enddo ! nc2
-             dendest(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1)=T_new
-
+            else if ((nc.ge.1).and.(nc.lt.ncomp)) then
+             ! do nothing
             else
-             print *,"source_term invalid"
-             stop
-            endif
+             print *,"nc invalid"
+             stop    
+            endif 
 
-           else if (((dir_main.ge.1).and.(dir_main.lt.SDIM)).or. &
-                    ((nc.ge.1).and.(nc.lt.ncomp))) then
+           else if ((dir_main.ge.1).and.(dir_main.lt.SDIM)) then
             ! do nothing
            else
-            print *,"dir_main or nc invalid"
+            print *,"dir_main invalid"
             stop    
            endif 
 
