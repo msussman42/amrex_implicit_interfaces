@@ -49,6 +49,8 @@ REAL_T, intent(in), dimension(SDIM) :: x !spatial coordinates
 REAL_T, intent(out) :: Phi !LS dist, Phi>0 in the substrate
 REAL_T :: yhalf,xshift
 REAL_T :: local_time
+REAL_T :: ptb_dist_low
+REAL_T :: ptb_dist_high
 INTEGER_T :: im_substrate
 INTEGER_T :: expected_nmat
 
@@ -94,9 +96,24 @@ if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
   print *,"dimension bust"
   stop
  endif
+
   ! patterned_substrates is declared in GLOBALUTIL.F90.
   ! Phi<0 in the substrate, Phi>0 in the fluid
- call patterned_substrates(xshift,yhalf,x(SDIM),Phi,local_time,im_substrate)
+ ptb_dist_low=0.05d0
+ ptb_dist_high=0.1d0
+ if ((axis_dir.eq.0).or. &
+     (axis_dir.eq.1).or. &
+     (axis_dir.eq.2)) then
+  ! do nothing
+ else if (axis_dir.eq.3) then
+  ptb_dist_low=ptb_dist_high
+ else
+  print *,"axis_dir invalid"
+  stop
+ endif
+
+ call patterned_substrates(xshift,yhalf,x(SDIM),Phi,local_time,im_substrate, &
+         ptb_dist_low,ptb_dist_high)
  Phi=-Phi
 else
  print *,"num_materials or probtype invalid"

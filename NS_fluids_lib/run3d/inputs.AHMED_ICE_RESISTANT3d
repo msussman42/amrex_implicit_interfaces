@@ -70,7 +70,7 @@ amr.check_int       = 100
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps
-amr.plot_int        = 100 # 100 for production runs
+amr.plot_int        = 5 # 100 for production runs
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 16
@@ -235,7 +235,10 @@ ns.xblob=0.1  # axis_dir=1,2,3 (0<x<0.4 0<y<0.4 0<z<0.6)
 ns.yblob=0.2
 ns.zblob=0.38
 ns.radblob=0.06 
-ns.zblob2=0.1    #zblob2 is the altitude of the oil/ice layer
+#axis_dir=0,1,2
+#ns.zblob2=0.1    #zblob2 is the altitude of the oil layer
+#axis_dir=3
+ns.zblob2=0.15    #zblob2 is the altitude of the ice layer
 ns.xblob3=50.0
 ns.yblob3=0.0
 ns.zblob3=-155.0

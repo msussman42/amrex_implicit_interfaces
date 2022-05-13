@@ -15424,11 +15424,13 @@ end subroutine global_checkinplane
       return
       end subroutine tridiag_solve
 
-      subroutine patterned_substrates(x,y,z,dist,time,im_substrate)
+      subroutine patterned_substrates(x,y,z,dist,time,im_substrate, &
+                      ptb_dist_low,ptb_dist_high)
       use probcommon_module
       IMPLICIT NONE
 
       REAL_T, intent(in) :: x,y,z,time
+      REAL_T, intent(in) :: ptb_dist_low,ptb_dist_high
       INTEGER_T, intent(in) :: im_substrate
       REAL_T, intent(out) :: dist
       REAL_T :: xprime
@@ -15561,13 +15563,14 @@ end subroutine global_checkinplane
          
          !ptb_dist=SQRT(0.00016**2-rPillar**2)-SQRT(0.00016**2-0.00015**2)+ &
          ! 0.002
-         ptb_dist=0.05 !< Was 0.0005 to make a dimple surface, now turned it
-                         !to 0.001 to make all flat surface
+         !< Was 0.0005 to make a dimple surface, now turned it
+         !to 0.001 to make all flat surface
+         ptb_dist=ptb_dist_low 
         else
-         ptb_dist=0.1
+         ptb_dist=ptb_dist_high
         endif
       else
-       ptb_dist=0.1
+       ptb_dist=ptb_dist_high
       endif
        
        !---------------------------------------------------------------------
