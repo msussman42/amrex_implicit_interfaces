@@ -236,7 +236,10 @@ ns.xblob=0.1  # axis_dir=1,2,3 (0<x<0.4 0<y<0.6)
 ns.yblob=0.38
 ns.zblob=0.38
 ns.radblob=0.06 
-ns.zblob2=0.1    #zblob2 is the altitude of the oil/ice layer
+#axis_dir=0,1,2
+#ns.zblob2=0.1    #zblob2 is the altitude of the oil layer
+#axis_dir=3
+ns.zblob2=0.15    #zblob2 is the altitude of the ice layer
 ns.xblob3=50.0
 ns.yblob3=-155.0
 ns.zblob3=-155.0
