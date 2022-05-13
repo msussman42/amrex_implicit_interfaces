@@ -11516,6 +11516,7 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
  if ((SDC_outer_sweeps<=0)||
      (SDC_outer_sweeps>=ns_time_order))
   amrex::Error("SDC_outer_sweeps invalid");
+
  if (ns_time_order<=1)
   amrex::Error("ns_time_order invalid");
 
