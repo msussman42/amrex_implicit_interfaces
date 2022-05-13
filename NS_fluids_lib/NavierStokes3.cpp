@@ -3935,11 +3935,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          amrex::Error("ncomp_check invalid");
 
         allocate_array(1,nsolve,-1,HOOP_FORCE_MARK_MF);
-         // update_state==1:
+         // update_state==OP_HOOP_BOUSSINESQ_IMPLICIT:
          //  unp1(1)=unp1(1)/(one+param2*hoop_force_coef)-dt|g|beta(T-T0)
-         // update_state==0:
+         // update_state==OP_HOOP_BOUSSINESQ_EXPLICIT:
          //  unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)-dt|g|beta(T-T0)
-        int update_state=0;  
+        int update_state=OP_HOOP_BOUSSINESQ_EXPLICIT;
         diffuse_hoopALL(REGISTER_MARK_MF,BOUSSINESQ_TEMP_MF,
          HOOP_FORCE_MARK_MF,update_state);
 
@@ -12212,12 +12212,13 @@ void NavierStokes::veldiffuseALL() {
  //
 
   // HOOP_FORCE_MARK_MF=(unp1-un)rho/dt
-  // update_state==1:
-  //  unp1(1)=unp1(1)/(one+param2*hoop_force_coef)
+  // update_state==OP_HOOP_BOUSSINESQ_IMPLICIT:
+  //  unp1(1)=unp1(1)/(one+param2*hoop_force_coef)-dt |g| beta (t-t0)
   //  unew=unp1
-  // update_state==0:
-  //  unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)
- int update_state=1;
+  // update_state==OP_HOOP_BOUSSINESQ_EXPLICIT:
+  //  unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)-dt |g| beta (t-t0)
+  // The Boussinesq force is always explicit.
+ int update_state=OP_HOOP_BOUSSINESQ_IMPLICIT;
  diffuse_hoopALL(REGISTER_MARK_MF,BOUSSINESQ_TEMP_MF,
    HOOP_FORCE_MARK_MF,update_state);
 

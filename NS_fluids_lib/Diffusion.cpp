@@ -21,8 +21,12 @@
 
 namespace amrex{
 
-//update_state==1: unp1=unp1/(one+beta f_hoop)
-//update_state==0: unp1=unp1-beta f_hoop	
+// update_state==OP_HOOP_BOUSSINESQ_IMPLICIT:
+//  unp1(1)=unp1(1)/(one+param2*hoop_force_coef)-dt |g| beta (t-t0)
+//  unew=unp1
+// update_state==OP_HOOP_BOUSSINESQ_EXPLICIT:
+//  unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)-dt |g| beta (t-t0)
+// The Boussinesq force is always explicit.
 void NavierStokes::diffuse_hoopALL(int idx_vel,int idx_thermal,
  int idx_force,int update_state) {
 
@@ -103,8 +107,12 @@ void NavierStokes::diffuse_hoopALL(int idx_vel,int idx_thermal,
    FACETENSOR_MF,
    simple_AMR_BC_flag_viscosity);
 
-//update_state==1: unp1=unp1/(one+beta f_hoop)
-//update_state==0: unp1=unp1-beta f_hoop	
+  // update_state==OP_HOOP_BOUSSINESQ_IMPLICIT:
+  //  unp1(1)=unp1(1)/(one+param2*hoop_force_coef)-dt |g| beta (t-t0)
+  //  unew=unp1
+  // update_state==OP_HOOP_BOUSSINESQ_EXPLICIT:
+  //  unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)-dt |g| beta (t-t0)
+  // The Boussinesq force is always explicit.
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.diffuse_hoop(idx_vel,idx_thermal,idx_force,update_state);
@@ -115,10 +123,10 @@ void NavierStokes::diffuse_hoopALL(int idx_vel,int idx_thermal,
 
 } // subroutine diffuse_hoopALL
 
-//update_state==1: unp1=unp1/(one+beta f_hoop)
-//update_state==0: unp1=unp1-beta f_hoop	
-//update_state==0: compute explicit terms: u^* = u^n + dt F1(u^n)
-//update_state==1: compute implicit terms: u^** = u^* + dt F2(u^**)
+//update_state==OP_HOOP_BOUSSINESQ_IMPLICIT: unp1=unp1/(one+beta f_hoop)
+//update_state==OP_HOOP_BOUSSINESQ_EXPLICIT: unp1=unp1-beta f_hoop	
+//update_state==OP_HOOP_BOUSSINESQ_EXPLICIT: explicit: u^* = u^n + dt F1(u^n)
+//update_state==OP_HOOP_BOUSSINESQ_IMPLICIT: implicit:u^** = u^* + dt F2(u^**)
 void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  int idx_force,int update_state) {
  
