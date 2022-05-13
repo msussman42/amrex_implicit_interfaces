@@ -264,8 +264,8 @@ stop
         print *,"uncoupled_viscosity invalid"
         stop
        endif
-       if ((update_state.ne.0).and. &
-           (update_state.ne.1)) then
+       if ((update_state.ne.OP_HOOP_BOUSSINESQ_EXPLICIT).and. &
+           (update_state.ne.OP_HOOP_BOUSSINESQ_IMPLICIT)) then
         print *,"update_state invalid"
         stop
        endif
@@ -685,9 +685,9 @@ stop
            stop
           endif
 
-          if (update_state.eq.1) then
+          if (update_state.eq.OP_HOOP_BOUSSINESQ_IMPLICIT) then
            unp1(1)=unp1(1)/(one+param2*hoop_force_coef)
-          else if (update_state.eq.0) then
+          else if (update_state.eq.OP_HOOP_BOUSSINESQ_EXPLICIT) then
            unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)
           else
            print *,"update_state invalid"
@@ -709,10 +709,10 @@ stop
            stop
           endif
 
-          if (update_state.eq.1) then
+          if (update_state.eq.OP_HOOP_BOUSSINESQ_IMPLICIT) then
            unp1(1)=unp1(1)/(one+param2*hoop_force_coef)
            unp1(2)=unp1(2)/(one+hoop_force_coef)
-          else if (update_state.eq.0) then
+          else if (update_state.eq.OP_HOOP_BOUSSINESQ_EXPLICIT) then
            unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)
            unp1(2)=unp1(2)-hoop_force_coef*un(2)
           else
@@ -740,9 +740,9 @@ stop
         ! viscosity force=-div(2 mu D)-HOOP_FORCE_MARK_MF
         do dir=1,SDIM
          force(D_DECL(i,j,k),dir)=(unp1(dir)-un(dir))/(inverseden*dt)
-         if (update_state.eq.0) then
+         if (update_state.eq.OP_HOOP_BOUSSINESQ_EXPLICIT) then
           ! do nothing
-         else if (update_state.eq.1) then
+         else if (update_state.eq.OP_HOOP_BOUSSINESQ_IMPLICIT) then
           unew(D_DECL(i,j,k),dir)=unp1(dir)
          else
           print *,"update_state invalid"
