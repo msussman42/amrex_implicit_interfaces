@@ -2035,9 +2035,6 @@ void NavierStokes::update_SEM_forces(int project_option,
  } else
   amrex::Error("project_option invalid71");
 
- int local_idx_gpmac=GP_DEST_FACE_MF;
- int local_idx_div=MACDIV_MF;
- 
  int nsolve=1;
  if (project_option==SOLVETYPE_PRES) { // grad p
   nsolve=1;
@@ -2132,8 +2129,8 @@ void NavierStokes::update_SEM_forces(int project_option,
  if ((update_spectral+update_stable>=1)&&
      (update_spectral+update_stable<=2)) {
   update_SEM_delta_force(project_option,
-   local_idx_gpmac,
-   local_idx_div,
+   GP_DEST_FACE_MF, //grad p (MAC grid)
+   MACDIV_MF, // -div(2 mu D)-HOOP_FORCE or -div(k grad T)
    update_spectral,
    update_stable,nsolve);
  } else
