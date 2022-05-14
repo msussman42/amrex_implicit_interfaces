@@ -1886,9 +1886,18 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
  } else
   amrex::Error("SDC_outer_sweeps invalid update_SEM_forcesALL");
 
+ if ((slab_step<-1)||(slab_step>ns_time_order))
+  amrex::Error("slab_step invalid(1)");
+
+ if ((update_spectral==0)||
+     (update_spectral==1)) {
+  // do nothing
+ } else
+  amrex::Error("update_spectral invalid update_SEM_forcesALL");
+
  if (update_stable==1) {
   if ((slab_step<0)||(slab_step>=ns_time_order))
-   amrex::Error("slab_step invalid");
+   amrex::Error("slab_step invalid(2)");
  } else if (update_stable==0) {
   // do nothing
  } else
@@ -1956,18 +1965,11 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
   int create_hierarchy=0;
   allocate_maccoefALL(project_option,nsolve,create_hierarchy);
 
- } else
-  amrex::Error("project_option invalid69");
-
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.update_SEM_forces(project_option,
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.update_SEM_forces(project_option,
     idx_source,update_spectral,update_stable);
- }
-
- if ((project_option==SOLVETYPE_PRES)||  // grad p
-     (project_option==SOLVETYPE_HEAT)||  // -div(k grad T)
-     (project_option==SOLVETYPE_VISC)) { //-div(2 mu D)-HOOP_FORCE_MARK_MF
+  }
 
   deallocate_maccoefALL(project_option);
 
@@ -2007,6 +2009,15 @@ void NavierStokes::update_SEM_forces(int project_option,
   // do nothing
  } else
   amrex::Error("SDC_outer_sweeps invalid update_SEM_forces");
+
+ if ((slab_step<-1)||(slab_step>ns_time_order))
+  amrex::Error("slab_step invalid(3)");
+
+ if ((update_spectral==0)||
+     (update_spectral==1)) {
+  // do nothing
+ } else
+  amrex::Error("update_spectral invalid update_SEM_forces");
 
  if (update_stable==1) {
   if ((slab_step<0)||(slab_step>=ns_time_order))
