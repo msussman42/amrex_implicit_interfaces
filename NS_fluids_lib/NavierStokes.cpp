@@ -11504,7 +11504,7 @@ int NavierStokes::ns_thread() {
 
 // add correction term to velocity and/or temperature
 // called from:
-//  NavierStokes::multiphase_project
+//  NavierStokes::multiphase_project(before "scale_variablesALL()" is called)
 //  NavierStokes::veldiffuseALL
 void NavierStokes::make_SEM_delta_force(int project_option) {
 

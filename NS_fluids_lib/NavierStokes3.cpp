@@ -2410,9 +2410,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
   if (SDC_outer_sweeps_end>1) {
 
-   if (SDC_outer_sweeps==0)
-    slab_step_start--; 
-   slab_step_end++; 
+   if (SDC_outer_sweeps_end==ns_time_order) {
+    if (SDC_outer_sweeps==0)
+     slab_step_start--; 
+    slab_step_end++; 
+   } else
+    amrex::Error("SDC_outer_sweeps_end invalid");
 
   } else if (SDC_outer_sweeps_end==1) {
 
@@ -12226,6 +12229,8 @@ void NavierStokes::veldiffuseALL() {
   // update_state==OP_HOOP_BOUSSINESQ_EXPLICIT:
   //  unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)-dt |g| beta (t-t0)
   // The Boussinesq force is always explicit.
+  //
+  // force(D_DECL(i,j,k),dir)=(unp1(dir)-un(dir))/(inverseden*dt)
  int update_state=OP_HOOP_BOUSSINESQ_IMPLICIT;
  diffuse_hoopALL(REGISTER_MARK_MF,BOUSSINESQ_TEMP_MF,
    HOOP_FORCE_MARK_MF,update_state);
@@ -12293,6 +12298,12 @@ void NavierStokes::veldiffuseALL() {
 
   //multigrid precond. BiCGStab viscosity
  multiphase_project(SOLVETYPE_VISC); 
+  
+  //VISCHEAT_SOURCE_MF is a parameter for:
+  //  update_SEM_forcesALL(SOLVETYPE_VISC,VISCHEAT_SOURCE_MF,...)
+  //  init_gradu_tensorALL(VISCHEAT_SOURCE_MF,...)
+  //  diffusion_heatingALL(VISCHEAT_SOURCE_MF,VISCHEAT_MF);
+  //
  SET_STOKES_MARK(VISCHEAT_SOURCE_MF,107);
 
   // spectral_override==1 => order derived from "enable_spectral"
