@@ -1167,10 +1167,14 @@ void apply_pressure_grad(
      int idx_gpcell,
      int idx_divup);
 
-    void update_SEM_delta_force(int project_option,
-     int idx_gpmac,
-     int idx_div,
-     int update_spectral,int update_stable,
+    void update_SEM_delta_force(
+     int project_option,
+      //GP_DEST_FACE_MF = grad p (MAC grid) SOLVETYPE_PRES
+      //MACDIV_MF=-div(2 mu D) SOLVETYPE_VISC
+      //MACDIV_MF=-div(k grad T) SOLVETYPE_HEAT
+      //HOOP_FORCE_MARK_MF included in update_SEM_delta_force.
+     int update_spectral,
+     int update_stable,
      int nsolve);
 
     void increment_potential_forceALL();

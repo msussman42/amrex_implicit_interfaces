@@ -11894,8 +11894,10 @@ void NavierStokes::add_perturbation() {
 //   NavierStokes::veldiffuseALL
 void NavierStokes::update_SEM_delta_force(
  int project_option,
- int idx_gpmac,
- int idx_div,
+ //GP_DEST_FACE_MF=grad p (MAC grid) SOLVETYPE_PRES
+ //MACDIV_MF=-div(k grad T) SOLVETYPE_HEAT
+ //MACDIV_MF=-div(2 mu D) SOLVETYPE_VISC
+ //HOOP_FORCE_MARK_MF included in this routine (update_SEM_delta_force)
  int update_spectral,
  int update_stable,
  int nsolve) {
@@ -11931,6 +11933,21 @@ void NavierStokes::update_SEM_delta_force(
  } else
   amrex::Error("project_option invalid5");
 
+ if ((SDC_outer_sweeps>=0)&&
+     (SDC_outer_sweeps<ns_time_order)) {
+  // do nothing
+ } else
+  amrex::Error("SDC_outer_sweeps invalid update_SEM_forces");
+
+ if ((slab_step<-1)||(slab_step>ns_time_order))
+  amrex::Error("slab_step invalid(4)");
+
+ if ((update_spectral==0)||
+     (update_spectral==1)) {
+  // do nothing
+ } else
+  amrex::Error("update_spectral invalid update_SEM_delta_force");
+
  if (update_stable==1) {
   if ((slab_step<0)||(slab_step>=ns_time_order))
    amrex::Error("slab_step invalid");
@@ -11942,40 +11959,41 @@ void NavierStokes::update_SEM_delta_force(
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- debug_ngrow(idx_div,0,3);
+ debug_ngrow(MACDIV_MF,0,3);
 
- int idx_hoop=idx_div;
+ int idx_hoop=MACDIV_MF;
 
  if (project_option==SOLVETYPE_PRES) { // grad p  (face)
-  // check nothing
+  if (nsolve!=1)
+   amrex::Error("nsolve invalid SOLVETYPE_PRES case");
  } else if (project_option==SOLVETYPE_HEAT) { // -div(k grad T)
   if (nsolve!=1)
-   amrex::Error("nsolve invalid");
-  if (localMF[idx_div]->nComp()!=1) {
+   amrex::Error("nsolve invalid SOLVETYPE_HEAT case");
+  if (localMF[MACDIV_MF]->nComp()!=1) {
    print_project_option(project_option);
-   std::cout << "idx_div = " << idx_div << '\n';
+   std::cout << "MACDIV_MF = " << MACDIV_MF << '\n';
    std::cout << "nsolve = " << nsolve << '\n';
-   std::cout << "localMF ncomp= " <<
-     localMF[idx_div]->nComp() << '\n';
-   amrex::Error("localMF[idx_div]->nComp() invalid");
+   std::cout << "localMF[MACDIV_MF] ncomp= " <<
+     localMF[MACDIV_MF]->nComp() << '\n';
+   amrex::Error("localMF[MACDIV_MF]->nComp() invalid");
   }
  } else if (project_option==SOLVETYPE_VISC) {//-div(2 mu D)-HOOP_FORCE_MARK_MF
   idx_hoop=HOOP_FORCE_MARK_MF;
   if (nsolve!=AMREX_SPACEDIM)
-   amrex::Error("nsolve invalid");
-  if (localMF[idx_div]->nComp()!=nsolve) {
+   amrex::Error("nsolve invalid SOLVETYPE_VISC case");
+  if (localMF[MACDIV_MF]->nComp()!=nsolve) {
    print_project_option(project_option);
-   std::cout << "idx_div = " << idx_div << '\n';
+   std::cout << "MACDIV_MF = " << MACDIV_MF << '\n';
    std::cout << "nsolve = " << nsolve << '\n';
-   std::cout << "localMF ncomp= " <<
-     localMF[idx_div]->nComp() << '\n';
-   amrex::Error("localMF[idx_div]->nComp() invalid");
+   std::cout << "localMF[MACDIV_MF] ncomp= " <<
+     localMF[MACDIV_MF]->nComp() << '\n';
+   amrex::Error("localMF[MACDIV_MF]->nComp() invalid");
   }
   if (localMF[idx_hoop]->nComp()!=nsolve) {
    print_project_option(project_option);
    std::cout << "idx_hoop = " << idx_hoop << '\n';
    std::cout << "nsolve = " << nsolve << '\n';
-   std::cout << "localMF ncomp= " <<
+   std::cout << "localMF[idx_hoop] ncomp= " <<
      localMF[idx_hoop]->nComp() << '\n';
    amrex::Error("localMF[idx_hoop]->nComp() invalid");
   }
@@ -11984,7 +12002,7 @@ void NavierStokes::update_SEM_delta_force(
 
  if (project_option==SOLVETYPE_VISC) { 
   debug_ngrow(idx_hoop,0,3);
-  if (localMF[idx_hoop]->nComp()!=localMF[idx_div]->nComp())
+  if (localMF[idx_hoop]->nComp()!=localMF[MACDIV_MF]->nComp())
    amrex::Error("localMF[idx_hoop]->nComp() invalid");
  } else if (project_option==SOLVETYPE_HEAT) { 
   // check nothing
@@ -11998,13 +12016,13 @@ void NavierStokes::update_SEM_delta_force(
      (project_option==SOLVETYPE_VISC)) { //viscosity
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   debug_ngrow(idx_gpmac+dir,0,3);
+   debug_ngrow(GP_DEST_FACE_MF+dir,0,3);
 
    if (project_option==SOLVETYPE_PRES) {
     if (nsolve!=1)
      amrex::Error("expecting nsolve==1 if project_option==SOLVETYPE_PRES");
-    if (localMF[idx_gpmac+dir]->nComp()!=nsolve)
-     amrex::Error("localMF[idx_gpmac+dir]->nComp() invalid");
+    if (localMF[GP_DEST_FACE_MF+dir]->nComp()!=nsolve)
+     amrex::Error("localMF[GP_DEST_FACE_MF+dir]->nComp() invalid");
    } else if ((project_option==SOLVETYPE_HEAT)||
               (project_option==SOLVETYPE_VISC)) {
     // do nothing
@@ -12057,7 +12075,7 @@ void NavierStokes::update_SEM_delta_force(
  
    const Real* xlo = grid_loc[gridno].lo();
  
-   FArrayBox& divfab=(*localMF[idx_div])[mfi];
+   FArrayBox& divfab=(*localMF[MACDIV_MF])[mfi];
    FArrayBox& hoopfab=(*localMF[idx_hoop])[mfi];
    FArrayBox& HOfab=(*localMF[spectralF_MF])[mfi];
    FArrayBox& LOfab=(*localMF[stableF_MF])[mfi];
@@ -12144,7 +12162,7 @@ void NavierStokes::update_SEM_delta_force(
 
     const Real* xlo = grid_loc[gridno].lo();
 
-    FArrayBox& gpfab=(*localMF[idx_gpmac+dir])[mfi];
+    FArrayBox& gpfab=(*localMF[GP_DEST_FACE_MF+dir])[mfi];
     FArrayBox& HOfab=(*localMF[spectralF_GP_MF+dir])[mfi];
     FArrayBox& LOfab=(*localMF[stableF_GP_MF+dir])[mfi];
     FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];

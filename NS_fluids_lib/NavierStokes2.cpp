@@ -4062,8 +4062,13 @@ void NavierStokes::init_gradu_tensor(
 } // subroutine init_gradu_tensor
 
   
-// if projection:
-// - dt*(grad p)*face_weight  
+// if projection (energyflag=SUB_OP_FOR_MAIN):
+//  gp_mf = - dt*(grad p)*face_weight  
+// if called from update_SEM_forces with project_option
+// equal to SOLVETYPE_HEAT or SOLVETYPE_VISC, then
+//  gp_mf=-k grad T or -2 mu D respectively  (dt=1)
+// if called from update_SEM_forces with project_option=SOLVETYPE_PRES,
+//  gp_mf=grad P (energyflag=SUB_OP_FOR_SDC)
 // face_weight=0 at embedded solid faces and on 
 // the domain boundary where pressure has a Neumann BC.
 void NavierStokes::apply_pressure_grad(

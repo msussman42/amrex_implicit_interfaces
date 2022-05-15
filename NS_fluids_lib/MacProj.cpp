@@ -1931,7 +1931,10 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
      (project_option==SOLVETYPE_VISC)) {  //-div(2 mu D)-HOOP_FORCE_MARK_MF
 
    // allocate and initialize to 0.0
+   // UMAC_MF=-2 mu D (SOLVETYPE_VISC) or
+   // UMAC_MF=-k grad T (SOLVETYPE_HEAT)
   allocate_MAC_velocityALL(nsolve,UMAC_MF);
+   // allocate and initialize to 0.0
   allocate_MAC_velocityALL(nsolve,GP_DEST_FACE_MF);
 
   min_face_wt.resize(thread_class::nthreads);
@@ -2028,9 +2031,9 @@ void NavierStokes::update_SEM_forces(int project_option,
   amrex::Error("update_stable invalid update sem forces");
 
  if ((project_option==SOLVETYPE_PRES)||   // grad p face
-     (project_option==SOLVETYPE_VISC)) {  
+     (project_option==SOLVETYPE_VISC)) {  // -div(2 mu D)-HOOP_FORCE_MARK_MF
   //do nothing
- } else if (project_option==SOLVETYPE_HEAT) { 
+ } else if (project_option==SOLVETYPE_HEAT) { // -div(k grad T)
   //do nothing
  } else
   amrex::Error("project_option invalid71");
@@ -2068,15 +2071,18 @@ void NavierStokes::update_SEM_forces(int project_option,
    apply_pressure_grad(
     simple_AMR_BC_flag,
     simple_AMR_BC_flag_viscosity,
-    homflag,energyflag,UMAC_MF,
+    homflag,energyflag,
+    UMAC_MF,
     idx_source,
-    project_option,nsolve);
+    project_option,
+    nsolve);
 
    if (localMF[UMAC_MF]->nComp()!=nsolve)
     amrex::Error("localMF[UMAC_MF]->nComp() invalid");
 
    int ncomp_edge=-1;
    int scomp=0;
+     // spectral_override==1 => order derived from "enable_spectral"
    avgDownEdge_localMF(UMAC_MF,scomp,ncomp_edge,0,AMREX_SPACEDIM,1,20);
 
    MultiFab* sourcemf=localMF[idx_source];
@@ -2108,12 +2114,6 @@ void NavierStokes::update_SEM_forces(int project_option,
     idx_source,
     project_option,nsolve);
 
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    MultiFab* macvel=
-     getStateMAC(Umac_Type,0,dir,0,nsolve,cur_time_slab); 
-    MultiFab::Copy(*localMF[UMAC_MF+dir],*macvel,0,0,nsolve,0);
-    delete macvel;
-   } 
   } else
    amrex::Error("project_option invalid73");
 
@@ -2128,11 +2128,15 @@ void NavierStokes::update_SEM_forces(int project_option,
   // does not look at enable_spectral
  if ((update_spectral+update_stable>=1)&&
      (update_spectral+update_stable<=2)) {
-  update_SEM_delta_force(project_option,
-   GP_DEST_FACE_MF, //grad p (MAC grid)
-   MACDIV_MF, // -div(2 mu D)-HOOP_FORCE or -div(k grad T)
+  update_SEM_delta_force(
+   project_option,
+   //GP_DEST_FACE_MF = grad p (MAC grid) SOLVETYPE_PRES
+   //MACDIV_MF=-div(2 mu D) SOLVETYPE_VISC
+   //MACDIV_MF=-div(k grad T) SOLVETYPE_HEAT
+   //HOOP_FORCE_MARK_MF included in update_SEM_delta_force.
    update_spectral,
-   update_stable,nsolve);
+   update_stable,
+   nsolve);
  } else
   amrex::Error("update_spectral+update_stable invalid");
 
