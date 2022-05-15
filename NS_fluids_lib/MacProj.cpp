@@ -1746,7 +1746,8 @@ void NavierStokes::apply_div(
   if (presbc.size()!=nsolve*AMREX_SPACEDIM*2)
    amrex::Error("presbc.size() invalid");
 
-  Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+  Vector<int> velbc=getBCArray(State_Type,gridno,
+     STATECOMP_VEL,STATE_NCOMP_VEL);
 
 // for heat equation:
 // vol*(T-T^n)*(rho cv)/dt-vol*grad dot k grad T = -1/dt vol*div u+
@@ -2382,7 +2383,8 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
    FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
    const Real* xlo = grid_loc[gridno].lo();
-   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+   Vector<int> velbc=getBCArray(State_Type,gridno,
+     STATECOMP_VEL,STATE_NCOMP_VEL);
 
 // RHS=(a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2}+...)/vol_ij
 //

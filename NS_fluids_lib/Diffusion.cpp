@@ -404,7 +404,8 @@ void NavierStokes::viscous_boundary_fluxes(
     FArrayBox& areafab=(*localMF[AREA_MF+dir])[mfi];
     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+    Vector<int> velbc=getBCArray(State_Type,gridno,
+      STATECOMP_VEL,STATE_NCOMP_VEL);
     Vector<int> tempbc=getBCArray(State_Type,gridno,STATECOMP_STATES+1,1);
 
     int tid_current=0;
@@ -758,7 +759,8 @@ void NavierStokes::combine_state_variable(
      FArrayBox& macfab=(*face_mf)[mfi];
      FArrayBox& lsfab=(*LEVEL_COMBINE)[mfi];
      FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
-     Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+     Vector<int> velbc=getBCArray(State_Type,gridno,
+       STATECOMP_VEL,STATE_NCOMP_VEL);
 
      int tid_current=ns_thread();
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
@@ -917,7 +919,8 @@ void NavierStokes::combine_state_variable(
    FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
    FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
 
-   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+   Vector<int> velbc=getBCArray(State_Type,gridno,
+     STATECOMP_VEL,STATE_NCOMP_VEL);
    Vector<int> listbc;
    getBCArray_list(listbc,state_index,gridno,scomp,ncomp);
    if (listbc.size()!=nsolve*num_materials_combine*AMREX_SPACEDIM*2)
