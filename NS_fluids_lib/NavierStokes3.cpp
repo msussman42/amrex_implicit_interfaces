@@ -1217,7 +1217,7 @@ Real NavierStokes::advance(Real time,Real dt) {
 
  return dt_new;
 
-} // subroutine advance
+} // end subroutine advance
 
 
 
@@ -1474,7 +1474,7 @@ void advance_recalesce(
    } // recal_material
   } // im_source
  
-} // advance_recalesce
+} // end subroutine advance_recalesce
 
 
 void
@@ -1567,7 +1567,7 @@ NavierStokes::recalesce_temperature(int im_source) {
 } // omp
  ns_reconcile_d_num(171);
 
-}  // recalesce_temperature
+}  // end subroutine recalesce_temperature
 
 
 
@@ -1731,7 +1731,7 @@ NavierStokes::process_recalesce_data(
 
  delete mask; 
 
-}  // process_recalesce_data
+}  // end subroutine process_recalesce_data
 
 
 void NavierStokes::process_recalesce_dataALL(
@@ -1872,8 +1872,9 @@ void NavierStokes::process_recalesce_dataALL(
   }  // io proc ?
  } // verbose>0?
 
-} // process_recalesce_dataALL
+} // end subroutine process_recalesce_dataALL
 
+// called from: NavierStokes::do_the_advance
 // delta=integral_tn^tnp1  f^spectral dt - deltatn F^stable
 void NavierStokes::init_splitting_force_SDC() {
 
@@ -1881,6 +1882,17 @@ void NavierStokes::init_splitting_force_SDC() {
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
+
+ if (divu_outer_sweeps==0) {
+  // do nothing
+ } else
+  amrex::Error("divu_outer_sweeps invalid");
+
+ if ((SDC_outer_sweeps>=0)&&
+     (SDC_outer_sweeps<ns_time_order)) {
+  // do nothing
+ } else
+  amrex::Error("SDC_outer_sweeps invalid");
 
  if (ns_time_order>=2) {
 
@@ -2443,6 +2455,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
    }
 
    int local_num_divu_outer_sweeps=num_divu_outer_sweeps;
+
    if ((slab_step==-1)||(slab_step==ns_time_order)) {
     local_num_divu_outer_sweeps=1;
    } else if ((slab_step>=0)&&(slab_step<ns_time_order)) {
@@ -3970,11 +3983,21 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     
       } else if (slab_step==ns_time_order) {
 
-       // delta=integral_tn^tnp1  f^spectral dt - deltatn F^stable
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-        ns_level.init_splitting_force_SDC();
-       }
+       if (divu_outer_sweeps==0) {
+
+        if ((SDC_outer_sweeps>=0)&&
+            (SDC_outer_sweeps<ns_time_order)) {
+
+         // delta=integral_tn^tnp1  f^spectral dt - deltatn F^stable
+         for (int ilev=finest_level;ilev>=level;ilev--) {
+          NavierStokes& ns_level=getLevel(ilev);
+          ns_level.init_splitting_force_SDC();
+         }
+
+	} else
+	 amrex::Error("SDC_outer_sweeps invalid");
+       } else
+	amrex::Error("divu_outer_sweeps invalid");
 
       } else
        amrex::Error("slab_step invalid");

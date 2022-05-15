@@ -7278,8 +7278,8 @@ stop
         if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
 
          do veldir=1,SDIM
-          velnew(D_DECL(i,j,k),veldir)= &
-            velnew(D_DECL(i,j,k),veldir)- &
+          velnew(D_DECL(i,j,k),STATECOMP_VEL+veldir)= &
+            velnew(D_DECL(i,j,k),STATECOMP_VEL+veldir)- &
             rhoinverse(D_DECL(i,j,k))* &
             deltafab(D_DECL(i,j,k),veldir)
          enddo ! veldir=1..sdim
@@ -7930,7 +7930,9 @@ stop
        print *,"nstate invalid"
        stop
       endif
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif
@@ -7975,7 +7977,7 @@ stop
         enddo ! iquad
         sanity_sum=sanity_sum+GQwsQUAD(jstencil,kinterval)
        enddo  ! jstencil
-       if (abs(sanity_sum-two)>1.0E-12) then
+       if (abs(sanity_sum-two).gt.1.0D-12) then
         print *,"SDC sanity check failed"
         stop
        endif
@@ -8129,7 +8131,9 @@ stop
        print *,"nstate invalid"
        stop
       endif
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif
