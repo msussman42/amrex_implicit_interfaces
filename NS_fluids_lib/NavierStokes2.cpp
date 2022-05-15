@@ -772,14 +772,12 @@ void NavierStokes::avgDown_and_Copy_localMF(
  int ncomp_vel=0;
  int ncomp_flux=0;
  int scomp_flux=0;
- int ncomp_flux_use=0;
 
  if (operation_flag==OP_ISCHEME_MAC) {  // advection 
   ncomp_den=nmat*num_state_material;
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=NFLUXSEM;
   scomp_flux=0;
-  ncomp_flux_use=NFLUXSEM;
  } else if ((operation_flag==OP_UNEW_CELL_TO_MAC)|| 
             (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC)||
 	    (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC)) {
@@ -787,19 +785,16 @@ void NavierStokes::avgDown_and_Copy_localMF(
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=1;
   scomp_flux=0;
-  ncomp_flux_use=1;
  } else if (operation_flag==OP_PRESGRAD_MAC) { //grad p
   ncomp_den=1;
   ncomp_vel=1;
   ncomp_flux=1;
   scomp_flux=0;
-  ncomp_flux_use=1;
  } else if (operation_flag==OP_UGRAD_COUPLING_MAC) {  
   ncomp_den=AMREX_SPACEDIM;
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=AMREX_SPACEDIM;
   scomp_flux=0;
-  ncomp_flux_use=AMREX_SPACEDIM;
  } else
   amrex::Error("operation_flag invalid");
 
@@ -875,7 +870,7 @@ void NavierStokes::avgDown_and_Copy_localMF(
     crse_S_fine_BA_MAC.set(i,amrex::coarsen(fgridsMAC[i],2));
    }
    DistributionMapping crse_dmap=fdmap;
-   MultiFab crse_S_fine_MAC(crse_S_fine_BA_MAC,crse_dmap,ncomp_flux_use,0,
+   MultiFab crse_S_fine_MAC(crse_S_fine_BA_MAC,crse_dmap,ncomp_flux,0,
      MFInfo().SetTag("crse_S_fine_MAC"),FArrayBoxFactory());
    crse_S_fine_MAC.setVal(1.0e+40);
 
@@ -956,7 +951,7 @@ void NavierStokes::avgDown_and_Copy_localMF(
      &level,&f_level,
      &bfact_c,&bfact_f,     
      xlo_fine,dx,
-     &ncomp_flux_use,
+     &ncomp_flux,
      &ncomp_den,
      &ncomp_vel,
      c_dat,ARLIM(clo),ARLIM(chi),
@@ -974,7 +969,7 @@ void NavierStokes::avgDown_and_Copy_localMF(
 } //omp
    ns_reconcile_d_num(128);
 
-   S_crse_MAC.copy(crse_S_fine_MAC,0,scomp_flux,ncomp_flux_use);
+   S_crse_MAC.copy(crse_S_fine_MAC,0,scomp_flux,ncomp_flux);
    ParallelDescriptor::Barrier();
 
    const Box& domain = geom.Domain();
@@ -984,13 +979,13 @@ void NavierStokes::avgDown_and_Copy_localMF(
     crse_S_fine_MAC.shift(pshift);
 
     ParallelDescriptor::Barrier();
-    S_crse_MAC.copy(crse_S_fine_MAC,0,scomp_flux,ncomp_flux_use);
+    S_crse_MAC.copy(crse_S_fine_MAC,0,scomp_flux,ncomp_flux);
     ParallelDescriptor::Barrier();
 
     pshift[dir]=-2*domain.length(dir);
     crse_S_fine_MAC.shift(pshift);
 
-    S_crse_MAC.copy(crse_S_fine_MAC,0,scomp_flux,ncomp_flux_use);
+    S_crse_MAC.copy(crse_S_fine_MAC,0,scomp_flux,ncomp_flux);
     ParallelDescriptor::Barrier();
    }  // isPeriodic(dir)
 
@@ -1020,21 +1015,17 @@ void NavierStokes::interp_and_Copy_localMF(
  int ncomp_vel=0;
  int ncomp_flux=0;
  int scomp_flux=0;
- int ncomp_flux_use=0;
-
 
  if (operation_flag==OP_UGRAD_COUPLING_MAC) {  // viscosity
   ncomp_den=AMREX_SPACEDIM;
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=AMREX_SPACEDIM;
   scomp_flux=0;
-  ncomp_flux_use=AMREX_SPACEDIM;
  } else if (operation_flag==OP_ISCHEME_MAC) {  // advection 
   ncomp_den=nmat*num_state_material;
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=NFLUXSEM;
   scomp_flux=0;
-  ncomp_flux_use=NFLUXSEM;
  } else if ((operation_flag==OP_UNEW_CELL_TO_MAC)||
             (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC)|| 
 	    (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC)) {
@@ -1042,13 +1033,11 @@ void NavierStokes::interp_and_Copy_localMF(
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=1;
   scomp_flux=0;
-  ncomp_flux_use=1;
  } else if (operation_flag==OP_PRESGRAD_MAC) {
   ncomp_den=1;
   ncomp_vel=1;
   ncomp_flux=1;
   scomp_flux=0;
-  ncomp_flux_use=1;
  } else
   amrex::Error("operation_flag invalid");
 
@@ -1200,7 +1189,8 @@ void NavierStokes::interp_and_Copy_localMF(
     FArrayBox& maskfab=(*localMF[MASKSEM_MF])[mfi];
     FArrayBox& cmaskfab=(*coarse_mask_sem_fine)[mfi];
     FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+    Vector<int> velbc=getBCArray(State_Type,gridno,
+      STATECOMP_VEL,STATE_NCOMP_VEL);
 
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -1222,7 +1212,7 @@ void NavierStokes::interp_and_Copy_localMF(
      &bfact_c,
      &bfact_f,     
      xlo,
-     &ncomp_flux_use,
+     &ncomp_flux,
      &ncomp_den,
      &ncomp_vel,
      f_dat,ARLIM(flo),ARLIM(fhi),
@@ -1304,13 +1294,14 @@ void NavierStokes::sync_flux_var(int dir,int flux_MF,int ncomp_flux) {
 
       FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
       FArrayBox& masknbr=(*localMF[MASK_NBR_MF])[mfi];
-      Vector<int> presbc=getBCArray(State_Type,gridno,AMREX_SPACEDIM,1);
+      Vector<int> presbc=getBCArray(State_Type,gridno,STATECOMP_PRES,1);
 
       int tid_current=ns_thread();
       if ((tid_current<0)||(tid_current>=thread_class::nthreads))
        amrex::Error("tid_current invalid");
       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+       // fort_fillbdry_flux is declared in: NAVIERSTOKES_3D.F90
       fort_fillbdry_flux( 
        &sync_iter,
        &level,
@@ -1480,7 +1471,8 @@ void NavierStokes::interp_flux_localMF(
     FArrayBox& maskfab=(*localMF[MASKSEM_MF])[mfi];
     FArrayBox& cmaskfab=(*coarse_mask_sem_fine)[mfi];
     FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+    Vector<int> velbc=getBCArray(State_Type,gridno,
+      STATECOMP_VEL,STATE_NCOMP_VEL);
 
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -1735,7 +1727,8 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
    FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
    int ncomp_visc=viscfab.nComp();
 
-   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+   Vector<int> velbc=getBCArray(State_Type,gridno,
+     STATECOMP_VEL,STATE_NCOMP_VEL);
 
    int rzflag=0;
    if (geom.IsRZ())
@@ -2004,7 +1997,8 @@ void NavierStokes::apply_cell_pressure_gradient(
    getBCArray_list(presbc,state_index,gridno,scomp,ncomp);
    if (presbc.size()!=nsolve*AMREX_SPACEDIM*2)
     amrex::Error("presbc.size() invalid");
-   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+   Vector<int> velbc=getBCArray(State_Type,gridno,
+     STATECOMP_VEL,STATE_NCOMP_VEL);
 
    Real beta=0.0;
 
@@ -2181,7 +2175,8 @@ void NavierStokes::apply_cell_pressure_gradient(
    getBCArray_list(presbc,state_index,gridno,scomp,ncomp);
    if (presbc.size()!=nsolve*AMREX_SPACEDIM*2)
     amrex::Error("presbc.size() invalid");
-   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+   Vector<int> velbc=getBCArray(State_Type,gridno,
+     STATECOMP_VEL,STATE_NCOMP_VEL);
 
    int local_enable_spectral=enable_spectral;
    int operation_flag_interp_macvel=-1;
@@ -2860,7 +2855,8 @@ void NavierStokes::increment_face_velocity(
       FArrayBox& semfluxfab=(*localMF[SEM_FLUXREG_MF])[mfi];
       int ncfluxreg=semfluxfab.nComp();
 
-      Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+      Vector<int> velbc=getBCArray(State_Type,gridno,
+        STATECOMP_VEL,STATE_NCOMP_VEL);
 
       int rzflag=0;
       if (geom.IsRZ())
@@ -3335,7 +3331,8 @@ void NavierStokes::VELMAC_TO_CELL(
   FArrayBox& areay=(*localMF[AREA_MF+1])[mfi];
   FArrayBox& areaz=(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
 
-  Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+  Vector<int> velbc=getBCArray(State_Type,gridno,
+    STATECOMP_VEL,STATE_NCOMP_VEL);
 
   int energyflag=SUB_OP_DEFAULT;
   int project_option=SOLVETYPE_PRES;
@@ -3713,7 +3710,8 @@ void NavierStokes::doit_gradu_tensor(
 
     const Real* xlo = grid_loc[gridno].lo();
 
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+    Vector<int> velbc=getBCArray(State_Type,gridno,
+      STATECOMP_VEL,STATE_NCOMP_VEL);
 
     FArrayBox& velfab=(*localMF[idx_vel])[mfi];
 
@@ -4286,7 +4284,8 @@ void NavierStokes::apply_pressure_grad(
  
     const Real* xlo = grid_loc[gridno].lo();
 
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+    Vector<int> velbc=getBCArray(State_Type,gridno,
+       STATECOMP_VEL,STATE_NCOMP_VEL);
 
     FArrayBox& velfab=(*localMF[pboth_mf])[mfi];
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
@@ -4524,7 +4523,8 @@ void NavierStokes::apply_pressure_grad(
     getBCArray_list(presbc,state_index,gridno,scomp,ncomp);
     if (presbc.size()!=nsolve*AMREX_SPACEDIM*2)
      amrex::Error("presbc.size() invalid");
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+    Vector<int> velbc=getBCArray(State_Type,gridno,
+      STATECOMP_VEL,STATE_NCOMP_VEL);
   
     Real beta=0.0;
 
@@ -5175,7 +5175,8 @@ void NavierStokes::make_physics_vars(int project_option) {
 
 // face_frac=0 if presbc<> interior or exterior dirichlet.
    Vector<int> presbc=getBCArray(State_Type,gridno,STATECOMP_PRES,1);
-   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+   Vector<int> velbc=getBCArray(State_Type,gridno,
+      STATECOMP_VEL,STATE_NCOMP_VEL);
 
    // mask=tag if not covered by level+1 or outside the domain.
    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
@@ -6781,7 +6782,8 @@ void NavierStokes::move_particles(
 
    Vector<int> denbc=getBCArray(State_Type,gridno,STATECOMP_STATES,
       nmat*num_state_material);
-   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+   Vector<int> velbc=getBCArray(State_Type,gridno,
+      STATECOMP_VEL,STATE_NCOMP_VEL);
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -9089,8 +9091,8 @@ void NavierStokes::init_pressure_error_indicator() {
    int bfact=parent->Space_blockingFactor(level);
 
    const Real* xlo = grid_loc[gridno].lo();
-   Vector<int> velbc=
-     getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+   Vector<int> velbc=getBCArray(State_Type,gridno,
+      STATECOMP_VEL,STATE_NCOMP_VEL);
    FArrayBox& velfab=(*velmf)[mfi];
    FArrayBox& vortfab=(*vortmf)[mfi];
 
@@ -9729,7 +9731,8 @@ void NavierStokes::getStateVISC() {
      if (cellten.nComp()!=ntensor)
       amrex::Error("cellten invalid ncomp");
 
-     Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+     Vector<int> velbc=getBCArray(State_Type,gridno,
+       STATECOMP_VEL,STATE_NCOMP_VEL);
 
      int tid_current=ns_thread();
      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -9799,7 +9802,8 @@ void NavierStokes::getStateVISC() {
    FArrayBox& eosfab=(*EOSdata)[mfi];
    FArrayBox& tensorfab=(*tensor)[mfi];
 
-   Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+   Vector<int> velbc=getBCArray(State_Type,gridno,
+     STATECOMP_VEL,STATE_NCOMP_VEL);
 
    int fortran_im=im+1;
 
@@ -9886,7 +9890,8 @@ void NavierStokes::getStateVISC() {
     FArrayBox& velfab=(*vel)[mfi];
     FArrayBox& eosfab=(*EOSdata)[mfi];
 
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+    Vector<int> velbc=getBCArray(State_Type,gridno,
+      STATECOMP_VEL,STATE_NCOMP_VEL);
 
     int fortran_im=im+1;
 
@@ -10180,7 +10185,8 @@ void NavierStokes::getState_tracemag(int idx) {
 
    FArrayBox& velfab=(*vel_data)[mfi];
 
-   Vector<int> bc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+   Vector<int> bc=getBCArray(State_Type,gridno,
+     STATECOMP_VEL,STATE_NCOMP_VEL);
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -10248,7 +10254,8 @@ void NavierStokes::getState_tracemag(int idx) {
    FArrayBox& denfab=(*den_data)[mfi];
    FArrayBox& tenfab=(*tensor)[mfi];
 
-   Vector<int> bc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+   Vector<int> bc=getBCArray(State_Type,gridno,
+     STATECOMP_VEL,STATE_NCOMP_VEL);
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))

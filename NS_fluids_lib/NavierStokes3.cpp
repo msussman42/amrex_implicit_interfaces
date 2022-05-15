@@ -1540,7 +1540,8 @@ NavierStokes::recalesce_temperature(int im_source) {
   int bfact=parent->Space_blockingFactor(level);
 
   const Real* xlo = grid_loc[gridno].lo();
-  Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+  Vector<int> velbc=getBCArray(State_Type,gridno,
+    STATECOMP_VEL,STATE_NCOMP_VEL);
 
   FArrayBox& snewfab=S_new[mfi];
 
@@ -1648,7 +1649,8 @@ NavierStokes::process_recalesce_data(
   int bfact=parent->Space_blockingFactor(level);
 
   const Real* xlo = grid_loc[gridno].lo();
-  Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+  Vector<int> velbc=getBCArray(State_Type,gridno,
+    STATECOMP_VEL,STATE_NCOMP_VEL);
 
   FArrayBox& maskfab=(*mask)[mfi];
   FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
@@ -5540,7 +5542,8 @@ NavierStokes::ColorSum(
   FArrayBox& areaz=(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
 
   Vector<int> levelbc=getBCArray(LS_Type,gridno,0,1);
-  Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+  Vector<int> velbc=getBCArray(State_Type,gridno,
+     STATECOMP_VEL,STATE_NCOMP_VEL);
 
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))

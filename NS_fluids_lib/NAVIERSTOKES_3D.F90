@@ -5084,8 +5084,13 @@ END SUBROUTINE SIMP
              if ((n.ge.SEM_U+1).and.(n.le.SEM_W+1)) then ! velocity
               fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),n)
              else if (n.eq.SEM_T+1) then !temperature
-              dencomp=(imcrit-1)*num_state_material+ENUM_DENVAR+1
-              fine_data=den_fine(D_DECL(istrip,jstrip,kstrip),dencomp+1)
+              if (ENUM_DENVAR+1.eq.ENUM_TEMPERATUREVAR) then
+               dencomp=(imcrit-1)*num_state_material+ENUM_DENVAR+1
+               fine_data=den_fine(D_DECL(istrip,jstrip,kstrip),dencomp+1)
+              else
+               print *,"ENUM_TEMPERATUREVAR<>ENUM_DENVAR+1"
+               stop
+              endif
              else
               print *,"n invalid"
               stop
@@ -5212,8 +5217,13 @@ END SUBROUTINE SIMP
                   if ((n.ge.SEM_U+1).and.(n.le.SEM_W+1)) then ! velocity
                    fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),n)
                   else if (n.eq.SEM_T+1) then ! temperature
-                   dencomp=(imcrit-1)*num_state_material+ENUM_DENVAR+1
-                   fine_data=den_fine(D_DECL(istrip,jstrip,kstrip),dencomp+1)
+                   if (ENUM_DENVAR+1.eq.ENUM_TEMPERATUREVAR) then
+                    dencomp=(imcrit-1)*num_state_material+ENUM_DENVAR+1
+                    fine_data=den_fine(D_DECL(istrip,jstrip,kstrip),dencomp+1)
+                   else
+                    print *,"ENUM_TEMPERATUREVAR<>ENUM_DENVAR+1"
+                    stop
+                   endif
                   else
                    print *,"n invalid"
                    stop
@@ -5846,8 +5856,13 @@ END SUBROUTINE SIMP
                if ((n.ge.SEM_U+1).and.(n.le.SEM_W+1)) then ! velocity
                 crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),n)
                else if (n.eq.SEM_T+1) then ! temperature
-                dencomp=(imcrit-1)*num_state_material+ENUM_DENVAR+1
-                crse_data=den_crse(D_DECL(istrip,jstrip,kstrip),dencomp+1)
+                if (ENUM_DENVAR+1.eq.ENUM_TEMPERATUREVAR) then
+                 dencomp=(imcrit-1)*num_state_material+ENUM_DENVAR+1
+                 crse_data=den_crse(D_DECL(istrip,jstrip,kstrip),dencomp+1)
+                else
+                 print *,"ENUM_TEMPERATUREVAR<>ENUM_DENVAR+1"
+                 stop
+                endif
                else
                 print *,"n invalid"
                 stop
@@ -5972,8 +5987,13 @@ END SUBROUTINE SIMP
                     if ((n.ge.SEM_U+1).and.(n.le.SEM_W+1)) then ! velocity
                      crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),n)
                     else if (n.eq.SEM_T+1) then ! temperature
-                     dencomp=(imcrit-1)*num_state_material+ENUM_DENVAR+1
-                     crse_data=den_crse(D_DECL(istrip,jstrip,kstrip),dencomp+1)
+                     if (ENUM_DENVAR+1.eq.ENUM_TEMPERATUREVAR) then
+                      dencomp=(imcrit-1)*num_state_material+ENUM_DENVAR+1
+                      crse_data=den_crse(D_DECL(istrip,jstrip,kstrip),dencomp+1)
+                     else
+                      print *,"ENUM_TEMPERATUREVAR<>ENUM_DENVAR+1"
+                      stop
+                     endif
                     else
                      print *,"n invalid"
                      stop

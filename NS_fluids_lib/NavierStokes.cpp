@@ -9199,7 +9199,8 @@ void NavierStokes::ns_header_msg_level(
      FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
      FArrayBox& mfinerfab=(*localMF[MASKCOEF_MF])[mfi];
 
-     Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+     Vector<int> velbc=getBCArray(State_Type,gridno,
+         STATECOMP_VEL,STATE_NCOMP_VEL);
      Vector<int> vofbc=getBCArray(State_Type,gridno,STATECOMP_MOF,1);
 
      int tid_current=ns_thread();
@@ -12347,7 +12348,8 @@ void NavierStokes::tensor_advection_update() {
       FArrayBox& velfab=(*velmf)[mfi];
       FArrayBox& tendata=(*tendata_mf)[mfi];
 
-      Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+      Vector<int> velbc=getBCArray(State_Type,gridno,
+        STATECOMP_VEL,STATE_NCOMP_VEL);
 
       // get |grad U|,D,grad U 
       int iproject=0;
@@ -12413,7 +12415,8 @@ void NavierStokes::tensor_advection_update() {
       FArrayBox& zdfab=(*xdisplace_mf[AMREX_SPACEDIM-1])[mfi];
       FArrayBox& tendata=(*tendata_mf)[mfi];
 
-      Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+      Vector<int> velbc=getBCArray(State_Type,gridno,
+        STATECOMP_VEL,STATE_NCOMP_VEL);
 
       int transposegradu=0;
 
@@ -14340,7 +14343,8 @@ NavierStokes::level_phase_change_convert(
     const int* fabhi=fabgrid.hiVect();
 
     const Real* xlo = grid_loc[gridno].lo();
-    Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+    Vector<int> velbc=getBCArray(State_Type,gridno,
+        STATECOMP_VEL,STATE_NCOMP_VEL);
 
     FArrayBox& burnvelfab=(*localMF[BURNING_VELOCITY_MF])[mfi];
     FArrayBox& nodevelfab=(*localMF[nodevel_MF])[mfi];
@@ -16526,7 +16530,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
      FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
 
-     Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+     Vector<int> velbc=getBCArray(State_Type,gridno,
+        STATECOMP_VEL,STATE_NCOMP_VEL);
      Vector<int> denbc=getBCArray(State_Type,gridno,STATECOMP_STATES,
       nmat*num_state_material);
 
@@ -16732,7 +16737,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      } else
       amrex::Error("source_term invalid");
 
-     Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+     Vector<int> velbc=getBCArray(State_Type,gridno,
+        STATECOMP_VEL,STATE_NCOMP_VEL);
      Vector<int> denbc=getBCArray(State_Type,gridno,STATECOMP_STATES,
       nmat*num_state_material);
 
@@ -18074,7 +18080,8 @@ NavierStokes::GetDrag(int isweep) {
   const int* fabhi=fabgrid.hiVect();
 
   const Real* xlo = grid_loc[gridno].lo();
-  Vector<int> velbc=getBCArray(State_Type,gridno,0,AMREX_SPACEDIM);
+  Vector<int> velbc=getBCArray(State_Type,gridno,
+     STATECOMP_VEL,STATE_NCOMP_VEL);
 
   FArrayBox& maskfab=(*mask)[mfi];
   FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
@@ -18741,7 +18748,7 @@ NavierStokes::dotSumONES_size(int project_option,
   FArrayBox& alpha_fab = (*localMF[ALPHACOEF_MF])[mfi];
   FArrayBox& mfab=(*localMF[MASKCOEF_MF])[mfi];
 
-  Vector<int> presbc=getBCArray(State_Type,gridno,AMREX_SPACEDIM,1);
+  Vector<int> presbc=getBCArray(State_Type,gridno,STATECOMP_PRES,1);
 
   Vector<Real> fab_sum;
   fab_sum.resize(color_ONES_count);
@@ -18902,7 +18909,7 @@ NavierStokes::dotSumONES(int project_option,
   FArrayBox& alpha_fab = (*localMF[ALPHACOEF_MF])[mfi];
   FArrayBox& mfab=(*localMF[MASKCOEF_MF])[mfi];
 
-  Vector<int> presbc=getBCArray(State_Type,gridno,AMREX_SPACEDIM,1);
+  Vector<int> presbc=getBCArray(State_Type,gridno,STATECOMP_PRES,1);
 
   Vector<Real> fab_sum;
   fab_sum.resize(color_ONES_count);
@@ -19043,7 +19050,7 @@ NavierStokes::mf_combine_ones_level(int project_option,
   FArrayBox& alpha_fab = (*localMF[ALPHACOEF_MF])[mfi];
   FArrayBox& mfab=(*localMF[MASKCOEF_MF])[mfi];
 
-  Vector<int> presbc=getBCArray(State_Type,gridno,AMREX_SPACEDIM,1);
+  Vector<int> presbc=getBCArray(State_Type,gridno,STATECOMP_PRES,1);
 
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
