@@ -97,8 +97,13 @@ ns.gravity        = -9.8 # m/s^2
 #can be used instead (simulation would run 100 times faster, giving similar
 #freezing times?).  
 ns.fixed_dt_scales=0.0 0.0 0.0
-ns.tension=0.831 0.17407 0.1341 0.8341 0.831 0.1315 
-ns.unscaled_min_curvature_radius=10.0
+#triple point: theta_liq=95, theta_ice=97, theta_gas=168
+#contact line: theta_L=33 degrees
+#ns.tension=0.831 0.17407 0.1341 0.8341 0.831 0.1315 
+#triple point: theta_liq=107.5, theta_ice=107.5, theta_gas=145.0
+#contact line: theta_L=45 degrees
+ns.tension=0.831 0.49977 0.243 0.831 0.831 0.243
+#ns.unscaled_min_curvature_radius=10.0
 
 # specific heat of glass: 0.84E+3 J/(kg K)
 # specific heat of water: 4.186E+3 J/(kg K)
