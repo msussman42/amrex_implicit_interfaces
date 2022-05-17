@@ -11480,26 +11480,26 @@ void NavierStokes::multiphase_project(int project_option) {
      // total Energy, and internal energy.
      // initializes ns_level.conservative_energy_mask
 
-     // (multiphase_project)
-     // If update_energy=1, then rho (if non-cons),E,T,consmask updated.
-     // Copies UMAC to Umac_new: "save_to_macvel_state(UMAC_MF)"
-   int idx_gpcell=-1;
-   int idx_divup=-1;
-   int update_energy=0;
+   // (multiphase_project)
+   // If update_energy=SUB_OP_THERMAL_COMP, 
+   // then rho (if non-cons),E,T,consmask updated.
+   // Copies UMAC to Umac_new: "save_to_macvel_state(UMAC_MF)"
+   int update_energy=SUB_OP_THERMAL_INCOMP;
    if (project_option==SOLVETYPE_PRES) {
-    update_energy=1; // update temperature and density (if non-cons)
+     // update temperature and density (if non-cons)
+    update_energy=SUB_OP_THERMAL_COMP; 
    } else if ((project_option==SOLVETYPE_INITPROJ)||  
 	      (project_option==SOLVETYPE_PRESCOR)) { 
     // do nothing
    } else 
     amrex::Error("project_option invalid");
 
-    // NavierStokes::apply_cell_pressure_gradient declared
+    // NavierStokes::init_divup_cell_vel_cell declared
     // in NavierStokes2.cpp.
-    // At the end of apply_cell_pressure_gradient,
+    // At the end of init_divup_cell_vel_cell,
     // UMAC_MF is copied to UMAC_new. 
-   ns_level.apply_cell_pressure_gradient(project_option,
-    update_energy,PRESPC2_MF,UMAC_MF,idx_gpcell,idx_divup);
+   ns_level.init_divup_cell_vel_cell(project_option,
+    update_energy,PRESPC2_MF,UMAC_MF);
 
    if (project_option==SOLVETYPE_PRES) {
 

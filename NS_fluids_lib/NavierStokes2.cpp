@@ -1804,19 +1804,17 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
 } // end subroutine MAC_GRID_ELASTIC_FORCE
 
 // PEDGE_MF allocated in allocate_pressure_work_vars
-void NavierStokes::apply_cell_pressure_gradient(
+void NavierStokes::init_divup_cell_vel_cell(
  int project_option,
  int energyflag,
  int idx_pres,    //nsolve=1
- int idx_umac,    //nsolve=1
- int idx_gpcell,  //sdim 
- int idx_divup) { //nsolve=1
+ int idx_umac) {  //nsolve=1
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
  } else
-  amrex::Error("SDC_outer_sweeps invalid apply_cell_pressure_gradient");
+  amrex::Error("SDC_outer_sweeps invalid init_divup_cell_vel_cell");
 
  if ((project_option==SOLVETYPE_PRES)||
      (project_option==SOLVETYPE_INITPROJ)||
@@ -2026,7 +2024,7 @@ void NavierStokes::apply_cell_pressure_gradient(
  
    int ncphys_proxy=FACECOMP_NCOMP;
 
-   // in apply_cell_pressure_gradient: p^CELL -> p^MAC 
+   // in init_divup_cell_vel_cell: p^CELL -> p^MAC 
    // AMR transfer data is in the 3rd component of xp.
    fort_cell_to_mac(
     &ncomp_mgoni, 
@@ -2193,7 +2191,7 @@ void NavierStokes::apply_cell_pressure_gradient(
 
    int homflag=0; // default
  
-   // in apply_cell_pressure_gradient 
+   // in init_divup_cell_vel_cell 
 
    int ncomp_denold=presfab.nComp();
    int ncomp_veldest=Snewfab.nComp();
@@ -2309,7 +2307,7 @@ void NavierStokes::apply_cell_pressure_gradient(
  } else
   amrex::Error("energyflag invalid");
 
-} // end subroutine apply_cell_pressure_gradient
+} // end subroutine init_divup_cell_vel_cell
 
 void NavierStokes::save_to_macvel_state(int idx_umac) {
 

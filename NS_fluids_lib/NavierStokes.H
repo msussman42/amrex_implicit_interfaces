@@ -1159,13 +1159,11 @@ void apply_pressure_grad(
 
     void save_to_macvel_state(int idx_umac);
 
-    void apply_cell_pressure_gradient(
+    void init_divup_cell_vel_cell(
      int project_option,
      int energyflag,
      int idx_pres,  
-     int idx_umac,
-     int idx_gpcell,
-     int idx_divup);
+     int idx_umac);
 
     void update_SEM_delta_force(
      int project_option,
