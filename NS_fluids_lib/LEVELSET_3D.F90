@@ -11155,7 +11155,7 @@ stop
        endif
       enddo ! im=1..nmat
  
-      ! mac -> cell in solver (apply_cell_pressure_gradient) or VELMAC_TO_CELL
+      ! mac -> cell in solver (init_divup_cell_vel_cell) or VELMAC_TO_CELL
       if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
           (operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. & ! velocity increment
           (operation_flag.eq.OP_XDISP_MAC_TO_CELL)) then ! displacement
@@ -11767,7 +11767,7 @@ stop
          stop
         endif
 
-       ! mac -> cell in solver (apply_cell_pressure_gradient) or VELMAC_TO_CELL
+       ! mac -> cell in solver (init_divup_cell_vel_cell) or VELMAC_TO_CELL
        else if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
                 (operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. & 
                 (operation_flag.eq.OP_XDISP_MAC_TO_CELL)) then ! displacement
@@ -12481,14 +12481,20 @@ stop
        if (enable_spectral.eq.0) then
         ! do nothing
        else
-        print *,"enable_spectral and ns_time_order are not consistent"
+        print *,"enable_spectral and ns_time_order are not consistent(1)"
+        print *,"ns_time_order, enable_spectral ",ns_time_order, &
+                enable_spectral
         stop
        endif
       else if ((ns_time_order.ge.2).and.(ns_time_order.le.32)) then
        if (enable_spectral.eq.1) then
         ! do nothing
+       else if (enable_spectral.eq.0) then
+        ! do nothing (this case possible?)
        else
-        print *,"enable_spectral and ns_time_order are not consistent"
+        print *,"enable_spectral and ns_time_order are not consistent(2)"
+        print *,"ns_time_order, enable_spectral ",ns_time_order, &
+                enable_spectral
         stop
        endif
       else

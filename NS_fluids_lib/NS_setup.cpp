@@ -392,13 +392,11 @@ NavierStokes::override_enable_spectral(int enable_spectral_in) {
 
  enable_spectral=enable_spectral_in;
 
- if ((enable_spectral_in==1)||(enable_spectral_in==2)) {
+ if (enable_spectral_in==1) {
 
   sem_interp_HIGH_PARM.interp_enable_spectral=enable_spectral_in;
   for (int im=0;im<nmat;im++) {
    int ibase=im*num_state_material;
-   desc_lst.resetMapper(State_Type,STATECOMP_STATES+ibase+ENUM_DENVAR,
-     &sem_interp_HIGH_PARM);
    desc_lst.resetMapper(State_Type,STATECOMP_STATES+ibase+ENUM_TEMPERATUREVAR,
      &sem_interp_HIGH_PARM);
   } // im=0..nmat-1
@@ -407,13 +405,11 @@ NavierStokes::override_enable_spectral(int enable_spectral_in) {
    desc_lst.resetMapper(State_Type,imvel,&sem_interp_HIGH_PARM);
   }
 
- } else if ((enable_spectral_in==0)||(enable_spectral_in==3)) {
+ } else if (enable_spectral_in==0) {
 
   sem_interp_LOW_PARM.interp_enable_spectral=enable_spectral_in;
   for (int im=0;im<nmat;im++) {
    int ibase=im*num_state_material;
-   desc_lst.resetMapper(State_Type,STATECOMP_STATES+ibase+ENUM_DENVAR,
-     &sem_interp_LOW_PARM);
    desc_lst.resetMapper(State_Type,STATECOMP_STATES+ibase+ENUM_TEMPERATUREVAR,
      &sem_interp_LOW_PARM);
   } // im=0..nmat-1
@@ -434,9 +430,9 @@ NavierStokes::override_enable_spectralGHOST(
 
   for (int nc=0;nc<ncomp;nc++) {
    int target_comp=scomp+nc;
-   if ((enable_spectral_in==0)||(enable_spectral_in==3)) {
+   if (enable_spectral_in==0) {
     desc_lstGHOST.resetMapper(State_Type,target_comp,&pc_interp);
-   } else if ((enable_spectral_in==1)||(enable_spectral_in==2)) {
+   } else if (enable_spectral_in==1) {
     sem_interp_HIGH_PARM.interp_enable_spectral=enable_spectral_in;
     desc_lstGHOST.resetMapper(State_Type,target_comp,&sem_interp_HIGH_PARM);
    } else
@@ -802,12 +798,10 @@ NavierStokes::variableSetUp ()
 
     sem_interp_DEFAULT.interp_enable_spectral=enable_spectral;
 
-    if ((enable_spectral==1)||(enable_spectral==2)) {
-     sem_interp_HIGH_PARM.interp_enable_spectral=enable_spectral;
-     sem_interp_LOW_PARM.interp_enable_spectral=0;
-    } else if ((enable_spectral==0)||(enable_spectral==3)) {
-     sem_interp_LOW_PARM.interp_enable_spectral=enable_spectral;
+    if ((enable_spectral==0)||
+	(enable_spectral==1)) {
      sem_interp_HIGH_PARM.interp_enable_spectral=1;
+     sem_interp_LOW_PARM.interp_enable_spectral=0;
     } else
      amrex::Error("enable_spectral invalid");
 
