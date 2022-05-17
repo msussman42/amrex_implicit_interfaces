@@ -6,12 +6,16 @@
       real*8 theta_L
       integer select
 
-      select=1
+      select=2
 
       if (select.eq.1) then
        sigma12=0.831d0   ! liquid/gas
        sigma23=0.831d0  ! gas/solid
        sigma13=0.1341d0 ! liquid/solid
+      else if (select.eq.2) then
+       sigma12=0.831d0   ! liquid/gas
+       sigma23=0.831d0  ! gas/solid
+       sigma13=0.243d0 ! liquid/solid
       else
        print *,"select invalid"
        stop

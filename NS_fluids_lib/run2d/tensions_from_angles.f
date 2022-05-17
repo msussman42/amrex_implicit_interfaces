@@ -6,7 +6,7 @@
       real*8 mypi
       integer select
 
-      select=2
+      select=3
 
       if (select.eq.1) then
        sigma12=0.831d0   ! liquid/gas
@@ -18,6 +18,11 @@
        theta1=107.5d0 ! liquid
        theta2=145.0d0 ! gas
        theta3=107.5d0 ! solid
+      else if (select.eq.3) then
+       sigma12=0.831d0   ! (silicone) liquid/gas
+       theta1=60.0d0 ! (silicone) liquid
+       theta2=168.0d0 ! gas
+       theta3=132.0d0 ! solid
       else
        print *,"select invalid"
        stop

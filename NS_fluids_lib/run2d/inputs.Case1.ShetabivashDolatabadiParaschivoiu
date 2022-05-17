@@ -90,19 +90,26 @@ ns.gravity        = -9.8 # m/s^2
 # sigma_{SG}=sigma_{LG}
 # sigma_{LG}(1-cos(theta_L_substrate))=sigma_{SL}
 # 12,13,14,23,24,34
-# LG,LI,LS,IG,GS,SI  (LS not used)
+# LG,LI,LS,IG,GS,SI  
 #advection, surface tension, gravity
 #Note: if gravity turned off, then surface tension force can be significantly
 #reduced so that advection and freezing time steps
 #can be used instead (simulation would run 100 times faster, giving similar
 #freezing times?).  
 ns.fixed_dt_scales=0.0 0.0 0.0
-#triple point: theta_liq=95, theta_ice=97, theta_gas=168
+#triple point: theta_liq=95, theta_ice=97, theta_gas=168 LG,LI,GI
 #contact line: theta_L=33 degrees
+# LG,LI,LS,IG,GS,SI   (SI not used)
 #ns.tension=0.831 0.17407 0.1341 0.8341 0.831 0.1315 
 #triple point: theta_liq=107.5, theta_ice=107.5, theta_gas=145.0
 #contact line: theta_L=45 degrees
-ns.tension=0.831 0.49977 0.243 0.831 0.831 0.243
+#ns.tension=0.831 0.49977 0.243 0.831 0.831 0.243
+#triple point: (silicone) theta_liq=60.0, theta_ice=132.0, theta_gas=168.0
+#contact line: theta_L=45 degrees
+# LG,LI,LS,IG,GS,SI  (SI not used)
+ns.tension=0.831 0.232 0.243 0.968 0.831 0.243
+
+
 #ns.unscaled_min_curvature_radius=10.0
 
 # specific heat of glass: 0.84E+3 J/(kg K)
