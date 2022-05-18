@@ -1962,6 +1962,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
    ns_level.setVal_localMF(ONES_MF,1.0,0,1,0);
    ns_level.setVal_localMF(ONES_GROW_MF,1.0,0,1,1);
 
+    // NavierStokes::allocate_FACE_WEIGHT declared in: NavierStokes3.cpp
    ns_level.allocate_FACE_WEIGHT(nsolve,project_option);
    ns_level.allocate_pressure_work_vars(nsolve,project_option);
   } // ilev=finest_level ... level
@@ -1980,12 +1981,13 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.remove_pressure_work_vars();
-   ns_level.delete_localMF(FACE_WEIGHT_MF,AMREX_SPACEDIM);
-   ns_level.delete_localMF(OFF_DIAG_CHECK_MF,1);
+
+    // NavierStokes::remove_FACE_WEIGHT_vars declared in: NavierStokes3.cpp
+   ns_level.remove_FACE_WEIGHT_vars();
+
    ns_level.delete_localMF(ONES_MF,1);
    ns_level.delete_localMF(ONES_GROW_MF,1);
-   ns_level.delete_localMF(TYPE_ONES_MF,1);
-   ns_level.delete_localMF(COLOR_ONES_MF,1);
+
    ns_level.delete_localMF(DIFFUSIONRHS_MF,1);
   } // ilev=finest_level ... level
 

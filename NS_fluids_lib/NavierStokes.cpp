@@ -18250,6 +18250,13 @@ NavierStokes::GetDrag(int isweep) {
 
 } // end subroutine GetDrag
 
+//called from:
+//NavierStokes::multiphase_SHELL_preconditioner
+//NavierStokes::multiphase_preconditioner
+//NavierStokes::multiphase_project
+//NavierStokes::JacobiALL
+//NavierStokes::residALL
+//NavierStokes::applyALL
 void NavierStokes::project_right_hand_side(
   int index_MF,int project_option,int& change_flag) {
 
@@ -18409,8 +18416,9 @@ void NavierStokes::project_right_hand_side(
  } else
   amrex::Error("project_option_singular_possible inv project_right_hand_side");
 
-} // subroutine project_right_hand_side
+} // end subroutine project_right_hand_side
 
+// called from: NavierStokes::project_right_hand_side
 void NavierStokes::dot_productALL_ones(int project_option,
   int index_MF,Vector<Real>& coef) {
 
@@ -18447,9 +18455,11 @@ void NavierStokes::dot_productALL_ones(int project_option,
   }
  } // for (int k = coarsest_ONES_level; k <= finest_level; k++)
 
-} // subroutine dot_productALL_ones
+} // end subroutine dot_productALL_ones
 
 // index_MF = index_MF + coef
+// called from:
+// NavierStokes::project_right_hand_side
 void NavierStokes::mf_combine_ones(int project_option,
   int index_MF,Vector<Real> coef) {
 
@@ -18475,7 +18485,7 @@ void NavierStokes::mf_combine_ones(int project_option,
 
  } // for (int k = coarsest_ONES_level; k <= finest_level; k++)
 
-} // subroutine mf_combine_ones
+} // end subroutine mf_combine_ones
 
 void NavierStokes::zap_resid_where_singular(int index_MF) {
 
@@ -18497,6 +18507,7 @@ void NavierStokes::zap_resid_where_singular(int index_MF) {
 
 }  // subroutine zap_resid_where_singular
 
+//called from: NavierStokes::multiphase_project
 void NavierStokes::dot_productALL_ones_size(int project_option) {
 
  int finest_level=parent->finestLevel();
@@ -18536,7 +18547,7 @@ void NavierStokes::dot_productALL_ones_size(int project_option) {
   }
  } // for (int k = coarsest_ONES_level; k <= finest_level; k++)
 
-} // subroutine dot_productALL_ones_size
+} // end subroutine dot_productALL_ones_size
 
 
 void NavierStokes::dot_productALL(int project_option,
@@ -18653,7 +18664,7 @@ NavierStokes::dotSum(int project_option,
  result=sum[0];
 } // end subroutine dotSum
 
-
+//called from: NavierStokes::dot_productALL_ones_size
 void
 NavierStokes::dotSumONES_size(int project_option,
   Vector<Real>& result_sum,
@@ -18817,7 +18828,7 @@ NavierStokes::dotSumONES_size(int project_option,
 
 } // end subroutine dotSumONES_size
 
-
+//called by: NavierStokes::dot_productALL_ones
 void
 NavierStokes::dotSumONES(int project_option,
   int index_MF,
@@ -18972,7 +18983,7 @@ NavierStokes::dotSumONES(int project_option,
 
 } // end subroutine dotSumONES
 
-
+//called from: NavierStokes::mf_combine_ones
 void
 NavierStokes::mf_combine_ones_level(int project_option,
   int index_MF,
