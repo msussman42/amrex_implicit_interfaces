@@ -508,6 +508,7 @@ void NavierStokes::delete_localMF(int idx_MF,int ncomp) {
   } else {
    std::cout << "level= " << level << '\n';
    std::cout << "idx_MF= " << idx_MF << '\n';
+   std::cout << "ncomp= " << ncomp << '\n';
    amrex::Error("forgot to allocate the localMF variable before delete");
   }
   delete localMF[scomp];

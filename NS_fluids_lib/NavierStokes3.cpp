@@ -7568,7 +7568,18 @@ void NavierStokes::remove_MAC_velocityALL(int idx) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.delete_localMF(idx,AMREX_SPACEDIM);
  }
-} // remove_MAC_velocityALL
+} // end subroutine remove_MAC_velocityALL
+
+// called from:
+// NavierStokes::update_SEM_forcesALL
+// NavierStokes::multiphase_project
+// NavierStokes::diffusion_heatingALL 
+void NavierStokes::remove_FACE_WEIGHT_vars() {
+
+ delete_localMF(FACE_WEIGHT_MF,AMREX_SPACEDIM);
+ delete_localMF(OFF_DIAG_CHECK_MF,1);
+
+} // end subroutine remove_FACE_WEIGHT_vars()
 
 // called from:
 // NavierStokes::update_SEM_forcesALL
@@ -7873,7 +7884,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
   }
  }
 
-} // subroutine allocate_FACE_WEIGHT 
+} // end subroutine allocate_FACE_WEIGHT 
 
 // called from NavierStokes::multiphase_project
 void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
@@ -11603,10 +11614,9 @@ void NavierStokes::multiphase_project(int project_option) {
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.remove_project_variables(); // remove poldhold,ones,outer_iter
-  ns_level.remove_pressure_work_vars(); // remove umacstar, gradpedge, pedge
-  ns_level.delete_localMF(FACE_WEIGHT_MF,AMREX_SPACEDIM);
-  ns_level.delete_localMF(OFF_DIAG_CHECK_MF,1);
+  ns_level.remove_project_variables(); //remove poldhold,ones,outer_iter
+  ns_level.remove_pressure_work_vars(); //remove umacstar, gradpedge, pedge
+  ns_level.remove_FACE_WEIGHT_vars(); //remove FACE_WEIGHT,OFF_DIAG_CHECK
  }
 
  delete_array(MAC_PHI_CRSE_MF);
@@ -11765,8 +11775,7 @@ void NavierStokes::diffusion_heatingALL(
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.delete_localMF(FACE_WEIGHT_MF,AMREX_SPACEDIM);
-  ns_level.delete_localMF(OFF_DIAG_CHECK_MF,1);
+  ns_level.remove_FACE_WEIGHT_vars();
  }
 
 }  // subroutine diffusion_heatingALL

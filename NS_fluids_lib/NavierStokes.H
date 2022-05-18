@@ -1081,6 +1081,8 @@ void apply_pressure_grad(
 
     void allocate_project_variables(int nsolve,int project_option);
 
+    void remove_FACE_WEIGHT_vars();
+
     void allocate_FACE_WEIGHT(
       int nsolve,
       int project_option);
