@@ -15170,6 +15170,10 @@ END SUBROUTINE Adist
          print *,"ncomp invalid2"
          stop
         endif
+        if (ncomp_xvel.ne.1) then
+         print *,"ncomp_xvel invalid2 project_option_projectionF"
+         stop
+        endif
        else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
         print *,"extension project should be low order"
         stop
@@ -15178,9 +15182,17 @@ END SUBROUTINE Adist
          print *,"ncomp invalid3"
          stop
         endif
+        if (ncomp_xvel.ne.SDIM) then
+         print *,"ncomp_xvel invalid3 SOLVETYPE_VISC"
+         stop
+        endif
        else if (project_option.eq.SOLVETYPE_HEAT) then ! thermal conduction
         if (ncomp.ne.1) then
          print *,"ncomp invalid4"
+         stop
+        endif
+        if (ncomp_xvel.ne.1) then
+         print *,"ncomp_xvel invalid4 SOLVETYPE_HEAT"
          stop
         endif
        else if ((project_option.ge.SOLVETYPE_SPEC).and. &
@@ -15189,9 +15201,17 @@ END SUBROUTINE Adist
          print *,"ncomp invalid5"
          stop
         endif
+        if (ncomp_xvel.ne.1) then
+         print *,"ncomp_xvel invalid5 SOLVETYPE_SPEC"
+         stop
+        endif
        else if (project_option.eq.SOLVETYPE_SMOOTH) then ! smoothing
         if (ncomp.ne.1) then
-         print *,"ncomp invalid4"
+         print *,"ncomp invalid6"
+         stop
+        endif
+        if (ncomp_xvel.ne.1) then
+         print *,"ncomp_xvel invalid6 SOLVETYPE_SMOOTH"
          stop
         endif
        else
@@ -15220,8 +15240,9 @@ END SUBROUTINE Adist
         print *,"energyflag invalid"
         stop
        endif
-       if (ncomp_xvel.ne.1) then
-        print *,"ncomp_xvel invalid"
+       if ((ncomp_xvel.ne.1).and. &
+           (ncomp_xvel.ne.SDIM)) then
+        print *,"ncomp_xvel invalid OP_RHS_CELL"
         stop
        endif
        if (ncomp_veldest.eq.ncomp) then
@@ -15269,7 +15290,7 @@ END SUBROUTINE Adist
         stop
        endif
        if (ncomp_xvel.ne.1) then
-        print *,"ncomp_xvel invalid"
+        print *,"ncomp_xvel invalid OP_DIV_CELL"
         stop
        endif
 
@@ -15327,7 +15348,7 @@ END SUBROUTINE Adist
         stop
        endif
        if (ncomp_xvel.ne.1) then
-        print *,"ncomp_xvel invalid"
+        print *,"ncomp_xvel invalid OP_VEL_MAC_TO_CELL"
         stop
        endif
 
@@ -15412,8 +15433,8 @@ END SUBROUTINE Adist
         print *,"scomp, dcomp, or scomp_bc invalid"
         stop
        endif
-       if (ncomp_xvel.ne.1) then
-        print *,"ncomp_xvel invalid"
+       if (ncomp_xvel.ne.NFLUXSEM) then
+        print *,"ncomp_xvel invalid OP_ISCHEME_CELL"
         stop
        endif
        if (ncomp_cterm.ne.ncomp) then
