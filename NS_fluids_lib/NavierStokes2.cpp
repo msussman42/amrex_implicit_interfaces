@@ -1908,8 +1908,8 @@ void NavierStokes::init_divup_cell_vel_cell(
  MultiFab* ustar;
 
  MultiFab* divup;
- if ((energyflag==SUB_OP_THERMAL_INCOMP)|| //do not update the energy
-     (energyflag==SUB_OP_THERMAL_COMP)) {//update the energy
+ if ((energyflag==SUB_OP_THERMAL_DIVUP_NULL)||//do not update the temperature
+     (energyflag==SUB_OP_THERMAL_DIVUP_OK)) {//update the temperature(comp)
   ustar=getState(1,0,AMREX_SPACEDIM,cur_time_slab);
   divup=new MultiFab(grids,dmap,nsolve,0,
    MFInfo().SetTag("divup"),FArrayBoxFactory());
@@ -2108,9 +2108,10 @@ void NavierStokes::init_divup_cell_vel_cell(
     spectral_override,caller_id);
 
   // isweep=1 calculate cell velocity from mass weighted average of face
-  // velocity.
-  // isweep=2 update cell velocity,
-  //  update density (if non conservative), update energy.
+  //          velocity.
+  // isweep=2 update cell velocity and
+  //          update temperature (if compressible material and 
+  //          energyflag=SUB_OP_THERMAL_DIVUP_OK)
  for (int isweep=1;isweep<=2;isweep++) {
 
   if (thread_class::nthreads<1)
@@ -3061,9 +3062,9 @@ void NavierStokes::increment_KE(Real beta) {
 } // subroutine increment_KE
 
 
-// vel_or_disp=-1 => interpolate mac velocity increment
-// vel_or_disp=0 => interpolate mac velocity
-// vel_or_disp=1 => interpolate mac displacement
+// vel_or_disp=-1=>interpolate mac velocity increment(local_enable_spectral=0)
+// vel_or_disp=0=>interpolate mac velocity
+// vel_or_disp=1=>interpolate mac displacement(local_enable_spectral=0)
 // dest_idx==-1 => destination is the state data.
 // dest_idx>=0  => destination is localMF[dest_idx]
 void NavierStokes::VELMAC_TO_CELLALL(

@@ -11219,6 +11219,13 @@ stop
         stop
        endif
 
+       if (enable_spectral.eq.0) then
+        ! do nothing
+       else
+        print *,"must have enable_spectral==0 if OP_VEL_DIVUP_TO_CELL"
+        stop
+       endif
+
       else if (operation_flag.eq.OP_RHS_CELL) then ! rhs of solver
 
        if (ncomp_veldest.eq.nsolve) then
@@ -11379,8 +11386,8 @@ stop
         print *,"homflag invalid"
         stop
        endif
-       if ((energyflag.ne.SUB_OP_THERMAL_INCOMP).and. &!yes u^{cell},no div(up) 
-           (energyflag.ne.SUB_OP_THERMAL_COMP)) then !yes u^{cell},yes div(up)
+       if ((energyflag.ne.SUB_OP_THERMAL_DIVUP_NULL).and. & 
+           (energyflag.ne.SUB_OP_THERMAL_DIVUP_OK)) then 
         print *,"energyflag invalid"
         stop
        endif
@@ -12298,9 +12305,9 @@ stop
           stop
          endif
         
-         if (energyflag.eq.SUB_OP_THERMAL_INCOMP) then
+         if (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) then
           ! do nothing
-         else if (energyflag.eq.SUB_OP_THERMAL_COMP) then
+         else if (energyflag.eq.SUB_OP_THERMAL_DIVUP_OK) then
 
           Eforce_conservative=Eforce_conservative- &
             dt*(aface(2)*uface(2)*pres_face(2)- &
@@ -12337,7 +12344,7 @@ stop
           rhs(D_DECL(i,j,k),1)=Eforce_conservative
 
            ! update the temperature
-          if (energyflag.eq.SUB_OP_THERMAL_COMP) then 
+          if (energyflag.eq.SUB_OP_THERMAL_DIVUP_OK) then 
 
            do im=1,nmat
 
@@ -13283,6 +13290,12 @@ stop
        endif
        if (ncomp_xp.ne.2+nsolve) then
         print *,"ncomp_xp invalid(4) ",ncomp_xp
+        stop
+       endif
+       if (enable_spectral.eq.0) then
+        ! do nothing
+       else
+        print *,"must have enable_spectral==0 if OP_PRES_CELL_TO_MAC"
         stop
        endif
 
