@@ -12603,7 +12603,8 @@ stop
              if ((operation_flag.eq.OP_XDISP_MAC_TO_CELL).or. & ! displacement
                  (operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. & 
                  (operation_flag.eq.OP_VEL_DIVUP_TO_CELL)) then !div(up) 
-                 ! do nothing
+              print *,"expecting enable_spectral==0"
+              stop
              else if ((operation_flag.eq.OP_RHS_CELL).or. & ! RHS for solver
                       (operation_flag.eq.OP_DIV_CELL).or. & ! divergence
                       (operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & 
