@@ -2260,7 +2260,7 @@ void NavierStokes::ADVECT_DIV() {
 } // omp
  ns_reconcile_d_num(41);
 
-} // subroutine ADVECT_DIV
+} // end subroutine ADVECT_DIV
 
 void NavierStokes::getStateDIV_ALL(int idx,int ngrow) {
 
@@ -2283,7 +2283,7 @@ void NavierStokes::getStateDIV_ALL(int idx,int ngrow) {
   ns_level.avgDown_localMF(idx,scomp,ncomp,0);
  }
 
-} // subroutine getStateDIV_ALL 
+} // end subroutine getStateDIV_ALL 
 
 void NavierStokes::getStateDIV(int idx,int ngrow) {
 
@@ -2492,7 +2492,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   delete velmac[dir];
 
-} // subroutine getStateDIV
+} // end subroutine getStateDIV
 
 
 

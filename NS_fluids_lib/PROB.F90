@@ -15198,7 +15198,7 @@ END SUBROUTINE Adist
         print *,"project_option invalid"
         stop
        endif
-       if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then ! operation_flag=0
+       if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then!operation_flag=OP_RHS_CELL
         print *,"maskSEM invalid"
         stop
        endif 
@@ -15321,8 +15321,8 @@ END SUBROUTINE Adist
         print *,"scomp or ncomp invalid"
         stop
        endif
-       if ((energyflag.ne.SUB_OP_THERMAL_INCOMP).and. &
-           (energyflag.ne.SUB_OP_THERMAL_COMP)) then
+       if ((energyflag.ne.SUB_OP_THERMAL_DIVUP_NULL).and. &
+           (energyflag.ne.SUB_OP_THERMAL_DIVUP_OK)) then
         print *,"energyflag invalid"
         stop
        endif
