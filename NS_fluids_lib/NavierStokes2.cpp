@@ -2300,8 +2300,8 @@ void NavierStokes::init_divup_cell_vel_cell(
 
  }  // isweep=1,2
 
- if ((energyflag==SUB_OP_THERMAL_INCOMP)||
-     (energyflag==SUB_OP_THERMAL_COMP)) {
+ if ((energyflag==SUB_OP_THERMAL_DIVUP_NULL)||
+     (energyflag==SUB_OP_THERMAL_DIVUP_OK)) {
   save_to_macvel_state(idx_umac);
   delete divup; // div(up) is discarded.
   delete ustar;

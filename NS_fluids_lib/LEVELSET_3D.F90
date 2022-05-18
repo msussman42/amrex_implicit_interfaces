@@ -11370,8 +11370,8 @@ stop
         print *,"homflag invalid"
         stop
        endif
-       if ((energyflag.ne.SUB_OP_THERMAL_INCOMP).and. &
-           (energyflag.ne.SUB_OP_THERMAL_COMP)) then
+       if ((energyflag.ne.SUB_OP_THERMAL_DIVUP_NULL).and. &
+           (energyflag.ne.SUB_OP_THERMAL_DIVUP_OK)) then
         print *,"energyflag invalid"
         stop
        endif
@@ -12450,7 +12450,7 @@ stop
            enddo ! im=1..nmat
 
            !do not update temperature
-          else if (energyflag.eq.SUB_OP_THERMAL_INCOMP) then
+          else if (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) then
            ! do nothing
           else
            print *,"energyflag invalid" 
@@ -12495,9 +12495,27 @@ stop
        endif
       else if ((ns_time_order.ge.2).and.(ns_time_order.le.32)) then
        if (enable_spectral.eq.1) then
-        ! do nothing
+
+        if ((operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. &
+            (operation_flag.eq.OP_XDISP_MAC_TO_CELL).or. &
+            (operation_flag.eq.OP_VEL_DIVUP_TO_CELL)) then
+         print *,"expecting enable_spectral=0"
+         stop
+        endif
+
        else if (enable_spectral.eq.0) then
-        ! do nothing (this case possible?)
+
+        if ((operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. &
+            (operation_flag.eq.OP_XDISP_MAC_TO_CELL).or. &
+            (operation_flag.eq.OP_VEL_DIVUP_TO_CELL)) then
+         ! do nothing
+        else if (operation_flag.eq.OP_RHS_CELL) then
+         ! do nothing
+        else
+         print *,"expecting enable_spectral==1"
+         stop
+        endif
+
        else
         print *,"enable_spectral and ns_time_order are not consistent(2)"
         print *,"ns_time_order, enable_spectral ",ns_time_order, &
@@ -12562,11 +12580,14 @@ stop
               ncomp_xvel=nsolve
               ncomp_cterm=1
              else if (operation_flag.eq.OP_FORCE_MAC_TO_CELL) then  
-              ! do nothing
+              print *,"expecting enable_spectral==0"
+              stop
              else if (operation_flag.eq.OP_XDISP_MAC_TO_CELL) then!displacement
-              ! do nothing
+              print *,"expecting enable_spectral==0"
+              stop
              else if (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) then ! div(up)
-              ! do nothing
+              print *,"expecting enable_spectral==0"
+              stop
              else if (operation_flag.eq.OP_ISCHEME_CELL) then ! advection
               scomp=1
               scomp_bc=1
