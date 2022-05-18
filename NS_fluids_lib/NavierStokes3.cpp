@@ -3309,7 +3309,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       } // ilev=finest_level ... level
 
       Real beta=1.0;
-      int vel_or_disp=0;// 0=velocity  1=displacement
+      int vel_or_disp=0;// -1=velocity increment 0=velocity  1=displacement
       int dest_idx=-1;  // update State_Type
 
        // maintain conservation of energy for compressible materials.
@@ -11475,22 +11475,20 @@ void NavierStokes::multiphase_project(int project_option) {
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
 
-     // presBILINEAR2 and get_new_data(Umac_type+dir) are inputs.
-     // Update cell velocity, density (if non-conservative),
-     // total Energy, and internal energy.
-     // initializes ns_level.conservative_energy_mask
+   // presBILINEAR2 and get_new_data(Umac_type+dir) are inputs.
+   // Update cell velocity and temperature (compressible materials).
 
    // (multiphase_project)
-   // If update_energy=SUB_OP_THERMAL_COMP, 
-   // then rho (if non-cons),E,T,consmask updated.
+   // If update_energy=SUB_OP_THERMAL_DIVUP_OK, 
+   // then temperature might be updated if compressible material.
    // Copies UMAC to Umac_new: "save_to_macvel_state(UMAC_MF)"
-   int update_energy=SUB_OP_THERMAL_INCOMP;
+   int update_energy=SUB_OP_THERMAL_DIVUP_NULL;
    if (project_option==SOLVETYPE_PRES) {
-     // update temperature and density (if non-cons)
-    update_energy=SUB_OP_THERMAL_COMP; 
+     // update temperature if compressible material
+    update_energy=SUB_OP_THERMAL_DIVUP_OK; 
    } else if ((project_option==SOLVETYPE_INITPROJ)||  
 	      (project_option==SOLVETYPE_PRESCOR)) { 
-    // do nothing
+    update_energy=SUB_OP_THERMAL_DIVUP_NULL;
    } else 
     amrex::Error("project_option invalid");
 
