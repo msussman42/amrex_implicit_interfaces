@@ -49,7 +49,8 @@ ns.disable_advection=0
 ns.disable_pressure_solve=0
 ns.post_init_pressure_solve=1
 
-ns.ns_tiling=true
+#ns.ns_tiling=true
+ns.ns_tiling=false
 fabarray.mfiter_tile_size=8 8
 amr.blocking_factor = 32 32
 #amr.space_blocking_factor=4 4  # can go up to 16 16
@@ -64,8 +65,6 @@ amr.time_blocking_factor=2
 ns.init_shrink    = 0.2 # reduce init dt since grad p not initially known
 # 0  low order space and time
 # 1  SEM space and time
-# 2  SEM space 
-# 3  SEM time
 ns.enable_spectral=1
 #ns.enable_spectral=0
 # number of timesteps between checkpoints
@@ -140,7 +139,7 @@ ns.probtype=26
 
 #ns.mem_debug = 1
 #ns.verbose should be commented out if performance needed.
-ns.v = 1
+#ns.v = 1
 #ns.d = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
