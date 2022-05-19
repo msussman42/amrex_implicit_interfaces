@@ -286,7 +286,6 @@ int  NavierStokes::force_cmof_at_triple_junctions=1;
 int  NavierStokes::partial_cmof_stencil_at_walls=1;
 
 int  NavierStokes::enable_spectral=0;
-int  NavierStokes::SEM_upwind=1;
 // default: tessellating fluid => default==1
 //          non-tessellating or tessellating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
@@ -2721,14 +2720,6 @@ NavierStokes::read_params ()
     } else
      amrex::Error("enable_spectral invalid");
 
-    pp.query("SEM_upwind",SEM_upwind);
-    if (SEM_upwind==1) {
-     // do nothing
-    } else if (SEM_upwind==0) {
-     // do nothing
-    } else
-     amrex::Error("SEM_upwind invalid");
-
     pp.query("continuous_mof",continuous_mof);
     pp.query("force_cmof_at_triple_junctions",force_cmof_at_triple_junctions);
     pp.query("partial_cmof_stencil_at_walls",partial_cmof_stencil_at_walls);
@@ -2848,7 +2839,6 @@ NavierStokes::read_params ()
      std::cout << "gravity_dir " << gravity_dir << '\n';
      std::cout << "cfl " << cfl << '\n';
      std::cout << "enable_spectral " << enable_spectral << '\n';
-     std::cout << "SEM_upwind " << SEM_upwind << '\n';
      std::cout << "continuous_mof " << continuous_mof << '\n';
      std::cout << "force_cmof_at_triple_junctions " << 
        force_cmof_at_triple_junctions << '\n';
@@ -16649,8 +16639,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &blob_array_size,
       &num_colors,
       &nten,
-      &project_option_visc,
-      &SEM_upwind);
+      &project_option_visc);
     }   // mfi
 } // omp
     ns_reconcile_d_num(84);

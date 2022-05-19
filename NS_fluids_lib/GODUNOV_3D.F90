@@ -18466,7 +18466,6 @@ stop
        im_solid_map, &
        homflag, &
        ntensor, &
-       SEM_upwind, &
        simple_AMR_BC_flag_viscosity) &
       bind(c,name='fort_face_gradients')
 
@@ -18493,7 +18492,6 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
 
-      INTEGER_T, intent(in) :: SEM_upwind
       INTEGER_T, intent(in) :: simple_AMR_BC_flag_viscosity
 
       INTEGER_T, intent(in) :: nmat
@@ -18726,12 +18724,6 @@ stop
        ! do nothing
       else
        print *,"simple_AMR_BC_flag_viscosity invalid"
-       stop
-      endif
-
-      if ((SEM_upwind.ne.0).and. &
-          (SEM_upwind.ne.1)) then
-       print *,"SEM_upwind invalid face gradients"
        stop
       endif
 
@@ -19580,7 +19572,6 @@ stop
                operation_flag, &  ! OP_UGRAD_MAC
                energyflag, &
                project_option_vel, &
-               SEM_upwind, &
                time, &  ! beta
                time, &  ! visc_coef
                time, &

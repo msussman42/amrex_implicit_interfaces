@@ -12737,7 +12737,6 @@ END SUBROUTINE Adist
        operation_flag, &
        energyflag, &
        project_option, &
-       SEM_upwind, &
        beta, &
        visc_coef, &
        time, &
@@ -12791,7 +12790,6 @@ END SUBROUTINE Adist
       INTEGER_T, intent(in) :: operation_flag
       INTEGER_T, intent(in) :: energyflag
       INTEGER_T, intent(in) :: project_option
-      INTEGER_T, intent(in) :: SEM_upwind
       INTEGER_T, intent(in) :: i,j,k
       INTEGER_T, intent(in) :: dir
       INTEGER_T, intent(in) :: bfact,bfact_c,bfact_f
@@ -12961,10 +12959,6 @@ END SUBROUTINE Adist
       endif
       if ((bfact_f.ne.bfact).and.(bfact.ne.2*bfact_f)) then
        print *,"bfact_f invalid"
-       stop
-      endif
-      if ((SEM_upwind.ne.0).and.(SEM_upwind.ne.1)) then
-       print *,"SEM_upwind invalid"
        stop
       endif
 
@@ -14455,8 +14449,6 @@ END SUBROUTINE Adist
               if ((abs(inside_flux).lt.1.0D+20).and. &
                   (abs(outside_flux).lt.1.0D+20)) then
 
-               if (SEM_upwind.eq.1) then
-
                 if (((side.eq.1).and.(local_vel(0).ge.zero)).or. &
                     ((side.eq.2).and.(local_vel(bfact).le.zero))) then
                  xface(D_DECL(ic,jc,kc),nc)=outside_flux
@@ -14467,20 +14459,6 @@ END SUBROUTINE Adist
                  print *,"side invalid"
                  stop
                 endif
-
-               else if (SEM_upwind.eq.0) then
-
-                if ((side.eq.1).or.(side.eq.2)) then
-                 xface(D_DECL(ic,jc,kc),nc)=half*(outside_flux+inside_flux)
-                else
-                 print *,"side invalid"
-                 stop
-                endif
-
-               else
-                print *,"SEM_upwind invalid"
-                stop
-               endif
 
               else
                print *,"inside_flux or outside_flux overflow"

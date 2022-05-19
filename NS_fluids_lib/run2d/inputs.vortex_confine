@@ -37,7 +37,6 @@ amr.grid_eff        = 0.75
 ns.ns_tiling=false
 #fabarray.mfiter_tile_size=32 32
 amr.blocking_factor = 32 32
-ns.SEM_upwind=1
 amr.space_blocking_factor=8 8
 #amr.space_blocking_factor=1 1
 #amr.space_blocking_factor=2 2

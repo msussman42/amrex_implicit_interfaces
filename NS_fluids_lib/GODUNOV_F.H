@@ -1047,7 +1047,6 @@ extern "C"
      int* im_solid_map,
      int* homflag,
      int* ntensor,
-     int* SEM_upwind,
      int* simple_AMR_BC_flag_viscosity);
 
 

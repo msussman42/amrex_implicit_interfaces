@@ -1452,7 +1452,6 @@ protected:
     static Real truncate_thickness;  // default is 2.0
 
     static int  enable_spectral;
-    static int  SEM_upwind;
      // continuous_mof = 0 => regular MOF
      // continuous_mof = 2 => CMOF ("continuous MOF ")
      // continuous_mof = 3 => CLSVOF except use MOF in cells with >2 materials.

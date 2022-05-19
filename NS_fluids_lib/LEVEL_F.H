@@ -305,8 +305,7 @@ namespace amrex{
         int* blob_array_size,
         int* num_colors,
         int* nten,
-        int* project_option,
-        int* SEM_upwind);
+        int* project_option);
 
 
       void fort_inc_temp(

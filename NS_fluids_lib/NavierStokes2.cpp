@@ -2089,8 +2089,7 @@ void NavierStokes::init_divup_cell_vel_cell(
     &blob_array_size,
     &num_colors,
     &nten,
-    &project_option,
-    &SEM_upwind);
+    &project_option);
   } // mfi
 } // omp
   ns_reconcile_d_num(132);
@@ -2957,8 +2956,7 @@ void NavierStokes::increment_face_velocity(
        &blob_array_size,
        &num_colors,
        &nten,
-       &project_option,
-       &SEM_upwind);
+       &project_option);
     } // mfi
 } // omp
     ns_reconcile_d_num(134);
@@ -3803,7 +3801,6 @@ void NavierStokes::doit_gradu_tensor(
      im_solid_map_ptr,
      &homflag,
      &ntensor,
-     &SEM_upwind,
      &simple_AMR_BC_flag_viscosity);
    } // mfi
 } // omp
@@ -4617,8 +4614,7 @@ void NavierStokes::apply_pressure_grad(
      &blob_array_size,
      &num_colors,
      &nten,
-     &project_option,
-     &SEM_upwind);
+     &project_option);
 
    }  // mfi
 } // omp
@@ -6087,8 +6083,7 @@ void NavierStokes::process_potential_force_face() {
     &blob_array_size,
     &num_colors,
     &nten,
-    &local_project_option,
-    &SEM_upwind);
+    &local_project_option);
   } // mfi
 } // omp
   ns_reconcile_d_num(151);
