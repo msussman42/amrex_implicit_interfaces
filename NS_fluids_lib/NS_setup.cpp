@@ -2631,6 +2631,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
   std::cout << "TIME= "<<upper_slab_time<<" VORT ERR= " << 
     NS_sumdata[IQ_VORT_ERROR_SUM_COMP] << '\n';
+  std::cout << "TIME= "<<upper_slab_time<<" TEMP ERR= " << 
+    NS_sumdata[IQ_TEMP_ERROR_SUM_COMP] << '\n';
   std::cout << "TIME= "<<upper_slab_time<<" VEL ERR= " << 
     NS_sumdata[IQ_VEL_ERROR_SUM_COMP] << '\n';
 

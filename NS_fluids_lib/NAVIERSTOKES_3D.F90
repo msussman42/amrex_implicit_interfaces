@@ -7027,8 +7027,11 @@ END SUBROUTINE SIMP
       REAL_T vort(3)
 
       REAL_T local_vort
+      REAL_T local_temperature
       REAL_T local_vort_error
+      REAL_T local_temperature_error
       REAL_T vort_expect
+      REAL_T temperature_expect
       REAL_T local_vel_error
       REAL_T local_energy_moment
       REAL_T local_vel(SDIM)
@@ -7376,8 +7379,9 @@ END SUBROUTINE SIMP
          idest=IQ_LS_F_SUM_COMP+im
          local_result(idest)=local_result(idest)+volgrid*LSvolume
 
-         dencore=den(D_DECL(i,j,k),1+num_state_material*(im-1))
-         Tcore=den(D_DECL(i,j,k),2+num_state_material*(im-1))
+         dencore=den(D_DECL(i,j,k),ENUM_DENVAR+1+num_state_material*(im-1))
+         Tcore=den(D_DECL(i,j,k), &
+                   ENUM_TEMPERATUREVAR+1+num_state_material*(im-1))
 
          idest=IQ_MASS_SUM_COMP+im
          local_result(idest)=local_result(idest)+ &
@@ -7509,24 +7513,36 @@ END SUBROUTINE SIMP
          local_vel(dir)=vel(D_DECL(i,j,k),dir)
          local_xsten(dir)=xsten(0,dir)
         enddo
-        call get_vort_vel_error(time,local_xsten,local_vort,local_vel, &
-         local_vort_error,local_vel_error,vort_expect,vel_expect, &
+        local_temperature=den(D_DECL(i,j,k),ENUM_TEMPERATUREVAR+1)
+        call get_vort_vel_error(time,local_xsten, &
+         local_vort,local_vel,local_temperature, &
+         local_vort_error,local_vel_error,local_temperature_error, &
+         vort_expect,vel_expect,temperature_expect, &
          local_energy_moment)
         
-        local_result(IQ_ENERGY_MOMENT_SUM_COMP+1)=local_result(IQ_ENERGY_MOMENT_SUM_COMP+1)+ &
+        local_result(IQ_ENERGY_MOMENT_SUM_COMP+1)= &
+             local_result(IQ_ENERGY_MOMENT_SUM_COMP+1)+ &
          local_energy_moment*local_kinetic_energy(1)
 
         if (local_result(IQ_VORT_ERROR_SUM_COMP+1).lt.local_vort_error) then
          local_result(IQ_VORT_ERROR_SUM_COMP+1)=local_vort_error
         endif
+
+        if (local_result(IQ_TEMP_ERROR_SUM_COMP+1).lt. &
+            local_temperature_error) then
+         local_result(IQ_TEMP_ERROR_SUM_COMP+1)=local_temperature_error
+        endif
+
         if (local_result(IQ_VEL_ERROR_SUM_COMP+1).lt.local_vel_error) then
          local_result(IQ_VEL_ERROR_SUM_COMP+1)=local_vel_error
         endif
         if (isweep.eq.0) then
          ! do nothing
         else if (isweep.eq.1) then
+
          if (local_vort_error.gt.zero) then
-          if (local_vort_error.gt.resultALL(IQ_VORT_ERROR_SUM_COMP+1)-VOFTOL) then
+          if (local_vort_error.gt. &
+              resultALL(IQ_VORT_ERROR_SUM_COMP+1)-VOFTOL) then
            print *,"**** POSITION OF MAX VORT ERROR ****"
            do dir=1,SDIM
             print *,"dir,xpos ",dir,local_xsten(dir)
@@ -7540,6 +7556,25 @@ END SUBROUTINE SIMP
           ! do nothing
          else
           print *,"local_vort_error invalid"
+          stop
+         endif
+
+         if (local_temperature_error.gt.zero) then
+          if (local_temperature_error.gt. &
+              resultALL(IQ_TEMP_ERROR_SUM_COMP+1)-VOFTOL) then
+           print *,"**** POSITION OF MAX TEMP ERROR ****"
+           do dir=1,SDIM
+            print *,"dir,xpos ",dir,local_xsten(dir)
+           enddo
+           print *,"time ",time
+           print *,"local_temperature_error ",local_temperature_error
+           print *,"EXPECTED temperature ",temperature_expect
+           print *,"ACTUAL temperature ",local_temperature
+          endif
+         else if (local_temperature_error.eq.zero) then
+          ! do nothing
+         else
+          print *,"local_temperature_error invalid"
           stop
          endif
 
