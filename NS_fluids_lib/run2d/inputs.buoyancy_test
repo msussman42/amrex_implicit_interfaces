@@ -47,7 +47,6 @@ ns.post_init_pressure_solve=1
 ns.ns_tiling=false
 #fabarray.mfiter_tile_size=32 32
 amr.blocking_factor = 16 16
-ns.SEM_upwind=1 # the default
 #amr.space_blocking_factor=16 16
 #amr.space_blocking_factor=1 1
 amr.space_blocking_factor=2 2

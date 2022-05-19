@@ -12926,8 +12926,7 @@ stop
        blob_array_size, &
        num_colors, &
        nten, &
-       project_option, &
-       SEM_upwind) &
+       project_option) &
       bind(c,name='fort_cell_to_mac')
 
       use global_utility_module
@@ -12996,7 +12995,6 @@ stop
       INTEGER_T, intent(in) :: rz_flag
       INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T, intent(in) :: project_option
-      INTEGER_T, intent(in) :: SEM_upwind
 
       REAL_T, intent(in), target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
@@ -13214,11 +13212,6 @@ stop
       endif
       if ((level.gt.finest_level).or.(level.lt.0)) then
        print *,"level invalid cell to mac"
-       stop
-      endif
-      if ((SEM_upwind.ne.0).and. &
-          (SEM_upwind.ne.1)) then
-       print *,"SEM_upwind invalid cell to mac"
        stop
       endif
  
@@ -15089,7 +15082,6 @@ stop
                operation_flag, & 
                energyflag, &
                project_option, &
-               SEM_upwind, &
                beta, &
                visc_coef, &
                time, &

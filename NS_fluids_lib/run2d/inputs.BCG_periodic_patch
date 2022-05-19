@@ -52,15 +52,16 @@ ns.post_init_pressure_solve=1
 ns.ns_tiling=true
 fabarray.mfiter_tile_size=8 8
 amr.blocking_factor = 32 32
-ns.SEM_upwind=1 # the default
-amr.space_blocking_factor=4 4  # can go up to 16 16
+#amr.space_blocking_factor=4 4  # can go up to 16 16
 #amr.space_blocking_factor=1 1
-#amr.space_blocking_factor=2 2
-#amr.time_blocking_factor=2
+amr.space_blocking_factor=2 2
+amr.time_blocking_factor=2
 #amr.time_blocking_factor=1
-amr.time_blocking_factor=4  # can go up to 16
+#amr.time_blocking_factor=4  # can go up to 16
 # for SEM, the initial time step is further reduced by 2^{r_time}
-ns.init_shrink    = 0.05 # reduce init dt since grad p not initially known
+# init_shrink=0.05 if time_blocking_factor=4
+# init_shrink=0.2 if time_blocking_factor=2
+ns.init_shrink    = 0.2 # reduce init dt since grad p not initially known
 # 0  low order space and time
 # 1  SEM space and time
 # 2  SEM space 
