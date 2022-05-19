@@ -2265,6 +2265,7 @@ NavierStokes::setup_integrated_quantities() {
  }
 
  NS_sumdata_type[IQ_VORT_ERROR_SUM_COMP]=3;  // reduce real max (-1.0E+6)
+ NS_sumdata_type[IQ_TEMP_ERROR_SUM_COMP]=3;  // reduce real max (-1.0E+6)
  NS_sumdata_type[IQ_VEL_ERROR_SUM_COMP]=3;   // reduce real max (-1.0E+6)
 
  for (int idir=0;idir<3;idir++) {

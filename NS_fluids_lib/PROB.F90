@@ -2300,7 +2300,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
   end subroutine closest_distance_to_CL
 
-      subroutine get_vortex_info(x,time,neg_force,vel,vort,energy_moment)
+      subroutine get_vortex_info(x,time, &
+            neg_force,vel,vort,energy_moment,temperature)
       IMPLICIT NONE
 
       REAL_T, intent(in) :: x(SDIM)
@@ -2310,6 +2311,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, intent(out) :: vel(SDIM)
       REAL_T, intent(out) :: vort
       REAL_T, intent(out) :: energy_moment
+      REAL_T, intent(out) :: temperature
       REAL_T problo(SDIM)
       REAL_T probhi(SDIM)
       REAL_T problen(SDIM)
@@ -2324,6 +2326,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"time invalid"
        stop
       endif
+
+      temperature=zero
 
       if ((probtype.eq.26).and. &
           ((axis_dir.eq.2).or. &  ! vortex confinement, no interface
@@ -2553,6 +2557,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        gx=cos(two*Pi*xprime(dir_x))
        vel(dir_x)=-alpha*fx*gy
        vel(dir_y)=alpha*fy*gx
+       temperature=alpha*fx*fy+fort_tempconst(1)
        if (SDIM.eq.2) then
         if ((adv_dir.eq.1).or.(adv_dir.eq.3)) then
          vel(1)=vel(1)+adv_vel
@@ -2603,17 +2608,22 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       end subroutine get_vortex_info
 
-      subroutine get_vort_vel_error(time,x,vort,vel,vort_err,vel_err, &
-          vort_expect,vel_expect,energy_moment)
+      subroutine get_vort_vel_error(time,x,vort,vel,temperature, &
+          vort_err,vel_err,temperature_err, &
+          vort_expect,vel_expect,temperature_expect, &
+          energy_moment)
       IMPLICIT NONE
 
       REAL_T, intent(in) :: time
       REAL_T, intent(in) :: x(SDIM)
       REAL_T, intent(in) :: vort
       REAL_T, intent(in) :: vel(SDIM)
+      REAL_T, intent(in) :: temperature
       REAL_T, intent(out) :: vort_err
       REAL_T, intent(out) :: vel_err
+      REAL_T, intent(out) :: temperature_err
       REAL_T, intent(out) :: vort_expect
+      REAL_T, intent(out) :: temperature_expect
       REAL_T, intent(out) :: energy_moment
       REAL_T, intent(out) :: vel_expect(SDIM)
       REAL_T :: neg_force(SDIM)
@@ -2623,11 +2633,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        vel_expect(dir)=zero
       enddo
       vort_expect=zero
+      temperature_expect=zero
       vort_err=zero
+      temperature_err=zero
       vel_err=zero
       energy_moment=zero
 
-      if (time.lt.zero) then
+      if (time.ge.zero) then
+       ! do nothing
+      else
        print *,"time invalid"
        stop
       endif
@@ -2640,7 +2654,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             (adv_dir.eq.3)) then
          if (SDIM.eq.2) then
           call get_vortex_info(x,time,neg_force,vel_expect,vort_expect, &
-           energy_moment)
+           energy_moment,temperature_expect)
           vort_err=abs(vort_expect-vort)
           do dir=1,SDIM
            vel_err=vel_err+(vel_expect(dir)-vel(dir))**2
@@ -2660,8 +2674,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! do nothing
        else if (axis_dir.eq.11) then ! BCG periodic
         call get_vortex_info(x,time,neg_force,vel_expect,vort_expect, &
-          energy_moment)
+          energy_moment,temperature_expect)
         vort_err=abs(vort_expect-vort)
+        temperature_err=abs(temperature_expect-temperature)
         do dir=1,SDIM
          vel_err=vel_err+(vel_expect(dir)-vel(dir))**2
         enddo
@@ -26391,7 +26406,12 @@ end subroutine initialize2d
        INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
        REAL_T theta_initdata
        REAL_T concentration_initdata
-      REAL_T concen1_initdata,concen2_initdata
+       REAL_T concen1_initdata,concen2_initdata
+
+       REAL_T local_neg_force(SDIM)
+       REAL_T local_vel(SDIM)
+       REAL_T local_vort
+       REAL_T local_energy_moment
 
        nhalf_box=1
 
@@ -26724,7 +26744,10 @@ end subroutine initialize2d
            if (axis_dir.eq.10) then ! BCG test
             scalc(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(1)
            else if (axis_dir.eq.11) then ! BCG periodic test
-            scalc(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(1)
+            call get_vortex_info(xpos,time, &
+              local_neg_force,local_vel,local_vort, &
+              local_energy_moment, &
+              scalc(ibase+ENUM_TEMPERATUREVAR+1))
            else if (axis_dir.eq.12) then ! buoyancy test
             if (xpos(SDIM).le.problo_array(SDIM)) then
              scalc(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(1)
