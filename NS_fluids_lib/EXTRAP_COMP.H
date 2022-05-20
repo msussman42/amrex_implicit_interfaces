@@ -95,6 +95,12 @@ interface temperature and interface mass fraction.
 #define SEMPROCESS_NEXT (SEMDIFFUSE_U+AMREX_SPACEDIM)
 #define NSTATE_SDC (SEMPROCESS_NEXT)
 
+#define SEM_INTERIOR 0
+#define SEM_DIRICHLET 1
+#define SEM_NEUMANN 2
+#define SEM_REFLECT_EVEN 3
+#define SEM_REFLECT_ODD 4
+
 #define FSI_NOTHING_VALID 0
 #define FSI_FINE_VEL_VALID 1
 #define FSI_FINE_SIGN_VEL_VALID 2

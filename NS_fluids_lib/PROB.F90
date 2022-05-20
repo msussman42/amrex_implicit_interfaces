@@ -13262,7 +13262,7 @@ END SUBROUTINE Adist
         do dir2=1,SDIM
  
          side=1
-         if (indexlo(dir2).lt.fablo(dir2)) then
+         if (indexlo(dir2).eq.fablo(dir2)-1) then
           if (dir2.eq.dir) then
            print *,"indexlo(dir) invalid; strip must at least"
            print *,"be alongside a strip that is in the domain"
@@ -13274,10 +13274,17 @@ END SUBROUTINE Adist
           if (velbc_in(dir2,side,dir2).ne.INT_DIR) then
            cen_outside_domain_flag=1
           endif
+         else if (indexlo(dir2).ge.fablo(dir2)) then
+          ! do nothing
+         else
+          print *,"indexlo(dir2)<fablo(dir2)-1"
+          print *,"dir,dir2,indexlo(dir2),fablo(dir2) ", &
+               dir,dir2,indexlo(dir2),fablo(dir2)
+          stop
          endif
 
          side=2
-         if (indexhi(dir2).gt.fabhi(dir2)) then
+         if (indexhi(dir2).eq.fabhi(dir2)+1) then
           if (dir2.eq.dir) then
            print *,"indexhi(dir) invalid; strip must at least"
            print *,"be alongside a strip that is in the domain"
@@ -13289,6 +13296,13 @@ END SUBROUTINE Adist
           if (velbc_in(dir2,side,dir2).ne.INT_DIR) then
            cen_outside_domain_flag=1
           endif
+         else if (indexhi(dir2).le.fabhi(dir2)) then
+          ! do nothing
+         else
+          print *,"indexhi(dir2)>fabhi(dir2)+1"
+          print *,"dir,dir2,indexhi(dir2),fabhi(dir2) ", &
+               dir,dir2,indexhi(dir2),fabhi(dir2)
+          stop
          endif
 
         enddo ! dir2=1..sdim
@@ -13317,7 +13331,7 @@ END SUBROUTINE Adist
             NINT(maskcov(D_DECL(sideidx(1),sideidx(2),sideidx(SDIM))))
            
            do dir2=1,SDIM
-            if (sideidx(dir2).lt.fablo(dir2)) then
+            if (sideidx(dir2).eq.fablo(dir2)-1) then
              testbc=velbc_in(dir2,side,dir2)
              if ((testbc.eq.INT_DIR).and.(dir2.eq.dir)) then
               local_maskCF= &
@@ -13357,7 +13371,9 @@ END SUBROUTINE Adist
               stop
              endif
             else
-             print *,"sideidx bust"
+             print *,"sideidx(dir2) < fablo(dir2)-1"
+             print *,"dir,dir2,sideidx(dir2),fablo(dir2) ", &
+                  dir,dir2,sideidx(dir2),fablo(dir2)
              stop 
             endif
            enddo ! dir2=1..sdim
@@ -13378,7 +13394,7 @@ END SUBROUTINE Adist
             NINT(maskcov(D_DECL(sideidx(1),sideidx(2),sideidx(SDIM))))
 
            do dir2=1,SDIM
-            if (sideidx(dir2).gt.fabhi(dir2)) then
+            if (sideidx(dir2).eq.fabhi(dir2)+1) then
              testbc=velbc_in(dir2,side,dir2)
              if ((testbc.eq.INT_DIR).and.(dir2.eq.dir)) then
               local_maskCF= &
@@ -13418,7 +13434,9 @@ END SUBROUTINE Adist
               stop
              endif
             else
-             print *,"sideidx bust"
+             print *,"sideidx(dir2) > fabhi(dir2)+1"
+             print *,"dir,dir2,sideidx(dir2),fabhi(dir2) ", &
+                  dir,dir2,sideidx(dir2),fabhi(dir2)
              stop 
             endif
            enddo ! dir2=1..sdim
@@ -13447,7 +13465,7 @@ END SUBROUTINE Adist
            ! fine-fine boundary or element properly contained in grid.
           if (nbr_outside_domain_flag(side).eq.0) then
 
-           local_bctype(side)=0 ! interior
+           local_bctype(side)=SEM_INTERIOR 
 
            local_bcval(side)=zero
             
@@ -13485,7 +13503,7 @@ END SUBROUTINE Adist
              stop
             endif
 
-           else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! MAC pressure gradient
+           else if (operation_flag.eq.OP_PRESGRAD_MAC) then!MAC pres. gradient
             if (nc.eq.1) then
              if (scomp.eq.1) then
               local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
@@ -13553,16 +13571,16 @@ END SUBROUTINE Adist
            if (operation_flag.eq.OP_UGRAD_MAC) then ! grad U
 
             if (velbc_in(dir,side,nc).eq.REFLECT_EVEN) then
-             local_bctype(side)=3 ! reflect even
+             local_bctype(side)=SEM_REFLECT_EVEN
              local_bcval(side)=zero
             else if (velbc_in(dir,side,nc).eq.FOEXTRAP) then
-             local_bctype(side)=2 ! neumann
+             local_bctype(side)=SEM_NEUMANN
              local_bcval(side)=zero
             else if (velbc_in(dir,side,nc).eq.REFLECT_ODD) then
-             local_bctype(side)=4
+             local_bctype(side)=SEM_RELECT_ODD
              local_bcval(side)=zero
             else if (velbc_in(dir,side,nc).eq.EXT_DIR) then
-             local_bctype(side)=1 ! dirichlet
+             local_bctype(side)=SEM_DIRICHLET
 
              local_bcval(side)=vel(D_DECL(i_out,j_out,k_out),nc)
             else
@@ -13575,16 +13593,16 @@ END SUBROUTINE Adist
                     (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then 
 
             if (velbc_in(dir,side,scomp_bc).eq.REFLECT_EVEN) then
-             local_bctype(side)=3 ! reflect even
+             local_bctype(side)=SEM_REFLECT_EVEN
              local_bcval(side)=zero
             else if (velbc_in(dir,side,scomp_bc).eq.FOEXTRAP) then
-             local_bctype(side)=2 ! neumann
+             local_bctype(side)=SEM_NEUMANN
              local_bcval(side)=zero
             else if (velbc_in(dir,side,scomp_bc).eq.REFLECT_ODD) then
-             local_bctype(side)=4
+             local_bctype(side)=SEM_REFLECT_ODD
              local_bcval(side)=zero
             else if (velbc_in(dir,side,scomp_bc).eq.EXT_DIR) then
-             local_bctype(side)=1 ! dirichlet
+             local_bctype(side)=SEM_DIRICHLET
              local_bcval(side)=vel(D_DECL(i_out,j_out,k_out),scomp)
             else
              print *,"velbc_in is corrupt"
@@ -13606,25 +13624,25 @@ END SUBROUTINE Adist
             if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then ! velocity
 
              if (velbc_in(dir,side,nc).eq.REFLECT_EVEN) then
-              local_bctype(side)=3 ! reflect
+              local_bctype(side)=SEM_REFLECT_EVEN
               local_bcval(side)=zero
              else if (velbc_in(dir,side,nc).eq.FOEXTRAP) then
-              local_bctype(side)=2 ! neumann
+              local_bctype(side)=SEM_NEUMANN
               local_bcval(side)=zero
              else if (velbc_in(dir,side,nc).eq.REFLECT_ODD) then
-              local_bctype(side)=4
+              local_bctype(side)=SEM_REFLECT_ODD
               local_bcval(side)=zero
              else if (velbc_in(dir,side,nc).eq.EXT_DIR) then
 
                ! normal points out of the computational domain.
                ! udotn<0 => characteristics enter into the domain.
               if (udotn_boundary.lt.zero) then
-               local_bctype(side)=1 ! dirichlet
+               local_bctype(side)=SEM_DIRICHLET
 
                local_bcval(side)= &
                  vel(D_DECL(i_out,j_out,k_out),nc) 
               else if (udotn_boundary.ge.zero) then
-               local_bctype(side)=2 ! neumann
+               local_bctype(side)=SEM_NEUMANN
                local_bcval(side)=zero
               else
                print *,"udotn_boundary invalid"
@@ -13640,27 +13658,27 @@ END SUBROUTINE Adist
 
              if (presbc_in(dir,side,ibase+ENUM_TEMPERATUREVAR+1).eq. &
                  REFLECT_EVEN) then
-              local_bctype(side)=3 ! reflect even
+              local_bctype(side)=SEM_REFLECT_EVEN
               local_bcval(side)=zero 
              else if (presbc_in(dir,side,ibase+ENUM_TEMPERATUREVAR+1).eq. &
                       FOEXTRAP) then
-              local_bctype(side)=2 ! neumann
+              local_bctype(side)=SEM_NEUMANN
               local_bcval(side)=zero 
              else if (presbc_in(dir,side,ibase+ENUM_TEMPERATUREVAR+1).eq. &
                       REFLECT_ODD) then
               print *,"cannot have reflect odd BC for temperature"
               stop
-              local_bctype(side)=4
+              local_bctype(side)=SEM_REFLECT_ODD
               local_bcval(side)=zero 
              else if (presbc_in(dir,side,ibase+ENUM_TEMPERATUREVAR+1).eq. &
                       EXT_DIR) then
               if (udotn_boundary.lt.zero) then
                templocal=den(D_DECL(i_out,j_out,k_out), &
                  ibase+ENUM_TEMPERATUREVAR+1)
-               local_bctype(side)=1 ! dirichlet
+               local_bctype(side)=SEM_DIRICHLET
                local_bcval(side)=templocal
               else if (udotn_boundary.ge.zero) then
-               local_bctype(side)=2 ! neumann
+               local_bctype(side)=SEM_NEUMANN
                local_bcval(side)=zero
               else
                print *,"udotn_boundary invalid"
@@ -13679,13 +13697,13 @@ END SUBROUTINE Adist
                     (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC)) then 
 
             if (presbc_in(dir,side,1).eq.REFLECT_EVEN) then
-             local_bctype(side)=3 ! reflect even
+             local_bctype(side)=SEM_REFLECT_EVEN
              local_bcval(side)=zero
             else if (presbc_in(dir,side,1).eq.FOEXTRAP) then
-             local_bctype(side)=2 ! neumann
+             local_bctype(side)=SEM_NEUMANN
              local_bcval(side)=zero
             else if (presbc_in(dir,side,1).eq.EXT_DIR) then
-             local_bctype(side)=1 ! dirichlet
+             local_bctype(side)=SEM_DIRICHLET
              local_bcval(side)=pres(D_DECL(i_out,j_out,k_out),1)
             else
              print *,"presbc_in is corrupt"
@@ -13701,7 +13719,7 @@ END SUBROUTINE Adist
           else if ((nbr_outside_domain_flag(side).eq.-1).or. &
                    (nbr_outside_domain_flag(side).eq.-2)) then
 
-           local_bctype(side)=0 ! interior (default)
+           local_bctype(side)=SEM_INTERIOR
            local_bcval(side)=zero
            ic=i_out
            jc=j_out
@@ -13825,7 +13843,7 @@ END SUBROUTINE Adist
               stop
              endif
             else if (simple_AMR_BC_flag.eq.1) then
-
+FIX ME HERE
              templocal=den(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1)
 
              if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then
