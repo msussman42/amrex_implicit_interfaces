@@ -995,10 +995,13 @@ CONTAINS
         do i1=0,i+1
          yGL_extend(i1)=cache_gauss_lobatto(i+1,i1,typ)
         enddo
+         ! exterior BC left, extend right
         yLT(0)=-one
         yLT(i+1)=y_extend(i+1)
+         ! exterior BC right, extend left
         yRT(0)=y_extend(0)
         yRT(i+1)=one
+         ! exterior BC left and right
         yLRT(0)=-one
         yLRT(i+1)=one
         do i1=1,i
@@ -1007,30 +1010,35 @@ CONTAINS
          yLRT(i1)=y(i1-1)
         enddo ! i1
 
+         ! extrap left, extend right
         yLTextrap(i)=y_extend(i+1)
+         ! extrap left, exterior BC right
         yLTextrapEXT(i)=one
         do i1=0,i-1
          yLTextrap(i1)=y(i1)
          yLTextrapEXT(i1)=y(i1)
         enddo
 
+         ! extrap right, extend left
         yRTextrap(0)=y_extend(0)
+         ! extrap right, exterior BC left
         yRTextrapEXT(0)=-one
         do i1=0,i-1
          yRTextrap(i1+1)=y(i1)
          yRTextrapEXT(i1+1)=y(i1)
         enddo
 
+         ! extrap left and right
         do i1=0,i-1
          yLRTextrap(i1)=y(i1)
         enddo
 
-         ! N=Neumann D=Dirichlet E=extrap I=Interior
         allocate(deriv_matrix(0:i,0:i))
         call polyinterp_Dmatrix(i,yRTextrapEXT,deriv_matrix)
         do i1=0,i
         do j1=0,i
-         cache_wLT_EXT(i,i1,j1,typ)=deriv_matrix(i1,j1) !N=left E=right
+          ! extrap right, exterior BC left
+         cache_wLT_EXT(i,i1,j1,typ)=deriv_matrix(i1,j1) 
         enddo
         enddo
         deallocate(deriv_matrix)
@@ -1039,7 +1047,8 @@ CONTAINS
         call polyinterp_Dmatrix(i,yLTextrapEXT,deriv_matrix)
         do i1=0,i
         do j1=0,i
-         cache_wRT_EXT(i,i1,j1,typ)=deriv_matrix(i1,j1) !E=left N=right
+          ! Extrap left, exterior BC right
+         cache_wRT_EXT(i,i1,j1,typ)=deriv_matrix(i1,j1) 
         enddo
         enddo
         deallocate(deriv_matrix)
@@ -10537,7 +10546,6 @@ end subroutine global_checkinplane
       return
       end subroutine SEM_INTERP_ELEMENT
 
-FIX ME
       subroutine lineGRAD( &
        levelrz_in, &
        dir, &
@@ -10674,9 +10682,16 @@ FIX ME
        yGL(i1)=cache_gauss_lobatto(bfact,i1,SPTYPE)
       enddo
 
+       ! dx_element=dx * bfact
+       ! since bfact>=2 => -1<y(0)<-1+1/bfact => 
+       ! 0<y(0)+1<1/bfact => 0<(y(0)+1)/2<1/(2 bfact) =>
+       ! 0<dx_ends<dx * bfact /(2 bfact) =>
+       ! 0<dx_ends<dx/2
       dx_ends=dx_element*(y(0)+one)/two
-      if (dx_ends.ge.half*dx) then
-       print *,"(dx_ends.gt.half*dx)"
+      if (dx_ends.lt.half*dx) then
+       ! do nothing
+      else
+       print *,"(dx_ends.ge.half*dx)"
        stop
       endif
 
@@ -10706,10 +10721,13 @@ FIX ME
       do i1=0,bfact+1
        yGL_extend(i1)=cache_gauss_lobatto(bfact+1,i1,SPTYPE)
       enddo
+       ! exterior BC left, extend right
       yLT(0)=-one
       yLT(bfact+1)=y_extend(bfact+1)
+       ! exterior BC right, extend left
       yRT(0)=y_extend(0)
       yRT(bfact+1)=one
+       ! exterior BC left and right
       yLRT(0)=-one
       yLRT(bfact+1)=one
       do i1=1,bfact
@@ -10718,20 +10736,21 @@ FIX ME
        yLRT(i1)=y(i1-1)
       enddo ! i1
 
-      yLTextrap(bfact)=y_extend(bfact+1)
-      yLTextrapEXT(bfact)=one
+      yLTextrap(bfact)=y_extend(bfact+1) ! extrap left, extend right
+      yLTextrapEXT(bfact)=one ! extrap left, exterior BC right
       do i1=0,bfact-1
        yLTextrap(i1)=y(i1)
        yLTextrapEXT(i1)=y(i1)
       enddo
 
-      yRTextrap(0)=y_extend(0)
-      yRTextrapEXT(0)=-one
+      yRTextrap(0)=y_extend(0) ! extrap right, extend left
+      yRTextrapEXT(0)=-one ! extrap right, exterior BC left
       do i1=0,bfact-1
        yRTextrap(i1+1)=y(i1)
        yRTextrapEXT(i1+1)=y(i1)
       enddo
 
+       ! extrap left and right
       do i1=0,bfact-1
        yLRTextrap(i1)=y(i1)
       enddo
@@ -10754,8 +10773,10 @@ FIX ME
 
       do j1=0,bfact
        do i1=0,bfact
-        wRT_EXT(i1,j1)=cache_wRT_EXT(bfact,i1,j1,SPTYPE) !E=left N=right
-        wLT_EXT(i1,j1)=cache_wLT_EXT(bfact,i1,j1,SPTYPE) !N=left E=right
+         ! extrap left, exterior BC right
+        wRT_EXT(i1,j1)=cache_wRT_EXT(bfact,i1,j1,SPTYPE) 
+         ! extrap right, exterior BC left
+        wLT_EXT(i1,j1)=cache_wLT_EXT(bfact,i1,j1,SPTYPE) 
        enddo
       enddo
 
@@ -10765,48 +10786,44 @@ FIX ME
        PLINE(i1+1)=source(i1)
       enddo
 
-       ! -1=extrap,0=interior,1=dirichlet,2=neumann,
-       !  3=reflect_even,4=reflect_odd
-       ! -2=coarse next to fine
-       ! -3=fine next to coarse
       local_source_side(1)=source_side(1)
       local_source_side(2)=source_side(2)
       local_bctype(1)=bctype(1)
       local_bctype(2)=bctype(2)
-      if (bctype(1).eq.3) then ! reflect even
-       local_bctype(1)=0
+      if (bctype(1).eq.SEM_REFLECT_EVEN) then ! reflect even
+       local_bctype(1)=SEM_INTERIOR
        local_source_side(1)=PLINE(1)
       endif
-      if (bctype(2).eq.3) then ! reflect even
-       local_bctype(2)=0
+      if (bctype(2).eq.SEM_REFLECT_EVEN) then ! reflect even
+       local_bctype(2)=SEM_INTERIOR
        local_source_side(2)=PLINE(bfact)
       endif
-      if (bctype(1).eq.4) then ! reflect odd
-       local_bctype(1)=0
+      if (bctype(1).eq.SEM_REFLECT_ODD) then ! reflect odd
+       local_bctype(1)=SEM_INTERIOR
        local_source_side(1)=-PLINE(1)
       endif
-      if (bctype(2).eq.4) then ! reflect odd
-       local_bctype(2)=0
+      if (bctype(2).eq.SEM_REFLECT_ODD) then ! reflect odd
+       local_bctype(2)=SEM_INTERIOR
        local_source_side(2)=-PLINE(bfact)
       endif
 
        ! SEM_IMAGE_BC_ALG is defined in PROBCOMMON.F90
       if (SEM_IMAGE_BC_ALG.eq.1) then
 
-       if (bctype(1).eq.1) then ! dirichlet -> reflect odd
-        local_bctype(1)=0
+       if (bctype(1).eq.SEM_DIRICHLET) then ! dirichlet -> reflect odd
+        local_bctype(1)=SEM_INTERIOR
         local_source_side(1)=two*bcvalue(1)-PLINE(1)
        endif
-       if (bctype(2).eq.1) then ! dirichlet -> reflect odd
-        local_bctype(2)=0
+       if (bctype(2).eq.SEM_DIRICHLET) then ! dirichlet -> reflect odd
+        local_bctype(2)=SEM_INTERIOR
         local_source_side(2)=two*bcvalue(2)-PLINE(bfact)
        endif
-       if (bctype(1).eq.2) then ! neumann -> reflect even
-        local_bctype(1)=0
+       if (bctype(1).eq.SEM_NEUMANN) then ! neumann -> reflect even
+        local_bctype(1)=SEM_INTERIOR
         local_source_side(1)=PLINE(1)-two*dx_ends*bcvalue(1)
        endif
-       if (bctype(2).eq.2) then ! neumann -> reflect even
-        local_bctype(2)=0
+       if (bctype(2).eq.SEM_NEUMANN) then ! neumann -> reflect even
+        local_bctype(2)=SEM_INTERIOR
         local_source_side(2)=PLINE(bfact)+two*dx_ends*bcvalue(2)
        endif
 
@@ -10819,9 +10836,10 @@ FIX ME
 
       AMR_boundary_flag=0
 
-      if ((local_bctype(1).eq.-2).or.(local_bctype(1).eq.-3)) then
+      if ((local_bctype(1).eq.SEM_COARSE_NEXT_TO_FINE).or. &
+          (local_bctype(1).eq.SEM_FINE_NEXT_TO_COARSE)) then
        AMR_boundary_flag=1
-       local_bctype(1)=0
+       local_bctype(1)=SEM_INTERIOR
        if ((x_sep(1).gt.zero).and. &
            (x_sep(1).lt.two)) then
         y_extend(0)=-one-x_sep(1)
@@ -10831,11 +10849,14 @@ FIX ME
         print *,"x_sep invalid"
         stop
        endif
+        ! cannot use the cache; cache is for AMR_boundary_flag=0
+       call polyinterp_Dmatrix(bfact+1,yRT,wRT)
       endif
 
-      if ((local_bctype(2).eq.-2).or.(local_bctype(2).eq.-3)) then
+      if ((local_bctype(2).eq.SEM_COARSE_NEXT_TO_FINE).or. &
+          (local_bctype(2).eq.SEM_FINE_NEXT_TO_COARSE)) then
        AMR_boundary_flag=1
-       local_bctype(2)=0
+       local_bctype(2)=SEM_INTERIOR
        if ((x_sep(2).gt.zero).and. &
            (x_sep(2).lt.two)) then
         y_extend(bfact+1)=one+x_sep(2)
@@ -10845,55 +10866,67 @@ FIX ME
         print *,"x_sep invalid"
         stop
        endif
+        ! cannot use the cache; cache is for AMR_boundary_flag=0
+       call polyinterp_Dmatrix(bfact+1,yLT,wLT)
       endif
 
-      if ((local_bctype(1).eq.0).and. &
-          (local_bctype(2).eq.0)) then ! I=left I=right
+      if ((local_bctype(1).eq.SEM_INTERIOR).and. &
+          (local_bctype(2).eq.SEM_INTERIOR)) then 
        PLINE(0)=local_source_side(1)
        PLINE(bfact+1)=local_source_side(2)
        call poly_change_basis(bfact+1,bfact+1,PLINE,PLINE2, &
         y_extend,yGL_extend)
-      else if ((local_bctype(1).eq.0).and. &
-               (local_bctype(2).eq.-1)) then !I=left E=right
+      else if ((local_bctype(1).eq.SEM_INTERIOR).and. &
+               (local_bctype(2).eq.SEM_EXTRAP)) then 
        PLINE(0)=local_source_side(1)
        call poly_change_basis(bfact,bfact+1,PLINE,PLINE2, &
         yRTextrap,yGL_extend)
-      else if ((local_bctype(1).eq.1).and. &
-               (local_bctype(2).eq.-1)) then !D=left E=right
+      else if ((local_bctype(1).eq.SEM_DIRICHLET).and. &
+               (local_bctype(2).eq.SEM_EXTRAP)) then 
        PLINE(0)=bcvalue(1)
        call poly_change_basis(bfact,bfact+1,PLINE,PLINE2, &
         yRTextrapEXT,yGL_extend)
-      else if ((local_bctype(1).eq.2).and. &
-               (local_bctype(2).eq.-1)) then !N=left E=right
+      else if ((local_bctype(1).eq.SEM_NEUMANN).and. &
+               (local_bctype(2).eq.SEM_EXTRAP)) then 
+        ! P'(xj)=sum wij * P(xi) * 2/dx_element
+        ! bcvalue(1)=sum wi0 * P(i) * 2/dx_element
+        ! P(0)=(bcvalue(1)-sum_{i\ne 0} wi0 * P(i) * 2/dx_element)*
+        !      (dx_element/2) * (1/w00)
        sum1=bcvalue(1)*dx_element/two
        do i1=1,bfact
         sum1=sum1-PLINE(i1)*wLT_EXT(i1,0) 
        enddo
-       if (wLT_EXT(0,0).eq.zero) then
+       if (wLT_EXT(0,0).ne.zero) then
+        ! do nothing
+       else
         print *,"wLT_EXT bust"
         stop
        endif
        PLINE(0)=sum1/wLT_EXT(0,0)
        call poly_change_basis(bfact,bfact+1,PLINE,PLINE2, &
         yRTextrapEXT,yGL_extend)
-      else if ((local_bctype(1).eq.-1).and. &
-               (local_bctype(2).eq.0)) then ! E=left I=right
+      else if ((local_bctype(1).eq.SEM_EXTRAP).and. &
+               (local_bctype(2).eq.SEM_INTERIOR)) then 
        do i1=0,bfact-1
         PLINE(i1)=source(i1)
        enddo
        PLINE(bfact)=local_source_side(2)
        call poly_change_basis(bfact,bfact+1,PLINE,PLINE2, &
         yLTextrap,yGL_extend)
-      else if ((local_bctype(1).eq.-1).and. &
-               (local_bctype(2).eq.1)) then ! E=left D=right
+      else if ((local_bctype(1).eq.SEM_EXTRAP).and. &
+               (local_bctype(2).eq.SEM_DIRICHLET)) then 
        do i1=0,bfact-1
         PLINE(i1)=source(i1)
        enddo
        PLINE(bfact)=bcvalue(2)
        call poly_change_basis(bfact,bfact+1,PLINE,PLINE2, &
         yLTextrapEXT,yGL_extend)
-      else if ((local_bctype(1).eq.-1).and. &
-               (local_bctype(2).eq.2)) then ! E=left N=right
+      else if ((local_bctype(1).eq.SEM_EXTRAP).and. &
+               (local_bctype(2).eq.SEM_NEUMANN)) then 
+        ! P'(xj)=sum wij * P(xi) * 2/dx_element
+        ! bcvalue(2)=sum wir * P(i) * 2/dx_element
+        ! P(r)=(bcvalue(2)-sum_{i\ne r} wir * P(i) * 2/dx_element)*
+        !      (dx_element/2) * (1/wrr)
        do i1=0,bfact-1
         PLINE(i1)=source(i1)
        enddo
@@ -10901,22 +10934,31 @@ FIX ME
        do i1=0,bfact-1
         sum2=sum2-PLINE(i1)*wRT_EXT(i1,bfact)
        enddo
-       if (wRT_EXT(bfact,bfact).eq.zero) then
+       if (wRT_EXT(bfact,bfact).ne.zero) then
+        ! do nothing
+       else
         print *,"wRT_EXT bust"
         stop
        endif
        PLINE(bfact)=sum2/wRT_EXT(bfact,bfact)
        call poly_change_basis(bfact,bfact+1,PLINE,PLINE2, &
         yLTextrapEXT,yGL_extend)
-      else if ((local_bctype(1).eq.-1).and. &
-               (local_bctype(2).eq.-1)) then ! E=left E=right
+      else if ((local_bctype(1).eq.SEM_EXTRAP).and. &
+               (local_bctype(2).eq.SEM_EXTRAP)) then 
        do i1=0,bfact-1
         PLINE(i1)=source(i1)
        enddo
        call poly_change_basis(bfact-1,bfact+1,PLINE,PLINE2, &
         yLRTextrap,yGL_extend)
-      else if ((local_bctype(1).eq.2).and. &
-               (local_bctype(2).eq.2)) then ! N=left N=right
+      else if ((local_bctype(1).eq.SEM_NEUMANN).and. &
+               (local_bctype(2).eq.SEM_NEUMANN)) then 
+        ! P'(xj)=sum wij * P(xi) * 2/dx_element
+        ! bcvalue(1)=sum wi0 * P(i) * 2/dx_element
+        ! bcvalue(2)=sum wir * P(i) * 2/dx_element
+        ! bcvalue(1)*dx_element/2=sum wi0 * P(i) 
+        ! bcvalue(2)*dx_element/2=sum wir * P(i) 
+        ! sum1=w00 * P(0) + w_{r+1,0}P(r+1)
+        ! sum2=w0,r+1 * P(r+1) + w_{r+1,r+1}P(r+1)
        sum1=bcvalue(1)*dx_element/two
        sum2=bcvalue(2)*dx_element/two
        do i1=1,bfact
@@ -10928,92 +10970,98 @@ FIX ME
        C=wLRT(0,bfact+1)
        D=wLRT(bfact+1,bfact+1)
        det=A*D-B*C
-       if (det.eq.zero) then
+       if (det.ne.zero) then
+        ! do nothing
+       else
         print *,"determinent bust"
         stop
        endif
+        ! Cramer's rule: Ax=B
+        ! x_i = det(A_i)/det(A)
+        ! A_i is the matrix formed by replacing the ith column of A
+        ! by the column vector B.
        PLINE(0)=(D*sum1-B*sum2)/det
        PLINE(bfact+1)=(A*sum2-C*sum1)/det 
        call poly_change_basis(bfact+1,bfact+1,PLINE,PLINE2, &
         yLRT,yGL_extend)
-      else if ((local_bctype(1).eq.2).and. &
-               (local_bctype(2).eq.0)) then ! N=left I=right
-       if (AMR_boundary_flag.ne.0) then
-        print *,"this code must be modified for AMR"
-        stop
-       endif
+      else if ((local_bctype(1).eq.SEM_NEUMANN).and. &
+               (local_bctype(2).eq.SEM_INTERIOR)) then 
        PLINE(bfact+1)=local_source_side(2)
        sum1=bcvalue(1)*dx_element/two
        do i1=1,bfact+1
         sum1=sum1-PLINE(i1)*wLT(i1,0) 
        enddo
-       if (wLT(0,0).eq.zero) then
+       if (wLT(0,0).ne.zero) then
+        ! do nothing
+       else
         print *,"wLT bust"
         stop
        endif
        PLINE(0)=sum1/wLT(0,0)
        call poly_change_basis(bfact+1,bfact+1,PLINE,PLINE2, &
         yLT,yGL_extend)
-      else if ((local_bctype(1).eq.2).and. &
-               (local_bctype(2).eq.1)) then ! N=left D=right
+      else if ((local_bctype(1).eq.SEM_NEUMANN).and. &
+               (local_bctype(2).eq.SEM_DIRICHLET)) then 
        PLINE(bfact+1)=bcvalue(2)
        sum1=bcvalue(1)*dx_element/two
        do i1=1,bfact+1
         sum1=sum1-PLINE(i1)*wLRT(i1,0)
        enddo
-       if (wLRT(0,0).eq.zero) then
-        print *,"wLT bust"
+       if (wLRT(0,0).ne.zero) then
+        ! do nothing
+       else
+        print *,"wLRT bust"
         stop
        endif
        PLINE(0)=sum1/wLRT(0,0)
        call poly_change_basis(bfact+1,bfact+1,PLINE,PLINE2, &
         yLRT,yGL_extend)
-      else if ((local_bctype(1).eq.1).and. &
-               (local_bctype(2).eq.2)) then ! D=left N=right
+      else if ((local_bctype(1).eq.SEM_DIRICHLET).and. &
+               (local_bctype(2).eq.SEM_NEUMANN)) then 
        PLINE(0)=bcvalue(1)
        sum2=bcvalue(2)*dx_element/two
        do i1=0,bfact
         sum2=sum2-PLINE(i1)*wLRT(i1,bfact+1)
        enddo
-       if (wLRT(bfact+1,bfact+1).eq.zero) then
-        print *,"wLT bust"
+       if (wLRT(bfact+1,bfact+1).ne.zero) then
+        ! do nothing
+       else
+        print *,"wLRT bust"
         stop
        endif
        PLINE(bfact+1)=sum2/wLRT(bfact+1,bfact+1)
        call poly_change_basis(bfact+1,bfact+1,PLINE,PLINE2, &
         yLRT,yGL_extend)
-      else if ((local_bctype(1).eq.0).and. &
-               (local_bctype(2).eq.2)) then ! I=left N=right
-       if (AMR_boundary_flag.ne.0) then
-        print *,"this code must be modified for AMR"
-        stop
-       endif
+      else if ((local_bctype(1).eq.SEM_INTERIOR).and. &
+               (local_bctype(2).eq.SEM_NEUMANN)) then
        PLINE(0)=local_source_side(1)
        sum2=bcvalue(2)*dx_element/two
        do i1=0,bfact
         sum2=sum2-PLINE(i1)*wRT(i1,bfact+1)
        enddo
-       if (wRT(bfact+1,bfact+1).eq.zero) then
+       if (wRT(bfact+1,bfact+1).ne.zero) then
+        ! do nothing
+       else
         print *,"wRT bust"
         stop
        endif
        PLINE(bfact+1)=sum2/wRT(bfact+1,bfact+1)
        call poly_change_basis(bfact+1,bfact+1,PLINE,PLINE2, &
         yRT,yGL_extend)
-      else if ((local_bctype(1).eq.1).and. &
-               (local_bctype(2).eq.1)) then ! D=left D=right
+      else if ((local_bctype(1).eq.SEM_DIRICHLET).and. &
+               (local_bctype(2).eq.SEM_DIRICHLET)) then 
        PLINE(0)=bcvalue(1)
        PLINE(bfact+1)=bcvalue(2)
        call poly_change_basis(bfact+1,bfact+1,PLINE,PLINE2, &
         yLRT,yGL_extend)
-      else if ((local_bctype(1).eq.0).and. &
-               (local_bctype(2).eq.1)) then ! I=left D=right
+      else if ((local_bctype(1).eq.SEM_INTERIOR).and. &
+               (local_bctype(2).eq.SEM_DIRICHLET)) then 
        PLINE(0)=local_source_side(1)
        PLINE(bfact+1)=bcvalue(2)
        call poly_change_basis(bfact+1,bfact+1,PLINE,PLINE2, &
         yRT,yGL_extend)
-      else if ((local_bctype(1).eq.1).and. &
-               (local_bctype(2).eq.0)) then ! D=left  I=right
+      else if ((local_bctype(1).eq.SEM_DIRICHLET).and. &
+               (local_bctype(2).eq.SEM_INTERIOR)) then 
        PLINE(0)=bcvalue(1)
        PLINE(bfact+1)=local_source_side(2)
        call poly_change_basis(bfact+1,bfact+1,PLINE,PLINE2, &
