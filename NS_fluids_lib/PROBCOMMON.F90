@@ -428,7 +428,9 @@ implicit none
 
       REAL_T, PARAMETER :: TANGENT_EPS=1.0D-2
 
-      INTEGER_T, PARAMETER :: SEM_IMAGE_BC_ALG=1
+       !SEM_IMAGE_BC_ALG=1 => use "reflect_odd" for dirichlet,
+       !                      use "reflect even" for Neumann
+      INTEGER_T, PARAMETER :: SEM_IMAGE_BC_ALG=0
 
       INTEGER_T, PARAMETER :: POLYGON_LIST_MAX=1000
 

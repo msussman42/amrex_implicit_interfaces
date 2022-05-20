@@ -112,6 +112,7 @@ if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
   stop
  endif
 
+  ! patterned_substrates is declared in: GLOBALUTIL.F90
  call patterned_substrates(xshift,yhalf,x(SDIM),Phi,local_time,im_substrate, &
          ptb_dist_low,ptb_dist_high)
  Phi=-Phi
@@ -235,6 +236,8 @@ if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
   LS(2)=-(max(LS(1),LS(3)))
  else if (axis_dir.eq.1) then
   LS(2)=-LS(1)
+
+  ! water, air, ice, substrate
  else if (axis_dir.eq.3) then
   ! zblob2 is the altitude of the ice layer
   LS(3)=zblob2-x(SDIM)

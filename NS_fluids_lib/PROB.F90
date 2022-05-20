@@ -13577,7 +13577,7 @@ END SUBROUTINE Adist
              local_bctype(side)=SEM_NEUMANN
              local_bcval(side)=zero
             else if (velbc_in(dir,side,nc).eq.REFLECT_ODD) then
-             local_bctype(side)=SEM_RELECT_ODD
+             local_bctype(side)=SEM_REFLECT_ODD
              local_bcval(side)=zero
             else if (velbc_in(dir,side,nc).eq.EXT_DIR) then
              local_bctype(side)=SEM_DIRICHLET
@@ -13749,16 +13749,20 @@ END SUBROUTINE Adist
              if (side.eq.1) then
               x_sep(side)=two*(xsten_face(0,dir)-xsten_coarse(0,dir))/ &
                (dx(dir)*bfact)
-              if ((x_sep(side).le.zero).or. &
-                  (x_sep(side).ge.two)) then
+              if ((x_sep(side).gt.zero).and. &
+                  (x_sep(side).lt.two)) then
+               ! do nothing
+              else
                print *,"x_sep(side) invalid"
                stop
               endif
              else if (side.eq.2) then
               x_sep(side)=two*(xsten_coarse(0,dir)-xsten_face(0,dir))/ &
                (dx(dir)*bfact)
-              if ((x_sep(side).le.zero).or. &
-                  (x_sep(side).ge.two)) then
+              if ((x_sep(side).gt.zero).and. &
+                  (x_sep(side).lt.two)) then
+               ! do nothing
+              else
                print *,"x_sep(side) invalid"
                stop
               endif
@@ -13800,16 +13804,20 @@ END SUBROUTINE Adist
              if (side.eq.1) then
               x_sep(side)=two*(xsten_face(0,dir)-xsten_fine(0,dir))/ &
                (dx(dir)*bfact)
-              if ((x_sep(side).le.zero).or. &
-                  (x_sep(side).ge.half)) then
+              if ((x_sep(side).gt.zero).and. &
+                  (x_sep(side).lt.half)) then
+               ! do nothing
+              else
                print *,"x_sep(side) invalid"
                stop
               endif
              else if (side.eq.2) then
               x_sep(side)=two*(xsten_fine(0,dir)-xsten_face(0,dir))/ &
                (dx(dir)*bfact)
-              if ((x_sep(side).le.zero).or. &
-                  (x_sep(side).ge.half)) then
+              if ((x_sep(side).gt.zero).and. &
+                  (x_sep(side).lt.half)) then
+               ! do nothing
+              else
                print *,"x_sep(side) invalid"
                stop
               endif
