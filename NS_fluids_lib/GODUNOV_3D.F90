@@ -1818,7 +1818,7 @@ stop
                    ic,jc,kc, &
                    fablo,bfact,dx,nhalf)
 
-                  local_bctype(side)=0  ! interior
+                  local_bctype(side)=SEM_INTERIOR
 
                   local_bcval(side)=zero
 
@@ -1828,7 +1828,7 @@ stop
                    local_data_side(side)=c_tdata(D_DECL(ic,jc,kc),tcompMM)
                   else if (nbr_covered_flag.eq.0) then
                    local_data_side(side)=zero
-                   local_bctype(side)=-1 ! extrap
+                   local_bctype(side)=SEM_EXTRAP
                    local_bcval(side)=zero
                   else
                    print *,"nbr_covered_flag invalid"
@@ -1855,7 +1855,7 @@ stop
                       (velbc(dir,side,dir).eq.FOEXTRAP).or. &
                       (velbc(dir,side,dir).eq.REFLECT_ODD).or. &
                       (velbc(dir,side,dir).eq.EXT_DIR)) then
-                   local_bctype(side)=-1 ! extrap
+                   local_bctype(side)=SEM_EXTRAP
                    local_bcval(side)=zero
                   else
                    print *,"velbc is corrupt"

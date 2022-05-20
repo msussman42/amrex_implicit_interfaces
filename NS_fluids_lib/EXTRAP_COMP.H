@@ -101,6 +101,11 @@ interface temperature and interface mass fraction.
 #define SEM_REFLECT_EVEN 3
 #define SEM_REFLECT_ODD 4
 
+#define SEM_FINE_NEXT_TO_COARSE -3
+#define SEM_COARSE_NEXT_TO_FINE -2
+#define SEM_EXTRAP -1
+
+
 #define FSI_NOTHING_VALID 0
 #define FSI_FINE_VEL_VALID 1
 #define FSI_FINE_SIGN_VEL_VALID 2

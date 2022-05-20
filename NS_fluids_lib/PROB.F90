@@ -13727,7 +13727,7 @@ END SUBROUTINE Adist
                 
             ! fine(current) next to coarse 
            if (nbr_outside_domain_flag(side).eq.-1) then 
-            bctype_tag=-3
+            bctype_tag=SEM_FINE_NEXT_TO_COARSE
             if (level.ge.1) then
              if (side.eq.1) then
               icoarse=(sideidx(1)-1)/2
@@ -13778,7 +13778,7 @@ END SUBROUTINE Adist
              
              ! coarse(current) next to fine
            else if (nbr_outside_domain_flag(side).eq.-2) then
-            bctype_tag=-2
+            bctype_tag=SEM_COARSE_NEXT_TO_FINE
             if (level.lt.finest_level) then
              if (side.eq.1) then
               ifine=2*sideidx(1)+1
@@ -13843,7 +13843,7 @@ END SUBROUTINE Adist
               stop
              endif
             else if (simple_AMR_BC_flag.eq.1) then
-FIX ME HERE
+
              templocal=den(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1)
 
              if ((nc.ge.SEM_U+1).and.(nc.le.SEM_W+1)) then
@@ -13925,7 +13925,7 @@ FIX ME HERE
              stop
             endif
 
-           else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! MAC pressure gradient
+           else if (operation_flag.eq.OP_PRESGRAD_MAC) then!MAC pres gradient
 
             if (simple_AMR_BC_flag.eq.0) then
              local_bctype(side)=bctype_tag
@@ -14082,7 +14082,7 @@ FIX ME HERE
             stop
            endif
          
-          else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! pressure grad on MAC
+          else if (operation_flag.eq.OP_PRESGRAD_MAC) then!pres grad on MAC
 
            if (nc.eq.1) then
             local_data(isten+1)=pres(D_DECL(ic,jc,kc),1)
@@ -14171,8 +14171,8 @@ FIX ME HERE
            do side=1,2
             local_bcval_den(side)=one  ! will not be used since "extrap" bc.
             local_bctype_den(side)=local_bctype(side)
-            if (local_bctype_den(side).ne.0) then
-             local_bctype_den(side)=-1 ! extrap
+            if (local_bctype_den(side).ne.SEM_INTERIOR) then
+             local_bctype_den(side)=SEM_EXTRAP
             endif
            enddo
            call lineGRAD( &
@@ -14578,14 +14578,14 @@ FIX ME HERE
             ! do nothing
            else if ((side.eq.1).or.(side.eq.2)) then
             if (nbr_outside_domain_flag(side).eq.1) then
-             if ((local_bctype(side).eq.3).or. & ! reflect even
-                 (local_bctype(side).eq.2)) then ! neumann
+             if ((local_bctype(side).eq.SEM_REFLECT_EVEN).or. & 
+                 (local_bctype(side).eq.SEM_NEUMANN)) then ! neumann
               if (shared_xcut.ne.zero) then
                print *,"shared_xcut invalid"
                stop
               endif
-             else if ((local_bctype(side).eq.1).or. &
-                      (local_bctype(side).eq.0)) then
+             else if ((local_bctype(side).eq.SEM_DIRICHLET).or. &
+                      (local_bctype(side).eq.SEM_INTERIOR)) then
               ! do nothing
              else
               print *,"local_bctype invalid"
