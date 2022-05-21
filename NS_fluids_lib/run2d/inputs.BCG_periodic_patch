@@ -120,11 +120,13 @@ ns.advbot=0.0
 ns.adv_vel=2.0
 ns.adv_dir=3  # 1=advect in x direction  2=advect in y direction 3=x and y
 ns.uncoupled_viscosity=0
-ns.viscconst= 0.0 0.0 
+ns.viscconst= 0.01 0.01
 ns.denconst=1.0 1.0 
 ns.speciesconst=1.0 2.0 1.0 2.0 1.0 2.0
 ns.speciesviscconst=1.0e-8 1.0e-8 100.0 1.0e-8 0.001 1.0e-8 
-ns.heatviscconst= 0.0 0.0
+ns.heatviscconst= 0.01 0.01
+ns.stiffCP=1.0 1.0
+ns.stiffCV=1.0 1.0
 ns.pressure_error_cutoff=0.0 0.0
 ns.tempconst=2.0 2.0 
 ns.material_type=0 0   # 0 0 if INCOMP;  13 14 if COMPRESSIBLE
