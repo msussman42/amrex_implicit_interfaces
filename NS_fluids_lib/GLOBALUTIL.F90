@@ -17414,8 +17414,10 @@ end subroutine global_checkinplane
        print *,"im out of range"
        stop
       endif
-      if ((fort_stiffCP(im).lt.zero).or. &
-          (fort_prerecalesce_stiffCP(im).lt.zero)) then
+      if ((fort_stiffCP(im).ge.zero).and. &
+          (fort_prerecalesce_stiffCP(im).ge.zero)) then
+       ! do nothing
+      else
        print *,"fortran stiffCP invalid"
        stop
       endif
@@ -17602,18 +17604,24 @@ end subroutine global_checkinplane
        print *,"im invalid in internal_default"
        stop
       endif
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       ! do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (temperature.le.zero) then
+      if (temperature.gt.zero) then
+       ! do nothing
+      else
        print *,"T invalid"
        stop
       endif
 
 !      cv=4.1855D+7
       cv=get_user_stiffCP(im)
-      if (cv.le.zero) then
+      if (cv.gt.zero) then
+       ! do nothing
+      else
        print *,"cv invalid in internal default"
        stop
       endif
@@ -22243,11 +22251,15 @@ end subroutine global_checkinplane
       REAL_T, intent(out) :: internal_energy
       REAL_T local_internal_energy
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       ! do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (temperature.le.zero) then
+      if (temperature.gt.zero) then
+       ! do nothing
+      else
        print *,"T invalid"
        stop
       endif
@@ -23358,7 +23370,9 @@ else if ((imattype.eq.999).or. &
  call INTERNAL_material(rho,massfrac_parm, &
    T2,e2,imattype,im)
  DeDT=(e2-e1)/DT
- if (DeDT.le.zero) then
+ if (DeDT.gt.zero) then
+  ! do nothing
+ else
   print *,"e must be increasing function of T"
   stop
  endif

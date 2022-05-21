@@ -671,7 +671,13 @@ stop
           print *,"dt invalid"
           stop
          endif
-          ! 1/(den cv)  note: De/DT=cv
+          ! The variable "DeDT" stores: 1/(den cv)  
+          ! Note that the derivative, De/DT, satifies: De/DT=cv
+          ! In the c++ data structure:
+          !  DeDT is declared as localMF[CELL_DEDT_MF] and
+          !  initialized in: fort_init_physics_vars
+          ! fort_init_physics_vars calls "DeDT_material"
+          ! "DeDT_material" calls "INTERNAL_material" for default case.
          dedt_inverse=DeDT(D_DECL(i,j,k))
          if (dedt_inverse.gt.zero) then
           ! do nothing
