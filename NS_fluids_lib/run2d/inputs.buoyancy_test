@@ -27,7 +27,6 @@ mg.rtol_b = -0.01
 #Lp.v = 1
 
 ns.num_materials=2
-# num_species_var=3 for diagnostics
 ns.num_species_var=0
 ns.MOFITERMAX=15
 #-1=Weymouth Yue,  
@@ -57,8 +56,6 @@ amr.time_blocking_factor=2
 ns.init_shrink    = 0.05 # reduce init dt since grad p not initially known
 # 0  low order space and time
 # 1  SEM space and time
-# 2  SEM space 
-# 3  SEM time
 ns.enable_spectral=1
 #ns.enable_spectral=0
 amr.check_int       = 100      # number of timesteps between checkpoints
@@ -127,7 +124,7 @@ ns.speciesconst=1.0 2.0 1.0 2.0 1.0 2.0
 ns.speciesviscconst=1.0e-8 1.0e-8 100.0 1.0e-8 0.001 1.0e-8 
 ns.pressure_error_cutoff=0.0 0.0
 ns.tempconst=293.0 293.0  # temperature at the bottom of the domain
-ns.radblob2=3.0 #T=293.0 + 3.0*y  (z in 3d)
+ns.radblob2=3.0 #T(probhi(sdim))-T(problo(sdim))=3.0
 ns.material_type=0 0   # 0 0 if INCOMP;  13 14 if COMPRESSIBLE
 # Specific heat capacity [J/(kg.K)]
 # in CRYOGENIC_TANK_MK: CP-CV=R/molar_mass => CP=CV+R/molar_mass

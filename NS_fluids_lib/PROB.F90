@@ -26779,9 +26779,20 @@ end subroutine initialize2d
              scalc(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(1)
             else if (xpos(SDIM).ge.probhi_array(SDIM)) then
              scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
-               fort_initial_temperature(1)+radblob2*problen_array(SDIM)
+               fort_initial_temperature(1)+radblob2
             else if ((xpos(SDIM).gt.problo_array(SDIM)).and. &
                      (xpos(SDIM).lt.probhi_array(SDIM))) then
+             ! the "radblob2/2" temperature contour lives on the
+             ! curve z=(problo+probhi)/2+radblob3*cos(beta (x-problo(1)) - pi)
+             ! beta=2 pi/(probhi(1)-problo(1))
+             ! tanh(x/eps)=1 as x->inf
+             ! tanh(x/eps)=-1 as x->-inf
+             ! tanh(0)=0
+             ! quadratic mapping p(z):
+             ! p(zcrit)=0
+             ! p(problo)=-1
+             ! p(probhi)=1
+             ! T(p(z))=TMID*(tanh(p/eps)+1)/2
              scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
                fort_initial_temperature(1)+ &
                radblob2*(xpos(SDIM)-problo_array(SDIM))
