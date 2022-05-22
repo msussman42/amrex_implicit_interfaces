@@ -26439,6 +26439,12 @@ end subroutine initialize2d
        REAL_T local_vort
        REAL_T local_energy_moment
 
+       REAL_T zcrit
+       REAL_T z_extrema
+       REAL_T a1,a2,D2
+       REAL_T pz,fpz,gpz
+       REAL_T T_HOT,T_COLD
+
        nhalf_box=1
 
        scal_ptr=>scal
@@ -26870,7 +26876,7 @@ end subroutine initialize2d
              gpz=half*(fpz+one)
              
              scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
-               T_HOT*(one-gpz)+TCOLD*gpz
+               T_HOT*(one-gpz)+T_COLD*gpz
             else
              print *,"xpos is NaN"
              stop
