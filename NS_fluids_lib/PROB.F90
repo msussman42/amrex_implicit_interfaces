@@ -26866,10 +26866,11 @@ end subroutine initialize2d
               print *,"pz out of range"
               stop
              endif
-             FIX ME
+             fpz=tanh(pz/radblob4)/tanh(one/radblob4)
+             gpz=half*(fpz+one)
+             
              scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
-               fort_initial_temperature(1)+ &
-               radblob2*(xpos(SDIM)-problo_array(SDIM))
+               T_HOT*(one-gpz)+TCOLD*gpz
             else
              print *,"xpos is NaN"
              stop
