@@ -26778,6 +26778,12 @@ end subroutine initialize2d
             if (xpos(SDIM).le.problo_array(SDIM)) then
              scalc(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(1)
             else if (xpos(SDIM).ge.probhi_array(SDIM)) then
+             if (radblob2.lt.zero) then
+              ! do nothing
+             else
+              print *,"radblob2 invalid"
+              stop
+             endif
              scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
                fort_initial_temperature(1)+radblob2
             else if ((xpos(SDIM).gt.problo_array(SDIM)).and. &
@@ -26792,7 +26798,28 @@ end subroutine initialize2d
              ! p(zcrit)=0
              ! p(problo)=-1
              ! p(probhi)=1
-             ! T(p(z))=TMID*(tanh(p/eps)+1)/2
+             ! problo -1 a1=1/(zcrit-problo)      (a2-a1)
+             ! zcrit  0  a2=1/(probhi-zcrit) b=-----------------
+             ! probhi 1                         probhi-problo
+             ! p(z)=-1+a1(z-problo)+b (z-problo)(z-zcrit)
+             ! p'(z)=a1+b(2z-problo-zcrit)=a1+2b(z-(problo+zcrit)/2)=0
+             ! z=-a1/(2b)+(problo+zcrit)/2=
+             ! (1/2)[ (a1/(a1-a2))(probhi-problo)+problo+zcrit ]=
+             ! (1/2)[ a1 * probhi /(a1-a2) + a2 * problo/(a2-a1) + zcrit ]
+             ! if a1>a2,
+             ! (1/2)[ (a1 * probhi - a2 * problo)/(a1-a2) + zcrit ]
+             ! if a1<a2,
+             ! (1/2)[ (a2 * problo - a1 * probhi)/(a2-a1) + zcrit ]
+             ! WLOG, problo=0 probhi=1
+             ! if a1>a2,
+             ! (1/2)[ 1/(1-a2/a1) + zcrit ]
+             ! if a1<a2,
+             ! (1/2)[ -1/(a2/a1-1) + zcrit ]
+             ! 
+             ! f(p(z))=tanh(p(z)/eps)/tanh(1/eps)
+             ! g(z)=(f(p(z))+1)/2
+             ! T(z)=T_HOT * (1-g(z)) + T_COLD * g(z)
+             ! 
              scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
                fort_initial_temperature(1)+ &
                radblob2*(xpos(SDIM)-problo_array(SDIM))
