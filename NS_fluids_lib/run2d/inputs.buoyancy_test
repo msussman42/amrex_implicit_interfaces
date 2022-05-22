@@ -124,7 +124,13 @@ ns.speciesconst=1.0 2.0 1.0 2.0 1.0 2.0
 ns.speciesviscconst=1.0e-8 1.0e-8 100.0 1.0e-8 0.001 1.0e-8 
 ns.pressure_error_cutoff=0.0 0.0
 ns.tempconst=293.0 293.0  # temperature at the bottom of the domain
-ns.radblob2=3.0 #T(probhi(sdim))-T(problo(sdim))=3.0
+# T_HOT=ns.tempconst(1)
+# T_COLD=ns.tempconst(1)-abs(radblob2)
+ns.radblob2=3.0
+#zcrit=(problo(sdim)+probhi(sdim))/2+abs(radblob3) *
+#  cos(beta(x-problo(1))-Pi)
+#  beta=2 Pi/problen_array(1) 
+ns.radblob3=0.1
 ns.material_type=0 0   # 0 0 if INCOMP;  13 14 if COMPRESSIBLE
 # Specific heat capacity [J/(kg.K)]
 # in CRYOGENIC_TANK_MK: CP-CV=R/molar_mass => CP=CV+R/molar_mass
