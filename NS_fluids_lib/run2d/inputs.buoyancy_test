@@ -131,6 +131,8 @@ ns.radblob2=3.0
 #  cos(beta(x-problo(1))-Pi)
 #  beta=2 Pi/problen_array(1) 
 ns.radblob3=0.1
+# tansition thickness from hot to cold "tanh(pz/abs(radblob4))"
+ns.radblob4=0.1
 ns.material_type=0 0   # 0 0 if INCOMP;  13 14 if COMPRESSIBLE
 # Specific heat capacity [J/(kg.K)]
 # in CRYOGENIC_TANK_MK: CP-CV=R/molar_mass => CP=CV+R/molar_mass
