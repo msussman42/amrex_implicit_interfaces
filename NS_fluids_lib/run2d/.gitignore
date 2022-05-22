@@ -50,6 +50,7 @@ Dhir_outflow/
 Dhir_Vertical_Wall_outflow/
 swirl/
 vortex_confine/
+buoyancy/
 BCG/
 BCG_periodic/
 BCG_periodic_patch/

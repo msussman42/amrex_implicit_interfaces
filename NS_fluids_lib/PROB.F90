@@ -26442,7 +26442,7 @@ end subroutine initialize2d
        REAL_T zcrit
        REAL_T z_extrema
        REAL_T a1,a2,D2
-       REAL_T pz,fpz,gpz
+       REAL_T pz,pz_sanity,fpz,gpz
        REAL_T T_HOT,T_COLD
 
        nhalf_box=1
@@ -26863,8 +26863,8 @@ end subroutine initialize2d
               print *,"D2 is NaN"
               stop
              endif
-             pz=-one+a1*(xpos(SDIM)-problo_array(1))+ &
-                D2*(xpos(SDIM)-problo_array(1))* &
+             pz=-one+a1*(xpos(SDIM)-problo_array(SDIM))+ &
+                D2*(xpos(SDIM)-problo_array(SDIM))* &
                    (xpos(SDIM)-zcrit)
              if ((pz.ge.-one).and.(pz.le.one)) then
               ! do nothing
@@ -26872,6 +26872,24 @@ end subroutine initialize2d
               print *,"pz out of range"
               stop
              endif
+             pz_sanity=-one+a1*(probhi_array(SDIM)-problo_array(SDIM))+ &
+                D2*(probhi_array(SDIM)-problo_array(SDIM))* &
+                   (probhi_array(SDIM)-zcrit)
+             if (abs(pz_sanity-one).le.VOFTOL) then
+              ! do nothing
+             else
+              print *,"pz_sanity invalid"
+              stop
+             endif
+             pz_sanity=-one+a1*(zcrit-problo_array(SDIM))
+             if (abs(pz_sanity).le.VOFTOL) then
+              ! do nothing
+             else
+              print *,"pz_sanity invalid"
+              stop
+             endif
+
+
              fpz=tanh(pz/radblob4)/tanh(one/radblob4)
              gpz=half*(fpz+one)
              
@@ -28909,14 +28927,14 @@ end subroutine initialize2d
            outer_rad=radblob3-y*(radblob3-radblob4)/yblob3 
            areacross=Pi*(outer_rad**2-radblob5**2)
            if ((x.ge.radblob5).and.(x.le.outer_rad)) then
-            y_vel=advbot*1000.0/areacross
+            y_vel=advbot*1000.0d0/areacross
            endif 
            ! gas nozzle: 0<y<yblob3
           else if (y.le.yblob3) then
            outer_rad=radblob3-y*(radblob3-radblob4)/yblob3
            areacross=Pi*outer_rad**2
            if (x.le.outer_rad) then
-            y_vel=advbot*1000.0/areacross
+            y_vel=advbot*1000.0d0/areacross
            endif
           else  ! expansion region
            radshrink=radblob7**2-radblob5**2
@@ -28929,7 +28947,7 @@ end subroutine initialize2d
              (y-yblob3)*(radshrink-radblob4)/(probhiy-yblob3)
            areacross=Pi*outer_rad**2
            if (x.le.outer_rad) then
-            y_vel=advbot*1000.0/areacross
+            y_vel=advbot*1000.0d0/areacross
            endif
           endif 
 ! microfluidics problem initial velocity at t=0
@@ -29010,17 +29028,17 @@ end subroutine initialize2d
               (axis_dir.eq.1)) then
 
            if (y.le.half) then
-            x_vel=tanh( (y-one/four)*30.0 )
+            x_vel=tanh( (y-one/four)*30.0d0 )
            else
-            x_vel=tanh( (three/four-y)*30.0 )
+            x_vel=tanh( (three/four-y)*30.0d0 )
            endif
-           y_vel=0.05*sin(two*Pi*x)
+           y_vel=0.05d0*sin(two*Pi*x)
 
           else if ((axis_dir.eq.2).or. & !vortex confinement
                    (axis_dir.eq.3)) then
 
            dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
-           jumpval=tanh(30.0*dist)
+           jumpval=tanh(30.0d0*dist)
            jumpval=(jumpval+one)/two
            alpha=(one-jumpval)*vinletgas
            x_vel=alpha*(y-yblob)
@@ -29044,8 +29062,8 @@ end subroutine initialize2d
             y_vel=y_vel+adv_vel
            endif
           else if (axis_dir.eq.12) then  ! buoyancy
-           x_vel=0.0
-           y_vel=0.0
+           x_vel=zero
+           y_vel=zero
           else
            print *,"axis_dir invalid"
            stop
