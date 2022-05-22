@@ -17566,8 +17566,10 @@ end subroutine global_checkinplane
       endif
 !      cv=4.1855D+7
       cv=get_user_stiffCP(im)
-      if (cv.le.zero) then
-       print *,"cv invalid in temperature default"
+      if (cv.gt.zero) then
+       ! do nothing
+      else
+       print *,"cv invalid in temperature default (must be positive) cv=",cv
        stop
       endif
       if (imattype.eq.999) then
@@ -17622,7 +17624,9 @@ end subroutine global_checkinplane
       if (cv.gt.zero) then
        ! do nothing
       else
-       print *,"cv invalid in internal default"
+       print *,"cv invalid in internal default (must be positive)"
+       print *,"cv=get_user_stiffCP(im)=",cv
+       print *,"im=",im
        stop
       endif
       if (imattype.eq.999) then

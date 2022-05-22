@@ -3,13 +3,13 @@
 #
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
-stop_time =  0.5  # maximum problem time
+stop_time =  10.0  # maximum problem time
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
-geometry.prob_hi   =  1.0 1.0   #meters
+geometry.prob_hi   =  1.0 2.0   #meters
 geometry.is_periodic = 1 0
 
 # default is SFC (Space Filling Curve)
@@ -32,7 +32,7 @@ ns.MOFITERMAX=15
 #-1=Weymouth Yue,  
 # 1=EILE (default), 2=always EI, 3=always LE
 ns.EILE_flag=1 # EI-LE (want same time step for 2d and 3d cases)
-amr.n_cell    = 32 32
+amr.n_cell    = 32 64
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.max_level = 0
 amr.regrid_int      = 1       # how often to regrid
@@ -80,7 +80,7 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
 
 ns.visual_compare=0 # if 1, then compare to COARSEDATA.tec
-ns.visual_ncell=32 32
+ns.visual_ncell=32 64
 
 ns.cfl            = 0.5   # cfl number for hyperbolic system 0.5
 ns.change_max     = 1.1     
@@ -113,7 +113,7 @@ ns.vinletgas=0.0
 ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=0.0
-ns.adv_dir=0  # 1=advect in x direction  2=advect in y direction 3=x and y
+ns.adv_dir=2  # 1=advect in x direction  2=advect in y direction 
 ns.uncoupled_viscosity=0
 ns.viscconst= 0.0 0.0 
 # Dynamic viscosity [Pa.s]
@@ -126,23 +126,23 @@ ns.pressure_error_cutoff=0.0 0.0
 ns.tempconst=293.0 293.0  # temperature at the bottom of the domain
 # T_HOT=ns.tempconst(1)
 # T_COLD=ns.tempconst(1)-abs(radblob2)
-ns.radblob2=3.0
+ns.radblob2=30.0
 #zcrit=(problo(sdim)+probhi(sdim))/2+abs(radblob3) *
 #  cos(beta(x-problo(1))-Pi)
 #  beta=2 Pi/problen_array(1) 
-ns.radblob3=0.1
+ns.radblob3=0.05
 # tansition thickness from hot to cold "tanh(pz/abs(radblob4))"
 ns.radblob4=0.1
 ns.material_type=0 0   # 0 0 if INCOMP;  13 14 if COMPRESSIBLE
 # Specific heat capacity [J/(kg.K)]
 # in CRYOGENIC_TANK_MK: CP-CV=R/molar_mass => CP=CV+R/molar_mass
-ns.stiffCP=1300.0 0.0 
+ns.stiffCP=1300.0 1300.0 
 # Ground based experiments used HFE7000.
 # Space-Station experiments used Perfluoro-n-Pentane (PnP, or C5F12)
 # REFPROP (Refrigerant), (RE347MCC), Methyl-Heptafluoropropyl, 
 # https://pubchem.ncbi.nlm.nih.gov/compound/2774943#section=Synonyms
 # Methyl-Perfluoropropyl, HFE7000, CV=
-ns.stiffCV=1300.0 0.0  #CV used CRYOGENIC_TANK_MK to get CP
+ns.stiffCV=1300.0 1300.0  #CV used CRYOGENIC_TANK_MK to get CP
 # Thermal conductivity [W/(m.K)]
 ns.heatviscconst=0.075 0.0
 ns.constant_density_all_time=1 1 
