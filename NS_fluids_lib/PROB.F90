@@ -26775,20 +26775,23 @@ end subroutine initialize2d
               local_energy_moment, &
               scalc(ibase+ENUM_TEMPERATUREVAR+1))
            else if (axis_dir.eq.12) then ! buoyancy test
+            T_HOT=fort_initial_temperature(1)
+            T_COLD=T_HOT-abs(radblob2)
+            if ((T_HOT.gt.T_COLD).and. &
+                (T_COLD.gt.zero)) then
+             ! do nothing
+            else
+             print *,"T_HOT or T_COLD invalid"
+             stop
+            endif
+
             if (xpos(SDIM).le.problo_array(SDIM)) then
-             scalc(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(1)
+             scalc(ibase+ENUM_TEMPERATUREVAR+1)=T_HOT
             else if (xpos(SDIM).ge.probhi_array(SDIM)) then
-             if (radblob2.lt.zero) then
-              ! do nothing
-             else
-              print *,"radblob2 invalid"
-              stop
-             endif
-             scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
-               fort_initial_temperature(1)+radblob2
+             scalc(ibase+ENUM_TEMPERATUREVAR+1)=T_COLD
             else if ((xpos(SDIM).gt.problo_array(SDIM)).and. &
                      (xpos(SDIM).lt.probhi_array(SDIM))) then
-             ! the "radblob2/2" temperature contour lives on the
+             ! the "(T_HOT+T_COLD)/2" temperature contour lives on the
              ! curve z=(problo+probhi)/2+radblob3*cos(beta (x-problo(1)) - pi)
              ! beta=2 pi/(probhi(1)-problo(1))
              ! tanh(x/eps)=1 as x->inf
@@ -26803,23 +26806,67 @@ end subroutine initialize2d
              ! probhi 1                         probhi-problo
              ! p(z)=-1+a1(z-problo)+b (z-problo)(z-zcrit)
              ! p'(z)=a1+b(2z-problo-zcrit)=a1+2b(z-(problo+zcrit)/2)=0
-             ! z=-a1/(2b)+(problo+zcrit)/2=
-             ! (1/2)[ (a1/(a1-a2))(probhi-problo)+problo+zcrit ]=
-             ! (1/2)[ a1 * probhi /(a1-a2) + a2 * problo/(a2-a1) + zcrit ]
-             ! if a1>a2,
-             ! (1/2)[ (a1 * probhi - a2 * problo)/(a1-a2) + zcrit ]
-             ! if a1<a2,
-             ! (1/2)[ (a2 * problo - a1 * probhi)/(a2-a1) + zcrit ]
-             ! WLOG, problo=0 probhi=1
-             ! if a1>a2,
-             ! (1/2)[ 1/(1-a2/a1) + zcrit ]
-             ! if a1<a2,
-             ! (1/2)[ -1/(a2/a1-1) + zcrit ]
+             ! z=-a1/(2b)+(problo+zcrit)/2
              ! 
              ! f(p(z))=tanh(p(z)/eps)/tanh(1/eps)
              ! g(z)=(f(p(z))+1)/2
              ! T(z)=T_HOT * (1-g(z)) + T_COLD * g(z)
              ! 
+             if ((problen_array(1).gt.zero).and. &
+                 (problen_array(SDIM).gt.zero)) then
+              ! do nothing
+             else
+              print *,"problen_array invalid"
+              stop
+             endif
+
+             zcrit=half*(problo_array(SDIM)+probhi_array(SDIM))+ &
+               abs(radblob3)* &
+               cos(two*Pi*(xpos(1)-problo_array(1))/problen_array(1)-Pi)
+
+             if ((zcrit.gt.problo_array(SDIM)).and. &
+                 (zcrit.lt.probhi_array(SDIM))) then
+              ! do nothing
+             else
+              print *,"zcrit invalid"
+              stop
+             endif
+             a1=one/(zcrit-problo_array(SDIM))
+             a2=one/(probhi_array(SDIM)-zcrit)
+             D2=(a2-a1)/problen_array(SDIM)
+
+             if ((a1.gt.zero).and.(a2.gt.zero)) then
+              ! do nothing
+             else
+              print *,"a1 or a2 invalid"
+              stop
+             endif
+
+             if (D2.eq.zero) then
+              ! do nothing
+             else if (D2.ne.zero) then
+              z_extrema=half*(-a1/D2+problo_array(SDIM)+zcrit)
+              if ((z_extrema.lt.problo_array(SDIM)).or. &
+                  (z_extrema.gt.probhi_array(SDIM))) then
+               ! do nothing
+              else
+               print *,"z_extrema invalid: ",z_extrema
+               stop
+              endif
+             else
+              print *,"D2 is NaN"
+              stop
+             endif
+             pz=-one+a1*(xpos(SDIM)-problo_array(1))+ &
+                D2*(xpos(SDIM)-problo_array(1))* &
+                   (xpos(SDIM)-zcrit)
+             if ((pz.ge.-one).and.(pz.le.one)) then
+              ! do nothing
+             else
+              print *,"pz out of range"
+              stop
+             endif
+             FIX ME
              scalc(ibase+ENUM_TEMPERATUREVAR+1)= &
                fort_initial_temperature(1)+ &
                radblob2*(xpos(SDIM)-problo_array(SDIM))
