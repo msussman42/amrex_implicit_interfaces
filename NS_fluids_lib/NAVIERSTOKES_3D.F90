@@ -11877,8 +11877,8 @@ END SUBROUTINE SIMP
        do_input, &
        visual_compare, &
        time, &
-       fabin,DIMS(fabin), &
-       fabout,DIMS(fabout), &
+       fabin,DIMS(fabin), & !initialized from COARSEDATA.tec
+       fabout,DIMS(fabout), & !initialized by "ns_level.output_zones"
        vislo,vishi, &
        visual_ncomp) &
       bind(c,name='fort_io_compare')
