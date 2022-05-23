@@ -14705,7 +14705,7 @@ END SUBROUTINE SIMP
         Np, & !  Np = number of particles
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
-        level,gridno,ipart) &
+        level,gridno) &
       bind(c,name='fort_particle_grid')
 
       use probf90_module
@@ -14717,7 +14717,6 @@ END SUBROUTINE SIMP
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: ipart
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
@@ -14748,7 +14747,7 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      write(matstr,'(I2)') ipart
+      write(matstr,'(I2)') 0
       do i=1,2
        if (matstr(i:i).eq.' ') then
         matstr(i:i)='0'
@@ -14817,8 +14816,6 @@ END SUBROUTINE SIMP
 
       subroutine fort_combine_particles( &
        grids_per_level,finest_level,nsteps, &
-       ipart, &
-       NS_ncomp_particles, &
        arrdim,time,plotint) &
       bind(c,name='fort_combine_particles')
 
@@ -14831,8 +14828,6 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: plotint
       INTEGER_T :: strandid
       INTEGER_T, intent(in) :: arrdim,finest_level,nsteps
-      INTEGER_T, intent(in) :: ipart
-      INTEGER_T, intent(in) :: NS_ncomp_particles
       INTEGER_T, intent(in) :: grids_per_level(arrdim)
 
       character*29 cennamestr29
@@ -14857,14 +14852,7 @@ END SUBROUTINE SIMP
 
       alloc_flag=0
 
-      if ((ipart.lt.0).or.(ipart.gt.99).or. &
-          (ipart.ge.num_materials).or. &
-          (ipart.ge.NS_ncomp_particles)) then
-       print *,"ipart out of range"
-       stop
-      endif
-
-      write(matstr,'(I2)') ipart
+      write(matstr,'(I2)') 0
       do i=1,2
        if (matstr(i:i).eq.' ') then
         matstr(i:i)='0'

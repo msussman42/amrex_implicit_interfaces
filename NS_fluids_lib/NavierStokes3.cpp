@@ -386,11 +386,10 @@ void NavierStokes::nonlinear_advection() {
 
  if (particles_flag==1) {
 
-  int ipart=0;
   bool local_copy_flag=true; //do not redistribute inside of copyParticle
   NavierStokes& ns_level0=getLevel(0);
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-   ns_level0.newDataPC(slab_step+1,ipart);
+   ns_level0.newDataPC(slab_step+1);
 
    // first add particles if needed
   for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -421,6 +420,11 @@ void NavierStokes::nonlinear_advection() {
 
   NeighborParticleContainer<N_EXTRA_REAL,0> 
    localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
+  if (num_SoA_var==SOA_NCOMP) {
+   // do nothing
+  } else
+   amrex::Error("num_SoA_var invalid");
+
   for (int ns=0;ns<num_SoA_var;ns++) 
    localPC_nbr.AddRealComp(true);
 
@@ -761,13 +765,17 @@ void NavierStokes::correct_xdisplace_with_particles() {
  if (particles_flag==1) {
 
   bool local_copy_flag=true; //do not redistribue inside of copyParticles
-  int ipart=0;
   NavierStokes& ns_level0=getLevel(0);
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-    ns_level0.newDataPC(slab_step+1,ipart);
+    ns_level0.newDataPC(slab_step+1);
 
   NeighborParticleContainer<N_EXTRA_REAL,0> 
     localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
+  if (num_SoA_var==SOA_NCOMP) {
+   // do nothing
+  } else
+   amrex::Error("num_SoA_var invalid");
+
   for (int ns=0;ns<num_SoA_var;ns++)
    localPC_nbr.AddRealComp(true);
 
@@ -1149,7 +1157,6 @@ Real NavierStokes::advance(Real time,Real dt) {
    if (particles_flag==0) {
     // do nothing
    } else if (particles_flag==1) {
-    int ipart=0;
     int lev_min=0;
     int lev_max=-1;
     int nGrow_Redistribute=0;
@@ -1157,7 +1164,7 @@ Real NavierStokes::advance(Real time,Real dt) {
 
     NavierStokes& ns_level0=getLevel(0);
     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& old_PC=
-       ns_level0.newDataPC(ns_time_order,ipart);
+      ns_level0.newDataPC(ns_time_order);
     old_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
       local_Redistribute);
    } else {
@@ -12626,13 +12633,17 @@ void NavierStokes::veldiffuseALL() {
   int nnbr=1;
 
   bool local_copy_flag=true; //do not redistribute inside of copyParticles
-  int ipart=0;
   NavierStokes& ns_level0=getLevel(0);
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-    ns_level0.newDataPC(slab_step+1,ipart);
+    ns_level0.newDataPC(slab_step+1);
 
   NeighborParticleContainer<N_EXTRA_REAL,0> 
     localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
+  if (num_SoA_var==SOA_NCOMP) {
+   // do nothing
+  } else
+   amrex::Error("num_SoA_var invalid");
+
   for (int ns=0;ns<num_SoA_var;ns++)
    localPC_nbr.AddRealComp(true);
 

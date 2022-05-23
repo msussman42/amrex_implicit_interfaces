@@ -281,11 +281,10 @@ public:
     void CopyNewToOldPC(int lev_max);
     void CopyOldToNewPC(int lev_max);
 
-    AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
-       newDataPC (int slab_index,int sub_index);
+    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& newDataPC (int slab_index);
 
     const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
-       newDataPC (int slab_index,int sub_index) const;
+       newDataPC (int slab_index) const;
 
     Vector< Vector< FSI_container_class > > new_data_FSI;
 
@@ -296,9 +295,7 @@ public:
     using PLS_ParticleContainerType=
             AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
 
-    Vector<
-        Vector<PLS_ParticleContainerType*>
-          > AmrLevel0_new_dataPC;
+    Vector<PLS_ParticleContainerType*> AmrLevel0_new_dataPC;
 
     //
 protected:

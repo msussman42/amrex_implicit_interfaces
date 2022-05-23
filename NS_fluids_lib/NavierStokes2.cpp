@@ -7025,10 +7025,9 @@ void NavierStokes::output_triangles() {
     // do nothing
    } else if (particles_flag==1) {
 
-    int ipart=0;
     NavierStokes& ns_level0=getLevel(0);
     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-     ns_level0.newDataPC(slab_step+1,ipart);
+     ns_level0.newDataPC(slab_step+1);
 
      //TODO: manage SoA data.
 
@@ -7046,7 +7045,7 @@ void NavierStokes::output_triangles() {
       Np,       //pass by value
       tilelo,tilehi,
       fablo,fabhi,&bfact,
-      &level,&gridno,&ipart);
+      &level,&gridno);
    } else
     amrex::Error("particles_flag invalid in output_triangles");
 

@@ -14659,7 +14659,6 @@ end subroutine global_checkinplane
       function fort_is_eulerian_elastic_model(elastic_visc_in, &
         viscoelastic_model_in) &
       bind(c,name='fort_is_eulerian_elastic_model')
-      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T fort_is_eulerian_elastic_model

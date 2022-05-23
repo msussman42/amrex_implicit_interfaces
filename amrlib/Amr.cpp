@@ -39,6 +39,10 @@
 
 #include <INTERP_F.H>
 
+#include <DRAG_COMP.H>
+#include <EXTRAP_COMP.H>
+#include <GLOBALUTIL_F.H>
+
 #ifdef BL_USE_ARRAYVIEW
 #include <DatasetClient.H>
 #endif
@@ -209,8 +213,7 @@ Amr::Amr ()
      // ...
     InitAmr();
 
-}
-
+} // end subroutine Amr::Amr () 
 
 void
 Amr::InitAmr () {
@@ -264,7 +267,7 @@ Amr::InitAmr () {
 
     int i;
     for (i = 0; i < AMREX_SPACEDIM; i++)
-        isPeriodic[i] = false;
+     isPeriodic[i] = false;
 
     ParmParse ppns("ns");
     ParmParse pp("amr");
@@ -281,6 +284,55 @@ Amr::InitAmr () {
     ppns.get("num_materials",global_AMR_num_materials);
     if ((global_AMR_num_materials<2)||(global_AMR_num_materials>999))
      amrex::Error("global_AMR_num_materials invalid");
+
+    global_AMR_num_materials_viscoelastic=0;
+
+    Vector<Real> elastic_viscosity_temp;
+    Vector<Real> elastic_time_temp;
+    Vector<int> viscoelastic_model_temp;
+    Vector<int> store_elastic_data_temp;
+    elastic_viscosity_temp.resize(global_AMR_num_materials);
+    elastic_time_temp.resize(global_AMR_num_materials);
+    viscoelastic_model_temp.resize(global_AMR_num_materials);
+    store_elastic_data_temp.resize(global_AMR_num_materials);
+
+    for (int im=0;im<global_AMR_num_materials;im++) {
+     elastic_viscosity_temp[im]=0.0;
+     elastic_time_temp[im]=0.0;
+     viscoelastic_model_temp[im]=0;
+     store_elastic_data_temp[im]=0;
+    }
+    ppns.queryarr("elastic_viscosity",elastic_viscosity_temp,0,
+		  global_AMR_num_materials);
+    ppns.queryarr("elastic_time",elastic_time_temp,0,
+		  global_AMR_num_materials);
+    ppns.queryarr("viscoelastic_model",viscoelastic_model_temp,0,
+		  global_AMR_num_materials);
+
+    for (int im=0;im<global_AMR_num_materials;im++) {
+     if (elastic_viscosity_temp[im]>0.0) {
+      if (fort_is_eulerian_elastic_model(&elastic_viscosity_temp[im],
+           &viscoelastic_model_temp[im])==1) {
+       store_elastic_data_temp[im]=1;
+      } else if (fort_is_eulerian_elastic_model(&elastic_viscosity_temp[im],
+           &viscoelastic_model_temp[im])==0) {
+       // do nothing
+      } else
+       amrex::Error("fort_is_eulerian_elastic_model invalid");
+     } else if (elastic_viscosity_temp[im]==0.0) {
+      // do nothing
+     } else
+      amrex::Error("elastic_viscosity_temp[im] invalid");
+    } // im=0..global_AMR_num_materials-1 
+
+    for (int im=0;im<global_AMR_num_materials;im++) {
+     if (store_elastic_data_temp[im]==1) {
+      global_AMR_num_materials_viscoelastic++;
+     } else if (store_elastic_data_temp[im]==0) {
+      // do nothing
+     } else
+      amrex::Error("store_elastic_data_temp invalid");
+    } // im=0..global_AMR_num_materials-1 
 
     recalesce_flag.resize(global_AMR_num_materials);
     for (int im=0;im<global_AMR_num_materials;im++) {
@@ -316,33 +368,29 @@ Amr::InitAmr () {
 
     pp.query("file_name_digits", file_name_digits);
 
-    if (pp.contains("run_log"))
-    {
-        std::string log_file_name;
-        pp.get("run_log",log_file_name);
-        setRecordRunInfo(log_file_name);
+    if (pp.contains("run_log")) {
+     std::string log_file_name;
+     pp.get("run_log",log_file_name);
+     setRecordRunInfo(log_file_name);
     }
-    if (pp.contains("run_log_terse"))
-    {
-        std::string log_file_name;
-        pp.get("run_log_terse",log_file_name);
-        setRecordRunInfoTerse(log_file_name);
+    if (pp.contains("run_log_terse")) {
+     std::string log_file_name;
+     pp.get("run_log_terse",log_file_name);
+     setRecordRunInfoTerse(log_file_name);
     }
-    if (pp.contains("grid_log"))
-    {
-        std::string grid_file_name;
-        pp.get("grid_log",grid_file_name);
-        setRecordGridInfo(grid_file_name);
+    if (pp.contains("grid_log")) {
+     std::string grid_file_name;
+     pp.get("grid_log",grid_file_name);
+     setRecordGridInfo(grid_file_name);
     }
 
-    if (pp.contains("data_log"))
-    {
-      int num_datalogs = pp.countval("data_log");
-      datalog.resize(num_datalogs);
-      Vector<std::string> data_file_names(num_datalogs);
-      pp.queryarr("data_log",data_file_names,0,num_datalogs);
-      for (int i_data = 0; i_data < num_datalogs; i_data++) 
-        setRecordDataInfo(i_data,data_file_names[i_data]);
+    if (pp.contains("data_log")) {
+     int num_datalogs = pp.countval("data_log");
+     datalog.resize(num_datalogs);
+     Vector<std::string> data_file_names(num_datalogs);
+     pp.queryarr("data_log",data_file_names,0,num_datalogs);
+     for (int i_data = 0; i_data < num_datalogs; i_data++) 
+      setRecordDataInfo(i_data,data_file_names[i_data]);
     }
 
     //
@@ -366,12 +414,11 @@ Amr::InitAmr () {
     MAX_NUM_SLAB=33;
     slab_dt_type=0; // 0=SEM 1=evenly spaced
 
-    for (i = 0; i < nlev; i++)
-    {
-        level_cells_advanced[i] = 0.0;
-        level_steps[i] = 0;
-        level_count[i] = 0;
-        space_blocking_factor[i] = 1;
+    for (i = 0; i < nlev; i++) {
+     level_cells_advanced[i] = 0.0;
+     level_steps[i] = 0;
+     level_count[i] = 0;
+     space_blocking_factor[i] = 1;
     }
 
     regrid_int=0;
@@ -388,9 +435,8 @@ Amr::InitAmr () {
     check_per = -1.0;
     int got_check_per = pp.query("check_per",check_per);
 
-    if (got_check_int == 1 && got_check_per == 1)
-    {
-        amrex::Error("Must only specify amr.check_int OR amr.check_per");
+    if (got_check_int == 1 && got_check_per == 1) {
+     amrex::Error("Must only specify amr.check_int OR amr.check_per");
     }
 
     plot_file_root = "plt";
@@ -402,11 +448,12 @@ Amr::InitAmr () {
     plot_per = -1.0;
     int got_plot_per = pp.query("plot_per",plot_per);
 
-    if (got_plot_int == 1 && got_plot_per == 1)
-    {
-        amrex::Error("Must only specify amr.plot_int OR amr.plot_per");
+    if (got_plot_int == 1 && got_plot_per == 1) {
+     amrex::Error("Must only specify amr.plot_int OR amr.plot_per");
     }
+
     slice_int=-1;
+
     if (got_plot_int==1) {
      slice_int=plot_int;
 
@@ -455,14 +502,13 @@ Amr::InitAmr () {
     hi -= IntVect::TheUnitVector();
 
     Real offset[AMREX_SPACEDIM];
-    for (i = 0; i < AMREX_SPACEDIM; i++)
-    {
-        const Real delta = geom[0].ProbLength(i)/(Real)n_cell[i];
-        offset[i]        = geom[0].ProbLo(i) + delta*lo[i];
-	if ((lo[i]==0)&&(delta>0.0)) {
-	 // do nothing
-	} else
- 	 amrex::Error("expecting lo=0 and delta>0");
+    for (i = 0; i < AMREX_SPACEDIM; i++) {
+     const Real delta = geom[0].ProbLength(i)/(Real)n_cell[i];
+     offset[i]        = geom[0].ProbLo(i) + delta*lo[i];
+     if ((lo[i]==0)&&(delta>0.0)) {
+      // do nothing
+     } else
+      amrex::Error("expecting lo=0 and delta>0");
     }
 
     if (ParallelDescriptor::IOProcessor()) {
@@ -490,6 +536,18 @@ Amr::InitAmr () {
      //do nothing
     } else
      amrex::Error("global_AMR_ncomp_PC invalid");
+
+    int num_materials=global_AMR_num_materials;
+    int num_species_var=global_AMR_num_species_var;
+    int num_materials_viscoelastic=global_AMR_num_materials_viscoelastic;
+
+    if (global_AMR_num_SoA_var==SOA_NCOMP*global_AMR_ncomp_PC) {
+     // do nothing
+    } else {
+     std::cout << "ns.num_SoA_var expect: " << SOA_NCOMP << '\n';
+     std::cout << "ns.num_SoA_var input: " << global_AMR_num_SoA_var << '\n';
+     amrex::Error("ns.num_SoA_var invalid");
+    }
 
     m_gdb.reset(new AmrParGDB(this));
 

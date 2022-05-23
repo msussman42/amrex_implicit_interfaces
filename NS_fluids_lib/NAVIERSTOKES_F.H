@@ -692,15 +692,15 @@ extern "C" {
        const int* fablo,const int* fabhi,
        int* bfact,
        int* level,
-       const int* gridno,
-       int* ipart);
+       const int* gridno);
 
     void fort_combine_particles(
-     int* grids_per_level,int* finest_level,
-     int* nsteps,int* ipart,
-     int* NS_ncomp_particles,
+     int* grids_per_level,
+     int* finest_level,
+     int* nsteps,
      int* arrdim,
-     Real* time,int* plotint);
+     Real* time,
+     int* plotint);
 
 }
 }/* namespace amrex */
