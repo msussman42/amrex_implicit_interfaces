@@ -252,4 +252,10 @@ FSI_SIZE=area
 #define CISLCOMP_DEN_MOM (CISLCOMP_FTARGET+num_materials)
 #define CISLCOMP_NCOMP (CISLCOMP_DEN_MOM+num_materials)
 
+#define SOA_COMP_LS (0)
+#define SOA_COMP_SPECIES (SOA_COMP_LS+num_materials)
+#define SOA_COMP_TENSOR (SOA_COMP_SPECIES+num_species_var)
+#define SOA_COMP_NEXT (SOA_COMP_TENSOR+num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE)
+#define SOA_NCOMP (SOA_COMP_NEXT)
+
 #endif

@@ -9409,30 +9409,32 @@ void NavierStokes::post_restart() {
 
    if (level_ncomp_PC==0) {
     // do nothing
-   } else if (level_ncomp_PC>0) {
+   } else if (level_ncomp_PC==1) {
 
-    for (int PC_index=0;PC_index<level_ncomp_PC;PC_index++) {
-     AmrLevel0_new_dataPC[i][PC_index]=
-        new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
-     for (int ns=0;ns<num_SoA_var;ns++)
-      AmrLevel0_new_dataPC[i][PC_index]->AddRealComp(true);
+    if (num_SoA_var==SOA_NCOMP) {
+     // do nothing
+    } else
+     amrex::Error("num_SoA_var invalid");
+
+    AmrLevel0_new_dataPC[i]=
+      new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
+    for (int ns=0;ns<num_SoA_var;ns++)
+     AmrLevel0_new_dataPC[i]->AddRealComp(true);
      
-     int raw_index=level_ncomp_PC * i + PC_index;
-     std::string Part_name="FusionPart";
-     std::stringstream raw_string_stream(std::stringstream::in |
-         std::stringstream::out);
-     raw_string_stream << raw_index;
-     std::string raw_string=raw_string_stream.str();
-     Part_name+=raw_string;
+    std::string Part_name="FusionPart";
+    std::stringstream i_string_stream(std::stringstream::in |
+        std::stringstream::out);
+    i_string_stream << i;
+    std::string i_string=i_string_stream.str();
+    Part_name+=i_string;
 
-     if (ParallelDescriptor::IOProcessor()) {
-      std::cout << "Restarting particle container, time_slab i= " <<
-        i << " PC_index= " << PC_index << " FullPathName= " <<
-        FullPathName << " Part_name= " << Part_name << '\n';
-     }
+    if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "Restarting particle container, time_slab i= " <<
+       i << " FullPathName= " <<
+       FullPathName << " Part_name= " << Part_name << '\n';
+    }
 
-     AmrLevel0_new_dataPC[i][PC_index]->Restart(FullPathName,Part_name);
-    } // PC_index=0..level_ncomp_PC-1 
+    AmrLevel0_new_dataPC[i]->Restart(FullPathName,Part_name);
 
    } else
     amrex::Error("level_ncomp_PC invalid");
@@ -9851,9 +9853,8 @@ NavierStokes::initData () {
  if (particles_flag==0) {
   // do nothing
  } else if (particles_flag==1) {
-  int ipart=0;
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& current_PC=
-    ns_level0.newDataPC(ns_time_order,ipart);
+    ns_level0.newDataPC(ns_time_order);
   int nGrow_Redistribute=0;
   int local_Redistribute=0;
   current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
@@ -10100,7 +10101,6 @@ NavierStokes::init(
   // do nothing
  } else if (particles_flag==1) {
 
-   int ipart=0;
    int lev_min=0;
    int lev_max=level;
    int nGrow_Redistribute=0;
@@ -10111,9 +10111,9 @@ NavierStokes::init(
     // new Amr_level prior to deleting the old level==0 structure.
    if (level==0) {
     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& new_PC=
-     ns_level0.newDataPC(ns_time_order,ipart);
+     ns_level0.newDataPC(ns_time_order);
     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& old_PC=
-     oldns->newDataPC(ns_time_order,ipart);
+     oldns->newDataPC(ns_time_order);
      //clears new_PC first
     new_PC.copyParticles(old_PC,local_copy);
    } else if (level>0) {
@@ -10122,7 +10122,7 @@ NavierStokes::init(
     amrex::Error("level invalid");
      
    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& new_PC=
-    ns_level0.newDataPC(ns_time_order,ipart);
+    ns_level0.newDataPC(ns_time_order);
 
    new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
      local_redistribute);
@@ -10240,7 +10240,6 @@ NavierStokes::init (const BoxArray& ba_in,
   // do nothing
  } else if (particles_flag==1) {
 
-   int ipart=0;
    int lev_min=0;
    int lev_max=level;
    int nGrow_Redistribute=0;
@@ -10255,7 +10254,7 @@ NavierStokes::init (const BoxArray& ba_in,
      
    NavierStokes& ns_level0=getLevel(0);
    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& new_PC=
-    ns_level0.newDataPC(ns_time_order,ipart);
+    ns_level0.newDataPC(ns_time_order);
 
    new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
      local_Redistribute);
@@ -19654,14 +19653,12 @@ void NavierStokes::writeInterfaceReconstruction() {
   if (particles_flag==0) {
    // do nothing
   } else if (particles_flag==1) {
-   int ipart=0;
 
     // in: NAVIERSTOKES_3D.F90
-   fort_combine_particles(grids_per_level.dataPtr(),
+   fort_combine_particles(
+    grids_per_level.dataPtr(),
     &finest_level,
     &nsteps,
-    &ipart,
-    &particles_flag,
     &arrdim,
     &cur_time_slab,
     &plotint);
@@ -21527,10 +21524,9 @@ void NavierStokes::post_regrid (int lbase,
   if (particles_flag==0) {
    // do nothing
   } else if (particles_flag==1) {
-   int ipart=0;
    NavierStokes& ns_level0=getLevel(0);
    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& current_PC=
-      ns_level0.newDataPC(ns_time_order,ipart);
+      ns_level0.newDataPC(ns_time_order);
    current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
      local_Redistribute);
   } else
@@ -23260,8 +23256,6 @@ NavierStokes::init_particle_container(int append_flag) {
 
  if (particles_flag==1) {
 
-  int ipart=0;
-
   MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
   if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
    amrex::Error("LSmf invalid ncomp");
@@ -23273,7 +23267,7 @@ NavierStokes::init_particle_container(int append_flag) {
 
   NavierStokes& ns_level0=getLevel(0);
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-    ns_level0.newDataPC(slab_step+1,ipart);
+    ns_level0.newDataPC(slab_step+1);
 
   MultiFab* xdisplace_mf[AMREX_SPACEDIM];
 
@@ -23527,8 +23521,6 @@ NavierStokes::post_init_state () {
 
  if (particles_flag==1) {
 
-  int ipart=0;
-
   int append_flag=0;
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -23536,7 +23528,7 @@ NavierStokes::post_init_state () {
   }
   NavierStokes& ns_level0=getLevel(0);
   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-   ns_level0.newDataPC(slab_step+1,ipart);
+   ns_level0.newDataPC(slab_step+1);
 
   int lev_min=0;
   int lev_max=-1;
