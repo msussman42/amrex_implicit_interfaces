@@ -20040,7 +20040,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  if (visual_compare==1) {
 
   if (ParallelDescriptor::IOProcessor()) {
-   int do_input=1;
+   int do_input=1; //read from COARSEDATA.tec and put in visual_fab_input
+    //fort_io_compare is declared in: NAVIERSTOKES_3D.F90
    fort_io_compare(
     &nmat,
     &nsteps,
@@ -20614,16 +20615,17 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  if (ParallelDescriptor::IOProcessor()) {
 
+   //fort_io_compare is declared in: NAVIERSTOKES_3D.F90
   fort_io_compare(
    &nmat,
    &nsteps,
    &do_input,
-   &visual_compare,  // unused since do_input==0
+   &visual_compare,//if visual_compare==1 then compare fab_input to fab_output
    &cur_time_slab,
-   visual_fab_input.dataPtr(),
+   visual_fab_input.dataPtr(), //initialized from COARSEDATA.tec
    ARLIM(visual_fab_input.loVect()), 
    ARLIM(visual_fab_input.hiVect()), 
-   visual_fab_output.dataPtr(),
+   visual_fab_output.dataPtr(), //initialized by "ns_level.output_zones"
    ARLIM(visual_fab_output.loVect()), 
    ARLIM(visual_fab_output.hiVect()), 
    visual_domain.loVect(),
