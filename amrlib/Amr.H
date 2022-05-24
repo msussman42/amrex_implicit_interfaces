@@ -127,7 +127,7 @@ public:
 
     AmrLevel& getLevel (int lev) noexcept { return *amr_level[lev]; }
 
-    int global_AMR_ncomp_PC; //init in InitAmr
+    int global_AMR_particles_flag; //init in InitAmr
     int global_AMR_num_materials; //init in InitAmr
     int global_AMR_num_materials_viscoelastic; //init in InitAmr
     int global_AMR_num_species_var; //init in InitAmr

@@ -524,30 +524,19 @@ Amr::InitAmr () {
     if ((global_AMR_num_species_var<0)||(global_AMR_num_species_var>999))
      amrex::Error("global_AMR_num_species_var invalid");
 
-    global_AMR_num_SoA_var=0;
-    ppns.query("num_SoA_var",global_AMR_num_SoA_var);
-    if ((global_AMR_num_SoA_var<0)||(global_AMR_num_SoA_var>999))
-     amrex::Error("global_AMR_num_SoA_var invalid");
-
-    global_AMR_ncomp_PC=0;
-    ppns.query("particles_flag",global_AMR_ncomp_PC);
-    if ((global_AMR_ncomp_PC==0)||
-        (global_AMR_ncomp_PC==1)) {
+    global_AMR_particles_flag=0;
+    ppns.query("particles_flag",global_AMR_particles_flag);
+    if ((global_AMR_particles_flag==0)||
+        (global_AMR_particles_flag==1)) {
      //do nothing
     } else
-     amrex::Error("global_AMR_ncomp_PC invalid");
+     amrex::Error("global_AMR_particles_flag invalid");
 
     int num_materials=global_AMR_num_materials;
     int num_species_var=global_AMR_num_species_var;
     int num_materials_viscoelastic=global_AMR_num_materials_viscoelastic;
 
-    if (global_AMR_num_SoA_var==SOA_NCOMP*global_AMR_ncomp_PC) {
-     // do nothing
-    } else {
-     std::cout << "ns.num_SoA_var expect: " << SOA_NCOMP << '\n';
-     std::cout << "ns.num_SoA_var input: " << global_AMR_num_SoA_var << '\n';
-     amrex::Error("ns.num_SoA_var invalid");
-    }
+    global_AMR_num_SoA_var=SOA_NCOMP;
 
     m_gdb.reset(new AmrParGDB(this));
 
