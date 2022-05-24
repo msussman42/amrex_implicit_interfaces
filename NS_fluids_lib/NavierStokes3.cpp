@@ -384,6 +384,11 @@ void NavierStokes::nonlinear_advection() {
   ns_level.prepare_advect_vars(prev_time_slab);
  }
 
+ if (parent->global_AMR_particles_flag==particles_flag) {
+  // do nothing
+ } else
+  amrex::Error("parent->global_AMR_particles_flag==particles_flag failed");
+
  if (particles_flag==1) {
 
   bool local_copy_flag=true; //do not redistribute inside of copyParticle
@@ -420,7 +425,13 @@ void NavierStokes::nonlinear_advection() {
 
   NeighborParticleContainer<N_EXTRA_REAL,0> 
    localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
+
   if (num_SoA_var==SOA_NCOMP) {
+   // do nothing
+  } else
+   amrex::Error("num_SoA_var invalid");
+
+  if (num_SoA_var==parent->global_AMR_num_SoA_var) {
    // do nothing
   } else
    amrex::Error("num_SoA_var invalid");
@@ -762,6 +773,11 @@ void NavierStokes::correct_xdisplace_with_particles() {
   refinement_ratio[ilev]=2;
  int nnbr=1;
 
+ if (parent->global_AMR_particles_flag==particles_flag) {
+  // do nothing
+ } else
+  amrex::Error("parent->global_AMR_particles_flag==particles_flag failed");
+
  if (particles_flag==1) {
 
   bool local_copy_flag=true; //do not redistribue inside of copyParticles
@@ -771,7 +787,13 @@ void NavierStokes::correct_xdisplace_with_particles() {
 
   NeighborParticleContainer<N_EXTRA_REAL,0> 
     localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
+
   if (num_SoA_var==SOA_NCOMP) {
+   // do nothing
+  } else
+   amrex::Error("num_SoA_var invalid");
+
+  if (num_SoA_var==parent->global_AMR_num_SoA_var) {
    // do nothing
   } else
    amrex::Error("num_SoA_var invalid");
@@ -1153,6 +1175,11 @@ Real NavierStokes::advance(Real time,Real dt) {
     std::fflush(NULL);
     ParallelDescriptor::Barrier();
    }
+
+   if (parent->global_AMR_particles_flag==particles_flag) {
+    // do nothing
+   } else
+    amrex::Error("parent->global_AMR_particles_flag==particles_flag failed");
 
    if (particles_flag==0) {
     // do nothing
@@ -12620,6 +12647,11 @@ void NavierStokes::veldiffuseALL() {
  } else
   amrex::Error("include_viscous_heating invalid");
 
+ if (parent->global_AMR_particles_flag==particles_flag) {
+  // do nothing
+ } else
+  amrex::Error("parent->global_AMR_particles_flag==particles_flag failed");
+
  if (particles_flag==1) {
 
   const Vector<Geometry>& ns_geom=parent->Geom();
@@ -12639,7 +12671,13 @@ void NavierStokes::veldiffuseALL() {
 
   NeighborParticleContainer<N_EXTRA_REAL,0> 
     localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
+
   if (num_SoA_var==SOA_NCOMP) {
+   // do nothing
+  } else
+   amrex::Error("num_SoA_var invalid");
+
+  if (num_SoA_var==parent->global_AMR_num_SoA_var) {
    // do nothing
   } else
    amrex::Error("num_SoA_var invalid");

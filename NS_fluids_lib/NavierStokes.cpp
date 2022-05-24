@@ -1596,7 +1596,6 @@ void fortran_parameters() {
  Vector<int> linear_elastic_model_temp;
  Vector<Real> shear_modulus_temp;
  Vector<int> store_elastic_data_temp;
- int particles_flag_temp=0;
 
  elastic_viscosity_temp.resize(nmat);
  elastic_time_temp.resize(nmat);
@@ -1624,7 +1623,6 @@ void fortran_parameters() {
  pp.queryarr("lame_coefficient",lame_coefficient_temp,0,nmat);
  pp.queryarr("linear_elastic_model",linear_elastic_model_temp,0,nmat);
  pp.queryarr("shear_modulus",shear_modulus_temp,0,nmat);
- pp.query("particles_flag",particles_flag_temp);
 
  for (int im=0;im<nmat;im++) {
   if (elastic_viscosity_temp[im]>0.0) {
@@ -3324,10 +3322,6 @@ NavierStokes::read_params ()
      // do nothing
     } else
      amrex::Error("EILE_flag invalid");
-
-    pp.query("num_SoA_var",num_SoA_var); // number of Structure of Array vars.
-    if (num_SoA_var<0)
-     amrex::Error("num_SoA_var invalid");
 
     num_species_var=0;
 
@@ -5281,6 +5275,8 @@ NavierStokes::read_params ()
       std::cout << "cavitation_tension i=" << i << "  " << 
        cavitation_tension[i] << '\n';
      } // i=0..nmat-1
+
+     num_SoA_var=SOA_NCOMP;
 
      std::cout << "pressure_select_criterion " << 
        pressure_select_criterion << '\n';
@@ -9403,15 +9399,24 @@ void NavierStokes::post_restart() {
 
   std::string FullPathName=FullPath;
   int time_order=parent->Time_blockingFactor();
-  int level_ncomp_PC=parent->global_AMR_ncomp_PC;
+
+  if (parent->global_AMR_particles_flag==particles_flag) {
+   // do nothing
+  } else
+   amrex::Error("parent->global_AMR_particles_flag==particles_flag failed");
 
   for (int i=0;i<=time_order;i++) {
 
-   if (level_ncomp_PC==0) {
+   if (particles_flag==0) {
     // do nothing
-   } else if (level_ncomp_PC==1) {
+   } else if (particles_flag==1) {
 
     if (num_SoA_var==SOA_NCOMP) {
+     // do nothing
+    } else
+     amrex::Error("num_SoA_var invalid");
+
+    if (num_SoA_var==parent->global_AMR_num_SoA_var) {
      // do nothing
     } else
      amrex::Error("num_SoA_var invalid");
@@ -9437,7 +9442,7 @@ void NavierStokes::post_restart() {
     AmrLevel0_new_dataPC[i]->Restart(FullPathName,Part_name);
 
    } else
-    amrex::Error("level_ncomp_PC invalid");
+    amrex::Error("particles_flag invalid");
 
   }//for (int i=0;i<=time_order;i++) 
 
