@@ -116,10 +116,13 @@ ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=2  # 1=advect in x direction  2=advect in y direction 
 ns.uncoupled_viscosity=0
-ns.viscconst= 0.0 0.0 
+#ns.viscconst= 0.0 0.0 
 # Dynamic viscosity [Pa.s]
 # (PNP: 4.2E-4)
-#ns.viscconst=4.48E-04 0.0
+#ns.viscconst=4.48E-04 4.48E-04
+#want cell Reynolds number ~ 100 
+#rho dx_coarse U/mu = 1400 x (1/32) x 1/mu = 100  mu=14/32 try mu=0.5
+ns.viscconst= 0.5 0.5 
 ns.denconst=1400.0 1400.0 
 ns.speciesconst=1.0 2.0 1.0 2.0 1.0 2.0
 ns.speciesviscconst=1.0e-8 1.0e-8 100.0 1.0e-8 0.001 1.0e-8 
@@ -145,7 +148,10 @@ ns.stiffCP=1300.0 1300.0
 # Methyl-Perfluoropropyl, HFE7000, CV=
 ns.stiffCV=1300.0 1300.0  #CV used CRYOGENIC_TANK_MK to get CP
 # Thermal conductivity [W/(m.K)]
-ns.heatviscconst=0.075 0.0
+#ns.heatviscconst=0.075 0.075
+#Want Prandtl number=1=c_p mu/k=1   1300 x 0.5 /k=1
+#k=1300 x 0.5 = 650.0
+ns.heatviscconst=650.0 650.0
 ns.constant_density_all_time=1 1 
 
 ns.xblob=0.0
