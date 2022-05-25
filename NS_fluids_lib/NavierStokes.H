@@ -1453,10 +1453,8 @@ protected:
 
     static int  enable_spectral;
      // continuous_mof = 0 => regular MOF
+     // continuous_mof = 1 => particle level set
      // continuous_mof = 2 => CMOF ("continuous MOF ")
-     // continuous_mof = 3 => CLSVOF except use MOF in cells with >2 materials.
-     // continuous_mof = 4 => CLSVOF except use CMOF in cells w/ >2 materials.
-     // continuous_mof = 5 => use CLSVOF everywhere (not recommended)
     static int  continuous_mof; // default is 0
      // =1 EXT_DIR,REFLECT_EVEN,embedded; =2 same as 1 plus triple points.
      // default is 1

@@ -40,7 +40,6 @@ ns.projection_pressure_scale=10000.0
 # for debugging
 ns.v=1
 
-# 0=MOF 2=CMOF 4=CLSVOF/CMOF
 ns.continuous_mof=2
 ns.mof_ordering=0 0 1
 

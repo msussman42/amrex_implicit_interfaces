@@ -35,12 +35,7 @@ Lp.harmavg = 0
 godunov.printMinMax=0
 
 ns.EILE_flag=-1
-# continuous_mof = 0 => regular MOF
-# continuous_mof = 2 => CMOF ("continuous MOF ")
-# continuous_mof = 3 => CLSVOF except use MOF in cells with >2 materials.
-# continuous_mof = 4 => CLSVOF except use CMOF in cells w/ >2 materials.
-# continuous_mof = 5 => use CLSVOF everywhere (not recommended)
-ns.continuous_mof=4  # CLSVOF
+ns.continuous_mof=2 #CMOF
 ns.num_materials=2
 
 ns.num_species_var=0

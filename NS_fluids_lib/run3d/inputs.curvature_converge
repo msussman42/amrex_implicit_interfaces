@@ -41,7 +41,6 @@ amr.plot_file       = plt
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 512
 ns.EILE_flag=-1
-# 0=MOF 2=CMOF 4=CLSVOF/CMOF
 ns.continuous_mof=2
 ns.vof_height_function=1
 ns.MOFITERMAX=15
