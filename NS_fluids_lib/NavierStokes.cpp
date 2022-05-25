@@ -247,6 +247,7 @@ int  NavierStokes::MOFITERMAX=DEFAULT_MOFITERMAX;
    F_ij^derived=derived volume fraction in cell ij for a given slope and
      intercept.   
 
+continuous_mof=1 Particle Level Set Method
 
 continuous_mof=2 (if same number of materials in center cell as in stencil)
 
@@ -262,9 +263,6 @@ continuous_mof=2 (if same number of materials in center cell as in stencil)
    F_ij^derived=derived volume fraction in cell for a given
      slope and intercept.
 
-continuous_mof=4 
-
-  use CLSVOF in 2 material cells and CMOF in >2 mat cells.
 
 
 NOTE: rigid materials are not counted as materials in a cell.  Rigid 

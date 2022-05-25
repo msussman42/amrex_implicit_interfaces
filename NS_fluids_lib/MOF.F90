@@ -8910,8 +8910,7 @@ contains
        stop
       endif
       if ((continuous_mof.eq.0).or. &
-          (continuous_mof.eq.2).or. &
-          (continuous_mof.eq.5)) then
+          (continuous_mof.eq.2)) then
        ! do nothing
       else
        print *,"continuous_mof invalid"
@@ -8923,8 +8922,7 @@ contains
       endif
 
       if ((continuous_mof.eq.0).or. &
-          (continuous_mof.eq.2).or. &
-          (continuous_mof.eq.5)) then
+          (continuous_mof.eq.2)) then
        call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell,cencell,sdim)
       else
        print *,"continuous_mof invalid"
@@ -8946,8 +8944,7 @@ contains
        shapeflag=0
 
        if ((continuous_mof.eq.0).or. &
-           (continuous_mof.eq.2).or. &
-           (continuous_mof.eq.5)) then
+           (continuous_mof.eq.2)) then
         call fast_cut_cell_intersection( &
          bfact,dx,xsten0,nhalf0, &
          slope,intercept, &
@@ -9269,8 +9266,7 @@ contains
       endif
 
       if ((continuous_mof.eq.0).or. &
-          (continuous_mof.eq.2).or. &
-          (continuous_mof.eq.5)) then
+          (continuous_mof.eq.2)) then
        ! do nothing
       else
        print *,"continuous_mof invalid"
@@ -9354,8 +9350,7 @@ contains
 !  search the vertices of all triangles that make up the "cut" domain.
 
       if ((continuous_mof.eq.0).or. &
-          (continuous_mof.eq.2).or. &
-          (continuous_mof.eq.5)) then
+          (continuous_mof.eq.2)) then
        call Box_volumeFAST(bfact,dx_scale,xsten0_scale,nhalf0, &
         volcell,cencell,sdim)
       else
@@ -9390,8 +9385,7 @@ contains
        null_intercept=zero
 
        if ((continuous_mof.eq.0).or. &
-           (continuous_mof.eq.2).or. &
-           (continuous_mof.eq.5)) then
+           (continuous_mof.eq.2)) then
 
         do k=klo_stencil,khi_stencil,2
         do j=-1,1,2
@@ -10150,8 +10144,7 @@ contains
       endif
 
       if ((continuous_mof.eq.0).or. &
-          (continuous_mof.eq.2).or. &
-          (continuous_mof.eq.5)) then
+          (continuous_mof.eq.2)) then
        ! do nothing
       else
        print *,"continuous_mof invalid"
@@ -10170,8 +10163,7 @@ contains
 
         ! if RZ, cencell can be negative
 
-       if ((continuous_mof.eq.0).or. &
-           (continuous_mof.eq.5)) then
+       if (continuous_mof.eq.0) then
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
          volcell_vof, &
@@ -10229,8 +10221,7 @@ contains
          ! testcen in absolute coordinate system
        if (fastflag.eq.0) then
           ! xcell used for LS dist.
-        if ((continuous_mof.eq.0).or. &
-            (continuous_mof.eq.5)) then
+        if (continuous_mof.eq.0) then
           ! (testcen is the centroid of the intersection of
           !  the material region with the center cell)
          call multi_cell_intersection( &
@@ -10259,8 +10250,7 @@ contains
        else if (fastflag.eq.1) then
 
         shapeflag=0
-        if ((continuous_mof.eq.0).or. &
-            (continuous_mof.eq.5)) then
+        if (continuous_mof.eq.0) then
           ! (testcen is the centroid of the intersection of
           !  the material region with the center cell)
          call fast_cut_cell_intersection( &
@@ -10738,7 +10728,6 @@ contains
       REAL_T, intent(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),nmat)
       REAL_T, intent(in) :: lsnormal(nmat,sdim)
       INTEGER_T, intent(in) :: lsnormal_valid(nmat)
-      INTEGER_T local_MOFITERMAX
       INTEGER_T local_nlist_vof
       INTEGER_T local_nlist_cen
 
@@ -10792,8 +10781,7 @@ contains
        stop
       endif
       if ((continuous_mof.eq.0).or. &
-          (continuous_mof.eq.2).or. &
-          (continuous_mof.eq.5)) then
+          (continuous_mof.eq.2)) then
        ! do nothing
       else
        print *,"continuous_mof invalid"
@@ -10808,7 +10796,6 @@ contains
 
       else if ((fastflag.eq.0).or. &
                (continuous_mof.eq.2).or. &
-               (continuous_mof.eq.5).or. &
                (levelrz.eq.1).or. &
                (levelrz.eq.3)) then
 
@@ -10925,19 +10912,15 @@ contains
       endif
 
       if ((continuous_mof.eq.0).or. &
-          (continuous_mof.eq.2).or. &
-          (nguess.eq.0)) then
+          (continuous_mof.eq.2)) then
          ! -pi < angle < pi
        call slope_to_angle(npredict,angle_init,sdim)
        nguess=nguess+1
        do dir=1,sdim-1
         angle_array(dir,nguess)=angle_init(dir)
        enddo
-      else if ((continuous_mof.eq.5).and. &
-               (nguess.eq.1)) then
-       ! do nothing
       else
-       print *,"continuous_mof or nguess invalid"
+       print *,"continuous_mof invalid"
        stop
       endif
 
@@ -11011,17 +10994,7 @@ contains
       delta_theta=Pi/180.0  ! 1 degree=pi/180
       delta_theta_max=10.0*Pi/180  ! 10 degrees
 
-      if (continuous_mof.eq.5) then
-       local_MOFITERMAX=0
-      else if ((continuous_mof.eq.0).or. &
-               (continuous_mof.eq.2)) then
-       local_MOFITERMAX=MOFITERMAX
-      else
-       print *,"continuous_mof invalid"
-       stop
-      endif
-
-      do while ((iter.lt.local_MOFITERMAX).and. &
+      do while ((iter.lt.MOFITERMAX).and. &
                 (err.gt.tol).and. &
                 (err_local_min.gt.local_tol))
 
@@ -11292,7 +11265,7 @@ contains
        intercept_array(iter+2)=intopt
 
        iter=iter+1
-      enddo ! while error>tol and iter<local_MOFITERMAX
+      enddo ! while error>tol and iter<MOFITERMAX
 
       iicrit=iter
       do ii=0,iter
@@ -11593,8 +11566,7 @@ contains
        stop
       endif
       if ((continuous_mof.eq.0).or. &
-          (continuous_mof.eq.2).or. &
-          (continuous_mof.eq.5)) then
+          (continuous_mof.eq.2)) then
        ! do nothing
       else
        print *,"continuous_mof invalid"
@@ -11609,8 +11581,7 @@ contains
 
        ! cencell_vof,cencell_cen is in absolute coordinate system
 
-      if ((continuous_mof.eq.0).or. &
-          (continuous_mof.eq.5)) then
+      if (continuous_mof.eq.0) then
        call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell_vof, &
         cencell_vof,sdim)
        call Box_volumeFAST( &
@@ -11648,8 +11619,7 @@ contains
 
          ! get triangulation of uncaptured space in the cell
          ! in: individual_MOF
-       if ((continuous_mof.eq.0).or. &
-           (continuous_mof.eq.5)) then
+       if (continuous_mof.eq.0) then
         use_super_cell=0
         call tets_box_planes_super( &
          tessellate, & ! =0 (is_rigid==1 regions not subtracted)
@@ -13142,10 +13112,6 @@ contains
 !   F_ij^ref=reference volume fraction in cell
 !   F_ij^derived=derived volume fraction in cell for a given
 !     slope and intercept.
-!continuous_mof=4 
-!  use CLSVOF in 2 material cells and CMOF in >2 mat cells.
-!continuous_mof=5 => this is the value passed if just 2 materials in a cell
-!    and continuous_mof=4 originally.
 
 ! normal points from light to dark   phi=n dot (x-x0) + intercept
 ! vof, ref centroid, order,slope,intercept  x nmat
@@ -13155,10 +13121,6 @@ contains
 ! if continuous_mof=2:
 !  centroids: 3x3 super cell unless near Fsolid>1/2 cell (cmofsten)
 !  vfrac    : center cell
-! if continuous_mof=5:
-!  centroids: center cell
-!  vfrac    : center cell
-!  slopes   : level set 
 !
 ! RIGID materials are always reconstructed using standard MOF.
 !
@@ -13363,8 +13325,7 @@ contains
 
       if (continuous_mof.eq.2) then
        nhalf_box=3
-      else if ((continuous_mof.eq.0).or. &
-               (continuous_mof.eq.5)) then
+      else if (continuous_mof.eq.0) then
        nhalf_box=1
       else
        print *,"continuous_mof invalid"
@@ -13425,9 +13386,7 @@ contains
          lsnormal_valid(imaterial)=0
 
         else if ((continuous_mof.eq.0).or. &
-                 (continuous_mof.eq.2).or. &
-                 (continuous_mof.eq.4).or. &
-                 (continuous_mof.eq.5)) then
+                 (continuous_mof.eq.2)) then
  
           ! in multimaterial_MOF
           ! find n=grad phi/|grad phi| corresponding to "imaterial"
@@ -13510,9 +13469,7 @@ contains
        vofcomp=(imaterial-1)*ngeom_recon+1
 
        if ((continuous_mof.eq.0).or. &
-           (continuous_mof.eq.2).or. &
-           (continuous_mof.eq.4).or. &
-           (continuous_mof.eq.5)) then
+           (continuous_mof.eq.2)) then
         mofdata(vofcomp+sdim+1)=zero  ! order=0
         do dir=1,sdim
          mofdata(vofcomp+sdim+1+dir)=zero  ! slope=0 
@@ -13654,9 +13611,7 @@ contains
         endif
 
         if ((continuous_mof.eq.0).or. &
-            (continuous_mof.eq.2).or. &
-            (continuous_mof.eq.4).or. &
-            (continuous_mof.eq.5)) then
+            (continuous_mof.eq.2)) then
          order_algorithm_in(imaterial)=order_algorithm(imaterial)
  
          if (order_algorithm(imaterial).eq.0) then
@@ -13851,8 +13806,7 @@ contains
           ! no need to pick an optimal ordering
        if (n_ndef.eq.0) then
 
-        if ((continuous_mof.eq.0).or. &
-            (continuous_mof.eq.5)) then
+        if (continuous_mof.eq.0) then
 
          call Box_volumeFAST(bfact,dx,xsten0,nhalf0,uncaptured_volume_vof, &
           uncaptured_centroid_vof,sdim)
@@ -13930,8 +13884,7 @@ contains
           order_algorithm_in(imaterial)=placelist(irank)
          enddo ! iflex
         
-         if ((continuous_mof.eq.0).or. &
-             (continuous_mof.eq.5)) then
+         if (continuous_mof.eq.0) then
 
           call Box_volumeFAST( &
            bfact,dx,xsten0,nhalf0, &
