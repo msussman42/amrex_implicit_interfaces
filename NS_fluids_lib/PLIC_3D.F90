@@ -245,8 +245,8 @@ stop
        stop
       endif
       if ((continuous_mof.eq.0).or. & ! MOF
-          (continuous_mof.eq.2).or. & ! CMOF
-          (continuous_mof.eq.4)) then ! CLSVOF/CMOF
+          (continuous_mof.eq.1).or. & ! particle LS
+          (continuous_mof.eq.2)) then ! CMOF
        ! do nothing
       else
        print *,"continuous_mof invalid"
@@ -594,7 +594,16 @@ stop
          stop
         endif
 
-        continuous_mof_base=continuous_mof
+        if ((continuous_mof.eq.0).or. & !MOF
+            (continuous_mof.eq.2)) then !CMOF
+         continuous_mof_base=continuous_mof
+        else if (continuous_mof.eq.1) then !PLS
+         continuous_mof_base=0
+        else
+         print *,"continuous_mof invalid"
+         stop
+        endif
+
         if (mod_cmofsten.eq.1) then
          if (force_cmof_at_triple_junctions.eq.0) then
           ! do nothing
@@ -632,8 +641,7 @@ stop
            stop
           endif
 
-          if ((continuous_mof_base.eq.4).or. & ! CLSVOF 2 mat., CMOF > 2 mat
-              (continuous_mof_base.eq.2)) then ! CMOF
+          if (continuous_mof_base.eq.2) then ! CMOF
            if (nmat_in_cell.eq.nmat_in_stencil) then
             continuous_mof_parm=2 ! CMOF
            else if (nmat_in_cell.lt.nmat_in_stencil) then
@@ -653,10 +661,8 @@ stop
            print *,"nmat_in_cell invalid"
            stop
           endif
-          if (continuous_mof_base.eq.4) then ! CLSVOF if 2 materials in stencil
-           continuous_mof_parm=5
-          else if ((continuous_mof_base.eq.0).or. & ! MOF
-                   (continuous_mof_base.eq.2)) then ! CMOF
+          if ((continuous_mof_base.eq.0).or. & ! MOF
+              (continuous_mof_base.eq.2)) then ! CMOF
            if (continuous_mof_parm.ne.continuous_mof_base) then
             print *,"continuous_mof_parm.ne.continuous_mof_base"
             stop
@@ -914,8 +920,7 @@ stop
            stop
           endif 
          endif
-        else if ((continuous_mof_parm.eq.0).or. &
-                 (continuous_mof_parm.eq.5)) then
+        else if (continuous_mof_parm.eq.0) then
          ! do nothing
         else
          print *,"continuous_mof_parm invalid"
@@ -949,8 +954,7 @@ stop
            mofdata_super(vofcomprecon+dir)=mofdata(vofcomprecon+dir)
           enddo
          enddo ! im
-        else if ((continuous_mof_parm.eq.0).or. &
-                 (continuous_mof_parm.eq.5)) then
+        else if (continuous_mof_parm.eq.0) then
          ! do nothing
         else
          print *,"continuous_mof_parm invalid"

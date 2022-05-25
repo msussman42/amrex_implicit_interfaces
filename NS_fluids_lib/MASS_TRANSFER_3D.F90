@@ -7451,7 +7451,7 @@ stop
  
       ! vof,ref centroid,order,slope,intercept  x nmat
       ! LS_slopes_FD comes from FORT_FD_NORMAL (MOF_REDIST)
-      ! FORT_FD_NORMAL calls find_cut_geom_slope_CLSVOF:
+      ! fort_fd_normal calls find_cut_geom_slope_CLSVOF:
       ! finds grad phi/|grad phi| where grad=(d/dx,d/dy,d/dz) or
       ! grad=(d/dr,d/dz) or
       ! grad=(d/dr,d/dtheta,d/dz)
