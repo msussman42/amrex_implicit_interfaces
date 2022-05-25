@@ -20,7 +20,6 @@ geometry.prob_hi   =  6.0 60.0    # D* 4 4 20
 # 1=EILE (default), -1=Weymouth Yue
 # 2=always EI   3=always LE
 ns.EILE_flag=-1
-# 0=MOF  2=CMOF  4=hybrid CLSVOF+CMOF
 ns.continuous_mof=2
 ns.vof_height_function=1
 

@@ -12,7 +12,6 @@ geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  5.0e-3 7.5e-3   # MKS
 ns.EILE_flag=-1
 # OCT 2018  continuous_mof=2 CMOF everywhere 
-#           continuous_mof=4 CLSVOF in 2 material cells, CMOF in >2 mat cells
 ns.continuous_mof=2 
 ns.MOFITERMAX=15
 ns.minimum_relative_error=1.0e-22

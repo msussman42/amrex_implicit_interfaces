@@ -11,9 +11,8 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  4.8e-3 7.2e-3   # MKS
 ns.EILE_flag=-1
-# 4=CLSVOF in 2 material cells, and CMOF in >2 mat cells.
 # 2=CMOF
-ns.continuous_mof=4 
+ns.continuous_mof=2 
 ns.MOFITERMAX=15
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3
