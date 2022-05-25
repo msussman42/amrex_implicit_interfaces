@@ -12313,6 +12313,7 @@ END SUBROUTINE SIMP
            do n=1,VISUALCOMP_NCOMP_MAGVEL
             L1norm(ebase+n)=L1norm(ebase+n)/gridsum(im)
             L2norm(ebase+n)=sqrt(L2norm(ebase+n)/gridsum(im))
+            call print_visual_descriptor(im,n)
             print *,"im,n,cells,L1,L2,Linf,ic,jc,kc ", &
              im,n,gridsum(im), &
              L1norm(ebase+n),L2norm(ebase+n),Linfnorm(ebase+n), &

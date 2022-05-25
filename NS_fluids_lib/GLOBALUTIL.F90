@@ -5537,19 +5537,75 @@ end subroutine global_checkinplane
       return
       end subroutine matrix_inverse
 
+      subroutine print_visual_descriptor(im,n_fortran)
+      use probcommon_module
+      IMPLICIT NONE
 
+      INTEGER_T, intent(in) :: im,n_fortran
+      INTEGER_T :: n_cpp
+
+      if ((im.ge.1).and.(im.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"im invalid"
+       stop
+      endif
+
+      print *,"im=1..num_materials; im,num_materials:",im,num_materials
+
+      n_cpp=n_fortran-1
+
+      if (n_cpp.eq.VISUALCOMP_X) then
+       print *,"VISUAL X"
+      else if (n_cpp.eq.VISUALCOMP_Y) then
+       print *,"VISUAL Y"
+      else if ((n_cpp.eq.VISUALCOMP_Z).and.(SDIM.eq.3)) then
+       print *,"VISUAL Z"
+      else if (n_cpp.eq.VISUALCOMP_U) then
+       print *,"VISUAL U"
+      else if (n_cpp.eq.VISUALCOMP_V) then
+       print *,"VISUAL V"
+      else if ((n_cpp.eq.VISUALCOMP_W).and.(SDIM.eq.3)) then
+       print *,"VISUAL W"
+      else if (n_cpp.eq.VISUALCOMP_PMG) then
+       print *,"VISUAL PMG"
+      else if (n_cpp.eq.VISUALCOMP_DEN) then
+       print *,"VISUAL DEN"
+      else if (n_cpp.eq.VISUALCOMP_TEMP) then
+       print *,"VISUAL TEMP"
+      else if ((n_cpp.ge.VISUALCOMP_Y1).and. &
+               (n_cpp.le.VISUALCOMP_Y1+num_species_var-1)) then
+       print *,"VISUAL Y species component(1..num_species_var)=", &
+               n_cpp-VISUALCOMP_Y1+1
+      else if (n_cpp.eq.VISUALCOMP_VORTMAG) then
+       print *,"VISUAL VORTMAG"
+      else if ((n_cpp.ge.VISUALCOMP_LS).and. &
+               (n_cpp.le.VISUALCOMP_LS+num_materials-1)) then
+       print *,"VISUAL LS material component(1..nmat)=",n_cpp-VISUALCOMP_LS+1
+      else if (n_cpp.eq.VISUALCOMP_MAGVEL) then
+       print *,"VISUAL MAGVEL"
+      else
+       print *,"n_cpp out of range"
+       stop
+      endif
+
+      return
+      end subroutine print_visual_descriptor
 
       subroutine least_squares_interp(npoints,x0,xpos,wts,vals, &
        order,linearflag,coeffs,ncoeffs,sdim_parm)
       IMPLICIT NONE
 
-      INTEGER_T npoints,order,ncoeffs,sdim_parm
-      INTEGER_T linearflag
-      REAL_T x0(sdim_parm)
-      REAL_T xpos(npoints,sdim_parm)
-      REAL_T wts(npoints)
-      REAL_T vals(npoints)
-      REAL_T coeffs(ncoeffs)
+      INTEGER_T, intent(in) :: ncoeffs
+      INTEGER_T, intent(in) :: order
+      INTEGER_T, intent(in) :: npoints
+      INTEGER_T, intent(in) :: sdim_parm
+      INTEGER_T, intent(in) :: linearflag
+      REAL_T, intent(in) :: x0(sdim_parm)
+      REAL_T, intent(in) :: xpos(npoints,sdim_parm)
+      REAL_T, intent(in) :: wts(npoints)
+      REAL_T, intent(in) :: vals(npoints)
+      REAL_T, intent(out) :: coeffs(ncoeffs)
       REAL_T AA(ncoeffs,ncoeffs)
       REAL_T BB(ncoeffs)
       INTEGER_T ncoeffs_test
