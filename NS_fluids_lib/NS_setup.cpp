@@ -1251,6 +1251,11 @@ NavierStokes::variableSetUp ()
       } else 
        amrex::Error("dir invalid ns_setup");
 
+      if (dcomp==imls*AMREX_SPACEDIM+dir) {
+       // do nothing
+      } else
+       amrex::Error("dcomp invalid");
+
       desc_lstGHOST.setComponent(LS_Type,dcomp,
         nrm_extrap_str,bc,fort_extrapfill,&pc_interp);
  
