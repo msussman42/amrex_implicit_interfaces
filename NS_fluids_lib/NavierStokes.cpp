@@ -10559,6 +10559,14 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
 
  int finest_level=parent->finestLevel();
 
+ if ((fill_state_idx==TensorXU_Type)||
+     (fill_state_idx==TensorYU_Type)||
+     ((fill_state_idx==TensorZU_Type)&&(AMREX_SPACEDIM==3))||
+     ((fill_state_idx==TensorZV_Type)&&(AMREX_SPACEDIM==3))) {
+  //do nothing
+ } else
+  amrex::Error("fill_state_idx invalid");
+
  if (level==0) {
   // do nothing
  } else
@@ -13788,6 +13796,7 @@ NavierStokes::level_phase_change_rate_extend() {
   } else
    amrex::Error("velflag invalid");
 
+   //scomp=0
   PCINTERP_fill_borders(local_mf,ngrow_make_distance,
    0,ncomp,State_Type,scompBC_map);
 
@@ -13869,6 +13878,7 @@ NavierStokes::level_phase_change_rate_extend() {
   for (int imdest=0;imdest<ncomp;imdest++)
    scompBC_map[imdest]=extend_start_pos+imdest;
 
+    //scomp=0
   PCINTERP_fill_borders(local_mf,ngrow_make_distance,
    0,ncomp,State_Type,scompBC_map);
 
@@ -13932,6 +13942,7 @@ NavierStokes::level_DRAG_extend() {
  for (int imdest=0;imdest<ncomp;imdest++)
   scompBC_map[imdest]=extend_start_pos+imdest;
 
+  //scomp=0
  PCINTERP_fill_borders(DRAG_MF,ngrow_make_distance,
    0,ncomp,State_Type,scompBC_map);
 
@@ -14015,6 +14026,7 @@ NavierStokes::level_DRAG_extend() {
  for (int imdest=0;imdest<ncomp;imdest++)
   scompBC_map[imdest]=extend_start_pos+imdest;
 
+   //scomp=0
  PCINTERP_fill_borders(DRAG_MF,ngrow_make_distance,
    0,ncomp,State_Type,scompBC_map);
 
@@ -14122,28 +14134,33 @@ NavierStokes::level_phase_change_convertALL() {
        Vector<int> scompBC_map;
        scompBC_map.resize(1);
        debug_ngrow(DEN_RECON_MF,1,30);
+
        int dstcomp=(im_current-1)*num_state_material;
        int srccomp=STATECOMP_STATES+(im_current-1)*num_state_material;
+
        // density
        // spectral_override==0 => always low order
-       avgDown_localMF_ALL(DEN_RECON_MF,dstcomp,1,1);
-       scompBC_map[0]=srccomp;
+       avgDown_localMF_ALL(DEN_RECON_MF,dstcomp+ENUM_DENVAR,1,1);
+       scompBC_map[0]=srccomp+ENUM_DENVAR;
+        //ngrow=1 scomp=dstcomp+ENUM_DENVAR ncomp=1
        GetStateFromLocalALL(DEN_RECON_MF,1,
-	  dstcomp,1,State_Type,scompBC_map);
+	  dstcomp+ENUM_DENVAR,1,State_Type,scompBC_map);
+
        // temperature
-       avgDown_localMF_ALL(DEN_RECON_MF,dstcomp+1,1,1);
-       scompBC_map[0]=srccomp+1;
+       avgDown_localMF_ALL(DEN_RECON_MF,dstcomp+ENUM_TEMPERATUREVAR,1,1);
+       scompBC_map[0]=srccomp+ENUM_TEMPERATUREVAR;
+        //ngrow=1 scomp=dstcomp+ENUM_TEMPERATUREVAR ncomp=1
        GetStateFromLocalALL(DEN_RECON_MF,1,
-	  dstcomp+1,1,State_Type,scompBC_map);
+	  dstcomp+ENUM_TEMPERATUREVAR,1,State_Type,scompBC_map);
 
        int ispec=mass_fraction_id[iten-1];
        if (ispec==0) {
         // do nothing
        } else if ((ispec>=1)&&(ispec<=num_species_var)) {
-        avgDown_localMF_ALL(DEN_RECON_MF,dstcomp+1+ispec,1,1);
-        scompBC_map[0]=srccomp+1+ispec;
+        avgDown_localMF_ALL(DEN_RECON_MF,dstcomp+ENUM_SPECIESVAR+ispec-1,1,1);
+        scompBC_map[0]=srccomp+ENUM_SPECIESVAR+ispec-1;
         GetStateFromLocalALL(DEN_RECON_MF,1,
- 	   dstcomp+1+ispec,1,State_Type,scompBC_map);
+ 	   dstcomp+ENUM_SPECIESVAR+ispec-1,1,State_Type,scompBC_map);
        } else
         amrex::Error("ispec invalid");
       } // im_count=0,1
@@ -14155,6 +14172,7 @@ NavierStokes::level_phase_change_convertALL() {
       for (int im_group=0;im_group<nmat*(AMREX_SPACEDIM+1);im_group++)
        scompBC_map_LS[im_group]=im_group;
       debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
+       //scomp=0
       GetStateFromLocalALL(HOLD_LS_DATA_MF,ngrow_distance,
          0,nmat*(AMREX_SPACEDIM+1),LS_Type,scompBC_map_LS);
 
@@ -25073,6 +25091,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
    Vector<int> scompBC_map;
    scompBC_map.resize(1);
    scompBC_map[0]=0;
+    //scomp=i ncomp=1
    PCINTERP_fill_coarse_patch(DIST_TOUCH_MF,i,
      1,State_Type,scompBC_map);
   } // i=0..nmat-1

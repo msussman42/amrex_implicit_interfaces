@@ -3092,6 +3092,7 @@ void NavierStokes::VELMAC_TO_CELLALL(
       (vel_or_disp==-1)) { //velocity increment
    for (int dir=0;dir<AMREX_SPACEDIM;dir++)
     scompBC_map[dir]=dir;
+    //scomp=0
    GetStateFromLocalALL(dest_idx,localMF[dest_idx]->nGrow(),0,
      AMREX_SPACEDIM,State_Type,scompBC_map);
   } else if (vel_or_disp==1) { // displacement
@@ -3106,6 +3107,7 @@ void NavierStokes::VELMAC_TO_CELLALL(
 
     // there is no cell centered displacement, so PCINTERP_fill_bordersALL
     // must be called instead of GetStateFromLocalALL
+    // scomp=0
    PCINTERP_fill_bordersALL(dest_idx,localMF[dest_idx]->nGrow(),0,
      AMREX_SPACEDIM,State_Type,scompBC_map);
   } else
@@ -5805,7 +5807,7 @@ void NavierStokes::init_gravity_potential() {
 
    int extrap_enable_spectral=enable_spectral;
    override_enable_spectralGHOST(0,1,extrap_enable_spectral);
-    //ngrow=1
+    //ngrow=1  scomp=0  ncomp=2
    PCINTERP_fill_borders(HYDROSTATIC_PRESDEN_MF,1,0,2,
      State_Type,scompBC_map);
    
@@ -8456,6 +8458,7 @@ void NavierStokes::VOF_Recon_resize(int ngrow,int dest_mf) {
   scompBC_map.resize(nmat*ngeom_recon);
   for (int i=0;i<nmat*ngeom_recon;i++)
    scompBC_map[i]=i+1+AMREX_SPACEDIM;
+   //scomp=0
   PCINTERP_fill_borders(dest_mf,ngrow,0,nmat*ngeom_recon,
     State_Type,scompBC_map);
  
@@ -8664,6 +8667,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
   }
  }
 
+  //scomp=0
  PCINTERP_fill_borders(dest_mf,ngrow,0,nmat*ngeom_recon,
    State_Type,scompBC_map);
 
