@@ -7535,8 +7535,8 @@ stop
        burnvel,DIMS(burnvel), &
        Tsatfab,DIMS(Tsatfab), &
        smoothfab,DIMS(smoothfab), &
-       LS,DIMS(LS),  &
-       LSnew,DIMS(LSnew), & 
+       LS,DIMS(LS),  & !if nucleation_flag==0: localMF[HOLD_LS_DATA_MF]
+       LSnew,DIMS(LSnew), & ! get_new_data(LS_Type,slab_step+1);
        Snew,DIMS(Snew), & 
        LS_slopes_FD, &
        DIMS(LS_slopes_FD), & 
