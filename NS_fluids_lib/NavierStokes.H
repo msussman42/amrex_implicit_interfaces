@@ -447,9 +447,9 @@ protected:
 
     void getStateDen_localMF(int idx_MF,int ngrow,Real time);
     void getStateDist_localMF(int idx_MF,int ngrow,Real time,int caller_id);
-    void resize_levelsetLO(int ngrow,int idx);
-    void allocate_levelsetLO(int ngrow,int idx);
-    void allocate_levelsetLO_ALL(int ngrow,int idx);
+    void resize_levelset(int ngrow,int idx);
+    void allocate_levelset(int ngrow,int idx);
+    void allocate_levelset_ALL(int ngrow,int idx);
 
     void getState_localMF(int idx_MF,int ngrow,
      int scomp,int ncomp,Real time);
@@ -551,7 +551,6 @@ protected:
     static void override_enable_spectral(int enable_spectral_in);
     static void override_enable_spectralGHOST(
         int scomp,int ncomp,int enable_spectral_in);
-    static void override_LS_HO(int Interp_LO); //0=use normals 1=PC
 
     static void set_tensor_extrap_components(
       int coord,std::string postfix,int indx,int ibase_tensor);

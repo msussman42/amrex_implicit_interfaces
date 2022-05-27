@@ -2211,7 +2211,7 @@ void NavierStokes::SEM_advectALL(int source_term) {
       ns_level.new_localMF(COARSE_FINE_FLUX_MF+dir,NFLUXSEM,0,dir);
       ns_level.setVal_localMF(COARSE_FINE_FLUX_MF+dir,1.0e+40,0,NFLUXSEM,0);
      } // dir=0..sdim-1
-     ns_level.resize_levelsetLO(2,LEVELPC_MF);
+     ns_level.resize_levelset(2,LEVELPC_MF);
      ns_level.VOF_Recon_resize(1,SLOPE_RECON_MF);
      ns_level.resize_maskfiner(1,MASKCOEF_MF);
      ns_level.resize_mask_nbr(1);
@@ -2698,7 +2698,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
 
      // in: NavierStokes::do_the_advance
-    allocate_levelsetLO_ALL(1,LEVELPC_MF);
+    allocate_levelset_ALL(1,LEVELPC_MF);
 
     if ((ns_time_order==1)&&(enable_spectral!=0))
      amrex::Error("(ns_time_order==1)&&(enable_spectral!=0)");
@@ -3090,7 +3090,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // piecewise constant interpolation at coarse/fine borders.
         // fluid LS can be positive in the solid regions.
         // HOLD_LS_DATA_MF is deleted in phase_change_redistributeALL()
-       allocate_levelsetLO_ALL(ngrow_distance,HOLD_LS_DATA_MF);
+       allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_MF);
        if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
         amrex::Error("hold_LS_DATA_MF (nComp()) !=nmat*(AMREX_SPACEDIM+1)");
        debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
@@ -10068,7 +10068,7 @@ void NavierStokes::multiphase_project(int project_option) {
   if (ns_level.localMF[STATE_FOR_RESID_MF]->nComp()!=nsolve)
    amrex::Error("ns_level.localMF[STATE_FOR_RESID_MF]->nComp()!=nsolve");
 
-  ns_level.resize_levelsetLO(2,LEVELPC_MF);
+  ns_level.resize_levelset(2,LEVELPC_MF);
   ns_level.debug_ngrow(LEVELPC_MF,2,870);
  } // ilev=finest_level ... level
 
@@ -11761,7 +11761,7 @@ void NavierStokes::diffusion_heatingALL(
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.resize_levelsetLO(2,LEVELPC_MF);
+  ns_level.resize_levelset(2,LEVELPC_MF);
   ns_level.debug_ngrow(LEVELPC_MF,2,840);
   ns_level.VOF_Recon_resize(1,SLOPE_RECON_MF);
   ns_level.debug_ngrow(SLOPE_RECON_MF,1,841);

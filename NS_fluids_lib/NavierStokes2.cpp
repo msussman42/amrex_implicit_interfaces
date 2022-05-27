@@ -1602,7 +1602,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
  } else
   amrex::Error("partid invalid");
 
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,103);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
@@ -1882,7 +1882,7 @@ void NavierStokes::init_divup_cell_vel_cell(
    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
  }
 
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
 
  debug_ngrow(LEVELPC_MF,2,103);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
@@ -2680,7 +2680,7 @@ void NavierStokes::increment_face_velocity(
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,110);
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,111);
@@ -3179,7 +3179,7 @@ void NavierStokes::VELMAC_TO_CELL(
    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
  }
 
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,103);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
@@ -3630,7 +3630,7 @@ void NavierStokes::doit_gradu_tensor(
  resize_mask_nbr(1);
  resize_metrics(1);
  VOF_Recon_resize(2,SLOPE_RECON_MF);
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
 
  debug_ngrow(MASKCOEF_MF,1,845);
  debug_ngrow(VOLUME_MF,1,845);
@@ -4248,7 +4248,7 @@ void NavierStokes::apply_pressure_grad(
   if (localMF[SEM_FLUXREG_MF]->nComp()!=ntensor)
    amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid5");
 
-  resize_levelsetLO(2,LEVELPC_MF);
+  resize_levelset(2,LEVELPC_MF);
   debug_ngrow(LEVELPC_MF,2,110);
 
    // 1. spectral_loop==0 tileloop==0  low order grad U+grad U^T
@@ -4442,7 +4442,7 @@ void NavierStokes::apply_pressure_grad(
   for (int m=0;m<2*AMREX_SPACEDIM;m++)
    dombcpres[m]=b_rec[m];
 
-  resize_levelsetLO(2,LEVELPC_MF);
+  resize_levelset(2,LEVELPC_MF);
 
   allocate_flux_register(operation_flag);
   if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM)
@@ -4720,7 +4720,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
   // in: NavierStokes::make_physics_varsALL
   // piecewise constant interpolation.
- allocate_levelsetLO_ALL(1,LEVELPC_MF);
+ allocate_levelset_ALL(1,LEVELPC_MF);
 
    // create DIST_CURV_MF 
 
@@ -4893,7 +4893,7 @@ void NavierStokes::allocate_physics_vars() {
 
 } // allocate_physics_vars
 
-void NavierStokes::allocate_levelsetLO_ALL(int ngrow,int idx) {
+void NavierStokes::allocate_levelset_ALL(int ngrow,int idx) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
@@ -4904,12 +4904,12 @@ void NavierStokes::allocate_levelsetLO_ALL(int ngrow,int idx) {
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.allocate_levelsetLO(ngrow,idx);
+  ns_level.allocate_levelset(ngrow,idx);
  }
 
-}  // allocate_levelsetLO_ALL
+}  // allocate_levelset_ALL
 
-void NavierStokes::allocate_levelsetLO(int ngrow,int idx) {
+void NavierStokes::allocate_levelset(int ngrow,int idx) {
 
  int nmat=num_materials;
 
@@ -4922,10 +4922,10 @@ void NavierStokes::allocate_levelsetLO(int ngrow,int idx) {
   amrex::Error("localMF[idx]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
  debug_ngrow(idx,ngrow,90);
 
-} // subroutine allocate_levelsetLO
+} // subroutine allocate_levelset
 
 
-void NavierStokes::resize_levelsetLO(int ngrow,int idx) {
+void NavierStokes::resize_levelset(int ngrow,int idx) {
 
  if ((ngrow<0)||(ngrow>ngrow_distance))
   amrex::Error("ngrow invalid");
@@ -4933,7 +4933,7 @@ void NavierStokes::resize_levelsetLO(int ngrow,int idx) {
  if (localMF_grow[idx]>=0) {
   // do nothing
  } else {
-  std::cout << "in resize_levelsetLO  ngrow= " << ngrow << 
+  std::cout << "in resize_levelset  ngrow= " << ngrow << 
    " idx= " << idx << '\n';
   std::cout << "localMF_grow[idx] = " << localMF_grow[idx] << '\n';
   amrex::Error("localMF_grow[idx]<0");
@@ -4942,10 +4942,10 @@ void NavierStokes::resize_levelsetLO(int ngrow,int idx) {
  if (localMF[idx]->nGrow()==ngrow) {
   // do nothing
  } else {
-  allocate_levelsetLO(ngrow,idx);
+  allocate_levelset(ngrow,idx);
  }
 
-} // subroutine resize_levelsetLO
+} // subroutine resize_levelset
 
 // called from make_physics_varsALL
 // density vars get 1/rho
@@ -5129,7 +5129,7 @@ void NavierStokes::make_physics_vars(int project_option) {
 } // omp
  ns_reconcile_d_num(144);
 
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
 
  Vector< Real > local_curv_min;
  Vector< Real > local_curv_max;
@@ -5882,7 +5882,7 @@ void NavierStokes::process_potential_force_face() {
  resize_mask_nbr(1);
  VOF_Recon_resize(1,SLOPE_RECON_MF);
  resize_metrics(1);
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
 
  debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
@@ -8936,7 +8936,7 @@ MultiFab* NavierStokes::derive_EOS_pressure(Vector<int> local_material_type) {
   std::cout << "in: derive_EOS_pressure\n";
   amrex::Error("localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
  }
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,662);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
@@ -9047,7 +9047,7 @@ void NavierStokes::init_pressure_error_indicator() {
  if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
   amrex::Error("localMF[SLOPERECON_MF]->nComp() invalid");
 
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,665);
 
  if (num_state_base!=2)

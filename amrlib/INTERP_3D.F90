@@ -471,8 +471,7 @@ stop
       end subroutine fort_multimofinterp
 
 
-      subroutine fort_lshointerp( &
-       LSHOInterp_LO, &
+      subroutine fort_lsinterp( &
        clsdata,DIMS(clsdata), &
        clo,chi, &
        flsdata,DIMS(flsdata), &
@@ -483,7 +482,7 @@ stop
        ncomp, &
        levelc,levelf, &
        bfact_coarse,bfact_fine) &
-      bind(c,name='fort_lshointerp')
+      bind(c,name='fort_lsinterp')
 
       use geometry_intersect_module
       use MOF_routines_module
@@ -492,7 +491,6 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: LSHOInterp_LO
       INTEGER_T, intent(in) :: levelc,levelf
       INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
       INTEGER_T, intent(in) :: nmat,ncomp
@@ -513,7 +511,7 @@ stop
       INTEGER_T ic,jc,kc
       REAL_T testwt
 
-      INTEGER_T dir,dir2
+      INTEGER_T dir
       REAL_T volcell
       REAL_T cencell(SDIM)
       REAL_T volfine
@@ -528,11 +526,8 @@ stop
       INTEGER_T nhalf
       INTEGER_T nhalfgrid
       INTEGER_T n_overlap
-      REAL_T LSHO_FINE(ncomp)
-      REAL_T LSHO_COARSE(ncomp)
-      REAL_T LSBASE
-      REAL_T nrm_mat(SDIM)
-      REAL_T RR,mag
+      REAL_T LS_FINE(ncomp)
+      REAL_T LS_COARSE(ncomp)
 
       INTEGER_T tid
 #ifdef _OPENMP
@@ -553,10 +548,6 @@ stop
 
       if (ncomp.ne.(SDIM+1)*nmat) then
        print *,"ncomp invalid"
-       stop
-      endif
-      if ((LSHOInterp_LO.ne.0).and.(LSHOInterp_LO.ne.1)) then
-       print *,"LSHOInterp_LO invalid"
        stop
       endif
       if ((levelc.ne.levelf-1).or.(levelc.lt.0)) then
@@ -596,7 +587,7 @@ stop
          volfine,cenfine,SDIM)
 
        do dir=1,ncomp
-        LSHO_FINE(dir)=zero
+        LS_FINE(dir)=zero
        enddo
 
        volcell=zero
@@ -636,7 +627,7 @@ stop
               n_overlap=n_overlap+1
 
               do dir=1,ncomp
-               LSHO_COARSE(dir)=clsdata(D_DECL(ic,jc,kc),dir)
+               LS_COARSE(dir)=clsdata(D_DECL(ic,jc,kc),dir)
               enddo
 
               call gridsten(xsten,problo,ic,jc,kc, &
@@ -669,35 +660,12 @@ stop
 
                ! normals
               do dir=nmat+1,ncomp
-               LSHO_FINE(dir)=LSHO_FINE(dir)+voltemp*LSHO_COARSE(dir) 
+               LS_FINE(dir)=LS_FINE(dir)+voltemp*LS_COARSE(dir) 
               enddo
 
                ! levelsets
               do dir=1,nmat
-               LSBASE=LSHO_COARSE(dir)
-
-               if (LSHOInterp_LO.eq.0) then
-
-                do dir2=1,SDIM
-                 nrm_mat(dir2)=LSHO_COARSE(nmat+SDIM*(dir-1)+dir2)
-                enddo
-
-                RR=one
-                call prepare_normal(nrm_mat,RR,mag)
-
-                do dir2=1,SDIM
-                 LSBASE=LSBASE+(xstengrid(0,dir2)-xsten(0,dir2))* &
-                  nrm_mat(dir2)
-                enddo
-
-               else if (LSHOInterp_LO.eq.1) then
-                ! do nothing
-               else
-                print *,"LSHOInterp invalid"
-                stop
-               endif
-
-               LSHO_FINE(dir)=LSHO_FINE(dir)+voltemp*LSBASE
+               LS_FINE(dir)=LS_FINE(dir)+voltemp*LS_COARSE(dir)
               enddo ! dir=1..nmat
  
              else if (testwt.eq.zero) then
@@ -739,7 +707,7 @@ stop
        endif
 
        do dir=1,ncomp
-        flsdata(D_DECL(ifine,jfine,kfine),dir)=LSHO_FINE(dir)/volcell
+        flsdata(D_DECL(ifine,jfine,kfine),dir)=LS_FINE(dir)/volcell
        enddo 
 
       enddo
@@ -747,7 +715,7 @@ stop
       enddo ! ifine,jfine,kfine
  
       return 
-      end subroutine fort_lshointerp
+      end subroutine fort_lsinterp
 
 
 

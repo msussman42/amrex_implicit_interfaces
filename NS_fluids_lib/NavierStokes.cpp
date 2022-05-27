@@ -11234,7 +11234,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
     amrex::Error("cell_visc_material ncomp invalid (3)");
    }
 
-   resize_levelsetLO(2,LEVELPC_MF);
+   resize_levelset(2,LEVELPC_MF);
    debug_ngrow(LEVELPC_MF,2,5);
    if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
     amrex::Error("localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
@@ -11370,7 +11370,7 @@ void NavierStokes::make_marangoni_force() {
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,5);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("localMF[LEVELPC_MF]->nComp() invalid");
@@ -11700,7 +11700,7 @@ void NavierStokes::make_heat_source() {
 
  VOF_Recon_resize(1,SLOPE_RECON_MF);
  debug_ngrow(SLOPE_RECON_MF,1,3);
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,5);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("localMF[LEVELPC_MF]->nComp() invalid");
@@ -12254,7 +12254,7 @@ void NavierStokes::tensor_advection_update() {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2);
 
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,8);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
@@ -12947,7 +12947,7 @@ NavierStokes::prepare_displacement(int mac_grow) {
 }  // end subroutine prepare_displacement
 
 //if nucleation_flag==0, then prior to call:
-// allocate_levelsetLO_ALL(ngrow_distance,HOLD_LS_DATA_MF);
+// allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_MF);
 void
 NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 	int color_count,int nucleation_flag) {
@@ -13469,7 +13469,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    if (conductivity_fab.nComp()!=nmat)
     amrex::Error("conductivity_fab.nComp()!=nmat");
 
-   int stefan_flag=1;
    Vector<int> use_exact_temperature(2*nten);
    for (int im=0;im<2*nten;im++)
     use_exact_temperature[im]=0;
@@ -13511,14 +13510,12 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
     FArrayBox& curvfab=(*localMF[FD_CURV_CELL_MF])[mfi];
 
-     // if stefan_flag==1:
      // lsnewfab and burnvelfab are updated.
      // lsfab is not updated.
      // burnvelfab=BURNING_VELOCITY_MF is cell centered velocity.
     fort_ratemasschange( 
      &tid_current,
      &nucleation_flag,
-     &stefan_flag,
      &level,
      &finest_level,
      &ngrow_distance,
@@ -13610,7 +13607,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     fort_ratemasschange( 
      &tid_current,
      &nucleation_flag,
-     &stefan_flag,
      &level,
      &finest_level,
      &ngrow_distance,
@@ -17820,7 +17816,7 @@ void NavierStokes::GetDragALL() {
   ns_level.avgDownDRAG_MF();
  }
 
- allocate_levelsetLO_ALL(ngrow_distance,HOLD_LS_DATA_MF);
+ allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_MF);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("hold_LS_DATA_MF (nComp()) !=nmat*(AMREX_SPACEDIM+1)");
  debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
@@ -17924,7 +17920,7 @@ NavierStokes::GetDrag(int isweep) {
 
  debug_ngrow(CELLTENSOR_MF,1,45);
  debug_ngrow(FACETENSOR_MF,1,45);
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,45);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM))
   amrex::Error("levelpc mf has incorrect ncomp");
@@ -19891,7 +19887,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   // (plot_sdim_macro declared up above)
  allocate_array(1,PLOTCOMP_NCOMP,-1,MULTIFAB_TOWER_PLT_MF);
 
- allocate_levelsetLO_ALL(1,LEVELPC_MF);
+ allocate_levelset_ALL(1,LEVELPC_MF);
 
 // HOLD_VELOCITY_DATA_MF not already allocated,
 // so "init_gradu_tensorALL" needs to allocate HOLD_VELOCITY_DATA_MF
@@ -22288,7 +22284,7 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
  } else
   amrex::Error("post_init_flag invalid 20982");
 
- allocate_levelsetLO_ALL(2,LEVELPC_MF);
+ allocate_levelset_ALL(2,LEVELPC_MF);
 
  if (fast_mode==0) {
   //make_physics_varsALL calls "init_gradu_tensor_and_material_visc_ALL"
@@ -22705,7 +22701,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
    // do nothing
   } else if (post_init_flag==0) { // called from writePlotFile
     // in: NavierStokes::prepare_post_process
-   ns_level.allocate_levelsetLO(1,LEVELPC_MF);
+   ns_level.allocate_levelset(1,LEVELPC_MF);
   } else
    amrex::Error("post_init_flag invalid 21362");
    
@@ -22802,7 +22798,7 @@ NavierStokes::accumulate_PC_info(
  } else 
   amrex::Error("level invalid");
 
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,8);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
@@ -22970,7 +22966,7 @@ NavierStokes::accumulate_info_no_particles(int im_elastic) {
  } else 
   amrex::Error("level invalid");
 
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,8);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
@@ -23105,7 +23101,7 @@ void NavierStokes::assimilate_vel_from_particles(
  } else
   amrex::Error("level out of range");
 
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,8);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
@@ -25950,7 +25946,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
 
  resize_metrics(1);
 
- resize_levelsetLO(ngrow_distance,LEVELPC_MF);
+ resize_levelset(ngrow_distance,LEVELPC_MF);
 
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM))
   amrex::Error("localMF[LEVELPC_MF]->nComp() invalid");

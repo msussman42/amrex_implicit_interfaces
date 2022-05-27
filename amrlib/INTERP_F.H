@@ -58,8 +58,7 @@ extern "C"
      int* levelc,int* levelf,
      int* bfactc,int* bfactf);
 
-    void fort_lshointerp(
-       int* LSHOInterp_LO,
+    void fort_lsinterp(
        const Real* crse, AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
        const int* clo, const int* chi,
        Real*  fine, AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),

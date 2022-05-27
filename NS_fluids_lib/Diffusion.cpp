@@ -351,7 +351,7 @@ void NavierStokes::viscous_boundary_fluxes(
   VOF_Recon_resize(1,SLOPE_RECON_MF);
   debug_ngrow(SLOPE_RECON_MF,1,820);
 
-  resize_levelsetLO(2,LEVELPC_MF);
+  resize_levelset(2,LEVELPC_MF);
   debug_ngrow(LEVELPC_MF,2,120);
   if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM))
    amrex::Error("levelpc mf has incorrect ncomp");
@@ -612,7 +612,7 @@ void NavierStokes::combine_state_variable(
  if ((combine_flag==0)||  // FVM -> GFM
      (combine_flag==1)) { // GFM -> FVM
 
-  resize_levelsetLO(2,LEVELPC_MF);
+  resize_levelset(2,LEVELPC_MF);
   LEVEL_COMBINE=localMF[LEVELPC_MF];
 
   if (interface_cond_avail==1) {
@@ -639,7 +639,7 @@ void NavierStokes::combine_state_variable(
   if (update_flux==0) {
    LEVEL_COMBINE=&LS_new;
   } else if (update_flux==1) {
-   resize_levelsetLO(2,LEVELPC_MF);
+   resize_levelset(2,LEVELPC_MF);
    LEVEL_COMBINE=localMF[LEVELPC_MF];
    debug_ngrow(LEVELPC_MF,2,830);
   } else
@@ -1050,7 +1050,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  debug_ngrow(idx_heat,0,4);
  debug_ngrow(source_idx,1,842);
  debug_ngrow(CELLTENSOR_MF,1,6);
- resize_levelsetLO(2,LEVELPC_MF);
+ resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,5);
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,845);

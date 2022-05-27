@@ -14,8 +14,7 @@ namespace amrex {
 //
 PCInterpNull              pc_interp_null;
 PCInterp                  pc_interp;
-LSHOInterp                ls_ho_interp_LOW_PARM;
-LSHOInterp                ls_ho_interp_HIGH_PARM;
+LSInterp                  ls_interp;
 SEMInterp                 sem_interp_DEFAULT;
 SEMInterp                 sem_interp_LOW_PARM;
 SEMInterp                 sem_interp_HIGH_PARM;
@@ -637,10 +636,10 @@ PCInterp::interp (
 }
 
 
-LSHOInterp::~LSHOInterp () {}
+LSInterp::~LSInterp () {}
 
 Box
-LSHOInterp::CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)
+LSInterp::CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)
 {
  if ((bfactc<1)||(bfactf<1))
   amrex::Error("bfactc or bfactf invalid");
@@ -667,7 +666,7 @@ LSHOInterp::CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)
 }
 
 void
-LSHOInterp::interp (
+LSInterp::interp (
  Real time,
  const FArrayBox& crse,
  int              crse_comp,
@@ -705,20 +704,16 @@ LSHOInterp::interp (
  const Real* dxf = fine_geom.CellSize();
  const Real* dxc = crse_geom.CellSize();
 
- int nmat=LSHOInterp_nmat;
-
- if ((LSHOInterp_LO!=0)&&(LSHOInterp_LO!=1))
-  amrex::Error("LSHOInterp_LO invalid");
+ int nmat=LSInterp_nmat;
 
  if (nmat<1)
-  amrex::Error("nmat invalid in ls ho interp");
+  amrex::Error("nmat invalid in ls interp");
  if (ncomp!=(AMREX_SPACEDIM+1)*nmat) {
   std::cout << "ncomp " << ncomp << '\n';
-  amrex::Error("must interpolate all ls ho data at once");
+  amrex::Error("must interpolate all ls data at once");
  }
 
- fort_lshointerp (
-  &LSHOInterp_LO,
+ fort_lsinterp (
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
   clo,chi,
   fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
@@ -730,7 +725,7 @@ LSHOInterp::interp (
   &levelc,&levelf,
   &bfactc,&bfactf);
 
-} //subroutine LSHOInterp::interp
+} //subroutine LSInterp::interp
 
 
 

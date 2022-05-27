@@ -7470,7 +7470,6 @@ stop
       subroutine fort_ratemasschange( &
        tid, &
        nucleation_flag, &
-       stefan_flag, &  ! do not update LSnew if stefan_flag==0
        level, &
        finest_level, &
        ngrow_distance_in, &
@@ -7563,7 +7562,6 @@ stop
 
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: nucleation_flag
-      INTEGER_T, intent(in) :: stefan_flag
       INTEGER_T, target, intent(in) :: level
       INTEGER_T, target, intent(in) :: finest_level
       INTEGER_T :: local_probe_constrain
@@ -7752,7 +7750,7 @@ stop
       INTEGER_T local_Tanasawa_or_Schrage_or_Kassemi
       INTEGER_T distribute_from_targ
       INTEGER_T vofcomp_source,vofcomp_dest
-      REAL_T Fsource,Fdest
+      REAL_T Fsource,Fdest ! used for the hydrate model
       REAL_T LSSIGN,SIGNVEL
       INTEGER_T found_path
       INTEGER_T, target :: debugrate
@@ -7867,13 +7865,6 @@ stop
       endif
 
       Y_TOLERANCE=0.01D0
-
-      if ((stefan_flag.eq.0).or.(stefan_flag.eq.1)) then
-       ! do nothing
-      else
-       print *,"stefan_flag invalid"
-       stop
-      endif
 
       if ((use_supermesh.eq.0).or. &
           (use_supermesh.eq.1)) then
@@ -9936,9 +9927,7 @@ stop
                   if (dt.gt.zero) then
                    if (dxmin.gt.zero) then
                     if (vel_phasechange(ireverse).ge.dxmin/(two*dt)) then
-                     if (stefan_flag.eq.1) then
-                      vel_phasechange(ireverse)=dxmin/(two*dt)
-                     endif
+                     vel_phasechange(ireverse)=dxmin/(two*dt)
                     else if (vel_phasechange(ireverse).ge.zero) then
                      ! do nothing
                     else
@@ -10068,17 +10057,10 @@ stop
               stop
              endif
 
-             if (stefan_flag.eq.1) then
-              LSnew(D_DECL(i,j,k),im_source)= &
+             LSnew(D_DECL(i,j,k),im_source)= &
                LSnew(D_DECL(i,j,k),im_source)-dt*vel_phasechange(ireverse)
-              LSnew(D_DECL(i,j,k),im_dest)= &
+             LSnew(D_DECL(i,j,k),im_dest)= &
                LSnew(D_DECL(i,j,k),im_dest)+dt*vel_phasechange(ireverse)
-             else if (stefan_flag.eq.0) then
-              ! do nothing
-             else
-              print *,"stefan_flag invalid in rate mass change"
-              stop
-             endif
 
              do dir=1,SDIM
               if (LShere(im_dest).ge.zero) then
@@ -10210,52 +10192,45 @@ stop
               (velmag_sum.ge.zero)) then
            ! do nothing
           else if (two*velmag_sum*dt.gt.dxmin) then
-           if (stefan_flag.eq.1) then
-            print *,"phase change velocity exceeds cfl limits"
-            print *,"velmag_sum ",velmag_sum
-            print *,"dxmin ",dxmin
-            print *,"dt ",dt
-            print *,"velmag_sum x dt ",velmag_sum*dt
-            print *,"i,j,k ",i,j,k
-            print *,"im_primary ",im_primary
-            do imls=1,nmat
-             print *,"imls,LShere ",imls,LShere(imls)
-            enddo
-            print *,"xsten(0,1-3) ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
-            do im=1,nmat-1
-             do im_opp=im+1,nmat
-              call get_iten(im,im_opp,iten,nmat)
-              do ireverse=0,1
-               print *,"im,im_opp,ireverse,latent_heat ",im,im_opp,ireverse, &
-                       latent_heat(iten+ireverse*nten)
-               print *,"im,im_opp,ireverse,saturation_temp ", &
-                       im,im_opp,ireverse, &
-                       saturation_temp(iten+ireverse*nten)
-              enddo
-             enddo
-            enddo
-            do im=1,nmat
-             print *,"im,T ",im,EOS(D_DECL(i,j,k),(im-1)*num_state_material+2)
-            enddo 
-            do iten=1,nten
+           print *,"phase change velocity exceeds cfl limits"
+           print *,"velmag_sum ",velmag_sum
+           print *,"dxmin ",dxmin
+           print *,"dt ",dt
+           print *,"velmag_sum x dt ",velmag_sum*dt
+           print *,"i,j,k ",i,j,k
+           print *,"im_primary ",im_primary
+           do imls=1,nmat
+            print *,"imls,LShere ",imls,LShere(imls)
+           enddo
+           print *,"xsten(0,1-3) ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
+           do im=1,nmat-1
+            do im_opp=im+1,nmat
+             call get_iten(im,im_opp,iten,nmat)
              do ireverse=0,1
-              print *,"iten,ireverse,temp_probe(1) ", &
-                iten,ireverse,temp_target_probe_history(iten+ireverse*nten,1)
-              print *,"iten,ireverse,temp_probe(2) ", &
-                iten,ireverse,temp_target_probe_history(iten+ireverse*nten,2)
-              print *,"iten,ireverse,dxprobe(1) ", &
-                iten,ireverse,dxprobe_target_history(iten+ireverse*nten,1)
-              print *,"iten,ireverse,dxprobe(2) ", &
-                iten,ireverse,dxprobe_target_history(iten+ireverse*nten,2)
+              print *,"im,im_opp,ireverse,latent_heat ",im,im_opp,ireverse, &
+                      latent_heat(iten+ireverse*nten)
+              print *,"im,im_opp,ireverse,saturation_temp ", &
+                      im,im_opp,ireverse, &
+                      saturation_temp(iten+ireverse*nten)
              enddo
             enddo
-            stop
-           else if (stefan_flag.eq.0) then
-            ! do nothing
-           else
-            print *,"stefan_flag invalid"
-            stop
-           endif
+           enddo
+           do im=1,nmat
+            print *,"im,T ",im,EOS(D_DECL(i,j,k),(im-1)*num_state_material+2)
+           enddo 
+           do iten=1,nten
+            do ireverse=0,1
+             print *,"iten,ireverse,temp_probe(1) ", &
+               iten,ireverse,temp_target_probe_history(iten+ireverse*nten,1)
+             print *,"iten,ireverse,temp_probe(2) ", &
+               iten,ireverse,temp_target_probe_history(iten+ireverse*nten,2)
+             print *,"iten,ireverse,dxprobe(1) ", &
+               iten,ireverse,dxprobe_target_history(iten+ireverse*nten,1)
+             print *,"iten,ireverse,dxprobe(2) ", &
+               iten,ireverse,dxprobe_target_history(iten+ireverse*nten,2)
+            enddo
+           enddo
+           stop
           else
            print *,"velmag_sum invalid"
            stop
