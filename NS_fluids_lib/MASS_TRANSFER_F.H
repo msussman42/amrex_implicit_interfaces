@@ -72,7 +72,6 @@ extern "C"
    void fort_ratemasschange(
     int* tid,
     int* nucleation_flag,
-    int* stefan_flag,
     int* level,
     int* finest_level,
     int* ngrow_distance,

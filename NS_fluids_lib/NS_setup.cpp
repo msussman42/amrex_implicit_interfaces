@@ -444,33 +444,6 @@ NavierStokes::override_enable_spectralGHOST(
 
 }  // subroutine override_enable_spectralGHOST
 
-// called from: NavierStokes::allocate_levelsetLO
-void
-NavierStokes::override_LS_HO(int Interp_LO) { // 0=use normals 1=PC
-
- if ((Interp_LO!=0)&&(Interp_LO!=1))
-  amrex::Error("Interp_LO invalid");
-
- int nmat=num_materials;
- int ncomp_ls=(AMREX_SPACEDIM+1)*nmat;
-
- if (Interp_LO==0) {
-  ls_ho_interp_HIGH_PARM.LSHOInterp_nmat=nmat;
-  ls_ho_interp_HIGH_PARM.LSHOInterp_LO=Interp_LO;
-  for (int im=0;im<ncomp_ls;im++) {
-   desc_lst.resetMapper(LS_Type,im,&ls_ho_interp_HIGH_PARM);
-  } // im
- } else if (Interp_LO==1) {
-  ls_ho_interp_LOW_PARM.LSHOInterp_nmat=nmat;
-  ls_ho_interp_LOW_PARM.LSHOInterp_LO=Interp_LO;
-  for (int im=0;im<ncomp_ls;im++) {
-   desc_lst.resetMapper(LS_Type,im,&ls_ho_interp_LOW_PARM);
-  } // im
- } else
-  amrex::Error("Interp_LO invalid");
-
-}  // subroutine override_LS_HO
-
 void
 NavierStokes::set_tensor_extrap_components(
   int coord,std::string postfix,int indx,int ibase_tensor) {
@@ -1267,10 +1240,10 @@ NavierStokes::variableSetUp ()
     if (dcomp!=AMREX_SPACEDIM*nmat)
      amrex::Error("dcomp invalid");
 
-    Vector<std::string> LS_HO_names;
-    LS_HO_names.resize(ncomp_ls);
-    Vector<BCRec> LS_HO_bcs;
-    LS_HO_bcs.resize(ncomp_ls);
+    Vector<std::string> LS_names;
+    LS_names.resize(ncomp_ls);
+    Vector<BCRec> LS_bcs;
+    LS_bcs.resize(ncomp_ls);
 
     dcomp=0;
   
@@ -1281,30 +1254,30 @@ NavierStokes::variableSetUp ()
      im_string_stream << imls+1;
      std::string im_string=im_string_stream.str();
 
-     std::string LS_str="LS_HO"; 
+     std::string LS_str="LS"; 
      LS_str+=im_string;
-     LS_HO_names[imls]=LS_str;
-     set_scalar_vof_bc(LS_HO_bcs[imls],phys_bc);
+     LS_names[imls]=LS_str;
+     set_scalar_vof_bc(LS_bcs[imls],phys_bc);
 
      for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
       std::string nrm_extrap_str=" ";
       if (dir==0) {
-       set_x_vel_extrap_bc(LS_HO_bcs[nmat+dcomp],phys_bc);
-       nrm_extrap_str="x_norm_HO"; 
+       set_x_vel_extrap_bc(LS_bcs[nmat+dcomp],phys_bc);
+       nrm_extrap_str="x_norm"; 
        nrm_extrap_str+=im_string;
       } else if (dir==1) {
-       set_y_vel_extrap_bc(LS_HO_bcs[nmat+dcomp],phys_bc);
-       nrm_extrap_str="y_norm_HO"; 
+       set_y_vel_extrap_bc(LS_bcs[nmat+dcomp],phys_bc);
+       nrm_extrap_str="y_norm"; 
        nrm_extrap_str+=im_string;
       } else if ((dir==2)&&(AMREX_SPACEDIM==3)) {
-       set_z_vel_extrap_bc(LS_HO_bcs[nmat+dcomp],phys_bc);
-       nrm_extrap_str="z_norm_HO"; 
+       set_z_vel_extrap_bc(LS_bcs[nmat+dcomp],phys_bc);
+       nrm_extrap_str="z_norm"; 
        nrm_extrap_str+=im_string;
       } else 
        amrex::Error("dir invalid ns_setup");
 
-      LS_HO_names[nmat+dcomp]=nrm_extrap_str;
+      LS_names[nmat+dcomp]=nrm_extrap_str;
 
       dcomp++;
 
@@ -1317,20 +1290,16 @@ NavierStokes::variableSetUp ()
     if (dcomp+nmat!=ncomp_ls)
      amrex::Error("dcomp invalid");
 
-     // GROUP_LS_HO_FILL: grouplsBC for components 1..nmat
-     //                   extrapBC for components nmat+1..nmat * (sdim+1)
-    StateDescriptor::BndryFunc LS_HO_fill_class(fort_ls_ho_fill,
-       fort_group_ls_ho_fill);
+     // GROUP_LS_FILL: grouplsBC for components 1..nmat
+     //                extrapBC for components nmat+1..nmat * (sdim+1)
+    StateDescriptor::BndryFunc LS_fill_class(fort_ls_fill,
+       fort_group_ls_fill);
 
-    ls_ho_interp_HIGH_PARM.LSHOInterp_nmat=nmat;
-    ls_ho_interp_HIGH_PARM.LSHOInterp_LO=0; // 0=use normals 1=piecewise const 
-
-    ls_ho_interp_LOW_PARM.LSHOInterp_nmat=nmat;
-    ls_ho_interp_LOW_PARM.LSHOInterp_LO=1; // 0=use normals 1=piecewise const 
+    ls_interp.LSInterp_nmat=nmat;
 
     desc_lstGHOST.setComponent(LS_Type,
-      AMREX_SPACEDIM*nmat,LS_HO_names,
-      LS_HO_bcs,LS_HO_fill_class,&ls_ho_interp_HIGH_PARM);
+      AMREX_SPACEDIM*nmat,LS_names,
+      LS_bcs,LS_fill_class,&ls_interp);
 
     Vector<std::string> LS_main_names;
     LS_main_names.resize(ncomp_ls);
@@ -1381,20 +1350,15 @@ NavierStokes::variableSetUp ()
     if (dcomp+nmat!=ncomp_ls)
      amrex::Error("dcomp invalid");
 
-     // GROUP_LS_HO_FILL: grouplsBC for components 1..nmat
-     //                   extrapBC for components nmat+1..nmat * (sdim+1)
-    StateDescriptor::BndryFunc LS_main_fill_class(fort_ls_ho_fill,
-       fort_group_ls_ho_fill);
+     // GROUP_LS_FILL: grouplsBC for components 1..nmat
+     //                extrapBC for components nmat+1..nmat * (sdim+1)
+    StateDescriptor::BndryFunc LS_main_fill_class(fort_ls_fill,
+       fort_group_ls_fill);
 
-    ls_ho_interp_HIGH_PARM.LSHOInterp_nmat=nmat;
-    ls_ho_interp_HIGH_PARM.LSHOInterp_LO=0; // 0=use normals 1=piecewise const 
+    ls_interp.LSInterp_nmat=nmat;
 
-    ls_ho_interp_LOW_PARM.LSHOInterp_nmat=nmat;
-    ls_ho_interp_LOW_PARM.LSHOInterp_LO=1; // 0=use normals 1=piecewise const 
-
-      //default is low order (piecewise constant)
     desc_lst.setComponent(LS_Type,0,LS_main_names,
-      LS_main_bcs,LS_main_fill_class,&ls_ho_interp_LOW_PARM);
+      LS_main_bcs,LS_main_fill_class,&ls_interp);
 
 
 // State_Type  ------------------------------------------------- 

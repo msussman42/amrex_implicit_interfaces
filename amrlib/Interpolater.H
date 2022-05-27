@@ -66,15 +66,14 @@ public:
 };
 
 
-class LSHOInterp
+class LSInterp
     :
     public Interpolater
 {
 public:
-    int LSHOInterp_nmat;
-    int LSHOInterp_LO;  //0=>use normals  1=>do not use normals
+    int LSInterp_nmat;
 
-    virtual ~LSHOInterp ();
+    virtual ~LSInterp ();
     virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type);
     virtual void interp (
      Real time,
@@ -291,8 +290,7 @@ public:
 //
 // CONSTRUCT A GLOBAL OBJECT OF EACH VERSION.
 //
-extern LSHOInterp                ls_ho_interp_LOW_PARM;
-extern LSHOInterp                ls_ho_interp_HIGH_PARM;
+extern LSInterp                  ls_interp;
 extern PCInterp                  pc_interp;
 extern SEMInterp                 sem_interp_DEFAULT;
 extern SEMInterp                 sem_interp_LOW_PARM;

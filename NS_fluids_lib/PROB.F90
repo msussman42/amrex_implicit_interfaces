@@ -21503,7 +21503,7 @@ end subroutine RatePhaseChange
        Cmethane_in_hydrate, &
        C_w0, &
        PHYDWATER, &
-       VOFsrc,VOFdst)
+       VOFsrc,VOFdst) ! VOFsrc,VOFdst used for the hydrate model.
       use hydrateReactor_module
       use global_utility_module
 
@@ -31229,13 +31229,13 @@ end subroutine initialize2d
       return
       end subroutine fort_group_extmoffill
 
-      subroutine fort_ls_ho_fill( &
+      subroutine fort_ls_fill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact) &
-      bind(c,name='fort_ls_ho_fill')
+      bind(c,name='fort_ls_fill')
 
       IMPLICIT NONE
 
@@ -31247,20 +31247,20 @@ end subroutine initialize2d
       REAL_T, intent(inout) :: u(DIMV(u))
       INTEGER_T, intent(in) :: bc(SDIM,2)
 
-      print *,"fort_ls_ho_fill should never be called"
-      print *,"fort_group_ls_ho_fill should be called instead"
+      print *,"fort_ls_fill should never be called"
+      print *,"fort_group_ls_fill should be called instead"
       stop
 
       return
-      end subroutine fort_ls_ho_fill
+      end subroutine fort_ls_fill
 
-      subroutine fort_group_ls_ho_fill( &
+      subroutine fort_group_ls_fill( &
       grid_type, &
       level, &
       u,DIMS(u), &
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact) &
-      bind(c,name='fort_group_ls_ho_fill')
+      bind(c,name='fort_group_ls_fill')
 
       use filcc_module
       use global_utility_module
@@ -31326,12 +31326,12 @@ end subroutine initialize2d
       ncomp_ho=(SDIM+1)*nmat
 
       if (ncomp_ho.ne.ncomp) then
-       print *,"ncomp invalid fort_group_ls_ho_fill"
+       print *,"ncomp invalid fort_group_ls_fill"
        stop
       endif
       if ((scomp.ne.SDIM*nmat).and. &  ! called from ghost fill
           (scomp.ne.0)) then           ! called from main fill
-       print *,"scomp invalid fort_group_ls_ho_fill"
+       print *,"scomp invalid fort_group_ls_fill"
        print *,"scomp= ",scomp
        stop
       endif
@@ -31481,7 +31481,7 @@ end subroutine initialize2d
       enddo ! dir2
 
       return
-      end subroutine fort_group_ls_ho_fill
+      end subroutine fort_group_ls_fill
 
        ! this is for the "errorind" variable.
       subroutine fort_scalarfill( &

@@ -220,7 +220,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void fort_ls_ho_fill(
+     void fort_ls_fill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
@@ -229,7 +229,7 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-     void fort_group_ls_ho_fill(
+     void fort_group_ls_fill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
