@@ -367,6 +367,10 @@ public:
 
     void prepare_advect_vars(Real time);
     void delete_advect_vars();
+
+    void prepare_umac_material(Real time);
+    void delete_umac_material();
+
     void exit_viscous_solver();
 
     void diffusion_heatingALL(int source_idx,int idx_heat);

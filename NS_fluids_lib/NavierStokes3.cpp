@@ -360,7 +360,6 @@ void NavierStokes::nonlinear_advection() {
    amrex::Error("EILE_flag invalid");
  } // dir_absolute_direct_split=0..sdim-1
 
-
  if (verbose>0)
   if (ParallelDescriptor::IOProcessor())
    std::cout << "order_direct_split " << order_direct_split << '\n';
@@ -371,9 +370,6 @@ void NavierStokes::nonlinear_advection() {
  if ((normdir_here<0)||(normdir_here>=AMREX_SPACEDIM))
   amrex::Error("normdir_here invalid (prior to loop)");
  advect_time_slab=prev_time_slab;
- int update_flag=0;  // do not update the error. 
- VOF_Recon_ALL(1,advect_time_slab,update_flag,
-  init_vof_prev_time,SLOPE_RECON_MF);
 
   // delete_advect_vars() called in NavierStokes::do_the_advance
   // right after increment_face_velocityALL. 
@@ -383,6 +379,26 @@ void NavierStokes::nonlinear_advection() {
     //            ADVECT_REGISTER_MF
   ns_level.prepare_advect_vars(prev_time_slab);
  }
+
+ if (continuous_mof==1) {
+  if (enable_spectral==0) {
+   // do nothing
+  } else
+   amrex::Error("PLS and space-time SEM are incompatible");
+
+  allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_MF);
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.prepare_umac_material(prev_time_slab);
+  }
+
+  delete_array(HOLD_LS_DATA_MF);
+
+ } else if ((continuous_mof==0)||(continuous_mof==2)) {
+  // do nothing
+ } else
+  amrex::Error("continuous_mof invalid");
 
  if (parent->global_AMR_particles_flag==particles_flag) {
   // do nothing
@@ -460,6 +476,10 @@ void NavierStokes::nonlinear_advection() {
    // do nothing
  } else
   amrex::Error("particles_flag invalid");
+
+ int update_flag=0;  // do not update the error. 
+ VOF_Recon_ALL(1,advect_time_slab,update_flag,
+  init_vof_prev_time,SLOPE_RECON_MF);
 
  for (dir_absolute_direct_split=0;
       dir_absolute_direct_split<AMREX_SPACEDIM;
@@ -668,7 +688,23 @@ void NavierStokes::nonlinear_advection() {
    parent->levelSteps(0)); 
  }
 
-}  // subroutine nonlinear_advection
+ if (continuous_mof==1) {
+  if (enable_spectral==0) {
+   // do nothing
+  } else
+   amrex::Error("PLS and space-time SEM are incompatible");
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.delete_umac_material();
+  }
+
+ } else if ((continuous_mof==0)||(continuous_mof==2)) {
+  // do nothing
+ } else
+  amrex::Error("continuous_mof invalid");
+
+}  // end subroutine nonlinear_advection
 
 
 void NavierStokes::allocate_SDC() {
@@ -13150,6 +13186,43 @@ void NavierStokes::prepare_advect_vars(Real time) {
  push_back_state_register(ADVECT_REGISTER_MF,time,201);
 
 } // end subroutine prepare_advect_vars(Real time)
+
+
+void NavierStokes::prepare_umac_material(Real time) {
+
+ if (time<0.0)
+  amrex::Error("time invalid");
+ if (ngrow_distance!=4)
+  amrex::Error("ngrow_distance!=4");
+ if (ngrow_make_distance!=3)
+  amrex::Error("ngrow_make_distance!=3");
+ 
+ debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,6003);
+
+ MultiFab* local_umac[AMREX_SPACEDIM];
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   //scomp=0, ncomp=1
+  local_umac[dir]=
+    getStateMAC(Umac_Type,ngrow_distance,dir,0,1,time);
+  new_localMF(UMAC_MATERIAL_MF+dir,num_materials,ngrow_distance,dir);
+  for (int im=0;im<num_materials;im++) {
+   MultiFab::Copy(*localMF[UMAC_MATERIAL_MF],*local_umac[dir],
+		  0,im,1,ngrow_distance);
+  }
+ } // dir
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  delete local_umac[dir];
+ }
+
+} // end subroutine prepare_umac_material(Real time)
+
+void NavierStokes::delete_umac_material() {
+
+ delete_localMF(UMAC_MATERIAL_MF,AMREX_SPACEDIM);
+
+} // subroutine delete_umac_material()
 
 // FUTURE: do the same treatment for advection:
 //  variable: dt div (-pI + tau)/rho = unp1-u^advect = dt_non_advect_force
