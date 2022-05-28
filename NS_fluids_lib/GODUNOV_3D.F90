@@ -6344,9 +6344,9 @@ stop
       LS_ptr=>LS
 
       call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,123)
-      call checkbound_array1(fablo,fabhi,u_mac_ptr, &
+      call checkbound_array1(fablo,fabhi,umac_ptr, &
         ngrow_distance,normdir,123)
-      call checkbound_array1(fablo,fabhi,u_mac_mask_ptr, &
+      call checkbound_array1(fablo,fabhi,umac_mask_ptr, &
         ngrow_distance,normdir,123)
       call checkbound_array(fablo,fabhi,scalar_mask_ptr,0,-1,123)
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1,123)
@@ -6446,7 +6446,7 @@ stop
       enddo ! i,j,k (face center "conserved" variables) 
 
       return
-      end subroutine fort_build_macvof
+      end subroutine fort_extend_mac_vel
 
 
 
