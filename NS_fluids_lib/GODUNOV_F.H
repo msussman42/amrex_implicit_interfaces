@@ -262,7 +262,29 @@ extern "C"
     int* level,
     int* finest_level);
 
- 
+   void fort_extend_mac_vel(
+    int* tid_current,
+    int* level,
+    int* finest_level,
+    int* normdir, // 0..sdim-1
+    int* im_cpp, // 0..nmat-1
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact,
+    const Real* xlo,const Real* dx,
+    Real* time,
+    Real* dt,
+    int* velbc,
+    Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
+    Real* umac,
+    AMREX_ARLIM_P(umaclo),AMREX_ARLIM_P(umachi),
+    Real* umac_mask,
+    AMREX_ARLIM_P(umac_masklo),AMREX_ARLIM_P(umac_maskhi),
+    Real* scalar_mask,
+    AMREX_ARLIM_P(scalar_masklo),AMREX_ARLIM_P(scalar_maskhi),
+    Real* LS,
+    AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi));
+
    void fort_maketensor(
     int* partid,
     int* level,
