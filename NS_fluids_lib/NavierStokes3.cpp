@@ -13257,6 +13257,8 @@ void NavierStokes::prepare_umac_material(Real time) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+     //fort_extend_mac_vel is declared in: GODUNOV_3D.F90
+     //fort_extend_mac_vel uses "containing_MACcell"
     fort_extend_mac_vel( 
      &tid_current,
      &level,
@@ -13264,7 +13266,8 @@ void NavierStokes::prepare_umac_material(Real time) {
      &dir,
      &im,
      tilelo,tilehi,
-     fablo,fabhi,&bfact,
+     fablo,fabhi,
+     &bfact,
      xlo,dx,
      &time,
      &dt_slab,
@@ -13285,6 +13288,13 @@ void NavierStokes::prepare_umac_material(Real time) {
 
   } //im=0..nmat-1
  } // dir=0..sdim-1
+
+  // synchronize and set BC:
+  //       UMAC_MATERIAL_MF
+  //       UMAC_MASK_MATERIAL_MF
+  //       SCALAR_MASK_MATERIAL_MF
+
+
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   delete local_umac[dir];

@@ -6242,6 +6242,217 @@ stop
       end subroutine fort_build_macvof
 
 
+      subroutine fort_extend_mac_vel( &
+       tid_current, &
+       level, &
+       finest_level, &
+       normdir, & ! 0..sdim-1
+       im_cpp, & ! 0..nmat-1
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       xlo,dx, &
+       time, &
+       dt, &
+       velbc, &
+       mask, & 
+       DIMS(mask), &
+       umac,DIMS(umac), & 
+       umac_mask,DIMS(umac_mask), & 
+       scalar_mask,DIMS(scalar_mask), & 
+       LS,DIMS(LS)) &
+      bind(c,name='fort_extend_mac_vel')
+
+      use probcommon_module
+      use global_utility_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: tid_current
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: normdir
+      INTEGER_T, intent(in) :: im_cpp
+      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: xlo(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: dt
+      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
+      INTEGER_T, intent(in) :: DIMDEC(mask) 
+      INTEGER_T, intent(in) :: DIMDEC(umac) 
+      INTEGER_T, intent(in) :: DIMDEC(umac_mask) 
+      INTEGER_T, intent(in) :: DIMDEC(scalar_mask) 
+      INTEGER_T, intent(in) :: DIMDEC(LS) 
+
+      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: umac(DIMV(umac))
+      REAL_T, pointer :: umac_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: umac_mask(DIMV(umac_mask))
+      REAL_T, pointer :: umac_mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: scalar_mask(DIMV(scalaer_mask))
+      REAL_T, pointer :: scalar_mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: LS(DIMV(LS),num_materials*(SDIM+1))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+
+      INTEGER_T i,j,k
+
+      nhalf=3
+
+      if (time.ge.zero) then
+       ! do nothing
+      else
+       print *,"time invalid"
+       stop
+      endif
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid fort_extend_mac_vel"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid46"
+       stop
+      endif
+
+      if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"normdir invalid fort_extend_mac_vel"
+       stop
+      endif
+      if (ngrow_distance.eq.4) then
+       ! do nothing
+      else
+       print *,"ngrow_distance invalid"
+       stop
+      endif
+
+      mask_ptr=>mask
+      umac_ptr=>umac
+      umac_mask_ptr=>umac_mask
+      scalar_mask_ptr=>scalar_mask
+      LS_ptr=>LS
+
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,123)
+      call checkbound_array1(fablo,fabhi,u_mac_ptr, &
+        ngrow_distance,normdir,123)
+      call checkbound_array1(fablo,fabhi,u_mac_mask_ptr, &
+        ngrow_distance,normdir,123)
+      call checkbound_array(fablo,fabhi,scalar_mask_ptr,0,-1,123)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1,123)
+
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,ngrow_distance,normdir,20)
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+        ! normdir=0..sdim-1
+       call gridstenMAC_level(xsten,i,j,k,level,nhalf,normdir,26)
+
+       velmac(1)=x_mac_old(D_DECL(i,j,k))
+       velmac(num_MAC_vectors)=xd_mac_old(D_DECL(i,j,k))
+
+       if (veldir.eq.1) then
+        if (levelrz.eq.0) then
+         ! do nothing
+        else if (levelrz.eq.1) then
+         if (SDIM.ne.2) then
+          print *,"dimension bust"
+          stop
+         endif
+         if (xsten(0,1).le.VOFTOL*dx(1)) then
+          do ivec=1,num_MAC_vectors
+           velmac(ivec)=zero
+          enddo
+         endif
+        else if (levelrz.eq.3) then
+         if (xsten(0,1).le.VOFTOL*dx(1)) then
+          do ivec=1,num_MAC_vectors
+           velmac(ivec)=zero
+          enddo
+         endif
+        else
+         print *,"levelrz invalid build macvof"
+         stop
+        endif
+       else if (veldir.eq.2) then
+        if (levelrz.eq.0) then
+         ! do nothing
+        else if (levelrz.eq.1) then
+         if (SDIM.ne.2) then
+          print *,"dimension bust"
+          stop
+         endif
+         if (xsten(0,1).le.VOFTOL*dx(1)) then
+          do ivec=1,num_MAC_vectors
+           velmac(ivec)=zero
+          enddo
+         endif
+        else if (levelrz.eq.3) then
+         if (xsten(0,1).le.VOFTOL*dx(1)) then
+          do ivec=1,num_MAC_vectors
+           velmac(ivec)=zero
+          enddo
+         endif
+        else
+         print *,"levelrz invalid build macvof 2"
+         stop
+        endif
+       else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+        if (levelrz.eq.0) then
+         ! do nothing
+        else if (levelrz.eq.1) then
+         print *,"dimension bust"
+         stop
+        else if (levelrz.eq.3) then
+         if (xsten(0,1).le.VOFTOL*dx(1)) then
+          do ivec=1,num_MAC_vectors
+           velmac(ivec)=zero
+          enddo
+         endif
+        else
+         print *,"levelrz invalid build macvof 3"
+         stop
+        endif
+       else
+        print *,"veldir invalid"
+        stop
+       endif
+
+       do ivec=1,num_MAC_vectors
+        if ((velmac(ivec).ge.zero).or. &
+            (velmac(ivec).le.zero)) then
+         xvel(D_DECL(i,j,k),ivec)=velmac(ivec)
+        else
+         print *,"velmac is NaN"
+         stop
+        endif
+       enddo
+
+      enddo         
+      enddo         
+      enddo ! i,j,k (face center "conserved" variables) 
+
+      return
+      end subroutine fort_build_macvof
+
+
+
+
+
+
          ! 1=T11 2=T12 3=T22 4=T33 5=T13 6=T23
          ! rhoinverse is 1/den
       subroutine fort_tensorheat( &
