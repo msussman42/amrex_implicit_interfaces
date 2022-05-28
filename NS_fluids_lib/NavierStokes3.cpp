@@ -13203,6 +13203,8 @@ void NavierStokes::prepare_umac_material(Real time) {
  debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,6003);
  debug_ngrow(MASKCOEF_MF,1,6003);
 
+ const Real* dx=geom.CellSize();
+
  MultiFab* local_umac[AMREX_SPACEDIM];
 
  new_localMF(SCALAR_MASK_MATERIAL_MF,num_materials,0,-1);
@@ -13243,253 +13245,43 @@ void NavierStokes::prepare_umac_material(Real time) {
 
     // mask=tag if not covered by level+1 or outside the domain.
     FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-   FArrayBox& lsnewfab=LS_new[mfi];
-   FArrayBox& snewfab=S_new[mfi];
-   FArrayBox& eosfab=(*localMF[DEN_RECON_MF])[mfi];
-
-   FArrayBox& smoothfab=(*localMF[local_temperature_smooth_mf])[mfi];
-
-   FArrayBox& presfab=(*presmf)[mfi]; 
-   FArrayBox& pres_eos_fab=(*pres_eos_mf)[mfi]; 
-
-   FArrayBox& conductivity_fab=(*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
-   if (conductivity_fab.nComp()!=nmat)
-    amrex::Error("conductivity_fab.nComp()!=nmat");
-
-   Vector<int> use_exact_temperature(2*nten);
-   for (int im=0;im<2*nten;im++)
-    use_exact_temperature[im]=0;
-
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-   if (nucleation_flag==0) {
-
     FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
-    FArrayBox& LS_NRM_FD_fab=(*localMF[LS_NRM_FD_MF])[mfi];
+    FArrayBox& scalarfab=(*localMF[SCALAR_MASK_MATERIAL_MF])[mfi];
+    FArrayBox& umacfab=(*localMF[UMAC_MATERIAL_MF+dir])[mfi];
+    FArrayBox& umacmaskfab=(*localMF[UMAC_MASK_MATERIAL_MF+dir])[mfi];
+    Vector<int> velbc=getBCArray(State_Type,gridno,
+      STATECOMP_VEL,STATE_NCOMP_VEL);
 
-    FArrayBox& burnvelfab=(*localMF[BURNING_VELOCITY_MF])[mfi];
-    if (burnvelfab.nComp()!=nburning)
-     amrex::Error("burnvelfab.nComp() incorrect");
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // ntsat=nten*(ncomp_per_tsat+1)
-     // e.g. for interface 12,
-     //  component 1=0 if T_gamma,Y_gamma not defined
-     //             =1 if T_gamma,Y_gamma defined in fort_ratemasschange
-     //             =2 if T_gamma,Y_gamma defined after extrapolation
-     //             =-1 or -2 for condensation case.
-     //  component 2=T_gamma
-     //  component 3=Y_gamma
-     //  repeats ....
-    FArrayBox& Tsatfab=(*localMF[SATURATION_TEMP_MF])[mfi];
-    if (Tsatfab.nComp()!=ntsat) {
-     std::cout << "Tsatfab.nComp()=" << Tsatfab.nComp() << 
-       " ntsat=" << ntsat << '\n';
-     amrex::Error("Tsatfab.nComp()!=ntsat 2");
-    }
-
-    FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
-    FArrayBox& typefab=(*localMF[TYPE_MF])[mfi];
-     // fluids tessellate; solids overlap
-    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi]; 
-
-    FArrayBox& curvfab=(*localMF[FD_CURV_CELL_MF])[mfi];
-
-     // lsnewfab and burnvelfab are updated.
-     // lsfab is not updated.
-     // burnvelfab=BURNING_VELOCITY_MF is cell centered velocity.
-    fort_ratemasschange( 
+    fort_extend_mac_vel( 
      &tid_current,
-     &nucleation_flag,
      &level,
      &finest_level,
-     &ngrow_distance,
-     &nstate,
-     &nmat,
-     &nten,
-     &nburning,
-     &ntsat,
-     &nden,
-     &custom_nucleation_model,
-     &do_the_nucleate,
-     nucleate_pos.dataPtr(),
-     &nucleate_pos_size, 
-     nucleation_temp.dataPtr(), 
-     nucleation_pressure.dataPtr(), 
-     nucleation_pmg.dataPtr(), 
-     nucleation_mach.dataPtr(), 
-     cavitation_pressure.dataPtr(), 
-     cavitation_vapor_density.dataPtr(), 
-     cavitation_tension.dataPtr(), 
-     microlayer_substrate.dataPtr(),
-     microlayer_angle.dataPtr(),
-     microlayer_size.dataPtr(),
-     macrolayer_size.dataPtr(),
-     max_contact_line_size.dataPtr(),
-     &R_Palmore_Desjardins,
-     &local_smoothing_length_scale,
-     latent_heat.dataPtr(),
-     use_exact_temperature.dataPtr(),
-     reaction_rate.dataPtr(),
-     hardwire_Y_gamma.dataPtr(),
-     hardwire_T_gamma.dataPtr(),
-     accommodation_coefficient.dataPtr(),
-     reference_pressure.dataPtr(),
-     saturation_temp.dataPtr(),
-     saturation_temp_curv.dataPtr(),
-     saturation_temp_vel.dataPtr(),
-     saturation_temp_min.dataPtr(),
-     saturation_temp_max.dataPtr(),
-     freezing_model.dataPtr(),
-     Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
-     interface_mass_transfer_model.dataPtr(),
-     distribute_from_target.dataPtr(),
-     mass_fraction_id.dataPtr(),
-     constant_density_all_time.dataPtr(),
-     material_type_evap.dataPtr(),
-     molar_mass.dataPtr(),
-     species_molar_mass.dataPtr(),
-     &use_supermesh,
+     &dir,
+     &im,
      tilelo,tilehi,
      fablo,fabhi,&bfact,
      xlo,dx,
-     &prev_time_slab,
+     &time,
      &dt_slab,
-     &blob_arraysize,
-     blob_array.dataPtr(),
-     &color_count,
-     colorfab.dataPtr(),
-     ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
-     typefab.dataPtr(),
-     ARLIM(typefab.loVect()),ARLIM(typefab.hiVect()),
+     velbc.dataPtr(),
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-     conductivity_fab.dataPtr(), //nmat components
-     ARLIM(conductivity_fab.loVect()),ARLIM(conductivity_fab.hiVect()),
-     burnvelfab.dataPtr(),
-     ARLIM(burnvelfab.loVect()),ARLIM(burnvelfab.hiVect()),
-     Tsatfab.dataPtr(),
-     ARLIM(Tsatfab.loVect()),ARLIM(Tsatfab.hiVect()),
-     smoothfab.dataPtr(),
-     ARLIM(smoothfab.loVect()),ARLIM(smoothfab.hiVect()),
-     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-     lsnewfab.dataPtr(),ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
-     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-     LS_NRM_FD_fab.dataPtr(),
-     ARLIM(LS_NRM_FD_fab.loVect()),
-     ARLIM(LS_NRM_FD_fab.hiVect()),
-     eosfab.dataPtr(),ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
-     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-     presfab.dataPtr(),ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
-     pres_eos_fab.dataPtr(),
-     ARLIM(pres_eos_fab.loVect()),ARLIM(pres_eos_fab.hiVect()),
-     curvfab.dataPtr(),
-     ARLIM(curvfab.loVect()),
-     ARLIM(curvfab.hiVect()));
+     umacfab.dataPtr(im),
+     ARLIM(umacfab.loVect()),ARLIM(umacfab.hiVect()),
+     umacmaskfab.dataPtr(im),
+     ARLIM(umacmaskfab.loVect()),ARLIM(umacmaskfab.hiVect()),
+     scalarfab.dataPtr(im),ARLIM(scalarfab.loVect()),ARLIM(scalarfab.hiVect()),
+     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()));
 
-   } else if (nucleation_flag==1) {
-
-    fort_ratemasschange( 
-     &tid_current,
-     &nucleation_flag,
-     &level,
-     &finest_level,
-     &ngrow_distance,
-     &nstate,
-     &nmat,
-     &nten,
-     &nburning,
-     &ntsat,
-     &nden,
-     &custom_nucleation_model,
-     &do_the_nucleate,
-     nucleate_pos.dataPtr(),
-     &nucleate_pos_size, 
-     nucleation_temp.dataPtr(), 
-     nucleation_pressure.dataPtr(), 
-     nucleation_pmg.dataPtr(), 
-     nucleation_mach.dataPtr(), 
-     cavitation_pressure.dataPtr(), 
-     cavitation_vapor_density.dataPtr(), 
-     cavitation_tension.dataPtr(), 
-     microlayer_substrate.dataPtr(),
-     microlayer_angle.dataPtr(),
-     microlayer_size.dataPtr(),
-     macrolayer_size.dataPtr(),
-     max_contact_line_size.dataPtr(),
-     &R_Palmore_Desjardins,
-     &local_smoothing_length_scale,
-     latent_heat.dataPtr(),
-     use_exact_temperature.dataPtr(),
-     reaction_rate.dataPtr(),
-     hardwire_Y_gamma.dataPtr(),
-     hardwire_T_gamma.dataPtr(),
-     accommodation_coefficient.dataPtr(),
-     reference_pressure.dataPtr(),
-     saturation_temp.dataPtr(),
-     saturation_temp_curv.dataPtr(),
-     saturation_temp_vel.dataPtr(),
-     saturation_temp_min.dataPtr(),
-     saturation_temp_max.dataPtr(),
-     freezing_model.dataPtr(),
-     Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
-     interface_mass_transfer_model.dataPtr(),
-     distribute_from_target.dataPtr(),
-     mass_fraction_id.dataPtr(),
-     constant_density_all_time.dataPtr(),
-     material_type_evap.dataPtr(),
-     molar_mass.dataPtr(),
-     species_molar_mass.dataPtr(),
-     &use_supermesh,
-     tilelo,tilehi,
-     fablo,fabhi,&bfact,
-     xlo,dx,
-     &prev_time_slab,
-     &dt_slab,
-     &blob_arraysize,
-     blob_array.dataPtr(),
-     &color_count,
-     lsnewfab.dataPtr(), //colorfab
-     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
-     lsnewfab.dataPtr(), //typefab
-     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
-     maskcov.dataPtr(),
-     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-     conductivity_fab.dataPtr(), //nmat components
-     ARLIM(conductivity_fab.loVect()),ARLIM(conductivity_fab.hiVect()),
-     lsnewfab.dataPtr(), //burnvelfab
-     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
-     lsnewfab.dataPtr(), //Tsatfab
-     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
-     smoothfab.dataPtr(),
-     ARLIM(smoothfab.loVect()),ARLIM(smoothfab.hiVect()),
-     lsnewfab.dataPtr(), //lsfab
-     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
-     lsnewfab.dataPtr(),
-     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
-     snewfab.dataPtr(),
-     ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-     lsnewfab.dataPtr(), //LS_NRM_FD_fab
-     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
-     eosfab.dataPtr(),ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
-     lsnewfab.dataPtr(), //reconfab
-     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
-     presfab.dataPtr(),
-     ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
-     pres_eos_fab.dataPtr(),
-     ARLIM(pres_eos_fab.loVect()),ARLIM(pres_eos_fab.hiVect()),
-     lsnewfab.dataPtr(), //curvfab
-     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()));
-   } else
-    amrex::Error("nucleation_flag invalid");
-
- } // mfi
+   } // mfi
 } // omp
- ns_reconcile_d_num(70);
 
-
+   ns_reconcile_d_num(70);
 
   } //im=0..nmat-1
  } // dir=0..sdim-1
