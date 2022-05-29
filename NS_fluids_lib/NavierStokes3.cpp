@@ -393,6 +393,15 @@ void NavierStokes::nonlinear_advection() {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.prepare_umac_material(prev_time_slab);
   }
+  for (int im=0;im<num_materials;im++) {
+   if (ns_is_rigid(im)==0) {
+    multiphase_project(SOLVETYPE_VELEXTRAP+im);
+   } else if (ns_is_rigid(im)==1) {
+    // do nothing
+   } else
+    amrex::Error("ns_is_rigid invalid");
+
+  }
 
   delete_array(HOLD_LS_DATA_MF);
 
@@ -13222,69 +13231,76 @@ void NavierStokes::prepare_umac_material(Real time) {
    MultiFab::Copy(*localMF[UMAC_MATERIAL_MF+dir],*local_umac[dir],
 		  0,im,1,ngrow_distance);
 
-   if (thread_class::nthreads<1)
-    amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+   if (ns_is_rigid(im)==0) {
+
+    if (thread_class::nthreads<1)
+     amrex::Error("thread_class::nthreads invalid");
+    thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-    const int gridno = mfi.index();
-    const Box& tilegrid = mfi.tilebox();
-    const Box& fabgrid = grids[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
-    int bfact=parent->Space_blockingFactor(level);
+    for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+     const int gridno = mfi.index();
+     const Box& tilegrid = mfi.tilebox();
+     const Box& fabgrid = grids[gridno];
+     const int* tilelo=tilegrid.loVect();
+     const int* tilehi=tilegrid.hiVect();
+     const int* fablo=fabgrid.loVect();
+     const int* fabhi=fabgrid.hiVect();
+     int bfact=parent->Space_blockingFactor(level);
 
-    const Real* xlo = grid_loc[gridno].lo();
+     const Real* xlo = grid_loc[gridno].lo();
 
-    // mask=tag if not covered by level+1 or outside the domain.
-    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-    FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
-    FArrayBox& scalarfab=(*localMF[SCALAR_MASK_MATERIAL_MF])[mfi];
-    FArrayBox& umacfab=(*localMF[UMAC_MATERIAL_MF+dir])[mfi];
-    FArrayBox& umacmaskfab=(*localMF[UMAC_MASK_MATERIAL_MF+dir])[mfi];
-    Vector<int> velbc=getBCArray(State_Type,gridno,
+     // mask=tag if not covered by level+1 or outside the domain.
+     FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
+     FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
+     FArrayBox& scalarfab=(*localMF[SCALAR_MASK_MATERIAL_MF])[mfi];
+     FArrayBox& umacfab=(*localMF[UMAC_MATERIAL_MF+dir])[mfi];
+     FArrayBox& umacmaskfab=(*localMF[UMAC_MASK_MATERIAL_MF+dir])[mfi];
+     Vector<int> velbc=getBCArray(State_Type,gridno,
       STATECOMP_VEL,STATE_NCOMP_VEL);
 
-    int tid_current=ns_thread();
-    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-     amrex::Error("tid_current invalid");
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+     int tid_current=ns_thread();
+     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+      amrex::Error("tid_current invalid");
+     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
      //fort_extend_mac_vel is declared in: GODUNOV_3D.F90
      //fort_extend_mac_vel uses "containing_MACcell"
-    fort_extend_mac_vel( 
-     &tid_current,
-     &level,
-     &finest_level,
-     &dir,
-     &im,
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact,
-     xlo,dx,
-     &time,
-     &dt_slab,
-     velbc.dataPtr(),
-     maskcov.dataPtr(),
-     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-     umacfab.dataPtr(im),
-     ARLIM(umacfab.loVect()),ARLIM(umacfab.hiVect()),
-     umacmaskfab.dataPtr(im),
-     ARLIM(umacmaskfab.loVect()),ARLIM(umacmaskfab.hiVect()),
-     scalarfab.dataPtr(im),ARLIM(scalarfab.loVect()),ARLIM(scalarfab.hiVect()),
-     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()));
+     fort_extend_mac_vel( 
+      &tid_current,
+      &level,
+      &finest_level,
+      &dir,
+      &im,
+      tilelo,tilehi,
+      fablo,fabhi,
+      &bfact,
+      xlo,dx,
+      &time,
+      &dt_slab,
+      velbc.dataPtr(),
+      maskcov.dataPtr(),
+      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
+      umacfab.dataPtr(im),
+      ARLIM(umacfab.loVect()),ARLIM(umacfab.hiVect()),
+      umacmaskfab.dataPtr(im),
+      ARLIM(umacmaskfab.loVect()),ARLIM(umacmaskfab.hiVect()),
+      scalarfab.dataPtr(im),ARLIM(scalarfab.loVect()),ARLIM(scalarfab.hiVect()),
+      lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()));
 
-   } // mfi
+    } // mfi
 } // omp
 
-   ns_reconcile_d_num(70);
+    ns_reconcile_d_num(70);
+
+   } else if (ns_is_rigid(im)==1) {
+    // do nothing
+   } else
+    amrex::Error("ns_is_rigid invalid");
 
   } //im=0..nmat-1
  } // dir=0..sdim-1
