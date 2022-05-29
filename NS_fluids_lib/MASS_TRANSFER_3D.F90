@@ -7450,7 +7450,6 @@ stop
       end subroutine advance_TY_gamma
  
       ! vof,ref centroid,order,slope,intercept  x nmat
-      ! LS_slopes_FD comes from FORT_FD_NORMAL (MOF_REDIST)
       ! fort_fd_normal calls find_cut_geom_slope_CLSVOF:
       ! finds grad phi/|grad phi| where grad=(d/dx,d/dy,d/dz) or
       ! grad=(d/dr,d/dz) or
@@ -7537,8 +7536,6 @@ stop
        LS,DIMS(LS),  & !if nucleation_flag==0: localMF[HOLD_LS_DATA_MF]
        LSnew,DIMS(LSnew), & ! get_new_data(LS_Type,slab_step+1);
        Snew,DIMS(Snew), & 
-       LS_slopes_FD, &
-       DIMS(LS_slopes_FD), & 
        EOS,DIMS(EOS), &
        recon,DIMS(recon), &
        pres,DIMS(pres), &
@@ -7646,7 +7643,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(LS) ! declare the x,y,z dimensions of LS
       INTEGER_T, intent(in) :: DIMDEC(LSnew)
       INTEGER_T, intent(in) :: DIMDEC(Snew)
-      INTEGER_T, intent(in) :: DIMDEC(LS_slopes_FD)
       INTEGER_T, intent(in) :: DIMDEC(EOS)
       INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(pres)
@@ -7683,8 +7679,6 @@ stop
       REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(inout) :: Snew(DIMV(Snew),nstate)
       REAL_T, pointer :: Snew_ptr(D_DECL(:,:,:),:)
-      REAL_T, target, intent(in) :: LS_slopes_FD(DIMV(LS_slopes_FD),nmat*SDIM)
-      REAL_T, pointer :: LS_slopes_FD_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: EOS(DIMV(EOS),nden)
       REAL_T, pointer :: EOS_ptr(D_DECL(:,:,:),:)
        ! F,X,order,SL,I x nmat
@@ -7723,9 +7717,7 @@ stop
       REAL_T, target :: xsrc_micro(SDIM)
       REAL_T, target :: xdst_micro(SDIM)
       REAL_T nrmCP(SDIM)  ! closest point normal
-      REAL_T nrmFD(SDIM)  ! finite difference normal
-      REAL_T nrmPROBE(SDIM)  ! must choose nrmCP is microstructure.
-      REAL_T theta_nrmPROBE(SDIM)
+      REAL_T theta_nrmCP(SDIM)
       REAL_T, target :: LSINT(nmat*(SDIM+1))
       REAL_T LShere(nmat)
       type(probe_out_type) :: POUT
@@ -8019,9 +8011,6 @@ stop
        recon_ptr=>recon
        call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1,1251)
        call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1,1252)
-       LS_slopes_FD_ptr=>LS_slopes_FD
-       call checkbound_array(fablo,fabhi,LS_slopes_FD_ptr, &
-               ngrow_distance,-1,1253)
 
       else if (nucleation_flag.eq.1) then
        ! do nothing
@@ -8355,40 +8344,32 @@ stop
                      ! xCP=x-phi grad phi   grad phi=(x-xCP)/phi
                    nrmCP(dir)=LS(D_DECL(i,j,k),nmat+(im_source-1)*SDIM+dir)
                      ! Least squares slope: see Sussman and Puckett (2000)
-                   nrmFD(dir)= &
-                    LS_slopes_FD(D_DECL(i,j,k),(im_source-1)*SDIM+dir)
                    xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
-
-                   nrmPROBE(dir)=nrmCP(dir)
 
                     ! normal_probe_factor=1/2 or 1
                    xdst(dir)=xI(dir)- &
-                    normal_probe_factor*dxmin*nrmPROBE(dir) 
+                    normal_probe_factor*dxmin*nrmCP(dir) 
                    xsrc(dir)=xI(dir)+ &
-                    normal_probe_factor*dxmin*nrmPROBE(dir)
+                    normal_probe_factor*dxmin*nrmCP(dir)
                    xdst_micro(dir)=xI(dir)- &
-                    microscale_probe_size*dxmin*nrmPROBE(dir) 
+                    microscale_probe_size*dxmin*nrmCP(dir) 
                    xsrc_micro(dir)=xI(dir)+ &
-                    microscale_probe_size*dxmin*nrmPROBE(dir)
+                    microscale_probe_size*dxmin*nrmCP(dir)
                   enddo ! dir=1..sdim
                  else if (LShere(im_source).ge.zero) then
                   LS_pos=LShere(im_dest)
                   do dir=1,SDIM
                    nrmCP(dir)=LS(D_DECL(i,j,k),nmat+(im_dest-1)*SDIM+dir)
-                   nrmFD(dir)= &
-                    LS_slopes_FD(D_DECL(i,j,k),(im_dest-1)*SDIM+dir)
-
-                   nrmPROBE(dir)=nrmCP(dir)
 
                    xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
                    xdst(dir)=xI(dir)+ &
-                      normal_probe_factor*dxmin*nrmPROBE(dir) 
+                      normal_probe_factor*dxmin*nrmCP(dir) 
                    xsrc(dir)=xI(dir)- &
-                      normal_probe_factor*dxmin*nrmPROBE(dir)
+                      normal_probe_factor*dxmin*nrmCP(dir)
                    xdst_micro(dir)=xI(dir)+ &
-                      microscale_probe_size*dxmin*nrmPROBE(dir) 
+                      microscale_probe_size*dxmin*nrmCP(dir) 
                    xsrc_micro(dir)=xI(dir)- &
-                      microscale_probe_size*dxmin*nrmPROBE(dir)
+                      microscale_probe_size*dxmin*nrmCP(dir)
                   enddo ! dir=1..sdim
                  else
                   print *,"LShere bust"
@@ -8536,7 +8517,7 @@ stop
                  dxprobe_dest=dxprobe_source
 
                  RR=one
-                 call prepare_normal(nrmPROBE,RR,mag)
+                 call prepare_normal(nrmCP,RR,mag)
 
                  if (levelrz.eq.0) then
                   ! do nothing
@@ -8548,15 +8529,15 @@ stop
                  else if (levelrz.eq.3) then
                   if (mag.gt.zero) then
                    do dir=1,SDIM
-                    theta_nrmPROBE(dir)=nrmPROBE(dir)
+                    theta_nrmCP(dir)=nrmCP(dir)
                    enddo
                    RR=xsten(0,1)
-                   call prepare_normal(theta_nrmPROBE,RR,mag)
+                   call prepare_normal(theta_nrmCP,RR,mag)
                    if (mag.gt.zero) then
-                    ! mag=theta_nrmPROBE dot nrmPROBE
+                    ! mag=theta_nrmCP dot nrmCP
                     mag=zero
                     do dir=1,SDIM
-                     mag=mag+theta_nrmPROBE(dir)*nrmPROBE(dir)
+                     mag=mag+theta_nrmCP(dir)*nrmCP(dir)
                     enddo
                     if (abs(mag).gt.one+VOFTOL) then
                      print *,"dot product bust"
@@ -9963,8 +9944,6 @@ stop
                    print *,"den_I_interp_SAT(2) ",den_I_interp_SAT(2)
                    print *,"LSINTsrc,LSINTdst ",LSINT(im_source),LSINT(im_dest)
                    print *,"nrmCP ",nrmCP(1),nrmCP(2),nrmCP(SDIM)
-                   print *,"nrmFD ",nrmFD(1),nrmFD(2),nrmFD(SDIM)
-                   print *,"nrmPROBE ",nrmPROBE(1),nrmPROBE(2),nrmPROBE(SDIM)
                    print *,"im_dest= ",im_dest
                   endif
     
@@ -10065,21 +10044,16 @@ stop
              do dir=1,SDIM
               if (LShere(im_dest).ge.zero) then
                SIGNVEL=one
-               nrmFD(dir)= &
-                  LS_slopes_FD(D_DECL(i,j,k),(im_source-1)*SDIM+dir)
                nrmCP(dir)= &
                   LS(D_DECL(i,j,k),nmat+(im_source-1)*SDIM+dir)
               else if (LShere(im_source).ge.zero) then
                SIGNVEL=-one
-               nrmFD(dir)= &
-                  LS_slopes_FD(D_DECL(i,j,k),(im_dest-1)*SDIM+dir)
                nrmCP(dir)= &
                   LS(D_DECL(i,j,k),nmat+(im_dest-1)*SDIM+dir)
               else
                print *,"LShere bust"
                stop
               endif
-              nrmPROBE(dir)=nrmCP(dir)
              enddo ! dir=1..sdim
 
               ! units of k (thermal conductivity): watts/(m kelvin)
@@ -10131,7 +10105,7 @@ stop
                do dir=1,ncomp_per_burning
 
                 burnvel(D_DECL(i,j,k),nten+(iten-1)*ncomp_per_burning+dir)= &
-                 SIGNVEL*nrmPROBE(dir)*vel_phasechange(ireverse)
+                 SIGNVEL*nrmCP(dir)*vel_phasechange(ireverse)
 
                 if (1.eq.0) then
                  print *,"i,j,k,prev_time,dt,iten,ireverse,dir,burn ", &

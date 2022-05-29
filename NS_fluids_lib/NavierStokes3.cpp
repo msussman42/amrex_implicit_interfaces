@@ -3141,13 +3141,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         amrex::Error("hold_LS_DATA_MF (nComp()) !=nmat*(AMREX_SPACEDIM+1)");
        debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
 
-       for (int ilev=level;ilev<=finest_level;ilev++) {
-        NavierStokes& ns_level=getLevel(ilev);
-        ns_level.new_localMF(LS_NRM_FD_MF,nmat*AMREX_SPACEDIM,
-			ngrow_distance,-1);
-	ns_level.build_NRM_FD_MF(LS_NRM_FD_MF,HOLD_LS_DATA_MF);
-       }
-
         // initialize TEMPERATURE_SMOOTH_MF
        multiphase_project(SOLVETYPE_SMOOTH);
 
@@ -3265,7 +3258,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        delete_array(TEMPERATURE_SMOOTH_MF);
 
-       delete_array(LS_NRM_FD_MF);
        delete_array(BURNING_VELOCITY_MF);
        delete_array(FD_NRM_ND_MF);
        delete_array(FD_CURV_CELL_MF);

@@ -87,7 +87,6 @@
 #define CELL_SOUND_MF 73
 #define CELL_VISC_MF 74
 #define CELL_VISC_MATERIAL_MF 75
-#define LS_NRM_FD_MF 76
 #define HOLD_LS_DATA_MF 77
 #define DIFFUSIONRHS_MF 78
 #define LEVELPC_MF 79

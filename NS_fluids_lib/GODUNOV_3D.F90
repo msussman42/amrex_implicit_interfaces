@@ -6381,6 +6381,13 @@ stop
        stop
       endif
 
+      k1low=-1
+      k1high=1
+      if (SDIM.eq.2) then
+       k1low=0
+       k1high=0
+      endif
+
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
@@ -6393,6 +6400,39 @@ stop
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,normdir,26)
        call gridsten_level(xclamped_minus_sten,i-ii,j-jj,k-kk,level,nhalf)
        call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
+
+       if (ivec(normdir+1).eq.fablo(normdir+1)) then
+        bctest=velbc(normdir+1,1,normdir+1)
+        if ((bctest.eq.REFLECT_ODD).or. &
+            (bctest.eq.EXT_DIR)) then
+         vel_boundary_fixed=1
+        else if ((bctest.eq.INT_DIR).or. &
+                 (bctest.eq.FOEXTRAP)) then
+         ! do nothing
+        else
+         print *,"bctest invalid"
+         stop
+        endif
+       else if (ivec(normdir+1).eq.fabhi(normdir+1)+1) then
+        bctest=velbc(normdir+1,2,normdir+1)
+        if ((bctest.eq.REFLECT_ODD).or. &
+            (bctest.eq.EXT_DIR)) then
+         vel_boundary_fixed=2
+        else if ((bctest.eq.INT_DIR).or. &
+                 (bctest.eq.FOEXTRAP)) then
+         ! do nothing
+        else
+         print *,"bctest invalid"
+         stop
+        endif
+       else if ((ivec(normdir+1).gt.fablo(normdir+1)).and. &
+                (ivec(normdir+1).lt.fabhi(normdir+1)+1)) then
+        vel_boundary_fixed=0
+       else
+        print *,"ivec invalid"
+        stop
+       endif
+     
        do dir2=1,SDIM
         xclamped_minus(dir2)=xclamped_minus_sten(0,dir2)
         xclamped_plus(dir2)=xclamped_plus_sten(0,dir2)
@@ -6404,77 +6444,130 @@ stop
        enddo
        call get_primary_material(LSLEFT,nmat,imL)
        call get_primary_material(LSRIGHT,nmat,imR)
-       if ((imL.eq.im_cpp+1).or.(imR.eq.im_cpp+1)) then
-        ! do nothing
-       else if ((is_rigid(num_materials,imL).eq.1).or. &
-                (is_rigid(num_materials,imR).eq.1)) then
-        ! do nothing
-       else if ((is_rigid(num_materials,imL).eq.0).and. &
-                (is_rigid(num_materials,imR).eq.0)) then
-         ! LS>0 if clamped
-        call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
-             vel_clamped_minus,temperature_clamped_minus)
-        call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
-             vel_clamped_plus,temperature_clamped_plus)
 
-        if ((LS_clamped_minus.ge.zero).or. &
-            (LS_clamped_plus.ge.zero)) then
+       if ((imL.ge.1).and.(imL.le.num_materials).and. &
+           (imR.ge.1).and.(imR.le.num_materials)) then
+        ! do nothing
+       else
+        print *,"imL or imR invalid"
+        stop
+       endif
+   
+       if ((vel_boundary_fixed.eq.1).or. &
+           (vel_boundary_fixed.eq.2)) then
+        ! do nothing
+       else if (vel_boundary_fixed.eq.0) then
+
+        if ((imL.eq.im_cpp+1).or.(imR.eq.im_cpp+1)) then
          ! do nothing
-        else if ((LS_clamped_minus.lt.zero).and. &
-                 (LS_clamped_plus.lt.zero)) then
+        else if ((is_rigid(num_materials,imL).eq.1).or. &
+                 (is_rigid(num_materials,imR).eq.1)) then
+         ! do nothing
+        else if ((is_rigid(num_materials,imL).eq.0).and. &
+                 (is_rigid(num_materials,imR).eq.0)) then
+          ! LS>0 if clamped
+         call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
+              vel_clamped_minus,temperature_clamped_minus)
+         call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
+              vel_clamped_plus,temperature_clamped_plus)
 
-         need_closest_point=0
-
-         if ((LSLEFT(im_cpp+1).lt.-EXTEND_BAND_WIDTH).and. &
-             (LSRIGHT(im_cpp+1).lt.-EXTEND_BAND_WIDTH)) then
-          if (ivec(normdir+1).le.growhi_cell(normdir+1)) then
-           scalar_mask(D_DECL(i,j,k))=scalar_mask(D_DECL(i,j,k))+one
-          endif
-          if (ivec(normdir+1)-1.ge.growlo_cell(normdir+1)) then
-           scalar_mask(D_DECL(i-ii,j-jj,k-kk))= &
-               scalar_mask(D_DECL(i-ii,j-jj,k-kk))+one
-          endif
-         else if ((LSLEFT(im_cpp+1).lt.-EXTEND_BAND_WIDTH).and. &
-                  (LSRIGHT(im_cpp+1).lt.zero)) then
-          if (ivec(normdir+1)-1.ge.growlo_cell(normdir+1)) then
-           scalar_mask(D_DECL(i-ii,j-jj,k-kk))= &
-               scalar_mask(D_DECL(i-ii,j-jj,k-kk))+one
-          endif
-          need_closest_point=1
-         else if ((LSRIGHT(im_cpp+1).lt.-EXTEND_BAND_WIDTH).and. &
-                  (LSLEFT(im_cpp+1).lt.zero)) then
-          if (ivec(normdir+1).le.growhi_cell(normdir+1)) then
-           scalar_mask(D_DECL(i,j,k))=scalar_mask(D_DECL(i,j,k))+one
-          endif
-          need_closest_point=1
-         else if ((LSLEFT(im_cpp+1).ge.-EXTEND_BAND_WIDTH).and. &
-                  (LSRIGHT(im_cpp+1).ge.-EXTEND_BAND_WIDTH).and. &
-                  (LSLEFT(im_cpp+1).lt.zero).and. &
-                  (LSRIGHT(im_cpp+1).lt.zero)) then
-          need_closest_point=1
-         else if ((LSLEFT(im_cpp+1).ge.zero).or. &
-                  (LSRIGHT(im_cpp+1).ge.zero)) then
+         if ((LS_clamped_minus.ge.zero).or. &
+             (LS_clamped_plus.ge.zero)) then
           ! do nothing
+         else if ((LS_clamped_minus.lt.zero).and. &
+                  (LS_clamped_plus.lt.zero)) then
+
+          need_closest_point=0
+
+          if ((LSLEFT(im_cpp+1).ge.zero).or. &
+              (LSRIGHT(im_cpp+1).ge.zero)) then
+           ! do nothing
+          else if ((LSLEFT(im_cpp+1).lt.-EXTEND_BAND_WIDTH).and. &
+                   (LSRIGHT(im_cpp+1).lt.-EXTEND_BAND_WIDTH)) then
+           if (ivec(normdir+1).le.growhi_cell(normdir+1)) then
+            scalar_mask(D_DECL(i,j,k))=scalar_mask(D_DECL(i,j,k))+one
+           endif
+           if (ivec(normdir+1)-1.ge.growlo_cell(normdir+1)) then
+            scalar_mask(D_DECL(i-ii,j-jj,k-kk))= &
+              scalar_mask(D_DECL(i-ii,j-jj,k-kk))+one
+           endif
+          else if ((LSLEFT(im_cpp+1).lt.-EXTEND_BAND_WIDTH).and. &
+                   (LSRIGHT(im_cpp+1).lt.zero)) then
+           if (ivec(normdir+1)-1.ge.growlo_cell(normdir+1)) then
+            scalar_mask(D_DECL(i-ii,j-jj,k-kk))= &
+                scalar_mask(D_DECL(i-ii,j-jj,k-kk))+one
+           endif
+           need_closest_point=1
+          else if ((LSRIGHT(im_cpp+1).lt.-EXTEND_BAND_WIDTH).and. &
+                   (LSLEFT(im_cpp+1).lt.zero)) then
+           if (ivec(normdir+1).le.growhi_cell(normdir+1)) then
+            scalar_mask(D_DECL(i,j,k))=scalar_mask(D_DECL(i,j,k))+one
+           endif
+           need_closest_point=1
+          else if ((LSLEFT(im_cpp+1).ge.-EXTEND_BAND_WIDTH).and. &
+                   (LSRIGHT(im_cpp+1).ge.-EXTEND_BAND_WIDTH).and. &
+                   (LSLEFT(im_cpp+1).lt.zero).and. &
+                   (LSRIGHT(im_cpp+1).lt.zero)) then
+           need_closest_point=1
+          else
+           print *,"LSLEFT or LSRIGHT invalid"
+           stop
+          endif
+
+          if (need_closest_point.eq.1) then
+           do dir=1,SDIM
+            nrmCP_LEFT(dir)=LS(D_DECL(i-ii,j-jj,k-kk), &
+             num_materials+im_cpp*SDIM+dir)
+            xI_LEFT(dir)=xclamped_minus(dir)-LSLEFT(imcpp+1)*nrmCP_LEFT(dir)
+            nrmCP_RIGHT(dir)=LS(D_DECL(i,j,k), &
+             num_materials+im_cpp*SDIM+dir)
+            xI_RIGHT(dir)=xclamped_plus(dir)-LSRIGHT(imcpp+1)*nrmCP_RIGHT(dir)
+           enddo
+           call containing_MACcell(bfact,dx,xlo,fablo,xI_LEFT, &
+            normdir,mac_cell_index_LEFT)
+           call containing_MACcell(bfact,dx,xlo,fablo,xI_RIGHT, &
+            normdir,mac_cell_index_RIGHT)
+
+           mindist=-one
+           do i1=-1,1
+           do j1=-1,1
+           do k1=k1low,k1high
+            call check_for_closest_UMAC(i1,j1,k1, &
+              mac_cell_index_LEFT, &
+              normdir, &
+              umac_ptr, &
+              LS_ptr, &
+              mindist, &
+              umac_trial)
+            call check_for_closest_UMAC(i1,j1,k1, &
+              mac_cell_index_RIGHT, &
+              normdir, &
+              umac_ptr, &
+              LS_ptr, &
+              mindist, &
+              umac_trial)
+           enddo
+           enddo
+           enddo
+
+          else if (need_closest_point.eq.0) then
+           ! do nothing
+          else
+           print *,"need_closest_point invaid"
+           stop
+          endif
+
          else
-          print *,"LSLEFT or LSRIGHT invalid"
+          print *,"LS_clamped_minus or LS_clamped_plus invalid"
           stop
          endif
-
-         if (need_closest_point.eq.1) then
-
-         else if (need_closest_point.eq.0) then
-          ! do nothing
-         else
-          print *,"need_closest_point invaid"
-          stop
-         endif
-
-        else
-         print *,"LS_clamped_minus or LS_clamped_plus invalid"
+        else 
+         print *,"(is_rigid(num_materials,imL or imR) invalid"
          stop
         endif
-       else 
-        print *,"(is_rigid(num_materials,imL or imR) invalid"
+
+       else
+        print *,"vel_boundary_fixed invalid"
         stop
        endif
 
