@@ -81,6 +81,7 @@ interface temperature and interface mass fraction.
 #define SOLVETYPE_PRESEXTRAP 12
 #define SOLVETYPE_SPEC 100
 #define SOLVETYPE_SMOOTH 200
+#define SOLVETYPE_VELEXTRAP 300
 
 #define SEM_U 0
 #define SEM_V 1

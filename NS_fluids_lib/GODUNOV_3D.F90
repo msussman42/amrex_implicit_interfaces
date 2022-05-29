@@ -6336,6 +6336,18 @@ stop
        print *,"ngrow_distance invalid"
        stop
       endif
+      if ((im_cpp.ge.0).and.(im_cpp.lt.num_materials)) then
+       ! do nothing
+      else
+       print *,"im_cpp invalid"
+       stop
+      endif
+      if (is_rigid(num_materials,im_cpp+1).eq.0) then
+       ! do nothing
+      else
+       print *,"is_rigid(num_materials,im_cpp+1) invalid"
+       stop
+      endif
 
       mask_ptr=>mask
       umac_ptr=>umac
@@ -6352,7 +6364,21 @@ stop
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1,123)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,ngrow_distance,normdir,20)
+        growlo,growhi,0,normdir,20)
+
+      ii=0
+      jj=0
+      kk=0
+      if (normdir.eq.0) then
+       ii=1
+      else if (normdir.eq.1) then
+       jj=1
+      else if ((normdir.eq.2).and.(SDIM.eq.3)) then
+       kk=1
+      else
+       print *,"normdir invalid"
+       stop
+      endif
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -6360,6 +6386,30 @@ stop
 
         ! normdir=0..sdim-1
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,normdir,26)
+       call gridsten_level(xclamped_minus_sten,i-ii,j-jj,k-kk,level,nhalf)
+       call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
+       do dir2=1,SDIM
+        xclamped_minus(dir2)=xclamped_minus_sten(0,dir2)
+        xclamped_plus(dir2)=xclamped_plus_sten(0,dir2)
+       enddo
+
+       do im=1,nmat
+        LSLEFT(im)=LS(D_DECL(i-ii,j-jj,k-kk),im)
+        LSRIGHT(im)=LS(D_DECL(i,j,k),im)
+       enddo
+       call get_primary_material(LSLEFT,nmat,imL)
+       call get_primary_material(LSRIGHT,nmat,imR)
+       if ((imL.eq.im_cpp+1).or.(imR.eq.im_cpp+1)) then
+        ! do nothing
+       else if ((is_rigid(num_materials,imL).eq.1).or. &
+                (is_rigid(num_materials,imR).eq.1)) then
+        ! do nothing
+       else
+         ! LS>0 if clamped
+        call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
+             vel_clamped_minus,temperature_clamped_minus)
+        call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
+             vel_clamped_plus,temperature_clamped_plus)
 
        velmac(1)=x_mac_old(D_DECL(i,j,k))
        velmac(num_MAC_vectors)=xd_mac_old(D_DECL(i,j,k))
