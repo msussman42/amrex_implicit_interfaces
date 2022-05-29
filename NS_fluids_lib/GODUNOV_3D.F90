@@ -6292,7 +6292,7 @@ stop
       REAL_T, pointer :: umac_ptr(D_DECL(:,:,:))
       REAL_T, intent(inout), target :: umac_mask(DIMV(umac_mask))
       REAL_T, pointer :: umac_mask_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: scalar_mask(DIMV(scalaer_mask))
+      REAL_T, intent(inout), target :: scalar_mask(DIMV(scalar_mask))
       REAL_T, pointer :: scalar_mask_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: LS(DIMV(LS),num_materials*(SDIM+1))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
@@ -6365,6 +6365,7 @@ stop
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0,normdir,20)
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo_cell,growhi_cell,0) 
 
       ii=0
       jj=0
@@ -6383,6 +6384,10 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+
+       ivec(1)=i
+       ivec(2)=j
+       ivec(3)=k
 
         ! normdir=0..sdim-1
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,normdir,26)
@@ -6404,92 +6409,74 @@ stop
        else if ((is_rigid(num_materials,imL).eq.1).or. &
                 (is_rigid(num_materials,imR).eq.1)) then
         ! do nothing
-       else
+       else if ((is_rigid(num_materials,imL).eq.0).and. &
+                (is_rigid(num_materials,imR).eq.0)) then
          ! LS>0 if clamped
         call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
              vel_clamped_minus,temperature_clamped_minus)
         call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
              vel_clamped_plus,temperature_clamped_plus)
 
-       velmac(1)=x_mac_old(D_DECL(i,j,k))
-       velmac(num_MAC_vectors)=xd_mac_old(D_DECL(i,j,k))
+        if ((LS_clamped_minus.ge.zero).or. &
+            (LS_clamped_plus.ge.zero)) then
+         ! do nothing
+        else if ((LS_clamped_minus.lt.zero).and. &
+                 (LS_clamped_plus.lt.zero)) then
 
-       if (veldir.eq.1) then
-        if (levelrz.eq.0) then
-         ! do nothing
-        else if (levelrz.eq.1) then
-         if (SDIM.ne.2) then
-          print *,"dimension bust"
+         need_closest_point=0
+
+         if ((LSLEFT(im_cpp+1).lt.-EXTEND_BAND_WIDTH).and. &
+             (LSRIGHT(im_cpp+1).lt.-EXTEND_BAND_WIDTH)) then
+          if (ivec(normdir+1).le.growhi_cell(normdir+1)) then
+           scalar_mask(D_DECL(i,j,k))=scalar_mask(D_DECL(i,j,k))+one
+          endif
+          if (ivec(normdir+1)-1.ge.growlo_cell(normdir+1)) then
+           scalar_mask(D_DECL(i-ii,j-jj,k-kk))= &
+               scalar_mask(D_DECL(i-ii,j-jj,k-kk))+one
+          endif
+         else if ((LSLEFT(im_cpp+1).lt.-EXTEND_BAND_WIDTH).and. &
+                  (LSRIGHT(im_cpp+1).lt.zero)) then
+          if (ivec(normdir+1)-1.ge.growlo_cell(normdir+1)) then
+           scalar_mask(D_DECL(i-ii,j-jj,k-kk))= &
+               scalar_mask(D_DECL(i-ii,j-jj,k-kk))+one
+          endif
+          need_closest_point=1
+         else if ((LSRIGHT(im_cpp+1).lt.-EXTEND_BAND_WIDTH).and. &
+                  (LSLEFT(im_cpp+1).lt.zero)) then
+          if (ivec(normdir+1).le.growhi_cell(normdir+1)) then
+           scalar_mask(D_DECL(i,j,k))=scalar_mask(D_DECL(i,j,k))+one
+          endif
+          need_closest_point=1
+         else if ((LSLEFT(im_cpp+1).ge.-EXTEND_BAND_WIDTH).and. &
+                  (LSRIGHT(im_cpp+1).ge.-EXTEND_BAND_WIDTH).and. &
+                  (LSLEFT(im_cpp+1).lt.zero).and. &
+                  (LSRIGHT(im_cpp+1).lt.zero)) then
+          need_closest_point=1
+         else if ((LSLEFT(im_cpp+1).ge.zero).or. &
+                  (LSRIGHT(im_cpp+1).ge.zero)) then
+          ! do nothing
+         else
+          print *,"LSLEFT or LSRIGHT invalid"
           stop
          endif
-         if (xsten(0,1).le.VOFTOL*dx(1)) then
-          do ivec=1,num_MAC_vectors
-           velmac(ivec)=zero
-          enddo
-         endif
-        else if (levelrz.eq.3) then
-         if (xsten(0,1).le.VOFTOL*dx(1)) then
-          do ivec=1,num_MAC_vectors
-           velmac(ivec)=zero
-          enddo
-         endif
-        else
-         print *,"levelrz invalid build macvof"
-         stop
-        endif
-       else if (veldir.eq.2) then
-        if (levelrz.eq.0) then
-         ! do nothing
-        else if (levelrz.eq.1) then
-         if (SDIM.ne.2) then
-          print *,"dimension bust"
+
+         if (need_closest_point.eq.1) then
+
+         else if (need_closest_point.eq.0) then
+          ! do nothing
+         else
+          print *,"need_closest_point invaid"
           stop
          endif
-         if (xsten(0,1).le.VOFTOL*dx(1)) then
-          do ivec=1,num_MAC_vectors
-           velmac(ivec)=zero
-          enddo
-         endif
-        else if (levelrz.eq.3) then
-         if (xsten(0,1).le.VOFTOL*dx(1)) then
-          do ivec=1,num_MAC_vectors
-           velmac(ivec)=zero
-          enddo
-         endif
+
         else
-         print *,"levelrz invalid build macvof 2"
+         print *,"LS_clamped_minus or LS_clamped_plus invalid"
          stop
         endif
-       else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-        if (levelrz.eq.0) then
-         ! do nothing
-        else if (levelrz.eq.1) then
-         print *,"dimension bust"
-         stop
-        else if (levelrz.eq.3) then
-         if (xsten(0,1).le.VOFTOL*dx(1)) then
-          do ivec=1,num_MAC_vectors
-           velmac(ivec)=zero
-          enddo
-         endif
-        else
-         print *,"levelrz invalid build macvof 3"
-         stop
-        endif
-       else
-        print *,"veldir invalid"
+       else 
+        print *,"(is_rigid(num_materials,imL or imR) invalid"
         stop
        endif
-
-       do ivec=1,num_MAC_vectors
-        if ((velmac(ivec).ge.zero).or. &
-            (velmac(ivec).le.zero)) then
-         xvel(D_DECL(i,j,k),ivec)=velmac(ivec)
-        else
-         print *,"velmac is NaN"
-         stop
-        endif
-       enddo
 
       enddo         
       enddo         
