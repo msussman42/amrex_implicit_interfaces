@@ -13304,11 +13304,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
   debug_ixType(HOLD_LS_DATA_MF,-1,HOLD_LS_DATA_MF);
 
-  debug_ngrow(LS_NRM_FD_MF,ngrow_distance,30);
-  if (localMF[LS_NRM_FD_MF]->nComp()!=nmat*AMREX_SPACEDIM) 
-   amrex::Error("localMF[LS_NRM_FD_MF]->nComp() invalid");
-  debug_ixType(LS_NRM_FD_MF,-1,LS_NRM_FD_MF);
-
   debug_ngrow(MDOT_MF,0,355);
   debug_ixType(MDOT_MF,-1,MDOT_MF);
 
@@ -13481,7 +13476,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    if (nucleation_flag==0) {
 
     FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
-    FArrayBox& LS_NRM_FD_fab=(*localMF[LS_NRM_FD_MF])[mfi];
 
     FArrayBox& burnvelfab=(*localMF[BURNING_VELOCITY_MF])[mfi];
     if (burnvelfab.nComp()!=nburning)
@@ -13590,9 +13584,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
      lsnewfab.dataPtr(),ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-     LS_NRM_FD_fab.dataPtr(),
-     ARLIM(LS_NRM_FD_fab.loVect()),
-     ARLIM(LS_NRM_FD_fab.hiVect()),
      eosfab.dataPtr(),ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
      reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
      presfab.dataPtr(),ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
@@ -13684,8 +13675,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      snewfab.dataPtr(),
      ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
-     lsnewfab.dataPtr(), //LS_NRM_FD_fab
-     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      eosfab.dataPtr(),ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
      lsnewfab.dataPtr(), //reconfab
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
