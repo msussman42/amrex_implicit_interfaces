@@ -6275,6 +6275,14 @@ stop
 
       REAL_T xstenMAC(-3:3,SDIM)
       INTEGER_T nhalf
+      REAL_T local_umac
+      REAL_T local_dist
+      INTEGER_T local_dir
+      INTEGER_T ii,jj,kk
+      INTEGER_T i,j,k
+      REAL_T LSLEFT(num_materials)
+      REAL_T LSRIGHT(num_materials)
+      INTEGER_T imL,imR
 
       nhalf=3
 
@@ -6336,68 +6344,53 @@ stop
        ! normdir=0..sdim-1
       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir,26)
 
-      do im=1,nmat
-       LSLEFT(im)=LS(D_DECL(i-ii,j-jj,k-kk),im)
-       LSRIGHT(im)=LS(D_DECL(i,j,k),im)
+      do im=1,num_materials
+       call safe_data(i-ii,j-jj,k-kk,im,LS_ptr,LSLEFT(im))
+       call safe_data(i,j,k,im,LS_ptr,LSRIGHT(im))
       enddo
-      call get_primary_material(LSLEFT,nmat,imL)
-      call get_primary_material(LSRIGHT,nmat,imR)
+      call get_primary_material(LSLEFT,num_materials,imL)
+      call get_primary_material(LSRIGHT,num_materials,imR)
 
-       if ((imL.ge.1).and.(imL.le.num_materials).and. &
-           (imR.ge.1).and.(imR.le.num_materials)) then
-        ! do nothing
+      if ((imL.ge.1).and.(imL.le.num_materials).and. &
+          (imR.ge.1).and.(imR.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"imL or imR invalid"
+       stop
+      endif
+   
+      if ((LSLEFT(im_cpp+1).ge.zero).or. &
+          (LSRIGHT(im_cpp+1).ge.zero)) then
+       call safe_data_single(i,j,k,umac_ptr,local_umac)
+       local_dist=zero
+       do local_dir=1,SDIM
+        local_dist=local_dist+(xstenMAC(0,local_dir)-xtarget(local_dir))**2
+       enddo
+       local_dist=sqrt(local_dist)
+       if (mindist.eq.-one) then
+        mindist=local_dist
+        umac_trial=local_umac
+       else if (mindist.ge.zero) then
+        if (local_dist.lt.mindist) then
+         mindist=local_dist
+         umac_trial=local_umac
+        else if (local_dist.ge.mindist) then
+         ! do nothing
+        else
+         print *,"local_dist or mindist invalid"
+         stop
+        endif
        else
-        print *,"imL or imR invalid"
+        print *,"mindist invalid"
         stop
        endif
-   
-          if ((LSLEFT(im_cpp+1).ge.zero).or. &
-              (LSRIGHT(im_cpp+1).ge.zero)) then
-           ! do nothing
-          else if ((LSLEFT(im_cpp+1).lt.-EXTEND_BAND_WIDTH).and. &
-                   (LSRIGHT(im_cpp+1).lt.-EXTEND_BAND_WIDTH)) then
-           if (ivec(normdir+1).le.growhi_cell(normdir+1)) then
-            scalar_mask(D_DECL(i,j,k))=scalar_mask(D_DECL(i,j,k))+one
-           endif
-           if (ivec(normdir+1)-1.ge.growlo_cell(normdir+1)) then
-            scalar_mask(D_DECL(i-ii,j-jj,k-kk))= &
-              scalar_mask(D_DECL(i-ii,j-jj,k-kk))+one
-           endif
-          else if ((LSLEFT(im_cpp+1).lt.-EXTEND_BAND_WIDTH).and. &
-                   (LSRIGHT(im_cpp+1).lt.zero)) then
-           if (ivec(normdir+1)-1.ge.growlo_cell(normdir+1)) then
-            scalar_mask(D_DECL(i-ii,j-jj,k-kk))= &
-                scalar_mask(D_DECL(i-ii,j-jj,k-kk))+one
-           endif
-           need_closest_point=1
-          else if ((LSRIGHT(im_cpp+1).lt.-EXTEND_BAND_WIDTH).and. &
-                   (LSLEFT(im_cpp+1).lt.zero)) then
-           if (ivec(normdir+1).le.growhi_cell(normdir+1)) then
-            scalar_mask(D_DECL(i,j,k))=scalar_mask(D_DECL(i,j,k))+one
-           endif
-           need_closest_point=1
-          else if ((LSLEFT(im_cpp+1).ge.-EXTEND_BAND_WIDTH).and. &
-                   (LSRIGHT(im_cpp+1).ge.-EXTEND_BAND_WIDTH).and. &
-                   (LSLEFT(im_cpp+1).lt.zero).and. &
-                   (LSRIGHT(im_cpp+1).lt.zero)) then
-           need_closest_point=1
-          else
-           print *,"LSLEFT or LSRIGHT invalid"
-           stop
-          endif
-
-          if (need_closest_point.eq.1) then
-           do local_dir=1,SDIM
-            nrmCP_LEFT(local_dir)=LS(D_DECL(i-ii,j-jj,k-kk), &
-               num_materials+im_cpp*SDIM+local_dir)
-            xI_LEFT(local_dir)=xclamped_minus(local_dir)- &
-               LSLEFT(imcpp+1)*nrmCP_LEFT(local_dir)
-            nrmCP_RIGHT(local_dir)=LS(D_DECL(i,j,k), &
-               num_materials+im_cpp*SDIM+local_dir)
-            xI_RIGHT(local_dir)=xclamped_plus(local_dir)- &
-               LSRIGHT(imcpp+1)*nrmCP_RIGHT(local_dir)
-           enddo
-
+      else if ((LSLEFT(im_cpp+1).lt.zero).and. &
+               (LSRIGHT(im_cpp+1).lt.zero)) then
+       ! do nothing
+      else
+       print *,"LSLEFT or LSRIGHT invalid"
+       stop
+      endif
 
       return
       end subroutine check_for_closest_UMAC
@@ -6458,12 +6451,44 @@ stop
       REAL_T, intent(in), target :: LS(DIMV(LS),num_materials*(SDIM+1))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T xstenMAC(-3:3,SDIM)
+      REAL_T xclamped_minus_sten(-3:3,SDIM)
+      REAL_T xclamped_plus_sten(-3:3,SDIM)
+      REAL_T xclamped_minus(SDIM)
+      REAL_T xclamped_plus(SDIM)
+      REAL_T xtarget(SDIM)
+      REAL_T LSLEFT(num_materials)
+      REAL_T LSRIGHT(num_materials)
       INTEGER_T nhalf
 
+      INTEGER_T bctest
+      INTEGER_T vel_boundary_fixed
       INTEGER_T i,j,k
+      INTEGER_T ii,jj,kk
+      INTEGER_T i1,j1,k1
+      INTEGER_T k1low,k1high
+      INTEGER_T mask_left,mask_right
+      INTEGER_T imL,imR
+      INTEGER_T :: ivec(3)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T :: growlo_cell(3),growhi_cell(3)
+      REAL_T :: LS_clamped_minus,LS_clamped_plus
+      REAL_T :: vel_clamped_minus(SDIM),vel_clamped_plus(SDIM)
+      INTEGER_T :: need_closest_point
+      REAL_T :: nrmCP_LEFT(SDIM)
+      REAL_T :: nrmCP_RIGHT(SDIM)
+      REAL_T :: xI_LEFT(SDIM)
+      REAL_T :: xI_RIGHT(SDIM)
+      INTEGER_T :: mac_cell_index_LEFT(SDIM)
+      INTEGER_T :: mac_cell_index_RIGHT(SDIM)
+      REAL_T :: mindist
 
       nhalf=3
 
+      if ((tid_current.lt.0).or. &
+          (tid_current.ge.geom_nthreads)) then
+       print *,"tid_current invalid in fort_extend_mac_vel"
+       stop
+      endif
       if (time.ge.zero) then
        ! do nothing
       else
@@ -6605,12 +6630,12 @@ stop
          xtarget(local_dir)=xstenMAC(0,local_dir)
         enddo
 
-        do im=1,nmat
+        do im=1,num_materials
          LSLEFT(im)=LS(D_DECL(i-ii,j-jj,k-kk),im)
          LSRIGHT(im)=LS(D_DECL(i,j,k),im)
         enddo
-        call get_primary_material(LSLEFT,nmat,imL)
-        call get_primary_material(LSRIGHT,nmat,imR)
+        call get_primary_material(LSLEFT,num_materials,imL)
+        call get_primary_material(LSRIGHT,num_materials,imR)
 
         if ((imL.ge.1).and.(imL.le.num_materials).and. &
             (imR.ge.1).and.(imR.le.num_materials)) then
@@ -6633,9 +6658,9 @@ stop
          else if ((is_rigid(num_materials,imL).eq.0).and. &
                   (is_rigid(num_materials,imR).eq.0)) then
            ! LS>0 if clamped
-          call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
+          call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
                vel_clamped_minus,temperature_clamped_minus)
-          call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
+          call SUB_clamped_LS(xclamped_plus,time,LS_clamped_plus, &
                vel_clamped_plus,temperature_clamped_plus)
 
           if ((LS_clamped_minus.ge.zero).or. &
@@ -6659,14 +6684,16 @@ stop
                scalar_mask(D_DECL(i-ii,j-jj,k-kk))+one
             endif
            else if ((LSLEFT(im_cpp+1).lt.-EXTEND_BAND_WIDTH).and. &
-                    (LSRIGHT(im_cpp+1).lt.zero)) then
+                    (LSRIGHT(im_cpp+1).lt.zero).and. &
+                    (LSRIGHT(im_cpp+1).ge.-EXTEND_BAND_WIDTH)) then
             if (ivec(normdir+1)-1.ge.growlo_cell(normdir+1)) then
              scalar_mask(D_DECL(i-ii,j-jj,k-kk))= &
                  scalar_mask(D_DECL(i-ii,j-jj,k-kk))+one
             endif
             need_closest_point=1
            else if ((LSRIGHT(im_cpp+1).lt.-EXTEND_BAND_WIDTH).and. &
-                    (LSLEFT(im_cpp+1).lt.zero)) then
+                    (LSLEFT(im_cpp+1).lt.zero).and. &
+                    (LSLEFT(im_cpp+1).ge.-EXTEND_BAND_WIDTH)) then
             if (ivec(normdir+1).le.growhi_cell(normdir+1)) then
              scalar_mask(D_DECL(i,j,k))=scalar_mask(D_DECL(i,j,k))+one
             endif
