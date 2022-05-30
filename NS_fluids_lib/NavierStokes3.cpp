@@ -13192,12 +13192,17 @@ void NavierStokes::prepare_advect_vars(Real time) {
 
 void NavierStokes::prepare_umac_material(Real time) {
 
- if (time<0.0)
+ if (time>=0.0) {
+  // do nothing
+ } else
   amrex::Error("time invalid");
+
  if (ngrow_distance!=4)
   amrex::Error("ngrow_distance!=4");
  if (ngrow_make_distance!=3)
   amrex::Error("ngrow_make_distance!=3");
+
+ int finest_level=parent->finestLevel();
  
  bool use_tiling=ns_tiling;
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
@@ -13209,7 +13214,9 @@ void NavierStokes::prepare_umac_material(Real time) {
  MultiFab* local_umac[AMREX_SPACEDIM];
 
  new_localMF(SCALAR_MASK_MATERIAL_MF,num_materials,0,-1);
- setVal_localMF(SCALAR_MASK_MATERIAL_MF,0.0,im,1,0);
+ for (int im=0;im<num_materials;im++) {
+  setVal_localMF(SCALAR_MASK_MATERIAL_MF,0.0,im,1,0);
+ }
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    //scomp=0, ncomp=1
@@ -13297,12 +13304,22 @@ void NavierStokes::prepare_umac_material(Real time) {
   } //im=0..nmat-1
  } // dir=0..sdim-1
 
-  // synchronize and set BC:
-  //       UMAC_MATERIAL_MF
-  //       UMAC_MASK_MATERIAL_MF
-  //       SCALAR_MASK_MATERIAL_MF
 
+ for (int im=0;im<num_materials;im++) {
 
+   // spectral_override==0 => always low order.
+   // synchronizes level+1 and level.
+  avgDown_localMF(SCALAR_MASK_MATERIAL_MF,im,1,0);
+   // spectral_override==0 => always low order.
+  avgDownEdge_localMF(UMAC_MATERIAL_MF,im,1,0,AMREX_SPACEDIM,0,200);
+  avgDownEdge_localMF(UMAC_MASK_MATERIAL_MF,im,1,0,AMREX_SPACEDIM,0,200);
+
+ } //im=0..nmat-1
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  localMF[UMAC_MATERIAL_MF+dir]->FillBoundary(geom.periodicity());
+  localMF[UMAC_MASK_MATERIAL_MF+dir]->FillBoundary(geom.periodicity());
+ }
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   delete local_umac[dir];

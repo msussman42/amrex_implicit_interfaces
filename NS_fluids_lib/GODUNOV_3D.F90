@@ -6283,6 +6283,7 @@ stop
       REAL_T LSLEFT(num_materials)
       REAL_T LSRIGHT(num_materials)
       INTEGER_T imL,imR
+      INTEGER_T imlocal
 
       nhalf=3
 
@@ -6344,9 +6345,9 @@ stop
        ! normdir=0..sdim-1
       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir,26)
 
-      do im=1,num_materials
-       call safe_data(i-ii,j-jj,k-kk,im,LS_ptr,LSLEFT(im))
-       call safe_data(i,j,k,im,LS_ptr,LSRIGHT(im))
+      do imlocal=1,num_materials
+       call safe_data(i-ii,j-jj,k-kk,imlocal,LS_ptr,LSLEFT(imlocal))
+       call safe_data(i,j,k,imlocal,LS_ptr,LSRIGHT(imlocal))
       enddo
       call get_primary_material(LSLEFT,num_materials,imL)
       call get_primary_material(LSRIGHT,num_materials,imR)
@@ -6418,6 +6419,7 @@ stop
       bind(c,name='fort_extend_mac_vel')
 
       use probcommon_module
+      use geometry_intersect_module
       use global_utility_module
       IMPLICIT NONE
 
@@ -6472,6 +6474,7 @@ stop
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T :: growlo_cell(3),growhi_cell(3)
       REAL_T :: LS_clamped_minus,LS_clamped_plus
+      REAL_T :: temperature_clamped_minus,temperature_clamped_plus
       REAL_T :: vel_clamped_minus(SDIM),vel_clamped_plus(SDIM)
       INTEGER_T :: need_closest_point
       REAL_T :: nrmCP_LEFT(SDIM)
@@ -6480,7 +6483,11 @@ stop
       REAL_T :: xI_RIGHT(SDIM)
       INTEGER_T :: mac_cell_index_LEFT(SDIM)
       INTEGER_T :: mac_cell_index_RIGHT(SDIM)
+      INTEGER_T :: imlocal
+      INTEGER_T :: local_dir
       REAL_T :: mindist
+      REAL_T :: dxmin
+      REAL_T :: EXTEND_BAND_WIDTH
 
       nhalf=3
 
@@ -6535,6 +6542,9 @@ stop
        stop
       endif
 
+      call get_dxmin(dx,bfact,dxmin)
+      EXTEND_BAND_WIDTH=two*dxmin
+
       mask_ptr=>mask
       umac_ptr=>umac
       umac_mask_ptr=>umac_mask
@@ -6546,7 +6556,7 @@ stop
         ngrow_distance,normdir,123)
       call checkbound_array1(fablo,fabhi,umac_mask_ptr, &
         ngrow_distance,normdir,123)
-      call checkbound_array(fablo,fabhi,scalar_mask_ptr,0,-1,123)
+      call checkbound_array1(fablo,fabhi,scalar_mask_ptr,0,-1,123)
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1,123)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
@@ -6630,9 +6640,9 @@ stop
          xtarget(local_dir)=xstenMAC(0,local_dir)
         enddo
 
-        do im=1,num_materials
-         LSLEFT(im)=LS(D_DECL(i-ii,j-jj,k-kk),im)
-         LSRIGHT(im)=LS(D_DECL(i,j,k),im)
+        do imlocal=1,num_materials
+         LSLEFT(imlocal)=LS(D_DECL(i-ii,j-jj,k-kk),imlocal)
+         LSRIGHT(imlocal)=LS(D_DECL(i,j,k),imlocal)
         enddo
         call get_primary_material(LSLEFT,num_materials,imL)
         call get_primary_material(LSRIGHT,num_materials,imR)
@@ -6713,12 +6723,12 @@ stop
              nrmCP_LEFT(local_dir)=LS(D_DECL(i-ii,j-jj,k-kk), &
                 num_materials+im_cpp*SDIM+local_dir)
              xI_LEFT(local_dir)=xclamped_minus(local_dir)- &
-                LSLEFT(imcpp+1)*nrmCP_LEFT(local_dir)
+                LSLEFT(im_cpp+1)*nrmCP_LEFT(local_dir)
              nrmCP_RIGHT(local_dir)=LS(D_DECL(i,j,k), &
                 num_materials+im_cpp*SDIM+local_dir)
              xI_RIGHT(local_dir)=xclamped_plus(local_dir)- &
-                LSRIGHT(imcpp+1)*nrmCP_RIGHT(local_dir)
-            enddo
+                LSRIGHT(im_cpp+1)*nrmCP_RIGHT(local_dir)
+            enddo !local_dir=1..sdim
             call containing_MACcell(bfact,dx,xlo,fablo,xI_LEFT, &
              normdir,mac_cell_index_LEFT)
             call containing_MACcell(bfact,dx,xlo,fablo,xI_RIGHT, &
@@ -6739,7 +6749,7 @@ stop
                umac_ptr, &
                LS_ptr, &
                mindist, &
-               umac(D_DECL(i,j,k))
+               umac(D_DECL(i,j,k)))
              call check_for_closest_UMAC( &
                xtarget, &
                fablo,fabhi, &
@@ -6755,6 +6765,8 @@ stop
             enddo
             enddo
             enddo
+
+            umac_mask(D_DECL(i,j,k))=one
 
            else if (need_closest_point.eq.0) then
             ! do nothing
