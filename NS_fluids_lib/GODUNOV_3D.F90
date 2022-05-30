@@ -6265,42 +6265,28 @@ stop
       INTEGER_T, intent(in) :: normdir
       INTEGER_T, intent(in) :: im_cpp
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, intent(in) :: mac_cell_index(SDIM)
+      INTEGER_T, intent(in) :: i1,j1,k1
+      REAL_T, intent(inout) :: mindist
+      REAL_T, intent(inout) :: umac_trial
 
       REAL_T, intent(in), pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), pointer :: umac_ptr(D_DECL(:,:,:))
 
-      REAL_T xsten(-3:3,SDIM)
+      REAL_T xstenMAC(-3:3,SDIM)
       INTEGER_T nhalf
-
-      INTEGER_T i,j,k
 
       nhalf=3
 
-      if (time.ge.zero) then
-       ! do nothing
-      else
-       print *,"time invalid"
-       stop
-      endif
-      if (dt.gt.zero) then
-       ! do nothing
-      else
-       print *,"dt invalid"
-       stop
-      endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid fort_extend_mac_vel"
-       stop
-      endif
-      if (bfact.lt.1) then
-       print *,"bfact invalid46"
+       print *,"level invalid check_for_closest_UMAC"
        stop
       endif
 
       if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
        ! do nothing
       else
-       print *,"normdir invalid fort_extend_mac_vel"
+       print *,"normdir invalid check_for_closest_UMAC"
        stop
       endif
       if (ngrow_distance.eq.4) then
@@ -6322,23 +6308,9 @@ stop
        stop
       endif
 
-      mask_ptr=>mask
-      umac_ptr=>umac
-      umac_mask_ptr=>umac_mask
-      scalar_mask_ptr=>scalar_mask
-      LS_ptr=>LS
-
-      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,123)
       call checkbound_array1(fablo,fabhi,umac_ptr, &
         ngrow_distance,normdir,123)
-      call checkbound_array1(fablo,fabhi,umac_mask_ptr, &
-        ngrow_distance,normdir,123)
-      call checkbound_array(fablo,fabhi,scalar_mask_ptr,0,-1,123)
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1,123)
-
-      call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,0,normdir,20)
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo_cell,growhi_cell,0) 
 
       ii=0
       jj=0
@@ -6354,70 +6326,22 @@ stop
        stop
       endif
 
-      k1low=-1
-      k1high=1
-      if (SDIM.eq.2) then
-       k1low=0
-       k1high=0
+      i=mac_cell_index(1)+i1
+      j=mac_cell_index(2)+j1
+      k=0;
+      if (SDIM.eq.3) then
+       k=mac_cell_index(SDIM)+k1
       endif
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
+       ! normdir=0..sdim-1
+      call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir,26)
 
-       ivec(1)=i
-       ivec(2)=j
-       ivec(3)=k
-
-        ! normdir=0..sdim-1
-       call gridstenMAC_level(xsten,i,j,k,level,nhalf,normdir,26)
-       call gridsten_level(xclamped_minus_sten,i-ii,j-jj,k-kk,level,nhalf)
-       call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
-
-       if (ivec(normdir+1).eq.fablo(normdir+1)) then
-        bctest=velbc(normdir+1,1,normdir+1)
-        if ((bctest.eq.REFLECT_ODD).or. &
-            (bctest.eq.EXT_DIR)) then
-         vel_boundary_fixed=1
-        else if ((bctest.eq.INT_DIR).or. &
-                 (bctest.eq.FOEXTRAP)) then
-         ! do nothing
-        else
-         print *,"bctest invalid"
-         stop
-        endif
-       else if (ivec(normdir+1).eq.fabhi(normdir+1)+1) then
-        bctest=velbc(normdir+1,2,normdir+1)
-        if ((bctest.eq.REFLECT_ODD).or. &
-            (bctest.eq.EXT_DIR)) then
-         vel_boundary_fixed=2
-        else if ((bctest.eq.INT_DIR).or. &
-                 (bctest.eq.FOEXTRAP)) then
-         ! do nothing
-        else
-         print *,"bctest invalid"
-         stop
-        endif
-       else if ((ivec(normdir+1).gt.fablo(normdir+1)).and. &
-                (ivec(normdir+1).lt.fabhi(normdir+1)+1)) then
-        vel_boundary_fixed=0
-       else
-        print *,"ivec invalid"
-        stop
-       endif
-     
-       do local_dir=1,SDIM
-        xclamped_minus(local_dir)=xclamped_minus_sten(0,local_dir)
-        xclamped_plus(local_dir)=xclamped_plus_sten(0,local_dir)
-        xtarget(local_dir)=xsten(0,local_dir)
-       enddo
-
-       do im=1,nmat
-        LSLEFT(im)=LS(D_DECL(i-ii,j-jj,k-kk),im)
-        LSRIGHT(im)=LS(D_DECL(i,j,k),im)
-       enddo
-       call get_primary_material(LSLEFT,nmat,imL)
-       call get_primary_material(LSRIGHT,nmat,imR)
+      do im=1,nmat
+       LSLEFT(im)=LS(D_DECL(i-ii,j-jj,k-kk),im)
+       LSRIGHT(im)=LS(D_DECL(i,j,k),im)
+      enddo
+      call get_primary_material(LSLEFT,nmat,imL)
+      call get_primary_material(LSRIGHT,nmat,imR)
 
        if ((imL.ge.1).and.(imL.le.num_materials).and. &
            (imR.ge.1).and.(imR.le.num_materials)) then
@@ -6427,32 +6351,6 @@ stop
         stop
        endif
    
-       if ((vel_boundary_fixed.eq.1).or. &
-           (vel_boundary_fixed.eq.2)) then
-        ! do nothing
-       else if (vel_boundary_fixed.eq.0) then
-
-        if ((imL.eq.im_cpp+1).or.(imR.eq.im_cpp+1)) then
-         ! do nothing
-        else if ((is_rigid(num_materials,imL).eq.1).or. &
-                 (is_rigid(num_materials,imR).eq.1)) then
-         ! do nothing
-        else if ((is_rigid(num_materials,imL).eq.0).and. &
-                 (is_rigid(num_materials,imR).eq.0)) then
-          ! LS>0 if clamped
-         call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
-              vel_clamped_minus,temperature_clamped_minus)
-         call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
-              vel_clamped_plus,temperature_clamped_plus)
-
-         if ((LS_clamped_minus.ge.zero).or. &
-             (LS_clamped_plus.ge.zero)) then
-          ! do nothing
-         else if ((LS_clamped_minus.lt.zero).and. &
-                  (LS_clamped_plus.lt.zero)) then
-
-          need_closest_point=0
-
           if ((LSLEFT(im_cpp+1).ge.zero).or. &
               (LSRIGHT(im_cpp+1).ge.zero)) then
            ! do nothing
@@ -6499,10 +6397,6 @@ stop
             xI_RIGHT(local_dir)=xclamped_plus(local_dir)- &
                LSRIGHT(imcpp+1)*nrmCP_RIGHT(local_dir)
            enddo
-           call containing_MACcell(bfact,dx,xlo,fablo,xI_LEFT, &
-            normdir,mac_cell_index_LEFT)
-           call containing_MACcell(bfact,dx,xlo,fablo,xI_RIGHT, &
-            normdir,mac_cell_index_RIGHT)
 
 
       return
@@ -6563,7 +6457,7 @@ stop
       REAL_T, pointer :: scalar_mask_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: LS(DIMV(LS),num_materials*(SDIM+1))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T xsten(-3:3,SDIM)
+      REAL_T xstenMAC(-3:3,SDIM)
       INTEGER_T nhalf
 
       INTEGER_T i,j,k
@@ -6669,7 +6563,7 @@ stop
        if ((mask_left.eq.1).or.(mask_right.eq.1)) then
 
          ! normdir=0..sdim-1
-        call gridstenMAC_level(xsten,i,j,k,level,nhalf,normdir,26)
+        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir,26)
         call gridsten_level(xclamped_minus_sten,i-ii,j-jj,k-kk,level,nhalf)
         call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
 
@@ -6708,7 +6602,7 @@ stop
         do local_dir=1,SDIM
          xclamped_minus(local_dir)=xclamped_minus_sten(0,local_dir)
          xclamped_plus(local_dir)=xclamped_plus_sten(0,local_dir)
-         xtarget(local_dir)=xsten(0,local_dir)
+         xtarget(local_dir)=xstenMAC(0,local_dir)
         enddo
 
         do im=1,nmat
