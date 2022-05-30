@@ -425,6 +425,7 @@ protected:
 
      // spectral_override==1 => order derived from "enable_spectral"
      // spectral_override==0 => always low order.
+     // synchronizes level+1 and level.
     void avgDown_localMF(int idxMF,int scomp,int ncomp,
      int spectral_override);
     void Plus_localMF(int idx_dest,Real val,
