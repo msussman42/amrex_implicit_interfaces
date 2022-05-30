@@ -13246,7 +13246,7 @@ void NavierStokes::prepare_umac_material(Real time) {
 
      const Real* xlo = grid_loc[gridno].lo();
 
-     // mask=tag if not covered by level+1 or outside the domain.
+     // mask=tag (1) if not covered by level+1 or outside the domain.
      FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
      FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
      FArrayBox& scalarfab=(*localMF[SCALAR_MASK_MATERIAL_MF])[mfi];
