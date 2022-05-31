@@ -497,6 +497,7 @@ namespace amrex{
         int* finest_level,
         int* nsolve,
         int* local_face_index,
+        int* local_face_ncomp,
         int* nmat,
         const Real* xlo,
 	const Real* dx,
