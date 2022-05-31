@@ -7703,14 +7703,14 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
  int local_face_index=FACECOMP_FACEDEN;  // 1/rho
  int local_face_ncomp=FACECOMP_NCOMP;
- int local_cell_ncomp=1
+ int local_cell_ncomp=1;
  int local_cell_index=0;
  int local_face_var_mf=FACE_VAR_MF;
  int local_cell_den_mf=CELL_DEN_MF;
  int local_cell_visc_mf=CELL_VISC_MF;
 
  if ((project_option>=SOLVETYPE_VELEXTRAP)&&
-     (project_option<SOLVETYPE_VELEXRAP+num_materials)) {
+     (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
 
   local_face_index=project_option-SOLVETYPE_VELEXTRAP;
   local_cell_index=project_option-SOLVETYPE_VELEXTRAP;
@@ -7720,7 +7720,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
   local_cell_den_mf=SCALAR_MASK_MATERIAL_MF;
   local_cell_visc_mf=SCALAR_MASK_MATERIAL_MF;
 
- } else if (project_option_is_valid(project_option).eq.1) {
+ } else if (project_option_is_valid(project_option)==1) {
   // do nothing
  } else
   amrex::Error("project_option invalid");
