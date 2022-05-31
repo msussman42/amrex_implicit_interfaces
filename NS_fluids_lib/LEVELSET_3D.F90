@@ -15189,7 +15189,6 @@ stop
        dt, &
        offdiagcheck, &
        DIMS(offdiagcheck), &
-       recon,DIMS(recon), &
        cenden,DIMS(cenden), &
        cenvisc,DIMS(cenvisc), &
        xfwt,DIMS(xfwt), &
@@ -15231,7 +15230,6 @@ stop
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: DIMDEC(offdiagcheck)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(cenden)
       INTEGER_T, intent(in) :: DIMDEC(cenvisc)
       INTEGER_T, intent(in) :: DIMDEC(xfwt)
@@ -15245,8 +15243,6 @@ stop
       REAL_T, intent(in) :: dt
       REAL_T, intent(inout),target :: offdiagcheck(DIMV(offdiagcheck),nsolve) 
       REAL_T, pointer :: offdiagcheck_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon) 
-      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: cenden(DIMV(cenden)) 
       REAL_T, pointer :: cenden_ptr(D_DECL(:,:,:))
       REAL_T, intent(in),target :: cenvisc(DIMV(cenvisc)) 
@@ -15349,8 +15345,6 @@ stop
 
       offdiagcheck_ptr=>offdiagcheck
       call checkbound_array(fablo,fabhi,offdiagcheck_ptr,0,-1,241)
-      recon_ptr=>recon
-      call checkbound_array(fablo,fabhi,recon_ptr,1,-1,241)
       cenden_ptr=>cenden
       call checkbound_array1(fablo,fabhi,cenden_ptr,1,-1,241)
       cenvisc_ptr=>cenvisc
