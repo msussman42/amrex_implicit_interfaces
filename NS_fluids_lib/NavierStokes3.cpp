@@ -7867,13 +7867,16 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(localMF[SLOPE_RECON_MF]->boxArray().d_numPts());
+  thread_class::init_d_numPts(
+    localMF[local_cell_den_mf]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(*localMF[SLOPE_RECON_MF],use_tiling); mfi.isValid(); ++mfi) {
+  for (MFIter mfi(*localMF[local_cell_den_mf],use_tiling); 
+       mfi.isValid(); ++mfi) {
+
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
 
    const int gridno = mfi.index();
@@ -7885,8 +7888,8 @@ void NavierStokes::allocate_FACE_WEIGHT(
    const int* fabhi=fabgrid.hiVect();
    int bfact=parent->Space_blockingFactor(level);
 
-   FArrayBox& cenden=(*localMF[CELL_DEN_MF])[mfi];  // 1/rho
-   FArrayBox& cenvisc=(*localMF[CELL_VISC_MF])[mfi];
+   FArrayBox& cenden=(*localMF[local_cell_den_mf])[mfi];  // 1/rho
+   FArrayBox& cenvisc=(*localMF[local_cell_visc_mf])[mfi];
 
    FArrayBox& xfwt=(*localMF[FACE_WEIGHT_MF])[mfi];
    FArrayBox& yfwt=(*localMF[FACE_WEIGHT_MF+1])[mfi];
@@ -7894,9 +7897,9 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
    FArrayBox& offdiagcheck=(*localMF[OFF_DIAG_CHECK_MF])[mfi];
  
-   FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];  
-   FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];  
-   FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];  
+   FArrayBox& xface=(*localMF[local_face_var_mf])[mfi];  
+   FArrayBox& yface=(*localMF[local_face_var_mf+1])[mfi];  
+   FArrayBox& zface=(*localMF[local_face_var_mf+AMREX_SPACEDIM-1])[mfi];  
 
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];  // mask=1 at fine-fine bc
    const Real* xlo = grid_loc[gridno].lo();
@@ -7920,14 +7923,17 @@ void NavierStokes::allocate_FACE_WEIGHT(
     &finest_level,
     &nsolve,
     &local_face_index,
+    &local_face_ncomp,
     &nmat,
     xlo,
     dx,
     &dt_slab,
     offdiagcheck.dataPtr(),
     ARLIM(offdiagcheck.loVect()),ARLIM(offdiagcheck.hiVect()),
-    cenden.dataPtr(),ARLIM(cenden.loVect()),ARLIM(cenden.hiVect()),
-    cenvisc.dataPtr(),ARLIM(cenvisc.loVect()),ARLIM(cenvisc.hiVect()),
+    cenden.dataPtr(local_cell_index),
+    ARLIM(cenden.loVect()),ARLIM(cenden.hiVect()),
+    cenvisc.dataPtr(local_cell_index),
+    ARLIM(cenvisc.loVect()),ARLIM(cenvisc.hiVect()),
     xfwt.dataPtr(),ARLIM(xfwt.loVect()),ARLIM(xfwt.hiVect()),
     yfwt.dataPtr(),ARLIM(yfwt.loVect()),ARLIM(yfwt.hiVect()),
     zfwt.dataPtr(),ARLIM(zfwt.loVect()),ARLIM(zfwt.hiVect()),
@@ -13232,9 +13238,9 @@ void NavierStokes::prepare_umac_material(Real time) {
 
  MultiFab* local_umac[AMREX_SPACEDIM];
 
- new_localMF(SCALAR_MASK_MATERIAL_MF,num_materials,0,-1);
+ new_localMF(SCALAR_MASK_MATERIAL_MF,num_materials,1,-1);
  for (int im=0;im<num_materials;im++) {
-  setVal_localMF(SCALAR_MASK_MATERIAL_MF,0.0,im,1,0);
+  setVal_localMF(SCALAR_MASK_MATERIAL_MF,0.0,im,1,1);
  }
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {

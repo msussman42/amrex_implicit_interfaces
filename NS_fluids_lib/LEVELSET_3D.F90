@@ -15183,6 +15183,7 @@ stop
        finest_level, &
        nsolve, &
        local_face_index, &
+       local_face_ncomp, &
        nmat, &
        xlo, &
        dx, &
@@ -15220,6 +15221,7 @@ stop
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nsolve
       INTEGER_T, intent(in) :: local_face_index
+      INTEGER_T, intent(in) :: local_face_ncomp
       REAL_T, intent(in) :: visc_coef
       INTEGER_T, intent(in) :: uncoupled_viscosity
       INTEGER_T, intent(in) :: project_option
@@ -15253,11 +15255,11 @@ stop
       REAL_T, pointer :: yfwt_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out),target :: zfwt(DIMV(zfwt),nsolve)
       REAL_T, pointer :: zfwt_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: xface(DIMV(xface),FACECOMP_NCOMP)
+      REAL_T, intent(in),target :: xface(DIMV(xface),local_face_ncomp)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: yface(DIMV(yface),FACECOMP_NCOMP)
+      REAL_T, intent(in),target :: yface(DIMV(yface),local_face_ncomp)
       REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: zface(DIMV(zface),FACECOMP_NCOMP)
+      REAL_T, intent(in),target :: zface(DIMV(zface),local_face_ncomp)
       REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
@@ -15289,24 +15291,54 @@ stop
       endif
 
        ! indexes start at 0
-       if ((local_face_index.ge.FACECOMP_NCOMP).or. &
+       if ((local_face_index.ge.local_face_ncomp).or. &
            (local_face_index.lt.0)) then
        print *,"local_face_index invalid1"
        print *,"local_face_index=",local_face_index
-       print *,"FACECOMP_NCOMP=",FACECOMP_NCOMP
+       print *,"local_face_ncomp=",local_face_ncomp
        stop
       endif
-      if ((local_face_index.eq.FACECOMP_FACEDEN).or. &
-          (local_face_index.eq.FACECOMP_FACEHEAT).or. &
-          (local_face_index.eq.FACECOMP_FACEVISC).or. &
-          (local_face_index.eq.FACECOMP_FACESMOOTH).or. &
-          (local_face_index.eq. &
-           FACECOMP_FACESPEC+project_option-SOLVETYPE_SPEC)) then
-       ! do nothing
+      if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
+          (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
+       if (local_face_index.eq. &
+           project_option-SOLVETYPE_VELEXTRAP) then
+        ! do nothing
+       else
+        print *,"local_face_index invalid"
+        stop
+       endif
+       if (local_face_ncomp.eq.num_materials) then
+        ! do nothing
+       else
+        print *,"local_face_ncomp invalid"
+        stop
+       endif
+
+      else if (project_option_is_validF(project_option).eq.1) then
+
+       if ((local_face_index.eq.FACECOMP_FACEDEN).or. &
+           (local_face_index.eq.FACECOMP_FACEHEAT).or. &
+           (local_face_index.eq.FACECOMP_FACEVISC).or. &
+           (local_face_index.eq.FACECOMP_FACESMOOTH).or. &
+           (local_face_index.eq. &
+            FACECOMP_FACESPEC+project_option-SOLVETYPE_SPEC)) then
+        ! do nothing
+       else
+        print *,"local_face_index invalid2"
+        print *,"local_face_index=",local_face_index
+        print *,"local_face_ncomp=",local_face_ncomp
+        print *,"FACECOMP_NCOMP=",FACECOMP_NCOMP
+        stop
+       endif
+       if (local_face_ncomp.eq.FACECOMP_NCOMP) then
+        ! do nothing
+       else
+        print *,"local_face_ncomp invalid"
+        stop
+       endif
+
       else
-       print *,"local_face_index invalid2"
-       print *,"local_face_index=",local_face_index
-       print *,"FACECOMP_NCOMP=",FACECOMP_NCOMP
+       print *,"project_option invalid"
        stop
       endif
 
@@ -15439,6 +15471,9 @@ stop
            !do nothing
           else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
            !do nothing
+          else if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
+                   (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then 
+           !do nothing
           else
            print *,"project_option invalid"
            stop
@@ -15457,45 +15492,69 @@ stop
              stop
             endif
 
-            if (dir.eq.0) then
-             cc=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
-             cc_ice=xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
-            else if (dir.eq.1) then
-             cc=yface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
-             cc_ice=yface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
-            else if ((dir.eq.2).and.(SDIM.eq.3)) then
-             cc=zface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
-             cc_ice=zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
-            else
-             print *,"dir invalid buildfacewt"
-             stop
-            endif
-          
-            if (dir.eq.0) then
-             dd=xface(D_DECL(i,j,k),local_face_index+1)
-             do face_vcomp=1,2*nmat
-              face_vol(face_vcomp)=xface(D_DECL(i,j,k), &
-                      face_vcomp+FACECOMP_VOFFACE)
-             enddo
-            else if (dir.eq.1) then
-             dd=yface(D_DECL(i,j,k),local_face_index+1)
-             do face_vcomp=1,2*nmat
-              face_vol(face_vcomp)=yface(D_DECL(i,j,k), &
-                      face_vcomp+FACECOMP_VOFFACE)
-             enddo
-            else if ((dir.eq.2).and.(SDIM.eq.3)) then
-             dd=zface(D_DECL(i,j,k),local_face_index+1)
-             do face_vcomp=1,2*nmat
-              face_vol(face_vcomp)=zface(D_DECL(i,j,k), &
-                      face_vcomp+FACECOMP_VOFFACE)
-             enddo
-            else
-             print *,"dir invalid buildfacewt"
-             stop
-            endif
+            if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
+                (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
+
+             cc_ice=one
+             if (dir.eq.0) then
+              cc=xface(D_DECL(i,j,k),local_face_index+1)
+             else if (dir.eq.1) then
+              cc=yface(D_DECL(i,j,k),local_face_index+1)
+             else if ((dir.eq.2).and.(SDIM.eq.3)) then
+              cc=zface(D_DECL(i,j,k),local_face_index+1)
+             else
+              print *,"dir invalid buildfacewt"
+              stop
+             endif
+             dd=cc
+             face_damping_factor=zero          
  
-            face_damping_factor=get_face_damping_factor( &
-              face_vol,nmat,project_option,dt)
+            else if (project_option_is_validF(project_option).eq.1) then
+
+             if (dir.eq.0) then
+              cc=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
+              cc_ice=xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+             else if (dir.eq.1) then
+              cc=yface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
+              cc_ice=yface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+             else if ((dir.eq.2).and.(SDIM.eq.3)) then
+              cc=zface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
+              cc_ice=zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+             else
+              print *,"dir invalid buildfacewt"
+              stop
+             endif
+          
+             if (dir.eq.0) then
+              dd=xface(D_DECL(i,j,k),local_face_index+1)
+              do face_vcomp=1,2*nmat
+               face_vol(face_vcomp)=xface(D_DECL(i,j,k), &
+                  face_vcomp+FACECOMP_VOFFACE)
+              enddo
+             else if (dir.eq.1) then
+              dd=yface(D_DECL(i,j,k),local_face_index+1)
+              do face_vcomp=1,2*nmat
+               face_vol(face_vcomp)=yface(D_DECL(i,j,k), &
+                  face_vcomp+FACECOMP_VOFFACE)
+              enddo
+             else if ((dir.eq.2).and.(SDIM.eq.3)) then
+              dd=zface(D_DECL(i,j,k),local_face_index+1)
+              do face_vcomp=1,2*nmat
+               face_vol(face_vcomp)=zface(D_DECL(i,j,k), &
+                  face_vcomp+FACECOMP_VOFFACE)
+              enddo
+             else
+              print *,"dir invalid buildfacewt"
+              stop
+             endif
+ 
+             face_damping_factor=get_face_damping_factor( &
+               face_vol,nmat,project_option,dt)
+
+            else
+             print *,"project_option invalid"
+             stop
+            endif
 
              ! eval_face_coeff is declared in: PROB.F90
              ! e.g. 1/rho or if damping is active,
