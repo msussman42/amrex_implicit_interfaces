@@ -5625,7 +5625,9 @@ int NavierStokes::project_option_momeqn(int project_option) {
      (project_option==SOLVETYPE_INITPROJ)||  
      (project_option==SOLVETYPE_PRESCOR)|| 
      (project_option==SOLVETYPE_PRESEXTRAP)|| 
-     (project_option==SOLVETYPE_VISC)) { 
+     (project_option==SOLVETYPE_VISC)||
+     ((project_option>=SOLVETYPE_VELEXTRAP)&&
+      (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
   return 1;
  } else if ((project_option==SOLVETYPE_HEAT)||  
             ((project_option>=SOLVETYPE_SPEC)&& 
@@ -5645,7 +5647,9 @@ int NavierStokes::project_option_singular_possible(int project_option) {
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_INITPROJ)|| 
      (project_option==SOLVETYPE_PRESCOR)|| 
-     (project_option==SOLVETYPE_PRESEXTRAP)) { 
+     (project_option==SOLVETYPE_PRESEXTRAP)||
+     ((project_option>=SOLVETYPE_VELEXTRAP)&&
+      (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
   return 1;
  } else if ((project_option==SOLVETYPE_HEAT)|| 
    	    (project_option==SOLVETYPE_VISC)|| 
@@ -5666,7 +5670,9 @@ int NavierStokes::project_option_olddata_needed(int project_option) {
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_INITPROJ)|| 
      (project_option==SOLVETYPE_PRESCOR)||  
-     (project_option==SOLVETYPE_PRESEXTRAP)) { 
+     (project_option==SOLVETYPE_PRESEXTRAP)||
+     ((project_option>=SOLVETYPE_VELEXTRAP)&&
+      (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
   return 0;
  } else if ((project_option==SOLVETYPE_HEAT)|| 
    	    (project_option==SOLVETYPE_VISC)|| 
@@ -5713,7 +5719,9 @@ int NavierStokes::project_option_needs_scaling(int project_option) {
 	    (project_option==SOLVETYPE_VISC)|| 
             ((project_option>=SOLVETYPE_SPEC)&&
              (project_option<SOLVETYPE_SPEC+num_species_var))|| 
-            (project_option==SOLVETYPE_SMOOTH)) { 
+            (project_option==SOLVETYPE_SMOOTH)||
+	    ((project_option>=SOLVETYPE_VELEXTRAP)&&
+	     (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
   return 0;
  } else {
   amrex::Error("project_option invalid");
@@ -5734,7 +5742,9 @@ int NavierStokes::project_option_projection(int project_option) {
 	    (project_option==SOLVETYPE_VISC)|| 
             ((project_option>=SOLVETYPE_SPEC)&&
              (project_option<SOLVETYPE_SPEC+num_species_var))|| 
-            (project_option==SOLVETYPE_SMOOTH)) { 
+            (project_option==SOLVETYPE_SMOOTH)||
+	    ((project_option>=SOLVETYPE_VELEXTRAP)&&
+	     (project_option<SOLVETYPE_VELEXTRAP+num_materials))) {
   return 0;
  } else {
   amrex::Error("project_option invalid");

@@ -7698,24 +7698,37 @@ void NavierStokes::allocate_FACE_WEIGHT(
  if (ncomp_check!=nsolve)
   amrex::Error("ncomp_check alid");
 
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  debug_ngrow(FACE_VAR_MF+dir,0,850);
- }
-
  resize_mask_nbr(1);
  debug_ngrow(MASK_NBR_MF,1,851);
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,31);
- if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
-  amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
+ if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+     (project_option<SOLVETYPE_VELEXRAP+num_materials)) {
 
- debug_ngrow(CELL_VISC_MF,1,47);
- debug_ngrow(CELL_DEN_MF,1,47);
- if (localMF[CELL_VISC_MF]->nComp()!=1)
-  amrex::Error("localMF[CELL_VISC_MF]->nComp() invalid");
- if (localMF[CELL_DEN_MF]->nComp()!=1)
-  amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   debug_ngrow(UMAC_MASK_MATERIAL_MF+dir,0,850);
+  }
+  debug_ngrow(SCALAR_MASK_MATERIAL_MF,0,850);
+
+ } else if (project_option_is_valid(project_option).eq.1) {
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   debug_ngrow(FACE_VAR_MF+dir,0,850);
+  }
+
+  VOF_Recon_resize(1,SLOPE_RECON_MF);
+  debug_ngrow(SLOPE_RECON_MF,1,31);
+  if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
+   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
+
+  debug_ngrow(CELL_VISC_MF,1,47);
+  debug_ngrow(CELL_DEN_MF,1,47);
+  if (localMF[CELL_VISC_MF]->nComp()!=1)
+   amrex::Error("localMF[CELL_VISC_MF]->nComp() invalid");
+  if (localMF[CELL_DEN_MF]->nComp()!=1)
+   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+
+ } else
+  amrex::Error("project_option invalid");
 
  int bcsize=AMREX_SPACEDIM*2*nsolve*grids.size();
  bcpres_array.resize(bcsize);
