@@ -3606,6 +3606,7 @@ end subroutine dynamic_contact_angle
        stop
       endif
 
+       ! MAX_NUM_EOS=998
       if ((fort_material_type(im).ge.1).and. &
           (fort_material_type(im).le.MAX_NUM_EOS)) then
        is_compressible_mat=1
@@ -23319,7 +23320,14 @@ pressure=pressure/global_pressure_scale
 return
 end subroutine EOS_material
 
-
+! This routine is used by the Tryggvason low Mach number model,
+! Xia, Liu, Tryggvason,
+! "Fully resolved numerical simulations of fused deposition modeling."
+! Part II -
+! solidification, residual stresses and modeling of the nozzle". 
+! In: Rapid Prototyping Journal 24.6 (2018), pp. 973-987.
+! Set ns.material_type_lowmach=0 to disable the Tryggvason low mach
+! term.
 subroutine dVdT_material(dVdT,massfrac_parm, &
   pressure_in,temperature, &
   imattype,im)

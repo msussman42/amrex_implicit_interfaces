@@ -276,6 +276,8 @@ stop
 return 
 end subroutine STUB_VEL
 
+! density(T) = density_base * (1+expansion_factor(T))
+! remark: expansion_factor(T)=density(T)/density_base - 1
 subroutine STUB_UNITLESS_EXPANSION_FACTOR( &
   im,temperature,temperature_base,expansion_factor)
  use probcommon_module
