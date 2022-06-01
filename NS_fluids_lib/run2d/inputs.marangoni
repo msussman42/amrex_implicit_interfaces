@@ -45,12 +45,17 @@ ns.continuous_mof=2
 # 12 21
 #ns.latent_heat=2257.0e+7 -2257.0e+7
 ns.latent_heat=358.0e+7 -358.0e+7
-ns.distribute_target=0 1
 # 12 -> liquid evaporates to vapor
 # 21 -> vapor condensates to liquid
 # if 330<T<370, then neither evaporation nor condensation takes place.
 ns.saturation_temp=370.0 330.0
-ns.freezing_model=4 4
+ns.distribute_from_target= 0 0 
+ns.distribute_mdot_evenly = 0 0 
+ns.constant_density_all_time=1 0 
+ns.constant_volume_mdot=-1 1 # sealed 1..2 nten
+ns.Tanasawa_or_Schrage_or_Kassemi= 3 3
+ns.accommodation_coefficient=1.0 1.0
+ns.freezing_model=6 6
 # 0=> conservative advection of temperature
 # 1=> non-conservative advection of temperature
 # 0=use LS  1=use VOF

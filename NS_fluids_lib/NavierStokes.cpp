@@ -795,19 +795,12 @@ Vector<Real> NavierStokes::reaction_rate;
 //    b) single equation for T with source term
 //    c) single equation for C with source term.
 // 3=wildfire combustion
-// 4=source term model (single equation for T with source term).
-//   Tanasawa model or Schrage is used for evaporation and condensation.
-//   TSAT used to determine if phase change happens.
-//   expansion source, and offsetting sink evenly distributed.
-//   For Tannasawa model implemented here, it is assumed that Y=1
-//   at the interface.  Schrage Model does not assume Y=1 at interface.
-// MEHDI EVAPORATION: freezing_model=4
 //   1=liquid  2=ambient gas  3=solid wall  num_species_var=1
 //   ->  12 13 23 21 31 32
 //   latent_heat
 //   ->  +L 0  0  -L 0  0
 //   freezing_model
-//   ->  4  0  0  4  0  0
+//   ->  6  0  0  6  0  0
 //   mass_fraction_id
 //   ->  1  0  0  1  0  0
 //   Tanasawa_or_Schrage_or_Kassemi
@@ -830,9 +823,6 @@ Vector<int> NavierStokes::freezing_model;
 
 //0=Palmore and Desjardins (Villegas, Tanguy, Desjardins) 
 //1=Tanasawa  2=Schrage 3=Kassemi
-//4=Stefan model in which T_interface=f(Pressure_smooth)
-//  Pressure_smooth=P(rho_gas_closest_point,T_smooth_closest)
-//see "smoothing_length_scale"
 Vector<int> NavierStokes::Tanasawa_or_Schrage_or_Kassemi; 
 
 //ispec=mass_fraction_id[0..2 nten-1]=1..num_species_var
@@ -959,7 +949,6 @@ Vector<Real> NavierStokes::heatviscconst_eddy_wall; //default = 0
 Vector<Real> NavierStokes::heatviscconst_eddy_bulk; //default = 0
 Vector<Real> NavierStokes::speciesviscconst;// species mass diffusion coeff.
 Vector<Real> NavierStokes::prerecalesce_heatviscconst;
-Real NavierStokes::smoothing_length_scale=0.0;
 Vector<Real> NavierStokes::heatflux_factor;
 Vector<Real> NavierStokes::heatviscconst;
 Real NavierStokes::heatviscconst_max=0.0;
@@ -3704,8 +3693,6 @@ NavierStokes::read_params ()
     }
     pp.queryarr("les_model",les_model,0,nmat);
 
-    pp.query("smoothing_length_scale",smoothing_length_scale);
-
     heatviscconst.resize(nmat);
     heatviscconst_interface.resize(nten);
     pp.queryarr("heatflux_factor",heatflux_factor,0,nmat);
@@ -3847,8 +3834,6 @@ NavierStokes::read_params ()
       Tanasawa_or_Schrage_or_Kassemi,0,2*nten);
     pp.queryarr("mass_fraction_id",mass_fraction_id,0,2*nten);
 
-    int at_least_one_tanguy_fully_saturated_model=0;
-
      // set defaults for "distribute_from_target"
     for (int iten=0;iten<nten;iten++) {
      for (int ireverse=0;ireverse<2;ireverse++) {
@@ -3934,8 +3919,6 @@ NavierStokes::read_params ()
 	 //do nothing
 	} else if (Tanasawa_or_Schrage_or_Kassemi[iten_local]==3) { //Kassemi
 	 //do nothing
-	} else if (Tanasawa_or_Schrage_or_Kassemi[iten_local]==4) { //Tanguy
-         at_least_one_tanguy_fully_saturated_model=1;
 	} else
 	 amrex::Error("Tanasawa_or_Schrage_or_Kassemi[iten_local] invalid");
 
@@ -3947,19 +3930,6 @@ NavierStokes::read_params ()
        amrex::Error("freezing_model invalid");
      } // ireverse
     } // iten
-
-    if (at_least_one_tanguy_fully_saturated_model==0) {
-     if (smoothing_length_scale==0.0) {
-      //do nothing
-     } else
-      amrex::Error("smoothing_length_scale should be 0.0");
-    } else if (at_least_one_tanguy_fully_saturated_model==1) {
-     if (smoothing_length_scale>=0.0) {
-      //do nothing
-     } else
-      amrex::Error("smoothing_length_scale should be >=0.0");
-    } else
-     amrex::Error("at_least_one_tanguy_fully_saturated_model invalid");
 
     pp.queryarr("distribute_from_target",distribute_from_target,0,2*nten);
     pp.queryarr("distribute_mdot_evenly",distribute_mdot_evenly,0,2*nten);
@@ -4915,8 +4885,6 @@ NavierStokes::read_params ()
       std::cout << "i,temperature_source_rad=" << i << ' ' <<
          temperature_source_rad[i] << '\n';
      }
-     std::cout << "smoothing_length_scale "  << 
-        smoothing_length_scale << '\n';
  
      for (int i=0;i<nten;i++) {
       std::cout << "i= " << i << " denconst_interface "  << 
@@ -5546,8 +5514,7 @@ int NavierStokes::is_hydrate_freezing_model(int loc_freezing_model) {
 
 int NavierStokes::is_valid_freezing_model(int loc_freezing_model) {
 
- if ((loc_freezing_model==4)|| //Tannasawa or Schrage 
-     (loc_freezing_model==5)|| //Stefan model evaporation or condensation
+ if ((loc_freezing_model==5)|| //Stefan model evaporation or condensation
      (loc_freezing_model==6)|| //Palmore and Desjardins
      (loc_freezing_model==7)) {//cavitation
   return 1;
@@ -5571,8 +5538,7 @@ int NavierStokes::is_multi_component_evap(int loc_freezing_model,
   return 0;
  } else if (loc_latent_heat!=0.0) {
 
-  if ((loc_freezing_model==4)|| //Tannasawa or Schrage 
-      (loc_freezing_model==5)|| //Stefan model evaporation or condensation
+  if ((loc_freezing_model==5)|| //Stefan model evaporation or condensation
       (loc_freezing_model==6)|| //Palmore and Desjardins
       (loc_freezing_model==7)) {//cavitation
 
@@ -5580,8 +5546,7 @@ int NavierStokes::is_multi_component_evap(int loc_freezing_model,
     return 1;
    } else if ((loc_evap_flag==1)|| //Tanasawa
               (loc_evap_flag==2)|| //Schrage
-              (loc_evap_flag==3)|| //Kassemi
-              (loc_evap_flag==4)) {//Tanguy recommendation.
+              (loc_evap_flag==3)) { //Kassemi
     return 0;
    } else {
     amrex::Error("loc_evap_flag invalid");
@@ -13024,24 +12989,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   amrex::Error("DEN_RECON_MF invalid ncomp");
  debug_ixType(DEN_RECON_MF,-1,DEN_RECON_MF);
 
- int local_temperature_smooth_mf=DEN_RECON_MF;
- Real local_smoothing_length_scale=0.0;
- if (nucleation_flag==1) {
-  // do nothing
- } else if (nucleation_flag==0) {
-  local_temperature_smooth_mf=TEMPERATURE_SMOOTH_MF;
-  local_smoothing_length_scale=smoothing_length_scale;
- } else
-  amrex::Error("nucleation_flag invalid");
-
- debug_ngrow(local_temperature_smooth_mf,ngrow_distance,28); 
- debug_ixType(local_temperature_smooth_mf,-1,local_temperature_smooth_mf);
-
- if (localMF[local_temperature_smooth_mf]->nComp()>=nmat) {
-  // do nothing
- } else
-  amrex::Error("localMF[local_temperature_smooth_mf]->nComp() invalid");
-
  Vector<Real> blob_array;
  int blob_arraysize=num_elements_blobclass;
  blob_array.resize(blob_arraysize);
@@ -13465,8 +13412,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    FArrayBox& snewfab=S_new[mfi];
    FArrayBox& eosfab=(*localMF[DEN_RECON_MF])[mfi];
 
-   FArrayBox& smoothfab=(*localMF[local_temperature_smooth_mf])[mfi];
-
    FArrayBox& presfab=(*presmf)[mfi]; 
    FArrayBox& pres_eos_fab=(*pres_eos_mf)[mfi]; 
 
@@ -13546,7 +13491,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      macrolayer_size.dataPtr(),
      max_contact_line_size.dataPtr(),
      &R_Palmore_Desjardins,
-     &local_smoothing_length_scale,
      latent_heat.dataPtr(),
      use_exact_temperature.dataPtr(),
      reaction_rate.dataPtr(),
@@ -13589,8 +13533,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      ARLIM(burnvelfab.loVect()),ARLIM(burnvelfab.hiVect()),
      Tsatfab.dataPtr(),
      ARLIM(Tsatfab.loVect()),ARLIM(Tsatfab.hiVect()),
-     smoothfab.dataPtr(),
-     ARLIM(smoothfab.loVect()),ARLIM(smoothfab.hiVect()),
      lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
      lsnewfab.dataPtr(),ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
@@ -13634,7 +13576,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      macrolayer_size.dataPtr(),
      max_contact_line_size.dataPtr(),
      &R_Palmore_Desjardins,
-     &local_smoothing_length_scale,
      latent_heat.dataPtr(),
      use_exact_temperature.dataPtr(),
      reaction_rate.dataPtr(),
@@ -13677,8 +13618,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      lsnewfab.dataPtr(), //Tsatfab
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
-     smoothfab.dataPtr(),
-     ARLIM(smoothfab.loVect()),ARLIM(smoothfab.hiVect()),
      lsnewfab.dataPtr(), //lsfab
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      lsnewfab.dataPtr(),

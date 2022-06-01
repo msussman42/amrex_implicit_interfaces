@@ -203,13 +203,6 @@ ns.latent_heat = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
 # 1 = mystery source term model
 # 2 = hydrate
 # 3 = wildfires (combustion) ?
-# 4 = Tanasawa model  (no extra species variable required)
-#     rate of evaporation is proportional to 
-#     half*(Tsrc_INT+Tdst_INT)-Tsat  i.e.
-#     rate of evaporation proportional to the present interface temperature
-#     minus some prescribed (constant) saturation temperature.
-#     In near future: Saturation temperature Tsat will depend on liquid, gas,
-#     and vapor state variables.
 # 5 = [k grad T dot n]/L evaporation law
 #     a) species (rho Y)_{t} + div(rho u Y) = div (D rho grad Y)
 #        Y is the mass fraction of vapor within the gas.

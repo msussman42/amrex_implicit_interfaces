@@ -41,7 +41,6 @@ stop
        INTEGER_T :: tid
        INTEGER_T :: use_supermesh
        INTEGER_T :: probe_constrain
-       REAL_T :: smoothing_length_scale
        REAL_T, pointer :: Y_TOLERANCE
        INTEGER_T, pointer :: local_freezing_model
        REAL_T, pointer :: LL
@@ -74,7 +73,6 @@ stop
        INTEGER_T, pointer :: fablo(:)
        INTEGER_T, pointer :: fabhi(:)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
-       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: smoothfab
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: recon
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres
@@ -83,7 +81,6 @@ stop
       type probe_out_type
       REAL_T :: T_probe(2)
       REAL_T :: T_probe_raw(2)
-      REAL_T :: T_probe_raw_smooth(2)
       REAL_T :: Y_probe(2)
       REAL_T :: den_I_interp(2)
       REAL_T :: den_probe(2)
@@ -2639,38 +2636,6 @@ stop
         stop
        endif
 
-       if (PROBE_PARMS%smoothing_length_scale.eq.zero) then
-        POUT%T_probe_raw_smooth(iprobe)=POUT%T_probe_raw(iprobe)
-       else if (PROBE_PARMS%smoothing_length_scale.gt.zero) then 
-        call interpfabFWEIGHT( &
-         PROBE_PARMS%bfact, &
-         PROBE_PARMS%level, &
-         PROBE_PARMS%finest_level, &
-         PROBE_PARMS%dx, &
-         PROBE_PARMS%xlo, &
-         xtarget_probe, &
-         im_target_probe(iprobe), &
-         PROBE_PARMS%nmat, &
-         im_target_probe(iprobe), &
-         PROBE_PARMS%fablo, &
-         PROBE_PARMS%fabhi, &
-         PROBE_PARMS%smoothfab, &
-         PROBE_PARMS%recon, &
-         POUT%T_probe_raw_smooth(iprobe))
-
-        if (POUT%T_probe_raw_smooth(iprobe).ge.zero) then
-         ! do nothing
-        else
-         print *,"T_probe_raw_smooth went negative"
-         print *,"T_probe_raw_smooth ",POUT%T_probe_raw_smooth(iprobe)
-         stop
-        endif
-
-       else 
-        print *,"PROBE_PARMS%smoothing_length_scale invalid"
-        stop
-       endif
-
        call interpfabFWEIGHT( &
         PROBE_PARMS%bfact, &
         PROBE_PARMS%level, &
@@ -2887,7 +2852,6 @@ stop
       REAL_T Pgamma
       REAL_T density_probe
       REAL_T Tvapor_probe
-      REAL_T Tvapor_probe_smooth
       REAL_T internal_energy,Pvapor_probe
       INTEGER_T im_probe
       INTEGER_T imattype
@@ -2993,7 +2957,6 @@ stop
 
           density_probe=POUT%den_I_interp(iprobe_vapor)
           Tvapor_probe=POUT%T_probe(iprobe_vapor)
-          Tvapor_probe_smooth=POUT%T_probe_raw_smooth(iprobe_vapor)
 
           if (LL.gt.zero) then  ! evaporation (destination=vapor)
            im_probe=TSAT_Y_PARMS%PROBE_PARMS%im_dest
@@ -7355,9 +7318,7 @@ stop
 
       T_history=TSAT_predict
 
-       ! Kassemi or smoothed Kassemi?
-      if ((fully_saturated.eq.2).or. &
-          (fully_saturated.eq.3)) then
+      if (fully_saturated.eq.2) then
        X_gamma_c=one
        Y_gamma_c=one
        Y_history=one
@@ -7495,7 +7456,6 @@ stop
        macrolayer_size, &
        max_contact_line_size, &
        R_Palmore_Desjardins, &
-       smoothing_length_scale, &
        latent_heat, &
        use_exact_temperature, &
        reaction_rate, &
@@ -7532,7 +7492,6 @@ stop
        conductstate,DIMS(conductstate), &
        burnvel,DIMS(burnvel), &
        Tsatfab,DIMS(Tsatfab), &
-       smoothfab,DIMS(smoothfab), &
        LS,DIMS(LS),  & !if nucleation_flag==0: localMF[HOLD_LS_DATA_MF]
        LSnew,DIMS(LSnew), & ! get_new_data(LS_Type,slab_step+1);
        Snew,DIMS(Snew), & 
@@ -7597,7 +7556,6 @@ stop
       REAL_T, intent(in) :: macrolayer_size(nmat)
       REAL_T, intent(in) :: max_contact_line_size(nmat)
       REAL_T, intent(in) :: R_Palmore_Desjardins
-      REAL_T, intent(in) :: smoothing_length_scale
       REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: use_exact_temperature(2*nten)
       REAL_T, intent(in) :: reaction_rate(2*nten)
@@ -7639,7 +7597,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(conductstate)
       INTEGER_T, intent(in) :: DIMDEC(burnvel)
       INTEGER_T, intent(in) :: DIMDEC(Tsatfab)
-      INTEGER_T, intent(in) :: DIMDEC(smoothfab)
       INTEGER_T, intent(in) :: DIMDEC(LS) ! declare the x,y,z dimensions of LS
       INTEGER_T, intent(in) :: DIMDEC(LSnew)
       INTEGER_T, intent(in) :: DIMDEC(Snew)
@@ -7668,8 +7625,6 @@ stop
       REAL_T, intent(out), target :: Tsatfab(DIMV(Tsatfab),ntsat)
       REAL_T, pointer :: Tsatfab_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, intent(in) :: smoothfab(DIMV(smoothfab),nmat)
-      REAL_T, pointer :: smoothfab_ptr(D_DECL(:,:,:),:)
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  nmat=num. materials
@@ -7849,13 +7804,6 @@ stop
        stop
       endif
 
-      if (smoothing_length_scale.ge.zero) then
-       ! do nothing
-      else
-       print *,"smoothing_length_scale invalid"
-       stop
-      endif
-
       Y_TOLERANCE=0.01D0
 
       if ((use_supermesh.eq.0).or. &
@@ -7869,12 +7817,7 @@ stop
       if (nucleation_flag.eq.0) then
        ! do nothing
       else if (nucleation_flag.eq.1) then
-       if (smoothing_length_scale.eq.zero) then
-        ! do nothing
-       else
-        print *,"expecting smoothing_length_scale==0"
-        stop
-       endif
+       ! do nothing
       else
        print *,"nucleation_flag invalid"
        stop
@@ -7999,11 +7942,6 @@ stop
         Tsatfab_ptr, &
         ngrow_make_distance,-1,1250)
 
-       smoothfab_ptr=>smoothfab
-       call checkbound_array(fablo,fabhi, &
-        smoothfab_ptr, &
-        ngrow_distance,-1,1250)
-
        call checkbound_array(fablo,fabhi, &
         curvfab_ptr, &
         ngrow_make_distance,-1,1250)
@@ -8102,13 +8040,10 @@ stop
       PROBE_PARMS%tid=tid
       PROBE_PARMS%use_supermesh=use_supermesh
 
-      PROBE_PARMS%smoothing_length_scale=smoothing_length_scale
-
       PROBE_PARMS%Y_TOLERANCE=>Y_TOLERANCE
 
       PROBE_PARMS%debugrate=>debugrate
       PROBE_PARMS%EOS=>EOS 
-      PROBE_PARMS%smoothfab=>smoothfab 
       PROBE_PARMS%LS=>LS  ! PROBE_PARMS%LS is pointer, LS is target
       PROBE_PARMS%recon=>recon
       PROBE_PARMS%pres=>pres
@@ -8966,68 +8901,12 @@ stop
                      if (user_override_TI_YI.eq.0) then
 
                        ! 3=Kassemi model
-                       ! 4=Stefan model with "T_gamma=f(Pressure_smooth)"
-                      if ((local_Tanasawa_or_Schrage_or_Kassemi.eq.3).or. &
-                          (local_Tanasawa_or_Schrage_or_Kassemi.eq.4)) then
+                      if (local_Tanasawa_or_Schrage_or_Kassemi.eq.3) then
                        fully_saturated=2
                        Y_predict=one
                        X_predict=one
                        Y_gamma_a=Y_predict
                        Y_gamma_b=Y_predict
-
-                       if (local_Tanasawa_or_Schrage_or_Kassemi.eq.3) then
-                        ! do nothing
-                       else if (local_Tanasawa_or_Schrage_or_Kassemi.eq.4) then
-                        fully_saturated=3
-                        if (PROBE_PARMS%LL.gt.zero) then  ! evaporation 
-                         im_probe=im_dest
-                        else if (PROBE_PARMS%LL.lt.zero) then ! condensation 
-                         im_probe=im_source
-                        else
-                         print *,"LL invalid"
-                         stop
-                        endif
-
-                        call init_massfrac_parm( &
-                          POUT%den_I_interp(iprobe_vapor), &
-                          massfrac_parm,im_probe)
-                        do local_ispec=1,num_species_var
-                         massfrac_parm(local_ispec)=Y_predict
-                        enddo
-                        call INTERNAL_material( &
-                         POUT%den_I_interp(iprobe_vapor), &
-                         massfrac_parm, &
-                         POUT%T_probe_raw_smooth(iprobe_vapor), &
-                         internal_energy, &
-                         material_type_evap(im_probe), &
-                         im_probe)
-                        call EOS_material( &
-                         POUT%den_I_interp(iprobe_vapor), &
-                         massfrac_parm, &
-                         internal_energy, &
-                         Pvapor_probe, &
-                         material_type_evap(im_probe), &
-                         im_probe)
-                        X_predict=Pvapor_probe/TSAT_Y_PARMS%reference_pressure
-                        if (X_predict.gt.one) then
-                         TSAT_predict=local_Tsat(ireverse)
-                        else if ((X_predict.gt.zero).and. &
-                                 (X_predict.le.one)) then 
-                         call Tgamma_from_TSAT_and_X(TSAT_predict, &
-                          local_Tsat(ireverse), &
-                          X_predict, &
-                          PROBE_PARMS%LL, &
-                          R_Palmore_Desjardins, &
-                          molar_mass_vapor,TI_min,TI_max)
-                        else
-                         print *,"X_predict invalid"
-                         stop
-                        endif
-                        X_predict=one 
-                       else
-                        print *,"local_Tanasawa_or_Schrage_or_Kassemi invalid"
-                        stop
-                       endif
 
                        T_gamma_a=TSAT_predict
                        T_gamma_b=TSAT_predict
@@ -9060,8 +8939,6 @@ stop
 
                       if (fully_saturated.eq.1) then ! Tgamma=Tboil
                        ! do nothing
-                      else if (fully_saturated.eq.3) then ! Tgamma<Tboil
-                       ! do nothing (T_gamma_[ab] defined as "TSAT_predict")
                       else if (fully_saturated.eq.2) then ! Kassemi
                        if (LL(ireverse).gt.zero) then ! evaporation
                         T_gamma_a=TI_min
@@ -9526,15 +9403,13 @@ stop
                         X_gamma_a,X_gamma_b,X_gamma_c)
 
                        ! Palmore and Desjardins, or
-                       ! Kassemi, or,
-                       ! Tgamma=f(P_vapor_smooth)
+                       ! Kassemi
                       else if ((molar_mass_ambient.gt.zero).and. &
                                (molar_mass_vapor.gt.zero).and. &
                                (R_Palmore_Desjardins.gt.zero).and. &
                                (TSAT_Y_PARMS%den_G.gt.zero).and. &
                                ((fully_saturated.eq.0).or. &
-                                (fully_saturated.eq.1).or. &
-                                (fully_saturated.eq.3))) then
+                                (fully_saturated.eq.1))) then
 
                        ! Palmore and Desjardins, Y=X=1
                        if (fully_saturated.eq.1) then 
@@ -9543,29 +9418,6 @@ stop
                         Y_interface_min=one
                         Y_predict=one
                         TSAT_correct=local_Tsat(ireverse)
-
-                       ! Tgamma=f(P_vapor_smooth)
-                       else if (fully_saturated.eq.3) then
-
-                        call advance_TY_gamma( &
-                          TSAT_Y_PARMS, &
-                          POUT, &
-                          fully_saturated, &
-                          trial_and_error, &
-                          probe_ok, &
-                          TSAT_iter, &
-                          TSAT_predict, &
-                          TSAT_correct, &
-                          Y_predict, &
-                          VEL_correct, &
-                          local_Tsat(ireverse), &
-                          LL(ireverse),R_Palmore_Desjardins, &
-                          molar_mass_ambient,molar_mass_vapor, &
-                          TI_YI_ptr,TI_YI_counter,TI_YI_best_guess_index, &
-                          TI_min,TI_max, &
-                          T_gamma_a,T_gamma_b,T_gamma_c, &
-                          Y_gamma_a,Y_gamma_b,Y_gamma_c, &
-                          X_gamma_a,X_gamma_b,X_gamma_c)
 
                        else if ((fully_saturated.eq.0).and. &
                                 (POUT%Y_probe(iprobe_vapor).ge. &

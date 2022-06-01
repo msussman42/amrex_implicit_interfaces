@@ -1688,14 +1688,12 @@ protected:
      //    c) single equation for C with source term.
      //       Coefficient for diffusivity "D" is zero at junction
      //       between F_water=1 and F_water<1.
-     // 4=Tanasawa model (evaporation and condensation for saturated material)
      // 5=evaporation
      // 1-2 1-3 1-4 2-3 2-4 3-4
      // 2-1 3-1 4-1 3-2 4-2 4-3
     static Vector<int> freezing_model;
      // 0=Palmore and Desjardins (same as Villegas et al)
      // 1=Tanasawa  2=Schrage  3=Kassemi
-     // 4=Stefan model in which T_interface=f(Pressure_smooth)
     static Vector<int> Tanasawa_or_Schrage_or_Kassemi; 
      // index: 1..2*nten
      // value: 1..num_species_var
@@ -2079,7 +2077,6 @@ protected:
     static Vector<Real> heatviscconst_eddy_bulk;
     static Vector<Real> prerecalesce_viscconst;
     static Vector<Real> viscconst_interface;
-    static Real smoothing_length_scale;
     static Vector<Real> heatflux_factor;
     static Vector<Real> heatviscconst;
     static Real heatviscconst_max;
