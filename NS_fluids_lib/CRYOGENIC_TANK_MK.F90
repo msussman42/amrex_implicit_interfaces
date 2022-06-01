@@ -1171,7 +1171,7 @@ end function SOLID_TOP_HALF_DIST
 !
 ! a = sqrt(gamma R_sp T) = sqrt(gamma p/rho)
 !
-
+! EOS=Equation Of State P=P(rho,e,Y)
 subroutine EOS_CRYOGENIC_TANK_MK(rho,massfrac_var, &
   internal_energy,pressure, &
   imattype,im,num_species_var_in)
@@ -1186,7 +1186,7 @@ subroutine EOS_CRYOGENIC_TANK_MK(rho,massfrac_var, &
  INTEGER_T :: dummy_input
 
  if (num_species_var_in.eq.num_species_var) then
-  if (im.eq.2) then
+  if (im.eq.2) then  ! material 2 is vapor
    if (imattype.eq.TANK_MK_MATERIAL_TYPE) then
     ! p = rho (gamme-1) U
     pressure=rho * (TANK_MK_GAS_GAMMA-one) * internal_energy
@@ -1241,7 +1241,7 @@ INTEGER_T :: dummy_input
  endif
 
  if (num_species_var_in.eq.num_species_var) then
-  if (im.eq.2) then
+  if (im.eq.2) then  ! vapor material
    if (imattype.eq.TANK_MK_MATERIAL_TYPE) then
     ! p = rho (gamma-1) e  rho=1/V
     ! V = (gamma-1) e/p=(gamma-1)Cv T/p
@@ -1287,7 +1287,7 @@ subroutine SOUNDSQR_CRYOGENIC_TANK_MK(rho,massfrac_var, &
  REAL_T pressure
 
  if (num_species_var_in.eq.num_species_var) then
-  if (im.eq.2) then
+  if (im.eq.2) then ! vapor
    if (imattype.eq.TANK_MK_MATERIAL_TYPE) then
      ! a = sqrt(gamma R_sp T) = sqrt(gamma p/rho)
     call EOS_CRYOGENIC_TANK_MK(rho,massfrac_var, &
@@ -1329,7 +1329,7 @@ subroutine INTERNAL_CRYOGENIC_TANK_MK(rho,massfrac_var, &
  REAL_T, intent(out) :: local_internal_energy
 
  if (num_species_var_in.eq.num_species_var) then
-  if (im.eq.2) then
+  if (im.eq.2) then ! vapor
    if ((imattype.eq.TANK_MK_MATERIAL_TYPE).or. &
        (imattype.eq.0)) then 
     ! U_mix = C_{v,spc} T
@@ -1365,7 +1365,7 @@ subroutine TEMPERATURE_CRYOGENIC_TANK_MK(rho,massfrac_var, &
  REAL_T, intent(in) :: internal_energy
 
  if (num_species_var_in.eq.num_species_var) then
-  if (im.eq.2) then
+  if (im.eq.2) then  ! vapor
    if ((imattype.eq.TANK_MK_MATERIAL_TYPE).or. &
        (imattype.eq.0)) then 
     ! T = U / C_{v,spc}
@@ -1486,8 +1486,6 @@ call CRYOGENIC_TANK_MK_PRES_UTIL(x,PRES,rho_hyd)
 
 return 
 end subroutine CRYOGENIC_TANK_MK_PRES
-
-
 
 subroutine CRYOGENIC_TANK_MK_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module

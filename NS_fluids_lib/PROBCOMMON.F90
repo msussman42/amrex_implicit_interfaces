@@ -308,7 +308,10 @@ implicit none
        !nten=num_interfaces=( (nmat-1)*(nmat-1)+nmat-1 )/2
       INTEGER_T, PARAMETER :: MAX_NUM_INTERFACES=55
       INTEGER_T, PARAMETER :: MAX_NUM_SPECIES=10
-      INTEGER_T, PARAMETER :: MAX_NUM_EOS=24
+       ! for user definable EOS, the EOS is defined based on "probtype"
+       ! not "material_type"; but it is essential that
+       ! 1<=material_type<=MAX_NUM_EOS
+      INTEGER_T, PARAMETER :: MAX_NUM_EOS=998
 
 #include "probdataf95.H"
 
