@@ -40,9 +40,6 @@ stop
        nsolve, &
        nmat, &
        project_option, &
-       xface,DIMS(xface), &
-       yface,DIMS(yface), &
-       zface,DIMS(zface), &
        masksolv,DIMS(masksolv), & ! ONES_MF in c++
        maskcov,DIMS(maskcov), &
        alpha,DIMS(alpha), &
@@ -71,9 +68,6 @@ stop
       INTEGER_T, intent(in) :: nsolve
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: project_option
-      INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(yface)
-      INTEGER_T, intent(in) :: DIMDEC(zface)
       INTEGER_T, intent(in) :: DIMDEC(masksolv) ! ONES_MF in c++
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(alpha)
@@ -93,12 +87,6 @@ stop
       INTEGER_T             :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bc(SDIM,2,nsolve)
 
-      REAL_T, intent(in), target :: xface(DIMV(xface),FACECOMP_NCOMP)
-      REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: yface(DIMV(yface),FACECOMP_NCOMP)
-      REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: zface(DIMV(zface),FACECOMP_NCOMP)
-      REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
        ! ONES_MF in c++
       REAL_T, intent(out), target :: masksolv(DIMV(masksolv))
       REAL_T, pointer :: masksolv_ptr(D_DECL(:,:,:))
@@ -156,12 +144,6 @@ stop
        stop
       endif
 
-      xface_ptr=>xface
-      yface_ptr=>yface
-      zface_ptr=>zface
-      call checkbound_array(fablo,fabhi,xface_ptr,0,0,244)
-      call checkbound_array(fablo,fabhi,yface_ptr,0,1,244)
-      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,244)
        ! ONES_MF in c++
       masksolv_ptr=>masksolv
       maskcov_ptr=>maskcov
@@ -395,7 +377,6 @@ stop
          cterm,DIMS(cterm), &
          c2,DIMS(c2), &
          DeDT,DIMS(DeDT), &
-         recon,DIMS(recon), &
          lsnew,DIMS(lsnew), &
          den,DIMS(den), &
          mu,DIMS(mu), &
@@ -431,7 +412,6 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(cterm)
        INTEGER_T, intent(in) :: DIMDEC(c2)
        INTEGER_T, intent(in) :: DIMDEC(DeDT)
-       INTEGER_T, intent(in) :: DIMDEC(recon)
        INTEGER_T, intent(in) :: DIMDEC(lsnew)
        INTEGER_T, intent(in) :: DIMDEC(den)
        INTEGER_T, intent(in) :: DIMDEC(mu)
@@ -452,8 +432,6 @@ stop
        REAL_T, pointer :: c2_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in),target :: DeDT(DIMV(DeDT))
        REAL_T, pointer :: DeDT_ptr(D_DECL(:,:,:))
-       REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon)
-       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in),target :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
        REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
 
@@ -494,8 +472,6 @@ stop
        call checkbound_array1(fablo,fabhi,DeDT_ptr,1,-1,33)
        lsnew_ptr=>lsnew
        call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,33)
-       recon_ptr=>recon
-       call checkbound_array(fablo,fabhi,recon_ptr,1,-1,33)
 
        if (bfact.lt.1) then
         print *,"bfact too small"
@@ -727,15 +703,26 @@ stop
         else if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
                  (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then 
 
-         if (dt.gt.zero) then
+         if (dt.ge.zero) then
           ! do nothing
          else
           print *,"dt invalid"
           stop
          endif
-
-         print *,"VELEXTRAP: FIX local_cterm(1)"
-         stop
+         if (nsolve.ne.1) then
+          print *,"nsolveMM invalid 150"
+          stop
+         endif
+         local_diag=den(D_DECL(i,j,k))
+         if ((local_diag.gt.zero).and. &
+             (local_diag.le.two*SDIM)) then
+          local_cterm(1)=1.0D+6
+         else if (local_diag.eq.zero) then
+          local_cterm(1)=zero
+         else
+          print *,"local_diag invalid"
+          stop
+         endif
 
         else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
 

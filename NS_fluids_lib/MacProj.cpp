@@ -252,7 +252,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,200);
- debug_ngrow(FACE_VAR_MF,0,201);
 
   // ONES_MF=1 if diag>0  ONES_MF=0 if diag==0.
  debug_ngrow(ONES_MF,0,202);
@@ -265,25 +264,49 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,202);
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,134);
- debug_ngrow(CELL_SOUND_MF,0,135);
- debug_ngrow(CELL_DEN_MF,1,136);
- debug_ngrow(CELL_VISC_MF,1,137);
- debug_ngrow(CELL_DEDT_MF,1,138);
+ int local_cell_ncomp=1;
+ int local_cell_c2_ncomp=2;
+ int local_cell_index=0;
+ int local_cell_den_mf=CELL_DEN_MF;
+ int local_cell_sound_mf=CELL_SOUND_MF;
+ int local_cell_visc_mf=CELL_VISC_MF;
+ int local_cell_dedt_mf=CELL_DEDT_MF;
+
+ if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+     (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
+  local_cell_index=project_option-SOLVETYPE_VELEXTRAP;
+  local_cell_c2_ncomp=num_materials;
+  local_cell_ncomp=num_materials;
+  local_cell_den_mf=SCALAR_MASK_MATERIAL_MF;
+  local_cell_visc_mf=SCALAR_MASK_MATERIAL_MF;
+  local_cell_sound_mf=SCALAR_MASK_MATERIAL_MF;
+  local_cell_dedt_mf=SCALAR_MASK_MATERIAL_MF;
+ } else if (project_option_is_valid(project_option)==1) {
+  // do nothing
+ } else
+  amrex::Error("project_option invalid");
+
+ debug_ngrow(local_cell_sound_mf,0,135);
+ debug_ngrow(local_cell_den_mf,1,136);
+ debug_ngrow(local_cell_visc_mf,1,137);
+ debug_ngrow(local_cell_dedt_mf,1,138);
+
  debug_ngrow(OFF_DIAG_CHECK_MF,0,139);
 
  if (localMF[OFF_DIAG_CHECK_MF]->nComp()!=nsolve)
   amrex::Error("localMF[OFF_DIAG_CHECK_MF]->nComp() invalid");
- if (localMF[CELL_DEN_MF]->nComp()!=1)
-  amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
- if (localMF[CELL_VISC_MF]->nComp()!=1)
-  amrex::Error("localMF[CELL_VISC_MF]->nComp() invalid");
- if (localMF[CELL_DEDT_MF]->nComp()!=1)
-  amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
- if (localMF[CELL_SOUND_MF]->nComp()!=2)
-  amrex::Error("localMF[CELL_SOUND_MF]->nComp() invalid");
+ if (localMF[local_cell_den_mf]->nComp()!=local_cell_ncomp)
+  amrex::Error("localMF[local_cell_den_mf]->nComp() invalid");
+
+ if (localMF[local_cell_visc_mf]->nComp()!=local_cell_ncomp)
+  amrex::Error("localMF[local_cell_visc_mf]->nComp() invalid");
+
+ if (localMF[local_cell_dedt_mf]->nComp()!=local_cell_ncomp)
+  amrex::Error("localMF[local_cell_dedt_mf]->nComp() invalid");
+
+ if (localMF[local_cell_sound_mf]->nComp()!=local_cell_c2_ncomp)
+  amrex::Error("localMF[local_cell_sound_mf]->nComp() invalid");
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -309,14 +332,14 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
    // 1/(c^2 dt^2)  (first component)
    // p^advect      (2nd component)
-  FArrayBox& c2fab=(*localMF[CELL_SOUND_MF])[mfi];
-  FArrayBox& denfab=(*localMF[CELL_DEN_MF])[mfi];  // inverse of density
+  FArrayBox& c2fab=(*localMF[local_cell_sound_mf])[mfi];
+  FArrayBox& denfab=(*localMF[local_cell_den_mf])[mfi]; // inverse of density
    // 1/(rho cv)   (DeDT=cv)
-  FArrayBox& DeDTfab=(*localMF[CELL_DEDT_MF])[mfi];  
+  FArrayBox& DeDTfab=(*localMF[local_cell_dedt_mf])[mfi];  
+  FArrayBox& mufab=(*localMF[local_cell_visc_mf])[mfi];
+
   FArrayBox& cterm = (*localMF[ALPHANOVOLUME_MF])[mfi];
   FArrayBox& lsfab = LS_new[mfi];
-  FArrayBox& mufab=(*localMF[CELL_VISC_MF])[mfi];
-  FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
 
   int rzflag=0;
   if (geom.IsRZ())
@@ -338,13 +361,18 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     xlo,dx,
     offdiagcheck.dataPtr(),
     ARLIM(offdiagcheck.loVect()),ARLIM(offdiagcheck.hiVect()),
-    cterm.dataPtr(),ARLIM(cterm.loVect()),ARLIM(cterm.hiVect()),
-    c2fab.dataPtr(),ARLIM(c2fab.loVect()),ARLIM(c2fab.hiVect()),
-    DeDTfab.dataPtr(),ARLIM(DeDTfab.loVect()),ARLIM(DeDTfab.hiVect()),
-    reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-    denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
-    mufab.dataPtr(),ARLIM(mufab.loVect()),ARLIM(mufab.hiVect()),
+    cterm.dataPtr(),
+    ARLIM(cterm.loVect()),ARLIM(cterm.hiVect()),
+    c2fab.dataPtr(local_cell_index),
+    ARLIM(c2fab.loVect()),ARLIM(c2fab.hiVect()),
+    DeDTfab.dataPtr(local_cell_index),
+    ARLIM(DeDTfab.loVect()),ARLIM(DeDTfab.hiVect()),
+    lsfab.dataPtr(),
+    ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+    denfab.dataPtr(local_cell_index),
+    ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+    mufab.dataPtr(local_cell_index),
+    ARLIM(mufab.loVect()),ARLIM(mufab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,
     &bfact,
@@ -459,10 +487,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
       localMF[FACE_WEIGHT_MF+dir]->boxArray())
    amrex::Error("face_weight_stable boxarrays do not match");
 
-  if (localMF[AREA_MF+dir]->boxArray()!=
-      localMF[FACE_VAR_MF+dir]->boxArray())
-   amrex::Error("face_var boxarrays do not match");
-
   new_localMF(BXCOEFNOAREA_MF+dir,nsolve,0,dir);
   new_localMF(BXCOEF_MF+dir,nsolve,0,dir);
   localMF[BXCOEFNOAREA_MF+dir]->setVal(1.0,0,nsolve,0);
@@ -563,10 +587,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   FArrayBox& fwtyfab = (*localMF[FACE_WEIGHT_MF+1])[mfi];
   FArrayBox& fwtzfab = (*localMF[FACE_WEIGHT_MF+AMREX_SPACEDIM-1])[mfi];
 
-  FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];  
-  FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];  
-  FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];  
-
   Vector<int> bc;
   getBCArray_list(bc,state_index,gridno,scomp,ncomp);
   if (bc.size()!=nsolve*AMREX_SPACEDIM*2)
@@ -583,9 +603,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     &nsolve,
     &nmat,
     &project_option,
-    xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-    yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
-    zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
      // ONES_MF=1 if diag>0  ONES_MF=0 if diag==0.
     ones_fab.dataPtr(),ARLIM(ones_fab.loVect()),ARLIM(ones_fab.hiVect()),
     maskcov.dataPtr(),ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
@@ -637,6 +654,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    //    project_option==SOLVETYPE_INITPROJ,
    //    project_option==SOLVETYPE_PRESCOR,
    //    project_option==SOLVETYPE_PRESEXTRAP,  
+   //    project_option==SOLVETYPE_VELEXTRAP,  
   if (project_option_singular_possible(project_option)==1) {
 
    if (thread_class::nthreads<1)
@@ -790,9 +808,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 } // omp
  ns_reconcile_d_num(35);
 
-}  // subroutine allocate_maccoef
+}  // end subroutine allocate_maccoef
 
-// called at end of pressure extrapolation.
+// called at end of pressure or velocity extrapolation.
 void 
 NavierStokes::restore_active_pressure(int save_mf) {
 
