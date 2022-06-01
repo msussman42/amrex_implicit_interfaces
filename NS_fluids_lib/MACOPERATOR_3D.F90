@@ -724,7 +724,8 @@ stop
           endif
          endif
 
-        else if (project_option.eq.SOLVETYPE_SMOOTH) then  ! smoothing
+        else if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
+                 (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then 
 
          if (dt.gt.zero) then
           ! do nothing
@@ -733,7 +734,8 @@ stop
           stop
          endif
 
-         local_cterm(1)=one/dt ! den cv / dt
+         print *,"VELEXTRAP: FIX local_cterm(1)"
+         stop
 
         else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
 

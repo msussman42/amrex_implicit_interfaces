@@ -5596,8 +5596,7 @@ int NavierStokes::project_option_momeqn(int project_option) {
   return 1;
  } else if ((project_option==SOLVETYPE_HEAT)||  
             ((project_option>=SOLVETYPE_SPEC)&& 
-             (project_option<SOLVETYPE_SPEC+num_species_var))||
-	    (project_option==SOLVETYPE_SMOOTH)) { 
+             (project_option<SOLVETYPE_SPEC+num_species_var))) {
   return 0;
  } else {
   amrex::Error("project_option invalid");
@@ -5619,8 +5618,7 @@ int NavierStokes::project_option_singular_possible(int project_option) {
  } else if ((project_option==SOLVETYPE_HEAT)|| 
    	    (project_option==SOLVETYPE_VISC)|| 
             ((project_option>=SOLVETYPE_SPEC)&&
-	     (project_option<SOLVETYPE_SPEC+num_species_var))|| 
-            (project_option==SOLVETYPE_SMOOTH)) { 
+	     (project_option<SOLVETYPE_SPEC+num_species_var))) {
   return 0;
  } else {
   amrex::Error("project_option invalid");
@@ -5642,8 +5640,7 @@ int NavierStokes::project_option_olddata_needed(int project_option) {
  } else if ((project_option==SOLVETYPE_HEAT)|| 
    	    (project_option==SOLVETYPE_VISC)|| 
             ((project_option>=SOLVETYPE_SPEC)&&
-	     (project_option<SOLVETYPE_SPEC+num_species_var))|| 
-            (project_option==SOLVETYPE_SMOOTH)) { 
+	     (project_option<SOLVETYPE_SPEC+num_species_var))) {
   return 1;
  } else {
   amrex::Error("project_option invalid");
@@ -5657,14 +5654,15 @@ int NavierStokes::project_option_pressure(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)||
      (project_option==SOLVETYPE_INITPROJ)||
-     (project_option==SOLVETYPE_PRESEXTRAP)) { 
+     (project_option==SOLVETYPE_PRESEXTRAP)||
+     ((project_option>=SOLVETYPE_VELEXTRAP)&&
+      (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
   return 1;
  } else if ((project_option==SOLVETYPE_PRESCOR)|| 
 	    (project_option==SOLVETYPE_HEAT)|| 
 	    (project_option==SOLVETYPE_VISC)|| 
             ((project_option>=SOLVETYPE_SPEC)&&
-             (project_option<SOLVETYPE_SPEC+num_species_var))|| 
-            (project_option==SOLVETYPE_SMOOTH)) { 
+             (project_option<SOLVETYPE_SPEC+num_species_var))) {
   return 0;
  } else {
   amrex::Error("project_option invalid");
@@ -5684,7 +5682,6 @@ int NavierStokes::project_option_needs_scaling(int project_option) {
 	    (project_option==SOLVETYPE_VISC)|| 
             ((project_option>=SOLVETYPE_SPEC)&&
              (project_option<SOLVETYPE_SPEC+num_species_var))|| 
-            (project_option==SOLVETYPE_SMOOTH)||
 	    ((project_option>=SOLVETYPE_VELEXTRAP)&&
 	     (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
   return 0;
@@ -5707,7 +5704,6 @@ int NavierStokes::project_option_projection(int project_option) {
 	    (project_option==SOLVETYPE_VISC)|| 
             ((project_option>=SOLVETYPE_SPEC)&&
              (project_option<SOLVETYPE_SPEC+num_species_var))|| 
-            (project_option==SOLVETYPE_SMOOTH)||
 	    ((project_option>=SOLVETYPE_VELEXTRAP)&&
 	     (project_option<SOLVETYPE_VELEXTRAP+num_materials))) {
   return 0;
@@ -5747,14 +5743,17 @@ NavierStokes::get_mm_scomp_solver(
   nlist=1;
   if (num_materials_combine!=1)
    amrex::Error("num_materials_combine invalid");
+ } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+   	    (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
+  nsolve=1;
+  nlist=1;
+  if (num_materials_combine!=1)
+   amrex::Error("num_materials_combine invalid");
  } else if (project_option==SOLVETYPE_HEAT) { 
   nsolve=1;
   nlist=num_materials_combine;
  } else if ((project_option>=SOLVETYPE_SPEC)&&
             (project_option<SOLVETYPE_SPEC+num_species_var)) { 
-  nsolve=1;
-  nlist=num_materials_combine;
- } else if (project_option==SOLVETYPE_SMOOTH) { //all BCs are insulating.
   nsolve=1;
   nlist=num_materials_combine;
  } else if (project_option==SOLVETYPE_VISC) { 
@@ -5822,16 +5821,6 @@ NavierStokes::get_mm_scomp_solver(
 
    scomp[im]=STATECOMP_STATES+
      im*num_state_material+num_state_base+project_option-SOLVETYPE_SPEC;
-   ncomp[im]=1;
-  }
-  state_index=State_Type;
-
- } else if (project_option==SOLVETYPE_SMOOTH) { 
-
-  // all BCs must be insulating
-  // u,v,w,p,den1,T1,...
-  for (int im=0;im<nlist;im++) {
-   scomp[im]=STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR;
    ncomp[im]=1;
   }
   state_index=State_Type;
@@ -6715,9 +6704,10 @@ void NavierStokes::print_project_option(int project_option) {
  } else if (project_option==SOLVETYPE_PRESEXTRAP) {
   std::cout << "project_option= " << project_option << 
     " (SOLVETYPE_PRESEXTRAP) \n";
- } else if (project_option==SOLVETYPE_SMOOTH) {
+ } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+            (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
   std::cout << "project_option= " << project_option << 
-    " (SOLVETYPE_SMOOTH) \n";
+    " (SOLVETYPE_VELEXTRAP) \n";
  } else if ((project_option>=SOLVETYPE_SPEC)&&
             (project_option<SOLVETYPE_SPEC+num_species_var)) {
   std::cout << "project_option= " << project_option << 

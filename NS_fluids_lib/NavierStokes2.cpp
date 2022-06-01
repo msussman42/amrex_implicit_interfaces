@@ -4828,10 +4828,6 @@ void NavierStokes::make_physics_varsALL(int project_option,
       num_species_var,0,AMREX_SPACEDIM,0,11);
   }
 
-   // spectral_override==0
-  ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACESMOOTH,
-	1,0,AMREX_SPACEDIM,0,12);
-
  }  // ilev=finest_level ... level
 
  if (1==0) {
@@ -5236,7 +5232,6 @@ void NavierStokes::make_physics_vars(int project_option) {
     &local_curv_max[tid_current],
     &isweep,
     &nrefine_vof,
-    &smoothing_length_scale,
     denconst_interface.dataPtr(),
     viscconst_interface.dataPtr(),
     heatviscconst_interface.dataPtr(),

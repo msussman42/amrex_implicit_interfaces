@@ -11329,7 +11329,6 @@ stop
                ! local_freezing_model=1 (source term model)
                ! local_freezing_model=2 (hydrate model)
                ! local_freezing_model=3 (wildfire)
-               ! local_freezing_model=4 (Tanasawa/Schrage)
                ! local_freezing_model=5 (evaporation/condensation)
                ! local_freezing_model=6 (Palmore Desjardins)
                ! local_freezing_model=7 (Cavitation)
@@ -11461,7 +11460,6 @@ stop
                     ! local_freezing_model=1 (source term model)
                     ! local_freezing_model=2 (hydrate model)
                     ! local_freezing_model=3 (wildfire)
-                    ! local_freezing_model=4 (Tanasawa or Schrage)
                     ! local_freezing_model=5 (stefan evaporation/condensation)
                     ! local_freezing_model=6 (Palmore/Desjardins)
                     ! local_freezing_model=7 (Cavitation)
@@ -17842,7 +17840,8 @@ stop
                       if (project_option.eq.SOLVETYPE_HEAT) then
                        ! do nothing
                       else if ((project_option.ge.SOLVETYPE_SPEC).and. &
-                               (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+                               (project_option.lt. &
+                                SOLVETYPE_SPEC+num_species_var)) then
                        if ((Tgamma_STATUS.eq.1).or.(Tgamma_STATUS.eq.2)) then
                         if (is_multi_component_evapF(local_freezing_model, &
                          Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten),&

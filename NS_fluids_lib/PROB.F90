@@ -12652,42 +12652,6 @@ END SUBROUTINE Adist
          print *,"project_option=",project_option
          stop
         endif
-       else if (project_option.eq.SOLVETYPE_SMOOTH) then ! smoothing 
-        if (nsolve.ne.1) then
-         print *,"nsolve invalid for smoothing"
-         stop
-        endif
-        cc_group=one
-
-        if ((dd_group.ge.zero).and. &
-            (cc_group.eq.one)) then
-         local_wt(veldir)=dd_group*cc_group
-         if (side.eq.0) then
-          ! do nothing
-         else if ((side.eq.1).or.(side.eq.2)) then
-          if (local_presbc.eq.INT_DIR) then
-           ! do nothing
-          else if (local_presbc.eq.EXT_DIR) then
-           local_wt(veldir)=zero
-          else if (local_presbc.eq.REFLECT_EVEN) then
-           local_wt(veldir)=zero
-          else if (local_presbc.eq.FOEXTRAP) then
-           local_wt(veldir)=zero
-          else
-           print *,"local_presbc invalid"
-           stop
-          endif
-         else
-          print *,"side invalid"
-          stop
-         endif
-        else
-         print *,"dd_group or cc_group invalid3"
-         print *,"dd_group= ",dd_group
-         print *,"cc_group= ",cc_group
-         print *,"project_option=",project_option
-         stop
-        endif
 
        else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
         if (nsolve.ne.SDIM) then
@@ -15238,6 +15202,10 @@ END SUBROUTINE Adist
        else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
         print *,"extension project should be low order"
         stop
+       else if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
+                (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then 
+        print *,"vel extension  should be low order"
+        stop
        else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
         if (ncomp.ne.SDIM) then
          print *,"ncomp invalid3"
@@ -15264,15 +15232,6 @@ END SUBROUTINE Adist
         endif
         if (ncomp_xvel.ne.1) then
          print *,"ncomp_xvel invalid5 SOLVETYPE_SPEC"
-         stop
-        endif
-       else if (project_option.eq.SOLVETYPE_SMOOTH) then ! smoothing
-        if (ncomp.ne.1) then
-         print *,"ncomp invalid6"
-         stop
-        endif
-        if (ncomp_xvel.ne.1) then
-         print *,"ncomp_xvel invalid6 SOLVETYPE_SMOOTH"
          stop
         endif
        else
@@ -21507,7 +21466,7 @@ end subroutine RatePhaseChange
        molar_mass, &
        species_molar_mass, &
        local_freezing_model, &
-         ! 1=Tanasawa  2=Schrage 3=Kassemi 4="T_gamma=f(P_vapor_smooth)"
+         ! 1=Tanasawa  2=Schrage 3=Kassemi 
        local_Tanasawa_or_Schrage_or_Kassemi, & 
        distribute_from_target, &
        vel, &
@@ -21555,7 +21514,7 @@ end subroutine RatePhaseChange
       INTEGER_T, intent(in) :: for_estdt
       REAL_T, intent(in) :: xI(SDIM)
       INTEGER_T, intent(in) :: local_freezing_model
-!1=Tanasawa 2=Schrage 3=Kassemi 4="T_gamma=f(Pressure_vapor_smooth)"
+!1=Tanasawa 2=Schrage 3=Kassemi 
       INTEGER_T, intent(in) :: local_Tanasawa_or_Schrage_or_Kassemi
        ! MEHDI EVAPORATION
       INTEGER_T, intent(in) :: ispec ! 0 if no species  1..num_species_var
@@ -21597,12 +21556,6 @@ end subroutine RatePhaseChange
       REAL_T velsrc,veldst,velsum
       REAL_T velsrc_micro,veldst_micro
       REAL_T psi_upper,psi_lower,micro_slope
-      REAL_T gamma_tanasawa
-      REAL_T fluid_molar_mass_Tanasawa ! Tanasawa model
-      REAL_T universal_gas
-      REAL_T gamma_schrage
-      REAL_T Tsrc_ref,psrc_ref
-      REAL_T psrc_sat,densrc_sat
       INTEGER_T verb_hydrate
       INTEGER_T mdot_override
       REAL_T mdot
@@ -21755,7 +21708,6 @@ end subroutine RatePhaseChange
         ! local_freezing_model=1 (source term model)
         ! local_freezing_model=2 (hydrate model)
         ! local_freezing_model=3 (wildfire)
-        ! local_freezing_model=4 (source term model-Tanasawa/Schrage Model)
         ! local_freezing_model=5 (Stefan model evaporation/condensation)
         ! local_freezing_model=6 (Palmore and Desjardins)
         ! local_freezing_model=7 (Cavitation)
@@ -21984,251 +21936,6 @@ end subroutine RatePhaseChange
         endif 
 
         vel=velsum
-
-       else if (local_freezing_model.eq.4) then ! Tanasawa or Schrage
-
-         ! Tanasawa model for a fully saturated gas:
-        gamma_tanasawa=0.1
-        fluid_molar_mass_Tanasawa=0.07215  ! kg/mol
-        fluid_molar_mass_Tanasawa=1000.0*fluid_molar_mass_Tanasawa ! g/mol
-        universal_gas=8.314   ! J/(mol K)
-        universal_gas=1.0D+7*universal_gas  ! erg/(mol K)
-
-        velsrc=zero
-        veldst=zero
-        if (LL.gt.zero) then ! evaporation
-         if (distribute_from_target.ne.0) then
-          print *,"distribute_from_target invalid"
-          stop
-         endif
-          !EVAPORATION
-         if (local_Tanasawa_or_Schrage_or_Kassemi.eq.1) then ! Tanasawa
-
-          if ((Tsrc_INT.gt.Tsat).and.(Tdst_INT.gt.Tsat)) then
-           velsrc=two*gamma_tanasawa/abs(gamma_tanasawa-one)
-           velsrc=velsrc*sqrt(fluid_molar_mass_Tanasawa/(two*Pi*universal_gas))
-           velsrc=velsrc*dendst_I*LL*(half*(Tsrc_INT+Tdst_INT)-Tsat)
-           velsrc=velsrc/(Tsat**(1.5))
-           velsrc=velsrc/densrc_I ! rate=mdot/densrc_I
-           veldst=velsrc
-
-           if (for_estdt.eq.1) then
-            velsrc=max(velsrc,velsrc/(one-expansion_fact))
-            veldst=velsrc
-           else if (for_estdt.eq.0) then
-            ! do nothing
-           else
-            print *,"for_estdt invalid"
-            stop
-           endif
-
-          endif
-
-           !approximate schrage
-         else if (local_Tanasawa_or_Schrage_or_Kassemi.eq.2) then 
-          ! MEHDI EVAPORATION
-
-          ! gamma: Accomodation coefficient
-          ! M: Molecular weight (molar mass) [kg/mol]  
-          ! m: Mass of a molecule [kg]
-          ! n: Material mass [mol]
-          ! R: Universal gas constant 8.314462618 [J/(mol K)] 
-          ! N_A: Avogadro constant 6.02214076E23 [1/mol]
-          ! k_B: Boltzmann constant 1.380649E−23 [J/K]
-          ! P_x: Pressure (near the interface) [Pa]
-          ! T_x: Temperature (near interface) [K]
-          !
-          ! (M = m N_A)  , (R = N_A k_B) , (k_B / m = R / M)
-          !
-          ! - Approximate schrage model (using P and T)
-          ! mdot=(2 gamma/(2-gamma))
-          !      sqrt(M/(2 pi R))
-          !      (P_v/sqrt(T_v) - P_l/sqrt(T_l))           {1}
-          !
-          ! Note: The formulation is at the boundary very close to
-          !       the phase-change interface just inside the vapor
-          !       region. I think that is why writing the ideal gas
-          !       equation makes sense for the liquid region. 
-          !             
-          ! P V=n R T
-          ! P V=n N_A k_B T
-          ! P = (n N_A)/V k_B T                            {2}
-          !
-          ! rho = mass/volume = (n M)/V = (n m N_a)/V
-          ! rho/m = (n N_A)/V                              {3}
-          !
-          ! - Replacing {3} in {2} gives:
-          ! P = rho/m k_B T = rho T R / M
-          ! P/sqrt(T) = rho/m k_B sqrt(T)                  {4}
-          ! 
-          ! - Replacing {4} in {1} gives:
-          ! mdot=(2 gamma/(2-gamma))
-          !      sqrt(M/(2 pi R))
-          !      (k_B/m)
-          !      (rho_v sqrt(T_v) - rho_l sqrt(T_l))       {5}
-          !
-          ! - Simplifying the 2nd and 3rd product terms:          
-          ! sqrt((M k_B^2)/(2 pi R m^2))= 
-          ! sqrt((M k_B^2)/(2 pi N_A k_B m^2))=
-          ! sqrt((M k_B)/(2 pi N_A m^2))=
-          ! sqrt((k_B)/(2 pi m))
-          ! sqrt(R/(2 pi M))
-          !
-          ! - Approximate schrage model (using rho and T)
-          ! => Mass flux (condensation)
-          ! mdot=(2 gamma/(2-gamma))
-          !      sqrt(R/(2 pi M))
-          !      (rho_v sqrt(T_v) - rho_l sqrt(T_l))       {6}
-          !
-          ! => Mass flux (evaporation)
-          ! mdot=(2 gamma/(2-gamma))
-          !      sqrt(R/(2 pi M))
-          !      (rho_l sqrt(T_l) - rho_v sqrt(T_v))       {6}
-          !                &
-          ! => Heat flux
-          ! qddot = L mdot
-          !
-          ! Evaporation:
-          !     rhol_l => Saturation vapor density at T_l
-          !     T_l    => Liquid temeparture at the interface
-          !     rho_v  => Vapor density (interface or probe?)
-          !     T_v    => Vapor temperature (interface or probe?)
-          !
-          ! Clausius-Clayperon equation
-          ! P_2/P_1=exp(-L/R_specific (1/T_2 - 1/T_1)
-          ! P_sat/P_ref = exp ( -L/(R/M) (1/T_sat - 1/T_ref)
-          !
-         
-          if (LL.gt.zero) then
-           ! do nothing
-          else
-           print *,"This Schrage model only for evaporation"
-           stop
-          endif 
-          universal_gas = 8.314462618d0
-          Tsrc_ref=20.0d0  ! Kelvin
-          psrc_ref=0.090717D+6  ! Pascal  MKS  N/m^2
-
-          ! P_sat/P_ref = exp ( -L/(R/M) (1/T_sat - 1/T_ref)
-          ! units of temperature: KELVIN
-          if ((Tsrc_probe.gt.zero).and.(Tsrc_probe.lt.1.0D+20)) then
-           psrc_sat=psrc_ref*exp(-LL/(universal_gas/molar_mass(im_source))* &
-                   (1.0d0/Tsrc_probe - 1.0d0/Tsrc_ref))
-          else
-           print *,"Tsrc_probe invalid"
-           stop
-          endif
-
-          !rho = (P M) / (T R)
-          densrc_sat=(psrc_sat * molar_mass(im_source))/ &
-                     (Tsrc_probe*universal_gas)
-          if ((densrc_sat.gt.zero).and.(densrc_sat.lt.1.0D+20)) then
-           ! do nothing
-          else
-           print *,"densrc_sat invalid"
-           print *,"densrc_sat=",densrc_sat
-           print *,"psrc_sat=",psrc_sat
-           print *,"im_source=",im_source
-           print *,"Tsrc_probe=",Tsrc_probe
-           print *,"universal_gas=",universal_gas
-           print *,"molar_mass(im_source)=",molar_mass(im_source)
-           stop
-          endif
-          
-          ! mdot=(2 gamma/(2-gamma))
-          !      sqrt(R/(2 pi M))
-          !      (rho_l_sat sqrt(T_l) - rho_v sqrt(T_v))       {6}
-          ! NOT SURE ABOUT UNIT OF "mdot"
-          ! LiangETAL2017  (J => molar flux [mol/cm^2 s])
-          ! KharangateMudawar2017 (mdor => mass transfer rate [kg/m^2 s]
-          !
-          gamma_schrage=0.01d0 
-          velsrc=two*gamma_schrage/(two-gamma_schrage)
-          if (molar_mass(im_source).gt.zero) then
-           velsrc=velsrc*sqrt(universal_gas/(2.0d0*Pi*molar_mass(im_source)))
-           velsrc=velsrc*(densrc_sat*sqrt(Tsrc_probe)- &
-                          dendst_probe*sqrt(Tdst_probe))
-           if (velsrc.gt.zero) then
-            if (densrc_I.gt.zero) then
-             velsrc=velsrc/densrc_I ! rate=mdot/densrc_I
-             veldst=velsrc
-            else
-             print *,"densrc_I invalid"
-             stop
-            endif
-           else if (velsrc.le.zero) then
-            velsrc=zero
-           else
-            print *,"velsrc bust"
-            stop
-           endif
-          else
-           print *,"molar_mass invalid"
-           stop
-          endif
-
-          if (for_estdt.eq.1) then
-           velsrc=max(velsrc,velsrc/(one-expansion_fact))
-           veldst=velsrc
-          else if (for_estdt.eq.0) then
-           ! do nothing
-          else
-           print *,"for_estdt invalid"
-           stop
-          endif
-
-         else
-          print *,"local_Tanasawa_or_Schrage_or_Kassemi invalid"
-          stop
-         endif
-        else if (LL.lt.zero) then ! condensation
-         if (distribute_from_target.ne.1) then
-          print *,"distribute_from_target invalid"
-          stop
-         endif
-         if (local_Tanasawa_or_Schrage_or_Kassemi.eq.1) then ! Tanasawa
-
-          if ((Tsrc_INT.lt.Tsat).and.(Tdst_INT.lt.Tsat)) then
-           velsrc=two*gamma_tanasawa/abs(gamma_tanasawa-one)
-           velsrc=velsrc*sqrt(fluid_molar_mass_Tanasawa/(two*Pi*universal_gas))
-           velsrc=velsrc*densrc_I*LL*(half*(Tsrc_INT+Tdst_INT)-Tsat)
-           velsrc=velsrc/(Tsat**(1.5))
-           velsrc=velsrc/dendst_I ! rate=mdot/dendst_I
-           veldst=velsrc
-           if (for_estdt.eq.1) then
-            velsrc=max(velsrc,velsrc/(one-expansion_fact))
-            veldst=velsrc
-           else if (for_estdt.eq.0) then
-            ! do nothing
-           else
-            print *,"for_estdt invalid"
-            stop
-           endif
-          endif
-
-         else if (local_Tanasawa_or_Schrage_or_Kassemi.eq.2) then !schrage
-          ! MEHDI EVAPORATION (CONDENSATION)
-         else
-          print *,"local_Tanasawa_or_Schrage_or_Kassemi invalid"
-          stop
-         endif
-
-        else if (LL.eq.zero) then
-         print *,"LL invalid"
-         stop
-        else
-         print *,"LL invalid"
-         stop
-        endif
-
-        if ((velsrc.lt.zero).or.(veldst.lt.zero)) then
-         print *,"velsrc or veldst invalid"
-         print *,"velsrc=",velsrc
-         print *,"veldst=",veldst
-         stop
-        endif
-
-        vel=velsrc
 
        else if (local_freezing_model.eq.2) then
 
@@ -25134,15 +24841,6 @@ end subroutine initialize2d
          stop
         endif
        else if (project_option.eq.SOLVETYPE_HEAT) then  ! temperature
-        if (homflag.eq.0) then
-         temp_homflag=0
-        else if (homflag.eq.1) then
-         temp_homflag=1
-        else
-         print *,"homflag invalid in override pbc 3"
-         stop
-        endif
-       else if (project_option.eq.SOLVETYPE_SMOOTH) then  
         if (homflag.eq.0) then
          temp_homflag=0
         else if (homflag.eq.1) then

@@ -76,14 +76,18 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   // do nothing
 
+ } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+            (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {  
+
+  // do nothing
+
  } else if (project_option==SOLVETYPE_VISC) {  
 
   // do nothing
   
  } else if ((project_option==SOLVETYPE_HEAT)||  
             ((project_option>=SOLVETYPE_SPEC)&& 
-             (project_option<SOLVETYPE_SPEC+num_species_var))||
-            (project_option==SOLVETYPE_SMOOTH)) { 
+             (project_option<SOLVETYPE_SPEC+num_species_var))) {
 
   // do nothing
   

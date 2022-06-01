@@ -2668,8 +2668,6 @@ stop
        ! local_freezing_model=1 (source term model)
        ! local_freezing_model=2 (hydrate model)
        ! local_freezing_model=3 (wildfire)
-       ! local_freezing_model=4 (source term model - Tanasawa Model
-       !  or Schrage)
        ! local_freezing_model=5 (evaporation/condensation)
        ! local_freezing_model=6 (evaporation/condensation Palmore)
        ! local_freezing_model=7 (cavitation (under construction))
@@ -2852,7 +2850,8 @@ stop
       REAL_T Pgamma
       REAL_T density_probe
       REAL_T Tvapor_probe
-      REAL_T internal_energy,Pvapor_probe
+      REAL_T Pvapor_probe
+      REAL_T internal_energy
       INTEGER_T im_probe
       INTEGER_T imattype
       REAL_T massfrac_parm(num_species_var+1)
@@ -4131,42 +4130,7 @@ stop
           stop
          endif
 
-          ! some sanity checks here.
-         if (local_freezing_model.eq.4) then 
-          if (LL.ne.zero) then
-           if (ireverse.eq.0) then ! evaporation
-            if (LL.le.zero) then
-             print *,"LL invalid"
-             stop
-            endif
-            if (distribute_from_targ.ne.0) then
-             print *,"distribute_from_targ invalid"
-             stop
-            endif
-            im_source=im
-            im_dest=im_opp
-           else if (ireverse.eq.1) then ! condensation
-            if (LL.ge.zero) then
-             print *,"LL invalid"
-             stop
-            endif
-            if (distribute_from_targ.ne.1) then
-             print *,"distribute_from_targ invalid"
-             stop
-            endif
-            im_source=im_opp
-            im_dest=im
-           else
-            print *,"ireverse invalid"
-            stop
-           endif
-          else if (LL.eq.zero) then
-           ! do nothing
-          else
-           print *,"LL invalid"
-           stop
-          endif 
-         else if (is_valid_freezing_modelF(local_freezing_model).eq.1) then
+         if (is_valid_freezing_modelF(local_freezing_model).eq.1) then
           ! do nothing
          else
           print *,"local_freezing_model invalid in fort_convertmaterial"
@@ -6286,26 +6250,6 @@ stop
               stop
 #endif
 
-             else if (local_freezing_model.eq.4) then ! Tanasawa or Schrage
-               ! if LL>0 => evaporation => delete energy 
-               ! if LL<0 => condensation => add energy 
-               ! latent_heat: erg/g
-               ! cv: erg/(g Kelvin)
-               ! 
-              if (dF.gt.zero) then
-               energy_source=-LL*dF
-               do im_weight=1,nmat
-                tcomp_wt=STATECOMP_STATES+(im_weight-1)*num_state_material+ &
-                        ENUM_TEMPERATUREVAR+1
-                snew(D_DECL(i,j,k),tcomp_wt)= &
-                 snew(D_DECL(i,j,k),tcomp_wt)+energy_source/cvtotal
-               enddo
-              else if (dF.eq.zero) then
-               ! do nothing
-              else
-               print *,"dF invalid"
-               stop
-              endif
              else if (local_freezing_model.eq.7) then ! Cavitation
               print *,"FIX ME: cavitation case not considered here"
               stop
@@ -7711,7 +7655,6 @@ stop
       REAL_T newphi_substrate
       INTEGER_T, target :: dencomp_source,dencomp_dest
       INTEGER_T ispec
-      INTEGER_T local_ispec
       REAL_T vapor_den
       REAL_T source_perim_factor,dest_perim_factor
       REAL_T contact_line_perim
@@ -7765,10 +7708,6 @@ stop
       REAL_T TEMP_PROBE_dest
 
       INTEGER_T debug_limiter
-
-      REAL_T massfrac_parm(num_species_var+1)
-      REAL_T Pvapor_probe
-      REAL_T internal_energy
 
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
@@ -8517,8 +8456,7 @@ stop
                  TI_min=saturation_temp_min(iten+ireverse*nten)
                  TI_max=saturation_temp_max(iten+ireverse*nten)
 
-                 if ((local_freezing_model.eq.4).or. & !Tanasawa or Schrage
-                     (local_freezing_model.eq.5).or. & !Stefan evap/cond
+                 if ((local_freezing_model.eq.5).or. & !Stefan evap/cond
                      (local_freezing_model.eq.6)) then !Palmore/Desjardins
 
                   if (LL(ireverse).gt.zero) then ! evaporation
@@ -8842,7 +8780,6 @@ stop
                  TI_YI_counter=0
                  TI_YI_best_guess_index=0
 
-!    local_freezing_model=4  Tanasawa or Schrage
 !    local_freezing_model=5  fully saturated evaporation?
 !    local_freezing_model=6  Palmore/Desjardins
 !    local_freezing_model=7  Cavitation (a seed must exist)
