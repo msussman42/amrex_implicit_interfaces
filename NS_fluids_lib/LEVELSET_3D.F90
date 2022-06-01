@@ -7569,7 +7569,6 @@ stop
        curv_max, &
        isweep, &
        nrefine_vof, &
-       smoothing_length_scale, &
        den_interface, &
        visc_interface, &
        heatvisc_interface, &
@@ -7751,7 +7750,6 @@ stop
 
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
-      REAL_T, intent(in) :: smoothing_length_scale
       REAL_T, intent(in) :: den_interface(nten)
       REAL_T, intent(in) :: visc_interface(nten)
       REAL_T, intent(in) :: heatvisc_interface(nten)
@@ -7813,8 +7811,6 @@ stop
       INTEGER_T dencomp,tempcomp
       REAL_T facevisc_local
       REAL_T faceheat_local
-      REAL_T smoothing_local
-      REAL_T smoothing_time
       REAL_T facespecies_local(num_species_var+1)
       REAL_T theta,visc1,visc2,heat1,heat2
       REAL_T spec1(num_species_var+1)
@@ -8365,27 +8361,6 @@ stop
           stop
          endif
 
-
-
-         ! A provisional
-         ! temperature field is derived from the original temperature
-         ! field by way of running the heat equation for a length of time
-         ! t=(L/(2 * arc_erf(0.2)))^2  arc_erf(0.2)=0.1791 derived from:
-         ! u_t = u_xx u(x,0)=1 x<0  =0 x>0
-         ! u(t,x)=(1-erf(x/(2 sqrt(t))))/2  let x=L 
-         ! solve u(t,L)=0.4  => .2=erf(x/(2 sqrt(t))) =>
-         ! x/(2 sqrt(t))=arc_erf(.2)=0.1791
-         ! matlab: erfinv(0.2)
-         ! sqrt(t)=L/(2 * .1791)  t=(L/(2 * .1791))^2
-         ! Kassemi model:
-         ! mdot=A(pi/sqrt(T_i) - pv(T_v_smeared)/sqrt(T_v_smeared))
-         if (smoothing_length_scale.ge.zero) then
-          smoothing_time=(smoothing_length_scale/(two*0.1791d0))**2
-         else
-          print *,"smoothing_length_scale invalid"
-          stop
-         endif
-
           ! LS>0 if clamped
          call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
                 vel_clamped_minus,temperature_clamped_minus)
@@ -8683,7 +8658,6 @@ stop
 
          facevisc_local=zero
          faceheat_local=zero
-         smoothing_local=zero
          do imspec=1,num_species_var
           facespecies_local(imspec)=zero
          enddo
@@ -8784,17 +8758,10 @@ stop
           stop
          endif
 
-          ! dt * smoothing_local = smoothing_time
          if (dt.eq.zero) then
-          smoothing_local=zero
+          ! do nothing
          else if (dt.gt.zero) then
-          if (smoothing_time.ge.zero) then
-           smoothing_local=smoothing_time/dt
-          else
-           print *,"smoothing_time became corrupt; smoothing_time=", &
-             smoothing_time
-           stop
-          endif
+          ! do nothing
          else
           print *,"dt became corrupt; dt=",dt
           stop
@@ -8846,8 +8813,6 @@ stop
          else if ((solid_present_flag.eq.2).or. &
                   (solid_present_flag.eq.3)) then
          
-          smoothing_local=zero
-
           call geom_avg(localvisc_plus(implus_majority), &
                   localvisc_minus(imminus_majority), &
                   wtR,wtL,facevisc_local)
@@ -9000,8 +8965,6 @@ stop
            enddo
 
           else if (gradh.ne.zero) then
-
-           smoothing_local=zero
 
            if ((im_main.gt.nmat).or.(im_main_opp.gt.nmat)) then
             print *,"im_main or im_main_opp bust 3"
@@ -9559,14 +9522,11 @@ stop
           ! do nothing
          else if ((mask_boundary_insulating.eq.1).or. &
                   (mask_boundary_insulating.eq.2)) then
-          smoothing_local=zero
+          ! do nothing
          else
           print *,"mask_boundary_insulating invalid"
           stop
          endif
-
-         local_face(FACECOMP_FACESMOOTH+1)=smoothing_local
-
 
           ! mask_boundary=1 at left neumann boundary
           ! mask_boundary=2 at right neumann boundary
@@ -15319,7 +15279,6 @@ stop
        if ((local_face_index.eq.FACECOMP_FACEDEN).or. &
            (local_face_index.eq.FACECOMP_FACEHEAT).or. &
            (local_face_index.eq.FACECOMP_FACEVISC).or. &
-           (local_face_index.eq.FACECOMP_FACESMOOTH).or. &
            (local_face_index.eq. &
             FACECOMP_FACESPEC+project_option-SOLVETYPE_SPEC)) then
         ! do nothing
@@ -15424,8 +15383,6 @@ stop
           ! viscosity: dedge is FACECOMP_FACEVISC component c++ ( mu )
           ! temperature: dedge is FACECOMP_FACEHEAT component c++ ( k )
           ! species: dedge is FACECOMP_FACESPEC component c++ ( rho D )
-          ! smoothing: dedge is FACECOMP_FACESMOOTH component c++
-          ! (=1 in bulk,=0 interface(s))
 
           if (dir.eq.0) then
            inorm=i
@@ -15463,8 +15420,6 @@ stop
           else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
            !do nothing
           else if (project_option.eq.SOLVETYPE_HEAT) then ! temperature
-           !do nothing
-          else if (project_option.eq.SOLVETYPE_SMOOTH) then ! smoothing
            !do nothing
           else if ((project_option.ge.SOLVETYPE_SPEC).and. &
                    (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then 

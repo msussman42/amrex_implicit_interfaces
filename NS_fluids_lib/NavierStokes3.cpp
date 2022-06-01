@@ -3141,9 +3141,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         amrex::Error("hold_LS_DATA_MF (nComp()) !=nmat*(AMREX_SPACEDIM+1)");
        debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
 
-        // initialize TEMPERATURE_SMOOTH_MF
-       multiphase_project(SOLVETYPE_SMOOTH);
-
         // BURNING_VELOCITY_MF flag==+ or - 1 if valid rate of phase change.
        for (int ilev=level;ilev<=finest_level;ilev++) {
         int nucleation_flag=0;
@@ -3255,8 +3252,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        // 2.unsplit advection of materials changing phase
        // 3.update volume fractions, jump strength, temperature
        level_phase_change_convertALL();
-
-       delete_array(TEMPERATURE_SMOOTH_MF);
 
        delete_array(BURNING_VELOCITY_MF);
        delete_array(FD_NRM_ND_MF);
@@ -7853,8 +7848,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
  } else if ((project_option>=SOLVETYPE_SPEC)&&
             (project_option<SOLVETYPE_SPEC+num_species_var)) { // rho D
   local_face_index=FACECOMP_FACESPEC+project_option-SOLVETYPE_SPEC;
- } else if (project_option==SOLVETYPE_SMOOTH) {
-  local_face_index=FACECOMP_FACESMOOTH;
  } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
             (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
   local_face_index=project_option-SOLVETYPE_VELEXTRAP;
@@ -9095,6 +9088,9 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
  if ((project_option==SOLVETYPE_PRESCOR)|| 
      (project_option==SOLVETYPE_PRESEXTRAP)) {
   setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
+ } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+            (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
+  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
  } else if (project_option==SOLVETYPE_PRES)  { 
   int scomp=0;
    // MDOT_MF already premultiplied by the cell volume
@@ -9116,11 +9112,6 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
 
  } else if ((project_option>=SOLVETYPE_SPEC)&&
 	    (project_option<SOLVETYPE_SPEC+num_species_var)) {
-
-  zero_independent_vel(project_option,UMAC_MF,nsolve);
-  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
-
- } else if (project_option==SOLVETYPE_SMOOTH) {
 
   zero_independent_vel(project_option,UMAC_MF,nsolve);
   setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
@@ -9326,11 +9317,6 @@ void NavierStokes::set_local_tolerances(int project_option) {
   save_atol_b=0.01*save_mac_abs_tol; 
   pp.query("visc_bot_atol",save_atol_b);
   save_min_rel_error=diffusion_minimum_relative_error;
- } else if (project_option==SOLVETYPE_SMOOTH) { 
-  save_mac_abs_tol=visc_abs_tol;
-  save_atol_b=0.01*save_mac_abs_tol; 
-  pp.query("visc_bot_atol",save_atol_b);
-  save_min_rel_error=diffusion_minimum_relative_error;
  } else
   amrex::Error("project_option invalid 51");
 
@@ -9457,7 +9443,9 @@ void NavierStokes::multiphase_project(int project_option) {
   //                          -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol=
   // if incompressible: DIV_new=MDOT_MF dt/vol
   ADVECT_DIV_ALL();
- } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
+ } else if ((project_option==SOLVETYPE_PRESEXTRAP)||
+            ((project_option>=SOLVETYPE_VELEXTRAP)&&
+	     (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
   allocate_array(1,1,-1,PRESSURE_SAVE_MF);
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -9466,57 +9454,6 @@ void NavierStokes::multiphase_project(int project_option) {
       *ns_level.localMF[PRESSURE_SAVE_MF],
       P_new,STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
   } // ilev=level ... finest_level
- } else if (project_option==SOLVETYPE_SMOOTH) { 
-
-  if ((localMF_grow[TEMPERATURE_SAVE_MF]==-1)&&
-      (localMF_grow[TEMPERATURE_SMOOTH_MF]==-1)) {
-   // do nothing
-  } else
-   amrex::Error("TEMPERATURE_SAVE_MF or TEMPERATURE_SMOOTH_MF not deleted");
-
-  Vector<int> scomp_thermal;
-  Vector<int> ncomp_thermal;
-  int state_index_thermal;  
-  int ncomp_check_thermal;
-  get_mm_scomp_solver(
-    nmat,
-    project_option,
-    state_index_thermal,
-    scomp_thermal,
-    ncomp_thermal,
-    ncomp_check_thermal);
-  if (ncomp_check_thermal!=nmat)
-   amrex::Error("ncomp_check_thermal invalid");
-
-   // data at time = cur_time_slab
-  getState_localMF_listALL(
-    TEMPERATURE_SAVE_MF,1,
-    state_index_thermal,
-    scomp_thermal,
-    ncomp_thermal);
-
-  int combine_flag=0;  // FVM -> GFM 
-   // combine_idx==-1 => update S_new  
-   // combine_idx>=0  => update localMF[combine_idx]
-  int combine_idx=-1; 
-  int update_flux=0;
-  int hflag_combine=0;
-  int interface_cond_avail=0;
- 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.combine_state_variable(
-    SOLVETYPE_HEAT,
-    combine_idx,
-    combine_flag,
-    hflag_combine,
-    update_flux,
-    interface_cond_avail); 
-  } // ilev=finest_level ... level
-
-  for (int ilist=0;ilist<scomp_thermal.size();ilist++) 
-   avgDownALL(state_index_thermal,scomp_thermal[ilist],
-	ncomp_thermal[ilist],1);
 
  } else if (project_option_is_valid(project_option)==1) {
   // do not save anything
@@ -9536,7 +9473,8 @@ void NavierStokes::multiphase_project(int project_option) {
  } else if ((project_option>=SOLVETYPE_SPEC)&&
 	    (project_option<SOLVETYPE_SPEC+num_species_var)) { 
   override_enable_spectral(0); // always low order
- } else if (project_option==SOLVETYPE_SMOOTH) { 
+ } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+ 	    (project_option<SOLVETYPE_VELEXTRAP+num_materials)) { 
   override_enable_spectral(0); // always low order
  } else
   amrex::Error("project_option invalid43");
@@ -9570,7 +9508,8 @@ void NavierStokes::multiphase_project(int project_option) {
  } else if ((project_option>=SOLVETYPE_SPEC)&&
             (project_option<SOLVETYPE_SPEC+num_species_var)) {
   // do nothing
- } else if (project_option==SOLVETYPE_SMOOTH) { 
+ } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+            (project_option<SOLVETYPE_VELEXTRAP+num_materials)) { 
   // do nothing
  } else
   amrex::Error("project_option invalid multiphase_project");
@@ -10373,8 +10312,6 @@ void NavierStokes::multiphase_project(int project_option) {
     } else if ((project_option>=SOLVETYPE_SPEC)&&
                (project_option<SOLVETYPE_SPEC+num_species_var)) { 
      jacobi_cycles_count=initial_thermal_cycles;
-    } else if (project_option==SOLVETYPE_SMOOTH) { 
-     jacobi_cycles_count=initial_viscosity_cycles;
     } else if (project_option==SOLVETYPE_VISC) { 
      jacobi_cycles_count=initial_viscosity_cycles;
     } else
@@ -11538,7 +11475,9 @@ void NavierStokes::multiphase_project(int project_option) {
  int homflag_dual_time=0;
 
  if ((project_option==SOLVETYPE_INITPROJ)||  
-     (project_option==SOLVETYPE_PRESCOR)) { 
+     (project_option==SOLVETYPE_PRESCOR)||
+     ((project_option>=SOLVETYPE_VELEXTRAP)&&
+      (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
   homflag_dual_time=1;
  } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
   homflag_dual_time=0;
@@ -11549,8 +11488,6 @@ void NavierStokes::multiphase_project(int project_option) {
   homflag_dual_time=0;
  } else if ((project_option>=SOLVETYPE_SPEC)&&
 	    (project_option<SOLVETYPE_SPEC+num_species_var)) {
-  homflag_dual_time=0;
- } else if (project_option==SOLVETYPE_SMOOTH) { 
   homflag_dual_time=0;
  } else
   amrex::Error("project_option invalid 53");
@@ -11698,7 +11635,9 @@ void NavierStokes::multiphase_project(int project_option) {
 
  cpp_overridepbc(0,project_option);
 
- if (project_option==SOLVETYPE_PRESEXTRAP) { 
+ if ((project_option==SOLVETYPE_PRESEXTRAP)||
+     ((project_option>=SOLVETYPE_VELEXTRAP)&&
+      (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
     // in: MacProj.cpp (calls fort_restore_pres)
@@ -11744,63 +11683,6 @@ void NavierStokes::multiphase_project(int project_option) {
       0,0,1,1);
   } // ilev=level ... finest_level
   delete_array(DIV_SAVE_MF);
- } else if (project_option==SOLVETYPE_SMOOTH) {  
-
-  if ((localMF_grow[TEMPERATURE_SAVE_MF]>=0)&&
-      (localMF_grow[TEMPERATURE_SMOOTH_MF]==-1)) {
-   // do nothing
-  } else
-   amrex::Error("TEMPERATURE_SAVE_MF or TEMPERATURE_SMOOTH_MF invalid");
-
-  Vector<int> scomp_thermal;
-  Vector<int> ncomp_thermal;
-  int state_index_thermal;  
-  int ncomp_check_thermal;
-  get_mm_scomp_solver(
-    nmat,
-    project_option,
-    state_index_thermal,
-    scomp_thermal,
-    ncomp_thermal,
-    ncomp_check_thermal);
-  if (ncomp_check_thermal!=nmat)
-   amrex::Error("ncomp_check_thermal invalid");
-
-  int combine_flag=1;  // GFM -> FVM  
-   // combine_idx==-1 => update S_new  
-   // combine_idx>=0  => update localMF[combine_idx]
-  int combine_idx=-1; 
-  int update_flux=0;
-  int hflag_combine=0;
-  int interface_cond_avail=0;
- 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.combine_state_variable(
-    SOLVETYPE_HEAT,
-    combine_idx,
-    combine_flag,
-    hflag_combine,
-    update_flux,
-    interface_cond_avail); 
-  } // ilev=finest_level ... level
-
-  for (int ilist=0;ilist<scomp_thermal.size();ilist++) 
-   avgDownALL(state_index_thermal,scomp_thermal[ilist],
-	ncomp_thermal[ilist],1);
-
-   // data at time = cur_time_slab
-  getState_localMF_listALL(
-    TEMPERATURE_SMOOTH_MF,
-    ngrow_distance,
-    state_index_thermal,
-    scomp_thermal,
-    ncomp_thermal);
-
-  putState_localMF_listALL(TEMPERATURE_SAVE_MF,
-     state_index_thermal,scomp_thermal,ncomp_thermal);
-
-  delete_array(TEMPERATURE_SAVE_MF);
 
  } else if (project_option_is_valid(project_option)==1) {
   // do nothing

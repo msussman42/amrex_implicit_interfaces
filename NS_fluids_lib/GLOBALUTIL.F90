@@ -25001,8 +25001,7 @@ INTEGER_T, intent(in) :: project_option
   project_option_momeqnF=1
  else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
           ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
-           (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. &
-          (project_option.eq.SOLVETYPE_SMOOTH)) then ! smooth temperature
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
   project_option_momeqnF=0
  else
   print *,"project_option invalid"
@@ -25029,8 +25028,7 @@ INTEGER_T, intent(in) :: project_option
  else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
           (project_option.eq.SOLVETYPE_VISC).or. & ! viscosity
           ((project_option.ge.SOLVETYPE_SPEC).and. &
-           (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. & !species
-          (project_option.eq.SOLVETYPE_SMOOTH)) then !smoothing
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then !species
   project_option_singular_possibleF=0
  else
   print *,"project_option invalid"
@@ -25056,8 +25054,7 @@ INTEGER_T, intent(in) :: project_option
  else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
           (project_option.eq.SOLVETYPE_VISC).or. & ! viscosity
           ((project_option.ge.SOLVETYPE_SPEC).and. &
-           (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. & !species
-          (project_option.eq.SOLVETYPE_SMOOTH)) then !smoothing
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then !species
   project_option_olddata_neededF=1
  else 
   print *,"project_option invalid"
@@ -25075,14 +25072,15 @@ INTEGER_T, intent(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. &
      (project_option.eq.SOLVETYPE_INITPROJ).or. &
-     (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extrapolation
+     (project_option.eq.SOLVETYPE_PRESEXTRAP).or. & !pressure extrap
+     ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
+      (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials))) then
   project_option_pressureF=1
  else if ((project_option.eq.SOLVETYPE_PRESCOR).or. & 
           (project_option.eq.SOLVETYPE_HEAT).or. &  ! temperature
           (project_option.eq.SOLVETYPE_VISC).or. &  ! viscosity
           ((project_option.ge.SOLVETYPE_SPEC).and. &
-           (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. & ! species
-          (project_option.eq.SOLVETYPE_SMOOTH)) then ! smoothing of temperature
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then!species
   project_option_pressureF=0
  else
   print *,"project_option invalid"
@@ -25108,7 +25106,6 @@ INTEGER_T, intent(in) :: project_option
           (project_option.eq.SOLVETYPE_VISC).or. &  ! viscosity
           ((project_option.ge.SOLVETYPE_SPEC).and. &
            (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. & ! species
-          (project_option.eq.SOLVETYPE_SMOOTH).or. &!smoothing of temperature
           ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
            (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials))) then
   project_option_needs_scalingF=0
@@ -25136,7 +25133,6 @@ INTEGER_T, intent(in) :: project_option
           (project_option.eq.SOLVETYPE_VISC).or. &  ! viscosity
           ((project_option.ge.SOLVETYPE_SPEC).and. &
            (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. & ! species
-          (project_option.eq.SOLVETYPE_SMOOTH).or. &!smoothing of temperature
           ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
            (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials))) then
   project_option_projectionF=0
@@ -25188,8 +25184,7 @@ IMPLICIT NONE
 
 INTEGER_T, intent(in) :: freezing_model
 
- if ((freezing_model.eq.4).or. & !Tannasawa or Schrage 
-     (freezing_model.eq.5).or. & !Stefan model evaporation or condensation
+ if ((freezing_model.eq.5).or. & !Stefan model evaporation or condensation
      (freezing_model.eq.6).or. & !Palmore and Desjardins
      (freezing_model.eq.7)) then !cavitation
   is_valid_freezing_modelF=1
@@ -25269,8 +25264,7 @@ REAL_T, intent(in) :: latent_heat
   is_multi_component_evapF=0
  else if (latent_heat.ne.zero) then
 
-  if ((freezing_model.eq.4).or. & !Tannasawa or Schrage 
-      (freezing_model.eq.5).or. & !Stefan model evaporation or condensation
+  if ((freezing_model.eq.5).or. & !Stefan model evaporation or condensation
       (freezing_model.eq.6).or. & !Palmore and Desjardins
       (freezing_model.eq.7)) then !cavitation
 
@@ -25278,8 +25272,7 @@ REAL_T, intent(in) :: latent_heat
     is_multi_component_evapF=1
    else if ((evap_flag.eq.1).or. & !Tanasawa
             (evap_flag.eq.2).or. & !Schrage
-            (evap_flag.eq.3).or. & !Kassemi
-            (evap_flag.eq.4)) then !Tanguy recommendation.
+            (evap_flag.eq.3)) then !Kassemi
     is_multi_component_evapF=0
    else
     print *,"evap_flag invalid (F) "

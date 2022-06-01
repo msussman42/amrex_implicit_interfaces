@@ -11655,8 +11655,7 @@ END SUBROUTINE SIMP
           endif
          else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
                   ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
-                   (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. &
-                  (project_option.eq.SOLVETYPE_SMOOTH)) then ! smoothing
+                   (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
           if ((nsolve.eq.1).and. &
               (velcomp.eq.0)) then
            veldir=1
