@@ -386,7 +386,7 @@ void NavierStokes::nonlinear_advection() {
   } else
    amrex::Error("PLS and space-time SEM are incompatible");
 
-  allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_MF);
+  allocate_levelset_ALL(ngrow_distance,LEVELPC_MF);
 
     //must go from finest to coarsest levels here.
   for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -402,8 +402,6 @@ void NavierStokes::nonlinear_advection() {
     amrex::Error("ns_is_rigid invalid");
 
   }
-
-  delete_array(HOLD_LS_DATA_MF);
 
  } else if ((continuous_mof==0)||(continuous_mof==2)) {
   // do nothing
@@ -13138,7 +13136,7 @@ void NavierStokes::prepare_umac_material(Real time) {
  
  bool use_tiling=ns_tiling;
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,6003);
+ debug_ngrow(LEVELPC_MF,ngrow_distance,6003);
  debug_ngrow(MASKCOEF_MF,1,6003);
 
  const Real* dx=geom.CellSize();
@@ -13187,7 +13185,7 @@ void NavierStokes::prepare_umac_material(Real time) {
 
      // mask=tag (1) if not covered by level+1 or outside the domain.
      FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-     FArrayBox& lsfab=(*localMF[HOLD_LS_DATA_MF])[mfi];
+     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
      FArrayBox& scalarfab=(*localMF[SCALAR_MASK_MATERIAL_MF])[mfi];
      FArrayBox& umacfab=(*localMF[UMAC_MATERIAL_MF+dir])[mfi];
      FArrayBox& umacmaskfab=(*localMF[UMAC_MASK_MATERIAL_MF+dir])[mfi];
