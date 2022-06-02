@@ -9424,7 +9424,6 @@ void NavierStokes::multiphase_project(int project_option) {
   amrex::Error("slab_step invalid");
 
  const Real* coarse_dx=geom.CellSize();
-
  
   // The independent variable is "DIV_Type"
   // which means the presently stored contents 
@@ -9453,6 +9452,14 @@ void NavierStokes::multiphase_project(int project_option) {
    MultiFab::Copy(
       *ns_level.localMF[PRESSURE_SAVE_MF],
       P_new,STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
+   if (project_option==SOLVETYPE_PRESEXTRAP) {
+    // do nothing
+   } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+	      (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
+    P_new.setVal(0.0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
+   } else
+    amrex::Error("project_option invalid");
+
   } // ilev=level ... finest_level
 
  } else if (project_option_is_valid(project_option)==1) {
@@ -9490,6 +9497,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
  int nsolve=1;
 
+  //SOLVETYPE_INITPROJ, SOLVETYPE_PRES, SOLVETYPE_PRESCOR
  if (project_option_projection(project_option)==1) {
 
   if (project_option==SOLVETYPE_INITPROJ) { 
@@ -9760,6 +9768,7 @@ void NavierStokes::multiphase_project(int project_option) {
    check_value_max(4,DIFFUSIONRHS_MF,0,1,0,0.0);
  }
 
+  //SOLVETYPE_PRES, SOLVETYPE_PRESCOR, SOLVETYPE_INITPROJ
  if (project_option_projection(project_option)==1) {
 
   Vector<blobclass> blobdata;
@@ -9933,6 +9942,22 @@ void NavierStokes::multiphase_project(int project_option) {
    // do nothing
   } else
    amrex::Error("alloc_blobdata invalid");
+
+ } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+	    (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    int im_extend=project_option-SOLVETYPE_VELEXTRAP;
+    MultiFab::Copy(
+      *ns_level.localMF[MAC_TEMP_MF+dir],
+      *ns_level.localMF[UMAC_MATERIAL_MF+dir],im_extend,0,nsolve,0);
+    MultiFab::Copy(
+      *ns_level.localMF[UMAC_MF+dir],
+      *ns_level.localMF[UMAC_MATERIAL_MF+dir],im_extend,0,nsolve,0);
+   }  // dir=0..sdim-1
+  } // ilev=finest_level ... level
 
  } else if (project_option_projection(project_option)==0) {
   // do nothing
