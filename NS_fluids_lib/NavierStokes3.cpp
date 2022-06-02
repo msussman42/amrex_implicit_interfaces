@@ -10072,7 +10072,9 @@ void NavierStokes::multiphase_project(int project_option) {
  int homflag_residual_correction_form=0; 
 
  if ((project_option==SOLVETYPE_PRESCOR)|| 
-     (project_option==SOLVETYPE_INITPROJ)) { 
+     (project_option==SOLVETYPE_INITPROJ)||
+     ((project_option>=SOLVETYPE_VELEXTRAP)&&
+      (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
   homflag_residual_correction_form=1; 
  } else if (project_option_is_valid(project_option)==1) {
   homflag_residual_correction_form=0; 
@@ -10383,6 +10385,7 @@ void NavierStokes::multiphase_project(int project_option) {
      // mac_phi_crse=0
      //
      // updatevelALL calls mac_update.
+     FIX ME SOLVETYPE_VELEXTRAP
     updatevelALL(project_option,MAC_PHI_CRSE_MF,nsolve);
 
     double after_startup=0.0;
