@@ -10270,7 +10270,6 @@ END SUBROUTINE SIMP
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(lsnew)
       INTEGER_T, intent(in) :: DIMDEC(macnew)
       INTEGER_T, intent(in) :: DIMDEC(facegrav)
@@ -10278,8 +10277,6 @@ END SUBROUTINE SIMP
       REAL_T, intent(in),target :: xface(DIMV(xface),FACECOMP_NCOMP)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon) 
-      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
       REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout),target :: macnew(DIMV(macnew))
@@ -10301,7 +10298,6 @@ END SUBROUTINE SIMP
       nhalf=1
 
       xface_ptr=>xface
-      recon_ptr=>recon
       lsnew_ptr=>lsnew
       macnew_ptr=>macnew
       facegrav_ptr=>facegrav
@@ -10359,7 +10355,6 @@ END SUBROUTINE SIMP
       endif
 
       call checkbound_array(fablo,fabhi,xface_ptr,0,dir,42)
-      call checkbound_array(fablo,fabhi,recon_ptr,1,-1,42)
       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,42)
       call checkbound_array1(fablo,fabhi,macnew_ptr,0,dir,42)
       call checkbound_array1(fablo,fabhi,facegrav_ptr,0,dir,42)
