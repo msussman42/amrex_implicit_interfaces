@@ -21582,8 +21582,7 @@ contains
       end subroutine multi_get_volumePOINT
 
 
-       ! called from: get_mach_number, fort_eos_pressure,
-       !        FORT_PRESSURE_INDICATOR, fort_advective_pressure,
+       ! called from: get_mach_number, 
        !        fort_derturbvisc, fort_derconductivity
       subroutine get_primary_material_VFRAC(VFRAC,nmat,im_primary,caller_id)
       use probcommon_module

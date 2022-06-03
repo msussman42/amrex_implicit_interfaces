@@ -1541,6 +1541,7 @@ void NavierStokes::applyGradALL(
   int simple_AMR_BC_flag=0;
   int simple_AMR_BC_flag_viscosity=0;
 
+   //NavierStokes::apply_pressure_grad is declared in: NavierStokes2.cpp
   ns_level.apply_pressure_grad(
    simple_AMR_BC_flag,
    simple_AMR_BC_flag_viscosity,
@@ -1700,17 +1701,15 @@ void NavierStokes::apply_div(
      (localMF[idx_gphi+AMREX_SPACEDIM-1]->nComp()!=nsolve)) 
   amrex::Error("invalid nComp");
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
-
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(localMF[SLOPE_RECON_MF]->boxArray().d_numPts());
+ thread_class::init_d_numPts(localMF[VOLUME_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*localMF[SLOPE_RECON_MF],use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*localMF[VOLUME_MF],use_tiling); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
   const Box& tilegrid = mfi.tilebox();
@@ -1748,8 +1747,6 @@ void NavierStokes::apply_div(
   FArrayBox& poldfab = (*localMF[idx_phi])[mfi];
 
   FArrayBox& diffusionRHSfab = (*diffusionRHScell)[mfi];
-
-  FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
 
   FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
   FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
@@ -1861,8 +1858,8 @@ void NavierStokes::apply_div(
    ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()),
    maskSEMfab.dataPtr(), 
    ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
-   reconfab.dataPtr(), // levelPC
-   ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+   vol.dataPtr(), // levelPC
+   ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
    solxfab.dataPtr(),
    ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
    solyfab.dataPtr(),
@@ -1874,7 +1871,6 @@ void NavierStokes::apply_div(
    diagfab.dataPtr(),
    ARLIM(diagfab.loVect()),ARLIM(diagfab.hiVect()),//denold
    poldfab.dataPtr(),ARLIM(poldfab.loVect()),ARLIM(poldfab.hiVect()),//ustar
-   reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
    diffusionRHSfab.dataPtr(), //mdotcell
    ARLIM(diffusionRHSfab.loVect()),ARLIM(diffusionRHSfab.hiVect()),
    maskdivresfab.dataPtr(),
@@ -2214,9 +2210,6 @@ void NavierStokes::ADVECT_DIV() {
 
  debug_ngrow(FACE_VAR_MF,0,660);
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,0,661);
-
  debug_ngrow(CELL_SOUND_MF,0,144);
 
  if (localMF[CELL_SOUND_MF]->nComp()!=2)
@@ -2337,12 +2330,9 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
  const Real* dx = geom.CellSize();
 
  resize_metrics(1);
- debug_ngrow(VOLUME_MF,0,250);
+ debug_ngrow(VOLUME_MF,1,250);
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,80);
-
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,610);
 
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>nmat))
@@ -2405,7 +2395,6 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
    FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
    FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
    FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
-   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
    const Real* xlo = grid_loc[gridno].lo();
    Vector<int> velbc=getBCArray(State_Type,gridno,
      STATECOMP_VEL,STATE_NCOMP_VEL);
@@ -2479,30 +2468,28 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
     ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()),
     maskSEMfab.dataPtr(), 
     ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
-    reconfab.dataPtr(), //levelPC
-    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+    vol.dataPtr(), //levelPC
+    ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
     solxfab.dataPtr(),
     ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
     solyfab.dataPtr(),
     ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
     solzfab.dataPtr(),
     ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
-    reconfab.dataPtr(), //cterm
-    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-    reconfab.dataPtr(), //pold
-    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+    vol.dataPtr(), //cterm
+    ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
+    vol.dataPtr(), //pold
+    ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
     vol.dataPtr(), // denold
     ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
-    reconfab.dataPtr(), // ustar
-    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-    reconfab.dataPtr(),
-    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-    reconfab.dataPtr(), //mdotcell
-    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-    reconfab.dataPtr(), //maskdivres
-    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-    reconfab.dataPtr(), //maskres
-    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+    vol.dataPtr(), // ustar
+    ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
+    vol.dataPtr(), //mdotcell
+    ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
+    vol.dataPtr(), //maskdivres
+    ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
+    vol.dataPtr(), //maskres
+    ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
     &SDC_outer_sweeps,
     &homflag,
     &nsolve,

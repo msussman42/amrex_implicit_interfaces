@@ -10719,9 +10719,6 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,3);
-
  if ((im<0)||(im>=nmat))
   amrex::Error("im invalid52");
 
@@ -10976,9 +10973,6 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
  int nstate=STATE_NCOMP;
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
-
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,3);
 
  if ((im<0)||(im>=nmat))
   amrex::Error("im invalid52");
@@ -11343,8 +11337,6 @@ void NavierStokes::make_marangoni_force() {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2);
 
- VOF_Recon_resize(2,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,2,3);
  debug_ngrow(DIST_CURV_MF,1,3);
  debug_ngrow(CELL_DEN_MF,1,5);
  if (localMF[CELL_DEN_MF]->nComp()!=1)
@@ -12224,8 +12216,6 @@ void NavierStokes::tensor_advection_update() {
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,9);
  debug_ngrow(CELLTENSOR_MF,1,9);
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
@@ -15548,18 +15538,11 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
  if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_make_distance)
   amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
 
- resize_metrics(1);
- VOF_Recon_resize(1,SLOPE_RECON_MF);
-
  debug_ngrow(VOLUME_MF,1,34);
  debug_ngrow(SWEPT_CROSSING_MF,0,34);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,2);
-
- debug_ngrow(SLOPE_RECON_MF,1,31);
- if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
-  amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
  debug_ngrow(CELL_DEN_MF,1,28); 
  debug_ngrow(CELL_DEDT_MF,1,28); 
@@ -16318,7 +16301,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
    amrex::Error("localMF[LEVELPC_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM)");
 
   debug_ngrow(LEVELPC_MF,1,37);
-  debug_ngrow(SLOPE_RECON_MF,1,37);
   debug_ngrow(delta_MF,0,37);
   debug_ngrow(MASKCOEF_MF,1,36);
   debug_ngrow(DEN_RECON_MF,1,37);
@@ -16447,8 +16429,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      FArrayBox& xp=(*localMF[AMRSYNC_PRES_MF+dir])[mfi];  
      FArrayBox& xgp=(*localMF[COARSE_FINE_FLUX_MF+dir])[mfi];  
 
-     FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
-
      FArrayBox& xvel=(*localMF[UMAC_MF+dir])[mfi];  
 
      FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi];
@@ -16556,7 +16536,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
       xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //xcut
       xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), // xflux
-      reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
       xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()),//holds COARSE_FINE
       xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()),//holds AMRSYNC_PRES
       xvel.dataPtr(),ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()), 
@@ -16659,7 +16638,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
 
      FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
-     FArrayBox& slopefab=(*localMF[SLOPE_RECON_MF])[mfi];
 
      FArrayBox& deltafab=(*localMF[delta_MF])[mfi];
      int deltacomp=0;
@@ -16763,8 +16741,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       ARLIM(S_old_fab.loVect()),ARLIM(S_old_fab.hiVect()),
       S_old_fab.dataPtr(), // ustar
       ARLIM(S_old_fab.loVect()),ARLIM(S_old_fab.hiVect()),
-      slopefab.dataPtr(), // recon
-      ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
       velfab.dataPtr(), // OP_ISCHEME_CELL, mdot
       ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
       denfab.dataPtr(), // OP_ISCHEME_CELL, maskdivres

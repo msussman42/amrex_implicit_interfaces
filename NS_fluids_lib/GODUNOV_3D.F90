@@ -1052,7 +1052,6 @@ stop
        levelpc,DIMS(levelpc), &
        xflux,DIMS(xflux), &
        xface,DIMS(xface), &
-       recon,DIMS(recon), &  
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -19017,7 +19016,6 @@ stop
        solidy,DIMS(solidy), &
        solidz,DIMS(solidz), &
        levelpc,DIMS(levelpc), &
-       recon,DIMS(recon), &
        xlo,dx, &
        rzflag, &
        tilelo,tilehi, &
@@ -19084,7 +19082,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(solidy)
       INTEGER_T, intent(in) :: DIMDEC(solidz)
       INTEGER_T, intent(in) :: DIMDEC(levelpc)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
  
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
       REAL_T, intent(in) :: time
@@ -19125,8 +19122,6 @@ stop
       REAL_T, pointer :: solidz_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: levelpc(DIMV(levelpc),nmat)
       REAL_T, pointer :: levelpc_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
   
       INTEGER_T i,j,k
       INTEGER_T dir2
@@ -19367,8 +19362,6 @@ stop
 
       levelpc_ptr=>levelpc
       call checkbound_array(fablo,fabhi,levelpc_ptr,2,-1,1368)
-      recon_ptr=>recon
-      call checkbound_array(fablo,fabhi,recon_ptr,2,-1,1368)
 
       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
 

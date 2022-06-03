@@ -1645,9 +1645,6 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
    amrex::Error("localMF[AREA_MF+dir]->boxArray()!=UMAC_new.boxArray()");
  } // dir=0..sdim-1
 
- VOF_Recon_resize(2,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,2,118);
-
  const Box& domain = geom.Domain();
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
@@ -1888,9 +1885,6 @@ void NavierStokes::init_divup_cell_vel_cell(
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,118);
-
  const Box& domain = geom.Domain();
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
@@ -1975,8 +1969,6 @@ void NavierStokes::init_divup_cell_vel_cell(
    FArrayBox& xvel=(*localMF[idx_umac+dir])[mfi];
    FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
 
-   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
-
    FArrayBox& xp=(*localMF[PEDGE_MF+dir])[mfi];
 
    // mask=1.0 at interior fine bc ghost cells
@@ -2050,8 +2042,8 @@ void NavierStokes::init_divup_cell_vel_cell(
     xlo,dx,
     &spectral_loop,
     &ncfluxreg, //=AMREX_SPACEDIM (placeholder)
-    reconfab.dataPtr(), //semflux placeholder
-    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+    levelpcfab.dataPtr(), //semflux placeholder
+    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
     maskfab.dataPtr(), // mask=1.0 at interior fine bc ghost cells
     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     maskcoef.dataPtr(), // maskcoef=1 if not covered by finer level or outside
@@ -2064,7 +2056,6 @@ void NavierStokes::init_divup_cell_vel_cell(
     ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //xcut
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
-    reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),//xgp 
     xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), 
     xvel.dataPtr(),ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()), 
@@ -2158,7 +2149,6 @@ void NavierStokes::init_divup_cell_vel_cell(
 
    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
-   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];//1=fine/fine bc
    FArrayBox& maskcoef=(*localMF[MASKCOEF_MF])[mfi];// 1=not covered.
    FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
@@ -2280,7 +2270,6 @@ void NavierStokes::init_divup_cell_vel_cell(
     presfab.dataPtr(),
     ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),//denold
     ustarfab.dataPtr(),ARLIM(ustarfab.loVect()),ARLIM(ustarfab.hiVect()),
-    reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
     levelpcfab.dataPtr(),
     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//mdot
     levelpcfab.dataPtr(),
@@ -2689,8 +2678,6 @@ void NavierStokes::increment_face_velocity(
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
   debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
  }
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,120);
 
  resize_maskfiner(1,MASKCOEF_MF);
  resize_mask_nbr(1);
@@ -2824,8 +2811,6 @@ void NavierStokes::increment_face_velocity(
     
       FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];  
 
-      FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
-
       FArrayBox& xvel=Umac_new[mfi];
 
       FArrayBox& xgp=(*Umac_old)[mfi];
@@ -2925,7 +2910,6 @@ void NavierStokes::increment_face_velocity(
        ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //xcut
        xface.dataPtr(),
        ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-       reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
        xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()), //holds Umac_old
        xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), //xp(holds AMRSYNC)
        xvel.dataPtr(),ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()), 
@@ -3184,9 +3168,6 @@ void NavierStokes::VELMAC_TO_CELL(
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,128);
-
  const Real* dx = geom.CellSize();
 
  resize_maskfiner(1,MASKCOEF_MF);
@@ -3281,13 +3262,13 @@ void NavierStokes::VELMAC_TO_CELL(
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(localMF[SLOPE_RECON_MF]->boxArray().d_numPts());
+ thread_class::init_d_numPts(localMF[LEVELPC_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*localMF[SLOPE_RECON_MF],use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*localMF[LEVELPC_MF],use_tiling); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   int gridno=mfi.index();
   const Box& tilegrid = mfi.tilebox();
@@ -3315,7 +3296,6 @@ void NavierStokes::VELMAC_TO_CELL(
   FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
   FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
   FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
-  FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
   FArrayBox& xvel=(*face_velocity[0])[mfi];
@@ -3397,7 +3377,8 @@ void NavierStokes::VELMAC_TO_CELL(
    areay.dataPtr(),ARLIM(areay.loVect()),ARLIM(areay.hiVect()), //ay
    areaz.dataPtr(),ARLIM(areaz.loVect()),ARLIM(areaz.hiVect()), //az
    volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
-   voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()), // rhs
+   levelpcfab.dataPtr(),
+   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()), // rhs
    veldest.dataPtr(),ARLIM(veldest.loVect()),ARLIM(veldest.hiVect()), 
    veldest.dataPtr(),ARLIM(veldest.loVect()),ARLIM(veldest.hiVect()), //dendest
    maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
@@ -3421,10 +3402,12 @@ void NavierStokes::VELMAC_TO_CELL(
    volfab.dataPtr(),
    ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()), // denold
    veldest.dataPtr(),ARLIM(veldest.loVect()),ARLIM(veldest.hiVect()), //ustar
-   voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),//recon
-   voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),//mdot
-   voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),//maskdivres
-   voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),//maskres
+   levelpcfab.dataPtr(),
+   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//mdot
+   levelpcfab.dataPtr(),
+   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//maskdivres
+   levelpcfab.dataPtr(),
+   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//maskres
    &SDC_outer_sweeps,
    &homflag,
    &nsolve,
@@ -3629,12 +3612,10 @@ void NavierStokes::doit_gradu_tensor(
  resize_maskfiner(1,MASKCOEF_MF);
  resize_mask_nbr(1);
  resize_metrics(1);
- VOF_Recon_resize(2,SLOPE_RECON_MF);
  resize_levelset(2,LEVELPC_MF);
 
  debug_ngrow(MASKCOEF_MF,1,845);
  debug_ngrow(VOLUME_MF,1,845);
- debug_ngrow(SLOPE_RECON_MF,2,841);
  debug_ngrow(MASKSEM_MF,1,841);
  debug_ngrow(LEVELPC_MF,2,120);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM))
@@ -3642,8 +3623,6 @@ void NavierStokes::doit_gradu_tensor(
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
   debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
  }
- if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
-  amrex::Error("slope recon mf has incorrect ncomp");
 
  int rzflag=0;
  if (geom.IsRZ())
@@ -3720,7 +3699,6 @@ void NavierStokes::doit_gradu_tensor(
     FArrayBox& solidzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
 
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
-    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
 
     // mask0=tag if not covered by level+1 or outside the domain.
     FArrayBox& mask0fab=(*localMF[MASKCOEF_MF])[mfi];
@@ -3788,8 +3766,6 @@ void NavierStokes::doit_gradu_tensor(
      ARLIM(solidzfab.loVect()),ARLIM(solidzfab.hiVect()),
      levelpcfab.dataPtr(),
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-     reconfab.dataPtr(),
-     ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
      xlo,dx,
      &rzflag,
      tilelo,tilehi,
@@ -4136,11 +4112,9 @@ void NavierStokes::apply_pressure_grad(
  resize_maskfiner(1,MASKCOEF_MF);
  resize_mask_nbr(1);
  resize_metrics(1);
- VOF_Recon_resize(1,SLOPE_RECON_MF);
 
  debug_ngrow(MASKCOEF_MF,1,845);
  debug_ngrow(VOLUME_MF,1,845);
- debug_ngrow(SLOPE_RECON_MF,1,841);
  debug_ngrow(MASKSEM_MF,1,841);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM))
   amrex::Error("levelpc mf has incorrect ncomp");
@@ -4294,8 +4268,6 @@ void NavierStokes::apply_pressure_grad(
 
     FArrayBox& xface=(*localMF[FACE_VAR_MF+dir-1])[mfi];
 
-    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
- 
     FArrayBox& tensor_data=(*localMF[LOCAL_FACETENSOR_MF])[mfi];
     FArrayBox& cell_tensor_data=(*localMF[LOCAL_CELLTENSOR_MF])[mfi];
     FArrayBox& mask_tensor_data=(*localMF[MASKSOLIDTENSOR_MF])[mfi];
@@ -4348,7 +4320,6 @@ void NavierStokes::apply_pressure_grad(
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
      xflux.dataPtr(),ARLIM(xflux.loVect()),ARLIM(xflux.hiVect()),
      xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,
@@ -4510,8 +4481,6 @@ void NavierStokes::apply_pressure_grad(
     FArrayBox& xcut=(*localMF[FACE_WEIGHT_MF+dir])[mfi]; // A/rho
     FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
 
-    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
-
     FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
     FArrayBox& presfab=(*localMF[pboth_mf])[mfi]; // in: apply_pressure_grad
 
@@ -4548,7 +4517,8 @@ void NavierStokes::apply_pressure_grad(
     int ncphys_proxy=FACECOMP_NCOMP;
 
     // -grad p * FACE_WEIGHT * dt
-    // in: apply_pressure_grad
+    // fort_cell_to_mac called from: apply_pressure_grad
+    // fort_cell_to_mac is declared in: LEVELSET_3D.F90
     fort_cell_to_mac(
      &ncomp_mgoni,
      &ncomp_xp,
@@ -4586,7 +4556,6 @@ void NavierStokes::apply_pressure_grad(
      ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
      xcut.dataPtr(),ARLIM(xcut.loVect()),ARLIM(xcut.hiVect()),
      xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
      xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()),
      xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), //holds AMRSYNC_PRES
      xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()), // xvel
@@ -5519,9 +5488,6 @@ void NavierStokes::increment_potential_force() {
    amrex::Error("localMF[POTENTIAL_FORCE_EDGE_MF+dir]->nComp() invalid");
   }
 
-  VOF_Recon_resize(1,SLOPE_RECON_MF);
-  debug_ngrow(SLOPE_RECON_MF,1,240);
-
   const Real* dx = geom.CellSize();
   MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
 
@@ -5548,7 +5514,6 @@ void NavierStokes::increment_potential_force() {
    FArrayBox& macfab=Umac_new[mfi];
    FArrayBox& facegrav=(*localMF[POTENTIAL_FORCE_EDGE_MF+dir])[mfi];
    FArrayBox& xfacefab=(*localMF[FACE_VAR_MF+dir])[mfi];
-   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
    FArrayBox& lsfab=LS_new[mfi];
 
    int tid_current=ns_thread();
@@ -5574,8 +5539,6 @@ void NavierStokes::increment_potential_force() {
      xlo,dx,&dir,
      xfacefab.dataPtr(), 
      ARLIM(xfacefab.loVect()),ARLIM(xfacefab.hiVect()),
-     reconfab.dataPtr(),
-     ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
      lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
      macfab.dataPtr(),
      ARLIM(macfab.loVect()),ARLIM(macfab.hiVect()),
@@ -5875,13 +5838,11 @@ void NavierStokes::process_potential_force_face() {
 
  resize_maskfiner(1,MASKCOEF_MF);
  resize_mask_nbr(1);
- VOF_Recon_resize(1,SLOPE_RECON_MF);
  resize_metrics(1);
  resize_levelset(2,LEVELPC_MF);
 
  debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
- debug_ngrow(SLOPE_RECON_MF,1,130);
 
  MultiFab &S_new = get_new_data(State_Type,slab_step+1);
 
@@ -5951,8 +5912,6 @@ void NavierStokes::process_potential_force_face() {
 
    FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
  
-   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];  
-
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
 
    // mask=tag if not covered by level+1 or outside the domain.
@@ -6049,7 +6008,6 @@ void NavierStokes::process_potential_force_face() {
     ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //xcut
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
-    reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
     xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()), 
     xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), 
     xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()), //xvel
@@ -8936,9 +8894,6 @@ MultiFab* NavierStokes::derive_EOS_pressure(Vector<int> local_material_type) {
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
   amrex::Error("localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1)");
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,663);
-
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
@@ -8974,7 +8929,6 @@ MultiFab* NavierStokes::derive_EOS_pressure(Vector<int> local_material_type) {
 
   const Real* xlo = grid_loc[gridno].lo();
  
-  FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
   FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
   FArrayBox& denfab=(*denmf)[mfi];
   FArrayBox& presfab=(*mf)[mfi];
@@ -8992,8 +8946,6 @@ MultiFab* NavierStokes::derive_EOS_pressure(Vector<int> local_material_type) {
    xlo,dx,
    presfab.dataPtr(),
    ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
-   voffab.dataPtr(),
-   ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
    levelpcfab.dataPtr(),
    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
    denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
@@ -9036,11 +8988,6 @@ void NavierStokes::init_pressure_error_indicator() {
  debug_ngrow(CELLTENSOR_MF,1,9);
  if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
-
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,664);
- if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
-  amrex::Error("localMF[SLOPERECON_MF]->nComp() invalid");
 
  resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,665);
@@ -9152,7 +9099,7 @@ void NavierStokes::init_pressure_error_indicator() {
   // mask=tag if not covered by level+1 or outside the domain.
   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
 
-  FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
+  FArrayBox& LSfab=(*localMF[LEVELPC_MF])[mfi];
   FArrayBox& denfab=(*denmf)[mfi];
   FArrayBox& presfab=(*presmf)[mfi];
   FArrayBox& vortfab=(*vortmf)[mfi];
@@ -9160,8 +9107,8 @@ void NavierStokes::init_pressure_error_indicator() {
 
   if (denfab.nComp()!=nmat*num_state_material)
    amrex::Error("denfab.nComp() invalid");
-  if (voffab.nComp()!=nmat*ngeom_recon)
-   amrex::Error("voffab.nComp() invalid");
+  if (LSfab.nComp()!=nmat*(AMREX_SPACEDIM+1)
+   amrex::Error("LSfab.nComp() invalid");
   if (presfab.nComp()!=1)
    amrex::Error("presfab.nComp() invalid");
   if (vortfab.nComp()!=1)
@@ -9172,6 +9119,7 @@ void NavierStokes::init_pressure_error_indicator() {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   //fort_pressure_indicator is declared in: NAVIERSTOKES_3D.F90
   fort_pressure_indicator(
    &pressure_error_flag,
    vorterr.dataPtr(),
@@ -9180,7 +9128,7 @@ void NavierStokes::init_pressure_error_indicator() {
    xlo,dx,
    errnew.dataPtr(scomp_error),
    ARLIM(errnew.loVect()),ARLIM(errnew.hiVect()),
-   voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
+   LSfab.dataPtr(),ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
    denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
    vortfab.dataPtr(),ARLIM(vortfab.loVect()),ARLIM(vortfab.hiVect()),
    presfab.dataPtr(),ARLIM(presfab.loVect()),ARLIM(presfab.hiVect()),
@@ -9235,9 +9183,6 @@ void NavierStokes::init_advective_pressure(int project_option) {
  debug_ngrow(VOLUME_MF,0,700);
 
  debug_ngrow(FACE_VAR_MF,0,660);
-
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,661);
 
  debug_ngrow(MASKCOEF_MF,1,6001);
 
@@ -10094,11 +10039,6 @@ void NavierStokes::getState_tracemag(int idx) {
  int ntrace=5*nmat;
   //ngrow=1
  new_localMF(idx,ntrace,1,-1);
-
- VOF_Recon_resize(2,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,2,680);
- if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
-  amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
  debug_ngrow(CELLTENSOR_MF,1,9);
  if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)

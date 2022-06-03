@@ -7360,7 +7360,7 @@ end subroutine global_checkinplane
        if ((delta.gt.dxmax).or.(dir.eq.1)) then
         dxmax=delta
        endif
-      enddo ! dir
+      enddo ! dir=1..sdim
 
       end subroutine get_dxmax
 
@@ -7403,7 +7403,7 @@ end subroutine global_checkinplane
        if ((delta.gt.dxmax).or.(dir.eq.1)) then
         dxmax=delta
        endif
-      enddo ! dir
+      enddo ! dir=1..sdim
 
       end subroutine get_dxmaxLS
 
