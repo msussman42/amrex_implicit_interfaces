@@ -13131,7 +13131,11 @@ stop
       vel_ptr=>vel
       pres_ptr=>pres
       den_ptr=>den
-
+      solfab_ptr=>solfab
+      mgoni_ptr=>mgoni
+      typefab_ptr=>typefab
+      colorfab_ptr=>colorfab
+      levelPC_ptr=>levelPC
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -13183,14 +13187,37 @@ stop
        print *,"spectral_loop invalid"
        stop
       endif
-      if ((ncfluxreg/SDIM)*SDIM.ne.ncfluxreg) then
-       print *,"ncfluxreg invalid11 ",ncfluxreg
+
+      if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
+          (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
+       if (enable_spectral.eq.0) then
+        ! do nothing
+       else 
+        print *,"enable_spectral invalid"
+        stop
+       endif
+       if (operation_flag.eq.OP_PRESGRAD_MAC) then
+        ! do nothing
+       else 
+        print *,"operation_flag invalid"
+        stop
+       endif
+      else if (project_option_is_validF(project_option) then
+
+       if ((ncfluxreg/SDIM)*SDIM.ne.ncfluxreg) then
+        print *,"ncfluxreg invalid11 ",ncfluxreg
+        stop
+       endif
+       if (ncfluxreg.lt.SDIM) then
+        print *,"ncfluxreg invalid12 ",ncfluxreg
+        stop
+       endif
+
+      else
+       print *,"project_option invalid"
        stop
       endif
-      if (ncfluxreg.lt.SDIM) then
-       print *,"ncfluxreg invalid12 ",ncfluxreg
-       stop
-      endif
+
       nten_test=num_interfaces
       if (nten.ne.nten_test) then
        print *,"nten invalid edge grad nten nten_test ",nten,nten_test
@@ -13244,8 +13271,16 @@ stop
         stop
        endif
 
-       if (ncphys.ne.FACECOMP_NCOMP) then
-        print *,"ncphys invalid"
+       if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
+           (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
+        ! do nothing
+       else if (project_option_is_validF(project_option) then
+        if (ncphys.ne.FACECOMP_NCOMP) then
+         print *,"ncphys invalid"
+         stop
+        endif
+       else
+        print *,"project_option invalid"
         stop
        endif
 
@@ -13408,27 +13443,36 @@ stop
       endif
 
       call checkbound_array(fablo,fabhi,xcut_ptr,0,dir,231)
-      call checkbound_array(fablo,fabhi,xface_ptr,0,dir,263)
       call checkbound_array(fablo,fabhi,xgp_ptr,0,dir,2330)
-      call checkbound_array(fablo,fabhi,xp_ptr,0,dir,2331)
       call checkbound_array(fablo,fabhi,xvel_ptr,0,dir,2332)
-      call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
       call checkbound_array(fablo,fabhi,vel_ptr,1,-1,234)
       call checkbound_array(fablo,fabhi,pres_ptr,1,-1,234)
       call checkbound_array(fablo,fabhi,den_ptr,1,-1,234)
-      solfab_ptr=>solfab
-      call checkbound_array(fablo,fabhi,solfab_ptr,0,dir,234)
-      mgoni_ptr=>mgoni
+
       call checkbound_array(fablo,fabhi,mgoni_ptr,1,-1,234)
-      typefab_ptr=>typefab
       call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1,6625)
-      colorfab_ptr=>colorfab
       call checkbound_array1(fablo,fabhi,colorfab_ptr,1,-1,6626)
-      levelPC_ptr=>levelPC
       call checkbound_array(fablo,fabhi,levelPC_ptr,1,-1,234)
       call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,234)
       call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1,234)
-      call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
+
+      if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
+          (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
+       ! do nothing
+      else if (project_option_is_validF(project_option) then
+         !local_face_var_mf
+       call checkbound_array(fablo,fabhi,xface_ptr,0,dir,263)
+         !local_amrsync_pres_mf
+       call checkbound_array(fablo,fabhi,xp_ptr,0,dir,2331)
+         !local_sem_fluxreg_mf
+       call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
+         !local_fsu_ghost_mac_mf+dir
+       call checkbound_array(fablo,fabhi,solfab_ptr,0,dir,234)
+       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
+      else
+       print *,"project_option invalid"
+       stop
+      endif
 
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=DXMAXLS
@@ -13530,7 +13574,7 @@ stop
            ! with the solid velocity.
           local_vel_MAC=xvel(D_DECL(i,j,k),1)
 
-         else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then !(grd ppot)_MAC
+         else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
 
           do im=1,ncphys
            local_face(im)=xface(D_DECL(i,j,k),im)
