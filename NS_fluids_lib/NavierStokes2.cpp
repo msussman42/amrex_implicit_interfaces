@@ -3717,7 +3717,6 @@ void NavierStokes::doit_gradu_tensor(
 
     FArrayBox& semfluxfab=(*sem_flux_mf)[mfi];
     int ncfluxreg=semfluxfab.nComp();
-    int local_enable_spectral=enable_spectral;
 
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -3735,7 +3734,7 @@ void NavierStokes::doit_gradu_tensor(
      &slab_step,
      &itensor_iter,
      &cur_time_slab,
-     &local_enable_spectral,
+     &enable_spectral,
      velbc.dataPtr(),
      &spectral_loop,
      &ncfluxreg,
@@ -4115,22 +4114,56 @@ void NavierStokes::apply_pressure_grad(
 
  debug_ngrow(MASKCOEF_MF,1,845);
  debug_ngrow(VOLUME_MF,1,845);
- debug_ngrow(MASKSEM_MF,1,841);
  if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM))
   amrex::Error("levelpc mf has incorrect ncomp");
 
+ int local_fsi_ghost_mac_mf=FSI_GHOST_MAC_MF;
+ int local_fsi_ghost_ncomp=nparts_def*AMREX_SPACEDIM;
+ int local_fsi_ghost_ngrow=0;
+ int local_face_var_mf=FACE_VAR_MF;
+ int local_amrsync_pres_mf=AMRSYNC_PRES_MF;
+ int local_amrsync_pres_ncomp=nsolve;
+ int local_sem_fluxreg_mf=SEM_FLUXREG_MF;
+ int local_sem_fluxreg_ncomp=AMREX_SPACEDIM*nsolve;
+ int local_masksem_mf=MASKSEM_MF;
+
+ if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+     (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
+
+  if (enable_spectral==0) {
+   // do nothing
+  } else
+   amrex::Error("expecting enable_spectral==0");
+
+  local_fsi_ghost_mac_mf=AREA_MF;
+  local_fsi_ghost_ncomp=localMF[AREA_MF]->nComp();
+  local_fsi_ghost_ngrow=localMF[AREA_MF]->nGrow();
+  local_face_var_mf=AREA_MF;
+  local_amrsync_pres_mf=AREA_MF;
+  local_amrsync_pres_ncomp=localMF[AREA_MF]->nComp();
+  local_sem_fluxreg_mf=VOLUME_MF;
+  local_sem_fluxreg_ncomp=local_MF[VOLUME_MF]->nComp();
+  local_masksem_mf=VOLUME_MF;
+
+ } else if (project_option_is_valid(project_option)==1) {
+  // do nothing
+ } else
+  amrex::Error("project_option invalid");
+
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
-   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
-  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
-   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+  if (localMF[local_fsi_ghost_mac_mf+data_dir]->nGrow()!=
+      local_fsi_ghost_ngrow)
+   amrex::Error("localMF[local_fsi_ghost_mac_mf+data_dir]->nGrow() bad");
+  if (localMF[local_fsi_ghost_mac_mf+data_dir]->nComp()!=local_fsi_ghost_ncomp)
+   amrex::Error("localMF[local_fsi_ghost_mac_mf+data_dir]->nComp() bad");
  }
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
+  debug_ngrow(local_fsi_ghost_mac_mf+data_dir,
+              local_fsi_ghost_ngrow,112);
  }
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-  debug_ngrow(FACE_VAR_MF+dir,0,122);
+  debug_ngrow(local_face_var_mf+dir,0,122);
 
  const Box& domain = geom.Domain();
  const int* domlo = domain.loVect();
@@ -4148,13 +4181,16 @@ void NavierStokes::apply_pressure_grad(
 
  const Real* dx = geom.CellSize();
 
+ debug_ngrow(local_masksem_mf,1,841);
+
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-  if (localMF[AMRSYNC_PRES_MF+dir]->nComp()!=nsolve)
-   amrex::Error("localMF[AMRSYNC_PRES_MF+dir]->nComp() invalid29");
-  if (localMF[AMRSYNC_PRES_MF+dir]->boxArray()!=
+  if (localMF[local_amrsync_pres_mf+dir]->nComp()!=
+      local_amrsync_pres_ncomp)
+   amrex::Error("localMF[local_amrsync_pres_mf+dir]->nComp() invalid29");
+  if (localMF[local_amrsync_pres_mf+dir]->boxArray()!=
       localMF[AREA_MF+dir]->boxArray())
-   amrex::Error("AMRSYNC_PRES boxarrays do not match");
+   amrex::Error("local_amrsync_pres_mf boxarrays do not match");
 
   if (localMF[gp_mf+dir]->nComp()!=nsolve)
    amrex::Error("localMF[gp_mf+dir]->nComp() invalid29");
@@ -4178,7 +4214,7 @@ void NavierStokes::apply_pressure_grad(
     avgDown_and_Copy_localMF( // avgdown in tan dir, copy in normal dir.
      pboth_mf,
      pboth_mf,
-     AMRSYNC_PRES_MF,
+     local_amrsync_pres_mf,
      operation_flag);
    } else if (level==finest_level) {
     // do nothing
@@ -4189,7 +4225,7 @@ void NavierStokes::apply_pressure_grad(
     interp_and_Copy_localMF(
      pboth_mf,
      pboth_mf,
-     AMRSYNC_PRES_MF,
+     local_amrsync_pres_mf,
      operation_flag);
    } else if (level==0) {
     // do nothing
@@ -4217,10 +4253,14 @@ void NavierStokes::apply_pressure_grad(
   int nden=nmat*num_state_material;
 
   int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM; 
+  if (ntensor==local_sem_fluxreg_ncomp) {
+   // do nothing
+  } else
+   amrex::Error("local_sem_fluxreg_ncomp invalid");
 
   allocate_flux_register(operation_flag);
-  if (localMF[SEM_FLUXREG_MF]->nComp()!=ntensor)
-   amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid5");
+  if (localMF[local_sem_fluxreg_mf]->nComp()!=ntensor)
+   amrex::Error("localMF[local_sem_fluxreg_mf]->nComp() invalid5");
 
   resize_levelset(2,LEVELPC_MF);
   debug_ngrow(LEVELPC_MF,2,110);
@@ -4262,11 +4302,11 @@ void NavierStokes::apply_pressure_grad(
 
     FArrayBox& velfab=(*localMF[pboth_mf])[mfi];
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
-    FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
+    FArrayBox& maskSEMfab=(*localMF[local_masksem_mf])[mfi];
 
     FArrayBox& xflux=(*localMF[gp_mf+dir-1])[mfi];
 
-    FArrayBox& xface=(*localMF[FACE_VAR_MF+dir-1])[mfi];
+    FArrayBox& xface=(*localMF[local_face_var_mf+dir-1])[mfi];
 
     FArrayBox& tensor_data=(*localMF[LOCAL_FACETENSOR_MF])[mfi];
     FArrayBox& cell_tensor_data=(*localMF[LOCAL_CELLTENSOR_MF])[mfi];
@@ -4277,9 +4317,8 @@ void NavierStokes::apply_pressure_grad(
     // maskcoef=tag if not covered by level+1 or outside the domain.
     FArrayBox& maskcoef_fab=(*localMF[MASKCOEF_MF])[mfi];
 
-    FArrayBox& semfluxfab=(*localMF[SEM_FLUXREG_MF])[mfi];
+    FArrayBox& semfluxfab=(*localMF[local_sem_fluxreg_mf])[mfi];
     int ncfluxreg=semfluxfab.nComp();
-    int local_enable_spectral=enable_spectral;
 
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -4293,7 +4332,7 @@ void NavierStokes::apply_pressure_grad(
      &tileloop,
      &dir,
      &operation_flag, // OP_UGRAD_COUPLING_MAC
-     &local_enable_spectral,
+     &enable_spectral,
      &spectral_loop,
      &ncfluxreg,
      semfluxfab.dataPtr(),
@@ -4415,38 +4454,49 @@ void NavierStokes::apply_pressure_grad(
 
   resize_levelset(2,LEVELPC_MF);
 
-  allocate_flux_register(operation_flag);
-  if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM)
-   amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid6");
+  if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+      (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
 
-  if (simple_AMR_BC_flag==0) {
-
-   if (level<finest_level) {
-    avgDown_and_Copy_localMF(
-     pboth_mf,
-     pboth_mf,
-     AMRSYNC_PRES_MF,
-     operation_flag);
-   } else if (level==finest_level) {
-    // do nothing
-   } else
-    amrex::Error("level invalid18");
-
-   if ((level>=1)&&(level<=finest_level)) {
-    interp_and_Copy_localMF(
-     pboth_mf,
-     pboth_mf,
-     AMRSYNC_PRES_MF,
-     operation_flag);
-   } else if (level==0) {
-    // do nothing
-   } else
-    amrex::Error("level invalid19");
-
-  } else if (simple_AMR_BC_flag==1) {
    // do nothing
+   
+  } else if (project_option_is_valid(project_option)==1) {
+
+   allocate_flux_register(operation_flag);
+
+   if (simple_AMR_BC_flag==0) {
+
+    if (level<finest_level) {
+     avgDown_and_Copy_localMF(
+      pboth_mf,
+      pboth_mf,
+      local_amrsync_pres_mf,
+      operation_flag);
+    } else if (level==finest_level) {
+     // do nothing
+    } else
+     amrex::Error("level invalid18");
+
+    if ((level>=1)&&(level<=finest_level)) {
+     interp_and_Copy_localMF(
+      pboth_mf,
+      pboth_mf,
+      local_amrsync_pres_mf,
+      operation_flag);
+    } else if (level==0) {
+     // do nothing
+    } else
+     amrex::Error("level invalid19");
+
+   } else if (simple_AMR_BC_flag==1) {
+    // do nothing
+   } else
+    amrex::Error("simple_AMR_BC_flag invalid");
+
   } else
-   amrex::Error("simple_AMR_BC_flag invalid");
+   amrex::Error("project_option invalid");
+
+  if (localMF[local_sem_fluxreg_mf]->nComp()!=local_sem_fluxreg_ncomp)
+   amrex::Error("localMF[local_sem_fluxreg_mf]->nComp() invalid6");
 
    //spectral_loop==0 (find gradients only from element data and
    //  immediate neighbors.
@@ -4476,15 +4526,15 @@ void NavierStokes::apply_pressure_grad(
 
     const Real* xlo = grid_loc[gridno].lo();
 
-    FArrayBox& xp=(*localMF[AMRSYNC_PRES_MF+dir])[mfi];
+    FArrayBox& xp=(*localMF[local_amrsync_pres_mf+dir])[mfi];
     FArrayBox& xgp=(*localMF[gp_mf+dir])[mfi];
     FArrayBox& xcut=(*localMF[FACE_WEIGHT_MF+dir])[mfi]; // A/rho
-    FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
+    FArrayBox& xface=(*localMF[local_face_var_mf+dir])[mfi];
 
-    FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
+    FArrayBox& maskSEMfab=(*localMF[local_masksem_mf])[mfi];
     FArrayBox& presfab=(*localMF[pboth_mf])[mfi]; // in: apply_pressure_grad
 
-    FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
+    FArrayBox& solfab=(*localMF[local_fsi_ghost_mac_mf+dir])[mfi];
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
     Vector<int> presbc;
@@ -4499,12 +4549,12 @@ void NavierStokes::apply_pressure_grad(
     // mask=tag if not covered by level+1 or outside the domain.
     FArrayBox& maskcoeffab=(*localMF[MASKCOEF_MF])[mfi];
     FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
-    FArrayBox& semfluxfab=(*localMF[SEM_FLUXREG_MF])[mfi];
+
+    FArrayBox& semfluxfab=(*localMF[local_sem_fluxreg_mf])[mfi];
     int ncfluxreg=semfluxfab.nComp();
-    if (ncfluxreg!=AMREX_SPACEDIM)
+    if (ncfluxreg!=local_sem_fluxreg_ncomp)
      amrex::Error("ncfluxreg invalid");
 
-    int local_enable_spectral=enable_spectral;
     int ncomp_xp=nsolve;
     int ncomp_xgp=nsolve;
     int ncomp_mgoni=presfab.nComp();
@@ -4531,7 +4581,7 @@ void NavierStokes::apply_pressure_grad(
      &energyflag,
      &beta,
      &visc_coef,
-     &local_enable_spectral,
+     &enable_spectral,
      &ncphys_proxy,
      constant_density_all_time.dataPtr(),
      presbc.dataPtr(),
@@ -4595,7 +4645,14 @@ void NavierStokes::apply_pressure_grad(
   } // tileloop
   } // dir
 
-  synchronize_flux_register(operation_flag,spectral_loop);
+  if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+      (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
+   // do nothing
+  } else if (project_option_is_valid(project_option)==1) {
+   synchronize_flux_register(operation_flag,spectral_loop);
+  } else
+   amrex::Error("project_option invalid");
+
   } // spectral_loop
 
   if (project_option==SOLVETYPE_HEAT) { 
