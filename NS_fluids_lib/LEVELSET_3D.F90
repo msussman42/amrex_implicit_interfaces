@@ -10753,7 +10753,7 @@ stop
        xvel,DIMS(xvel), &
        yvel,DIMS(yvel), &
        zvel,DIMS(zvel), &
-       xface,DIMS(xface), &
+       xface,DIMS(xface), & !local_face_var_mf
        yface,DIMS(yface), &
        zface,DIMS(zface), &
        ax,DIMS(ax), &
@@ -10767,7 +10767,7 @@ stop
        maskcoef,DIMS(maskcoef), & ! 1=not covered  0=covered
        maskSEM,DIMS(maskSEM), &
        levelPC,DIMS(levelPC), &
-       solxfab,DIMS(solxfab), &
+       solxfab,DIMS(solxfab), & !local_fsi_ghost_mac_mf
        solyfab,DIMS(solyfab), &
        solzfab,DIMS(solzfab), &
        cterm,DIMS(cterm), &
@@ -10929,7 +10929,6 @@ stop
       INTEGER_T dir,side
       INTEGER_T veldir
       INTEGER_T im
-      INTEGER_T vofcomp
       INTEGER_T sidecomp,ibase
       INTEGER_T ii,jj,kk
       INTEGER_T iface,jface,kface
@@ -11021,17 +11020,23 @@ stop
       mdotcell_ptr=>mdotcell
       pold_ptr=>pold
       denold_ptr=>denold
+      ax_ptr=>ax
+      ay_ptr=>ay
+      az_ptr=>az
+      solxfab_ptr=>solxfab
+      solyfab_ptr=>solyfab
+      solzfab_ptr=>solzfab
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
        stop
       endif
       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
-       print *,"nparts invalid MAC_TO_CELL"
+       print *,"nparts invalid fort_mac_to_cell"
        stop
       endif
       if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
-       print *,"nparts_def invalid MAC_TO_CELL"
+       print *,"nparts_def invalid fort_mac_to_cell"
        stop
       endif
       if (bfact.lt.1) then
@@ -11109,7 +11114,28 @@ stop
         stop
        endif
       enddo ! im=1..nmat
- 
+
+      if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
+          (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
+       if (enable_spectral.eq.0) then
+        ! do nothing
+       else 
+        print *,"enable_spectral invalid"
+        stop
+       endif
+       if (operation_flag.eq.OP_RHS_CELL) then
+        ! do nothing
+       else 
+        print *,"operation_flag invalid"
+        stop
+       endif
+      else if (project_option_is_validF(project_option).eq.1) then
+       ! do nothing
+      else
+       print *,"project_option invalid"
+       stop
+      endif
+
       ! mac -> cell in solver (init_divup_cell_vel_cell) or VELMAC_TO_CELL
       if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
           (operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. & ! velocity increment
@@ -11195,10 +11221,27 @@ stop
         print *,"ncomp_dendest invalid"
         stop
        endif
-       if (ncphys.ne.FACECOMP_NCOMP) then
-        print *,"ncphys invalid"
+
+       if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
+           (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
+        if (enable_spectral.eq.0) then
+         ! do nothing
+        else 
+         print *,"enable_spectral invalid"
+         stop
+        endif
+       else if (project_option_is_validF(project_option).eq.1) then
+
+        if (ncphys.ne.FACECOMP_NCOMP) then
+         print *,"ncphys invalid"
+         stop
+        endif
+
+       else
+        print *,"project_option invalid"
         stop
        endif
+
        if ((nsolve.ne.1).and. &
            (nsolve.ne.SDIM)) then
         print *,"nsolve invalid 2"
@@ -11226,12 +11269,14 @@ stop
         print *,"ncomp_dendest invalid"
         stop
        endif
+
        if (ncphys.eq.FACECOMP_NCOMP) then
         ! do nothing
        else
         print *,"ncphys invalid"
         stop
        endif
+
        if (nsolve.eq.1) then
         ! do nothing
        else
@@ -11381,6 +11426,7 @@ stop
        print *,"project_option invalid"
        stop
       endif
+
       do im=1,nmat
        if (fort_denconst(im).le.zero) then
         print *,"denconst invalid"
@@ -11396,34 +11442,19 @@ stop
       call checkbound_array(fablo,fabhi,yvel_ptr,0,1,33)
       call checkbound_array(fablo,fabhi,zvel_ptr,0,SDIM-1,33)
 
-      call checkbound_array(fablo,fabhi,xface_ptr,0,0,33)
-      call checkbound_array(fablo,fabhi,yface_ptr,0,1,33)
-      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,33)
-
-      ax_ptr=>ax
       call checkbound_array1(fablo,fabhi,ax_ptr,0,0,33)
-      ay_ptr=>ay
       call checkbound_array1(fablo,fabhi,ay_ptr,0,1,33)
-      az_ptr=>az
       call checkbound_array1(fablo,fabhi,az_ptr,0,SDIM-1,33)
 
       call checkbound_array(fablo,fabhi,vol_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,rhs_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,veldest_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,dendest_ptr,0,-1,33)
-      call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
       call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,133)
       call checkbound_array(fablo,fabhi,maskcoef_ptr,1,-1,134)
 
       levelPC_ptr=>levelPC
       call checkbound_array(fablo,fabhi,levelPC_ptr,1,-1,135)
-
-      solxfab_ptr=>solxfab
-      call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,136)
-      solyfab_ptr=>solyfab
-      call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,136)
-      solzfab_ptr=>solzfab
-      call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1,136)
 
       call checkbound_array(fablo,fabhi,cterm_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,pold_ptr,0,-1,33)
@@ -11433,6 +11464,29 @@ stop
       call checkbound_array(fablo,fabhi,mdotcell_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,maskdivres_ptr,0,-1,137)
       call checkbound_array1(fablo,fabhi,maskres_ptr,0,-1,138)
+
+
+      if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
+          (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
+
+       ! do nothing
+
+      else if (project_option_is_validF(project_option).eq.1) then
+
+         !local_face_var_mf
+       call checkbound_array(fablo,fabhi,xface_ptr,0,0,33)
+       call checkbound_array(fablo,fabhi,yface_ptr,0,1,33)
+       call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,33)
+       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
+         !local_fsi_ghost_mac_mf+dir
+       call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,136)
+       call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,136)
+       call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1,136)
+
+      else
+       print *,"project_option invalid"
+       stop
+      endif
 
         ! max(dx,dy,dz) if XYZ or R - Theta - Z
         ! (get_dxmax(): max(dr,r probhix,dz) if R - Theta - Z)
@@ -12082,7 +12136,7 @@ stop
          ! (2) rho_t + u dot grad rho=0 instead of
          !     rho_t + div(rho u)=0
          ! 
-        is_rigid_material_near=0
+        is_rigid_near=0
         do im=1,nmat
          LStest(im)=levelPC(D_DECL(i,j,k),im)
          if (is_rigid(nmat,im).eq.1) then
@@ -12848,7 +12902,7 @@ stop
        time, &
        xlo,dx, &
        spectral_loop, &
-       ncfluxreg, &
+       ncfluxreg, & !local_sem_fluxreg_ncomp
        semflux,DIMS(semflux), &
        mask,DIMS(mask), & ! 1=fine/fine  0=coarse/fine
        maskcoef,DIMS(maskcoef), & ! 1=not cov. or outside domain  0=covered
@@ -13202,7 +13256,7 @@ stop
         print *,"operation_flag invalid"
         stop
        endif
-      else if (project_option_is_validF(project_option) then
+      else if (project_option_is_validF(project_option).eq.1) then
 
        if ((ncfluxreg/SDIM)*SDIM.ne.ncfluxreg) then
         print *,"ncfluxreg invalid11 ",ncfluxreg
@@ -13274,7 +13328,7 @@ stop
        if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
            (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
         ! do nothing
-       else if (project_option_is_validF(project_option) then
+       else if (project_option_is_validF(project_option).eq.1) then
         if (ncphys.ne.FACECOMP_NCOMP) then
          print *,"ncphys invalid"
          stop
@@ -13442,6 +13496,7 @@ stop
        stop
       endif
 
+       ! FACE_WEIGHT_MF
       call checkbound_array(fablo,fabhi,xcut_ptr,0,dir,231)
       call checkbound_array(fablo,fabhi,xgp_ptr,0,dir,2330)
       call checkbound_array(fablo,fabhi,xvel_ptr,0,dir,2332)
@@ -13459,14 +13514,14 @@ stop
       if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
           (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
        ! do nothing
-      else if (project_option_is_validF(project_option) then
+      else if (project_option_is_validF(project_option).eq.1) then
          !local_face_var_mf
        call checkbound_array(fablo,fabhi,xface_ptr,0,dir,263)
          !local_amrsync_pres_mf
        call checkbound_array(fablo,fabhi,xp_ptr,0,dir,2331)
          !local_sem_fluxreg_mf
        call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
-         !local_fsu_ghost_mac_mf+dir
+         !local_fsi_ghost_mac_mf+dir
        call checkbound_array(fablo,fabhi,solfab_ptr,0,dir,234)
        call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
       else

@@ -10385,7 +10385,6 @@ void NavierStokes::multiphase_project(int project_option) {
      // mac_phi_crse=0
      //
      // updatevelALL calls mac_update.
-      FIX
     updatevelALL(project_option,MAC_PHI_CRSE_MF,nsolve);
 
     double after_startup=0.0;
@@ -10432,6 +10431,7 @@ void NavierStokes::multiphase_project(int project_option) {
        // mac_phi_crse_mf=0.0
        // mac_rhs_crse=POLDHOLD * alpha - 
        //              vol div UMAC/dt + diffusionRHS
+       // NavierStokes::mac_project_rhs is declared in MacProj.cpp
       ns_level.mac_project_rhs(project_option,MAC_PHI_CRSE_MF,
         MAC_RHS_CRSE_MF,nsolve);
      } // ilev=finest_level ... level
@@ -11535,7 +11535,48 @@ void NavierStokes::multiphase_project(int project_option) {
  bprof.start();
 #endif
 
- if (project_option_projection(project_option)==1) {
+ if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+     (project_option<SOLVETYPE_VELEXTRAP+num_materials)) { 
+
+  int im_extend=project_option-SOLVETYPE_VELEXTRAP;
+
+  getState_localMF_listALL(
+    PRESPC2_MF,1,
+    state_index,
+    scomp,
+    ncomp);
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   int update_energy=SUB_OP_THERMAL_DIVUP_NULL;
+
+    // NavierStokes::init_divup_cell_vel_cell declared
+    // in NavierStokes2.cpp.
+   ns_level.init_divup_cell_vel_cell(project_option,
+    update_energy,PRESPC2_MF,UMAC_MF);
+
+    // spectral_override==0 => always low order.
+   ns_level.avgDownEdge_localMF(UMAC_MATERIAL_MF,im_extend,1,
+      0,AMREX_SPACEDIM,0,200);
+  } // ilev=finest_level ... level
+
+  Vector<int> scompBC_map;
+  scompBC_map.resize(1);
+  scompBC_map[0]=0;
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+
+   if (localMF[UMAC_MATERIAL_MF+dir]->nGrow()==ngrow_distance) {
+    // do nothing
+   } else
+    amrex::Error("localMF[UMAC_MATERIAL_MF+dir]->nGrow() invalid");
+
+   GetStateFromLocalALL(UMAC_MATERIAL_MF+dir,ngrow_distance,im_extend,1,
+     Umac_Type+dir,scompBC_map);
+  } //dir=0..sdim-1
+
+  delete_array(PRESPC2_MF);
+
+ } else if (project_option_projection(project_option)==1) {
 
   getState_localMF_listALL(
     PRESPC2_MF,1,
@@ -11603,9 +11644,9 @@ void NavierStokes::multiphase_project(int project_option) {
     ns_level.avgDown(State_Type,STATECOMP_STATES,num_state_material*nmat,1);
 
    } else if (project_option==SOLVETYPE_INITPROJ) {
-    ns_level.avgDown(State_Type,0,AMREX_SPACEDIM,1);
+    ns_level.avgDown(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL,1);
    } else if (project_option==SOLVETYPE_PRESCOR) { 
-    ns_level.avgDown(State_Type,0,AMREX_SPACEDIM,1);
+    ns_level.avgDown(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL,1);
    } else
     amrex::Error("project_option invalid 54");
 

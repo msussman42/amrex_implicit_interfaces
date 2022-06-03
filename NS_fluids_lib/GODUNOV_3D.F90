@@ -1051,7 +1051,7 @@ stop
        vel,DIMS(vel), &
        levelpc,DIMS(levelpc), &
        xflux,DIMS(xflux), &
-       xface,DIMS(xface), &
+       xface,DIMS(xface), & !FACE_VAR_MF
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -1108,7 +1108,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(levelpc)
       INTEGER_T, intent(in) :: DIMDEC(xflux)
       INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
   
       REAL_T, intent(in) :: dt 
       REAL_T, intent(in) :: cur_time
@@ -1135,8 +1134,6 @@ stop
       REAL_T, pointer :: xflux_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: xface(DIMV(xface),FACECOMP_NCOMP)
-
-      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
 
       REAL_T, intent(in) :: visc_coef
 
@@ -1343,7 +1340,6 @@ stop
       call checkbound_array(fablo,fabhi,c_tdata,1,-1,1265)
       call checkbound_array(fablo,fabhi,vel,1,-1,1281)
       call checkbound_array(fablo,fabhi,levelpc_ptr,2,-1,1284)
-      call checkbound_array(fablo,fabhi,recon,1,-1,234)
       call checkbound_array1(fablo,fabhi,maskSEM,1,-1,1264)
       call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
       call checkbound_array1(fablo,fabhi,mask,1,-1,234)

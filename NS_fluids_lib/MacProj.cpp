@@ -1647,37 +1647,9 @@ void NavierStokes::apply_div(
  } else
   amrex::Error("nparts invalid");
 
- for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
-   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
-  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
-   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
- }
-
- const Real* dx = geom.CellSize();
-
- if (homflag==0) {
-  if (idx_phi==POLDHOLD_MF) {
-   // do nothing
-  } else
-   amrex::Error("expecting POLDHOLD");
- } else if (homflag==1) {
-  // do nothing
- } else if (homflag==2) {
-  // do nothing
- } else if (homflag==3) {
-  // do nothing
- } else if (homflag==4) {
-  // do nothing
- } else
-  amrex::Error("homflag invalid");
-
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,250);
- debug_ngrow(FACE_VAR_MF,0,251);
- for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
- }
+
  resize_maskfiner(1,MASKCOEF_MF);
  resize_mask_nbr(1);
  debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer lev.
@@ -1690,6 +1662,72 @@ void NavierStokes::apply_div(
  debug_ngrow(ALPHACOEF_MF,0,253); 
  if (localMF[ALPHACOEF_MF]->nComp()!=nsolve)
   amrex::Error("localMF[ALPHACOEF_MF]->nComp()!=nsolve");
+
+ int local_fsi_ghost_mac_mf=FSI_GHOST_MAC_MF;
+ int local_fsi_ghost_ncomp=nparts_def*AMREX_SPACEDIM;
+ int local_fsi_ghost_ngrow=0;
+ int local_face_var_mf=FACE_VAR_MF;
+ int local_masksem_mf=MASKSEM_MF;
+
+ if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+     (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
+
+  if (enable_spectral==0) {
+   // do nothing
+  } else
+   amrex::Error("expecting enable_spectral==0");
+
+  local_fsi_ghost_mac_mf=AREA_MF;
+  local_fsi_ghost_ncomp=localMF[AREA_MF]->nComp();
+  local_fsi_ghost_ngrow=localMF[AREA_MF]->nGrow();
+  local_face_var_mf=AREA_MF;
+  local_masksem_mf=VOLUME_MF;
+
+ } else if (project_option_is_valid(project_option)==1) {
+  // do nothing
+ } else
+  amrex::Error("project_option invalid");
+
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  if (localMF[local_fsi_ghost_mac_mf+data_dir]->nGrow()!=
+      local_fsi_ghost_ngrow)
+   amrex::Error("localMF[local_fsi_ghost_mac_mf+data_dir]->nGrow() bad");
+  if (localMF[local_fsi_ghost_mac_mf+data_dir]->nComp()!=local_fsi_ghost_ncomp)
+   amrex::Error("localMF[local_fsi_ghost_mac_mf+data_dir]->nComp() bad");
+ }
+
+ const Real* dx = geom.CellSize();
+
+ if (homflag==0) {
+  if (idx_phi==POLDHOLD_MF) {
+   // do nothing
+  } else
+   amrex::Error("expecting idx_phi==POLDHOLD_MF");
+ } else if (homflag==1) {
+  // do nothing
+ } else if (homflag==2) {
+  // do nothing
+ } else if (homflag==3) {
+  // do nothing
+ } else if (homflag==4) {
+  // do nothing
+ } else
+  amrex::Error("homflag invalid");
+
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  debug_ngrow(local_fsi_ghost_mac_mf+data_dir,
+              local_fsi_ghost_ngrow,112);
+ }
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) 
+  debug_ngrow(local_face_var_mf+data_dir,0,122);
+
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  if (localMF[idx_gphi+data_dir]->nComp()!=nsolve)
+   amrex::Error("localMF[idx_gphi+data_dir]->nComp() invalid29");
+  if (localMF[AREA_MF+data_dir]->boxArray()!=
+      localMF[idx_gphi+data_dir]->boxArray())
+   amrex::Error("idx_gphi boxarrays do not match");
+ } // data_dir=0..sdim-1
 
  if (diffusionRHScell->nGrow()<0)
   amrex::Error("diffusionRHScell invalid");
@@ -1724,9 +1762,9 @@ void NavierStokes::apply_div(
   FArrayBox& ay = (*localMF[AREA_MF+1])[mfi];
   FArrayBox& az = (*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
 
-  FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];
-  FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];
-  FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];
+  FArrayBox& xface=(*localMF[local_face_var_mf])[mfi];
+  FArrayBox& yface=(*localMF[local_face_var_mf+1])[mfi];
+  FArrayBox& zface=(*localMF[local_face_var_mf+AMREX_SPACEDIM-1])[mfi];
 
   FArrayBox& vol = (*localMF[VOLUME_MF])[mfi];
 
@@ -1748,15 +1786,15 @@ void NavierStokes::apply_div(
 
   FArrayBox& diffusionRHSfab = (*diffusionRHScell)[mfi];
 
-  FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
-  FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
-  FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
+  FArrayBox& solxfab=(*localMF[local_fsi_ghost_mac_mf])[mfi];
+  FArrayBox& solyfab=(*localMF[local_fsi_ghost_mac_mf+1])[mfi];
+  FArrayBox& solzfab=(*localMF[local_fsi_ghost_mac_mf+AMREX_SPACEDIM-1])[mfi];
 
   FArrayBox& cterm = (*localMF[ALPHACOEF_MF])[mfi];
 
   FArrayBox& maskdivresfab = (*localMF[MASK_DIV_RESIDUAL_MF])[mfi];
   FArrayBox& maskresfab = (*localMF[MASK_RESIDUAL_MF])[mfi];
-  FArrayBox& maskSEMfab = (*localMF[MASKSEM_MF])[mfi];
+  FArrayBox& maskSEMfab = (*localMF[local_masksem_mf])[mfi];
 
   const Real* xlo = grid_loc[gridno].lo();
 
@@ -1793,7 +1831,7 @@ void NavierStokes::apply_div(
 //
 
   int operation_flag=OP_RHS_CELL;
-  int energyflag=SUB_OP_DEFAULT; // not used when operation_flag==100
+  int energyflag=SUB_OP_DEFAULT; // not used when operation_flag==OP_RHS_CELL
   int local_enable_spectral=enable_spectral;
 
   int ncomp_denold=nsolve;
