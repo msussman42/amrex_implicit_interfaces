@@ -9030,8 +9030,8 @@ void NavierStokes::updatevelALL(
  } else
   amrex::Error("project_option_momeqn(project_option)  invalid40");
 
-
    // gradpedge=-dt W grad p
+   // NavierStokes::applyGradALL is declared in MacProj.cpp
  applyGradALL(project_option,idx_mac_phi_crse,nsolve);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -10385,7 +10385,7 @@ void NavierStokes::multiphase_project(int project_option) {
      // mac_phi_crse=0
      //
      // updatevelALL calls mac_update.
-     FIX ME SOLVETYPE_VELEXTRAP
+      FIX
     updatevelALL(project_option,MAC_PHI_CRSE_MF,nsolve);
 
     double after_startup=0.0;

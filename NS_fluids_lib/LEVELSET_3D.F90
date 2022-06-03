@@ -10774,7 +10774,6 @@ stop
        pold,DIMS(pold), &
        denold,DIMS(denold), &
        ustar,DIMS(ustar), &
-       recon,DIMS(recon), &
        mdotcell,DIMS(mdotcell), & !VELADVECT_MF if OP_ISCHEME_CELL
        maskdivres,DIMS(maskdivres), & !DEN_RECON_MF if OP_ISCHEME_CELL
        maskres,DIMS(maskres), &
@@ -10851,7 +10850,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(pold)
       INTEGER_T, intent(in) :: DIMDEC(denold)
       INTEGER_T, intent(in) :: DIMDEC(ustar)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(mdotcell)
       INTEGER_T, intent(in) :: DIMDEC(maskdivres)
       INTEGER_T, intent(in) :: DIMDEC(maskres)
@@ -10914,8 +10912,6 @@ stop
       REAL_T, pointer :: denold_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: ustar(DIMV(ustar),SDIM) 
       REAL_T, pointer :: ustar_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: &
        mdotcell(DIMV(mdotcell),nsolve) !VELADVECT_MF if OP_ISCHEME_CELL
       REAL_T, pointer :: mdotcell_ptr(D_DECL(:,:,:),:)
@@ -10978,8 +10974,7 @@ stop
       INTEGER_T scomp,scomp_bc,dcomp,ncomp ! in: mac_to_cell
       INTEGER_T ncomp_xvel
       INTEGER_T ncomp_cterm
-      REAL_T vfrac(nmat)
-      REAL_T vfrac_embedded
+      INTEGER_T is_rigid_near
       REAL_T LStest(nmat)
       INTEGER_T velcomp
       INTEGER_T partid
@@ -11435,13 +11430,12 @@ stop
       call checkbound_array(fablo,fabhi,denold_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,ustar_ptr,0,-1,33)
 
-      recon_ptr=>recon
-      call checkbound_array(fablo,fabhi,recon_ptr,0,-1,33)
-
       call checkbound_array(fablo,fabhi,mdotcell_ptr,0,-1,33)
       call checkbound_array(fablo,fabhi,maskdivres_ptr,0,-1,137)
       call checkbound_array1(fablo,fabhi,maskres_ptr,0,-1,138)
 
+        ! max(dx,dy,dz) if XYZ or R - Theta - Z
+        ! (get_dxmax(): max(dr,r probhix,dz) if R - Theta - Z)
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=DXMAXLS
 
@@ -12088,12 +12082,18 @@ stop
          ! (2) rho_t + u dot grad rho=0 instead of
          !     rho_t + div(rho u)=0
          ! 
-        vfrac_embedded=zero
+        is_rigid_material_near=0
         do im=1,nmat
-         vofcomp=(im-1)*ngeom_recon+1
-         vfrac(im)=recon(D_DECL(i,j,k),vofcomp)
+         LStest(im)=levelPC(D_DECL(i,j,k),im)
          if (is_rigid(nmat,im).eq.1) then
-          vfrac_embedded=vfrac_embedded+vfrac(im)
+          if (LStest(im).ge.-DXMAXLS) then
+           is_rigid_near=1
+          else if (LStest(im).le.-DXMAXLS) then
+           ! do nothing
+          else
+           print *,"LStest(im) is NaN"
+           stop
+          endif 
          else if (is_rigid(nmat,im).eq.0) then
           ! do nothing
          else
@@ -12102,11 +12102,11 @@ stop
          endif
         enddo ! im=1..nmat
 
-        if (vfrac_embedded.ge.VOFTOL) then
+        if (is_rigid_near.eq.1) then
          use_face_pres_cen=0
-        else if (abs(vfrac_embedded).le.VOFTOL) then
+        else if (is_rigid_near.eq.0) then
          do im=1,nmat
-          if (vfrac(im).ge.VOFTOL) then
+          if (LStest(im).ge.-DXMAXLS) then
            if (is_compressible_mat(im).eq.0) then
             use_face_pres_cen=0
            else if (is_compressible_mat(im).eq.1) then
@@ -12115,15 +12115,15 @@ stop
             print *,"is_compressible_mat invalid"
             stop
            endif
-          else if (abs(vfrac(im)).le.VOFTOL) then
+          else if (LStest(im).le.-DXMAXLS) then
            ! do nothing
           else
-           print *,"vfrac(im) invalid (1)fort_mac_to_cell OP_VEL_DIVUP_TO_CELL"
+           print *,"LStest(im) is NaN(1)fort_mac_to_cell OP_VEL_DIVUP_TO_CELL"
            stop
           endif 
          enddo ! im=1..nmat
         else
-         print *,"vfrac_embedded inv(1)fort_mac_to_cell OP_VEL_DIVUP_TO_CELL"
+         print *,"is_rigid_near inv(1)fort_mac_to_cell OP_VEL_DIVUP_TO_CELL"
          stop
         endif 
 
@@ -12162,7 +12162,9 @@ stop
           stop
          endif
          hx=hx*RR
-         if (hx.le.zero) then
+         if (hx.gt.zero) then
+          ! do nothing
+         else
           print *,"hx invalid"
           stop
          endif
@@ -12315,7 +12317,7 @@ stop
               half*veldest(D_DECL(i,j,k),velcomp)**2
             enddo ! velcomp=1..sdim
 
-            if (vfrac(im).gt.VOFTOL) then
+            if (LStest(im).ge.-DXMAXLS) then
 
              if (is_compressible_mat(im).eq.1) then
 
@@ -12401,10 +12403,10 @@ stop
               print *,"is_compressible_mat(im) invalid"
               stop
              endif
-            else if (abs(vfrac(im)).le.VOFTOL) then
+            else if (LStest(im).le.-DXMAXLS) then
              ! do nothing
             else
-             print *,"vfrac(im) invalid"
+             print *,"LStest(im) is NaN"
              stop
             endif 
            enddo ! im=1..nmat
@@ -12855,7 +12857,6 @@ stop
        solfab,DIMS(solfab), &
        xcut,DIMS(xcut), &   ! coeff*areafrac
        xface,DIMS(xface), &  ! xflux for advection
-       recon,DIMS(recon), &  
        ! Umac_old if:
        !  OP_UMAC_PLUS_VISC_CELL_TO_MAC or
        !  OP_U_COMP_CELL_MAC_TO_MAC
@@ -12932,7 +12933,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(maskSEM)
       INTEGER_T, intent(in) :: DIMDEC(xcut)
       INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(xgp)
       INTEGER_T, intent(in) :: DIMDEC(xp)
       INTEGER_T, intent(in) :: DIMDEC(xvel)
@@ -12975,8 +12975,6 @@ stop
        ! xflux for advection
       REAL_T, intent(inout), target :: xface(DIMV(xface),ncphys) 
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
        !holds Umac_old if 
        ! OP_UMAC_PLUS_VISC_CELL_TO_MAC or OP_U_COMP_CELL_MAC_TO_MAC
       REAL_T, intent(inout), target :: xgp(DIMV(xgp),ncomp_xgp) 
@@ -13428,8 +13426,6 @@ stop
       call checkbound_array1(fablo,fabhi,colorfab_ptr,1,-1,6626)
       levelPC_ptr=>levelPC
       call checkbound_array(fablo,fabhi,levelPC_ptr,1,-1,234)
-      recon_ptr=>recon
-      call checkbound_array(fablo,fabhi,recon_ptr,0,-1,234)
       call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,234)
       call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1,234)
       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
@@ -14597,7 +14593,7 @@ stop
            stop
           endif
 
-         else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then !(grd pot)_MAC
+         else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
 
            ! hydrostatic pressure
           pplus=pres(D_DECL(i,j,k),1)

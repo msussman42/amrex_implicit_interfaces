@@ -10243,7 +10243,6 @@ END SUBROUTINE SIMP
        fablo,fabhi,bfact, &
        xlo,dx,dir, &
        xface,DIMS(xface), &
-       recon,DIMS(recon), &
        lsnew,DIMS(lsnew), &
        macnew,DIMS(macnew), &
        facegrav,DIMS(facegrav) ) &
@@ -10422,7 +10421,6 @@ END SUBROUTINE SIMP
         local_material_type, &
         xlo,dx, &
         pres,DIMS(pres), &
-        recon,DIMS(recon), &
         levelpc,DIMS(levelpc), &
         den,DIMS(den), &
         tilelo,tilehi, &
@@ -10434,7 +10432,6 @@ END SUBROUTINE SIMP
 
       use global_utility_module
       use probf90_module
-      use MOF_routines_module
 
       IMPLICIT NONE
 
@@ -10452,13 +10449,10 @@ END SUBROUTINE SIMP
       REAL_T, intent(in) :: dx(SDIM)
 
       INTEGER_T, intent(in) :: DIMDEC(pres)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
       INTEGER_T, intent(in) :: DIMDEC(levelpc)
       INTEGER_T, intent(in) :: DIMDEC(den)
       REAL_T, intent(inout), target :: pres(DIMV(pres))
       REAL_T, pointer :: pres_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
-      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: levelpc(DIMV(levelpc),nmat*(1+SDIM))
       REAL_T, pointer :: levelpc_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: den(DIMV(den),nden) ! den,temp,Y
@@ -10470,8 +10464,6 @@ END SUBROUTINE SIMP
       INTEGER_T ibase
       REAL_T rho,internal_energy,TEMP
       REAL_T LS(nmat)
-      REAL_T vfrac(nmat)
-      INTEGER_T vofcomp
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T ispec
 
@@ -10497,11 +10489,9 @@ END SUBROUTINE SIMP
       endif
 
       pres_ptr=>pres
-      recon_ptr=>recon
       levelpc_ptr=>levelpc
       den_ptr=>den
 
-      call checkbound_array(fablo,fabhi,recon_ptr,1,-1,44)
       call checkbound_array(fablo,fabhi,levelpc_ptr,1,-1,44)
       call checkbound_array1(fablo,fabhi,pres_ptr,1,-1,44)
       call checkbound_array(fablo,fabhi,den_ptr,1,-1,44)
@@ -10513,22 +10503,9 @@ END SUBROUTINE SIMP
 
        do im=1,nmat
         LS(im)=levelpc(D_DECL(i,j,k),im)
-        vofcomp=(im-1)*ngeom_recon+1
-        vfrac(im)=recon(D_DECL(i,j,k),vofcomp)
        enddo ! im
 
-       call get_primary_material_VFRAC(vfrac,nmat,im_primary,1)
-
-       if (vfrac(im_primary).le.VOFTOL) then
-        print *,"vfrac too small fort_eos_pressure"
-        print *,"i,j,k ",i,j,k
-        print *,"level,finest_level ",level,finest_level
-        print *,"im_primary= ",im_primary
-        do im=1,nmat
-         print *,"im,vfrac,LS ",im,vfrac(im),LS(im)
-        enddo
-        stop
-       endif
+       call get_primary_material(LS,nmat,im_primary)
 
        ibase=(im_primary-1)*num_state_material
 
@@ -13908,7 +13885,7 @@ END SUBROUTINE SIMP
         temperature_error_cutoff, &
         xlo,dx, &
         errnew,DIMS(errnew), &
-        slrecon,DIMS(slrecon), &
+        LS,DIMS(LS), &
         den,DIMS(den), &
         vort,DIMS(vort), &
         pres,DIMS(pres), &
@@ -13923,7 +13900,6 @@ END SUBROUTINE SIMP
 
       use global_utility_module
       use probf90_module
-      use MOF_routines_module
 
       IMPLICIT NONE
 
@@ -13943,7 +13919,7 @@ END SUBROUTINE SIMP
       REAL_T, intent(in) :: temperature_error_cutoff(nmat)
       INTEGER_T, intent(in) :: DIMDEC(maskcov)
       INTEGER_T, intent(in) :: DIMDEC(errnew)
-      INTEGER_T, intent(in) :: DIMDEC(slrecon)
+      INTEGER_T, intent(in) :: DIMDEC(LS)
       INTEGER_T, intent(in) :: DIMDEC(den)
       INTEGER_T, intent(in) :: DIMDEC(vort)
       INTEGER_T, intent(in) :: DIMDEC(pres)
@@ -13953,26 +13929,29 @@ END SUBROUTINE SIMP
       REAL_T, pointer :: errnew_ptr(D_DECL(:,:,:))
       REAL_T, intent(in),target :: den(DIMV(den),nmat*num_state_material)
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: slrecon(DIMV(slrecon),nmat*ngeom_recon)
-      REAL_T, pointer :: slrecon_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in),target :: LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: vort(DIMV(vort))
       REAL_T, pointer :: vort_ptr(D_DECL(:,:,:))
       REAL_T, intent(in),target :: pres(DIMV(pres))
       REAL_T, pointer :: pres_ptr(D_DECL(:,:,:))
 
       INTEGER_T i,j,k,im
-      REAL_T vfrac(nmat)
+      REAL_T LStest(nmat)
       REAL_T pres_array(D_DECL(3,3,3))
       REAL_T temp_array(D_DECL(3,3,3))
-      INTEGER_T i2,j2,k2,vofcomp
+      INTEGER_T i2,j2,k2
       INTEGER_T kstencil_lo,kstencil_hi
       INTEGER_T tcomp
       REAL_T local_vort
       INTEGER_T local_mask
+      REAL_T DXMAXLS
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
       nhalf=3
+
+      call get_dxmaxLS(dx,bfact,DXMAXLS)
 
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
@@ -13994,12 +13973,12 @@ END SUBROUTINE SIMP
       maskcov_ptr=>maskcov
       errnew_ptr=>errnew
       den_ptr=>den
-      slrecon_ptr=>slrecon
+      LS_ptr=>LS
       vort_ptr=>vort
       pres_ptr=>pres
 
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,44)
-      call checkbound_array(fablo,fabhi,slrecon_ptr,1,-1,44)
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,44)
       call checkbound_array1(fablo,fabhi,errnew_ptr,1,-1,44)
       call checkbound_array(fablo,fabhi,den_ptr,1,-1,44)
       call checkbound_array1(fablo,fabhi,vort_ptr,0,-1,44)
@@ -14034,16 +14013,15 @@ END SUBROUTINE SIMP
         call gridsten_level(xsten,i,j,k,level,nhalf)
 
         do im=1,nmat
-         vofcomp=(im-1)*ngeom_recon+1
-         vfrac(im)=slrecon(D_DECL(i,j,k),vofcomp)
+         LStest(im)=LS(D_DECL(i,j,k),im)
         enddo
-        call get_primary_material_VFRAC(vfrac,nmat,im,2)
+        call get_primary_material(LStest,nmat,im)
 
         if (is_rigid(nmat,im).eq.0) then
 
            ! only check pressure/temperature/vorticity
            ! magnitude away from interfaces
-         if (vfrac(im).gt.one-VOFTOL) then
+         if (LStest(im).gt.DXMAXLS) then
 
           tcomp=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
 
@@ -14080,7 +14058,12 @@ END SUBROUTINE SIMP
            vorterr(im), &
            pressure_error_cutoff(im), &
            temperature_error_cutoff(im))
-         endif  ! vfrac ~ 1
+         else if (LStest(im).le.DXMAXLS) then
+          ! do nothing
+         else
+          print *,"LStest(im) is NaN"
+          stop
+         endif  
 
         else if (is_rigid(nmat,im).eq.1) then
          ! do nothing

@@ -348,9 +348,6 @@ void NavierStokes::viscous_boundary_fluxes(
   const int* domlo = domain.loVect();
   const int* domhi = domain.hiVect();
 
-  VOF_Recon_resize(1,SLOPE_RECON_MF);
-  debug_ngrow(SLOPE_RECON_MF,1,820);
-
   resize_levelset(2,LEVELPC_MF);
   debug_ngrow(LEVELPC_MF,2,120);
   if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM))
@@ -1045,8 +1042,6 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  int nsolve=AMREX_SPACEDIM;
 
  debug_ngrow(FACE_VAR_MF,0,2);
- VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,3);
  debug_ngrow(idx_heat,0,4);
  debug_ngrow(source_idx,1,842);
  debug_ngrow(CELLTENSOR_MF,1,6);
