@@ -340,8 +340,10 @@ REAL_T :: initial_time
    else if (axis_dir.eq.5) then
 
      ! "drop_slope_dist" declared in GLOBALUTIL.F90
-     ! in: GENERAL_PHASE_CHANGE_LS (initial angle=static angle)
-     ! maxtall==two*radblob => no ice in this call.
+     ! this routine: GENERAL_PHASE_CHANGE_LS (initial angle=static angle)
+     ! maxtall==two*radblob > radnew+vert => no ice in this call.
+     ! (the purpose of this first call to drop_slope_dist is to get the
+     ! LS function for gas)
     call drop_slope_dist(x(1),x(2),x(SDIM),initial_time,nmat, &
       two*radblob,dist_ice,dist_liquid)
 
@@ -569,9 +571,12 @@ REAL_T :: initial_time
     endif
     ! material 3: ice
     ! material 1: water
+    ! "drop_slope_dist" declared in GLOBALUTIL.F90
     ! in: materialdist_batch (initial angle=static angle)
-    call drop_slope_dist(x(1),x(2),x(SDIM),initial_time,nmat,radblob3, &
-      dist_ice,dist_liquid)
+    ! radblob3 is the thickness of the underside of the droplet that
+    ! is already frozen
+    call drop_slope_dist(x(1),x(2),x(SDIM),initial_time,nmat, &
+      radblob3,dist_ice,dist_liquid)
     if (is_rigid(nmat,3).ne.0) then
      print *,"expecting material 3 to be ice"
      stop

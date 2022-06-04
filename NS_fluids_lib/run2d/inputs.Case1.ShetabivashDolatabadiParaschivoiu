@@ -64,7 +64,7 @@ amr.plot_file       = plt
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 1024
 amr.file_name_digits=7
-#amr.restart         = chk0205000
+#amr.restart         = chk0137500
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -78,37 +78,29 @@ ns.change_max     = 1.01
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = -9.8 # m/s^2
-# on the substrate (if there is ice):
-# sigma_{SG}-sigma_{SI}=sigma_{IG}cos(theta_I_substrate)
-# theta_I_substrate=33 degrees
-# sigma_{SG}=sigma_{IG}
-# sigma_{IG}-sigma_{SI}=sigma_{IG}cos(theta_I_substrate)
-# sigma_{IG}(1-cos(theta_I_substrate))=sigma_{SI}
 
-# sigma_{SG}-sigma_{SL}=sigma_{LG}cos(theta_L_substrate)
-# theta_L_substrate=33 degrees
-# sigma_{SG}=sigma_{LG}
-# sigma_{LG}(1-cos(theta_L_substrate))=sigma_{SL}
-# 12,13,14,23,24,34
-# LG,LI,LS,IG,GS,SI  
 #advection, surface tension, gravity
 #Note: if gravity turned off, then surface tension force can be significantly
 #reduced so that advection and freezing time steps
 #can be used instead (simulation would run 100 times faster, giving similar
 #freezing times?).  
 ns.fixed_dt_scales=0.0 0.0 0.0
-#triple point: theta_liq=95, theta_ice=97, theta_gas=168 LG,LI,GI
-#contact line: theta_L=33 degrees
-# LG,LI,LS,IG,GS,SI   (SI not used)
-#ns.tension=0.831 0.17407 0.1341 0.8341 0.831 0.1315 
-#triple point: theta_liq=107.5, theta_ice=107.5, theta_gas=145.0
-#contact line: theta_L=45 degrees
-#ns.tension=0.831 0.49977 0.243 0.831 0.831 0.243
+# 12,13,14,23,24,34
+# LG,LI,LS,IG,GS,SI  
+#initial theta_liquid (CL_tensions_from_angles.f):
+# sigma_{SG}-sigma_{SL}=sigma_{LG}cos(theta_L_initial)
+#    let sigma_{SG}=sigma_{LG} =>
+# 1-sigma_{SL}/sigma_{LG}=cos(theta_L_initial)
+#
+#triple point (tensions_from_angles.f):
+# sin(theta_G)/sigma_LI = sin(theta_I)/sigma_LG = sin(theta_L)/sigma_GI
+
 #triple point: (silicone) theta_liq=60.0, theta_ice=132.0, theta_gas=168.0
-#contact line: theta_L=45 degrees
+#contact line: theta_L_initial=45 degrees
 # LG,LI,LS,IG,GS,SI  (SI not used)
 ns.tension=0.831 0.232 0.243 0.968 0.831 0.243
-
+# if theta_L_initial=33 degrees then:
+#ns.tension=0.831 0.232 0.134 0.968 0.831 0.243
 
 #ns.unscaled_min_curvature_radius=10.0
 

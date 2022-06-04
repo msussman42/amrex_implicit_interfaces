@@ -22761,7 +22761,9 @@ if (probtype.eq.55) then
    stop
   endif
  endif
- if (maxtall.le.zero) then
+ if (maxtall.gt.zero) then
+  ! do nothing
+ else
   print *,"maxtall invalid"
   stop
  endif
@@ -22782,8 +22784,8 @@ if (probtype.eq.55) then
       (abs(xcheck).lt.1.0D-7).and. &
       (abs(ycheck).lt.1.0D-7).and. &
       (abs(zcheck).lt.1.0D-7)) then
-   im=1
-   im_opp=2
+   im=1 ! liquid
+   im_opp=2 ! gas
    im_3=im_solid_substrate
    call get_iten(im,im_opp,iten,num_materials)
    do imloop=1,nmat
@@ -22793,7 +22795,9 @@ if (probtype.eq.55) then
      fort_tension,user_tension, &
      marangoni_temp, &
      nmat,nten,1)
-     ! find angle between materials "im" and "im_3"
+     ! find the angle between the "im,im_3" interface and the
+     ! "im,im_opp" interface.
+     ! i.e. between the liquid/substrate and liquid/gas interfaces.
    call get_CL_iten(im,im_opp,im_3,iten_13,iten_23, &
     user_tension,nten,cos_angle,sin_angle)
 
@@ -22819,7 +22823,9 @@ if (probtype.eq.55) then
      else
       term1=Pi-test_angle+half*sin(two*test_angle)
      endif
-     if (term1.le.zero) then
+     if (term1.gt.zero) then
+      ! do nothing
+     else
       print *,"term1 invalid"
       stop
      endif
@@ -22848,6 +22854,11 @@ if (probtype.eq.55) then
     endif
 
      ! dist>0 in the liquid drop
+     ! if radblob2=0, then in RZ:
+     ! zprime=z-yblob2
+     ! yblob2_new=yblob2+vert
+     ! if cos_angle>0 then vert<0 (i.e. center of drop shifted down)
+     ! if cos_angle<0 then vert>0 (i.e. center of drop shifted up)
     dist=radnew-sqrt(rprime**2+(zprime-vert)**2)
     dist_truncate=dist
 
@@ -22911,7 +22922,12 @@ if (probtype.eq.55) then
       print *,"dist or zprime invalid"
       stop
      endif 
-    endif !  maxtall-vert<radnew
+    else if (maxtall-vert.ge.radnew) then
+     ! do nothing
+    else
+     print *,"maxtall, vert, or radnew invalid"
+     stop
+    endif 
      
    else
     print *,"contact angle too close to 0 or pi for drop on slope"
