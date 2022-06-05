@@ -2318,10 +2318,29 @@ void NavierStokes::ADVECT_DIV() {
 } // end subroutine ADVECT_DIV
 
 void NavierStokes::getStateDIV_ALL(int idx_source,int scomp_src,
-  int idx_dest,int idx_mask,int ngrow_dest) {
+  int idx_dest,int idx_mask) {
 
  if (level!=0)
   amrex::Error("level invalid getStateDIV_ALL");
+
+ if (idx_dest>=0) {
+  // do nothing
+ } else
+  amrex::Error("idx_dest invalid");
+
+ if (idx_source==-1) {
+  if (scomp_src==0) {
+   // do nothing
+  } else
+   amrex::Error("scomp_src invalid");
+ } else if (idx_source>=0) {
+  if (scomp_src>=0) {
+   // do nothing
+  } else
+   amrex::Error("scomp_src invalid");
+
+ } else
+  amrex::Error("idx_source invalid");
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
@@ -2334,7 +2353,7 @@ void NavierStokes::getStateDIV_ALL(int idx_source,int scomp_src,
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.getStateDIV(idx_source,scomp_src,
-    idx_dest,idx_mask,ngrow_dest);
+    idx_dest,idx_mask);
   int scomp_dst=0;
   int ncomp=ns_level.localMF[idx_dest]->nComp();
    // spectral_override==0 => always low order.
@@ -2344,9 +2363,28 @@ void NavierStokes::getStateDIV_ALL(int idx_source,int scomp_src,
 } // end subroutine getStateDIV_ALL 
 
 void NavierStokes::getStateDIV(int idx_source,int scomp_src,
-  int idx_dest,int idx_mask,int ngrow_dest) {
+  int idx_dest,int idx_mask) {
 
  bool use_tiling=ns_tiling;
+
+ if (idx_dest>=0) {
+  // do nothing
+ } else
+  amrex::Error("idx_dest invalid");
+
+ if (idx_source==-1) {
+  if (scomp_src==0) {
+   // do nothing
+  } else
+   amrex::Error("scomp_src invalid");
+ } else if (idx_source>=0) {
+  if (scomp_src>=0) {
+   // do nothing
+  } else
+   amrex::Error("scomp_src invalid");
+
+ } else
+  amrex::Error("idx_source invalid");
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
@@ -2355,7 +2393,7 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
   amrex::Error("SDC_outer_sweeps invalid");
 
  if (localMF_grow[idx_dest]==-1) {
-  new_localMF(idx_dest,1,ngrow_dest,-1);
+  new_localMF(idx_dest,1,1,-1);//ncomp=1,ngrow=1,grid type=-1 (cell)
  } else
   amrex::Error("local div data not previously deleted");
 
@@ -2365,16 +2403,44 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
  int nten=num_interfaces;
  int nsolve=1;
 
- MultiFab* velmac[AMREX_SPACEDIM];
- for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  velmac[dir]=getStateMAC(Umac_Type,0,dir,0,nsolve,cur_time_slab);
-
- const Real* dx = geom.CellSize();
-
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,250);
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,80);
+
+ MultiFab* velmac[AMREX_SPACEDIM];
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  if (idx_source==-1) {
+   velmac[dir]=getStateMAC(Umac_Type,0,dir,0,nsolve,cur_time_slab);
+  } else if (idx_source>=0) {
+   velmac[dir]=localMF[idx_source+dir];
+  } else
+   amrex::Error("idx_source invalid");
+  if (localMF[AREA_MF+dir]->boxArray()!=
+      velmac[dir]->boxArray())
+   amrex::Error("velmac boxarrays do not match");
+ } //dir=0..sdim-1
+
+ MultiFab* div_mask=nullptr;
+ if (idx_mask==-1) {
+   //ncomp=1  ngrow=0
+  div_mask=new MultiFab(state[State_Type].boxArray(),dmap,1,0,
+    MFInfo().SetTag("mf getStateDIV"),FArrayBoxFactory());
+  div_mask->setVal(1.0,0,1,0); //val,scomp,ncomp,ngrow
+ } else if (idx_mask>=0) {
+  div_mask=localMF[idx_mask];
+ } else
+  amrex::Error("idx_mask invalid");
+
+ if (div_mask->nGrow()>=0) {
+  // do nothing
+ } else
+  amrex::Error("div_mask->nGrow() invalid");
+
+ if (localMF[VOLUME_MF]->boxArray()!=div_mask->boxArray())
+  amrex::Error("div_mask boxarrays do not match");
+
+ const Real* dx = geom.CellSize();
 
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>nmat))
@@ -2391,13 +2457,6 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
-
- for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
-   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
-  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
-   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
- }
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -2422,9 +2481,7 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
    FArrayBox& ay = (*localMF[AREA_MF+1])[mfi];
    FArrayBox& az = (*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
 
-   FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];
-   FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];
-   FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];
+   FArrayBox& maskdivres = (*div_mask)[mfi];
 
    FArrayBox& maskcoef = (*localMF[MASKCOEF_MF])[mfi];//1=not cov  0=cov
    FArrayBox& maskSEMfab = (*localMF[MASKSEM_MF])[mfi];
@@ -2434,16 +2491,12 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
    FArrayBox& uy = (*velmac[1])[mfi];
    FArrayBox& uz = (*velmac[AMREX_SPACEDIM-1])[mfi];
    FArrayBox& rhs = (*localMF[idx_dest])[mfi];
-   FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
-   FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
-   FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
    const Real* xlo = grid_loc[gridno].lo();
    Vector<int> velbc=getBCArray(State_Type,gridno,
      STATECOMP_VEL,STATE_NCOMP_VEL);
 
 // RHS=(a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2}+...)/vol_ij
 //
-
 
    int operation_flag=OP_DIV_CELL;
    int energyflag=SUB_OP_DEFAULT;
@@ -2494,9 +2547,9 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
     ux.dataPtr(scomp_src),ARLIM(ux.loVect()),ARLIM(ux.hiVect()),
     uy.dataPtr(scomp_src),ARLIM(uy.loVect()),ARLIM(uy.hiVect()),
     uz.dataPtr(scomp_src),ARLIM(uz.loVect()),ARLIM(uz.hiVect()),
-    xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-    yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
-    zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
+    ux.dataPtr(),ARLIM(ux.loVect()),ARLIM(ux.hiVect()),//xface
+    uy.dataPtr(),ARLIM(uy.loVect()),ARLIM(uy.hiVect()),//yface
+    uz.dataPtr(),ARLIM(uz.loVect()),ARLIM(uz.hiVect()),//zface
     ax.dataPtr(),ARLIM(ax.loVect()),ARLIM(ax.hiVect()),
     ay.dataPtr(),ARLIM(ay.loVect()),ARLIM(ay.hiVect()),
     az.dataPtr(),ARLIM(az.loVect()),ARLIM(az.hiVect()),
@@ -2512,12 +2565,9 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
     ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
     vol.dataPtr(), //levelPC
     ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
-    solxfab.dataPtr(),
-    ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
-    solyfab.dataPtr(),
-    ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
-    solzfab.dataPtr(),
-    ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
+    ux.dataPtr(),ARLIM(ux.loVect()),ARLIM(ux.hiVect()),//solx
+    uy.dataPtr(),ARLIM(uy.loVect()),ARLIM(uy.hiVect()),//soly
+    uz.dataPtr(),ARLIM(uz.loVect()),ARLIM(uz.hiVect()),//solz
     vol.dataPtr(), //cterm
     ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
     vol.dataPtr(), //pold
@@ -2528,8 +2578,8 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
     ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
     vol.dataPtr(), //mdotcell
     ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
-    vol.dataPtr(), //maskdivres
-    ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
+    maskdivres.dataPtr(), 
+    ARLIM(maskdivres.loVect()),ARLIM(maskdivres.hiVect()),
     vol.dataPtr(), //maskres
     ARLIM(vol.loVect()),ARLIM(vol.hiVect()),
     &SDC_outer_sweeps,
@@ -2542,8 +2592,20 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
 } // omp
  ns_reconcile_d_num(42);
 
- for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  delete velmac[dir];
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  if (idx_source==-1) {
+   delete velmac[dir];
+  } else if (idx_source>=0) {
+   //do nothing
+  } else
+   amrex::Error("idx_source invalid");
+ }
+ if (idx_mask==-1) {
+  delete div_mask;
+ } else if (idx_mask>=0) {
+  //do nothing
+ } else
+  amrex::Error("idx_mask invalid");
 
 } // end subroutine getStateDIV
 

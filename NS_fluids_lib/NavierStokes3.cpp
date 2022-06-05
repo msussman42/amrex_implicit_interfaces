@@ -4122,10 +4122,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     int idx_source=-1;
     int scomp_src=0;
     int idx_mask=-1;
-    int ngrow_dest=1;
-    getStateDIV_ALL(idx_source,scomp_src,MACDIV_MF,idx_mask,ngrow_dest);
+    getStateDIV_ALL(idx_source,scomp_src,MACDIV_MF,idx_mask);
     if (localMF[MACDIV_MF]->nComp()!=1)
      amrex::Error("localMF[MACDIV_MF]->nComp() invalid");
+    if (localMF[MACDIV_MF]->nGrow()!=1)
+     amrex::Error("localMF[MACDIV_MF]->nGrow() invalid");
 
     int caller_id=1;
      //MACDIV<stuff>.plt (visit can open binary tecplot files)

@@ -15072,7 +15072,6 @@ END SUBROUTINE Adist
       REAL_T VOLTERM
       INTEGER_T nbase
       INTEGER_T ntensor
-      REAL_T xflux_R
       REAL_T local_div_val
 
       if (nmat.ne.num_materials) then
@@ -15610,32 +15609,14 @@ END SUBROUTINE Adist
          else if (operation_flag.eq.OP_RHS_CELL) then ! RHS
 
           local_data(isten+1)=xvel(D_DECL(ic,jc,kc),nc)
-          xflux_R=xvel(D_DECL(ic,jc,kc),nc)
-          if (abs(xflux_R-local_data(isten+1)).gt. &
-              VOFTOL*abs(xflux_R)) then
-           print *,"xflux_R invalid"
-           stop
-          endif
 
          else if (operation_flag.eq.OP_DIV_CELL) then ! divergence
 
           local_data(isten+1)=xvel(D_DECL(ic,jc,kc),1)
-          xflux_R=xvel(D_DECL(ic,jc,kc),1)
-          if (abs(xflux_R-local_data(isten+1)).gt. &
-              VOFTOL*abs(xflux_R)) then
-           print *,"xflux_R invalid"
-           stop
-          endif
 
          else if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then
 
           local_data(isten+1)=xvel(D_DECL(ic,jc,kc),1)
-          xflux_R=xvel(D_DECL(ic,jc,kc),1)
-          if (abs(xflux_R-local_data(isten+1)).gt. &
-              VOFTOL*abs(xflux_R)) then
-           print *,"xflux_R invalid"
-           stop
-          endif
 
          else
           print *,"operation_flag invalid27:",operation_flag
@@ -16464,7 +16445,7 @@ END SUBROUTINE Adist
             else if (probtype.eq.802) then ! dissolution, xlo,velx
              print *,"802 obsolete"
              stop
-            else if (probtype.eq.OP_DIV_CELL) then
+            else if (probtype.eq.110) then
              call get_bump_velocity(xsten,nhalf,dx,bfact,velcell(veldir),time)  ! xvel,xlo 
             else if (probtype.eq.59) then ! xvel,xlo,velbc_override 2d
              ! vel=solidvel in solid
@@ -16974,7 +16955,7 @@ END SUBROUTINE Adist
               print *,"levelrz invalid for probtype=32"
               stop
              endif
-            else if (probtype.eq.OP_DIV_CELL) then
+            else if (probtype.eq.110) then
              call get_bump_velocity(xsten,nhalf,dx,bfact,velcell(veldir),time) ! xvel,xhi
             endif
             if (probtype.eq.5700) then  ! xvel,xhi
