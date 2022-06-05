@@ -19874,8 +19874,10 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
   // declared in: MacProj.cpp
  int idx_source=-1;
+ int scomp_src=0;
  int idx_mask=-1;
- getStateDIV_ALL(idx_source,MACDIV_MF,idx_mask,1);
+ int ngrow_dest=1;
+ getStateDIV_ALL(idx_source,scomp_src,MACDIV_MF,idx_mask,ngrow_dest);
  if (localMF[MACDIV_MF]->nComp()!=1)
   amrex::Error("localMF[MACDIV_MF]->nComp() invalid");
 

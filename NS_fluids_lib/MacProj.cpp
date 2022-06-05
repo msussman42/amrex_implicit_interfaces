@@ -2317,8 +2317,8 @@ void NavierStokes::ADVECT_DIV() {
 
 } // end subroutine ADVECT_DIV
 
-void NavierStokes::getStateDIV_ALL(int idx_source,int idx_dest,int idx_mask,
-		int ngrow) {
+void NavierStokes::getStateDIV_ALL(int idx_source,int scomp_src,
+  int idx_dest,int idx_mask,int ngrow_dest) {
 
  if (level!=0)
   amrex::Error("level invalid getStateDIV_ALL");
@@ -2333,17 +2333,18 @@ void NavierStokes::getStateDIV_ALL(int idx_source,int idx_dest,int idx_mask,
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.getStateDIV(idx_source,idx_dest,idx_mask,ngrow);
-  int scomp=0;
+  ns_level.getStateDIV(idx_source,scomp_src,
+    idx_dest,idx_mask,ngrow_dest);
+  int scomp_dst=0;
   int ncomp=ns_level.localMF[idx_dest]->nComp();
    // spectral_override==0 => always low order.
-  ns_level.avgDown_localMF(idx_dest,scomp,ncomp,0);
+  ns_level.avgDown_localMF(idx_dest,scomp_dst,ncomp,0);
  }
 
 } // end subroutine getStateDIV_ALL 
 
-void NavierStokes::getStateDIV(int idx_source,int idx_dest,int idx_mask,
-		int ngrow) {
+void NavierStokes::getStateDIV(int idx_source,int scomp_src,
+  int idx_dest,int idx_mask,int ngrow_dest) {
 
  bool use_tiling=ns_tiling;
 
@@ -2354,7 +2355,7 @@ void NavierStokes::getStateDIV(int idx_source,int idx_dest,int idx_mask,
   amrex::Error("SDC_outer_sweeps invalid");
 
  if (localMF_grow[idx_dest]==-1) {
-  new_localMF(idx_dest,1,ngrow,-1);
+  new_localMF(idx_dest,1,ngrow_dest,-1);
  } else
   amrex::Error("local div data not previously deleted");
 
@@ -2490,9 +2491,9 @@ void NavierStokes::getStateDIV(int idx_source,int idx_dest,int idx_mask,
     ux.dataPtr(),ARLIM(ux.loVect()),ARLIM(ux.hiVect()),//xp
     uy.dataPtr(),ARLIM(uy.loVect()),ARLIM(uy.hiVect()),//yp
     uz.dataPtr(),ARLIM(uz.loVect()),ARLIM(uz.hiVect()),//zp
-    ux.dataPtr(),ARLIM(ux.loVect()),ARLIM(ux.hiVect()),
-    uy.dataPtr(),ARLIM(uy.loVect()),ARLIM(uy.hiVect()),
-    uz.dataPtr(),ARLIM(uz.loVect()),ARLIM(uz.hiVect()),
+    ux.dataPtr(scomp_src),ARLIM(ux.loVect()),ARLIM(ux.hiVect()),
+    uy.dataPtr(scomp_src),ARLIM(uy.loVect()),ARLIM(uy.hiVect()),
+    uz.dataPtr(scomp_src),ARLIM(uz.loVect()),ARLIM(uz.hiVect()),
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
     yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
     zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
