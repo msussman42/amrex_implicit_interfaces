@@ -1206,9 +1206,9 @@ void apply_pressure_grad(
 	int scomp,int ncomp,Real time);
 
     void getStateDIV_ALL(int idx_source,int scomp_src,
-      int idx_dest,int idx_mask,int ngrow_dest);
+      int idx_dest,int idx_mask);
     void getStateDIV(int idx_source,int scomp_src,
-      int idx_dest,int idx_mask,int ngrow_dest);
+      int idx_dest,int idx_mask);
 
     void ADVECT_DIV_ALL();
     void ADVECT_DIV();

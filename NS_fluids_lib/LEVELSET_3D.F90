@@ -10944,7 +10944,9 @@ stop
       REAL_T rho
       REAL_T TEMPERATURE,internal_e
       REAL_T NEW_TEMPERATURE
-      REAL_T CC,CC_DUAL,MSKDV,MSKRES,MDOT,divu
+      REAL_T CC,CC_DUAL
+      REAL_T MSKDV,MSKRES
+      REAL_T MDOT,divu
       REAL_T local_rhs
       REAL_T local_POLD
       REAL_T local_POLD_DUAL
@@ -11270,13 +11272,6 @@ stop
         stop
        endif
 
-       if (ncphys.eq.FACECOMP_NCOMP) then
-        ! do nothing
-       else
-        print *,"ncphys invalid"
-        stop
-       endif
-
        if (nsolve.eq.1) then
         ! do nothing
        else
@@ -11560,6 +11555,17 @@ stop
           AZL*zvel(D_DECL(i,j,k),1)
         endif
         divu=divu/VOLTERM
+
+        MSKDV=maskdivres(D_DECL(i,j,k),1)
+        if (MSKDV.eq.one) then
+         ! do nothing
+        else if (MSKDV.eq.zero) then
+         divu=zero
+        else
+         print *,"MSKDV invalid"
+         stop
+        endif
+
         rhs(D_DECL(i,j,k),1)=divu
 
        else if (operation_flag.eq.OP_RHS_CELL) then ! RHS
