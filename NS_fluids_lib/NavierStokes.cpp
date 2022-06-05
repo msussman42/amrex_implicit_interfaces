@@ -19873,7 +19873,9 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   amrex::Error("conductivity_data invalid ncomp");
 
   // declared in: MacProj.cpp
- getStateDIV_ALL(MACDIV_MF,1);
+ int idx_source=-1;
+ int idx_mask=-1;
+ getStateDIV_ALL(idx_source,MACDIV_MF,idx_mask,1);
  if (localMF[MACDIV_MF]->nComp()!=1)
   amrex::Error("localMF[MACDIV_MF]->nComp() invalid");
 
