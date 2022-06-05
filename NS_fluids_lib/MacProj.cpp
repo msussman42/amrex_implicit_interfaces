@@ -2317,7 +2317,8 @@ void NavierStokes::ADVECT_DIV() {
 
 } // end subroutine ADVECT_DIV
 
-void NavierStokes::getStateDIV_ALL(int idx,int ngrow) {
+void NavierStokes::getStateDIV_ALL(int idx_source,int idx_dest,int idx_mask,
+		int ngrow) {
 
  if (level!=0)
   amrex::Error("level invalid getStateDIV_ALL");
@@ -2332,15 +2333,17 @@ void NavierStokes::getStateDIV_ALL(int idx,int ngrow) {
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.getStateDIV(idx,ngrow);
+  ns_level.getStateDIV(idx_source,idx_dest,idx_mask,ngrow);
   int scomp=0;
-  int ncomp=ns_level.localMF[idx]->nComp();
-  ns_level.avgDown_localMF(idx,scomp,ncomp,0);
+  int ncomp=ns_level.localMF[idx_dest]->nComp();
+   // spectral_override==0 => always low order.
+  ns_level.avgDown_localMF(idx_dest,scomp,ncomp,0);
  }
 
 } // end subroutine getStateDIV_ALL 
 
-void NavierStokes::getStateDIV(int idx,int ngrow) {
+void NavierStokes::getStateDIV(int idx_source,int idx_dest,int idx_mask,
+		int ngrow) {
 
  bool use_tiling=ns_tiling;
 
@@ -2350,8 +2353,8 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
  } else
   amrex::Error("SDC_outer_sweeps invalid");
 
- if (localMF_grow[idx]==-1) {
-  new_localMF(idx,1,ngrow,-1);
+ if (localMF_grow[idx_dest]==-1) {
+  new_localMF(idx_dest,1,ngrow,-1);
  } else
   amrex::Error("local div data not previously deleted");
 
@@ -2397,13 +2400,13 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(localMF[idx]->boxArray().d_numPts());
+ thread_class::init_d_numPts(localMF[idx_dest]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*localMF[idx],use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*localMF[idx_dest],use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
@@ -2429,7 +2432,7 @@ void NavierStokes::getStateDIV(int idx,int ngrow) {
    FArrayBox& ux = (*velmac[0])[mfi];
    FArrayBox& uy = (*velmac[1])[mfi];
    FArrayBox& uz = (*velmac[AMREX_SPACEDIM-1])[mfi];
-   FArrayBox& rhs = (*localMF[idx])[mfi];
+   FArrayBox& rhs = (*localMF[idx_dest])[mfi];
    FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
    FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
    FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];

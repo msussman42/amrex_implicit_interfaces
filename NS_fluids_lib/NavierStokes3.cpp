@@ -4119,7 +4119,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
    if (ratio==nsteps+1) {
 
     // declared in: MacProj.cpp
-    getStateDIV_ALL(MACDIV_MF,1);
+    int idx_source=-1;
+    int idx_mask=-1;
+    getStateDIV_ALL(idx_source,MACDIV_MF,idx_mask,1);
     if (localMF[MACDIV_MF]->nComp()!=1)
      amrex::Error("localMF[MACDIV_MF]->nComp() invalid");
 
