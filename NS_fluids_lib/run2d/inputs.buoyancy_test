@@ -3,7 +3,7 @@
 #
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
-stop_time =  4.0  # maximum problem time
+stop_time =  2.5  # maximum problem time
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -48,12 +48,13 @@ ns.ns_tiling=false
 amr.blocking_factor = 16 16
 #amr.space_blocking_factor=16 16
 #amr.space_blocking_factor=1 1
-amr.space_blocking_factor=2 2
-amr.time_blocking_factor=2
+amr.space_blocking_factor=4 4
+amr.time_blocking_factor=4
 #amr.time_blocking_factor=1
 #amr.time_blocking_factor=16
 # for SEM, the initial time step is further reduced by 2^{r_time}
-ns.init_shrink    = 0.05 # reduce init dt since grad p not initially known
+# 4th order: ns.init_shrink=0.0125   2nd order: ns.init_shrink=0.05
+ns.init_shrink    = 0.0125 # reduce init dt since grad p not initially known
 # 0  low order space and time
 # 1  SEM space and time
 ns.enable_spectral=1
@@ -65,7 +66,7 @@ amr.plot_int        = 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 # change this if tiling vs. no tiling.
-amr.max_grid_size   = 256
+amr.max_grid_size   = 1024
 #amr.restart         = chk4400
 #amr.trace   =1
 
@@ -105,6 +106,7 @@ ns.DrhoDT = -0.00219 0.0   # units: 1/degree K
 
 ns.tension        = 0.0 0.0 
 #ns.fixed_dt	  = 0.0025     # hardwire dt
+ns.fixed_dt_velocity=0.75
 ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=12 # buoyancy test
@@ -122,7 +124,7 @@ ns.uncoupled_viscosity=0
 #ns.viscconst=4.48E-04 4.48E-04
 #want cell Reynolds number ~ 100 
 #rho dx_coarse U/mu = 1400 x (1/32) x 1/mu = 100  mu=14/32 try mu=0.5
-ns.viscconst= 0.5 0.5 
+ns.viscconst= 1.0 1.0 
 ns.denconst=1400.0 1400.0 
 ns.speciesconst=1.0 2.0 1.0 2.0 1.0 2.0
 ns.speciesviscconst=1.0e-8 1.0e-8 100.0 1.0e-8 0.001 1.0e-8 
@@ -149,9 +151,9 @@ ns.stiffCP=1300.0 1300.0
 ns.stiffCV=1300.0 1300.0  #CV used CRYOGENIC_TANK_MK to get CP
 # Thermal conductivity [W/(m.K)]
 #ns.heatviscconst=0.075 0.075
-#Want Prandtl number=1=c_p mu/k=1   1300 x 0.5 /k=1
-#k=1300 x 0.5 = 650.0
-ns.heatviscconst=650.0 650.0
+#Want Prandtl number=1=c_p mu/k=1   1300 x 1.0 /k=1
+#k=1300 x 1 = 1300.0
+ns.heatviscconst=1300.0 1300.0
 ns.constant_density_all_time=1 1 
 
 ns.xblob=0.0
