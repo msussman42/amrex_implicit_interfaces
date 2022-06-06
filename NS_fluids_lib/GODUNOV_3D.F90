@@ -6410,6 +6410,7 @@ stop
        umac,DIMS(umac), & 
        umac_mask,DIMS(umac_mask), & 
        scalar_mask,DIMS(scalar_mask), & 
+       divu_mask,DIMS(divu_mask), & 
        LS,DIMS(LS)) &
       bind(c,name='fort_extend_mac_vel')
 
@@ -6435,6 +6436,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(umac) 
       INTEGER_T, intent(in) :: DIMDEC(umac_mask) 
       INTEGER_T, intent(in) :: DIMDEC(scalar_mask) 
+      INTEGER_T, intent(in) :: DIMDEC(divu_mask) 
       INTEGER_T, intent(in) :: DIMDEC(LS) 
 
       REAL_T, intent(in), target :: mask(DIMV(mask))
@@ -6445,6 +6447,8 @@ stop
       REAL_T, pointer :: umac_mask_ptr(D_DECL(:,:,:))
       REAL_T, intent(inout), target :: scalar_mask(DIMV(scalar_mask))
       REAL_T, pointer :: scalar_mask_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: divu_mask(DIMV(divu_mask))
+      REAL_T, pointer :: divu_mask_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: LS(DIMV(LS),num_materials*(SDIM+1))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T xstenMAC(-3:3,SDIM)
@@ -6544,6 +6548,7 @@ stop
       umac_ptr=>umac
       umac_mask_ptr=>umac_mask
       scalar_mask_ptr=>scalar_mask
+      divu_mask_ptr=>divu_mask
       LS_ptr=>LS
 
       call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,123)
@@ -6552,6 +6557,7 @@ stop
       call checkbound_array1(fablo,fabhi,umac_mask_ptr, &
         ngrow_distance,normdir,123)
       call checkbound_array1(fablo,fabhi,scalar_mask_ptr,0,-1,123)
+      call checkbound_array1(fablo,fabhi,divu_mask_ptr,0,-1,123)
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1,123)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &

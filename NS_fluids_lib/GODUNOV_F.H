@@ -282,6 +282,8 @@ extern "C"
     AMREX_ARLIM_P(umac_masklo),AMREX_ARLIM_P(umac_maskhi),
     Real* scalar_mask,
     AMREX_ARLIM_P(scalar_masklo),AMREX_ARLIM_P(scalar_maskhi),
+    Real* divu_mask,
+    AMREX_ARLIM_P(divu_masklo),AMREX_ARLIM_P(divu_maskhi),
     Real* LS,
     AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi));
 
