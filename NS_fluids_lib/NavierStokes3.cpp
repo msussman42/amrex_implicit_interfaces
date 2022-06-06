@@ -13193,8 +13193,12 @@ void NavierStokes::prepare_umac_material(Real time) {
  MultiFab* local_umac[AMREX_SPACEDIM];
 
  new_localMF(SCALAR_MASK_MATERIAL_MF,num_materials,1,-1);
+ new_localMF(DIVU_MASK_MATERIAL_MF,num_materials,1,-1);
+ new_localMF(DIVU_MATERIAL_MF,num_materials,1,-1);
  for (int im=0;im<num_materials;im++) {
   setVal_localMF(SCALAR_MASK_MATERIAL_MF,0.0,im,1,1);
+  setVal_localMF(DIVU_MASK_MATERIAL_MF,1.0,im,1,1);
+  setVal_localMF(DIVU_MATERIAL_MF,0.0,im,1,1);
  }
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -13236,6 +13240,7 @@ void NavierStokes::prepare_umac_material(Real time) {
      FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
      FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
      FArrayBox& scalarfab=(*localMF[SCALAR_MASK_MATERIAL_MF])[mfi];
+     FArrayBox& divu_mask_fab=(*localMF[DIVU_MASK_MATERIAL_MF])[mfi];
      FArrayBox& umacfab=(*localMF[UMAC_MATERIAL_MF+dir])[mfi];
      FArrayBox& umacmaskfab=(*localMF[UMAC_MASK_MATERIAL_MF+dir])[mfi];
      Vector<int> velbc=getBCArray(State_Type,gridno,
@@ -13267,7 +13272,10 @@ void NavierStokes::prepare_umac_material(Real time) {
       ARLIM(umacfab.loVect()),ARLIM(umacfab.hiVect()),
       umacmaskfab.dataPtr(im),
       ARLIM(umacmaskfab.loVect()),ARLIM(umacmaskfab.hiVect()),
-      scalarfab.dataPtr(im),ARLIM(scalarfab.loVect()),ARLIM(scalarfab.hiVect()),
+      scalarfab.dataPtr(im),
+      ARLIM(scalarfab.loVect()),ARLIM(scalarfab.hiVect()),
+      divu_mask_fab.dataPtr(im),
+      ARLIM(divu_mask_fab.loVect()),ARLIM(divu_mask_fab.hiVect()),
       lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()));
 
     } // mfi
@@ -13311,6 +13319,8 @@ void NavierStokes::delete_umac_material() {
  delete_localMF(UMAC_MATERIAL_MF,AMREX_SPACEDIM);
  delete_localMF(UMAC_MASK_MATERIAL_MF,AMREX_SPACEDIM);
  delete_localMF(SCALAR_MASK_MATERIAL_MF,1);
+ delete_localMF(DIVU_MASK_MATERIAL_MF,1);
+ delete_localMF(DIVU_MATERIAL_MF,1);
 
 } // subroutine delete_umac_material()
 
