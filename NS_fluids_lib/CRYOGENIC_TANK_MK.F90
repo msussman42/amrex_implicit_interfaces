@@ -1316,6 +1316,9 @@ subroutine SOUNDSQR_CRYOGENIC_TANK_MK(rho,massfrac_var, &
  return
 end subroutine SOUNDSQR_CRYOGENIC_TANK_MK
 
+! this routine returns: e(T)
+! CV for the temperature solver is defined as:
+! (e(T+DT)-e(T))/DT
 subroutine INTERNAL_CRYOGENIC_TANK_MK(rho,massfrac_var, &
   temperature,local_internal_energy, &
   imattype,im,num_species_var_in)

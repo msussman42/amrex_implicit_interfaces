@@ -11362,6 +11362,8 @@ void NavierStokes::make_marangoni_force() {
 
  const Real* dx = geom.CellSize();
 
+  // div sigma delta (I-nn^T)/rho=
+  //   -sigma kappa grad H/rho + (I-nn^T) (grad sigma) delta/rho 
   // height function curvature
   // finite difference curvature
   // pforce
@@ -11369,6 +11371,8 @@ void NavierStokes::make_marangoni_force() {
   // dir/side flag
   // im3
   // x nten
+  // DIST_CURV_MF is calculated in:
+  // NavierStokes::makeStateCurv
  int num_curv=nten*(5+AMREX_SPACEDIM);
  if (localMF[DIST_CURV_MF]->nComp()!=num_curv)
   amrex::Error("DIST_CURV invalid ncomp");
@@ -11395,6 +11399,14 @@ void NavierStokes::make_marangoni_force() {
 
   const Real* xlo = grid_loc[gridno].lo();
 
+   //DIST_CURV_MF contains for each pair of materials:
+   //1. height function curvature
+   //2. finite difference curvature
+   //3. pressure force for nudging (obsolete)
+   //4. marangoni force
+   //5. dir/side flag
+   // DIST_CURV_MF is calculated in:
+   // NavierStokes::makeStateCurv
   FArrayBox& curvfab=(*localMF[DIST_CURV_MF])[mfi];
   FArrayBox& rhoinversefab=(*localMF[CELL_DEN_MF])[mfi];
   FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
@@ -11413,8 +11425,8 @@ void NavierStokes::make_marangoni_force() {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  // force=dt * ((I-nn^T)(grad sigma) delta) / rho
-  // in: GODUNOV_3D.F90
+  // force=dt * div ((I-nn^T)(grad sigma) delta) / rho
+  // declared in: GODUNOV_3D.F90
   fort_marangoniforce(
    &nstate,
    &nten,

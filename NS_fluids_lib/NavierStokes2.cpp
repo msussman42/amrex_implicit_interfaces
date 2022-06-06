@@ -4766,20 +4766,6 @@ void NavierStokes::make_physics_varsALL(int project_option,
  } else
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
- if (1==0) {
-  int do_face_decomp=0;
-  for (int ilev=level;ilev<=finest_level;ilev++) {
-   NavierStokes& ns_level=getLevel(ilev);
-   int tessellate=3;
-   ns_level.makeFaceFrac(tessellate,1,FACEFRAC_MM_MF,do_face_decomp);
-   ns_level.ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,0);
-   ns_level.makeCellFrac(tessellate,0,CELLFRAC_MM_MF);
-  } // ilev
- } else if (1==1) {
-  // do nothing
- } else
-  amrex::Error("bust");
-
   // in: NavierStokes::make_physics_varsALL
   // piecewise constant interpolation.
  allocate_levelset_ALL(1,LEVELPC_MF);
@@ -4940,7 +4926,11 @@ void NavierStokes::allocate_physics_vars() {
  } else
   amrex::Error("localMF_grow[SWEPT_CROSSING_MF] invalid");
 
+  //CELL_DEDT_MF contains 1/(rho CV)
+  //CELL_DEDT_MF is passed as a parameter to:
+  //fort_scalarcoeff
  new_localMF_if_not_exist(CELL_DEDT_MF,1,1,-1); // ncomp,ngrow,dir
+  //CELL_DEN_MF contains 1/rho
  new_localMF_if_not_exist(CELL_DEN_MF,1,1,-1); // ncomp,ngrow,dir
   // coeff_avg,padvect_avg 
  new_localMF_if_not_exist(CELL_SOUND_MF,2,0,-1); // ncomp,ngrow,dir

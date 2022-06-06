@@ -7607,10 +7607,10 @@ stop
        solxfab,DIMS(solxfab), &
        solyfab,DIMS(solyfab), &
        solzfab,DIMS(solzfab), &
-        ! voltotal/DeDT_total 1/(rho cv)
+        ! voltotal/DeDT_total = 1/(rho cv)
        cenDeDT, &
        DIMS(cenDeDT), & 
-        ! voltotal/mass_total (1/rho)
+        ! voltotal/mass_total = (1/rho)
        cenden, &
        DIMS(cenden), &   
        cenvof,DIMS(cenvof), &   
@@ -10019,6 +10019,13 @@ stop
          enddo ! ispec=1,num_species_var
 
           ! DeDT = cv
+          ! DeDT_material is declared in: GLOBALUTIL.F90
+          ! if imattype!=18,15 then
+          !  DeDT_material = (e(T+DT)-e(T))/DT
+          ! e(T) is subroutine INTERNAL_material and is declared in:
+          ! GLOBALUTIL.F90.
+          ! if (is_in_probtype_list().eq.1) then a call to, SUB_INTERNAL,
+          ! is made.
          call DeDT_material(den,massfrac_parm, &
            TEMPERATURE,DeDT,imattype,im)
          if (DeDT.gt.zero) then
