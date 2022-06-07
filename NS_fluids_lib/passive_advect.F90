@@ -1,0 +1,701 @@
+#undef BL_LANG_CC
+#ifndef BL_LANG_FORT
+#define BL_LANG_FORT
+#endif
+
+#include "AMReX_REAL.H"
+#include "AMReX_CONSTANTS.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_BC_TYPES.H"
+
+#include "AMReX_ArrayLim.H"
+#include "EXTRAP_COMP.H"
+
+
+#if (AMREX_SPACEDIM==3)
+#define SDIM 3
+#elif (AMREX_SPACEDIM==2)
+#define SDIM 2
+#else
+print *,"dimension bust"
+stop
+#endif
+
+! probtype==28,29,31
+module passive_advect_module
+
+implicit none                   
+
+contains
+
+  ! do any initial preparation needed
+subroutine INIT_passive_advect_MODULE()
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+ if ((probtype.eq.28).or. &
+     (probtype.eq.29).or. &
+     (probtype.eq.31)) then
+  ! do nothing
+ else
+  print *,"probtype invalid"
+  stop
+ endif
+
+return
+end subroutine INIT_passive_advect_MODULE
+
+ ! fluids tessellate the domain, solids are immersed. 
+subroutine passive_advect_LS(x,t,LS,nmat)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(out) :: LS(nmat)
+REAL_T :: xstar,ystar,zstar
+REAL_T :: xprime,yprime,zprime
+
+  if (nmat.eq.num_materials) then
+   ! do nothing
+  else
+   print *,"nmat invalid"
+   stop
+  endif
+
+  initial_time=zero
+
+  xstar=x(1)
+  ystar=x(2)
+  zstar=x(SDIM)
+ 
+  if (probtype.eq.28) then 
+
+   if (adv_vel.ne.zero) then
+    if (SDIM.eq.2) then
+     if ((adv_dir.eq.1).or.(adv_dir.eq.SDIM+1)) then
+      xstar=xstar-adv_vel*t
+      do while (xstar.lt.problox)
+       xstar=xstar+probhix-problox
+      enddo
+      do while (xstar.gt.probhix)
+       xstar=xstar-probhix+problox
+      enddo
+     else if ((adv_dir.eq.2).or.(adv_dir.eq.SDIM+1)) then
+      ystar=ystar-adv_vel*t
+      do while (ystar.lt.probloy)
+       ystar=ystar+probhiy-probloy
+      enddo
+      do while (ystar.gt.probhiy)
+       ystar=ystar-probhiy+probloy
+      enddo
+     else
+      print *,"adv_dir invalid probtype==28 (4)"
+      stop
+     endif
+     zstar=ystar
+    else if (SDIM.eq.3) then
+     if ((adv_dir.eq.1).or.(adv_dir.eq.SDIM+1)) then
+      xstar=xstar-adv_vel*t
+      do while (xstar.lt.problox)
+       xstar=xstar+probhix-problox
+      enddo
+      do while (xstar.gt.probhix)
+       xstar=xstar-probhix+problox
+      enddo
+     else if ((adv_dir.eq.2).or.(adv_dir.eq.SDIM+1)) then
+      ystar=ystar-adv_vel*t
+      do while (ystar.lt.probloy)
+       ystar=ystar+probhiy-probloy
+      enddo
+      do while (ystar.gt.probhiy)
+       ystar=ystar-probhiy+probloy
+      enddo
+     else if ((adv_dir.eq.3).or.(adv_dir.eq.SDIM+1)) then
+      zstar=zstar-adv_vel*t
+      do while (zstar.lt.probloz)
+       zstar=zstar+probhiz-probloz
+      enddo
+      do while (zstar.gt.probhiz)
+       zstar=zstar-probhiz+probloz
+      enddo
+     else
+      print *,"adv_dir invalid probtype==28 (5)"
+      stop
+     endif
+    else
+     print *,"dimension bust"
+     stop
+    endif
+   else if (adv_vel.eq.zero) then
+    ! do nothing
+   else
+    print *,"adv_vel is NaN"
+    stop
+   endif 
+
+   if (axis_dir.eq.0) then ! dist<0 in the object
+    call zalesakdist(LS(1),xstar,ystar)
+    LS(2)=-LS(1)
+   else if (axis_dir.eq.1) then
+    xprime=(xstar-xblob)/10.0d0
+    yprime=(ystar-yblob)/10.0d0+2.0d0
+    call Adist(xprime,yprime,LS(1))
+    LS(2)=-LS(1)
+   else if (axis_dir.eq.2) then ! dist<0 in the circle
+    if (SDIM.eq.2) then
+     LS(1)=sqrt( (xstar-xblob)**2 + (ystar-yblob)**2 ) - radblob
+    else if (SDIM.eq.3) then
+     LS(1)=sqrt((xstar-xblob)**2+(ystar-yblob)**2+(zstar-zblob)**2) - radblob
+    else
+     print *,"dimension bust"
+     stop
+    endif
+    LS(2)=-LS(1)
+   else if (axis_dir.eq.3) then
+    ! dist<0 inside the triangle.
+    call triangledist(xstar,ystar,xblob,xblob2,yblob,yblob2,LS(1))
+    LS(2)=-LS(1)
+   else if (axis_dir.eq.4) then
+    ! dist<0 inside the polygon
+    call polygondist(xstar,ystar,xblob,xblob2,yblob,yblob2, &
+      xblob3,yblob3,LS(1))
+    LS(2)=-LS(1)
+   else
+    print *,"axis_dir invalid probtype=28"
+    stop
+   endif
+
+  else if (probtype.eq.29) then ! single vortex
+
+   if (SDIM.eq.2) then
+    call deformdist(LS(1),xstar,ystar) ! dist<0 in the object
+    LS(2)=-LS(1)
+
+    if ((axis_dir.eq.3).or.(axis_dir.eq.4)) then
+
+     if (denfact.eq.one) then
+      ! do nothing - single vortex 2 materials
+      if (num_materials.ne.2) then
+       print *,"nmat invalid"
+       stop
+      endif
+     else if (denfact.eq.-one) then ! split deforming circle in half
+      if (num_materials.ne.3) then
+       print *,"num_materials invalid"
+       stop
+      endif
+      LS(3)=LS(1)  ! negative in the circle
+      LS(1)=-LS(3) ! positive in the circle
+      distline=half-x(1) ! positive left side, negative right side
+      if (distline.lt.LS(1)) then
+       LS(1)=distline ! LS(1) is negative right side of circle
+      endif
+      LS(2)=-LS(3) ! positive in the circle
+      distline=x(1)-half !positive right side, negative left side
+      if (distline.lt.LS(2)) then ! LS(2) is negative left side of circle
+       LS(2)=distline             ! LS(2) is positive right side of circle
+      endif
+     else
+      print *,"denfact invalid"
+      stop
+     endif
+    endif
+
+   else if (SDIM.eq.3) then
+
+    LS(1)=sqrt((xstar-xblob)**2+(ystar-yblob)**2+(zstar-zblob)**2)-radblob
+    LS(2)=-LS(1)
+
+    if (denfact.eq.zero) then
+     ! do nothing - single vortex 2 materials
+     if (num_materials.ne.2) then
+      print *,"nmat invalid"
+      stop
+     endif
+    else if (denfact.eq.-one) then ! split deforming sphere in half
+     if (num_materials.ne.3) then
+      print *,"nmat invalid"
+      stop
+     endif
+     LS(3)=LS(1)
+     LS(1)=-LS(3)
+     distline=xblob-x(1)
+     if (distline.lt.LS(1)) then
+      LS(1)=distline ! positive left side of circle
+     endif
+     LS(2)=-LS(3)
+     distline=x(1)-xblob
+     if (distline.lt.LS(2)) then
+      LS(2)=distline  ! positive right side of circle
+     endif
+
+    else
+     print *,"denfact invalid"
+     stop
+    endif
+
+   else
+    print *,"dimension bust"
+    stop
+   endif
+
+  else if (probtype.eq.31) then ! translating circle
+   if (SDIM.eq.2) then
+    LS(1)=sqrt( (xstar-xblob)**2 + (ystar-yblob)**2 ) - radblob
+   else if (SDIM.eq.3) then
+    LS(1)=sqrt((xstar-xblob)**2+(ystar-yblob)**2+(zstar-zblob)**2)-radblob
+   else
+    print *,"dimension bust"
+    stop
+   endif
+   LS(2)=-LS(1)
+
+  else
+   print *,"expecting probtype.eq. 28,29 or 31"
+   stop
+  endif
+
+return
+end subroutine passive_advect_LS
+
+! initial velocity is some kind of shear flow
+subroutine passive_advect_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: dx(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(out) :: VEL(SDIM)
+REAL_T :: pres_analytical
+INTEGER_T dir
+INTEGER_T, intent(in) :: velsolid_flag
+REAL_T :: vert_lo,vert_hi
+REAL_T :: D_gamma,T_analytical,Y_analytical,LS_analytical
+
+  if (nmat.eq.num_materials) then
+   ! do nothing
+  else
+   print *,"nmat invalid"
+   stop
+  endif
+
+if ((velsolid_flag.eq.0).or. &
+    (velsolid_flag.eq.1)) then
+ ! do nothing
+else 
+ print *,"velsolid_flag invalid"
+ stop
+endif
+
+do dir=1,SDIM
+ if (dx(dir).gt.zero) then
+  ! do nothing
+ else
+  print *,"dx invalid"
+  stop
+ endif
+enddo
+
+do dir=1,SDIM
+ VEL(dir)=zero
+enddo
+
+if (SDIM.eq.2) then
+
+ if (probtype.eq.28) then
+  if (dir.eq.1) then
+   call zalesakuu(velcell(veldir),x,y,z,time,dx)
+  else if (dir.eq.2) then
+   call zalesakvv(velcell(veldir),x,y,z,time,dx)
+  else
+   print *,"dir invalid"
+   stop
+  endif
+ else if (probtype.eq.29) then
+  if (dir.eq.1) then
+   call deformuu(velcell(veldir),x,y,time,dx)
+  else if (dir.eq.2) then
+   call deformvv(velcell(veldir),x,y,time,dx)
+  else
+   print *,"dir invalid"
+   stop
+  endif
+ else if (probtype.eq.31) then ! xlo,velx
+  if (dir.eq.1) then
+   call circleuu(velcell(veldir),x,y,y)
+  else if (dir.eq.2) then
+   call circlevv(velcell(veldir),x,y,y)
+  else
+   print *,"dir invalid"
+   stop
+  endif
+ else
+  print *,"probtype invalid"
+  stop
+ endif
+else if (SDIM.eq.3) then
+
+ if (probtype.eq.28) then
+  if (dir.eq.1) then
+   call zalesakuu(velcell(veldir),x,y,z,time,dx)
+  else if (dir.eq.2) then
+   call zalesakvv(velcell(veldir),x,y,z,time,dx)
+  else if (dir.eq.3) then
+   call zalesakww(velcell(veldir),x,y,z,time,dx)
+  else
+   print *,"dir invalid"
+   stop
+  endif
+ else if (probtype.eq.29) then
+  if (dir.eq.1) then
+   call deform3duu(velcell(veldir),x,y,z,time,dx)
+  else if (dir.eq.2) then
+   call deform3dvv(velcell(veldir),x,y,z,time,dx)
+  else if (dir.eq.3) then
+   call deform3dww(velcell(veldir),x,y,z,time,dx)
+  else
+   print *,"dir invalid"
+   stop
+  endif
+ else if (probtype.eq.31) then
+  if (dir.eq.1) then
+   call circleuu(velcell(veldir),x,y,z)
+  else if (dir.eq.2) then
+   call circlevv(velcell(veldir),x,y,z)
+  else if (dir.eq.3) then
+   call circleww(velcell(veldir),x,y,z)
+  else
+   print *,"dir invalid"
+   stop
+  endif
+ else
+  print *,"probtype invalid"
+  stop
+ endif
+
+else
+ print *,"dimension bust"
+ stop
+endif
+
+return 
+end subroutine passive_advect_VEL
+
+
+! this routine used as a default when
+! pressure boundary conditions are prescribed.
+! For the case when only top wall is 
+! "outflow" (outflow in quotes since ice shrinks when
+! melting), and flow is incompressible, ok to make the top wall pressure zero.
+subroutine passive_advect_PRES(x,t,LS,PRES,nmat)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(out) :: PRES
+REAL_T :: D_gamma,T_analytical,Y_analytical,LS_analytical
+REAL_T :: pres_analytical
+REAL_T :: VEL(SDIM)
+
+if (num_materials.eq.nmat) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+if (probtype.eq.424) then
+
+ PRES=zero
+
+ if (axis_dir.eq.0) then
+  if (vinletgas.eq.zero) then
+   call drop_analytical_solution(t,x,D_gamma,T_analytical, &
+      Y_analytical,VEL,LS_analytical,pres_analytical)
+   PRES=pres_analytical
+  endif
+ else if (axis_dir.eq.1) then
+  ! do nothing
+ else
+  print *,"axis_dir invalid"
+  stop
+ endif
+
+else
+ print *,"num_materials,num_state_material, or probtype invalid"
+ stop
+endif
+
+return 
+end subroutine passive_advect_PRES
+
+
+
+subroutine passive_advect_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
+INTEGER_T, intent(in) :: nmat
+INTEGER_T, intent(in) :: nstate_mat
+REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+INTEGER_T im,ibase,n
+REAL_T :: D_gamma,T_analytical,Y_analytical,LS_analytical
+REAL_T :: pres_analytical
+REAL_T :: VEL(SDIM)
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+if (nstate_mat.eq.num_state_material) then
+ ! do nothing
+else
+ print *,"nstate_mat invalid"
+ stop
+endif
+
+if (probtype.eq.424) then
+ do im=1,num_materials
+  ibase=(im-1)*num_state_material
+  STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) 
+  if (t.eq.zero) then
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) 
+  else if (t.gt.zero) then
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
+  else
+   print *,"t invalid"
+   stop
+  endif
+
+   ! initial species in inputs?
+  do n=1,num_species_var
+   STATE(ibase+ENUM_SPECIESVAR+n)=fort_speciesconst((n-1)*num_materials+im)
+  enddo
+
+ enddo ! im=1..num_materials
+
+ if (axis_dir.eq.0) then
+  if (vinletgas.eq.zero) then
+   call drop_analytical_solution(t,x,D_gamma,T_analytical, &
+      Y_analytical,VEL,LS_analytical,pres_analytical)
+   do im=1,num_materials
+    ibase=(im-1)*num_state_material
+    STATE(ibase+ENUM_TEMPERATUREVAR+1)=T_analytical
+    STATE(ibase+ENUM_SPECIESVAR+1)=Y_analytical
+   enddo
+  endif
+ else if (axis_dir.eq.1) then
+  ! do nothing
+ else
+  print *,"axis_dir invalid"
+  stop
+ endif
+else
+ print *,"num_materials,num_state_material, or probtype invalid"
+ stop
+endif
+ 
+return
+end subroutine passive_advect_STATE
+
+ ! dir=1..sdim  side=1..2
+subroutine passive_advect_LS_BC(xwall,xghost,t,LS, &
+   LS_in,dir,side,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(inout) :: LS(nmat)
+REAL_T, intent(in) :: LS_in(nmat)
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) ::  dx(SDIM)
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+if ((dir.ge.1).and.(dir.le.SDIM).and. &
+    (side.ge.1).and.(side.le.2)) then
+ call passive_advect_LS(xghost,t,LS,nmat)
+else
+ print *,"dir or side invalid"
+ stop
+endif
+
+return
+end subroutine passive_advect_LS_BC
+
+
+ ! dir=1..sdim  side=1..2 veldir=1..sdim
+subroutine passive_advect_VEL_BC(xwall,xghost,t,LS, &
+   VEL,VEL_in,veldir,dir,side,dx,nmat)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(inout) :: VEL
+REAL_T, intent(in) :: VEL_in
+INTEGER_T, intent(in) :: veldir,dir,side
+REAL_T, intent(in) :: dx(SDIM)
+REAL_T local_VEL(SDIM)
+INTEGER_T velsolid_flag
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+if (probtype.eq.424) then
+ ! do nothing
+else
+ print *,"expecting probtype==424"
+ stop
+endif
+velsolid_flag=0
+if ((dir.ge.1).and.(dir.le.SDIM).and. &
+    (side.ge.1).and.(side.le.2).and. &
+    (veldir.ge.1).and.(veldir.le.SDIM)) then
+
+ call passive_advect_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
+ VEL=local_VEL(veldir)
+
+else
+ print *,"dir,side, or veldir invalid"
+ stop
+endif
+
+return
+end subroutine passive_advect_VEL_BC
+
+ ! dir=1..sdim  side=1..2
+subroutine passive_advect_PRES_BC(xwall,xghost,t,LS, &
+   PRES,PRES_in,dir,side,dx,nmat)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(inout) :: PRES
+REAL_T, intent(in) :: PRES_in
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) :: dx(SDIM)
+REAL_T :: rr
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+ call passive_advect_PRES(xghost,t,LS,PRES,nmat)
+
+ rr=xghost(1)**2+xghost(2)**2
+ if (SDIM.eq.3) then
+  rr=rr+xghost(SDIM)**2
+ endif
+ rr=sqrt(rr)
+ if (1.eq.0) then
+  print *,"x,y,r,t,pres ",xghost(1),xghost(2),rr,t,PRES
+ endif
+
+return
+end subroutine passive_advect_PRES_BC
+
+ ! dir=1..sdim  side=1..2
+subroutine passive_advect_STATE_BC(xwall,xghost,t,LS, &
+   STATE,STATE_merge,STATE_in,im,istate,dir,side,dx,nmat)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: nmat
+REAL_T, intent(in) :: xwall
+REAL_T, intent(in) :: xghost(SDIM)
+REAL_T, intent(in) :: t
+REAL_T, intent(in) :: LS(nmat)
+REAL_T :: local_STATE(nmat*num_state_material)
+REAL_T, intent(inout) :: STATE
+REAL_T, intent(inout) :: STATE_merge
+REAL_T, intent(in) :: STATE_in
+INTEGER_T, intent(in) :: dir,side
+REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, intent(in) :: istate,im
+INTEGER_T ibase,im_crit,im_loop
+INTEGER_T local_bcflag
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+local_bcflag=1
+
+if ((istate.ge.1).and. &
+    (istate.le.num_state_material).and. &
+    (im.ge.1).and. &
+    (im.le.num_materials)) then
+ call passive_advect_STATE(xghost,t,LS,local_STATE,local_bcflag, &
+         nmat,num_state_material)
+ ibase=(im-1)*num_state_material
+ STATE=local_STATE(ibase+istate)
+ im_crit=1
+ do im_loop=2,num_materials
+  if (LS(im_loop).gt.LS(im_crit)) then
+   im_crit=im_loop
+  endif
+ enddo
+ ibase=(im_crit-1)*num_state_material
+ STATE_merge=local_STATE(ibase+istate)
+
+ if (probtype.eq.424) then
+  ! do nothing
+ else
+  print *,"expecting probtype == 424"
+  stop
+ endif
+else
+ print *,"istate invalid"
+ stop
+endif
+
+return
+end subroutine passive_advect_STATE_BC
+
+
+end module passive_advect_module

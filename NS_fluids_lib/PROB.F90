@@ -3470,202 +3470,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine ENTROPY_TEMPERATURE_material
 
-
-
-SUBROUTINE Adist(xx, yy, dist)
-IMPLICIT NONE
-
-REAL_T, INTENT (IN) :: xx
-REAL_T, INTENT (IN) :: yy
-REAL_T, INTENT (INOUT) :: dist
-
-REAL_T, DIMENSION(4) :: xvec
-REAL_T, DIMENSION(4) :: yvec
-REAL_T, DIMENSION(4) :: nx
-REAL_T, DIMENSION(4) :: ny
-REAL_T, DIMENSION(4) :: m
-
-REAL_T :: px, py
-REAL_T :: vx, vy
-REAL_T :: phi_i, maxval
-REAL_T :: mhat
-REAL_T :: dist1, dist2, dist3
-REAL_T :: eps
-INTEGER_T :: i
-
-eps = 0.01
-dist = -999.9e9
-dist1 = -999.9e9
-dist2 = -999.9e9
-dist3 = -999.9e9
-
-! Big Triangle !
-xvec(1) = 0.0
-xvec(2) = 1.0
-xvec(3) = -1.0
-
-yvec(1) = 3.0
-yvec(2) = 0.0
-yvec(3) = 0.0
-
-nx(1) = 3.0/sqrt(10.0)
-nx(2) = 0.0
-nx(3) = -3.0/sqrt(10.0)
-
-ny(1) = 1.0/sqrt(10.0)
-ny(2) = -1.0
-ny(3) = 1.0/sqrt(10.0)
-
-m(1) = -3.0
-m(2) = 0.0
-m(3) = 3.0
-
-maxval = -999.9
-do i = 1, 3
-	if (i /= 2) then
-		!write(*,*) 'i = ', i
-		mhat = -1.0/m(i)
-		px = (m(i)*xvec(i) - mhat*xx + yy - yvec(i))/(m(i) - mhat)
-		py = m(i)*(px - xvec(i)) + yvec(i)
-	else	! i == 2, horizontal edge
-		!write(*,*) 'i = ', i
-		px = xx
-		py = yvec(i)
-	endif
-	
-	vx = xx - px
-	vy = yy - py
-	phi_i = vx*nx(i) + vy*ny(i)
-	
-	!perr = abs(m(i) - (py - yvec(i))/(px - xvec(i)))
-	!write(*,*) 'Projection error = ', perr
-	
-	if(phi_i > maxval) then
-		maxval = phi_i
-		!write(*,*) 'i = ', i, 'new phi_i = ', phi_i
-	endif
-	
-	!write(*,*) 'i = ', i, 'nx = ', nx(i), 'ny = ', ny(i), 'vx = ', vx, 'vy = ', vy
-enddo
-
-dist1 = maxval
-! End Big Triangle !
-
-! Trapezoid !
-xvec(1) = 4.0/9.0
-xvec(2) = (2.0 + eps)/3.0
-xvec(3) = -(2.0 + eps)/3.0
-xvec(4) = -4.0/9.0
-
-yvec(1) = 2.0/3.0
-yvec(2) = -eps
-yvec(3) = -eps
-yvec(4) = 2.0/3.0
-
-nx(1) = -3.0/sqrt(10.0)
-nx(2) = 0.0
-nx(3) = 3.0/sqrt(10.0)
-nx(4) = 0.0
-
-ny(1) = -1.0/sqrt(10.0)
-ny(2) = 1.0
-ny(3) = -1.0/sqrt(10.0)
-ny(4) = -1.0
-
-m(1) = -3.0
-m(2) = 0.0
-m(3) = 3.0
-m(4) = 0.0
-
-maxval = 999.9
-do i = 1, 4
-	if ((i == 1) .OR. (i == 3)) then
-		!write(*,*) 'i = ', i
-		mhat = -1.0/m(i)
-		px = (m(i)*xvec(i) - mhat*xx + yy - yvec(i))/(m(i) - mhat)
-		py = m(i)*(px - xvec(i)) + yvec(i)
-	else	! i == 2 || 4, horizontal edge
-		!write(*,*) 'i = ', i
-		px = xx
-		py = yvec(i)
-	endif
-	
-	vx = xx - px
-	vy = yy - py
-	phi_i = vx*nx(i) + vy*ny(i)
-	
-	!perr = abs(m(i) - (py - yvec(i))/(px - xvec(i)))
-	!write(*,*) 'Projection error = ', perr
-	
-	if(phi_i < maxval) then
-		maxval = phi_i
-		!write(*,*) 'i = ', i, 'new phi_i = ', phi_i
-	endif
-	
-	!write(*,*) 'i = ', i, 'nx = ', nx(i), 'ny = ', ny(i), 'vx = ', vx, 'vy = ', vy
-enddo
-
-dist2 = maxval
-! End Trapezoid !
-
-! Little Triangle !
-xvec(1) = 0.0
-xvec(2) = 1.0/3.0
-xvec(3) = -1.0/3.0
-
-yvec(1) = 2.0
-yvec(2) = 1.0
-yvec(3) = 1.0
-
-nx(1) = -3.0/sqrt(10.0)
-nx(2) = 0.0
-nx(3) = 3.0/sqrt(10.0)
-
-ny(1) = -1.0/sqrt(10.0)
-ny(2) = 1.0
-ny(3) = -1.0/sqrt(10.0)
-
-m(1) = -3.0
-m(2) = 0.0
-m(3) = 3.0
-
-maxval = 999.9
-do i = 1, 3
-	if ((i == 1) .OR. (i == 3)) then
-		!write(*,*) 'i = ', i
-		mhat = -1.0/m(i)
-		px = (m(i)*xvec(i) - mhat*xx + yy - yvec(i))/(m(i) - mhat)
-		py = m(i)*(px - xvec(i)) + yvec(i)
-	else	! i == 2, horizontal edge
-		!write(*,*) 'i = ', i
-		px = xx
-		py = yvec(i)
-	endif
-	
-	vx = xx - px
-	vy = yy - py
-	phi_i = vx*nx(i) + vy*ny(i)
-	
-	!perr = abs(m(i) - (py - yvec(i))/(px - xvec(i)))
-	!write(*,*) 'Projection error = ', perr
-	
-	if(phi_i < maxval) then
-		maxval = phi_i
-		!write(*,*) 'i = ', i, 'new phi_i = ', phi_i
-	endif
-	
-	!write(*,*) 'i = ', i, 'nx = ', nx(i), 'ny = ', ny(i), 'vx = ', vx, 'vy = ', vy
-enddo
-
-dist3 = maxval
-! End Little Triangle !
-
-dist = max(dist1, dist2, dist3)
-
-END SUBROUTINE Adist
-
-
-
       function CLS(phi,eps)
       IMPLICIT NONE
       REAL_T CLS,phi,eps,temp
@@ -5961,18 +5765,16 @@ END SUBROUTINE Adist
        REAL_T, intent(out) :: dist
        INTEGER_T, intent(in) :: imaterial
        REAL_T, intent(in) :: time
-       REAL_T xsten_star(-1:1,SDIM)
-       INTEGER_T nhalf_star,dir
+       INTEGER_T dir
        REAL_T x,y,z
        REAL_T xstar,ystar,zstar
+       REAL_T xvec(SDIM)
        INTEGER_T nmat,nten
        REAL_T distsolid,distgas,dist_liquid,dist_ice
        INTEGER_T im_solid_exactdist
-       INTEGER_T isten
+       REAL_T LS(num_materials)
 
        im_solid_exactdist=im_solid_primary()
-
-       nhalf_star=1
 
        if (bfact.lt.1) then
         print *,"bfact invalid200"
@@ -5986,6 +5788,10 @@ END SUBROUTINE Adist
        x=xsten(0,1)
        y=xsten(0,2)
        z=xsten(0,SDIM)
+
+       do dir=1,SDIM
+        xvec(dir)=xsten(0,dir)
+       enddo
 
        nmat=num_materials
        nten=num_interfaces
@@ -6001,79 +5807,13 @@ END SUBROUTINE Adist
        ystar=y
        zstar=z
 
-       if ((probtype.eq.28).and.(adv_vel.ne.zero)) then
-        if (SDIM.eq.2) then
-         if ((adv_dir.eq.1).or.(adv_dir.eq.SDIM+1)) then
-          xstar=xstar-adv_vel*time
-          do while (xstar.lt.problox)
-           xstar=xstar+probhix-problox
-          enddo
-          do while (xstar.gt.probhix)
-           xstar=xstar-probhix+problox
-          enddo
-         else if ((adv_dir.eq.2).or.(adv_dir.eq.SDIM+1)) then
-          ystar=ystar-adv_vel*time
-          do while (ystar.lt.probloy)
-           ystar=ystar+probhiy-probloy
-          enddo
-          do while (ystar.gt.probhiy)
-           ystar=ystar-probhiy+probloy
-          enddo
-         else
-          print *,"adv_dir invalid probtype==28 (4)"
-          stop
-         endif
-         zstar=ystar
-        else if (SDIM.eq.3) then
-         if ((adv_dir.eq.1).or.(adv_dir.eq.SDIM+1)) then
-          xstar=xstar-adv_vel*time
-          do while (xstar.lt.problox)
-           xstar=xstar+probhix-problox
-          enddo
-          do while (xstar.gt.probhix)
-           xstar=xstar-probhix+problox
-          enddo
-         else if ((adv_dir.eq.2).or.(adv_dir.eq.SDIM+1)) then
-          ystar=ystar-adv_vel*time
-          do while (ystar.lt.probloy)
-           ystar=ystar+probhiy-probloy
-          enddo
-          do while (ystar.gt.probhiy)
-           ystar=ystar-probhiy+probloy
-          enddo
-         else if ((adv_dir.eq.3).or.(adv_dir.eq.SDIM+1)) then
-          zstar=zstar-adv_vel*time
-          do while (zstar.lt.probloz)
-           zstar=zstar+probhiz-probloz
-          enddo
-          do while (zstar.gt.probhiz)
-           zstar=zstar-probhiz+probloz
-          enddo
-         else
-          print *,"adv_dir invalid probtype==28 (5)"
-          stop
-         endif
-        else
-         print *,"dimension bust"
-         stop
-        endif
-       endif 
+       if (probtype.eq.28) then
 
-
-       do isten=-1,1
-        dir=1
-        xsten_star(isten,dir)=xsten(isten,dir)+xstar-xsten(0,dir)
-        dir=2 
-        xsten_star(isten,dir)=xsten(isten,dir)+ystar-xsten(0,dir)
-        if (SDIM.eq.3) then
-         dir=SDIM
-         xsten_star(isten,dir)=xsten(isten,dir)+zstar-xsten(0,dir)
-        endif
-       enddo ! isten
-       call materialdist(xsten_star,nhalf_star,dx,bfact,dist,imaterial,time)
+        call SUB_LS(xvec,time,LS,nmat)
+        dist=LS(1)
 
         ! drop on slope (exactdist)
-       if (probtype.eq.55) then
+       else if (probtype.eq.55) then
      
         if (SDIM.eq.2) then
 
@@ -6089,7 +5829,7 @@ END SUBROUTINE Adist
 
           if ((imaterial.eq.1).or.(imaterial.eq.2)) then
            ! distsolid>0 in solid
-           call materialdist(xsten_star,nhalf_star,dx,bfact,distsolid,3,time)
+           call materialdist(xsten,nhalf,dx,bfact,distsolid,3,time)
            ! in: exactdist (maxtall=2 * radblob => dist_ice=dist_liquid)
            call drop_slope_dist(xstar,ystar,zstar, &
             time,nmat,two*radblob,dist_ice,dist_liquid)
@@ -6127,7 +5867,7 @@ END SUBROUTINE Adist
 
           if ((imaterial.eq.1).or.(imaterial.eq.2)) then
            ! distsolid>0 in solid
-           call materialdist(xsten_star,nhalf_star,dx,bfact,distsolid,3,time)
+           call materialdist(xsten,nhalf,dx,bfact,distsolid,3,time)
            ! in: exactdist (maxtall=2 * radblob => dist_ice=dist_liquid)
            call drop_slope_dist(xstar,ystar,zstar, &
             time,nmat,two*radblob,dist_ice,dist_liquid)
@@ -6150,12 +5890,9 @@ END SUBROUTINE Adist
          stop
         endif
 
-       else if (probtype.ne.55) then
-        ! do nothing
-       else
-        print *,"probtype bust"
-        stop
-       endif 
+       else 
+        call materialdist(xsten,nhalf,dx,bfact,dist,imaterial,time)
+       endif
 
        return
        end subroutine exactdist
@@ -8061,70 +7798,6 @@ END SUBROUTINE Adist
         endif
        endif ! probtype.eq.531 ?
 
-       if ((probtype.eq.29).and.(SDIM.eq.3)) then
-        if (denfact.eq.zero) then
-         ! do nothing - single vortex 2 materials
-         if (nmat.ne.2) then
-          print *,"nmat invalid"
-          stop
-         endif
-        else if (denfact.eq.-one) then ! split deforming sphere in half
-         if (nmat.ne.3) then
-          print *,"nmat invalid"
-          stop
-         endif
-         dist(3)=dist(1)
-         dist(1)=-dist(3)
-         distline=xblob-x
-         if (distline.lt.dist(1)) then
-          dist(1)=distline
-         endif
-         dist(2)=-dist(3)
-         distline=x-xblob
-         if (distline.lt.dist(2)) then
-          dist(2)=distline
-         endif
-
-        else
-         print *,"denfact invalid"
-         stop
-        endif
-
-       endif ! 3d vortex
-
-       if ((probtype.eq.29).and. &
-           ((axis_dir.eq.3).or.(axis_dir.eq.4)).and. &
-           (SDIM.eq.2)) then
-
-        if (denfact.eq.one) then
-         ! do nothing - single vortex 2 materials
-         if (nmat.ne.2) then
-          print *,"nmat invalid"
-          stop
-         endif
-        else if (denfact.eq.-one) then ! split deforming circle in half
-         if (nmat.ne.3) then
-          print *,"nmat invalid"
-          stop
-         endif
-         dist(3)=dist(1)  ! negative in the circle
-         dist(1)=-dist(3)
-         distline=half-x
-         if (distline.lt.dist(1)) then
-          dist(1)=distline
-         endif
-         dist(2)=-dist(3)
-         distline=x-half
-         if (distline.lt.dist(2)) then
-          dist(2)=distline
-         endif
-        else
-         print *,"denfact invalid"
-         stop
-        endif
-
-       endif  ! single vortex with reversal
-
         ! freezing disk: ice, water, air
        if ((probtype.eq.801).and. &
            (num_materials.eq.3).and.(radblob2.gt.zero)) then
@@ -9657,34 +9330,10 @@ END SUBROUTINE Adist
         if (dist1.gt.dist) then
          dist=dist1
         endif
-       else if (probtype.eq.31) then ! vapordist: translating circle
-        dist=sqrt( (x-xblob)**2 + (y-yblob)**2 ) - radblob
        else if (probtype.eq.23) then
         dist=yblob+radblob*cos(two*Pi*x/xblob)-y
        else if ((probtype.eq.24).or.(probtype.eq.27)) then
         dist=half-y
-       else if (probtype.eq.28) then ! prescribed velocity 2D
-        if (axis_dir.eq.0) then
-         call zalesakdist(dist,x,y)
-        else if (axis_dir.eq.1) then
-         xprime=(x-xblob)/10.0
-         yprime=(y-yblob)/10.0+2.0
-         call Adist(xprime,yprime,dist)
-        else if (axis_dir.eq.2) then
-         dist=sqrt( (x-xblob)**2 + (y-yblob)**2 ) - radblob
-        else if (axis_dir.eq.3) then
-           ! dist<0 inside the triangle.
-         call triangledist(x,y,xblob,xblob2,yblob,yblob2,dist)
-        else if (axis_dir.eq.4) then
-           ! dist<0 inside the polygon
-         call polygondist(x,y,xblob,xblob2,yblob,yblob2, &
-          xblob3,yblob3,dist)
-        else
-         print *,"axis_dir invalid probtype=28"
-         stop
-        endif
-       else if (probtype.eq.29) then ! 2d single vortex, vapordist
-        call deformdist(dist,x,y)
        else if ((probtype.eq.25).and.(axis_dir.eq.0)) then ! vapordist
         dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
         dist=-dist
@@ -10001,17 +9650,6 @@ END SUBROUTINE Adist
         endif
        else if (probtype.eq.603) then  ! Benard advection (vapordist)
         dist=zblob-z
-       else if (probtype.eq.28) then ! prescribed velocity 3D
-        if (axis_dir.eq.2) then
-         dist=sqrt( (x-xblob)**2 + (y-yblob)**2 + (z-zblob)**2 )-radblob
-        else
-         print *,"axis_dir invalid"
-         stop
-        endif
-       else if (probtype.eq.29) then ! 3d deformation, vapordist
-        dist=sqrt( (x-xblob)**2 + (y-yblob)**2 + (z-zblob)**2 )-radblob
-       else if (probtype.eq.31) then ! vapordist: translating sphere
-        dist=sqrt( (x-xblob)**2 + (y-yblob)**2 + (z-zblob)**2 ) - radblob
        else if (probtype.eq.101) then
         call cubedist(xblob-radblob,xblob+radblob,yblob-radblob,yblob+radblob, &
          zblob-radblob,zblob+radblob,x,y,z,dist)
@@ -10318,71 +9956,6 @@ END SUBROUTINE Adist
 
       return
       end subroutine vapordist
-
-
-! negative on the inside of the triangle!
-      subroutine triangledist(x,y,xlo,xhi,ylo,yhi,dist)
-      IMPLICIT NONE
-
-      REAL_T x,y,xlo,xhi,ylo,yhi,dist,dist1,dist2,dist3
-      REAL_T m,b
-
-      if ((xlo.ge.xhi-1.0D-10).or.(ylo.ge.yhi-1.0D-10)) then 
-       print *,"invalid parameters triangle dist",xlo,xhi,ylo,yhi
-       stop
-      endif
-      dist1=xlo-x
-      dist2=ylo-y
-      m=(yhi-ylo)/(xlo-xhi)
-      b=yhi-m*xlo
-      dist3=y-(m*x+b)
-      dist=dist1
-      if (dist2.gt.dist) then
-       dist=dist2
-      endif
-      if (dist3.gt.dist) then
-       dist=dist3
-      endif
-  
-      return
-      end subroutine triangledist
-
-! negative on the inside of the polygon!
-      subroutine polygondist(x,y,xlo,xhi,ylo,yhi,xwid,ywid,dist)
-      IMPLICIT NONE
-
-      REAL_T x,y,xlo,xhi,ylo,yhi,xwid,ywid,dist,dist1,dist2,dist3
-      REAL_T dist4,dist5
-      REAL_T m,b
-
-      if ((xlo.ge.xhi-1.0D-10).or.(ylo.ge.yhi-1.0D-10)) then 
-       print *,"invalid parameters triangle dist",xlo,xhi,ylo,yhi
-       stop
-      endif
-      dist1=xlo-xwid-x
-      dist2=ylo-ywid-y
-      m=(yhi-ylo)/(xlo-xhi)
-      b=yhi-m*xlo
-      dist3=y-(m*x+b)
-      dist4=y-yhi
-      dist5=x-xhi
-      dist=dist1
-      if (dist2.gt.dist) then
-       dist=dist2
-      endif
-      if (dist3.gt.dist) then
-       dist=dist3
-      endif
-      if (dist4.gt.dist) then
-       dist=dist4
-      endif
-      if (dist5.gt.dist) then
-       dist=dist5
-      endif
-  
-      return
-      end subroutine polygondist
-
 
 
       subroutine airgunsolid(x,y,xcen,ycen,xhole,yhole, &
@@ -16432,13 +16005,7 @@ END SUBROUTINE Adist
             call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
            else if (SDIM.eq.2) then
   
-            if (probtype.eq.28) then
-             call zalesakuu(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.29) then
-             call deformuu(velcell(veldir),x,y,time,dx)
-            else if (probtype.eq.31) then ! xlo,velx
-             call circleuu(velcell(veldir),x,y,y)
-            else if ((probtype.eq.1).and.(axis_dir.eq.11)) then
+            if ((probtype.eq.1).and.(axis_dir.eq.11)) then
              velcell(veldir)=vinletgas*(y/yblob-one) 
             else if (probtype.eq.58) then
              velcell(veldir)=zero
@@ -16496,10 +16063,6 @@ END SUBROUTINE Adist
              endif
             else if (probtype.eq.58) then
               velcell(veldir)=zero
-            else if (probtype.eq.28) then
-              call zalesakuu(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.29) then
-              call deform3duu(velcell(veldir),x,y,z,time,dx)
             else if (probtype.eq.51) then
               velcell(veldir)=zero
             else if (probtype.eq.50) then
@@ -16539,14 +16102,8 @@ END SUBROUTINE Adist
             call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
            else if (SDIM.eq.2) then
   
-            if (probtype.eq.28) then
-             call zalesakvv(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.29) then
-             call deformvv(velcell(veldir),x,y,time,dx)
-            else if (probtype.eq.31) then ! xlo,vely
-             call circlevv(velcell(veldir),x,y,y)
 ! xlo wall vertical pipe velocity
-            else if (probtype.eq.41) then
+            if (probtype.eq.41) then
              velcell(veldir)=zero
             else if (probtype.eq.532) then ! xlo,yvel
              call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
@@ -16557,11 +16114,7 @@ END SUBROUTINE Adist
 
            else if (SDIM.eq.3) then
 
-            if (probtype.eq.29) then
-             call deform3dvv(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.28) then
-             call zalesakvv(velcell(veldir),x,y,z,time,dx)
-            endif
+            ! do nothing
 
            else
             print *,"dimension bust"
@@ -16588,10 +16141,6 @@ END SUBROUTINE Adist
            if ((probtype.eq.36).and. &
                ((yblob9.ne.zero).or.(yblob10.ne.zero))) then
             velcell(veldir)=yblob9
-           else if (probtype.eq.28) then
-            call zalesakww(velcell(veldir),x,y,z,time,dx)
-           else if (probtype.eq.29) then
-            call deform3dww(velcell(veldir),x,y,z,time,dx)
            else if (probtype.eq.bubbleInPackedColumn) then ! xlo,velz
             call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
            endif
@@ -16625,12 +16174,6 @@ END SUBROUTINE Adist
              velcell(veldir)=-vinletgas
             else if (probtype.eq.21) then
              velcell(veldir)=adv_vel
-            else if (probtype.eq.28) then
-             call zalesakuu(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.29) then
-             call deformuu(velcell(veldir),x,y,time,dx)
-            else if (probtype.eq.31) then ! ylo,velx
-             call circleuu(velcell(veldir),x,y,y)
             else if (probtype.eq.58) then
              velcell(veldir)=zero
             else if (probtype.eq.53) then  ! x vel bottom wall
@@ -16648,10 +16191,6 @@ END SUBROUTINE Adist
 
             if (probtype.eq.58) then
              velcell(veldir)=zero
-            else if (probtype.eq.29) then
-             call deform3duu(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.28) then
-             call zalesakuu(velcell(veldir),x,y,z,time,dx)
             endif
 
            else
@@ -16673,18 +16212,11 @@ END SUBROUTINE Adist
             call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
            else if (SDIM.eq.2) then
   
-            if (probtype.eq.28) then
-             call zalesakvv(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.29) then
-             call deformvv(velcell(veldir),x,y,time,dx)
-            else if (probtype.eq.31) then ! ylo,vely
-             call circlevv(velcell(veldir),x,y,y)
-   
              ! side=1, dir=2,veldir=2  (vely at ylo)
              ! bubble formation
              ! bubble_formation_inflow_bc sets of Poiseuille flow
              ! quantity in cell is average velocity for Poiseuille flow
-            else if ((probtype.eq.25).and.(axis_dir.gt.0)) then
+            if ((probtype.eq.25).and.(axis_dir.gt.0)) then
              call bubble_formation_inflow_bc(xsten,nhalf,x,velcell(veldir))
             else if (probtype.eq.22) then
              velcell(veldir)=y_vel*(xblob**2-x**2)*three/ &
@@ -16736,10 +16268,6 @@ END SUBROUTINE Adist
             else if (probtype.eq.5501) then
                ! vel=solvel in sol
              call mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat) 
-            else if (probtype.eq.28) then
-             call zalesakvv(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.29) then
-             call deform3dvv(velcell(veldir),x,y,z,time,dx)
 ! microfluidics squeeze vertical vel ylo inflow
             else if (probtype.eq.5700) then ! yvel,ylo
              call microfluidic_velbc(xsten,nhalf,dir,side,velcell)
@@ -16774,11 +16302,6 @@ END SUBROUTINE Adist
             velcell(veldir)=z_vel  ! ylo,velz
            endif
   
-           if (probtype.eq.29) then
-            call deform3dww(velcell(veldir),x,y,z,time,dx)
-           else if (probtype.eq.28) then
-            call zalesakww(velcell(veldir),x,y,z,time,dx)
-           endif
           else
            print *,"veldir invalid"
            stop
@@ -16823,10 +16346,6 @@ END SUBROUTINE Adist
                !  zlo,velx
              call velread_bc_point(x,y,z,dir,veldir,0,time,velcell(dir))
             endif
-           else if (probtype.eq.28) then
-            call zalesakuu(velcell(veldir),x,y,z,time,dx)
-           else if (probtype.eq.29) then
-            call deform3duu(velcell(veldir),x,y,z,time,dx)
 ! wall gas pipe horizontal velocity (velx) z=zlo 
            else if (probtype.eq.41) then
             print *,"modify for pipe 3d"
@@ -16846,10 +16365,6 @@ END SUBROUTINE Adist
   
            if (probtype.eq.bubbleInPackedColumn) then ! zlo,vely
             call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
-           else if (probtype.eq.28) then
-            call zalesakvv(velcell(veldir),x,y,z,time,dx)
-           else if (probtype.eq.29) then
-            call deform3dvv(velcell(veldir),x,y,z,time,dx)
 ! zlo face, y velocity
            else if (probtype.eq.530) then
             call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
@@ -16896,10 +16411,6 @@ END SUBROUTINE Adist
             endif
             velcell(veldir)=yblob9+(x-problox)*(yblob10-yblob9)/  &
               (probhix-problox)
-           else if (probtype.eq.28) then
-            call zalesakww(velcell(veldir),x,y,z,time,dx)
-           else if (probtype.eq.29) then
-            call deform3dww(velcell(veldir),x,y,z,time,dx)
            endif
   
           else
@@ -16935,12 +16446,6 @@ END SUBROUTINE Adist
               ! xhi,xvel
             if (probtype.eq.532) then
              call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
-            else if (probtype.eq.28) then
-             call zalesakuu(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.29) then
-             call deformuu(velcell(veldir),x,y,time,dx)
-            else if (probtype.eq.31) then ! xhi,velx
-             call circleuu(velcell(veldir),x,y,y)
             else if ((probtype.eq.1).and.(axis_dir.eq.11)) then
              velcell(veldir)=vinletgas*(y/yblob-one) 
             else if (probtype.eq.58) then
@@ -16966,10 +16471,6 @@ END SUBROUTINE Adist
 
             if (probtype.eq.58) then
              velcell(veldir)=zero
-            else if (probtype.eq.28) then
-             call zalesakuu(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.29) then
-             call deform3duu(velcell(veldir),x,y,z,time,dx)
             else if ((axis_dir.eq.13).and.(probtype.eq.22)) then
              call vbc(velcell(veldir),time,z,y,error)
             endif
@@ -17001,13 +16502,7 @@ END SUBROUTINE Adist
             call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
            else if (SDIM.eq.2) then
   
-            if (probtype.eq.28) then
-             call zalesakvv(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.29) then
-             call deformvv(velcell(veldir),x,y,time,dx)
-            else if (probtype.eq.31) then ! xhi,vely
-             call circlevv(velcell(veldir),x,y,y)
-            else if ((probtype.eq.36).and.(yblob10.ne.zero)) then
+            if ((probtype.eq.36).and.(yblob10.ne.zero)) then
              velcell(veldir)=yblob10
 ! xhi wall vertical pipe velocity
             else if (probtype.eq.41) then
@@ -17023,11 +16518,6 @@ END SUBROUTINE Adist
 
            else if (SDIM.eq.3) then
 
-            if (probtype.eq.29) then
-             call deform3dvv(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.28) then
-             call zalesakvv(velcell(veldir),x,y,z,time,dx)
-            endif
             if (probtype.eq.5700) then  ! xhi,vely
              call microfluidic_velbc(xsten,nhalf,dir,side,velcell)
             endif
@@ -17059,10 +16549,6 @@ END SUBROUTINE Adist
            if ((probtype.eq.36).and. &
                ((yblob9.ne.zero).or.(yblob10.ne.zero))) then
             velcell(veldir)=yblob10
-           else if (probtype.eq.29) then
-            call deform3dww(velcell(veldir),x,y,z,time,dx)
-           else if (probtype.eq.28) then
-            call zalesakww(velcell(veldir),x,y,z,time,dx)
            endif
 
           else
@@ -17095,12 +16581,6 @@ END SUBROUTINE Adist
              velcell(veldir)=vinletgas
             else if (probtype.eq.21) then
              velcell(veldir)=adv_vel
-            else if (probtype.eq.28) then
-             call zalesakuu(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.29) then
-             call deformuu(velcell(veldir),x,y,time,dx)
-            else if (probtype.eq.31) then ! yhi,velx
-             call circleuu(velcell(veldir),x,y,y)
             else if (probtype.eq.58) then
              velcell(veldir)=zero
             endif
@@ -17109,10 +16589,6 @@ END SUBROUTINE Adist
 
             if (probtype.eq.58) then
              velcell(veldir)=zero
-            else if (probtype.eq.29) then
-             call deform3duu(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.29) then
-             call zalesakuu(velcell(veldir),x,y,z,time,dx)
             endif
 
            else
@@ -17142,14 +16618,8 @@ END SUBROUTINE Adist
             call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
            else if (SDIM.eq.2) then
   
-            if (probtype.eq.28) then
-             call zalesakvv(velcell(veldir),x,y,z,time,dx)
-            else if (probtype.eq.29) then
-             call deformvv(velcell(veldir),x,y,time,dx)
-            else if (probtype.eq.31) then ! yhi,vely,2D
-             call circlevv(velcell(veldir),x,y,y)
-            else if ((probtype.eq.16).or. &
-               ((probtype.eq.25).and.(axis_dir.eq.0)) ) then
+            if ((probtype.eq.16).or. &
+                ((probtype.eq.25).and.(axis_dir.eq.0)) ) then
              velcell(veldir)=zero
              if ((x.ge.xblob-radblob).and. &
                  (x.le.xblob+radblob)) then
@@ -17197,10 +16667,6 @@ END SUBROUTINE Adist
              call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
             else if (probtype.eq.531) then
              call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
-            else if (probtype.eq.29) then
-             call deform3dvv(velcell(veldir),x,y,z,time,dx)        
-            else if (probtype.eq.28) then
-             call zalesakvv(velcell(veldir),x,y,z,time,dx)        
             endif
 ! microfluidics problem yvel yhi,3D 
 ! microfluidics channel -- 0,3,4 Roper, 1 Comsol, 2,5 squeeze
@@ -17237,12 +16703,6 @@ END SUBROUTINE Adist
             velcell(veldir)=z_vel  ! yhi, velz
            endif
   
-           if (probtype.eq.29) then
-            call deform3dww(velcell(veldir),x,y,z,time,dx)
-           else if (probtype.eq.28) then
-            call zalesakww(velcell(veldir),x,y,z,time,dx)
-           endif
-
           else
            print *,"veldir invalid"
            stop
@@ -17265,10 +16725,6 @@ END SUBROUTINE Adist
             velcell(veldir)=vinletgas
            else if (probtype.eq.58) then
             velcell(veldir)=zero
-           else if (probtype.eq.28) then
-            call zalesakuu(velcell(veldir),x,y,z,time,dx)
-           else if (probtype.eq.29) then
-            call deform3duu(velcell(veldir),x,y,z,time,dx)
            endif
   
           else if (veldir.eq.2) then
@@ -17282,10 +16738,6 @@ END SUBROUTINE Adist
   
            if (probtype.eq.bubbleInPackedColumn) then ! zhi,vely
             call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
-           else if (probtype.eq.29) then
-            call deform3dvv(velcell(veldir),x,y,z,time,dx)
-           else if (probtype.eq.28) then
-            call zalesakvv(velcell(veldir),x,y,z,time,dx)
            endif
   
 ! zhi, velz
@@ -17327,10 +16779,6 @@ END SUBROUTINE Adist
             velcell(veldir)=yblob9+(x-problox)*(yblob10-yblob9)/ &
                (probhix-problox)
 
-           else if (probtype.eq.29) then
-            call deform3dww(velcell(veldir),x,y,z,time,dx)
-           else if (probtype.eq.28) then
-            call zalesakww(velcell(veldir),x,y,z,time,dx)
            endif
   
           else
@@ -20417,16 +19865,6 @@ END SUBROUTINE Adist
       return
       end subroutine
 
-! Cervone et al 2009, page 416
-      subroutine deformdist(dist,x,y)
-      IMPLICIT NONE
-      REAL_T dist,x,y
-
-      dist=sqrt( (x-half)**2 + (y-0.75)**2 )-0.15
-
-      return
-      end subroutine deformdist
-
       subroutine zalesakuu(u,x,y,z,time,dx)
       IMPLICIT NONE
       REAL_T u,x,y,z,time
@@ -20538,83 +19976,6 @@ END SUBROUTINE Adist
 
       return
       end subroutine zalesakww
-
-
-
-      subroutine zalesakdist(dist,xx,yy)
-      IMPLICIT NONE
-      REAL_T dist,xx,yy,x,y
-      REAL_T dist1,dist2
-
-      if (probtype.ne.28) then
-       print *,"probtype invalid"
-       stop
-      endif
-
-      x=xx
-      y=yy
-      if (axis_dir.eq.0) then
-       if (levelrz.eq.0) then
-        ! do nothing
-       else if (levelrz.eq.3) then
-        x=xx*cos(yy)+50.0
-        y=xx*sin(yy)+50.0
-       else
-        print *,"levelrz invalid in zalesakdist"
-        stop
-       endif
-       dist=sqrt((x-50.0)**2+(y-75.0)**2)-15.0
-       if ((x.ge.47.5).and.(x.le.52.5)) then
-        if (y.le.60.0) then
-         if (x.lt.50.0) then
-          dist=sqrt( (y-60.0)**2+(x-47.5)**2 )
-         else
-          dist=sqrt( (y-60.0)**2+(x-52.5)**2 )
-         endif
-        else if (y.le.85.0) then
-         if (x.lt.50.0) then
-          dist1=x-47.5
-         else
-          dist1=52.5-x
-         endif
-         dist2=85.0-y
-         dist=min(dist1,dist2)
-        else if ((y.le.90.0).and.(dist.le.zero)) then
-         dist=max(dist,85.0-y)
-        endif
-       else if ((dist.lt.zero).and.(x.lt.47.5)) then
-        if (y.le.85.0) then
-         dist=max(dist,(x-47.5))
-        else
-         dist=max(dist,-sqrt( (x-47.5)**2+(y-85.0)**2 ) )
-        endif
-       else if ((dist.lt.zero).and.(x.gt.52.5)) then
-        if (y.le.85.0) then
-         dist=max(dist,(52.5-x))
-        else
-         dist=max(dist,-sqrt( (x-52.5)**2+(y-85.0)**2 ) )
-        endif
-       endif
-
-      else if (axis_dir.eq.1) then
-       if (levelrz.eq.3) then
-        dist=x-radblob
-       else if (levelrz.eq.0) then
-        dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
-       else
-        print *,"levelrz invalid zalesak dist"
-        stop
-       endif
-      else if (axis_dir.eq.2) then
-       dist=sqrt((x-50.0)**2+(y-75.0)**2)-15.0
-      else
-       print *,"axis_dir invalid zalesakdist"
-       stop
-      endif
-
-       
-      return
-      end subroutine zalesakdist
 
 
       subroutine circleuu(u,x,y,z)
@@ -28451,16 +27812,6 @@ end subroutine initialize2d
          x_vel=velcell(1)
          y_vel=velcell(2)
          z_vel=velcell(SDIM)
-        else if (probtype.eq.31) then  ! translating circle or sphere
-         call circleuu(velcell(1),x,y,z)
-         call circlevv(velcell(2),x,y,z)
-         if (SDIM.eq.3) then
-          call circleww(velcell(SDIM),x,y,z)
-         endif
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
-
          ! Marioff injector
         else if (probtype.eq.537) then
           call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
@@ -28790,13 +28141,7 @@ end subroutine initialize2d
            stop
           endif
              
-         else if (probtype.eq.28) then ! 2D prescribed motion
-          call zalesakuu(x_vel,x,y,z,zero,dx)
-          call zalesakvv(y_vel,x,y,z,zero,dx)
-         else if (probtype.eq.29) then
-          call deformuu(x_vel,x,y,zero,dx)
-          call deformvv(y_vel,x,y,zero,dx)
-         else if (probtype.eq.202) then  ! liquid lens
+         if (probtype.eq.202) then  ! liquid lens
           ! do nothing (adv_vel used above if prescribed)
          else if (probtype.eq.36) then ! bubble 2D
           if ((axis_dir.eq.2).or.(axis_dir.eq.4)) then
@@ -29103,14 +28448,6 @@ end subroutine initialize2d
            stop
           endif
 
-         else if (probtype.eq.28) then
-          call zalesakuu(x_vel,x,y,z,zero,dx)
-          call zalesakvv(y_vel,x,y,z,zero,dx)
-          call zalesakww(z_vel,x,y,z,zero,dx)
-         else if (probtype.eq.29) then
-          call deform3duu(x_vel,x,y,z,zero,dx)
-          call deform3dvv(y_vel,x,y,z,zero,dx)
-          call deform3dww(z_vel,x,y,z,zero,dx)
 ! vbubble - this routine is initvelocity
          else if (probtype.eq.36) then ! bubble 3D
           if ((axis_dir.eq.2).or.(axis_dir.eq.4)) then
