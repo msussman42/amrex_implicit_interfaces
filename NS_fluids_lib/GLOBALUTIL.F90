@@ -24081,8 +24081,346 @@ vel= &
 return
 end subroutine local_shallow_water_velocity
 
+! negative on the inside of the triangle!
+subroutine triangledist(x,y,xlo,xhi,ylo,yhi,dist)
+IMPLICIT NONE
 
+REAL_T, intent(in) :: x,y,xlo,xhi,ylo,yhi
+REAL_T, intent(out) :: dist
+REAL_T dist1,dist2,dist3
+REAL_T m,b
 
+if ((xlo.ge.xhi-1.0D-10).or.(ylo.ge.yhi-1.0D-10)) then 
+ print *,"invalid parameters triangle dist",xlo,xhi,ylo,yhi
+ stop
+endif
+dist1=xlo-x
+dist2=ylo-y
+m=(yhi-ylo)/(xlo-xhi)
+b=yhi-m*xlo
+dist3=y-(m*x+b)
+dist=dist1
+if (dist2.gt.dist) then
+ dist=dist2
+endif
+if (dist3.gt.dist) then
+ dist=dist3
+endif
+
+return
+end subroutine triangledist
+
+! negative on the inside of the polygon!
+subroutine polygondist(x,y,xlo,xhi,ylo,yhi,xwid,ywid,dist)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: x,y,xlo,xhi,ylo,yhi,xwid,ywid
+REAL_T, intent(out) :: dist
+REAL_T :: dist1,dist2,dist3
+REAL_T dist4,dist5
+REAL_T m,b
+
+if ((xlo.ge.xhi-1.0D-10).or.(ylo.ge.yhi-1.0D-10)) then 
+ print *,"invalid parameters triangle dist",xlo,xhi,ylo,yhi
+ stop
+endif
+dist1=xlo-xwid-x
+dist2=ylo-ywid-y
+m=(yhi-ylo)/(xlo-xhi)
+b=yhi-m*xlo
+dist3=y-(m*x+b)
+dist4=y-yhi
+dist5=x-xhi
+dist=dist1
+if (dist2.gt.dist) then
+ dist=dist2
+endif
+if (dist3.gt.dist) then
+ dist=dist3
+endif
+if (dist4.gt.dist) then
+ dist=dist4
+endif
+if (dist5.gt.dist) then
+ dist=dist5
+endif
+
+return
+end subroutine polygondist
+
+subroutine zalesakdist(dist,xx,yy)
+IMPLICIT NONE
+REAL_T, intent(in) :: xx,yy
+REAL_T, intent(out) :: dist
+REAL_T x,y
+REAL_T dist1,dist2
+
+x=xx
+y=yy
+if (axis_dir.eq.0) then
+ if (levelrz.eq.0) then
+  ! do nothing
+ else if (levelrz.eq.3) then
+  x=xx*cos(yy)+50.0d0
+  y=xx*sin(yy)+50.0d0
+ else
+  print *,"levelrz invalid in zalesakdist"
+  stop
+ endif
+ dist=sqrt((x-50.0d0)**2+(y-75.0d0)**2)-15.0d0
+ if ((x.ge.47.5d0).and.(x.le.52.5d0)) then
+  if (y.le.60.0d0) then
+   if (x.lt.50.0d0) then
+    dist=sqrt( (y-60.0d0)**2+(x-47.5d0)**2 )
+   else
+    dist=sqrt( (y-60.0d0)**2+(x-52.5d0)**2 )
+   endif
+  else if (y.le.85.0d0) then
+   if (x.lt.50.0d0) then
+    dist1=x-47.5d0
+   else
+    dist1=52.5d0-x
+   endif
+   dist2=85.0d0-y
+   dist=min(dist1,dist2)
+  else if ((y.le.90.0d0).and.(dist.le.zero)) then
+   dist=max(dist,85.0d0-y)
+  endif
+ else if ((dist.lt.zero).and.(x.lt.47.5d0)) then
+  if (y.le.85.0d0) then
+   dist=max(dist,(x-47.5d0))
+  else
+   dist=max(dist,-sqrt( (x-47.5d0)**2+(y-85.0d0)**2 ) )
+  endif
+ else if ((dist.lt.zero).and.(x.gt.52.5d0)) then
+  if (y.le.85.0d0) then
+   dist=max(dist,(52.5d0-x))
+  else
+   dist=max(dist,-sqrt( (x-52.5d0)**2+(y-85.0d0)**2 ) )
+  endif
+ endif
+
+else if (axis_dir.eq.1) then
+ if (levelrz.eq.3) then
+  dist=x-radblob
+ else if (levelrz.eq.0) then
+  dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
+ else
+  print *,"levelrz invalid zalesak dist"
+  stop
+ endif
+else if (axis_dir.eq.2) then
+ dist=sqrt((x-50.0d0)**2+(y-75.0d0)**2)-15.0d0
+else
+ print *,"axis_dir invalid zalesakdist"
+ stop
+endif
+ 
+return
+end subroutine zalesakdist
+
+SUBROUTINE Adist(xx, yy, dist)
+IMPLICIT NONE
+
+REAL_T, INTENT (IN) :: xx
+REAL_T, INTENT (IN) :: yy
+REAL_T, INTENT (INOUT) :: dist
+
+REAL_T, DIMENSION(4) :: xvec
+REAL_T, DIMENSION(4) :: yvec
+REAL_T, DIMENSION(4) :: nx
+REAL_T, DIMENSION(4) :: ny
+REAL_T, DIMENSION(4) :: m
+
+REAL_T :: px, py
+REAL_T :: vx, vy
+REAL_T :: phi_i, maxval
+REAL_T :: mhat
+REAL_T :: dist1, dist2, dist3
+REAL_T :: eps
+INTEGER_T :: i
+
+eps = 0.01
+dist = -999.9e9
+dist1 = -999.9e9
+dist2 = -999.9e9
+dist3 = -999.9e9
+
+! Big Triangle !
+xvec(1) = 0.0
+xvec(2) = 1.0
+xvec(3) = -1.0
+
+yvec(1) = 3.0
+yvec(2) = 0.0
+yvec(3) = 0.0
+
+nx(1) = 3.0/sqrt(10.0)
+nx(2) = 0.0
+nx(3) = -3.0/sqrt(10.0)
+
+ny(1) = 1.0/sqrt(10.0)
+ny(2) = -1.0
+ny(3) = 1.0/sqrt(10.0)
+
+m(1) = -3.0
+m(2) = 0.0
+m(3) = 3.0
+
+maxval = -999.9
+do i = 1, 3
+	if (i /= 2) then
+		!write(*,*) 'i = ', i
+		mhat = -1.0/m(i)
+		px = (m(i)*xvec(i) - mhat*xx + yy - yvec(i))/(m(i) - mhat)
+		py = m(i)*(px - xvec(i)) + yvec(i)
+	else	! i == 2, horizontal edge
+		!write(*,*) 'i = ', i
+		px = xx
+		py = yvec(i)
+	endif
+	
+	vx = xx - px
+	vy = yy - py
+	phi_i = vx*nx(i) + vy*ny(i)
+	
+	!perr = abs(m(i) - (py - yvec(i))/(px - xvec(i)))
+	!write(*,*) 'Projection error = ', perr
+	
+	if(phi_i > maxval) then
+		maxval = phi_i
+		!write(*,*) 'i = ', i, 'new phi_i = ', phi_i
+	endif
+	
+	!write(*,*) 'i = ', i, 'nx = ', nx(i), 'ny = ', ny(i), 'vx = ', vx, 'vy = ', vy
+enddo
+
+dist1 = maxval
+! End Big Triangle !
+
+! Trapezoid !
+xvec(1) = 4.0/9.0
+xvec(2) = (2.0 + eps)/3.0
+xvec(3) = -(2.0 + eps)/3.0
+xvec(4) = -4.0/9.0
+
+yvec(1) = 2.0/3.0
+yvec(2) = -eps
+yvec(3) = -eps
+yvec(4) = 2.0/3.0
+
+nx(1) = -3.0/sqrt(10.0)
+nx(2) = 0.0
+nx(3) = 3.0/sqrt(10.0)
+nx(4) = 0.0
+
+ny(1) = -1.0/sqrt(10.0)
+ny(2) = 1.0
+ny(3) = -1.0/sqrt(10.0)
+ny(4) = -1.0
+
+m(1) = -3.0
+m(2) = 0.0
+m(3) = 3.0
+m(4) = 0.0
+
+maxval = 999.9
+do i = 1, 4
+	if ((i == 1) .OR. (i == 3)) then
+		!write(*,*) 'i = ', i
+		mhat = -1.0/m(i)
+		px = (m(i)*xvec(i) - mhat*xx + yy - yvec(i))/(m(i) - mhat)
+		py = m(i)*(px - xvec(i)) + yvec(i)
+	else	! i == 2 || 4, horizontal edge
+		!write(*,*) 'i = ', i
+		px = xx
+		py = yvec(i)
+	endif
+	
+	vx = xx - px
+	vy = yy - py
+	phi_i = vx*nx(i) + vy*ny(i)
+	
+	!perr = abs(m(i) - (py - yvec(i))/(px - xvec(i)))
+	!write(*,*) 'Projection error = ', perr
+	
+	if(phi_i < maxval) then
+		maxval = phi_i
+		!write(*,*) 'i = ', i, 'new phi_i = ', phi_i
+	endif
+	
+	!write(*,*) 'i = ', i, 'nx = ', nx(i), 'ny = ', ny(i), 'vx = ', vx, 'vy = ', vy
+enddo
+
+dist2 = maxval
+! End Trapezoid !
+
+! Little Triangle !
+xvec(1) = 0.0
+xvec(2) = 1.0/3.0
+xvec(3) = -1.0/3.0
+
+yvec(1) = 2.0
+yvec(2) = 1.0
+yvec(3) = 1.0
+
+nx(1) = -3.0/sqrt(10.0)
+nx(2) = 0.0
+nx(3) = 3.0/sqrt(10.0)
+
+ny(1) = -1.0/sqrt(10.0)
+ny(2) = 1.0
+ny(3) = -1.0/sqrt(10.0)
+
+m(1) = -3.0
+m(2) = 0.0
+m(3) = 3.0
+
+maxval = 999.9
+do i = 1, 3
+	if ((i == 1) .OR. (i == 3)) then
+		!write(*,*) 'i = ', i
+		mhat = -1.0/m(i)
+		px = (m(i)*xvec(i) - mhat*xx + yy - yvec(i))/(m(i) - mhat)
+		py = m(i)*(px - xvec(i)) + yvec(i)
+	else	! i == 2, horizontal edge
+		!write(*,*) 'i = ', i
+		px = xx
+		py = yvec(i)
+	endif
+	
+	vx = xx - px
+	vy = yy - py
+	phi_i = vx*nx(i) + vy*ny(i)
+	
+	!perr = abs(m(i) - (py - yvec(i))/(px - xvec(i)))
+	!write(*,*) 'Projection error = ', perr
+	
+	if(phi_i < maxval) then
+		maxval = phi_i
+		!write(*,*) 'i = ', i, 'new phi_i = ', phi_i
+	endif
+	
+	!write(*,*) 'i = ', i, 'nx = ', nx(i), 'ny = ', ny(i), 'vx = ', vx, 'vy = ', vy
+enddo
+
+dist3 = maxval
+! End Little Triangle !
+
+dist = max(dist1, dist2, dist3)
+
+END SUBROUTINE Adist
+
+! Cervone et al 2009, page 416
+subroutine deformdist(dist,x,y)
+IMPLICIT NONE
+REAL_T, intent(in) :: x,y
+REAL_T, intent(out) :: dist
+
+dist=sqrt( (x-half)**2 + (y-0.75d0)**2 )-0.15d0
+
+return
+end subroutine deformdist
 
 subroutine doit(problo,probhi,ncell,dx,tstop)
 use probcommon_module
