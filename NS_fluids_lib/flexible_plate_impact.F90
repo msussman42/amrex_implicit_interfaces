@@ -172,12 +172,13 @@ endif
 return
 end subroutine flexible_plate_check_vel_rigid
 
-subroutine flexible_plate_clamped_LS(x,t,LS,vel,temperature)
+subroutine flexible_plate_clamped_LS(x,t,LS,vel,temperature,dx)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
   REAL_T, intent(in) :: x(SDIM)
+  REAL_T, intent(in) :: dx(SDIM)
   REAL_T, intent(in) :: t
   REAL_T, intent(out) :: LS
   REAL_T, intent(out) :: vel(SDIM)

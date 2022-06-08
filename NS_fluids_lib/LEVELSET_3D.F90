@@ -5120,7 +5120,7 @@ stop
          enddo
 
          call SUB_clamped_LS(xstencil_point,cur_time_slab,LS_clamped, &
-           VEL_clamped,temperature_clamped)
+           VEL_clamped,temperature_clamped,dx)
 
          if (LS_clamped.ge.zero) then
           do dir=1,SDIM
@@ -8365,9 +8365,9 @@ stop
 
           ! LS>0 if clamped
          call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
-                vel_clamped_minus,temperature_clamped_minus)
+                vel_clamped_minus,temperature_clamped_minus,dx)
          call SUB_clamped_LS(xclamped_plus,time,LS_clamped_plus, &
-                vel_clamped_plus,temperature_clamped_plus)
+                vel_clamped_plus,temperature_clamped_plus,dx)
          if ((LS_clamped_minus.ge.zero).or. &
              (LS_clamped_plus.ge.zero)) then
           is_clamped_face=1
@@ -11806,7 +11806,7 @@ stop
         if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & !velocity
             (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then !velocity increment
          call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-                vel_clamped,temperature_clamped)
+                vel_clamped,temperature_clamped,dx)
         else if (operation_flag.eq.OP_XDISP_MAC_TO_CELL) then ! displacement
          LS_clamped=-9999.0
         else
@@ -12131,7 +12131,7 @@ stop
 
          ! LS>0 if clamped
         call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-                vel_clamped,temperature_clamped)
+                vel_clamped,temperature_clamped,dx)
 
         use_face_pres_cen=1
 
@@ -13727,9 +13727,9 @@ stop
            xclamped_plus(dir2)=xclamped_plus_sten(0,dir2)
           enddo
           call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
-              vel_clamped_minus,temperature_clamped_minus)
+              vel_clamped_minus,temperature_clamped_minus,dx)
           call SUB_clamped_LS(xclamped_plus,time,LS_clamped_plus, &
-              vel_clamped_plus,temperature_clamped_plus)
+              vel_clamped_plus,temperature_clamped_plus,dx)
           if ((LS_clamped_plus.ge.zero).and. &
               (LS_clamped_minus.ge.zero)) then
            is_clamped_face=1
@@ -18954,7 +18954,7 @@ stop
       endif
 
       call SUB_clamped_LS(xpart,vel_time_slab,LS_clamped, &
-              vel_clamped,temperature_clamped)
+          vel_clamped,temperature_clamped,grid_PARM%dx)
 
       if (LS_clamped.ge.zero) then
 
@@ -19602,7 +19602,7 @@ stop
        enddo
 
        call SUB_clamped_LS(xpart_last,vel_time_slab,LS_clamped, &
-              vel_clamped,temperature_clamped)
+              vel_clamped,temperature_clamped,dx)
 
        if (LS_clamped.ge.zero) then
 

@@ -313,6 +313,9 @@ implicit none
        ! 1<=material_type<=MAX_NUM_EOS
       INTEGER_T, PARAMETER :: MAX_NUM_EOS=998
 
+      REAL_T, PARAMETER :: CLAMPED_EVERYWHERE_LS=99999.0D0
+      REAL_T, PARAMETER :: CLAMPED_NO_WHERE_LS=-99999.0D0
+
 #include "probdataf95.H"
 
       REAL_T :: UNSCALED_MUSHY_THICK=2.0d0
@@ -904,8 +907,9 @@ implicit none
        INTEGER_T, intent(in) :: dir
       end subroutine TEMPLATE_check_vel_rigid
 
-      subroutine TEMPLATE_clamped_LS(x,t,LS,vel,temperature)
+      subroutine TEMPLATE_clamped_LS(x,t,LS,vel,temperature,dx)
        REAL_T, intent(in) :: x(SDIM)
+       REAL_T, intent(in) :: dx(SDIM)
        REAL_T, intent(in) :: t
        REAL_T, intent(out) :: LS
        REAL_T, intent(out) :: vel(SDIM)

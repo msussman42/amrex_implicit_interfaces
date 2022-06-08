@@ -522,7 +522,7 @@ stop
         enddo
          ! LS>0 if clamped
         call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-                vel_clamped,temperature_clamped)
+                vel_clamped,temperature_clamped,dx)
 
         if (LS_clamped.ge.zero) then
          is_clamped_cell=1

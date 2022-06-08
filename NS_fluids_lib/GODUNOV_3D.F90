@@ -344,63 +344,6 @@ stop
 
       return
       end subroutine add_crossing
- 
-
-      subroutine velfunc(vel,x,time,dx)
-      IMPLICIT NONE
-
-      REAL_T vel(SDIM)
-      REAL_T x(SDIM),dx(SDIM)
-      REAL_T time
-
-
-      if (probtype.eq.29) then
-       if (SDIM.eq.3) then
-        call deform3duu(vel(1),x(1),x(2),x(SDIM),time,dx)
-        call deform3dvv(vel(2),x(1),x(2),x(SDIM),time,dx)
-        call deform3dww(vel(SDIM),x(1),x(2),x(SDIM),time,dx)
-       else if (SDIM.eq.2) then
-        call deformuu(vel(1),x(1),x(2),time,dx)
-        call deformvv(vel(2),x(1),x(2),time,dx)
-       else
-        print *,"dimension bust"
-        stop
-       endif
-      else if (probtype.eq.28) then
-       call zalesakuu(vel(1),x(1),x(2),x(SDIM),time,dx)
-       call zalesakvv(vel(2),x(1),x(2),x(SDIM),time,dx)
-       if (SDIM.eq.3) then
-        call zalesakww(vel(SDIM),x(1),x(2),x(SDIM),time,dx)
-       endif
-      else if (probtype.eq.31) then
-       call circleuu(vel(1),x(1),x(2),x(SDIM))
-       call circlevv(vel(2),x(1),x(2),x(SDIM))
-       if (SDIM.eq.3) then
-        call circleww(vel(SDIM),x(1),x(2),x(SDIM))
-       endif
-      else
-       print *,"probtype invalid velfunc"
-       stop
-      endif
-
-      return
-      end subroutine velfunc
-
-      subroutine init_passive_advect_flag(passive_advect_flag)
-      IMPLICIT NONE
-
-      INTEGER_T passive_advect_flag
-
-
-      passive_advect_flag=0
-
-      if ((probtype.eq.29).or.(probtype.eq.28).or.(probtype.eq.31)) then 
-       passive_advect_flag=1
-      endif
-
-      return 
-      end subroutine init_passive_advect_flag
- 
 
       subroutine departure_node_split( &
         xstenMAC,nhalf,dx,bfact, &
@@ -409,15 +352,18 @@ stop
       use mass_transfer_module
       IMPLICIT NONE
 
-      INTEGER_T normdir,nhalf,bfact,dir
-      REAL_T xstenMAC(-nhalf:nhalf,SDIM)
-      REAL_T delta
-      REAL_T dx(SDIM) 
-      REAL_T vel0(SDIM)
+      INTEGER_T, intent(in) :: normdir,nhalf,bfact
+      INTEGER_T :: dir
+      REAL_T, intent(in) :: xstenMAC(-nhalf:nhalf,SDIM)
+      REAL_T, intent(inout) :: delta
+      REAL_T, intent(in) :: dx(SDIM) 
+      REAL_T vel0_test(SDIM)
       REAL_T x0(SDIM)
-      INTEGER_T map_forward
-      REAL_T dt,passive_veltime,RR
-      INTEGER_T passive_advect_flag
+      INTEGER_T, intent(in) :: map_forward
+      REAL_T, intent(in) :: dt,passive_veltime
+      REAL_T :: RR
+      REAL_T LS_clamped
+      REAL_T temperature_clamped
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid departure node split"
@@ -457,15 +403,15 @@ stop
        x0(dir)=xstenMAC(0,dir)
       enddo
 
-      call init_passive_advect_flag(passive_advect_flag)
+      call SUB_clamped_LS(x0,passive_veltime,LS_clamped, &
+         vel0_test,temperature_clamped,dx)
        
-      if (passive_advect_flag.eq.1) then 
-       call velfunc(vel0,x0,passive_veltime,dx)
-       delta=dt*vel0(normdir+1)/RR
-      else if (passive_advect_flag.eq.0) then
+      if (LS_clamped.ge.zero) then 
+       delta=dt*vel0_test(normdir+1)/RR
+      else if (LS_clamped.lt.zero) then
        ! do nothing
       else
-       print *,"passive_advect_flag invalid"
+       print *,"LS_clamped invalid"
        stop
       endif
 
@@ -2259,9 +2205,9 @@ stop
 
           ! LS>0 if clamped
          call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
-              vel_clamped_minus,temperature_clamped_minus)
+              vel_clamped_minus,temperature_clamped_minus,dx)
          call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
-              vel_clamped_plus,temperature_clamped_plus)
+              vel_clamped_plus,temperature_clamped_plus,dx)
          if ((LS_clamped_minus.ge.zero).or. &
              (LS_clamped_plus.ge.zero)) then
           is_clamped_face=1
@@ -4762,7 +4708,7 @@ stop
 
         delta=delta*dt/RR
 
-          ! modifies "delta" if "passive_advect_flag=1" or RZ. 
+          ! modifies "delta" if "CLAMPED" or RZ. 
         call departure_node_split( &
           xsten,nhalf,dx,bfact, &
           delta,passive_veltime, &
@@ -5958,7 +5904,7 @@ stop
              momface_total(1)=momface_total(1)/massface_total(1)
              ! LS>0 if clamped
              call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-                vel_clamped,temperature_clamped)
+                vel_clamped,temperature_clamped,dx)
              if (LS_clamped.ge.zero) then
               momface_total(1)=vel_clamped(veldir)
              else if (LS_clamped.lt.zero) then
@@ -6670,9 +6616,9 @@ stop
                   (is_rigid(num_materials,imR).eq.0)) then
            ! LS>0 if clamped
           call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
-               vel_clamped_minus,temperature_clamped_minus)
+               vel_clamped_minus,temperature_clamped_minus,dx)
           call SUB_clamped_LS(xclamped_plus,time,LS_clamped_plus, &
-               vel_clamped_plus,temperature_clamped_plus)
+               vel_clamped_plus,temperature_clamped_plus,dx)
 
           if ((LS_clamped_minus.ge.zero).or. &
               (LS_clamped_plus.ge.zero)) then
@@ -17634,7 +17580,7 @@ stop
           
            ! LS>0 if clamped
           call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-                vel_clamped,temperature_clamped)
+                vel_clamped,temperature_clamped,dx)
 
           if (LS_clamped.ge.zero) then
            is_solid_cell=nmat+1
@@ -18892,9 +18838,9 @@ stop
 
          ! LS>0 if clamped
        call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
-           vel_clamped_minus,temperature_clamped_minus)
+           vel_clamped_minus,temperature_clamped_minus,dx)
        call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
-           vel_clamped_plus,temperature_clamped_plus)
+           vel_clamped_plus,temperature_clamped_plus,dx)
        if ((LS_clamped_minus.ge.zero).or. &
            (LS_clamped_plus.ge.zero)) then
         is_clamped_face=1
@@ -19580,9 +19526,9 @@ stop
 
            ! LS>0 if clamped
           call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
-                vel_clamped_minus,temperature_clamped_minus)
+                vel_clamped_minus,temperature_clamped_minus,dx)
           call SUB_clamped_LS(xclamped_plus,time,LS_clamped_plus, &
-                vel_clamped_plus,temperature_clamped_plus)
+                vel_clamped_plus,temperature_clamped_plus,dx)
           if ((LS_clamped_minus.ge.zero).or. &
               (LS_clamped_plus.ge.zero)) then
            is_clamped_face=1
@@ -19966,7 +19912,7 @@ stop
 
           ! LS>0 if clamped
          call SUB_clamped_LS(xclamped_cen,time,LS_clamped_cen, &
-                vel_clamped_cen,temperature_clamped_cen)
+                vel_clamped_cen,temperature_clamped_cen,dx)
 
          im1=i-ii
          jm1=j-jj
@@ -20720,7 +20666,7 @@ stop
        endif
         ! LS>0 if clamped
        call SUB_clamped_LS(x_MAC_control_volume,cur_time,LS_clamped, &
-             vel_clamped,temperature_clamped)
+             vel_clamped,temperature_clamped,dx)
        if (LS_clamped.ge.zero) then
         local_mask=0
        else if (LS_clamped.lt.zero) then
@@ -21977,6 +21923,7 @@ stop
       ! 0 - low order
       ! 1 - space/time spectral
       subroutine fort_build_masksem( &
+       dx, &
        spectral_cells_level, &
        mask_sweep, &
        level, &
@@ -22003,6 +21950,7 @@ stop
       use probf90_module
       IMPLICIT NONE
 
+      REAL_T, intent(in) :: dx(SDIM)
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(inout) :: spectral_cells_level(nmat)
       INTEGER_T, intent(in) :: mask_sweep
@@ -22150,7 +22098,7 @@ stop
          enddo
           ! LS>0 if clamped
          call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-             vel_clamped,temperature_clamped)
+             vel_clamped,temperature_clamped,dx)
 
          if (LS_clamped.ge.zero) then
           clamped_cell_in_element=1
@@ -22736,7 +22684,7 @@ stop
 
         ! LS>0 if clamped
        call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-             vel_clamped,temperature_clamped)
+             vel_clamped,temperature_clamped,dx)
 
        do im=1,nmat
         ibase=STATECOMP_STATES+(im-1)*num_state_material

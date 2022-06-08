@@ -15784,10 +15784,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine SEM_MAC_TO_CELL
 
-      subroutine SUB_clamped_LS(x,t,LS,vel,temperature)
+      subroutine SUB_clamped_LS(x,t,LS,vel,temperature,dx)
       IMPLICIT NONE
 
       REAL_T, intent(in) :: x(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: t
       REAL_T, intent(out) :: LS
       REAL_T, intent(out) :: vel(SDIM)
@@ -15795,7 +15796,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       INTEGER_T dir
 
-      call SUB_clamped_LS_no_scale(x,t,LS,vel,temperature)
+      call SUB_clamped_LS_no_scale(x,t,LS,vel,temperature,dx)
       do dir=1,SDIM
        if (vel_homflag.eq.1) then
         vel(dir)=zero

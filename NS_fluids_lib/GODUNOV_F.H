@@ -180,6 +180,7 @@ extern "C"
 
 
    void fort_build_masksem(
+    const Real* dx,
     Real* spectral_cells_level,
     int* mask_sweep,
     int* level,
@@ -225,7 +226,8 @@ extern "C"
     AMREX_ARLIM_P(xd_mac_oldlo),
     AMREX_ARLIM_P(xd_mac_oldhi),
     Real* xvel,AMREX_ARLIM_P(xvello),AMREX_ARLIM_P(xvelhi),//1..num_MAC_vectors
-    const Real* xlo,const Real* dx,
+    const Real* xlo,
+    const Real* dx,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,

@@ -8757,7 +8757,7 @@ void NavierStokes::build_masksemALL() {
 
  } //mask_sweep
 
-} // subroutine build_masksemALL
+} // end subroutine build_masksemALL
 
 void NavierStokes::build_masksem(int mask_sweep) {
 
@@ -8770,6 +8770,12 @@ void NavierStokes::build_masksem(int mask_sweep) {
   bfact_fine=parent->Space_blockingFactor(level+1);
  if (bfact_fine>bfact)
   amrex::Error("bfact_fine invalid");
+
+ const Box& domain = geom.Domain();
+ const int* domlo = domain.loVect();
+ const int* domhi = domain.hiVect();
+
+ const Real* dx = geom.CellSize();
 
  int nmat=num_materials;
 
@@ -8828,9 +8834,6 @@ void NavierStokes::build_masksem(int mask_sweep) {
   int scomp=STATECOMP_MOF+im*ngeom_raw;
   MultiFab::Copy(*vofmat,S_new,scomp,im,1,0);
  }
- const Box& domain = geom.Domain();
- const int* domlo = domain.loVect();
- const int* domhi = domain.hiVect();
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -8870,6 +8873,7 @@ void NavierStokes::build_masksem(int mask_sweep) {
 
    // declared in: GODUNOV_3D.F90
   fort_build_masksem( 
+   dx,
    spectral_cells_level[tid_current].dataPtr(),
    &mask_sweep,
    &level,
@@ -8946,14 +8950,13 @@ void NavierStokes::build_masksem(int mask_sweep) {
   int interior_only=1;
   MultiFab& mf_out=*localMF[MASKSEM_MF];
   FArrayBox& mffab=mf_out[0];
-  const Real* dx = geom.CellSize();
   int scomp=0;
   int ncomp=1;
   std::cout << " checking out masksem_mf \n";
   tecplot_debug(mffab,xlo,fablo,fabhi,dx,-1,0,scomp,ncomp,interior_only);
  }
 
-} // subroutine build_masksem()
+} // emd subroutine build_masksem()
 
 
 

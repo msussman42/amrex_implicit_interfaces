@@ -205,19 +205,20 @@ INTEGER_T, intent(in) :: dir
 return
 end subroutine STUB_check_vel_rigid
 
-subroutine STUB_CLAMPED_LS(x,t,LS,vel,temperature)
+subroutine STUB_clamped_LS(x,t,LS,vel,temperature,dx)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
 REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: dx(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(out) :: LS
 REAL_T, intent(out) :: vel(SDIM)
 REAL_T, intent(out) :: temperature
 INTEGER_T dir
 
- LS=-99999.0D0
+ LS=CLAMPED_NO_WHERE_LS
  do dir=1,SDIM
   vel(dir)=zero
  enddo
