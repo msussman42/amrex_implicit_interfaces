@@ -641,7 +641,12 @@ NavierStokes::set_tensor_extrap_components_main(
 } // end subroutine set_tensor_extrap_components_main
 
 
-
+// variableSetUp() is called from:
+// NSBld::variableSetUp()
+// NSBld::variableSetUp() is called from:
+// Amr::InitAmr()
+// Amr::InitAmr() is called from:
+// AMR::Amr ()
 void
 NavierStokes::variableSetUp ()
 {

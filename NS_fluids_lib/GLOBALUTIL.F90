@@ -14643,12 +14643,13 @@ end subroutine global_checkinplane
 
       function fort_is_passive_advect_test() &
       bind(c,name='fort_is_passive_advect_test')
+      use probcommon_module
 
       IMPLICIT NONE
       INTEGER_T fort_is_passive_advect_test
       REAL_T dx_placeholder(SDIM)
       REAL_T x_placeholder(SDIM)
-      REAL_T time_plaecholder
+      REAL_T time_placeholder
       REAL_T LS
       REAL_T vel(SDIM)
       REAL_T temperature
@@ -14659,7 +14660,7 @@ end subroutine global_checkinplane
        x_placeholder(dir)=zero
       enddo
       time_placeholder=zero
-      call SUB_clamped_LS(x_placeholder,time_placeholder,LS,vel, &
+      call SUB_clamped_LS_no_scale(x_placeholder,time_placeholder,LS,vel, &
              temperature,dx_placeholder)
       if (LS.eq.CLAMPED_EVERYWHERE_LS) then
        fort_is_passive_advect_test=1
