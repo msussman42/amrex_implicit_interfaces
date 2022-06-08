@@ -1339,11 +1339,28 @@ stop
 #if (STANDALONE==0)
        ! do nothing
 #elif (STANDALONE==1)
-       print *,"issuing command ",rmcommand_mat
-       print *,"and issuing command ",rmcommand_refcen
+       if (ilev.eq.finest_level) then
+        if (igrid.eq.grids_per_level(ilev+1)-1) then
+         print *,"fort_combinetriangles"
+         print *,"issuing command ",rmcommand_mat
+         print *,"and issuing command ",rmcommand_refcen
 
-       call execute_command_line(rmcommand_mat,exitstat=sysret)
-       call execute_command_line(rmcommand_refcen,exitstat=sysret)
+         call execute_command_line(rmcommand_mat,exitstat=sysret)
+         call execute_command_line(rmcommand_refcen,exitstat=sysret)
+        else if ((igrid.ge.0).and. &
+                 (igrid.lt.grids_per_level(ilev+1)-1)) then
+         ! do nothing
+        else
+         print *,"igrid invalid"
+         stop
+        endif
+       else if ((ilev.ge.0).and. &
+                (ilev.lt.finest_level)) then
+        ! do nothing
+       else
+        print *,"ilev invalid"
+        stop
+       endif
 #else
        print *,"STANDALONE invalid"
        stop
@@ -2424,13 +2441,33 @@ stop
 #if (STANDALONE==0)
           ! do nothing
 #elif (STANDALONE==1)
-          print *,"issuing command ",rmcommand_LS
+          if (ilev.eq.finest_level) then
+           if (igrid.eq.grids_per_level(ilev+1)-1) then
+            print *,"fort_combinetrianglessingle"
+            print *,"issuing command ",rmcommand_LS
 
-          call execute_command_line(rmcommand_LS,exitstat=sysret)
-          if (sysret.ne.0) then
-           print *,"execute_command_line has sysret=",sysret
+            call execute_command_line(rmcommand_LS,exitstat=sysret)
+            if (sysret.ne.0) then
+             print *,"execute_command_line has sysret=",sysret
+             stop
+            endif
+
+           else if ((igrid.ge.0).and. &
+                    (igrid.lt.grids_per_level(ilev+1)-1)) then
+            ! do nothing
+           else
+            print *,"igrid invalid"
+            stop
+           endif
+          else if ((ilev.ge.0).and. &
+                   (ilev.lt.finest_level)) then
+           ! do nothing
+          else
+           print *,"ilev invalid"
            stop
           endif
+
+
 #else
           print *,"STANDALONE invalid"
           stop

@@ -58,6 +58,7 @@ REAL_T, intent(in) :: t
 REAL_T, intent(out) :: LS(nmat)
 REAL_T :: xstar,ystar,zstar
 REAL_T :: xprime,yprime,zprime
+REAL_T :: distline
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -65,8 +66,6 @@ REAL_T :: xprime,yprime,zprime
    print *,"nmat invalid"
    stop
   endif
-
-  initial_time=zero
 
   xstar=x(1)
   ystar=x(2)
@@ -263,22 +262,20 @@ return
 end subroutine passive_advect_LS
 
 ! initial velocity is some kind of shear flow
-subroutine passive_advect_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
+subroutine passive_advect_VEL(xvec,time,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
+REAL_T, intent(in) :: xvec(SDIM)
 REAL_T, intent(in) :: dx(SDIM)
-REAL_T, intent(in) :: t
+REAL_T, intent(in) :: time
 REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: VEL(SDIM)
-REAL_T :: pres_analytical
 INTEGER_T dir
 INTEGER_T, intent(in) :: velsolid_flag
-REAL_T :: vert_lo,vert_hi
-REAL_T :: D_gamma,T_analytical,Y_analytical,LS_analytical
+REAL_T :: x,y,z
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -295,6 +292,10 @@ else
  stop
 endif
 
+x=xvec(1)
+y=xvec(2)
+z=xvec(SDIM)
+
 do dir=1,SDIM
  if (dx(dir).gt.zero) then
   ! do nothing
@@ -308,83 +309,87 @@ do dir=1,SDIM
  VEL(dir)=zero
 enddo
 
-if (SDIM.eq.2) then
+do dir=1,SDIM
 
- if (probtype.eq.28) then
-  if (dir.eq.1) then
-   call zalesakuu(velcell(veldir),x,y,z,time,dx)
-  else if (dir.eq.2) then
-   call zalesakvv(velcell(veldir),x,y,z,time,dx)
+ if (SDIM.eq.2) then
+
+  if (probtype.eq.28) then
+   if (dir.eq.1) then
+    call zalesakuu(VEL(dir),x,y,z,time,dx)
+   else if (dir.eq.2) then
+    call zalesakvv(VEL(dir),x,y,z,time,dx)
+   else
+    print *,"dir invalid"
+    stop
+   endif
+  else if (probtype.eq.29) then
+   if (dir.eq.1) then
+    call deformuu(VEL(dir),x,y,time,dx)
+   else if (dir.eq.2) then
+    call deformvv(VEL(dir),x,y,time,dx)
+   else
+    print *,"dir invalid"
+    stop
+   endif
+  else if (probtype.eq.31) then 
+   if (dir.eq.1) then
+    call circleuu(VEL(dir),x,y,y)
+   else if (dir.eq.2) then
+    call circlevv(VEL(dir),x,y,y)
+   else
+    print *,"dir invalid"
+    stop
+   endif
   else
-   print *,"dir invalid"
+   print *,"probtype invalid"
    stop
   endif
- else if (probtype.eq.29) then
-  if (dir.eq.1) then
-   call deformuu(velcell(veldir),x,y,time,dx)
-  else if (dir.eq.2) then
-   call deformvv(velcell(veldir),x,y,time,dx)
+ else if (SDIM.eq.3) then
+
+  if (probtype.eq.28) then
+   if (dir.eq.1) then
+    call zalesakuu(VEL(dir),x,y,z,time,dx)
+   else if (dir.eq.2) then
+    call zalesakvv(VEL(dir),x,y,z,time,dx)
+   else if (dir.eq.3) then
+    call zalesakww(VEL(dir),x,y,z,time,dx)
+   else
+    print *,"dir invalid"
+    stop
+   endif
+  else if (probtype.eq.29) then
+   if (dir.eq.1) then
+    call deform3duu(VEL(dir),x,y,z,time,dx)
+   else if (dir.eq.2) then
+    call deform3dvv(VEL(dir),x,y,z,time,dx)
+   else if (dir.eq.3) then
+    call deform3dww(VEL(dir),x,y,z,time,dx)
+   else
+    print *,"dir invalid"
+    stop
+   endif
+  else if (probtype.eq.31) then
+   if (dir.eq.1) then
+    call circleuu(VEL(dir),x,y,z)
+   else if (dir.eq.2) then
+    call circlevv(VEL(dir),x,y,z)
+   else if (dir.eq.3) then
+    call circleww(VEL(dir),x,y,z)
+   else
+    print *,"dir invalid"
+    stop
+   endif
   else
-   print *,"dir invalid"
+   print *,"probtype invalid"
    stop
   endif
- else if (probtype.eq.31) then ! xlo,velx
-  if (dir.eq.1) then
-   call circleuu(velcell(veldir),x,y,y)
-  else if (dir.eq.2) then
-   call circlevv(velcell(veldir),x,y,y)
-  else
-   print *,"dir invalid"
-   stop
-  endif
+
  else
-  print *,"probtype invalid"
+  print *,"dimension bust"
   stop
  endif
-else if (SDIM.eq.3) then
 
- if (probtype.eq.28) then
-  if (dir.eq.1) then
-   call zalesakuu(velcell(veldir),x,y,z,time,dx)
-  else if (dir.eq.2) then
-   call zalesakvv(velcell(veldir),x,y,z,time,dx)
-  else if (dir.eq.3) then
-   call zalesakww(velcell(veldir),x,y,z,time,dx)
-  else
-   print *,"dir invalid"
-   stop
-  endif
- else if (probtype.eq.29) then
-  if (dir.eq.1) then
-   call deform3duu(velcell(veldir),x,y,z,time,dx)
-  else if (dir.eq.2) then
-   call deform3dvv(velcell(veldir),x,y,z,time,dx)
-  else if (dir.eq.3) then
-   call deform3dww(velcell(veldir),x,y,z,time,dx)
-  else
-   print *,"dir invalid"
-   stop
-  endif
- else if (probtype.eq.31) then
-  if (dir.eq.1) then
-   call circleuu(velcell(veldir),x,y,z)
-  else if (dir.eq.2) then
-   call circlevv(velcell(veldir),x,y,z)
-  else if (dir.eq.3) then
-   call circleww(velcell(veldir),x,y,z)
-  else
-   print *,"dir invalid"
-   stop
-  endif
- else
-  print *,"probtype invalid"
-  stop
- endif
-
-else
- print *,"dimension bust"
- stop
-endif
+enddo ! dir=1..sdim
 
 return 
 end subroutine passive_advect_VEL
@@ -405,9 +410,6 @@ REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: PRES
-REAL_T :: D_gamma,T_analytical,Y_analytical,LS_analytical
-REAL_T :: pres_analytical
-REAL_T :: VEL(SDIM)
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -416,27 +418,8 @@ else
  stop
 endif
 
-if (probtype.eq.424) then
 
  PRES=zero
-
- if (axis_dir.eq.0) then
-  if (vinletgas.eq.zero) then
-   call drop_analytical_solution(t,x,D_gamma,T_analytical, &
-      Y_analytical,VEL,LS_analytical,pres_analytical)
-   PRES=pres_analytical
-  endif
- else if (axis_dir.eq.1) then
-  ! do nothing
- else
-  print *,"axis_dir invalid"
-  stop
- endif
-
-else
- print *,"num_materials,num_state_material, or probtype invalid"
- stop
-endif
 
 return 
 end subroutine passive_advect_PRES
@@ -456,9 +439,6 @@ REAL_T, intent(in) :: t
 REAL_T, intent(in) :: LS(nmat)
 REAL_T, intent(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
-REAL_T :: D_gamma,T_analytical,Y_analytical,LS_analytical
-REAL_T :: pres_analytical
-REAL_T :: VEL(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -473,7 +453,6 @@ else
  stop
 endif
 
-if (probtype.eq.424) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
   STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) 
@@ -493,27 +472,6 @@ if (probtype.eq.424) then
 
  enddo ! im=1..num_materials
 
- if (axis_dir.eq.0) then
-  if (vinletgas.eq.zero) then
-   call drop_analytical_solution(t,x,D_gamma,T_analytical, &
-      Y_analytical,VEL,LS_analytical,pres_analytical)
-   do im=1,num_materials
-    ibase=(im-1)*num_state_material
-    STATE(ibase+ENUM_TEMPERATUREVAR+1)=T_analytical
-    STATE(ibase+ENUM_SPECIESVAR+1)=Y_analytical
-   enddo
-  endif
- else if (axis_dir.eq.1) then
-  ! do nothing
- else
-  print *,"axis_dir invalid"
-  stop
- endif
-else
- print *,"num_materials,num_state_material, or probtype invalid"
- stop
-endif
- 
 return
 end subroutine passive_advect_STATE
 
@@ -575,12 +533,6 @@ else
  print *,"nmat invalid"
  stop
 endif
-if (probtype.eq.424) then
- ! do nothing
-else
- print *,"expecting probtype==424"
- stop
-endif
 velsolid_flag=0
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2).and. &
@@ -613,7 +565,6 @@ REAL_T, intent(inout) :: PRES
 REAL_T, intent(in) :: PRES_in
 INTEGER_T, intent(in) :: dir,side
 REAL_T, intent(in) :: dx(SDIM)
-REAL_T :: rr
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -623,15 +574,6 @@ else
 endif
 
  call passive_advect_PRES(xghost,t,LS,PRES,nmat)
-
- rr=xghost(1)**2+xghost(2)**2
- if (SDIM.eq.3) then
-  rr=rr+xghost(SDIM)**2
- endif
- rr=sqrt(rr)
- if (1.eq.0) then
-  print *,"x,y,r,t,pres ",xghost(1),xghost(2),rr,t,PRES
- endif
 
 return
 end subroutine passive_advect_PRES_BC
@@ -683,12 +625,6 @@ if ((istate.ge.1).and. &
  ibase=(im_crit-1)*num_state_material
  STATE_merge=local_STATE(ibase+istate)
 
- if (probtype.eq.424) then
-  ! do nothing
- else
-  print *,"expecting probtype == 424"
-  stop
- endif
 else
  print *,"istate invalid"
  stop

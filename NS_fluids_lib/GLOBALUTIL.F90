@@ -4640,6 +4640,13 @@ INTEGER_T :: dir,i,j,k
  ! A (0,0,1) = v1 x v2 => third column of A is v1 x v2
  ! A^{-1} maps from real space back to unit space
 
+ if ((tol.ge.zero).and.(tol.lt.one)) then
+  ! do nothing
+ else
+  print *,"tol out of range: ",tol
+  stop
+ endif
+
  inplane=1
 
  do dir=1,3
@@ -4717,6 +4724,10 @@ INTEGER_T :: dir,i,j,k
     tx_sum_new=min(tx_sum_new,one-tol)
     tx(1)=tx(1)*tx_sum_new/tx_sum
     tx(2)=tx(2)*tx_sum_new/tx_sum
+   else if (tx_sum.eq.zero) then
+    tx_sum_new=zero
+    tx(1)=zero
+    tx(2)=zero
    else
     print *,"tx_sum is NaN"
     stop
@@ -8750,7 +8761,7 @@ end subroutine global_checkinplane
         print *,"tile box incorrect"
         stop
        endif
-      enddo ! dir2
+      enddo ! dir2=1..sdim
       
       return
       end subroutine growntilebox
@@ -17539,19 +17550,27 @@ end subroutine global_checkinplane
        ! fort_prefreeze_tension
       do iten=1,nten
        new_tension(iten)=tension(iten)
-       if (fort_tension_min(iten).lt.zero) then
+       if (fort_tension_min(iten).ge.zero) then
+        ! do nothing
+       else
         print *,"fort_tension_min invalid"
         stop
        endif
-       if (fort_tension_slope(iten).ne.zero) then
-        if (fort_tension_T0(iten).le.zero) then
+       if (fort_tension_slope(iten).eq.zero) then
+        ! do nothing
+       else if (fort_tension_slope(iten).ne.zero) then
+        if (fort_tension_T0(iten).gt.zero) then
+         ! do nothing
+        else
          print *,"T0 invalid"
          stop
         endif
          ! im<im_opp
         call get_inverse_iten(im,im_opp,iten,nmat)
-        if ((temperature(im).le.zero).or. &
-            (temperature(im_opp).le.zero)) then
+        if ((temperature(im).gt.zero).and. &
+            (temperature(im_opp).gt.zero)) then
+         ! do nothing
+        else
          print *,"temperature must be positive"
          stop
         endif
@@ -17560,8 +17579,15 @@ end subroutine global_checkinplane
          (avgtemp-fort_tension_T0(iten))
         if (new_tension(iten).lt.fort_tension_min(iten)) then
          new_tension(iten)=fort_tension_min(iten)
+        else if (new_tension(iten).ge.fort_tension_min(iten)) then
+         ! do nothing
+        else
+         print *,"new_tension or fort_tension_min NaN"
+         stop
         endif
-        if (new_tension(iten).lt.zero) then
+        if (new_tension(iten).ge.zero) then
+         ! do nothing
+        else
          print *,"new_tension invalid"
          stop
         endif
@@ -24149,6 +24175,7 @@ return
 end subroutine polygondist
 
 subroutine zalesakdist(dist,xx,yy)
+use probcommon_module
 IMPLICIT NONE
 REAL_T, intent(in) :: xx,yy
 REAL_T, intent(out) :: dist
@@ -24421,6 +24448,417 @@ dist=sqrt( (x-half)**2 + (y-0.75d0)**2 )-0.15d0
 
 return
 end subroutine deformdist
+
+subroutine streamdeform3D(s,x,y,z)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: x,y,z
+REAL_T, intent(out) :: s
+REAL_T :: sx,sy,sz
+
+sx=sin(Pi*x)
+sy=sin(Pi*y)
+sz=sin(Pi*z)
+
+s=sx*sx*sy*sy*sz*sz
+
+return
+end subroutine streamdeform3D
+
+subroutine deform3duu(u,x,y,z,t,dx)
+IMPLICIT NONE
+REAL_T, intent(in) ::  x,y,z,t
+REAL_T, intent(out) ::  u
+REAL_T, intent(in) :: dx(SDIM)
+REAL_T aa
+
+
+aa=cos(Pi*t/three)
+u=two*(sin(Pi*x)**2)*sin(two*Pi*y)*sin(two*Pi*z)*aa
+
+return
+end subroutine deform3duu
+
+subroutine deform3dvv(u,x,y,z,t,dx)
+IMPLICIT NONE
+REAL_T, intent(in) ::  x,y,z,t
+REAL_T, intent(out) ::  u
+REAL_T, intent(in) :: dx(SDIM)
+REAL_T aa
+
+
+aa=cos(Pi*t/three)
+u=-(sin(Pi*y)**2)*sin(two*Pi*x)*sin(two*Pi*z)*aa
+
+return
+end subroutine deform3dvv
+
+subroutine deform3dww(u,x,y,z,t,dx)
+IMPLICIT NONE
+REAL_T, intent(in) ::  x,y,z,t
+REAL_T, intent(out) ::  u
+REAL_T, intent(in) :: dx(SDIM)
+REAL_T aa
+
+
+aa=cos(Pi*t/three)
+u=-(sin(Pi*z)**2)*sin(two*Pi*x)*sin(two*Pi*y)*aa
+
+return 
+end subroutine deform3dww
+
+! u = -s_y  
+! v = s_x
+! u_i+1/2 = -(s_i+1,j+1 + s_i,j+1 - s_i+1,j-1 - s_i,j-1)/(4 dy)
+! u_i-1/2 = -(s_i,j+1 + s_i-1,j+1 - s_i,j-1 - s_i-1,j-1)/(4 dy)
+! v_j+1/2 = (s_i+1,j+1 + s_i+1,j - s_i-1,j+1 - s_i-1,j)/(4 dx)
+! v_j-1/2 = (s_i+1,j + s_i+1,j-1 - s_i-1,j - s_i-1,j-1)/(4 dx)
+! div u= -(s_i+1,j+1 + s_i,j+1 - s_i+1,j-1 - s_i,j-1)/(4 dy dx)+
+!         (s_i,j+1 + s_i-1,j+1 - s_i,j-1 - s_i-1,j-1)/(4 dy dx)+
+!         (s_i+1,j+1 + s_i+1,j - s_i-1,j+1 - s_i-1,j)/(4 dx dy)+
+!        -(s_i+1,j + s_i+1,j-1 - s_i-1,j - s_i-1,j-1)/(4 dx dy)=0
+! 
+subroutine streamdeform(s,x,y)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: x,y
+REAL_T, intent(out) :: s
+REAL_T sx,sy
+
+sx=sin(Pi*x)
+sy=sin(Pi*y)
+s=sx*sx*sy*sy
+
+return
+end subroutine streamdeform
+
+subroutine deformuu(u,x,y,t,dx)
+use probcommon_module
+IMPLICIT NONE
+REAL_T, intent(in) :: x,y,t
+REAL_T, intent(out) :: u
+REAL_T, intent(in) :: dx(SDIM)
+REAL_T aa,s1,s2,s3,s4
+REAL_T x1,x2,y1,y2
+
+
+if (probtype.ne.29) then
+ print *,"probtype should be 29"
+ stop
+endif
+
+if (fort_stop_time.gt.zero) then
+ ! do nothing
+else
+ print *,"fort_stop_time invalid"
+ stop
+endif
+if (period_time.gt.zero) then
+ ! do nothing
+else
+ print *,"period_time invalid"
+ stop
+endif
+aa=cos(Pi*t/period_time)
+if (axis_dir.eq.0) then
+ u=sin(four*Pi*(x+half))*sin(four*Pi*(y+half))*aa
+else if ((axis_dir.eq.1).or.(axis_dir.eq.3).or. &
+         (axis_dir.eq.4)) then
+! when t=T, object is back to circular
+! Cervone et al 2009, page 413
+! psi=(1/pi)sin^2(pi x)sin^2(pi y)
+! u=-psi_y=-sin^2(pi x)sin(2 pi y)=-2 sin^2(pi x)sin(pi y)cos(pi y)
+
+ if ((axis_dir.eq.3).or.(axis_dir.eq.1)) then
+  s1=sin(Pi*y)
+  s2=cos(Pi*y)
+  s3=sin(Pi*x)
+  u=-two*s1*s2*s3*s3
+ else if (axis_dir.eq.4) then
+  x1=x+half*dx(1)
+  x2=x-half*dx(1)
+  y1=y+dx(2)
+  y2=y-dx(2)
+  call streamdeform(s1,x1,y1)
+  call streamdeform(s2,x1,y2)
+  call streamdeform(s3,x2,y1)
+  call streamdeform(s4,x2,y2)
+  u=-(s1-s2+s3-s4)/(four*dx(2)*Pi)
+ else
+  print *,"bust"
+  stop
+ endif
+
+ if ((axis_dir.eq.3).or.(axis_dir.eq.4)) then
+  u=u*aa
+ endif
+else if (axis_dir.eq.2) then
+ s1=sin(Pi*x)
+ s2=sin(two*Pi*y)
+ u=s1*s1*s2
+ if (t.ge.one) then
+  u=-u
+ endif
+else
+ print *,"axis_dir invalid deformuu"
+ stop
+endif
+
+return
+end subroutine deformuu
+
+subroutine deformvv(v,x,y,t,dx)
+use probcommon_module
+IMPLICIT NONE
+REAL_T, intent(in) :: x,y,t
+REAL_T, intent(out) :: v
+REAL_T, intent(in) :: dx(SDIM)
+REAL_T aa,s1,s2,s3,s4
+REAL_T x1,x2,y1,y2
+
+
+if (probtype.ne.29) then
+ print *,"probtype should be 29"
+ stop
+endif
+
+if (fort_stop_time.gt.zero) then
+ ! do nothing
+else
+ print *,"fort_stop_time invalid"
+ stop
+endif
+if (period_time.gt.zero) then
+ ! do nothing
+else
+ print *,"period_time invalid"
+ stop
+endif
+aa=cos(Pi*t/period_time)
+if (axis_dir.eq.0) then
+ v=cos(four*Pi*(x+half))*cos(four*Pi*(y+half))*aa
+else if ((axis_dir.eq.1).or.(axis_dir.eq.3).or. &
+         (axis_dir.eq.4)) then
+! when t=T, object is back to circular
+! Cervone et al 2009, page 413
+! psi=(1/pi)sin^2(pi x)sin^2(pi y)
+! v=psi_x=2 sin(pi x)cos(pi x)sin^2 (pi y)
+
+ if ((axis_dir.eq.3).or.(axis_dir.eq.1)) then
+  s1=sin(Pi*x)
+  s2=cos(Pi*x)
+  s3=sin(Pi*y)
+  v=two*s1*s2*s3*s3
+ else if (axis_dir.eq.4) then
+  x1=x+dx(1)
+  x2=x-dx(1)
+  y1=y+half*dx(2)
+  y2=y-half*dx(2)
+  call streamdeform(s1,x1,y1)
+  call streamdeform(s2,x2,y1)
+  call streamdeform(s3,x1,y2)
+  call streamdeform(s4,x2,y2)
+  v=(s1-s2+s3-s4)/(four*dx(1)*Pi)
+ else
+  print *,"bust"
+  stop
+ endif
+
+ if ((axis_dir.eq.3).or.(axis_dir.eq.4)) then
+  v=v*aa
+ endif
+else if (axis_dir.eq.2) then
+ s1=sin(Pi*y)
+ s2=sin(two*Pi*x)
+ v=-s1*s1*s2
+ if (t.ge.one) then
+  v=-v
+ endif
+else
+ print *,"axis_dir invalid deformvv"
+ stop
+endif
+
+return
+end subroutine deformvv
+
+subroutine zalesakuu(u,x,y,z,time,dx)
+use probcommon_module
+IMPLICIT NONE
+REAL_T, intent(in) :: x,y,z,time
+REAL_T, intent(out) :: u
+REAL_T, intent(in) :: dx(SDIM)
+
+if (probtype.ne.28) then
+ print *,"probtype invalid"
+ stop
+endif
+if ((SDIM.eq.2).and.(abs(z-y).gt.VOFTOL)) then
+ print *,"abs(z-y) bust"
+ stop
+endif 
+
+if (adv_vel.eq.zero) then
+ if (levelrz.eq.0) then
+  u=-(Pi/314.0)*(y-50.0)
+ else if (levelrz.eq.3) then
+  u=zero
+ else
+  print *,"zalesakuu: levelrz invalid"
+  stop
+ endif
+else if ((adv_dir.eq.1).or.(adv_dir.eq.SDIM+1)) then
+ u=adv_vel
+else if (adv_dir.eq.2) then
+ u=zero
+else if (adv_dir.eq.SDIM) then
+ u=zero
+else
+ print *,"adv_dir invalid zalesakuu (7)"
+ stop
+endif
+
+return
+end subroutine zalesakuu
+
+subroutine zalesakvv(v,x,y,z,time,dx)
+use probcommon_module
+IMPLICIT NONE
+REAL_T, intent(in) :: x,y,z,time
+REAL_T, intent(out) :: v
+REAL_T, intent(in) :: dx(SDIM)
+
+if (probtype.ne.28) then
+ print *,"probtype invalid"
+ stop
+endif
+if ((SDIM.eq.2).and.(abs(z-y).gt.VOFTOL)) then
+ print *,"abs(z-y) bust"
+ stop
+endif 
+
+if (adv_vel.eq.zero) then
+ if (levelrz.eq.0) then
+  v=(Pi/314.0)*(x-50.0)
+ else if (levelrz.eq.3) then
+  v=(Pi/314.0)*x
+ else
+  print *,"zalesakvv: levelrz invalid"
+  stop
+ endif
+else if ((adv_dir.eq.2).or.(adv_dir.eq.SDIM+1)) then
+ v=adv_vel
+else if (adv_dir.eq.1) then
+ v=zero
+else if ((adv_dir.eq.SDIM).and.(SDIM.eq.3)) then
+ v=zero
+else
+ print *,"adv_dir invalid zalesakvv (8)"
+ stop
+endif
+
+return
+end subroutine zalesakvv
+
+
+subroutine zalesakww(w,x,y,z,time,dx)
+use probcommon_module
+IMPLICIT NONE
+REAL_T, intent(in) :: x,y,z,time
+REAL_T, intent(out) :: w
+REAL_T, intent(in) :: dx(SDIM)
+
+if (probtype.ne.28) then
+ print *,"probtype invalid"
+ stop
+endif
+if (levelrz.ne.0) then
+ print *,"levelrz invalid zalesakvv"
+ stop
+endif
+if ((SDIM.eq.2).and.(abs(z-y).gt.VOFTOL)) then
+ print *,"abs(z-y) bust"
+ stop
+endif 
+
+if (adv_vel.eq.zero) then
+ w=zero
+else if ((adv_dir.eq.SDIM).or.(adv_dir.eq.SDIM+1)) then
+ w=adv_vel
+else if (adv_dir.eq.1) then
+ w=zero
+else if (adv_dir.eq.2) then
+ w=zero
+else
+ print *,"adv_dir invalid zalesakww (9)"
+ stop
+endif
+
+return
+end subroutine zalesakww
+
+
+subroutine circleuu(u,x,y,z)
+use probcommon_module
+IMPLICIT NONE
+REAL_T, intent(in) :: x,y,z
+REAL_T, intent(out) :: u
+
+u=zero
+if (adv_dir .eq. 1) then
+   u = adv_vel
+else if (adv_dir .eq. 2) then
+   u = zero
+else if (adv_dir.eq.SDIM) then
+   u = zero
+else if (adv_dir.eq.SDIM+1) then
+   u = adv_vel
+endif
+
+return
+end subroutine circleuu
+
+subroutine circlevv(v,x,y,z)
+use probcommon_module
+IMPLICIT NONE
+REAL_T, intent(in) :: x,y,z
+REAL_T, intent(out) :: v
+
+v=zero
+if (adv_dir .eq. 2) then
+   v = adv_vel
+else if (adv_dir .eq. 1) then
+   v = zero
+else if ((adv_dir.eq.SDIM).and.(SDIM.eq.3)) then
+   v = zero
+else if (adv_dir.eq.SDIM+1) then
+   v = adv_vel
+endif
+
+return
+end subroutine circlevv
+
+subroutine circleww(w,x,y,z)
+use probcommon_module
+IMPLICIT NONE
+REAL_T, intent(in) :: x,y,z
+REAL_T, intent(out) :: w
+
+if (SDIM.ne.3) then
+ print *,"dimension bust circleww"
+ stop
+endif
+
+w=zero
+if ((adv_dir.eq.3).or.(adv_dir.eq.4)) then
+   w = adv_vel
+else
+   w = zero
+endif
+
+return
+end subroutine circleww
+
 
 subroutine doit(problo,probhi,ncell,dx,tstop)
 use probcommon_module
