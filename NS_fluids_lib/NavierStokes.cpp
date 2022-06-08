@@ -247,8 +247,6 @@ int  NavierStokes::MOFITERMAX=DEFAULT_MOFITERMAX;
    F_ij^derived=derived volume fraction in cell ij for a given slope and
      intercept.   
 
-continuous_mof=1 Particle Level Set Method
-
 continuous_mof=2 (if same number of materials in center cell as in stencil)
 
   CMOF  minimize E=||xS_ij^ref-xS_ij^derived||  "S"=super cell
