@@ -1030,10 +1030,12 @@ stop
         dotprod=dotprod+ &
          gradT(dir2)*fort_tension_slope(iten)*nfluid(dir2)
        enddo ! dir2
-
-        ! tension=sigma_0 + slope*(T-T0)
+        ! for the specific case,
+        ! tension=sigma_0 + slope*(T-T0),
+        ! then:
+        ! grad sigma=slope * grad T
+        !
         ! (I-nn^T)(grad sigma) delta
-        ! 
        do dir2=1,SDIM
         mgoni_force(dir2)= &
          (fort_tension_slope(iten)*gradT(dir2)- &
