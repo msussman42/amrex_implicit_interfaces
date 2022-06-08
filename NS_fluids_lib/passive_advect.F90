@@ -57,7 +57,7 @@ REAL_T, intent(in) :: x(SDIM)
 REAL_T, intent(in) :: t
 REAL_T, intent(out) :: LS(nmat)
 REAL_T :: xstar,ystar,zstar
-REAL_T :: xprime,yprime,zprime
+REAL_T :: xprime,yprime
 REAL_T :: distline
 
   if (nmat.eq.num_materials) then

@@ -45,7 +45,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, 06/08/22, 11:40am on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, 06/08/22, 14:53pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
@@ -100,7 +100,7 @@ main (int   argc,
     pp.query("sleepsec",sleepsec);
 
     if (strt_time < 0.0)
-        amrex::Abort("MUST SPECIFY a non-negative strt_time");
+     amrex::Abort("MUST SPECIFY a non-negative strt_time");
 
     if (max_step < 0 && stop_time < 0.0)
     {

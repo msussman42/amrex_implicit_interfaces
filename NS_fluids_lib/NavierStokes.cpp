@@ -1284,7 +1284,8 @@ void read_geometry_raw(int& geometry_coord,
 } // end subroutine read_geometry_raw
 
 // this routine is called from main.cpp prior to:
-//  amrptr->init(strt_time,stop_time);
+//  1. Amr* amrptr = new Amr();
+//  2. amrptr->init(strt_time,stop_time);
 void fortran_parameters() {
 
  int geometry_coord;
@@ -2291,6 +2292,8 @@ NavierStokes::setup_integrated_quantities() {
 
 } // end subroutine setup_integrated_quantities
 
+// read_params is called from:
+// NavierStokes::variableSetUp
 void
 NavierStokes::read_params ()
 {
@@ -2903,12 +2906,14 @@ NavierStokes::read_params ()
 
     if (AMREX_SPACEDIM==2) {
      adapt_quad_depth=2;
-     if ((probtype==28)||(probtype==29)||(probtype==31))
+     if (is_zalesak()==1) {
       adapt_quad_depth=5; 
+     }
     } else if (AMREX_SPACEDIM==3) {
      adapt_quad_depth=1;
-     if ((probtype==28)||(probtype==29)||(probtype==31))
+     if (is_zalesak()==1) {
       adapt_quad_depth=3;
+     }
     } else
      amrex::Error("dimension bust");
 

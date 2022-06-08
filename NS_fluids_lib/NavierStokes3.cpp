@@ -13489,7 +13489,15 @@ void NavierStokes::prepare_viscous_solver() {
 // probtype=31 translating circle or sphere
 int NavierStokes::is_zalesak() {
 
- return ( ((probtype==28)||(probtype==29)||(probtype==31)) ? 1 : 0 );
+ if (fort_is_passive_advect_test()==1) {
+  return 1;
+ } else if (fort_is_passive_advect_test()==0) {
+  return 0;
+ } else {
+  amrex::Error("fort_is_passive_advect_test() invalid");
+  return 0;
+ }
+
 }
 
 // velocity scaled by global_velocity_scale
