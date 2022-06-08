@@ -633,5 +633,33 @@ endif
 return
 end subroutine passive_advect_STATE_BC
 
+subroutine passive_advect_clamped_LS(x,t,LS,vel,temperature,dx)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+  REAL_T, intent(in) :: x(SDIM)
+  REAL_T, intent(in) :: dx(SDIM)
+  REAL_T, intent(in) :: t
+  REAL_T, intent(out) :: LS
+  REAL_T, intent(out) :: vel(SDIM)
+  REAL_T, intent(out) :: temperature
+  INTEGER_T :: velsolid_flag
+  REAL_T :: LSarray(num_materials)
+
+if ((probtype.eq.28).or. &
+    (probtype.eq.29).or. &
+    (probtype.eq.31)) then
+ LS=CLAMPED_EVERYWHERE_LS
+ velsolid_flag=0
+ call passive_advect_VEL(x,t,LSarray,vel,velsolid_flag,dx,num_materials)
+ temperature=fort_tempconst(1)
+else
+ print *,"probtype invalid"
+ stop
+endif
+
+return
+end subroutine passive_advect_clamped_LS
 
 end module passive_advect_module

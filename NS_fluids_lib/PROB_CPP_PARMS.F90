@@ -503,7 +503,7 @@ stop
       SUB_ASSIMILATE=>STUB_ASSIMILATE
       SUB_SUMINT=>STUB_SUMINT
       SUB_check_vel_rigid=>STUB_check_vel_rigid
-      SUB_clamped_LS_no_scale=>STUB_CLAMPED_LS
+      SUB_clamped_LS_no_scale=>STUB_clamped_LS
 
       SUB_wallfunc=>STUB_wallfunc
 
@@ -618,6 +618,7 @@ stop
        SUB_VEL_BC=>passive_advect_VEL_BC
        SUB_PRES_BC=>passive_advect_PRES_BC
        SUB_STATE_BC=>passive_advect_STATE_BC
+       SUB_clamped_LS_no_scale=>passive_advect_clamped_LS
 
       else if (probtype.eq.414) then
        SUB_INIT_MODULE=>INIT_MITSUHIRO_MELTING_MODULE
@@ -789,23 +790,23 @@ stop
        SUB_SUMINT=>GENERAL_PHASE_CHANGE_SUMINT ! Nusseltt number
       else
        ! assign null routines here that would cause the program to abort
-       ! if called.  In otherwords, these are routines THAT MUST BE DEFINED
-       ! and CANNOT depend on the STUB routines.
-       SUB_INIT_MODULE=>NULL()
-       SUB_LS=>NULL()
+       ! if called.  In otherwords, these are routines, that if called,
+       ! MUST BE DEFINED and CANNOT depend on the STUB routines.
+       SUB_INIT_MODULE=>NULL() ! always called
+       SUB_LS=>NULL() ! always called
 !       SUB_clamped_LS_no_scale=>NULL()
-       SUB_VEL=>NULL()
+       SUB_VEL=>NULL() ! always called
        SUB_EOS=>NULL()
        SUB_dVdT=>NULL()
        SUB_SOUNDSQR=>NULL()
        SUB_INTERNAL=>NULL()
        SUB_TEMPERATURE=>NULL()
-       SUB_PRES=>NULL()
-       SUB_STATE=>NULL()
-       SUB_LS_BC=>NULL()
-       SUB_VEL_BC=>NULL()
-       SUB_PRES_BC=>NULL()
-       SUB_STATE_BC=>NULL()
+       SUB_PRES=>NULL() ! always called
+       SUB_STATE=>NULL() ! always called
+       SUB_LS_BC=>NULL() ! always called
+       SUB_VEL_BC=>NULL() ! always called
+       SUB_PRES_BC=>NULL() ! always called
+       SUB_STATE_BC=>NULL() ! always called
        SUB_HEATSOURCE=>NULL()
        SUB_EB_heat_source=>NULL()
        SUB_microcell_heat_coeff=>NULL()
