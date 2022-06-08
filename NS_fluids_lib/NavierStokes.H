@@ -325,7 +325,7 @@ public:
       NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr,
       int nnbr);
 
-    void assimilate_vel_from_particles(
+    void assimilate_Q_from_particles(
       AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
       NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr,
       int nnbr);
@@ -443,12 +443,8 @@ protected:
     void new_localMF_if_not_exist(int idx_MF,int ncomp,int ngrow,
 		    int grid_type);
 
-    //MAC_state_idx==Umac_Type or (mac velocity)
-    //MAC_state_idx==XDmac_Type   (mac displacement)
     //dir=0..sdim-1
-    void getStateMAC_localMF(int MAC_state_idx,
-     int idx_MF,int ngrow,int dir,
-     int scomp,int ncomp,Real time);
+    void getStateMAC_localMF(int idx_MF,int ngrow,int dir,Real time);
 
     void getStateDen_localMF(int idx_MF,int ngrow,Real time);
     void getStateDist_localMF(int idx_MF,int ngrow,Real time,int caller_id);
@@ -1445,21 +1441,15 @@ protected:
      // =0 do not hybridize with particles (default)
      // =1 hybridize with particles
     static int particles_flag;  
-    static Real particles_weight_XD;  //=0.0 particles have no effect  
-    static Real particles_weight_VEL; //=0.0 particles have no effect  
     static int particle_nsubdivide;  
     static int particle_max_per_nsubdivide;  
     static int particle_min_per_nsubdivide;  
-    static Real particle_volume;
-    static Real particle_relaxation_time_to_fluid;
-    static Real fluid_relaxation_time_to_particle;
     static int particle_interaction_ngrow;
 
     static Real truncate_thickness;  // default is 2.0
 
     static int  enable_spectral;
      // continuous_mof = 0 => regular MOF
-     // continuous_mof = 1 => particle level set
      // continuous_mof = 2 => CMOF ("continuous MOF ")
     static int  continuous_mof; // default is 0
      // =1 EXT_DIR,REFLECT_EVEN,embedded; =2 same as 1 plus triple points.
@@ -1568,9 +1558,6 @@ protected:
     static int TensorYU_Type;
     static int TensorZU_Type;
     static int TensorZV_Type;
-    static int XDmac_Type;
-    static int YDmac_Type;
-    static int ZDmac_Type;
     static int NUM_STATE_TYPE;
 
     static Vector<Real> tension_min;
@@ -1917,7 +1904,6 @@ protected:
      // 1 => Oldroyd-B
      //       Oldroyd-B=lim_{L\rightarrow\infty} FENE_CR
      //       (i) lambda'=lambda
-     // 2=> elastic material  Q=bulk_modulus*(grad X + grad X^{T}) (linear ex.)
      // 3=> incremental elastic model 
      //   (a) cell centered formulation
      //   (b) face centered formulation

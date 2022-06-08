@@ -245,7 +245,6 @@ stop
        stop
       endif
       if ((continuous_mof.eq.0).or. & ! MOF
-          (continuous_mof.eq.1).or. & ! particle LS
           (continuous_mof.eq.2)) then ! CMOF
        ! do nothing
       else
@@ -594,15 +593,7 @@ stop
          stop
         endif
 
-        if ((continuous_mof.eq.0).or. & !MOF
-            (continuous_mof.eq.2)) then !CMOF
-         continuous_mof_base=continuous_mof
-        else if (continuous_mof.eq.1) then !PLS
-         continuous_mof_base=0
-        else
-         print *,"continuous_mof invalid"
-         stop
-        endif
+        continuous_mof_base=continuous_mof
 
         if (mod_cmofsten.eq.1) then
          if (force_cmof_at_triple_junctions.eq.0) then

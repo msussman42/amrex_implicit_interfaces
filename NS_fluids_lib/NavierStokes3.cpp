@@ -380,11 +380,8 @@ void NavierStokes::nonlinear_advection() {
   ns_level.prepare_advect_vars(prev_time_slab);
  }
 
- if (continuous_mof==1) {
-  if (enable_spectral==0) {
-   // do nothing
-  } else
-   amrex::Error("PLS and space-time SEM are incompatible");
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
 
   allocate_levelset_ALL(ngrow_distance,LEVELPC_MF);
 
@@ -395,18 +392,27 @@ void NavierStokes::nonlinear_advection() {
   }
   for (int im=0;im<num_materials;im++) {
    if (ns_is_rigid(im)==0) {
-    multiphase_project(SOLVETYPE_VELEXTRAP+im);
+    if ((elastic_time[im]>=0.0)&&
+        (elastic_viscosity[im]>=0.0)) {
+     if (store_elastic_data[im]==1) {
+      multiphase_project(SOLVETYPE_VELEXTRAP+im);
+     } else if (store_elastic_data[im]==0) {
+      // do nothing
+     } else
+      amrex::Error("store_elastic_data invalid");
+    } else
+     amrex::Error("elastic_time or elastic_viscosity invalid");
    } else if (ns_is_rigid(im)==1) {
     // do nothing
    } else
     amrex::Error("ns_is_rigid invalid");
 
-  }
+  } //im=0..nmat-1
 
- } else if ((continuous_mof==0)||(continuous_mof==2)) {
+ } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  amrex::Error("continuous_mof invalid");
+  amrex::Error("num_materials_viscoelastic invalid");
 
  if (parent->global_AMR_particles_flag==particles_flag) {
   // do nothing
@@ -696,21 +702,18 @@ void NavierStokes::nonlinear_advection() {
    parent->levelSteps(0)); 
  }
 
- if (continuous_mof==1) {
-  if (enable_spectral==0) {
-   // do nothing
-  } else
-   amrex::Error("PLS and space-time SEM are incompatible");
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.delete_umac_material();
   }
 
- } else if ((continuous_mof==0)||(continuous_mof==2)) {
+ } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
-  amrex::Error("continuous_mof invalid");
+  amrex::Error("num_materials_viscoelastic invalid");
 
 }  // end subroutine nonlinear_advection
 
@@ -902,36 +905,6 @@ void NavierStokes::tensor_advection_updateALL() {
 
   delete_array(CELLTENSOR_MF);
   delete_array(FACETENSOR_MF);
-
-  for (int im=0;im<nmat;im++) {
-   if (ns_is_rigid(im)==0) {
-    if ((elastic_time[im]>=0.0)&&
-        (elastic_viscosity[im]>=0.0)) {
-     if (store_elastic_data[im]==1) {
-      if (viscoelastic_model[im]==2) {
-
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-        ns_level.accumulate_info_no_particles(im);
-       }
-
-      } else if (fort_is_eulerian_elastic_model(&elastic_viscosity[im],
-			                 &viscoelastic_model[im])==1) {
-       // do nothing
-      } else
-       amrex::Error("viscoelastic_model[im] invalid");
-     } else if (store_elastic_data[im]==0) {
-      // do nothing
-     } else
-      amrex::Error("store_elastic_data invalid");
-    } else
-     amrex::Error("elastic_time or elastic_viscosity invalid");
-   } else if (ns_is_rigid(im)==1) {
-    // do nothing
-   } else
-    amrex::Error("ns_is_rigid(im) invalid");
-
-  } // im=0..nmat-1
 
   avgDownALL_TENSOR();
 
@@ -13202,9 +13175,7 @@ void NavierStokes::prepare_umac_material(Real time) {
  }
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   //scomp=0, ncomp=1
-  local_umac[dir]=
-    getStateMAC(Umac_Type,ngrow_distance,dir,0,1,time);
+  local_umac[dir]=getStateMAC(Umac_Type,ngrow_distance,dir,time);
   new_localMF(UMAC_MATERIAL_MF+dir,num_materials,ngrow_distance,dir);
   new_localMF(UMAC_MASK_MATERIAL_MF+dir,num_materials,0,dir);
   for (int im=0;im<num_materials;im++) {
@@ -13214,74 +13185,83 @@ void NavierStokes::prepare_umac_material(Real time) {
 		  0,im,1,ngrow_distance);
 
    if (ns_is_rigid(im)==0) {
+    if ((elastic_time[im]>=0.0)&&
+        (elastic_viscosity[im]>=0.0)) {
+     if (store_elastic_data[im]==1) {
 
-    if (thread_class::nthreads<1)
-     amrex::Error("thread_class::nthreads invalid");
-    thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+      if (thread_class::nthreads<1)
+       amrex::Error("thread_class::nthreads invalid");
+      thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-    for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-     const int gridno = mfi.index();
-     const Box& tilegrid = mfi.tilebox();
-     const Box& fabgrid = grids[gridno];
-     const int* tilelo=tilegrid.loVect();
-     const int* tilehi=tilegrid.hiVect();
-     const int* fablo=fabgrid.loVect();
-     const int* fabhi=fabgrid.hiVect();
-     int bfact=parent->Space_blockingFactor(level);
+      for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+       BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+       const int gridno = mfi.index();
+       const Box& tilegrid = mfi.tilebox();
+       const Box& fabgrid = grids[gridno];
+       const int* tilelo=tilegrid.loVect();
+       const int* tilehi=tilegrid.hiVect();
+       const int* fablo=fabgrid.loVect();
+       const int* fabhi=fabgrid.hiVect();
+       int bfact=parent->Space_blockingFactor(level);
 
-     const Real* xlo = grid_loc[gridno].lo();
+       const Real* xlo = grid_loc[gridno].lo();
 
-     // mask=tag (1) if not covered by level+1 or outside the domain.
-     FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-     FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
-     FArrayBox& scalarfab=(*localMF[SCALAR_MASK_MATERIAL_MF])[mfi];
-     FArrayBox& divu_mask_fab=(*localMF[DIVU_MASK_MATERIAL_MF])[mfi];
-     FArrayBox& umacfab=(*localMF[UMAC_MATERIAL_MF+dir])[mfi];
-     FArrayBox& umacmaskfab=(*localMF[UMAC_MASK_MATERIAL_MF+dir])[mfi];
-     Vector<int> velbc=getBCArray(State_Type,gridno,
-      STATECOMP_VEL,STATE_NCOMP_VEL);
+       // mask=tag (1) if not covered by level+1 or outside the domain.
+       FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
+       FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
+       FArrayBox& scalarfab=(*localMF[SCALAR_MASK_MATERIAL_MF])[mfi];
+       FArrayBox& divu_mask_fab=(*localMF[DIVU_MASK_MATERIAL_MF])[mfi];
+       FArrayBox& umacfab=(*localMF[UMAC_MATERIAL_MF+dir])[mfi];
+       FArrayBox& umacmaskfab=(*localMF[UMAC_MASK_MATERIAL_MF+dir])[mfi];
+       Vector<int> velbc=getBCArray(State_Type,gridno,
+         STATECOMP_VEL,STATE_NCOMP_VEL);
 
-     int tid_current=ns_thread();
-     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-      amrex::Error("tid_current invalid");
-     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+       int tid_current=ns_thread();
+       if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+        amrex::Error("tid_current invalid");
+       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     //fort_extend_mac_vel is declared in: GODUNOV_3D.F90
-     //fort_extend_mac_vel uses "containing_MACcell"
-     fort_extend_mac_vel( 
-      &tid_current,
-      &level,
-      &finest_level,
-      &dir,
-      &im,
-      tilelo,tilehi,
-      fablo,fabhi,
-      &bfact,
-      xlo,dx,
-      &time,
-      &dt_slab,
-      velbc.dataPtr(),
-      maskcov.dataPtr(),
-      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-      umacfab.dataPtr(im),
-      ARLIM(umacfab.loVect()),ARLIM(umacfab.hiVect()),
-      umacmaskfab.dataPtr(im),
-      ARLIM(umacmaskfab.loVect()),ARLIM(umacmaskfab.hiVect()),
-      scalarfab.dataPtr(im),
-      ARLIM(scalarfab.loVect()),ARLIM(scalarfab.hiVect()),
-      divu_mask_fab.dataPtr(im),
-      ARLIM(divu_mask_fab.loVect()),ARLIM(divu_mask_fab.hiVect()),
-      lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()));
+       //fort_extend_mac_vel is declared in: GODUNOV_3D.F90
+       //fort_extend_mac_vel uses "containing_MACcell"
+       fort_extend_mac_vel( 
+        &tid_current,
+        &level,
+        &finest_level,
+        &dir,
+        &im,
+        tilelo,tilehi,
+        fablo,fabhi,
+        &bfact,
+        xlo,dx,
+        &time,
+        &dt_slab,
+        velbc.dataPtr(),
+        maskcov.dataPtr(),
+        ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
+        umacfab.dataPtr(im),
+        ARLIM(umacfab.loVect()),ARLIM(umacfab.hiVect()),
+        umacmaskfab.dataPtr(im),
+        ARLIM(umacmaskfab.loVect()),ARLIM(umacmaskfab.hiVect()),
+        scalarfab.dataPtr(im),
+        ARLIM(scalarfab.loVect()),ARLIM(scalarfab.hiVect()),
+        divu_mask_fab.dataPtr(im),
+        ARLIM(divu_mask_fab.loVect()),ARLIM(divu_mask_fab.hiVect()),
+        lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()));
 
-    } // mfi
+      } // mfi
 } // omp
 
-    ns_reconcile_d_num(70);
+      ns_reconcile_d_num(70);
+     } else if (store_elastic_data[im]==0) {
+      // do nothing
+     } else
+      amrex::Error("store_elastic_data invalid");
+    } else
+     amrex::Error("elastic_time or elastic_viscosity invalid");
 
    } else if (ns_is_rigid(im)==1) {
     // do nothing
