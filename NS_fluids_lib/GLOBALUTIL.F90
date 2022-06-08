@@ -14641,8 +14641,38 @@ end subroutine global_checkinplane
       return
       end function fort_drag_type
 
+      function fort_is_passive_advect_test() &
+      bind(c,name='fort_is_passive_advect_test')
 
+      IMPLICIT NONE
+      INTEGER_T fort_is_passive_advect_test
+      REAL_T dx_placeholder(SDIM)
+      REAL_T x_placeholder(SDIM)
+      REAL_T time_plaecholder
+      REAL_T LS
+      REAL_T vel(SDIM)
+      REAL_T temperature
+      INTEGER_T dir
 
+      do dir=1,SDIM
+       dx_placeholder(dir)=one
+       x_placeholder(dir)=zero
+      enddo
+      time_placeholder=zero
+      call SUB_clamped_LS(x_placeholder,time_placeholder,LS,vel, &
+             temperature,dx_placeholder)
+      if (LS.eq.CLAMPED_EVERYWHERE_LS) then
+       fort_is_passive_advect_test=1
+      else if (LS.ne.CLAMPED_EVERYWHERE_LS) then
+       fort_is_passive_advect_test=0
+      else
+       print *,"LS is NaN"
+       stop
+       fort_is_passive_advect_test=0
+      endif
+
+      return
+      end function fort_is_passive_advect_test
 
       function fort_is_rigid_base(FSI_flag_local,nmat,im) &
       bind(c,name='fort_is_rigid_base')

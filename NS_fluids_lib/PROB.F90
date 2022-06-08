@@ -1442,11 +1442,6 @@ stop
        if (probtype.eq.801) then
         uu=max(abs(uu),abs(vinletgas)*fort_denconst(1)/fort_denconst(2))
        endif
-
-       if (probtype.eq.31) then
-        uu=max(abs(uu),abs(adv_vel))
-       endif
-
        if ((probtype.eq.701).and.(axis_dir.eq.2)) then
         uu=max(abs(uu),abs(adv_vel))
         uu=max(abs(uu),yblob*two*Pi)
@@ -5807,7 +5802,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ystar=y
        zstar=z
 
-       if (probtype.eq.28) then
+       if (fort_is_passive_advect_test().eq.1) then
 
         call SUB_LS(xvec,time,LS,nmat)
         dist=LS(1)

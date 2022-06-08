@@ -16,6 +16,8 @@ extern "C"
     Real* elastic_visc_in,
     int* viscoelastic_model_in);
 
+   int fort_is_passive_advect_test();
+
    int fort_is_rigid_base(
         int* FSI_flag_local,
 	int* nmat,

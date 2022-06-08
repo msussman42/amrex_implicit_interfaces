@@ -12431,6 +12431,9 @@ END SUBROUTINE SIMP
       REAL_T xx(SDIM)
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
+      REAL_T LS
+      REAL_T vel(SDIM)
+      REAL_T temperature
 
       nhalf=1
 
@@ -12450,33 +12453,21 @@ END SUBROUTINE SIMP
        do dir=1,SDIM
         xx(dir)=xsten(0,dir)
        enddo
- 
-       if (probtype.eq.31) then
-        call circleuu(u(D_DECL(i,j,k),1),xx(1),xx(2),xx(SDIM))
-        call circlevv(u(D_DECL(i,j,k),2),xx(1),xx(2),xx(SDIM))
-        if (SDIM.eq.3) then
-         call circleww(u(D_DECL(i,j,k),SDIM),xx(1),xx(2),xx(SDIM))
-        endif
-       else if (probtype.eq.29) then
-        if (SDIM.eq.3) then
-         call deform3duu(u(D_DECL(i,j,k),1),xx(1),xx(2),xx(SDIM),time,dx)
-         call deform3dvv(u(D_DECL(i,j,k),2),xx(1),xx(2),xx(SDIM),time,dx)
-         call deform3dww(u(D_DECL(i,j,k),SDIM),xx(1),xx(2),xx(SDIM),time,dx)
-        else if (SDIM.eq.2) then
-         call deformuu(u(D_DECL(i,j,k),1),xx(1),xx(2),time,dx)
-         call deformvv(u(D_DECL(i,j,k),2),xx(1),xx(2),time,dx)
+
+       if (fort_is_passive_advect_test().eq.1) then
+        call SUB_clamped_LS(xx,time,LS,vel,temperature,dx)
+        if (LS.eq.CLAMPED_EVERYWHERE_LS) then
+         do dir=1,SDIM
+          u(D_DECL(i,j,k),dir)=vel(dir)
+         enddo
         else
-         print *,"dimension bust"
+         print *,"expecting LS.eq.CLAMPED_EVERYWHERE_LS"
          stop
         endif
-       else if (probtype.eq.28) then
-        call zalesakuu(u(D_DECL(i,j,k),1),xx(1),xx(2),xx(SDIM),time,dx)
-        call zalesakvv(u(D_DECL(i,j,k),2),xx(1),xx(2),xx(SDIM),time,dx)
-        if (SDIM.eq.3) then
-         call zalesakww(u(D_DECL(i,j,k),SDIM),xx(1),xx(2),xx(SDIM),time,dx)
-        endif
+
        else
-        print *,"invalid probtype for fort_zalesak_cell"
+        print *,"expecting fort_is_passive_advect_test().eq.1"
+        stop
        endif
 
        do dir=1,SDIM
