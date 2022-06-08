@@ -662,4 +662,43 @@ endif
 return
 end subroutine passive_advect_clamped_LS
 
+
+subroutine passive_advect_CFL_HELPER(time,dir,uu,dx)
+use probcommon_module
+IMPLICIT NONE
+INTEGER_T, intent(in) :: dir
+REAL_T, intent(in) :: time
+REAL_T, intent(inout) :: uu
+REAL_T, intent(in) :: dx(SDIM)
+
+if ((dir.lt.0).or.(dir.ge.SDIM)) then
+ print *,"dir invalid"
+ stop
+endif
+
+if (dir.eq.0) then
+ ! do nothing
+else if (dir.eq.1) then
+ ! do nothing
+else if ((dir.eq.2).and.(SDIM.eq.3)) then
+ ! do nothing
+else
+ print *,"dir invalid passitve_advect_CFL_HELPER"
+ stop
+endif
+if (probtype.eq.31) then
+ uu=max(abs(uu),abs(adv_vel))
+else if (probtype.eq.28) then
+ ! do nothing
+else if (probtype.eq.29) then
+ ! do nothing
+else
+ print *,"probtype invalid"
+ stop
+endif
+
+return
+end subroutine passive_advect_CFL_HELPER
+
+
 end module passive_advect_module
