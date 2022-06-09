@@ -3084,13 +3084,11 @@ void NavierStokes::increment_KE(Real beta) {
 } // subroutine increment_KE
 
 
-// vel_or_disp=-1=>interpolate mac velocity increment(local_enable_spectral=0)
-// vel_or_disp=0=>interpolate mac velocity
-// vel_or_disp=1=>interpolate mac displacement(local_enable_spectral=0)
+// velmac_op=OP_INTERPOLATE_INCREMENT or OP_INTERPOLATE_BASE
 // dest_idx==-1 => destination is the state data.
 // dest_idx>=0  => destination is localMF[dest_idx]
 void NavierStokes::VELMAC_TO_CELLALL(
-  int vel_or_disp,
+  int velmac_op,
   int dest_idx) {
 
  int finest_level=parent->finestLevel();
@@ -3102,7 +3100,7 @@ void NavierStokes::VELMAC_TO_CELLALL(
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.VELMAC_TO_CELL(vel_or_disp,dest_idx);
+  ns_level.VELMAC_TO_CELL(velmac_op,dest_idx);
  }
 
  if (dest_idx==-1) {
@@ -3111,42 +3109,27 @@ void NavierStokes::VELMAC_TO_CELLALL(
   Vector<int> scompBC_map;
   scompBC_map.resize(AMREX_SPACEDIM);
 
-  if ((vel_or_disp==0)||   //velocity
-      (vel_or_disp==-1)) { //velocity increment
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-    scompBC_map[dir]=dir;
+  if ((velmac_op==OP_INTERPOLATE_BASE)||   //velocity
+      (velmac_op==OP_INTERPOLATE_INCREMENT)) { //velocity increment
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    scompBC_map[dir]=STATECOMP_VEL+dir;
+   }
     //scomp=0
    GetStateFromLocalALL(dest_idx,localMF[dest_idx]->nGrow(),0,
-     AMREX_SPACEDIM,State_Type,scompBC_map);
-  } else if (vel_or_disp==1) { // displacement
-
-   if (ENUM_NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
-    // do nothing
-   } else
-    amrex::Error("ENUM_NUM_TENSOR_TYPE invalid");
-
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-    scompBC_map[dir]=EXTRAPCOMP_ELASTIC+ENUM_NUM_TENSOR_TYPE+dir;
-
-    // there is no cell centered displacement, so PCINTERP_fill_bordersALL
-    // must be called instead of GetStateFromLocalALL
-    // scomp=0
-   PCINTERP_fill_bordersALL(dest_idx,localMF[dest_idx]->nGrow(),0,
-     AMREX_SPACEDIM,State_Type,scompBC_map);
-  } else
-   amrex::Error("vel_or_disp invalid");
+     STATE_NCOMP_VEL,State_Type,scompBC_map);
+  } else 
+   amrex::Error("velmac_op invalid");
+	  
  } else
   amrex::Error("dest_idx invalid");
 
 } // end subroutine VELMAC_TO_CELLALL
 
-// vel_or_disp=-1 => interpolate mac velocity increment
-// vel_or_disp=0 => interpolate mac velocity
-// vel_or_disp=1 => interpolate mac displacement
+// velmac_op=OP_INTERPOLATE_INCREMENT or OP_INTERPOLATE_BASE
 // dest_idx==-1 => destination is the state data.
 // dest_idx>=0  => destination is localMF[dest_idx]
 void NavierStokes::VELMAC_TO_CELL(
-  int vel_or_disp,
+  int velmac_op,
   int dest_idx) {
  
  bool use_tiling=ns_tiling;
@@ -3216,7 +3199,6 @@ void NavierStokes::VELMAC_TO_CELL(
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
 
  int operation_flag=-1; 
- int MAC_state_idx=Umac_Type;
 
  int local_enable_spectral=enable_spectral;
 
@@ -3224,55 +3206,43 @@ void NavierStokes::VELMAC_TO_CELL(
  MultiFab* save_face_velocity[AMREX_SPACEDIM];
  MultiFab* dest_velocity=nullptr;
 
- if (vel_or_disp==0) { //mac velocity (not the increment)
-  MAC_state_idx=Umac_Type;
+ if (velmac_op==OP_INTERPOLATE_BASE) { //mac velocity (not the increment)
   operation_flag=OP_VEL_MAC_TO_CELL;
- } else if (vel_or_disp==-1) { //mac velocity increment
-  MAC_state_idx=Umac_Type;
+ } else if (velmac_op==OP_INTERPOLATE_INCREMENT) { //mac velocity increment
   operation_flag=OP_FORCE_MAC_TO_CELL;
   local_enable_spectral=0;
- } else if (vel_or_disp==1) { //displacement
-  MAC_state_idx=XDmac_Type;
-  operation_flag=OP_XDISP_MAC_TO_CELL;
-  local_enable_spectral=0;
  } else 
-  amrex::Error("vel_or_disp invalid");
+  amrex::Error("velmac_op invalid");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-	 //ngrow=0, scomp=0, ncomp=nsolve=1
-  face_velocity[dir]=getStateMAC(
-    MAC_state_idx,0,dir,0,nsolve,cur_time_slab);
+   //ngrow=0
+  face_velocity[dir]=getStateMAC(0,dir,cur_time_slab);
   save_face_velocity[dir]=face_velocity[dir];
  }
 
- if (vel_or_disp==0) { //velocity
+ if (velmac_op==OP_INTERPOLATE_BASE) { //velocity
   // do nothing
- } else if (vel_or_disp==-1) { //mac velocity increment
+ } else if (velmac_op==OP_INTERPOLATE_INCREMENT) { //mac velocity increment
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    save_face_velocity[dir]=localMF[REGISTER_MARK_MAC_MF+dir];
   }
- } else if (vel_or_disp==1) { //displacement
-  // do nothing
  } else 
-  amrex::Error("vel_or_disp invalid");
+  amrex::Error("velmac_op invalid");
 
  if (dest_idx==-1) {
-  if ((vel_or_disp==0)||   //u^{mac->cell}
-      (vel_or_disp==-1)) { //u_increment^{mac->cell}
+  if ((velmac_op==OP_INTERPOLATE_BASE)||   //u^{mac->cell}
+      (velmac_op==OP_INTERPOLATE_INCREMENT)) { //u_increment^{mac->cell}
    MultiFab& S_new=get_new_data(State_Type,slab_step+1);
    dest_velocity=&S_new;
-  } else if (vel_or_disp==1) {
-   amrex::Error("no state cell centered disp available");
   } else
-   amrex::Error("vel_or_disp invalid");
+   amrex::Error("velmac_op invalid");
  } else if (dest_idx>=0) {
-  if ((vel_or_disp==0)||  //velocity
-      (vel_or_disp==1)) { //displacement
+  if (velmac_op==OP_INTERPOLATE_BASE) {   //u^{mac->cell}
    dest_velocity=localMF[dest_idx];
-  } else if (vel_or_disp==-1) {
-   amrex::Error("increment option only valid if vel_or_disp==0 or 1");
+  } else if (velmac_op==OP_INTERPOLATE_INCREMENT) {
+   amrex::Error("increment option not allowed if dest_idx>=0");
   } else
-   amrex::Error("vel_or_disp invalid");
+   amrex::Error("velmac_op invalid");
  } else
   amrex::Error("dest_idx invalid");
 
@@ -3289,7 +3259,7 @@ void NavierStokes::VELMAC_TO_CELL(
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,129);
 
-  MultiFab& Umac_new=get_new_data(MAC_state_idx+dir,slab_step+1);
+  MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
   int ncmac=Umac_new.nComp();
 
   if (ncmac!=nsolve) {

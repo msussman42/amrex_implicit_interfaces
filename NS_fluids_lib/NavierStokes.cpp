@@ -16851,9 +16851,7 @@ NavierStokes::split_scalar_advection() {
   advect_time_slab); 
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  getStateMAC_localMF(Umac_Type,
-    UMACOLD_MF+dir,ngrow_mac_old,dir,
-    0,1,advect_time_slab);
+  getStateMAC_localMF(UMACOLD_MF+dir,ngrow_mac_old,dir,advect_time_slab);
 
   getStateMAC_localMF(XDmac_Type,
     XDMACOLD_MF+dir,ngrow_mac_old,dir,
@@ -19829,14 +19827,14 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  getStateALL(1,cur_time_slab,0,
    AMREX_SPACEDIM,HOLD_VELOCITY_DATA_MF);
 
- int vel_or_disp=0;  // velocity
+ int velmac_op=OP_INTERPOLATE_BASE;
  int dest_idx=-1; // we put the interpolant in State_Type so that the
                   // command MultiFab* velmf=ns_level.getState( ... 
                   // gets the interpolated data.  We have to restore
                   // HOLD_VELOCITY_DATA_MF at the end.  Note: this should
 		  // be done after getStateVISC_ALL() since the WALE model
 		  // for eddy viscosity depends on the velocity.
- VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
+ VELMAC_TO_CELLALL(velmac_op,dest_idx);
 
  int tecplot_finest_level=finest_level;
  if ((tecplot_max_level<tecplot_finest_level)&&
@@ -19931,11 +19929,6 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  } else
   amrex::Error("visual_compare invalid");
 
- vel_or_disp=1;  // displacement
- dest_idx=VISUAL_XDISP_MAC_CELL_MF;
- allocate_array(1,AMREX_SPACEDIM,-1,dest_idx);
- VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
-
  std::string path2="./temptecplot";
  UtilCreateDirectoryDestructive(path2);
 
@@ -19967,28 +19960,24 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } else
    amrex::Error("NUM_CELL_ELASTIC invalid");
 
-  viscoelasticmf = new MultiFab(
-   ns_level.state[State_Type].boxArray(),
-   ns_level.dmap,
-   NUM_CELL_ELASTIC+AMREX_SPACEDIM,
-    1,MFInfo().SetTag("mf viscoelasticmf"),FArrayBoxFactory());
-
   if ((num_materials_viscoelastic>=1)&&
       (num_materials_viscoelastic<=nmat)) {
+
+   viscoelasticmf = new MultiFab(
+    ns_level.state[State_Type].boxArray(),
+    ns_level.dmap,
+    NUM_CELL_ELASTIC,
+    1,MFInfo().SetTag("mf viscoelasticmf"),FArrayBoxFactory());
+
    MultiFab* just_tensors=ns_level.getStateTensor(1,0,NUM_CELL_ELASTIC,
       cur_time_slab);
      // dst,src,scomp,dcomp,ncomp,ngrow
    MultiFab::Copy(*viscoelasticmf,*just_tensors,0,0,NUM_CELL_ELASTIC,1); 
    delete just_tensors;
   } else if (num_materials_viscoelastic==0) {
-   // do nothing
+   viscoelasticmf = lsdist; //placeholder
   } else
    amrex::Error("num_materials_viscoelastic invalid:writeTECPLOT_File");
-
-    // dst,src,scomp,dcomp,ncomp,ngrow
-  MultiFab::Copy(*viscoelasticmf,
-    *ns_level.localMF[VISUAL_XDISP_MAC_CELL_MF],0,
-    NUM_CELL_ELASTIC,AMREX_SPACEDIM,1); 
 
   for (int plot_grid_type=0;plot_grid_type<=1;plot_grid_type++) {
 
@@ -20026,8 +20015,14 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } else
    amrex::Error("slice_dir invalid");
 
-  delete viscoelasticmf;
-
+  if ((num_materials_viscoelastic>=1)&&
+      (num_materials_viscoelastic<=nmat)) {
+   delete viscoelasticmf;
+  } else if (num_materials_viscoelastic==0) {
+   // do nothing
+  } else
+   amrex::Error("num_materials_viscoelastic invalid:writeTECPLOT_File(2)");
+   
   delete div_data;
   delete velmf;
   delete denmf;
@@ -20315,19 +20310,11 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
      amrex::Error("im invalid");
    } //partid
 
-   if (icomp+1==PLOTCOMP_XDISP) {
+   if (icomp+1==PLOTCOMP_VISC) {
     // do nothing
    } else
-    amrex::Error("icomp+1!=PLOTCOMP_XDISP");
+    amrex::Error("icomp+1!=PLOTCOMP_VISC");
 
-   icomp++;
-   varnames[icomp]="x_displace";
-   icomp++;
-   varnames[icomp]="y_displace";
-   if (AMREX_SPACEDIM==3) {
-    icomp++;
-    varnames[icomp]="z_displace";
-   }
    for (int im=0;im<num_materials;im++) {
     std::stringstream im_string_stream(std::stringstream::in |
      std::stringstream::out);
@@ -20482,8 +20469,6 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  }  // ilev
 
  delete_array(MULTIFAB_TOWER_PLT_MF);
-
- delete_array(VISUAL_XDISP_MAC_CELL_MF);
 
  delete_array(MACDIV_MF);
  delete_array(MAGTRACE_MF); 

@@ -926,39 +926,13 @@ NavierStokes::variableSetUp ()
       1,EXTRAP_NCOMP_ELASTIC,&pc_interp,null_state_holds_data);
 
       // setComponent: 0..ENUM_NUM_TENSOR_TYPE-1
+      // modifies dest_lstGHOST
      set_tensor_extrap_components(coord,CC_postfix_str,Tensor_Type,0);
 
-     int ibase_tensor=ENUM_NUM_TENSOR_TYPE;
-
-FIX ME
-      // same as x_vel_bc except that EXT_DIR => FOEXTRAP
-     set_x_vel_extrap_bc(bc,phys_bc);
-     std::string xdisplace_strE="XDISPLACEextrap"; 
-     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
-      xdisplace_strE,bc,fort_extrapfill,&tensor_pc_interp);
-
-     ibase_tensor++;
-
-      // same as y_vel_bc except that EXT_DIR => FOEXTRAP
-     set_y_vel_extrap_bc(bc,phys_bc);
-     std::string ydisplace_strE="YDISPLACEextrap"; 
-     desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
-      ydisplace_strE,bc,fort_extrapfill,&tensor_pc_interp);
-
-#if (AMREX_SPACEDIM == 3)
-     if (AMREX_SPACEDIM==3) {
-      ibase_tensor++;
-
-      // same as z_vel_bc except that EXT_DIR => FOEXTRAP
-      set_z_vel_extrap_bc(bc,phys_bc);
-      std::string zdisplace_strE="ZDISPLACEextrap"; 
-      desc_lstGHOST.setComponent(Tensor_Type,ibase_tensor,
-       zdisplace_strE,bc,fort_extrapfill,&tensor_pc_interp);
-     }
-#endif
-
-     if (ibase_tensor!=EXTRAP_NCOMP_ELASTIC-1)
-      amrex::Error("ibase_tensor invalid");
+     if (ENUM_NUM_TENSOR_TYPE==EXTRAP_NCOMP_ELASTIC) {
+      // do nothing
+     } else
+      amrex::Error("EXTRAP_NCOMP_ELASTIC invalid");
 
      for (int partid=0;partid<num_materials_viscoelastic;partid++) {
 
@@ -1047,6 +1021,11 @@ FIX ME
 
 #endif
 
+      if (ibase_tensor==ENUM_NUM_TENSOR_TYPE-1) {
+       // do nothing
+      } else 
+       amrex::Error("ibase_tensor!=ENUM_NUM_TENSOR_TYPE-1");
+
       StateDescriptor::BndryFunc MOFvelocity_fill_class_tensor(
        fort_tensorfill,
        fort_group_tensorfill);
@@ -1069,7 +1048,9 @@ FIX ME
       null_state_holds_data);
 
      std::string MAC_postfix_str="XU";
+      //modifies dest_lstGHOST
      set_tensor_extrap_components(coord,MAC_postfix_str,TensorXU_Type,0);
+      //modifies dest_lst
      set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorXU_Type);
 
      //ngrow=1
@@ -1550,39 +1531,14 @@ FIX ME
      TSAT_bcs,TSAT_fill_class,&tsat_interp);
 
      // setComponent: 0..ENUM_NUM_TENSOR_TYPE-1
+     // modifies dest_lstGHOST
     set_tensor_extrap_components(coord,CC_postfix_str,State_Type,
 		    EXTRAPCOMP_ELASTIC);
 
-    int ibase_state_tensor=EXTRAPCOMP_ELASTIC+ENUM_NUM_TENSOR_TYPE;
-
-     // same as x_vel_bc except that EXT_DIR => FOEXTRAP
-    set_x_vel_extrap_bc(bc,phys_bc);
-    std::string xdisplace_state_strE="XDISPLACEextrap"; 
-    desc_lstGHOST.setComponent(State_Type,ibase_state_tensor,
-      xdisplace_state_strE,bc,fort_extrapfill,&tensor_pc_interp);
-
-    ibase_state_tensor++;
-
-     // same as y_vel_bc except that EXT_DIR => FOEXTRAP
-    set_y_vel_extrap_bc(bc,phys_bc);
-    std::string ydisplace_state_strE="YDISPLACEextrap"; 
-    desc_lstGHOST.setComponent(State_Type,ibase_state_tensor,
-      ydisplace_state_strE,bc,fort_extrapfill,&tensor_pc_interp);
-
-#if (AMREX_SPACEDIM == 3)
-    if (AMREX_SPACEDIM==3) {
-     ibase_state_tensor++;
-
-     // same as z_vel_bc except that EXT_DIR => FOEXTRAP
-     set_z_vel_extrap_bc(bc,phys_bc);
-     std::string zdisplace_state_strE="ZDISPLACEextrap"; 
-     desc_lstGHOST.setComponent(State_Type,ibase_state_tensor,
-       zdisplace_state_strE,bc,fort_extrapfill,&tensor_pc_interp);
-    }
-#endif
-
-    if (ibase_state_tensor!=EXTRAPCOMP_ELASTIC+EXTRAP_NCOMP_ELASTIC-1)
-     amrex::Error("ibase_state_tensor invalid");
+    if (ENUM_NUM_TENSOR_TYPE==EXTRAP_NCOMP_ELASTIC) {
+     // do nothing
+    } else
+     amrex::Error("EXTRAP_NCOMP_ELASTIC invalid");
 
     Vector<std::string> DRAG_names;
     DRAG_names.resize(N_DRAG);

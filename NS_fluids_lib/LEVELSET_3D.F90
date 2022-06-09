@@ -11149,8 +11149,7 @@ stop
 
       ! mac -> cell in solver (init_divup_cell_vel_cell) or VELMAC_TO_CELL
       if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
-          (operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. & ! velocity increment
-          (operation_flag.eq.OP_XDISP_MAC_TO_CELL)) then ! displacement
+          (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then ! velocity increment
        if (ncomp_veldest.ge.SDIM) then
         ! do nothing
        else
@@ -11365,8 +11364,7 @@ stop
 
        ! umac->ucell in solver or VELMAC_TO_CELL
       else if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
-               (operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. & 
-               (operation_flag.eq.OP_XDISP_MAC_TO_CELL)) then ! displacement
+               (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then ! increment
 
        if (homflag.eq.0) then
         ! do nothing
@@ -11799,16 +11797,13 @@ stop
 
        ! mac -> cell in solver (init_divup_cell_vel_cell) or VELMAC_TO_CELL
        else if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
-                (operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. & 
-                (operation_flag.eq.OP_XDISP_MAC_TO_CELL)) then ! displacement
+                (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then !increment
 
          ! LS>0 if clamped
         if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & !velocity
             (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then !velocity increment
          call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
                 vel_clamped,temperature_clamped,dx)
-        else if (operation_flag.eq.OP_XDISP_MAC_TO_CELL) then ! displacement
-         LS_clamped=-9999.0
         else
          print *,"operation_flag invalid:",operation_flag
          stop
@@ -11978,8 +11973,6 @@ stop
                (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then 
             ufacesolid(side)=solxfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
-           else if (operation_flag.eq.OP_XDISP_MAC_TO_CELL) then ! displacement
-            ufacesolid(side)=uface(side)
            else
             print *,"operation_flag invalid"
             stop
@@ -12029,8 +12022,6 @@ stop
                (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then 
             ufacesolid(side)=solyfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
-           else if (operation_flag.eq.OP_XDISP_MAC_TO_CELL) then ! displacement
-            ufacesolid(side)=uface(side)
            else
             print *,"operation_flag invalid"
             stop
@@ -12042,8 +12033,6 @@ stop
                (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then 
             ufacesolid(side)=solzfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
-           else if (operation_flag.eq.OP_XDISP_MAC_TO_CELL) then ! displacement
-            ufacesolid(side)=uface(side)
            else
             print *,"operation_flag invalid"
             stop
@@ -12092,8 +12081,7 @@ stop
             (mass_side(1)*ufacesolid(1)+ &
              mass_side(2)*ufacesolid(2))/masscell
           else if (cell_velocity_override.eq.0) then
-           if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
-               (operation_flag.eq.OP_XDISP_MAC_TO_CELL)) then ! displacement
+           if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then
             weight_prev=zero
            else if (operation_flag.eq.OP_FORCE_MAC_TO_CELL) then 
             uface(1)=uface(1)-save_uface(1)
@@ -12528,7 +12516,6 @@ stop
        if (enable_spectral.eq.1) then
 
         if ((operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. &
-            (operation_flag.eq.OP_XDISP_MAC_TO_CELL).or. &
             (operation_flag.eq.OP_VEL_DIVUP_TO_CELL)) then
          print *,"expecting enable_spectral=0"
          stop
@@ -12537,7 +12524,6 @@ stop
        else if (enable_spectral.eq.0) then
 
         if ((operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. &
-            (operation_flag.eq.OP_XDISP_MAC_TO_CELL).or. &
             (operation_flag.eq.OP_VEL_DIVUP_TO_CELL)) then
          ! do nothing
         else if (operation_flag.eq.OP_RHS_CELL) then
@@ -12613,9 +12599,6 @@ stop
              else if (operation_flag.eq.OP_FORCE_MAC_TO_CELL) then  
               print *,"expecting enable_spectral==0"
               stop
-             else if (operation_flag.eq.OP_XDISP_MAC_TO_CELL) then!displacement
-              print *,"expecting enable_spectral==0"
-              stop
              else if (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) then ! div(up)
               print *,"expecting enable_spectral==0"
               stop
@@ -12631,8 +12614,7 @@ stop
               stop
              endif
              
-             if ((operation_flag.eq.OP_XDISP_MAC_TO_CELL).or. & ! displacement
-                 (operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. & 
+             if ((operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. & 
                  (operation_flag.eq.OP_VEL_DIVUP_TO_CELL)) then !div(up) 
               print *,"expecting enable_spectral==0"
               stop
