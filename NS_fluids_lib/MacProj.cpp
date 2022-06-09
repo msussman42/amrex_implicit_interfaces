@@ -277,10 +277,10 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   local_cell_index=project_option-SOLVETYPE_VELEXTRAP;
   local_cell_c2_ncomp=num_materials;
   local_cell_ncomp=num_materials;
-  local_cell_den_mf=SCALAR_MASK_MATERIAL_MF;
-  local_cell_visc_mf=SCALAR_MASK_MATERIAL_MF;
-  local_cell_sound_mf=SCALAR_MASK_MATERIAL_MF;
-  local_cell_dedt_mf=SCALAR_MASK_MATERIAL_MF;
+  local_cell_den_mf=idx_scalar_mask_material_mf;
+  local_cell_visc_mf=idx_scalar_mask_material_mf;
+  local_cell_sound_mf=idx_scalar_mask_material_mf;
+  local_cell_dedt_mf=idx_scalar_mask_material_mf;
  } else if (project_option_is_valid(project_option)==1) {
   // do nothing
  } else

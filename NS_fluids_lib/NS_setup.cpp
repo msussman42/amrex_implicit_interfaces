@@ -898,80 +898,6 @@ NavierStokes::variableSetUp ()
     } else
      amrex::Error("nparts invalid");
 
-// XDmac_Type ... ZDmac_Type
-
-    int displacement_enable_spectral=0;
-
-    xd_mac_interp.interp_enable_spectral=displacement_enable_spectral;
-    xd_mac_lo_interp.interp_enable_spectral=0;
-
-     // ngrow=0
-    desc_lst.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
-     0,1,&xd_mac_interp,state_holds_data);
-    // ngrow=0,ncomp=1
-    desc_lstGHOST.addDescriptor(XDmac_Type,IndexType::TheUMACType(),
-     0,1,&xd_mac_lo_interp,null_state_holds_data);
-
-     // same as x_vel_bc except that EXT_DIR => FOEXTRAP
-    set_x_vel_extrap_bc(bc,phys_bc);
-    std::string extrap_str="xd_extrap"; 
-      //dcomp=0
-    desc_lstGHOST.setComponent(XDmac_Type,0,
-      extrap_str,bc,fort_x_extrapfill,&xd_mac_lo_interp);
-
-     // ngrow=0
-    desc_lst.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
-     0,1,&xd_mac_interp,state_holds_data);
-     // ngrow=0,ncomp=1
-    desc_lstGHOST.addDescriptor(YDmac_Type,IndexType::TheVMACType(),
-     0,1,&xd_mac_lo_interp,null_state_holds_data);
-
-     // same as y_vel_bc except that EXT_DIR => FOEXTRAP
-    set_y_vel_extrap_bc(bc,phys_bc);
-    extrap_str="yd_extrap"; 
-      //dcomp=0
-    desc_lstGHOST.setComponent(YDmac_Type,0,
-      extrap_str,bc,fort_x_extrapfill,&xd_mac_lo_interp);
-
-#if (AMREX_SPACEDIM == 3)
-     // ngrow=0
-    desc_lst.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
-     0,1,&xd_mac_interp,state_holds_data);
-     // ngrow=0,ncomp=1
-    desc_lstGHOST.addDescriptor(ZDmac_Type,IndexType::TheWMACType(),
-     0,1,&xd_mac_lo_interp,null_state_holds_data);
-
-     // same as z_vel_bc except that EXT_DIR => FOEXTRAP
-    set_z_vel_extrap_bc(bc,phys_bc);
-    extrap_str="zd_extrap"; 
-      //dcomp=0
-    desc_lstGHOST.setComponent(ZDmac_Type,0,
-      extrap_str,bc,fort_x_extrapfill,&xd_mac_lo_interp);
-#endif
-
-    std::string xd_mac_name="XDMAC";
-    BCRec xd_mac_bcs;
-     // same as x_vel_bc except that EXT_DIR => FOEXTRAP
-    set_x_vel_extrap_bc(xd_mac_bcs,phys_bc);
-    desc_lst.setComponent(XDmac_Type,0,xd_mac_name,xd_mac_bcs,
-       fort_xdmacfill,&xd_mac_interp);
-
-    std::string yd_mac_name="YDMAC";
-    BCRec yd_mac_bcs;
-     // same as y_vel_bc except that EXT_DIR => FOEXTRAP
-    set_y_vel_extrap_bc(yd_mac_bcs,phys_bc);
-    desc_lst.setComponent(YDmac_Type,0,yd_mac_name,yd_mac_bcs,
-       fort_xdmacfill,&xd_mac_interp);
-
-#if (AMREX_SPACEDIM == 3)
-    std::string zd_mac_name="ZDMAC";
-    BCRec zd_mac_bcs;
-     // same as z_vel_bc except that EXT_DIR => FOEXTRAP
-    set_z_vel_extrap_bc(zd_mac_bcs,phys_bc);
-    desc_lst.setComponent(ZDmac_Type,0,zd_mac_name,zd_mac_bcs,
-       fort_xdmacfill,&xd_mac_interp);
-#endif
-
 // Tensor_Type  -------------------------------------------
 
     if (num_materials_viscoelastic!=im_elastic_map.size())
@@ -1004,6 +930,7 @@ NavierStokes::variableSetUp ()
 
      int ibase_tensor=ENUM_NUM_TENSOR_TYPE;
 
+FIX ME
       // same as x_vel_bc except that EXT_DIR => FOEXTRAP
      set_x_vel_extrap_bc(bc,phys_bc);
      std::string xdisplace_strE="XDISPLACEextrap"; 

@@ -1919,8 +1919,11 @@ void NavierStokes::init_divup_cell_vel_cell(
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     debug_ngrow(idx_umac+dir,0,111);
     if (localMF[idx_umac+dir]->nComp()==1) {
-     MultiFab::Copy(*localMF[UMAC_MATERIAL_MF+dir],
-		    *localMF[idx_umac+dir],0,im_extend,1,0);
+     if (idx_umac_material_mf>=0) {
+      MultiFab::Copy(*localMF[idx_umac_material_mf+dir],
+ 		     *localMF[idx_umac+dir],0,im_extend,1,0);
+     } else
+      amrex::Error("idx_umac_material_mf invalid");
     } else
      amrex::Error("localMF[idx_umac+dir]->nComp() invalid");
    }  // dir=0..sdim-1

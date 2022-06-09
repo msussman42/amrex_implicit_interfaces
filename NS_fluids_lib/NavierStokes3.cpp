@@ -380,40 +380,6 @@ void NavierStokes::nonlinear_advection() {
   ns_level.prepare_advect_vars(prev_time_slab);
  }
 
- if ((num_materials_viscoelastic>=1)&&
-     (num_materials_viscoelastic<=nmat)) {
-
-  allocate_levelset_ALL(ngrow_distance,LEVELPC_MF);
-
-    //must go from finest to coarsest levels here.
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.prepare_umac_material(prev_time_slab);
-  }
-  for (int im=0;im<num_materials;im++) {
-   if (ns_is_rigid(im)==0) {
-    if ((elastic_time[im]>=0.0)&&
-        (elastic_viscosity[im]>=0.0)) {
-     if (store_elastic_data[im]==1) {
-      multiphase_project(SOLVETYPE_VELEXTRAP+im);
-     } else if (store_elastic_data[im]==0) {
-      // do nothing
-     } else
-      amrex::Error("store_elastic_data invalid");
-    } else
-     amrex::Error("elastic_time or elastic_viscosity invalid");
-   } else if (ns_is_rigid(im)==1) {
-    // do nothing
-   } else
-    amrex::Error("ns_is_rigid invalid");
-
-  } //im=0..nmat-1
-
- } else if (num_materials_viscoelastic==0) {
-  // do nothing
- } else
-  amrex::Error("num_materials_viscoelastic invalid");
-
  if (parent->global_AMR_particles_flag==particles_flag) {
   // do nothing
  } else
@@ -701,19 +667,6 @@ void NavierStokes::nonlinear_advection() {
    -1, // data_dir==-1
    parent->levelSteps(0)); 
  }
-
- if ((num_materials_viscoelastic>=1)&&
-     (num_materials_viscoelastic<=nmat)) {
-
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.delete_umac_material();
-  }
-
- } else if (num_materials_viscoelastic==0) {
-  // do nothing
- } else
-  amrex::Error("num_materials_viscoelastic invalid");
 
 }  // end subroutine nonlinear_advection
 
@@ -7687,9 +7640,9 @@ void NavierStokes::allocate_FACE_WEIGHT(
   local_cell_index=project_option-SOLVETYPE_VELEXTRAP;
   local_face_ncomp=num_materials;
   local_cell_ncomp=num_materials;
-  local_face_var_mf=UMAC_MASK_MATERIAL_MF;
-  local_cell_den_mf=SCALAR_MASK_MATERIAL_MF;
-  local_cell_visc_mf=SCALAR_MASK_MATERIAL_MF;
+  local_face_var_mf=idx_umac_mask_material_mf;
+  local_cell_den_mf=idx_scalar_mask_material_mf;
+  local_cell_visc_mf=idx_scalar_mask_material_mf;
 
  } else if (project_option_is_valid(project_option)==1) {
   // do nothing
@@ -9926,12 +9879,16 @@ void NavierStokes::multiphase_project(int project_option) {
    NavierStokes& ns_level=getLevel(ilev);
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     int im_extend=project_option-SOLVETYPE_VELEXTRAP;
-    MultiFab::Copy(
+
+    if (idx_umac_material_mf>=0) {
+     MultiFab::Copy(
       *ns_level.localMF[MAC_TEMP_MF+dir],
-      *ns_level.localMF[UMAC_MATERIAL_MF+dir],im_extend,0,nsolve,0);
-    MultiFab::Copy(
+      *ns_level.localMF[idx_umac_material_mf+dir],im_extend,0,nsolve,0);
+     MultiFab::Copy(
       *ns_level.localMF[UMAC_MF+dir],
-      *ns_level.localMF[UMAC_MATERIAL_MF+dir],im_extend,0,nsolve,0);
+      *ns_level.localMF[idx_umac_material_mf+dir],im_extend,0,nsolve,0);
+    } else
+     amrex::Error("idx_umac_material_mf invalid");
    }  // dir=0..sdim-1
   } // ilev=finest_level ... level
 
@@ -11533,9 +11490,13 @@ void NavierStokes::multiphase_project(int project_option) {
    ns_level.init_divup_cell_vel_cell(project_option,
     update_energy,PRESPC2_MF,UMAC_MF);
 
+   if (idx_umac_material_mf>=0) {
     // spectral_override==0 => always low order.
-   ns_level.avgDownEdge_localMF(UMAC_MATERIAL_MF,im_extend,1,
+    ns_level.avgDownEdge_localMF(idx_umac_material_mf,im_extend,1,
       0,AMREX_SPACEDIM,0,200);
+   } else
+    amrex::Error("idx_umac_material_mf invalid");
+
   } // ilev=finest_level ... level
 
   Vector<int> scompBC_map;
@@ -11543,13 +11504,19 @@ void NavierStokes::multiphase_project(int project_option) {
   scompBC_map[0]=0;
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-   if (localMF[UMAC_MATERIAL_MF+dir]->nGrow()==ngrow_distance) {
-    // do nothing
-   } else
-    amrex::Error("localMF[UMAC_MATERIAL_MF+dir]->nGrow() invalid");
+   if (idx_umac_material_mf>=0) {
 
-   GetStateFromLocalALL(UMAC_MATERIAL_MF+dir,ngrow_distance,im_extend,1,
+    if (localMF[idx_umac_material_mf+dir]->nGrow()==ngrow_distance) {
+     // do nothing
+    } else
+     amrex::Error("localMF[idx_umac_material_mf+dir]->nGrow() invalid");
+
+    GetStateFromLocalALL(idx_umac_material_mf+dir,ngrow_distance,im_extend,1,
      Umac_Type+dir,scompBC_map);
+
+   } else
+    amrex::Error("idx_umac_material_mf invalid");
+
   } //dir=0..sdim-1
 
   delete_array(PRESPC2_MF);
@@ -13141,168 +13108,6 @@ void NavierStokes::prepare_advect_vars(Real time) {
 
 } // end subroutine prepare_advect_vars(Real time)
 
-
-void NavierStokes::prepare_umac_material(Real time) {
-
- if (time>=0.0) {
-  // do nothing
- } else
-  amrex::Error("time invalid");
-
- if (ngrow_distance!=4)
-  amrex::Error("ngrow_distance!=4");
- if (ngrow_make_distance!=3)
-  amrex::Error("ngrow_make_distance!=3");
-
- int finest_level=parent->finestLevel();
- 
- bool use_tiling=ns_tiling;
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- debug_ngrow(LEVELPC_MF,ngrow_distance,6003);
- debug_ngrow(MASKCOEF_MF,1,6003);
-
- const Real* dx=geom.CellSize();
-
- MultiFab* local_umac[AMREX_SPACEDIM];
-
- new_localMF(SCALAR_MASK_MATERIAL_MF,num_materials,1,-1);
- new_localMF(DIVU_MASK_MATERIAL_MF,num_materials,1,-1);
- new_localMF(DIVU_MATERIAL_MF,num_materials,1,-1);
- for (int im=0;im<num_materials;im++) {
-  setVal_localMF(SCALAR_MASK_MATERIAL_MF,0.0,im,1,1);
-  setVal_localMF(DIVU_MASK_MATERIAL_MF,1.0,im,1,1);
-  setVal_localMF(DIVU_MATERIAL_MF,0.0,im,1,1);
- }
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  local_umac[dir]=getStateMAC(Umac_Type,ngrow_distance,dir,time);
-  new_localMF(UMAC_MATERIAL_MF+dir,num_materials,ngrow_distance,dir);
-  new_localMF(UMAC_MASK_MATERIAL_MF+dir,num_materials,0,dir);
-  for (int im=0;im<num_materials;im++) {
-    //idx,dataval,scomp,ncomp,ngrow
-   setVal_localMF(UMAC_MASK_MATERIAL_MF+dir,0.0,im,1,0);
-   MultiFab::Copy(*localMF[UMAC_MATERIAL_MF+dir],*local_umac[dir],
-		  0,im,1,ngrow_distance);
-
-   if (ns_is_rigid(im)==0) {
-    if ((elastic_time[im]>=0.0)&&
-        (elastic_viscosity[im]>=0.0)) {
-     if (store_elastic_data[im]==1) {
-
-      if (thread_class::nthreads<1)
-       amrex::Error("thread_class::nthreads invalid");
-      thread_class::init_d_numPts(S_new.boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-      for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-       BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-       const int gridno = mfi.index();
-       const Box& tilegrid = mfi.tilebox();
-       const Box& fabgrid = grids[gridno];
-       const int* tilelo=tilegrid.loVect();
-       const int* tilehi=tilegrid.hiVect();
-       const int* fablo=fabgrid.loVect();
-       const int* fabhi=fabgrid.hiVect();
-       int bfact=parent->Space_blockingFactor(level);
-
-       const Real* xlo = grid_loc[gridno].lo();
-
-       // mask=tag (1) if not covered by level+1 or outside the domain.
-       FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-       FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
-       FArrayBox& scalarfab=(*localMF[SCALAR_MASK_MATERIAL_MF])[mfi];
-       FArrayBox& divu_mask_fab=(*localMF[DIVU_MASK_MATERIAL_MF])[mfi];
-       FArrayBox& umacfab=(*localMF[UMAC_MATERIAL_MF+dir])[mfi];
-       FArrayBox& umacmaskfab=(*localMF[UMAC_MASK_MATERIAL_MF+dir])[mfi];
-       Vector<int> velbc=getBCArray(State_Type,gridno,
-         STATECOMP_VEL,STATE_NCOMP_VEL);
-
-       int tid_current=ns_thread();
-       if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-        amrex::Error("tid_current invalid");
-       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-       //fort_extend_mac_vel is declared in: GODUNOV_3D.F90
-       //fort_extend_mac_vel uses "containing_MACcell"
-       fort_extend_mac_vel( 
-        &tid_current,
-        &level,
-        &finest_level,
-        &dir,
-        &im,
-        tilelo,tilehi,
-        fablo,fabhi,
-        &bfact,
-        xlo,dx,
-        &time,
-        &dt_slab,
-        velbc.dataPtr(),
-        maskcov.dataPtr(),
-        ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-        umacfab.dataPtr(im),
-        ARLIM(umacfab.loVect()),ARLIM(umacfab.hiVect()),
-        umacmaskfab.dataPtr(im),
-        ARLIM(umacmaskfab.loVect()),ARLIM(umacmaskfab.hiVect()),
-        scalarfab.dataPtr(im),
-        ARLIM(scalarfab.loVect()),ARLIM(scalarfab.hiVect()),
-        divu_mask_fab.dataPtr(im),
-        ARLIM(divu_mask_fab.loVect()),ARLIM(divu_mask_fab.hiVect()),
-        lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()));
-
-      } // mfi
-} // omp
-
-      ns_reconcile_d_num(70);
-     } else if (store_elastic_data[im]==0) {
-      // do nothing
-     } else
-      amrex::Error("store_elastic_data invalid");
-    } else
-     amrex::Error("elastic_time or elastic_viscosity invalid");
-
-   } else if (ns_is_rigid(im)==1) {
-    // do nothing
-   } else
-    amrex::Error("ns_is_rigid invalid");
-
-  } //im=0..nmat-1
- } // dir=0..sdim-1
-
-
- for (int im=0;im<num_materials;im++) {
-
-   // spectral_override==0 => always low order.
-   // synchronizes level+1 and level.
-  avgDown_localMF(SCALAR_MASK_MATERIAL_MF,im,1,0);
-   // spectral_override==0 => always low order.
-  avgDownEdge_localMF(UMAC_MATERIAL_MF,im,1,0,AMREX_SPACEDIM,0,200);
-  avgDownEdge_localMF(UMAC_MASK_MATERIAL_MF,im,1,0,AMREX_SPACEDIM,0,200);
-
- } //im=0..nmat-1
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  localMF[UMAC_MATERIAL_MF+dir]->FillBoundary(geom.periodicity());
-  localMF[UMAC_MASK_MATERIAL_MF+dir]->FillBoundary(geom.periodicity());
- }
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  delete local_umac[dir];
- }
-
-} // end subroutine prepare_umac_material(Real time)
-
-void NavierStokes::delete_umac_material() {
-
- delete_localMF(UMAC_MATERIAL_MF,AMREX_SPACEDIM);
- delete_localMF(UMAC_MASK_MATERIAL_MF,AMREX_SPACEDIM);
- delete_localMF(SCALAR_MASK_MATERIAL_MF,1);
- delete_localMF(DIVU_MASK_MATERIAL_MF,1);
- delete_localMF(DIVU_MATERIAL_MF,1);
-
-} // subroutine delete_umac_material()
 
 // FUTURE: do the same treatment for advection:
 //  variable: dt div (-pI + tau)/rho = unp1-u^advect = dt_non_advect_force
