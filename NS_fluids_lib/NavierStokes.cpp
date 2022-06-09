@@ -16769,7 +16769,6 @@ NavierStokes::split_scalar_advection() {
  int ngrow=2;
  int mac_grow=2; 
  int ngrow_mac_old=2;
- int num_MAC_vectors=2;
 
  if (NUM_CELL_ELASTIC==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
   // do nothing

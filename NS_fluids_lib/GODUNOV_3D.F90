@@ -14244,7 +14244,6 @@ stop
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T ibucket
-      INTEGER_T ibucket_map
       REAL_T xsten_crse(-1:1,SDIM)
       INTEGER_T dir2
       INTEGER_T iside
@@ -14302,7 +14301,7 @@ stop
       INTEGER_T istencil
       INTEGER_T maskcell
       REAL_T donate_data
-      REAL_T donate_data_MAC(SDIM,num_MAC_vectors)
+      REAL_T donate_data_MAC(SDIM)
       REAL_T donate_density
       REAL_T donate_mom_density
       REAL_T ETcore
@@ -14313,7 +14312,6 @@ stop
 
       INTEGER_T idonatelow
       INTEGER_T idonatehigh
-
 
       REAL_T voltotal_target
       REAL_T voltotal_depart
@@ -14337,8 +14335,8 @@ stop
       REAL_T multi_cen_grid(SDIM,nmat)
       REAL_T newcen(SDIM,nmat)
       REAL_T veldata(nc_bucket)
-      REAL_T veldata_MAC(SDIM,num_MAC_vectors)
-      REAL_T veldata_MAC_mass(SDIM,num_MAC_vectors)
+      REAL_T veldata_MAC(SDIM)
+      REAL_T veldata_MAC_mass(SDIM)
 
       REAL_T, dimension(:,:), allocatable :: compareconserve
       REAL_T, dimension(:,:), allocatable :: comparestate
@@ -14350,8 +14348,6 @@ stop
       INTEGER_T check_intersection
       INTEGER_T check_accept
       REAL_T xsten_recon(-1:1,SDIM)
-
-      INTEGER_T ivec
 
       REAL_T warning_cutoff
       INTEGER_T momcomp
@@ -14663,12 +14659,6 @@ stop
       call checkbound_array(fablo,fabhi,ymassside_ptr,1,-1,9379)
       call checkbound_array(fablo,fabhi,zmassside_ptr,1,-1,9380)
 
-      if (num_MAC_vectors.eq.2) then
-       ! do nothing
-      else
-       print *,"num_MAC_vectors invalid"
-       stop
-      endif 
       if (NUM_CELL_ELASTIC.eq. &
           ENUM_NUM_TENSOR_TYPE*num_materials_viscoelastic) then
        ! do nothing
@@ -14946,10 +14936,8 @@ stop
             do istate=1,nc_bucket
              veldata(istate)=zero
             enddo
-            do ivec=1,num_MAC_vectors
-             veldata_MAC(veldir,ivec)=zero
-             veldata_MAC_mass(veldir,ivec)=zero
-            enddo
+            veldata_MAC(veldir)=zero
+            veldata_MAC_mass(veldir)=zero
 
             do istencil=idonatelow,idonatehigh
 
@@ -15137,33 +15125,19 @@ stop
                   stop
                 endif
 
-                ! xvel   : xvel  1..num_MAC_vectors
-                 
                 if (veldir.eq.1) then
-                  do ivec=1,num_MAC_vectors
-                   donate_data_MAC(veldir,ivec)= &
-                    xvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC),ivec) 
-                  enddo
+                 donate_data_MAC(veldir)= &
+                  xvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC)) 
                 else if (veldir.eq.2) then
-                  do ivec=1,num_MAC_vectors
-                   donate_data_MAC(veldir,ivec)= &
-                    yvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC),ivec) 
-                  enddo
+                 donate_data_MAC(veldir)= &
+                  yvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC)) 
                 else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-                  do ivec=1,num_MAC_vectors
-                   donate_data_MAC(veldir,ivec)= &
-                    zvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC),ivec) 
-                  enddo
+                 donate_data_MAC(veldir)= &
+                  zvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC)) 
                 else
-                  print *,"veldir invalid"
-                  stop
+                 print *,"veldir invalid"
+                 stop
                 endif
-
-                veldata_MAC_mass(veldir,2)= &
-                  veldata_MAC_mass(veldir,2)+LS_voltotal_depart
-                veldata_MAC(veldir,2)= &
-                  veldata_MAC(veldir,2)+ &
-                  donate_data_MAC(veldir,2)*LS_voltotal_depart
 
                  ! initialize momentum for each material.
                 do im=1,nmat
@@ -15191,7 +15165,7 @@ stop
                  !   massdepart_mom=donate_data*added_weight(im)
                  massdepart_mom=massdepart_mom*multi_volume_grid(im)
 
-                 mom2(veldir)=massdepart_mom*donate_data_MAC(veldir,1)
+                 mom2(veldir)=massdepart_mom*donate_data_MAC(veldir)
 
                  veldata(CISLCOMP_DEN_MOM+im)= &
                   veldata(CISLCOMP_DEN_MOM+im)+massdepart_mom
@@ -15200,12 +15174,12 @@ stop
                  veldata(momcomp)=veldata(momcomp)+mom2(veldir) 
 
                   ! this gets incremented for im=1..nmat
-                 veldata_MAC_mass(veldir,1)= &
-                  veldata_MAC_mass(veldir,1)+massdepart_mom
+                 veldata_MAC_mass(veldir)=veldata_MAC_mass(veldir)+ &
+                     massdepart_mom
 
                   ! this gets incremented for im=1..nmat
-                 veldata_MAC(veldir,1)= &
-                  veldata_MAC(veldir,1)+mom2(veldir)
+                 veldata_MAC(veldir)= &
+                  veldata_MAC(veldir)+mom2(veldir)
 
                 enddo ! im=1,..,nmat 
 
@@ -15236,34 +15210,6 @@ stop
              ibucket=2
             else
              print *,"iside_part invalid"
-             stop
-            endif
-
-            ibucket_map=ibucket+2
-
-            if (veldir.eq.1) then
-             xmomside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
-              xmomside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
-              veldata_MAC(veldir,2)
-             xmassside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
-              xmassside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
-              veldata_MAC_mass(veldir,2)
-            else if (veldir.eq.2) then
-             ymomside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
-              ymomside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
-              veldata_MAC(veldir,2)
-             ymassside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
-              ymassside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
-              veldata_MAC_mass(veldir,2)
-            else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-             zmomside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
-              zmomside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
-              veldata_MAC(veldir,2)
-             zmassside(D_DECL(ipart,jpart,kpart),ibucket_map)= &
-              zmassside(D_DECL(ipart,jpart,kpart),ibucket_map)+ &
-              veldata_MAC_mass(veldir,2)
-            else
-             print *,"veldir invalid"
              stop
             endif
 
