@@ -3300,12 +3300,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       } // ilev=finest_level ... level
 
       Real beta=1.0;
-      int vel_or_disp=0;// -1=velocity increment 0=velocity  1=displacement
+      int velmac_op=OP_INTERPOLATE_BASE;
       int dest_idx=-1;  // update State_Type
 
        // maintain conservation of energy for compressible materials.
       increment_KE_ALL(beta);
-      VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
+      VELMAC_TO_CELLALL(velmac_op,dest_idx);
       beta=-1.0;
       increment_KE_ALL(beta);
 
@@ -11903,12 +11903,12 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
    
    // average down the MAC velocity, set the boundary conditions.
   make_MAC_velocity_consistentALL();
-  int vel_or_disp=-1; //interpolate MAC velocity increment
+  int velmac_op=OP_INTERPOLATE_INCREMENT; 
   int dest_idx=-1;   //update State_Type
 
    // declared in: NavierStokes2.cpp
    // increment: State_Type+=interp_mac_to_cell(Umac_new-REGISTER_MARK_MAC)
-  VELMAC_TO_CELLALL(vel_or_disp,dest_idx);
+  VELMAC_TO_CELLALL(velmac_op,dest_idx);
 
    //vel_elastic_ALL called from veldiffuseALL
   if (viscoelastic_force_only==0) { 

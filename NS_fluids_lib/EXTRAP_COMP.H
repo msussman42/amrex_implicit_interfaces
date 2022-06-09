@@ -32,9 +32,9 @@ interface temperature and interface mass fraction.
 #define EXTRAP_NCOMP_BURNING (num_interfaces+num_interfaces*EXTRAP_PER_BURNING)
 #define EXTRAP_NCOMP_TSAT (num_interfaces+num_interfaces*EXTRAP_PER_TSAT)
 #if (0)
-11,12,22,33,13,23,XD,YD,ZD
+11,12,22,33,13,23
 #endif
-#define EXTRAP_NCOMP_ELASTIC (ENUM_NUM_TENSOR_TYPE+AMREX_SPACEDIM)
+#define EXTRAP_NCOMP_ELASTIC (ENUM_NUM_TENSOR_TYPE)
 #define EXTRAP_NCOMP_SOLID (1+AMREX_SPACEDIM)
 
 #define EXTRAPCOMP_SCALAR (0)
@@ -149,7 +149,6 @@ FSI_SIZE=area
 #define OP_VEL_DIVUP_TO_CELL (101)
 #define OP_GRADU_MAC_TO_CELL (105)
 #define OP_ISCHEME_CELL (107)
-#define OP_XDISP_MAC_TO_CELL (113)
 
 #define SUB_OP_DEFAULT 0
 
@@ -174,6 +173,10 @@ FSI_SIZE=area
 
 #define OP_HOOP_BOUSSINESQ_IMPLICIT 1
 #define OP_HOOP_BOUSSINESQ_EXPLICIT 0
+
+#define OP_INTERPOLATE_INCREMENT 1
+#define OP_INTERPOLATE_BASE 0
+
 #define PLOTCOMP_X 0
 #define PLOTCOMP_Y (PLOTCOMP_X+1)
 #define PLOTCOMP_Z (PLOTCOMP_Y+plot_sdim_macro-2)
@@ -194,10 +197,7 @@ FSI_SIZE=area
 #define PLOTCOMP_SCALARS (PLOTCOMP_LS_SLOPE+num_materials*plot_sdim_macro)
 #define PLOTCOMP_MOMDEN (PLOTCOMP_SCALARS+num_materials*num_state_material)
 #define PLOTCOMP_CONFIG_TENSOR (PLOTCOMP_MOMDEN+num_materials)
-#define PLOTCOMP_XDISP (PLOTCOMP_CONFIG_TENSOR+num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE)
-#define PLOTCOMP_YDISP (PLOTCOMP_XDISP+1)
-#define PLOTCOMP_ZDISP (PLOTCOMP_YDISP+plot_sdim_macro-2)
-#define PLOTCOMP_VISC (PLOTCOMP_ZDISP+1)
+#define PLOTCOMP_VISC (PLOTCOMP_CONFIG_TENSOR+num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE)
 #define PLOTCOMP_THERMALCOND (PLOTCOMP_VISC+num_materials)
 #define PLOTCOMP_TRACE_A_VORT (PLOTCOMP_THERMALCOND+num_materials)
 #define PLOTCOMP_F_ELASTIC_X (PLOTCOMP_TRACE_A_VORT+5*num_materials)
