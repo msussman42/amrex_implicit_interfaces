@@ -16852,10 +16852,6 @@ NavierStokes::split_scalar_advection() {
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   getStateMAC_localMF(UMACOLD_MF+dir,ngrow_mac_old,dir,advect_time_slab);
-
-  getStateMAC_localMF(XDmac_Type,
-    XDMACOLD_MF+dir,ngrow_mac_old,dir,
-    0,1,advect_time_slab);
  } // dir = 0..sdim-1
 
  if ((dir_absolute_direct_split<0)||
@@ -16892,10 +16888,8 @@ NavierStokes::split_scalar_advection() {
  debug_ngrow(MASK_NBR_MF,ngrow,28); 
 
  MultiFab* umac_new[AMREX_SPACEDIM];
- MultiFab* xdisp_mac_new[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   umac_new[dir]=&get_new_data(Umac_Type+dir,slab_step+1);
-  xdisp_mac_new[dir]=&get_new_data(XDmac_Type+dir,slab_step+1);
  }
 
  int ngrid=grids.size();
@@ -16953,29 +16947,27 @@ NavierStokes::split_scalar_advection() {
 } // omp
  ns_reconcile_d_num(86);
 
- MultiFab* xvel[AMREX_SPACEDIM]; // num_MAC_vectors components
- MultiFab* side_bucket_mom[AMREX_SPACEDIM]; // 2*num_MAC_vectors components
- MultiFab* side_bucket_mass[AMREX_SPACEDIM]; // 2*num_MAC_vectors components
+ MultiFab* xvel[AMREX_SPACEDIM]; 
+ MultiFab* side_bucket_mom[AMREX_SPACEDIM]; // 2 components
+ MultiFab* side_bucket_mass[AMREX_SPACEDIM]; // 2 components
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
+   //ncomp=1
   xvel[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),dmap,
-    num_MAC_vectors,
-    ngrow_mac_old,MFInfo().SetTag("xvel"),FArrayBoxFactory());
+    1,ngrow_mac_old,MFInfo().SetTag("xvel"),FArrayBoxFactory());
 
-    //ncomp=2*num_MAC_vectors ngrow=1
+    //ncomp=2 ngrow=1
   side_bucket_mom[dir]=new MultiFab(grids,dmap,
-     2*num_MAC_vectors,1,
-     MFInfo().SetTag("side_bucket_mom"),FArrayBoxFactory());
-    //scomp=0 ncomp=2*num_MAC_vectors ngrow=1
-  side_bucket_mom[dir]->setVal(0.0,0,2*num_MAC_vectors,1);
+     2,1,MFInfo().SetTag("side_bucket_mom"),FArrayBoxFactory());
+    //scomp=0 ncomp=2 ngrow=1
+  side_bucket_mom[dir]->setVal(0.0,0,2,1);
 
-   //ncomp=2*num_MAC_vectors ngrow=1
+   //ncomp=2 ngrow=1
   side_bucket_mass[dir]=new MultiFab(grids,dmap,
-     2*num_MAC_vectors,1,
-     MFInfo().SetTag("side_bucket_mass"),FArrayBoxFactory());
-   //scomp=0 ncomp=2*num_MAC_vectors ngrow=1
-  side_bucket_mass[dir]->setVal(0.0,0,2*num_MAC_vectors,1);
+     2,1,MFInfo().SetTag("side_bucket_mass"),FArrayBoxFactory());
+   //scomp=0 ncomp=2 ngrow=1
+  side_bucket_mass[dir]->setVal(0.0,0,2,1);
  }  // dir = 0..sdim-1
 
  for (int veldir=1;veldir<=AMREX_SPACEDIM;veldir++) {
@@ -17002,8 +16994,7 @@ NavierStokes::split_scalar_advection() {
     const Real* xlo = grid_loc[gridno].lo();
 
     FArrayBox& x_mac_old=(*localMF[UMACOLD_MF+veldir-1])[mfi];
-    FArrayBox& xd_mac_old=(*localMF[XDMACOLD_MF+veldir-1])[mfi];
-    FArrayBox& xvelfab=(*xvel[veldir-1])[mfi]; // 1..num_MAC_vectors
+    FArrayBox& xvelfab=(*xvel[veldir-1])[mfi]; 
 
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -17016,7 +17007,6 @@ NavierStokes::split_scalar_advection() {
      &finest_level,
      &normdir_here,
      x_mac_old.dataPtr(),ARLIM(x_mac_old.loVect()),ARLIM(x_mac_old.hiVect()),
-     xd_mac_old.dataPtr(),ARLIM(xd_mac_old.loVect()),ARLIM(xd_mac_old.hiVect()),
      xvelfab.dataPtr(),ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
      xlo,dx,
      tilelo,tilehi,
@@ -17024,7 +17014,6 @@ NavierStokes::split_scalar_advection() {
      &bfact,
      &nmat,
      &ngrow,  //=2
-     &num_MAC_vectors, //=2
      &ngrow_mac_old, //=2
      &veldir);
   }  // mfi
@@ -17243,7 +17232,6 @@ NavierStokes::split_scalar_advection() {
    xlo,dx,
     // local variables
    consfab.dataPtr(),ARLIM(consfab.loVect()),ARLIM(consfab.hiVect()),
-    // 1..num_MAC_vectors
    xvelfab.dataPtr(),ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
    yvelfab.dataPtr(),ARLIM(yvelfab.loVect()),ARLIM(yvelfab.hiVect()),
    zvelfab.dataPtr(),ARLIM(zvelfab.loVect()),ARLIM(zvelfab.hiVect()),
@@ -17263,7 +17251,6 @@ NavierStokes::split_scalar_advection() {
    &ncomp_state,
    &ntensor,
    &nc_bucket,
-   &num_MAC_vectors,
    &verbose,
    &gridno,&ngrid,
    &level,
@@ -17314,21 +17301,17 @@ NavierStokes::split_scalar_advection() {
     // mask=tag if not covered by level+1 or outside the domain.
    FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
 
-   FArrayBox& xmomside=(*side_bucket_mom[0])[mfi];//1..2*num_MAC_vectors
+   FArrayBox& xmomside=(*side_bucket_mom[0])[mfi];//1..2
    FArrayBox& ymomside=(*side_bucket_mom[1])[mfi];
    FArrayBox& zmomside=(*side_bucket_mom[AMREX_SPACEDIM-1])[mfi];
 
-   FArrayBox& xmassside=(*side_bucket_mass[0])[mfi];//1..2*num_MAC_vectors
+   FArrayBox& xmassside=(*side_bucket_mass[0])[mfi];//1..2
    FArrayBox& ymassside=(*side_bucket_mass[1])[mfi];
    FArrayBox& zmassside=(*side_bucket_mass[AMREX_SPACEDIM-1])[mfi];
 
    FArrayBox& xvmac_new=(*umac_new[0])[mfi];
    FArrayBox& yvmac_new=(*umac_new[1])[mfi];
    FArrayBox& zvmac_new=(*umac_new[AMREX_SPACEDIM-1])[mfi];
-
-   FArrayBox& xdmac_new=(*xdisp_mac_new[0])[mfi];
-   FArrayBox& ydmac_new=(*xdisp_mac_new[1])[mfi];
-   FArrayBox& zdmac_new=(*xdisp_mac_new[AMREX_SPACEDIM-1])[mfi];
 
     // velocity * dt
    FArrayBox& unode=(*localMF[MAC_VELOCITY_MF+normdir_here])[mfi];
@@ -17342,7 +17325,6 @@ NavierStokes::split_scalar_advection() {
 
     // declared in GODUNOV_3D.F90
    fort_build_newmac(
-    &num_MAC_vectors, //num_MAC_vectors=2
     &normdir_here,
     tilelo,tilehi,
     fablo,fabhi,&bfact,
@@ -17356,9 +17338,6 @@ NavierStokes::split_scalar_advection() {
     xvmac_new.dataPtr(),ARLIM(xvmac_new.loVect()),ARLIM(xvmac_new.hiVect()),
     yvmac_new.dataPtr(),ARLIM(yvmac_new.loVect()),ARLIM(yvmac_new.hiVect()),
     zvmac_new.dataPtr(),ARLIM(zvmac_new.loVect()),ARLIM(zvmac_new.hiVect()),
-    xdmac_new.dataPtr(),ARLIM(xdmac_new.loVect()),ARLIM(xdmac_new.hiVect()),
-    ydmac_new.dataPtr(),ARLIM(ydmac_new.loVect()),ARLIM(ydmac_new.hiVect()),
-    zdmac_new.dataPtr(),ARLIM(zdmac_new.loVect()),ARLIM(zdmac_new.hiVect()),
     maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     xlo,dx,
     &cur_time_slab,
@@ -25813,37 +25792,24 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
 
 }  // subroutine makeStateCurv
 
-//MAC_state_idx==Umac_Type or (mac velocity)
-//MAC_state_idx==XDmac_Type   (mac displacement)
 //dir=0..sdim-1
-MultiFab* NavierStokes::getStateMAC(int MAC_state_idx,
- int ngrow,int dir,
- int scomp,int ncomp,Real time) {
+MultiFab* NavierStokes::getStateMAC(int ngrow,int dir,Real time) {
 
  if ((dir<0)||(dir>=AMREX_SPACEDIM))
   amrex::Error("dir invalid get state mac");
 
- MultiFab& S_new=get_new_data(MAC_state_idx+dir,slab_step+1);
+ MultiFab& S_new=get_new_data(Umac_Type+dir,slab_step+1);
  int ntotal=S_new.nComp();
 
-  //sanity checks
- if (MAC_state_idx==Umac_Type) {
+ if (ntotal!=1)
+  amrex::Error("ntotal invalid");
 
-  if ((ntotal!=1)||(ncomp!=1)||(scomp!=0))
-   amrex::Error("ntotal, ncomp, or scomp bust getStateMAC");
-
- } else if (MAC_state_idx==XDmac_Type) {
-
-  if ((ntotal!=1)||(ncomp!=1)||(scomp!=0))
-   amrex::Error("ntotal, ncomp, or scomp bust getStateMAC");
-
- } else
-  amrex::Error("MAC_state_idx invalid");
-
- MultiFab* mf = new MultiFab(state[MAC_state_idx+dir].boxArray(),dmap,ncomp,
+  //ncomp=1
+ MultiFab* mf = new MultiFab(state[Umac_Type+dir].boxArray(),dmap,1,
   ngrow,MFInfo().SetTag("mf getStateMAC"),FArrayBoxFactory());
 
- FillPatch(*this,*mf,0,time,MAC_state_idx+dir,scomp,ncomp,debug_fillpatch);
+  //scomp_dest=0 scomp_source=0 ncomp=1
+ FillPatch(*this,*mf,0,time,Umac_Type+dir,0,1,debug_fillpatch);
 
  ParallelDescriptor::Barrier();
 
