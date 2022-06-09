@@ -318,8 +318,6 @@ public:
 
     void init_particle_container(int append_flag);
 
-    void accumulate_info_no_particles(int im);
-
     void accumulate_PC_info(
       AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
       NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr,
@@ -367,9 +365,6 @@ public:
 
     void prepare_advect_vars(Real time);
     void delete_advect_vars();
-
-    void prepare_umac_material(Real time);
-    void delete_umac_material();
 
     void exit_viscous_solver();
 
@@ -584,8 +579,6 @@ protected:
      int project_option,
      MultiFab* xflux,MultiFab* yflux,MultiFab* zflux,
      int nsolve);
-
-    void correct_xdisplace_with_particles();
 
     void tensor_advection_update();
     void tensor_advection_updateALL();
@@ -1341,6 +1334,10 @@ protected:
     static Real dt_slab;
     static int advect_iter;
     static int hydrate_flag;
+
+    static int idx_umac_material_mf;
+    static int idx_umac_mask_material_mf;
+    static int idx_scalar_mask_material_mf;
 
     static Vector<int> type_ONES_flag;
     static int color_ONES_count;

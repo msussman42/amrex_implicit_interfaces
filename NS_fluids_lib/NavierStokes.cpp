@@ -292,15 +292,6 @@ int NavierStokes::particle_max_per_nsubdivide=3;
 int NavierStokes::particle_min_per_nsubdivide=1; 
 int NavierStokes::particles_flag=0; 
 
-// TODO: store this information for each particle.
-//=0.0 particles have no effect
-Real NavierStokes::particles_weight_XD=0.0; 
-Real NavierStokes::particles_weight_VEL=0.0; 
-Real NavierStokes::particle_volume=1.0;
- // d u_part /dt = -(1/relaxation_time)*(u_part - u_fluid)
-Real NavierStokes::particle_relaxation_time_to_fluid=0.0;
- // d u_fluid /dt = -(1/relaxation_time)*(u_fluid - u_part)
-Real NavierStokes::fluid_relaxation_time_to_particle=1.0e+20;
 int NavierStokes::particle_interaction_ngrow=1;
 
 Real NavierStokes::truncate_thickness=2.0;  
@@ -535,10 +526,7 @@ int  NavierStokes::LS_Type=Wmac_Type+1;
 // -(pnew-pold)/(rho c^2 dt) + dt mdot/vol
 int  NavierStokes::DIV_Type=LS_Type+1;
 int  NavierStokes::Solid_State_Type=DIV_Type+1;
-int  NavierStokes::XDmac_Type=Solid_State_Type+1;
-int  NavierStokes::YDmac_Type=XDmac_Type+1;
-int  NavierStokes::ZDmac_Type=YDmac_Type+AMREX_SPACEDIM-2;
-int  NavierStokes::Tensor_Type=ZDmac_Type+1;
+int  NavierStokes::Tensor_Type=Solid_State_Type+1;
 int  NavierStokes::TensorXU_Type=Tensor_Type+1;
 int  NavierStokes::TensorYU_Type=TensorXU_Type+1;
 int  NavierStokes::TensorZU_Type=TensorYU_Type+1;
@@ -686,6 +674,10 @@ Real NavierStokes::real_number_of_cells=0.0;
 
 // 1.0/(den_max * mglib_min_coeff_factor) default=1000.0
 Real NavierStokes::mglib_min_coeff_factor=1000.0; 
+
+int NavierStokes::idx_umac_material_mf=-1;
+int NavierStokes::idx_umac_mask_material_mf=-1;
+int NavierStokes::idx_scalar_mask_material_mf=-1;
 
 int NavierStokes::hydrate_flag=0; 
 int NavierStokes::post_init_pressure_solve=1; 
@@ -3134,14 +3126,7 @@ NavierStokes::read_params ()
     pp.queryarr("linear_elastic_model",linear_elastic_model,0,nmat);
     pp.queryarr("shear_modulus",shear_modulus,0,nmat);
     pp.query("particles_flag",particles_flag);
-    pp.query("particles_weight_XD",particles_weight_XD);
-    pp.query("particles_weight_VEL",particles_weight_VEL);
 
-    pp.query("particle_volume",particle_volume);
-    pp.query("particle_relaxation_time_to_fluid",
-       particle_relaxation_time_to_fluid);
-    pp.query("fluid_relaxation_time_to_particle",
-       fluid_relaxation_time_to_particle);
     pp.query("particle_interaction_ngrow",particle_interaction_ngrow);
 
     for (int im=0;im<nmat;im++) {
@@ -3193,19 +3178,6 @@ NavierStokes::read_params ()
     } else
      amrex::Error("nparts invalid");
  
-    XDmac_Type=NUM_STATE_TYPE;
-    NUM_STATE_TYPE++;
-    YDmac_Type=XDmac_Type+1;
-    NUM_STATE_TYPE++;
-    ZDmac_Type=YDmac_Type+AMREX_SPACEDIM-2;
-
-    if (AMREX_SPACEDIM==3) {
-     NUM_STATE_TYPE++;
-    } else if (AMREX_SPACEDIM==2) {
-     // do nothing
-    } else
-     amrex::Error("AMREX_SPACEDIM invalid");
-
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=nmat)) {
      Tensor_Type=NUM_STATE_TYPE;
@@ -4946,9 +4918,6 @@ NavierStokes::read_params ()
      std::cout << "TensorZU_Type= " << TensorZU_Type << '\n';
      std::cout << "TensorZV_Type= " << TensorZV_Type << '\n';
      std::cout << "NUM_CELL_ELASTIC= " << NUM_CELL_ELASTIC << '\n';
-     std::cout << "XDmac_Type= " << XDmac_Type << '\n';
-     std::cout << "YDmac_Type= " << YDmac_Type << '\n';
-     std::cout << "ZDmac_Type= " << ZDmac_Type << '\n';
      std::cout << "NUM_STATE_TYPE= " << NUM_STATE_TYPE << '\n';
 
      std::cout << "angular_velocity= " << angular_velocity << '\n';
@@ -4968,14 +4937,6 @@ NavierStokes::read_params ()
      std::cout << "particles_flag = " << particles_flag << '\n';
      std::cout << "particle_interaction_ngrow=" << 
       particle_interaction_ngrow << '\n';
-
-     std::cout << "particles_weight_XD = " << particles_weight_XD << '\n';
-     std::cout << "particles_weight_VEL= " << particles_weight_VEL << '\n';
-     std::cout << "particle_volume=" << particle_volume << '\n';
-     std::cout << "particle_relaxation_time_to_fluid=" <<
-       particle_relaxation_time_to_fluid << '\n';
-     std::cout << "fluid_relaxation_time_to_particle=" << 
-       fluid_relaxation_time_to_particle << '\n';
 
      for (int i=0;i<nmat;i++) {
       std::cout << "mof_ordering i= " << i << ' ' <<
@@ -9618,14 +9579,6 @@ NavierStokes::initData () {
   }
   Smac_new.setVal(0.0,0,1,0);
 
-  MultiFab& XDmac_new = get_new_data(XDmac_Type+dir,slab_step+1);
-
-  if (XDmac_new.nComp()!=1) {
-   std::cout << "nmat = " << nmat << '\n';
-   amrex::Error("XDmac_new.nComp() invalid in initData");
-  }
-  XDmac_new.setVal(0.0,0,1,0);
-
  }  // dir=0..sdim-1
 
  prepare_mask_nbr(1);
@@ -9885,12 +9838,6 @@ void NavierStokes::init_boundary() {
   } else if (k==Vmac_Type) {
    // do nothing
   } else if (k==Wmac_Type) {
-   // do nothing
-  } else if (k==XDmac_Type) {
-   // do nothing
-  } else if (k==YDmac_Type) {
-   // do nothing
-  } else if (k==ZDmac_Type) {
    // do nothing
   } else if (k==LS_Type) {
    MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
@@ -10739,13 +10686,6 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
     if (ENUM_NUM_TENSOR_TYPE!=2*AMREX_SPACEDIM)
      amrex::Error("ENUM_NUM_TENSOR_TYPE invalid");
 
-    MultiFab* XDISP_LOCAL[AMREX_SPACEDIM];
-
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-       //ngrow,dir,scomp,ncomp
-     XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
-    } // dir=0..sdim-1
-
     int rzflag=0;
     if (geom.IsRZ())
      rzflag=1;
@@ -10793,10 +10733,6 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
      FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
      int ncomp_visc=viscfab.nComp();
 
-     FArrayBox& xdfab=(*XDISP_LOCAL[0])[mfi];
-     FArrayBox& ydfab=(*XDISP_LOCAL[1])[mfi];
-     FArrayBox& zdfab=(*XDISP_LOCAL[AMREX_SPACEDIM-1])[mfi];
-
      int tid_current=ns_thread();
      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
       amrex::Error("tid_current invalid");
@@ -10805,9 +10741,8 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
        // declared in: GODUNOV_3D.F90
        // viscoelastic_model==0 => FENE-CR
        // viscoelastic_model==1 => Oldroyd B
-       // viscoelastic_model==2 => purely elastic
        // viscoelastic_model==3 => incremental elastic model
-       // viscoelastic_model==4 => pressure velocity coupling (N/A here)
+       // viscoelastic_model==4 => FSI pressure velocity coupling (N/A here)
        // viscoelastic_model==5 => FENE-P
        // viscoelastic_model==6 => linear PTT
      if (fort_is_eulerian_elastic_model(&elastic_viscosity[im],
@@ -10821,9 +10756,6 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
        &ncomp_visc,
        &im,  // 0..nmat-1
        xlo,dx,
-       xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
-       ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
-       zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
        viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
        tenfab.dataPtr(),ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
        tenMACfab.dataPtr(),
@@ -10844,10 +10776,6 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
     ns_reconcile_d_num(54);
 
     check_for_NAN(localMF[VISCOTEN_MF],2001);
-
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     delete XDISP_LOCAL[dir];
-    }
 
    } else
     amrex::Error("partid could not be found: make_viscoelastic_tensor");
@@ -11005,13 +10933,6 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
     getStateTensor_localMF(VISCOTEN_MF,1,scomp_tensor,ENUM_NUM_TENSOR_TYPE,
      cur_time_slab);
 
-    MultiFab* XDISP_LOCAL[AMREX_SPACEDIM];
-
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-        //ngrow,dir,scomp,ncomp
-     XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
-    } // dir=0..sdim-1
-
     int rzflag=0;
     if (geom.IsRZ())
      rzflag=1;
@@ -11053,10 +10974,6 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
      FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
      int ncomp_visc=viscfab.nComp();
 
-     FArrayBox& xdfab=(*XDISP_LOCAL[0])[mfi];
-     FArrayBox& ydfab=(*XDISP_LOCAL[1])[mfi];
-     FArrayBox& zdfab=(*XDISP_LOCAL[AMREX_SPACEDIM-1])[mfi];
-
      int tid_current=ns_thread();
      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
       amrex::Error("tid_current invalid");
@@ -11072,9 +10989,6 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
        &ncomp_visc,
        &im,  // 0..nmat-1
        xlo,dx,
-       xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
-       ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
-       zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
        viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
        tenfab.dataPtr(),ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
        tilelo,tilehi,
@@ -11093,10 +11007,6 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
     ns_reconcile_d_num(54);
 
     check_for_NAN(localMF[VISCOTEN_MF],2001);
-
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     delete XDISP_LOCAL[dir];
-    }
 
    } else
     amrex::Error("partid could not be found: make_viscoelastic_tensor");
@@ -12272,13 +12182,6 @@ void NavierStokes::tensor_advection_update() {
      MultiFab* tensor_source_mf=
       getStateTensor(0,scomp_tensor,ENUM_NUM_TENSOR_TYPE,cur_time_slab);
 
-     MultiFab* xdisplace_mf[AMREX_SPACEDIM];
-
-     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-       //ngrow,dir,scomp,ncomp
-      xdisplace_mf[dir]=getStateMAC(XDmac_Type,1,dir,0,1,cur_time_slab);
-     } // dir=0..sdim-1
-
      MultiFab* velmf=getState(1,0,AMREX_SPACEDIM,cur_time_slab);
    
      MultiFab* tendata_mf=new MultiFab(grids,dmap,20,ngrow_zero,
@@ -12381,9 +12284,6 @@ void NavierStokes::tensor_advection_update() {
       FArrayBox& velfab=(*velmf)[mfi];
       FArrayBox& tensor_new_fab=Tensor_new[mfi];
       FArrayBox& tensor_source_mf_fab=(*tensor_source_mf)[mfi];
-      FArrayBox& xdfab=(*xdisplace_mf[0])[mfi];
-      FArrayBox& ydfab=(*xdisplace_mf[1])[mfi];
-      FArrayBox& zdfab=(*xdisplace_mf[AMREX_SPACEDIM-1])[mfi];
       FArrayBox& tendata=(*tendata_mf)[mfi];
 
       Vector<int> velbc=getBCArray(State_Type,gridno,
@@ -12424,9 +12324,6 @@ void NavierStokes::tensor_advection_update() {
         tensor_source_mf_fab.dataPtr(),
         ARLIM(tensor_source_mf_fab.loVect()),
         ARLIM(tensor_source_mf_fab.hiVect()),
-        xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
-        ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
-        zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
         tilelo,tilehi,
         fablo,fabhi,
         &bfact, 
@@ -12499,9 +12396,6 @@ void NavierStokes::tensor_advection_update() {
       
      delete tendata_mf;
      delete tensor_source_mf;
-     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-      delete xdisplace_mf[dir];
-     }
      delete velmf;
     } else
      amrex::Error("partid could not be found: tensor_advection_update");
@@ -22867,150 +22761,6 @@ NavierStokes::accumulate_PC_info(
  }
 
 } // end subroutine accumulate_PC_info
-
-
-
-// called from: NavierStokes::tensor_advection_updateALL() (NavierStokes3.cpp)
-//   (called after calls to ns_level.tensor_advection_update)
-void 
-NavierStokes::accumulate_info_no_particles(int im_elastic) {
-
- int nmat=num_materials;
-
- if ((num_materials_viscoelastic>=1)&&
-     (num_materials_viscoelastic<=nmat)) {
-  // do nothing
- } else
-  amrex::Error("num_materials_viscoelastic bad:accumulate_info_no_particles");
-
- bool use_tiling=ns_tiling;
- int finest_level=parent->finestLevel();
- if ((level>=0)&&(level<=finest_level)) {
-  // do nothing
- } else 
-  amrex::Error("level invalid");
-
- resize_levelset(2,LEVELPC_MF);
- debug_ngrow(LEVELPC_MF,2,8);
- if (localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))
-  amrex::Error("(localMF[LEVELPC_MF]->nComp()!=nmat*(AMREX_SPACEDIM+1))");
-
- if ((im_elastic>=0)&&(im_elastic<nmat)) {
-  // do nothing
- } else
-  amrex::Error("im_elastic invalid");
-
- if (num_state_base!=2)
-  amrex::Error("num_state_base invalid");
-
- const Real* dx = geom.CellSize();
-
- MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
-
- int elastic_partid=0;
- int scomp_tensor=0;
-
- if (ns_is_rigid(im_elastic)==0) {
-  if (store_elastic_data[im_elastic]==1) {
-   if (viscoelastic_model[im_elastic]==2) {
-    elastic_partid=0;
-    while ((im_elastic_map[elastic_partid]!=im_elastic)&&
-           (elastic_partid<im_elastic_map.size())) {
-     elastic_partid++;
-    }
-    if (elastic_partid<im_elastic_map.size()) {
-     scomp_tensor=elastic_partid*ENUM_NUM_TENSOR_TYPE;
-    } else
-     amrex::Error("elastic_partid too large");
-   } else
-    amrex::Error("viscoelastic_model[im_elastic] invalid");
-  } else
-   amrex::Error("store_elastic_data invalid");
- } else
-  amrex::Error("ns_is_rigid invalid");
-
- if (localMF_grow[VISCOTEN_MF]==-1) {
-  // do nothing
- } else 
-  amrex::Error("VISCOTEN_MF should not be allocated in accumulate_info");
-
- int ncomp_tensor=ENUM_NUM_TENSOR_TYPE;
-
- MultiFab* XDISP_LOCAL[AMREX_SPACEDIM];
- MultiFab* XDISP_new[AMREX_SPACEDIM];
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  XDISP_new[dir]=&get_new_data(XDmac_Type+dir,slab_step+1);
- }
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  //ngrow,dir,scomp,ncomp
-  XDISP_LOCAL[dir]=getStateMAC(XDmac_Type,2,dir,0,1,cur_time_slab);
- } // dir=0..sdim-1
-
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(Tensor_new.boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
- for (MFIter mfi(Tensor_new,use_tiling); mfi.isValid(); ++mfi) {
-  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-  const int gridno = mfi.index();
-  const Box& tilegrid = mfi.tilebox();
-  const Box& fabgrid = grids[gridno];
-  const int* tilelo=tilegrid.loVect();
-  const int* tilehi=tilegrid.hiVect();
-  const int* fablo=fabgrid.loVect();
-  const int* fabhi=fabgrid.hiVect();
-  int bfact=parent->Space_blockingFactor(level);
-
-  const Real* xlo = grid_loc[gridno].lo();
-
-  FArrayBox& TNEWfab=Tensor_new[mfi];
-
-  FArrayBox& xdfab=(*XDISP_LOCAL[0])[mfi];
-  FArrayBox& ydfab=(*XDISP_LOCAL[1])[mfi];
-  FArrayBox& zdfab=(*XDISP_LOCAL[AMREX_SPACEDIM-1])[mfi];
-
-  FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
- 
-  int tid_current=ns_thread();
-  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-   amrex::Error("tid_current invalid");
-  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-   // declared in GODUNOV_3D.F90.
-   //   calls local_tensor_from_xdisplace
-  fort_assimilate_tensor_from_xdisplace( 
-    &im_elastic, // 0..nmat-1
-    &tid_current,
-    tilelo,tilehi,
-    fablo,fabhi,
-    &bfact,
-    &level,
-    &finest_level,
-    xlo,dx,
-    &ncomp_tensor,
-    &nmat,
-    levelpcfab.dataPtr(),
-    ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-    TNEWfab.dataPtr(scomp_tensor),
-    ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
-    xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
-    ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
-    zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()));
- } // mfi
-} // omp
- ns_reconcile_d_num(81);
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  delete XDISP_LOCAL[dir];
- }
-
-} // end subroutine accumulate_info_no_particles
 
 void NavierStokes::assimilate_vel_from_particles(
    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,

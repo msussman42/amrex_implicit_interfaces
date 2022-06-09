@@ -8784,9 +8784,6 @@ stop
        ncomp_visc, &
        im_parm, & ! 0..nmat-1
        xlo,dx, &
-       xdfab,DIMS(xdfab), &
-       ydfab,DIMS(ydfab), &
-       zdfab,DIMS(zdfab), &
        visc,DIMS(visc), &
        tensor,DIMS(tensor), &
        tilelo,tilehi, &
@@ -8812,9 +8809,6 @@ stop
       INTEGER_T, intent(in) :: im_parm
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(xdfab)
-      INTEGER_T, intent(in) :: DIMDEC(ydfab)
-      INTEGER_T, intent(in) :: DIMDEC(zdfab)
       INTEGER_T, intent(in) :: DIMDEC(visc)
       INTEGER_T, intent(in) :: DIMDEC(tensor)
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
@@ -8822,10 +8816,9 @@ stop
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
 
-      REAL_T, intent(in), target :: xdfab(DIMV(xdfab),1)
-      REAL_T, intent(in), target :: ydfab(DIMV(ydfab),1)
-      REAL_T, intent(in), target :: zdfab(DIMV(zdfab),1)
       REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
+      REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
+
       REAL_T, intent(inout), target :: tensor(DIMV(tensor), &
               ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
@@ -8866,6 +8859,7 @@ stop
       nhalf=3
 
       tensor_ptr=>tensor
+      visc_ptr=>visc
 
       if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
        ! do nothing
@@ -8890,7 +8884,7 @@ stop
        stop
       endif
       if (finest_level.ne.fort_finest_level) then
-       print *,"finest_level invalid MAKETENSOR"
+       print *,"finest_level invalid fort_maketensor"
        stop
       endif
 
@@ -8918,11 +8912,7 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,xdfab,2,0,11)
-      call checkbound_array(fablo,fabhi,ydfab,2,1,11)
-      call checkbound_array(fablo,fabhi,zdfab,2,SDIM-1,11)
-
-      call checkbound_array(fablo,fabhi,visc,1,-1,11)
+      call checkbound_array(fablo,fabhi,visc_ptr,1,-1,11)
       call checkbound_array(fablo,fabhi,tensor_ptr,1,-1,8)
 
       do dir_local=1,SDIM
@@ -8970,118 +8960,7 @@ stop
         ! modtime=elastic_time
        else if (viscoelastic_model.eq.3) then ! incremental model
         ! coeff=elastic_viscosity
-       else if (viscoelastic_model.eq.2) then ! displacement gradient
-
-        data_out%data_interp=>cell_data_deriv
-
-         !type(deriv_from_grid_parm_type) :: data_in
-        data_in%level=level
-        data_in%finest_level=finest_level
-        data_in%bfact=bfact ! bfact=kind of spectral element grid 
-        data_in%dx=>dx_local
-        data_in%xlo=>xlo_local
-        data_in%fablo=>fablo_local
-        data_in%fabhi=>fabhi_local
-
-        data_in%ncomp=1
-        data_in%scomp=1
-
-        data_in%index_flux(1)=i
-        data_in%index_flux(2)=j
-        if (SDIM.eq.3) then
-         data_in%index_flux(SDIM)=k
-        else if (SDIM.eq.2) then
-         !do nothing
-        else
-         print *,"dimension bust"
-         stop
-        endif
-
-        data_in%grid_type_flux=-1
-        do dir_local=1,SDIM
-         data_in%box_type_flux(dir_local)=0
-        enddo
-
-        do dir_XD=1,SDIM
-
-         data_in%grid_type_data=dir_XD-1
-         do dir_local=1,SDIM
-          data_in%box_type_data(dir_local)=0
-         enddo
-         data_in%box_type_data(dir_XD)=1
-
-         if (dir_XD.eq.1) then
-          data_in%disp_data=>xdfab
-         else if (dir_XD.eq.2) then
-          data_in%disp_data=>ydfab
-         else if ((dir_XD.eq.3).and.(SDIM.eq.3)) then
-          data_in%disp_data=>zdfab
-         else
-          print *,"dir_XD invalid"
-          stop
-         endif
-
-         do dir_flux=0,SDIM-1
-          data_in%dir_deriv=dir_flux+1
-          call deriv_from_grid_util(data_in,data_out)
-          gradXDtensor(dir_XD,dir_flux+1)=cell_data_deriv(1)
-         enddo
-         data_in%dir_deriv=-1
-         call deriv_from_grid_util(data_in,data_out)
-         XDcenter(dir_XD)=cell_data_deriv(1)
-
-        enddo ! dir_XD=1..sdim
-
-         ! declared in: GLOBALUTIL.F90
-        call stress_from_strain( &
-          im_elastic_p1, & ! =1..nmat
-          xcenter, &
-          dx, &
-          gradXDtensor, &
-          XDcenter(1), &
-          XDcenter(2), &
-          DISP_TEN, &  ! dir_x (displace),dir_space
-          hoop_22)  ! output: "theta-theta" component xdisp/r if RZ
-
-        do ii=1,3
-        do jj=1,3
-         Q(ii,jj)=zero
-        enddo
-        enddo
-
-        Q(1,1)=DISP_TEN(1,1)
-        Q(1,2)=DISP_TEN(1,2)
-        Q(2,2)=DISP_TEN(2,2)
-        if (SDIM.eq.3) then
-         Q(3,3)=DISP_TEN(SDIM,SDIM)
-        else if (SDIM.eq.2) then
-         if (levelrz.eq.0) then
-          ! T33 (theta coordinate)
-          Q(3,3)=zero
-         else if (levelrz.eq.1) then
-          ! T33 (theta coordinate)
-          ! dX/dx + dX/dx
-          Q(3,3)=two*hoop_22 ! 2 * (xdisp/r)
-         else if (levelrz.eq.3) then
-          ! T33 (z coordinate)
-          Q(3,3)=zero
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
-        else
-         print *,"dimension bust"
-         stop
-        endif
-                   
-        if (SDIM.eq.3) then 
-         Q(1,SDIM)=DISP_TEN(1,SDIM)
-         Q(2,SDIM)=DISP_TEN(2,SDIM)
-        endif
-        Q(2,1)=Q(1,2)
-        Q(3,1)=Q(1,3)
-        Q(3,2)=Q(2,3)
-       else if (viscoelastic_model.eq.4) then !pressure velocity coupling
+       else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
         print *,"this routine should not be called if visc_model==4"
         stop
        else
@@ -9102,8 +8981,6 @@ stop
           print *,"A=Q+I should be positive definite"
           stop
          endif
-        else if (viscoelastic_model.eq.2) then ! displacement gradient
-         ! do nothing
         else if (viscoelastic_model.eq.3) then ! incremental model
          ! do nothing
         else if (viscoelastic_model.eq.4) then !pressure velocity coupling
@@ -9141,11 +9018,9 @@ stop
         ! do nothing 
        else if (viscoelastic_model.eq.1) then !OLDROYD-B
         ! do nothing 
-       else if (viscoelastic_model.eq.2) then ! displacement gradient
-        ! do nothing
        else if (viscoelastic_model.eq.3) then ! incremental model
         ! do nothing
-       else if (viscoelastic_model.eq.4) then !pressure velocity coupling
+       else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
         print *,"this routine should not be called if visc_model==4"
         stop
        else if (viscoelastic_model.eq.6) then !linearPTT
@@ -9188,9 +9063,6 @@ stop
        ncomp_visc, &
        im_parm, & ! 0..nmat-1
        xlo,dx, &
-       xdfab,DIMS(xdfab), &
-       ydfab,DIMS(ydfab), &
-       zdfab,DIMS(zdfab), &
        visc,DIMS(visc), &
        tensor,DIMS(tensor), &
        tensorMAC,DIMS(tensorMAC), &
@@ -9219,9 +9091,6 @@ stop
       INTEGER_T, intent(in) :: im_parm  ! 0..nmat-1
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(xdfab)
-      INTEGER_T, intent(in) :: DIMDEC(ydfab)
-      INTEGER_T, intent(in) :: DIMDEC(zdfab)
       INTEGER_T, intent(in) :: DIMDEC(visc)
       INTEGER_T, intent(in) :: DIMDEC(tensor)
       INTEGER_T, intent(in) :: DIMDEC(tensorMAC)
@@ -9230,12 +9099,6 @@ stop
       INTEGER_T :: growlo(3), growhi(3)
       INTEGER_T, intent(in) :: bfact
 
-      REAL_T, intent(in), target :: xdfab(DIMV(xdfab),1)
-      REAL_T, intent(in), target :: ydfab(DIMV(ydfab),1)
-      REAL_T, intent(in), target :: zdfab(DIMV(zdfab),1)
-      REAL_T, pointer :: xdfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, pointer :: ydfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, pointer :: zdfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
       REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: tensor(DIMV(tensor), &
@@ -9258,8 +9121,6 @@ stop
       INTEGER_T dir_XD
       INTEGER_T im_elastic_p1
       REAL_T xcenter(SDIM)
-      REAL_T XDcenter(SDIM)
-      REAL_T gradXDtensor(SDIM,SDIM) ! dir_xdisp,dir_space
 
       type(deriv_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
@@ -9342,12 +9203,6 @@ stop
        stop
       endif
 
-      xdfab_ptr=>xdfab
-      ydfab_ptr=>ydfab
-      zdfab_ptr=>zdfab
-      call checkbound_array(fablo,fabhi,xdfab_ptr,2,0,11)
-      call checkbound_array(fablo,fabhi,ydfab_ptr,2,1,11)
-      call checkbound_array(fablo,fabhi,zdfab_ptr,2,SDIM-1,11)
 
       visc_ptr=>visc
       tensor_ptr=>tensor
@@ -9425,92 +9280,7 @@ stop
          ! coeff=elastic_viscosity
          print *,"expecting interp_Q_to_flux==1"
          stop
-        else if (viscoelastic_model.eq.2) then ! displacement gradient
-
-          !type(deriv_from_grid_parm_type) :: data_in
-         data_in%ncomp=1
-         data_in%scomp=1
-
-         do dir_XD=1,SDIM
-
-          data_in%grid_type_data=dir_XD-1
-          do dir_local=1,SDIM
-           data_in%box_type_data(dir_local)=0
-          enddo
-          data_in%box_type_data(dir_XD)=1
-
-          if (dir_XD.eq.1) then
-           data_in%disp_data=>xdfab
-          else if (dir_XD.eq.2) then
-           data_in%disp_data=>ydfab
-          else if ((dir_XD.eq.3).and.(SDIM.eq.3)) then
-           data_in%disp_data=>zdfab
-          else
-           print *,"dir_XD invalid"
-           stop
-          endif
-
-          do dir_flux=0,SDIM-1
-           data_in%dir_deriv=dir_flux+1
-           call deriv_from_grid_util(data_in,data_out)
-           gradXDtensor(dir_XD,dir_flux+1)=cell_data_deriv(1)
-          enddo
-          data_in%dir_deriv=-1
-          call deriv_from_grid_util(data_in,data_out)
-          XDcenter(dir_XD)=cell_data_deriv(1)
-
-         enddo ! dir_XD=1..sdim
-
-          ! declared in: GLOBALUTIL.F90
-         call stress_from_strain( &
-          im_elastic_p1, & ! =1..nmat
-          xcenter, &
-          dx, &
-          gradXDtensor, &
-          XDcenter(1), &
-          XDcenter(2), &
-          DISP_TEN, &  ! dir_x (displace),dir_space
-          hoop_22)  ! output: "theta-theta" component xdisp/r if RZ
-
-         do ii=1,3
-         do jj=1,3
-          Q(ii,jj)=zero
-         enddo
-         enddo
-
-         Q(1,1)=DISP_TEN(1,1)
-         Q(1,2)=DISP_TEN(1,2)
-         Q(2,2)=DISP_TEN(2,2)
-         if (SDIM.eq.3) then
-          Q(3,3)=DISP_TEN(SDIM,SDIM)
-         else if (SDIM.eq.2) then
-          if (levelrz.eq.0) then
-           ! T33 (theta coordinate)
-           Q(3,3)=zero
-          else if (levelrz.eq.1) then
-           ! T33 (theta coordinate)
-           ! dX/dx + dX/dx
-           Q(3,3)=two*hoop_22 ! 2 * (xdisp/r)
-          else if (levelrz.eq.3) then
-           ! T33 (z coordinate)
-           Q(3,3)=zero
-          else
-           print *,"levelrz invalid"
-           stop
-          endif
-         else
-          print *,"dimension bust"
-          stop
-         endif
-                   
-         if (SDIM.eq.3) then 
-          Q(1,SDIM)=DISP_TEN(1,SDIM)
-          Q(2,SDIM)=DISP_TEN(2,SDIM)
-         endif
-         Q(2,1)=Q(1,2)
-         Q(3,1)=Q(1,3)
-         Q(3,2)=Q(2,3)
-        else if (viscoelastic_model.eq.4) then !pressure velocity coupling
+        else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
          print *,"this routine should not be called if visc_model==4"
          stop
         else
@@ -9989,9 +9759,6 @@ stop
        vel,DIMS(vel), &
        tnew,DIMS(tnew), &
        told,DIMS(told), &
-       xdisp,DIMS(xdisp), &
-       ydisp,DIMS(ydisp), &
-       zdisp,DIMS(zdisp), &
        tilelo, tilehi,  &
        fablo, fabhi, &
        bfact,  &
@@ -10017,9 +9784,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(vel)
       INTEGER_T, intent(in) :: DIMDEC(tnew)
       INTEGER_T, intent(in) :: DIMDEC(told)
-      INTEGER_T, intent(in) :: DIMDEC(xdisp)
-      INTEGER_T, intent(in) :: DIMDEC(ydisp)
-      INTEGER_T, intent(in) :: DIMDEC(zdisp)
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3), growhi(3)
@@ -10042,13 +9806,6 @@ stop
 
       REAL_T, intent(in), target :: told(DIMV(told),ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: told_ptr(D_DECL(:,:,:),:)
-
-      REAL_T, intent(in), target :: xdisp(DIMV(xdisp))
-      REAL_T, pointer :: xdisp_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: ydisp(DIMV(ydisp))
-      REAL_T, pointer :: ydisp_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: zdisp(DIMV(zdisp))
-      REAL_T, pointer :: zdisp_ptr(D_DECL(:,:,:))
 
       INTEGER_T :: i,j,k,n
       REAL_T, intent(in) :: dt,elastic_time
@@ -10083,9 +9840,6 @@ stop
       nhalf=3
 
       tnew_ptr=>tnew
-      xdisp_ptr=>xdisp
-      ydisp_ptr=>ydisp
-      zdisp_ptr=>zdisp
 
       if (irz.ne.levelrz) then
        print *,"irz invalid"
@@ -10121,9 +9875,7 @@ stop
        ! modtime=elastic_time
       else if (viscoelastic_model.eq.3) then ! incremental model
        ! coeff=elastic_viscosity
-      else if (viscoelastic_model.eq.2) then ! displacement gradient
-       ! coeff=elastic_viscosity
-      else if (viscoelastic_model.eq.4) then !pressure velocity coupling
+      else if (viscoelastic_model.eq.4) then !pressure velocity FSI coupling
        print *,"this routine should not be called if visc_model==4"
        stop
       else
@@ -10161,10 +9913,6 @@ stop
       told_ptr=>told
       call checkbound_array(fablo,fabhi,told_ptr,0,-1,63)
 
-      call checkbound_array1(fablo,fabhi,xdisp_ptr,1,0,63)
-      call checkbound_array1(fablo,fabhi,ydisp_ptr,1,1,63)
-      call checkbound_array1(fablo,fabhi,zdisp_ptr,1,SDIM-1,63)
-
       if ((transposegradu.ne.0).and. &
           (transposegradu.ne.1)) then
        print *,"transposegradu invalid"
@@ -10185,27 +9933,7 @@ stop
        ! modtime=elastic_time
       else if (viscoelastic_model.eq.3) then ! incremental model
        ! coeff=elastic_viscosity
-      else if (viscoelastic_model.eq.2) then ! displacement gradient
-
-       im_elastic=im_critical+1
-        ! elastic bulk modulus not included.
-        ! declared in: GLOBALUTIL.F90
-       call local_tensor_from_xdisplace( &
-        im_elastic, &  ! 1..nmat
-        tilelo,tilehi, &  ! tile box dimensions
-        fablo,fabhi, &    ! fortran array box dimensions containing the tile
-        bfact, &          ! space order
-        level, &          ! 0<=level<=finest_level
-        finest_level, &
-        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
-        ENUM_NUM_TENSOR_TYPE, & !ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
-        nmat, &
-        tnew_ptr, &       ! FAB that holds elastic tensor, Q, when complete
-        xdisp_ptr, &      
-        ydisp_ptr, &      
-        zdisp_ptr)
-
-      else if (viscoelastic_model.eq.4) then !pressure velocity coupling
+      else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
        print *,"this routine should not be called if visc_model==4"
        stop
       else
@@ -10292,11 +10020,9 @@ stop
           print *,"A=Q+I should be positive definite"
           stop
          endif
-        else if (viscoelastic_model.eq.2) then ! displacement gradient
-         ! do nothing
         else if (viscoelastic_model.eq.3) then ! incremental model
          ! do nothing
-        else if (viscoelastic_model.eq.4) then !pressure velocity coupling
+        else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
          print *,"this routine should not be called if visc_model==4"
          stop
         else
@@ -10326,11 +10052,9 @@ stop
         equilibrium_diagonal=zero
        else if (viscoelastic_model.eq.1) then !OLDROYD-B
         equilibrium_diagonal=zero
-       else if (viscoelastic_model.eq.2) then ! displacement gradient
-        equilibrium_diagonal=zero ! not used
        else if (viscoelastic_model.eq.3) then ! incremental model
         equilibrium_diagonal=zero
-       else if (viscoelastic_model.eq.4) then !pressure velocity coupling
+       else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
         print *,"this routine should not be called if visc_model==4"
         stop
        else if (viscoelastic_model.eq.6) then !linearPTT
@@ -10351,26 +10075,11 @@ stop
         stop
        endif
 
-       if (viscoelastic_model.eq.2) then ! elastic material
-
-        do ii=1,3 
-        do jj=1,3 
-         Q(ii,jj)=zero
-        enddo
-        enddo
-        do dir_local=1,ENUM_NUM_TENSOR_TYPE
-         call stress_index(dir_local,ii,jj)
-         Q(ii,jj)=tnew(D_DECL(i,j,k),dir_local)
-        enddo
-        Q(2,1)=Q(1,2)
-        Q(3,1)=Q(1,3)
-        Q(3,2)=Q(2,3)
-
-       else if ((viscoelastic_model.eq.0).or. & !FENE-CR
-                (viscoelastic_model.eq.1).or. & !OLDROYD_B
-                (viscoelastic_model.eq.5).or. & !FENE-P
-                (viscoelastic_model.eq.6).or. & !linear PTT
-                (viscoelastic_model.eq.3)) then !incremental
+       if ((viscoelastic_model.eq.0).or. & !FENE-CR
+           (viscoelastic_model.eq.1).or. & !OLDROYD_B
+           (viscoelastic_model.eq.5).or. & !FENE-P
+           (viscoelastic_model.eq.6).or. & !linear PTT
+           (viscoelastic_model.eq.3)) then !incremental
 
         do ii=1,3 
         do jj=1,3 
@@ -10592,7 +10301,7 @@ stop
         enddo
         enddo
 
-       else if (viscoelastic_model.eq.4) then !pressure velocity coupling
+       else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
         print *,"this routine should not be called if visc_model==4"
         stop
        else 
@@ -23697,138 +23406,6 @@ stop
       enddo ! dirmac=1..sdim
 
       end subroutine fort_assimilate_xdisplace_from_particles
-
-
-       ! called from NavierStokes.cpp:
-       !  NavierStokes::accumulate_info_no_particles(int im_elastic)
-      subroutine fort_assimilate_tensor_from_xdisplace( &
-        im_PLS_cpp, & ! 0..nmat-1
-        tid, &  ! thread id
-        tilelo,tilehi, &  ! tile box dimensions
-        fablo,fabhi, &    ! fortran array box dimensions containing the tile
-        bfact, &          ! space order
-        level, &          ! 0<=level<=finest_level
-        finest_level, &
-        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
-        ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
-        nmat, &
-        LS, &
-        DIMS(LS), &
-        TNEWfab, &       ! FAB that holds elastic tensor, Q, when complete
-        DIMS(TNEWfab), &
-        xdfab, &      
-        DIMS(xdfab), &
-        ydfab, &      
-        DIMS(ydfab), &
-        zdfab, &      
-        DIMS(zdfab)) &
-      bind(c,name='fort_assimilate_tensor_from_xdisplace')
-
-      use global_utility_module
-      use probcommon_module
-      implicit none
-
-      INTEGER_T, intent(in) :: im_PLS_cpp
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: ncomp_tensor
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      REAL_T, intent(in), target :: xlo(SDIM)
-      REAL_T, intent(in), target :: dx(SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(LS) 
-      INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
-      INTEGER_T, intent(in) :: DIMDEC(xdfab) 
-      INTEGER_T, intent(in) :: DIMDEC(ydfab) 
-      INTEGER_T, intent(in) :: DIMDEC(zdfab) 
-      REAL_T, intent(in), target :: LS( &  
-        DIMV(LS), &
-        nmat*(1+SDIM))
-       ! Q assimilated from particles/cells
-      REAL_T, intent(inout), target :: TNEWfab( &  
-        DIMV(TNEWfab), &
-        ncomp_tensor)
-      REAL_T, pointer :: TNEWfab_ptr(D_DECL(:,:,:),:)
-
-      REAL_T, intent(in), target :: xdfab( &
-        DIMV(xdfab))
-      REAL_T, pointer :: xdfab_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: ydfab( &
-        DIMV(ydfab))
-      REAL_T, pointer :: ydfab_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: zdfab( &
-        DIMV(zdfab))
-      REAL_T, pointer :: zdfab_ptr(D_DECL(:,:,:))
-
-      INTEGER_T im_elastic
-
-      TNEWfab_ptr=>TNEWfab
-      xdfab_ptr=>xdfab
-      ydfab_ptr=>ydfab
-      zdfab_ptr=>zdfab
-
-      if (nmat.eq.num_materials) then
-       ! do nothing
-      else
-       print *,"nmat invalid"
-       stop
-      endif
-
-      if ((im_PLS_cpp.ge.0).and.(im_PLS_cpp.lt.nmat)) then
-       ! do nothing
-      else
-       print *,"im_PLS_cpp invalid"
-       stop
-      endif
-
-       ! 6 in 3D, 4 in 2D
-      if (ncomp_tensor.eq.2*SDIM) then
-       ! do nothing
-      else
-       print *,"ncomp_tensor invalid"
-       stop
-      endif
-
-      call checkbound_array(fablo,fabhi,LS,2,-1,24499)
-      call checkbound_array(fablo,fabhi,TNEWfab_ptr,1,-1,24500)
-
-      call checkbound_array1(fablo,fabhi,xdfab_ptr,2,0,24501)
-      call checkbound_array1(fablo,fabhi,ydfab_ptr,2,1,24502)
-      call checkbound_array1(fablo,fabhi,zdfab_ptr,2,SDIM-1,24503)
-
-      im_elastic=im_PLS_cpp+1
-       ! e.g. (grad XD + (grad XD)^{T})/2
-       ! XD=X(x0,t) - x0  => displacement
-       ! XD_{t} + u dot grad XD = u   u=velocity
-       ! if XD approximated on an Eulerian mesh, then "reversibility property"
-       ! is lost. 
-       ! if XD approximated on a Lagrangian mesh, then "synchronous coupling
-       ! property" is lost.
-       ! Strategy: hybrid Eulerian, Lagrangian method for FSI
-       ! prior hybrid approaches: "material point method"
-       ! methods by J. Teran (UCLA), others ....
-       ! note: Henshaw has already proven that classical asynchronous coupling
-       ! results in a method that is unconditionally unstable.
-       ! declared in: GLOBALUTIL.F90
-      call local_tensor_from_xdisplace( &
-        im_elastic, &
-        tilelo,tilehi, &  ! tile box dimensions
-        fablo,fabhi, &    ! fortran array box dimensions containing the tile
-        bfact, &          ! space order
-        level, &          ! 0<=level<=finest_level
-        finest_level, &
-        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
-        ncomp_tensor, &  ! ncomp_tensor=4 in 2D (11,12,22,33) and 6 in 3D 
-        nmat, &
-        TNEWfab_ptr, &   ! FAB that holds elastic tensor, Q, when complete
-        xdfab_ptr, &      
-        ydfab_ptr, &      
-        zdfab_ptr)
-
-      end subroutine fort_assimilate_tensor_from_xdisplace
 
 
       end module FSI_PC_module
