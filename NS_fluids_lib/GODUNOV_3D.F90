@@ -5565,7 +5565,6 @@ stop
       end subroutine fort_init_icemask
 
       subroutine fort_build_newmac( &
-       num_MAC_vectors, & ! num_MAC_vectors=2
        normdir, & ! 0..sdim-1
        tilelo,tilehi, &
        fablo,fabhi, &
@@ -5580,9 +5579,6 @@ stop
        xvmac,DIMS(xvmac), &
        yvmac,DIMS(yvmac), &
        zvmac,DIMS(zvmac), &
-       xdmac,DIMS(xdmac), &
-       ydmac,DIMS(ydmac), &
-       zdmac,DIMS(zdmac), &
        mask,DIMS(mask), &
        xlo,dx, &
        cur_time, &
@@ -5597,7 +5593,6 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: num_MAC_vectors !num_MAC_vectors=2
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: normdir !normdir=0..sdim-1
       INTEGER_T, intent(in) :: level
@@ -5621,33 +5616,23 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(yvmac) 
       INTEGER_T, intent(in) :: DIMDEC(zvmac) 
 
-      INTEGER_T, intent(in) :: DIMDEC(xdmac) 
-      INTEGER_T, intent(in) :: DIMDEC(ydmac) 
-      INTEGER_T, intent(in) :: DIMDEC(zdmac) 
-
       INTEGER_T, intent(in) :: DIMDEC(mask) 
 
       REAL_T, intent(in), target :: unode(DIMV(unode))
       REAL_T, pointer :: unode_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in), target :: xmomside(DIMV(xmomside), &
-        2*num_MAC_vectors)
+      REAL_T, intent(in), target :: xmomside(DIMV(xmomside),2)
       REAL_T, pointer :: xmomside_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: ymomside(DIMV(xmomside), &
-        2*num_MAC_vectors)
+      REAL_T, intent(in), target :: ymomside(DIMV(xmomside),2)
       REAL_T, pointer :: ymomside_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: zmomside(DIMV(xmomside), &
-        2*num_MAC_vectors)
+      REAL_T, intent(in), target :: zmomside(DIMV(xmomside),2)
       REAL_T, pointer :: zmomside_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: xmassside(DIMV(xmassside), &
-        2*num_MAC_vectors)
+      REAL_T, intent(in), target :: xmassside(DIMV(xmassside),2)
       REAL_T, pointer :: xmassside_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: ymassside(DIMV(ymassside), &
-        2*num_MAC_vectors)
+      REAL_T, intent(in), target :: ymassside(DIMV(ymassside),2)
       REAL_T, pointer :: ymassside_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: zmassside(DIMV(zmassside), &
-        2*num_MAC_vectors)
+      REAL_T, intent(in), target :: zmassside(DIMV(zmassside),2)
       REAL_T, pointer :: zmassside_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(out), target :: xvmac(DIMV(xvmac))
@@ -5656,13 +5641,6 @@ stop
       REAL_T, pointer :: yvmac_ptr(D_DECL(:,:,:))
       REAL_T, intent(out), target :: zvmac(DIMV(zvmac))
       REAL_T, pointer :: zvmac_ptr(D_DECL(:,:,:))
-
-      REAL_T, intent(out), target :: xdmac(DIMV(xdmac))
-      REAL_T, pointer :: xdmac_ptr(D_DECL(:,:,:))
-      REAL_T, intent(out), target :: ydmac(DIMV(ydmac))
-      REAL_T, pointer :: ydmac_ptr(D_DECL(:,:,:))
-      REAL_T, intent(out), target :: zdmac(DIMV(zdmac))
-      REAL_T, pointer :: zdmac_ptr(D_DECL(:,:,:))
 
       REAL_T, intent(in), target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
@@ -5677,15 +5655,13 @@ stop
       INTEGER_T iside
       INTEGER_T icell,jcell,kcell
       INTEGER_T ibucket
-      INTEGER_T ibucket_map
       INTEGER_T ileft,jleft,kleft
       INTEGER_T iright,jright,kright
-      INTEGER_T ivec
       INTEGER_T zapvel
       REAL_T maskleft
       REAL_T maskright
-      REAL_T momface_total(num_MAC_vectors)
-      REAL_T massface_total(num_MAC_vectors)
+      REAL_T momface_total
+      REAL_T massface_total
       REAL_T massquarter,momquarter
       REAL_T xsten(-1:1,SDIM)
 
@@ -5734,12 +5710,6 @@ stop
        print *,"nmat invalid"
        stop
       endif
-      if (num_MAC_vectors.eq.2) then
-       ! do nothing
-      else
-       print *,"num_MAC_vectors invalid"
-       stop
-      endif
 
       call checkbound_array1(fablo,fabhi,unode_ptr,0,normdir,11978)
 
@@ -5756,10 +5726,6 @@ stop
       call checkbound_array1(fablo,fabhi,xvmac_ptr,0,0,11990)
       call checkbound_array1(fablo,fabhi,yvmac_ptr,0,1,11991)
       call checkbound_array1(fablo,fabhi,zvmac_ptr,0,SDIM-1,11992)
-
-      call checkbound_array1(fablo,fabhi,xdmac_ptr,0,0,11994)
-      call checkbound_array1(fablo,fabhi,ydmac_ptr,0,1,11995)
-      call checkbound_array1(fablo,fabhi,zdmac_ptr,0,SDIM-1,11996)
 
       do veldir=1,SDIM
 
@@ -5816,7 +5782,6 @@ stop
          if (zapvel.eq.1) then
           if (veldir.eq.1) then
            xvmac(D_DECL(i,j,k))=zero
-           xdmac(D_DECL(i,j,k))=zero
           else
            print *,"veldir invalid"
            stop
@@ -5835,10 +5800,8 @@ stop
 
           if ((maskleft.eq.one).and.(maskright.eq.one)) then
 
-            do ivec=1,num_MAC_vectors
-             momface_total(ivec)=zero
-             massface_total(ivec)=zero
-            enddo
+            momface_total=zero
+            massface_total=zero
 
              ! iside=-1 (left of face)
              ! iside=1  (right of face)
@@ -5862,51 +5825,45 @@ stop
               stop
              endif
 
-             do ivec=1,num_MAC_vectors
+             if (veldir.eq.1) then
+              massquarter=xmassside(D_DECL(icell,jcell,kcell),ibucket)
+              momquarter=xmomside(D_DECL(icell,jcell,kcell),ibucket)
+             else if (veldir.eq.2) then
+              massquarter=ymassside(D_DECL(icell,jcell,kcell),ibucket)
+              momquarter=ymomside(D_DECL(icell,jcell,kcell),ibucket)
+             else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+              massquarter=zmassside(D_DECL(icell,jcell,kcell),ibucket)
+              momquarter=zmomside(D_DECL(icell,jcell,kcell),ibucket)
+             else
+              print *,"veldir invalid"
+              stop
+             endif
+             if (massquarter.ge.zero) then
+              ! do nothing
+             else
+              print *,"massquarter cannot be negative, ivec=",ivec
+              print *,"icell,jcell,kcell,ibucket ", &
+                icell,jcell,kcell,ibucket 
+              print *,"i,j,k ",i,j,k
+              print *,"massquarter ",massquarter
+              print *,"momquarter ",momquarter
+              stop
+             endif
 
-              ibucket_map=ibucket+2*(ivec-1)
-           
-              if (veldir.eq.1) then
-               massquarter=xmassside(D_DECL(icell,jcell,kcell),ibucket_map)
-               momquarter=xmomside(D_DECL(icell,jcell,kcell),ibucket_map)
-              else if (veldir.eq.2) then
-               massquarter=ymassside(D_DECL(icell,jcell,kcell),ibucket_map)
-               momquarter=ymomside(D_DECL(icell,jcell,kcell),ibucket_map)
-              else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-               massquarter=zmassside(D_DECL(icell,jcell,kcell),ibucket_map)
-               momquarter=zmomside(D_DECL(icell,jcell,kcell),ibucket_map)
-              else
-               print *,"veldir invalid"
-               stop
-              endif
-              if (massquarter.ge.zero) then
-               ! do nothing
-              else
-               print *,"massquarter cannot be negative, ivec=",ivec
-               print *,"icell,jcell,kcell,ibucket_map ", &
-                 icell,jcell,kcell,ibucket_map 
-               print *,"i,j,k ",i,j,k
-               print *,"massquarter ",massquarter
-               print *,"momquarter ",momquarter
-               stop
-              endif
+             massface_total=massface_total+massquarter
+             momface_total=momface_total+momquarter
 
-              massface_total(ivec)=massface_total(ivec)+massquarter
-              momface_total(ivec)=momface_total(ivec)+momquarter
-
-             enddo !ivec=1,num_MAC_vectors
 
             enddo ! iside: do iside=-1,1,2
 
-             ! mac velocity
-            if (massface_total(1).gt.zero) then
+            if (massface_total.gt.zero) then
 
-             momface_total(1)=momface_total(1)/massface_total(1)
+             momface_total=momface_total/massface_total
              ! LS>0 if clamped
              call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
                 vel_clamped,temperature_clamped,dx)
              if (LS_clamped.ge.zero) then
-              momface_total(1)=vel_clamped(veldir)
+              momface_total=vel_clamped(veldir)
              else if (LS_clamped.lt.zero) then
               ! do nothing
              else
@@ -5915,38 +5872,16 @@ stop
              endif
 
             else
-             print *,"massface_total(1) invalid"
+             print *,"massface_total invalid"
              stop
             endif
           
-            if (massface_total(2).gt.zero) then
-             momface_total(2)= &
-               momface_total(2)/massface_total(2)
-             if (veldir.eq.normdir+1) then
-              momface_total(2)= &
-               momface_total(2)+unode(D_DECL(i,j,k))
-             else if ((veldir.ge.1).and.(veldir.le.SDIM)) then
-              ! do nothing
-             else
-              print *,"veldir invalid"
-              stop
-             endif
-            else if (massface_total(2).eq.zero) then
-             momface_total(2)=zero
-            else
-             print *,"massface_total(2) invalid"
-             stop
-            endif
-             
             if (veldir.eq.1) then
-             xvmac(D_DECL(i,j,k))=momface_total(1)
-             xdmac(D_DECL(i,j,k))=momface_total(2)
+             xvmac(D_DECL(i,j,k))=momface_total
             else if (veldir.eq.2) then
-             yvmac(D_DECL(i,j,k))=momface_total(1)
-             ydmac(D_DECL(i,j,k))=momface_total(2)
+             yvmac(D_DECL(i,j,k))=momface_total
             else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-             zvmac(D_DECL(i,j,k))=momface_total(1)
-             zdmac(D_DECL(i,j,k))=momface_total(2)
+             zvmac(D_DECL(i,j,k))=momface_total
             else
              print *,"veldir invalid"
              stop
@@ -5981,16 +5916,14 @@ stop
        normdir, &
        x_mac_old, &
        DIMS(x_mac_old), &
-       xd_mac_old, & 
-       DIMS(xd_mac_old), &
-       xvel,DIMS(xvel), &  ! 1..num_MAC_vectors
-       xlo,dx, &
+       xvel,DIMS(xvel), &  
+       xlo, &
+       dx, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
        nmat, &
        ngrow, &  !=2
-       num_MAC_vectors, & ! num_MAC_vectors=2
        ngrowmac, & !=2
        veldir) &
       bind(c,name='fort_build_macvof')
@@ -6001,7 +5934,6 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: num_MAC_vectors !num_MAC_vectors=2.
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: normdir
@@ -6011,28 +5943,23 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: DIMDEC(x_mac_old) 
-      INTEGER_T, intent(in) :: DIMDEC(xd_mac_old) 
-      INTEGER_T, intent(in) :: DIMDEC(xvel) !1..num_MAC_vectors
+      INTEGER_T, intent(in) :: DIMDEC(xvel) 
       REAL_T, intent(in), target :: x_mac_old(DIMV(x_mac_old))
       REAL_T, pointer :: x_mac_old_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: xd_mac_old(DIMV(xd_mac_old))
-      REAL_T, pointer :: xd_mac_old_ptr(D_DECL(:,:,:))
-      REAL_T, intent(out), target :: xvel(DIMV(xvel),num_MAC_vectors) 
-      REAL_T, pointer :: xvel_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(out), target :: xvel(DIMV(xvel)) 
+      REAL_T, pointer :: xvel_ptr(D_DECL(:,:,:))
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
 
       INTEGER_T i,j,k
       INTEGER_T igridlo(3),igridhi(3)
-      REAL_T velmac(num_MAC_vectors)
+      REAL_T velmac
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
-      INTEGER_T ivec
 
       nhalf=1
 
       x_mac_old_ptr=>x_mac_old
-      xd_mac_old_ptr=>xd_mac_old
 
       xvel_ptr=>xvel
 
@@ -6052,13 +5979,6 @@ stop
        ! do nothing
       else
        print *,"num_materials_viscoelastic invalid:fort_build_macvof"
-       stop
-      endif
-
-      if (num_MAC_vectors.eq.2) then
-       ! do nothing
-      else
-       print *,"num_MAC_vectors invalid"
        stop
       endif
 
@@ -6082,8 +6002,7 @@ stop
        stop
       endif
       call checkbound_array1(fablo,fabhi,x_mac_old_ptr,ngrowmac,veldir-1,12319)
-      call checkbound_array1(fablo,fabhi,xd_mac_old_ptr,ngrowmac,veldir-1,12320)
-      call checkbound_array(fablo,fabhi,xvel_ptr,ngrowmac,veldir-1,12321)
+      call checkbound_array1(fablo,fabhi,xvel_ptr,ngrowmac,veldir-1,12321)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         igridlo,igridhi,ngrowmac,veldir-1,20)
@@ -6095,8 +6014,7 @@ stop
         ! veldir=1..sdim
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir-1,26)
 
-       velmac(1)=x_mac_old(D_DECL(i,j,k))
-       velmac(num_MAC_vectors)=xd_mac_old(D_DECL(i,j,k))
+       velmac=x_mac_old(D_DECL(i,j,k))
 
        if (veldir.eq.1) then
         if (levelrz.eq.0) then
@@ -6107,15 +6025,11 @@ stop
           stop
          endif
          if (xsten(0,1).le.VOFTOL*dx(1)) then
-          do ivec=1,num_MAC_vectors
-           velmac(ivec)=zero
-          enddo
+          velmac=zero
          endif
         else if (levelrz.eq.3) then
          if (xsten(0,1).le.VOFTOL*dx(1)) then
-          do ivec=1,num_MAC_vectors
-           velmac(ivec)=zero
-          enddo
+           velmac=zero
          endif
         else
          print *,"levelrz invalid build macvof"
@@ -6130,15 +6044,11 @@ stop
           stop
          endif
          if (xsten(0,1).le.VOFTOL*dx(1)) then
-          do ivec=1,num_MAC_vectors
-           velmac(ivec)=zero
-          enddo
+           velmac=zero
          endif
         else if (levelrz.eq.3) then
          if (xsten(0,1).le.VOFTOL*dx(1)) then
-          do ivec=1,num_MAC_vectors
-           velmac(ivec)=zero
-          enddo
+           velmac=zero
          endif
         else
          print *,"levelrz invalid build macvof 2"
@@ -6152,9 +6062,7 @@ stop
          stop
         else if (levelrz.eq.3) then
          if (xsten(0,1).le.VOFTOL*dx(1)) then
-          do ivec=1,num_MAC_vectors
-           velmac(ivec)=zero
-          enddo
+           velmac=zero
          endif
         else
          print *,"levelrz invalid build macvof 3"
@@ -6165,15 +6073,13 @@ stop
         stop
        endif
 
-       do ivec=1,num_MAC_vectors
-        if ((velmac(ivec).ge.zero).or. &
-            (velmac(ivec).le.zero)) then
-         xvel(D_DECL(i,j,k),ivec)=velmac(ivec)
-        else
-         print *,"velmac is NaN"
-         stop
-        endif
-       enddo
+       if ((velmac.ge.zero).or. &
+           (velmac.le.zero)) then
+        xvel(D_DECL(i,j,k))=velmac
+       else
+        print *,"velmac is NaN"
+        stop
+       endif
 
       enddo         
       enddo         
@@ -14168,13 +14074,13 @@ stop
        unode,DIMS(unode), & ! vel*dt
        xlo,dx, &
        conserve,DIMS(conserve), & ! local variables
-       xvel,DIMS(xvel), & ! 1..num_MAC_vectors
+       xvel,DIMS(xvel), & 
        yvel,DIMS(yvel), &
        zvel,DIMS(zvel), &
-       xmomside,DIMS(xmomside), & ! 1..2*num_MAC_vectors
+       xmomside,DIMS(xmomside), & ! 1..2
        ymomside,DIMS(ymomside), &
        zmomside,DIMS(zmomside), &
-       xmassside,DIMS(xmassside), & ! 1..2*num_MAC_vectors
+       xmassside,DIMS(xmassside), & ! 1..2
        ymassside,DIMS(ymassside), &
        zmassside,DIMS(zmassside), &
        ngrow, &
@@ -14187,7 +14093,6 @@ stop
        ncomp_state, &
        ntensor, &
        nc_bucket, &
-       num_MAC_vectors, & !=2 (fort_vfrac_split)
        verbose, &
        gridno,ngrid, &
        level, &
@@ -14204,7 +14109,6 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: num_MAC_vectors !=2
       INTEGER_T, intent(inout) :: nprocessed
       INTEGER_T, intent(in) :: tid
 
@@ -14310,34 +14214,25 @@ stop
        ! local variables
       REAL_T, intent(in), target :: conserve(DIMV(conserve),nc_conserve)
       REAL_T, pointer :: conserve_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: xvel(DIMV(xvel), &
-         num_MAC_vectors) 
-      REAL_T, pointer :: xvel_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: yvel(DIMV(yvel), &
-         num_MAC_vectors)  
-      REAL_T, pointer :: yvel_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: zvel(DIMV(zvel), &
-         num_MAC_vectors) 
-      REAL_T, pointer :: zvel_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: xvel(DIMV(xvel)) 
+      REAL_T, pointer :: xvel_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: yvel(DIMV(yvel))  
+      REAL_T, pointer :: yvel_ptr(D_DECL(:,:,:))
+      REAL_T, intent(in), target :: zvel(DIMV(zvel)) 
+      REAL_T, pointer :: zvel_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(inout), target :: xmomside(DIMV(xmomside), &
-        2*num_MAC_vectors)
+      REAL_T, intent(inout), target :: xmomside(DIMV(xmomside),2)
       REAL_T, pointer :: xmomside_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: ymomside(DIMV(ymomside), &
-        2*num_MAC_vectors)
+      REAL_T, intent(inout), target :: ymomside(DIMV(ymomside),2)
       REAL_T, pointer :: ymomside_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: zmomside(DIMV(zmomside), &
-        2*num_MAC_vectors)
+      REAL_T, intent(inout), target :: zmomside(DIMV(zmomside),2)
       REAL_T, pointer :: zmomside_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(inout), target :: xmassside(DIMV(xmassside), &
-        2*num_MAC_vectors)
+      REAL_T, intent(inout), target :: xmassside(DIMV(xmassside),2)
       REAL_T, pointer :: xmassside_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: ymassside(DIMV(ymassside), &
-        2*num_MAC_vectors)
+      REAL_T, intent(inout), target :: ymassside(DIMV(ymassside),2)
       REAL_T, pointer :: ymassside_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: zmassside(DIMV(zmassside), &
-        2*num_MAC_vectors)
+      REAL_T, intent(inout), target :: zmassside(DIMV(zmassside),2)
       REAL_T, pointer :: zmassside_ptr(D_DECL(:,:,:),:)
     
       REAL_T, intent(in) :: density_floor(nmat)

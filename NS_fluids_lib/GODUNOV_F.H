@@ -222,10 +222,7 @@ extern "C"
     Real* x_mac_old,
     AMREX_ARLIM_P(x_mac_oldlo),
     AMREX_ARLIM_P(x_mac_oldhi),
-    Real* xd_mac_old,
-    AMREX_ARLIM_P(xd_mac_oldlo),
-    AMREX_ARLIM_P(xd_mac_oldhi),
-    Real* xvel,AMREX_ARLIM_P(xvello),AMREX_ARLIM_P(xvelhi),//1..num_MAC_vectors
+    Real* xvel,AMREX_ARLIM_P(xvello),AMREX_ARLIM_P(xvelhi),
     const Real* xlo,
     const Real* dx,
     const int* tilelo,const int* tilehi,
@@ -233,13 +230,11 @@ extern "C"
     int* bfact,
     int* nmat,
     int* ngrow,
-    int* num_MAC_vectors,
     int* ngrowmac,
     int* veldir);
 
 
    void fort_build_newmac(
-    int* num_MAC_vectors,
     int* normdir, // 0..sdim-1
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
@@ -254,9 +249,6 @@ extern "C"
     Real* xvmac,AMREX_ARLIM_P(xvmaclo),AMREX_ARLIM_P(xvmachi),
     Real* yvmac,AMREX_ARLIM_P(yvmaclo),AMREX_ARLIM_P(yvmachi),
     Real* zvmac,AMREX_ARLIM_P(zvmaclo),AMREX_ARLIM_P(zvmachi),
-    Real* xdmac,AMREX_ARLIM_P(xdmaclo),AMREX_ARLIM_P(xdmachi),
-    Real* ydmac,AMREX_ARLIM_P(ydmaclo),AMREX_ARLIM_P(ydmachi),
-    Real* zdmac,AMREX_ARLIM_P(zdmaclo),AMREX_ARLIM_P(zdmachi),
     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
     const Real* xlo,const Real* dx,
     Real* cur_time,
@@ -820,7 +812,6 @@ extern "C"
      int* ncomp_state,
      int* ntensor,
      int* nc_bucket,
-     int* num_MAC_vectors, 
      int* verbose,
      const int* gridno,int* ngrid,
      int* level,
