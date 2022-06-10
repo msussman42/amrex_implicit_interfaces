@@ -12143,6 +12143,10 @@ void NavierStokes::tensor_advection_update() {
 
  debug_ngrow(CELLTENSOR_MF,1,9);
 
+ debug_ngrow(HOLD_VELOCITY_DATA_MF,1,9);
+ if (localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL)
+  amrex::Error("localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL");
+
  MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
 
  int rzflag=0;
@@ -12182,82 +12186,16 @@ void NavierStokes::tensor_advection_update() {
      MultiFab* tensor_source_mf=
       getStateTensor(0,scomp_tensor,ENUM_NUM_TENSOR_TYPE,cur_time_slab);
 
-     MultiFab* velmf=getState(1,0,AMREX_SPACEDIM,cur_time_slab);
-   
-     MultiFab* tendata_mf=new MultiFab(grids,dmap,20,ngrow_zero,
-	  MFInfo().SetTag("tendata_mf"),FArrayBoxFactory());
-
-     if (thread_class::nthreads<1)
-      amrex::Error("thread_class::nthreads invalid");
-     thread_class::init_d_numPts(tensor_source_mf->boxArray().d_numPts());
- 
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-     for (MFIter mfi(*tensor_source_mf,use_tiling); mfi.isValid(); ++mfi) {
-
-      BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-      const int gridno = mfi.index();
-      const Box& tilegrid = mfi.tilebox();
-      const Box& fabgrid = grids[gridno];
-      const int* tilelo=tilegrid.loVect();
-      const int* tilehi=tilegrid.hiVect();
-      const int* fablo=fabgrid.loVect();
-      const int* fabhi=fabgrid.hiVect();
-      int bfact=parent->Space_blockingFactor(level);
-
-      const Real* xlo = grid_loc[gridno].lo();
-
-      FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
-      int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
-
-      if (cellten.nComp()!=ntensor)
-       amrex::Error("cellten invalid ncomp");
-
-      FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
-      if (viscfab.nComp()!=3*nmat)
-       amrex::Error("viscfab.nComp() invalid");
-
-      FArrayBox& velfab=(*velmf)[mfi];
-      FArrayBox& tendata=(*tendata_mf)[mfi];
-
-      Vector<int> velbc=getBCArray(State_Type,gridno,
-        STATECOMP_VEL,STATE_NCOMP_VEL);
-
-      // get |grad U|,D,grad U 
-      int iproject=0;
-      int onlyscalar=0; 
-
-      int tid_current=ns_thread();
-      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-       amrex::Error("tid_current invalid");
-      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-      // declared in: DERIVE_3D.F90
-      // 0<=im<=nmat-1
-      fort_getshear(
-       &ntensor,
-       cellten.dataPtr(),
-       ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
-       velfab.dataPtr(),
-       ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-       dx,xlo,
-       tendata.dataPtr(),
-       ARLIM(tendata.loVect()),ARLIM(tendata.hiVect()),
-       &iproject,&onlyscalar,
-       &cur_time_slab,
-       tilelo,tilehi,
-       fablo,fabhi,
-       &bfact, 
-       &level, 
-       velbc.dataPtr(),
-       &ngrow_zero, // 0
-       &nmat);
-     } // mfi  
-} // omp
-     ns_reconcile_d_num(64);
-
+     MultiFab* tendata_mf=localMF[HOLD_GETSHEAR_DATA_MF];
+     if (tendata_mf->nGrow()==0) {
+      // do nothing
+     } else
+      amrex::Error("tendata_mf invalid nGrow()");
+     if (tendata_mf->nComp()==20) {
+      // do nothing
+     } else
+      amrex::Error("tendata_mf invalid nComp()");
+     
      if (thread_class::nthreads<1)
       amrex::Error("thread_class::nthreads invalid");
      thread_class::init_d_numPts(tensor_source_mf->boxArray().d_numPts());
@@ -12281,7 +12219,7 @@ void NavierStokes::tensor_advection_update() {
       const Real* xlo = grid_loc[gridno].lo();
 
       FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
-      FArrayBox& velfab=(*velmf)[mfi];
+      FArrayBox& velfab=(*localMF[HOLD_VELOCITY_DATA_MF])[mfi];
       FArrayBox& tensor_new_fab=Tensor_new[mfi];
       FArrayBox& tensor_source_mf_fab=(*tensor_source_mf)[mfi];
       FArrayBox& tendata=(*tendata_mf)[mfi];
@@ -12394,9 +12332,7 @@ void NavierStokes::tensor_advection_update() {
      } else
       amrex::Error("bl_spacedim or rzflag invalid");
       
-     delete tendata_mf;
      delete tensor_source_mf;
-     delete velmf;
     } else
      amrex::Error("partid could not be found: tensor_advection_update");
 
@@ -17383,14 +17319,11 @@ NavierStokes::split_scalar_advection() {
   amrex::Error("stokes_flow invalid");
 
  delete_localMF(UMACOLD_MF,AMREX_SPACEDIM);
- delete_localMF(XDMACOLD_MF,AMREX_SPACEDIM);
  
  if ((level>=0)&&(level<finest_level)) {
 
   int spectral_override=1; // order derived from "enable_spectral"
   avgDownMacState(Umac_Type,spectral_override);
-  spectral_override=0; //always low order
-  avgDownMacState(XDmac_Type,spectral_override);
  
   avgDown(LS_Type,0,nmat,0);
   MOFavgDown();
@@ -22561,7 +22494,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 
 }  // end subroutine prepare_post_process
 
-// called from: NavierStokes::correct_xdisplace_with_particles() 
+// called from: NavierStokes::correct_Q_with_particles() 
 // (NavierStokes3.cpp)
 // called prior to tensor_advection_updateALL().
 void 

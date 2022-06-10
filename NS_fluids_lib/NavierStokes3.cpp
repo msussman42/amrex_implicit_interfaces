@@ -834,6 +834,13 @@ void NavierStokes::tensor_advection_updateALL() {
 
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
 
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+    //ngrow=1
+   ns_level.getState_localMF(HOLD_VELOCITY_DATA_MF,
+     1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
+  }
+
    // init_gradu_tensorALL fills CELLTENSOR_MF using these steps:
    // 1. find all velocity derivatives at faces.
    // 2. interpolate derivatives from faces to cells using 1-sided
@@ -841,25 +848,47 @@ void NavierStokes::tensor_advection_updateALL() {
    //    but lsright(im_primary)<0.
    //    (im_primary is the main material in the cell, lspoint(im_primary)>=0)
    // init_gradu_tensorALL declared in NavierStokes2.cpp
-  int do_alloc=1;
+  int do_alloc=0;
   int simple_AMR_BC_flag_viscosity=1;
   init_gradu_tensorALL(
-    HOLD_VELOCITY_DATA_MF,//deleted at end of init_gradu_tensorALL(do_alloc=1)
+    HOLD_VELOCITY_DATA_MF,
     do_alloc,
     CELLTENSOR_MF,
     FACETENSOR_MF,
     simple_AMR_BC_flag_viscosity);
 
-   // in: NavierStokes.cpp
+  allocate_array(0,20,-1,HOLD_GETSHEAR_DATA_MF);
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   // get |grad U|,D,grad U 
+   // 1: sqrt(2 * D : D)
+   // 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
+   // 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
+   int iproject=0;
+   int only_scalar=0; 
+   int destcomp=0;
+   int ngrow_zero=0;
+   ns_level.level_getshear(
+       ns_level.localmf[HOLD_GETSHEAR_DATA_MF],
+       ns_level.localmf[HOLD_VELOCITY_DATA_MF],
+       iproject,only_scalar,destcomp,ngrow_zero);
+  }
+
+
+   // tensor_advection_update is declared in: NavierStokes.cpp
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.tensor_advection_update();
   }
+  avgDownALL_TENSOR();
 
+  FIX ME UPDATE THE PARTICLE DATA TOO IF PARTICLES EXIST
+
+  delete_array(HOLD_GETSHEAR_DATA_MF);
+  delete_array(HOLD_VELOCITY_DATA_MF);
   delete_array(CELLTENSOR_MF);
   delete_array(FACETENSOR_MF);
-
-  avgDownALL_TENSOR();
 
  } else if (num_materials_viscoelastic==0) {
   // do nothing
