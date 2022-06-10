@@ -9660,7 +9660,7 @@ stop
        im_critical, &  ! 0<=im_critical<=nmat-1
        ncomp_visc, & 
        visc,DIMS(visc), &
-       tendata,DIMS(tendata), & ! tendata:fort_getshear,iproject=onlyscalar=0
+       tendata,DIMS(tendata), & !tendata:fort_getshear,iproject=only_scalar=0
        dx,xlo, &
        vel,DIMS(vel), &
        tnew,DIMS(tnew), &
