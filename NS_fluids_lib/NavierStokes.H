@@ -318,10 +318,7 @@ public:
 
     void init_particle_container(int append_flag);
 
-    void accumulate_PC_info(
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
-      NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr,
-      int nnbr);
+    void correct_Q_with_particles();
 
     void assimilate_Q_from_particles(
       AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
