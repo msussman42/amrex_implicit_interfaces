@@ -429,7 +429,7 @@ stop
        dx,xlo, &
        tensordata, &
        DIMS(tensordata), &
-       iproject,onlyscalar, &
+       iproject,only_scalar, &
        time, &
        tilelo,tilehi, &
        fablo,fabhi, &
@@ -451,7 +451,7 @@ stop
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
       INTEGER_T i,j,k,n,dir,veldir
-      INTEGER_T, intent(in) :: iproject,ngrow,onlyscalar
+      INTEGER_T, intent(in) :: iproject,ngrow,only_scalar
       INTEGER_T i1,j1
       INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
@@ -617,17 +617,17 @@ stop
 #endif
        shear=sqrt(two*shear)
 
-       if (onlyscalar.eq.1) then
+       if (only_scalar.eq.1) then
         tensordata(D_DECL(i,j,k),1)=shear
-       else if (onlyscalar.eq.2) then
+       else if (only_scalar.eq.2) then
         vort(1)=gradu(3,2)-gradu(2,3)
         vort(2)=gradu(1,3)-gradu(3,1)
         vort(3)=gradu(2,1)-gradu(1,2)
         tensordata(D_DECL(i,j,k),1)= &
           sqrt(vort(1)**2+vort(2)**2+vort(3)**2)
-       else if (onlyscalar.eq.3) then
+       else if (only_scalar.eq.3) then
         tensordata(D_DECL(i,j,k),1)=abs(gradu(1,1)+gradu(2,2)+gradu(3,3))
-       else if (onlyscalar.eq.0) then
+       else if (only_scalar.eq.0) then
         tensordata(D_DECL(i,j,k),1)=shear
         n=2
         do i1=1,3
@@ -643,7 +643,7 @@ stop
         enddo
         enddo
        else 
-        print *,"onlyscalar invalid"
+        print *,"only_scalar invalid"
         stop
        endif
 
@@ -1685,7 +1685,7 @@ stop
 
       INTEGER_T im  ! im=0..nmat-1
       INTEGER_T i,j,k
-      INTEGER_T iproject,onlyscalar
+      INTEGER_T iproject,only_scalar
       REAL_T T11,T22,T33,traceA,modtime
       INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz
       INTEGER_T nbase
@@ -1783,7 +1783,7 @@ stop
       call checkbound_array(fablo,fabhi,visc,ngrow,-1,327)
 
       iproject=0
-      onlyscalar=1  ! mag(trace gradu)
+      only_scalar=1  ! mag(trace gradu)
         
        ! in: fort_dermagtrace
        ! visc=sqrt(2*(a11**2+a22**2+a33**2+2*a12**2+2*a13**2+2*a23**2))

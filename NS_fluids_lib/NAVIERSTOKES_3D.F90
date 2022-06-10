@@ -14027,7 +14027,7 @@ END SUBROUTINE SIMP
           enddo
           enddo
 
-           ! vort is initialized in fort_getshear when onlyscalar.eq.2
+           ! vort is initialized in fort_getshear when only_scalar.eq.2
            ! vort is the vorticity magnitude (L2 norm)
           local_vort=vort(D_DECL(i,j,k))
 
