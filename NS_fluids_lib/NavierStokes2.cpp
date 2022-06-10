@@ -9115,7 +9115,7 @@ void NavierStokes::level_getshear(
     dx,xlo,
     shear_output_fab.dataPtr(destcomp),
     ARLIM(shear_output_fab.loVect()),ARLIM(shear_output_fab.hiVect()),
-    &iproject,&onlyscalar,
+    &iproject,&only_scalar,
     &cur_time_slab,
     tilelo,tilehi,
     fablo,fabhi,
@@ -9751,13 +9751,13 @@ void NavierStokes::getStateVISC() {
 
    if (shear_thinning_fluid[im]==1) {
 
-    // since onlyscalar==1, this routine calculates mag(trace gradu)=
+    // since only_scalar==1, this routine calculates mag(trace gradu)=
     //  sqrt(2 D:D)
     // since D is symmetric, D:D=trace(D^2) 
     // is invariant to coordinate transformations.
     // if levelrz==1, gradu(3,3)=u/|r|
     int iproject=0;
-    int onlyscalar=1;  // mag(trace gradu) 
+    int only_scalar=1;  // mag(trace gradu) 
     int destcomp=0;
     level_getshear(gammadot_mf,vel,iproject,only_scalar,destcomp,ngrow);
 
