@@ -22442,6 +22442,12 @@ void NavierStokes::assimilate_Q_from_particles(
    Array<Real> real_compALL(N_real_comp);
    for (int i=0;i<NUM_CELL_ELASTIC;i++) {
     Vector<Real>& real_comp=particles_SoA.GetRealData(i);
+
+    if (real_comp.size()==Np) {
+     //do nothing
+    } else
+     amrex::Error("real_comp.size()!=Np");
+
     for (int j=0;j<Np;j++) {
      real_compALL[k]=real_comp[j]; 
      k++;
@@ -22476,7 +22482,7 @@ void NavierStokes::assimilate_Q_from_particles(
     &ncomp_accumulate,
     &nmat,
     TNEWfab.dataPtr(),
-    ARLIM(SNEWfab.loVect()),ARLIM(SNEWfab.hiVect()),
+    ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
     tensor_fab.dataPtr(),
     ARLIM(tensor_fab.loVect()),ARLIM(tensor_fab.hiVect()),
     matrixfab.dataPtr(),
