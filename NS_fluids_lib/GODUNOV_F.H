@@ -497,9 +497,6 @@ extern "C"
     Real* usolid,AMREX_ARLIM_P(usolidlo),AMREX_ARLIM_P(usolidhi),
     Real* ughost,AMREX_ARLIM_P(ughostlo),AMREX_ARLIM_P(ughosthi));
 
-
-
-
    void fort_assimilate_statedata(
     int* isweep,
     int* law_of_the_wall,
@@ -1119,52 +1116,7 @@ extern "C"
      int* num_divu_outer_sweeps);
 
 
-   void fort_assimilate_xdisplace_from_particles(
-     Real* particles_weight_XD,
-     int* tid,
-     const int* tilelo,const int* tilehi,
-     const int* fablo,const int* fabhi,
-     int* bfact,
-     int* level,
-     int* finest_level,
-     const Real* xlo,const Real* dx,
-     const void* particles_no_nbr,
-     const void* particles_nbr,
-     const void* particles_only_nbr,
-     int Np_no_nbr, //pass by value just in case "long" on the c++ side.
-     int Np_nbr, //pass by value just in case "long" on the c++ side.
-     int Nn,     // pass by value just in case "long" on the c++ side.
-     int* matrix_points,
-     int* RHS_points,
-     int* ncomp_accumulate,
-     int* nmat,
-     Real* LS,
-     AMREX_ARLIM_P(LSlo),
-     AMREX_ARLIM_P(LShi),
-     Real* xdNEWfab,
-     AMREX_ARLIM_P(xdNEWfablo),
-     AMREX_ARLIM_P(xdNEWfabhi),
-     Real* ydNEWfab,
-     AMREX_ARLIM_P(ydNEWfablo),
-     AMREX_ARLIM_P(ydNEWfabhi),
-     Real* zdNEWfab,
-     AMREX_ARLIM_P(zdNEWfablo),
-     AMREX_ARLIM_P(zdNEWfabhi),
-     Real* xdfab,
-     AMREX_ARLIM_P(xdfablo),
-     AMREX_ARLIM_P(xdfabhi),
-     Real* ydfab,
-     AMREX_ARLIM_P(ydfablo),
-     AMREX_ARLIM_P(ydfabhi),
-     Real* zdfab,
-     AMREX_ARLIM_P(zdfablo),
-     AMREX_ARLIM_P(zdfabhi),
-     Real* matrixfab,
-     AMREX_ARLIM_P(matrixfablo),
-     AMREX_ARLIM_P(matrixfabhi));
-
-
-   void fort_assimilate_VEL_from_particles(
+   void fort_assimilate_Q_from_particles(
      Real* fluid_relaxation_time_to_particle,
      Real* dt_slab,
      int* tid,

@@ -753,74 +753,75 @@ void NavierStokes::deallocate_SDC() {
 }  // subroutine deallocate_SDC
 
 
-// called before tensor_advection_updateALL() from 
-// NavierStokes::do_the_advance
-void NavierStokes::correct_xdisplace_with_particles() {
+// called at the beginning of tensor_advection_updateALL()
+void NavierStokes::correct_Q_with_particles() {
 
  int finest_level=parent->finestLevel();
- if ((level==0)&&(level<=finest_level)) {
-  // do nothing
- } else
-  amrex::Error("level invalid");
+ int nmat=num_materials;
 
- const Vector<Geometry>& ns_geom=parent->Geom();
- const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
- const Vector<BoxArray>& ns_ba=parent->boxArray();
+ if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
 
- Vector<int> refinement_ratio;
- refinement_ratio.resize(ns_ba.size());
- for (int ilev=0;ilev<refinement_ratio.size();ilev++)
-  refinement_ratio[ilev]=2;
- int nnbr=1;
+  if ((level==0)&&(level<=finest_level)) {
+   // do nothing
+  } else
+   amrex::Error("level invalid");
 
- if (parent->global_AMR_particles_flag==particles_flag) {
-  // do nothing
- } else
-  amrex::Error("parent->global_AMR_particles_flag==particles_flag failed");
+  const Vector<Geometry>& ns_geom=parent->Geom();
+  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
+  const Vector<BoxArray>& ns_ba=parent->boxArray();
 
- if (particles_flag==1) {
+  Vector<int> refinement_ratio;
+  refinement_ratio.resize(ns_ba.size());
+  for (int ilev=0;ilev<refinement_ratio.size();ilev++)
+   refinement_ratio[ilev]=2;
+  int nnbr=1;
 
-  bool local_copy_flag=true; //do not redistribue inside of copyParticles
-  NavierStokes& ns_level0=getLevel(0);
-  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-    ns_level0.newDataPC(slab_step+1);
+  if (parent->global_AMR_particles_flag==particles_flag) {
+   // do nothing
+  } else
+   amrex::Error("parent->global_AMR_particles_flag==particles_flag failed");
 
-  NeighborParticleContainer<N_EXTRA_REAL,0> 
+  if (particles_flag==1) {
+
+   bool local_copy_flag=true; //do not redistribue inside of copyParticles
+   NavierStokes& ns_level0=getLevel(0);
+   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
+     ns_level0.newDataPC(slab_step+1);
+
+   NeighborParticleContainer<N_EXTRA_REAL,0> 
     localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
 
-  if (num_SoA_var==SOA_NCOMP) {
+   if (num_SoA_var==SOA_NCOMP) {
+    // do nothing
+   } else
+    amrex::Error("num_SoA_var invalid");
+
+   if (num_SoA_var==parent->global_AMR_num_SoA_var) {
+    // do nothing
+   } else
+    amrex::Error("num_SoA_var invalid");
+
+   for (int ns=0;ns<num_SoA_var;ns++)
+    localPC_nbr.AddRealComp(true);
+
+   localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
+   localPC_nbr.fillNeighbors();
+
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    ns_level.assimilate_Q_from_particles(localPC_no_nbr,localPC_nbr,nnbr);
+   }
+   localPC_nbr.clearNeighbors();
+
+   avgDownALL_TENSOR();
+  } else if (particles_flag==0) {
    // do nothing
   } else
-   amrex::Error("num_SoA_var invalid");
-
-  if (num_SoA_var==parent->global_AMR_num_SoA_var) {
-   // do nothing
-  } else
-   amrex::Error("num_SoA_var invalid");
-
-  for (int ns=0;ns<num_SoA_var;ns++)
-   localPC_nbr.AddRealComp(true);
-
-  localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
-  localPC_nbr.fillNeighbors();
-
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.accumulate_PC_info(localPC_no_nbr,localPC_nbr,nnbr);
-  }
-  localPC_nbr.clearNeighbors();
-
- } else if (particles_flag==0) {
-  // do nothing
+   amrex::Error("particles_flag invalid");
  } else
-  amrex::Error("particles_flag invalid");
+  amrex::Error("num_materials_viscoelastic bad correct_Q_with_particles()");
 
- for (int ilev=finest_level-1;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.avgDownMacState(XDmac_Type,0);
- }
-
-} // end subroutine correct_xdisplace_with_particles()
+} // end subroutine correct_Q_with_particles()
 
 
 
@@ -833,6 +834,8 @@ void NavierStokes::tensor_advection_updateALL() {
  int nmat=num_materials;
 
  if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=nmat)) {
+
+  correct_Q_with_particles();
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -3413,10 +3416,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       }
       debug_memory();
 
-      // 3a. assimilate particle info to xdisplace
-      correct_xdisplace_with_particles();
-
-      // 3b. TENSOR ADVECTION
+      // 3. TENSOR ADVECTION
       //  (non-Newtonian materials)
       // second half of D^{upside down triangle}/Dt
       tensor_advection_updateALL();
@@ -12632,58 +12632,6 @@ void NavierStokes::veldiffuseALL() {
    // do nothing
  } else
   amrex::Error("include_viscous_heating invalid");
-
- if (parent->global_AMR_particles_flag==particles_flag) {
-  // do nothing
- } else
-  amrex::Error("parent->global_AMR_particles_flag==particles_flag failed");
-
- if (particles_flag==1) {
-
-  const Vector<Geometry>& ns_geom=parent->Geom();
-  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
-  const Vector<BoxArray>& ns_ba=parent->boxArray();
-
-  Vector<int> refinement_ratio;
-  refinement_ratio.resize(ns_ba.size());
-  for (int ilev=0;ilev<refinement_ratio.size();ilev++)
-   refinement_ratio[ilev]=2;
-  int nnbr=1;
-
-  bool local_copy_flag=true; //do not redistribute inside of copyParticles
-  NavierStokes& ns_level0=getLevel(0);
-  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr=
-    ns_level0.newDataPC(slab_step+1);
-
-  NeighborParticleContainer<N_EXTRA_REAL,0> 
-    localPC_nbr(ns_geom,ns_dmap,ns_ba,refinement_ratio,nnbr);
-
-  if (num_SoA_var==SOA_NCOMP) {
-   // do nothing
-  } else
-   amrex::Error("num_SoA_var invalid");
-
-  if (num_SoA_var==parent->global_AMR_num_SoA_var) {
-   // do nothing
-  } else
-   amrex::Error("num_SoA_var invalid");
-
-  for (int ns=0;ns<num_SoA_var;ns++)
-   localPC_nbr.AddRealComp(true);
-
-  localPC_nbr.copyParticles(localPC_no_nbr,local_copy_flag);
-  localPC_nbr.fillNeighbors();
-
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.assimilate_vel_from_particles(localPC_no_nbr,localPC_nbr,nnbr);
-  }
-  localPC_nbr.clearNeighbors();
-
- } else if (particles_flag==0) {
-  // do nothing
- } else
-  amrex::Error("particles_flag invalid");
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
