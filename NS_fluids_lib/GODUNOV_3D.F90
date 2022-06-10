@@ -22302,7 +22302,7 @@ stop
 
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
-         ! (x0,y0,z0,u,v,w,den,T,insert time) is extra. 
+         ! (insert time) is extra. 
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
@@ -22316,22 +22316,22 @@ stop
         INTEGER_T :: bfact
         INTEGER_T :: level
         INTEGER_T :: finest_level
-        INTEGER_T :: matrix_points
-        INTEGER_T :: RHS_points
         INTEGER_T :: ncomp_accumulate
         REAL_T, pointer :: dx(:)
         REAL_T, pointer :: xlo(:)
         INTEGER_T :: Npart
         type(particle_t), pointer, dimension(:) :: particles
+        INTEGER_T :: N_real_comp
+        REAL_T, pointer, dimension(:) :: real_compALL
         INTEGER_T :: nmat
        end type accum_parm_type
 
       contains
 
-      subroutine traverse_particlesVEL( &
+      subroutine traverse_particles_Q( &
        accum_PARM, &
        matrixfab, &
-       VEL_fab, &
+       tensor_fab, &
        ncomp_accumulate)
 
       use probcommon_module
@@ -22341,7 +22341,7 @@ stop
       type(accum_parm_type), intent(in) :: accum_PARM
        ! pointers are always intent(in).
        ! the actual data intent attribute is inherited from the target.
-      REAL_T, pointer, intent(in) :: VEL_fab(D_DECL(:,:,:),:)
+      REAL_T, pointer, intent(in) :: tensor_fab(D_DECL(:,:,:),:)
       REAL_T, pointer, intent(in) :: matrixfab(D_DECL(:,:,:),:)
 
       INTEGER_T :: nhalf
@@ -22349,9 +22349,7 @@ stop
       INTEGER_T :: interior_ID
       INTEGER_T :: dir
       REAL_T, target :: xpart(SDIM)
-      REAL_T xpartfoot(SDIM)
-      REAL_T xdisp(SDIM)
-      REAL_T velpart(SDIM)
+      REAL_T Qpart(NUM_CELL_ELASTIC)
       INTEGER_T cell_index(SDIM)
       INTEGER_T interior_ok
       INTEGER_T i,j,k
@@ -22360,7 +22358,7 @@ stop
       REAL_T xc(SDIM)
       INTEGER_T npart_local
 
-      REAL_T, target :: cell_data_interp(SDIM)
+      REAL_T, target :: cell_data_interp(NUM_CELL_ELASTIC)
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
       INTEGER_T, target :: fablo_local(SDIM)
@@ -22380,8 +22378,16 @@ stop
        tilehi_local(dir)=accum_PARM%tilehi(dir)
       enddo
 
-      call checkbound_array(tilelo_local,tilehi_local,matrixfab,1,-1,23511)
-      call checkbound_array(fablo_local,fabhi_local,VEL_fab,2,-1,23512)
+      if (NUM_CELL_ELASTIC.eq. &
+          num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) then
+       ! do nothing
+      else
+       print *,"NUM_CELL_ELASTIC invalid"
+       stop
+      endif
+
+      call checkbound_array(tilelo_local,tilehi_local,matrixfab,0,-1,23511)
+      call checkbound_array(fablo_local,fabhi_local,tensor_fab,1,-1,23512)
 
       data_out%data_interp=>cell_data_interp
 
@@ -22394,10 +22400,10 @@ stop
       data_in%xlo=>xlo_local
       data_in%fablo=>fablo_local
       data_in%fabhi=>fabhi_local
-      data_in%ncomp=SDIM
+      data_in%ncomp=NUM_CELL_ELASTIC
       data_in%scomp=1
 
-      data_in%state=>VEL_fab
+      data_in%state=>tensor_fab
 
       nhalf=3
 
@@ -22415,18 +22421,24 @@ stop
        print *,"accum_PARM%Npart invalid"
        stop
       endif
+      FIX ME ADD THIS SANITY CHECK TO THE CALLER ALSO CHECK NCOMP_ACCUM...
+      if (npart_local*NUM_CELL_ELASTIC.eq.accum_PARM%N_real_comp) then
+       ! do nothing
+      else
+       print *,"accum_PARM%N_real_comp invalid"
+       stop
+      endif
 
       do interior_ID=1,npart_local
 
        if (accum_PARM%Npart.ge.0) then
         do dir=1,SDIM
          xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
-         xpartfoot(dir)= &
-           accum_PARM%particles(interior_ID)%extra_state(N_EXTRA_REAL_X0+dir)
-         xdisp(dir)=xpart(dir)-xpartfoot(dir)
-         velpart(dir)= &
-          accum_PARM%particles(interior_ID)%extra_state(N_EXTRA_REAL_U+dir)
         enddo ! dir=1..sdim
+        do dir=1,NUM_CELL_ELASTIC
+         k=(dir-1)*npart_local+interior_ID
+         Qpart(dir)=accum_PARM%real_compALL(k)
+        enddo ! dir=1..NUM_CELL_ELASTIC
 
         data_in%xtarget=>xpart
         data_in%interp_foot_flag=0
@@ -22492,7 +22504,6 @@ stop
        ! called from NavierStokes.cpp:
        ! NavierStokes::assimilate_Q_from_particles()
       subroutine fort_assimilate_Q_from_particles( &
-        fluid_relaxation_time_to_particle, &
         dt, &
         tid, &  ! thread id
         tilelo,tilehi, &  ! tile box dimensions
@@ -22500,32 +22511,21 @@ stop
         bfact, &          ! space order
         level, &          ! 0<=level<=finest_level
         finest_level, &
-        xlo,dx, &         ! xlo is lower left hand corner coordinate of fab
-        particles_no_nbr, & 
-        particles_nbr, & 
-        particles_only_nbr, & 
-        Np_no_nbr, & ! pass by value
-        Np_nbr, & ! pass by value
-        Nn, & ! pass by value
-        matrix_points, & 
-        RHS_points, &    
-        ncomp_accumulate, & ! matrix_points+sdim * RHS_points
+        xlo, &         ! xlo is lower left hand corner coordinate of fab
+        dx, &
+        particles, & 
+        Np, & ! pass by value
+        real_compALL, &
+        N_real_comp, & ! pass by value
+        ncomp_accumulate, & 
         nmat, &
-        LS, &
-        DIMS(LS), &
-        SNEWfab, &  
-        DIMS(SNEWfab), &
-        UMACNEW, &  
-        DIMS(UMACNEW), &
-        VMACNEW, &  
-        DIMS(VMACNEW), &
-        WMACNEW, &  
-        DIMS(WMACNEW), &
-        vel_fab, &      
-        DIMS(vel_fab), &
+        TNEWfab, &  
+        DIMS(TNEWfab), &
+        tensor_fab, &      
+        DIMS(tensor_fab), &
         matrixfab, &     ! accumulation FAB
         DIMS(matrixfab)) &
-      bind(c,name='fort_assimilate_VEL_from_particles')
+      bind(c,name='fort_assimilate_Q_from_particles')
 
       use global_utility_module
       use probcommon_module
@@ -22533,11 +22533,9 @@ stop
 
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: dt
-      REAL_T, intent(in) :: fluid_relaxation_time_to_particle
-      INTEGER_T, intent(in) :: matrix_points
-      INTEGER_T, intent(in) :: RHS_points
       INTEGER_T, intent(in) :: ncomp_accumulate
-      INTEGER_T, value, intent(in) :: Np_no_nbr,Np_nbr,Nn ! pass by value
+      INTEGER_T, value, intent(in) :: Np ! pass by value
+      INTEGER_T, value, intent(in) :: N_real_comp ! pass by value
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
@@ -22546,44 +22544,26 @@ stop
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in), target :: xlo(SDIM)
       REAL_T, intent(in), target :: dx(SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(LS) 
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
-      INTEGER_T, intent(in) :: DIMDEC(SNEWfab) 
-      INTEGER_T, intent(in) :: DIMDEC(UMACNEW) 
-      INTEGER_T, intent(in) :: DIMDEC(VMACNEW) 
-      INTEGER_T, intent(in) :: DIMDEC(WMACNEW) 
-      INTEGER_T, intent(in) :: DIMDEC(vel_fab) 
+      INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
+      INTEGER_T, intent(in) :: DIMDEC(tensor_fab) 
       REAL_T, intent(inout), target :: matrixfab( &
         DIMV(matrixfab), &
         ncomp_accumulate)
       REAL_T, pointer :: matrixfab_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: LS( &  
-        DIMV(LS), &
-        nmat*(1+SDIM))
-      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: SNEWfab( & 
-        DIMV(SNEWfab), &
-        SDIM)
-      REAL_T, pointer :: SNEWfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: UMACNEW( & 
-        DIMV(UMACNEW))
-      REAL_T, pointer :: UMACNEW_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: VMACNEW( & 
-        DIMV(VMACNEW))
-      REAL_T, pointer :: VMACNEW_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: WMACNEW( & 
-        DIMV(WMACNEW))
-      REAL_T, pointer :: WMACNEW_ptr(D_DECL(:,:,:))
+      REAL_T, intent(inout), target :: TNEWfab( & 
+        DIMV(TNEWfab), &
+        NUM_CELL_ELASTIC)
+      REAL_T, pointer :: TNEWfab_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: vel_fab( &
-        DIMV(vel_fab), &
-        SDIM)
-      REAL_T, pointer :: vel_fab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: tensor_fab( &
+        DIMV(tensor_fab), &
+        NUM_CELL_ELASTIC)
+      REAL_T, pointer :: tensor_fab_ptr(D_DECL(:,:,:),:)
 
-      type(particle_t), intent(in), target :: particles_no_nbr(Np_no_nbr)
-      type(particle_t), intent(in) :: particles_nbr(Np_nbr)
-      type(particle_t), intent(in), target :: particles_only_nbr(Nn)
+      type(particle_t), intent(in), target :: particles(Np)
+      REAL_T, intent(in), target :: real_compALL(N_real_comp)
 
       type(accum_parm_type) :: accum_PARM
 
@@ -22606,12 +22586,8 @@ stop
       nhalf=3
 
       matrixfab_ptr=>matrixfab
-      LS_ptr=>LS
-      SNEWfab_ptr=>SNEWfab
-      UMACNEW_ptr=>UMACNEW
-      VMACNEW_ptr=>VMACNEW
-      WMACNEW_ptr=>WMACNEW
-      vel_fab_ptr=>vel_fab
+      TNEWfab_ptr=>TNEWfab
+      tensor_fab_ptr=>tensor_fab
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -22620,24 +22596,21 @@ stop
        stop
       endif
 
-      if (matrix_points.eq.1) then
+      if (NUM_CELL_ELASTIC.eq. &
+          num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) then
        ! do nothing
       else
-       print *,"matrix_points invalid"
+       print *,"NUM_CELL_ELASTIC invalid"
        stop
       endif
-      if (RHS_points.eq.1) then
-       ! do nothing
-      else
-       print *,"RHS_points invalid"
-       stop
-      endif
-      if (ncomp_accumulate.eq.matrix_points+SDIM*RHS_points) then
+
+      if (ncomp_accumulate.eq.NUM_CELL_ELASTIC+1) then
        ! do nothing
       else
        print *,"ncomp_accumulate invalid"
        stop
       endif
+
       if (dt.gt.zero) then
        ! do nothing
       else
@@ -22645,13 +22618,9 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,LS_ptr,2,-1,23775)
-      call checkbound_array(tilelo,tilehi,matrixfab_ptr,1,-1,23776)
-      call checkbound_array(fablo,fabhi,SNEWfab_ptr,1,-1,23777)
-      call checkbound_array1(fablo,fabhi,UMACNEW_ptr,0,0,23778)
-      call checkbound_array1(fablo,fabhi,VMACNEW_ptr,0,1,23779)
-      call checkbound_array1(fablo,fabhi,WMACNEW_ptr,0,SDIM-1,23780)
-      call checkbound_array(fablo,fabhi,vel_fab_ptr,2,-1,23781)
+      call checkbound_array(tilelo,tilehi,matrixfab_ptr,0,-1,23776)
+      call checkbound_array(fablo,fabhi,TNEWfab_ptr,1,-1,23777)
+      call checkbound_array(fablo,fabhi,tensor_fab_ptr,1,-1,23781)
 
       accum_PARM%fablo=>fablo 
       accum_PARM%fabhi=>fabhi
@@ -22660,67 +22629,22 @@ stop
       accum_PARM%bfact=bfact
       accum_PARM%level=level
       accum_PARM%finest_level=finest_level
-      accum_PARM%matrix_points=matrix_points
-      accum_PARM%RHS_points=RHS_points
       accum_PARM%ncomp_accumulate=ncomp_accumulate
       accum_PARM%dx=>dx
       accum_PARM%xlo=>xlo
       accum_PARM%nmat=nmat
+      accum_PARM%particles=>particles
+      accum_PARM%real_compALL=>real_compALL
+      accum_PARM%Npart=Np
+      accum_PARM%N_real_comp=N_real_comp
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      if (Np_no_nbr+Nn.eq.Np_nbr) then
-       ! do nothing
-      else
-       print *,"Np_no_nbr+Nn.ne.Np_nbr"
-       stop
-      endif
-
-       ! sanity check
-      do interior_ID=1,Np_no_nbr
-       do dir=1,SDIM
-        xpart1=particles_nbr(interior_ID)%pos(dir)
-        xpart2=particles_no_nbr(interior_ID)%pos(dir)
-        if (abs(xpart1-xpart2).le.dx(dir)*VOFTOL) then
-         ! do nothing
-        else
-         print *,"xpart1 or xpart2 invalid"
-         stop
-        endif
-       enddo
-      enddo ! interior_ID=1,Np_no_nbr
-
-      accum_PARM%particles=>particles_no_nbr
-      accum_PARM%Npart=Np_no_nbr
-
-      call traverse_particlesVEL( &
+      call traverse_particles_Q( &
         accum_PARM, &
         matrixfab_ptr, &
-        vel_fab_ptr, &
+        tensor_fab_ptr, &
         ncomp_accumulate)
-
-      accum_PARM%particles=>particles_only_nbr
-      accum_PARM%Npart=Nn
-
-      call traverse_particlesVEL( &
-        accum_PARM, &
-        matrixfab_ptr, &
-        vel_fab_ptr, &
-        ncomp_accumulate)
-
-      if (dt.gt.zero) then
-       if (fluid_relaxation_time_to_particle.eq.zero) then
-        local_wt=one
-       else if (fluid_relaxation_time_to_particle.gt.zero) then
-        local_wt=one-exp(-dt/fluid_relaxation_time_to_particle)
-       else
-        print *,"fluid_relaxation_time_to_particle invalid"
-        stop
-       endif
-      else
-       print *,"dt invalid"
-       stop
-      endif
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)

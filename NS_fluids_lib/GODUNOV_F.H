@@ -1117,7 +1117,6 @@ extern "C"
 
 
    void fort_assimilate_Q_from_particles(
-     Real* fluid_relaxation_time_to_particle,
      Real* dt_slab,
      int* tid,
      const int* tilelo,const int* tilehi,
@@ -1125,35 +1124,20 @@ extern "C"
      int* bfact,
      int* level,
      int* finest_level,
-     const Real* xlo,const Real* dx,
-     const void* particles_no_nbr,
-     const void* particles_nbr,
-     const void* particles_only_nbr,
-     int Np_no_nbr, //pass by value just in case "long" on the c++ side.
-     int Np_nbr, //pass by value just in case "long" on the c++ side.
-     int Nn,     // pass by value just in case "long" on the c++ side.
-     int* matrix_points,
-     int* RHS_points,
+     const Real* xlo,
+     const Real* dx,
+     const void* particles,
+     int Np, //pass by value just in case "long" on the c++ side.
+     Real* real_compALL,
+     int N_real_comp, //pass by value just in case "long" on the c++ side.
      int* ncomp_accumulate,
      int* nmat,
-     Real* LS,
-     AMREX_ARLIM_P(LSlo),
-     AMREX_ARLIM_P(LShi),
-     Real* SNEWfab,
-     AMREX_ARLIM_P(SNEWfablo),
-     AMREX_ARLIM_P(SNEWfabhi),
-     Real* UMACNEWfab,
-     AMREX_ARLIM_P(UMACNEWfablo),
-     AMREX_ARLIM_P(UMACNEWfabhi),
-     Real* VMACNEWfab,
-     AMREX_ARLIM_P(VMACNEWfablo),
-     AMREX_ARLIM_P(VMACNEWfabhi),
-     Real* WMACNEWfab,
-     AMREX_ARLIM_P(WMACNEWfablo),
-     AMREX_ARLIM_P(WMACNEWfabhi),
-     Real* vel_fab,
-     AMREX_ARLIM_P(vel_fablo),
-     AMREX_ARLIM_P(vel_fabhi),
+     Real* TNEWfab,
+     AMREX_ARLIM_P(TNEWfablo),
+     AMREX_ARLIM_P(TNEWfabhi),
+     Real* tensor_fab,
+     AMREX_ARLIM_P(tensor_fablo),
+     AMREX_ARLIM_P(tensor_fabhi),
      Real* matrixfab,
      AMREX_ARLIM_P(matrixfablo),
      AMREX_ARLIM_P(matrixfabhi));
