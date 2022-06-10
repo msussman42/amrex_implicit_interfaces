@@ -12186,6 +12186,8 @@ void NavierStokes::tensor_advection_update() {
      MultiFab* tensor_source_mf=
       getStateTensor(0,scomp_tensor,ENUM_NUM_TENSOR_TYPE,cur_time_slab);
 
+     debug_ngrow(HOLD_GETSHEAR_DATA_MF,0,9);
+
      MultiFab* tendata_mf=localMF[HOLD_GETSHEAR_DATA_MF];
      if (tendata_mf->nGrow()==0) {
       // do nothing
