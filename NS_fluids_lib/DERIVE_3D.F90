@@ -506,9 +506,7 @@ stop
 
       call checkbound_array(fablo,fabhi,cellten_ptr,ngrow,-1,64)
       call checkbound_array(fablo,fabhi,vel_ptr,ngrow+1,-1,64)
-      call checkbound_array(fablo,fabhi, &
-       tensordata_ptr, &
-       ngrow,-1,65)
+      call checkbound_array(fablo,fabhi,tensordata_ptr,ngrow,-1,65)
 
       if (levelrz.eq.0) then
        ! do nothing

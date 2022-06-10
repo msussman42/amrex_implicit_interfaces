@@ -5841,7 +5841,7 @@ stop
              if (massquarter.ge.zero) then
               ! do nothing
              else
-              print *,"massquarter cannot be negative, ivec=",ivec
+              print *,"massquarter cannot be negative"
               print *,"icell,jcell,kcell,ibucket ", &
                 icell,jcell,kcell,ibucket 
               print *,"i,j,k ",i,j,k
@@ -14517,6 +14517,14 @@ stop
 
       enddo  ! im=1..nmat
 
+      if ((all_incomp.eq.0).or. &
+          (all_incomp.eq.1)) then
+       ! do nothing
+      else
+       print *,"all_incomp invalid"
+       stop
+      endif
+
       if (num_state_material.ne. &
           num_state_base+num_species_var) then
        print *,"num_state_material invalid"
@@ -14853,7 +14861,9 @@ stop
              bfact,level, &
              volcell_accept,cencell_accept,SDIM)
  
-            if (volcell_accept.le.zero) then
+            if (volcell_accept.gt.zero) then
+             ! do nothing
+            else
              print *,"volcell_accept invalid"
              stop
             endif
@@ -15087,7 +15097,7 @@ stop
                   nmax, &
                   nmat,SDIM,3)
 
-                 ! we are inside the istencil + isidedonate loops.
+                 ! Sanity check inside the istencil + isidedonate loops.
                 LS_voltotal_depart=zero
                 do im=1,nmat
                  if (is_rigid(nmat,im).eq.0) then 
@@ -15149,7 +15159,9 @@ stop
                            CISLCOMP_STATES+dencomp_data) 
                  massdepart_mom=donate_data*added_weight(im)
 
-                 if (massdepart_mom.le.zero) then
+                 if (massdepart_mom.gt.zero) then
+                  ! do nothing
+                 else
                   print *,"density invalid in vfrac split 1"
                   print *,"idonate,jdonate,kdonate ",idonate,jdonate,kdonate
                   print *,"im ",im
@@ -15158,8 +15170,6 @@ stop
                   print *,"massdepart_mom ",massdepart_mom
                   stop
                  endif
-
-                 mom2(veldir)=zero 
 
                  ! a few lines before:
                  !   massdepart_mom=donate_data*added_weight(im)
@@ -15614,7 +15624,9 @@ stop
              massdepart=donate_density
              massdepart_mom=donate_density*added_weight(im)
 
-             if (massdepart.le.zero) then
+             if (massdepart.gt.zero) then
+              ! do nothing
+             else
               print *,"density invalid in vfrac split 2"
               print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse
               print *,"idonate,jdonate,kdonate ",idonate,jdonate,kdonate
@@ -15625,7 +15637,9 @@ stop
               stop
              endif
 
-             if (massdepart_mom.le.zero) then
+             if (massdepart_mom.gt.zero) then
+              ! do nothing
+             else
               print *,"density (for mom) invalid in vfrac split 2"
               print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse
               print *,"idonate,jdonate,kdonate ",idonate,jdonate,kdonate
@@ -15804,11 +15818,15 @@ stop
           endif
          enddo ! im=1..nmat
         
-         if (voltotal_depart.le.zero) then
+         if (voltotal_depart.gt.zero) then
+          ! do nothing
+         else
           print *,"voltotal_depart bust "
           stop
          endif
-         if (voltotal_target.le.zero) then
+         if (voltotal_target.gt.zero) then
+          ! do nothing
+         else
           print *,"voltotal_target bust "
           stop
          endif
@@ -15857,7 +15875,7 @@ stop
            endif
           enddo ! dir2
 
-         enddo  ! im (geometry)
+         enddo  ! im=1..nmat (geometry)
 
          call consistent_materials(newvfrac_cor,newcen,nmat)
 
@@ -16033,7 +16051,9 @@ stop
           endif
          enddo ! im=1..nmat
 
-         if (totalmass_depart.le.zero) then
+         if (totalmass_depart.gt.zero) then
+          ! do nothing
+         else
           print *,"totalmass_depart bust totalmass_depart=",totalmass_depart
           do dir2=1,SDIM
            print *,"dir,fablo,fabhi ",dir2,fablo(dir2),fabhi(dir2)
@@ -16178,8 +16198,10 @@ stop
                ETcore=fort_tempcutoffmax(im)
               endif
 
-              if (ETcore.le.zero) then
-               print *,"Energy went negative"
+              if (ETcore.gt.zero) then
+               ! do nothing
+              else
+               print *,"Energy (ETcore) went negative"
                stop
               endif
 
@@ -16193,7 +16215,9 @@ stop
                stop
               endif
               massdepart=veldata(CISLCOMP_STATES+dencomp_data)
-              if (massdepart.le.zero) then
+              if (massdepart.gt.zero) then
+               ! do nothing
+              else
                print *,"massdepart invalid"
                stop
               endif 
@@ -16237,8 +16261,10 @@ stop
               if (ETcore.gt.fort_tempcutoffmax(im)) then
                ETcore=fort_tempcutoffmax(im)
               endif
-              if (ETcore.le.zero) then
-               print *,"Energy went negative"
+              if (ETcore.gt.zero) then
+               ! do nothing
+              else
+               print *,"Energy (ETcore) went negative(2)"
                stop
               endif
               snew_hold(STATECOMP_STATES+tempcomp_data)=ETcore

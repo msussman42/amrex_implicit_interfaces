@@ -1152,6 +1152,14 @@ void apply_pressure_grad(
     void init_pressure_error_indicator();
     void init_advective_pressure(int project_option);
 
+    void level_getshear(
+      MultiFab* shear_output_mf,
+      MultiFab* vel_mf,
+      int iproject,
+      int only_scalar,
+      int destcomp,
+      int ngrow);
+
     void save_to_macvel_state(int idx_umac);
 
     void init_divup_cell_vel_cell(

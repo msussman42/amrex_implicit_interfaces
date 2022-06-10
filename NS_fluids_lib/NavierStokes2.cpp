@@ -3452,15 +3452,14 @@ void NavierStokes::init_gradu_tensorALL(
  } else
   amrex::Error("SDC_outer_sweeps invalid init_gradu_tensorALL");
 
- int nsolve=AMREX_SPACEDIM;
-
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
 
   if (do_alloc==1) {
 
     // ngrow,scomp,ncomp
-   ns_level.getState_localMF(idx_vel,1,0,nsolve,cur_time_slab);
+   ns_level.getState_localMF(idx_vel,1,STATECOMP_VEL,STATE_NCOMP_VEL,
+		cur_time_slab);
       
   } else if (do_alloc==0) {
 
@@ -3470,7 +3469,7 @@ void NavierStokes::init_gradu_tensorALL(
    amrex::Error("do_alloc invalid");
 
   ns_level.debug_ngrow(idx_vel,1,945);
-  if (ns_level.localMF[idx_vel]->nComp()<nsolve)
+  if (ns_level.localMF[idx_vel]->nComp()<STATE_NCOMP_VEL)
    amrex::Error("ns_level.localMF[idx_vel]->nComp() invalid");
 
 //ux,vx,wx,uy,vy,wy,uz,vz,wz
@@ -9023,6 +9022,114 @@ MultiFab* NavierStokes::derive_EOS_pressure(Vector<int> local_material_type) {
  return mf;
 } // subroutine derive_EOS_pressure()
 
+void NavierStokes::level_getshear(
+	MultiFab* shear_output_mf,
+	MultiFab* vel_mf,
+	int iproject,
+	int only_scalar,
+	int destcomp,
+	int ngrow) {
+
+ int finest_level = parent->finestLevel();
+ if ((level>=0)&&(level<=finest_level)) {
+  // do nothing
+ } else
+  amrex::Error("level invalid");
+
+ if ((ngrow==0)||(ngrow==1)) {
+  // do nothing
+ } else
+  amrex::Error("ngrow invalid");
+
+ bool use_tiling=ns_tiling;
+ int nmat=num_materials;
+ int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
+
+ debug_ngrow(CELLTENSOR_MF,1,9);
+ if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
+  amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
+
+ if (vel_mf->nGrow()>=ngrow) {
+  // do nothing
+ } else
+  amrex::Error("vel_mf->nGrow() invalid");
+
+ if (vel_mf->nComp()>=STATE_NCOMP_VEL) {
+  // do nothing
+ } else
+  amrex::Error("vel_mf->nComp() invalid");
+
+ if (shear_output_mf->nGrow()>=ngrow) {
+  // do nothing
+ } else
+  amrex::Error("shear_output_mf->nGrow() invalid");
+
+ if (shear_output_mf->nComp()>=destcomp+1) {
+  // do nothing
+ } else
+  amrex::Error("shear_output_mf->nComp() invalid");
+
+ const Real* dx = geom.CellSize();
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(vel_mf->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(*vel_mf,use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  int bfact=parent->Space_blockingFactor(level);
+
+  const Real* xlo = grid_loc[gridno].lo();
+
+  FArrayBox& shear_output_fab=(*shear_output_mf)[mfi];
+
+  FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
+  if (cellten.nComp()!=ntensor)
+   amrex::Error("cellten invalid ncomp");
+
+  Vector<int> velbc=getBCArray(State_Type,gridno,
+    STATECOMP_VEL,STATE_NCOMP_VEL);
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  fort_getshear(
+    &ntensor,
+    cellten.dataPtr(),
+    ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
+    (*vel_mf)[mfi].dataPtr(),
+    ARLIM((*vel_mf)[mfi].loVect()),ARLIM((*vel_mf)[mfi].hiVect()),
+    dx,xlo,
+    shear_output_fab.dataPtr(destcomp),
+    ARLIM(shear_output_fab.loVect()),ARLIM(shear_output_fab.hiVect()),
+    &iproject,&onlyscalar,
+    &cur_time_slab,
+    tilelo,tilehi,
+    fablo,fabhi,
+    &bfact,
+    &level,
+    velbc.dataPtr(),
+    &ngrow,&nmat);
+
+ } //mfi
+} // omp
+ ns_reconcile_d_num(164);
+
+} // end subroutine level_getshear
+
 // in NavierStokes::multiphase_project when:
 // project_option==SOLVETYPE_PRES 
 //  and homflag=0,
@@ -9068,68 +9175,13 @@ void NavierStokes::init_pressure_error_indicator() {
  if (STATE_NCOMP!=S_new.nComp())
   amrex::Error("STATE_NCOMP!=S_new.nComp()");
 
- MultiFab* velmf=getState(1,0,AMREX_SPACEDIM,cur_time_slab);
+ MultiFab* velmf=getState(1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
 
- if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(velmf->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
- for (MFIter mfi(*velmf,use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
-
-   const Real* xlo = grid_loc[gridno].lo();
-   Vector<int> velbc=getBCArray(State_Type,gridno,
-      STATECOMP_VEL,STATE_NCOMP_VEL);
-   FArrayBox& velfab=(*velmf)[mfi];
-   FArrayBox& vortfab=(*vortmf)[mfi];
-
-   FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
-
-   if (cellten.nComp()!=ntensor)
-    amrex::Error("cellten invalid ncomp");
-
-   int tencomp=0;
-   int iproject=0;
-   int onlyscalar=2; // magnitude of vorticity
-   int ngrow_zero=0;
-
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-   fort_getshear(
-    &ntensor,
-    cellten.dataPtr(tencomp),ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
-    velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-    dx,xlo,
-    vortfab.dataPtr(),
-    ARLIM(vortfab.loVect()),ARLIM(vortfab.hiVect()),
-    &iproject,
-    &onlyscalar,
-    &cur_time_slab,
-    tilelo,tilehi,
-    fablo,fabhi,
-    &bfact,
-    &level,
-    velbc.dataPtr(),
-    &ngrow_zero,
-    &nmat);
- } // mfi
-} // omp
- ns_reconcile_d_num(161);
+ int iproject=0;
+ int only_scalar=2; // magnitude of vorticity
+ int destcomp=0;
+ int ngrow_zero=0;
+ level_getshear(vortmf,velmf,iproject,only_scalar,destcomp,ngrow_zero);
 
  delete velmf;
 
@@ -9644,7 +9696,7 @@ void NavierStokes::getStateVISC() {
 
  new_localMF(CELL_VISC_MATERIAL_MF,ncomp_visc,ngrow,-1);//sets values to 0.0
 
- MultiFab* vel=getState(ngrow+1,0,AMREX_SPACEDIM,cur_time_slab);
+ MultiFab* vel=getState(ngrow+1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
 
  MultiFab* EOSdata=getStateDen(ngrow,cur_time_slab);
 
@@ -9698,70 +9750,16 @@ void NavierStokes::getStateVISC() {
   } else if (ns_is_rigid(im)==0) {
 
    if (shear_thinning_fluid[im]==1) {
+
+    // since onlyscalar==1, this routine calculates mag(trace gradu)=
+    //  sqrt(2 D:D)
+    // since D is symmetric, D:D=trace(D^2) 
+    // is invariant to coordinate transformations.
+    // if levelrz==1, gradu(3,3)=u/|r|
     int iproject=0;
     int onlyscalar=1;  // mag(trace gradu) 
-
-    if (thread_class::nthreads<1)
-     amrex::Error("thread_class::nthreads invalid");
-    thread_class::init_d_numPts(vel->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-    for (MFIter mfi(*vel,use_tiling); mfi.isValid(); ++mfi) {
-     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-     const int gridno = mfi.index();
-     const Box& tilegrid = mfi.tilebox();
-     const Box& fabgrid = grids[gridno];
-     const int* tilelo=tilegrid.loVect();
-     const int* tilehi=tilegrid.hiVect();
-     const int* fablo=fabgrid.loVect();
-     const int* fabhi=fabgrid.hiVect();
-     int bfact=parent->Space_blockingFactor(level);
-
-     const Real* xlo = grid_loc[gridno].lo();
-
-     FArrayBox& gammadot=(*gammadot_mf)[mfi];
-
-     FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
-     if (cellten.nComp()!=ntensor)
-      amrex::Error("cellten invalid ncomp");
-
-     Vector<int> velbc=getBCArray(State_Type,gridno,
-       STATECOMP_VEL,STATE_NCOMP_VEL);
-
-     int tid_current=ns_thread();
-     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-      amrex::Error("tid_current invalid");
-     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-      // since onlyscalar==1, this routine calculates mag(trace gradu)=
-      //  sqrt(2 D:D)
-      // since D is symmetric, D:D=trace(D^2) 
-      // is invariant to coordinate transformations.
-      // if levelrz==1, gradu(3,3)=u/|r|
-     fort_getshear(
-      &ntensor,
-      cellten.dataPtr(),
-      ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
-      (*vel)[mfi].dataPtr(),
-      ARLIM((*vel)[mfi].loVect()),ARLIM((*vel)[mfi].hiVect()),
-      dx,xlo,
-      gammadot.dataPtr(),
-      ARLIM(gammadot.loVect()),ARLIM(gammadot.hiVect()),
-      &iproject,&onlyscalar,
-      &cur_time_slab,
-      tilelo,tilehi,
-      fablo,fabhi,
-      &bfact,
-      &level,
-      velbc.dataPtr(),
-      &ngrow,&nmat);
-
-    } //mfi
-} // omp
-    ns_reconcile_d_num(164);
+    int destcomp=0;
+    level_getshear(gammadot_mf,vel,iproject,only_scalar,destcomp,ngrow);
 
    } else if (shear_thinning_fluid[im]==0) {
      // do nothing
@@ -10146,71 +10144,11 @@ void NavierStokes::getState_tracemag(int idx) {
   int ncomp_tensor=tensor->nComp();
     
   int idest=5*im;
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(den_data->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-  for (MFIter mfi(*den_data,use_tiling); mfi.isValid(); ++mfi) {
-
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
-
-   const Real* xlo = grid_loc[gridno].lo();
-
-   FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
-   if (cellten.nComp()!=ntensor)
-    amrex::Error("cellten invalid ncomp");
-
-   FArrayBox& destfab=(*localMF[idx])[mfi];
-
-   FArrayBox& velfab=(*vel_data)[mfi];
-
-   Vector<int> bc=getBCArray(State_Type,gridno,
-     STATECOMP_VEL,STATE_NCOMP_VEL);
-
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-   int iproject=0;
-   int onlyscalar=1;  // mag(trace gradu)
-   int ngrow_getshear=1;
-    // declared in: DERIVE_3D.F90
-   fort_getshear(
-    &ntensor,
-    cellten.dataPtr(),
-    ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
-    velfab.dataPtr(),
-    ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-    dx,xlo,
-    destfab.dataPtr(idest),
-    ARLIM(destfab.loVect()),ARLIM(destfab.hiVect()),
-    &iproject,&onlyscalar,
-    &cur_time_slab,
-    tilelo,tilehi,
-    fablo,fabhi,
-    &bfact,
-    &level,
-    bc.dataPtr(),
-    &ngrow_getshear,
-    &nmat);
-
-  } //mfi
-} // omp
-  ns_reconcile_d_num(167);
+  int iproject=0;
+  int only_scalar=1;  // mag(trace gradu)
+  int ngrow_getshear=1;
+  level_getshear(localMF[idx],vel_data,iproject,only_scalar,
+     idest,ngrow_getshear);
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
