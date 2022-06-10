@@ -321,9 +321,7 @@ public:
     void correct_Q_with_particles();
 
     void assimilate_Q_from_particles(
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
-      NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr,
-      int nnbr);
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC);
 
     //
     // Advance grids at this level in time.
@@ -903,8 +901,7 @@ protected:
     void prescribe_solid_geometry(Real time,int renormalize_only);
 
     void move_particles(
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
-      NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr);
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC);
 
     void truncate_VOF(Vector<Real>& delta_mass_all);
 
@@ -1444,7 +1441,6 @@ protected:
     static int particle_nsubdivide;  
     static int particle_max_per_nsubdivide;  
     static int particle_min_per_nsubdivide;  
-    static int particle_interaction_ngrow;
 
     static Real truncate_thickness;  // default is 2.0
 

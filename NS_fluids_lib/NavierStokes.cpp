@@ -22,139 +22,6 @@
 #include <AMReX_TagBox.H>
 #include <AMReX_PlotFileUtil.H>
 
-/* 
-  Narrow Band WENO LEVEL SET METHOD:
-  1. t=0 distance function is given.
-  2. traverse grid and add (i,j,k) indices for extended 
-     narrow band points and regular
-     narrow band points.
-     For this step, 
-     a) two Particle Container objects are created: extended_narrow_band_pc and
-     regular_narrow_band_pc 
-       NStructReal=0
-       NStructInt=0
-       NArrayReal=0
-       NArrayInt=sdim   (i,j,k)
-     b) traverse grid and add to the respective particle container objects.
-
-      for (MFIter mfi = MakeMFIter(lev); mfi.isValid(); ++mfi) {
-
-       // ``particles'' starts off empty
-       auto& particles = GetParticles(lev)[std::make_pair(mfi.index(),
-                                        mfi.LocalTileIndex())];
-
-       (optional) for all indices on tile:
-
-       ParticleType p;
-       p.id()   = ParticleType::NextID();
-       p.cpu()  = ParallelDescriptor::MyProc();
-       p.pos(0) = ...
-       etc...
-
-       // AoS real data
-       p.rdata(0) = ...
-       p.rdata(1)  = ...
-
-       // AoS int data
-       p.idata(0) = ...
-       p.idata(1) = ...
-
-       // Particle real attributes (SoA)
-       std::array<double, 2> real_attribs;
-       real_attribs[0] = ...
-       real_attribs[1] = ...
-
-       // Particle int attributes (SoA)
-       std::array<int, 2> int_attribs;
-       int_attribs[0] = ...
-       int_attribs[1]  = ...
-
-       particles.push_back(p);
-       particles.push_back_real(real_attribs);
-       particles.push_back_int(int_attribs);
-
-       // ... add more particles if desired ...
-      }
-
-  3. using MyParIter = ParIter<0, 0, 0, sdim>;
-       // loop through every grid (or tile if tiling enabled) that has particles.
-     for (MyParIter pti(regular_narrow_band_pc, lev); pti.isValid(); ++pti) {
-      auto& particle_attributes = pti.GetStructOfArrays();
-      // Vector<Real>& real_comp0 = particle_attributes.GetRealData(0);
-      for (int i=0;i<SDIM;i++) 
-       Vector<int>& int_comp[i]  = particle_attributes.GetIntData(i);
-      for (int i = 0; i < pti.numParticles; ++i) {
-        // do stuff with your SoA data... (int_comp[j], j=0..sdim-1)
-	advect LS data with WENO.
-      }
-     }
-
-     for (MyParIter pti(extended_narrow_band_pc, lev); pti.isValid(); ++pti) {
-      auto& particle_attributes = pti.GetStructOfArrays();
-      // Vector<Real>& real_comp0 = particle_attributes.GetRealData(0);
-      for (int i=0;i<SDIM;i++)
-       Vector<int>& int_comp[i]  = particle_attributes.GetIntData(i);
-      for (int i = 0; i < pti.numParticles(); ++i) {
-        // do stuff with your SoA data... (int_comp[j], j=0..sdim-1)
-        reinitialize LS data with WENO.
-      }
-      FORT_DOSTUFF_WITH_SOA(
-			real_comp0.size(),  // =pti.numParticles()
-			real_comp0.dataPtr(),
-			int_comp[0].dataPtr(), 
-			int_comp[1].dataPtr(), 
-			int_comp[AMREX_SPACEDIM-1].dataPtr(), .... );
-
-         or
-      Array<int> int_compALL(AMREX_SPACEDIM * pti.numParticles())
-      for (int i=0;i<SDIM;i++) {
-       for (int j = 0; j < pti.numParticles; ++j) {
-	       int k=i*pti.numParticles()+j;
-	       int_compALL[k]=int_comp[i][j];
-       }
-      }
-
-     }
-
-
-  https://amrex-codes.github.io/amrex/docs_html/Particle.html
-
-  if particles:
-  #include <AMReX_Particles.H>
-  NStructReal=number of extra Real variables (not including particle position)  
-  NStructInt=number of extra int variables (not including cpu and id)
-
-  Array-of-Structs: particle1, particle2, particle3, ....
-  Struct-of-Arrays: foo1,foo2,foo3, ...  NArrayReal=2
-                    bar1,bar2,bar3, ... 
-		    l1,l2,l3, ....   NArrayInt=2
-		    n1,n2,n3, ....
-  ParticleContainer<NStructReal,NStructInt,NArrayReal,NArrayInt> mypc
-
-    (see AMReX_Particles.H)
-    rr[n]=refinement ratio between levels n and n+1
-  Particle(const Vector<Geometry> &geom,
-           const Vector<DistributionMapping> &dmap,
-	   const Vector<BoxArray> &ba,
-	   const Vector<int> &rr);  
- 
-  Redistribute()
-
-  amrex/Tutorials/Particles/NeighborList
-
-
-  for Cody,
-    1. declare mypc (object of type ParticleContainer)
-    2. fill the particle container
-    3. Redistribute()
-    4. advect LS
-    5. advect particles
-    6. Redistribute()
-    7. correct LS
-
-    (how to use the GPUs?)
-*/
-
 #include <NavierStokes.H>
 #include <INTEGRATED_QUANTITY.H>
 #include <DRAG_COMP.H>
@@ -291,8 +158,6 @@ int NavierStokes::particle_nsubdivide=1;
 int NavierStokes::particle_max_per_nsubdivide=3; 
 int NavierStokes::particle_min_per_nsubdivide=1; 
 int NavierStokes::particles_flag=0; 
-
-int NavierStokes::particle_interaction_ngrow=1;
 
 Real NavierStokes::truncate_thickness=2.0;  
 Real NavierStokes::init_shrink  = 1.0;
@@ -3127,8 +2992,6 @@ NavierStokes::read_params ()
     pp.queryarr("shear_modulus",shear_modulus,0,nmat);
     pp.query("particles_flag",particles_flag);
 
-    pp.query("particle_interaction_ngrow",particle_interaction_ngrow);
-
     for (int im=0;im<nmat;im++) {
      if (fort_is_eulerian_elastic_model(&elastic_viscosity[im],
        &viscoelastic_model[im])==1) {
@@ -4935,8 +4798,6 @@ NavierStokes::read_params ()
      std::cout << "particle_min_per_nsubdivide= " << 
         particle_min_per_nsubdivide << '\n';
      std::cout << "particles_flag = " << particles_flag << '\n';
-     std::cout << "particle_interaction_ngrow=" << 
-      particle_interaction_ngrow << '\n';
 
      for (int i=0;i<nmat;i++) {
       std::cout << "mof_ordering i= " << i << ' ' <<
@@ -22497,9 +22358,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 }  // end subroutine prepare_post_process
 
 void NavierStokes::assimilate_Q_from_particles(
-   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
-   NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr,
-   int nnbr) {
+   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC) {
 
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
@@ -22520,122 +22379,115 @@ void NavierStokes::assimilate_Q_from_particles(
   } else
    amrex::Error("particles_flag invalid");
 
- MultiFab& Tensor_new = get_new_data(Tensor_Type,slab_step+1);
- if (Tensor_new.nComp()!=NUM_CELL_ELASTIC)
-  amrex::Error("Tensor_new.nComp()!=NUM_CELL_ELASTIC");
+  MultiFab& Tensor_new = get_new_data(Tensor_Type,slab_step+1);
+  if (Tensor_new.nComp()!=NUM_CELL_ELASTIC)
+   amrex::Error("Tensor_new.nComp()!=NUM_CELL_ELASTIC");
+  if (NCOMP_SUM_WEIGHTS==NUM_CELL_ELASTIC+1) {
+   // do nothing
+  } else
+   amrex::Error("NCOMP_SUM_WEIGHTS==NUM_CELL_ELASTIC+1 failed");
 
+   // Qcor=Q - lambda
+   // E=sum_p w_p(Qcor(xp)-Qp)^2=sum_p w_p(Q(xp)-lambda-Qp)^2
+   // dE/dlambda=0 =>
+   // sum_p w_p (Q(xp)-Qp)=lambda sum_p w_p
+   // lambda=[sum_p w_p (Q(xp)-Qp)]/[sum_p w_p]
+  int ncomp_accumulate=NCOMP_SUM_WEIGHTS;
 
- int matrix_points=1;  // sum_{xp in Omega_cell} W(xp,x_cell,LS)
- int RHS_points=1;     // sum_{xp in Omega_cell} (vel_cell(xp)-vel_cell_p)*W
- int ncomp_accumulate=matrix_points+AMREX_SPACEDIM*RHS_points;
+  MultiFab* tensor_mf=getStateTensor(1,0,NUM_CELL_ELASTIC,cur_time_slab);
 
-  // 2 ghost cells in order to interpolate the velocity
-  // to the particle positions.   1 ghost cell layer of 
-  // neighbor particles.
- MultiFab* velocity_mf=getState(2,0,AMREX_SPACEDIM,cur_time_slab);
-
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(velocity_mf->boxArray().d_numPts());
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(velocity_mf->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*velocity_mf,use_tiling); mfi.isValid(); ++mfi) {
-  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-  const int gridno = mfi.index();
-   // std::cout << tilegrid << '\n';
-   // std::cout << gridno << '\n';
-  const Box& tilegrid = mfi.tilebox();
-  const Box& fabgrid = grids[gridno];
-  const int* tilelo=tilegrid.loVect();
-  const int* tilehi=tilegrid.hiVect();
-  const int* fablo=fabgrid.loVect();
-  const int* fabhi=fabgrid.hiVect();
-  int bfact=parent->Space_blockingFactor(level);
+  for (MFIter mfi(*tensor_mf,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+    // std::cout << tilegrid << '\n';
+    // std::cout << gridno << '\n';
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
 
-  const Real* xlo = grid_loc[gridno].lo();
+   const Real* xlo = grid_loc[gridno].lo();
 
-  // particles is of type "ParticleTileType::AoS"
-  // see AMReX_ArrayOfStructs.H
-  // particles is of type:
-  //  amrex::ParticleTile<SDIM,0,0,0>
-  // (species variables are stored in "SoA = structure of arrays")
+   // particles is of type "ParticleTileType::AoS"
+   // see AMReX_ArrayOfStructs.H
+   // particles is of type:
+   //  amrex::ParticleTile<SDIM,0,0,0>
+   // (Q variables are stored in "SoA = structure of arrays")
 
-  auto& particles_no_nbr = localPC_no_nbr.GetParticles(level)
-    [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-  auto& particles_AoS_no_nbr = particles_no_nbr.GetArrayOfStructs();
-  int Np_no_nbr=particles_AoS_no_nbr.size();
+   auto& particles_grid_tile = localPC.GetParticles(level)
+     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+   auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
+   int Np=particles_AoS.size();
+   auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
+   int N_arrays=particles_SoA.size();
+   if (N_arrays==NUM_CELL_ELASTIC) {
+    //do nothing
+   } else
+    amrex::Error("N_arrays invalid");
 
-  auto& particles_nbr = localPC_nbr.GetParticles(level)
-    [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-  auto& particles_AoS_nbr = particles_nbr.GetArrayOfStructs();
-  int Np_nbr=particles_AoS_nbr.size();
+   int k=0;
+   int N_real_comp=NUM_CELL_ELASTIC*Np;
 
-   // ParticleVector& (does this get SoA data?)
-  auto& neighbors_local = 
-    localPC_nbr.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
-  int Nn=neighbors_local.size();
+   Array<Real> real_compALL(N_real_comp);
+   for (int i=0;i<NUM_CELL_ELASTIC;i++) {
+    Vector<Real>& real_comp=particles_SoA.GetRealData(i);
+    for (int j=0;j<Np;j++) {
+     real_compALL[k]=real_comp[j]; 
+     k++;
+    }
+   }
+   FArrayBox matrixfab(tilegrid,ncomp_accumulate);
+   matrixfab.setVal(0.0);
 
-  Box tilebox_grow=grow(tilegrid,nnbr);
-  FArrayBox matrixfab(tilebox_grow,ncomp_accumulate);
-  matrixfab.setVal(0.0);
+   FArrayBox& TNEWfab=Tensor_new[mfi];
 
-  FArrayBox& SNEWfab=State_new[mfi];
-  FArrayBox& UMAC_NEWfab=Umac_new[mfi];
-  FArrayBox& VMAC_NEWfab=Vmac_new[mfi];
-  FArrayBox& WMAC_NEWfab=Wmac_new[mfi];
-
-  FArrayBox& vel_fab=(*velocity_mf)[mfi];
-  FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
+   FArrayBox& tensor_fab=(*tensor_mf)[mfi];
  
-  int tid_current=ns_thread();
-  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-   amrex::Error("tid_current invalid");
-  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  // declared in: GODUNOV_3D.F90
-  fort_assimilate_Q_from_particles( 
-   &fluid_relaxation_time_to_particle,
-   &dt_slab,
-   &tid_current,
-   tilelo,tilehi,
-   fablo,fabhi,
-   &bfact,
-   &level,
-   &finest_level,
-   xlo,dx,
-   particles_AoS_no_nbr.data(),
-   particles_AoS_nbr.data(),
-   neighbors_local.data(),
-   Np_no_nbr,  //pass by value
-   Np_nbr,     //pass by value
-   Nn,         //pass by value
-   &matrix_points,
-   &RHS_points,
-   &ncomp_accumulate,
-   &nmat,
-   levelpcfab.dataPtr(),
-   ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-   SNEWfab.dataPtr(),
-   ARLIM(SNEWfab.loVect()),ARLIM(SNEWfab.hiVect()),
-   UMAC_NEWfab.dataPtr(),
-   ARLIM(UMAC_NEWfab.loVect()),ARLIM(UMAC_NEWfab.hiVect()),
-   VMAC_NEWfab.dataPtr(),
-   ARLIM(VMAC_NEWfab.loVect()),ARLIM(VMAC_NEWfab.hiVect()),
-   WMAC_NEWfab.dataPtr(),
-   ARLIM(WMAC_NEWfab.loVect()),ARLIM(WMAC_NEWfab.hiVect()),
-   vel_fab.dataPtr(),
-   ARLIM(vel_fab.loVect()),ARLIM(vel_fab.hiVect()),
-   matrixfab.dataPtr(),
-   ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
- } // mfi
+   // declared in: GODUNOV_3D.F90
+   fort_assimilate_Q_from_particles( 
+    &dt_slab,
+    &tid_current,
+    tilelo,tilehi,
+    fablo,fabhi,
+    &bfact,
+    &level,
+    &finest_level,
+    xlo,dx,
+    particles_AoS.data(),
+    Np,  //pass by value
+    real_compALL.dataPtr(),
+    N_real_comp,  //pass by value
+    &ncomp_accumulate,
+    &nmat,
+    TNEWfab.dataPtr(),
+    ARLIM(SNEWfab.loVect()),ARLIM(SNEWfab.hiVect()),
+    tensor_fab.dataPtr(),
+    ARLIM(tensor_fab.loVect()),ARLIM(tensor_fab.hiVect()),
+    matrixfab.dataPtr(),
+    ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
+  } // mfi
 } // omp
- ns_reconcile_d_num(81);
+  ns_reconcile_d_num(81);
 
- delete velocity_mf;
-
+  delete tensor_mf;
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
 
 } // end subroutine assimilate_Q_from_particles
 
