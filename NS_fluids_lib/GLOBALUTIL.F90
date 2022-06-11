@@ -5211,8 +5211,6 @@ end subroutine global_checkinplane
       return
       end subroutine fort_jacobi_eigenvalue
 
-       ! called from fort_updatetensor which is declared in GODUNOV_3D.F90.
-       ! A=Q+I must be symmetric and positive definite.
       subroutine project_to_positive_definite(S,n,min_eval)
       IMPLICIT NONE
 
@@ -5325,6 +5323,36 @@ end subroutine global_checkinplane
       enddo
 
       end subroutine project_to_positive_definite
+
+       ! called from fort_updatetensor which is declared in GODUNOV_3D.F90.
+       ! A=Q+I must be symmetric and positive definite.
+      subroutine project_A_to_positive_definite(A, &
+         viscoelastic_model,polymer_factor)
+      IMPLICIT NONE
+
+      REAL_T, intent(inout) :: A(3,3)
+      INTEGER_T, intent(in) :: viscoelastic_model
+      REAL_T, intent(in) :: polymer_factor
+      INTEGER_T A_dim
+      REAL_T min_eval
+
+      if ((viscoelastic_model.eq.0).or. & !FENE-CR
+          (viscoelastic_model.eq.1).or. & !OLDROYD-B
+          (viscoelastic_model.eq.5).or. & !FENE-P
+          (viscoelastic_model.eq.6)) then !linear PTT
+
+       min_eval=0.01D0*(polymer_factor**2)
+       A_dim=3
+       call project_to_positive_definite(A,A_dim,min_eval)
+
+      else if (viscoelastic_model.eq.3) then ! incremental
+       ! do nothing
+      else
+       print *,"viscoelastic_model invalid"
+       stop
+      endif
+      return
+      end subroutine project_A_to_positive_definite
 
       subroutine matrix_solve(AA,xx,bb,matstatus,numelem)
       IMPLICIT NONE
@@ -11766,7 +11794,6 @@ end subroutine global_checkinplane
         data_in2%finest_level=data_in%finest_level
         data_in2%bfact=data_in%bfact
         data_in2%nmat=num_materials
-        data_in2%interp_foot_flag=0
         data_in2%xtarget=>xtarget
         if ((data_in%dx(1).gt.zero).and. &
             (data_in%dx(2).gt.zero).and. &
@@ -12106,8 +12133,6 @@ end subroutine global_checkinplane
         data_in2%level=data_in%level
         data_in2%finest_level=data_in%finest_level
         data_in2%bfact=data_in%bfact
-        data_in2%interp_foot_flag=0
-        data_in2%interp_dir=0 ! not used if interp_foot_flag==0
         data_in2%xtarget=>xtarget
         data_in2%dx=>data_in%dx
         data_in2%xlo=>data_in%xlo
@@ -12162,12 +12187,10 @@ end subroutine global_checkinplane
        else if ((data_in%grid_type_data.ge.0).and. &
                 (data_in%grid_type_data.le.SDIM-1)) then
         allocate(data_out2%data_interp(1))
-        data_in2%interp_foot_flag=0
 
         call interpfab_XDISP( &
           data_in%grid_type_data, & ! start_dir=0..sdim-1
           data_in%grid_type_data, & ! end_dir=0..sdim-1
-          data_in2%interp_foot_flag, &
           data_in%bfact, &
           data_in%level, &
           data_in%finest_level, &
@@ -12265,7 +12288,6 @@ end subroutine global_checkinplane
       subroutine interpfab_XDISP( &
        start_dir, &  ! 0<=start_dir<=sdim-1
        end_dir, &    ! 0<=start_dir<=end_dir<=sdim-1
-       interp_foot_flag, &
        bfact, &
        level, &
        finest_level, &
@@ -12281,7 +12303,6 @@ end subroutine global_checkinplane
 
       INTEGER_T, intent(in) :: start_dir
       INTEGER_T, intent(in) :: end_dir
-      INTEGER_T, intent(in) :: interp_foot_flag
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -12406,16 +12427,6 @@ end subroutine global_checkinplane
         if ((local_data.ge.-1.0D+30).and. &
             (local_data.le.1.0D+30)) then
 
-         if (interp_foot_flag.eq.0) then
-          ! do nothing
-         else if (interp_foot_flag.eq.1) then
-           ! xdisplace=x-xfoot    xfoot=x-xdisplace
-          local_data=xsten_offset(0,dir_disp_comp+1)-local_data
-         else
-          print *,"interp_foot_flag invalid"
-          stop
-         endif
-
          if (1.eq.0) then
           print *,"dir_disp_comp,WT,local_data ", &
             dir_disp_comp,WT,local_data
@@ -12512,19 +12523,6 @@ end subroutine global_checkinplane
        print *,"data_in%nmat invalid"
        stop
       endif
-      if (data_in%interp_foot_flag.eq.0) then
-       ! do nothing
-      else if (data_in%interp_foot_flag.eq.1) then
-       if (data_in%ncomp.eq.SDIM) then
-        ! do nothing
-       else
-        print *,"ncomp or interp_foot_flag invalid"
-        stop
-       endif
-      else
-       print *,"interp_foot_flag invalid"
-       stop
-      endif
        
       if (data_in%nmat.eq.num_materials) then
        ! do nothing
@@ -12589,16 +12587,6 @@ end subroutine global_checkinplane
                 local_data_fab,local_data(im))
         if ((local_data(im).ge.-1.0D+30).and. &
             (local_data(im).le.1.0D+30)) then
-
-         if (data_in%interp_foot_flag.eq.0) then
-          ! do nothing
-         else if (data_in%interp_foot_flag.eq.1) then
-           ! xdisplace=x-xfoot    xfoot=x-xdisplace
-          local_data(im)=xsten(0,im)-local_data(im)
-         else
-          print *,"interp_foot_flag invalid"
-          stop
-         endif
 
          data_out%data_interp(im)=data_out%data_interp(im)+WT*local_data(im)
 
@@ -12674,21 +12662,6 @@ end subroutine global_checkinplane
         stop
        endif
       enddo 
-      if ((data_in%interp_dir.ge.0).and. &
-          (data_in%interp_dir.lt.SDIM)) then
-       ! do nothing
-      else
-       print *,"data_in%interp_dir invalid"
-       stop
-      endif
-      if (data_in%interp_foot_flag.eq.0) then
-       ! do nothing
-      else if (data_in%interp_foot_flag.eq.1) then
-       ! do nothing
-      else
-       print *,"interp_foot_flag invalid"
-       stop
-      endif
        
       local_data_fab=>data_in%state
 
@@ -12740,16 +12713,6 @@ end subroutine global_checkinplane
        call safe_data_single(isten,jsten,ksten,local_data_fab,local_data)
        if ((local_data.ge.-1.0D+30).and. &
            (local_data.le.1.0D+30)) then
-
-         if (data_in%interp_foot_flag.eq.0) then
-          ! do nothing
-         else if (data_in%interp_foot_flag.eq.1) then
-           ! xdisplace=x-xfoot    xfoot=x-xdisplace
-          local_data=xsten(0,data_in%interp_dir+1)-local_data
-         else
-          print *,"interp_foot_flag invalid"
-          stop
-         endif
 
          data_out%data_interp(1)=data_out%data_interp(1)+WT*local_data
 

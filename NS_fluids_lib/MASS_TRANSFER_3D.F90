@@ -5951,7 +5951,6 @@ stop
               data_in%scomp=1
 
               data_in%xtarget=>xstar
-              data_in%interp_foot_flag=0 !=1 if interp xfoot from xdisp data
 
               call interp_from_grid_util(data_in,data_out)
 

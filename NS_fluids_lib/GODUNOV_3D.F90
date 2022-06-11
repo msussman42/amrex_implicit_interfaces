@@ -9733,8 +9733,6 @@ stop
       REAL_T shear
       REAL_T modtime,trace_A,equilibrium_diagonal
       REAL_T growthrate,rr,uu
-      REAL_T min_eval
-      INTEGER_T A_dim
 
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
@@ -10023,22 +10021,8 @@ stop
          Aadvect(ii,ii)=Aadvect(ii,ii)+one
         enddo  ! ii=1,3
 
-
-        if ((viscoelastic_model.eq.0).or. & !FENE-CR
-            (viscoelastic_model.eq.1).or. & !OLDROYD-B
-            (viscoelastic_model.eq.5).or. & !FENE-P
-            (viscoelastic_model.eq.6)) then !linear PTT
-
-         min_eval=0.01D0*(polymer_factor**2)
-         A_dim=3
-         call project_to_positive_definite(Aadvect,A_dim,min_eval)
-
-        else if (viscoelastic_model.eq.3) then ! incremental
-         ! do nothing
-        else
-         print *,"viscoelastic_model invalid"
-         stop
-        endif
+        call project_A_to_positive_definite(Aadvect, &
+                viscoelastic_model,polymer_factor)
 
         if ((viscoelastic_model.eq.0).or. & !FENE-CR
             (viscoelastic_model.eq.1).or. & !OLDROYD-B
@@ -10133,19 +10117,8 @@ stop
         enddo  ! ii=1..3
 
          ! Q=S A S^T at this stage
-        if ((viscoelastic_model.eq.0).or. & !FENE-CR
-            (viscoelastic_model.eq.1).or. & !OLDROYD-B
-            (viscoelastic_model.eq.5).or. & !FENE-P
-            (viscoelastic_model.eq.6)) then !linear PTT
-         min_eval=0.01D0*(polymer_factor**2)
-         A_dim=3
-         call project_to_positive_definite(Q,A_dim,min_eval)
-        else if (viscoelastic_model.eq.3) then !incremental
-         ! do nothing
-        else
-         print *,"viscoelastic_model"
-         stop
-        endif 
+        call project_A_to_positive_definite(Q, &
+              viscoelastic_model,polymer_factor)
  
         do ii=1,3
          Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
@@ -10180,19 +10153,8 @@ stop
         enddo
         enddo
 
-        if ((viscoelastic_model.eq.0).or. & !FENE-CR
-            (viscoelastic_model.eq.1).or. & !OLDROYD-B
-            (viscoelastic_model.eq.5).or. & !FENE-P
-            (viscoelastic_model.eq.6)) then !linear PTT
-         min_eval=0.01D0*(polymer_factor**2)
-         A_dim=3
-         call project_to_positive_definite(Aadvect,A_dim,min_eval)
-        else if (viscoelastic_model.eq.3) then ! incremental
-         !check nothing
-        else
-         print *,"viscoelastic_model invalid"
-         stop
-        endif
+        call project_A_to_positive_definite(Aadvect, &
+                viscoelastic_model,polymer_factor)
 
         do ii=1,3
         do jj=1,3
@@ -22408,6 +22370,7 @@ stop
       nhalf=3
 
       eps=accum_PARM%dx(1)/10.0d0
+
       if (eps.gt.zero) then
        ! do nothing
       else
@@ -22421,11 +22384,16 @@ stop
        print *,"accum_PARM%Npart invalid"
        stop
       endif
-      FIX ME ADD THIS SANITY CHECK TO THE CALLER ALSO CHECK NCOMP_ACCUM...
       if (npart_local*NUM_CELL_ELASTIC.eq.accum_PARM%N_real_comp) then
        ! do nothing
       else
        print *,"accum_PARM%N_real_comp invalid"
+       stop
+      endif
+      if (NUM_CELL_ELASTIC+1.eq.accum_PARM%ncomp_accumulate) then
+       ! do nothing
+      else
+       print *,"accum_PARM%ncomp_accumulate invalid"
        stop
       endif
 
@@ -22441,7 +22409,6 @@ stop
         enddo ! dir=1..NUM_CELL_ELASTIC
 
         data_in%xtarget=>xpart
-        data_in%interp_foot_flag=0
         call interp_from_grid_util(data_in,data_out)
 
         call containing_cell(accum_PARM%bfact, &
@@ -22453,8 +22420,8 @@ stop
 
         interior_ok=1
         do dir=1,SDIM
-         if ((cell_index(dir).lt.accum_PARM%tilelo(dir)-1).or. &
-             (cell_index(dir).gt.accum_PARM%tilehi(dir)+1)) then
+         if ((cell_index(dir).lt.accum_PARM%tilelo(dir)).or. &
+             (cell_index(dir).gt.accum_PARM%tilehi(dir))) then
           interior_ok=0
          endif
         enddo
@@ -22475,10 +22442,10 @@ stop
          if (w_p.gt.zero) then
           matrixfab(D_DECL(i,j,k),1)= &
            matrixfab(D_DECL(i,j,k),1)+w_p
-          do dir=1,SDIM
+          do dir=1,NUM_CELL_ELASTIC
            matrixfab(D_DECL(i,j,k),1+dir)= &
             matrixfab(D_DECL(i,j,k),1+dir)+ &
-            w_p*(data_out%data_interp(dir)-velpart(dir))
+            w_p*(data_out%data_interp(dir)-Qpart(dir))
           enddo
          else
           print *,"w_p invalid"
@@ -22499,7 +22466,7 @@ stop
       enddo ! do interior_ID=1,accum_PARM%Npart
 
       return
-      end subroutine traverse_particlesVEL
+      end subroutine traverse_particles_Q
 
        ! called from NavierStokes.cpp:
        ! NavierStokes::assimilate_Q_from_particles()
@@ -22576,12 +22543,7 @@ stop
 
       REAL_T A_matrix,B_matrix
       REAL_T lambda
-      REAL_T vel_local
-      REAL_T local_wt
-      INTEGER_T interior_ID
-      REAL_T xpart1,xpart2
-      INTEGER_T dirmac
-      INTEGER_T ii,jj,kk
+      REAL_T tensor_local(NUM_CELL_ELASTIC)
 
       nhalf=3
 
@@ -22608,6 +22570,13 @@ stop
        ! do nothing
       else
        print *,"ncomp_accumulate invalid"
+       stop
+      endif
+
+      if (Np*NUM_CELL_ELASTIC.eq.N_real_comp) then
+       ! do nothing
+      else
+       print *,"N_real_comp invalid"
        stop
       endif
 
@@ -22651,271 +22620,29 @@ stop
       do k=growlo(3),growhi(3)
        call gridsten_level(xsten,i,j,k,level,nhalf)
        A_matrix=matrixfab(D_DECL(i,j,k),1) ! sum w(xp)
-       do dir=1,SDIM
-        B_matrix=matrixfab(D_DECL(i,j,k),1+dir) !sum w*(vel(xp)-vel_p)
-        vel_local=vel_fab(D_DECL(i,j,k),dir)
-        if (A_matrix.eq.zero) then
-         SNEWfab(D_DECL(i,j,k),dir)=vel_local
-        else if (A_matrix.gt.zero) then
-         ! lambda=sum (interp(vel)-vel_p)w_p/sum w_p
-         lambda=B_matrix/A_matrix
-         if ((local_wt.ge.zero).and.(local_wt.le.one)) then
-          SNEWFAB(D_DECL(i,j,k),dir)= &
-            vel_local-local_wt*lambda
-         else
-          print *,"local_wt invalid"
-          stop
-         endif
-        else
-         print *,"A_matrix invalid"
-         stop
-        endif
-       enddo ! dir=1..SDIM
-      enddo
-      enddo
-      enddo
-
-      do dirmac=1,SDIM
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-          growlo,growhi,0,dirmac-1,38)
-
-       ii=0
-       jj=0
-       kk=0
-       if (dirmac.eq.1) then
-        ii=1
-       else if (dirmac.eq.2) then
-        jj=1
-       else if ((dirmac.eq.3).and.(SDIM.eq.3)) then
-        kk=1
-       else
-        print *,"dirmac invalid"
-        stop
-       endif
-
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
-       do k=growlo(3),growhi(3)
-         !dirmac=1..sdim
-        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dirmac-1,59)
-
-        A_matrix=matrixfab(D_DECL(i,j,k),1)+ &
-                 matrixfab(D_DECL(i-ii,j-jj,k-kk),1) ! sum w(xp)
-        B_matrix=matrixfab(D_DECL(i,j,k),1+dirmac)+ &
-           matrixfab(D_DECL(i-ii,j-jj,k-kk),1+dirmac) !sum w*(vel(xp)-vel_p)
+       do dir=1,NUM_CELL_ELASTIC
+        B_matrix=matrixfab(D_DECL(i,j,k),1+dir) !sum w*(Q(xp)-Q_p)
+        tensor_local(dir)=tensor_fab(D_DECL(i,j,k),dir)
         if (A_matrix.eq.zero) then
          ! do nothing
         else if (A_matrix.gt.zero) then
-         ! lambda=sum (interp(vel)-vel_p)w_p/sum w_p
-         if ((local_wt.ge.zero).and.(local_wt.le.one)) then
-          lambda=local_wt*B_matrix/A_matrix
-         else
-          print *,"local_wt invalid"
-          stop
-         endif
-         if (dirmac.eq.1) then
-          UMACNEW(D_DECL(i,j,k))=UMACNEW(D_DECL(i,j,k))-lambda
-         else if (dirmac.eq.2) then
-          VMACNEW(D_DECL(i,j,k))=VMACNEW(D_DECL(i,j,k))-lambda
-         else if ((dirmac.eq.3).and.(SDIM.eq.3)) then
-          WMACNEW(D_DECL(i,j,k))=WMACNEW(D_DECL(i,j,k))-lambda
-         else
-          print *,"dirmac invalid"
-          stop
-         endif
+         ! lambda=sum (interp(Q)-Q_p)w_p/sum w_p
+         lambda=B_matrix/A_matrix
+         tensor_local(dir)=tensor_local(dir)-lambda
         else
          print *,"A_matrix invalid"
          stop
         endif
+       enddo ! dir=1..NUM_CELL_ELASTIC
+project_A_to_positive_definite
+       do dir=1,NUM_CELL_ELASTIC
+        TNEWfab(D_DECL(i,j,k),dir)=tensor_local(dir)
        enddo
-       enddo
-       enddo
-      enddo ! dirmac=1..sdim
+      enddo
+      enddo
+      enddo
 
       end subroutine fort_assimilate_Q_from_particles
-
-      subroutine traverse_particles( &
-       accum_PARM, &
-       matrixfab, &
-       xdfab, &
-       ydfab, &
-       zdfab, &
-       ncomp_accumulate)
-
-      use probcommon_module
-      use global_utility_module
-
-      INTEGER_T, intent(in) :: ncomp_accumulate
-      type(accum_parm_type), intent(in) :: accum_PARM
-       ! pointers are always intent(in).
-       ! the actual data intent attribute is inherited from the target.
-      REAL_T, pointer, intent(in) :: xdfab(D_DECL(:,:,:))
-      REAL_T, pointer, intent(in) :: ydfab(D_DECL(:,:,:))
-      REAL_T, pointer, intent(in) :: zdfab(D_DECL(:,:,:))
-      REAL_T, pointer, intent(in) :: matrixfab(D_DECL(:,:,:),:)
-
-      INTEGER_T :: nhalf
-      REAL_T :: eps
-      INTEGER_T :: interior_ID
-      INTEGER_T :: dir
-      REAL_T, target :: xpart(SDIM)
-      REAL_T xpartfoot(SDIM)
-      REAL_T xdisp(SDIM)
-      INTEGER_T cell_index(SDIM)
-      INTEGER_T interior_ok
-      INTEGER_T i,j,k
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T tmp,w_p
-      REAL_T xc(SDIM)
-      INTEGER_T npart_local
-
-      REAL_T :: eulerian_xdisp(SDIM)
-
-      REAL_T, target :: cell_data_interp(1)
-      REAL_T, target :: dx_local(SDIM)
-      REAL_T, target :: xlo_local(SDIM)
-      INTEGER_T, target :: fablo_local(SDIM)
-      INTEGER_T, target :: fabhi_local(SDIM)
-      INTEGER_T, target :: tilelo_local(SDIM)
-      INTEGER_T, target :: tilehi_local(SDIM)
-      INTEGER_T :: start_dir
-      INTEGER_T :: end_dir
-
-      type(single_interp_from_grid_parm_type) :: data_in
-      type(interp_from_grid_out_parm_type) :: data_out
-
-      start_dir=0
-      end_dir=SDIM-1
-
-      do dir=1,SDIM
-       dx_local(dir)=accum_PARM%dx(dir)
-       xlo_local(dir)=accum_PARM%xlo(dir)
-       fablo_local(dir)=accum_PARM%fablo(dir)
-       fabhi_local(dir)=accum_PARM%fabhi(dir)
-       tilelo_local(dir)=accum_PARM%tilelo(dir)
-       tilehi_local(dir)=accum_PARM%tilehi(dir)
-      enddo
-
-      call checkbound_array(tilelo_local,tilehi_local,matrixfab,1,-1,24004)
-      call checkbound_array1(fablo_local,fabhi_local,xdfab,2,0,24005)
-      call checkbound_array1(fablo_local,fabhi_local,ydfab,2,1,24006)
-      call checkbound_array1(fablo_local,fabhi_local,zdfab,2,SDIM-1,24007)
-
-      data_out%data_interp=>cell_data_interp
-
-      data_in%level=accum_PARM%level
-      data_in%finest_level=accum_PARM%finest_level
-      data_in%bfact=accum_PARM%bfact
-
-      data_in%dx=>dx_local
-      data_in%xlo=>xlo_local
-      data_in%fablo=>fablo_local
-      data_in%fabhi=>fabhi_local
-
-      nhalf=3
-
-      eps=accum_PARM%dx(1)/10.0d0
-      if (eps.gt.zero) then
-       ! do nothing
-      else
-       print *,"eps invalid"
-       stop
-      endif
-
-      if (accum_PARM%Npart.ge.0) then
-       npart_local=accum_PARM%Npart
-      else
-       print *,"accum_PARM%Npart invalid"
-       stop
-      endif
-
-      do interior_ID=1,npart_local
-
-       if (accum_PARM%Npart.ge.0) then
-        do dir=1,SDIM
-         xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
-         xpartfoot(dir)= &
-           accum_PARM%particles(interior_ID)%extra_state(N_EXTRA_REAL_X0+dir)
-         xdisp(dir)=xpart(dir)-xpartfoot(dir)
-        enddo
-
-        data_in%xtarget=>xpart
-        data_in%interp_foot_flag=0
-
-        call interpfab_XDISP( &
-          start_dir, &
-          end_dir, &
-          data_in%interp_foot_flag, &
-          accum_PARM%bfact, &
-          accum_PARM%level, &
-          accum_PARM%finest_level, &
-          dx_local, &
-          xlo_local, &
-          xpart, &
-          fablo_local, &
-          fabhi_local, &
-          xdfab, &
-          ydfab, &
-          zdfab, &
-          eulerian_xdisp)
-
-        call containing_cell(accum_PARM%bfact, &
-          accum_PARM%dx, &
-          accum_PARM%xlo, &
-          accum_PARM%fablo, &
-          xpart, &
-          cell_index)
-
-        interior_ok=1
-        do dir=1,SDIM
-         if ((cell_index(dir).lt.accum_PARM%tilelo(dir)-1).or. &
-             (cell_index(dir).gt.accum_PARM%tilehi(dir)+1)) then
-          interior_ok=0
-         endif
-        enddo
-
-        if (interior_ok.eq.1) then
-         i=cell_index(1)
-         j=cell_index(2)
-         k=cell_index(SDIM)
-         call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
-         tmp=0.0d0
-         do dir=1,SDIM
-          xc(dir)=xsten(0,dir)
-          tmp=tmp+(xpart(dir)-xc(dir))**2
-         enddo
-         tmp=sqrt(tmp)
-         w_p=(1.0d0/(eps+tmp))
-
-         if (w_p.gt.zero) then
-          matrixfab(D_DECL(i,j,k),1)= &
-           matrixfab(D_DECL(i,j,k),1)+w_p
-          do dir=1,SDIM
-           matrixfab(D_DECL(i,j,k),1+dir)= &
-            matrixfab(D_DECL(i,j,k),1+dir)+ &
-            w_p*(eulerian_xdisp(dir)-xdisp(dir))
-          enddo
-         else
-          print *,"w_p invalid"
-          stop
-         endif
-        else if (interior_ok.eq.0) then
-         ! do nothing
-        else
-         print *,"interior_ok invalid"
-         stop
-        endif
-
-       else
-        print *,"accum_PARM%Npart invalid"
-        stop
-       endif
-
-      enddo ! do interior_ID=1,accum_PARM%Npart
-
-      return
-      end subroutine traverse_particles
-
 
       end module FSI_PC_module
 
