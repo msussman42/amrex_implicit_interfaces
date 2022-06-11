@@ -201,7 +201,6 @@ module probcommon_module_types
       INTEGER_T :: finest_level
       INTEGER_T :: bfact
       INTEGER_T :: nmat
-      INTEGER_T :: interp_foot_flag ! =1 => xdisp=x-xfoot  xfoot=x-xdisp
       REAL_T, pointer :: xtarget(:)
       REAL_T, pointer :: dx(:)
       REAL_T, pointer :: xlo(:)
@@ -216,8 +215,6 @@ module probcommon_module_types
       INTEGER_T :: level
       INTEGER_T :: finest_level
       INTEGER_T :: bfact
-      INTEGER_T :: interp_foot_flag ! =1 => xdisp=x-xfoot  xfoot=x-xdisp
-      INTEGER_T :: interp_dir ! interp_dir=0..sdim-1
       REAL_T, pointer :: xtarget(:)
       REAL_T, pointer :: dx(:)
       REAL_T, pointer :: xlo(:)

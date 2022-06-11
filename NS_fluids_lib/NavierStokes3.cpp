@@ -404,15 +404,6 @@ void NavierStokes::nonlinear_advection() {
   localPC.Redistribute(lev_min,lev_max,
      nGrow_Redistribute,local_Redistribute);
 
-  const Vector<Geometry>& ns_geom=parent->Geom();
-  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
-  const Vector<BoxArray>& ns_ba=parent->boxArray();
-
-  Vector<int> refinement_ratio;
-  refinement_ratio.resize(ns_ba.size());
-  for (int ilev=0;ilev<refinement_ratio.size();ilev++)
-   refinement_ratio[ilev]=2;
-
   if (num_SoA_var==SOA_NCOMP) {
    // do nothing
   } else
@@ -749,15 +740,6 @@ void NavierStokes::correct_Q_with_particles() {
    // do nothing
   } else
    amrex::Error("level invalid");
-
-  const Vector<Geometry>& ns_geom=parent->Geom();
-  const Vector<DistributionMapping>& ns_dmap=parent->DistributionMap();
-  const Vector<BoxArray>& ns_ba=parent->boxArray();
-
-  Vector<int> refinement_ratio;
-  refinement_ratio.resize(ns_ba.size());
-  for (int ilev=0;ilev<refinement_ratio.size();ilev++)
-   refinement_ratio[ilev]=2;
 
   if (parent->global_AMR_particles_flag==particles_flag) {
    // do nothing

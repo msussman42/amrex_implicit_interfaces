@@ -18154,7 +18154,6 @@ stop
 
       data_in%scomp=1  ! placeholder
       data_in%ncomp=1  ! placeholder
-      data_in%interp_foot_flag=0  ! placeholder
       data_in%level=accum_PARM%level
       data_in%finest_level=accum_PARM%finest_level
       data_in%bfact=accum_PARM%bfact
@@ -18165,8 +18164,6 @@ stop
       data_in%fabhi=>fabhi_local
       data_in%state=>velfab  
 
-      single_data_in%interp_dir=0  ! placeholder
-      single_data_in%interp_foot_flag=0  ! placeholder
       single_data_in%level=accum_PARM%level
       single_data_in%finest_level=accum_PARM%finest_level
       single_data_in%bfact=accum_PARM%bfact
@@ -18209,11 +18206,9 @@ stop
         print *,"there should not be any particles if append_flag==0"
         stop
        else if (accum_PARM%append_flag.eq.1) then
-        single_data_in%interp_foot_flag=1
         call interpfab_XDISP( &
           start_dir, &
           end_dir, &
-          single_data_in%interp_foot_flag, &
           accum_PARM%bfact, &
           accum_PARM%level, &
           accum_PARM%finest_level, &
@@ -18246,7 +18241,6 @@ stop
        enddo
 
        data_in%xtarget=>xpart
-       data_in%interp_foot_flag=0
        data_in%scomp=1
        data_in%ncomp=SDIM
        data_in%state=>velfab  
@@ -18300,11 +18294,9 @@ stop
         stop
        endif
       else if (accum_PARM%append_flag.eq.1) then
-       single_data_in%interp_foot_flag=1
        call interpfab_XDISP( &
          start_dir, &
          end_dir, &
-         single_data_in%interp_foot_flag, &
          accum_PARM%bfact, &
          accum_PARM%level, &
          accum_PARM%finest_level, &
@@ -18342,7 +18334,6 @@ stop
       endif
 
       data_in%xtarget=>xtarget
-      data_in%interp_foot_flag=0
       data_in%scomp=1
       data_in%ncomp=SDIM
       data_in%state=>velfab  
