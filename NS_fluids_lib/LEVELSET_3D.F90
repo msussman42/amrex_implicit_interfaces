@@ -17867,7 +17867,6 @@ stop
         endif
        enddo
 
-FIX ME no more nnbr
        if (interior_ok.eq.1) then
 
         i=cell_index(1)
@@ -17882,6 +17881,8 @@ FIX ME no more nnbr
         else if ((previous_link.ge.1).and. &
                  (previous_link.le.Np)) then
          ibase=(previous_link-1)*(SDIM+1)
+         ! child link 1 (particle index), parent link 1 (i,j,k index),
+         ! child link 2 (particle index), parent link 2 (i,j,k index), ...
          i_parent=particle_link_data(ibase+2) 
          j_parent=particle_link_data(ibase+3) 
          k_parent=particle_link_data(ibase+1+SDIM) 
@@ -18860,9 +18861,7 @@ FIX ME no more nnbr
       return
       end subroutine fort_init_particle_container
 
-       ! relaxation_time=particle_relaxation_time_to_fluid*mass_part/dt
       subroutine interp_mac_velocity(grid_PARM,xpart, &
-        vel_part,relaxation_time, &
         vel_time_slab,u)
       use global_utility_module
       use probcommon_module
@@ -18872,15 +18871,11 @@ FIX ME no more nnbr
 
       type(grid_parm_type), intent(in) :: grid_PARM
       REAL_T, intent(in) :: xpart(SDIM)
-      REAL_T, intent(in) :: vel_part(SDIM)
-      REAL_T, intent(in) :: relaxation_time
       REAL_T, intent(in) :: vel_time_slab
       REAL_T, intent(out) :: u(SDIM)
 
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
-      INTEGER_T ileft,jleft,kleft
-      INTEGER_T iright,jright,kright
       INTEGER_T imac,jmac,kmac
       INTEGER_T isten,jsten,ksten
       INTEGER_T dir,dir_inner
@@ -18894,15 +18889,12 @@ FIX ME no more nnbr
       REAL_T dx_inner
       REAL_T wt_dist(SDIM)
       REAL_T local_data
-      REAL_T local_mass
       REAL_T mass_interp(1)
       REAL_T, dimension(D_DECL(2,2,2),1) :: data_stencil
-      REAL_T, dimension(D_DECL(2,2,2),1) :: data_mass_stencil
       INTEGER_T ncomp_interp
       REAL_T LS_clamped
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
-      REAL_T wt_lagrangian
       REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
 
       nhalf=3      
@@ -18998,14 +18990,6 @@ FIX ME no more nnbr
         do jmac=imaclo(2),imachi(2)
         do kmac=imaclo(3),imachi(3)
 
-         ileft=imac-ii
-         jleft=jmac-jj
-         kleft=kmac-kk
-         iright=imac
-         jright=jmac
-         kright=kmac
-         local_mass=one
-
          isten=imac-imaclo(1)+1
          jsten=jmac-imaclo(2)+1
          ksten=kmac-imaclo(3)+1
@@ -19021,8 +19005,7 @@ FIX ME no more nnbr
          endif
          call safe_data_single(imac,jmac,kmac,local_data_fab,local_data)
 
-         data_stencil(D_DECL(isten,jsten,ksten),1)=local_mass*local_data
-         data_mass_stencil(D_DECL(isten,jsten,ksten),1)=local_mass
+         data_stencil(D_DECL(isten,jsten,ksten),1)=local_data
         enddo ! kmac
         enddo ! jmac
         enddo ! imac
@@ -19030,40 +19013,9 @@ FIX ME no more nnbr
         ncomp_interp=1
         call bilinear_interp_stencil(data_stencil, &
           wt_dist,ncomp_interp,u(dir),dir)  ! caller_id=dir
-        ncomp_interp=1
-        call bilinear_interp_stencil(data_mass_stencil, &
-          wt_dist,ncomp_interp,mass_interp,dir)  ! caller_id=dir
-
-        if (mass_interp(1).gt.zero) then
-         u(dir)=u(dir)/mass_interp(1)
-        else 
-         print *,"mass_interp invalid"
-         stop
-        endif
 
        enddo ! dir=1..sdim
 
-        ! relaxation_time=particle_relaxation_time_to_fluid*mass_part/dt
-       if (relaxation_time.eq.zero) then
-        wt_lagrangian=zero
-       else if (relaxation_time.gt.zero) then
-        wt_lagrangian=exp(-one/relaxation_time)
-       else
-        print *,"relaxation_time invalid"
-        stop
-       endif
-    
-        ! du_part/dt = -alpha*(u_part - u_fluid) + F_particle_interaction
-       if ((wt_lagrangian.ge.zero).and. &
-           (wt_lagrangian.le.one)) then
-        do dir=1,SDIM
-         u(dir)=wt_lagrangian*vel_part(dir)+ &
-           (one-wt_lagrangian)*u(dir)
-        enddo
-       else
-        print *,"wt_lagrangian invalid"
-        stop
-       endif 
       else
        print *,"LS_clamped invalid"
        stop
@@ -19242,10 +19194,6 @@ FIX ME no more nnbr
       REAL_T, target :: problo_arr(3)
       REAL_T, target :: probhi_arr(3)
 
-      type(accum_parm_type_count) :: accum_PARM
-
-
-      FIX ME
       INTEGER_T interior_ID
       INTEGER_T dir
       REAL_T xpart1(SDIM)
@@ -19258,18 +19206,6 @@ FIX ME no more nnbr
       type(grid_parm_type) grid_PARM
       INTEGER_T num_RK_stages
 
-      INTEGER_T cell_index(SDIM)
-      INTEGER_T i,j,k
-      INTEGER_T local_count,current_link,current_count
-      REAL_T density_part
-      REAL_T mass_part
-      REAL_T local_relaxation_time
-      REAL_T vel_part(SDIM)
-      REAL_T LS_clamped
-      REAL_T vel_clamped(SDIM)
-      REAL_T temperature_clamped
-      REAL_T wt_lagrangian
-      REAL_T temp_relaxation_time
       REAL_T wrap_pos
 
       umac_ptr=>umac
@@ -19323,130 +19259,15 @@ FIX ME no more nnbr
       call checkbound_array1(fablo,fabhi,vmac_ptr,1,1,2871)
       call checkbound_array1(fablo,fabhi,wmac_ptr,1,SDIM-1,2871)
 
-      accum_PARM%append_flag=0
-
-      accum_PARM%fablo=>fablo 
-      accum_PARM%fabhi=>fabhi
-      accum_PARM%tilelo=>tilelo 
-      accum_PARM%tilehi=>tilehi
-      accum_PARM%bfact=bfact
-      accum_PARM%level=level
-      accum_PARM%finest_level=finest_level
-      accum_PARM%dx=>dx
-      accum_PARM%xlo=>xlo
-
-      accum_PARM%nsubdivide=1
-
-      accum_PARM%cell_particle_count=>cell_particle_count
-
-      accum_PARM%particles=>particles_NBR
-      accum_PARM%Npart=Np_NBR
-
-      call update_particle_link_data( &
-         particle_interaction_ngrow, &
-         accum_PARM, &
-         cell_particle_count_ptr, &
-         particles_NBR, &  
-         particle_link_data, &
-         Np_NBR)
-
-       ! stub for calculating the interaction force
-      do interior_ID=1,Np
-       do dir=1,SDIM
-        xpart1(dir)=particles(interior_ID)%pos(dir)
-       enddo
-
-       call containing_cell(bfact, &
-         dx, &
-         xlo, &
-         fablo, &
-         xpart1, &
-         cell_index)
-
-       i=cell_index(1)
-       j=cell_index(2)
-       k=cell_index(SDIM)
-       local_count=cell_particle_count(D_DECL(i,j,k),1)
-       current_link=cell_particle_count(D_DECL(i,j,k),2)
-       current_count=1
-       do while ((current_link.ne.interior_ID).and. &
-                 (current_count.lt.local_count))
-        current_count=current_count+1
-        if ((current_link.ge.1).and. &
-            (current_link.le.Np)) then
-         current_link=particle_link_data((current_link-1)*(1+SDIM)+1)
-        else
-         print *,"current_link invalid"
-         stop
-        endif
-       enddo
-       if (current_link.eq.interior_ID) then
-        do dir=1,SDIM
-         xpart2(dir)=particles_NBR(interior_ID)%pos(dir)
-         if (abs(xpart1(dir)-xpart2(dir)).le.VOFTOL*dx(dir)) then
-          ! do nothing
-         else
-          print *,"particles_NBR and particles out of sync"
-          stop
-         endif
-        enddo ! dir=1..sdim
-       else
-        print *,"current_link.ne.interior_ID"
-        stop
-       endif
-
-      enddo ! interior_ID=1..Np, checking particles_NBR, stub for 
-            ! interaction force. 
-
       num_RK_stages=2
       
       do interior_ID=1,Np
-
-       mass_part=zero
-       local_relaxation_time=-one
-
-       density_part= &
-        particles(interior_ID)%extra_state(N_EXTRA_REAL_DEN+1)
-       if (density_part.gt.zero) then
-        if (particle_volume.gt.zero) then
-         mass_part=density_part*particle_volume
-         do dir=1,SDIM
-          vel_part(dir)= &
-            particles(interior_ID)%extra_state(N_EXTRA_REAL_U+dir)
-          if (abs(vel_part(dir))*dt.le.dx(dir)) then
-           ! do nothing
-          else
-           print *,"abs(vel_part(dir))*dt.gt.dx(dir)"
-           stop
-          endif
-         enddo ! dir=1..sdim
-         if (particle_relaxation_time_to_fluid.ge.zero) then
-          if (dt.gt.zero) then
-           local_relaxation_time=particle_relaxation_time_to_fluid* &
-             mass_part/dt
-          else
-           print *,"dt invalid"
-           stop
-          endif
-         else
-          print *,"particle_relaxation_time_to_fluid invalid"
-          stop
-         endif  
-        else
-         print *,"particle_volume invalid"
-         stop
-        endif
-       else
-        print *,"density_part invalid"
-        stop
-       endif
 
        !4th-RK
        do dir=1,SDIM
         xpart1(dir)=particles(interior_ID)%pos(dir)
        enddo
        call interp_mac_velocity(grid_PARM,xpart1, &
-        vel_part,local_relaxation_time, &
         vel_time_slab,u1)
 
        if (num_RK_stages.eq.4) then
@@ -19457,7 +19278,6 @@ FIX ME no more nnbr
         call check_cfl_BC(grid_PARM,xpart1,xpart2)
 
         call interp_mac_velocity(grid_PARM,xpart2, &
-         vel_part,local_relaxation_time, &
          vel_time_slab,u2)
 
         do dir=1,SDIM
@@ -19467,7 +19287,6 @@ FIX ME no more nnbr
         call check_cfl_BC(grid_PARM,xpart1,xpart3)
 
         call interp_mac_velocity(grid_PARM,xpart3, &
-         vel_part,local_relaxation_time, &
          vel_time_slab,u3)
 
         do dir=1,SDIM
@@ -19477,7 +19296,6 @@ FIX ME no more nnbr
         call check_cfl_BC(grid_PARM,xpart1,xpart4)
 
         call interp_mac_velocity(grid_PARM,xpart4, &
-         vel_part,local_relaxation_time, &
          vel_time_slab,u4)
 
         do dir=1,SDIM
@@ -19491,7 +19309,6 @@ FIX ME no more nnbr
         call check_cfl_BC(grid_PARM,xpart1,xpart2)
 
         call interp_mac_velocity(grid_PARM,xpart2, &
-         vel_part,local_relaxation_time, &
          vel_time_slab,u2)
 
         do dir=1,SDIM
@@ -19509,49 +19326,6 @@ FIX ME no more nnbr
         particles(interior_ID)%pos(dir)=xpart_last(dir)
        enddo
 
-       call SUB_clamped_LS(xpart_last,vel_time_slab,LS_clamped, &
-              vel_clamped,temperature_clamped,dx)
-
-       if (LS_clamped.ge.zero) then
-
-        do dir=1,SDIM
-         particles(interior_ID)%extra_state(N_EXTRA_REAL_U+dir)= &
-              vel_clamped(dir)
-        enddo
-
-       else if (LS_clamped.lt.zero) then
-
-        if (local_relaxation_time.eq.zero) then
-         wt_lagrangian=zero
-        else if (local_relaxation_time.gt.zero) then
-         wt_lagrangian=exp(-one/local_relaxation_time)
-        else
-         print *,"local_relaxation_time invalid"
-         stop
-        endif
-
-        temp_relaxation_time=zero
-        call interp_mac_velocity(grid_PARM,xpart_last, &
-         vel_part,temp_relaxation_time, &
-         vel_time_slab,u_last)
-
-        if ((wt_lagrangian.ge.zero).and. &
-            (wt_lagrangian.le.one)) then
-         do dir=1,SDIM
-          particles(interior_ID)%extra_state(N_EXTRA_REAL_U+dir)= &
-            wt_lagrangian*vel_part(dir)+ &
-            (one-wt_lagrangian)*u_last(dir)
-         enddo
-        else
-         print *,"wt_lagrangian invalid"
-         stop
-        endif 
-
-       else
-        print *,"LS_clamped invalid"
-        stop
-       endif
-
        do dir=1,SDIM
         wrap_pos=particles(interior_ID)%pos(dir)
         if (wrap_pos.lt.problo_arr(dir)) then
@@ -19559,9 +19333,6 @@ FIX ME no more nnbr
           if (dombc(dir,2).eq.INT_DIR) then
            particles(interior_ID)%pos(dir)= &
              wrap_pos+ &
-             (probhi_arr(dir)-problo_arr(dir))
-           particles(interior_ID)%extra_state(N_EXTRA_REAL_X0+dir)= &
-             particles(interior_ID)%extra_state(N_EXTRA_REAL_X0+dir)+ &
              (probhi_arr(dir)-problo_arr(dir))
           else
            print *,"expecting both dombc_lo and dombc_hi to be INT_DIR"
@@ -19581,9 +19352,6 @@ FIX ME no more nnbr
            particles(interior_ID)%pos(dir)= &
              wrap_pos- &
              (probhi_arr(dir)-problo_arr(dir))
-           particles(interior_ID)%extra_state(N_EXTRA_REAL_X0+dir)= &
-             particles(interior_ID)%extra_state(N_EXTRA_REAL_X0+dir)- &
-             (probhi_arr(dir)-problo_arr(dir))
           else
            print *,"expecting both dombc_lo and dombc_hi to be INT_DIR"
            stop
@@ -19601,7 +19369,7 @@ FIX ME no more nnbr
                  (wrap_pos.le.probhi_arr(dir))) then
          ! do nothing
         else
-         print *,"wrap_pos is NaN"
+         print *,"wrap_pos probably is NaN: ",wrap_pos
          stop
         endif
        enddo ! dir=1..sdim
