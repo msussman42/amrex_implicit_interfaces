@@ -19243,7 +19243,6 @@ stop
       grid_PARM%finest_level=finest_level
       grid_PARM%dx=>dx
       grid_PARM%xlo=>xlo
-      grid_PARM%lsfab=>lsfab
       grid_PARM%umac=>umac
       grid_PARM%vmac=>vmac
       grid_PARM%wmac=>wmac
