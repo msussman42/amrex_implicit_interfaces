@@ -11815,11 +11815,11 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
        int interp_Q_to_flux=1;
        if (viscoelastic_model[im]==2) {
         interp_Q_to_flux=0;  // 1 is a possible option here
-       } else if (fort_is_eulerian_elastic_model(&elastic_viscosity[im],
+       } else if (fort_built_in_elastic_model(&elastic_viscosity[im],
                    &viscoelastic_model[im])==1) {
 	interp_Q_to_flux=1;
        } else
-        amrex::Error("fort_is_eulerian_elastic_model invalid");
+        amrex::Error("fort_built_in_elastic_model invalid");
 
         // NavierStokes::make_viscoelastic_tensorMACALL is declared in
 	//   NavierStokes.cpp
