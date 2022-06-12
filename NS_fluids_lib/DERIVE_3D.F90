@@ -886,14 +886,14 @@ stop
        stop
       endif
 
-      if (fort_is_eulerian_elastic_model(elastic_viscosity, &
+      if (fort_built_in_elastic_model(elastic_viscosity, &
               viscoelastic_model).eq.1) then
        ! do nothing
-      else if (fort_is_eulerian_elastic_model(elastic_viscosity, &
+      else if (fort_built_in_elastic_model(elastic_viscosity, &
                  viscoelastic_model).eq.0) then
        ! do nothing
       else
-       print *,"fort_is_eulerian_elastic_model invalid"
+       print *,"fort_built_in_elastic_model invalid"
        stop
       endif
 
@@ -1737,21 +1737,21 @@ stop
        print *,"ncomp_visc invalid"
        stop
       endif  
-      if (fort_is_eulerian_elastic_model(elastic_viscosity(im+1), &
+      if (fort_built_in_elastic_model(elastic_viscosity(im+1), &
              viscoelastic_model(im+1)).eq.1) then 
        ! do nothing
-      else if (fort_is_eulerian_elastic_model(elastic_viscosity(im+1), &
+      else if (fort_built_in_elastic_model(elastic_viscosity(im+1), &
              viscoelastic_model(im+1)).eq.0) then 
        ! do nothing
       else
-       print *,"fort_is_eulerian_elastic_model invalid"
+       print *,"fort_built_in_elastic_model invalid"
        stop
       endif
       if (fort_elastic_viscosity(im+1).ne.elastic_viscosity(im+1)) then
        print *,"elastic_viscosity(im+1) invalid"
        stop
       endif
-      if (fort_is_eulerian_elastic_model(elastic_viscosity(im+1), &
+      if (fort_built_in_elastic_model(elastic_viscosity(im+1), &
              fort_viscoelastic_model(im+1)).eq.1) then 
        if (num_materials_viscoelastic.le.0) then
         print *,"num_materials_viscoelastic.le.0:fort_dermagtrace"
@@ -1761,14 +1761,14 @@ stop
         print *,"ncomp_tensor.ne.ENUM_NUM_TENSOR_TYPE"
         stop
        endif
-      else if (fort_is_eulerian_elastic_model(elastic_viscosity(im+1), &
+      else if (fort_built_in_elastic_model(elastic_viscosity(im+1), &
                  fort_viscoelastic_model(im+1)).eq.0) then 
        if (ncomp_tensor.ne.ncomp_den) then
         print *,"ncomp_tensor.ne.ncomp_den"
         stop
        endif
       else
-       print *,"fort_is_eulerian_elastic_model invalid"
+       print *,"fort_built_in_elastic_model invalid"
        stop
       endif  
 
@@ -1842,12 +1842,12 @@ stop
          sqrt(vort(1)**2+vort(2)**2+vort(3)**2)
 
         ! dest(1) calculated in fort_getshear.
-       if (fort_is_eulerian_elastic_model(elastic_viscosity(im+1), &
+       if (fort_built_in_elastic_model(elastic_viscosity(im+1), &
              fort_viscoelastic_model(im+1)).eq.0) then 
         dest(D_DECL(i,j,k),2)=dest(D_DECL(i,j,k),1)
         dest(D_DECL(i,j,k),3)=dest(D_DECL(i,j,k),1)
         dest(D_DECL(i,j,k),4)=dest(D_DECL(i,j,k),1)
-       else if (fort_is_eulerian_elastic_model(elastic_viscosity(im+1), &
+       else if (fort_built_in_elastic_model(elastic_viscosity(im+1), &
                  fort_viscoelastic_model(im+1)).eq.1) then 
         if (ncomp_visc.ne.3*nmat) then
          print *,"ncomp_visc invalid"
@@ -1918,7 +1918,7 @@ stop
         endif
 
        else
-        print *,"fort_is_eulerian_elastic_model invalid"
+        print *,"fort_built_in_elastic_model invalid"
         stop
        endif
 
@@ -2747,7 +2747,7 @@ stop
 
               ! if the forcing fluid "im_primary" is a viscoelastic material,
               ! then the viscoelastic force onto "im_test" must be considered.
-              if (fort_is_eulerian_elastic_model( &
+              if (fort_built_in_elastic_model( &
                    fort_elastic_viscosity(im_primary), &
                    fort_viscoelastic_model(im_primary)).eq.1) then 
                partid=1
@@ -2768,12 +2768,12 @@ stop
                 print *,"partid invalid in fort_getdrag"
                 stop
                endif
-              else if (fort_is_eulerian_elastic_model( &
+              else if (fort_built_in_elastic_model( &
                        fort_elastic_viscosity(im_primary), &
                        fort_viscoelastic_model(im_primary)).eq.0) then 
                ! do nothing
               else
-               print *,"fort_is_eulerian_elastic_model invalid"
+               print *,"fort_built_in_elastic_model invalid"
                stop
               endif
 

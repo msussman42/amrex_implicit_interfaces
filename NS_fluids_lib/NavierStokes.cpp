@@ -458,7 +458,7 @@ Vector<int> NavierStokes::viscosity_state_model; // def=0
 Vector<int> NavierStokes::viscoelastic_model; // def=0
 Vector<int> NavierStokes::les_model; // def=0
 
-Vector<int> NavierStokes::store_elastic_data; // def=0
+Vector<int> NavierStokes::store_elastic_data; // def=0, 0...num_materials-1
 Vector<Real> NavierStokes::elastic_viscosity; // def=0
 Vector<Real> NavierStokes::elastic_regularization; // def=0
 Vector<Real> NavierStokes::lame_coefficient; // def=0
@@ -529,7 +529,8 @@ int NavierStokes::BLB_MASS=-32767;
 int NavierStokes::BLB_PRES=-32767;
 
 Vector<int> NavierStokes::im_solid_map; //nparts components, in range 0..nmat-1
-Vector<int> NavierStokes::im_elastic_map; 
+// 0<=im_elastic_map<num_materials
+Vector<int> NavierStokes::im_elastic_map; //0...num_materials_viscoelastic-1
 
 Vector<Real> NavierStokes::FSI_force_integral;
 
@@ -1469,14 +1470,14 @@ void fortran_parameters() {
 
  for (int im=0;im<nmat;im++) {
   if (elastic_viscosity_temp[im]>0.0) {
-   if (fort_is_eulerian_elastic_model(&elastic_viscosity_temp[im],
+   if (fort_built_in_elastic_model(&elastic_viscosity_temp[im],
               		         &viscoelastic_model_temp[im])==1) {
     store_elastic_data_temp[im]=1;
-   } else if (fort_is_eulerian_elastic_model(&elastic_viscosity_temp[im],
+   } else if (fort_built_in_elastic_model(&elastic_viscosity_temp[im],
                                         &viscoelastic_model_temp[im])==0) {
     // do nothing
    } else
-    amrex::Error("fort_is_eulerian_elastic_model invalid");
+    amrex::Error("fort_built_in_elastic_model invalid");
   } else if (elastic_viscosity_temp[im]==0.0) {
    // do nothing
   } else
@@ -2973,14 +2974,14 @@ NavierStokes::read_params ()
     pp.queryarr("viscoelastic_model",viscoelastic_model,0,nmat);
 
     for (int i=0;i<nmat;i++) {
-     if (fort_is_eulerian_elastic_model(&elastic_viscosity[i],
+     if (fort_built_in_elastic_model(&elastic_viscosity[i],
 			           &viscoelastic_model[i])==1) {
       // do nothing
-     } else if (fort_is_eulerian_elastic_model(&elastic_viscosity[i],
+     } else if (fort_built_in_elastic_model(&elastic_viscosity[i],
                                           &viscoelastic_model[i])==0) {
       // do nothing
      } else
-      amrex::Error("fort_is_eulerian_elastic_model invalid");
+      amrex::Error("fort_built_in_elastic_model invalid");
     } // i=0..nmat-1
 
     pp.queryarr("elastic_regularization",elastic_regularization,0,nmat);
@@ -2993,14 +2994,14 @@ NavierStokes::read_params ()
     pp.query("particles_flag",particles_flag);
 
     for (int im=0;im<nmat;im++) {
-     if (fort_is_eulerian_elastic_model(&elastic_viscosity[im],
+     if (fort_built_in_elastic_model(&elastic_viscosity[im],
        &viscoelastic_model[im])==1) {
       store_elastic_data[im]=1;
-     } else if (fort_is_eulerian_elastic_model(&elastic_viscosity[im],
+     } else if (fort_built_in_elastic_model(&elastic_viscosity[im],
                  &viscoelastic_model[im])==0) {
       // do nothing
      } else
-      amrex::Error("fort_is_eulerian_elastic_model invalid");
+      amrex::Error("fort_built_in_elastic_model invalid");
     } // im=0..nmat-1 
 
     num_materials_viscoelastic=0;
@@ -4121,7 +4122,7 @@ NavierStokes::read_params ()
 
     for (int i=0;i<nmat;i++) {
      if (elastic_viscosity[i]>=0.0) {
-      if (fort_is_eulerian_elastic_model(&elastic_viscosity[i],
+      if (fort_built_in_elastic_model(&elastic_viscosity[i],
 			            &viscoelastic_model[i])==1) {
        if (viscoelastic_model[i]==2) { // elastic model
         if (elastic_time[i]>=1.0e+8) {
@@ -4133,16 +4134,16 @@ NavierStokes::read_params ()
          // do nothing
         } else
          amrex::Error("elastic time inconsistent with model");
-       } else if (fort_is_eulerian_elastic_model(&elastic_viscosity[i],
+       } else if (fort_built_in_elastic_model(&elastic_viscosity[i],
 	     		                    &viscoelastic_model[i])==1) {
         // do nothing
        } else
-        amrex::Error("fort_is_eulerian_elastic_model invalid");
-      } else if (fort_is_eulerian_elastic_model(&elastic_viscosity[i],
+        amrex::Error("fort_built_in_elastic_model invalid");
+      } else if (fort_built_in_elastic_model(&elastic_viscosity[i],
 		 	                   &viscoelastic_model[i])==0) {
        //do nothing
       } else
-       amrex::Error("fort_is_eulerian_elastic_model invalid");
+       amrex::Error("fort_built_in_elastic_model invalid");
      } else
       amrex::Error("elastic_viscosity invalid");
     } // i=0..nmat-1
@@ -4171,14 +4172,14 @@ NavierStokes::read_params ()
      } else
       amrex::Error("viscosity state model invalid");
 
-     if (fort_is_eulerian_elastic_model(&elastic_viscosity[i],
+     if (fort_built_in_elastic_model(&elastic_viscosity[i],
 			           &viscoelastic_model[i])==1) {
       // do nothing
-     } else if (fort_is_eulerian_elastic_model(&elastic_viscosity[i],
+     } else if (fort_built_in_elastic_model(&elastic_viscosity[i],
 	 	                          &viscoelastic_model[i])==0) {
       // do nothing
      } else
-      amrex::Error("fort_is_eulerian_elastic_model invalid");
+      amrex::Error("fort_built_in_elastic_model invalid");
 
      if (les_model[i]<0)
       amrex::Error("les model invalid");
@@ -10606,7 +10607,7 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
        // viscoelastic_model==4 => FSI pressure velocity coupling (N/A here)
        // viscoelastic_model==5 => FENE-P
        // viscoelastic_model==6 => linear PTT
-     if (fort_is_eulerian_elastic_model(&elastic_viscosity[im],
+     if (fort_built_in_elastic_model(&elastic_viscosity[im],
 			           &viscoelastic_model[im])==1) {
       fort_maketensor_mac(
        &interp_Q_to_flux,
@@ -10631,7 +10632,7 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
        &polymer_factor[im],
        &rzflag,&nmat);
      } else
-      amrex::Error("fort_is_eulerian_elastic_model invalid");
+      amrex::Error("fort_built_in_elastic_model invalid");
     }  // mfi  
 }//omp
     ns_reconcile_d_num(54);
@@ -10840,7 +10841,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
       amrex::Error("tid_current invalid");
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     if (fort_is_eulerian_elastic_model(&elastic_viscosity[im],
+     if (fort_built_in_elastic_model(&elastic_viscosity[im],
 			           &viscoelastic_model[im])==1) {
        // declared in: GODUNOV_3D.F90
       fort_maketensor(
@@ -10862,7 +10863,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
        &polymer_factor[im],
        &rzflag,&nmat);
      } else
-      amrex::Error("fort_is_eulerian_elastic_model invalid");
+      amrex::Error("fort_built_in_elastic_model invalid");
     }  // mfi  
 }//omp
     ns_reconcile_d_num(54);
@@ -11044,7 +11045,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    if (fort_is_eulerian_elastic_model(&elastic_viscosity[im],
+    if (fort_built_in_elastic_model(&elastic_viscosity[im],
 		                  &viscoelastic_model[im])==1) {
      // declared in: GODUNOV_3D.F90
      fort_tensorheat(
@@ -11068,7 +11069,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
       &local_dt_slab,
       &rzflag,&im,&nmat,&nden);
     } else
-     amrex::Error("fort_is_eulerian_elastic_model invalid");
+     amrex::Error("fort_built_in_elastic_model invalid");
    }  // mfi  
 }//omp
 
@@ -12106,7 +12107,7 @@ void NavierStokes::tensor_advection_update() {
        amrex::Error("tid_current invalid");
       thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-      if (fort_is_eulerian_elastic_model(&elastic_viscosity[im],
+      if (fort_built_in_elastic_model(&elastic_viscosity[im],
  			            &viscoelastic_model[im])==1) {
         // declared in: GODUNOV_3D.F90
        fort_updatetensor(
@@ -12136,7 +12137,7 @@ void NavierStokes::tensor_advection_update() {
         velbc.dataPtr(),
         &transposegradu);
       } else
-       amrex::Error("fort_is_eulerian_elastic_model invalid");
+       amrex::Error("fort_built_in_elastic_model invalid");
      }  // mfi
 } // omp
      ns_reconcile_d_num(65);
@@ -22486,7 +22487,10 @@ void NavierStokes::assimilate_Q_from_particles(
     tensor_fab.dataPtr(),
     ARLIM(tensor_fab.loVect()),ARLIM(tensor_fab.hiVect()),
     matrixfab.dataPtr(),
-    ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()));
+    ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()),
+    viscoelastic_model.dataPtr(), //0..num_materials-1
+    im_elastic_map.dataPtr(), //0...num_materials_viscoelastic-1
+    polymer_factor.dataPtr()); //0...num_materials-1
   } // mfi
 } // omp
   ns_reconcile_d_num(81);

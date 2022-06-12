@@ -14718,12 +14718,12 @@ end subroutine global_checkinplane
       end function is_rigid
 
 
-      function fort_is_eulerian_elastic_model(elastic_visc_in, &
+      function fort_built_in_elastic_model(elastic_visc_in, &
         viscoelastic_model_in) &
-      bind(c,name='fort_is_eulerian_elastic_model')
+      bind(c,name='fort_built_in_elastic_model')
       IMPLICIT NONE
 
-      INTEGER_T fort_is_eulerian_elastic_model
+      INTEGER_T fort_built_in_elastic_model
       REAL_T, intent(in) :: elastic_visc_in
       INTEGER_T, intent(in) :: viscoelastic_model_in
 
@@ -14734,24 +14734,24 @@ end subroutine global_checkinplane
            (viscoelastic_model_in.eq.3).or. & ! incremental elastic model
            (viscoelastic_model_in.eq.5).or. & ! FENE-P
            (viscoelastic_model_in.eq.6)) then ! linear PTT
-        fort_is_eulerian_elastic_model=1
+        fort_built_in_elastic_model=1
        else if (viscoelastic_model_in.eq.4) then ! pressure velocity coupling
-        fort_is_eulerian_elastic_model=0
+        fort_built_in_elastic_model=0
        else
         print *,"viscoelastic_model_in invalid"
         stop
-        fort_is_eulerian_elastic_model=0
+        fort_built_in_elastic_model=0
        endif
       else if (elastic_visc_in.eq.zero) then
-       fort_is_eulerian_elastic_model=0
+       fort_built_in_elastic_model=0
       else
        print *,"elastic_visc_in invalid"
        stop
-       fort_is_eulerian_elastic_model=0
+       fort_built_in_elastic_model=0
       endif
 
       return
-      end function fort_is_eulerian_elastic_model
+      end function fort_built_in_elastic_model
 
       function is_prescribed(nmat,im)
       use probcommon_module

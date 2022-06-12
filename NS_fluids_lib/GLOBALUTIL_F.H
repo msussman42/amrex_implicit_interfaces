@@ -12,7 +12,7 @@ namespace amrex{
 extern "C"
 {
 
-   int fort_is_eulerian_elastic_model(
+   int fort_built_in_elastic_model(
     Real* elastic_visc_in,
     int* viscoelastic_model_in);
 

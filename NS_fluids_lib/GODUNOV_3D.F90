@@ -10032,6 +10032,7 @@ stop
         else if (viscoelastic_model.eq.3) then !incremental
          do ii=1,3
          do jj=1,3
+         FIX ME
           Aadvect(ii,jj)=Aadvect(ii,jj)+dt*two*visctensor(ii,jj) 
          enddo
          enddo
@@ -22491,7 +22492,10 @@ stop
         tensor_fab, &      
         DIMS(tensor_fab), &
         matrixfab, &     ! accumulation FAB
-        DIMS(matrixfab)) &
+        DIMS(matrixfab), &
+        viscoelastic_model, &
+        im_elastic_map, &
+        polymer_factor) &
       bind(c,name='fort_assimilate_Q_from_particles')
 
       use global_utility_module
@@ -22511,6 +22515,12 @@ stop
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in), target :: xlo(SDIM)
       REAL_T, intent(in), target :: dx(SDIM)
+
+      INTEGER_T, intent(in) :: viscoelastic_model(nmat)
+       ! 0<=im_elastic_map<num_materials
+      INTEGER_T, intent(in) :: im_elastic_map(num_materials_viscoelastic)
+      REAL_T, intent(in) :: polymer_factor(nmat)
+
       INTEGER_T, intent(in) :: DIMDEC(matrixfab) 
       INTEGER_T, intent(in) :: DIMDEC(TNEWfab) 
       INTEGER_T, intent(in) :: DIMDEC(tensor_fab) 
@@ -22580,6 +22590,14 @@ stop
        stop
       endif
 
+      if ((num_materials_viscoelastic.ge.1).and. &
+          (num_materials_viscoelastic.le.nmat)) then
+       ! do nothing
+      else
+       print *,"num_materials_viscoelastic invalid"
+       stop
+      endif
+
       if (dt.gt.zero) then
        ! do nothing
       else
@@ -22634,7 +22652,35 @@ stop
          stop
         endif
        enddo ! dir=1..NUM_CELL_ELASTIC
-project_A_to_positive_definite
+
+       do ipart=1,num_materials_viscoelastic
+        im_map=im_elastic_map(ipart)+1
+        if ((im_map.ge.1).and.(im_map.le.nmat)) then
+         do dir=1,ENUM_NUM_TENSOR_TYPE
+          call stress_index(dir,ii,jj)
+          Q(ii,jj)=tensor_local((ipart-1)*ENUM_NUM_TENSOR_TYPE+dir)
+         enddo
+         Q(2,1)=Q(1,2)
+         Q(3,1)=Q(1,3)
+         Q(3,2)=Q(2,3)
+         do ii=1,3
+          Q(ii,ii)=Q(ii,ii)+one
+         enddo
+         call project_A_to_positive_definite(Q, &
+           viscoelastic_model(im_map),polymer_factor(im_map))
+         do ii=1,3
+          Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
+         enddo
+         do dir=1,ENUM_NUM_TENSOR_TYPE
+          call stress_index(dir,ii,jj)
+          tensor_local((ipart-1)*ENUM_NUM_TENSOR_TYPE+dir)=Q(ii,jj)
+         enddo
+        else
+         print *,"im_map invalid"
+         stop
+        endif
+       enddo ! ipart=1...num_materials_viscoelastic
+
        do dir=1,NUM_CELL_ELASTIC
         TNEWfab(D_DECL(i,j,k),dir)=tensor_local(dir)
        enddo
