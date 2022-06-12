@@ -17600,8 +17600,7 @@ stop
 
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
-         ! (x0,y0,z0,r,u,v,w,den,T,
-         !  insert time,type_molecule,type_atom) is extra. 
+         ! (insert time) is extra. 
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
@@ -17621,11 +17620,11 @@ stop
         INTEGER_T :: Npart
         type(particle_t), pointer, dimension(:) :: particles
         INTEGER_T :: nsubdivide
-        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
         REAL_T, pointer, dimension(D_DECL(:,:,:)) :: xd
         REAL_T, pointer, dimension(D_DECL(:,:,:)) :: yd
         REAL_T, pointer, dimension(D_DECL(:,:,:)) :: zd
-        INTEGER_T, pointer, dimension(D_DECL(:,:,:),:) :: cell_particle_count
+        INTEGER_T, pointer, dimension(D_DECL(:,:,:),:) :: &
+           cell_particle_count
        end type accum_parm_type_count
 
        type grid_parm_type
@@ -17641,7 +17640,6 @@ stop
         REAL_T, pointer :: umac(D_DECL(:,:,:))
         REAL_T, pointer :: vmac(D_DECL(:,:,:))
         REAL_T, pointer :: wmac(D_DECL(:,:,:))
-        REAL_T, pointer :: lsfab(D_DECL(:,:,:),:)
         INTEGER_T, pointer :: velbc(:,:,:)
         INTEGER_T, pointer :: dombc(:,:)
         INTEGER_T, pointer :: domlo(:)
@@ -17653,7 +17651,6 @@ stop
       contains
 
       subroutine count_particles( &
-       LS_local, &
        accum_PARM, &
        cell_particle_count, &
        particles, &
@@ -17664,17 +17661,17 @@ stop
       use mass_transfer_module
 
       type(accum_parm_type_count), intent(in) :: accum_PARM
-       ! the pointer is not modified; the properties of the target
-       ! are inherited.
+       !the pointer is not modified; the properties of the target
+       !are inherited.
+       !cell_particle_count(i,j,k,1)=number particles in the cell.
+       !cell_particle_count(i,j,k,2)=particle id of first particle in list
       INTEGER_T, intent(in), pointer, &
         dimension(D_DECL(:,:,:),:) :: cell_particle_count
       INTEGER_T, intent(in) :: Np 
       type(particle_t), intent(in) :: particles(Np)
-       ! child link 1, parent link 1,
-       ! child link 2, parent link 2, ...
+       ! child link 1 (particle index), parent link 1 (i,j,k index),
+       ! child link 2 (particle index), parent link 2 (i,j,k index), ...
       INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
-
-      REAL_T, pointer, intent(in) :: LS_local(D_DECL(:,:,:),:)
 
       INTEGER_T :: interior_ID
       INTEGER_T :: dir
@@ -17702,9 +17699,6 @@ stop
        fablo_local(dir)=accum_PARM%fablo(dir)
        fabhi_local(dir)=accum_PARM%fabhi(dir)
       enddo
-
-      call checkbound_array(fablo_local,fabhi_local,LS_local, &
-         local_ngrow,-1,19458)
 
       do interior_ID=1,accum_PARM%Npart
 
@@ -17809,7 +17803,6 @@ stop
 
 
       subroutine update_particle_link_data( &
-       nnbr, &
        accum_PARM, &
        cell_particle_count, &
        particles, &
@@ -17818,16 +17811,16 @@ stop
 
       use global_utility_module
 
-      INTEGER_T, intent(in) :: nnbr
-
       type(accum_parm_type_count), intent(in) :: accum_PARM
-       ! the pointer is never modified, but the target will be modified.
+       !the pointer is never modified, but the target will be modified.
+       !cell_particle_count(i,j,k,1)=number particles in the cell.
+       !cell_particle_count(i,j,k,2)=particle id of first particle in list
       INTEGER_T, intent(in), pointer, &
         dimension(D_DECL(:,:,:),:) :: cell_particle_count
       INTEGER_T, intent(in) :: Np 
       type(particle_t), intent(in) :: particles(Np)
-       ! child link 1, parent link 1,
-       ! child link 2, parent link 2, ...
+       ! child link 1 (particle index), parent link 1 (i,j,k index),
+       ! child link 2 (particle index), parent link 2 (i,j,k index), ...
       INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
 
       INTEGER_T :: interior_ID
@@ -17846,13 +17839,6 @@ stop
       REAL_T, target :: xlo_local(SDIM)
       INTEGER_T, target :: fablo_local(SDIM)
       INTEGER_T, target :: fabhi_local(SDIM)
-
-      if (nnbr.ge.1) then
-       ! do nothing
-      else
-       print *,"nnbr invalid"
-       stop
-      endif
 
       do dir=1,SDIM
        dx_local(dir)=accum_PARM%dx(dir)
@@ -17875,11 +17861,13 @@ stop
 
        interior_ok=1
        do dir=1,SDIM
-        if ((cell_index(dir).lt.accum_PARM%tilelo(dir)-nnbr).or. &
-            (cell_index(dir).gt.accum_PARM%tilehi(dir)+nnbr)) then
+        if ((cell_index(dir).lt.accum_PARM%tilelo(dir)).or. &
+            (cell_index(dir).gt.accum_PARM%tilehi(dir))) then
          interior_ok=0
         endif
        enddo
+
+FIX ME no more nnbr
        if (interior_ok.eq.1) then
 
         i=cell_index(1)
@@ -19284,8 +19272,6 @@ stop
       REAL_T temp_relaxation_time
       REAL_T wrap_pos
 
-      cell_particle_count_ptr=>cell_particle_count
-      lsfab_ptr=>lsfab
       umac_ptr=>umac
       vmac_ptr=>vmac
       wmac_ptr=>wmac
@@ -19297,12 +19283,6 @@ stop
        stop
       endif
 
-      if (Np+Np_NBR_only.eq.Np_NBR) then
-       ! do nothing
-      else
-       print *,"Np+Np_NBR_only.ne.Np_NBR"
-       stop
-      endif
       if (dt.gt.zero) then
        ! do nothing
       else
@@ -19339,20 +19319,9 @@ stop
       grid_PARM%problo=>problo_arr
       grid_PARM%probhi=>probhi_arr
 
-      call checkbound_array(fablo,fabhi,lsfab_ptr,2,-1,2871)
-      call checkbound_array1(fablo,fabhi,umac_ptr,2,0,2871)
-      call checkbound_array1(fablo,fabhi,vmac_ptr,2,1,2871)
-      call checkbound_array1(fablo,fabhi,wmac_ptr,2,SDIM-1,2871)
-      call checkbound_array_INTEGER(tilelo,tilehi, &
-              cell_particle_count_ptr, &
-              particle_interaction_ngrow,-1,21228)
-
-      if (single_particle_size.eq.SDIM+N_EXTRA_REAL) then
-       ! do nothing
-      else
-       print *,"single_particle_size invalid"
-       stop
-      endif
+      call checkbound_array1(fablo,fabhi,umac_ptr,1,0,2871)
+      call checkbound_array1(fablo,fabhi,vmac_ptr,1,1,2871)
+      call checkbound_array1(fablo,fabhi,wmac_ptr,1,SDIM-1,2871)
 
       accum_PARM%append_flag=0
 
