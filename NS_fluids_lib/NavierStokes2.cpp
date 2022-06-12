@@ -6660,8 +6660,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 }  // end subroutine prescribe_solid_geometry()
 
 void NavierStokes::move_particles(
-  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC_no_nbr,
-  NeighborParticleContainer<N_EXTRA_REAL,0>& localPC_nbr) {
+  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC) {
 
  bool use_tiling=ns_tiling;
  int max_level = parent->maxLevel();
@@ -6693,140 +6692,92 @@ void NavierStokes::move_particles(
  else
   amrex::Error("divu_outer_sweeps invalid move_particles");
 
- int nnbr=particle_interaction_ngrow;
- if (nnbr>=1) {
-  // do nothing
- } else
-  amrex::Error("nnbr invalid");
-
  if (particles_flag==1) {
 
-  const Real* dx = geom.CellSize();
-  const Box& domain = geom.Domain();
-  const int* domlo = domain.loVect();
-  const int* domhi = domain.hiVect();
+  if ((num_materials_viscoelastic>=1)&&
+      (num_materials_viscoelastic<=nmat)) {
 
-  Vector<int> dombc(2*AMREX_SPACEDIM);
-  const BCRec& descbc = get_desc_lst()[State_Type].getBC(STATECOMP_MOF);
-  const int* b_rec=descbc.vect();
-  for (int m=0;m<2*AMREX_SPACEDIM;m++)
-   dombc[m]=b_rec[m];
+   MultiFab& Tensor_new = get_new_data(Tensor_Type,slab_step+1);
+   if (Tensor_new.nComp()!=NUM_CELL_ELASTIC)
+    amrex::Error("Tensor_new.nComp()!=NUM_CELL_ELASTIC");
 
-   // level set function(s) prior to CLSMOF advection.
-  MultiFab* LSmf=getStateDist(2,cur_time_slab,7);  
-  if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
-   amrex::Error("LSmf invalid ncomp");
-  if (LSmf->nGrow()!=2)
-   amrex::Error("LSmf->nGrow()!=2");
+   const Real* dx = geom.CellSize();
+   const Box& domain = geom.Domain();
+   const int* domlo = domain.loVect();
+   const int* domhi = domain.hiVect();
 
-  MultiFab* mac_velocity[AMREX_SPACEDIM];
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   mac_velocity[dir]=getStateMAC(Umac_Type,2,dir,0,1,vel_time_slab);
-  }
+   Vector<int> dombc(2*AMREX_SPACEDIM);
+   const BCRec& descbc = get_desc_lst()[State_Type].getBC(STATECOMP_MOF);
+   const int* b_rec=descbc.vect();
+   for (int m=0;m<2*AMREX_SPACEDIM;m++)
+    dombc[m]=b_rec[m];
 
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(LSmf->boxArray().d_numPts());
+   MultiFab* mac_velocity[AMREX_SPACEDIM];
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    mac_velocity[dir]=getStateMAC(1,dir,vel_time_slab);
+   }
+
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(Tensor_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(*LSmf,use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
+   for (MFIter mfi(Tensor_new,use_tiling); mfi.isValid(); ++mfi) {
+    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+    const int gridno = mfi.index();
+    const Box& tilegrid = mfi.tilebox();
+    const Box& fabgrid = grids[gridno];
+    const int* tilelo=tilegrid.loVect();
+    const int* tilehi=tilegrid.hiVect();
+    const int* fablo=fabgrid.loVect();
+    const int* fabhi=fabgrid.hiVect();
+    int bfact=parent->Space_blockingFactor(level);
 
-   FArrayBox& lsfab=(*LSmf)[mfi];
-   FArrayBox& xvelfab=(*mac_velocity[0])[mfi];
-   FArrayBox& yvelfab=(*mac_velocity[1])[mfi];
-   FArrayBox& zvelfab=(*mac_velocity[AMREX_SPACEDIM-1])[mfi];
+    FArrayBox& xvelfab=(*mac_velocity[0])[mfi];
+    FArrayBox& yvelfab=(*mac_velocity[1])[mfi];
+    FArrayBox& zvelfab=(*mac_velocity[AMREX_SPACEDIM-1])[mfi];
 
-   const Real* xlo = grid_loc[gridno].lo();
+    const Real* xlo = grid_loc[gridno].lo();
 
-    // TODO: manage SoA data.
-   auto& particles = localPC_no_nbr.GetParticles(level)
+    auto& particles = localPC.GetParticles(level)
      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-   auto& particles_AoS = particles.GetArrayOfStructs();
-   int Np=particles_AoS.size();
+    auto& particles_AoS = particles.GetArrayOfStructs();
+    int Np=particles_AoS.size();
 
-   auto& particles_NBR = localPC_nbr.GetParticles(level)
-     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-   auto& particles_AoS_NBR = particles_NBR.GetArrayOfStructs();
-   int Np_NBR=particles_AoS_NBR.size();
-
-     // ParticleVector&
-   auto& neighbors_local = 
-     localPC_nbr.GetNeighbors(level,mfi.index(),mfi.LocalTileIndex());
-   int Nn=neighbors_local.size();
-
-    // component 1: number of particles linked to the cell.
-    // component 2: the link to the list of particles.
-    // Declare cell_particle_count local to the MFIter loop
-    // so that this routine is thread safe.
-   Box tilebox_grow=grow(tilegrid,nnbr);
-   BaseFab<int> cell_particle_count(tilebox_grow,2);
-   cell_particle_count.setVal(0);
-
-    // The link index will start at 1.
-   Vector< int > particle_link_data;
-    // i_particle_link_1,i1,j1,k1,   (child link, parent link)
-    // i_particle_link_2,i2,j2,k2,  ...
-   particle_link_data.resize(Np_NBR*(1+AMREX_SPACEDIM));
-
-   for (int i_link=0;i_link<Np_NBR*(1+AMREX_SPACEDIM);i_link++)
-    particle_link_data[i_link]=0;
-
-   int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL;
-
-   Vector<int> denbc=getBCArray(State_Type,gridno,STATECOMP_STATES,
+    Vector<int> denbc=getBCArray(State_Type,gridno,STATECOMP_STATES,
       nmat*num_state_material);
-   Vector<int> velbc=getBCArray(State_Type,gridno,
+    Vector<int> velbc=getBCArray(State_Type,gridno,
       STATECOMP_VEL,STATE_NCOMP_VEL);
 
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   Real local_dt_slab=dt_slab;
-   if (hold_dt_factors[0]==1.0) {
-    // do nothing
-   } else if ((hold_dt_factors[0]>0.0)&&
-  	      (hold_dt_factors[0]<1.0)) {
-    local_dt_slab*=hold_dt_factors[0];
-   } else
-    amrex::Error("hold_dt_factors[0] invalid");
+    Real local_dt_slab=dt_slab;
+    if (hold_dt_factors[0]==1.0) {
+     // do nothing
+    } else if ((hold_dt_factors[0]>0.0)&&
+   	       (hold_dt_factors[0]<1.0)) {
+     local_dt_slab*=hold_dt_factors[0];
+    } else
+     amrex::Error("hold_dt_factors[0] invalid");
 
      // declared in: LEVELSET_3D.F90
-   fort_move_particle_container( 
+    fort_move_particle_container( 
      &tid_current,
-     &single_particle_size,
-     &particle_volume,
-     &particle_relaxation_time_to_fluid,
-     &particle_interaction_ngrow,
      &nmat,
      tilelo,tilehi,
-     fablo,fabhi,&bfact,
+     fablo,fabhi,
+     &bfact,
      &level,
      &finest_level,
      xlo,dx,
      particles_AoS.data(),
      Np,  // pass by value
-     particles_AoS_NBR.data(),
-     Np_NBR,  // pass by value
-     neighbors_local.data(),
-     Nn,       //pass by value
-     particle_link_data.dataPtr(),
-     cell_particle_count.dataPtr(),
-     ARLIM(cell_particle_count.loVect()),
-     ARLIM(cell_particle_count.hiVect()),
      &local_dt_slab,
      &vel_time_slab,
      xvelfab.dataPtr(),
@@ -6835,21 +6786,21 @@ void NavierStokes::move_particles(
      ARLIM(yvelfab.loVect()),ARLIM(yvelfab.hiVect()),
      zvelfab.dataPtr(),
      ARLIM(zvelfab.loVect()),ARLIM(zvelfab.hiVect()),
-     lsfab.dataPtr(),
-     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
      velbc.dataPtr(),
      denbc.dataPtr(),
      dombc.dataPtr(),
      domlo,domhi);
 
-  }  // mfi
+   }  // mfi
 } // omp
-  ns_reconcile_d_num(154);
+   ns_reconcile_d_num(154);
 
-  delete LSmf;
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   delete mac_velocity[dir];
-  }
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    delete mac_velocity[dir];
+   }
+
+  } else
+   amrex::Error("expecting num_materials_viscoelastic>=1 in move_particles");
 
  } else
   amrex::Error("expecting particles_flag==1 in move_particles");

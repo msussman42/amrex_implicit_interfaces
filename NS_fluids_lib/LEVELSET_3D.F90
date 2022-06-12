@@ -19193,10 +19193,6 @@ stop
        ! called from NavierStokes2.cpp
       subroutine fort_move_particle_container( &
         tid, &
-        single_particle_size, &
-        particle_volume, &
-        particle_relaxation_time_to_fluid, &
-        particle_interaction_ngrow, &
         nmat, &
         tilelo,tilehi, &
         fablo,fabhi, &
@@ -19206,19 +19202,11 @@ stop
         xlo,dx, &
         particles, & ! a list of particles in the elastic structure
         Np, & !  Np = number of particles
-        particles_NBR, & ! a list of particles+NBRs in the elastic structure
-        Np_NBR, & !  Np_NBR = number of particles+NBRs
-        nbr_particles, &  ! a list of nbr particles in the elastic structure
-        Np_NBR_only, &
-        particle_link_data, &
-        cell_particle_count, &
-        DIMS(cell_particle_count), &
         dt, &
         vel_time_slab, &
         umac,DIMS(umac), &
         vmac,DIMS(vmac), &
         wmac,DIMS(wmac), &
-        lsfab,DIMS(lsfab), &
         velbc_in, &
         denbc_in, &
         dombc, &
@@ -19234,10 +19222,6 @@ stop
 
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: single_particle_size
-      REAL_T, intent(in) :: particle_volume
-      REAL_T, intent(in) :: particle_relaxation_time_to_fluid
-      INTEGER_T, intent(in) :: particle_interaction_ngrow
       INTEGER_T, intent(in) :: level,finest_level
 
       REAL_T, intent(in) :: dt
@@ -19248,38 +19232,18 @@ stop
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
       INTEGER_T, value, intent(in) :: Np ! pass by value
-      INTEGER_T, value, intent(in) :: Np_NBR ! pass by value
-      INTEGER_T, value, intent(in) :: Np_NBR_only ! pass by value
       type(particle_t), intent(inout), target :: particles(Np)
-      type(particle_t), intent(inout), target :: particles_NBR(Np_NBR)
-      type(particle_t), intent(inout), target :: nbr_particles(Np_NBR_only)
 
-       ! child link 1, parent link 1,
-       ! child link 2, parent link 2, ...
-      INTEGER_T, intent(inout) :: particle_link_data(Np_NBR*(1+SDIM))
-
-      INTEGER_T, intent(in) :: DIMDEC(cell_particle_count)
-      INTEGER_T, intent(in) :: DIMDEC(lsfab)
       INTEGER_T, intent(in) :: DIMDEC(umac)
       INTEGER_T, intent(in) :: DIMDEC(vmac)
       INTEGER_T, intent(in) :: DIMDEC(wmac)
 
-       ! first component: number of particles in the cell
-       ! second component: link to the local particle container: 1..Np 
-      INTEGER_T, intent(inout), target :: cell_particle_count( &
-              DIMV(cell_particle_count), &
-              2) 
-      INTEGER_T, pointer :: cell_particle_count_ptr(D_DECL(:,:,:),:)
-     
       REAL_T, intent(in), target :: umac(DIMV(umac)) 
       REAL_T, pointer :: umac_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: vmac(DIMV(vmac)) 
       REAL_T, pointer :: vmac_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: wmac(DIMV(wmac)) 
       REAL_T, pointer :: wmac_ptr(D_DECL(:,:,:))
-
-      REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
-      REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, intent(in), target :: velbc_in(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: denbc_in(SDIM,2)
@@ -19292,6 +19256,8 @@ stop
 
       type(accum_parm_type_count) :: accum_PARM
 
+
+      FIX ME
       INTEGER_T interior_ID
       INTEGER_T dir
       REAL_T xpart1(SDIM)
