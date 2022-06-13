@@ -19259,14 +19259,21 @@ void NavierStokes::writeInterfaceReconstruction() {
    // do nothing
   } else if (particles_flag==1) {
 
+   if ((num_materials_viscoelastic>=1)&&
+       (num_materials_viscoelastic<=nmat)) {
+
     // in: NAVIERSTOKES_3D.F90
-   fort_combine_particles(
-    grids_per_level.dataPtr(),
-    &finest_level,
-    &nsteps,
-    &arrdim,
-    &cur_time_slab,
-    &plotint);
+    fort_combine_particles(
+     grids_per_level.dataPtr(),
+     &finest_level,
+     &nsteps,
+     &arrdim,
+     &cur_time_slab,
+     &plotint);
+
+   } else
+    amrex::Error("num_materials_viscoelastic invalid");
+
   } else
    amrex::Error("particles_flag invalid");
 
@@ -19738,17 +19745,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   if ((num_materials_viscoelastic>=1)&&
       (num_materials_viscoelastic<=nmat)) {
 
-   viscoelasticmf = new MultiFab(
-    ns_level.state[State_Type].boxArray(),
-    ns_level.dmap,
-    NUM_CELL_ELASTIC,
-    1,MFInfo().SetTag("mf viscoelasticmf"),FArrayBoxFactory());
+   viscoelasticmf=ns_level.getStateTensor(1,0,NUM_CELL_ELASTIC,cur_time_slab);
 
-   MultiFab* just_tensors=ns_level.getStateTensor(1,0,NUM_CELL_ELASTIC,
-      cur_time_slab);
-     // dst,src,scomp,dcomp,ncomp,ngrow
-   MultiFab::Copy(*viscoelasticmf,*just_tensors,0,0,NUM_CELL_ELASTIC,1); 
-   delete just_tensors;
   } else if (num_materials_viscoelastic==0) {
    viscoelasticmf = lsdist; //placeholder
   } else
@@ -22453,7 +22451,8 @@ void NavierStokes::assimilate_Q_from_particles(
      real_compALL[k]=real_comp[j]; 
      k++;
     }
-   }
+   } // for (int i=0;i<NUM_CELL_ELASTIC;i++) 
+
    FArrayBox matrixfab(tilegrid,ncomp_accumulate);
    matrixfab.setVal(0.0);
 
