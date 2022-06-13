@@ -14907,12 +14907,10 @@ END SUBROUTINE SIMP
 
         if (SDIM.eq.3) then
          write(12,*) 'TITLE = "3D particles" '
-         write(12,'(A25)',ADVANCE="NO") 'VARIABLES = "X", "Y", "Z"'
-         write(12,'(A24)',ADVANCE="NO") ',"time add"'
+         write(12,'(A36)',ADVANCE="NO") 'VARIABLES = "X", "Y", "Z","time add"'
         else if (SDIM.eq.2) then
          write(12,*) 'TITLE = "2D particles" '
-         write(12,'(A20)',ADVANCE="NO") 'VARIABLES = "X", "Y"'
-         write(12,'(A24)',ADVANCE="NO") ',"time add"'
+         write(12,'(A31)',ADVANCE="NO") 'VARIABLES = "X", "Y","time add"'
         else
          print *,"dimension bust"
          stop
