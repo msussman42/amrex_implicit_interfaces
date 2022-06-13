@@ -948,10 +948,10 @@ stop
             zone2d_gb(iz_gb)%var(index2d,i,j)
          enddo ! do ivar_gb=1,nmat*num_state_material+nmat+viscoelastic stuff
 
-         if (index3d.eq.PLOTCOMP_XDISP) then
+         if (index3d.eq.PLOTCOMP_VISC) then
           ! do nothing
          else
-          print *,"(index3d.ne.PLOTCOMP_XDISP)"
+          print *,"(index3d.ne.PLOTCOMP_VISC)"
           stop
          endif
 
@@ -2233,7 +2233,7 @@ END SUBROUTINE SIMP
        stop
       endif
       if (elastic_ncomp.eq. &
-          num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE+SDIM) then
+          num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) then
        ! do nothing
       else
        print *,"elastic_ncomp invalid"
@@ -2342,7 +2342,17 @@ END SUBROUTINE SIMP
       mom_den_ptr=>mom_den
       call checkbound_array(lo,hi,mom_den_ptr,1,-1,41118)
       elastic_ptr=>elastic
-      call checkbound_array(lo,hi,elastic_ptr,1,-1,41119)
+
+      if ((num_materials_viscoelastic.ge.1).and. &
+          (num_materials_viscoelastic.le.num_materials)) then
+       call checkbound_array(lo,hi,elastic_ptr,1,-1,41119)
+      else if (num_materials_viscoelastic.eq.0) then
+       ! do nothing
+      else
+       print *,"num_materials_viscoelastic invalid"
+       stop
+      endif
+
       lsdist_ptr=>lsdist
       call checkbound_array(lo,hi,lsdist_ptr,1,-1,41120)
       visc_ptr=>visc
@@ -14658,8 +14668,7 @@ END SUBROUTINE SIMP
 
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
-         ! (x0,y0,z0,r,u,v,w,den,T,
-         !  insert time,type_molecule,type_atom) is extra. 
+         ! (insert time) is extra. 
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
@@ -14672,9 +14681,13 @@ END SUBROUTINE SIMP
         xlo,dx, &
         particles, & ! a list of particles in the elastic structure
         Np, & !  Np = number of particles
+        real_compALL, &
+        N_real_comp, & ! pass by value
         tilelo,tilehi, &
-        fablo,fabhi,bfact, &
-        level,gridno) &
+        fablo,fabhi, &
+        bfact, &
+        level, &
+        gridno) &
       bind(c,name='fort_particle_grid')
 
       use probf90_module
@@ -14692,20 +14705,20 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: level,gridno
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       INTEGER_T, value, intent(in) :: Np ! pass by value
+      INTEGER_T, value, intent(in) :: N_real_comp ! pass by value
       type(particle_t), intent(in) :: particles(Np)
+      REAL_T, intent(in) :: real_compALL(N_real_comp)
 
-      character*2 matstr
-
-      character*29 cennamestr29
+      character*28 cennamestr28
       character*3 levstr
       character*5 gridstr
-      character*37 cenfilename37
+      character*36 cenfilename36
 
       REAL_T xref(SDIM)
       REAL_T xrefT(SDIM)
       INTEGER_T ipart_counter
-      INTEGER_T i,dir
-
+      INTEGER_T i,k,dir
+      REAL_T Q_hold
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -14715,16 +14728,22 @@ END SUBROUTINE SIMP
        print *,"bfact invalid151"
        stop
       endif
+      if (Np*NUM_CELL_ELASTIC.eq.N_real_comp) then
+       ! do nothing
+      else
+       print *,"N_real_comp invalid"
+       stop
+      endif
+      if ((num_materials_viscoelastic.ge.1).and. &
+          (num_materials_viscoelastic.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"num_materials_viscoelastic invalid"
+       stop
+      endif
 
-      write(matstr,'(I2)') 0
-      do i=1,2
-       if (matstr(i:i).eq.' ') then
-        matstr(i:i)='0'
-       endif
-      enddo
-
-      write(cennamestr29,'(A14,A10,A2,A3)') &
-          './temptecplot/','tempPARCON',matstr,'pos'
+      write(cennamestr28,'(A14,A14)') &
+          './temptecplot/','tempPARCON_pos'
 
       write(levstr,'(I3)') level
       write(gridstr,'(I5)') gridno
@@ -14739,17 +14758,17 @@ END SUBROUTINE SIMP
         gridstr(i:i)='0'
        endif
       enddo
-      write(cenfilename37,'(A29,A3,A5)') cennamestr29,levstr,gridstr
-      print *,"cenfilename37 ",cenfilename37
+      write(cenfilename36,'(A28,A3,A5)') cennamestr28,levstr,gridstr
+      print *,"cenfilename36 ",cenfilename36
 
-      if (N_EXTRA_REAL.eq.2*SDIM+3) then
+      if (N_EXTRA_REAL.eq.1) then
        ! do nothing
       else
        print *,"N_EXTRA_REAL unexpected value"
        stop
       endif
 
-      open(unit=12,file=cenfilename37)
+      open(unit=12,file=cenfilename36)
       write(12,*) Np
 
       do ipart_counter=1,Np
@@ -14763,19 +14782,22 @@ END SUBROUTINE SIMP
        do dir=1,SDIM
         write(12,'(E25.16)',ADVANCE="NO") xrefT(dir)
        enddo
-        ! displacement
-       do dir=1,SDIM
-        write(12,'(E25.16)',ADVANCE="NO") &
-         xref(dir)-particles(ipart_counter)%extra_state(N_EXTRA_REAL_X0+dir)
-       enddo
+
        do dir=1,N_EXTRA_REAL
-        if (dir.lt.N_EXTRA_REAL) then
-         write(12,'(E25.16)',ADVANCE="NO") &
+        write(12,'(E25.16)',ADVANCE="NO") &
           particles(ipart_counter)%extra_state(dir)
-        else
-         write(12,'(E25.16)') particles(ipart_counter)%extra_state(dir)
-        endif
        enddo ! dir=1..N_EXTRA_REAL
+
+       do dir=1,NUM_CELL_ELASTIC
+        k=(dir-1)*Np+ipart_counter
+        Q_hold=real_compALL(k)
+        if (dir.lt.NUM_CELL_ELASTIC) then
+         write(12,'(E25.16)',ADVANCE="NO") Q_hold
+        else
+         write(12,'(E25.16)') Q_hold
+        endif
+       enddo ! dir=1..NUM_CELL_ELASTIC
+
       enddo ! ipart_counter=1,Np
 
       close(12)
@@ -14799,38 +14821,37 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: arrdim,finest_level,nsteps
       INTEGER_T, intent(in) :: grids_per_level(arrdim)
 
-      character*29 cennamestr29
-      character*11 newcennamestr11
+      character*28 cennamestr28
+      character*10 newcennamestr10
 
       character*3 levstr
       character*5 gridstr
 
-      character*37 cenfilename37
+      character*36 cenfilename36
 
-      character*2 matstr
       character*6 stepstr
 
-      character*21 newcenfilename21
+      character*20 newcenfilename20
+
+      character*2 ipartstr
+      character*2 tensorcompstr
+      character*19 varstrname19
 
       INTEGER_T i
       INTEGER_T ilev,igrid,ipass
-      REAL_T xref(SDIM+SDIM+N_EXTRA_REAL)
+      REAL_T xref(SDIM+N_EXTRA_REAL+NUM_CELL_ELASTIC)
       INTEGER_T nparticles,Part_nparticles
       INTEGER_T alloc_flag
       INTEGER_T istruct
+      INTEGER_T ipart
+      INTEGER_T tensorcomp
 
       alloc_flag=0
 
-      write(matstr,'(I2)') 0
-      do i=1,2
-       if (matstr(i:i).eq.' ') then
-        matstr(i:i)='0'
-       endif
-      enddo
+      write(cennamestr28,'(A14,A14)') &
+          './temptecplot/','tempPARCON_pos'
       
-      write(cennamestr29,'(A14,A10,A2,A3)') &
-          './temptecplot/','tempPARCON',matstr,'pos'
-      write(newcennamestr11,'(A6,A2,A3)') 'PARCON',matstr,'pos'
+      write(newcennamestr10,'(A10)') 'PARCON_pos'
 
       nparticles=0
 
@@ -14858,33 +14879,73 @@ END SUBROUTINE SIMP
          strandid=(nsteps/plotint)+1
         endif
 
-        write(newcenfilename21,'(A11,A6,A4)') newcennamestr11,stepstr,'.tec'
-        print *,"newcenfilename21 ",newcenfilename21
-        open(unit=12,file=newcenfilename21)
+        write(newcenfilename20,'(A10,A6,A4)') newcennamestr10,stepstr,'.tec'
+        print *,"newcenfilename20 ",newcenfilename20
+        open(unit=12,file=newcenfilename20)
 
-        if (N_EXTRA_REAL.eq.2*SDIM+3) then
+        if (N_EXTRA_REAL.eq.1) then
          ! do nothing
         else
          print *,"N_EXTRA_REAL invalid"
+         stop
+        endif
+        if ((num_materials_viscoelastic.ge.1).and. &
+            (num_materials_viscoelastic.le.num_materials)) then
+         ! do nothing
+        else
+         print *,"num_materials_viscoelastic invalid"
+         stop
+        endif
+
+        if (NUM_CELL_ELASTIC.eq. &
+            num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) then
+         ! do nothing
+        else
+         print *,"NUM_CELL_ELASTIC invalid"
          stop
         endif
 
         if (SDIM.eq.3) then
          write(12,*) 'TITLE = "3D particles" '
          write(12,'(A25)',ADVANCE="NO") 'VARIABLES = "X", "Y", "Z"'
-         write(12,'(A24)',ADVANCE="NO") ',"xdisp","ydisp","zdisp"'
-         write(12,'(A34)',ADVANCE="NO") ',"x0","y0","z0","u","v","w"'
-         write(12,*) ',"den","T","time add" ' 
+         write(12,'(A24)',ADVANCE="NO") ',"time add"'
         else if (SDIM.eq.2) then
          write(12,*) 'TITLE = "2D particles" '
          write(12,'(A20)',ADVANCE="NO") 'VARIABLES = "X", "Y"'
-         write(12,'(A16)',ADVANCE="NO") ',"xdisp","ydisp"'
-         write(12,'(A25)',ADVANCE="NO") ',"x0","y0","u","v"'
-         write(12,*) ',"den","T","time add" ' 
+         write(12,'(A24)',ADVANCE="NO") ',"time add"'
         else
          print *,"dimension bust"
          stop
         endif
+        do ipart=1,num_materials_viscoelastic
+         do tensorcomp=1,ENUM_NUM_TENSOR_TYPE
+
+          write(ipartstr,'(I2)') ipart
+          do i=1,2
+           if (ipartstr(i:i).eq.' ') then
+            ipartstr(i:i)='0'
+           endif
+          enddo
+          write(tensorcompstr,'(I2)') tensorcomp
+          do i=1,2
+           if (tensorcompstr(i:i).eq.' ') then
+            tensorcompstr(i:i)='0'
+           endif
+          enddo
+          write(varstrname19,'(A5,A2,A10,A2)') 'ipart',ipartstr, &
+             'tensorcomp',tensorcompstr
+          if (ipart*tensorcomp.eq.NUM_CELL_ELASTIC) then
+           write(12,*) ',"',varstrname19,'"'
+          else if ((ipart*tensorcomp.ge.1).and. &
+                   (ipart*tensorcomp.lt.NUM_CELL_ELASTIC)) then
+           write(12,'(A2,A19,A1)',ADVANCE="NO"),',"',varstrname19,'"'
+          else
+           print *,"ipart or tensorcomp invalid"
+           stop
+          endif
+
+         enddo ! tensorcomp=1,ENUM_NUM_TENSOR_TYPE
+        enddo ! ipart=1,num_materials_viscoelastic
 
         if (plotint.le.0) then
          strandid=1
@@ -14914,9 +14975,9 @@ END SUBROUTINE SIMP
           endif
          enddo
 
-         write(cenfilename37,'(A29,A3,A5)') cennamestr29,levstr,gridstr
-         print *,"cenfilename37 ",cenfilename37
-         open(unit=5,file=cenfilename37)
+         write(cenfilename36,'(A28,A3,A5)') cennamestr28,levstr,gridstr
+         print *,"cenfilename36 ",cenfilename36
+         open(unit=5,file=cenfilename36)
 
          read(5,*) Part_nparticles
 
@@ -14925,8 +14986,10 @@ END SUBROUTINE SIMP
          else if (ipass.eq.1) then
 
           do i=1,Part_nparticles
-           read(5,*) (xref(istruct),istruct=1,SDIM+SDIM+N_EXTRA_REAL)
-           write(12,*) (xref(istruct),istruct=1,SDIM+SDIM+N_EXTRA_REAL)
+           read(5,*) &
+             (xref(istruct),istruct=1,SDIM+N_EXTRA_REAL+NUM_CELL_ELASTIC)
+           write(12,*) &
+             (xref(istruct),istruct=1,SDIM+N_EXTRA_REAL+NUM_CELL_ELASTIC)
           enddo
 
          else

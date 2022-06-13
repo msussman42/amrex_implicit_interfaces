@@ -6986,27 +6986,57 @@ void NavierStokes::output_triangles() {
     // do nothing
    } else if (particles_flag==1) {
 
-    NavierStokes& ns_level0=getLevel(0);
-    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-     ns_level0.newDataPC(slab_step+1);
+    if ((num_materials_viscoelastic>=1)&&
+	(num_materials_viscoelastic<=nmat)) {
 
-     //TODO: manage SoA data.
+     NavierStokes& ns_level0=getLevel(0);
+     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+      ns_level0.newDataPC(slab_step+1);
 
-    auto& particles = localPC.GetParticles(level)
+     auto& particles_grid_tile = localPC.GetParticles(level)
       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-    auto& particles_AoS = particles.GetArrayOfStructs();
+     auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
+     int Np=particles_AoS.size();
+     auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
+     int N_arrays=particles_SoA.size();
+     if (N_arrays==NUM_CELL_ELASTIC) {
+      //do nothing
+     } else
+      amrex::Error("N_arrays invalid");
 
-    int Np=particles_AoS.size();
+     int k=0;
+     int N_real_comp=NUM_CELL_ELASTIC*Np;
+
+     Array<Real> real_compALL(N_real_comp);
+     for (int i=0;i<NUM_CELL_ELASTIC;i++) {
+      Vector<Real>& real_comp=particles_SoA.GetRealData(i);
+
+      if (real_comp.size()==Np) {
+       //do nothing
+      } else
+       amrex::Error("real_comp.size()!=Np");
+
+      for (int j=0;j<Np;j++) {
+       real_compALL[k]=real_comp[j]; 
+       k++;
+      }
+     } // for (int i=0;i<NUM_CELL_ELASTIC;i++) 
 
      // declared in: NAVIERSTOKES_3D.F90
-    fort_particle_grid(
+     fort_particle_grid(
       &tid_current,
       xlo,dx,
       particles_AoS.data(),
       Np,       //pass by value
+      real_compALL.dataPtr(),
+      N_real_comp,  //pass by value
       tilelo,tilehi,
-      fablo,fabhi,&bfact,
-      &level,&gridno);
+      fablo,fabhi,
+      &bfact,
+      &level,
+      &gridno);
+    } else
+     amrex::Error("num_materials_viscoelastic invalid");
    } else
     amrex::Error("particles_flag invalid in output_triangles");
 
@@ -7328,9 +7358,16 @@ void NavierStokes::output_zones(
  } else
   amrex::Error("slice_dir invalid");
 
- int elastic_ncomp=viscoelasticmf->nComp();
- if (elastic_ncomp==
-     num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE+AMREX_SPACEDIM) {
+ int elastic_ncomp=0;
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+  elastic_ncomp=viscoelasticmf->nComp();
+ } else if (num_materials_viscoelastic==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
+
+ if (elastic_ncomp==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
   // do nothing
  } else
   amrex::Error("elastic_ncomp invalid");
@@ -7343,7 +7380,15 @@ void NavierStokes::output_zones(
  check_for_NAN(div_data,5);
  check_for_NAN(denmf,6);
  check_for_NAN(mom_denmf,6);
- check_for_NAN(viscoelasticmf,6);
+
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=nmat)) {
+  check_for_NAN(viscoelasticmf,6);
+ } else if (num_materials_viscoelastic==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
+
  check_for_NAN(lsdistmf,7);
  check_for_NAN(viscmf,9);
  check_for_NAN(conductmf,9);
@@ -7412,10 +7457,18 @@ void NavierStokes::output_zones(
      nmat,1,
      MFInfo().SetTag("mom_denmfminus"),FArrayBoxFactory());
 
-    MultiFab* viscoelasticmfminus=
-     new MultiFab(cgrids_minusBA,cgrids_minus_map,
-      elastic_ncomp,1,
-      MFInfo().SetTag("viscoelasticmfminus"),FArrayBoxFactory());
+    MultiFab* viscoelasticmfminus;
+
+    if ((num_materials_viscoelastic>=1)&&
+        (num_materials_viscoelastic<=nmat)) {
+     viscoelasticmfminus=
+      new MultiFab(cgrids_minusBA,cgrids_minus_map,
+       elastic_ncomp,1,
+       MFInfo().SetTag("viscoelasticmfminus"),FArrayBoxFactory());
+    } else if (num_materials_viscoelastic==0) {
+     viscoelasticmfminus=mom_denmfminus; //placeholder
+    } else
+     amrex::Error("num_materials_viscoelastic invalid");
 
     MultiFab* lsdistmfminus=
      new MultiFab(cgrids_minusBA,cgrids_minus_map,
@@ -7492,11 +7545,17 @@ void NavierStokes::output_zones(
     check_for_NAN(denmfminus,16);
     check_for_NAN(mom_denmfminus,16);
 
+    if ((num_materials_viscoelastic>=1)&&
+        (num_materials_viscoelastic<=nmat)) {
      // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-    viscoelasticmfminus->ParallelCopy(*viscoelasticmf,0,0,
-     elastic_ncomp,
-     1,1,geom.periodicity()); 
-    check_for_NAN(viscoelasticmfminus,16);
+     viscoelasticmfminus->ParallelCopy(*viscoelasticmf,0,0,
+      elastic_ncomp,
+      1,1,geom.periodicity()); 
+     check_for_NAN(viscoelasticmfminus,16);
+    } else if (num_materials_viscoelastic==0) {
+     // do nothing
+    } else
+     amrex::Error("num_materials_viscoelastic invalid");
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     lsdistmfminus->ParallelCopy(*lsdistmf,0,0,nmat*(1+AMREX_SPACEDIM),
@@ -7664,7 +7723,13 @@ void NavierStokes::output_zones(
     }  // mfi
     ns_reconcile_d_num(157);
 
-    delete viscoelasticmfminus;
+    if ((num_materials_viscoelastic>=1)&&
+        (num_materials_viscoelastic<=nmat)) {
+     delete viscoelasticmfminus;
+    } else if (num_materials_viscoelastic==0) {
+     // do nothing
+    } else
+     amrex::Error("num_materials_viscoelastic invalid");
 
     delete maskSEM_minus;
     delete velmfminus;
@@ -7734,7 +7799,13 @@ void NavierStokes::output_zones(
     check_for_NAN(mom_denmfminus,16);
 
     MultiFab* viscoelasticmfminus=viscoelasticmf;
-    check_for_NAN(viscoelasticmfminus,16);
+    if ((num_materials_viscoelastic>=1)&&
+        (num_materials_viscoelastic<=nmat)) {
+     check_for_NAN(viscoelasticmfminus,16);
+    } else if (num_materials_viscoelastic==0) {
+     // do nothing
+    } else
+     amrex::Error("num_materials_viscoelastic invalid:writeTECPLOT_File");
 
     MultiFab* lsdistmfminus=lsdistmf;
     check_for_NAN(lsdistmfminus,18);
