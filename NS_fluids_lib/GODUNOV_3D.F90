@@ -5688,10 +5688,6 @@ stop
       yvmac_ptr=>yvmac
       zvmac_ptr=>zvmac
 
-      xdmac_ptr=>xdmac
-      ydmac_ptr=>ydmac
-      zdmac_ptr=>zdmac
-
       if (bfact.lt.1) then
        print *,"bfact invalid45"
        stop
@@ -5852,7 +5848,6 @@ stop
 
              massface_total=massface_total+massquarter
              momface_total=momface_total+momquarter
-
 
             enddo ! iside: do iside=-1,1,2
 
