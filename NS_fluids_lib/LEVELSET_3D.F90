@@ -18369,6 +18369,11 @@ stop
       INTEGER_T local_mask
       REAL_T temp_time
 
+      INTEGER_T ipart
+      INTEGER_T im_map
+      INTEGER_T ii,jj
+      REAL_T Q(3,3)
+
       cell_particle_count_ptr=>cell_particle_count
       mfiner_ptr=>mfiner
       tensorfab_ptr=>tensorfab
@@ -18648,7 +18653,33 @@ stop
              Np, &
              tensor_sub)
 
-            ! FIX ME NEED TO INSURE POS DEF OF TENSOR_SUB
+           do ipart=1,num_materials_viscoelastic
+            im_map=im_elastic_map(ipart)+1
+            if ((im_map.ge.1).and.(im_map.le.nmat)) then
+             do dir=1,ENUM_NUM_TENSOR_TYPE
+              call stress_index(dir,ii,jj)
+              Q(ii,jj)=tensor_sub((ipart-1)*ENUM_NUM_TENSOR_TYPE+dir)
+             enddo
+             Q(2,1)=Q(1,2)
+             Q(3,1)=Q(1,3)
+             Q(3,2)=Q(2,3)
+             do ii=1,3
+              Q(ii,ii)=Q(ii,ii)+one
+             enddo
+             call project_A_to_positive_definite(Q, &
+               viscoelastic_model(im_map),polymer_factor(im_map))
+             do ii=1,3
+              Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
+             enddo
+             do dir=1,ENUM_NUM_TENSOR_TYPE
+              call stress_index(dir,ii,jj)
+              tensor_sub((ipart-1)*ENUM_NUM_TENSOR_TYPE+dir)=Q(ii,jj)
+             enddo
+            else
+             print *,"im_map invalid"
+             stop
+            endif
+           enddo ! ipart=1...num_materials_viscoelastic
 
            Np_append_test=Np_append_test+1
 
