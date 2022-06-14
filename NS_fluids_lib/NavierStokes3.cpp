@@ -222,7 +222,7 @@ NavierStokes::avgDownMac() {
 }  // end subroutine avgDownMac
 
 // spectral_override==0 => always do low order average down.
-void NavierStokes::avgDownMacState(int MAC_state_idx,int spectral_override) {
+void NavierStokes::avgDownMacState(int spectral_override) {
 
  int finest_level = parent->finestLevel();
 
@@ -232,27 +232,15 @@ void NavierStokes::avgDownMacState(int MAC_state_idx,int spectral_override) {
  NavierStokes& fine_lev = getLevel(level+1);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  MultiFab& S_crse = get_new_data(MAC_state_idx+dir,slab_step+1);
-  MultiFab& S_fine = fine_lev.get_new_data(MAC_state_idx+dir,slab_step+1);
+  MultiFab& S_crse = get_new_data(Umac_Type+dir,slab_step+1);
+  MultiFab& S_fine = fine_lev.get_new_data(Umac_Type+dir,slab_step+1);
   int scomp=0;
   int ncomp_edge=S_crse.nComp(); 
  
-  if (MAC_state_idx==Umac_Type) {
-   if (ncomp_edge==1) {
-    // do nothing
-   } else
-    amrex::Error("ncomp_edge invalid in avgDownMacState");
-  } else if (MAC_state_idx==XDmac_Type) {
-   if (ncomp_edge==1) {
-    // do nothing
-   } else
-    amrex::Error("ncomp_edge invalid in avgDownMacState");
-   if (spectral_override==0) {
-    // do nothing
-   } else
-    amrex::Error("spectral_override invalid");
+  if (ncomp_edge==1) {
+   // do nothing
   } else
-   amrex::Error("MAC_state_idx invalid");
+   amrex::Error("ncomp_edge invalid in avgDownMacState");
    
   if ((S_crse.nComp()!=ncomp_edge)||
       (S_fine.nComp()!=ncomp_edge))
@@ -493,7 +481,8 @@ void NavierStokes::nonlinear_advection() {
 
     for (int ilev=finest_level-1;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
-     ns_level.avgDownMacState(XDmac_Type,0);
+     // spectral_override==0 => always low order.
+     ns_level.avgDownMacState(0);
     }
 
    } else if (dir_absolute_direct_split==AMREX_SPACEDIM-1) {

@@ -867,7 +867,7 @@ protected:
      int spectral_override);
     void MOFavgDown();
     void avgDownMac(); 
-    void avgDownMacState(int MAC_state_idx,int spectral_override); 
+    void avgDownMacState(int spectral_override); 
     void avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
      int scomp,int ncomp,int spectral_override,int caller_id);
      // spectral_override==1 => order derived from "enable_spectral"

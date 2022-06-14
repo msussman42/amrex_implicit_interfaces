@@ -1141,9 +1141,9 @@ extern "C"
      Real* matrixfab,
      AMREX_ARLIM_P(matrixfablo),
      AMREX_ARLIM_P(matrixfabhi),
-     viscoelastic_model, 
-     im_elastic_map,
-     polymer_factor);
+     int* viscoelastic_model, 
+     int* im_elastic_map,
+     Real* polymer_factor);
 
 }
 

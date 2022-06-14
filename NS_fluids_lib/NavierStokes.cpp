@@ -22439,8 +22439,8 @@ void NavierStokes::assimilate_Q_from_particles(
    int N_real_comp=NUM_CELL_ELASTIC*Np;
 
    Array<Real> real_compALL(N_real_comp);
-   for (int i=0;i<NUM_CELL_ELASTIC;i++) {
-    Vector<Real>& real_comp=particles_SoA.GetRealData(i);
+   for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
+    Vector<Real>& real_comp=particles_SoA.GetRealData(dir);
 
     if (real_comp.size()==Np) {
      //do nothing
@@ -22450,8 +22450,14 @@ void NavierStokes::assimilate_Q_from_particles(
     for (int j=0;j<Np;j++) {
      real_compALL[k]=real_comp[j]; 
      k++;
+
+     if (k==dir*Np+j+1) {
+      //do nothing
+     } else
+      amrex::Error("k invalid");
+
     }
-   } // for (int i=0;i<NUM_CELL_ELASTIC;i++) 
+   } // for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) 
 
    if (k==N_real_comp) {
     // do nothing
@@ -22603,8 +22609,8 @@ NavierStokes::init_particle_container(int append_flag) {
     int N_real_comp=NUM_CELL_ELASTIC*Np;
 
     Array<Real> real_compALL(N_real_comp);
-    for (int i=0;i<NUM_CELL_ELASTIC;i++) {
-     Vector<Real>& real_comp=particles_SoA.GetRealData(i);
+    for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
+     Vector<Real>& real_comp=particles_SoA.GetRealData(dir);
 
      if (real_comp.size()==Np) {
       //do nothing
@@ -22614,8 +22620,14 @@ NavierStokes::init_particle_container(int append_flag) {
      for (int j=0;j<Np;j++) {
       real_compALL[k]=real_comp[j]; 
       k++;
+
+      if (k==dir*Np+j+1) {
+       //do nothing
+      } else
+       amrex::Error("k invalid");
+
      }
-    } // for (int i=0;i<NUM_CELL_ELASTIC;i++) 
+    } // for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) 
 
     if (k==N_real_comp) {
      // do nothing
@@ -22653,7 +22665,6 @@ NavierStokes::init_particle_container(int append_flag) {
      //    e.g. if particle_nsubdivide=2 => 4 pieces in 2D.
      //                 "         "   =4 => 64 pieces in 2D.
      // 2. for each small sub-box, add a particle at the sub-box center.
-     FIX ME
      fort_init_particle_container( 
        &tid_current,
        &single_particle_size,
@@ -22664,7 +22675,8 @@ NavierStokes::init_particle_container(int append_flag) {
        &particle_min_per_nsubdivide,
        &nmat,
        tilelo,tilehi,
-       fablo,fabhi,&bfact,
+       fablo,fabhi,
+       &bfact,
        &level,
        &finest_level,
        &cur_time_slab,
@@ -22685,8 +22697,11 @@ NavierStokes::init_particle_container(int append_flag) {
        ARLIM(tensorfab.loVect()),
        ARLIM(tensorfab.hiVect()),
        mfinerfab.dataPtr(),
-       ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()) );
-
+       ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()),
+       viscoelastic_model.dataPtr(), //0..num_materials-1
+       im_elastic_map.dataPtr(), //0...num_materials_viscoelastic-1
+       polymer_factor.dataPtr()); //0...num_materials-1
+      
      if (isweep==0) {
       new_particle_data.resize(Np_append*single_particle_size);
      }
@@ -22704,6 +22719,7 @@ NavierStokes::init_particle_container(int append_flag) {
      } else
       amrex::Error("particle_delete_flag[i_delete] invalid");
     }
+
     if (Np_delete<=Np) {
      // do nothing
     } else
@@ -22716,15 +22732,18 @@ NavierStokes::init_particle_container(int append_flag) {
     int N_real_comp_mirror=NUM_CELL_ELASTIC*Np_mirror_AoS;
     Array<Real> mirror_real_compALL(N_real_comp_mirror);
 
+     //save the existing particle data to:
+     //1. mirrorPC_AoS
+     //2. mirror_real_compALL
     int i_mirror=0;
     for (int i_delete=0;i_delete<Np;i_delete++) {
      if (particle_delete_flag[i_delete]==1) {
       // do nothing
      } else if (particle_delete_flag[i_delete]==0) {
       mirrorPC_AoS[i_mirror]=particles_AoS[i_delete];
-      for (int i=0;i<NUM_CELL_ELASTIC;i++) {
-       int k_dest=i*Np_mirror_AoS+i_mirror;
-       int k_source=i*Np+i_delete;
+      for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
+       int k_dest=dir*Np_mirror_AoS+i_mirror;
+       int k_source=dir*Np+i_delete;
        mirror_real_compALL[k_dest]=real_compALL[k_source];
       }
       i_mirror++;
@@ -22764,6 +22783,7 @@ NavierStokes::init_particle_container(int append_flag) {
     if (i_mirror==Np_mirror_AoS) {
 
      particles_grid_tile.resize(0);
+
      for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
       Vector<Real>& real_comp=particles_SoA.GetRealData(dir);
       real_comp.resize(0);
@@ -22780,9 +22800,9 @@ NavierStokes::init_particle_container(int append_flag) {
     } else
      amrex::Error("i_mirror <> Np_mirror_AoS");
 
-  } // mfi
+   } // mfi
 } // omp
-  ns_reconcile_d_num(81);
+   ns_reconcile_d_num(81);
 
    delete tensor_mf;
 
