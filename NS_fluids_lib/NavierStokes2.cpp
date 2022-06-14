@@ -234,23 +234,14 @@ void NavierStokes::new_localMF_if_not_exist(int idx_MF,int ncomp,
 } //new_localMF_if_not_exist
 
 
-//MAC_state_idx==Umac_Type or (mac velocity)
-//MAC_state_idx==XDmac_Type   (mac displacement)
 //dir=0..sdim-1
-void NavierStokes::getStateMAC_localMF(int MAC_state_idx,
-  int idx_MF,int ngrow,int dir,
-  int scomp,int ncomp,Real time) {
+void NavierStokes::getStateMAC_localMF(
+  int idx_MF,int ngrow,int dir,Real time) {
 
  if ((dir>=0)&&(dir<AMREX_SPACEDIM)) {
   // do nothing
  } else
   amrex::Error("dir invalid");
-
- if ((MAC_state_idx==Umac_Type)||
-     (MAC_state_idx==XDmac_Type)) {
-  // do nothing
- } else
-  amrex::Error("MAC_state_idx invalid");
 
  if (localMF_grow[idx_MF]==-1) {
   // do nothing
@@ -263,7 +254,7 @@ void NavierStokes::getStateMAC_localMF(int MAC_state_idx,
   amrex::Error("ngrow invalid");
 
    // NavierStokes::getStateMAC declared in NavierStokes.cpp
- localMF[idx_MF]=getStateMAC(MAC_state_idx,ngrow,dir,scomp,ncomp,time);
+ localMF[idx_MF]=getStateMAC(ngrow,dir,time);
  localMF_grow[idx_MF]=ngrow;
 } // end getStateMAC_localMF
  
@@ -3345,8 +3336,7 @@ void NavierStokes::VELMAC_TO_CELL(
    &divu_outer_sweeps,
    &num_divu_outer_sweeps,
    // operation_flag=OP_VEL_MAC_TO_CELL, or
-   // operation_flag=OP_FORCE_MAC_TO_CELL, or
-   // OP_XDISP_MAC_TO_CELL
+   // operation_flag=OP_FORCE_MAC_TO_CELL
    &operation_flag, 
    &energyflag,
    constant_density_all_time.dataPtr(),
@@ -7008,8 +6998,8 @@ void NavierStokes::output_triangles() {
      int N_real_comp=NUM_CELL_ELASTIC*Np;
 
      Array<Real> real_compALL(N_real_comp);
-     for (int i=0;i<NUM_CELL_ELASTIC;i++) {
-      Vector<Real>& real_comp=particles_SoA.GetRealData(i);
+     for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
+      Vector<Real>& real_comp=particles_SoA.GetRealData(dir);
 
       if (real_comp.size()==Np) {
        //do nothing
@@ -7019,6 +7009,12 @@ void NavierStokes::output_triangles() {
       for (int j=0;j<Np;j++) {
        real_compALL[k]=real_comp[j]; 
        k++;
+
+       if (k==dir*Np+j+1) {
+        //do nothing
+       } else
+        amrex::Error("k invalid");
+
       }
      } // for (int i=0;i<NUM_CELL_ELASTIC;i++) 
 

@@ -10727,8 +10727,6 @@ stop
        ! operation_flag=105 (from face_gradients, interp grad U^T)
        ! OP_ISCHEME_CELL 
        ! operation_flag=107 (advection)
-       ! OP_XDISP_MAC_TO_CELL
-       ! operation_flag=113 (mac -> cell displacement in MAC_TO_CELL)
       subroutine fort_mac_to_cell( &
        ns_time_order, &
        divu_outer_sweeps, &
@@ -17619,10 +17617,12 @@ stop
         REAL_T, pointer :: xlo(:)
         INTEGER_T :: Npart
         type(particle_t), pointer, dimension(:) :: particles
+        INTEGER_T :: N_real_comp
+        REAL_T, pointer, dimension(:) :: real_compALL
         INTEGER_T :: nsubdivide
-        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: xd
-        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: yd
-        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: zd
+        REAL_T, pointer :: TENSOR(D_DECL(:,:,:),:)
+        !cell_particle_count(i,j,k,1)=number particles in the cell.
+        !cell_particle_count(i,j,k,2)=particle id of first particle in list
         INTEGER_T, pointer, dimension(D_DECL(:,:,:),:) :: &
            cell_particle_count
        end type accum_parm_type_count
@@ -17652,8 +17652,6 @@ stop
 
       subroutine count_particles( &
        accum_PARM, &
-       cell_particle_count, &
-       particles, &
        particle_link_data, &
        Np)
 
@@ -17661,14 +17659,7 @@ stop
       use mass_transfer_module
 
       type(accum_parm_type_count), intent(in) :: accum_PARM
-       !the pointer is not modified; the properties of the target
-       !are inherited.
-       !cell_particle_count(i,j,k,1)=number particles in the cell.
-       !cell_particle_count(i,j,k,2)=particle id of first particle in list
-      INTEGER_T, intent(in), pointer, &
-        dimension(D_DECL(:,:,:),:) :: cell_particle_count
       INTEGER_T, intent(in) :: Np 
-      type(particle_t), intent(in) :: particles(Np)
        ! child link 1 (particle index), parent link 1 (i,j,k index),
        ! child link 2 (particle index), parent link 2 (i,j,k index), ...
       INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
@@ -17727,7 +17718,7 @@ stop
 
         ok_to_add_link=1
 
-        previous_link=cell_particle_count(D_DECL(i,j,k),2)
+        previous_link=accum_PARM%cell_particle_count(D_DECL(i,j,k),2)
         if (previous_link.eq.0) then
          ! do nothing; no particles attached to cell (i,j,k)
         else if ((previous_link.ge.1).and. &
@@ -17761,10 +17752,10 @@ stop
           stop
          endif
 
-         cell_particle_count(D_DECL(i,j,k),1)= &
-           cell_particle_count(D_DECL(i,j,k),1)+1
+         accum_PARM%cell_particle_count(D_DECL(i,j,k),1)= &
+           accum_PARM%cell_particle_count(D_DECL(i,j,k),1)+1
 
-         cell_particle_count(D_DECL(i,j,k),2)=interior_ID
+         accum_PARM%cell_particle_count(D_DECL(i,j,k),2)=interior_ID
 
          ibase_new=(interior_ID-1)*(SDIM+1)
          particle_link_data(ibase_new+1)=previous_link
@@ -18046,16 +18037,12 @@ stop
 
       subroutine interp_eul_lag_dist( &
          nmat, &
-         particles_weight_XD, &
-         particles_weight_VEL, &
-         velfab, &
          accum_PARM, &
          i,j,k, &
          xtarget, &  ! where to add the new particle
          particle_link_data, &
          Np, &
-         x_foot_interp, &  ! x_foot_interp=xtarget if append_flag==0
-         vel_interp)
+         Q_interp)
       use probcommon_module
       use global_utility_module
 
@@ -18063,37 +18050,29 @@ stop
 
       type(accum_parm_type_count), intent(in) :: accum_PARM
       INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: particles_weight_XD
-      REAL_T, intent(in) :: particles_weight_VEL
       INTEGER_T, intent(in) :: i,j,k
       REAL_T, target, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: Np
       INTEGER_T, intent(in) :: particle_link_data(Np*(1+SDIM))
-      REAL_T, intent(out) :: x_foot_interp(SDIM)
-      REAL_T, intent(out) :: vel_interp(SDIM)
-      REAL_T :: x_foot_interp_local(SDIM)
-
-      REAL_T, intent(in), pointer ::  velfab(D_DECL(:,:,:),:)
+      REAL_T, intent(out) :: Q_interp(NUM_CELL_ELASTIC)
 
       INTEGER_T :: nhalf
       INTEGER_T :: dir
       REAL_T :: xsten(-3:3,SDIM)
-      REAL_T A_X,b_X(SDIM),b_VEL(SDIM)
+      REAL_T A_VEL,b_VEL(NUM_CELL_ELASTIC)
       INTEGER_T :: current_link
       REAL_T, target :: xpart(SDIM)
-      REAL_T :: xfoot(SDIM)
-      REAL_T :: velpart(SDIM)
-      REAL_T :: vel_interp_local(SDIM)
+      REAL_T :: Qpart(NUM_CELL_ELASTIC)
+      REAL_T :: Q_interp_local(NUM_CELL_ELASTIC)
       INTEGER_T :: ibase
 
       REAL_T tmp,eps
       REAL_T w_p
 
       type(interp_from_grid_parm_type) :: data_in 
-      type(single_interp_from_grid_parm_type) :: single_data_in 
       type(interp_from_grid_out_parm_type) :: data_out
 
-      REAL_T, target, dimension(num_materials*(SDIM+1)) :: data_interp_local
+      REAL_T, target, dimension(NUM_CELL_ELASTIC) :: data_interp_local
 
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
@@ -18102,14 +18081,8 @@ stop
 
       INTEGER_T :: test_count,test_cell_particle_count
       REAL_T :: local_wt
-      INTEGER_T :: start_dir,end_dir
 
-#define xdfab accum_PARM%xd
-#define ydfab accum_PARM%yd
-#define zdfab accum_PARM%zd
-
-      start_dir=0
-      end_dir=SDIM-1
+      INTEGER_T :: SoA_comp
 
       if (nmat.eq.num_materials) then
        ! do nothing
@@ -18130,19 +18103,13 @@ stop
        fabhi_local(dir)=accum_PARM%fabhi(dir)
       enddo
 
-      call checkbound_array(fablo_local,fabhi_local,velfab,1,-1,19896)
-
-      call checkbound_array1(fablo_local,fabhi_local,xdfab,1,0,19903)
-      call checkbound_array1(fablo_local,fabhi_local,ydfab,1,1,19904)
-      call checkbound_array1(fablo_local,fabhi_local,zdfab,1,SDIM-1,19905)
-
       call checkbound_array(fablo_local,fabhi_local, &
-              accum_PARM%LS,1,-1,19912)
+         accum_PARM%TENSOR,1,-1,19896)
 
       data_out%data_interp=>data_interp_local
 
-      data_in%scomp=1  ! placeholder
-      data_in%ncomp=1  ! placeholder
+      data_in%scomp=1 
+      data_in%ncomp=NUM_CELL_ELASTIC
       data_in%level=accum_PARM%level
       data_in%finest_level=accum_PARM%finest_level
       data_in%bfact=accum_PARM%bfact
@@ -18151,24 +18118,14 @@ stop
       data_in%xlo=>xlo_local
       data_in%fablo=>fablo_local
       data_in%fabhi=>fabhi_local
-      data_in%state=>velfab  
-
-      single_data_in%level=accum_PARM%level
-      single_data_in%finest_level=accum_PARM%finest_level
-      single_data_in%bfact=accum_PARM%bfact
-      single_data_in%dx=>dx_local
-      single_data_in%xlo=>xlo_local
-      single_data_in%fablo=>fablo_local
-      single_data_in%fabhi=>fabhi_local
-      single_data_in%state=>xdfab  
+      data_in%state=accum_PARM%TENSOR
 
        ! data(xtarget)=interp_data(xtarget)-lambda
        ! lambda=
        !  sum_p w_p(interp_data(xp)-particle_data_p)/
        !  sum_P w_p
-      A_X=zero
-      do dir=1,SDIM
-       b_X(dir)=zero
+      A_VEL=zero
+      do dir=1,NUM_CELL_ELASTIC
        b_VEL(dir)=zero
       enddo
 
@@ -18182,39 +18139,17 @@ stop
       do while ((current_link.ge.1).and.(current_link.le.Np))
        do dir=1,SDIM
         xpart(dir)=accum_PARM%particles(current_link)%pos(dir)
-        xfoot(dir)= &
-          accum_PARM%particles(current_link)%extra_state(N_EXTRA_REAL_X0+dir)
-        velpart(dir)= &
-          accum_PARM%particles(current_link)%extra_state(N_EXTRA_REAL_U+dir)
        enddo 
-
-       if (accum_PARM%append_flag.eq.0) then
-        do dir=1,SDIM
-         x_foot_interp_local(dir)=xpart(dir)
-        enddo
-        print *,"there should not be any particles if append_flag==0"
-        stop
-       else if (accum_PARM%append_flag.eq.1) then
-        call interpfab_XDISP( &
-          start_dir, &
-          end_dir, &
-          accum_PARM%bfact, &
-          accum_PARM%level, &
-          accum_PARM%finest_level, &
-          dx_local, &
-          xlo_local, &
-          xpart, &
-          fablo_local, &
-          fabhi_local, &
-          xdfab, &
-          ydfab, &
-          zdfab, &
-          x_foot_interp_local)
-
-       else 
-        print *,"accum_PARM%append_flag invalid" 
-        stop
-       endif
+       do dir=1,NUM_CELL_ELASTIC
+        SoA_comp=(dir-1)*Np+current_link
+        if ((SoA_comp.ge.1).and. &
+            (SoA_comp.le.accum_PARM%N_real_comp)) then
+         Qpart(dir)=accum_PARM%real_compALL(SoA_comp)
+        else
+         print *,"SoA_comp invalid"
+         stop
+        endif
+       enddo !dir=1,NUM_CELL_ELASTIC
 
        tmp=0.0d0
        do dir=1,SDIM
@@ -18224,20 +18159,14 @@ stop
 
        w_p=1.0d0/(eps+tmp)
  
-       A_X=A_X+w_p
-       do dir=1,SDIM
-        b_X(dir)=b_X(dir)+w_p*(x_foot_interp_local(dir)-xfoot(dir))
-       enddo
+       A_VEL=A_VEL+w_p
 
        data_in%xtarget=>xpart
-       data_in%scomp=1
-       data_in%ncomp=SDIM
-       data_in%state=>velfab  
 
         ! bilinear interpolation
        call interp_from_grid_util(data_in,data_out)
-       do dir=1,SDIM
-        vel_interp_local(dir)=data_out%data_interp(dir)
+       do dir=1,NUM_CELL_ELASTIC
+        Q_interp_local(dir)=data_out%data_interp(dir)
        enddo
 
        if (accum_PARM%append_flag.eq.0) then
@@ -18249,8 +18178,9 @@ stop
         print *,"accum_PARM%append_flag invalid" 
         stop
        endif
-       do dir=1,SDIM
-        b_VEL(dir)=b_VEL(dir)+w_p*(vel_interp_local(dir)-velpart(dir))
+
+       do dir=1,NUM_CELL_ELASTIC
+        b_VEL(dir)=b_VEL(dir)+w_p*(Q_interp_local(dir)-Qpart(dir))
        enddo
 
        ibase=(current_link-1)*(1+SDIM)
@@ -18272,90 +18202,32 @@ stop
        stop
       endif
 
-      if (accum_PARM%append_flag.eq.0) then
-       do dir=1,SDIM
-        x_foot_interp(dir)=xtarget(dir)
-       enddo
-       if (A_X.eq.zero) then
-        ! do nothing
-       else
-        print *,"expecting A_X=0.0 if append_flag==0"
-        stop
-       endif
-      else if (accum_PARM%append_flag.eq.1) then
-       call interpfab_XDISP( &
-         start_dir, &
-         end_dir, &
-         accum_PARM%bfact, &
-         accum_PARM%level, &
-         accum_PARM%finest_level, &
-         dx_local, &
-         xlo_local, &
-         xtarget, &
-         fablo_local, &
-         fabhi_local, &
-         xdfab, &
-         ydfab, &
-         zdfab, &
-         x_foot_interp)
-
-       if (A_X.gt.zero) then
-        local_wt=particles_weight_XD
-        if ((local_wt.ge.zero).and.(local_wt.le.one)) then
-         do dir=1,SDIM
-          x_foot_interp(dir)=x_foot_interp(dir)- &
-            local_wt*b_X(dir)/A_X
-         enddo
-        else
-         print *,"local_wt invalid"
-         stop
-        endif
-       else if (A_X.eq.zero) then
-        ! do nothing
-       else
-        print *,"A_X invalid"
-        stop
-       endif
-
-      else 
-       print *,"accum_PARM%append_flag invalid" 
-       stop
-      endif
-
+       ! xtarget might not coincide with an Eulerian grid cell.
       data_in%xtarget=>xtarget
-      data_in%scomp=1
-      data_in%ncomp=SDIM
-      data_in%state=>velfab  
 
        ! bilinear interpolation
       call interp_from_grid_util(data_in,data_out)
-      do dir=1,SDIM
-       vel_interp(dir)=data_out%data_interp(dir)
+      do dir=1,NUM_CELL_ELASTIC
+       Q_interp(dir)=data_out%data_interp(dir)
       enddo
 
       if (accum_PARM%append_flag.eq.0) then
-       if (A_X.eq.zero) then
+       if (A_VEL.eq.zero) then
         ! do nothing
        else
-        print *,"expecting A_X==0 if append_flag==0"
+        print *,"expecting A_VEL==0 if append_flag==0"
         stop
        endif
       else if (accum_PARM%append_flag.eq.1) then
 
-       if (A_X.gt.zero) then
-        local_wt=particles_weight_VEL
-        if ((local_wt.ge.zero).and.(local_wt.le.one)) then
-         do dir=1,SDIM
-          vel_interp(dir)=vel_interp(dir)-local_wt*b_VEL(dir)/A_X
-         enddo
-        else
-         print *,"local_wt invalid"
-         stop
-        endif
-       else if (A_X.eq.zero) then
+       if (A_VEL.gt.zero) then
+        do dir=1,NUM_CELL_ELASTIC
+         Q_interp(dir)=Q_interp(dir)-b_VEL(dir)/A_VEL
+        enddo
+       else if (A_VEL.eq.zero) then
         ! do nothing
        else
-        print *,"A_X invalid"
+        print *,"A_VEL invalid"
         stop
        endif
 
@@ -18363,10 +18235,6 @@ stop
        print *,"accum_PARM%append_flag invalid" 
        stop
       endif
-
-#undef xdfab
-#undef ydfab
-#undef zdfab
 
       return
       end subroutine interp_eul_lag_dist
@@ -18374,8 +18242,6 @@ stop
        ! called from NavierStokes.cpp:
        !  NavierStokes::init_particle_container
       subroutine fort_init_particle_container( &
-        particles_weight_XD, &
-        particles_weight_VEL, &
         tid, &
         single_particle_size, &
         isweep, &
@@ -18393,6 +18259,8 @@ stop
         xlo,dx, &
         particles, & ! a list of particles in the elastic structure
         Np, & !  Np = number of particles
+        real_compALL, &
+        N_real_comp, & ! pass by value
         new_particles, & ! size is "new_Pdata_size"
         new_Pdata_size, &
         Np_append, & ! number of particles to add
@@ -18400,12 +18268,11 @@ stop
         particle_delete_flag, & ! 1=> delete
         cell_particle_count, &
         DIMS(cell_particle_count), &
-        velfab,DIMS(velfab), &
-        xd,DIMS(xd), &
-        yd,DIMS(yd), &
-        zd,DIMS(zd), &
-        lsfab,DIMS(lsfab), &
-        mfiner,DIMS(mfiner) ) &
+        tensorfab,DIMS(tensorfab), &
+        mfiner,DIMS(mfiner), &
+        viscoelastic_model, &
+        im_elastic_map, &
+        polymer_factor) &
       bind(c,name='fort_init_particle_container')
 
       use probf90_module
@@ -18423,9 +18290,6 @@ stop
 
       INTEGER_T, intent(in) :: nmat
 
-      REAL_T, intent(in) :: particles_weight_XD
-      REAL_T, intent(in) :: particles_weight_VEL
-
       INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, intent(in) :: bfact
@@ -18435,7 +18299,9 @@ stop
       REAL_T, intent(in)    :: cur_time_slab
       REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
       INTEGER_T, value, intent(in) :: Np ! pass by value
-      type(particle_t), intent(inout), target :: particles(Np)
+      type(particle_t), intent(in), target :: particles(Np)
+      INTEGER_T, value, intent(in) :: N_real_comp ! pass by value
+      REAL_T, intent(in), target :: real_compALL(N_real_comp)
       INTEGER_T, intent(inout) :: new_Pdata_size
       REAL_T, intent(out) :: new_particles(new_Pdata_size)
       INTEGER_T, intent(inout) :: Np_append
@@ -18446,11 +18312,7 @@ stop
       INTEGER_T, intent(inout) :: particle_delete_flag(Np) ! 1=>delete
 
       INTEGER_T, intent(in) :: DIMDEC(cell_particle_count)
-      INTEGER_T, intent(in) :: DIMDEC(velfab)
-      INTEGER_T, intent(in) :: DIMDEC(xd)
-      INTEGER_T, intent(in) :: DIMDEC(yd)
-      INTEGER_T, intent(in) :: DIMDEC(zd)
-      INTEGER_T, intent(in) :: DIMDEC(lsfab)
+      INTEGER_T, intent(in) :: DIMDEC(tensorfab)
       INTEGER_T, intent(in) :: DIMDEC(mfiner)
    
        ! first component: number of particles in the cell
@@ -18461,19 +18323,16 @@ stop
       INTEGER_T, pointer, &
         dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
 
-      REAL_T, intent(in), target :: xd(DIMV(xd)) 
-      REAL_T, pointer :: xd_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: yd(DIMV(yd)) 
-      REAL_T, pointer :: yd_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: zd(DIMV(zd)) 
-      REAL_T, pointer :: zd_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: &
-           velfab(DIMV(velfab),STATE_NCOMP_VEL+STATE_NCOMP_PRES) 
-      REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat*(SDIM+1)) 
-      REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
+         tensorfab(DIMV(tensorfab),NUM_CELL_ELASTIC) 
+      REAL_T, pointer :: tensorfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mfiner(DIMV(mfiner)) 
       REAL_T, pointer :: mfiner_ptr(D_DECL(:,:,:))
+
+      INTEGER_T, intent(in) :: viscoelastic_model(nmat)
+       ! 0<=im_elastic_map<num_materials
+      INTEGER_T, intent(in) :: im_elastic_map(num_materials_viscoelastic)
+      REAL_T, intent(in) :: polymer_factor(nmat)
 
       type(accum_parm_type_count) :: accum_PARM
    
@@ -18492,10 +18351,9 @@ stop
       INTEGER_T local_count
       INTEGER_T sub_found
       INTEGER_T Np_append_test
-      REAL_T :: x_foot_sub(SDIM)
       REAL_T :: xpart(SDIM)
       REAL_T :: xsub(SDIM)
-      REAL_T :: vel_sub(SDIM)
+      REAL_T :: tensor_sub(NUM_CELL_ELASTIC)
       INTEGER_T, allocatable, dimension(:,:) :: sub_particle_data
       INTEGER_T, allocatable, dimension(:) :: sort_data_id
       REAL_T, allocatable, dimension(:) :: sort_data_time
@@ -18513,25 +18371,39 @@ stop
 
       cell_particle_count_ptr=>cell_particle_count
       mfiner_ptr=>mfiner
-      lsfab_ptr=>lsfab
-      velfab_ptr=>velfab
-      xd_ptr=>xd
-      yd_ptr=>yd
-      zd_ptr=>zd
+      tensorfab_ptr=>tensorfab
 
-      call checkbound_array(fablo,fabhi,velfab_ptr,1,-1,20355)
-
-      call checkbound_array1(fablo,fabhi,xd_ptr,1,0,20362)
-      call checkbound_array1(fablo,fabhi,yd_ptr,1,1,20363)
-      call checkbound_array1(fablo,fabhi,zd_ptr,1,SDIM-1,20364)
+      call checkbound_array(fablo,fabhi,tensorfab_ptr,1,-1,20355)
 
       call checkbound_array1(fablo,fabhi,mfiner_ptr,1,-1,20370)
 
-      call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1,20372)
       call checkbound_array_INTEGER(tilelo,tilehi, &
               cell_particle_count_ptr,0,-1,20374)
 
-      if (single_particle_size.eq.SDIM+N_EXTRA_REAL) then
+      if (NUM_CELL_ELASTIC.eq. &
+          num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) then
+       ! do nothing
+      else
+       print *,"NUM_CELL_ELASTIC invalid"
+       stop
+      endif
+
+      if (Np*NUM_CELL_ELASTIC.eq.N_real_comp) then
+       ! do nothing
+      else
+       print *,"N_real_comp invalid"
+       stop
+      endif
+
+      if ((num_materials_viscoelastic.ge.1).and. &
+          (num_materials_viscoelastic.le.nmat)) then
+       ! do nothing
+      else
+       print *,"num_materials_viscoelastic invalid"
+       stop
+      endif
+
+      if (single_particle_size.eq.SDIM+N_EXTRA_REAL+NUM_CELL_ELASTIC) then
        ! do nothing
       else
        print *,"single_particle_size invalid"
@@ -18560,24 +18432,20 @@ stop
 
       accum_PARM%nsubdivide=particle_nsubdivide
 
-      accum_PARM%LS=>lsfab  ! accum_PARM%LS is pointer, LS is target
-
-      accum_PARM%xd=>xd
-      accum_PARM%yd=>yd
-      accum_PARM%zd=>zd
+       !accum_PARM%TENSOR is pointer, tensorfab is target
+      accum_PARM%TENSOR=>tensorfab 
 
       accum_PARM%cell_particle_count=>cell_particle_count
 
       accum_PARM%particles=>particles
       accum_PARM%Npart=Np
+      accum_PARM%real_compALL=>real_compALL
+      accum_PARM%N_real_comp=N_real_comp
 
       if (isweep.eq.0) then
        if (append_flag.eq.1) then
         call count_particles( &
-         lsfab_ptr, &
          accum_PARM, &
-         cell_particle_count_ptr, &
-         particles, &  
          particle_link_data, &
          Np)
        else if (append_flag.eq.0) then
@@ -18773,16 +18641,14 @@ stop
              ! add bulk particles
            call interp_eul_lag_dist( &
              nmat, &
-             particles_weight_XD, &
-             particles_weight_VEL, &
-             velfab_ptr, &
              accum_PARM, &
              i,j,k, &
              xsub, &
              particle_link_data, &
              Np, &
-             x_foot_sub, &  ! x_foot_sub=xsub if append_flag==0
-             vel_sub)
+             tensor_sub)
+
+            ! FIX ME NEED TO INSURE POS DEF OF TENSOR_SUB
 
            Np_append_test=Np_append_test+1
 
@@ -18792,11 +18658,10 @@ stop
             ibase=(Np_append_test-1)*single_particle_size
             do dir=1,SDIM
              new_particles(ibase+dir)=xsub(dir)
-             new_particles(ibase+SDIM+N_EXTRA_REAL_X0+dir)=x_foot_sub(dir)
-             new_particles(ibase+SDIM+N_EXTRA_REAL_U+dir)=vel_sub(dir)
             enddo
-            new_particles(ibase+SDIM+N_EXTRA_REAL_DEN+1)=one !stub for density
-            new_particles(ibase+SDIM+N_EXTRA_REAL_T+1)=zero !stub for temp.
+            do dir=1,NUM_CELL_ELASTIC
+             new_particles(ibase+SDIM+N_EXTRA_REAL+dir)=tensor_sub(dir)
+            enddo
             new_particles(ibase+SDIM+N_EXTRA_REAL_INSERT_TIME+1)=cur_time_slab
            else
             print *,"isweep invalid"

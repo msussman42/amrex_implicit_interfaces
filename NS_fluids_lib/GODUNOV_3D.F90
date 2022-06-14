@@ -8739,11 +8739,8 @@ stop
       INTEGER_T i,j,k
       INTEGER_T dir_flux
       INTEGER_T dir_local
-      INTEGER_T dir_XD
       INTEGER_T im_elastic_p1
       REAL_T xcenter(SDIM)
-      REAL_T XDcenter(SDIM)
-      REAL_T gradXDtensor(SDIM,SDIM) ! dir_xdisp,dir_space
 
       type(deriv_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
@@ -9024,7 +9021,6 @@ stop
       INTEGER_T i,j,k
       INTEGER_T dir_flux
       INTEGER_T dir_local
-      INTEGER_T dir_XD
       INTEGER_T im_elastic_p1
       REAL_T xcenter(SDIM)
 

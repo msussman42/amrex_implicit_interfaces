@@ -573,8 +573,6 @@ namespace amrex{
        int* ngrow_distance);
 
      void fort_init_particle_container(
-        Real* particles_weight_XD,
-        Real* particles_weight_VEL,
         int* tid,
         int* single_particle_size,
         int* isweep,
@@ -592,6 +590,8 @@ namespace amrex{
         const Real* xlo,const Real* dx,
         const void* particles,
         int Np, 
+        Real* real_compALL,
+        int N_real_comp, //pass by value just in case "long" on the c++ side.
         Real* new_particles, // size is "new_Pdata_size"
         int* new_Pdata_size, 
         int* Np_append, 
@@ -600,25 +600,15 @@ namespace amrex{
 	int* cell_particle_count,
 	AMREX_ARLIM_P(cell_particle_countlo),
 	AMREX_ARLIM_P(cell_particle_counthi),
-        Real* velfab,
-	AMREX_ARLIM_P(velfablo),
-	AMREX_ARLIM_P(velfabhi),
-        Real* xd,
-	AMREX_ARLIM_P(xdlo),
-	AMREX_ARLIM_P(xdhi),
-        Real* yd,
-	AMREX_ARLIM_P(ydlo),
-	AMREX_ARLIM_P(ydhi),
-        Real* zd,
-	AMREX_ARLIM_P(zdlo),
-	AMREX_ARLIM_P(zdhi),
-        Real* LS,
-	AMREX_ARLIM_P(LSlo),
-	AMREX_ARLIM_P(LShi),
+        Real* tensorfab,
+	AMREX_ARLIM_P(tensorfablo),
+	AMREX_ARLIM_P(tensorfabhi),
         Real* mfiner,
 	AMREX_ARLIM_P(mfinerlo),
-	AMREX_ARLIM_P(mfinerhi) );
-
+	AMREX_ARLIM_P(mfinerhi),
+        int* viscoelastic_model, 
+        int* im_elastic_map,
+        Real* polymer_factor);
 
      void fort_move_particle_container(
         int* tid,
