@@ -22453,6 +22453,11 @@ void NavierStokes::assimilate_Q_from_particles(
     }
    } // for (int i=0;i<NUM_CELL_ELASTIC;i++) 
 
+   if (k==N_real_comp) {
+    // do nothing
+   } else 
+    amrex::Error("k invalid");
+
    FArrayBox matrixfab(tilegrid,ncomp_accumulate);
    matrixfab.setVal(0.0);
 
@@ -22537,35 +22542,24 @@ NavierStokes::init_particle_container(int append_flag) {
 
  if (particles_flag==1) {
 
-  MultiFab* LSmf=getStateDist(1,cur_time_slab,7);  
-  if (LSmf->nComp()!=nmat*(1+AMREX_SPACEDIM))
-   amrex::Error("LSmf invalid ncomp");
-  if (LSmf->nGrow()!=1)
-   amrex::Error("LSmf->nGrow()!=1");
+  if ((num_materials_viscoelastic>=1)&&
+      (num_materials_viscoelastic<=nmat)) {
 
-  MultiFab* init_velocity_mf=getState(1,STATECOMP_VEL,
-     STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
+   MultiFab* tensor_mf=getStateTensor(1,0,NUM_CELL_ELASTIC,cur_time_slab);
 
-  NavierStokes& ns_level0=getLevel(0);
-  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-    ns_level0.newDataPC(slab_step+1);
+   NavierStokes& ns_level0=getLevel(0);
+   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
+      ns_level0.newDataPC(slab_step+1);
 
-  MultiFab* xdisplace_mf[AMREX_SPACEDIM];
-
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    //ngrow,dir,scomp,ncomp
-   xdisplace_mf[dir]=getStateMAC(XDmac_Type,1,dir,0,1,cur_time_slab);
-  } // dir=0..sdim-1
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(LSmf->boxArray().d_numPts());
+   if (thread_class::nthreads<1)
+    amrex::Error("thread_class::nthreads invalid");
+   thread_class::init_d_numPts(tensor_mf->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(*LSmf,use_tiling); mfi.isValid(); ++mfi) {
+   for (MFIter mfi(*tensor_mf,use_tiling); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
     const int gridno = mfi.index();
     const Box& tilegrid = mfi.tilebox();
@@ -22579,11 +22573,7 @@ NavierStokes::init_particle_container(int append_flag) {
     const Real* xlo = grid_loc[gridno].lo();
 
     FArrayBox& mfinerfab=(*localMF[MASKCOEF_MF])[mfi];
-    FArrayBox& lsfab=(*LSmf)[mfi];
-    FArrayBox& velfab=(*init_velocity_mf)[mfi];
-    FArrayBox& xdfab=(*xdisplace_mf[0])[mfi];
-    FArrayBox& ydfab=(*xdisplace_mf[1])[mfi];
-    FArrayBox& zdfab=(*xdisplace_mf[AMREX_SPACEDIM-1])[mfi];
+    FArrayBox& tensorfab=(*tensor_mf)[mfi];
 
      // component 1: number of particles linked to the cell.
      // component 2: the link to the list of particles.
@@ -22591,18 +22581,46 @@ NavierStokes::init_particle_container(int append_flag) {
     cell_particle_count.setVal(0);
 
      // allocate for just one particle for now.
-    int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL;
+    int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL+NUM_CELL_ELASTIC;
     Vector< Real > new_particle_data;
     new_particle_data.resize(single_particle_size);
 
       // this is an object with a pointer to both AoS and
       // SoA data.
-    auto& particles = localPC.GetParticles(level)
+    auto& particles_grid_tile = localPC.GetParticles(level)
       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
  
-     // Todo: manage SoA data.
-    auto& particles_AoS = particles.GetArrayOfStructs();
+    auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
     int Np=particles_AoS.size();
+    auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
+    int N_arrays=particles_SoA.size();
+    if (N_arrays==NUM_CELL_ELASTIC) {
+     //do nothing
+    } else
+     amrex::Error("N_arrays invalid");
+
+    int k=0;
+    int N_real_comp=NUM_CELL_ELASTIC*Np;
+
+    Array<Real> real_compALL(N_real_comp);
+    for (int i=0;i<NUM_CELL_ELASTIC;i++) {
+     Vector<Real>& real_comp=particles_SoA.GetRealData(i);
+
+     if (real_comp.size()==Np) {
+      //do nothing
+     } else
+      amrex::Error("real_comp.size()!=Np");
+
+     for (int j=0;j<Np;j++) {
+      real_compALL[k]=real_comp[j]; 
+      k++;
+     }
+    } // for (int i=0;i<NUM_CELL_ELASTIC;i++) 
+
+    if (k==N_real_comp) {
+     // do nothing
+    } else 
+     amrex::Error("k invalid");
 
      // The link index will start at 1.
     Vector< int > particle_link_data;
@@ -22636,8 +22654,6 @@ NavierStokes::init_particle_container(int append_flag) {
      //                 "         "   =4 => 64 pieces in 2D.
      // 2. for each small sub-box, add a particle at the sub-box center.
      fort_init_particle_container( 
-       &particles_weight_XD,
-       &particles_weight_VEL,
        &tid_current,
        &single_particle_size,
        &isweep,
@@ -22654,6 +22670,8 @@ NavierStokes::init_particle_container(int append_flag) {
        xlo,dx,
        particles_AoS.data(), // existing particles
        Np,  // pass by value
+       real_compALL.dataPtr(),
+       N_real_comp,  //pass by value
        new_particle_data.dataPtr(), // size is "new_Pdata_size"
        &new_Pdata_size,
        &Np_append,  // Np_append number of new particles to add.
@@ -22662,14 +22680,9 @@ NavierStokes::init_particle_container(int append_flag) {
        cell_particle_count.dataPtr(),
        ARLIM(cell_particle_count.loVect()),
        ARLIM(cell_particle_count.hiVect()),
-       velfab.dataPtr(),
-       ARLIM(velfab.loVect()),
-       ARLIM(velfab.hiVect()),
-       xdfab.dataPtr(),ARLIM(xdfab.loVect()),ARLIM(xdfab.hiVect()),
-       ydfab.dataPtr(),ARLIM(ydfab.loVect()),ARLIM(ydfab.hiVect()),
-       zdfab.dataPtr(),ARLIM(zdfab.loVect()),ARLIM(zdfab.hiVect()),
-       lsfab.dataPtr(),
-       ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+       tensorfab.dataPtr(),
+       ARLIM(tensorfab.loVect()),
+       ARLIM(tensorfab.hiVect()),
        mfinerfab.dataPtr(),
        ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()) );
 
@@ -22695,22 +22708,29 @@ NavierStokes::init_particle_container(int append_flag) {
     } else
      amrex::Error("Np_delete invalid");
 
-     // mirrorPC will only contain AoS data.  In the future,
-     // SoA data will have to be managed too.
     Vector< My_ParticleContainer::ParticleType > mirrorPC_AoS;
     int Np_mirror_AoS=Np-Np_delete+Np_append;
     mirrorPC_AoS.resize(Np_mirror_AoS);
+
+    int N_real_comp_mirror=NUM_CELL_ELASTIC*Np_mirror_AoS;
+    Array<Real> mirror_real_compALL(N_real_comp_mirror);
+
     int i_mirror=0;
     for (int i_delete=0;i_delete<Np;i_delete++) {
      if (particle_delete_flag[i_delete]==1) {
       // do nothing
      } else if (particle_delete_flag[i_delete]==0) {
       mirrorPC_AoS[i_mirror]=particles_AoS[i_delete];
+      for (int i=0;i<NUM_CELL_ELASTIC;i++) {
+       int k_dest=i*Np_mirror_AoS+i_mirror;
+       int k_source=i*Np+i_mirror;
+       mirror_real_compALL[k_dest]=real_compALL[k_source];
+      }
       i_mirror++;
      } else
       amrex::Error("particle_delete_flag[i_delete] invalid");
     }
-
+FIX ME
     for (int i_append=0;i_append<Np_append;i_append++) {
 
      My_ParticleContainer::ParticleType p;
@@ -22741,11 +22761,10 @@ NavierStokes::init_particle_container(int append_flag) {
 } // omp
   ns_reconcile_d_num(81);
 
-  delete init_velocity_mf;
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   delete xdisplace_mf[dir];
-  }
-  delete LSmf;
+   delete tensor_mf;
+
+  } else
+   amrex::Error("num_materials_viscoelastic invalid");
 
  } else
   amrex::Error("particles_flag invalid in init_particle_container");

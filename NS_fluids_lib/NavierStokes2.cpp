@@ -7022,6 +7022,11 @@ void NavierStokes::output_triangles() {
       }
      } // for (int i=0;i<NUM_CELL_ELASTIC;i++) 
 
+     if (k==N_real_comp) {
+      // do nothing
+     } else 
+      amrex::Error("k invalid");
+
      // declared in: NAVIERSTOKES_3D.F90
      fort_particle_grid(
       &tid_current,
