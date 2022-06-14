@@ -22653,6 +22653,7 @@ NavierStokes::init_particle_container(int append_flag) {
      //    e.g. if particle_nsubdivide=2 => 4 pieces in 2D.
      //                 "         "   =4 => 64 pieces in 2D.
      // 2. for each small sub-box, add a particle at the sub-box center.
+     FIX ME
      fort_init_particle_container( 
        &tid_current,
        &single_particle_size,
@@ -22723,14 +22724,19 @@ NavierStokes::init_particle_container(int append_flag) {
       mirrorPC_AoS[i_mirror]=particles_AoS[i_delete];
       for (int i=0;i<NUM_CELL_ELASTIC;i++) {
        int k_dest=i*Np_mirror_AoS+i_mirror;
-       int k_source=i*Np+i_mirror;
+       int k_source=i*Np+i_delete;
        mirror_real_compALL[k_dest]=real_compALL[k_source];
       }
       i_mirror++;
      } else
       amrex::Error("particle_delete_flag[i_delete] invalid");
     }
-FIX ME
+
+    if (i_mirror==Np-Np_delete) {
+     //do nothing
+    } else
+     amrex::Error("i_mirror invalid");
+
     for (int i_append=0;i_append<Np_append;i_append++) {
 
      My_ParticleContainer::ParticleType p;
@@ -22746,14 +22752,31 @@ FIX ME
      for (int dir=0;dir<N_EXTRA_REAL;dir++) {
       p.rdata(dir) = new_particle_data[ibase+AMREX_SPACEDIM+dir];
      }
+     for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
+      int k_dest=dir*Np_mirror_AoS+i_mirror;
+      int k_source=ibase+AMREX_SPACEDIM+N_EXTRA_REAL+dir;
+      mirror_real_compALL[k_dest]=new_particle_data[k_source];
+     }
      mirrorPC_AoS[i_mirror]=p;
      i_mirror++;
     } // i_append=0..Np_append-1
+
     if (i_mirror==Np_mirror_AoS) {
-     particles.resize(0);
+
+     particles_grid_tile.resize(0);
+     for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
+      Vector<Real>& real_comp=particles_SoA.GetRealData(dir);
+      real_comp.resize(0);
+      for (i_mirror=0;i_mirror<Np_mirror_AoS;i_mirror++) {
+       int k_source=dir*Np_mirror_AoS+i_mirror;
+       real_comp.push_back(mirror_real_compALL[k_source]);
+      } //i_mirror=0...Np_mirror_AoS-1
+     } //dir=0..NUM_CELL_ELASTIC-1
+
      for (i_mirror=0;i_mirror<Np_mirror_AoS;i_mirror++) {
-      particles.push_back(mirrorPC_AoS[i_mirror]);
+      particles_grid_tile.push_back(mirrorPC_AoS[i_mirror]);
      }
+
     } else
      amrex::Error("i_mirror <> Np_mirror_AoS");
 
