@@ -9690,6 +9690,7 @@ stop
       REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
       REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
 
+       ! D=(1/2)(gradU + gradU^Transpose)
        ! 1: sqrt(2 * D : D)
        ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
        ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
@@ -9769,6 +9770,7 @@ stop
        ! coeff=(visc-etaS)/(modtime+dt)
        ! modtime=elastic_time
       else if (viscoelastic_model.eq.3) then ! incremental model
+       ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
        ! coeff=elastic_viscosity
       else if (viscoelastic_model.eq.4) then !pressure velocity FSI coupling
        print *,"this routine should not be called if visc_model==4"
@@ -9827,6 +9829,7 @@ stop
        ! coeff=(visc-etaS)/(modtime+dt)
        ! modtime=elastic_time
       else if (viscoelastic_model.eq.3) then ! incremental model
+       ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
        ! coeff=elastic_viscosity
       else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
        print *,"this routine should not be called if visc_model==4"
@@ -9844,11 +9847,12 @@ stop
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
+       ! D=(1/2)(gradU + gradU^Transpose)
        ! tendata has: |D|, D, grad U
        ! 1: sqrt(2 * D : D)
        ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
        ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
-       shear=tendata(D_DECL(i,j,k),1)
+       shear=tendata(D_DECL(i,j,k),1) ! sqrt(2 D:D)
        n=2
        do ii=1,3
        do jj=1,3
@@ -9916,6 +9920,7 @@ stop
           stop
          endif
         else if (viscoelastic_model.eq.3) then ! incremental model
+         ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
          ! do nothing
         else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
          print *,"this routine should not be called if visc_model==4"
@@ -9948,6 +9953,7 @@ stop
        else if (viscoelastic_model.eq.1) then !OLDROYD-B
         equilibrium_diagonal=zero
        else if (viscoelastic_model.eq.3) then ! incremental model
+        ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
         equilibrium_diagonal=zero
        else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
         print *,"this routine should not be called if visc_model==4"
@@ -9978,7 +9984,9 @@ stop
 
         do ii=1,3 
         do jj=1,3 
+
          Aadvect(ii,jj)=Q(ii,jj)
+
           !cfl cond: |u|dt<dx and dt|gradu|<1
          if ((viscoelastic_model.eq.0).or. & !FENE-CR
              (viscoelastic_model.eq.1).or. & !OLDROYD-B
@@ -10007,9 +10015,25 @@ stop
         enddo ! ii=1,3
 
         do ii=1,3
+
          Smult(ii,ii)=Smult(ii,ii)+one
+
           ! Aadvect <-- Q+I
-         Aadvect(ii,ii)=Aadvect(ii,ii)+one
+         if ((viscoelastic_model.eq.0).or. & !FENE-CR
+             (viscoelastic_model.eq.1).or. & !OLDROYD-B
+             (viscoelastic_model.eq.5).or. & !FENE-P
+             (viscoelastic_model.eq.6)) then !linear PTT
+          Aadvect(ii,ii)=Aadvect(ii,ii)+one
+         else if (viscoelastic_model.eq.3) then ! incremental model
+          ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+          ! do nothing
+         else if (viscoelastic_model.eq.4) then!FSI pressure velocity coupling
+          print *,"this routine should not be called if visc_model==4"
+          stop
+         else
+          print *,"viscoelastic_model invalid"
+          stop
+         endif
         enddo  ! ii=1,3
 
         call project_A_to_positive_definite(Aadvect, &
@@ -10113,11 +10137,23 @@ stop
               viscoelastic_model,polymer_factor)
  
         do ii=1,3
-         Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
+
+         if ((viscoelastic_model.eq.0).or. & !FENE-CR
+             (viscoelastic_model.eq.1).or. & !OLDROYD-B
+             (viscoelastic_model.eq.5).or. & !FENE-P
+             (viscoelastic_model.eq.6)) then !linear PTT
+          Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
+         else if (viscoelastic_model.eq.3) then ! incremental model
+          ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+          ! do nothing
+         else
+          print *,"viscoelastic_model invalid"
+          stop
+         endif
+
         enddo
 
-        ! note: for viscoelastic_model==2 or
-        !           viscoelastic_model==3,
+        ! note: for viscoelastic_model==3,
         !  modtime=lambda_tilde=elastic_time >> 1
         !
         ! lambda_tilde=f(A)/lambda=(1/(lambda(1-tr(A)/L^2)))
