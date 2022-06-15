@@ -301,7 +301,6 @@ extern "C"
     int* irz,int* nmat);
 
    void fort_maketensor_mac(
-    int* interp_Q_to_flux,
     int* flux_grid_type,
     int* partid,
     int* level,

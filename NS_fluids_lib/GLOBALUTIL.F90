@@ -5346,6 +5346,7 @@ end subroutine global_checkinplane
        call project_to_positive_definite(A,A_dim,min_eval)
 
       else if (viscoelastic_model.eq.3) then ! incremental
+       ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
        ! do nothing
       else
        print *,"viscoelastic_model invalid"
