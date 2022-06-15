@@ -9649,7 +9649,6 @@ stop
       INTEGER_T, intent(in) :: irz
       INTEGER_T ii,jj,kk
       REAL_T visctensor(3,3)
-      REAL_T DPLASTIC(3,3)
       REAL_T gradu_FENECR(3,3)
       REAL_T gradV(3,3)
       REAL_T Q(3,3)
@@ -9991,22 +9990,22 @@ stop
            NP_dotdot_D=NP_dotdot_D+NP(ii,jj)*visctensor(ii,jj)
           enddo
           enddo
-          Y_plastic_parm_scaled=two ! scaled by the bulk modulus
-          f_plastic=magA-sqrt(2.0d0/3.0d0)*Y_plastic_parm_scaled
+          ! scaled by the bulk modulus
+          Y_plastic_parm_scaled=(1.0d0/100.0d0)*sqrt(2.0d0/3.0d0)
+          f_plastic=magA-Y_plastic_parm_scaled
           do ii=1,3
           do jj=1,3
+
            if ((f_plastic.lt.zero).or. &
                ((f_plastic.ge.zero).and.(NP_dotdot_D.le.zero))) then
-            DPLASTIC(ii,jj)=zero
+            Aadvect(ii,jj)=Aadvect(ii,jj)+dt*two*visctensor(ii,jj) 
            else if ((f_plastic.ge.zero).and.(NP_dotdot_D.gt.zero)) then
-            DPLASTIC(ii,jj)=NP(ii,jj)
+            Aadvect(ii,jj)=Y_plastic_parm_scaled*NP(ii,jj)
            else
             print *,"f_plastic or NP_dotdot_D invalid"
             stop
            endif
 
-           Aadvect(ii,jj)=Aadvect(ii,jj)+ &
-            dt*two*(visctensor(ii,jj)-DPLASTIC(ii,jj)) 
           enddo !jj=1,3
           enddo !ii=1,3
          else
