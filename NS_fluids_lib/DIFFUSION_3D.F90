@@ -21,20 +21,11 @@ print *,"dimension bust"
 stop
 #endif
 !
-! note for standard viscoelastic update:
 ! 1. DA/Dt=0  or DQ/Dt=0
 ! 2. A^** = S A^* S^T   S=I+dt grad u
 ! 3. dA/dt = -(A-I)/lambda  or DQ/Dt=-Q/lambda
 !
-! for just the HOOP STRESS term for viscoelastic update:
-! 1. DA/Dt=0  or DQ/Dt=0
-! 2. A^**=S A^* S^T  S=1+dt u/r
-!    dA/dt=2 dt u A/r
-! 3. dA/dt= -(A-1)/lambda or DQ/Dt=-Q/lambda
-!
 ! force term: div(mu H Q)/rho or div(mu H A)/rho  Q=A-I
-! force term for just the hoop term is: 
-!   u_t = -mu H Q/(rho r) or u_t = -mu H A/(rho r)
 !
 !ux,vx,wx,uy,vy,wy,uz,vz,wz
 ! grad u in cylindrical coordinates:

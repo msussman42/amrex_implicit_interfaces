@@ -552,7 +552,7 @@ stop
         do veldir=1,SDIM
          gradu(veldir,dir)=cellten(D_DECL(i,j,k),nbase+veldir) 
         enddo
-       enddo ! dir
+       enddo ! dir=1..sdim
 
        if (levelrz.eq.0) then
         ! do nothing

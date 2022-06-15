@@ -10331,7 +10331,7 @@ void NavierStokes::SOD_SANITY_CHECK(int id) {
 
 
 void NavierStokes::make_viscoelastic_tensorMACALL(int im,
-  int interp_Q_to_flux,int flux_mf,int flux_grid_type,
+  int flux_mf,int flux_grid_type,
   int fill_state_idx) {
 
  int finest_level=parent->finestLevel();
@@ -10376,7 +10376,7 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.make_viscoelastic_tensorMAC(im,interp_Q_to_flux,
+  ns_level.make_viscoelastic_tensorMAC(im,
      flux_mf,flux_grid_type,fill_state_idx);
  }
  if (localMF_grow[VISCOTEN_MF]==1) {
@@ -10451,7 +10451,7 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
 
 
 void NavierStokes::make_viscoelastic_tensorMAC(int im,
-  int interp_Q_to_flux,int flux_mf,int flux_grid_type,int fill_state_idx) {
+  int flux_mf,int flux_grid_type,int fill_state_idx) {
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
@@ -10610,7 +10610,6 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
      if (fort_built_in_elastic_model(&elastic_viscosity[im],
 			           &viscoelastic_model[im])==1) {
       fort_maketensor_mac(
-       &interp_Q_to_flux,
        &flux_grid_type,
        &partid,
        &level,

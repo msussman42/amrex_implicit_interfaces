@@ -11797,38 +11797,26 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 	// We are currently in vel_elastic_ALL
        make_viscoelastic_tensorALL(im);
 
-       //(a) interpolate Q to CC,XY,XZ,YZ locations, or
-       //(b) find grad X  + grad X^T directly from the 
-       //    displacement vars, and put in the CC,XY,XZ,YZ
-       //    variables.
-       int interp_Q_to_flux=1;
-       if (viscoelastic_model[im]==2) {
-        interp_Q_to_flux=0;  // 1 is a possible option here
-       } else if (fort_built_in_elastic_model(&elastic_viscosity[im],
-                   &viscoelastic_model[im])==1) {
-	interp_Q_to_flux=1;
-       } else
-        amrex::Error("fort_built_in_elastic_model invalid");
-
+        //interpolate Q to CC,XY,XZ,YZ locations.
         // NavierStokes::make_viscoelastic_tensorMACALL is declared in
 	//   NavierStokes.cpp
 	// make_viscoelastic_tensorMACALL -> make_viscoelastic_tensorMAC
 	// -> fort_maketensor_mac
        int flux_grid_type=-1;
-       make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
+       make_viscoelastic_tensorMACALL(im,
          MAC_ELASTIC_FLUX_CC_MF,flux_grid_type,TensorXU_Type);
        flux_grid_type=3;
-       make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
+       make_viscoelastic_tensorMACALL(im,
          MAC_ELASTIC_FLUX_XY_MF,flux_grid_type,TensorYU_Type);
 
        if (AMREX_SPACEDIM==2) {
         // do nothing
        } else if (AMREX_SPACEDIM==3) {
 	flux_grid_type=4;
-        make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
+        make_viscoelastic_tensorMACALL(im,
 	  MAC_ELASTIC_FLUX_XZ_MF,flux_grid_type,TensorZU_Type);
 	flux_grid_type=5;
-        make_viscoelastic_tensorMACALL(im,interp_Q_to_flux,
+        make_viscoelastic_tensorMACALL(im,
 	  MAC_ELASTIC_FLUX_YZ_MF,flux_grid_type,TensorZV_Type);
        } else
         amrex::Error("dimension bust");
