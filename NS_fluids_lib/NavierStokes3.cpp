@@ -266,6 +266,11 @@ void NavierStokes::nonlinear_advection() {
 
  int nmat=num_materials;
 
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+  //do nothing
+ } else
+  amrex::Error("slab_step invalid");
+
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
@@ -380,11 +385,17 @@ void NavierStokes::nonlinear_advection() {
    ns_level0.newDataPC(slab_step+1);
 
    // first add particles if needed
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   int append_flag=1;
-   ns_level.init_particle_container(append_flag);
-  }
+  if (slab_step==ns_time_order-1) {
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    int append_flag=1;
+    ns_level.init_particle_container(append_flag);
+   }
+  } else if ((slab_step>=0)&&(slab_step<ns_time_order-1)) {
+   //do nothing
+  } else
+   amrex::Error("slab_step invalid");
+
   int lev_min=0;
   int lev_max=-1;
   int nGrow_Redistribute=0;
@@ -821,7 +832,6 @@ void NavierStokes::tensor_advection_updateALL() {
        iproject,only_scalar,destcomp,ngrow_zero);
   }
 
-
    // tensor_advection_update is declared in: NavierStokes.cpp
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -829,7 +839,10 @@ void NavierStokes::tensor_advection_updateALL() {
   }
   avgDownALL_TENSOR();
 
-  FIX ME UPDATE THE PARTICLE DATA TOO IF PARTICLES EXIST
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.particle_tensor_advection_update();
+  }
 
   delete_array(HOLD_GETSHEAR_DATA_MF);
   delete_array(HOLD_VELOCITY_DATA_MF);
