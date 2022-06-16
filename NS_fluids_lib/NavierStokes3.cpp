@@ -839,10 +839,15 @@ void NavierStokes::tensor_advection_updateALL() {
   }
   avgDownALL_TENSOR();
 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.particle_tensor_advection_update();
-  }
+  if (particles_flag==1) {
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    ns_level.particle_tensor_advection_update();
+   }
+  } else if (particles_flag==0) {
+   // do nothing
+  } else
+   amrex::Error("particles_flag invalid");
 
   delete_array(HOLD_GETSHEAR_DATA_MF);
   delete_array(HOLD_VELOCITY_DATA_MF);
@@ -11805,8 +11810,6 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
         // note: tensor_advection_updateALL is called before veldiffuseALL.
         // VISCOTEN_MF initialized in NavierStokes::make_viscoelastic_tensor
 	// fort_maketensor called from ::make_viscoelastic_tensor
-	// if viscoelastic_model==2 then Q is built from the displacement
-	// vector field.
 	// We are currently in vel_elastic_ALL
        make_viscoelastic_tensorALL(im);
 
@@ -12523,8 +12526,6 @@ void NavierStokes::veldiffuseALL() {
      if ((elastic_time[im]>0.0)&&
          (elastic_viscosity[im]>0.0)) {
       // initializes VISCOTEN_MF
-      // if viscoelastic_model==2 then Q is built from the displacement
-      // vector field.
       // we are currently in "veldiffuseALL"
       make_viscoelastic_tensorALL(im);
       for (int ilev=finest_level;ilev>=level;ilev--) {

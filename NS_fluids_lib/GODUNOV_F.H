@@ -375,6 +375,37 @@ extern "C"
     int* transposegradu);
 
 
+   void fort_update_particle_tensor(
+    int* tid,
+    Real* cur_time_slab,
+    const void* particles,
+    int Np, //pass by value just in case "long" on the c++ side.
+    Real* real_compALL,
+    int N_real_comp, //pass by value just in case "long" on the c++ side.
+    int* level,
+    int* finest_level,
+    int* nmat,
+    int* im,
+    int* partid,
+    int* scomp_tensor,
+    int* ncomp_visc,
+    Real* visc,AMREX_ARLIM_P(visclo),AMREX_ARLIM_P(vischi),
+    Real* tendata,AMREX_ARLIM_P(tendatalo),AMREX_ARLIM_P(tendatahi),
+    const Real* dx,const Real* xlo,
+    Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact,
+    Real* dt,
+    Real* elastic_time,
+    int* viscoelastic_model,
+    Real* polymer_factor,
+    int* irz,
+    const int* bcrec,
+    int* transposegradu);
+
+
+
    void fort_estdt(
       int* interface_mass_transfer_model,
       int* caller_id,
