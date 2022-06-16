@@ -2460,13 +2460,14 @@ void NavierStokes::make_MAC_velocity_consistent() {
  int spectral_override=1;
 
   // avgDown all the MAC components.
+  // Umac_Type
  if (level<finest_level)
-  avgDownMacState(Umac_Type,spectral_override); 
+  avgDownMacState(spectral_override); 
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   // ngrow,dir,scomp,ncomp,time
-  MultiFab* tempmac=getStateMAC(
-     Umac_Type,0,dir,0,1,cur_time_slab);
+   // ngrow,dir,time
+   // Umac_Type
+  MultiFab* tempmac=getStateMAC(0,dir,cur_time_slab);
   MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
    // scomp,dcomp,ncomp,ngrow
   MultiFab::Copy(Umac_new,*tempmac,0,0,1,0);
@@ -2796,8 +2797,8 @@ void NavierStokes::increment_face_velocity(
               (operation_flag==OP_UNEW_USOL_MAC_TO_MAC)|| 
               (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC)) {
 
-    int ncomp_MAC=Umac_new.nComp();
-    Umac_old=getStateMAC(Umac_Type,0,dir,0,ncomp_MAC,cur_time_slab); 
+     //Umac_Type
+    Umac_old=getStateMAC(0,dir,cur_time_slab); 
     if (Umac_old->boxArray()==Umac_new.boxArray()) {
      // do nothing
     } else
@@ -6979,9 +6980,11 @@ void NavierStokes::output_triangles() {
     if ((num_materials_viscoelastic>=1)&&
 	(num_materials_viscoelastic<=nmat)) {
 
+     using My_ParticleContainer =
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+
      NavierStokes& ns_level0=getLevel(0);
-     AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-      ns_level0.newDataPC(slab_step+1);
+     My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
 
      auto& particles_grid_tile = localPC.GetParticles(level)
       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
@@ -6997,9 +7000,10 @@ void NavierStokes::output_triangles() {
      int k=0;
      int N_real_comp=NUM_CELL_ELASTIC*Np;
 
-     Array<Real> real_compALL(N_real_comp);
+     Vector<Real> real_compALL(N_real_comp);
      for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
-      Vector<Real>& real_comp=particles_SoA.GetRealData(dir);
+      My_ParticleContainer::RealVector& 
+	      real_comp=particles_SoA.GetRealData(dir);
 
       if (real_comp.size()==Np) {
        //do nothing

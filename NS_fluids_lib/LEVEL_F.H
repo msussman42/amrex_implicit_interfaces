@@ -626,7 +626,6 @@ namespace amrex{
         Real* umac,AMREX_ARLIM_P(umaclo),AMREX_ARLIM_P(umachi),
         Real* vmac,AMREX_ARLIM_P(vmaclo),AMREX_ARLIM_P(vmachi),
         Real* wmac,AMREX_ARLIM_P(wmaclo),AMREX_ARLIM_P(wmachi),
-        Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
 	int* velbc,
 	int* denbc,
 	int* dombc,

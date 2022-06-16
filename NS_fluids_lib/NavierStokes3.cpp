@@ -380,9 +380,11 @@ void NavierStokes::nonlinear_advection() {
 
  if (particles_flag==1) {
 
+  using My_ParticleContainer =
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+
   NavierStokes& ns_level0=getLevel(0);
-  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-   ns_level0.newDataPC(slab_step+1);
+  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
 
    // first add particles if needed
   if (slab_step==ns_time_order-1) {
@@ -748,9 +750,11 @@ void NavierStokes::correct_Q_with_particles() {
 
   if (particles_flag==1) {
 
+   using My_ParticleContainer =
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+
    NavierStokes& ns_level0=getLevel(0);
-   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-     ns_level0.newDataPC(slab_step+1);
+   My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
 
    if (num_SoA_var==SOA_NCOMP) {
     // do nothing
@@ -827,8 +831,8 @@ void NavierStokes::tensor_advection_updateALL() {
    int destcomp=0;
    int ngrow_zero=0;
    ns_level.level_getshear(
-       ns_level.localmf[HOLD_GETSHEAR_DATA_MF],
-       ns_level.localmf[HOLD_VELOCITY_DATA_MF],
+       ns_level.localMF[HOLD_GETSHEAR_DATA_MF],
+       ns_level.localMF[HOLD_VELOCITY_DATA_MF],
        iproject,only_scalar,destcomp,ngrow_zero);
   }
 
@@ -1152,9 +1156,11 @@ Real NavierStokes::advance(Real time,Real dt) {
     int nGrow_Redistribute=0;
     int local_Redistribute=0;
 
+    using My_ParticleContainer =
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+
     NavierStokes& ns_level0=getLevel(0);
-    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& old_PC=
-      ns_level0.newDataPC(ns_time_order);
+    My_ParticleContainer& old_PC=ns_level0.newDataPC(ns_time_order);
     old_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
       local_Redistribute);
    } else {
@@ -2122,9 +2128,9 @@ void NavierStokes::SEM_advectALL(int source_term) {
    for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-      //ngrow,dir,scomp,ncomp,time
-     ns_level.getStateMAC_localMF(
-       Umac_Type,UMAC_MF+dir,0,dir,0,1,vel_time_slab);
+      //ngrow,dir,time
+      //Umac_Type
+     ns_level.getStateMAC_localMF(UMAC_MF+dir,0,dir,vel_time_slab);
 
      if (hold_dt_factors[0]==1.0) {
       // do nothing
@@ -9823,8 +9829,8 @@ void NavierStokes::multiphase_project(int project_option) {
      // 3. MAC_TEMP=UMAC
      // 4. .... (UMAC updated)
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    MultiFab* macvel=
-      ns_level.getStateMAC(Umac_Type,0,dir,0,nsolve,cur_time_slab); 
+     //Umac_TYpe
+    MultiFab* macvel=ns_level.getStateMAC(0,dir,cur_time_slab); 
     MultiFab::Copy(
       *ns_level.localMF[MAC_TEMP_MF+dir],
       *macvel,0,0,nsolve,0);
@@ -11786,13 +11792,13 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     // ngrow=0,scomp=0,ncomp=1
+     // Umac_Type
+     // ngrow=0
      // REGISTER_MARK_MAC_MF is needed by "VELMAC_TO_CELLALL" in order to
      // interpolate the increment from the MAC grid to the CELL grid.
      // 1. increment=UMAC_new - localMF[REGISTER_MARK_MAC_MF]
      // 2. UCELL_new+=interp_mac_to_cell(increment)
-    ns_level.getStateMAC_localMF(Umac_Type,REGISTER_MARK_MAC_MF+dir,
-	0,dir,0,1,cur_time_slab);
+    ns_level.getStateMAC_localMF(REGISTER_MARK_MAC_MF+dir,0,dir,cur_time_slab);
    }
   }
 
@@ -13021,9 +13027,9 @@ void NavierStokes::prepare_advect_vars(Real time) {
 
  new_localMF(ADVECT_REGISTER_MF,AMREX_SPACEDIM,1,-1);
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   //ngrow=0, scomp=0, ncomp=1
-  getStateMAC_localMF(Umac_Type,ADVECT_REGISTER_FACE_MF+dir,0,dir,
-    0,1,time);
+   //ngrow=0
+   //Umac_Type
+  getStateMAC_localMF(ADVECT_REGISTER_FACE_MF+dir,0,dir,time);
  } // dir
   // advect_register has 1 ghost initialized.
  push_back_state_register(ADVECT_REGISTER_MF,time,201);

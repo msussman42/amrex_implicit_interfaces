@@ -9212,8 +9212,10 @@ void NavierStokes::post_restart() {
     } else
      amrex::Error("num_SoA_var invalid");
 
-    AmrLevel0_new_dataPC[i]=
-      new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
+    using My_ParticleContainer =
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+
+    AmrLevel0_new_dataPC[i]=new My_ParticleContainer(parent);
     for (int ns=0;ns<num_SoA_var;ns++)
      AmrLevel0_new_dataPC[i]->AddRealComp(true);
      
@@ -9641,8 +9643,9 @@ NavierStokes::initData () {
  if (particles_flag==0) {
   // do nothing
  } else if (particles_flag==1) {
-  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& current_PC=
-    ns_level0.newDataPC(ns_time_order);
+  using My_ParticleContainer =
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+  My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
   int nGrow_Redistribute=0;
   int local_Redistribute=0;
   current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
@@ -9889,13 +9892,14 @@ NavierStokes::init(
    bool local_copy=true; //do not redistribute inside of copyParticles
    int local_redistribute=0;
 
+   using My_ParticleContainer =
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+
     // if level==0, we must copy from the old Amr_level (level==0) to the
     // new Amr_level prior to deleting the old level==0 structure.
    if (level==0) {
-    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& new_PC=
-     ns_level0.newDataPC(ns_time_order);
-    AmrParticleContainer<N_EXTRA_REAL,0,0,0>& old_PC=
-     oldns->newDataPC(ns_time_order);
+    My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
+    My_ParticleContainer& old_PC=oldns->newDataPC(ns_time_order);
      //clears new_PC first
     new_PC.copyParticles(old_PC,local_copy);
    } else if (level>0) {
@@ -9903,8 +9907,7 @@ NavierStokes::init(
    } else
     amrex::Error("level invalid");
      
-   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& new_PC=
-    ns_level0.newDataPC(ns_time_order);
+   My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
 
    new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
      local_redistribute);
@@ -10034,9 +10037,11 @@ NavierStokes::init (const BoxArray& ba_in,
    } else
     amrex::Error("level invalid");
      
+   using My_ParticleContainer =
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+
    NavierStokes& ns_level0=getLevel(0);
-   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& new_PC=
-    ns_level0.newDataPC(ns_time_order);
+   My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
 
    new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
      local_Redistribute);
@@ -11984,7 +11989,6 @@ void NavierStokes::tensor_advection_update() {
 
  int finest_level=parent->finestLevel();
 
- int ngrow_zero=0;
  int nmat=num_materials;
 
  if ((num_materials_viscoelastic>=1)&&
@@ -12459,8 +12463,8 @@ NavierStokes::prepare_displacement(int mac_grow) {
 
  for (int normdir=0;normdir<AMREX_SPACEDIM;normdir++) {
 
-  MultiFab* temp_mac_velocity=getStateMAC(Umac_Type,mac_grow,normdir,
-   0,1,vel_time_slab); 
+   //Umac_Type
+  MultiFab* temp_mac_velocity=getStateMAC(mac_grow,normdir,vel_time_slab); 
 
    // MAC_VELOCITY_MF deleted towards the end of 
    //   NavierStokes::nonlinear_advection
@@ -17152,7 +17156,8 @@ NavierStokes::split_scalar_advection() {
  if ((level>=0)&&(level<finest_level)) {
 
   int spectral_override=1; // order derived from "enable_spectral"
-  avgDownMacState(Umac_Type,spectral_override);
+   //Umac_Type
+  avgDownMacState(spectral_override);
  
   avgDown(LS_Type,0,nmat,0);
   MOFavgDown();
@@ -19463,9 +19468,10 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  for (int ilev=finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    //ngrow=0,scomp=0,ncomp=1
-   ns_level.getStateMAC_localMF(Umac_Type,HOLD_VELOCITY_DATA_MAC_MF+dir,
-		   0,dir,0,1,cur_time_slab);
+    //ngrow=0
+    //Umac_Type
+   ns_level.getStateMAC_localMF(HOLD_VELOCITY_DATA_MAC_MF+dir, 
+		 0,dir,cur_time_slab);
   } //dir=0,...,sdim-1
  } //ilev
 
@@ -20733,8 +20739,9 @@ void NavierStokes::MaxAdvectSpeed(
   } else
    amrex::Error("caller_id invalid");
 
-   //ngrow=0,scomp=0,ncomp=1
-  MultiFab* velmac=getStateMAC(Umac_Type,0,dir,0,1,cur_time_slab);
+   //ngrow=0
+   //Umac_Type
+  MultiFab* velmac=getStateMAC(0,dir,cur_time_slab);
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -21084,9 +21091,10 @@ void NavierStokes::post_regrid (int lbase,
   if (particles_flag==0) {
    // do nothing
   } else if (particles_flag==1) {
+   using My_ParticleContainer =
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
    NavierStokes& ns_level0=getLevel(0);
-   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& current_PC=
-      ns_level0.newDataPC(ns_time_order);
+   My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
    current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
      local_Redistribute);
   } else
@@ -22108,7 +22116,8 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
    STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
  MultiFab* velmac[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  velmac[dir]=getStateMAC(Umac_Type,0,dir,0,1,cur_time_slab);
+   //Umac_Type
+  velmac[dir]=getStateMAC(0,dir,cur_time_slab);
  }
  
   // mask=tag if not covered by level+1 
@@ -22362,7 +22371,7 @@ void NavierStokes::assimilate_Q_from_particles(
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(velocity_mf->boxArray().d_numPts());
+  thread_class::init_d_numPts(tensor_mf->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -22388,6 +22397,8 @@ void NavierStokes::assimilate_Q_from_particles(
    // particles is of type:
    //  amrex::ParticleTile<SDIM,0,0,0>
    // (Q variables are stored in "SoA = structure of arrays")
+   using My_ParticleContainer =
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
 
    auto& particles_grid_tile = localPC.GetParticles(level)
      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
@@ -22403,9 +22414,9 @@ void NavierStokes::assimilate_Q_from_particles(
    int k=0;
    int N_real_comp=NUM_CELL_ELASTIC*Np;
 
-   Array<Real> real_compALL(N_real_comp);
+   Vector<Real> real_compALL(N_real_comp);
    for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
-    Vector<Real>& real_comp=particles_SoA.GetRealData(dir);
+    My_ParticleContainer::RealVector& real_comp=particles_SoA.GetRealData(dir);
 
     if (real_comp.size()==Np) {
      //do nothing
@@ -22518,9 +22529,11 @@ NavierStokes::init_particle_container(int append_flag) {
 
    MultiFab* tensor_mf=getStateTensor(1,0,NUM_CELL_ELASTIC,cur_time_slab);
 
+   using My_ParticleContainer =
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+
    NavierStokes& ns_level0=getLevel(0);
-   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-      ns_level0.newDataPC(slab_step+1);
+   My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
@@ -22573,9 +22586,9 @@ NavierStokes::init_particle_container(int append_flag) {
     int k=0;
     int N_real_comp=NUM_CELL_ELASTIC*Np;
 
-    Array<Real> real_compALL(N_real_comp);
+    Vector<Real> real_compALL(N_real_comp);
     for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
-     Vector<Real>& real_comp=particles_SoA.GetRealData(dir);
+     My_ParticleContainer::RealVector& real_comp=particles_SoA.GetRealData(dir);
 
      if (real_comp.size()==Np) {
       //do nothing
@@ -22672,9 +22685,6 @@ NavierStokes::init_particle_container(int append_flag) {
      }
     } // isweep=0...1
 
-    using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
-
     int Np_delete=0;
     for (int i_delete=0;i_delete<Np;i_delete++) {
      if (particle_delete_flag[i_delete]==1) {
@@ -22695,7 +22705,7 @@ NavierStokes::init_particle_container(int append_flag) {
     mirrorPC_AoS.resize(Np_mirror_AoS);
 
     int N_real_comp_mirror=NUM_CELL_ELASTIC*Np_mirror_AoS;
-    Array<Real> mirror_real_compALL(N_real_comp_mirror);
+    Vector<Real> mirror_real_compALL(N_real_comp_mirror);
 
      //save the existing particle data to:
      //1. mirrorPC_AoS
@@ -22750,7 +22760,8 @@ NavierStokes::init_particle_container(int append_flag) {
      particles_grid_tile.resize(0);
 
      for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
-      Vector<Real>& real_comp=particles_SoA.GetRealData(dir);
+      My_ParticleContainer::RealVector& 
+	      real_comp=particles_SoA.GetRealData(dir);
       real_comp.resize(0);
       for (i_mirror=0;i_mirror<Np_mirror_AoS;i_mirror++) {
        int k_source=dir*Np_mirror_AoS+i_mirror;
@@ -22844,9 +22855,11 @@ NavierStokes::particle_tensor_advection_update() {
    } else
     amrex::Error("tendata_mf invalid nComp()");
 
+   using My_ParticleContainer =
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+
    NavierStokes& ns_level0=getLevel(0);
-   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-      ns_level0.newDataPC(slab_step+1);
+   My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
@@ -22901,9 +22914,9 @@ NavierStokes::particle_tensor_advection_update() {
     int k=0;
     int N_real_comp=NUM_CELL_ELASTIC*Np;
 
-    Array<Real> real_compALL(N_real_comp);
+    Vector<Real> real_compALL(N_real_comp);
     for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
-     Vector<Real>& real_comp=particles_SoA.GetRealData(dir);
+     My_ParticleContainer::RealVector& real_comp=particles_SoA.GetRealData(dir);
 
      if (real_comp.size()==Np) {
       //do nothing
@@ -22988,7 +23001,8 @@ NavierStokes::particle_tensor_advection_update() {
  
          for (int dir=scomp_tensor;
 	      dir<scomp_tensor+ENUM_NUM_TENSOR_TYPE;dir++) {
-          Vector<Real>& real_comp=particles_SoA.GetRealData(dir);
+ 	  My_ParticleContainer::RealVector& 
+		  real_comp=particles_SoA.GetRealData(dir);
 
           if (real_comp.size()==Np) {
            //do nothing
@@ -22996,7 +23010,7 @@ NavierStokes::particle_tensor_advection_update() {
            amrex::Error("real_comp.size()!=Np");
 
           for (int j=0;j<Np;j++) {
-	   int k=dir*Np+j;
+	   k=dir*Np+j;
 	   real_comp[j]=real_compALL[k];
 	  }
 	 } //dir=scomp_tensor ... scomp_tensor+ENUM_TENSOR_TYPE-1
@@ -23103,9 +23117,11 @@ NavierStokes::post_init_state () {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.init_particle_container(append_flag);
   }
+  using My_ParticleContainer =
+      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+
   NavierStokes& ns_level0=getLevel(0);
-  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC=
-   ns_level0.newDataPC(slab_step+1);
+  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
 
   int lev_min=0;
   int lev_max=-1;

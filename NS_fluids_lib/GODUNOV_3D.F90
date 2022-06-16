@@ -8747,8 +8747,6 @@ stop
 
       REAL_T, target :: cell_data_deriv(1)
 
-      REAL_T DISP_TEN(SDIM,SDIM) ! dir_x (displace), dir_space
-      REAL_T hoop_22
        ! Q=A-I
       REAL_T trace_A
       REAL_T xsten(-3:3,SDIM)
@@ -9013,7 +9011,6 @@ stop
       INTEGER_T ii,jj
       REAL_T Q(3,3),TQ(3,3)
       INTEGER_T i,j,k
-      INTEGER_T dir_flux
       INTEGER_T dir_local
       INTEGER_T im_elastic_p1
       REAL_T xcenter(SDIM)
@@ -9028,8 +9025,6 @@ stop
 
       REAL_T, target :: cell_data_deriv(1)
 
-      REAL_T DISP_TEN(SDIM,SDIM) ! dir_x (displace), dir_space
-      REAL_T hoop_22
       INTEGER_T itensor
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
@@ -9642,7 +9637,7 @@ stop
       REAL_T, pointer :: told_ptr(D_DECL(:,:,:),:)
       REAL_T :: point_told(ENUM_NUM_TENSOR_TYPE)
 
-      INTEGER_T :: i,j,k,n
+      INTEGER_T :: i,j,k
       REAL_T, intent(in) :: dt,elastic_time
       INTEGER_T, intent(in) :: viscoelastic_model
       REAL_T, intent(in) :: polymer_factor
@@ -14070,9 +14065,9 @@ stop
       xvel_ptr=>xvel
       yvel_ptr=>yvel
       zvel_ptr=>zvel
-      call checkbound_array(fablo,fabhi,xvel_ptr,ngrow_mac_old,0,1243)
-      call checkbound_array(fablo,fabhi,yvel_ptr,ngrow_mac_old,1,125)
-      call checkbound_array(fablo,fabhi,zvel_ptr,ngrow_mac_old,SDIM-1,126)
+      call checkbound_array1(fablo,fabhi,xvel_ptr,ngrow_mac_old,0,1243)
+      call checkbound_array1(fablo,fabhi,yvel_ptr,ngrow_mac_old,1,125)
+      call checkbound_array1(fablo,fabhi,zvel_ptr,ngrow_mac_old,SDIM-1,126)
 
       call checkbound_array(fablo,fabhi,xmomside_ptr,1,-1,9374)
       call checkbound_array(fablo,fabhi,ymomside_ptr,1,-1,9375)
@@ -22010,6 +22005,9 @@ stop
       REAL_T lambda
       REAL_T tensor_local(NUM_CELL_ELASTIC)
 
+      INTEGER_T ipart,im_map,ii,jj
+      REAL_T Q(3,3)
+
       nhalf=3
 
       matrixfab_ptr=>matrixfab
@@ -22183,7 +22181,7 @@ stop
       INTEGER_T, value, intent(in) :: Np ! pass by value
       INTEGER_T, value, intent(in) :: N_real_comp ! pass by value
       type(particle_t), intent(in), target :: particles(Np)
-      REAL_T, intent(in), target :: real_compALL(N_real_comp)
+      REAL_T, intent(inout), target :: real_compALL(N_real_comp)
 
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: partid !0<=partid<num_materials_viscoelastic
@@ -22329,6 +22327,12 @@ stop
        print *,"NUM_CELL_ELASTIC invalid"
        stop
       endif
+      if (Np.ge.0) then
+       ! do nothing
+      else
+       print *,"Np invalid"
+       stop
+      endif
       if (Np*NUM_CELL_ELASTIC.eq.N_real_comp) then
        ! do nothing
       else
@@ -22349,10 +22353,6 @@ stop
       call checkbound_array(fablo,fabhi,tendata_ptr,0,-1,9)
       vel_ptr=>vel
       call checkbound_array(fablo,fabhi,vel_ptr,1,-1,61)
-      call checkbound_array(fablo,fabhi,tnew_ptr,0,-1,62)
-
-      told_ptr=>told
-      call checkbound_array(fablo,fabhi,told_ptr,0,-1,63)
 
       if ((transposegradu.ne.0).and. &
           (transposegradu.ne.1)) then
@@ -22379,7 +22379,7 @@ stop
             (cell_index(dir_local).gt.growhi(dir_local))) then
          in_tile_flag=0
         endif
-       enddo
+       enddo !dir_local=1..sdim
 
        if (in_tile_flag.eq.1) then
         i=cell_index(1)

@@ -2410,8 +2410,9 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
 
  MultiFab* velmac[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   //Umac_Type
   if (idx_source==-1) {
-   velmac[dir]=getStateMAC(Umac_Type,0,dir,0,nsolve,cur_time_slab);
+   velmac[dir]=getStateMAC(0,dir,cur_time_slab);
   } else if (idx_source>=0) {
    velmac[dir]=localMF[idx_source+dir];
   } else
