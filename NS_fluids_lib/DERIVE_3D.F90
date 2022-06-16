@@ -990,8 +990,7 @@ stop
          ! do nothing
         else if (viscoelastic_model.eq.4) then ! pressure velocity coupling
          ! do nothing
-        else if ((viscoelastic_model.eq.2).or. & !displacement gradient
-                 (viscoelastic_model.eq.3)) then !incremental
+        else if (viscoelastic_model.eq.3) then !incremental
          bulk_modulus=elastic_viscosity
          if (bulk_modulus.gt.zero) then
           if (visc_coef.gt.zero) then
@@ -1194,8 +1193,7 @@ stop
            endif
 
            ! modtime=elastic_time >> 1 for 2,3
-          else if ((viscoelastic_model.eq.2).or. & !displacement gradient
-                   (viscoelastic_model.eq.4).or. & !pressure velocity coupling
+          else if ((viscoelastic_model.eq.4).or. & !pressure velocity coupling
                    (viscoelastic_model.eq.3)) then !incremental
            modtime=elastic_time
           else
@@ -1221,8 +1219,6 @@ stop
              ! etaS=etaL-etaP=viscconst-elastic_viscosity 
             viscoelastic_coeff= &
              (visc(D_DECL(i,j,k),im_parm)-etaS)/(modtime+dt)
-           else if (viscoelastic_model.eq.2) then !displacement gradient
-            viscoelastic_coeff=elastic_viscosity
            else if (viscoelastic_model.eq.3) then !incremental
             viscoelastic_coeff=elastic_viscosity
            else if (viscoelastic_model.eq.4) then !pressure velocity coupling
