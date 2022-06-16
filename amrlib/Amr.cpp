@@ -311,10 +311,10 @@ Amr::InitAmr () {
 
     for (int im=0;im<global_AMR_num_materials;im++) {
      if (elastic_viscosity_temp[im]>0.0) {
-      if (fort_is_eulerian_elastic_model(&elastic_viscosity_temp[im],
+      if (fort_built_in_elastic_model(&elastic_viscosity_temp[im],
            &viscoelastic_model_temp[im])==1) {
        store_elastic_data_temp[im]=1;
-      } else if (fort_is_eulerian_elastic_model(&elastic_viscosity_temp[im],
+      } else if (fort_built_in_elastic_model(&elastic_viscosity_temp[im],
            &viscoelastic_model_temp[im])==0) {
        // do nothing
       } else

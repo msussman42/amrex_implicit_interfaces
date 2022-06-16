@@ -14936,7 +14936,7 @@ END SUBROUTINE SIMP
            write(12,*) ',"',varstrname19,'"'
           else if ((ipart*tensorcomp.ge.1).and. &
                    (ipart*tensorcomp.lt.NUM_CELL_ELASTIC)) then
-           write(12,'(A2,A19,A1)',ADVANCE="NO"),',"',varstrname19,'"'
+           write(12,'(A2,A19,A1)',ADVANCE="NO") ',"',varstrname19,'"'
           else
            print *,"ipart or tensorcomp invalid"
            stop

@@ -24616,14 +24616,8 @@ INTEGER_T, intent(in) :: level
 INTEGER_T, intent(in) :: finest_level
 INTEGER_T, intent(in) :: nmat,im_critical
 INTEGER_T, intent(in) :: ncomp_visc
-INTEGER_T, intent(in) :: DIMDEC(visc)
-INTEGER_T, intent(in) :: DIMDEC(tendata)
-INTEGER_T, intent(in) :: DIMDEC(vel)
-INTEGER_T, intent(in) :: DIMDEC(tnew)
-INTEGER_T, intent(in) :: DIMDEC(told)
 INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
 INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
-INTEGER_T :: growlo(3), growhi(3)
 INTEGER_T, intent(in) :: bfact
 REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
 
@@ -24656,6 +24650,7 @@ REAL_T Aadvect(3,3)
 REAL_T Smult(3,3)
 REAL_T SA(3,3)
 REAL_T SAS(3,3)
+REAL_T NP(3,3)
 REAL_T shear
 REAL_T modtime,trace_A,equilibrium_diagonal
 
@@ -24664,7 +24659,6 @@ INTEGER_T nhalf
 
 INTEGER_T dir_local
 
-INTEGER_T im_elastic
 INTEGER_T dumbbell_model
 REAL_T magA,NP_dotdot_D,Y_plastic_parm_scaled,f_plastic
 
@@ -25081,7 +25075,7 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
 
  do ii=1,3
   if (dumbbell_model.eq.1) then
-   Aadvect(ii,jj)=Aadvect(ii,jj)+one
+   Aadvect(ii,ii)=Aadvect(ii,ii)+one
   else if (dumbbell_model.eq.0) then ! e.g. incremental model
    ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
    ! do nothing
@@ -25096,13 +25090,13 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
 
  do ii=1,3
  do jj=1,3
-   Q(ii,jj)=Aadvect(ii,jj)
+  Q(ii,jj)=Aadvect(ii,jj)
  enddo
  enddo
 
  do ii=1,3
   if (dumbbell_model.eq.1) then
-   Q(ii,jj)=Q(ii,jj)-one
+   Q(ii,ii)=Q(ii,ii)-one
   else if (dumbbell_model.eq.0) then ! e.g. incremental model
    ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
    ! do nothing
@@ -25110,7 +25104,6 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
    print *,"dumbbell_model invalid"
    stop
   endif
- enddo
  enddo
 
 else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling

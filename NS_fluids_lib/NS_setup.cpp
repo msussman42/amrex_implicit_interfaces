@@ -951,7 +951,7 @@ NavierStokes::variableSetUp ()
       Vector<BCRec> MOFvelocity_bcs_tensor;
       MOFvelocity_bcs_tensor.resize(ENUM_NUM_TENSOR_TYPE);
 
-      ibase_tensor=0;
+      int ibase_tensor=0;
 
        // analogous to u_x
        // reflect at symmetric BC x-faces

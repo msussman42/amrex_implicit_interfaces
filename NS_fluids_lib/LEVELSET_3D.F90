@@ -18080,7 +18080,6 @@ stop
       INTEGER_T, target :: fabhi_local(SDIM)
 
       INTEGER_T :: test_count,test_cell_particle_count
-      REAL_T :: local_wt
 
       INTEGER_T :: SoA_comp
 
@@ -18785,7 +18784,6 @@ stop
       REAL_T dx_inner
       REAL_T wt_dist(SDIM)
       REAL_T local_data
-      REAL_T mass_interp(1)
       REAL_T, dimension(D_DECL(2,2,2),1) :: data_stencil
       INTEGER_T ncomp_interp
       REAL_T LS_clamped
@@ -19046,7 +19044,8 @@ stop
         velbc_in, &
         denbc_in, &
         dombc, &
-        domlo,domhi) &
+        domlo, &
+        domhi) &
       bind(c,name='fort_move_particle_container')
 
       use probf90_module
@@ -19097,7 +19096,6 @@ stop
       REAL_T xpart3(SDIM)
       REAL_T xpart4(SDIM)
       REAL_T xpart_last(SDIM)
-      REAL_T u_last(SDIM)
       REAL_T u1(SDIM), u2(SDIM), u3(SDIM), u4(SDIM)
       type(grid_parm_type) grid_PARM
       INTEGER_T num_RK_stages
