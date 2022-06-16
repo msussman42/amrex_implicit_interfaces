@@ -22177,6 +22177,7 @@ stop
 
       use probcommon_module
       use global_utility_module
+      use geometry_intersect_module
       IMPLICIT NONE
 
       INTEGER_T, value, intent(in) :: Np ! pass by value
@@ -22216,12 +22217,7 @@ stop
       REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(out), target :: tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE)
-      REAL_T, pointer :: tnew_ptr(D_DECL(:,:,:),:)
       REAL_T :: point_tnew(ENUM_NUM_TENSOR_TYPE)
-
-      REAL_T, intent(in), target :: told(DIMV(told),ENUM_NUM_TENSOR_TYPE)
-      REAL_T, pointer :: told_ptr(D_DECL(:,:,:),:)
       REAL_T :: point_told(ENUM_NUM_TENSOR_TYPE)
 
       INTEGER_T :: i,j,k,n
@@ -22232,9 +22228,15 @@ stop
       INTEGER_T, intent(in) :: bc(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: irz
       INTEGER_T :: dir_local
+      REAL_T xpart(SDIM)
+      INTEGER_T interior_ID
+      INTEGER_T cell_index(SDIM)
+      INTEGER_T in_tile_flag
 
-      tnew_ptr=>tnew
-
+      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
+       print *,"tid invalid"
+       stop
+      endif
       if (irz.ne.levelrz) then
        print *,"irz invalid"
        stop
@@ -22296,6 +22298,50 @@ stop
        print *,"dt invalid"
        stop
       endif
+      if (cur_time_slab.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time_slab invalid"
+       stop
+      endif
+      if (scomp_tensor.eq.partid*ENUM_NUM_TENSOR_TYPE) then
+       ! do nothing
+      else
+       print *,"scomp_tensor invalid"
+       stop
+      endif
+      if ((partid.ge.0).and.(partid.lt.num_materials_viscoelastic)) then
+       ! do nothing
+      else
+       print *,"partid invalid"
+       stop
+      endif
+      if (partid.le.im_critical) then
+       ! do nothing
+      else
+       print *,"partid invalid"
+       stop
+      endif
+      if (NUM_CELL_ELASTIC.eq. &
+          num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) then
+       ! do nothing
+      else
+       print *,"NUM_CELL_ELASTIC invalid"
+       stop
+      endif
+      if (Np*NUM_CELL_ELASTIC.eq.N_real_comp) then
+       ! do nothing
+      else
+       print *,"N_real_comp invalid"
+       stop
+      endif
+      if ((num_materials_viscoelastic.ge.1).and. &
+          (num_materials_viscoelastic.le.nmat)) then
+       ! do nothing
+      else
+       print *,"num_materials_viscoelastic invalid"
+       stop
+      endif
 
       visc_ptr=>visc
       call checkbound_array(fablo,fabhi,visc_ptr,0,-1,9)
@@ -22316,45 +22362,69 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
+      do interior_ID=1,Np
 
-       do dir_local=1,ENUM_NUM_TENSOR_TYPE
-        point_told(dir_local)=told(D_DECL(i,j,k),dir_local)
+       do dir_local=1,SDIM
+        xpart(dir_local)=particles(interior_ID)%pos(dir_local)
+       enddo ! dir_local=1..sdim
+
+       do dir_local=scomp_tensor+1,scomp_tensor+ENUM_NUM_TENSOR_TYPE
+        k=(dir_local-1)*Np+interior_ID
+        point_told(dir_local-scomp_tensor)=real_compALL(k)
+       enddo ! dir=1..NUM_CELL_ELASTIC
+       call containing_cell(bfact,dx,xlo,fablo,xpart,cell_index)
+       in_tile_flag=1
+       do dir_local=1,SDIM
+        if ((cell_index(dir_local).lt.growlo(dir_local)).or. &
+            (cell_index(dir_local).gt.growhi(dir_local))) then
+         in_tile_flag=0
+        endif
        enddo
 
-       call point_updatetensor( &
-        i,j,k, &
-        level, &
-        finest_level, &
-        nmat, &
-        im_critical, &  ! 0<=im_critical<=nmat-1
-        ncomp_visc, & 
-        visc_ptr, &
-        tendata_ptr, & !tendata:fort_getshear,iproject=only_scalar=0
-        dx,xlo, &
-        vel_ptr, &
-        point_tnew, &
-        point_told, &
-        tilelo, tilehi,  &
-        fablo, fabhi, &
-        bfact,  &
-        dt, &
-        elastic_time, &
-        viscoelastic_model, &
-        polymer_factor, &
-        irz, &
-        bc, &
-        transposegradu) 
+       if (in_tile_flag.eq.1) then
+        i=cell_index(1)
+        j=cell_index(2)
+        k=0
+        if (SDIM.eq.3) then
+         k=cell_index(SDIM)
+        endif
 
-       do dir_local=1,ENUM_NUM_TENSOR_TYPE
-        tnew(D_DECL(i,j,k),dir_local)=point_tnew(dir_local)
-       enddo
+        call point_updatetensor( &
+         i,j,k, &
+         level, &
+         finest_level, &
+         nmat, &
+         im_critical, &  ! 0<=im_critical<=nmat-1
+         ncomp_visc, & 
+         visc_ptr, &
+         tendata_ptr, & !tendata:fort_getshear,iproject=only_scalar=0
+         dx,xlo, &
+         vel_ptr, &
+         point_tnew, &
+         point_told, &
+         tilelo, tilehi,  &
+         fablo, fabhi, &
+         bfact,  &
+         dt, &
+         elastic_time, &
+         viscoelastic_model, &
+         polymer_factor, &
+         irz, &
+         bc, &
+         transposegradu) 
 
-      enddo
-      enddo
-      enddo
+        do dir_local=scomp_tensor+1,scomp_tensor+ENUM_NUM_TENSOR_TYPE
+         k=(dir_local-1)*Np+interior_ID
+         real_compALL(k)=point_tnew(dir_local-scomp_tensor)
+        enddo
+       else if (in_tile_flag.eq.0) then
+        ! do nothing
+       else
+        print *,"in_tile_flag invalid"
+        stop
+       endif
+
+      enddo !interior_ID=1,Np
 
       return
       end subroutine fort_update_particle_tensor
