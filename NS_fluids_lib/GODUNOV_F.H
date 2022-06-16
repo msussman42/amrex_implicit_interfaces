@@ -375,18 +375,6 @@ extern "C"
     int* transposegradu);
 
 
-   void fort_fix_hoop_tensor(
-    int* level,
-    int* finest_level,
-    int* nmat,int* im,
-    const Real* dx,const Real* xlo,
-    Real* tensor_new,AMREX_ARLIM_P(tnewlo),AMREX_ARLIM_P(tnewhi),
-    const int* tilelo,const int* tilehi,
-    const int* fablo,const int* fabhi,
-    int* bfact,
-    int* irz);
-
-
    void fort_estdt(
       int* interface_mass_transfer_model,
       int* caller_id,

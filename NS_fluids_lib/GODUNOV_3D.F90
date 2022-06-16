@@ -9579,6 +9579,555 @@ stop
 
         ! called form tensor_advecton_update() in NavierStokes.cpp
         ! vel is the advective velocity
+      subroutine point_updatetensor( &
+       i,j,k, &
+       level, &
+       finest_level, &
+       nmat, &
+       im_critical, &  ! 0<=im_critical<=nmat-1
+       ncomp_visc, & 
+       visc, &
+       tendata, & !tendata:fort_getshear,iproject=only_scalar=0
+       dx,xlo, &
+       vel, &
+       tnew, &
+       told, &
+       tilelo, tilehi,  &
+       fablo, fabhi, &
+       bfact,  &
+       dt, &
+       elastic_time, &
+       viscoelastic_model, &
+       polymer_factor, &
+       irz, &
+       bc, &
+       transposegradu) 
+
+      use probcommon_module
+      use global_utility_module
+      IMPLICIT NONE
+
+      INTEGER_T, intent(in) :: i,j,k
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nmat,im_critical
+      INTEGER_T, intent(in) :: ncomp_visc
+      INTEGER_T, intent(in) :: DIMDEC(visc)
+      INTEGER_T, intent(in) :: DIMDEC(tendata)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: DIMDEC(tnew)
+      INTEGER_T, intent(in) :: DIMDEC(told)
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
+      REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
+
+      REAL_T, intent(in), pointer :: visc(D_DECL(:,:,:),:)
+
+       ! D=(1/2)(gradU + gradU^Transpose)
+       ! 1: sqrt(2 * D : D)
+       ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
+       ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
+      REAL_T, intent(in), pointer :: tendata(D_DECL(:,:,:),:)
+      REAL_T, intent(in), pointer :: vel(D_DECL(:,:,:),:)
+
+      REAL_T, intent(out) :: tnew(ENUM_NUM_TENSOR_TYPE)
+      REAL_T, intent(in) :: told(ENUM_NUM_TENSOR_TYPE)
+
+      INTEGER_T :: n
+      REAL_T, intent(in) :: dt,elastic_time
+      INTEGER_T, intent(in) :: viscoelastic_model
+      REAL_T, intent(in) :: polymer_factor
+      INTEGER_T, intent(in) :: transposegradu
+      INTEGER_T, intent(in) :: bc(SDIM,2,SDIM)
+      INTEGER_T, intent(in) :: irz
+      INTEGER_T ii,jj,kk
+      REAL_T visctensor(3,3)
+      REAL_T gradu_FENECR(3,3)
+      REAL_T gradV(3,3)
+      REAL_T Q(3,3)
+      REAL_T W_Jaumann(3,3)  ! W=(1/2)(grad V - (grad V)^T)
+      REAL_T Aadvect(3,3)
+      REAL_T Smult(3,3)
+      REAL_T SA(3,3)
+      REAL_T SAS(3,3)
+      REAL_T shear
+      REAL_T modtime,trace_A,equilibrium_diagonal
+
+      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T nhalf
+
+      INTEGER_T dir_local
+
+      INTEGER_T im_elastic
+      INTEGER_T dumbbell_model
+      REAL_T magA,NP_dotdot_D,Y_plastic_parm_scaled,f_plastic
+
+      nhalf=3
+
+      if (irz.ne.levelrz) then
+       print *,"irz invalid"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid60"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid 34"
+       stop
+      endif
+
+      if (polymer_factor.ge.zero) then !1/L
+       ! do nothing
+      else
+       print *,"polymer_factor out of range"
+       stop
+      endif
+
+      if (viscoelastic_model.eq.0) then ! FENE-CR
+       ! coeff=(visc-etaS)/(modtime+dt)
+       ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
+      else if (viscoelastic_model.eq.1) then ! Oldroyd-B
+       ! coeff=(visc-etaS)/(modtime+dt)
+       ! modtime=elastic_time
+      else if (viscoelastic_model.eq.5) then ! FENE-P
+       ! coeff=(visc-etaS)/(modtime+dt)
+       ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
+      else if (viscoelastic_model.eq.6) then ! linear PTT
+       ! coeff=(visc-etaS)/(modtime+dt)
+       ! modtime=elastic_time
+      else if (viscoelastic_model.eq.3) then ! incremental model
+       ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+       ! coeff=elastic_viscosity
+      else if (viscoelastic_model.eq.4) then !pressure velocity FSI coupling
+       print *,"this routine should not be called if visc_model==4"
+       stop
+      else
+       print *,"viscoelastic_model invalid"
+       stop
+      endif
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if ((im_critical.lt.0).or.(im_critical.ge.nmat)) then
+       print *,"im_critical invalid27"
+       stop
+      endif
+      if (ncomp_visc.ne.3*nmat) then
+       print *,"ncomp visc invalid"
+       stop
+      endif
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
+      endif
+
+      call checkbound_array(fablo,fabhi,visc,0,-1,9)
+      call checkbound_array(fablo,fabhi,tendata,0,-1,9)
+      call checkbound_array(fablo,fabhi,vel,1,-1,61)
+
+      if ((transposegradu.ne.0).and. &
+          (transposegradu.ne.1)) then
+       print *,"transposegradu invalid"
+       stop
+      endif
+
+      if ((viscoelastic_model.eq.0).or. & !FENE-CR
+          (viscoelastic_model.eq.1).or. & !OLDROYD-B
+          (viscoelastic_model.eq.5).or. & !FENE-P
+          (viscoelastic_model.eq.6)) then !linear PTT
+       dumbbell_model=1
+      else if (viscoelastic_model.eq.3) then ! incremental model
+       ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+       dumbbell_model=0
+      else if (viscoelastic_model.eq.4) then!FSI pressure velocity coupling
+       print *,"this routine should not be called if viscoelastic_model==4"
+       stop
+      else
+       print *,"viscoelastic_model invalid"
+       stop
+      endif
+
+      call gridsten_level(xsten,i,j,k,level,nhalf)
+
+       ! D=(1/2)(gradU + gradU^Transpose)
+       ! tendata has: |D|, D, grad U
+       ! 1: sqrt(2 * D : D)
+       ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
+       ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
+      shear=tendata(D_DECL(i,j,k),1) ! sqrt(2 D:D)
+      n=2
+      do ii=1,3
+      do jj=1,3
+       ! (1/2) (grad U + (grad U)^T)
+       visctensor(ii,jj)=tendata(D_DECL(i,j,k),n)
+       n=n+1
+      enddo 
+      enddo 
+      do ii=1,3
+      do jj=1,3
+       gradV(ii,jj)=tendata(D_DECL(i,j,k),n) !(veldir,dir)
+       if (transposegradu.eq.0) then
+        !gradu(veldir,dir)
+        gradu_FENECR(ii,jj)=tendata(D_DECL(i,j,k),n)
+       else if (transposegradu.eq.1) then
+        !gradu(dir,veldir)
+        gradu_FENECR(jj,ii)=tendata(D_DECL(i,j,k),n)
+       else
+        print *,"transposegradu invalid"
+        stop
+       endif
+
+       n=n+1
+      enddo 
+      enddo 
+      do ii=1,3
+      do jj=1,3
+       W_Jaumann(ii,jj)=half*(gradV(ii,jj)-gradV(jj,ii))
+      enddo 
+      enddo 
+       
+      do ii=1,3
+      do jj=1,3
+       Q(ii,jj)=zero
+      enddo
+      enddo
+      do dir_local=1,ENUM_NUM_TENSOR_TYPE
+       call stress_index(dir_local,ii,jj)
+       Q(ii,jj)=told(dir_local)
+      enddo
+      Q(2,1)=Q(1,2)
+      Q(3,1)=Q(1,3)
+      Q(3,2)=Q(2,3)
+
+       ! modtime=lambda/f(A)
+      modtime=visc(D_DECL(i,j,k),2*nmat+im_critical+1)
+      if (modtime.ge.zero) then
+       ! do nothing
+      else
+       print *,"modtime invalid"
+       stop
+      endif
+
+      trace_A=zero
+      do ii=1,3
+       trace_A=trace_A+Q(ii,ii)+one
+       if (dumbbell_model.eq.1) then
+        if (Q(ii,ii)+one.gt.zero) then
+         ! do nothing
+        else
+         print *,"A=Q+I should be positive definite"
+         stop
+        endif
+       else if (dumbbell_model.eq.0) then ! e.g. incremental model
+        ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+        ! do nothing
+       else
+        print *,"dumbbell_model invalid"
+        stop
+       endif
+      enddo ! ii=1,3
+
+       ! (1/lambda)*(f(A)A-I)=
+       ! (f(A)/lambda)*(A-I/f(A))=
+       ! (f(A)/lambda)*(Q+I-I/f(A))
+       ! 1-1/f(A)=1-(1-trac(A)/L^2)=trac(A)/L^2
+       ! (1/lambda)*(f(A)A-I)=(f(A)/lambda)*(Q+trac(A)I/L^{2})
+      if (viscoelastic_model.eq.5) then !FENE-P          
+       if (trace_A.gt.zero) then
+        if (polymer_factor.gt.zero) then !1/L
+         equilibrium_diagonal=min(trace_A*(polymer_factor**2),one)
+        else
+         print *,"polymer_factor out of range for FENE-P"
+         stop
+        endif
+       else
+        print *,"trace_A should be positive for FENE-P"
+        stop
+       endif
+      else if (viscoelastic_model.eq.0) then !FENE-CR
+       equilibrium_diagonal=zero
+      else if (viscoelastic_model.eq.1) then !OLDROYD-B
+       equilibrium_diagonal=zero
+      else if (viscoelastic_model.eq.3) then ! incremental model
+       ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+       equilibrium_diagonal=zero
+      else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
+       print *,"this routine should not be called if visc_model==4"
+       stop
+      else if (viscoelastic_model.eq.6) then !linearPTT
+       equilibrium_diagonal=zero
+       if (trace_A.gt.zero) then
+        if (polymer_factor.ge.zero) then 
+         if (SDIM*(polymer_factor**2).lt.one) then
+          modtime=modtime/(one+(polymer_factor**2)*(trace_A-three))
+         else
+          print *,"eps=polymer_factor**2"
+          print *,"need eps * sdim < 1"
+          stop
+         endif
+        else
+         print *,"polymer_factor invalid: ",polymer_factor
+         stop
+        endif
+       else
+        print *,"trace_A invalid"
+        stop
+       endif
+      else
+       print *,"viscoelastic_model invalid"
+       stop
+      endif
+
+      if ((viscoelastic_model.eq.0).or. & !FENE-CR
+          (viscoelastic_model.eq.1).or. & !OLDROYD_B
+          (viscoelastic_model.eq.5).or. & !FENE-P
+          (viscoelastic_model.eq.6).or. & !linear PTT
+          (viscoelastic_model.eq.3)) then !incremental
+
+       do ii=1,3 
+       do jj=1,3 
+
+        Aadvect(ii,jj)=Q(ii,jj)
+
+         !cfl cond: |u|dt<dx and dt|gradu|<1
+        if (dumbbell_model.eq.1) then
+         Smult(ii,jj)=dt*gradu_FENECR(ii,jj) 
+        else if (viscoelastic_model.eq.3) then !incremental
+         if (dumbbell_model.eq.0) then
+          Smult(ii,jj)=dt*W_Jaumann(ii,jj) 
+         else
+          print *,"dumbbell_model invalid"
+          stop
+         endif
+        else
+         print *,"viscoelastic_model invalid"
+         stop
+        endif
+
+        if (Smult(ii,jj).le.-one+VOFTOL) then
+         Smult(ii,jj)=-one+VOFTOL
+        else if (Smult(ii,jj).ge.one-VOFTOL) then
+         Smult(ii,jj)=one-VOFTOL
+        else if (abs(Smult(ii,jj)).le.one) then
+         ! do nothing
+        else
+         print *,"Smult(ii,jj) became corrupt"
+         stop
+        endif
+    
+       enddo ! jj=1,3
+       enddo ! ii=1,3
+
+       do ii=1,3
+
+        Smult(ii,ii)=Smult(ii,ii)+one
+
+         ! Aadvect <-- Q+I
+        if (dumbbell_model.eq.1) then
+         Aadvect(ii,ii)=Aadvect(ii,ii)+one
+        else if (dumbbell_model.eq.0) then ! e.g. incremental model
+         ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+         ! do nothing
+        else
+         print *,"dumbbell_model invalid"
+         stop
+        endif
+       enddo  ! ii=1,3
+
+       call project_A_to_positive_definite(Aadvect, &
+               viscoelastic_model,polymer_factor)
+
+       if (dumbbell_model.eq.1) then
+        ! do nothing
+       else if (viscoelastic_model.eq.3) then !incremental
+        if (dumbbell_model.eq.0) then
+         magA=zero
+         do ii=1,3
+         do jj=1,3
+          magA=magA+Aadvect(ii,jj)**2
+         enddo
+         enddo
+         magA=sqrt(magA)
+         NP_dotdot_D=zero
+         do ii=1,3
+         do jj=1,3
+          if (magA.gt.zero) then
+           NP(ii,jj)=Aadvect(ii,jj)/magA
+          else if (magA.eq.zero) then
+           NP(ii,jj)=zero
+          else
+           print *,"magA invalid"
+           stop
+          endif
+          NP_dotdot_D=NP_dotdot_D+NP(ii,jj)*visctensor(ii,jj)
+         enddo
+         enddo
+         ! scaled by the bulk modulus
+         Y_plastic_parm_scaled=(1.0d0/100.0d0)*sqrt(2.0d0/3.0d0)
+         f_plastic=magA-Y_plastic_parm_scaled
+         do ii=1,3
+         do jj=1,3
+
+          if ((f_plastic.lt.zero).or. &
+              ((f_plastic.ge.zero).and.(NP_dotdot_D.le.zero))) then
+           Aadvect(ii,jj)=Aadvect(ii,jj)+dt*two*visctensor(ii,jj) 
+          else if ((f_plastic.ge.zero).and.(NP_dotdot_D.gt.zero)) then
+           Aadvect(ii,jj)=Y_plastic_parm_scaled*NP(ii,jj)
+          else
+           print *,"f_plastic or NP_dotdot_D invalid"
+           stop
+          endif
+
+         enddo !jj=1,3
+         enddo !ii=1,3
+        else
+         print *,"dumbbell_model invalid"
+         stop
+        endif
+       else
+        print *,"viscoelastic_model invalid"
+        stop
+       endif
+
+       do ii=1,3
+       do jj=1,3
+        SA(ii,jj)=zero
+        do kk=1,3
+         SA(ii,jj)=SA(ii,jj)+Smult(ii,kk)*Aadvect(kk,jj)
+        enddo
+       enddo
+       enddo
+       
+       do ii=1,3
+       do jj=1,3
+        SAS(ii,jj)=zero
+        do kk=1,3
+         SAS(ii,jj)=SAS(ii,jj)+SA(ii,kk)*Smult(jj,kk)
+        enddo
+        Q(ii,jj)=SAS(ii,jj)
+       enddo  ! jj=1..3
+       enddo  ! ii=1..3
+
+        !NOTE: gradU already has hoop terms built in.
+       if (SDIM.eq.3) then
+        ! do nothing
+       else if (SDIM.eq.2) then
+        ! do nothing
+       else
+        print *,"dimension bust"
+        stop
+       endif
+
+        ! Q=S A S^T at this stage
+       call project_A_to_positive_definite(Q, &
+             viscoelastic_model,polymer_factor)
+ 
+       do ii=1,3
+
+        if (dumbbell_model.eq.1) then
+         Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
+        else if (dumbbell_model.eq.0) then ! e.g. incremental model
+         ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+         ! do nothing
+        else
+         print *,"dumbbell_model invalid"
+         stop
+        endif
+
+       enddo !ii=1,3
+
+       ! note: for viscoelastic_model==3,
+       !  modtime=lambda_tilde=elastic_time >> 1
+       !
+       ! lambda_tilde=f(A)/lambda=(1/(lambda(1-tr(A)/L^2)))
+       ! ofs \equiv equilibrium_diagonal
+       ! lambda_tilde (Q^n+1-Q^n)=-dt (Q^n+1 + ofs I)
+       ! (Q^n+1-Q^n)/dt = -(Q^n+1+ofs)/lambda_tilde
+       ! Q^n+1 * (1/dt+1/lambda_tilde) = Q_n/dt-ofs/lambda_tilde
+       ! Q^n+1 * (1+dt/lambda_tilde) = Q_n-ofs*dt/lambda_tilde
+       ! Q^{n+1}=(lambda_tilde/(lambda_tilde+dt))*(Q_n-ofs*dt/lambda_tilde)
+       ! Q^n+1 = (Q_n/dt-ofs/lambda_tilde)*dt*lambda_tilde/
+       !         (lambda_tilde+dt)
+       ! Q^n+1=(Q^n * lambda_tilde - ofs * dt)/(lambda+dt) 
+       do ii=1,3
+       do jj=1,3
+        if (ii.eq.jj) then
+         Q(ii,jj)=(modtime*Q(ii,jj)-equilibrium_diagonal*dt)/(modtime+dt)
+        else if (ii.ne.jj) then
+         Q(ii,jj)=modtime*Q(ii,jj)/(modtime+dt)
+        else
+         print *,"ii or jj invalid"
+         stop
+        endif
+       enddo
+       enddo
+
+       do ii=1,3
+       do jj=1,3
+        Aadvect(ii,jj)=Q(ii,jj)
+       enddo
+       enddo
+
+       do ii=1,3
+        if (dumbbell_model.eq.1) then
+         Aadvect(ii,jj)=Aadvect(ii,jj)+one
+        else if (dumbbell_model.eq.0) then ! e.g. incremental model
+         ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+         ! do nothing
+        else
+         print *,"dumbbell_model invalid"
+         stop
+        endif
+       enddo ! do ii=1,3
+
+       call project_A_to_positive_definite(Aadvect, &
+               viscoelastic_model,polymer_factor)
+
+       do ii=1,3
+       do jj=1,3
+         Q(ii,jj)=Aadvect(ii,jj)
+       enddo
+       enddo
+
+       do ii=1,3
+        if (dumbbell_model.eq.1) then
+         Q(ii,jj)=Q(ii,jj)-one
+        else if (dumbbell_model.eq.0) then ! e.g. incremental model
+         ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+         ! do nothing
+        else
+         print *,"dumbbell_model invalid"
+         stop
+        endif
+       enddo
+       enddo
+
+      else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
+       print *,"this routine should not be called if viscoelastic_model==4"
+       stop
+      else 
+       print *,"viscoelastic_model invalid"
+       stop
+      endif
+
+      do dir_local=1,ENUM_NUM_TENSOR_TYPE
+       call stress_index(dir_local,ii,jj)
+       tnew(dir_local)=Q(ii,jj)
+      enddo
+
+      return
+      end subroutine point_updatetensor
+
+
+        ! called form tensor_advecton_update() in NavierStokes.cpp
+        ! vel is the advective velocity
       subroutine fort_updatetensor( &
        level, &
        finest_level, &
@@ -9636,9 +10185,11 @@ stop
 
       REAL_T, intent(out), target :: tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: tnew_ptr(D_DECL(:,:,:),:)
+      REAL_T :: point_tnew(ENUM_NUM_TENSOR_TYPE)
 
       REAL_T, intent(in), target :: told(DIMV(told),ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: told_ptr(D_DECL(:,:,:),:)
+      REAL_T :: point_told(ENUM_NUM_TENSOR_TYPE)
 
       INTEGER_T :: i,j,k,n
       REAL_T, intent(in) :: dt,elastic_time
@@ -9647,30 +10198,7 @@ stop
       INTEGER_T, intent(in) :: transposegradu
       INTEGER_T, intent(in) :: bc(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: irz
-      INTEGER_T ii,jj,kk
-      REAL_T visctensor(3,3)
-      REAL_T gradu_FENECR(3,3)
-      REAL_T gradV(3,3)
-      REAL_T Q(3,3)
-      REAL_T W_Jaumann(3,3)  ! W=(1/2)(grad V - (grad V)^T)
-      REAL_T Aadvect(3,3)
-      REAL_T Smult(3,3)
-      REAL_T SA(3,3)
-      REAL_T SAS(3,3)
-      REAL_T shear
-      REAL_T modtime,trace_A,equilibrium_diagonal
-      REAL_T growthrate,rr,uu
-
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
-
-      INTEGER_T dir_local
-
-      INTEGER_T im_elastic
-      INTEGER_T dumbbell_model
-      REAL_T magA,NP_dotdot_D,Y_plastic_parm_scaled,f_plastic
-
-      nhalf=3
+      INTEGER_T :: dir_local
 
       tnew_ptr=>tnew
 
@@ -9753,394 +10281,42 @@ stop
        stop
       endif
 
-      if ((viscoelastic_model.eq.0).or. & !FENE-CR
-          (viscoelastic_model.eq.1).or. & !OLDROYD-B
-          (viscoelastic_model.eq.5).or. & !FENE-P
-          (viscoelastic_model.eq.6)) then !linear PTT
-       dumbbell_model=1
-      else if (viscoelastic_model.eq.3) then ! incremental model
-       ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-       dumbbell_model=0
-      else if (viscoelastic_model.eq.4) then!FSI pressure velocity coupling
-       print *,"this routine should not be called if viscoelastic_model==4"
-       stop
-      else
-       print *,"viscoelastic_model invalid"
-       stop
-      endif
-
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       call gridsten_level(xsten,i,j,k,level,nhalf)
-
-       ! D=(1/2)(gradU + gradU^Transpose)
-       ! tendata has: |D|, D, grad U
-       ! 1: sqrt(2 * D : D)
-       ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
-       ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
-       shear=tendata(D_DECL(i,j,k),1) ! sqrt(2 D:D)
-       n=2
-       do ii=1,3
-       do jj=1,3
-         ! (1/2) (grad U + (grad U)^T)
-        visctensor(ii,jj)=tendata(D_DECL(i,j,k),n)
-        n=n+1
-       enddo 
-       enddo 
-       do ii=1,3
-       do jj=1,3
-        gradV(ii,jj)=tendata(D_DECL(i,j,k),n) !(veldir,dir)
-        if (transposegradu.eq.0) then
-          !gradu(veldir,dir)
-         gradu_FENECR(ii,jj)=tendata(D_DECL(i,j,k),n)
-        else if (transposegradu.eq.1) then
-          !gradu(dir,veldir)
-         gradu_FENECR(jj,ii)=tendata(D_DECL(i,j,k),n)
-        else
-         print *,"transposegradu invalid"
-         stop
-        endif
-
-        n=n+1
-       enddo 
-       enddo 
-       do ii=1,3
-       do jj=1,3
-        W_Jaumann(ii,jj)=half*(gradV(ii,jj)-gradV(jj,ii))
-       enddo 
-       enddo 
-       
-       do ii=1,3
-       do jj=1,3
-        Q(ii,jj)=zero
-       enddo
-       enddo
        do dir_local=1,ENUM_NUM_TENSOR_TYPE
-        call stress_index(dir_local,ii,jj)
-        Q(ii,jj)=told(D_DECL(i,j,k),dir_local)
+        point_told(dir_local)=told(D_DECL(i,j,k),dir_local)
        enddo
-       Q(2,1)=Q(1,2)
-       Q(3,1)=Q(1,3)
-       Q(3,2)=Q(2,3)
 
-        ! modtime=lambda/f(A)
-       modtime=visc(D_DECL(i,j,k),2*nmat+im_critical+1)
-       if (modtime.ge.zero) then
-        ! do nothing
-       else
-        print *,"modtime invalid"
-        stop
-       endif
-
-       trace_A=zero
-       do ii=1,3
-        trace_A=trace_A+Q(ii,ii)+one
-        if (dumbbell_model.eq.1) then
-         if (Q(ii,ii)+one.gt.zero) then
-          ! do nothing
-         else
-          print *,"A=Q+I should be positive definite"
-          stop
-         endif
-        else if (dumbbell_model.eq.0) then ! e.g. incremental model
-         ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-         ! do nothing
-        else
-         print *,"dumbbell_model invalid"
-         stop
-        endif
-       enddo ! ii=1,3
-
-        ! (1/lambda)*(f(A)A-I)=
-        ! (f(A)/lambda)*(A-I/f(A))=
-        ! (f(A)/lambda)*(Q+I-I/f(A))
-        ! 1-1/f(A)=1-(1-trac(A)/L^2)=trac(A)/L^2
-        ! (1/lambda)*(f(A)A-I)=(f(A)/lambda)*(Q+trac(A)I/L^{2})
-       if (viscoelastic_model.eq.5) then !FENE-P          
-        if (trace_A.gt.zero) then
-         if (polymer_factor.gt.zero) then !1/L
-          equilibrium_diagonal=min(trace_A*(polymer_factor**2),one)
-         else
-          print *,"polymer_factor out of range for FENE-P"
-          stop
-         endif
-        else
-         print *,"trace_A should be positive for FENE-P"
-         stop
-        endif
-       else if (viscoelastic_model.eq.0) then !FENE-CR
-        equilibrium_diagonal=zero
-       else if (viscoelastic_model.eq.1) then !OLDROYD-B
-        equilibrium_diagonal=zero
-       else if (viscoelastic_model.eq.3) then ! incremental model
-        ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-        equilibrium_diagonal=zero
-       else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
-        print *,"this routine should not be called if visc_model==4"
-        stop
-       else if (viscoelastic_model.eq.6) then !linearPTT
-        equilibrium_diagonal=zero
-        if (trace_A.gt.zero) then
-         if (polymer_factor.ge.zero) then 
-          if (SDIM*(polymer_factor**2).lt.one) then
-           modtime=modtime/(one+(polymer_factor**2)*(trace_A-three))
-          else
-           print *,"eps=polymer_factor**2"
-           print *,"need eps * sdim < 1"
-           stop
-          endif
-         else
-          print *,"polymer_factor invalid: ",polymer_factor
-          stop
-         endif
-        else
-         print *,"trace_A invalid"
-         stop
-        endif
-       else
-        print *,"viscoelastic_model invalid"
-        stop
-       endif
-
-       if ((viscoelastic_model.eq.0).or. & !FENE-CR
-           (viscoelastic_model.eq.1).or. & !OLDROYD_B
-           (viscoelastic_model.eq.5).or. & !FENE-P
-           (viscoelastic_model.eq.6).or. & !linear PTT
-           (viscoelastic_model.eq.3)) then !incremental
-
-        do ii=1,3 
-        do jj=1,3 
-
-         Aadvect(ii,jj)=Q(ii,jj)
-
-          !cfl cond: |u|dt<dx and dt|gradu|<1
-         if (dumbbell_model.eq.1) then
-          Smult(ii,jj)=dt*gradu_FENECR(ii,jj) 
-         else if (viscoelastic_model.eq.3) then !incremental
-          if (dumbbell_model.eq.0) then
-           Smult(ii,jj)=dt*W_Jaumann(ii,jj) 
-          else
-           print *,"dumbbell_model invalid"
-           stop
-          endif
-         else
-          print *,"viscoelastic_model invalid"
-          stop
-         endif
-
-         if (Smult(ii,jj).le.-one+VOFTOL) then
-          Smult(ii,jj)=-one+VOFTOL
-         else if (Smult(ii,jj).ge.one-VOFTOL) then
-          Smult(ii,jj)=one-VOFTOL
-         else if (abs(Smult(ii,jj)).le.one) then
-          ! do nothing
-         else
-          print *,"Smult(ii,jj) became corrupt"
-          stop
-         endif
-    
-        enddo ! jj=1,3
-        enddo ! ii=1,3
-
-        do ii=1,3
-
-         Smult(ii,ii)=Smult(ii,ii)+one
-
-          ! Aadvect <-- Q+I
-         if (dumbbell_model.eq.1) then
-          Aadvect(ii,ii)=Aadvect(ii,ii)+one
-         else if (dumbbell_model.eq.0) then ! e.g. incremental model
-          ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-          ! do nothing
-         else
-          print *,"dumbbell_model invalid"
-          stop
-         endif
-        enddo  ! ii=1,3
-
-        call project_A_to_positive_definite(Aadvect, &
-                viscoelastic_model,polymer_factor)
-
-        if (dumbbell_model.eq.1) then
-         ! do nothing
-        else if (viscoelastic_model.eq.3) then !incremental
-         if (dumbbell_model.eq.0) then
-          magA=zero
-          do ii=1,3
-          do jj=1,3
-           magA=magA+Aadvect(ii,jj)**2
-          enddo
-          enddo
-          magA=sqrt(magA)
-          NP_dotdot_D=zero
-          do ii=1,3
-          do jj=1,3
-           if (magA.gt.zero) then
-            NP(ii,jj)=Aadvect(ii,jj)/magA
-           else if (magA.eq.zero) then
-            NP(ii,jj)=zero
-           else
-            print *,"magA invalid"
-            stop
-           endif
-           NP_dotdot_D=NP_dotdot_D+NP(ii,jj)*visctensor(ii,jj)
-          enddo
-          enddo
-          ! scaled by the bulk modulus
-          Y_plastic_parm_scaled=(1.0d0/100.0d0)*sqrt(2.0d0/3.0d0)
-          f_plastic=magA-Y_plastic_parm_scaled
-          do ii=1,3
-          do jj=1,3
-
-           if ((f_plastic.lt.zero).or. &
-               ((f_plastic.ge.zero).and.(NP_dotdot_D.le.zero))) then
-            Aadvect(ii,jj)=Aadvect(ii,jj)+dt*two*visctensor(ii,jj) 
-           else if ((f_plastic.ge.zero).and.(NP_dotdot_D.gt.zero)) then
-            Aadvect(ii,jj)=Y_plastic_parm_scaled*NP(ii,jj)
-           else
-            print *,"f_plastic or NP_dotdot_D invalid"
-            stop
-           endif
-
-          enddo !jj=1,3
-          enddo !ii=1,3
-         else
-          print *,"dumbbell_model invalid"
-          stop
-         endif
-        else
-         print *,"viscoelastic_model invalid"
-         stop
-        endif
-
-        do ii=1,3
-        do jj=1,3
-         SA(ii,jj)=zero
-         do kk=1,3
-          SA(ii,jj)=SA(ii,jj)+Smult(ii,kk)*Aadvect(kk,jj)
-         enddo
-        enddo
-        enddo
-        
-        do ii=1,3
-        do jj=1,3
-         SAS(ii,jj)=zero
-         do kk=1,3
-          SAS(ii,jj)=SAS(ii,jj)+SA(ii,kk)*Smult(jj,kk)
-         enddo
-         Q(ii,jj)=SAS(ii,jj)
-        enddo  ! jj=1..3
-        enddo  ! ii=1..3
-
-         !NOTE: gradU already has hoop terms built in.
-        if (SDIM.eq.3) then
-         ! do nothing
-        else if (SDIM.eq.2) then
-         ! do nothing
-        else
-         print *,"dimension bust"
-         stop
-        endif
-
-         ! Q=S A S^T at this stage
-        call project_A_to_positive_definite(Q, &
-              viscoelastic_model,polymer_factor)
- 
-        do ii=1,3
-
-         if (dumbbell_model.eq.1) then
-          Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
-         else if (dumbbell_model.eq.0) then ! e.g. incremental model
-          ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-          ! do nothing
-         else
-          print *,"dumbbell_model invalid"
-          stop
-         endif
-
-        enddo !ii=1,3
-
-        ! note: for viscoelastic_model==3,
-        !  modtime=lambda_tilde=elastic_time >> 1
-        !
-        ! lambda_tilde=f(A)/lambda=(1/(lambda(1-tr(A)/L^2)))
-        ! ofs \equiv equilibrium_diagonal
-        ! lambda_tilde (Q^n+1-Q^n)=-dt (Q^n+1 + ofs I)
-        ! (Q^n+1-Q^n)/dt = -(Q^n+1+ofs)/lambda_tilde
-        ! Q^n+1 * (1/dt+1/lambda_tilde) = Q_n/dt-ofs/lambda_tilde
-        ! Q^n+1 * (1+dt/lambda_tilde) = Q_n-ofs*dt/lambda_tilde
-        ! Q^{n+1}=(lambda_tilde/(lambda_tilde+dt))*(Q_n-ofs*dt/lambda_tilde)
-        ! Q^n+1 = (Q_n/dt-ofs/lambda_tilde)*dt*lambda_tilde/
-        !         (lambda_tilde+dt)
-        ! Q^n+1=(Q^n * lambda_tilde - ofs * dt)/(lambda+dt) 
-        do ii=1,3
-        do jj=1,3
-         if (ii.eq.jj) then
-          Q(ii,jj)=(modtime*Q(ii,jj)-equilibrium_diagonal*dt)/(modtime+dt)
-         else if (ii.ne.jj) then
-          Q(ii,jj)=modtime*Q(ii,jj)/(modtime+dt)
-         else
-          print *,"ii or jj invalid"
-          stop
-         endif
-        enddo
-        enddo
-
-        do ii=1,3
-        do jj=1,3
-         Aadvect(ii,jj)=Q(ii,jj)
-        enddo
-        enddo
-
-        do ii=1,3
-         if (dumbbell_model.eq.1) then
-          Aadvect(ii,jj)=Aadvect(ii,jj)+one
-         else if (dumbbell_model.eq.0) then ! e.g. incremental model
-          ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-          ! do nothing
-         else
-          print *,"dumbbell_model invalid"
-          stop
-         endif
-        enddo ! do ii=1,3
-
-        call project_A_to_positive_definite(Aadvect, &
-                viscoelastic_model,polymer_factor)
-
-        do ii=1,3
-        do jj=1,3
-          Q(ii,jj)=Aadvect(ii,jj)
-        enddo
-        enddo
-
-        do ii=1,3
-         if (dumbbell_model.eq.1) then
-          Q(ii,jj)=Q(ii,jj)-one
-         else if (dumbbell_model.eq.0) then ! e.g. incremental model
-          ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-          ! do nothing
-         else
-          print *,"dumbbell_model invalid"
-          stop
-         endif
-        enddo
-        enddo
-
-       else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
-        print *,"this routine should not be called if viscoelastic_model==4"
-        stop
-       else 
-        print *,"viscoelastic_model invalid"
-        stop
-       endif
+       call point_updatetensor( &
+        i,j,k, &
+        level, &
+        finest_level, &
+        nmat, &
+        im_critical, &  ! 0<=im_critical<=nmat-1
+        ncomp_visc, & 
+        visc_ptr, &
+        tendata_ptr, & !tendata:fort_getshear,iproject=only_scalar=0
+        dx,xlo, &
+        vel_ptr, &
+        point_tnew, &
+        point_told, &
+        tilelo, tilehi,  &
+        fablo, fabhi, &
+        bfact,  &
+        dt, &
+        elastic_time, &
+        viscoelastic_model, &
+        polymer_factor, &
+        irz, &
+        bc, &
+        transposegradu) 
 
        do dir_local=1,ENUM_NUM_TENSOR_TYPE
-        call stress_index(dir_local,ii,jj)
-        tnew(D_DECL(i,j,k),dir_local)=Q(ii,jj)
+        tnew(D_DECL(i,j,k),dir_local)=point_tnew(dir_local)
        enddo
 
       enddo
@@ -10149,141 +10325,6 @@ stop
 
       return
       end subroutine fort_updatetensor
-
-      subroutine fort_fix_hoop_tensor( &
-       level, &
-       finest_level, &
-       nmat,im, & 
-       dx,xlo, &
-       tnew,DIMS(tnew), &
-       tilelo, tilehi,  &
-       fablo, fabhi, &
-       bfact,  &
-       irz) &
-      bind(c,name='fort_fix_hoop_tensor')
-
-      use probcommon_module
-      use global_utility_module
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: nmat,im
-      INTEGER_T, intent(in) :: DIMDEC(tnew)
-      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
-      INTEGER_T :: growlo(3), growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
-
-      REAL_T, intent(inout), target :: tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE)
-      REAL_T, pointer :: tnew_ptr(D_DECL(:,:,:),:)
-
-      INTEGER_T :: i,j,k
-      INTEGER_T irz
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
-      REAL_T Q,Qp1,Qnew
-      REAL_T rr,rrp1
-
-      nhalf=3
-
-      tnew_ptr=>tnew
-
-      if (irz.ne.levelrz) then
-       print *,"irz invalid"
-       stop
-      endif
-      if (bfact.lt.1) then
-       print *,"bfact invalid61"
-       stop
-      endif
-      if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid 35"
-       stop
-      endif
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if ((im.lt.0).or.(im.ge.nmat)) then
-       print *,"im invalid28"
-       stop
-      endif
-
-      call checkbound_array(fablo,fabhi,tnew_ptr,0,-1,62)
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
-
-      if ((SDIM.eq.2).and.(levelrz.eq.1)) then
-
-       if (growlo(1).eq.0) then
-        i=0
-        do j=growlo(2),growhi(2)
-        do k=growlo(3),growhi(3)
-
-         call gridsten_level(xsten,i,j,k,level,nhalf)
-
-         if (abs(xsten(-1,1)).le.VOFTOL) then
-
-          if (fabhi(1).ge.1) then
-
-           Q=tnew(D_DECL(i,j,k),4)
-           Qp1=tnew(D_DECL(i+1,j,k),4)
-            
-           rr=xsten(0,1)
-           rrp1=xsten(2,1)
-           if ((rr.gt.zero).and.(rrp1.gt.rr)) then
-            ! (Qnew-0)/rr = (Qp1-Qnew)/rrp1
-            ! Qnew(1/rr+1/rrp1)=Qp1/rrp1
-            ! Qnew(rrp1/rr + 1)=Qp1
-            ! Qnew=Qp1/(rrp1/rr + 1)
-            Qnew=Qp1/(rrp1/rr+one)
-            if (abs(Qnew).gt.abs(Q)) then
-             Qnew=Q
-            endif
-           else
-            print *,"rr or rrp1 invalid"
-            stop
-           endif
-           ! we do not want the negative reflected
-           ! ghost value of Q to be less than or equal
-           ! to -1.0, otherwise the code will complain about loss of 
-           ! the positive definite property.  (the code might still
-           ! complain, because "average down" and advection might bring
-           ! large values of Q33 to the i=0 column prior to this routine)
-           if (Qnew.ge.half) then
-            Qnew=half
-           endif
-
-           tnew(D_DECL(i,j,k),4)=Qnew
-          else
-           print *,"fabhi invalid"
-           stop
-          endif
-
-         else
-          print *,"abs(xsten(-1,1)) invalid"
-          stop
-         endif
-
-        enddo
-        enddo
- 
-       else if (growlo(1).gt.0) then
-        ! do nothing
-       else
-        print *,"growlo(1) invalid"
-        stop
-       endif
-      else
-       print *,"sdim or levelrz invalid"
-       stop
-      endif
-
-      return
-      end subroutine fort_fix_hoop_tensor
 
 
        ! adjust_temperature==1  modify temperature (Snew and coeff)
@@ -22652,6 +22693,221 @@ stop
       enddo
 
       end subroutine fort_assimilate_Q_from_particles
+
+      subroutine fort_update_particle_tensor( &
+       tid, &
+       cur_time_slab, &
+       particles, & 
+       Np, & ! pass by value
+       real_compALL, &
+       N_real_comp, & ! pass by value
+       level, &
+       finest_level, &
+       nmat, &
+       im_critical, &  ! 0<=im_critical<=nmat-1
+       partid, & !0<=partid<num_materials_viscoelastic
+       scomp_tensor, & !scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE
+       ncomp_visc, & 
+       visc,DIMS(visc), &
+       tendata,DIMS(tendata), & !tendata:fort_getshear,iproject=only_scalar=0
+       dx,xlo, &
+       vel,DIMS(vel), &
+       tilelo, tilehi,  &
+       fablo, fabhi, &
+       bfact,  &
+       dt, &
+       elastic_time, &
+       viscoelastic_model, &
+       polymer_factor, &
+       irz, &
+       bc, &
+       transposegradu) &
+      bind(c,name='fort_update_particle_tensor')
+
+      use probcommon_module
+      use global_utility_module
+      IMPLICIT NONE
+
+      INTEGER_T, value, intent(in) :: Np ! pass by value
+      INTEGER_T, value, intent(in) :: N_real_comp ! pass by value
+      type(particle_t), intent(in), target :: particles(Np)
+      REAL_T, intent(in), target :: real_compALL(N_real_comp)
+
+      INTEGER_T, intent(in) :: tid
+      INTEGER_T, intent(in) :: partid !0<=partid<num_materials_viscoelastic
+      !scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE
+      INTEGER_T, intent(in) :: scomp_tensor
+      INTEGER_T, intent(in) :: level
+      INTEGER_T, intent(in) :: finest_level
+      INTEGER_T, intent(in) :: nmat,im_critical
+      INTEGER_T, intent(in) :: ncomp_visc
+      INTEGER_T, intent(in) :: DIMDEC(visc)
+      INTEGER_T, intent(in) :: DIMDEC(tendata)
+      INTEGER_T, intent(in) :: DIMDEC(vel)
+      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, intent(in) :: bfact
+
+      REAL_T, intent(in) :: cur_time_slab
+
+      REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
+
+      REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
+      REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
+
+       ! D=(1/2)(gradU + gradU^Transpose)
+       ! 1: sqrt(2 * D : D)
+       ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
+       ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
+      REAL_T, intent(in), target :: tendata(DIMV(tendata),20)
+      REAL_T, pointer :: tendata_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
+      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, intent(out), target :: tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE)
+      REAL_T, pointer :: tnew_ptr(D_DECL(:,:,:),:)
+      REAL_T :: point_tnew(ENUM_NUM_TENSOR_TYPE)
+
+      REAL_T, intent(in), target :: told(DIMV(told),ENUM_NUM_TENSOR_TYPE)
+      REAL_T, pointer :: told_ptr(D_DECL(:,:,:),:)
+      REAL_T :: point_told(ENUM_NUM_TENSOR_TYPE)
+
+      INTEGER_T :: i,j,k,n
+      REAL_T, intent(in) :: dt,elastic_time
+      INTEGER_T, intent(in) :: viscoelastic_model
+      REAL_T, intent(in) :: polymer_factor
+      INTEGER_T, intent(in) :: transposegradu
+      INTEGER_T, intent(in) :: bc(SDIM,2,SDIM)
+      INTEGER_T, intent(in) :: irz
+      INTEGER_T :: dir_local
+
+      tnew_ptr=>tnew
+
+      if (irz.ne.levelrz) then
+       print *,"irz invalid"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid60"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid 34"
+       stop
+      endif
+
+      if (polymer_factor.ge.zero) then !1/L
+       ! do nothing
+      else
+       print *,"polymer_factor out of range"
+       stop
+      endif
+
+      if (viscoelastic_model.eq.0) then ! FENE-CR
+       ! coeff=(visc-etaS)/(modtime+dt)
+       ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
+      else if (viscoelastic_model.eq.1) then ! Oldroyd-B
+       ! coeff=(visc-etaS)/(modtime+dt)
+       ! modtime=elastic_time
+      else if (viscoelastic_model.eq.5) then ! FENE-P
+       ! coeff=(visc-etaS)/(modtime+dt)
+       ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
+      else if (viscoelastic_model.eq.6) then ! linear PTT
+       ! coeff=(visc-etaS)/(modtime+dt)
+       ! modtime=elastic_time
+      else if (viscoelastic_model.eq.3) then ! incremental model
+       ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+       ! coeff=elastic_viscosity
+      else if (viscoelastic_model.eq.4) then !pressure velocity FSI coupling
+       print *,"this routine should not be called if visc_model==4"
+       stop
+      else
+       print *,"viscoelastic_model invalid"
+       stop
+      endif
+
+      if (nmat.ne.num_materials) then
+       print *,"nmat invalid"
+       stop
+      endif
+      if ((im_critical.lt.0).or.(im_critical.ge.nmat)) then
+       print *,"im_critical invalid27"
+       stop
+      endif
+      if (ncomp_visc.ne.3*nmat) then
+       print *,"ncomp visc invalid"
+       stop
+      endif
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
+      endif
+
+      visc_ptr=>visc
+      call checkbound_array(fablo,fabhi,visc_ptr,0,-1,9)
+      tendata_ptr=>tendata
+      call checkbound_array(fablo,fabhi,tendata_ptr,0,-1,9)
+      vel_ptr=>vel
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,61)
+      call checkbound_array(fablo,fabhi,tnew_ptr,0,-1,62)
+
+      told_ptr=>told
+      call checkbound_array(fablo,fabhi,told_ptr,0,-1,63)
+
+      if ((transposegradu.ne.0).and. &
+          (transposegradu.ne.1)) then
+       print *,"transposegradu invalid"
+       stop
+      endif
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       do dir_local=1,ENUM_NUM_TENSOR_TYPE
+        point_told(dir_local)=told(D_DECL(i,j,k),dir_local)
+       enddo
+
+       call point_updatetensor( &
+        i,j,k, &
+        level, &
+        finest_level, &
+        nmat, &
+        im_critical, &  ! 0<=im_critical<=nmat-1
+        ncomp_visc, & 
+        visc_ptr, &
+        tendata_ptr, & !tendata:fort_getshear,iproject=only_scalar=0
+        dx,xlo, &
+        vel_ptr, &
+        point_tnew, &
+        point_told, &
+        tilelo, tilehi,  &
+        fablo, fabhi, &
+        bfact,  &
+        dt, &
+        elastic_time, &
+        viscoelastic_model, &
+        polymer_factor, &
+        irz, &
+        bc, &
+        transposegradu) 
+
+       do dir_local=1,ENUM_NUM_TENSOR_TYPE
+        tnew(D_DECL(i,j,k),dir_local)=point_tnew(dir_local)
+       enddo
+
+      enddo
+      enddo
+      enddo
+
+      return
+      end subroutine fort_update_particle_tensor
+
 
       end module FSI_PC_module
 
