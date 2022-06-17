@@ -322,7 +322,7 @@ public:
     void correct_Q_with_particles();
 
     void assimilate_Q_from_particles(
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC);
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC);
 
     //
     // Advance grids at this level in time.
@@ -902,7 +902,7 @@ protected:
     void prescribe_solid_geometry(Real time,int renormalize_only);
 
     void move_particles(
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC);
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC);
 
     void truncate_VOF(Vector<Real>& delta_mass_all);
 

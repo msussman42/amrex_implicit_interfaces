@@ -9213,7 +9213,10 @@ void NavierStokes::post_restart() {
      amrex::Error("num_SoA_var invalid");
 
     using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
+
+    if (N_EXTRA_INT==0) 
+     amrex::Error("need N_EXTRA_INT>0");
 
     AmrLevel0_new_dataPC[i]=new My_ParticleContainer(parent);
     for (int ns=0;ns<num_SoA_var;ns++)
@@ -9644,7 +9647,7 @@ NavierStokes::initData () {
   // do nothing
  } else if (particles_flag==1) {
   using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
   My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
   int nGrow_Redistribute=0;
   int local_Redistribute=0;
@@ -9893,7 +9896,7 @@ NavierStokes::init(
    int local_redistribute=0;
 
    using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
     // if level==0, we must copy from the old Amr_level (level==0) to the
     // new Amr_level prior to deleting the old level==0 structure.
@@ -10038,7 +10041,7 @@ NavierStokes::init (const BoxArray& ba_in,
     amrex::Error("level invalid");
      
    using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
    NavierStokes& ns_level0=getLevel(0);
    My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
@@ -21092,7 +21095,7 @@ void NavierStokes::post_regrid (int lbase,
    // do nothing
   } else if (particles_flag==1) {
    using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
    NavierStokes& ns_level0=getLevel(0);
    My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
    current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
@@ -22331,7 +22334,10 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 }  // end subroutine prepare_post_process
 
 void NavierStokes::assimilate_Q_from_particles(
-   AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC) {
+   AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC) {
+
+ if (N_EXTRA_INT==0) 
+  amrex::Error("need N_EXTRA_INT>0");
 
  int nmat=num_materials;
  bool use_tiling=ns_tiling;
@@ -22398,7 +22404,7 @@ void NavierStokes::assimilate_Q_from_particles(
    //  amrex::ParticleTile<SDIM,0,0,0>
    // (Q variables are stored in "SoA = structure of arrays")
    using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
    auto& particles_grid_tile = localPC.GetParticles(level)
      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
@@ -22530,7 +22536,7 @@ NavierStokes::init_particle_container(int append_flag) {
    MultiFab* tensor_mf=getStateTensor(1,0,NUM_CELL_ELASTIC,cur_time_slab);
 
    using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
    NavierStokes& ns_level0=getLevel(0);
    My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
@@ -22564,8 +22570,12 @@ NavierStokes::init_particle_container(int append_flag) {
     BaseFab<int> cell_particle_count(tilegrid,2);
     cell_particle_count.setVal(0);
 
+    if (N_EXTRA_INT==0) 
+     amrex::Error("need N_EXTRA_INT>0");
+
      // allocate for just one particle for now.
-    int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL+NUM_CELL_ELASTIC;
+    int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL+NUM_CELL_ELASTIC+
+     N_EXTRA_INT;
     Vector< Real > new_particle_data;
     new_particle_data.resize(single_particle_size);
 
@@ -22856,7 +22866,7 @@ NavierStokes::particle_tensor_advection_update() {
     amrex::Error("tendata_mf invalid nComp()");
 
    using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
    NavierStokes& ns_level0=getLevel(0);
    My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
@@ -23118,7 +23128,7 @@ NavierStokes::post_init_state () {
    ns_level.init_particle_container(append_flag);
   }
   using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
   NavierStokes& ns_level0=getLevel(0);
   My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);

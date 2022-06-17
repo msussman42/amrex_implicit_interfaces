@@ -6651,7 +6651,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 }  // end subroutine prescribe_solid_geometry()
 
 void NavierStokes::move_particles(
-  AmrParticleContainer<N_EXTRA_REAL,0,0,0>& localPC) {
+  AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC) {
 
  bool use_tiling=ns_tiling;
  int max_level = parent->maxLevel();
@@ -6981,7 +6981,7 @@ void NavierStokes::output_triangles() {
 	(num_materials_viscoelastic<=nmat)) {
 
      using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
      NavierStokes& ns_level0=getLevel(0);
      My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);

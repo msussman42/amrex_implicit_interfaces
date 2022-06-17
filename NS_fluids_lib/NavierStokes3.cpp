@@ -381,7 +381,7 @@ void NavierStokes::nonlinear_advection() {
  if (particles_flag==1) {
 
   using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
   NavierStokes& ns_level0=getLevel(0);
   My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
@@ -751,7 +751,7 @@ void NavierStokes::correct_Q_with_particles() {
   if (particles_flag==1) {
 
    using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
    NavierStokes& ns_level0=getLevel(0);
    My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
@@ -1157,7 +1157,7 @@ Real NavierStokes::advance(Real time,Real dt) {
     int local_Redistribute=0;
 
     using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,0,0,0>;
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
     NavierStokes& ns_level0=getLevel(0);
     My_ParticleContainer& old_PC=ns_level0.newDataPC(ns_time_order);
