@@ -1364,7 +1364,8 @@
       character*13 newfilename !auxdata ...
       character*2 auxstr
 
-      INTEGER_T i,j,k,nwrite,dir2
+      INTEGER_T i,j,k,dir2
+      INTEGER_T nwrite
 
 ! Guibo
 
@@ -1569,7 +1570,8 @@
 
       character*11 newfilename !auxfull.plt
 
-      INTEGER_T i,j,k,nwrite,dir2
+      INTEGER_T i,j,k,dir2
+      INTEGER_T nwrite
 
 ! Guibo
 
@@ -1671,18 +1673,21 @@
       Varname='Z'
       call dumpstring(Varname)
 
+       ! FSI_LEVELSET
       ih=1
       Varname='L'
       ih=ih+1
       Varname(ih:ih)='S'
       call dumpstring(Varname)
 
+       ! FSI_SIGN_QUALITY
       ih=1
       Varname='S'
       ih=ih+1
       Varname(ih:ih)='Q'
       call dumpstring(Varname)
 
+       ! FSI_EXTRAP_FLAG
       ih=1
       Varname='X'
       ih=ih+1

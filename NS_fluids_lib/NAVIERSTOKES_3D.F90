@@ -514,6 +514,9 @@ stop
        ! do nothing
       else
        print *,"nwrite3d-nwrite2d invalid"
+       print *,"nwrite3d: ",nwrite3d
+       print *,"nwrite2d: ",nwrite2d
+       print *,"PLOTCOMP_DIFF: ",PLOTCOMP_DIFF
        stop
       endif
 
@@ -871,14 +874,21 @@ stop
          index3d=0
          index2d=0
 
+         if (plot_sdim_macro.eq.3) then
+          ! do nothing
+         else
+          print *,"plot_sdim_macro invalid"
+          stop
+         endif
+
          theta=two*Pi*k/visual_revolve
-         rr=zone2d_gb(iz_gb)%var(1,i,j)
-         zz=zone2d_gb(iz_gb)%var(2,i,j)
+         rr=zone2d_gb(iz_gb)%var(PLOTCOMP_X+1,i,j)
+         zz=zone2d_gb(iz_gb)%var(PLOTCOMP_Y+1,i,j)
          xx=rr*cos(theta)
          yy=rr*sin(theta)
-         zone3d_gb(iz_gb)%var(1,i,j,k)=xx
-         zone3d_gb(iz_gb)%var(2,i,j,k)=yy
-         zone3d_gb(iz_gb)%var(3,i,j,k)=zz
+         zone3d_gb(iz_gb)%var(PLOTCOMP_X+1,i,j,k)=xx
+         zone3d_gb(iz_gb)%var(PLOTCOMP_Y+1,i,j,k)=yy
+         zone3d_gb(iz_gb)%var(PLOTCOMP_Z+1,i,j,k)=zz
 
          index3d=index3d+plot_sdim
          index2d=index2d+SDIM
@@ -947,24 +957,6 @@ stop
           zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
             zone2d_gb(iz_gb)%var(index2d,i,j)
          enddo ! do ivar_gb=1,nmat*num_state_material+nmat+viscoelastic stuff
-
-         if (index3d.eq.PLOTCOMP_VISC) then
-          ! do nothing
-         else
-          print *,"(index3d.ne.PLOTCOMP_VISC)"
-          stop
-         endif
-
-          ! displacement
-         ur=zone2d_gb(iz_gb)%var(index2d+1,i,j)
-         uz=zone2d_gb(iz_gb)%var(index2d+2,i,j)
-         ux=ur*cos(theta)
-         uy=ur*sin(theta)
-         zone3d_gb(iz_gb)%var(index3d+1,i,j,k)=ux
-         zone3d_gb(iz_gb)%var(index3d+2,i,j,k)=uy
-         zone3d_gb(iz_gb)%var(index3d+3,i,j,k)=uz
-         index3d=index3d+plot_sdim
-         index2d=index2d+SDIM
 
          if (index3d.eq.PLOTCOMP_VISC) then
           ! do nothing
@@ -2209,6 +2201,9 @@ END SUBROUTINE SIMP
        ! do nothing
       else
        print *,"nwrite3d-nwrite2d invalid"
+       print *,"nwrite3d: ",nwrite3d
+       print *,"nwrite2d: ",nwrite2d
+       print *,"PLOTCOMP_DIFF: ",PLOTCOMP_DIFF
        stop
       endif
 
@@ -4078,6 +4073,9 @@ END SUBROUTINE SIMP
        ! do nothing
       else
        print *,"nwrite3d-nwrite2d invalid"
+       print *,"nwrite3d: ",nwrite3d
+       print *,"nwrite2d: ",nwrite2d
+       print *,"PLOTCOMP_DIFF: ",PLOTCOMP_DIFF
        stop
       endif
 

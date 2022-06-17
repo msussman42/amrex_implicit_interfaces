@@ -3350,7 +3350,7 @@ void NavierStokes::VELMAC_TO_CELL(
    &level,
    &finest_level,
    &project_option,
-   &local_enable_spectral, //0 if interp displacement to CELLS.
+   &local_enable_spectral, 
    &ncphys_proxy,
    velbc.dataPtr(),
    velbc.dataPtr(), // presbc
@@ -3427,8 +3427,8 @@ void NavierStokes::VELMAC_TO_CELL(
 // do_alloc=1 => allocate variable
 // do_alloc=0 => variable already allocated
 void NavierStokes::init_gradu_tensorALL(
- int idx_vel, //source velocity or displacement; 
-              //allocated if do_alloc==1,
+ int idx_vel, //source velocity. 
+              //allocated if do_alloc==1.
               //deleted if do_alloc==1.
  int do_alloc,
  int idx_cell,
@@ -4030,7 +4030,7 @@ void NavierStokes::init_gradu_tensor(
 
  delete mask3; 
 
-} // subroutine init_gradu_tensor
+} // end subroutine init_gradu_tensor
 
   
 // if projection (energyflag=SUB_OP_FOR_MAIN):
