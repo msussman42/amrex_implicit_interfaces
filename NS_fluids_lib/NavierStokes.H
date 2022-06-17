@@ -18,7 +18,7 @@ namespace amrex{
 // State_Type:
 //  vel, pres, num_state_material x nmat, ngeom_raw x nmat, error ind
 // Umac_Type, Vmac_Type, Wmac_Type:
-//  mac vel, displacement
+//  mac vel
 // LS_Type:
 //  LS 1..nmat, LS_slope sdim x nmat
 // DIV_Type (1 variable):
@@ -1541,7 +1541,7 @@ protected:
 
      // vel, pres, num_state_material x nmat, ngeom_raw x nmat, error ind
     static int State_Type; 
-     // mac vel, displacement
+     // mac vel
     static int Umac_Type;
     static int Vmac_Type;
     static int Wmac_Type;

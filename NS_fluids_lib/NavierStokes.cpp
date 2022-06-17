@@ -382,7 +382,7 @@ int  NavierStokes::ngeom_recon=ENUM_NUM_MOF_VAR;
 
 // vel, pres, num_state_material x nmat, ngeom_raw x nmat, error ind
 int  NavierStokes::State_Type=0;
-// mac vel, displacement
+// mac vel
 int  NavierStokes::Umac_Type=State_Type+1;
 int  NavierStokes::Vmac_Type=Umac_Type+1;
 int  NavierStokes::Wmac_Type=Vmac_Type+AMREX_SPACEDIM-2;
@@ -19404,7 +19404,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     MultiFab& mac_new_temp=get_new_data(Umac_Type+dir_mac,slab_step+1);
     writeSanityCheckData(
      "RawMacType",
-     "RawMacType: vel,displacement",
+     "RawMacType: vel",
      caller_id,
      mac_new_temp.nComp(),
      -1,  //data_mf=-1

@@ -63,7 +63,8 @@ stop
       character*2 matstr
       character*6 stepstr
 
-      INTEGER_T i,j,k,im,nwrite,dir2
+      INTEGER_T i,j,k,im,dir2
+      INTEGER_T nwrite
 
 ! Guibo
 

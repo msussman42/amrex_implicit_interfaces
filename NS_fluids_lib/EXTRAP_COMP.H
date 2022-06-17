@@ -206,7 +206,7 @@ FSI_SIZE=area
 
 #define PLOTCOMP_NCOMP (PLOTCOMP_F_ELASTIC_Z+1)
 
-#define PLOTCOMP_DIFF (4+num_materials)
+#define PLOTCOMP_DIFF (3+num_materials)
 
 #define SLICECOMP_X 0
 #define SLICECOMP_Y (SLICECOMP_X+1)
