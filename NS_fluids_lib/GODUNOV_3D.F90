@@ -2648,7 +2648,6 @@ stop
         microlayer_angle, &
         microlayer_size, &
         macrolayer_size, &
-        latent_heat, &
         reaction_rate, &
         freezing_model, &
         Tanasawa_or_Schrage_or_Kassemi, &
@@ -2720,7 +2719,6 @@ stop
       REAL_T, intent(in) :: microlayer_size(nmat)
       REAL_T, intent(in) :: macrolayer_size(nmat)
       INTEGER_T, intent(in) :: interface_mass_transfer_model(2*nten)
-      REAL_T, intent(in) :: latent_heat(2*nten)
       REAL_T, intent(in) :: reaction_rate(2*nten)
       REAL_T :: K_f
       INTEGER_T, intent(in) :: freezing_model(2*nten)
@@ -3397,7 +3395,13 @@ stop
          endif
          call get_iten(im,im_opp,iten,nmat)
 
-         LL=latent_heat(iten+ireverse*nten)
+         tcompsrc=(im_primaryL-1)*num_state_material+1+ENUM_TEMPERATUREVAR
+         tcompdst=(im_primaryR-1)*num_state_material+1+ENUM_TEMPERATUREVAR
+         Tsrc=den(D_DECL(i-ii,j-jj,k-kk),tcompsrc)
+         Tdst=den(D_DECL(i,j,k),tcompdst)
+
+         LL=get_user_latent_heat(iten+ireverse*nten,half*(Tsrc+Tdst),0)
+
          K_f=reaction_rate(iten+ireverse*nten)
          local_freezing_model=freezing_model(iten+ireverse*nten)
          local_Tanasawa_or_Schrage_or_Kassemi= &
@@ -4983,7 +4987,6 @@ stop
        time, &
        level,finest_level, &
        nmat,nten, &
-       latent_heat, &
        saturation_temp, &
        freezing_model, &
        distribute_from_target, &
@@ -5012,7 +5015,6 @@ stop
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: nmat,nten
-      REAL_T, intent(in) :: latent_heat(2*nten)
       REAL_T, intent(in) :: saturation_temp(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
@@ -5155,7 +5157,7 @@ stop
            call get_iten(im,im_opp,iten,nmat)
            iten_shift=iten+ireverse*nten
 
-           LL=latent_heat(iten_shift)
+           LL=get_user_latent_heat(iten_shift,293.0d0,1)
 
            jump_strength=JUMPFAB(D_DECL(i,j,k),iten_shift)
   
@@ -5229,7 +5231,6 @@ stop
        time, &
        level,finest_level, &
        nmat,nten, &
-       latent_heat, &
        saturation_temp, &
        freezing_model, &
        distribute_from_target, &
@@ -5253,7 +5254,6 @@ stop
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: nmat,nten
-      REAL_T, intent(in) :: latent_heat(2*nten)
       REAL_T, intent(in) :: saturation_temp(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
@@ -5435,7 +5435,6 @@ stop
           im_opp_left, &
           ireverse_left, &
           LSleft, &
-          latent_heat, &
           distribute_from_target, &
           complement_flag, &
           nmat,nten)
@@ -5452,7 +5451,6 @@ stop
           im_opp_right, &
           ireverse_right, &
           LSright, &
-          latent_heat, &
           distribute_from_target, &
           complement_flag, &
           nmat,nten)
@@ -8732,20 +8730,14 @@ stop
       INTEGER_T ii,jj
       REAL_T Q(3,3),TQ(3,3)
       INTEGER_T i,j,k
-      INTEGER_T dir_flux
       INTEGER_T dir_local
       INTEGER_T im_elastic_p1
       REAL_T xcenter(SDIM)
-
-      type(deriv_from_grid_parm_type) :: data_in
-      type(interp_from_grid_out_parm_type) :: data_out
 
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
       INTEGER_T, target :: fablo_local(SDIM)
       INTEGER_T, target :: fabhi_local(SDIM)
-
-      REAL_T, target :: cell_data_deriv(1)
 
        ! Q=A-I
       REAL_T trace_A
@@ -9008,8 +9000,6 @@ stop
       INTEGER_T, intent(in) :: viscoelastic_model
       INTEGER_T, intent(in) :: irz
 
-      INTEGER_T ii,jj
-      REAL_T Q(3,3),TQ(3,3)
       INTEGER_T i,j,k
       INTEGER_T dir_local
       INTEGER_T im_elastic_p1
@@ -9793,7 +9783,6 @@ stop
        nstate, &
        ntsat, &
        nden, &
-       latent_heat, &
        freezing_model, &
        distribute_from_target, &
        saturation_temp, &
@@ -9845,7 +9834,6 @@ stop
       INTEGER_T, intent(in) :: adjust_temperature
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
-      REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       REAL_T, intent(in) :: saturation_temp(2*nten)
@@ -10255,9 +10243,12 @@ stop
             print *,"im or im_opp bust 8"
             stop
            endif
+
            call get_iten(im,im_opp,iten,nmat)
-           LL=latent_heat(iten+ireverse*nten)
+           LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
+
            Tgamma_STATUS=NINT(TgammaFAB(D_DECL(i,j,k),iten))
+
            if (ireverse.eq.0) then
             ! do nothing
            else if (ireverse.eq.1) then
@@ -10590,7 +10581,7 @@ stop
          im_dest=im_dest_crit
          im_dest_substrate=im_dest_substrate_crit
 
-         LL=latent_heat(iten+ireverse*nten)
+         LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
          local_freezing_model=freezing_model(iten+ireverse*nten)
          distribute_from_targ=distribute_from_target(iten+ireverse*nten)
 
@@ -10889,7 +10880,6 @@ stop
 ! Q units: J/(m^2 s)
       subroutine fort_heatsource_face( &
        nmat,nten,nstate, &
-       latent_heat, &
        saturation_temp, &
        tilelo,tilehi, &
        fablo,fabhi, &
@@ -10919,7 +10909,6 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nmat,nten,nstate
-      REAL_T, intent(in) :: latent_heat(2*nten)
       REAL_T, intent(in) :: saturation_temp(2*nten)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -12052,7 +12041,6 @@ stop
       ! tag = 2 -> receving cell
       ! tag = 0 -> none of above
       subroutine fort_tagexpansion(&
-      latent_heat, &
       freezing_model, &
       distribute_from_target, &
       ngrow_expansion_in, &
@@ -12097,7 +12085,6 @@ stop
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: nmat,nten
       INTEGER_T :: nten_test
-      REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -12349,7 +12336,6 @@ stop
            im,im_opp, &
            ireverse, &
            LSCELL, &
-           latent_heat, &
            distribute_from_target, &
            complement_flag, &
            nmat,nten)
@@ -13450,7 +13436,6 @@ stop
        density_floor, &
        density_ceiling, &
        solidheat_flag, &
-       latent_heat, &
        freezing_model, &
        distribute_from_target, &
        nten, &
@@ -13526,7 +13511,6 @@ stop
       INTEGER_T, intent(in) :: ngrow,ngrow_mac_old
       INTEGER_T, intent(in) :: solidheat_flag
       INTEGER_T, intent(in) :: nten
-      REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
 
@@ -15855,7 +15839,6 @@ stop
        hflag, &
        num_materials_combine, &
        mass_fraction_id, &
-       latent_heat, &
        freezing_model, &
        Tanasawa_or_Schrage_or_Kassemi, &
        distribute_from_target, &
@@ -15915,7 +15898,6 @@ stop
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: hflag
       INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
-      REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
@@ -16710,7 +16692,7 @@ stop
               if (im_opp.ne.im) then
 
                call get_iten(im,im_opp,iten,nmat)
-               LL=latent_heat(iten+ireverse*nten)
+               LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
 
                if (interface_cond_avail.eq.1) then
 
@@ -22218,7 +22200,7 @@ stop
       REAL_T :: point_tnew(ENUM_NUM_TENSOR_TYPE)
       REAL_T :: point_told(ENUM_NUM_TENSOR_TYPE)
 
-      INTEGER_T :: i,j,k,n
+      INTEGER_T :: i,j,k
       REAL_T, intent(in) :: dt,elastic_time
       INTEGER_T, intent(in) :: viscoelastic_model
       REAL_T, intent(in) :: polymer_factor

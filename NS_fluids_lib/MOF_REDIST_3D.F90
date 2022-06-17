@@ -1750,7 +1750,6 @@ stop
          level, &
          finest_level, &
          truncate_volume_fractions, &
-         latent_heat, &
          maskfab,DIMS(maskfab), &
          facepairX,DIMS(facepairX), &
          facepairY,DIMS(facepairY), &
@@ -1799,7 +1798,6 @@ stop
       REAL_T, intent(inout) :: maxLS(nmat)
       REAL_T, intent(in) :: max_problen
       INTEGER_T, intent(in) :: truncate_volume_fractions(nmat)
-      REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: DIMDEC(maskfab)
       INTEGER_T, intent(in) :: DIMDEC(facepairX)
       INTEGER_T, intent(in) :: DIMDEC(facepairY)

@@ -12,6 +12,11 @@ namespace amrex{
 extern "C"
 {
 
+   Real get_user_latent_heat(
+     int iten, //pass by value
+     Real temperature, //pass by value
+     int default_flag); //pass by value
+
    int fort_built_in_elastic_model(
     Real* elastic_visc_in,
     int* viscoelastic_model_in);

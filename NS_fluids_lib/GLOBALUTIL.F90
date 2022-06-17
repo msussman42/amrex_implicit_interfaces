@@ -17239,6 +17239,85 @@ end subroutine global_checkinplane
       return
       end function get_user_stiffCP
 
+       ! 1<=iten<=2 * num_interfaces
+       ! default_flag=1 => only the sign is needed
+       ! default_flag=0 => the value is important too.
+      REAL_T function get_user_latent_heat(iten,temperature,default_flag) &
+      bind(c,name='get_user_latent_heat')
+
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, value, intent(in) :: iten
+      REAL_T, value, intent(in) :: temperature
+      INTEGER_T, value, intent(in) :: default_flag
+      REAL_T new_latent_heat
+      REAL_T sign_latent_heat
+
+      if ((iten.ge.1).and.(iten.le.2*num_interfaces)) then
+       ! do nothing
+      else
+       print *,"iten invalid"
+       stop
+      endif
+
+      if ((default_flag.eq.0).or.(default_flag.eq.1)) then
+       ! do nothing
+      else
+       print *,"default_flag invalid"
+       stop
+      endif
+
+      if (fort_latent_heat(iten).ge.zero) then
+       sign_latent_heat=one
+      else if (fort_latent_heat(iten).lt.zero) then
+       sign_latent_heat=-one
+      else
+       print *,"fort_latent_heat invalid"
+       stop
+      endif
+
+      new_latent_heat=abs(fort_latent_heat(iten))
+      if (fort_latent_heat_slope(iten).eq.zero) then
+       ! do nothing
+      else if (fort_latent_heat_slope(iten).lt.zero) then
+       if (default_flag.eq.1) then
+        ! do nothing
+       else if (default_flag.eq.0) then
+        new_latent_heat=abs(fort_latent_heat(iten))+ &
+           fort_latent_heat_slope(iten)* &
+           (temperature-fort_latent_heat_T0(iten))
+
+        if (new_latent_heat.lt.abs(fort_latent_heat_min(iten))) then
+         new_latent_heat=abs(fort_latent_heat_min(iten))
+        else if (new_latent_heat.ge. &
+                 abs(fort_latent_heat_min(iten))) then
+         ! do nothing
+        else
+         print *,"new_latent_heat or fort_latent_heat_min NaN"
+         stop
+        endif
+        if (new_latent_heat.ge.zero) then
+         ! do nothing
+        else
+         print *,"new_latent_heat invalid"
+         stop
+        endif
+       else
+        print *,"default_flag invalid"
+        stop
+       endif
+      else
+       print *,"fort_latent_heat_slope(iten) should be non-positive"
+       stop
+      endif
+
+      get_user_latent_heat=sign_latent_heat*new_latent_heat
+
+      return
+      end function get_user_latent_heat
+
+
       subroutine get_user_tension(xpos,time, &
         tension,new_tension, &
         temperature, &

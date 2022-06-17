@@ -3641,7 +3641,6 @@ stop
        nstate, &
        ntsat, &
        supermesh_flag, &
-       latent_heat, &
        saturation_temp, &
        freezing_model, &
        Tanasawa_or_Schrage_or_Kassemi, &
@@ -3699,7 +3698,6 @@ stop
       INTEGER_T, intent(in) :: nstate
       INTEGER_T, intent(in) :: ntsat
       INTEGER_T, intent(in) :: supermesh_flag
-      REAL_T, intent(in) :: latent_heat(2*nten)
       REAL_T, intent(in) :: saturation_temp(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*nten)
@@ -4106,7 +4104,7 @@ stop
          call get_iten(im,im_opp,iten,nmat)
          local_freezing_model=freezing_model(iten+ireverse*nten)
          distribute_from_targ=distribute_from_target(iten+ireverse*nten)
-         LL=latent_heat(iten+ireverse*nten)
+         LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
          mass_frac_id=0
 
          if (is_multi_component_evapF(local_freezing_model, &
@@ -4227,7 +4225,7 @@ stop
              stop
             endif
 
-            LL=latent_heat(iten+ireverse*nten)
+            LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
 
             if ((is_rigid(nmat,im).eq.1).or. &
                 (is_rigid(nmat,im_opp).eq.1)) then
@@ -4774,7 +4772,7 @@ stop
              stop
            endif
 
-           LL=latent_heat(iten+ireverse*nten)
+           LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
            local_freezing_model=freezing_model(iten+ireverse*nten)
            distribute_from_targ=distribute_from_target(iten+ireverse*nten)
            mass_frac_id=mass_fraction_id(iten+ireverse*nten)
@@ -6350,7 +6348,7 @@ stop
              stop
             endif
 
-            LL=latent_heat(iten+ireverse*nten)
+            LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
 
             if ((is_rigid(nmat,im).eq.1).or. &
                 (is_rigid(nmat,im_opp).eq.1)) then
@@ -6521,9 +6519,9 @@ stop
         nten, &
         nburning, &
         ngrow, &
-        latent_heat, &
         tilelo,tilehi, &
-        fablo,fabhi,bfact, &
+        fablo,fabhi, &
+        bfact, &
         vel,DIMS(vel), &
         LS,DIMS(LS)) &  ! old level set function before phase change
       bind(c,name='fort_extend_burning_vel')
@@ -6546,7 +6544,6 @@ stop
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, intent(in) :: bfact
 
-      REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: DIMDEC(vel)
       INTEGER_T, intent(in) :: DIMDEC(LS)
 
@@ -6666,7 +6663,7 @@ stop
          endif
   
          call get_iten(im,im_opp,iten,nmat)
-         LL=latent_heat(iten+ireverse*nten)
+         LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
 
          if (LL.ne.zero) then
   
@@ -7399,7 +7396,6 @@ stop
        macrolayer_size, &
        max_contact_line_size, &
        R_Palmore_Desjardins, &
-       latent_heat, &
        use_exact_temperature, &
        reaction_rate, &
        hardwire_Y_gamma, &
@@ -7499,7 +7495,6 @@ stop
       REAL_T, intent(in) :: macrolayer_size(nmat)
       REAL_T, intent(in) :: max_contact_line_size(nmat)
       REAL_T, intent(in) :: R_Palmore_Desjardins
-      REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: use_exact_temperature(2*nten)
       REAL_T, intent(in) :: reaction_rate(2*nten)
       REAL_T :: K_f(0:1)
@@ -7628,6 +7623,7 @@ stop
       REAL_T local_Tsat_base(0:1)
       REAL_T vel_phasechange(0:1)
       REAL_T, target :: LL(0:1)
+      REAL_T :: latent_heat_temperature
       INTEGER_T valid_phase_change(0:1)
       REAL_T, target :: dxprobe_source
       REAL_T, target :: dxprobe_dest
@@ -8036,7 +8032,14 @@ stop
              dxprobe_target_history(iten+ireverse*nten,2)=zero
 
              valid_phase_change(ireverse)=0
-             LL(ireverse)=latent_heat(iten+ireverse*nten)
+
+             latent_heat_temperature= &
+              EOS(D_DECL(i,j,k), &
+                  (im_primary-1)*num_state_material+ENUM_TEMPERATUREVAR+1)
+
+             LL(ireverse)=get_user_latent_heat( &
+               iten+ireverse*nten,latent_heat_temperature,0)
+
              K_f(ireverse)=reaction_rate(iten+ireverse*nten)
 
              local_freezing_model=freezing_model(iten+ireverse*nten)
@@ -9968,17 +9971,22 @@ stop
            do im=1,nmat-1
             do im_opp=im+1,nmat
              call get_iten(im,im_opp,iten,nmat)
+             latent_heat_temperature= &
+              EOS(D_DECL(i,j,k), &
+                  (im_primary-1)*num_state_material+ENUM_TEMPERATUREVAR+1)
              do ireverse=0,1
               print *,"im,im_opp,ireverse,latent_heat ",im,im_opp,ireverse, &
-                      latent_heat(iten+ireverse*nten)
+                get_user_latent_heat(iten+ireverse*nten, &
+                 latent_heat_temperature,0)
               print *,"im,im_opp,ireverse,saturation_temp ", &
-                      im,im_opp,ireverse, &
-                      saturation_temp(iten+ireverse*nten)
+                im,im_opp,ireverse, &
+                saturation_temp(iten+ireverse*nten)
              enddo
             enddo
            enddo
            do im=1,nmat
-            print *,"im,T ",im,EOS(D_DECL(i,j,k),(im-1)*num_state_material+2)
+            print *,"im,T ",im,EOS(D_DECL(i,j,k), &
+                    (im-1)*num_state_material+ENUM_TEMPERATUREVAR+1)
            enddo 
            do iten=1,nten
             do ireverse=0,1
@@ -10022,8 +10030,12 @@ stop
              stop
             endif
             call get_iten(im,im_opp,iten,nmat)
+            latent_heat_temperature= &
+             EOS(D_DECL(i,j,k), &
+                 (im_primary-1)*num_state_material+ENUM_TEMPERATUREVAR+1)
             do ireverse=0,1
-             LL(ireverse)=latent_heat(iten+ireverse*nten)
+             LL(ireverse)=get_user_latent_heat(iten+ireverse*nten, &
+                     latent_heat_temperature,0)
              local_freezing_model=freezing_model(iten+ireverse*nten)
              local_Tsat(ireverse)=saturation_temp(iten+ireverse*nten)
 

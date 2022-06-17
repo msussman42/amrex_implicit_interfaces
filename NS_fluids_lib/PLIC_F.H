@@ -31,7 +31,7 @@ extern "C"
         int* nsteps,
         Real* time,
         int* nmat,int* nten,
-        Real* latent_heat,int* update_flag,
+        int* update_flag,
         int* total_calls,
         int* total_iterations,
         int* continuous_mof,

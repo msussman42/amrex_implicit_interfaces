@@ -1505,6 +1505,7 @@ REAL_T, intent(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
 REAL_T den,temperature,internal_energy,pressure,Pgamma
 REAL_T massfrac_parm(num_species_var+1)
+REAL_T LL
 
  ! num_state_material=2 (default)  density and temperature
  ! num_state_material>2 if scalar (species) variables added.
@@ -1581,11 +1582,12 @@ if ((num_materials.eq.3).and. &
      print *,"mismatch between TANK_MK_R_UNIV and fort_R_Palmore_Desjardins"
      stop
     endif
+    LL=get_user_latent_heat(1,293.0d0,1)
     call Pgamma_Clausius_Clapyron(Pgamma, &
             fort_reference_pressure(1), &
             temperature, &
             fort_saturation_temp(1), &
-            fort_latent_heat(1), &
+            LL, &
             TANK_MK_R_UNIV,fort_molar_mass(2))
     if (abs(Pgamma-pressure).le.VOFTOL*pressure) then
      ! do nothing

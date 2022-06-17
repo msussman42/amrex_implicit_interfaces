@@ -736,6 +736,10 @@ stop
 
       INTEGER_T im_liquid,im_vapor
 
+      INTEGER_T local_index(3)
+      REAL_T local_x(SDIM)
+      REAL_T local_temperature(nmat)
+
       INTEGER_T nhalf_height ! in: initheightLS
 
       nhalf_height=2*ngrow_distance+1 
@@ -1040,7 +1044,9 @@ stop
           RR=one
          else if (levelrz.eq.3) then
           RR=xcenter(1)
-          if (RR.le.zero) then
+          if (RR.gt.zero) then
+           ! do nothing
+          else
            print *,"RR invalid"
            stop
           endif
@@ -4490,7 +4496,6 @@ stop
        tessellate, &
        distribute_mdot_evenly, &
        constant_volume_mdot, &
-       latent_heat, &
        distribute_from_target, &
        constant_density_all_time, & ! 1..nmat
        cur_time_slab, &
@@ -4578,7 +4583,6 @@ stop
       INTEGER_T, intent(in) :: material_type_visual(nmat)
       INTEGER_T, intent(in) :: distribute_mdot_evenly(2*nten)
       INTEGER_T, intent(in) :: constant_volume_mdot(2*nten)
-      REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
 
@@ -4755,6 +4759,7 @@ stop
       INTEGER_T im_source,im_dest
       INTEGER_T im_evenly
       INTEGER_T iten,iten_shift
+      REAL_T LL
       INTEGER_T ireverse
       INTEGER_T complement_flag
       INTEGER_T im_negate
@@ -5942,9 +5947,10 @@ stop
                 endif
                 call get_iten(im_mdot,im_opp_mdot,iten,nmat)
                 iten_shift=ireverse*nten+iten
-                if (latent_heat(iten_shift).eq.zero) then
+                LL=get_user_latent_heat(iten_shift,293.0d0,1)
+                if (LL.eq.zero) then
                  ! do nothing
-                else if (latent_heat(iten_shift).ne.zero) then
+                else if (LL.ne.zero) then
                  if (ireverse.eq.0) then
                   im_source=im_mdot
                   im_dest=im_opp_mdot
@@ -7608,7 +7614,6 @@ stop
        visc_interface, &
        heatvisc_interface, &
        speciesvisc_interface, &
-       latent_heat, &
        freezing_model, &
        distribute_from_target, &
        solidheat_flag, &
@@ -7699,7 +7704,6 @@ stop
       INTEGER_T, intent(in) :: project_option
       REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
       REAL_T, intent(in) :: visc_coef
-      REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T :: veldir
@@ -8168,7 +8172,7 @@ stop
           if (is_rigid(nmat,im_opp).eq.0) then
            call get_iten(im,im_opp,iten,nmat)
            do ireverse=0,1
-            if (latent_heat(iten+ireverse*nten).ne.zero) then
+            if (get_user_latent_heat(iten+ireverse*nten,293.0d0,1).ne.zero) then
              if (freezing_model(iten+ireverse*nten).eq.0) then
               im_solid_micro=microlayer_substrate(im)
               if ((im_solid_micro.ge.1).and. &
@@ -8948,14 +8952,14 @@ stop
              ! do nothing
             else if (heatvisc_interface(iten).gt.zero) then
 
-             if (latent_heat(iten).ne.zero) then
+             if (get_user_latent_heat(iten,293.0d0,1).ne.zero) then
               if ((freezing_model(iten).eq.0).or. &
                   (freezing_model(iten).eq.5)) then
                print *,"heatvisc_interface invalid"
                stop
               endif 
              endif 
-             if (latent_heat(iten+nten).ne.zero) then
+             if (get_user_latent_heat(iten+nten,293.0d0,1).ne.zero) then
               if ((freezing_model(iten+nten).eq.0).or. &
                   (freezing_model(iten+nten).eq.5)) then
                print *,"heatvisc_interface invalid"
@@ -9096,14 +9100,14 @@ stop
             ! do nothing
            else if (heatvisc_interface(iten).gt.zero) then
 
-            if (latent_heat(iten).ne.zero) then
+            if (get_user_latent_heat(iten,293.0d0,1).ne.zero) then
              if ((freezing_model(iten).eq.0).or. &
                  (freezing_model(iten).eq.5)) then
               print *,"heatvisc_interface invalid"
               stop
              endif 
             endif 
-            if (latent_heat(iten+nten).ne.zero) then
+            if (get_user_latent_heat(iten+nten,293.0d0,1).ne.zero) then
              if ((freezing_model(iten+nten).eq.0).or. &
                  (freezing_model(iten+nten).eq.5)) then
               print *,"heatvisc_interface invalid"
