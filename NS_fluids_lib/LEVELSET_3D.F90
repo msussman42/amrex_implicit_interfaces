@@ -592,6 +592,9 @@ stop
       REAL_T, intent(in) :: mgoni_temp( &
        -1:1,-1:1,-1:1,nmat)
 
+      REAL_T :: mgoni_tension(-1:1,-1:1,-1:1)
+      REAL_T :: local_tension(nten)
+
       REAL_T, intent(in) :: lssten( &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
@@ -690,7 +693,7 @@ stop
       REAL_T cenpos(SDIM)
       REAL_T areacentroid(SDIM)
       REAL_T temperature_cen(nmat)
-      REAL_T gradT(SDIM)
+      REAL_T grad_tension(SDIM)
       REAL_T RR
       REAL_T dnrm(SDIM)
       REAL_T dxsten(SDIM)
@@ -985,7 +988,40 @@ stop
        ! Marangoni force:
        ! (I-nn^T)(grad sigma) delta=
        ! (grad sigma - (grad sigma dot n)n ) delta
-      if (fort_tension_slope(iten).ne.zero) then
+      if (fort_tension_slope(iten).lt.zero) then
+
+       do iofs=-1,1
+       do jofs=-1,1
+       do kofs=-1,1
+        local_index(1)=iofs
+        local_index(2)=jofs
+        local_index(3)=kofs
+        do dir2=1,SDIM
+         if (local_index(dir2).eq.-1) then
+          local_x(dir2)=xsten(-2,dir2)
+         else if (local_index(dir2).eq.1) then
+          local_x(dir2)=xsten(2,dir2)
+         else if (local_index(dir2).eq.0) then
+          local_x(dir2)=xsten(0,dir2)
+         else
+          print *,"local_index invalid"
+          stop
+         endif
+        enddo !dir2=1,SDIM
+
+        do im_sort=1,nmat
+         local_temperature(im_sort)=mgoni_temp(iofs,jofs,kofs,im_sort)
+        enddo
+
+        call get_user_tension(local_x,time, &
+         fort_tension,local_tension, &
+         local_temperature, &
+         nmat,nten,2)
+        mgoni_tension(iofs,jofs,kofs)=local_tension(iten)
+       enddo
+       enddo
+       enddo
+
 
        dotprod=zero
 
@@ -1009,7 +1045,7 @@ stop
            stop
           endif
          else
-          print *,"gradT: levelrz invalid"
+          print *,"grad_tension: levelrz invalid"
           stop
          endif
         else if ((dir2.eq.3).and.(SDIM.eq.3)) then
@@ -1020,15 +1056,12 @@ stop
          stop
         endif 
 
-        gradT(dir2)=( &
-         mgoni_temp(iofs,jofs,kofs,im)+ &
-         mgoni_temp(iofs,jofs,kofs,im_opp)- &
-         mgoni_temp(-iofs,-jofs,-kofs,im)- &
-         mgoni_temp(-iofs,-jofs,-kofs,im_opp))/ &
-         (two*RR*(xsten(2,dir2)-xsten(-2,dir2)))
+        grad_tension(dir2)=( &
+         mgoni_tension(iofs,jofs,kofs)- &
+         mgoni_tension(-iofs,-jofs,-kofs))/ &
+         (RR*(xsten(2,dir2)-xsten(-2,dir2)))
 
-        dotprod=dotprod+ &
-         gradT(dir2)*fort_tension_slope(iten)*nfluid(dir2)
+        dotprod=dotprod+grad_tension(dir2)*nfluid(dir2)
        enddo ! dir2
         ! for the specific case,
         ! tension=sigma_0 + slope*(T-T0),
@@ -1038,13 +1071,13 @@ stop
         ! (I-nn^T)(grad sigma) delta
        do dir2=1,SDIM
         mgoni_force(dir2)= &
-         (fort_tension_slope(iten)*gradT(dir2)- &
+         (grad_tension(dir2)- &
           nfluid(dir2)*dotprod)*delta_mgoni
        enddo
       else if (fort_tension_slope(iten).eq.zero) then
        ! do nothing
       else
-       print *,"fort_tension_slopes bust"
+       print *,"fort_tension_slope must be non-positive"
        stop
       endif 
 

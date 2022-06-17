@@ -17279,7 +17279,7 @@ end subroutine global_checkinplane
        endif
        if (fort_tension_slope(iten).eq.zero) then
         ! do nothing
-       else if (fort_tension_slope(iten).ne.zero) then
+       else if (fort_tension_slope(iten).lt.zero) then
         if (fort_tension_T0(iten).gt.zero) then
          ! do nothing
         else
@@ -17312,6 +17312,9 @@ end subroutine global_checkinplane
          print *,"new_tension invalid"
          stop
         endif
+       else
+        print *,"fort_tension_slope(iten) should be non-positive"
+        stop
        endif
       enddo ! iten
       do im=1,nmat
