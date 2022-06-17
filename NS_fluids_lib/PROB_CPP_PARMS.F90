@@ -225,6 +225,9 @@ stop
         ccspeciesconst, &
         ccspeciesviscconst, &
         cclatent_heat, &
+        cclatent_heat_slope, &
+        cclatent_heat_T0, &
+        cclatent_heat_min, &
         ccsaturation_temp, &
         ccreference_pressure, &
         ccmolar_mass, &
@@ -387,6 +390,9 @@ stop
       REAL_T, intent(in) :: &
         ccspeciesviscconst((ccnum_species_var+1)*ccnum_materials)
       REAL_T, intent(in) :: cclatent_heat(2*ccnten)
+      REAL_T, intent(in) :: cclatent_heat_slope(2*ccnten)
+      REAL_T, intent(in) :: cclatent_heat_T0(2*ccnten)
+      REAL_T, intent(in) :: cclatent_heat_min(2*ccnten)
       REAL_T, intent(in) :: ccsaturation_temp(2*ccnten)
       REAL_T, intent(in) :: ccreference_pressure(2*ccnten)
       REAL_T, intent(in) :: ccmolar_mass(ccnum_materials)
@@ -1344,6 +1350,12 @@ stop
       do iten=1,nten
        fort_latent_heat(iten)=cclatent_heat(iten)
        fort_latent_heat(nten+iten)=cclatent_heat(nten+iten)
+       fort_latent_heat_slope(iten)=cclatent_heat_slope(iten)
+       fort_latent_heat_slope(nten+iten)=cclatent_heat_slope(nten+iten)
+       fort_latent_heat_T0(iten)=cclatent_heat_T0(iten)
+       fort_latent_heat_T0(nten+iten)=cclatent_heat_T0(nten+iten)
+       fort_latent_heat_min(iten)=cclatent_heat_min(iten)
+       fort_latent_heat_min(nten+iten)=cclatent_heat_min(nten+iten)
 
        fort_saturation_temp(iten)=ccsaturation_temp(iten)
        fort_saturation_temp(nten+iten)=ccsaturation_temp(nten+iten)
@@ -1498,7 +1510,21 @@ stop
           fort_reference_pressure(iten+nten)
        enddo ! iten=1..nten
       endif
-      
+     
+      if (ioproc.eq.1) then
+       do iten=1,2*nten
+        print *,"iten,latent_heat ",iten,fort_latent_heat(iten)
+        print *,"iten,latent_heat_slope ",iten,fort_latent_heat_slope(iten)
+        print *,"iten,latent_heat_T0 ",iten,fort_latent_heat_T0(iten)
+        if (fort_latent_heat_slope(iten).le.zero) then
+         ! do nothing
+        else
+         print *,"fort_latent_heat_slope must be non-positive"
+         stop
+        endif
+       enddo ! iten=1..2*nten
+      endif
+
       gravity=ccgravity
       gravity_dir=ccgravity_dir
       invert_gravity=ccinvert_gravity

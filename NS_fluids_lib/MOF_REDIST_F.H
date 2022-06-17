@@ -66,7 +66,6 @@ namespace amrex{
        int* level,
        int* finest_level,
        int* truncate_volume_fractions,
-       Real* latent_heat,
        Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
        Real* facepairX,
        AMREX_ARLIM_P(facepairXlo),AMREX_ARLIM_P(facepairXhi),

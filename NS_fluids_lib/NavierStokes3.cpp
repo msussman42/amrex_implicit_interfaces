@@ -1817,7 +1817,7 @@ void NavierStokes::process_recalesce_dataALL(
       ireverse=0;
      else 
       ireverse=1;
-     LL=latent_heat[iten+ireverse*nten-1];
+     LL=get_user_latent_heat(iten+ireverse*nten,293.0,1);
     }  // im_opp<>im_source
    } // im_opp
    
@@ -5550,7 +5550,6 @@ NavierStokes::ColorSum(
    &tessellate,
    distribute_mdot_evenly.dataPtr(),
    constant_volume_mdot.dataPtr(),
-   latent_heat.dataPtr(),
    distribute_from_target.dataPtr(),
    constant_density_all_time.dataPtr(),
    &cur_time_slab,
@@ -7697,14 +7696,15 @@ void NavierStokes::allocate_FACE_WEIGHT(
  if (project_option==SOLVETYPE_HEAT) { 
 
   for (int im=0;im<2*nten;im++) {
-   if (latent_heat[im]!=0.0) {
+   Real LL=get_user_latent_heat(im+1,293.0,1);
+   if (LL!=0.0) {
     if (is_GFM_freezing_model(freezing_model[im])==1) {
      GFM_flag=1; 
     } else if (is_GFM_freezing_model(freezing_model[im])==0) {
      // do nothing
     } else 
      amrex::Error("is_GFM_freezing_model invalid");
-   } else if (latent_heat[im]==0.0) {
+   } else if (LL==0.0) {
     // do nothing
    } else
     amrex::Error("latent_heat[im] invalid");
@@ -7714,11 +7714,12 @@ void NavierStokes::allocate_FACE_WEIGHT(
             (project_option<SOLVETYPE_SPEC+num_species_var)) {
 
   for (int im=0;im<2*nten;im++) {
-   if (latent_heat[im]!=0.0) {
+   Real LL=get_user_latent_heat(im+1,293.0,1);
+   if (LL!=0.0) {
     if (is_GFM_freezing_model(freezing_model[im])==1) {
      if (is_multi_component_evap(freezing_model[im],
           Tanasawa_or_Schrage_or_Kassemi[im],
- 	  latent_heat[im])==1) {
+ 	  LL)==1) {
       int ispec=mass_fraction_id[im];
       if ((ispec>=1)&&(ispec<=num_species_var)) {
        if (ispec==project_option-SOLVETYPE_SPEC+1) {
@@ -7728,7 +7729,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
        amrex::Error("ispec invalid");
      } else if (is_multi_component_evap(freezing_model[im],
          Tanasawa_or_Schrage_or_Kassemi[im],
-         latent_heat[im])==0) {
+         LL)==0) {
       // do nothing
      } else 
       amrex::Error("is_multi_component_evap invalid");
@@ -7736,7 +7737,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
      // do nothing
     } else 
      amrex::Error("is_GFM_freezing_model invalid");
-   } else if (latent_heat[im]==0.0) {
+   } else if (LL==0.0) {
     // do nothing
    } else
     amrex::Error("latent_heat[im] invalid");
@@ -7994,14 +7995,15 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
     //   c) T_ice=(F T_ice + (F^*-F) Tsat)/F^*
     //      T_water does not change
    for (int im=0;im<2*nten;im++) {
-    if (latent_heat[im]!=0.0) {
+    Real LL=get_user_latent_heat(im+1,293.0,1);
+    if (LL!=0.0) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
       GFM_flag=1;
      } else if (is_GFM_freezing_model(freezing_model[im])==0) {
       // do nothing
      } else 
       amrex::Error("is_GFM_freezing_model invalid");
-    } else if (latent_heat[im]==0.0) {
+    } else if (LL==0.0) {
      // do nothing
     } else
      amrex::Error("latent_heat[im] invalid");
@@ -8019,11 +8021,12 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
   if (is_phasechange==1) {
 
    for (int im=0;im<2*nten;im++) {
-    if (latent_heat[im]!=0.0) {
+    Real LL=get_user_latent_heat(im+1,293.0,1);
+    if (LL!=0.0) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
       if (is_multi_component_evap(freezing_model[im],
            Tanasawa_or_Schrage_or_Kassemi[im],
-   	   latent_heat[im])==1) {
+   	   LL)==1) {
        int ispec=mass_fraction_id[im];
        if ((ispec>=1)&&(ispec<=num_species_var)) {
         if (ispec==project_option-SOLVETYPE_SPEC+1) {
@@ -8033,7 +8036,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
         amrex::Error("ispec invalid");
       } else if (is_multi_component_evap(freezing_model[im],
                    Tanasawa_or_Schrage_or_Kassemi[im],
-                   latent_heat[im])==0) {
+                   LL)==0) {
        // do nothing
       } else 
        amrex::Error("is_multi_component_evap invalid");
@@ -8041,7 +8044,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
       // do nothing
      } else 
       amrex::Error("is_GFM_freezing_model invalid");
-    } else if (latent_heat[im]==0.0) {
+    } else if (LL==0.0) {
      // do nothing
     } else
      amrex::Error("latent_heat[im] invalid");

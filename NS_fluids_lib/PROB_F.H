@@ -31,7 +31,6 @@ namespace amrex{
 
      void fort_initdata_alloc(
       int* nmat,int* nten,int* nc,
-      Real* latent_heat,
       int* freezing_model,
       int* distribute_from_target,
       Real* saturation_temp,
@@ -47,7 +46,6 @@ namespace amrex{
       int* bfact,
       int* nc,
       int* nmat,int* nten,
-      Real* latent_heat,
       Real* saturation_temp,
       Real* scal,AMREX_ARLIM_P(scallo),AMREX_ARLIM_P(scalhi),
       Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
@@ -315,7 +313,6 @@ namespace amrex{
       Real* macrolayer_size,
       int* microlayer_substrate,
       Real* microlayer_temperature_substrate,
-      Real* latent_heat,
       int* freezing_model,
       Real* saturation_temp,
       int* nsolve,

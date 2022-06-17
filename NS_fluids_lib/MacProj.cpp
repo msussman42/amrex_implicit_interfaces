@@ -7,6 +7,7 @@
 #include <NavierStokes.H>
 #include <LEVEL_F.H>
 #include <GODUNOV_F.H>
+#include <GLOBALUTIL_F.H>
 #include <NAVIERSTOKES_F.H>
 #include <DIFFUSION_F.H>
 #include <MACOPERATOR_F.H>
@@ -400,14 +401,15 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   if (is_phasechange==1) {
     // alphanovolume=(rho cv/(dt*fact))+(1/vol) sum_face Aface k_m/(theta dx)
    for (int im=0;im<2*nten;im++) {
-    if (latent_heat[im]!=0.0) {
+    Real LL=get_user_latent_heat(im+1,293.0,1);
+    if (LL!=0.0) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
       GFM_flag=1;
      } else if (is_GFM_freezing_model(freezing_model[im])==0) {
       // do nothing
      } else 
       amrex::Error("is_GFM_freezing_model invalid");
-    } else if (latent_heat[im]==0.0) {
+    } else if (LL==0.0) {
      // do nothing
     } else
      amrex::Error("latent_heat[im] invalid");
@@ -424,12 +426,13 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   if (is_phasechange==1) {
 
    for (int im=0;im<2*nten;im++) {
-    if (latent_heat[im]!=0.0) {
+    Real LL=get_user_latent_heat(im+1,293.0,1);
+    if (LL!=0.0) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
 
       if (is_multi_component_evap(freezing_model[im],
            Tanasawa_or_Schrage_or_Kassemi[im],
-  	   latent_heat[im])==1) {
+  	   LL)==1) {
        int ispec=mass_fraction_id[im];
        if ((ispec>=1)&&(ispec<=num_species_var)) {
         if (ispec==project_option-SOLVETYPE_SPEC+1) {
@@ -439,7 +442,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
         amrex::Error("ispec invalid");
       } else if (is_multi_component_evap(freezing_model[im],
                   Tanasawa_or_Schrage_or_Kassemi[im],
-                  latent_heat[im])==0) {
+                  LL)==0) {
        // do nothing
       } else 
        amrex::Error("is_multi_component_evap invalid");
@@ -447,7 +450,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
       // do nothing
      } else 
       amrex::Error("is_GFM_freezing_model invalid");
-    } else if (latent_heat[im]==0.0) {
+    } else if (LL==0.0) {
      // do nothing
     } else
      amrex::Error("latent_heat[im] invalid");

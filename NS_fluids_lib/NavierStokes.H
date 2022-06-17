@@ -1661,6 +1661,9 @@ protected:
       // latent_heat<0 if condensation or solidification
       // latent_heat>0 if boiling or melting
     static Vector<Real> latent_heat; 
+    static Vector<Real> latent_heat_min; 
+    static Vector<Real> latent_heat_T0; 
+    static Vector<Real> latent_heat_slope; //should be non-positive 
 
     static Real R_Palmore_Desjardins;
 

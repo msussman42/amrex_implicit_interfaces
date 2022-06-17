@@ -300,6 +300,8 @@ implicit none
 !  FORT_MUSHY_THICK
 ! added May 1, 2022:
 !  UNSCALED_MUSHY_THICK (user definable in fortran plug-in files)
+! added June 17, 2022:
+!  fort_latent_heat_slope, fort_latent_heat_T0, fort_latent_heat_min
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
        !nten=num_interfaces=( (nmat-1)*(nmat-1)+nmat-1 )/2

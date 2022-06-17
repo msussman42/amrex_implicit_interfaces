@@ -59,7 +59,6 @@ stop
         nsteps, &
         time, &
         nmat,nten, &
-        latent_heat, &
         update_flag, &
         total_calls, &
         total_iterations, &
@@ -111,7 +110,6 @@ stop
       REAL_T, pointer :: slopes_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: snew(DIMV(snew),nmat*ngeom_raw+1) 
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in) :: latent_heat(2*nten)
       
       INTEGER_T i,j,k,dir
       INTEGER_T igridlo(3),igridhi(3)

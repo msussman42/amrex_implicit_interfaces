@@ -420,7 +420,6 @@ extern "C"
       Real* microlayer_angle,
       Real* microlayer_size,
       Real* macrolayer_size,
-      Real* latent_heat,
       Real* reaction_rate,
       int* freezing_model,
       int* Tanasawa_or_Schrage_or_Kassemi,
@@ -559,7 +558,6 @@ extern "C"
     int* nstate,
     int* ntsat,
     int* nden,
-    Real* latent_heat,
     int* freezing_model,
     int* distribute_from_target,
     Real* saturation_temp,
@@ -594,7 +592,6 @@ extern "C"
 
    void fort_heatsource_face(
     int* nmat,int* nten,int* nstate,
-    Real* latent_heat,
     Real* saturation_temp,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
@@ -648,7 +645,6 @@ extern "C"
     Real* time,
     int* level,int* finest_level,
     int* nmat,int* nten,
-    Real* latent_heat,
     Real* saturation_temp,
     int* freezing_model,
     int* distribute_from_target,
@@ -668,7 +664,6 @@ extern "C"
     Real* time,
     int* level,int* finest_level,
     int* nmat,int* nten,
-    Real* latent_heat,
     Real* saturation_temp,
     int* freezing_model,
     int* distribute_from_target,
@@ -684,7 +679,6 @@ extern "C"
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
    void fort_tagexpansion(
-    Real* latent_heat,
     int* freezing_model,
     int* distribute_from_target,
     int* ngrow_expansion,
@@ -771,7 +765,6 @@ extern "C"
      Real* density_floor,
      Real* density_ceiling,
      int* solidheat_flag,
-     Real* latent_heat,
      int* freezing_model,
      int* distribute_from_target,
      int* nten,
@@ -863,7 +856,6 @@ extern "C"
      int* hflag,
      int* num_materials_combine,
      int* mass_fraction_id,
-     Real* latent_heat,
      int* freezing_model,
      int* Tanasawa_or_Schrage_or_Kassemi,
      int* distribute_from_target,

@@ -554,6 +554,7 @@ Vector<Real> NavierStokes::tension_slope;
 Vector<Real> NavierStokes::tension_min;
 Vector<Real> NavierStokes::tension_T0;
 Vector<Real> NavierStokes::tension;
+
 Real NavierStokes::unscaled_min_curvature_radius=0.0;
 Vector<Real> NavierStokes::prefreeze_tension;
 Vector<Real> NavierStokes::recalesce_model_parameters;
@@ -638,6 +639,9 @@ Real NavierStokes::perturbation_eps_vel=0.0;
 // latent_heat<0 if condensation or solidification
 // latent_heat>0 if boiling or melting
 Vector<Real> NavierStokes::latent_heat;
+Vector<Real> NavierStokes::latent_heat_slope;
+Vector<Real> NavierStokes::latent_heat_min;
+Vector<Real> NavierStokes::latent_heat_T0;
 
 //ergs/(mol kelvin)
 Real NavierStokes::R_Palmore_Desjardins=8.31446261815324e+7;
@@ -1694,13 +1698,19 @@ void fortran_parameters() {
   tension_mintemp[im]=0.0;
  }
  Vector<Real> tensiontemp(nten);
+
  Vector<Real> prefreeze_tensiontemp(nten);
+
  pp.getarr("tension",tensiontemp,0,nten);
  pp.queryarr("tension_slope",tension_slopetemp,0,nten);
  pp.queryarr("tension_T0",tension_T0temp,0,nten);
  pp.queryarr("tension_min",tension_mintemp,0,nten);
 
  Vector<Real> latent_heat_temp(2*nten);
+ Vector<Real> latent_heat_slopetemp(2*nten);
+ Vector<Real> latent_heat_T0temp(2*nten);
+ Vector<Real> latent_heat_mintemp(2*nten);
+
  Vector<Real> saturation_temp_temp(2*nten);
  Vector<Real> reference_pressure_temp(2*nten);
  for (int i=0;i<nten;i++) { 
@@ -1714,10 +1724,30 @@ void fortran_parameters() {
   saturation_temp_temp[i+nten]=0.0;
   reference_pressure_temp[i]=1.0e+6;
   reference_pressure_temp[i+nten]=1.0e+6;
+
   latent_heat_temp[i]=0.0;
   latent_heat_temp[i+nten]=0.0;
+  latent_heat_slopetemp[i]=0.0;
+  latent_heat_slopetemp[i+nten]=0.0;
+  latent_heat_T0temp[i]=0.0;
+  latent_heat_T0temp[i+nten]=0.0;
+  latent_heat_mintemp[i]=0.0;
+  latent_heat_mintemp[i+nten]=0.0;
  }
  pp.queryarr("latent_heat",latent_heat_temp,0,2*nten);
+ pp.queryarr("latent_heat_slope",latent_heat_slopetemp,0,2*nten);
+ pp.queryarr("latent_heat_T0",latent_heat_T0temp,0,2*nten);
+ pp.queryarr("latent_heat_min",latent_heat_mintemp,0,2*nten);
+
+ for (int i=0;i<2*nten;i++) { 
+
+  if (latent_heat_slopetemp[i]<=0.0) {
+   // do nothing
+  } else
+   amrex::Error("latent_heat_slope must be non-positive(1)");
+
+ } //i=0...2*nten-1
+
  pp.queryarr("saturation_temp",saturation_temp_temp,0,2*nten);
  pp.queryarr("reference_pressure",reference_pressure_temp,0,2*nten);
 
@@ -1962,6 +1992,9 @@ void fortran_parameters() {
   speciesconst_temp.dataPtr(),
   speciesviscconst_temp.dataPtr(),
   latent_heat_temp.dataPtr(),
+  latent_heat_slopetemp.dataPtr(),
+  latent_heat_T0temp.dataPtr(),
+  latent_heat_mintemp.dataPtr(),
   saturation_temp_temp.dataPtr(),
   reference_pressure_temp.dataPtr(),
   molar_mass_temp.dataPtr(),
@@ -3291,7 +3324,12 @@ NavierStokes::read_params ()
     nucleation_pressure.resize(2*nten);
     nucleation_pmg.resize(2*nten);
     nucleation_mach.resize(2*nten);
+
     latent_heat.resize(2*nten);
+    latent_heat_slope.resize(2*nten);
+    latent_heat_T0.resize(2*nten);
+    latent_heat_min.resize(2*nten);
+
     reaction_rate.resize(2*nten);
     freezing_model.resize(2*nten);
     Tanasawa_or_Schrage_or_Kassemi.resize(2*nten);
@@ -3306,6 +3344,7 @@ NavierStokes::read_params ()
     tension_slope.resize(nten);
     tension_T0.resize(nten);
     tension_min.resize(nten);
+
     prefreeze_tension.resize(nten);
 
      // (dir,side)  (1,1),(2,1),(3,1),(1,2),(2,2),(3,2)
@@ -3366,9 +3405,20 @@ NavierStokes::read_params ()
      nucleation_pressure[i+nten]=0.0;
      nucleation_pmg[i+nten]=0.0;
      nucleation_mach[i+nten]=0.0;
+
      latent_heat[i]=0.0;
-     reaction_rate[i]=0.0;
      latent_heat[i+nten]=0.0;
+
+     latent_heat_slope[i]=0.0;
+     latent_heat_slope[i+nten]=0.0;
+
+     latent_heat_T0[i]=0.0;
+     latent_heat_T0[i+nten]=0.0;
+
+     latent_heat_min[i]=0.0;
+     latent_heat_min[i+nten]=0.0;
+
+     reaction_rate[i]=0.0;
      reaction_rate[i+nten]=0.0;
      freezing_model[i]=0;
      freezing_model[i+nten]=0;
@@ -3674,7 +3724,13 @@ NavierStokes::read_params ()
     pp.queryarr("nucleation_pressure",nucleation_pressure,0,2*nten);
     pp.queryarr("nucleation_pmg",nucleation_pmg,0,2*nten);
     pp.queryarr("nucleation_mach",nucleation_mach,0,2*nten);
+
     pp.queryarr("latent_heat",latent_heat,0,2*nten);
+    pp.queryarr("latent_heat_slope",latent_heat_slope,0,2*nten);
+    pp.queryarr("latent_heat_T0",latent_heat_T0,0,2*nten);
+    pp.queryarr("latent_heat_min",latent_heat_min,0,2*nten);
+
+
     pp.queryarr("reaction_rate",reaction_rate,0,2*nten);
     pp.queryarr("freezing_model",freezing_model,0,2*nten);
     pp.queryarr("Tanasawa_or_Schrage_or_Kassemi",
@@ -3688,7 +3744,8 @@ NavierStokes::read_params ()
 
       if (freezing_model[iten_local]>=0) {
 
-       if (latent_heat[iten_local]!=0.0) {
+       Real LL=get_user_latent_heat(iten_local+1,293.0,1);
+       if (LL!=0.0) {
         int im1=0;
         int im2=0;
         int im_source=0;
@@ -3769,7 +3826,7 @@ NavierStokes::read_params ()
 	} else
 	 amrex::Error("Tanasawa_or_Schrage_or_Kassemi[iten_local] invalid");
 
-       } else if (latent_heat[iten_local]==0) {
+       } else if (LL==0) {
         distribute_from_target[iten_local]=0;
        } else
         amrex::Error("latent_heat invalid");
@@ -3806,7 +3863,8 @@ NavierStokes::read_params ()
 
       if (freezing_model[iten_local]>=0) {
 
-       if (latent_heat[iten_local]!=0.0) {
+       Real LL=get_user_latent_heat(iten_local+1,293.0,1);
+       if (LL!=0.0) {
         get_inverse_iten_cpp(im1,im2,iten+1,nmat);
         if ((im1>=1)&&(im1<=nmat)&&(im2>=1)&&(im2<=nmat)&&
             (im1!=im2)) { 
@@ -3840,14 +3898,15 @@ NavierStokes::read_params ()
         } else
          amrex::Error("im_constant invalid");
  
-       } else if (latent_heat[iten_local]==0) {
+       } else if (LL==0) {
         // do nothing
        } else
         amrex::Error("latent_heat invalid");
       } else
        amrex::Error("freezing_model invalid");
 
-      if (latent_heat[iten_local]==0.0) {
+      Real LL=get_user_latent_heat(iten_local+1,293.0,1);
+      if (LL==0.0) {
 
        if (distribute_from_target[iten_local]==0) {
         // do nothing
@@ -3864,7 +3923,7 @@ NavierStokes::read_params ()
        } else
         amrex::Error("constant_volume_mdot[iten_local] invalid");
 
-      } else if (latent_heat[iten_local]!=0.0) {
+      } else if (LL!=0.0) {
 
        if ((distribute_from_target[iten_local]==0)||
            (distribute_from_target[iten_local]==1)) {
@@ -4482,25 +4541,31 @@ NavierStokes::read_params ()
 
     is_phasechange=0;
     for (int i=0;i<2*nten;i++) {
-     if (latent_heat[i]!=0.0) {
+     Real LL=get_user_latent_heat(i+1,293.0,1);
+     if (LL!=0.0) {
       is_phasechange=1;
       if (is_valid_freezing_model(freezing_model[i])==1) {
        // do nothing
       } else
        amrex::Error("freezing_model[i] invalid");
+     } else if (LL==0.0) {
+      //do nothing
+     } else {
+      amrex::Error("LL is NaN");
      } // latent_heat<>0
     }  // i=0;i<2*nten
 
     hydrate_flag=0;
     for (int i=0;i<2*nten;i++) {
-     if (latent_heat[i]!=0.0) {
+     Real LL=get_user_latent_heat(i+1,293.0,1);
+     if (LL!=0.0) {
       if (is_hydrate_freezing_model(freezing_model[i])==1) {
        hydrate_flag=1;
       } else if (is_hydrate_freezing_model(freezing_model[i])==0) {
        // do nothing
       } else
        amrex::Error("is_hydrate_freezing_model bust");
-     } else if (latent_heat[i]==0.0) {
+     } else if (LL==0.0) {
       // do nothing
      } else
       amrex::Error("latent_heat is NaN");
@@ -4578,7 +4643,7 @@ NavierStokes::read_params ()
 
        int indexEXP=iten+ireverse*nten-1;
 
-       Real LL=latent_heat[indexEXP];
+       Real LL=get_user_latent_heat(indexEXP+1,293.0,1);
 
        if (LL!=0.0) {
         if ((truncate_volume_fractions[im-1]==0)&&
@@ -5023,6 +5088,31 @@ NavierStokes::read_params ()
        latent_heat[i] << '\n';
       std::cout << "latent_heat i+nten=" << i+nten << "  " << 
        latent_heat[i+nten] << '\n';
+
+      std::cout << "latent_heat_slope i=" << i << "  " << 
+       latent_heat_slope[i] << '\n';
+      std::cout << "latent_heat_slope i+nten=" << i+nten << "  " << 
+       latent_heat_slope[i+nten] << '\n';
+
+      if (latent_heat_slope[i]<=0.0) {
+       //do nothing
+      } else 
+       amrex::Error("need latent_heat_slope[i]<=0.0)");
+
+      if (latent_heat_slope[i+nten]<=0.0) {
+       //do nothing
+      } else 
+       amrex::Error("need latent_heat_slope[i+nten]<=0.0)");
+
+      std::cout << "latent_heat_T0 i=" << i << "  " << 
+       latent_heat_T0[i] << '\n';
+      std::cout << "latent_heat_T0 i+nten=" << i+nten << "  " << 
+       latent_heat_T0[i+nten] << '\n';
+
+      std::cout << "latent_heat_min i=" << i << "  " << 
+       latent_heat_min[i] << '\n';
+      std::cout << "latent_heat_min i+nten=" << i+nten << "  " << 
+       latent_heat_min[i+nten] << '\n';
 
       std::cout << "reaction_rate i=" << i << "  " << 
        reaction_rate[i] << '\n';
@@ -9144,7 +9234,6 @@ void NavierStokes::post_restart() {
  int nc=S_new.nComp();
 
  fort_initdata_alloc(&nmat,&nten,&nc,
-  latent_heat.dataPtr(),
   freezing_model.dataPtr(),
   distribute_from_target.dataPtr(),
   saturation_temp.dataPtr(),
@@ -9484,7 +9573,6 @@ NavierStokes::initData () {
  regenerate_from_eulerian(upper_slab_time);
 
  fort_initdata_alloc(&nmat,&nten,&nc,
-  latent_heat.dataPtr(),
   freezing_model.dataPtr(),
   distribute_from_target.dataPtr(),
   saturation_temp.dataPtr(),
@@ -9541,8 +9629,8 @@ NavierStokes::initData () {
    fablo,fabhi,
    &bfact_space,
    &nc,
-   &nmat,&nten,
-   latent_heat.dataPtr(),
+   &nmat,
+   &nten,
    saturation_temp.dataPtr(),
    S_new[mfi].dataPtr(),
    ARLIM(S_new[mfi].loVect()),
@@ -13164,7 +13252,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      macrolayer_size.dataPtr(),
      max_contact_line_size.dataPtr(),
      &R_Palmore_Desjardins,
-     latent_heat.dataPtr(),
      use_exact_temperature.dataPtr(),
      reaction_rate.dataPtr(),
      hardwire_Y_gamma.dataPtr(),
@@ -13249,7 +13336,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      macrolayer_size.dataPtr(),
      max_contact_line_size.dataPtr(),
      &R_Palmore_Desjardins,
-     latent_heat.dataPtr(),
      use_exact_temperature.dataPtr(),
      reaction_rate.dataPtr(),
      hardwire_Y_gamma.dataPtr(),
@@ -13470,9 +13556,9 @@ NavierStokes::level_phase_change_rate_extend() {
     &nten,
     &ncomp,
     &ngrow_distance,
-    latent_heat.dataPtr(),
     tilelo,tilehi,
-    fablo,fabhi,&bfact,
+    fablo,fabhi,
+    &bfact,
     burnvelfab.dataPtr(),
     ARLIM(burnvelfab.loVect()),ARLIM(burnvelfab.hiVect()),
     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()));
@@ -13678,8 +13764,10 @@ NavierStokes::level_phase_change_convertALL() {
  for (im=1;im<=nmat-1;im++) {
   for (im_opp=im+1;im_opp<=nmat;im_opp++) {
    get_iten_cpp(im,im_opp,iten,nmat);
-   Real LL0=latent_heat[iten-1];
-   Real LL1=latent_heat[iten-1+nten];
+   if ((iten<1)||(iten>num_interfaces))
+    amrex::Error("iten invalid");
+   Real LL0=get_user_latent_heat(iten,293.0,1);
+   Real LL1=get_user_latent_heat(iten+nten,293.0,1);
    if ((LL0!=0.0)||(LL1!=0.0)) {
     n_phase_change++;
    } else if ((LL0==0.0)&&(LL1==0.0)) {
@@ -13703,8 +13791,10 @@ NavierStokes::level_phase_change_convertALL() {
   for (im=1;im<=nmat-1;im++) {
    for (im_opp=im+1;im_opp<=nmat;im_opp++) {
     get_iten_cpp(im,im_opp,iten,nmat);
-    Real LL0=latent_heat[iten-1];
-    Real LL1=latent_heat[iten-1+nten];
+    if ((iten<1)||(iten>num_interfaces))
+     amrex::Error("iten invalid");
+    Real LL0=get_user_latent_heat(iten,293.0,1);
+    Real LL1=get_user_latent_heat(iten+nten,293.0,1);
     if ((LL0!=0.0)||(LL1!=0.0)) {
 
      for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -13846,8 +13936,8 @@ NavierStokes::level_phase_change_convert(
      (i_phase_change<n_phase_change)&&
      (iten>=1)&&(iten<=nten)) {
 
-  Real LL0=latent_heat[iten-1];
-  Real LL1=latent_heat[iten-1+nten];
+  Real LL0=get_user_latent_heat(iten,293.0,1);
+  Real LL1=get_user_latent_heat(iten+nten,293.0,1);
   if ((LL0!=0.0)||(LL1!=0.0)) {
    // do nothing
   } else
@@ -14110,7 +14200,6 @@ NavierStokes::level_phase_change_convert(
     &nstate,
     &ntsat,
     &use_supermesh,
-    latent_heat.dataPtr(),
     saturation_temp.dataPtr(),
     freezing_model.dataPtr(),
     Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
@@ -14268,7 +14357,7 @@ NavierStokes::phase_change_redistributeALL() {
 
     int indexEXP=iten+ireverse*nten-1;
 
-    Real LL=latent_heat[indexEXP];
+    Real LL=get_user_latent_heat(indexEXP+1,293.0,1);
     int distribute_from_targ=distribute_from_target[indexEXP];
 
     int im_source=-1;
@@ -14631,7 +14720,7 @@ NavierStokes::level_phase_change_redistribute(
    amrex::Error("localMF[donorflag_complement_MF]->nComp() invalid");
 
   if ((indexEXP>=0)&&(indexEXP<2*nten)) {
-   LL=latent_heat[indexEXP];
+   LL=get_user_latent_heat(indexEXP+1,293.0,1);
   } else
    amrex::Error("indexEXP invalid");
 
@@ -14716,7 +14805,6 @@ NavierStokes::level_phase_change_redistribute(
     // material is neither a donor or a receiver.
     // donorfab is modified.
    fort_tagexpansion( 
-    latent_heat.dataPtr(),
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
     &ngrow_expansion,
@@ -15036,7 +15124,6 @@ NavierStokes::level_phase_change_redistribute(
      &cur_time_slab,
      &level,&finest_level,
      &nmat,&nten,
-     latent_heat.dataPtr(),
      saturation_temp.dataPtr(),
      freezing_model.dataPtr(),
      distribute_from_target.dataPtr(),
@@ -15144,7 +15231,6 @@ NavierStokes::level_init_icemask() {
     &cur_time_slab,
     &level,&finest_level,
     &nmat,&nten,
-    latent_heat.dataPtr(),
     saturation_temp.dataPtr(),
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
@@ -15258,14 +15344,15 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
   if (project_option==SOLVETYPE_HEAT) { 
    face_comp_index=FACECOMP_FACEHEAT;
    for (int im=0;im<2*nten;im++) {
-    if (latent_heat[im]!=0.0) {
+    Real LL=get_user_latent_heat(im+1,293.0,1);
+    if (LL!=0.0) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
       GFM_flag=1;
      } else if (is_GFM_freezing_model(freezing_model[im])==0) {
       // do nothing
      } else 
       amrex::Error("is_GFM_freezing_model bust");
-    } else if (latent_heat[im]==0.0) {
+    } else if (LL==0.0) {
      // do nothing
     } else
      amrex::Error("latent_heat[im] invalid");
@@ -15274,7 +15361,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 	     (project_option<SOLVETYPE_SPEC+num_species_var)) { //mass fraction
    face_comp_index=FACECOMP_FACESPEC+project_option-SOLVETYPE_SPEC;
    for (int im=0;im<2*nten;im++) {
-    if (latent_heat[im]!=0.0) {
+    Real LL=get_user_latent_heat(im+1,293.0,1);
+    if (LL!=0.0) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
 
       if (is_multi_component_evap(freezing_model[im],
@@ -15297,7 +15385,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
       // do nothing
      } else 
       amrex::Error("is_GFM_freezing_model bust");
-    } else if (latent_heat[im]==0.0) {
+    } else if (LL==0.0) {
      // do nothing
     } else
      amrex::Error("latent_heat[im] invalid");
@@ -15458,7 +15546,6 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     &nstate,
     &ntsat, // nten*(ncomp_per_tsat+1)
     &nden,  // nmat*num_state_material
-    latent_heat.dataPtr(),
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
     saturation_temp.dataPtr(),
@@ -15588,7 +15675,6 @@ NavierStokes::heat_source_term_flux_source() {
     // declared in: GODUNOV_3D.F90
    fort_heatsource_face( 
     &nmat,&nten,&nstate,
-    latent_heat.dataPtr(),
     saturation_temp.dataPtr(),
     tilelo,tilehi,
     fablo,fabhi,
@@ -16968,7 +17054,6 @@ NavierStokes::split_scalar_advection() {
    density_floor.dataPtr(),
    density_ceiling.dataPtr(),
    &solidheat_flag, //0==diffuse in solid 1==dirichlet 2==neumann
-   latent_heat.dataPtr(),
    freezing_model.dataPtr(),
    distribute_from_target.dataPtr(),
    &nten,
@@ -20817,7 +20902,6 @@ void NavierStokes::MaxAdvectSpeed(
     microlayer_angle.dataPtr(),
     microlayer_size.dataPtr(),
     macrolayer_size.dataPtr(),
-    latent_heat.dataPtr(),
     reaction_rate.dataPtr(),
     freezing_model.dataPtr(),
     Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
@@ -24904,7 +24988,6 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
     &level,
     &finest_level,
     truncate_volume_fractions.dataPtr(),
-    latent_heat.dataPtr(),
     maskfab.dataPtr(),
     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     facepairXfab.dataPtr(),

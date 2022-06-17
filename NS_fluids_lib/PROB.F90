@@ -570,7 +570,6 @@ stop
         im,im_opp, &
         ireverse, &
         LS, &
-        latent_heat, &
         distribute_from_target, &
         complement_flag, &
         nmat,nten)
@@ -591,7 +590,6 @@ stop
       REAL_T, intent(out) :: icemask
       REAL_T, intent(out) :: icefacecut
       REAL_T, intent(in) :: LS(nmat)
-      REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: complement_flag
 
@@ -673,7 +671,7 @@ stop
 
       call get_iten(im,im_opp,iten,nmat)
       do ireverse=0,1
-       LL(ireverse)=latent_heat(iten+ireverse*nten)
+       LL(ireverse)=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
       enddo
 
       ! is_ice=1 if FSI_flag==3 or 6.
@@ -752,7 +750,7 @@ stop
              endif
              call get_iten(im,im_opp,iten,nmat)
              do ireverse=0,1
-              LL(ireverse)=latent_heat(iten+ireverse*nten)
+              LL(ireverse)=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
              enddo
             else if (is_ice(nmat,im_tertiary).eq.1) then
              ! do nothing
@@ -23875,7 +23873,6 @@ end subroutine initialize2d
        macrolayer_size, &
        microlayer_substrate, &
        microlayer_temperature_substrate, &
-       latent_heat, &
        freezing_model, &
        saturation_temp, &
        nsolve, &
@@ -23937,7 +23934,6 @@ end subroutine initialize2d
       REAL_T, intent(in) :: macrolayer_size(nmat)
       INTEGER_T, intent(in) :: microlayer_substrate(nmat)
       REAL_T, intent(in) :: microlayer_temperature_substrate(nmat)
-      REAL_T, intent(in) :: latent_heat(2*nten)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       REAL_T, intent(in) :: saturation_temp(2*nten)
 
@@ -24051,7 +24047,7 @@ end subroutine initialize2d
           do im1=1,nmat-1
           do im2=im1+1,nmat
            call get_iten(im1,im2,iten,nmat)
-           LL=latent_heat(iten+ireverse*nten)
+           LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
            local_freezing_model=freezing_model(iten+ireverse*nten)
            TSAT=saturation_temp(iten+ireverse*nten)
 
@@ -24282,7 +24278,6 @@ end subroutine initialize2d
 
 
        subroutine init_initdata(nmat,nten,nc, &
-         latent_heat, &
          freezing_model, &
          distribute_from_target, &
          saturation_temp, &
@@ -24295,7 +24290,6 @@ end subroutine initialize2d
        INTEGER_T nc_expect
        INTEGER_T nten_test
        REAL_T, intent(in) :: dx(SDIM)
-       REAL_T, intent(in) :: latent_heat(2*nten)
        INTEGER_T, intent(in) :: freezing_model(2*nten)
        INTEGER_T, intent(in) :: distribute_from_target(2*nten)
        REAL_T, intent(in) :: saturation_temp(2*nten)
@@ -24359,8 +24353,9 @@ end subroutine initialize2d
          print *,"im or im_opp bust 8"
          stop
         endif
+         ! 1<=iten<=num_interfaces
         call get_iten(im,im_opp,iten,nmat)
-        LL=latent_heat(iten+ireverse*nten)
+        LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
         local_freezing_model=freezing_model(iten+ireverse*nten)
         TSAT=saturation_temp(iten+ireverse*nten)
         if (is_hydrate_freezing_modelF(local_freezing_model).eq.1) then 
@@ -24664,7 +24659,6 @@ end subroutine initialize2d
 
        subroutine fort_initdata_alloc( &
         nmat,nten,nc, &
-        latent_heat, &
         freezing_model, &
         distribute_from_target, &
         saturation_temp, &
@@ -24677,13 +24671,11 @@ end subroutine initialize2d
 
        INTEGER_T, intent(in) :: nmat,nten,nc
        REAL_T, intent(in) :: dx(SDIM)
-       REAL_T, intent(in) :: latent_heat(2*nten)
        INTEGER_T, intent(in) :: freezing_model(2*nten)
        INTEGER_T, intent(in) :: distribute_from_target(2*nten)
        REAL_T, intent(in) :: saturation_temp(2*nten)
 
        call init_initdata(nmat,nten,nc, &
-        latent_heat, &
         freezing_model, &
         distribute_from_target, &
         saturation_temp, &
@@ -24703,7 +24695,6 @@ end subroutine initialize2d
         nc, &
         nmat, &
         nten, &
-        latent_heat, &
         saturation_temp, &
         scal,DIMS(scal), &
         LS,DIMS(LS), &
@@ -24741,7 +24732,6 @@ end subroutine initialize2d
        INTEGER_T, intent(in) :: nc
        INTEGER_T, intent(in) :: nten
        INTEGER_T imls
-       REAL_T, intent(in) :: latent_heat(2*nten)
        REAL_T, intent(in) :: saturation_temp(2*nten)
        REAL_T, intent(in) :: time
        INTEGER_T, intent(in) :: DIMDEC(scal)
@@ -25787,7 +25777,7 @@ end subroutine initialize2d
            im_dest=2
            ireverse=0
            call get_iten(im_source,im_dest,iten,nmat)
-           L_ice_melt=abs(latent_heat(iten+ireverse*nten))
+           L_ice_melt=abs(get_user_latent_heat(iten+ireverse*nten,293.0d0,1))
            TSAT=saturation_temp(iten+ireverse*nten)
            T_EXTREME=fort_initial_temperature(im_source)
            cp_melt=get_user_stiffCP(im_source) ! J/Kelvin
