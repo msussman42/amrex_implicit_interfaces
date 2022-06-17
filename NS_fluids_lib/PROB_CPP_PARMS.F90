@@ -1480,6 +1480,12 @@ stop
        do iten=1,nten
         print *,"iten,tension ",iten,fort_tension(iten)
         print *,"iten,tension_slope ",iten,fort_tension_slope(iten)
+        if (fort_tension_slope(iten).le.zero) then
+         ! do nothing
+        else
+         print *,"fort_tension_slope must be non-positive"
+         stop
+        endif
         print *,"iten,tension_T0 ",iten,fort_tension_T0(iten)
         print *,"iten,tension_min ",iten,fort_tension_min(iten)
         print *,"iten,prefreeze_tension ",iten,fort_prefreeze_tension(iten)

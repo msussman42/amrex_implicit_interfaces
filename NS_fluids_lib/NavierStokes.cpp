@@ -1704,6 +1704,12 @@ void fortran_parameters() {
  Vector<Real> saturation_temp_temp(2*nten);
  Vector<Real> reference_pressure_temp(2*nten);
  for (int i=0;i<nten;i++) { 
+
+  if (tension_slopetemp[i]<=0.0) {
+   // do nothing
+  } else
+   amrex::Error("tension_slope must be non-positive(1)");
+
   saturation_temp_temp[i]=0.0;
   saturation_temp_temp[i+nten]=0.0;
   reference_pressure_temp[i]=1.0e+6;
@@ -5043,6 +5049,12 @@ NavierStokes::read_params ()
 
       std::cout << "tension i=" << i << "  " << tension[i] << '\n';
       std::cout << "tension_slope i=" << i << "  " << tension_slope[i] << '\n';
+
+      if (tension_slope[i]<=0.0) {
+       // do nothing
+      } else
+       amrex::Error("tension_slope must be non-positive(2)");
+
       std::cout << "tension_T0 i=" << i << "  " << tension_T0[i] << '\n';
       std::cout << "tension_min i=" << i << "  " << tension_min[i] << '\n';
       std::cout << "initial cap_wave_speed i=" << i << "  " << 
