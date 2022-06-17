@@ -1147,6 +1147,28 @@ implicit none
       INTEGER_T, intent(inout) :: nodemap(3)
       end subroutine TEMPLATE_ORDER_NODES
 
+      subroutine TEMPLATE_VARIABLE_SURFACE_TENSION( &
+        xpos, &
+        time, &
+        iten, &
+        temperature, &
+        tension)
+      INTEGER_T, intent(in) :: iten
+      REAL_T, intent(in) :: time,temperature
+      REAL_T, intent(in) :: xpos(SDIM)
+      REAL_T, intent(inout) :: tension
+      end subroutine TEMPLATE_VARIABLE_SURFACE_TENSION
+
+      subroutine TEMPLATE_VARIABLE_LATENT_HEAT( &
+        iten, &
+        temperature, &
+        latent_heat)
+      INTEGER_T, intent(in) :: iten
+      REAL_T, intent(in) :: temperature
+      REAL_T, intent(inout) :: latent_heat ! always positive
+      end subroutine TEMPLATE_VARIABLE_LATENT_HEAT
+
+
       END INTERFACE
 
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
@@ -1207,6 +1229,11 @@ implicit none
               SUB_K_EFFECTIVE
 
       PROCEDURE(TEMPLATE_reference_wavelen), POINTER :: SUB_reference_wavelen
+
+      PROCEDURE(TEMPLATE_VARIABLE_SURFACE_TENSION), POINTER :: &
+              SUB_VARIABLE_SURFACE_TENSION
+      PROCEDURE(TEMPLATE_VARIABLE_LATENT_HEAT), POINTER :: &
+              SUB_VARIABLE_LATENT_HEAT
 
 contains
 
