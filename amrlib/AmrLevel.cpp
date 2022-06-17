@@ -144,7 +144,7 @@ AmrLevel::AmrLevel (Amr&            papa,
 
        if (num_SoA_var>0) {
         AmrLevel0_new_dataPC[i]=
-          new AmrParticleContainer<N_EXTRA_REAL,0,0,0>(parent);
+          new AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>(parent);
         //add Structure of Array component(s)
         //amrex-master/Src/Particle/AMReX_Particles.H
         //void AddRealComp (T communicate=true)
@@ -472,7 +472,8 @@ AmrLevel::~AmrLevel ()
     parent = 0;
 }
 
-AmrParticleContainer<N_EXTRA_REAL,0,0,0>& AmrLevel::newDataPC (int slab_index)
+AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& 
+   AmrLevel::newDataPC (int slab_index)
 {
 
 if (level==0) {
@@ -505,7 +506,7 @@ if (level==0) {
 
 }
 
-const AmrParticleContainer<N_EXTRA_REAL,0,0,0>&
+const AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>&
 AmrLevel::newDataPC (int slab_index) const
 {
 
