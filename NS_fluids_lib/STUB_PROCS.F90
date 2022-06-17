@@ -1387,4 +1387,73 @@ INTEGER_T :: dir_local
 
 end subroutine STUB_reference_wavelen
 
+subroutine STUB_VARIABLE_SURFACE_TENSION( &
+  xpos, &
+  time, &
+  iten, &
+  temperature, &
+  tension)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: iten
+REAL_T, intent(in) :: time,temperature
+REAL_T, intent(in) :: xpos(SDIM)
+REAL_T, intent(inout) :: tension
+
+ if ((iten.ge.1).and.(iten.le.num_interfaces)) then
+  ! do nothing
+ else
+  print *,"iten invalid"
+  stop
+ endif
+ if (temperature.gt.0.0d0) then
+  ! do nothing
+ else
+  print *,"temperature invalid"
+  stop
+ endif
+ if (tension.ge.0.0d0) then
+  ! do nothing
+ else
+  print *,"tension invalid"
+  stop
+ endif
+
+end subroutine STUB_VARIABLE_SURFACE_TENSION
+
+subroutine STUB_VARIABLE_LATENT_HEAT( &
+  iten, &
+  temperature, &
+  latent_heat)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: iten
+REAL_T, intent(in) :: temperature
+REAL_T, intent(inout) :: latent_heat ! always positive
+
+ if ((iten.ge.1).and.(iten.le.2*num_interfaces)) then
+  ! do nothing
+ else
+  print *,"iten invalid"
+  stop
+ endif
+ if (temperature.gt.0.0d0) then
+  ! do nothing
+ else
+  print *,"temperature invalid"
+  stop
+ endif
+ if (latent_heat.gt.0.0d0) then
+  ! do nothing
+ else
+  print *,"latent_heat invalid"
+  stop
+ endif
+
+end subroutine STUB_VARIABLE_LATENT_HEAT
+
 end module STUB_module

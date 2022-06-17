@@ -17288,6 +17288,10 @@ end subroutine global_checkinplane
            fort_latent_heat_slope(iten)* &
            (temperature-fort_latent_heat_T0(iten))
 
+        if (is_in_probtype_list().eq.1) then
+         call SUB_VARIABLE_LATENT_HEAT(iten,temperature,new_latent_heat)
+        endif
+
         if (new_latent_heat.lt.abs(fort_latent_heat_min(iten))) then
          new_latent_heat=abs(fort_latent_heat_min(iten))
         else if (new_latent_heat.ge. &
@@ -17377,6 +17381,12 @@ end subroutine global_checkinplane
         avgtemp=half*(temperature(im)+temperature(im_opp))
         new_tension(iten)=new_tension(iten)+fort_tension_slope(iten)* &
          (avgtemp-fort_tension_T0(iten))
+
+        if (is_in_probtype_list().eq.1) then
+         call SUB_VARIABLE_SURFACE_TENSION(xpos,time,iten, &
+           avgtemp,new_tension(iten))
+        endif
+
         if (new_tension(iten).lt.fort_tension_min(iten)) then
          new_tension(iten)=fort_tension_min(iten)
         else if (new_tension(iten).ge.fort_tension_min(iten)) then
