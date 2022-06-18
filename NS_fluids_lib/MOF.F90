@@ -3653,7 +3653,7 @@ end subroutine intersection_volume_and_map
       else if (mag.eq.zero) then
        ! do nothing
       else
-       print *,"mag invalid in surface_area"
+       print *,"mag invalid in surface_area; mag=",mag
        stop
       endif
 
