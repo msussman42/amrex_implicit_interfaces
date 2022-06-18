@@ -896,7 +896,6 @@ protected:
     void avgDown_list(int stateidx,Vector<int> scomp,
       Vector<int> ncomp,int spectral_override); 
 
-     // particle_id==-1 => no info from particles
     void prescribe_solid_geometryALL(Real time,int renormalize_only,
       int local_truncate,int caller_id);
     void prescribe_solid_geometry(Real time,int renormalize_only);

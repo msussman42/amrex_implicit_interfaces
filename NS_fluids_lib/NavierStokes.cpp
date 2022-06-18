@@ -4594,9 +4594,12 @@ NavierStokes::read_params ()
       amrex::Error("FSI_flag invalid");
     }  // i=0..nmat-1
 
+     //default=1
     pp.query("particle_nsubdivide",particle_nsubdivide);
+     //default=3
     pp.query("particle_max_per_nsubdivide",
 	    particle_max_per_nsubdivide);
+     //default=1
     pp.query("particle_min_per_nsubdivide",
 	    particle_min_per_nsubdivide);
 
@@ -9316,8 +9319,10 @@ void NavierStokes::post_restart() {
     using My_ParticleContainer =
       AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
-    if (N_EXTRA_INT==0) 
-     amrex::Error("need N_EXTRA_INT>0");
+    if (N_EXTRA_INT>0) {
+     //do nothing
+    } else
+     amrex::Error("N_EXTRA_INT invalid");
 
     AmrLevel0_new_dataPC[i]=new My_ParticleContainer(parent);
     for (int ns=0;ns<num_SoA_var;ns++)

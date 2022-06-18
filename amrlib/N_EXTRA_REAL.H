@@ -9,7 +9,7 @@ Structure of Array components can be added real time.
 #define N_EXTRA_REAL (1)
 #define N_EXTRA_REAL_INSERT_TIME (0)
 
-#define N_EXTRA_INT (0)
+#define N_EXTRA_INT (1)
 #define N_EXTRA_INT_MATERIAL_ID (0)
 
 #endif

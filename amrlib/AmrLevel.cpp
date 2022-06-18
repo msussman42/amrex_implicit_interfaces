@@ -142,7 +142,7 @@ AmrLevel::AmrLevel (Amr&            papa,
 
       if (local_particles_flag==1) {
 
-       if (num_SoA_var>0) {
+       if (num_SoA_var>=0) {
         AmrLevel0_new_dataPC[i]=
           new AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>(parent);
         //add Structure of Array component(s)
@@ -151,7 +151,7 @@ AmrLevel::AmrLevel (Amr&            papa,
         for (int ns=0;ns<num_SoA_var;ns++)
          AmrLevel0_new_dataPC[i]->AddRealComp(true);
        } else
-        amrex::Error("particles only if non-Newtonian materials exist");
+        amrex::Error("num_SoA_var invalid");
 
       } else if (local_particles_flag==0) {
        // do nothing
