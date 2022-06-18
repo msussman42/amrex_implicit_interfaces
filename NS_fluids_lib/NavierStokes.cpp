@@ -3829,7 +3829,7 @@ NavierStokes::read_params ()
        } else if (LL==0) {
         distribute_from_target[iten_local]=0;
        } else
-        amrex::Error("latent_heat invalid");
+        amrex::Error("latent_heat (LL) invalid");
       } else
        amrex::Error("freezing_model invalid");
      } // ireverse
@@ -3901,7 +3901,7 @@ NavierStokes::read_params ()
        } else if (LL==0) {
         // do nothing
        } else
-        amrex::Error("latent_heat invalid");
+        amrex::Error("latent_heat (LL) invalid");
       } else
        amrex::Error("freezing_model invalid");
 
@@ -3939,7 +3939,7 @@ NavierStokes::read_params ()
         amrex::Error("distribute_from_target invalid");
 
       } else
-       amrex::Error("latent_heat invalid");
+       amrex::Error("latent_heat (LL) invalid");
 
      } // ireverse
     } // iten
@@ -4568,7 +4568,7 @@ NavierStokes::read_params ()
      } else if (LL==0.0) {
       // do nothing
      } else
-      amrex::Error("latent_heat is NaN");
+      amrex::Error("latent_heat (LL) is NaN");
     } // i
 
     truncate_volume_fractions.resize(nmat);
@@ -5495,7 +5495,7 @@ int NavierStokes::is_multi_component_evap(int loc_freezing_model,
   }
 
  } else {
-  amrex::Error("latent_heat invalid");
+  amrex::Error("loc_latent_heat invalid");
   return 0;
  }
 
@@ -14456,7 +14456,11 @@ NavierStokes::phase_change_redistributeALL() {
      delete_array(donorflag_MF);
      delete_array(donorflag_complement_MF);
 
-    } // LL!=0
+    } else if (LL==0.0) {
+     // do nothing
+    } else {
+     amrex::Error("LL is NaN");
+    } 
    } // ireverse
   } // im_opp
  } // im=1..nmat
@@ -14738,9 +14742,14 @@ NavierStokes::level_phase_change_redistribute(
  VOF_Recon_resize(1,SLOPE_RECON_MF);
   
  if (isweep==0) {
- 
-  if (LL==0.0)
+
+  if (LL!=0.0) {
+   // do nothing
+  } else if (LL==0.0) {
    amrex::Error("LL invalid");
+  } else
+   amrex::Error("LL is NaN");
+
   if (std::abs(expect_mdot_sign)!=1.0)
    amrex::Error("expect_mdot_sign invalid");
   if ((im_source<1)||(im_source>nmat))
@@ -14855,8 +14864,13 @@ NavierStokes::level_phase_change_redistribute(
 
    // redistribution.
 
-  if (LL==0.0)
+  if (LL!=0.0) {
+   // do nothing
+  } else if (LL==0.0) {
    amrex::Error("LL invalid");
+  } else
+   amrex::Error("LL is NaN");
+
   if (std::abs(expect_mdot_sign)!=1.0)
    amrex::Error("expect_mdot_sign invalid");
   if ((im_source<1)||(im_source>nmat))
@@ -14937,8 +14951,13 @@ NavierStokes::level_phase_change_redistribute(
 
    // clear out mdot in the donor cells.
 
-  if (LL==0.0)
+  if (LL!=0.0) {
+   // do nothing
+  } else if (LL==0.0) {
    amrex::Error("LL invalid");
+  } else
+   amrex::Error("LL is NaN");
+
   if (std::abs(expect_mdot_sign)!=1.0)
    amrex::Error("expect_mdot_sign invalid");
   if ((im_source<1)||(im_source>nmat))
@@ -15355,7 +15374,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     } else if (LL==0.0) {
      // do nothing
     } else
-     amrex::Error("latent_heat[im] invalid");
+     amrex::Error("latent_heat[im] (LL) invalid");
    } // im=0..2 nten-1
   } else if ((project_option>=SOLVETYPE_SPEC)&&  
 	     (project_option<SOLVETYPE_SPEC+num_species_var)) { //mass fraction
@@ -15367,7 +15386,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 
       if (is_multi_component_evap(freezing_model[im],
 	   Tanasawa_or_Schrage_or_Kassemi[im],
-           latent_heat[im])==1) {
+           LL)==1) {
        int ispec=mass_fraction_id[im];
        if ((ispec>=1)&&(ispec<=num_species_var)) {
         if (ispec==project_option-SOLVETYPE_SPEC+1) {
@@ -15377,7 +15396,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
         amrex::Error("ispec invalid");
       } else if (is_multi_component_evap(freezing_model[im],
            Tanasawa_or_Schrage_or_Kassemi[im],
-           latent_heat[im])==0) {
+           LL)==0) {
        // do nothing
       } else 
        amrex::Error("is_multi_component_evap invalid");
