@@ -412,7 +412,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     } else if (LL==0.0) {
      // do nothing
     } else
-     amrex::Error("latent_heat[im] invalid");
+     amrex::Error("latent_heat[im] (LL) invalid");
    } // im=0..2 nten-1
   } else if (is_phasechange==0) {
    // do nothing
@@ -453,7 +453,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     } else if (LL==0.0) {
      // do nothing
     } else
-     amrex::Error("latent_heat[im] invalid");
+     amrex::Error("latent_heat[im] (LL) invalid");
      
    } // im=0.. 2 nten -1
 

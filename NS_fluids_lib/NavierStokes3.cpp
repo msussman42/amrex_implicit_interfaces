@@ -1374,8 +1374,12 @@ void advance_recalesce(
    if ((recal_material[im_source]==1) || 
        (recal_material[im_source]==2)) {
     Real LL=latent_heat_source[im_source];
-    if (LL==0.0)
+    if (LL!=0.0) {
+     //do nothing
+    } else if (LL==0.0) {
      amrex::Error("LL invalid");
+    } else
+     amrex::Error("LL is NaN");
 
     int ibase=im_source*recalesce_num_state; 
     int ibaseI=im_source*num_integrate; 
@@ -1820,15 +1824,20 @@ void NavierStokes::process_recalesce_dataALL(
      LL=get_user_latent_heat(iten+ireverse*nten,293.0,1);
     }  // im_opp<>im_source
    } // im_opp
-   
-   if (LL==0.0)
+  
+   if (LL!=0.0) {
+    //do nothing
+   } else if (LL==0.0) {
     amrex::Error("latent_heat invalid");
+   } else
+    amrex::Error("LL is NaN");
+
   } else if (recalesce_material[im_source]==0) {
    // do nothing
   } else 
    amrex::Error("recalesce_material invalid");
   latent_heat_source[im_source]=LL;
- } // im_source
+ } // im_source=0 ... nmat-1
 
   // recalesce_material=0,1 (static),2 (dynamic)
  advance_recalesce(nmat,nten,
@@ -7740,7 +7749,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
    } else if (LL==0.0) {
     // do nothing
    } else
-    amrex::Error("latent_heat[im] invalid");
+    amrex::Error("latent_heat[im] (LL) invalid");
 
   } // im=0..2 nten -1
  } else if (project_option_is_valid(project_option)==1) {
@@ -8006,7 +8015,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
     } else if (LL==0.0) {
      // do nothing
     } else
-     amrex::Error("latent_heat[im] invalid");
+     amrex::Error("latent_heat[im] (LL) invalid");
    } // im=0..2 nten -1
   } else if (is_phasechange==0) {
    // do nothing
@@ -8047,7 +8056,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
     } else if (LL==0.0) {
      // do nothing
     } else
-     amrex::Error("latent_heat[im] invalid");
+     amrex::Error("latent_heat[im] (LL) invalid");
      
    } // im=0.. 2 nten -1
 
