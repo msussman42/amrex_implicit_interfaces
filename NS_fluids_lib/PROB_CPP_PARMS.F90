@@ -1516,9 +1516,10 @@ stop
      
       if (ioproc.eq.1) then
        do iten=1,2*nten
-        print *,"iten,latent_heat ",iten,fort_latent_heat(iten)
-        print *,"iten,latent_heat_slope ",iten,fort_latent_heat_slope(iten)
-        print *,"iten,latent_heat_T0 ",iten,fort_latent_heat_T0(iten)
+        print *,"iten,fort_latent_heat ",iten,fort_latent_heat(iten)
+        print *,"iten,fort_latent_heat_slope ",iten,fort_latent_heat_slope(iten)
+        print *,"iten,fort_latent_heat_T0 ",iten,fort_latent_heat_T0(iten)
+        print *,"iten,fort_latent_heat_min ",iten,fort_latent_heat_min(iten)
         if (fort_latent_heat_slope(iten).le.zero) then
          ! do nothing
         else

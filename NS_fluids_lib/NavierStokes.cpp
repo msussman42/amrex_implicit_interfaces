@@ -4552,7 +4552,7 @@ NavierStokes::read_params ()
       //do nothing
      } else {
       amrex::Error("LL is NaN");
-     } // latent_heat<>0
+     } 
     }  // i=0;i<2*nten
 
     hydrate_flag=0;
@@ -15407,7 +15407,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     } else if (LL==0.0) {
      // do nothing
     } else
-     amrex::Error("latent_heat[im] invalid");
+     amrex::Error("latent_heat[im] (LL) invalid");
    } // im=0.. 2 nten -1
   } else
    amrex::Error("project_option invalid");
