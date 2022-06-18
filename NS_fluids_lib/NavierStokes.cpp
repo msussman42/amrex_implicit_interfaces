@@ -1,8 +1,3 @@
-//SEM_scalar_advection, MASKSEM_MF,deltacomp,make_SEM_delta_force,
-//fort_updatesemforce, SEM_MAC_TO_CELL, SEM_CELL_TO_MAC
-//
-//supermesh (using particle container) used to capture shocks 
-//and materials regions with large gap error.
 #include <algorithm>
 #include <vector>
 
@@ -16267,37 +16262,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       amrex::Error("tid_current invalid");
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // people who have run the code, and published papers:
-     // 1. UTRC -> Marios Soteriou and ?, Marco
-     // 2. Sandia Livermore -> Marco and Everett (what would Marco 
-     //    recommend for improving performance)
-     // 3. Mitsuhiro
-     // 4. Yongsheng
-     // 5. Zhouteng Ye?
-     // 6. Zeyu Huang?
-     // 7. Yaohong Wang?
-     // 8. Researcher from Columbia univ, NY
-     // 9. Pierre Trontin 
-     // 10. Puckett? -Viral droplets floating in the air.
-     // (surrogate model, optimization, data assimilation)
-     // (artificial intelligence and multiphase flow turbulence modeling,
-     // run fine grid simulation in order to produce training data fluxes for
-     // coarse grid sub-scale model)
-     // ideas to improve the performance of the existing code:
-     // 1. pass structures between fortran and c++
-     // 2. compiler directives to the sanity checks. (checkbound)
-     // 3. canonical test problems that automatically get run (and do not
-     //    take long) in order to make sure the code is not broken after 
-     //    changes.
-     // 4. HD5
-     // 5. python front end for plotting MOF centroids, filled in 
-     //    material regions, Particle Container particles, grids,
-     //    slice data easily accessible.  Plot on the fly, different
-     //    box types.
-     // 6. https://pyamg.saclay.inria.fr/vizir4.html
-     //
      // in: SEM_scalar_advection
-     // advect: rho u, rho, temperature (non conservatively)
+     // advect: rho u, rho, temperature 
      // fort_cell_to_mac in LEVELSET_3D.F90
      int nsolve=1; //unused here
      int ncphys_proxy=NFLUXSEM;
@@ -19353,7 +19319,7 @@ void NavierStokes::writeInterfaceReconstruction() {
    // do nothing
   } else if (particles_flag==1) {
 
-   if ((num_materials_viscoelastic>=1)&&
+   if ((num_materials_viscoelastic>=0)&&
        (num_materials_viscoelastic<=nmat)) {
 
     // in: NAVIERSTOKES_3D.F90
@@ -22456,7 +22422,9 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 void NavierStokes::assimilate_Q_from_particles(
    AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC) {
 
- if (N_EXTRA_INT==0) 
+ if (N_EXTRA_INT>0) {
+  // do nothing
+ } else
   amrex::Error("need N_EXTRA_INT>0");
 
  int nmat=num_materials;
@@ -22616,7 +22584,7 @@ void NavierStokes::assimilate_Q_from_particles(
 // DO NOT FORGET TO HAVE CHECKPOINT/RESTART CAPABILITY FOR PARTICLES.
 // This routine called from:
 // 1. post_init_state() and
-// 2. move_particles()
+// 2. nonlinear_advection()
 void
 NavierStokes::init_particle_container(int append_flag) {
 
@@ -22650,10 +22618,20 @@ NavierStokes::init_particle_container(int append_flag) {
 
  if (particles_flag==1) {
 
-  if ((num_materials_viscoelastic>=1)&&
+  if ((num_materials_viscoelastic>=0)&&
       (num_materials_viscoelastic<=nmat)) {
 
-   MultiFab* tensor_mf=getStateTensor(1,0,NUM_CELL_ELASTIC,cur_time_slab);
+   MultiFab* lsmf=getStateDist(1,cur_time_slab,3);  
+
+   MultiFab* tensor_mf=nullptr;
+
+   if ((num_materials_viscoelastic>=1)&&
+       (num_materials_viscoelastic<=nmat)) {
+    tensor_mf=getStateTensor(1,0,NUM_CELL_ELASTIC,cur_time_slab);
+   } else if (num_materials_viscoelastic==0) {
+    tensor_mf=lsmf;
+   } else
+    amrex::Error("num_materials_viscoelastic invalid");
 
    using My_ParticleContainer =
       AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
@@ -22663,13 +22641,13 @@ NavierStokes::init_particle_container(int append_flag) {
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(tensor_mf->boxArray().d_numPts());
+   thread_class::init_d_numPts(lsmf->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(*tensor_mf,use_tiling); mfi.isValid(); ++mfi) {
+   for (MFIter mfi(*lsmf,use_tiling); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
     const int gridno = mfi.index();
     const Box& tilegrid = mfi.tilebox();
@@ -22683,7 +22661,9 @@ NavierStokes::init_particle_container(int append_flag) {
     const Real* xlo = grid_loc[gridno].lo();
 
     FArrayBox& mfinerfab=(*localMF[MASKCOEF_MF])[mfi];
+
     FArrayBox& tensorfab=(*tensor_mf)[mfi];
+    FArrayBox& lsfab=(*lsmf)[mfi];
 
      // component 1: number of particles linked to the cell.
      // component 2: the link to the list of particles.
@@ -22910,7 +22890,15 @@ NavierStokes::init_particle_container(int append_flag) {
 } // omp
    ns_reconcile_d_num(81);
 
-   delete tensor_mf;
+   delete lsmf;
+
+   if ((num_materials_viscoelastic>=1)&&
+       (num_materials_viscoelastic<=nmat)) {
+    delete tensor_mf;
+   } else if (num_materials_viscoelastic==0) {
+    //do nothing
+   } else
+    amrex::Error("num_materials_viscoelastic invalid");
 
   } else
    amrex::Error("num_materials_viscoelastic invalid");
