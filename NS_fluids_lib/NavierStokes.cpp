@@ -19322,7 +19322,7 @@ void NavierStokes::writeInterfaceReconstruction() {
    if ((num_materials_viscoelastic>=0)&&
        (num_materials_viscoelastic<=nmat)) {
 
-    // in: NAVIERSTOKES_3D.F90
+    // fort_combine_particles is declared in: NAVIERSTOKES_3D.F90
     fort_combine_particles(
      grids_per_level.dataPtr(),
      &finest_level,
@@ -22670,12 +22670,14 @@ NavierStokes::init_particle_container(int append_flag) {
     BaseFab<int> cell_particle_count(tilegrid,2);
     cell_particle_count.setVal(0);
 
-    if (N_EXTRA_INT==0) 
-     amrex::Error("need N_EXTRA_INT>0");
+    if (N_EXTRA_INT>0) {
+     // do nothing
+    } else 
+     amrex::Error("N_EXTRA_INT invalid");
 
      // allocate for just one particle for now.
-    int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL+NUM_CELL_ELASTIC+
-     N_EXTRA_INT;
+    int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL+N_EXTRA_INT+
+      NUM_CELL_ELASTIC;
     Vector< Real > new_particle_data;
     new_particle_data.resize(single_particle_size);
 
@@ -22784,6 +22786,9 @@ NavierStokes::init_particle_container(int append_flag) {
        tensorfab.dataPtr(),
        ARLIM(tensorfab.loVect()),
        ARLIM(tensorfab.hiVect()),
+       lsfab.dataPtr(),
+       ARLIM(lsfab.loVect()),
+       ARLIM(lsfab.hiVect()),
        mfinerfab.dataPtr(),
        ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()),
        viscoelastic_model.dataPtr(), //0..num_materials-1
@@ -22856,9 +22861,13 @@ NavierStokes::init_particle_container(int append_flag) {
      for (int dir=0;dir<N_EXTRA_REAL;dir++) {
       p.rdata(dir) = new_particle_data[ibase+AMREX_SPACEDIM+dir];
      }
+     for (int dir=0;dir<N_EXTRA_INT;dir++) {
+      p.idata(dir) = 
+       (int) new_particle_data[ibase+AMREX_SPACEDIM+N_EXTRA_REAL+dir];
+     }
      for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
       int k_dest=dir*Np_mirror_AoS+i_mirror;
-      int k_source=ibase+AMREX_SPACEDIM+N_EXTRA_REAL+dir;
+      int k_source=ibase+AMREX_SPACEDIM+N_EXTRA_REAL+N_EXTRA_INT+dir;
       mirror_real_compALL[k_dest]=new_particle_data[k_source];
      }
      mirrorPC_AoS[i_mirror]=p;

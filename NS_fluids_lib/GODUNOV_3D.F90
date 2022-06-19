@@ -21701,6 +21701,8 @@ stop
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
+         ! (material_id) is extra.
+         integer(c_int) :: extra_int(N_EXTRA_INT)
        end type particle_t
 
        type accum_parm_type
