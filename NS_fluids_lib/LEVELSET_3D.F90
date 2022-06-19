@@ -18477,6 +18477,7 @@ stop
       type(interp_from_grid_parm_type) :: data_in 
       type(interp_from_grid_out_parm_type) :: data_out_LS
       REAL_T, target, dimension(nmat) :: data_interp_local_LS
+      REAL_T time_in_future
 
       cell_particle_count_ptr=>cell_particle_count
       mfiner_ptr=>mfiner
@@ -18490,6 +18491,14 @@ stop
 
       call checkbound_array_INTEGER(tilelo,tilehi, &
               cell_particle_count_ptr,0,-1,20374)
+
+      if (cur_time_slab.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time_slab invalid"
+       stop
+      endif
+      time_in_future=cur_time_slab+max(cur_time_slab,1.0D+3)
 
       if (NUM_CELL_ELASTIC.eq. &
           num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) then
@@ -18511,6 +18520,19 @@ stop
        ! do nothing
       else
        print *,"num_materials_viscoelastic invalid"
+       stop
+      endif
+
+      if (N_EXTRA_REAL.ge.1) then
+       ! do nothing
+      else
+       print *,"N_EXTRA_REAL invalid"
+       stop
+      endif
+      if (N_EXTRA_INT.ge.1) then
+       ! do nothing
+      else
+       print *,"N_EXTRA_INT invalid"
        stop
       endif
 
@@ -18601,6 +18623,20 @@ stop
       endif
       Np_append_test=0
 
+      data_out_LS%data_interp=>data_interp_local_LS
+
+      data_in%scomp=1 
+      data_in%ncomp=nmat
+      data_in%level=level
+      data_in%finest_level=finest_level
+      data_in%bfact=bfact
+      data_in%nmat=num_materials
+      data_in%dx=>dx
+      data_in%xlo=>xlo
+      data_in%fablo=>fablo
+      data_in%fabhi=>fabhi
+      data_in%state=lsfab_ptr
+
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
@@ -18686,33 +18722,30 @@ stop
                xpart(dir)=particles(current_link)%pos(dir)
               enddo 
 
-              data_out_LS%data_interp=>data_interp_local_LS
-
               data_in%xtarget=>xpart
-              data_in%scomp=1 
-              data_in%ncomp=nmat
-              data_in%level=level
-              data_in%finest_level=finest_level
-              data_in%bfact=bfact
-              data_in%nmat=num_materials
-              data_in%dx=>dx
-              data_in%xlo=>xlo
-              data_in%fablo=>fablo
-              data_in%fabhi=>fabhi
-              data_in%state=lsfab_ptr
               call interp_from_grid_util(data_in,data_out_LS)
               do dir=1,nmat
                LS_sub(dir)=data_out_LS%data_interp(dir)
               enddo
               call get_primary_material(LS_sub,nmat,im_primary_sub)
-              im_particle=particles(current_link)% &
-                extra_int(N_EXTRA_INT_MATERIAL_ID+1)
-              if (im_particle.eq.im_primary_sub) then
-               ! do nothing
-              else if (im_particle.ne.im_primary_sub) then
-               sort_data_time(sub_iter)=cur_time_slab+1.0D+3
+              if ((im_primary_sub.ge.1).and.(im_primary_sub.le.nmat)) then
+               im_particle=particles(current_link)% &
+                 extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+               if ((im_particle.ge.1).and.(im_particle.le.nmat)) then
+                if (im_particle.eq.im_primary_sub) then
+                 ! do nothing
+                else if (im_particle.ne.im_primary_sub) then
+                 sort_data_time(sub_iter)=time_in_future
+                else
+                 print *,"im_particle or im_primary_sub invalid"
+                 stop
+                endif
+               else
+                print *,"im_particle invalid"
+                stop
+               endif
               else
-               print *,"im_particle or im_primary_sub invalid"
+               print *,"im_primary_sub invalid"
                stop
               endif
 
@@ -18755,12 +18788,10 @@ stop
               ! do nothing
              else if (sort_data_time(bubble_iter).gt.zero) then
               if ((bubble_iter.gt.particle_max_per_nsubdivide).or. &
-                  (sort_data_time(bubble_iter).gt. &
-                   cur_time_slab+1.0D+3-1.0d0)) then
+                  (sort_data_time(bubble_iter).ge.time_in_future-one)) then
                particle_delete_flag(sort_data_id(bubble_iter))=1
               else if ((bubble_iter.le.particle_max_per_nsubdivide).and. &
-                       (sort_data_time(bubble_iter).le. &
-                        cur_time_slab+1.0D+3-1.0d0)) then
+                   (sort_data_time(bubble_iter).lt.time_in_future-one)) then
                ! do nothing
               else
                print *,"bubble_iter or sort_data_time bust"
@@ -18849,8 +18880,13 @@ stop
             enddo
             new_particles(ibase+SDIM+N_EXTRA_REAL_INSERT_TIME+1)=cur_time_slab
             call get_primary_material(LS_sub,nmat,im_primary_sub)
-            new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT_MATERIAL_ID+1)= &
+            if ((im_primary_sub.ge.1).and.(im_primary_sub.le.nmat)) then
+             new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT_MATERIAL_ID+1)= &
               im_primary_sub
+            else
+             print *,"im_primary_sub invalid"
+             stop
+            endif
            else
             print *,"isweep invalid"
             stop
