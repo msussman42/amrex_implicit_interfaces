@@ -14670,6 +14670,8 @@ END SUBROUTINE SIMP
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
+         ! (material_id) is extra.
+         integer(c_int) :: extra_int(N_EXTRA_INT)
        end type particle_t
 
       contains
@@ -14717,6 +14719,7 @@ END SUBROUTINE SIMP
       INTEGER_T ipart_counter
       INTEGER_T i,k,dir
       REAL_T Q_hold
+      REAL_T int_to_real_var
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -14732,7 +14735,7 @@ END SUBROUTINE SIMP
        print *,"N_real_comp invalid"
        stop
       endif
-      if ((num_materials_viscoelastic.ge.1).and. &
+      if ((num_materials_viscoelastic.ge.0).and. &
           (num_materials_viscoelastic.le.num_materials)) then
        ! do nothing
       else
@@ -14765,6 +14768,12 @@ END SUBROUTINE SIMP
        print *,"N_EXTRA_REAL unexpected value"
        stop
       endif
+      if (N_EXTRA_INT.eq.1) then
+       ! do nothing
+      else
+       print *,"N_EXTRA_INT unexpected value"
+       stop
+      endif
 
       open(unit=12,file=cenfilename36)
       write(12,*) Np
@@ -14785,6 +14794,11 @@ END SUBROUTINE SIMP
         write(12,'(E25.16)',ADVANCE="NO") &
           particles(ipart_counter)%extra_state(dir)
        enddo ! dir=1..N_EXTRA_REAL
+
+       do dir=1,N_EXTRA_INT
+        int_to_real_var=particles(ipart_counter)%extra_int(dir)
+        write(12,'(E25.16)',ADVANCE="NO") int_to_real_var
+       enddo ! dir=1..N_EXTRA_INT
 
        do dir=1,NUM_CELL_ELASTIC
         k=(dir-1)*Np+ipart_counter
@@ -14837,7 +14851,7 @@ END SUBROUTINE SIMP
 
       INTEGER_T i
       INTEGER_T ilev,igrid,ipass
-      REAL_T xref(SDIM+N_EXTRA_REAL+NUM_CELL_ELASTIC)
+      REAL_T xref(SDIM+N_EXTRA_REAL+N_EXTRA_INT+NUM_CELL_ELASTIC)
       INTEGER_T nparticles,Part_nparticles
       INTEGER_T alloc_flag
       INTEGER_T istruct
@@ -14887,7 +14901,13 @@ END SUBROUTINE SIMP
          print *,"N_EXTRA_REAL invalid"
          stop
         endif
-        if ((num_materials_viscoelastic.ge.1).and. &
+        if (N_EXTRA_INT.eq.1) then
+         ! do nothing
+        else
+         print *,"N_EXTRA_INT invalid"
+         stop
+        endif
+        if ((num_materials_viscoelastic.ge.0).and. &
             (num_materials_viscoelastic.le.num_materials)) then
          ! do nothing
         else
@@ -14905,10 +14925,12 @@ END SUBROUTINE SIMP
 
         if (SDIM.eq.3) then
          write(12,*) 'TITLE = "3D particles" '
-         write(12,'(A36)',ADVANCE="NO") 'VARIABLES = "X", "Y", "Z","time add"'
+         write(12,'(A50)',ADVANCE="NO") &
+           'VARIABLES = "X", "Y", "Z","time add","material id"'
         else if (SDIM.eq.2) then
          write(12,*) 'TITLE = "2D particles" '
-         write(12,'(A31)',ADVANCE="NO") 'VARIABLES = "X", "Y","time add"'
+         write(12,'(A45)',ADVANCE="NO") &
+           'VARIABLES = "X", "Y","time add","material id"'
         else
          print *,"dimension bust"
          stop
@@ -14983,9 +15005,9 @@ END SUBROUTINE SIMP
 
           do i=1,Part_nparticles
            read(5,*) &
-             (xref(istruct),istruct=1,SDIM+N_EXTRA_REAL+NUM_CELL_ELASTIC)
+             (xref(istruct),istruct=1,SDIM+N_EXTRA_REAL+N_EXTRA_INT+NUM_CELL_ELASTIC)
            write(12,*) &
-             (xref(istruct),istruct=1,SDIM+N_EXTRA_REAL+NUM_CELL_ELASTIC)
+             (xref(istruct),istruct=1,SDIM+N_EXTRA_REAL+N_EXTRA_INT+NUM_CELL_ELASTIC)
           enddo
 
          else

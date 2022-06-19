@@ -17639,6 +17639,8 @@ stop
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
+         ! (material_id) is extra.
+         integer(c_int) :: extra_int(N_EXTRA_INT)
        end type particle_t
 
        type accum_parm_type_count
@@ -17658,6 +17660,7 @@ stop
         REAL_T, pointer, dimension(:) :: real_compALL
         INTEGER_T :: nsubdivide
         REAL_T, pointer :: TENSOR(D_DECL(:,:,:),:)
+        REAL_T, pointer :: LEVELSET(D_DECL(:,:,:),:)
         !cell_particle_count(i,j,k,1)=number particles in the cell.
         !cell_particle_count(i,j,k,2)=particle id of first particle in list
         INTEGER_T, pointer, dimension(D_DECL(:,:,:),:) :: &
@@ -18079,7 +18082,8 @@ stop
          xtarget, &  ! where to add the new particle
          particle_link_data, &
          Np, &
-         Q_interp)
+         Q_interp, &
+         LS_interp)
       use probcommon_module
       use global_utility_module
 
@@ -18092,6 +18096,7 @@ stop
       INTEGER_T, intent(in) :: Np
       INTEGER_T, intent(in) :: particle_link_data(Np*(1+SDIM))
       REAL_T, intent(out) :: Q_interp(NUM_CELL_ELASTIC)
+      REAL_T, intent(out) :: LS_interp(nmat)
 
       INTEGER_T :: nhalf
       INTEGER_T :: dir
@@ -18101,6 +18106,7 @@ stop
       REAL_T, target :: xpart(SDIM)
       REAL_T :: Qpart(NUM_CELL_ELASTIC)
       REAL_T :: Q_interp_local(NUM_CELL_ELASTIC)
+      REAL_T :: LS_interp_local(nmat)
       INTEGER_T :: ibase
 
       REAL_T tmp,eps
@@ -18108,8 +18114,10 @@ stop
 
       type(interp_from_grid_parm_type) :: data_in 
       type(interp_from_grid_out_parm_type) :: data_out
+      type(interp_from_grid_out_parm_type) :: data_out_LS
 
       REAL_T, target, dimension(NUM_CELL_ELASTIC) :: data_interp_local
+      REAL_T, target, dimension(nmat) :: data_interp_local_LS
 
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
@@ -18141,8 +18149,11 @@ stop
 
       call checkbound_array(fablo_local,fabhi_local, &
          accum_PARM%TENSOR,1,-1,19896)
+      call checkbound_array(fablo_local,fabhi_local, &
+         accum_PARM%LEVELSET,1,-1,19896)
 
       data_out%data_interp=>data_interp_local
+      data_out_LS%data_interp=>data_interp_local_LS
 
       data_in%scomp=1 
       data_in%ncomp=NUM_CELL_ELASTIC
@@ -18200,10 +18211,33 @@ stop
        data_in%xtarget=>xpart
 
         ! bilinear interpolation
-       call interp_from_grid_util(data_in,data_out)
-       do dir=1,NUM_CELL_ELASTIC
-        Q_interp_local(dir)=data_out%data_interp(dir)
-       enddo
+       if (NUM_CELL_ELASTIC.gt.0) then
+        data_in%scomp=1 
+        data_in%ncomp=NUM_CELL_ELASTIC
+        data_in%state=accum_PARM%TENSOR
+        call interp_from_grid_util(data_in,data_out)
+        do dir=1,NUM_CELL_ELASTIC
+         Q_interp_local(dir)=data_out%data_interp(dir)
+        enddo
+       else if (NUM_CELL_ELASTIC.eq.0) then
+        ! do nothing
+       else
+        print *,"NUM_CELL_ELASTIC invalid"
+        stop
+       endif
+
+       if (nmat.gt.0) then
+        data_in%scomp=1 
+        data_in%ncomp=nmat
+        data_in%state=accum_PARM%LEVELSET
+        call interp_from_grid_util(data_in,data_out_LS)
+        do dir=1,nmat
+         LS_interp_local(dir)=data_out_LS%data_interp(dir)
+        enddo
+       else
+        print *,"nmat invalid"
+        stop
+       endif
 
        if (accum_PARM%append_flag.eq.0) then
         print *,"there should not be any particles if append_flag==0"
@@ -18242,10 +18276,33 @@ stop
       data_in%xtarget=>xtarget
 
        ! bilinear interpolation
-      call interp_from_grid_util(data_in,data_out)
-      do dir=1,NUM_CELL_ELASTIC
-       Q_interp(dir)=data_out%data_interp(dir)
-      enddo
+      if (NUM_CELL_ELASTIC.gt.0) then
+       data_in%scomp=1 
+       data_in%ncomp=NUM_CELL_ELASTIC
+       data_in%state=accum_PARM%TENSOR
+       call interp_from_grid_util(data_in,data_out)
+       do dir=1,NUM_CELL_ELASTIC
+        Q_interp(dir)=data_out%data_interp(dir)
+       enddo
+      else if (NUM_CELL_ELASTIC.eq.0) then
+       ! do nothing
+      else
+       print *,"NUM_CELL_ELASTIC invalid"
+       stop
+      endif
+
+      if (nmat.gt.0) then
+       data_in%scomp=1 
+       data_in%ncomp=nmat
+       data_in%state=accum_PARM%LEVELSET
+       call interp_from_grid_util(data_in,data_out_LS)
+       do dir=1,nmat
+        LS_interp(dir)=data_out_LS%data_interp(dir)
+       enddo
+      else
+       print *,"nmat invalid"
+       stop
+      endif
 
       if (accum_PARM%append_flag.eq.0) then
        if (A_VEL.eq.zero) then
@@ -18305,6 +18362,7 @@ stop
         cell_particle_count, &
         DIMS(cell_particle_count), &
         tensorfab,DIMS(tensorfab), &
+        lsfab,DIMS(lsfab), &
         mfiner,DIMS(mfiner), &
         viscoelastic_model, &
         im_elastic_map, &
@@ -18349,6 +18407,7 @@ stop
 
       INTEGER_T, intent(in) :: DIMDEC(cell_particle_count)
       INTEGER_T, intent(in) :: DIMDEC(tensorfab)
+      INTEGER_T, intent(in) :: DIMDEC(lsfab)
       INTEGER_T, intent(in) :: DIMDEC(mfiner)
    
        ! first component: number of particles in the cell
@@ -18362,6 +18421,8 @@ stop
       REAL_T, intent(in), target :: &
          tensorfab(DIMV(tensorfab),NUM_CELL_ELASTIC) 
       REAL_T, pointer :: tensorfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat) 
+      REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mfiner(DIMV(mfiner)) 
       REAL_T, pointer :: mfiner_ptr(D_DECL(:,:,:))
 
@@ -18387,9 +18448,12 @@ stop
       INTEGER_T local_count
       INTEGER_T sub_found
       INTEGER_T Np_append_test
-      REAL_T :: xpart(SDIM)
+      REAL_T, target :: xpart(SDIM)
       REAL_T :: xsub(SDIM)
       REAL_T :: tensor_sub(NUM_CELL_ELASTIC)
+      REAL_T :: LS_sub(nmat)
+      INTEGER_T :: im_primary_sub
+      INTEGER_T :: im_particle
       INTEGER_T, allocatable, dimension(:,:) :: sub_particle_data
       INTEGER_T, allocatable, dimension(:) :: sort_data_id
       REAL_T, allocatable, dimension(:) :: sort_data_time
@@ -18410,11 +18474,17 @@ stop
       INTEGER_T ii,jj
       REAL_T Q(3,3)
 
+      type(interp_from_grid_parm_type) :: data_in 
+      type(interp_from_grid_out_parm_type) :: data_out_LS
+      REAL_T, target, dimension(nmat) :: data_interp_local_LS
+
       cell_particle_count_ptr=>cell_particle_count
       mfiner_ptr=>mfiner
       tensorfab_ptr=>tensorfab
+      lsfab_ptr=>lsfab
 
       call checkbound_array(fablo,fabhi,tensorfab_ptr,1,-1,20355)
+      call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1,20355)
 
       call checkbound_array1(fablo,fabhi,mfiner_ptr,1,-1,20370)
 
@@ -18436,7 +18506,7 @@ stop
        stop
       endif
 
-      if ((num_materials_viscoelastic.ge.1).and. &
+      if ((num_materials_viscoelastic.ge.0).and. &
           (num_materials_viscoelastic.le.nmat)) then
        ! do nothing
       else
@@ -18444,7 +18514,8 @@ stop
        stop
       endif
 
-      if (single_particle_size.eq.SDIM+N_EXTRA_REAL+NUM_CELL_ELASTIC) then
+      if (single_particle_size.eq. &
+          SDIM+N_EXTRA_REAL+N_EXTRA_INT+NUM_CELL_ELASTIC) then
        ! do nothing
       else
        print *,"single_particle_size invalid"
@@ -18475,6 +18546,7 @@ stop
 
        !accum_PARM%TENSOR is pointer, tensorfab is target
       accum_PARM%TENSOR=>tensorfab 
+      accum_PARM%LEVELSET=>lsfab 
 
       accum_PARM%cell_particle_count=>cell_particle_count
 
@@ -18593,85 +18665,129 @@ stop
             ! check if particles need to be deleted
           if (local_count.ge.1) then
 
-           if (local_count.gt.particle_max_per_nsubdivide) then
-            allocate(sort_data_time(local_count))
-            allocate(sort_data_id(local_count))
-            sub_iter=0
-            do cell_iter=1,cell_count_hold
-             isub_test=sub_particle_data(cell_iter,1)
-             jsub_test=sub_particle_data(cell_iter,2)
-             ksub_test=sub_particle_data(cell_iter,SDIM)
-             current_link=sub_particle_data(cell_iter,SDIM+1)
-             if ((isub_test.eq.isub).and. &
-                 (jsub_test.eq.jsub)) then
-              if ((SDIM.eq.2).or. &
-                  ((SDIM.eq.3).and.(ksub_test.eq.ksub))) then
-               sub_iter=sub_iter+1
-               sort_data_id(sub_iter)=current_link                     
-               sort_data_time(sub_iter)= &
-                 particles(current_link)% &
-                 extra_state(N_EXTRA_REAL_INSERT_TIME+1) 
-              else if ((SDIM.eq.3).and.(ksub_test.ne.ksub)) then
+           allocate(sort_data_time(local_count))
+           allocate(sort_data_id(local_count))
+           sub_iter=0
+           do cell_iter=1,cell_count_hold
+            isub_test=sub_particle_data(cell_iter,1)
+            jsub_test=sub_particle_data(cell_iter,2)
+            ksub_test=sub_particle_data(cell_iter,SDIM)
+            current_link=sub_particle_data(cell_iter,SDIM+1)
+            if ((isub_test.eq.isub).and. &
+                (jsub_test.eq.jsub)) then
+             if ((SDIM.eq.2).or. &
+                 ((SDIM.eq.3).and.(ksub_test.eq.ksub))) then
+              sub_iter=sub_iter+1
+              sort_data_id(sub_iter)=current_link                     
+              sort_data_time(sub_iter)= &
+                particles(current_link)% &
+                extra_state(N_EXTRA_REAL_INSERT_TIME+1) 
+              do dir=1,SDIM
+               xpart(dir)=particles(current_link)%pos(dir)
+              enddo 
+
+              data_out_LS%data_interp=>data_interp_local_LS
+
+              data_in%xtarget=>xpart
+              data_in%scomp=1 
+              data_in%ncomp=nmat
+              data_in%level=level
+              data_in%finest_level=finest_level
+              data_in%bfact=bfact
+              data_in%nmat=num_materials
+              data_in%dx=>dx
+              data_in%xlo=>xlo
+              data_in%fablo=>fablo
+              data_in%fabhi=>fabhi
+              data_in%state=lsfab_ptr
+              call interp_from_grid_util(data_in,data_out_LS)
+              do dir=1,nmat
+               LS_sub(dir)=data_out_LS%data_interp(dir)
+              enddo
+              call get_primary_material(LS_sub,nmat,im_primary_sub)
+              im_particle=particles(current_link)% &
+                extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+              if (im_particle.eq.im_primary_sub) then
                ! do nothing
+              else if (im_particle.ne.im_primary_sub) then
+               sort_data_time(sub_iter)=cur_time_slab+1.0D+3
               else
-               print *,"dimension or ksub bust"
+               print *,"im_particle or im_primary_sub invalid"
                stop
               endif
-             endif
-            enddo ! cell_iter=1..cell_count_hold
 
-            if (sub_iter.eq.local_count) then
-             bubble_change=1
-             bubble_iter=0
-              ! sort from oldest particle to youngest.
-              ! i.e. particle with smallest "add time" is at the top of
-              ! the list.
-             do while ((bubble_change.eq.1).and. &
-                       (bubble_iter.lt.local_count))
-              do ibubble=1,local_count-bubble_iter-1
-               if (sort_data_time(ibubble).gt. &
-                   sort_data_time(ibubble+1)) then
-                temp_id=sort_data_id(ibubble)
-                sort_data_id(ibubble)=sort_data_id(ibubble+1)
-                sort_data_id(ibubble+1)=temp_id
-                temp_time=sort_data_time(ibubble)
-                sort_data_time(ibubble)=sort_data_time(ibubble+1)
-                sort_data_time(ibubble+1)=temp_time
-                bubble_change=1
-               endif
-              enddo ! ibubble=1..local_count-bubble_iter-1
-              bubble_iter=bubble_iter+1
-             enddo ! bubble_change==1 and bubble_iter<local_count
-             do bubble_iter=particle_max_per_nsubdivide+1,local_count
+             else if ((SDIM.eq.3).and.(ksub_test.ne.ksub)) then
+              ! do nothing
+             else
+              print *,"dimension or ksub bust"
+              stop
+             endif
+            endif
+           enddo ! cell_iter=1..cell_count_hold
+
+           if (sub_iter.eq.local_count) then
+            bubble_change=1
+            bubble_iter=0
+             ! sort from oldest particle to youngest.
+             ! i.e. particle with smallest "add time" is at the top of
+             ! the list.
+            do while ((bubble_change.eq.1).and. &
+                      (bubble_iter.lt.local_count))
+             do ibubble=1,local_count-bubble_iter-1
+              if (sort_data_time(ibubble).gt. &
+                  sort_data_time(ibubble+1)) then
+               temp_id=sort_data_id(ibubble)
+               sort_data_id(ibubble)=sort_data_id(ibubble+1)
+               sort_data_id(ibubble+1)=temp_id
+               temp_time=sort_data_time(ibubble)
+               sort_data_time(ibubble)=sort_data_time(ibubble+1)
+               sort_data_time(ibubble+1)=temp_time
+               bubble_change=1
+              endif
+             enddo ! ibubble=1..local_count-bubble_iter-1
+             bubble_iter=bubble_iter+1
+            enddo ! bubble_change==1 and bubble_iter<local_count
+
+            do bubble_iter=1,local_count
                ! never delete particles that were present from the
                ! very beginning of the simulation.
-              if (sort_data_time(bubble_iter).eq.zero) then
-               ! do nothing
-              else if (sort_data_time(bubble_iter).gt.zero) then
+             if (sort_data_time(bubble_iter).eq.zero) then
+              ! do nothing
+             else if (sort_data_time(bubble_iter).gt.zero) then
+              if ((bubble_iter.gt.particle_max_per_nsubdivide).or. &
+                  (sort_data_time(bubble_iter).gt. &
+                   cur_time_slab+1.0D+3-1.0d0)) then
                particle_delete_flag(sort_data_id(bubble_iter))=1
+              else if ((bubble_iter.le.particle_max_per_nsubdivide).and. &
+                       (sort_data_time(bubble_iter).le. &
+                        cur_time_slab+1.0D+3-1.0d0)) then
+               ! do nothing
               else
-               print *,"sort_data_time(bubble_iter) invalid"
+               print *,"bubble_iter or sort_data_time bust"
                stop
               endif
-             enddo ! bubble_iter
-            else
-             print *,"sub_iter invalid"
-             stop
-            endif    
-            deallocate(sort_data_time)
-            deallocate(sort_data_id)
-           else if ((local_count.ge.1).and. &
-                    (local_count.le.particle_max_per_nsubdivide)) then
-            ! do nothing
+             else
+              print *,"sort_data_time(bubble_iter) invalid"
+              stop
+             endif
+            enddo ! bubble_iter
            else
-            print *,"local_count bust"
+            print *,"sub_iter invalid"
             stop
-           endif 
+           endif    
+           deallocate(sort_data_time)
+           deallocate(sort_data_id)
+          else if (local_count.eq.0) then
+           ! do nothing
+          else
+           print *,"local_count bust"
+           stop
+          endif 
 
-            ! insufficient particles in the subbox or adding the
-            ! particles for the very first time.
-          else if ((local_count.lt.particle_min_per_nsubdivide).or. &
-                   (append_flag.eq.0)) then 
+           ! insufficient particles in the subbox or adding the
+           ! particles for the very first time.
+          if ((local_count.lt.particle_min_per_nsubdivide).or. &
+              (append_flag.eq.0)) then 
 
            call sub_box_cell_center( &
              accum_PARM, &
@@ -18687,7 +18803,8 @@ stop
              xsub, &
              particle_link_data, &
              Np, &
-             tensor_sub)
+             tensor_sub, &
+             LS_sub)
 
            do ipart=1,num_materials_viscoelastic
             im_map=im_elastic_map(ipart)+1
@@ -18727,9 +18844,13 @@ stop
              new_particles(ibase+dir)=xsub(dir)
             enddo
             do dir=1,NUM_CELL_ELASTIC
-             new_particles(ibase+SDIM+N_EXTRA_REAL+dir)=tensor_sub(dir)
+             new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT+dir)= &
+               tensor_sub(dir)
             enddo
             new_particles(ibase+SDIM+N_EXTRA_REAL_INSERT_TIME+1)=cur_time_slab
+            call get_primary_material(LS_sub,nmat,im_primary_sub)
+            new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT_MATERIAL_ID+1)= &
+              im_primary_sub
            else
             print *,"isweep invalid"
             stop
