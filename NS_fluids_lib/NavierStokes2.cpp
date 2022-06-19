@@ -6684,12 +6684,21 @@ void NavierStokes::move_particles(
 
  if (particles_flag==1) {
 
-  if ((num_materials_viscoelastic>=1)&&
+  if ((num_materials_viscoelastic>=0)&&
       (num_materials_viscoelastic<=nmat)) {
 
-   MultiFab& Tensor_new = get_new_data(Tensor_Type,slab_step+1);
-   if (Tensor_new.nComp()!=NUM_CELL_ELASTIC)
-    amrex::Error("Tensor_new.nComp()!=NUM_CELL_ELASTIC");
+    // sanity check
+   if ((num_materials_viscoelastic>=1)&&
+       (num_materials_viscoelastic<=nmat)) {
+    MultiFab& Tensor_new = get_new_data(Tensor_Type,slab_step+1);
+    if (Tensor_new.nComp()!=NUM_CELL_ELASTIC)
+     amrex::Error("Tensor_new.nComp()!=NUM_CELL_ELASTIC");
+   } else if (num_materials_viscoelastic==0) {
+    // do nothing
+   } else 
+    amrex::Error("num_materials_viscoelastic invalid");
+
+   MultiFab& S_new = get_new_data(State_Type,slab_step+1);
 
    const Real* dx = geom.CellSize();
    const Box& domain = geom.Domain();
@@ -6709,13 +6718,13 @@ void NavierStokes::move_particles(
 
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(Tensor_new.boxArray().d_numPts());
+   thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(Tensor_new,use_tiling); mfi.isValid(); ++mfi) {
+   for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
     BL_ASSERT(grids[mfi.index()] == mfi.validbox());
     const int gridno = mfi.index();
     const Box& tilegrid = mfi.tilebox();
@@ -6790,7 +6799,7 @@ void NavierStokes::move_particles(
    }
 
   } else
-   amrex::Error("expecting num_materials_viscoelastic>=1 in move_particles");
+   amrex::Error("expecting num_materials_viscoelastic>=0 in move_particles");
 
  } else
   amrex::Error("expecting particles_flag==1 in move_particles");
@@ -6976,7 +6985,7 @@ void NavierStokes::output_triangles() {
     // do nothing
    } else if (particles_flag==1) {
 
-    if ((num_materials_viscoelastic>=1)&&
+    if ((num_materials_viscoelastic>=0)&&
 	(num_materials_viscoelastic<=nmat)) {
 
      using My_ParticleContainer =

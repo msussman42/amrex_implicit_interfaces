@@ -22919,6 +22919,7 @@ NavierStokes::init_particle_container(int append_flag) {
 }  // end subroutine init_particle_container()
 
 //called from:
+//NavierStokes3.cpp,
 //void NavierStokes::tensor_advection_updateALL() if particles_flag==1.
 void
 NavierStokes::particle_tensor_advection_update() {
