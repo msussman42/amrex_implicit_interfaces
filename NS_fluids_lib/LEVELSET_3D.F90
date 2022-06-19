@@ -4563,7 +4563,7 @@ stop
       INTEGER_T, intent(in) :: nstate
       INTEGER_T, intent(in) :: sweep_num
       INTEGER_T, intent(in) :: tessellate
-      INTEGER_T, intent(in) :: nface,nface_dst,ncellfrac
+      INTEGER_T, intent(in) :: nface_dst,ncellfrac
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: level
@@ -4800,10 +4800,6 @@ stop
        stop
       endif
 
-      if (nface.ne.nmat*SDIM*2) then
-       print *,"nface invalid"
-       stop
-      endif
       if (nface_dst.ne.nmat*nmat*2) then
        print *,"nface_dst invalid"
        stop
