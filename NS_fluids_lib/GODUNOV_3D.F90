@@ -9329,7 +9329,6 @@ stop
       INTEGER_T nhalf
       REAL_T ldata(D_DECL(3,3,3))
       REAL_T volume_frac,facearea
-      REAL_T areacentroid(SDIM)
       REAL_T centroid(SDIM)
       REAL_T cencell(SDIM)
       REAL_T volcell
@@ -9505,7 +9504,7 @@ stop
           call getvolume( &
            bfact,dx,xsten,nhalf, &
            ldata,volume_frac,facearea, &
-           centroid,areacentroid,VOFTOL,SDIM)
+           centroid,VOFTOL,SDIM)
           call CISBOX(xsten,nhalf, &
            xlo,dx,i,j,k, &
            bfact,level, &

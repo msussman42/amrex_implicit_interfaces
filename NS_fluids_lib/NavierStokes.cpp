@@ -24818,7 +24818,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
  int nstar=9;
  if (AMREX_SPACEDIM==3)
   nstar*=3;
- int nface=nmat*AMREX_SPACEDIM*2*(1+AMREX_SPACEDIM); 
+ int nface=nmat*AMREX_SPACEDIM*2; 
 
   // (nmat,nmat,2)  left material, right material, frac_pair+dist_pair
  int nface_dst=nmat*nmat*2;
@@ -24826,10 +24826,9 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
  new_localMF(STENCIL_MF,nstar,ngrow_distance,-1);
  localMF[STENCIL_MF]->setVal(0.0);
 
- int do_face_decomp=0;
  int tessellate=0;
   // fort_faceinit is in: MOF_REDIST_3D.F90
- makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MF,do_face_decomp);
+ makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MF);
   // fort_faceprocess is in: MOF_REDIST_3D.F90
  ProcessFaceFrac(tessellate,FACEFRAC_MF,FACEFRAC_SOLVE_MM_MF,ngrow_distance);
 
@@ -24846,9 +24845,8 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
 
   // fort_faceinittest is in MOF_REDIST_3D.F90
   // FACETEST_MF has nmat * sdim components.
- makeFaceTest(
-	 tessellate,  // =0
-	 ngrow_distance,FACETEST_MF);
+  // tessellate=0
+ makeFaceTest(tessellate,ngrow_distance,FACETEST_MF);
 
  if (profile_dist==1) {
   after_profile = ParallelDescriptor::second();
@@ -24979,7 +24977,6 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
    FArrayBox& origdist=(*localMF[ORIGDIST_MF])[mfi];
 
    FArrayBox& stencilfab=(*localMF[STENCIL_MF])[mfi];
-   FArrayBox& facefracfab=(*localMF[FACEFRAC_MF])[mfi];
 
    FArrayBox& facepairXfab=(*localMF[FACEFRAC_SOLVE_MM_MF])[mfi];
    FArrayBox& facepairYfab=(*localMF[FACEFRAC_SOLVE_MM_MF+1])[mfi];
@@ -25018,8 +25015,6 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
     ARLIM(facepairYfab.loVect()),ARLIM(facepairYfab.hiVect()),
     facepairZfab.dataPtr(),
     ARLIM(facepairZfab.loVect()),ARLIM(facepairZfab.hiVect()),
-    facefracfab.dataPtr(),
-    ARLIM(facefracfab.loVect()),ARLIM(facefracfab.hiVect()),
     facetestfab.dataPtr(),
     ARLIM(facetestfab.loVect()),ARLIM(facetestfab.hiVect()),
     stencilfab.dataPtr(),
@@ -25045,7 +25040,6 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
     &ngrow_distance,
     &nmat,&nten,
     &nstar,
-    &nface,
     &nface_dst);
  } // mfi
 } // omp
@@ -25162,7 +25156,6 @@ NavierStokes::correct_dist_uninit() {
 
 
 // WARNING:  allocates, but does not delete.
-// called from NavierStokes::make_physics_varsALL if using supermesh.
 // called from NavierStokes::ColorSum
 // called from NavierStokes::makeStateDist
 void
@@ -25172,8 +25165,8 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
  bool use_tiling=ns_tiling;
 
  int nmat=num_materials;
-  // (nmat,sdim,2,sdim+1) area+centroid on each face of a cell.
- int nface_src=nmat*AMREX_SPACEDIM*2*(1+AMREX_SPACEDIM); 
+  // (nmat,sdim,2,sdim+1) area on each face of a cell.
+ int nface_src=nmat*AMREX_SPACEDIM*2; 
   // (nmat,nmat,2)  left material, right material, frac_pair+dist_pair
  int nface_dst=nmat*nmat*2;
 
@@ -25286,13 +25279,11 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 
 
 // WARNING: makeFaceFrac allocates, but does not delete.
-// do_face_decomp=0 if called from makeStateDist (tessellate==0)
-// do_face_decomp=0 if called from make_physics_varsALL (tessellate==3)
-// do_face_decomp=0 if called from ColorSum (tessellate==1)
+// if caller from: makeStateDist (tessellate==0)
+// if caller from: ColorSum (tessellate==1)
 void
 NavierStokes::makeFaceFrac(
- int tessellate,int ngrow,int idx,
- int do_face_decomp) {
+ int tessellate,int ngrow,int idx) {
 
  
  bool use_tiling=ns_tiling;
@@ -25300,23 +25291,13 @@ NavierStokes::makeFaceFrac(
  int nmat=num_materials;
  int nten=num_interfaces;
 
-  // (nmat,sdim,2,sdim+1) area+centroid on each face of a cell.
- int nface=nmat*AMREX_SPACEDIM*2*(1+AMREX_SPACEDIM); 
-
-  // inside,outside,area+centroid,dir,side)
-  // (nmat,nmat,sdim+1,sdim,2)
- int nface_decomp=0;
- if (do_face_decomp==1) {
-  nface_decomp=nmat*nmat*(AMREX_SPACEDIM+1)*AMREX_SPACEDIM*2;
- } else if (do_face_decomp==0) {
-  // do nothing
- } else
-  amrex::Error("do_face_decomp invalid"); 
+  // (nmat,sdim,2) area on each face of a cell.
+ int nface=nmat*AMREX_SPACEDIM*2; 
 
  int finest_level=parent->finestLevel();
 
  delete_localMF_if_exist(idx,1);
- new_localMF(idx,nface+nface_decomp,ngrow,-1);
+ new_localMF(idx,nface,ngrow,-1);
  localMF[idx]->setVal(0.0);
  VOF_Recon_resize(ngrow,SLOPE_RECON_MF);
  debug_ngrow(SLOPE_RECON_MF,ngrow,90);
@@ -25385,8 +25366,7 @@ NavierStokes::makeFaceFrac(
     &cur_time_slab,
     &ngrow,
     &nmat,
-    &nface,
-    &nface_decomp);
+    &nface);
  } // mfi
 } // omp
  ns_reconcile_d_num(119);
@@ -25404,8 +25384,8 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
  bool use_tiling=ns_tiling;
 
  int nmat=num_materials;
-  // (im,dir,side,dir2)  (dir2==1 => area  dir2==2..sdim+1 => cen)
- int nface=nmat*AMREX_SPACEDIM*2*(1+AMREX_SPACEDIM); 
+  // (im,dir,side)  area  
+ int nface=nmat*AMREX_SPACEDIM*2; 
 
  int finest_level=parent->finestLevel();
 

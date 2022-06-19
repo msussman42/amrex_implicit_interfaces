@@ -1754,7 +1754,6 @@ stop
          facepairX,DIMS(facepairX), &
          facepairY,DIMS(facepairY), &
          facepairZ,DIMS(facepairZ), &
-         facefab,DIMS(facefab), &
          facetest,DIMS(facetest), &
          stenfab,DIMS(stenfab), &
          vofrecon,DIMS(vofrecon), &
@@ -1773,7 +1772,6 @@ stop
          ngrow_distance_in, &
          nmat,nten, &
          nstar, &
-         nface, &
          nface_dst) &
       bind(c,name='fort_levelstrip')
 
@@ -1790,7 +1788,6 @@ stop
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nstar
-      INTEGER_T, intent(in) :: nface
       INTEGER_T, intent(in) :: nface_dst
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ngrow_distance_in
@@ -1802,7 +1799,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(facepairX)
       INTEGER_T, intent(in) :: DIMDEC(facepairY)
       INTEGER_T, intent(in) :: DIMDEC(facepairZ)
-      INTEGER_T, intent(in) :: DIMDEC(facefab)
       INTEGER_T, intent(in) :: DIMDEC(facetest)
       INTEGER_T, intent(in) :: DIMDEC(stenfab)
       INTEGER_T, intent(in) :: DIMDEC(vofrecon)
@@ -1820,8 +1816,6 @@ stop
       REAL_T, pointer :: facepairY_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: facepairZ(DIMV(facepairZ),nface_dst)
       REAL_T, pointer :: facepairZ_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: facefab(DIMV(facefab),nface)
-      REAL_T, pointer :: facefab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: facetest(DIMV(facetest),nmat*SDIM)
       REAL_T, pointer :: facetest_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: stenfab(DIMV(stenfab),nstar)
@@ -1871,7 +1865,7 @@ stop
       INTEGER_T istar_array(3)
       INTEGER_T istar_array_offset(3)
       INTEGER_T sorted_list(nmat)
-      INTEGER_T nten_test,nstar_test,nface_test
+      INTEGER_T nten_test,nstar_test
       INTEGER_T FSI_exclude
       REAL_T mofdata(nmat*ngeom_recon)
       INTEGER_T istar
@@ -1963,12 +1957,6 @@ stop
        stop
       endif
 
-       ! areas and centroids on face
-      nface_test=nmat*SDIM*2*(1+SDIM)
-      if (nface_test.ne.nface) then
-       print *,"nface invalid levelstrip nface nface_test ",nface,nface_test
-       stop
-      endif
       if (nface_dst.eq.2*nmat*nmat) then
        ! do nothing
       else
@@ -2032,8 +2020,6 @@ stop
         ngrow_distance,1,1871)
       call checkbound_array(fablo,fabhi,facepairZ_ptr, &
         ngrow_distance,SDIM-1,1871)
-      facefab_ptr=>facefab
-      call checkbound_array(fablo,fabhi,facefab_ptr,ngrow_distance,-1,1871)
       facetest_ptr=>facetest
       call checkbound_array(fablo,fabhi,facetest_ptr,ngrow_distance,-1,1872)
       stenfab_ptr=>stenfab
@@ -3425,8 +3411,7 @@ stop
          time, &
          ngrow, &
          nmat, &
-         nface, &
-         nface_decomp) &
+         nface) &
       bind(c,name='fort_faceinit')
 
       use global_utility_module
@@ -3443,16 +3428,13 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nface
-      INTEGER_T, intent(in) :: nface_decomp
-      INTEGER_T :: nface_decomp_test
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ngrow
       INTEGER_T, intent(in) :: DIMDEC(facefab)
       INTEGER_T, intent(in) :: DIMDEC(maskfab)
       INTEGER_T, intent(in) :: DIMDEC(vofrecon)
 
-      REAL_T, intent(out), target :: &
-              facefab(DIMV(facefab),nface+nface_decomp)
+      REAL_T, intent(out), target :: facefab(DIMV(facefab),nface)
       REAL_T, pointer :: facefab_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: maskfab(DIMV(maskfab),2)
@@ -3481,10 +3463,8 @@ stop
       REAL_T mofdata(nmat*ngeom_recon)
       REAL_T mofdatavalid(nmat*ngeom_recon)
       REAL_T mofdataproject(nmat*ngeom_recon)
-      REAL_T localface(nmat,SDIM,2,SDIM+1)
-      REAL_T localface_line(nmat,nmat,SDIM+1,SDIM,2)
-      REAL_T totalface_line(nmat,SDIM,2)
-      REAL_T totalface(SDIM,2,SDIM+1)
+      REAL_T localface(nmat,SDIM,2)
+      REAL_T totalface(SDIM,2)
 
       REAL_T xsten(-3:3,SDIM)
       REAL_T xsten_thin(-1:1,SDIM)
@@ -3497,32 +3477,10 @@ stop
       REAL_T multi_volume(nmat)
       REAL_T multi_cen(SDIM,nmat)
       REAL_T multi_area(nmat)
-      REAL_T multi_area_line(nmat)
-      REAL_T multi_volume_offset(nmat)
-      REAL_T multi_cen_offset(SDIM,nmat)
       REAL_T total_vol
-      REAL_T total_line
       INTEGER_T mask1,mask2
-      REAL_T areacen(SDIM)
-      REAL_T uncaptured_volume_fraction
-      REAL_T vfrac_fluid_sum
-      REAL_T vfrac_solid_sum
-      INTEGER_T loop_counter
-      INTEGER_T num_processed_fluid
-      INTEGER_T num_processed_solid
-      INTEGER_T nmat_fluid
-      INTEGER_T nmat_rigid
-      INTEGER_T testflag
       INTEGER_T iten
       INTEGER_T nten_test
-      INTEGER_T is_processed(nten)
-      REAL_T slope(SDIM)
-      REAL_T intercept
-      REAL_T local_linefrac(nmat)
-      REAL_T F1,F2,FSTRIP
-      REAL_T X1(SDIM)
-      REAL_T X2(SDIM)
-      REAL_T XSTRIP(SDIM)
       INTEGER_T normalize_tessellate
       INTEGER_T local_tessellate
       INTEGER_T is_rigid_local(nmat)
@@ -3565,22 +3523,11 @@ stop
        stop
       endif
 
-       ! area+centroid for all faces of a cell.
-       ! (nmat,sdim,2,sdim+1)
-      nface_test=nmat*SDIM*2*(1+SDIM)
+       ! area for all faces of a cell.
+       ! (nmat,sdim,2)
+      nface_test=nmat*SDIM*2
       if (nface_test.ne.nface) then
        print *,"nface invalid faceinit nface nface_test ",nface,nface_test
-       stop
-      endif
-
-       ! areas and centroids after projecting surface to cell faces.
-       ! inside,outside,area+centroid,dir,side 
-       ! (nmat,nmat,sdim+1,sdim,2)
-      nface_decomp_test=nmat*nmat*(SDIM+1)*SDIM*2
-
-      if ((nface_decomp.ne.0).and. &
-          (nface_decomp.ne.nface_decomp_test)) then
-       print *,"nface_decomp invalid"
        stop
       endif
 
@@ -3690,15 +3637,13 @@ stop
         enddo ! im
 
         call check_full_cell_vfrac( &
-                vcenter, &
-                tessellate, & ! 0,1, or 3
-                nmat,im_crit)
+          vcenter, &
+          tessellate, & ! 0,1, or 3
+          nmat,im_crit)
 
         do dir=1,SDIM
          do side=1,2
-          do dir2=1,SDIM+1
-           totalface(dir,side,dir2)=zero
-          enddo
+          totalface(dir,side)=zero
          enddo
         enddo
 
@@ -3706,10 +3651,8 @@ stop
         do im=1,nmat
          do dir=1,SDIM
           do side=1,2
-           do dir2=1,SDIM+1
-            iface=iface+1
-            localface(im,dir,side,dir2)=zero
-           enddo ! dir2
+           iface=iface+1
+           localface(im,dir,side)=zero
           enddo ! side
          enddo ! dir
         enddo ! im
@@ -3719,48 +3662,9 @@ stop
          stop
         endif
 
-        if (nface_decomp.eq.0) then
-         ! do nothing
-        else if (nface_decomp.eq.nface_decomp_test) then
-
-         do im1=1,nmat
-          do dir=1,SDIM
-           do side=1,2
-            totalface_line(im1,dir,side)=zero
-           enddo
-          enddo
-         enddo
-
-         iface=0
-         do im1=1,nmat
-          do im2=1,nmat
-           do dir2=1,SDIM+1
-            do dir=1,SDIM
-             do side=1,2
-              iface=iface+1
-              localface_line(im1,im2,dir2,dir,side)=zero
-             enddo ! side
-            enddo ! dir
-           enddo ! dir2
-          enddo ! im2
-         enddo ! im1
-         if (nface_decomp.ne.iface) then
-          print *,"nface_decomp invalid"
-          stop
-         endif
-        else
-         print *,"nface_decomp invalid"
-         stop
-        endif 
-
         do dir=1,SDIM
         do side=1,2
-          ! areacen in absolute coordinate system.
-         call gridarea(xsten,nhalf,levelrz,dir-1,side-1, &
-          totalface(dir,side,1),areacen)
-         do dir2=1,SDIM
-          totalface(dir,side,1+dir2)=areacen(dir2)
-         enddo
+         call gridarea(xsten,nhalf,levelrz,dir-1,side-1,totalface(dir,side))
         enddo
         enddo ! dir,side
 
@@ -3768,22 +3672,9 @@ stop
 
          do dir=1,SDIM
          do side=1,2
-          localface(im_crit,dir,side,1)=one ! area fraction
-           ! centroid of face (absolute coordinate system)
-          do dir2=1,SDIM
-           localface(im_crit,dir,side,1+dir2)=totalface(dir,side,1+dir2)
-          enddo
+          localface(im_crit,dir,side)=one ! area fraction
          enddo
          enddo  ! dir,side
-
-         if (nface_decomp.gt.0) then
-          ! do nothing, there are no interfaces along faces.
-         else if (nface_decomp.eq.0) then
-          ! do nothing
-         else
-          print *,"nface_decomp invalid"
-          stop
-         endif
 
         else if (im_crit.eq.0) then
 
@@ -3860,543 +3751,12 @@ stop
           if (total_vol.gt.zero) then
            do im=1,nmat
             vcenter_thin(im)=multi_volume(im)/total_vol
-            localface(im,dir,side,1)=vcenter_thin(im)
-             ! absolute coordinate system.
-            do dir2=1,SDIM
-             localface(im,dir,side,1+dir2)=multi_cen(dir2,im)
-            enddo
-             ! centroid in normal direction to face=centroid of face.
-             ! absolute coordinate system.
-            localface(im,dir,side,1+dir)=totalface(dir,side,1+dir)
+            localface(im,dir,side)=vcenter_thin(im)
            enddo ! im=1..nmat
           else
            print *,"total_vol invalid"
            stop
           endif 
-
-          if (nface_decomp.gt.0) then
-
-           if (tessellate.eq.0) then
-            ! do nothing
-           else if ((tessellate.eq.1).or. &
-                    (tessellate.eq.3)) then
-            print *,"expecting nface_decomp=0 if tessellate=1,3"
-            stop
-           else
-            print *,"tessellate invalid"
-            stop
-           endif
-
-           call check_full_cell_vfrac( &
-             vcenter_thin, &
-             tessellate, & ! 0,1, or 3
-             nmat,im_crit_thin)
-
-           if ((im_crit_thin.ge.1).and.(im_crit_thin.le.nmat)) then
-            ! do nothing, there are no internal interfaces
-           else if (im_crit_thin.eq.0) then
-
-            do im=1,nmat
-             is_rigid_local(im)=is_rigid(nmat,im)
-             if (local_tessellate.eq.2) then
-              is_rigid_local(im)=0
-             else if (local_tessellate.eq.0) then 
-              ! do nothing
-             else if (local_tessellate.eq.1) then 
-              ! do nothing
-             else
-              print *,"local_tessellate invalid4"
-              stop
-             endif
-            enddo ! im=1..nmat
-
-            do iten=1,nten
-             is_processed(iten)=0
-            enddo
-
-            uncaptured_volume_fraction=one
-
-            nmat_rigid=0
-            nmat_fluid=0
-            vfrac_fluid_sum=zero
-            vfrac_solid_sum=zero
-
-            do im=1,nmat
-             if (is_rigid_local(im).eq.0) then
-              nmat_fluid=nmat_fluid+1
-              vfrac_fluid_sum=vfrac_fluid_sum+vcenter_thin(im)
-             else if (is_rigid_local(im).eq.1) then
-              nmat_rigid=nmat_rigid+1
-              vfrac_solid_sum=vfrac_solid_sum+vcenter_thin(im)
-             else
-              print *,"is_rigid_local invalid"
-              stop
-             endif
-            enddo ! im=1..nmat
-
-            if ((tessellate.eq.0).or. &
-                (tessellate.eq.3)) then
-             if (abs(one-vfrac_fluid_sum).le.VOFTOL) then
-              ! do nothing
-             else
-              print *,"vfrac_fluid_sum invalid"
-              stop
-             endif
-            else if (tessellate.eq.1) then
-             ! do nothing
-            else
-             print *,"tessellate invalid"
-             stop
-            endif
-
-            if ((vfrac_solid_sum.le.one+VOFTOL).and. &
-                (vfrac_solid_sum.ge.zero)) then
-             ! do nothing
-            else
-             print *,"vfrac_solid_sum invalid"
-             stop
-            endif
-
-            if (nmat_fluid+nmat_rigid.ne.nmat) then
-             print *,"nmat_fluid or nmat_rigid invalid"
-             stop
-            endif
-            num_processed_solid=0
-            num_processed_fluid=0
-
-            if ((tessellate.eq.1).or. &
-                (tessellate.eq.3)) then
-
-             loop_counter=0
-             do while ((loop_counter.lt.nmat_rigid).and. &
-                       (num_processed_solid.lt.nmat_rigid).and. &
-                       (uncaptured_volume_fraction.gt. &
-                        one-vfrac_solid_sum)) 
-
-               ! F,CEN,ORDER,SLOPE,INTERCEPT
-              do im=1,nmat
-               if (is_rigid_local(im).eq.1) then
-                vofcomp=(im-1)*ngeom_recon+1
-                testflag=NINT(mofdataproject(vofcomp+SDIM+1))
-
-                if (testflag.eq.1) then
-
-                 num_processed_solid=num_processed_solid+1
-
-                 uncaptured_volume_fraction= &
-                  uncaptured_volume_fraction-vcenter_thin(im)
-                 if (uncaptured_volume_fraction.lt.FACETOL_DVOL) then
-                  uncaptured_volume_fraction=zero
-                 endif
-
-                  ! vcenter_thin(im)=multi_volume(im)/total_vol
-                 if ((vcenter_thin(im).gt.FACETOL_DVOL).and. &
-                     (uncaptured_volume_fraction.gt.zero)) then
-
-                  do dir2=1,SDIM
-                   slope(dir2)=mofdataproject(vofcomp+SDIM+1+dir2)
-                  enddo
-                  intercept=mofdataproject(vofcomp+2*SDIM+2)
-
-                  ! dist=intercept+n dot (x-x0)
-                  ! n points into im
-                  ! perturb interface into the other materials
-                  ! for shifting interface in direction of normal:
-                  ! x0'=x0-eps n
-                  ! dist=intercept+n dot (x-x0')=intercept+eps+n dot(x-x0)
-                  ! for shifting in direction of n':
-                  ! dist=intercept+n dot (x-x0)+eps n dot n'
-                  if (slope(dir).eq.zero) then
-
-                   mofdataproject(vofcomp+2*SDIM+2)= &
-                    intercept+half*FACETOL_DVOL*dx(dir)
-
-                    ! rigid material
-                    ! in: fort_faceinit
-                   call multi_get_volume_grid_simple( &
-                    local_tessellate, &  !=0,1, or 2
-                    bfact,dx,xsten,nhalf, &
-                    mofdataproject, &
-                    xsten_thin,nhalf_thin, &
-                    multi_volume_offset, &
-                    multi_cen_offset, &
-                    geom_xtetlist_uncapt(1,1,1,tid+1), &
-                    nmax, &
-                    nmax, &
-                    nmat,SDIM,3)
-
-                   mofdataproject(vofcomp+2*SDIM+2)=intercept
-
-                   if (multi_volume_offset(im).gt.multi_volume(im)) then
-
-                    if (multi_area(im).gt.zero) then
-
-                     if (dxthin.gt.zero) then
-                      multi_area_line(im)=multi_area(im)/dxthin
-                     else
-                      print *,"dxthin invalid"
-                      stop
-                     endif
-
-                     do im_opp=1,nmat
-                      local_linefrac(im_opp)=zero
-                     enddo
-                     total_line=zero
-                     do im_opp=1,nmat
-                      if (im_opp.ne.im) then
-                       call get_iten(im,im_opp,iten,nmat)
-                       if (is_processed(iten).eq.0) then
-                        is_processed(iten)=1
-                        F1=multi_volume(im_opp)
-                        F2=multi_volume_offset(im_opp)
-                        do dir2=1,SDIM
-                         X1(dir2)=multi_cen(dir2,im)
-                         X2(dir2)=multi_cen_offset(dir2,im)
-                        enddo
-                        if (F2.ne.F1) then
-                         FSTRIP=F2-F1
-                         do dir2=1,SDIM
-                          XSTRIP(dir2)=(F2*X2(dir2)-F1*X1(dir2))/FSTRIP
-                         enddo
-                        else if (F2.eq.F1) then
-                         do dir2=1,SDIM
-                          XSTRIP(dir2)=zero
-                         enddo
-                        else
-                         print *,"F2 and F1 are invalid"
-                         stop
-                        endif
-                        if (side.eq.1) then
-                         XSTRIP(dir)=xsten(-1,dir)
-                        else if (side.eq.2) then
-                         XSTRIP(dir)=xsten(1,dir)
-                        else
-                         print *,"side invalid"
-                         stop
-                        endif
-                        do dir2=1,SDIM
-                         localface_line(im,im_opp,1+dir2,dir,side)=XSTRIP(dir2)
-                        enddo
-   
-                        local_linefrac(im_opp)=abs(F1-F2)
-                        total_line=total_line+local_linefrac(im_opp)
-                       else if (is_processed(iten).eq.1) then
-                        ! do nothing
-                       else
-                        print *,"is_processed invalid"
-                        stop
-                       endif
-                      else if (im_opp.eq.im) then
-                       ! do nothing
-                      else
-                       print *,"im_opp or im bust"
-                       stop
-                      endif
-                     enddo !im_opp=1..nmat
-   
-                     if (total_line.gt.zero) then
-                      do im_opp=1,nmat
-                       if (im_opp.ne.im) then
-                        local_linefrac(im_opp)=local_linefrac(im_opp)/total_line
-                        localface_line(im,im_opp,1,dir,side)= &
-                         local_linefrac(im_opp)
-                       else if (im_opp.eq.im) then
-                        ! do nothing
-                       else
-                        print *,"im_opp or im bust"
-                        stop
-                       endif
-                      enddo ! im_opp
-
-                      totalface_line(im,dir,side)=multi_area_line(im)
-                     else
-                      print *,"total_line bust: total_face=",total_line
-                      stop
-                     endif
-                    else
-                     print *,"im boundary disappeared 1"
-                     print *,"loop_counter=",loop_counter
-                     print *,"num_processed_solid=",num_processed_solid
-                     print *,"uncaptured_volume_fraction ", &
-                       uncaptured_volume_fraction
-                     print *,"vfrac_solid_sum ",vfrac_solid_sum
-                     print *,"im=",im
-                     print *,"multi_volume(im)=",multi_volume(im)
-                     print *,"multi_volume_offset(im)=",multi_volume_offset(im)
-                     print *,"multi_area(im)=",multi_area(im)
-                     stop
-                    endif
-
-                   else
-                    print *,"im region should grow 1"
-                    stop
-                   endif
-
-                  else if ((abs(slope(dir)-one).le.VOFTOL).or. &
-                           (abs(slope(dir)+one).le.VOFTOL)) then
-                   ! do nothing
-                  else
-                   print *,"slope invalid"
-                   stop
-                  endif
-
-                 else if ((uncaptured_volume_fraction.eq.zero).or. &
-                          (vcenter_thin(im).le.FACETOL_DVOL)) then
-                  ! do nothing
-                 else
-                  print *,"uncaptured_volume_fraction or vcenter_thin bad"
-                  stop 
-                 endif 
-
-                else if (testflag.eq.0) then
-                 ! do nothing
-                else
-                 print *,"testflag invalid"
-                 stop
-                endif  
-               else if (is_rigid_local(im).eq.0) then
-                ! do nothing
-               else
-                print *,"is_rigid_local invalid"
-                stop
-               endif
-              enddo ! im=1..nmat
-              loop_counter=loop_counter+1
-             enddo  ! while 
-                    ! loop_counter<nmat_rigid and
-                    ! num_processed_solid<nmat_rigid and
-                    ! uncaptured_volume_fraction>1-vfrac_solid_sum
-
-            else if (tessellate.eq.0) then
-             ! do nothing
-            else
-             print *,"tessellate invalid47"
-             stop
-            endif
-
-
-            loop_counter=0
-            do while ((loop_counter.lt.nmat_fluid).and. &
-                      (num_processed_fluid.lt.nmat_fluid).and. &
-                      (uncaptured_volume_fraction.gt.zero))
-
-              ! F,CEN,ORDER,SLOPE,INTERCEPT
-             do im=1,nmat
-              if (is_rigid_local(im).eq.0) then
-               vofcomp=(im-1)*ngeom_recon+1
-               testflag=NINT(mofdataproject(vofcomp+SDIM+1))
-
-               if (testflag.eq.num_processed_fluid+1) then
-
-                num_processed_fluid=num_processed_fluid+1
-
-                uncaptured_volume_fraction= &
-                  uncaptured_volume_fraction-vcenter_thin(im)
-                if (uncaptured_volume_fraction.lt.FACETOL_DVOL) then
-                 uncaptured_volume_fraction=zero
-                endif
-
-                  ! vcenter_thin(im)=multi_volume(im)/total_vol
-                if ((vcenter_thin(im).gt.FACETOL_DVOL).and. &
-                    (uncaptured_volume_fraction.gt.zero)) then
-
-                 do dir2=1,SDIM
-                  slope(dir2)=mofdataproject(vofcomp+SDIM+1+dir2)
-                 enddo
-                 intercept=mofdataproject(vofcomp+2*SDIM+2)
-
-                 ! dist=intercept+n dot (x-x0)
-                 ! n points into im
-                 ! perturb interface into the other materials
-                 ! for shifting interface in direction of normal:
-                 ! x0'=x0-eps n
-                 ! dist=intercept+n dot (x-x0')=intercept+eps+n dot(x-x0)
-                 ! for shifting in direction of n':
-                 ! dist=intercept+n dot (x-x0)+eps n dot n'
-                 if (slope(dir).eq.zero) then
-
-                  mofdataproject(vofcomp+2*SDIM+2)= &
-                    intercept+half*FACETOL_DVOL*dx(dir)
-
-                   ! fluid material
-                   ! in: fort_faceinit
-                  call multi_get_volume_grid_simple( &
-                   local_tessellate, &  ! 0,1, or 2
-                   bfact,dx,xsten,nhalf, &
-                   mofdataproject, &
-                   xsten_thin,nhalf_thin, &
-                   multi_volume_offset, &
-                   multi_cen_offset, &
-                   geom_xtetlist_uncapt(1,1,1,tid+1), &
-                   nmax, &
-                   nmax, &
-                   nmat,SDIM,3)
-
-                  mofdataproject(vofcomp+2*SDIM+2)=intercept
-
-                   ! vcenter_thin(im)=multi_volume(im)/total_vol>FACETOL_DVOL
-                  if (multi_volume_offset(im).gt.multi_volume(im)) then
-
-                   if (multi_area(im).gt.zero) then
-
-                    if (dxthin.gt.zero) then
-                     multi_area_line(im)=multi_area(im)/dxthin
-                    else
-                     print *,"dxthin invalid"
-                     stop
-                    endif
-
-                    do im_opp=1,nmat
-                     local_linefrac(im_opp)=zero
-                    enddo
-                    total_line=zero
-
-                    do im_opp=1,nmat
-
-                     if ((is_rigid_local(im_opp).eq.0).or. &
-                         (local_tessellate.eq.1)) then
-
-                      if (im_opp.ne.im) then
-                       call get_iten(im,im_opp,iten,nmat)
-                       if (is_processed(iten).eq.0) then
-                        is_processed(iten)=1
-                        F1=multi_volume(im_opp)
-                        F2=multi_volume_offset(im_opp)
-                        do dir2=1,SDIM
-                         X1(dir2)=multi_cen(dir2,im)
-                         X2(dir2)=multi_cen_offset(dir2,im)
-                        enddo
-                        if (F2.ne.F1) then
-                         FSTRIP=F2-F1
-                         do dir2=1,SDIM
-                          XSTRIP(dir2)=(F2*X2(dir2)-F1*X1(dir2))/FSTRIP
-                         enddo
-                        else if (F2.eq.F1) then
-                         do dir2=1,SDIM
-                          XSTRIP(dir2)=zero
-                         enddo
-                        else
-                         print *,"F2 and F1 are invalid"
-                         stop
-                        endif
-                        if (side.eq.1) then
-                         XSTRIP(dir)=xsten(-1,dir)
-                        else if (side.eq.2) then
-                         XSTRIP(dir)=xsten(1,dir)
-                        else
-                         print *,"side invalid"
-                         stop
-                        endif
-                        do dir2=1,SDIM
-                         localface_line(im,im_opp,1+dir2,dir,side)=XSTRIP(dir2)
-                        enddo
-
-                        local_linefrac(im_opp)=abs(F1-F2)
-                        total_line=total_line+local_linefrac(im_opp)
-                       else if (is_processed(iten).eq.1) then
-                        ! do nothing
-                       else
-                        print *,"is_processed invalid"
-                        stop
-                       endif
-                      else if (im_opp.eq.im) then
-                       ! do nothing
-                      else
-                       print *,"im_opp or im bust"
-                       stop
-                      endif
-                     else if ((is_rigid_local(im_opp).eq.1).and. &
-                              (local_tessellate.eq.0)) then
-                      ! do nothing
-                     else
-                      print *,"is_rigid_local or local_tessellate invalid48"
-                      stop
-                     endif
-                    enddo !im_opp
-
-                    if (total_line.gt.zero) then
-                     do im_opp=1,nmat
-                      if (im_opp.ne.im) then
-                       local_linefrac(im_opp)=local_linefrac(im_opp)/total_line
-                       localface_line(im,im_opp,1,dir,side)= &
-                         local_linefrac(im_opp)
-                      else if (im_opp.eq.im) then
-                       ! do nothing
-                      else
-                       print *,"im_opp or im bust"
-                       stop
-                      endif
-                     enddo ! im_opp
-
-                     totalface_line(im,dir,side)=multi_area_line(im)
-                    else
-                     print *,"total_line bust: total_face=",total_line
-                     stop
-                    endif
-                   else
-                    print *,"im boundary disappeared 2"
-                    print *,"loop_counter=",loop_counter
-                    print *,"num_processed_solid=",num_processed_solid
-                    print *,"num_processed_fluid=",num_processed_fluid
-                    print *,"uncaptured_volume_fraction ", &
-                       uncaptured_volume_fraction
-                    print *,"vfrac_solid_sum ",vfrac_solid_sum
-                    print *,"im=",im
-                    print *,"multi_volume(im)=",multi_volume(im)
-                    print *,"multi_volume_offset(im)=",multi_volume_offset(im)
-                    print *,"multi_area(im)=",multi_area(im)
-                    stop
-                   endif
-
-                  else
-                   print *,"im region should grow 2"
-                   stop
-                  endif
-
-                 else if ((abs(slope(dir)-one).le.VOFTOL).or. &
-                          (abs(slope(dir)+one).le.VOFTOL)) then
-                  ! do nothing
-                 else
-                  print *,"slope invalid"
-                  stop
-                 endif
-
-                else if ((uncaptured_volume_fraction.eq.zero).or. &
-                         (vcenter_thin(im).le.FACETOL_DVOL)) then
-                 ! do nothing
-                else
-                 print *,"uncaptured_volume or vcenter_thin invalid"
-                 stop 
-                endif 
-
-               endif  ! testflag==num_processed_fluid+1
-           
-              else if (is_rigid_local(im).eq.1) then
-               ! do nothing
-              else
-               print *,"is_rigid_local invalid"
-               stop
-              endif
-
-             enddo ! im=1..nmat
-
-             loop_counter=loop_counter+1
-            enddo  ! while 
-                   ! loop_counter<nmat_fluid and
-                   ! num_processed_fluid<nmat_fluid and
-                   ! uncaptured_volume_fraction>0
-
-           else
-            print *,"im_crit_thin out of range"
-            stop
-           endif
-
-          else if (nface_decomp.eq.0) then
-           ! do nothing
-          else
-           print *,"nface_decomp invalid"
-           stop
-          endif
 
          enddo
          enddo ! dir,side
@@ -4406,74 +3766,26 @@ stop
          stop
         endif
 
-        dir2=1
         do im=1,nmat
          do dir=1,SDIM
           do side=1,2
-           localface(im,dir,side,dir2)= &
-            localface(im,dir,side,dir2)*totalface(dir,side,1)
+           localface(im,dir,side)= &
+            localface(im,dir,side)*totalface(dir,side)
           enddo
          enddo
         enddo 
 
-         ! centroid in absolute coordinate system.
-         ! centroid is 2,...,sdim+1 components
         iface=0
         do im=1,nmat
          do dir=1,SDIM
           do side=1,2
-           do dir2=1,SDIM+1
-            iface=iface+1
-            facefab(D_DECL(i,j,k),iface)=localface(im,dir,side,dir2)
-           enddo ! dir2
+           iface=iface+1
+           facefab(D_DECL(i,j,k),iface)=localface(im,dir,side)
           enddo ! side
          enddo ! dir
         enddo ! im
 
         if (iface.ne.nface) then
-         print *,"iface invalid"
-         stop
-        endif
-
-        iface=0
-
-        if (nface_decomp.eq.1) then
-
-         dir2=1
-         do im1=1,nmat
-          do im2=1,nmat
-           do dir=1,SDIM
-            do side=1,2
-             localface_line(im1,im2,dir2,dir,side)= &
-              localface_line(im1,im2,dir2,dir,side)* &
-              totalface_line(im1,dir,side)
-            enddo ! side
-           enddo ! dir
-          enddo ! im2
-         enddo ! im1
-
-         do im1=1,nmat
-          do im2=1,nmat
-           do dir2=1,SDIM+1
-            do dir=1,SDIM
-             do side=1,2
-              iface=iface+1
-              facefab(D_DECL(i,j,k),nface+iface)= &
-                localface_line(im1,im2,dir2,dir,side)
-             enddo ! side
-            enddo ! dir
-           enddo ! dir2
-          enddo ! im2
-         enddo ! im1
- 
-        else if (nface_decomp.eq.0) then
-         ! do nothing
-        else
-         print *,"nface_decomp invalid"
-         stop
-        endif
-
-        if (iface.ne.nface_decomp) then
          print *,"iface invalid"
          stop
         endif
@@ -4585,8 +3897,8 @@ stop
        stop
       endif
 
-       ! (nmat,sdim,2,sdim+1)
-      nface_test=nmat*SDIM*2*(1+SDIM)
+       ! (nmat,sdim,2)
+      nface_test=nmat*SDIM*2
       if (nface_test.ne.nface) then
        print *,"nface bad fort_faceinittest nface nface_test ", &
                nface,nface_test
@@ -4714,9 +4026,8 @@ stop
 
            total_face=zero
            do im=1,nmat
-            ! (im,dir,side,dir2)
-            iface=(im-1)*SDIM*2*(SDIM+1)+(dir-1)*2*(SDIM+1)+ &
-                  (side_cell-1)*(SDIM+1)+1
+            ! (im,dir,side)
+            iface=(im-1)*SDIM*2+(dir-1)*2+side_cell
             facefrac(im)=facefab(D_DECL(icell,jcell,kcell),iface)
             if (tessellate.eq.1) then
              total_face=total_face+facefrac(im)
@@ -4735,7 +4046,9 @@ stop
             endif
            enddo !im=1..nmat 
 
-           if (total_face.le.zero) then
+           if (total_face.gt.zero) then
+            !do nothing
+           else
             print *,"total_face invalid"
             stop
            endif
@@ -4790,7 +4103,6 @@ stop
        !      -> fort_faceprocess
        ! called from: NavierStokes::ProcessFaceFrac (NavierStokes.cpp)
        ! facefab is initialized in fort_faceinit
-       ! centroids in facefab are in an absolute coordinate system.
       subroutine fort_faceprocess( &
        ngrow_source, &
        ngrow_dest, &
@@ -4865,19 +4177,16 @@ stop
       REAL_T cencell_right(SDIM)
       REAL_T volcell_left
       REAL_T volcell_right
-      REAL_T leftface(nmat,SDIM+1)
-      REAL_T rightface(nmat,SDIM+1)
+      REAL_T leftface(nmat)
+      REAL_T rightface(nmat)
       REAL_T frac_left(nmat)
       REAL_T frac_right(nmat)
       REAL_T left_total
       REAL_T right_total
       REAL_T vol_total
-      REAL_T x_left(SDIM,nmat)
-      REAL_T x_right(SDIM,nmat)
       INTEGER_T ml,mr
       REAL_T frac_pair(nmat,nmat)  !(m_left,m_right)
       REAL_T dist_pair(nmat,nmat)
-      REAL_T x_pair(nmat,nmat,SDIM)  ! (m_left,m_right)
       REAL_T dpair
       REAL_T delta,RR
       REAL_T xstenMAC(-1:1,SDIM)
@@ -4913,7 +4222,7 @@ stop
        stop
       endif
 
-      nface_src_test=nmat*SDIM*2*(1+SDIM)
+      nface_src_test=nmat*SDIM*2
       if (nface_src_test.ne.nface_src) then
        print *,"nface_src invalid nface_src nface_src_test ", &
          nface_src,nface_src_test
@@ -5062,58 +4371,55 @@ stop
 
         left_total=zero
         right_total=zero
-         ! (im,dir,side,dir2)
+         ! (im,dir,side)
         do im=1,nmat
-         do dir2=1,SDIM+1
-          side=2
-          call abs_array_index4(im,dir+1,side,dir2, &
-           nmat,SDIM,2,SDIM+1,iface_left)
-          side=1
-          call abs_array_index4(im,dir+1,side,dir2, &
-           nmat,SDIM,2,SDIM+1,iface_right)
+         side=2
+         call abs_array_index3(im,dir+1,side, &
+          nmat,SDIM,2,iface_left)
+         side=1
+         call abs_array_index3(im,dir+1,side, &
+          nmat,SDIM,2,iface_right)
 
-          if (left_face_ok.eq.1) then
+         if (left_face_ok.eq.1) then
 
-           leftface(im,dir2)=facefab(D_DECL(i-ii,j-jj,k-kk),iface_left)
-           if (right_face_ok.eq.1) then
-            ! do nothing
-           else if (right_face_ok.eq.0) then
-            rightface(im,dir2)=leftface(im,dir2)
-           else
-            print *,"right_face_ok invalid"
-            stop
-           endif
-           
-          else if (left_face_ok.eq.0) then
+          leftface(im)=facefab(D_DECL(i-ii,j-jj,k-kk),iface_left)
+          if (right_face_ok.eq.1) then
            ! do nothing
+          else if (right_face_ok.eq.0) then
+           rightface(im)=leftface(im)
+          else
+           print *,"right_face_ok invalid"
+           stop
+          endif
+           
+         else if (left_face_ok.eq.0) then
+          ! do nothing
+         else
+          print *,"left_face_ok invalid"
+          stop
+         endif
+
+         if (right_face_ok.eq.1) then
+
+          rightface(im)=facefab(D_DECL(i,j,k),iface_right)
+          if (left_face_ok.eq.1) then
+           ! do nothing
+          else if (left_face_ok.eq.0) then
+           leftface(im)=rightface(im)
           else
            print *,"left_face_ok invalid"
            stop
           endif
 
-          if (right_face_ok.eq.1) then
+         else if (right_face_ok.eq.0) then
+          ! do nothing
+         else
+          print *,"right_face_ok invalid"
+          stop
+         endif
 
-           rightface(im,dir2)=facefab(D_DECL(i,j,k),iface_right)
-           if (left_face_ok.eq.1) then
-            ! do nothing
-           else if (left_face_ok.eq.0) then
-            leftface(im,dir2)=rightface(im,dir2)
-           else
-            print *,"left_face_ok invalid"
-            stop
-           endif
-
-          else if (right_face_ok.eq.0) then
-           ! do nothing
-          else
-           print *,"right_face_ok invalid"
-           stop
-          endif
-
-         enddo ! dir2
-
-         frac_left(im)=leftface(im,1)
-         frac_right(im)=rightface(im,1)
+         frac_left(im)=leftface(im)
+         frac_right(im)=rightface(im)
 
          if ((tessellate.eq.1).or. &
              (tessellate.eq.3).or. &
@@ -5127,14 +4433,11 @@ stop
           stop
          endif 
 
-          ! absolute coordinate system.
-         do dir2=1,SDIM
-          x_left(dir2,im)=leftface(im,dir2+1)
-          x_right(dir2,im)=rightface(im,dir2+1)
-         enddo
         enddo ! im=1..nmat
 
-        if ((left_total.le.zero).or.(right_total.le.zero)) then
+        if ((left_total.gt.zero).and.(right_total.gt.zero)) then
+         ! do nothing
+        else
          print *,"left_total or right_total invalid"
          stop
         endif
@@ -5218,7 +4521,6 @@ stop
 
          enddo ! im=1..nmat
 
-           ! x_pair in absolute coordinate system.
          caller_id=12
          if (tessellate.eq.0) then
           local_tessellate=1 ! is_rigid data has been zeroed out.
@@ -5249,7 +4551,6 @@ stop
            nmat, &
            dir+1, &
            frac_pair, & ! left,right
-           x_pair, & ! left,right (unused for now)
            SDIM, &
            geom_xtetlist(1,1,1,tid+1), &
            nmax, &
@@ -5304,7 +4605,9 @@ stop
         endif
 
         delta=xsten_right(0,dir+1)-xsten_left(0,dir+1)
-        if (delta.le.zero) then
+        if (delta.gt.zero) then
+         ! do nothing
+        else
          print *,"delta invalid faceprocess"
          stop
         endif 

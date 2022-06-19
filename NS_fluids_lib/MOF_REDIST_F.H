@@ -73,7 +73,6 @@ namespace amrex{
        AMREX_ARLIM_P(facepairYlo),AMREX_ARLIM_P(facepairYhi),
        Real* facepairZ,
        AMREX_ARLIM_P(facepairZlo),AMREX_ARLIM_P(facepairZhi),
-       Real* facefab,AMREX_ARLIM_P(facefablo),AMREX_ARLIM_P(facefabhi),
        Real* facetest,AMREX_ARLIM_P(facetestlo),AMREX_ARLIM_P(facetesthi),
        Real* stenfab,AMREX_ARLIM_P(stenfablo),AMREX_ARLIM_P(stenfabhi),
        Real* vofrecon,AMREX_ARLIM_P(vofreconlo),AMREX_ARLIM_P(vofreconhi),
@@ -91,7 +90,6 @@ namespace amrex{
        int* ngrowLS,
        int* nmat,int* nten,
        int* nstar,
-       int* nface,
        int* nface_dst);
 
      void fort_correct_uninit(
@@ -140,8 +138,7 @@ namespace amrex{
        Real* time,
        int* ngrow,
        int* nmat,
-       int* nface,
-       int* nface_decomp);
+       int* nface);
 
      void fort_faceinittest(
        int* tid,

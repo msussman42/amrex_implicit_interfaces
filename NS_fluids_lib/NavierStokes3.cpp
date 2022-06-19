@@ -5423,8 +5423,6 @@ NavierStokes::ColorSum(
  if (localMF[SLOPE_RECON_MF]->nComp()!=nmat*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
- int do_face_decomp=0;
-
  if (sweep_num==0) {
   getStateDist_localMF(LS_COLORSUM_MF,1,cur_time_slab,20);
   getStateDen_localMF(DEN_COLORSUM_MF,1,cur_time_slab);
@@ -5432,7 +5430,7 @@ NavierStokes::ColorSum(
   getState_localMF(VEL_COLORSUM_MF,1,STATECOMP_VEL,
     STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
 
-  makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MM_MF,do_face_decomp);
+  makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MM_MF);
   ProcessFaceFrac(tessellate,FACEFRAC_MM_MF,FACEFRAC_SOLVE_MM_MF,0);
   makeCellFrac(tessellate,0,CELLFRAC_MM_MF);
  } else if (sweep_num==1) {
@@ -5450,8 +5448,8 @@ NavierStokes::ColorSum(
  if (localMF[DEN_COLORSUM_MF]->nComp()!=num_state_material*nmat)
   amrex::Error("localMF[DEN_COLORSUM_MF]->nComp()!=num_state_material*nmat");
 
-   // (nmat,sdim,2,sdim+1) area+centroid on each face of a cell.
- int nface=nmat*AMREX_SPACEDIM*2*(1+AMREX_SPACEDIM);
+   // (nmat,sdim,2) area on each face of a cell.
+ int nface=nmat*AMREX_SPACEDIM*2;
   // (nmat,nmat,2)  left material, right material, frac_pair+dist_pair
  int nface_dst=nmat*nmat*2;
   // (nmat,nmat,3+sdim)
@@ -5529,7 +5527,6 @@ NavierStokes::ColorSum(
   FArrayBox& denfab=(*localMF[DEN_COLORSUM_MF])[mfi];
   FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
 
-  FArrayBox& facefab=(*localMF[FACEFRAC_MM_MF])[mfi];
   FArrayBox& xfacepair=(*localMF[FACEFRAC_SOLVE_MM_MF])[mfi];
   FArrayBox& yfacepair=(*localMF[FACEFRAC_SOLVE_MM_MF+1])[mfi];
   FArrayBox& zfacepair=(*localMF[FACEFRAC_SOLVE_MM_MF+AMREX_SPACEDIM-1])[mfi];
@@ -5579,7 +5576,6 @@ NavierStokes::ColorSum(
    velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
    denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
-   facefab.dataPtr(),ARLIM(facefab.loVect()),ARLIM(facefab.hiVect()),
    xfacepair.dataPtr(),ARLIM(xfacepair.loVect()),ARLIM(xfacepair.hiVect()),
    yfacepair.dataPtr(),ARLIM(yfacepair.loVect()),ARLIM(yfacepair.hiVect()),
    zfacepair.dataPtr(),ARLIM(zfacepair.loVect()),ARLIM(zfacepair.hiVect()),
@@ -5614,7 +5610,6 @@ NavierStokes::ColorSum(
    velbc.dataPtr(),
    material_type_lowmach.dataPtr(),
    material_type_visual.dataPtr(),
-   &nface,
    &nface_dst,
    &ncellfrac);
  } // mfi

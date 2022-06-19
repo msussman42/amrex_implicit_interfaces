@@ -691,7 +691,6 @@ stop
       REAL_T delta_mgoni
       REAL_T volpos,facearea
       REAL_T cenpos(SDIM)
-      REAL_T areacentroid(SDIM)
       REAL_T temperature_cen(nmat)
       REAL_T grad_tension(SDIM)
       REAL_T RR
@@ -969,7 +968,7 @@ stop
       call getvolume( &
        bfact,dx,xsten,nhalf_height, &
        LS1_save,volpos,facearea, &
-       cenpos,areacentroid,VOFTOL,SDIM)
+       cenpos,VOFTOL,SDIM)
 
       if (facearea.ge.zero) then
        delta_mgoni=facearea/vol_sten
@@ -4514,7 +4513,6 @@ stop
        VEL,DIMS(VEL), &
        DEN,DIMS(DEN), &
        VOF,DIMS(VOF), &
-       facefab,DIMS(facefab), &
        xface,DIMS(xface), &
        yface,DIMS(yface), &
        zface,DIMS(zface), &
@@ -4549,7 +4547,6 @@ stop
        velbc, &
        material_type_lowmach, &
        material_type_visual, &
-       nface, &
        nface_dst, &
        ncellfrac) &
       bind(c,name='fort_getcolorsum')
@@ -4606,7 +4603,6 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(VEL)
       INTEGER_T, intent(in) :: DIMDEC(DEN)
       INTEGER_T, intent(in) :: DIMDEC(VOF)
-      INTEGER_T, intent(in) :: DIMDEC(facefab)
       INTEGER_T, intent(in) :: DIMDEC(xface)
       INTEGER_T, intent(in) :: DIMDEC(yface)
       INTEGER_T, intent(in) :: DIMDEC(zface)
@@ -4649,8 +4645,6 @@ stop
       REAL_T, pointer :: DEN_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: VOF(DIMV(VOF),nmat*ngeom_recon)
       REAL_T, pointer :: VOF_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: facefab(DIMV(facefab),nface)
-      REAL_T, pointer :: facefab_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: xface(DIMV(xface),nface_dst)
       REAL_T, intent(in), target :: yface(DIMV(yface),nface_dst)
       REAL_T, intent(in), target :: zface(DIMV(zface),nface_dst)
@@ -4806,7 +4800,7 @@ stop
        stop
       endif
 
-      if (nface.ne.nmat*SDIM*2*(1+SDIM)) then
+      if (nface.ne.nmat*SDIM*2) then
        print *,"nface invalid"
        stop
       endif
@@ -4870,8 +4864,6 @@ stop
       call checkbound_array(fablo,fabhi,DEN_ptr,1,-1,6615)
       VOF_ptr=>VOF
       call checkbound_array(fablo,fabhi,VOF_ptr,1,-1,6616)
-      facefab_ptr=>facefab
-      call checkbound_array(fablo,fabhi,facefab_ptr,1,-1,6617)
       xface_ptr=>xface
       yface_ptr=>yface
       zface_ptr=>zface
@@ -15921,7 +15913,6 @@ stop
       REAL_T LS_temp(D_DECL(-1:1,-1:1,-1:1))
       REAL_T LSfacearea
       REAL_T LScentroid(SDIM)
-      REAL_T LSareacentroid(SDIM)
       INTEGER_T nrefine_geom
       REAL_T dxmaxLS
       REAL_T ls_hold(nmat*(1+SDIM))
@@ -17203,7 +17194,7 @@ stop
                       (center_stencil_wetting_im.eq.0)) then
               call getvolume(bfact,dx,xsten,nhalf, &
                LS_temp,mofnew(vofcomp),LSfacearea, &
-               LScentroid,LSareacentroid,VOFTOL,SDIM)
+               LScentroid,VOFTOL,SDIM)
 
               do dir=1,SDIM
                mofnew(vofcomp+dir)=LScentroid(dir)-cencell(dir)

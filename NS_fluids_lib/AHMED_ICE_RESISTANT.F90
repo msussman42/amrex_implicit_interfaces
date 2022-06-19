@@ -770,7 +770,6 @@ REAL_T :: volcell
 REAL_T :: facearea_seed
 REAL_T :: centroid_seed(SDIM)
 REAL_T :: cencell(SDIM)
-REAL_T :: areacentroid_seed(SDIM)
 
 nmat=assimilate_in%nmat
 nstate=assimilate_in%nstate
@@ -881,7 +880,6 @@ if ((num_materials.ge.3).and. &
          vfrac_seed, &
          facearea_seed, &
          centroid_seed, &
-         areacentroid_seed, &
          VOFTOL, &
          SDIM)
        call CISBOX( &

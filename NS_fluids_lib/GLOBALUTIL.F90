@@ -8112,17 +8112,16 @@ end subroutine global_checkinplane
 
 
 
-      subroutine gridarea(xsten,nhalf,rzflag,dir,side,area,areacen)
+      subroutine gridarea(xsten,nhalf,rzflag,dir,side,area)
       IMPLICIT NONE
 
       REAL_T, intent(out) :: area
-      REAL_T, intent(out) :: areacen(SDIM)
       INTEGER_T, intent(in) :: nhalf
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       INTEGER_T, intent(in) :: rzflag
       INTEGER_T, intent(in) :: dir,side
       INTEGER_T iside,dir2
-      REAL_T RR,R1,R2,RC
+      REAL_T RR,R1,R2
 
       if (side.eq.0) then
        iside=-1
@@ -8137,14 +8136,13 @@ end subroutine global_checkinplane
        stop
       endif
 
-      areacen(dir+1)=xsten(iside,dir+1)
-
       area=one
       do dir2=1,SDIM
        if (dir2.ne.dir+1) then
         area=area*(xsten(1,dir2)-xsten(-1,dir2))
-        areacen(dir2)=half*(xsten(1,dir2)+xsten(-1,dir2))
-        if (area.le.zero) then
+        if (area.gt.zero) then
+         ! do nothing
+        else
          print *,"area bust"
          stop
         endif
@@ -8169,8 +8167,6 @@ end subroutine global_checkinplane
          print *,"R2+R1 invalid"
          stop
         endif
-        RC=two*(R2*R2+R1*R1+R2*R1)/(three*(R2+R1))
-        areacen(dir2)=RC
        else
         print *,"dir invalid gridarea 2"
         stop
@@ -8186,16 +8182,13 @@ end subroutine global_checkinplane
         print *,"R2+R1 invalid"
         stop
        endif
-       RC=two*(R2*R2+R1*R1+R2*R1)/(three*(R2+R1))
 
        if (dir.eq.0) then ! R face
         RR=abs(xsten(iside,1))
        else if (dir.eq.1) then ! Theta face
         RR=one
-        areacen(dir2)=RC
        else if ((dir.eq.2).and.(SDIM.eq.3)) then ! Z face
         RR=abs(xsten(0,1))
-        areacen(dir2)=RC
        else
         print *,"dir invalid gridarea 3"
         stop
@@ -13279,23 +13272,22 @@ end subroutine global_checkinplane
       return
       end subroutine aggressive_worker
 
-      subroutine abs_array_index4(i,j,k,l,Ni,Nj,Nk,Nl,abs_index)
+      subroutine abs_array_index3(i,j,k,Ni,Nj,Nk,abs_index)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: i,j,k,l,Ni,Nj,Nk,Nl
+      INTEGER_T, intent(in) :: i,j,k,Ni,Nj,Nk
       INTEGER_T, intent(out) :: abs_index
 
       if ((i.lt.1).or.(i.gt.Ni).or. &
           (j.lt.1).or.(j.gt.Nj).or. &
-          (k.lt.1).or.(k.gt.Nk).or. &
-          (l.lt.1).or.(l.gt.Nl)) then
-       print *,"index bust abs_array_index4"
+          (k.lt.1).or.(k.gt.Nk)) then
+       print *,"index bust abs_array_index3"
        stop
       endif
-      abs_index=(i-1)*Nj*Nk*Nl+(j-1)*Nk*Nl+(k-1)*Nl+l
+      abs_index=(i-1)*Nj*Nk+(j-1)*Nk+k
 
       return
-      end subroutine abs_array_index4
+      end subroutine abs_array_index3
 
        ! finds the cell that contains "x" 
       subroutine containing_cell( &

@@ -50,7 +50,6 @@ namespace amrex{
        Real* VEL,AMREX_ARLIM_P(VELlo),AMREX_ARLIM_P(VELhi),
        Real* DEN,AMREX_ARLIM_P(DENlo),AMREX_ARLIM_P(DENhi),
        Real* VOF,AMREX_ARLIM_P(VOFlo),AMREX_ARLIM_P(VOFhi),
-       Real* facefab,AMREX_ARLIM_P(facefablo),AMREX_ARLIM_P(facefabhi),
        Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
        Real* yface,AMREX_ARLIM_P(yfacelo),AMREX_ARLIM_P(yfacehi),
        Real* zface,AMREX_ARLIM_P(zfacelo),AMREX_ARLIM_P(zfacehi),
@@ -85,7 +84,6 @@ namespace amrex{
        int* velbc,
        int* material_type_lowmach,
        int* material_type_visual,
-       int* nface,
        int* nface_dst,
        int* ncellfrac);
 
