@@ -1198,7 +1198,7 @@ end subroutine init_geometry_tables
 
 subroutine create_xnodelist( &
   n_vol,n_area, &
-  cum_volume,cum_area,cum_centroid,cum_areacentroid, &
+  cum_volume,cum_area,cum_centroid, &
   xnode,phinode,checksum,maxnode, &
   shapeflag,nodedomain,sdim)
 
@@ -1209,7 +1209,6 @@ INTEGER_T sdim
 INTEGER_T n_vol,n_area
 REAL_T cum_volume,cum_area
 REAL_T cum_centroid(sdim)
-REAL_T cum_areacentroid(sdim)
 
 INTEGER_T checksum,maxnode,shapeflag,nodedomain
 REAL_T xnode(nodedomain,sdim)
@@ -1223,7 +1222,7 @@ REAL_T phi1,phi2
 REAL_T xtet(sdim+1,sdim)
 REAL_T xtri(sdim,sdim)
 REAL_T local_volume,local_area
-REAL_T local_centroid(sdim),local_areacentroid(sdim)
+REAL_T local_centroid(sdim)
 REAL_T xnodelist_array(maxnodelist,sdim)
 type(intersect_type) :: template_geom
 
@@ -1371,13 +1370,9 @@ type(intersect_type) :: template_geom
     enddo
    enddo
 
-   call surface_area(xtri,local_area,local_areacentroid,sdim)
+   call surface_area(xtri,local_area,sdim)
 
    cum_area=cum_area+local_area
-   do dir=1,sdim
-    cum_areacentroid(dir)=cum_areacentroid(dir)+ &
-      local_area*local_areacentroid(dir)
-   enddo
   enddo ! looping through all tris
 
  else
@@ -1753,7 +1748,7 @@ end subroutine create_xnodelist_and_map
 
 subroutine increment_volume( &
  n_vol,n_area, &
- cum_volume,cum_area,cum_centroid,cum_areacentroid, &
+ cum_volume,cum_area,cum_centroid, &
  phinode,xnode,nodedomain,sdim)
 
 IMPLICIT NONE
@@ -1763,7 +1758,6 @@ INTEGER_T sdim
 INTEGER_T n_vol,n_area
 REAL_T cum_volume,cum_area
 REAL_T cum_centroid(sdim)
-REAL_T cum_areacentroid(sdim)
 
 INTEGER_T nodedomain
 REAL_T phinode(nodedomain)
@@ -1827,7 +1821,7 @@ INTEGER_T maxnode,n_nodes,shapeflag
    shapeflag=1
    call create_xnodelist( &
     n_vol,n_area, &
-    cum_volume,cum_area,cum_centroid,cum_areacentroid, &
+    cum_volume,cum_area,cum_centroid, &
     xnode,phinode,checksum,maxnode,shapeflag, &
     nodedomain,sdim)
 
@@ -2030,7 +2024,7 @@ end subroutine increment_volume_and_map
 ! linearcut=0 => input might be intersection with plane
 ! linearcut=-1 => always break up initial domain into tets/tris
 subroutine intersection_volume( &
-  cum_volume,cum_area,cum_centroid,cum_areacentroid, &
+  cum_volume,cum_area,cum_centroid, &
   phinode,xnode,nodedomain, &
   sdim,fullelementfast,linearcut)
 
@@ -2041,7 +2035,6 @@ INTEGER_T sdim
 INTEGER_T n_vol,n_area
 REAL_T cum_volume,cum_area
 REAL_T cum_centroid(sdim)
-REAL_T cum_areacentroid(sdim)
 
 INTEGER_T nodedomain,fullelementfast,linearcut,bfact
 REAL_T phinode(nodedomain)
@@ -2108,7 +2101,6 @@ INTEGER_T nhalf
  cum_area=zero
  do dir=1,sdim
    cum_centroid(dir)=zero
-   cum_areacentroid(dir)=zero
  enddo
  n_vol=0
  n_area=0
@@ -2195,7 +2187,7 @@ INTEGER_T nhalf
      call extract_tet(xnode,phinode,xx,ls,id,symmetry_flag,sdim)
      call increment_volume( &
       n_vol,n_area, &
-      cum_volume,cum_area,cum_centroid,cum_areacentroid, &
+      cum_volume,cum_area,cum_centroid, &
       ls,xx,sub_nodedomain,sdim)
     enddo 
 
@@ -2203,7 +2195,7 @@ INTEGER_T nhalf
 
     call create_xnodelist( &
      n_vol,n_area, &
-     cum_volume,cum_area,cum_centroid,cum_areacentroid, &
+     cum_volume,cum_area,cum_centroid, &
      xnode,phinode,checksum,maxnode,shapeflag, &
      nodedomain,sdim)
 
@@ -2219,16 +2211,6 @@ INTEGER_T nhalf
    else
     do dir=1,sdim
      cum_centroid(dir)=zero
-    enddo
-   endif
-
-   if (cum_area.gt.zero) then
-    do dir=1,sdim
-     cum_areacentroid(dir)=cum_areacentroid(dir)/cum_area
-    enddo
-   else
-    do dir=1,sdim
-     cum_areacentroid(dir)=zero
     enddo
    endif
   endif ! not a full element or a full element that is "tetrahedralized"
@@ -2613,7 +2595,7 @@ end subroutine intersection_volume_and_map
         bfact,dxgrid,xgrid,nhalf, &
         lnode, &
         volumedark,centroiddark, &
-        area,areacentroid,volall,cenall,sdim)
+        area,volall,cenall,sdim)
       IMPLICIT NONE
 
       INTEGER_T bfact
@@ -2628,8 +2610,6 @@ end subroutine intersection_volume_and_map
       REAL_T volall,area
       REAL_T cenall(sdim)
       REAL_T centroididdark(sdim)
-      REAL_T areacentroid(sdim)
-      REAL_T areacentroiddark(sdim)
       REAL_T xx(sdim+1,sdim)
       REAL_T lsdark(sdim+1)
       REAL_T volumeiddark
@@ -2657,8 +2637,6 @@ end subroutine intersection_volume_and_map
  
       do j_dir=1,sdim
        centroiddark(j_dir)=zero
-       areacentroiddark(j_dir)=zero
-       areacentroid(j_dir)=zero
       enddo
       volumedark=zero
       area=zero
@@ -2729,10 +2707,10 @@ end subroutine intersection_volume_and_map
 
         if (sdim.eq.3) then
          call intersection_volumeXYZ(lsdark,xx,volumeiddark, &
-           centroididdark,areaiddark,areacentroiddark,sdim)
+           centroididdark,areaiddark,sdim)
         else if (sdim.eq.2) then
          call int_volumeXYorRZ(lsdark,xx,volumeiddark, &
-           centroididdark,areaiddark,areacentroiddark,sdim)
+           centroididdark,areaiddark,sdim)
         else
          print *,"sdim invalid"
          stop
@@ -2743,8 +2721,6 @@ end subroutine intersection_volume_and_map
         do j_dir=1,sdim
          centroiddark(j_dir)=centroiddark(j_dir)+ &
                  centroididdark(j_dir)*volumeiddark
-         areacentroid(j_dir)=areacentroid(j_dir)+ &
-                 areacentroiddark(j_dir)*areaiddark
         enddo
 
        enddo ! id
@@ -2753,16 +2729,6 @@ end subroutine intersection_volume_and_map
       else if (volall.lt.zero) then
        print *,"volall invalid"
        stop
-      endif
-
-      if (area.gt.zero) then
-       do j_dir=1,sdim
-        areacentroid(j_dir)=areacentroid(j_dir)/area
-       enddo
-      else
-       do j_dir=1,sdim
-        areacentroid(j_dir)=zero
-       enddo
       endif
 
       if (volumedark.gt.zero) then
@@ -2785,7 +2751,7 @@ end subroutine intersection_volume_and_map
 ! Also, obtain the centroid and surface area of intersection.
 
       subroutine int_volumeXYorRZ(phi,x,volumedark, &
-       centroiddark,area,areacentroid,sdim)
+       centroiddark,area,sdim)
       IMPLICIT NONE
 
       INTEGER_T sdim
@@ -2796,8 +2762,6 @@ end subroutine intersection_volume_and_map
       REAL_T x(sdim+1,sdim)
       REAL_T xint(sdim+1,sdim)
       REAL_T volumedark,area
-      REAL_T areacentroid(sdim)
-      REAL_T areacentroidlist(sdim)
       REAL_T volumelistdark,arealist
       REAL_T centroiddark(sdim)
       REAL_T centroidlistdark(sdim)
@@ -2817,7 +2781,6 @@ end subroutine intersection_volume_and_map
       area=zero
       do j_dir=1,sdim
        centroiddark(j_dir)=zero
-       areacentroid(j_dir)=zero
       enddo
       do n=1,nlist
        do i_tet_node=1,sdim+1
@@ -2851,23 +2814,9 @@ end subroutine intersection_volume_and_map
        do j_dir=1,sdim
         xint(sdim+1,j_dir)=zero
        enddo
-       call areaXYorRZ(xint,1,2,arealist,areacentroidlist)
+       call areaXYorRZ(xint,1,2,arealist)
        area=area+arealist
-       do j_dir=1,sdim
-        areacentroid(j_dir)=areacentroid(j_dir)+ &
-                areacentroidlist(j_dir)*arealist
-       enddo
       enddo
-
-      if (area.gt.zero) then
-       do j_dir=1,sdim
-        areacentroid(j_dir)=areacentroid(j_dir)/area
-       enddo
-      else
-       do j_dir=1,sdim
-        areacentroid(j_dir)=zero
-       enddo
-      endif
 
       return
       end subroutine int_volumeXYorRZ
@@ -3142,13 +3091,12 @@ end subroutine intersection_volume_and_map
 
 ! find the length of a side of a triangle; also find the centroid of the
 ! side.      
-      subroutine areaXYorRZ(x,i1,i2,area,areacentroid)
+      subroutine areaXYorRZ(x,i1,i2,area)
       IMPLICIT NONE
 
       REAL_T, intent(in) :: x(3,2)
       REAL_T xx(2,2)
       REAL_T, intent(out) :: area
-      REAL_T, intent(out) :: areacentroid(2)
       INTEGER_T i1,i2,dir,sdim
 
       sdim=2
@@ -3164,7 +3112,7 @@ end subroutine intersection_volume_and_map
        xx(1,dir)=x(i1,dir) 
        xx(2,dir)=x(i2,dir) 
       enddo
-      call surface_area(xx,area,areacentroid,sdim)
+      call surface_area(xx,area,sdim)
 
       return
       end subroutine areaXYorRZ
@@ -3339,13 +3287,12 @@ end subroutine intersection_volume_and_map
 
 ! find area of a face of a tetrahedron
 ! find the centroid of a face of a tetrahedron
-      subroutine areaXYZ(x,i1,i2,i3,area,areacentroid)
+      subroutine areaXYZ(x,i1,i2,i3,area)
       IMPLICIT NONE
 
       REAL_T, intent(in) :: x(4,3)
       REAL_T xx(3,3)
       REAL_T, intent(out) :: area
-      REAL_T, intent(out) :: areacentroid(3)
       INTEGER_T, intent(in) :: i1,i2,i3 
       INTEGER_T dir
       INTEGER_T sdim
@@ -3365,14 +3312,14 @@ end subroutine intersection_volume_and_map
        xx(2,dir)=x(i2,dir) 
        xx(3,dir)=x(i3,dir) 
       enddo
-      call surface_area(xx,area,areacentroid,sdim)
+      call surface_area(xx,area,sdim)
 
       return
       end subroutine areaXYZ
 
 ! find the area of a triangular planar element in 2d or 3d
 ! THANK YOU JOHN BURKHARDT
-      subroutine surface_area(x,area,areacen,sdim)
+      subroutine surface_area(x,area,sdim)
       use probcommon_module
       use LegendreNodes
       use triangle_fekete_module, only : fekete_degree,fekete_order_num, &
@@ -3382,7 +3329,6 @@ end subroutine intersection_volume_and_map
       INTEGER_T, intent(in) :: sdim
       REAL_T, intent(in) :: x(sdim,sdim)
       REAL_T, intent(out) :: area
-      REAL_T, intent(out) :: areacen(sdim)
       REAL_T xx(sdim-1,sdim)
       INTEGER_T i,dir,dircrit,itan,jtan
       REAL_T, dimension(:,:), allocatable :: xy
@@ -3432,14 +3378,6 @@ end subroutine intersection_volume_and_map
        stop
       endif
 
-      do dir=1,sdim
-       areacen(dir)=zero
-       do i=1,sdim
-        areacen(dir)=areacen(dir)+x(i,dir)
-       enddo
-       areacen(dir)=areacen(dir)/sdim
-      enddo ! dir
-
       if (mag.gt.zero) then
        if (levelrz.eq.0) then
         ! do nothing
@@ -3486,9 +3424,6 @@ end subroutine intersection_volume_and_map
        else if (levelrz.eq.1) then
 
         area=zero
-        do dir=1,sdim
-         areacen(dir)=zero
-        enddo
         jac=abs(y1_cross_y2(dircrit))
 
         if (sdim.ne.2) then
@@ -3517,18 +3452,12 @@ end subroutine intersection_volume_and_map
  
          area=area+DA*jac*w(i)
 
-         do dir=1,sdim
-          areacen(dir)=areacen(dir)+(x(sdim,dir)+dxpos(dir))*DA*jac*w(i)
-         enddo
         enddo ! i
 
         if (area.eq.zero) then
          print *,"area became 0 even though mag>0"
          stop
         endif
-        do dir=1,sdim
-         areacen(dir)=areacen(dir)/area
-        enddo
 
         deallocate(xy)
         deallocate(w)
@@ -3536,9 +3465,6 @@ end subroutine intersection_volume_and_map
        else if (levelrz.eq.3) then ! in: surface_area
 
         area=zero
-        do dir=1,sdim
-         areacen(dir)=zero
-        enddo
         jac=abs(y1_cross_y2(dircrit))
 
         if (sdim.eq.2) then
@@ -3571,18 +3497,12 @@ end subroutine intersection_volume_and_map
 
           area=area+DA*jac*w(i)
 
-          do dir=1,sdim
-           areacen(dir)=areacen(dir)+(x(sdim,dir)+dxpos(dir))*DA*jac*w(i)
-          enddo
          enddo ! i
 
          if (area.eq.zero) then
           print *,"area became 0 even though mag>0"
           stop
          endif
-         do dir=1,sdim
-          areacen(dir)=areacen(dir)/area
-         enddo
 
          deallocate(xy)
          deallocate(w)
@@ -3625,18 +3545,12 @@ end subroutine intersection_volume_and_map
  
           area=area+DA*jac*w(i)
 
-          do dir=1,sdim
-           areacen(dir)=areacen(dir)+(x(sdim,dir)+dxpos(dir))*DA*jac*w(i)
-          enddo
          enddo ! i
 
          if (area.eq.zero) then
           print *,"area became 0 even though mag>0"
           stop
          endif
-         do dir=1,sdim
-          areacen(dir)=areacen(dir)/area
-         enddo
 
          area=area*half
 
@@ -4765,7 +4679,6 @@ INTEGER_T k_grid_node
 REAL_T volslow,areaslow,volall
 REAL_T cenall(3)
 REAL_T censlow(3)
-REAL_T areacenslow(3)
 REAL_T xnode3d(8,3)
 REAL_T xnode2d(4,2)
 REAL_T phinode(8)
@@ -4775,7 +4688,6 @@ REAL_T t1,t2
 
 REAL_T cum_volume,cum_area
 REAL_T cum_centroid(3)
-REAL_T cum_areacentroid(3)
 
  nhalf=3
  bfact=2
@@ -4878,7 +4790,7 @@ REAL_T cum_areacentroid(3)
      call cell_intersection_grid( &
        bfact,dxgrid,xsten0,nhalf, &
        phinode, &
-       volslow,censlow,areaslow,areacenslow, &
+       volslow,censlow,areaslow, &
        volall,cenall,sdim)
 
        if (1.eq.1) then
@@ -4889,12 +4801,12 @@ REAL_T cum_areacentroid(3)
         linearcut=1
         if (sdim.eq.2) then
          call intersection_volume( &
-          cum_volume,cum_area,cum_centroid,cum_areacentroid, &
+          cum_volume,cum_area,cum_centroid, &
           phinode,xnode2d,nodedomain, &
           sdim,fullelementfast,linearcut)
         else if (sdim.eq.3) then
          call intersection_volume( &
-          cum_volume,cum_area,cum_centroid,cum_areacentroid, &
+          cum_volume,cum_area,cum_centroid, &
           phinode,xnode3d,nodedomain, &
           sdim,fullelementfast,linearcut)
         else
@@ -4906,7 +4818,7 @@ REAL_T cum_areacentroid(3)
         call cell_intersection_grid( &
          bfact,dxgrid,xsten0,nhalf, &
          phinode, &
-         cum_volume,cum_centroid,cum_area,cum_areacentroid, &
+         cum_volume,cum_centroid,cum_area, &
          volall,cenall,sdim)
 
        endif
@@ -4949,12 +4861,6 @@ REAL_T cum_areacentroid(3)
        do dir=1,sdim
         if (abs(cum_centroid(dir)-censlow(dir)).gt.VOFTOL) then
          print *,"centroid incorrect"
-         stop
-        endif
-       enddo
-       do dir=1,sdim
-        if (abs(cum_areacentroid(dir)-areacenslow(dir)).gt.VOFTOL) then
-         print *,"area centroid incorrect"
          stop
         endif
        enddo
@@ -6427,7 +6333,7 @@ end subroutine volume_sanity_check
 ! find the volume/area/etc. of intersection of a plane with
 ! a tetrahedron
       subroutine intersection_volumeXYZ(phi,x,volumedark, &
-       centroiddark,area,areacentroid,sdim)
+       centroiddark,area,sdim)
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: sdim
@@ -6436,8 +6342,6 @@ end subroutine volume_sanity_check
       REAL_T, intent(in) :: phi(sdim+1)
       REAL_T, intent(in) :: x(sdim+1,sdim)
       REAL_T xint(sdim+1,sdim)
-      REAL_T, intent(out) :: areacentroid(sdim)
-      REAL_T areacentroidlist(sdim)
       REAL_T, intent(out) :: centroiddark(sdim)
       REAL_T centroidlistdark(sdim)
 
@@ -6459,7 +6363,6 @@ end subroutine volume_sanity_check
       area=zero
       do j_dir=1,sdim
        centroiddark(j_dir)=zero
-       areacentroid(j_dir)=zero
       enddo
 
       do n=1,nlist
@@ -6494,23 +6397,9 @@ end subroutine volume_sanity_check
        do j_dir=1,sdim
         xint(sdim+1,j_dir)=zero
        enddo
-       call areaXYZ(xint,1,2,3,arealist,areacentroidlist)
+       call areaXYZ(xint,1,2,3,arealist)
        area=area+arealist
-       do j_dir=1,sdim
-        areacentroid(j_dir)=areacentroid(j_dir)+ &
-                areacentroidlist(j_dir)*arealist
-       enddo
       enddo
-
-      if (area.gt.zero) then
-       do j_dir=1,sdim
-        areacentroid(j_dir)=areacentroid(j_dir)/area
-       enddo
-      else
-       do j_dir=1,sdim
-        areacentroid(j_dir)=zero
-       enddo
-      endif
 
       return
       end subroutine intersection_volumeXYZ
@@ -7329,7 +7218,7 @@ end subroutine volume_sanity_check
       subroutine getvolume( &
         bfact,dxgrid,xsten,nhalf, &
         ldata,volume,facearea, &
-        centroid,areacentroid,EBVOFTOL,sdim)
+        centroid,EBVOFTOL,sdim)
       use probcommon_module
       IMPLICIT NONE
 
@@ -7341,7 +7230,6 @@ end subroutine volume_sanity_check
       REAL_T, intent(in) :: dxgrid(sdim)
       REAL_T, intent(out) :: volume,facearea
       REAL_T volcell
-      REAL_T, intent(out) :: areacentroid(sdim)
       REAL_T, intent(out) :: centroid(sdim)
       REAL_T cenall(sdim)
       INTEGER_T dir
@@ -7380,7 +7268,7 @@ end subroutine volume_sanity_check
       call fast_cell_intersection_grid( &
        bfact,dxgrid,xsten,nhalf, &       
        lnode, &
-       volume,centroid,facearea,areacentroid, &
+       volume,centroid,facearea, &
        volcell,cenall,sdim)
 
       if (volcell.le.zero) then
@@ -7410,7 +7298,7 @@ end subroutine volume_sanity_check
          ! "centroid" in absolute coordinate system      
       subroutine getvolumebatch(bfact,dxgrid,xsten,nhalf, &
        ldata,volume,facearea, &
-       centroid,areacentroid,nmat,EBVOFTOL,sdim)
+       centroid,nmat,EBVOFTOL,sdim)
       use probcommon_module
       use global_utility_module
 
@@ -7427,7 +7315,6 @@ end subroutine volume_sanity_check
       REAL_T, intent(out) :: volume(nmat)
       REAL_T, intent(out) :: facearea(nmat)
       REAL_T volcell
-      REAL_T, intent(out) :: areacentroid(nmat,sdim)
       REAL_T, intent(out) :: centroid(nmat,sdim)
       REAL_T cenall(sdim)
 
@@ -7474,7 +7361,7 @@ end subroutine volume_sanity_check
         bfact,dxgrid,xsten,nhalf, &
         lnode, &
         volume, &
-        centroid,facearea,areacentroid, &
+        centroid,facearea, &
         volcell,cenall,nmat,sdim)
 
       do im=1,nmat
@@ -7606,7 +7493,7 @@ end subroutine volume_sanity_check
       subroutine fast_cut_cell_intersection( &
         bfact,dx,xsten0,nhalf0, &
         slope,intercept, &
-        volume,centroid,area,areacentroid, &
+        volume,centroid,area, &
         xsten_grid,nhalf_grid,xtet,shapeflag,sdim)
 
       use global_utility_module
@@ -7617,7 +7504,6 @@ end subroutine volume_sanity_check
 
       REAL_T cum_volume,cum_area
       REAL_T cum_centroid(sdim)
-      REAL_T cum_areacentroid(sdim)
 
       INTEGER_T, intent(in) :: bfact,nhalf0,nhalf_grid
 
@@ -7630,7 +7516,6 @@ end subroutine volume_sanity_check
       REAL_T, intent(in) :: intercept
 
       REAL_T, intent(out) :: volume,area
-      REAL_T, intent(out) :: areacentroid(sdim)
       REAL_T, intent(out) :: centroid(sdim)
       INTEGER_T dir,inode
       INTEGER_T j_dir
@@ -7676,7 +7561,7 @@ end subroutine volume_sanity_check
 
        nodedomain=sdim+1
        call intersection_volume( &
-        cum_volume,cum_area,cum_centroid,cum_areacentroid, &
+        cum_volume,cum_area,cum_centroid, &
         ls,xtet,nodedomain, &
         sdim,fullelementfast,linearcut)
 
@@ -7746,7 +7631,7 @@ end subroutine volume_sanity_check
         stop
        endif
        call intersection_volume( &
-        cum_volume,cum_area,cum_centroid,cum_areacentroid, &
+        cum_volume,cum_area,cum_centroid, &
         phinode,xnode,nodedomain, &
         sdim,fullelementfast,linearcut)
       else
@@ -7758,7 +7643,6 @@ end subroutine volume_sanity_check
       area=cum_area
       do dir=1,sdim
        centroid(dir)=cum_centroid(dir)
-       areacentroid(dir)=cum_areacentroid(dir)
       enddo
 
       return
@@ -8053,7 +7937,7 @@ end subroutine volume_sanity_check
         bfact,dxgrid,xsten0,nhalf0, &
         lnodebatch, &
         volumedark,centroiddark, &
-        area,areacentroid,volall,cenall,nmat,sdim)
+        area,volall,cenall,nmat,sdim)
 
       use probcommon_module
       IMPLICIT NONE
@@ -8063,7 +7947,6 @@ end subroutine volume_sanity_check
 
       REAL_T cum_volume,cum_area
       REAL_T cum_centroid(sdim)
-      REAL_T cum_areacentroid(sdim)
 
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(in) :: lnodebatch(4*(sdim-1),nmat)
@@ -8076,7 +7959,6 @@ end subroutine volume_sanity_check
       REAL_T, intent(out) :: volall
       REAL_T, intent(out) :: area(nmat)
       REAL_T, intent(out) :: cenall(sdim)
-      REAL_T, intent(out) :: areacentroid(nmat,sdim)
       INTEGER_T j_dir
       INTEGER_T i_grid_node
       INTEGER_T j_grid_node
@@ -8148,7 +8030,7 @@ end subroutine volume_sanity_check
          lnode(inode)=lnodebatch(inode,im)
         enddo        
         call intersection_volume( &
-         cum_volume,cum_area,cum_centroid,cum_areacentroid, &
+         cum_volume,cum_area,cum_centroid, &
          lnode,xnode,nodedomain, &
          sdim,fullelementfast,linearcut)
 
@@ -8156,7 +8038,6 @@ end subroutine volume_sanity_check
         area(im)=cum_area
         do j_dir=1,sdim
          centroiddark(im,j_dir)=cum_centroid(j_dir)
-         areacentroid(im,j_dir)=cum_areacentroid(j_dir)
         enddo
        enddo  ! im
 
@@ -8168,7 +8049,6 @@ end subroutine volume_sanity_check
         area(im)=zero
         do j_dir=1,sdim
          centroiddark(im,j_dir)=zero
-         areacentroid(im,j_dir)=zero
         enddo
        enddo  ! im
 
@@ -8186,7 +8066,7 @@ end subroutine volume_sanity_check
         bfact,dxgrid,xsten0,nhalf0, &
         lnode, &
         volumedark,centroiddark, &
-        area,areacentroid,volall,cenall,sdim)
+        area,volall,cenall,sdim)
 
       IMPLICIT NONE
 
@@ -8194,7 +8074,6 @@ end subroutine volume_sanity_check
 
       REAL_T cum_volume,cum_area
       REAL_T cum_centroid(sdim)
-      REAL_T cum_areacentroid(sdim)
 
       INTEGER_T, intent(in) :: bfact,nhalf0
       REAL_T, intent(in) :: lnode(4*(sdim-1))
@@ -8205,7 +8084,6 @@ end subroutine volume_sanity_check
       REAL_T, intent(out) :: centroiddark(sdim)
       REAL_T, intent(out) :: volall,area
       REAL_T, intent(out) :: cenall(sdim)
-      REAL_T, intent(out) :: areacentroid(sdim)
       INTEGER_T i_grid_node
       INTEGER_T j_grid_node
       INTEGER_T k_grid_node
@@ -8267,7 +8145,7 @@ end subroutine volume_sanity_check
         stop
        endif
        call intersection_volume( &
-        cum_volume,cum_area,cum_centroid,cum_areacentroid, &
+        cum_volume,cum_area,cum_centroid, &
         lnode,xnode,nodedomain, &
         sdim,fullelementfast,linearcut)
 
@@ -8275,7 +8153,6 @@ end subroutine volume_sanity_check
        area=cum_area
        do j_dir=1,sdim
         centroiddark(j_dir)=cum_centroid(j_dir)
-        areacentroid(j_dir)=cum_areacentroid(j_dir)
        enddo
 
       else if (volall.eq.zero) then
@@ -8284,7 +8161,6 @@ end subroutine volume_sanity_check
        area=zero
        do j_dir=1,sdim
         centroiddark(j_dir)=zero
-        areacentroid(j_dir)=zero
        enddo
       else if (volall.lt.zero) then
        print *,"volall invalid"
@@ -8549,7 +8425,6 @@ contains
 
       REAL_T, intent(out) :: volume,area
       REAL_T volumelist,arealist
-      REAL_T areacentroid(sdim)
       REAL_T, intent(out) :: centroid(sdim)
       REAL_T centroidlist(sdim)
       INTEGER_T i_tet_node
@@ -8592,10 +8467,10 @@ contains
 
        if (sdim.eq.3) then
         call intersection_volumeXYZ(ls,xx,volumelist, &
-         centroidlist,arealist,areacentroid,sdim)
+         centroidlist,arealist,sdim)
        else if (sdim.eq.2) then
         call int_volumeXYorRZ(ls,xx,volumelist, &
-         centroidlist,arealist,areacentroid,sdim)
+         centroidlist,arealist,sdim)
        else
         print *,"sdim invalid"
         stop
@@ -8892,7 +8767,6 @@ contains
       REAL_T, intent(in) :: vtarget
       REAL_T volcell
       REAL_T cencell(sdim)
-      REAL_T areacentroidn(sdim)
       REAL_T, intent(out) :: centroid(sdim)
       INTEGER_T shapeflag
       REAL_T xtet(sdim+1,sdim)
@@ -8948,7 +8822,7 @@ contains
         call fast_cut_cell_intersection( &
          bfact,dx,xsten0,nhalf0, &
          slope,intercept, &
-         voln,centroid,arean,areacentroidn, &
+         voln,centroid,arean, &
          xsten0,nhalf0,xtet,shapeflag,sdim) 
        else
         print *,"continuous_mof invalid"
@@ -8989,7 +8863,6 @@ contains
       REAL_T, intent(in) :: vtarget
       REAL_T volcell
       REAL_T cencell(sdim)
-      REAL_T areacentroidn(sdim)
       REAL_T, intent(out) :: centroid(sdim)
       INTEGER_T shapeflag
       REAL_T xtet(sdim+1,sdim)
@@ -9018,7 +8891,7 @@ contains
       call fast_cut_cell_intersection( &
        bfact,dx,xsten0,nhalf0, &
        slope,intercept, &
-       voln,centroid,arean,areacentroidn, &
+       voln,centroid,arean, &
        xsten0,nhalf0,xtet,shapeflag,sdim) 
 
       ff=(voln-vtarget)/volcell
@@ -10091,7 +9964,6 @@ contains
       REAL_T, intent(in) :: refvfrac
       INTEGER_T, intent(in) :: use_initial_guess 
 
-      REAL_T areacentroid(sdim) 
       REAL_T, intent(out) :: testcen(sdim)
       REAL_T testcenT(sdim)
       REAL_T, intent(in) :: angle(sdim-1)
@@ -10115,7 +9987,6 @@ contains
       INTEGER_T ksten_low,ksten_high
       REAL_T volsten
       REAL_T areasten
-      REAL_T areacentroidsten(sdim)
       REAL_T censten(sdim)
       REAL_T local_angles(2)
       REAL_T local_volume
@@ -10257,7 +10128,6 @@ contains
           bfact,dx,xsten0,nhalf0, &
           nslope,intercept, &
           volume_cut,testcen,facearea, &
-          areacentroid, &
           xsten0,nhalf0,xtet,shapeflag,sdim) 
         else if (continuous_mof.eq.2) then
           ! (testcen is the centroid of the intersection of
@@ -10266,7 +10136,6 @@ contains
          facearea=zero
          do dir=1,sdim
           testcen(dir)=zero
-          areacentroid(dir)=zero
          enddo 
 
          if (sdim.eq.3) then
@@ -10297,14 +10166,11 @@ contains
             bfact,dx,xsten0,nhalf0, &
             nslope,intercept, &
             volsten,censten,areasten, &
-            areacentroidsten, &
             xsten2,nhalf2,xtet,shapeflag,sdim) 
            volume_cut=volume_cut+volsten
            facearea=facearea+areasten
            do dir=1,sdim
             testcen(dir)=testcen(dir)+volsten*censten(dir)
-            areacentroid(dir)=areacentroid(dir)+ &
-             areasten*areacentroidsten(dir) 
            enddo
 
           else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
@@ -10323,11 +10189,6 @@ contains
            testcen(dir)=testcen(dir)/volume_cut
           else
            testcen(dir)=zero
-          endif
-          if (facearea.gt.zero) then
-           areacentroid(dir)=areacentroid(dir)/facearea
-          else
-           areacentroid(dir)=zero
           endif
          enddo ! dir=1..sdim
 
@@ -14125,8 +13986,6 @@ contains
       REAL_T volcut,volcut2,areacut,areacut2
       REAL_T cencut(sdim)
       REAL_T cencut2(sdim)
-      REAL_T areacentroid(sdim)
-      REAL_T areacentroid2(sdim)
       REAL_T xtet(sdim+1,sdim)
       REAL_T total_volume
       REAL_T total_centroid(sdim)
@@ -14267,12 +14126,12 @@ contains
        call fast_cut_cell_intersection( &
         bfact,dx,xsten0,nhalf0, &
         nslope,intercept, &
-        volcut,cencut,areacut,areacentroid, &
+        volcut,cencut,areacut, &
         xsten0,nhalf0,xtet,shapeflag,sdim)
        call fast_cut_cell_intersection( &
         bfact,dx,xsten0,nhalf0, &
         nslope2,intercept2, &
-        volcut2,cencut2,areacut2,areacentroid2, &
+        volcut2,cencut2,areacut2, &
         xsten0,nhalf0,xtet,shapeflag,sdim)
 
        call Box_volumeFAST( &
@@ -14946,7 +14805,6 @@ contains
       REAL_T nrecon(sdim)
       REAL_T intercept
       REAL_T voltemp,centemp(sdim),areatemp
-      REAL_T areacentroidtemp(sdim)
       INTEGER_T single_material
       REAL_T remaining_vfrac
       REAL_T uncaptured_volume_fraction_fluid
@@ -15502,7 +15360,6 @@ contains
               bfact,dx,xsten0,nhalf0, &
               nrecon,intercept, &
               voltemp,centemp,areatemp, &
-              areacentroidtemp, &
               xsten_grid,nhalf_grid,xtet,shapeflag,sdim) 
            else 
             print *,"fastflag invalid multi get volume grid 2"
@@ -15849,7 +15706,6 @@ contains
              bfact,dx,xsten0,nhalf0, &
              nrecon,intercept, &
              voltemp,centemp,areatemp, &
-             areacentroidtemp, &
              xsten_grid,nhalf_grid,xtet,shapeflag,sdim) 
            else 
             print *,"fastflag invalid multi get volume grid 2"
@@ -16175,8 +16031,7 @@ contains
         ! (vi) (a) project the centroid pairs to the face.
         !      (b) A_pair=(V_pair/V_thinbox) * A_face 
         !
-        ! output: multi_area_pair,multi_area_cen_pair (absolute coordinates)
-        !
+        ! output: multi_area_pair
         ! 
         ! tessellate_in=0,1, or 3
         ! calls multi_get_volume_tessellate if tessellate_in=1 or 3.
@@ -16191,7 +16046,6 @@ contains
        nmat, &
        dir_plus, & ! 1..sdim
        multi_area_pair, & ! (nmat,nmat) (left,right)
-       multi_area_cen_pair, & ! (nmat,nmat,sdim) (left,right)
        sdim, &
        xtetlist_plus, &
        nlist_alloc_plus, &
@@ -16225,7 +16079,6 @@ contains
       REAL_T, intent(out) :: xtetlist_plus(4,3,nlist_alloc_plus)
       REAL_T, intent(out) :: xtetlist_minus(4,3,nlist_alloc_minus)
       REAL_T, intent(out) :: multi_area_pair(nmat,nmat)
-      REAL_T, intent(out) :: multi_area_cen_pair(nmat,nmat,sdim)
       REAL_T :: mofdatavalid_plus(nmat*ngeom_recon)
       REAL_T :: mofdatavalid_minus(nmat*ngeom_recon)
       REAL_T :: mofdataproject_plus(nmat*ngeom_recon)
@@ -16257,7 +16110,6 @@ contains
       REAL_T uncaptured_volume_save
       REAL_T uncaptured_volume_START
       REAL_T uncaptured_centroid_START(sdim)
-      REAL_T uncaptured_centroid_fluid(sdim)
       REAL_T uncaptured_area
 
       REAL_T volume_plus
@@ -16265,7 +16117,6 @@ contains
 
       REAL_T voltemp
       REAL_T areatemp
-      REAL_T areacentroidtemp(sdim)
       REAL_T centemp(sdim)
 
       INTEGER_T num_processed_fluid
@@ -16358,7 +16209,6 @@ contains
         multi_area_pair(im,im_opp)=zero
         multi_volume_pair(im,im_opp)=zero
         do dir_local=1,sdim
-         multi_area_cen_pair(im,im_opp,dir_local)=zero
          multi_volume_cen_pair(im,im_opp,dir_local)=zero
         enddo
        enddo
@@ -16546,10 +16396,6 @@ contains
       if (uncaptured_area.gt.zero) then
 
        uncaptured_volume_fluid=uncaptured_volume_START
-       do dir_local=1,sdim
-        uncaptured_centroid_fluid(dir_local)= &
-             uncaptured_centroid_START(dir_local)
-       enddo
 
        vfrac_fluid_sum=zero
        do im=1,nmat
@@ -16919,7 +16765,6 @@ contains
             xsten0_minus,nhalf0, &
             nrecon,intercept, &
             voltemp,centemp,areatemp, &
-            areacentroidtemp, &
             xsten_thin,nhalf_thin, &
             xtet,shapeflag,sdim) 
           else 
@@ -16934,19 +16779,6 @@ contains
            uncaptured_volume_fluid=zero
           endif
 
-           ! V^{uncapt,k}=V+V^{uncapt,k+1}
-           ! V^{uncapt,k}x^{uncapt,k}=V x+V^{uncapt,k+1}x^{uncapt,k+1}
-
-          do dir_local=1,sdim
-           if (uncaptured_volume_fluid.le.zero) then
-            uncaptured_centroid_fluid(dir_local)=zero
-           else
-            uncaptured_centroid_fluid(dir_local)= &
-             (uncaptured_volume_save*uncaptured_centroid_fluid(dir_local)- &
-              voltemp*centemp(dir_local))/uncaptured_volume_fluid
-           endif
-          enddo ! dir_local=1..sdim
-   
           uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_fluid- &
            mofdataproject_minus(vofcomp)
           if (uncaptured_volume_fraction_fluid.lt.VOFTOL) then
@@ -17020,9 +16852,6 @@ contains
                xsten_thin,nhalf_thin,sdim)
 
        voltemp=zero
-       do dir_local=1,sdim
-        centemp(dir_local)=zero
-       enddo
 
        do im=1,nmat
 
@@ -17037,11 +16866,6 @@ contains
             cen_diff(dir_local)=multi_volume_cen_pair(im,im_opp,dir_local)
            enddo
            call project_centroid_box(cen_diff,xsten_thin,nhalf_thin,sdim)
-           do dir_local=1,sdim
-            multi_area_cen_pair(im,im_opp,dir_local)=cen_diff(dir_local)
-            centemp(dir_local)=centemp(dir_local)+cen_diff(dir_local)* &
-                  multi_volume_pair(im,im_opp)
-           enddo
 
           else if (is_rigid_local(im_opp).eq.1) then
            ! do nothing
@@ -17061,10 +16885,6 @@ contains
 
        enddo ! im=1..nmat
        if (voltemp.gt.zero) then
-        do dir_local=1,sdim
-         centemp(dir_local)=centemp(dir_local)/voltemp
-        enddo
-        call project_centroid_box(centemp,xsten_thin,nhalf_thin,sdim)
         do im=1,nmat
          if (is_rigid_local(im).eq.0) then
           do im_opp=1,nmat
@@ -17096,16 +16916,6 @@ contains
        endif
 
        dxthin=half*(xsten0_plus(1,dir_plus)-xsten0_minus(-1,dir_plus))
-
-       do dir_local=1,sdim
-        if (abs(centemp(dir_local)-uncaptured_centroid_START(dir_local)).le. &
-            UNCAPT_TOL*dxthin) then
-         ! do nothing
-        else
-         print *,"centemp invalid"
-         stop
-        endif
-       enddo
 
        if (abs(voltemp-uncaptured_volume_START).le. &
            UNCAPT_TOL*volume_plus) then

@@ -7026,7 +7026,6 @@ END SUBROUTINE SIMP
       REAL_T LSvolume,LSfacearea
       REAL_T LScentroid(SDIM)
       REAL_T LScen_material(SDIM)
-      REAL_T LSareacentroid(SDIM)
       INTEGER_T i1,j1,k1,k1lo,k1hi
       REAL_T KECELL,dencore,Tcore,ecore,totalE
       INTEGER_T in_slice,nhalf
@@ -7368,7 +7367,7 @@ END SUBROUTINE SIMP
           ! LScentroid is in an absolute coordinate system.
          call getvolume(bfact,dx,xsten,nhalf, &
           ldata,LSvolume,LSfacearea, &
-          LScentroid,LSareacentroid,VOFTOL,SDIM)
+          LScentroid,VOFTOL,SDIM)
 
          vofcomp=(im-1)*ngeom_recon+1
          do dir=1,SDIM
@@ -14540,7 +14539,6 @@ END SUBROUTINE SIMP
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf,side
       REAL_T local_area
-      REAL_T areacen(SDIM)
       INTEGER_T at_z_axis
 
       nhalf=3
@@ -14600,7 +14598,7 @@ END SUBROUTINE SIMP
        do k=growlo(3),growhi(3)
         call gridsten_level(xsten,i,j,k,level,nhalf)
         side=0
-        call gridarea(xsten,nhalf,rzflag,dir,side,local_area,areacen)
+        call gridarea(xsten,nhalf,rzflag,dir,side,local_area)
         at_z_axis=0
         if (rzflag.eq.0) then
          ! do nothing

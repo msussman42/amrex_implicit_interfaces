@@ -3505,7 +3505,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       INTEGER_T dir2,i1,j1,k1,k1lo,k1hi
       REAL_T centroid(nmat,SDIM)
-      REAL_T areacentroid(nmat,SDIM)
       REAL_T lsgrid(D_DECL(3,3,3),nmat)
       REAL_T distbatch(nmat)
       REAL_T facearea(nmat)
@@ -3592,7 +3591,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       EBVOFTOL=VOFTOL
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac, &
-        facearea,centroid,areacentroid,nmat,EBVOFTOL,SDIM)
+        facearea,centroid,nmat,EBVOFTOL,SDIM)
       do im=1,nmat
        do dir2=1,SDIM
         cenbc(im,dir2)=centroid(im,dir2)-xsten(0,dir2)
@@ -3793,7 +3792,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T inode,jnode,knode,klo,khi
       INTEGER_T isynth
       REAL_T xn,yn,zn,facearea
-      REAL_T areacentroid(SDIM)
       REAL_T volbox
       REAL_T cenbox(SDIM)
       INTEGER_T nmat
@@ -3863,7 +3861,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        call fast_cell_intersection_grid( &
         bfact,dx,xsten,nhalf, &
         lnode, &
-        vfrac,cen,facearea,areacentroid, &
+        vfrac,cen,facearea, &
         volbox,cenbox,SDIM)
        if (volbox.le.zero) then
         vfrac=zero
@@ -5934,7 +5932,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T volcut(nmat)
       REAL_T cencut(SDIM)
       REAL_T facearea
-      REAL_T areacentroid(SDIM)
       ! get_symmetric_error
       REAL_T, intent(inout) :: xtrilist(SDIM+1,SDIM,POLYGON_LIST_MAX) 
       INTEGER_T nmax
@@ -6160,7 +6157,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          bfact,dx,xsten,nhalf, &
          lnode, &
          volcut(imaterial), &
-         cencut,facearea,areacentroid, &
+         cencut,facearea, &
          volallagain,cenallagain,SDIM)
 
        enddo ! imaterial
@@ -6990,7 +6987,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       INTEGER_T dir2,i1,j1,k1,k1lo,k1hi,isten
       REAL_T centroid(nmat,SDIM)
-      REAL_T areacentroid(nmat,SDIM)
       REAL_T lsgrid(D_DECL(3,3,3),nmat)
       REAL_T, dimension(:), allocatable :: distbatch
       REAL_T facearea(nmat)
@@ -7082,7 +7078,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        EBVOFTOL=VOFTOL
        call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac,facearea, &
-        centroid,areacentroid,nmat,EBVOFTOL,SDIM)
+        centroid,nmat,EBVOFTOL,SDIM)
 
        do im=1,nmat
         do dir2=1,SDIM
@@ -8185,7 +8181,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       INTEGER_T dir2,i1,j1,k1,k1lo,k1hi,isten
       REAL_T centroid(nmat,SDIM)
-      REAL_T areacentroid(nmat,SDIM)
       REAL_T lsgrid(D_DECL(3,3,3),nmat)
       REAL_T facearea(nmat)
       REAL_T distbatch(nmat)
@@ -8243,7 +8238,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       EBVOFTOL=VOFTOL
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac, &
-        facearea,centroid,areacentroid,nmat,EBVOFTOL,SDIM)
+        facearea,centroid,nmat,EBVOFTOL,SDIM)
       do im=1,nmat
        do dir2=1,SDIM
         cenbc(im,dir2)=centroid(im,dir2)-xsten(0,dir2)
@@ -8269,7 +8264,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       INTEGER_T dir2,i1,j1,k1,k1lo,k1hi,isten
       REAL_T centroid(nmat,SDIM)
-      REAL_T areacentroid(nmat,SDIM)
       REAL_T lsgrid(D_DECL(3,3,3),nmat)
       REAL_T facearea(nmat)
       REAL_T, dimension(:), allocatable :: distbatch
@@ -8333,7 +8327,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! in: MOF.F90
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac,facearea, &
-        centroid,areacentroid,nmat,EBVOFTOL,SDIM)
+        centroid,nmat,EBVOFTOL,SDIM)
       do im=1,nmat
 
        if (vfrac(im).lt.zero) then
@@ -10192,7 +10186,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       INTEGER_T dir2,i1,j1,k1,k1lo,k1hi,isten
       REAL_T centroid(nmat,SDIM)
-      REAL_T areacentroid(nmat,SDIM)
       REAL_T lsgrid(D_DECL(3,3,3),nmat)
       REAL_T facearea(nmat)
       REAL_T distbatch(nmat)
@@ -10258,7 +10251,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       EBVOFTOL=VOFTOL
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac, &
-        facearea,centroid,areacentroid,nmat,EBVOFTOL,SDIM)
+        facearea,centroid,nmat,EBVOFTOL,SDIM)
 
       do im=1,nmat
        do dir2=1,SDIM

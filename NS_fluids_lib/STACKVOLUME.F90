@@ -122,7 +122,6 @@ stop
       REAL_T ltest(D_DECL(3,3,3),nmat)
       REAL_T lnode(4*(SDIM-1),nmat)
       REAL_T facearea(nmat)
-      REAL_T areacentroid(nmat,SDIM)
       REAL_T tempvol(nmat)
       REAL_T tempcen(nmat,SDIM)
       REAL_T volall
@@ -231,7 +230,7 @@ stop
       call fast_cell_intersection_grid_batch(bfact,dxin,xsten,nhalf, &
        lnode, &
        tempvol, &
-       tempcen,facearea,areacentroid,volall, &
+       tempcen,facearea,volall, &
        cenall,nmat,SDIM)
       do imaterial=1,nmat
        voldata(imaterial,1)=tempvol(imaterial)
