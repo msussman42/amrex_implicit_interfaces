@@ -3392,7 +3392,9 @@ end subroutine intersection_volume_and_map
           dircrit=sdim
          endif
         endif
-        if (y1_cross_y2(dircrit).eq.zero) then
+        if (abs(y1_cross_y2(dircrit)).gt.zero) then
+         ! do nothing
+        else
          print *,"y1_cross_y2 bust"
          stop
         endif
@@ -3454,8 +3456,10 @@ end subroutine intersection_volume_and_map
 
         enddo ! i
 
-        if (area.eq.zero) then
-         print *,"area became 0 even though mag>0"
+        if (area.gt.zero) then
+         ! do nothing
+        else
+         print *,"area became 0 even though mag>0, area=",area
          stop
         endif
 
@@ -3499,8 +3503,10 @@ end subroutine intersection_volume_and_map
 
          enddo ! i
 
-         if (area.eq.zero) then
-          print *,"area became 0 even though mag>0"
+         if (area.gt.zero) then
+          ! do nothing
+         else
+          print *,"area became 0 even though mag>0, area=",area
           stop
          endif
 
@@ -3547,8 +3553,10 @@ end subroutine intersection_volume_and_map
 
          enddo ! i
 
-         if (area.eq.zero) then
-          print *,"area became 0 even though mag>0"
+         if (area.gt.zero) then
+          ! do nothing
+         else
+          print *,"area became 0 even though mag>0, area=",area
           stop
          endif
 

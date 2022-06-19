@@ -3449,10 +3449,8 @@ stop
       REAL_T, intent(in) :: time
 
       INTEGER_T i,j,k
-      INTEGER_T im,im_opp
-      INTEGER_T im1,im2
+      INTEGER_T im
       INTEGER_T im_crit
-      INTEGER_T im_crit_thin
       INTEGER_T iface
       INTEGER_T dir,side
 
@@ -3479,11 +3477,9 @@ stop
       REAL_T multi_area(nmat)
       REAL_T total_vol
       INTEGER_T mask1,mask2
-      INTEGER_T iten
       INTEGER_T nten_test
       INTEGER_T normalize_tessellate
       INTEGER_T local_tessellate
-      INTEGER_T is_rigid_local(nmat)
       INTEGER_T nhalf_box
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
