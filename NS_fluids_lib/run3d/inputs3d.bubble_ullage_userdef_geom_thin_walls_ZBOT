@@ -100,7 +100,7 @@ ns.radblob5 = 0.005  #TANK_MK_NOZZLE_THICK_OUTLET
 ns.radblob2         = 0.082   # radius of spherical ullage
 ns.xblob2           = 0.0
 ns.yblob2           = 0.0 # 0.0 if 3D
-ns.zblob2           = 0.051
+ns.zblob2           = 0.186
 
 ns.xblob4 	    = 0.127 # End cap radius TANK_MK_END_RADIUS
 
@@ -128,8 +128,8 @@ geometry.coord_sys  = 0 # 3D
 #geometry.prob_lo    = 0.0  -0.2 #2D RZ
 #geometry.prob_lo    = -0.2  -0.2 #2D XY
 #geometry.prob_hi    = 0.2  0.2  #2D
-geometry.prob_lo    = -0.2  -0.2 -0.2 #3D
-geometry.prob_hi    = 0.2  0.2 0.2    #3D
+geometry.prob_lo    = -0.075  -0.075 -0.05 #3D
+geometry.prob_hi    = 0.075  0.075 0.25    #3D
 geometry.is_periodic= 0 0 0
 
 ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
@@ -141,7 +141,7 @@ ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 #amr.n_cell          = 64 64 #2D XY
 #amr.max_level       = 1     #2D
 #amr.n_cell          = 128 128 128 #3D
-amr.n_cell          = 64 64 64 # 8 cores compute1 #3D
+amr.n_cell          = 64 64 128 # 8 cores compute1 #3D
 amr.max_level       = 1 #3D
 
 amr.regrid_int      = 1     # How often to regrid
