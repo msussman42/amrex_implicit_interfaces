@@ -28,6 +28,9 @@ implicit none
 INTEGER_T, PARAMETER :: TANK_MK_MATERIAL_TYPE=24
 
 INTEGER_T, PARAMETER :: TANK_MK_AUX_THICK_WALLS=0
+INTEGER_T, PARAMETER :: ZBOT_FLIGHT_ID=1
+INTEGER_T, PARAMETER :: TPCE_ID=0
+INTEGER_T, PARAMETER :: TANK_MK_GEOM_DESCRIPTOR=ZBOT_FLIGHT_ID
 
 INTEGER_T :: num_aux_expect
 
@@ -94,6 +97,8 @@ INTEGER_T, intent(out) :: file_format
 INTEGER_T :: stat
 
  print *,"CRYOGENIC_TANK_MK_OPEN_CASFILE should not be called"
+ print *,"THIS ROUTINE WOULD BE USED IF LAGRANGIAN DATA"
+ print *,"NEEDS TO BE DISTRIBUTED?"
  stop
 
  if (part_id.ne.1) then
@@ -147,261 +152,394 @@ INTEGER_T :: dir
 
   ! the buffer size for the auxiliary mesh is 0.2*max_side_len on each
   ! side.
- if (lev77.eq.-1) then
+ if (lev77.eq.-1) then !lev77==-1 => aux grid used.
 
-  if (TANK_MK_AUX_THICK_WALLS.eq.1) then
+  if (TANK_MK_GEOM_DESCRIPTOR.eq.TPCE_ID) then
 
-   if (part_id.eq.1) then ! heater_a (top heater)
-    if ((xcell(1).le.-0.056d0).or. &
-        (xcell(1).ge.0.056d0).or. &
-        (xcell(2).le.0.139d0).or. &
-        (xcell(2).ge.0.183d0).or. &
-        (xcell(3).le.-0.0416d0).or. &
-        (xcell(3).ge.0.0416d0)) then
-     LS=-5.1D-3
-     MASK=FSI_FINE_SIGN_VEL_VALID 
+   if (TANK_MK_AUX_THICK_WALLS.eq.1) then
+
+    if (part_id.eq.1) then ! heater_a (top heater)
+     if ((xcell(1).le.-0.056d0).or. &
+         (xcell(1).ge.0.056d0).or. &
+         (xcell(2).le.0.139d0).or. &
+         (xcell(2).ge.0.183d0).or. &
+         (xcell(3).le.-0.0416d0).or. &
+         (xcell(3).ge.0.0416d0)) then
+      LS=-5.1D-3
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+    else if (part_id.eq.2) then ! side heater
+     if ((xcell(1).le.0.082d0).or. &
+         (xcell(1).ge.0.112d0).or. &
+         (xcell(2).le.-0.0375d0).or. &
+         (xcell(2).ge.0.0775d0).or. &
+         (xcell(3).le.-0.0423d0).or. &
+         (xcell(3).ge.0.0423d0)) then
+      LS=-5.2D-3
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+    else if (part_id.eq.3) then ! source
+
+     if ((xcell(1).le.-0.019d0).or. &
+         (xcell(1).ge.0.030d0).or. &
+         (xcell(2).le.-0.20d0).or. &
+         (xcell(2).ge.-0.11d0).or. &
+         (xcell(3).le.-0.014d0).or. &
+         (xcell(3).ge.0.014d0)) then
+      LS=-0.0043
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+    else if (part_id.eq.4) then ! sink
+
+     if ((xcell(1).le.-0.140d0).or. &
+         (xcell(1).ge.0.140d0).or. &
+         (xcell(2).le.-0.184d0).or. &
+         (xcell(2).ge.-0.038d0).or. &
+         (xcell(3).le.-0.023d0).or. &
+         (xcell(3).ge.0.023d0)) then
+      LS=-0.0127
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+     if ((xcell(1).ge.-0.123d0).and. &
+         (xcell(1).le.0.123d0).and. &
+         (xcell(2).ge.-0.167d0).and. &
+         (xcell(2).le.10.0d0).and. &
+         (xcell(3).ge.-10.0d0).and. &
+         (xcell(3).le.10.0d0)) then
+      LS=-0.0127
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+    else if (part_id.eq.5) then ! tank
+
+     if ((xcell(1).le.-0.17d0).or. &
+         (xcell(1).ge.0.17d0).or. &
+         (xcell(2).le.-0.22d0).or. &
+         (xcell(2).ge.0.22d0).or. &
+         (xcell(3).le.-0.17d0).or. &
+         (xcell(3).ge.0.17d0)) then
+      LS=-0.02
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+     if ((xcell(1).ge.-0.09d0).and. &
+         (xcell(1).le.0.09d0).and. &
+         (xcell(2).ge.-0.14d0).and. &
+         (xcell(2).le.0.14d0).and. &
+         (xcell(3).ge.-0.09d0).and. &
+         (xcell(3).le.0.09d0)) then
+      LS=-0.02
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+    else if (part_id.eq.6) then ! nozzle housing
+
+     if ((xcell(1).le.-0.03896d0).or. &
+         (xcell(1).ge.0.0502d0).or. &
+         (xcell(2).le.-0.210d0).or. &
+         (xcell(2).ge.-0.104d0).or. &
+         (xcell(3).le.-0.0348d0).or. &
+         (xcell(3).ge.0.0348d0)) then
+      LS=-0.0048
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
     else
-     ! do nothing
+     print *,"part_id invalid"
+     stop
     endif
-   else if (part_id.eq.2) then ! side heater
-    if ((xcell(1).le.0.082d0).or. &
-        (xcell(1).ge.0.112d0).or. &
-        (xcell(2).le.-0.0375d0).or. &
-        (xcell(2).ge.0.0775d0).or. &
-        (xcell(3).le.-0.0423d0).or. &
-        (xcell(3).ge.0.0423d0)) then
-     LS=-5.2D-3
-     MASK=FSI_FINE_SIGN_VEL_VALID 
+
+   else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
+
+    if (part_id.eq.1) then ! heater_a (top heater)
+     if ((xcell(1).le.-0.05576d0).or. &
+         (xcell(1).ge.0.05576d0).or. &
+         (xcell(2).le.0.147d0).or. &
+         (xcell(2).ge.0.177d0).or. &
+         (xcell(3).le.-0.0416d0).or. &
+         (xcell(3).ge.0.0416d0)) then
+      LS=-5.1D-3
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+    else if (part_id.eq.2) then ! side heater
+     if ((xcell(1).le.0.0926d0).or. &
+         (xcell(1).ge.0.107d0).or. &
+         (xcell(2).le.-0.0575d0).or. &
+         (xcell(2).ge.0.0575d0).or. &
+         (xcell(3).le.-0.0423d0).or. &
+         (xcell(3).ge.0.0423d0)) then
+      LS=-5.2D-3
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+    else if (part_id.eq.3) then ! source
+
+     if ((xcell(1).le.-0.0142d0).or. &
+         (xcell(1).ge.0.0255d0).or. &
+         (xcell(2).le.-0.203d0).or. &
+         (xcell(2).ge.-0.111d0).or. &
+         (xcell(3).le.-0.0092d0).or. &
+         (xcell(3).ge.0.0092d0)) then
+      LS=-0.0043
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+    else if (part_id.eq.4) then ! sink (2 masked off parts: TORUS shape)
+
+     if ((xcell(1).le.-0.0142d0).or. &
+         (xcell(1).ge.0.0255d0).or. &
+         (xcell(2).le.-0.2026d0).or. &
+         (xcell(2).ge.-0.111d0).or. &
+         (xcell(3).le.-0.0092d0).or. &
+         (xcell(3).ge.0.0092d0)) then
+      LS=-0.0127
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+     if ((xcell(1).ge.-0.00805d0).and. &
+         (xcell(1).le.0.0193d0).and. &
+         (xcell(2).ge.-0.196d0).and. &
+         (xcell(2).le.10.0d0).and. &
+         (xcell(3).ge.-10.0d0).and. &
+         (xcell(3).le.10.0d0)) then
+      LS=-0.00416
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+    else if (part_id.eq.5) then ! tank
+
+     if ((xcell(1).le.-0.156d0).or. &
+         (xcell(1).ge.0.156d0).or. &
+         (xcell(2).le.-0.207d0).or. &
+         (xcell(2).ge.0.207d0).or. &
+         (xcell(3).le.-0.156d0).or. &
+         (xcell(3).ge.0.156d0)) then
+      LS=-0.02
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+     if ((xcell(1).ge.-0.082d0).and. &
+         (xcell(1).le.0.082d0).and. &
+         (xcell(2).ge.-0.133d0).and. &
+         (xcell(2).le.0.133d0).and. &
+         (xcell(3).ge.-0.0822d0).and. &
+         (xcell(3).le.0.0822d0)) then
+      LS=-0.0188
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+    else if (part_id.eq.6) then ! nozzle housing
+
+     if ((xcell(1).le.-0.02417d0).or. &
+         (xcell(1).ge.0.03542d0).or. &
+         (xcell(2).le.-0.2054d0).or. &
+         (xcell(2).ge.-0.1081d0).or. &
+         (xcell(3).le.-0.0195d0).or. &
+         (xcell(3).ge.0.0195d0)) then
+      LS=-0.0042
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+    else if (part_id.eq.7) then ! LAD housing
+
+     if ((xcell(1).le.-0.134d0).or. &
+         (xcell(1).ge.0.134d0).or. &
+         (xcell(2).le.-0.184d0).or. &
+         (xcell(2).ge.-0.0387d0).or. &
+         (xcell(3).le.-0.0236d0).or. &
+         (xcell(3).ge.0.0236d0)) then
+      LS=-0.012
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+     if ((xcell(1).ge.-0.117d0).and. &
+         (xcell(1).le.0.117d0).and. &
+         (xcell(2).ge.-0.167d0).and. &
+         (xcell(2).le.10.0d0).and. &
+         (xcell(3).ge.-10.0d0).and. &
+         (xcell(3).le.10.0d0)) then
+      LS=-0.012
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+
     else
-     ! do nothing
+     print *,"part_id invalid"
+     stop
     endif
 
-   else if (part_id.eq.3) then ! source
-
-    if ((xcell(1).le.-0.019d0).or. &
-        (xcell(1).ge.0.030d0).or. &
-        (xcell(2).le.-0.20d0).or. &
-        (xcell(2).ge.-0.11d0).or. &
-        (xcell(3).le.-0.014d0).or. &
-        (xcell(3).ge.0.014d0)) then
-     LS=-0.0043
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
-    endif
-
-   else if (part_id.eq.4) then ! sink
-
-    if ((xcell(1).le.-0.140d0).or. &
-        (xcell(1).ge.0.140d0).or. &
-        (xcell(2).le.-0.184d0).or. &
-        (xcell(2).ge.-0.038d0).or. &
-        (xcell(3).le.-0.023d0).or. &
-        (xcell(3).ge.0.023d0)) then
-     LS=-0.0127
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
-    endif
-
-    if ((xcell(1).ge.-0.123d0).and. &
-        (xcell(1).le.0.123d0).and. &
-        (xcell(2).ge.-0.167d0).and. &
-        (xcell(2).le.10.0d0).and. &
-        (xcell(3).ge.-10.0d0).and. &
-        (xcell(3).le.10.0d0)) then
-     LS=-0.0127
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
-    endif
-
-   else if (part_id.eq.5) then ! tank
-
-    if ((xcell(1).le.-0.17d0).or. &
-        (xcell(1).ge.0.17d0).or. &
-        (xcell(2).le.-0.22d0).or. &
-        (xcell(2).ge.0.22d0).or. &
-        (xcell(3).le.-0.17d0).or. &
-        (xcell(3).ge.0.17d0)) then
-     LS=-0.02
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
-    endif
-
-    if ((xcell(1).ge.-0.09d0).and. &
-        (xcell(1).le.0.09d0).and. &
-        (xcell(2).ge.-0.14d0).and. &
-        (xcell(2).le.0.14d0).and. &
-        (xcell(3).ge.-0.09d0).and. &
-        (xcell(3).le.0.09d0)) then
-     LS=-0.02
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
-    endif
-
-   else if (part_id.eq.6) then ! nozzle housing
-
-    if ((xcell(1).le.-0.03896d0).or. &
-        (xcell(1).ge.0.0502d0).or. &
-        (xcell(2).le.-0.210d0).or. &
-        (xcell(2).ge.-0.104d0).or. &
-        (xcell(3).le.-0.0348d0).or. &
-        (xcell(3).ge.0.0348d0)) then
-     LS=-0.0048
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
-    endif
-
-   else
-    print *,"part_id invalid"
+   else 
+    print *,"TANK_MK_AUX_THICK_WALLS invalid"
     stop
    endif
 
-  else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
+  else if (TANK_MK_GEOM_DESCRIPTOR.eq.ZBOT_FLIGHT_ID) then
 
-   if (part_id.eq.1) then ! heater_a (top heater)
-    if ((xcell(1).le.-0.05576d0).or. &
-        (xcell(1).ge.0.05576d0).or. &
-        (xcell(2).le.0.147d0).or. &
-        (xcell(2).ge.0.177d0).or. &
-        (xcell(3).le.-0.0416d0).or. &
-        (xcell(3).ge.0.0416d0)) then
-     LS=-5.1D-3
-     MASK=FSI_FINE_SIGN_VEL_VALID 
+   if (TANK_MK_AUX_THICK_WALLS.eq.1) then
+
+    print *,"this option not supported"
+    stop
+
+   else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
+
+    if (part_id.eq.1) then ! side heater_a 
+     if ((xcell(1).le.-0.06432d0).or. &
+         (xcell(1).ge.0.05158d0).or. &
+         (xcell(2).le.0.118d0).or. &
+         (xcell(2).ge.0.141d0).or. &
+         (xcell(3).le.-0.0274d0).or. &
+         (xcell(3).ge.0.0591d0)) then
+      LS=-5.27D-3
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+    else if (part_id.eq.2) then ! side heater b
+     if ((xcell(1).le.-0.0516d0).or. &
+         (xcell(1).ge.0.0643d0).or. &
+         (xcell(2).le.0.118d0).or. &
+         (xcell(2).ge.0.141d0).or. &
+         (xcell(3).le.-0.0643d0).or. &
+         (xcell(3).ge.0.0328d0)) then
+      LS=-5.3D-3
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+    else if (part_id.eq.3) then ! source
+
+     if ((xcell(1).le.-0.00852d0).or. &
+         (xcell(1).ge.0.00852d0).or. &
+         (xcell(2).le.-0.0443d0).or. &
+         (xcell(2).ge.0.0921d0).or. &
+         (xcell(3).le.-0.00852d0).or. &
+         (xcell(3).ge.0.00852d0)) then
+      LS=-0.0062
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+    else if (part_id.eq.4) then ! sink
+
+     if ((xcell(1).le.-0.000572d0).or. &
+         (xcell(1).ge.0.0124d0).or. &
+         (xcell(2).le.-0.0423d0).or. &
+         (xcell(2).ge.0.0491d0).or. &
+         (xcell(3).le.-0.0361d0).or. &
+         (xcell(3).ge.-0.0232d0)) then
+      LS=-0.0042
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+    else if (part_id.eq.5) then ! tank
+
+     if ((xcell(1).le.-0.0876d0).or. &
+         (xcell(1).ge.0.0876d0).or. &
+         (xcell(2).le.0.00524d0).or. &
+         (xcell(2).ge.0.256d0).or. &
+         (xcell(3).le.-0.0876d0).or. &
+         (xcell(3).ge.0.0876d0)) then
+      LS=-0.011
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+     if ((xcell(1).ge.-0.046d0).and. &
+         (xcell(1).le.0.046d0).and. &
+         (xcell(2).ge.0.047d0).and. &
+         (xcell(2).le.0.214d0).and. &
+         (xcell(3).ge.-0.046d0).and. &
+         (xcell(3).le.0.046d0)) then
+      LS=-0.0114
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+    else if (part_id.eq.6) then ! nozzle housing
+
+     if ((xcell(1).le.-0.0125d0).or. &
+         (xcell(1).ge.0.0125d0).or. &
+         (xcell(2).le.-0.0443d0).or. &
+         (xcell(2).ge.0.092d0).or. &
+         (xcell(3).le.-0.0125d0).or. &
+         (xcell(3).ge.0.0125d0)) then
+      LS=-0.0062
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
+    else if (part_id.eq.7) then ! LAD housing
+
+     if ((xcell(1).le.-0.00146d0).or. &
+         (xcell(1).ge.0.0133d0).or. &
+         (xcell(2).le.-0.0423d0).or. &
+         (xcell(2).ge.0.0499d0).or. &
+         (xcell(3).le.-0.0370d0).or. &
+         (xcell(3).ge.-0.0223d0)) then
+      LS=-0.0042
+      MASK=FSI_FINE_SIGN_VEL_VALID 
+     else
+      ! do nothing
+     endif
+
     else
-     ! do nothing
-    endif
-   else if (part_id.eq.2) then ! side heater
-    if ((xcell(1).le.0.0926d0).or. &
-        (xcell(1).ge.0.107d0).or. &
-        (xcell(2).le.-0.0575d0).or. &
-        (xcell(2).ge.0.0575d0).or. &
-        (xcell(3).le.-0.0423d0).or. &
-        (xcell(3).ge.0.0423d0)) then
-     LS=-5.2D-3
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
-    endif
-
-   else if (part_id.eq.3) then ! source
-
-    if ((xcell(1).le.-0.0142d0).or. &
-        (xcell(1).ge.0.0255d0).or. &
-        (xcell(2).le.-0.203d0).or. &
-        (xcell(2).ge.-0.111d0).or. &
-        (xcell(3).le.-0.0092d0).or. &
-        (xcell(3).ge.0.0092d0)) then
-     LS=-0.0043
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
-    endif
-
-   else if (part_id.eq.4) then ! sink
-
-    if ((xcell(1).le.-0.0142d0).or. &
-        (xcell(1).ge.0.0255d0).or. &
-        (xcell(2).le.-0.2026d0).or. &
-        (xcell(2).ge.-0.111d0).or. &
-        (xcell(3).le.-0.0092d0).or. &
-        (xcell(3).ge.0.0092d0)) then
-     LS=-0.0127
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
-    endif
-
-    if ((xcell(1).ge.-0.00805d0).and. &
-        (xcell(1).le.0.0193d0).and. &
-        (xcell(2).ge.-0.196d0).and. &
-        (xcell(2).le.10.0d0).and. &
-        (xcell(3).ge.-10.0d0).and. &
-        (xcell(3).le.10.0d0)) then
-     LS=-0.00416
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
-    endif
-
-   else if (part_id.eq.5) then ! tank
-
-    if ((xcell(1).le.-0.156d0).or. &
-        (xcell(1).ge.0.156d0).or. &
-        (xcell(2).le.-0.207d0).or. &
-        (xcell(2).ge.0.207d0).or. &
-        (xcell(3).le.-0.156d0).or. &
-        (xcell(3).ge.0.156d0)) then
-     LS=-0.02
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
-    endif
-
-    if ((xcell(1).ge.-0.082d0).and. &
-        (xcell(1).le.0.082d0).and. &
-        (xcell(2).ge.-0.133d0).and. &
-        (xcell(2).le.0.133d0).and. &
-        (xcell(3).ge.-0.0822d0).and. &
-        (xcell(3).le.0.0822d0)) then
-     LS=-0.0188
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
-    endif
-
-   else if (part_id.eq.6) then ! nozzle housing
-
-    if ((xcell(1).le.-0.02417d0).or. &
-        (xcell(1).ge.0.03542d0).or. &
-        (xcell(2).le.-0.2054d0).or. &
-        (xcell(2).ge.-0.1081d0).or. &
-        (xcell(3).le.-0.0195d0).or. &
-        (xcell(3).ge.0.0195d0)) then
-     LS=-0.0042
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
-    endif
-
-   else if (part_id.eq.7) then ! LAD housing
-
-    if ((xcell(1).le.-0.134d0).or. &
-        (xcell(1).ge.0.134d0).or. &
-        (xcell(2).le.-0.184d0).or. &
-        (xcell(2).ge.-0.0387d0).or. &
-        (xcell(3).le.-0.0236d0).or. &
-        (xcell(3).ge.0.0236d0)) then
-     LS=-0.012
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
-    endif
-
-    if ((xcell(1).ge.-0.117d0).and. &
-        (xcell(1).le.0.117d0).and. &
-        (xcell(2).ge.-0.167d0).and. &
-        (xcell(2).le.10.0d0).and. &
-        (xcell(3).ge.-10.0d0).and. &
-        (xcell(3).le.10.0d0)) then
-     LS=-0.012
-     MASK=FSI_FINE_SIGN_VEL_VALID 
-    else
-     ! do nothing
+     print *,"part_id invalid"
+     stop
     endif
 
-
-   else
-    print *,"part_id invalid"
+   else 
+    print *,"TANK_MK_AUX_THICK_WALLS invalid"
     stop
    endif
 
-  else 
-   print *,"TANK_MK_AUX_THICK_WALLS invalid"
+  else
+   print *,"TANK_MK_GEOM_DESCRIPTOR invalid"
    stop
   endif
 
@@ -430,45 +568,86 @@ INTEGER_T, intent(out) :: aux_ncells_max_side
    if (num_materials.eq.3) then
     LS_FROM_SUBROUTINE=0
 
-    if (TANK_MK_AUX_THICK_WALLS.eq.1) then
-     if (auxcomp.eq.1) then ! heater a (top heater)
-      aux_ncells_max_side=128
-     else if (auxcomp.eq.2) then ! heater b
-      aux_ncells_max_side=128
-     else if (auxcomp.eq.3) then ! source
-      aux_ncells_max_side=64
-     else if (auxcomp.eq.4) then ! sink
-      aux_ncells_max_side=128
-     else if (auxcomp.eq.5) then ! tank
-      aux_ncells_max_side=128
-     else if (auxcomp.eq.6) then ! nozzle
-      aux_ncells_max_side=64
-     else
-      print *,"auxcomp invalid"
-      stop
-     endif
-    else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
-     if (auxcomp.eq.1) then ! heater a (top heater)
-      aux_ncells_max_side=128
-     else if (auxcomp.eq.2) then ! heater b
-      aux_ncells_max_side=128
-     else if (auxcomp.eq.3) then ! source
-      aux_ncells_max_side=64
-     else if (auxcomp.eq.4) then ! sink
-      aux_ncells_max_side=128
-     else if (auxcomp.eq.5) then ! tank
-      aux_ncells_max_side=256
-     else if (auxcomp.eq.6) then ! nozzle
-      aux_ncells_max_side=128
-     else if (auxcomp.eq.7) then ! LAD housing
-      aux_ncells_max_side=128
-     else
-      print *,"auxcomp invalid"
+    if (TANK_MK_GEOM_DESCRIPTOR.eq.TPCE_ID) then
+
+     if (TANK_MK_AUX_THICK_WALLS.eq.1) then
+      if (auxcomp.eq.1) then ! heater a (top heater)
+       aux_ncells_max_side=128
+      else if (auxcomp.eq.2) then ! heater b
+       aux_ncells_max_side=128
+      else if (auxcomp.eq.3) then ! source
+       aux_ncells_max_side=64
+      else if (auxcomp.eq.4) then ! sink
+       aux_ncells_max_side=128
+      else if (auxcomp.eq.5) then ! tank
+       aux_ncells_max_side=128
+      else if (auxcomp.eq.6) then ! nozzle
+       aux_ncells_max_side=64
+      else
+       print *,"auxcomp invalid"
+       stop
+      endif
+     else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
+
+      if (auxcomp.eq.1) then ! heater a (top heater)
+       aux_ncells_max_side=128
+      else if (auxcomp.eq.2) then ! heater b
+       aux_ncells_max_side=128
+      else if (auxcomp.eq.3) then ! source
+       aux_ncells_max_side=64
+      else if (auxcomp.eq.4) then ! sink
+       aux_ncells_max_side=128
+      else if (auxcomp.eq.5) then ! tank
+       aux_ncells_max_side=256
+      else if (auxcomp.eq.6) then ! nozzle
+       aux_ncells_max_side=128
+      else if (auxcomp.eq.7) then ! LAD housing
+       aux_ncells_max_side=128
+      else
+       print *,"auxcomp invalid"
+       stop
+      endif
+
+     else 
+      print *,"TANK_MK_AUX_THICK_WALLS invalid"
       stop
      endif
 
-    else 
-     print *,"TANK_MK_AUX_THICK_WALLS invalid"
+    else if (TANK_MK_GEOM_DESCRIPTOR.eq.ZBOT_FLIGHT_ID) then
+
+     if (TANK_MK_AUX_THICK_WALLS.eq.1) then
+
+      print *,"this option not supported"
+      stop
+
+     else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
+
+      if (auxcomp.eq.1) then ! side heater a 
+       aux_ncells_max_side=64
+      else if (auxcomp.eq.2) then ! side heater b
+       aux_ncells_max_side=64
+      else if (auxcomp.eq.3) then ! source
+       aux_ncells_max_side=64
+      else if (auxcomp.eq.4) then ! sink
+       aux_ncells_max_side=64
+      else if (auxcomp.eq.5) then ! tank
+       aux_ncells_max_side=256
+      else if (auxcomp.eq.6) then ! nozzle
+       aux_ncells_max_side=64
+      else if (auxcomp.eq.7) then ! LAD housing
+       aux_ncells_max_side=64
+      else
+       print *,"auxcomp invalid"
+       stop
+      endif
+
+     else 
+      print *,"TANK_MK_AUX_THICK_WALLS invalid"
+      stop
+     endif
+
+    else
+     print *,"TANK_MK_GEOM_DESCRIPTOR invalid"
      stop
     endif
 
@@ -505,58 +684,101 @@ INTEGER_T :: stat
 
   if (fort_num_local_aux_grids.eq.num_aux_expect) then
 
-   if (TANK_MK_AUX_THICK_WALLS.eq.1) then
+   if (TANK_MK_GEOM_DESCRIPTOR.eq.TPCE_ID) then
 
-    if (part_id.eq.1) then ! top heater
-     open(unit=unit_id,file= 'heatera_coarse.vtk',status='old',iostat=stat)
-    else if (part_id.eq.2) then ! side heater
-     open(unit=unit_id,file= 'heaterb_coarse.vtk',status='old',iostat=stat)
-    else if (part_id.eq.3) then
-     open(unit=unit_id,file= 'nozzlesource_coarse.vtk',status='old',iostat=stat)
-    else if (part_id.eq.4) then
-     open(unit=unit_id,file= 'sink_coarse.vtk',status='old',iostat=stat)
-    else if (part_id.eq.5) then
-     open(unit=unit_id, file= 'tank_coarse.vtk',status='old', &
-        iostat=stat)
-    else if (part_id.eq.6) then
-     open(unit=unit_id, file= 'nozzle_coarse.vtk',status='old', &
-        iostat=stat)
-    else
-     print *,"part_id invalid"
-     stop
-    endif
+    if (TANK_MK_AUX_THICK_WALLS.eq.1) then
 
-   else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
-
-    if (part_id.eq.1) then ! top heater
-     open(unit=unit_id,file= 'tpce_heatera.vtk',status='old',iostat=stat)
-    else if (part_id.eq.2) then ! side heater
-     open(unit=unit_id,file= 'tpce_heaterb.vtk',status='old',iostat=stat)
-    else if (part_id.eq.3) then
-     open(unit=unit_id,file= 'nozzle_source_15deg.vtk',status='old',iostat=stat)
-    else if (part_id.eq.4) then
-     open(unit=unit_id,file= 'tpce_sink.vtk',status='old',iostat=stat)
-    else if (part_id.eq.5) then
-     open(unit=unit_id, file= 'tpce_shell.vtk',status='old', &
-        iostat=stat)
-    else if (part_id.eq.6) then
-     if (1.eq.0) then
-      open(unit=unit_id, file= 'nozzle_15deg.vtk',status='old', &
-        iostat=stat)
+     if (part_id.eq.1) then ! top heater
+      open(unit=unit_id,file= 'heatera_coarse.vtk',status='old',iostat=stat)
+     else if (part_id.eq.2) then ! side heater
+      open(unit=unit_id,file= 'heaterb_coarse.vtk',status='old',iostat=stat)
+     else if (part_id.eq.3) then
+      open(unit=unit_id,file= 'nozzlesource_coarse.vtk',status='old',iostat=stat)
+     else if (part_id.eq.4) then
+      open(unit=unit_id,file= 'sink_coarse.vtk',status='old',iostat=stat)
+     else if (part_id.eq.5) then
+      open(unit=unit_id, file= 'tank_coarse.vtk',status='old', &
+         iostat=stat)
+     else if (part_id.eq.6) then
+      open(unit=unit_id, file= 'nozzle_coarse.vtk',status='old', &
+         iostat=stat)
      else
-      open(unit=unit_id, file= 'nozzle_15deg_01thick.vtk',status='old', &
-        iostat=stat)
+      print *,"part_id invalid"
+      stop
      endif
-    else if (part_id.eq.7) then
-     open(unit=unit_id, file= 'tpce_ladhousing.vtk',status='old', &
-        iostat=stat)
 
-    else
-     print *,"part_id invalid"
+    else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
+
+     if (part_id.eq.1) then ! top heater
+      open(unit=unit_id,file= 'tpce_heatera.vtk',status='old',iostat=stat)
+     else if (part_id.eq.2) then ! side heater
+      open(unit=unit_id,file= 'tpce_heaterb.vtk',status='old',iostat=stat)
+     else if (part_id.eq.3) then
+      open(unit=unit_id,file= 'nozzle_source_15deg.vtk',status='old',iostat=stat)
+     else if (part_id.eq.4) then
+      open(unit=unit_id,file= 'tpce_sink.vtk',status='old',iostat=stat)
+     else if (part_id.eq.5) then
+      open(unit=unit_id, file= 'tpce_shell.vtk',status='old', &
+         iostat=stat)
+     else if (part_id.eq.6) then
+      if (1.eq.0) then
+       open(unit=unit_id, file= 'nozzle_15deg.vtk',status='old', &
+         iostat=stat)
+      else
+       open(unit=unit_id, file= 'nozzle_15deg_01thick.vtk',status='old', &
+         iostat=stat)
+      endif
+     else if (part_id.eq.7) then
+      open(unit=unit_id, file= 'tpce_ladhousing.vtk',status='old', &
+         iostat=stat)
+
+     else
+      print *,"part_id invalid"
+      stop
+     endif
+    else 
+     print *,"TANK_MK_AUX_THICK_WALLS invalid"
      stop
     endif
+
+   else if (TANK_MK_GEOM_DESCRIPTOR.eq.ZBOT_FLIGHT_ID) then
+
+    if (TANK_MK_AUX_THICK_WALLS.eq.1) then
+
+     print *,"this option not supported"
+     stop
+
+    else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
+
+     if (part_id.eq.1) then ! side heatera
+      open(unit=unit_id,file= 'zbot_flight_heatera.vtk',status='old',iostat=stat)
+     else if (part_id.eq.2) then ! side heaterb
+      open(unit=unit_id,file= 'zbot_flight_heaterb.vtk',status='old',iostat=stat)
+     else if (part_id.eq.3) then
+      open(unit=unit_id,file= 'zbot_flight_inflow.vtk',status='old',iostat=stat)
+     else if (part_id.eq.4) then
+      open(unit=unit_id,file= 'zblot_flight_outflow.vtk',status='old',iostat=stat)
+     else if (part_id.eq.5) then
+      open(unit=unit_id,file= 'zbot_flight_tank.vtk',status='old', &
+        iostat=stat)
+     else if (part_id.eq.6) then
+      open(unit=unit_id,file= 'zbot_flight_inletnozzle.vtk',status='old', &
+        iostat=stat)
+     else if (part_id.eq.7) then
+      open(unit=unit_id,file= 'zbot_flight_outletnozzle.vtk',status='old', &
+        iostat=stat)
+
+     else
+      print *,"part_id invalid"
+      stop
+     endif
+    else 
+     print *,"TANK_MK_AUX_THICK_WALLS invalid"
+     stop
+    endif
+
    else 
-    print *,"TANK_MK_AUX_THICK_WALLS invalid"
+    print *,"TANK_MK_GEOM_DESCRIPTOR invalid"
     stop
    endif
 
