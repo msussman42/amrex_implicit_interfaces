@@ -129,7 +129,6 @@ stop
          nparts, &
          nparts_def, &
          im_solid_map, &
-         ntensor, &
          nsolve) &
        bind(c,name='fort_hoopimplicit')
 
@@ -148,7 +147,6 @@ stop
        INTEGER_T, intent(in) :: nparts
        INTEGER_T, intent(in) :: nparts_def
        INTEGER_T, intent(in) :: im_solid_map(nparts_def)
-       INTEGER_T, intent(in) :: ntensor
        INTEGER_T, intent(in) :: nsolve
        INTEGER_T, intent(in) :: level
        INTEGER_T, intent(in) :: finest_level
@@ -178,7 +176,7 @@ stop
 
        REAL_T, intent(out),target :: force(DIMV(force),nsolve)
        REAL_T, pointer :: force_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(in),target :: tensor(DIMV(tensor),ntensor)
+       REAL_T, intent(in),target :: tensor(DIMV(tensor),AMREX_SPACEDIM_SQR)
        REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in),target :: thermal(DIMV(thermal))
        REAL_T, pointer :: thermal_ptr(D_DECL(:,:,:))
@@ -240,13 +238,6 @@ stop
         ! do nothing
        else
         print *,"nsolve invalid"
-        stop
-       endif
-
-       if (ntensor.eq.SDIM*SDIM) then
-        ! do nothing
-       else
-        print *,"ntensor invalid"
         stop
        endif
 

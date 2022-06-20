@@ -11006,8 +11006,6 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
  int nmat=num_materials;
  int nden=nmat*num_state_material;
 
- int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
-
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
   // do nothing
@@ -11025,7 +11023,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
   amrex::Error("localMF[idx]->nComp() invalid");
 
  debug_ngrow(CELLTENSOR_MF,1,6);
- if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
+ if (localMF[CELLTENSOR_MF]->nComp()!=AMREX_SPACEDIM_SQR)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,3);
@@ -11124,7 +11122,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
      amrex::Error("DeDTinversefab.nComp() invalid");
 
     FArrayBox& gradufab=(*localMF[CELLTENSOR_MF])[mfi];
-    if (gradufab.nComp()!=ntensor)
+    if (gradufab.nComp()!=AMREX_SPACEDIM_SQR)
      amrex::Error("gradufab.nComp() invalid");
 
     FArrayBox& heatfab=(*localMF[idx])[mfi];
@@ -11158,7 +11156,6 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
 		                  &viscoelastic_model[im])==1) {
      // declared in: GODUNOV_3D.F90
      fort_tensorheat(
-      &ntensor,
       &nstate,
       xlo,dx,
       xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
@@ -16925,13 +16922,17 @@ NavierStokes::split_scalar_advection() {
    amrex::Error("ns_is_rigid(im) invalid");
  } // im=0..nmat-1
 
- int ntensor=0;
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
+
+  if (Tensor_new.nComp()==NUM_CELL_ELASTIC) {
+   // do nothing
+  } else
+   amrex::Error("(Tensor_new.nComp()==NUM_CELL_ELASTIC) failed");
+
   Tensor_new.setVal(0.0,0,NUM_CELL_ELASTIC,1);
-  ntensor=Tensor_new.nComp();
  } else if (num_materials_viscoelastic==0) {
-  ntensor=0;
+  // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid:split_scalar_advection");
 
@@ -17107,7 +17108,6 @@ NavierStokes::split_scalar_advection() {
    &vofrecon_ncomp,
    &den_recon_ncomp,
    &ncomp_state,
-   &ntensor,
    &nc_bucket,
    &verbose,
    &gridno,&ngrid,
@@ -17612,11 +17612,9 @@ NavierStokes::GetDrag(int isweep) {
  } else
   amrex::Error("nparts invalid");
 
- int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
-
- if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
+ if (localMF[CELLTENSOR_MF]->nComp()!=AMREX_SPACEDIM_SQR)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
- if (localMF[FACETENSOR_MF]->nComp()!=ntensor)
+ if (localMF[FACETENSOR_MF]->nComp()!=AMREX_SPACEDIM_SQR)
   amrex::Error("localMF[FACETENSOR_MF]->nComp() invalid");
 
  int nstate=STATE_NCOMP;
@@ -17698,14 +17696,13 @@ NavierStokes::GetDrag(int isweep) {
  } else
   amrex::Error("ENUM_NUM_TENSOR_TYPE invalid");
 
- int elastic_ntensor=num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE;
  int VISCOTEN_ALL_MAT_MF_local=0;
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=nmat)) {
   VISCOTEN_ALL_MAT_MF_local=VISCOTEN_ALL_MAT_MF;
 
   debug_ngrow(VISCOTEN_ALL_MAT_MF_local,1,50);
-  if (localMF[VISCOTEN_ALL_MAT_MF_local]->nComp()==elastic_ntensor) {
+  if (localMF[VISCOTEN_ALL_MAT_MF_local]->nComp()==NUM_CELL_ELASTIC) {
    //do nothing
   } else {
    amrex::Error("VISCOTEN_ALL_MAT_MF_local invalid nComp");
@@ -17797,7 +17794,6 @@ NavierStokes::GetDrag(int isweep) {
    local_integrated_quantities[tid_current].dataPtr(),
    &gravity_normalized,
    &gravity_dir,
-   &elastic_ntensor,
    tensor_data.dataPtr(),
    ARLIM(tensor_data.loVect()),ARLIM(tensor_data.hiVect()),
    elastic_tensor_data.dataPtr(),
@@ -17832,7 +17828,6 @@ NavierStokes::GetDrag(int isweep) {
    fablo,fabhi,&bfact,
    &rzflag,velbc.dataPtr(),&cur_time_slab,
    &visc_coef,
-   &ntensor,
    &nmat,
    &nparts,
    &nparts_def,
@@ -18867,7 +18862,6 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
   amrex::Error("level or finest_level invalid");
 
  int nmat=num_materials;
- int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
 
  if (IQ_TOTAL_SUM_COMP!=NS_sumdata.size())
   amrex::Error("(IQ_TOTAL_SUM_COMP!=NS_sumdata.size())");
@@ -18879,7 +18873,7 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
+ if (localMF[CELLTENSOR_MF]->nComp()!=AMREX_SPACEDIM_SQR)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
  MultiFab* den_recon=getStateDen(1,upper_slab_time);  
@@ -19051,7 +19045,7 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
    FArrayBox& viscofab=(*viscoelastic_tensor)[mfi];
 
    FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
-   if (cellten.nComp()!=ntensor)
+   if (cellten.nComp()!=AMREX_SPACEDIM_SQR)
     amrex::Error("cellten invalid ncomp");
 
    FArrayBox& dragfab=(*localMF[DRAG_MF])[mfi];
@@ -19119,7 +19113,6 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
     &Z_dir,
     &R_dir,
     &nmat,
-    &ntensor,
     &den_ncomp,
     &isweep);
 
@@ -19454,7 +19447,6 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  int nsteps=parent->levelSteps(0);
 
  int nmat=num_materials;
- int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
 
  int finest_level = parent->finestLevel();
 
@@ -19607,9 +19599,9 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  if (localMF_grow[HOLD_VELOCITY_DATA_MF]!=-1)
   amrex::Error("localMF_grow[HOLD_VELOCITY_DATA_MF] invalid");
 
- if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
+ if (localMF[CELLTENSOR_MF]->nComp()!=AMREX_SPACEDIM_SQR)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
- if (localMF[FACETENSOR_MF]->nComp()!=ntensor)
+ if (localMF[FACETENSOR_MF]->nComp()!=AMREX_SPACEDIM_SQR)
   amrex::Error("localMF[FACETENSOR_MF]->nComp() invalid");
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()

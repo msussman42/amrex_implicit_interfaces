@@ -3473,13 +3473,10 @@ void NavierStokes::init_gradu_tensorALL(
     simple_AMR_BC_flag_viscosity);
  } // ilev=finest_level ... level
 
-   // grad U.
- int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM; 
-
 //ux,vx,wx,uy,vy,wy,uz,vz,wz
  int irow=0;
  int icol=0;
- for (int i=0;i<ntensor;i++) {
+ for (int i=0;i<AMREX_SPACEDIM_SQR;i++) {
   Vector<int> scompBC_map;
    // desc_lstGHOST.setComponent(State_Type, ...
    // "set_tensor_bc", tensor_pc_interp 
@@ -3519,7 +3516,7 @@ void NavierStokes::init_gradu_tensorALL(
    irow++;
    icol=0;
   }
- } // i=0..ntensor-1
+ } // i=0..AMREX_SPACEDIM_SQR-1
 
  if ((irow==AMREX_SPACEDIM)&&(icol==0)) {
   // do nothing
@@ -3575,8 +3572,6 @@ void NavierStokes::doit_gradu_tensor(
  debug_ngrow(idx_vel,1,845);
  if (localMF[idx_vel]->nComp()!=AMREX_SPACEDIM)
   amrex::Error("localMF[idx_vel] ncomp invalid");
-
- int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM; 
 
  debug_ngrow(LSTENSOR_MF,1,845);
  debug_ngrow(MASKSOLIDTENSOR_MF,1,845);
@@ -3640,7 +3635,7 @@ void NavierStokes::doit_gradu_tensor(
  if (itensor_iter==0) {  // compute grad U
 
   sem_flux_mf=localMF[SEM_FLUXREG_MF];
-  if (sem_flux_mf->nComp()!=ntensor)
+  if (sem_flux_mf->nComp()!=AMREX_SPACEDIM_SQR)
    amrex::Error("sem fluxreg mf has invalid ncomp");
 
   // interp grad U from MAC grid to CELL grid. (sem_flux_mf not used)
@@ -3776,7 +3771,6 @@ void NavierStokes::doit_gradu_tensor(
      &nparts_def,
      im_solid_map_ptr,
      &homflag,
-     &ntensor,
      &simple_AMR_BC_flag_viscosity);
    } // mfi
 } // omp
@@ -3788,7 +3782,7 @@ void NavierStokes::doit_gradu_tensor(
 
  int im=0;
 
- for (int sc=0;sc<ntensor;sc++) {
+ for (int sc=0;sc<AMREX_SPACEDIM_SQR;sc++) {
 
    int dir=0;
    if ((sc>=0)&&(sc<AMREX_SPACEDIM)) { // ux,vx,wx
@@ -3801,7 +3795,7 @@ void NavierStokes::doit_gradu_tensor(
    } else
     amrex::Error("sc invalid");
 
-   int sc_mat=im*ntensor+sc;
+   int sc_mat=im*AMREX_SPACEDIM_SQR+sc;
 
    if (itensor_iter==1) { // cell grad U
     localMF[idx_cell]->FillBoundary(sc_mat,1,geom.periodicity()); 
@@ -3872,6 +3866,7 @@ void NavierStokes::FillBoundaryTENSOR(
  } else
   amrex::Error("dir invalid FillBoundaryTENSOR");
 
+  //nc=1 ng=1
  MultiFab* macmf=new MultiFab(state[Umac_Type+dir].boxArray(),dmap,1,1,
     MFInfo().SetTag("macmf"),FArrayBoxFactory());
 
@@ -3978,12 +3973,10 @@ void NavierStokes::init_gradu_tensor(
  if (localMF[idx_vel]->nComp()!=AMREX_SPACEDIM)
   amrex::Error("localMF[idx_vel]->nComp() invalid in init_gradu_tensor");
 
- int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM; 
-
  int nmasksolid=AMREX_SPACEDIM;
 
- new_localMF(idx_face,ntensor,1,-1);
- new_localMF(idx_cell,ntensor,1,-1);
+ new_localMF(idx_face,AMREX_SPACEDIM_SQR,1,-1);
+ new_localMF(idx_cell,AMREX_SPACEDIM_SQR,1,-1);
 
   // x,y,z 
  new_localMF(MASKSOLIDTENSOR_MF,nmasksolid,1,-1);
@@ -3994,7 +3987,7 @@ void NavierStokes::init_gradu_tensor(
 
   // flux register is initialized to zero.
  allocate_flux_register(operation_flag);
- if (localMF[SEM_FLUXREG_MF]->nComp()!=ntensor)
+ if (localMF[SEM_FLUXREG_MF]->nComp()!=AMREX_SPACEDIM_SQR)
   amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid4");
 
   // spectral_loop==0 
@@ -4239,8 +4232,8 @@ void NavierStokes::apply_pressure_grad(
   init_gradu_tensor(
     homflag,
     pboth_mf,
-    LOCAL_CELLTENSOR_MF,
-    LOCAL_FACETENSOR_MF,
+    LOCAL_CELLTENSOR_MF, //should not be allocated at this point
+    LOCAL_FACETENSOR_MF, //should not be allocated at this point
     simple_AMR_BC_flag_viscosity);
 
   show_norm2(localMF[pboth_mf],0,localMF[pboth_mf]->nComp(),20);
@@ -4251,14 +4244,13 @@ void NavierStokes::apply_pressure_grad(
 
   int nden=nmat*num_state_material;
 
-  int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM; 
-  if (ntensor==local_sem_fluxreg_ncomp) {
+  if (local_sem_fluxreg_ncomp==AMREX_SPACEDIM_SQR) {
    // do nothing
   } else
    amrex::Error("local_sem_fluxreg_ncomp invalid");
 
   allocate_flux_register(operation_flag);
-  if (localMF[local_sem_fluxreg_mf]->nComp()!=ntensor)
+  if (localMF[local_sem_fluxreg_mf]->nComp()!=AMREX_SPACEDIM_SQR)
    amrex::Error("localMF[local_sem_fluxreg_mf]->nComp() invalid5");
 
   resize_levelset(2,LEVELPC_MF);
@@ -4367,7 +4359,6 @@ void NavierStokes::apply_pressure_grad(
      &visc_coef,
      &nmat,
      &nden,
-     &ntensor,
      &uncoupled_viscosity,
      &homflag);
    } // mfi
@@ -7175,19 +7166,17 @@ void NavierStokes::check_for_NAN_TENSOR(int datatype,MultiFab* mf,int id) {
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid check_for_NAN_TENSOR");
 
- int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM; 
-
  int ncomp=mf->nComp();
  int ngrow=mf->nGrow();
 
- if (ncomp!=ntensor)
+ if (ncomp!=AMREX_SPACEDIM_SQR)
   amrex::Error("ncomp invalid");
  if (ngrow!=1)
   amrex::Error("ngrow invalid");
 
  std::fflush(NULL);
 
- for (int sc=0;sc<ntensor;sc++) {
+ for (int sc=0;sc<AMREX_SPACEDIM_SQR;sc++) {
 
    int dir=0;
    if ((sc>=0)&&(sc<AMREX_SPACEDIM)) // ux,vx,wx
@@ -7201,7 +7190,7 @@ void NavierStokes::check_for_NAN_TENSOR(int datatype,MultiFab* mf,int id) {
     amrex::Error("sc invalid");
 
    check_for_NAN_TENSOR_base(datatype,mf,sc,dir,id);
- }  // sc
+ }  // sc=0...AMREX_SPACEDIM_SQR-1
 
  
  std::fflush(NULL);
@@ -9077,10 +9066,9 @@ void NavierStokes::level_getshear(
 
  bool use_tiling=ns_tiling;
  int nmat=num_materials;
- int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
 
  debug_ngrow(CELLTENSOR_MF,1,9);
- if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
+ if (localMF[CELLTENSOR_MF]->nComp()!=AMREX_SPACEDIM_SQR)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
  if (vel_mf->nGrow()>=ngrow) {
@@ -9129,7 +9117,7 @@ void NavierStokes::level_getshear(
   FArrayBox& shear_output_fab=(*shear_output_mf)[mfi];
 
   FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
-  if (cellten.nComp()!=ntensor)
+  if (cellten.nComp()!=AMREX_SPACEDIM_SQR)
    amrex::Error("cellten invalid ncomp");
 
   Vector<int> velbc=getBCArray(State_Type,gridno,
@@ -9141,7 +9129,6 @@ void NavierStokes::level_getshear(
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
   fort_getshear(
-    &ntensor,
     cellten.dataPtr(),
     ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
     (*vel_mf)[mfi].dataPtr(),
@@ -9180,13 +9167,12 @@ void NavierStokes::init_pressure_error_indicator() {
  int finest_level = parent->finestLevel();
 
  int nmat=num_materials;
- int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,6001);
 
  debug_ngrow(CELLTENSOR_MF,1,9);
- if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
+ if (localMF[CELLTENSOR_MF]->nComp()!=AMREX_SPACEDIM_SQR)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
  resize_levelset(2,LEVELPC_MF);
@@ -9669,14 +9655,13 @@ void NavierStokes::getStateVISC() {
  bool use_tiling=ns_tiling;
 
  int nmat=num_materials;
- int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
 
   // init_gradu_tensorALL is called in NavierStokes::make_physics_varsALL
   // prior to this routine being called.
   // Also, init_gradu_tensorALL is called in NavierStokes::writeTECPLOT_File
   // prior to this routine being called.
  debug_ngrow(CELLTENSOR_MF,1,9);
- if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
+ if (localMF[CELLTENSOR_MF]->nComp()!=AMREX_SPACEDIM_SQR)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
  VOF_Recon_resize(2,SLOPE_RECON_MF);
@@ -9913,7 +9898,7 @@ void NavierStokes::getStateVISC() {
     FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
 
     FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
-    if (cellten.nComp()!=ntensor)
+    if (cellten.nComp()!=AMREX_SPACEDIM_SQR)
      amrex::Error("cellten invalid ncomp");
 
     FArrayBox& velfab=(*vel)[mfi];
@@ -9938,7 +9923,6 @@ void NavierStokes::getStateVISC() {
       &fortran_im,
       &nmat,
       &dt_slab,
-      &ntensor,  // for declaring cellten
       eosfab.dataPtr(),
       ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
       voffab.dataPtr(),
@@ -10122,7 +10106,6 @@ void NavierStokes::getState_tracemag(int idx) {
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
- int ntensor=AMREX_SPACEDIM*AMREX_SPACEDIM;
 
  if (localMF_grow[idx]>=0)
   amrex::Error("local magtrace not previously deleted");
@@ -10132,7 +10115,7 @@ void NavierStokes::getState_tracemag(int idx) {
  new_localMF(idx,ntrace,1,-1);
 
  debug_ngrow(CELLTENSOR_MF,1,9);
- if (localMF[CELLTENSOR_MF]->nComp()!=ntensor)
+ if (localMF[CELLTENSOR_MF]->nComp()!=AMREX_SPACEDIM_SQR)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
   //ngrow=1
@@ -10175,8 +10158,6 @@ void NavierStokes::getState_tracemag(int idx) {
   } else
    amrex::Error("ns_is_rigid(im) invalid");
 
-  int ncomp_tensor=tensor->nComp();
-    
   int idest=5*im;
   int iproject=0;
   int only_scalar=1;  // mag(trace gradu)
@@ -10207,7 +10188,7 @@ void NavierStokes::getState_tracemag(int idx) {
    const Real* xlo = grid_loc[gridno].lo();
 
    FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
-   if (cellten.nComp()!=ntensor)
+   if (cellten.nComp()!=AMREX_SPACEDIM_SQR)
     amrex::Error("cellten invalid ncomp");
 
    FArrayBox& destfab=(*localMF[idx])[mfi];
@@ -10242,7 +10223,6 @@ void NavierStokes::getState_tracemag(int idx) {
     &level,
     &finest_level,  
     &im, //im=0..nmat-1
-    &ntensor,
     cellten.dataPtr(),
     ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
     destfab.dataPtr(idest),
@@ -10262,7 +10242,6 @@ void NavierStokes::getState_tracemag(int idx) {
     &cur_time_slab,
     bc.dataPtr(),
     &ncomp_den,
-    &ncomp_tensor,
     &ncomp_visc,
     &ntrace, 
     &nmat,

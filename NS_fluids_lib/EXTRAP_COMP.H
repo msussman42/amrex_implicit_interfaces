@@ -3,6 +3,8 @@
 
 #include <DRAG_COMP.H>
 
+#define AMREX_SPACEDIM_SQR (AMREX_SPACEDIM*AMREX_SPACEDIM)
+
 #define ENUM_XVEL (0)
 #define ENUM_YVEL (1)
 #define ENUM_ZVEL (2)

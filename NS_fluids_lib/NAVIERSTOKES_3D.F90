@@ -6916,7 +6916,6 @@ END SUBROUTINE SIMP
         Z_dir, &
         R_dir, &
         nmat, &
-        ntensor,  &
         den_ncomp, &
         isweep) &  ! isweep=0 or 1
       bind(c,name='fort_summass')
@@ -6942,7 +6941,6 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: resultsize
       INTEGER_T, intent(in) :: den_ncomp
       INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: ntensor
       INTEGER_T, intent(in) :: isweep  ! isweep=0 or 1
       INTEGER_T, intent(in) :: coflow_num_cells,Z_dir,R_dir
       REAL_T, intent(out) :: coflow_Z(0:coflow_num_cells)
@@ -6968,7 +6966,7 @@ END SUBROUTINE SIMP
       INTEGER_T, intent(in) :: sumdata_type(resultsize)
       INTEGER_T, intent(in) :: sumdata_sweep(resultsize)
       REAL_T, intent(in) ::  time
-      REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)  
+      REAL_T, intent(in), target :: cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)  
       REAL_T, pointer :: cellten_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat)  
       REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
@@ -7103,10 +7101,6 @@ END SUBROUTINE SIMP
        print *,"den_ncomp invalid"
        stop
       endif
-      if (ntensor.ne.SDIM*SDIM) then
-       print *,"ntensor invalid"
-       stop
-      endif
       if ((Z_dir.lt.0).or.(Z_dir.ge.SDIM)) then
        print *,"Z_dir invalid"
        stop
@@ -7189,7 +7183,6 @@ END SUBROUTINE SIMP
       GRID_DATA_PARM%nhalf=nhalf
       GRID_DATA_PARM%nmat=nmat
       GRID_DATA_PARM%bfact=bfact
-      GRID_DATA_PARM%ntensor=ntensor
       GRID_DATA_PARM%den_ncomp=den_ncomp
       GRID_DATA_PARM%level=level
       GRID_DATA_PARM%finest_level=finest_level

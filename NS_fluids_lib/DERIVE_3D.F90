@@ -41,7 +41,6 @@ stop
        im, &  ! im=1..nmat
        nmat, &
        dt, &
-       ntensor, &  ! for declaring cellten
        denstate,DIMS(denstate), &
        vof,DIMS(vof), &
        vel,DIMS(vel), &
@@ -69,7 +68,6 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ncompvisc
       INTEGER_T, intent(in) :: ngrow
-      INTEGER_T, intent(in) :: ntensor
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: cur_time
 
@@ -96,7 +94,7 @@ stop
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: visc(DIMV(visc),ncompvisc)
       REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)
+      REAL_T, intent(in), target :: cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)
       REAL_T, pointer :: cellten_ptr(D_DECL(:,:,:),:)
 
       REAL_T g(3,3),s(3,3),sd(3,3),g2(3),g2tr,ss,sdsd
@@ -150,10 +148,6 @@ stop
       endif
       if (cur_time.lt.zero) then 
        print *,"cur_time invalid"
-       stop
-      endif
-      if (ntensor.ne.SDIM*SDIM) then
-       print *,"ntensor invalid"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -423,7 +417,6 @@ stop
       end subroutine fort_derturbvisc
 
       subroutine fort_getshear( &
-       ntensor, &
        cellten,DIMS(cellten), &
        vel,DIMS(vel), &
        dx,xlo, &
@@ -443,7 +436,7 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level,ntensor
+      INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: time
       REAL_T, intent(in) :: dx(SDIM)
@@ -462,7 +455,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(vel)
       INTEGER_T, intent(in) :: DIMDEC(tensordata)
   
-      REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)
+      REAL_T, intent(in), target :: cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)
       REAL_T, pointer :: cellten_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
@@ -484,10 +477,6 @@ stop
       cellten_ptr=>cellten
       vel_ptr=>vel
 
-      if (ntensor.ne.SDIM*SDIM) then
-       print *,"ntensor invalid"
-       stop
-      endif
       if (bfact.lt.1) then
        print *,"bfact invalid2"
        stop
@@ -1607,7 +1596,6 @@ stop
        level, &
        finest_level, &
        im, &   ! im=0..nmat-1
-       ntensor, &
        cellten,DIMS(cellten), &
        dest,DIMS(dest), &
        den,DIMS(den), &
@@ -1621,7 +1609,6 @@ stop
        dx,xlo,time, &
        bc, &
        ncomp_den, &
-       ncomp_tensor, &
        ncomp_visc, &
        n_trace, &
        nmat, &
@@ -1640,9 +1627,7 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: ntensor
       INTEGER_T, intent(in) :: ncomp_den
-      INTEGER_T, intent(in) :: ncomp_tensor
       INTEGER_T, intent(in) :: ncomp_visc
       INTEGER_T, intent(in) :: n_trace
       INTEGER_T, intent(in) :: nmat
@@ -1669,13 +1654,13 @@ stop
       INTEGER_T, intent(in) :: ngrow
       REAL_T, intent(in) :: time
       REAL_T, intent(in) :: dx(SDIM), xlo(SDIM)
-      REAL_T, intent(in), target :: cellten(DIMV(cellten),ntensor)
+      REAL_T, intent(in), target :: cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)
 
       REAL_T, intent(inout), target :: dest(DIMV(dest),5)
       REAL_T, pointer :: dest_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: den(DIMV(den),ncomp_den)
-      REAL_T, intent(in), target :: tensor(DIMV(tensor),ncomp_tensor)
+      REAL_T, intent(in), target :: tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE)
       REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, intent(in), target :: visc(DIMV(visc),ncomp_visc)
 
@@ -1696,10 +1681,6 @@ stop
 
       dest_ptr=>dest
 
-      if (ntensor.ne.SDIM*SDIM) then
-       print *,"ntensor invalid"
-       stop
-      endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid dermagtrace"
        stop
@@ -1753,16 +1734,9 @@ stop
         print *,"num_materials_viscoelastic.le.0:fort_dermagtrace"
         stop
        endif
-       if (ncomp_tensor.ne.ENUM_NUM_TENSOR_TYPE) then
-        print *,"ncomp_tensor.ne.ENUM_NUM_TENSOR_TYPE"
-        stop
-       endif
       else if (fort_built_in_elastic_model(elastic_viscosity(im+1), &
                  fort_viscoelastic_model(im+1)).eq.0) then 
-       if (ncomp_tensor.ne.ncomp_den) then
-        print *,"ncomp_tensor.ne.ncomp_den"
-        stop
-       endif
+       ! do nothing
       else
        print *,"fort_built_in_elastic_model invalid"
        stop
@@ -1942,7 +1916,6 @@ stop
        localsum, &
        gravity_normalized, &
        gravdir, &
-       ntenvisco, &
        tdata,DIMS(tdata), &  ! grad U (CELLTENSOR_MF)
        viscoten,DIMS(viscoten), &  ! viscoelastic configuration tensor
        den,DIMS(den), & 
@@ -1971,7 +1944,6 @@ stop
        rzflag,bc, &
        time, &
        visc_coef, &
-       ntensor, &
        nmat, &
        nparts, &
        nparts_def, &
@@ -1994,15 +1966,12 @@ stop
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
 
-      INTEGER_T, intent(in) :: ntensor
-
       INTEGER_T, intent(in) :: isweep
       REAL_T, intent(in) :: globalsum(N_DRAG_IQ)
       INTEGER_T, intent(in) :: globalsum_sweep(N_DRAG_IQ)
       REAL_T, intent(inout) :: localsum(N_DRAG_IQ)
       REAL_T, intent(in) :: gravity_normalized
       INTEGER_T, intent(in) :: gravdir
-      INTEGER_T, intent(in) :: ntenvisco
       REAL_T, intent(in) :: visc_coef
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: rzflag
@@ -2039,9 +2008,9 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(vel)
       INTEGER_T, intent(in) :: DIMDEC(drag)
 
-      REAL_T, intent(in),target :: tdata(DIMV(tdata),ntensor)
+      REAL_T, intent(in),target :: tdata(DIMV(tdata),AMREX_SPACEDIM_SQR)
       REAL_T, pointer :: tdata_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: viscoten(DIMV(viscoten),ntenvisco)
+      REAL_T, intent(in),target :: viscoten(DIMV(viscoten),NUM_CELL_ELASTIC)
       REAL_T, pointer :: viscoten_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: den(DIMV(den),nmat*num_state_material)
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
@@ -2293,11 +2262,6 @@ stop
        stop
       endif
 
-      if (ntensor.ne.SDIM*SDIM) then
-       print *,"ntensor invalid"
-       stop
-      endif
-
       if ((isweep.lt.0).or.(isweep.gt.1)) then
        print *,"isweep invalid"
        stop
@@ -2312,8 +2276,9 @@ stop
       endif
       if ((num_materials_viscoelastic.ge.1).and. &
           (num_materials_viscoelastic.le.nmat)) then
-       if (ENUM_NUM_TENSOR_TYPE*num_materials_viscoelastic.ne.ntenvisco) then
-        print *,"ntenvisco invalid1"
+       if (ENUM_NUM_TENSOR_TYPE*num_materials_viscoelastic.ne. &
+           NUM_CELL_ELASTIC) then
+        print *,"NUM_CELL_ELASTIC invalid1"
         stop
        endif
       else if (num_materials_viscoelastic.eq.0) then
