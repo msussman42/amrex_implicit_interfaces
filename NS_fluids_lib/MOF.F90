@@ -3318,7 +3318,7 @@ end subroutine intersection_volume_and_map
       end subroutine areaXYZ
 
 ! find the area of a triangular planar element in 2d or 3d
-! THANK YOU JOHN BURKHARDT
+! Acknowledgement: JOHN BURKHARDT
       subroutine surface_area(x,area,sdim)
       use probcommon_module
       use LegendreNodes
@@ -3379,6 +3379,7 @@ end subroutine intersection_volume_and_map
       endif
 
       if (mag.gt.zero) then
+
        if (levelrz.eq.0) then
         ! do nothing
        else if ((levelrz.eq.1).or.(levelrz.eq.3)) then
@@ -3398,9 +3399,28 @@ end subroutine intersection_volume_and_map
          print *,"y1_cross_y2 bust"
          stop
         endif
+
         do dir=1,sdim
-         coeff(dir)=y1_cross_y2(dir)/y1_cross_y2(dircrit)
-        enddo
+         if (dir.eq.dircrit) then
+          if (abs(y1_cross_y2(dir)).gt.zero) then
+           coeff(dir)=one
+          else
+           print *,"y1_cross_y2(dircrit) bad, value=",y1_cross_y2(dir)
+           stop
+          endif
+         else if (dir.ne.dircrit) then
+          coeff(dir)=y1_cross_y2(dir)/y1_cross_y2(dircrit)
+          if (abs(coeff(dir)).le.one) then
+           ! do nothing
+          else
+           print *,"coeff(dir) out of range, dir,value=",dir,coeff(dir)
+           stop
+          endif
+         else
+          print *,"dir or dircrit bust"
+          stop
+         endif
+        enddo !dir=1..sdim
 
         if (dircrit.eq.1) then
          itan=2
