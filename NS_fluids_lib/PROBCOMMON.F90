@@ -60,7 +60,6 @@ module probcommon_module_types
        INTEGER_T :: nhalf
        INTEGER_T :: nmat
        INTEGER_T :: bfact
-       INTEGER_T :: ntensor
        INTEGER_T :: den_ncomp
        INTEGER_T :: level
        INTEGER_T :: finest_level

@@ -51,7 +51,6 @@ extern "C"
       int* nparts,
       int* nparts_def,
       int* im_solid_map,
-      int* ntensor,
       int* nsolve);
 
 }

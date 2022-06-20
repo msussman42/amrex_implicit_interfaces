@@ -527,7 +527,6 @@ stop
         ! TANGENTIAL (dirtan) direction.
         ! levelpc(im).
       subroutine slopecrossterm( &
-        ntensor, &
         nmat,  & 
         massfrac, &
         total_mass, &
@@ -546,7 +545,6 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: ntensor
       INTEGER_T, intent(in) :: nmat
 
        ! pointers are always intent(in) but the data itself inherits
@@ -586,11 +584,6 @@ stop
       endif
       if (nmat.ne.num_materials) then
        print *,"nmat invalid"
-       stop
-      endif
-
-      if (ntensor.ne.SDIM*SDIM) then
-       print *,"ntensor invalid"
        stop
       endif
 
@@ -1007,7 +1000,6 @@ stop
        visc_coef, &
        nmat, &
        nden, &
-       ntensor, &
        uncoupled_viscosity, &
        homflag) &
       bind(c,name='fort_crossterm')
@@ -1019,7 +1011,6 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: ntensor
       INTEGER_T, intent(in) :: tileloop
       INTEGER_T, intent(in) :: spectral_loop
       INTEGER_T, intent(in) :: ncfluxreg
@@ -1067,9 +1058,9 @@ stop
       REAL_T, pointer :: faceLS_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mdata(DIMV(mdata),SDIM)
       REAL_T, pointer :: mdata_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: tdata(DIMV(tdata),ntensor)
+      REAL_T, intent(in), target :: tdata(DIMV(tdata),AMREX_SPACEDIM_SQR)
       REAL_T, pointer :: tdata_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: c_tdata(DIMV(c_tdata),ntensor)
+      REAL_T, intent(in), target :: c_tdata(DIMV(c_tdata),AMREX_SPACEDIM_SQR)
 
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
       REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
@@ -1206,11 +1197,7 @@ stop
        print *,"operation_flag invalid5"
        stop
       endif
-      if (ntensor.ne.SDIM*SDIM) then
-       print *,"ntensor invalid"
-       stop
-      endif
-      if (ncfluxreg.ne.ntensor) then
+      if (ncfluxreg.ne.AMREX_SPACEDIM_SQR) then
        print *,"ncfluxreg invalid18 ",ncfluxreg
        stop
       endif
@@ -1484,7 +1471,6 @@ stop
            ! mdata=0 if both adjoining cells to a face are solid cells or
            ! a cell pair is outside the grid.
            call slopecrossterm( &
-             ntensor, &
              nmat,  &
              massfrac, &
              total_mass, &
@@ -6657,7 +6643,6 @@ stop
          ! 1=T11 2=T12 3=T22 4=T33 5=T13 6=T23
          ! rhoinverse is 1/den
       subroutine fort_tensorheat( &
-       ntensor, &
        nstate, &
        xlo,dx,  &
        xface,DIMS(xface), &
@@ -6684,7 +6669,6 @@ stop
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: im_parm
       INTEGER_T, intent(in) :: nden,nstate,level
-      INTEGER_T, intent(in) :: ntensor
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
       INTEGER_T, intent(in) :: DIMDEC(xface)
       INTEGER_T, intent(in) :: DIMDEC(yface)
@@ -6712,7 +6696,7 @@ stop
       REAL_T, pointer :: vischeat_ptr(D_DECL(:,:,:))
       REAL_T, intent(in),target :: tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE)
       REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: gradu(DIMV(gradu),ntensor)
+      REAL_T, intent(in),target :: gradu(DIMV(gradu),AMREX_SPACEDIM_SQR)
       REAL_T, pointer :: gradu_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: dt
       INTEGER_T, intent(in) :: irz
@@ -6762,10 +6746,6 @@ stop
 
       if (nden.ne.nmat*num_state_material) then
        print *,"nden invalid"
-       stop
-      endif
-      if (ntensor.ne.SDIM*SDIM) then
-       print *,"ntensor invalid"
        stop
       endif
 
@@ -6910,7 +6890,6 @@ stop
 
          ! rhoinverse is 1/den
       subroutine fort_visctensorheat( &
-       ntensor, &
        nsolve, &
        nstate, &
        xlo,dx,  &
@@ -6933,7 +6912,6 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: ntensor
       INTEGER_T, intent(in) :: nsolve
       INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nden,nstate,level
@@ -6962,7 +6940,7 @@ stop
       REAL_T, pointer :: ystress_ptr(D_DECL(:,:,:),:)
       REAL_T, pointer :: zstress_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in),target :: gradu(DIMV(gradu),ntensor)
+      REAL_T, intent(in),target :: gradu(DIMV(gradu),AMREX_SPACEDIM_SQR)
       REAL_T, pointer :: gradu_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in) :: dt
       INTEGER_T, intent(in) :: irz
@@ -6986,10 +6964,6 @@ stop
       endif
       if (nsolve.ne.SDIM) then
        print *,"nsolve invalid"
-       stop
-      endif
-      if (ntensor.ne.SDIM*SDIM) then
-       print *,"ntensor invalid"
        stop
       endif
 
@@ -13485,7 +13459,6 @@ stop
        recon_ncomp, &
        den_recon_ncomp, &
        ncomp_state, &
-       ntensor, &
        nc_bucket, &
        verbose, &
        gridno,ngrid, &
@@ -13526,7 +13499,6 @@ stop
       INTEGER_T, intent(in) :: recon_ncomp
       INTEGER_T, intent(in) :: den_recon_ncomp
       INTEGER_T, intent(in) :: ncomp_state
-      INTEGER_T, intent(in) :: ntensor
       INTEGER_T, intent(in) :: nc_bucket
       INTEGER_T :: nc_bucket_test
       INTEGER_T, intent(in) :: map_forward
@@ -13576,7 +13548,7 @@ stop
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat)
       REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: tensor(DIMV(tensor),ntensor)
+      REAL_T, intent(in), target :: tensor(DIMV(tensor),NUM_CELL_ELASTIC)
       REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: &
            velfab(DIMV(velfab),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
@@ -13587,7 +13559,7 @@ stop
        ! new data
       REAL_T, intent(inout), target :: snew(DIMV(snew),ncomp_state)
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: tennew(DIMV(tennew),ntensor)
+      REAL_T, intent(inout), target :: tennew(DIMV(tennew),NUM_CELL_ELASTIC)
       REAL_T, pointer :: tennew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: LSnew(DIMV(LSnew),nmat)
       REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
@@ -13712,7 +13684,7 @@ stop
 
       REAL_T mofdata_grid(recon_ncomp)
       REAL_T snew_hold(ncomp_state)
-      REAL_T tennew_hold(ntensor)
+      REAL_T tennew_hold(NUM_CELL_ELASTIC)
       REAL_T dencore(nmat)
       REAL_T newLS(nmat)
       REAL_T newvfrac_weymouth(nmat)
@@ -13924,10 +13896,11 @@ stop
        stop
       endif
 
-      if (ntensor.eq.num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) then
+      if (NUM_CELL_ELASTIC.eq. &
+          num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) then
        ! do nothing
       else
-       print *,"ntensor invalid"
+       print *,"NUM_CELL_ELASTIC invalid"
        stop
       endif
 
@@ -13936,12 +13909,6 @@ stop
        ! do nothing
       else
        print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
-       stop
-      endif
-      if (ntensor.eq.NUM_CELL_ELASTIC) then
-       ! do nothing
-      else
-       print *,"ntensor invalid"
        stop
       endif
 
@@ -17943,7 +17910,6 @@ stop
        nparts_def, &
        im_solid_map, &
        homflag, &
-       ntensor, &
        simple_AMR_BC_flag_viscosity) &
       bind(c,name='fort_face_gradients')
 
@@ -17956,7 +17922,6 @@ stop
 
       REAL_T def_dt
 
-      INTEGER_T, intent(in) :: ntensor
       INTEGER_T, intent(in) :: ns_time_order
       INTEGER_T, intent(in) :: divu_outer_sweeps
       INTEGER_T, intent(in) :: num_divu_outer_sweeps
@@ -18023,9 +17988,9 @@ stop
       REAL_T, pointer :: faceLS_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(out), target :: mdata(DIMV(mdata),SDIM)
       REAL_T, pointer :: mdata_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: tdata(DIMV(tdata),ntensor)
+      REAL_T, intent(inout), target :: tdata(DIMV(tdata),AMREX_SPACEDIM_SQR)
       REAL_T, pointer :: tdata_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: c_tdata(DIMV(c_tdata),ntensor)
+      REAL_T, intent(out), target :: c_tdata(DIMV(c_tdata),AMREX_SPACEDIM_SQR)
       REAL_T, pointer :: c_tdata_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
@@ -18167,7 +18132,7 @@ stop
         print *,"ncfluxreg invalid15 ",ncfluxreg
         stop
        endif
-       if (ncfluxreg.ne.ntensor) then
+       if (ncfluxreg.ne.AMREX_SPACEDIM_SQR) then
         print *,"ncfluxreg invalid16 ",ncfluxreg
         stop
        endif
@@ -18249,11 +18214,6 @@ stop
        ! do nothing
       else
        print *,"rzflag invalid"
-       stop
-      endif
-
-      if (ntensor.ne.SDIM*SDIM) then
-       print *,"ntensor invalid"
        stop
       endif
 
@@ -19025,7 +18985,7 @@ stop
 
               ncomp_source=SDIM
               ncomp_dest=SDIM
-              ncomp_xgp=ntensor
+              ncomp_xgp=AMREX_SPACEDIM_SQR
               ncomp_xp=SDIM ! number of amrsync components
               scomp_bc=1
               operation_flag=OP_UGRAD_MAC  ! evaluate tensor values
@@ -19063,7 +19023,7 @@ stop
                dcomp, &
                ncomp_dest, &
                ncomp_source, &
-               ncomp_xgp, &     ! =ntensor
+               ncomp_xgp, &     ! =AMREX_SPACEDIM_SQR
                ncomp_dest, &    ! ncphys
                spectral_loop, &
                ncfluxreg, &
@@ -19147,11 +19107,11 @@ stop
 
               scomp_bc=1
               ncomp_dest=SDIM ! ncomp
-              ncomp_xvel=ntensor
-              ncomp_denold=ntensor
-              ncomp_veldest=ntensor
-              ncomp_dendest=ntensor
-              ncomp_cterm=ntensor
+              ncomp_xvel=AMREX_SPACEDIM_SQR
+              ncomp_denold=AMREX_SPACEDIM_SQR
+              ncomp_veldest=AMREX_SPACEDIM_SQR
+              ncomp_dendest=AMREX_SPACEDIM_SQR
+              ncomp_cterm=AMREX_SPACEDIM_SQR
               operation_flag=OP_GRADU_MAC_TO_CELL 
               project_option_vel=SOLVETYPE_VISC
               energyflag=SUB_OP_DEFAULT

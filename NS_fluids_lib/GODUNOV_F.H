@@ -36,7 +36,6 @@ extern "C"
     Real* mf,AMREX_ARLIM_P(mflo),AMREX_ARLIM_P(mfhi));
 
    void fort_tensorheat(
-    int* ntensor,
     int* nstate,
     const Real* xlo,const Real* dx,
     Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
@@ -818,7 +817,6 @@ extern "C"
      int* recon_ncomp,
      int* den_recon_ncomp,
      int* ncomp_state,
-     int* ntensor,
      int* nc_bucket,
      int* verbose,
      const int* gridno,int* ngrid,
@@ -961,7 +959,6 @@ extern "C"
      Real* visc_coef, 
      int* nmat,
      int* nden,
-     int* ntensor,
      int* uncoupled_viscosity,
      int* homflag);
 
@@ -1052,12 +1049,10 @@ extern "C"
      int* nparts_def,
      int* im_solid_map,
      int* homflag,
-     int* ntensor,
      int* simple_AMR_BC_flag_viscosity);
 
 
    void fort_visctensorheat(
-     int* ntensor,
      int* nsolve,
      int* nstate,
      const Real* xlo,const Real* dx,

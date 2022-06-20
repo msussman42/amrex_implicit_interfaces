@@ -17,7 +17,6 @@ namespace amrex{
 extern "C" {
 
      void fort_getshear(
-       int* ntensor,
        Real* cellten,AMREX_ARLIM_P(celltenlo),AMREX_ARLIM_P(celltenhi),
        Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
        const Real* delta, const Real* xlo,
@@ -34,7 +33,6 @@ extern "C" {
        int* level,
        int* finest_level,
        int* im,  // im=0..nmat-1
-       int* ntensor,
        Real* cellten,AMREX_ARLIM_P(celltenlo),AMREX_ARLIM_P(celltenhi),
        Real* dest,AMREX_ARLIM_P(destlo),AMREX_ARLIM_P(desthi),
        Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
@@ -48,7 +46,6 @@ extern "C" {
        const Real* dx, const Real* xlo,Real* time,
        int* bcrec,
        int* ncomp_den,
-       int* ncomp_tensor,
        int* ncomp_visc,
        int* n_trace,
        int* nmat,
@@ -70,7 +67,6 @@ extern "C" {
       Real* localsum,
       Real* gravity_normalized,
       int* gravdir,
-      int* ntenvisco,
       Real* tdata,AMREX_ARLIM_P(tdatalo),AMREX_ARLIM_P(tdatahi),
       Real* viscoten,AMREX_ARLIM_P(viscotenlo),AMREX_ARLIM_P(viscotenhi),
       Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
@@ -100,7 +96,6 @@ extern "C" {
       int* rzflag,int* bcrec,
       Real* time,
       Real* visc_coef,
-      int* ntensor,
       int* nmat,
       int* nparts,
       int* nparts_def,
@@ -212,7 +207,6 @@ extern "C" {
       int* fortran_im,
       int* nmat,
       Real* dt,
-      int* ntensor,
       Real* denstate,AMREX_ARLIM_P(denstatelo),AMREX_ARLIM_P(denstatehi),
       Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
       Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),

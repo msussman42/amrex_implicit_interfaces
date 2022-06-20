@@ -516,7 +516,6 @@ extern "C" {
      int* Z_dir,
      int* R_dir,
      int* nmat,
-     int* ntensor,
      int* den_Ncomp,
      int* isweep); // =0 or 1
 

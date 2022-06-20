@@ -12462,7 +12462,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T test_maskSEM
       REAL_T shared_xcut
       INTEGER_T nbase
-      INTEGER_T ntensor
       INTEGER_T testbc
       REAL_T problo(SDIM),probhi(SDIM),problen(SDIM)
       REAL_T dx_c(SDIM),dx_f(SDIM)
@@ -12542,8 +12541,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      ntensor=SDIM*SDIM
-
       if ((level.lt.0).or. &
           (level.gt.finest_level)) then
        print *,"level invalid sem cell to mac"
@@ -12575,7 +12572,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       if (operation_flag.eq.OP_UGRAD_MAC) then ! tensor
 
-       if (ncomp_xgp.ne.ntensor) then
+       if (ncomp_xgp.ne.AMREX_SPACEDIM_SQR) then
         print *,"ncomp_xgp invalid1"
         stop
        endif
@@ -12592,7 +12589,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
         ! number of components for flux synchronization.
-       if (ncfluxreg.ne.ntensor) then
+       if (ncfluxreg.ne.AMREX_SPACEDIM_SQR) then
         print *,"ncfluxreg invalid2 ",ncfluxreg
         stop
        endif
@@ -14630,7 +14627,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T vel_new(SDIM)
       REAL_T VOLTERM
       INTEGER_T nbase
-      INTEGER_T ntensor
       REAL_T local_div_val
 
       if (nmat.ne.num_materials) then
@@ -14654,8 +14650,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"level or finest_level invalid"
        stop
       endif
-
-      ntensor=SDIM*SDIM
 
       if (bfact.lt.1) then
        print *,"bfact invalid200 mac to cell"
@@ -14735,11 +14729,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"ncomp invalid1"
         stop
        endif
-       if ((ncomp_xvel.eq.ntensor).and. &
-           (ncomp_veldest.eq.ntensor).and. &
-           (ncomp_dendest.eq.ntensor).and. &
-           (ncomp_denold.eq.ntensor).and. &
-           (ncomp_cterm.eq.ntensor)) then
+       if ((ncomp_xvel.eq.AMREX_SPACEDIM_SQR).and. &
+           (ncomp_veldest.eq.AMREX_SPACEDIM_SQR).and. &
+           (ncomp_dendest.eq.AMREX_SPACEDIM_SQR).and. &
+           (ncomp_denold.eq.AMREX_SPACEDIM_SQR).and. &
+           (ncomp_cterm.eq.AMREX_SPACEDIM_SQR)) then
         ! do nothing
        else
         print *,"nc_xvel,nc_veldest,nc_dendest,nc_denold or nc_cterm invalid"
