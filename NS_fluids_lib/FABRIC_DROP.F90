@@ -281,18 +281,23 @@ LS(2)=-LS(1)
 ! LS(3)= DIST_THREADS(x)
 
 ! Approximate level set calcualtion from internal fine mesh
-if ((x(3).lt.(zblob3+internal_dx(3))).or.(x(3).gt.(zblob4-internal_dx(3)))) then
+if ((x(SDIM).lt.(zblob3+internal_dx(SDIM))).or. &
+    (x(SDIM).gt.(zblob4-internal_dx(SDIM)))) then
  ! use large level set value
  LS(3)=-abs(radblob3)
 else
  ! assuming [xblob3,yblob3]:[xblob4,yblob4] is the repeating pattern
  x_p(1)=modulo(x(1),xblob4)
  x_p(2)=modulo(x(2),yblob4)
- x_p(3)=x(3)
+ if (SDIM.eq.3) then
+  x_p(SDIM)=x(SDIM)
+ endif
 
  ind(1)=IDINT((x_p(1)-xblob3)/internal_dx(1))
  ind(2)=IDINT((x_p(2)-yblob3)/internal_dx(2))
- ind(3)=IDINT((x_p(3)-zblob3)/internal_dx(3))
+ if (SDIM.eq.3) then
+  ind(SDIM)=IDINT((x_p(SDIM)-zblob3)/internal_dx(SDIM))
+ endif
  do dir=1,SDIM
   if (ind(dir).lt.1) then
    ind(dir)=1
@@ -308,7 +313,9 @@ else
  ! (https://en.wikipedia.org/wiki/Trilinear_interpolation)
  x_0(1)=xblob3+(ind(1)-half)*internal_dx(1)
  x_0(2)=yblob3+(ind(2)-half)*internal_dx(2)
- x_0(3)=zblob3+(ind(3)-half)*internal_dx(3)
+ if (SDIM.eq.3) then
+  x_0(SDIM)=zblob3+(ind(SDIM)-half)*internal_dx(SDIM)
+ endif
 
  x_d=(x_p-x_0)/internal_dx ! component-wise division
 
@@ -329,7 +336,9 @@ else
  c_0=c_00*(one-x_d(2)) + c_10*x_d(2)
  c_1=c_01*(one-x_d(2)) + c_11*x_d(2)
 
- c=c_0*(one-x_d(3)) + c_1*x_d(3)
+ if (SDIM.eq.3) then
+  c=c_0*(one-x_d(SDIM)) + c_1*x_d(SDIM)
+ endif
 
  LS(3)=c
 
