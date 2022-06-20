@@ -406,9 +406,13 @@ LS=0.0d0
 
    xy(1)=x(1)
    xy(2)=x(2)
-   xy(3)=x(3)
+   if (SDIM.eq.3) then
+    xy(SDIM)=x(SDIM)
+   endif
    xz(1)=x(1)
-   xz(2)=x(3)
+   if (SDIM.eq.3) then
+    xz(2)=x(SDIM)
+   endif
 
   do ky=1,N1+2
    if( x(2).ge.ynf(ky)-0.5d0*hN1 .and. x(2).lt. ynf(ky)+0.5d0*hN1)then
