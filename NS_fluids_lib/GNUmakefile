@@ -102,20 +102,20 @@ PYTHONCOMP = python
 # total view:
 #  1. ssh -YX sussman@hpc-login.rcc.fsu.edu (same password as FSUID)
 #      https://rcc.fsu.edu/manage
-#  2. module load gnu/11.2.1 openmpi 
+#  2. module load gnu openmpi  (version 8.3.1)
 #  2.5 cd multimaterialTV
 #  2.6 get latest code, USE_MPI=TRUE
 #  3. make clean
 #  4. srun  --pty -t 30:00 -n 4  -p genacc_q /bin/bash
 #  5. module load tv
-#  6. module load gnu/11.2.1 openmpi
+#  6. module load gnu openmpi (version 8.3.1)
 #  7. mpirun -tv -np 4 ./amr2<tab> inputs<tab>
 #     (same directory where program compiled)
 #  8. A few windows appear, press "GO", then program output will appear
 #     in the xterminal.  "HALT" to pause, "GO" to continue.
 #  For memory debugging: "DEBUG" "OPEN MemoryScape"
 #  Memory Debugging Options=Extreme
-# module load gnu/11.2.1 openmpi
+# module load gnu openmpi (version 8.3.1)
 # module load intel openmpi (not working June 20, 2022)
 # mecfd_q  (dedicated nodes)
 # mecfd18_q (dedicated nodes)
@@ -123,7 +123,7 @@ PYTHONCOMP = python
 # engineering_q
 # engineering_long
 # hpc-login.rcc.fsu.edu  "module load intel openmpi" (not working June 20), or  
-#                        "module load gnu/11.2.1 openmpi"
+#                        "module load gnu openmpi (version 8.3.1)"
 # sussman + same password as FSUID
 #   https://rcc.fsu.edu/manage
 # bromwich or compute1 GNU MPI:
