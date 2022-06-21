@@ -141,7 +141,7 @@ ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 #amr.n_cell          = 64 64 #2D XY
 #amr.max_level       = 1     #2D
 #amr.n_cell          = 128 128 128 #3D
-amr.n_cell          = 64 64 128 # 8 cores compute1 #3D
+amr.n_cell          = 32 32 64 # 8 cores compute1 #3D
 amr.max_level       = 1 #3D
 
 amr.regrid_int      = 1     # How often to regrid
