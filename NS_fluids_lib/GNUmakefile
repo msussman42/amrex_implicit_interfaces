@@ -131,13 +131,13 @@ PYTHONCOMP = python
 #  For memory debugging: "DEBUG" "OPEN MemoryScape"
 #  Memory Debugging Options=Extreme
 # module load gnu openmpi (version 8.3.1)
-# module load intel openmpi (not working June 20, 2022)
+# module load intel openmpi (set HOSTNAME properly)
 # mecfd_q  (dedicated nodes)
 # mecfd18_q (dedicated nodes)
 # backfill
 # engineering_q
 # engineering_long
-# hpc-login.rcc.fsu.edu  "module load intel openmpi" (not working June 20), or  
+# hpc-login.rcc.fsu.edu  "module load intel openmpi" (set HOSTNAME), or  
 #                        "module load gnu openmpi (version 8.3.1)"
 # sussman + same password as FSUID
 #   https://rcc.fsu.edu/manage
