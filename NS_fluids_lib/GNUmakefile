@@ -21,8 +21,6 @@ MOF_HOME = ..
 #  host_name := $(shell hostname -f)
 # endif
 #
-# HOSTNAME = unknown
-# HOSTNAME = hpc_rcc_fsu
 
 PRECISION = DOUBLE
 DEBUG	  = TRUE
@@ -32,6 +30,7 @@ PROFILE = FALSE
 MEM_PROFILE = FALSE
 DIM       = 2
 iPAD_ISH = FALSE
+FSU_HPC = FALSE
 CYGWIN    = FALSE
 CYGWIN_ZENBOOK = FALSE
 MEHDI_VAHAB_FSI = FALSE
@@ -131,13 +130,13 @@ PYTHONCOMP = python
 #  For memory debugging: "DEBUG" "OPEN MemoryScape"
 #  Memory Debugging Options=Extreme
 # module load gnu openmpi (version 8.3.1)
-# module load intel openmpi (set HOSTNAME properly)
+# module load intel openmpi (not working June 2022)
 # mecfd_q  (dedicated nodes)
 # mecfd18_q (dedicated nodes)
 # backfill
 # engineering_q
 # engineering_long
-# hpc-login.rcc.fsu.edu  "module load intel openmpi" (set HOSTNAME), or  
+# hpc-login.rcc.fsu.edu  "module load intel openmpi" (not working June, 2022)  
 #                        "module load gnu openmpi (version 8.3.1)"
 # sussman + same password as FSUID
 #   https://rcc.fsu.edu/manage
@@ -175,6 +174,10 @@ endif
 ifeq ($(iPAD_ISH),TRUE)
  PYTHONCOMP = python3
  HOSTNAME = unknown
+endif
+ifeq ($(FSU_HPC),TRUE)
+ PYTHONCOMP = python3
+ HOSTNAME = hpc_rcc_fsu
 endif
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs 
