@@ -27,6 +27,12 @@ ifeq ($(findstring cori, $(NERSC_HOST)), cori)
   which_computer := cori
 endif
 
+# SUSSMAN
+ifeq ($(findstring hpc_rcc_fsu, $(host_name)), hpc_rcc_fsu)
+  which_site := hpc_rcc_fsu
+  which_computer := hpc_rcc_fsu
+endif
+
 ifeq ($(findstring titan, $(host_name)), titan)
   which_site := olcf
   which_computer := titan
