@@ -9,6 +9,21 @@
 AMREX_HOME = ../amrex-master
 MOF_HOME = ..
 
+# in Make.machines:
+# which_site := unknown
+# which_computer := unknown
+#
+# ifdef HOSTNAME
+#  host_name := $(strip $(HOSTNAME))
+# else ifdef HOST
+#  host_name := $(strip $(HOST))
+# else
+#  host_name := $(shell hostname -f)
+# endif
+#
+# HOSTNAME = unknown
+# HOSTNAME = hpc_rcc_fsu
+
 PRECISION = DOUBLE
 DEBUG	  = TRUE
 FSANITIZER = FALSE
