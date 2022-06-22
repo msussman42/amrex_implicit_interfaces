@@ -3678,7 +3678,9 @@ stop
          
          else if (is_rigid(nmat,im_majority).eq.0) then
 
-          if (vol_sten.le.zero) then
+          if (vol_sten.gt.zero) then
+           ! do nothing
+          else
            print *,"vol_sten invalid: cell volume should be positive"
            stop
           endif
@@ -4045,7 +4047,9 @@ stop
                 print *,"im_curv invalid"
                 stop
                endif
-               if (nrm_test(dircrossing)*critsign.le.zero) then
+               if (nrm_test(dircrossing)*critsign.gt.zero) then
+                ! do nothing
+               else
                 print *,"critsign and nrm_test mismatch"
                 print *,"dircrossing = ",dircrossing
                 print *,"sidestar= ",sidestar
@@ -4081,15 +4085,29 @@ stop
 
                 ! nrm_mat: from PROBE normal
                 ! nrm_test: from FD normal
-               if ((nrm_mat(dircrossing)*nrm_test(dircrossing).le.zero).or. &
+               if ((nrm_mat(dircrossing)*nrm_test(dircrossing).gt.zero).and. &
+                   (abs(nrm_mat(dircrossing)).gt. &
+                    half*abs(nrm_test(dircrossing)))) then
+                ! do nothing
+               else if  &
+                  ((nrm_mat(dircrossing)*nrm_test(dircrossing).le.zero).or. &
                    (abs(nrm_mat(dircrossing)).le. &
                     half*abs(nrm_test(dircrossing)))) then
                 do dirloc=1,SDIM
                  nrm_mat(dirloc)=nrm_test(dirloc)
                 enddo
+               else
+                print *,"nrm_mat or nrm_test is NaN"
+                stop
                endif
   
-              endif ! im_curv=im_main or im_main_opp
+              else if ((im_curv.ne.im_main).and. &
+                       (im_curv.ne.im_main_opp)) then
+               ! do nothing
+              else
+               print *,"im_curv or im_main bust"
+               stop
+              endif 
 
                ! if R-Theta, then N(2) -> N(2)/RR + renormalize.
               RR=xcenter(1) 
@@ -4109,7 +4127,11 @@ stop
                  ! declared in GLOBALUTIL.F90
                 call prepare_normal(nrm_mat,RR,mag)
                 if (mag.eq.zero) then
-                 print *,"both normals for is_rigid material are null"
+                 ! do nothing
+                else if (mag.gt.zero) then
+                 ! do nothing
+                else
+                 print *,"mag is invalid for im_curv material: ",mag
                  stop
                 endif
                else
@@ -4120,7 +4142,7 @@ stop
               else if (mag.gt.zero) then
                ! do nothing
               else
-               print *,"mag invalid"
+               print *,"mag invalid; mag=",mag
                stop
               endif
 
@@ -4213,7 +4235,8 @@ stop
               enddo
 
               do im_curv=1,nmat
-               itemperature=(im_curv-1)*num_state_material+2
+               itemperature= &
+                 (im_curv-1)*num_state_material+ENUM_TEMPERATUREVAR+1
                mgoni_temp(i1,j1,k1,im_curv)= &
                 denfab(D_DECL(i+i1,j+j1,k+k1),itemperature)
               enddo
@@ -4330,7 +4353,6 @@ stop
       enddo
       enddo
       enddo  ! i,j,k
-
 
       deallocate(xsten0)
       deallocate(xsten_curv)

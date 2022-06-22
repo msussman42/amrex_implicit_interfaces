@@ -3953,6 +3953,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          //  unp1(1)=unp1(1)/(one+param2*hoop_force_coef)-dt|g|beta(T-T0)
          // update_state==OP_HOOP_BOUSSINESQ_EXPLICIT:
          //  unp1(1)=unp1(1)-param2*hoop_force_coef*un(1)-dt|g|beta(T-T0)
+	 // force=rho(unp1-un)/dt
         int update_state=OP_HOOP_BOUSSINESQ_EXPLICIT;
         diffuse_hoopALL(REGISTER_MARK_MF,BOUSSINESQ_TEMP_MF,
          HOOP_FORCE_MARK_MF,update_state);

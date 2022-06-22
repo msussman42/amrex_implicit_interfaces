@@ -97,8 +97,7 @@ stop
 ! Diagonal terms not multiplied by 2.
        subroutine fort_hoopimplicit( &
          override_density, &
-         constant_density_all_time, & ! 1..nmat
-         nstate, &
+         constant_density_all_time, & ! 1..num_materials
          gravity_normalized, & ! gravity_normalized>0 unless invert_gravity
          grav_dir, &
          force,DIMS(force), &
@@ -125,11 +124,9 @@ stop
          update_state, &
          dt, &
          rzflag, &
-         nmat, &
          nparts, &
          nparts_def, &
-         im_solid_map, &
-         nsolve) &
+         im_solid_map) &
        bind(c,name='fort_hoopimplicit')
 
        use probf90_module
@@ -137,17 +134,14 @@ stop
 
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: nmat
-       INTEGER_T, intent(in) :: nstate
-       INTEGER_T, intent(in) :: override_density(nmat)
-       INTEGER_T, intent(in) :: constant_density_all_time(nmat)
+       INTEGER_T, intent(in) :: override_density(num_materials)
+       INTEGER_T, intent(in) :: constant_density_all_time(num_materials)
        INTEGER_T, intent(in) :: grav_dir
        REAL_T, intent(in) :: gravity_normalized
  
        INTEGER_T, intent(in) :: nparts
        INTEGER_T, intent(in) :: nparts_def
        INTEGER_T, intent(in) :: im_solid_map(nparts_def)
-       INTEGER_T, intent(in) :: nsolve
        INTEGER_T, intent(in) :: level
        INTEGER_T, intent(in) :: finest_level
        INTEGER_T, intent(in) :: rzflag
@@ -174,13 +168,14 @@ stop
        INTEGER_T, intent(in) :: DIMDEC(den)
        INTEGER_T, intent(in) :: DIMDEC(mu)
 
-       REAL_T, intent(out),target :: force(DIMV(force),nsolve)
+       REAL_T, intent(out),target :: force(DIMV(force),AMREX_SPACEDIM)
        REAL_T, pointer :: force_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in),target :: tensor(DIMV(tensor),AMREX_SPACEDIM_SQR)
        REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in),target :: thermal(DIMV(thermal))
        REAL_T, pointer :: thermal_ptr(D_DECL(:,:,:))
-       REAL_T, intent(in),target :: recon(DIMV(recon),nmat*ngeom_recon)
+       REAL_T, intent(in),target :: &
+               recon(DIMV(recon),num_materials*ngeom_recon)
        REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in),target :: solxfab(DIMV(solxfab),nparts_def*SDIM)
        REAL_T, intent(in),target :: solyfab(DIMV(solyfab),nparts_def*SDIM)
@@ -188,11 +183,11 @@ stop
        REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
        REAL_T, pointer :: solyfab_ptr(D_DECL(:,:,:),:)
        REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(in),target :: uold(DIMV(uold),nsolve)
+       REAL_T, intent(in),target :: uold(DIMV(uold),AMREX_SPACEDIM)
        REAL_T, pointer :: uold_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(inout),target :: unew(DIMV(unew),nstate)
+       REAL_T, intent(inout),target :: unew(DIMV(unew),STATE_NCOMP)
        REAL_T, pointer :: unew_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(in),target :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
+       REAL_T, intent(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
        REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
        REAL_T, intent(in),target :: den(DIMV(den))
        REAL_T, pointer :: den_ptr(D_DECL(:,:,:))
@@ -204,8 +199,8 @@ stop
 
        INTEGER_T i,j,k,dir
        INTEGER_T im
-       REAL_T un(nsolve)
-       REAL_T unp1(nsolve)
+       REAL_T un(AMREX_SPACEDIM)
+       REAL_T unp1(AMREX_SPACEDIM)
        REAL_T RCEN
        REAL_T inverseden
        REAL_T mu_cell
@@ -227,20 +222,6 @@ stop
 
        nhalf=3
 
-       if (nstate.eq.STATE_NCOMP) then
-        ! do nothing
-       else
-        print *,"nstate invalid"
-        stop
-       endif
-
-       if (nsolve.eq.SDIM) then
-        ! do nothing
-       else
-        print *,"nsolve invalid"
-        stop
-       endif
-
        if ((uncoupled_viscosity.ne.0).and. &
            (uncoupled_viscosity.ne.1)) then
         print *,"uncoupled_viscosity invalid"
@@ -255,21 +236,17 @@ stop
         print *,"level invalid hoop implicit"
         stop
        endif
-       if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+       if ((nparts.lt.0).or.(nparts.gt.num_materials)) then
         print *,"nparts invalid fort_hoopimplicit"
         stop
        endif
-       if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+       if ((nparts_def.lt.1).or.(nparts_def.gt.num_materials)) then
         print *,"nparts_def invalid fort_hoopimplicit"
         stop
        endif
 
        if (bfact.lt.1) then
         print *,"bfact invalid8"
-        stop
-       endif
-       if (nmat.ne.num_materials) then
-        print *,"nmat invalid"
         stop
        endif
 
@@ -352,17 +329,17 @@ stop
         im_solid=0
         partid_crit=0
 
-        do im=1,nmat
-         if (is_lag_part(nmat,im).eq.1) then
-          if (is_rigid(nmat,im).eq.1) then
+        do im=1,num_materials
+         if (is_lag_part(num_materials,im).eq.1) then
+          if (is_rigid(num_materials,im).eq.1) then
            LStest=lsnew(D_DECL(i,j,k),im)
-           if (is_prescribed(nmat,im).eq.1) then
+           if (is_prescribed(num_materials,im).eq.1) then
             if (LStest.ge.zero) then
              if (im_solid.eq.0) then
               im_solid=im
               partid_crit=partid
               LScrit=LStest
-             else if ((im_solid.ge.1).and.(im_solid.le.nmat)) then
+             else if ((im_solid.ge.1).and.(im_solid.le.num_materials)) then
               if (LStest.ge.LScrit) then
                im_solid=im
                partid_crit=partid
@@ -378,21 +355,21 @@ stop
              print *,"LStest invalid"
              stop
             endif
-           else if (is_prescribed(nmat,im).eq.0) then
+           else if (is_prescribed(num_materials,im).eq.0) then
             ! do nothing
            else
-            print *,"is_prescribed(nmat,im) invalid"
+            print *,"is_prescribed(num_materials,im) invalid"
             stop
            endif
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid(num_materials,im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(nmat,im) invalid"
+           print *,"is_rigid(num_materials,im) invalid"
            stop
           endif
           partid=partid+1
-         else if (is_lag_part(nmat,im).eq.0) then
-          if (is_rigid(nmat,im).eq.0) then
+         else if (is_lag_part(num_materials,im).eq.0) then
+          if (is_rigid(num_materials,im).eq.0) then
            ! do nothing
           else
            print *,"is_rigid invalid DIFFUSION_3D.F90"
@@ -402,7 +379,7 @@ stop
           print *,"is_lag_part invalid"
           stop
          endif
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
         if (partid.ne.nparts) then
          print *,"partid invalid"
@@ -424,7 +401,7 @@ stop
          stop
         endif
  
-        if ((im_solid.ge.1).and.(im_solid.le.nmat)) then
+        if ((im_solid.ge.1).and.(im_solid.le.num_materials)) then
 
          if (im_solid_map(partid_crit+1)+1.ne.im_solid) then
           print *,"im_solid_map(partid_crit+1)+1.ne.im_solid"
@@ -454,7 +431,7 @@ stop
          cell_density_denom=zero
          Fsolid=zero
 
-         do im=1,nmat
+         do im=1,num_materials
 
           vofcomp=(im-1)*ngeom_recon+1
           localF=recon(D_DECL(i,j,k),vofcomp)
@@ -484,9 +461,9 @@ stop
            print *,"rho_base invalid"
            stop
           endif
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_rigid(num_materials,im).eq.1) then
            Fsolid=Fsolid+localF
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid(num_materials,im).eq.0) then
            cell_density_denom=cell_density_denom+localF*rho_base
 
            if ((override_density(im).eq.0).or. & ! rho_t + div (rho u) = 0
@@ -525,10 +502,10 @@ stop
             stop
            endif
           else
-           print *,"is_rigid(nmat,im) invalid"
+           print *,"is_rigid(num_materials,im) invalid"
            stop
           endif
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
 
          if (cell_density_denom.gt.zero) then
           ! do nothing

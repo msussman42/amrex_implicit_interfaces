@@ -153,13 +153,10 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  } else
   amrex::Error("invert_gravity invalid");
 
-
  const Real* dx = geom.CellSize();
 
- int nmat=num_materials;
-
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>nmat))
+ if ((nparts<0)||(nparts>num_materials))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -169,7 +166,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat)) {
+ } else if ((nparts>=1)&&(nparts<=num_materials)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -184,12 +181,10 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
   debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
  }
 
- int nsolve=AMREX_SPACEDIM;
-
  debug_ngrow(FACE_VAR_MF,0,810);
 
  debug_ngrow(idx_vel,1,812);
- if (localMF[idx_vel]->nComp()!=nsolve)
+ if (localMF[idx_vel]->nComp()!=AMREX_SPACEDIM)
   amrex::Error("localMF[idx_vel]->nComp() invalid");
 
  debug_ngrow(idx_thermal,1,812);
@@ -197,7 +192,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
   amrex::Error("localMF[idx_thermal]->nComp() invalid");
 
  debug_ngrow(idx_force,1,812);
- if (localMF[idx_force]->nComp()!=nsolve)
+ if (localMF[idx_force]->nComp()!=AMREX_SPACEDIM)
   amrex::Error("localMF[idx_force]->nComp() invalid");
 
  debug_ngrow(CELLTENSOR_MF,1,6);
@@ -215,13 +210,12 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  MultiFab* Un=localMF[idx_vel];
 
  MultiFab& U_new=get_new_data(State_Type,slab_step+1);
- int nstate=STATE_NCOMP;
- if (U_new.nComp()!=nstate) 
-  amrex::Error("U_new.nComp()!=nstate");
+ if (U_new.nComp()!=STATE_NCOMP) 
+  amrex::Error("U_new.nComp()!=STATE_NCOMP");
 
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
- if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
-  amrex::Error("LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1)");
+ if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error("LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1)");
 
  Real local_visc_coef=visc_coef;
 
@@ -274,7 +268,6 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
   fort_hoopimplicit(
    override_density.dataPtr(), 
    constant_density_all_time.dataPtr(),
-   &nstate,
    &gravity_normalized,
    &gravity_dir,
    forcefab.dataPtr(),
@@ -307,16 +300,14 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
    &update_state,
    &dt_slab,
    &rzflag,
-   &nmat,
    &nparts,
    &nparts_def,
-   im_solid_map_ptr,
-   &nsolve);
+   im_solid_map_ptr);
  } // mfi
 } // omp
  ns_reconcile_d_num(25);
 
-}  // diffuse_hoop
+}  // end subroutine diffuse_hoop
 
 
 // fluxes expected to approximate -dt k grad S
