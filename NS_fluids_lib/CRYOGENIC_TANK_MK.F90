@@ -757,7 +757,7 @@ INTEGER_T :: stat
      else if (part_id.eq.3) then
       open(unit=unit_id,file= 'zbot_flight_inflow.vtk',status='old',iostat=stat)
      else if (part_id.eq.4) then
-      open(unit=unit_id,file= 'zblot_flight_outflow.vtk',status='old',iostat=stat)
+      open(unit=unit_id,file= 'zbot_flight_outflow.vtk',status='old',iostat=stat)
      else if (part_id.eq.5) then
       open(unit=unit_id,file= 'zbot_flight_tank.vtk',status='old', &
         iostat=stat)
@@ -2125,6 +2125,29 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   T1_probe(2)=0.0889d0
   T4_probe(1)=0.0d0
   T4_probe(2)=half*TANK_MK_HEIGHT+TANK_MK_END_RADIUS-0.025d0
+ 
+  if (axis_dir.eq.2) then ! TPCE aux files
+   if (TANK_MK_GEOM_DESCRIPTOR.eq.ZBOT_FLIGHT_ID) then
+    T1_probe(1)=xblob2
+    T1_probe(2)=zblob2
+    T4_probe(1)=xblob2
+    T4_probe(2)=zblob2
+   endif
+  endif
+
+  if (SDIM.eq.2) then
+   ! do nothing
+  else if (SDIM.eq.3) then
+   T4_probe(SDIM)=T4_probe(2)
+   T4_probe(2)=T4_probe(1)
+
+   T1_probe(SDIM)=T1_probe(2)
+   T1_probe(2)=T1_probe(1)
+  else
+   print *,"dimension bust"
+   stop
+  endif
+
   im=2 ! vapor
   dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
   den=GRID_DATA_IN%den(D_DECL(i,j,k),dencomp)
