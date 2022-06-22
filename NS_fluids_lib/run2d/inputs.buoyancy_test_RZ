@@ -1,0 +1,194 @@
+#max_grid_size=32 order=4,4  
+#VORT ERR=2.14E-4 VEL ERR=1.18E-5 TIME=0.5 adv_dir=3 adv_vel=2.0
+#
+max_step  =  99999    # maximum timestep
+#max_step  =  2    # maximum timestep
+stop_time =  2.5  # maximum problem time
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys = 1        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0
+geometry.prob_hi   =  0.5 2.0   #meters
+geometry.is_periodic = 0 0
+
+# default is SFC (Space Filling Curve)
+#DistributionMapping.strategy=SFC
+
+# multigrid class
+#mg.verbose = 1
+#cg.verbose = 1
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 200
+mg.bot_atol = 1.0e-13
+mg.rtol_b = -0.01
+#Lp.v = 1
+
+ns.num_materials=2
+ns.num_species_var=0
+ns.MOFITERMAX=15
+#-1=Weymouth Yue,  
+# 1=EILE (default), 2=always EI, 3=always LE
+ns.EILE_flag=1 # EI-LE (want same time step for 2d and 3d cases)
+amr.n_cell    = 16 64
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.max_level = 0
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 2 2 2 2 2 2  
+amr.grid_eff        = 0.75 
+
+ns.disable_advection=0
+ns.disable_pressure_solve=0
+ns.post_init_pressure_solve=1
+
+ns.ns_tiling=false
+#fabarray.mfiter_tile_size=32 32
+amr.blocking_factor = 16 16
+#amr.space_blocking_factor=16 16
+#amr.space_blocking_factor=1 1
+amr.space_blocking_factor=4 4
+amr.time_blocking_factor=4
+#amr.time_blocking_factor=1
+#amr.time_blocking_factor=16
+# for SEM, the initial time step is further reduced by 2^{r_time}
+# 4th order: ns.init_shrink=0.0125   2nd order: ns.init_shrink=0.05
+ns.init_shrink    = 0.0125 # reduce init dt since grad p not initially known
+# 0  low order space and time
+# 1  SEM space and time
+ns.enable_spectral=1
+#ns.enable_spectral=0
+amr.check_int       = 100      # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 10
+#amr.plot_int        = 10  
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+# change this if tiling vs. no tiling.
+amr.max_grid_size   = 1024
+#amr.restart         = chk4400
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-11
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=2
+ns.initial_cg_cycles=2
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+ns.projection_pressure_scale=1.0
+
+amr.plotfile_on_restart=1
+ns.visual_compare=0 # if 1, then compare to COARSEDATA.tec
+ns.visual_ncell=16 64
+
+ns.cfl            = 0.5   # cfl number for hyperbolic system 0.5
+ns.change_max     = 1.1     
+ns.change_max_init= 1.0e+6
+ns.visc_coef      = 1.0
+mac.visc_abs_tol   = 1.0e-11
+
+ns.gravity        = 9.8
+ns.gravity_dir      = 2 # 1..SDIM
+ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.
+# override_density=2 => Boussinesq approximation
+#   rho independent of T, but the gravity force is modified.
+#   Boussinesq approx: Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
+ns.override_density=2 0  # 1..num_materials
+# rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
+# coefficient for heat expansion for HFE7000 at 298 K=0.00219 (1/K)
+# (PNP: 0.002252)
+# coefficient for heat expansion for an ideal gas: (1/T)=
+# 1/298=0.0034
+ns.DrhoDT = -0.00219 0.0   # units: 1/degree K
+
+ns.tension        = 0.0 0.0 
+#ns.fixed_dt	  = 0.0025     # hardwire dt
+ns.fixed_dt_velocity=0.75
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+ns.axis_dir=12 # buoyancy test
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.1
+ns.advbot=0.0
+ns.adv_vel=0.0
+ns.adv_dir=2  # 1=advect in x direction  2=advect in y direction 
+ns.uncoupled_viscosity=0
+#ns.viscconst= 0.0 0.0 
+# Dynamic viscosity [Pa.s]
+# (PNP: 4.2E-4)
+#ns.viscconst=4.48E-04 4.48E-04
+#want cell Reynolds number ~ 100 
+#rho dx_coarse U/mu = 1400 x (1/32) x 1/mu = 100  mu=14/32 try mu=0.5
+ns.viscconst= 1.0 1.0 
+ns.denconst=1400.0 1400.0 
+ns.speciesconst=1.0 2.0 1.0 2.0 1.0 2.0
+ns.speciesviscconst=1.0e-8 1.0e-8 100.0 1.0e-8 0.001 1.0e-8 
+ns.pressure_error_cutoff=0.0 0.0
+ns.tempconst=293.0 293.0  # temperature at the bottom of the domain
+# T_HOT=ns.tempconst(1)
+# T_COLD=ns.tempconst(1)-abs(radblob2)
+ns.radblob2=30.0
+#zcrit=(problo(sdim)+probhi(sdim))/2+abs(radblob3) *
+#  cos(beta(x-problo(1))-Pi)
+#  beta=2 Pi/problen_array(1) 
+ns.radblob3=0.05
+# tansition thickness from hot to cold "tanh(pz/abs(radblob4))"
+ns.radblob4=0.1
+ns.material_type=0 0   # 0 0 if INCOMP;  13 14 if COMPRESSIBLE
+# Specific heat capacity [J/(kg.K)]
+# in CRYOGENIC_TANK_MK: CP-CV=R/molar_mass => CP=CV+R/molar_mass
+ns.stiffCP=1300.0 1300.0 
+# Ground based experiments used HFE7000.
+# Space-Station experiments used Perfluoro-n-Pentane (PnP, or C5F12)
+# REFPROP (Refrigerant), (RE347MCC), Methyl-Heptafluoropropyl, 
+# https://pubchem.ncbi.nlm.nih.gov/compound/2774943#section=Synonyms
+# Methyl-Perfluoropropyl, HFE7000, CV=
+ns.stiffCV=1300.0 1300.0  #CV used CRYOGENIC_TANK_MK to get CP
+# Thermal conductivity [W/(m.K)]
+#ns.heatviscconst=0.075 0.075
+#Want Prandtl number=1=c_p mu/k=1   1300 x 1.0 /k=1
+#k=1300 x 1 = 1300.0
+ns.heatviscconst=1300.0 1300.0
+ns.constant_density_all_time=1 1 
+
+ns.xblob=0.0
+ns.yblob=1.0
+ns.zblob=0.0
+ns.radblob=0.0 # frequency cos(2 * pi * radblob * t)
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=26
+
+#ns.mem_debug = 1
+ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 3 3
+ns.hi_bc          = 3 3
+# 0=dirichlet at inflow (default)
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+ns.prescribe_temperature_outflow=0
+ns.temperature_lo_bc = 3 1
+ns.temperature_hi_bc = 3 1
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

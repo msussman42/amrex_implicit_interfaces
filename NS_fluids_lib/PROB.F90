@@ -25191,6 +25191,7 @@ end subroutine initialize2d
              ! T(z)=T_HOT * (1-g(z)) + T_COLD * g(z)
              ! 
              if ((problen_array(1).gt.zero).and. &
+                 (problen_array(2).gt.zero).and. &
                  (problen_array(SDIM).gt.zero)) then
               ! do nothing
              else
@@ -25198,9 +25199,23 @@ end subroutine initialize2d
               stop
              endif
 
-             zcrit=half*(problo_array(SDIM)+probhi_array(SDIM))+ &
+             if (levelrz.eq.0) then
+              zcrit=half*(problo_array(SDIM)+probhi_array(SDIM))+ &
                abs(radblob3)* &
                cos(two*Pi*(xpos(1)-problo_array(1))/problen_array(1)-Pi)
+             else if ((levelrz.eq.1).and.(SDIM.eq.2)) then
+              if (problo_array(1).eq.zero) then
+               zcrit=half*(problo_array(SDIM)+probhi_array(SDIM))+ &
+                abs(radblob3)* &
+                cos(Pi*(xpos(1)+probhi_array(1))/problen_array(1)-Pi)
+              else
+               print *,"problo_array(1) invalid"
+               stop
+              endif
+             else
+              print *,"levelrz invalid probtype=26 and axis_dir=12"
+              stop
+             endif
 
              if ((zcrit.gt.problo_array(SDIM)).and. &
                  (zcrit.lt.probhi_array(SDIM))) then
