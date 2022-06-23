@@ -4628,6 +4628,7 @@ REAL_T, dimension(3) :: tx
 REAL_T, dimension(3) :: tx_project
 REAL_T, dimension(3) :: v1,v2,v1xv2
 INTEGER_T :: dir,i,j,k
+REAL_T :: sanity_tol
 
  ! xnode(1)-xnode(1) is mapped to (0,0,0)
  ! xnode(2)-xnode(1)=v1 is mapped to (1,0,0)
@@ -4669,7 +4670,6 @@ INTEGER_T :: dir,i,j,k
  if (abs(det).eq.zero) then
   inplane=0
  else if (abs(det).gt.zero) then
-  det=1.0/det
   AINVERSE(1,1)=+(AA(2,2)*AA(3,3)-AA(2,3)*AA(3,2))
   AINVERSE(2,1)=-(AA(2,1)*AA(3,3)-AA(2,3)*AA(3,1))
   AINVERSE(3,1)=+(AA(2,1)*AA(3,2)-AA(2,2)*AA(3,1))
@@ -4681,7 +4681,7 @@ INTEGER_T :: dir,i,j,k
   AINVERSE(3,3)=+(AA(1,1)*AA(2,2)-AA(1,2)*AA(2,1))
   do i=1,3
   do j=1,3
-   AINVERSE(i,j)=AINVERSE(i,j)*det
+   AINVERSE(i,j)=AINVERSE(i,j)/det
   enddo
   enddo
   
@@ -4704,10 +4704,19 @@ INTEGER_T :: dir,i,j,k
            (tx(2).le.one+tol).and. &
            (tx(1)+tx(2).le.one+tol)) then
 
-   if (abs(tx(3)).le.VOFTOL) then
+   sanity_tol=VOFTOL*max(1.0d0,1.0d0/det)
+
+   if (abs(tx(3)).le.sanity_tol) then
     ! do nothing
-   else if (abs(tx(3)).ge.VOFTOL) then
+   else if (abs(tx(3)).ge.sanity_tol) then
     print *,"something wrong with transformation"
+    print *,"tx(1)= ",tx(1)
+    print *,"tx(2)= ",tx(2)
+    print *,"tx(3)= ",tx(3)
+    print *,"tol= ",tol
+    print *,"VOFTOL= ",VOFTOL
+    print *,"det= ",det
+    print *,"sanity_tol= ",sanity_tol
     stop
    else
     print *,"tx(3) is NaN"
@@ -4749,10 +4758,17 @@ INTEGER_T :: dir,i,j,k
    enddo
 
    do i=1,3
-    if (abs(tx_project(i)-tx(i)).le.VOFTOL) then
+    if (abs(tx_project(i)-tx(i)).le.sanity_tol) then
      ! do nothing
-    else if (abs(tx_project(i)-tx(i)).ge.VOFTOL) then
+    else if (abs(tx_project(i)-tx(i)).ge.sanity_tol) then
      print *,"sanity check failed tx_project and tx differ too much"
+     print *,"i=",i
+     print *,"tx(i)= ",tx(i)
+     print *,"tx_project(i)= ",tx_project(i)
+     print *,"tol= ",tol
+     print *,"VOFTOL= ",VOFTOL
+     print *,"det= ",det
+     print *,"sanity_tol= ",sanity_tol
      stop
     else
      print *,"tx or tx_project are NaN"
