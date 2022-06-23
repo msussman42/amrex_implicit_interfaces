@@ -448,12 +448,12 @@ INTEGER_T :: dir
 
     else if (part_id.eq.3) then ! source
 
-     if ((xcell(1).le.-0.00852d0).or. &
-         (xcell(1).ge.0.00852d0).or. &
+     if ((xcell(1).le.-0.01002d0).or. &
+         (xcell(1).ge.0.01002d0).or. &
          (xcell(2).le.-0.0443d0).or. &
          (xcell(2).ge.0.0921d0).or. &
-         (xcell(3).le.-0.00852d0).or. &
-         (xcell(3).ge.0.00852d0)) then
+         (xcell(3).le.-0.01002d0).or. &
+         (xcell(3).ge.0.01002d0)) then
       LS=-0.0062
       MASK=FSI_FINE_SIGN_VEL_VALID 
      else
@@ -462,12 +462,12 @@ INTEGER_T :: dir
 
     else if (part_id.eq.4) then ! sink
 
-     if ((xcell(1).le.-0.000572d0).or. &
-         (xcell(1).ge.0.0124d0).or. &
+     if ((xcell(1).le.-0.00214d0).or. &
+         (xcell(1).ge.0.0139d0).or. &
          (xcell(2).le.-0.0423d0).or. &
-         (xcell(2).ge.0.0491d0).or. &
-         (xcell(3).le.-0.0361d0).or. &
-         (xcell(3).ge.-0.0232d0)) then
+         (xcell(2).ge.0.0505d0).or. &
+         (xcell(3).le.-0.03766d0).or. &
+         (xcell(3).ge.-0.02163d0)) then
       LS=-0.0042
       MASK=FSI_FINE_SIGN_VEL_VALID 
      else
@@ -502,12 +502,12 @@ INTEGER_T :: dir
 
     else if (part_id.eq.6) then ! nozzle housing
 
-     if ((xcell(1).le.-0.0125d0).or. &
-         (xcell(1).ge.0.0125d0).or. &
+     if ((xcell(1).le.-0.0175d0).or. &
+         (xcell(1).ge.0.0175d0).or. &
          (xcell(2).le.-0.0443d0).or. &
          (xcell(2).ge.0.092d0).or. &
-         (xcell(3).le.-0.0125d0).or. &
-         (xcell(3).ge.0.0125d0)) then
+         (xcell(3).le.-0.0175d0).or. &
+         (xcell(3).ge.0.0175d0)) then
       LS=-0.0062
       MASK=FSI_FINE_SIGN_VEL_VALID 
      else
@@ -516,13 +516,13 @@ INTEGER_T :: dir
 
     else if (part_id.eq.7) then ! LAD housing
 
-     if ((xcell(1).le.-0.00146d0).or. &
-         (xcell(1).ge.0.0133d0).or. &
-         (xcell(2).le.-0.0423d0).or. &
-         (xcell(2).ge.0.0499d0).or. &
-         (xcell(3).le.-0.0370d0).or. &
-         (xcell(3).ge.-0.0223d0)) then
-      LS=-0.0042
+     if ((xcell(1).le.-0.00672d0).or. &
+         (xcell(1).ge.0.0185d0).or. &
+         (xcell(2).le.-0.0425d0).or. &
+         (xcell(2).ge.0.0551d0).or. &
+         (xcell(3).le.-0.0423d0).or. &
+         (xcell(3).ge.-0.0170d0)) then
+      LS=-0.0044
       MASK=FSI_FINE_SIGN_VEL_VALID 
      else
       ! do nothing
@@ -714,7 +714,8 @@ INTEGER_T :: stat
      else if (part_id.eq.2) then ! side heater
       open(unit=unit_id,file= 'tpce_heaterb.vtk',status='old',iostat=stat)
      else if (part_id.eq.3) then
-      open(unit=unit_id,file= 'nozzle_source_15deg.vtk',status='old',iostat=stat)
+      open(unit=unit_id,file= 'nozzle_source_15deg.vtk', &
+              status='old',iostat=stat)
      else if (part_id.eq.4) then
       open(unit=unit_id,file= 'tpce_sink.vtk',status='old',iostat=stat)
      else if (part_id.eq.5) then
@@ -731,7 +732,6 @@ INTEGER_T :: stat
      else if (part_id.eq.7) then
       open(unit=unit_id, file= 'tpce_ladhousing.vtk',status='old', &
          iostat=stat)
-
      else
       print *,"part_id invalid"
       stop
@@ -751,23 +751,26 @@ INTEGER_T :: stat
     else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
 
      if (part_id.eq.1) then ! side heatera
-      open(unit=unit_id,file= 'zbot_flight_heatera.vtk',status='old',iostat=stat)
+      open(unit=unit_id,file= 'zbot_flight_heatera.vtk',status='old', &
+              iostat=stat)
      else if (part_id.eq.2) then ! side heaterb
-      open(unit=unit_id,file= 'zbot_flight_heaterb.vtk',status='old',iostat=stat)
+      open(unit=unit_id,file= 'zbot_flight_heaterb.vtk',status='old', &
+              iostat=stat)
      else if (part_id.eq.3) then
-      open(unit=unit_id,file= 'zbot_flight_inflow.vtk',status='old',iostat=stat)
+      open(unit=unit_id,file= 'zbot_flight_inflow_thick.vtk',status='old', &
+              iostat=stat)
      else if (part_id.eq.4) then
-      open(unit=unit_id,file= 'zbot_flight_outflow.vtk',status='old',iostat=stat)
+      open(unit=unit_id,file= 'zbot_flight_outflow_thick.vtk', &
+              status='old',iostat=stat)
      else if (part_id.eq.5) then
-      open(unit=unit_id,file= 'zbot_flight_tank.vtk',status='old', &
-        iostat=stat)
+      open(unit=unit_id,file= 'zbot_flight_tank_thicknozzles.vtk', &
+              status='old',iostat=stat)
      else if (part_id.eq.6) then
-      open(unit=unit_id,file= 'zbot_flight_inletnozzle.vtk',status='old', &
-        iostat=stat)
+      open(unit=unit_id,file= 'zbot_flight_inletnozzle_thick.vtk', &
+              status='old',iostat=stat)
      else if (part_id.eq.7) then
-      open(unit=unit_id,file= 'zbot_flight_outletnozzle.vtk',status='old', &
-        iostat=stat)
-
+      open(unit=unit_id,file= 'zbot_flight_outletnozzle_thick.vtk', &
+              status='old',iostat=stat)
      else
       print *,"part_id invalid"
       stop
