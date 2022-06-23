@@ -5,8 +5,8 @@
 # ----------------------------------------------------------
 # -------- Problem setup -----------------------------------
 # ----------------------------------------------------------
-#max_step=200
-max_step=99999999
+max_step=20
+#max_step=99999999
 stop_time=8000.0
 
 # unique problem identifier associated with each new plug-in:
@@ -97,7 +97,7 @@ ns.radblob5 = 0.005  #TANK_MK_NOZZLE_THICK_OUTLET
 # TANK GEOMETRY FILES IN 3D have the "vertical direction" as the
 # "y" direction, but the code swaps y and z so that
 # the "z" direction becomes the vertical direction.
-ns.radblob2         = 0.082   # radius of spherical ullage
+ns.radblob2         = 0.03   # radius of spherical ullage
 ns.xblob2           = 0.0
 ns.yblob2           = 0.0 # 0.0 if 3D
 ns.zblob2           = 0.186
@@ -188,7 +188,8 @@ ns.slice_dir=2 # vertical direction 3D
 ns.xslice=0.0000001 0.0 0.0
 #amr.slice_int=2000
 #amr.plot_int        = 200 # number of timesteps between plot files (2D)
-amr.plot_int        = 10   # number of timesteps between plot files (3D)
+#amr.plot_int        = 10  # number of timesteps between plot files (2D)
+amr.plot_int        = 1   # number of timesteps between plot files (3D)
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.output_drop_distribution=1

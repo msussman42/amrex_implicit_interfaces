@@ -642,8 +642,8 @@ extern "C"
     Real* mdotcount,
     int* ngrow_expansion,
     Real* time,
-    int* level,int* finest_level,
-    int* nmat,int* nten,
+    int* level,
+    int* finest_level,
     Real* saturation_temp,
     int* freezing_model,
     int* distribute_from_target,
@@ -656,7 +656,8 @@ extern "C"
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
     Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi),
     Real* mdot,AMREX_ARLIM_P(mdotlo),AMREX_ARLIM_P(mdothi),
-    Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi));
+    Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
+    Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
 
    void fort_init_icemask(

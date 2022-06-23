@@ -14662,6 +14662,10 @@ NavierStokes::phase_change_redistributeALL() {
 
 } // subroutine phase_change_redistributeALL
 
+// isweep==0: fort_tagexpansion
+// isweep==1: fort_distributeexpansion
+// isweep==2: fort_clearexpansion
+// isweep==3: fort_initjumpterm
 void
 NavierStokes::level_phase_change_redistribute(
  Real expect_mdot_sign,
@@ -15065,6 +15069,10 @@ NavierStokes::level_phase_change_redistribute(
   mdot_sum2_complement[0]+=mdot_sum2_complement_local[0];
   mdot_lost_complement[0]+=mdot_lost_complement_local[0];
 
+  // isweep==0: fort_tagexpansion
+  // isweep==1: fort_distributeexpansion
+  // isweep==2: fort_clearexpansion
+  // isweep==3: fort_initjumpterm
  } else if (isweep==3) {
 
   Vector<Real> mdotplus_local;
@@ -15103,6 +15111,7 @@ NavierStokes::level_phase_change_redistribute(
     FArrayBox& mdotfab=(*localMF[MDOT_MF])[mfi];
     FArrayBox& JUMPfab=(*localMF[JUMP_STRENGTH_MF])[mfi];
     FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
+    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
 
     int bfact=parent->Space_blockingFactor(level);
 
@@ -15115,7 +15124,8 @@ NavierStokes::level_phase_change_redistribute(
     //  NavierStokes::do_the_advance
     // mdot initialized in NavierStokes::prelim_alloc()
     // declared in: GODUNOV_3D.F90 (distribute_from_target==0)
-    //   a)  jump_strength=JUMPFAB(D_DECL(i,j,k),iten+ireverse*nten)
+    //   a)  jump_strength=
+    //       JUMPFAB(D_DECL(i,j,k),iten+ireverse*num_interfaces)
     //      dF * volgrid * (den_source/den_dest-1)/ dt^2 
     //   b)  divu_material=jump_strength  cm^3/s^2
     //   c)  mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+divu_material
@@ -15138,8 +15148,8 @@ NavierStokes::level_phase_change_redistribute(
      &mdotcount_local[tid_current],
      &ngrow_expansion,
      &cur_time_slab,
-     &level,&finest_level,
-     &nmat,&nten,
+     &level,
+     &finest_level,
      saturation_temp.dataPtr(),
      freezing_model.dataPtr(),
      distribute_from_target.dataPtr(),
@@ -15155,7 +15165,9 @@ NavierStokes::level_phase_change_redistribute(
       // mdotfab is incremented.
      mdotfab.dataPtr(),ARLIM(mdotfab.loVect()),ARLIM(mdotfab.hiVect()),
      newdistfab.dataPtr(),
-     ARLIM(newdistfab.loVect()),ARLIM(newdistfab.hiVect()));
+     ARLIM(newdistfab.loVect()),ARLIM(newdistfab.hiVect()),
+     reconfab.dataPtr(),
+     ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()));
 
   } // mfi
 } // omp
