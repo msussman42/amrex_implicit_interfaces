@@ -629,13 +629,13 @@ INTEGER_T, intent(out) :: aux_ncells_max_side
       else if (auxcomp.eq.3) then ! source
        aux_ncells_max_side=256
       else if (auxcomp.eq.4) then ! sink
-       aux_ncells_max_side=256
+       aux_ncells_max_side=512
       else if (auxcomp.eq.5) then ! tank
        aux_ncells_max_side=256
       else if (auxcomp.eq.6) then ! nozzle
        aux_ncells_max_side=256
       else if (auxcomp.eq.7) then ! LAD housing
-       aux_ncells_max_side=256
+       aux_ncells_max_side=512
       else
        print *,"auxcomp invalid"
        stop
@@ -693,7 +693,8 @@ INTEGER_T :: stat
      else if (part_id.eq.2) then ! side heater
       open(unit=unit_id,file= 'heaterb_coarse.vtk',status='old',iostat=stat)
      else if (part_id.eq.3) then
-      open(unit=unit_id,file= 'nozzlesource_coarse.vtk',status='old',iostat=stat)
+      open(unit=unit_id,file= 'nozzlesource_coarse.vtk', &
+        status='old',iostat=stat)
      else if (part_id.eq.4) then
       open(unit=unit_id,file= 'sink_coarse.vtk',status='old',iostat=stat)
      else if (part_id.eq.5) then

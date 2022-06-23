@@ -4962,17 +4962,17 @@ stop
         ! vof,ref centroid,order,slope,intercept  x nmat
         ! FACECOMP_ICEMASK component c++ initialized to one
         !   in "init_physics_vars"
-        ! if nmat=2, nten=1
-        ! if nmat=3, nten=3    12 13 23
-        ! if nmat=4, nten=6    12 13 14 23 24 34
+        ! if nmat=2, num_interfaces=1
+        ! if nmat=3, num_interfaces=3    12 13 23
+        ! if nmat=4, num_interfaces=6    12 13 14 23 24 34
       subroutine fort_initjumpterm( &
        mdotplus, &
        mdotminus, &
        mdotcount, &
        ngrow_expansion_in, &
        time, &
-       level,finest_level, &
-       nmat,nten, &
+       level, &
+       finest_level, &
        saturation_temp, &
        freezing_model, &
        distribute_from_target, &
@@ -4985,7 +4985,8 @@ stop
        maskcov,DIMS(maskcov), &
        JUMPFAB,DIMS(JUMPFAB), &
        mdot,DIMS(mdot), &
-       LSnew,DIMS(LSnew) ) &
+       LSnew,DIMS(LSnew), &
+       recon,DIMS(recon) ) &
       bind(c,name='fort_initjumpterm')
 
       use probf90_module
@@ -5000,12 +5001,11 @@ stop
       INTEGER_T, intent(in) :: ngrow_expansion_in
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: nmat,nten
-      REAL_T, intent(in) :: saturation_temp(2*nten)
-      INTEGER_T, intent(in) :: freezing_model(2*nten)
-      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
-      INTEGER_T, intent(in) :: constant_volume_mdot(2*nten)
-      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
+      REAL_T, intent(in) :: saturation_temp(2*num_interfaces)
+      INTEGER_T, intent(in) :: freezing_model(2*num_interfaces)
+      INTEGER_T, intent(in) :: distribute_from_target(2*num_interfaces)
+      INTEGER_T, intent(in) :: constant_volume_mdot(2*num_interfaces)
+      INTEGER_T, intent(in) :: constant_density_all_time(num_materials)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -5017,25 +5017,31 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(JUMPFAB)
       INTEGER_T, intent(in) :: DIMDEC(mdot)
       INTEGER_T, intent(in) :: DIMDEC(LSnew)
+      INTEGER_T, intent(in) :: DIMDEC(recon)
       REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: JUMPFAB(DIMV(JUMPFAB),2*nten)
+      REAL_T, intent(in), target :: JUMPFAB(DIMV(JUMPFAB),2*num_interfaces)
       REAL_T, pointer :: JUMPFAB_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout), target :: mdot(DIMV(mdot))
       REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: LSnew(DIMV(LSnew),nmat)
+      REAL_T, intent(in), target :: LSnew(DIMV(LSnew),num_materials)
       REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
+      REAL_T, intent(in), target ::  &
+        recon(DIMV(recon),num_materials*ngeom_recon)
+      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k
       INTEGER_T im,im_opp,ireverse,iten
       INTEGER_T iten_shift
       INTEGER_T im_source,im_dest
-      INTEGER_T nten_test
       REAL_T jump_strength
 
       REAL_T LL
       REAL_T divu_material
       INTEGER_T local_mask
+      REAL_T F_solid_sum
+      INTEGER_T imlocal,vofcomp,im_primary
+      REAL_T LS_local(num_materials)
 
       mdot_ptr=>mdot
 
@@ -5068,36 +5074,29 @@ stop
        stop
       endif
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
-       stop
-      endif
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif
 
-      do im=1,nmat-1
-       do im_opp=im+1,nmat
+      do im=1,num_materials-1
+       do im_opp=im+1,num_materials
         do ireverse=0,1
-         call get_iten(im,im_opp,iten,nmat)
-         iten_shift=iten+ireverse*nten
+         call get_iten(im,im_opp,iten,num_materials)
+         iten_shift=iten+ireverse*num_interfaces
          if (is_valid_freezing_modelF(freezing_model(iten_shift)).eq.1) then
           ! do nothing 
          else
           print *,"freezing_model invalid init jump term"
-          print *,"iten,ireverse,nten ",iten,ireverse,nten
+          print *,"iten,ireverse,num_interfaces ",iten,ireverse,num_interfaces
           stop
          endif
          if ((distribute_from_target(iten_shift).lt.0).or. &
              (distribute_from_target(iten_shift).gt.1)) then
           print *,"distribute_from_target invalid init jump term"
-          print *,"iten,ireverse,nten ",iten,ireverse,nten
+          print *,"iten,ireverse,num_interfaces ",iten,ireverse,num_interfaces
           stop
          endif
          if (constant_volume_mdot(iten_shift).eq.0) then 
@@ -5121,6 +5120,8 @@ stop
       call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,1269)
       LSnew_ptr=>LSnew
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1,1270)
+      recon_ptr=>recon
+      call checkbound_array(fablo,fabhi,recon_ptr,1,-1,1270)
  
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -5132,23 +5133,23 @@ stop
 
        if (local_mask.eq.1) then
 
-        do im=1,nmat-1
-         do im_opp=im+1,nmat
+        do im=1,num_materials-1
+         do im_opp=im+1,num_materials
           do ireverse=0,1
-           if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
+           if ((im.gt.num_materials).or.(im_opp.gt.num_materials)) then
             print *,"im or im_opp bust 10"
             stop
            endif
 
-           call get_iten(im,im_opp,iten,nmat)
-           iten_shift=iten+ireverse*nten
+           call get_iten(im,im_opp,iten,num_materials)
+           iten_shift=iten+ireverse*num_interfaces
 
            LL=get_user_latent_heat(iten_shift,293.0d0,1)
 
            jump_strength=JUMPFAB(D_DECL(i,j,k),iten_shift)
   
-           if ((is_rigid(nmat,im).eq.1).or. &
-               (is_rigid(nmat,im_opp).eq.1)) then 
+           if ((is_rigid(num_materials,im).eq.1).or. &
+               (is_rigid(num_materials,im_opp).eq.1)) then 
             ! do nothing
            else if (LL.ne.zero) then
             if (ireverse.eq.0) then
@@ -5161,24 +5162,62 @@ stop
              print *,"ireverse invalid"
              stop
             endif
+      
+            F_solid_sum=zero 
+            do imlocal=1,num_materials
+             LS_local(imlocal)=LSnew(D_DECL(i,j,k),imlocal)
+             if (is_rigid(num_materials,imlocal).eq.1) then
+              vofcomp=(imlocal-1)*ngeom_recon+1
+              F_solid_sum=F_solid_sum+recon(D_DECL(i,j,k),vofcomp)
+             else if (is_rigid(num_materials,imlocal).eq.0) then
+              ! do nothing
+             else
+              print *,"is_rigid invalid"
+              stop
+             endif
+            enddo ! imlocal=1..num_materials 
 
-              ! jump_strength units: cm^3/s^2
-            divu_material=jump_strength
+            call get_primary_material(LS_local,num_materials,im_primary)
 
-            if (divu_material.gt.zero) then
-             mdotplus=mdotplus+divu_material
-             mdotcount=mdotcount+one
-            else if (divu_material.lt.zero) then
-             mdotminus=mdotminus+divu_material
-             mdotcount=mdotcount+one
-            else if (divu_material.eq.zero) then
-             ! do nothing
-            else
-             print *,"divu_material bust"
-             stop
-            endif
+            if (F_solid_sum.ge.zero) then
+             if (F_solid_sum.lt.half) then
+              if (is_rigid(num_materials,im_primary).eq.0) then
+             
+               ! jump_strength units: cm^3/s^2
+               divu_material=jump_strength
+
+               if (divu_material.gt.zero) then
+                mdotplus=mdotplus+divu_material
+                mdotcount=mdotcount+one
+               else if (divu_material.lt.zero) then
+                mdotminus=mdotminus+divu_material
+                mdotcount=mdotcount+one
+               else if (divu_material.eq.zero) then
+                ! do nothing
+               else
+                print *,"divu_material bust"
+                stop
+               endif
             
-            mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+divu_material
+               mdot(D_DECL(i,j,k))=mdot(D_DECL(i,j,k))+divu_material
+              else if (is_rigid(num_materials,im_primary).eq.1) then
+               ! do nothing
+              else
+               print *,"is_rigid invalid"
+               stop
+              endif
+             else if ((F_solid_sum.ge.half).and. &
+                      (F_solid_sum.le.one+VOFTOL)) then
+              ! do nothing
+             else
+              print *,"F_solid_sum invalid"
+              stop
+             endif 
+            else
+             print *,"F_solid_sum invalid"
+             stop
+            endif 
+
            else if (LL.eq.zero) then
             ! do nothing
            else
@@ -5186,8 +5225,8 @@ stop
             stop
            endif  
           enddo ! ireverse=0...1
-         enddo ! im_opp=im+1...nmat
-        enddo ! im=1...nmat-1
+         enddo ! im_opp=im+1...num_materials
+        enddo ! im=1...num_materials-1
 
        else if (local_mask.eq.0) then
         ! do nothing
