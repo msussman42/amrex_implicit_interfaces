@@ -10,8 +10,6 @@
 #include "EXTRAP_COMP.H"
 
 #define element_buffer_tol 0.01d0
-#define sign_box_radius 2.0d0
-#define sign_quality_cutoff 0.5d0
 #define tecplot_post_process 1
 
 ! 10 seconds for tail to do a full period
@@ -9433,7 +9431,9 @@ INTEGER_T, allocatable :: raw_elements(:,:)
     aux_FSIdata3D(i,j,k,FSI_STRESS+dir)=0.0d0
    enddo
    aux_FSIdata3D(i,j,k,FSI_LEVELSET+1)=-99999.0
-   aux_FSIdata3D(i,j,k,FSI_SIGN_QUALITY+1)=0.0d0
+   ! bit 0=1 if +sign hits
+   ! bit 1=1 if -sign hits
+   aux_FSIdata3D(i,j,k,FSI_SIGN_CONFLICT+1)=0.0d0
    aux_FSIdata3D(i,j,k,FSI_TEMPERATURE+1)=0.0d0
    aux_FSIdata3D(i,j,k,FSI_EXTRAP_FLAG+1)=FSI_NOTHING_VALID
    aux_FSIdata3D(i,j,k,FSI_SIZE+1)=0.0d0
@@ -11002,9 +11002,7 @@ IMPLICIT NONE
   REAL_T mag_ncrit
   REAL_T mag_x
   REAL_T mag_xproj
-  INTEGER_T in_sign_box
-  REAL_T sign_quality
-  REAL_T sign_quality_local
+  REAL_T sign_conflict_local
   INTEGER_T ibase
   REAL_T ls_local
   INTEGER_T mask_local,mask_node
@@ -11640,59 +11638,6 @@ IMPLICIT NONE
           mag_n_test=zero
           mag_x=zero
 
-          in_sign_box=1
-
-          if (element_inplane.eq.1) then
-           if (abs(element_unsigned_mindist-unsigned_mindist).ge. &
-               element_buffer_tol*10.0d0*dxBB(1)) then
-            print *,"element_unsigned_mindist error"
-            print *,"element_unsigned_mindist=",element_unsigned_mindist
-            print *,"unsigned_mindist=",unsigned_mindist
-            stop
-           else if (abs(element_unsigned_mindist-unsigned_mindist).le. &
-                    element_buffer_tol*10.0d0*dxBB(1)) then
-
-            mag_xproj=zero
-            do dir=1,3
-             mag_xproj=mag_xproj+(element_xclosest(dir)- &
-                                  xclosest_project(dir))**2
-            enddo
-            mag_xproj=sqrt(mag_xproj)
-            if (mag_xproj.ge.element_buffer_tol*10.0d0*dxBB(1)) then
-             print *,"mag_xproj too big"
-             print *,"mag_xproj,dx ",mag_xproj,dxBB(1)
-             print *,"element_unsigned_mindist=",element_unsigned_mindist
-             print *,"unsigned_mindist=",unsigned_mindist
-             stop
-            else if (mag_xproj.le.element_buffer_tol*10.0d0*dxBB(1)) then
-             ! do nothing
-            else
-             print *,"mag_xproj is NaN"
-             stop
-            endif
-                    
-           else
-            print *,"element_unsigned_mindist is NaN?"
-            stop
-           endif
-
-          else if (element_inplane.eq.0) then
-           do dir=1,3
-            if (abs(xclosest_project(dir)-xx(dir)).gt. &
-                sign_box_radius*dxBB(dir)) then
-             in_sign_box=0
-            else if (abs(xclosest_project(dir)-xx(dir)).le. &
-                     sign_box_radius*dxBB(dir)) then
-             ! do nothing 
-            else
-             print *,"xclosest_project or xx invalid"
-             stop
-            endif
-           enddo !dir=1..3
-          else
-           print *,"element_inplane invalid"
-           stop
-          endif
           do dir=1,3
            mag_n=mag_n+normal_closest(dir)**2
            mag_n_test=mag_n_test+normal(dir)**2
@@ -11717,12 +11662,9 @@ IMPLICIT NONE
            ! n dot x=normal_closest dot (xx-xclosest_project)
            ! n dot x = mag_x * mag_n * cos(theta)
 
-          sign_quality=zero
-
           if (mag_n.gt.zero) then
            if (mag_n_test.gt.zero) then
-            if (mag_x.gt.zero) then
-             sign_quality=abs(n_dot_x)/(mag_n*mag_x)
+            if (mag_x.ge.zero) then
 
              if (element_inplane.eq.1) then
 
@@ -11738,67 +11680,33 @@ IMPLICIT NONE
 
               mag_n=sqrt(mag_n)
               mag_x=sqrt(mag_x)
-              sign_quality=abs(n_dot_x)/(mag_n*mag_x)
 
-              if (sign_quality.ge.0.99d0) then
-               ! do nothing
-              else
-               print *,"sign_quality should be close to 1 if element_inplane"
-               print *,"sign_quality: ",sign_quality
-               print *,"abs(n_dot_x) ",abs(n_dot_x)
-               print *,"mag_n (element_normal)=",mag_n
-               print *,"mag_x=",mag_x
-               print *,"dxBB ",dxBB(1),dxBB(2),dxBB(3)
-               stop
-              endif
              else if (element_inplane.eq.0) then
-              if (sign_quality.ge.sign_quality_cutoff) then
-               ! do nothing
-              else if ((sign_quality.ge.zero).and. &
-                       (sign_quality.le.sign_quality_cutoff)) then
-               sign_quality=zero
-              else
-               print *,"sign_quality is NaN"
-               stop
-              endif
+
+              ! do nothing
+
              else
               print *,"element_inplane invalid"
               stop
              endif
 
-             if (sign_quality.gt.zero) then
-
-              if (in_sign_box.eq.1) then
-
-               hitflag=1
-               if (n_dot_x.gt.zero) then ! fluid(sign switched later)
-                hitsign=one
-               else if (n_dot_x.lt.zero) then ! solid(sign switched later)
-                hitsign=-one
-               else
-                print *,"n_dot_x bust"
-                stop
-               endif
-    
-              else if (in_sign_box.eq.0) then
-               ! do nothing
-              else
-               print *,"in_sign_box invalid"
-               stop
-              endif
-
-             else if (sign_quality.eq.zero) then
-              ! do nothing
+             hitflag=1
+             if (n_dot_x.eq.zero) then
+              hitsign=zero
+             else if (n_dot_x.gt.zero) then ! fluid(sign switched later)
+              hitsign=one
+             else if (n_dot_x.lt.zero) then ! solid(sign switched later)
+              hitsign=-one
              else
-              print *,"sign_quality invalid"
+              print *,"n_dot_x bust"
               stop
              endif
-            else if (mag_x.eq.zero) then
-             ! do nothing
+    
             else
              print *,"mag_x invalid"
              stop
             endif
+
            else if (mag_n_test.eq.zero) then
             ! do nothing
            else
@@ -11855,14 +11763,16 @@ IMPLICIT NONE
            n_dot_x=zero
            phiside=zero
            do dir=1,3
+             ! levelset at the center cell
             n_dot_x=n_dot_x+normal(dir)*(xx(dir)-xnot(dir))
+             ! levelset at the side cell
             phiside=phiside+normal(dir)*(xside(dir)-xnot(dir))
            enddo
            if ((n_dot_x.eq.zero).and. &
                (phiside.eq.zero)) then
             ! do nothing
            else if (n_dot_x*phiside.gt.zero) then
-            ! do nothing
+            ! do nothing (no crossing)
            else if (n_dot_x*phiside.le.zero) then
             mag_ncrit=zero
             do dir=1,3
@@ -11899,7 +11809,7 @@ IMPLICIT NONE
               print *,"phiside or n_dot_x is NaN"
               stop
              endif
-            enddo  ! dir
+            enddo  ! dir=1..3
 
             call checkinplaneBIG( &
              eul_over_lag_scale, &
@@ -11928,7 +11838,6 @@ IMPLICIT NONE
              totaldist=sqrt(totaldist)
              if (testdist.le.unsigned_mindist) then
               unsigned_mindist=testdist
-              sign_quality=one
               hitflag=1
               if (n_dot_x.eq.zero) then
                hitsign=zero
@@ -11942,6 +11851,11 @@ IMPLICIT NONE
                print *,"n_dot_x bust"
                stop
               endif
+             else if (testdist.gt.unsigned_mindist) then
+              ! do nothing
+             else
+              print *,"testdist or unsigned_mindist bust"
+              stop
              endif
 
              if (totaldist.eq.zero) then
@@ -11978,12 +11892,52 @@ IMPLICIT NONE
          modify_vel=0
 
          ls_local=FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)
-         sign_quality_local=FSIdata3D(i,j,k,ibase+FSI_SIGN_QUALITY+1)
+         sign_conflict_local=FSIdata3D(i,j,k,ibase+FSI_SIGN_CONFLICT+1)
          mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
          do dir=1,3
           vel_local(dir)=FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)
          enddo
          temp_local=FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)
+
+         if (hitflag.eq.1) then
+          ! bit 0=1 if +sign hits
+          ! bit 1=1 if -sign hits
+          if (hitsign.ge.zero) then
+           if (sign_conflict_local.eq.zero) then
+            sign_conflict_local=one
+           else if (sign_conflict_local.eq.one) then
+            ! do nothing
+           else if (sign_conflict_local.eq.three) then
+            ! do nothing
+           else if (sign_conflict_local.eq.two) then
+            sign_conflict_local=three
+           else
+            print *,"sign_conflict_local invalid"
+            stop
+           endif
+          else if (hitsign.lt.zero) then
+           if (sign_conflict_local.eq.zero) then
+            sign_conflict_local=two
+           else if (sign_conflict_local.eq.one) then
+            sign_conflict_local=three
+           else if (sign_conflict_local.eq.three) then
+            ! do nothing
+           else if (sign_conflict_local.eq.two) then
+            ! do nothing
+           else
+            print *,"sign_conflict_local invalid"
+            stop
+           endif
+          else
+           print *,"hitsign invalid"
+           stop
+          endif
+         else if (hitflag.eq.0) then
+          ! do nothing
+         else
+          print *,"hitflag invalid"
+          stop
+         endif 
 
          if ((mask_local.eq.FSI_NOTHING_VALID).or. &  
              (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. & 
@@ -11991,40 +11945,15 @@ IMPLICIT NONE
 
           if ((mask_local.eq.FSI_NOTHING_VALID).or. &
               (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID)) then
-           if (sign_quality_local.eq.zero) then
-            ! do nothing
-           else
-            print *,"sign_quality_local invalid"
-            stop
-           endif
+           ! do nothing
           else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then 
-           if (sign_quality_local.eq.one) then
-            ! do nothing
-           else
-            print *,"sign_quality_local invalid"
-            stop
-           endif
+           ! do nothing
           else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
-           if (sign_quality_local.eq.one) then
-            ! do nothing
-           else
-            print *,"sign_quality_local invalid"
-            stop
-           endif
+           ! do nothing
           else if (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID) then 
-           if (sign_quality_local.eq.zero) then
-            ! do nothing
-           else
-            print *,"sign_quality_local invalid"
-            stop
-           endif
+           ! do nothing
           else if (mask_local.eq.FSI_FINE_VEL_VALID) then 
-           if (sign_quality_local.eq.zero) then
-            ! do nothing
-           else
-            print *,"sign_quality_local invalid"
-            stop
-           endif
+           ! do nothing
           else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
            ! do nothing
           else
@@ -12050,10 +11979,10 @@ IMPLICIT NONE
           endif
 
           if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.1) then 
+
            mask_local=FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID
            ls_local=-unsigned_mindist
-           sign_quality_local=one
-           sign_quality=one
+
           else if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.0) then
 
            if (FSI_mesh_type%exclusive_doubly_wetted.eq.0) then
@@ -12092,11 +12021,24 @@ IMPLICIT NONE
             print *,"mask_local invalid"
             stop
            endif 
+
            if (hitflag.eq.1) then
-            mask_local=FSI_FINE_SIGN_VEL_VALID
              ! The "-" below asserts that ls_local now points into the solid
             ls_local=-hitsign*abs(ls_local)
-            sign_quality_local=sign_quality
+
+            if ((mask_local.eq.FSI_NOTHING_VALID).or. &
+                (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
+                (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).or. &
+                (mask_local.eq.FSI_FINE_VEL_VALID)) then
+             mask_local=FSI_FINE_VEL_VALID
+            else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then 
+             ! do nothing
+            else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
+             ! do nothing
+            else 
+             print *,"mask_local invalid"
+             stop
+            endif
            else if (hitflag.eq.0) then
             ! do nothing
            else
@@ -12205,7 +12147,7 @@ IMPLICIT NONE
          endif 
 
          FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local
-         FSIdata3D(i,j,k,ibase+FSI_SIGN_QUALITY+1)=sign_quality_local
+         FSIdata3D(i,j,k,ibase+FSI_SIGN_CONFLICT+1)=sign_conflict_local
          FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=mask_local
          do dir=1,3
           FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel_local(dir)
@@ -12514,6 +12456,10 @@ IMPLICIT NONE
 
       mask_local=NINT(old_FSIdata(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
       ls_local=old_FSIdata(i,j,k,ibase+FSI_LEVELSET+1)
+       ! bit 0=1 if +sign hits
+       ! bit 1=1 if -sign hits
+      sign_conflict_local=old_FSIdata(i,j,k,ibase+FSI_SIGN_CONFLICT+1)
+
       new_mask_local=mask_local
 
       do dir=1,3
@@ -12547,59 +12493,120 @@ IMPLICIT NONE
 
        else if (sign_valid(override_MASK).eq.0) then
 
-        do dir=1,3
-
-         ii=0
-         jj=0
-         kk=0
-         if (dir.eq.1) then
-          i_norm=i
-          ii=1
-         else if (dir.eq.2) then
-          i_norm=j
-          jj=1
-         else if (dir.eq.3) then
-          i_norm=k
-          kk=1
+        if (((sign_conflict_local.eq.one).or. &
+             (sign_conflict_local.eq.two)).and. &
+            (abs(ls_local).le.dx3D(1))) then
+         mask_local=FSI_FINE_SIGN_VEL_VALID
+         sign_status_changed=1
+         if (sign_conflict_local.eq.one) then
+          ls_local=-abs(ls_local)
+         else if (sign_conflict_local.eq.two) then
+          ls_local=abs(ls_local)
          else
-          print *,"dir invalid"
+          print *,"sign_conflict_local invalid"
           stop
          endif
+        else if ((sign_conflict_local.eq.zero).or. &
+                 (sign_conflict_local.eq.three).or. &
+                 (abs(ls_local).gt.dx3D(1))) then
 
-         if (i_norm.eq.FSI_growlo(dir)) then
-          mminus=0
-         else if ((i_norm.gt.FSI_growlo(dir)).and. &
-                  (i_norm.le.FSI_growhi(dir))) then
-          do nc=1,NCOMP_FSI
-           data_minus(nc)=old_FSIdata(i-ii,j-jj,k-kk,ibase+nc)
-          enddo
-          mminus=NINT(data_minus(FSI_EXTRAP_FLAG+1))
-          LSMINUS=data_minus(FSI_LEVELSET+1)
-          xminus=xdata3D(i-ii,j-jj,k-kk,dir)
-         else 
-          print *,"i_norm invalid"
-          stop
-         endif
+         do dir=1,3
+
+          ii=0
+          jj=0
+          kk=0
+          if (dir.eq.1) then
+           i_norm=i
+           ii=1
+          else if (dir.eq.2) then
+           i_norm=j
+           jj=1
+          else if (dir.eq.3) then
+           i_norm=k
+           kk=1
+          else
+           print *,"dir invalid"
+           stop
+          endif
+
+          if (i_norm.eq.FSI_growlo(dir)) then
+           mminus=0
+          else if ((i_norm.gt.FSI_growlo(dir)).and. &
+                   (i_norm.le.FSI_growhi(dir))) then
+           do nc=1,NCOMP_FSI
+            data_minus(nc)=old_FSIdata(i-ii,j-jj,k-kk,ibase+nc)
+           enddo
+           mminus=NINT(data_minus(FSI_EXTRAP_FLAG+1))
+           LSMINUS=data_minus(FSI_LEVELSET+1)
+           xminus=xdata3D(i-ii,j-jj,k-kk,dir)
+          else 
+           print *,"i_norm invalid"
+           stop
+          endif
     
-         if (i_norm.eq.FSI_growhi(dir)) then
-          mplus=0
-         else if ((i_norm.ge.FSI_growlo(dir)).and. &
-                  (i_norm.lt.FSI_growhi(dir))) then
-          do nc=1,NCOMP_FSI
-           data_plus(nc)=old_FSIdata(i+ii,j+jj,k+kk,ibase+nc)
-          enddo
-          mplus=NINT(data_plus(FSI_EXTRAP_FLAG+1))
-          LSPLUS=data_plus(FSI_LEVELSET+1)
-          xplus=xdata3D(i+ii,j+jj,k+kk,dir)
-         else 
-          print *,"i_norm invalid"
-          stop
-         endif
+          if (i_norm.eq.FSI_growhi(dir)) then
+           mplus=0
+          else if ((i_norm.ge.FSI_growlo(dir)).and. &
+                   (i_norm.lt.FSI_growhi(dir))) then
+           do nc=1,NCOMP_FSI
+            data_plus(nc)=old_FSIdata(i+ii,j+jj,k+kk,ibase+nc)
+           enddo
+           mplus=NINT(data_plus(FSI_EXTRAP_FLAG+1))
+           LSPLUS=data_plus(FSI_LEVELSET+1)
+           xplus=xdata3D(i+ii,j+jj,k+kk,dir)
+          else 
+           print *,"i_norm invalid"
+           stop
+          endif
 
-         ! sign_valid==1 if mask=2,3,10,11   sign_valid==0 if mask=0,1
-         if ((sign_valid(mplus).eq.1).and. &
-             (sign_valid(mminus).eq.1)) then
-          if (abs(LSPLUS).le.abs(LSMINUS)) then
+          ! sign_valid==1 if mask=2,3,10,11   sign_valid==0 if mask=0,1
+          if ((sign_valid(mplus).eq.1).and. &
+              (sign_valid(mminus).eq.1)) then
+           if (abs(LSPLUS).le.abs(LSMINUS)) then
+            sign_defined_local=sign_funct(LSPLUS)
+            if ((abs(LSPLUS).le.abs(LSsign)).or. &
+                (sign_defined.eq.0)) then
+             sign_defined=sign_defined_local
+             LSsign=LSPLUS
+             if (sign_valid(mask_local).eq.0) then
+              ls_local=sign_defined*abs(ls_local)
+              sign_status_changed=1
+             else if (sign_valid(mask_local).eq.1) then
+              ! do nothing
+             else
+              print *,"mask_local invalid"
+              stop
+             endif
+            endif
+           else if (abs(LSPLUS).ge.abs(LSMINUS)) then
+            sign_defined_local=sign_funct(LSMINUS)
+            if ((abs(LSMINUS).le.abs(LSsign)).or. &
+                (sign_defined.eq.0)) then
+             sign_defined=sign_defined_local
+             LSsign=LSMINUS
+             if (sign_valid(mask_local).eq.0) then
+              ls_local=sign_defined*abs(ls_local)
+              sign_status_changed=1
+             else if (sign_valid(mask_local).eq.1) then
+              ! do nothing
+             else
+              print *,"mask_local invalid"
+              stop
+             endif
+            endif
+           else
+            print *,"LSPLUS or LSMINUS invalid"
+            print *,"LSPLUS, LSMINUS ",LSPLUS,LSMINUS
+            print *,"dir=",dir
+            print *,"i,j,k ",i,j,k
+            print *,"mask_local=",mask_local
+            print *,"ls_local=",ls_local
+            print *,"mplus=",mplus
+            print *,"mminus=",mminus
+            stop
+           endif
+          else if ((sign_valid(mplus).eq.1).and. &
+                   (sign_valid(mminus).eq.0)) then
            sign_defined_local=sign_funct(LSPLUS)
            if ((abs(LSPLUS).le.abs(LSsign)).or. &
                (sign_defined.eq.0)) then
@@ -12615,7 +12622,8 @@ IMPLICIT NONE
              stop
             endif
            endif
-          else if (abs(LSPLUS).ge.abs(LSMINUS)) then
+          else if ((sign_valid(mplus).eq.0).and. &
+                   (sign_valid(mminus).eq.1)) then
            sign_defined_local=sign_funct(LSMINUS)
            if ((abs(LSMINUS).le.abs(LSsign)).or. &
                (sign_defined.eq.0)) then
@@ -12631,150 +12639,108 @@ IMPLICIT NONE
              stop
             endif
            endif
-          else
-           print *,"LSPLUS or LSMINUS invalid"
-           print *,"LSPLUS, LSMINUS ",LSPLUS,LSMINUS
-           print *,"dir=",dir
-           print *,"i,j,k ",i,j,k
-           print *,"mask_local=",mask_local
-           print *,"ls_local=",ls_local
-           print *,"mplus=",mplus
-           print *,"mminus=",mminus
-           stop
-          endif
-         else if ((sign_valid(mplus).eq.1).and. &
-                  (sign_valid(mminus).eq.0)) then
-          sign_defined_local=sign_funct(LSPLUS)
-          if ((abs(LSPLUS).le.abs(LSsign)).or. &
-              (sign_defined.eq.0)) then
-           sign_defined=sign_defined_local
-           LSsign=LSPLUS
-           if (sign_valid(mask_local).eq.0) then
-            ls_local=sign_defined*abs(ls_local)
-            sign_status_changed=1
-           else if (sign_valid(mask_local).eq.1) then
-            ! do nothing
-           else
-            print *,"mask_local invalid"
-            stop
-           endif
-          endif
-         else if ((sign_valid(mplus).eq.0).and. &
-                  (sign_valid(mminus).eq.1)) then
-          sign_defined_local=sign_funct(LSMINUS)
-          if ((abs(LSMINUS).le.abs(LSsign)).or. &
-              (sign_defined.eq.0)) then
-           sign_defined=sign_defined_local
-           LSsign=LSMINUS
-           if (sign_valid(mask_local).eq.0) then
-            ls_local=sign_defined*abs(ls_local)
-            sign_status_changed=1
-           else if (sign_valid(mask_local).eq.1) then
-            ! do nothing
-           else
-            print *,"mask_local invalid"
-            stop
-           endif
-          endif
-         else if ((sign_valid(mplus).eq.0).and. &
-                  (sign_valid(mminus).eq.0)) then
-          ! do nothing
-         else
-          print *,"mplus or mminus invalid"
-          stop
-         endif
-
-        enddo ! dir=1..3
-
-        if (vel_valid(mask_local).eq.0) then 
-
-         do dir=1,NCOMP_FSI
-          weight_top(dir)=zero
-         enddo
-         weight_bot=zero
-         do i1=-3,3
-         do j1=-3,3
-         do k1=-3,3
-          if ((i+i1.ge.FSI_growlo(1)).and.(i+i1.le.FSI_growhi(1)).and. &
-              (j+j1.ge.FSI_growlo(2)).and.(j+j1.le.FSI_growhi(2)).and. &
-              (k+k1.ge.FSI_growlo(3)).and.(k+k1.le.FSI_growhi(3))) then
-           mask_node=NINT(old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_EXTRAP_FLAG+1))
-           if (vel_valid(mask_node).eq.1) then
-            weight=VOFTOL*dx3D(1)
-            do dir=1,3
-             xc(dir)=xdata3D(i+i1,j+j1,k+k1,dir)
-             weight=weight+(xc(dir)-xcen(dir))**2
-            enddo
-            if (weight.gt.zero) then
-             ! do nothing
-            else
-             print *,"weight invalid"
-             stop
-            endif
-            weight=one/weight
-            do dir=1,3
-             weight_top(FSI_VELOCITY+dir)=weight_top(FSI_VELOCITY+dir)+ &
-              old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_VELOCITY+dir)*weight
-            enddo
-             ! temperature
-            weight_top(FSI_TEMPERATURE+1)=weight_top(FSI_TEMPERATURE+1)+ &
-              old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_TEMPERATURE+1)*weight
-      
-            weight_bot=weight_bot+weight
-           else if (vel_valid(mask_node).eq.0) then
-            ! do nothing
-           else
-            print *,"vel_valid(mask_node) invalid"
-            stop
-           endif
-          endif ! i1,j1,k1 in grid
-         enddo
-         enddo
-         enddo ! i1,j1,k1
-
-         if (weight_bot.gt.zero) then
-          do dir=1,3
-           FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)= &
-                   weight_top(FSI_VELOCITY+dir)/weight_bot
-          enddo
-          FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)= &
-                  weight_top(FSI_TEMPERATURE+1)/weight_bot
-          if (CTML_force_model.eq.2) then 
-           print *,"CTML_force_model.eq.2 not supported"
-           stop
-          else if (CTML_force_model.eq.0) then ! Goldstein et al
+          else if ((sign_valid(mplus).eq.0).and. &
+                   (sign_valid(mminus).eq.0)) then
            ! do nothing
           else
-           print *,"CTML_force_model invalid"
+           print *,"mplus or mminus invalid"
            stop
           endif
+
+         enddo ! dir=1..3
+
+         if (vel_valid(mask_local).eq.0) then 
+
+          do dir=1,NCOMP_FSI
+           weight_top(dir)=zero
+          enddo
+          weight_bot=zero
+          do i1=-3,3
+          do j1=-3,3
+          do k1=-3,3
+           if ((i+i1.ge.FSI_growlo(1)).and.(i+i1.le.FSI_growhi(1)).and. &
+               (j+j1.ge.FSI_growlo(2)).and.(j+j1.le.FSI_growhi(2)).and. &
+               (k+k1.ge.FSI_growlo(3)).and.(k+k1.le.FSI_growhi(3))) then
+            mask_node=NINT(old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_EXTRAP_FLAG+1))
+            if (vel_valid(mask_node).eq.1) then
+             weight=VOFTOL*dx3D(1)
+             do dir=1,3
+              xc(dir)=xdata3D(i+i1,j+j1,k+k1,dir)
+              weight=weight+(xc(dir)-xcen(dir))**2
+             enddo
+             if (weight.gt.zero) then
+              ! do nothing
+             else
+              print *,"weight invalid"
+              stop
+             endif
+             weight=one/weight
+             do dir=1,3
+              weight_top(FSI_VELOCITY+dir)=weight_top(FSI_VELOCITY+dir)+ &
+               old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_VELOCITY+dir)*weight
+             enddo
+              ! temperature
+             weight_top(FSI_TEMPERATURE+1)=weight_top(FSI_TEMPERATURE+1)+ &
+               old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_TEMPERATURE+1)*weight
+      
+             weight_bot=weight_bot+weight
+            else if (vel_valid(mask_node).eq.0) then
+             ! do nothing
+            else
+             print *,"vel_valid(mask_node) invalid"
+             stop
+            endif
+           endif ! i1,j1,k1 in grid
+          enddo
+          enddo
+          enddo ! i1,j1,k1
+
+          if (weight_bot.gt.zero) then
+           do dir=1,3
+            FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)= &
+                   weight_top(FSI_VELOCITY+dir)/weight_bot
+           enddo
+           FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)= &
+                  weight_top(FSI_TEMPERATURE+1)/weight_bot
+           if (CTML_force_model.eq.2) then 
+            print *,"CTML_force_model.eq.2 not supported"
+            stop
+           else if (CTML_force_model.eq.0) then ! Goldstein et al
+            ! do nothing
+           else
+            print *,"CTML_force_model invalid"
+            stop
+           endif
 
            ! FORCE is not extended!
 
-          if (CTML_force_model.eq.2) then ! pres-vel
-           print *,"CTML_force_model.eq.2 not supported"
-           stop
-          else if (CTML_force_model.eq.0) then ! Goldstein et al
+           if (CTML_force_model.eq.2) then ! pres-vel
+            print *,"CTML_force_model.eq.2 not supported"
+            stop
+           else if (CTML_force_model.eq.0) then ! Goldstein et al
+            ! do nothing
+           else
+            print *,"CTML_force_model invalid"
+            stop
+           endif
+          
+          else if (weight_bot.eq.zero) then
            ! do nothing
           else
-           print *,"CTML_force_model invalid"
+           print *,"weight_box is NaN"
            stop
-          endif
-          
-         else if (weight_bot.eq.zero) then
+          endif 
+
+         else if (vel_valid(mask_local).eq.1) then
           ! do nothing
          else
-          print *,"weight_box is NaN"
+          print *,"vel_valid(mask_local) invalid"
           stop
-         endif 
-
-        else if (vel_valid(mask_local).eq.1) then
-         ! do nothing
+         endif
         else
-         print *,"vel_valid(mask_local) invalid"
+         print *,"sign_conflict_local or ls_local invalid"
          stop
         endif
-
        else
         print *,"sign_valid(override_MASK) invalid"
         stop
