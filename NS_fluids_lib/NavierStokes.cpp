@@ -7425,7 +7425,9 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
    int ibase=partid*NCOMP_FSI;
    setVal_localMF(FSI_MF,0.0,ibase+FSI_VELOCITY,3,ngrow_make_distance); 
    setVal_localMF(FSI_MF,-99999.0,ibase+FSI_LEVELSET,1,ngrow_make_distance);
-   setVal_localMF(FSI_MF,0.0,ibase+FSI_SIGN_QUALITY,1,ngrow_make_distance);
+   // bit 0 = 1 if +sign hits
+   // bit 1 = 1 if -sign hits
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_SIGN_CONFLICT,1,ngrow_make_distance);
    setVal_localMF(FSI_MF,0.0,ibase+FSI_TEMPERATURE,1,ngrow_make_distance);
    setVal_localMF(FSI_MF,FSI_NOTHING_VALID,
 		  ibase+FSI_EXTRAP_FLAG,1,ngrow_make_distance);
@@ -8724,10 +8726,12 @@ void NavierStokes::ns_header_msg_level(
       im_part*num_state_material+ENUM_TEMPERATUREVAR,
       ibase+FSI_TEMPERATURE,1,ngrow_make_distance);
 
-     // flag (mask) and sign quality
+     // flag (mask) and sign conflict indicator
     if (FSI_operation==2) {
 
-     setVal_localMF(FSI_MF,0.0,ibase+FSI_SIGN_QUALITY,1,ngrow_make_distance); 
+     // bit 0 = 1 if +sign hits
+     // bit 1 = 1 if -sign hits
+     setVal_localMF(FSI_MF,0.0,ibase+FSI_SIGN_CONFLICT,1,ngrow_make_distance); 
 
      if ((level>0)||
          ((level==0)&&(cur_time>0.0))) {

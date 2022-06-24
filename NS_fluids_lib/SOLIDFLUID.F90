@@ -737,8 +737,8 @@
 
          FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)= &
           FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_LEVELSET+1) !LS
-         FSIdata3D(i,j,k,ibase+FSI_SIGN_QUALITY+1)= &
-          FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_SIGN_QUALITY+1) !LS
+         FSIdata3D(i,j,k,ibase+FSI_SIGN_CONFLICT+1)= &
+          FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_SIGN_CONFLICT+1) 
          FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)= &
           FSIdata(D_DECL(i2d,j2d,k2d),ibase+FSI_TEMPERATURE+1) !T
          FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)= &
@@ -962,8 +962,8 @@
           ibase=(partid-1)*NCOMP_FSI
           FSIdata(D_DECL(i,j,k),ibase+FSI_LEVELSET+1)= &
            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_LEVELSET+1) ! LS
-          FSIdata(D_DECL(i,j,k),ibase+FSI_SIGN_QUALITY+1)= &
-           FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_SIGN_QUALITY+1) ! LS
+          FSIdata(D_DECL(i,j,k),ibase+FSI_SIGN_CONFLICT+1)= &
+           FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_SIGN_CONFLICT+1) 
           FSIdata(D_DECL(i,j,k),ibase+FSI_TEMPERATURE+1)= &
            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_TEMPERATURE+1) ! T
           FSIdata(D_DECL(i,j,k),ibase+FSI_EXTRAP_FLAG+1)= &
@@ -1680,11 +1680,11 @@
       Varname(ih:ih)='S'
       call dumpstring(Varname)
 
-       ! FSI_SIGN_QUALITY
+       ! FSI_SIGN_CONFLICT
       ih=1
       Varname='S'
       ih=ih+1
-      Varname(ih:ih)='Q'
+      Varname(ih:ih)='C'
       call dumpstring(Varname)
 
        ! FSI_EXTRAP_FLAG
@@ -1747,7 +1747,7 @@
 
        zone_gb(iz_gb)%var(3+1,i,j,k)=aux_FSIdata3D(i,j,k,FSI_LEVELSET+1)
        zone_gb(iz_gb)%var(3+2,i,j,k)= &
-         aux_FSIdata3D(i,j,k,FSI_SIGN_QUALITY+1)
+         aux_FSIdata3D(i,j,k,FSI_SIGN_CONFLICT+1)
        zone_gb(iz_gb)%var(3+3,i,j,k)= &
          aux_FSIdata3D(i,j,k,FSI_EXTRAP_FLAG+1)
       enddo
