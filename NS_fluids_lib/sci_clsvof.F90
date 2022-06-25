@@ -8257,7 +8257,10 @@ REAL_T, dimension(3) :: velparm
   enddo
 
   call global_checkinline(nnode,xnode,adjusted_tol,xc, &
-        inplane,unsigned_mindist,xclosest,normal_closest)
+        inplane, &  ! intent(inout)
+        unsigned_mindist, & ! intent(inout)
+        xclosest, & ! intent(inout)
+        normal_closest) ! intent(inout)
 
  else
   print *,"inode invalid in checkinlineBIG"
@@ -11024,15 +11027,12 @@ IMPLICIT NONE
   INTEGER_T sign_status_changed
   INTEGER_T num_elements
   INTEGER_T num_elements_container
-  REAL_T LSMIN_debug
-  REAL_T LSMAX_debug
 
   REAL_T element_scale
   REAL_T test_scale
   REAL_T test_scale_max
   REAL_T eul_over_lag_scale
 
-  INTEGER_T mask_debug
   INTEGER_T debug_all
   INTEGER_T mask1,mask2
   INTEGER_T null_intersection
@@ -11303,10 +11303,6 @@ IMPLICIT NONE
    call checkbound3D_array(FSI_lo,FSI_hi, &
     masknbr3D, &
     ngrow_make_distance,-1,521)
-
-   mask_debug=0
-   LSMIN_debug=1.0D+10
-   LSMAX_debug=-1.0D+10
 
    if (FSI_operation.eq.2) then ! make distance in narrow band
 
@@ -11948,7 +11944,8 @@ IMPLICIT NONE
           else if (mask_local.eq.FSI_FINE_VEL_VALID) then 
            ! do nothing
           else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
-           ! do nothing
+           print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
+           stop
           else
            print *,"mask_local invalid"
            stop
@@ -11994,9 +11991,11 @@ IMPLICIT NONE
             mask_local=FSI_FINE_VEL_VALID
            else if (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID) then
             mask_local=FSI_COARSE_LS_SIGN_FINE_VEL_VALID
+           else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
+            print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
+            stop
            else if ((mask_local.eq.FSI_FINE_VEL_VALID).or. &
-                    (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).or. &
-                    (mask_local.eq.FSI_FINE_SIGN_VEL_VALID)) then
+                    (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID)) then
             ! do nothing
            else
             print *,"mask_local invalid"
@@ -12016,6 +12015,16 @@ IMPLICIT NONE
            endif 
 
            if (hitflag.eq.1) then
+
+            if ((sign_conflict_local.eq.one).or. &
+                (sign_conflict_local.eq.two).or. &
+                (sign_conflict_local.eq.three)) then
+             ! do nothing
+            else
+             print *,"sign_conflict_local invalid"
+             stop
+            endif
+
              ! The "-" below asserts that ls_local now points into the solid
             ls_local=-hitsign*abs(ls_local)
 
@@ -12024,6 +12033,9 @@ IMPLICIT NONE
                 (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).or. &
                 (mask_local.eq.FSI_FINE_VEL_VALID)) then
              mask_local=FSI_COARSE_LS_SIGN_FINE_VEL_VALID
+            else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
+             print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
+             stop
             else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then 
              print *,"not a doubly wetted element"
              stop
@@ -12127,8 +12139,6 @@ IMPLICIT NONE
 
          else if ( ((mask_local.eq.FSI_FINE_VEL_VALID).and. &
                     (unsigned_mindist.ge.abs(ls_local))).or. &
-                   ((mask_local.eq.FSI_FINE_SIGN_VEL_VALID).and. &
-                    (unsigned_mindist.ge.abs(ls_local))).or. &
                    ((mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID).and. &
                     (unsigned_mindist.ge.abs(ls_local))).or. &
                    ((mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID).and. &
@@ -12218,9 +12228,11 @@ IMPLICIT NONE
        ls_local=8.0*dx3D(1)
       else if (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID ) then
        ! do nothing, just use the value from fill coarse patch
+      else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
+       print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
+       stop
       else if ((mask_local.eq.FSI_FINE_VEL_VALID ).or. &
                (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).or. &
-               (mask_local.eq.FSI_FINE_SIGN_VEL_VALID).or. & 
                (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID).or. & 
                (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID)) then
        ! do nothing
@@ -12251,8 +12263,10 @@ IMPLICIT NONE
         ! do nothing
        else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then
         ! do nothing
-       else if ((mask_local.eq.FSI_FINE_SIGN_VEL_VALID).or. &
-                (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
+       else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
+        print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
+        stop
+       else if ((mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
                 (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).or. &
                 (mask_local.eq.FSI_NOTHING_VALID).or. &
                 (mask_local.eq.FSI_FINE_VEL_VALID)) then
@@ -12295,96 +12309,26 @@ IMPLICIT NONE
 
       ls_local=FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)
       mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
+
       if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then
         ! LS > 0 in the thin shell which is the fluid region.
        ls_local=ls_local+wallthick*dx3D(1)
       else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
        ! do nothing
+      else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
+       print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
+       stop
       else if ((mask_local.eq.FSI_NOTHING_VALID).or. &
                (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
                (mask_local.eq.FSI_FINE_VEL_VALID).or. &
-               (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).or. &
-               (mask_local.eq.FSI_FINE_SIGN_VEL_VALID)) then
+               (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID)) then
        ! do nothing
       else
        print *,"mask_local invalid"
        stop
       endif
 
-      if ((ctml_part_id.ge.1).and. &
-          (ctml_part_id.le.CTML_NPARTS)) then
-
-       if (doubly_wetted_solid_inside.eq.1) then ! default
-        ! do nothing
-       else
-        print *,"expecting doubly_wetted_solid_inside.eq.1"
-        stop
-       endif
-      else if (ctml_part_id.eq.0) then
-       ! do nothing
-      else
-       print *,"ctml_part_id invalid"
-       stop
-      endif
-
-      if (doubly_wetted_solid_inside.eq.1) then ! default
-
-       if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
-        ! do nothing
-       else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then
-        ! do nothing
-       else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then
-        ! do nothing
-       else if ((mask_local.eq.FSI_NOTHING_VALID).or. &
-                (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
-                (mask_local.eq.FSI_FINE_VEL_VALID).or. &
-                (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID)) then
-        ! do nothing
-       else
-        print *,"mask_local invalid"
-        stop
-       endif
-
-      else if (doubly_wetted_solid_inside.eq.0) then !fluid region is filament
-
-       if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then
-        ! do nothing
-       else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then
-        ls_local=-ls_local
-       else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then
-        ls_local=-ls_local
-       else if ((mask_local.eq.FSI_NOTHING_VALID).or. &
-                (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
-                (mask_local.eq.FSI_FINE_VEL_VALID).or. &
-                (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID)) then
-        ! do nothing
-       else
-        print *,"mask_local invalid"
-        stop
-       endif
-
-      else
-       print *,"doubly_wetted_solid_inside invalid"
-       stop
-      endif
-
       FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local
-
-      if (sign_valid(mask_local).eq.1) then
-       if (ls_local.lt.LSMIN_debug) then
-        LSMIN_debug=ls_local
-        mask_debug=mask_local
-       endif
-       if (ls_local.gt.LSMAX_debug) then
-        LSMAX_debug=ls_local
-        mask_debug=mask_local
-       endif
-      else if (sign_valid(mask_local).eq.0) then
-       ! do nothing
-      else
-       print *,"sign_valid(mask_local) invalid"
-       stop
-      endif
 
      else if ((mask1.eq.1).and.(mask2.eq.0)) then
       ! do nothing
@@ -12759,22 +12703,6 @@ IMPLICIT NONE
        stop
       endif
 
-      if (sign_valid(new_mask_local).eq.1) then
-       if (ls_local.lt.LSMIN_debug) then
-        LSMIN_debug=ls_local
-        mask_debug=new_mask_local
-       endif
-       if (ls_local.gt.LSMAX_debug) then
-        LSMAX_debug=ls_local
-        mask_debug=new_mask_local
-       endif
-      else if (sign_valid(new_mask_local).eq.0) then
-       ! do nothing
-      else
-       print *,"new_mask_local invalid"
-       stop
-      endif
-
       FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=new_mask_local 
       FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local 
 
@@ -12802,9 +12730,6 @@ IMPLICIT NONE
    if (isout.eq.0) then
     ! do nothing
    else if (isout.eq.1) then
-    print *,"LSMIN_debug=",LSMIN_debug
-    print *,"LSMAX_debug=",LSMAX_debug
-    print *,"mask_debug=",mask_debug
     print *,"END: CLSVOF_InitBox"
     print *,"FSI_operation=",FSI_operation
     print *,"touch_flag=",touch_flag

@@ -44,7 +44,6 @@ namespace amrex{
        const Real* damping_coefficient,
        const int* num_local_aux_grids,
        const int* ZEYU_DCA_SELECT,
-       const int* doubly_wetted_solid_inside,
        const Real* denfact,
        const Real* velfact,
        int* n_sites,
