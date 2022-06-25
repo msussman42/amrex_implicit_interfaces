@@ -10948,7 +10948,7 @@ IMPLICIT NONE
 
   REAL_T dxBB(3) ! set in find_grid_bounding_box
   REAL_T dxBB_min
-  REAL_T delta_cutoff
+  REAL_T FSI_delta_cutoff
 
   INTEGER_T :: ielem
   INTEGER_T :: ielem_container
@@ -10992,6 +10992,7 @@ IMPLICIT NONE
   INTEGER_T :: ii,jj,kk
   INTEGER_T :: hitflag
   REAL_T :: phiside
+  REAL_T :: phicen
   REAL_T :: testdist
   REAL_T :: hitsign
   REAL_T :: totaldist
@@ -11033,7 +11034,6 @@ IMPLICIT NONE
 
   INTEGER_T mask_debug
   INTEGER_T debug_all
-  INTEGER_T in_the_interior
   INTEGER_T mask1,mask2
   INTEGER_T null_intersection
   INTEGER_T ctml_part_id
@@ -11460,7 +11460,7 @@ IMPLICIT NONE
        dxBB_min=dxBB(dir)
       endif
      enddo
-     delta_cutoff=3.0d0*dxBB_min
+     FSI_delta_cutoff=3.0d0*dxBB_min
 
      if (test_scale_max.gt.zero) then
       eul_over_lag_scale=min(one,dxBB_min/test_scale_max)
@@ -11487,14 +11487,11 @@ IMPLICIT NONE
 
      if (null_intersection.eq.0) then
 
-      in_the_interior=1
+       ! sanity check
       do dir=1,3
        gridlenBB(dir)=gridhiBB(dir)-gridloBB(dir)+1
-       if ((gridlenBB(dir).ge.0).and. &
-           (gridlenBB(dir).lt.2*local_iband)) then
-        in_the_interior=0
-       else if ((gridlenBB(dir).ge.2*local_iband).and. &
-                (gridlenBB(dir).le.2048)) then
+       if ((gridlenBB(dir).ge.1).and. &
+           (gridlenBB(dir).le.2048)) then
         ! do nothing
        else
         print *,"gridlenBB(dir) invalid"
@@ -11760,28 +11757,28 @@ IMPLICIT NONE
            ! normal points from solid to fluid
            ! phi=n dot (x-xnot)
            ! phi>0 in the fluid (sign will be switched later)
-           n_dot_x=zero
+           phicen=zero
            phiside=zero
            do dir=1,3
              ! levelset at the center cell
-            n_dot_x=n_dot_x+normal(dir)*(xx(dir)-xnot(dir))
+            phicen=phicen+normal(dir)*(xx(dir)-xnot(dir))
              ! levelset at the side cell
             phiside=phiside+normal(dir)*(xside(dir)-xnot(dir))
            enddo
-           if ((n_dot_x.eq.zero).and. &
+           if ((phicen.eq.zero).and. &
                (phiside.eq.zero)) then
             ! do nothing
-           else if (n_dot_x*phiside.gt.zero) then
+           else if (phicen*phiside.gt.zero) then
             ! do nothing (no crossing)
-           else if (n_dot_x*phiside.le.zero) then
+           else if (phicen*phiside.le.zero) then
             mag_ncrit=zero
             do dir=1,3
-             if (n_dot_x.gt.phiside) then
-              ncrit(dir)=(xx(dir)-xside(dir))
-             else if (n_dot_x.lt.phiside) then
+             if (phicen.gt.phiside) then ! i.e. phicen>=0 (fluid), phiside<=0
+              ncrit(dir)=(xx(dir)-xside(dir)) 
+             else if (phicen.lt.phiside) then ! phicen<=0, phiside>=0 (fluid)
               ncrit(dir)=(xside(dir)-xx(dir))
              else
-              print *,"n_dot_x or phiside NaN"
+              print *,"phicen or phiside NaN"
               stop
              endif
              mag_ncrit=mag_ncrit+ncrit(dir)**2
@@ -11798,15 +11795,15 @@ IMPLICIT NONE
             do dir=1,3
              if (phiside.eq.zero) then
               xcrit(dir)=xside(dir)
-             else if (n_dot_x.eq.zero) then
+             else if (phicen.eq.zero) then
               xcrit(dir)=xx(dir)
              else if ((phiside.ne.zero).and. &
-                      (n_dot_x.ne.zero)) then
+                      (phicen.ne.zero)) then
               xcrit(dir)=(abs(phiside)*xx(dir)+ &
-                           abs(n_dot_x)*xside(dir))/  &
-                          (abs(n_dot_x)+abs(phiside))
+                           abs(phicen)*xside(dir))/  &
+                          (abs(phicen)+abs(phiside))
              else
-              print *,"phiside or n_dot_x is NaN"
+              print *,"phiside or phicen is NaN"
               stop
              endif
             enddo  ! dir=1..3
@@ -11938,7 +11935,7 @@ IMPLICIT NONE
           print *,"hitflag invalid"
           stop
          endif 
-
+FIX ME 
          if ((mask_local.eq.FSI_NOTHING_VALID).or. &  
              (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. & 
              (unsigned_mindist.lt.abs(ls_local))) then
@@ -12163,7 +12160,7 @@ IMPLICIT NONE
           ! FIX ME: delta function must be corrected so that
           ! perimeter measured from Eulerian and Lagrangian perspectives
           ! match.  (total forces should match too?)
-         FSIdata3D(i,j,k,ibase+FSI_SIZE+1)=hsprime(ls_local,delta_cutoff)
+         FSIdata3D(i,j,k,ibase+FSI_SIZE+1)=hsprime(ls_local,FSI_delta_cutoff)
          FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)=temp_local
 
         else if ((mask1.eq.1).and.(mask2.eq.0)) then
