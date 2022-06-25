@@ -9952,12 +9952,12 @@ INTEGER_T, intent(in) :: mask
 
 if ((mask.eq.FSI_FINE_SIGN_VEL_VALID).or. &  
     (mask.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID).or. &  
-    (mask.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID).or. &
-    (mask.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. & 
-    (mask.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID)) then 
+    (mask.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID)) then
  sign_valid=1
 else if ((mask.eq.FSI_NOTHING_VALID ).or. &
-         (mask.eq.FSI_FINE_VEL_VALID)) then
+         (mask.eq.FSI_FINE_VEL_VALID).or. &
+         (mask.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
+         (mask.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID)) then
  sign_valid=0
 else
  print *,"mask invalid"
@@ -11005,7 +11005,6 @@ IMPLICIT NONE
   REAL_T n_dot_x
   REAL_T mag_ncrit
   REAL_T mag_x
-  REAL_T mag_xproj
   REAL_T sign_conflict_local
   INTEGER_T ibase
   REAL_T ls_local
@@ -11015,15 +11014,21 @@ IMPLICIT NONE
   REAL_T, dimension(3) :: force_local
   REAL_T temp_local
   INTEGER_T nc
-  INTEGER_T sign_defined
-  INTEGER_T sign_defined_local
   INTEGER_T i_norm
   INTEGER_T ii_current
   INTEGER_T mminus,mplus
   REAL_T xminus,xplus
-  REAL_T LSsign,LSMINUS,LSPLUS
+  REAL_T LSMINUS,LSPLUS
   REAL_T data_minus(NCOMP_FSI)
   REAL_T data_plus(NCOMP_FSI)
+
+  REAL_T LS_sum
+  REAL_T grad_phi_norm_plus
+  REAL_T grad_phi_norm_minus
+  INTEGER_T sign_count,sign_valid_sten
+  REAL_T LS_fast_marching
+  REAL_T dx_fast_marching
+
   INTEGER_T sign_status_changed
   INTEGER_T num_elements
   INTEGER_T num_elements_container
@@ -12407,8 +12412,6 @@ IMPLICIT NONE
 
       if (sign_valid(mask_local).eq.0) then
 
-       sign_defined=0
-       LSsign=zero
        sign_status_changed=0
 
        call SUB_OVERRIDE_FSI_SIGN_LS_VEL_TEMP( &
@@ -12423,7 +12426,8 @@ IMPLICIT NONE
 
        if (sign_valid(override_MASK).eq.1) then
 
-        sign_status_changed=1
+        ! induces "new_mask_local=FSI_FINE_SIGN_VEL_VALID" below.
+        sign_status_changed=1 
         ls_local=override_LS
         do dir=1,3
          FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=override_VEL(dir)
@@ -12435,7 +12439,7 @@ IMPLICIT NONE
         if (((sign_conflict_local.eq.one).or. &
              (sign_conflict_local.eq.two)).and. &
             (abs(ls_local).le.dx3D(1))) then
-         mask_local=FSI_FINE_SIGN_VEL_VALID
+         ! induces "new_mask_local=FSI_FINE_SIGN_VEL_VALID" below.
          sign_status_changed=1
          if (sign_conflict_local.eq.one) then
           ls_local=-abs(ls_local)
@@ -12445,9 +12449,26 @@ IMPLICIT NONE
           print *,"sign_conflict_local invalid"
           stop
          endif
+        else if ((sign_conflict_local.eq.zero).and. &
+                 ((mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
+                  (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID))) then
+         ! induces "new_mask_local=FSI_FINE_SIGN_VEL_VALID" below.
+         sign_status_changed=1
         else if ((sign_conflict_local.eq.zero).or. &
                  (sign_conflict_local.eq.three).or. &
                  (abs(ls_local).gt.dx3D(1))) then
+
+          ! if sign_conflict_local==0,
+          !  LS=(b+c+d)/3
+          ! else
+          !  grad_phi_norm_plus=((|a|-b)^2+(|a|-c)^2+(|a|-d)^2)^.5
+          !  grad_phi_norm_minus=((-|a|-b)^2+(-|a|-c)^2+(-|a|-d)^2)^.5
+
+         LS_sum=zero
+         grad_phi_norm_plus=zero
+         grad_phi_norm_minus=zero
+     
+         sign_count=0
 
          do dir=1,3
 
@@ -12469,7 +12490,7 @@ IMPLICIT NONE
           endif
 
           if (i_norm.eq.FSI_growlo(dir)) then
-           mminus=0
+           mminus=FSI_NOTHING_VALID
           else if ((i_norm.gt.FSI_growlo(dir)).and. &
                    (i_norm.le.FSI_growhi(dir))) then
            do nc=1,NCOMP_FSI
@@ -12484,7 +12505,7 @@ IMPLICIT NONE
           endif
     
           if (i_norm.eq.FSI_growhi(dir)) then
-           mplus=0
+           mplus=FSI_NOTHING_VALID
           else if ((i_norm.ge.FSI_growlo(dir)).and. &
                    (i_norm.lt.FSI_growhi(dir))) then
            do nc=1,NCOMP_FSI
@@ -12498,41 +12519,24 @@ IMPLICIT NONE
            stop
           endif
 
-          ! sign_valid==1 if mask=2,3,10,11   sign_valid==0 if mask=0,1
+          ! sign_valid==1 if mask=
+          !   FSI_FINE_SIGN_VEL_VALID, 
+          !   FSI_DOUBLY_WETTED_SIGN_VEL_VALID, 
+          !   FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID.
+          ! sign_valid==0 if 
+          !   mask=FSI_NOTHING_VALID,
+          !   FSI_FINE_VEL_VALID,
+          !   FSI_COARSE_LS_SIGN_VEL_VALID, 
+          !   FSI_COARSE_LS_SIGN_FINE_VEL_VALID
           if ((sign_valid(mplus).eq.1).and. &
               (sign_valid(mminus).eq.1)) then
+           sign_valid_sten=1
            if (abs(LSPLUS).le.abs(LSMINUS)) then
-            sign_defined_local=sign_funct(LSPLUS)
-            if ((abs(LSPLUS).le.abs(LSsign)).or. &
-                (sign_defined.eq.0)) then
-             sign_defined=sign_defined_local
-             LSsign=LSPLUS
-             if (sign_valid(mask_local).eq.0) then
-              ls_local=sign_defined*abs(ls_local)
-              sign_status_changed=1
-             else if (sign_valid(mask_local).eq.1) then
-              ! do nothing
-             else
-              print *,"mask_local invalid"
-              stop
-             endif
-            endif
+            LS_fast_marching=LSPLUS
+            dx_fast_marching=(xplus-xcen(dir))**2
            else if (abs(LSPLUS).ge.abs(LSMINUS)) then
-            sign_defined_local=sign_funct(LSMINUS)
-            if ((abs(LSMINUS).le.abs(LSsign)).or. &
-                (sign_defined.eq.0)) then
-             sign_defined=sign_defined_local
-             LSsign=LSMINUS
-             if (sign_valid(mask_local).eq.0) then
-              ls_local=sign_defined*abs(ls_local)
-              sign_status_changed=1
-             else if (sign_valid(mask_local).eq.1) then
-              ! do nothing
-             else
-              print *,"mask_local invalid"
-              stop
-             endif
-            endif
+            LS_fast_marching=LSMINUS
+            dx_fast_marching=(xminus-xcen(dir))**2
            else
             print *,"LSPLUS or LSMINUS invalid"
             print *,"LSPLUS, LSMINUS ",LSPLUS,LSMINUS
@@ -12546,47 +12550,73 @@ IMPLICIT NONE
            endif
           else if ((sign_valid(mplus).eq.1).and. &
                    (sign_valid(mminus).eq.0)) then
-           sign_defined_local=sign_funct(LSPLUS)
-           if ((abs(LSPLUS).le.abs(LSsign)).or. &
-               (sign_defined.eq.0)) then
-            sign_defined=sign_defined_local
-            LSsign=LSPLUS
-            if (sign_valid(mask_local).eq.0) then
-             ls_local=sign_defined*abs(ls_local)
-             sign_status_changed=1
-            else if (sign_valid(mask_local).eq.1) then
-             ! do nothing
-            else
-             print *,"mask_local invalid"
-             stop
-            endif
-           endif
+           sign_valid_sten=1
+           LS_fast_marching=LSPLUS
+           dx_fast_marching=(xplus-xcen(dir))**2
           else if ((sign_valid(mplus).eq.0).and. &
                    (sign_valid(mminus).eq.1)) then
-           sign_defined_local=sign_funct(LSMINUS)
-           if ((abs(LSMINUS).le.abs(LSsign)).or. &
-               (sign_defined.eq.0)) then
-            sign_defined=sign_defined_local
-            LSsign=LSMINUS
-            if (sign_valid(mask_local).eq.0) then
-             ls_local=sign_defined*abs(ls_local)
-             sign_status_changed=1
-            else if (sign_valid(mask_local).eq.1) then
-             ! do nothing
-            else
-             print *,"mask_local invalid"
-             stop
-            endif
-           endif
+           sign_valid_sten=1
+           LS_fast_marching=LSMINUS
+           dx_fast_marching=(xminus-xcen(dir))**2
           else if ((sign_valid(mplus).eq.0).and. &
                    (sign_valid(mminus).eq.0)) then
-           ! do nothing
+           sign_valid_sten=0
           else
            print *,"mplus or mminus invalid"
            stop
           endif
 
+          if (sign_valid_sten.eq.1) then
+           if (dx_fast_marching.gt.zero) then
+            sign_count=sign_count+1
+            LS_sum=LS_sum+LS_fast_marching
+            grad_phi_norm_plus=grad_phi_norm_plus+ &
+             (LS_fast_marching-abs(ls_local))**2/dx_fast_marching
+            grad_phi_norm_minus=grad_phi_norm_minus+ &
+             (LS_fast_marching+abs(ls_local))**2/dx_fast_marching
+           else
+            print *,"dx_fast_marching invalid"
+            stop
+           endif
+          else if (sign_valid_sten.eq.0) then
+           ! do nothing
+          else
+           print *,"sign_valid_sten invalid"
+           stop
+          endif
+
          enddo ! dir=1..3
+
+         if ((sign_count.ge.1).and. &
+             (sign_count.le.3)) then
+          if (sign_conflict_local.eq.zero) then
+           ls_local=LS_sum/sign_count
+          else if ((sign_conflict_local.eq.one).or. &
+                   (sign_conflict_local.eq.two).or. & 
+                   (sign_conflict_local.eq.three)) then
+           grad_phi_norm_plus=abs(sqrt(grad_phi_norm_plus)-one)
+           grad_phi_norm_minus=abs(sqrt(grad_phi_norm_minus)-one)
+ 
+           if (grad_phi_norm_plus.le.grad_phi_norm_minus) then
+            ls_local=abs(ls_local)
+           else if (grad_phi_norm_plus.gt.grad_phi_norm_minus) then
+            ls_local=-abs(ls_local)
+           else
+            print *,"grad_phi_norm plus or minus invalid"
+            stop
+           endif
+          else
+           print *,"sign_conflict_local invalid"
+           stop
+          endif
+          ! induces "new_mask_local=FSI_FINE_SIGN_VEL_VALID" below.
+          sign_status_changed=1
+         else if (sign_count.eq.0) then
+          ! do nothing
+         else
+          print *,"sign_count invalid"
+          stop
+         endif
 
          if (vel_valid(mask_local).eq.0) then 
 
@@ -12676,6 +12706,7 @@ IMPLICIT NONE
           print *,"vel_valid(mask_local) invalid"
           stop
          endif
+
         else
          print *,"sign_conflict_local or ls_local invalid"
          stop
