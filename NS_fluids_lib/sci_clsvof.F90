@@ -11556,11 +11556,11 @@ IMPLICIT NONE
           eul_over_lag_scale, &
           xx, & ! target point at which the signed distance is sought.
           xclosest, &
-          xclosest_project, &
+          xclosest_project, & !intent(out)
           normal, & ! intent(in)
           normal_closest, & ! intent(out)
           ielem, &
-          element_node_edge_inplane, & 
+          element_node_edge_inplane, & !intent(out)
           FSI_mesh_type, &
           part_id, &
           nparts, &
@@ -11573,12 +11573,12 @@ IMPLICIT NONE
           ! check distance to the edges of a triangular element.
           call checkinlineBIG( &
            eul_over_lag_scale, &
-           xclosest_project, &
-           normal_closest, & ! initially the normal of the element.
+           xclosest_project, & !intent(inout)
+           normal_closest, & ! intent(inout), initially normal of element.
            inode,ielem, &
-           unsigned_mindist, &
+           unsigned_mindist, & !intent(inout)
            xx, & ! target point at which the signed distance is sought.
-           element_node_edge_inplane, & 
+           element_node_edge_inplane, &  !intent(inout)
            FSI_mesh_type, &
            part_id, &
            nparts, &
@@ -11586,12 +11586,12 @@ IMPLICIT NONE
           ! check distance to the nodes of a triangular element.
           ! normal_closest is the element normal.
           call checkinpointBIG( &
-           xclosest_project, &
-           normal_closest, &
+           xclosest_project, & !intent(inout)
+           normal_closest, & ! intent(inout)
            inode,ielem, &
-           unsigned_mindist, &
+           unsigned_mindist, & ! intent(inout)
            xx, & ! target point at which the signed distance is sought.
-           element_node_edge_inplane, & 
+           element_node_edge_inplane, &  !intent(inout)
            FSI_mesh_type, &
            part_id, &
            nparts, &
@@ -11659,8 +11659,8 @@ IMPLICIT NONE
            ! n dot x=normal_closest dot (xx-xclosest_project)
            ! n dot x = mag_x * mag_n * cos(theta)
 
-          if (mag_n.gt.zero) then
-           if (mag_n_test.gt.zero) then
+          if (mag_n.ge.zero) then
+           if (mag_n_test.ge.zero) then
             if (mag_x.ge.zero) then
 
              if (element_inplane.eq.1) then
@@ -11704,14 +11704,10 @@ IMPLICIT NONE
              stop
             endif
 
-           else if (mag_n_test.eq.zero) then
-            ! do nothing
            else
             print *,"mag_n_test invalid"
             stop
            endif
-          else if (mag_n.eq.zero) then
-           ! do nothing
           else
            print *,"mag_n invalid"
            stop
@@ -11836,13 +11832,13 @@ IMPLICIT NONE
              if (testdist.le.unsigned_mindist) then
               unsigned_mindist=testdist
               hitflag=1
-              if (n_dot_x.eq.zero) then
+              if (phicen.eq.zero) then
                hitsign=zero
                ! n_dot_x>0 in the fluid (sign will be switched later)
-              else if (n_dot_x.gt.zero) then
+              else if (phicen.gt.zero) then
                hitsign=one
                ! n_dot_x<0 in the solid (sign will be switched later)
-              else if (n_dot_x.lt.zero) then
+              else if (phicen.lt.zero) then
                hitsign=-one
               else
                print *,"n_dot_x bust"
@@ -11878,7 +11874,7 @@ IMPLICIT NONE
              stop
             endif  ! inplane
            else
-            print *,"n_dot_x or phiside is NaN"
+            print *,"phicen or phiside is NaN"
             stop
            endif 
           endif ! abs(ii)+abs(jj)+abs(kk)>0
@@ -11935,7 +11931,7 @@ IMPLICIT NONE
           print *,"hitflag invalid"
           stop
          endif 
-FIX ME 
+ 
          if ((mask_local.eq.FSI_NOTHING_VALID).or. &  
              (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. & 
              (unsigned_mindist.lt.abs(ls_local))) then
@@ -12027,11 +12023,13 @@ FIX ME
                 (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
                 (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).or. &
                 (mask_local.eq.FSI_FINE_VEL_VALID)) then
-             mask_local=FSI_FINE_VEL_VALID
+             mask_local=FSI_COARSE_LS_SIGN_FINE_VEL_VALID
             else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then 
-             ! do nothing
+             print *,"not a doubly wetted element"
+             stop
             else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
-             ! do nothing
+             print *,"not a doubly wetted element"
+             stop
             else 
              print *,"mask_local invalid"
              stop
