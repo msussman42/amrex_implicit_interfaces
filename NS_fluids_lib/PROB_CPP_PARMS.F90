@@ -143,7 +143,6 @@ stop
         ccdamping_coefficient, &
         ccnum_local_aux_grids, &
         ccZEYU_DCA_SELECT, &
-        ccdoubly_wetted_solid_inside, &
         ccdenfact, &
         ccvelfact, &
         ccn_sites, &
@@ -304,7 +303,6 @@ stop
       REAL_T, intent(in) :: ccdamping_coefficient(ccnum_materials)
       INTEGER_T, intent(in) :: ccnum_local_aux_grids
       INTEGER_T, intent(in) :: ccZEYU_DCA_SELECT
-      INTEGER_T, intent(in) :: ccdoubly_wetted_solid_inside
       INTEGER_T, intent(in) :: ccprescribe_temperature_outflow
       INTEGER_T, intent(in) :: ccsolidheat_flag
       INTEGER_T, intent(in) :: rz_flag
@@ -1145,13 +1143,6 @@ stop
       
       fort_ZEYU_DCA_SELECT=ccZEYU_DCA_SELECT
       
-      doubly_wetted_solid_inside=ccdoubly_wetted_solid_inside
-      if ((doubly_wetted_solid_inside.ne.0).and. &
-          (doubly_wetted_solid_inside.ne.1)) then
-       print *,"doubly_wetted_solid_inside invalid in override"
-       stop
-      endif
-      
       num_species_var=ccnum_species_var
       if (num_species_var.lt.MAX_NUM_SPECIES) then
        ! do nothing
@@ -1712,7 +1703,6 @@ stop
 
        print *,"fort: fort_num_local_aux_grids= ",fort_num_local_aux_grids
 
-       print *,"fort: doubly_wetted_solid_inside ",doubly_wetted_solid_inside
        print *,"fort: denfact,velfact,xblob,yblob,zblob ", &
         denfact,velfact,xblob,yblob,zblob
        print *,"fort: radblob,probtype,adv_dir,adv_vel,axis_dir ", &

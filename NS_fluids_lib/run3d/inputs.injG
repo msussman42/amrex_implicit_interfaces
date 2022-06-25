@@ -20,7 +20,6 @@ ns.num_materials=4
 ns.num_species_var=1
 ns.post_init_pressure_solve=0 
 ns.MOFITERMAX=15
-ns.doubly_wetted_solid_inside=1  # default
 
 # multigrid class
 mg.verbose = 0

@@ -893,7 +893,6 @@ Vector<int> NavierStokes::CTML_force_model;
 
 int NavierStokes::CTML_FSI_init = 0;
 
-int NavierStokes::doubly_wetted_solid_inside = 1; 
 int NavierStokes::elements_generated = 0; 
 
 // 0=take into account sound speed only at t=0 if compressible.
@@ -1382,12 +1381,6 @@ void fortran_parameters() {
  pp.query("inflow_pressure",inflow_pressure);
  pp.query("outflow_pressure",outflow_pressure);
  pp.query("period_time",period_time);
-
- int doubly_wetted_solid_inside=1;
- pp.query("doubly_wetted_solid_inside",doubly_wetted_solid_inside);
- if (!((doubly_wetted_solid_inside==1)||
-       (doubly_wetted_solid_inside==0)))
-  amrex::Error("doubly_wetted_solid_inside invalid");
 
  int num_species_var=0;
  int num_materials=0;
@@ -1912,7 +1905,6 @@ void fortran_parameters() {
   damping_coefficient_temp.dataPtr(),
   &num_local_aux_grids_temp,
   &ZEYU_DCA_SELECT_temp,
-  &doubly_wetted_solid_inside,
   &denfact,
   &velfact,
   &n_sites,
@@ -2811,11 +2803,6 @@ NavierStokes::read_params ()
 
     pp.query("adapt_quad_depth",adapt_quad_depth);
 
-    pp.query("doubly_wetted_solid_inside",doubly_wetted_solid_inside);
-    if (!((doubly_wetted_solid_inside==1)||
-	  (doubly_wetted_solid_inside==0)))
-     amrex::Error("doubly_wetted_solid_inside invalid");
-
     law_of_the_wall.resize(nmat);
     wall_model_velocity.resize(nmat);
     interface_mass_transfer_model.resize(2*nten);
@@ -3148,8 +3135,6 @@ NavierStokes::read_params ()
 	     FSI_bounding_box_ngrow[i] << '\n';
      }
 
-     std::cout << "doubly_wetted_solid_inside " << 
-	     doubly_wetted_solid_inside << '\n';
      for (int i=0;i<nmat;i++) {
       std::cout << "law_of_the_wall i=" << i << " " << 
 	      law_of_the_wall[i] << '\n';
