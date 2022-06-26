@@ -12217,80 +12217,78 @@ IMPLICIT NONE
      mask1=NINT(masknbr3D(i,j,k,1))
      mask2=NINT(masknbr3D(i,j,k,2))
 
-     ! mask2==1 if (i,j,k) interior to tile
-     ! mask1==0 if (i,j,k) is exterior to tile and is a
-     !  coarse/fine ghost cell.
-     if ((mask1.eq.0).or.(mask2.eq.1)) then
+     if ((mask1.eq.1).and. &
+         (mask2.eq.1)) then
+      ! do nothing
+     else
+      print *,"expecting mask1=mask2=1"
+      print *,"mask1: ",mask1
+      print *,"mask2: ",mask2
+      stop
+     endif
 
-      ls_local=FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)
-      mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
+     ls_local=FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)
+     mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
 
-      if (mask_local.eq.FSI_NOTHING_VALID) then
-       ls_local=8.0*dx3D(1)
-      else if (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID ) then
-       ! do nothing, just use the value from fill coarse patch
+     if (mask_local.eq.FSI_NOTHING_VALID) then
+      ls_local=8.0*dx3D(1)
+     else if (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID ) then
+      ! do nothing, just use the value from fill coarse patch
+     else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
+      print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
+      stop
+     else if ((mask_local.eq.FSI_FINE_VEL_VALID ).or. &
+              (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).or. &
+              (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID).or. & 
+              (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID)) then
+      ! do nothing
+     else
+      print *,"mask_local invalid"
+      stop
+     endif
+
+     if ((ctml_part_id.ge.1).and. &
+         (ctml_part_id.le.CTML_NPARTS)) then
+      if (FSI(part_id)%exclusive_doubly_wetted.eq.1) then
+       ! do nothing
+      else
+       print *,"expecting doubly wetted"
+       stop
+      endif
+     else if (ctml_part_id.eq.0) then
+      ! do nothing
+     else
+      print *,"ctml_part_id invalid"
+      stop
+     endif
+
+     if (FSI_mesh_type%exclusive_doubly_wetted.eq.0) then
+      ! do nothing
+     else if (FSI_mesh_type%exclusive_doubly_wetted.eq.1) then
+      if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then
+       ! do nothing
+      else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then
+       ! do nothing
       else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
        print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
        stop
-      else if ((mask_local.eq.FSI_FINE_VEL_VALID ).or. &
+      else if ((mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
                (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).or. &
-               (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID).or. & 
-               (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID)) then
-       ! do nothing
+               (mask_local.eq.FSI_NOTHING_VALID).or. &
+               (mask_local.eq.FSI_FINE_VEL_VALID)) then
+       mask_local=FSI_DOUBLY_WETTED_SIGN_VEL_VALID
       else
        print *,"mask_local invalid"
        stop
       endif
-
-      if ((ctml_part_id.ge.1).and. &
-          (ctml_part_id.le.CTML_NPARTS)) then
-       if (FSI(part_id)%exclusive_doubly_wetted.eq.1) then
-        ! do nothing
-       else
-        print *,"expecting doubly wetted"
-        stop
-       endif
-      else if (ctml_part_id.eq.0) then
-       ! do nothing
-      else
-       print *,"ctml_part_id invalid"
-       stop
-      endif
-
-      if (FSI_mesh_type%exclusive_doubly_wetted.eq.0) then
-       ! do nothing
-      else if (FSI_mesh_type%exclusive_doubly_wetted.eq.1) then
-       if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then
-        ! do nothing
-       else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then
-        ! do nothing
-       else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
-        print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
-        stop
-       else if ((mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
-                (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).or. &
-                (mask_local.eq.FSI_NOTHING_VALID).or. &
-                (mask_local.eq.FSI_FINE_VEL_VALID)) then
-        mask_local=FSI_DOUBLY_WETTED_SIGN_VEL_VALID
-       else
-        print *,"mask_local invalid"
-        stop
-       endif
-       ls_local=-abs(ls_local)
-      else
-       print *,"exclusive_doubly_wetted invalid"
-       stop
-      endif
-
-      FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local
-      FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=mask_local
-
-     else if ((mask1.eq.1).and.(mask2.eq.0)) then
-      ! do nothing
+      ls_local=-abs(ls_local)
      else
-      print *,"mask1 or mask2 invalid"
+      print *,"exclusive_doubly_wetted invalid"
       stop
      endif
+
+     FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local
+     FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=mask_local
 
     enddo   
     enddo   
@@ -12304,40 +12302,39 @@ IMPLICIT NONE
      mask1=NINT(masknbr3D(i,j,k,1))
      mask2=NINT(masknbr3D(i,j,k,2))
 
-     ! mask2==1 => (i,j,k) interior to tile
-     ! mask1==0 => (i,j,k) in coarse/fine or EXT_DIR 
-     if ((mask1.eq.0).or.(mask2.eq.1)) then
-
-      ls_local=FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)
-      mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
-
-      if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then
-        ! LS > 0 in the thin shell which is the fluid region.
-       ls_local=ls_local+wallthick*dx3D(1)
-      else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
-       ! do nothing
-      else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
-       print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
-       stop
-      else if ((mask_local.eq.FSI_NOTHING_VALID).or. &
-               (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
-               (mask_local.eq.FSI_FINE_VEL_VALID).or. &
-               (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID)) then
-       ! do nothing
-      else
-       print *,"mask_local invalid"
-       stop
-      endif
-
-      FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local
-
-     else if ((mask1.eq.1).and.(mask2.eq.0)) then
+     if ((mask1.eq.1).and. &
+         (mask2.eq.1)) then
       ! do nothing
      else
-      print *,"mask1 or mask2 invalid"
+      print *,"expecting mask1=mask2=1"
+      print *,"mask1: ",mask1
+      print *,"mask2: ",mask2
       stop
      endif
-  
+
+     ls_local=FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)
+     mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
+
+     if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then
+      ! LS > 0 in the thin shell which is the fluid region.
+      ls_local=ls_local+wallthick*dx3D(1)
+     else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
+      ! do nothing
+     else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
+      print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
+      stop
+     else if ((mask_local.eq.FSI_NOTHING_VALID).or. &
+              (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
+              (mask_local.eq.FSI_FINE_VEL_VALID).or. &
+              (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID)) then
+      ! do nothing
+     else
+      print *,"mask_local invalid"
+      stop
+     endif
+
+     FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local
+
     enddo
     enddo
     enddo
@@ -12389,10 +12386,13 @@ IMPLICIT NONE
      mask1=NINT(masknbr3D(i,j,k,1))
      mask2=NINT(masknbr3D(i,j,k,2))
 
-     ! mask2==1 => (i,j,k) interior to tile
-     ! mask1==0 => (i,j,k) in coarse/fine or EXT_DIR ghost cell.
-     !  coarse/fine ghost cell.
-     if ((mask1.eq.0).or.(mask2.eq.1)) then
+     ! masknbr3D derived from localMF[MASK_NBR_MF]
+     ! (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
+     ! (2) =1 interior  =0 otherwise
+     ! (3) =1 interior+ngrow-1  =0 otherwise
+     ! (4) =1 interior+ngrow    =0 otherwise
+     if ((mask1.eq.0).or. &
+         (mask2.eq.1)) then
 
       mask_local=NINT(old_FSIdata(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
       ls_local=old_FSIdata(i,j,k,ibase+FSI_LEVELSET+1)
