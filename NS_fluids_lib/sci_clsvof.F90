@@ -10869,7 +10869,6 @@ end subroutine CLSVOF_FILLCONTAINER
 ! mask=FSI_FINE_SIGN_VEL_VALID or
 ! mask=FSI_DOUBLY_WETTED_SIGN_VEL_VALID or
 ! mask=FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID or 
-! mask=FSI_NOTHING_VALID or
 ! mask=FSI_COARSE_LS_SIGN_VEL_VALID or
 ! mask=FSI_COARSE_LS_SIGN_FINE_VEL_VALID
 
@@ -10896,9 +10895,9 @@ subroutine CLSVOF_InitBox(  &
   dx3D, &
   xlo3D_tile, &
   xhi3D_tile, &
-  FSI_lo,FSI_hi, & ! =contain_aux(part_id)%lo3D, hi3D for aux
-  FSI_growlo,FSI_growhi, &
-  growlo3D,growhi3D, & ! =FSI_growlo,FSI_growhi for aux
+  FSI_lo3D,FSI_hi3D, & ! =contain_aux(part_id)%lo3D, hi3D for aux
+  FSI_growlo3D,FSI_growhi3D, &
+  growlo3D,growhi3D, & ! =FSI_growlo3D,FSI_growhi3D for aux
   xdata3D, &
   FSIdata3D, &
   masknbr3D, &
@@ -10932,8 +10931,8 @@ IMPLICIT NONE
   REAL_T, intent(in) :: dx3D(3)
   REAL_T, intent(in) :: xlo3D_tile(3)
   REAL_T, intent(in) :: xhi3D_tile(3)
-  INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
-  INTEGER_T, intent(in) :: FSI_growlo(3),FSI_growhi(3)
+  INTEGER_T, intent(in) :: FSI_lo3D(3),FSI_hi3D(3)
+  INTEGER_T, intent(in) :: FSI_growlo3D(3),FSI_growhi3D(3)
   INTEGER_T, intent(in) :: growlo3D(3),growhi3D(3)
   REAL_T, intent(in), pointer :: xdata3D(:,:,:,:)
   REAL_T, intent(in), pointer :: FSIdata3D(:,:,:,:)
@@ -11000,7 +10999,6 @@ IMPLICIT NONE
   REAL_T :: hitsign
   REAL_T :: totaldist
 
-  INTEGER_T modify_vel
   REAL_T mag_n,mag_n_test
   REAL_T n_dot_x
   REAL_T mag_ncrit
@@ -11126,25 +11124,25 @@ IMPLICIT NONE
 
    if (lev77.eq.-1) then
 
-    if (contain_aux(part_id)%lo3D(dir).ne.FSI_lo(dir)) then
-     print *,"contain_aux(part_id)%lo3D(dir).ne.FSI_lo(dir)"
+    if (contain_aux(part_id)%lo3D(dir).ne.FSI_lo3D(dir)) then
+     print *,"contain_aux(part_id)%lo3D(dir).ne.FSI_lo3D(dir)"
      stop
     endif
-    if (contain_aux(part_id)%hi3D(dir).ne.FSI_hi(dir)) then
-     print *,"contain_aux(part_id)%hi3D(dir).ne.FSI_hi(dir)"
+    if (contain_aux(part_id)%hi3D(dir).ne.FSI_hi3D(dir)) then
+     print *,"contain_aux(part_id)%hi3D(dir).ne.FSI_hi3D(dir)"
      stop
     endif
 
    else if (lev77.ge.1) then
 
     if (contain_elem(lev77)%tilelo3D(tid+1,tilenum+1,dir).ne. &
-        FSI_lo(dir)) then
-     print *,"tilelo3D(tid+1,tilenum+1,dir).ne.FSI_lo(dir)"
+        FSI_lo3D(dir)) then
+     print *,"tilelo3D(tid+1,tilenum+1,dir).ne.FSI_lo3D(dir)"
      stop
     endif 
     if (contain_elem(lev77)%tilehi3D(tid+1,tilenum+1,dir).ne. &
-        FSI_hi(dir)) then
-     print *,"tilehi3D(tid+1,tilenum+1,dir).ne.FSI_hi(dir)"
+        FSI_hi3D(dir)) then
+     print *,"tilehi3D(tid+1,tilenum+1,dir).ne.FSI_hi3D(dir)"
      stop
     endif 
 
@@ -11153,16 +11151,16 @@ IMPLICIT NONE
     stop
    endif
 
-   if (FSI_growlo(dir).lt.FSI_lo(dir)) then
+   if (FSI_growlo3D(dir).lt.FSI_lo3D(dir)) then
     ! do nothing
    else
-    print *,"FSI_growlo(dir) invalid"
+    print *,"FSI_growlo3D(dir) invalid"
     stop
    endif
-   if (FSI_growhi(dir).gt.FSI_hi(dir)) then
+   if (FSI_growhi3D(dir).gt.FSI_hi3D(dir)) then
     ! do nothing
    else
-    print *,"FSI_growhi(dir) invalid"
+    print *,"FSI_growhi3D(dir) invalid"
     stop
    endif
    if (xlo3D_tile(dir).lt.xhi3D_tile(dir)) then
@@ -11275,10 +11273,10 @@ IMPLICIT NONE
     print *,"ioproc=",ioproc
     print '(A9,3(f12.6))',"problo3D ",problo3D(1),problo3D(2),problo3D(3)
     print '(A9,3(f12.6))',"probhi3D ",probhi3D(1),probhi3D(2),probhi3D(3)
-    print '(A7,3(I10))',"FSI_lo ",FSI_lo(1),FSI_lo(2),FSI_lo(3)
-    print '(A7,3(I10))',"FSI_hi ",FSI_hi(1),FSI_hi(2),FSI_hi(3)
-    print '(A11,3(I10))',"FSI_growlo ",FSI_growlo(1),FSI_growlo(2),FSI_growlo(3)
-    print '(A11,3(I10))',"FSI_growhi ",FSI_growhi(1),FSI_growhi(2),FSI_growhi(3)
+    print '(A7,3(I10))',"FSI_lo3D ",FSI_lo3D(1),FSI_lo3D(2),FSI_lo3D(3)
+    print '(A7,3(I10))',"FSI_hi3D ",FSI_hi3D(1),FSI_hi3D(2),FSI_hi3D(3)
+    print '(A11,3(I10))',"FSI_growlo3D ",FSI_growlo3D(1),FSI_growlo3D(2),FSI_growlo3D(3)
+    print '(A11,3(I10))',"FSI_growhi3D ",FSI_growhi3D(1),FSI_growhi3D(2),FSI_growhi3D(3)
     print '(A11,3(I10))',"growlo3D ",growlo3D(1),growlo3D(2),growlo3D(3)
     print '(A11,3(I10))',"growhi3D ",growhi3D(1),growhi3D(2),growhi3D(3)
    else
@@ -11299,13 +11297,13 @@ IMPLICIT NONE
     stop
    endif
 
-   call checkbound3D_array(FSI_lo,FSI_hi, &
+   call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
     FSIdata3D, &
     ngrow_make_distance,-1,521)
-   call checkbound3D_array(FSI_lo,FSI_hi, &
+   call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
     xdata3D, &
     ngrow_make_distance,-1,521)
-   call checkbound3D_array(FSI_lo,FSI_hi, &
+   call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
     masknbr3D, &
     ngrow_make_distance,-1,521)
 
@@ -11448,8 +11446,8 @@ IMPLICIT NONE
        nparts, &
        null_intersection, &
        minnode,maxnode, &
-       FSI_lo,FSI_hi, &
-       FSI_growlo,FSI_growhi, &
+       FSI_lo3D,FSI_hi3D, &
+       FSI_growlo3D,FSI_growhi3D, &
        growlo3D,growhi3D, &
        xdata3D, &
        gridloBB,gridhiBB, &
@@ -11507,688 +11505,686 @@ IMPLICIT NONE
       do j=gridloBB(2),gridhiBB(2)
       do k=gridloBB(3),gridhiBB(3)
 
-       if ((i.ge.FSI_lo(1)).and.(i.le.FSI_hi(1)).and. &
-           (j.ge.FSI_lo(2)).and.(j.le.FSI_hi(2)).and. &
-           (k.ge.FSI_lo(3)).and.(k.le.FSI_hi(3))) then
+       if ((i.ge.FSI_lo3D(1)).and.(i.le.FSI_hi3D(1)).and. &
+           (j.ge.FSI_lo3D(2)).and.(j.le.FSI_hi3D(2)).and. &
+           (k.ge.FSI_lo3D(3)).and.(k.le.FSI_hi3D(3))) then
 
         mask1=NINT(masknbr3D(i,j,k,1))
         mask2=NINT(masknbr3D(i,j,k,2))
 
-         ! mask2==1 if (i,j,k) interior to tile
-         ! mask1==0 if (i,j,k) is exterior to tile and is not a
-         !  fine/fine ghost cell.
-        if ((mask1.eq.0).or.(mask2.eq.1)) then
+         ! masknbr3D derived from localMF[MASK_NBR_MF]
+         ! (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
+         ! (2) =1 interior  =0 otherwise
+         ! (3) =1 interior+ngrow-1  =0 otherwise
+         ! (4) =1 interior+ngrow    =0 otherwise
 
+        if ((mask1.eq.1).and. &
+            (mask2.eq.1)) then
+         ! do nothing
+        else
+         print *,"expecting mask1=mask2=1"
+         print *,"mask1: ",mask1
+         print *,"mask2: ",mask2
+         stop
+        endif
+
+        do dir=1,3
+         xx(dir)=xdata3D(i,j,k,dir)
+        enddo
+
+        ! normal points from solid to fluid
+        ! -normal points from fluid to solid
+        dotprod=zero
+        do dir=1,3
+         dotprod=dotprod+normal(dir)*(xx(dir)-xnot(dir))
+        enddo
+
+        do dir=1,3
+         xclosest(dir)=xx(dir)-dotprod*normal(dir)
+
+         element_xclosest(dir)=xclosest(dir)
+
+         normal_closest(dir)=normal(dir)
+        enddo
+        unsigned_mindist=abs(dotprod)
+
+        element_unsigned_mindist=unsigned_mindist
+
+        if (debug_all.eq.1) then
+         print *,"ielem=",ielem
          do dir=1,3
-          xx(dir)=xdata3D(i,j,k,dir)
+          print *,"dir,xx ",dir,xx(dir)
+          print *,"dir,xclosest  ",dir,xclosest(dir)
          enddo
-
-         ! normal points from solid to fluid
-         ! -normal points from fluid to solid
-         dotprod=zero
-         do dir=1,3
-          dotprod=dotprod+normal(dir)*(xx(dir)-xnot(dir))
-         enddo
-         do dir=1,3
-          xclosest(dir)=xx(dir)-dotprod*normal(dir)
-
-          element_xclosest(dir)=xclosest(dir)
-
-          normal_closest(dir)=normal(dir)
-         enddo
-         unsigned_mindist=abs(dotprod)
-
-         element_unsigned_mindist=unsigned_mindist
-
-         if (debug_all.eq.1) then
-          print *,"ielem=",ielem
-          do dir=1,3
-           print *,"dir,xx ",dir,xx(dir)
-           print *,"dir,xclosest  ",dir,xclosest(dir)
-          enddo
-          if (dotprod.ge.zero) then
-           print *,"dotprodplus=",dotprod
-          else
-           print *,"dotprodminus=",dotprod
-          endif
+         if (dotprod.ge.zero) then
+          print *,"dotprodplus=",dotprod
+         else
+          print *,"dotprodminus=",dotprod
          endif
+        endif
 
-         call checkinplaneBIG( &
+        call checkinplaneBIG( &
+         eul_over_lag_scale, &
+         xx, & ! target point at which the signed distance is sought.
+         xclosest, &
+         xclosest_project, & !intent(out)
+         normal, & ! intent(in)
+         normal_closest, & ! intent(out)
+         ielem, &
+         element_node_edge_inplane, & !intent(out)
+         FSI_mesh_type, &
+         part_id, &
+         nparts, &
+         time)
+
+        element_inplane=element_node_edge_inplane
+
+! investigate using NodeNormalBIG (normal defined at nodes)
+        do inode=1,nodes_per_elem
+         ! check distance to the edges of a triangular element.
+         call checkinlineBIG( &
           eul_over_lag_scale, &
+          xclosest_project, & !intent(inout)
+          normal_closest, & ! intent(inout), initially normal of element.
+          inode,ielem, &
+          unsigned_mindist, & !intent(inout)
           xx, & ! target point at which the signed distance is sought.
-          xclosest, &
-          xclosest_project, & !intent(out)
-          normal, & ! intent(in)
-          normal_closest, & ! intent(out)
-          ielem, &
-          element_node_edge_inplane, & !intent(out)
+          element_node_edge_inplane, &  !intent(inout)
           FSI_mesh_type, &
           part_id, &
           nparts, &
-          time)
+          time,dxBB)
+         ! check distance to the nodes of a triangular element.
+         ! normal_closest is the element normal.
+         call checkinpointBIG( &
+          xclosest_project, & !intent(inout)
+          normal_closest, & ! intent(inout)
+          inode,ielem, &
+          unsigned_mindist, & ! intent(inout)
+          xx, & ! target point at which the signed distance is sought.
+          element_node_edge_inplane, &  !intent(inout)
+          FSI_mesh_type, &
+          part_id, &
+          nparts, &
+          time,dxBB)
+        enddo ! inode=1,nodes_per_elem
 
-         element_inplane=element_node_edge_inplane
- 
-! investigate using NodeNormalBIG (normal defined at nodes)
-         do inode=1,nodes_per_elem
-          ! check distance to the edges of a triangular element.
-          call checkinlineBIG( &
-           eul_over_lag_scale, &
-           xclosest_project, & !intent(inout)
-           normal_closest, & ! intent(inout), initially normal of element.
-           inode,ielem, &
-           unsigned_mindist, & !intent(inout)
-           xx, & ! target point at which the signed distance is sought.
-           element_node_edge_inplane, &  !intent(inout)
-           FSI_mesh_type, &
-           part_id, &
-           nparts, &
-           time,dxBB)
-          ! check distance to the nodes of a triangular element.
-          ! normal_closest is the element normal.
-          call checkinpointBIG( &
-           xclosest_project, & !intent(inout)
-           normal_closest, & ! intent(inout)
-           inode,ielem, &
-           unsigned_mindist, & ! intent(inout)
-           xx, & ! target point at which the signed distance is sought.
-           element_node_edge_inplane, &  !intent(inout)
-           FSI_mesh_type, &
-           part_id, &
-           nparts, &
-           time,dxBB)
-         enddo ! inode=1,nodes_per_elem
+        hitflag=0
+        hitsign=zero
 
-         hitflag=0
-         hitsign=zero
+        do dir=1,3
+         if (dir.eq.1) then
+          xleft(dir)=xdata3D(i-1,j,k,dir)
+          xright(dir)=xdata3D(i+1,j,k,dir)
+         else if (dir.eq.2) then
+          xleft(dir)=xdata3D(i,j-1,k,dir)
+          xright(dir)=xdata3D(i,j+1,k,dir)
+         else if (dir.eq.3) then
+          xleft(dir)=xdata3D(i,j,k-1,dir)
+          xright(dir)=xdata3D(i,j,k+1,dir)
+         else
+          print *,"dir invalid"
+          stop
+         endif
+         if (xright(dir).gt.xleft(dir)) then
+          ! do nothing
+         else
+          print *,"xright(dir).le.xleft(dir)"
+          stop
+         endif
+        enddo ! dir=1..3
+
+        ! normal points from solid to fluid
+        ! phi>0 in the fluid (sign will be switched later)
+        ! xclosest_project=xx-phi n
+        ! phi n = xx-xclosest_project
+        ! phi = n dot (xx-xclosest_project) (sign will be switched later)
+        if (element_node_edge_inplane.eq.1) then
+
+         n_dot_x=zero
+         mag_n=zero
+         mag_n_test=zero
+         mag_x=zero
 
          do dir=1,3
-          if (dir.eq.1) then
-           xleft(dir)=xdata3D(i-1,j,k,dir)
-           xright(dir)=xdata3D(i+1,j,k,dir)
-          else if (dir.eq.2) then
-           xleft(dir)=xdata3D(i,j-1,k,dir)
-           xright(dir)=xdata3D(i,j+1,k,dir)
-          else if (dir.eq.3) then
-           xleft(dir)=xdata3D(i,j,k-1,dir)
-           xright(dir)=xdata3D(i,j,k+1,dir)
-          else
-           print *,"dir invalid"
-           stop
-          endif
-          if (xright(dir).gt.xleft(dir)) then
-           ! do nothing
-          else
-           print *,"xright(dir).le.xleft(dir)"
-           stop
-          endif
+          mag_n=mag_n+normal_closest(dir)**2
+          mag_n_test=mag_n_test+normal(dir)**2
+          !xx=cell center where LS needed
+          mag_x=mag_x+(xx(dir)-xclosest_project(dir))**2 
+          
+          n_dot_x=n_dot_x+ &
+            normal_closest(dir)*(xx(dir)-xclosest_project(dir))
          enddo ! dir=1..3
 
-         ! normal points from solid to fluid
-         ! phi>0 in the fluid (sign will be switched later)
-         ! xclosest_project=xx-phi n
-         ! phi n = xx-xclosest_project
-         ! phi = n dot (xx-xclosest_project) (sign will be switched later)
-         if (element_node_edge_inplane.eq.1) then
+         mag_n_test=sqrt(mag_n_test)
+         mag_n=sqrt(mag_n)
+         mag_x=sqrt(mag_x)
 
-          n_dot_x=zero
-          mag_n=zero
-          mag_n_test=zero
-          mag_x=zero
+         if (abs(mag_x).lt.unsigned_mindist) then
+          unsigned_mindist=abs(mag_x)
+         endif
 
-          do dir=1,3
-           mag_n=mag_n+normal_closest(dir)**2
-           mag_n_test=mag_n_test+normal(dir)**2
-           !xx=cell center where LS needed
-           mag_x=mag_x+(xx(dir)-xclosest_project(dir))**2 
-           
-           n_dot_x=n_dot_x+ &
-             normal_closest(dir)*(xx(dir)-xclosest_project(dir))
-          enddo ! dir=1..3
+          ! at this stage, normal points from solid to fluid.
+          ! mag_x=||xx-xclosest_project||
+          ! mag_n=||normal_closest||
+          ! n dot x=normal_closest dot (xx-xclosest_project)
+          ! n dot x = mag_x * mag_n * cos(theta)
 
-          mag_n_test=sqrt(mag_n_test)
-          mag_n=sqrt(mag_n)
-          mag_x=sqrt(mag_x)
+         if (mag_n.ge.zero) then
+          if (mag_n_test.ge.zero) then
+           if (mag_x.ge.zero) then
 
-          if (abs(mag_x).lt.unsigned_mindist) then
-           unsigned_mindist=abs(mag_x)
+            if (element_inplane.eq.1) then
+
+             n_dot_x=zero
+             mag_n=zero
+             mag_x=zero
+             do dir=1,3
+              mag_n=mag_n+element_normal(dir)**2
+              mag_x=mag_x+(xx(dir)-element_xclosest(dir))**2 
+              n_dot_x=n_dot_x+ &
+               element_normal(dir)*(xx(dir)-element_xclosest(dir))
+             enddo ! dir=1..3
+
+             mag_n=sqrt(mag_n)
+             mag_x=sqrt(mag_x)
+
+            else if (element_inplane.eq.0) then
+
+             ! do nothing
+
+            else
+             print *,"element_inplane invalid"
+             stop
+            endif
+
+            hitflag=1
+            if (n_dot_x.eq.zero) then
+             hitsign=zero
+            else if (n_dot_x.gt.zero) then ! fluid(sign switched later)
+             hitsign=one
+            else if (n_dot_x.lt.zero) then ! solid(sign switched later)
+             hitsign=-one
+            else
+             print *,"n_dot_x bust"
+             stop
+            endif
+   
+           else
+            print *,"mag_x invalid"
+            stop
+           endif
+
+          else
+           print *,"mag_n_test invalid"
+           stop
           endif
 
-           ! at this stage, normal points from solid to fluid.
-           ! mag_x=||xx-xclosest_project||
-           ! mag_n=||normal_closest||
-           ! n dot x=normal_closest dot (xx-xclosest_project)
-           ! n dot x = mag_x * mag_n * cos(theta)
+         else
+          print *,"mag_n invalid"
+          stop
+         endif
 
-          if (mag_n.ge.zero) then
-           if (mag_n_test.ge.zero) then
-            if (mag_x.ge.zero) then
+        else if (element_node_edge_inplane.eq.0) then
+         print *,"checkinpointBIG should guarantee inplane=1, aborting"
+         stop
+        else
+         print *,"element_node_edge_inplane invalid"
+         stop
+        endif
 
-             if (element_inplane.eq.1) then
+! check crossing between cells
 
-              n_dot_x=zero
-              mag_n=zero
-              mag_x=zero
-              do dir=1,3
-               mag_n=mag_n+element_normal(dir)**2
-               mag_x=mag_x+(xx(dir)-element_xclosest(dir))**2 
-               n_dot_x=n_dot_x+ &
-                element_normal(dir)*(xx(dir)-element_xclosest(dir))
-              enddo ! dir=1..3
+        do ii=-1,1
+        do jj=-1,1
+        do kk=-1,1
+         if (abs(ii)+abs(jj)+abs(kk).gt.0) then
 
-              mag_n=sqrt(mag_n)
-              mag_x=sqrt(mag_x)
+          do dir=1,3
+           if (dir.eq.1) then
+            ii_current=ii
+           else if (dir.eq.2) then
+            ii_current=jj
+           else if (dir.eq.3) then
+            ii_current=kk
+           else
+            print *,"dir invalid"
+            stop
+           endif
+           if (ii_current.eq.-1) then
+            xside(dir)=xleft(dir)
+           else if (ii_current.eq.0) then
+            xside(dir)=xx(dir)
+           else if (ii_current.eq.1) then
+            xside(dir)=xright(dir)
+           else
+            print *,"ii_current invalid"
+            stop
+           endif
+          enddo ! dir=1..3
 
-             else if (element_inplane.eq.0) then
+          ! normal points from solid to fluid
+          ! phi=n dot (x-xnot)
+          ! phi>0 in the fluid (sign will be switched later)
+          phicen=zero
+          phiside=zero
+          do dir=1,3
+            ! levelset at the center cell
+           phicen=phicen+normal(dir)*(xx(dir)-xnot(dir))
+            ! levelset at the side cell
+           phiside=phiside+normal(dir)*(xside(dir)-xnot(dir))
+          enddo
+          if ((phicen.eq.zero).and. &
+              (phiside.eq.zero)) then
+           ! do nothing: either normal=0 or interface parallel to the edge
+          else if (phicen*phiside.gt.zero) then
+           ! do nothing (no crossing)
+          else if (phicen*phiside.le.zero) then
+           mag_ncrit=zero
+           do dir=1,3
+            if (phicen.gt.phiside) then ! i.e. phicen>=0 (fluid), phiside<=0
+             ncrit(dir)=(xx(dir)-xside(dir)) 
+            else if (phicen.lt.phiside) then ! phicen<=0, phiside>=0 (fluid)
+             ncrit(dir)=(xside(dir)-xx(dir))
+            else
+             print *,"phicen or phiside NaN"
+             stop
+            endif
+            mag_ncrit=mag_ncrit+ncrit(dir)**2
+           enddo
+           mag_ncrit=sqrt(mag_ncrit)
+           if (mag_ncrit.gt.zero) then
+            do dir=1,3
+             ncrit(dir)=ncrit(dir)/mag_ncrit
+            enddo
+           else
+            print *,"mag_ncrit is NaN"
+            stop
+           endif
+           do dir=1,3
+            if (phiside.eq.zero) then
+             xcrit(dir)=xside(dir)
+            else if (phicen.eq.zero) then
+             xcrit(dir)=xx(dir)
+            else if ((phiside.ne.zero).and. &
+                     (phicen.ne.zero)) then
+             xcrit(dir)=(abs(phiside)*xx(dir)+ &
+                          abs(phicen)*xside(dir))/  &
+                         (abs(phicen)+abs(phiside))
+            else
+             print *,"phiside or phicen is NaN"
+             stop
+            endif
+           enddo  ! dir=1..3
 
-              ! do nothing
-
-             else
-              print *,"element_inplane invalid"
-              stop
-             endif
-
+           call checkinplaneBIG( &
+            eul_over_lag_scale, &
+            xx, & ! target point at which the signed distance is sought.
+            xcrit, & !is xcrit in the element?
+            xcrit_project, &
+            ncrit, &
+            ncrit_closest, &
+            ielem, &
+            element_node_edge_inplane, &
+            FSI_mesh_type, &
+            part_id, &
+            nparts, &
+            time)
+! totaldist is the distance between xx and xside
+! testdist  is the distance between xx and xcrit 
+! xx=center point  xside=stencil point xcrit=crossing point
+           if (element_node_edge_inplane.eq.1) then
+            testdist=zero
+            totaldist=zero
+            do dir=1,3
+             testdist=testdist+(xcrit(dir)-xx(dir))**2
+             totaldist=totaldist+(xside(dir)-xx(dir))**2
+            enddo
+            testdist=sqrt(testdist)
+            totaldist=sqrt(totaldist)
+            if (testdist.le.unsigned_mindist) then
+             unsigned_mindist=testdist
              hitflag=1
-             if (n_dot_x.eq.zero) then
+             if (phicen.eq.zero) then
               hitsign=zero
-             else if (n_dot_x.gt.zero) then ! fluid(sign switched later)
+              ! n_dot_x>0 in the fluid (sign will be switched later)
+             else if (phicen.gt.zero) then
               hitsign=one
-             else if (n_dot_x.lt.zero) then ! solid(sign switched later)
+              ! n_dot_x<0 in the solid (sign will be switched later)
+             else if (phicen.lt.zero) then
               hitsign=-one
              else
               print *,"n_dot_x bust"
               stop
              endif
-    
+            else if (testdist.gt.unsigned_mindist) then
+             ! do nothing
             else
-             print *,"mag_x invalid"
+             print *,"testdist or unsigned_mindist bust"
              stop
             endif
 
+            if (totaldist.eq.zero) then
+             print *,"totaldist invalid"
+             print *,"totaldist= ",totaldist
+             stop
+            else if (totaldist.lt.testdist-1.0E-10) then
+             print *,"cannot have totaldist<testdist"
+             print *,"totaldist= ",totaldist
+             print *,"testdist= ",testdist
+             stop
+            else
+             testdist=testdist/totaldist
+             if (testdist.gt.one) then
+              testdist=one
+             endif
+            endif
+
+           else if (element_node_edge_inplane.eq.0) then
+            ! do nothing
            else
-            print *,"mag_n_test invalid"
+            print *,"inplane invalid"
             stop
-           endif
+           endif  ! inplane
           else
-           print *,"mag_n invalid"
+           print *,"phicen or phiside is NaN"
+           stop
+          endif 
+         endif ! abs(ii)+abs(jj)+abs(kk)>0
+        enddo 
+        enddo 
+        enddo  ! ii,jj,kk
+
+        ls_local=FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)
+        sign_conflict_local=FSIdata3D(i,j,k,ibase+FSI_SIGN_CONFLICT+1)
+        mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
+        do dir=1,3
+         vel_local(dir)=FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)
+        enddo
+        temp_local=FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)
+
+        if (hitflag.eq.1) then
+         ! bit 0=1 if +sign hits
+         ! bit 1=1 if -sign hits
+         if (hitsign.ge.zero) then
+          if (sign_conflict_local.eq.zero) then
+           sign_conflict_local=one
+          else if (sign_conflict_local.eq.one) then
+           ! do nothing
+          else if (sign_conflict_local.eq.three) then
+           ! do nothing
+          else if (sign_conflict_local.eq.two) then
+           sign_conflict_local=three
+          else
+           print *,"sign_conflict_local invalid"
            stop
           endif
-
-         else if (element_node_edge_inplane.eq.0) then
-          ! do nothing
+         else if (hitsign.lt.zero) then
+          if (sign_conflict_local.eq.zero) then
+           sign_conflict_local=two
+          else if (sign_conflict_local.eq.one) then
+           sign_conflict_local=three
+          else if (sign_conflict_local.eq.three) then
+           ! do nothing
+          else if (sign_conflict_local.eq.two) then
+           ! do nothing
+          else
+           print *,"sign_conflict_local invalid"
+           stop
+          endif
          else
-          print *,"element_node_edge_inplane invalid"
+          print *,"hitsign invalid"
+          stop
+         endif
+        else if (hitflag.eq.0) then
+         print *,"expecting hitflag=1"
+         stop
+        else
+         print *,"hitflag invalid"
+         stop
+        endif 
+
+        if ((mask_local.eq.FSI_NOTHING_VALID).or. &  
+            (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. & 
+            (unsigned_mindist.lt.abs(ls_local))) then
+
+         if ((mask_local.eq.FSI_NOTHING_VALID).or. &
+             (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID)) then
+          ! do nothing
+         else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then 
+          ! do nothing
+         else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
+          ! do nothing
+         else if (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID) then 
+          ! do nothing
+         else if (mask_local.eq.FSI_FINE_VEL_VALID) then 
+          ! do nothing
+         else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
+          print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
+          stop
+         else
+          print *,"mask_local invalid"
           stop
          endif
 
-! check crossing between cells
-
-         do ii=-1,1
-         do jj=-1,1
-         do kk=-1,1
-          if (abs(ii)+abs(jj)+abs(kk).gt.0) then
-
-           do dir=1,3
-            if (dir.eq.1) then
-             ii_current=ii
-            else if (dir.eq.2) then
-             ii_current=jj
-            else if (dir.eq.3) then
-             ii_current=kk
-            else
-             print *,"dir invalid"
-             stop
-            endif
-            if (ii_current.eq.-1) then
-             xside(dir)=xleft(dir)
-            else if (ii_current.eq.0) then
-             xside(dir)=xx(dir)
-            else if (ii_current.eq.1) then
-             xside(dir)=xright(dir)
-            else
-             print *,"ii_current invalid"
-             stop
-            endif
-           enddo ! dir=1..3
-
-           ! normal points from solid to fluid
-           ! phi=n dot (x-xnot)
-           ! phi>0 in the fluid (sign will be switched later)
-           phicen=zero
-           phiside=zero
-           do dir=1,3
-             ! levelset at the center cell
-            phicen=phicen+normal(dir)*(xx(dir)-xnot(dir))
-             ! levelset at the side cell
-            phiside=phiside+normal(dir)*(xside(dir)-xnot(dir))
-           enddo
-           if ((phicen.eq.zero).and. &
-               (phiside.eq.zero)) then
-            ! do nothing
-           else if (phicen*phiside.gt.zero) then
-            ! do nothing (no crossing)
-           else if (phicen*phiside.le.zero) then
-            mag_ncrit=zero
-            do dir=1,3
-             if (phicen.gt.phiside) then ! i.e. phicen>=0 (fluid), phiside<=0
-              ncrit(dir)=(xx(dir)-xside(dir)) 
-             else if (phicen.lt.phiside) then ! phicen<=0, phiside>=0 (fluid)
-              ncrit(dir)=(xside(dir)-xx(dir))
-             else
-              print *,"phicen or phiside NaN"
-              stop
-             endif
-             mag_ncrit=mag_ncrit+ncrit(dir)**2
-            enddo
-            mag_ncrit=sqrt(mag_ncrit)
-            if (mag_ncrit.gt.zero) then
-             do dir=1,3
-              ncrit(dir)=ncrit(dir)/mag_ncrit
-             enddo
-            else
-             print *,"mag_ncrit is NaN"
-             stop
-            endif
-            do dir=1,3
-             if (phiside.eq.zero) then
-              xcrit(dir)=xside(dir)
-             else if (phicen.eq.zero) then
-              xcrit(dir)=xx(dir)
-             else if ((phiside.ne.zero).and. &
-                      (phicen.ne.zero)) then
-              xcrit(dir)=(abs(phiside)*xx(dir)+ &
-                           abs(phicen)*xside(dir))/  &
-                          (abs(phicen)+abs(phiside))
-             else
-              print *,"phiside or phicen is NaN"
-              stop
-             endif
-            enddo  ! dir=1..3
-
-            call checkinplaneBIG( &
-             eul_over_lag_scale, &
-             xx, & ! target point at which the signed distance is sought.
-             xcrit, & !is xcrit in the element?
-             xcrit_project, &
-             ncrit, &
-             ncrit_closest, &
-             ielem, &
-             element_node_edge_inplane, &
-             FSI_mesh_type, &
-             part_id, &
-             nparts, &
-             time)
-! totaldist is the distance between xx and xside
-! testdist  is the distance between xx and xcrit 
-! xx=center point  xside=stencil point xcrit=crossing point
-            if (element_node_edge_inplane.eq.1) then
-             testdist=zero
-             totaldist=zero
-             do dir=1,3
-              testdist=testdist+(xcrit(dir)-xx(dir))**2
-              totaldist=totaldist+(xside(dir)-xx(dir))**2
-             enddo
-             testdist=sqrt(testdist)
-             totaldist=sqrt(totaldist)
-             if (testdist.le.unsigned_mindist) then
-              unsigned_mindist=testdist
-              hitflag=1
-              if (phicen.eq.zero) then
-               hitsign=zero
-               ! n_dot_x>0 in the fluid (sign will be switched later)
-              else if (phicen.gt.zero) then
-               hitsign=one
-               ! n_dot_x<0 in the solid (sign will be switched later)
-              else if (phicen.lt.zero) then
-               hitsign=-one
-              else
-               print *,"n_dot_x bust"
-               stop
-              endif
-             else if (testdist.gt.unsigned_mindist) then
-              ! do nothing
-             else
-              print *,"testdist or unsigned_mindist bust"
-              stop
-             endif
-
-             if (totaldist.eq.zero) then
-              print *,"totaldist invalid"
-              print *,"totaldist= ",totaldist
-              stop
-             else if (totaldist.lt.testdist-1.0E-10) then
-              print *,"cannot have totaldist<testdist"
-              print *,"totaldist= ",totaldist
-              print *,"testdist= ",testdist
-              stop
-             else
-              testdist=testdist/totaldist
-              if (testdist.gt.one) then
-               testdist=one
-              endif
-             endif
-
-            else if (element_node_edge_inplane.eq.0) then
-             ! do nothing
-            else
-             print *,"inplane invalid"
-             stop
-            endif  ! inplane
-           else
-            print *,"phicen or phiside is NaN"
-            stop
-           endif 
-          endif ! abs(ii)+abs(jj)+abs(kk)>0
-         enddo 
-         enddo 
-         enddo  ! ii,jj,kk
-
-         modify_vel=0
-
-         ls_local=FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)
-         sign_conflict_local=FSIdata3D(i,j,k,ibase+FSI_SIGN_CONFLICT+1)
-         mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
-         do dir=1,3
-          vel_local(dir)=FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)
-         enddo
-         temp_local=FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)
-
-         if (hitflag.eq.1) then
-          ! bit 0=1 if +sign hits
-          ! bit 1=1 if -sign hits
-          if (hitsign.ge.zero) then
-           if (sign_conflict_local.eq.zero) then
-            sign_conflict_local=one
-           else if (sign_conflict_local.eq.one) then
-            ! do nothing
-           else if (sign_conflict_local.eq.three) then
-            ! do nothing
-           else if (sign_conflict_local.eq.two) then
-            sign_conflict_local=three
-           else
-            print *,"sign_conflict_local invalid"
-            stop
-           endif
-          else if (hitsign.lt.zero) then
-           if (sign_conflict_local.eq.zero) then
-            sign_conflict_local=two
-           else if (sign_conflict_local.eq.one) then
-            sign_conflict_local=three
-           else if (sign_conflict_local.eq.three) then
-            ! do nothing
-           else if (sign_conflict_local.eq.two) then
-            ! do nothing
-           else
-            print *,"sign_conflict_local invalid"
-            stop
-           endif
+         if ((ctml_part_id.ge.1).and. &
+             (ctml_part_id.le.CTML_NPARTS)) then
+          if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.1) then 
+           ! do nothing
           else
-           print *,"hitsign invalid"
+           print *,"expecting doubly wetted"
            stop
           endif
-         else if (hitflag.eq.0) then
+         else if (ctml_part_id.eq.0) then
           ! do nothing
          else
-          print *,"hitflag invalid"
+          print *,"ctml_part_id invalid"
           stop
-         endif 
- 
-         if ((mask_local.eq.FSI_NOTHING_VALID).or. &  
-             (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. & 
-             (unsigned_mindist.lt.abs(ls_local))) then
+         endif
 
-          if ((mask_local.eq.FSI_NOTHING_VALID).or. &
-              (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID)) then
+         if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.1) then 
+
+          mask_local=FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID
+          ls_local=-unsigned_mindist
+
+         else if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.0) then
+
+          if (FSI_mesh_type%exclusive_doubly_wetted.eq.0) then
            ! do nothing
-          else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then 
-           ! do nothing
-          else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
-           ! do nothing
-          else if (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID) then 
-           ! do nothing
-          else if (mask_local.eq.FSI_FINE_VEL_VALID) then 
-           ! do nothing
+          else
+           print *,"doubly wetted flags are inconsistent"
+           stop
+          endif
+
+          if ((mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID).or. &
+              (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID)) then 
+           mask_local=FSI_NOTHING_VALID
+          endif
+
+          if (mask_local.eq.FSI_NOTHING_VALID) then
+           mask_local=FSI_FINE_VEL_VALID
+          else if (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID) then
+           mask_local=FSI_COARSE_LS_SIGN_FINE_VEL_VALID
           else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
            print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
            stop
+          else if ((mask_local.eq.FSI_FINE_VEL_VALID).or. &
+                   (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID)) then
+           ! do nothing
           else
            print *,"mask_local invalid"
            stop
           endif
 
-          modify_vel=1
-
-          if ((ctml_part_id.ge.1).and. &
-              (ctml_part_id.le.CTML_NPARTS)) then
-           if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.1) then 
-            ! do nothing
-           else
-            print *,"expecting doubly wetted"
-            stop
-           endif
-          else if (ctml_part_id.eq.0) then
-           ! do nothing
-          else
-           print *,"ctml_part_id invalid"
+          if ((mask_local.eq.FSI_NOTHING_VALID).or. &
+              (mask_local.eq.FSI_FINE_VEL_VALID)) then
+           ls_local=unsigned_mindist
+          else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
+           print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
            stop
-          endif
+          else if ((mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
+                   (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID)) then
+           ls_local=sign_funct(ls_local)*unsigned_mindist 
+          else
+           print *,"mask_local invalid"
+           stop
+          endif 
 
-          if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.1) then 
+          if (hitflag.eq.1) then
 
-           mask_local=FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID
-           ls_local=-unsigned_mindist
-
-          else if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.0) then
-
-           if (FSI_mesh_type%exclusive_doubly_wetted.eq.0) then
+           if ((sign_conflict_local.eq.one).or. &
+               (sign_conflict_local.eq.two).or. &
+               (sign_conflict_local.eq.three)) then
             ! do nothing
            else
-            print *,"doubly wetted flags are inconsistent"
+            print *,"sign_conflict_local invalid"
             stop
            endif
 
-           if ((mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID).or. &
-               (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID)) then 
-            mask_local=FSI_NOTHING_VALID
-           endif
+            ! The "-" below asserts that ls_local now points into the solid
+           ls_local=-hitsign*abs(ls_local)
 
-           if (mask_local.eq.FSI_NOTHING_VALID) then
-            mask_local=FSI_FINE_VEL_VALID
-           else if (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID) then
+           if ((mask_local.eq.FSI_NOTHING_VALID).or. &
+               (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
+               (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).or. &
+               (mask_local.eq.FSI_FINE_VEL_VALID)) then
             mask_local=FSI_COARSE_LS_SIGN_FINE_VEL_VALID
            else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
             print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
             stop
-           else if ((mask_local.eq.FSI_FINE_VEL_VALID).or. &
-                    (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID)) then
-            ! do nothing
-           else
+           else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then 
+            print *,"not a doubly wetted element"
+            stop
+           else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
+            print *,"not a doubly wetted element"
+            stop
+           else 
             print *,"mask_local invalid"
             stop
            endif
-
-           if ((mask_local.eq.FSI_NOTHING_VALID).or. &
-               (mask_local.eq.FSI_FINE_VEL_VALID)) then
-            ls_local=unsigned_mindist
-           else if ((mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
-                    (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).or. &
-                    (mask_local.eq.FSI_FINE_SIGN_VEL_VALID)) then 
-            ls_local=sign_funct(ls_local)*unsigned_mindist 
-           else
-            print *,"mask_local invalid"
-            stop
-           endif 
-
-           if (hitflag.eq.1) then
-
-            if ((sign_conflict_local.eq.one).or. &
-                (sign_conflict_local.eq.two).or. &
-                (sign_conflict_local.eq.three)) then
-             ! do nothing
-            else
-             print *,"sign_conflict_local invalid"
-             stop
-            endif
-
-             ! The "-" below asserts that ls_local now points into the solid
-            ls_local=-hitsign*abs(ls_local)
-
-            if ((mask_local.eq.FSI_NOTHING_VALID).or. &
-                (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
-                (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).or. &
-                (mask_local.eq.FSI_FINE_VEL_VALID)) then
-             mask_local=FSI_COARSE_LS_SIGN_FINE_VEL_VALID
-            else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
-             print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
-             stop
-            else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then 
-             print *,"not a doubly wetted element"
-             stop
-            else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
-             print *,"not a doubly wetted element"
-             stop
-            else 
-             print *,"mask_local invalid"
-             stop
-            endif
-           else if (hitflag.eq.0) then
-            ! do nothing
-           else
-            print *,"hitflag invalid"
-            stop
-           endif 
-          else
-           print *,"wetted flag invalid"
+          else if (hitflag.eq.0) then
+           print *,"expecting hitflag=1"
            stop
-          endif
+          else
+           print *,"hitflag invalid"
+           stop
+          endif 
+         else
+          print *,"wetted flag invalid"
+          stop
+         endif
 
-          if (modify_vel.eq.1) then
+         do dir=1,3
+          vel_local(dir)=0.0d0
+         enddo
+         do dir=1,3
+          force_local(dir)=0.0d0
+         enddo
+         temp_local=0.0d0
 
-           do dir=1,3
-            vel_local(dir)=0.0d0
-           enddo
-           do dir=1,3
-            force_local(dir)=0.0d0
-           enddo
-           temp_local=0.0d0
-
-           weighttotal=0.0d0
-           do inode=1,nodes_per_elem
-            nodeptr=FSI_mesh_type%IntElemBIG(inode,ielem)
-            do dir=1,3
-             xfoot(dir)=FSI_mesh_type%NodeBIG(dir,nodeptr)
-             velparm(dir)=FSI_mesh_type%NodeVelBIG(dir,nodeptr)
-            enddo
-            massparm=FSI_mesh_type%NodeMassBIG(nodeptr)
-            if (massparm.gt.zero) then
-             ! do nothing
-            else
-             print *,"massparm invalid"
-             stop
-            endif
-            call get_target_from_foot(xfoot,xtarget, &
-             velparm,time, &
-             FSI_mesh_type, &
-             part_id, &
-             nparts)
-   
-             ! xtarget is Lagrangian coordinate
-             ! xx is grid coordinate 
-            if (CTML_DEBUG_Mass.eq.1) then
-             print *,"inode,ielem,xtarget,xx,massparm ", &
-               inode,ielem, &
-               xtarget(1),xtarget(2),xtarget(3), &  
-               xx(1),xx(2),xx(3),massparm
-            endif
-            distwt=0.0d0
-            do dir=1,3
-             distwt=distwt+(xtarget(dir)-xx(dir))**2
-            enddo
-            weight=1.0d0/( (distwt+(1.0E-10)**2)**4 )
-            weight=weight*massparm
-            do dir=1,3
-             vel_local(dir)=vel_local(dir)+weight*velparm(dir)
-            enddo
-            do dir=1,3
-             force_local(dir)=force_local(dir)+ &
-              weight*FSI_mesh_type%NodeForceBIG(dir,nodeptr)
-            enddo
-            temp_local=temp_local+ & 
-             weight*FSI_mesh_type%NodeTempBIG(nodeptr)
-            weighttotal=weighttotal+weight
-           enddo ! inode=1..nodes_per_elem
-
-           do dir=1,3
-            vel_local(dir)=vel_local(dir)/weighttotal
-           enddo
-           do dir=1,3
-            force_local(dir)=force_local(dir)/weighttotal
-           enddo
-
-           if ((probtype.eq.9).and.(axis_dir.gt.1)) then
-            if ( xx(1) .gt. -0.4 .and. xx(1) .lt. -0.2 ) then
-             if ( xx(3) .lt. 0.045 .and. xx(3) .gt. 0.03 ) then
-              vel_local(3) = -1.0
-             endif
-            endif
-           endif
-
-           temp_local=temp_local/weighttotal
-
-          else if (modify_vel.eq.0) then
+         weighttotal=0.0d0
+         do inode=1,nodes_per_elem
+          nodeptr=FSI_mesh_type%IntElemBIG(inode,ielem)
+          do dir=1,3
+           xfoot(dir)=FSI_mesh_type%NodeBIG(dir,nodeptr)
+           velparm(dir)=FSI_mesh_type%NodeVelBIG(dir,nodeptr)
+          enddo
+          massparm=FSI_mesh_type%NodeMassBIG(nodeptr)
+          if (massparm.gt.zero) then
            ! do nothing
           else
-           print *,"modify_vel invalid"
+           print *,"massparm invalid"
            stop
           endif
+          call get_target_from_foot(xfoot,xtarget, &
+            velparm,time, &
+            FSI_mesh_type, &
+            part_id, &
+            nparts)
+  
+            ! xtarget is Lagrangian coordinate
+            ! xx is grid coordinate 
+          if (CTML_DEBUG_Mass.eq.1) then
+           print *,"inode,ielem,xtarget,xx,massparm ", &
+             inode,ielem, &
+             xtarget(1),xtarget(2),xtarget(3), &  
+             xx(1),xx(2),xx(3),massparm
+          endif
+          distwt=0.0d0
+          do dir=1,3
+           distwt=distwt+(xtarget(dir)-xx(dir))**2
+          enddo
+          weight=1.0d0/( (distwt+(1.0E-10)**2)**4 )
+          weight=weight*massparm
+          do dir=1,3
+           vel_local(dir)=vel_local(dir)+weight*velparm(dir)
+          enddo
+          do dir=1,3
+           force_local(dir)=force_local(dir)+ &
+            weight*FSI_mesh_type%NodeForceBIG(dir,nodeptr)
+          enddo
+          temp_local=temp_local+ & 
+           weight*FSI_mesh_type%NodeTempBIG(nodeptr)
+          weighttotal=weighttotal+weight
+         enddo ! inode=1..nodes_per_elem
 
-         else if ( ((mask_local.eq.FSI_FINE_VEL_VALID).and. &
-                    (unsigned_mindist.ge.abs(ls_local))).or. &
-                   ((mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID).and. &
-                    (unsigned_mindist.ge.abs(ls_local))).or. &
-                   ((mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID).and. &
-                    (unsigned_mindist.ge.abs(ls_local))).or. &
-                   ((mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).and. &
-                    (unsigned_mindist.ge.abs(ls_local))) ) then
-          ! do nothing
-         else
-          print *,"mask_local invalid"
-          stop
-         endif 
-
-         FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local
-         FSIdata3D(i,j,k,ibase+FSI_SIGN_CONFLICT+1)=sign_conflict_local
-         FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=mask_local
          do dir=1,3
-          FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel_local(dir)
-           ! the Eulerian force will be corrected later so that:
-           ! a) integral 1 dA = integral delta dV
-           !  delta_cor=
-           !   delta * (integral 1 dA)/
-           !           (integral 1 delta dV)
-           ! b) integral F_lag dA=integral delta_cor F_cor dV
-           !    F_cor=F+c
-          FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=force_local(dir)*dt
-         enddo 
-          ! FIX ME: delta function must be corrected so that
-          ! perimeter measured from Eulerian and Lagrangian perspectives
-          ! match.  (total forces should match too?)
-         FSIdata3D(i,j,k,ibase+FSI_SIZE+1)=hsprime(ls_local,FSI_delta_cutoff)
-         FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)=temp_local
+          vel_local(dir)=vel_local(dir)/weighttotal
+         enddo
+         do dir=1,3
+          force_local(dir)=force_local(dir)/weighttotal
+         enddo
 
-        else if ((mask1.eq.1).and.(mask2.eq.0)) then
+         if ((probtype.eq.9).and.(axis_dir.gt.1)) then
+          if ( xx(1) .gt. -0.4 .and. xx(1) .lt. -0.2 ) then
+           if ( xx(3) .lt. 0.045 .and. xx(3) .gt. 0.03 ) then
+            vel_local(3) = -1.0
+           endif
+          endif
+         endif
+
+         temp_local=temp_local/weighttotal
+
+        else if ( ((mask_local.eq.FSI_FINE_VEL_VALID).and. &
+                   (unsigned_mindist.ge.abs(ls_local))).or. &
+                  ((mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID).and. &
+                   (unsigned_mindist.ge.abs(ls_local))).or. &
+                  ((mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID).and. &
+                   (unsigned_mindist.ge.abs(ls_local))).or. &
+                  ((mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).and. &
+                   (unsigned_mindist.ge.abs(ls_local))) ) then
          ! do nothing
         else
-         print *,"mask1 or mask2 invalid"
+         print *,"mask_local invalid"
          stop
-        endif
+        endif 
 
-       else if ((i.ge.FSI_growlo(1)).and.(i.le.FSI_growhi(1)).and. &
-                (j.ge.FSI_growlo(2)).and.(j.le.FSI_growhi(2)).and. &
-                (k.ge.FSI_growlo(3)).and.(k.le.FSI_growhi(3))) then
+        FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local
+        FSIdata3D(i,j,k,ibase+FSI_SIGN_CONFLICT+1)=sign_conflict_local
+        FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=mask_local
+        do dir=1,3
+         FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel_local(dir)
+          ! the Eulerian force will be corrected later so that:
+          ! a) integral 1 dA = integral delta dV
+          !  delta_cor=
+          !   delta * (integral 1 dA)/
+          !           (integral 1 delta dV)
+          ! b) integral F_lag dA=integral delta_cor F_cor dV
+          !    F_cor=F+c
+         FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=force_local(dir)*dt
+        enddo 
+         ! FIX ME: delta function must be corrected so that
+         ! perimeter measured from Eulerian and Lagrangian perspectives
+         ! match.  (total forces should match too?)
+        FSIdata3D(i,j,k,ibase+FSI_SIZE+1)=hsprime(ls_local,FSI_delta_cutoff)
+        FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)=temp_local
+
+       else if ((i.ge.FSI_growlo3D(1)).and.(i.le.FSI_growhi3D(1)).and. &
+                (j.ge.FSI_growlo3D(2)).and.(j.le.FSI_growhi3D(2)).and. &
+                (k.ge.FSI_growlo3D(3)).and.(k.le.FSI_growhi3D(3))) then
         ! do nothing
        else
-        print *,"i,j,k outside of FSI_growlo,FSI_growhi range"
+        print *,"i,j,k outside of FSI_growlo3D,FSI_growhi3D range"
         stop
        endif 
 
@@ -12214,9 +12210,9 @@ IMPLICIT NONE
      endif
     enddo ! dir=1..3
 
-    do i=FSI_lo(1),FSI_hi(1)
-    do j=FSI_lo(2),FSI_hi(2)
-    do k=FSI_lo(3),FSI_hi(3)
+    do i=FSI_lo3D(1),FSI_hi3D(1)
+    do j=FSI_lo3D(2),FSI_hi3D(2)
+    do k=FSI_lo3D(3),FSI_hi3D(3)
 
      mask1=NINT(masknbr3D(i,j,k,1))
      mask2=NINT(masknbr3D(i,j,k,2))
@@ -12301,9 +12297,9 @@ IMPLICIT NONE
     enddo   
 
     wallthick=1.0
-    do i=FSI_lo(1),FSI_hi(1)
-    do j=FSI_lo(2),FSI_hi(2)
-    do k=FSI_lo(3),FSI_hi(3)
+    do i=FSI_lo3D(1),FSI_hi3D(1)
+    do j=FSI_lo3D(2),FSI_hi3D(2)
+    do k=FSI_lo3D(3),FSI_hi3D(3)
 
      mask1=NINT(masknbr3D(i,j,k,1))
      mask2=NINT(masknbr3D(i,j,k,2))
@@ -12351,20 +12347,20 @@ IMPLICIT NONE
      !FSI_growlo3D(dir)=FSI_lo3D(dir)-ngrow_make_distance_in
      !FSI_growhi3D(dir)=FSI_hi3D(dir)+ngrow_make_distance_in
     allocate(old_FSIdata( &
-         FSI_growlo(1):FSI_growhi(1), &
-         FSI_growlo(2):FSI_growhi(2), &
-         FSI_growlo(3):FSI_growhi(3), &
+         FSI_growlo3D(1):FSI_growhi3D(1), &
+         FSI_growlo3D(2):FSI_growhi3D(2), &
+         FSI_growlo3D(3):FSI_growhi3D(3), &
          nFSI))
 
     old_FSIdata_ptr=>old_FSIdata
 
-    call checkbound3D_array(FSI_lo,FSI_hi, &
+    call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
      old_FSIdata_ptr, &
      ngrow_make_distance,-1,521)
 
-    do i=FSI_growlo(1),FSI_growhi(1)
-    do j=FSI_growlo(2),FSI_growhi(2)
-    do k=FSI_growlo(3),FSI_growhi(3)
+    do i=FSI_growlo3D(1),FSI_growhi3D(1)
+    do j=FSI_growlo3D(2),FSI_growhi3D(2)
+    do k=FSI_growlo3D(3),FSI_growhi3D(3)
      do nc=1,nFSI
       old_FSIdata(i,j,k,nc)=FSIdata3D(i,j,k,nc)
      enddo
@@ -12489,10 +12485,10 @@ IMPLICIT NONE
            stop
           endif
 
-          if (i_norm.eq.FSI_growlo(dir)) then
+          if (i_norm.eq.FSI_growlo3D(dir)) then
            mminus=FSI_NOTHING_VALID
-          else if ((i_norm.gt.FSI_growlo(dir)).and. &
-                   (i_norm.le.FSI_growhi(dir))) then
+          else if ((i_norm.gt.FSI_growlo3D(dir)).and. &
+                   (i_norm.le.FSI_growhi3D(dir))) then
            do nc=1,NCOMP_FSI
             data_minus(nc)=old_FSIdata(i-ii,j-jj,k-kk,ibase+nc)
            enddo
@@ -12504,10 +12500,10 @@ IMPLICIT NONE
            stop
           endif
     
-          if (i_norm.eq.FSI_growhi(dir)) then
+          if (i_norm.eq.FSI_growhi3D(dir)) then
            mplus=FSI_NOTHING_VALID
-          else if ((i_norm.ge.FSI_growlo(dir)).and. &
-                   (i_norm.lt.FSI_growhi(dir))) then
+          else if ((i_norm.ge.FSI_growlo3D(dir)).and. &
+                   (i_norm.lt.FSI_growhi3D(dir))) then
            do nc=1,NCOMP_FSI
             data_plus(nc)=old_FSIdata(i+ii,j+jj,k+kk,ibase+nc)
            enddo
@@ -12627,9 +12623,9 @@ IMPLICIT NONE
           do i1=-3,3
           do j1=-3,3
           do k1=-3,3
-           if ((i+i1.ge.FSI_growlo(1)).and.(i+i1.le.FSI_growhi(1)).and. &
-               (j+j1.ge.FSI_growlo(2)).and.(j+j1.le.FSI_growhi(2)).and. &
-               (k+k1.ge.FSI_growlo(3)).and.(k+k1.le.FSI_growhi(3))) then
+           if ((i+i1.ge.FSI_growlo3D(1)).and.(i+i1.le.FSI_growhi3D(1)).and. &
+               (j+j1.ge.FSI_growlo3D(2)).and.(j+j1.le.FSI_growhi3D(2)).and. &
+               (k+k1.ge.FSI_growlo3D(3)).and.(k+k1.le.FSI_growhi3D(3))) then
             mask_node=NINT(old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_EXTRAP_FLAG+1))
             if (vel_valid(mask_node).eq.1) then
              weight=VOFTOL*dx3D(1)
