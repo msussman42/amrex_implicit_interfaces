@@ -316,8 +316,6 @@ endif
 return
 end subroutine WAVY_INIT_LS
 
-
-
 subroutine WAVY_BOUNDING_BOX_AUX(auxcomp, &
     minnode,maxnode,LS_FROM_SUBROUTINE,aux_ncells_max_side)
 use probcommon_module

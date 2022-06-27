@@ -123,9 +123,14 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_CASFILE
 
 
 subroutine CRYOGENIC_TANK_MK_OVERRIDE_FSI_SIGN_LS_VEL_TEMP( &
+ exterior_BB, &
+ interior_BB, &
  xcell,time,LS,VEL,TEMP,MASK,lev77,im_part,part_id)
 use probcommon_module
 use global_utility_module
+
+REAL_T, intent(in) :: exterior_BB(3,2)
+REAL_T, intent(in) :: interior_BB(3,2)
 REAL_T, intent(in) :: xcell(3)
 REAL_T, intent(in) :: time
 REAL_T, intent(out) :: LS
@@ -136,6 +141,7 @@ INTEGER_T, intent(in) :: lev77 !lev77=-1 for aux, >=0 otherwise.
 INTEGER_T, intent(in) :: im_part
 INTEGER_T, intent(in) :: part_id
 INTEGER_T :: dir
+
  if ((lev77.eq.-1).or. &
      (lev77.ge.1)) then
   ! do nothing
@@ -159,110 +165,19 @@ INTEGER_T :: dir
    if (TANK_MK_AUX_THICK_WALLS.eq.1) then
 
     if (part_id.eq.1) then ! heater_a (top heater)
-     if ((xcell(1).le.-0.056d0).or. &
-         (xcell(1).ge.0.056d0).or. &
-         (xcell(2).le.0.139d0).or. &
-         (xcell(2).ge.0.183d0).or. &
-         (xcell(3).le.-0.0416d0).or. &
-         (xcell(3).ge.0.0416d0)) then
-      LS=-5.1D-3
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
     else if (part_id.eq.2) then ! side heater
-     if ((xcell(1).le.0.082d0).or. &
-         (xcell(1).ge.0.112d0).or. &
-         (xcell(2).le.-0.0375d0).or. &
-         (xcell(2).ge.0.0775d0).or. &
-         (xcell(3).le.-0.0423d0).or. &
-         (xcell(3).ge.0.0423d0)) then
-      LS=-5.2D-3
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
     else if (part_id.eq.3) then ! source
-
-     if ((xcell(1).le.-0.019d0).or. &
-         (xcell(1).ge.0.030d0).or. &
-         (xcell(2).le.-0.20d0).or. &
-         (xcell(2).ge.-0.11d0).or. &
-         (xcell(3).le.-0.014d0).or. &
-         (xcell(3).ge.0.014d0)) then
-      LS=-0.0043
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
     else if (part_id.eq.4) then ! sink
-
-     if ((xcell(1).le.-0.140d0).or. &
-         (xcell(1).ge.0.140d0).or. &
-         (xcell(2).le.-0.184d0).or. &
-         (xcell(2).ge.-0.038d0).or. &
-         (xcell(3).le.-0.023d0).or. &
-         (xcell(3).ge.0.023d0)) then
-      LS=-0.0127
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
-     if ((xcell(1).ge.-0.123d0).and. &
-         (xcell(1).le.0.123d0).and. &
-         (xcell(2).ge.-0.167d0).and. &
-         (xcell(2).le.10.0d0).and. &
-         (xcell(3).ge.-10.0d0).and. &
-         (xcell(3).le.10.0d0)) then
-      LS=-0.0127
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
+     call check_inside_box(xcell,interior_BB,LS,MASK)
     else if (part_id.eq.5) then ! tank
-
-     if ((xcell(1).le.-0.17d0).or. &
-         (xcell(1).ge.0.17d0).or. &
-         (xcell(2).le.-0.22d0).or. &
-         (xcell(2).ge.0.22d0).or. &
-         (xcell(3).le.-0.17d0).or. &
-         (xcell(3).ge.0.17d0)) then
-      LS=-0.02
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
-     if ((xcell(1).ge.-0.09d0).and. &
-         (xcell(1).le.0.09d0).and. &
-         (xcell(2).ge.-0.14d0).and. &
-         (xcell(2).le.0.14d0).and. &
-         (xcell(3).ge.-0.09d0).and. &
-         (xcell(3).le.0.09d0)) then
-      LS=-0.02
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
+     call check_inside_box(xcell,interior_BB,LS,MASK)
     else if (part_id.eq.6) then ! nozzle housing
-
-     if ((xcell(1).le.-0.03896d0).or. &
-         (xcell(1).ge.0.0502d0).or. &
-         (xcell(2).le.-0.210d0).or. &
-         (xcell(2).ge.-0.104d0).or. &
-         (xcell(3).le.-0.0348d0).or. &
-         (xcell(3).ge.0.0348d0)) then
-      LS=-0.0048
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
     else
      print *,"part_id invalid"
      stop
@@ -271,137 +186,22 @@ INTEGER_T :: dir
    else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
 
     if (part_id.eq.1) then ! heater_a (top heater)
-     if ((xcell(1).le.-0.05576d0).or. &
-         (xcell(1).ge.0.05576d0).or. &
-         (xcell(2).le.0.147d0).or. &
-         (xcell(2).ge.0.177d0).or. &
-         (xcell(3).le.-0.0416d0).or. &
-         (xcell(3).ge.0.0416d0)) then
-      LS=-5.1D-3
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
     else if (part_id.eq.2) then ! side heater
-     if ((xcell(1).le.0.0926d0).or. &
-         (xcell(1).ge.0.107d0).or. &
-         (xcell(2).le.-0.0575d0).or. &
-         (xcell(2).ge.0.0575d0).or. &
-         (xcell(3).le.-0.0423d0).or. &
-         (xcell(3).ge.0.0423d0)) then
-      LS=-5.2D-3
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
     else if (part_id.eq.3) then ! source
-
-     if ((xcell(1).le.-0.0142d0).or. &
-         (xcell(1).ge.0.0255d0).or. &
-         (xcell(2).le.-0.203d0).or. &
-         (xcell(2).ge.-0.111d0).or. &
-         (xcell(3).le.-0.0092d0).or. &
-         (xcell(3).ge.0.0092d0)) then
-      LS=-0.0043
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
     else if (part_id.eq.4) then ! sink (2 masked off parts: TORUS shape)
-
-     if ((xcell(1).le.-0.0142d0).or. &
-         (xcell(1).ge.0.0255d0).or. &
-         (xcell(2).le.-0.2026d0).or. &
-         (xcell(2).ge.-0.111d0).or. &
-         (xcell(3).le.-0.0092d0).or. &
-         (xcell(3).ge.0.0092d0)) then
-      LS=-0.0127
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
-     if ((xcell(1).ge.-0.00805d0).and. &
-         (xcell(1).le.0.0193d0).and. &
-         (xcell(2).ge.-0.196d0).and. &
-         (xcell(2).le.10.0d0).and. &
-         (xcell(3).ge.-10.0d0).and. &
-         (xcell(3).le.10.0d0)) then
-      LS=-0.00416
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
+     call check_inside_box(xcell,interior_BB,LS,MASK)
     else if (part_id.eq.5) then ! tank
-
-     if ((xcell(1).le.-0.156d0).or. &
-         (xcell(1).ge.0.156d0).or. &
-         (xcell(2).le.-0.207d0).or. &
-         (xcell(2).ge.0.207d0).or. &
-         (xcell(3).le.-0.156d0).or. &
-         (xcell(3).ge.0.156d0)) then
-      LS=-0.02
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
-     if ((xcell(1).ge.-0.082d0).and. &
-         (xcell(1).le.0.082d0).and. &
-         (xcell(2).ge.-0.133d0).and. &
-         (xcell(2).le.0.133d0).and. &
-         (xcell(3).ge.-0.0822d0).and. &
-         (xcell(3).le.0.0822d0)) then
-      LS=-0.0188
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
+     call check_inside_box(xcell,interior_BB,LS,MASK)
     else if (part_id.eq.6) then ! nozzle housing
-
-     if ((xcell(1).le.-0.02417d0).or. &
-         (xcell(1).ge.0.03542d0).or. &
-         (xcell(2).le.-0.2054d0).or. &
-         (xcell(2).ge.-0.1081d0).or. &
-         (xcell(3).le.-0.0195d0).or. &
-         (xcell(3).ge.0.0195d0)) then
-      LS=-0.0042
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
     else if (part_id.eq.7) then ! LAD housing
-
-     if ((xcell(1).le.-0.134d0).or. &
-         (xcell(1).ge.0.134d0).or. &
-         (xcell(2).le.-0.184d0).or. &
-         (xcell(2).ge.-0.0387d0).or. &
-         (xcell(3).le.-0.0236d0).or. &
-         (xcell(3).ge.0.0236d0)) then
-      LS=-0.012
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
-     if ((xcell(1).ge.-0.117d0).and. &
-         (xcell(1).le.0.117d0).and. &
-         (xcell(2).ge.-0.167d0).and. &
-         (xcell(2).le.10.0d0).and. &
-         (xcell(3).ge.-10.0d0).and. &
-         (xcell(3).le.10.0d0)) then
-      LS=-0.012
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
+     call check_inside_box(xcell,interior_BB,LS,MASK)
     else
      print *,"part_id invalid"
      stop
@@ -422,112 +222,20 @@ INTEGER_T :: dir
    else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
 
     if (part_id.eq.1) then ! side heater_a 
-     if ((xcell(1).le.-0.06432d0).or. &
-         (xcell(1).ge.0.05158d0).or. &
-         (xcell(2).le.0.118d0).or. &
-         (xcell(2).ge.0.141d0).or. &
-         (xcell(3).le.-0.0274d0).or. &
-         (xcell(3).ge.0.0591d0)) then
-      LS=-5.27D-3
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
     else if (part_id.eq.2) then ! side heater b
-     if ((xcell(1).le.-0.0516d0).or. &
-         (xcell(1).ge.0.0643d0).or. &
-         (xcell(2).le.0.118d0).or. &
-         (xcell(2).ge.0.141d0).or. &
-         (xcell(3).le.-0.0643d0).or. &
-         (xcell(3).ge.0.0328d0)) then
-      LS=-5.3D-3
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
     else if (part_id.eq.3) then ! source
-
-     if ((xcell(1).le.-0.01002d0).or. &
-         (xcell(1).ge.0.01002d0).or. &
-         (xcell(2).le.-0.0443d0).or. &
-         (xcell(2).ge.0.0921d0).or. &
-         (xcell(3).le.-0.01002d0).or. &
-         (xcell(3).ge.0.01002d0)) then
-      LS=-0.0062
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
     else if (part_id.eq.4) then ! sink
-
-     if ((xcell(1).le.-0.00214d0).or. &
-         (xcell(1).ge.0.0139d0).or. &
-         (xcell(2).le.-0.0423d0).or. &
-         (xcell(2).ge.0.0505d0).or. &
-         (xcell(3).le.-0.03766d0).or. &
-         (xcell(3).ge.-0.02163d0)) then
-      LS=-0.0042
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
     else if (part_id.eq.5) then ! tank
-
-     if ((xcell(1).le.-0.0876d0).or. &
-         (xcell(1).ge.0.0876d0).or. &
-         (xcell(2).le.0.00524d0).or. &
-         (xcell(2).ge.0.256d0).or. &
-         (xcell(3).le.-0.0876d0).or. &
-         (xcell(3).ge.0.0876d0)) then
-      LS=-0.011
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
-     if ((xcell(1).ge.-0.046d0).and. &
-         (xcell(1).le.0.046d0).and. &
-         (xcell(2).ge.0.047d0).and. &
-         (xcell(2).le.0.214d0).and. &
-         (xcell(3).ge.-0.046d0).and. &
-         (xcell(3).le.0.046d0)) then
-      LS=-0.0114
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
+     call check_inside_box(xcell,interior_BB,LS,MASK)
     else if (part_id.eq.6) then ! nozzle housing
-
-     if ((xcell(1).le.-0.0175d0).or. &
-         (xcell(1).ge.0.0175d0).or. &
-         (xcell(2).le.-0.0443d0).or. &
-         (xcell(2).ge.0.092d0).or. &
-         (xcell(3).le.-0.0175d0).or. &
-         (xcell(3).ge.0.0175d0)) then
-      LS=-0.0062
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
     else if (part_id.eq.7) then ! LAD housing
-
-     if ((xcell(1).le.-0.00672d0).or. &
-         (xcell(1).ge.0.0185d0).or. &
-         (xcell(2).le.-0.0425d0).or. &
-         (xcell(2).ge.0.0551d0).or. &
-         (xcell(3).le.-0.0423d0).or. &
-         (xcell(3).ge.-0.0170d0)) then
-      LS=-0.0044
-      MASK=FSI_FINE_SIGN_VEL_VALID 
-     else
-      ! do nothing
-     endif
-
+     call check_outside_box(xcell,exterior_BB,LS,MASK)
     else
      print *,"part_id invalid"
      stop
