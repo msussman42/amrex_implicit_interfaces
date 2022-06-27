@@ -131,6 +131,9 @@ type mesh_type
  REAL_T soliddrop_speed
  REAL_T solid_displ(3)
  REAL_T solid_speed(3)
+ REAL_T exterior_BB(3,2)
+ REAL_T interior_BB(3,2)
+ REAL_T center_BB(3)
  INTEGER_T deforming_part
  INTEGER_T normal_invert
  INTEGER_T exclusive_doubly_wetted
@@ -2375,6 +2378,90 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
  view_refined=0
  call tecplot_normals(FSI_mesh_type,part_id,max_part_id,view_refined)
 
+ do dir=1,3
+  FSI_mesh_type%center_BB(dir)=zero
+  FSI_mesh_type%exterior_BB(dir,1)=zero
+  FSI_mesh_type%exterior_BB(dir,2)=zero
+  FSI_mesh_type%interior_BB(dir,1)=zero
+  FSI_mesh_type%interior_BB(dir,2)=zero
+ enddo
+
+ do inode_list=1,FSI_mesh_type%NumNodes
+  do dir=1,3
+   x1(dir)=FSI_mesh_type%Node(dir,inode_list)
+   FSI_mesh_type%center_BB(dir)=FSI_mesh_type%center_BB(dir)+x1(dir)
+   if (inode_list.eq.1) then
+    FSI_mesh_type%exterior_BB(dir,1)=x1(dir)
+    FSI_mesh_type%exterior_BB(dir,2)=x1(dir)
+   endif
+   if (x1(dir).lt.FSI_mesh_type%exterior_BB(dir,1)) then
+    FSI_mesh_type%exterior_BB(dir,1)=x1(dir)
+   endif
+   if (x1(dir).gt.FSI_mesh_type%exterior_BB(dir,2)) then
+    FSI_mesh_type%exterior_BB(dir,2)=x1(dir)
+   endif
+  enddo !dir=1..3
+ enddo ! inode_list=1,FSI_mesh_type%NumNodes
+
+ if (FSI_mesh_type%NumNodes.gt.0) then
+  do dir=1,3
+   FSI_mesh_type%center_BB(dir)= &
+       FSI_mesh_type%center_BB(dir)/FSI_mesh_type%NumNodes
+   if ((FSI_mesh_type%center_BB(dir).ge. &
+        FSI_mesh_type%exterior_BB(dir,1)).and. &
+       (FSI_mesh_type%center_BB(dir).le. &
+        FSI_mesh_type%exterior_BB(dir,2))) then
+    ! do nothing
+   else
+    print *,"center_BB invalid"
+    stop
+   endif
+  enddo !dir=1..3
+  do inode_list=1,FSI_mesh_type%NumNodes
+   do dir=1,3
+    x1(dir)=FSI_mesh_type%Node(dir,inode_list)
+    if (x1(dir).ge.FSI_mesh_type%center_BB(dir)) then
+     if (inode_list.eq.1) then
+      FSI_mesh_type%interior_BB(dir,2)=x1(dir)
+     endif
+     FSI_mesh_type%interior_BB(dir,2)= &
+          min(FSI_mesh_type%interior_BB(dir,2),x1(dir))
+    endif
+    if (x1(dir).le.FSI_mesh_type%center_BB(dir)) then
+     if (inode_list.eq.1) then
+      FSI_mesh_type%interior_BB(dir,1)=x1(dir)
+     endif
+     FSI_mesh_type%interior_BB(dir,1)= &
+          max(FSI_mesh_type%interior_BB(dir,1),x1(dir))
+    endif
+   enddo !dir=1..3
+  enddo ! inode_list=1,FSI_mesh_type%NumNodes
+ else if (FSI_mesh_type%NumNodes.eq.0) then
+  ! do nothing
+ else
+  print *,"NumNodes invalid"
+  stop
+ endif
+
+ if (ioproc.eq.1) then
+  do dir=1,3
+   print *,"part_id,dir,center_BB ",part_id,dir,FSI_mesh_type%center_BB(dir)
+   print *,"part_id,dir,exterior_BB(dir,1) ", &
+           part_id,dir,FSI_mesh_type%exterior_BB(dir,1)
+   print *,"part_id,dir,exterior_BB(dir,2) ", &
+           part_id,dir,FSI_mesh_type%exterior_BB(dir,2)
+   print *,"part_id,dir,interior_BB(dir,1) ", &
+           part_id,dir,FSI_mesh_type%interior_BB(dir,1)
+   print *,"part_id,dir,interior_BB(dir,2) ", &
+           part_id,dir,FSI_mesh_type%interior_BB(dir,2)
+  enddo !dir=1..3
+ else if (ioproc.eq.0) then
+  ! do nothing
+ else
+  print *,"ioproc invalid"
+  stop
+ endif 
+   
 ! START OF LAGRANGIAN REFINEMENT SECTION ---------------------
 
  biggest_h=0.0
@@ -12435,6 +12522,8 @@ IMPLICIT NONE
        sign_status_changed=0
 
        call SUB_OVERRIDE_FSI_SIGN_LS_VEL_TEMP( &
+         FSI_mesh_type%exterior_BB, &
+         FSI_mesh_type%interior_BB, &
          xcen,time, &
          override_LS, &
          override_VEL, &
@@ -12448,7 +12537,25 @@ IMPLICIT NONE
 
         ! induces "new_mask_local=FSI_FINE_SIGN_VEL_VALID" below.
         sign_status_changed=1 
-        ls_local=override_LS
+        if (sign_conflict_local.eq.zero) then
+         ls_local=override_LS
+        else if ((sign_conflict_local.eq.one).or. &
+                 (sign_conflict_local.eq.two).or. &
+                 (sign_conflict_local.eq.three)) then
+         if (override_LS.lt.zero) then
+          ls_local=-abs(ls_local)
+         else if (override_LS.gt.zero) then
+          ls_local=abs(ls_local)
+         else if (override_LS.eq.zero) then
+          ls_local=zero
+         else
+          print *,"override_LS invalid"
+          stop
+         endif
+        else
+         print *,"sign_conflict_local invalid"
+         stop
+        endif
         do dir=1,3
          FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=override_VEL(dir)
         enddo

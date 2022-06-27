@@ -4788,866 +4788,959 @@ REAL_T :: sanity_tol
 return
 end subroutine global_checkinplane
 
-
-
-      subroutine get_crse_index(i,j,k,ic,jc,kc,dir)
-      IMPLICIT NONE
-
-      INTEGER_T i,j,k,ic,jc,kc,dir
-
-      ic=i
-      jc=j
-      kc=k
-      if (dir.eq.SDIM) then
-       if (i.ge.0) then
-        ic=i/2
-       else
-        ic=(i-1)/2
-       endif
-       if (j.ge.0) then
-        jc=j/2
-       else
-        jc=(j-1)/2
-       endif
-       if (k.ge.0) then
-        kc=k/2
-       else
-        kc=(k-1)/2
-       endif
-      else if (dir.eq.0) then
-       if (i.ge.0) then
-        ic=i/2
-       else
-        ic=(i-1)/2
-       endif
-      else if (dir.eq.1) then
-       if (j.ge.0) then
-        jc=j/2
-       else
-        jc=(j-1)/2
-       endif
-      else if (dir.eq.SDIM-1) then
-       if (k.ge.0) then
-        kc=k/2
-       else
-        kc=(k-1)/2
-       endif
-      else
-       print *,"dir invalid get crse index"
-       stop
-      endif
-
-      return
-      end subroutine get_crse_index
-
-      subroutine maxind(k,S,n,m_out)
-      IMPLICIT NONE
-      INTEGER_T, intent(in) :: n
-      INTEGER_T, intent(in) :: k
-      REAL_T, intent(in) :: S(n,n)
-      INTEGER_T, intent(out) :: m_out
-      INTEGER_T :: i
-
-      if ((n.ge.2).and.(n.le.3)) then
-       ! do nothing
-      else
-       print *,"n out of range"
-       stop
-      endif
-      if ((k.ge.1).and.(k.le.n)) then
-       ! do nothing
-      else
-       print *,"k out of range"
-       stop
-      endif
-      m_out=k+1
-      do i=k+2,n
-       if (abs(S(k,i))>abs(S(k,m_out))) then
-        m_out=i
-       endif
-      enddo
-      
-      return
-      end subroutine maxind
-
-      subroutine EVAL_update(k,t,y,changed,evals,state,n)
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: n
-      INTEGER_T, intent(in) :: k
-      REAL_T, intent(inout) :: y
-      INTEGER_T, intent(inout) :: state
-      INTEGER_T, intent(inout) :: changed(n)
-      REAL_T, intent(inout) :: evals(n)
-      REAL_T, intent(in) :: t
-
-      if ((n.ge.2).and.(n.le.3)) then
-       ! do nothing
-      else
-       print *,"n out of range"
-       stop
-      endif
-      if ((k.ge.1).and.(k.le.n)) then
-       ! do nothing
-      else
-       print *,"k invalid"
-       stop
-      endif
-      y=evals(k) 
-      evals(k)=y+t
-      if ((changed(k).eq.1).and.(y.eq.evals(k))) then
-       changed(k)=0
-       state=state-1
-      else if ((changed(k).eq.0).and.(y.ne.evals(k))) then
-       changed(k)=1
-       state=state+1
-      else if ((changed(k).eq.1).and.(y.ne.evals(k))) then
-       ! do nothing
-      else if ((changed(k).eq.0).and.(y.eq.evals(k))) then
-       ! do nothing
-      else 
-       print *,"changed or evals invalid"
-       stop
-      endif
-
-      return
-      end subroutine EVAL_update
-
-      subroutine EVAL_rotate(k,l,i,j,S,n,sinrot,cosrot)
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: n
-      REAL_T, intent(inout) :: S(n,n)
-      REAL_T, intent(in) :: sinrot,cosrot
-      INTEGER_T, intent(in) :: k,l,i,j
-      REAL_T skl,sij 
-
-      if ((n.ge.2).and.(n.le.3)) then
-       ! do nothing
-      else
-       print *,"expecting n=2,3"
-       stop
-      endif
-
-      skl=S(k,l)
-      sij=S(i,j)
-      S(k,l)=cosrot*skl-sinrot*sij
-      S(i,j)=sinrot*skl+cosrot*sij
-
-      return
-      end subroutine EVAL_rotate
-      
-       !columns of "evecs" are the eigenvectors.
-       !This routine will modify S, but then restore S at the end.
-      subroutine fort_jacobi_eigenvalue(S,evals,evecs,n)
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: n
-      REAL_T, intent(inout) :: S(n,n)
-      REAL_T, intent(out) :: evals(n)
-      REAL_T, intent(out) :: evecs(n,n)
-      REAL_T :: S_SAVE(n,n)
-      INTEGER_T :: i,j,k,k_in,l,m,state
-      REAL_T :: sinrot,cosrot,t,p,y,d,r
-      INTEGER_T :: ind(n)
-      INTEGER_T :: changed(n)
-      REAL_T :: eik,eil
-      REAL_T :: XL(n,n)
-      REAL_T :: XLXT(n,n)
-      REAL_T :: max_S
-      REAL_T :: sanity_err
-      REAL_T :: swap_hold
-      REAL_T :: sum_off_diag
-
-      if (1.eq.0) then
-       print *,"begin of jacobi eval"
-      endif
-
-      if ((n.ge.2).and.(n.le.3)) then
-       ! do nothing
-      else
-       print *,"expecting n=2,3"
-       stop
-      endif
-
-      sum_off_diag=zero
-
-      do i=1,n
-      do j=1,n
-       if (i.eq.j) then
-        evecs(i,j)=one
-       else if (i.ne.j) then
-        evecs(i,j)=zero
-        sum_off_diag=sum_off_diag+abs(S(i,j))
-       else
-        print *,"i or j corrupt"
-        stop
-       endif
-       S_SAVE(i,j)=S(i,j)
-      enddo
-      enddo
-
-      max_S=zero
-      do i=1,n
-      do j=1,n  
-       if (abs(S_SAVE(i,j)).gt.max_S) then
-        max_S=abs(S_SAVE(i,j))
-       endif
-      enddo
-      enddo
-      max_S=max(max_S,one)
-
-      state=n
-      
-      do k=1,n
-       call maxind(k,S,n,ind(k))
-       evals(k)=S(k,k)
-       changed(k)=1
-      enddo
-
-      if ((sum_off_diag.le.1.0D-13*max_S).and. &
-          (sum_off_diag.ge.zero)) then
-       state=0
-       sanity_err=zero
-      else if (sum_off_diag.gt.zero) then
-       ! do nothing
-      else
-       print *,"sum_off_diag invalid"
-       stop
-      endif
-
-      do while (state.ne.0)
-       m=1
-       do k=2,n-1
-        if ((ind(k).ge.1).and.(ind(m).ge.1).and. &
-            (ind(k).le.n).and.(ind(m).le.n).and. &
-            (k.ge.1).and.(k.le.n).and.(m.ge.1).and.(m.le.n)) then
-         if (abs(S(k,ind(k))).gt.abs(S(m,ind(m)))) then
-          m=k
-         endif
-        else
-         print *,"k,m,ind(k),ind(m) bad ",k,m,ind(k),ind(m)
-         stop
-        endif
-       enddo
-       k=m
-       l=ind(m)
-       if ((l.ge.1).and.(l.le.n)) then
-        ! do nothing
-       else
-        print *,"l invalid ",l
-        print *,"m=",m
-        stop
-       endif
-
-       p=S(k,l)
-       y=(evals(l)-evals(k))/two
-       d=abs(y)+sqrt(p**2+y**2)
-       r=sqrt(p**2+d**2)
-       if (r.gt.zero) then
-        cosrot=d/r
-        sinrot=p/r
-       else
-        print *,"expecting r>0 in fort_jacobi_eigenvalue"
-        print *,"k,l,p,y,d,r ",k,l,p,y,d,r
-        print *,"max_S=",max_S
-        do i=1,n
-        do j=1,n
-         print *,"i,j,S_SAVE(i,j) ",i,j,S_SAVE(i,j)
-        enddo
-        enddo
-        stop
-       endif
-       if (d.gt.zero) then
-        t=p**2/d
-       else
-        print *,"expecting d>0 in fort_jacobi_eigenvalue"
-        print *,"max_S=",max_S
-        stop
-       endif
-       if (y.lt.zero) then
-        sinrot=-sinrot
-        t=-t
-       else if (y.ge.zero) then
-        ! do nothing
-       else
-        print *,"y invalid"
-        stop
-       endif
-       S(k,l)=zero
-       call EVAL_update(k,-t,y,changed,evals,state,n)       
-       call EVAL_update(l,t,y,changed,evals,state,n)       
-       do i=1,k-1
-        call EVAL_rotate(i,k,i,l,S,n,sinrot,cosrot)
-       enddo
-       do i=k+1,l-1
-        call EVAL_rotate(k,i,i,l,S,n,sinrot,cosrot)
-       enddo
-       do i=l+1,n
-        call EVAL_rotate(k,i,l,i,S,n,sinrot,cosrot)
-       enddo
-       do i=1,n
-        eik=evecs(i,k)
-        eil=evecs(i,l)
-        evecs(i,k)=cosrot*eik-sinrot*eil
-        evecs(i,l)=sinrot*eik+cosrot*eil
-       enddo
-       call maxind(k,S,n,ind(k))
-       call maxind(l,S,n,ind(l))
-      
-        ! AX=X Lambda
-        ! A=X Lambda X^{-1}=X Lambda X^T
-       do i=1,n
-       do j=1,n  
-        XL(i,j)=evecs(i,j)*evals(j)
-       enddo
-       enddo
-
-       do i=1,n
-       do j=1,n  
-        XLXT(i,j)=zero
-        do k_in=1,n
-         XLXT(i,j)=XLXT(i,j)+XL(i,k_in)*evecs(j,k_in)
-        enddo
-       enddo
-       enddo
-
-       sanity_err=zero
-       do i=1,n
-       do j=1,n  
-        if (abs(XLXT(i,j)-S_SAVE(i,j)).gt.sanity_err) then
-         sanity_err=abs(XLXT(i,j)-S_SAVE(i,j))
-        endif
-       enddo
-       enddo
-       if (sanity_err.ge.1.0D-12*max_S) then
-        ! do nothing
-       else if (sanity_err.le.1.0D-12*max_S) then
-        state=0
-       else
-        print *,"sanity_err became corrupt"
-        stop
-       endif
-
-      enddo !do while (state.ne.0)
-
-      if (sanity_err.ge.1.0D-11*max_S) then
-       print *,"sanity_err too large(1)"
-       stop
-      else if (sanity_err.le.1.0D-11*max_S) then
-       ! do nothing
-      else
-       print *,"sanity_err is NaN"
-       stop
-      endif
-
-       ! restore S
-      do k=1,n-1
-       do l=k+1,n
-        S(k,l)=S(l,k)
-       enddo
-      enddo
-      do i=1,n
-      do j=1,n
-       if (abs(S(i,j)-S_SAVE(i,j)).le.1.0D-12*max_S) then
-        ! do nothing
-       else
-        print *,"S not properly restored"
-        print *,"i,j,n,S(i,j),S_SAVE(i,j),abs(S-S_SAVE): ", &
-          i,j,n,S(i,j),S_SAVE(i,j),abs(S(i,j)-S_SAVE(i,j))
-        stop
-       endif
-      enddo
-      enddo
-
-      do k=1,n-1
-       m=k 
-       do l=k+1,n
-        if (abs(evals(l)).gt.abs(evals(m))) then
-         m=l
-        else if (abs(evals(l)).le.abs(evals(m))) then
-         ! do nothing
-        else
-         print *,"evals NaN error"
-         stop
-        endif
-       enddo
-       if (k.ne.m) then
-        swap_hold=evals(m)
-        evals(m)=evals(k)
-        evals(k)=swap_hold
-        do i=1,n
-         swap_hold=evecs(i,m)
-         evecs(i,m)=evecs(i,k)
-         evecs(i,k)=swap_hold
-        enddo
-       endif
-      enddo
-
-       ! AX=X Lambda
-       ! A=X Lambda X^{-1}=X Lambda X^T
-      do i=1,n
-      do j=1,n  
-       XL(i,j)=evecs(i,j)*evals(j)
-      enddo
-      enddo
-
-      do i=1,n
-      do j=1,n  
-       XLXT(i,j)=zero
-       do k_in=1,n
-        XLXT(i,j)=XLXT(i,j)+XL(i,k_in)*evecs(j,k_in)
-       enddo
-      enddo
-      enddo
-
-      sanity_err=zero
-      do i=1,n
-      do j=1,n  
-       if (abs(XLXT(i,j)-S_SAVE(i,j)).gt.sanity_err) then
-        sanity_err=abs(XLXT(i,j)-S_SAVE(i,j))
-       endif
-      enddo
-      enddo
-
-      if (sanity_err.ge.1.0D-11*max_S) then
-       print *,"sanity_err too large(2)"
-       stop
-      else if (sanity_err.le.1.0D-11*max_S) then
-       ! do nothing
-      else
-       print *,"sanity_err became corrupt"
-       stop
-      endif
-
-      if (1.eq.0) then
-       print *,"end of jacobi eval"
-      endif
-
-      return
-      end subroutine fort_jacobi_eigenvalue
-
-      subroutine project_to_positive_definite(S,n,min_eval)
-      IMPLICIT NONE
-
-      REAL_T, intent(in)    :: min_eval
-      INTEGER_T, intent(in) :: n
-      REAL_T, intent(inout) :: S(n,n)
-
-      REAL_T :: S_local(n,n)
-      REAL_T :: STS(n,n)
-      REAL_T :: evals_project(n)
-      REAL_T :: XL(n,n)
-      REAL_T :: evals_S(n)
-      REAL_T :: evecs_S(n,n)
-      REAL_T :: evals_STS(n)
-      REAL_T :: evecs_STS(n,n)
-      INTEGER_T :: i,j,k
-      REAL_T :: max_eval_sqr
-
-      if (min_eval.gt.zero) then
-       ! do nothing
-      else
-       print *,"min_eval invalid"
-       stop
-      endif
-
-      if (n.ge.2) then
-       ! do nothing
-      else
-       print *,"expecting n>=2"
-       stop
-      endif
-
-      do i=1,n
-      do j=1,n
-       S_local(i,j)=S(i,j)
-       STS(i,j)=zero
-       do k=1,n
-        STS(i,j)=STS(i,j)+S(k,i)*S(k,j)
-       enddo
-      enddo
-      enddo
-
-      call fort_jacobi_eigenvalue(S_local,evals_S,evecs_S,n)
-      call fort_jacobi_eigenvalue(STS,evals_STS,evecs_STS,n)
-      
-      max_eval_sqr=-1.0D+20
-      do i=1,n
-       if (evals_STS(i).gt.max_eval_sqr) then
-        max_eval_sqr=evals_STS(i)
-       else if (evals_STS(i).le.max_eval_sqr) then
-        ! do nothing
-       else
-        print *,"evals_STS or max_eval_sqr invalid"
-        stop
-       endif
-
-       if (evals_STS(i).lt.zero) then
-        print *,"evals_STS(i) cannot be negative"
-        stop
-       else if (evals_STS(i).ge.zero) then
-        ! do nothing
-       else
-        print *,"evals_STS(i) is NaN"
-        stop
-       endif
-
-      enddo
-
-      if (max_eval_sqr.lt.zero) then
-       print *,"max_eval_sqr cannot be negative"
-       stop
-      else if (max_eval_sqr.ge.zero) then
-       ! do nothing
-      else
-       print *,"max_eval_sqr is NaN"
-       stop
-      endif
-
-      max_eval_sqr=max(max_eval_sqr,one)
-      do i=1,n
-       if ((abs(evals_S(i)**2-evals_STS(i)).le.1.0D-12*max_eval_sqr).or. &
-           (1.eq.1)) then
-        ! do nothing
-       else
-        print *,"evals_S and evals_STS inconsistent"
-        print *,"max_eval_sqr= ",max_eval_sqr
-        print *,"i,n = ",i,n
-        print *,"evals_S(i)= ",evals_S(i)
-        print *,"evals_STS(i)= ",evals_STS(i)
-        stop
-       endif
-      enddo
-      do i=1,n
-       evals_project(i)=max(min_eval,evals_S(i))
-      enddo
-       ! AX=X Lambda
-       ! A=X Lambda X^T
-      do i=1,n
-      do j=1,n
-       XL(i,j)=evecs_STS(i,j)*evals_project(j)
-      enddo
-      enddo
-      do i=1,n
-      do j=1,n
-       S(i,j)=zero
-       do k=1,n
-        S(i,j)=S(i,j)+XL(i,k)*evecs_STS(j,k)
-       enddo
-      enddo
-      enddo
-
-      end subroutine project_to_positive_definite
-
-       ! called from fort_updatetensor which is declared in GODUNOV_3D.F90.
-       ! A=Q+I must be symmetric and positive definite.
-      subroutine project_A_to_positive_definite(A, &
-         viscoelastic_model,polymer_factor)
-      IMPLICIT NONE
-
-      REAL_T, intent(inout) :: A(3,3)
-      INTEGER_T, intent(in) :: viscoelastic_model
-      REAL_T, intent(in) :: polymer_factor
-      INTEGER_T A_dim
-      REAL_T min_eval
-
-      if ((viscoelastic_model.eq.0).or. & !FENE-CR
-          (viscoelastic_model.eq.1).or. & !OLDROYD-B
-          (viscoelastic_model.eq.5).or. & !FENE-P
-          (viscoelastic_model.eq.6)) then !linear PTT
-
-       min_eval=0.01D0*(polymer_factor**2)
-       A_dim=3
-       call project_to_positive_definite(A,A_dim,min_eval)
-
-      else if (viscoelastic_model.eq.3) then ! incremental
-       ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-       ! do nothing
-      else
-       print *,"viscoelastic_model invalid"
-       stop
-      endif
-      return
-      end subroutine project_A_to_positive_definite
-
-      subroutine matrix_solve(AA,xx,bb,matstatus,numelem)
-      IMPLICIT NONE
-      INTEGER_T numelem
-      REAL_T AA(numelem,numelem)
-      REAL_T xx(numelem)
-      REAL_T bb(numelem)
-      REAL_T alpha,holdvalue
-      INTEGER_T i,j,k,holdj,matstatus
-      REAL_T rowsum,maxrowsum
-
-      matstatus=1
-
-        ! first we normalize the matrix system by the infinity norm
-        ! of AA
-        ! this means the maximum eigenvalue of the normalized
-        ! system has magnitude <2.
-      maxrowsum=zero
-      do i=1,numelem
-       rowsum=zero
-       do j=1,numelem
-        rowsum=rowsum+abs(AA(i,j))
-       enddo
-       if (rowsum.gt.maxrowsum) then
-        maxrowsum=rowsum
-       endif
-       if (rowsum.le.zero) then
-        matstatus=0
-       endif
-      enddo
-      if (maxrowsum.le.zero) then
-       matstatus=0
-      endif
-      
-      if (matstatus.eq.1) then
- 
-        do i=1,numelem
-         do j=1,numelem
-          AA(i,j)=AA(i,j)/maxrowsum
-         enddo
-         bb(i)=bb(i)/maxrowsum
-        enddo
-
-        do i=1,numelem-1
-         holdj=i
-         holdvalue=abs(AA(i,i))
-         do j=i+1,numelem 
-          if (abs(AA(j,i)).gt.holdvalue) then
-           holdj=j
-           holdvalue=abs(AA(j,i))
-          endif
-         enddo
-         if (holdj.ne.i) then
-          do j=i,numelem
-           holdvalue=AA(i,j)
-           AA(i,j)=AA(holdj,j)
-           AA(holdj,j)=holdvalue
-          enddo
-         endif
-         holdvalue=bb(i)
-         bb(i)=bb(holdj)
-         bb(holdj)=holdvalue
-         if (abs(AA(i,i)).lt.1.0D-10) then
-          matstatus=0
-         else
-          do j=i+1,numelem
-           alpha=AA(j,i)/AA(i,i)
-           AA(j,i)=zero
-           do k=i+1,numelem
-            AA(j,k)=AA(j,k)-alpha*AA(i,k)
-           enddo
-           bb(j)=bb(j)-alpha*bb(i)
-          enddo
-         endif
-        enddo
-
-        do i=numelem,1,-1
-         if (matstatus.eq.1) then
-          holdvalue=bb(i)
-          do j=i+1,numelem
-           holdvalue=holdvalue-AA(i,j)*xx(j)
-          enddo
-          if (abs(AA(i,i)).lt.1.0D-10) then
-           matstatus=0
-          else
-           xx(i)=holdvalue/AA(i,i)
-          endif
-         else if (matstatus.eq.0) then
-          ! do nothing
-         else
-          print *,"matstatus invalid"
-          stop
-         endif
-        enddo  ! back solve
-     
-      else if (matstatus.eq.0) then
-       ! do nothing
-      else
-       print *,"matstatus invalid"
-       stop
-      endif
-
-      return
-      end subroutine matrix_solve
-
-      subroutine print_matrix(AA,numelem)
-      IMPLICIT NONE
-      INTEGER_T numelem
-      REAL_T AA(numelem,numelem)
-
-      INTEGER_T i
-
-      do i=1,numelem
-       print *,AA(i,:)
-       print *,"endrow"
-      enddo
-
-      return
-      end subroutine print_matrix
-
-      subroutine matrix_inverse(AA,xx,matstatus,numelem)
-      IMPLICIT NONE
-      INTEGER_T numelem
-      REAL_T AA(numelem,numelem)
-      REAL_T AAhold(numelem,numelem)
-      REAL_T xx(numelem,numelem)
-      REAL_T bb(numelem,numelem)
-      REAL_T alpha,holdvalue
-      INTEGER_T i,j,k,holdj,matstatus
-
-      do i=1,numelem
-       do j=1,numelem
-        AAhold(i,j)=AA(i,j)
-        bb(i,j)=zero
-       enddo
-       bb(i,i)=one
-      enddo
- 
-      matstatus=1
-      do i=1,numelem-1
-         holdj=i
-         holdvalue=abs(AA(i,i))
-         do j=i+1,numelem 
-          if (abs(AA(j,i)).gt.holdvalue) then
-           holdj=j
-           holdvalue=abs(AA(j,i))
-          endif
-         enddo
-         if (holdj.ne.i) then
-          do j=i,numelem
-           holdvalue=AA(i,j)
-           AA(i,j)=AA(holdj,j)
-           AA(holdj,j)=holdvalue
-          enddo
-         endif
-         do k=1,numelem
-          holdvalue=bb(i,k)
-          bb(i,k)=bb(holdj,k)
-          bb(holdj,k)=holdvalue
-         enddo
-         if (abs(AA(i,i)).lt.1.0D-32) then
-          matstatus=0
-         else
-          do j=i+1,numelem
-           alpha=AA(j,i)/AA(i,i)
-           do k=i,numelem
-            AA(j,k)=AA(j,k)-alpha*AA(i,k)
-           enddo
-           do k=1,numelem
-            bb(j,k)=bb(j,k)-alpha*bb(i,k)
-           enddo
-          enddo
-         endif
-      enddo
-
-      do i=numelem,1,-1
-         if (matstatus.ne.0) then
-          do k=1,numelem
-           holdvalue=bb(i,k)
-           do j=i+1,numelem
-            holdvalue=holdvalue-AA(i,j)*xx(j,k)
-           enddo
-           if (abs(AA(i,i)).lt.1.0D-32) then
-            matstatus=0
-           else
-            xx(i,k)=holdvalue/AA(i,i)
-           endif
-          enddo
-         endif
-      enddo
-
-      if (1.eq.1) then
-       do i=1,numelem
-        do j=1,numelem
-         holdvalue=zero
-         do k=1,numelem
-          holdvalue=holdvalue+AAhold(i,k)*xx(k,j)
-         enddo 
-         if (i.ne.j) then
-          if (abs(holdvalue).gt.1.0D-12) then
-           print *,"inverse failed1"
-           print *,"AAhold="
-           call print_matrix(AAhold,numelem)
-           print *,"xx="
-           call print_matrix(xx,numelem)
-           stop
-          endif
-         else if (i.eq.j) then
-          if (abs(holdvalue-one).gt.1.0D-12) then
-           print *,"inverse failed2"
-           print *,"AAhold="
-           call print_matrix(AAhold,numelem)
-           print *,"xx="
-           call print_matrix(xx,numelem)
-           stop
-          endif
-         endif
-        enddo
-       enddo
-      endif
-
-      return
-      end subroutine matrix_inverse
-
-      subroutine print_visual_descriptor(im,n_fortran)
-      use probcommon_module
-      IMPLICIT NONE
-
-      INTEGER_T, intent(in) :: im,n_fortran
-      INTEGER_T :: n_cpp
-
-      if ((im.ge.1).and.(im.le.num_materials)) then
-       ! do nothing
-      else
-       print *,"im invalid"
-       stop
-      endif
-
-      print *,"im=1..num_materials; im,num_materials:",im,num_materials
-
-      n_cpp=n_fortran-1
-
-      if (n_cpp.eq.VISUALCOMP_X) then
-       print *,"VISUAL X"
-      else if (n_cpp.eq.VISUALCOMP_Y) then
-       print *,"VISUAL Y"
-      else if ((n_cpp.eq.VISUALCOMP_Z).and.(SDIM.eq.3)) then
-       print *,"VISUAL Z"
-      else if (n_cpp.eq.VISUALCOMP_U) then
-       print *,"VISUAL U"
-      else if (n_cpp.eq.VISUALCOMP_V) then
-       print *,"VISUAL V"
-      else if ((n_cpp.eq.VISUALCOMP_W).and.(SDIM.eq.3)) then
-       print *,"VISUAL W"
-      else if (n_cpp.eq.VISUALCOMP_PMG) then
-       print *,"VISUAL PMG"
-      else if (n_cpp.eq.VISUALCOMP_DEN) then
-       print *,"VISUAL DEN"
-      else if (n_cpp.eq.VISUALCOMP_TEMP) then
-       print *,"VISUAL TEMP"
-      else if ((n_cpp.ge.VISUALCOMP_Y1).and. &
-               (n_cpp.le.VISUALCOMP_Y1+num_species_var-1)) then
-       print *,"VISUAL Y species component(1..num_species_var)=", &
-               n_cpp-VISUALCOMP_Y1+1
-      else if (n_cpp.eq.VISUALCOMP_VORTMAG) then
-       print *,"VISUAL VORTMAG"
-      else if ((n_cpp.ge.VISUALCOMP_LS).and. &
-               (n_cpp.le.VISUALCOMP_LS+num_materials-1)) then
-       print *,"VISUAL LS material component(1..nmat)=",n_cpp-VISUALCOMP_LS+1
-      else if (n_cpp.eq.VISUALCOMP_MAGVEL) then
-       print *,"VISUAL MAGVEL"
-      else
-       print *,"n_cpp out of range"
-       stop
-      endif
-
-      return
-      end subroutine print_visual_descriptor
+subroutine check_outside_box(xcell,BB,LS,MASK)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: xcell(3)
+REAL_T, intent(in) :: BB(3,2)
+INTEGER_T, intent(out) :: MASK
+REAL_T, intent(out) :: LS
+REAL_T :: lenscale
+REAL_T :: test_lenscale
+INTEGER_T outside_flag
+INTEGER_T dir
+
+lenscale=zero
+outside_flag=0
+
+do dir=1,3
+ if (BB(dir,2).ge.BB(dir,1)) then
+  test_lenscale=(BB(dir,2)-BB(dir,1))/four
+  if (test_lenscale.gt.lenscale) then
+   lenscale=test_lenscale
+  endif
+  if (xcell(dir).le.BB(dir,1)) then
+   outside_flag=1
+  endif
+  if (xcell(dir).ge.BB(dir,2)) then
+   outside_flag=1
+  endif
+ else
+  print *,"BB invalid"
+  stop
+ endif
+enddo !dir=1..3
+
+if (outside_flag.eq.1) then
+ LS=-lenscale
+ MASK=FSI_FINE_SIGN_VEL_VALID
+else if (outside_flag.eq.0) then
+ ! do nothing
+else
+ print *,"outside_flag invalid"
+ stop
+endif
+
+return
+end subroutine check_outside_box
+
+subroutine check_inside_box(xcell,BB,LS,MASK)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: xcell(3)
+REAL_T, intent(in) :: BB(3,2)
+INTEGER_T, intent(out) :: MASK
+REAL_T, intent(out) :: LS
+REAL_T :: lenscale
+REAL_T :: test_lenscale
+INTEGER_T inside_flag
+INTEGER_T dir
+
+lenscale=zero
+inside_flag=1
+
+do dir=1,3
+ if (BB(dir,2).ge.BB(dir,1)) then
+  test_lenscale=(BB(dir,2)-BB(dir,1))/four
+  if (test_lenscale.gt.lenscale) then
+   lenscale=test_lenscale
+  endif
+  if (xcell(dir).lt.BB(dir,1)) then
+   inside_flag=0
+  endif
+  if (xcell(dir).gt.BB(dir,2)) then
+   inside_flag=0
+  endif
+ else
+  print *,"BB invalid"
+  stop
+ endif
+enddo !dir=1..3
+
+if (inside_flag.eq.1) then
+ LS=-lenscale
+ MASK=FSI_FINE_SIGN_VEL_VALID
+else if (inside_flag.eq.0) then
+ ! do nothing
+else
+ print *,"inside_flag invalid"
+ stop
+endif
+
+return
+end subroutine check_inside_box
+
+
+subroutine get_crse_index(i,j,k,ic,jc,kc,dir)
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: i,j,k
+INTEGER_T, intent(out) :: ic,jc,kc
+INTEGER_T, intent(in) :: dir
+
+ic=i
+jc=j
+kc=k
+if (dir.eq.SDIM) then
+ if (i.ge.0) then
+  ic=i/2
+ else
+  ic=(i-1)/2
+ endif
+ if (j.ge.0) then
+  jc=j/2
+ else
+  jc=(j-1)/2
+ endif
+ if (k.ge.0) then
+  kc=k/2
+ else
+  kc=(k-1)/2
+ endif
+else if (dir.eq.0) then
+ if (i.ge.0) then
+  ic=i/2
+ else
+  ic=(i-1)/2
+ endif
+else if (dir.eq.1) then
+ if (j.ge.0) then
+  jc=j/2
+ else
+  jc=(j-1)/2
+ endif
+else if (dir.eq.SDIM-1) then
+ if (k.ge.0) then
+  kc=k/2
+ else
+  kc=(k-1)/2
+ endif
+else
+ print *,"dir invalid get crse index"
+ stop
+endif
+
+return
+end subroutine get_crse_index
+
+subroutine maxind(k,S,n,m_out)
+IMPLICIT NONE
+INTEGER_T, intent(in) :: n
+INTEGER_T, intent(in) :: k
+REAL_T, intent(in) :: S(n,n)
+INTEGER_T, intent(out) :: m_out
+INTEGER_T :: i
+
+if ((n.ge.2).and.(n.le.3)) then
+ ! do nothing
+else
+ print *,"n out of range"
+ stop
+endif
+if ((k.ge.1).and.(k.le.n)) then
+ ! do nothing
+else
+ print *,"k out of range"
+ stop
+endif
+m_out=k+1
+do i=k+2,n
+ if (abs(S(k,i))>abs(S(k,m_out))) then
+  m_out=i
+ endif
+enddo
+
+return
+end subroutine maxind
+
+subroutine EVAL_update(k,t,y,changed,evals,state,n)
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: n
+INTEGER_T, intent(in) :: k
+REAL_T, intent(inout) :: y
+INTEGER_T, intent(inout) :: state
+INTEGER_T, intent(inout) :: changed(n)
+REAL_T, intent(inout) :: evals(n)
+REAL_T, intent(in) :: t
+
+if ((n.ge.2).and.(n.le.3)) then
+ ! do nothing
+else
+ print *,"n out of range"
+ stop
+endif
+if ((k.ge.1).and.(k.le.n)) then
+ ! do nothing
+else
+ print *,"k invalid"
+ stop
+endif
+y=evals(k) 
+evals(k)=y+t
+if ((changed(k).eq.1).and.(y.eq.evals(k))) then
+ changed(k)=0
+ state=state-1
+else if ((changed(k).eq.0).and.(y.ne.evals(k))) then
+ changed(k)=1
+ state=state+1
+else if ((changed(k).eq.1).and.(y.ne.evals(k))) then
+ ! do nothing
+else if ((changed(k).eq.0).and.(y.eq.evals(k))) then
+ ! do nothing
+else 
+ print *,"changed or evals invalid"
+ stop
+endif
+
+return
+end subroutine EVAL_update
+
+subroutine EVAL_rotate(k,l,i,j,S,n,sinrot,cosrot)
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: n
+REAL_T, intent(inout) :: S(n,n)
+REAL_T, intent(in) :: sinrot,cosrot
+INTEGER_T, intent(in) :: k,l,i,j
+REAL_T skl,sij 
+
+if ((n.ge.2).and.(n.le.3)) then
+ ! do nothing
+else
+ print *,"expecting n=2,3"
+ stop
+endif
+
+skl=S(k,l)
+sij=S(i,j)
+S(k,l)=cosrot*skl-sinrot*sij
+S(i,j)=sinrot*skl+cosrot*sij
+
+return
+end subroutine EVAL_rotate
+
+ !columns of "evecs" are the eigenvectors.
+ !This routine will modify S, but then restore S at the end.
+subroutine fort_jacobi_eigenvalue(S,evals,evecs,n)
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: n
+REAL_T, intent(inout) :: S(n,n)
+REAL_T, intent(out) :: evals(n)
+REAL_T, intent(out) :: evecs(n,n)
+REAL_T :: S_SAVE(n,n)
+INTEGER_T :: i,j,k,k_in,l,m,state
+REAL_T :: sinrot,cosrot,t,p,y,d,r
+INTEGER_T :: ind(n)
+INTEGER_T :: changed(n)
+REAL_T :: eik,eil
+REAL_T :: XL(n,n)
+REAL_T :: XLXT(n,n)
+REAL_T :: max_S
+REAL_T :: sanity_err
+REAL_T :: swap_hold
+REAL_T :: sum_off_diag
+
+if (1.eq.0) then
+ print *,"begin of jacobi eval"
+endif
+
+if ((n.ge.2).and.(n.le.3)) then
+ ! do nothing
+else
+ print *,"expecting n=2,3"
+ stop
+endif
+
+sum_off_diag=zero
+
+do i=1,n
+do j=1,n
+ if (i.eq.j) then
+  evecs(i,j)=one
+ else if (i.ne.j) then
+  evecs(i,j)=zero
+  sum_off_diag=sum_off_diag+abs(S(i,j))
+ else
+  print *,"i or j corrupt"
+  stop
+ endif
+ S_SAVE(i,j)=S(i,j)
+enddo
+enddo
+
+max_S=zero
+do i=1,n
+do j=1,n  
+ if (abs(S_SAVE(i,j)).gt.max_S) then
+  max_S=abs(S_SAVE(i,j))
+ endif
+enddo
+enddo
+max_S=max(max_S,one)
+
+state=n
+
+do k=1,n
+ call maxind(k,S,n,ind(k))
+ evals(k)=S(k,k)
+ changed(k)=1
+enddo
+
+if ((sum_off_diag.le.1.0D-13*max_S).and. &
+    (sum_off_diag.ge.zero)) then
+ state=0
+ sanity_err=zero
+else if (sum_off_diag.gt.zero) then
+ ! do nothing
+else
+ print *,"sum_off_diag invalid"
+ stop
+endif
+
+do while (state.ne.0)
+ m=1
+ do k=2,n-1
+  if ((ind(k).ge.1).and.(ind(m).ge.1).and. &
+      (ind(k).le.n).and.(ind(m).le.n).and. &
+      (k.ge.1).and.(k.le.n).and.(m.ge.1).and.(m.le.n)) then
+   if (abs(S(k,ind(k))).gt.abs(S(m,ind(m)))) then
+    m=k
+   endif
+  else
+   print *,"k,m,ind(k),ind(m) bad ",k,m,ind(k),ind(m)
+   stop
+  endif
+ enddo
+ k=m
+ l=ind(m)
+ if ((l.ge.1).and.(l.le.n)) then
+  ! do nothing
+ else
+  print *,"l invalid ",l
+  print *,"m=",m
+  stop
+ endif
+
+ p=S(k,l)
+ y=(evals(l)-evals(k))/two
+ d=abs(y)+sqrt(p**2+y**2)
+ r=sqrt(p**2+d**2)
+ if (r.gt.zero) then
+  cosrot=d/r
+  sinrot=p/r
+ else
+  print *,"expecting r>0 in fort_jacobi_eigenvalue"
+  print *,"k,l,p,y,d,r ",k,l,p,y,d,r
+  print *,"max_S=",max_S
+  do i=1,n
+  do j=1,n
+   print *,"i,j,S_SAVE(i,j) ",i,j,S_SAVE(i,j)
+  enddo
+  enddo
+  stop
+ endif
+ if (d.gt.zero) then
+  t=p**2/d
+ else
+  print *,"expecting d>0 in fort_jacobi_eigenvalue"
+  print *,"max_S=",max_S
+  stop
+ endif
+ if (y.lt.zero) then
+  sinrot=-sinrot
+  t=-t
+ else if (y.ge.zero) then
+  ! do nothing
+ else
+  print *,"y invalid"
+  stop
+ endif
+ S(k,l)=zero
+ call EVAL_update(k,-t,y,changed,evals,state,n)       
+ call EVAL_update(l,t,y,changed,evals,state,n)       
+ do i=1,k-1
+  call EVAL_rotate(i,k,i,l,S,n,sinrot,cosrot)
+ enddo
+ do i=k+1,l-1
+  call EVAL_rotate(k,i,i,l,S,n,sinrot,cosrot)
+ enddo
+ do i=l+1,n
+  call EVAL_rotate(k,i,l,i,S,n,sinrot,cosrot)
+ enddo
+ do i=1,n
+  eik=evecs(i,k)
+  eil=evecs(i,l)
+  evecs(i,k)=cosrot*eik-sinrot*eil
+  evecs(i,l)=sinrot*eik+cosrot*eil
+ enddo
+ call maxind(k,S,n,ind(k))
+ call maxind(l,S,n,ind(l))
+
+  ! AX=X Lambda
+  ! A=X Lambda X^{-1}=X Lambda X^T
+ do i=1,n
+ do j=1,n  
+  XL(i,j)=evecs(i,j)*evals(j)
+ enddo
+ enddo
+
+ do i=1,n
+ do j=1,n  
+  XLXT(i,j)=zero
+  do k_in=1,n
+   XLXT(i,j)=XLXT(i,j)+XL(i,k_in)*evecs(j,k_in)
+  enddo
+ enddo
+ enddo
+
+ sanity_err=zero
+ do i=1,n
+ do j=1,n  
+  if (abs(XLXT(i,j)-S_SAVE(i,j)).gt.sanity_err) then
+   sanity_err=abs(XLXT(i,j)-S_SAVE(i,j))
+  endif
+ enddo
+ enddo
+ if (sanity_err.ge.1.0D-12*max_S) then
+  ! do nothing
+ else if (sanity_err.le.1.0D-12*max_S) then
+  state=0
+ else
+  print *,"sanity_err became corrupt"
+  stop
+ endif
+
+enddo !do while (state.ne.0)
+
+if (sanity_err.ge.1.0D-11*max_S) then
+ print *,"sanity_err too large(1)"
+ stop
+else if (sanity_err.le.1.0D-11*max_S) then
+ ! do nothing
+else
+ print *,"sanity_err is NaN"
+ stop
+endif
+
+ ! restore S
+do k=1,n-1
+ do l=k+1,n
+  S(k,l)=S(l,k)
+ enddo
+enddo
+do i=1,n
+do j=1,n
+ if (abs(S(i,j)-S_SAVE(i,j)).le.1.0D-12*max_S) then
+  ! do nothing
+ else
+  print *,"S not properly restored"
+  print *,"i,j,n,S(i,j),S_SAVE(i,j),abs(S-S_SAVE): ", &
+    i,j,n,S(i,j),S_SAVE(i,j),abs(S(i,j)-S_SAVE(i,j))
+  stop
+ endif
+enddo
+enddo
+
+do k=1,n-1
+ m=k 
+ do l=k+1,n
+  if (abs(evals(l)).gt.abs(evals(m))) then
+   m=l
+  else if (abs(evals(l)).le.abs(evals(m))) then
+   ! do nothing
+  else
+   print *,"evals NaN error"
+   stop
+  endif
+ enddo
+ if (k.ne.m) then
+  swap_hold=evals(m)
+  evals(m)=evals(k)
+  evals(k)=swap_hold
+  do i=1,n
+   swap_hold=evecs(i,m)
+   evecs(i,m)=evecs(i,k)
+   evecs(i,k)=swap_hold
+  enddo
+ endif
+enddo
+
+ ! AX=X Lambda
+ ! A=X Lambda X^{-1}=X Lambda X^T
+do i=1,n
+do j=1,n  
+ XL(i,j)=evecs(i,j)*evals(j)
+enddo
+enddo
+
+do i=1,n
+do j=1,n  
+ XLXT(i,j)=zero
+ do k_in=1,n
+  XLXT(i,j)=XLXT(i,j)+XL(i,k_in)*evecs(j,k_in)
+ enddo
+enddo
+enddo
+
+sanity_err=zero
+do i=1,n
+do j=1,n  
+ if (abs(XLXT(i,j)-S_SAVE(i,j)).gt.sanity_err) then
+  sanity_err=abs(XLXT(i,j)-S_SAVE(i,j))
+ endif
+enddo
+enddo
+
+if (sanity_err.ge.1.0D-11*max_S) then
+ print *,"sanity_err too large(2)"
+ stop
+else if (sanity_err.le.1.0D-11*max_S) then
+ ! do nothing
+else
+ print *,"sanity_err became corrupt"
+ stop
+endif
+
+if (1.eq.0) then
+ print *,"end of jacobi eval"
+endif
+
+return
+end subroutine fort_jacobi_eigenvalue
+
+subroutine project_to_positive_definite(S,n,min_eval)
+IMPLICIT NONE
+
+REAL_T, intent(in)    :: min_eval
+INTEGER_T, intent(in) :: n
+REAL_T, intent(inout) :: S(n,n)
+
+REAL_T :: S_local(n,n)
+REAL_T :: STS(n,n)
+REAL_T :: evals_project(n)
+REAL_T :: XL(n,n)
+REAL_T :: evals_S(n)
+REAL_T :: evecs_S(n,n)
+REAL_T :: evals_STS(n)
+REAL_T :: evecs_STS(n,n)
+INTEGER_T :: i,j,k
+REAL_T :: max_eval_sqr
+
+if (min_eval.gt.zero) then
+ ! do nothing
+else
+ print *,"min_eval invalid"
+ stop
+endif
+
+if (n.ge.2) then
+ ! do nothing
+else
+ print *,"expecting n>=2"
+ stop
+endif
+
+do i=1,n
+do j=1,n
+ S_local(i,j)=S(i,j)
+ STS(i,j)=zero
+ do k=1,n
+  STS(i,j)=STS(i,j)+S(k,i)*S(k,j)
+ enddo
+enddo
+enddo
+
+call fort_jacobi_eigenvalue(S_local,evals_S,evecs_S,n)
+call fort_jacobi_eigenvalue(STS,evals_STS,evecs_STS,n)
+
+max_eval_sqr=-1.0D+20
+do i=1,n
+ if (evals_STS(i).gt.max_eval_sqr) then
+  max_eval_sqr=evals_STS(i)
+ else if (evals_STS(i).le.max_eval_sqr) then
+  ! do nothing
+ else
+  print *,"evals_STS or max_eval_sqr invalid"
+  stop
+ endif
+
+ if (evals_STS(i).lt.zero) then
+  print *,"evals_STS(i) cannot be negative"
+  stop
+ else if (evals_STS(i).ge.zero) then
+  ! do nothing
+ else
+  print *,"evals_STS(i) is NaN"
+  stop
+ endif
+
+enddo
+
+if (max_eval_sqr.lt.zero) then
+ print *,"max_eval_sqr cannot be negative"
+ stop
+else if (max_eval_sqr.ge.zero) then
+ ! do nothing
+else
+ print *,"max_eval_sqr is NaN"
+ stop
+endif
+
+max_eval_sqr=max(max_eval_sqr,one)
+do i=1,n
+ if ((abs(evals_S(i)**2-evals_STS(i)).le.1.0D-12*max_eval_sqr).or. &
+     (1.eq.1)) then
+  ! do nothing
+ else
+  print *,"evals_S and evals_STS inconsistent"
+  print *,"max_eval_sqr= ",max_eval_sqr
+  print *,"i,n = ",i,n
+  print *,"evals_S(i)= ",evals_S(i)
+  print *,"evals_STS(i)= ",evals_STS(i)
+  stop
+ endif
+enddo
+do i=1,n
+ evals_project(i)=max(min_eval,evals_S(i))
+enddo
+ ! AX=X Lambda
+ ! A=X Lambda X^T
+do i=1,n
+do j=1,n
+ XL(i,j)=evecs_STS(i,j)*evals_project(j)
+enddo
+enddo
+do i=1,n
+do j=1,n
+ S(i,j)=zero
+ do k=1,n
+  S(i,j)=S(i,j)+XL(i,k)*evecs_STS(j,k)
+ enddo
+enddo
+enddo
+
+end subroutine project_to_positive_definite
+
+ ! called from fort_updatetensor which is declared in GODUNOV_3D.F90.
+ ! A=Q+I must be symmetric and positive definite.
+subroutine project_A_to_positive_definite(A, &
+   viscoelastic_model,polymer_factor)
+IMPLICIT NONE
+
+REAL_T, intent(inout) :: A(3,3)
+INTEGER_T, intent(in) :: viscoelastic_model
+REAL_T, intent(in) :: polymer_factor
+INTEGER_T A_dim
+REAL_T min_eval
+
+if ((viscoelastic_model.eq.0).or. & !FENE-CR
+    (viscoelastic_model.eq.1).or. & !OLDROYD-B
+    (viscoelastic_model.eq.5).or. & !FENE-P
+    (viscoelastic_model.eq.6)) then !linear PTT
+
+ min_eval=0.01D0*(polymer_factor**2)
+ A_dim=3
+ call project_to_positive_definite(A,A_dim,min_eval)
+
+else if (viscoelastic_model.eq.3) then ! incremental
+ ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+ ! do nothing
+else
+ print *,"viscoelastic_model invalid"
+ stop
+endif
+return
+end subroutine project_A_to_positive_definite
+
+subroutine matrix_solve(AA,xx,bb,matstatus,numelem)
+IMPLICIT NONE
+INTEGER_T numelem
+REAL_T AA(numelem,numelem)
+REAL_T xx(numelem)
+REAL_T bb(numelem)
+REAL_T alpha,holdvalue
+INTEGER_T i,j,k,holdj,matstatus
+REAL_T rowsum,maxrowsum
+
+matstatus=1
+
+  ! first we normalize the matrix system by the infinity norm
+  ! of AA
+  ! this means the maximum eigenvalue of the normalized
+  ! system has magnitude <2.
+maxrowsum=zero
+do i=1,numelem
+ rowsum=zero
+ do j=1,numelem
+  rowsum=rowsum+abs(AA(i,j))
+ enddo
+ if (rowsum.gt.maxrowsum) then
+  maxrowsum=rowsum
+ endif
+ if (rowsum.le.zero) then
+  matstatus=0
+ endif
+enddo
+if (maxrowsum.le.zero) then
+ matstatus=0
+endif
+
+if (matstatus.eq.1) then
+
+  do i=1,numelem
+   do j=1,numelem
+    AA(i,j)=AA(i,j)/maxrowsum
+   enddo
+   bb(i)=bb(i)/maxrowsum
+  enddo
+
+  do i=1,numelem-1
+   holdj=i
+   holdvalue=abs(AA(i,i))
+   do j=i+1,numelem 
+    if (abs(AA(j,i)).gt.holdvalue) then
+     holdj=j
+     holdvalue=abs(AA(j,i))
+    endif
+   enddo
+   if (holdj.ne.i) then
+    do j=i,numelem
+     holdvalue=AA(i,j)
+     AA(i,j)=AA(holdj,j)
+     AA(holdj,j)=holdvalue
+    enddo
+   endif
+   holdvalue=bb(i)
+   bb(i)=bb(holdj)
+   bb(holdj)=holdvalue
+   if (abs(AA(i,i)).lt.1.0D-10) then
+    matstatus=0
+   else
+    do j=i+1,numelem
+     alpha=AA(j,i)/AA(i,i)
+     AA(j,i)=zero
+     do k=i+1,numelem
+      AA(j,k)=AA(j,k)-alpha*AA(i,k)
+     enddo
+     bb(j)=bb(j)-alpha*bb(i)
+    enddo
+   endif
+  enddo
+
+  do i=numelem,1,-1
+   if (matstatus.eq.1) then
+    holdvalue=bb(i)
+    do j=i+1,numelem
+     holdvalue=holdvalue-AA(i,j)*xx(j)
+    enddo
+    if (abs(AA(i,i)).lt.1.0D-10) then
+     matstatus=0
+    else
+     xx(i)=holdvalue/AA(i,i)
+    endif
+   else if (matstatus.eq.0) then
+    ! do nothing
+   else
+    print *,"matstatus invalid"
+    stop
+   endif
+  enddo  ! back solve
+
+else if (matstatus.eq.0) then
+ ! do nothing
+else
+ print *,"matstatus invalid"
+ stop
+endif
+
+return
+end subroutine matrix_solve
+
+subroutine print_matrix(AA,numelem)
+IMPLICIT NONE
+INTEGER_T numelem
+REAL_T AA(numelem,numelem)
+
+INTEGER_T i
+
+do i=1,numelem
+ print *,AA(i,:)
+ print *,"endrow"
+enddo
+
+return
+end subroutine print_matrix
+
+subroutine matrix_inverse(AA,xx,matstatus,numelem)
+IMPLICIT NONE
+INTEGER_T numelem
+REAL_T AA(numelem,numelem)
+REAL_T AAhold(numelem,numelem)
+REAL_T xx(numelem,numelem)
+REAL_T bb(numelem,numelem)
+REAL_T alpha,holdvalue
+INTEGER_T i,j,k,holdj,matstatus
+
+do i=1,numelem
+ do j=1,numelem
+  AAhold(i,j)=AA(i,j)
+  bb(i,j)=zero
+ enddo
+ bb(i,i)=one
+enddo
+
+matstatus=1
+do i=1,numelem-1
+   holdj=i
+   holdvalue=abs(AA(i,i))
+   do j=i+1,numelem 
+    if (abs(AA(j,i)).gt.holdvalue) then
+     holdj=j
+     holdvalue=abs(AA(j,i))
+    endif
+   enddo
+   if (holdj.ne.i) then
+    do j=i,numelem
+     holdvalue=AA(i,j)
+     AA(i,j)=AA(holdj,j)
+     AA(holdj,j)=holdvalue
+    enddo
+   endif
+   do k=1,numelem
+    holdvalue=bb(i,k)
+    bb(i,k)=bb(holdj,k)
+    bb(holdj,k)=holdvalue
+   enddo
+   if (abs(AA(i,i)).lt.1.0D-32) then
+    matstatus=0
+   else
+    do j=i+1,numelem
+     alpha=AA(j,i)/AA(i,i)
+     do k=i,numelem
+      AA(j,k)=AA(j,k)-alpha*AA(i,k)
+     enddo
+     do k=1,numelem
+      bb(j,k)=bb(j,k)-alpha*bb(i,k)
+     enddo
+    enddo
+   endif
+enddo
+
+do i=numelem,1,-1
+   if (matstatus.ne.0) then
+    do k=1,numelem
+     holdvalue=bb(i,k)
+     do j=i+1,numelem
+      holdvalue=holdvalue-AA(i,j)*xx(j,k)
+     enddo
+     if (abs(AA(i,i)).lt.1.0D-32) then
+      matstatus=0
+     else
+      xx(i,k)=holdvalue/AA(i,i)
+     endif
+    enddo
+   endif
+enddo
+
+if (1.eq.1) then
+ do i=1,numelem
+  do j=1,numelem
+   holdvalue=zero
+   do k=1,numelem
+    holdvalue=holdvalue+AAhold(i,k)*xx(k,j)
+   enddo 
+   if (i.ne.j) then
+    if (abs(holdvalue).gt.1.0D-12) then
+     print *,"inverse failed1"
+     print *,"AAhold="
+     call print_matrix(AAhold,numelem)
+     print *,"xx="
+     call print_matrix(xx,numelem)
+     stop
+    endif
+   else if (i.eq.j) then
+    if (abs(holdvalue-one).gt.1.0D-12) then
+     print *,"inverse failed2"
+     print *,"AAhold="
+     call print_matrix(AAhold,numelem)
+     print *,"xx="
+     call print_matrix(xx,numelem)
+     stop
+    endif
+   endif
+  enddo
+ enddo
+endif
+
+return
+end subroutine matrix_inverse
+
+subroutine print_visual_descriptor(im,n_fortran)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, intent(in) :: im,n_fortran
+INTEGER_T :: n_cpp
+
+if ((im.ge.1).and.(im.le.num_materials)) then
+ ! do nothing
+else
+ print *,"im invalid"
+ stop
+endif
+
+print *,"im=1..num_materials; im,num_materials:",im,num_materials
+
+n_cpp=n_fortran-1
+
+if (n_cpp.eq.VISUALCOMP_X) then
+ print *,"VISUAL X"
+else if (n_cpp.eq.VISUALCOMP_Y) then
+ print *,"VISUAL Y"
+else if ((n_cpp.eq.VISUALCOMP_Z).and.(SDIM.eq.3)) then
+ print *,"VISUAL Z"
+else if (n_cpp.eq.VISUALCOMP_U) then
+ print *,"VISUAL U"
+else if (n_cpp.eq.VISUALCOMP_V) then
+ print *,"VISUAL V"
+else if ((n_cpp.eq.VISUALCOMP_W).and.(SDIM.eq.3)) then
+ print *,"VISUAL W"
+else if (n_cpp.eq.VISUALCOMP_PMG) then
+ print *,"VISUAL PMG"
+else if (n_cpp.eq.VISUALCOMP_DEN) then
+ print *,"VISUAL DEN"
+else if (n_cpp.eq.VISUALCOMP_TEMP) then
+ print *,"VISUAL TEMP"
+else if ((n_cpp.ge.VISUALCOMP_Y1).and. &
+         (n_cpp.le.VISUALCOMP_Y1+num_species_var-1)) then
+ print *,"VISUAL Y species component(1..num_species_var)=", &
+         n_cpp-VISUALCOMP_Y1+1
+else if (n_cpp.eq.VISUALCOMP_VORTMAG) then
+ print *,"VISUAL VORTMAG"
+else if ((n_cpp.ge.VISUALCOMP_LS).and. &
+         (n_cpp.le.VISUALCOMP_LS+num_materials-1)) then
+ print *,"VISUAL LS material component(1..nmat)=",n_cpp-VISUALCOMP_LS+1
+else if (n_cpp.eq.VISUALCOMP_MAGVEL) then
+ print *,"VISUAL MAGVEL"
+else
+ print *,"n_cpp out of range"
+ stop
+endif
+
+return
+end subroutine print_visual_descriptor
 
       subroutine least_squares_interp(npoints,x0,xpos,wts,vals, &
        order,linearflag,coeffs,ncoeffs,sdim_parm)

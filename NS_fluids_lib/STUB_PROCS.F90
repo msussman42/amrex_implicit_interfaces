@@ -84,9 +84,13 @@ INTEGER_T, intent(inout) :: tagflag
 end subroutine STUB_OVERRIDE_TAGFLAG
 
 subroutine STUB_OVERRIDE_FSI_SIGN_LS_VEL_TEMP( &
+ exterior_BB, &
+ interior_BB, &
  xcell,time,LS,VEL,TEMP,MASK,lev77,im_part,part_id)
 use probcommon_module
 use global_utility_module
+REAL_T, intent(in) :: exterior_BB(3,2)
+REAL_T, intent(in) :: interior_BB(3,2)
 REAL_T, intent(in) :: xcell(3)
 REAL_T, intent(in) :: time
 REAL_T, intent(out) :: LS
