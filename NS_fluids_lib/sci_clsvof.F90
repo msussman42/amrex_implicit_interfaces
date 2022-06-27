@@ -10973,7 +10973,6 @@ IMPLICIT NONE
   INTEGER_T :: i1,j1,k1
   INTEGER_T :: element_inplane
   INTEGER_T :: element_node_edge_inplane
-  REAL_T :: wallthick
   REAL_T, dimension(3) :: velparm
   REAL_T :: massparm
   INTEGER_T :: dir
@@ -11954,7 +11953,8 @@ IMPLICIT NONE
          else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then 
           ! do nothing
          else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
-          ! do nothing
+          print *,"mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID invalid here"
+          stop
          else if (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID) then 
           ! do nothing
          else if (mask_local.eq.FSI_FINE_VEL_VALID) then 
@@ -11996,8 +11996,12 @@ IMPLICIT NONE
            stop
           endif
 
-          if ((mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID).or. &
-              (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID)) then 
+          if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
+           print *,"mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID invalid here"
+           stop
+          endif
+
+          if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then 
            mask_local=FSI_NOTHING_VALID
           endif
 
@@ -12144,10 +12148,12 @@ IMPLICIT NONE
          endif
 
          temp_local=temp_local/weighttotal
+        else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
+
+         print *,"mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID invalid here"
+         stop
 
         else if ( ((mask_local.eq.FSI_FINE_VEL_VALID).and. &
-                   (unsigned_mindist.ge.abs(ls_local))).or. &
-                  ((mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID).and. &
                    (unsigned_mindist.ge.abs(ls_local))).or. &
                   ((mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID).and. &
                    (unsigned_mindist.ge.abs(ls_local))).or. &
@@ -12237,9 +12243,11 @@ IMPLICIT NONE
      else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
       print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
       stop
+     else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
+      print *,"mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID invalid here"
+      stop
      else if ((mask_local.eq.FSI_FINE_VEL_VALID ).or. &
               (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID).or. &
-              (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID).or. & 
               (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID)) then
       ! do nothing
      else
@@ -12263,10 +12271,14 @@ IMPLICIT NONE
      endif
 
      if (FSI_mesh_type%exclusive_doubly_wetted.eq.0) then
+
       ! do nothing
+
      else if (FSI_mesh_type%exclusive_doubly_wetted.eq.1) then
+
       if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then
-       ! do nothing
+       print *,"mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID invalid here"
+       stop
       else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then
        ! do nothing
       else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
@@ -12281,7 +12293,9 @@ IMPLICIT NONE
        print *,"mask_local invalid"
        stop
       endif
+
       ls_local=-abs(ls_local)
+
      else
       print *,"exclusive_doubly_wetted invalid"
       stop
@@ -12294,7 +12308,6 @@ IMPLICIT NONE
     enddo   
     enddo   
 
-    wallthick=1.0
     do i=FSI_lo3D(1),FSI_hi3D(1)
     do j=FSI_lo3D(2),FSI_hi3D(2)
     do k=FSI_lo3D(3),FSI_hi3D(3)
@@ -12316,10 +12329,21 @@ IMPLICIT NONE
      mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
 
      if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID) then
-      ! LS > 0 in the thin shell which is the fluid region.
-      ls_local=ls_local+wallthick*dx3D(1)
+       !ls_local<0 in the fluid
+      if (ls_local.le.zero) then
+       ls_local=ls_local+dx3D(1)
+      else
+       print *,"ls_local invalid"
+       stop
+      endif
      else if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
-      ! do nothing
+       !ls_local<0 in the fluid
+      if (ls_local.lt.zero) then
+       ! do nothing
+      else
+       print *,"ls_local invalid"
+       stop
+      endif
      else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
       print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
       stop
