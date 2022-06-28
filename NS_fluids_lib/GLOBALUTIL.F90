@@ -7899,7 +7899,7 @@ end subroutine print_visual_descriptor
 
       REAL_T function hsprime(phi,cutoff)
       IMPLICIT NONE
-      REAL_T phi,cutoff
+      REAL_T, intent(in) :: phi,cutoff
 
       if ((phi.ge.cutoff).or.(phi.le.-cutoff)) then
        hsprime=0
@@ -7912,7 +7912,7 @@ end subroutine print_visual_descriptor
       INTEGER_T function sign_funct(LS)
       IMPLICIT NONE
 
-      REAL_T LS
+      REAL_T, intent(in) :: LS
 
       if (LS.lt.zero) then
        sign_funct=-1
@@ -7927,7 +7927,7 @@ end subroutine print_visual_descriptor
 
       REAL_T function hssign(phi,cutoff)
       IMPLICIT NONE
-      REAL_T phi,cutoff
+      REAL_T, intent(in) :: phi,cutoff
 
       hssign=two*hs(phi,cutoff)-one
       return
