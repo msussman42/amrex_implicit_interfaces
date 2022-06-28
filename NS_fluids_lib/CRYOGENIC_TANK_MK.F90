@@ -337,13 +337,13 @@ INTEGER_T, intent(out) :: aux_ncells_max_side
       else if (auxcomp.eq.3) then ! source
        aux_ncells_max_side=256
       else if (auxcomp.eq.4) then ! sink
-       aux_ncells_max_side=512
+       aux_ncells_max_side=256
       else if (auxcomp.eq.5) then ! tank
        aux_ncells_max_side=256
       else if (auxcomp.eq.6) then ! nozzle
        aux_ncells_max_side=256
       else if (auxcomp.eq.7) then ! LAD housing
-       aux_ncells_max_side=512
+       aux_ncells_max_side=256
       else
        print *,"auxcomp invalid"
        stop

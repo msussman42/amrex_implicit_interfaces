@@ -4816,7 +4816,7 @@ do dir=1,3
    outside_flag=1
   endif
  else
-  print *,"BB invalid"
+  print *,"check outside, BB invalid dir,1,2: ",BB(dir,1),BB(dir,2)
   stop
  endif
 enddo !dir=1..3
@@ -4862,7 +4862,7 @@ do dir=1,3
    inside_flag=0
   endif
  else
-  print *,"BB invalid"
+  print *,"check inside, BB invalid dir,1,2: ",BB(dir,1),BB(dir,2)
   stop
  endif
 enddo !dir=1..3
