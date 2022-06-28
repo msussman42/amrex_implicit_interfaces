@@ -11087,6 +11087,7 @@ IMPLICIT NONE
   REAL_T n_dot_x
   REAL_T mag_ncrit
   REAL_T mag_x
+  REAL_T sign_conflict
   REAL_T sign_conflict_local
   INTEGER_T ibase
   REAL_T ls_local
@@ -11994,7 +11995,10 @@ IMPLICIT NONE
         enddo  ! ii,jj,kk
 
         ls_local=FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)
+
         sign_conflict_local=FSIdata3D(i,j,k,ibase+FSI_SIGN_CONFLICT+1)
+        sign_conflict=sign_conflict_local
+
         mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
         do dir=1,3
          vel_local(dir)=FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)
@@ -12006,11 +12010,11 @@ IMPLICIT NONE
          ! =1 positive
          ! =2 negative
          ! =3 inconclusive
-         if (abs(unsigned_mindist).le.0.0d0*VOFTOL*dx3D(1)) then
+         if (abs(unsigned_mindist).le.VOFTOL*dx3D(1)) then
           unsigned_mindist=zero
           sign_conflict_local=one
-         else if (abs(unsigned_mindist).ge.0.0d0*VOFTOL*dx3D(1)) then
-          if ((abs(unsigned_mindist).le.0.01d0*dx3D(1)).or.(1.eq.1))  then
+         else if (abs(unsigned_mindist).ge.VOFTOL*dx3D(1)) then
+          if (abs(unsigned_mindist).le.0.01d0*dx3D(1))  then
            if (hitsign.ge.zero) then
             sign_conflict_local=one
            else if (hitsign.lt.zero) then
@@ -12037,7 +12041,7 @@ IMPLICIT NONE
             else if (mag_n.gt.zero) then
              n_dot_x=n_dot_x/(mag_n*mag_n_test)
 
-             if (abs(n_dot_x).lt.cos(89.0d0*Pi/180.0d0)) then
+             if (abs(n_dot_x).lt.cos(60.0d0*Pi/180.0d0)) then
               sign_conflict_local=three
              else if (hitsign.ge.zero) then
               sign_conflict_local=one
@@ -12113,6 +12117,7 @@ IMPLICIT NONE
 
           mask_local=FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID
           ls_local=-unsigned_mindist
+          sign_conflict=sign_conflict_local
 
          else if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.0) then
 
@@ -12150,12 +12155,22 @@ IMPLICIT NONE
           if ((mask_local.eq.FSI_NOTHING_VALID).or. &
               (mask_local.eq.FSI_FINE_VEL_VALID)) then
            ls_local=unsigned_mindist
+           sign_conflict=sign_conflict_local
           else if (mask_local.eq.FSI_FINE_SIGN_VEL_VALID) then 
            print *,"mask_local.eq.FSI_FINE_SIGN_VEL_VALID invalid here"
            stop
           else if ((mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
                    (mask_local.eq.FSI_COARSE_LS_SIGN_FINE_VEL_VALID)) then
-           ls_local=sign_funct(ls_local)*unsigned_mindist 
+           if (ls_local.le.zero) then
+            sign_conflict=one
+            ls_local=-unsigned_mindist 
+           else if (ls_local.gt.zero) then
+            sign_conflict=two
+            ls_local=unsigned_mindist 
+           else
+            print *,"ls_local invalid"
+            stop
+           endif
           else
            print *,"mask_local invalid"
            stop
@@ -12174,6 +12189,7 @@ IMPLICIT NONE
 
             ! The "-" below asserts that ls_local now points into the solid
            ls_local=-hitsign*abs(ls_local)
+           sign_conflict=sign_conflict_local
 
            if ((mask_local.eq.FSI_NOTHING_VALID).or. &
                (mask_local.eq.FSI_COARSE_LS_SIGN_VEL_VALID).or. &
@@ -12293,7 +12309,7 @@ IMPLICIT NONE
         endif 
 
         FSIdata3D(i,j,k,ibase+FSI_LEVELSET+1)=ls_local
-        FSIdata3D(i,j,k,ibase+FSI_SIGN_CONFLICT+1)=sign_conflict_local
+        FSIdata3D(i,j,k,ibase+FSI_SIGN_CONFLICT+1)=sign_conflict
         FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=mask_local
         do dir=1,3
          FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel_local(dir)
