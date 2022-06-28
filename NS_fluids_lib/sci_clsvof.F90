@@ -11629,7 +11629,9 @@ IMPLICIT NONE
          element_xclosest(dir)=xclosest(dir)
 
          normal_closest(dir)=normal(dir)
-        enddo
+         xclosest_project(dir)=xclosest(dir)
+        enddo ! dir=1..3
+
         unsigned_mindist=abs(dotprod)
 
         element_unsigned_mindist=unsigned_mindist
@@ -11738,6 +11740,7 @@ IMPLICIT NONE
           
           n_dot_x=n_dot_x+ &
             normal_closest(dir)*(xx(dir)-xclosest_project(dir))
+     
          enddo ! dir=1..3
 
          mag_n_test=sqrt(mag_n_test)
@@ -11768,10 +11771,17 @@ IMPLICIT NONE
               mag_x=mag_x+(xx(dir)-element_xclosest(dir))**2 
               n_dot_x=n_dot_x+ &
                element_normal(dir)*(xx(dir)-element_xclosest(dir))
+
+              normal_closest(dir)=element_normal(dir)
              enddo ! dir=1..3
 
              mag_n=sqrt(mag_n)
              mag_x=sqrt(mag_x)
+
+             if (abs(mag_x).le.unsigned_mindist) then
+              xclosest_project(dir)=element_xclosest(dir)
+              unsigned_mindist=abs(mag_x)
+             endif
 
             else if (element_inplane.eq.0) then
 
@@ -11904,10 +11914,10 @@ IMPLICIT NONE
            call checkinplaneBIG( &
             eul_over_lag_scale, &
             xx, & ! target point at which the signed distance is sought.
-            xcrit, & !is xcrit in the element?
-            xcrit_project, &
-            ncrit, &
-            ncrit_closest, &
+            xcrit, & !intent(in)
+            xcrit_project, & ! intent(out)
+            ncrit, &         ! intent(in)
+            ncrit_closest, & ! intent(out)
             ielem, &
             element_node_edge_inplane, &
             FSI_mesh_type, &
@@ -11927,6 +11937,10 @@ IMPLICIT NONE
             testdist=sqrt(testdist)
             totaldist=sqrt(totaldist)
             if (testdist.le.unsigned_mindist) then
+             do dir=1,3
+              normal_closest(dir)=ncrit(dir)
+              xclosest_project(dir)=xcrit(dir)
+             enddo
              unsigned_mindist=testdist
              hitflag=1
              if (phicen.eq.zero) then
@@ -11988,8 +12002,10 @@ IMPLICIT NONE
         temp_local=FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)
 
         if (hitflag.eq.1) then
-         ! bit 0=1 if +sign hits
-         ! bit 1=1 if -sign hits
+         ! =0 no hits
+         ! =1 positive
+         ! =2 negative
+         ! =3 inconclusive
          if (hitsign.ge.zero) then
           if (sign_conflict_local.eq.zero) then
            sign_conflict_local=one
@@ -12505,8 +12521,10 @@ IMPLICIT NONE
 
       mask_local=NINT(old_FSIdata(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
       ls_local=old_FSIdata(i,j,k,ibase+FSI_LEVELSET+1)
-       ! bit 0=1 if +sign hits
-       ! bit 1=1 if -sign hits
+      ! =0 no hits
+      ! =1 positive
+      ! =2 negative
+      ! =3 inconclusive
       sign_conflict_local=old_FSIdata(i,j,k,ibase+FSI_SIGN_CONFLICT+1)
 
       new_mask_local=mask_local
@@ -12562,8 +12580,7 @@ IMPLICIT NONE
        else if (sign_valid(override_MASK).eq.0) then
 
         if (((sign_conflict_local.eq.one).or. &
-             (sign_conflict_local.eq.two).or. &
-             (sign_conflict_local.eq.three)).and. &
+             (sign_conflict_local.eq.two)).and. &
             (abs(ls_local).le.dx3D(1))) then
          ! induces "new_mask_local=FSI_FINE_SIGN_VEL_VALID" below.
          sign_status_changed=1
@@ -12571,8 +12588,6 @@ IMPLICIT NONE
           ls_local=-abs(ls_local)
          else if (sign_conflict_local.eq.two) then
           ls_local=abs(ls_local)
-         else if (sign_conflict_local.eq.three) then
-          ! do nothing
          else
           print *,"sign_conflict_local invalid"
           stop
