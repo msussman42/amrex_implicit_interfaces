@@ -2413,24 +2413,22 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
         FSI_mesh_type%exterior_BB(dir,2))) then
     ! do nothing
    else
-    print *,"center_BB invalid"
+    print *,"center_BB invalid: dir,center_BB: ", &
+      dir,FSI_mesh_type%center_BB(dir)
     stop
    endif
+   FSI_mesh_type%interior_BB(dir,1)=FSI_mesh_type%exterior_BB(dir,1)
+   FSI_mesh_type%interior_BB(dir,2)=FSI_mesh_type%exterior_BB(dir,2)
   enddo !dir=1..3
+
   do inode_list=1,FSI_mesh_type%NumNodes
    do dir=1,3
     x1(dir)=FSI_mesh_type%Node(dir,inode_list)
     if (x1(dir).ge.FSI_mesh_type%center_BB(dir)) then
-     if (inode_list.eq.1) then
-      FSI_mesh_type%interior_BB(dir,2)=x1(dir)
-     endif
      FSI_mesh_type%interior_BB(dir,2)= &
           min(FSI_mesh_type%interior_BB(dir,2),x1(dir))
     endif
     if (x1(dir).le.FSI_mesh_type%center_BB(dir)) then
-     if (inode_list.eq.1) then
-      FSI_mesh_type%interior_BB(dir,1)=x1(dir)
-     endif
      FSI_mesh_type%interior_BB(dir,1)= &
           max(FSI_mesh_type%interior_BB(dir,1),x1(dir))
     endif
@@ -12564,7 +12562,8 @@ IMPLICIT NONE
        else if (sign_valid(override_MASK).eq.0) then
 
         if (((sign_conflict_local.eq.one).or. &
-             (sign_conflict_local.eq.two)).and. &
+             (sign_conflict_local.eq.two).or. &
+             (sign_conflict_local.eq.three)).and. &
             (abs(ls_local).le.dx3D(1))) then
          ! induces "new_mask_local=FSI_FINE_SIGN_VEL_VALID" below.
          sign_status_changed=1
@@ -12572,6 +12571,8 @@ IMPLICIT NONE
           ls_local=-abs(ls_local)
          else if (sign_conflict_local.eq.two) then
           ls_local=abs(ls_local)
+         else if (sign_conflict_local.eq.three) then
+          ! do nothing
          else
           print *,"sign_conflict_local invalid"
           stop
