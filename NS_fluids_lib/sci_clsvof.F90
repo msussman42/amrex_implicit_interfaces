@@ -12006,39 +12006,65 @@ IMPLICIT NONE
          ! =1 positive
          ! =2 negative
          ! =3 inconclusive
-         if (hitsign.ge.zero) then
-          if (sign_conflict_local.eq.zero) then
-           sign_conflict_local=one
-          else if (sign_conflict_local.eq.one) then
-           ! do nothing
-          else if (sign_conflict_local.eq.three) then
-           ! do nothing
-          else if (sign_conflict_local.eq.two) then
-           sign_conflict_local=three
+         if (abs(unsigned_mindist).le.VOFTOL*dx3D(1)) then
+          unsigned_mindist=zero
+          sign_conflict_local=one
+         else if (abs(unsigned_mindist).ge.VOFTOL*dx3D(1)) then
+          if (abs(unsigned_mindist).le.0.01d0*dx3D(1)) then
+           if (hitsign.ge.zero) then
+            sign_conflict_local=one
+           else if (hitsign.lt.zero) then
+            sign_conflict_local=two
+           else
+            print *,"hitsign invalid"
+            stop
+           endif
+          else if (abs(unsigned_mindist).ge.0.01d0*dx3D(1)) then
+           mag_n=zero
+           mag_n_test=zero
+           n_dot_x=zero
+           do dir=1,3
+            mag_n=mag_n+normal_closest(dir)**2
+            mag_n_test=mag_n_test+(xclosest_project(dir)-xx(dir))**2
+            n_dot_x=n_dot_x+normal_closest(dir)* &
+                  (xclosest_project(dir)-xx(dir))
+           enddo
+           mag_n_test=sqrt(mag_n_test)
+           mag_n=sqrt(mag_n)
+           if (mag_n_test.gt.zero) then
+            if (mag_n.eq.zero) then
+             sign_conflict_local=three
+            else if (mag_n.gt.zero) then
+             n_dot_x=n_dot_x/(mag_n*mag_n_test)
+
+             if (abs(n_dot_x).lt.cos(60.0d0*Pi/180.0d0)) then
+              sign_conflict_local=three
+             else if (hitsign.ge.zero) then
+              sign_conflict_local=one
+             else if (hitsign.lt.zero) then
+              sign_conflict_local=two
+             else
+              print *,"hitsign invalid"
+              stop
+             endif
+
+            else
+             print *,"mag_n is corrupt"
+             stop
+            endif
+           else
+            print *,"mag_n_test invalid"
+            stop
+           endif
           else
-           print *,"sign_conflict_local invalid"
-           stop
-          endif
-         else if (hitsign.lt.zero) then
-          if (sign_conflict_local.eq.zero) then
-           sign_conflict_local=two
-          else if (sign_conflict_local.eq.one) then
-           sign_conflict_local=three
-          else if (sign_conflict_local.eq.three) then
-           ! do nothing
-          else if (sign_conflict_local.eq.two) then
-           ! do nothing
-          else
-           print *,"sign_conflict_local invalid"
+           print *,"unsigned_mindist is corrupt"
            stop
           endif
          else
-          print *,"hitsign invalid"
+          print *,"unsigned_mindist is corrupt"
           stop
          endif
-        else if (hitflag.eq.0) then
-         print *,"expecting hitflag=1"
-         stop
+
         else
          print *,"hitflag invalid"
          stop
