@@ -12006,11 +12006,11 @@ IMPLICIT NONE
          ! =1 positive
          ! =2 negative
          ! =3 inconclusive
-         if (abs(unsigned_mindist).le.VOFTOL*dx3D(1)) then
+         if (abs(unsigned_mindist).le.0.0d0*VOFTOL*dx3D(1)) then
           unsigned_mindist=zero
           sign_conflict_local=one
-         else if (abs(unsigned_mindist).ge.VOFTOL*dx3D(1)) then
-          if (abs(unsigned_mindist).le.0.01d0*dx3D(1)) then
+         else if (abs(unsigned_mindist).ge.0.0d0*VOFTOL*dx3D(1)) then
+          if ((abs(unsigned_mindist).le.0.01d0*dx3D(1)).or.(1.eq.1))  then
            if (hitsign.ge.zero) then
             sign_conflict_local=one
            else if (hitsign.lt.zero) then
@@ -12037,7 +12037,7 @@ IMPLICIT NONE
             else if (mag_n.gt.zero) then
              n_dot_x=n_dot_x/(mag_n*mag_n_test)
 
-             if (abs(n_dot_x).lt.cos(60.0d0*Pi/180.0d0)) then
+             if (abs(n_dot_x).lt.cos(89.0d0*Pi/180.0d0)) then
               sign_conflict_local=three
              else if (hitsign.ge.zero) then
               sign_conflict_local=one
