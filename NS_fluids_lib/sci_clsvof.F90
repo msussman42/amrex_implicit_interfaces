@@ -11055,7 +11055,6 @@ IMPLICIT NONE
   REAL_T, dimension(3) :: xtarget
   INTEGER_T, dimension(3) :: gridloBB,gridhiBB,gridlenBB
   INTEGER_T :: i,j,k
-  INTEGER_T :: i1,j1,k1
   INTEGER_T :: element_inplane
   INTEGER_T :: element_node_edge_inplane
   REAL_T, dimension(3) :: velparm
@@ -11103,7 +11102,7 @@ IMPLICIT NONE
   REAL_T LS_sum,LS_SIDE,dx_SIDE
   REAL_T total_variation_sum_plus
   REAL_T total_variation_sum_minus
-  REAL_T weight_total_variation
+  INTEGER_T weight_total_variation
 
   INTEGER_T sign_status_changed
   INTEGER_T num_elements
@@ -12614,7 +12613,7 @@ IMPLICIT NONE
 
        else if (sign_valid(override_MASK).eq.0) then
 
-        inner_band_size=one
+        inner_band_size=1.0d0
 
         if (((sign_conflict_local.eq.one).or. &
              (sign_conflict_local.eq.two)).and. &
@@ -12645,20 +12644,20 @@ IMPLICIT NONE
           weight_top(dir)=zero
          enddo
          weight_bot=zero
-         weight_total_variation=zero
+         weight_total_variation=0
      
-         do i1=-3,3
-         do j1=-3,3
-         do k1=-3,3
-          if ((i+i1.ge.FSI_growlo3D(1)).and.(i+i1.le.FSI_growhi3D(1)).and. &
-              (j+j1.ge.FSI_growlo3D(2)).and.(j+j1.le.FSI_growhi3D(2)).and. &
-              (k+k1.ge.FSI_growlo3D(3)).and.(k+k1.le.FSI_growhi3D(3))) then
+         do ii=-1,1
+         do jj=-1,1
+         do kk=-1,1
+          if ((i+ii.ge.FSI_growlo3D(1)).and.(i+ii.le.FSI_growhi3D(1)).and. &
+              (j+jj.ge.FSI_growlo3D(2)).and.(j+jj.le.FSI_growhi3D(2)).and. &
+              (k+kk.ge.FSI_growlo3D(3)).and.(k+kk.le.FSI_growhi3D(3))) then
 
-           mask_node=NINT(old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_EXTRAP_FLAG+1))
+           mask_node=NINT(old_FSIdata(i+ii,j+jj,k+kk,ibase+FSI_EXTRAP_FLAG+1))
 
            weight=VOFTOL*dx3D(1)
            do dir=1,3
-            xc(dir)=xdata3D(i+i1,j+j1,k+k1,dir)
+            xc(dir)=xdata3D(i+ii,j+jj,k+kk,dir)
             weight=weight+(xc(dir)-xcen(dir))**2
            enddo
            if (weight.gt.zero) then
@@ -12672,11 +12671,11 @@ IMPLICIT NONE
            if (vel_valid(mask_node).eq.1) then
             do dir=1,3
              weight_top(FSI_VELOCITY+dir)=weight_top(FSI_VELOCITY+dir)+ &
-              old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_VELOCITY+dir)*weight
+              old_FSIdata(i+ii,j+jj,k+kk,ibase+FSI_VELOCITY+dir)*weight
             enddo
              ! temperature
             weight_top(FSI_TEMPERATURE+1)=weight_top(FSI_TEMPERATURE+1)+ &
-              old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_TEMPERATURE+1)*weight
+              old_FSIdata(i+ii,j+jj,k+kk,ibase+FSI_TEMPERATURE+1)*weight
       
             weight_bot=weight_bot+weight
            else if (vel_valid(mask_node).eq.0) then
@@ -12697,7 +12696,7 @@ IMPLICIT NONE
            !   FSI_COARSE_LS_SIGN_FINE_VEL_VALID
            if (sign_valid(mask_node).eq.1) then
 
-            weight_total_variation=weight_total_variation+one
+            weight_total_variation=weight_total_variation+1
 
              !ibase=(part_id-1)*NCOMP_FSI
             LS_SIDE=old_FSIdata(i+ii,j+jj,k+kk,ibase+FSI_LEVELSET+1)
@@ -12725,13 +12724,13 @@ IMPLICIT NONE
             print *,"sign_valid(mask_node) invalid"
             stop
            endif
-          endif ! i1,j1,k1 in grid
+          endif ! ii,jj,kk in grid
          enddo
          enddo
-         enddo ! i1,j1,k1
+         enddo ! ii,jj,kk
 
          if ((weight_total_variation.ge.1).and. &
-             (weight_total_variation.le.26)) then
+             (weight_total_variation.le.3*3*3-1)) then
           if (sign_conflict_local.eq.zero) then
            ls_local=LS_sum/weight_total_variation
           else if ((sign_conflict_local.eq.one).or. &
@@ -12761,7 +12760,7 @@ IMPLICIT NONE
          else if (weight_total_variation.eq.0) then
           ! do nothing
          else
-          print *,"weight_total_variation invalid"
+          print *,"weight_total_variation invalid: ",weight_total_variation
           stop
          endif
 

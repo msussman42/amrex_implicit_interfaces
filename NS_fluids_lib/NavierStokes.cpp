@@ -4389,8 +4389,8 @@ NavierStokes::read_params ()
     pp.query("inflow_pressure",inflow_pressure);
     pp.query("outflow_pressure",outflow_pressure);
 
-    pp.query( "multilevel_maxcycle",multilevel_maxcycle);
-    pp.query( "multilevel_restart_period",multilevel_restart_period);
+    pp.query("multilevel_maxcycle",multilevel_maxcycle);
+    pp.query("multilevel_restart_period",multilevel_restart_period);
     if ((multilevel_maxcycle>1)&&(multilevel_restart_period>1)) {
      // do nothing
     } else
@@ -4399,6 +4399,11 @@ NavierStokes::read_params ()
 
     ParmParse ppmac("mac");
     ParmParse ppcg("cg");
+
+    int cg_restart_period=-1;
+    ppcg.query("restart_period",cg_restart_period);
+    int cg_maxiter=-1;
+    ppcg.query("maxiter",cg_maxiter);
 
     ppmac.query( "mac_abs_tol",mac_abs_tol);
       // mac.visc_abs_tol (not ns.visc_abs_tol)
@@ -5210,9 +5215,19 @@ NavierStokes::read_params ()
      std::cout << "ractivey " << ractivey << '\n';
      std::cout << "ractivez " << ractivez << '\n';
      std::cout << "wait_time " << wait_time << '\n';
+
      std::cout << "multilevel_maxcycle " << multilevel_maxcycle << '\n';
+
      std::cout << "multilevel_restart_period " << 
 	     multilevel_restart_period << '\n';
+     if (cg_restart_period>=0) {
+      std::cout << "cg.restart_period " << 
+	     cg_restart_period << '\n';
+     }
+     if (cg_maxiter>=0) {
+      std::cout << "cg.maxiter " << 
+	     cg_maxiter << '\n';
+     }
 
      std::cout << "mac.mac_abs_tol " <<mac_abs_tol<< '\n';
      std::cout << "mac.visc_abs_tol " <<visc_abs_tol<< '\n';
