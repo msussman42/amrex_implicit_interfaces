@@ -12736,163 +12736,13 @@ IMPLICIT NONE
           else if ((sign_conflict_local.eq.one).or. &
                    (sign_conflict_local.eq.two).or. & 
                    (sign_conflict_local.eq.three)) then
-           grad_phi_norm_plus=abs(sqrt(grad_phi_norm_plus)-one)
-           grad_phi_norm_minus=abs(sqrt(grad_phi_norm_minus)-one)
  
-           if (grad_phi_norm_plus.le.grad_phi_norm_minus) then
+           if (total_variation_sum_plus.le.total_variation_sum_minus) then
             ls_local=abs(ls_local)
-           else if (grad_phi_norm_plus.gt.grad_phi_norm_minus) then
+           else if (total_variation_sum_plus.ge.total_variation_sum_minus) then
             ls_local=-abs(ls_local)
            else
-            print *,"grad_phi_norm plus or minus invalid"
-            stop
-           endif
-          else
-           print *,"sign_conflict_local invalid"
-           stop
-          endif
-          ! induces "new_mask_local=FSI_FINE_SIGN_VEL_VALID" below.
-          sign_status_changed=1
-         else if (sign_count.eq.0) then
-          ! do nothing
-         else
-          print *,"sign_count invalid"
-          stop
-         endif
-
-         do dir=1,3
-
-          ii=0
-          jj=0
-          kk=0
-          if (dir.eq.1) then
-           i_norm=i
-           ii=1
-          else if (dir.eq.2) then
-           i_norm=j
-           jj=1
-          else if (dir.eq.3) then
-           i_norm=k
-           kk=1
-          else
-           print *,"dir invalid"
-           stop
-          endif
-
-          if (i_norm.eq.FSI_growlo3D(dir)) then
-           mminus=FSI_NOTHING_VALID
-          else if ((i_norm.gt.FSI_growlo3D(dir)).and. &
-                   (i_norm.le.FSI_growhi3D(dir))) then
-           do nc=1,NCOMP_FSI
-            data_minus(nc)=old_FSIdata(i-ii,j-jj,k-kk,ibase+nc)
-           enddo
-           mminus=NINT(data_minus(FSI_EXTRAP_FLAG+1))
-           LSMINUS=data_minus(FSI_LEVELSET+1)
-           xminus=xdata3D(i-ii,j-jj,k-kk,dir)
-          else 
-           print *,"i_norm invalid"
-           stop
-          endif
-    
-          if (i_norm.eq.FSI_growhi3D(dir)) then
-           mplus=FSI_NOTHING_VALID
-          else if ((i_norm.ge.FSI_growlo3D(dir)).and. &
-                   (i_norm.lt.FSI_growhi3D(dir))) then
-           do nc=1,NCOMP_FSI
-            data_plus(nc)=old_FSIdata(i+ii,j+jj,k+kk,ibase+nc)
-           enddo
-           mplus=NINT(data_plus(FSI_EXTRAP_FLAG+1))
-           LSPLUS=data_plus(FSI_LEVELSET+1)
-           xplus=xdata3D(i+ii,j+jj,k+kk,dir)
-          else 
-           print *,"i_norm invalid"
-           stop
-          endif
-
-          ! sign_valid==1 if mask=
-          !   FSI_FINE_SIGN_VEL_VALID, 
-          !   FSI_DOUBLY_WETTED_SIGN_VEL_VALID, 
-          !   FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID.
-          ! sign_valid==0 if 
-          !   mask=FSI_NOTHING_VALID,
-          !   FSI_FINE_VEL_VALID,
-          !   FSI_COARSE_LS_SIGN_VEL_VALID, 
-          !   FSI_COARSE_LS_SIGN_FINE_VEL_VALID
-          if ((sign_valid(mplus).eq.1).and. &
-              (sign_valid(mminus).eq.1)) then
-           sign_valid_sten=1
-           if (abs(LSPLUS).le.abs(LSMINUS)) then
-            LS_fast_marching=LSPLUS
-            dx_fast_marching=(xplus-xcen(dir))**2
-           else if (abs(LSPLUS).ge.abs(LSMINUS)) then
-            LS_fast_marching=LSMINUS
-            dx_fast_marching=(xminus-xcen(dir))**2
-           else
-            print *,"LSPLUS or LSMINUS invalid"
-            print *,"LSPLUS, LSMINUS ",LSPLUS,LSMINUS
-            print *,"dir=",dir
-            print *,"i,j,k ",i,j,k
-            print *,"mask_local=",mask_local
-            print *,"ls_local=",ls_local
-            print *,"mplus=",mplus
-            print *,"mminus=",mminus
-            stop
-           endif
-          else if ((sign_valid(mplus).eq.1).and. &
-                   (sign_valid(mminus).eq.0)) then
-           sign_valid_sten=1
-           LS_fast_marching=LSPLUS
-           dx_fast_marching=(xplus-xcen(dir))**2
-          else if ((sign_valid(mplus).eq.0).and. &
-                   (sign_valid(mminus).eq.1)) then
-           sign_valid_sten=1
-           LS_fast_marching=LSMINUS
-           dx_fast_marching=(xminus-xcen(dir))**2
-          else if ((sign_valid(mplus).eq.0).and. &
-                   (sign_valid(mminus).eq.0)) then
-           sign_valid_sten=0
-          else
-           print *,"mplus or mminus invalid"
-           stop
-          endif
-
-          if (sign_valid_sten.eq.1) then
-           if (dx_fast_marching.gt.zero) then
-            sign_count=sign_count+1
-            LS_sum=LS_sum+LS_fast_marching
-            grad_phi_norm_plus=grad_phi_norm_plus+ &
-             (LS_fast_marching-abs(ls_local))**2/dx_fast_marching
-            grad_phi_norm_minus=grad_phi_norm_minus+ &
-             (LS_fast_marching+abs(ls_local))**2/dx_fast_marching
-           else
-            print *,"dx_fast_marching invalid"
-            stop
-           endif
-          else if (sign_valid_sten.eq.0) then
-           ! do nothing
-          else
-           print *,"sign_valid_sten invalid"
-           stop
-          endif
-
-         enddo ! dir=1..3
-
-         if ((sign_count.ge.1).and. &
-             (sign_count.le.3)) then
-          if (sign_conflict_local.eq.zero) then
-           ls_local=LS_sum/sign_count
-          else if ((sign_conflict_local.eq.one).or. &
-                   (sign_conflict_local.eq.two).or. & 
-                   (sign_conflict_local.eq.three)) then
-           grad_phi_norm_plus=abs(sqrt(grad_phi_norm_plus)-one)
-           grad_phi_norm_minus=abs(sqrt(grad_phi_norm_minus)-one)
- 
-           if (grad_phi_norm_plus.le.grad_phi_norm_minus) then
-            ls_local=abs(ls_local)
-           else if (grad_phi_norm_plus.gt.grad_phi_norm_minus) then
-            ls_local=-abs(ls_local)
-           else
-            print *,"grad_phi_norm plus or minus invalid"
+            print *,"total_variation_sum plus or minus invalid"
             stop
            endif
           else
@@ -12910,50 +12760,6 @@ IMPLICIT NONE
 
          if (vel_valid(mask_local).eq.0) then 
 
-          do dir=1,NCOMP_FSI
-           weight_top(dir)=zero
-          enddo
-          weight_bot=zero
-          do i1=-3,3
-          do j1=-3,3
-          do k1=-3,3
-           if ((i+i1.ge.FSI_growlo3D(1)).and.(i+i1.le.FSI_growhi3D(1)).and. &
-               (j+j1.ge.FSI_growlo3D(2)).and.(j+j1.le.FSI_growhi3D(2)).and. &
-               (k+k1.ge.FSI_growlo3D(3)).and.(k+k1.le.FSI_growhi3D(3))) then
-            mask_node=NINT(old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_EXTRAP_FLAG+1))
-            if (vel_valid(mask_node).eq.1) then
-             weight=VOFTOL*dx3D(1)
-             do dir=1,3
-              xc(dir)=xdata3D(i+i1,j+j1,k+k1,dir)
-              weight=weight+(xc(dir)-xcen(dir))**2
-             enddo
-             if (weight.gt.zero) then
-              ! do nothing
-             else
-              print *,"weight invalid"
-              stop
-             endif
-             weight=one/weight
-             do dir=1,3
-              weight_top(FSI_VELOCITY+dir)=weight_top(FSI_VELOCITY+dir)+ &
-               old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_VELOCITY+dir)*weight
-             enddo
-              ! temperature
-             weight_top(FSI_TEMPERATURE+1)=weight_top(FSI_TEMPERATURE+1)+ &
-               old_FSIdata(i+i1,j+j1,k+k1,ibase+FSI_TEMPERATURE+1)*weight
-      
-             weight_bot=weight_bot+weight
-            else if (vel_valid(mask_node).eq.0) then
-             ! do nothing
-            else
-             print *,"vel_valid(mask_node) invalid"
-             stop
-            endif
-           endif ! i1,j1,k1 in grid
-          enddo
-          enddo
-          enddo ! i1,j1,k1
-
           if (weight_bot.gt.zero) then
            do dir=1,3
             FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)= &
@@ -12961,6 +12767,8 @@ IMPLICIT NONE
            enddo
            FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)= &
                   weight_top(FSI_TEMPERATURE+1)/weight_bot
+
+           ! FORCE is not extended!
            if (CTML_force_model.eq.2) then 
             print *,"CTML_force_model.eq.2 not supported"
             stop
@@ -12971,18 +12779,6 @@ IMPLICIT NONE
             stop
            endif
 
-           ! FORCE is not extended!
-
-           if (CTML_force_model.eq.2) then ! pres-vel
-            print *,"CTML_force_model.eq.2 not supported"
-            stop
-           else if (CTML_force_model.eq.0) then ! Goldstein et al
-            ! do nothing
-           else
-            print *,"CTML_force_model invalid"
-            stop
-           endif
-          
           else if (weight_bot.eq.zero) then
            ! do nothing
           else
