@@ -11097,12 +11097,13 @@ IMPLICIT NONE
   REAL_T, dimension(3) :: force_local
   REAL_T temp_local
   INTEGER_T nc
-  INTEGER_T i_norm
   INTEGER_T ii_current
 
-  REAL_T LS_sum
+  REAL_T inner_band_size
+  REAL_T LS_sum,LS_SIDE,dx_SIDE
   REAL_T total_variation_sum_plus
   REAL_T total_variation_sum_minus
+  REAL_T weight_total_variation
 
   INTEGER_T sign_status_changed
   INTEGER_T num_elements
@@ -12736,13 +12737,19 @@ IMPLICIT NONE
           else if ((sign_conflict_local.eq.one).or. &
                    (sign_conflict_local.eq.two).or. & 
                    (sign_conflict_local.eq.three)) then
- 
-           if (total_variation_sum_plus.le.total_variation_sum_minus) then
-            ls_local=abs(ls_local)
-           else if (total_variation_sum_plus.ge.total_variation_sum_minus) then
-            ls_local=-abs(ls_local)
+
+           if ((total_variation_sum_plus.ge.zero).and. &
+               (total_variation_sum_minus.ge.zero)) then 
+            if (total_variation_sum_plus.le.total_variation_sum_minus) then
+             ls_local=abs(ls_local)
+            else if (total_variation_sum_plus.ge.total_variation_sum_minus) then
+             ls_local=-abs(ls_local)
+            else
+             print *,"total_variation_sum plus or minus invalid(1)"
+             stop
+            endif
            else
-            print *,"total_variation_sum plus or minus invalid"
+            print *,"total_variation_sum plus or minus invalid(2)"
             stop
            endif
           else
@@ -12751,10 +12758,10 @@ IMPLICIT NONE
           endif
           ! induces "new_mask_local=FSI_FINE_SIGN_VEL_VALID" below.
           sign_status_changed=1
-         else if (sign_count.eq.0) then
+         else if (weight_total_variation.eq.0) then
           ! do nothing
          else
-          print *,"sign_count invalid"
+          print *,"weight_total_variation invalid"
           stop
          endif
 
@@ -12782,7 +12789,7 @@ IMPLICIT NONE
           else if (weight_bot.eq.zero) then
            ! do nothing
           else
-           print *,"weight_box is NaN"
+           print *,"weight_bot is NaN"
            stop
           endif 
 
