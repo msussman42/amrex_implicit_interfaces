@@ -12041,7 +12041,7 @@ IMPLICIT NONE
             else if (mag_n.gt.zero) then
              n_dot_x=n_dot_x/(mag_n*mag_n_test)
 
-             if (abs(n_dot_x).lt.cos(60.0d0*Pi/180.0d0)) then
+             if (abs(n_dot_x).lt.cos(80.0d0*Pi/180.0d0)) then
               sign_conflict_local=three
              else if (hitsign.ge.zero) then
               sign_conflict_local=one
