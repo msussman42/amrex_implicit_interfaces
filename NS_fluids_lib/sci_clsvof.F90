@@ -9,7 +9,9 @@
 #include "AMReX_ArrayLim.H"
 #include "EXTRAP_COMP.H"
 
-#define element_buffer_tol 0.01d0
+#define element_buffer_tol 0.0d0
+#define angle_tol 80.0d0
+
 #define tecplot_post_process 1
 
 ! 10 seconds for tail to do a full period
@@ -12033,7 +12035,7 @@ IMPLICIT NONE
             else if (mag_n.gt.zero) then
              n_dot_x=n_dot_x/(mag_n*mag_n_test)
 
-             if (abs(n_dot_x).lt.cos(80.0d0*Pi/180.0d0)) then
+             if (abs(n_dot_x).lt.cos(angle_tol*Pi/180.0d0)) then
               sign_conflict_local=three
              else if (hitsign.ge.zero) then
               sign_conflict_local=one
