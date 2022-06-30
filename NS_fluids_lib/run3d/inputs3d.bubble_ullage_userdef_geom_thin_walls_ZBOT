@@ -159,7 +159,7 @@ ns.vorterr	    = 0.0 0.0 0.0 # vorticity limit for grid refinement
 
 # Adaptive dt
 ns.cfl              = 0.5      # cfl number for hyperbolic system
-ns.init_shrink      = 1.0      # scale back initial timestep
+ns.init_shrink      = 0.01     # scale back initial timestep
 ns.change_max       = 1.1      
 ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 
@@ -390,6 +390,7 @@ ns.xblob3 = 18.3 # Watts=J/s
 #nozzle outlet velocity (v_n) measured from simulations.
 #nozzle radius is 0.005m
 #To find Dj (diameter of jet at the interface): Tecplot -> insert -> Stream
+#If xblob5 too big, then decrease init_shrink
 #Weber number=rho_liq * v_n^2 * r_nozzle^2 /(sigma * Dj)=
 #BREAKUP:
 #(3.35 Liters/min) 1400 * (0.95)^2 * (0.005)^2 /(0.012 * 0.012)=219.0 
