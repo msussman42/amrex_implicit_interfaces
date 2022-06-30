@@ -10,7 +10,7 @@
 #include "EXTRAP_COMP.H"
 
 #define element_buffer_tol 0.0d0
-#define angle_tol 45.0d0
+#define angle_tol 5.0d0
 #define max_plane_intersects 100
 
 #define tecplot_post_process 1
@@ -12822,8 +12822,8 @@ IMPLICIT NONE
 
           local_corner_count=local_corner_count+1
           if (ioproc.eq.1) then
-           print *,"local_corner_count,xcen,num_sign_changes ", &
-             local_corner_count,xcen(1),xcen(2),xcen(3), &
+           print *,"local_corner_count,part_id,xcen,num_sign_changes ", &
+             local_corner_count,part_id,xcen(1),xcen(2),xcen(3), &
              num_sign_changes
           endif
 
