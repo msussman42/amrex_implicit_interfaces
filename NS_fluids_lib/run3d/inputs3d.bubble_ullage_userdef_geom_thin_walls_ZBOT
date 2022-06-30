@@ -5,8 +5,8 @@
 # ----------------------------------------------------------
 # -------- Problem setup -----------------------------------
 # ----------------------------------------------------------
-max_step=20
-#max_step=99999999
+#max_step=20
+max_step=99999999
 stop_time=8000.0
 
 # unique problem identifier associated with each new plug-in:
@@ -412,7 +412,8 @@ ns.xblob3 = 18.3 # Watts=J/s
 #ns.xblob5 = 0.166667e-5 # m^3/s  (0.1 Liters/minute) (v_n=0.023 m/s, Dj=0.012)
 #64^3
 #ns.xblob5 = 3.0e-5 # m^3/s  (0.3x6 Liters/minute) (v_n=0.084x6 m/s, Dj=0.024)
-ns.xblob5 = 3.0e-4 # m^3/s  (0.3x6 Liters/minute) (v_n=0.084x6 m/s, Dj=0.024)
+#ns.xblob5 = 3.0e-4 # m^3/s  (0.3x6 Liters/minute) (v_n=0.084x6 m/s, Dj=0.024)
+ns.xblob5 = 1.2e-3 # m^3/s 1400 * (4)^2 * .002 / (10 * .012)=373 
 ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 
 # ----------------------------------------------------------
