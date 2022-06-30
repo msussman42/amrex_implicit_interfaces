@@ -11111,7 +11111,7 @@ IMPLICIT NONE
 
   INTEGER_T num_plane_intersects
   REAL_T t_top,t_bottom,t_crit,swap_data
-  INTEGER_T num_sign_changes,local_corner_count
+  INTEGER_T num_sign_changes,local_corner_count,local_smooth_count
   REAL_T plane_diff
   REAL_T plane_intersect_list(max_plane_intersects)
 
@@ -12562,6 +12562,7 @@ IMPLICIT NONE
     endif
 
     local_corner_count=0
+    local_smooth_count=0
 
     do i=growlo3D(1),growhi3D(1)
     do j=growlo3D(2),growhi3D(2)
@@ -12644,6 +12645,7 @@ IMPLICIT NONE
              (sign_conflict_local.eq.two)).and. &
             (abs(ls_local).le.inner_band_size*dx3D(1))) then
          ! induces "new_mask_local=FSI_FINE_SIGN_VEL_VALID" below.
+         local_smooth_count=local_smooth_count+1
          sign_status_changed=1
          if (sign_conflict_local.eq.one) then
           ls_local=-abs(ls_local)
@@ -13059,6 +13061,8 @@ IMPLICIT NONE
    else if (isout.eq.1) then
     print *,"END: CLSVOF_InitBox"
     print *,"FSI_operation=",FSI_operation
+    print *,"local_corner_count=",local_corner_count
+    print *,"local_smooth_count=",local_smooth_count
     print *,"touch_flag=",touch_flag
    else
     print *,"isout invalid3: ",isout
