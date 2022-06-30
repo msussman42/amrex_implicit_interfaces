@@ -11070,6 +11070,7 @@ IMPLICIT NONE
   REAL_T :: weight_bot
   REAL_T, dimension(3) :: minnode,maxnode
   REAL_T, dimension(3) :: xx
+  REAL_T, dimension(3) :: x_outside
   REAL_T, dimension(3) :: xcen
   REAL_T, dimension(3) :: xleft
   REAL_T, dimension(3) :: xright
@@ -12639,170 +12640,194 @@ IMPLICIT NONE
                  (sign_conflict_local.eq.three).or. &
                  (abs(ls_local).ge.inner_band_size*dx3D(1))) then
 
-         LS_sum=zero
-         total_variation_sum_plus=zero
-         total_variation_sum_minus=zero
-         do dir=1,NCOMP_FSI
-          weight_top(dir)=zero
-         enddo
-         weight_bot=zero
-         weight_total_variation=0
-     
-         do ii=-1,1
-         do jj=-1,1
-         do kk=-1,1
-          if ((i+ii.ge.FSI_growlo3D(1)).and.(i+ii.le.FSI_growhi3D(1)).and. &
-              (j+jj.ge.FSI_growlo3D(2)).and.(j+jj.le.FSI_growhi3D(2)).and. &
-              (k+kk.ge.FSI_growlo3D(3)).and.(k+kk.le.FSI_growhi3D(3))) then
+         if ((sign_conflict_local.eq.three).and. &
+             (abs(ls_local).le.inner_band_size*dx3D(1))) then
 
-           mask_node=NINT(old_FSIdata(i+ii,j+jj,k+kk,ibase+FSI_EXTRAP_FLAG+1))
+          call SUB_GET_OUTSIDE_POINT( &
+            FSI_mesh_type%exterior_BB, &
+            xcen,time, &
+            x_outside, &
+            im_part, &
+            part_id)
 
-           weight=VOFTOL*dx3D(1)
-           do dir=1,3
-            xc(dir)=xdata3D(i+ii,j+jj,k+kk,dir)
-            weight=weight+(xc(dir)-xcen(dir))**2
-           enddo
-           if (weight.gt.zero) then
-            ! do nothing
-           else
-            print *,"weight invalid"
-            stop
-           endif
-           weight=one/weight
-
-           if (vel_valid(mask_node).eq.1) then
-            do dir=1,3
-             weight_top(FSI_VELOCITY+dir)=weight_top(FSI_VELOCITY+dir)+ &
-              old_FSIdata(i+ii,j+jj,k+kk,ibase+FSI_VELOCITY+dir)*weight
-            enddo
-             ! temperature
-            weight_top(FSI_TEMPERATURE+1)=weight_top(FSI_TEMPERATURE+1)+ &
-              old_FSIdata(i+ii,j+jj,k+kk,ibase+FSI_TEMPERATURE+1)*weight
-      
-            weight_bot=weight_bot+weight
-           else if (vel_valid(mask_node).eq.0) then
-            ! do nothing
-           else
-            print *,"vel_valid(mask_node) invalid"
-            stop
-           endif
-
-           ! sign_valid==1 if mask=
-           !   FSI_FINE_SIGN_VEL_VALID, 
-           !   FSI_DOUBLY_WETTED_SIGN_VEL_VALID, 
-           !   FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID.
-           ! sign_valid==0 if 
-           !   mask=FSI_NOTHING_VALID,
-           !   FSI_FINE_VEL_VALID,
-           !   FSI_COARSE_LS_SIGN_VEL_VALID, 
-           !   FSI_COARSE_LS_SIGN_FINE_VEL_VALID
-           if (sign_valid(mask_node).eq.1) then
-
-            weight_total_variation=weight_total_variation+1
-
-             !ibase=(part_id-1)*NCOMP_FSI
-            LS_SIDE=old_FSIdata(i+ii,j+jj,k+kk,ibase+FSI_LEVELSET+1)
-            dx_SIDE=zero
-            do dir=1,3
-             dx_SIDE=dx_SIDE+(xc(dir)-xcen(dir))**2
-            enddo
-            dx_SIDE=sqrt(dx_SIDE)
-
-            LS_sum=LS_sum+LS_SIDE
-
-            if (dx_SIDE.gt.zero) then
-             total_variation_sum_plus=total_variation_sum_plus+ &
-                (abs(LS_SIDE-abs(ls_local)))/dx_SIDE
-             total_variation_sum_minus=total_variation_sum_minus+ &
-                (abs(LS_SIDE+abs(ls_local)))/dx_SIDE
-            else
-             print *,"dx_SIDE invalid"
-             stop
-            endif
-
-           else if (sign_valid(mask_node).eq.0) then
-            ! do nothing
-           else
-            print *,"sign_valid(mask_node) invalid"
-            stop
-           endif
-          endif ! ii,jj,kk in grid
-         enddo
-         enddo
-         enddo ! ii,jj,kk
-
-         if ((weight_total_variation.ge.1).and. &
-             (weight_total_variation.le.3*3*3-1)) then
-          if (sign_conflict_local.eq.zero) then
-           ls_local=LS_sum/weight_total_variation
-          else if ((sign_conflict_local.eq.one).or. &
-                   (sign_conflict_local.eq.two).or. & 
-                   (sign_conflict_local.eq.three)) then
-
-           if ((total_variation_sum_plus.ge.zero).and. &
-               (total_variation_sum_minus.ge.zero)) then 
-            if (total_variation_sum_plus.le.total_variation_sum_minus) then
-             ls_local=abs(ls_local)
-            else if (total_variation_sum_plus.ge.total_variation_sum_minus) then
-             ls_local=-abs(ls_local)
-            else
-             print *,"total_variation_sum plus or minus invalid(1)"
-             stop
-            endif
-           else
-            print *,"total_variation_sum plus or minus invalid(2)"
-            stop
-           endif
-          else
-           print *,"sign_conflict_local invalid"
-           stop
-          endif
-          ! induces "new_mask_local=FSI_FINE_SIGN_VEL_VALID" below.
           sign_status_changed=1
-         else if (weight_total_variation.eq.0) then
-          ! do nothing
-         else
-          print *,"weight_total_variation invalid: ",weight_total_variation
-          stop
-         endif
 
-         if (vel_valid(mask_local).eq.0) then 
+         else if ((sign_conflict_local.eq.zero).or. &
+                  (sign_conflict_local.eq.one).or. &
+                  (sign_conflict_local.eq.two).or. &
+                  (abs(ls_local).ge.inner_band_size*dx3D(1))) then
 
-          if (weight_bot.gt.zero) then
-           do dir=1,3
-            FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)= &
-                   weight_top(FSI_VELOCITY+dir)/weight_bot
-           enddo
-           FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)= &
-                  weight_top(FSI_TEMPERATURE+1)/weight_bot
+          LS_sum=zero
+          total_variation_sum_plus=zero
+          total_variation_sum_minus=zero
+          do dir=1,NCOMP_FSI
+           weight_top(dir)=zero
+          enddo
+          weight_bot=zero
+          weight_total_variation=0
+      
+          do ii=-1,1
+          do jj=-1,1
+          do kk=-1,1
+           if ((i+ii.ge.FSI_growlo3D(1)).and.(i+ii.le.FSI_growhi3D(1)).and. &
+               (j+jj.ge.FSI_growlo3D(2)).and.(j+jj.le.FSI_growhi3D(2)).and. &
+               (k+kk.ge.FSI_growlo3D(3)).and.(k+kk.le.FSI_growhi3D(3))) then
 
-           ! FORCE is not extended!
-           if (CTML_force_model.eq.2) then 
-            print *,"CTML_force_model.eq.2 not supported"
-            stop
-           else if (CTML_force_model.eq.0) then ! Goldstein et al
-            ! do nothing
+            mask_node=NINT(old_FSIdata(i+ii,j+jj,k+kk,ibase+FSI_EXTRAP_FLAG+1))
+
+            weight=VOFTOL*dx3D(1)
+            do dir=1,3
+             xc(dir)=xdata3D(i+ii,j+jj,k+kk,dir)
+             weight=weight+(xc(dir)-xcen(dir))**2
+            enddo
+            if (weight.gt.zero) then
+             ! do nothing
+            else
+             print *,"weight invalid"
+             stop
+            endif
+            weight=one/weight
+
+            if (vel_valid(mask_node).eq.1) then
+             do dir=1,3
+              weight_top(FSI_VELOCITY+dir)=weight_top(FSI_VELOCITY+dir)+ &
+               old_FSIdata(i+ii,j+jj,k+kk,ibase+FSI_VELOCITY+dir)*weight
+             enddo
+              ! temperature
+             weight_top(FSI_TEMPERATURE+1)=weight_top(FSI_TEMPERATURE+1)+ &
+               old_FSIdata(i+ii,j+jj,k+kk,ibase+FSI_TEMPERATURE+1)*weight
+       
+             weight_bot=weight_bot+weight
+            else if (vel_valid(mask_node).eq.0) then
+             ! do nothing
+            else
+             print *,"vel_valid(mask_node) invalid"
+             stop
+            endif
+
+            ! sign_valid==1 if mask=
+            !   FSI_FINE_SIGN_VEL_VALID, 
+            !   FSI_DOUBLY_WETTED_SIGN_VEL_VALID, 
+            !   FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID.
+            ! sign_valid==0 if 
+            !   mask=FSI_NOTHING_VALID,
+            !   FSI_FINE_VEL_VALID,
+            !   FSI_COARSE_LS_SIGN_VEL_VALID, 
+            !   FSI_COARSE_LS_SIGN_FINE_VEL_VALID
+            if (sign_valid(mask_node).eq.1) then
+
+             weight_total_variation=weight_total_variation+1
+
+              !ibase=(part_id-1)*NCOMP_FSI
+             LS_SIDE=old_FSIdata(i+ii,j+jj,k+kk,ibase+FSI_LEVELSET+1)
+             dx_SIDE=zero
+             do dir=1,3
+              dx_SIDE=dx_SIDE+(xc(dir)-xcen(dir))**2
+             enddo
+             dx_SIDE=sqrt(dx_SIDE)
+
+             LS_sum=LS_sum+LS_SIDE
+
+             if (dx_SIDE.gt.zero) then
+              total_variation_sum_plus=total_variation_sum_plus+ &
+                 (abs(LS_SIDE-abs(ls_local)))/dx_SIDE
+              total_variation_sum_minus=total_variation_sum_minus+ &
+                 (abs(LS_SIDE+abs(ls_local)))/dx_SIDE
+             else
+              print *,"dx_SIDE invalid"
+              stop
+             endif
+
+            else if (sign_valid(mask_node).eq.0) then
+             ! do nothing
+            else
+             print *,"sign_valid(mask_node) invalid"
+             stop
+            endif
+           endif ! ii,jj,kk in grid
+          enddo
+          enddo
+          enddo ! ii,jj,kk
+
+          if ((weight_total_variation.ge.1).and. &
+              (weight_total_variation.le.3*3*3-1)) then
+           if (sign_conflict_local.eq.zero) then
+            ls_local=LS_sum/weight_total_variation
+           else if ((sign_conflict_local.eq.one).or. &
+                    (sign_conflict_local.eq.two).or. & 
+                    (sign_conflict_local.eq.three)) then
+
+            if ((total_variation_sum_plus.ge.zero).and. &
+                (total_variation_sum_minus.ge.zero)) then 
+             if (total_variation_sum_plus.le. &
+                 total_variation_sum_minus) then
+              ls_local=abs(ls_local)
+             else if (total_variation_sum_plus.ge. &
+                      total_variation_sum_minus) then
+              ls_local=-abs(ls_local)
+             else
+              print *,"total_variation_sum plus or minus invalid(1)"
+              stop
+             endif
+            else
+             print *,"total_variation_sum plus or minus invalid(2)"
+             stop
+            endif
            else
-            print *,"CTML_force_model invalid"
+            print *,"sign_conflict_local invalid"
             stop
            endif
-
-          else if (weight_bot.eq.zero) then
+           ! induces "new_mask_local=FSI_FINE_SIGN_VEL_VALID" below.
+           sign_status_changed=1
+          else if (weight_total_variation.eq.0) then
            ! do nothing
           else
-           print *,"weight_bot is NaN"
+           print *,"weight_total_variation invalid: ",weight_total_variation
            stop
-          endif 
+          endif
 
-         else if (vel_valid(mask_local).eq.1) then
-          ! do nothing
+          if (vel_valid(mask_local).eq.0) then 
+
+           if (weight_bot.gt.zero) then
+            do dir=1,3
+             FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)= &
+                    weight_top(FSI_VELOCITY+dir)/weight_bot
+            enddo
+            FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)= &
+                   weight_top(FSI_TEMPERATURE+1)/weight_bot
+
+            ! FORCE is not extended!
+            if (CTML_force_model.eq.2) then 
+             print *,"CTML_force_model.eq.2 not supported"
+             stop
+            else if (CTML_force_model.eq.0) then ! Goldstein et al
+             ! do nothing
+            else
+             print *,"CTML_force_model invalid"
+             stop
+            endif
+
+           else if (weight_bot.eq.zero) then
+            ! do nothing
+           else
+            print *,"weight_bot is NaN"
+            stop
+           endif 
+
+          else if (vel_valid(mask_local).eq.1) then
+           ! do nothing
+          else
+           print *,"vel_valid(mask_local) invalid"
+           stop
+          endif
+
          else
-          print *,"vel_valid(mask_local) invalid"
+          print *,"sign_conflict_local or ls_local invalid (1) "
           stop
          endif
 
         else
-         print *,"sign_conflict_local or ls_local invalid"
+         print *,"sign_conflict_local or ls_local invalid (2) "
          stop
         endif
        else

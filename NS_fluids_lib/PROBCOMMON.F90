@@ -889,6 +889,16 @@ implicit none
       INTEGER_T, intent(in) :: part_id
       end subroutine TEMPLATE_OVERRIDE_FSI_SIGN_LS_VEL_TEMP
 
+      subroutine TEMPLATE_GET_OUTSIDE_POINT( &
+        exterior_BB, &
+        xcell,time,x_outside,im_part,part_id)
+      REAL_T, intent(in) :: exterior_BB(3,2)
+      REAL_T, intent(in) :: xcell(3)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(out) :: x_outside(3)
+      INTEGER_T, intent(in) :: im_part
+      INTEGER_T, intent(in) :: part_id
+      end subroutine TEMPLATE_GET_OUTSIDE_POINT
 
       subroutine TEMPLATE_BOUNDING_BOX_AUX(auxcomp, &
           minnode,maxnode,LS_FROM_SUBROUTINE,aux_ncells_max_side)
@@ -1182,6 +1192,8 @@ implicit none
       PROCEDURE(TEMPLATE_AUX_DATA), POINTER :: SUB_AUX_DATA
       PROCEDURE(TEMPLATE_OVERRIDE_FSI_SIGN_LS_VEL_TEMP), POINTER :: &
         SUB_OVERRIDE_FSI_SIGN_LS_VEL_TEMP
+      PROCEDURE(TEMPLATE_GET_OUTSIDE_POINT), POINTER :: &
+        SUB_GET_OUTSIDE_POINT
       PROCEDURE(TEMPLATE_BOUNDING_BOX_AUX), POINTER :: SUB_BOUNDING_BOX_AUX
       PROCEDURE(TEMPLATE_check_vel_rigid), POINTER :: SUB_check_vel_rigid
       PROCEDURE(TEMPLATE_clamped_LS), POINTER :: SUB_clamped_LS_no_scale

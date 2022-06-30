@@ -113,6 +113,25 @@ INTEGER_T, intent(in) :: part_id
  
 end subroutine STUB_OVERRIDE_FSI_SIGN_LS_VEL_TEMP
 
+subroutine STUB_GET_OUTSIDE_POINT( &
+ exterior_BB, &
+ xcell,time,x_outside,im_part,part_id)
+use probcommon_module
+use global_utility_module
+REAL_T, intent(in) :: exterior_BB(3,2)
+REAL_T, intent(in) :: xcell(3)
+REAL_T, intent(in) :: time
+REAL_T, intent(out) :: x_outside(3)
+INTEGER_T, intent(in) :: im_part
+INTEGER_T, intent(in) :: part_id
+INTEGER_T :: dir
+
+ do dir=1,3
+  x_outside(dir)=exterior_BB(dir,2)
+ enddo
+ 
+end subroutine STUB_GET_OUTSIDE_POINT
+
 subroutine STUB_AUX_DATA(auxcomp,x,LS)
 use probcommon_module
 use global_utility_module
