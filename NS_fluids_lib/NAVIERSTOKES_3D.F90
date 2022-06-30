@@ -8521,6 +8521,9 @@ END SUBROUTINE SIMP
                print *,"region_volume ",region_volume
                print *,"region_volume_flux ",region_volume_flux
                print *,"dt ",dt
+               do dir=1,SDIM
+                print *,"dir,dx,dx/(2 dt) ",dir,dx(dir),dx(dir)/(two*dt)
+               enddo
                print *,"im ",im
                stop
               endif
