@@ -122,6 +122,46 @@ return
 end subroutine CRYOGENIC_TANK_MK_OPEN_CASFILE
 
 
+subroutine CRYOGENIC_TANK_MK_GET_OUTSIDE_POINT( &
+ exterior_BB, &
+ xcell,time,x_outside,im_part,part_id)
+use probcommon_module
+use global_utility_module
+REAL_T, intent(in) :: exterior_BB(3,2)
+REAL_T, intent(in) :: xcell(3)
+REAL_T, intent(in) :: time
+REAL_T, intent(out) :: x_outside(3)
+INTEGER_T, intent(in) :: im_part
+INTEGER_T, intent(in) :: part_id
+INTEGER_T :: dir
+REAL_T :: BB_len
+
+ do dir=1,3
+  BB_len=exterior_BB(dir,2)-exterior_BB(dir,1)
+  if (BB_len.gt.zero) then
+   if (dir.eq.2) then
+    x_outside(dir)=xcell(dir)
+   else if ((dir.eq.1).or.(dir.eq.3)) then
+    if (xcell(dir).gt.zero) then
+     x_outside(dir)=exterior_BB(dir,2)+0.05d0*BB_len
+    else if (xcell(dir).le.zero) then
+     x_outside(dir)=exterior_BB(dir,1)-0.05d0*BB_len
+    else
+     print *,"xcell invalid"
+     stop
+    endif
+   else
+    print *,"dir invalid"
+    stop
+   endif
+  else
+   print *,"BB_len invalid"
+   stop
+  endif
+ enddo ! dir=1..3
+ 
+end subroutine CRYOGENIC_TANK_MK_GET_OUTSIDE_POINT
+
 subroutine CRYOGENIC_TANK_MK_OVERRIDE_FSI_SIGN_LS_VEL_TEMP( &
  exterior_BB, &
  interior_BB, &
@@ -339,7 +379,7 @@ INTEGER_T, intent(out) :: aux_ncells_max_side
       else if (auxcomp.eq.4) then ! sink
        aux_ncells_max_side=256
       else if (auxcomp.eq.5) then ! tank
-       aux_ncells_max_side=256
+       aux_ncells_max_side=256  !256 for production, 64 for testing.
       else if (auxcomp.eq.6) then ! nozzle
        aux_ncells_max_side=256
       else if (auxcomp.eq.7) then ! LAD housing

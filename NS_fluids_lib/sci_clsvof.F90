@@ -11502,6 +11502,9 @@ IMPLICIT NONE
     stop
    endif
 
+   local_corner_count=0
+   local_smooth_count=0
+
    if (FSI_operation.eq.2) then ! make distance in narrow band
 
     if (isout.eq.0) then
@@ -12651,9 +12654,6 @@ IMPLICIT NONE
      stop
     endif
 
-    local_corner_count=0
-    local_smooth_count=0
-
     do i=growlo3D(1),growhi3D(1)
     do j=growlo3D(2),growhi3D(2)
     do k=growlo3D(3),growhi3D(3)
@@ -12973,9 +12973,21 @@ IMPLICIT NONE
             if (plane_intersect_list_sign(cur_ptr).eq.cur_sign) then
              ! do nothing
             else
-             print *,"inconsistent sign"
-             stop
+             print *,"inconsistent sign(1)"
+             print *,"im_part, part_id ",im_part,part_id
+             print *,"num_plane_intersects ",num_plane_intersects
+             print *,"xcen ",xcen(1),xcen(2),xcen(3)
+             print *,"x_outside ",x_outside(1),x_outside(2),x_outside(3)
+             do ii=1,num_plane_intersects
+              print *,"ii,t,(outside) sign ",ii, &
+                plane_intersect_list(ii), &
+                plane_intersect_list_sign(ii)
+             enddo
+             ls_local=-ls_local
+             cur_sign=-cur_sign
+!            stop
             endif
+
             cur_ptr=cur_ptr+1
             ls_local=-ls_local
             cur_sign=-cur_sign
@@ -12995,9 +13007,23 @@ IMPLICIT NONE
              if (plane_intersect_list_sign(cur_ptr).eq.cur_sign) then
               ! do nothing
              else
-              print *,"inconsistent sign"
-              stop
+              print *,"inconsistent sign(2)"
+              print *,"cur_ptr,cur_sign,plane_diff ",cur_ptr,cur_sign,plane_diff
+
+              print *,"im_part, part_id ",im_part,part_id
+              print *,"num_plane_intersects ",num_plane_intersects
+              print *,"xcen ",xcen(1),xcen(2),xcen(3)
+              print *,"x_outside ",x_outside(1),x_outside(2),x_outside(3)
+              do ii=1,num_plane_intersects
+               print *,"ii,t,(outside) sign ",ii, &
+                 plane_intersect_list(ii), &
+                 plane_intersect_list_sign(ii)
+              enddo
+              ls_local=-ls_local
+              cur_sign=-cur_sign
+!             stop
              endif
+
              cur_ptr=cur_ptr+1
              ls_local=-ls_local
              cur_sign=-cur_sign
@@ -13250,8 +13276,11 @@ IMPLICIT NONE
    else if (isout.eq.1) then
     print *,"END: CLSVOF_InitBox"
     print *,"FSI_operation=",FSI_operation
-    print *,"local_corner_count=",local_corner_count
-    print *,"local_smooth_count=",local_smooth_count
+    if ((local_corner_count.gt.0).or. &
+        (local_smooth_count.gt.0)) then
+     print *,"local_corner_count=",local_corner_count
+     print *,"local_smooth_count=",local_smooth_count
+    endif
     print *,"touch_flag=",touch_flag
    else
     print *,"isout invalid3: ",isout
