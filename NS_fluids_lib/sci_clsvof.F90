@@ -11191,12 +11191,13 @@ IMPLICIT NONE
   INTEGER_T num_plane_intersects
   INTEGER_T num_plane_intersects_new
   INTEGER_T cur_ptr
+  INTEGER_T cur_sign
   REAL_T t_top,t_bottom,t_crit,swap_data
   INTEGER_T swap_sign
   INTEGER_T num_sign_changes,local_corner_count,local_smooth_count
   REAL_T far_field_sign
   REAL_T near_field_sign
-  INTEGER_T less_than_flag
+  INTEGER_T less_than_flag,equal_flag
   REAL_T plane_diff
 
   REAL_T plane_intersect_list(max_plane_intersects)
@@ -12822,7 +12823,7 @@ IMPLICIT NONE
              far_field_sign=far_field_sign- &
                 normal(dir)*(x_outside(dir)-xnot(dir))
              near_field_sign=near_field_sign- &
-                normal(dir)*(x_cen(dir)-xnot(dir))
+                normal(dir)*(xcen(dir)-xnot(dir))
              t_top=t_top-normal(dir)*(xcen(dir)-xnot(dir))
              t_bottom=t_bottom+normal(dir)*xright(dir)
             enddo
@@ -12964,28 +12965,51 @@ IMPLICIT NONE
           num_plane_intersects=num_plane_intersects_new
 
            ! list sorted from highest to lowest
-          if (num_plane_intersects.eq.0) then
-           ls_local=-abs(ls_local)
-
-          num_sign_changes=num_plane_intersects
-          do ii=1,num_plane_intersects-1
-           plane_diff=abs(plane_intersect_list(ii)- &
-                          plane_intersect_list(ii+1))
-           if (plane_diff.le.VOFTOL) then
-            num_sign_changes=num_sign_changes-1
-           else if (plane_diff.ge.VOFTOL) then
-            ! do nothing
+          ls_local=-abs(ls_local)
+          cur_sign=-1
+          cur_ptr=1
+          do while (cur_ptr.le.num_plane_intersects)
+           if (cur_ptr+1.gt.num_plane_intersects) then
+            if (plane_intersect_list_sign(cur_ptr).eq.cur_sign) then
+             ! do nothing
+            else
+             print *,"inconsistent sign"
+             stop
+            endif
+            cur_ptr=cur_ptr+1
+            ls_local=-ls_local
+            cur_sign=-cur_sign
+           else if (cur_ptr+1.le.num_plane_intersects) then
+            plane_diff=abs(plane_intersect_list(cur_ptr)- &
+                           plane_intersect_list(cur_ptr+1))
+            if (plane_diff.le.crossing_tol) then
+             if (plane_intersect_list_sign(cur_ptr)* &
+                 plane_intersect_list_sign(cur_ptr+1).eq.-1) then
+              ! do nothing
+             else
+              print *,"not all duplicates deleted"
+              stop
+             endif
+             cur_ptr=cur_ptr+2
+            else if (plane_diff.gt.crossing_tol) then
+             if (plane_intersect_list_sign(cur_ptr).eq.cur_sign) then
+              ! do nothing
+             else
+              print *,"inconsistent sign"
+              stop
+             endif
+             cur_ptr=cur_ptr+1
+             ls_local=-ls_local
+             cur_sign=-cur_sign
+            else
+             print *,"plane_diff is NaN"
+             stop
+            endif
            else
-            print *,"plane_diff is NaN"
+            print *,"cur_ptr invalid"
             stop
            endif
-          enddo ! ii=1,num_plane_intersects-1
-
-          if ((num_sign_changes/2)*2.eq.num_sign_changes) then
-           ls_local=-abs(ls_local)
-          else
-           ls_local=abs(ls_local)
-          endif
+          enddo !while (cur_ptr.le.num_plane_intersects)
 
           local_corner_count=local_corner_count+1
           if (ioproc.eq.1) then
