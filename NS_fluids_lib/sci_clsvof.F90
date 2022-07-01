@@ -9,9 +9,10 @@
 #include "AMReX_ArrayLim.H"
 #include "EXTRAP_COMP.H"
 
-#define element_buffer_tol 0.0d0
-#define angle_tol 5.0d0
+#define element_buffer_tol (0.0d0)
+#define angle_tol (5.0d0)
 #define max_plane_intersects 100
+#define crossing_tol (0.001d0)
 
 #define tecplot_post_process 1
 
@@ -10059,7 +10060,7 @@ end function sign_valid
 INTEGER_T function vel_valid(mask)
 IMPLICIT NONE
 
-INTEGER_T mask
+INTEGER_T, intent(in) :: mask
 
 if ((mask.eq.FSI_FINE_VEL_VALID).or. &  
     (mask.eq.FSI_FINE_SIGN_VEL_VALID).or. & 
@@ -10952,6 +10953,84 @@ IMPLICIT NONE
 return
 end subroutine CLSVOF_FILLCONTAINER
 
+INTEGER_T function is_less_than_list(t1,s1,t2,s2)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: t1,t2
+INTEGER_T, intent(in) :: s1,s2
+
+ is_less_than_list=0
+
+ if ((t1.ge.zero).and.(t1.le.one).and. &
+     (t2.ge.zero).and.(t2.le.one).and. &
+     ((s1.eq.-1).or.(s1.eq.1)).and. &
+     ((s2.eq.-1).or.(s2.eq.1))) then
+  if (abs(t1-t2).le.crossing_tol) then
+   if (s1.eq.s2) then
+    ! do nothing
+   else if (s1.lt.s2) then
+    is_less_than_list=1
+   else if (s1.gt.s2) then
+    ! do nothing
+   else
+    print *,"s1 or s2 bust"
+    stop
+   endif
+  else if (t1.lt.t2) then
+   is_less_than_list=1
+  else if (t1.gt.t2) then
+   ! do nothing
+  else
+   print *,"t1 or t2 is NaN"
+   stop
+  endif
+ else 
+  print *,"t1,t2,s1, or s2 invalid"
+  stop
+ endif
+
+end function is_less_than_list
+
+
+INTEGER_T function is_equal_list(t1,s1,t2,s2)
+IMPLICIT NONE
+
+REAL_T, intent(in) :: t1,t2
+INTEGER_T, intent(in) :: s1,s2
+
+ is_equal_list=0
+
+ if ((t1.ge.zero).and.(t1.le.one).and. &
+     (t2.ge.zero).and.(t2.le.one).and. &
+     ((s1.eq.-1).or.(s1.eq.1)).and. &
+     ((s2.eq.-1).or.(s2.eq.1))) then
+  if (abs(t1-t2).le.crossing_tol) then
+   if (s1.eq.s2) then
+    is_equal_list=1
+   else if (s1.lt.s2) then
+    ! do nothing
+   else if (s1.gt.s2) then
+    ! do nothing
+   else
+    print *,"s1 or s2 bust"
+    stop
+   endif
+  else if (t1.lt.t2) then
+   ! do nothing
+  else if (t1.gt.t2) then
+   ! do nothing
+  else
+   print *,"t1 or t2 is NaN"
+   stop
+  endif
+ else 
+  print *,"t1,t2,s1, or s2 invalid"
+  stop
+ endif
+
+end function is_equal_list
+
+
 ! nFSI==nparts*NCOMP_FSI
 ! mask=FSI_NOTHING_VALID or
 ! mask=FSI_FINE_VEL_VALID or
@@ -11110,10 +11189,20 @@ IMPLICIT NONE
   INTEGER_T weight_total_variation
 
   INTEGER_T num_plane_intersects
+  INTEGER_T num_plane_intersects_new
+  INTEGER_T cur_ptr
   REAL_T t_top,t_bottom,t_crit,swap_data
+  INTEGER_T swap_sign
   INTEGER_T num_sign_changes,local_corner_count,local_smooth_count
+  REAL_T far_field_sign
+  REAL_T near_field_sign
+  INTEGER_T less_than_flag
   REAL_T plane_diff
+
   REAL_T plane_intersect_list(max_plane_intersects)
+  ! sign on the far field side
+  ! sign=-n dot (xfar-x0)
+  INTEGER_T plane_intersect_list_sign(max_plane_intersects)
 
   INTEGER_T sign_status_changed
   INTEGER_T num_elements
@@ -12727,7 +12816,13 @@ IMPLICIT NONE
             eul_over_lag_scale=zero
             t_top=zero
             t_bottom=zero
+            far_field_sign=zero
+            near_field_sign=zero
             do dir=1,3
+             far_field_sign=far_field_sign- &
+                normal(dir)*(x_outside(dir)-xnot(dir))
+             near_field_sign=near_field_sign- &
+                normal(dir)*(x_cen(dir)-xnot(dir))
              t_top=t_top-normal(dir)*(xcen(dir)-xnot(dir))
              t_bottom=t_bottom+normal(dir)*xright(dir)
             enddo
@@ -12757,7 +12852,20 @@ IMPLICIT NONE
                num_plane_intersects=num_plane_intersects+1
                if ((num_plane_intersects.ge.1).and. &
                    (num_plane_intersects.le.max_plane_intersects)) then
-                plane_intersect_list(num_plane_intersects)=t_crit
+                if (far_field_sign*near_field_sign.lt.zero) then
+                 plane_intersect_list(num_plane_intersects)=t_crit
+                 if (far_field_sign.lt.zero) then
+                  plane_intersect_list_sign(num_plane_intersects)=-1
+                 else if (far_field_sign.gt.zero) then
+                  plane_intersect_list_sign(num_plane_intersects)=1
+                 else
+                  print *,"far_field_sign invalid"
+                  stop
+                 endif
+                else
+                 print *,"far_field_sign or near_field_sign invalid"
+                 stop
+                endif
                else
                 print *,"num_plane_intersects invalid"
                 stop
@@ -12791,17 +12899,74 @@ IMPLICIT NONE
 
           enddo ! ielem_container=1,num_elements_container
 
-           ! sort from lowest to highest
+           ! sort from highest to lowest
           do ii=1,num_plane_intersects-1
            do jj=1,num_plane_intersects-ii
-            if (plane_intersect_list(jj).gt. &
-                plane_intersect_list(jj+1)) then
+             ! x(t)=xcen + t xright
+            less_than_flag=is_less_than_list( &
+             plane_intersect_list(jj), &
+             plane_intersect_list_sign(jj), &
+             plane_intersect_list(jj+1), &
+             plane_intersect_list_sign(jj+1))
+
+            if (less_than_flag.eq.1) then
              swap_data=plane_intersect_list(jj+1)
+             swap_sign=plane_intersect_list_sign(jj+1)
              plane_intersect_list(jj+1)=plane_intersect_list(jj)
+             plane_intersect_list_sign(jj+1)=plane_intersect_list_sign(jj)
              plane_intersect_list(jj)=swap_data
+             plane_intersect_list_sign(jj)=swap_sign
+            else if (less_than_flag.eq.0) then
+             ! do nothing
+            else
+             print *,"less_than_flag invalid"
+             stop
             endif
+
            enddo
           enddo
+
+          num_plane_intersects_new=0
+          cur_ptr=1
+          do while (cur_ptr.le.num_plane_intersects)
+           if (cur_ptr+1.gt.num_plane_intersects) then
+            num_plane_intersects_new=num_plane_intersects_new+1
+            plane_intersect_list(num_plane_intersects_new)= &
+               plane_intersect_list(cur_ptr)
+            plane_intersect_list_sign(num_plane_intersects_new)= &
+               plane_intersect_list_sign(cur_ptr)
+            cur_ptr=cur_ptr+1
+           else if (cur_ptr+1.le.num_plane_intersects) then
+            equal_flag=is_equal_list( &
+             plane_intersect_list(cur_ptr), &
+             plane_intersect_list_sign(cur_ptr), &
+             plane_intersect_list(cur_ptr+1), &
+             plane_intersect_list_sign(cur_ptr+1))
+            if (equal_flag.eq.0) then
+             num_plane_intersects_new=num_plane_intersects_new+1
+             plane_intersect_list(num_plane_intersects_new)= &
+               plane_intersect_list(cur_ptr)
+             plane_intersect_list_sign(num_plane_intersects_new)= &
+               plane_intersect_list_sign(cur_ptr)
+             cur_ptr=cur_ptr+1
+            else if (equal_flag.eq.1) then
+             cur_ptr=cur_ptr+1
+            else
+             print *,"equal_flag invalid"
+             stop
+            endif
+           else
+            print *,"cur_ptr invalid"
+            stop
+           endif
+          enddo !while (cur_ptr.le.num_plane_intersects)
+
+          num_plane_intersects=num_plane_intersects_new
+
+           ! list sorted from highest to lowest
+          if (num_plane_intersects.eq.0) then
+           ls_local=-abs(ls_local)
+
           num_sign_changes=num_plane_intersects
           do ii=1,num_plane_intersects-1
            plane_diff=abs(plane_intersect_list(ii)- &
