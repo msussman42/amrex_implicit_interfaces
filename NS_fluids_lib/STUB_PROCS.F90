@@ -125,10 +125,17 @@ REAL_T, intent(out) :: x_outside(3)
 INTEGER_T, intent(in) :: im_part
 INTEGER_T, intent(in) :: part_id
 INTEGER_T :: dir
+REAL_T :: BB_len
 
  do dir=1,3
-  x_outside(dir)=exterior_BB(dir,2)
- enddo
+  BB_len=exterior_BB(dir,2)-exterior_BB(dir,1)
+  if (BB_len.gt.zero) then
+   x_outside(dir)=exterior_BB(dir,2)+0.05d0*BB_len
+  else
+   print *,"BB_len invalid"
+   stop
+  endif
+ enddo ! dir=1..3
  
 end subroutine STUB_GET_OUTSIDE_POINT
 
