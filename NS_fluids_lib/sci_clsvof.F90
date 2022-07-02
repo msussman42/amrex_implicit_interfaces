@@ -12985,7 +12985,7 @@ IMPLICIT NONE
              enddo
              ls_local=-ls_local
              cur_sign=-cur_sign
-!            stop
+             stop
             endif
 
             cur_ptr=cur_ptr+1
@@ -13021,7 +13021,7 @@ IMPLICIT NONE
               enddo
               ls_local=-ls_local
               cur_sign=-cur_sign
-!             stop
+              stop
              endif
 
              cur_ptr=cur_ptr+1
