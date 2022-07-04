@@ -418,7 +418,7 @@ stop
       
        if (triple_point_flag.eq.0) then 
         do im=1,num_materials
-         if (is_rigid(num_materials,im).eq.0) then
+         if (is_rigid(im).eq.0) then
           if (abs(local_LS(im)).le.two*dxmaxLS) then
            if ((im.eq.im_primary).or.(im.eq.im_secondary)) then
             call find_cut_geom_slope_CLSVOF( &
@@ -456,7 +456,7 @@ stop
            print *,"local_LS invalid"
            stop
           endif
-         else if (is_rigid(num_materials,im).eq.1) then
+         else if (is_rigid(im).eq.1) then
           ! do nothing
          else
           print *,"is_rigid invalid MOF_REDIST_3D.F90"
@@ -1119,7 +1119,7 @@ stop
        enddo
 
         ! fort_ratemasschange will not consider cells in which
-        ! (is_rigid(num_materials,im_primary).eq.0) 
+        ! (is_rigid(im_primary).eq.0) 
         !
        do im=1,num_materials+num_interfaces
 
@@ -1132,19 +1132,19 @@ stop
 
         local_status=1
 
-        if (is_rigid(num_materials,im_primary).eq.1) then
+        if (is_rigid(im_primary).eq.1) then
 
          local_status=0
 
-        else if (is_rigid(num_materials,im_primary).eq.0) then
+        else if (is_rigid(im_primary).eq.0) then
 
          if ((im.ge.1).and.(im.le.num_materials)) then
 
-          if (is_rigid(num_materials,im).eq.1) then
+          if (is_rigid(im).eq.1) then
 
            local_status=0
 
-          else if (is_rigid(num_materials,im).eq.0) then
+          else if (is_rigid(im).eq.0) then
 
            if ((im.ne.im_primary).and. &
                (im.ne.im_secondary)) then
@@ -1152,7 +1152,7 @@ stop
            endif
 
           else
-           print *,"is_rigid(num_materials,im) invalid"
+           print *,"is_rigid(im) invalid"
            stop
           endif
 
@@ -1161,12 +1161,12 @@ stop
 
           iten=im-num_materials
           call get_inverse_iten(im1,im2,iten,num_materials)
-          if (is_rigid(num_materials,im1).eq.1) then
+          if (is_rigid(im1).eq.1) then
            local_status=0
-          else if (is_rigid(num_materials,im1).eq.0) then
-           if (is_rigid(num_materials,im2).eq.1) then
+          else if (is_rigid(im1).eq.0) then
+           if (is_rigid(im2).eq.1) then
             local_status=0
-           else if (is_rigid(num_materials,im2).eq.0) then
+           else if (is_rigid(im2).eq.0) then
            
             if ((im1.ne.im_primary).and. &
                 (im1.ne.im_secondary)) then
@@ -1178,12 +1178,12 @@ stop
             endif
 
            else
-            print *,"is_rigid(num_materials,im2) invalid"
+            print *,"is_rigid(im2) invalid"
             stop
            endif
 
           else
-           print *,"is_rigid(num_materials,im1) invalid"
+           print *,"is_rigid(im1) invalid"
            stop
           endif
 
@@ -1690,7 +1690,7 @@ stop
          endif
 
         else
-         print *,"is_rigid(num_materials,im_primary) invalid"
+         print *,"is_rigid(im_primary) invalid"
          stop
         endif
  
@@ -2085,7 +2085,7 @@ stop
 
        do im=1,num_materials
 
-        if (is_rigid(num_materials,im).eq.0) then
+        if (is_rigid(im).eq.0) then
 
          crse_dist_valid=1
          if (level.eq.0) then
@@ -2157,7 +2157,7 @@ stop
                   im,init_dist_from_crse
          endif 
 
-        else if (is_rigid(num_materials,im).eq.1) then
+        else if (is_rigid(im).eq.1) then
 
          init_dist_from_crse=newfab(D_DECL(i,j,k),im)
          touchfab(D_DECL(i,j,k),im)=two
@@ -2228,7 +2228,7 @@ stop
         print *,"im_crit invalid"
         stop
        endif
-       if (is_rigid(num_materials,im_crit).eq.0) then
+       if (is_rigid(im_crit).eq.0) then
         ! do nothing
        else
         print *,"is_rigid invalid MOF_REDIST_3D.F90"
@@ -2252,11 +2252,11 @@ stop
 
          ! initialize: cell_test
        do im=1,num_materials
-        if (is_rigid(num_materials,im).eq.0) then
+        if (is_rigid(im).eq.0) then
          if (vcenter(im).gt.VOFTOL_REDIST) then
           cell_test(im)=1
          endif
-        else if (is_rigid(num_materials,im).eq.1) then
+        else if (is_rigid(im).eq.1) then
          ! do nothing
         else
          print *,"is_rigid invalid MOF_REDIST_3D.F90"
@@ -2283,10 +2283,10 @@ stop
         stop
        endif
         ! im_test_center must be a fluid material.
-       if (is_rigid(num_materials,im_test_center).eq.0) then 
+       if (is_rigid(im_test_center).eq.0) then 
         ! do nothing
        else
-        print *,"is_rigid(num_materials,im_test_center).ne.0 (0)"
+        print *,"is_rigid(im_test_center).ne.0 (0)"
         stop
        endif
         ! 1..num_materials,fluid materials in cell, nstar
@@ -2329,7 +2329,7 @@ stop
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
           VFRAC_TEMP=vofrecon(D_DECL(isten,jsten,ksten),vofcomp)
-          if (is_rigid(num_materials,im).eq.0) then
+          if (is_rigid(im).eq.0) then
            if ((icur(1).eq.0).and.(icur(2).eq.0).and.(icur(3).eq.0)) then
             VFRAC_INTERP=vcenter(im)
            else if ((theta_nbr.gt.zero).and.(theta_cen.gt.zero)) then
@@ -2342,12 +2342,12 @@ stop
            if (VFRAC_INTERP.ge.VFRAC_STENCIL_CUTOFF) then
             stencil_test(im)=1
            endif
-          else if (is_rigid(num_materials,im).eq.1) then
+          else if (is_rigid(im).eq.1) then
            if (VFRAC_TEMP.ge.VOFTOL_REDIST) then
             rigid_in_stencil=1
            endif
           else
-           print *,"is_rigid(num_materials,im) invalid"
+           print *,"is_rigid(im) invalid"
            stop
           endif
          enddo  ! im=1..num_materials
@@ -2366,7 +2366,7 @@ stop
 
          ! face_test
         do im=1,num_materials
-         if (is_rigid(num_materials,im).eq.0) then
+         if (is_rigid(im).eq.0) then
 
           if (cell_test(im).eq.1) then
 
@@ -2433,7 +2433,7 @@ stop
            print *,"cell_test invalid"
            stop
           endif
-         else if (is_rigid(num_materials,im).eq.1) then
+         else if (is_rigid(im).eq.1) then
           ! do nothing
          else
           print *,"is_rigid invalid MOF_REDIST_3D.F90"
@@ -2509,10 +2509,10 @@ stop
            print *,"im_test_stencil out of range 1"
            stop
           endif
-          if (is_rigid(num_materials,im_test_stencil).eq.0) then
+          if (is_rigid(im_test_stencil).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(num_materials,im_test_stencil).ne.0 (1)"
+           print *,"is_rigid(im_test_stencil).ne.0 (1)"
            stop
           endif
 
@@ -2554,10 +2554,10 @@ stop
           FSI_exclude=1
           call sort_volume_fraction(FSUM,FSI_exclude,sorted_list,num_materials)
           im_corner=sorted_list(1)
-          if (is_rigid(num_materials,im_corner).eq.0) then
+          if (is_rigid(im_corner).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(num_materials,im_corner).ne.0"
+           print *,"is_rigid(im_corner).ne.0"
            stop
           endif
          else if (im_corner.eq.0) then
@@ -2680,7 +2680,7 @@ stop
            endif 
 
            do im=1,num_materials
-            if (is_rigid(num_materials,im).eq.0) then
+            if (is_rigid(im).eq.0) then
              if ((frac_pair(im,im).ge.VOFTOL_REDIST).and. &
                  (frac_pair(im,im).le.one+VOFTOL_REDIST)) then 
               if ((i3.eq.0).and. &
@@ -2704,10 +2704,10 @@ stop
               print *,"frac_pair invalid"
               stop
              endif
-            else if (is_rigid(num_materials,im).eq.1) then
+            else if (is_rigid(im).eq.1) then
              ! do nothing
             else
-             print *,"is_rigid(num_materials,im) invalid"
+             print *,"is_rigid(im) invalid"
              stop
             endif
            enddo ! im=1..num_materials
@@ -2744,7 +2744,7 @@ stop
           istar_array(3)=k3
 
           do im=1,num_materials
-           if (is_rigid(num_materials,im).eq.0) then
+           if (is_rigid(im).eq.0) then
             vofcomp=(im-1)*ngeom_recon+1
             VFRAC_TEMP=vofrecon(D_DECL(iside,jside,kside),vofcomp)
             if (VFRAC_TEMP.ge.one-VOFTOL) then
@@ -2752,7 +2752,7 @@ stop
              call put_istar(istar,istar_array) 
              donateflag(num_materials+1+istar)=im
             endif
-           else if (is_rigid(num_materials,im).eq.1) then
+           else if (is_rigid(im).eq.1) then
             ! do nothing
            else
             print *,"is_rigid invalid MOF_REDIST_3D.F90"
@@ -2787,7 +2787,7 @@ stop
         endif
 
          ! face_test=0 if cell_test==0
-        if (is_rigid(num_materials,im).eq.0) then
+        if (is_rigid(im).eq.0) then
 
          if ((stringent_test_passed(im).eq.1).or. &
              (face_test(im).eq.1)) then
@@ -2857,13 +2857,13 @@ stop
            call put_istar(istar,istar_array)
            if ((istar.ge.1).and.(istar.le.nstar)) then
             im_test_stencil=NINT(stenfab(D_DECL(i,j,k),istar))
-            if (is_rigid(num_materials,im_test_stencil).eq.0) then
+            if (is_rigid(im_test_stencil).eq.0) then
              if (im_test_stencil.eq.im) then
                ! 1<=istar<=nstar
               donateflag(num_materials+1+istar)=im
              endif
             else
-             print *,"is_rigid(num_materials,im_test_stencil).ne.0 (1)"
+             print *,"is_rigid(im_test_stencil).ne.0 (1)"
              stop
             endif
            else
@@ -2892,7 +2892,7 @@ stop
           stop
          endif 
 
-        else if (is_rigid(num_materials,im).eq.1) then
+        else if (is_rigid(im).eq.1) then
          ! do nothing
         else
          print *,"is_rigid invalid MOF_REDIST_3D.F90"
@@ -3066,7 +3066,7 @@ stop
 
         ctouch=NINT(touchfab(D_DECL(i,j,k),im))
 
-        if (is_rigid(num_materials,im).eq.0) then
+        if (is_rigid(im).eq.0) then
 
          if (ctouch.eq.0) then
           init_dist=newfab(D_DECL(i,j,k),im)
@@ -3094,7 +3094,7 @@ stop
           stop
          endif
  
-        else if (is_rigid(num_materials,im).eq.1) then
+        else if (is_rigid(im).eq.1) then
 
          if (ctouch.ne.2) then
           print *,"ctouch invalid"
@@ -3387,7 +3387,6 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nface
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ngrow
       INTEGER_T, intent(in) :: DIMDEC(facefab)
       INTEGER_T, intent(in) :: DIMDEC(maskfab)
@@ -3493,10 +3492,6 @@ stop
       call checkbound_array(fablo,fabhi,maskfab,ngrow,-1,2884)
       call checkbound_array(fablo,fabhi,vofrecon,ngrow,-1,2885)
       
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid faceinit"
        print *,"ngeom_recon=",ngeom_recon
@@ -3682,9 +3677,9 @@ stop
                (tessellate.eq.3)) then
             total_vol=total_vol+multi_volume(im)
            else if (tessellate.eq.0) then
-            if (is_rigid(num_materials,im).eq.0) then
+            if (is_rigid(im).eq.0) then
              total_vol=total_vol+multi_volume(im)
-            else if (is_rigid(num_materials,im).eq.1) then
+            else if (is_rigid(im).eq.1) then
              ! do nothing
             else
              print *,"is_rigid invalid MOF_REDIST_3D.F90"
@@ -3976,9 +3971,9 @@ stop
             if (tessellate.eq.1) then
              total_face=total_face+facefrac(im)
             else if (tessellate.eq.0) then
-             if (is_rigid(num_materials,im).eq.0) then
+             if (is_rigid(im).eq.0) then
               total_face=total_face+facefrac(im)
-             else if (is_rigid(num_materials,im).eq.1) then
+             else if (is_rigid(im).eq.1) then
               ! do nothing
              else
               print *,"is_rigid invalid MOF_REDIST_3D.F90"
@@ -4081,7 +4076,6 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nface_src,nface_dst
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: DIMDEC(dstfab)
       INTEGER_T, intent(in) :: DIMDEC(facefab)
       INTEGER_T, intent(in) :: DIMDEC(vofrecon)
@@ -4189,10 +4183,6 @@ stop
       call checkbound_array(fablo,fabhi,facefab,ngrow_source,-1,2881)
       call checkbound_array(fablo,fabhi,vofrecon,ngrow_source,-1,2882)
       
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid faceprocess"
        print *,"ngeom_recon=",ngeom_recon
@@ -4368,10 +4358,10 @@ stop
 
          if ((tessellate.eq.1).or. &
              (tessellate.eq.3).or. &
-             (is_rigid(num_materials,im).eq.0)) then
+             (is_rigid(im).eq.0)) then
           left_total=left_total+frac_left(im)
           right_total=right_total+frac_right(im)
-         else if ((tessellate.eq.0).and.(is_rigid(num_materials,im).eq.1)) then
+         else if ((tessellate.eq.0).and.(is_rigid(im).eq.1)) then
           ! do nothing
          else 
           print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
@@ -4405,7 +4395,7 @@ stop
 
          if ((tessellate.eq.1).or. &
              (tessellate.eq.3).or. &
-             (is_rigid(num_materials,im).eq.0)) then
+             (is_rigid(im).eq.0)) then
 
           if ((frac_left(im).gt.one+FACETOL_SANITY).or. &
               (frac_left(im).lt.zero).or. &
@@ -4425,7 +4415,7 @@ stop
            frac_right(im) = one
           endif
 
-         else if ((tessellate.eq.0).and.(is_rigid(num_materials,im).eq.1)) then
+         else if ((tessellate.eq.0).and.(is_rigid(im).eq.1)) then
           ! do nothing
          else
           print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
@@ -4446,10 +4436,10 @@ stop
           vofcomp=(im-1)*ngeom_recon+1
           if ((tessellate.eq.1).or. &
               (tessellate.eq.3).or. &
-              (is_rigid(num_materials,im).eq.0)) then
+              (is_rigid(im).eq.0)) then
            ! do nothing
           else if ((tessellate.eq.0).and. &
-                   (is_rigid(num_materials,im).eq.1)) then
+                   (is_rigid(im).eq.1)) then
            do dir2=1,ngeom_recon
             mofdata_left(vofcomp+dir2-1)=zero 
             mofdata_right(vofcomp+dir2-1)=zero 
@@ -4561,13 +4551,13 @@ stop
 
          if ((tessellate.eq.1).or. &
              (tessellate.eq.3).or. &
-             (is_rigid(num_materials,ml).eq.0)) then
+             (is_rigid(ml).eq.0)) then
 
           do mr = 1, num_materials
 
            if ((tessellate.eq.1).or. &
                (tessellate.eq.3).or. &
-               (is_rigid(num_materials,mr).eq.0)) then
+               (is_rigid(mr).eq.0)) then
 
             if ((frac_pair(ml,mr).lt.-FACETOL_SANITY).or. &
                 (frac_pair(ml,mr).gt.one+FACETOL_SANITY)) then
@@ -4609,7 +4599,7 @@ stop
              stop
             endif ! dir==1 ?
 
-           else if ((tessellate.eq.0).and.(is_rigid(num_materials,mr).eq.1)) then
+           else if ((tessellate.eq.0).and.(is_rigid(mr).eq.1)) then
             ! do nothing
            else
             print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
@@ -4618,7 +4608,7 @@ stop
 
           enddo ! mr=1..num_materials
 
-         else if ((tessellate.eq.0).and.(is_rigid(num_materials,ml).eq.1)) then
+         else if ((tessellate.eq.0).and.(is_rigid(ml).eq.1)) then
           ! do nothing
          else
           print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"

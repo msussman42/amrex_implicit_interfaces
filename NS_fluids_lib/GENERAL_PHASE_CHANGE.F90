@@ -551,7 +551,7 @@ REAL_T :: initial_time
     endif
 
     LS(nmat)=distsolid
-    if (is_rigid(nmat,nmat).ne.1) then
+    if (is_rigid(nmat).ne.1) then
      print *,"expecting last material to be rigid"
      stop
     endif
@@ -577,7 +577,7 @@ REAL_T :: initial_time
     ! is already frozen
     call drop_slope_dist(x(1),x(2),x(SDIM),initial_time,nmat, &
       radblob3,dist_ice,dist_liquid)
-    if (is_rigid(nmat,3).ne.0) then
+    if (is_rigid(3).ne.0) then
      print *,"expecting material 3 to be ice"
      stop
     endif

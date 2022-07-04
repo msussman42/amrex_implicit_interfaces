@@ -429,7 +429,7 @@
          print *,"CTML_force_model invalid"
          stop
         endif
-       else if (fort_FSI_flag_valid(nmat,im_local).eq.1) then
+       else if (fort_FSI_flag_valid(im_local).eq.1) then
         ! do nothing
        else
         print *,"fort_FSI_flag_valid invalid"
@@ -811,7 +811,7 @@
          print *,"im_part invalid fort_headermsg"
          stop
         endif
-        if (is_lag_part(nmat,im_part).eq.1) then
+        if (is_lag_part(im_part).eq.1) then
 
          if (fort_read_from_CAD(FSI_flag(im_part)).eq.1) then
 
@@ -1224,7 +1224,7 @@
           print *,"im_part invalid fort_headermsg"
           stop
          endif
-         if (is_lag_part(nmat,im_part).eq.1) then
+         if (is_lag_part(im_part).eq.1) then
 
           if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid CAD
               (FSI_flag(im_part).eq.4).or. & ! CTML FSI Goldstein et al

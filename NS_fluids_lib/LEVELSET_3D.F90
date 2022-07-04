@@ -77,7 +77,7 @@ stop
         if ((CP%im_solid_max.ge.1).and. &
             (CP%im_solid_max.le.CP%nmat)) then
 
-         if (is_rigid(CP%nmat,CP%im_solid_max).eq.1) then
+         if (is_rigid(CP%im_solid_max).eq.1) then
 
           nhalf=3
           call gridsten_level(xsten,CP%i,CP%j,CP%k,CP%level,nhalf)
@@ -129,7 +129,7 @@ stop
           endif
 
          else 
-          print *,"is_rigid(CP%nmat,CP%im_solid_max) invalid"
+          print *,"is_rigid(CP%im_solid_max) invalid"
           stop
          endif
         else
@@ -243,7 +243,7 @@ stop
          ! in the substrate, have the most weight.
          call get_primary_material(LS_virtual,CP%nmat,im_primary_sub_stencil)
 
-         if (is_rigid(CP%nmat,im_primary_sub_stencil).eq.0) then
+         if (is_rigid(im_primary_sub_stencil).eq.0) then
 
           if (shortest_dist_to_fluid.eq.-one) then
            im_fluid_critical=im_primary_sub_stencil
@@ -271,12 +271,12 @@ stop
            stop
           endif
 
-         else if (is_rigid(CP%nmat,im_primary_sub_stencil).eq.1) then
+         else if (is_rigid(im_primary_sub_stencil).eq.1) then
 
           ! do nothing
 
          else
-          print *,"is_rigid(nmat,im_primary_sub_stencil) invalid"
+          print *,"is_rigid(im_primary_sub_stencil) invalid"
           stop 
          endif
          
@@ -1549,7 +1549,7 @@ stop
 
        if ((im3.ge.1).and.(im3.le.nmat)) then
 
-        if (is_rigid(nmat,im3).eq.1) then
+        if (is_rigid(im3).eq.1) then
 
          if ((im3.eq.im).or.(im3.eq.im_opp)) then
           print *,"im3 invalid" 
@@ -1571,7 +1571,7 @@ stop
           nsolid_save(D_DECL(i,j,k),dir2)=nsolid(dir2)
          enddo
 
-        else if (is_rigid(nmat,im3).eq.0) then
+        else if (is_rigid(im3).eq.0) then
          do dir2=1,SDIM
           nsolid_save(D_DECL(i,j,k),dir2)=nfluid(dir2)
          enddo
@@ -1635,7 +1635,7 @@ stop
 
       if ((im3.ge.1).and.(im3.le.nmat)) then
 
-       if (is_rigid(nmat,im3).eq.1) then
+       if (is_rigid(im3).eq.1) then
         
         if ((im3.eq.im).or.(im3.eq.im_opp)) then
          print *,"im3 invalid" 
@@ -1835,7 +1835,7 @@ stop
          stop
         endif
 
-       else if (is_rigid(nmat,im3).eq.0) then
+       else if (is_rigid(im3).eq.0) then
         ! do nothing
        else
         print *,"is_rigid invalid LEVELSET_3D.F90"
@@ -1861,7 +1861,7 @@ stop
          stop
         endif
 
-        if (is_rigid(nmat,im3).eq.1) then
+        if (is_rigid(im3).eq.1) then
 
          ! cos(theta_1)=(sigma_23-sigma_13)/sigma_12
          ! cos(theta_2)=(-sigma_23+sigma_13)/sigma_12
@@ -1876,7 +1876,7 @@ stop
           stop
          endif 
 
-        else if (is_rigid(nmat,im3).eq.0) then
+        else if (is_rigid(im3).eq.0) then
 
          gamma1=half*(user_tension(iten)-user_tension(iten_23)+ &
            user_tension(iten_13))/user_tension(iten)
@@ -1935,7 +1935,7 @@ stop
          nopp(dir2)=nopp_save(D_DECL(i,j,k),dir2)
         enddo
 
-       else if (is_rigid(nmat,im3).eq.0) then
+       else if (is_rigid(im3).eq.0) then
 
         LSmain=LSTEST(im)
         LSopp=LSTEST(im_opp)
@@ -1944,7 +1944,7 @@ stop
          nopp(dir2)=nopp_save(D_DECL(i,j,k),dir2)
         enddo
 
-       else if (is_rigid(nmat,im3).eq.1) then
+       else if (is_rigid(im3).eq.1) then
 
         call get_LS_extend(LSTEST,nmat,iten,LSmain)
         LSopp=LSmain
@@ -1972,7 +1972,7 @@ stop
         endif 
 
        else
-        print *,"is_rigid(nmat,im3) invalid"
+        print *,"is_rigid(im3) invalid"
         stop
        endif
  
@@ -2002,9 +2002,9 @@ stop
         n2=ncurv2_save(D_DECL(i,j,k),dir2)
         if (im3.eq.0) then
          ngrid(dir2)=gamma1*n1-gamma2*n2
-        else if (is_rigid(nmat,im3).eq.0) then
+        else if (is_rigid(im3).eq.0) then
          ngrid(dir2)=gamma1*n1-gamma2*n2
-        else if (is_rigid(nmat,im3).eq.1) then
+        else if (is_rigid(im3).eq.1) then
          if (imhold.eq.im3) then
           ngrid(dir2)=n2
          else if ((imhold.ne.im3).and. &
@@ -2016,7 +2016,7 @@ stop
           stop
          endif
         else
-         print *,"is_rigid(nmat,im3) invalid"
+         print *,"is_rigid(im3) invalid"
          stop
         endif
         ngrid_save(D_DECL(i,j,k),dir2)=ngrid(dir2)
@@ -2197,12 +2197,12 @@ stop
        
         if (im3.eq.0) then
          n_node2(dir2)=n_node2LS(dir2)
-        else if (is_rigid(nmat,im3).eq.0) then
+        else if (is_rigid(im3).eq.0) then
          n_node2(dir2)=n_node2LS(dir2)
-        else if (is_rigid(nmat,im3).eq.1) then
+        else if (is_rigid(im3).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid(nmat,im3) invalid"
+         print *,"is_rigid(im3) invalid"
          stop
         endif
        enddo ! dir2
@@ -2217,9 +2217,9 @@ stop
 
         if (im3.eq.0) then
          ngrid(dir2)=gamma1*n1-gamma2*n2
-        else if (is_rigid(nmat,im3).eq.0) then
+        else if (is_rigid(im3).eq.0) then
          ngrid(dir2)=gamma1*n1-gamma2*n2
-        else if (is_rigid(nmat,im3).eq.1) then
+        else if (is_rigid(im3).eq.1) then
          if (im3_present_node.eq.1) then
           ngrid(dir2)=n2
          else if (im3_present_node.eq.0) then 
@@ -2229,7 +2229,7 @@ stop
           stop
          endif
         else
-         print *,"is_rigid(nmat,im3) invalid"
+         print *,"is_rigid(im3) invalid"
          stop
         endif
        enddo ! dir2=1..sdim
@@ -2675,10 +2675,10 @@ stop
          vfrac_solid_sum=zero
 
          do im=1,nmat
-          if (is_rigid(nmat,im).eq.0) then
+          if (is_rigid(im).eq.0) then
            nmat_fluid=nmat_fluid+1
            vfrac_fluid_sum=vfrac_fluid_sum+vcenter(im)
-          else if (is_rigid(nmat,im).eq.1) then
+          else if (is_rigid(im).eq.1) then
            nmat_rigid=nmat_rigid+1
            vfrac_solid_sum=vfrac_solid_sum+vcenter(im)
           else
@@ -2714,7 +2714,7 @@ stop
 
             ! F,CEN,ORDER,SLOPE,INTERCEPT
            do im=1,nmat
-            if (is_rigid(nmat,im).eq.1) then
+            if (is_rigid(im).eq.1) then
              vofcomp=(im-1)*ngeom_recon+1
              testflag=NINT(mofdatavalid(vofcomp+SDIM+1))
 
@@ -2927,7 +2927,7 @@ stop
               stop
              endif 
 
-            else if (is_rigid(nmat,im).eq.0) then
+            else if (is_rigid(im).eq.0) then
              ! do nothing
             else
              print *,"is_rigid invalid LEVELSET_3D.F90"
@@ -2957,7 +2957,7 @@ stop
 
            ! F,CEN,ORDER,SLOPE,INTERCEPT
           do im=1,nmat
-           if (is_rigid(nmat,im).eq.0) then
+           if (is_rigid(im).eq.0) then
             vofcomp=(im-1)*ngeom_recon+1
             testflag=NINT(mofdatavalid(vofcomp+SDIM+1))
 
@@ -3008,7 +3008,7 @@ stop
 
                  do im_opp=1,nmat
 
-                  if ((is_rigid(nmat,im_opp).eq.0).or. &
+                  if ((is_rigid(im_opp).eq.0).or. &
                       (tessellate.eq.1)) then
 
                    if (im_opp.ne.im) then
@@ -3029,7 +3029,7 @@ stop
                     print *,"im_opp or im bust"
                     stop
                    endif
-                  else if ((is_rigid(nmat,im_opp).eq.1).and. &
+                  else if ((is_rigid(im_opp).eq.1).and. &
                            ((tessellate.eq.0).or. &
                             (tessellate.eq.3))) then
                    ! do nothing
@@ -3042,7 +3042,7 @@ stop
 
                  if (total_facearea.gt.zero) then
                   do im_opp=1,nmat
-                   if ((is_rigid(nmat,im_opp).eq.0).or. &
+                   if ((is_rigid(im_opp).eq.0).or. &
                        (tessellate.eq.1)) then
 
                     if (im_opp.ne.im) then
@@ -3106,7 +3106,7 @@ stop
                      print *,"im_opp or im bust"
                      stop
                     endif
-                   else if ((is_rigid(nmat,im_opp).eq.1).and. &
+                   else if ((is_rigid(im_opp).eq.1).and. &
                             ((tessellate.eq.0).or. &
                              (tessellate.eq.3))) then
                     ! do nothing
@@ -3176,7 +3176,7 @@ stop
 
             endif  ! testflag==num_processed_fluid+1
 
-           else if (is_rigid(nmat,im).eq.1) then
+           else if (is_rigid(im).eq.1) then
             ! do nothing
            else
             print *,"is_rigid invalid LEVELSET_3D.F90"
@@ -3667,7 +3667,7 @@ stop
 
          call get_primary_material(LS_fixed,nmat,im_majority)
 
-         if (is_rigid(nmat,im_majority).eq.1) then
+         if (is_rigid(im_majority).eq.1) then
 
           ! do nothing, all interface forces are 0
   
@@ -3676,7 +3676,7 @@ stop
          
           ! do nothing, all interface forces are 0
          
-         else if (is_rigid(nmat,im_majority).eq.0) then
+         else if (is_rigid(im_majority).eq.0) then
 
           if (vol_sten.gt.zero) then
            ! do nothing
@@ -3729,9 +3729,9 @@ stop
   
            if (im_opp.eq.im_majority) then
             ! do nothing
-           else if (is_rigid(nmat,im_opp).eq.1) then
+           else if (is_rigid(im_opp).eq.1) then
             ! do nothing
-           else if (is_rigid(nmat,im_opp).eq.0) then
+           else if (is_rigid(im_opp).eq.0) then
 
             if (im_majority.lt.im_opp) then
              im_main=im_majority
@@ -4115,9 +4115,9 @@ stop
               call prepare_normal(nrm_mat,RR,mag)
 
               if (mag.eq.zero) then
-               if (is_rigid(nmat,im_curv).eq.0) then
+               if (is_rigid(im_curv).eq.0) then
                 ! do nothing
-               else if (is_rigid(nmat,im_curv).eq.1) then
+               else if (is_rigid(im_curv).eq.1) then
                  ! nrm_test obtained via finite differences.
                 do dirloc=1,SDIM
                  nrm_mat(dirloc)=nrm_test(dirloc)
@@ -4465,11 +4465,11 @@ stop
         enddo
 
         do im=1,nmat
-         if (is_rigid(nmat,im).eq.1) then
+         if (is_rigid(im).eq.1) then
           if (source_fab(D_DECL(i,j,k),im).ge.zero) then
            base_type=im
           endif
-         else if (is_rigid(nmat,im).eq.0) then
+         else if (is_rigid(im).eq.0) then
           ! do nothing
          else
           print *,"is_rigid invalid LEVELSET_3D.F90"
@@ -5082,12 +5082,12 @@ stop
          enddo ! im=1..nmat
 
          call get_primary_material(LSside,nmat,im_side_majority)
-         if (is_rigid(nmat,im_side_majority).eq.1) then
+         if (is_rigid(im_side_majority).eq.1) then
           local_solid=1
-         else if (is_rigid(nmat,im_side_majority).eq.0) then
+         else if (is_rigid(im_side_majority).eq.0) then
           ! do nothing
          else
-          print *,"is_rigid(nmat,im_side_majority) invalid"
+          print *,"is_rigid(im_side_majority) invalid"
           stop
          endif
 
@@ -5608,7 +5608,7 @@ stop
              level_blobdata(ic+1)=level_blobdata(ic+1)+vol !blob_cellvol_count
 
              pressure_local=VEL(D_DECL(i,j,k),STATECOMP_PRES+1)
-             if (is_rigid(nmat,im).eq.0) then
+             if (is_rigid(im).eq.0) then
 
               if ((fort_material_type(im).ge.1).and. &
                   (fort_material_type(im).le.MAX_NUM_EOS)) then 
@@ -5689,10 +5689,10 @@ stop
                stop
               endif
 
-             else if (is_rigid(nmat,im).eq.1) then
+             else if (is_rigid(im).eq.1) then
               ! do nothing
              else
-              print *,"is_rigid(nmat,im) invalid"
+              print *,"is_rigid(im) invalid"
               stop
              endif
 
@@ -6584,7 +6584,7 @@ stop
         vfrac=mofdata(vofcomp)
   
         if (vfrac.ge.VOFTOL) then
-         if (is_rigid(nmat,im_primary).eq.0) then
+         if (is_rigid(im_primary).eq.0) then
 
            ! anelastic approximation only appropriate for "incompressible"
            ! model.
@@ -6788,10 +6788,10 @@ stop
            print *,"fort_material_type(im_primary) invalid"
            stop
           endif
-         else if (is_rigid(nmat,im_primary).eq.1) then
+         else if (is_rigid(im_primary).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid(nmat,im_primary) invalid"
+          print *,"is_rigid(im_primary) invalid"
           stop
          endif
         else
@@ -8177,9 +8177,9 @@ stop
 
       if (solidheat_flag.eq.0) then ! diffuse in solid
        do im=1,nmat-1
-        if (is_rigid(nmat,im).eq.0) then
+        if (is_rigid(im).eq.0) then
          do im_opp=im+1,nmat
-          if (is_rigid(nmat,im_opp).eq.0) then
+          if (is_rigid(im_opp).eq.0) then
            call get_iten(im,im_opp,iten,nmat)
            do ireverse=0,1
             if (get_user_latent_heat(iten+ireverse*nten,293.0d0,1).ne.zero) then
@@ -8187,8 +8187,8 @@ stop
               im_solid_micro=microlayer_substrate(im)
               if ((im_solid_micro.ge.1).and. &
                   (im_solid_micro.le.nmat)) then
-               if (is_rigid(nmat,im_solid_micro).ne.1) then
-                print *,"is_rigid(nmat,im_solid_micro) invalid"
+               if (is_rigid(im_solid_micro).ne.1) then
+                print *,"is_rigid(im_solid_micro) invalid"
                 stop
                endif 
                micro_table(im_opp,im_solid_micro)=iten
@@ -8201,8 +8201,8 @@ stop
               im_solid_micro=microlayer_substrate(im_opp)
               if ((im_solid_micro.ge.1).and. &
                   (im_solid_micro.le.nmat)) then
-               if (is_rigid(nmat,im_solid_micro).ne.1) then
-                print *,"is_rigid(nmat,im_solid_micro) invalid"
+               if (is_rigid(im_solid_micro).ne.1) then
+                print *,"is_rigid(im_solid_micro) invalid"
                 stop
                endif 
                micro_table(im,im_solid_micro)=iten
@@ -8215,17 +8215,17 @@ stop
              endif
             endif
            enddo ! ireverse=0..1
-          else if (is_rigid(nmat,im_opp).eq.1) then
+          else if (is_rigid(im_opp).eq.1) then
            ! do nothing
           else
            print *,"is_rigid invalid LEVELSET_3D.F90"
            stop
           endif
          enddo !im_opp=im+1,nmat
-        else if (is_rigid(nmat,im).eq.1) then
+        else if (is_rigid(im).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid(nmat,im) invalid"
+         print *,"is_rigid(im) invalid"
          stop
         endif
        enddo ! do im=1,nmat-1
@@ -8438,12 +8438,12 @@ stop
           stop
          endif
 
-         if ((is_rigid(nmat,implus_majority).eq.1).or. &
-             (is_rigid(nmat,imminus_majority).eq.1).or. &
+         if ((is_rigid(implus_majority).eq.1).or. &
+             (is_rigid(imminus_majority).eq.1).or. &
              (is_clamped_face.ge.1)) then
           predict_face_afrac_solid=zero
-         else if ((is_rigid(nmat,implus_majority).eq.0).and. &
-                  (is_rigid(nmat,imminus_majority).eq.0).and. &
+         else if ((is_rigid(implus_majority).eq.0).and. &
+                  (is_rigid(imminus_majority).eq.0).and. &
                   (is_clamped_face.eq.0)) then
           predict_face_afrac_solid=one
          else
@@ -8451,12 +8451,12 @@ stop
           stop
          endif
 
-         if ((is_prescribed(nmat,implus_majority).eq.1).or. &
-             (is_prescribed(nmat,imminus_majority).eq.1).or. &
+         if ((is_prescribed(implus_majority).eq.1).or. &
+             (is_prescribed(imminus_majority).eq.1).or. &
              (is_clamped_face.ge.1)) then
           predict_face_afrac_prescribed=zero
-         else if ((is_prescribed(nmat,implus_majority).eq.0).and. &
-                  (is_prescribed(nmat,imminus_majority).eq.0).and. &
+         else if ((is_prescribed(implus_majority).eq.0).and. &
+                  (is_prescribed(imminus_majority).eq.0).and. &
                   (is_clamped_face.eq.0)) then
           predict_face_afrac_prescribed=one
          else
@@ -8786,17 +8786,17 @@ stop
          if (is_clamped_face.ge.1) then
           solid_present_flag=is_clamped_face
          else if (is_clamped_face.eq.0) then
-          if ((is_rigid(nmat,implus_majority).eq.1).and. &
-              (is_rigid(nmat,imminus_majority).eq.1)) then
+          if ((is_rigid(implus_majority).eq.1).and. &
+              (is_rigid(imminus_majority).eq.1)) then
            solid_present_flag=1
-          else if ((is_rigid(nmat,implus_majority).eq.1).and. &
-                   (is_rigid(nmat,imminus_majority).eq.0)) then
+          else if ((is_rigid(implus_majority).eq.1).and. &
+                   (is_rigid(imminus_majority).eq.0)) then
            solid_present_flag=2
-          else if ((is_rigid(nmat,implus_majority).eq.0).and. &
-                   (is_rigid(nmat,imminus_majority).eq.1)) then
+          else if ((is_rigid(implus_majority).eq.0).and. &
+                   (is_rigid(imminus_majority).eq.1)) then
            solid_present_flag=3
-          else if ((is_rigid(nmat,implus_majority).eq.0).and. &
-                   (is_rigid(nmat,imminus_majority).eq.0)) then
+          else if ((is_rigid(implus_majority).eq.0).and. &
+                   (is_rigid(imminus_majority).eq.0)) then
            solid_present_flag=0
           else
            print *,"implus_majority or imminus_majority invalid"
@@ -8885,20 +8885,20 @@ stop
            if (solidheat_flag.eq.0) then ! diffuse in solid
             im_solid_micro=0
             im_fluid_micro=0
-            if (is_rigid(nmat,implus_majority).eq.1) then
+            if (is_rigid(implus_majority).eq.1) then
              im_solid_micro=implus_majority
-            else if (is_rigid(nmat,implus_majority).eq.0) then
+            else if (is_rigid(implus_majority).eq.0) then
              im_fluid_micro=implus_majority
             else
-             print *,"is_rigid(nmat,implus_majority) invalid"
+             print *,"is_rigid(implus_majority) invalid"
              stop
             endif
-            if (is_rigid(nmat,imminus_majority).eq.1) then
+            if (is_rigid(imminus_majority).eq.1) then
              im_solid_micro=imminus_majority
-            else if (is_rigid(nmat,imminus_majority).eq.0) then
+            else if (is_rigid(imminus_majority).eq.0) then
              im_fluid_micro=imminus_majority
             else
-             print *,"is_rigid(nmat,imminus_majority) invalid"
+             print *,"is_rigid(imminus_majority) invalid"
              stop
             endif
             if ((im_fluid_micro.ge.1).and. &
@@ -9398,8 +9398,7 @@ stop
           enddo
            ! voltotal=sum F_prescribed
            ! im_prescribed_primary=argmax_im F_prescribed
-          call combine_prescribed_VOF(volmat,nmat,voltotal, &
-                 im_prescribed_primary)
+          call combine_prescribed_VOF(volmat,voltotal,im_prescribed_primary)
 
           if (is_clamped_face.ge.1) then
 
@@ -9446,7 +9445,7 @@ stop
           if ((wall_flag_face.ge.0).and. &
               (wall_flag_face.le.nmat)) then
 
-           prescribed_flag=prescribed_exists(nmat)
+           prescribed_flag=prescribed_exists()
 
            if (prescribed_flag.eq.1) then 
 
@@ -10322,8 +10321,8 @@ stop
        if (fort_material_type(im).eq.0) then
         ! do nothing
        else if (fort_material_type(im).eq.999) then
-        if (is_rigid(nmat,im).ne.1) then
-         print *,"is_rigid(nmat,im).ne.1"
+        if (is_rigid(im).ne.1) then
+         print *,"is_rigid(im).ne.1"
          stop
         endif
        else if ((fort_material_type(im).gt.0).and. &
@@ -10473,10 +10472,10 @@ stop
              stop
             endif  
  
-            if (is_rigid(nmat,im).eq.0) then
+            if (is_rigid(im).eq.0) then
              voltotal_fluid=voltotal_fluid+multi_volume(im)
              mass_total_fluid=mass_total_fluid+den_value*multi_volume(im)
-            else if (is_rigid(nmat,im).eq.1) then
+            else if (is_rigid(im).eq.1) then
              voltotal_solid=voltotal_solid+multi_volume(im)
              mass_total_solid=mass_total_solid+den_value*multi_volume(im)
             else
@@ -11911,10 +11910,10 @@ stop
          im_solid=0
          do im=1,nmat
           LStest(im)=levelPC(D_DECL(i,j,k),im)
-          if (is_lag_part(nmat,im).eq.1) then
+          if (is_lag_part(im).eq.1) then
 
-           if (is_rigid(nmat,im).eq.1) then
-            if (is_prescribed(nmat,im).eq.1) then
+           if (is_rigid(im).eq.1) then
+            if (is_prescribed(im).eq.1) then
              if (im_solid.eq.0) then
               im_solid=im
               partid=nparts_temp
@@ -11927,13 +11926,13 @@ stop
               print *,"im_solid invalid 5"
               stop
              endif
-            else if (is_prescribed(nmat,im).eq.0) then
+            else if (is_prescribed(im).eq.0) then
              ! do nothing
             else
-             print *,"is_prescribed(nmat,im) invalid"
+             print *,"is_prescribed(im) invalid"
              stop
             endif
-           else if (is_rigid(nmat,im).eq.0) then
+           else if (is_rigid(im).eq.0) then
             ! do nothing
            else
             print *,"is_rigid invalid LEVELSET_3D.F90"
@@ -11941,8 +11940,8 @@ stop
            endif
            nparts_temp=nparts_temp+1
 
-          else if (is_lag_part(nmat,im).eq.0) then
-           if (is_rigid(nmat,im).eq.0) then
+          else if (is_lag_part(im).eq.0) then
+           if (is_rigid(im).eq.0) then
             ! do nothing
            else
             print *,"is_rigid invalid LEVELSET_3D.F90"
@@ -12187,7 +12186,7 @@ stop
         is_rigid_near=0
         do im=1,nmat
          LStest(im)=levelPC(D_DECL(i,j,k),im)
-         if (is_rigid(nmat,im).eq.1) then
+         if (is_rigid(im).eq.1) then
           if (LStest(im).ge.-DXMAXLS) then
            is_rigid_near=1
           else if (LStest(im).le.-DXMAXLS) then
@@ -12196,10 +12195,10 @@ stop
            print *,"LStest(im) is NaN"
            stop
           endif 
-         else if (is_rigid(nmat,im).eq.0) then
+         else if (is_rigid(im).eq.0) then
           ! do nothing
          else
-          print *,"is_rigid(nmat,im) invalid"
+          print *,"is_rigid(im) invalid"
           stop
          endif
         enddo ! im=1..nmat
@@ -13955,22 +13954,22 @@ stop
             do im=1,nmat
              local_volume=local_face(FACECOMP_VOFFACE+2*(im-1)+side)
              volface=volface+local_volume
-             if (is_prescribed(nmat,im).eq.0) then
+             if (is_prescribed(im).eq.0) then
               not_prescribed_volface=not_prescribed_volface+local_volume
-             else if (is_prescribed(nmat,im).eq.1) then
+             else if (is_prescribed(im).eq.1) then
               ! do nothing
              else
-              print *,"is_prescribed(nmat,im) invalid"
+              print *,"is_prescribed(im) invalid"
               stop
              endif
-             if (is_rigid(nmat,im).eq.0) then
-              if (is_prescribed(nmat,im).eq.0) then
+             if (is_rigid(im).eq.0) then
+              if (is_prescribed(im).eq.0) then
                fluid_volface=fluid_volface+local_volume
               else
-               print *,"is_prescribed(nmat,im) invalid"
+               print *,"is_prescribed(im) invalid"
                stop
               endif
-             else if (is_rigid(nmat,im).eq.1) then
+             else if (is_rigid(im).eq.1) then
               ! do nothing
              else
               print *,"is_rigid invalid LEVELSET_3D.F90"
@@ -14187,12 +14186,12 @@ stop
                  stop
                 endif
 
-                if (is_lag_part(nmat,im).eq.1) then
+                if (is_lag_part(im).eq.1) then
                  partid_check=partid_check+1
-                else if (is_lag_part(nmat,im).eq.0) then
+                else if (is_lag_part(im).eq.0) then
                  ! do nothing
                 else
-                 print *,"is_lag_part(nmat,im) invalid"
+                 print *,"is_lag_part(im) invalid"
                  stop
                 endif
                 mass_sum=mass_sum+DMface
@@ -14312,10 +14311,10 @@ stop
                    stop
                   endif
 
-                 else if ((is_ice(nmat,typeleft).eq.0).and. &
-                          (is_ice(nmat,typeright).eq.0).and. &
-                          (is_FSI_rigid(nmat,typeleft).eq.0).and. &
-                          (is_FSI_rigid(nmat,typeright).eq.0)) then
+                 else if ((is_ice(typeleft).eq.0).and. &
+                          (is_ice(typeright).eq.0).and. &
+                          (is_FSI_rigid(typeleft).eq.0).and. &
+                          (is_FSI_rigid(typeright).eq.0)) then
                   ! do nothing
                  else
                   print *,"is_ice or is_FSI_rigid invalid"
@@ -16148,25 +16147,25 @@ stop
         stop
        endif
 
-       if (is_lag_part(nmat,im).eq.1) then
+       if (is_lag_part(im).eq.1) then
         nmat_lag=nmat_lag+1
-        if (is_rigid(nmat,im).eq.1) then
+        if (is_rigid(im).eq.1) then
          nmat_solid=nmat_solid+1
-        else if (is_rigid(nmat,im).eq.0) then
+        else if (is_rigid(im).eq.0) then
          nmat_fluid=nmat_fluid+1
         else
-         print *,"is_rigid(nmat,im) invalid"
+         print *,"is_rigid(im) invalid"
          stop
         endif
-       else if (is_lag_part(nmat,im).eq.0) then
-        if (is_rigid(nmat,im).eq.0) then
+       else if (is_lag_part(im).eq.0) then
+        if (is_rigid(im).eq.0) then
          nmat_fluid=nmat_fluid+1
         else
-         print *,"is_rigid(nmat,im) invalid"
+         print *,"is_rigid(im) invalid"
          stop
         endif
        else
-        print *,"is_lag_part(nmat,im) invalid"
+        print *,"is_lag_part(im) invalid"
         stop
        endif
 
@@ -16248,7 +16247,7 @@ stop
           vofcompraw=(im-1)*ngeom_raw+1
           F_stencil=state_mof(D_DECL(i,j,k),vofcompraw)
 
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_rigid(im).eq.1) then
            if (constant_density_all_time(im).eq.1) then
             ! do nothing
            else
@@ -16256,7 +16255,7 @@ stop
             print *,"in: fort_renormalize_prescribe"
             stop
            endif
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid(im).eq.0) then
 
            if (F_stencil.gt.VOFTOL) then
             ! do nothing
@@ -16420,13 +16419,13 @@ stop
            stop
           endif
 
-          if (is_lag_part(nmat,im).eq.0) then
-           print *,"is_lag_part(nmat,im).eq.0"
+          if (is_lag_part(im).eq.0) then
+           print *,"is_lag_part(im).eq.0"
            stop
-          else if (is_lag_part(nmat,im).eq.1) then
-           if (is_rigid(nmat,im).eq.0) then
+          else if (is_lag_part(im).eq.1) then
+           if (is_rigid(im).eq.0) then
             ! do nothing
-           else if (is_rigid(nmat,im).eq.1) then
+           else if (is_rigid(im).eq.1) then
 
             ! positive in the rigid body
             call materialdistsolid( &
@@ -16594,7 +16593,7 @@ stop
             stop
            endif
           else 
-           print *,"is_lag_part(nmat,im) invalid"
+           print *,"is_lag_part(im) invalid"
            stop
           endif
 
@@ -16613,7 +16612,7 @@ stop
               (im_solid_max.gt.nmat).or. &
               (partid_max.lt.1).or. &
               (partid_max.gt.nparts).or. &
-              (is_rigid(nmat,im_solid_max).ne.1)) then
+              (is_rigid(im_solid_max).ne.1)) then
            print *,"im_solid_max or partid_max became corrupt"
            stop
           endif
@@ -16622,7 +16621,7 @@ stop
           ibase=(partid_max-1)*SDIM
 
            ! velocity
-          if (is_prescribed(nmat,im_solid_max).eq.1) then
+          if (is_prescribed(im_solid_max).eq.1) then
 
            dir=1
            velnew(D_DECL(i,j,k),dir)= &
@@ -16639,19 +16638,19 @@ stop
                     solzfab(D_DECL(i,j,k+1),ibase+dir))
            endif
 
-          else if (is_prescribed(nmat,im_solid_max).eq.0) then
+          else if (is_prescribed(im_solid_max).eq.0) then
            ! do nothing
           else
-           print *,"is_prescribed(nmat,im_solid_max) invalid"
+           print *,"is_prescribed(im_solid_max) invalid"
            stop
           endif
 
            ! initialize the fluid temperature with the solid temperature
            ! in the solid regions.
           do im=1,nmat
-           if (is_rigid(nmat,im).eq.1) then
+           if (is_rigid(im).eq.1) then
             ! do nothing
-           else if (is_rigid(nmat,im).eq.0) then
+           else if (is_rigid(im).eq.0) then
             istate=2
             statecomp=(im-1)*num_state_material+istate
             statecomp_solid=(im_solid_max-1)*num_state_material+istate
@@ -16680,9 +16679,9 @@ stop
           ! solid volume fractions and centroids
          do im=1,nmat
           vofcomp=(im-1)*ngeom_recon+1
-          if (is_rigid(nmat,im).eq.0) then
+          if (is_rigid(im).eq.0) then
            ! do nothing
-          else if (is_rigid(nmat,im).eq.1) then
+          else if (is_rigid(im).eq.1) then
            mofnew(vofcomp)=vfrac_solid_new(im)
            do dir=1,SDIM
             mofnew(vofcomp+dir)=censolid_new(im,dir)
@@ -16772,7 +16771,7 @@ stop
 
              !fluid stencil cell, we trust this LS value.
              !if (at_center==1) then cell is (i,j,k) cell which is solid.
-            if ((is_rigid(nmat,im_primary_stencil).eq.0).and. & 
+            if ((is_rigid(im_primary_stencil).eq.0).and. & 
                 (at_center.eq.0)) then
 
              do im=1,nmat
@@ -16781,7 +16780,7 @@ stop
              enddo
 
              !solid stencil cell, extrapolate from the fluid side.
-            else if ((is_rigid(nmat,im_primary_stencil).eq.1).or. & 
+            else if ((is_rigid(im_primary_stencil).eq.1).or. & 
                      (at_center.eq.1)) then
 
              do im=1,nmat
@@ -16792,7 +16791,7 @@ stop
               ! do nothing
              else if ((im_fluid_critical.ge.1).and. &
                       (im_fluid_critical.le.nmat)) then
-              if (is_rigid(nmat,im_fluid_critical).eq.0) then
+              if (is_rigid(im_fluid_critical).eq.0) then
                if (im1_substencil.eq.0) then
                 im1_substencil=im_fluid_critical
                else if ((im1_substencil.ge.1).and. &
@@ -16807,7 +16806,7 @@ stop
                 stop
                endif
               else
-               print *,"is_rigid(nmat,im_fluid_critical) invalid"
+               print *,"is_rigid(im_fluid_critical) invalid"
                stop
               endif
              else
@@ -16816,7 +16815,7 @@ stop
              endif
 
             else
-             print *,"is_rigid(nmat,im_primary_stencil) or at_center invalid"
+             print *,"is_rigid(im_primary_stencil) or at_center invalid"
              stop
             endif
                            
@@ -16851,8 +16850,8 @@ stop
              print *,"dx,dy,dz,local_mag ",dx(1),dx(2),dx(SDIM),local_mag
 
              do im=1,nmat
-              print *,"im,is_rigid(nmat,im),ls_hold(im) ", &
-                      im,is_rigid(nmat,im),ls_hold(im)
+              print *,"im,is_rigid(im),ls_hold(im) ", &
+                      im,is_rigid(im),ls_hold(im)
              enddo
              do i1=LSstenlo(1),LSstenhi(1)
              do j1=LSstenlo(2),LSstenhi(2)
@@ -16948,16 +16947,16 @@ stop
             enddo
  
             do im=1,nmat
-             if (is_rigid(nmat,im).eq.1) then
+             if (is_rigid(im).eq.1) then
               ! do nothing
-             else if (is_rigid(nmat,im).eq.0) then
+             else if (is_rigid(im).eq.0) then
 
               LS_virtual_max=-99999.0
               im_primary_stencil=0
               do im_opp=1,nmat
-               if (is_rigid(nmat,im_opp).eq.1) then
+               if (is_rigid(im_opp).eq.1) then
                 ! do nothing
-               else if (is_rigid(nmat,im_opp).eq.0) then
+               else if (is_rigid(im_opp).eq.0) then
                 if (im.ne.im_opp) then
                  if (im_primary_stencil.eq.0) then
                   im_primary_stencil=im_opp
@@ -17012,7 +17011,7 @@ stop
                 (center_stencil_wetting_im.le.nmat)) then 
              if (LS_virtual_new(im_solid_max).ge.zero) then
               do im=1,nmat
-               if (is_rigid(nmat,im).eq.0) then
+               if (is_rigid(im).eq.0) then
                 if (im.eq.center_stencil_wetting_im) then
                  if (LS_virtual_new(im).lt.zero) then
                   LS_virtual_new(im)=zero
@@ -17032,10 +17031,10 @@ stop
                   stop
                  endif
                 endif
-               else if (is_rigid(nmat,im).eq.1) then
+               else if (is_rigid(im).eq.1) then
                 ! do nothing
                else
-                print *,"is_rigid(nmat,im) invalid"
+                print *,"is_rigid(im) invalid"
                 stop
                endif
               enddo ! im=1..nmat
@@ -17076,12 +17075,12 @@ stop
              vofcomprecon=(im-1)*ngeom_recon+1
              vofcompraw=(im-1)*ngeom_raw+1
 
-             if (is_rigid(nmat,im).eq.0) then
+             if (is_rigid(im).eq.0) then
               do dir=0,SDIM
                local_mof(vofcomprecon+dir)= &
                   state_mof(D_DECL(i,j,k),vofcompraw+dir)
               enddo
-             else if (is_rigid(nmat,im).eq.1) then
+             else if (is_rigid(im).eq.1) then
               local_mof(vofcomprecon)=vfrac_solid_new(im) 
               do dir=1,SDIM
                local_mof(vofcomprecon+dir)=censolid_new(im,dir)
@@ -17176,9 +17175,9 @@ stop
 
            do im=1,nmat
 
-            if (is_rigid(nmat,im).eq.1) then
+            if (is_rigid(im).eq.1) then
              ! do nothing
-            else if (is_rigid(nmat,im).eq.0) then
+            else if (is_rigid(im).eq.0) then
 
              do i1=istenlo(1),istenhi(1)
              do j1=istenlo(2),istenhi(2)
@@ -17465,14 +17464,14 @@ stop
         FSI_exclude=1
         call sort_volume_fraction(volmat,FSI_exclude,sorted_list,nmat)
         imcrit=sorted_list(1)
-        if (is_rigid(nmat,imcrit).eq.0) then
+        if (is_rigid(imcrit).eq.0) then
          ! do nothing
         else
-         print *,"is_rigid(nmat,imcrit) invalid"
+         print *,"is_rigid(imcrit) invalid"
          stop
         endif
         do im=1,nmat
-         if (is_rigid(nmat,im).eq.0) then
+         if (is_rigid(im).eq.0) then
 
           if (lspoint(im).gt.LSbandsize) then
            vofcomprecon=(im-1)*ngeom_recon+1
@@ -17484,7 +17483,7 @@ stop
            restore_sum=zero
 
            do im2=1,nmat
-            if (is_rigid(nmat,im2).eq.0) then
+            if (is_rigid(im2).eq.0) then
 
              if (im2.ne.im) then
               vofcomprecon=(im2-1)*ngeom_recon+1
@@ -17510,10 +17509,10 @@ stop
               stop
              endif 
 
-            else if (is_rigid(nmat,im2).eq.1) then
+            else if (is_rigid(im2).eq.1) then
              ! do nothing
             else
-             print *,"is_rigid(nmat,im2) invalid"
+             print *,"is_rigid(im2) invalid"
              stop
             endif
            enddo ! im2
@@ -17551,10 +17550,10 @@ stop
            stop
           endif 
 
-         else if (is_rigid(nmat,im).eq.1) then
+         else if (is_rigid(im).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid(nmat,im) invalid"
+          print *,"is_rigid(im) invalid"
           stop
          endif
         enddo ! im=1...nmat

@@ -1729,7 +1729,7 @@ end subroutine nozzle2d
        stop
       endif
 
-      if (is_rigid(num_materials,im).ne.1) then
+      if (is_rigid(im).ne.1) then
        print *,"is_rigid invalid GLOBALDIST.F90"
        stop
       endif

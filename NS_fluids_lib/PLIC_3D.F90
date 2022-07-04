@@ -372,15 +372,15 @@ stop
         voflist_center(im)=mofdata(vofcomprecon)
         voflist_stencil(im)=zero
 
-        if (is_rigid(nmat,im).eq.0) then
+        if (is_rigid(im).eq.0) then
          vfrac_fluid_sum=vfrac_fluid_sum+voflist_center(im)
-        else if (is_rigid(nmat,im).eq.1) then
+        else if (is_rigid(im).eq.1) then
          if (im_raster_solid.eq.0) then
           im_raster_solid=im
           vfrac_raster_solid=voflist_center(im)
          else if ((im_raster_solid.ge.1).and. &
                   (im_raster_solid.le.nmat).and. &
-                  (is_rigid(nmat,im_raster_solid).eq.1)) then
+                  (is_rigid(im_raster_solid).eq.1)) then
           if (vfrac_raster_solid.lt.voflist_center(im)) then
            im_raster_solid=im
            vfrac_raster_solid=voflist_center(im)
@@ -392,7 +392,7 @@ stop
       
          vfrac_solid_sum=vfrac_solid_sum+voflist_center(im)
         else
-         print *,"is_rigid(nmat,im) invalid"
+         print *,"is_rigid(im) invalid"
          stop
         endif
 
@@ -444,14 +444,14 @@ stop
         nmat_in_cell=0
         nmat_in_stencil=0
         do im=1,nmat
-         if (is_rigid(nmat,im).eq.0) then
+         if (is_rigid(im).eq.0) then
           if (voflist_stencil(im).gt.VOFTOL) then
            nmat_in_stencil=nmat_in_stencil+1
           endif
           if (voflist_center(im).gt.VOFTOL) then
            nmat_in_cell=nmat_in_cell+1
           endif
-         else if (is_rigid(nmat,im).eq.1) then
+         else if (is_rigid(im).eq.1) then
           ! do nothing
          else
           print *,"is_rigid invalid PLIC_3D.F90"
@@ -545,12 +545,12 @@ stop
             vofcomprecon=(im-1)*ngeom_recon+1
             vfrac_local(im)=mofsten(vofcomprecon)
 
-            if (is_rigid(nmat,im).eq.0) then
+            if (is_rigid(im).eq.0) then
              vfrac_fluid_sum=vfrac_fluid_sum+vfrac_local(im)
-            else if (is_rigid(nmat,im).eq.1) then
+            else if (is_rigid(im).eq.1) then
              vfrac_solid_sum=vfrac_solid_sum+vfrac_local(im)
             else
-             print *,"is_rigid(nmat,im) invalid"
+             print *,"is_rigid(im) invalid"
              stop
             endif
            enddo ! im=1..nmat
@@ -733,15 +733,15 @@ stop
            vofcomprecon=(im-1)*ngeom_recon+1
            vfrac_local(im)=mofsten(vofcomprecon)
 
-           if (is_rigid(nmat,im).eq.0) then
+           if (is_rigid(im).eq.0) then
             vfrac_fluid_sum=vfrac_fluid_sum+vfrac_local(im)
-           else if (is_rigid(nmat,im).eq.1) then
+           else if (is_rigid(im).eq.1) then
             if (im_raster_solid.eq.0) then
              im_raster_solid=im
              vfrac_raster_solid=vfrac_local(im)
             else if ((im_raster_solid.ge.1).and. &
                      (im_raster_solid.le.nmat).and. &
-                     (is_rigid(nmat,im_raster_solid).eq.1)) then
+                     (is_rigid(im_raster_solid).eq.1)) then
              if (vfrac_raster_solid.lt.vfrac_local(im)) then
               im_raster_solid=im
               vfrac_raster_solid=vfrac_local(im)
@@ -753,7 +753,7 @@ stop
      
             vfrac_solid_sum=vfrac_solid_sum+vfrac_local(im)
            else
-            print *,"is_rigid(nmat,im) invalid"
+            print *,"is_rigid(im) invalid"
             stop
            endif
           enddo ! im=1..nmat
@@ -817,12 +817,12 @@ stop
                 mofdata_super(vofcomprecon+dir)+ &
                 volmat*(censten(dir)+mofsten(vofcomprecon+dir))
             enddo ! dir
-            if (is_rigid(nmat,im).eq.0) then
+            if (is_rigid(im).eq.0) then
              volume_super_mofdata=volume_super_mofdata+volmat
-            else if (is_rigid(nmat,im).eq.1) then
+            else if (is_rigid(im).eq.1) then
              ! do nothing
             else
-             print *,"is_rigid(nmat,im) invalid"
+             print *,"is_rigid(im) invalid"
              stop
             endif
 
@@ -875,11 +875,11 @@ stop
           endif
 
            ! always standard MOF centroid for the rigid materials.
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_rigid(im).eq.1) then
            do dir=1,SDIM
             mofdata_super(vofcomprecon+dir)=mofdata(vofcomprecon+dir)
            enddo
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid(im).eq.0) then
            ! do nothing
           else
            print *,"is_rigid invalid PLIC_3D.F90"

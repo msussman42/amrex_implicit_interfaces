@@ -641,10 +641,10 @@ stop
 
         vfrac_sum_solid=zero
         do im=1,nmat
-         if (is_rigid(nmat,im).eq.1) then
+         if (is_rigid(im).eq.1) then
           vofcomp=(im-1)*ngeom_recon+1
           vfrac_sum_solid=vfrac_sum_solid+mofdata(vofcomp)
-         else if (is_rigid(nmat,im).eq.0) then
+         else if (is_rigid(im).eq.0) then
           ! do nothing
          else
           print *,"is_rigid invalid MARCHING_TETRA_3D.F90"

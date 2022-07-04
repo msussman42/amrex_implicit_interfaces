@@ -1414,12 +1414,12 @@ END SUBROUTINE SIMP
          if (vfrac(im).lt.VOFTOL) then
           vfrac(im)=zero
          endif
-         if (is_rigid(nmat,im).eq.1) then
+         if (is_rigid(im).eq.1) then
           vfrac_solid_sum=vfrac_solid_sum+vfrac(im)
-         else if (is_rigid(nmat,im).eq.0) then
+         else if (is_rigid(im).eq.0) then
           vfrac_fluid_sum=vfrac_fluid_sum+vfrac(im)
          else
-          print *,"is_rigid(nmat,im) invalid"
+          print *,"is_rigid(im) invalid"
           stop
          endif
          if (imcrit.eq.0) then
@@ -1449,7 +1449,7 @@ END SUBROUTINE SIMP
         endif
 
         if ((vfrac_solid_sum.ge.vfrac_fluid_sum).or. &
-            (is_rigid(nmat,imcrit).eq.1)) then
+            (is_rigid(imcrit).eq.1)) then
          imcrit=0
         endif
 
@@ -1509,7 +1509,7 @@ END SUBROUTINE SIMP
 
           ibase=(im-1)*num_state_material
 
-          if (is_rigid(nmat,im).eq.0) then
+          if (is_rigid(im).eq.0) then
 
            rho(im)=den(D_DECL(i,j,k),ibase+ENUM_DENVAR+1)  ! regular density
    
@@ -1570,7 +1570,7 @@ END SUBROUTINE SIMP
             stop
            endif
    
-          else if (is_rigid(nmat,im).eq.1) then
+          else if (is_rigid(im).eq.1) then
 
            rho(im)=fort_denconst(im)
            if (rho(im).gt.zero) then
@@ -1600,15 +1600,15 @@ END SUBROUTINE SIMP
           ! fluid material dominates
          else if ((imcrit.ge.1).and.(imcrit.le.nmat)) then
   
-          if (is_rigid(nmat,imcrit).eq.0) then
+          if (is_rigid(imcrit).eq.0) then
 
            do im=1,nmat
 
             local_infinite_weight=0
 
-            if (is_rigid(nmat,im).eq.1) then
+            if (is_rigid(im).eq.1) then
              ! do nothing
-            else if (is_rigid(nmat,im).eq.0) then
+            else if (is_rigid(im).eq.0) then
              if ((vfrac(im).gt.zero).and. &
                  (vfrac(im).le.one+VOFTOL)) then
               if (pressure_select_criterion.eq.0) then ! vol. frac.
@@ -1644,14 +1644,14 @@ END SUBROUTINE SIMP
               stop
              endif
             else
-             print *,"is_rigid(nmat,im) invalid"
+             print *,"is_rigid(im) invalid"
              stop
             endif
 
            enddo ! im=1,nmat
 
           else
-           print *,"is_rigid(nmat,imcrit) invalid"
+           print *,"is_rigid(imcrit) invalid"
            stop
           endif
 
@@ -1674,17 +1674,17 @@ END SUBROUTINE SIMP
 
          else if ((imcrit.ge.1).and.(imcrit.le.nmat)) then
 
-          if (is_rigid(nmat,imcrit).eq.0) then
+          if (is_rigid(imcrit).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(nmat,imcrit) invalid"
+           print *,"is_rigid(imcrit) invalid"
            stop
           endif
 
-          if (is_rigid(nmat,im_weight).eq.0) then
+          if (is_rigid(im_weight).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(nmat,im_weight).ne.0"
+           print *,"is_rigid(im_weight).ne.0"
            stop
           endif
 
@@ -8533,10 +8533,10 @@ END SUBROUTINE SIMP
                ! div u =volume_flux/volume_raster  (units 1/seconds)
                ! units of mdot: cm^3/second^2
               if (region_volume_flux.ne.zero) then
-               if (is_rigid(nmat,im).eq.1) then
+               if (is_rigid(im).eq.1) then
                 print *,"disallowed: volume_flux<>0 for is_rigid==1 material"
                 stop
-               else if (is_rigid(nmat,im).eq.0) then
+               else if (is_rigid(im).eq.0) then
                 if ((imattype.gt.0).and.(imattype.lt.999)) then
                  print *,"disallowed: volume flux<>0 for compressible material"
                  stop
@@ -8632,10 +8632,10 @@ END SUBROUTINE SIMP
                        (region_mass_flux.ne.zero)) then
                update_density_flag=1
 
-               if (is_rigid(nmat,im).eq.1) then
+               if (is_rigid(im).eq.1) then
                 print *,"mass_flux<>0 disallowed for is_rigid==1 materials"
                 stop
-               else if (is_rigid(nmat,im).eq.0) then
+               else if (is_rigid(im).eq.0) then
                 if ((imattype.gt.0).and.(imattype.lt.999)) then
                  ! do nothing
                 else if (imattype.eq.0) then
@@ -8650,16 +8650,16 @@ END SUBROUTINE SIMP
                  stop
                 endif
                else
-                print *,"is_rigid(nmat,im) invalid"
+                print *,"is_rigid(im) invalid"
                 stop
                endif
   
               else if (region_volume_flux.ne.zero) then
                density_flux=region_mass_flux/region_volume_flux
-               if (is_rigid(nmat,im).eq.1) then
+               if (is_rigid(im).eq.1) then
                 print *,"volume_flux<>0 disallowed for is_rigid==1 materials"
                 stop
-               else if (is_rigid(nmat,im).eq.0) then
+               else if (is_rigid(im).eq.0) then
                 if ((imattype.gt.0).and.(imattype.lt.999)) then
                  print *,"disallowed: volume flux<>0 for compressible material"
                  stop
@@ -8683,7 +8683,7 @@ END SUBROUTINE SIMP
                  stop
                 endif
                else
-                print *,"is_rigid(nmat,im) invalid"
+                print *,"is_rigid(im) invalid"
                 stop
                endif
               else
@@ -8925,10 +8925,10 @@ END SUBROUTINE SIMP
                ! do nothing
               else if (region_volume_flux.gt.zero) then
 
-               if (is_rigid(nmat,im).eq.1) then
+               if (is_rigid(im).eq.1) then
                 print *,"disallowed: volume_flux>0 for is_rigid==1 material"
                 stop
-               else if (is_rigid(nmat,im).eq.0) then
+               else if (is_rigid(im).eq.0) then
                 if ((imattype.gt.0).and.(imattype.lt.999)) then
                  print *,"disallowed: volume flux>0 for compressible material"
                 else if (imattype.eq.0) then
@@ -10507,7 +10507,7 @@ END SUBROUTINE SIMP
 
        ibase=(im_primary-1)*num_state_material
 
-       if (is_rigid(nmat,im_primary).eq.0) then
+       if (is_rigid(im_primary).eq.0) then
 
         ! compressible material
         if ((local_material_type(im_primary).gt.0).and. &
@@ -10552,7 +10552,7 @@ END SUBROUTINE SIMP
          stop
         endif
 
-       else if (is_rigid(nmat,im_primary).eq.1) then
+       else if (is_rigid(im_primary).eq.1) then
         ! do nothing
        else
         print *,"is_rigid bust"
@@ -13656,16 +13656,16 @@ END SUBROUTINE SIMP
                  mofdatacoarse(vofcomp_recon+dir)+ &
                  multi_cen(dir,im)*multi_volume(im)
                enddo
-               if (is_rigid(nmat,im).eq.0) then
+               if (is_rigid(im).eq.0) then
                 volcoarse=volcoarse+multi_volume(im)
                 do dir=1,SDIM
                  cencoarse(dir)=cencoarse(dir)+ &
                   multi_cen(dir,im)*multi_volume(im)
                 enddo
-               else if (is_rigid(nmat,im).eq.1) then
+               else if (is_rigid(im).eq.1) then
                 ! do nothing
                else
-                print *,"is_rigid(nmat,im) invalid"
+                print *,"is_rigid(im) invalid"
                 stop
                endif
               enddo ! im=1..nmat
@@ -14006,7 +14006,7 @@ END SUBROUTINE SIMP
         enddo
         call get_primary_material(LStest,nmat,im)
 
-        if (is_rigid(nmat,im).eq.0) then
+        if (is_rigid(im).eq.0) then
 
            ! only check pressure/temperature/vorticity
            ! magnitude away from interfaces
@@ -14054,7 +14054,7 @@ END SUBROUTINE SIMP
           stop
          endif  
 
-        else if (is_rigid(nmat,im).eq.1) then
+        else if (is_rigid(im).eq.1) then
          ! do nothing
         else
          print *,"is_rigid invalid NAVIERSTOKES_3D.F90"

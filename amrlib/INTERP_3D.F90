@@ -394,16 +394,16 @@ stop
                  multi_cen(dir,im)*multi_volume(im)
                enddo
 
-               if (is_rigid(nmat,im).eq.0) then
+               if (is_rigid(im).eq.0) then
                 volcell=volcell+multi_volume(im)
                 do dir=1,SDIM
                  cencell(dir)=cencell(dir)+ &
                   multi_cen(dir,im)*multi_volume(im)
                 enddo
-               else if (is_rigid(nmat,im).eq.1) then
+               else if (is_rigid(im).eq.1) then
                 ! do nothing
                else
-                print *,"is_rigid(nmat,im) invalid"
+                print *,"is_rigid(im) invalid"
                 stop
                endif
               enddo ! im=1..nmat
@@ -946,16 +946,16 @@ stop
                  multi_cen(dir,im)*multi_volume(im)
                enddo
 
-               if (is_rigid(nmat,im).eq.0) then
+               if (is_rigid(im).eq.0) then
                 volcell=volcell+multi_volume(im)
                 do dir=1,SDIM
                  cencell(dir)=cencell(dir)+ &
                   multi_cen(dir,im)*multi_volume(im)
                 enddo
-               else if (is_rigid(nmat,im).eq.1) then
+               else if (is_rigid(im).eq.1) then
                 ! do nothing
                else
-                print *,"is_rigid(nmat,im) invalid"
+                print *,"is_rigid(im) invalid"
                 stop
                endif
               enddo ! im=1..nmat

@@ -547,7 +547,7 @@ stop
         else if (is_clamped_cell.eq.0) then
 
          do im=1,nmat
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_rigid(im).eq.1) then
            LSTEST=lsnew(D_DECL(i,j,k),im)
            if (LSTEST.ge.zero) then
             rigid_mask=1.0D+6
@@ -558,17 +558,17 @@ stop
             print *,"LSTEST invalid"
             stop
            endif
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid(im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(nmat,im) invalid"
+           print *,"is_rigid(im) invalid"
            stop
           endif
          enddo ! im=1..nmat
 
          do im=1,nmat
-          if (is_prescribed(nmat,im).eq.1) then
-           if (is_rigid(nmat,im).eq.1) then
+          if (is_prescribed(im).eq.1) then
+           if (is_rigid(im).eq.1) then
             LSTEST=lsnew(D_DECL(i,j,k),im)
             if (LSTEST.ge.zero) then
              prescribed_mask=1.0D+6
@@ -580,13 +580,13 @@ stop
              stop
             endif
            else
-            print *,"is_rigid(nmat,im) invalid"
+            print *,"is_rigid(im) invalid"
             stop
            endif
-          else if (is_prescribed(nmat,im).eq.0) then
+          else if (is_prescribed(im).eq.0) then
            ! do nothing
           else
-           print *,"is_prescribed(nmat,im) invalid"
+           print *,"is_prescribed(im) invalid"
            stop
           endif
          enddo ! im=1..nmat
