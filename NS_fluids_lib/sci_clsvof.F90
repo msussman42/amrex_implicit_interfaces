@@ -8805,27 +8805,24 @@ use CTML_module
 IMPLICIT NONE
 
 INTEGER_T, intent(in) :: ioproc,isout
-INTEGER_T :: nmat
 INTEGER_T :: part_id
 INTEGER_T :: ctml_part_id
 INTEGER_T :: fsi_part_id
 INTEGER_T :: dir,inode,num_nodes
 
- nmat=num_materials
-
  if (TOTAL_NPARTS.ge.1) then
 
-  if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4,8
+  if (CTML_FSI_flagF().eq.1) then ! FSI_flag==4,8
 #ifdef MVAHABFSI
    call CTML_RESET_ARRAYS(); ! vel_fib=zero  force_fib=zero
 #else
    print *,"define MEHDI_VAHAB_FSI in GNUmakefile"
    stop
 #endif
-  else if (CTML_FSI_flagF(nmat).eq.0) then
+  else if (CTML_FSI_flagF().eq.0) then
    ! do nothing
   else 
-   print *,"CTML_FSI_flagF(nmat) invalid"
+   print *,"CTML_FSI_flagF() invalid"
    stop
   endif
 
@@ -8914,7 +8911,6 @@ IMPLICIT NONE
 
 INTEGER_T, intent(in) :: ioproc,isout
 INTEGER_T :: ierr1
-INTEGER_T :: nmat
 double precision, dimension(:), allocatable :: sync_velocity
 double precision, dimension(:), allocatable :: temp_velocity
 double precision, dimension(:), allocatable :: sync_force
@@ -8925,7 +8921,6 @@ INTEGER_T ctml_part_id
 INTEGER_T fsi_part_id
 INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
 
- nmat=num_materials
 
  if (TOTAL_NPARTS.ge.1) then
 
@@ -9027,17 +9022,17 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
 
   enddo !part_id=1,TOTAL_NPARTS
 
-  if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4,8
+  if (CTML_FSI_flagF().eq.1) then ! FSI_flag==4,8
 #ifdef MVAHABFSI
    call CTML_SET_VELOCITY(CTML_NPARTS, &
     ctml_max_n_fib_nodes,ctml_fib_vel) !vel_fib=ctml_fib_vel
 #else
    print *,"define MEHDI_VAHAB_FSI in GNUmakefile"
 #endif
-  else if (CTML_FSI_flagF(nmat).eq.0) then
+  else if (CTML_FSI_flagF().eq.0) then
    ! do nothing
   else 
-   print *,"CTML_FSI_flagF(nmat) invalid"
+   print *,"CTML_FSI_flagF() invalid"
    stop
   endif
 
@@ -9675,7 +9670,6 @@ REAL_T, intent(in) :: CLSVOFtime
 REAL_T, intent(in) :: problo(3),probhi(3)
 INTEGER_T :: test_NPARTS
 INTEGER_T :: part_id
-INTEGER_T :: nmat
 INTEGER_T :: dir
 INTEGER_T :: im_part
 INTEGER_T :: ctml_part_id,fsi_part_id
@@ -9684,9 +9678,7 @@ INTEGER_T FSI_bounding_box_ngrow(num_materials)
 INTEGER_T im_sanity_check
 INTEGER_T idir,ielem,inode
 
-  nmat=num_materials
-
-  do im_sanity_check=1,nmat
+  do im_sanity_check=1,num_materials
    if ((FSI_refine_factor(im_sanity_check).lt.0).or. &
        (FSI_refine_factor(im_sanity_check).gt.100)) then
     print *,"FSI_refine_factor(im_sanity_check) invalid"
@@ -9696,9 +9688,9 @@ INTEGER_T idir,ielem,inode
     print *,"FSI_bounding_box_ngrow(im_sanity_check) invalid"
     stop
    endif
-  enddo ! do im_sanity_check=1,nmat
+  enddo ! do im_sanity_check=1,num_materials
 
-  if ((nparts_in.lt.1).or.(nparts_in.ge.nmat)) then
+  if ((nparts_in.lt.1).or.(nparts_in.ge.num_materials)) then
    print *,"nparts_in invalid"
    stop
   endif
@@ -9714,13 +9706,13 @@ INTEGER_T idir,ielem,inode
     im_solid_mapF(part_id)=im_solid_map_in(part_id)
     im_part=im_solid_mapF(part_id)+1
 
-    if (CTML_FSI_mat(nmat,im_part).eq.1) then ! FSI_flag==4,8
+    if (CTML_FSI_mat(im_part).eq.1) then ! FSI_flag==4,8
      ctml_part_id=ctml_part_id+1
      CTML_partid_map(part_id)=ctml_part_id
-    else if (CTML_FSI_mat(nmat,im_part).eq.0) then
+    else if (CTML_FSI_mat(im_part).eq.0) then
      CTML_partid_map(part_id)=0
     else
-     print *,"CTML_FSI_mat(nmat,im_part) invalid"
+     print *,"CTML_FSI_mat(im_part) invalid"
      stop
     endif
 
@@ -9788,7 +9780,7 @@ INTEGER_T idir,ielem,inode
 
    use_temp=0
 
-   if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4,8 for some materials
+   if (CTML_FSI_flagF().eq.1) then ! FSI_flag==4,8 for some materials
 #ifdef MVAHABFSI
     if (CTML_FSI_INIT.eq.0) then
      call CTML_INIT_SOLID(dx_max_level, &
@@ -9835,16 +9827,16 @@ INTEGER_T idir,ielem,inode
     do part_id=1,TOTAL_NPARTS
 
      im_part=im_solid_mapF(part_id)+1
-     if (CTML_FSI_mat(nmat,im_part).eq.1) then !FSI_flag==4,8
+     if (CTML_FSI_mat(im_part).eq.1) then !FSI_flag==4,8
       FSI(part_id)%deforming_part=1
       FSI(part_id)%CTML_flag=1
       num_nodes_list(im_part)=ctml_max_n_fib_nodes
       num_elements_list(im_part)=ctml_max_n_fib_nodes
-     else if (CTML_FSI_mat(nmat,im_part).eq.0) then
+     else if (CTML_FSI_mat(im_part).eq.0) then
       FSI(part_id)%deforming_part=0
       FSI(part_id)%CTML_flag=0
      else
-      print *,"CTML_FSI_mat(nmat,im_part) invalid"
+      print *,"CTML_FSI_mat(im_part) invalid"
       stop
      endif
     enddo ! part_id=1,TOTAL_NPARTS
@@ -9854,7 +9846,7 @@ INTEGER_T idir,ielem,inode
     stop
 #endif
 
-   else if (CTML_FSI_flagF(nmat).eq.0) then
+   else if (CTML_FSI_flagF().eq.0) then
 
     part_id=1
 
@@ -9980,12 +9972,12 @@ INTEGER_T idir,ielem,inode
    endif
 
   else if ((im_critical.ge.0).and. &
-           (im_critical.lt.nmat)) then
+           (im_critical.lt.num_materials)) then
 
    ctml_part_id=0
    do part_id=1,TOTAL_NPARTS
     im_part=im_solid_mapF(part_id)+1
-    if (CTML_FSI_mat(nmat,im_part).eq.1) then !FSI_flag==4,8
+    if (CTML_FSI_mat(im_part).eq.1) then !FSI_flag==4,8
      ctml_part_id=ctml_part_id+1
      if (CTML_partid_map(part_id).eq.ctml_part_id) then
       if (im_part.eq.im_critical+1) then
@@ -10009,7 +10001,7 @@ INTEGER_T idir,ielem,inode
          FSI_output_element_list(4*(ielem-1)+inode)=ielem
         enddo
        enddo
-      else if ((im_part.ge.1).and.(im_part.le.nmat)) then
+      else if ((im_part.ge.1).and.(im_part.le.num_materials)) then
        ! do nothing
       else
        print *,"im_part invalid"
@@ -10019,10 +10011,10 @@ INTEGER_T idir,ielem,inode
       print *,"CTML_partid_map(part_id) invalid"
       stop
      endif
-    else if (CTML_FSI_mat(nmat,im_part).eq.0) then
+    else if (CTML_FSI_mat(im_part).eq.0) then
      ! do nothing
     else
-     print *,"CTML_FSI_mat(nmat,im_part) invalid"
+     print *,"CTML_FSI_mat(im_part) invalid"
      stop
     endif
    enddo ! part_id=1,TOTAL_NPARTS
@@ -15266,7 +15258,7 @@ INTEGER_T :: idir,ielem,im_part
     ctml_part_id=0
     do part_id=1,TOTAL_NPARTS
      im_part=im_solid_mapF(part_id)+1
-     if (CTML_FSI_mat(nmat,im_part).eq.1) then !FSI_flag==4,8
+     if (CTML_FSI_mat(im_part).eq.1) then !FSI_flag==4,8
       ctml_part_id=ctml_part_id+1
       if (CTML_partid_map(part_id).eq.ctml_part_id) then
        if (im_part.eq.-im_critical-1) then
@@ -15294,17 +15286,17 @@ INTEGER_T :: idir,ielem,im_part
        print *,"CTML_partid_map(part_id) invalid"
        stop
       endif
-     else if (CTML_FSI_mat(nmat,im_part).eq.0) then
+     else if (CTML_FSI_mat(im_part).eq.0) then
       ! do nothing
      else
-      print *,"CTML_FSI_mat(nmat,im_part) invalid"
+      print *,"CTML_FSI_mat(im_part) invalid"
       stop
      endif
     enddo ! part_id=1,TOTAL_NPARTS
 
    else if (im_critical.eq.-1) then
 
-    if (CTML_FSI_flagF(nmat).eq.1) then ! FSI_flag==4,8
+    if (CTML_FSI_flagF().eq.1) then ! FSI_flag==4,8
 #ifdef MVAHABFSI
 
      do part_id=1,TOTAL_NPARTS
@@ -15394,10 +15386,10 @@ INTEGER_T :: idir,ielem,im_part
      print *,"define MVAHABFSI"
      stop
 #endif
-    else if (CTML_FSI_flagF(nmat).eq.0) then
+    else if (CTML_FSI_flagF().eq.0) then
      ! do nothing
     else
-     print *,"CTML_FSI_flagF(nmat) invalid"
+     print *,"CTML_FSI_flagF() invalid"
      stop
     endif
 
@@ -15542,7 +15534,7 @@ INTEGER_T :: idir,ielem,im_part
     ctml_part_id=0
     do part_id=1,TOTAL_NPARTS
      im_part=im_solid_mapF(part_id)+1
-     if (CTML_FSI_mat(nmat,im_part).eq.1) then !FSI_flag==4,8
+     if (CTML_FSI_mat(im_part).eq.1) then !FSI_flag==4,8
       ctml_part_id=ctml_part_id+1
       if (CTML_partid_map(part_id).eq.ctml_part_id) then
        if (im_part.eq.im_critical+1) then
@@ -15584,10 +15576,10 @@ INTEGER_T :: idir,ielem,im_part
        print *,"CTML_partid_map(part_id) invalid"
        stop
       endif
-     else if (CTML_FSI_mat(nmat,im_part).eq.0) then
+     else if (CTML_FSI_mat(im_part).eq.0) then
       ! do nothing
      else
-      print *,"CTML_FSI_mat(nmat,im_part) invalid"
+      print *,"CTML_FSI_mat(im_part) invalid"
       stop
      endif
     enddo ! part_id=1,TOTAL_NPARTS

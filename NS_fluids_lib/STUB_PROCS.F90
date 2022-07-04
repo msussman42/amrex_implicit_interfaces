@@ -857,15 +857,15 @@ REAL_T, intent(out) :: problo3D(3)
 REAL_T, intent(out) :: probhi3D(3)
 
 
-  !CTML_FSI_flagF(num_materials) is declared in GLOBALUTIL.F90
- if (CTML_FSI_flagF(num_materials).eq.1) then ! FSI_flag==4 or 8
+  !CTML_FSI_flagF() is declared in GLOBALUTIL.F90
+ if (CTML_FSI_flagF().eq.1) then ! FSI_flag==4 or 8
   xmap3D(1)=1
   xmap3D(2)=2
   xmap3D(3)=0
   xslice3D(3)=zero
   problo3D(3)=-half*dx_slice
   probhi3D(3)=half*dx_slice
- else if (CTML_FSI_flagF(num_materials).eq.0) then
+ else if (CTML_FSI_flagF().eq.0) then
 
    ! 537 is 6 hole injector
   if ((probtype.eq.538).or. &

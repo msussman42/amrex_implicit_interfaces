@@ -175,10 +175,10 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
-      if (is_rigid(nmat,im).eq.1) then
-       print *,"cannot have eddy wall viscosity and (is_rigid(nmat,im).eq.1)"
+      if (is_rigid(im).eq.1) then
+       print *,"cannot have eddy wall viscosity and (is_rigid(im).eq.1)"
        stop
-      else if (is_rigid(nmat,im).eq.0) then
+      else if (is_rigid(im).eq.0) then
        ! do nothing
       else
        print *,"is_rigid invalid DERIVE_3D.F90 1"
@@ -380,9 +380,9 @@ stop
           VFRAC(im_local)=vof(D_DECL(i+i1,j+j1,k+k1),vofcomp)
          enddo
          call get_primary_material_VFRAC(VFRAC,nmat,im_primary,caller_id)
-         if (is_rigid(nmat,im_primary).eq.1) then
+         if (is_rigid(im_primary).eq.1) then
           near_solid=1
-         else if (is_rigid(nmat,im_primary).eq.0) then
+         else if (is_rigid(im_primary).eq.0) then
           ! do nothing
          else
           print *,"is_rigid invalid DERIVE_3D.F90 2"
@@ -940,7 +940,7 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
-      if (is_rigid(nmat,im_parm).eq.1) then
+      if (is_rigid(im_parm).eq.1) then
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
@@ -948,7 +948,7 @@ stop
        enddo
        enddo
        enddo
-      else if (is_rigid(nmat,im_parm).eq.0) then
+      else if (is_rigid(im_parm).eq.0) then
 
        vel_ptr=>vel
        call checkbound_array(fablo,fabhi,vel_ptr,ngrow+1,-1,321)
@@ -1452,11 +1452,11 @@ stop
          do dir_local=1,SDIM
           nrm(dir_local)=zero
          enddo
-         if ((is_rigid(nmat,im_primary_side).eq.1).and. &
-             (is_rigid(nmat,im_primary_center).eq.1)) then
+         if ((is_rigid(im_primary_side).eq.1).and. &
+             (is_rigid(im_primary_center).eq.1)) then
           ! do nothing 
-         else if ((is_rigid(nmat,im_primary_side).eq.1).and. &
-                  (is_rigid(nmat,im_primary_center).eq.0).and. &
+         else if ((is_rigid(im_primary_side).eq.1).and. &
+                  (is_rigid(im_primary_center).eq.0).and. &
                   (im_primary_center.eq.im_parm)) then
           im_solid_crit=im_primary_side
           near_interface=1
@@ -1467,8 +1467,8 @@ stop
           jprobe=jsolid-2*side*jj
           kprobe=ksolid-2*side*kk
           nrm(dir)=-side  ! points from solid to fluid
-         else if ((is_rigid(nmat,im_primary_center).eq.1).and. &
-                  (is_rigid(nmat,im_primary_side).eq.0).and. &
+         else if ((is_rigid(im_primary_center).eq.1).and. &
+                  (is_rigid(im_primary_side).eq.0).and. &
                   (im_primary_side.eq.im_parm)) then
           im_solid_crit=im_primary_center
           near_interface=1
@@ -1479,15 +1479,15 @@ stop
           jprobe=jsolid+2*side*jj
           kprobe=ksolid+2*side*kk
           nrm(dir)=side ! points from solid to fluid
-         else if ((is_rigid(nmat,im_primary_center).eq.0).and. &
-                  (is_rigid(nmat,im_primary_side).eq.0)) then
+         else if ((is_rigid(im_primary_center).eq.0).and. &
+                  (is_rigid(im_primary_side).eq.0)) then
           ! do nothing
-         else if ((is_rigid(nmat,im_primary_side).eq.1).and. &
-                  (is_rigid(nmat,im_primary_center).eq.0).and. &
+         else if ((is_rigid(im_primary_side).eq.1).and. &
+                  (is_rigid(im_primary_center).eq.0).and. &
                   (im_primary_center.ne.im_parm)) then
           ! do nothing
-         else if ((is_rigid(nmat,im_primary_center).eq.1).and. &
-                  (is_rigid(nmat,im_primary_side).eq.0).and. &
+         else if ((is_rigid(im_primary_center).eq.1).and. &
+                  (is_rigid(im_primary_side).eq.0).and. &
                   (im_primary_side.ne.im_parm)) then
           ! do nothing
          else
@@ -1501,10 +1501,10 @@ stop
           enddo
           call get_primary_material_VFRAC(VFRAC,nmat,im_primary_probe, &
                   caller_id)
-          if ((is_rigid(nmat,im_primary_probe).eq.1).or. &
+          if ((is_rigid(im_primary_probe).eq.1).or. &
               (im_primary_probe.ne.im_parm)) then
            near_interface=0
-          else if ((is_rigid(nmat,im_primary_probe).eq.0).and. &
+          else if ((is_rigid(im_primary_probe).eq.0).and. &
                    (im_primary_probe.eq.im_parm)) then
            ! do nothing
           else
@@ -1867,7 +1867,7 @@ stop
          stop
         endif
 
-        if (is_rigid(nmat,im+1).eq.1) then
+        if (is_rigid(im+1).eq.1) then
          dest(D_DECL(i,j,k),3)=traceA
          dest(D_DECL(i,j,k),4)=zero
         else if (Carreau_beta(im+1).eq.zero) then
@@ -2638,11 +2638,11 @@ stop
                     levelpc(D_DECL(i_side_visc,j_side_visc,k_side_visc),im)
                 enddo
                 call get_primary_material(ls_visc,nmat,im_visc)
-                if (is_rigid(nmat,im_visc).eq.1) then
+                if (is_rigid(im_visc).eq.1) then
 
                  partid=0
                  do im=1,im_visc-1
-                  if (is_lag_part(nmat,im).eq.1) then
+                  if (is_lag_part(im).eq.1) then
                    partid=partid+1
                   endif
                  enddo
@@ -2667,14 +2667,14 @@ stop
                   endif
                  enddo ! dir=1..sdim
 
-                else if (is_rigid(nmat,im_visc).eq.0) then
+                else if (is_rigid(im_visc).eq.0) then
                  do dir=1,SDIM
                   vel6point(dir_visc,side_visc,dir)= &
                    half*(vel(D_DECL(icell,jcell,kcell),dir)+ &
                          vel(D_DECL(i_side_visc,j_side_visc,k_side_visc),dir))
                  enddo
                 else
-                 print *,"is_rigid(nmat,im_visc) invalid"
+                 print *,"is_rigid(im_visc) invalid"
                  stop
                 endif
 
@@ -3101,9 +3101,9 @@ stop
 
       im_ice=0
       do im=1,nmat
-       if (is_ice(nmat,im).eq.1) then
+       if (is_ice(im).eq.1) then
         im_ice=im
-       else if (is_ice(nmat,im).eq.0) then
+       else if (is_ice(im).eq.0) then
         ! do nothing
        else
         print *,"is_ice invalid"

@@ -3503,9 +3503,9 @@ stop
          LS_local(im)=oldLS(D_DECL(i-i1,j-j1,k-k1),im)
         enddo
         call get_primary_material(LS_local,nmat,im_primary)
-        if (is_rigid(nmat,im_primary).eq.0) then
+        if (is_rigid(im_primary).eq.0) then
          ! do nothing
-        else if (is_rigid(nmat,im_primary).eq.1) then
+        else if (is_rigid(im_primary).eq.1) then
          rigid_in_stencil=1
         else
          print *,"is_rigid invalid MASS_TRANSFER_3D.F90"
@@ -4198,7 +4198,7 @@ stop
         enddo
         call get_primary_material(lsmat,nmat,im_primary)
 
-        if (is_rigid(nmat,im_primary).eq.0) then
+        if (is_rigid(im_primary).eq.0) then
 
          do im=1,nmat
           vofcomp_recon=(im-1)*ngeom_recon+1
@@ -4227,8 +4227,8 @@ stop
 
             LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
 
-            if ((is_rigid(nmat,im).eq.1).or. &
-                (is_rigid(nmat,im_opp).eq.1)) then
+            if ((is_rigid(im).eq.1).or. &
+                (is_rigid(im_opp).eq.1)) then
              ! do nothing
             else if (LL.ne.zero) then
              if (ireverse.eq.0) then
@@ -4695,9 +4695,9 @@ stop
 
                multi_volume_total=zero
                do u_im=1,nmat
-                if (is_rigid(nmat,u_im).eq.0) then 
+                if (is_rigid(u_im).eq.0) then 
                  multi_volume_total=multi_volume_total+multi_volume(u_im)
-                else if (is_rigid(nmat,u_im).eq.1) then 
+                else if (is_rigid(u_im).eq.1) then 
                  ! do nothing
                 else
                  print *,"is_rigid invalid MASS_TRANSFER_3D.F90"
@@ -4889,13 +4889,13 @@ stop
             ! materials.
            call get_primary_material(unsplit_lsnew,nmat,im_primary_new)
            call get_primary_material(oldLS_point,nmat,im_primary_old)
-           call combine_solid_VOF(newvfrac,nmat,solid_vof_new)
-           call combine_solid_VOF(oldvfrac,nmat,solid_vof_old)
+           call combine_solid_VOF(newvfrac,solid_vof_new)
+           call combine_solid_VOF(oldvfrac,solid_vof_old)
 
            away_from_interface=0
            
-           if ((is_rigid(nmat,im_primary_new).eq.1).or. &
-               (is_rigid(nmat,im_primary_old).eq.1)) then
+           if ((is_rigid(im_primary_new).eq.1).or. &
+               (is_rigid(im_primary_old).eq.1)) then
             away_from_interface=1
            endif
 
@@ -4989,13 +4989,13 @@ stop
              do udir=1,SDIM 
               new_centroid(im_local,udir)=old_centroid(im_local,udir)
              enddo
-             if (is_rigid(nmat,im_local).eq.0) then
+             if (is_rigid(im_local).eq.0) then
               fixed_vfrac_sum=fixed_vfrac_sum+newvfrac(im_local)
               do udir=1,SDIM 
                fixed_centroid_sum(udir)=fixed_centroid_sum(udir)+ &
                  newvfrac(im_local)*new_centroid(im_local,udir)
               enddo
-             else if (is_rigid(nmat,im_local).eq.1) then
+             else if (is_rigid(im_local).eq.1) then
               ! ignore, solids are embedded
              else
               print *,"is_rigid invalid MASS_TRANSFER_3D.F90"
@@ -6350,11 +6350,11 @@ stop
 
             LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
 
-            if ((is_rigid(nmat,im).eq.1).or. &
-                (is_rigid(nmat,im_opp).eq.1)) then
+            if ((is_rigid(im).eq.1).or. &
+                (is_rigid(im_opp).eq.1)) then
              ! do nothing
-            else if ((is_rigid(nmat,im).eq.0).and. &
-                     (is_rigid(nmat,im_opp).eq.0)) then
+            else if ((is_rigid(im).eq.0).and. &
+                     (is_rigid(im_opp).eq.0)) then
 
              if (LL.ne.zero) then
               if (ireverse.eq.0) then
@@ -6489,10 +6489,10 @@ stop
            enddo ! ireverse=0,1
           enddo ! im_opp
          enddo ! im
-        else if (is_rigid(nmat,im_primary).eq.1) then
+        else if (is_rigid(im_primary).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid(nmat,im_primary) invalid"
+         print *,"is_rigid(im_primary) invalid"
          stop
         endif
 
@@ -6675,7 +6675,7 @@ stop
             ls_local(im_local)=LS(D_DECL(i,j,k),im_local)
            enddo
            call get_primary_material(ls_local,nmat,im_local)
-           if (is_rigid(nmat,im_local).eq.0) then
+           if (is_rigid(im_local).eq.0) then
 
             if ((im_dest.ge.1).and.(im_dest.le.nmat)) then
              rtag_local=vel(D_DECL(i,j,k),iten)
@@ -6825,10 +6825,10 @@ stop
              stop
             endif
 
-           else if (is_rigid(nmat,im_local).eq.1) then
+           else if (is_rigid(im_local).eq.1) then
             ! do nothing
            else
-            print *,"is_rigid(nmat,im_local) invalid"
+            print *,"is_rigid(im_local) invalid"
             stop
            endif
           enddo ! k
@@ -8013,7 +8013,7 @@ stop
          enddo
          call get_primary_material(LShere,nmat,im_primary)
 
-         if (is_rigid(nmat,im_primary).eq.0) then
+         if (is_rigid(im_primary).eq.0) then
 
           do im=1,nmat-1
            do im_opp=im+1,nmat
@@ -8165,8 +8165,8 @@ stop
                stop
               endif
 
-              if ((is_rigid(nmat,im).eq.1).or. &
-                  (is_rigid(nmat,im_opp).eq.1)) then
+              if ((is_rigid(im).eq.1).or. &
+                  (is_rigid(im_opp).eq.1)) then
 
                ! do nothing
 
@@ -8202,7 +8202,7 @@ stop
                 ! FOR YANG:
                 ! BOTH LEVELSET FUNCTIONS WITHIN 2 dx of interface and
                 ! at least one of them is positive.
-                ! note: is_rigid(nmat,im_primary).eq.0 so we are not in 
+                ! note: is_rigid(im_primary).eq.0 so we are not in 
                 ! a solid material.
                if ((abs(LShere(im_source)).le.two*dxmaxLS).and. &
                    (abs(LShere(im_dest)).le.two*dxmaxLS)) then
@@ -8985,8 +8985,8 @@ stop
 
                    if (microlayer_size(im_source).gt.zero) then
                     if (im_substrate_source.gt.0) then
-                     if (is_rigid(nmat,im_substrate_source).ne.1) then
-                      print *,"is_rigid(nmat,im_substrate_source).ne.1"
+                     if (is_rigid(im_substrate_source).ne.1) then
+                      print *,"is_rigid(im_substrate_source).ne.1"
                       stop
                      endif
                      do dir=1,SDIM
@@ -9015,8 +9015,8 @@ stop
 
                    if (microlayer_size(im_dest).gt.zero) then
                     if (im_substrate_dest.gt.0) then
-                     if (is_rigid(nmat,im_substrate_dest).ne.1) then
-                      print *,"is_rigid(nmat,im_substrate_dest).ne.1"
+                     if (is_rigid(im_substrate_dest).ne.1) then
+                      print *,"is_rigid(im_substrate_dest).ne.1"
                       stop
                      endif
                      do dir=1,SDIM
@@ -10006,7 +10006,7 @@ stop
            stop
           endif
 
-         else if (is_rigid(nmat,im_primary).eq.1) then
+         else if (is_rigid(im_primary).eq.1) then
 
           ! do nothing
 
@@ -10022,7 +10022,7 @@ stop
           LShere(im)=LSnew(D_DECL(i,j,k),im)
          enddo
          call get_primary_material(LShere,nmat,im_primary)
-         if (is_rigid(nmat,im_primary).eq.0) then
+         if (is_rigid(im_primary).eq.0) then
           do im=1,nmat-1
            do im_opp=im+1,nmat
             if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
@@ -10052,13 +10052,13 @@ stop
                stop
               endif
 
-              if ((is_rigid(nmat,im).eq.1).or. &
-                  (is_rigid(nmat,im_opp).eq.1)) then
+              if ((is_rigid(im).eq.1).or. &
+                  (is_rigid(im_opp).eq.1)) then
 
                ! do nothing
 
-              else if ((is_rigid(nmat,im).eq.0).and. &
-                       (is_rigid(nmat,im_opp).eq.0)) then
+              else if ((is_rigid(im).eq.0).and. &
+                       (is_rigid(im_opp).eq.0)) then
                if (im_primary.eq.im_source) then
                 create_in%LL=LL(ireverse)
                 create_in%local_freezing_model=local_freezing_model
@@ -10083,7 +10083,7 @@ stop
                 stop
                endif
               else
-               print *,"is_rigid(nmat,im or im_opp) invalid"
+               print *,"is_rigid(im or im_opp) invalid"
                stop
               endif
              else if (LL(ireverse).eq.zero) then
@@ -10096,10 +10096,10 @@ stop
            enddo ! im_opp
           enddo ! im
 
-         else if (is_rigid(nmat,im_primary).eq.1) then
+         else if (is_rigid(im_primary).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid(nmat,im_primary) invalid"
+          print *,"is_rigid(im_primary) invalid"
           stop
          endif
 

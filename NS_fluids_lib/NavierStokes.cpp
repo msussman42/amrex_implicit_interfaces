@@ -24754,7 +24754,6 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
 
  const Real* dx = geom.CellSize();
  int nmat=num_materials;
- int nten=num_interfaces;
 
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
 
@@ -25297,7 +25296,6 @@ NavierStokes::makeFaceFrac(
  bool use_tiling=ns_tiling;
 
  int nmat=num_materials;
- int nten=num_interfaces;
 
   // (nmat,sdim,2) area on each face of a cell.
  int nface=nmat*AMREX_SPACEDIM*2; 

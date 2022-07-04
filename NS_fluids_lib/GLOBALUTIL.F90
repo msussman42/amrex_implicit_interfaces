@@ -13620,24 +13620,16 @@ end subroutine print_visual_descriptor
       return
       end subroutine containing_node
 
-      function CTML_FSI_flagF(nmat)
+      function CTML_FSI_flagF()
       use probcommon_module
 
       IMPLICIT NONE
 
       INTEGER_T CTML_FSI_flagF
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T im
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid CTML_FSI_flagF"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
-
       CTML_FSI_flagF=0
-      do im=1,nmat
+      do im=1,num_materials
        if ((FSI_flag(im).eq.4).or. &
            (FSI_flag(im).eq.8)) then
 #ifdef MVAHABFSI
@@ -13658,27 +13650,21 @@ end subroutine print_visual_descriptor
         print *,"FSI_flag invalid in CTML_FSI_flagF"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       return
       end function CTML_FSI_flagF
 
 
-      function CTML_FSI_mat(nmat,im)
+      function CTML_FSI_mat(im)
       use probcommon_module
 
       IMPLICIT NONE
 
       INTEGER_T CTML_FSI_mat
-      INTEGER_T, intent(in) :: nmat,im
+      INTEGER_T, intent(in) :: im
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid CTML_FSI_MAT"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid16"
        stop
       endif
@@ -13707,19 +13693,13 @@ end subroutine print_visual_descriptor
       return
       end function CTML_FSI_mat
 
-      function fort_FSI_flag_valid(nmat,im)
+      function fort_FSI_flag_valid(im)
       use probcommon_module
       IMPLICIT NONE
       INTEGER_T fort_FSI_flag_valid
-      INTEGER_T, intent(in) :: nmat,im
+      INTEGER_T, intent(in) :: im
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid fort_FSI_flag_valid"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid16"
        stop
       endif
@@ -13734,21 +13714,15 @@ end subroutine print_visual_descriptor
       return
       end function fort_FSI_flag_valid
 
-      function is_ice(nmat,im)
+      function is_ice(im)
       use probcommon_module
 
       IMPLICIT NONE
 
       INTEGER_T is_ice
-      INTEGER_T, intent(in) :: nmat,im
+      INTEGER_T, intent(in) :: im
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid is_ice"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid16"
        stop
       endif
@@ -13772,21 +13746,15 @@ end subroutine print_visual_descriptor
       return
       end function is_ice
 
-      function is_FSI_rigid(nmat,im)
+      function is_FSI_rigid(im)
       use probcommon_module
 
       IMPLICIT NONE
 
       INTEGER_T :: is_FSI_rigid
-      INTEGER_T, intent(in) :: nmat,im
+      INTEGER_T, intent(in) :: im
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid is_FSI_rigid"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid16"
        stop
       endif
@@ -13907,12 +13875,12 @@ end subroutine print_visual_descriptor
       endif
 
       is_damped_material=0
-      if ((is_ice(nmat,im).eq.1).or. &
-          (is_FSI_rigid(nmat,im).eq.1).or. &
+      if ((is_ice(im).eq.1).or. &
+          (is_FSI_rigid(im).eq.1).or. &
           (fort_damping_coefficient(im).gt.zero)) then
        is_damped_material=1
-      else if ((is_ice(nmat,im).eq.0).and. &
-               (is_FSI_rigid(nmat,im).eq.0).and. &
+      else if ((is_ice(im).eq.0).and. &
+               (is_FSI_rigid(im).eq.0).and. &
                (fort_damping_coefficient(im).eq.zero)) then
        is_damped_material=0
       else
@@ -13923,24 +13891,18 @@ end subroutine print_visual_descriptor
       return
       end function is_damped_material
 
-      function is_lag_part(nmat,im)
+      function is_lag_part(im)
       use probcommon_module
 
       IMPLICIT NONE
 
       INTEGER_T is_lag_part
-      INTEGER_T, intent(in) :: nmat,im
+      INTEGER_T, intent(in) :: im
 
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid17 in is_lag_part: im=",im
-       print *,"nmat=",nmat
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid is_lag_part"
-       print *,"nmat=",nmat
        print *,"num_materials=",num_materials
-       error stop
+       stop
       endif
 
       if ((FSI_flag(im).eq.1).or. & ! prescribed rigid solid (PROB.F90)
@@ -14489,6 +14451,7 @@ end subroutine print_visual_descriptor
 
       function fort_is_rigid_base(FSI_flag_local,im) &
       bind(c,name='fort_is_rigid_base')
+      use probcommon_module
 
       IMPLICIT NONE
 
@@ -14596,31 +14559,25 @@ end subroutine print_visual_descriptor
       return
       end function fort_built_in_elastic_model
 
-      function is_prescribed(nmat,im)
+      function is_prescribed(im)
       use probcommon_module
 
       IMPLICIT NONE
 
       INTEGER_T is_prescribed
-      INTEGER_T nmat,im
+      INTEGER_T, intent(in) :: im
 
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid18"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid is_prescribed"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
        stop
       endif
 
       if (is_rigid(im).eq.0) then
        is_prescribed=0
       else if (is_rigid(im).eq.1) then
-       if (CTML_FSI_mat(nmat,im).eq.0) then
+       if (CTML_FSI_mat(im).eq.0) then
         is_prescribed=1
-       else if (CTML_FSI_mat(nmat,im).eq.1) then
+       else if (CTML_FSI_mat(im).eq.1) then
         if (FSI_flag(im).eq.4) then ! Goldstein et al
          is_prescribed=0
         else if (FSI_flag(im).eq.8) then ! pres-vel coupling
@@ -14630,7 +14587,7 @@ end subroutine print_visual_descriptor
          stop
         endif
        else 
-        print *,"CTML_FSI_mat(nmat,im) invalid"
+        print *,"CTML_FSI_mat(im) invalid"
         stop
        endif
       else
@@ -14642,24 +14599,17 @@ end subroutine print_visual_descriptor
       end function is_prescribed
 
 
-      function rigid_exists(nmat)
+      function rigid_exists()
       use probcommon_module
 
       IMPLICIT NONE
 
       INTEGER_T rigid_exists
-      INTEGER_T nmat,im
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid rigid_exists"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
+      INTEGER_T im
 
       rigid_exists=0
 
-      do im=1,nmat
+      do im=1,num_materials
        if (is_rigid(im).eq.1) then
         rigid_exists=1
        else if (is_rigid(im).eq.0) then
@@ -14673,72 +14623,58 @@ end subroutine print_visual_descriptor
       return
       end function rigid_exists
 
-      function prescribed_exists(nmat)
+      function prescribed_exists()
       use probcommon_module
 
       IMPLICIT NONE
 
       INTEGER_T prescribed_exists
-      INTEGER_T nmat,im
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid prescribed_exists"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
+      INTEGER_T im
 
       prescribed_exists=0
 
-      do im=1,nmat
-       if (is_prescribed(nmat,im).eq.1) then
+      do im=1,num_materials
+       if (is_prescribed(im).eq.1) then
         if (is_rigid(im).eq.1) then
          prescribed_exists=1
         else
          print *,"is_rigid(im) invalid"
          stop
         endif
-       else if (is_prescribed(nmat,im).eq.0) then
+       else if (is_prescribed(im).eq.0) then
         ! do nothing
        else
         print *,"is_prescribed invalid in prescribed_exists"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       return
       end function prescribed_exists
  
        ! solid_dist>0 in the solid
-      subroutine combine_solid_LS(LS,nmat,solid_dist,im_solid_primary)
+      subroutine combine_solid_LS(LS,solid_dist,im_solid_primary)
       use probcommon_module
 
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      REAL_T solid_dist
-      REAL_T LS(nmat)
+      REAL_T, intent(out) :: solid_dist
+      REAL_T, intent(in) :: LS(num_materials)
       INTEGER_T im
-      INTEGER_T im_solid_primary
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid combine_solid_LS"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
+      INTEGER_T, intent(out) :: im_solid_primary
 
       solid_dist=-99999.0
       im_solid_primary=0
 
-      do im=1,nmat
+      do im=1,num_materials
        if (is_rigid(im).eq.0) then
         ! do nothing
        else if (is_rigid(im).eq.1) then
         if (im_solid_primary.eq.0) then
          solid_dist=LS(im)
          im_solid_primary=im
-        else if ((im_solid_primary.ge.1).and.(im_solid_primary.le.nmat)) then
+        else if ((im_solid_primary.ge.1).and. &
+                 (im_solid_primary.le.num_materials)) then
          if (LS(im).gt.solid_dist) then
           solid_dist=LS(im)
           im_solid_primary=im
@@ -14756,31 +14692,23 @@ end subroutine print_visual_descriptor
         print *,"is_rigid invalid GLOBALUTIL.F90"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       end subroutine combine_solid_LS
 
 
-      subroutine combine_solid_VOF(VOF,nmat,solid_vof)
+      subroutine combine_solid_VOF(VOF,solid_vof)
       use probcommon_module
 
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      REAL_T solid_vof
-      REAL_T VOF(nmat)
+      REAL_T, intent(out) :: solid_vof
+      REAL_T, intent(in) :: VOF(num_materials)
       INTEGER_T im
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid combine_solid_VOF"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
 
       solid_vof=zero
 
-      do im=1,nmat
+      do im=1,num_materials
        if (is_rigid(im).eq.0) then
         ! do nothing
        else if (is_rigid(im).eq.1) then
@@ -14789,42 +14717,34 @@ end subroutine print_visual_descriptor
         print *,"is_rigid invalid GLOBALUTIL.F90"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       end subroutine combine_solid_VOF
 
-      subroutine combine_prescribed_VOF(VOF,nmat,solid_vof, &
+      subroutine combine_prescribed_VOF(VOF,solid_vof, &
                       im_prescribed_primary)
       use probcommon_module
 
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      REAL_T solid_vof
-      REAL_T VOF(nmat)
-      INTEGER_T im_prescribed_primary
+      REAL_T, intent(out) :: solid_vof
+      REAL_T, intent(in) :: VOF(num_materials)
+      INTEGER_T, intent(out) :: im_prescribed_primary
       INTEGER_T im
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid combine_prescribed_VOF"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
 
       solid_vof=zero
       im_prescribed_primary=0
 
-      do im=1,nmat
-       if (is_prescribed(nmat,im).eq.0) then
+      do im=1,num_materials
+       if (is_prescribed(im).eq.0) then
         ! do nothing
-       else if (is_prescribed(nmat,im).eq.1) then
+       else if (is_prescribed(im).eq.1) then
         if (is_rigid(im).eq.1) then
          solid_vof=solid_vof+VOF(im)
          if (im_prescribed_primary.eq.0) then
           im_prescribed_primary=im
          else if ((im_prescribed_primary.ge.1).and. &
-                  (im_prescribed_primary.le.nmat)) then
+                  (im_prescribed_primary.le.num_materials)) then
           if (VOF(im).gt.VOF(im_prescribed_primary)) then
            im_prescribed_primary=im
           endif
@@ -14840,7 +14760,7 @@ end subroutine print_visual_descriptor
         print *,"is_prescribed invalid"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       end subroutine combine_prescribed_VOF
 
@@ -14853,9 +14773,9 @@ end subroutine print_visual_descriptor
 
       rigid_count=0
       do im=1,num_materials
-       if (is_rigid(num_materials,im).eq.1) then
+       if (is_rigid(im).eq.1) then
         rigid_count=rigid_count+1
-       else if (is_rigid(num_materials,im).eq.0) then
+       else if (is_rigid(im).eq.0) then
         ! do nothing
        else
         print *,"is_rigid invalid GLOBALUTIL.F90"
@@ -14895,10 +14815,10 @@ end subroutine print_visual_descriptor
 
       im_solid_primary=0
       do im=1,num_materials
-       if ((is_rigid(num_materials,im).eq.1).and. &
+       if ((is_rigid(im).eq.1).and. &
            (im_solid_primary.eq.0)) then 
         im_solid_primary=im
-       else if ((is_rigid(num_materials,im).eq.0).or. &
+       else if ((is_rigid(im).eq.0).or. &
                 (im_solid_primary.gt.0)) then
         ! do nothing
        else
@@ -14915,15 +14835,15 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      INTEGER_T im
+      INTEGER_T, intent(in) :: im
    
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid19"
        stop
       endif 
-      if (is_rigid(num_materials,im).eq.1) then
+      if (is_rigid(im).eq.1) then
        ! do nothing
-      else if (is_rigid(num_materials,im).eq.0) then
+      else if (is_rigid(im).eq.0) then
        print *,"expecting solid im=",im
        stop
       else
@@ -15410,7 +15330,7 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      if (is_rigid(num_materials,im_substrate).ne.1) then
+      if (is_rigid(im_substrate).ne.1) then
        print *,"is_rigid invalid GLOBALUTIL.F90"
        stop
       endif
@@ -15754,12 +15674,12 @@ end subroutine print_visual_descriptor
 
       nparts=0
       do im=1,nmat
-       if (is_lag_part(nmat,im).eq.1) then
+       if (is_lag_part(im).eq.1) then
         nparts=nparts+1
-       else if (is_lag_part(nmat,im).eq.0) then
+       else if (is_lag_part(im).eq.0) then
         ! do nothing
        else
-        print *,"is_lag_part(nmat,im) invalid dumpstring_headers"
+        print *,"is_lag_part(im) invalid dumpstring_headers"
         stop
        endif
       enddo !im=1..nmat

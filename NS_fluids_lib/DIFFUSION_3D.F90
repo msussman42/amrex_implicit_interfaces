@@ -330,10 +330,10 @@ stop
         partid_crit=0
 
         do im=1,num_materials
-         if (is_lag_part(num_materials,im).eq.1) then
-          if (is_rigid(num_materials,im).eq.1) then
+         if (is_lag_part(im).eq.1) then
+          if (is_rigid(im).eq.1) then
            LStest=lsnew(D_DECL(i,j,k),im)
-           if (is_prescribed(num_materials,im).eq.1) then
+           if (is_prescribed(im).eq.1) then
             if (LStest.ge.zero) then
              if (im_solid.eq.0) then
               im_solid=im
@@ -355,21 +355,21 @@ stop
              print *,"LStest invalid"
              stop
             endif
-           else if (is_prescribed(num_materials,im).eq.0) then
+           else if (is_prescribed(im).eq.0) then
             ! do nothing
            else
-            print *,"is_prescribed(num_materials,im) invalid"
+            print *,"is_prescribed(im) invalid"
             stop
            endif
-          else if (is_rigid(num_materials,im).eq.0) then
+          else if (is_rigid(im).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(num_materials,im) invalid"
+           print *,"is_rigid(im) invalid"
            stop
           endif
           partid=partid+1
-         else if (is_lag_part(num_materials,im).eq.0) then
-          if (is_rigid(num_materials,im).eq.0) then
+         else if (is_lag_part(im).eq.0) then
+          if (is_rigid(im).eq.0) then
            ! do nothing
           else
            print *,"is_rigid invalid DIFFUSION_3D.F90"
@@ -461,9 +461,9 @@ stop
            print *,"rho_base invalid"
            stop
           endif
-          if (is_rigid(num_materials,im).eq.1) then
+          if (is_rigid(im).eq.1) then
            Fsolid=Fsolid+localF
-          else if (is_rigid(num_materials,im).eq.0) then
+          else if (is_rigid(im).eq.0) then
            cell_density_denom=cell_density_denom+localF*rho_base
 
            if ((override_density(im).eq.0).or. & ! rho_t + div (rho u) = 0
@@ -502,7 +502,7 @@ stop
             stop
            endif
           else
-           print *,"is_rigid(num_materials,im) invalid"
+           print *,"is_rigid(im) invalid"
            stop
           endif
          enddo ! im=1..num_materials
