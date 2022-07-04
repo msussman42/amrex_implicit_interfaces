@@ -13063,6 +13063,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // fort_fd_node_normal is declared in: MOF_REDIST_3D.F90
+    // The output from this routine is used for finding the curvature
+    // which is used in ratemasschange.
    fort_fd_node_normal( 
     &level,
     &finest_level,
@@ -13074,8 +13076,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     tilelo,tilehi,
     fablo,fabhi,&bfact,
     xlo,dx,
-    &nmat,
-    &nten,
     &n_normal,
     &ngrow_make_distance);
   } // mfi
@@ -24644,6 +24644,7 @@ NavierStokes::makeStateDistALL(int keep_all_interfaces) {
 // called from: NavierStokes::do_the_advance 
 // (prior to level_phase_change_rate) and
 // called from: NavierStokes::init_FSI_GHOST_MAC_MF
+// fd_mf used by the GNBC algorithm.
 void 
 NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf) {
 
@@ -24693,7 +24694,7 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf) {
       amrex::Error("tid_current invalid");
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-      // in: MOF_REDIST_3D.F90
+      // fort_dt_normal is declared in: MOF_REDIST_3D.F90
      fort_fd_normal( 
       &level,
       &finest_level,
@@ -24704,8 +24705,7 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf) {
       tilelo,tilehi,
       fablo,fabhi,
       &bfact,
-      xlo,dx,
-      &nmat);
+      xlo,dx);
    } // mfi
 } // omp
    ns_reconcile_d_num(114);

@@ -35,7 +35,7 @@ stop
       subroutine update_closest( &
         xsten_accept,xsten_donate,nhalf, &
         dx,xlo,bfact,level,fablo, &
-        mofdata,nmat,nstar, &
+        mofdata,nstar, &
         idon,jdon,kdon, & ! donate index
         i1,j1,k1, &  ! accept index: idon+i1,jdon+j1,kdon+k1
         newLS, &
@@ -50,7 +50,7 @@ stop
 
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: nhalf
-      INTEGER_T, intent(in) :: bfact,nmat,nstar
+      INTEGER_T, intent(in) :: bfact,nstar
       INTEGER_T, intent(in) :: idon,jdon,kdon
       INTEGER_T, intent(in) :: i1,j1,k1
       INTEGER_T, intent(in) :: fablo(SDIM)
@@ -63,12 +63,12 @@ stop
       REAL_T :: xaccept_point(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: mofdata(nmat*ngeom_recon)
-      REAL_T, intent(inout) :: newLS(nmat*(1+SDIM))
-      INTEGER_T, intent(inout) :: touch_hold(nmat)
-      REAL_T, intent(inout) :: minLS(nmat)
-      REAL_T, intent(inout) :: maxLS(nmat)
-      INTEGER_T, intent(in) :: donateflag(nmat+1+nstar)
+      REAL_T, intent(in) :: mofdata(num_interfaces*ngeom_recon)
+      REAL_T, intent(inout) :: newLS(num_interfaces*(1+SDIM))
+      INTEGER_T, intent(inout) :: touch_hold(num_interfaces)
+      REAL_T, intent(inout) :: minLS(num_interfaces)
+      REAL_T, intent(inout) :: maxLS(num_interfaces)
+      INTEGER_T, intent(in) :: donateflag(num_interfaces+1+nstar)
       INTEGER_T :: center_stencil
       INTEGER_T :: im0_center
       INTEGER_T :: imslope
@@ -123,10 +123,11 @@ stop
         ! get the slope of the fluid material whose interface is closest to
         ! the center of the cell.  Slope comes from mofdata and points
         ! towards material "imslope"
+        ! get_primary_slope is declared in: MOF.F90
        call get_primary_slope( &
         bfact,dx,xsten_donate,nhalf, &
         mofdata, &
-        LSslope,imslope,nmat,SDIM) 
+        LSslope,imslope,num_interfaces,SDIM) 
       else if ((i1.ne.0).or.(j1.ne.0).or.(k1.ne.0)) then
        ! do nothing
       else
@@ -143,7 +144,7 @@ stop
        istar_array(dir)=0
       enddo
       call put_istar(istar,istar_array) 
-      im0_center=donateflag(nmat+1+istar)
+      im0_center=donateflag(num_interfaces+1+istar)
 
       if (SDIM.eq.2) then
        klosten=0
@@ -173,12 +174,13 @@ stop
         istar_array(2)=j2
         istar_array(3)=k2
         call put_istar(istar,istar_array) 
-        donateIND=donateflag(nmat+1+istar)
+        donateIND=donateflag(num_interfaces+1+istar)
 
         if (donateIND.eq.0) then
          ! do nothing (corner is on FAB boundary or corner is
          ! occupied by flotsam that should be ignored)
-        else if ((donateIND.ge.1).and.(donateIND.le.nmat)) then
+        else if ((donateIND.ge.1).and. &
+                 (donateIND.le.num_interfaces)) then
 
          ! this routine will not update solid components.
          ! LSslope only used if xaccept=xdonate=xcell
@@ -190,9 +192,10 @@ stop
           n_im=n_im+1
           im_test(n_im)=im0_center
          endif
+          ! compare_distance is declared in: MOF.F90
          call compare_distance( &
           bfact,dx,xsten_donate,nhalf, &
-          nmat, &
+          num_interfaces, &
           xaccept_point, &
           xdonate_vert, &
           newLS, &
@@ -220,7 +223,8 @@ stop
       enddo
       enddo ! i2,j2,k2
 
-       ! only uses donateflag(1..nmat+1)
+       ! only uses donateflag(1..num_interfaces+1)
+       ! multi_get_distance is declared in: MOF.F90
       call multi_get_distance( &
         bfact,dx,xsten_donate,nhalf,xaccept_point, &
         mofdata, &
@@ -228,7 +232,7 @@ stop
         touch_hold, &
         minLS, &
         maxLS, &
-        nmat,SDIM, &
+        num_interfaces,SDIM, &
         center_stencil, &
         donateflag)
 
@@ -243,6 +247,7 @@ stop
        ! prior to calling this routine, copy LS_new normal information
        ! to LS_NRM_FD.
        ! called from: NavierStokes::build_NRM_FD_MF (NavierStokes.cpp)
+       ! The output from this routine is used by the GNBC algorithm
       subroutine fort_fd_normal( &
        level, &
        finest_level, &
@@ -253,8 +258,7 @@ stop
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
-       xlo,dx, &
-       nmat) &
+       xlo,dx) &
       bind(c,name='fort_fd_normal')
 
       use global_utility_module
@@ -264,14 +268,15 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: DIMDEC(LS_new)
       INTEGER_T, intent(in) :: DIMDEC(LS_NRM_FD)
 
-      REAL_T, intent(in), target :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
+      REAL_T, intent(in), target :: &
+           LS_new(DIMV(LS_new),num_materials*(1+SDIM))
       REAL_T, pointer :: LS_new_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(out), target :: LS_NRM_FD(DIMV(LS_NRM_FD),nmat*SDIM)
+      REAL_T, intent(out), target :: &
+           LS_NRM_FD(DIMV(LS_NRM_FD),num_materials*SDIM)
       REAL_T, pointer :: LS_NRM_FD_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -284,16 +289,16 @@ stop
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T dir
       INTEGER_T im
-      REAL_T ls_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
-      REAL_T lsnormal(nmat,SDIM)
-      INTEGER_T lsnormal_valid(nmat)
-      REAL_T ls_intercept(nmat)
+      REAL_T ls_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      REAL_T lsnormal(num_materials,SDIM)
+      INTEGER_T lsnormal_valid(num_materials)
+      REAL_T ls_intercept(num_materials)
       REAL_T dxmaxLS
       INTEGER_T k1lo,k1hi
       INTEGER_T i,j,k
       INTEGER_T i1,j1,k1
       INTEGER_T dcomp
-      REAL_T local_LS(nmat)
+      REAL_T local_LS(num_materials)
       INTEGER_T im_primary,im_secondary,triple_point_flag
 
       nhalf=3 
@@ -325,12 +330,6 @@ stop
               ngrow_make_distance+1,-1,2871)
       call checkbound_array(fablo,fabhi,LS_NRM_FD_ptr, &
               ngrow_make_distance+1,-1,312)
-      if (nmat.eq.num_materials) then
-       ! do nothing
-      else
-       print *,"nmat invalid"
-       stop
-      endif
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
       else
@@ -384,7 +383,7 @@ stop
        do i1=-1,1
        do j1=-1,1
        do k1=k1lo,k1hi
-       do im=1,nmat
+       do im=1,num_materials
         ls_stencil(D_DECL(i1,j1,k1),im)= &
                 LS_new(D_DECL(i+i1,j+j1,k+k1),im)
        enddo
@@ -392,13 +391,14 @@ stop
        enddo
        enddo
 
-       do im=1,nmat
+       do im=1,num_materials
         local_LS(im)=ls_stencil(D_DECL(0,0,0),im)
        enddo
-       call get_primary_material(local_LS,nmat,im_primary)
-       call get_secondary_material(local_LS,nmat,im_primary,im_secondary)
+       call get_primary_material(local_LS,num_materials,im_primary)
+       call get_secondary_material(local_LS,num_materials,im_primary, &
+               im_secondary)
        triple_point_flag=0
-       do im=1,nmat
+       do im=1,num_materials
         if ((im.ne.im_primary).and.(im.ne.im_secondary)) then
          if (abs(local_LS(im)).le.dxmaxLS) then
           triple_point_flag=1
@@ -408,29 +408,29 @@ stop
           print *,"local_LS bust"
           stop
          endif
-        else if ((im.ge.1).and.(im.le.nmat)) then
+        else if ((im.ge.1).and.(im.le.num_materials)) then
          ! do nothing
         else
          print *,"im bust"
          stop
         endif
-       enddo ! im=1..nmat
+       enddo ! im=1..num_materials
       
        if (triple_point_flag.eq.0) then 
-        do im=1,nmat
-         if (is_rigid(nmat,im).eq.0) then
+        do im=1,num_materials
+         if (is_rigid(num_materials,im).eq.0) then
           if (abs(local_LS(im)).le.two*dxmaxLS) then
            if ((im.eq.im_primary).or.(im.eq.im_secondary)) then
             call find_cut_geom_slope_CLSVOF( &
-             ls_stencil, & ! (-1,1)^3,nmat
-             lsnormal, &  ! (nmat,sdim)
-             lsnormal_valid, &  ! nmat
-             ls_intercept, & ! nmat
+             ls_stencil, & ! (-1,1)^3,num_materials
+             lsnormal, &  ! (num_materials,sdim)
+             lsnormal_valid, &  ! num_materials
+             ls_intercept, & ! num_materials
              bfact,dx, &
              xsten,nhalf, &
              im, &
              dxmaxLS, &
-             nmat,SDIM)
+             num_materials,SDIM)
 
             if (lsnormal_valid(im).eq.1) then
              do dir=1,SDIM
@@ -443,7 +443,7 @@ stop
              print *,"lsnormal_valid invalid"
              stop
             endif
-           else if ((im.ge.1).and.(im.le.nmat)) then
+           else if ((im.ge.1).and.(im.le.num_materials)) then
             ! do nothing
            else
             print *,"im invalid 110"
@@ -456,13 +456,13 @@ stop
            print *,"local_LS invalid"
            stop
           endif
-         else if (is_rigid(nmat,im).eq.1) then
+         else if (is_rigid(num_materials,im).eq.1) then
           ! do nothing
          else
           print *,"is_rigid invalid MOF_REDIST_3D.F90"
           stop
          endif
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
        else if (triple_point_flag.eq.1) then
         ! do nothing
        else
@@ -488,8 +488,6 @@ stop
        fablo,fabhi, &
        bfact, &
        xlo,dx, &
-       nmat, &
-       nten, &
        n_normal, &
        ngrow_make_distance_in) &
       bind(c,name='fort_fd_node_normal')
@@ -501,14 +499,14 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: n_normal
       INTEGER_T, intent(in) :: ngrow_make_distance_in
       INTEGER_T, intent(in) :: DIMDEC(LS_new)
       INTEGER_T, intent(in) :: DIMDEC(FD_NRM_ND_fab)
-      REAL_T, intent(in), target :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
-      REAL_T, intent(out), target :: FD_NRM_ND_fab(DIMV(FD_NRM_ND_fab),n_normal)
+      REAL_T, intent(in), target :: &
+              LS_new(DIMV(LS_new),num_materials*(1+SDIM))
+      REAL_T, intent(out), target :: &
+              FD_NRM_ND_fab(DIMV(FD_NRM_ND_fab),n_normal)
       REAL_T, pointer :: FD_NRM_ND_fab_ptr(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -517,7 +515,6 @@ stop
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
 
       REAL_T xsten_nd(-3:3,SDIM)
-      INTEGER_T nten_test
       INTEGER_T n_normal_test
       INTEGER_T nhalf
       INTEGER_T k1hi
@@ -549,11 +546,6 @@ stop
        print *,"level invalid in fort_fd_node_normal"
        stop
       endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid fd_node_normal nten nten_test ",nten,nten_test
-       stop
-      endif
 
       if (ngrow_make_distance.ne.3) then
        print *,"ngrow_make_distance.ne.3"
@@ -567,7 +559,7 @@ stop
        print *,"ngrow_distance.ne.4"
        stop
       endif
-      n_normal_test=(SDIM+1)*(nten+nmat)
+      n_normal_test=(SDIM+1)*(num_interfaces+num_materials)
       if (n_normal_test.ne.n_normal) then
        print *,"n_normal invalid fd_node_normal n_normal ",n_normal
        stop
@@ -577,12 +569,6 @@ stop
       call checkbound_array(fablo,fabhi,FD_NRM_ND_fab_ptr, &
               ngrow_distance,-1,2874)
 
-      if (nmat.eq.num_materials) then
-       ! do nothing
-      else
-       print *,"nmat invalid"
-       stop
-      endif
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
       else
@@ -626,7 +612,7 @@ stop
 
        call gridstenND_level(xsten_nd,i,j,k,level,nhalf)
 
-       do im=1,nmat+nten
+       do im=1,num_materials+num_interfaces
         do dir=1,SDIM
          local_normal(dir)=zero
         enddo
@@ -636,11 +622,12 @@ stop
          do i1=0,1
          do j1=0,1
          do k1=0,k1hi
-          if ((im.ge.1).and.(im.le.nmat)) then
+          if ((im.ge.1).and.(im.le.num_materials)) then
            local_LS=LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im) 
-          else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
-           iten=im-nmat
-           call get_inverse_iten(im1,im2,iten,nmat)
+          else if ((im.ge.num_materials+1).and. &
+                   (im.le.num_materials+num_interfaces)) then
+           iten=im-num_materials
+           call get_inverse_iten(im1,im2,iten,num_materials)
            local_LS=half*(LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im1)- &
                 LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im2))
           else
@@ -709,7 +696,7 @@ stop
          FD_NRM_ND_fab(D_DECL(i,j,k),ibase+dir)=local_normal(dir)
         enddo 
         FD_NRM_ND_fab(D_DECL(i,j,k),ibase+SDIM+1)=local_mag
-       enddo ! im=1..nmat+nten
+       enddo ! im=1..num_materials+num_interfaces
 
       enddo
       enddo
@@ -2983,7 +2970,7 @@ stop
          call update_closest( &
           xsten_accept,xsten_donate,nhalf, &
           dx,xlo,bfact,level,fablo, &
-          mofdata,nmat,nstar, &
+          mofdata,nstar, &
           i,j,k, &  ! donate index
           i1,j1,k1, & ! accept index: i+i1,j+j1,k+k1
           newfab_hold, &
