@@ -48,8 +48,6 @@ namespace amrex{
        const int* fablo,const int* fabhi,
        int* bfact,
        const Real* xlo,const Real* dx,
-       int* nmat,
-       int* nten,
        int* n_normal,
        int* ngrow_make_distance);
 
@@ -85,7 +83,6 @@ namespace amrex{
        const Real* xlo,const Real* dx,
        Real* time,
        int* ngrowLS,
-       int* nmat,int* nten,
        int* nstar,
        int* nface_dst);
 
@@ -101,8 +98,7 @@ namespace amrex{
        const int* fablo,const int* fabhi,
        int* bfact,
        const Real* xlo,const Real* dx,
-       Real* time,
-       int* nmat);
+       Real* time);
 
      void fort_steninit(
        int* level,int* finest_level,
@@ -114,14 +110,14 @@ namespace amrex{
        int* bfact,
        const int* rz_flag,
        const Real* xlo,const Real* dx,
-       Real* time,int* ngrowLS,
-       int* nmat,int* nstar);
+       Real* time,
+       int* ngrowLS,
+       int* nstar);
 
 
      void fort_faceinit(
        int* tid,
        int* tessellate,
-       int* nten,
        int* level,
        int* finest_level,
        Real* facefab,AMREX_ARLIM_P(facefablo),AMREX_ARLIM_P(facefabhi),
@@ -134,7 +130,6 @@ namespace amrex{
        const Real* xlo,const Real* dx,
        Real* time,
        int* ngrow,
-       int* nmat,
        int* nface);
 
      void fort_faceinittest(
@@ -153,7 +148,6 @@ namespace amrex{
        const Real* xlo,const Real* dx,
        Real* time,
        int* ngrow,
-       int* nmat,
        int* nface);
 
      void fort_faceprocess(
@@ -173,7 +167,7 @@ namespace amrex{
        const int* rz_flag,
        const Real* xlo,const Real* dx,
        Real* time,
-       int* nmat,int* nface_src,int* nface_dst);
+       int* nface_src,int* nface_dst);
 
   };
 

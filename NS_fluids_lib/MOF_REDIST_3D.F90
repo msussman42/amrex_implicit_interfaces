@@ -42,7 +42,7 @@ stop
         touch_hold, &
         minLS, &
         maxLS, &
-        donateflag, &
+        donateflag, & !1..num_materials+1+nstar
         time)
       use global_utility_module
       use MOF_routines_module
@@ -63,12 +63,12 @@ stop
       REAL_T :: xaccept_point(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: mofdata(num_interfaces*ngeom_recon)
-      REAL_T, intent(inout) :: newLS(num_interfaces*(1+SDIM))
-      INTEGER_T, intent(inout) :: touch_hold(num_interfaces)
-      REAL_T, intent(inout) :: minLS(num_interfaces)
-      REAL_T, intent(inout) :: maxLS(num_interfaces)
-      INTEGER_T, intent(in) :: donateflag(num_interfaces+1+nstar)
+      REAL_T, intent(in) :: mofdata(num_materials*ngeom_recon)
+      REAL_T, intent(inout) :: newLS(num_materials*(1+SDIM))
+      INTEGER_T, intent(inout) :: touch_hold(num_materials)
+      REAL_T, intent(inout) :: minLS(num_materials)
+      REAL_T, intent(inout) :: maxLS(num_materials)
+      INTEGER_T, intent(in) :: donateflag(num_materials+1+nstar)
       INTEGER_T :: center_stencil
       INTEGER_T :: im0_center
       INTEGER_T :: imslope
@@ -127,7 +127,7 @@ stop
        call get_primary_slope( &
         bfact,dx,xsten_donate,nhalf, &
         mofdata, &
-        LSslope,imslope,num_interfaces,SDIM) 
+        LSslope,imslope,num_materials,SDIM) 
       else if ((i1.ne.0).or.(j1.ne.0).or.(k1.ne.0)) then
        ! do nothing
       else
@@ -144,7 +144,7 @@ stop
        istar_array(dir)=0
       enddo
       call put_istar(istar,istar_array) 
-      im0_center=donateflag(num_interfaces+1+istar)
+      im0_center=donateflag(num_materials+1+istar)
 
       if (SDIM.eq.2) then
        klosten=0
@@ -174,13 +174,13 @@ stop
         istar_array(2)=j2
         istar_array(3)=k2
         call put_istar(istar,istar_array) 
-        donateIND=donateflag(num_interfaces+1+istar)
+        donateIND=donateflag(num_materials+1+istar)
 
         if (donateIND.eq.0) then
          ! do nothing (corner is on FAB boundary or corner is
          ! occupied by flotsam that should be ignored)
         else if ((donateIND.ge.1).and. &
-                 (donateIND.le.num_interfaces)) then
+                 (donateIND.le.num_materials)) then
 
          ! this routine will not update solid components.
          ! LSslope only used if xaccept=xdonate=xcell
@@ -195,7 +195,7 @@ stop
           ! compare_distance is declared in: MOF.F90
          call compare_distance( &
           bfact,dx,xsten_donate,nhalf, &
-          num_interfaces, &
+          num_materials, &
           xaccept_point, &
           xdonate_vert, &
           newLS, &
@@ -223,7 +223,7 @@ stop
       enddo
       enddo ! i2,j2,k2
 
-       ! only uses donateflag(1..num_interfaces+1)
+       ! only uses donateflag(1..num_materials+1)
        ! multi_get_distance is declared in: MOF.F90
       call multi_get_distance( &
         bfact,dx,xsten_donate,nhalf,xaccept_point, &
@@ -232,7 +232,7 @@ stop
         touch_hold, &
         minLS, &
         maxLS, &
-        num_interfaces,SDIM, &
+        num_materials,SDIM, &
         center_stencil, &
         donateflag)
 
@@ -801,7 +801,7 @@ stop
        level, &
        finest_level, &
        height_function_flag, &  ! 1=> use height function 0 => use FD
-       F_new, &  !F_new(i,j,k,im)  im=1..nmat*ngeom_recon
+       F_new, &  !F_new(i,j,k,im)  im=1..num_materials*ngeom_recon
        DIMS(F_new), &
        LS_new, &
        DIMS(LS_new), &
@@ -813,8 +813,6 @@ stop
        fablo,fabhi, &
        bfact, &
        xlo,dx, &
-       nmat, &
-       nten, &
        n_normal, &
        ngrow_make_distance_in) &
       bind(c,name='fort_node_to_cell')
@@ -829,30 +827,31 @@ stop
       INTEGER_T, intent(in) :: tid_current
       INTEGER_T, intent(in) :: level,finest_level
       INTEGER_T, intent(in) :: height_function_flag
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: n_normal
       INTEGER_T, intent(in) :: ngrow_make_distance_in
       INTEGER_T, intent(in) :: DIMDEC(LS_new)
       INTEGER_T, intent(in) :: DIMDEC(F_new)
       INTEGER_T, intent(in) :: DIMDEC(FD_NRM_ND_fab)
       INTEGER_T, intent(in) :: DIMDEC(CURV_CELL)
-      REAL_T, intent(in), target :: F_new(DIMV(F_new),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: &
+        F_new(DIMV(F_new),num_materials*ngeom_recon)
       REAL_T, pointer :: F_new_ptr(D_DECL(:,:,:),:)
 
       REAL_T, allocatable, target :: F_tess(D_DECL(:,:,:),:)
       REAL_T, pointer :: F_tess_ptr(D_DECL(:,:,:),:)
       INTEGER_T DIMDEC(F_tess)
 
-      REAL_T, intent(in), target :: LS_new(DIMV(LS_new),nmat*(1+SDIM))
+      REAL_T, intent(in), target :: &
+         LS_new(DIMV(LS_new),num_materials*(1+SDIM))
       REAL_T, pointer :: LS_new_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: &
               FD_NRM_ND_fab(DIMV(FD_NRM_ND_fab),n_normal)
       REAL_T, pointer :: FD_NRM_ND_fab_ptr(D_DECL(:,:,:),:)
-       ! first nmat+nten components are curvature
-       ! second nmat+nten components are status (0=bad 1=good)
+       ! first num_materials+num_interfaces components are curvature
+       ! second num_materials+num_interfaces components are 
+       !   status (0=bad 1=good)
       REAL_T, intent(out), target ::  &
-              CURV_CELL(DIMV(CURV_CELL),2*(nmat+nten))
+              CURV_CELL(DIMV(CURV_CELL),2*(num_materials+num_interfaces))
       REAL_T, pointer :: CURV_CELL_ptr(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -869,7 +868,6 @@ stop
       REAL_T x_col_avg(SDIM)
 
       INTEGER_T nhalf_grow
-      INTEGER_T nten_test
       INTEGER_T n_normal_test
       INTEGER_T nhalf
       INTEGER_T k1hi
@@ -895,7 +893,7 @@ stop
       REAL_T total_curv
       INTEGER_T local_status
       INTEGER_T crossing_status
-      REAL_T local_LS(nmat)
+      REAL_T local_LS(num_materials)
       REAL_T, dimension(-ngrow_distance:ngrow_distance, &
                 -ngrow_distance:ngrow_distance, &
                 -ngrow_distance:ngrow_distance) :: vofsten
@@ -906,13 +904,13 @@ stop
       REAL_T curv_LS
       REAL_T curv_VOF
       REAL_T curv_choice
-      REAL_T mofdata(nmat*ngeom_recon)
+      REAL_T mofdata(num_materials*ngeom_recon)
       INTEGER_T tessellate
       INTEGER_T caller_id
       INTEGER_T nmax
       INTEGER_T LSstenlo(3),LSstenhi(3)
       INTEGER_T HTstenlo(3),HTstenhi(3)
-      REAL_T vof_local(nmat)
+      REAL_T vof_local(num_materials)
       REAL_T slopesum(SDIM,-1:1)
       REAL_T localsum
       INTEGER_T sign_change
@@ -978,12 +976,7 @@ stop
        stop
       endif
 
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid node_to_cell nten nten_test ",nten,nten_test
-       stop
-      endif
-      n_normal_test=(SDIM+1)*(nten+nmat)
+      n_normal_test=(SDIM+1)*(num_interfaces+num_materials)
       if (n_normal_test.ne.n_normal) then
        print *,"n_normal invalid node_to_cell n_normal ",n_normal
        stop
@@ -999,12 +992,6 @@ stop
       call checkbound_array(fablo,fabhi,CURV_CELL_ptr, &
               ngrow_make_distance,-1,2877)
 
-      if (nmat.eq.num_materials) then
-       ! do nothing
-      else
-       print *,"nmat invalid"
-       stop
-      endif
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
       else
@@ -1054,7 +1041,7 @@ stop
       call box_to_dim( &
         DIMS(F_tess), &
         growlo,growhi)
-      allocate(F_tess(DIMV(F_tess),nmat*ngeom_recon))
+      allocate(F_tess(DIMV(F_tess),num_materials*ngeom_recon))
       
       F_tess_ptr=>F_tess
       call checkbound_array(tilelo,tilehi,F_tess_ptr,ngrow_distance,-1,2875)
@@ -1064,7 +1051,7 @@ stop
       do k=growlo(3),growhi(3)
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
-       do im=1,nmat*ngeom_recon
+       do im=1,num_materials*ngeom_recon
         mofdata(im)=F_new(D_DECL(i,j,k),im)
        enddo
 
@@ -1087,11 +1074,11 @@ stop
          geom_xtetlist(1,1,1,tid_current+1), &
          nmax, &
          nmax, &
-         nmat, &
+         num_materials, &
          SDIM, &
          caller_id)
 
-       do im=1,nmat*ngeom_recon
+       do im=1,num_materials*ngeom_recon
         F_tess(D_DECL(i,j,k),im)=mofdata(im)
        enddo
 
@@ -1105,9 +1092,10 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
-       ! first nmat+nten components are curvature
-       ! second nmat+nten components are status (0=bad 1=good)
-       do im=1,2*(nmat+nten)
+       ! first num_materials+num_interfaces components are curvature
+       ! second num_materials+num_interfaces components are 
+       !   status (0=bad 1=good)
+       do im=1,2*(num_materials+num_interfaces)
         CURV_CELL(D_DECL(i,j,k),im)=zero
        enddo
       enddo
@@ -1120,8 +1108,9 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
-       ! first nmat+nten components are curvature
-       ! second nmat+nten components are status (0=bad 1=good)
+       ! first num_materials+num_interfaces components are curvature
+       ! second num_materials+num_interfaces components are 
+       !   status (0=bad 1=good)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
        call gridsten_level(xsten_grow,i,j,k,level,nhalf_grow)
@@ -1130,31 +1119,32 @@ stop
        enddo
 
         ! fort_ratemasschange will not consider cells in which
-        ! (is_rigid(nmat,im_primary).eq.0) 
+        ! (is_rigid(num_materials,im_primary).eq.0) 
         !
-       do im=1,nmat+nten
+       do im=1,num_materials+num_interfaces
 
-        do im_local=1,nmat
+        do im_local=1,num_materials
          local_LS(im_local)=LS_new(D_DECL(i,j,k),im_local)
         enddo
-        call get_primary_material(local_LS,nmat,im_primary)
-        call get_secondary_material(local_LS,nmat,im_primary,im_secondary)
+        call get_primary_material(local_LS,num_materials,im_primary)
+        call get_secondary_material(local_LS,num_materials,im_primary, &
+          im_secondary)
 
         local_status=1
 
-        if (is_rigid(nmat,im_primary).eq.1) then
+        if (is_rigid(num_materials,im_primary).eq.1) then
 
          local_status=0
 
-        else if (is_rigid(nmat,im_primary).eq.0) then
+        else if (is_rigid(num_materials,im_primary).eq.0) then
 
-         if ((im.ge.1).and.(im.le.nmat)) then
+         if ((im.ge.1).and.(im.le.num_materials)) then
 
-          if (is_rigid(nmat,im).eq.1) then
+          if (is_rigid(num_materials,im).eq.1) then
 
            local_status=0
 
-          else if (is_rigid(nmat,im).eq.0) then
+          else if (is_rigid(num_materials,im).eq.0) then
 
            if ((im.ne.im_primary).and. &
                (im.ne.im_secondary)) then
@@ -1162,20 +1152,21 @@ stop
            endif
 
           else
-           print *,"is_rigid(nmat,im) invalid"
+           print *,"is_rigid(num_materials,im) invalid"
            stop
           endif
 
-         else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
+         else if ((im.ge.num_materials+1).and. &
+                  (im.le.num_materials+num_interfaces)) then
 
-          iten=im-nmat
-          call get_inverse_iten(im1,im2,iten,nmat)
-          if (is_rigid(nmat,im1).eq.1) then
+          iten=im-num_materials
+          call get_inverse_iten(im1,im2,iten,num_materials)
+          if (is_rigid(num_materials,im1).eq.1) then
            local_status=0
-          else if (is_rigid(nmat,im1).eq.0) then
-           if (is_rigid(nmat,im2).eq.1) then
+          else if (is_rigid(num_materials,im1).eq.0) then
+           if (is_rigid(num_materials,im2).eq.1) then
             local_status=0
-           else if (is_rigid(nmat,im2).eq.0) then
+           else if (is_rigid(num_materials,im2).eq.0) then
            
             if ((im1.ne.im_primary).and. &
                 (im1.ne.im_secondary)) then
@@ -1187,12 +1178,12 @@ stop
             endif
 
            else
-            print *,"is_rigid(nmat,im2) invalid"
+            print *,"is_rigid(num_materials,im2) invalid"
             stop
            endif
 
           else
-           print *,"is_rigid(nmat,im1) invalid"
+           print *,"is_rigid(num_materials,im1) invalid"
            stop
           endif
 
@@ -1322,12 +1313,12 @@ stop
           curv_LS=total_curv
           curv_VOF=total_curv
 
-           ! for 1<=im<=nmat, use F_m,  L_m=F_m-1/2, 
+           ! for 1<=im<=num_materials, use F_m,  L_m=F_m-1/2, 
            !   L_m should change sign in the "cross" stencil.
            !   L_m should be primary or secondary in the center,
            !   and center should not be dominated by an "is_rigid" material.
-           ! for nmat+1<=im<=nmat+nten:
-           !  iten=im-nmat
+           ! for num_materials+1<=im<=num_materials+num_interfaces:
+           !  iten=im-num_materials
            !  iten => m1,m2
            !  use 
            !(F_m1-F_m2+1)/2,L_m1=(1/2)((F_m1-1/2)-(F_m2-1/2))=(F_m1-F_m2)/2
@@ -1350,7 +1341,7 @@ stop
           do i1=LSstenlo(1),LSstenhi(1)
           do j1=LSstenlo(2),LSstenhi(2)
           do k1=LSstenlo(3),LSstenhi(3)
-           do im_local=1,nmat
+           do im_local=1,num_materials
             vofcomp=(im_local-1)*ngeom_recon+1
              ! we do not look at the tessellating volume fractions since
              ! we need the curvature near embedded walls.
@@ -1358,12 +1349,13 @@ stop
               F_new_ptr, &
               vof_local(im_local))
            enddo
-           if ((im.ge.1).and.(im.le.nmat)) then
+           if ((im.ge.1).and.(im.le.num_materials)) then
             vofsten(i1,j1,k1)=vof_local(im)
             lssten(i1,j1,k1)=vof_local(im)-half
-           else if ((im.ge.nmat+1).and.(im.le.nmat+nten)) then
-            iten=im-nmat
-            call get_inverse_iten(im1,im2,iten,nmat)
+           else if ((im.ge.num_materials+1).and. &
+                    (im.le.num_materials+num_interfaces)) then
+            iten=im-num_materials
+            call get_inverse_iten(im1,im2,iten,num_materials)
             vofsten(i1,j1,k1)= &
                half*(vof_local(im1)-vof_local(im2)+one) 
             lssten(i1,j1,k1)= &
@@ -1613,7 +1605,7 @@ stop
                 col_ht_VOF, &
                 normal_dir, &
                 n1d, & !n1d==1.0d0=>im on top,n1d==-1.0d0 => im on bot
-                nmat, &
+                num_materials, &
                 SDIM)
 
                if (crossing_status.eq.0) then
@@ -1698,7 +1690,7 @@ stop
          endif
 
         else
-         print *,"is_rigid(nmat,im_primary) invalid"
+         print *,"is_rigid(num_materials,im_primary) invalid"
          stop
         endif
  
@@ -1712,9 +1704,9 @@ stop
         endif
  
         CURV_CELL(D_DECL(i,j,k),im)=curv_choice
-        CURV_CELL(D_DECL(i,j,k),nmat+nten+im)=local_status
+        CURV_CELL(D_DECL(i,j,k),num_materials+num_interfaces+im)=local_status
 
-       enddo ! im=1..nmat+nten
+       enddo ! im=1..num_materials+num_interfaces
 
       enddo
       enddo
@@ -1726,7 +1718,7 @@ stop
       end subroutine fort_node_to_cell
 
         ! vofrecon=vof,ref centroid,order,slope,intercept
-        ! newfab has nmat*(sdim+1) components
+        ! newfab has num_materials*(sdim+1) components
         !
       subroutine fort_levelstrip( &
          keep_all_interfaces, &
@@ -1757,7 +1749,6 @@ stop
          xlo,dx, &
          time, &
          ngrow_distance_in, &
-         nmat,nten, &
          nstar, &
          nface_dst) &
       bind(c,name='fort_levelstrip')
@@ -1773,15 +1764,13 @@ stop
       INTEGER_T, intent(in) :: keep_all_interfaces 
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nstar
       INTEGER_T, intent(in) :: nface_dst
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ngrow_distance_in
-      REAL_T, intent(inout) :: minLS(nmat)
-      REAL_T, intent(inout) :: maxLS(nmat)
+      REAL_T, intent(inout) :: minLS(num_materials)
+      REAL_T, intent(inout) :: maxLS(num_materials)
       REAL_T, intent(in) :: max_problen
-      INTEGER_T, intent(in) :: truncate_volume_fractions(nmat)
+      INTEGER_T, intent(in) :: truncate_volume_fractions(num_materials)
       INTEGER_T, intent(in) :: DIMDEC(maskfab)
       INTEGER_T, intent(in) :: DIMDEC(facepairX)
       INTEGER_T, intent(in) :: DIMDEC(facepairY)
@@ -1803,22 +1792,26 @@ stop
       REAL_T, pointer :: facepairY_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: facepairZ(DIMV(facepairZ),nface_dst)
       REAL_T, pointer :: facepairZ_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: facetest(DIMV(facetest),nmat*SDIM)
+      REAL_T, intent(in), target :: facetest(DIMV(facetest),num_materials*SDIM)
       REAL_T, pointer :: facetest_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: stenfab(DIMV(stenfab),nstar)
       REAL_T, pointer :: stenfab_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: &
+       vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
       REAL_T, pointer :: vofrecon_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: origdist(DIMV(origdist),nmat*(1+SDIM))
+      REAL_T, intent(in), target :: &
+       origdist(DIMV(origdist),num_materials*(1+SDIM))
       REAL_T, pointer :: origdist_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: newfab(DIMV(newfab),nmat*(1+SDIM))
+      REAL_T, intent(inout), target :: &
+        newfab(DIMV(newfab),num_materials*(1+SDIM))
       REAL_T, pointer :: newfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: touchfab(DIMV(touchfab),nmat)
+      REAL_T, intent(inout), target :: touchfab(DIMV(touchfab),num_materials)
       REAL_T, pointer :: touchfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: crsetouch(DIMV(crsetouch),nmat)
+      REAL_T, intent(in), target :: crsetouch(DIMV(crsetouch),num_materials)
       REAL_T, pointer :: crsetouch_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: crsedist(DIMV(crsedist),nmat*(1+SDIM))
+      REAL_T, intent(in), target :: &
+        crsedist(DIMV(crsedist),num_materials*(1+SDIM))
       REAL_T, pointer :: crsedist_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -1831,7 +1824,7 @@ stop
       REAL_T, intent(in) :: time
 
       INTEGER_T i,j,k,i1,j1,k1
-      REAL_T vcenter(nmat)
+      REAL_T vcenter(num_materials)
       REAL_T VFRAC_TEMP
       INTEGER_T nhalf
       REAL_T xsten_accept(-3:3,SDIM)
@@ -1845,23 +1838,23 @@ stop
       INTEGER_T fluid_materials_in_cell_stencil
       INTEGER_T im
       INTEGER_T vofcomp
-      REAL_T newfab_hold(nmat*(1+SDIM))
-      INTEGER_T touch_hold(nmat)
+      REAL_T newfab_hold(num_materials*(1+SDIM))
+      INTEGER_T touch_hold(num_materials)
       INTEGER_T ilocut(3),ihicut(3)
       INTEGER_T icur(3)
       INTEGER_T istar_array(3)
       INTEGER_T istar_array_offset(3)
-      INTEGER_T sorted_list(nmat)
-      INTEGER_T nten_test,nstar_test
+      INTEGER_T sorted_list(num_materials)
+      INTEGER_T nstar_test
       INTEGER_T FSI_exclude
-      REAL_T mofdata(nmat*ngeom_recon)
+      REAL_T mofdata(num_materials*ngeom_recon)
       INTEGER_T istar
       INTEGER_T im_crit
-      INTEGER_T stencil_test(nmat)
-      INTEGER_T cell_test(nmat)
-      INTEGER_T face_test(nmat)
-      INTEGER_T stringent_test_passed(nmat)
-      INTEGER_T full_neighbor(nmat)
+      INTEGER_T stencil_test(num_materials)
+      INTEGER_T cell_test(num_materials)
+      INTEGER_T face_test(num_materials)
+      INTEGER_T stringent_test_passed(num_materials)
+      INTEGER_T full_neighbor(num_materials)
       INTEGER_T ii,jj,kk
       INTEGER_T i3,j3,k3
       INTEGER_T i4,j4,k4
@@ -1871,19 +1864,20 @@ stop
       INTEGER_T im_corner
       INTEGER_T im_test_stencil
       INTEGER_T im_test_center
-      REAL_T FSUM(nmat)
+      REAL_T FSUM(num_materials)
       INTEGER_T on_border
-       ! 1..nmat,fluid materials in cell,nstar
-       ! donateflag(nmat+2 ... nmat+1+nstar)=fluid material id that owns
+       ! 1..num_materials,fluid materials in cell,nstar
+       ! donateflag(num_materials+2 ... num_materials+1+nstar)=
+       ! fluid material id that owns
        ! the respective star stencil position.
-       ! donateflag(1..nmat)=1 if the respective material is a fluid
+       ! donateflag(1..num_materials)=1 if the respective material is a fluid
        ! which has a "non-flotsam" presence in the cell.
        ! If (cell_test(im)==1) and 
        !    ((keep_all_interfaces==1)or
        !     (truncate_volume_fractions(im)==0)) and
        !     (the local star point is owned by material im) then
-       !  donateflag(nmat+1+istar)=im 
-      INTEGER_T donateflag(nmat+1+nstar)
+       !  donateflag(num_materials+1+istar)=im 
+      INTEGER_T donateflag(num_materials+1+nstar)
       INTEGER_T crse_dist_valid
       INTEGER_T ctouch
       REAL_T init_dist_from_crse
@@ -1901,13 +1895,13 @@ stop
       INTEGER_T version_of_choice
       INTEGER_T keep_flotsam
       INTEGER_T legitimate_material
-      INTEGER_T height_check(nmat)
-      INTEGER_T boundary_face_count(nmat)
-      INTEGER_T center_face_count(nmat)
+      INTEGER_T height_check(num_materials)
+      INTEGER_T boundary_face_count(num_materials)
+      INTEGER_T center_face_count(num_materials)
       INTEGER_T iface,jface,kface
       INTEGER_T f_index(3)
       INTEGER_T ml,mr,ifacepair
-      REAL_T frac_pair(nmat,nmat)  !(m_left,m_right)
+      REAL_T frac_pair(num_materials,num_materials)  !(m_left,m_right)
 
       newfab_ptr=>newfab
       touchfab_ptr=>touchfab
@@ -1944,15 +1938,10 @@ stop
        stop
       endif
 
-      if (nface_dst.eq.2*nmat*nmat) then
+      if (nface_dst.eq.2*num_materials*num_materials) then
        ! do nothing
       else
        print *,"nface_dst invalid"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid levelstrip nten nten_test ",nten,nten_test
        stop
       endif
 
@@ -1985,7 +1974,7 @@ stop
        stop
       endif
 
-      do im=1,nmat
+      do im=1,num_materials
        if (truncate_volume_fractions(im).eq.0) then
         ! do nothing
        else if (truncate_volume_fractions(im).eq.1) then
@@ -1994,7 +1983,7 @@ stop
         print *,"truncate_volume_fractions invalid"
         stop
        endif
-      enddo !im=1..nmat
+      enddo !im=1..num_materials
 
       maskfab_ptr=>maskfab
       call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow_distance,-1,2878)
@@ -2022,12 +2011,6 @@ stop
       call checkbound_array(fablo,fabhi,crsetouch_ptr,0,-1,1876)
       call checkbound_array(fablo,fabhi,crsedist_ptr,0,-1,1876)
       
-      if (nmat.eq.num_materials) then
-       ! do nothing
-      else
-       print *,"nmat invalid"
-       stop
-      endif
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
       else
@@ -2100,9 +2083,9 @@ stop
         print *,"DEB_DIST: im_crit=",im_crit
        endif 
 
-       do im=1,nmat
+       do im=1,num_materials
 
-        if (is_rigid(nmat,im).eq.0) then
+        if (is_rigid(num_materials,im).eq.0) then
 
          crse_dist_valid=1
          if (level.eq.0) then
@@ -2141,7 +2124,7 @@ stop
         
          if (crse_dist_valid.eq.1) then
           do dir=1,SDIM
-           dir2=nmat+(im-1)*SDIM+dir
+           dir2=num_materials+(im-1)*SDIM+dir
            newfab(D_DECL(i,j,k),dir2)=crsedist(D_DECL(i,j,k),dir2)
           enddo
           init_dist_from_crse=crsedist(D_DECL(i,j,k),im)
@@ -2174,7 +2157,7 @@ stop
                   im,init_dist_from_crse
          endif 
 
-        else if (is_rigid(nmat,im).eq.1) then
+        else if (is_rigid(num_materials,im).eq.1) then
 
          init_dist_from_crse=newfab(D_DECL(i,j,k),im)
          touchfab(D_DECL(i,j,k),im)=two
@@ -2190,7 +2173,7 @@ stop
          stop
         endif
 
-       enddo ! im=1..nmat
+       enddo ! im=1..num_materials
 
       enddo
       enddo
@@ -2209,42 +2192,43 @@ stop
 
        call gridsten_level(xsten_donate,i,j,k,level,nhalf)
 
-       ! im=1..nmat: donateflag(im)=1 => find closest distance to the 
+       ! im=1..num_materials: donateflag(im)=1 => find closest distance to the 
        !             im interface.
-       ! donateflag(nmat+1)=number fluid materials in the cell.
-       ! donateflag(nmat+2 ... nmat+1+nstar)=fluid material id that owns
+       ! donateflag(num_materials+1)=number fluid materials in the cell.
+       ! donateflag(num_materials+2 ... num_materials+1+nstar)=
+       ! fluid material id that owns
        ! the respective star stencil position.
        ! If (cell_test(im)==1) and 
        !    ((keep_all_interfaces==1)or
        !     (truncate_volume_fractions(im)==0)) and
        !     (the LOCAL star point is owned by material im) then
-       !  donateflag(nmat+1+istar)=im 
+       !  donateflag(num_materials+1+istar)=im 
 
-       do im=1,nmat+1+nstar
+       do im=1,num_materials+1+nstar
         donateflag(im)=0
        enddo
 
        fluid_materials_in_cell_stencil=0
 
-       do im=1,nmat*ngeom_recon
+       do im=1,num_materials*ngeom_recon
         mofdata(im)=vofrecon(D_DECL(i,j,k),im)
        enddo
 
-       do im=1,nmat
+       do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
         vcenter(im)=mofdata(vofcomp)
        enddo
 
        FSI_exclude=1
-       call sort_volume_fraction(vcenter,FSI_exclude,sorted_list,nmat)
+       call sort_volume_fraction(vcenter,FSI_exclude,sorted_list,num_materials)
        im_crit=sorted_list(1)
-       if ((im_crit.ge.1).and.(im_crit.le.nmat)) then
+       if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
         ! do nothing
        else
         print *,"im_crit invalid"
         stop
        endif
-       if (is_rigid(nmat,im_crit).eq.0) then
+       if (is_rigid(num_materials,im_crit).eq.0) then
         ! do nothing
        else
         print *,"is_rigid invalid MOF_REDIST_3D.F90"
@@ -2258,7 +2242,7 @@ stop
         ! in the present algorithm, a reconstructed segment is valid if
         ! (A) F>VOFTOL_REDIST and
         ! (B)        
-       do im=1,nmat
+       do im=1,num_materials
         cell_test(im)=0 !F>VOFTOL_REDIST?
         face_test(im)=0 !face areafrac between cells consistent?
         full_neighbor(im)=0 !neighbor F(im)>1-facetol ?
@@ -2267,12 +2251,12 @@ stop
        enddo
 
          ! initialize: cell_test
-       do im=1,nmat
-        if (is_rigid(nmat,im).eq.0) then
+       do im=1,num_materials
+        if (is_rigid(num_materials,im).eq.0) then
          if (vcenter(im).gt.VOFTOL_REDIST) then
           cell_test(im)=1
          endif
-        else if (is_rigid(nmat,im).eq.1) then
+        else if (is_rigid(num_materials,im).eq.1) then
          ! do nothing
         else
          print *,"is_rigid invalid MOF_REDIST_3D.F90"
@@ -2285,28 +2269,28 @@ stop
          print *,"DEB_DIST: im,cell_test=",im,cell_test(im)
         endif 
 
-       enddo  ! im=1..nmat
+       enddo  ! im=1..num_materials
 
        do dir=1,3
         istar_array(dir)=0
        enddo
        call put_istar(istar,istar_array)
        im_test_center=NINT(stenfab(D_DECL(i,j,k),istar))
-       if ((im_test_center.ge.1).and.(im_test_center.le.nmat)) then
+       if ((im_test_center.ge.1).and.(im_test_center.le.num_materials)) then
         ! do nothing
        else
         print *,"im_test_center out of range (0)"
         stop
        endif
         ! im_test_center must be a fluid material.
-       if (is_rigid(nmat,im_test_center).eq.0) then 
+       if (is_rigid(num_materials,im_test_center).eq.0) then 
         ! do nothing
        else
-        print *,"is_rigid(nmat,im_test_center).ne.0 (0)"
+        print *,"is_rigid(num_materials,im_test_center).ne.0 (0)"
         stop
        endif
-        ! 1..nmat,fluid materials in cell, nstar
-       donateflag(nmat+1+istar)=im_test_center
+        ! 1..num_materials,fluid materials in cell, nstar
+       donateflag(num_materials+1+istar)=im_test_center
 
        if ((i.eq.i_DEB_DIST).and. &
            (j.eq.j_DEB_DIST).and. &
@@ -2342,10 +2326,10 @@ stop
          theta_nbr=sqrt(theta_nbr)
          theta_cen=sqrt(theta_cen)
 
-         do im=1,nmat
+         do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
           VFRAC_TEMP=vofrecon(D_DECL(isten,jsten,ksten),vofcomp)
-          if (is_rigid(nmat,im).eq.0) then
+          if (is_rigid(num_materials,im).eq.0) then
            if ((icur(1).eq.0).and.(icur(2).eq.0).and.(icur(3).eq.0)) then
             VFRAC_INTERP=vcenter(im)
            else if ((theta_nbr.gt.zero).and.(theta_cen.gt.zero)) then
@@ -2358,15 +2342,15 @@ stop
            if (VFRAC_INTERP.ge.VFRAC_STENCIL_CUTOFF) then
             stencil_test(im)=1
            endif
-          else if (is_rigid(nmat,im).eq.1) then
+          else if (is_rigid(num_materials,im).eq.1) then
            if (VFRAC_TEMP.ge.VOFTOL_REDIST) then
             rigid_in_stencil=1
            endif
           else
-           print *,"is_rigid(nmat,im) invalid"
+           print *,"is_rigid(num_materials,im) invalid"
            stop
           endif
-         enddo  ! im=1..nmat
+         enddo  ! im=1..num_materials
 
         enddo
         enddo
@@ -2375,14 +2359,14 @@ stop
         if ((i.eq.i_DEB_DIST).and. &
             (j.eq.j_DEB_DIST).and. &
             (k.eq.k_DEB_DIST)) then
-         do im=1,nmat
+         do im=1,num_materials
           print *,"DEB_DIST: im,stencil_test=",im,stencil_test(im)
          enddo
         endif
 
          ! face_test
-        do im=1,nmat
-         if (is_rigid(nmat,im).eq.0) then
+        do im=1,num_materials
+         if (is_rigid(num_materials,im).eq.0) then
 
           if (cell_test(im).eq.1) then
 
@@ -2420,8 +2404,8 @@ stop
                stop
               endif
 
-              local_facetest= &
-               NINT(facetest(D_DECL(iside,jside,kside),(dir-1)*nmat+im))
+              local_facetest=NINT(facetest(D_DECL(iside,jside,kside), &
+                                           (dir-1)*num_materials+im))
               if (local_facetest.eq.0) then
                face_test(im)=0
               else if (local_facetest.eq.1) then
@@ -2449,13 +2433,13 @@ stop
            print *,"cell_test invalid"
            stop
           endif
-         else if (is_rigid(nmat,im).eq.1) then
+         else if (is_rigid(num_materials,im).eq.1) then
           ! do nothing
          else
           print *,"is_rigid invalid MOF_REDIST_3D.F90"
           stop
          endif
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
 
          ! stringent_test_passed (on_border==0):
@@ -2485,7 +2469,7 @@ stop
           endif
          enddo ! dir=1..3
          im_corner=0
-         do im=1,nmat
+         do im=1,num_materials
           FSUM(im)=zero
          enddo
          ! (i4,j4,k4)=(0,0,0) if (i3,j3,k3)=(0,0,0)
@@ -2518,16 +2502,17 @@ stop
            ! node in question.
           call put_istar(istar,istar_array_offset)
           im_test_stencil=NINT(stenfab(D_DECL(isten,jsten,ksten),istar))
-          if ((im_test_stencil.ge.1).and.(im_test_stencil.le.nmat)) then
+          if ((im_test_stencil.ge.1).and. &
+              (im_test_stencil.le.num_materials)) then
            ! do nothing
           else
            print *,"im_test_stencil out of range 1"
            stop
           endif
-          if (is_rigid(nmat,im_test_stencil).eq.0) then
+          if (is_rigid(num_materials,im_test_stencil).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(nmat,im_test_stencil).ne.0 (1)"
+           print *,"is_rigid(num_materials,im_test_stencil).ne.0 (1)"
            stop
           endif
 
@@ -2541,7 +2526,7 @@ stop
 
           if (im_corner.eq.0) then
            im_corner=im_test_stencil
-          else if ((im_corner.ge.1).and.(im_corner.le.nmat)) then
+          else if ((im_corner.ge.1).and.(im_corner.le.num_materials)) then
            if (im_corner.eq.im_test_stencil) then
             ! do nothing
            else
@@ -2553,7 +2538,7 @@ stop
            print *,"im_corner invalid"
            stop
           endif
-          do im=1,nmat
+          do im=1,num_materials
            vofcomp=(im-1)*ngeom_recon+1
            VFRAC_TEMP=vofrecon(D_DECL(isten,jsten,ksten),vofcomp)
            FSUM(im)=FSUM(im)+VFRAC_TEMP
@@ -2567,31 +2552,31 @@ stop
             ! to be the material with the dominant "nodal volume fraction"
          if (im_corner.eq.-1) then
           FSI_exclude=1
-          call sort_volume_fraction(FSUM,FSI_exclude,sorted_list,nmat)
+          call sort_volume_fraction(FSUM,FSI_exclude,sorted_list,num_materials)
           im_corner=sorted_list(1)
-          if (is_rigid(nmat,im_corner).eq.0) then
+          if (is_rigid(num_materials,im_corner).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(nmat,im_corner).ne.0"
+           print *,"is_rigid(num_materials,im_corner).ne.0"
            stop
           endif
          else if (im_corner.eq.0) then
           print *,"im_corner invalid"
           stop
-         else if ((im_corner.ge.1).and.(im_corner.le.nmat)) then
+         else if ((im_corner.ge.1).and.(im_corner.le.num_materials)) then
           ! do nothing
          else
           print *,"im_corner invalid"
           stop
          endif
          if ((im_corner.ge.1).and. &
-             (im_corner.le.nmat)) then
+             (im_corner.le.num_materials)) then
 
            ! a tougher test for flotsam near contact lines.
           if ((stencil_test(im_corner).eq.1).or. &
               (rigid_in_stencil.eq.0)) then
            call put_istar(istar,istar_array) 
-           donateflag(nmat+1+istar)=im_corner
+           donateflag(num_materials+1+istar)=im_corner
            stringent_test_passed(im_corner)=1
           else if ((stencil_test(im_corner).eq.0).and. &
                    (rigid_in_stencil.eq.1)) then
@@ -2610,8 +2595,8 @@ stop
              (j.eq.j_DEB_DIST).and. &
              (k.eq.k_DEB_DIST)) then
           call put_istar(istar,istar_array) 
-          print *,"DEB_DIST: i3,j3,k3,istar,donateflag(nmat+1+istar) ", &
-           i3,j3,k3,istar,donateflag(nmat+1+istar)
+          print *,"DEB_DIST:ijk 3,istar,donateflag(num_materials+1+istar) ", &
+           i3,j3,k3,istar,donateflag(num_materials+1+istar)
          endif
 
         enddo
@@ -2620,7 +2605,7 @@ stop
 
          ! dir=1..sdim, side=1..2
          ! on_border==0
-        do im=1,nmat
+        do im=1,num_materials
          height_check(im)=0
         enddo
 
@@ -2642,7 +2627,7 @@ stop
 
          do side=1,2
 
-          do im=1,nmat
+          do im=1,num_materials
            boundary_face_count(im)=0
            center_face_count(im)=0
           enddo
@@ -2672,8 +2657,8 @@ stop
            k4=k3+kface
 
            ifacepair=1
-           do ml = 1, nmat
-           do mr = 1, nmat
+           do ml = 1, num_materials
+           do mr = 1, num_materials
             if (dir.eq.1) then
              frac_pair(ml,mr)=facepairX(D_DECL(i4,j4,k4),ifacepair)
             else if (dir.eq.2) then
@@ -2694,8 +2679,8 @@ stop
             stop
            endif 
 
-           do im=1,nmat
-            if (is_rigid(nmat,im).eq.0) then
+           do im=1,num_materials
+            if (is_rigid(num_materials,im).eq.0) then
              if ((frac_pair(im,im).ge.VOFTOL_REDIST).and. &
                  (frac_pair(im,im).le.one+VOFTOL_REDIST)) then 
               if ((i3.eq.0).and. &
@@ -2719,17 +2704,17 @@ stop
               print *,"frac_pair invalid"
               stop
              endif
-            else if (is_rigid(nmat,im).eq.1) then
+            else if (is_rigid(num_materials,im).eq.1) then
              ! do nothing
             else
-             print *,"is_rigid(nmat,im) invalid"
+             print *,"is_rigid(num_materials,im) invalid"
              stop
             endif
-           enddo ! im=1..nmat
+           enddo ! im=1..num_materials
           enddo
           enddo
           enddo ! i3,j3,k3
-          do im=1,nmat
+          do im=1,num_materials
            if ((center_face_count(im).eq.1).and. &
                (boundary_face_count(im).eq.1)) then
             height_check(im)=1
@@ -2740,7 +2725,7 @@ stop
             print *,"center_face_count or boundary_face_count bad"
             stop
            endif
-          enddo ! im=1..nmat
+          enddo ! im=1..num_materials
          enddo ! side=1,2     
         enddo ! dir=1..sdim
         
@@ -2758,22 +2743,22 @@ stop
           istar_array(2)=j3
           istar_array(3)=k3
 
-          do im=1,nmat
-           if (is_rigid(nmat,im).eq.0) then
+          do im=1,num_materials
+           if (is_rigid(num_materials,im).eq.0) then
             vofcomp=(im-1)*ngeom_recon+1
             VFRAC_TEMP=vofrecon(D_DECL(iside,jside,kside),vofcomp)
             if (VFRAC_TEMP.ge.one-VOFTOL) then
              full_neighbor(im)=1
              call put_istar(istar,istar_array) 
-             donateflag(nmat+1+istar)=im
+             donateflag(num_materials+1+istar)=im
             endif
-           else if (is_rigid(nmat,im).eq.1) then
+           else if (is_rigid(num_materials,im).eq.1) then
             ! do nothing
            else
             print *,"is_rigid invalid MOF_REDIST_3D.F90"
             stop
            endif
-          enddo ! im=1..nmat 
+          enddo ! im=1..num_materials 
 
          else
           print *,"i3,j3,k3 bust"
@@ -2792,7 +2777,7 @@ stop
         stop
        endif
 
-       do im=1,nmat
+       do im=1,num_materials
 
         if ((i.eq.i_DEB_DIST).and. &
             (j.eq.j_DEB_DIST).and. &
@@ -2802,7 +2787,7 @@ stop
         endif
 
          ! face_test=0 if cell_test==0
-        if (is_rigid(nmat,im).eq.0) then
+        if (is_rigid(num_materials,im).eq.0) then
 
          if ((stringent_test_passed(im).eq.1).or. &
              (face_test(im).eq.1)) then
@@ -2872,13 +2857,13 @@ stop
            call put_istar(istar,istar_array)
            if ((istar.ge.1).and.(istar.le.nstar)) then
             im_test_stencil=NINT(stenfab(D_DECL(i,j,k),istar))
-            if (is_rigid(nmat,im_test_stencil).eq.0) then
+            if (is_rigid(num_materials,im_test_stencil).eq.0) then
              if (im_test_stencil.eq.im) then
                ! 1<=istar<=nstar
-              donateflag(nmat+1+istar)=im
+              donateflag(num_materials+1+istar)=im
              endif
             else
-             print *,"is_rigid(nmat,im_test_stencil).ne.0 (1)"
+             print *,"is_rigid(num_materials,im_test_stencil).ne.0 (1)"
              stop
             endif
            else
@@ -2907,15 +2892,15 @@ stop
           stop
          endif 
 
-        else if (is_rigid(nmat,im).eq.1) then
+        else if (is_rigid(num_materials,im).eq.1) then
          ! do nothing
         else
          print *,"is_rigid invalid MOF_REDIST_3D.F90"
          stop
         endif
-       enddo ! im=1..nmat
+       enddo ! im=1..num_materials
 
-       donateflag(nmat+1)=fluid_materials_in_cell_stencil
+       donateflag(num_materials+1)=fluid_materials_in_cell_stencil
 
        if ((i.eq.i_DEB_DIST).and. &
            (j.eq.j_DEB_DIST).and. &
@@ -2925,14 +2910,14 @@ stop
        endif
 
        if ((fluid_materials_in_cell_stencil.lt.1).or. &
-           (fluid_materials_in_cell_stencil.gt.nmat)) then
+           (fluid_materials_in_cell_stencil.gt.num_materials)) then
         print *,"fluid_materials_in_cell_stencil invalid:", &
           fluid_materials_in_cell_stencil
         stop
        else if (fluid_materials_in_cell_stencil.eq.1) then
          ! do nothing
        else if ((fluid_materials_in_cell_stencil.ge.2).and. &
-                (fluid_materials_in_cell_stencil.le.nmat)) then
+                (fluid_materials_in_cell_stencil.le.num_materials)) then
 
         ilocut(3)=0
         ihicut(3)=0
@@ -2960,10 +2945,10 @@ stop
 
          call gridsten_level(xsten_accept,i+i1,j+j1,k+k1,level,nhalf)
 
-         do im=1,nmat*(1+SDIM)
+         do im=1,num_materials*(1+SDIM)
           newfab_hold(im)=newfab(D_DECL(i+i1,j+j1,k+k1),im)
          enddo  ! im
-         do im=1,nmat
+         do im=1,num_materials
           touch_hold(im)=NINT(touchfab(D_DECL(i+i1,j+j1,k+k1),im))
          enddo
 
@@ -2980,10 +2965,10 @@ stop
           donateflag, &
           time)
 
-         do im=1,nmat*(1+SDIM)
+         do im=1,num_materials*(1+SDIM)
           newfab(D_DECL(i+i1,j+j1,k+k1),im)=newfab_hold(im)
          enddo  ! im
-         do im=1,nmat
+         do im=1,num_materials
           touchfab(D_DECL(i+i1,j+j1,k+k1),im)=touch_hold(im)
          enddo
 
@@ -3017,8 +3002,7 @@ stop
          fablo,fabhi, &
          bfact, &
          xlo,dx, &
-         time, &
-         nmat) &
+         time) &
       bind(c,name='fort_correct_uninit')
 
       use global_utility_module
@@ -3028,17 +3012,17 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: minLS(nmat)
-      REAL_T, intent(in) :: maxLS(nmat)
+      REAL_T, intent(in) :: minLS(num_materials)
+      REAL_T, intent(in) :: maxLS(num_materials)
       REAL_T, intent(in) :: max_problen
       INTEGER_T, intent(in) :: DIMDEC(newfab)
       INTEGER_T, intent(in) :: DIMDEC(touchfab)
 
-      REAL_T, intent(inout), target :: newfab(DIMV(newfab),nmat*(1+SDIM))
+      REAL_T, intent(inout), target :: &
+        newfab(DIMV(newfab),num_materials*(1+SDIM))
       REAL_T, pointer :: newfab_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: touchfab(DIMV(touchfab),nmat)
+      REAL_T, intent(in), target :: touchfab(DIMV(touchfab),num_materials)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -3071,11 +3055,6 @@ stop
       call checkbound_array(fablo,fabhi,newfab_ptr,1,-1,2876)
       call checkbound_array(fablo,fabhi,touchfab,0,-1,2876)
       
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0)
  
@@ -3083,11 +3062,11 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       do im=1,nmat
+       do im=1,num_materials
 
         ctouch=NINT(touchfab(D_DECL(i,j,k),im))
 
-        if (is_rigid(nmat,im).eq.0) then
+        if (is_rigid(num_materials,im).eq.0) then
 
          if (ctouch.eq.0) then
           init_dist=newfab(D_DECL(i,j,k),im)
@@ -3115,7 +3094,7 @@ stop
           stop
          endif
  
-        else if (is_rigid(nmat,im).eq.1) then
+        else if (is_rigid(num_materials,im).eq.1) then
 
          if (ctouch.ne.2) then
           print *,"ctouch invalid"
@@ -3127,7 +3106,7 @@ stop
          stop
         endif
 
-       enddo ! im=1..nmat
+       enddo ! im=1..num_materials
 
       enddo
       enddo
@@ -3149,7 +3128,7 @@ stop
        xlo,dx, &
        time, &
        ngrow_distance_in, &
-       nmat,nstar) &
+       nstar) &
       bind(c,name='fort_steninit')
 
       use global_utility_module
@@ -3162,7 +3141,6 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nstar
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: ngrow_distance_in
       INTEGER_T, intent(in) :: DIMDEC(stenfab)
       INTEGER_T, intent(in) :: DIMDEC(maskfab)
@@ -3173,7 +3151,8 @@ stop
 
       REAL_T, intent(in), target :: maskfab(DIMV(maskfab),2)
       REAL_T, pointer :: maskfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: &
+        vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
       REAL_T, pointer :: vofrecon_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -3185,7 +3164,7 @@ stop
       REAL_T, intent(in) :: time
 
       INTEGER_T i,j,k
-      REAL_T vcenter(nmat)
+      REAL_T vcenter(num_materials)
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
@@ -3194,7 +3173,7 @@ stop
       INTEGER_T vofcomp
       INTEGER_T istar_array(3)
       INTEGER_T nstar_test
-      REAL_T mofdata(nmat*ngeom_recon)
+      REAL_T mofdata(num_materials*ngeom_recon)
       INTEGER_T istar
       INTEGER_T im_crit
       INTEGER_T i3,j3,k3
@@ -3244,10 +3223,6 @@ stop
       vofrecon_ptr=>vofrecon
       call checkbound_array(fablo,fabhi,vofrecon_ptr,ngrow_distance,-1,2879)
       
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid steninit"
        print *,"ngeom_recon=",ngeom_recon
@@ -3300,12 +3275,12 @@ stop
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
 
-        do im=1,nmat*ngeom_recon
+        do im=1,num_materials*ngeom_recon
          mofdata(im)=vofrecon(D_DECL(i,j,k),im)
         enddo
 
          ! vcenter = volume fraction 
-        do im=1,nmat
+        do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
          vcenter(im)=mofdata(vofcomp)
         enddo ! im
@@ -3314,9 +3289,9 @@ stop
         call check_full_cell_vfrac( &
                 vcenter, &
                 tessellate, &  ! =0
-                nmat,im_crit)
+                num_materials,im_crit)
 
-        if ((im_crit.ge.1).and.(im_crit.le.nmat)) then
+        if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
 
          do istar=1,nstar
           stenfab(D_DECL(i,j,k),istar)=im_crit
@@ -3345,8 +3320,8 @@ stop
            tessellate, &  ! =0
            bfact,dx,xsten,nhalf, &
            mofdata,xcorner, &
-           im_test,nmat,SDIM)
-          if ((im_test.ge.1).and.(im_test.le.nmat)) then
+           im_test,num_materials,SDIM)
+          if ((im_test.ge.1).and.(im_test.le.num_materials)) then
            call put_istar(istar,istar_array) 
            stenfab(D_DECL(i,j,k),istar)=im_test
           else
@@ -3385,7 +3360,6 @@ stop
       subroutine fort_faceinit( &
          tid, &
          tessellate, &  ! =0,1, or 3
-         nten, &
          level, &
          finest_level, &
          facefab,DIMS(facefab), &
@@ -3397,7 +3371,6 @@ stop
          xlo,dx, &
          time, &
          ngrow, &
-         nmat, &
          nface) &
       bind(c,name='fort_faceinit')
 
@@ -3411,7 +3384,6 @@ stop
 
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: tessellate ! 0,1, or 3
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nface
@@ -3425,7 +3397,7 @@ stop
       REAL_T, pointer :: facefab_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: maskfab(DIMV(maskfab),2)
-      REAL_T, intent(in), target :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -3443,12 +3415,12 @@ stop
 
       INTEGER_T nface_test
       INTEGER_T vofcomp
-      REAL_T vcenter(nmat)
-      REAL_T vcenter_thin(nmat)
-      REAL_T mofdata(nmat*ngeom_recon)
-      REAL_T mofdatavalid(nmat*ngeom_recon)
-      REAL_T mofdataproject(nmat*ngeom_recon)
-      REAL_T localface(nmat,SDIM,2)
+      REAL_T vcenter(num_materials)
+      REAL_T vcenter_thin(num_materials)
+      REAL_T mofdata(num_materials*ngeom_recon)
+      REAL_T mofdatavalid(num_materials*ngeom_recon)
+      REAL_T mofdataproject(num_materials*ngeom_recon)
+      REAL_T localface(num_materials,SDIM,2)
       REAL_T totalface(SDIM,2)
 
       REAL_T xsten(-3:3,SDIM)
@@ -3459,12 +3431,11 @@ stop
       INTEGER_T nmax,ivert
       INTEGER_T dir2
       INTEGER_T shapeflag
-      REAL_T multi_volume(nmat)
-      REAL_T multi_cen(SDIM,nmat)
-      REAL_T multi_area(nmat)
+      REAL_T multi_volume(num_materials)
+      REAL_T multi_cen(SDIM,num_materials)
+      REAL_T multi_area(num_materials)
       REAL_T total_vol
       INTEGER_T mask1,mask2
-      INTEGER_T nten_test
       INTEGER_T normalize_tessellate
       INTEGER_T local_tessellate
       INTEGER_T nhalf_box
@@ -3486,12 +3457,6 @@ stop
        stop
       endif
 
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid FACEINIT nten nten_test ",nten,nten_test
-       stop
-      endif
- 
       nhalf=3 
       nhalf_thin=1 
       nmax=POLYGON_LIST_MAX ! in: FACEINIT
@@ -3507,8 +3472,8 @@ stop
       endif
 
        ! area for all faces of a cell.
-       ! (nmat,sdim,2)
-      nface_test=nmat*SDIM*2
+       ! (num_materials,sdim,2)
+      nface_test=num_materials*SDIM*2
       if (nface_test.ne.nface) then
        print *,"nface invalid faceinit nface nface_test ",nface,nface_test
        stop
@@ -3576,7 +3541,7 @@ stop
          ! xsten(-1,dir) is left coordinate in dir direction.
         call gridsten_level(xsten,i,j,k,level,nhalf)
 
-        do im=1,nmat*ngeom_recon
+        do im=1,num_materials*ngeom_recon
          mofdata(im)=vofrecon(D_DECL(i,j,k),im)
         enddo
 
@@ -3587,7 +3552,7 @@ stop
          bfact,dx, &
          normalize_tessellate, &  ! =0
          mofdata,mofdatavalid, &
-         nmat,SDIM,3000)
+         num_materials,SDIM,3000)
 
         if (tessellate.eq.3) then
 
@@ -3601,7 +3566,7 @@ stop
           geom_xtetlist_uncapt(1,1,1,tid+1), &
           nmax, &
           nmax, &
-          nmat, &
+          num_materials, &
           SDIM, &
           3)  ! caller_id=3
 
@@ -3614,7 +3579,7 @@ stop
         endif
 
           ! vcenter = volume fraction 
-        do im=1,nmat
+        do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
          vcenter(im)=mofdatavalid(vofcomp)
         enddo ! im
@@ -3622,7 +3587,7 @@ stop
         call check_full_cell_vfrac( &
           vcenter, &
           tessellate, & ! 0,1, or 3
-          nmat,im_crit)
+          num_materials,im_crit)
 
         do dir=1,SDIM
          do side=1,2
@@ -3631,7 +3596,7 @@ stop
         enddo
 
         iface=0
-        do im=1,nmat
+        do im=1,num_materials
          do dir=1,SDIM
           do side=1,2
            iface=iface+1
@@ -3651,7 +3616,7 @@ stop
         enddo
         enddo ! dir,side
 
-        if ((im_crit.ge.1).and.(im_crit.le.nmat)) then
+        if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
 
          do dir=1,SDIM
          do side=1,2
@@ -3686,11 +3651,11 @@ stop
            ! xsten_thin box: xsten_thin(0,dir) = center of thin box
            ! xsten_thin(1,dir) right side in dir direction
            ! xsten_thin(-1,dir) left side
-           ! multi_cen(sdim,nmat) is "absolute" 
+           ! multi_cen(sdim,num_materials) is "absolute" 
           call project_slopes_to_face( &
            bfact,dx,xsten,nhalf, &
            mofdatavalid,mofdataproject, &
-           nmat,SDIM,dir,side)
+           num_materials,SDIM,dir,side)
 
            ! base case (also area fractions)
            ! multi_cen in absolute coordinate system (not relative to cell
@@ -3708,18 +3673,18 @@ stop
             geom_xtetlist_uncapt(1,1,1,tid+1), &
             nmax, &
             nmax, &
-            nmat,SDIM, &
+            num_materials,SDIM, &
             shapeflag,3) 
 
           total_vol=zero
-          do im=1,nmat
+          do im=1,num_materials
            if ((tessellate.eq.1).or. &
                (tessellate.eq.3)) then
             total_vol=total_vol+multi_volume(im)
            else if (tessellate.eq.0) then
-            if (is_rigid(nmat,im).eq.0) then
+            if (is_rigid(num_materials,im).eq.0) then
              total_vol=total_vol+multi_volume(im)
-            else if (is_rigid(nmat,im).eq.1) then
+            else if (is_rigid(num_materials,im).eq.1) then
              ! do nothing
             else
              print *,"is_rigid invalid MOF_REDIST_3D.F90"
@@ -3729,13 +3694,13 @@ stop
             print *,"tessellate invalid46"
             stop
            endif
-          enddo ! im=1..nmat
+          enddo ! im=1..num_materials
 
           if (total_vol.gt.zero) then
-           do im=1,nmat
+           do im=1,num_materials
             vcenter_thin(im)=multi_volume(im)/total_vol
             localface(im,dir,side)=vcenter_thin(im)
-           enddo ! im=1..nmat
+           enddo ! im=1..num_materials
           else
            print *,"total_vol invalid"
            stop
@@ -3749,7 +3714,7 @@ stop
          stop
         endif
 
-        do im=1,nmat
+        do im=1,num_materials
          do dir=1,SDIM
           do side=1,2
            localface(im,dir,side)= &
@@ -3759,7 +3724,7 @@ stop
         enddo 
 
         iface=0
-        do im=1,nmat
+        do im=1,num_materials
          do dir=1,SDIM
           do side=1,2
            iface=iface+1
@@ -3804,7 +3769,6 @@ stop
        xlo,dx, &
        time, &
        ngrow, &
-       nmat, &
        nface) &
       bind(c,name='fort_faceinittest')
 
@@ -3821,7 +3785,7 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: nface
-      INTEGER_T, intent(in) :: nmat,ngrow
+      INTEGER_T, intent(in) :: ngrow
       INTEGER_T, intent(in) :: DIMDEC(facefab)
       INTEGER_T, intent(in) :: DIMDEC(facetest)
       INTEGER_T, intent(in) :: DIMDEC(maskfab)
@@ -3829,11 +3793,12 @@ stop
 
       REAL_T, intent(in), target :: facefab(DIMV(facefab),nface)
 
-      REAL_T, intent(out), target :: facetest(DIMV(facetest),nmat*SDIM)
+      REAL_T, intent(out), target :: facetest(DIMV(facetest),num_materials*SDIM)
       REAL_T, pointer :: facetest_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: maskfab(DIMV(maskfab),2)
-      REAL_T, intent(in), target :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: &
+       vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -3852,10 +3817,10 @@ stop
       INTEGER_T side_cell
       INTEGER_T iface
       REAL_T total_face
-      REAL_T facefrac(nmat)
-      REAL_T faceleft(nmat)
-      REAL_T faceright(nmat)
-      REAL_T local_face_test(nmat)
+      REAL_T facefrac(num_materials)
+      REAL_T faceleft(num_materials)
+      REAL_T faceright(num_materials)
+      REAL_T local_face_test(num_materials)
       INTEGER_T nface_test
       REAL_T xstenMAC(-1:1,SDIM)
       INTEGER_T nhalf
@@ -3880,8 +3845,8 @@ stop
        stop
       endif
 
-       ! (nmat,sdim,2)
-      nface_test=nmat*SDIM*2
+       ! (num_materials,sdim,2)
+      nface_test=num_materials*SDIM*2
       if (nface_test.ne.nface) then
        print *,"nface bad fort_faceinittest nface nface_test ", &
                nface,nface_test
@@ -3903,10 +3868,6 @@ stop
       call checkbound_array(fablo,fabhi,maskfab,ngrow,-1,2888)
       call checkbound_array(fablo,fabhi,vofrecon,ngrow,-1,2889)
       
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid faceinittest"
        print *,"ngeom_recon=",ngeom_recon
@@ -3985,7 +3946,7 @@ stop
          endif
 
          if (at_RZ_face.eq.1) then
-          do im=1,nmat
+          do im=1,num_materials
            local_face_test(im)=1
           enddo
          else if (at_RZ_face.eq.0) then
@@ -4008,16 +3969,16 @@ stop
            endif
 
            total_face=zero
-           do im=1,nmat
+           do im=1,num_materials
             ! (im,dir,side)
             iface=(im-1)*SDIM*2+(dir-1)*2+side_cell
             facefrac(im)=facefab(D_DECL(icell,jcell,kcell),iface)
             if (tessellate.eq.1) then
              total_face=total_face+facefrac(im)
             else if (tessellate.eq.0) then
-             if (is_rigid(nmat,im).eq.0) then
+             if (is_rigid(num_materials,im).eq.0) then
               total_face=total_face+facefrac(im)
-             else if (is_rigid(nmat,im).eq.1) then
+             else if (is_rigid(num_materials,im).eq.1) then
               ! do nothing
              else
               print *,"is_rigid invalid MOF_REDIST_3D.F90"
@@ -4027,7 +3988,7 @@ stop
              print *,"tessellate invalid50"
              stop
             endif
-           enddo !im=1..nmat 
+           enddo !im=1..num_materials 
 
            if (total_face.gt.zero) then
             !do nothing
@@ -4035,7 +3996,7 @@ stop
             print *,"total_face invalid"
             stop
            endif
-           do im=1,nmat
+           do im=1,num_materials
             if (side.eq.1) then
              faceleft(im)=facefrac(im)/total_face
             else if (side.eq.2) then
@@ -4047,7 +4008,7 @@ stop
            enddo ! im
           enddo ! side
         
-          do im=1,nmat
+          do im=1,num_materials
            if (abs(faceleft(im)-faceright(im)).le.FACETOL_REDIST) then
             local_face_test(im)=1
            else if (abs(faceleft(im)-faceright(im)).ge.FACETOL_REDIST) then
@@ -4056,14 +4017,14 @@ stop
             print *,"faceleft or faceright bust"
             stop
            endif
-          enddo ! im=1..nmat
+          enddo ! im=1..num_materials
          else 
           print *,"at_RZ_face invalid"
           stop
          endif
 
-         do im=1,nmat
-          facetest(D_DECL(i,j,k),nmat*(dir-1)+im)=local_face_test(im)
+         do im=1,num_materials
+          facetest(D_DECL(i,j,k),num_materials*(dir-1)+im)=local_face_test(im)
          enddo ! im
 
         enddo ! k
@@ -4102,7 +4063,7 @@ stop
        rz_flag, &
        xlo,dx, &
        time, &
-       nmat,nface_src,nface_dst) &
+       nface_src,nface_dst) &
       bind(c,name='fort_faceprocess')
 
       use global_utility_module
@@ -4129,7 +4090,8 @@ stop
       REAL_T, pointer :: dstfab_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(in), target :: facefab(DIMV(facefab),nface_src)
-      REAL_T, intent(in), target :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, intent(in), target :: &
+        vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -4148,28 +4110,28 @@ stop
       INTEGER_T im,im_opp
 
       INTEGER_T nface_src_test,nface_dst_test,vofcomp
-      REAL_T mofdata_left(nmat*ngeom_recon)
-      REAL_T mofdata_right(nmat*ngeom_recon)
+      REAL_T mofdata_left(num_materials*ngeom_recon)
+      REAL_T mofdata_right(num_materials*ngeom_recon)
       REAL_T xsten_left(-3:3,SDIM)
       REAL_T xsten_right(-3:3,SDIM)
       INTEGER_T nhalf
       INTEGER_T dir2
-      REAL_T multi_cen_left(SDIM,nmat)
-      REAL_T multi_cen_right(SDIM,nmat)
+      REAL_T multi_cen_left(SDIM,num_materials)
+      REAL_T multi_cen_right(SDIM,num_materials)
       REAL_T cencell_left(SDIM)
       REAL_T cencell_right(SDIM)
       REAL_T volcell_left
       REAL_T volcell_right
-      REAL_T leftface(nmat)
-      REAL_T rightface(nmat)
-      REAL_T frac_left(nmat)
-      REAL_T frac_right(nmat)
+      REAL_T leftface(num_materials)
+      REAL_T rightface(num_materials)
+      REAL_T frac_left(num_materials)
+      REAL_T frac_right(num_materials)
       REAL_T left_total
       REAL_T right_total
       REAL_T vol_total
       INTEGER_T ml,mr
-      REAL_T frac_pair(nmat,nmat)  !(m_left,m_right)
-      REAL_T dist_pair(nmat,nmat)
+      REAL_T frac_pair(num_materials,num_materials)  !(m_left,m_right)
+      REAL_T dist_pair(num_materials,num_materials)
       REAL_T dpair
       REAL_T delta,RR
       REAL_T xstenMAC(-1:1,SDIM)
@@ -4205,13 +4167,13 @@ stop
        stop
       endif
 
-      nface_src_test=nmat*SDIM*2
+      nface_src_test=num_materials*SDIM*2
       if (nface_src_test.ne.nface_src) then
        print *,"nface_src invalid nface_src nface_src_test ", &
          nface_src,nface_src_test
        stop
       endif
-      nface_dst_test=nmat*nmat*2
+      nface_dst_test=num_materials*num_materials*2
       if (nface_dst_test.ne.nface_dst) then
        print *,"nface_dst invalid nface_dst nface_dst_test ", &
          nface_dst,nface_dst_test
@@ -4355,13 +4317,13 @@ stop
         left_total=zero
         right_total=zero
          ! (im,dir,side)
-        do im=1,nmat
+        do im=1,num_materials
          side=2
          call abs_array_index3(im,dir+1,side, &
-          nmat,SDIM,2,iface_left)
+          num_materials,SDIM,2,iface_left)
          side=1
          call abs_array_index3(im,dir+1,side, &
-          nmat,SDIM,2,iface_right)
+          num_materials,SDIM,2,iface_right)
 
          if (left_face_ok.eq.1) then
 
@@ -4406,17 +4368,17 @@ stop
 
          if ((tessellate.eq.1).or. &
              (tessellate.eq.3).or. &
-             (is_rigid(nmat,im).eq.0)) then
+             (is_rigid(num_materials,im).eq.0)) then
           left_total=left_total+frac_left(im)
           right_total=right_total+frac_right(im)
-         else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
+         else if ((tessellate.eq.0).and.(is_rigid(num_materials,im).eq.1)) then
           ! do nothing
          else 
           print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
           stop
          endif 
 
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
         if ((left_total.gt.zero).and.(right_total.gt.zero)) then
          ! do nothing
@@ -4424,7 +4386,7 @@ stop
          print *,"left_total or right_total invalid"
          stop
         endif
-        do im=1,nmat
+        do im=1,num_materials
          frac_left(im)=frac_left(im)/left_total
          frac_right(im)=frac_right(im)/right_total
         enddo ! im
@@ -4439,11 +4401,11 @@ stop
          bfact,level, &
          volcell_right,cencell_right,SDIM) 
 
-        do im = 1,nmat
+        do im = 1,num_materials
 
          if ((tessellate.eq.1).or. &
              (tessellate.eq.3).or. &
-             (is_rigid(nmat,im).eq.0)) then
+             (is_rigid(num_materials,im).eq.0)) then
 
           if ((frac_left(im).gt.one+FACETOL_SANITY).or. &
               (frac_left(im).lt.zero).or. &
@@ -4463,31 +4425,31 @@ stop
            frac_right(im) = one
           endif
 
-         else if ((tessellate.eq.0).and.(is_rigid(nmat,im).eq.1)) then
+         else if ((tessellate.eq.0).and.(is_rigid(num_materials,im).eq.1)) then
           ! do nothing
          else
           print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
           stop
          endif 
 
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
         if ((left_face_ok.eq.1).and. &  ! cell to left of face is in FAB
             (right_face_ok.eq.1)) then  ! cell to right of face is in FAB
 
-         do im=1,nmat*ngeom_recon
+         do im=1,num_materials*ngeom_recon
           mofdata_left(im)=vofrecon(D_DECL(i-ii,j-jj,k-kk),im)
           mofdata_right(im)=vofrecon(D_DECL(i,j,k),im)
          enddo
 
-         do im=1,nmat
+         do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
           if ((tessellate.eq.1).or. &
               (tessellate.eq.3).or. &
-              (is_rigid(nmat,im).eq.0)) then
+              (is_rigid(num_materials,im).eq.0)) then
            ! do nothing
           else if ((tessellate.eq.0).and. &
-                   (is_rigid(nmat,im).eq.1)) then
+                   (is_rigid(num_materials,im).eq.1)) then
            do dir2=1,ngeom_recon
             mofdata_left(vofcomp+dir2-1)=zero 
             mofdata_right(vofcomp+dir2-1)=zero 
@@ -4502,7 +4464,7 @@ stop
            multi_cen_right(dir2,im)=mofdata_right(vofcomp+dir2)
           enddo
 
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
 
          caller_id=12
          if (tessellate.eq.0) then
@@ -4531,7 +4493,7 @@ stop
            nhalf, &
            mofdata_right, &
            mofdata_left, &
-           nmat, &
+           num_materials, &
            dir+1, &
            frac_pair, & ! left,right
            SDIM, &
@@ -4545,7 +4507,7 @@ stop
         else if ((left_face_ok.eq.0).or. &
                  (right_face_ok.eq.0)) then
 
-         do im=1,nmat
+         do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
           do dir2=1,SDIM
            multi_cen_left(dir2,im)=zero
@@ -4553,12 +4515,12 @@ stop
           enddo
          enddo ! im
 
-         do ml = 1, nmat
-          do mr = 1, nmat
+         do ml = 1, num_materials
+          do mr = 1, num_materials
            frac_pair(ml,mr)=zero
           enddo
          enddo
-         do ml=1,nmat
+         do ml=1,num_materials
           frac_pair(ml,ml)=frac_left(ml)
          enddo
 
@@ -4568,16 +4530,16 @@ stop
         endif
 
         vol_total=zero
-        do im=1,nmat
-        do im_opp=1,nmat
+        do im=1,num_materials
+        do im_opp=1,num_materials
          vol_total=vol_total+frac_pair(im,im_opp)
         enddo
         enddo
 
         if (vol_total.gt.zero) then
 
-         do im=1,nmat
-         do im_opp=1,nmat
+         do im=1,num_materials
+         do im_opp=1,num_materials
           frac_pair(im,im_opp)=frac_pair(im,im_opp)/vol_total
          enddo
          enddo
@@ -4595,17 +4557,17 @@ stop
          stop
         endif 
 
-        do ml = 1, nmat
+        do ml = 1, num_materials
 
          if ((tessellate.eq.1).or. &
              (tessellate.eq.3).or. &
-             (is_rigid(nmat,ml).eq.0)) then
+             (is_rigid(num_materials,ml).eq.0)) then
 
-          do mr = 1, nmat
+          do mr = 1, num_materials
 
            if ((tessellate.eq.1).or. &
                (tessellate.eq.3).or. &
-               (is_rigid(nmat,mr).eq.0)) then
+               (is_rigid(num_materials,mr).eq.0)) then
 
             if ((frac_pair(ml,mr).lt.-FACETOL_SANITY).or. &
                 (frac_pair(ml,mr).gt.one+FACETOL_SANITY)) then
@@ -4647,28 +4609,28 @@ stop
              stop
             endif ! dir==1 ?
 
-           else if ((tessellate.eq.0).and.(is_rigid(nmat,mr).eq.1)) then
+           else if ((tessellate.eq.0).and.(is_rigid(num_materials,mr).eq.1)) then
             ! do nothing
            else
             print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
             stop
            endif 
 
-          enddo ! mr=1..nmat
+          enddo ! mr=1..num_materials
 
-         else if ((tessellate.eq.0).and.(is_rigid(nmat,ml).eq.1)) then
+         else if ((tessellate.eq.0).and.(is_rigid(num_materials,ml).eq.1)) then
           ! do nothing
          else
           print *,"tessellate or is_rigid invalid MOF_REDIST_3D.F90"
           stop
          endif 
 
-        enddo ! ml=1..nmat
+        enddo ! ml=1..num_materials
 
        else if (at_RZ_face.eq.1) then
 
-        do ml = 1, nmat
-         do mr = 1, nmat
+        do ml = 1, num_materials
+         do mr = 1, num_materials
           frac_pair(ml,mr)=zero
           dist_pair(ml,mr)=zero
          enddo
@@ -4680,8 +4642,8 @@ stop
        endif
 
        iface_left=0
-       do ml = 1, nmat
-        do mr = 1, nmat
+       do ml = 1, num_materials
+        do mr = 1, num_materials
           !(ml,mr,2) 
          iface_left=iface_left+1
          dstfab(D_DECL(i,j,k),iface_left)=frac_pair(ml,mr)

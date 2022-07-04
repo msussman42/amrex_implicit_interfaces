@@ -1782,9 +1782,9 @@ contains
         ! do nothing
        else if ((im_primary_sten.ge.1).and. &
                 (im_primary_sten.le.LOW%nmat)) then
-        if (is_rigid(LOW%nmat,im_primary_sten).eq.1) then
+        if (is_rigid(im_primary_sten).eq.1) then
          ! do nothing
-        else if (is_rigid(LOW%nmat,im_primary_sten).eq.0) then
+        else if (is_rigid(im_primary_sten).eq.0) then
          if (abs(LS_sten(im_fluid)).le.LOW%dxmin*GNBC_RADIUS) then
           if (im_secondary_image.eq.0) then
            im_secondary_image=im_primary_sten
@@ -1796,7 +1796,7 @@ contains
           stop
          endif
         else
-         print *,"is_rigid(LOW%nmat,im_primary_sten) invalid"
+         print *,"is_rigid(im_primary_sten) invalid"
          stop
         endif
        else
@@ -2314,10 +2314,10 @@ end subroutine dynamic_contact_angle
         print *,"im_solid invalid in getGhostVel"
         stop
        endif
-       if (is_rigid(LOW%nmat,im_solid).eq.1) then
+       if (is_rigid(im_solid).eq.1) then
         ! do nothing
        else
-        print *,"is_rigid(nmat,im_solid) invalid"
+        print *,"is_rigid(im_solid) invalid"
         stop
        endif
        if (LOW%nmat.ne.num_materials) then
@@ -2416,9 +2416,9 @@ end subroutine dynamic_contact_angle
 
            im_fluid_crossing=-1
            do im=1,LOW%nmat
-            if (is_rigid(LOW%nmat,im).eq.1) then
+            if (is_rigid(im).eq.1) then
              ! do nothing
-            else if (is_rigid(LOW%nmat,im).eq.0) then
+            else if (is_rigid(im).eq.0) then
              if (im_fluid_crossing.eq.-1) then
               im_fluid_crossing=im
              else if ((im_fluid_crossing.ge.1).and. &
@@ -2853,12 +2853,12 @@ end subroutine dynamic_contact_angle
                near_contact_line=0
               else if ((im_secondary_image.ge.1).and. &
                        (im_secondary_image.le.LOW%nmat)) then
-               if (is_rigid(LOW%nmat,im_secondary_image).eq.1) then
+               if (is_rigid(im_secondary_image).eq.1) then
                 near_contact_line=0
-               else if (is_rigid(LOW%nmat,im_secondary_image).eq.0) then
+               else if (is_rigid(im_secondary_image).eq.0) then
                 ! do nothing
                else
-                print *,"is_rigid(nmat,im_secondary_image) invalid"
+                print *,"is_rigid(im_secondary_image) invalid"
                 stop
                endif
               else
@@ -8058,9 +8058,9 @@ end subroutine print_visual_descriptor
          cen(dir,imaterial)=zero
         enddo
        endif
-       if (is_rigid(nmat,imaterial).eq.0) then
+       if (is_rigid(imaterial).eq.0) then
         voftotal=voftotal+vfrac(imaterial)
-       else if (is_rigid(nmat,imaterial).eq.1) then
+       else if (is_rigid(imaterial).eq.1) then
         ! do nothing
        else
         print *,"is_rigid invalid GLOBALUTIL.F90"
@@ -14487,19 +14487,19 @@ end subroutine print_visual_descriptor
       return
       end function fort_is_passive_advect_test
 
-      function fort_is_rigid_base(FSI_flag_local,nmat,im) &
+      function fort_is_rigid_base(FSI_flag_local,im) &
       bind(c,name='fort_is_rigid_base')
 
       IMPLICIT NONE
 
       INTEGER_T fort_is_rigid_base
       INTEGER_T, intent(in) :: FSI_flag_local
-      INTEGER_T, intent(in) :: nmat,im
+      INTEGER_T, intent(in) :: im
       INTEGER_T dummy_input
 
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid17 in fort_is_rigid_base: im=",im
-       print *,"nmat=",nmat
+       print *,"num_materials=",num_materials
 
        print *,"(breakpoint) break point and gdb: "
        print *,"(1) compile with the -g option"
@@ -14532,23 +14532,18 @@ end subroutine print_visual_descriptor
       return
       end function fort_is_rigid_base
 
-      function is_rigid(nmat,im) 
+      function is_rigid(im) 
       use probcommon_module
 
       IMPLICIT NONE
 
       INTEGER_T is_rigid
-      INTEGER_T, intent(in) :: nmat,im
+      INTEGER_T, intent(in) :: im
       INTEGER_T dummy_input
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat.ne.num_materials"
-       stop
-      endif
-
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid17 in is_rigid: im=",im
-       print *,"nmat=",nmat
+       print *,"num_materials=",num_materials
 
        print *,"(breakpoint) break point and gdb: "
        print *,"(1) compile with the -g option"
@@ -14561,7 +14556,7 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      is_rigid=fort_is_rigid_base(FSI_flag(im),nmat,im)
+      is_rigid=fort_is_rigid_base(FSI_flag(im),im)
 
       return
       end function is_rigid
@@ -14620,9 +14615,9 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      if (is_rigid(nmat,im).eq.0) then
+      if (is_rigid(im).eq.0) then
        is_prescribed=0
-      else if (is_rigid(nmat,im).eq.1) then
+      else if (is_rigid(im).eq.1) then
        if (CTML_FSI_mat(nmat,im).eq.0) then
         is_prescribed=1
        else if (CTML_FSI_mat(nmat,im).eq.1) then
@@ -14665,9 +14660,9 @@ end subroutine print_visual_descriptor
       rigid_exists=0
 
       do im=1,nmat
-       if (is_rigid(nmat,im).eq.1) then
+       if (is_rigid(im).eq.1) then
         rigid_exists=1
-       else if (is_rigid(nmat,im).eq.0) then
+       else if (is_rigid(im).eq.0) then
         ! do nothing
        else
         print *,"is_rigid invalid GLOBALUTIL.F90 in rigid_exists"
@@ -14697,10 +14692,10 @@ end subroutine print_visual_descriptor
 
       do im=1,nmat
        if (is_prescribed(nmat,im).eq.1) then
-        if (is_rigid(nmat,im).eq.1) then
+        if (is_rigid(im).eq.1) then
          prescribed_exists=1
         else
-         print *,"is_rigid(nmat,im) invalid"
+         print *,"is_rigid(im) invalid"
          stop
         endif
        else if (is_prescribed(nmat,im).eq.0) then
@@ -14737,9 +14732,9 @@ end subroutine print_visual_descriptor
       im_solid_primary=0
 
       do im=1,nmat
-       if (is_rigid(nmat,im).eq.0) then
+       if (is_rigid(im).eq.0) then
         ! do nothing
-       else if (is_rigid(nmat,im).eq.1) then
+       else if (is_rigid(im).eq.1) then
         if (im_solid_primary.eq.0) then
          solid_dist=LS(im)
          im_solid_primary=im
@@ -14786,9 +14781,9 @@ end subroutine print_visual_descriptor
       solid_vof=zero
 
       do im=1,nmat
-       if (is_rigid(nmat,im).eq.0) then
+       if (is_rigid(im).eq.0) then
         ! do nothing
-       else if (is_rigid(nmat,im).eq.1) then
+       else if (is_rigid(im).eq.1) then
         solid_vof=solid_vof+VOF(im)
        else
         print *,"is_rigid invalid GLOBALUTIL.F90"
@@ -14824,7 +14819,7 @@ end subroutine print_visual_descriptor
        if (is_prescribed(nmat,im).eq.0) then
         ! do nothing
        else if (is_prescribed(nmat,im).eq.1) then
-        if (is_rigid(nmat,im).eq.1) then
+        if (is_rigid(im).eq.1) then
          solid_vof=solid_vof+VOF(im)
          if (im_prescribed_primary.eq.0) then
           im_prescribed_primary=im
@@ -14838,7 +14833,7 @@ end subroutine print_visual_descriptor
           stop
          endif
         else
-         print *,"is_rigid(nmat,im) invalid"
+         print *,"is_rigid(im) invalid"
          stop
         endif
        else
@@ -17569,7 +17564,7 @@ end subroutine print_visual_descriptor
        stop
       endif
       if (imattype.eq.999) then
-       if (is_rigid(nmat,im).eq.0) then
+       if (is_rigid(im).eq.0) then
         print *,"is_rigid invalid GLOBALUTIL.F90"
         stop
        endif
@@ -25575,7 +25570,7 @@ INTEGER_T is_rigid_local(nmat)
 tessellate=0
 
 do im=1,nmat
- is_rigid_local(im)=is_rigid(nmat,im)
+ is_rigid_local(im)=is_rigid(im)
  if (tessellate.eq.2) then
   is_rigid_local(im)=0
   print *,"expecting tessellate==0"
