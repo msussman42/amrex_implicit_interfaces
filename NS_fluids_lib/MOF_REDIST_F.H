@@ -20,8 +20,7 @@ namespace amrex{
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,
        int* bfact,
-       const Real* xlo,const Real* dx,
-       int* nmat);
+       const Real* xlo,const Real* dx);
 
 
      void fort_fd_node_normal(
@@ -33,8 +32,6 @@ namespace amrex{
        const int* fablo,const int* fabhi,
        int* bfact,
        const Real* xlo,const Real* dx,
-       int* nmat,
-       int* nten,
        int* n_normal,
        int* ngrow_make_distance);
 
