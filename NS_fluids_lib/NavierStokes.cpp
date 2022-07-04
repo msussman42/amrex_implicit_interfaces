@@ -1797,9 +1797,9 @@ void fortran_parameters() {
   }
 
   int imp1=im+1;
-  if (fort_is_rigid_base(&FSI_flag_temp[im],&nmat,&imp1)==1) {
+  if (fort_is_rigid_base(&FSI_flag_temp[im],&imp1)==1) {
    shear_thinning_fluid_temp[im]=0;
-  } else if (fort_is_rigid_base(&FSI_flag_temp[im],&nmat,&imp1)==0) {
+  } else if (fort_is_rigid_base(&FSI_flag_temp[im],&imp1)==0) {
    shear_thinning_fluid_temp[im]=0;
    if ((probtype==2)&&(axis_dir>0)&&(im==0))
     shear_thinning_fluid_temp[im]=1;
@@ -4273,9 +4273,9 @@ NavierStokes::read_params ()
       amrex::Error("Cannot have Carreau_beta!=0 and visc_coef==0 ");
 
      int ip1=i+1;
-     if (fort_is_rigid_base(&FSI_flag[i],&nmat,&ip1)==1) {
+     if (fort_is_rigid_base(&FSI_flag[i],&ip1)==1) {
       shear_thinning_fluid[i]=0;
-     } else if (fort_is_rigid_base(&FSI_flag[i],&nmat,&ip1)==0) {
+     } else if (fort_is_rigid_base(&FSI_flag[i],&ip1)==0) {
       shear_thinning_fluid[i]=0;
       if ((probtype==2)&&(axis_dir>0)&&(i==0))
        shear_thinning_fluid[i]=1;
@@ -5381,7 +5381,7 @@ int NavierStokes::ns_is_rigid(int im) {
   amrex::Error("im invalid50 (ns_is_rigid)");
  
  int imp1=im+1;
- int local_flag=fort_is_rigid_base(&FSI_flag[im],&num_materials,&imp1);
+ int local_flag=fort_is_rigid_base(&FSI_flag[im],&imp1);
 
  return local_flag;
 
@@ -13136,8 +13136,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     fablo,fabhi,
     &bfact,
     xlo,dx,
-    &nmat,
-    &nten,
     &n_normal,
     &ngrow_make_distance);
   } // mfi
@@ -24921,7 +24919,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
     xlo,dx,
     &cur_time_slab,
     &ngrow_distance,
-    &nmat,&nstar);
+    &nstar);
  } // mfi
 } // omp
  ns_reconcile_d_num(115);
@@ -25050,7 +25048,6 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
     xlo,dx,
     &cur_time_slab,
     &ngrow_distance,
-    &nmat,&nten,
     &nstar,
     &nface_dst);
  } // mfi
@@ -25158,8 +25155,7 @@ NavierStokes::correct_dist_uninit() {
     tilelo,tilehi,
     fablo,fabhi,&bfact,
     xlo,dx,
-    &cur_time_slab,
-    &nmat);
+    &cur_time_slab);
  } // mfi
 } // omp
  ns_reconcile_d_num(117);
@@ -25278,7 +25274,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
     &rzflag,
     xlo,dx,
     &cur_time_slab,
-    &nmat,&nface_src,&nface_dst);
+    &nface_src,&nface_dst);
   } // mfi
 } // omp
   ns_reconcile_d_num(118);
@@ -25362,7 +25358,6 @@ NavierStokes::makeFaceFrac(
    fort_faceinit( 
     &tid_current,
     &tessellate,  // 0,1, or 3
-    &nten,
     &level,
     &finest_level,
     facefab.dataPtr(),
@@ -25377,7 +25372,6 @@ NavierStokes::makeFaceFrac(
     xlo,dx,
     &cur_time_slab,
     &ngrow,
-    &nmat,
     &nface);
  } // mfi
 } // omp
@@ -25483,7 +25477,6 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
     xlo,dx,
     &cur_time_slab,
     &ngrow,
-    &nmat,
     &nface);
  } // mfi
 } // omp

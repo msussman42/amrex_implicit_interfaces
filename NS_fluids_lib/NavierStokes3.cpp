@@ -7430,7 +7430,7 @@ NavierStokes::Type_level(
    // updates one ghost cell.
    // declared in: LEVELSET_3D.F90
    //  for each cell,
-   //   if is_rigid(nmat,im)==1 and LS>=0 then type=im
+   //   if is_rigid(im)==1 and LS>=0 then type=im
   fort_gettypefab(
    source_fab.dataPtr(),
    ARLIM(source_fab.loVect()),ARLIM(source_fab.hiVect()),

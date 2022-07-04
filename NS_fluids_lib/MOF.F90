@@ -5787,7 +5787,7 @@ end subroutine volume_sanity_check
       INTEGER_T is_rigid_local(nmat)
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
        else if (tessellate.eq.0) then ! called from slope recon routine
@@ -6198,7 +6198,7 @@ end subroutine volume_sanity_check
       INTEGER_T is_rigid_local(nmat)
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
        else if (tessellate.eq.0) then
@@ -11401,7 +11401,7 @@ contains
       tessellate=0
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
         print *,"tessellate should be 0"
@@ -13155,7 +13155,7 @@ contains
       tessellate=0
 
       do imaterial=1,nmat
-       is_rigid_local(imaterial)=is_rigid(nmat,imaterial)
+       is_rigid_local(imaterial)=is_rigid(imaterial)
        if (tessellate.eq.2) then
         is_rigid_local(imaterial)=0
         print *,"only tessellate==0 allowed for multimaterial_MOF"
@@ -14307,7 +14307,7 @@ contains
        stop
       endif
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
        else if ((tessellate.eq.0).or. &
@@ -14515,7 +14515,7 @@ contains
       endif
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
        else if ((tessellate.eq.0).or. &
@@ -14863,7 +14863,7 @@ contains
       nhalf_box=1
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
        else if ((tessellate.eq.0).or. &
@@ -16332,7 +16332,7 @@ contains
       endif
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (local_tessellate_in.eq.2) then
         is_rigid_local(im)=0
        else if (local_tessellate_in.eq.0) then
@@ -17073,7 +17073,7 @@ contains
       nhalf_box=1
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
        else if ((tessellate.eq.0).or. &
@@ -18117,7 +18117,7 @@ contains
       tessellate_local=0
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate_local.eq.2) then
         is_rigid_local(im)=0
         print *,"expecting tessellate_local==0"
@@ -18984,7 +18984,7 @@ contains
       tessellate=0
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
         print *,"expecting tessellate==0 here"
@@ -19071,7 +19071,7 @@ contains
       tessellate=0
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
         print *,"expecting tessellate==0"
@@ -19194,7 +19194,7 @@ contains
       renorm_tessellate=0
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (renorm_tessellate.eq.2) then
         is_rigid_local(im)=0
         print *,"expecting renorm_tessellate==0"
@@ -19607,7 +19607,7 @@ contains
       tessellate=0
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
         print *,"expecting tessellate==0 here"
@@ -20305,7 +20305,7 @@ contains
        tessellate=0
 
        do im=1,nmat
-        is_rigid_local(im)=is_rigid(nmat,im)
+        is_rigid_local(im)=is_rigid(im)
         if (tessellate.eq.2) then
          is_rigid_local(im)=0
          print *,"expecting tessellate==0 here"
@@ -20501,7 +20501,7 @@ contains
       tessellate=0
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
         ! force non-tessellating materials to behave like tessellating
         ! material.
        if (tessellate.eq.2) then 
@@ -21080,7 +21080,7 @@ contains
       nhalf_box=1
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
         print *,"expecting tessellate=0 or 3"
@@ -21442,7 +21442,7 @@ contains
       tessellate=0
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
         print *,"expecting tessellate==0"
@@ -21558,7 +21558,7 @@ contains
       INTEGER_T is_rigid_local(nmat)
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
         print *,"expecting tessellate=0,1, or 3 in check_full_cell_vfrac"
@@ -21730,7 +21730,7 @@ contains
       tessellate=0
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
         print *,"expecting tessellate==0"
@@ -21829,7 +21829,7 @@ contains
       tessellate=0
 
       do im=1,nmat
-       is_rigid_local(im)=is_rigid(nmat,im)
+       is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
         print *,"expecting tessellate==0"
