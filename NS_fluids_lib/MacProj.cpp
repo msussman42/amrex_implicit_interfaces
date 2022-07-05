@@ -1612,7 +1612,6 @@ void NavierStokes::apply_div(
  } else
   amrex::Error("project_option_momeqn invalid66");
 
- int nten=num_interfaces;
  int finest_level=parent->finestLevel();
 
  bool use_tiling=ns_tiling;
@@ -2401,7 +2400,6 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
 
- int nten=num_interfaces;
  int nsolve=1;
 
  resize_metrics(1);

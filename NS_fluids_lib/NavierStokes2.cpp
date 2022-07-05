@@ -3126,7 +3126,6 @@ void NavierStokes::VELMAC_TO_CELL(
 
  int finest_level=parent->finestLevel();
  int nmat=num_materials;
- int nten=num_interfaces;
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
