@@ -13983,7 +13983,7 @@ contains
       end subroutine multimaterial_MOF
 
 
-      subroutine diagnostic_MOF(sdim,nmat,nmax)
+      subroutine diagnostic_MOF(sdim,nmax)
 
       use probcommon_module
       use geometry_intersect_module
@@ -13993,12 +13993,12 @@ contains
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: nmax
-      INTEGER_T, intent(in) :: sdim,nmat
+      INTEGER_T, intent(in) :: sdim
       REAL_T xtetlist(4,3,nmax)
       REAL_T xsten0(-3:3,sdim) 
       REAL_T dx(sdim) 
-      REAL_T mofdata(nmat*(2*sdim+3))
-      REAL_T multi_centroidA(nmat,sdim)
+      REAL_T mofdata(num_materials*(2*sdim+3))
+      REAL_T multi_centroidA(num_materials,sdim)
       INTEGER_T continuous_mof
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T angle(sdim-1)
@@ -14022,9 +14022,9 @@ contains
       REAL_T xref_matT(sdim)
       REAL_T xact_matT(sdim)
       REAL_T avgiter
-      REAL_T total_calls(nmat)
-      REAL_T total_iterations(nmat)
-      INTEGER_T max_iterations(nmat)
+      REAL_T total_calls(num_materials)
+      REAL_T total_iterations(num_materials)
+      INTEGER_T max_iterations(num_materials)
       REAL_T shrink_factor
       INTEGER_T mof_verbose
       INTEGER_T use_ls_data
@@ -14046,8 +14046,8 @@ contains
        print *,"ngeom_recon invalid"
        stop
       endif
-      nrecon=nmat*ngeom_recon
-      allocate(LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat))
+      nrecon=num_materials*ngeom_recon
+      allocate(LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials))
       if (sdim.eq.2) then
        k1lo=0
        k1hi=0
@@ -14061,7 +14061,7 @@ contains
       do i1=-1,1
       do j1=-1,1
       do k1=k1lo,k1hi
-      do im=1,nmat
+      do im=1,num_materials
        LS_stencil(D_DECL(i1,j1,k1),im)=zero
       enddo
       enddo
@@ -14073,9 +14073,11 @@ contains
        print *,"nmax invalid diagnostic MOF nmax=",nmax
        stop
       endif
-      if (nmat.ne.2) then
-       print *,"nmat invalid diagnostic mof"
-       print *,"nmat= ",nmat
+      if ((num_materials.ge.2).and.(num_materials.le.MAX_NUM_MATERIALS)) then
+       ! do nothing
+      else
+       print *,"num_materials not initialized properly"
+       print *,"num_materials=",num_materials
        stop
       endif
 
@@ -14098,7 +14100,7 @@ contains
         xsten0(isten,dir)=isten*half*dx(dir)
        enddo
       enddo ! dir
-      do im=1,nmat
+      do im=1,num_materials
        total_calls(im)=zero
        total_iterations(im)=zero
        max_iterations(im)=0
@@ -14205,10 +14207,10 @@ contains
         multi_centroidA, &
         continuous_mof, &
         cmofsten, &
-        nmat,sdim,1)
+        num_materials,sdim,1)
 
        moferror=zero
-       do im=1,nmat
+       do im=1,num_materials
         vofcomp=(im-1)*(2*sdim+3)+1
 
         do dir=1,sdim
@@ -14230,7 +14232,7 @@ contains
        endif
 
         ! diagnostic_MOF
-       do im=1,nmat
+       do im=1,num_materials
         total_calls(im)=total_calls(im)+mof_calls(1,im)
         total_iterations(im)= &
             total_iterations(im)+mof_iterations(1,im)
@@ -14245,7 +14247,7 @@ contains
       print *,"MOFITERMAX= ",MOFITERMAX
       print *,"nsamples= ",nsamples
       print *,"shrink_factor=",shrink_factor
-      do im=1,nmat
+      do im=1,num_materials
        print *,"im= ",im
        print *,"total calls= ",total_calls(im)
        if (total_calls(im).gt.zero) then
@@ -21907,7 +21909,7 @@ contains
 
       subroutine fort_initmof( &
        order_algorithm_in, &
-       nmat,MOFITERMAX_in, &
+       MOFITERMAX_in, &
        MOF_DEBUG_RECON_in, &
        MOF_TURN_OFF_LS_in, &
        nthreads, &
@@ -21920,25 +21922,28 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat,nmax_in,nthreads
-      INTEGER_T, intent(in) :: order_algorithm_in(nmat)
+      INTEGER_T, intent(in) :: nmax_in,nthreads
+      INTEGER_T, intent(in) :: order_algorithm_in(num_materials)
       INTEGER_T, intent(in) :: MOFITERMAX_in
       INTEGER_T, intent(in) :: MOF_DEBUG_RECON_in
       INTEGER_T, intent(in) :: MOF_TURN_OFF_LS_in
-      INTEGER_T sdim,nmat_test,nmax_test
+      INTEGER_T sdim,nmax_test
 
 #include "mofdata.H"
+
+      if ((num_materials.ge.2).and.(num_materials.le.MAX_NUM_MATERIALS)) then
+       ! do nothing
+      else
+       print *,"num_materials not initialized properly"
+       print *,"num_materials=",num_materials
+       stop
+      endif
 
       MOF_DEBUG_RECON_COUNT=0
       MOF_DEBUG_RECON=MOF_DEBUG_RECON_in
       MOF_TURN_OFF_LS=MOF_TURN_OFF_LS_in
 
       call set_MOFITERMAX(MOFITERMAX_in)
-
-      if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
-       print *,"nmat invalid init mof"
-       stop
-      endif
 
       if (nthreads.lt.1) then
        print *,"nthreads invalid"
@@ -21958,10 +21963,10 @@ contains
 
       allocate(intercept_error_history(INTERCEPT_MAXITER,geom_nthreads))
 
-      allocate(mof_calls(geom_nthreads,nmat))
-      allocate(mof_iterations(geom_nthreads,nmat))
+      allocate(mof_calls(geom_nthreads,num_materials))
+      allocate(mof_iterations(geom_nthreads,num_materials))
 
-      call set_order_algorithm(order_algorithm_in,nmat)
+      call set_order_algorithm(order_algorithm_in,num_materials)
 
       print *,"initializing geometry tables"
 
@@ -21971,9 +21976,8 @@ contains
       endif
       if (1.eq.0) then
        sdim=2
-       nmat_test=2
        nmax_test=1000
-       call diagnostic_MOF(sdim,nmat_test,nmax_test)
+       call diagnostic_MOF(sdim,nmax_test)
        stop
       endif
 
