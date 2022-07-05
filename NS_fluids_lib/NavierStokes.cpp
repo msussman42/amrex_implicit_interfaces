@@ -1759,6 +1759,26 @@ void fortran_parameters() {
   prefreeze_tensiontemp[im]=tensiontemp[im];
  pp.queryarr("prefreeze_tension",prefreeze_tensiontemp,0,nten);
 
+ int ioproc=0;
+ if (ParallelDescriptor::IOProcessor())
+  ioproc=1;
+
+ const int cc_int_size=sizeof(int);
+
+  // declared in PROB_CPP_PARMS.F90
+ fort_override_MAIN_GLOBALS(
+  &cc_int_size,
+  &num_species_var,
+  &num_materials_viscoelastic_temp,
+  &num_state_material,
+  &num_state_base,
+  &ngeom_raw,
+  &ngeom_recon,
+  &nmat,
+  &nten,
+  &ioproc);
+
+ ParallelDescriptor::Barrier();
 
  for (int im=0;im<nmat;im++) {
 
@@ -1829,10 +1849,6 @@ void fortran_parameters() {
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid 9");
 
- int ioproc=0;
- if (ParallelDescriptor::IOProcessor())
-  ioproc=1;
-
  int prescribe_temperature_outflow=0;
  pp.query("prescribe_temperature_outflow",prescribe_temperature_outflow);
  if ((prescribe_temperature_outflow<0)||
@@ -1888,8 +1904,6 @@ void fortran_parameters() {
   amrex::Error("n_sites invalid(1)");
  }
  double start_initialization = ParallelDescriptor::second();
-
- const int cc_int_size=sizeof(int);
 
   // declared in PROB_CPP_PARMS.F90
  fort_override(
