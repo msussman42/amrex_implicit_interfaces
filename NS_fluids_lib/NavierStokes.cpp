@@ -2042,7 +2042,7 @@ void fortran_parameters() {
  
  fort_initmof(
    mof_ordering_local.dataPtr(),
-   &nmat,&MOFITERMAX,
+   &MOFITERMAX,
    &MOF_DEBUG_RECON,
    &MOF_TURN_OFF_LS,
    &thread_class::nthreads,
