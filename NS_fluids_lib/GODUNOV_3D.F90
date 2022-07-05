@@ -633,8 +633,8 @@ stop
          LSLEFT(im)=levelpc(D_DECL(im1,jm1,km1),im)
          LSRIGHT(im)=levelpc(D_DECL(i,j,k),im)
         enddo
-        call get_primary_material(LSLEFT,nmat,imL)
-        call get_primary_material(LSRIGHT,nmat,imR)
+        call get_primary_material(LSLEFT,imL)
+        call get_primary_material(LSRIGHT,imR)
  
         if ((imL.ne.im_primary).and. &
             (imR.ne.im_primary)) then 
@@ -2170,8 +2170,8 @@ stop
           LSleft(im)=levelpc(D_DECL(im1,jm1,km1),im)
           LSright(im)=levelpc(D_DECL(i,j,k),im)
          enddo
-         call get_primary_material(LSleft,nmat,imL)
-         call get_primary_material(LSright,nmat,imR)
+         call get_primary_material(LSleft,imL)
+         call get_primary_material(LSright,imR)
 
          if ((imL.lt.1).or.(imL.gt.nmat)) then
           print *,"imL invalid"
@@ -3362,8 +3362,8 @@ stop
         LSleft(im)=dist(D_DECL(i-ii,j-jj,k-kk),im)
         LSright(im)=dist(D_DECL(i,j,k),im)
        enddo
-       call get_primary_material(LSleft,nmat,im_primaryL)
-       call get_primary_material(LSright,nmat,im_primaryR)
+       call get_primary_material(LSleft,im_primaryL)
+       call get_primary_material(LSright,im_primaryR)
 
        USTEFAN=zero
 
@@ -3888,7 +3888,7 @@ stop
           do im_sub=1,nmat
            LSsub(im_sub)=dist(D_DECL(ialt,jalt,kalt),im_sub)
           enddo
-          call get_primary_material(LSsub,nmat,im_sub)
+          call get_primary_material(LSsub,im_sub)
           if ((im_sub.ne.im).and. &
               (im_sub.ne.im_opp)) then
            triple_flag=1
@@ -5177,7 +5177,7 @@ stop
              endif
             enddo ! imlocal=1..num_materials 
 
-            call get_primary_material(LS_local,num_materials,im_primary)
+            call get_primary_material(LS_local,im_primary)
 
             if (F_solid_sum.ge.zero) then
              if (F_solid_sum.lt.half) then
@@ -6214,8 +6214,8 @@ stop
        call safe_data(i-ii,j-jj,k-kk,imlocal,LS_ptr,LSLEFT(imlocal))
        call safe_data(i,j,k,imlocal,LS_ptr,LSRIGHT(imlocal))
       enddo
-      call get_primary_material(LSLEFT,num_materials,imL)
-      call get_primary_material(LSRIGHT,num_materials,imR)
+      call get_primary_material(LSLEFT,imL)
+      call get_primary_material(LSRIGHT,imR)
 
       if ((imL.ge.1).and.(imL.le.num_materials).and. &
           (imR.ge.1).and.(imR.le.num_materials)) then
@@ -6515,8 +6515,8 @@ stop
          LSLEFT(imlocal)=LS(D_DECL(i-ii,j-jj,k-kk),imlocal)
          LSRIGHT(imlocal)=LS(D_DECL(i,j,k),imlocal)
         enddo
-        call get_primary_material(LSLEFT,num_materials,imL)
-        call get_primary_material(LSRIGHT,num_materials,imR)
+        call get_primary_material(LSLEFT,imL)
+        call get_primary_material(LSRIGHT,imR)
 
         if ((imL.ge.1).and.(imL.le.num_materials).and. &
             (imR.ge.1).and.(imR.le.num_materials)) then
@@ -6862,7 +6862,7 @@ stop
        do imlocal=1,nmat
         LScen(imlocal)=lsfab(D_DECL(i,j,k),imlocal)
        enddo
-       call get_primary_material(LScen,nmat,local_mask)
+       call get_primary_material(LScen,local_mask)
 
        if ((local_mask.eq.im_parm+1).and. &
            (LScen(im_parm+1).gt.zero)) then
@@ -7307,7 +7307,7 @@ stop
        do im=1,nmat
         LScen(im)=ls(D_DECL(i,j,k),im)
        enddo
-       call get_primary_material(LScen,nmat,im)
+       call get_primary_material(LScen,im)
 
        if (is_rigid(im).eq.0) then ! fluid region
 
@@ -11073,7 +11073,7 @@ stop
         do im=1,nmat
          ls_cell_or_face(im)=LS(D_DECL(i,j,k),im)
         enddo
-        call get_primary_material(ls_cell_or_face,nmat,im_primary)
+        call get_primary_material(ls_cell_or_face,im_primary)
 
         if (is_rigid(im_primary).eq.1) then
 
@@ -11114,7 +11114,7 @@ stop
          do im=1,nmat
           ls_cell_or_face(im)=LS(D_DECL(icell,jcell,kcell),im)
          enddo
-         call get_primary_material(ls_cell_or_face,nmat,im_primary_cell)
+         call get_primary_material(ls_cell_or_face,im_primary_cell)
 
          if (is_rigid(im_primary_cell).eq.0) then
 
@@ -11562,10 +11562,10 @@ stop
           LS_left(im)=LSCP(D_DECL(i-ii,j-jj,k-kk),im)
           LS_left_probe(im)=LSCP(D_DECL(i-2*ii,j-2*jj,k-2*kk),im)
          enddo
-         call get_primary_material(LS_right,nmat,im_primary_right)
-         call get_primary_material(LS_right_probe,nmat,im_primary_right_probe)
-         call get_primary_material(LS_left,nmat,im_primary_left)
-         call get_primary_material(LS_left_probe,nmat,im_primary_left_probe)
+         call get_primary_material(LS_right,im_primary_right)
+         call get_primary_material(LS_right_probe,im_primary_right_probe)
+         call get_primary_material(LS_left,im_primary_left)
+         call get_primary_material(LS_left_probe,im_primary_left_probe)
          if ((im_primary_right.ge.1).and. &
              (im_primary_right.le.nmat).and. &
              (im_primary_right_probe.ge.1).and. &
@@ -12285,7 +12285,7 @@ stop
 
          ! first checks the rigid materials for a positive LS; if none
          ! exist, then the subroutine checks the fluid materials.
-        call get_primary_material(LSCELL,nmat,im_primary)
+        call get_primary_material(LSCELL,im_primary)
 
         VDOT=expan(D_DECL(i,j,k),indexEXP+1)
         if (expect_mdot_sign.eq.one) then
@@ -16480,7 +16480,7 @@ stop
 
          ! first checks the rigid materials for a positive LS; if none
          ! exist, then the subroutine checks the fluid materials.
-        call get_primary_material(cell_LS,nmat,im_primary)
+        call get_primary_material(cell_LS,im_primary)
 
         if (is_prescribed(im_primary).eq.1) then
          is_solid_cell=im_primary
@@ -17657,8 +17657,8 @@ stop
          stop
         endif
 
-        call get_primary_material(lsleft,nmat,imL)
-        call get_primary_material(lsright,nmat,imR)
+        call get_primary_material(lsleft,imL)
+        call get_primary_material(lsright,imR)
 
         partidL=0
         partidR=0
@@ -17944,7 +17944,6 @@ stop
        bfact,bfact_c,bfact_f, &
        level, &
        finest_level, &
-       nmat, &
        nparts, &
        nparts_def, &
        im_solid_map, &
@@ -17976,7 +17975,6 @@ stop
 
       INTEGER_T, intent(in) :: simple_AMR_BC_flag_viscosity
 
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
@@ -18039,7 +18037,7 @@ stop
       REAL_T, pointer :: solidy_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: solidz(DIMV(solidz),nparts_def*SDIM)
       REAL_T, pointer :: solidz_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: levelpc(DIMV(levelpc),nmat)
+      REAL_T, intent(in), target :: levelpc(DIMV(levelpc),num_materials)
       REAL_T, pointer :: levelpc_ptr(D_DECL(:,:,:),:)
   
       INTEGER_T i,j,k
@@ -18062,8 +18060,8 @@ stop
       REAL_T vplus(SDIM)
       REAL_T vminus(SDIM)
 
-      REAL_T lsleft(nmat)
-      REAL_T lsright(nmat)
+      REAL_T lsleft(num_materials)
+      REAL_T lsright(num_materials)
 
       REAL_T solidvelleft(SDIM)
       REAL_T solidvelright(SDIM)
@@ -18087,7 +18085,7 @@ stop
       INTEGER_T operation_flag
       INTEGER_T energyflag 
       INTEGER_T project_option_vel
-      REAL_T lspoint(nmat)
+      REAL_T lspoint(num_materials)
       INTEGER_T im_primary
       REAL_T gradu(SDIM)
       REAL_T int_xlo,int_xhi
@@ -18206,19 +18204,15 @@ stop
        stop
       endif
 
-      do im=1,nmat
+      do im=1,num_materials
 
        if (fort_denconst(im).le.zero) then
         print *,"denconst invalid"
         stop
        endif
 
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
        ! in: fort_face_gradients
       if ((ns_time_order.ge.1).and.(ns_time_order.le.32)) then
        ! do nothing
@@ -18475,13 +18469,13 @@ stop
             
           mdata(D_DECL(i,j,k),dir)=one
 
-          do im=1,nmat
+          do im=1,num_materials
            lsleft(im)=levelpc(D_DECL(im1,jm1,km1),im)
            lsright(im)=levelpc(D_DECL(i,j,k),im)
-          enddo ! im=1..nmat
+          enddo ! im=1..num_materials
 
-          call get_primary_material(lsleft,nmat,imL)
-          call get_primary_material(lsright,nmat,imR)
+          call get_primary_material(lsleft,imL)
+          call get_primary_material(lsright,imR)
 
           call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level,nhalf)
           call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
@@ -18886,11 +18880,11 @@ stop
          ip1=i+ii
          jp1=j+jj
          kp1=k+kk
-         do im=1,nmat
+         do im=1,num_materials
           lspoint(im)=levelpc(D_DECL(i,j,k),im)
          enddo
-         call get_primary_material(lspoint,nmat,im_primary)
-         if ((im_primary.lt.1).or.(im_primary.gt.nmat)) then
+         call get_primary_material(lspoint,im_primary)
+         if ((im_primary.lt.1).or.(im_primary.gt.num_materials)) then
           print *,"im_primary invalid"
           stop
          endif
@@ -19004,7 +18998,7 @@ stop
            maskcov=NINT(mask0(D_DECL(i,j,k)))
 
            if ((local_maskSEM.ge.1).and. &
-               (local_maskSEM.le.nmat).and. &
+               (local_maskSEM.le.num_materials).and. &
                (maskcov.eq.1)) then
 
             call strip_status_dir(i,j,k,bfact,dir-1,stripstat)
@@ -19040,7 +19034,6 @@ stop
                simple_AMR_BC_flag_viscosity, &
                level, &
                finest_level, &
-               nmat, &
                operation_flag, &  ! OP_UGRAD_MAC
                energyflag, &
                project_option_vel, &
@@ -19127,7 +19120,7 @@ stop
            maskcov=NINT(mask0(D_DECL(i,j,k)))
 
            if ((local_maskSEM.ge.1).and. &
-               (local_maskSEM.le.nmat).and. &
+               (local_maskSEM.le.num_materials).and. &
                (maskcov.eq.1)) then
 
             call strip_status_dir(i,j,k,bfact,dir-1,stripstat)
@@ -19167,7 +19160,6 @@ stop
                SDC_outer_sweeps, &
                level, &
                finest_level, &
-               nmat, &
                operation_flag, & ! operation_flag==OP_GRADU_MAC_TO_CELL
                project_option_vel, &
                energyflag, &
@@ -19622,7 +19614,7 @@ stop
         LS_control_volume(im_LS)=cell_data_interp(im_LS)
        enddo
 
-       call get_primary_material(LS_control_volume,nmat,local_mask)
+       call get_primary_material(LS_control_volume,local_mask)
 
        if ((local_mask.eq.im_elastic_p1).and. &
            (cell_data_interp(im_elastic_p1).gt.zero)) then
@@ -19830,7 +19822,7 @@ stop
                   cell_data_interp(im_LS)
          enddo
 
-         call get_primary_material(cell_data_interp,nmat,local_mask)
+         call get_primary_material(cell_data_interp,local_mask)
          if ((local_mask.eq.im_elastic_p1).and. &
              (cell_data_interp(im_elastic_p1).gt.zero)) then
           local_mask=1
@@ -19928,7 +19920,7 @@ stop
           LS_plus_at_flux_point(side_flux+1,dir_flux+1,im_LS)= &
                   cell_data_interp(im_LS)
          enddo
-         call get_primary_material(cell_data_interp,nmat,local_mask)
+         call get_primary_material(cell_data_interp,local_mask)
          if ((local_mask.eq.im_elastic_p1).and. &
              (cell_data_interp(im_elastic_p1).gt.zero)) then
           local_mask=1
@@ -19947,7 +19939,7 @@ stop
           LS_minus_at_flux_point(side_flux+1,dir_flux+1,im_LS)= &
                   cell_data_interp(im_LS)
          enddo
-         call get_primary_material(cell_data_interp,nmat,local_mask)
+         call get_primary_material(cell_data_interp,local_mask)
          if ((local_mask.eq.im_elastic_p1).and. &
              (cell_data_interp(im_elastic_p1).gt.zero)) then
           local_mask=1
@@ -20531,7 +20523,7 @@ stop
         enddo
         ! first checks the rigid materials for a positive LS; if none
         ! exist, then the subroutine checks the fluid materials.
-        call get_primary_material(LS_local,nmat,im_primary) 
+        call get_primary_material(LS_local,im_primary) 
 
         if (is_rigid(im_primary).eq.0) then
          ! check all neighbors in "star stencil" for solid cells.
@@ -20580,7 +20572,7 @@ stop
            do im=1,nmat
             LS_stencil(im)=LS_state(D_DECL(icell,jcell,kcell),im)
            enddo
-           call get_primary_material(LS_stencil,nmat,im_stencil) 
+           call get_primary_material(LS_stencil,im_stencil) 
            if (is_rigid(im_stencil).eq.0) then
             ! do nothing
            else if (is_rigid(im_stencil).eq.1) then
@@ -20701,11 +20693,11 @@ stop
          do im=1,nmat
           LS_LEFT(im)=LS_state(D_DECL(ileft,jleft,kleft),im)
          enddo
-         call get_primary_material(LS_LEFT,nmat,im_stencil_left)
+         call get_primary_material(LS_LEFT,im_stencil_left)
          do im=1,nmat
           LS_RIGHT(im)=LS_state(D_DECL(iright,jright,kright),im)
          enddo
-         call get_primary_material(LS_RIGHT,nmat,im_stencil_right)
+         call get_primary_material(LS_RIGHT,im_stencil_right)
 
          if (is_rigid(im_stencil_left).eq.0) then
           if (is_rigid(im_stencil_right).eq.0) then
@@ -20770,7 +20762,7 @@ stop
                do im=1,nmat
                 LS_stencil(im)=LS_state(D_DECL(icell,jcell,kcell),im)
                enddo
-               call get_primary_material(LS_stencil,nmat,im_stencil) 
+               call get_primary_material(LS_stencil,im_stencil) 
                if (is_rigid(im_stencil).eq.0) then
                 ! do nothing
                else if (is_rigid(im_stencil).eq.1) then
@@ -20851,7 +20843,7 @@ stop
          do im=1,nmat
           LS_stencil(im)=half*(LS_LEFT(im)+LS_RIGHT(im))
          enddo
-         call get_primary_material(LS_stencil,nmat,im_stencil)
+         call get_primary_material(LS_stencil,im_stencil)
 
          local_damping=static_damping_coefficient(im_stencil)
          if (local_damping.gt.zero) then

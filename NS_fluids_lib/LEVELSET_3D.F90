@@ -241,7 +241,7 @@ stop
 
          ! the fluid cells closest to the substrate, but not
          ! in the substrate, have the most weight.
-         call get_primary_material(LS_virtual,CP%nmat,im_primary_sub_stencil)
+         call get_primary_material(LS_virtual,im_primary_sub_stencil)
 
          if (is_rigid(im_primary_sub_stencil).eq.0) then
 
@@ -1121,7 +1121,7 @@ stop
        call get_LS_extend(LSTEST,nmat,iten,lsdata(i,j,k))
        call get_VOF_extend(VOFTEST,nmat,iten,vofdata(i,j,k))
 
-       call get_primary_material(LSTEST,nmat,imhold)
+       call get_primary_material(LSTEST,imhold)
        im_primary_sten(i,j,k)=imhold
 
        if ((abs(i).le.1).and.(abs(j).le.1).and.(abs(k).le.1)) then
@@ -3665,7 +3665,7 @@ stop
 
          call FIX_LS_tessellate(LS,LS_fixed,nmat)
 
-         call get_primary_material(LS_fixed,nmat,im_majority)
+         call get_primary_material(LS_fixed,im_majority)
 
          if (is_rigid(im_majority).eq.1) then
 
@@ -3711,7 +3711,7 @@ stop
              LSSIDE(im)=LSPC(D_DECL(iside,jside,kside),im)
             enddo
             call FIX_LS_tessellate(LSSIDE,LSSIDE_fixed,nmat)
-            call get_primary_material(LSSIDE_fixed,nmat,im_opp)
+            call get_primary_material(LSSIDE_fixed,im_opp)
             do im=1,nmat
              LS_STAR_FIXED(sidestar,dirstar,im)=LSSIDE_fixed(im)
             enddo
@@ -5081,7 +5081,7 @@ stop
           endif
          enddo ! im=1..nmat
 
-         call get_primary_material(LSside,nmat,im_side_majority)
+         call get_primary_material(LSside,im_side_majority)
          if (is_rigid(im_side_majority).eq.1) then
           local_solid=1
          else if (is_rigid(im_side_majority).eq.0) then
@@ -6569,7 +6569,7 @@ stop
          LScen(im)=LS(D_DECL(i,j,k),im)
         enddo
 
-        call get_primary_material(LScen,nmat,im_primary)
+        call get_primary_material(LScen,im_primary)
 
         call Box_volumeFAST(bfact,dx,xsten,nhalf, &
          volcell,cencell,SDIM)
@@ -8393,8 +8393,8 @@ stop
           LSminus(im)=levelPC(D_DECL(im1,jm1,km1),im)
          enddo
           ! checks rigid and non-rigid materials.
-         call get_primary_material(LSplus,nmat,implus_majority)
-         call get_primary_material(LSminus,nmat,imminus_majority)
+         call get_primary_material(LSplus,implus_majority)
+         call get_primary_material(LSminus,imminus_majority)
 
          if ((implus_majority.lt.1).or.(implus_majority.gt.nmat).or. &
              (imminus_majority.lt.1).or.(imminus_majority.gt.nmat)) then
@@ -10780,12 +10780,10 @@ stop
        operation_flag, &
        energyflag, &
        constant_density_all_time, &
-       nmat, &
        nparts, &
        nparts_def, &
        im_solid_map, &
        added_weight, &
-       nten, &
        level, &
        finest_level, &
        project_option, &
@@ -10854,13 +10852,12 @@ stop
       INTEGER_T, intent(in) :: slab_step
       INTEGER_T, intent(in) :: enable_spectral
       INTEGER_T, intent(in) :: SDC_outer_sweeps 
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: energyflag 
-      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
+      INTEGER_T, intent(in) :: constant_density_all_time(num_materials)
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
-      REAL_T, intent(in) :: added_weight(nmat)
+      REAL_T, intent(in) :: added_weight(num_materials)
       INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nsolve
       INTEGER_T, intent(in) :: homflag
@@ -10949,7 +10946,7 @@ stop
       REAL_T, pointer :: maskcoef_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: levelPC(DIMV(levelPC),nmat*(SDIM+1))
+      REAL_T, intent(in), target :: levelPC(DIMV(levelPC),num_materials*(SDIM+1))
       REAL_T, pointer :: levelPC_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: solxfab(DIMV(solxfab),SDIM*nparts_def)
       REAL_T, intent(in), target :: solyfab(DIMV(solyfab),SDIM*nparts_def)
@@ -11029,7 +11026,7 @@ stop
       INTEGER_T ncomp_xvel
       INTEGER_T ncomp_cterm
       INTEGER_T is_rigid_near
-      REAL_T LStest(nmat)
+      REAL_T LStest(num_materials)
       INTEGER_T velcomp
       INTEGER_T partid
       INTEGER_T partid_ghost
@@ -11082,15 +11079,11 @@ stop
       solyfab_ptr=>solyfab
       solzfab_ptr=>solzfab
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+      if ((nparts.lt.0).or.(nparts.gt.num_materials)) then
        print *,"nparts invalid fort_mac_to_cell"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+      if ((nparts_def.lt.1).or.(nparts_def.gt.num_materials)) then
        print *,"nparts_def invalid fort_mac_to_cell"
        stop
       endif
@@ -11151,7 +11144,7 @@ stop
        stop
       endif
 
-      do im=1,nmat
+      do im=1,num_materials
        imattype=fort_material_type(im)
        if (imattype.eq.999) then
         ! do nothing
@@ -11168,7 +11161,7 @@ stop
         print *,"added_weight invalid"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
           (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
@@ -11226,13 +11219,13 @@ stop
       else if (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) then 
  
        if (ncomp_veldest.ge. &
-           SDIM+num_state_material*nmat) then
+           SDIM+num_state_material*num_materials) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
         stop
        endif
-       if (ncomp_dendest.ge.num_state_material*nmat) then
+       if (ncomp_dendest.ge.num_state_material*num_materials) then
         ! do nothing
        else
         print *,"ncomp_dendest invalid"
@@ -11358,7 +11351,7 @@ stop
         stop
        endif
 
-       if (ncomp_denold.eq.nmat*num_state_material) then
+       if (ncomp_denold.eq.num_materials*num_state_material) then
         ! do nothing
        else
         print *,"ncomp_denold invalid"
@@ -11473,7 +11466,7 @@ stop
        stop
       endif
 
-      do im=1,nmat
+      do im=1,num_materials
        if (fort_denconst(im).le.zero) then
         print *,"denconst invalid"
         stop
@@ -11908,7 +11901,7 @@ stop
          partid_ghost=0
          nparts_temp=0
          im_solid=0
-         do im=1,nmat
+         do im=1,num_materials
           LStest(im)=levelPC(D_DECL(i,j,k),im)
           if (is_lag_part(im).eq.1) then
 
@@ -11917,7 +11910,7 @@ stop
              if (im_solid.eq.0) then
               im_solid=im
               partid=nparts_temp
-             else if ((im_solid.ge.1).and.(im_solid.le.nmat)) then
+             else if ((im_solid.ge.1).and.(im_solid.le.num_materials)) then
               if (LStest(im).gt.LStest(im_solid)) then
                im_solid=im
                partid=nparts_temp
@@ -11952,7 +11945,7 @@ stop
            stop
           endif
 
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
 
          if (nparts_temp.ne.nparts) then
           print *,"nparts_temp invalid"
@@ -12087,7 +12080,7 @@ stop
           endif
 
           mass_side(side)=zero
-          do im=1,nmat 
+          do im=1,num_materials 
            if (side.eq.1) then  ! left half of cell
             sidecomp=FACECOMP_MASSFACE+2*(im-1)+2
            else if (side.eq.2) then ! right half of cell
@@ -12103,7 +12096,7 @@ stop
             print *,"added_weight invalid"
             stop
            endif
-          enddo ! im=1..nmat
+          enddo ! im=1..num_materials
 
          enddo ! side=1..2
 
@@ -12184,7 +12177,7 @@ stop
          !     rho_t + div(rho u)=0
          ! 
         is_rigid_near=0
-        do im=1,nmat
+        do im=1,num_materials
          LStest(im)=levelPC(D_DECL(i,j,k),im)
          if (is_rigid(im).eq.1) then
           if (LStest(im).ge.-DXMAXLS) then
@@ -12201,12 +12194,12 @@ stop
           print *,"is_rigid(im) invalid"
           stop
          endif
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
         if (is_rigid_near.eq.1) then
          use_face_pres_cen=0
         else if (is_rigid_near.eq.0) then
-         do im=1,nmat
+         do im=1,num_materials
           if (LStest(im).ge.-DXMAXLS) then
            if (is_compressible_mat(im).eq.0) then
             use_face_pres_cen=0
@@ -12222,7 +12215,7 @@ stop
            print *,"LStest(im) is NaN(1)fort_mac_to_cell OP_VEL_DIVUP_TO_CELL"
            stop
           endif 
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
         else
          print *,"is_rigid_near inv(1)fort_mac_to_cell OP_VEL_DIVUP_TO_CELL"
          stop
@@ -12319,7 +12312,7 @@ stop
           endif
 
           mass_side(side)=zero
-          do im=1,nmat 
+          do im=1,num_materials 
            if (side.eq.1) then  ! left half of cell
             sidecomp=FACECOMP_MASSFACE+2*(im-1)+2
            else if (side.eq.2) then ! right half of cell
@@ -12409,7 +12402,7 @@ stop
            ! update the temperature
           if (energyflag.eq.SUB_OP_THERMAL_DIVUP_OK) then 
 
-           do im=1,nmat
+           do im=1,num_materials
 
             KE_diff=zero
             do velcomp=1,SDIM
@@ -12510,7 +12503,7 @@ stop
              print *,"LStest(im) is NaN"
              stop
             endif 
-           enddo ! im=1..nmat
+           enddo ! im=1..num_materials
 
            !do not update temperature
           else if (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) then
@@ -12605,7 +12598,7 @@ stop
          local_maskSEM=NINT(maskSEM(D_DECL(i,j,k)))
 
          if ((local_maskSEM.ge.1).and. &
-             (local_maskSEM.le.nmat)) then
+             (local_maskSEM.le.num_materials)) then
 
           call strip_status(i,j,k,bfact,stripstat)
 
@@ -12679,7 +12672,6 @@ stop
                 SDC_outer_sweeps, &
                 level, &
                 finest_level, &
-                nmat, &
                 operation_flag, & 
                 project_option, &
                 energyflag, &
@@ -12726,7 +12718,6 @@ stop
                 SDC_outer_sweeps, &
                 level, &
                 finest_level, &
-                nmat, &
                 operation_flag, & 
                 project_option, &
                 energyflag, &
@@ -12773,7 +12764,6 @@ stop
                 SDC_outer_sweeps, &
                 level, &
                 finest_level, &
-                nmat, &
                 operation_flag, & 
                 project_option, &
                 energyflag, &
@@ -13728,8 +13718,8 @@ stop
            LSright(im)=levelPC(D_DECL(i,j,k),im)
            localLS(im)=half*(LSright(im)+LSleft(im))
           enddo
-          call get_primary_material(LSleft,nmat,im_left)
-          call get_primary_material(LSright,nmat,im_right)
+          call get_primary_material(LSleft,im_left)
+          call get_primary_material(LSright,im_right)
 
           if ((is_compressible_mat(im_left).eq.1).and. &
               (is_compressible_mat(im_right).eq.1)) then
@@ -13857,7 +13847,7 @@ stop
            LSupwind(im)=levelPC(D_DECL(idonate,jdonate,kdonate),im)
           enddo
 
-          call get_primary_material(LSupwind,nmat,im)
+          call get_primary_material(LSupwind,im)
           if ((im.ge.1).and.(im.le.nmat)) then
            ibase=num_state_material*(im-1) 
            denlocal=den(D_DECL(idonate,jdonate,kdonate),ibase+ENUM_DENVAR+1) 
@@ -16767,7 +16757,7 @@ stop
             do im=1,nmat
              LS_predict(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
             enddo
-            call get_primary_material(LS_predict,nmat,im_primary_stencil)
+            call get_primary_material(LS_predict,im_primary_stencil)
 
              !fluid stencil cell, we trust this LS value.
              !if (at_center==1) then cell is (i,j,k) cell which is solid.
@@ -18735,7 +18725,7 @@ stop
               do dir=1,nmat
                LS_sub(dir)=data_out_LS%data_interp(dir)
               enddo
-              call get_primary_material(LS_sub,nmat,im_primary_sub)
+              call get_primary_material(LS_sub,im_primary_sub)
               if ((im_primary_sub.ge.1).and.(im_primary_sub.le.nmat)) then
                im_particle=particles(current_link)% &
                  extra_int(N_EXTRA_INT_MATERIAL_ID+1)
@@ -18887,7 +18877,7 @@ stop
                tensor_sub(dir)
             enddo
             new_particles(ibase+SDIM+N_EXTRA_REAL_INSERT_TIME+1)=cur_time_slab
-            call get_primary_material(LS_sub,nmat,im_primary_sub)
+            call get_primary_material(LS_sub,im_primary_sub)
             if ((im_primary_sub.ge.1).and.(im_primary_sub.le.nmat)) then
              new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT_MATERIAL_ID+1)= &
               im_primary_sub

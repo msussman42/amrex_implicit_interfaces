@@ -1775,7 +1775,7 @@ contains
         call safe_data(isten,jsten,ksten,im,local_data_fab_LS,LS_sten(im))
        enddo
 
-       call get_primary_material(LS_sten,LOW%nmat,im_primary_sten)
+       call get_primary_material(LS_sten,im_primary_sten)
        if (im_primary_sten.eq.im_fluid) then
         ! do nothing
        else if (im_primary_sten.eq.im_solid) then
@@ -25475,21 +25475,20 @@ Tout=Tinf*H_local+Tsat*(one-H_local)
 
 end subroutine smooth_init
 
-subroutine get_primary_material(LS,nmat,im_primary)
+subroutine get_primary_material(LS,im_primary)
 use probcommon_module
 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: LS(nmat)
+REAL_T, intent(in) :: LS(num_materials)
 INTEGER_T, intent(out) :: im_primary
 INTEGER_T im,imtest
 INTEGER_T tessellate
-INTEGER_T is_rigid_local(nmat)
+INTEGER_T is_rigid_local(num_materials)
 
 tessellate=0
 
-do im=1,nmat
+do im=1,num_materials
  is_rigid_local(im)=is_rigid(im)
  if (tessellate.eq.2) then
   is_rigid_local(im)=0
@@ -25507,21 +25506,15 @@ do im=1,nmat
   print *,"tessellate invalid38"
   stop
  endif
-enddo ! im=1..nmat
-
-if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
- print *,"nmat invalid get_primary_material"
- print *,"nmat= ",nmat
- stop
-endif
+enddo ! im=1..num_materials
 
 im_primary=0
-do im=1,nmat
+do im=1,num_materials
  if (is_rigid_local(im).eq.1) then
   if (LS(im).ge.zero) then
    if (im_primary.ne.0) then
     print *,"cannot have two rigid materials in same place"
-    do imtest=1,nmat
+    do imtest=1,num_materials
      print *,"imtest,LS(imtest) ",imtest,LS(imtest)
     enddo
     stop
@@ -25539,11 +25532,11 @@ do im=1,nmat
   print *,"is_rigid invalid GLOBALUTIL.F90"
   stop
  endif
-enddo !im=1..nmat
+enddo !im=1..num_materials
 
 if (im_primary.eq.0) then
 
- do im=1,nmat
+ do im=1,num_materials
    if (im_primary.eq.0) then
     im_primary=im
    else if ((im_primary.ge.1).and.(im_primary.lt.im)) then
@@ -25559,10 +25552,10 @@ if (im_primary.eq.0) then
     print *,"im_primary invalid"
     stop
    endif
- enddo !im=1..nmat
+ enddo !im=1..num_materials
 
 else if ((im_primary.ge.1).and. &
-         (im_primary.le.nmat).and. &
+         (im_primary.le.num_materials).and. &
          (is_rigid_local(im_primary).eq.1)) then
  ! do nothing
 else
@@ -25605,8 +25598,8 @@ shift_amount=thickness_factor*dxmin
 if ((mask1.eq.0).or.(mask2.eq.0)) then
  HVAL=zero
 else if ((mask1.eq.1).and.(mask2.eq.1)) then
- call get_primary_material(LS1,num_materials,im1)
- call get_primary_material(LS2,num_materials,im2)
+ call get_primary_material(LS1,im1)
+ call get_primary_material(LS2,im2)
  if ((im1.eq.im_parm+1).and.(im2.eq.im_parm+1)) then
   LS_avg=half*(LS1(im_parm+1)+LS2(im_parm+1))-shift_amount
   HVAL=hs(LS_avg,shift_amount)

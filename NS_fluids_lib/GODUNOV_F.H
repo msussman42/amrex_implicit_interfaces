@@ -1045,7 +1045,6 @@ extern "C"
      int* bfact,int* bfact_c,int* bfact_f,
      int* level,
      int* finest_level,
-     int* nmat,
      int* nparts,
      int* nparts_def,
      int* im_solid_map,

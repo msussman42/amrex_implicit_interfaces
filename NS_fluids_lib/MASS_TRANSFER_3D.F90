@@ -2435,9 +2435,7 @@ stop
          LSPROBE(imls))
        enddo ! imls=1..nmat
 
-       call get_primary_material(LSPROBE, &
-        PROBE_PARMS%nmat, &
-        im_primary_probe(iprobe))
+       call get_primary_material(LSPROBE,im_primary_probe(iprobe))
 
        if (DEBUG_TRIPLE.eq.1) then
         if ((DEBUG_I.eq.PROBE_PARMS%i).and. &
@@ -3502,7 +3500,7 @@ stop
         do im=1,nmat
          LS_local(im)=oldLS(D_DECL(i-i1,j-j1,k-k1),im)
         enddo
-        call get_primary_material(LS_local,nmat,im_primary)
+        call get_primary_material(LS_local,im_primary)
         if (is_rigid(im_primary).eq.0) then
          ! do nothing
         else if (is_rigid(im_primary).eq.1) then
@@ -4196,7 +4194,7 @@ stop
         do im=1,nmat
          lsmat(im)=LSold(D_DECL(i,j,k),im)
         enddo
-        call get_primary_material(lsmat,nmat,im_primary)
+        call get_primary_material(lsmat,im_primary)
 
         if (is_rigid(im_primary).eq.0) then
 
@@ -4887,8 +4885,8 @@ stop
 
             ! declared in MOF.F90: checks both is_rigid and non is_rigid
             ! materials.
-           call get_primary_material(unsplit_lsnew,nmat,im_primary_new)
-           call get_primary_material(oldLS_point,nmat,im_primary_old)
+           call get_primary_material(unsplit_lsnew,im_primary_new)
+           call get_primary_material(oldLS_point,im_primary_old)
            call combine_solid_VOF(newvfrac,solid_vof_new)
            call combine_solid_VOF(oldvfrac,solid_vof_old)
 
@@ -6674,7 +6672,7 @@ stop
            do im_local=1,nmat
             ls_local(im_local)=LS(D_DECL(i,j,k),im_local)
            enddo
-           call get_primary_material(ls_local,nmat,im_local)
+           call get_primary_material(ls_local,im_local)
            if (is_rigid(im_local).eq.0) then
 
             if ((im_dest.ge.1).and.(im_dest.le.nmat)) then
@@ -8011,7 +8009,7 @@ stop
          do im=1,nmat
           LShere(im)=LS(D_DECL(i,j,k),im)
          enddo
-         call get_primary_material(LShere,nmat,im_primary)
+         call get_primary_material(LShere,im_primary)
 
          if (is_rigid(im_primary).eq.0) then
 
@@ -8453,7 +8451,7 @@ stop
                    LSINT(imls))
                  enddo ! imls=1..nmat*(SDIM+1)
 
-                 call get_primary_material(LSINT,nmat,imls_I)
+                 call get_primary_material(LSINT,imls_I)
 
                  TI_min=saturation_temp_min(iten+ireverse*nten)
                  TI_max=saturation_temp_max(iten+ireverse*nten)
@@ -10021,7 +10019,7 @@ stop
          do im=1,nmat
           LShere(im)=LSnew(D_DECL(i,j,k),im)
          enddo
-         call get_primary_material(LShere,nmat,im_primary)
+         call get_primary_material(LShere,im_primary)
          if (is_rigid(im_primary).eq.0) then
           do im=1,nmat-1
            do im_opp=im+1,nmat

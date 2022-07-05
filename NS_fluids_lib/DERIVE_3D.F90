@@ -198,7 +198,7 @@ stop
         vofcomp=(im_local-1)*ngeom_recon+1
         VFRAC(im_local)=vof(D_DECL(i,j,k),vofcomp)
        enddo
-       call get_primary_material_VFRAC(VFRAC,nmat,im_primary,caller_id)
+       call get_primary_material_VFRAC(VFRAC,im_primary,caller_id)
 
        do veldir=1,3
        do dir=1,3
@@ -379,7 +379,7 @@ stop
           vofcomp=(im_local-1)*ngeom_recon+1
           VFRAC(im_local)=vof(D_DECL(i+i1,j+j1,k+k1),vofcomp)
          enddo
-         call get_primary_material_VFRAC(VFRAC,nmat,im_primary,caller_id)
+         call get_primary_material_VFRAC(VFRAC,im_primary,caller_id)
          if (is_rigid(im_primary).eq.1) then
           near_solid=1
          else if (is_rigid(im_primary).eq.0) then
@@ -1418,7 +1418,7 @@ stop
         vofcomp=(im_local-1)*ngeom_recon+1
         VFRAC(im_local)=vof(D_DECL(i,j,k),vofcomp)
        enddo
-       call get_primary_material_VFRAC(VFRAC,nmat,im_primary_center,caller_id)
+       call get_primary_material_VFRAC(VFRAC,im_primary_center,caller_id)
 
        do dir=1,SDIM
         ii=0
@@ -1446,7 +1446,7 @@ stop
           vofcomp=(im_local-1)*ngeom_recon+1
           VFRAC(im_local)=vof(D_DECL(i+side*ii,j+side*jj,k+side*kk),vofcomp)
          enddo
-         call get_primary_material_VFRAC(VFRAC,nmat,im_primary_side,caller_id)
+         call get_primary_material_VFRAC(VFRAC,im_primary_side,caller_id)
 
          near_interface=0
          do dir_local=1,SDIM
@@ -1499,8 +1499,7 @@ stop
            vofcomp=(im_local-1)*ngeom_recon+1
            VFRAC(im_local)=vof(D_DECL(iprobe,jprobe,kprobe),vofcomp)
           enddo
-          call get_primary_material_VFRAC(VFRAC,nmat,im_primary_probe, &
-                  caller_id)
+          call get_primary_material_VFRAC(VFRAC,im_primary_probe,caller_id)
           if ((is_rigid(im_primary_probe).eq.1).or. &
               (im_primary_probe.ne.im_parm)) then
            near_interface=0
@@ -2501,7 +2500,7 @@ stop
            ! im_primary is the material applying a given force/torque onto
            ! "im_test"
            ! "get_primary_material" declared in GLOBALUTIL.F90
-          call get_primary_material(ls_sort,nmat,im_primary)
+          call get_primary_material(ls_sort,im_primary)
 
           if (im_primary.eq.im_test) then
            ! do nothing
@@ -2555,7 +2554,7 @@ stop
              do im=1,nmat
               ls_side(im)=levelpc(D_DECL(i_side,j_side,k_side),im)
              enddo
-             call get_primary_material(ls_side,nmat,im_side)
+             call get_primary_material(ls_side,im_side)
 
              if (im_side.eq.im_test) then
 
@@ -2637,7 +2636,7 @@ stop
                  ls_visc(im)= &
                     levelpc(D_DECL(i_side_visc,j_side_visc,k_side_visc),im)
                 enddo
-                call get_primary_material(ls_visc,nmat,im_visc)
+                call get_primary_material(ls_visc,im_visc)
                 if (is_rigid(im_visc).eq.1) then
 
                  partid=0
