@@ -292,7 +292,6 @@ namespace amrex{
         int* level,int* finest_level,
         const int* rz_flag,
         const int* domlo,const int* domhi,
-        int* nmat,
         int* nparts,
         int* nparts_def,
         int* im_solid_map,
@@ -300,7 +299,6 @@ namespace amrex{
         Real* blob_array,
         int* blob_array_size,
         int* num_colors,
-        int* nten,
         int* project_option);
 
 

@@ -3732,7 +3732,7 @@ NavierStokes::read_params ()
         int im_dest=0;
 	 // get_inverse_iten_cpp declared in NavierStokes2.cpp
 	 // 1<=im1,im2<=nmat
-        get_inverse_iten_cpp(im1,im2,iten+1,nmat);
+        get_inverse_iten_cpp(im1,im2,iten+1);
         if (ireverse==0) {
          im_source=im1;  
          im_dest=im2;  
@@ -3845,7 +3845,7 @@ NavierStokes::read_params ()
 
        Real LL=get_user_latent_heat(iten_local+1,293.0,1);
        if (LL!=0.0) {
-        get_inverse_iten_cpp(im1,im2,iten+1,nmat);
+        get_inverse_iten_cpp(im1,im2,iten+1);
         if ((im1>=1)&&(im1<=nmat)&&(im2>=1)&&(im2<=nmat)&&
             (im1!=im2)) { 
          // do nothing
@@ -4619,7 +4619,7 @@ NavierStokes::read_params ()
        if ((im>nmat)||(im_opp>nmat))
         amrex::Error("im or im_opp bust 200cpp");
        int iten;
-       get_iten_cpp(im,im_opp,iten,nmat);
+       get_iten_cpp(im,im_opp,iten);
        if ((iten<1)||(iten>nten))
         amrex::Error("iten invalid");
        int im_source=im;
@@ -13766,7 +13766,7 @@ NavierStokes::level_phase_change_convertALL() {
  int n_phase_change=0;
  for (im=1;im<=nmat-1;im++) {
   for (im_opp=im+1;im_opp<=nmat;im_opp++) {
-   get_iten_cpp(im,im_opp,iten,nmat);
+   get_iten_cpp(im,im_opp,iten);
    if ((iten<1)||(iten>num_interfaces))
     amrex::Error("iten invalid");
    Real LL0=get_user_latent_heat(iten,293.0,1);
@@ -13793,7 +13793,7 @@ NavierStokes::level_phase_change_convertALL() {
 
   for (im=1;im<=nmat-1;im++) {
    for (im_opp=im+1;im_opp<=nmat;im_opp++) {
-    get_iten_cpp(im,im_opp,iten,nmat);
+    get_iten_cpp(im,im_opp,iten);
     if ((iten<1)||(iten>num_interfaces))
      amrex::Error("iten invalid");
     Real LL0=get_user_latent_heat(iten,293.0,1);
@@ -13929,7 +13929,7 @@ NavierStokes::level_phase_change_convert(
  int nten=num_interfaces;
 
  int iten;
- get_iten_cpp(im_outer,im_opp_outer,iten,nmat);
+ get_iten_cpp(im_outer,im_opp_outer,iten);
 
  if ((im_outer>=1)&&(im_outer<=nmat)&&
      (im_opp_outer>=1)&&(im_opp_outer<=nmat)&&
@@ -14354,7 +14354,7 @@ NavierStokes::phase_change_redistributeALL() {
     if ((im>nmat)||(im_opp>nmat))
      amrex::Error("im or im_opp bust 200cpp");
     int iten;
-    get_iten_cpp(im,im_opp,iten,nmat);
+    get_iten_cpp(im,im_opp,iten);
     if ((iten<1)||(iten>nten))
      amrex::Error("iten invalid");
 
@@ -16124,7 +16124,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
   if (localMF[VELADVECT_MF]->nComp()!=AMREX_SPACEDIM)
    amrex::Error("localMF[VELADVECT_MF]->nComp()!=AMREX_SPACEDIM");
 
-  int nten=num_interfaces;
   int nstate=STATE_NCOMP;
 
   MultiFab& S_new_test=get_new_data(State_Type,slab_step+1);
@@ -16340,7 +16339,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &bfact,&bfact_c,&bfact_f, 
       &level,&finest_level,
       &rzflag,domlo,domhi, 
-      &nmat,
       &nparts,
       &nparts_def,
       im_solid_map_ptr,
@@ -16348,7 +16346,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       blob_array.dataPtr(),
       &blob_array_size,
       &num_colors,
-      &nten,
       &project_option_visc);
     }   // mfi
 } // omp

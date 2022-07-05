@@ -1868,8 +1868,6 @@ void NavierStokes::init_divup_cell_vel_cell(
 
  const Real* dx = geom.CellSize();
 
- int nten=num_interfaces;
-
  MultiFab* presmf=localMF[idx_pres];
  if (presmf->nComp()!=nsolve)
   amrex::Error("presmf->nComp() invalid");
@@ -2099,7 +2097,6 @@ void NavierStokes::init_divup_cell_vel_cell(
      &level,&finest_level,
      &rzflag,
      domlo,domhi,
-     &nmat,
      &nparts,
      &nparts_def,
      im_solid_map_ptr,
@@ -2107,7 +2104,6 @@ void NavierStokes::init_divup_cell_vel_cell(
      blob_array.dataPtr(),
      &blob_array_size,
      &num_colors,
-     &nten,
      &project_option);
    } // mfi
 } // omp
@@ -2365,19 +2361,16 @@ void NavierStokes::grid_type_to_box_type_cpp(int grid_type,
 
 } // end subroutine grid_type_to_box_type_cpp
 
-void NavierStokes::get_iten_cpp(int im1,int im2,int& iten,int nmat) {
+void NavierStokes::get_iten_cpp(int im1,int im2,int& iten) {
 
  int im=-1;
  int im_opp=-1;
 
- if (nmat<1)
-  amrex::Error("nmat invalid");
-
- if ((im1<1)||(im1>nmat)||
-     (im2<1)||(im2>nmat)||
+ if ((im1<1)||(im1>num_materials)||
+     (im2<1)||(im2>num_materials)||
      (im1==im2)) {
   std::cout << "im1,im2 mismatch im1,im2=" << im1 << ' ' << im2 << '\n';
-  std::cout << "nmat=" << nmat << '\n';
+  std::cout << "num_materials=" << num_materials << '\n';
   amrex::Error("get_iten_cpp problem "); 
  }
 
@@ -2392,9 +2385,9 @@ void NavierStokes::get_iten_cpp(int im1,int im2,int& iten,int nmat) {
  if (im==1) {
   iten=im_opp-1;
  } else if (im==2) {
-  iten=nmat-1+im_opp-2;
+  iten=num_materials-1+im_opp-2;
  } else if (im==3) {
-  iten=2*nmat-3+im_opp-3;
+  iten=2*num_materials-3+im_opp-3;
  } else {
   amrex::Error("im1 or im2 not supported yet");
  }
@@ -2402,32 +2395,29 @@ void NavierStokes::get_iten_cpp(int im1,int im2,int& iten,int nmat) {
 }  // get_iten_cpp
 
 
-void NavierStokes::get_inverse_iten_cpp(int& im1,int& im2,int iten,int nmat) {
+void NavierStokes::get_inverse_iten_cpp(int& im1,int& im2,int iten) {
 
  if (iten<1) {
   std::cout << "iten= " << iten << '\n';
   amrex::Error("iten invalid in get_inverse_iten_cpp");
  }
- if (nmat<1)
-  amrex::Error("nmat invalid");
-
  im1=0;
  im2=0;
- for (int im=1;im<=nmat;im++) {
-  for (int im_opp=im+1;im_opp<=nmat;im_opp++) {
+ for (int im=1;im<=num_materials;im++) {
+  for (int im_opp=im+1;im_opp<=num_materials;im_opp++) {
    int iten_test;
-   get_iten_cpp(im,im_opp,iten_test,nmat); 
+   get_iten_cpp(im,im_opp,iten_test); 
    if (iten==iten_test) {
     im1=im;
     im2=im_opp;
    }
   }
  }
- if ((im1<1)||(im1>nmat)||
-     (im2<1)||(im2>nmat)||
+ if ((im1<1)||(im1>num_materials)||
+     (im2<1)||(im2>num_materials)||
      (im1==im2)) {
   std::cout << "im1,im2 mismatch im1,im2=" << im1 << ' ' << im2 << '\n';
-  std::cout << "nmat=" << nmat << '\n';
+  std::cout << "num_materials=" << num_materials << '\n';
   amrex::Error("get_inverse_iten_cpp problem "); 
  }
 
@@ -2546,7 +2536,6 @@ void NavierStokes::increment_face_velocity(
 
  int finest_level = parent->finestLevel();
  int nmat=num_materials;
- int nten=num_interfaces;
 
  MultiFab* levelcolor=nullptr;
  MultiFab* leveltype=nullptr;
@@ -2960,7 +2949,6 @@ void NavierStokes::increment_face_velocity(
        &level,&finest_level,
        &rzflag,
        domlo,domhi, 
-       &nmat,
        &nparts,
        &nparts_def,
        im_solid_map_ptr,
@@ -2968,7 +2956,6 @@ void NavierStokes::increment_face_velocity(
        blob_array.dataPtr(),
        &blob_array_size,
        &num_colors,
-       &nten,
        &project_option);
     } // mfi
 } // omp
@@ -4059,8 +4046,6 @@ void NavierStokes::apply_pressure_grad(
  
  bool use_tiling=ns_tiling;
 
- int nten=num_interfaces;
-
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
@@ -4351,7 +4336,6 @@ void NavierStokes::apply_pressure_grad(
      &rzflag,
      velbc.dataPtr(),
      &visc_coef,
-     &nmat,
      &nden,
      &uncoupled_viscosity,
      &homflag);
@@ -4609,8 +4593,8 @@ void NavierStokes::apply_pressure_grad(
      fablo,fabhi, 
      &bfact,&bfact_c,&bfact_f,
      &level,&finest_level,
-     &rzflag,domlo,domhi,
-     &nmat,
+     &rzflag,
+     domlo,domhi,
      &nparts,
      &nparts_def,
      im_solid_map_ptr,
@@ -4618,7 +4602,6 @@ void NavierStokes::apply_pressure_grad(
      blob_array.dataPtr(),
      &blob_array_size,
      &num_colors,
-     &nten,
      &project_option);
 
    }  // mfi
@@ -5891,8 +5874,6 @@ void NavierStokes::process_potential_force_face() {
  for (int m=0;m<2*AMREX_SPACEDIM;m++)
   dombcpres[m]=b_rec[m];
 
- int nten=num_interfaces;
-
  MultiFab* dendata=getStateDen(1,cur_time_slab);
 
   // gpx/rhox,gpy/rhoy,gpz/rhoz
@@ -6059,7 +6040,6 @@ void NavierStokes::process_potential_force_face() {
     &level,&finest_level,
     &rzflag,
     domlo,domhi,
-    &nmat,
     &nparts,
     &nparts_def,
     im_solid_map_ptr,
@@ -6067,7 +6047,6 @@ void NavierStokes::process_potential_force_face() {
     blob_array.dataPtr(),
     &blob_array_size,
     &num_colors,
-    &nten,
     &local_project_option);
   } // mfi
 } // omp

@@ -1102,9 +1102,9 @@ void apply_pressure_grad(
 
     static void grid_type_to_box_type_cpp(int grid_type,int* box_type);
 
-    static void get_iten_cpp(int im1,int im2,int& iten,int nmat);
+    static void get_iten_cpp(int im1,int im2,int& iten);
      // iten>=1  im1,im2>=1
-    static void get_inverse_iten_cpp(int& im1,int& im2,int iten,int nmat);
+    static void get_inverse_iten_cpp(int& im1,int& im2,int iten);
 
      // unew^f=unew^f + beta * localMF[idx_velcell]
     void increment_face_velocity(

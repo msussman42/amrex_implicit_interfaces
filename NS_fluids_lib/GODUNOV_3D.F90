@@ -527,7 +527,6 @@ stop
         ! TANGENTIAL (dirtan) direction.
         ! levelpc(im).
       subroutine slopecrossterm( &
-        nmat,  & 
         massfrac, &
         total_mass, &
         levelpc, &
@@ -545,7 +544,6 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat
 
        ! pointers are always intent(in) but the data itself inherits
        ! its intent property from the target.
@@ -553,7 +551,7 @@ stop
       REAL_T, intent(in), pointer :: mdata(D_DECL(:,:,:),:)
       REAL_T, intent(in), pointer :: tdata(D_DECL(:,:,:),:)
       REAL_T, intent(in), pointer :: levelpc(D_DECL(:,:,:),:)
-      REAL_T, intent(in) :: massfrac(nmat)
+      REAL_T, intent(in) :: massfrac(num_materials)
       REAL_T, intent(in) :: total_mass
 
       INTEGER_T, intent(in) :: ii,jj,kk
@@ -567,8 +565,8 @@ stop
       REAL_T weight_total,sumslope
       REAL_T testslope
       INTEGER_T try_stencil
-      REAL_T LSLEFT(nmat)
-      REAL_T LSRIGHT(nmat)
+      REAL_T LSLEFT(num_materials)
+      REAL_T LSRIGHT(num_materials)
 
       if (dir.eq.dirtan) then
        print *,"dir or dirtan invalid"
@@ -580,10 +578,6 @@ stop
       endif
       if ((dirtan.lt.1).or.(dirtan.gt.SDIM)) then
        print *,"dirtan invalid"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
        stop
       endif
 
@@ -613,10 +607,10 @@ stop
 
         ! massfrac derived from tessellating interfaces.
        im_primary=0
-       do im=1,nmat
+       do im=1,num_materials
         if (im_primary.eq.0) then
          im_primary=im
-        else if ((im_primary.ge.1).and.(im_primary.le.nmat)) then
+        else if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
          if (massfrac(im).gt.massfrac(im_primary)) then
           im_primary=im
          endif
@@ -626,10 +620,10 @@ stop
         endif
        enddo ! im
     
-       if ((im_primary.ge.1).and.(im_primary.le.nmat).and. &
+       if ((im_primary.ge.1).and.(im_primary.le.num_materials).and. &
            (massfrac(im_primary).gt.zero)) then
 
-        do im=1,nmat
+        do im=1,num_materials
          LSLEFT(im)=levelpc(D_DECL(im1,jm1,km1),im)
          LSRIGHT(im)=levelpc(D_DECL(i,j,k),im)
         enddo
@@ -657,7 +651,7 @@ stop
             !im_face=0 if, wrt i1,j1,k1, imL_1<>imR_1 or 
             !coarse/fine or exterior BC or is_clamped_face>=1
            im_face=NINT(faceLS(D_DECL(i1,j1,k1),dirtan))
-           if ((im_face.ge.0).and.(im_face.le.nmat)) then
+           if ((im_face.ge.0).and.(im_face.le.num_materials)) then
             ! do nothing
            else
             print *,"im_face invalid"
@@ -675,7 +669,7 @@ stop
            else if (is_prescribed(im_face).eq.1) then 
             try_stencil=0  
            else if (is_prescribed(im_face).eq.0) then ! im_face=fluid
-            if ((im_face.ge.1).and.(im_face.le.nmat)) then
+            if ((im_face.ge.1).and.(im_face.le.num_materials)) then
              if (im_face.eq.im_primary) then
               try_stencil=1
              else if (im_face.ne.im_primary) then
@@ -896,9 +890,6 @@ stop
       REAL_T, intent(in) :: LS1
       REAL_T, intent(out) :: heatcoeff
       INTEGER_T :: ispec
-      INTEGER_T :: nmat
-
-      nmat=num_materials
 
       if (den.gt.zero) then
        ! do nothing
@@ -917,9 +908,9 @@ stop
                (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
        ispec=project_option-SOLVETYPE_SPEC
        if (LS1.ge.zero) then ! center cell owned by im_source
-        heatcoeff=fort_speciesviscconst(ispec*nmat+im_source)*den
+        heatcoeff=fort_speciesviscconst(ispec*num_materials+im_source)*den
        else ! center cell owned by im_dest
-        heatcoeff=fort_speciesviscconst(ispec*nmat+im_dest)*den
+        heatcoeff=fort_speciesviscconst(ispec*num_materials+im_dest)*den
        endif
       else
        print *,"project_option invalid"
@@ -998,7 +989,6 @@ stop
        rzflag, &
        velbc, &
        visc_coef, &
-       nmat, &
        nden, &
        uncoupled_viscosity, &
        homflag) &
@@ -1020,7 +1010,7 @@ stop
       INTEGER_T, intent(in) :: homflag
       INTEGER_T :: nc
       INTEGER_T, intent(in) :: uncoupled_viscosity
-      INTEGER_T, intent(in) :: nmat,nden
+      INTEGER_T, intent(in) :: nden
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM) 
       INTEGER_T, intent(in) :: rzflag 
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -1064,7 +1054,7 @@ stop
 
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
       REAL_T, intent(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
-      REAL_T, intent(in), target :: levelpc(DIMV(levelpc),nmat)
+      REAL_T, intent(in), target :: levelpc(DIMV(levelpc),num_materials)
       REAL_T, pointer :: levelpc_ptr(D_DECL(:,:,:),:)
 
       REAL_T, intent(out), target :: xflux(DIMV(xflux),nsolve)  ! u
@@ -1094,8 +1084,8 @@ stop
       INTEGER_T wzMM
 
       INTEGER_T im
-      REAL_T LSleft(nmat)
-      REAL_T LSright(nmat)
+      REAL_T LSleft(num_materials)
+      REAL_T LSright(num_materials)
       REAL_T divterm
       INTEGER_T compressible_face
       REAL_T uxterm,vyterm,wzterm
@@ -1103,8 +1093,8 @@ stop
       REAL_T diff_flux(SDIM)
       INTEGER_T imL,imR
       REAL_T total_mass,DMface
-      REAL_T massfrac(nmat)
-      REAL_T massF(2*nmat)
+      REAL_T massfrac(num_materials)
+      REAL_T massF(2*num_materials)
       REAL_T xsten(-1:1,SDIM)
       REAL_T xstenMAC(-1:1,SDIM)
       REAL_T xclamped_minus_sten(-1:1,SDIM)
@@ -1238,17 +1228,13 @@ stop
        stop
       endif
 
-      do im=1,nmat
+      do im=1,num_materials
        if (fort_denconst(im).le.zero) then
         print *,"denconst invalid"
         stop
        endif
       enddo
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if (nden.ne.nmat*num_state_material) then
+      if (nden.ne.num_materials*num_state_material) then
        print *,"nden invalid"
        stop
       endif
@@ -1387,15 +1373,15 @@ stop
          jm1=j-jj
          km1=k-kk
 
-         do im=1,2*nmat
+         do im=1,2*num_materials
           massF(im)=xface(D_DECL(i,j,k),FACECOMP_MASSFACE+im)
          enddo
-         do im=1,nmat
+         do im=1,num_materials
           massfrac(im)=zero
          enddo
          total_mass=zero
          do side=1,2
-          do im=1,nmat
+          do im=1,num_materials
            DMface=massF(2*(im-1)+side)
            if (DMface.lt.zero) then
             print *,"DMface bust"
@@ -1406,7 +1392,7 @@ stop
           enddo ! im
          enddo ! side
          if (total_mass.gt.zero) then
-          do im=1,nmat
+          do im=1,num_materials
            massfrac(im)=massfrac(im)/total_mass
           enddo
          else if (total_mass.eq.zero) then
@@ -1471,7 +1457,6 @@ stop
            ! mdata=0 if both adjoining cells to a face are solid cells or
            ! a cell pair is outside the grid.
            call slopecrossterm( &
-             nmat,  &
              massfrac, &
              total_mass, &
              levelpc_ptr, &
@@ -1632,7 +1617,7 @@ stop
             maskcov=NINT(maskcoef(D_DECL(i,j,k)))
 
             if ((local_maskSEM.ge.1).and. &
-                (local_maskSEM.le.nmat).and. &
+                (local_maskSEM.le.num_materials).and. &
                 (maskcov.eq.1)) then
 
               ! elemhi(dir)=elemlo(dir)
@@ -2166,18 +2151,18 @@ stop
           stop
          endif
 
-         do im=1,nmat
+         do im=1,num_materials
           LSleft(im)=levelpc(D_DECL(im1,jm1,km1),im)
           LSright(im)=levelpc(D_DECL(i,j,k),im)
          enddo
          call get_primary_material(LSleft,imL)
          call get_primary_material(LSright,imR)
 
-         if ((imL.lt.1).or.(imL.gt.nmat)) then
+         if ((imL.lt.1).or.(imL.gt.num_materials)) then
           print *,"imL invalid"
           stop
          endif
-         if ((imR.lt.1).or.(imR.gt.nmat)) then
+         if ((imR.lt.1).or.(imR.gt.num_materials)) then
           print *,"imR invalid"
           stop
          endif
@@ -2376,7 +2361,7 @@ stop
            maskcov=NINT(maskcoef(D_DECL(i,j,k)))
 
            if ((local_maskSEM.ge.1).and. &
-               (local_maskSEM.le.nmat).and. &
+               (local_maskSEM.le.num_materials).and. &
                (maskcov.eq.1)) then
 
             call elementbox(i,j,k,bfact,dir-1,elemlo,elemhi)
@@ -3024,7 +3009,7 @@ stop
           print *,"im or im_opp bust 6"
           stop
          endif
-         call get_iten(im,im_opp,iten,nmat)
+         call get_iten(im,im_opp,iten)
          if ((is_rigid(im).eq.1).or. &
              (is_rigid(im_opp).eq.1)) then
           cap_wave_speed(iten)=zero
@@ -3050,7 +3035,7 @@ stop
       else if (recompute_wave_speed.eq.0) then
        do im=1,nmat-1
         do im_opp=im+1,nmat
-         call get_iten(im,im_opp,iten,nmat)
+         call get_iten(im,im_opp,iten)
          level_cap_wave_speed(iten)=zero
         enddo
        enddo
@@ -3379,7 +3364,7 @@ stop
           print *,"im or im_opp bust 7"
           stop
          endif
-         call get_iten(im,im_opp,iten,nmat)
+         call get_iten(im,im_opp,iten)
 
          tcompsrc=(im_primaryL-1)*num_state_material+1+ENUM_TEMPERATUREVAR
          tcompdst=(im_primaryR-1)*num_state_material+1+ENUM_TEMPERATUREVAR
@@ -3845,7 +3830,7 @@ stop
         ! fluid region
        if ((is_rigid(im_primaryL).eq.0).and. &
            (is_rigid(im_primaryR).eq.0)) then 
-        call fluid_interface(LSleft,LSright,gradh,im_opp,im,nmat)
+        call fluid_interface(LSleft,LSright,gradh,im_opp,im)
        else if ((is_rigid(im_primaryL).eq.1).or. &
                 (is_rigid(im_primaryR).eq.1)) then
         gradh=zero
@@ -3862,7 +3847,7 @@ stop
          print *,"im or im_opp bust 8"
          stop
         endif
-        call get_iten(im,im_opp,iten,nmat)
+        call get_iten(im,im_opp,iten)
 
         if (level_cap_wave_speed(iten).lt.zero) then
          print *,"level_cap wave speed not initialized"
@@ -5084,7 +5069,7 @@ stop
       do im=1,num_materials-1
        do im_opp=im+1,num_materials
         do ireverse=0,1
-         call get_iten(im,im_opp,iten,num_materials)
+         call get_iten(im,im_opp,iten)
          iten_shift=iten+ireverse*num_interfaces
          if (is_valid_freezing_modelF(freezing_model(iten_shift)).eq.1) then
           ! do nothing 
@@ -5141,7 +5126,7 @@ stop
             stop
            endif
 
-           call get_iten(im,im_opp,iten,num_materials)
+           call get_iten(im,im_opp,iten)
            iten_shift=iten+ireverse*num_interfaces
 
            LL=get_user_latent_heat(iten_shift,293.0d0,1)
@@ -5383,7 +5368,7 @@ stop
       do im=1,nmat-1
        do im_opp=im+1,nmat
         do ireverse=0,1
-         call get_iten(im,im_opp,iten,nmat)
+         call get_iten(im,im_opp,iten)
          if (is_valid_freezing_modelF( &
               freezing_model(iten+ireverse*nten)).eq.1) then
           ! do nothing 
@@ -10256,7 +10241,7 @@ stop
             stop
            endif
 
-           call get_iten(im,im_opp,iten,nmat)
+           call get_iten(im,im_opp,iten)
            LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
 
            Tgamma_STATUS=NINT(TgammaFAB(D_DECL(i,j,k),iten))
@@ -12355,7 +12340,7 @@ stop
           if (ireverse.eq.-1) then
            ICEMASK=one
           else if ((ireverse.eq.0).or.(ireverse.eq.1)) then
-           call get_iten(im,im_opp,iten,nmat)
+           call get_iten(im,im_opp,iten)
            index_compare=iten+ireverse*nten-1
            if ((index_compare.ge.0).and.(index_compare.lt.2*nten)) then
             if (index_compare.eq.indexEXP) then
@@ -16696,7 +16681,7 @@ stop
              do im_opp=1,nmat
               if (im_opp.ne.im) then
 
-               call get_iten(im,im_opp,iten,nmat)
+               call get_iten(im,im_opp,iten)
                LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
 
                if (interface_cond_avail.eq.1) then
