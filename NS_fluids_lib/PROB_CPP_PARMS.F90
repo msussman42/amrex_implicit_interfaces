@@ -1762,3 +1762,134 @@ stop
       
       return
       end subroutine fort_override
+
+
+      subroutine fort_override_MAIN_GLOBALS( &
+        cc_int_size, &
+        ccnum_species_var, &
+        ccnum_materials_viscoelastic, &
+        ccnum_state_material, &
+        ccnum_state_base, &
+        ccngeom_raw, &
+        ccngeom_recon, &
+        ccnum_materials, &
+        ccnten, &
+        ioproc) &
+      bind(c,name='fort_override_MAIN_GLOBALS')
+
+      use probcommon_module
+      
+      IMPLICIT NONE
+      
+      INTEGER_T, intent(in) :: cc_int_size
+      INTEGER_T, intent(in) :: ccnum_materials
+      INTEGER_T, intent(in) :: ccnten
+      INTEGER_T, intent(in) :: ccnum_species_var
+      INTEGER_T, intent(in) :: ccnum_materials_viscoelastic
+      INTEGER_T, intent(in) :: ccnum_state_material
+      INTEGER_T, intent(in) :: ccnum_state_base
+      INTEGER_T, intent(in) :: ccngeom_raw
+      INTEGER_T, intent(in) :: ccngeom_recon
+      INTEGER_T, intent(in) :: ioproc
+
+      INTEGER_T :: local_var_int
+      REAL_T :: local_var_double
+      INTEGER_T :: fort_double_size,fort_int_size
+      
+      num_materials=ccnum_materials
+      if (num_materials.lt.MAX_NUM_MATERIALS) then
+       ! do nothing
+      else
+       print *,"increase MAX_NUM_MATERIALS; aborting"
+       stop
+      endif
+      num_interfaces=( (num_materials-1)*(num_materials-1)+ &
+             (num_materials-1) )/2
+
+      fort_double_size=SIZEOF(local_var_double)
+      fort_int_size=SIZEOF(local_var_int)
+     
+      if ((fort_double_size.eq.8).and. &
+          (fort_int_size.eq.cc_int_size)) then
+       print *,"fort_override_MAIN_GLOBALS"
+       print *,"fort_double_size=",fort_double_size     
+       print *,"fort_int_size=",fort_int_size     
+       print *,"cc_int_size=",cc_int_size     
+      else
+       print *,"fort_override_MAIN_GLOBALS"
+       print *,"fort_double_size or fort_int_size invalid"
+       print *,"fort_double_size=",fort_double_size     
+       print *,"fort_int_size=",fort_int_size     
+       print *,"cc_int_size=",cc_int_size     
+       stop
+      endif
+
+      num_species_var=ccnum_species_var
+      if (num_species_var.lt.MAX_NUM_SPECIES) then
+       ! do nothing
+      else
+       print *,"num_species_var too large, increase MAX_NUM_SPECIES"
+       stop
+      endif
+      
+      num_materials_viscoelastic=ccnum_materials_viscoelastic
+      
+      num_state_base=ccnum_state_base
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid 60"
+       stop
+      endif
+      num_state_material=num_state_base  ! den,T
+      num_state_material=num_state_material+num_species_var
+      
+      if (num_state_material.ne.ccnum_state_material) then
+       print *,"ccnum_state_material invalid"
+       stop
+      endif
+      
+      if ((num_species_var.lt.0).or. &
+          (num_materials_viscoelastic.lt.0).or. &
+          (num_materials_viscoelastic.gt.num_materials).or. &
+          (num_materials.lt.1).or. &
+          (num_interfaces.lt.1).or. &
+          (num_materials.gt.MAX_NUM_MATERIALS).or. &
+          (num_interfaces.gt.100).or. &
+          (num_materials.gt.100)) then
+       print *,"material parameters illegal"
+       stop
+      endif
+      
+      ngeom_raw=ccngeom_raw
+      ngeom_recon=ccngeom_recon
+      
+      if (ngeom_recon.ne.2*SDIM+3) then
+       print *,"ngeom_recon invalid"
+       stop
+      endif
+      if (ngeom_raw.ne.SDIM+1) then
+       print *,"ngeom_raw invalid"
+       stop
+      endif
+      
+      if (ioproc.eq.1) then
+       print *,"fort_override_MAIN_GLOBALS"
+      
+       print *,"num_materials= ",num_materials
+       print *,"num_interfaces= ",num_interfaces
+       print *,"numspec,num_mat_visc,MAX_NUM_MATERIALS ", &
+        num_species_var,num_materials_viscoelastic, &
+        MAX_NUM_MATERIALS
+       print *,"ngeom_raw ",ngeom_raw
+       print *,"ngeom_recon ",ngeom_recon
+       print *,"fort: num_state_material ",num_state_material
+       print *,"fort: num_state_base ",num_state_base
+      
+      else if (ioproc.eq.0) then
+       ! do nothing
+      else
+       print *,"ioproc invalid"
+       stop
+      endif
+      
+      return
+      end subroutine fort_override_MAIN_GLOBALS

@@ -166,6 +166,18 @@ namespace amrex{
        Real* fort_visc_coef,
        int* ioproc);
 
+
+     void fort_override_MAIN_GLOBALS(
+       const int* cc_int_size,
+       int* num_species_var,
+       int* num_materials_viscoelastic,
+       int* num_state_material, 
+       int* num_state_base, 
+       int* ngeom_raw,
+       int* ngeom_recon,
+       int* num_materials,
+       int* nten,
+       int* ioproc);
   }
 
 }/* namespace amrex */
