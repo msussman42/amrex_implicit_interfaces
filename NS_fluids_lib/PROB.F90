@@ -127,7 +127,7 @@ stop
       endif
 
       if (tessellate.eq.0) then
-       call get_primary_material_VFRAC(vof,nmat,im_primary,4)
+       call get_primary_material_VFRAC(vof,im_primary,4)
       else if ((tessellate.eq.1).or. &
                (tessellate.eq.3)) then
        im_primary=0
@@ -632,8 +632,8 @@ stop
 
         ! we are in "get_icemask"
 
-      call get_primary_material(LS,nmat,im_primary)
-      call get_secondary_material(LS,nmat,im_primary,im_secondary)
+      call get_primary_material(LS,im_primary)
+      call get_secondary_material(LS,im_primary,im_secondary)
 
       if ((im_secondary.ge.1).and. &
           (im_secondary.le.nmat)) then
@@ -5066,8 +5066,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       im_opp=0
       gradh=zero
 
-      call get_primary_material(LSleft,nmat,imL)
-      call get_primary_material(LSright,nmat,imR)
+      call get_primary_material(LSleft,imL)
+      call get_primary_material(LSright,imR)
 
       if ((is_rigid(imL).eq.1).or. &
           (is_rigid(imR).eq.1)) then
@@ -5360,8 +5360,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       im_opp=0
       gradh=zero
 
-      call get_primary_material(LSleft,nmat,imL)
-      call get_primary_material(LSright,nmat,imR)
+      call get_primary_material(LSleft,imL)
+      call get_primary_material(LSright,imR)
 
       if ((imL.lt.1).or.(imL.gt.nmat).or. &
           (imR.lt.1).or.(imR.gt.nmat)) then
@@ -5630,7 +5630,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      call get_primary_material(LS_temp,nmat,im_primary)
+      call get_primary_material(LS_temp,im_primary)
 
       material_present_flag(im_primary)=1
 
@@ -5656,7 +5656,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         do im=1,nmat 
          LS_temp(im)=LS_stencil(D_DECL(i1,j1,k1),im)
         enddo
-        call get_primary_material(LS_temp,nmat,im_primary)
+        call get_primary_material(LS_temp,im_primary)
         material_present_flag(im_primary)=1
         if (is_rigid(im_primary).eq.0) then
          if (probtype.eq.46) then ! cavitation
@@ -14502,7 +14502,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        SDC_outer_sweeps, &
        level, &
        finest_level, &
-       nmat, &
        operation_flag, &
        project_option, &
        energyflag, &
@@ -14552,7 +14551,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T, intent(in) :: SDC_outer_sweeps
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: slab_step
       INTEGER_T, intent(in) :: operation_flag
       INTEGER_T, intent(in) :: homflag
@@ -14629,11 +14627,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T nbase
       REAL_T local_div_val
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-
       if ((dir_main.ge.1).and.(dir_main.le.SDIM)) then
        ! do nothing
       else
@@ -14685,7 +14678,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       source_term=homflag
 
       if ((maskSEM.ge.1).and. &
-          (maskSEM.le.nmat)) then
+          (maskSEM.le.num_materials)) then
 
        ! do nothing
 
@@ -14699,7 +14692,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       if (operation_flag.eq.OP_GRADU_MAC_TO_CELL) then ! grad U: MAC -> CELL
 
-       if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
+       if ((maskSEM.lt.1).or.(maskSEM.gt.num_materials)) then
         print *,"maskSEM invalid"
         stop
        endif 
@@ -14790,7 +14783,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"project_option invalid"
         stop
        endif
-       if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then!operation_flag=OP_RHS_CELL
+       if ((maskSEM.lt.1).or.(maskSEM.gt.num_materials)) then!operation_flag=OP_RHS_CELL
         print *,"maskSEM invalid"
         stop
        endif 
@@ -14843,7 +14836,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else if (operation_flag.eq.OP_DIV_CELL) then ! divergence
 
-       if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
+       if ((maskSEM.lt.1).or.(maskSEM.gt.num_materials)) then
         print *,"maskSEM invalid"
         stop
        endif 
@@ -14891,7 +14884,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then
 
-       if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
+       if ((maskSEM.lt.1).or.(maskSEM.gt.num_materials)) then
         print *,"maskSEM invalid"
         stop
        endif 
@@ -14925,13 +14918,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
 
        if (ncomp_veldest.ge. &
-           SDIM+num_state_material*nmat) then
+           SDIM+num_state_material*num_materials) then
         ! do nothing
        else
         print *,"ncomp_veldest invalid"
         stop
        endif
-       if (ncomp_dendest.ge.num_state_material*nmat) then
+       if (ncomp_dendest.ge.num_state_material*num_materials) then
         ! do nothing
        else
         print *,"ncomp_dendest invalid"
@@ -14952,7 +14945,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else if (operation_flag.eq.OP_ISCHEME_CELL) then ! advection
 
-       if ((maskSEM.ge.1).and.(maskSEM.le.nmat)) then
+       if ((maskSEM.ge.1).and.(maskSEM.le.num_materials)) then
         ! do nothing
        else
         print *,"maskSEM invalid"
@@ -14971,7 +14964,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"ncomp_dendest invalid"
         stop
        endif
-       if (ncomp_denold.eq.nmat*num_state_material) then
+       if (ncomp_denold.eq.num_materials*num_state_material) then
         ! do nothing
        else
         print *,"ncomp_denold invalid"
@@ -15077,7 +15070,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      if ((maskSEM.lt.1).or.(maskSEM.gt.nmat)) then
+      if ((maskSEM.lt.1).or.(maskSEM.gt.num_materials)) then
        print *,"maskSEM invalid"
        stop
       endif 

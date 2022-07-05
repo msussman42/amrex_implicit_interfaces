@@ -19090,7 +19090,7 @@ contains
        endif
       enddo ! im=1..nmat
 
-      call get_primary_material(LS,nmat,im_primary)
+      call get_primary_material(LS,im_primary)
       if (is_rigid_local(im_primary).eq.0) then
        do im=1,nmat
         LS_new(im)=LS(im)
@@ -21422,7 +21422,7 @@ contains
 
        ! called from: get_mach_number, 
        !        fort_derturbvisc, fort_derconductivity
-      subroutine get_primary_material_VFRAC(VFRAC,nmat,im_primary,caller_id)
+      subroutine get_primary_material_VFRAC(VFRAC,im_primary,caller_id)
       use probcommon_module
       use geometry_intersect_module
       use global_utility_module
@@ -21430,18 +21430,17 @@ contains
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: caller_id
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: VFRAC(nmat)
+      REAL_T, intent(in) :: VFRAC(num_materials)
       INTEGER_T, intent(out) :: im_primary
       INTEGER_T im
       INTEGER_T im_crit_fluid,im_crit_solid
       REAL_T sum_vfrac_fluid,sum_vfrac_solid,VOFSUM
       INTEGER_T tessellate
-      INTEGER_T is_rigid_local(nmat)
+      INTEGER_T is_rigid_local(num_materials)
 
       tessellate=0
 
-      do im=1,nmat
+      do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
@@ -21459,13 +21458,7 @@ contains
         print *,"tessellate invalid39"
         stop
        endif
-      enddo ! im=1..nmat
-
-      if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
-       print *,"nmat invalid get_primary_material_VFRAC"
-       print *,"nmat= ",nmat
-       stop
-      endif
+      enddo ! im=1..num_materials
 
       im_crit_fluid=0
       im_crit_solid=0
@@ -21473,7 +21466,7 @@ contains
       sum_vfrac_fluid=zero
       VOFSUM=zero
 
-      do im=1,nmat
+      do im=1,num_materials
 
        if ((VFRAC(im).lt.-VOFTOL).or. &
            (VFRAC(im).gt.one+VOFTOL)) then
@@ -21508,7 +21501,7 @@ contains
         stop
        endif
        VOFSUM=VOFSUM+VFRAC(im)
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       if (abs(sum_vfrac_fluid-one).gt.SANITY_TOL) then
        print *,"sum_vfrac_fluid invalid"
@@ -21524,7 +21517,7 @@ contains
        stop
       endif
       if ((im_crit_fluid.lt.1).or. &
-          (im_crit_fluid.gt.nmat)) then
+          (im_crit_fluid.gt.num_materials)) then
        print *,"im_crit_fluid invalid"
        stop
       endif

@@ -127,7 +127,7 @@ stop
        call get_primary_slope( &
         bfact,dx,xsten_donate,nhalf, &
         mofdata, &
-        LSslope,imslope,num_materials,SDIM) 
+        LSslope,imslope,SDIM) 
       else if ((i1.ne.0).or.(j1.ne.0).or.(k1.ne.0)) then
        ! do nothing
       else
@@ -394,9 +394,8 @@ stop
        do im=1,num_materials
         local_LS(im)=ls_stencil(D_DECL(0,0,0),im)
        enddo
-       call get_primary_material(local_LS,num_materials,im_primary)
-       call get_secondary_material(local_LS,num_materials,im_primary, &
-               im_secondary)
+       call get_primary_material(local_LS,im_primary)
+       call get_secondary_material(local_LS,im_primary,im_secondary)
        triple_point_flag=0
        do im=1,num_materials
         if ((im.ne.im_primary).and.(im.ne.im_secondary)) then
@@ -1126,9 +1125,8 @@ stop
         do im_local=1,num_materials
          local_LS(im_local)=LS_new(D_DECL(i,j,k),im_local)
         enddo
-        call get_primary_material(local_LS,num_materials,im_primary)
-        call get_secondary_material(local_LS,num_materials,im_primary, &
-          im_secondary)
+        call get_primary_material(local_LS,im_primary)
+        call get_secondary_material(local_LS,im_primary,im_secondary)
 
         local_status=1
 
