@@ -2388,7 +2388,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
      if ((im>nmat)||(im_opp>nmat))
       amrex::Error("im or im_opp bust 200cpp");
      int iten,im_source,im_dest;
-     get_iten_cpp(im,im_opp,iten,nmat);
+     get_iten_cpp(im,im_opp,iten);
      if (iten<1)
       amrex::Error("iten invalid");
      Real LL=latent_heat[iten+ireverse*nten-1];

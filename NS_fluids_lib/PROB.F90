@@ -668,7 +668,7 @@ stop
        stop
       endif
 
-      call get_iten(im,im_opp,iten,nmat)
+      call get_iten(im,im_opp,iten)
       do ireverse=0,1
        LL(ireverse)=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
       enddo
@@ -747,7 +747,7 @@ stop
               print *,"im_ice or im_tertiary invalid"
               stop
              endif
-             call get_iten(im,im_opp,iten,nmat)
+             call get_iten(im,im_opp,iten)
              do ireverse=0,1
               LL(ireverse)=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
              enddo
@@ -5043,23 +5043,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! If there are more than one "im_3", pick the one with the
         ! largest value.
         !
-      subroutine fluid_interface(LSleft,LSright, &
-        gradh,im_opp,im,nmat)
+      subroutine fluid_interface(LSleft,LSright,gradh,im_opp,im)
       use global_utility_module
 
       IMPLICIT NONE
 
-      INTEGER_T im_opp,im,nmat
-      REAL_T LSleft(nmat)
-      REAL_T LSright(nmat)
-      REAL_T gradh
+      INTEGER_T, intent(out) :: im_opp,im
+      REAL_T, intent(in) :: LSleft(num_materials)
+      REAL_T, intent(in) :: LSright(num_materials)
+      REAL_T, intent(out) :: gradh
       INTEGER_T imL,imR
-
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
 
       im=0
       im_opp=0
@@ -5126,7 +5119,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        !   0.0<=facecut_prescribed<=VOFTOL_AREAFRAC  or
        !   max(LSleft(im_prescribed),LSright(im_prescribed))>=0.0
       subroutine fixed_face( &
-       nmat, &
        facecut_solid, &      
        facecut_prescribed, & 
        LSleft,LSright, &
@@ -5141,12 +5133,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat
         !surface tension coefficient is zero
       REAL_T, intent(inout) :: facecut_solid 
       REAL_T, intent(inout) :: facecut_prescribed ! grad p coefficient is zero
-      REAL_T, intent(in) :: LSleft(nmat)
-      REAL_T, intent(in) :: LSright(nmat)
+      REAL_T, intent(in) :: LSleft(num_materials)
+      REAL_T, intent(in) :: LSright(num_materials)
       REAL_T LScrit_solid,LScrit_prescribed,LStest
       INTEGER_T, intent(out) :: is_solid_face,is_prescribed_face
       INTEGER_T im
@@ -5164,7 +5155,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       nparts=0
       partid_solid=-1
       partid_prescribed=-1
-      do im=1,nmat
+      do im=1,num_materials
 
        if (is_lag_part(im).eq.1) then
 
@@ -5181,7 +5172,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           partid_solid=nparts
           LScrit_solid=max(LSleft(im),LSright(im))
          else if ((im_solid.ge.1).and. &
-                  (im_solid.le.nmat)) then
+                  (im_solid.le.num_materials)) then
           LStest=max(LSleft(im),LSright(im))
           if (LStest.gt.LScrit_solid) then
            LScrit_solid=LStest
@@ -5198,7 +5189,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            partid_prescribed=nparts
            LScrit_prescribed=max(LSleft(im),LSright(im))
           else if ((im_prescribed.ge.1).and. &
-                   (im_prescribed.le.nmat)) then
+                   (im_prescribed.le.num_materials)) then
            LStest=max(LSleft(im),LSright(im))
            if (LStest.gt.LScrit_prescribed) then
             LScrit_prescribed=LStest
@@ -5241,9 +5232,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
 
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
-      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+      if ((nparts.lt.0).or.(nparts.gt.num_materials)) then
        print *,"nparts invalid fixed_face"
        stop
       endif
@@ -5253,7 +5244,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        is_solid_face=1
        if (im_solid.eq.0) then
         ! do nothing
-       else if ((im_solid.ge.1).and.(im_solid.le.nmat)) then
+       else if ((im_solid.ge.1).and.(im_solid.le.num_materials)) then
         im_solid_valid=1 
         if ((partid_solid.lt.0).or. &
             (partid_solid.ge.nparts)) then
@@ -5267,7 +5258,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (facecut_solid.ge.VOFTOL_AREAFRAC) then
        if (im_solid.eq.0) then
         ! do nothing
-       else if ((im_solid.ge.1).and.(im_solid.le.nmat)) then
+       else if ((im_solid.ge.1).and.(im_solid.le.num_materials)) then
         im_solid_valid=1
         if (LScrit_solid.ge.zero) then
          is_solid_face=1
@@ -5291,7 +5282,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        is_prescribed_face=1
        if (im_prescribed.eq.0) then
         ! do nothing
-       else if ((im_prescribed.ge.1).and.(im_prescribed.le.nmat)) then
+       else if ((im_prescribed.ge.1).and.(im_prescribed.le.num_materials)) then
         im_prescribed_valid=1 
         if ((partid_prescribed.lt.0).or. &
             (partid_prescribed.ge.nparts)) then
@@ -5305,7 +5296,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (facecut_prescribed.ge.VOFTOL_AREAFRAC) then
        if (im_prescribed.eq.0) then
         ! do nothing
-       else if ((im_prescribed.ge.1).and.(im_prescribed.le.nmat)) then
+       else if ((im_prescribed.ge.1).and.(im_prescribed.le.num_materials)) then
         im_prescribed_valid=1
         if (LScrit_prescribed.ge.zero) then
          is_prescribed_face=1
@@ -5327,33 +5318,19 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine fixed_face
 
-      subroutine fluid_interface_tension(LSleft,LSright, &
-        gradh,im_opp,im,nmat,nten)
+      subroutine fluid_interface_tension(LSleft,LSright,gradh,im_opp,im)
 
       use global_utility_module
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat,nten
-      INTEGER_T nten_test
       INTEGER_T, intent(out) :: im_opp,im
-      REAL_T, intent(in) :: LSleft(nmat)
-      REAL_T, intent(in) :: LSright(nmat)
+      REAL_T, intent(in) :: LSleft(num_materials)
+      REAL_T, intent(in) :: LSright(num_materials)
       REAL_T, intent(out) :: gradh
       REAL_T psiL,psiR,HLEFT,HRIGHT
       INTEGER_T imL,imR
       INTEGER_T iten
-
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten: fluid_interface_tension nten nten_test ",nten,nten_test
-       stop
-      endif
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
 
       im=0
       im_opp=0
@@ -5362,8 +5339,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       call get_primary_material(LSleft,imL)
       call get_primary_material(LSright,imR)
 
-      if ((imL.lt.1).or.(imL.gt.nmat).or. &
-          (imR.lt.1).or.(imR.gt.nmat)) then
+      if ((imL.lt.1).or.(imL.gt.num_materials).or. &
+          (imR.lt.1).or.(imR.gt.num_materials)) then
        print *,"imL or imR invalid"
        stop
       endif
@@ -5389,9 +5366,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
 
-       call get_iten(imL,imR,iten,nmat)
-       call get_LS_extend(LSleft,nmat,iten,psiL) ! psiL>0 fluid im
-       call get_LS_extend(LSright,nmat,iten,psiR) ! psiR>0 fluid im
+       call get_iten(imL,imR,iten)
+       call get_LS_extend(LSleft,iten,psiL) ! psiL>0 fluid im
+       call get_LS_extend(LSright,iten,psiR) ! psiR>0 fluid im
 
        call HSCALE(psiL,im,im_opp,HLEFT)
        call HSCALE(psiR,im,im_opp,HRIGHT)
@@ -24015,7 +23992,7 @@ end subroutine initialize2d
           do ireverse=0,1
           do im1=1,nmat-1
           do im2=im1+1,nmat
-           call get_iten(im1,im2,iten,nmat)
+           call get_iten(im1,im2,iten)
            LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
            local_freezing_model=freezing_model(iten+ireverse*nten)
            TSAT=saturation_temp(iten+ireverse*nten)
@@ -24323,7 +24300,7 @@ end subroutine initialize2d
          stop
         endif
          ! 1<=iten<=num_interfaces
-        call get_iten(im,im_opp,iten,nmat)
+        call get_iten(im,im_opp,iten)
         LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
         local_freezing_model=freezing_model(iten+ireverse*nten)
         TSAT=saturation_temp(iten+ireverse*nten)
@@ -25760,7 +25737,7 @@ end subroutine initialize2d
            im_source=1
            im_dest=2
            ireverse=0
-           call get_iten(im_source,im_dest,iten,nmat)
+           call get_iten(im_source,im_dest,iten)
            L_ice_melt=abs(get_user_latent_heat(iten+ireverse*nten,293.0d0,1))
            TSAT=saturation_temp(iten+ireverse*nten)
            T_EXTREME=fort_initial_temperature(im_source)

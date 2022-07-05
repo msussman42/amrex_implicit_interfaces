@@ -958,7 +958,6 @@ extern "C"
      int* rzflag,
      int* velbc,
      Real* visc_coef, 
-     int* nmat,
      int* nden,
      int* uncoupled_viscosity,
      int* homflag);

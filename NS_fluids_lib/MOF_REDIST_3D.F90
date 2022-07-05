@@ -626,7 +626,7 @@ stop
           else if ((im.ge.num_materials+1).and. &
                    (im.le.num_materials+num_interfaces)) then
            iten=im-num_materials
-           call get_inverse_iten(im1,im2,iten,num_materials)
+           call get_inverse_iten(im1,im2,iten)
            local_LS=half*(LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im1)- &
                 LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im2))
           else
@@ -1158,7 +1158,7 @@ stop
                   (im.le.num_materials+num_interfaces)) then
 
           iten=im-num_materials
-          call get_inverse_iten(im1,im2,iten,num_materials)
+          call get_inverse_iten(im1,im2,iten)
           if (is_rigid(im1).eq.1) then
            local_status=0
           else if (is_rigid(im1).eq.0) then
@@ -1353,7 +1353,7 @@ stop
            else if ((im.ge.num_materials+1).and. &
                     (im.le.num_materials+num_interfaces)) then
             iten=im-num_materials
-            call get_inverse_iten(im1,im2,iten,num_materials)
+            call get_inverse_iten(im1,im2,iten)
             vofsten(i1,j1,k1)= &
                half*(vof_local(im1)-vof_local(im2)+one) 
             lssten(i1,j1,k1)= &

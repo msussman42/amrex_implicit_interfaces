@@ -1502,7 +1502,7 @@ NavierStokes::recalesce_temperature(int im_source) {
   int iten;
   int ireverse;
   if (im_opp!=im_source) {
-   get_iten_cpp(im_source+1,im_opp+1,iten,nmat);
+   get_iten_cpp(im_source+1,im_opp+1,iten);
    if ((iten<1)||(iten>nten))
     amrex::Error("iten invalid");
    if (im_source<im_opp)
@@ -1814,7 +1814,7 @@ void NavierStokes::process_recalesce_dataALL(
     int iten;
     int ireverse;
     if (im_opp!=im_source) {
-     get_iten_cpp(im_source+1,im_opp+1,iten,nmat);
+     get_iten_cpp(im_source+1,im_opp+1,iten);
      if ((iten<1)||(iten>nten))
       amrex::Error("iten invalid");
      if (im_source<im_opp)

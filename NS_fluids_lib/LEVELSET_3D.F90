@@ -816,7 +816,7 @@ stop
        print *,"iten invalid"
        stop
       endif
-      call get_iten(im,im_opp,iten_test,nmat)
+      call get_iten(im,im_opp,iten_test)
       if (iten.ne.iten_test) then
        print *,"iten and iten_test differ"
        stop
@@ -887,8 +887,8 @@ stop
        stop
       endif 
 
-      call get_LS_extend(LS_CENTER,nmat,iten,LS_CENTER_EXTEND)
-      call get_LS_extend(LS_OPP,nmat,iten,LS_OPP_EXTEND)
+      call get_LS_extend(LS_CENTER,iten,LS_CENTER_EXTEND)
+      call get_LS_extend(LS_OPP,iten,LS_OPP_EXTEND)
 
       if (LS_CENTER_EXTEND*LS_OPP_EXTEND.gt.zero) then
        print *,"level set does not change sign"
@@ -922,9 +922,7 @@ stop
       enddo
 
       call get_user_tension(xcenter,time, &
-       fort_tension,user_tension, &
-       temperature_cen, &
-       nmat,nten,2)
+       fort_tension,user_tension,temperature_cen,2)
 
       if (unscaled_min_curvature_radius.ge.zero) then
        ! do nothing
@@ -958,7 +956,7 @@ stop
        do imhold=1,nmat
         LSTEST(imhold)=lssten(i,j,k,imhold)
        enddo
-       call get_LS_extend(LSTEST,nmat,iten,LS1_save(D_DECL(i,j,k)))
+       call get_LS_extend(LSTEST,iten,LS1_save(D_DECL(i,j,k)))
       enddo
       enddo
       enddo ! i,j,k (-1 ... 1)
@@ -978,7 +976,7 @@ stop
       endif
 
        ! declared in GLOBALUTIL.F90
-      call get_LSNRM_extend(LS_CENTER,nrmcenter,nmat,iten,nfluid)
+      call get_LSNRM_extend(LS_CENTER,nrmcenter,iten,nfluid)
       RR=one
       call prepare_normal(nfluid,RR,mag)
       if (mag.gt.zero) then
@@ -1017,9 +1015,7 @@ stop
         enddo
 
         call get_user_tension(local_x,time, &
-         fort_tension,local_tension, &
-         local_temperature, &
-         nmat,nten,2)
+         fort_tension,local_tension,local_temperature,2)
         mgoni_tension(iofs,jofs,kofs)=local_tension(iten)
        enddo
        enddo
@@ -1118,8 +1114,8 @@ stop
         VOFTEST(imhold)=vofsten(i,j,k,imhold)
        enddo
         ! declared in GLOBALUTIL.F90
-       call get_LS_extend(LSTEST,nmat,iten,lsdata(i,j,k))
-       call get_VOF_extend(VOFTEST,nmat,iten,vofdata(i,j,k))
+       call get_LS_extend(LSTEST,iten,lsdata(i,j,k))
+       call get_VOF_extend(VOFTEST,iten,vofdata(i,j,k))
 
        call get_primary_material(LSTEST,imhold)
        im_primary_sten(i,j,k)=imhold
@@ -1528,7 +1524,7 @@ stop
         enddo
        enddo ! imhold
 
-       call get_LSNRM_extend(LSTEST,nrmtest,nmat,iten,nfluid)
+       call get_LSNRM_extend(LSTEST,nrmtest,iten,nfluid)
 
        RR=one
        call prepare_normal(nfluid,RR,mag)
@@ -1946,7 +1942,7 @@ stop
 
        else if (is_rigid(im3).eq.1) then
 
-        call get_LS_extend(LSTEST,nmat,iten,LSmain)
+        call get_LS_extend(LSTEST,iten,LSmain)
         LSopp=LSmain
         do dir2=1,SDIM
           ! nmain points from material im_opp into material im.
@@ -2774,7 +2770,7 @@ stop
 
                  do im_opp=1,nmat
                   if (im_opp.ne.im) then
-                   call get_iten(im,im_opp,iten,nmat)
+                   call get_iten(im,im_opp,iten)
                    if (is_processed(iten).eq.0) then 
                     local_facefrac(im_opp)= &
                      abs(multi_volume(im_opp)-multi_volume_offset(im_opp))
@@ -2796,7 +2792,7 @@ stop
                  if (total_facearea.gt.zero) then
                   do im_opp=1,nmat
                    if (im_opp.ne.im) then
-                    call get_iten(im,im_opp,iten,nmat)
+                    call get_iten(im,im_opp,iten)
                     if (is_processed(iten).eq.0) then 
                      is_processed(iten)=1
                      local_facefrac(im_opp)= &
@@ -3012,7 +3008,7 @@ stop
                       (tessellate.eq.1)) then
 
                    if (im_opp.ne.im) then
-                    call get_iten(im,im_opp,iten,nmat)
+                    call get_iten(im,im_opp,iten)
                     if (is_processed(iten).eq.0) then 
                      local_facefrac(im_opp)= &
                       abs(multi_volume(im_opp)-multi_volume_offset(im_opp))
@@ -3046,7 +3042,7 @@ stop
                        (tessellate.eq.1)) then
 
                     if (im_opp.ne.im) then
-                     call get_iten(im,im_opp,iten,nmat)
+                     call get_iten(im,im_opp,iten)
                      if (is_processed(iten).eq.0) then 
                       is_processed(iten)=1
                       local_facefrac(im_opp)= &
@@ -3743,7 +3739,7 @@ stop
              print *,"im_majority bust"
              stop
             endif
-            call get_iten(im_main,im_main_opp,iten,nmat)
+            call get_iten(im_main,im_main_opp,iten)
 
             do dirloc=1,SDIM
        
@@ -3752,8 +3748,8 @@ stop
               LSRIGHT_fixed(im)=LS_STAR_FIXED(1,dirloc,im)
              enddo
 
-             call get_LS_extend(LSLEFT_fixed,nmat,iten,LSLEFT_EXTEND)
-             call get_LS_extend(LSRIGHT_fixed,nmat,iten,LSRIGHT_EXTEND)
+             call get_LS_extend(LSLEFT_fixed,iten,LSLEFT_EXTEND)
+             call get_LS_extend(LSRIGHT_fixed,iten,LSRIGHT_EXTEND)
 
              XRIGHT=xsten0(2,dirloc)
              XLEFT=xsten0(-2,dirloc)
@@ -5955,7 +5951,7 @@ stop
                  print *,"im_alt bust"
                  stop
                 endif
-                call get_iten(im_mdot,im_opp_mdot,iten,nmat)
+                call get_iten(im_mdot,im_opp_mdot,iten)
                 iten_shift=ireverse*nten+iten
                 LL=get_user_latent_heat(iten_shift,293.0d0,1)
                 if (LL.eq.zero) then
@@ -8180,7 +8176,7 @@ stop
         if (is_rigid(im).eq.0) then
          do im_opp=im+1,nmat
           if (is_rigid(im_opp).eq.0) then
-           call get_iten(im,im_opp,iten,nmat)
+           call get_iten(im,im_opp,iten)
            do ireverse=0,1
             if (get_user_latent_heat(iten+ireverse*nten,293.0d0,1).ne.zero) then
              if (freezing_model(iten+ireverse*nten).eq.0) then
@@ -8473,9 +8469,8 @@ stop
           im_prescribed_valid=1
           solid_velocity=vel_clamped_face(veldir+1)
          else if (is_clamped_face.eq.0) then
-          ! in: PROB.F90
+          ! fixed_face is declared in: PROB.F90
           call fixed_face( &
-           nmat, &
            predict_face_afrac_solid, &
            predict_face_afrac_prescribed, &
            LSminus,LSplus, &
@@ -8687,7 +8682,7 @@ stop
           gradh_tension=zero
          else if (is_solid_face.eq.0) then
 
-          call fluid_interface(LSminus,LSplus,gradh,im_main_opp,im_main,nmat)
+          call fluid_interface(LSminus,LSplus,gradh,im_main_opp,im_main)
 
           call get_dxmaxLS(dx,bfact,DXMAXLS)
 
@@ -8695,7 +8690,7 @@ stop
            gradh_tension=zero
           else if ((covered_face.eq.0).or.(covered_face.eq.1)) then
            call fluid_interface_tension(LSminus,LSplus,gradh_tension, &
-            im_opp_tension,im_tension,nmat,nten)
+            im_opp_tension,im_tension)
           else
            print *,"covered_face invalid"
            stop
@@ -8722,17 +8717,17 @@ stop
            print *,"fluid_interface bust"
            stop
           endif
-          call get_iten(im_main,im_main_opp,iten,nmat)
+          call get_iten(im_main,im_main_opp,iten)
 
           do im=1,nmat
            LSIDE_MAT(im)=levelPC(D_DECL(im1,jm1,km1),im)
           enddo
-          call get_LS_extend(LSIDE_MAT,nmat,iten,LSIDE(1))
+          call get_LS_extend(LSIDE_MAT,iten,LSIDE(1))
 
           do im=1,nmat
            LSIDE_MAT(im)=levelPC(D_DECL(i,j,k),im)
           enddo
-          call get_LS_extend(LSIDE_MAT,nmat,iten,LSIDE(2))
+          call get_LS_extend(LSIDE_MAT,iten,LSIDE(2))
 
           if (LSIDE(1)*LSIDE(2).le.zero) then
            LS_consistent=1
@@ -8753,19 +8748,17 @@ stop
            print *,"fluid_interface_tension bust"
            stop
           endif
-          call get_iten(im_tension,im_opp_tension,iten_tension,nmat)
+          call get_iten(im_tension,im_opp_tension,iten_tension)
 
           do im=1,nmat
            LSIDE_tension_MAT(im)=levelPC(D_DECL(im1,jm1,km1),im)
           enddo
-          call get_LS_extend(LSIDE_tension_MAT,nmat,iten_tension, &
-           LSIDE_tension(1))
+          call get_LS_extend(LSIDE_tension_MAT,iten_tension,LSIDE_tension(1))
 
           do im=1,nmat
            LSIDE_tension_MAT(im)=levelPC(D_DECL(i,j,k),im)
           enddo
-          call get_LS_extend(LSIDE_tension_MAT,nmat,iten_tension, &
-           LSIDE_tension(2))
+          call get_LS_extend(LSIDE_tension_MAT,iten_tension,LSIDE_tension(2))
 
           sign_test=gradh_tension*(LSIDE_tension(2)-LSIDE_tension(1))
           if (sign_test.ge.zero) then
@@ -8956,7 +8949,7 @@ stop
             ! prescribed interface coefficient.
            if (implus_majority.ne.imminus_majority) then
 
-            call get_iten(imminus_majority,implus_majority,iten,nmat)
+            call get_iten(imminus_majority,implus_majority,iten)
 
             if (heatvisc_interface(iten).eq.zero) then
              ! do nothing
@@ -9023,7 +9016,7 @@ stop
             print *,"im_main or im_main_opp invalid"
             stop
            endif
-           call get_iten(im_main,im_main_opp,iten,nmat)
+           call get_iten(im_main,im_main_opp,iten)
 
            if (LSIDE(1).ge.LSIDE(2)) then
             visc1=localvisc_minus(im_main)
@@ -9236,7 +9229,7 @@ stop
  
             if ((FFACE(im).gt.VOFTOL).and. &
                 (FFACE(im_opp).gt.VOFTOL)) then
-             call get_iten(im,im_opp,iten,nmat)
+             call get_iten(im,im_opp,iten)
 
              if (visc_interface(iten).eq.zero) then
               ! do nothing
@@ -9540,7 +9533,7 @@ stop
           do im_opp=im+1,nmat
            if ((FFACE(im).gt.VOFTOL).and. &
                (FFACE(im_opp).gt.VOFTOL)) then
-            call get_iten(im,im_opp,iten,nmat)
+            call get_iten(im,im_opp,iten)
             if (den_interface(iten).eq.zero) then
              ! do nothing
             else if (den_interface(iten).gt.zero) then
@@ -9673,7 +9666,7 @@ stop
             print *,"im_tension or im_opp_tension bust 4"
             stop
            endif
-           call get_iten(im_tension,im_opp_tension,iten_tension,nmat)
+           call get_iten(im_tension,im_opp_tension,iten_tension)
   
 ! vof,ref centroid,order,slope,intercept  x num_materials
 
@@ -12956,7 +12949,6 @@ stop
        level,finest_level, &
        rz_flag, &
        domlo,domhi, &
-       nmat, &
        nparts, &
        nparts_def, &
        im_solid_map, &
@@ -12964,7 +12956,6 @@ stop
        blob_array, &
        blob_array_size, &
        num_colors, &
-       nten, &
        project_option) &
       bind(c,name='fort_cell_to_mac')
 
@@ -12982,7 +12973,6 @@ stop
       INTEGER_T, intent(in) :: tileloop
       INTEGER_T, intent(in) :: spectral_loop
       INTEGER_T, intent(in) :: ncfluxreg
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
@@ -12991,8 +12981,7 @@ stop
       INTEGER_T, intent(in) :: num_colors
       REAL_T, intent(in) :: blob_array(blob_array_size)
         
-      REAL_T, intent(in) :: added_weight(nmat)
-      INTEGER_T, intent(in) :: nten
+      REAL_T, intent(in) :: added_weight(num_materials)
       INTEGER_T, intent(in) :: slab_step
       INTEGER_T, intent(in) :: operation_flag
       INTEGER_T, intent(in) :: energyflag
@@ -13000,7 +12989,7 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: ncphys  ! nflux for advection
-      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
+      INTEGER_T, intent(in) :: constant_density_all_time(num_materials)
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: time
       REAL_T, intent(in) :: beta,visc_coef
@@ -13024,7 +13013,8 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(typefab)
 
        ! denbc for advect
-      INTEGER_T, intent(in) :: presbc_in(SDIM,2,nmat*num_state_material) 
+      INTEGER_T, intent(in) :: &
+              presbc_in(SDIM,2,num_materials*num_state_material) 
       INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -13042,7 +13032,8 @@ stop
 
       REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: levelPC(DIMV(levelPC),nmat*(1+SDIM))
+      REAL_T, intent(in), target :: &
+              levelPC(DIMV(levelPC),num_materials*(1+SDIM))
       REAL_T, pointer :: levelPC_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: solfab(DIMV(solfab),nparts_def*SDIM)
       REAL_T, pointer :: solfab_ptr(D_DECL(:,:,:),:)
@@ -13071,7 +13062,8 @@ stop
        ! holds U_old(dir) if OP_U_COMP_CELL_MAC_TO_MAC
       REAL_T, intent(in), target :: pres(DIMV(pres),1)
       REAL_T, pointer :: pres_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: den(DIMV(den),nmat*num_state_material)
+      REAL_T, intent(in), target ::  &
+              den(DIMV(den),num_materials*num_state_material)
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: mgoni(DIMV(mgoni),ncomp_mgoni)
       REAL_T, pointer :: mgoni_ptr(D_DECL(:,:,:),:)
@@ -13098,7 +13090,7 @@ stop
       REAL_T cutedge,RR
       REAL_T xstenMAC(-3:3,SDIM)
       REAL_T xmac(SDIM)
-      INTEGER_T nhalf,nten_test
+      INTEGER_T nhalf
       REAL_T DXMAXLS
       REAL_T local_vel_MAC
       REAL_T local_vel_old_MAC
@@ -13132,14 +13124,14 @@ stop
       INTEGER_T use_face_pres
       INTEGER_T at_coarse_fine_wallF
       INTEGER_T at_coarse_fine_wallC
-      REAL_T user_tension(nten)
+      REAL_T user_tension(num_interfaces)
       REAL_T tension_scaled
       REAL_T pforce_scaled
-      REAL_T LSleft(nmat)
-      REAL_T LSright(nmat)
-      REAL_T LSupwind(nmat)
-      REAL_T localLS(nmat)
-      REAL_T mgoni_temp(nmat)
+      REAL_T LSleft(num_materials)
+      REAL_T LSright(num_materials)
+      REAL_T LSupwind(num_materials)
+      REAL_T localLS(num_materials)
+      REAL_T mgoni_temp(num_materials)
       INTEGER_T local_maskSEM
       INTEGER_T maskcov
       REAL_T hx
@@ -13215,19 +13207,15 @@ stop
       colorfab_ptr=>colorfab
       levelPC_ptr=>levelPC
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (ncomp_xp.lt.1) then
        print *,"ncomp_xp invalid(1) ",ncomp_xp
        stop
       endif
-      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+      if ((nparts.lt.0).or.(nparts.gt.num_materials)) then
        print *,"nparts invalid fort_cell_to_mac"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+      if ((nparts_def.lt.1).or.(nparts_def.gt.num_materials)) then
        print *,"nparts_def invalid fort_cell_to_mac"
        stop
       endif
@@ -13296,12 +13284,6 @@ stop
        stop
       endif
 
-      nten_test=num_interfaces
-      if (nten.ne.nten_test) then
-       print *,"nten invalid edge grad nten nten_test ",nten,nten_test
-       stop
-      endif
-
       if ((blob_array_size.ne.1).and. &
           (blob_array_size.ne.num_colors*num_elements_blobclass)) then
        print *,"blob_array_size invalid"
@@ -13319,7 +13301,7 @@ stop
 
       if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
 
-       if (ncomp_mgoni.eq.nmat*num_state_material) then
+       if (ncomp_mgoni.eq.num_materials*num_state_material) then
         ! do nothing
        else
         print *,"ncomp_mgoni invalid"
@@ -13392,7 +13374,7 @@ stop
         print *,"ncphys invalid"
         stop
        endif
-       if (ncomp_mgoni.eq.nmat*num_state_material) then
+       if (ncomp_mgoni.eq.num_materials*num_state_material) then
         ! do nothing
        else
         print *,"ncomp_mgoni invalid"
@@ -13497,7 +13479,7 @@ stop
        stop
       endif
 
-      do im=1,nmat
+      do im=1,num_materials
 
        if (added_weight(im).gt.zero) then
         ! do nothing
@@ -13513,7 +13495,7 @@ stop
         stop
        endif
 
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       if ((slab_step.lt.-1).or.(slab_step.gt.bfact_time_order)) then
        print *,"slab_step invalid cell to mac"
@@ -13556,7 +13538,7 @@ stop
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=DXMAXLS
 
-      do im=1,nmat
+      do im=1,num_materials
 
        if (fort_material_type(im).eq.0) then
         ! do nothing
@@ -13570,7 +13552,7 @@ stop
         stop
        endif
 
-      enddo  ! im=1..nmat
+      enddo  ! im=1..num_materials
 
       ii=0
       jj=0
@@ -13706,7 +13688,7 @@ stop
              (operation_flag.eq.OP_PRES_CELL_TO_MAC)) then  ! p^CELL->MAC
 
           ! levelPC() has piecewise constant BC at coarse/fine borders.
-          do im=1,nmat
+          do im=1,num_materials
            LSleft(im)=levelPC(D_DECL(im1,jm1,km1),im)
            LSright(im)=levelPC(D_DECL(i,j,k),im)
            localLS(im)=half*(LSright(im)+LSleft(im))
@@ -13836,12 +13818,12 @@ stop
            stop
           endif
 
-          do im=1,nmat
+          do im=1,num_materials
            LSupwind(im)=levelPC(D_DECL(idonate,jdonate,kdonate),im)
           enddo
 
           call get_primary_material(LSupwind,im)
-          if ((im.ge.1).and.(im.le.nmat)) then
+          if ((im.ge.1).and.(im.le.num_materials)) then
            ibase=num_state_material*(im-1) 
            denlocal=den(D_DECL(idonate,jdonate,kdonate),ibase+ENUM_DENVAR+1) 
            if (denlocal.gt.zero) then
@@ -13934,7 +13916,7 @@ stop
            volface=zero
 
            do side=1,2
-            do im=1,nmat
+            do im=1,num_materials
              local_volume=local_face(FACECOMP_VOFFACE+2*(im-1)+side)
              volface=volface+local_volume
              if (is_prescribed(im).eq.0) then
@@ -13958,7 +13940,7 @@ stop
               print *,"is_rigid invalid LEVELSET_3D.F90"
               stop
              endif
-            enddo ! im=1..nmat
+            enddo ! im=1..num_materials
            enddo ! side=1,2
 
            if (volface.le.zero) then
@@ -13994,7 +13976,6 @@ stop
            !   0.0<=not_prescribed_prescribed<=VOFTOL_AREAFRAC  or
            !   max(LSleft(im_prescribed),LSright(im_prescribed))>=0.0
            call fixed_face( &
-            nmat, &
             fluid_volface, &
             not_prescribed_volface, &
             LSleft,LSright, &
@@ -14078,7 +14059,7 @@ stop
               do side=1,2
 
                partid_check=0
-               do im=1,nmat
+               do im=1,num_materials
 
                 DMface=local_face(FACECOMP_MASSFACE+2*(im-1)+side)
                 if (DMface.gt.zero) then
@@ -14181,7 +14162,7 @@ stop
                 velsum_primary=velsum_primary+DMface*primary_velmaterial
                 velsum_secondary=velsum_secondary+DMface*secondary_velmaterial
 
-               enddo ! im=1..nmat
+               enddo ! im=1..num_materials
 
                if (partid_check.ne.nparts) then
                 print *,"partid_check invalid"
@@ -14220,14 +14201,14 @@ stop
                 typeright=NINT(typefab(D_DECL(i,j,k)))
                 colorleft=NINT(colorfab(D_DECL(im1,jm1,km1)))
                 colorright=NINT(colorfab(D_DECL(i,j,k)))
-                if ((typeleft.ge.1).and.(typeleft.le.nmat).and. &
-                    (typeright.ge.1).and.(typeright.le.nmat)) then
+                if ((typeleft.ge.1).and.(typeleft.le.num_materials).and. &
+                    (typeright.ge.1).and.(typeright.le.num_materials)) then
 
-                 if ((is_damped_material(nmat,typeleft).eq.1).or. &
-                     (is_damped_material(nmat,typeright).eq.1)) then
+                 if ((is_damped_material(typeleft).eq.1).or. &
+                     (is_damped_material(typeright).eq.1)) then
 
-                  if ((is_damped_material(nmat,typeleft).eq.1).and. &
-                      (is_damped_material(nmat,typeright).eq.1)) then
+                  if ((is_damped_material(typeleft).eq.1).and. &
+                      (is_damped_material(typeright).eq.1)) then
                    if (LSleft(typeleft).ge.LSright(typeright)) then  
                     typeface=typeleft
                     colorface=colorleft
@@ -14238,10 +14219,10 @@ stop
                     print *,"LSleft or LSright bust"
                     stop
                    endif
-                  else if (is_damped_material(nmat,typeleft).eq.1) then
+                  else if (is_damped_material(typeleft).eq.1) then
                    typeface=typeleft
                    colorface=colorleft
-                  else if (is_damped_material(nmat,typeright).eq.1) then
+                  else if (is_damped_material(typeright).eq.1) then
                    typeface=typeright
                    colorface=colorright
                   else
@@ -14252,7 +14233,7 @@ stop
                    ! is_ice==1 or
                    ! is_FSI_rigid==1 or
                    ! fort_damping_coefficient>0
-                  if (is_damped_material(nmat,typeface).eq.1) then
+                  if (is_damped_material(typeface).eq.1) then
                    if ((colorface.ge.1).and.(colorface.le.num_colors)) then
                      ! declared in: GLOBALUTIL.F90
                     call get_rigid_velocity( &
@@ -14588,7 +14569,7 @@ stop
           do side=1,2
            mass(side)=zero
            vol_local(side)=zero
-           do im=1,nmat
+           do im=1,num_materials
             mass(side)=mass(side)+ &
              local_face(FACECOMP_MASSFACE+2*(im-1)+side)
             vol_local(side)=vol_local(side)+ &
@@ -14619,7 +14600,6 @@ stop
           fluid_volface=one
           not_prescribed_volface=one
           call fixed_face( &
-           nmat, &
            fluid_volface, &
            not_prescribed_volface, &
            LSleft,LSright, &
@@ -14637,7 +14617,7 @@ stop
            if (is_solid_face.eq.1) then
             if (im_prescribed_valid.eq.1) then
              if ((im_prescribed.ge.1).and. &
-                 (im_prescribed.le.nmat)) then
+                 (im_prescribed.le.num_materials)) then
               if (im_solid_map(partid_prescribed+1)+1.eq.im_prescribed) then
                use_face_pres=0 ! do not use div(up)
                face_velocity_override=1
@@ -14812,7 +14792,7 @@ stop
           do side=1,2
            mass(side)=zero
            vol_local(side)=zero
-           do im=1,nmat
+           do im=1,num_materials
             mass(side)=mass(side)+ &
              local_face(FACECOMP_MASSFACE+2*(im-1)+side)
             vol_local(side)=vol_local(side)+ &
@@ -14840,7 +14820,6 @@ stop
           pgrad_tension=zero
 
           call fixed_face( &
-           nmat, &
            AFACE, &
            AFACE, &
            LSleft,LSright, &
@@ -14873,8 +14852,7 @@ stop
                 (is_clamped_face.eq.3)) then
              gradh=zero
             else if (is_clamped_face.eq.0) then
-             call fluid_interface_tension(LSleft,LSright,gradh, &
-              im_opp,im,nmat,nten)
+             call fluid_interface_tension(LSleft,LSright,gradh,im_opp,im)
             else
              print *,"is_clamped_face invalid"
              stop
@@ -14886,17 +14864,16 @@ stop
 
            if (gradh.ne.zero) then
 
-            do im_heat=1,nmat
+            do im_heat=1,num_materials
              tcomp=(im_heat-1)*num_state_material+ENUM_TEMPERATUREVAR+1
              mgoni_temp(im_heat)=half*(mgoni(D_DECL(i,j,k),tcomp)+ &
               mgoni(D_DECL(im1,jm1,km1),tcomp))
             enddo ! im_heat
 
             call get_user_tension(xmac,time, &
-             fort_tension,user_tension, &
-             mgoni_temp,nmat,nten,3)
+             fort_tension,user_tension,mgoni_temp,3)
 
-            call get_iten(im,im_opp,iten,nmat)
+            call get_iten(im,im_opp,iten)
             call get_scaled_tension(user_tension(iten),tension_scaled)
             call get_scaled_pforce(pforce_scaled)
 
@@ -15087,7 +15064,7 @@ stop
 
              ! local_maskSEM==0 for rigid materials or ice
             if ((local_maskSEM.ge.1).and. &
-                (local_maskSEM.le.nmat).and. &
+                (local_maskSEM.le.num_materials).and. &
                 (maskcov.eq.1)) then
 
              if ((operation_flag.eq.OP_PRESGRAD_MAC).or. & ! pressure gradient
@@ -16873,7 +16850,7 @@ stop
               print *,"im1_substencil or im2_substencil invalid"
               stop
              endif
-             call get_iten(im,im_opp,iten,nmat)
+             call get_iten(im,im_opp,iten)
              do im_local=1,nmat
               dencomp=(im_local-1)*num_state_material+1+ENUM_DENVAR
               local_temperature(im_local)=den(D_DECL(i,j,k),dencomp+1)
@@ -16886,8 +16863,7 @@ stop
               local_XPOS, &
               time, &
               fort_tension,user_tension, &
-              local_temperature, &
-              nmat,nten,2)
+              local_temperature,2)
              ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
              ! theta_{ik}=0 => material i wets material k.
              ! im is material "i"  ("fluid" material)

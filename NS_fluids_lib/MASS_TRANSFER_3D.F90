@@ -4048,7 +4048,7 @@ stop
        print *,"cannot have im_outer==im_opp_outer"
        stop
       endif
-      call get_iten(im_outer,im_opp_outer,iten_outer,nmat)
+      call get_iten(im_outer,im_opp_outer,iten_outer)
 
       call get_dxmax(dx,bfact,dxmax)
       call get_dxmaxLS(dx,bfact,dxmaxLS)
@@ -4098,7 +4098,7 @@ stop
       do im=1,nmat-1
        do im_opp=im+1,nmat
         do ireverse=0,1
-         call get_iten(im,im_opp,iten,nmat)
+         call get_iten(im,im_opp,iten)
          local_freezing_model=freezing_model(iten+ireverse*nten)
          distribute_from_targ=distribute_from_target(iten+ireverse*nten)
          LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
@@ -4214,7 +4214,7 @@ stop
          do im=1,nmat-1
           do im_opp=im+1,nmat
 
-           call get_iten(im,im_opp,iten,nmat)
+           call get_iten(im,im_opp,iten)
 
            do ireverse=0,1
             if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
@@ -4331,7 +4331,7 @@ stop
 
            do im=1,nmat-1
             do im_opp=im+1,nmat
-             call get_iten(im,im_opp,iten,nmat)
+             call get_iten(im,im_opp,iten)
              do ireverse=0,1
                !interface_near==0 if im<>im_outer or im_opp<>im_opp_outer
               if (interface_near(iten+ireverse*nten).eq.1) then
@@ -6337,7 +6337,7 @@ stop
          do im=1,nmat-1
           do im_opp=im+1,nmat
 
-           call get_iten(im,im_opp,iten,nmat)
+           call get_iten(im,im_opp,iten)
 
            do ireverse=0,1
             if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
@@ -6659,7 +6659,7 @@ stop
           stop
          endif
   
-         call get_iten(im,im_opp,iten,nmat)
+         call get_iten(im,im_opp,iten)
          LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
 
          if (LL.ne.zero) then
@@ -8019,7 +8019,7 @@ stop
              print *,"im or im_opp bust 9"
              stop
             endif
-            call get_iten(im,im_opp,iten,nmat)
+            call get_iten(im,im_opp,iten)
 
             do ireverse=0,1
 
@@ -9925,7 +9925,7 @@ stop
           velmag_sum=zero
           do im=1,nmat-1
            do im_opp=im+1,nmat
-            call get_iten(im,im_opp,iten,nmat)
+            call get_iten(im,im_opp,iten)
             burnflag=NINT(burnvel(D_DECL(i,j,k),iten))
             if (burnflag.eq.0) then
              ! do nothing
@@ -9967,7 +9967,7 @@ stop
            print *,"xsten(0,1-3) ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
            do im=1,nmat-1
             do im_opp=im+1,nmat
-             call get_iten(im,im_opp,iten,nmat)
+             call get_iten(im,im_opp,iten)
              latent_heat_temperature= &
               EOS(D_DECL(i,j,k), &
                   (im_primary-1)*num_state_material+ENUM_TEMPERATUREVAR+1)
@@ -10026,7 +10026,7 @@ stop
              print *,"im or im_opp bust 9"
              stop
             endif
-            call get_iten(im,im_opp,iten,nmat)
+            call get_iten(im,im_opp,iten)
             latent_heat_temperature= &
              EOS(D_DECL(i,j,k), &
                  (im_primary-1)*num_state_material+ENUM_TEMPERATUREVAR+1)

@@ -2877,11 +2877,10 @@ end subroutine dynamic_contact_angle
                 print *,"im_primary_image or im_secondary_image invalid"
                 stop
                endif
-               call get_iten(im_fluid1,im_fluid2,iten,LOW%nmat)
+               call get_iten(im_fluid1,im_fluid2,iten)
                 ! in: subroutine getGhostVel
                call get_user_tension(xprobe_triple,LOW%time, &
-                 fort_tension,user_tension, &
-                 thermal_interp,LOW%nmat,LOW%nten,6)
+                 fort_tension,user_tension,thermal_interp,6)
                ! cos_angle and sin_angle correspond to the angle in im_fluid1
                call get_CL_iten(im_fluid1,im_fluid2,im_solid, &
                  iten_13,iten_23, &
@@ -7728,20 +7727,21 @@ end subroutine print_visual_descriptor
       return
       end subroutine fort_check_operation_flag_MAC
 
-      subroutine get_iten(im1,im2,iten,nmat)
+      subroutine get_iten(im1,im2,iten)
+      use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: im1,im2,nmat
+      INTEGER_T, intent(in) :: im1,im2
       INTEGER_T, intent(out) :: iten
       INTEGER_T im,im_opp
       INTEGER_T im_iter
       INTEGER_T previous_count
 
-      if ((im1.lt.1).or.(im1.gt.nmat).or. & 
-          (im2.lt.1).or.(im2.gt.nmat).or. &
+      if ((im1.lt.1).or.(im1.gt.num_materials).or. & 
+          (im2.lt.1).or.(im2.gt.num_materials).or. &
           (im1.eq.im2)) then
        print *,"im1,im2 mismatch im1,im2=",im1,im2
-       print *,"num_materials=",nmat
+       print *,"num_materials=",num_materials
        stop
       endif
 
@@ -7753,13 +7753,13 @@ end subroutine print_visual_descriptor
        im_opp=im1
       else
        print *,"im1,im2 mismatch2 im1,im2=",im1,im2
-       print *,"num_materials=",nmat
+       print *,"num_materials=",num_materials
        stop
       endif
       if (im_opp.gt.im) then
        previous_count=0
        do im_iter=1,im-1
-        previous_count=previous_count+nmat-im_iter
+        previous_count=previous_count+num_materials-im_iter
        enddo
        iten=previous_count+im_opp-im
       else
@@ -7771,17 +7771,19 @@ end subroutine print_visual_descriptor
       end subroutine get_iten    
 
 
-      subroutine get_inverse_iten(im1,im2,iten,nmat)
+      subroutine get_inverse_iten(im1,im2,iten)
+      use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T im1,im2,iten,nmat
+      INTEGER_T, intent(out) :: im1,im2
+      INTEGER_T, intent(in) :: iten
       INTEGER_T im,im_opp,iten_test
 
       im1=0
       im2=0
-      do im=1,nmat
-      do im_opp=im+1,nmat
-       call get_iten(im,im_opp,iten_test,nmat)
+      do im=1,num_materials
+      do im_opp=im+1,num_materials
+       call get_iten(im,im_opp,iten_test)
        if (iten.eq.iten_test) then
         im1=im
         im2=im_opp
@@ -7789,11 +7791,11 @@ end subroutine print_visual_descriptor
       enddo
       enddo
 
-      if ((im1.lt.1).or.(im1.gt.nmat).or. & 
-          (im2.lt.1).or.(im2.gt.nmat).or. &
+      if ((im1.lt.1).or.(im1.gt.num_materials).or. & 
+          (im2.lt.1).or.(im2.gt.num_materials).or. &
           (im1.eq.im2)) then
        print *,"im1,im2 mismatch im1,im2=",im1,im2
-       print *,"num_materials=",nmat
+       print *,"num_materials=",num_materials
        stop
       endif
 
@@ -13855,21 +13857,15 @@ end subroutine print_visual_descriptor
       return
       end function get_face_damping_factor
 
-      function is_damped_material(nmat,im)
+      function is_damped_material(im)
       use probcommon_module
 
       IMPLICIT NONE
 
       INTEGER_T :: is_damped_material
-      INTEGER_T, intent(in) :: nmat,im
+      INTEGER_T, intent(in) :: im
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid is_damped_material"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid16"
        stop
       endif
@@ -14854,23 +14850,17 @@ end subroutine print_visual_descriptor
       return 
       end subroutine debug_im_solid
 
-      subroutine get_LS_extend(LS,nmat,iten,LS_extend)
+      subroutine get_LS_extend(LS,iten,LS_extend)
       use probcommon_module
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat,iten
-      REAL_T, intent(in) :: LS(nmat)
+      INTEGER_T, intent(in) :: iten
+      REAL_T, intent(in) :: LS(num_materials)
       REAL_T, intent(out) :: LS_extend
       INTEGER_T im,im_opp
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid get_LS_extend"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
-      call get_inverse_iten(im,im_opp,iten,nmat)
+      call get_inverse_iten(im,im_opp,iten)
       if (im.ge.im_opp) then
        print *,"im or im_opp invalid"
        stop
@@ -14889,23 +14879,17 @@ end subroutine print_visual_descriptor
       return
       end subroutine get_LS_extend
 
-      subroutine get_LSNRM_extend(LS,NRM,nmat,iten,NRM_extend)
+      subroutine get_LSNRM_extend(LS,NRM,iten,NRM_extend)
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat,iten
-      REAL_T, intent(in) :: LS(nmat)
-      REAL_T, intent(in) :: NRM(nmat*SDIM)
+      INTEGER_T, intent(in) :: iten
+      REAL_T, intent(in) :: LS(num_materials)
+      REAL_T, intent(in) :: NRM(num_materials*SDIM)
       REAL_T, intent(out) :: NRM_extend(SDIM)
       INTEGER_T im,im_opp,dir
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid get_LSNRM_extend"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
-      call get_inverse_iten(im,im_opp,iten,nmat)
+      call get_inverse_iten(im,im_opp,iten)
       if (im.ge.im_opp) then
        print *,"im or im_opp invalid"
        stop
@@ -14932,24 +14916,17 @@ end subroutine print_visual_descriptor
       return
       end subroutine get_LSNRM_extend
 
-
-      subroutine get_VOF_extend(VOF,nmat,iten,VOF_extend)
+      subroutine get_VOF_extend(VOF,iten,VOF_extend)
       use probcommon_module
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat,iten
-      REAL_T, intent(in) :: VOF(nmat)
+      INTEGER_T, intent(in) :: iten
+      REAL_T, intent(in) :: VOF(num_materials)
       REAL_T, intent(out) :: VOF_extend
       INTEGER_T im,im_opp
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid get_VOF_extend"
-       print *,"nmat=",nmat
-       print *,"num_materials=",num_materials
-       stop
-      endif
-      call get_inverse_iten(im,im_opp,iten,nmat)
+      call get_inverse_iten(im,im_opp,iten)
       if (im.ge.im_opp) then
        print *,"im or im_opp invalid"
        stop
@@ -15652,7 +15629,7 @@ end subroutine print_visual_descriptor
       character*2 specstr
       character*2 matstr
       character*2 matstropp
-      INTEGER_T ih,im,ispec,imls,im_opp,dir,i,nmat,nten
+      INTEGER_T ih,im,ispec,imls,im_opp,dir,i
       INTEGER_T nparts,nparts_def,partid
       INTEGER_T plot_sdim_macro
       INTEGER_T test_nwrite
@@ -15669,11 +15646,8 @@ end subroutine print_visual_descriptor
       endif
       plot_sdim_macro=plot_sdim
 
-      nmat=num_materials
-      nten=num_interfaces
-
       nparts=0
-      do im=1,nmat
+      do im=1,num_materials
        if (is_lag_part(im).eq.1) then
         nparts=nparts+1
        else if (is_lag_part(im).eq.0) then
@@ -15682,9 +15656,9 @@ end subroutine print_visual_descriptor
         print *,"is_lag_part(im) invalid dumpstring_headers"
         stop
        endif
-      enddo !im=1..nmat
+      enddo !im=1..num_materials
 
-      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+      if ((nparts.lt.0).or.(nparts.gt.num_materials)) then
        print *,"nparts invalid dumpstring_headers"
        stop
       endif
@@ -15692,7 +15666,7 @@ end subroutine print_visual_descriptor
       if (nparts_def.eq.0) then
        nparts_def=1
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+      if ((nparts_def.lt.1).or.(nparts_def.gt.num_materials)) then
        print *,"nparts_def invalid dumpstring_headers2"
        stop
       endif
@@ -15785,7 +15759,7 @@ end subroutine print_visual_descriptor
       endif
 
        !VFRACS 
-      do im=1,nmat
+      do im=1,num_materials
 
        write(matstr,'(I2)') im
        do i=1,2
@@ -15813,7 +15787,7 @@ end subroutine print_visual_descriptor
       endif
 
         ! levelset
-      do imls=1,nmat
+      do imls=1,num_materials
        im=imls
        im_opp=imls
 
@@ -15846,7 +15820,7 @@ end subroutine print_visual_descriptor
       enddo  ! imls (levelset variables)
 
        ! levelset normals
-      do imls=1,nmat
+      do imls=1,num_materials
        im=imls
        im_opp=imls
 
@@ -15898,7 +15872,7 @@ end subroutine print_visual_descriptor
       endif
 
        ! density, temperature, mass fractions
-      do im=1,nmat
+      do im=1,num_materials
 
        write(matstr,'(I2)') im
        do i=1,2
@@ -15966,7 +15940,7 @@ end subroutine print_visual_descriptor
       endif
 
        ! mom_density
-      do im=1,nmat
+      do im=1,num_materials
 
        write(matstr,'(I2)') im
        do i=1,2
@@ -15990,7 +15964,7 @@ end subroutine print_visual_descriptor
 
       do partid=1,num_materials_viscoelastic
        im=fort_im_elastic_map(partid)+1
-       if ((im.ge.1).and.(im.le.nmat)) then
+       if ((im.ge.1).and.(im.le.num_materials)) then
         write(matstr,'(I2)') im
         do i=1,2
          if (matstr(i:i).eq.' ') then
@@ -16038,7 +16012,7 @@ end subroutine print_visual_descriptor
       endif
 
        ! viscosity
-      do im=1,nmat
+      do im=1,num_materials
        write(matstr,'(I2)') im
        do i=1,2
         if (matstr(i:i).eq.' ') then
@@ -16058,7 +16032,7 @@ end subroutine print_visual_descriptor
       enddo  ! im (viscosity variables)
 
        ! thermal conductivity
-      do im=1,nmat
+      do im=1,num_materials
        write(matstr,'(I2)') im
        do i=1,2
         if (matstr(i:i).eq.' ') then
@@ -16086,7 +16060,7 @@ end subroutine print_visual_descriptor
 
        ! gamma_dot, TR(A), TR(A)*shear thinning factor, TR(A)*thin*f(A),
        ! vorticity
-      do im=1,nmat
+      do im=1,num_materials
 
        write(matstr,'(I2)') im
        do i=1,2
@@ -17339,36 +17313,22 @@ end subroutine print_visual_descriptor
 
 
       subroutine get_user_tension(xpos,time, &
-        tension,new_tension, &
-        temperature, &
-        nmat,nten,caller_id)
+        tension,new_tension,temperature,caller_id)
       use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: caller_id 
-      INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: xpos(SDIM)
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nten
-      INTEGER_T nten_test
-      REAL_T, intent(in) :: temperature(nmat)
-      REAL_T, intent(in) :: tension(nten)
-      REAL_T, intent(out) :: new_tension(nten)
+      REAL_T, intent(in) :: temperature(num_materials)
+      REAL_T, intent(in) :: tension(num_interfaces)
+      REAL_T, intent(out) :: new_tension(num_interfaces)
       REAL_T avgtemp
       INTEGER_T iten,im,im_opp,ibase,stage
 
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid get_user_tension nten nten test", &
-         nten,nten_test
-       print *,"nmat=",nmat
-       print *,"caller_id=",caller_id
-       stop
-      endif
-
        ! fort_tension
        ! fort_prefreeze_tension
-      do iten=1,nten
+      do iten=1,num_interfaces
        new_tension(iten)=tension(iten)
        if (fort_tension_min(iten).ge.zero) then
         ! do nothing
@@ -17386,7 +17346,7 @@ end subroutine print_visual_descriptor
          stop
         endif
          ! im<im_opp
-        call get_inverse_iten(im,im_opp,iten,nmat)
+        call get_inverse_iten(im,im_opp,iten)
         if ((temperature(im).gt.zero).and. &
             (temperature(im_opp).gt.zero)) then
          ! do nothing
@@ -17422,7 +17382,7 @@ end subroutine print_visual_descriptor
         stop
        endif
       enddo ! iten
-      do im=1,nmat
+      do im=1,num_materials
        if (recalesce_material(im).eq.0) then
         ! do nothing
        else if ((recalesce_material(im).eq.1).or. &
@@ -17437,7 +17397,7 @@ end subroutine print_visual_descriptor
          ! stage=4 (frost)
          ! stage=5 (regular freezing starts)
         if (stage.lt.5) then
-         do iten=1,nten
+         do iten=1,num_interfaces
           new_tension(iten)=fort_prefreeze_tension(iten)
          enddo
         else if ((stage.eq.5).or.(stage.eq.6)) then
@@ -17450,7 +17410,7 @@ end subroutine print_visual_descriptor
         print *,"recalesce_material invalid"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       return
       end subroutine get_user_tension
@@ -22542,7 +22502,7 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      call get_iten(im,im_opp,iten,nmat)
+      call get_iten(im,im_opp,iten)
 
       if (user_tension(iten).eq.zero) then  ! default extrapolation
        cos_angle=zero
@@ -22642,14 +22602,12 @@ if (probtype.eq.55) then
    im=1 ! liquid
    im_opp=2 ! gas
    im_3=im_solid_substrate
-   call get_iten(im,im_opp,iten,num_materials)
+   call get_iten(im,im_opp,iten)
    do imloop=1,nmat
     marangoni_temp(imloop)=293.0
    enddo
    call get_user_tension(xvec,time, &
-     fort_tension,user_tension, &
-     marangoni_temp, &
-     nmat,nten,1)
+     fort_tension,user_tension,marangoni_temp,1)
      ! find the angle between the "im,im_3" interface and the
      ! "im,im_opp" interface.
      ! i.e. between the liquid/substrate and liquid/gas interfaces.
