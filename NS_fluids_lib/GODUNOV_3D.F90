@@ -16733,8 +16733,7 @@ stop
 
                    if ((im_primary.eq.im).or.(im_primary.eq.im_opp)) then
 
-                    call get_secondary_material(cell_LS,nmat, &
-                      im_primary,im_secondary)
+                    call get_secondary_material(cell_LS,im_primary,im_secondary)
 
                     if (im_primary.eq.im_secondary) then
                      print *,"cannot have im_primary.eq.im_secondary"

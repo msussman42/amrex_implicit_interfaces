@@ -10858,7 +10858,6 @@ stop
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
       REAL_T, intent(in) :: added_weight(num_materials)
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nsolve
       INTEGER_T, intent(in) :: homflag
       INTEGER_T, intent(in) :: level,finest_level
@@ -10984,7 +10983,6 @@ stop
       INTEGER_T iface,jface,kface
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
-      INTEGER_T nten_test
       INTEGER_T imattype
       REAL_T AXL,AXR
       REAL_T AYL,AYR
@@ -11136,11 +11134,6 @@ stop
        ! do nothing
       else
        print *,"enable_spectral invalid mac_to_cell"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten.ne.nten_test) then
-       print *,"nten invalid mac_to_cell nten nten_test ",nten,nten_test
        stop
       endif
 
@@ -15164,7 +15157,6 @@ stop
                simple_AMR_BC_flag, &
                level, &
                finest_level, &
-               nmat, &
                operation_flag, & 
                energyflag, &
                project_option, &

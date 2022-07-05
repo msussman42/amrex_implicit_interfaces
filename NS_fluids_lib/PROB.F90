@@ -639,8 +639,7 @@ stop
           (im_secondary.le.nmat)) then
         ! get_teriary_material is declared in MOF.F90
         ! is_rigid(im_tertiary)=0
-       call get_tertiary_material(LS,nmat, &
-         im_primary,im_secondary,im_tertiary)
+       call get_tertiary_material(LS,im_primary,im_secondary,im_tertiary)
       else
        print *,"im_secondary invalid"
        stop
@@ -11276,7 +11275,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 ! input: LSwall (LS just inside the domain)
 ! output: LS
       subroutine grouplsBC(time,dir,side,LS,LSwall, &
-        xsten,nhalf,dx,bfact,nmat)
+        xsten,nhalf,dx,bfact)
       use global_utility_module
       use rainControl_module
       use bubbleControl_module
@@ -11292,13 +11291,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       IMPLICIT NONE
 
-      INTEGER_T nmat,nhalf,bfact
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      INTEGER_T dir,side
-      REAL_T LS(nmat)
-      REAL_T LSwall(nmat)
-      REAL_T time,xwall,x,y,z
-      REAL_T dx(SDIM)
+      INTEGER_T, intent(in) :: nhalf,bfact
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, intent(in) :: dir,side
+      REAL_T, intent(inout) :: LS(num_materials)
+      REAL_T, intent(in) :: LSwall(num_materials)
+      REAL_T, intent(in) :: time
+      REAL_T xwall,x,y,z
+      REAL_T, intent(in) :: dx(SDIM)
       REAL_T local_LS
       INTEGER_T im,im_opp,imls
       REAL_T bigdist
@@ -11358,12 +11358,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-
-      do imls=1,nmat
+      do imls=1,num_materials
        LS(imls)=LSwall(imls)
       enddo
 
@@ -11379,55 +11374,55 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        call SUB_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx, &
         num_materials)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
+       call check_lsbc_extrap(LS,LSWALL,num_materials)
       else if (probtype.eq.401) then
        call HELIX_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
+       call check_lsbc_extrap(LS,LSWALL,num_materials)
       else if (probtype.eq.402) then
        call TSPRAY_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
+       call check_lsbc_extrap(LS,LSWALL,num_materials)
       else if (probtype.eq.412) then ! step
        call CAV2Dstep_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
+       call check_lsbc_extrap(LS,LSWALL,num_materials)
       else if (probtype.eq.413) then ! zeyu
        call ZEYU_droplet_impact_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
+       call check_lsbc_extrap(LS,LSWALL,num_materials)
       else if (probtype.eq.533) then
        call rigid_FSI_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
+       call check_lsbc_extrap(LS,LSWALL,num_materials)
       else if (probtype.eq.534) then
        call sinking_FSI_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
+       call check_lsbc_extrap(LS,LSWALL,num_materials)
 
       else if (probtype.eq.311) then ! user defined problem
 
        call USERDEF_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
+       call check_lsbc_extrap(LS,LSWALL,num_materials)
 
        ! curvature sanity check (line in 2D, plane in 3D)
       else if ((probtype.eq.36).and.(axis_dir.eq.210)) then
 
-       call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
+       call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+       call check_lsbc_extrap(LS,LSWALL,num_materials)
 
       else if (probtype.eq.199) then  ! in grouplsBC
 
-       do imls=1,nmat
+       do imls=1,num_materials
         im=imls
         call HYD_LVLS_BC(time,dir,side,LS(imls), &
          xwall,LSwall(imls),x,y,z,dx,im)
        enddo
-       call check_lsbc_extrap(LS,LSWALL,nmat)
+       call check_lsbc_extrap(LS,LSWALL,num_materials)
 
        ! in: grouplsBC
       else if (probtype.eq.220) then  ! UNIMATERIAL problem
 
-       do imls=1,nmat-1
+       do imls=1,num_materials-1
         im=imls
         call UNIMAT_LVLS_BC(time,dir,side,LS(imls), &
          xwall,LSwall(imls),x,y,z,dx,im)
        enddo
-       imls=nmat
+       imls=num_materials
        if ((FSI_flag(imls).eq.4).or. & !CTML Goldstein
            (FSI_flag(imls).eq.8)) then !CTML pres vel
         LS(imls)=-ten
@@ -11439,17 +11434,17 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if ((probtype.eq.299).or. &
                (probtype.eq.301)) then !melting (boundary condition LS)
 
-       call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
+       call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+       call check_lsbc_extrap(LS,LSWALL,num_materials)
 
       else if (probtype.eq.209) then  ! River
-       call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
+       call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+       call check_lsbc_extrap(LS,LSWALL,num_materials)
 
        ! marangoni (heat pipe) problem
       else if ((probtype.eq.36).and.(axis_dir.eq.10)) then
-       call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-       call check_lsbc_extrap(LS,LSWALL,nmat)
+       call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+       call check_lsbc_extrap(LS,LSWALL,num_materials)
       else
 
        if ((dir.eq.1).and.(side.eq.1)) then  ! xlo
@@ -11464,22 +11459,22 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           local_LS=yblob2-y
           LS(1)=local_LS
           LS(2)=-local_LS
-          do im=3,nmat
+          do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.6) then
           LS(1)=-bigdist
           LS(2)=bigdist
-          do im=3,nmat
+          do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
 
           ! ysl add level set function for BC 
          else if (probtype.eq.701) then ! xlo grouplsBC
           if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
-           call xloLS_rain(x,y,z,nmat,LS,adv_vel,time,bigdist)
+           call xloLS_rain(x,y,z,num_materials,LS,adv_vel,time,bigdist)
           else if (axis_dir.eq.2) then
            LS(1)=bigdist
            LS(2)=-bigdist
@@ -11487,42 +11482,42 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            print *,"axis_dir invalid"
            stop
           endif
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if ((probtype.eq.bubbleInPackedColumn).and.(1.eq.2)) then ! xlo 
-          call xloLS_pack(x,y,z,nmat,LS,adv_vel,time,bigdist)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call xloLS_pack(x,y,z,num_materials,LS,adv_vel,time,bigdist)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.110) then
-          call get_bump_dist(x,y,z,nmat,LS,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call get_bump_dist(x,y,z,num_materials,LS,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
           ! xlo 2d - grouplsBC
          else if ((probtype.eq.801).and.(axis_dir.eq.dir-1)) then 
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.802) then ! xlo: dissolution grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  !  xlo: dir=1 side=1 grouplsBC 2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.5700) then ! xlo
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.9) then  ! xlo, groupLSBC, 2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.41) then ! xlo, groupLSBC, 2d
-          call inletpipedist(x,y,z,nmat,LS)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call inletpipedist(x,y,z,num_materials,LS)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.532) then ! xlo
-          call get_jet_dist(x,y,z,nmat,LS)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call get_jet_dist(x,y,z,num_materials,LS)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.539) then ! xlo, sup injector - grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.202) then ! xlo, liquidlens - grouplsbc
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          endif
 
          else if (SDIM.eq.3) then
@@ -11530,39 +11525,39 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (probtype.eq.50) then
           LS(1)=bigdist
           LS(2)=-bigdist
-          do im=3,nmat
+          do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.58) then
           local_LS=zblob2-z
           LS(1)=local_LS
           LS(2)=-local_LS
-          do im=3,nmat
+          do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.41) then ! xlo 3D, grouplsbc
-          call inletpipedist(x,y,z,nmat,LS)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call inletpipedist(x,y,z,num_materials,LS)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.5700) then ! xlo
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
 
            ! airblast
          else if (probtype.eq.529) then  ! dir=1 side=1 grouplsBC
-          call get_jet_dist(x,y,z,nmat,LS)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call get_jet_dist(x,y,z,num_materials,LS)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! xlo dir=1 side=1 grouplsBC 3d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.5501) then  ! xlo, grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.9) then  ! xlo, grouplsBC, 3D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          endif
 
          else
@@ -11582,50 +11577,50 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (SDIM.eq.2) then
 
          if (probtype.eq.110) then
-          call get_bump_dist(x,y,z,nmat,LS,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call get_bump_dist(x,y,z,num_materials,LS,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! dir=1 side=2 (xhi) grouplsBC 2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if ((probtype.eq.5700).and.(1.eq.0)) then ! xhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.9) then  ! xhi, groupLSBC, 2D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.532) then ! xhi
-          call get_jet_dist(x,y,z,nmat,LS)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call get_jet_dist(x,y,z,num_materials,LS)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.539) then ! xhi, sup injector
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.41) then  ! xhi
-          call inletpipedist(x,y,z,nmat,LS)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call inletpipedist(x,y,z,num_materials,LS)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.202) then ! xhi, liquidlens, grouplsbc
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if ((probtype.eq.25).and.(axis_dir.gt.0)) then ! xhi, bubble frm.
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          endif
 
          else if (SDIM.eq.3) then
 
          if ((probtype.eq.5700).and.(1.eq.0)) then ! xhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! xhi dir=1 side=2 3d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.5501) then  ! xhi grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.9) then  ! xhi grouplsBC, 3D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          endif
 
          else
@@ -11643,69 +11638,69 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
           !ylo 2D bubble formation
          if ((probtype.eq.25).and.(axis_dir.gt.0)) then 
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
           ! ylo 2D grouplsBC
          else if ((probtype.eq.801).and.(axis_dir.eq.dir-1)) then
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.5700) then  ! ylo
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.41) then ! ylo
-          call inletpipedist(x,y,z,nmat,LS)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call inletpipedist(x,y,z,num_materials,LS)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.72) then
           local_LS=abs(x-xblob)-radblob
           LS(1)=-local_LS
           LS(2)=local_LS
-          do im=3,nmat
+          do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if ((probtype.eq.53).or.(probtype.eq.537)) then ! ylo 2D
-          call get_jet_dist(x,y,z,nmat,LS)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call get_jet_dist(x,y,z,num_materials,LS)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
            ! 2D ylo, diesel injector, grouplsBC
          else if ((probtype.eq.538).or. &
                   (probtype.eq.539).or. &
                   (probtype.eq.541)) then
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
           ! 540 Rieber problem
          else if (probtype.eq.540) then !dir=2 side=1,2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then !ylo dir=2 side=1,2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.9) then ! ylo, groupLSBC, 2D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.bubbleInPackedColumn) then ! ylo grouplsBC
-          call yloLS_pack(x,y,z,nmat,LS,adv_vel,time,bigdist)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call yloLS_pack(x,y,z,num_materials,LS,adv_vel,time,bigdist)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          endif
 
          else if (SDIM.eq.3) then
 
          if (probtype.eq.5700) then  ! ylo
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! ylo dir=2 side=1 3d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.5501) then  ! ylo grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.9) then  ! ylo, groupLSBC, 3D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.532) then  ! impinge from side, ylo
-          call get_jet_dist(x,y,z,nmat,LS)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call get_jet_dist(x,y,z,num_materials,LS)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          endif
 
          else
@@ -11724,13 +11719,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (probtype.eq.62) then
           LS(1)=-bigdist
           LS(2)=bigdist
-          do im=3,nmat
+          do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.5700) then ! yhi 2D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if ((probtype.eq.14).or.(probtype.eq.16).or. &
                ((probtype.eq.25).and.(axis_dir.eq.0)) ) then
           if (probtype.eq.25) then
@@ -11740,27 +11735,27 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            LS(1)=-bigdist
            LS(2)=bigdist
           endif
-          do im=3,nmat
+          do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
           ! top y=ymax wall
          else if (probtype.eq.41) then
-          call inletpipedist(x,y,z,nmat,LS)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call inletpipedist(x,y,z,num_materials,LS)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.540) then  ! Rieber problem y=yhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.539) then ! yhi, sup injector
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.9) then ! yhi, groupLSBC, 2D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.701) then ! yhi, groupLSBC, 2D
           if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
-           call yhiLS_rain(x,y,z,nmat,LS,adv_vel,time,bigdist)
-           call check_lsbc_extrap(LS,LSWALL,nmat)
+           call yhiLS_rain(x,y,z,num_materials,LS,adv_vel,time,bigdist)
+           call check_lsbc_extrap(LS,LSWALL,num_materials)
           else if (axis_dir.eq.2) then
            ! do nothing
           else
@@ -11772,21 +11767,21 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          else if (SDIM.eq.3) then
 
          if (probtype.eq.5700) then ! yhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.5501) then  ! yhi grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! yhi dir=2 side=2 3d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.9) then ! yhi, groupLSBC, 3D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.532) then  ! impinge from side, yhi
-          call get_jet_dist(x,y,z,nmat,LS)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call get_jet_dist(x,y,z,num_materials,LS)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          endif
 
          else
@@ -11805,31 +11800,31 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if ((probtype.eq.538).or. &
              (probtype.eq.541)) then  ! zlo, diesel injector
 
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          
          else if ((probtype.eq.53).or.(probtype.eq.531).or. &  ! zlo 3D
                   (probtype.eq.530).or.(probtype.eq.536).or. &
                   (probtype.eq.537).or.(probtype.eq.532)) then
-          call get_jet_dist(x,y,z,nmat,LS)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call get_jet_dist(x,y,z,num_materials,LS)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
 
           ! 540 Rieber problem
          else if (probtype.eq.540) then  ! dir=3 side=1
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! zlo dir=3 side=1 groupLSBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.5501) then  ! zlo grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.9) then  ! zlo grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.5700) then  ! microfluidics zlo
-          do im=1,nmat
+          do im=1,num_materials
            LS(im)=-bigdist
           enddo
           if ((im_solid_lsbc.le.0).or. &
@@ -11838,7 +11833,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            stop
           endif
           LS(im_solid_lsbc)=bigdist
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          endif
 
        else if ((dir.eq.3).and.(side.eq.2).and.(SDIM.eq.3)) then ! zhi
@@ -11849,18 +11844,18 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if ((probtype.eq.62).or.(probtype.eq.65)) then
           LS(1)=-bigdist
           LS(2)=bigdist
-          do im=3,nmat
+          do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.540) then  ! Rieber problem z=zhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.9) then  ! zhi, groupLSBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,nmat,time)
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          else if (probtype.eq.5700) then  ! microfluidics zhi
-          do im=1,nmat
+          do im=1,num_materials
            LS(im)=-bigdist
           enddo
           if ((im_solid_lsbc.lt.1).or. &
@@ -11869,7 +11864,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            stop
           endif
           LS(im_solid_lsbc)=bigdist
-          call check_lsbc_extrap(LS,LSWALL,nmat)
+          call check_lsbc_extrap(LS,LSWALL,num_materials)
          endif
 
        else
@@ -11882,10 +11877,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       if (ls_homflag.eq.0) then
        ! do nothing
       else if (ls_homflag.eq.1) then
-       do im=1,nmat
+       do im=1,num_materials
         if (is_rigid(im).eq.1) then
          if (LS(im).ge.zero) then ! point is in the solid
-          do im_opp=1,nmat
+          do im_opp=1,num_materials
            if (im.ne.im_opp) then
             if (is_rigid(im_opp).eq.0) then
              LS(im_opp)=LSwall(im_opp)  ! default 90 degree contact angle.
@@ -11901,17 +11896,17 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             print *,"im_opp invalid"
             stop
            endif
-          enddo ! im_opp=1..nmat
+          enddo ! im_opp=1..num_materials
          else if (LS(im).lt.zero) then
           ! do nothing
          else
           print *,"in: subroutine grouplsBC"
-          print *,"time,dir,side,bfact,nmat ",time,dir,side,bfact,nmat
+          print *,"time,dir,side,bfact,num_materials ",time,dir,side,bfact,num_materials
           print *,"probtype,axis_dir ",probtype,axis_dir
           print *,"ls_homflag=",ls_homflag
           print *,"dimension= ",SDIM
           print *,"LS(im) invalid: im, LS(im)= ",im,LS(im)
-          do imls=1,nmat
+          do imls=1,num_materials
            print *,"imls,LSwall(imls) ",imls,LSwall(imls)
           enddo
           print *,"x,y,z ",x,y,z
@@ -11924,7 +11919,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          print *,"is_rigid invalid PROB.F90"
          stop
         endif
-       enddo ! im=1..nmat
+       enddo ! im=1..num_materials
 
       else
        print *,"ls_homflag invalid"
@@ -12313,7 +12308,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        simple_AMR_BC_flag_in, &
        level, &
        finest_level, &
-       nmat, &
        operation_flag, &
        energyflag, &
        project_option, &
@@ -12363,7 +12357,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T :: local_AMR_BC_flag
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: time
       REAL_T, intent(in) :: dt
       REAL_T, intent(in) :: beta,visc_coef
@@ -12385,7 +12378,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: presbc_in(SDIM,2,nmat*num_state_material)
+      INTEGER_T, intent(in) :: presbc_in(SDIM,2,num_materials*num_state_material)
       INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM)
         ! intent(in) means the pointer cannot be reassigned.
         ! The data itself inherits the intent attribute from the
@@ -12520,10 +12513,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
  
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (ncphys.lt.1) then
        print *,"ncphys invalid"
        stop
@@ -12565,7 +12554,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"local_maskcov invalid in SEM_CELL_TO_MAC"
        stop
       endif
-      if ((cen_maskSEM.lt.0).or.(cen_maskSEM.gt.nmat)) then
+      if ((cen_maskSEM.lt.0).or.(cen_maskSEM.gt.num_materials)) then
        print *,"cen_maskSEM invalid"
        stop
       endif
@@ -12647,7 +12636,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"parameters invalid for op=7"
         stop
        endif
-       if ((cen_maskSEM.ge.1).and.(cen_maskSEM.le.nmat)) then
+       if ((cen_maskSEM.ge.1).and.(cen_maskSEM.le.num_materials)) then
         ! do nothing
        else
         print *,"cen_maskSEM invalid"
@@ -12789,7 +12778,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        ! do nothing unless the strip is a spectral element strip.
       if ((cen_maskSEM.ge.1).and. &
-          (cen_maskSEM.le.nmat)) then
+          (cen_maskSEM.le.num_materials)) then
        ! do nothing
       else if (cen_maskSEM.eq.0) then
        ! do nothing
@@ -12804,7 +12793,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         ! do nothing if element is not a spectral element
        if ((cen_maskSEM.ge.1).and. &
-           (cen_maskSEM.le.nmat)) then
+           (cen_maskSEM.le.num_materials)) then
 
         indexlo(1)=i
         indexlo(2)=j
@@ -29580,7 +29569,7 @@ end subroutine initialize2d
          call grouplsBC(time,dir2,side, &
           uboundary, &
           uwall, &
-          xsten,nhalf,dx,bfact,nmat)
+          xsten,nhalf,dx,bfact)
          do imls=1,nmat
           u(D_DECL(i,j,k),imls)=uboundary(imls)
          enddo

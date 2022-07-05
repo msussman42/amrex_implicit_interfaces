@@ -20275,7 +20275,7 @@ contains
        subroutine get_primary_slope( &
          bfact,dx,xsten0,nhalf0, &
          mofdata, &
-         slope,imslope,nmat,sdim)
+         slope,imslope,sdim)
        use probcommon_module
        use geometry_intersect_module
        use global_utility_module
@@ -20284,19 +20284,19 @@ contains
        INTEGER_T, intent(in) :: sdim
        INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
        INTEGER_T, intent(out) :: imslope
-       INTEGER_T, intent(in) :: nmat,bfact,nhalf0
-       REAL_T, intent(in) :: mofdata(nmat*(2*sdim+3))
-       REAL_T mofdatavalid(nmat*(2*sdim+3))
+       INTEGER_T, intent(in) :: bfact,nhalf0
+       REAL_T, intent(in) :: mofdata(num_materials*(2*sdim+3))
+       REAL_T mofdatavalid(num_materials*(2*sdim+3))
        REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim)
        REAL_T, intent(in) :: dx(sdim)
        REAL_T, intent(out) :: slope(sdim)
        REAL_T slope_test(sdim)
        REAL_T intercept,intercept_min
-       REAL_T vfrac_data(nmat)
-       INTEGER_T sorted_list(nmat)
+       REAL_T vfrac_data(num_materials)
+       INTEGER_T sorted_list(num_materials)
        REAL_T uncaptured_volume
        INTEGER_T im,vofcomp,FSI_exclude,irank,testflag,dir
-       INTEGER_T is_rigid_local(nmat)
+       INTEGER_T is_rigid_local(num_materials)
        INTEGER_T tessellate
        INTEGER_T nhalf_box
 
@@ -20304,7 +20304,7 @@ contains
 
        tessellate=0
 
-       do im=1,nmat
+       do im=1,num_materials
         is_rigid_local(im)=is_rigid(im)
         if (tessellate.eq.2) then
          is_rigid_local(im)=0
@@ -20322,7 +20322,7 @@ contains
          print *,"tessellate invalid32"
          stop
         endif
-       enddo ! im=1..nmat
+       enddo ! im=1..num_materials
 
        if (bfact.lt.1) then
         print *,"bfact invalid135"
@@ -20342,10 +20342,6 @@ contains
         print *,"sdim invalid get_primary_slope"
         stop
        endif
-       if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
-        print *,"nmat invalid get_primary_slope"
-        stop
-       endif
      
        imslope=0
        do dir=1,sdim
@@ -20361,14 +20357,14 @@ contains
          nhalf_box, & !=1 (=> do not use cmofsten)
          bfact,dx, &
          tessellate, & ! =0  (if tessellate==2 then is_rigid=0)
-         mofdata,mofdatavalid,nmat,sdim,3)
+         mofdata,mofdatavalid,num_materials,sdim,3)
 
-       do im=1,nmat
+       do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
         vfrac_data(im)=mofdatavalid(vofcomp)
        enddo
        FSI_exclude=1
-       call sort_volume_fraction(vfrac_data,FSI_exclude,sorted_list,nmat)
+       call sort_volume_fraction(vfrac_data,FSI_exclude,sorted_list,num_materials)
        im=sorted_list(1)
        if (is_rigid_local(im).eq.0) then
         ! do nothing
@@ -20385,9 +20381,9 @@ contains
         uncaptured_volume=one
         irank=1
 
-        do while ((irank.le.nmat).and. &
+        do while ((irank.le.num_materials).and. &
                   (uncaptured_volume.gt.zero))
-         do im=1,nmat
+         do im=1,num_materials
           if (is_rigid_local(im).eq.0) then
            vofcomp=(im-1)*ngeom_recon+1
            testflag=NINT(mofdatavalid(vofcomp+sdim+1))
@@ -20417,9 +20413,9 @@ contains
            print *,"is_rigid invalid MOF.F90"
            stop
           endif
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
          irank=irank+1
-        enddo ! while irank<=nmat and uncaptured _vol>0
+        enddo ! while irank<=num_materials and uncaptured _vol>0
        else
         print *,"vfrac_data max out of range"
         stop
@@ -21651,27 +21647,19 @@ contains
 
       end subroutine check_full_cell_vfrac
 
-      subroutine get_secondary_material(LS,nmat,im_primary,im_secondary)
+      subroutine get_secondary_material(LS,im_primary,im_secondary)
       use probcommon_module
       use geometry_intersect_module
       use global_utility_module
  
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(in) :: LS(num_materials)
       INTEGER_T, intent(in) :: im_primary
       INTEGER_T, intent(out) :: im_secondary
       INTEGER_T im
 
-      if ((nmat.ge.1).and.(nmat.le.MAX_NUM_MATERIALS)) then
-       ! do nothing
-      else
-       print *,"nmat invalid get_secondary_material"
-       print *,"nmat= ",nmat
-       stop
-      endif
-      if ((im_primary.ge.1).and.(im_primary.le.nmat)) then
+      if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
        ! do nothing
       else
        print *,"im_primary invalid get_secondary_material"
@@ -21679,7 +21667,7 @@ contains
       endif
 
       im_secondary=0
-      do im=1,nmat
+      do im=1,num_materials
        if (im.ne.im_primary) then
         if (im_secondary.eq.0) then
          im_secondary=im
@@ -21698,11 +21686,11 @@ contains
         stop
        endif
 
-      enddo !im=1..nmat
+      enddo !im=1..num_materials
 
       end subroutine get_secondary_material
 
-      subroutine get_tertiary_material(LS,nmat, &
+      subroutine get_tertiary_material(LS, &
              im_primary,im_secondary,im_tertiary)
       use probcommon_module
       use geometry_intersect_module
@@ -21710,19 +21698,18 @@ contains
  
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(in) :: LS(num_materials)
       INTEGER_T, intent(in) :: im_primary
       INTEGER_T, intent(in) :: im_secondary
       INTEGER_T, intent(out) :: im_tertiary
       INTEGER_T im_3
       INTEGER_T tessellate
       INTEGER_T im
-      INTEGER_T is_rigid_local(nmat)
+      INTEGER_T is_rigid_local(num_materials)
 
       tessellate=0
 
-      do im=1,nmat
+      do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
@@ -21740,23 +21727,16 @@ contains
         print *,"tessellate invalid42"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
-      if ((nmat.ge.1).and.(nmat.le.MAX_NUM_MATERIALS)) then
-       ! do nothing
-      else
-       print *,"nmat invalid get_tertiary_material"
-       print *,"nmat= ",nmat
-       stop
-      endif
-      if ((im_primary.ge.1).and.(im_primary.le.nmat)) then
+      if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
        ! do nothing
       else
        print *,"im_primary invalid get_tertiary_material"
        stop
       endif
       if ((im_secondary.ge.1).and. &
-          (im_secondary.le.nmat).and. &
+          (im_secondary.le.num_materials).and. &
           (im_secondary.ne.im_primary)) then
        ! do nothing
       else
@@ -21766,14 +21746,14 @@ contains
 
       im_tertiary=0
 
-      do im_3=1,nmat
+      do im_3=1,num_materials
        if (is_rigid_local(im_3).eq.0) then
         if ((im_3.ne.im_primary).and. &
             (im_3.ne.im_secondary)) then
          if (im_tertiary.eq.0) then
           im_tertiary=im_3
          else if ((im_tertiary.ge.1).and. &
-                  (im_tertiary.le.nmat)) then
+                  (im_tertiary.le.num_materials)) then
           if (LS(im_3).gt.LS(im_tertiary)) then
            im_tertiary=im_3
           endif
@@ -21794,7 +21774,7 @@ contains
         print *,"is_rigid_local(im_3) invalid"
         stop
        endif
-      enddo !im_3=1..nmat
+      enddo !im_3=1..num_materials
 
       end subroutine get_tertiary_material
 

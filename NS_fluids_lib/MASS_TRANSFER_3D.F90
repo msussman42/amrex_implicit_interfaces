@@ -2479,7 +2479,6 @@ stop
         POUT%probe_ok_gradient(iprobe)=0
 
         call get_secondary_material(LSPROBE, &
-         PROBE_PARMS%nmat, &
          im_primary_probe(iprobe), &
          im_secondary_probe(iprobe))
 
