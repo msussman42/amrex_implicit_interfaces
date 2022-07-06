@@ -18,8 +18,6 @@ extern "C"
     int* im_opp_outer,
     int* ngrow_expansion,
     int* level,int* finest_level,
-    int* nmat,
-    int* nten,
     int* nden,
     int* nstate,
     int* ntsat,

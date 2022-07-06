@@ -27,8 +27,6 @@ module probcommon_module_types
       INTEGER_T :: level
       INTEGER_T :: finest_level
       INTEGER_T :: bfact
-      INTEGER_T :: nmat
-      INTEGER_T :: nten
       REAL_T :: visc_coef
       REAL_T :: time
       REAL_T :: dt
@@ -58,7 +56,6 @@ module probcommon_module_types
        INTEGER_T :: igrid,jgrid,kgrid
        REAL_T :: volgrid
        INTEGER_T :: nhalf
-       INTEGER_T :: nmat
        INTEGER_T :: bfact
        INTEGER_T :: den_ncomp
        INTEGER_T :: level
@@ -73,7 +70,7 @@ module probcommon_module_types
        REAL_T :: time
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: cellten
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: lsfab
-        ! 1..nmat*ngeom_recon
+        ! 1..num_materials*ngeom_recon
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: slopes
         ! num_materials * num_state_material
         ! density1,temperature1,species1_1,...,species_N_1
@@ -97,8 +94,6 @@ module probcommon_module_types
        INTEGER_T :: finest_level
        REAL_T, pointer :: dx(:)
        REAL_T, pointer :: xlo(:)
-       INTEGER_T :: nmat
-       INTEGER_T :: nten
        INTEGER_T :: nstate
        INTEGER_T, pointer :: fablo(:)
        INTEGER_T, pointer :: fabhi(:)
@@ -132,7 +127,6 @@ module probcommon_module_types
       INTEGER_T, pointer :: im_solid_map(:)
       INTEGER_T :: nstate
       INTEGER_T :: nhalf
-      INTEGER_T :: nmat
       REAL_T :: cur_time
       REAL_T :: dt
       REAL_T, pointer :: dx(:)
@@ -199,7 +193,6 @@ module probcommon_module_types
       INTEGER_T :: level
       INTEGER_T :: finest_level
       INTEGER_T :: bfact
-      INTEGER_T :: nmat
       REAL_T, pointer :: xtarget(:)
       REAL_T, pointer :: dx(:)
       REAL_T, pointer :: xlo(:)
@@ -301,7 +294,7 @@ implicit none
 !  fort_latent_heat_slope, fort_latent_heat_T0, fort_latent_heat_min
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
-       !nten=num_interfaces=( (nmat-1)*(nmat-1)+nmat-1 )/2
+       !nten=num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2
       INTEGER_T, PARAMETER :: MAX_NUM_INTERFACES=55
       INTEGER_T, PARAMETER :: MAX_NUM_SPECIES=10
        ! for user definable EOS, the EOS is defined based on "probtype"
@@ -673,7 +666,7 @@ implicit none
         TI, &
         YI, &
         user_override_TI_YI, &
-        molar_mass, & ! index: 1..nmat
+        molar_mass, & ! index: 1..num_materials
         species_molar_mass, & ! index: 1..num_species_var
         ksrc_predict, &
         kdst_predict, &
@@ -722,7 +715,7 @@ implicit none
         interface_mass_transfer_model, &
         xI, & 
         ispec, &
-        molar_mass, & ! 1..nmat
+        molar_mass, & ! 1..num_materials
         species_molar_mass, & ! 1..num_species_var+1
         im_source, &
         im_dest, &
@@ -770,7 +763,7 @@ implicit none
         interface_mass_transfer_model, &
         ireverse, &
         iten, &        
-        molar_mass, & ! index: 1..nmat
+        molar_mass, & ! index: 1..num_materials
         species_molar_mass, & ! index: 1..num_species_var
         k_model_predict, &
         k_model_correct, &

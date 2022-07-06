@@ -11898,7 +11898,6 @@ end subroutine print_visual_descriptor
         data_in2%level=data_in%level
         data_in2%finest_level=data_in%finest_level
         data_in2%bfact=data_in%bfact
-        data_in2%nmat=num_materials
         data_in2%xtarget=>xtarget
         if ((data_in%dx(1).gt.zero).and. &
             (data_in%dx(2).gt.zero).and. &
@@ -12367,19 +12366,6 @@ end subroutine print_visual_descriptor
        ! do nothing
       else
        print *,"scomp invalid"
-       stop
-      endif
-      if (data_in%nmat.eq.num_materials) then
-       ! do nothing
-      else
-       print *,"data_in%nmat invalid"
-       stop
-      endif
-       
-      if (data_in%nmat.eq.num_materials) then
-       ! do nothing
-      else
-       print *,"nmat invalid"
        stop
       endif
 
