@@ -7,6 +7,8 @@
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
 
+#define MOFDEB (1)
+
 #define MAXTET (5)
 #define MAXAREA (5)
 ! this should be larger than INTERCEPT_TOL
@@ -149,7 +151,7 @@ IMPLICIT NONE
 
 type(intersect_type), intent(in) :: source
 type(intersect_type), intent(out) :: dest
-INTEGER_T :: sdim
+INTEGER_T, intent(in) :: sdim
 INTEGER_T :: i,dir
 
  if ((sdim.ne.2).and.(sdim.ne.3)) then
@@ -185,8 +187,8 @@ end subroutine fast_copy_intersect_type
 subroutine add_to_hex(gridmap,template_geom)
 IMPLICIT NONE
 
-type(intersect_type) :: template_geom
-INTEGER_T :: gridmap(2,2,2)
+type(intersect_type), intent(in) :: template_geom
+INTEGER_T, intent(in) :: gridmap(2,2,2)
 INTEGER_T :: mapped_nodes(maxmappednodes)
 INTEGER_T :: power2(maxmappednodes)
 INTEGER_T :: nn,n_nodes,inode,checksum
@@ -251,8 +253,8 @@ end subroutine add_to_hex
 subroutine add_to_tet(linemap,template_geom)
 IMPLICIT NONE
 
-type(intersect_type) :: template_geom
-INTEGER_T :: linemap(4)
+type(intersect_type), intent(in) :: template_geom
+INTEGER_T, intent(in) :: linemap(4)
 INTEGER_T :: mapped_nodes(maxmappednodes)
 INTEGER_T :: power2(maxmappednodes)
 INTEGER_T :: nn,n_nodes,inode,checksum
@@ -310,8 +312,8 @@ end subroutine add_to_tet
 subroutine add_to_tri(linemap,template_geom)
 IMPLICIT NONE
 
-type(intersect_type) :: template_geom
-INTEGER_T :: linemap(3)
+type(intersect_type), intent(in) :: template_geom
+INTEGER_T, intent(in) :: linemap(3)
 INTEGER_T :: mapped_nodes(maxmappednodes)
 INTEGER_T :: power2(maxmappednodes)
 INTEGER_T :: nn,n_nodes,inode,checksum
@@ -370,8 +372,8 @@ end subroutine add_to_tri
 subroutine add_to_rec(gridmap,template_geom)
 IMPLICIT NONE
 
-type(intersect_type) :: template_geom
-INTEGER_T :: gridmap(2,2)
+type(intersect_type), intent(in) :: template_geom
+INTEGER_T, intent(in) :: gridmap(2,2)
 INTEGER_T :: mapped_nodes(maxmappednodes)
 INTEGER_T :: power2(maxmappednodes)
 INTEGER_T :: nn,n_nodes,inode,checksum
@@ -449,11 +451,11 @@ subroutine init_intersect_type(template_geom,n_nodes,n_faces, &
   aligned_array,capface_array,sdim)
 IMPLICIT NONE
 
-INTEGER_T :: n_nodes,n_faces,n_capfaces,n_pos_nodes,sdim
-INTEGER_T :: node_array(n_nodes)
-INTEGER_T :: face_array(3*n_faces)
-INTEGER_T :: aligned_array(n_faces)
-INTEGER_T :: capface_array(3*n_capfaces)
+INTEGER_T, intent(in) :: n_nodes,n_faces,n_capfaces,n_pos_nodes,sdim
+INTEGER_T, intent(in) :: node_array(n_nodes)
+INTEGER_T, intent(in) :: face_array(3*n_faces)
+INTEGER_T, intent(in) :: aligned_array(n_faces)
+INTEGER_T, intent(in) :: capface_array(3*n_capfaces)
 INTEGER_T :: i,j,icomp,dir,firstnode,secondnode
 INTEGER_T :: rawnode,found,itet
 
@@ -1204,15 +1206,20 @@ subroutine create_xnodelist( &
 
 IMPLICIT NONE
 
-INTEGER_T sdim
+INTEGER_T, intent(in) :: sdim
 
-INTEGER_T n_vol,n_area
-REAL_T cum_volume,cum_area
-REAL_T cum_centroid(sdim)
+INTEGER_T, intent(inout) :: n_vol
+INTEGER_T, intent(inout) :: n_area
+REAL_T, intent(inout) :: cum_volume
+REAL_T, intent(inout) :: cum_area
+REAL_T, intent(inout) :: cum_centroid(sdim)
 
-INTEGER_T checksum,maxnode,shapeflag,nodedomain
-REAL_T xnode(nodedomain,sdim)
-REAL_T phinode(nodedomain)
+INTEGER_T, intent(in) :: shapeflag
+INTEGER_T, intent(in) :: nodedomain
+
+INTEGER_T, intent(in) :: checksum,maxnode
+REAL_T, intent(in) :: xnode(nodedomain,sdim)
+REAL_T, intent(in) :: phinode(nodedomain)
 INTEGER_T mapped_nodes(nodedomain)
 INTEGER_T n_nodes,dir,index1,index2,n_tet,n_capfaces
 INTEGER_T i
@@ -1230,13 +1237,17 @@ type(intersect_type) :: template_geom
 
   if (shapeflag.eq.0) then
    call fast_copy_intersect_type( &
-    hexahedron_maps(checksum,maxnode)%intersect_geometry,template_geom,sdim)
+    hexahedron_maps(checksum,maxnode)%intersect_geometry, &
+    template_geom, &
+    sdim)
    do i=1,nodedomain
     mapped_nodes(i)=hexahedron_maps(checksum,maxnode)%mapped_nodes(i)
    enddo
   else if (shapeflag.eq.1) then
    call fast_copy_intersect_type( &
-    tetrahedron_maps(checksum,maxnode)%intersect_geometry,template_geom,sdim)
+    tetrahedron_maps(checksum,maxnode)%intersect_geometry, &
+    template_geom, &
+    sdim)
    do i=1,nodedomain
     mapped_nodes(i)=tetrahedron_maps(checksum,maxnode)%mapped_nodes(i)
    enddo
@@ -1369,8 +1380,14 @@ type(intersect_type) :: template_geom
        xnodelist_array(template_geom%capfacelist(i,j_tet_node),dir)
     enddo
    enddo
+      if (MOFDEB.eq.1) then
+       print *,"calling surface_area(2) "
+      endif
 
    call surface_area(xtri,local_area,sdim)
+      if (MOFDEB.eq.1) then
+       print *,"after calling surface_area(2) "
+      endif
 
    cum_area=cum_area+local_area
   enddo ! looping through all tris
@@ -1392,15 +1409,15 @@ subroutine create_xnodelist_simple( &
 
 IMPLICIT NONE
 
-INTEGER_T sdim
+INTEGER_T, intent(in) :: sdim
 
-INTEGER_T n_vol
-REAL_T cum_volume
-REAL_T cum_centroid(sdim)
+INTEGER_T, intent(inout) :: n_vol
+REAL_T, intent(inout) :: cum_volume
+REAL_T, intent(inout) :: cum_centroid(sdim)
 
-INTEGER_T checksum,maxnode,shapeflag,nodedomain
-REAL_T xnode(nodedomain,sdim)
-REAL_T phinode(nodedomain)
+INTEGER_T, intent(in) :: checksum,maxnode,shapeflag,nodedomain
+REAL_T, intent(in) :: xnode(nodedomain,sdim)
+REAL_T, intent(in) :: phinode(nodedomain)
 INTEGER_T mapped_nodes(nodedomain)
 INTEGER_T n_nodes,dir,index1,index2,n_tet
 INTEGER_T i
@@ -1564,18 +1581,18 @@ subroutine create_xnodelist_and_map( &
 
 IMPLICIT NONE
 
-INTEGER_T sdim
-INTEGER_T normdir
-REAL_T coeff(2)
-INTEGER_T n_vol
-REAL_T cum_volume
-REAL_T cum_centroid(sdim)
-REAL_T cum_volume_map
-REAL_T cum_centroid_map(sdim)
+INTEGER_T, intent(in) :: sdim
+INTEGER_T, intent(in) :: normdir
+REAL_T, intent(in) :: coeff(2)
+INTEGER_T, intent(inout) :: n_vol
+REAL_T, intent(inout) :: cum_volume
+REAL_T, intent(inout) :: cum_centroid(sdim)
+REAL_T, intent(inout) :: cum_volume_map
+REAL_T, intent(inout) :: cum_centroid_map(sdim)
 
-INTEGER_T checksum,maxnode,shapeflag,nodedomain
-REAL_T xnode(nodedomain,sdim)
-REAL_T phinode(nodedomain)
+INTEGER_T, intent(in) :: checksum,maxnode,shapeflag,nodedomain
+REAL_T, intent(in) :: xnode(nodedomain,sdim)
+REAL_T, intent(in) :: phinode(nodedomain)
 INTEGER_T mapped_nodes(nodedomain)
 INTEGER_T n_nodes,dir,index1,index2,n_tet
 INTEGER_T i
@@ -1753,15 +1770,15 @@ subroutine increment_volume( &
 
 IMPLICIT NONE
 
-INTEGER_T sdim
+INTEGER_T, intent(in) :: sdim
 
-INTEGER_T n_vol,n_area
-REAL_T cum_volume,cum_area
-REAL_T cum_centroid(sdim)
+INTEGER_T, intent(inout) :: n_vol,n_area
+REAL_T, intent(inout) :: cum_volume,cum_area
+REAL_T, intent(inout) :: cum_centroid(sdim)
 
-INTEGER_T nodedomain
-REAL_T phinode(nodedomain)
-REAL_T xnode(nodedomain,sdim)
+INTEGER_T, intent(in) :: nodedomain
+REAL_T, intent(in) :: phinode(nodedomain)
+REAL_T, intent(in) :: xnode(nodedomain,sdim)
 INTEGER_T maxchecksum,checksum,power2,n
 REAL_T phimax
 INTEGER_T maxnode,n_nodes,shapeflag
@@ -1838,15 +1855,15 @@ subroutine increment_volume_simple( &
 
 IMPLICIT NONE
 
-INTEGER_T sdim
+INTEGER_T, intent(in) :: sdim
 
-INTEGER_T n_vol
-REAL_T cum_volume
-REAL_T cum_centroid(sdim)
+INTEGER_T, intent(inout) ::  n_vol
+REAL_T, intent(inout) :: cum_volume
+REAL_T, intent(inout) :: cum_centroid(sdim)
 
-INTEGER_T nodedomain
-REAL_T phinode(nodedomain)
-REAL_T xnode(nodedomain,sdim)
+INTEGER_T, intent(in) :: nodedomain
+REAL_T, intent(in) :: phinode(nodedomain)
+REAL_T, intent(in) :: xnode(nodedomain,sdim)
 INTEGER_T maxchecksum,checksum,power2,n
 REAL_T phimax
 INTEGER_T maxnode,n_nodes
@@ -1927,19 +1944,19 @@ subroutine increment_volume_and_map( &
 
 IMPLICIT NONE
 
-INTEGER_T sdim
-INTEGER_T normdir
-REAL_T coeff(2)
+INTEGER_T, intent(in) :: sdim
+INTEGER_T, intent(in) :: normdir
+REAL_T, intent(in) :: coeff(2)
 
-INTEGER_T n_vol
-REAL_T cum_volume
-REAL_T cum_centroid(sdim)
-REAL_T cum_volume_map
-REAL_T cum_centroid_map(sdim)
+INTEGER_T, intent(inout) :: n_vol
+REAL_T, intent(inout) :: cum_volume
+REAL_T, intent(inout) :: cum_centroid(sdim)
+REAL_T, intent(inout) :: cum_volume_map
+REAL_T, intent(inout) :: cum_centroid_map(sdim)
 
-INTEGER_T nodedomain
-REAL_T phinode(nodedomain)
-REAL_T xnode(nodedomain,sdim)
+INTEGER_T, intent(in) :: nodedomain
+REAL_T, intent(in) :: phinode(nodedomain)
+REAL_T, intent(in) :: xnode(nodedomain,sdim)
 INTEGER_T maxchecksum,checksum,power2,n
 REAL_T phimax
 INTEGER_T maxnode,n_nodes,shapeflag
@@ -2030,15 +2047,18 @@ subroutine intersection_volume( &
 
 IMPLICIT NONE
 
-INTEGER_T sdim
+INTEGER_T, intent(in) :: sdim
 
-INTEGER_T n_vol,n_area
-REAL_T cum_volume,cum_area
-REAL_T cum_centroid(sdim)
+INTEGER_T :: n_vol,n_area
+REAL_T, intent(out) :: cum_volume,cum_area
+REAL_T, intent(out) :: cum_centroid(sdim)
 
-INTEGER_T nodedomain,fullelementfast,linearcut,bfact
-REAL_T phinode(nodedomain)
-REAL_T xnode(nodedomain,sdim)
+INTEGER_T, intent(in) :: nodedomain
+INTEGER_T, intent(in) :: fullelementfast
+INTEGER_T, intent(in) :: linearcut
+INTEGER_T :: bfact
+REAL_T, intent(in) :: phinode(nodedomain)
+REAL_T, intent(in) :: xnode(nodedomain,sdim)
 INTEGER_T maxchecksum,power2
 REAL_T xsten_grid(-3:3,sdim)
 REAL_T dxgrid(sdim)
@@ -2228,15 +2248,16 @@ subroutine intersection_volume_simple( &
 
 IMPLICIT NONE
 
-INTEGER_T sdim
+INTEGER_T, intent(in) :: sdim
 
-INTEGER_T n_vol
-REAL_T cum_volume
-REAL_T cum_centroid(sdim)
+INTEGER_T :: n_vol
+REAL_T, intent(inout) :: cum_volume
+REAL_T, intent(inout) :: cum_centroid(sdim)
 
-INTEGER_T nodedomain,bfact
-REAL_T phinode(nodedomain)
-REAL_T xnode(nodedomain,sdim)
+INTEGER_T, intent(in) :: nodedomain
+INTEGER_T :: bfact
+REAL_T, intent(in) :: phinode(nodedomain)
+REAL_T, intent(in) :: xnode(nodedomain,sdim)
 INTEGER_T maxchecksum,power2
 REAL_T xsten_grid(-3:3,sdim)
 REAL_T dxgrid(sdim)
@@ -2390,18 +2411,19 @@ subroutine intersection_volume_and_map( &
 
 IMPLICIT NONE
 
-INTEGER_T sdim
-INTEGER_T normdir
-REAL_T coeff(2)
-INTEGER_T n_vol
-REAL_T cum_volume
-REAL_T cum_centroid(sdim)
-REAL_T cum_volume_map
-REAL_T cum_centroid_map(sdim)
+INTEGER_T, intent(in) :: sdim
+INTEGER_T, intent(in) :: normdir
+REAL_T, intent(in) :: coeff(2)
+INTEGER_T :: n_vol
+REAL_T, intent(inout) :: cum_volume
+REAL_T, intent(inout) :: cum_centroid(sdim)
+REAL_T, intent(inout) :: cum_volume_map
+REAL_T, intent(inout) :: cum_centroid_map(sdim)
 
-INTEGER_T nodedomain,bfact
-REAL_T phinode(nodedomain)
-REAL_T xnode(nodedomain,sdim)
+INTEGER_T, intent(in) :: nodedomain
+INTEGER_T :: bfact
+REAL_T, intent(in) :: phinode(nodedomain)
+REAL_T, intent(in) :: xnode(nodedomain,sdim)
 INTEGER_T maxchecksum,power2
 REAL_T xsten_grid(-3:3,sdim)
 REAL_T dxgrid(sdim)
@@ -2598,17 +2620,17 @@ end subroutine intersection_volume_and_map
         area,volall,cenall,sdim)
       IMPLICIT NONE
 
-      INTEGER_T bfact
+      INTEGER_T, intent(in) :: bfact
 
-      INTEGER_T sdim,nhalf
-      REAL_T lnode(4*(sdim-1))
+      INTEGER_T, intent(in) :: sdim,nhalf
+      REAL_T, intent(in) :: lnode(4*(sdim-1))
       REAL_T xnode(4*(sdim-1),sdim)
-      REAL_T xgrid(-nhalf:nhalf,sdim)
-      REAL_T dxgrid(sdim)
-      REAL_T volumedark
-      REAL_T centroiddark(sdim)
-      REAL_T volall,area
-      REAL_T cenall(sdim)
+      REAL_T, intent(in) :: xgrid(-nhalf:nhalf,sdim)
+      REAL_T, intent(in) :: dxgrid(sdim)
+      REAL_T, intent(out) :: volumedark
+      REAL_T, intent(out) :: centroiddark(sdim)
+      REAL_T, intent(out) :: volall,area
+      REAL_T, intent(out) :: cenall(sdim)
       REAL_T centroididdark(sdim)
       REAL_T xx(sdim+1,sdim)
       REAL_T lsdark(sdim+1)
@@ -2754,16 +2776,16 @@ end subroutine intersection_volume_and_map
        centroiddark,area,sdim)
       IMPLICIT NONE
 
-      INTEGER_T sdim
+      INTEGER_T, intent(in) :: sdim
 
       REAL_T xtrilist(sdim+1,sdim,MAXTET)
       REAL_T xarealist(sdim,sdim,MAXAREA)
-      REAL_T phi(sdim+1)
-      REAL_T x(sdim+1,sdim)
+      REAL_T, intent(in) :: phi(sdim+1)
+      REAL_T, intent(in) :: x(sdim+1,sdim)
       REAL_T xint(sdim+1,sdim)
-      REAL_T volumedark,area
+      REAL_T, intent(out) :: volumedark,area
       REAL_T volumelistdark,arealist
-      REAL_T centroiddark(sdim)
+      REAL_T, intent(out) :: centroiddark(sdim)
       REAL_T centroidlistdark(sdim)
 
       INTEGER_T i_tet_node
@@ -2830,16 +2852,16 @@ end subroutine intersection_volume_and_map
        centroiddark,sdim)
       IMPLICIT NONE
 
-      INTEGER_T sdim
+      INTEGER_T, intent(in) :: sdim
 
       REAL_T xtrilist(sdim+1,sdim,MAXTET)
       REAL_T xarealist(sdim,sdim,MAXAREA)
-      REAL_T phi(sdim+1)
-      REAL_T x(sdim+1,sdim)
+      REAL_T, intent(in) :: phi(sdim+1)
+      REAL_T, intent(in) :: x(sdim+1,sdim)
       REAL_T xint(sdim+1,sdim)
-      REAL_T volumedark
+      REAL_T, intent(out) :: volumedark
       REAL_T volumelistdark
-      REAL_T centroiddark(sdim)
+      REAL_T, intent(out) :: centroiddark(sdim)
       REAL_T centroidlistdark(sdim)
 
       INTEGER_T i_tet_node
@@ -2898,22 +2920,22 @@ end subroutine intersection_volume_and_map
        sdim)
       IMPLICIT NONE
 
-      INTEGER_T sdim
-      INTEGER_T normdir
-      REAL_T coeff(2)
+      INTEGER_T, intent(in) :: sdim
+      INTEGER_T, intent(in) :: normdir
+      REAL_T, intent(in) :: coeff(2)
 
       REAL_T xtrilist(sdim+1,sdim,MAXTET)
       REAL_T xarealist(sdim,sdim,MAXAREA)
-      REAL_T phi(sdim+1)
-      REAL_T x(sdim+1,sdim)
+      REAL_T, intent(in) :: phi(sdim+1)
+      REAL_T, intent(in) :: x(sdim+1,sdim)
       REAL_T xint(sdim+1,sdim)
-      REAL_T volumedark
+      REAL_T, intent(out) :: volumedark
       REAL_T volumelistdark
-      REAL_T volumedark_map
+      REAL_T, intent(out) :: volumedark_map
       REAL_T volumelistdark_map
-      REAL_T centroiddark(sdim)
+      REAL_T, intent(out) :: centroiddark(sdim)
       REAL_T centroidlistdark(sdim)
-      REAL_T centroiddark_map(sdim)
+      REAL_T, intent(out) :: centroiddark_map(sdim)
       REAL_T centroidlistdark_map(sdim)
 
       INTEGER_T i_tet_node
@@ -3089,15 +3111,15 @@ end subroutine intersection_volume_and_map
       return
       end subroutine get_xbounds
 
-! find the length of a side of a triangle; also find the centroid of the
-! side.      
+! find the length of a side of a triangle      
       subroutine areaXYorRZ(x,i1,i2,area)
       IMPLICIT NONE
 
       REAL_T, intent(in) :: x(3,2)
       REAL_T xx(2,2)
       REAL_T, intent(out) :: area
-      INTEGER_T i1,i2,dir,sdim
+      INTEGER_T, intent(in) :: i1,i2
+      INTEGER_T dir,sdim
 
       sdim=2
 
@@ -3596,6 +3618,14 @@ end subroutine intersection_volume_and_map
        ! do nothing
       else
        print *,"mag invalid in surface_area; mag=",mag
+       print *,"sdim=",sdim
+       do i=1,sdim
+       do dir=1,sdim
+        print *,"triangle index i=",i
+        print *,"dir=",dir
+        print *,"x(i,dir)=",x(i,dir)
+       enddo
+       enddo
        stop
       endif
 
