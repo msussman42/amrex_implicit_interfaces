@@ -2884,7 +2884,7 @@ end subroutine dynamic_contact_angle
                ! cos_angle and sin_angle correspond to the angle in im_fluid1
                call get_CL_iten(im_fluid1,im_fluid2,im_solid, &
                  iten_13,iten_23, &
-                 user_tension,LOW%nten,cos_angle,sin_angle)
+                 user_tension,cos_angle,sin_angle)
                sinthetaACT=zero
                costhetaACT=zero
                 ! because nrm_solid and nf_prj have unit magnitude,
@@ -22597,7 +22597,7 @@ if (probtype.eq.55) then
      ! "im,im_opp" interface.
      ! i.e. between the liquid/substrate and liquid/gas interfaces.
    call get_CL_iten(im,im_opp,im_3,iten_13,iten_23, &
-    user_tension,nten,cos_angle,sin_angle)
+    user_tension,cos_angle,sin_angle)
 
     ! angles other than 0 or pi are supported:
     ! 0 < angle < pi

@@ -1017,7 +1017,6 @@ stop
         geom_xtetlist(1,1,1,tid+1), &
         nmax, &
         nmax, &
-        nmat, &
         SDIM, &
         4)
 
@@ -5388,7 +5387,7 @@ stop
              multi_centroidA, &
              continuous_mof_parm, &
              cmofsten, &
-             nmat,SDIM,202)
+             SDIM,202)
 
              ! xPOINT_supermesh is needed in order to determine
              ! whether to interpolate old temperature and mass fraction
@@ -6289,7 +6288,7 @@ stop
                cmofsten, &
                u_xsten_updatecell,nhalf,nhalf_box, &
                bfact,dx, &
-               tessellate,mofdata,nmat,SDIM,106)
+               tessellate,mofdata,SDIM,106)
 
              do u_im=1,nmat
               vofcomp_recon=(u_im-1)*ngeom_recon+1

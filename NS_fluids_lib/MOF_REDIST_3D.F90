@@ -1073,7 +1073,6 @@ stop
          geom_xtetlist(1,1,1,tid_current+1), &
          nmax, &
          nmax, &
-         num_materials, &
          SDIM, &
          caller_id)
 
@@ -3545,7 +3544,7 @@ stop
          bfact,dx, &
          normalize_tessellate, &  ! =0
          mofdata,mofdatavalid, &
-         num_materials,SDIM,3000)
+         SDIM,3000)
 
         if (tessellate.eq.3) then
 
@@ -3559,7 +3558,6 @@ stop
           geom_xtetlist_uncapt(1,1,1,tid+1), &
           nmax, &
           nmax, &
-          num_materials, &
           SDIM, &
           3)  ! caller_id=3
 

@@ -46,7 +46,6 @@ stop
          REAL_T, pointer :: dx(:)
          REAL_T :: time
          INTEGER_T :: im_solid_max
-         INTEGER_T :: nmat
          INTEGER_T :: least_sqr_radius
          INTEGER_T :: least_sqrZ
          REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
@@ -75,7 +74,7 @@ stop
         ASSOCIATE(CP=>cell_CP_parm)
 
         if ((CP%im_solid_max.ge.1).and. &
-            (CP%im_solid_max.le.CP%nmat)) then
+            (CP%im_solid_max.le.num_materials)) then
 
          if (is_rigid(CP%im_solid_max).eq.1) then
 
@@ -105,7 +104,7 @@ stop
            do dir=1,SDIM
             nslope_cell(dir)= &
               CP%LS(D_DECL(CP%i,CP%j,CP%k), &
-              CP%nmat+SDIM*(CP%im_solid_max-1)+dir)
+              num_materials+SDIM*(CP%im_solid_max-1)+dir)
            enddo
           else if (FSI_flag(CP%im_solid_max).eq.1) then ! prescribed solid EUL
            ! do nothing
@@ -230,14 +229,14 @@ stop
          enddo
          dist_stencil_to_bulk=sqrt(dist_stencil_to_bulk)
 
-         do im_local=1,CP%nmat
+         do im_local=1,num_materials
           call safe_data(isten,jsten,ksten,im_local, &
            local_data_fab,local_data_out)
           LS_virtual(im_local)=local_data_out
           if ((i2.eq.0).and.(j2.eq.0).and.(k2.eq.0)) then
            LS_center_stencil(im_local)=local_data_out
           endif
-         enddo !im_local=1,CP%nmat
+         enddo !im_local=1,num_materials
 
          ! the fluid cells closest to the substrate, but not
          ! in the substrate, have the most weight.
@@ -248,7 +247,7 @@ stop
           if (shortest_dist_to_fluid.eq.-one) then
            im_fluid_critical=im_primary_sub_stencil
            shortest_dist_to_fluid=dist_stencil_to_bulk
-           do im_local=1,CP%nmat
+           do im_local=1,num_materials
             LS_interp_low_order(im_local)=LS_virtual(im_local)
            enddo
           else if (shortest_dist_to_fluid.ge.zero) then
@@ -256,7 +255,7 @@ stop
                shortest_dist_to_fluid) then
             im_fluid_critical=im_primary_sub_stencil
             shortest_dist_to_fluid=dist_stencil_to_bulk
-            do im_local=1,CP%nmat
+            do im_local=1,num_materials
              LS_interp_low_order(im_local)=LS_virtual(im_local)
             enddo
            else if (dist_stencil_to_bulk.ge. &
@@ -286,13 +285,13 @@ stop
        
         if (shortest_dist_to_fluid.ge.zero) then
 
-         do im_local=1,CP%nmat
+         do im_local=1,num_materials
           LS_interp(im_local)=LS_interp_low_order(im_local)
          enddo
           !no fluid cells in stencil
         else if (shortest_dist_to_fluid.eq.-one) then 
-                !no fluid cells in stencil
-         do im_local=1,CP%nmat
+          !no fluid cells in stencil
+         do im_local=1,num_materials
           LS_interp(im_local)=LS_center_stencil(im_local)
          enddo
 
@@ -1162,7 +1161,7 @@ stop
         ! im is material "i"  ("fluid" material)
         ! im_opp is material "j"
        call get_CL_iten(im,im_opp,im3,iten_13,iten_23, &
-        user_tension,nten,cos_angle,sin_angle)
+        user_tension,cos_angle,sin_angle)
 
        if ((sin_angle.ge.zero).and.(cos_angle.ge.zero)) then
         angle_im=asin(sin_angle)
@@ -2633,7 +2632,7 @@ stop
            bfact,dx, &
            local_tessellate, & ! =0 
            mofdata,mofdatavalid, &
-           nmat,SDIM,3)
+           SDIM,3)
 
          shapeflag=0
 
@@ -4974,7 +4973,6 @@ stop
           geom_xtetlist(1,1,1,tid_current+1), &
           nmax, &
           nmax, &
-          nmat, &
           SDIM, &
           caller_id)
         else
@@ -9963,7 +9961,6 @@ stop
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
          nmax, &
-         nmat, &
          SDIM, &
          3)
 
@@ -16005,11 +16002,6 @@ stop
        stop
       endif
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat bust"
-       stop
-      endif
-
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
        stop
@@ -16072,7 +16064,6 @@ stop
       cell_CP_parm%fabhi=>fabhi
       cell_CP_parm%dx=>dx
       cell_CP_parm%time=time
-      cell_CP_parm%nmat=num_materials
       cell_CP_parm%LS=>LS
 
       nmat_fluid=0
@@ -17052,7 +17043,7 @@ stop
               cmofsten, &
               xsten,nhalf,nhalf_box, &
               bfact,dx, &
-              tessellate,local_mof,nmat,SDIM,6)
+              tessellate,local_mof,SDIM,6)
             continuous_mof_parm=0
             mof_verbose=0
 
@@ -17069,7 +17060,7 @@ stop
              multi_centroidA, &
              continuous_mof_parm, &
              cmofsten, &
-             nmat,SDIM,2)
+             SDIM,2)
      
             tessellate_transfer=1 
             call multi_get_volume_tessellate( &
@@ -17080,7 +17071,6 @@ stop
              geom_xtetlist(1,1,1,tid+1), &
              nmax, &
              nmax, &
-             nmat, &
              SDIM, &
              2)
 
@@ -17205,7 +17195,7 @@ stop
            cmofsten, &
            xsten,nhalf,nhalf_box, &
            bfact,dx, &
-           tessellate,mofnew,nmat,SDIM,12)
+           tessellate,mofnew,SDIM,12)
 
          do im=1,num_materials*(1+SDIM)
           lsnew(D_DECL(i,j,k),im)=ls_hold(im)
@@ -17223,7 +17213,7 @@ stop
            cmofsten, &
            xsten,nhalf,nhalf_box, &
            bfact,dx, &
-           tessellate,mofnew,nmat,SDIM,13)
+           tessellate,mofnew,SDIM,13)
         else
          print *,"renormalize only invalid"
          stop
@@ -17502,7 +17492,7 @@ stop
           cmofsten, &
           xsten,nhalf,nhalf_box, &
           bfact,dx, &
-          tessellate,mofdata,nmat,SDIM,14)
+          tessellate,mofdata,SDIM,14)
 
         do im=1,nmat
          vofcompraw=(im-1)*ngeom_raw+1

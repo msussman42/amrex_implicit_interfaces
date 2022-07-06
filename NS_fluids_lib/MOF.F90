@@ -13108,7 +13108,6 @@ contains
         multi_centroidA, &
         continuous_mof, &
         cmofsten, &
-        nmat, &
         sdim, &
         caller_id)
 
@@ -13122,7 +13121,6 @@ contains
       INTEGER_T, INTENT (IN) :: bfact,nhalf0
       INTEGER_T, INTENT (IN) :: use_ls_data
       INTEGER_T, INTENT (IN) :: mof_verbose
-      INTEGER_T, INTENT (IN) :: nmat
       INTEGER_T, INTENT (IN) :: sdim
       INTEGER_T, INTENT (IN) :: nlist_alloc
       INTEGER_T, INTENT (IN) :: nmax
@@ -13131,16 +13129,16 @@ contains
 
        ! D_DECL(i,j,k) = i,j  in 2D
        !               = i,j,k in 3D
-      REAL_T, INTENT (IN) :: LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
+      REAL_T, INTENT (IN) :: LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
       REAL_T, INTENT (IN), DIMENSION(sdim) :: dx
 
       REAL_T, INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: xtetlist_vof
       REAL_T, INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: xtetlist_cen
       REAL_T, INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
-      REAL_T, INTENT (INOUT), DIMENSION(nmat*ngeom_recon) :: mofdata
-      REAL_T, DIMENSION(nmat*ngeom_recon) :: mofdata_in
-      REAL_T, INTENT (OUT), DIMENSION(nmat,sdim) :: multi_centroidA
+      REAL_T, INTENT (INOUT), DIMENSION(num_materials*ngeom_recon) :: mofdata
+      REAL_T, DIMENSION(num_materials*ngeom_recon) :: mofdata_in
+      REAL_T, INTENT (OUT), DIMENSION(num_materials,sdim) :: multi_centroidA
 
       INTEGER_T imaterial2
       INTEGER_T imaterial,vofcomp,dir
@@ -13158,7 +13156,7 @@ contains
       INTEGER_T single_material
       REAL_T remaining_vfrac
       REAL_T nrecon(sdim)
-      INTEGER_T order_algorithm_in(nmat)
+      INTEGER_T order_algorithm_in(num_materials)
       INTEGER_T num_materials_cell
       INTEGER_T, dimension(:,:), allocatable :: order_array
       INTEGER_T, dimension(:,:), allocatable :: order_stack
@@ -13168,14 +13166,14 @@ contains
       INTEGER_T order_count,order_stack_count
       INTEGER_T irank,iflex,jflex,kflex,is_valid
       INTEGER_T n_ndef,place_index,n_orderings
-      INTEGER_T placeholder(nmat)
-      INTEGER_T placelist(nmat)
-      INTEGER_T flexlist(nmat)
-      INTEGER_T temp_order(nmat)
+      INTEGER_T placeholder(num_materials)
+      INTEGER_T placelist(num_materials)
+      INTEGER_T flexlist(num_materials)
+      INTEGER_T temp_order(num_materials)
       INTEGER_T argmin_order
       REAL_T min_error,mof_err
       INTEGER_T alloc_flag
-      REAL_T voftest(nmat)
+      REAL_T voftest(num_materials)
       INTEGER_T i1,j1,k1,k1lo,k1hi
       REAL_T dxmaxLS
       REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: ls_mof
@@ -13197,7 +13195,7 @@ contains
       INTEGER_T nlist_vof,nlist_cen
 
       INTEGER_T tessellate
-      INTEGER_T is_rigid_local(nmat)
+      INTEGER_T is_rigid_local(num_materials)
 
       INTEGER_T nhalf_box
 
@@ -13219,7 +13217,7 @@ contains
 
       tessellate=0
 
-      do imaterial=1,nmat
+      do imaterial=1,num_materials
        is_rigid_local(imaterial)=is_rigid(imaterial)
        if (tessellate.eq.2) then
         is_rigid_local(imaterial)=0
@@ -13238,7 +13236,7 @@ contains
         print *,"tessellate invalid7"
         stop
        endif
-      enddo ! imaterial=1..nmat
+      enddo ! imaterial=1..num_materials
 
       if (bfact.lt.1) then
        print *,"bfact invalid135"
@@ -13286,9 +13284,9 @@ contains
        stop
       endif
 
-      if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
-       print *,"nmat invalid multimaterial mof"
-       print *,"nmat= ",nmat
+      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
+       print *,"num_materials invalid multimaterial mof"
+       print *,"num_materials= ",num_materials
        stop
       endif
       if (nmax.lt.10) then
@@ -13313,28 +13311,28 @@ contains
        stop
       endif
 
-      do imaterial=1,nmat
+      do imaterial=1,num_materials
        vofcomp=(imaterial-1)*ngeom_recon+1
        voftest(imaterial)=mofdata(vofcomp)
       enddo
 
-      allocate(ls_mof(D_DECL(-1:1,-1:1,-1:1),nmat))
-      allocate(lsnormal(nmat,sdim))
-      allocate(lsnormal_valid(nmat))
-      allocate(ls_intercept(nmat))
+      allocate(ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials))
+      allocate(lsnormal(num_materials,sdim))
+      allocate(lsnormal_valid(num_materials))
+      allocate(ls_intercept(num_materials))
 
       if (use_ls_data.eq.1) then
        do i1=-1,1
        do j1=-1,1
        do k1=k1lo,k1hi
-       do imaterial=1,nmat
+       do imaterial=1,num_materials
         ls_mof(D_DECL(i1,j1,k1),imaterial)= &
          LS_stencil(D_DECL(i1,j1,k1),imaterial) 
        enddo
        enddo
        enddo
        enddo
-       do imaterial=1,nmat
+       do imaterial=1,num_materials
         if (voftest(imaterial).le.VOFTOL) then
 
          lsnormal_valid(imaterial)=0
@@ -13352,7 +13350,7 @@ contains
           bfact,dx,xsten0,nhalf0, &
           imaterial, &
           dxmaxLS, &
-          nmat,sdim)
+          num_materials,sdim)
  
         else
          print *,"continuous_mof invalid"
@@ -13361,7 +13359,7 @@ contains
 
        enddo ! imaterial
       else if (use_ls_data.eq.0) then
-       do imaterial=1,nmat
+       do imaterial=1,num_materials
         lsnormal_valid(imaterial)=0
        enddo
       else
@@ -13373,14 +13371,14 @@ contains
        print *,"BEFORE BEFORE"
        print *,"nmax = ",nmax
        print *,"levelrz = ",levelrz
-       print *,"nmat = ",nmat
+       print *,"num_materials = ",num_materials
        print *,"sdim = ",sdim
        print *,"continuous_mof = ",continuous_mof
        print *,"ngeom_recon = ",ngeom_recon
-       do imaterial=1,nmat*ngeom_recon
+       do imaterial=1,num_materials*ngeom_recon
         print *,"i,mofdata ",imaterial,mofdata(imaterial)
        enddo
-       do imaterial=1,nmat
+       do imaterial=1,num_materials
         print *,"imaterial,order_algorithm ",imaterial, &
          order_algorithm(imaterial)
        enddo
@@ -13410,13 +13408,13 @@ contains
         cmofsten, &
         xsten0,nhalf0,nhalf_box,bfact,dx, &
         tessellate, &  ! =0
-        mofdata,nmat,sdim,6)
+        mofdata,sdim,6)
 
-       ! clear flag for all nmat materials.
-       ! vfrac,centroid,order,slope,intercept x nmat
+       ! clear flag for all num_materials materials.
+       ! vfrac,centroid,order,slope,intercept x num_materials
        ! reconstruct the rigid materials.
 
-      do imaterial=1,nmat
+      do imaterial=1,num_materials
 
        mof_iterations(tid+1,imaterial)=0
        mof_calls(tid+1,imaterial)=0
@@ -13499,7 +13497,7 @@ contains
            nlist_alloc, &
            centroidA, &
            nmax,imaterial, &
-           fastflag,nmat,sdim)
+           fastflag,num_materials,sdim)
 
           mofdata(vofcomp+sdim+1)=one ! order=1
           mofdata(vofcomp+2*sdim+2)=intercept
@@ -13570,9 +13568,9 @@ contains
  
          if (order_algorithm(imaterial).eq.0) then
           if (mofdata(vofcomp).ge.one-VOFTOL) then
-           order_algorithm_in(imaterial)=nmat+1
+           order_algorithm_in(imaterial)=num_materials+1
           else if (mofdata(vofcomp).le.VOFTOL) then
-           order_algorithm_in(imaterial)=nmat+1  ! was "1"
+           order_algorithm_in(imaterial)=num_materials+1  ! was "1"
           else
            ! do nothing
           endif
@@ -13592,42 +13590,42 @@ contains
         stop
        endif
 
-      enddo  ! imaterial=1..nmat
+      enddo  ! imaterial=1..num_materials
 
       if (num_materials_cell.le.2) then
-       do imaterial=1,nmat
+       do imaterial=1,num_materials
 
         if (is_rigid_local(imaterial).eq.1) then
          ! do nothing
         else if (is_rigid_local(imaterial).eq.0) then
          if (order_algorithm(imaterial).eq.0) then
-          order_algorithm_in(imaterial)=nmat+1  ! was "1"
+          order_algorithm_in(imaterial)=num_materials+1  ! was "1"
          endif
         else
          print *,"is_rigid_local invalid"
          stop
         endif
 
-       enddo ! imaterial=1..nmat
+       enddo ! imaterial=1..num_materials
       endif
 
       n_ndef=0
-      do imaterial=1,nmat
+      do imaterial=1,num_materials
        placeholder(imaterial)=0 ! 0 if place open, 1 if place taken
        placelist(imaterial)=0  ! list of available places (>=n_ndef)
        flexlist(imaterial)=0   ! list of materials that need an ordering
       enddo
-      do imaterial=1,nmat
+      do imaterial=1,num_materials
        if (is_rigid_local(imaterial).eq.1) then
         ! do nothing
        else if (is_rigid_local(imaterial).eq.0) then
         if (order_algorithm_in(imaterial).eq.0) then
          n_ndef=n_ndef+1
          flexlist(n_ndef)=imaterial
-        else if (order_algorithm_in(imaterial).gt.nmat) then
+        else if (order_algorithm_in(imaterial).gt.num_materials) then
          ! do nothing
         else if ((order_algorithm_in(imaterial).ge.1).and. &
-                 (order_algorithm_in(imaterial).le.nmat)) then
+                 (order_algorithm_in(imaterial).le.num_materials)) then
          placeholder(order_algorithm_in(imaterial))=1
         else
          print *,"order_algorithm_in(imaterial) invalid"
@@ -13637,11 +13635,11 @@ contains
         print *,"is_rigid_local invalid"
         stop
        endif
-      enddo ! imaterial=1..nmat
+      enddo ! imaterial=1..num_materials
 
         ! placelist: list of available places >= n_ndef
       place_index=0
-      do imaterial=1,nmat
+      do imaterial=1,num_materials
        if (is_rigid_local(imaterial).eq.1) then
         ! do nothing
        else if (is_rigid_local(imaterial).eq.0) then
@@ -13661,7 +13659,7 @@ contains
 
       if (n_ndef.eq.0) then
        ! do nothing
-      else if ((n_ndef.ge.1).and.(n_ndef.le.nmat)) then
+      else if ((n_ndef.ge.1).and.(n_ndef.le.num_materials)) then
        call nfact(n_ndef,n_orderings) 
         ! order_algorithm_in(flexlist(1..n_ndef))=
         !  placelist(order_array(*,1..n_ndef))
@@ -13676,11 +13674,11 @@ contains
          temp_order(jflex)=0 
         enddo
         call push_order_stack(order_stack,order_stack_count, &
-         temp_order,n_orderings,n_ndef,nmat)
+         temp_order,n_orderings,n_ndef,num_materials)
        enddo  ! i
        do while (order_stack_count.gt.0)
         call pop_order_stack(order_stack,order_stack_count, &
-         temp_order,n_orderings,n_ndef,nmat)
+         temp_order,n_orderings,n_ndef,num_materials)
         jflex=n_ndef
         do while (temp_order(jflex).eq.0)
          jflex=jflex-1
@@ -13709,7 +13707,7 @@ contains
           if (is_valid.eq.1) then
            temp_order(jflex+1)=irank
            call push_order_stack(order_stack,order_stack_count, &
-            temp_order,n_orderings,n_ndef,nmat)
+            temp_order,n_orderings,n_ndef,num_materials)
           endif
          enddo ! irank
         else
@@ -13783,7 +13781,7 @@ contains
         endif
 
         imaterial_count=1
-        do while ((imaterial_count.le.nmat).and. &
+        do while ((imaterial_count.le.num_materials).and. &
                   (uncaptured_volume_vof.gt.zero))
          call individual_MOF( &
           tid, &
@@ -13803,15 +13801,15 @@ contains
           multi_centroidA, &
           continuous_mof, &
           cmofsten, &
-          nmat,sdim)
+          num_materials,sdim)
          imaterial_count=imaterial_count+1
         enddo
 
          ! multiple orderings must be tested.
-       else if ((n_ndef.ge.1).and.(n_ndef.le.nmat)) then
+       else if ((n_ndef.ge.1).and.(n_ndef.le.num_materials)) then
 
-        allocate(mofdata_array(n_orderings,nmat*ngeom_recon))
-        allocate(centroidA_array(n_orderings,nmat,sdim))
+        allocate(mofdata_array(n_orderings,num_materials*ngeom_recon))
+        allocate(centroidA_array(n_orderings,num_materials,sdim))
         allocate(moferror_array(n_orderings))
         alloc_flag=alloc_flag+3
 
@@ -13820,13 +13818,13 @@ contains
 
         do order_count=1,n_orderings
 
-         do dir=1,nmat*ngeom_recon
+         do dir=1,num_materials*ngeom_recon
           mofdata_in(dir)=mofdata(dir)
          enddo
 
          do iflex=1,n_ndef
           imaterial=flexlist(iflex)
-          if ((imaterial.lt.1).or.(imaterial.gt.nmat)) then
+          if ((imaterial.lt.1).or.(imaterial.gt.num_materials)) then
            print *,"imaterial invalid"
            stop
           endif
@@ -13869,7 +13867,7 @@ contains
          endif
 
          imaterial_count=1
-         do while ((imaterial_count.le.nmat).and. &
+         do while ((imaterial_count.le.num_materials).and. &
                    (uncaptured_volume_vof.gt.zero))
           call individual_MOF( &
            tid, &
@@ -13889,12 +13887,12 @@ contains
            multi_centroidA, &
            continuous_mof, &
            cmofsten, &
-           nmat,sdim)
+           num_materials,sdim)
           imaterial_count=imaterial_count+1
          enddo ! while not all of uncaptured space filled
 
          mof_err=zero
-         do imaterial = 1,nmat
+         do imaterial = 1,num_materials
           if (is_rigid_local(imaterial).eq.1) then
            ! do nothing
           else if (is_rigid_local(imaterial).eq.0) then
@@ -13917,7 +13915,7 @@ contains
            stop
           endif
          enddo ! imaterial
-         do dir=1,nmat*ngeom_recon
+         do dir=1,num_materials*ngeom_recon
           mofdata_array(order_count,dir)=mofdata_in(dir)
          enddo
          moferror_array(order_count)=mof_err
@@ -13932,7 +13930,7 @@ contains
          if (1.eq.0) then
           print *,"n_ndef= ",n_ndef
           print *,"order_count=",order_count
-          do imaterial=1,nmat
+          do imaterial=1,num_materials
            print *,"imaterial,order_algorithm_in ",imaterial, &
             order_algorithm_in(imaterial)
           enddo
@@ -13946,10 +13944,10 @@ contains
          print *,"argmin_order invalid"
          stop
         else
-         do dir=1,nmat*ngeom_recon
+         do dir=1,num_materials*ngeom_recon
           mofdata(dir)=mofdata_array(argmin_order,dir)
          enddo
-         do imaterial = 1,nmat
+         do imaterial = 1,num_materials
           if (is_rigid_local(imaterial).eq.1) then
            ! do nothing
           else if (is_rigid_local(imaterial).eq.0) then
@@ -13981,7 +13979,7 @@ contains
 
       if (n_ndef.eq.0) then
        ! do nothing
-      else if ((n_ndef.ge.1).and.(n_ndef.le.nmat)) then
+      else if ((n_ndef.ge.1).and.(n_ndef.le.num_materials)) then
        deallocate(order_array)
        alloc_flag=alloc_flag-1
       else
@@ -13994,14 +13992,14 @@ contains
        stop
       endif
 
-      do imaterial=1,nmat
+      do imaterial=1,num_materials
        vofcomp=(imaterial-1)*ngeom_recon+1
        if (abs(voftest(imaterial)-mofdata(vofcomp)).ge.SANITY_TOL) then
         print *,"volume fraction changed"
         print *,"caller_id=",caller_id
         print *,"imaterial,vofbefore,vofafter ",imaterial, &
           voftest(imaterial),mofdata(vofcomp)
-        do imaterial2=1,nmat
+        do imaterial2=1,num_materials
          vofcomp=(imaterial2-1)*ngeom_recon+1
          print *,"imaterial2,vofbefore,vofafter ",imaterial2, &
           voftest(imaterial2),mofdata(vofcomp)
@@ -14015,14 +14013,14 @@ contains
        print *,"AFTER AFTER"
        print *,"nmax = ",nmax
        print *,"levelrz = ",levelrz
-       print *,"nmat = ",nmat
+       print *,"num_materials = ",num_materials
        print *,"sdim = ",sdim
        print *,"continuous_mof = ",continuous_mof
        print *,"ngeom_recon = ",ngeom_recon
-       do imaterial=1,nmat*ngeom_recon
+       do imaterial=1,num_materials*ngeom_recon
         print *,"i,mofdata ",imaterial,mofdata(imaterial)
        enddo
-       do imaterial=1,nmat
+       do imaterial=1,num_materials
         print *,"imaterial,order_algorithm ",imaterial, &
          order_algorithm(imaterial)
        enddo
@@ -14272,7 +14270,7 @@ contains
         multi_centroidA, &
         continuous_mof, &
         cmofsten, &
-        num_materials,sdim,1)
+        sdim,1)
 
        moferror=zero
        do im=1,num_materials
@@ -14329,13 +14327,13 @@ contains
       end subroutine diagnostic_MOF
 
 
-! vof,ref centroid,order,slope,intercept  x nmat
+! vof,ref centroid,order,slope,intercept  x num_materials
       subroutine make_vfrac_sum_ok_base( &
         cmofsten, &
         xsten,nhalf,nhalf_box, &
         bfact,dx, &
         tessellate, &
-        mofdata,nmat, &
+        mofdata, &
         sdim,errorid)
       use probcommon_module
       use geometry_intersect_module
@@ -14349,13 +14347,13 @@ contains
       INTEGER_T, intent(in) :: nhalf,nhalf_box
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,sdim)
       REAL_T, intent(in) :: dx(sdim)
-      INTEGER_T, intent(in) :: tessellate,nmat,errorid
-      REAL_T, intent(inout) :: mofdata(nmat*ngeom_recon)
+      INTEGER_T, intent(in) :: tessellate,errorid
+      REAL_T, intent(inout) :: mofdata(num_materials*ngeom_recon)
 
       INTEGER_T im,dir,vofcomp
       REAL_T voffluid,vofsolid,vofsolid_max
       INTEGER_T im_solid_max
-      INTEGER_T is_rigid_local(nmat)
+      INTEGER_T is_rigid_local(num_materials)
       REAL_T volcell
       REAL_T cencell(sdim)
 
@@ -14373,7 +14371,7 @@ contains
        print *,"bfact invalid"
        stop
       endif
-      do im=1,nmat
+      do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
@@ -14388,10 +14386,10 @@ contains
         print *,"tessellate invalid8"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
-      if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
-       print *,"nmat bust"
+      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
+       print *,"num_materials bust"
        stop
       endif
       if (ngeom_recon.ne.2*sdim+3) then
@@ -14420,7 +14418,7 @@ contains
        stop
       endif
 
-      do im=1,nmat
+      do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
 
        if ((mofdata(vofcomp).ge.-0.1d0).and. &
@@ -14441,7 +14439,7 @@ contains
        else
         print *,"mofdata(vofcomp) invalid 2"
         print *,"mofdata(vofcomp)=",mofdata(vofcomp)
-        print *,"im,nmat,ngeom_recon,sdim ",im,nmat,ngeom_recon,sdim
+        print *,"im,num_materials,ngeom_recon,sdim ",im,num_materials,ngeom_recon,sdim
         print *,"errorid= ",errorid
         stop
        endif
@@ -14453,7 +14451,7 @@ contains
          im_solid_max=im
          vofsolid_max=mofdata(vofcomp)
         else if ((im_solid_max.ge.1).and. &
-                 (im_solid_max.le.nmat)) then
+                 (im_solid_max.le.num_materials)) then
          if (vofsolid_max.lt.mofdata(vofcomp)) then
           im_solid_max=im
           vofsolid_max=mofdata(vofcomp)
@@ -14467,19 +14465,19 @@ contains
         print *,"is_rigid_local invalid36"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       if (voffluid.le.zero) then
        print *,"vacuum bust in make_vfrac_sum_ok_base"
        print *,"errorid= ",errorid
-       print *,"nmat= ",nmat
+       print *,"num_materials= ",num_materials
        print *,"sdim= ",sdim
        print *,"voffluid= ",voffluid
        print *,"vofsolid= ",vofsolid
        stop
       endif
 
-      do im=1,nmat
+      do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
        if (is_rigid_local(im).eq.1) then
         if (vofsolid.gt.one) then
@@ -14496,9 +14494,9 @@ contains
         print *,"is_rigid invalid MOF.F90"
         stop
        endif
-      enddo  ! im=1..nmat
+      enddo  ! im=1..num_materials
 
-      do im=1,nmat
+      do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
        if ((mofdata(vofcomp).eq.zero).or. &
            (mofdata(vofcomp).eq.one)) then
@@ -14530,19 +14528,19 @@ contains
         print *,"mofdata(vofcomp) invalid"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       return
       end subroutine make_vfrac_sum_ok_base
 
 
-! vof,ref centroid,order,slope,intercept  x nmat
+! vof,ref centroid,order,slope,intercept  x num_materials
       subroutine make_vfrac_sum_ok_copy( &
         cmofsten, &
         xsten,nhalf,nhalf_box, &
         bfact,dx, &
         tessellate, &
-        mofdata,mofdatavalid,nmat, &
+        mofdata,mofdatavalid, &
         sdim,errorid)
       use probcommon_module
       use geometry_intersect_module
@@ -14557,14 +14555,14 @@ contains
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,sdim)
       REAL_T, intent(in) :: dx(sdim)
 
-      INTEGER_T, intent(in) :: tessellate,nmat,errorid
-      REAL_T, intent(in) :: mofdata(nmat*ngeom_recon)
-      REAL_T, intent(out) :: mofdatavalid(nmat*ngeom_recon)
+      INTEGER_T, intent(in) :: tessellate,errorid
+      REAL_T, intent(in) :: mofdata(num_materials*ngeom_recon)
+      REAL_T, intent(out) :: mofdatavalid(num_materials*ngeom_recon)
       INTEGER_T im
       INTEGER_T dir
       INTEGER_T vofcomp
       REAL_T voffluid,vofsolid,vof_test
-      INTEGER_T is_rigid_local(nmat)
+      INTEGER_T is_rigid_local(num_materials)
 
       if ((nhalf.ge.1).and. &
           (nhalf_box.le.nhalf).and. &
@@ -14581,7 +14579,7 @@ contains
        stop
       endif
 
-      do im=1,nmat
+      do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
         is_rigid_local(im)=0
@@ -14596,12 +14594,12 @@ contains
         print *,"tessellate invalid9"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
-      if ((nmat.ge.1).and.(nmat.le.MAX_NUM_MATERIALS)) then
+      if ((num_materials.ge.1).and.(num_materials.le.MAX_NUM_MATERIALS)) then
        ! do nothing
       else
-       print *,"nmat bust"
+       print *,"num_materials bust"
        stop
       endif
       if (ngeom_recon.ne.2*sdim+3) then
@@ -14616,7 +14614,7 @@ contains
       voffluid=zero
       vofsolid=zero
 
-      do im=1,nmat
+      do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
        vof_test=mofdata(vofcomp)
        if ((vof_test.ge.-0.1).and. &
@@ -14643,11 +14641,11 @@ contains
        do dir=1,ngeom_recon
         mofdatavalid(dir+vofcomp-1)=mofdata(dir+vofcomp-1)
        enddo
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
       if (voffluid.le.zero) then
        print *,"vacuum bust in make_vfrac_sum_ok_copy"
        print *,"errorid= ",errorid
-       print *,"nmat= ",nmat
+       print *,"num_materials= ",num_materials
        print *,"sdim= ",sdim
        print *,"voffluid= ",voffluid
        print *,"vofsolid= ",vofsolid
@@ -14660,7 +14658,7 @@ contains
        xsten,nhalf,nhalf_box, &
        bfact,dx, &
        tessellate, &
-       mofdatavalid,nmat, &
+       mofdatavalid, &
        sdim,errorid)
 
       return
@@ -15006,7 +15004,7 @@ contains
         nhalf_box, & ! =1 (=> do not use cmofsten)
         bfact,dx, &
         local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2
-        mofdata,mofdatavalid,nmat,sdim,1)
+        mofdata,mofdatavalid,sdim,1)
 
       do dir=1,nmat*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -16341,7 +16339,7 @@ contains
         bfact,dx, &
         normalize_tessellate, &  ! =0
         mofdata_plus,mofdatavalid_plus, &
-        nmat,sdim,3000)
+        sdim,3000)
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
         xsten0_minus,nhalf0, &
@@ -16349,7 +16347,7 @@ contains
         bfact,dx, &
         normalize_tessellate, & ! =0
         mofdata_minus,mofdatavalid_minus, &
-        nmat,sdim,3000)
+        sdim,3000)
 
       if ((tessellate_in.eq.1).or. &
           (tessellate_in.eq.3)) then
@@ -16375,7 +16373,6 @@ contains
         xtetlist_plus, &
         nlist_alloc_plus, &
         nmax, &
-        nmat, &
         sdim, &
         caller_id)
 
@@ -16387,7 +16384,6 @@ contains
         xtetlist_minus, &
         nlist_alloc_minus, &
         nmax, &
-        nmat, &
         sdim, &
         caller_id)
 
@@ -17229,7 +17225,7 @@ contains
        nhalf_box, & !=1 (=> do not use cmofsten)
        bfact,dx, &
        local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2  
-       mofdata,mofdatavalid,nmat,sdim,101)
+       mofdata,mofdatavalid,sdim,101)
 
       do dir=1,nmat*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -18261,7 +18257,7 @@ contains
         nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         tessellate_local, & ! =0 (only tessellate_local==2 is used)
-        mofdata,mofdatavalid,nmat,sdim,102)
+        mofdata,mofdatavalid,sdim,102)
 
       do dir=1,nmat*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -19207,7 +19203,6 @@ contains
        xtetlist, &
        nlist_alloc, &
        nmax, &
-       nmat, &
        sdim, &
        caller_id)
 
@@ -19221,22 +19216,21 @@ contains
       INTEGER_T, intent(in) :: nmax
       INTEGER_T, intent(in) :: sdim
       INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T shapeflag
       INTEGER_T, intent(in) :: caller_id
       INTEGER_T, intent(in) :: bfact,nhalf0
       INTEGER_T, intent(in) :: tessellate_in  ! =1 or 3
       REAL_T xtet(sdim+1,sdim)
-      REAL_T, intent(inout) :: mofdata(nmat*(2*sdim+3))
+      REAL_T, intent(inout) :: mofdata(num_materials*(2*sdim+3))
       REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T, intent(in) :: dx(sdim)
 
       INTEGER_T :: local_tessellate
       INTEGER_T :: renorm_tessellate
 
-      REAL_T multi_volume(nmat)
-      REAL_T multi_cen(sdim,nmat)
-      REAL_T multi_area(nmat)
+      REAL_T multi_volume(num_materials)
+      REAL_T multi_cen(sdim,num_materials)
+      REAL_T multi_area(num_materials)
       REAL_T, intent(out) :: xtetlist(4,3,nlist_alloc)
       REAL_T fluid_vfrac_sum
       REAL_T solid_vfrac_sum
@@ -19247,11 +19241,11 @@ contains
       REAL_T cencell(sdim)
       INTEGER_T dir
       REAL_T vfrac_save
-      REAL_T vfracsolid(nmat)
+      REAL_T vfracsolid(num_materials)
       INTEGER_T vofcomp_solid
       INTEGER_T imcrit,im_solid
       INTEGER_T sanity_check
-      INTEGER_T is_rigid_local(nmat)
+      INTEGER_T is_rigid_local(num_materials)
       INTEGER_T nhalf_box
       INTEGER_T im_raster_solid
       REAL_T vfrac_raster_solid
@@ -19260,7 +19254,7 @@ contains
 
       renorm_tessellate=0
 
-      do im=1,nmat
+      do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
        if (renorm_tessellate.eq.2) then
         is_rigid_local(im)=0
@@ -19276,7 +19270,7 @@ contains
         print *,"renorm_tessellate invalid"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon.ne.2*sdim+3"
@@ -19309,8 +19303,8 @@ contains
        print *,"sdim invalid multi_get_volume_tessellate"
        stop
       endif
-      if ((nmat.lt.1).or.(nmat.gt.MAX_NUM_MATERIALS)) then
-       print *,"nmat invalid multi get volume tessellate"
+      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
+       print *,"num_materials invalid multi get volume tessellate"
        stop
       endif
  
@@ -19322,7 +19316,7 @@ contains
        nhalf_box, & !=1 (=> do not use cmofsten)
        bfact,dx, &
        renorm_tessellate, & !=0
-       mofdata,nmat,sdim,1)
+       mofdata,sdim,1)
 
       fluid_vfrac_sum=zero
       solid_vfrac_sum=zero
@@ -19330,7 +19324,7 @@ contains
       im_raster_solid=0
       vfrac_raster_solid=zero
 
-      do im=1,nmat
+      do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
        if (is_rigid_local(im).eq.1) then
 
@@ -19338,7 +19332,7 @@ contains
          im_raster_solid=im
          vfrac_raster_solid=mofdata(vofcomp)
         else if ((im_raster_solid.ge.1).and. &
-                 (im_raster_solid.le.nmat).and. &
+                 (im_raster_solid.le.num_materials).and. &
                  (is_rigid_local(im_raster_solid).eq.1)) then
          if (vfrac_raster_solid.lt.mofdata(vofcomp)) then
           im_raster_solid=im
@@ -19356,7 +19350,7 @@ contains
         print *,"is_rigid invalid MOF.F90"
         stop
        endif
-      enddo ! im=1,nmat
+      enddo ! im=1,num_materials
 
       if (abs(fluid_vfrac_sum-one).le.VOFTOL) then
        ! do nothing
@@ -19368,7 +19362,7 @@ contains
        ! only rigid materials in cell
       if (abs(solid_vfrac_sum-one).le.VOFTOL) then 
         
-       do im=1,nmat
+       do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
         if (is_rigid_local(im).eq.1) then
          mofdata(vofcomp)=mofdata(vofcomp)/solid_vfrac_sum
@@ -19380,12 +19374,12 @@ contains
          print *,"is_rigid invalid MOF.F90"
          stop
         endif
-       enddo ! im=1,nmat
+       enddo ! im=1,num_materials
 
        ! only fluid materials in the cell.
       else if (abs(solid_vfrac_sum).le.VOFTOL) then
 
-       do im=1,nmat
+       do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
         if (is_rigid_local(im).eq.1) then
          do dir=0,ngeom_recon-1
@@ -19397,7 +19391,7 @@ contains
          print *,"is_rigid invalid MOF.F90"
          stop
         endif
-       enddo ! im=1,nmat
+       enddo ! im=1,num_materials
 
       else if ((solid_vfrac_sum.ge.VOFTOL).and. &
                (solid_vfrac_sum.le.one-VOFTOL)) then
@@ -19411,11 +19405,11 @@ contains
         local_tessellate=2
 
         if (solid_vfrac_sum.ge.half) then
-         do im=1,nmat*ngeom_recon
+         do im=1,num_materials*ngeom_recon
           mofdata(im)=zero
          enddo
          if ((im_raster_solid.ge.1).and. &
-             (im_raster_solid.le.nmat)) then
+             (im_raster_solid.le.num_materials)) then
           vofcomp=(im_raster_solid-1)*ngeom_recon+1
           mofdata(vofcomp)=one
          else
@@ -19423,7 +19417,7 @@ contains
           stop
          endif
         else if (solid_vfrac_sum.le.half) then
-         do im=1,nmat
+         do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
           if (is_rigid_local(im).eq.1) then
            do dir=0,ngeom_recon-1
@@ -19435,7 +19429,7 @@ contains
            print *,"is_rigid invalid MOF.F90"
            stop
           endif
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
         else
          print *,"solid_vfrac_sum or fluid_vfrac_sum bust"
          stop
@@ -19458,7 +19452,7 @@ contains
         xtetlist, &
         nlist_alloc, &
         nmax, &
-        nmat, &
+        num_materials, &
         sdim, &
         shapeflag, &
         caller_id) 
@@ -19467,14 +19461,14 @@ contains
          volcell,cencell,sdim)
 
        multi_volume_sum=zero
-       do im=1,nmat
+       do im=1,num_materials
         multi_volume_sum=multi_volume_sum+multi_volume(im)
        enddo
        if (multi_volume_sum.le.zero) then
         print *,"multi_volume_sum invalid"
         stop
        endif
-       do im=1,nmat
+       do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
 
         vfrac_save=mofdata(vofcomp)
@@ -19500,12 +19494,12 @@ contains
          if (is_rigid_local(im).eq.0) then
           if ((vfrac_save.le.one+VOFTOL).and. &
               (vfrac_save.gt.one-VOFTOL)) then
-           do im_solid=1,nmat
+           do im_solid=1,num_materials
             vofcomp_solid=(im_solid-1)*ngeom_recon+1
             vfracsolid(im_solid)=mofdata(vofcomp_solid)
            enddo
            imcrit=0
-           do im_solid=1,nmat
+           do im_solid=1,num_materials
             if (is_rigid_local(im_solid).eq.1) then
              if (imcrit.eq.0) then
               imcrit=im_solid
@@ -19519,12 +19513,12 @@ contains
              print *,"is_rigid_local(im_solid) invalid"
              stop
             endif
-           enddo ! im_solid=1..nmat
-           if ((imcrit.ge.1).and.(imcrit.le.nmat)) then
+           enddo ! im_solid=1..num_materials
+           if ((imcrit.ge.1).and.(imcrit.le.num_materials)) then
             if ((vfracsolid(imcrit).ge.VOFTOL).and. &
                 (vfracsolid(imcrit).le.one-VOFTOL)) then
              vofcomp_solid=(imcrit-1)*ngeom_recon+1
-             mofdata(vofcomp+sdim+1)=nmat ! order
+             mofdata(vofcomp+sdim+1)=num_materials ! order
              do dir=1,sdim
               mofdata(vofcomp+sdim+1+dir)= &
                 -mofdata(vofcomp_solid+sdim+1+dir) ! slope
@@ -19558,13 +19552,13 @@ contains
          print *,"im,vofcomp=",im,vofcomp
          stop
         endif
-       enddo ! im=1..nmat
+       enddo ! im=1..num_materials
 
        if (sanity_check.eq.1) then
         if (caller_id.eq.7) then
-         if (nmat.eq.3) then
+         if (num_materials.eq.3) then
           print *,"-----------sanity multi_get_volume_tessellate------------"
-          do im=1,nmat
+          do im=1,num_materials
            vofcomp=(im-1)*ngeom_recon+1
            print *,"im,F ",im,mofdata(vofcomp)
            do dir=1,sdim
@@ -20424,7 +20418,7 @@ contains
          nhalf_box, & !=1 (=> do not use cmofsten)
          bfact,dx, &
          tessellate, & ! =0  (if tessellate==2 then is_rigid=0)
-         mofdata,mofdatavalid,num_materials,sdim,3)
+         mofdata,mofdatavalid,sdim,3)
 
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
@@ -20623,7 +20617,7 @@ contains
         nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         tessellate, &  ! =0 (if tessellate==2, set is_rigid=0)
-        mofdata,mofdatavalid,nmat,sdim,30)
+        mofdata,mofdatavalid,sdim,30)
 
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1
@@ -21201,7 +21195,7 @@ contains
         nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         local_tessellate, & ! =0
-        mofdata,mofdatavalid,nmat,sdim,300)
+        mofdata,mofdatavalid,sdim,300)
 
       do im=1,nmat
        vofcomp=(im-1)*ngeom_recon+1

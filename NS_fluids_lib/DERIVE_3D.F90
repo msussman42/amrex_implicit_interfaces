@@ -2363,7 +2363,6 @@ stop
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
          nmax, &
-         nmat, &
          SDIM, &
          101)
 
