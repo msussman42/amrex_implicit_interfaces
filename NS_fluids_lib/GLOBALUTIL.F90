@@ -13816,14 +13816,14 @@ end subroutine print_visual_descriptor
 
 
       function get_face_damping_factor( &
-         face_vol,nmat,project_option,dt)
+         face_vol,project_option,dt)
       use probcommon_module
       IMPLICIT NONE
 
       REAL_T :: get_face_damping_factor
 
-      INTEGER_T, intent(in) :: nmat,project_option
-      REAL_T, intent(in) :: face_vol(2*nmat)
+      INTEGER_T, intent(in) :: project_option
+      REAL_T, intent(in) :: face_vol(2*num_materials)
       REAL_T, intent(in) :: dt
       INTEGER_T :: im
       INTEGER_T :: iside
@@ -13831,7 +13831,7 @@ end subroutine print_visual_descriptor
       REAL_T :: max_damping_coeff
 
       max_damping_coeff=zero
-      do im=1,nmat
+      do im=1,num_materials
        do iside=1,2
         volcomp=2*(im-1)+iside
         if (face_vol(volcomp).eq.zero) then
@@ -13844,7 +13844,7 @@ end subroutine print_visual_descriptor
          stop
         endif
        enddo !iside=1,2
-      enddo !im=1,nmat
+      enddo !im=1,num_materials
 
       get_face_damping_factor=1.0
       if (max_damping_coeff.ge.zero) then
@@ -15960,7 +15960,7 @@ end subroutine print_visual_descriptor
        call dumpstring(Varname)
        test_nwrite=test_nwrite+1
 
-      enddo  ! im=1..nmat mom_den
+      enddo  ! im=1..num_materials mom_den
 
       do partid=1,num_materials_viscoelastic
        im=fort_im_elastic_map(partid)+1
@@ -17063,11 +17063,10 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T im,nmat,ibase,stage
+      INTEGER_T im,ibase,stage
       REAL_T density,temperature,mu
 
-      nmat=num_materials
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im out of range"
        stop
       endif
@@ -17136,10 +17135,9 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T im,nmat,ibase,stage
+      INTEGER_T im,ibase,stage
 
-      nmat=num_materials
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im out of range"
        stop
       endif
@@ -17185,10 +17183,9 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: im
-      INTEGER_T :: nmat,ibase,stage
+      INTEGER_T :: ibase,stage
 
-      nmat=num_materials
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im out of range"
        stop
       endif
@@ -17424,14 +17421,12 @@ end subroutine print_visual_descriptor
 
       INTEGER_T, intent(in) :: imattype
       INTEGER_T, intent(in) :: im
-      INTEGER_T :: nmat
       REAL_T, intent(in) :: rho
       REAL_T, intent(out) :: temperature
       REAL_T, intent(in) :: internal_energy
       REAL_T cv
 
-      nmat=num_materials
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid70"
        stop
       endif
@@ -17520,7 +17515,6 @@ end subroutine print_visual_descriptor
       
       REAL_T, intent(in) :: x,y,z
       REAL_T, intent(out) :: dist
-      INTEGER_T nmat
       REAL_T aspect,yprime,zprime,aspect2
 
       if (SDIM.eq.2) then
@@ -17529,8 +17523,6 @@ end subroutine print_visual_descriptor
         stop
        endif
       endif
-
-      nmat=num_materials
 
       aspect=tan(radblob2)
       if (SDIM.eq.2) then
@@ -22397,26 +22389,17 @@ end subroutine print_visual_descriptor
       ! im_3 is material "k"
       ! iten_13 corresponds to "ik"
       ! iten_23 corresponds to "jk"
-      ! if nmat=4, 12 13 14 23 24 34
+      ! if num_materials=4, 12 13 14 23 24 34
 
       subroutine get_CL_iten(im,im_opp,im_3,iten_13,iten_23, &
-       user_tension,nten,cos_angle,sin_angle)
+       user_tension,cos_angle,sin_angle)
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T im,im_opp,im_3,iten_13,iten_23,nten,nten_test
+      INTEGER_T im,im_opp,im_3,iten_13,iten_23
       INTEGER_T iten
-      INTEGER_T nmat
-      REAL_T user_tension(nten)
+      REAL_T user_tension(num_interfaces)
       REAL_T cos_angle,sin_angle
-
-
-      nmat=num_materials
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten: get_CL_iten nten nten_test ",nten,nten_test
-       stop
-      endif
 
       if ((im.lt.1).or.(im.gt.num_materials).or. &
           (im_opp.lt.1).or.(im_opp.gt.num_materials).or. &
@@ -22430,11 +22413,11 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      if (nmat.le.2) then
-       print *,"nmat too small for CL treatment"
+      if (num_materials.le.2) then
+       print *,"num_materials too small for CL treatment"
        stop
        ! 12 13 23
-      else if (nmat.eq.3) then
+      else if (num_materials.eq.3) then
        if ((im.eq.1).and.(im_opp.eq.2).and.(im_3.eq.3)) then
         iten_13=2
         iten_23=3
@@ -22445,14 +22428,15 @@ end subroutine print_visual_descriptor
         iten_13=1
         iten_23=3
        else
-        print *,"combination of im,im_opp,im_3 invalid nmat=",nmat
+        print *,"combination of im,im_opp,im_3 invalid num_materials=", &
+                num_materials
         print *,"im=",im
         print *,"im_opp=",im_opp
         print *,"im_3=",im_3
         stop
        endif
        ! 12 13 14 23 24 34
-      else if (nmat.eq.4) then
+      else if (num_materials.eq.4) then
        if ((im.eq.1).and.(im_opp.eq.2).and.(im_3.eq.3)) then
         iten_13=2
         iten_23=4
@@ -22491,7 +22475,8 @@ end subroutine print_visual_descriptor
         iten_13=2
         iten_23=6
        else
-        print *,"combination of im,im_opp,im_3 invalid nmat=",nmat
+        print *,"combination of im,im_opp,im_3 invalid num_materials=", &
+                num_materials
         print *,"im=",im
         print *,"im_opp=",im_opp
         print *,"im_3=",im_3

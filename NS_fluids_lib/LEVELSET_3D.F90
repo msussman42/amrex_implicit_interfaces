@@ -15239,7 +15239,6 @@ stop
        nsolve, &
        local_face_index, &
        local_face_ncomp, &
-       nmat, &
        xlo, &
        dx, &
        dt, &
@@ -15270,7 +15269,6 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: facewt_iter
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -15337,7 +15335,7 @@ stop
       REAL_T local_mask
       INTEGER_T caller_id
       INTEGER_T face_vcomp
-      REAL_T face_vol(2*nmat)
+      REAL_T face_vol(2*num_materials)
       REAL_T face_damping_factor
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
@@ -15405,10 +15403,6 @@ stop
 
       if (bfact.lt.1) then
        print *,"bfact invalid101"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
        stop
       endif
 
@@ -15577,19 +15571,19 @@ stop
           
              if (dir.eq.0) then
               dd=xface(D_DECL(i,j,k),local_face_index+1)
-              do face_vcomp=1,2*nmat
+              do face_vcomp=1,2*num_materials
                face_vol(face_vcomp)=xface(D_DECL(i,j,k), &
                   face_vcomp+FACECOMP_VOFFACE)
               enddo
              else if (dir.eq.1) then
               dd=yface(D_DECL(i,j,k),local_face_index+1)
-              do face_vcomp=1,2*nmat
+              do face_vcomp=1,2*num_materials
                face_vol(face_vcomp)=yface(D_DECL(i,j,k), &
                   face_vcomp+FACECOMP_VOFFACE)
               enddo
              else if ((dir.eq.2).and.(SDIM.eq.3)) then
               dd=zface(D_DECL(i,j,k),local_face_index+1)
-              do face_vcomp=1,2*nmat
+              do face_vcomp=1,2*num_materials
                face_vol(face_vcomp)=zface(D_DECL(i,j,k), &
                   face_vcomp+FACECOMP_VOFFACE)
               enddo
@@ -15599,7 +15593,7 @@ stop
              endif
  
              face_damping_factor=get_face_damping_factor( &
-               face_vol,nmat,project_option,dt)
+               face_vol,project_option,dt)
 
             else
              print *,"project_option invalid"
@@ -15766,8 +15760,6 @@ stop
        lsnew,DIMS(lsnew), &
        xlo,dx, &
        time, &
-       nmat, &
-       nten, &
        nparts, &
        nparts_def, &
        im_solid_map, &
@@ -15803,13 +15795,11 @@ stop
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in), target :: dx(SDIM)
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: nparts_def
       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
       INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
+      INTEGER_T, intent(in) :: constant_density_all_time(num_materials)
 
       INTEGER_T, intent(in) :: DIMDEC(vofnew)
       INTEGER_T, intent(in) :: DIMDEC(solxfab)
@@ -15823,7 +15813,7 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(velnew)
       INTEGER_T, intent(in) :: DIMDEC(dennew)
       INTEGER_T, intent(in) :: DIMDEC(lsnew)
-      REAL_T, intent(inout),target :: vofnew(DIMV(vofnew),nmat*ngeom_raw)
+      REAL_T, intent(inout),target :: vofnew(DIMV(vofnew),num_materials*ngeom_raw)
       REAL_T, pointer :: vofnew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: &
            vel(DIMV(vel),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
@@ -15832,16 +15822,16 @@ stop
            velnew(DIMV(velnew),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T, pointer :: velnew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target ::  &
-              LS(DIMV(LS),nmat*(1+SDIM))
+              LS(DIMV(LS),num_materials*(1+SDIM))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: state_mof(DIMV(state_mof),nmat*ngeom_raw)
+      REAL_T, intent(in),target :: state_mof(DIMV(state_mof),num_materials*ngeom_raw)
       REAL_T, pointer :: state_mof_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: den(DIMV(den),nmat*num_state_material)
+      REAL_T, intent(in),target :: den(DIMV(den),num_materials*num_state_material)
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout),target :: &
-              dennew(DIMV(dennew),nmat*num_state_material)
+              dennew(DIMV(dennew),num_materials*num_state_material)
       REAL_T, pointer :: dennew_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout),target :: lsnew(DIMV(lsnew),nmat*(1+SDIM))
+      REAL_T, intent(inout),target :: lsnew(DIMV(lsnew),num_materials*(1+SDIM))
       REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in),target :: solxfab(DIMV(solxfab),SDIM*nparts_def)
       REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
@@ -15864,39 +15854,39 @@ stop
       REAL_T centroid(SDIM)
       REAL_T volcell
       REAL_T cencell(SDIM)
-      REAL_T censolid_new(nmat,SDIM)
+      REAL_T censolid_new(num_materials,SDIM)
 
       REAL_T xsten(-9:9,SDIM)
       INTEGER_T nhalf
-      REAL_T mofnew(nmat*ngeom_recon)
+      REAL_T mofnew(num_materials*ngeom_recon)
       INTEGER_T istenlo(3),istenhi(3)
       INTEGER_T LSstenlo(3),LSstenhi(3)
-      REAL_T LS_solid_new(nmat)
+      REAL_T LS_solid_new(num_materials)
       INTEGER_T local_maskcov
-      REAL_T vfrac_solid_new(nmat)
+      REAL_T vfrac_solid_new(num_materials)
       REAL_T F_stencil
       REAL_T F_stencil_sum
       INTEGER_T statecomp
       INTEGER_T statecomp_solid
       INTEGER_T istate,ispecies
       INTEGER_T dencomp,tempcomp,speccomp
-      REAL_T den_hold(nmat*num_state_material)
+      REAL_T den_hold(num_materials*num_state_material)
       REAL_T state_stencil(num_state_material)
       REAL_T state_stencil_sum(num_state_material)
       REAL_T nslope_solid(SDIM)
       INTEGER_T nmax
-      REAL_T LS_extend(D_DECL(-1:1,-1:1,-1:1),nmat)
+      REAL_T LS_extend(D_DECL(-1:1,-1:1,-1:1),num_materials)
       REAL_T LS_temp(D_DECL(-1:1,-1:1,-1:1))
       REAL_T LSfacearea
       REAL_T LScentroid(SDIM)
       INTEGER_T nrefine_geom
       REAL_T dxmaxLS
-      REAL_T ls_hold(nmat*(1+SDIM))
+      REAL_T ls_hold(num_materials*(1+SDIM))
       REAL_T max_solid_LS
       REAL_T sum_vfrac_solid_new
-      REAL_T LS_predict(nmat)
-      REAL_T LS_virtual(nmat)
-      REAL_T LS_virtual_new(nmat)
+      REAL_T LS_predict(num_materials)
+      REAL_T LS_virtual(num_materials)
+      REAL_T LS_virtual_new(num_materials)
       REAL_T LS_virtual_max ! used for insuring tessellation property of LS
       INTEGER_T nmat_fluid,nmat_solid,nmat_lag
       INTEGER_T at_center
@@ -15917,8 +15907,7 @@ stop
       INTEGER_T im_local
       INTEGER_T continuous_mof_parm
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T user_tension(nten)
-      INTEGER_T nten_test
+      REAL_T user_tension(num_interfaces)
       INTEGER_T iten
       REAL_T cos_angle,sin_angle
       REAL_T F_fluid_new
@@ -15927,11 +15916,11 @@ stop
       INTEGER_T mof_verbose
       INTEGER_T use_ls_data
       INTEGER_T vofcomprecon
-      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
-      REAL_T, DIMENSION(nmat,SDIM) :: multi_centroidA
+      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      REAL_T, DIMENSION(num_materials,SDIM) :: multi_centroidA
       REAL_T orderflag
-      REAL_T local_temperature(nmat)
-      REAL_T local_mof(nmat*ngeom_recon)
+      REAL_T local_temperature(num_materials)
+      REAL_T local_mof(num_materials*ngeom_recon)
       type(cell_CP_parm_type) :: cell_CP_parm
       INTEGER_T cell_index(3)
       REAL_T xCP(SDIM)
@@ -15941,14 +15930,6 @@ stop
       INTEGER_T nhalf_box
 
       nhalf_box=1
-
-      nten_test=num_interfaces
-      if (nten_test.eq.nten) then
-       ! do nothing
-      else
-       print *,"nten invalid"
-       stop
-      endif
 
       if (renormalize_only.eq.1) then
        if (num_LS_extrap_iter.eq.1) then
@@ -16058,11 +16039,11 @@ stop
        stop
       endif
 
-      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+      if ((nparts.lt.0).or.(nparts.gt.num_materials)) then
        print *,"nparts invalid fort_renormalize_prescribe"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+      if ((nparts_def.lt.1).or.(nparts_def.gt.num_materials)) then
        print *,"nparts_def invalid fort_renormalize_prescribe"
        stop
       endif
@@ -16091,14 +16072,14 @@ stop
       cell_CP_parm%fabhi=>fabhi
       cell_CP_parm%dx=>dx
       cell_CP_parm%time=time
-      cell_CP_parm%nmat=nmat
+      cell_CP_parm%nmat=num_materials
       cell_CP_parm%LS=>LS
 
       nmat_fluid=0
       nmat_solid=0
       nmat_lag=0
 
-      do im=1,nmat
+      do im=1,num_materials
 
        if (num_state_material.ne. &
            num_state_base+num_species_var) then
@@ -16128,14 +16109,14 @@ stop
         stop
        endif
 
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       if (nmat_lag.ne.nparts) then
        print *,"nmat_lag invalid"
        stop
       endif
 
-      if (nmat_fluid+nmat_solid.ne.nmat) then
+      if (nmat_fluid+nmat_solid.ne.num_materials) then
        print *,"nmat_fluid and/or nmat_solid invalid"
        stop
       endif
@@ -16201,7 +16182,7 @@ stop
 
         if (LS_extrap_iter.eq.0) then
 
-         do im=1,nmat
+         do im=1,num_materials
 
           vofcompraw=(im-1)*ngeom_raw+1
           F_stencil=state_mof(D_DECL(i,j,k),vofcompraw)
@@ -16316,7 +16297,7 @@ stop
            stop
           endif
 
-         enddo ! im=1..nmat (extrapolation loop)
+         enddo ! im=1..num_materials (extrapolation loop)
 
         else if (LS_extrap_iter.gt.0) then
          ! do nothing
@@ -16329,11 +16310,11 @@ stop
         ! end: fluid state variable extrapolation into empty cells.
         ! ----------------------------------------------------------
       
-        do dir=1,nmat*ngeom_recon
+        do dir=1,num_materials*ngeom_recon
          mofnew(dir)=zero
         enddo
 
-        do im=1,nmat
+        do im=1,num_materials
 
          vofcomp=(im-1)*ngeom_recon+1
          vofcompraw=(im-1)*ngeom_raw+1
@@ -16348,7 +16329,7 @@ stop
           den_hold(statecomp)=dennew(D_DECL(i,j,k),statecomp)
          enddo
 
-        enddo  ! im=1..nmat
+        enddo  ! im=1..num_materials
 
 
          ! 1. prescribe solid materials. (F,X,LS,velocity,temperature)
@@ -16356,7 +16337,7 @@ stop
          !   (F,X,LS fluid)
         if (renormalize_only.eq.0) then
 
-         do im=1,nmat*(1+SDIM)
+         do im=1,num_materials*(1+SDIM)
           ls_hold(im)=lsnew(D_DECL(i,j,k),im)
          enddo
 
@@ -16365,7 +16346,7 @@ stop
          im_solid_max=0
          partid_max=0
 
-         if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+         if ((nparts.lt.0).or.(nparts.gt.num_materials)) then
           print *,"nparts invalid fort_renormalize_prescribe"
           stop
          endif
@@ -16373,7 +16354,7 @@ stop
          do partid=1,nparts
 
           im=im_solid_map(partid)+1
-          if ((im.lt.1).or.(im.gt.nmat)) then
+          if ((im.lt.1).or.(im.gt.num_materials)) then
            print *,"im invalid33"
            stop
           endif
@@ -16458,7 +16439,7 @@ stop
                 (FSI_flag(im).eq.8).or. & ! CTML FSI, pres/vel
                 (FSI_flag(im).eq.4)) then ! CTML FSI, Goldstein et al
              do dir=1,SDIM
-              nslope_solid(dir)=LS(D_DECL(i,j,k),nmat+SDIM*(im-1)+dir)
+              nslope_solid(dir)=LS(D_DECL(i,j,k),num_materials+SDIM*(im-1)+dir)
              enddo
             else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
              ! do nothing
@@ -16484,7 +16465,7 @@ stop
             ! level set for rigid solid
             ls_hold(im)=LS_solid_new(im)
             do dir=1,SDIM
-             ls_hold(nmat+SDIM*(im-1)+dir)=nslope_solid(dir)
+             ls_hold(num_materials+SDIM*(im-1)+dir)=nslope_solid(dir)
             enddo
 
             if ((vfrac_solid_new(im).le.VOFTOL).and. &
@@ -16568,7 +16549,7 @@ stop
           num_LS_extrap=num_LS_extrap+1 
 
           if ((im_solid_max.lt.1).or. &
-              (im_solid_max.gt.nmat).or. &
+              (im_solid_max.gt.num_materials).or. &
               (partid_max.lt.1).or. &
               (partid_max.gt.nparts).or. &
               (is_rigid(im_solid_max).ne.1)) then
@@ -16606,7 +16587,7 @@ stop
 
            ! initialize the fluid temperature with the solid temperature
            ! in the solid regions.
-          do im=1,nmat
+          do im=1,num_materials
            if (is_rigid(im).eq.1) then
             ! do nothing
            else if (is_rigid(im).eq.0) then
@@ -16618,7 +16599,7 @@ stop
             print *,"is_rigid invalid LEVELSET_3D.F90"
             stop
            endif
-          enddo ! im=1..nmat
+          enddo ! im=1..num_materials
 
          else if ((sum_vfrac_solid_new.le.half).and. &
                   (max_solid_LS.le.zero)) then
@@ -16628,7 +16609,7 @@ stop
           stop
          endif
 
-         do im=1,nmat
+         do im=1,num_materials
           do istate=1,num_state_material
            statecomp=(im-1)*num_state_material+istate
            dennew(D_DECL(i,j,k),statecomp)=den_hold(statecomp)
@@ -16636,7 +16617,7 @@ stop
          enddo
 
           ! solid volume fractions and centroids
-         do im=1,nmat
+         do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
           if (is_rigid(im).eq.0) then
            ! do nothing
@@ -16652,11 +16633,11 @@ stop
            print *,"is_rigid invalid LEVELSET_3D.F90"
            stop
           endif
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
 
           ! extend fluid LS,F,X into the solid.
          if ((im_solid_max.ge.1).and. &
-             (im_solid_max.le.nmat)) then
+             (im_solid_max.le.num_materials)) then
 
            ! (i,j,k) is a "solid" cell
            ! ls_hold will be modified
@@ -16723,7 +16704,7 @@ stop
              at_center=0
             endif
 
-            do im=1,nmat
+            do im=1,num_materials
              LS_predict(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
             enddo
             call get_primary_material(LS_predict,im_primary_stencil)
@@ -16733,7 +16714,7 @@ stop
             if ((is_rigid(im_primary_stencil).eq.0).and. & 
                 (at_center.eq.0)) then
 
-             do im=1,nmat
+             do im=1,num_materials
               LS_virtual_new(im)=LS_predict(im)
               LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
              enddo
@@ -16742,19 +16723,19 @@ stop
             else if ((is_rigid(im_primary_stencil).eq.1).or. & 
                      (at_center.eq.1)) then
 
-             do im=1,nmat
+             do im=1,num_materials
               LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
              enddo
 
              if (im_fluid_critical.eq.0) then
               ! do nothing
              else if ((im_fluid_critical.ge.1).and. &
-                      (im_fluid_critical.le.nmat)) then
+                      (im_fluid_critical.le.num_materials)) then
               if (is_rigid(im_fluid_critical).eq.0) then
                if (im1_substencil.eq.0) then
                 im1_substencil=im_fluid_critical
                else if ((im1_substencil.ge.1).and. &
-                        (im1_substencil.le.nmat)) then
+                        (im1_substencil.le.num_materials)) then
                 if (im_fluid_critical.eq.im1_substencil) then
                  ! do nothing
                 else
@@ -16808,7 +16789,7 @@ stop
                      im_solid_max,LS_solid_new(im_solid_max)
              print *,"dx,dy,dz,local_mag ",dx(1),dx(2),dx(SDIM),local_mag
 
-             do im=1,nmat
+             do im=1,num_materials
               print *,"im,is_rigid(im),ls_hold(im) ", &
                       im,is_rigid(im),ls_hold(im)
              enddo
@@ -16818,7 +16799,7 @@ stop
               call gridsten_level(xsten,i+i1,j+j1,k+k1,level,nhalf)
               print *,"i1,j1,k1,x,y,z ",i1,j1,k1, &
                       xsten(0,1),xsten(0,2),xsten(0,SDIM)
-              do im=1,nmat
+              do im=1,num_materials
                print *,"i1,j1,k1,im,LS_extend ",i1,j1,k1,im, &
                        LS_extend(D_DECL(i1,j1,k1),im)
               enddo
@@ -16834,12 +16815,12 @@ stop
              stop
             endif
            else if ((im1_substencil.ge.1).and. &
-                    (im1_substencil.le.nmat)) then
+                    (im1_substencil.le.num_materials)) then
             if (im2_substencil.eq.0) then
              !fluid: center_stencil_im_only owns the whole cell
              center_stencil_im_only=im1_substencil 
             else if ((im2_substencil.ge.1).and. &
-                     (im2_substencil.le.nmat)) then
+                     (im2_substencil.le.num_materials)) then
              if (im1_substencil.lt.im2_substencil) then
               im=im1_substencil
               im_opp=im2_substencil
@@ -16851,7 +16832,7 @@ stop
               stop
              endif
              call get_iten(im,im_opp,iten)
-             do im_local=1,nmat
+             do im_local=1,num_materials
               dencomp=(im_local-1)*num_state_material+1+ENUM_DENVAR
               local_temperature(im_local)=den(D_DECL(i,j,k),dencomp+1)
              enddo
@@ -16870,7 +16851,7 @@ stop
              ! im_opp is material "j"
              call get_CL_iten(im,im_opp,im_solid_max, &
               iten_13,iten_23, &
-              user_tension,nten,cos_angle,sin_angle)
+              user_tension,cos_angle,sin_angle)
              if ((sin_angle.eq.zero).and.(cos_angle.eq.one)) then
               center_stencil_wetting_im=im
              else if ((sin_angle.eq.zero).and.(cos_angle.eq.-one)) then 
@@ -16899,19 +16880,19 @@ stop
            do j1=istenlo(2),istenhi(2)
            do k1=istenlo(3),istenhi(3)
 
-            do im=1,nmat
+            do im=1,num_materials
              LS_virtual(im)=LS_extend(D_DECL(i1,j1,k1),im)
              LS_virtual_new(im)=LS_virtual(im)
             enddo
  
-            do im=1,nmat
+            do im=1,num_materials
              if (is_rigid(im).eq.1) then
               ! do nothing
              else if (is_rigid(im).eq.0) then
 
               LS_virtual_max=-99999.0
               im_primary_stencil=0
-              do im_opp=1,nmat
+              do im_opp=1,num_materials
                if (is_rigid(im_opp).eq.1) then
                 ! do nothing
                else if (is_rigid(im_opp).eq.0) then
@@ -16920,7 +16901,7 @@ stop
                   im_primary_stencil=im_opp
                   LS_virtual_max=LS_virtual(im_opp)
                  else if ((im_primary_stencil.ge.1).and. &
-                          (im_primary_stencil.le.nmat)) then
+                          (im_primary_stencil.le.num_materials)) then
                   if (LS_virtual(im_opp).gt.LS_virtual_max) then
                    im_primary_stencil=im_opp
                    LS_virtual_max=LS_virtual(im_opp)
@@ -16939,7 +16920,7 @@ stop
                 print *,"is_rigid invalid LEVELSET_3D.F90"
                 stop
                endif
-              enddo ! im_opp=1..nmat
+              enddo ! im_opp=1..num_materials
  
               if (im_primary_stencil.eq.0) then
                if (nmat_fluid.ne.1) then
@@ -16951,7 +16932,7 @@ stop
                 stop
                endif
               else if ((im_primary_stencil.ge.1).and. &
-                       (im_primary_stencil.le.nmat)) then
+                       (im_primary_stencil.le.num_materials)) then
                LS_virtual_new(im)=half*(LS_virtual(im)-LS_virtual_max)
               else
                print *,"im_primary_stencil invalid"
@@ -16963,12 +16944,12 @@ stop
               stop
              endif
 
-            enddo ! im=1..nmat
+            enddo ! im=1..num_materials
 
             if ((center_stencil_wetting_im.ge.1).and. &
-                (center_stencil_wetting_im.le.nmat)) then 
+                (center_stencil_wetting_im.le.num_materials)) then 
              if (LS_virtual_new(im_solid_max).ge.zero) then
-              do im=1,nmat
+              do im=1,num_materials
                if (is_rigid(im).eq.0) then
                 if (im.eq.center_stencil_wetting_im) then
                  if (LS_virtual_new(im).lt.zero) then
@@ -16995,7 +16976,7 @@ stop
                 print *,"is_rigid(im) invalid"
                 stop
                endif
-              enddo ! im=1..nmat
+              enddo ! im=1..num_materials
              else if (LS_virtual_new(im_solid_max).lt.zero) then
               ! do nothing
              else
@@ -17009,7 +16990,7 @@ stop
              stop
             endif
 
-            do im=1,nmat
+            do im=1,num_materials
              LS_extend(D_DECL(i1,j1,k1),im)=LS_virtual_new(im)
             enddo
 
@@ -17018,7 +16999,7 @@ stop
            enddo ! i1,j1,k1=-extend_radius..extend_radius
 
            if ((center_stencil_wetting_im.ge.1).and. &
-               (center_stencil_wetting_im.le.nmat)) then 
+               (center_stencil_wetting_im.le.num_materials)) then 
 
             if (1.eq.0) then
              print *,"center_stencil_wetting_im=", &
@@ -17029,7 +17010,7 @@ stop
 
             use_ls_data=0
 
-            do im=1,nmat
+            do im=1,num_materials
              vofcomprecon=(im-1)*ngeom_recon+1
              vofcompraw=(im-1)*ngeom_raw+1
 
@@ -17062,7 +17043,7 @@ stop
               local_mof(vofcomprecon+dir-1)=zero
              enddo
 
-            enddo  ! im=1..nmat
+            enddo  ! im=1..num_materials
 
             ! sum of F_fluid=1
             ! sum of F_rigid<=1
@@ -17131,7 +17112,7 @@ stop
             stop
            endif
 
-           do im=1,nmat
+           do im=1,num_materials
 
             if (is_rigid(im).eq.1) then
              ! do nothing
@@ -17150,7 +17131,7 @@ stop
               ! if there is just one fluid material in the stencil, then
               ! "center_stencil_im_only" holds the material id
              if ((center_stencil_im_only.ge.1).and. &
-                 (center_stencil_im_only.le.nmat)) then
+                 (center_stencil_im_only.le.num_materials)) then
               if (center_stencil_im_only.eq.im) then
                mofnew(vofcomp)=one
               else 
@@ -17160,7 +17141,7 @@ stop
                mofnew(vofcomp+dir)=zero
               enddo
              else if ((center_stencil_wetting_im.ge.1).and. &
-                      (center_stencil_wetting_im.le.nmat)) then 
+                      (center_stencil_wetting_im.le.num_materials)) then 
               mofnew(vofcomp)=local_mof(vofcomp)
               do dir=1,SDIM
                mofnew(vofcomp+dir)=local_mof(vofcomp+dir)
@@ -17201,7 +17182,7 @@ stop
              stop
             endif
 
-           enddo ! im=1..nmat
+           enddo ! im=1..num_materials
 
           else if ((LS_solid_new(im_solid_max).le.zero).and. &
                    (sum_vfrac_solid_new.le.half)) then
@@ -17226,7 +17207,7 @@ stop
            bfact,dx, &
            tessellate,mofnew,nmat,SDIM,12)
 
-         do im=1,nmat*(1+SDIM)
+         do im=1,num_materials*(1+SDIM)
           lsnew(D_DECL(i,j,k),im)=ls_hold(im)
          enddo
  
@@ -17253,14 +17234,14 @@ stop
          stop
         endif
 
-        do im=1,nmat
+        do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
          vofcompraw=(im-1)*ngeom_raw+1
          vofnew(D_DECL(i,j,k),vofcompraw)=mofnew(vofcomp)
          do dir=1,SDIM
           vofnew(D_DECL(i,j,k),vofcompraw+dir)=mofnew(vofcomp+dir)
          enddo
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
        else if (local_maskcov.eq.0) then
         ! do nothing
