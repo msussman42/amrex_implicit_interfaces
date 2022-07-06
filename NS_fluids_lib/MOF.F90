@@ -7,7 +7,7 @@
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
 
-#define MOFDEB (1)
+#define MOFDEB (0)
 
 #define MAXTET (5)
 #define MAXAREA (5)
@@ -1231,6 +1231,7 @@ REAL_T xtri(sdim,sdim)
 REAL_T local_volume,local_area
 REAL_T local_centroid(sdim)
 REAL_T xnodelist_array(maxnodelist,sdim)
+INTEGER_T local_mapped_node
 type(intersect_type) :: template_geom
 
  if (sdim.eq.3) then
@@ -1307,17 +1308,38 @@ type(intersect_type) :: template_geom
     enddo
     phi1=phinode(mapped_nodes(index1))
     phi2=phinode(mapped_nodes(index2))
-    if (((phi1.lt.zero).and.(phi2.lt.zero)).or. &
-        ((phi1.ge.zero).and.(phi2.ge.zero))) then
+
+    if (((phi1.ge.zero).and.(phi2.lt.zero)).or. &
+        ((phi1.lt.zero).and.(phi2.ge.zero))) then
+     do dir=1,sdim
+      if (phi1.eq.zero) then
+       xnodelist_array(i,dir)=x1(dir)
+      else if (phi2.eq.zero) then
+       xnodelist_array(i,dir)=x2(dir)
+      else if (phi1*phi2.lt.zero) then 
+       xnodelist_array(i,dir)= &
+        (abs(phi1)*x2(dir)+abs(phi2)*x1(dir))/ &
+        (abs(phi1)+abs(phi2))
+      else
+       print *,"phi1 or phi2 bust"
+       print *,"phi1,phi2 = ",phi1,phi2
+       stop
+      endif
+     enddo ! dir=1..sdim
+    else
      print *,"phi does not change sign"
      print *,"phi1,phi2 = ",phi1,phi2
+     print *,"index1,index2 ",index1,index2
+     print *,"mapped: ",mapped_nodes(index1),mapped_nodes(index2)
+     print *,"x1 ",x1(1),x1(2),x1(sdim)
+     print *,"x2 ",x2(1),x2(2),x2(sdim)
+     print *,"i,n_nodes ",i,n_nodes
+     print *,"(breakpoint) break point and gdb: "
+     print *,"(1) compile with the -g option"
+     print *,"(2) break MOF.F90:1339"
      stop
     endif
-    do dir=1,sdim
-     xnodelist_array(i,dir)= &
-      (abs(phi1)*x2(dir)+abs(phi2)*x1(dir))/ &
-      (abs(phi1)+abs(phi2))
-    enddo 
+
    else
     print *,"index1 should be < index2"
     stop
@@ -1370,30 +1392,43 @@ type(intersect_type) :: template_geom
 
   enddo ! looping through all tets 
    
-    
-  do i=1,n_capfaces
-   n_area=n_area+1
+  if ((n_capfaces.ge.0).and.(n_capfaces.le.maxcapfacelist)) then
+  
+   do i=1,n_capfaces
+    n_area=n_area+1
 
-   do j_tet_node=1,sdim
-    do dir=1,sdim
-     xtri(j_tet_node,dir)= &
-       xnodelist_array(template_geom%capfacelist(i,j_tet_node),dir)
-    enddo
-   enddo
-      if (MOFDEB.eq.1) then
-       print *,"calling surface_area(2) "
-      endif
+    do j_tet_node=1,sdim
 
-   call surface_area(xtri,local_area,sdim)
-      if (MOFDEB.eq.1) then
-       print *,"after calling surface_area(2) "
-      endif
+     local_mapped_node=template_geom%capfacelist(i,j_tet_node)
 
-   cum_area=cum_area+local_area
-  enddo ! looping through all tris
+     if ((local_mapped_node.ge.1).and. &
+         (local_mapped_node.le.maxnodelist)) then
+
+      do dir=1,sdim
+       xtri(j_tet_node,dir)=xnodelist_array(local_mapped_node,dir)
+      enddo
+
+     else
+      print *,"local_mapped_node invalid: ",local_mapped_node
+      print *,"maxnodelist=",maxnodelist
+      stop
+     endif
+
+    enddo !j_tet_node=1..sdim
+
+    call surface_area(xtri,local_area,sdim)
+
+    cum_area=cum_area+local_area
+   enddo ! i=1..n_capfaces
+
+  else
+   print *,"n_capfaces invalid: ",n_capfaces
+   print *,"maxcapfacelist=",maxcapfacelist
+   stop
+  endif
 
  else
-  print *,"n_nodes invalid"
+  print *,"n_nodes invalid: ",n_nodes
   stop
  endif 
 

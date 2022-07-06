@@ -5815,9 +5815,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
           ! drop falling on ice (exactdist)
          else if ((num_materials.eq.3).and.(axis_dir.eq.1)) then
-          ! do nothing (should not come here)
+          dist=-9999.0d0
          else if ((num_materials.eq.4).and.(axis_dir.eq.1)) then
-          ! do nothing (should not come here)
+          dist=-9999.0d0
+         else
+          dist=-9999.0d0
          endif  ! drop on slope problem
 
         else if (SDIM.eq.3) then
@@ -5849,7 +5851,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             stop
            endif
           endif  ! imaterial=1,2
-
+         else
+          dist=-9999.0d0
          endif  ! drop on slope problem
 
         else
@@ -5917,6 +5920,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T multi_cen(SDIM,nmat)
       INTEGER_T combine_materials,imat1a,imat1b,imaterial_temp
       REAL_T vfrac,dxmaxREFINE
+      REAL_T local_LS
       INTEGER_T inode
      
       nhalf_test=1
@@ -5980,7 +5984,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       dxmaxREFINE=zero
       do dir=1,SDIM
        dxlevel(dir)=xsten(1,dir)-xsten(-1,dir)
-       if (dxlevel(dir).le.zero) then
+       if (dxlevel(dir).gt.zero) then
+        ! do nothing
+       else
         print *,"dxlevel invalid"
         stop
        endif
@@ -5988,7 +5994,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         dxmaxREFINE=dxlevel(dir)
        endif
       enddo ! dir
-      if (dxmaxREFINE.le.zero) then
+      if (dxmaxREFINE.gt.zero) then
+       ! do nothing
+      else
        print *,"dxmaxREFINE invalid"
        stop
       endif
@@ -6028,15 +6036,24 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          dx,ltest(D_DECL(i1+2,j1+2,k1+2)), &
          imaterial_temp,time)
 
-        if (ltest(D_DECL(i1+2,j1+2,k1+2)).le.zero) then
-         minusflag(1)=1
-        endif
-        if (ltest(D_DECL(i1+2,j1+2,k1+2)).ge.zero) then
-         plusflag(1)=1
-        endif
-        if (abs(ltest(D_DECL(i1+2,j1+2,k1+2))).le.dxmaxREFINE) then
-         minusflag(1)=1
-         plusflag(1)=1
+        local_LS=ltest(D_DECL(i1+2,j1+2,k1+2))
+
+        if ((local_LS.ge.zero).or.(local_LS.le.zero)) then
+
+         if (local_LS.le.zero) then
+          minusflag(1)=1
+         endif
+         if (local_LS.ge.zero) then
+          plusflag(1)=1
+         endif
+         if (abs(local_LS).le.dxmaxREFINE) then
+          minusflag(1)=1
+          plusflag(1)=1
+         endif
+       
+        else
+         print *,"local_LS is NaN : ",local_LS
+         stop
         endif
      
         vofcomp=(imaterial-1)*ngeom_recon+1
@@ -6060,9 +6077,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          minusflag(2)=1
         else if (vfrac.gt.one-VOFTOL) then
          plusflag(2)=1
-        else
+        else if ((vfrac.ge.VOFTOL).and.(vfrac.le.one-VOFTOL)) then
          minusflag(2)=1
          plusflag(2)=1
+        else
+         print *,"vfrac out of range:",vfrac
+         stop
         endif
          
        enddo
@@ -6279,7 +6299,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        do dir=1,SDIM
         dxsub(dir)=half*(xsten(1,dir)-xsten(-1,dir))
         xmid(dir)=half*(xsten(1,dir)+xsten(-1,dir))
-        if (dxsub(dir).le.zero) then
+        if (dxsub(dir).gt.zero) then
+         ! do nothing
+        else
          print *,"dxsub invalid"
          stop
         endif
