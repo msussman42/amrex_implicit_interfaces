@@ -14211,8 +14211,6 @@ NavierStokes::level_phase_change_convert(
     &im_opp_outer,
     &ngrow_expansion,
     &level,&finest_level,
-    &nmat,
-    &nten,
     &nden,
     &nstate,
     &ntsat,
