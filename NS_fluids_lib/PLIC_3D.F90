@@ -358,7 +358,7 @@ stop
          xsten,nhalf,nhalf_box, &
          bfact,dx, &
          tessellate, & ! =0
-         mofdata,nmat,SDIM,6)
+         mofdata,SDIM,6)
 
        vfrac_fluid_sum=zero
        vfrac_solid_sum=zero
@@ -536,7 +536,7 @@ stop
             xstenbox,nhalfbox_sten,nhalf_box, &
             bfact,dx, &
             tessellate, & ! =0
-            mofsten,nmat,SDIM,6)
+            mofsten,SDIM,6)
 
            vfrac_fluid_sum=zero
            vfrac_solid_sum=zero
@@ -722,7 +722,7 @@ stop
             xstenbox,nhalfbox_sten,nhalf_box, &
             bfact,dx, &
             tessellate, & ! =0
-            mofsten,nmat,SDIM,6)
+            mofsten,SDIM,6)
 
           vfrac_fluid_sum=zero
           vfrac_solid_sum=zero
@@ -931,7 +931,6 @@ stop
           multi_centroidA, &
           continuous_mof_parm, &
           cmofsten, &
-          nmat, &
           SDIM, &
           2)
 

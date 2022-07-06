@@ -6413,7 +6413,6 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  MultiFab &S_new = get_new_data(State_Type,slab_step+1);
  MultiFab &LS_new = get_new_data(LS_Type,slab_step+1);
  int nmat=num_materials;
- int nten=num_interfaces;
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,6001);

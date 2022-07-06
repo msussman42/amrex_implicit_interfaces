@@ -2417,7 +2417,7 @@ END SUBROUTINE SIMP
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
          nmax, &
-         nmat,SDIM,8)
+         SDIM,8)
        else if (visual_tessellate_vfrac.eq.0) then
         ! do nothing
        else
@@ -7271,7 +7271,6 @@ END SUBROUTINE SIMP
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
          nmax, &
-         nmat, &
          SDIM, &
          101)
 
@@ -8411,7 +8410,6 @@ END SUBROUTINE SIMP
            geom_xtetlist(1,1,1,tid_current+1), &
            nmax, &
            nmax, &
-           nmat, &
            SDIM, &
            caller_id)
 
@@ -8870,7 +8868,6 @@ END SUBROUTINE SIMP
            geom_xtetlist(1,1,1,tid_current+1), &
            nmax, &
            nmax, &
-           nmat, &
            SDIM, &
            caller_id)
 
@@ -8883,7 +8880,6 @@ END SUBROUTINE SIMP
            geom_xtetlist(1,1,1,tid_current+1), &
            nmax, &
            nmax, &
-           nmat, &
            SDIM, &
            caller_id)
 
@@ -13614,7 +13610,7 @@ END SUBROUTINE SIMP
                  cmofsten, &
                  xstenfine,nhalf,nhalf_box, &
                  bfact_f,dxf, &
-                 tessellate,mofdatafine,nmat,SDIM,304)
+                 tessellate,mofdatafine,SDIM,304)
 
                call multimaterial_MOF( &
                 bfact_f,dxf,xstenfine,nhalf, &
@@ -13629,7 +13625,7 @@ END SUBROUTINE SIMP
                 multi_centroidA, &
                 continuous_mof, &
                 cmofsten, &
-                nmat,SDIM,3)
+                SDIM,3)
 
                call multi_get_volume_grid_simple( &
                 tessellate, &  !=0

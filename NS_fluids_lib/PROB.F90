@@ -20143,7 +20143,7 @@ end subroutine RatePhaseChange
           nucleate_in%bfact, &
           nucleate_in%dx, &
           tessellate, &  ! =0
-          mofdata,nmat,SDIM,204)
+          mofdata,SDIM,204)
 
         call multimaterial_MOF( &
          nucleate_in%bfact, &
@@ -20160,7 +20160,7 @@ end subroutine RatePhaseChange
          multi_centroidA, &
          continuous_mof, &
          cmofsten, &
-         nmat,SDIM,4)
+         SDIM,4)
 
         local_tessellate=3
         call multi_get_volume_tessellate( &
@@ -20172,7 +20172,6 @@ end subroutine RatePhaseChange
          geom_xtetlist(1,1,1,nucleate_in%tid+1), &
          nmax, &
          nmax, &
-         nmat, &
          SDIM, &
          4)
 
@@ -26063,7 +26062,7 @@ end subroutine initialize2d
           xsten,nhalf,nhalf_box, &
           bfact,dx, &
           tessellate, &  ! =0
-          mofdata,nmat,SDIM,201)
+          mofdata,SDIM,201)
 
         do im=1,nmat
          vofcomp_recon=(im-1)*ngeom_recon+1
@@ -29359,7 +29358,7 @@ end subroutine initialize2d
            xsten,nhalf,nhalf_box, &
            bfact,dx, &
            tessellate, &  ! =0
-           mofdata,nmat,SDIM,204)
+           mofdata,SDIM,204)
 
          call multimaterial_MOF( &
           bfact,dx,xsten,nhalf, &
@@ -29374,7 +29373,7 @@ end subroutine initialize2d
           multi_centroidA, &
           continuous_mof, &
           cmofsten, &
-          nmat,SDIM,4)
+          SDIM,4)
 
          do dir3=1,nmat*ngeom_recon
           u(D_DECL(i,j,k),dir3)=mofdata(dir3)
