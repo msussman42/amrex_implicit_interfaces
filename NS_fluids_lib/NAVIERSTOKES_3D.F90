@@ -11618,7 +11618,7 @@ END SUBROUTINE SIMP
          endif
 
          face_damping_factor=get_face_damping_factor( &
-            face_vol,nmat,project_option,dt)
+            face_vol,project_option,dt)
 
          if (project_option_singular_possibleF(project_option).eq.1) then
           if ((nsolve.eq.1).and.(velcomp.eq.0)) then

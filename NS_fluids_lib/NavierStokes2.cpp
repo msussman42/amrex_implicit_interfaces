@@ -6571,8 +6571,6 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
       ARLIM(lsnew.loVect()),ARLIM(lsnew.hiVect()),
       xlo,dx,
       &cur_time_slab,
-      &nmat,
-      &nten,
       &nparts,
       &nparts_def,
       im_solid_map_ptr,

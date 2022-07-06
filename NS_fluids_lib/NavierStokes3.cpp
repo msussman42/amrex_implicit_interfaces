@@ -7848,7 +7848,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
     &nsolve,
     &local_face_index,
     &local_face_ncomp,
-    &nmat,
     xlo,
     dx,
     &dt_slab,
