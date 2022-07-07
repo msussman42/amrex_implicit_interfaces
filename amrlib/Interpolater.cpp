@@ -153,7 +153,7 @@ multiMOFInterp::interp (Real time,
  const Real* dxf = fine_geom.CellSize();
  const Real* dxc = crse_geom.CellSize();
 
- int nmat=multiMOFInterp_nmat;
+ int local_nmat=multiMOFInterp_nmat;
  int ngeom_raw=multiMOFInterp_ngeom_raw;
  int ngeom_recon=multiMOFInterp_ngeom_recon;
 
@@ -162,16 +162,16 @@ multiMOFInterp::interp (Real time,
  if (ngeom_recon!=2*AMREX_SPACEDIM+3)
   amrex::Error("ngeom_recon invalid");
 
- if (nmat<1)
-  amrex::Error("nmat invalid in multi mof interp");
+ if (local_nmat<1)
+  amrex::Error("local_nmat invalid in multi mof interp");
 
- if (ncomp!=nmat*ngeom_raw) {
+ if (ncomp!=local_nmat*ngeom_raw) {
   std::cout << "ncomp " << ncomp << '\n';
   amrex::Error("must interpolate all multiMOF data at once");
  }
 
  Box reconbox(crse.box());
- FArrayBox* reconfab=new FArrayBox(reconbox,nmat*ngeom_recon);
+ FArrayBox* reconfab=new FArrayBox(reconbox,local_nmat*ngeom_recon);
 
   // 2 loops:
   // 1. MOF reconstruction on coarse level
@@ -184,7 +184,7 @@ multiMOFInterp::interp (Real time,
   lo,hi,
   reconfab->dataPtr(),
   AMREX_ARLIM(reconfab->loVect()),AMREX_ARLIM(reconfab->hiVect()),
-  prob_lo,dxf,dxc,&nmat,
+  prob_lo,dxf,dxc,
   &ngeom_recon,&ngeom_raw,
   &levelc,&levelf,
   &bfactc,&bfactf);
@@ -262,7 +262,7 @@ multiEXTMOFInterp::interp (Real time,
  const Real* dxf = fine_geom.CellSize();
  const Real* dxc = crse_geom.CellSize();
 
- int nmat=multiMOFInterp_nmat;
+ int local_nmat=multiMOFInterp_nmat;
  int ngeom_raw=multiMOFInterp_ngeom_raw;
  int ngeom_recon=multiMOFInterp_ngeom_recon;
 
@@ -271,10 +271,10 @@ multiEXTMOFInterp::interp (Real time,
  if (ngeom_recon!=2*AMREX_SPACEDIM+3)
   amrex::Error("ngeom_recon invalid");
 
- if (nmat<1)
-  amrex::Error("nmat invalid in multi ext mof interp");
+ if (local_nmat<1)
+  amrex::Error("local_nmat invalid in multi ext mof interp");
 
- if (ncomp!=nmat*ngeom_recon) {
+ if (ncomp!=local_nmat*ngeom_recon) {
   std::cout << "ncomp " << ncomp << '\n';
   amrex::Error("must interpolate all multiEXTMOF data at once");
  }
@@ -288,7 +288,7 @@ multiEXTMOFInterp::interp (Real time,
   fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
   lo,hi,
   prob_lo,
-  dxf,dxc,&nmat,
+  dxf,dxc,
   &ngeom_recon,&ngeom_raw,
   &levelc,&levelf,
   &bfactc,&bfactf);
@@ -369,9 +369,9 @@ BurnVelInterp::interp (Real time,
  const Real* dxf = fine_geom.CellSize();
  const Real* dxc = crse_geom.CellSize();
 
- int num_materials=burnvel_nmat;
- int num_interfaces=burnvel_nten;
- int ncomp_check=num_interfaces+num_interfaces*burnvel_ncomp_per;
+ int local_nmat=burnvel_nmat;
+ int local_nten=burnvel_nten;
+ int ncomp_check=local_nten+local_nten*burnvel_ncomp_per;
  if (burnvel_ncomp_per==0)
   ncomp_check=N_DRAG;
 
@@ -397,19 +397,19 @@ BurnVelInterp::interp (Real time,
  } else
   amrex::Error("crse.nComp() or fine.nComp() invalid");
 
- if (num_interfaces!=((num_materials-1)*(num_materials-1)+num_materials-1)/2) 
-  amrex::Error("num_interfaces invalid");
+ if (local_nten!=((local_nmat-1)*(local_nmat-1)+local_nmat-1)/2) 
+  amrex::Error("local_nten invalid");
 
- if (num_materials<1)
-  amrex::Error("num_materials invalid in burnvel interp");
+ if (local_nmat<1)
+  amrex::Error("local_nmat invalid in burnvel interp");
 
  if (ncomp!=ncomp_check) {
   std::cout << "ncomp " << ncomp << '\n';
   amrex::Error("must interpolate all burnvel data at once");
  }
   // if (velflag=0 or 1):
-  // first nmat components are the status.
-  // next sdim * nmat components are the burning velocities.
+  // first num_materials components are the status.
+  // next sdim * num_materials components are the burning velocities.
   
  fort_ext_burnvel_interp(
   &velflag,
@@ -419,8 +419,6 @@ BurnVelInterp::interp (Real time,
   lo,hi,
   prob_lo,
   dxf,dxc,
-  &num_materials,
-  &num_interfaces,
   &ncomp,
   &levelc,&levelf,
   &bfactc,&bfactf);
@@ -704,11 +702,11 @@ LSInterp::interp (
  const Real* dxf = fine_geom.CellSize();
  const Real* dxc = crse_geom.CellSize();
 
- int nmat=LSInterp_nmat;
+ int local_nmat=LSInterp_nmat;
 
- if (nmat<1)
-  amrex::Error("nmat invalid in ls interp");
- if (ncomp!=(AMREX_SPACEDIM+1)*nmat) {
+ if (local_nmat<1)
+  amrex::Error("local_nmat invalid in ls interp");
+ if (ncomp!=(AMREX_SPACEDIM+1)*local_nmat) {
   std::cout << "ncomp " << ncomp << '\n';
   amrex::Error("must interpolate all ls data at once");
  }
@@ -720,7 +718,6 @@ LSInterp::interp (
   fblo,fbhi,
   prob_lo,
   dxf,dxc,
-  &nmat,
   &ncomp,
   &levelc,&levelf,
   &bfactc,&bfactf);

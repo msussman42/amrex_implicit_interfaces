@@ -580,7 +580,7 @@ stop
       REAL_T, intent(out) :: icemask
       REAL_T, intent(out) :: icefacecut
       REAL_T, intent(in) :: LS(num_materials)
-      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+      INTEGER_T, intent(in) :: distribute_from_target(2*num_interfaces)
       INTEGER_T, intent(in) :: complement_flag
 
       REAL_T dist_mask_override
@@ -9994,15 +9994,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine
      
-      subroutine get_bump_dist(x,y,z,nmat,dist,time)
+      subroutine get_bump_dist(x,y,z,dist,time)
       use global_utility_module
       use global_distance_module
 
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      REAL_T dist(num_materials)
-      REAL_T x,y,z,time
+      REAL_T, intent(out) :: dist(num_materials)
+      REAL_T, intent(in) :: x,y,z,time
       REAL_T distsolid
       REAL_T distleft,distright
       REAL_T xleft,xright,elev
@@ -10010,10 +10009,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       im_solid_bump=im_solid_primary()
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if ((im_solid_bump.lt.1).or. &
           (im_solid_bump.gt.num_materials)) then
        print *,"im_solid_bump invalid in get_bump_dist"
@@ -10045,19 +10040,19 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
 
  
-      subroutine get_bump_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,time,nmat)
+      subroutine get_bump_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,time)
       use geometry_intersect_module
       IMPLICIT NONE
 
-      INTEGER_T nmat,bfact,nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, intent(in) :: bfact,nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten2(-1:1,SDIM)
 
-      REAL_T time
+      REAL_T, intent(in) :: time
       INTEGER_T im
-      REAL_T dx(SDIM)
-      REAL_T vfrac(num_materials)
-      REAL_T cenbc(num_materials,SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(out) :: vfrac(num_materials)
+      REAL_T, intent(out) :: cenbc(num_materials,SDIM)
 
       INTEGER_T dir2,i1,j1,k1,k1lo,k1hi,isten
       REAL_T centroid(num_materials,SDIM)
@@ -10080,11 +10075,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       if (probtype.ne.110) then
        print *,"probtype invalid"
-       stop
-      endif
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
        stop
       endif
 
@@ -10114,7 +10104,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        enddo ! isten
 
        call get_bump_dist(xsten2(0,1),xsten2(0,2), &
-        xsten2(0,SDIM),nmat,distbatch,time)
+        xsten2(0,SDIM),distbatch,time)
        do im=1,num_materials
         lsgrid(D_DECL(i1+2,j1+2,k1+2),im)=distbatch(im) 
        enddo
@@ -10126,7 +10116,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       EBVOFTOL=VOFTOL
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac, &
-        facearea,centroid,nmat,EBVOFTOL,SDIM)
+        facearea,centroid,EBVOFTOL,SDIM)
 
       do im=1,num_materials
        do dir2=1,SDIM
@@ -10142,15 +10132,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T nhalf,bfact
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T time
-      REAL_T dx(SDIM)
-      REAL_T vel
+      INTEGER_T, intent(in) :: nhalf,bfact
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(out) :: vel
 
       REAL_T VOF(num_materials)
       REAL_T cenbc(num_materials,SDIM)
-      INTEGER_T nmat
       REAL_T xleft,xright
       REAL_T velleft,velright
 
@@ -10162,7 +10151,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"nhalf invalid get bump velocity"
        stop
       endif
-      nmat=num_materials
 
       if (probtype.ne.110) then
        print *,"probtype invalid"
@@ -10174,7 +10162,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       call get_left_velocityIOWA(time,velleft)
       call get_right_velocityIOWA(time,velright)
 
-      call get_bump_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc,time,nmat)  
+      call get_bump_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc,time)  
 
       if (VOF(1).gt.zero) then
 
@@ -10187,17 +10175,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine get_bump_velocity
 
-      subroutine mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat)
+      subroutine mask_velocity(xsten,nhalf,dx,bfact,velcell,time)
       use global_utility_module
 
       IMPLICIT NONE
 
-      INTEGER_T nhalf,bfact
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T time
-      REAL_T dx(SDIM)
-      REAL_T velcell(SDIM)
-      INTEGER_T nmat
+      INTEGER_T, intent(in) :: nhalf,bfact
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(out) :: velcell(SDIM)
 
       REAL_T VOF(num_materials)
       REAL_T cenbc(num_materials,SDIM)
@@ -10211,12 +10198,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"bfact invalid200"
        stop
       endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
 
-      call get_initial_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc,nmat)
+      call get_initial_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc)
 
       do im=1,num_materials
        if (is_prescribed(im).eq.1) then
@@ -10239,61 +10222,18 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine mask_velocity
 
-      subroutine normal_FILL(time,x,dir,side,normal,iten,nten)
-      use global_utility_module
-      IMPLICIT NONE
-
-      INTEGER_T dir,side,iten,nten
-      REAL_T time
-      REAL_T normal(SDIM)
-      REAL_T x(SDIM)
-      INTEGER_T nmat
-      REAL_T RR,mag
-
-      nmat=num_materials
-      if (nten.ne.((nmat-1)*(nmat-1)+nmat-1)/2) then
-       print *,"nten invalid"
-       stop
-      endif
-      if ((iten.lt.1).or.(iten.gt.nten)) then
-       print *,"iten invalid"
-       stop
-      endif
-      if ((dir.lt.0).or.(dir.gt.SDIM-1)) then
-       print *,"dir invalid"
-       stop
-      endif
-      if ((side.ne.1).and.(side.ne.2)) then
-       print *,"side invalid"
-       stop
-      endif
-      if ((probtype.eq.36).and.(axis_dir.eq.210)) then
-       if (SDIM.eq.2) then
-        normal(1)=radblob
-        normal(2)=one
-       else if (SDIM.eq.3) then
-        normal(1)=radblob
-        normal(2)=radblob2
-        normal(SDIM)=one
-       else
-        print *,"dimension bust"
-        stop
-       endif
-       RR=x(1)
-       call prepare_normal(normal,RR,mag)
-      endif
-
-      return
-      end subroutine normal_FILL
-
       subroutine mofBC(time,dir,side,VOF,VOFwall, &
        xsten,nhalf,dx,bfact,im)
       IMPLICIT NONE
 
-      INTEGER_T dir,side,im,bfact,nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T time,VOF,xwall,VOFwall,x,y,z
-      REAL_T dx(SDIM)
+      INTEGER_T, intent(in) :: dir,side,im,bfact,nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: time
+      REAL_T, intent(out) :: VOF
+      REAL_T :: xwall
+      REAL_T, intent(in) :: VOFwall
+      REAL_T :: x,y,z
+      REAL_T, intent(in) :: dx(SDIM)
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid mofbc"
@@ -10377,20 +10317,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine mofBC
 
-      subroutine copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+      subroutine copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      REAL_T VOF(num_materials*ngeom_raw)
-      REAL_T VOFwall(num_materials*ngeom_raw)
-      REAL_T cenbc(num_materials,SDIM)
-      REAL_T vofarray(num_materials)
+      REAL_T, intent(out) :: VOF(num_materials*ngeom_raw)
+      REAL_T, intent(in) :: VOFwall(num_materials*ngeom_raw)
+      REAL_T, intent(in) :: cenbc(num_materials,SDIM)
+      REAL_T, intent(in) :: vofarray(num_materials)
       INTEGER_T im,vofcomp,dir2
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
 
       do im=1,num_materials
        vofcomp=(im-1)*(ngeom_raw)+1
@@ -10420,18 +10354,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine copy_mofbc_to_result
 
-      subroutine check_lsbc_extrap(LS,LSwall,nmat)
+      subroutine check_lsbc_extrap(LS,LSwall)
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      REAL_T LS(num_materials)
-      REAL_T LSwall(num_materials)
+      REAL_T, intent(out) :: LS(num_materials)
+      REAL_T, intent(in) :: LSwall(num_materials)
       INTEGER_T im
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
 
       do im=1,num_materials
        if ((FSI_flag(im).eq.0).or. & ! fluid
@@ -10459,7 +10387,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 ! this routine called for inflow, outflow, slipwall, noslipwall
 
       subroutine groupmofBC(time,dir,side,VOF,VOFwall, &
-        xsten,nhalf,dx,bfact,nmat)
+        xsten,nhalf,dx,bfact)
       use global_utility_module
       use randomNG
       use rainControl_module, only : get_rain_vfrac,get_rain_velocity
@@ -10469,13 +10397,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       use River
       IMPLICIT NONE
 
-      INTEGER_T nmat,bfact,nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      INTEGER_T dir,side
-      REAL_T VOF(num_materials*ngeom_raw)
-      REAL_T VOFwall(num_materials*ngeom_raw)
-      REAL_T time,xwall,x,y,z
-      REAL_T dx(SDIM)
+      INTEGER_T, intent(in) :: bfact,nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, intent(in) :: dir,side
+      REAL_T, intent(out) :: VOF(num_materials*ngeom_raw)
+      REAL_T, intent(in) :: VOFwall(num_materials*ngeom_raw)
+      REAL_T, intent(in) :: time
+      REAL_T :: xwall,x,y,z
+      REAL_T, intent(in) :: dx(SDIM)
       REAL_T cenbc(num_materials,SDIM)
       REAL_T LS
       REAL_T vofarray(num_materials)
@@ -10488,10 +10417,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       im_solid_mofbc=im_solid_primary()
 
-      if (num_materials.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (nhalf.lt.1) then
        print *,"nhalf invalid group mof bc"
        stop
@@ -10564,21 +10489,21 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       endif
 
       if (is_in_probtype_list().eq.1) then
-       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
 
       else if (probtype.eq.401) then
-       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
 
       else if (probtype.eq.412) then
-       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
 
       else if (probtype.eq.311) then ! user defined
 
-       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
 
       else if (probtype.eq.199) then !hydrates (groupmofBC)
        print *,"this code must be upgrated"
@@ -10621,20 +10546,20 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         
       else if ((probtype.eq.299).or. &
                (probtype.eq.301)) then !melting (boundary conditions for F,X)
-       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
       else if (probtype.eq.209) then ! River
-       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         ! marangoni (heat pipe) problem
       else if ((probtype.eq.36).and.(axis_dir.eq.10)) then
-       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
 
        ! sanity check: curvature for a plane should be 0
       else if ((probtype.eq.36).and.(axis_dir.eq.210)) then
-       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+       call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+       call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
       else
  
        if ((dir.eq.1).and.(side.eq.1)) then  ! xlo
@@ -10656,52 +10581,52 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          do im=3,num_materials
           vofarray(im)=zero
          enddo
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.6) then
          vofarray(1)=zero
          vofarray(2)=one-vofarray(1)
          do im=3,num_materials
           vofarray(im)=zero
          enddo
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.110) then
            ! xlo
-         call get_bump_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,time,nmat) 
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_bump_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,time) 
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if ((probtype.eq.59).or. &
                  (probtype.eq.710)) then  ! xlo dir=1 side=1 groupmofBC 2d
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
          ! xlo groupmofBC 2d
         else if ((probtype.eq.801).and.(axis_dir.eq.dir-1)) then 
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.802) then ! xlo - dissolution
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5700) then ! xlo
-         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.9) then  ! xlo, groupmofBC, 2D
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.41) then
-         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)  ! xlo
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)  ! xlo
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.532) then ! xlo
-         call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)   
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)   
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.539) then ! xlo, sup injector - groupmofBC
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.202) then ! xlo, liquidlens - groupmofbc
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.701) then  ! xlo dir=1 side=1 groupmofBC rain
          if ((axis_dir.eq.0).or. &
              (axis_dir.eq.1)) then
-          call get_rain_vfrac(x,y,z,dx,vofarray,cenbc,time,nmat,dir,adv_vel)
-          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+          call get_rain_vfrac(x,y,z,dx,vofarray,cenbc,time,dir,adv_vel)
+          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
          else if (axis_dir.eq.2) then
           do im=1,num_materials
            if ((FSI_flag(im).ne.2).and. &
@@ -10732,7 +10657,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          do im=3,num_materials
           vofarray(im)=zero
          enddo
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.58) then
          LS=zblob2-z
          if (LS.lt.zero) then
@@ -10744,27 +10669,27 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          do im=3,num_materials
           vofarray(im)=zero
          enddo
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.41) then ! xlo 3D
-         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)  ! xlo
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)  ! xlo
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5700) then ! xlo
-         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat) 
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc) 
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
           ! airblast
         else if (probtype.eq.529) then  ! dir=1 side=1 groupmofBC
-         call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if ((probtype.eq.59).or. &
                  (probtype.eq.710)) then  ! xlo dir=1 side=1 groupmofBC 3d
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5501) then  ! xlo, groupmofBC
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.9) then  ! xlo, groupmofBC, 3D
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         endif
 
         else
@@ -10782,37 +10707,37 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         if (probtype.eq.110) then
             ! xhi
-         call get_bump_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,time,nmat)  
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_bump_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,time)  
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if ((probtype.eq.59).or. &
                  (probtype.eq.710)) then  ! dir=1 side=2 (xhi) 2d
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
 
          ! outflow or inflow=EXT_DIR; for microfluid channels, 
          ! want extrap bc either case.
          ! so this code is disabled
         else if ((probtype.eq.5700).and.(1.eq.0)) then ! xhi
-         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.9) then ! xhi, groupmofbc, 2D
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.41) then
-         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)  ! xhi
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)  ! xhi
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.532) then ! xhi
-         call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat) 
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc) 
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.539) then ! xhi, sup injector
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.202) then ! xhi, liquidlens, groupmofbc
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if ((probtype.eq.25).and.(axis_dir.gt.0)) then ! xhi, bubble frm.
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         endif
 
         else if (SDIM.eq.3) then
@@ -10821,18 +10746,18 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          ! want extrap bc either case.
          ! so this code is disabled
         if ((probtype.eq.5700).and.(1.eq.0)) then ! xhi
-         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat) 
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc) 
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if ((probtype.eq.59).or. &
                  (probtype.eq.710)) then  ! dir=1 side=2 (xhi) 3d groupmofBC
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5501) then  ! xhi groupmofBC
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.9) then  ! xhi, groupmofBC, 3D
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         endif
 
         else 
@@ -10850,23 +10775,23 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         if ((probtype.eq.25).and.(axis_dir.gt.0)) then  ! ylo2D bubble formation
 
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
 
          ! ylo dir=2 side=1 groupmofBC 
         else if(probtype.eq.bubbleInPackedColumn)then  
-         call get_pack_vfrac(x,y,z,dx,vofarray,cenbc,time,nmat,dir)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_pack_vfrac(x,y,z,dx,vofarray,cenbc,time,dir)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
          ! ylo 2D groupmofBC
         else if ((probtype.eq.801).and.(axis_dir.eq.dir-1)) then 
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5700) then  ! ylo 2D
-         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.41) then
-         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)  ! ylo
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)  ! ylo
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.72) then
          if (abs(x-xblob).gt.radblob) then
           vofarray(1)=zero
@@ -10877,47 +10802,47 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          do im=3,num_materials
           vofarray(im)=zero
          enddo
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if ((probtype.eq.53).or.(probtype.eq.537)) then !ylo 2D,groupmofBC
-         call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat) 
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc) 
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if ((probtype.eq.538).or. &
                  (probtype.eq.539).or. &
                  (probtype.eq.541)) then ! ylo 2D, diesel injector, groupmofBC
 
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
 
          ! 540 Rieber problem
          ! ylo dir=2 side=1 2d groupmofBC
         else if ((probtype.eq.59).or. &
                  (probtype.eq.710).or. &
                  (probtype.eq.540)) then  
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.9) then ! ylo, groupmofbc, 2D
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         endif
 
         else if (SDIM.eq.3) then
 
         if (probtype.eq.5700) then  ! ylo
-         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat) 
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc) 
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if ((probtype.eq.59).or. &
                  (probtype.eq.710)) then  ! ylo dir=2 side=1 3d groupmofbc
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5501) then  ! ylo groupmofBC
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.9) then  ! ylo, groupmofBC, 3D
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.532) then  ! impinge from side, ylo
-         call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         endif
 
         else
@@ -10939,10 +10864,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          do im=3,num_materials
           vofarray(im)=zero
          enddo
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5700) then ! yhi
-         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if ((probtype.eq.14).or.(probtype.eq.16).or. &
           ((probtype.eq.25).and.(axis_dir.eq.0)) ) then
          if (probtype.eq.25) then
@@ -10955,43 +10880,43 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          do im=3,num_materials
           vofarray(im)=zero
          enddo
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
          ! top (y=yhi)  y=ymax wall
         else if (probtype.eq.41) then
-         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat) 
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_pipe_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc) 
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.540) then  ! Rieber problem y=yhi
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.539) then ! yhi, sup injector
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.9) then ! yhi, groupmofBC, 2D
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if ((probtype.eq.701).and.(1.eq.0)) then ! yhi, groupmofBC 2D
-         call get_rain_vfrac(x,y,z,dx,vofarray,cenbc,time,nmat,dir,adv_vel)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_rain_vfrac(x,y,z,dx,vofarray,cenbc,time,dir,adv_vel)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         endif
 
         else if (SDIM.eq.3) then
 
         if (probtype.eq.5700) then ! yhi
-         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat) 
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc) 
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5501) then  ! yhi groupmofBC
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if ((probtype.eq.59).or. &
                  (probtype.eq.710)) then  ! yhi dir=2 side=2 3d groupmofBC
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.9) then ! yhi, groupmofBC, 3D
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.532) then  ! impinge from side, yhi
-         call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         endif
 
         else 
@@ -11010,27 +10935,27 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         if ((probtype.eq.538).or. &  ! inputs.injA
             (probtype.eq.541)) then  ! zlo, diesel injector
 
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)   
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)   
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
          
         else if ((probtype.eq.53).or.(probtype.eq.531).or. &  ! zlo 3D
                  (probtype.eq.530).or.(probtype.eq.536).or. &
                  (probtype.eq.537).or.(probtype.eq.532)) then
-         call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)   
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)   
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
          ! 540 Rieber problem
          ! zlo dir=3 side=1 groupmofBC (3D)
         else if ((probtype.eq.59).or. &
                  (probtype.eq.710).or. &
                  (probtype.eq.540)) then  
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5501) then  ! zlo groupmofBC
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.9) then  ! zlo, groupmofBC
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5700) then  ! microfluidics zlo
          do im=1,num_materials
           vofarray(im)=zero
@@ -11041,7 +10966,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
          vofarray(im_solid_mofbc)=one
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         endif
 
        else if ((dir.eq.3).and.(side.eq.2).and.(SDIM.eq.3)) then ! zhi
@@ -11055,14 +10980,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          do im=3,num_materials
           vofarray(im)=zero
          enddo
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.540) then  ! Rieber problem z=zhi
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.9) then  ! zhi, groupmofBC
 
-         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5700) then  ! microfluidics zhi
          do im=1,num_materials
           vofarray(im)=zero
@@ -11073,7 +10998,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
          vofarray(im_solid_mofbc)=one
-         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
+         call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         endif
 
        else
@@ -11250,36 +11175,36 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        call SUB_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx, &
         num_materials)
-       call check_lsbc_extrap(LS,LSWALL,num_materials)
+       call check_lsbc_extrap(LS,LSWALL)
       else if (probtype.eq.401) then
        call HELIX_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,num_materials)
+       call check_lsbc_extrap(LS,LSWALL)
       else if (probtype.eq.402) then
        call TSPRAY_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,num_materials)
+       call check_lsbc_extrap(LS,LSWALL)
       else if (probtype.eq.412) then ! step
        call CAV2Dstep_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,num_materials)
+       call check_lsbc_extrap(LS,LSWALL)
       else if (probtype.eq.413) then ! zeyu
        call ZEYU_droplet_impact_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,num_materials)
+       call check_lsbc_extrap(LS,LSWALL)
       else if (probtype.eq.533) then
        call rigid_FSI_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,num_materials)
+       call check_lsbc_extrap(LS,LSWALL)
       else if (probtype.eq.534) then
        call sinking_FSI_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,num_materials)
+       call check_lsbc_extrap(LS,LSWALL)
 
       else if (probtype.eq.311) then ! user defined problem
 
        call USERDEF_LS_BC(xwall,xvec,time,LS,LSwall,dir,side,dx)
-       call check_lsbc_extrap(LS,LSWALL,num_materials)
+       call check_lsbc_extrap(LS,LSWALL)
 
        ! curvature sanity check (line in 2D, plane in 3D)
       else if ((probtype.eq.36).and.(axis_dir.eq.210)) then
 
        call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-       call check_lsbc_extrap(LS,LSWALL,num_materials)
+       call check_lsbc_extrap(LS,LSWALL)
 
       else if (probtype.eq.199) then  ! in grouplsBC
 
@@ -11288,7 +11213,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         call HYD_LVLS_BC(time,dir,side,LS(imls), &
          xwall,LSwall(imls),x,y,z,dx,im)
        enddo
-       call check_lsbc_extrap(LS,LSWALL,num_materials)
+       call check_lsbc_extrap(LS,LSWALL)
 
        ! in: grouplsBC
       else if (probtype.eq.220) then  ! UNIMATERIAL problem
@@ -11311,16 +11236,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                (probtype.eq.301)) then !melting (boundary condition LS)
 
        call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-       call check_lsbc_extrap(LS,LSWALL,num_materials)
+       call check_lsbc_extrap(LS,LSWALL)
 
       else if (probtype.eq.209) then  ! River
        call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-       call check_lsbc_extrap(LS,LSWALL,num_materials)
+       call check_lsbc_extrap(LS,LSWALL)
 
        ! marangoni (heat pipe) problem
       else if ((probtype.eq.36).and.(axis_dir.eq.10)) then
        call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-       call check_lsbc_extrap(LS,LSWALL,num_materials)
+       call check_lsbc_extrap(LS,LSWALL)
       else
 
        if ((dir.eq.1).and.(side.eq.1)) then  ! xlo
@@ -11338,14 +11263,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.6) then
           LS(1)=-bigdist
           LS(2)=bigdist
           do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
 
           ! ysl add level set function for BC 
          else if (probtype.eq.701) then ! xlo grouplsBC
@@ -11358,42 +11283,42 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            print *,"axis_dir invalid"
            stop
           endif
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.bubbleInPackedColumn).and.(1.eq.2)) then ! xlo 
           call xloLS_pack(x,y,z,num_materials,LS,adv_vel,time,bigdist)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.110) then
           call get_bump_dist(x,y,z,num_materials,LS,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
           ! xlo 2d - grouplsBC
          else if ((probtype.eq.801).and.(axis_dir.eq.dir-1)) then 
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.802) then ! xlo: dissolution grouplsBC
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  !  xlo: dir=1 side=1 grouplsBC 2d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then ! xlo
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then  ! xlo, groupLSBC, 2d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.41) then ! xlo, groupLSBC, 2d
           call inletpipedist(x,y,z,num_materials,LS)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.532) then ! xlo
           call get_jet_dist(x,y,z,num_materials,LS)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.539) then ! xlo, sup injector - grouplsBC
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.202) then ! xlo, liquidlens - grouplsbc
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          endif
 
          else if (SDIM.eq.3) then
@@ -11404,7 +11329,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.58) then
           local_LS=zblob2-z
           LS(1)=local_LS
@@ -11412,28 +11337,28 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.41) then ! xlo 3D, grouplsbc
           call inletpipedist(x,y,z,num_materials,LS)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then ! xlo
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
 
            ! airblast
          else if (probtype.eq.529) then  ! dir=1 side=1 grouplsBC
           call get_jet_dist(x,y,z,num_materials,LS)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! xlo dir=1 side=1 grouplsBC 3d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5501) then  ! xlo, grouplsBC
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then  ! xlo, grouplsBC, 3D
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          endif
 
          else
@@ -11454,49 +11379,49 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
          if (probtype.eq.110) then
           call get_bump_dist(x,y,z,num_materials,LS,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! dir=1 side=2 (xhi) grouplsBC 2d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.5700).and.(1.eq.0)) then ! xhi
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then  ! xhi, groupLSBC, 2D
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.532) then ! xhi
           call get_jet_dist(x,y,z,num_materials,LS)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.539) then ! xhi, sup injector
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.41) then  ! xhi
           call inletpipedist(x,y,z,num_materials,LS)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.202) then ! xhi, liquidlens, grouplsbc
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.25).and.(axis_dir.gt.0)) then ! xhi, bubble frm.
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          endif
 
          else if (SDIM.eq.3) then
 
          if ((probtype.eq.5700).and.(1.eq.0)) then ! xhi
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! xhi dir=1 side=2 3d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5501) then  ! xhi grouplsBC
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then  ! xhi grouplsBC, 3D
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          endif
 
          else
@@ -11515,17 +11440,17 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           !ylo 2D bubble formation
          if ((probtype.eq.25).and.(axis_dir.gt.0)) then 
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
           ! ylo 2D grouplsBC
          else if ((probtype.eq.801).and.(axis_dir.eq.dir-1)) then
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then  ! ylo
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.41) then ! ylo
           call inletpipedist(x,y,z,num_materials,LS)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.72) then
           local_LS=abs(x-xblob)-radblob
           LS(1)=-local_LS
@@ -11533,50 +11458,50 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.53).or.(probtype.eq.537)) then ! ylo 2D
           call get_jet_dist(x,y,z,num_materials,LS)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
            ! 2D ylo, diesel injector, grouplsBC
          else if ((probtype.eq.538).or. &
                   (probtype.eq.539).or. &
                   (probtype.eq.541)) then
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
           ! 540 Rieber problem
          else if (probtype.eq.540) then !dir=2 side=1,2d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then !ylo dir=2 side=1,2d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then ! ylo, groupLSBC, 2D
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.bubbleInPackedColumn) then ! ylo grouplsBC
           call yloLS_pack(x,y,z,num_materials,LS,adv_vel,time,bigdist)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          endif
 
          else if (SDIM.eq.3) then
 
          if (probtype.eq.5700) then  ! ylo
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! ylo dir=2 side=1 3d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5501) then  ! ylo grouplsBC
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then  ! ylo, groupLSBC, 3D
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.532) then  ! impinge from side, ylo
           call get_jet_dist(x,y,z,num_materials,LS)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          endif
 
          else
@@ -11598,10 +11523,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then ! yhi 2D
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.14).or.(probtype.eq.16).or. &
                ((probtype.eq.25).and.(axis_dir.eq.0)) ) then
           if (probtype.eq.25) then
@@ -11614,24 +11539,24 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
           ! top y=ymax wall
          else if (probtype.eq.41) then
           call inletpipedist(x,y,z,num_materials,LS)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.540) then  ! Rieber problem y=yhi
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.539) then ! yhi, sup injector
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then ! yhi, groupLSBC, 2D
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.701) then ! yhi, groupLSBC, 2D
           if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
            call yhiLS_rain(x,y,z,num_materials,LS,adv_vel,time,bigdist)
-           call check_lsbc_extrap(LS,LSWALL,num_materials)
+           call check_lsbc_extrap(LS,LSWALL)
           else if (axis_dir.eq.2) then
            ! do nothing
           else
@@ -11644,20 +11569,20 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
          if (probtype.eq.5700) then ! yhi
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5501) then  ! yhi grouplsBC
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! yhi dir=2 side=2 3d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then ! yhi, groupLSBC, 3D
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.532) then  ! impinge from side, yhi
           call get_jet_dist(x,y,z,num_materials,LS)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          endif
 
          else
@@ -11677,28 +11602,28 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              (probtype.eq.541)) then  ! zlo, diesel injector
 
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          
          else if ((probtype.eq.53).or.(probtype.eq.531).or. &  ! zlo 3D
                   (probtype.eq.530).or.(probtype.eq.536).or. &
                   (probtype.eq.537).or.(probtype.eq.532)) then
           call get_jet_dist(x,y,z,num_materials,LS)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
 
           ! 540 Rieber problem
          else if (probtype.eq.540) then  ! dir=3 side=1
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! zlo dir=3 side=1 groupLSBC
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5501) then  ! zlo grouplsBC
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then  ! zlo grouplsBC
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then  ! microfluidics zlo
           do im=1,num_materials
            LS(im)=-bigdist
@@ -11709,7 +11634,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            stop
           endif
           LS(im_solid_lsbc)=bigdist
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          endif
 
        else if ((dir.eq.3).and.(side.eq.2).and.(SDIM.eq.3)) then ! zhi
@@ -11723,13 +11648,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           do im=3,num_materials
            LS(im)=-bigdist
           enddo
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.540) then  ! Rieber problem z=zhi
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then  ! zhi, groupLSBC
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then  ! microfluidics zhi
           do im=1,num_materials
            LS(im)=-bigdist
@@ -11740,7 +11665,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            stop
           endif
           LS(im_solid_lsbc)=bigdist
-          call check_lsbc_extrap(LS,LSWALL,num_materials)
+          call check_lsbc_extrap(LS,LSWALL)
          endif
 
        else
@@ -15692,7 +15617,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T xprime,yprime,zprime
       REAL_T velcell(SDIM)
       INTEGER_T dir2
-      INTEGER_T nmat
       REAL_T velx_rain,vely_rain
       REAL_T xvec(SDIM)
       INTEGER_T local_dir
@@ -15732,8 +15656,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        vel_in=zero
       else if (vel_homflag.eq.0) then
 
-       nmat=num_materials
-      
        do dir2=1,SDIM
         velcell(dir2)=zero
        enddo
@@ -15855,10 +15777,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              call get_bump_velocity(xsten,nhalf,dx,bfact,velcell(veldir),time)  ! xvel,xlo 
             else if (probtype.eq.59) then ! xvel,xlo,velbc_override 2d
              ! vel=solidvel in solid
-             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat)
+             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time)
             else if (probtype.eq.710) then ! xvel,xlo,velbc_override 2d
              ! vel=solidvel in solid
-             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat)
+             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time)
             else if (probtype.eq.532) then
              call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell) ! xvel,xlo
             else if (probtype.eq.5700) then  ! xvel,xlo
@@ -15870,10 +15792,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if ((probtype.eq.59).or. &
                 (probtype.eq.710)) then ! xvel,xlo,velbc_override 3d
                ! vel=solvel in sol
-             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat) 
+             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time) 
             else if (probtype.eq.5501) then  ! xvel,xlo,velbc_override
                ! vel=solvel in sol
-             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat) 
+             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time) 
    
 ! XIAOYI LI : Adding turbulent boundary layer for gas flow          
             else if (probtype.eq.53) then
@@ -16103,10 +16025,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             else if ((probtype.eq.59).or. &
                      (probtype.eq.710)) then
                ! vel=solvel in sol
-             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat) 
+             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time) 
             else if (probtype.eq.5501) then
                ! vel=solvel in sol
-             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat) 
+             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time) 
 ! microfluidics squeeze vertical vel ylo inflow
             else if (probtype.eq.5700) then ! yvel,ylo
              call microfluidic_velbc(xsten,nhalf,dir,side,velcell)
@@ -16291,7 +16213,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              velcell(veldir)=zero
             else if (probtype.eq.59) then ! xvel,xhi,velbc_override 2d
              ! vel=solidvel in solid
-             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time,nmat)
+             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time)
             else if ((probtype.eq.22).and.(axis_dir.eq.13)) then
              call vbc(velcell(veldir),time,y,zero,error)
             else if (probtype.eq.32) then
@@ -16489,7 +16411,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             else if (probtype.eq.701) then
              if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
               call get_rain_velocity(x,y,z,dx,velcell(veldir), &
-                      vely_rain,time,dir,nmat,adv_vel)  ! yhi veldir=2
+                      vely_rain,time,dir,adv_vel)  ! yhi veldir=2
              else if (axis_dir.eq.2) then
               velcell(veldir)=zero  ! yhi veldir=2
              else
@@ -17266,25 +17188,25 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
            ! nozzle + pressure bc
           if ((probtype.eq.53).and.(axis_dir.eq.2)) then ! injection+shock
-           call get_jet_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc,num_materials) 
+           call get_jet_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc) 
            if (VOF(1).gt.zero) then
             ADV=inflow_pressure
            endif 
            ! 2d diesel injection w/needle ylo presBDRYCOND
           else if (probtype.eq.538) then 
-           call get_initial_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc,num_materials)
+           call get_initial_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc)
            if (VOF(1).gt.zero) then
             ADV=inflow_pressure
            endif
            ! 2d diesel injection w/needle ylo presBDRYCOND
           else if ((probtype.eq.541).and.(axis_dir.eq.2)) then
-           call get_initial_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc,num_materials)
+           call get_initial_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc)
            if (VOF(1).gt.zero) then
             ADV=inflow_pressure
            endif
           else if (probtype.eq.539) then  ! supnozzle ylo - presBDRYCOND
            ADV=outflow_pressure
-           call get_jet_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc,num_materials) 
+           call get_jet_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc) 
            if (VOF(1).gt.zero) then
 ! Hack: should be input, but "inflow_pressure" used at xlo
             ADV=1.6e7
@@ -17493,19 +17415,19 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
           ! pressure bc at inflow
          if ((probtype.eq.53).and.(axis_dir.eq.2)) then ! injection shock
-          call get_jet_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc,num_materials)   
+          call get_jet_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc)   
           if (VOF(1).gt.zero) then
            ADV=inflow_pressure
           endif 
            ! 3D zlo presBDRYCOND diesel injection w/needle
          else if (probtype.eq.538) then
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc,num_materials)
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc)
           if (VOF(1).gt.zero) then
            ADV=inflow_pressure
           endif
            ! 3D zlo presBDRYCOND diesel injection w/needle
          else if ((probtype.eq.541).and.(axis_dir.eq.2)) then
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc,num_materials)
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc)
           if (VOF(1).gt.zero) then
            ADV=inflow_pressure
           endif
@@ -18973,16 +18895,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       subroutine get_Rieber_velocity(xsten,nhalf,bfact,dx,vel)
       IMPLICIT NONE
 
-      INTEGER_T nhalf,bfact
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T dx(SDIM)
+      INTEGER_T, intent(in) :: nhalf,bfact
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
       REAL_T cenbc(num_materials,SDIM)
-      REAL_T vel(SDIM)
+      REAL_T, intent(out) :: vel(SDIM)
 
       INTEGER_T dir2
       REAL_T vfrac(num_materials)
       REAL_T midz
-      INTEGER_T nmat
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -18992,7 +18913,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"nhalf invalid get_Rieber_velocity"
        stop
       endif
-      nmat=num_materials
 
       do dir2=1,SDIM
        vel(dir2)=zero
@@ -19000,7 +18920,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       if (probtype.eq.540) then
 
-       call get_initial_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat)  
+       call get_initial_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc)  
        if (SDIM.eq.2) then
         midz=half*((yblob-radblob)+radblob2)
         if ((vfrac(1).gt.zero).and.(xsten(0,SDIM).ge.midz)) then  
@@ -19774,7 +19694,6 @@ end subroutine RatePhaseChange
 
       type(nucleation_parm_type_input), intent(in) :: nucleate_in
       type(nucleation_parm_type_inout), intent(inout) :: nucleate_out
-      INTEGER_T nmat
       REAL_T VOFTOL_NUCLEATE
       INTEGER_T i,j,k
       INTEGER_T denbase
@@ -19835,7 +19754,6 @@ end subroutine RatePhaseChange
         nucleate_in%pres,1,-1,1301)
       call checkbound_array1(nucleate_in%fablo,nucleate_in%fabhi, &
         nucleate_in%pres_eos,1,-1,1301)
-      nmat=nucleate_in%nmat
 
       if (nucleate_in%nstate.eq.STATE_NCOMP) then
        ! do nothing
@@ -20211,7 +20129,6 @@ end subroutine RatePhaseChange
        ! MEHDI EVAPORATION  im_source,im_dest = 1..num_materials
       INTEGER_T, intent(in) :: im_source,im_dest
       INTEGER_T :: start_freezing
-      INTEGER_T :: nmat
       REAL_T, intent(out) :: vel
       REAL_T, intent(in) :: densrc_I,dendst_I
       REAL_T, intent(in) :: densrc_probe,dendst_probe
@@ -20246,7 +20163,6 @@ end subroutine RatePhaseChange
       INTEGER_T mdot_override
       REAL_T mdot
 
-      nmat=num_materials
       if ((im_source.lt.1).or.(im_source.gt.num_materials)) then
        print *,"im_source invalid"
        stop
@@ -20674,7 +20590,7 @@ end subroutine RatePhaseChange
       if (is_in_probtype_list().eq.1) then
        ! compute mdot here
        call SUB_MDOT( &
-        nmat, &
+        num_materials, &
         num_species_var, &
         interface_mass_transfer_model, &
         xI, &
@@ -22921,7 +22837,6 @@ end subroutine initialize2d
       INTEGER_T mask_scomp
       INTEGER_T burnvel_scomp
       INTEGER_T tsat_scomp
-      INTEGER_T nmat
       INTEGER_T nten
       INTEGER_T ncomp_per
       INTEGER_T ncomp_per_burning
@@ -22934,9 +22849,6 @@ end subroutine initialize2d
        print *,"grid_type invalid"
        stop
       endif
-
-      nmat=num_materials
-      nten=num_interfaces
 
       ncomp_per_burning=EXTRAP_PER_BURNING
       ncomp_per_tsat=EXTRAP_PER_TSAT  ! interface temperature, mass fraction
@@ -23393,7 +23305,6 @@ end subroutine initialize2d
      
 
       subroutine fort_initdatasolid( &
-       nmat, &
        nparts, &
        ngrow_make_distance_in, &
        im_solid_map, &
@@ -23412,7 +23323,6 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: ngrow_make_distance_in
       INTEGER_T, intent(in) :: im_solid_map(nparts)
@@ -23447,10 +23357,6 @@ end subroutine initialize2d
       LS_ptr=>LS
       SNEW_ptr=>SNEW
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if ((nparts.lt.1).or.(nparts.ge.num_materials)) then
        print *,"nparts invalid"
        stop
@@ -23546,7 +23452,6 @@ end subroutine initialize2d
 
        ! called when solidheat_flag=1,2  (not =0)
       subroutine fort_initsolidtemp( &
-       nmat, &
        nden, &
        time, &
        tilelo,tilehi, &
@@ -23562,7 +23467,6 @@ end subroutine initialize2d
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nden
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -23596,11 +23500,7 @@ end subroutine initialize2d
       snew_ptr=>snew
       lsnew_ptr=>lsnew
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if (nden.ne.nmat*num_state_material) then
+      if (nden.ne.num_materials*num_state_material) then
        print *,"nden invalid"
        stop
       endif
@@ -23732,8 +23632,6 @@ end subroutine initialize2d
        fablo,fabhi,bfact, &
        domlo,domhi, &
        dt, &
-       nmat, &
-       nten, &
        solidheat_flag, &
        project_option, &
        time) &
@@ -23748,9 +23646,6 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: nsolve
       INTEGER_T, intent(in) :: dir
       INTEGER_T dir2
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
-      INTEGER_T nten_test
       INTEGER_T, intent(in) :: solidheat_flag
       INTEGER_T, intent(in) :: project_option
       INTEGER_T, intent(in) :: DIMDEC(LS)
@@ -23778,8 +23673,8 @@ end subroutine initialize2d
       REAL_T, intent(in) :: macrolayer_size(num_materials)
       INTEGER_T, intent(in) :: microlayer_substrate(num_materials)
       REAL_T, intent(in) :: microlayer_temperature_substrate(num_materials)
-      INTEGER_T, intent(in) :: freezing_model(2*nten)
-      REAL_T, intent(in) :: saturation_temp(2*nten)
+      INTEGER_T, intent(in) :: freezing_model(2*num_interfaces)
+      REAL_T, intent(in) :: saturation_temp(2*num_interfaces)
 
       INTEGER_T i,j,k,ii,jj,kk
       INTEGER_T side
@@ -23809,16 +23704,6 @@ end subroutine initialize2d
       endif
       if (time.lt.zero) then
        print *,"time invalid"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid viscfluxfill nten nten test", &
-        nten,nten_test
        stop
       endif
 
@@ -23891,9 +23776,9 @@ end subroutine initialize2d
           do im1=1,num_materials-1
           do im2=im1+1,num_materials
            call get_iten(im1,im2,iten)
-           LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
-           local_freezing_model=freezing_model(iten+ireverse*nten)
-           TSAT=saturation_temp(iten+ireverse*nten)
+           LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+           local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
+           TSAT=saturation_temp(iten+ireverse*num_interfaces)
 
            if ((LL.ne.zero).and. &
                (local_freezing_model.eq.0).and. &
@@ -24121,7 +24006,7 @@ end subroutine initialize2d
       end subroutine fort_viscfluxfill
 
 
-       subroutine init_initdata(nmat,nten,nc, &
+       subroutine init_initdata(nc, &
          freezing_model, &
          distribute_from_target, &
          saturation_temp, &
@@ -24130,13 +24015,12 @@ end subroutine initialize2d
        use supercooled_exact_sol
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: nmat,nten,nc
+       INTEGER_T, intent(in) :: nc
        INTEGER_T nc_expect
-       INTEGER_T nten_test
        REAL_T, intent(in) :: dx(SDIM)
-       INTEGER_T, intent(in) :: freezing_model(2*nten)
-       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
-       REAL_T, intent(in) :: saturation_temp(2*nten)
+       INTEGER_T, intent(in) :: freezing_model(2*num_interfaces)
+       INTEGER_T, intent(in) :: distribute_from_target(2*num_interfaces)
+       REAL_T, intent(in) :: saturation_temp(2*num_interfaces)
        REAL_T lmSt
 
        INTEGER_T ireverse,im,im_opp,iten,local_freezing_model
@@ -24149,16 +24033,6 @@ end subroutine initialize2d
 
        im_solid_initdata=im_solid_primary()
 
-       if (nmat.ne.num_materials) then
-        print *,"nmat invalid"
-        stop
-       endif
-       nten_test=num_interfaces
-       if (nten_test.ne.nten) then
-        print *,"nten invalid initdata nten nten test", &
-          nten,nten_test
-        stop
-       endif
        nc_expect=STATE_NCOMP
        if (nc.ne.nc_expect) then
         print *,"fort: nc invalid"
@@ -24179,10 +24053,13 @@ end subroutine initialize2d
         do ispace_initdata=1,ndiss_initdata-1 
          lowerdiag_initdata(ispace_initdata)=denfact/(dx(SDIM)**2)
          upperdiag_initdata(ispace_initdata)=denfact/(dx(SDIM)**2)
-         diag_initdata(ispace_initdata)=-lowerdiag_initdata(ispace_initdata)-upperdiag_initdata(ispace_initdata)-1.0/dtdiss_initdata
+         diag_initdata(ispace_initdata)= &
+                 -lowerdiag_initdata(ispace_initdata)- &
+                 upperdiag_initdata(ispace_initdata)-1.0/dtdiss_initdata
          rhs_initdata(ispace_initdata)=zero
          if (ispace_initdata.eq.1) then
-          rhs_initdata(ispace_initdata)=rhs_initdata(ispace_initdata)-lowerdiag_initdata(ispace_initdata)
+          rhs_initdata(ispace_initdata)=rhs_initdata(ispace_initdata)- &
+                  lowerdiag_initdata(ispace_initdata)
          endif
         enddo
          ! in: GLOBALUTIL.F90
@@ -24199,9 +24076,9 @@ end subroutine initialize2d
         endif
          ! 1<=iten<=num_interfaces
         call get_iten(im,im_opp,iten)
-        LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
-        local_freezing_model=freezing_model(iten+ireverse*nten)
-        TSAT=saturation_temp(iten+ireverse*nten)
+        LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+        local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
+        TSAT=saturation_temp(iten+ireverse*num_interfaces)
         if (is_hydrate_freezing_modelF(local_freezing_model).eq.1) then 
          if (num_species_var.eq.1) then
           ! do nothing
@@ -24216,12 +24093,12 @@ end subroutine initialize2d
          stop
         endif
 
-        fort_alpha(iten+ireverse*nten)=zero
-        fort_beta(iten+ireverse*nten)=zero
-        fort_expansion_factor(iten+ireverse*nten)=zero
-        fort_stefan_number(iten+ireverse*nten)=zero
-        fort_jacob_number(iten+ireverse*nten)=zero
-        fort_time_radblob(iten+ireverse*nten)=zero
+        fort_alpha(iten+ireverse*num_interfaces)=zero
+        fort_beta(iten+ireverse*num_interfaces)=zero
+        fort_expansion_factor(iten+ireverse*num_interfaces)=zero
+        fort_stefan_number(iten+ireverse*num_interfaces)=zero
+        fort_jacob_number(iten+ireverse*num_interfaces)=zero
+        fort_time_radblob(iten+ireverse*num_interfaces)=zero
 
         if ((is_rigid(im).eq.1).or. &
             (is_rigid(im_opp).eq.1)) then
@@ -24276,10 +24153,10 @@ end subroutine initialize2d
           stop
          endif
 
-         if (distribute_from_target(iten+ireverse*nten).eq.0) then
-          fort_expansion_factor(iten+ireverse*nten)=one-rho_dest/rho_source
-         else if (distribute_from_target(iten+ireverse*nten).eq.1) then
-          fort_expansion_factor(iten+ireverse*nten)=one-rho_source/rho_dest
+         if (distribute_from_target(iten+ireverse*num_interfaces).eq.0) then
+          fort_expansion_factor(iten+ireverse*num_interfaces)=one-rho_dest/rho_source
+         else if (distribute_from_target(iten+ireverse*num_interfaces).eq.1) then
+          fort_expansion_factor(iten+ireverse*num_interfaces)=one-rho_source/rho_dest
          else
           print *,"distribute_from_target invalid"
           stop
@@ -24290,54 +24167,54 @@ end subroutine initialize2d
          ! (J/(s m Kelvin))/((1/m^3)(J/Kelvin))
          ! (1/(s m))/(1/m^3)
          ! (1/(s))/(1/m^2)=m^2/s
-         fort_alpha(iten+ireverse*nten)=k_source/(rho_source*cp_source) 
+         fort_alpha(iten+ireverse*num_interfaces)=k_source/(rho_source*cp_source) 
 
          ! (J/(kg Kelvin)) Kelvin/(J/kg)=1
-         fort_stefan_number(iten+ireverse*nten)=cp_source*TDIFF/abs(LL)
+         fort_stefan_number(iten+ireverse*num_interfaces)=cp_source*TDIFF/abs(LL)
         
-         fort_jacob_number(iten+ireverse*nten)=(rho_source/rho_dest)* &
-            fort_stefan_number(iten+ireverse*nten)
+         fort_jacob_number(iten+ireverse*num_interfaces)=(rho_source/rho_dest)* &
+            fort_stefan_number(iten+ireverse*num_interfaces)
 
          ! solidification
          ! circular freeze.
          if (den_ratio.lt.10.0) then
-          call find_lambda(lmSt,fort_stefan_number(iten+ireverse*nten))
+          call find_lambda(lmSt,fort_stefan_number(iten+ireverse*num_interfaces))
 
          ! spherical boiling
          else if (den_ratio.ge.10.0) then
 
-          call find_beta(lmSt,den_ratio,fort_jacob_number(iten+ireverse*nten))
+          call find_beta(lmSt,den_ratio,fort_jacob_number(iten+ireverse*num_interfaces))
 
          else
           print *,"den_ratio bust"
           stop
          endif
 
-         fort_beta(iten+ireverse*nten)=lmSt
+         fort_beta(iten+ireverse*num_interfaces)=lmSt
 
           ! sqrt(alpha time_radblob)*two*lmSt=radblob 
          call solidification_front_time(lmSt, &
-          fort_alpha(iten+ireverse*nten), &
-          fort_time_radblob(iten+ireverse*nten), &
+          fort_alpha(iten+ireverse*num_interfaces), &
+          fort_time_radblob(iten+ireverse*num_interfaces), &
           radblob)
 
          print *,"iten,ireverse ",iten,ireverse
          print *,"im_source,im_dest ",im_source,im_dest 
          print *,"fort_expansion_factor= ", &
-          fort_expansion_factor(iten+ireverse*nten)
+          fort_expansion_factor(iten+ireverse*num_interfaces)
          print *,"distribute_from_target= ", &
-          distribute_from_target(iten+ireverse*nten)
+          distribute_from_target(iten+ireverse*num_interfaces)
          print *,"den_ratio= ",den_ratio
-         print *,"Stefan_number= ",fort_stefan_number(iten+ireverse*nten)
-         print *,"Jacob_number= ",fort_jacob_number(iten+ireverse*nten)
+         print *,"Stefan_number= ",fort_stefan_number(iten+ireverse*num_interfaces)
+         print *,"Jacob_number= ",fort_jacob_number(iten+ireverse*num_interfaces)
          print *,"lmSt= ",lmSt
-         print *,"alpha= ",fort_alpha(iten+ireverse*nten)
-         print *,"beta= ",fort_beta(iten+ireverse*nten)
+         print *,"alpha= ",fort_alpha(iten+ireverse*num_interfaces)
+         print *,"beta= ",fort_beta(iten+ireverse*num_interfaces)
          print *,"time_radblob is the time for the front to grow from"
          print *,"r=0 to r=radblob"
-         print *,"time_radblob=",fort_time_radblob(iten+ireverse*nten)
+         print *,"time_radblob=",fort_time_radblob(iten+ireverse*num_interfaces)
          print *,"radius doubling time=4 * time_radblob - time_radblob=", &
-          three*fort_time_radblob(iten+ireverse*nten)
+          three*fort_time_radblob(iten+ireverse*num_interfaces)
          print *,"front location: 2 beta sqrt(alpha t) "
         else if (LL.eq.zero) then
          ! do nothing
@@ -24502,7 +24379,7 @@ end subroutine initialize2d
        end subroutine fort_initgridmap
 
        subroutine fort_initdata_alloc( &
-        nmat,nten,nc, &
+        nc, &
         freezing_model, &
         distribute_from_target, &
         saturation_temp, &
@@ -24513,13 +24390,13 @@ end subroutine initialize2d
        use global_utility_module
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: nmat,nten,nc
+       INTEGER_T, intent(in) :: nc
        REAL_T, intent(in) :: dx(SDIM)
-       INTEGER_T, intent(in) :: freezing_model(2*nten)
-       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
-       REAL_T, intent(in) :: saturation_temp(2*nten)
+       INTEGER_T, intent(in) :: freezing_model(2*num_interfaces)
+       INTEGER_T, intent(in) :: distribute_from_target(2*num_interfaces)
+       REAL_T, intent(in) :: saturation_temp(2*num_interfaces)
 
-       call init_initdata(nmat,nten,nc, &
+       call init_initdata(nc, &
         freezing_model, &
         distribute_from_target, &
         saturation_temp, &
@@ -24537,8 +24414,6 @@ end subroutine initialize2d
         fablo,fabhi, &
         bfact, &
         nc, &
-        nmat, &
-        nten, &
         saturation_temp, &
         scal,DIMS(scal), &
         LS,DIMS(LS), &
@@ -24566,7 +24441,6 @@ end subroutine initialize2d
 
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: nmat
        INTEGER_T, intent(in) :: adapt_quad_depth,tid
        INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
        INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -24574,9 +24448,8 @@ end subroutine initialize2d
        INTEGER_T, intent(in) :: bfact
        INTEGER_T, intent(in) :: level,max_level
        INTEGER_T, intent(in) :: nc
-       INTEGER_T, intent(in) :: nten
        INTEGER_T imls
-       REAL_T, intent(in) :: saturation_temp(2*nten)
+       REAL_T, intent(in) :: saturation_temp(2*num_interfaces)
        REAL_T, intent(in) :: time
        INTEGER_T, intent(in) :: DIMDEC(scal)
        INTEGER_T, intent(in) :: DIMDEC(LS)
@@ -24621,7 +24494,6 @@ end subroutine initialize2d
        REAL_T vel(SDIM)
        REAL_T temp,dens,ccnt,test_gamma,test_pres
        REAL_T distsolid
-       INTEGER_T nten_test
 
        REAL_T den_jwl_left,den_jwl_right
        REAL_T temp_jwl_left,temp_jwl_right
@@ -24722,16 +24594,6 @@ end subroutine initialize2d
 
        if (nc.ne.STATE_NCOMP) then
         print *,"nc invalid"
-        stop
-       endif
-       nten_test=num_interfaces
-       if (nten_test.ne.nten) then
-        print *,"nten invalid initdata nten nten test", &
-          nten,nten_test
-        stop
-       endif
-       if (nmat.ne.num_materials) then
-        print *,"nmat invalid"
         stop
        endif
        if (nc.ne.STATE_NCOMP) then
@@ -25636,8 +25498,8 @@ end subroutine initialize2d
            im_dest=2
            ireverse=0
            call get_iten(im_source,im_dest,iten)
-           L_ice_melt=abs(get_user_latent_heat(iten+ireverse*nten,293.0d0,1))
-           TSAT=saturation_temp(iten+ireverse*nten)
+           L_ice_melt=abs(get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1))
+           TSAT=saturation_temp(iten+ireverse*num_interfaces)
            T_EXTREME=fort_initial_temperature(im_source)
            cp_melt=get_user_stiffCP(im_source) ! J/Kelvin
            k_melt=get_user_heatviscconst(im_source) ! W/(m Kelvin)
@@ -25655,25 +25517,25 @@ end subroutine initialize2d
 
             if (den_ratio.lt.10.0d0) then 
              call liquid_temperature( &
-              fort_beta(iten+ireverse*nten), & ! lmSt
+              fort_beta(iten+ireverse*num_interfaces), & ! lmSt
               T_EXTREME, &
               L_ice_melt, &
               cp_melt, &
-              fort_stefan_number(iten+ireverse*nten), &
+              fort_stefan_number(iten+ireverse*num_interfaces), &
               rstefan, &
-              fort_time_radblob(iten+ireverse*nten), &
+              fort_time_radblob(iten+ireverse*num_interfaces), &
               k_melt, &
               T_FIELD)
             else if (den_ratio.ge.10.0) then
              call superheat_temperature( &
-              fort_alpha(iten+ireverse*nten), &
-              fort_beta(iten+ireverse*nten), &
+              fort_alpha(iten+ireverse*num_interfaces), &
+              fort_beta(iten+ireverse*num_interfaces), &
               den_ratio, &
               T_EXTREME, &
-              fort_jacob_number(iten+ireverse*nten), &
+              fort_jacob_number(iten+ireverse*num_interfaces), &
               TSAT, &
               rstefan, &
-              fort_time_radblob(iten+ireverse*nten), &
+              fort_time_radblob(iten+ireverse*num_interfaces), &
               T_FIELD)
             else
              print *,"for_expansion_factor invalid"
@@ -25756,7 +25618,7 @@ end subroutine initialize2d
 
         endif ! if (probtype.eq.user_def_probtype) then ... else ... endif
 
-        call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat,time)
+        call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,time)
         do im=1,num_materials
          if (is_rigid(im).eq.1) then
           if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
@@ -25778,10 +25640,10 @@ end subroutine initialize2d
         enddo ! im=1..num_materials
 
          ! in: fort_initdata
-        call stackvolume_batch(xsten,nhalf,dx,bfact,fluiddata,nmat, &
+        call stackvolume_batch(xsten,nhalf,dx,bfact,fluiddata, &
          0,max_levelstack,materialdist_batch,time)
         call extract_vof_cen_batch(fluiddata,vofdark,voflight, &
-         cendark,cenlight,nmat)
+         cendark,cenlight)
 
          ! Rayleigh-Taylor, checkerboard test
         if (probtype.eq.602) then
@@ -25895,7 +25757,7 @@ end subroutine initialize2d
            xsten2(isten,dir)=xsten(isten+2*k1,dir)
           endif
          enddo ! isten
-         call materialdist_batch(xsten2,nhalf2,dx,bfact,distbatch,nmat,time)
+         call materialdist_batch(xsten2,nhalf2,dx,bfact,distbatch,time)
          do im=1,num_materials
           if (is_rigid(im).eq.1) then
            if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
@@ -25951,7 +25813,6 @@ end subroutine initialize2d
          xsten,nhalf,dx,bfact, &
          voflist, &
          LS_stencil, &
-         nmat,nten, &
          err,time)
 
         scalc(nc)=err
@@ -26001,11 +25862,11 @@ end subroutine initialize2d
           bfact,dx,xsten,nhalf, &
           imls, &
           dxmaxLS, &
-          nmat,SDIM)
+          SDIM)
 
          if (lsnormal_valid(imls).eq.1) then
           do dir=1,SDIM
-           LSc(nmat+SDIM*(imls-1)+dir)=lsnormal(imls,dir)
+           LSc(num_materials+SDIM*(imls-1)+dir)=lsnormal(imls,dir)
           enddo
          else if (lsnormal_valid(imls).eq.0) then
           ! do nothing
@@ -26056,7 +25917,6 @@ end subroutine initialize2d
         perturbation_eps_temp, &
         perturbation_eps_vel, &
         nstate, &
-        nmat, &
         xlo,dx,  &
         Snew,DIMS(Snew), &
         LSnew,DIMS(LSnew), &
@@ -26078,7 +25938,6 @@ end subroutine initialize2d
       REAL_T, intent(in) :: perturbation_eps_temp
       REAL_T, intent(in) :: perturbation_eps_vel
       INTEGER_T, intent(in) :: nstate
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
@@ -26112,10 +25971,6 @@ end subroutine initialize2d
       endif
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
        stop
       endif
       if (nstate.ne.STATE_NCOMP) then
@@ -26539,7 +26394,6 @@ end subroutine initialize2d
       REAL_T velcell(SDIM)
       REAL_T cenbc(num_materials,SDIM)
       REAL_T vfracbatch(num_materials)
-      INTEGER_T nmat,nten
       REAL_T drat
       REAL_T temp,dens,ccnt
       REAL_T xsten(-3:3,SDIM)
@@ -26563,9 +26417,6 @@ end subroutine initialize2d
       velsolid_flag=0
 
       call checkbound_array(fablo,fabhi,vel_ptr,1,-1,1308)
-
-      nmat=num_materials
-      nten=num_interfaces
 
       allocate(distbatch(num_materials))
 
@@ -26928,7 +26779,7 @@ end subroutine initialize2d
 
          ! HYDRATE  (in initvelocity)
         else if (probtype.eq.199) then
-         call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat,time)
+         call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,time)
          if (distbatch(1).ge.zero) then
           call INIT_STATE_WATER(x,y,z,time,velcell,temp,dens,ccnt)
          else if (distbatch(2).ge.zero) then
@@ -27001,7 +26852,7 @@ end subroutine initialize2d
           x_vel=zero
           y_vel=zero
           z_vel=zero
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc)
           if (vfracbatch(2).gt.zero) then
            if (SDIM.eq.2) then
             y_vel=-abs(advbot)
@@ -27122,7 +26973,7 @@ end subroutine initialize2d
 ! -vt dt/db - vt = 1
 ! vt=-1/(dt/db + 1)
 ! vb=1+vt=dt/db / (1+dt/db)
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc)
           drat=fort_denconst(3)/fort_denconst(1)  ! dt/db
           if (vfracbatch(1).gt.zero) then  ! diesel on bottom
            y_vel=drat/(one+drat)
@@ -27132,7 +26983,7 @@ end subroutine initialize2d
            y_vel=zero
           endif  
          else if (probtype.eq.18) then  ! drop collide same material
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc)
           if (vfracbatch(1).gt.zero) then
            if (y.gt.zero) then
             y_vel=-half
@@ -27143,7 +26994,7 @@ end subroutine initialize2d
            y_vel=zero
           endif
          else if (probtype.eq.51) then ! oscillating column
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc)
           if (vfracbatch(1).gt.zero) then
            x_vel=adv_vel
           else
@@ -27211,14 +27062,14 @@ end subroutine initialize2d
           else if (axis_dir.eq.4) then
 
            if (1.eq.0) then
-            call get_pipe_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat) 
+            call get_pipe_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc) 
             if (vfracbatch(1).gt.zero) then
              dist=half
             else
              dist=-half
             endif
            else
-            call inletpipedist(x,y,z,nmat,distbatch)   
+            call inletpipedist(x,y,z,distbatch)   
             dist=distbatch(1)
            endif
   
@@ -27328,7 +27179,7 @@ end subroutine initialize2d
            ! do nothing cavitation 2D, jwl
           else if (axis_dir.eq.10) then
            if (1.eq.0) then
-            call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+            call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc)
             if (vfracbatch(num_materials).gt.zero) then ! sphere
              y_vel=advbot
             else
@@ -27675,7 +27526,7 @@ end subroutine initialize2d
           y_vel=zero
           z_vel=zero
            ! initialize velocity of droplet only
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc)
           if (vfracbatch(1).gt.zero) then
            z_vel=-abs(advbot)
           endif
@@ -27727,7 +27578,7 @@ end subroutine initialize2d
 
 ! ysl 05/12/14
          else if (probtype.eq.17) then  ! drop collide of diesel and water
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc)
           drat=fort_denconst(3)/fort_denconst(1)  ! dt/db
           if (vfracbatch(1).gt.zero) then  ! diesel on bottom
            y_vel=drat/(one+drat)
@@ -27737,7 +27588,7 @@ end subroutine initialize2d
            y_vel=zero
           endif
          else if (probtype.eq.18) then  ! drop collide same material
-          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
+          call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc)
           if (vfracbatch(1).gt.zero) then
            if (y.gt.zero) then
             y_vel=-half
@@ -27870,12 +27721,9 @@ end subroutine initialize2d
       REAL_T xsten(-1:1,SDIM)
       REAL_T xsten_cell(SDIM)
       INTEGER_T nhalf
-      INTEGER_T nmat
       INTEGER_T velcomp
 
       nhalf=1
-
-      nmat=num_materials
 
       if ((dir.lt.0).or.(dir.ge.SDIM)) then
        print *,"dir invalid forcevelocity"
@@ -28630,7 +28478,7 @@ end subroutine initialize2d
       INTEGER_T borderlo(3)
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
-      INTEGER_T velcomp,veldir,nmat
+      INTEGER_T velcomp,veldir
       INTEGER_T nhalf
       REAL_T xsten(-3:3,SDIM)
 
@@ -28642,7 +28490,6 @@ end subroutine initialize2d
        print *,"bfact invalid200"
        stop
       endif
-      nmat=num_materials
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
        print *,"level invalid in fill 3"
        stop
@@ -28863,7 +28710,7 @@ end subroutine initialize2d
       INTEGER_T borderlo(3)
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
-      INTEGER_T im,nmat
+      INTEGER_T im
       REAL_T uwall(num_materials*ngeom_raw)
       REAL_T uboundary(num_materials*ngeom_raw)
       INTEGER_T nhalf
@@ -28899,7 +28746,6 @@ end subroutine initialize2d
 #if (AMREX_SPACEDIM==3)
       fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
-      nmat=num_materials
 
       if (num_materials*ngeom_raw.ne.ncomp) then
        print *,"ncomp invalid mof group fill"
@@ -28975,7 +28821,7 @@ end subroutine initialize2d
          call groupmofBC(time,dir2,side, &
           uboundary, &
           uwall, &
-          xsten,nhalf,dx,bfact,nmat)
+          xsten,nhalf,dx,bfact)
          do im=1,num_materials*ngeom_raw
           u(D_DECL(i,j,k),im)=uboundary(im)
          enddo
@@ -29094,7 +28940,6 @@ end subroutine initialize2d
 #if (AMREX_SPACEDIM==3)
       fabhi(SDIM)=UBOUND(u,SDIM)
 #endif
-      nmat=num_materials
 
       if (num_materials*ngeom_recon.ne.ncomp) then
        print *,"ncomp invalid in fort_group_extmoffill"
@@ -29176,7 +29021,7 @@ end subroutine initialize2d
          call groupmofBC(time,dir2,side, &
           uboundary, &
           uwall, &
-          xsten,nhalf,dx,bfact,nmat)
+          xsten,nhalf,dx,bfact)
 
          voffluid_wall=zero
          vofsolid_wall=zero
@@ -29321,7 +29166,6 @@ end subroutine initialize2d
       INTEGER_T borderlo(3)
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
-      INTEGER_T nmat
       INTEGER_T imls
       
       REAL_T uwall(ncomp)
@@ -29357,8 +29201,6 @@ end subroutine initialize2d
        print *,"bfact invalid200"
        stop
       endif
-
-      nmat=num_materials
 
       ncomp_ho=(SDIM+1)*num_materials
 

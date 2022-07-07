@@ -20,7 +20,6 @@ namespace amrex{
      const int* tilelo, const int* tilehi,
      const int* fablo, const int* fabhi,int* bfact,
      int* type_flag,
-     int* nmat,
      int* ncomp_type,
      int* ncomp_source,
      int* zero_diag_flag);
@@ -38,8 +37,6 @@ namespace amrex{
        Real* dt,
        const Real* dx,
        const Real* xlo,
-       int* nmat,
-       int* nten,
        int* nstate,
        Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
        Real* mdot,
@@ -94,8 +91,6 @@ namespace amrex{
        Real* dt,
        const Real* dx,
        const Real* xlo,
-       int* nmat,
-       int* nten,
        Real* mdot_local, // mdot_local initialized to 0
        AMREX_ARLIM_P(mdot_locallo),AMREX_ARLIM_P(mdot_localhi),
        Real* mdot_global, // mdot_global incremented 
@@ -236,13 +231,12 @@ namespace amrex{
        Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
        Real* vofnew,AMREX_ARLIM_P(vofnewlo),AMREX_ARLIM_P(vofnewhi),
        Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
-       const Real* xlo,const Real* dx, 
-       int* nmat);
+       const Real* xlo,const Real* dx);
 
      void fort_initrecalesce(
        int* recalesce_material,
        Real* recalesce_state_old,
-       int* recalesce_num_state,int* nmat);
+       int* recalesce_num_state);
 
       void fort_cell_to_mac(
         int* ncomp_mgoni,
@@ -302,7 +296,6 @@ namespace amrex{
 
       void fort_inc_temp(
         Real* beta,
-        int* nmat,
         int* level,
         int* finest_level,
         int* ncomp_state,
@@ -409,7 +402,6 @@ namespace amrex{
        int* project_option,
        Real* problo,Real* probhi,
        Real* visc_coef,
-       int* nten,
        const Real* xlo,const Real* dx,
        Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
        Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
@@ -446,7 +438,6 @@ namespace amrex{
        int* bfact,
        const int* presbc,
        const int* velbc,
-       int* nmat,
        int* nparts,
        int* nparts_def,
        int* im_solid_map,
@@ -460,7 +451,6 @@ namespace amrex{
         int* tessellate,
         int* ngrow_refine,
         int* nrefine_vof,
-        int* nten,
         int* spec_material_id_AMBIENT,
         int* mass_fraction_id,
         Real* cavitation_vapor_density,
@@ -475,7 +465,6 @@ namespace amrex{
         const int* tilelo,const int* tilehi,
         const int* fablo,const int* fabhi,
         int* bfact,
-        int* nmat,
         int* level,int* finest_level);
 
       void fort_buildfacewt(
@@ -512,7 +501,6 @@ namespace amrex{
      void fort_cellfaceinit(
        int* tid,
        int* tessellate,
-       int* nten,
        int* level,
        int* finest_level,
        Real* facefab,AMREX_ARLIM_P(facefablo),AMREX_ARLIM_P(facefabhi),
@@ -524,7 +512,7 @@ namespace amrex{
        const int* rz_flag,
        const Real* xlo,const Real* dx,
        Real* time,int* ngrow,
-       int* nmat,int* ncellfrac);
+       int* ncellfrac);
 
      void fort_curvstrip(
        int* post_restart_flag,
@@ -556,8 +544,6 @@ namespace amrex{
        Real* time,
        Real* visc_coef,
        Real* unscaled_min_curvature_radius,
-       int* nmat,
-       int* nten,
        int* num_curv,
        int* ngrow_distance);
 
@@ -569,7 +555,6 @@ namespace amrex{
         int* particle_nsubdivide,
         int* particle_max_per_nsubdivide,
         int* particle_min_per_nsubdivide,
-        int* nmat,
         const int* tilelo,const int* tilehi,
         const int* fablo,const int* fabhi,
         int* bfact,
@@ -604,7 +589,6 @@ namespace amrex{
 
      void fort_move_particle_container(
         int* tid,
-        int* nmat,
         const int* tilelo,const int* tilehi,
         const int* fablo,const int* fabhi,
         int* bfact,

@@ -30,7 +30,7 @@ extern "C" {
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
      int* bfact,
-     int* nmat,int* nden,
+     int* nden,
      Real* compressible_dt_factor,
      int* pressure_select_criterion,
      int* project_option);
@@ -45,8 +45,7 @@ extern "C" {
      Real* divnew,AMREX_ARLIM_P(divnewlo),AMREX_ARLIM_P(divnewhi),
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
-     int* bfact,
-     int* nmat);
+     int* bfact);
 
 
     void fort_eos_pressure(
@@ -60,7 +59,6 @@ extern "C" {
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
      int* bfact,
-     int* nmat,
      int* nden);
 
 
@@ -80,8 +78,7 @@ extern "C" {
      const int* fablo,const int* fabhi,
      int* bfact,
      int* level,
-     int* finest_level,
-     int* nmat);
+     int* finest_level);
 
     void fort_coflow(
      Real* time,
@@ -132,7 +129,6 @@ extern "C" {
      const int* gridno,
      int* visual_tessellate_vfrac,
      int* rz_flag,
-     int* nmat,
      int* nparts,
      int* nparts_def,
      int* im_solid_map,
@@ -160,7 +156,6 @@ extern "C" {
      Real* time,
      int* visual_revolve,
      int* plotint,
-     int* nmat,
      int* nparts, 
      int* nparts_def,
      int* im_solid_map);
@@ -170,7 +165,6 @@ extern "C" {
      Real* slice_data,int* nslice,int* nstate_slice);
 
     void fort_io_compare(
-     int* nmat,
      int* nsteps,
      int* do_input,
      int* visual_compare,
@@ -193,7 +187,6 @@ extern "C" {
       const Real* time);
 
     void fort_init_potential(
-      int* nmat,
       Real* presden,AMREX_ARLIM_P(presdenlo),AMREX_ARLIM_P(presdenhi),
       Real* state,AMREX_ARLIM_P(statelo),AMREX_ARLIM_P(statehi),
       const int* tilelo,const int* tilehi,
@@ -381,8 +374,6 @@ extern "C" {
       int* bfact_c,int* bfact_f,
       const Real* xlo_fine,const Real* dx,
       int* ncomp,
-      int* nmat,
-      int* nten,
       const Real* crse,AMREX_ARLIM_P(clo),AMREX_ARLIM_P(chi),
       const Real* fine,AMREX_ARLIM_P(fine_lo),AMREX_ARLIM_P(fine_hi),
       const int* lo, const int* hi,
@@ -396,7 +387,6 @@ extern "C" {
       int* bfact_c,int* bfact_f,
       const Real* xlo_fine,const Real* dx,
       int* ncomp,
-      int* nmat,
       const Real* crse,AMREX_ARLIM_P(clo),AMREX_ARLIM_P(chi),
       const Real* fine,AMREX_ARLIM_P(fine_lo),AMREX_ARLIM_P(fine_hi),
       const int* lo, const int* hi,
@@ -409,7 +399,7 @@ extern "C" {
       int* level_c,int* level_f,
       int* bfact_c,int* bfact_f,
       const Real* xlo_fine,const Real* dx,
-      int* ncomp,int* nmat,int* nten,
+      int* ncomp,
       const Real* crse,AMREX_ARLIM_P(clo),AMREX_ARLIM_P(chi),
       const Real* fine,AMREX_ARLIM_P(fine_lo),AMREX_ARLIM_P(fine_hi),
       const int* lo, const int* hi,
@@ -423,8 +413,7 @@ extern "C" {
       int* bfact_c,int* bfact_f,
       const Real* crse,AMREX_ARLIM_P(clo),AMREX_ARLIM_P(chi),
       const Real* fine,AMREX_ARLIM_P(fine_lo),AMREX_ARLIM_P(fine_hi),
-      const int* lo, const int* hi,
-      int* nmat);
+      const int* lo, const int* hi);
 
     void fort_erroravgdown(
       const Real* problo,
@@ -443,7 +432,6 @@ extern "C" {
       Real* angular_velocity,
       int* level,
       int* finest_level,
-      int* nmat,
       int* nstate,
       const int* tilelo,const int* tilehi,
       const int* fablo,const int* fabhi,int* bfact,
@@ -479,8 +467,7 @@ extern "C" {
       const Real* xlo,
       const Real* dx,
       Real* dt,
-      Real* cur_time,
-      int* nmat);
+      Real* cur_time);
 
     void fort_summass(
      int* tid,
@@ -515,7 +502,6 @@ extern "C" {
      Real* local_coflow_R_of_Z,
      int* Z_dir,
      int* R_dir,
-     int* nmat,
      int* den_Ncomp,
      int* isweep); // =0 or 1
 
@@ -527,7 +513,6 @@ extern "C" {
        Real* dt,
        const Real* dx,
        const Real* xlo,
-       int* nmat,
        int* nstate,
        Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
        Real* umacnew,

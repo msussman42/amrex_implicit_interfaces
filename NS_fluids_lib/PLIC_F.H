@@ -30,7 +30,6 @@ extern "C"
         Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi),
         int* nsteps,
         Real* time,
-        int* nmat,int* nten,
         int* update_flag,
         int* total_calls,
         int* total_iterations,

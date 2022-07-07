@@ -96,7 +96,7 @@ namespace amrex{
        int* ngeom_recon,
        int* num_materials,
        int* material_type,
-       int* nten,
+       int* cpp_num_interfaces,
        Real* DrhoDT,
        Real* tempconst,
        Real* initial_temperature,
@@ -176,7 +176,7 @@ namespace amrex{
        int* ngeom_raw,
        int* ngeom_recon,
        int* num_materials,
-       int* nten,
+       int* cpp_num_interfaces,
        int* ioproc);
   }
 

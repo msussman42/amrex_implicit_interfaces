@@ -119,7 +119,7 @@ stop
        fdatamof,DIMS(fdmof), &
        flo,fhi, &
        datarecon,DIMS(drecon), &
-       problo,dxf,dxc,nmat, &
+       problo,dxf,dxc, &
        ngeom_recon_test,ngeom_raw_test, &
        levelc,levelf, &
        bfact_coarse,bfact_fine) &
@@ -135,16 +135,16 @@ stop
       INTEGER_T, intent(in) :: levelc,levelf
       INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nmat,ngeom_recon_test,ngeom_raw_test
+      INTEGER_T, intent(in) :: ngeom_recon_test,ngeom_raw_test
       INTEGER_T, intent(in) :: DIMDEC(dmof)
       INTEGER_T, intent(in) :: DIMDEC(drecon)
       INTEGER_T, intent(in) :: DIMDEC(fdmof)
       INTEGER_T, intent(in) :: clo(SDIM),chi(SDIM)
       INTEGER_T, intent(in) :: flo(SDIM),fhi(SDIM)
       INTEGER_T domlo(SDIM)
-      REAL_T, intent(in) :: datamof(DIMV(dmof),nmat*ngeom_raw)
-      REAL_T, intent(out) :: datarecon(DIMV(drecon),nmat*ngeom_recon)
-      REAL_T, intent(out) :: fdatamof(DIMV(fdmof),nmat*ngeom_raw)
+      REAL_T, intent(in) :: datamof(DIMV(dmof),num_materials*ngeom_raw)
+      REAL_T, intent(out) :: datarecon(DIMV(drecon),num_materials*ngeom_recon)
+      REAL_T, intent(out) :: fdatamof(DIMV(fdmof),num_materials*ngeom_raw)
       REAL_T, intent(in) :: problo(SDIM)
       REAL_T, intent(in) :: dxf(SDIM),dxc(SDIM)
       INTEGER_T growlo(3),growhi(3)
@@ -157,20 +157,20 @@ stop
 
       INTEGER_T dir
       INTEGER_T nmax,im,vofcomp_old,vofcomp_new
-      REAL_T mofdata(nmat*ngeom_recon)
-      REAL_T mofdatafine(nmat*ngeom_recon)
-      REAL_T multi_centroidA(nmat,SDIM)
+      REAL_T mofdata(num_materials*ngeom_recon)
+      REAL_T mofdatafine(num_materials*ngeom_recon)
+      REAL_T multi_centroidA(num_materials,SDIM)
       REAL_T volcell
       REAL_T cencell(SDIM)
       REAL_T volfine
       REAL_T cenfine(SDIM)
       REAL_T voltemp
-      REAL_T multi_volume(nmat)
-      REAL_T multi_cen(SDIM,nmat)
+      REAL_T multi_volume(num_materials)
+      REAL_T multi_cen(SDIM,num_materials)
       INTEGER_T continuous_mof
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T mof_verbose,use_ls_data
-      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
+      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
       REAL_T xsten(-3:3,SDIM)
       REAL_T xstenfine(-3:3,SDIM)
       REAL_T xstengrid(-1:1,SDIM)
@@ -254,7 +254,7 @@ stop
        mof_verbose=0
        continuous_mof=0
 
-       do im=1,nmat
+       do im=1,num_materials
         vofcomp_old=(im-1)*ngeom_raw+1
         vofcomp_new=(im-1)*ngeom_recon+1
         mofdata(vofcomp_new)=datamof(D_DECL(i,j,k),vofcomp_old)
@@ -292,7 +292,7 @@ stop
          cmofsten, &
          SDIM,5)
 
-       do dir=1,nmat*ngeom_recon
+       do dir=1,num_materials*ngeom_recon
         datarecon(D_DECL(i,j,k),dir)=mofdata(dir)
        enddo
 
@@ -311,7 +311,7 @@ stop
        call Box_volumeFAST(bfact_fine,dxf,xstenfine,nhalf, &
          volfine,cenfine,SDIM)
 
-       do dir=1,nmat*ngeom_recon
+       do dir=1,num_materials*ngeom_recon
         mofdatafine(dir)=zero
        enddo
 
@@ -351,7 +351,7 @@ stop
  
               n_overlap=n_overlap+1
 
-              do dir=1,nmat*ngeom_recon
+              do dir=1,num_materials*ngeom_recon
                mofdata(dir)=datarecon(D_DECL(ic,jc,kc),dir)
               enddo
 
@@ -382,9 +382,9 @@ stop
                geom_xtetlist(1,1,1,tid+1), &
                nmax, &
                nmax, &
-               nmat,SDIM,6)
+               SDIM,6)
 
-              do im=1,nmat
+              do im=1,num_materials
                vofcomp_new=(im-1)*ngeom_recon+1
                mofdatafine(vofcomp_new)=mofdatafine(vofcomp_new)+ &
                 multi_volume(im)
@@ -406,7 +406,7 @@ stop
                 print *,"is_rigid(im) invalid"
                 stop
                endif
-              enddo ! im=1..nmat
+              enddo ! im=1..num_materials
              else if (testwt.eq.zero) then
               print *,"testwt should not be 0"
               stop
@@ -445,7 +445,7 @@ stop
         stop
        endif
 
-       do im=1,nmat
+       do im=1,num_materials
         vofcomp_old=(im-1)*ngeom_raw+1
         vofcomp_new=(im-1)*ngeom_recon+1
         voltemp=mofdatafine(vofcomp_new)/volcell
@@ -478,7 +478,6 @@ stop
        flo,fhi, &
        problo, &
        dxf,dxc, &
-       nmat, &
        ncomp, &
        levelc,levelf, &
        bfact_coarse,bfact_fine) &
@@ -493,7 +492,7 @@ stop
 
       INTEGER_T, intent(in) :: levelc,levelf
       INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
-      INTEGER_T, intent(in) :: nmat,ncomp
+      INTEGER_T, intent(in) :: ncomp
       INTEGER_T, intent(in) :: DIMDEC(clsdata)
       INTEGER_T, intent(in) :: DIMDEC(flsdata)
       INTEGER_T, intent(in) :: clo(SDIM),chi(SDIM)
@@ -546,7 +545,7 @@ stop
       nhalf=3
       nhalfgrid=1
 
-      if (ncomp.ne.(SDIM+1)*nmat) then
+      if (ncomp.ne.(SDIM+1)*num_materials) then
        print *,"ncomp invalid"
        stop
       endif
@@ -659,14 +658,14 @@ stop
               enddo
 
                ! normals
-              do dir=nmat+1,ncomp
+              do dir=num_materials+1,ncomp
                LS_FINE(dir)=LS_FINE(dir)+voltemp*LS_COARSE(dir) 
               enddo
 
                ! levelsets
-              do dir=1,nmat
+              do dir=1,num_materials
                LS_FINE(dir)=LS_FINE(dir)+voltemp*LS_COARSE(dir)
-              enddo ! dir=1..nmat
+              enddo ! dir=1..num_materials
  
              else if (testwt.eq.zero) then
               print *,"testwt cannot be 0"
@@ -730,7 +729,6 @@ stop
        flo,fhi, &
        problo, &
        dxf,dxc, &
-       nmat, &
        ngeom_recon_test,ngeom_raw_test, &
        levelc,levelf, &
        bfact_coarse,bfact_fine) &
@@ -746,13 +744,13 @@ stop
       INTEGER_T, intent(in) :: levelc,levelf
       INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nmat,ngeom_recon_test,ngeom_raw_test
+      INTEGER_T, intent(in) :: ngeom_recon_test,ngeom_raw_test
       INTEGER_T, intent(in) :: DIMDEC(dmof)
       INTEGER_T, intent(in) :: DIMDEC(fdmof)
       INTEGER_T, intent(in) :: flo(SDIM),fhi(SDIM)
       INTEGER_T domlo(SDIM)
-      REAL_T, intent(in) :: datamof(DIMV(dmof),nmat*ngeom_recon)
-      REAL_T, intent(out) :: fdatamof(DIMV(fdmof),nmat*ngeom_recon)
+      REAL_T, intent(in) :: datamof(DIMV(dmof),num_materials*ngeom_recon)
+      REAL_T, intent(out) :: fdatamof(DIMV(fdmof),num_materials*ngeom_recon)
       REAL_T, intent(in) :: problo(SDIM),dxf(SDIM),dxc(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
@@ -764,15 +762,15 @@ stop
 
       INTEGER_T dir
       INTEGER_T nmax,im,vofcomp_old,vofcomp_new
-      REAL_T mofdata(nmat*ngeom_recon)
-      REAL_T mofdatafine(nmat*ngeom_recon)
+      REAL_T mofdata(num_materials*ngeom_recon)
+      REAL_T mofdatafine(num_materials*ngeom_recon)
       REAL_T volcell
       REAL_T cencell(SDIM)
       REAL_T volfine
       REAL_T cenfine(SDIM)
       REAL_T voltemp
-      REAL_T multi_volume(nmat)
-      REAL_T multi_cen(SDIM,nmat)
+      REAL_T multi_volume(num_materials)
+      REAL_T multi_cen(SDIM,num_materials)
       REAL_T xsten(-3:3,SDIM)
       REAL_T xstenfine(-3:3,SDIM)
       REAL_T xstengrid(-1:1,SDIM)
@@ -784,8 +782,8 @@ stop
       INTEGER_T mof_verbose
       INTEGER_T continuous_mof
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T multi_centroidA(nmat,SDIM)
-      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
+      REAL_T multi_centroidA(num_materials,SDIM)
+      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
       INTEGER_T nhalf_box
 
@@ -865,7 +863,7 @@ stop
        call Box_volumeFAST(bfact_fine,dxf,xstenfine,nhalf, &
          volfine,cenfine,SDIM)
 
-       do dir=1,nmat*ngeom_recon
+       do dir=1,num_materials*ngeom_recon
         mofdatafine(dir)=zero
        enddo
        volcell=zero
@@ -905,7 +903,7 @@ stop
 
               n_overlap=n_overlap+1
 
-              do dir=1,nmat*ngeom_recon
+              do dir=1,num_materials*ngeom_recon
                mofdata(dir)=datamof(D_DECL(ic,jc,kc),dir)
               enddo
               call gridsten(xsten,problo,ic,jc,kc, &
@@ -934,9 +932,9 @@ stop
                geom_xtetlist(1,1,1,tid+1), &
                nmax, &
                nmax, &
-               nmat,SDIM,6)
+               SDIM,6)
 
-              do im=1,nmat
+              do im=1,num_materials
                vofcomp_new=(im-1)*ngeom_recon+1
                mofdatafine(vofcomp_new)=mofdatafine(vofcomp_new)+ &
                 multi_volume(im)
@@ -958,7 +956,7 @@ stop
                 print *,"is_rigid(im) invalid"
                 stop
                endif
-              enddo ! im=1..nmat
+              enddo ! im=1..num_materials
              else if (testwt.eq.zero) then
               ! do nothing
              else
@@ -997,7 +995,7 @@ stop
         stop
        endif
 
-       do im=1,nmat
+       do im=1,num_materials
         vofcomp_old=(im-1)*ngeom_recon+1
         vofcomp_new=(im-1)*ngeom_recon+1
         voltemp=mofdatafine(vofcomp_new)/volcell
@@ -1024,7 +1022,7 @@ stop
        mof_verbose=0
        continuous_mof=0
 
-       do im=1,nmat
+       do im=1,num_materials
         vofcomp_old=(im-1)*ngeom_recon+1
         vofcomp_new=(im-1)*ngeom_recon+1
         mofdata(vofcomp_new)= &
@@ -1065,7 +1063,7 @@ stop
          cmofsten, &
          SDIM,6)
 
-       do dir=1,nmat*ngeom_recon
+       do dir=1,num_materials*ngeom_recon
         fdatamof(D_DECL(ifine,jfine,kfine),dir)=mofdata(dir)
        enddo
 
@@ -1085,8 +1083,6 @@ stop
        flo,fhi, &
        problo, &
        dxf,dxc, &
-       nmat, &
-       nten, &
        nburning, &
        levelc,levelf, &
        bfact_coarse,bfact_fine) &
@@ -1101,8 +1097,6 @@ stop
       INTEGER_T, intent(in) :: levelc,levelf
       INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nburning
       INTEGER_T, intent(in) :: DIMDEC(cburn)
       INTEGER_T, intent(in) :: DIMDEC(fburn)
@@ -1132,8 +1126,8 @@ stop
       INTEGER_T iflag,iflag_sign,hitflag
       REAL_T burn_fine(nburning,-2:2)
       REAL_T burn_coarse(nburning)
-      INTEGER_T n_burn_interface(nten,-2:2)
-      INTEGER_T n_burn_material(nmat,0:2)
+      INTEGER_T n_burn_interface(num_interfaces,-2:2)
+      INTEGER_T n_burn_material(num_materials,0:2)
       INTEGER_T burnstat
       INTEGER_T bcomp
       REAL_T rburnstat
@@ -1143,10 +1137,10 @@ stop
 
       if (velflag.eq.0) then
        ncomp_per=EXTRAP_PER_TSAT ! interface temperature and mass fraction
-       ncomp_expect=nten*(ncomp_per+1)
+       ncomp_expect=num_interfaces*(ncomp_per+1)
       else if (velflag.eq.1) then
        ncomp_per=EXTRAP_PER_BURNING
-       ncomp_expect=nten*(ncomp_per+1)
+       ncomp_expect=num_interfaces*(ncomp_per+1)
       else if (velflag.eq.2) then
        ncomp_per=0
        ncomp_expect=N_DRAG
@@ -1178,12 +1172,6 @@ stop
        print *,"bfact_fine invalid"
        stop
       endif
-      if (nten.eq.((nmat-1)*(nmat-1)+nmat-1)/2) then
-       ! do nothing
-      else
-       print *,"nten invalid"
-       stop
-      endif
       if (nburning.eq.ncomp_expect) then
        ! do nothing
       else
@@ -1210,12 +1198,12 @@ stop
 
        n_overlap=0
 
-       do iten=1,nten
+       do iten=1,num_interfaces
         do iflag=-2,2
          n_burn_interface(iten,iflag)=0
         enddo
        enddo
-       do im=1,nmat
+       do im=1,num_materials
         do iflag=0,2
          n_burn_material(im,iflag)=0
         enddo
@@ -1277,7 +1265,7 @@ stop
               if ((velflag.eq.0).or. &
                   (velflag.eq.1)) then
 
-               do iten=1,nten
+               do iten=1,num_interfaces
                 rburnstat=burn_coarse(iten)
                 burnstat=NINT(rburnstat)
                 if ((burnstat.eq.0).and.(rburnstat.eq.zero)) then
@@ -1289,14 +1277,15 @@ stop
                  n_burn_interface(iten,burnstat)= &
                    n_burn_interface(iten,burnstat)+1
                  do dir=1,ncomp_per
-                  bcomp=nten+(iten-1)*ncomp_per+dir
+                  bcomp=num_interfaces+(iten-1)*ncomp_per+dir
                   burn_fine(bcomp,burnstat)= &
                    burn_fine(bcomp,burnstat)+burn_coarse(bcomp)
                  enddo ! dir
                 else
                  print *,"burnstat or rburnstatus invalid"
-                 print *,"nmat,nten,iten,burnstat,rburnstat ",  &
-                    nmat,nten,iten,burnstat,rburnstat
+                 print *, &
+                  "num_materials,num_interfaces,iten,burnstat,rburnstat ",  &
+                  num_materials,num_interfaces,iten,burnstat,rburnstat
                  do iflag=-2,2
                   print *,"iflag ",iflag
                   print *,"n_burn_interface(iten,iflag) ", &
@@ -1307,11 +1296,11 @@ stop
                   stop
                  enddo ! iflag=-2,2
                 endif
-               enddo ! iten=1..nten
+               enddo ! iten=1..num_interfaces
 
               else if (velflag.eq.2) then
 
-               do im=1,nmat
+               do im=1,num_materials
                 rburnstat=burn_coarse(DRAGCOMP_FLAG+im)
                 burnstat=NINT(rburnstat)
                 if ((burnstat.eq.0).and.(rburnstat.eq.zero)) then
@@ -1331,7 +1320,7 @@ stop
                     print *,"drag_type invalid"
                     stop
                    endif
-                  else if ((drag_im.ge.0).and.(drag_im.lt.nmat)) then
+                  else if ((drag_im.ge.0).and.(drag_im.lt.num_materials)) then
                    if ((drag_type.ge.0).and.(drag_type.lt.DRAG_TYPE_NEXT)) then
                     ! do nothing
                    else
@@ -1345,8 +1334,9 @@ stop
                  enddo ! bcomp=1..nburning
                 else
                  print *,"burnstat or rburnstatus invalid"
-                 print *,"nmat,nten,im,burnstat,rburnstat ",  &
-                    nmat,nten,im,burnstat,rburnstat
+                 print *, &
+                   "num_materials,num_interfaces,im,burnstat,rburnstat",  &
+                   num_materials,num_interfaces,im,burnstat,rburnstat
                  do iflag=0,2
                   print *,"iflag ",iflag
                   print *,"n_burn_material(im,iflag) ", &
@@ -1357,7 +1347,7 @@ stop
                   stop
                  enddo ! iflag=0,2
                 endif
-               enddo ! im=1..nmat
+               enddo ! im=1..num_materials
               else
                print *,"velflag invalid"
                stop
@@ -1395,7 +1385,7 @@ stop
         if ((velflag.eq.0).or. &
             (velflag.eq.1)) then
 
-         do iten=1,nten
+         do iten=1,num_interfaces
           hitflag=0
           do iflag=1,2
            do iflag_sign=-1,1,2
@@ -1405,7 +1395,7 @@ stop
               hitflag=1
               fburn(D_DECL(ifine,jfine,kfine),iten)=iflag*iflag_sign
               do dir=1,ncomp_per
-               bcomp=nten+(iten-1)*ncomp_per+dir
+               bcomp=num_interfaces+(iten-1)*ncomp_per+dir
                fburn(D_DECL(ifine,jfine,kfine),bcomp)= &
                 burn_fine(bcomp,iflag*iflag_sign)/ &
                 n_burn_interface(iten,iflag*iflag_sign)
@@ -1428,7 +1418,7 @@ stop
           if (hitflag.eq.0) then
            fburn(D_DECL(ifine,jfine,kfine),iten)=zero
            do dir=1,ncomp_per
-            bcomp=nten+(iten-1)*ncomp_per+dir
+            bcomp=num_interfaces+(iten-1)*ncomp_per+dir
             fburn(D_DECL(ifine,jfine,kfine),bcomp)=zero
            enddo
           else if (hitflag.eq.1) then
@@ -1438,11 +1428,11 @@ stop
            stop
           endif
 
-         enddo ! iten=1..nten
+         enddo ! iten=1..num_interfaces
 
         else if (velflag.eq.2) then
 
-         do im=1,nmat
+         do im=1,num_materials
           hitflag=0
           do iflag=1,2
            if (hitflag.eq.0) then
@@ -1469,7 +1459,7 @@ stop
                 print *,"drag_type invalid"
                 stop
                endif
-              else if ((drag_im.ge.0).and.(drag_im.lt.nmat)) then
+              else if ((drag_im.ge.0).and.(drag_im.lt.num_materials)) then
                if ((drag_type.ge.0).and.(drag_type.lt.DRAG_TYPE_NEXT)) then
                 ! do nothing
                else
@@ -1516,7 +1506,7 @@ stop
               print *,"drag_type invalid"
               stop
              endif
-            else if ((drag_im.ge.0).and.(drag_im.lt.nmat)) then
+            else if ((drag_im.ge.0).and.(drag_im.lt.num_materials)) then
              if ((drag_type.ge.0).and.(drag_type.lt.DRAG_TYPE_NEXT)) then
               ! do nothing
              else
@@ -1536,7 +1526,7 @@ stop
            stop
           endif
 
-         enddo ! iten=1..nten
+         enddo ! iten=1..num_interfaces
 
         else
          print *,"velflag invalid"

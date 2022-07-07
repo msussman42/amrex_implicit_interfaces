@@ -52,8 +52,6 @@ extern "C"
 
 
    void fort_nodedisplace(
-     int* nmat,
-     int* nten,
      int* nburning,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
@@ -73,8 +71,6 @@ extern "C"
     int* finest_level,
     int* ngrow_distance,
     int* nstate,
-    int* nmat,
-    int* nten,
     int* nburning,
     int* ntsat,
     int* nden,
@@ -150,8 +146,6 @@ extern "C"
     int* level,
     int* finest_level,
     const Real* xlo,const Real* dx,
-    int* nmat,
-    int* nten,
     int* nburning,
     int* ngrow,
     const int* tilelo,const int* tilehi,
@@ -164,8 +158,6 @@ extern "C"
     int* level,
     int* finest_level,
     const Real* xlo,const Real* dx,
-    int* nmat,
-    int* nten,
     int* ncomp,
     int* ngrow,
     const int* tilelo,const int* tilehi,
