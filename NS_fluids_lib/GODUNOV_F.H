@@ -52,11 +52,10 @@ extern "C"
     int* level,
     Real* dt,
     int* irz,
-    int* im,int* nmat,int* nden);
+    int* im,int* nden);
 
    void fort_marangoniforce(
     int* nstate,
-    int* nten,
     int* num_curv,
     const Real* xlo,const Real* dx,
     Real* ls,AMREX_ARLIM_P(lslo),AMREX_ARLIM_P(lshi),
@@ -71,12 +70,10 @@ extern "C"
     int* level,
     int* finest_level,
     Real* dt,
-    Real* cur_time,
-    int* nmat);
+    Real* cur_time);
 
    void fort_semdeltaforce(
     int* nstate,
-    int* nmat,
     int* project_option,
     const Real* xlo,const Real* dx,
     Real* deltafab,AMREX_ARLIM_P(deltafablo),AMREX_ARLIM_P(deltafabhi),
@@ -111,7 +108,6 @@ extern "C"
     int* update_spectral,
     int* update_stable,
     int* nstate,
-    int* nmat,
     int* project_option,
     const Real* xlo,const Real* dx,
     Real* divfab,AMREX_ARLIM_P(divfablo),AMREX_ARLIM_P(divfabhi),
@@ -132,7 +128,6 @@ extern "C"
     int* slab_step,
     int* update_spectral,
     int* update_stable,
-    int* nmat,
     const Real* xlo,const Real* dx,
     Real* gpfab,AMREX_ARLIM_P(gpfablo),AMREX_ARLIM_P(gpfabhi),
     Real* HOfab,AMREX_ARLIM_P(HOfablo),AMREX_ARLIM_P(HOfabhi),
@@ -146,7 +141,6 @@ extern "C"
    void fort_sdc_time_quad(
     int* HOncomp,int* LOncomp,int* delta_ncomp,
     int* nstate,
-    int* nmat,
     const Real* xlo,const Real* dx,
     Real* delta,AMREX_ARLIM_P(deltalo),AMREX_ARLIM_P(deltahi),
     Real* HOfab,AMREX_ARLIM_P(HOfablo),AMREX_ARLIM_P(HOfabhi),
@@ -165,7 +159,6 @@ extern "C"
     int* LOncomp,
     int* delta_ncomp,
     int* nstate,
-    int* nmat,
     const Real* xlo,const Real* dx,
     Real* delta,AMREX_ARLIM_P(deltalo),AMREX_ARLIM_P(deltahi),
     Real* HOfab,AMREX_ARLIM_P(HOfablo),AMREX_ARLIM_P(HOfabhi),
@@ -196,8 +189,7 @@ extern "C"
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
-    int* bfact_fine,
-    int* nmat);
+    int* bfact_fine);
 
    void fort_build_conserve(
     int* constant_density_all_time,
@@ -209,7 +201,7 @@ extern "C"
     Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,int* bfact,
-    int* nmat,int* ngrow,
+    int* ngrow,
     int* normdir,
     int* nc_conserve,
     int* nc_den);
@@ -227,7 +219,6 @@ extern "C"
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
-    int* nmat,
     int* ngrow,
     int* ngrowmac,
     int* veldir);
@@ -251,7 +242,6 @@ extern "C"
     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
     const Real* xlo,const Real* dx,
     Real* cur_time,
-    int* nmat,
     int* level,
     int* finest_level);
 
@@ -260,7 +250,7 @@ extern "C"
     int* level,
     int* finest_level,
     int* normdir, // 0..sdim-1
-    int* im_cpp, // 0..nmat-1
+    int* im_cpp, // 0..num_materials-1
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
@@ -297,7 +287,7 @@ extern "C"
     Real* elastic_time,
     int* viscoelastic_model,
     Real* polymer_factor,
-    int* irz,int* nmat);
+    int* irz);
 
    void fort_maketensor_mac(
     int* flux_grid_type,
@@ -318,7 +308,7 @@ extern "C"
     Real* elastic_time,
     int* viscoelastic_model,
     Real* polymer_factor,
-    int* irz,int* nmat);
+    int* irz);
 
    void fort_copy_vel_on_sign(
     int* im_part,
@@ -331,7 +321,7 @@ extern "C"
     Real* fsi,AMREX_ARLIM_P(fsilo),AMREX_ARLIM_P(fsihi),
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,int* bfact,
-    int* nmat,int* nstate);
+    int* nstate);
 
    void fort_build_moment(
     Real* cur_time,
@@ -347,13 +337,12 @@ extern "C"
     Real* fsi,AMREX_ARLIM_P(fsilo),AMREX_ARLIM_P(fsihi),
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,int* bfact,
-    int* nmat,int* nstate);
+    int* nstate);
 
  
    void fort_updatetensor(
     int* level,
     int* finest_level,
-    int* nmat,
     int* im,
     int* ncomp_visc,
     Real* visc,AMREX_ARLIM_P(visclo),AMREX_ARLIM_P(vischi),
@@ -383,7 +372,6 @@ extern "C"
     int N_real_comp, //pass by value just in case "long" on the c++ side.
     int* level,
     int* finest_level,
-    int* nmat,
     int* im,
     int* partid,
     int* scomp_tensor,
@@ -443,13 +431,11 @@ extern "C"
       Real* u_max_cap_wave,
       Real* dt_min,
       int* rzflag,
-      int* nten,
       Real* denconst,
       Real* visc_coef,
       Real* ns_gravity,
       Real* gravity_reference_wavelen_in,
       int* dir,
-      int* nmat,
       int* nparts,
       int* nparts_def,
       int* im_solid_map,
@@ -473,7 +459,6 @@ extern "C"
     int* level,
     int* finest_level,
     int* ngrow_distance,
-    int* nmat,
     int* nparts,
     int* nparts_ghost,
     int* nden,
@@ -500,7 +485,6 @@ extern "C"
     int* level,
     int* finest_level,
     int* ngrow_distance,
-    int* nmat,
     int* nparts,
     int* nparts_ghost,
     const int* tilelo,const int* tilehi,
@@ -522,7 +506,6 @@ extern "C"
     int* level,
     int* finest_level,
     int* nstate,
-    int* nmat,
     int* nparts,
     int* nparts_ghost,
     const int* tilelo,const int* tilehi,
@@ -552,8 +535,6 @@ extern "C"
     int* microlayer_substrate,
     Real* microlayer_temperature_substrate,
     int* adjust_temperature,
-    int* nmat,
-    int* nten,
     int* nstate,
     int* ntsat,
     int* nden,
@@ -590,7 +571,7 @@ extern "C"
 
 
    void fort_heatsource_face(
-    int* nmat,int* nten,int* nstate,
+    int* nstate,
     Real* saturation_temp,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
@@ -615,7 +596,6 @@ extern "C"
 
    void fort_heatsource(
     int* nstate,
-    int* nmat,
     int* nden,
     const Real* xlo,const Real* dx,
     Real* temperature_source,
@@ -663,7 +643,6 @@ extern "C"
    void fort_init_icemask(
     Real* time,
     int* level,int* finest_level,
-    int* nmat,int* nten,
     Real* saturation_temp,
     int* freezing_model,
     int* distribute_from_target,
@@ -691,7 +670,6 @@ extern "C"
     int* im_dest,
     int* indexEXP,
     int* level,int* finest_level,
-    int* nmat,int* nten,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
@@ -716,7 +694,6 @@ extern "C"
     int* im_dest,
     int* indexEXP,
     int* level,int* finest_level,
-    int* nmat,int* nten,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
@@ -742,7 +719,6 @@ extern "C"
     int* im_dest,
     int* indexEXP,
     int* level,int* finest_level,
-    int* nmat,int* nten,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,
@@ -767,7 +743,6 @@ extern "C"
      int* solidheat_flag,
      int* freezing_model,
      int* distribute_from_target,
-     int* nten,
      int* constant_density_all_time,
      int* velbc,
      int* EILE_flag,
@@ -813,7 +788,6 @@ extern "C"
      int* ngrow,
      int* ngrow_mac_old,
      int* nc_conserve,
-     int* nmat,
      int* map_forward,
      int* recon_ncomp,
      int* den_recon_ncomp,
@@ -829,7 +803,7 @@ extern "C"
    void fort_derive_mom_den(
      int* im_parm,
      int* ngrow,
-     int* constant_density_all_time, // 1..nmat
+     int* constant_density_all_time, // 1..num_materials
      int* spec_material_id_AMBIENT, // 1..num_species_var
      int* presbc,
      const int* tilelo,const int* tilehi,
@@ -846,7 +820,6 @@ extern "C"
      Real* gravity_normalized,
      Real* DrhoDT,
      int* override_density,
-     int* nmat,
      int* level,int* finest_level);
 
 
@@ -860,11 +833,9 @@ extern "C"
      int* distribute_from_target,
      Real* saturation_temp,
      int* hydrate_flag, // scalar
-     int* nmat,
      int* nparts,
      int* nparts_def,
      int* im_solid_map,
-     int* nten,
      int* nsolve,
      int* project_option,
      int* combine_idx,
@@ -905,11 +876,9 @@ extern "C"
    void fort_combinevelface(
      int* tid,
      int* hflag,
-     int* nmat,
      int* nparts,
      int* nparts_def,
      int* im_solid_map,
-     int* nten,
      int* combine_idx,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
@@ -963,7 +932,7 @@ extern "C"
      int* homflag);
 
    void fort_mac_elastic_force(
-     int* im_elastic, // 0..nmat-1
+     int* im_elastic, // 0..num_materials-1
      int* partid, // 0..num_materials_viscoelastic-1
      int* dir, //0..sdim-1
      int* ncomp_visc,
@@ -999,9 +968,7 @@ extern "C"
      int* level,
      int* finest_level,
      int* rzflag,
-     const int* domlo,const int* domhi,
-     int* nmat,
-     int* nten);
+     const int* domlo,const int* domhi);
 
 
    void fort_face_gradients(
@@ -1068,13 +1035,12 @@ extern "C"
      int* bfact,
      int* level,
      const Real* dt,int* irz,
-     int* nmat,int* nden);
+     int* nden);
 
    void fort_heatadvance(
      int* level,
      int* finest_level,
      Real* cur_time,
-     int* nmat,
      int* nparts,
      int* nparts_def,
      int* im_solid_map,
@@ -1096,7 +1062,6 @@ extern "C"
 
 
    void fort_velmac_override(
-     int* nmat,
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,
      int* bfact,
@@ -1135,7 +1100,6 @@ extern "C"
      Real* real_compALL,
      int N_real_comp, //pass by value just in case "long" on the c++ side.
      int* ncomp_accumulate,
-     int* nmat,
      Real* TNEWfab,
      AMREX_ARLIM_P(TNEWfablo),
      AMREX_ARLIM_P(TNEWfabhi),

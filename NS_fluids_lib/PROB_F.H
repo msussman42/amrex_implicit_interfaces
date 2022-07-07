@@ -30,7 +30,7 @@ namespace amrex{
       const Real* dx,const Real* xlo, const Real* xhi);
 
      void fort_initdata_alloc(
-      int* nmat,int* nten,int* nc,
+      int* nc,
       int* freezing_model,
       int* distribute_from_target,
       Real* saturation_temp,
@@ -45,7 +45,6 @@ namespace amrex{
       const int* fablo,const int* fabhi,
       int* bfact,
       int* nc,
-      int* nmat,int* nten,
       Real* saturation_temp,
       Real* scal,AMREX_ARLIM_P(scallo),AMREX_ARLIM_P(scalhi),
       Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
@@ -58,7 +57,6 @@ namespace amrex{
       Real* perturbation_eps_temp,
       Real* perturbation_eps_vel,
       int* nstate,
-      int* nmat,
       const Real* xlo,const Real* dx,
       Real* Snew,AMREX_ARLIM_P(Snewlo),AMREX_ARLIM_P(Snewhi), 
       Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi), 
@@ -85,7 +83,6 @@ namespace amrex{
      void fort_delete_regions_list(int* ioproc);
 
      void fort_initdatasolid(
-      int* nmat,
       int* nparts,
       int* ngrow_make_distance_in,
       int* im_solid_map,
@@ -99,7 +96,6 @@ namespace amrex{
       const Real* dx,const Real* xlo, const Real* xhi);
 
      void fort_initsolidtemp(
-      int* nmat,
       int* nden,
       Real* time,
       const int* tilelo,const int* tilehi,
@@ -332,8 +328,6 @@ namespace amrex{
       int* bfact,
       const int* domlo,const int* domhi,
       Real* dt,
-      int* nmat,
-      int* nten,
       int* solidheat_flag,
       int* project_option,
       Real* time);

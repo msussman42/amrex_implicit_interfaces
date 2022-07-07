@@ -16,11 +16,11 @@ namespace {
 namespace amrex{
 
 // State_Type:
-//  vel, pres, num_state_material x nmat, ngeom_raw x nmat, error ind
+//  vel, pres, num_state_material x num_materials, ngeom_raw x num_materials, error ind
 // Umac_Type, Vmac_Type, Wmac_Type:
 //  mac vel
 // LS_Type:
-//  LS 1..nmat, LS_slope sdim x nmat
+//  LS 1..num_materials, LS_slope sdim x num_materials
 // DIV_Type (1 variable):
 //  (a) temporary "pressure" for project_option==11, or
 //  (b) -(pnew-pold)/(rho c^2 dt) + dt mdot/vol
@@ -105,7 +105,7 @@ public:
   Vector<Real> blob_perim_mat;  
    // perimeter of contact line between im, im1, im2
   Vector< Vector<Real> > blob_triple_perim;
-  int im;  // 1<=im<=nmat
+  int im;  // 1<=im<=num_materials
 };
 
 class NavierStokes
@@ -1274,7 +1274,7 @@ void apply_pressure_grad(
     static int CTML_FSI_matC(int im);
     static int FSI_material_exists();
     static int FSI_material_exists_presvel();
-    static int FSI_flag_valid(int im); // 0<=im<nmat
+    static int FSI_flag_valid(int im); // 0<=im<num_materials
 
     void init_FSI_GHOST_MAC_MF_ALL_predict();
     void init_FSI_GHOST_MAC_MF_predict();
@@ -1537,13 +1537,14 @@ protected:
 
     static Vector<int>  shock_timestep;
 
-     // vel, pres, num_state_material x nmat, ngeom_raw x nmat, error ind
+     // vel, pres, num_state_material x num_materials, 
+     // ngeom_raw x num_materials, error ind
     static int State_Type; 
      // mac vel
     static int Umac_Type;
     static int Vmac_Type;
     static int Wmac_Type;
-     // LS 1..nmat, LS_slope sdim x nmat
+     // LS 1..num_materials, LS_slope sdim x num_materials
     static int LS_Type;
      // -(pnew-pold)/(rho c^2 dt) + dt mdot/vol
     static int DIV_Type;
@@ -1561,12 +1562,12 @@ protected:
     static Vector<Real> tension; // 1-2 1-3 1-4 2-3 2-4 3-4
     static Real unscaled_min_curvature_radius; //default: 0.0
     static Vector<Real> prefreeze_tension; // 1-2 1-3 1-4 2-3 2-4 3-4
-    static Vector<Real> recalesce_model_parameters; // 3*nmat
+    static Vector<Real> recalesce_model_parameters; // 3*num_materials
 
      // (dir,side)  (1,1),(2,1),(3,1),(1,2),(2,2),(3,2)
     static Vector<Real> outflow_velocity_buffer_size;
 
-    static Vector<Real> cap_wave_speed; // nten components
+    static Vector<Real> cap_wave_speed; // num_interfaces components
 
     static Real real_number_of_cells;
 
@@ -1578,9 +1579,9 @@ protected:
     static int FD_curv_interp; // def==1
     static int vof_height_function; // def==0
 
-     // index: 1..nmat
+     // index: 1..num_materials
     static Vector<Real> cavitation_pressure; 
-     // index: 1..nmat
+     // index: 1..num_materials
     static Vector<Real> cavitation_vapor_density; 
     static Vector<Real> cavitation_tension; 
 
@@ -1682,11 +1683,11 @@ protected:
      // 0=Palmore and Desjardins (same as Villegas et al)
      // 1=Tanasawa  2=Schrage  3=Kassemi
     static Vector<int> Tanasawa_or_Schrage_or_Kassemi; 
-     // index: 1..2*nten
+     // index: 1..2*num_interfaces
      // value: 1..num_species_var
     static Vector<int> mass_fraction_id; 
      // index: 1..num_species_var
-     // value: 1..nmat
+     // value: 1..num_materials
     static Vector<int> spec_material_id_LIQUID; 
     static Vector<int> spec_material_id_AMBIENT; 
      // 0 - distribute to the destination material 
@@ -1698,12 +1699,12 @@ protected:
      // 0 - mdot concentrated at full cells near interface on 1-side
      // 1 - mdot distributed evenly to all full cells; cellvol weight
      // 2 - mdot distributed evenly to all full cells; constant weight
-    static Vector<int> distribute_mdot_evenly; // 1..2*nten
+    static Vector<int> distribute_mdot_evenly; // 1..2*num_interfaces
      // 0 - sum mdot <>0   
      // 1 - distribute sum -mdot to the source
      // -1 - distribute sum -mdot to the dest
-    static Vector<int> constant_volume_mdot; // 1..2*nten
-    static Vector<int> constant_density_all_time; // 1..nmat, def=1
+    static Vector<int> constant_volume_mdot; // 1..2*num_interfaces
+    static Vector<int> constant_density_all_time; // 1..num_materials, def=1
     static int is_phasechange;
     static int ngrow_distance;  // should always be 4
     static int ngrow_make_distance;  // should always be 3
@@ -1726,7 +1727,7 @@ protected:
     static int BLB_MASS;
     static int BLB_PRES;
 
-    static Vector<int> im_solid_map; //nparts components, in range 0..nmat-1
+    static Vector<int> im_solid_map; //nparts components, in range 0..num_materials-1
     static Vector<int> im_elastic_map;
 
     static Vector<Real> FSI_force_integral;
@@ -2075,7 +2076,7 @@ protected:
     static Vector<Real> speciesconst;
       // num_species * num_materials size.
     static Vector<Real> speciesviscconst;
-      // num_species * nten
+      // num_species * num_interfaces
     static Vector<Real> speciesviscconst_interface;
       // num_species
     static Vector<Real> species_molar_mass;  // def=1

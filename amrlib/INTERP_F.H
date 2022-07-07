@@ -65,7 +65,6 @@ extern "C"
        const int* fblo, const int* fbhi,
        const Real* prob_lo,
        const Real* dxf, const Real* dxc,
-       int* nmat,
        int* ncomp,
        int* levelc,int* levelf,
        int* bfactc,int* bfactf);
@@ -79,7 +78,6 @@ extern "C"
        Real*  recon, AMREX_ARLIM_P(reconlo), AMREX_ARLIM_P(reconhi),
        const Real* prob_lo,
        const Real* dxf, const Real* dxc,
-       int* nmat,
        int* ngeom_recon,int* ngeom_raw,
        int* levelc,int* levelf,
        int* bfactc,int* bfactf);
@@ -92,7 +90,6 @@ extern "C"
        const int* fblo, const int* fbhi,
        const Real* prob_lo,
        const Real* dxf, const Real* dxc,
-       int* nmat,
        int* ngeom_recon,int* ngeom_raw,
        int* levelc,int* levelf,
        int* bfactc,int* bfactf);
@@ -105,8 +102,6 @@ extern "C"
        const int* fblo, const int* fbhi,
        const Real* prob_lo,
        const Real* dxf, const Real* dxc,
-       int* nmat,
-       int* nten,
        int* nburning,
        int* levelc,int* levelf,
        int* bfactc,int* bfactf);
