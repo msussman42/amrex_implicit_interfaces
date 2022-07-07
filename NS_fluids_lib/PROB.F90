@@ -120,11 +120,6 @@ stop
       INTEGER_T ispec
       REAL_T :: massfrac_parm(num_species_var+1)
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-
       if (tessellate.eq.0) then
        call get_primary_material_VFRAC(vof,im_primary,4)
       else if ((tessellate.eq.1).or. &
@@ -570,17 +565,13 @@ stop
         ireverse, &
         LS, &
         distribute_from_target, &
-        complement_flag, &
-        nmat,nten)
+        complement_flag)
       use global_utility_module
       use MOF_routines_module
       IMPLICIT NONE
 
       REAL_T, intent(in) :: xtarget(SDIM)
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
-      INTEGER_T nten_test
       INTEGER_T, intent(out) :: im
       INTEGER_T, intent(out) :: im_opp
       INTEGER_T, intent(out) :: ireverse
@@ -606,16 +597,6 @@ stop
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
-       stop
-      endif
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid get_icemask nten, nten_test ",nten,nten_test
        stop
       endif
 
@@ -669,7 +650,7 @@ stop
 
       call get_iten(im,im_opp,iten)
       do ireverse=0,1
-       LL(ireverse)=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
+       LL(ireverse)=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
       enddo
 
       ! is_ice=1 if FSI_flag==3 or 6.
@@ -748,7 +729,7 @@ stop
              endif
              call get_iten(im,im_opp,iten)
              do ireverse=0,1
-              LL(ireverse)=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
+              LL(ireverse)=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
              enddo
             else if (is_ice(im_tertiary).eq.1) then
              ! do nothing
@@ -825,11 +806,11 @@ stop
 
          if (im_ice.eq.im_dest) then  ! freezing
 
-          if (distribute_from_target(iten+nten*ireverse).eq.1) then
+          if (distribute_from_target(iten+num_interfaces*ireverse).eq.1) then
            ! do nothing
           else
            print *,"required freezing: "
-           print *,"distribute_from_target(iten+nten*ireverse)=1"
+           print *,"distribute_from_target(iten+num_interfaces*ireverse)=1"
            stop
           endif
 
@@ -871,11 +852,11 @@ stop
 
          else if (im_ice.eq.im_source) then ! melting
 
-          if (distribute_from_target(iten+nten*ireverse).eq.0) then
+          if (distribute_from_target(iten+num_interfaces*ireverse).eq.0) then
            ! dist. from the ice to the liquid
           else
            print *,"required melting:"
-           print *,"distribute_from_target(iten+nten*ireverse)=0"
+           print *,"distribute_from_target(iten+num_interfaces*ireverse)=0"
            stop
           endif
 
@@ -973,7 +954,6 @@ stop
 
       subroutine get_local_heat_source( &
        time,dt, &
-       nmat, &
        x, &
        xsten, &  ! xsten(-nhalf:nhalf,SDIM)
        nhalf, &
@@ -994,7 +974,6 @@ stop
       IMPLICIT NONE
 
       REAL_T, intent(in) :: time,dt
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nhalf
       REAL_T, intent(in) :: x(SDIM)
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
@@ -1042,19 +1021,21 @@ stop
       eps_rad=1.0
       hc=100.0
 
-      if (time.lt.zero) then
+      if (time.ge.zero) then
+       ! do nothing
+      else
        print *,"time invalid"
        stop
       endif
-      if (dt.le.zero) then
+      if (dt.gt.zero) then
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if (temperature_source.lt.zero) then
+      if (temperature_source.ge.zero) then
+       ! do nothing
+      else
        print *,"temperature_source invalid"
        stop
       endif
@@ -1850,22 +1831,14 @@ stop
       end subroutine viscosity
 
 
-      subroutine get_max_user_tension(tension,new_tension,nmat,nten)
+      subroutine get_max_user_tension(tension,new_tension)
       IMPLICIT NONE
 
-      INTEGER_T nmat,nten,nten_test
-      REAL_T tension(nten)
-      REAL_T new_tension(nten)
+      REAL_T, intent(in) :: tension(num_interfaces)
+      REAL_T, intent(out) :: new_tension(num_interfaces)
       INTEGER_T iten
 
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid get_max_user_tension nten nten test", &
-         nten,nten_test
-       stop
-      endif
-
-      do iten=1,nten
+      do iten=1,num_interfaces
        new_tension(iten)=tension(iten)
       enddo
 
@@ -1885,7 +1858,7 @@ stop
        tension_out=tension_in/global_pressure_scale
 
        return 
-       end subroutine
+       end subroutine get_scaled_tension
 
        subroutine get_scaled_pforce(pforce_scaled)
        IMPLICIT NONE
@@ -1921,12 +1894,11 @@ subroutine closest_distance_to_CL( &
      im_primary, & ! im_primary owns adjoining cell to given structure cell
      im_secondary, & ! im_secondary is a fluid too.
      im_solid, &  ! structure material id.
-     nmat, &
      prob_dim)
 use global_utility_module
 implicit none
 
-integer, intent(in) :: nmat,n_rad, prob_dim
+integer, intent(in) :: n_rad, prob_dim
 integer, intent(in) :: im_primary,im_secondary,im_solid
 double precision, intent(in) :: &
    LS_stencil(-n_rad:n_rad,-n_rad:n_rad,-n_rad:n_rad,num_materials)
@@ -2684,19 +2656,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine get_vort_vel_error
 
        ! called by ESTDT: determine maximum force due to buoyancy. 
-      subroutine get_max_denjump(denjump,nmat)
+      subroutine get_max_denjump(denjump)
       use global_utility_module
 
       IMPLICIT NONE
 
-      INTEGER_T nmat,im,im_opp
-      REAL_T denjump
+      INTEGER_T im,im_opp
+      REAL_T, intent(out) :: denjump
       REAL_T denjump_temp
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
 
       denjump=zero
 
@@ -3487,13 +3454,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end function myfact
 
 
-      subroutine get_pipe_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat)
+      subroutine get_pipe_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc)
       use global_utility_module
       use geometry_intersect_module
 
       IMPLICIT NONE
 
-      INTEGER_T nmat,bfact,nhalf
+      INTEGER_T bfact,nhalf
       REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten2(-1:1,SDIM)
       REAL_T dx(SDIM)
@@ -3530,11 +3497,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"solid missing for pipe"
         stop
        endif
-      endif
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
       endif
 
       if (probtype.eq.41) then
@@ -3578,8 +3540,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        enddo ! isten
 
-       call inletpipedist(xsten2(0,1),xsten2(0,2),xsten2(0,SDIM), &
-        nmat,distbatch)
+       call inletpipedist(xsten2(0,1),xsten2(0,2),xsten2(0,SDIM),distbatch)
        do im=1,num_materials
         lsgrid(D_DECL(i1+2,j1+2,k1+2),im)=distbatch(im) 
        enddo
@@ -3589,7 +3550,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       EBVOFTOL=VOFTOL
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac, &
-        facearea,centroid,nmat,EBVOFTOL,SDIM)
+        facearea,centroid,EBVOFTOL,SDIM)
       do im=1,num_materials
        do dir2=1,SDIM
         cenbc(im,dir2)=centroid(im,dir2)-xsten(0,dir2)
@@ -3664,10 +3625,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T inode,jnode,knode
       INTEGER_T idx_array(3)
       INTEGER_T knodelo,knodehi
-      INTEGER_T nmat
       REAL_T dist
 
-      nmat=num_materials
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid73"
        stop
@@ -3792,7 +3751,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T xn,yn,zn,facearea
       REAL_T volbox
       REAL_T cenbox(SDIM)
-      INTEGER_T nmat
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -3814,8 +3772,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"time bust in find_ls_stencil_volume_coarse"
        stop
       endif
-
-      nmat=num_materials
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid74"
@@ -3920,9 +3876,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T volbox,volbox_node
       REAL_T cenbox(SDIM)
       REAL_T cenbox_node(SDIM)
-      INTEGER_T nmat
 
-      nmat=num_materials
  
       nhalf2=1
 
@@ -4041,15 +3995,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine find_LS_stencil_volume
 
 
-      subroutine inletpipedist(x,y,z,nmat,dist)
+      subroutine inletpipedist(x,y,z,dist)
       use global_utility_module
       use global_distance_module
 
       IMPLICIT NONE
 
-      INTEGER_T im,nmat
-      REAL_T dist(num_materials)
-      REAL_T x,y,z,ht,rr,initial_time
+      INTEGER_T im
+      REAL_T, intent(out) :: dist(num_materials)
+      REAL_T, intent(in) :: x,y,z
+      REAL_T ht,rr,initial_time
       INTEGER_T im_solid_pipe
 
 
@@ -4061,11 +4016,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       im_solid_pipe=im_solid_primary()
 
       initial_time=zero
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
 
       if (probtype.eq.41) then
        ! do nothing
@@ -4154,14 +4104,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       IMPLICIT NONE
 
-      INTEGER_T nhalf,bfact
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T x,y,z,r,time
-      REAL_T dx(SDIM)
+      INTEGER_T, intent(in) :: nhalf,bfact
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T x,y,z,r
+      REAL_T, intent(in) :: time
+      REAL_T, intent(in) :: dx(SDIM)
       REAL_T cenbc(num_materials,SDIM)
-      REAL_T vel(SDIM)
+      REAL_T, intent(out) :: vel(SDIM)
       REAL_T VOF(num_materials)
-      INTEGER_T dir2,nmat
+      INTEGER_T dir2
       INTEGER_T im_solid_pipe
       REAL_T x_vel,y_vel,z_vel
 
@@ -4175,8 +4126,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"bfact invalid200"
        stop
       endif
-
-      nmat=num_materials
 
       if (probtype.eq.41) then
        ! do nothing
@@ -4205,7 +4154,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        vel(dir2)=zero
       enddo
 
-      call get_pipe_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc,nmat)  
+      call get_pipe_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc)  
 
         ! axis_dir=4 is LSA comparison
       if (axis_dir.eq.4) then
@@ -4907,13 +4856,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         ! currently not used.  April 8, 2016
       subroutine get_ternary(im,im_opp,im_3,iten,iten_13, &
-        iten_23,sin1,sin2,sin3,th1,th2,th3,tension,nten,nmat)
+        iten_23,sin1,sin2,sin3,th1,th2,th3,tension)
       IMPLICIT NONE
 
-      INTEGER_T im,im_opp,im_3,iten,iten_13,iten_23
-      INTEGER_T nten,nmat
-      REAL_T sin1,sin2,sin3
-      REAL_T tension(nten)
+      INTEGER_T, intent(in) :: im,im_opp,im_3,iten,iten_13,iten_23
+      REAL_T, intent(out) :: sin1,sin2,sin3
+      REAL_T, intent(in) :: tension(num_interfaces)
       REAL_T t1,t2,t3
       REAL_T th1,th2,th3
       REAL_T t1old,t2old,err
@@ -5431,8 +5379,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         bfact, &
         voflist, &
         LS_stencil, &
-        nmat, &
-        nten, &
         err, &
         time)
 
@@ -5444,8 +5390,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T, intent(in) :: max_level
       INTEGER_T, intent(in) :: nhalf
       INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
 
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
@@ -5456,7 +5400,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       INTEGER_T inear
       INTEGER_T im,im_primary
-      INTEGER_T nten_test
 
       REAL_T dxmin
       REAL_T dist,dist3
@@ -5470,12 +5413,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       if ((level.lt.0).or.(level.gt.max_level)) then
        print *,"level invalid calc_error_indicator"
-       stop
-      endif
-
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid calc_error_ind",nten,nten_test
        stop
       endif
 
@@ -5495,11 +5432,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
  
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-
       call get_dxmin(dx,bfact,dxmin)
       if (dxmin.gt.zero) then
        ! do nothing
@@ -5735,7 +5667,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        REAL_T x,y,z
        REAL_T xstar,ystar,zstar
        REAL_T xvec(SDIM)
-       INTEGER_T nmat,nten
        REAL_T distsolid,distgas,dist_liquid,dist_ice
        INTEGER_T im_solid_exactdist
        REAL_T LS(num_materials)
@@ -5758,9 +5689,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        do dir=1,SDIM
         xvec(dir)=xsten(0,dir)
        enddo
-
-       nmat=num_materials
-       nten=num_interfaces
 
        if (SDIM.eq.2) then
         if (abs(z-y).gt.1.0E-8) then
@@ -5798,7 +5726,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            call materialdist(xsten,nhalf,dx,bfact,distsolid,3,time)
            ! in: exactdist (maxtall=2 * radblob => dist_ice=dist_liquid)
            call drop_slope_dist(xstar,ystar,zstar, &
-            time,nmat,two*radblob,dist_ice,dist_liquid)
+            time,two*radblob,dist_ice,dist_liquid)
            distgas=-dist_liquid
 
            if (imaterial.eq.1) then
@@ -5838,7 +5766,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            call materialdist(xsten,nhalf,dx,bfact,distsolid,3,time)
            ! in: exactdist (maxtall=2 * radblob => dist_ice=dist_liquid)
            call drop_slope_dist(xstar,ystar,zstar, &
-            time,nmat,two*radblob,dist_ice,dist_liquid)
+            time,two*radblob,dist_ice,dist_liquid)
            distgas=-dist_liquid
 
            if (imaterial.eq.1) then
@@ -5877,7 +5805,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         xsten,nhalf, &   ! refined cell
         mofdata, &
         mofdata_tess, &
-        errorparm,cutflag,nmat,time)
+        errorparm,cutflag,time)
 
       use MOF_routines_module
       use geometry_intersect_module
@@ -5885,7 +5813,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       IMPLICIT NONE
 
 
-      INTEGER_T, intent(in) :: nmat,nhalf0,nhalf,bfact
+      INTEGER_T, intent(in) :: nhalf0,nhalf,bfact
       REAL_T, intent(in) :: time
       REAL_T, intent(in) :: mofdata(num_materials*ngeom_recon)
       REAL_T, intent(in) :: mofdata_tess(num_materials*ngeom_recon)
@@ -5954,11 +5882,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! do nothing
       else
        print *,"levelrz invalid get_symmetric error"
-       stop
-      endif
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
        stop
       endif
 
@@ -6172,7 +6095,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         xtrilist, &
         nmax, &
         nmax, &
-        nmat,SDIM,1)
+        SDIM,1)
 
        if (combine_materials.eq.1) then
         volcut(imat1b)=volcut(imat1a)
@@ -6202,12 +6125,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        mofdata, &
        mofdata_tess, &
        errorparm,level, &
-       max_level,nmat,time)
+       max_level,time)
       IMPLICIT NONE
 
 
       REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nmat 
       INTEGER_T, intent(in) :: nhalf0,nhalf,bfact
       REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,SDIM)
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
@@ -6230,11 +6152,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       allocate(dxsub(SDIM))
       allocate(xmid(SDIM))
       allocate(xstensub(-nhalf:nhalf,SDIM))
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid stackerror"
@@ -6288,7 +6205,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         xsten,nhalf, &
         mofdata, &
         mofdata_tess, &
-        localerror,cutflag,nmat,time)
+        localerror,cutflag,time)
 
       if ((level.eq.max_level).or.(cutflag.eq.0)) then
        do im=1,2*num_materials
@@ -6328,7 +6245,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          xstensub,nhalf, &
          mofdata, &
          mofdata_tess, &
-         errorparm,level+1,max_level,nmat,time)
+         errorparm,level+1,max_level,time)
        enddo
        enddo 
        enddo 
@@ -6490,7 +6407,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, intent(in) :: x,y,z
       REAL_T, intent(out) :: temp
       REAL_T, intent(in) :: time 
-      INTEGER_T nmat
       INTEGER_T im
       INTEGER_T im_solid_temp
       REAL_T LS(num_materials)
@@ -6501,7 +6417,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       bcflag=0
 
-      nmat=num_materials
       im_solid_temp=im_solid_primary()
 
       if (is_rigid(im).ne.1) then
@@ -6572,7 +6487,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       IMPLICIT NONE
 
       REAL_T x,y,z,tempflux,time
-      INTEGER_T nmat,dir
+      INTEGER_T dir
       INTEGER_T im_solid_tempflux
 
       if ((dir.lt.0).or.(dir.ge.SDIM)) then
@@ -6582,7 +6497,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       im_solid_tempflux=im_solid_primary()
  
-      nmat=num_materials
       if ((im_solid_tempflux.ge.1).and. &
           (im_solid_tempflux.le.num_materials)) then
        tempflux=zero
@@ -6965,14 +6879,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
 
 
-      subroutine get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat)
+      subroutine get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc)
       use global_utility_module
       use geometry_intersect_module
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T :: nten
       INTEGER_T, intent(in) :: bfact,nhalf
       REAL_T,  intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten2(-1:1,SDIM)
@@ -7005,11 +6917,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"nhalf invalid get microfluidic vfrac"
        stop
       endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      nten=num_interfaces
 
       allocate(distbatch(num_materials))
 
@@ -7064,7 +6971,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         call materialdist_batch( &
          xsten2,nhalf2,dx,bfact, &
-         distbatch,nmat,initial_time)
+         distbatch,initial_time)
         do im=1,num_materials
          lsgrid(D_DECL(i1+2,j1+2,k1+2),im)=distbatch(im) 
         enddo
@@ -7075,7 +6982,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        EBVOFTOL=VOFTOL
        call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac,facearea, &
-        centroid,nmat,EBVOFTOL,SDIM)
+        centroid,EBVOFTOL,SDIM)
 
        do im=1,num_materials
         do dir2=1,SDIM
@@ -7407,9 +7314,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, intent(in) :: xtarget(SDIM) 
       REAL_T, intent(out) :: dist
       INTEGER_T, intent(in) :: im_source,im_dest
-      INTEGER_T nmat
-
-      nmat=num_materials
 
       if ((im_source.lt.1).or.(im_source.gt.num_materials)) then
        print *,"im_source invalid"
@@ -7504,7 +7408,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         ! imaterial = 1..num_materials
         ! liquid,gas,alt,solid
-      subroutine materialdist_batch(xsten,nhalf,dx,bfact,dist,nmat,time)
+      subroutine materialdist_batch(xsten,nhalf,dx,bfact,dist,time)
       use global_utility_module
       use global_distance_module
       use hydrateReactor_module
@@ -7525,7 +7429,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T, intent(in) :: nhalf
       REAL_T, intent(in) :: dx(SDIM) 
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-      INTEGER_T, intent(in) :: nmat
       REAL_T, intent(out) :: dist(num_materials)
       REAL_T x,y,z
       INTEGER_T imaterial
@@ -7549,10 +7452,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       endif
       if (nhalf.lt.1) then
        print *,"nhalf invalid materialdistbatch"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
        stop
       endif
 
@@ -8012,7 +7911,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        if ((probtype.eq.530).and.(SDIM.eq.3)) then ! impinging jets
         if (axis_dir.eq.1) then  ! impinging unlike jets
-         call get_jet_dist(x,y,z,nmat,dist)
+         call get_jet_dist(x,y,z,dist)
         else if (axis_dir.eq.0) then
          ! do nothing
         else
@@ -8099,14 +7998,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, intent(out) :: dist
       INTEGER_T, intent(in) :: imaterial
       REAL_T, intent(in) :: time
-      INTEGER_T :: nmat
       REAL_T, dimension(:), allocatable :: distbatch
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
       endif
-      nmat=num_materials
       allocate(distbatch(num_materials))
       if ((imaterial.lt.1).or.(imaterial.gt.num_materials)) then
        print *,"imaterial invalid in materialdist"
@@ -8114,7 +8011,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat,time)
+      call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,time)
       dist=distbatch(imaterial)
 
       deallocate(distbatch)
@@ -8163,11 +8060,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine min_jetdist
 
 
-      subroutine get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat)
+      subroutine get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc)
       use geometry_intersect_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat,bfact,nhalf
+      INTEGER_T, intent(in) :: bfact,nhalf
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten2(-1:1,SDIM)
 
@@ -8191,11 +8088,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       endif
       if (nhalf.lt.3) then
        print *,"nhalf invalid get jet vfrac"
-       stop
-      endif
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
        stop
       endif
 
@@ -8225,7 +8117,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        enddo ! isten
 
        call get_jet_dist(xsten2(0,1),xsten2(0,2), &
-         xsten2(0,SDIM),nmat,distbatch)
+         xsten2(0,SDIM),distbatch)
        do im=1,num_materials
         lsgrid(D_DECL(i1+2,j1+2,k1+2),im)=distbatch(im) 
        enddo
@@ -8235,7 +8127,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       EBVOFTOL=VOFTOL
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac, &
-        facearea,centroid,nmat,EBVOFTOL,SDIM)
+        facearea,centroid,EBVOFTOL,SDIM)
       do im=1,num_materials
        do dir2=1,SDIM
         cenbc(im,dir2)=centroid(im,dir2)-xsten(0,dir2)
@@ -8246,11 +8138,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine get_jet_vfrac
 
 
-      subroutine get_initial_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat)
+      subroutine get_initial_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc)
       use geometry_intersect_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat,bfact,nhalf
+      INTEGER_T, intent(in) :: bfact,nhalf
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten2(-1:1,SDIM)
       REAL_T, intent(in) :: dx(SDIM)
@@ -8277,10 +8169,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       endif
       if (nhalf.lt.3) then
        print *,"nhalf invalid get initial vfrac"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
        stop
       endif
       allocate(distbatch(num_materials))
@@ -8312,7 +8200,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        call materialdist_batch( &
         xsten2,nhalf2,dx,bfact, &
-        distbatch,nmat,initial_time)
+        distbatch,initial_time)
        do im=1,num_materials
         lsgrid(D_DECL(i1+2,j1+2,k1+2),im)=distbatch(im) 
        enddo
@@ -8324,7 +8212,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! in: MOF.F90
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac,facearea, &
-        centroid,nmat,EBVOFTOL,SDIM)
+        centroid,EBVOFTOL,SDIM)
       do im=1,num_materials
 
        if (vfrac(im).lt.zero) then
@@ -8374,7 +8262,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T dir2
       REAL_T vfrac(num_materials)
       REAL_T angle
-      INTEGER_T nmat
       REAL_T xrot,yrot,xrot2,yrot2,radrot,xcen,ycen
       REAL_T dnode1,dnode2
 
@@ -8391,14 +8278,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       y=xsten(0,2)
       z=xsten(0,SDIM)
 
-      nmat=num_materials
       do dir2=1,SDIM
        vel(dir2)=zero
       enddo
 
       if (probtype.eq.537) then  ! get_jetbend_velocity
 
-       call get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat)
+       call get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc)
        if (vfrac(1).gt.zero) then
         vel(SDIM)=advbot
        else
@@ -8409,7 +8295,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        if ((probtype.eq.53).and.(axis_dir.ne.2)) then
        
-        call get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat)  
+        call get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc)  
         if (vfrac(1).gt.zero) then
           ! this is plug flow
          vel(SDIM)=advbot
@@ -8433,7 +8319,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         angle=0.5235988
 
-        call get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat) 
+        call get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc) 
 
         if (vfrac(1).gt.zero) then  
          vel(SDIM)=advbot*cos(angle)
@@ -8450,14 +8336,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        else if ((probtype.eq.538).or. & ! inputs.injA
                 (probtype.eq.541)) then 
 
-        call get_initial_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat)
+        call get_initial_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc)
         if (vfrac(1).gt.zero) then
          vel(SDIM)=advbot
         endif
 
        else if (probtype.eq.539) then ! supnozz - jetbend_vel
 
-        call get_initial_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat)
+        call get_initial_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc)
         if (vfrac(1).gt.VOFTOL) then !initial velocity in the gap
          angle=1.07961377
          vel(1)=advbot*cos(angle)
@@ -8475,7 +8361,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         angle=0.5235988
 
-        call get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat) 
+        call get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc) 
 
         if (vfrac(1).gt.zero) then  
          vel(SDIM)=advbot*cos(angle)
@@ -8503,7 +8389,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          dnode1=sqrt( (x-xrot)**2 + (y-yrot)**2 )
          dnode2=sqrt( (x-xrot2)**2 + (y-yrot2)**2 )
 
-         call get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat) 
+         call get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc) 
 
          if (vfrac(1).gt.zero) then  
           vel(SDIM)=advbot*cos(angle)
@@ -8521,7 +8407,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         else if (axis_dir.eq.1) then  ! impinge unlike jets
 
-         call get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat) 
+         call get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc) 
          if ((vfrac(1).gt.zero).or.(vfrac(3).gt.zero)) then
           vel(SDIM)=advbot*cos(angle)
           if (vfrac(1).gt.zero) then
@@ -8543,7 +8429,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        else if ( ((probtype.eq.53).and.(axis_dir.ne.2)).or. &  
                  (probtype.eq.536)) then
 
-        call get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat) 
+        call get_jet_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc) 
         if (vfrac(1).gt.zero) then
          vel(SDIM)=advbot
         else
@@ -8554,7 +8440,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        else if ((probtype.eq.538).or. & ! inputs.injA
                 (probtype.eq.541)) then 
 
-        call get_initial_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc,nmat) 
+        call get_initial_vfrac(xsten,nhalf,dx,bfact,vfrac,cenbc) 
         if (vfrac(1).gt.zero) then
          vel(SDIM)=advbot
         endif
@@ -8582,13 +8468,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       ! probtype.eq.539, probtype.eq.529,
       ! probtype.eq.531, probtype.eq.536,
       ! probtype.eq.537 
-      subroutine get_jet_dist(x,y,z,nmat,dist)
+      subroutine get_jet_dist(x,y,z,dist)
       use global_utility_module
       use global_distance_module
 
       IMPLICIT NONE
 
-      INTEGER_T nmat
       REAL_T dist(num_materials)
       REAL_T x,y,z,zmin,zmax,dist1,dist2
       REAL_T xmin,xmax
@@ -8607,11 +8492,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
 
       im_solid_jet=im_solid_primary()
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
 
       if (SDIM.eq.2) then
        if (abs(z-y).gt.VOFTOL) then
@@ -9000,7 +8880,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T h1
       REAL_T hugedist
       REAL_T distbatch(num_materials)
-      INTEGER_T nmat
       REAL_T initial_time
       REAL_T ypretend
       REAL_T wave_number
@@ -9028,7 +8907,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       endif
 
       initial_time=zero
-      nmat=num_materials
 
       hugedist=99999.0
 
@@ -9447,7 +9325,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
 ! pipe - vapordist 2D
        else if (probtype.eq.41) then
-        call inletpipedist(x,y,z,nmat,distbatch) 
+        call inletpipedist(x,y,z,distbatch) 
         dist=distbatch(1)
        else if (probtype.eq.44) then
          ! in 2d, y=z
@@ -9465,15 +9343,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          dist=dist1
         endif
        else if (probtype.eq.53) then  ! 2D JICF vapordist
-        call get_jet_dist(x,y,z,nmat,distbatch)
+        call get_jet_dist(x,y,z,distbatch)
         dist=distbatch(1)
        else if (probtype.eq.532) then ! impinge from sides (vapordist)
-        call get_jet_dist(x,y,z,nmat,distbatch)
+        call get_jet_dist(x,y,z,distbatch)
         dist=distbatch(1)
          ! 2d diesel injector w/needle (vapordist)
        else if ((probtype.eq.538).or. &  ! inputs.injA
                 (probtype.eq.541)) then
-        call get_jet_dist(x,y,z,nmat,distbatch)
+        call get_jet_dist(x,y,z,distbatch)
         dist=distbatch(1)
        else if (probtype.eq.701) then ! flapping wing (vapordist 2D)
         if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
@@ -9485,7 +9363,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          stop
         endif
        else if (probtype.eq.539) then ! jet w/ supersonic crossflow - vapordist
-        call get_jet_dist(x,y,z,nmat,distbatch)
+        call get_jet_dist(x,y,z,distbatch)
         dist=distbatch(1)
        else if(probtype.eq.72) then
         xmin=xblob-radblob
@@ -9822,24 +9700,24 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        else if (probtype.eq.58) then
         dist=zblob2-z
        else if (probtype.eq.529) then ! airblast with coaxial injection
-        call get_jet_dist(x,y,z,nmat,distbatch)
+        call get_jet_dist(x,y,z,distbatch)
         dist=distbatch(1)
          ! 3D jetbend problem
        else if (probtype.eq.53) then ! JICF (vapordist)
-        call get_jet_dist(x,y,z,nmat,distbatch)
+        call get_jet_dist(x,y,z,distbatch)
         dist=distbatch(1)
        else if (probtype.eq.530) then ! impinge (vapordist)
-        call get_jet_dist(x,y,z,nmat,distbatch)
+        call get_jet_dist(x,y,z,distbatch)
         dist=distbatch(1)
         ! 3d diesel injector w/needle (vapordist)
        else if ((probtype.eq.538).or. &  ! inputs.injA
                 (probtype.eq.541)) then
-        call get_jet_dist(x,y,z,nmat,distbatch)
+        call get_jet_dist(x,y,z,distbatch)
         dist=distbatch(1)
        else if (probtype.eq.701) then ! flapping wing (vapordist 3D)
         dist=zblob-z
        else if (probtype.eq.532) then ! impinge from sides (vapordist)
-        call get_jet_dist(x,y,z,nmat,distbatch)
+        call get_jet_dist(x,y,z,distbatch)
         dist=distbatch(1)
        else if (probtype.eq.536) then
         zmin=zblob-1.0e+10
@@ -9848,7 +9726,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         call cylinderdist(x,y,z,xblob,yblob,radblob2,zmin,zmax,dist)
         dist=-dist
        else if (probtype.eq.41) then ! pipe vapordist 3D
-        call inletpipedist(x,y,z,nmat,distbatch) 
+        call inletpipedist(x,y,z,distbatch) 
         dist=distbatch(1)
        else if (probtype.eq.54) then
         zmin=-1.0e+10
