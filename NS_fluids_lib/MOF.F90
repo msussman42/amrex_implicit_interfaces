@@ -12984,6 +12984,7 @@ contains
 
       subroutine push_order_stack(order_stack,order_stack_count, &
        temp_order,n_orderings,n_ndef)
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(inout) :: order_stack_count
@@ -13008,6 +13009,7 @@ contains
 
       subroutine pop_order_stack(order_stack,order_stack_count, &
        temp_order,n_orderings,n_ndef)
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(inout) :: order_stack_count
@@ -13481,7 +13483,7 @@ contains
            nlist_alloc, &
            centroidA, &
            nmax,imaterial, &
-           fastflag,num_materials,sdim)
+           fastflag,sdim)
 
           mofdata(vofcomp+sdim+1)=one ! order=1
           mofdata(vofcomp+2*sdim+2)=intercept
@@ -13658,11 +13660,11 @@ contains
          temp_order(jflex)=0 
         enddo
         call push_order_stack(order_stack,order_stack_count, &
-         temp_order,n_orderings,n_ndef,num_materials)
+         temp_order,n_orderings,n_ndef)
        enddo  ! i
        do while (order_stack_count.gt.0)
         call pop_order_stack(order_stack,order_stack_count, &
-         temp_order,n_orderings,n_ndef,num_materials)
+         temp_order,n_orderings,n_ndef)
         jflex=n_ndef
         do while (temp_order(jflex).eq.0)
          jflex=jflex-1
@@ -13691,7 +13693,7 @@ contains
           if (is_valid.eq.1) then
            temp_order(jflex+1)=irank
            call push_order_stack(order_stack,order_stack_count, &
-            temp_order,n_orderings,n_ndef,num_materials)
+            temp_order,n_orderings,n_ndef)
           endif
          enddo ! irank
         else
@@ -13785,7 +13787,7 @@ contains
           multi_centroidA, &
           continuous_mof, &
           cmofsten, &
-          num_materials,sdim)
+          sdim)
          imaterial_count=imaterial_count+1
         enddo
 
@@ -13871,7 +13873,7 @@ contains
            multi_centroidA, &
            continuous_mof, &
            cmofsten, &
-           num_materials,sdim)
+           sdim)
           imaterial_count=imaterial_count+1
          enddo ! while not all of uncaptured space filled
 
@@ -19003,6 +19005,7 @@ contains
        ! input : fluids tessellate, solids are embedded
        ! output: fluids tessellate and one and only one fluid LS is positive
       subroutine FIX_LS_tessellate(LS,LS_new)
+      use probcommon_module
       use global_utility_module
       IMPLICIT NONE
 
@@ -19088,6 +19091,7 @@ contains
         ! input: fluids tessellate, solids embedded
         ! output: fluids and solids tessellate.
       subroutine LS_tessellate(LS,LS_new)
+      use probcommon_module
       use global_utility_module
       IMPLICIT NONE
 
@@ -19419,7 +19423,6 @@ contains
         xtetlist, &
         nlist_alloc, &
         nmax, &
-        num_materials, &
         sdim, &
         shapeflag, &
         caller_id) 
@@ -19555,6 +19558,7 @@ contains
       end subroutine multi_get_volume_tessellate
 
       subroutine update_touchLS(newLS,minLS,maxLS,touch_hold,im,sdim)
+      use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: im,sdim
@@ -19869,6 +19873,7 @@ contains
          x_a,maxdx,ilist,jlist,nlist, &
          slope_list,intercept_list,im_list,sdim, &
          inboxflag)
+       use probcommon_module
        use global_utility_module
 
        IMPLICIT NONE
@@ -20048,6 +20053,7 @@ contains
         slope_list,intercept_list,im_list, &
         gphi,&
         x_0side,sdim,inboxflag)
+       use probcommon_module
        use global_utility_module
 
        IMPLICIT NONE
@@ -20391,7 +20397,7 @@ contains
         vfrac_data(im)=mofdatavalid(vofcomp)
        enddo
        FSI_exclude=1
-       call sort_volume_fraction(vfrac_data,FSI_exclude,sorted_list,num_materials)
+       call sort_volume_fraction(vfrac_data,FSI_exclude,sorted_list)
        im=sorted_list(1)
        if (is_rigid_local(im).eq.0) then
         ! do nothing
@@ -21989,7 +21995,7 @@ contains
       allocate(mof_calls(geom_nthreads,num_materials))
       allocate(mof_iterations(geom_nthreads,num_materials))
 
-      call set_order_algorithm(order_algorithm_in,num_materials)
+      call set_order_algorithm(order_algorithm_in)
 
       print *,"initializing geometry tables"
 

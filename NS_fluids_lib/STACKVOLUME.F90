@@ -231,7 +231,7 @@ stop
        lnode, &
        tempvol, &
        tempcen,facearea,volall, &
-       cenall,nmat,SDIM)
+       cenall,SDIM)
       do imaterial=1,nmat
        voldata(imaterial,1)=tempvol(imaterial)
        voldata(imaterial,2)=volall

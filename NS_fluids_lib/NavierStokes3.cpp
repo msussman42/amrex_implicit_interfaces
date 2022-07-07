@@ -7594,8 +7594,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
  } else
   amrex::Error("cannot have dt_slab<=0 in allocate_FACE_WEIGHT");
 
- int nmat=num_materials;
-
  if (project_option_momeqn(project_option)==1) {
   //do nothing
  } else if (project_option_momeqn(project_option)==0) {

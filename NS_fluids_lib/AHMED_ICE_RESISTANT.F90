@@ -750,7 +750,7 @@ type(assimilate_parm_type), intent(in) :: assimilate_in
 type(assimilate_out_parm_type), intent(inout) :: assimilate_out
 INTEGER_T, intent(in) :: i,j,k,cell_flag
 
-INTEGER_T :: nmat,nstate,nstate_test
+INTEGER_T :: nstate,nstate_test
 REAL_T :: xcrit(SDIM)
 REAL_T :: LS_normal(SDIM)
 REAL_T :: LS_test
@@ -771,7 +771,6 @@ REAL_T :: facearea_seed
 REAL_T :: centroid_seed(SDIM)
 REAL_T :: cencell(SDIM)
 
-nmat=assimilate_in%nmat
 nstate=assimilate_in%nstate
 
 nstate_test=STATE_NCOMP
@@ -784,12 +783,6 @@ else
  stop
 endif
 
-if (nmat.eq.num_materials) then
- ! do nothing
-else
- print *,"nmat invalid"
- stop
-endif
 if ((num_materials.ge.3).and. &
     (num_state_material.ge.2).and. & 
     (probtype.eq.425)) then

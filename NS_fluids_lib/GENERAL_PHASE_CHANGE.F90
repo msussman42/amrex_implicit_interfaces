@@ -344,7 +344,7 @@ REAL_T :: initial_time
      ! maxtall==two*radblob > radnew+vert => no ice in this call.
      ! (the purpose of this first call to drop_slope_dist is to get the
      ! LS function for gas)
-    call drop_slope_dist(x(1),x(2),x(SDIM),initial_time,nmat, &
+    call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
       two*radblob,dist_ice,dist_liquid)
 
     dist_gas=-dist_liquid
@@ -476,7 +476,7 @@ REAL_T :: initial_time
       stop
      endif
      ! in: materialdistbatch (initial angle=static angle)
-     call drop_slope_dist(x(1),x(2),x(SDIM),initial_time,nmat, &
+     call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
       two*radblob,dist_ice,dist_liquid)
     else
      print *,"radblob4 invalid radblob4=",radblob4
@@ -575,7 +575,7 @@ REAL_T :: initial_time
     ! in: materialdist_batch (initial angle=static angle)
     ! radblob3 is the thickness of the underside of the droplet that
     ! is already frozen
-    call drop_slope_dist(x(1),x(2),x(SDIM),initial_time,nmat, &
+    call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
       radblob3,dist_ice,dist_liquid)
     if (is_rigid(3).ne.0) then
      print *,"expecting material 3 to be ice"

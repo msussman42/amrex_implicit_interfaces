@@ -590,7 +590,7 @@ type(assimilate_parm_type), intent(in) :: assimilate_in
 type(assimilate_out_parm_type), intent(inout) :: assimilate_out
 INTEGER_T, intent(in) :: i,j,k,cell_flag
 
-INTEGER_T :: nmat,nstate,nstate_test
+INTEGER_T :: nstate,nstate_test
 REAL_T :: x_exact,xcrit,tcrit
 INTEGER_T :: use_T
 INTEGER_T :: dir
@@ -598,7 +598,6 @@ INTEGER_T :: im
 INTEGER_T :: ibase
 REAL_T local_temp,local_massfrac,LS_exact,t_physical_init
 
-nmat=assimilate_in%nmat
 nstate=assimilate_in%nstate
 
 nstate_test=STATE_NCOMP
@@ -611,12 +610,6 @@ else
  stop
 endif
 
-if (nmat.eq.num_materials) then
- ! do nothing
-else
- print *,"nmat invalid"
- stop
-endif
 if ((num_materials.eq.2).and. &
     (num_state_material.eq.3).and. & ! density, temperature, species
     (probtype.eq.2002)) then
