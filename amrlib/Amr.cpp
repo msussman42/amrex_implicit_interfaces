@@ -1457,19 +1457,18 @@ Amr::timeStep (Real time,
 
 }  // subroutine timeStep
 
-void Amr::recalesce_copy_new_to_old(int nmat) {
-
- if (nmat!=global_AMR_num_materials)
-  amrex::Error("nmat invalid");
+void Amr::recalesce_copy_new_to_old() {
 
  int recalesce_num_state=6;
 
- if ((recalesce_state_old.size()!=nmat*recalesce_num_state)||
-     (recalesce_state_new.size()!=nmat*recalesce_num_state)) {
+ if ((recalesce_state_old.size()!=
+      global_AMR_num_materials*recalesce_num_state)||
+     (recalesce_state_new.size()!=
+      global_AMR_num_materials*recalesce_num_state)) {
    amrex::Error("recalesce sizes incorrect");
  } else {
 
-  for (int im=0;im<nmat*recalesce_num_state;im++) {
+  for (int im=0;im<global_AMR_num_materials*recalesce_num_state;im++) {
 
    recalesce_state_old[im]=recalesce_state_new[im];
 
@@ -1479,18 +1478,15 @@ void Amr::recalesce_copy_new_to_old(int nmat) {
 
 
 
-void Amr::recalesce_copy_old_to_new(int nmat) {
-
- if (nmat!=global_AMR_num_materials)
-  amrex::Error("nmat invalid");
+void Amr::recalesce_copy_old_to_new() {
 
  int recalesce_num_state=6;
 
- if ((recalesce_state_old.size()!=nmat*recalesce_num_state)||
-     (recalesce_state_new.size()!=nmat*recalesce_num_state)) {
+ if ((recalesce_state_old.size()!=global_AMR_num_materials*recalesce_num_state)||
+     (recalesce_state_new.size()!=global_AMR_num_materials*recalesce_num_state)) {
    amrex::Error("recalesce sizes incorrect");
  } else {
-  for (int im=0;im<nmat*recalesce_num_state;im++) {
+  for (int im=0;im<global_AMR_num_materials*recalesce_num_state;im++) {
 
    recalesce_state_new[im]=recalesce_state_old[im];
 
@@ -1500,17 +1496,14 @@ void Amr::recalesce_copy_old_to_new(int nmat) {
 
 
 
-void Amr::recalesce_init(int nmat) {
-
- if (nmat!=global_AMR_num_materials)
-  amrex::Error("nmat invalid");
+void Amr::recalesce_init() {
 
  int recalesce_num_state=6;
 
- recalesce_state_old.resize(recalesce_num_state*nmat);
- recalesce_state_new.resize(recalesce_num_state*nmat);
+ recalesce_state_old.resize(recalesce_num_state*global_AMR_num_materials);
+ recalesce_state_new.resize(recalesce_num_state*global_AMR_num_materials);
 
- for (int im=0;im<recalesce_num_state*nmat;im++) {
+ for (int im=0;im<recalesce_num_state*global_AMR_num_materials;im++) {
   recalesce_state_old[im]=-1.0;
   recalesce_state_new[im]=-1.0;
  }
@@ -1518,37 +1511,31 @@ void Amr::recalesce_init(int nmat) {
 } // recalesce_init
 
 
-void Amr::recalesce_get_state(Vector<Real>& recalesce_state_out,int nmat) { 
-
- if (nmat!=global_AMR_num_materials)
-  amrex::Error("nmat invalid");
+void Amr::recalesce_get_state(Vector<Real>& recalesce_state_out) { 
 
  int recalesce_num_state=6;
 
- if (recalesce_state_out.size()!=recalesce_num_state*nmat)
+ if (recalesce_state_out.size()!=recalesce_num_state*global_AMR_num_materials)
   amrex::Error("recalesce_state_out has incorrect size");
- if (recalesce_state_old.size()!=recalesce_num_state*nmat)
+ if (recalesce_state_old.size()!=recalesce_num_state*global_AMR_num_materials)
   amrex::Error("recalesce_state_old has incorrect size");
 
- for (int im=0;im<recalesce_num_state*nmat;im++)
+ for (int im=0;im<recalesce_num_state*global_AMR_num_materials;im++)
   recalesce_state_out[im]=recalesce_state_old[im];
 
 } // recalesce_get_state
 
 
-void Amr::recalesce_put_state(Vector<Real>& recalesce_state_in,int nmat) {
-
- if (nmat!=global_AMR_num_materials)
-  amrex::Error("nmat invalid");
+void Amr::recalesce_put_state(Vector<Real>& recalesce_state_in) {
 
  int recalesce_num_state=6;
 
- if (recalesce_state_new.size()!=recalesce_num_state*nmat)
+ if (recalesce_state_new.size()!=recalesce_num_state*global_AMR_num_materials)
   amrex::Error("recalesce_state_new has incorrect size");
- if (recalesce_state_in.size()!=recalesce_num_state*nmat)
+ if (recalesce_state_in.size()!=recalesce_num_state*global_AMR_num_materials)
   amrex::Error("recalesce_state_in has incorrect size");
 
- for (int im=0;im<recalesce_num_state*nmat;im++)
+ for (int im=0;im<recalesce_num_state*global_AMR_num_materials;im++)
   recalesce_state_new[im]=recalesce_state_in[im];
 
 } // recalesce_put_state
