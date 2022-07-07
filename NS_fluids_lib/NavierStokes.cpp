@@ -682,7 +682,7 @@ Vector<int> NavierStokes::freezing_model;
 //1=Tanasawa  2=Schrage 3=Kassemi
 Vector<int> NavierStokes::Tanasawa_or_Schrage_or_Kassemi; 
 
-//ispec=mass_fraction_id[0..2 nten-1]=1..num_species_var
+//ispec=mass_fraction_id[0..2 num_interfaces-1]=1..num_species_var
 Vector<int> NavierStokes::mass_fraction_id; 
 //link diffused material to non-diff. (array 1..num_species_var)
 //spec_material_id_LIQUID, spec_material_id_AMBIENT are 
@@ -715,12 +715,12 @@ Vector<int> NavierStokes::spec_material_id_AMBIENT;
 //   distribute_from_target=0 melting 
 //   distribute_from_target=1 freezing 
 
-Vector<int> NavierStokes::distribute_from_target; // 1..2*nten
+Vector<int> NavierStokes::distribute_from_target; // 1..2*num_interfaces
 
 // 0 - mdot concentrated at full cells near interface on 1-side
 // 1 - mdot distributed evenly to all full cells; cellvol weight
 // 2 - mdot distributed evenly to all full cells; constant weight
-Vector<int> NavierStokes::distribute_mdot_evenly; // 1..2*nten
+Vector<int> NavierStokes::distribute_mdot_evenly; // 1..2*num_interfaces
 
 //  For freezing in which liquid volume is fixed, the liquid density
 //  must increase.  The mass fraction of "heavy liquid" increases.
@@ -729,7 +729,7 @@ Vector<int> NavierStokes::distribute_mdot_evenly; // 1..2*nten
 // 0 - sum mdot <>0   
 // 1 - distribute sum -mdot to the source
 // -1 - distribute sum -mdot to the dest
-Vector<int> NavierStokes::constant_volume_mdot; // 1..2*nten
+Vector<int> NavierStokes::constant_volume_mdot; // 1..2*num_interfaces
 Vector<int> NavierStokes::constant_density_all_time; // 1..num_materials, def=1
 
 int NavierStokes::is_phasechange=0;
@@ -860,7 +860,7 @@ Real NavierStokes::bottom_bottom_tol_factor=0.001;
 //   modify "get_use_DCA" in PROB.F90.
 Vector<int> NavierStokes::law_of_the_wall;
 Vector<Real> NavierStokes::wall_model_velocity; //1..num_materials
-Vector<int> NavierStokes::interface_mass_transfer_model; //1..2*nten
+Vector<int> NavierStokes::interface_mass_transfer_model; //1..2*num_interfaces
 Real NavierStokes::wall_slip_weight=0.0;
 int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 
@@ -1676,31 +1676,31 @@ void fortran_parameters() {
 
  int nten=num_interfaces;
 
- Vector<Real> tension_slopetemp(nten);
- Vector<Real> tension_T0temp(nten);
- Vector<Real> tension_mintemp(nten);
- for (int im=0;im<nten;im++) {
+ Vector<Real> tension_slopetemp(num_interfaces);
+ Vector<Real> tension_T0temp(num_interfaces);
+ Vector<Real> tension_mintemp(num_interfaces);
+ for (int im=0;im<num_interfaces;im++) {
   tension_slopetemp[im]=0.0;
   tension_T0temp[im]=293.0;
   tension_mintemp[im]=0.0;
  }
- Vector<Real> tensiontemp(nten);
+ Vector<Real> tensiontemp(num_interfaces);
 
- Vector<Real> prefreeze_tensiontemp(nten);
+ Vector<Real> prefreeze_tensiontemp(num_interfaces);
 
- pp.getarr("tension",tensiontemp,0,nten);
- pp.queryarr("tension_slope",tension_slopetemp,0,nten);
- pp.queryarr("tension_T0",tension_T0temp,0,nten);
- pp.queryarr("tension_min",tension_mintemp,0,nten);
+ pp.getarr("tension",tensiontemp,0,num_interfaces);
+ pp.queryarr("tension_slope",tension_slopetemp,0,num_interfaces);
+ pp.queryarr("tension_T0",tension_T0temp,0,num_interfaces);
+ pp.queryarr("tension_min",tension_mintemp,0,num_interfaces);
 
- Vector<Real> latent_heat_temp(2*nten);
- Vector<Real> latent_heat_slopetemp(2*nten);
- Vector<Real> latent_heat_T0temp(2*nten);
- Vector<Real> latent_heat_mintemp(2*nten);
+ Vector<Real> latent_heat_temp(2*num_interfaces);
+ Vector<Real> latent_heat_slopetemp(2*num_interfaces);
+ Vector<Real> latent_heat_T0temp(2*num_interfaces);
+ Vector<Real> latent_heat_mintemp(2*num_interfaces);
 
- Vector<Real> saturation_temp_temp(2*nten);
- Vector<Real> reference_pressure_temp(2*nten);
- for (int i=0;i<nten;i++) { 
+ Vector<Real> saturation_temp_temp(2*num_interfaces);
+ Vector<Real> reference_pressure_temp(2*num_interfaces);
+ for (int i=0;i<num_interfaces;i++) { 
 
   if (tension_slopetemp[i]<=0.0) {
    // do nothing
@@ -1708,35 +1708,35 @@ void fortran_parameters() {
    amrex::Error("tension_slope must be non-positive(1)");
 
   saturation_temp_temp[i]=0.0;
-  saturation_temp_temp[i+nten]=0.0;
+  saturation_temp_temp[i+num_interfaces]=0.0;
   reference_pressure_temp[i]=1.0e+6;
-  reference_pressure_temp[i+nten]=1.0e+6;
+  reference_pressure_temp[i+num_interfaces]=1.0e+6;
 
   latent_heat_temp[i]=0.0;
-  latent_heat_temp[i+nten]=0.0;
+  latent_heat_temp[i+num_interfaces]=0.0;
   latent_heat_slopetemp[i]=0.0;
-  latent_heat_slopetemp[i+nten]=0.0;
+  latent_heat_slopetemp[i+num_interfaces]=0.0;
   latent_heat_T0temp[i]=0.0;
-  latent_heat_T0temp[i+nten]=0.0;
+  latent_heat_T0temp[i+num_interfaces]=0.0;
   latent_heat_mintemp[i]=0.0;
-  latent_heat_mintemp[i+nten]=0.0;
+  latent_heat_mintemp[i+num_interfaces]=0.0;
  }
- pp.queryarr("latent_heat",latent_heat_temp,0,2*nten);
- pp.queryarr("latent_heat_slope",latent_heat_slopetemp,0,2*nten);
- pp.queryarr("latent_heat_T0",latent_heat_T0temp,0,2*nten);
- pp.queryarr("latent_heat_min",latent_heat_mintemp,0,2*nten);
+ pp.queryarr("latent_heat",latent_heat_temp,0,2*num_interfaces);
+ pp.queryarr("latent_heat_slope",latent_heat_slopetemp,0,2*num_interfaces);
+ pp.queryarr("latent_heat_T0",latent_heat_T0temp,0,2*num_interfaces);
+ pp.queryarr("latent_heat_min",latent_heat_mintemp,0,2*num_interfaces);
 
- for (int i=0;i<2*nten;i++) { 
+ for (int i=0;i<2*num_interfaces;i++) { 
 
   if (latent_heat_slopetemp[i]<=0.0) {
    // do nothing
   } else
    amrex::Error("latent_heat_slope must be non-positive(1)");
 
- } //i=0...2*nten-1
+ } //i=0...2*num_interfaces-1
 
- pp.queryarr("saturation_temp",saturation_temp_temp,0,2*nten);
- pp.queryarr("reference_pressure",reference_pressure_temp,0,2*nten);
+ pp.queryarr("saturation_temp",saturation_temp_temp,0,2*num_interfaces);
+ pp.queryarr("reference_pressure",reference_pressure_temp,0,2*num_interfaces);
 
  Real R_Palmore_Desjardins_temp=8.31446261815324e+7;  // ergs/(mol Kelvin)
  pp.query("R_Palmore_Desjardins",R_Palmore_Desjardins_temp);
@@ -1754,9 +1754,9 @@ void fortran_parameters() {
  pp.queryarr("species_molar_mass",
    species_molar_mass_temp,0,num_species_var);
 
- for (int im=0;im<nten;im++)
+ for (int im=0;im<num_interfaces;im++)
   prefreeze_tensiontemp[im]=tensiontemp[im];
- pp.queryarr("prefreeze_tension",prefreeze_tensiontemp,0,nten);
+ pp.queryarr("prefreeze_tension",prefreeze_tensiontemp,0,num_interfaces);
 
  int ioproc=0;
  if (ParallelDescriptor::IOProcessor())
@@ -1774,7 +1774,7 @@ void fortran_parameters() {
   &ngeom_raw,
   &ngeom_recon,
   &num_materials,
-  &nten,
+  &num_interfaces,
   &ioproc);
 
  ParallelDescriptor::Barrier();
@@ -1951,7 +1951,7 @@ void fortran_parameters() {
   &ngeom_recon,
   &num_materials,
   material_type_temp.dataPtr(),
-  &nten,
+  &num_interfaces,
   DrhoDTtemp.dataPtr(),
   tempconst_temp.dataPtr(),
   initial_temperature_temp.dataPtr(),
@@ -2817,7 +2817,7 @@ NavierStokes::read_params ()
 
     law_of_the_wall.resize(num_materials);
     wall_model_velocity.resize(num_materials);
-    interface_mass_transfer_model.resize(2*nten);
+    interface_mass_transfer_model.resize(2*num_interfaces);
 
     for (int i=0;i<2*nten;i++) {
      interface_mass_transfer_model[i]=0;
