@@ -294,7 +294,7 @@ implicit none
 !  fort_latent_heat_slope, fort_latent_heat_T0, fort_latent_heat_min
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
-       !nten=num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2
+      !num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2
       INTEGER_T, PARAMETER :: MAX_NUM_INTERFACES=55
       INTEGER_T, PARAMETER :: MAX_NUM_SPECIES=10
        ! for user definable EOS, the EOS is defined based on "probtype"

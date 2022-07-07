@@ -268,15 +268,13 @@ implicit none
 REAL_T, intent(in), dimension(SDIM) :: x !spatial coordinates
 INTEGER_T, intent(in) :: im
 REAL_T, intent(out) :: dist
-INTEGER_T :: nmat
 
-nmat=num_materials
-if (nmat.lt.1) then
- print *,"nmat invalid in soliddist"
+if (num_materials.lt.1) then
+ print *,"num_materials invalid in soliddist"
  stop
 endif
 
-if ((im.lt.1).or.(im.gt.nmat)) then
+if ((im.lt.1).or.(im.gt.num_materials)) then
  print *,"im invalid11"
  stop
 endif
@@ -1042,7 +1040,7 @@ type(assimilate_parm_type), intent(in) :: assimilate_in
 type(assimilate_out_parm_type), intent(inout) :: assimilate_out
 INTEGER_T, intent(in) :: i,j,k,cell_flag
 
-INTEGER_T :: nmat,nstate,nstate_test
+INTEGER_T :: nstate,nstate_test
 REAL_T :: rr,r_exact,tcrit
 REAL_T :: xcrit(SDIM)
 INTEGER_T :: dir
@@ -1056,7 +1054,6 @@ INTEGER_T :: ok_to_overwrite_vel
 
 ok_to_overwrite_vel=0
 
-nmat=assimilate_in%nmat
 nstate=assimilate_in%nstate
 
 nstate_test=STATE_NCOMP
@@ -1069,12 +1066,6 @@ else
  stop
 endif
 
-if (nmat.eq.num_materials) then
- ! do nothing
-else
- print *,"nmat invalid"
- stop
-endif
 if ((num_materials.eq.2).and. &
     (num_state_material.eq.3).and. & ! density, temperature, species
     (probtype.eq.424)) then

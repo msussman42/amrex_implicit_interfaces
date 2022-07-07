@@ -99,16 +99,15 @@ stop
 
 
       subroutine get_mach_number(tessellate, &
-        vel,den,vof,mach,nmat)
+        vel,den,vof,mach)
       use MOF_routines_module
       use global_utility_module
       IMPLICIT NONE
  
       INTEGER_T, intent(in) :: tessellate
-      INTEGER_T, intent(in) :: nmat
       REAL_T, intent(in) :: vel(SDIM+1)
-      REAL_T, intent(in) :: den(nmat*num_state_material)
-      REAL_T, intent(in) :: vof(nmat)
+      REAL_T, intent(in) :: den(num_materials*num_state_material)
+      REAL_T, intent(in) :: vof(num_materials)
       REAL_T, intent(out) :: mach
       INTEGER_T dir
       REAL_T UMACH_local
@@ -131,7 +130,7 @@ stop
       else if ((tessellate.eq.1).or. &
                (tessellate.eq.3)) then
        im_primary=0
-       do im=1,nmat
+       do im=1,num_materials
         if (im_primary.eq.0) then
          im_primary=im
         else if (vof(im).gt.vof(im_primary)) then
@@ -143,7 +142,7 @@ stop
        stop
       endif
      
-      if ((im_primary.lt.1).or.(im_primary.gt.nmat)) then
+      if ((im_primary.lt.1).or.(im_primary.gt.num_materials)) then
        print *,"im_primary invalid"
        stop
       endif
@@ -589,7 +588,7 @@ stop
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(out) :: icemask
       REAL_T, intent(out) :: icefacecut
-      REAL_T, intent(in) :: LS(nmat)
+      REAL_T, intent(in) :: LS(num_materials)
       INTEGER_T, intent(in) :: distribute_from_target(2*nten)
       INTEGER_T, intent(in) :: complement_flag
 
@@ -636,7 +635,7 @@ stop
       call get_secondary_material(LS,im_primary,im_secondary)
 
       if ((im_secondary.ge.1).and. &
-          (im_secondary.le.nmat)) then
+          (im_secondary.le.num_materials)) then
         ! get_teriary_material is declared in MOF.F90
         ! is_rigid(im_tertiary)=0
        call get_tertiary_material(LS,im_primary,im_secondary,im_tertiary)
@@ -644,7 +643,7 @@ stop
        print *,"im_secondary invalid"
        stop
       endif
-      if ((im_tertiary.ge.0).and.(im_tertiary.le.nmat)) then
+      if ((im_tertiary.ge.0).and.(im_tertiary.le.num_materials)) then
        ! do nothing
       else
        print *,"im_tertiary invalid"
@@ -716,7 +715,7 @@ stop
        icefacecut=zero
 
       else if ((im_FSI_rigid.ge.0).and. &
-               (im_FSI_rigid.le.nmat)) then
+               (im_FSI_rigid.le.num_materials)) then
 
        if (im_FSI_rigid.ne.im_primary) then
         ! do nothing
@@ -726,14 +725,14 @@ stop
        endif
 
         ! either the primary or secondary material is "ice"
-       if ((im_ice.ge.1).and.(im_ice.le.nmat)) then 
+       if ((im_ice.ge.1).and.(im_ice.le.num_materials)) then 
 
          ! if the associated "melt" material
          ! is not the primary or secondary material,
          ! then check if it is the tertiary material.
         if ((LL(0).eq.zero).and.(LL(1).eq.zero)) then
          if ((im_tertiary.ge.1).and. &
-             (im_tertiary.le.nmat)) then
+             (im_tertiary.le.num_materials)) then
           if (is_rigid(im_tertiary).eq.0) then
            if (is_FSI_rigid(im_tertiary).eq.0) then
             if (is_ice(im_tertiary).eq.0) then
@@ -970,7 +969,7 @@ stop
        ! called from: GODUNOV_3D.F90, subroutine fort_heatsource
        ! in fort_heatsource:
        ! T_local(im)=T_local(im)+ &
-       !   dt*DeDTinverse(D_DECL(i,j,k),1)*heat_source_total  im=1..nmat
+       !   dt*DeDTinverse(D_DECL(i,j,k),1)*heat_source_total  im=1..num_materials
 
       subroutine get_local_heat_source( &
        time,dt, &
@@ -1002,12 +1001,12 @@ stop
       REAL_T, intent(in) :: temperature_source
       REAL_T, intent(in) :: temperature_source_cen(SDIM)
       REAL_T, intent(in) :: temperature_source_rad(SDIM)
-      REAL_T, intent(in) :: LS(nmat)
-      REAL_T, intent(in) :: VFRAC(nmat)
-      REAL_T, intent(in) :: TEMPERATURE(nmat)
-      REAL_T, intent(in) :: DENSITY(nmat)
-      REAL_T, intent(in) :: CV(nmat)
-      REAL_T, intent(out) :: HEAT_SOURCE_OUT(nmat)
+      REAL_T, intent(in) :: LS(num_materials)
+      REAL_T, intent(in) :: VFRAC(num_materials)
+      REAL_T, intent(in) :: TEMPERATURE(num_materials)
+      REAL_T, intent(in) :: DENSITY(num_materials)
+      REAL_T, intent(in) :: CV(num_materials)
+      REAL_T, intent(out) :: HEAT_SOURCE_OUT(num_materials)
       REAL_T dist
       REAL_T dist_gas
       REAL_T eta,depth,xs,ys,zs,phiE
@@ -1059,7 +1058,7 @@ stop
        print *,"temperature_source invalid"
        stop
       endif
-      do im=1,nmat
+      do im=1,num_materials
        if ((VFRAC(im).ge.-VOFTOL).and. &
            (VFRAC(im).le.one+VOFTOL)) then
         ! do nothing
@@ -1324,7 +1323,7 @@ stop
            im,HEAT_SOURCE_OUT(im)
         endif
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       return
       end subroutine get_local_heat_source 
@@ -1930,11 +1929,11 @@ implicit none
 integer, intent(in) :: nmat,n_rad, prob_dim
 integer, intent(in) :: im_primary,im_secondary,im_solid
 double precision, intent(in) :: &
-   LS_stencil(-n_rad:n_rad,-n_rad:n_rad,-n_rad:n_rad,nmat)
+   LS_stencil(-n_rad:n_rad,-n_rad:n_rad,-n_rad:n_rad,num_materials)
 double precision, intent(in) :: &
    x_stencil(-n_rad:n_rad,-n_rad:n_rad,-n_rad:n_rad,prob_dim)
 double precision, intent(in) :: x_proj(prob_dim)
-double precision, intent(in) :: LS_xp(nmat)
+double precision, intent(in) :: LS_xp(num_materials)
 
 double precision, intent(out) :: actual_angle, closest_distance
 
@@ -2701,9 +2700,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       denjump=zero
 
-      do im=1,nmat 
+      do im=1,num_materials 
        if (is_rigid(im).eq.0) then
-        do im_opp=im+1,nmat
+        do im_opp=im+1,num_materials
          if (is_rigid(im_opp).eq.0) then
           denjump_temp=abs(fort_denconst(im)-fort_denconst(im_opp))
           if (denjump_temp.gt.denjump) then
@@ -3498,15 +3497,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten2(-1:1,SDIM)
       REAL_T dx(SDIM)
-      REAL_T cenbc(nmat,SDIM)
-      REAL_T vfrac(nmat)
+      REAL_T cenbc(num_materials,SDIM)
+      REAL_T vfrac(num_materials)
       INTEGER_T im
 
       INTEGER_T dir2,i1,j1,k1,k1lo,k1hi
-      REAL_T centroid(nmat,SDIM)
-      REAL_T lsgrid(D_DECL(3,3,3),nmat)
-      REAL_T distbatch(nmat)
-      REAL_T facearea(nmat)
+      REAL_T centroid(num_materials,SDIM)
+      REAL_T lsgrid(D_DECL(3,3,3),num_materials)
+      REAL_T distbatch(num_materials)
+      REAL_T facearea(num_materials)
       REAL_T pipexlo,pipexhi,vfrac_sum
       REAL_T EBVOFTOL
       INTEGER_T nhalf2,isten
@@ -3581,7 +3580,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        call inletpipedist(xsten2(0,1),xsten2(0,2),xsten2(0,SDIM), &
         nmat,distbatch)
-       do im=1,nmat
+       do im=1,num_materials
         lsgrid(D_DECL(i1+2,j1+2,k1+2),im)=distbatch(im) 
        enddo
       enddo
@@ -3591,7 +3590,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac, &
         facearea,centroid,nmat,EBVOFTOL,SDIM)
-      do im=1,nmat
+      do im=1,num_materials
        do dir2=1,SDIM
         cenbc(im,dir2)=centroid(im,dir2)-xsten(0,dir2)
        enddo
@@ -3602,7 +3601,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        if ((axis_dir.ge.0).and.(axis_dir.le.4)) then
 
         if ((xsten(0,1).lt.pipexlo).or.(xsten(0,1).gt.pipexhi)) then
-         do im=1,nmat
+         do im=1,num_materials
           vfrac(im)=zero
           do dir2=1,SDIM
            cenbc(im,dir2)=zero
@@ -3627,7 +3626,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        ! kluge
       vfrac_sum=zero
-      do im=1,nmat
+      do im=1,num_materials
        if (is_rigid(im).eq.0) then
         vfrac_sum=vfrac_sum+vfrac(im)
        else if (is_rigid(im).eq.1) then
@@ -3636,7 +3635,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"is_rigid(im) invalid"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
       if (vfrac_sum.lt.VOFTOL) then
        vfrac(1)=one
        vfrac(2)=zero
@@ -3669,7 +3668,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T dist
 
       nmat=num_materials
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid73"
        stop
       endif
@@ -3818,7 +3817,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       nmat=num_materials
 
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid74"
        stop
       endif
@@ -3939,7 +3938,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"nrefine out of range"
        stop
       endif
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid75"
        stop
       endif
@@ -4049,7 +4048,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       IMPLICIT NONE
 
       INTEGER_T im,nmat
-      REAL_T dist(nmat)
+      REAL_T dist(num_materials)
       REAL_T x,y,z,ht,rr,initial_time
       INTEGER_T im_solid_pipe
 
@@ -4131,14 +4130,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       endif
 
       dist(2)=-dist(1)
-      do im=3,nmat
+      do im=3,num_materials
        dist(im)=-99999.0
       enddo
 
         ! axis_dir=4 is the comparison with Linear Stability Analysis
       if (axis_dir.ne.4) then
        if ((im_solid_pipe.lt.1).or. &
-           (im_solid_pipe.gt.nmat)) then
+           (im_solid_pipe.gt.num_materials)) then
         print *,"im_solid_pipe invalid 2"
         stop
        endif
@@ -4238,7 +4237,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
       else if (axis_dir.eq.3) then
        if ((im_solid_pipe.lt.1).or. &
-           (im_solid_pipe.gt.nmat)) then
+           (im_solid_pipe.gt.num_materials)) then
         print *,"im_solid_pipe invalid 2.9"
         stop
        endif
@@ -4275,7 +4274,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                (axis_dir.eq.2)) then
 
        if ((im_solid_pipe.lt.1).or. &
-           (im_solid_pipe.gt.nmat)) then
+           (im_solid_pipe.gt.num_materials)) then
         print *,"im_solid_pipe invalid 3"
         stop
        endif
@@ -4921,10 +4920,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T iter,maxiter
       INTEGER_T i12,i13,i23
 
-      if ((nmat.lt.3).or. &
-          (im.le.0).or.(im.gt.nmat).or. &
-          (im_opp.le.0).or.(im_opp.gt.nmat).or. &
-          (im_3.le.0).or.(im_3.gt.nmat).or. &
+      if ((num_materials.lt.3).or. &
+          (im.le.0).or.(im.gt.num_materials).or. &
+          (im_opp.le.0).or.(im_opp.gt.num_materials).or. &
+          (im_3.le.0).or.(im_3.gt.num_materials).or. &
           (iten.le.0).or.(iten.gt.nten).or. & 
           (iten_13.le.0).or.(iten_13.gt.nten).or. & 
           (iten_23.le.0).or.(iten_23.gt.nten).or. &
@@ -5033,7 +5032,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
 
 
-        ! input: LSleft,LSright,nmat
+        ! input: LSleft,LSright,num_materials
         ! output: gradh,im,im_opp
         ! gradh=H(LSright)-H(LSleft) 
         !
@@ -5111,7 +5110,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine HSCALE
 
        ! partid=0..nparts-1
-       ! im_solid=0..nmat
+       ! im_solid=0..num_materials
        ! is_solid_face==1 if:
        !   0.0<=facecut_solid<=VOFTOL_AREAFRAC  or
        !   max(LSleft(im_solid),LSright(im_solid))>=0.0
@@ -5450,8 +5449,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T, intent(in) :: LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
-      REAL_T, intent(in) :: voflist(nmat)
+      REAL_T, intent(in) :: LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      REAL_T, intent(in) :: voflist(num_materials)
       REAL_T, intent(in) :: time
       REAL_T, intent(out) :: err
 
@@ -5464,10 +5463,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T i1,j1,k1
       INTEGER_T material_count
       INTEGER_T adapt_nozzle_flag
-      INTEGER_T material_present_flag(nmat)
+      INTEGER_T material_present_flag(num_materials)
       INTEGER_T k1lo,k1hi
       REAL_T vfrac_rigid_sum
-      REAL_T LS_temp(nmat)
+      REAL_T LS_temp(num_materials)
 
       if ((level.lt.0).or.(level.gt.max_level)) then
        print *,"level invalid calc_error_indicator"
@@ -5535,9 +5534,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
 
-       if (nmat.eq.2) then
+       if (num_materials.eq.2) then
         ! do nothing
-       else if (nmat.gt.2) then
+       else if (num_materials.gt.2) then
         im=3
         if ((FSI_flag(im).eq.1).or. &
             (FSI_flag(im).eq.2).or. &
@@ -5565,7 +5564,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          stop
         endif
        else
-        print *,"nmat invalid"
+        print *,"num_materials invalid"
         stop
        endif
 
@@ -5576,12 +5575,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif  
 
-      do im=1,nmat 
+      do im=1,num_materials 
        material_present_flag(im)=0
       enddo
 
       vfrac_rigid_sum=zero
-      do im=1,nmat 
+      do im=1,num_materials 
        LS_temp(im)=LS_stencil(D_DECL(0,0,0),im)
        if (is_rigid(im).eq.0) then
         ! do nothing
@@ -5591,7 +5590,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"is_rigid(im) invalid"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       if ((vfrac_rigid_sum.ge.one-VOFTOL).and. &
           (vfrac_rigid_sum.le.one+VOFTOL)) then
@@ -5614,7 +5613,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           ((is_rigid(im_primary).eq.1).and. & ! solid primary, but fluids
            (vfrac_rigid_sum.le.one-VOFTOL))) then  ! in the cell.
 
-       do im=1,nmat 
+       do im=1,num_materials 
         if ((voflist(im).ge.VOFTOL).and. &
             (voflist(im).le.one+VOFTOL)) then
          material_present_flag(im)=1
@@ -5624,12 +5623,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          print *,"voflist invalid"
          stop
         endif
-       enddo ! im=1..nmat
+       enddo ! im=1..num_materials
 
        do i1=-1,1
        do j1=-1,1
        do k1=k1lo,k1hi
-        do im=1,nmat 
+        do im=1,num_materials 
          LS_temp(im)=LS_stencil(D_DECL(i1,j1,k1),im)
         enddo
         call get_primary_material(LS_temp,im_primary)
@@ -5670,7 +5669,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       material_count=0
 
-      do im=1,nmat 
+      do im=1,num_materials 
 
        if (material_present_flag(im).eq.1) then
 
@@ -5683,9 +5682,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
         
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
-      if (material_count.gt.nmat) then
+      if (material_count.gt.num_materials) then
        print *,"material_count is corrupt"
        stop
       endif
@@ -5776,7 +5775,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        if (fort_is_passive_advect_test().eq.1) then
 
-        call SUB_LS(xvec,time,LS,nmat)
+        call SUB_LS(xvec,time,LS,num_materials)
         dist=LS(1)
 
         ! drop on slope (exactdist)
@@ -5888,15 +5887,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       INTEGER_T, intent(in) :: nmat,nhalf0,nhalf,bfact
       REAL_T, intent(in) :: time
-      REAL_T, intent(in) :: mofdata(nmat*ngeom_recon)
-      REAL_T, intent(in) :: mofdata_tess(nmat*ngeom_recon)
+      REAL_T, intent(in) :: mofdata(num_materials*ngeom_recon)
+      REAL_T, intent(in) :: mofdata_tess(num_materials*ngeom_recon)
       REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,SDIM)  ! top level
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)     ! refined
       REAL_T :: xsten_test(-1:1,SDIM)
       INTEGER_T nhalf_test,isten
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T dxlevel(SDIM)
-      REAL_T, intent(out) :: errorparm(2*nmat)
+      REAL_T, intent(out) :: errorparm(2*num_materials)
       INTEGER_T, intent(out) :: cutflag
       INTEGER_T imaterial
       INTEGER_T minusflag(2)
@@ -5908,7 +5907,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T ltest(D_DECL(3,3,3))
       REAL_T lnode(4*(SDIM-1))
       REAL_T volallagain
-      REAL_T volcut(nmat)
+      REAL_T volcut(num_materials)
       REAL_T cencut(SDIM)
       REAL_T facearea
       ! get_symmetric_error
@@ -5916,8 +5915,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T nmax
       INTEGER_T tessellate
       INTEGER_T vofcomp
-      REAL_T multi_volume(nmat)
-      REAL_T multi_cen(SDIM,nmat)
+      REAL_T multi_volume(num_materials)
+      REAL_T multi_cen(SDIM,num_materials)
       INTEGER_T combine_materials,imat1a,imat1b,imaterial_temp
       REAL_T vfrac,dxmaxREFINE
       REAL_T local_LS
@@ -5966,7 +5965,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       call Box_volumeFAST(bfact,dx,xsten,nhalf,volbox,cenbox,SDIM)
 
       cutflag=0
-      do ii=1,2*nmat
+      do ii=1,2*num_materials
        errorparm(ii)=zero
       enddo
 
@@ -6001,7 +6000,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      do imaterial=1,nmat
+      do imaterial=1,num_materials
 
        do ii=1,2
         minusflag(ii)=0
@@ -6122,7 +6121,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       if (cutflag.eq.1) then
 
         ! first initialize the volumes for the expected solution
-       do imaterial=1,nmat
+       do imaterial=1,num_materials
 
         inode=1
         do k1=k1lo,k1hi,2
@@ -6181,7 +6180,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         multi_volume(imat1b)=multi_volume(imat1a)
        endif 
 
-       do imaterial=1,nmat
+       do imaterial=1,num_materials
         errorparm(2*imaterial-1)=multi_volume(imaterial)
         errorparm(2*imaterial)=abs(volcut(imaterial)-multi_volume(imaterial))
        enddo
@@ -6213,11 +6212,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,SDIM)
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T, intent(in) :: dxin(SDIM)
-      REAL_T, intent(inout) :: errorparm(2*nmat)
+      REAL_T, intent(inout) :: errorparm(2*num_materials)
       INTEGER_T, intent(inout) :: max_level
       INTEGER_T, intent(in) :: level
-      REAL_T, intent(inout) :: mofdata(nmat*ngeom_recon)
-      REAL_T, intent(inout) :: mofdata_tess(nmat*ngeom_recon)
+      REAL_T, intent(inout) :: mofdata(num_materials*ngeom_recon)
+      REAL_T, intent(inout) :: mofdata_tess(num_materials*ngeom_recon)
        ! in: stackerror
       REAL_T, intent(inout) :: xtrilist(SDIM+1,SDIM,POLYGON_LIST_MAX) 
 
@@ -6227,7 +6226,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, allocatable, dimension(:) :: dxsub
       REAL_T, allocatable, dimension(:) :: xmid
 
-      allocate(localerror(2*nmat)) 
+      allocate(localerror(2*num_materials)) 
       allocate(dxsub(SDIM))
       allocate(xmid(SDIM))
       allocate(xstensub(-nhalf:nhalf,SDIM))
@@ -6277,7 +6276,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
 
       if (level.eq.0) then
-       do im=1,2*nmat
+       do im=1,2*num_materials
         errorparm(im)=zero
        enddo
       endif
@@ -6292,7 +6291,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         localerror,cutflag,nmat,time)
 
       if ((level.eq.max_level).or.(cutflag.eq.0)) then
-       do im=1,2*nmat
+       do im=1,2*num_materials
         errorparm(im)=errorparm(im)+localerror(im)
        enddo
       else
@@ -6516,7 +6515,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       endif 
 
       if ((im_solid_temp.ge.1).and. &
-          (im_solid_temp.le.nmat)) then
+          (im_solid_temp.le.num_materials)) then
 
        if (is_in_probtype_list().eq.1) then
 
@@ -6585,7 +6584,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
  
       nmat=num_materials
       if ((im_solid_tempflux.ge.1).and. &
-          (im_solid_tempflux.le.nmat)) then
+          (im_solid_tempflux.le.num_materials)) then
        tempflux=zero
        if ((probtype.eq.32).and.(SDIM.eq.2)) then
         tempflux= &
@@ -6979,15 +6978,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T xsten2(-1:1,SDIM)
       INTEGER_T nhalf2
       REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(out) :: cenbc(nmat,SDIM)
-      REAL_T, intent(out) :: vfrac(nmat)
+      REAL_T, intent(out) :: cenbc(num_materials,SDIM)
+      REAL_T, intent(out) :: vfrac(num_materials)
       INTEGER_T im
 
       INTEGER_T dir2,i1,j1,k1,k1lo,k1hi,isten
-      REAL_T centroid(nmat,SDIM)
-      REAL_T lsgrid(D_DECL(3,3,3),nmat)
+      REAL_T centroid(num_materials,SDIM)
+      REAL_T lsgrid(D_DECL(3,3,3),num_materials)
       REAL_T, dimension(:), allocatable :: distbatch
-      REAL_T facearea(nmat)
+      REAL_T facearea(num_materials)
       REAL_T EBVOFTOL
       INTEGER_T im_solid_microfluidic
       REAL_T initial_time
@@ -7012,7 +7011,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       endif
       nten=num_interfaces
 
-      allocate(distbatch(nmat))
+      allocate(distbatch(num_materials))
 
       if (SDIM.eq.2) then
        k1lo=0
@@ -7034,14 +7033,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             (xsten(0,SDIM).lt.probloz-VOFTOL*dx(SDIM))).and. &
            (SDIM.eq.3)) then
 
-       do im=1,nmat
+       do im=1,num_materials
         do dir2=1,SDIM
          cenbc(im,dir2)=zero
         enddo
         vfrac(im)=zero
        enddo ! im
        if ((im_solid_microfluidic.lt.1).or. &
-           (im_solid_microfluidic.gt.nmat)) then
+           (im_solid_microfluidic.gt.num_materials)) then
         print *,"im_solid_microfluidic invalid 7"
         stop
        endif
@@ -7066,7 +7065,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         call materialdist_batch( &
          xsten2,nhalf2,dx,bfact, &
          distbatch,nmat,initial_time)
-        do im=1,nmat
+        do im=1,num_materials
          lsgrid(D_DECL(i1+2,j1+2,k1+2),im)=distbatch(im) 
         enddo
        enddo
@@ -7078,7 +7077,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         lsgrid,vfrac,facearea, &
         centroid,nmat,EBVOFTOL,SDIM)
 
-       do im=1,nmat
+       do im=1,num_materials
         do dir2=1,SDIM
          cenbc(im,dir2)=centroid(im,dir2)-xsten(0,dir2)
         enddo
@@ -7412,11 +7411,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       nmat=num_materials
 
-      if ((im_source.lt.1).or.(im_source.gt.nmat)) then
+      if ((im_source.lt.1).or.(im_source.gt.num_materials)) then
        print *,"im_source invalid"
        stop
       endif
-      if ((im_dest.lt.1).or.(im_dest.gt.nmat)) then
+      if ((im_dest.lt.1).or.(im_dest.gt.num_materials)) then
        print *,"im_dest invalid"
        stop
       endif
@@ -7503,7 +7502,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       end subroutine cavitation_bubble_dist
 
-        ! imaterial = 1..nmat
+        ! imaterial = 1..num_materials
         ! liquid,gas,alt,solid
       subroutine materialdist_batch(xsten,nhalf,dx,bfact,dist,nmat,time)
       use global_utility_module
@@ -7527,7 +7526,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, intent(in) :: dx(SDIM) 
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(out) :: dist(nmat)
+      REAL_T, intent(out) :: dist(num_materials)
       REAL_T x,y,z
       INTEGER_T imaterial
       REAL_T distline
@@ -7583,12 +7582,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
       endif
 
-      do imaterial=1,nmat
+      do imaterial=1,num_materials
        dist(imaterial)=-9999.0
       enddo
 
       distsolid=-9999.0
-      do imaterial=1,nmat
+      do imaterial=1,num_materials
        if (is_rigid(imaterial).eq.1) then
          ! pos in solid, calling from materialdist_batch
         call materialdistsolid(x,y,z,dist(imaterial),time,imaterial)  
@@ -7601,11 +7600,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"is_rigid invalid PROB.F90"
         stop
        endif
-      enddo ! imaterial=1..nmat
+      enddo ! imaterial=1..num_materials
 
       if (distsolid.ge.zero) then
        if ((im_solid_materialdist.lt.1).or. &
-           (im_solid_materialdist.gt.nmat)) then
+           (im_solid_materialdist.gt.num_materials)) then
         print *,"im_solid_materialdist invalid: ",im_solid_materialdist
         print *,"probtype= ",probtype
         print *,"axis_dir=",axis_dir
@@ -7637,8 +7636,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        ! HYDRATE (materialdist_batch)
       else if (probtype.eq.199) then
-       if (nmat.ne.3) then
-        print *,"nmat invalid for hydrate problem"
+       if (num_materials.ne.3) then
+        print *,"num_materials invalid for hydrate problem"
         stop
        endif
        call INIT_LS_WATER(x,y,z,time,dist(1))
@@ -7652,8 +7651,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        enddo
 
       else if (probtype.eq.220) then
-       if (nmat.ne.3) then
-        print *,"nmat invalid for unimaterial problem"
+       if (num_materials.ne.3) then
+        print *,"num_materials invalid for unimaterial problem"
         stop
        endif
        maxdx=max(dx(1),dx(2))
@@ -7722,26 +7721,26 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
          ! water, jwl, air, vacuum
        if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
-        if (nmat.lt.3) then
-         print *,"nmat invalid"
+        if (num_materials.lt.3) then
+         print *,"num_materials invalid"
          stop
         endif
         call vapordist(xsten,nhalf,dx,bfact,dist(1))  ! water
         call cavitation_bubble_dist(xsten,nhalf,dist(2),dx,bfact) ! jwl
         dist(3)=y-(zblob+yblob) ! air
-        if (nmat.eq.4) then
-         dist(nmat)=-99999.0 ! vacuum
+        if (num_materials.eq.4) then
+         dist(num_materials)=-99999.0 ! vacuum
         endif
        else if (axis_dir.eq.10) then ! cavitation due to falling steel ball
-        if (nmat.ne.3) then
-         print *,"nmat invalid: nmat=",nmat
+        if (num_materials.ne.3) then
+         print *,"num_materials invalid: num_materials=",num_materials
          stop
         endif
-         ! dist(nmat)>0 in the steel sphere
-        call vapordist(xsten,nhalf,dx,bfact,dist(nmat)) 
+         ! dist(num_materials)>0 in the steel sphere
+        call vapordist(xsten,nhalf,dx,bfact,dist(num_materials)) 
         dist(1)=99999.0 ! water
         dist(2)=-99999.0 ! ambient
-        if (im_solid_materialdist.ne.nmat) then
+        if (im_solid_materialdist.ne.num_materials) then
          print *,"im_solid_materialdist invalid: ",im_solid_materialdist
          stop
         endif
@@ -7756,8 +7755,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        ! River
       else if (probtype.eq.209) then
-       if (nmat.ne.2) then
-        print *,"nmat invalid for River problem"
+       if (num_materials.ne.2) then
+        print *,"num_materials invalid for River problem"
         stop
        endif
        call RiverHeight(x,y,dist(1),axis_dir)
@@ -7776,8 +7775,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         if (((axis_dir.eq.3).and.(SDIM.eq.2)).or.  & ! barbell swimmer
             ((axis_dir.eq.2).and.(SDIM.eq.2)).or.  & ! ice crystal in drop
             ((axis_dir.eq.1).and.(SDIM.eq.2))) then ! falling solid on pool
-         if (nmat.ne.3) then
-          print *,"expecting nmat=3 if probtype=531"
+         if (num_materials.ne.3) then
+          print *,"expecting num_materials=3 if probtype=531"
           stop
          endif
          print *,"FSI algorithm not implemented yet"
@@ -7895,11 +7894,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! boiling from a cavity (materialdistbatch)
        if (probtype.eq.710) then
 
-        if (nmat.ne.3) then
-         print *,"nmat invalid probtype=710"
+        if (num_materials.ne.3) then
+         print *,"num_materials invalid probtype=710"
          stop
         endif
-        dist(nmat)=distsolid
+        dist(num_materials)=distsolid
         call vapordist(xsten,nhalf,dx,bfact,dist(1))  ! positive in liquid
         dist(2)=-dist(1)
 
@@ -7912,8 +7911,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          print *,"conflict of parameters 540"
          stop
         else if (radblob4.ne.zero) then
-         if (nmat.lt.3) then
-          print *,"nmat invalid"
+         if (num_materials.lt.3) then
+          print *,"num_materials invalid"
           stop
          endif
          raddist=sqrt( (x-xblob)**2 + (y-yblob)**2 + (z-zblob)**2 )
@@ -7939,8 +7938,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           endif
          endif
         else if (radblob3.ne.zero) then
-         if (nmat.lt.3) then
-          print *,"nmat invalid"
+         if (num_materials.lt.3) then
+          print *,"num_materials invalid"
           stop
          endif
          if (radblob2.ne.zero) then
@@ -7967,8 +7966,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          print *,"conflict of parameters 540"
          stop
         else if (radblob4.ne.zero) then
-         if (nmat.lt.3) then
-          print *,"nmat invalid"
+         if (num_materials.lt.3) then
+          print *,"num_materials invalid"
           stop
          endif
          raddist=sqrt( (x-xblob)**2 + (y-yblob)**2 )
@@ -7994,8 +7993,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           endif
          endif
         else if (radblob3.ne.zero) then
-         if (nmat.lt.3) then
-          print *,"nmat invalid"
+         if (num_materials.lt.3) then
+          print *,"num_materials invalid"
           stop
          endif
          if (radblob2.ne.zero) then
@@ -8027,7 +8026,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! water (material 3) on top
         ! diesel (material 1) on bottom
        if ((probtype.eq.17).and.(SDIM.eq.3)) then
-        if (nmat.ne.3) then
+        if (num_materials.ne.3) then
          print *,"num_materials must be 3"
          stop
         endif
@@ -8061,7 +8060,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! water (material 3) on top
         ! diesel (material 1) on bottom
        if ((probtype.eq.17).and.(SDIM.eq.2)) then
-        if (nmat.ne.3) then
+        if (num_materials.ne.3) then
          print *,"num_materials must be 3"
          stop
         endif
@@ -8108,8 +8107,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
       nmat=num_materials
-      allocate(distbatch(nmat))
-      if ((imaterial.lt.1).or.(imaterial.gt.nmat)) then
+      allocate(distbatch(num_materials))
+      if ((imaterial.lt.1).or.(imaterial.gt.num_materials)) then
        print *,"imaterial invalid in materialdist"
        print *,"imaterial = ",imaterial
        stop
@@ -8173,15 +8172,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T xsten2(-1:1,SDIM)
 
       REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(out) :: cenbc(nmat,SDIM)
-      REAL_T, intent(out) :: vfrac(nmat)
+      REAL_T, intent(out) :: cenbc(num_materials,SDIM)
+      REAL_T, intent(out) :: vfrac(num_materials)
       INTEGER_T im
 
       INTEGER_T dir2,i1,j1,k1,k1lo,k1hi,isten
-      REAL_T centroid(nmat,SDIM)
-      REAL_T lsgrid(D_DECL(3,3,3),nmat)
-      REAL_T facearea(nmat)
-      REAL_T distbatch(nmat)
+      REAL_T centroid(num_materials,SDIM)
+      REAL_T lsgrid(D_DECL(3,3,3),num_materials)
+      REAL_T facearea(num_materials)
+      REAL_T distbatch(num_materials)
       REAL_T EBVOFTOL
       INTEGER_T nhalf2
 
@@ -8227,7 +8226,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        call get_jet_dist(xsten2(0,1),xsten2(0,2), &
          xsten2(0,SDIM),nmat,distbatch)
-       do im=1,nmat
+       do im=1,num_materials
         lsgrid(D_DECL(i1+2,j1+2,k1+2),im)=distbatch(im) 
        enddo
       enddo
@@ -8237,7 +8236,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac, &
         facearea,centroid,nmat,EBVOFTOL,SDIM)
-      do im=1,nmat
+      do im=1,num_materials
        do dir2=1,SDIM
         cenbc(im,dir2)=centroid(im,dir2)-xsten(0,dir2)
        enddo
@@ -8255,15 +8254,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten2(-1:1,SDIM)
       REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(out) :: cenbc(nmat,SDIM)
-      REAL_T, intent(out) :: vfrac(nmat)
+      REAL_T, intent(out) :: cenbc(num_materials,SDIM)
+      REAL_T, intent(out) :: vfrac(num_materials)
       REAL_T :: initial_time
       INTEGER_T im
 
       INTEGER_T dir2,i1,j1,k1,k1lo,k1hi,isten
-      REAL_T centroid(nmat,SDIM)
-      REAL_T lsgrid(D_DECL(3,3,3),nmat)
-      REAL_T facearea(nmat)
+      REAL_T centroid(num_materials,SDIM)
+      REAL_T lsgrid(D_DECL(3,3,3),num_materials)
+      REAL_T facearea(num_materials)
       REAL_T, dimension(:), allocatable :: distbatch
       REAL_T EBVOFTOL
       INTEGER_T nhalf2
@@ -8284,7 +8283,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"nmat invalid"
        stop
       endif
-      allocate(distbatch(nmat))
+      allocate(distbatch(num_materials))
 
       if (SDIM.eq.2) then
        k1lo=0
@@ -8314,7 +8313,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        call materialdist_batch( &
         xsten2,nhalf2,dx,bfact, &
         distbatch,nmat,initial_time)
-       do im=1,nmat
+       do im=1,num_materials
         lsgrid(D_DECL(i1+2,j1+2,k1+2),im)=distbatch(im) 
        enddo
       enddo
@@ -8326,7 +8325,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       call getvolumebatch(bfact,dx,xsten,nhalf, &
         lsgrid,vfrac,facearea, &
         centroid,nmat,EBVOFTOL,SDIM)
-      do im=1,nmat
+      do im=1,num_materials
 
        if (vfrac(im).lt.zero) then
         print *,"vfrac invalid in get_initial_vfrac 1"
@@ -8590,7 +8589,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       IMPLICIT NONE
 
       INTEGER_T nmat
-      REAL_T dist(nmat)
+      REAL_T dist(num_materials)
       REAL_T x,y,z,zmin,zmax,dist1,dist2
       REAL_T xmin,xmax
       REAL_T distsolid
@@ -8629,13 +8628,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       initial_time=zero
 
-      do im=1,nmat
+      do im=1,num_materials
        dist(im)=-99999.0
       enddo
 
 
       distsolid=-9999.0
-      do im=1,nmat
+      do im=1,num_materials
        if (is_rigid(im).eq.1) then
          ! in get_jet_dist; positive in solid.
         call materialdistsolid(x,y2d,z,dist(im),initial_time,im)
@@ -8648,7 +8647,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"is_rigid invalid PROB.F90"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
    
       if (probtype.eq.538) then ! get_jet_dist (inputs.injA)
 
@@ -8687,7 +8686,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        dist(1)=-dist(1)
        dist(2)=-dist(1)
        if ((im_solid_jet.lt.1).or. &
-           (im_solid_jet.gt.nmat)) then
+           (im_solid_jet.gt.num_materials)) then
         print *,"im_solid_jet invalid 8"
         stop
        endif
@@ -8721,7 +8720,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         if ((axis_dir.eq.1).or.(axis_dir.eq.2)) then
          if ((im_solid_jet.lt.1).or. &
-             (im_solid_jet.gt.nmat)) then
+             (im_solid_jet.gt.num_materials)) then
           print *,"im_solid_jet invalid 9"
           stop
          endif
@@ -8811,7 +8810,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if ((axis_dir.eq.1).or.(axis_dir.eq.2)) then
            ! cylindrical solid nozzle if axis_dir=1
          if ((im_solid_jet.lt.1).or. &
-             (im_solid_jet.gt.nmat)) then
+             (im_solid_jet.gt.num_materials)) then
           print *,"im_solid_jet invalid 10"
           stop
          endif
@@ -8879,7 +8878,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          dist(2)=-dist(1)
         else if (axis_dir.eq.1) then ! impinging jets two materials
 
-         if (nmat.lt.3) then
+         if (num_materials.lt.3) then
           print *,"num_materials too small"
           stop
          endif
@@ -10124,7 +10123,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       IMPLICIT NONE
 
       INTEGER_T nmat
-      REAL_T dist(nmat)
+      REAL_T dist(num_materials)
       REAL_T x,y,z,time
       REAL_T distsolid
       REAL_T distleft,distright
@@ -10138,7 +10137,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
       if ((im_solid_bump.lt.1).or. &
-          (im_solid_bump.gt.nmat)) then
+          (im_solid_bump.gt.num_materials)) then
        print *,"im_solid_bump invalid in get_bump_dist"
        stop
       endif
@@ -10179,14 +10178,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T time
       INTEGER_T im
       REAL_T dx(SDIM)
-      REAL_T vfrac(nmat)
-      REAL_T cenbc(nmat,SDIM)
+      REAL_T vfrac(num_materials)
+      REAL_T cenbc(num_materials,SDIM)
 
       INTEGER_T dir2,i1,j1,k1,k1lo,k1hi,isten
-      REAL_T centroid(nmat,SDIM)
-      REAL_T lsgrid(D_DECL(3,3,3),nmat)
-      REAL_T facearea(nmat)
-      REAL_T distbatch(nmat)
+      REAL_T centroid(num_materials,SDIM)
+      REAL_T lsgrid(D_DECL(3,3,3),num_materials)
+      REAL_T facearea(num_materials)
+      REAL_T distbatch(num_materials)
       REAL_T EBVOFTOL
       INTEGER_T nhalf2
 
@@ -10238,7 +10237,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        call get_bump_dist(xsten2(0,1),xsten2(0,2), &
         xsten2(0,SDIM),nmat,distbatch,time)
-       do im=1,nmat
+       do im=1,num_materials
         lsgrid(D_DECL(i1+2,j1+2,k1+2),im)=distbatch(im) 
        enddo
  
@@ -10251,7 +10250,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         lsgrid,vfrac, &
         facearea,centroid,nmat,EBVOFTOL,SDIM)
 
-      do im=1,nmat
+      do im=1,num_materials
        do dir2=1,SDIM
         cenbc(im,dir2)=centroid(im,dir2)-xsten(0,dir2)
        enddo
@@ -10322,8 +10321,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T velcell(SDIM)
       INTEGER_T nmat
 
-      REAL_T VOF(nmat)
-      REAL_T cenbc(nmat,SDIM)
+      REAL_T VOF(num_materials)
+      REAL_T cenbc(num_materials,SDIM)
       INTEGER_T im
 
       if (nhalf.lt.3) then
@@ -10341,7 +10340,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       call get_initial_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc,nmat)
 
-      do im=1,nmat
+      do im=1,num_materials
        if (is_prescribed(im).eq.1) then
         if (is_rigid(im).eq.1) then
          if (VOF(im).gt.zero) then
@@ -10357,7 +10356,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"is_prescribed invalid"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       return
       end subroutine mask_velocity
@@ -10504,10 +10503,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       IMPLICIT NONE
 
       INTEGER_T nmat
-      REAL_T VOF(nmat*ngeom_raw)
-      REAL_T VOFwall(nmat*ngeom_raw)
-      REAL_T cenbc(nmat,SDIM)
-      REAL_T vofarray(nmat)
+      REAL_T VOF(num_materials*ngeom_raw)
+      REAL_T VOFwall(num_materials*ngeom_raw)
+      REAL_T cenbc(num_materials,SDIM)
+      REAL_T vofarray(num_materials)
       INTEGER_T im,vofcomp,dir2
 
       if (nmat.ne.num_materials) then
@@ -10515,7 +10514,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      do im=1,nmat
+      do im=1,num_materials
        vofcomp=(im-1)*(ngeom_raw)+1
        if ((FSI_flag(im).eq.0).or. & ! fluid
            (FSI_flag(im).eq.1).or. & ! prescribed solid - (EUL)
@@ -10538,7 +10537,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"FSI_flag invalid"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       return
       end subroutine copy_mofbc_to_result
@@ -10547,8 +10546,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       IMPLICIT NONE
 
       INTEGER_T nmat
-      REAL_T LS(nmat)
-      REAL_T LSwall(nmat)
+      REAL_T LS(num_materials)
+      REAL_T LSwall(num_materials)
       INTEGER_T im
 
       if (nmat.ne.num_materials) then
@@ -10556,7 +10555,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      do im=1,nmat
+      do im=1,num_materials
        if ((FSI_flag(im).eq.0).or. & ! fluid
            (FSI_flag(im).eq.1).or. & ! prescribed solid - (EUL)
            (FSI_flag(im).eq.3).or. & ! ice
@@ -10572,7 +10571,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"FSI_flag invalid"
         stop
        endif
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       return
       end subroutine check_lsbc_extrap
@@ -10595,13 +10594,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T nmat,bfact,nhalf
       REAL_T xsten(-nhalf:nhalf,SDIM)
       INTEGER_T dir,side
-      REAL_T VOF(nmat*ngeom_raw)
-      REAL_T VOFwall(nmat*ngeom_raw)
+      REAL_T VOF(num_materials*ngeom_raw)
+      REAL_T VOFwall(num_materials*ngeom_raw)
       REAL_T time,xwall,x,y,z
       REAL_T dx(SDIM)
-      REAL_T cenbc(nmat,SDIM)
+      REAL_T cenbc(num_materials,SDIM)
       REAL_T LS
-      REAL_T vofarray(nmat)
+      REAL_T vofarray(num_materials)
       INTEGER_T im
       INTEGER_T vofcomp
       INTEGER_T dir2
@@ -10611,7 +10610,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       im_solid_mofbc=im_solid_primary()
 
-      if (nmat.ne.num_materials) then
+      if (num_materials.ne.num_materials) then
        print *,"nmat invalid"
        stop
       endif
@@ -10655,13 +10654,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      do im=1,nmat*ngeom_raw
+      do im=1,num_materials*ngeom_raw
        VOF(im)=zero
       enddo
 
       vof_sum_check=zero
 
-      do im=1,nmat
+      do im=1,num_materials
        vofcomp=(im-1)*ngeom_raw+1
        VOF(vofcomp)=VOFwall(vofcomp)
        do dir2=1,SDIM
@@ -10671,7 +10670,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        vofarray(im)=VOFwall(vofcomp)
 
        vof_sum_check=vof_sum_check+vofarray(im)
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       if (vof_sum_check.lt.half) then
        print *,"vof_sum_check failed"
@@ -10682,7 +10681,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"nhalf ",nhalf
        print *,"dx= ",dx(1),dx(2),dx(SDIM)
        print *,"bfact=",bfact
-       print *,"nmat=",nmat
+       print *,"num_materials=",num_materials
        stop
       endif
 
@@ -10706,7 +10705,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (probtype.eq.199) then !hydrates (groupmofBC)
        print *,"this code must be upgrated"
        stop
-       do im=1,nmat
+       do im=1,num_materials
         if ((FSI_flag(im).ne.2).and. &
             (FSI_flag(im).ne.8).and. &
             (FSI_flag(im).ne.4)) then
@@ -10716,12 +10715,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          call HYD_MOMF_BC(time,dir,side,VOF(vofcomp+1), &
           xwall,VOFwall(vofcomp+1),x,y,z,dx,im)
         endif
-       enddo ! im=1..nmat
+       enddo ! im=1..num_materials
 
        ! in: groupmofBC
       else if (probtype.eq.220) then !UNIMATERIAL problem
 
-       do im=1,nmat-1
+       do im=1,num_materials-1
         vofcomp=(im-1)*ngeom_raw+1
         call UNIMAT_VOLF_BC(time,dir,side,VOF(vofcomp), &
          xwall,VOFwall(vofcomp),x,y,z,dx,im)
@@ -10729,7 +10728,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          xwall,VOFwall(vofcomp+1),x,y,z,dx,im)
        enddo
 
-       im=nmat
+       im=num_materials
        vofcomp=(im-1)*ngeom_raw+1
        if ((FSI_flag(im).eq.4).or. & ! CTML Goldstein et al
            (FSI_flag(im).eq.8)) then ! CTML pres vel
@@ -10776,14 +10775,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           vofarray(1)=one
          endif
          vofarray(2)=one-vofarray(1)
-         do im=3,nmat
+         do im=3,num_materials
           vofarray(im)=zero
          enddo
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
         else if (probtype.eq.6) then
          vofarray(1)=zero
          vofarray(2)=one-vofarray(1)
-         do im=3,nmat
+         do im=3,num_materials
           vofarray(im)=zero
          enddo
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
@@ -10826,7 +10825,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           call get_rain_vfrac(x,y,z,dx,vofarray,cenbc,time,nmat,dir,adv_vel)
           call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
          else if (axis_dir.eq.2) then
-          do im=1,nmat
+          do im=1,num_materials
            if ((FSI_flag(im).ne.2).and. &
                (FSI_flag(im).ne.4).and. &
                (FSI_flag(im).ne.8)) then
@@ -10840,7 +10839,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              VOF(vofcomp+dir2)=zero
             enddo
            endif
-          enddo ! im=1..nmat
+          enddo ! im=1..num_materials
          else
           print *,"axis_dir invalid"
           stop
@@ -10852,7 +10851,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         if (probtype.eq.50) then
          vofarray(1)=one
          vofarray(2)=one-vofarray(1)
-         do im=3,nmat
+         do im=3,num_materials
           vofarray(im)=zero
          enddo
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
@@ -10864,7 +10863,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           vofarray(1)=one
          endif
          vofarray(2)=one-vofarray(1)
-         do im=3,nmat
+         do im=3,num_materials
           vofarray(im)=zero
          enddo
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
@@ -10997,7 +10996,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           vofarray(1)=one
          endif
          vofarray(2)=one-vofarray(1)
-         do im=3,nmat
+         do im=3,num_materials
           vofarray(im)=zero
          enddo
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
@@ -11059,7 +11058,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         if (probtype.eq.62) then
          vofarray(1)=zero
          vofarray(2)=one
-         do im=3,nmat
+         do im=3,num_materials
           vofarray(im)=zero
          enddo
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
@@ -11075,7 +11074,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           vofarray(1)=zero
           vofarray(2)=one
          endif
-         do im=3,nmat
+         do im=3,num_materials
           vofarray(im)=zero
          enddo
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
@@ -11155,7 +11154,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
         else if (probtype.eq.5700) then  ! microfluidics zlo
-         do im=1,nmat
+         do im=1,num_materials
           vofarray(im)=zero
          enddo
          if ((im_solid_mofbc.le.0).or. &
@@ -11175,7 +11174,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         if ((probtype.eq.62).or.(probtype.eq.65)) then
          vofarray(1)=zero
          vofarray(2)=one-vofarray(1)
-         do im=3,nmat
+         do im=3,num_materials
           vofarray(im)=zero
          enddo
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
@@ -11187,11 +11186,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,nmat)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall,nmat)
         else if (probtype.eq.5700) then  ! microfluidics zhi
-         do im=1,nmat
+         do im=1,num_materials
           vofarray(im)=zero
          enddo
          if ((im_solid_mofbc.lt.1).or. &
-             (im_solid_mofbc.gt.nmat)) then
+             (im_solid_mofbc.gt.num_materials)) then
           print *,"im_solid_mofbc invalid 13"
           stop
          endif
@@ -20123,7 +20122,7 @@ end subroutine RatePhaseChange
         continuous_mof=0
         tessellate=0
 
-        do im_local=1,nmat
+        do im_local=1,num_materials
          ibase_raw=(im_local-1)*ngeom_raw+1
          ibase_recon=(im_local-1)*ngeom_recon+1
          do dir=0,SDIM
@@ -20135,7 +20134,7 @@ end subroutine RatePhaseChange
          do dir=SDIM+2,ngeom_recon-1
           mofdata(ibase_recon+dir)=zero  ! slope, intercept
          enddo
-        enddo  ! im_local=1..nmat
+        enddo  ! im_local=1..num_materials
 
         call make_vfrac_sum_ok_base( &
           cmofsten, &
@@ -20191,12 +20190,12 @@ end subroutine RatePhaseChange
          nucleate_out%LSnew(D_DECL(i,j,k),im_source)=-nucleate_in%dx(1)
          nucleate_out%LSnew(D_DECL(i,j,k),im_dest)=nucleate_in%dx(1)
          do dir=1,SDIM
-          nucleate_out%LSnew(D_DECL(i,j,k),nmat+SDIM*(im_source-1)+dir)=zero
-          nucleate_out%LSnew(D_DECL(i,j,k),nmat+SDIM*(im_dest-1)+dir)=zero
+          nucleate_out%LSnew(D_DECL(i,j,k),num_materials+SDIM*(im_source-1)+dir)=zero
+          nucleate_out%LSnew(D_DECL(i,j,k),num_materials+SDIM*(im_dest-1)+dir)=zero
          enddo
 
          vfluid_sum=zero
-         do im_local=1,nmat
+         do im_local=1,num_materials
           if (is_rigid(im_local).eq.0) then
            ibase_raw=(im_local-1)*ngeom_raw+1
            vfluid_sum=vfluid_sum+ &
@@ -20207,7 +20206,7 @@ end subroutine RatePhaseChange
            print *,"is_rigid(im_local) invalid"
            stop
           endif
-         enddo ! im_local=1..nmat
+         enddo ! im_local=1..num_materials
          if (vfluid_sum.gt.VOFTOL_NUCLEATE) then
           ibasesrc=(im_source-1)*ngeom_raw+1
           VOF_source=nucleate_out%Snew(D_DECL(i,j,k),mofbase+ibasesrc)
@@ -20331,7 +20330,7 @@ end subroutine RatePhaseChange
       REAL_T, intent(in) :: molar_mass(num_materials)
       REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
       INTEGER_T, intent(in) :: distribute_from_target
-       ! MEHDI EVAPORATION  im_source,im_dest = 1..nmat
+       ! MEHDI EVAPORATION  im_source,im_dest = 1..num_materials
       INTEGER_T, intent(in) :: im_source,im_dest
       INTEGER_T :: start_freezing
       INTEGER_T :: nmat
@@ -20370,11 +20369,11 @@ end subroutine RatePhaseChange
       REAL_T mdot
 
       nmat=num_materials
-      if ((im_source.lt.1).or.(im_source.gt.nmat)) then
+      if ((im_source.lt.1).or.(im_source.gt.num_materials)) then
        print *,"im_source invalid"
        stop
       endif
-      if ((im_dest.lt.1).or.(im_dest.gt.nmat)) then
+      if ((im_dest.lt.1).or.(im_dest.gt.num_materials)) then
        print *,"im_dest invalid"
        stop
       endif
@@ -20571,7 +20570,7 @@ end subroutine RatePhaseChange
        
          if (microlayer_size_source.gt.zero) then
           if ((microlayer_substrate_source.ge.1).and. &
-              (microlayer_substrate_source.le.nmat)) then
+              (microlayer_substrate_source.le.num_materials)) then
            if (is_rigid(microlayer_substrate_source).ne.1) then
             print *,"is_rigid(microlayer_substrate_source).ne.1"
             stop
@@ -20612,7 +20611,7 @@ end subroutine RatePhaseChange
   
          if (microlayer_size_dest.gt.zero) then
           if ((microlayer_substrate_dest.ge.1).and. &
-              (microlayer_substrate_dest.le.nmat)) then
+              (microlayer_substrate_dest.le.num_materials)) then
            if (is_rigid(microlayer_substrate_dest).ne.1) then
             print *,"is_rigid(microlayer_substrate_dest).ne.1"
             stop
@@ -23090,8 +23089,8 @@ end subroutine initialize2d
       else
        print *,"scomp invalid group extrapfill"
        print *,"scomp, ncomp, bfact, time ",scomp,ncomp,bfact,time
-       print *,"nmat,extrecon_scomp,mask_scomp,burnvel_scomp ", &
-        nmat,extrecon_scomp,mask_scomp,burnvel_scomp
+       print *,"num_materials,extrecon_scomp,mask_scomp,burnvel_scomp ", &
+        num_materials,extrecon_scomp,mask_scomp,burnvel_scomp
        print *,"EXTRAPCOMP_DRAG=",EXTRAPCOMP_DRAG
        stop
       endif
@@ -23574,7 +23573,7 @@ end subroutine initialize2d
        print *,"nmat invalid"
        stop
       endif
-      if ((nparts.lt.1).or.(nparts.ge.nmat)) then
+      if ((nparts.lt.1).or.(nparts.ge.num_materials)) then
        print *,"nparts invalid"
        stop
       endif
@@ -23624,7 +23623,7 @@ end subroutine initialize2d
        do partid=1,nparts
 
         im=im_solid_map(partid)+1
-        if ((im.lt.1).or.(im.gt.nmat)) then
+        if ((im.lt.1).or.(im.gt.num_materials)) then
          print *,"im invalid82"
          stop
         endif
@@ -23700,7 +23699,7 @@ end subroutine initialize2d
       REAL_T, intent(inout), target :: snew(DIMV(snew),nden)
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: lsnew(DIMV(lsnew),nmat*(SDIM+1))
+      REAL_T, intent(in), target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
       REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k
@@ -23755,7 +23754,7 @@ end subroutine initialize2d
       im_solid_thermal=im_solid_primary()
 
       if ((im_solid_thermal.lt.1).or. &
-          (im_solid_thermal.gt.nmat)) then
+          (im_solid_thermal.gt.num_materials)) then
        print *,"im_solid_thermal invalid 18"
        stop
       endif
@@ -23770,7 +23769,7 @@ end subroutine initialize2d
        disttest=-99999.0
        im_solid_crit=0
 
-       do im=1,nmat
+       do im=1,num_materials
         if (is_rigid(im).eq.1) then
           ! in: fort_initsolidtemp
          call materialdistsolid(xsten(0,1),xsten(0,2), &
@@ -23795,10 +23794,10 @@ end subroutine initialize2d
          print *,"is_rigid invalid PROB.F90"
          stop
         endif
-       enddo ! im=1..nmat
+       enddo ! im=1..num_materials
      
        if ((im_solid_crit.lt.1).or. &
-           (im_solid_crit.gt.nmat)) then
+           (im_solid_crit.gt.num_materials)) then
         print *,"im_solid_crit invalid in initsolidtemp"
         stop
        endif
@@ -23817,13 +23816,13 @@ end subroutine initialize2d
         stop
        endif
 
-       do im=1,nmat
+       do im=1,num_materials
         tcomp=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
         if ((distsolid.ge.zero).or. &
             (im.eq.im_solid_crit)) then
          snew(D_DECL(i,j,k),tcomp)=temp_solid_mat
         endif
-       enddo ! im=1..nmat
+       enddo ! im=1..num_materials
 
       enddo
       enddo
@@ -23889,7 +23888,7 @@ end subroutine initialize2d
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dt
-      REAL_T, intent(in), target :: LS(DIMV(LS),nmat*(SDIM+1))
+      REAL_T, intent(in), target :: LS(DIMV(LS),num_materials*(SDIM+1))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(in), target :: area(DIMV(area))
       REAL_T, pointer :: area_ptr(D_DECL(:,:,:))
@@ -23898,9 +23897,9 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
       INTEGER_T, intent(in) :: tempbc(SDIM,2)
       INTEGER_T, intent(in) :: temp_dombc(SDIM,2)
-      REAL_T, intent(in) :: macrolayer_size(nmat)
-      INTEGER_T, intent(in) :: microlayer_substrate(nmat)
-      REAL_T, intent(in) :: microlayer_temperature_substrate(nmat)
+      REAL_T, intent(in) :: macrolayer_size(num_materials)
+      INTEGER_T, intent(in) :: microlayer_substrate(num_materials)
+      REAL_T, intent(in) :: microlayer_temperature_substrate(num_materials)
       INTEGER_T, intent(in) :: freezing_model(2*nten)
       REAL_T, intent(in) :: saturation_temp(2*nten)
 
@@ -23991,14 +23990,14 @@ end subroutine initialize2d
        ! do nothing
       else if (project_option.eq.SOLVETYPE_HEAT) then ! thermal conduction
 
-       do im=1,nmat
+       do im=1,num_materials
 
         if (is_rigid(im).eq.0) then
          ! do nothing
         else if (is_rigid(im).eq.1) then
 
          if ((im_solid_tempflux.lt.1).or. &
-             (im_solid_tempflux.gt.nmat)) then
+             (im_solid_tempflux.gt.num_materials)) then
           print *,"im_solid_tempflux invalid"
           stop
          endif
@@ -24011,8 +24010,8 @@ end subroutine initialize2d
           heat_flux_model=0
 
           do ireverse=0,1
-          do im1=1,nmat-1
-          do im2=im1+1,nmat
+          do im1=1,num_materials-1
+          do im2=im1+1,num_materials
            call get_iten(im1,im2,iten)
            LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
            local_freezing_model=freezing_model(iten+ireverse*nten)
@@ -24155,7 +24154,7 @@ end subroutine initialize2d
          stop
         endif
     
-       enddo ! im=1..nmat
+       enddo ! im=1..num_materials
  
        do dir2=1,3
         growlo_strip(dir2)=growloMAC(dir2) 
@@ -24314,9 +24313,9 @@ end subroutine initialize2d
        endif  ! probtype=802
 
        do ireverse=0,1
-       do im=1,nmat-1
-       do im_opp=im+1,nmat
-        if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
+       do im=1,num_materials-1
+       do im_opp=im+1,num_materials
+        if ((im.gt.num_materials).or.(im_opp.gt.num_materials)) then
          print *,"im or im_opp bust 8"
          stop
         endif
@@ -24367,14 +24366,14 @@ end subroutine initialize2d
          k_source=get_user_heatviscconst(im_source) ! W/(m Kelvin)
 
           ! in: init_initdata
-         if ((im_source.ge.1).and.(im_source.le.nmat).and. &
-             (im_dest.ge.1).and.(im_dest.le.nmat)) then
+         if ((im_source.ge.1).and.(im_source.le.num_materials).and. &
+             (im_dest.ge.1).and.(im_dest.le.num_materials)) then
           T_extreme=fort_tempconst(im_source)
           if (fort_tempconst(im_dest).gt.T_extreme) then
            T_extreme=fort_tempconst(im_dest)
           endif
           if ((im_solid_initdata.ge.1).and. &
-              (im_solid_initdata.le.nmat)) then
+              (im_solid_initdata.le.num_materials)) then
            if (fort_tempconst(im_solid_initdata).gt.T_extreme) then
             T_extreme=fort_tempconst(im_solid_initdata)
            endif
@@ -24707,7 +24706,7 @@ end subroutine initialize2d
        REAL_T, intent(inout), target :: scal(DIMV(scal),nc)
        REAL_T, pointer :: scal_ptr(D_DECL(:,:,:),:)
 
-       REAL_T, intent(inout), target :: LS(DIMV(LS),nmat*(1+SDIM))
+       REAL_T, intent(inout), target :: LS(DIMV(LS),num_materials*(1+SDIM))
        REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
 
        REAL_T, intent(in) :: dx(SDIM)
@@ -24718,15 +24717,15 @@ end subroutine initialize2d
        REAL_T, dimension(:,:), allocatable :: comparestate
        REAL_T vfracsum_test
 
-       REAL_T fluiddata(nmat,2*SDIM+2)
-       REAL_T mofdata(nmat*ngeom_recon)
-       REAL_T distbatch(nmat)
-       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
+       REAL_T fluiddata(num_materials,2*SDIM+2)
+       REAL_T mofdata(num_materials*ngeom_recon)
+       REAL_T distbatch(num_materials)
+       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
        REAL_T err
-       REAL_T vofdark(nmat)
-       REAL_T voflight(nmat)
-       REAL_T cendark(nmat,SDIM)
-       REAL_T cenlight(nmat,SDIM)
+       REAL_T vofdark(num_materials)
+       REAL_T voflight(num_materials)
+       REAL_T cendark(num_materials,SDIM)
+       REAL_T cenlight(num_materials,SDIM)
 
        INTEGER_T nhalf,nhalf2,nmax
        REAL_T xsten(-3:3,SDIM)
@@ -24735,7 +24734,7 @@ end subroutine initialize2d
        INTEGER_T i1,j1,k1,k1lo,k1hi
        REAL_T xpos(SDIM)
        REAL_T scalc(nc)
-       REAL_T LSc(nmat*(1+SDIM))
+       REAL_T LSc(num_materials*(1+SDIM))
        REAL_T x,y,z,rr
        REAL_T volcell
        REAL_T cencell(SDIM)
@@ -24762,7 +24761,7 @@ end subroutine initialize2d
        INTEGER_T vofcomp_raw
        INTEGER_T vofcomp_recon
        REAL_T jumpval
-       REAL_T voflist(nmat)
+       REAL_T voflist(num_materials)
 
        INTEGER_T im_source,im_dest,ireverse,iten
        REAL_T L_ice_melt,TSAT,T_EXTREME,cp_melt,k_melt,rstefan
@@ -24770,11 +24769,11 @@ end subroutine initialize2d
        REAL_T den_ratio
        REAL_T dxmaxLS
        INTEGER_T im_solid_initdata
-       REAL_T lsnormal(nmat,SDIM)
-       INTEGER_T lsnormal_valid(nmat)
-       REAL_T ls_intercept(nmat)
+       REAL_T lsnormal(num_materials,SDIM)
+       INTEGER_T lsnormal_valid(num_materials)
+       REAL_T ls_intercept(num_materials)
        INTEGER_T doubly_flag
-       REAL_T local_state(nmat*num_state_material)
+       REAL_T local_state(num_materials*num_state_material)
        REAL_T massfrac_parm(num_species_var+1)
        INTEGER_T local_ibase
        INTEGER_T tessellate
@@ -24890,7 +24889,7 @@ end subroutine initialize2d
         do n=1,nc
          scalc(n)=zero
         enddo
-        do imls=1,nmat*(1+SDIM)
+        do imls=1,num_materials*(1+SDIM)
          LSc(imls)=zero
         enddo
         volcell=zero
@@ -24918,7 +24917,7 @@ end subroutine initialize2d
              ! bcflag=0 (calling from fort_initdata)
          call SUB_STATE(xpos,time,distbatch,local_state, &
                  bcflag,num_materials,num_state_material)
-         do im=1,nmat
+         do im=1,num_materials
           ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)= &
@@ -24941,7 +24940,7 @@ end subroutine initialize2d
            ! do nothing
           else
            print *,"density invalid probtype==421 "
-           print *,"im,ibase,nmat ",im,ibase,nmat
+           print *,"im,ibase,num_materials ",im,ibase,num_materials
            print *,"density=",scalc(ibase+ENUM_DENVAR+1)
            stop
           endif
@@ -24950,12 +24949,12 @@ end subroutine initialize2d
            ! do nothing
           else
            print *,"temperature invalid probtype==421 "
-           print *,"im,ibase,nmat ",im,ibase,nmat
+           print *,"im,ibase,num_materials ",im,ibase,num_materials
            print *,"temperature=",scalc(ibase+ENUM_TEMPERATUREVAR+1)
            stop
           endif
 
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
          call SUB_PRES(xpos,time,distbatch,p_hyd,num_materials)
          scalc(STATECOMP_PRES+1)=p_hyd
 
@@ -24972,7 +24971,7 @@ end subroutine initialize2d
 
          call HELIX_LS(xpos,time,distbatch)
          call HELIX_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
+         do im=1,num_materials
           ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
@@ -24983,7 +24982,7 @@ end subroutine initialize2d
            scalc(ibase+num_state_base+n)= &
             local_state(local_ibase+num_state_base+n)
           enddo
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
          call HELIX_PRES(xpos,time,distbatch,p_hyd)
          scalc(STATECOMP_PRES+1)=p_hyd
 
@@ -24991,7 +24990,7 @@ end subroutine initialize2d
 
          call TSPRAY_LS(xpos,time,distbatch)
          call TSPRAY_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
+         do im=1,num_materials
           ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
@@ -25002,7 +25001,7 @@ end subroutine initialize2d
            scalc(ibase+num_state_base+n)= &
             local_state(local_ibase+num_state_base+n)
           enddo
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
          call TSPRAY_PRES(xpos,time,distbatch,p_hyd)
          scalc(STATECOMP_PRES+1)=p_hyd
 
@@ -25010,7 +25009,7 @@ end subroutine initialize2d
 
          call CAV2Dstep_LS(xpos,time,distbatch)
          call CAV2Dstep_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
+         do im=1,num_materials
           ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
@@ -25021,7 +25020,7 @@ end subroutine initialize2d
            scalc(ibase+num_state_base+n)= &
             local_state(local_ibase+num_state_base+n)
           enddo
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
          call CAV2Dstep_PRES(xpos,time,distbatch,p_hyd)
          scalc(STATECOMP_PRES+1)=p_hyd
 
@@ -25029,7 +25028,7 @@ end subroutine initialize2d
 
          call ZEYU_droplet_impact_LS(xpos,time,distbatch)
          call ZEYU_droplet_impact_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
+         do im=1,num_materials
           ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
@@ -25040,7 +25039,7 @@ end subroutine initialize2d
            scalc(ibase+num_state_base+n)= &
             local_state(local_ibase+num_state_base+n)
           enddo
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
          call ZEYU_droplet_impact_PRES(xpos,time,distbatch,p_hyd)
          scalc(STATECOMP_PRES+1)=p_hyd
 
@@ -25048,7 +25047,7 @@ end subroutine initialize2d
 
          call rigid_FSI_LS(xpos,time,distbatch)
          call rigid_FSI_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
+         do im=1,num_materials
           ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
@@ -25059,7 +25058,7 @@ end subroutine initialize2d
            scalc(ibase+num_state_base+n)= &
             local_state(local_ibase+num_state_base+n)
           enddo
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
          call rigid_FSI_PRES(xpos,time,distbatch,p_hyd)
          scalc(STATECOMP_PRES+1)=p_hyd
 
@@ -25067,7 +25066,7 @@ end subroutine initialize2d
 
          call sinking_FSI_LS(xpos,time,distbatch)
          call sinking_FSI_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
+         do im=1,num_materials
           ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
@@ -25078,7 +25077,7 @@ end subroutine initialize2d
            scalc(ibase+num_state_base+n)= &
             local_state(local_ibase+num_state_base+n)
           enddo
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
          call sinking_FSI_PRES(xpos,time,distbatch,p_hyd)
          scalc(STATECOMP_PRES+1)=p_hyd
 
@@ -25086,7 +25085,7 @@ end subroutine initialize2d
 
          call USERDEF_LS(xpos,time,distbatch)
          call USERDEF_STATE(xpos,time,distbatch,local_state)
-         do im=1,nmat
+         do im=1,num_materials
           ibase=STATECOMP_STATES+(im-1)*num_state_material
           local_ibase=(im-1)*num_state_material
           scalc(ibase+ENUM_DENVAR+1)=local_state(local_ibase+ENUM_DENVAR+1) 
@@ -25097,13 +25096,13 @@ end subroutine initialize2d
            scalc(ibase+num_state_base+n)= &
             local_state(local_ibase+num_state_base+n)
           enddo
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
          call USERDEF_PRES(xpos,time,distbatch,p_hyd)
          scalc(STATECOMP_PRES+1)=p_hyd
 
         else
 
-         do im=1,nmat
+         do im=1,num_materials
 
           ibase=STATECOMP_STATES+(im-1)*num_state_material
 
@@ -25112,7 +25111,7 @@ end subroutine initialize2d
      
           do n=1,num_species_var
            scalc(ibase+num_state_base+n)= &
-            fort_speciesconst((n-1)*nmat+im)
+            fort_speciesconst((n-1)*num_materials+im)
           enddo
 
           if (probtype.eq.82) then ! annulus
@@ -25362,8 +25361,8 @@ end subroutine initialize2d
            ! initial temperature for melting ice block on a substrate.
           if (probtype.eq.59) then
 
-           if (nmat.lt.4) then
-            print *,"nmat too small for melting ice on substrate"
+           if (num_materials.lt.4) then
+            print *,"num_materials too small for melting ice on substrate"
             stop
            endif
            ! substrate (initial temperature)
@@ -25838,7 +25837,7 @@ end subroutine initialize2d
            ! in: subroutine fort_initdata
            ! hydrates
           if (probtype.eq.199) then
-           if (nmat.ne.3) then
+           if (num_materials.ne.3) then
             print *,"3 materials for hydrate reactor"
             stop
            endif
@@ -25875,12 +25874,12 @@ end subroutine initialize2d
 
           endif  
 
-         enddo  ! im=1..nmat
+         enddo  ! im=1..num_materials
 
         endif ! if (probtype.eq.user_def_probtype) then ... else ... endif
 
         call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,nmat,time)
-        do im=1,nmat
+        do im=1,num_materials
          if (is_rigid(im).eq.1) then
           if ((FSI_flag(im).eq.2).or. & ! prescribed solid (CAD)
               (FSI_flag(im).eq.8).or. & ! CTML FSI pres vel
@@ -25898,7 +25897,7 @@ end subroutine initialize2d
           print *,"is_rigid(im) invalid"
           stop
          endif
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
          ! in: fort_initdata
         call stackvolume_batch(xsten,nhalf,dx,bfact,fluiddata,nmat, &
@@ -25909,8 +25908,8 @@ end subroutine initialize2d
          ! Rayleigh-Taylor, checkerboard test
         if (probtype.eq.602) then
          if ((xblob.ge.1.0D+5).and.(radblob.le.0.001*dx(1))) then
-          if (nmat.ne.2) then
-           print *,"nmat invalid"
+          if (num_materials.ne.2) then
+           print *,"num_materials invalid"
            stop
           endif
           dir=2
@@ -25928,11 +25927,11 @@ end subroutine initialize2d
 
         debug_vfrac_sum=zero
 
-        do imls=1,nmat
+        do imls=1,num_materials
          LSc(imls)=distbatch(imls)
         enddo
 
-        do im=1,nmat
+        do im=1,num_materials
 
          vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
 
@@ -25963,18 +25962,18 @@ end subroutine initialize2d
           stop
          endif
 
-        enddo  ! im=1..nmat
+        enddo  ! im=1..num_materials
         
         if (debug_vfrac_sum.le.half) then
          print *,"WARNING in 'process_initdata'"
          print *,"debug_vfrac_sum= ",debug_vfrac_sum
          print *,"ic,jc,kc,x,y,z ",ic,jc,kc,x,y,z
          print *,"time=",time
-         do im=1,nmat
+         do im=1,num_materials
           print *,"im,vofdark ",im,vofdark(im)
           print *,"im,distbatch ",im,distbatch(im)
          enddo
-         if ((im_solid_initdata.ge.1).and.(im_solid_initdata.le.nmat)) then
+         if ((im_solid_initdata.ge.1).and.(im_solid_initdata.le.num_materials)) then
           call materialdistsolid(x,y,z,distsolid,time,im_solid_initdata)
           if ((FSI_flag(im_solid_initdata).eq.2).or. &!prescribed solid (CAD)
               (FSI_flag(im_solid_initdata).eq.8).or. &!CTML FSI pres vel
@@ -26019,7 +26018,7 @@ end subroutine initialize2d
           endif
          enddo ! isten
          call materialdist_batch(xsten2,nhalf2,dx,bfact,distbatch,nmat,time)
-         do im=1,nmat
+         do im=1,num_materials
           if (is_rigid(im).eq.1) then
            if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
                (FSI_flag(im).eq.8).or. & ! CTML FSI pres vel
@@ -26044,7 +26043,7 @@ end subroutine initialize2d
         enddo
         enddo ! i1,j1,k1 = -1..1
 
-        do im=1,nmat
+        do im=1,num_materials
          vofcomp_recon=(im-1)*ngeom_recon+1
          vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
          mofdata(vofcomp_recon)=scalc(vofcomp_raw)
@@ -26054,7 +26053,7 @@ end subroutine initialize2d
           mofdata(vofcomp_recon+dir)=scalc(vofcomp_raw+dir) ! centroid
           mofdata(vofcomp_recon+SDIM+dir+1)=zero ! slope
          enddo
-        enddo  ! im=1..nmat
+        enddo  ! im=1..num_materials
 
         ! sum F_fluid=1  sum F_solid <= 1
         call make_vfrac_sum_ok_base( &
@@ -26064,7 +26063,7 @@ end subroutine initialize2d
           tessellate, &  ! =0
           mofdata,SDIM,201)
 
-        do im=1,nmat
+        do im=1,num_materials
          vofcomp_recon=(im-1)*ngeom_recon+1
          voflist(im)=mofdata(vofcomp_recon)
         enddo
@@ -26085,7 +26084,7 @@ end subroutine initialize2d
         endif 
 
         vfracsum_test=zero
-        do im=1,nmat
+        do im=1,num_materials
          vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
          if (is_rigid(im).eq.0) then
           vfracsum_test=vfracsum_test+scalc(vofcomp_raw)
@@ -26095,11 +26094,11 @@ end subroutine initialize2d
           print *,"is_rigid(im) invalid"
           stop
          endif
-        enddo !im=1..nmat
+        enddo !im=1..num_materials
 
         if ((vfracsum_test.le.half).or.(vfracsum_test.gt.1.5)) then
          print *,"FAILED: vfracsum_test= ",vfracsum_test
-         do im=1,nmat
+         do im=1,num_materials
           vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
           print *,"im,vfrac ",im,scalc(vofcomp_raw)
           print *,"im,LS ",im,LSc(im)
@@ -26115,7 +26114,7 @@ end subroutine initialize2d
          stop
         endif
 
-        do imls=1,nmat 
+        do imls=1,num_materials 
          call find_cut_geom_slope_CLSVOF( &
           LS_stencil, &
           lsnormal, &
@@ -26136,17 +26135,17 @@ end subroutine initialize2d
           print *,"lsnormal_valid invalid"
           stop
          endif
-        enddo !imls=1..nmat 
+        enddo !imls=1..num_materials 
 
-        do im=1,nmat
+        do im=1,num_materials
          vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
          scalc(vofcomp_raw)=voflist(im)
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
         do n=1,nc
          scal(D_DECL(ic,jc,kc),n)=scalc(n)
         enddo
-        do imls=1,nmat*(1+SDIM)
+        do imls=1,num_materials*(1+SDIM)
          LS(D_DECL(ic,jc,kc),imls)=LSc(imls)
         enddo
 
@@ -26214,7 +26213,7 @@ end subroutine initialize2d
       INTEGER_T, intent(in) :: bfact
       REAL_T, intent(inout),target :: Snew(DIMV(Snew),nstate)
       REAL_T, pointer :: Snew_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout),target :: LSnew(DIMV(LSnew),nmat)
+      REAL_T, intent(inout),target :: LSnew(DIMV(LSnew),num_materials)
       REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
       REAL_T, intent(inout),target :: MAC(DIMV(MAC))
       REAL_T, pointer :: MAC_ptr(D_DECL(:,:,:))
@@ -26325,7 +26324,7 @@ end subroutine initialize2d
 
         if ((levelrz.eq.0).or.(levelrz.eq.3)) then
 
-         do im=1,nmat
+         do im=1,num_materials
          
           if (im.eq.1) then
            velcomp=dir+1
@@ -26347,7 +26346,7 @@ end subroutine initialize2d
            stop
           endif
      
-         enddo ! im=1..nmat 
+         enddo ! im=1..num_materials 
 
         else
          print *,"levelrz invalid probtype==82"
@@ -26690,7 +26689,7 @@ end subroutine initialize2d
       nmat=num_materials
       nten=num_interfaces
 
-      allocate(distbatch(nmat))
+      allocate(distbatch(num_materials))
 
       if (time.ne.zero) then
        print *,"time should be zero in initvelocity"
@@ -27452,7 +27451,7 @@ end subroutine initialize2d
           else if (axis_dir.eq.10) then
            if (1.eq.0) then
             call get_initial_vfrac(xsten,nhalf,dx,bfact,vfracbatch,cenbc,nmat)
-            if (vfracbatch(nmat).gt.zero) then ! sphere
+            if (vfracbatch(num_materials).gt.zero) then ! sphere
              y_vel=advbot
             else
              y_vel=zero
@@ -29024,7 +29023,7 @@ end subroutine initialize2d
 #endif
       nmat=num_materials
 
-      if (nmat*ngeom_raw.ne.ncomp) then
+      if (num_materials*ngeom_raw.ne.ncomp) then
        print *,"ncomp invalid mof group fill"
        stop
       endif
@@ -29034,7 +29033,7 @@ end subroutine initialize2d
       endif
 
       u_ptr=>u
-      do im=1,nmat*ngeom_raw
+      do im=1,num_materials*ngeom_raw
        call local_filcc4D(bfact, &
         u_ptr,im, &
         domlo,domhi,bc)
@@ -29092,14 +29091,14 @@ end subroutine initialize2d
          IWALL(3)=k
          IWALL(dir2)=inside_index
 
-         do im=1,nmat*ngeom_raw
+         do im=1,num_materials*ngeom_raw
           uwall(im)=u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),im)
          enddo
          call groupmofBC(time,dir2,side, &
           uboundary, &
           uwall, &
           xsten,nhalf,dx,bfact,nmat)
-         do im=1,nmat*ngeom_raw
+         do im=1,num_materials*ngeom_raw
           u(D_DECL(i,j,k),im)=uboundary(im)
          enddo
         enddo
@@ -29153,7 +29152,7 @@ end subroutine initialize2d
       INTEGER_T borderlo(3)
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
-      INTEGER_T im,nmat
+      INTEGER_T im,num_materials
       REAL_T uwall(num_materials*ngeom_raw)
       REAL_T uboundary(num_materials*ngeom_raw)
       INTEGER_T vofcomp
@@ -29219,7 +29218,7 @@ end subroutine initialize2d
 #endif
       nmat=num_materials
 
-      if (nmat*ngeom_recon.ne.ncomp) then
+      if (num_materials*ngeom_recon.ne.ncomp) then
        print *,"ncomp invalid in fort_group_extmoffill"
        stop
       endif
@@ -29229,7 +29228,7 @@ end subroutine initialize2d
       endif
 
       u_ptr=>u
-      do im=1,nmat*ngeom_recon
+      do im=1,num_materials*ngeom_recon
        call local_filcc4D(bfact, &
         u_ptr,im, &
         domlo,domhi,bc)
@@ -29287,7 +29286,7 @@ end subroutine initialize2d
          IWALL(3)=k
          IWALL(dir2)=inside_index
 
-         do im=1,nmat
+         do im=1,num_materials
           ibasesrc=(im-1)*ngeom_recon
           ibasedst=(im-1)*ngeom_raw
           do isub=1,ngeom_raw
@@ -29305,7 +29304,7 @@ end subroutine initialize2d
          vofsolid_wall=zero
          voffluid_bound=zero
          vofsolid_bound=zero
-         do im=1,nmat
+         do im=1,num_materials
           vofcomp=(im-1)*ngeom_raw+1
           voftest_wall=uwall(vofcomp)
           voftest_bound=uboundary(vofcomp)
@@ -29319,7 +29318,7 @@ end subroutine initialize2d
            print *,"is_rigid invalid PROB.F90"
            stop
           endif
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
 
          if ((voffluid_wall.le.zero).or.(voffluid_bound.le.zero)) then
           print *,"fluid disappeared in GROUP_EXTMOFFILL"
@@ -29340,7 +29339,7 @@ end subroutine initialize2d
          mof_verbose=0
          continuous_mof=0
 
-         do im=1,nmat
+         do im=1,num_materials
 
           ibasesrc=(im-1)*ngeom_raw+1
           ibasedst=(im-1)*ngeom_recon+1
@@ -29375,7 +29374,7 @@ end subroutine initialize2d
           cmofsten, &
           SDIM,4)
 
-         do dir3=1,nmat*ngeom_recon
+         do dir3=1,num_materials*ngeom_recon
           u(D_DECL(i,j,k),dir3)=mofdata(dir3)
          enddo
 
@@ -29483,13 +29482,13 @@ end subroutine initialize2d
 
       nmat=num_materials
 
-      ncomp_ho=(SDIM+1)*nmat
+      ncomp_ho=(SDIM+1)*num_materials
 
       if (ncomp_ho.ne.ncomp) then
        print *,"ncomp invalid fort_group_ls_fill"
        stop
       endif
-      if ((scomp.ne.SDIM*nmat).and. &  ! called from ghost fill
+      if ((scomp.ne.SDIM*num_materials).and. &  ! called from ghost fill
           (scomp.ne.0)) then           ! called from main fill
        print *,"scomp invalid fort_group_ls_fill"
        print *,"scomp= ",scomp
@@ -29523,7 +29522,7 @@ end subroutine initialize2d
       do dir2=1,SDIM
       do side=1,2
 
-        ! 1..nmat  level set functions
+        ! 1..num_materials  level set functions
        borderlo(3)=0
        borderhi(3)=0
        do dir3=1,SDIM
@@ -29561,14 +29560,14 @@ end subroutine initialize2d
          IWALL(2)=j
          IWALL(3)=k
          IWALL(dir2)=inside_index
-         do imls=1,nmat
+         do imls=1,num_materials
           uwall(imls)=u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),imls)
          enddo
          call grouplsBC(time,dir2,side, &
           uboundary, &
           uwall, &
           xsten,nhalf,dx,bfact)
-         do imls=1,nmat
+         do imls=1,num_materials
           u(D_DECL(i,j,k),imls)=uboundary(imls)
          enddo
         enddo
@@ -29581,8 +29580,8 @@ end subroutine initialize2d
         stop
        endif 
 
-        ! nmat+1 ... ncomp_ho: levelset normals
-       do icomp=nmat+1,ncomp_ho
+        ! num_materials+1 ... ncomp_ho: levelset normals
+       do icomp=num_materials+1,ncomp_ho
 
         borderlo(3)=0
         borderhi(3)=0
@@ -29635,7 +29634,7 @@ end subroutine initialize2d
          stop
         endif 
 
-       enddo ! icomp=nmat+1 ... ncomp_ho
+       enddo ! icomp=num_materials+1 ... ncomp_ho
 
       enddo ! side
       enddo ! dir2

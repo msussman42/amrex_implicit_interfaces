@@ -1739,10 +1739,10 @@ contains
       enddo ! dir=1..sdim
 
       total_WT=zero
-      do im=1,LOW%nmat*(1+SDIM)
+      do im=1,num_materials*(1+SDIM)
        LS_interp(im)=zero
       enddo 
-      do im=1,LOW%nmat
+      do im=1,num_materials
        thermal_interp(im)=zero
       enddo
 
@@ -1771,7 +1771,7 @@ contains
         stop
        endif
  
-       do im=1,LOW%nmat*(1+SDIM)
+       do im=1,num_materials*(1+SDIM)
         call safe_data(isten,jsten,ksten,im,local_data_fab_LS,LS_sten(im))
        enddo
 
@@ -1781,7 +1781,7 @@ contains
        else if (im_primary_sten.eq.im_solid) then
         ! do nothing
        else if ((im_primary_sten.ge.1).and. &
-                (im_primary_sten.le.LOW%nmat)) then
+                (im_primary_sten.le.num_materials)) then
         if (is_rigid(im_primary_sten).eq.1) then
          ! do nothing
         else if (is_rigid(im_primary_sten).eq.0) then
@@ -1803,10 +1803,10 @@ contains
         print *,"im_primary_sten invalid"
         stop
        endif
-       do im=1,LOW%nmat*(1+SDIM)
+       do im=1,num_materials*(1+SDIM)
         LS_interp(im)=LS_interp(im)+WT*LS_sten(im)
        enddo
-       do im=1,LOW%nmat
+       do im=1,num_materials
         call safe_data(isten,jsten,ksten, &
           (im-1)*num_state_material+2, &
           local_data_fab,local_temperature)
@@ -1816,7 +1816,7 @@ contains
          print *,"local_temperature invalid"
          stop
         endif
-       enddo ! im=1..nmat
+       enddo ! im=1..num_materials
        total_WT=total_WT+WT
 
       enddo ! ksten
@@ -1825,10 +1825,10 @@ contains
 
       if (total_WT.gt.zero) then
 
-       do im=1,LOW%nmat*(1+SDIM)
+       do im=1,num_materials*(1+SDIM)
         LS_interp(im)=LS_interp(im)/total_WT
        enddo
-       do im=1,LOW%nmat
+       do im=1,num_materials
         thermal_interp(im)=thermal_interp(im)/total_WT
        enddo
 
@@ -2222,7 +2222,6 @@ end subroutine dynamic_contact_angle
        INTEGER_T :: im_fluid1,im_fluid2
        INTEGER_T :: iten
        INTEGER_T :: iten_13,iten_23
-       INTEGER_T :: nten_test
        REAL_T :: cos_angle,sin_angle
        INTEGER_T :: near_contact_line
        REAL_T :: mag
@@ -2291,14 +2290,7 @@ end subroutine dynamic_contact_angle
        debug_slip_velocity_enforcement=0
     
        nhalf=3 
-       nten_test=num_interfaces
-       allocate(user_tension(nten_test))
-       if (LOW%nten.eq.nten_test) then
-        ! do nothing
-       else
-        print *,"nten invalid"
-        stop
-       endif
+       allocate(user_tension(num_interfaces))
         
        if ((data_dir.ge.0).and.(data_dir.lt.SDIM)) then
         ! do nothing
@@ -2318,10 +2310,6 @@ end subroutine dynamic_contact_angle
         ! do nothing
        else
         print *,"is_rigid(im_solid) invalid"
-        stop
-       endif
-       if (LOW%nmat.ne.num_materials) then
-        print *,"nmat invalid"
         stop
        endif
        if (LOW%dt.gt.zero) then
@@ -2376,12 +2364,12 @@ end subroutine dynamic_contact_angle
 
        call gridsten_level(xstenFLUID,iFLUID,jFLUID,kFLUID,LOW%level,nhalf)
        call gridsten_level(xsten_probe,i_probe,j_probe,k_probe,LOW%level,nhalf)
-       do im=1,LOW%nmat*(1+SDIM)
+       do im=1,num_materials*(1+SDIM)
         LS_probe(im)=LOW%LSCP(D_DECL(i_probe,j_probe,k_probe),im)
         LS_fluid(im)=LOW%LSCP(D_DECL(iFLUID,jFLUID,kFLUID),im)
        enddo
        call gridsten_level(xstenSOLID,iSOLID,jSOLID,kSOLID,LOW%level,nhalf)
-       do im=1,LOW%nmat*(1+SDIM)
+       do im=1,num_materials*(1+SDIM)
         LS_solid(im)=LOW%LSCP(D_DECL(iSOLID,jSOLID,kSOLID),im)
        enddo
 
@@ -2409,20 +2397,20 @@ end subroutine dynamic_contact_angle
                     (one-cross_factor)*xstenSOLID(0,dir)
            enddo
 
-           do im=1,LOW%nmat*(1+SDIM)
+           do im=1,num_materials*(1+SDIM)
             LS_crossing(im)=cross_factor*LS_fluid(im)+ &
                      (one-cross_factor)*LS_solid(im)
-           enddo ! im=1..nmat*(1+SDIM)
+           enddo ! im=1..num_materials*(1+SDIM)
 
            im_fluid_crossing=-1
-           do im=1,LOW%nmat
+           do im=1,num_materials
             if (is_rigid(im).eq.1) then
              ! do nothing
             else if (is_rigid(im).eq.0) then
              if (im_fluid_crossing.eq.-1) then
               im_fluid_crossing=im
              else if ((im_fluid_crossing.ge.1).and. &
-                      (im_fluid_crossing.le.LOW%nmat)) then
+                      (im_fluid_crossing.le.num_materials)) then
               if (LS_crossing(im_fluid_crossing).le.LS_crossing(im)) then
                im_fluid_crossing=im
               endif
@@ -2434,12 +2422,12 @@ end subroutine dynamic_contact_angle
              print *,"is_rigid invalid GLOBALUTIL.F90"
              stop
             endif
-           enddo ! im=1..nmat
+           enddo ! im=1..num_materials
 
-           call normalize_LS_normals(LOW%nmat,LS_crossing)
+           call normalize_LS_normals(LS_crossing)
 
            if ((im_fluid_crossing.ge.1).and. &
-               (im_fluid_crossing.le.LOW%nmat)) then
+               (im_fluid_crossing.le.num_materials)) then
             ! do nothing
            else
             print *,"im_fluid_crossing invalid"
@@ -2454,11 +2442,11 @@ end subroutine dynamic_contact_angle
            do dir=1,SDIM
              ! points into im_fluid material
             nrm_fluid(dir)= &
-                LS_crossing(LOW%nmat+(im_fluid-1)*SDIM+dir)
+                LS_crossing(num_materials+(im_fluid-1)*SDIM+dir)
             nrm_fluid_crossing(dir)= &
-                LS_crossing(LOW%nmat+(im_fluid_crossing-1)*SDIM+dir)
+                LS_crossing(num_materials+(im_fluid_crossing-1)*SDIM+dir)
              ! points into im_solid material
-            nrm_solid(dir)=LS_crossing(LOW%nmat+(im_solid-1)*SDIM+dir)
+            nrm_solid(dir)=LS_crossing(num_materials+(im_solid-1)*SDIM+dir)
             nf_dot_ns=nf_dot_ns+ &
                   nrm_fluid(dir)*nrm_solid(dir)
             nf_crossing_dot_ns=nf_crossing_dot_ns+ &
@@ -2652,7 +2640,7 @@ end subroutine dynamic_contact_angle
              im_solid, &
              LSMINUS_interp)
 
-            call normalize_LS_normals(LOW%nmat,LSMINUS_interp)
+            call normalize_LS_normals(LSMINUS_interp)
 
             call interp_from_fluid( &
              LOW, &
@@ -2663,7 +2651,7 @@ end subroutine dynamic_contact_angle
              im_solid, &
              LSPLUS_interp)
 
-            call normalize_LS_normals(LOW%nmat,LSPLUS_interp)
+            call normalize_LS_normals(LSPLUS_interp)
 
             cross_factorMINUS=-one
             cross_factorPLUS=-one
@@ -2728,7 +2716,7 @@ end subroutine dynamic_contact_angle
                xtriple(dir)=cross_factorPLUS*xprobePLUS_crossing(dir)+ &
                   (one-cross_factorPLUS)*xcrossing(dir)
               enddo
-              do im=1,LOW%nmat*(1+SDIM)
+              do im=1,num_materials*(1+SDIM)
                LS_triple(im)=cross_factorPLUS*LSPLUS_interp(im)+ &
                    (one-cross_factorPLUS)*LS_crossing(im)
               enddo
@@ -2745,7 +2733,7 @@ end subroutine dynamic_contact_angle
                xtriple(dir)=cross_factorMINUS*xprobeMINUS_crossing(dir)+ &
                   (one-cross_factorMINUS)*xcrossing(dir)
               enddo
-              do im=1,LOW%nmat*(1+SDIM)
+              do im=1,num_materials*(1+SDIM)
                LS_triple(im)=cross_factorMINUS*LSMINUS_interp(im)+ &
                    (one-cross_factorMINUS)*LS_crossing(im)
               enddo
@@ -2763,11 +2751,11 @@ end subroutine dynamic_contact_angle
 
             if ((cross_factor_flag.eq.1).or. &
                 (cross_factor_flag.eq.-1)) then
-              call normalize_LS_normals(LOW%nmat,LS_triple)
+              call normalize_LS_normals(LS_triple)
 
               nrm_solid(3)=zero
               do dir=1,SDIM
-               nrm_solid(dir)=LS_triple(LOW%nmat+(im_solid-1)*SDIM+dir)
+               nrm_solid(dir)=LS_triple(num_materials+(im_solid-1)*SDIM+dir)
                xprobe_triple(dir)=xtriple(dir)-LOW%dxmin*nrm_solid(dir)
               enddo
               
@@ -2780,10 +2768,10 @@ end subroutine dynamic_contact_angle
                im_solid, &
                LSTRIPLE_interp)
 
-              call normalize_LS_normals(LOW%nmat,LSTRIPLE_interp)
+              call normalize_LS_normals(LSTRIPLE_interp)
               nrm_fluid(3)=zero
               do dir=1,SDIM
-               nrm_fluid(dir)=LSTRIPLE_interp(LOW%nmat+(im_fluid-1)*SDIM+dir)
+               nrm_fluid(dir)=LSTRIPLE_interp(num_materials+(im_fluid-1)*SDIM+dir)
               enddo
 
               nf_dot_ns=zero
@@ -2852,7 +2840,7 @@ end subroutine dynamic_contact_angle
               if (im_secondary_image.eq.0) then
                near_contact_line=0
               else if ((im_secondary_image.ge.1).and. &
-                       (im_secondary_image.le.LOW%nmat)) then
+                       (im_secondary_image.le.num_materials)) then
                if (is_rigid(im_secondary_image).eq.1) then
                 near_contact_line=0
                else if (is_rigid(im_secondary_image).eq.0) then
@@ -3597,10 +3585,8 @@ end subroutine dynamic_contact_angle
       IMPLICIT NONE
 
       INTEGER_T, intent(in) :: im
-      INTEGER_T nmat
 
-      nmat=num_materials
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im out of range"
        stop
       endif
@@ -3702,10 +3688,8 @@ end subroutine dynamic_contact_angle
       REAL_T, intent(in) :: time
       REAL_T startup_time
       INTEGER_T, intent(in) :: bcflag,im
-      INTEGER_T nmat
 
-      nmat=num_materials
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im out of range"
        stop
       endif
@@ -4149,15 +4133,12 @@ end subroutine dynamic_contact_angle
       REAL_T xrigid3D(3)
       REAL_T, intent(out) :: vel
       REAL_T, intent(in) :: blob_array(blob_array_size)
-      INTEGER_T nmat
       INTEGER_T ibase
       INTEGER_T veldir,irow
       REAL_T blob_mass_for_velocity(3)
       REAL_T blob_center(3)
       REAL_T phi_N(3)
       REAL_T vel_local(SDIM) 
-
-      nmat=num_materials
 
       if (blob_array_size.ne.num_colors*num_elements_blobclass) then
        print *,"blob_array_size invalid"
@@ -4469,23 +4450,23 @@ end subroutine dynamic_contact_angle
       return 
       end subroutine normalize_vector
 
-      subroutine normalize_LS_normals(nmat,LS)
+      subroutine normalize_LS_normals(LS)
+      use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(inout) :: LS(nmat*(1+SDIM))
+      REAL_T, intent(inout) :: LS(num_materials*(1+SDIM))
       INTEGER_T :: im,dir
       REAL_T :: local_normal(SDIM)
 
-      do im=1,nmat
+      do im=1,num_materials
        do dir=1,SDIM
-        local_normal(dir)=LS(nmat+(im-1)*SDIM+dir)
+        local_normal(dir)=LS(num_materials+(im-1)*SDIM+dir)
        enddo
        call normalize_vector(local_normal)
        do dir=1,SDIM
-        LS(nmat+(im-1)*SDIM+dir)=local_normal(dir)
+        LS(num_materials+(im-1)*SDIM+dir)=local_normal(dir)
        enddo
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       return 
       end subroutine normalize_LS_normals
@@ -5730,7 +5711,7 @@ else if (n_cpp.eq.VISUALCOMP_VORTMAG) then
  print *,"VISUAL VORTMAG"
 else if ((n_cpp.ge.VISUALCOMP_LS).and. &
          (n_cpp.le.VISUALCOMP_LS+num_materials-1)) then
- print *,"VISUAL LS material component(1..nmat)=",n_cpp-VISUALCOMP_LS+1
+ print *,"VISUAL LS material component(1..num_materials)=",n_cpp-VISUALCOMP_LS+1
 else if (n_cpp.eq.VISUALCOMP_MAGVEL) then
  print *,"VISUAL MAGVEL"
 else
@@ -8027,27 +8008,21 @@ end subroutine print_visual_descriptor
         end function approximate
 
 
-      subroutine consistent_materials(vfrac,cen,nmat)
+      subroutine consistent_materials(vfrac,cen)
       use probcommon_module
 
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      REAL_T vfrac(nmat)
-      REAL_T cen(SDIM,nmat)
+      REAL_T, intent(inout) :: vfrac(num_materials)
+      REAL_T, intent(inout) :: cen(SDIM,num_materials)
 
       INTEGER_T imaterial,dir
       REAL_T voftotal
 
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat bust"
-       stop
-      endif
-
       voftotal=zero
 
-      do imaterial=1,nmat
+      do imaterial=1,num_materials
        if (vfrac(imaterial).le.VOFTOL) then
         vfrac(imaterial)=zero
         do dir=1,SDIM
@@ -8076,7 +8051,7 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      do imaterial=1,nmat
+      do imaterial=1,num_materials
        vfrac(imaterial)=vfrac(imaterial)/voftotal
       enddo 
 
@@ -22502,12 +22477,11 @@ end subroutine print_visual_descriptor
   ! and the distance to the remaining liquid part *above* the ice
   ! is returned in dist_truncate.
   ! this routine is called if probtype=55, axis_dir=0,1, or 5
-subroutine drop_slope_dist(x,y,z,time,nmat, &
+subroutine drop_slope_dist(x,y,z,time, &
    maxtall,dist,dist_truncate)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
 REAL_T, intent(in) :: x,y,z,time
 REAL_T, intent(out) :: dist,dist_truncate
 REAL_T, intent(in) :: maxtall
@@ -22517,9 +22491,8 @@ REAL_T cos_angle,sin_angle
 REAL_T term1,Vtarget,radnew,vert,test_angle
 REAL_T xprime,yprime,zprime,rprime,rtop,rbot
 REAL_T xcheck,ycheck,zcheck
-INTEGER_T nten
 REAL_T xvec(SDIM)
-REAL_T marangoni_temp(nmat)
+REAL_T marangoni_temp(num_materials)
 INTEGER_T im_solid_substrate
 REAL_T, allocatable, dimension(:) :: user_tension
 
@@ -22533,12 +22506,7 @@ if (probtype.eq.55) then
   xvec(SDIM)=z
  endif
 
- if (nmat.ne.num_materials) then
-  print *,"nmat invalid"
-  stop
- endif
- nten=( (nmat-1)*(nmat-1)+nmat-1 )/2
- allocate(user_tension(nten))
+ allocate(user_tension(num_interfaces))
 
  if (SDIM.eq.2) then
   if (abs(y-z).gt.VOFTOL) then
@@ -22574,7 +22542,7 @@ if (probtype.eq.55) then
    im_opp=2 ! gas
    im_3=im_solid_substrate
    call get_iten(im,im_opp,iten)
-   do imloop=1,nmat
+   do imloop=1,num_materials
     marangoni_temp(imloop)=293.0
    enddo
    call get_user_tension(xvec,time, &
@@ -24625,8 +24593,7 @@ subroutine point_updatetensor( &
  i,j,k, &
  level, &
  finest_level, &
- nmat, &
- im_critical, &  ! 0<=im_critical<=nmat-1
+ im_critical, &  ! 0<=im_critical<=num_materials-1
  ncomp_visc, & 
  visc, &
  tendata, & !tendata:fort_getshear,iproject=only_scalar=0
@@ -24651,7 +24618,7 @@ IMPLICIT NONE
 INTEGER_T, intent(in) :: i,j,k
 INTEGER_T, intent(in) :: level
 INTEGER_T, intent(in) :: finest_level
-INTEGER_T, intent(in) :: nmat,im_critical
+INTEGER_T, intent(in) :: im_critical
 INTEGER_T, intent(in) :: ncomp_visc
 INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
 INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
@@ -24744,15 +24711,11 @@ else
  stop
 endif
 
-if (nmat.ne.num_materials) then
- print *,"nmat invalid"
- stop
-endif
-if ((im_critical.lt.0).or.(im_critical.ge.nmat)) then
+if ((im_critical.lt.0).or.(im_critical.ge.num_materials)) then
  print *,"im_critical invalid27"
  stop
 endif
-if (ncomp_visc.ne.3*nmat) then
+if (ncomp_visc.ne.3*num_materials) then
  print *,"ncomp visc invalid"
  stop
 endif
@@ -24842,7 +24805,7 @@ Q(3,1)=Q(1,3)
 Q(3,2)=Q(2,3)
 
  ! modtime=lambda/f(A)
-modtime=visc(D_DECL(i,j,k),2*nmat+im_critical+1)
+modtime=visc(D_DECL(i,j,k),2*num_materials+im_critical+1)
 if (modtime.ge.zero) then
  ! do nothing
 else
@@ -25497,7 +25460,7 @@ end subroutine get_primary_material
 
 subroutine tensor_Heaviside( &
     dxmin, &
-    im_parm, & ! 0..nmat-1
+    im_parm, & ! 0..num_materials-1
     mask1,mask2, &
     LS1,LS2, &
     HVAL)
@@ -25505,7 +25468,7 @@ use probcommon_module
 IMPLICIT NONE
 
 REAL_T, intent(in) :: dxmin
-INTEGER_T, intent(in) :: im_parm ! 0..nmat-1
+INTEGER_T, intent(in) :: im_parm ! 0..num_materials-1
 REAL_T, intent(out) :: HVAL
 INTEGER_T, intent(in) :: mask1,mask2
 REAL_T, intent(in) :: LS1(num_materials)
