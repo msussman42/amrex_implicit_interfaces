@@ -178,13 +178,13 @@ stop
       use probcommon_module
 
       IMPLICIT NONE
-      INTEGER_T, intent(in) :: n_fib_bodies
-      INTEGER_T, intent(in) :: max_n_fib_nodes
-      INTEGER_T, intent(in) :: ifib
-      REAL_T, intent(inout) :: fib_pst(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T, intent(inout) :: fib_vel(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T, intent(inout) :: fib_frc(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T, intent(inout) :: fib_wt(n_fib_bodies,max_n_fib_nodes)
+      INTEGER_T, INTENT(in) :: n_fib_bodies
+      INTEGER_T, INTENT(in) :: max_n_fib_nodes
+      INTEGER_T, INTENT(in) :: ifib
+      REAL_T, INTENT(inout) :: fib_pst(n_fib_bodies,max_n_fib_nodes,SDIM)
+      REAL_T, INTENT(inout) :: fib_vel(n_fib_bodies,max_n_fib_nodes,SDIM)
+      REAL_T, INTENT(inout) :: fib_frc(n_fib_bodies,max_n_fib_nodes,SDIM)
+      REAL_T, INTENT(inout) :: fib_wt(n_fib_bodies,max_n_fib_nodes)
       INTEGER_T inode,idir,inode_cutoff
 
       if (1.eq.1) then
@@ -265,16 +265,16 @@ stop
       use probcommon_module
 
       IMPLICIT NONE
-      INTEGER_T, intent(in) :: n_fib_bodies
-      INTEGER_T, intent(in) :: max_n_fib_nodes
-      INTEGER_T, intent(in) :: ifib
-      REAL_T, intent(inout) :: fib_pst(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T, intent(inout) :: &
+      INTEGER_T, INTENT(in) :: n_fib_bodies
+      INTEGER_T, INTENT(in) :: max_n_fib_nodes
+      INTEGER_T, INTENT(in) :: ifib
+      REAL_T, INTENT(inout) :: fib_pst(n_fib_bodies,max_n_fib_nodes,SDIM)
+      REAL_T, INTENT(inout) :: &
               fib_vel_halftime(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T, intent(inout) :: &
+      REAL_T, INTENT(inout) :: &
               fib_vel(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T, intent(inout) :: fib_frc(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T, intent(inout) :: fib_wt(n_fib_bodies,max_n_fib_nodes)
+      REAL_T, INTENT(inout) :: fib_frc(n_fib_bodies,max_n_fib_nodes,SDIM)
+      REAL_T, INTENT(inout) :: fib_wt(n_fib_bodies,max_n_fib_nodes)
       INTEGER_T inode,idir,inode_cutoff
 
       if (1.eq.1) then
@@ -435,12 +435,12 @@ stop
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: cur_time ! t^{n+1}
-      REAL_T, intent(in) :: dt
-      INTEGER_T, intent(in) :: step
-      INTEGER_T, intent(in) :: verbose
-      INTEGER_T, intent(in) :: plot_int
-      INTEGER_T, intent(in) :: io_proc
+      REAL_T, INTENT(in) :: cur_time ! t^{n+1}
+      REAL_T, INTENT(in) :: dt
+      INTEGER_T, INTENT(in) :: step
+      INTEGER_T, INTENT(in) :: verbose
+      INTEGER_T, INTENT(in) :: plot_int
+      INTEGER_T, INTENT(in) :: io_proc
       INTEGER_T debug_tick
       INTEGER_T ifib,isec,inode,idir
 
@@ -628,14 +628,14 @@ bind(c,name='fort_ctmltransferforce')
  use global_utility_module
 
  IMPLICIT NONE
- INTEGER_T, intent(in) :: tilelo(SDIM)
- INTEGER_T, intent(in) :: tilehi(SDIM)
- INTEGER_T, intent(in) :: fablo(SDIM)
- INTEGER_T, intent(in) :: fabhi(SDIM)
- INTEGER_T, intent(in) :: DIMDEC(velnew)
- REAL_T, intent(inout) :: velnew(DIMV(velnew),SDIM)
- INTEGER_T, intent(in) :: DIMDEC(force)
- REAL_T, intent(in) :: force(DIMV(force),SDIM)
+ INTEGER_T, INTENT(in) :: tilelo(SDIM)
+ INTEGER_T, INTENT(in) :: tilehi(SDIM)
+ INTEGER_T, INTENT(in) :: fablo(SDIM)
+ INTEGER_T, INTENT(in) :: fabhi(SDIM)
+ INTEGER_T, INTENT(in) :: DIMDEC(velnew)
+ REAL_T, INTENT(inout) :: velnew(DIMV(velnew),SDIM)
+ INTEGER_T, INTENT(in) :: DIMDEC(force)
+ REAL_T, INTENT(in) :: force(DIMV(force),SDIM)
 
  INTEGER_T growlo(3),growhi(3)
  INTEGER_T i,j,k,idir

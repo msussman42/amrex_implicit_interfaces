@@ -30,10 +30,10 @@
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(out) :: xmap3D(3)
-      REAL_T, intent(out) :: xslice3D(3)
-      REAL_T, intent(out) :: problo3D(3),probhi3D(3)
-      REAL_T, intent(in) :: dx_max_level(SDIM)
+      INTEGER_T, INTENT(out) :: xmap3D(3)
+      REAL_T, INTENT(out) :: xslice3D(3)
+      REAL_T, INTENT(out) :: problo3D(3),probhi3D(3)
+      REAL_T, INTENT(in) :: dx_max_level(SDIM)
       INTEGER_T dir
 
       do dir=1,SDIM
@@ -171,108 +171,108 @@
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: tilenum
-      INTEGER_T, intent(in) :: gridno
-      INTEGER_T, intent(in) :: nthread_parm
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: max_level
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: tilenum
+      INTEGER_T, INTENT(in) :: gridno
+      INTEGER_T, INTENT(in) :: nthread_parm
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: max_level
 
-      INTEGER_T, intent(in) :: im_critical
-      INTEGER_T, intent(inout) :: num_nodes_list(num_materials)
-      INTEGER_T, intent(inout) :: num_elements_list(num_materials)
+      INTEGER_T, INTENT(in) :: im_critical
+      INTEGER_T, INTENT(inout) :: num_nodes_list(num_materials)
+      INTEGER_T, INTENT(inout) :: num_elements_list(num_materials)
 
-      INTEGER_T, intent(in) :: FSI_input_num_nodes
-      INTEGER_T, intent(in) :: FSI_input_num_elements
-      REAL_T, intent(inout) :: FSI_input_node_list(3*FSI_input_num_nodes)
-      INTEGER_T, intent(inout) :: &
+      INTEGER_T, INTENT(in) :: FSI_input_num_nodes
+      INTEGER_T, INTENT(in) :: FSI_input_num_elements
+      REAL_T, INTENT(inout) :: FSI_input_node_list(3*FSI_input_num_nodes)
+      INTEGER_T, INTENT(inout) :: &
         FSI_input_element_list(4*FSI_input_num_elements)
-      REAL_T, intent(inout) :: &
+      REAL_T, INTENT(inout) :: &
         FSI_input_displacement_list(3*FSI_input_num_nodes)
-      REAL_T, intent(inout) :: &
+      REAL_T, INTENT(inout) :: &
         FSI_input_velocity_halftime_list(3*FSI_input_num_nodes)
-      REAL_T, intent(inout) :: &
+      REAL_T, INTENT(inout) :: &
         FSI_input_velocity_list(3*FSI_input_num_nodes)
-      REAL_T, intent(inout) :: FSI_input_force_list(3*FSI_input_num_nodes)
-      REAL_T, intent(inout) :: &
+      REAL_T, INTENT(inout) :: FSI_input_force_list(3*FSI_input_num_nodes)
+      REAL_T, INTENT(inout) :: &
         FSI_input_mass_list(FSI_input_num_nodes)
-      REAL_T, intent(inout) :: &
+      REAL_T, INTENT(inout) :: &
         FSI_input_temperature_list(FSI_input_num_nodes)
 
-      INTEGER_T, intent(in) :: FSI_output_num_nodes
-      INTEGER_T, intent(in) :: FSI_output_num_elements
-      REAL_T, intent(inout) :: &
+      INTEGER_T, INTENT(in) :: FSI_output_num_nodes
+      INTEGER_T, INTENT(in) :: FSI_output_num_elements
+      REAL_T, INTENT(inout) :: &
        FSI_output_node_list(3*FSI_output_num_nodes)
-      INTEGER_T, intent(inout) :: &
+      INTEGER_T, INTENT(inout) :: &
               FSI_output_element_list(4*FSI_output_num_elements)
-      REAL_T, intent(inout) :: &
+      REAL_T, INTENT(inout) :: &
               FSI_output_displacement_list(3*FSI_output_num_nodes)
-      REAL_T, intent(inout) :: &
+      REAL_T, INTENT(inout) :: &
               FSI_output_velocity_halftime_list(3*FSI_output_num_nodes)
-      REAL_T, intent(inout) :: &
+      REAL_T, INTENT(inout) :: &
               FSI_output_velocity_list(3*FSI_output_num_nodes)
-      REAL_T, intent(inout) :: &
+      REAL_T, INTENT(inout) :: &
               FSI_output_force_list(3*FSI_output_num_nodes)
-      REAL_T, intent(inout) :: &
+      REAL_T, INTENT(inout) :: &
               FSI_output_mass_list(FSI_output_num_nodes)
-      REAL_T, intent(inout) :: &
+      REAL_T, INTENT(inout) :: &
               FSI_output_temperature_list(FSI_output_num_nodes)
 
-      INTEGER_T, intent(in) :: FSI_operation
-      INTEGER_T, intent(in) :: FSI_sub_operation
-      INTEGER_T, intent(in) :: nFSI
-      INTEGER_T, intent(in) :: ngrow_make_distance_in
-      INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: im_solid_map(nparts)
-      REAL_T, intent(in) :: h_small ! smallest mesh size from the max_level
-      REAL_T, intent(in) :: cur_time
-      REAL_T, intent(in) :: dt
-      INTEGER_T, intent(in) :: FSI_refine_factor(num_materials)
-      INTEGER_T, intent(in) :: FSI_bounding_box_ngrow(num_materials)
-      INTEGER_T, intent(inout) :: touch_flag
-      INTEGER_T, intent(in) :: CTML_FSI_init
-      INTEGER_T, intent(in) :: CTML_force_model(num_materials)
-      INTEGER_T, intent(in) :: iter
-      INTEGER_T, intent(in) :: current_step 
-      INTEGER_T, intent(in) :: plot_interval 
-      INTEGER_T, intent(in) :: ioproc
+      INTEGER_T, INTENT(in) :: FSI_operation
+      INTEGER_T, INTENT(in) :: FSI_sub_operation
+      INTEGER_T, INTENT(in) :: nFSI
+      INTEGER_T, INTENT(in) :: ngrow_make_distance_in
+      INTEGER_T, INTENT(in) :: nparts
+      INTEGER_T, INTENT(in) :: im_solid_map(nparts)
+      REAL_T, INTENT(in) :: h_small ! smallest mesh size from the max_level
+      REAL_T, INTENT(in) :: cur_time
+      REAL_T, INTENT(in) :: dt
+      INTEGER_T, INTENT(in) :: FSI_refine_factor(num_materials)
+      INTEGER_T, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
+      INTEGER_T, INTENT(inout) :: touch_flag
+      INTEGER_T, INTENT(in) :: CTML_FSI_init
+      INTEGER_T, INTENT(in) :: CTML_force_model(num_materials)
+      INTEGER_T, INTENT(in) :: iter
+      INTEGER_T, INTENT(in) :: current_step 
+      INTEGER_T, INTENT(in) :: plot_interval 
+      INTEGER_T, INTENT(in) :: ioproc
       INTEGER_T isout
-      INTEGER_T, intent(in) :: DIMDEC(FSIdata)  ! velfab if FSI_operation==4
-      INTEGER_T, intent(in) :: DIMDEC(velfab) 
-      INTEGER_T, intent(in) :: DIMDEC(drag) 
-      INTEGER_T, intent(in) :: DIMDEC(masknbr) 
-      INTEGER_T, intent(in) :: DIMDEC(maskfiner) 
+      INTEGER_T, INTENT(in) :: DIMDEC(FSIdata)  ! velfab if FSI_operation==4
+      INTEGER_T, INTENT(in) :: DIMDEC(velfab) 
+      INTEGER_T, INTENT(in) :: DIMDEC(drag) 
+      INTEGER_T, INTENT(in) :: DIMDEC(masknbr) 
+      INTEGER_T, INTENT(in) :: DIMDEC(maskfiner) 
         ! velfab if FSI_operation==4
-      REAL_T, intent(inout), target :: FSIdata(DIMV(FSIdata),nFSI) 
+      REAL_T, INTENT(inout), target :: FSIdata(DIMV(FSIdata),nFSI) 
       REAL_T, pointer :: FSIdata_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: velfab(DIMV(velfab),SDIM)
+      REAL_T, INTENT(in), target :: velfab(DIMV(velfab),SDIM)
       REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: drag(DIMV(drag),N_DRAG)
+      REAL_T, INTENT(in), target :: drag(DIMV(drag),N_DRAG)
       REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: masknbr(DIMV(masknbr),2)
+      REAL_T, INTENT(in), target :: masknbr(DIMV(masknbr),2)
       REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: maskfiner(DIMV(maskfiner),4)
+      REAL_T, INTENT(in), target :: maskfiner(DIMV(maskfiner),4)
       REAL_T, pointer :: maskfiner_ptr(D_DECL(:,:,:),:)
 
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T tilelo3D(3),tilehi3D(3)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T growlo3D(3),growhi3D(3)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: dx_max_level(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: dx_max_level(SDIM)
 
-      REAL_T, intent(inout) :: &
+      REAL_T, INTENT(inout) :: &
         FSI_force_integral(NCOMP_FSI*num_materials)
 
       REAL_T problo3D(3),probhi3D(3)
       REAL_T dx3D(3)
       REAL_T vel3D(3)
-      INTEGER_T, intent(in) :: velbc(SDIM,2)
-      INTEGER_T, intent(in) :: vofbc(SDIM,2)
+      INTEGER_T, INTENT(in) :: velbc(SDIM,2)
+      INTEGER_T, INTENT(in) :: vofbc(SDIM,2)
       INTEGER_T xmap3D(3)
       REAL_T xslice3D(3)
       INTEGER_T dir
@@ -1350,7 +1350,7 @@
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: auxcomp
+      INTEGER_T, INTENT(in) :: auxcomp
       INTEGER_T plotlo(3),plothi(3) 
       INTEGER_T lo(3),hi(3) 
 
@@ -1555,9 +1555,9 @@
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: auxcomp
-      INTEGER_T, intent(in) :: FSI_operation
-      INTEGER_T, intent(in) :: iter
+      INTEGER_T, INTENT(in) :: auxcomp
+      INTEGER_T, INTENT(in) :: FSI_operation
+      INTEGER_T, INTENT(in) :: iter
       INTEGER_T plotlo(3),plothi(3) 
       INTEGER_T lo(3),hi(3) 
 
@@ -1802,7 +1802,7 @@
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: ioproc
+      INTEGER_T, INTENT(in) :: ioproc
       INTEGER_T auxcomp
       INTEGER_T FSI_operation
       INTEGER_T FSI_touch_flag
@@ -1918,24 +1918,24 @@
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: sci_max_level
-      INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: im_solid_map(nparts)
-      INTEGER_T, intent(in) :: nthread_parm
-      INTEGER_T, intent(in) :: num_grids_on_level
-      INTEGER_T, intent(in) :: num_grids_on_level_proc
-      INTEGER_T, intent(in) :: max_num_tiles_on_thread_proc
-      INTEGER_T, intent(in) :: tile_dim
-      INTEGER_T, intent(in) :: tilelo_array(tile_dim*SDIM)
-      INTEGER_T, intent(in) :: tilehi_array(tile_dim*SDIM)
-      REAL_T, intent(in) :: cur_time,dt
-      REAL_T, intent(in) :: xlo_array(tile_dim*SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: dx_max_level(SDIM)
-      INTEGER_T, intent(in) :: gridno_array(tile_dim)
-      INTEGER_T, intent(in) :: num_tiles_on_thread_proc(nthread_parm)
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: sci_max_level
+      INTEGER_T, INTENT(in) :: nparts
+      INTEGER_T, INTENT(in) :: im_solid_map(nparts)
+      INTEGER_T, INTENT(in) :: nthread_parm
+      INTEGER_T, INTENT(in) :: num_grids_on_level
+      INTEGER_T, INTENT(in) :: num_grids_on_level_proc
+      INTEGER_T, INTENT(in) :: max_num_tiles_on_thread_proc
+      INTEGER_T, INTENT(in) :: tile_dim
+      INTEGER_T, INTENT(in) :: tilelo_array(tile_dim*SDIM)
+      INTEGER_T, INTENT(in) :: tilehi_array(tile_dim*SDIM)
+      REAL_T, INTENT(in) :: cur_time,dt
+      REAL_T, INTENT(in) :: xlo_array(tile_dim*SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: dx_max_level(SDIM)
+      INTEGER_T, INTENT(in) :: gridno_array(tile_dim)
+      INTEGER_T, INTENT(in) :: num_tiles_on_thread_proc(nthread_parm)
    
       REAL_T problo3D(3),probhi3D(3)
       REAL_T dx3D(3)

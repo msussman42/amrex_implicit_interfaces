@@ -226,9 +226,9 @@ CONTAINS
        ! LS<0 downstream of the shock z<zblob2
        SUBROUTINE shockdrop_shockLS(x,y,z,LS,zblob2,axis_dir)
        IMPLICIT NONE
-       INTEGER_T,intent(in) :: axis_dir
-       REAL_T,intent(in) :: x,y,z,zblob2
-       REAL_T,intent(out) :: LS
+       INTEGER_T,INTENT(in) :: axis_dir
+       REAL_T,INTENT(in) :: x,y,z,zblob2
+       REAL_T,INTENT(out) :: LS
 
        if (SDIM.eq.2) then
         if (abs(z-y).gt.1.0E-8) then

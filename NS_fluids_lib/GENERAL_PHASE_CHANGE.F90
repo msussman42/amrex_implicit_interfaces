@@ -45,10 +45,10 @@ subroutine acoustic_pulse_bc(time,vel_pulse,x_vec,for_dt)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: for_dt
-REAL_T, intent(in) :: time
-REAL_T, intent(out) :: vel_pulse
-REAL_T, intent(in) :: x_vec(SDIM)
+INTEGER_T, INTENT(in) :: for_dt
+REAL_T, INTENT(in) :: time
+REAL_T, INTENT(out) :: vel_pulse
+REAL_T, INTENT(in) :: x_vec(SDIM)
 
 if ((time.ge.zero).and.(time.le.1.0e+20)) then
  ! do nothing
@@ -107,10 +107,10 @@ end subroutine acoustic_pulse_bc
 subroutine GENERAL_PHASE_CHANGE_CFL_HELPER(time,dir,uu,dx)
 use probcommon_module
 implicit none
-INTEGER_T, intent(in) :: dir
-REAL_T, intent(in) :: time
-REAL_T, intent(inout) :: uu
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: dir
+REAL_T, INTENT(in) :: time
+REAL_T, INTENT(inout) :: uu
+REAL_T, INTENT(in) :: dx(SDIM)
 
 INTEGER_T dir2
 REAL_T utest
@@ -156,9 +156,9 @@ subroutine GENERAL_soliddist(x,dist,im)
 use probcommon_module
 use global_utility_module
 implicit none
-REAL_T, intent(in), dimension(SDIM) :: x !spatial coordinates
-INTEGER_T, intent(in) :: im
-REAL_T, intent(out) :: dist
+REAL_T, INTENT(in), dimension(SDIM) :: x !spatial coordinates
+INTEGER_T, INTENT(in) :: im
+REAL_T, INTENT(out) :: dist
 INTEGER_T :: nmat
 
 nmat=num_materials
@@ -237,10 +237,10 @@ subroutine GENERAL_PHASE_CHANGE_check_vel_rigid(x,t,vel,dir)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: vel
-INTEGER_T, intent(in) :: dir
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: vel
+INTEGER_T, INTENT(in) :: dir
 
 if (t.ge.0.0d0) then
  ! do nothing
@@ -292,10 +292,10 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(out) :: LS(nmat)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(out) :: LS(nmat)
 REAL_T :: dist_gas,dist_liquid,dist_ice,dist_liq2,distsolid
 INTEGER_T :: im
 INTEGER_T :: im_solid_materialdist
@@ -625,14 +625,14 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: dx(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: VEL(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: VEL(SDIM)
 INTEGER_T dir
-INTEGER_T, intent(in) :: velsolid_flag
+INTEGER_T, INTENT(in) :: velsolid_flag
 REAL_T :: temp
 REAL_T :: xmid,zmid
 
@@ -804,11 +804,11 @@ subroutine GENERAL_PHASE_CHANGE_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: PRES
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: PRES
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -828,13 +828,13 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: nstate_mat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: nstate_mat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
 REAL_T water_temp
 
@@ -906,14 +906,14 @@ subroutine GENERAL_PHASE_CHANGE_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(inout) :: LS(nmat)
-REAL_T, intent(in) :: LS_in(nmat)
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) ::  dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(inout) :: LS(nmat)
+REAL_T, INTENT(in) :: LS_in(nmat)
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) ::  dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -940,15 +940,15 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: VEL
-REAL_T, intent(in) :: VEL_in
-INTEGER_T, intent(in) :: veldir,dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: VEL
+REAL_T, INTENT(in) :: VEL_in
+INTEGER_T, INTENT(in) :: veldir,dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
 REAL_T temp
@@ -1014,15 +1014,15 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: PRES
-REAL_T, intent(in) :: PRES_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: PRES
+REAL_T, INTENT(in) :: PRES_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T base_pres
 REAL_T gravity_dz
 
@@ -1071,18 +1071,18 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
 REAL_T :: local_STATE(nmat*num_state_material)
-REAL_T, intent(inout) :: STATE
-REAL_T, intent(inout) :: STATE_merge
-REAL_T, intent(in) :: STATE_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
-INTEGER_T, intent(in) :: istate,im
+REAL_T, INTENT(inout) :: STATE
+REAL_T, INTENT(inout) :: STATE_merge
+REAL_T, INTENT(in) :: STATE_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: istate,im
 INTEGER_T ibase,im_crit,im_loop
 INTEGER_T local_bcflag
 
@@ -1256,18 +1256,18 @@ subroutine GENERAL_PHASE_CHANGE_HEATSOURCE(im,VFRAC,time,x, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: im
-REAL_T, intent(in) :: VFRAC(nmat)
-REAL_T, intent(in) :: time
-INTEGER_T, intent(in) :: nhalf
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, intent(in) :: temp(nmat)
-REAL_T, intent(in) :: den(nmat)
-REAL_T, intent(in) :: CV(nmat)
-REAL_T, intent(in) :: dt
-REAL_T, intent(out) :: heat_source
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: im
+REAL_T, INTENT(in) :: VFRAC(nmat)
+REAL_T, INTENT(in) :: time
+INTEGER_T, INTENT(in) :: nhalf
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+REAL_T, INTENT(in) :: temp(nmat)
+REAL_T, INTENT(in) :: den(nmat)
+REAL_T, INTENT(in) :: CV(nmat)
+REAL_T, INTENT(in) :: dt
+REAL_T, INTENT(out) :: heat_source
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1291,13 +1291,13 @@ subroutine GENERAL_PHASE_CHANGE_EB_heat_source(time,dt,xsten,nhalf, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nhalf
-REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
-REAL_T, intent(in) :: time
-REAL_T, intent(in) :: dt
-REAL_T, intent(out) :: heat_flux
-INTEGER_T, intent(out) :: heat_dir
-INTEGER_T, intent(out) :: heat_side
+INTEGER_T, INTENT(in) :: nhalf
+REAL_T, dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
+REAL_T, INTENT(in) :: time
+REAL_T, INTENT(in) :: dt
+REAL_T, INTENT(out) :: heat_flux
+INTEGER_T, INTENT(out) :: heat_dir
+INTEGER_T, INTENT(out) :: heat_side
 
 if (time.lt.zero) then
  print *,"time invalid"
@@ -1336,9 +1336,9 @@ subroutine GENERAL_PHASE_CHANGE_microcell_heat_coeff(heatcoeff,dx,veldir)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: dx(SDIM)
-INTEGER_T, intent(in) :: veldir
-REAL_T, intent(inout) :: heatcoeff
+REAL_T, INTENT(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: veldir
+REAL_T, INTENT(inout) :: heatcoeff
 
 if (probtype.eq.55) then
 
@@ -1376,8 +1376,8 @@ end subroutine GENERAL_PHASE_CHANGE_microcell_heat_coeff
 subroutine GENERAL_PHASE_CHANGE_velfreestream(problen,local_buffer)
 use probcommon_module
 IMPLICIT NONE
-REAL_T, intent(inout) :: local_buffer(2*SDIM)
-REAL_T, intent(in)    :: problen(SDIM)
+REAL_T, INTENT(inout) :: local_buffer(2*SDIM)
+REAL_T, INTENT(in)    :: problen(SDIM)
 REAL_T :: buf
 INTEGER_T :: ibuf
 INTEGER_T :: dirbc,side
@@ -1426,10 +1426,10 @@ use probcommon_module_types
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-INTEGER_T, intent(in) :: nhalf
-REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
-INTEGER_T, intent(inout) :: make_seed
-type(nucleation_parm_type_input), intent(in) :: nucleate_in
+INTEGER_T, INTENT(in) :: nhalf
+REAL_T, dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
+INTEGER_T, INTENT(inout) :: make_seed
+type(nucleation_parm_type_input), INTENT(in) :: nucleate_in
 REAL_T :: LL
 REAL_T :: dist
 REAL_T :: x_point(SDIM)
@@ -1489,8 +1489,8 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: xtarget(SDIM)
-REAL_T, intent(out) :: dist
+REAL_T, INTENT(in) :: xtarget(SDIM)
+REAL_T, INTENT(out) :: dist
 
  if (probtype.eq.55) then
   ! dist > 0 in the substrate
@@ -1520,10 +1520,10 @@ use probcommon_module_types
 use probcommon_module
 use global_utility_module
 
-INTEGER_T, intent(in) :: nsum1,nsum2,isweep
-type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
-REAL_T, intent(inout) :: increment_out1(nsum1)
-REAL_T, intent(inout) :: increment_out2(nsum2)
+INTEGER_T, INTENT(in) :: nsum1,nsum2,isweep
+type(user_defined_sum_int_type), INTENT(in) :: GRID_DATA_IN
+REAL_T, INTENT(inout) :: increment_out1(nsum1)
+REAL_T, INTENT(inout) :: increment_out2(nsum2)
 INTEGER_T :: i,j,k,dir,im
 REAL_T :: xlocal(SDIM)
 REAL_T :: cell_dim(SDIM)

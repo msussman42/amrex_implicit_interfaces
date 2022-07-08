@@ -100,10 +100,10 @@ contains
   use probcommon_module
   IMPLICIT NONE
 
-  INTEGER_T, intent(in) :: nmat
-  REAL_T, intent(in) :: x(SDIM)
-  REAL_T, intent(in) :: t
-  REAL_T, intent(out) :: LS(nmat)
+  INTEGER_T, INTENT(in) :: nmat
+  REAL_T, INTENT(in) :: x(SDIM)
+  REAL_T, INTENT(in) :: t
+  REAL_T, INTENT(out) :: LS(nmat)
   REAL_T ls_o,ls_i
 
   if (nmat.eq.num_materials) then
@@ -169,13 +169,13 @@ contains
   use probcommon_module
   IMPLICIT NONE
 
-  INTEGER_T, intent(in) :: nmat
-  REAL_T, intent(in) :: x(SDIM)
-  REAL_T, intent(in) :: t
-  REAL_T, intent(in) :: dx(SDIM)
-  REAL_T, intent(in) :: LS(nmat)
-  REAL_T, intent(out) :: VEL(SDIM)
-  INTEGER_T, intent(in) :: velsolid_flag
+  INTEGER_T, INTENT(in) :: nmat
+  REAL_T, INTENT(in) :: x(SDIM)
+  REAL_T, INTENT(in) :: t
+  REAL_T, INTENT(in) :: dx(SDIM)
+  REAL_T, INTENT(in) :: LS(nmat)
+  REAL_T, INTENT(out) :: VEL(SDIM)
+  INTEGER_T, INTENT(in) :: velsolid_flag
   INTEGER_T dir
 
   if (nmat.eq.num_materials) then
@@ -214,10 +214,10 @@ REAL_T function DIST_FINITE_CYLINDER(P,R_cyl,H_bot,H_top)
  ! Outside the cylinder > 0
  implicit none
 
- REAL_T, intent(in), dimension(SDIM) :: P
- REAL_T, intent(in) :: R_cyl
- REAL_T, intent(in) :: H_bot
- REAL_T, intent(in) :: H_top
+ REAL_T, INTENT(in), dimension(SDIM) :: P
+ REAL_T, INTENT(in) :: R_cyl
+ REAL_T, INTENT(in) :: H_bot
+ REAL_T, INTENT(in) :: H_top
  
  REAL_T x,y,z,r
  REAL_T dist_cyl, dist_end
@@ -311,11 +311,11 @@ subroutine EOS_CRYOGENIC_TANK2(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im,num_species_var_in
- REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, intent(in) :: internal_energy
- REAL_T, intent(out) :: pressure
+ INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+ REAL_T, INTENT(in) :: rho
+ REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+ REAL_T, INTENT(in) :: internal_energy
+ REAL_T, INTENT(out) :: pressure
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
@@ -346,11 +346,11 @@ subroutine dVdT_CRYOGENIC_TANK2(dVdT,massfrac_var, &
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-INTEGER_T, intent(in) :: imattype,im,num_species_var_in
-REAL_T, intent(in) :: pressure
-REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
-REAL_T, intent(in) :: temperature
-REAL_T, intent(out) :: dVdT
+INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+REAL_T, INTENT(in) :: pressure
+REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+REAL_T, INTENT(in) :: temperature
+REAL_T, INTENT(out) :: dVdT
 INTEGER_T :: dummy_input
 
  if (pressure.gt.zero) then
@@ -405,11 +405,11 @@ subroutine SOUNDSQR_CRYOGENIC_TANK2(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im,num_species_var_in
- REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, intent(in) :: internal_energy
- REAL_T, intent(out) :: soundsqr
+ INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+ REAL_T, INTENT(in) :: rho
+ REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+ REAL_T, INTENT(in) :: internal_energy
+ REAL_T, INTENT(out) :: soundsqr
  REAL_T pressure
 
  if (num_species_var_in.eq.num_species_var) then
@@ -448,11 +448,11 @@ subroutine INTERNAL_CRYOGENIC_TANK2(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im,num_species_var_in
- REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, intent(in) :: temperature 
- REAL_T, intent(out) :: local_internal_energy
+ INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+ REAL_T, INTENT(in) :: rho
+ REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+ REAL_T, INTENT(in) :: temperature 
+ REAL_T, INTENT(out) :: local_internal_energy
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
@@ -483,11 +483,11 @@ subroutine TEMPERATURE_CRYOGENIC_TANK2(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im,num_species_var_in
- REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, intent(out) :: temperature 
- REAL_T, intent(in) :: internal_energy
+ INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+ REAL_T, INTENT(in) :: rho
+ REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+ REAL_T, INTENT(out) :: temperature 
+ REAL_T, INTENT(in) :: internal_energy
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
@@ -524,11 +524,11 @@ subroutine CRYOGENIC_TANK2_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: PRES
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: PRES
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -557,13 +557,13 @@ subroutine CRYOGENIC_TANK2_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: nstate_mat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: nstate_mat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
 
  ! num_state_material=2 (default)  density and temperature
@@ -616,14 +616,14 @@ subroutine CRYOGENIC_TANK2_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(inout) :: LS(nmat)
-REAL_T, intent(in) :: LS_in(nmat)
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(inout) :: LS(nmat)
+REAL_T, INTENT(in) :: LS_in(nmat)
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -650,15 +650,15 @@ subroutine CRYOGENIC_TANK2_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: VEL
-REAL_T, intent(in) :: VEL_in
-INTEGER_T, intent(in) :: veldir,dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: VEL
+REAL_T, INTENT(in) :: VEL_in
+INTEGER_T, INTENT(in) :: veldir,dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
 
@@ -691,15 +691,15 @@ subroutine CRYOGENIC_TANK2_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: PRES
-REAL_T, intent(in) :: PRES_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: PRES
+REAL_T, INTENT(in) :: PRES_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -727,18 +727,18 @@ subroutine CRYOGENIC_TANK2_STATE_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
 REAL_T local_STATE(nmat*num_state_material)
-REAL_T, intent(inout) :: STATE
-REAL_T, intent(inout) :: STATE_merge
-REAL_T, intent(in) :: STATE_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
-INTEGER_T, intent(in) :: istate,im
+REAL_T, INTENT(inout) :: STATE
+REAL_T, INTENT(inout) :: STATE_merge
+REAL_T, INTENT(in) :: STATE_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: istate,im
 INTEGER_T ibase,im_crit,im_loop
 INTEGER_T local_bcflag
 
@@ -812,18 +812,18 @@ subroutine CRYOGENIC_TANK2_HEATSOURCE( &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: im
-REAL_T, intent(in) :: VFRAC(nmat)
-REAL_T, intent(in) :: time
-INTEGER_T, intent(in) :: nhalf
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, intent(in) :: temp(nmat)
-REAL_T, intent(in) :: den(nmat)
-REAL_T, intent(in) :: CV(nmat)
-REAL_T, intent(in) :: dt
-REAL_T, intent(out) :: heat_source
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: im
+REAL_T, INTENT(in) :: VFRAC(nmat)
+REAL_T, INTENT(in) :: time
+INTEGER_T, INTENT(in) :: nhalf
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+REAL_T, INTENT(in) :: temp(nmat)
+REAL_T, INTENT(in) :: den(nmat)
+REAL_T, INTENT(in) :: CV(nmat)
+REAL_T, INTENT(in) :: dt
+REAL_T, INTENT(out) :: heat_source
 
 INTEGER_T dir
 REAL_T local_dx(SDIM)

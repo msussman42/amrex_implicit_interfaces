@@ -578,54 +578,54 @@ implicit none
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
-        u, & !intent(in) uimage_raster_solid_frame(dir)
-        uimage_tngt_mag, & !intent(in) 
-        wall_model_velocity, & ! intent(in)
-        dist_probe, & ! intent(in)
-        dist_fluid, & ! intent(in)
-        temperature_image, & !intent(in) 
-        temperature_wall, & ! intent(in)      
-        temperature_wall_max, & ! intent(in)      
-        viscosity_molecular, & ! intent(in)      
-        viscosity_eddy_wall, & ! intent(in)      
-        y, & !intent(in) distance from image to wall
-        ughost_tngt, & ! intent(out)
-        im_fluid, &  ! intent(in)
-        critical_length) ! intent(in) used for sanity check
-      INTEGER_T, intent(in) :: dir ! 1,2,3
-      INTEGER_T, intent(in) :: data_dir ! 0,1,2
-      REAL_T, intent(in) :: dxmin
-      REAL_T, intent(in), pointer :: x_projection_raster(:)
-      REAL_T, intent(in), pointer :: dx(:)
-      REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
-      INTEGER_T, intent(in) :: im_fluid
-      REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
-      REAL_T, intent(in) :: uimage_tngt_mag
-      REAL_T, intent(in) :: wall_model_velocity
-      REAL_T, intent(in) :: dist_probe
-      REAL_T, intent(in) :: dist_fluid
-      REAL_T, intent(in) :: temperature_image
-      REAL_T, intent(in) :: temperature_wall
-      REAL_T, intent(in) :: temperature_wall_max
-      REAL_T, intent(in) :: viscosity_molecular
-      REAL_T, intent(in) :: viscosity_eddy_wall
-      REAL_T, intent(in) :: y !delta_r
-      REAL_T, intent(in) :: critical_length
-      REAL_T, intent(out) :: ughost_tngt  ! dir direction
+        u, & !INTENT(in) uimage_raster_solid_frame(dir)
+        uimage_tngt_mag, & !INTENT(in) 
+        wall_model_velocity, & ! INTENT(in)
+        dist_probe, & ! INTENT(in)
+        dist_fluid, & ! INTENT(in)
+        temperature_image, & !INTENT(in) 
+        temperature_wall, & ! INTENT(in)      
+        temperature_wall_max, & ! INTENT(in)      
+        viscosity_molecular, & ! INTENT(in)      
+        viscosity_eddy_wall, & ! INTENT(in)      
+        y, & !INTENT(in) distance from image to wall
+        ughost_tngt, & ! INTENT(out)
+        im_fluid, &  ! INTENT(in)
+        critical_length) ! INTENT(in) used for sanity check
+      INTEGER_T, INTENT(in) :: dir ! 1,2,3
+      INTEGER_T, INTENT(in) :: data_dir ! 0,1,2
+      REAL_T, INTENT(in) :: dxmin
+      REAL_T, INTENT(in), pointer :: x_projection_raster(:)
+      REAL_T, INTENT(in), pointer :: dx(:)
+      REAL_T, INTENT(in), pointer :: n_raster(:) ! points to solid
+      INTEGER_T, INTENT(in) :: im_fluid
+      REAL_T, INTENT(in) :: u !uimage_raster_solid_frame(dir)
+      REAL_T, INTENT(in) :: uimage_tngt_mag
+      REAL_T, INTENT(in) :: wall_model_velocity
+      REAL_T, INTENT(in) :: dist_probe
+      REAL_T, INTENT(in) :: dist_fluid
+      REAL_T, INTENT(in) :: temperature_image
+      REAL_T, INTENT(in) :: temperature_wall
+      REAL_T, INTENT(in) :: temperature_wall_max
+      REAL_T, INTENT(in) :: viscosity_molecular
+      REAL_T, INTENT(in) :: viscosity_eddy_wall
+      REAL_T, INTENT(in) :: y !delta_r
+      REAL_T, INTENT(in) :: critical_length
+      REAL_T, INTENT(out) :: ughost_tngt  ! dir direction
       end subroutine TEMPLATE_wallfunc
 
       subroutine TEMPLATE_INIT_REGIONS_LIST(constant_density_all_time, &
           num_materials_in,num_threads_in)
-      INTEGER_T, intent(in) :: num_materials_in
-      INTEGER_T, intent(in) :: num_threads_in
-      INTEGER_T, intent(in) :: constant_density_all_time(num_materials_in)
+      INTEGER_T, INTENT(in) :: num_materials_in
+      INTEGER_T, INTENT(in) :: num_threads_in
+      INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials_in)
       end subroutine TEMPLATE_INIT_REGIONS_LIST
 
       subroutine TEMPLATE_CHARFN_REGION(region_id,x,cur_time,charfn_out)
-      INTEGER_T, intent(in) :: region_id
-      REAL_T, intent(in) :: x(SDIM)
-      REAL_T, intent(in) :: cur_time
-      REAL_T, intent(out) :: charfn_out
+      INTEGER_T, INTENT(in) :: region_id
+      REAL_T, INTENT(in) :: x(SDIM)
+      REAL_T, INTENT(in) :: cur_time
+      REAL_T, INTENT(out) :: charfn_out
       end subroutine TEMPLATE_CHARFN_REGION
 
       subroutine TEMPLATE_THERMAL_K(x,dx,cur_time, &
@@ -639,19 +639,19 @@ implicit none
         temperature_wall_max, &
         temperature_probe, &
         nrm) ! nrm points from solid to fluid
-      INTEGER_T, intent(in) :: im
-      INTEGER_T, intent(in) :: im_solid
-      INTEGER_T, intent(in) :: near_interface
-      REAL_T, intent(in) :: x(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: cur_time
-      REAL_T, intent(in) :: density
-      REAL_T, intent(in) :: temperature
-      REAL_T, intent(in) :: temperature_wall
-      REAL_T, intent(in) :: temperature_wall_max
-      REAL_T, intent(in) :: temperature_probe
-      REAL_T, intent(in) :: nrm(SDIM) ! nrm points from solid to fluid
-      REAL_T, intent(inout) :: thermal_k
+      INTEGER_T, INTENT(in) :: im
+      INTEGER_T, INTENT(in) :: im_solid
+      INTEGER_T, INTENT(in) :: near_interface
+      REAL_T, INTENT(in) :: x(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: cur_time
+      REAL_T, INTENT(in) :: density
+      REAL_T, INTENT(in) :: temperature
+      REAL_T, INTENT(in) :: temperature_wall
+      REAL_T, INTENT(in) :: temperature_wall_max
+      REAL_T, INTENT(in) :: temperature_probe
+      REAL_T, INTENT(in) :: nrm(SDIM) ! nrm points from solid to fluid
+      REAL_T, INTENT(inout) :: thermal_k
       end subroutine TEMPLATE_THERMAL_K
 
       subroutine TEMPLATE_INTERFACE_TEMPERATURE( &
@@ -681,32 +681,32 @@ implicit none
         dxprobe_dst, &
         num_materials_in, &
         num_species_var_in)
-      INTEGER_T, intent(in) :: interface_mass_transfer_model
-      INTEGER_T, intent(in) :: num_materials_in
-      INTEGER_T, intent(in) :: num_species_var_in
-      INTEGER_T, intent(in) :: probe_constrain
-      INTEGER_T, intent(in) :: ireverse
-      INTEGER_T, intent(in) :: iten
-      REAL_T, intent(in) :: xI(SDIM)
-      REAL_T, intent(in) :: cur_time
-      REAL_T, intent(in) :: prev_time
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(inout) :: TI
-      REAL_T, intent(inout) :: YI
-      INTEGER_T, intent(inout) :: user_override_TI_YI
-      REAL_T, intent(in) :: molar_mass(num_materials_in)
-      REAL_T, intent(in) :: species_molar_mass(num_species_var_in)
-      REAL_T, intent(in) :: ksrc_predict
-      REAL_T, intent(in) :: kdst_predict
-      REAL_T, intent(in) :: ksrc_physical
-      REAL_T, intent(in) :: kdst_physical
-      REAL_T, intent(in) :: T_probe_src
-      REAL_T, intent(in) :: T_probe_dst
-      INTEGER_T, intent(in) :: probe_ok_gradient_src
-      INTEGER_T, intent(in) :: probe_ok_gradient_dst
-      REAL_T, intent(in) :: LL
-      REAL_T, intent(in) :: dxprobe_src
-      REAL_T, intent(in) :: dxprobe_dst
+      INTEGER_T, INTENT(in) :: interface_mass_transfer_model
+      INTEGER_T, INTENT(in) :: num_materials_in
+      INTEGER_T, INTENT(in) :: num_species_var_in
+      INTEGER_T, INTENT(in) :: probe_constrain
+      INTEGER_T, INTENT(in) :: ireverse
+      INTEGER_T, INTENT(in) :: iten
+      REAL_T, INTENT(in) :: xI(SDIM)
+      REAL_T, INTENT(in) :: cur_time
+      REAL_T, INTENT(in) :: prev_time
+      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(inout) :: TI
+      REAL_T, INTENT(inout) :: YI
+      INTEGER_T, INTENT(inout) :: user_override_TI_YI
+      REAL_T, INTENT(in) :: molar_mass(num_materials_in)
+      REAL_T, INTENT(in) :: species_molar_mass(num_species_var_in)
+      REAL_T, INTENT(in) :: ksrc_predict
+      REAL_T, INTENT(in) :: kdst_predict
+      REAL_T, INTENT(in) :: ksrc_physical
+      REAL_T, INTENT(in) :: kdst_physical
+      REAL_T, INTENT(in) :: T_probe_src
+      REAL_T, INTENT(in) :: T_probe_dst
+      INTEGER_T, INTENT(in) :: probe_ok_gradient_src
+      INTEGER_T, INTENT(in) :: probe_ok_gradient_dst
+      REAL_T, INTENT(in) :: LL
+      REAL_T, INTENT(in) :: dxprobe_src
+      REAL_T, INTENT(in) :: dxprobe_dst
       end subroutine TEMPLATE_INTERFACE_TEMPERATURE
 
       subroutine TEMPLATE_MDOT( &
@@ -719,8 +719,8 @@ implicit none
         species_molar_mass, & ! 1..num_species_var+1
         im_source, &
         im_dest, &
-        mdot, & ! intent(out)
-        mdot_override, & ! intent(inout)
+        mdot, & ! INTENT(out)
+        mdot_override, & ! INTENT(inout)
         ksrc_derived, &
         kdst_derived, &
         ksrc_physical, &
@@ -733,29 +733,29 @@ implicit none
         LL, &
         dxprobe_src, &
         dxprobe_dst)
-      INTEGER_T, intent(in) :: interface_mass_transfer_model
-      INTEGER_T, intent(in) :: num_materials_in
-      INTEGER_T, intent(in) :: num_species_var_in
-      INTEGER_T, intent(in) :: ispec
-      INTEGER_T, intent(in) :: im_source
-      INTEGER_T, intent(in) :: im_dest
-      REAL_T, intent(in) :: xI(SDIM)
-      REAL_T, intent(in) :: TI
-      REAL_T, intent(in) :: molar_mass(num_materials_in)
-      REAL_T, intent(in) :: species_molar_mass(num_species_var_in+1)
-      REAL_T, intent(out) :: mdot
-      INTEGER_T, intent(inout) :: mdot_override
-      REAL_T, intent(in) :: ksrc_derived
-      REAL_T, intent(in) :: kdst_derived
-      REAL_T, intent(in) :: ksrc_physical
-      REAL_T, intent(in) :: kdst_physical
-      REAL_T, intent(in) :: T_probe_src
-      REAL_T, intent(in) :: T_probe_dst
-      INTEGER_T, intent(in) :: probe_ok_gradient_src
-      INTEGER_T, intent(in) :: probe_ok_gradient_dst
-      REAL_T, intent(in) :: LL
-      REAL_T, intent(in) :: dxprobe_src
-      REAL_T, intent(in) :: dxprobe_dst
+      INTEGER_T, INTENT(in) :: interface_mass_transfer_model
+      INTEGER_T, INTENT(in) :: num_materials_in
+      INTEGER_T, INTENT(in) :: num_species_var_in
+      INTEGER_T, INTENT(in) :: ispec
+      INTEGER_T, INTENT(in) :: im_source
+      INTEGER_T, INTENT(in) :: im_dest
+      REAL_T, INTENT(in) :: xI(SDIM)
+      REAL_T, INTENT(in) :: TI
+      REAL_T, INTENT(in) :: molar_mass(num_materials_in)
+      REAL_T, INTENT(in) :: species_molar_mass(num_species_var_in+1)
+      REAL_T, INTENT(out) :: mdot
+      INTEGER_T, INTENT(inout) :: mdot_override
+      REAL_T, INTENT(in) :: ksrc_derived
+      REAL_T, INTENT(in) :: kdst_derived
+      REAL_T, INTENT(in) :: ksrc_physical
+      REAL_T, INTENT(in) :: kdst_physical
+      REAL_T, INTENT(in) :: T_probe_src
+      REAL_T, INTENT(in) :: T_probe_dst
+      INTEGER_T, INTENT(in) :: probe_ok_gradient_src
+      INTEGER_T, INTENT(in) :: probe_ok_gradient_dst
+      REAL_T, INTENT(in) :: LL
+      REAL_T, INTENT(in) :: dxprobe_src
+      REAL_T, INTENT(in) :: dxprobe_dst
       end subroutine TEMPLATE_MDOT
 
 
@@ -777,28 +777,28 @@ implicit none
         LL, &
         num_materials_in, &
         num_species_var_in)
-      INTEGER_T, intent(in) :: interface_mass_transfer_model
-      INTEGER_T, intent(in) :: num_materials_in
-      INTEGER_T, intent(in) :: num_species_var_in
-      INTEGER_T, intent(in) :: ireverse
-      INTEGER_T, intent(in) :: iten
-      REAL_T, intent(in) :: molar_mass(num_materials_in)
-      REAL_T, intent(in) :: species_molar_mass(num_species_var_in)
-      REAL_T, intent(in) :: k_model_predict(2) ! src,dst
-      REAL_T, intent(inout) :: k_model_correct(2) ! src,dst
-      REAL_T, intent(in) :: k_physical_base(2) ! src, dst
-      REAL_T, intent(in) :: T_probe_src
-      REAL_T, intent(in) :: T_probe_dst
-      INTEGER_T, intent(in) :: probe_ok_gradient_src
-      INTEGER_T, intent(in) :: probe_ok_gradient_dst
-      REAL_T, intent(in) :: LL
-      REAL_T, intent(in) :: dxprobe_src
-      REAL_T, intent(in) :: dxprobe_dst
+      INTEGER_T, INTENT(in) :: interface_mass_transfer_model
+      INTEGER_T, INTENT(in) :: num_materials_in
+      INTEGER_T, INTENT(in) :: num_species_var_in
+      INTEGER_T, INTENT(in) :: ireverse
+      INTEGER_T, INTENT(in) :: iten
+      REAL_T, INTENT(in) :: molar_mass(num_materials_in)
+      REAL_T, INTENT(in) :: species_molar_mass(num_species_var_in)
+      REAL_T, INTENT(in) :: k_model_predict(2) ! src,dst
+      REAL_T, INTENT(inout) :: k_model_correct(2) ! src,dst
+      REAL_T, INTENT(in) :: k_physical_base(2) ! src, dst
+      REAL_T, INTENT(in) :: T_probe_src
+      REAL_T, INTENT(in) :: T_probe_dst
+      INTEGER_T, INTENT(in) :: probe_ok_gradient_src
+      INTEGER_T, INTENT(in) :: probe_ok_gradient_dst
+      REAL_T, INTENT(in) :: LL
+      REAL_T, INTENT(in) :: dxprobe_src
+      REAL_T, INTENT(in) :: dxprobe_dst
       end subroutine TEMPLATE_K_EFFECTIVE
 
 
       subroutine TEMPLATE_reference_wavelen(wavelen)
-      REAL_T, intent(inout) :: wavelen
+      REAL_T, INTENT(inout) :: wavelen
       end subroutine TEMPLATE_reference_wavelen
 
       subroutine TEMPLATE_DELETE_REGIONS_LIST()
@@ -816,21 +816,21 @@ implicit none
         rho_hydrostatic, &
         pres_hydrostatic, &
         state_ptr)
-      INTEGER_T, intent(in) :: i,j,k,level
-      INTEGER_T, intent(in) :: gravity_dir_parm
-      REAL_T, intent(in) :: angular_velocity
-      REAL_T, intent(in) :: gravity_normalized
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(inout) :: rho_hydrostatic
-      REAL_T, intent(inout) :: pres_hydrostatic
-      REAL_T, intent(in),pointer :: state_ptr(D_DECL(:,:,:),:)
+      INTEGER_T, INTENT(in) :: i,j,k,level
+      INTEGER_T, INTENT(in) :: gravity_dir_parm
+      REAL_T, INTENT(in) :: angular_velocity
+      REAL_T, INTENT(in) :: gravity_normalized
+      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(inout) :: rho_hydrostatic
+      REAL_T, INTENT(inout) :: pres_hydrostatic
+      REAL_T, INTENT(in),pointer :: state_ptr(D_DECL(:,:,:),:)
       end subroutine TEMPLATE_correct_pres_rho_hydrostatic
         
       subroutine TEMPLATE_CFL_HELPER(time,dir,uu,dx)
-      INTEGER_T, intent(in) :: dir
-      REAL_T, intent(in) :: time
-      REAL_T, intent(inout) :: uu
-      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: dir
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(inout) :: uu
+      REAL_T, INTENT(in) :: dx(SDIM)
       end subroutine TEMPLATE_CFL_HELPER
 
 
@@ -838,225 +838,225 @@ implicit none
             increment_out2,nsum1,nsum2,isweep)
       use probcommon_module_types
 
-      INTEGER_T, intent(in) :: nsum1,nsum2,isweep
-      type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
-      REAL_T, intent(inout) :: increment_out1(nsum1)
-      REAL_T, intent(inout) :: increment_out2(nsum2)
+      INTEGER_T, INTENT(in) :: nsum1,nsum2,isweep
+      type(user_defined_sum_int_type), INTENT(in) :: GRID_DATA_IN
+      REAL_T, INTENT(inout) :: increment_out1(nsum1)
+      REAL_T, INTENT(inout) :: increment_out2(nsum2)
       end subroutine TEMPLATE_SUMINT
       
       subroutine TEMPLATE_LS(x,t,LS,nmat)
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: x(SDIM)
-      REAL_T, intent(in) :: t
-      REAL_T, intent(out) :: LS(nmat)
+      INTEGER_T, INTENT(in) :: nmat
+      REAL_T, INTENT(in) :: x(SDIM)
+      REAL_T, INTENT(in) :: t
+      REAL_T, INTENT(out) :: LS(nmat)
       end subroutine TEMPLATE_LS
 
       subroutine TEMPLATE_OVERRIDE_TAGFLAG(xsten,nhalf,time,rflag,tagflag)
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T, intent(in) :: time
-      REAL_T, intent(inout) :: rflag
-      INTEGER_T, intent(inout) :: tagflag
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(inout) :: rflag
+      INTEGER_T, INTENT(inout) :: tagflag
       end subroutine TEMPLATE_OVERRIDE_TAGFLAG
 
       subroutine TEMPLATE_AUX_DATA(auxcomp,x,LS)
-      INTEGER_T, intent(in) :: auxcomp
-      REAL_T, intent(in) :: x(3)
-      REAL_T, intent(out) :: LS
+      INTEGER_T, INTENT(in) :: auxcomp
+      REAL_T, INTENT(in) :: x(3)
+      REAL_T, INTENT(out) :: LS
       end subroutine TEMPLATE_AUX_DATA
 
       subroutine TEMPLATE_OVERRIDE_FSI_SIGN_LS_VEL_TEMP( &
         exterior_BB, &
         interior_BB, &
         xcell,time,LS,VEL,TEMP,MASK,lev77,im_part,part_id)
-      REAL_T, intent(in) :: exterior_BB(3,2)
-      REAL_T, intent(in) :: interior_BB(3,2)
-      REAL_T, intent(in) :: xcell(3)
-      REAL_T, intent(in) :: time
-      REAL_T, intent(out) :: LS
-      REAL_T, intent(out) :: VEL(3)
-      REAL_T, intent(out) :: TEMP
-      INTEGER_T, intent(out) :: MASK
-      INTEGER_T, intent(in) :: lev77 !lev77=-1 for aux, >=0 otherwise.
-      INTEGER_T, intent(in) :: im_part
-      INTEGER_T, intent(in) :: part_id
+      REAL_T, INTENT(in) :: exterior_BB(3,2)
+      REAL_T, INTENT(in) :: interior_BB(3,2)
+      REAL_T, INTENT(in) :: xcell(3)
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(out) :: LS
+      REAL_T, INTENT(out) :: VEL(3)
+      REAL_T, INTENT(out) :: TEMP
+      INTEGER_T, INTENT(out) :: MASK
+      INTEGER_T, INTENT(in) :: lev77 !lev77=-1 for aux, >=0 otherwise.
+      INTEGER_T, INTENT(in) :: im_part
+      INTEGER_T, INTENT(in) :: part_id
       end subroutine TEMPLATE_OVERRIDE_FSI_SIGN_LS_VEL_TEMP
 
       subroutine TEMPLATE_GET_OUTSIDE_POINT( &
         exterior_BB, &
         xcell,time,x_outside,im_part,part_id)
-      REAL_T, intent(in) :: exterior_BB(3,2)
-      REAL_T, intent(in) :: xcell(3)
-      REAL_T, intent(in) :: time
-      REAL_T, intent(out) :: x_outside(3)
-      INTEGER_T, intent(in) :: im_part
-      INTEGER_T, intent(in) :: part_id
+      REAL_T, INTENT(in) :: exterior_BB(3,2)
+      REAL_T, INTENT(in) :: xcell(3)
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(out) :: x_outside(3)
+      INTEGER_T, INTENT(in) :: im_part
+      INTEGER_T, INTENT(in) :: part_id
       end subroutine TEMPLATE_GET_OUTSIDE_POINT
 
       subroutine TEMPLATE_BOUNDING_BOX_AUX(auxcomp, &
           minnode,maxnode,LS_FROM_SUBROUTINE,aux_ncells_max_side)
-      INTEGER_T, intent(in) :: auxcomp
-      REAL_T, intent(inout) :: minnode(3)
-      REAL_T, intent(inout) :: maxnode(3)
-      INTEGER_T, intent(out) :: LS_FROM_SUBROUTINE
-      INTEGER_T, intent(out) :: aux_ncells_max_side
+      INTEGER_T, INTENT(in) :: auxcomp
+      REAL_T, INTENT(inout) :: minnode(3)
+      REAL_T, INTENT(inout) :: maxnode(3)
+      INTEGER_T, INTENT(out) :: LS_FROM_SUBROUTINE
+      INTEGER_T, INTENT(out) :: aux_ncells_max_side
       end subroutine TEMPLATE_BOUNDING_BOX_AUX
 
 
       subroutine TEMPLATE_check_vel_rigid(x,t,vel,dir)
-       REAL_T, intent(in) :: x(SDIM)
-       REAL_T, intent(in) :: t
-       REAL_T, intent(in) :: vel
-       INTEGER_T, intent(in) :: dir
+       REAL_T, INTENT(in) :: x(SDIM)
+       REAL_T, INTENT(in) :: t
+       REAL_T, INTENT(in) :: vel
+       INTEGER_T, INTENT(in) :: dir
       end subroutine TEMPLATE_check_vel_rigid
 
       subroutine TEMPLATE_clamped_LS(x,t,LS,vel,temperature,dx)
-       REAL_T, intent(in) :: x(SDIM)
-       REAL_T, intent(in) :: dx(SDIM)
-       REAL_T, intent(in) :: t
-       REAL_T, intent(out) :: LS
-       REAL_T, intent(out) :: vel(SDIM)
-       REAL_T, intent(out) :: temperature
+       REAL_T, INTENT(in) :: x(SDIM)
+       REAL_T, INTENT(in) :: dx(SDIM)
+       REAL_T, INTENT(in) :: t
+       REAL_T, INTENT(out) :: LS
+       REAL_T, INTENT(out) :: vel(SDIM)
+       REAL_T, INTENT(out) :: temperature
       end subroutine TEMPLATE_clamped_LS
 
       subroutine TEMPLATE_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: x(SDIM)
-      REAL_T, intent(in) :: t
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: LS(nmat)
-      REAL_T, intent(out) :: VEL(SDIM)
-      INTEGER_T, intent(in) :: velsolid_flag
+      INTEGER_T, INTENT(in) :: nmat
+      REAL_T, INTENT(in) :: x(SDIM)
+      REAL_T, INTENT(in) :: t
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: LS(nmat)
+      REAL_T, INTENT(out) :: VEL(SDIM)
+      INTEGER_T, INTENT(in) :: velsolid_flag
       end subroutine TEMPLATE_VEL
 
       subroutine TEMPLATE_EOS(rho,massfrac_var, &
         internal_energy,pressure, &
         imattype,im,num_species_var_in)
-      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
-      REAL_T, intent(in) :: rho
-      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
-      REAL_T, intent(in) :: internal_energy
-      REAL_T, intent(out) :: pressure
+      INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+      REAL_T, INTENT(in) :: rho
+      REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+      REAL_T, INTENT(in) :: internal_energy
+      REAL_T, INTENT(out) :: pressure
       end subroutine TEMPLATE_EOS
 
       subroutine TEMPLATE_UNITLESS_EXPANSION_FACTOR( &
         im,temperature,temperature_base,expansion_factor)
-      INTEGER_T, intent(in) :: im
-      REAL_T, intent(in) :: temperature
-      REAL_T, intent(in) :: temperature_base
-      REAL_T, intent(out) :: expansion_factor
+      INTEGER_T, INTENT(in) :: im
+      REAL_T, INTENT(in) :: temperature
+      REAL_T, INTENT(in) :: temperature_base
+      REAL_T, INTENT(out) :: expansion_factor
       end subroutine TEMPLATE_UNITLESS_EXPANSION_FACTOR
 
       subroutine TEMPLATE_dVdT(dVdT,massfrac_var, &
         pressure,temperature, &
         imattype,im,num_species_var_in)
-      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
-      REAL_T, intent(in) :: pressure,temperature
-      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
-      REAL_T, intent(out) :: dVdT
+      INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+      REAL_T, INTENT(in) :: pressure,temperature
+      REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+      REAL_T, INTENT(out) :: dVdT
       end subroutine TEMPLATE_dVdT
 
 
       subroutine TEMPLATE_SOUNDSQR(rho,massfrac_var, &
         internal_energy,soundsqr, &
         imattype,im,num_species_var_in)
-      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
-      REAL_T, intent(in) :: rho
-      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
-      REAL_T, intent(in) :: internal_energy
-      REAL_T, intent(out) :: soundsqr
+      INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+      REAL_T, INTENT(in) :: rho
+      REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+      REAL_T, INTENT(in) :: internal_energy
+      REAL_T, INTENT(out) :: soundsqr
       end subroutine TEMPLATE_SOUNDSQR
 
       subroutine TEMPLATE_INTERNAL(rho,massfrac_var, &
         temperature,local_internal_energy, &
         imattype,im,num_species_var_in)
-      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
-      REAL_T, intent(in) :: rho
-      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
-      REAL_T, intent(in) :: temperature 
-      REAL_T, intent(out) :: local_internal_energy
+      INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+      REAL_T, INTENT(in) :: rho
+      REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+      REAL_T, INTENT(in) :: temperature 
+      REAL_T, INTENT(out) :: local_internal_energy
       end subroutine TEMPLATE_INTERNAL
 
       subroutine TEMPLATE_TEMPERATURE(rho,massfrac_var, &
         temperature,internal_energy, &
         imattype,im,num_species_var_in)
-      INTEGER_T, intent(in) :: imattype,im,num_species_var_in
-      REAL_T, intent(in) :: rho
-      REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
-      REAL_T, intent(out) :: temperature 
-      REAL_T, intent(in) :: internal_energy
+      INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+      REAL_T, INTENT(in) :: rho
+      REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+      REAL_T, INTENT(out) :: temperature 
+      REAL_T, INTENT(in) :: internal_energy
       end subroutine TEMPLATE_TEMPERATURE
 
       subroutine TEMPLATE_PRES(x,t,LS,PRES,nmat)
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: x(SDIM)
-      REAL_T, intent(in) :: t
-      REAL_T, intent(in) :: LS(nmat)
-      REAL_T, intent(out) :: PRES
+      INTEGER_T, INTENT(in) :: nmat
+      REAL_T, INTENT(in) :: x(SDIM)
+      REAL_T, INTENT(in) :: t
+      REAL_T, INTENT(in) :: LS(nmat)
+      REAL_T, INTENT(out) :: PRES
       end subroutine TEMPLATE_PRES
 
       subroutine TEMPLATE_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
-      INTEGER_T, intent(in) :: bcflag
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nstate_mat
-      REAL_T, intent(in) :: x(SDIM)
-      REAL_T, intent(in) :: t
-      REAL_T, intent(in) :: LS(nmat)
-      REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+      INTEGER_T, INTENT(in) :: bcflag
+      INTEGER_T, INTENT(in) :: nmat
+      INTEGER_T, INTENT(in) :: nstate_mat
+      REAL_T, INTENT(in) :: x(SDIM)
+      REAL_T, INTENT(in) :: t
+      REAL_T, INTENT(in) :: LS(nmat)
+      REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
       end subroutine TEMPLATE_STATE
 
       subroutine TEMPLATE_LS_BC(xwall,xghost,t,LS, &
        LS_in,dir,side,dx,nmat)
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: xwall
-      REAL_T, intent(in) :: xghost(SDIM)
-      REAL_T, intent(in) :: t
-      REAL_T, intent(inout) :: LS(nmat)
-      REAL_T, intent(in) :: LS_in(nmat)
-      INTEGER_T, intent(in) :: dir,side
-      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: nmat
+      REAL_T, INTENT(in) :: xwall
+      REAL_T, INTENT(in) :: xghost(SDIM)
+      REAL_T, INTENT(in) :: t
+      REAL_T, INTENT(inout) :: LS(nmat)
+      REAL_T, INTENT(in) :: LS_in(nmat)
+      INTEGER_T, INTENT(in) :: dir,side
+      REAL_T, INTENT(in) :: dx(SDIM)
       end subroutine TEMPLATE_LS_BC
 
       subroutine TEMPLATE_VEL_BC(xwall,xghost,t,LS, &
         VEL,VEL_in,veldir,dir,side,dx,nmat)
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: xwall
-      REAL_T, intent(in) :: xghost(SDIM)
-      REAL_T, intent(in) :: t
-      REAL_T, intent(in) :: LS(nmat)
-      REAL_T, intent(inout) :: VEL
-      REAL_T, intent(in) :: VEL_in
-      INTEGER_T, intent(in) :: veldir,dir,side
-      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: nmat
+      REAL_T, INTENT(in) :: xwall
+      REAL_T, INTENT(in) :: xghost(SDIM)
+      REAL_T, INTENT(in) :: t
+      REAL_T, INTENT(in) :: LS(nmat)
+      REAL_T, INTENT(inout) :: VEL
+      REAL_T, INTENT(in) :: VEL_in
+      INTEGER_T, INTENT(in) :: veldir,dir,side
+      REAL_T, INTENT(in) :: dx(SDIM)
       end subroutine TEMPLATE_VEL_BC
 
       subroutine TEMPLATE_PRES_BC(xwall,xghost,t,LS, &
         PRES,PRES_in,dir,side,dx,nmat)
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: xwall
-      REAL_T, intent(in) :: xghost(SDIM)
-      REAL_T, intent(in) :: t
-      REAL_T, intent(in) :: LS(nmat)
-      REAL_T, intent(inout) :: PRES
-      REAL_T, intent(in) :: PRES_in
-      INTEGER_T, intent(in) :: dir,side
-      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: nmat
+      REAL_T, INTENT(in) :: xwall
+      REAL_T, INTENT(in) :: xghost(SDIM)
+      REAL_T, INTENT(in) :: t
+      REAL_T, INTENT(in) :: LS(nmat)
+      REAL_T, INTENT(inout) :: PRES
+      REAL_T, INTENT(in) :: PRES_in
+      INTEGER_T, INTENT(in) :: dir,side
+      REAL_T, INTENT(in) :: dx(SDIM)
       end subroutine TEMPLATE_PRES_BC
 
       subroutine TEMPLATE_STATE_BC(xwall,xghost,t,LS, &
        STATE,STATE_merge,STATE_in,im,istate,dir,side,dx, &
        nmat)
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: xwall
-      REAL_T, intent(in) :: xghost(SDIM)
-      REAL_T, intent(in) :: t
-      REAL_T, intent(in) :: LS(nmat)
-      REAL_T, intent(inout) :: STATE
-      REAL_T, intent(inout) :: STATE_merge
-      REAL_T, intent(in) :: STATE_in
-      INTEGER_T, intent(in) :: dir,side
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: istate,im
+      INTEGER_T, INTENT(in) :: nmat
+      REAL_T, INTENT(in) :: xwall
+      REAL_T, INTENT(in) :: xghost(SDIM)
+      REAL_T, INTENT(in) :: t
+      REAL_T, INTENT(in) :: LS(nmat)
+      REAL_T, INTENT(inout) :: STATE
+      REAL_T, INTENT(inout) :: STATE_merge
+      REAL_T, INTENT(in) :: STATE_in
+      INTEGER_T, INTENT(in) :: dir,side
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: istate,im
       end subroutine TEMPLATE_STATE_BC
 
       subroutine TEMPLATE_HEATSOURCE( &
@@ -1068,87 +1068,87 @@ implicit none
         temp, &
         heat_source,den,CV,dt, &
         nmat)
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: im
-      REAL_T, intent(in) :: VFRAC(nmat)
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, intent(in) :: x(SDIM)
-      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T, intent(in) :: temp(nmat)
-      REAL_T, intent(in) :: den(nmat)
-      REAL_T, intent(in) :: CV(nmat)
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(out) :: heat_source
+      INTEGER_T, INTENT(in) :: nmat
+      INTEGER_T, INTENT(in) :: im
+      REAL_T, INTENT(in) :: VFRAC(nmat)
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, INTENT(in) :: x(SDIM)
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, INTENT(in) :: temp(nmat)
+      REAL_T, INTENT(in) :: den(nmat)
+      REAL_T, INTENT(in) :: CV(nmat)
+      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(out) :: heat_source
       end subroutine TEMPLATE_HEATSOURCE
 
       subroutine TEMPLATE_EB_heat_source(time,dt,xsten,nhalf, &
         heat_flux,heat_dir,heat_side)
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
-      REAL_T, intent(in) :: time
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(out) :: heat_flux
-      INTEGER_T, intent(out) :: heat_dir
-      INTEGER_T, intent(out) :: heat_side
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(out) :: heat_flux
+      INTEGER_T, INTENT(out) :: heat_dir
+      INTEGER_T, INTENT(out) :: heat_side
       end subroutine TEMPLATE_EB_heat_source
 
       subroutine TEMPLATE_velfreestream(problen,local_buffer)
-      REAL_T, intent(inout) :: local_buffer(2*SDIM)
-      REAL_T, intent(in)    :: problen(SDIM)
+      REAL_T, INTENT(inout) :: local_buffer(2*SDIM)
+      REAL_T, INTENT(in)    :: problen(SDIM)
       end subroutine TEMPLATE_velfreestream
 
       subroutine TEMPLATE_nucleation(nucleate_in,xsten,nhalf,make_seed)
       use probcommon_module_types
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, dimension(-nhalf:nhalf,SDIM), intent(in) :: xsten
-      INTEGER_T, intent(inout) :: make_seed
-      type(nucleation_parm_type_input), intent(in) :: nucleate_in
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
+      INTEGER_T, INTENT(inout) :: make_seed
+      type(nucleation_parm_type_input), INTENT(in) :: nucleate_in
       end subroutine TEMPLATE_nucleation
 
       subroutine TEMPLATE_ICE_SUBSTRATE_DISTANCE(xtarget,dist)
-      REAL_T, intent(in) :: xtarget(SDIM)
-      REAL_T, intent(out) :: dist
+      REAL_T, INTENT(in) :: xtarget(SDIM)
+      REAL_T, INTENT(out) :: dist
       end subroutine TEMPLATE_ICE_SUBSTRATE_DISTANCE
 
 
       subroutine TEMPLATE_microcell_heat_coeff(heatcoeff,dx,veldir)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: veldir
-      REAL_T, intent(inout) :: heatcoeff
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: veldir
+      REAL_T, INTENT(inout) :: heatcoeff
       end subroutine TEMPLATE_microcell_heat_coeff
 
       subroutine TEMPLATE_ASSIMILATE(assimilate_in,assimilate_out, &
          i,j,k,cell_flag)
       use probcommon_module_types
-      type(assimilate_parm_type), intent(in) :: assimilate_in
-      type(assimilate_out_parm_type), intent(inout) :: assimilate_out
-      INTEGER_T, intent(in) :: i,j,k,cell_flag
+      type(assimilate_parm_type), INTENT(in) :: assimilate_in
+      type(assimilate_out_parm_type), INTENT(inout) :: assimilate_out
+      INTEGER_T, INTENT(in) :: i,j,k,cell_flag
       end subroutine TEMPLATE_ASSIMILATE
 
       subroutine TEMPLATE_FSI_SLICE(xmap3D,xslice3D,problo3D,probhi3D,dx_slice)
-      REAL_T, intent(in) :: dx_slice
-      INTEGER_T, intent(inout) :: xmap3D(3)
-      REAL_T, intent(inout) :: xslice3D(3)
-      REAL_T, intent(out) :: problo3D(3)
-      REAL_T, intent(out) :: probhi3D(3)
+      REAL_T, INTENT(in) :: dx_slice
+      INTEGER_T, INTENT(inout) :: xmap3D(3)
+      REAL_T, INTENT(inout) :: xslice3D(3)
+      REAL_T, INTENT(out) :: problo3D(3)
+      REAL_T, INTENT(out) :: probhi3D(3)
       end subroutine TEMPLATE_FSI_SLICE
 
       subroutine TEMPLATE_OPEN_CASFILE(part_id,unit_id,file_format)
-      INTEGER_T, intent(in) :: part_id
-      INTEGER_T, intent(in) :: unit_id
-      INTEGER_T, intent(out) :: file_format
+      INTEGER_T, INTENT(in) :: part_id
+      INTEGER_T, INTENT(in) :: unit_id
+      INTEGER_T, INTENT(out) :: file_format
       end subroutine TEMPLATE_OPEN_CASFILE
 
       subroutine TEMPLATE_OPEN_AUXFILE(part_id,unit_id,file_format)
-      INTEGER_T, intent(in) :: part_id
-      INTEGER_T, intent(in) :: unit_id
-      INTEGER_T, intent(out) :: file_format
+      INTEGER_T, INTENT(in) :: part_id
+      INTEGER_T, INTENT(in) :: unit_id
+      INTEGER_T, INTENT(out) :: file_format
       end subroutine TEMPLATE_OPEN_AUXFILE
 
       subroutine TEMPLATE_ORDER_NODES(nodes,nodemap)
-      REAL_T, intent(in) :: nodes(3,3) ! dir,nodenum
-      INTEGER_T, intent(inout) :: nodemap(3)
+      REAL_T, INTENT(in) :: nodes(3,3) ! dir,nodenum
+      INTEGER_T, INTENT(inout) :: nodemap(3)
       end subroutine TEMPLATE_ORDER_NODES
 
       subroutine TEMPLATE_VARIABLE_SURFACE_TENSION( &
@@ -1157,19 +1157,19 @@ implicit none
         iten, &
         temperature, &
         tension)
-      INTEGER_T, intent(in) :: iten
-      REAL_T, intent(in) :: time,temperature
-      REAL_T, intent(in) :: xpos(SDIM)
-      REAL_T, intent(inout) :: tension
+      INTEGER_T, INTENT(in) :: iten
+      REAL_T, INTENT(in) :: time,temperature
+      REAL_T, INTENT(in) :: xpos(SDIM)
+      REAL_T, INTENT(inout) :: tension
       end subroutine TEMPLATE_VARIABLE_SURFACE_TENSION
 
       subroutine TEMPLATE_VARIABLE_LATENT_HEAT( &
         iten, &
         temperature, &
         latent_heat)
-      INTEGER_T, intent(in) :: iten
-      REAL_T, intent(in) :: temperature
-      REAL_T, intent(inout) :: latent_heat ! always positive
+      INTEGER_T, INTENT(in) :: iten
+      REAL_T, INTENT(in) :: temperature
+      REAL_T, INTENT(inout) :: latent_heat ! always positive
       end subroutine TEMPLATE_VARIABLE_LATENT_HEAT
 
 
@@ -1246,8 +1246,8 @@ contains
       subroutine EOS_tait_ADIABATIC_rhohydro(rho,pressure)
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: rho
-      REAL_T, intent(out) :: pressure
+      REAL_T, INTENT(in) :: rho
+      REAL_T, INTENT(out) :: pressure
       REAL_T A,B,rhobar,pcav
 
 

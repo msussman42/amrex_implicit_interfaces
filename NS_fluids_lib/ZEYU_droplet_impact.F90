@@ -39,8 +39,8 @@ end subroutine INIT_ZEYU_droplet_impact_MODULE
 subroutine ZEYU_substrateLS(x,Phi) 
 use probcommon_module
 implicit none
-REAL_T, intent(in), dimension(SDIM) :: x !spatial coordinates
-REAL_T, intent(out) :: Phi !LS dist, Phi>0 in the substrate
+REAL_T, INTENT(in), dimension(SDIM) :: x !spatial coordinates
+REAL_T, INTENT(out) :: Phi !LS dist, Phi>0 in the substrate
 
 REAL_T substrate_height
 
@@ -95,13 +95,13 @@ subroutine ZEYU_droplet_impact_LS_VEL(x,t,LS,VEL,velsolid_flag,dx)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: dx(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
-REAL_T, intent(out) :: VEL(SDIM)
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(num_materials)
+REAL_T, INTENT(out) :: VEL(SDIM)
 INTEGER_T dir
-INTEGER_T, intent(in) :: velsolid_flag
+INTEGER_T, INTENT(in) :: velsolid_flag
 
 if ((velsolid_flag.eq.0).or. &
     (velsolid_flag.eq.1)) then
@@ -247,14 +247,14 @@ subroutine ZEYU_droplet_impact_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
-REAL_T, intent(out) :: VEL
-REAL_T, intent(in) :: VEL_in
-INTEGER_T, intent(in) :: veldir,dir,side
-REAL_T, intent(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(num_materials)
+REAL_T, INTENT(out) :: VEL
+REAL_T, INTENT(in) :: VEL_in
+INTEGER_T, INTENT(in) :: veldir,dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
 

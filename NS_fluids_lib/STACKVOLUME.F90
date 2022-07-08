@@ -22,13 +22,13 @@ stop
 
       abstract interface
         subroutine sub_interface(xsten,nhalf,dx,bfact,dist,nmat,time)
-        INTEGER_T, intent(in) :: bfact
-        INTEGER_T, intent(in) :: nhalf
-        REAL_T, intent(in) :: dx(SDIM) 
-        REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-        INTEGER_T, intent(in) :: nmat
-        REAL_T, intent(in) :: time
-        REAL_T, intent(out) :: dist(nmat)
+        INTEGER_T, INTENT(in) :: bfact
+        INTEGER_T, INTENT(in) :: nhalf
+        REAL_T, INTENT(in) :: dx(SDIM) 
+        REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+        INTEGER_T, INTENT(in) :: nmat
+        REAL_T, INTENT(in) :: time
+        REAL_T, INTENT(out) :: dist(nmat)
         end subroutine
       end interface
 
@@ -42,10 +42,10 @@ stop
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: fluiddata(num_materials,2*SDIM+2)
-      REAL_T, intent(out) :: vofdark(num_materials),voflight(num_materials)
-      REAL_T, intent(out) :: cendark(num_materials,SDIM)
-      REAL_T, intent(out) :: cenlight(num_materials,SDIM)
+      REAL_T, INTENT(in) :: fluiddata(num_materials,2*SDIM+2)
+      REAL_T, INTENT(out) :: vofdark(num_materials),voflight(num_materials)
+      REAL_T, INTENT(out) :: cendark(num_materials,SDIM)
+      REAL_T, INTENT(out) :: cenlight(num_materials,SDIM)
       REAL_T cenall(SDIM)
       REAL_T volall
       INTEGER_T dir,im
@@ -103,15 +103,15 @@ stop
 
       IMPLICIT NONE
 
-      procedure(sub_interface), intent(in) :: LS_sub
+      procedure(sub_interface), INTENT(in) :: LS_sub
 
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: bfact,nhalf
-      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T, intent(in) :: dxin(SDIM)
-      REAL_T, intent(out) :: voldata(num_materials,2*SDIM+2)
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: bfact,nhalf
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, INTENT(in) :: dxin(SDIM)
+      REAL_T, INTENT(out) :: voldata(num_materials,2*SDIM+2)
       INTEGER_T imaterial
-      INTEGER_T, intent(out) :: cutflag
+      INTEGER_T, INTENT(out) :: cutflag
       INTEGER_T i1,j1,k1,dir,minusflag,plusflag
       REAL_T ltest(D_DECL(3,3,3),num_materials)
       REAL_T lnode(4*(SDIM-1),num_materials)
@@ -245,13 +245,13 @@ stop
 
       procedure(sub_interface) :: LS_sub
 
-      INTEGER_T, intent(in) :: nhalf,bfact
-      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T, intent(in) :: dxin(SDIM)
-      REAL_T, intent(inout) :: voldata(num_materials,2*SDIM+2)
-      INTEGER_T, intent(inout) :: stack_max_level
-      INTEGER_T, intent(in) :: level
-      REAL_T, intent(in) :: time
+      INTEGER_T, INTENT(in) :: nhalf,bfact
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, INTENT(in) :: dxin(SDIM)
+      REAL_T, INTENT(inout) :: voldata(num_materials,2*SDIM+2)
+      INTEGER_T, INTENT(inout) :: stack_max_level
+      INTEGER_T, INTENT(in) :: level
+      REAL_T, INTENT(in) :: time
 
       INTEGER_T i1,j1,k1,k1lo,k1hi,dir,cutflag,im,isten
       REAL_T dxsten_fine(SDIM)

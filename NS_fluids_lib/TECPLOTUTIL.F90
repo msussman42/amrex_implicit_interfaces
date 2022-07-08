@@ -42,13 +42,13 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: dir,ncomp,interior_only,nsteps,bfact
-      INTEGER_T, intent(in) :: growlo(SDIM),growhi(SDIM) 
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM) 
+      INTEGER_T, INTENT(in) :: dir,ncomp,interior_only,nsteps,bfact
+      INTEGER_T, INTENT(in) :: growlo(SDIM),growhi(SDIM) 
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM) 
       INTEGER_T plotlo(SDIM),plothi(SDIM) 
       INTEGER_T lo(SDIM),hi(SDIM) 
-      INTEGER_T, intent(in) :: DIMDEC(fabdata)
-      REAL_T, intent(in) :: fabdata(DIMV(fabdata),ncomp)
+      INTEGER_T, INTENT(in) :: DIMDEC(fabdata)
+      REAL_T, INTENT(in) :: fabdata(DIMV(fabdata),ncomp)
       REAL_T xlo(SDIM)
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
@@ -358,19 +358,19 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: data_id
-      INTEGER_T, intent(in) :: data_dir
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: data_id
+      INTEGER_T, INTENT(in) :: data_dir
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: ncomp
 
-      INTEGER_T, intent(in) :: rz_flag
-      INTEGER_T, intent(in) :: lo(SDIM), hi(SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(datafab)
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: gridno
-      REAL_T, intent(in), target :: datafab(DIMV(datafab), &
+      INTEGER_T, INTENT(in) :: rz_flag
+      INTEGER_T, INTENT(in) :: lo(SDIM), hi(SDIM)
+      INTEGER_T, INTENT(in) :: DIMDEC(datafab)
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: gridno
+      REAL_T, INTENT(in), target :: datafab(DIMV(datafab), &
         ncomp)
       REAL_T, pointer :: datafab_ptr(D_DECL(:,:,:),:)
       REAL_T xposnd(SDIM)
@@ -379,9 +379,9 @@ stop
       REAL_T writend(2*ncomp+2*SDIM)
       INTEGER_T scomp,iw
 
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: probhi(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: probhi(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
 
       character*3 levstr
       character*5 gridstr
@@ -748,25 +748,25 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: n_root
-      character, dimension(n_root), intent(in) :: root_char_array
-      INTEGER_T, intent(in) :: data_dir
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: total_number_grids
-      INTEGER_T, intent(in) :: num_levels
-      INTEGER_T, intent(in) :: grids_per_level_array(num_levels)
-      INTEGER_T, intent(in) :: levels_array(total_number_grids)
-      INTEGER_T, intent(in) :: bfact_array(total_number_grids)
-      INTEGER_T, intent(in) :: gridno_array(total_number_grids)
-      INTEGER_T, intent(in) :: gridlo_array(total_number_grids*SDIM)
-      INTEGER_T, intent(in) :: gridhi_array(total_number_grids*SDIM)
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: SDC_outer_sweeps
-      INTEGER_T, intent(in) :: slab_step
-      INTEGER_T, intent(in) :: data_id
-      INTEGER_T, intent(in) :: nsteps
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: visual_revolve
+      INTEGER_T, INTENT(in) :: n_root
+      character, dimension(n_root), INTENT(in) :: root_char_array
+      INTEGER_T, INTENT(in) :: data_dir
+      INTEGER_T, INTENT(in) :: ncomp
+      INTEGER_T, INTENT(in) :: total_number_grids
+      INTEGER_T, INTENT(in) :: num_levels
+      INTEGER_T, INTENT(in) :: grids_per_level_array(num_levels)
+      INTEGER_T, INTENT(in) :: levels_array(total_number_grids)
+      INTEGER_T, INTENT(in) :: bfact_array(total_number_grids)
+      INTEGER_T, INTENT(in) :: gridno_array(total_number_grids)
+      INTEGER_T, INTENT(in) :: gridlo_array(total_number_grids*SDIM)
+      INTEGER_T, INTENT(in) :: gridhi_array(total_number_grids*SDIM)
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: SDC_outer_sweeps
+      INTEGER_T, INTENT(in) :: slab_step
+      INTEGER_T, INTENT(in) :: data_id
+      INTEGER_T, INTENT(in) :: nsteps
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: visual_revolve
 
       INTEGER_T strandid
       INTEGER_T nwrite
@@ -1397,25 +1397,25 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: n_root
-      character, dimension(n_root), intent(in) :: root_char_array
-      INTEGER_T, intent(in) :: data_dir
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: SDC_outer_sweeps
-      INTEGER_T, intent(in) :: slab_step
-      INTEGER_T, intent(in) :: data_id
-      INTEGER_T, intent(in) :: nsteps
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: visual_revolve
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM) 
-      INTEGER_T, intent(in) :: DIMDEC(datafab)
-      REAL_T, intent(in) :: datafab(DIMV(datafab),ncomp)
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: probhi(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: n_root
+      character, dimension(n_root), INTENT(in) :: root_char_array
+      INTEGER_T, INTENT(in) :: data_dir
+      INTEGER_T, INTENT(in) :: ncomp
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: SDC_outer_sweeps
+      INTEGER_T, INTENT(in) :: slab_step
+      INTEGER_T, INTENT(in) :: data_id
+      INTEGER_T, INTENT(in) :: nsteps
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: visual_revolve
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM) 
+      INTEGER_T, INTENT(in) :: DIMDEC(datafab)
+      REAL_T, INTENT(in) :: datafab(DIMV(datafab),ncomp)
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: probhi(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
       INTEGER_T :: tid_local
       INTEGER_T :: gridno_local
       INTEGER_T :: dir_local

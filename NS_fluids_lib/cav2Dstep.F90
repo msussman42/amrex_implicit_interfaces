@@ -47,8 +47,8 @@ use probcommon_module
  !  0 ________________|                  botwall
  !   -L              0 stepoffset      L
 implicit none
-REAL_T, intent(in) :: x, y !spatial coordinates
-REAL_T, intent(out) :: Phi !LS dist, Phi>0 in the solid
+REAL_T, INTENT(in) :: x, y !spatial coordinates
+REAL_T, INTENT(out) :: Phi !LS dist, Phi>0 in the solid
  
 INTEGER :: insideflag
 REAL_T :: topwall, botwall, stepheight, stepoffset;

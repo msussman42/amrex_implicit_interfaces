@@ -73,10 +73,10 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(out) :: LS(nmat)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(out) :: LS(nmat)
 REAL_T :: TEMPERATURE_analytical
 REAL_T :: LS_analytical
 REAL_T :: t_physical_init
@@ -112,14 +112,14 @@ subroutine SIMPLE_PALMORE_DESJARDINS_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: dx(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: VEL(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: VEL(SDIM)
 INTEGER_T dir
-INTEGER_T, intent(in) :: velsolid_flag
+INTEGER_T, INTENT(in) :: velsolid_flag
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -160,11 +160,11 @@ subroutine SIMPLE_PALMORE_DESJARDINS_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: PRES
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: PRES
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -183,8 +183,8 @@ subroutine SIMPLE_PALMORE_DESJARDINS_DiffusionLayer(l,f)
  use global_utility_module
  IMPLICIT NONE
 
- REAL_T, intent(in) :: l !diffusion layer value
- REAL_T, intent(out) :: f
+ REAL_T, INTENT(in) :: l !diffusion layer value
+ REAL_T, INTENT(out) :: f
  
  REAL_T :: T_inf, T_gamma, L_V, C_pG, erf_result, T_sat
  REAL_T :: k_G, den_G, D_G
@@ -285,7 +285,7 @@ subroutine SIMPLE_PALMORE_DESJARDINS_GetDiffusionLayer(l)
  !bisection method to find the diffusion layer value
  IMPLICIT NONE
  
- REAL_T, intent(out) :: l
+ REAL_T, INTENT(out) :: l
  REAL_T :: a, b, c, fa, fb, fc
  INTEGER_T :: iter
  
@@ -333,13 +333,13 @@ subroutine SIMPLE_PALMORE_DESJARDINS_TEMPorMASSFRAC( &
  ! for mass_frac: T_inf = Y_inf, T_gamma = Y_gamma, l_Y = l, lambda = D
  IMPLICIT NONE
  
- REAL_T, intent(in) :: x, t
- INTEGER_T, intent(in) :: use_T
+ REAL_T, INTENT(in) :: x, t
+ INTEGER_T, INTENT(in) :: use_T
  REAL_T :: T_inf, T_gamma, T_sat, lambda
  REAL_T :: k_G, den_G, D_G
  REAL_T :: L_V,C_pG
- REAL_T, intent(out) :: TorY,LS_exact
- REAL_T, intent(out) :: t_physical_init
+ REAL_T, INTENT(out) :: TorY,LS_exact
+ REAL_T, INTENT(out) :: t_physical_init
  INTEGER_T :: JINT
  REAL_T erf_result_x 
  REAL_T erf_result_l 
@@ -517,13 +517,13 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: nstate_mat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: nstate_mat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,use_T
 REAL_T LS_exact
 REAL_T t_physical_init
@@ -586,9 +586,9 @@ subroutine SIMPLE_PALMORE_DESJARDINS_ASSIMILATE( &
 use probcommon_module
 IMPLICIT NONE
 
-type(assimilate_parm_type), intent(in) :: assimilate_in
-type(assimilate_out_parm_type), intent(inout) :: assimilate_out
-INTEGER_T, intent(in) :: i,j,k,cell_flag
+type(assimilate_parm_type), INTENT(in) :: assimilate_in
+type(assimilate_out_parm_type), INTENT(inout) :: assimilate_out
+INTEGER_T, INTENT(in) :: i,j,k,cell_flag
 
 INTEGER_T :: nstate,nstate_test
 REAL_T :: x_exact,xcrit,tcrit
@@ -681,14 +681,14 @@ subroutine SIMPLE_PALMORE_DESJARDINS_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(inout) :: LS(nmat)
-REAL_T, intent(in) :: LS_in(nmat)
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) ::  dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(inout) :: LS(nmat)
+REAL_T, INTENT(in) :: LS_in(nmat)
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) ::  dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -714,15 +714,15 @@ subroutine SIMPLE_PALMORE_DESJARDINS_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: VEL
-REAL_T, intent(in) :: VEL_in
-INTEGER_T, intent(in) :: veldir,dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: VEL
+REAL_T, INTENT(in) :: VEL_in
+INTEGER_T, INTENT(in) :: veldir,dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
 
@@ -754,15 +754,15 @@ subroutine SIMPLE_PALMORE_DESJARDINS_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: PRES
-REAL_T, intent(in) :: PRES_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: PRES
+REAL_T, INTENT(in) :: PRES_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -789,18 +789,18 @@ subroutine SIMPLE_PALMORE_DESJARDINS_STATE_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
 REAL_T :: local_STATE(nmat*num_state_material)
-REAL_T, intent(inout) :: STATE
-REAL_T, intent(inout) :: STATE_merge
-REAL_T, intent(in) :: STATE_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
-INTEGER_T, intent(in) :: istate,im
+REAL_T, INTENT(inout) :: STATE
+REAL_T, INTENT(inout) :: STATE_merge
+REAL_T, INTENT(in) :: STATE_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: istate,im
 INTEGER_T ibase,im_crit,im_loop
 INTEGER_T local_bcflag
 
@@ -842,18 +842,18 @@ subroutine SIMPLE_PALMORE_DESJARDINS_HEATSOURCE(im,VFRAC,time,x, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: im
-REAL_T, intent(in) :: VFRAC(nmat)
-REAL_T, intent(in) :: time
-INTEGER_T, intent(in) :: nhalf
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, intent(in) :: temp(nmat)
-REAL_T, intent(in) :: den(nmat)
-REAL_T, intent(in) :: CV(nmat)
-REAL_T, intent(in) :: dt
-REAL_T, intent(out) :: heat_source
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: im
+REAL_T, INTENT(in) :: VFRAC(nmat)
+REAL_T, INTENT(in) :: time
+INTEGER_T, INTENT(in) :: nhalf
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+REAL_T, INTENT(in) :: temp(nmat)
+REAL_T, INTENT(in) :: den(nmat)
+REAL_T, INTENT(in) :: CV(nmat)
+REAL_T, INTENT(in) :: dt
+REAL_T, INTENT(out) :: heat_source
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -882,10 +882,10 @@ use probcommon_module_types
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nsum1,nsum2,isweep
-type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
-REAL_T, intent(inout) :: increment_out1(nsum1)
-REAL_T, intent(inout) :: increment_out2(nsum2)
+INTEGER_T, INTENT(in) :: nsum1,nsum2,isweep
+type(user_defined_sum_int_type), INTENT(in) :: GRID_DATA_IN
+REAL_T, INTENT(inout) :: increment_out1(nsum1)
+REAL_T, INTENT(inout) :: increment_out2(nsum2)
 INTEGER_T :: i,j,k
 INTEGER_T :: dir
 INTEGER_T :: im_crit

@@ -43,8 +43,8 @@ contains
 subroutine l2normd(s,x1,x2, x1x2norm)
 implicit none
 
-integer,intent(in)       :: s
-real(kind=8),intent(in)  :: x1(s),x2(s)
+integer,INTENT(in)       :: s
+real(kind=8),INTENT(in)  :: x1(s),x2(s)
 real(kind=8)             :: x1x2norm
 
 integer                  :: i
@@ -78,10 +78,10 @@ implicit none
 ! otherwise
 ! --------> return the distance from x to the cloest point
 
-integer,intent(in)           :: sd
-real(kind=8),intent(in)      ::  p1(sd),p2(sd),x(sd)
-real(kind=8),intent(out)     ::  dist
-real(kind=8),intent(out)     ::  pout(sd)
+integer,INTENT(in)           :: sd
+real(kind=8),INTENT(in)      ::  p1(sd),p2(sd),x(sd)
+real(kind=8),INTENT(out)     ::  dist
+real(kind=8),INTENT(out)     ::  pout(sd)
 
 real(kind=8)                 :: diff10,diff21,diffx
 real(kind=8),allocatable     :: x10(:), x21(:)
@@ -145,13 +145,13 @@ subroutine find_xc(la,lb,flag,xz,xc)
 ! flag =1 sinecurve   =2 cosinecurve
 implicit none
 
-real(kind=8),intent(in) :: la,lb
-integer,intent(in)      :: flag
-real(kind=8),intent(in) :: xz(2)
+real(kind=8),INTENT(in) :: la,lb
+integer,INTENT(in)      :: flag
+real(kind=8),INTENT(in) :: xz(2)
 integer                 :: k
 real(kind=8),allocatable         :: spl(:,:)
 real(kind=8)            :: dist,dtemp
-real(kind=8),intent(out):: xc(3)
+real(kind=8),INTENT(out):: xc(3)
 real(kind=8)            :: spltemp(2),pout(2)
 
 
@@ -254,10 +254,10 @@ subroutine FABRIC_DROP_LS(x,t,LS,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(out) :: LS(nmat)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(out) :: LS(nmat)
 
 REAL_T x_d(3),x_0(3),x_p(3)
 INTEGER_T ind(3)
@@ -358,8 +358,8 @@ use probcommon_module
 IMPLICIT NONE
 
 
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(out) :: LS
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(out) :: LS
 real(kind=8)         :: xlo,xhi,ylo,yhi,zlo,zhi
 real(kind=8)         :: hN1,hN2,xctemp
 real(kind=8)         :: xy(3),xc(3),xz(2),xh(3)
@@ -469,14 +469,14 @@ subroutine FABRIC_DROP_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: dx(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: VEL(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: VEL(SDIM)
 INTEGER_T dir
-INTEGER_T, intent(in) :: velsolid_flag
+INTEGER_T, INTENT(in) :: velsolid_flag
 
 if (nmat.eq.num_materials) then
    ! do nothing
@@ -547,10 +547,10 @@ end subroutine FABRIC_DROP_VEL
 ! subroutine EOS_FABRIC_DROP(rho,internal_energy,pressure, &
 !   imattype,im)
 !  IMPLICIT NONE
-!  INTEGER_T, intent(in) :: imattype,im
-!  REAL_T, intent(in) :: rho
-!  REAL_T, intent(in) :: internal_energy
-!  REAL_T, intent(out) :: pressure
+!  INTEGER_T, INTENT(in) :: imattype,im
+!  REAL_T, INTENT(in) :: rho
+!  REAL_T, INTENT(in) :: internal_energy
+!  REAL_T, INTENT(out) :: pressure
 
 !  if (imattype.eq.24) then
 !   pressure=zero
@@ -566,10 +566,10 @@ end subroutine FABRIC_DROP_VEL
 ! subroutine SOUNDSQR_FABRIC_DROP(rho,internal_energy,soundsqr, &
 !   imattype,im)
 !  IMPLICIT NONE
-!  INTEGER_T, intent(in) :: imattype,im
-!  REAL_T, intent(in) :: rho
-!  REAL_T, intent(in) :: internal_energy
-!  REAL_T, intent(out) :: soundsqr
+!  INTEGER_T, INTENT(in) :: imattype,im
+!  REAL_T, INTENT(in) :: rho
+!  REAL_T, INTENT(in) :: internal_energy
+!  REAL_T, INTENT(out) :: soundsqr
 !  REAL_T pressure
 
 !  if (imattype.eq.24) then
@@ -591,10 +591,10 @@ end subroutine FABRIC_DROP_VEL
 !   imattype,im)
 !  use global_utility_module
 !  IMPLICIT NONE
-!  INTEGER_T, intent(in) :: imattype,im
-!  REAL_T, intent(in) :: rho
-!  REAL_T, intent(in) :: temperature 
-!  REAL_T, intent(out) :: local_internal_energy
+!  INTEGER_T, INTENT(in) :: imattype,im
+!  REAL_T, INTENT(in) :: rho
+!  REAL_T, INTENT(in) :: temperature 
+!  REAL_T, INTENT(out) :: local_internal_energy
 
 !  call INTERNAL_default(rho,temperature,local_internal_energy, &
 !         imattype,im)
@@ -606,10 +606,10 @@ end subroutine FABRIC_DROP_VEL
 !   imattype,im)
 !  use global_utility_module
 !  IMPLICIT NONE
-!  INTEGER_T, intent(in) :: imattype,im
-!  REAL_T, intent(in) :: rho
-!  REAL_T, intent(out) :: temperature 
-!  REAL_T, intent(in) :: internal_energy
+!  INTEGER_T, INTENT(in) :: imattype,im
+!  REAL_T, INTENT(in) :: rho
+!  REAL_T, INTENT(out) :: temperature 
+!  REAL_T, INTENT(in) :: internal_energy
 
 !  call TEMPERATURE_default(rho,temperature,internal_energy, &
 !         imattype,im)
@@ -625,11 +625,11 @@ subroutine FABRIC_DROP_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: PRES
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: PRES
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -646,13 +646,13 @@ subroutine FABRIC_DROP_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: nstate_mat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: nstate_mat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
 
 if (nmat.eq.num_materials) then
@@ -700,14 +700,14 @@ subroutine FABRIC_DROP_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(inout) :: LS(nmat)
-REAL_T, intent(in) :: LS_in(nmat)
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(inout) :: LS(nmat)
+REAL_T, INTENT(in) :: LS_in(nmat)
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -733,15 +733,15 @@ subroutine FABRIC_DROP_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: VEL
-REAL_T, intent(in) :: VEL_in
-INTEGER_T, intent(in) :: veldir,dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: VEL
+REAL_T, INTENT(in) :: VEL_in
+INTEGER_T, INTENT(in) :: veldir,dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
 
@@ -773,15 +773,15 @@ subroutine FABRIC_DROP_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: PRES
-REAL_T, intent(in) :: PRES_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: PRES
+REAL_T, INTENT(in) :: PRES_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -810,18 +810,18 @@ subroutine FABRIC_DROP_STATE_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
 REAL_T local_STATE(nmat*num_state_material)
-REAL_T, intent(inout) :: STATE
-REAL_T, intent(inout) :: STATE_merge
-REAL_T, intent(in) :: STATE_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
-INTEGER_T, intent(in) :: istate,im
+REAL_T, INTENT(inout) :: STATE
+REAL_T, INTENT(inout) :: STATE_merge
+REAL_T, INTENT(in) :: STATE_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: istate,im
 INTEGER_T ibase,im_crit,im_loop
 INTEGER_T local_bcflag
 
@@ -870,18 +870,18 @@ subroutine FABRIC_DROP_HEATSOURCE( &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: im
-REAL_T, intent(in) :: VFRAC(nmat)
-REAL_T, intent(in) :: time
-INTEGER_T, intent(in) :: nhalf
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, intent(in) :: temp(nmat)
-REAL_T, intent(in) :: den(nmat)
-REAL_T, intent(in) :: CV(nmat)
-REAL_T, intent(in) :: dt
-REAL_T, intent(out) :: heat_source
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: im
+REAL_T, INTENT(in) :: VFRAC(nmat)
+REAL_T, INTENT(in) :: time
+INTEGER_T, INTENT(in) :: nhalf
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+REAL_T, INTENT(in) :: temp(nmat)
+REAL_T, INTENT(in) :: den(nmat)
+REAL_T, INTENT(in) :: CV(nmat)
+REAL_T, INTENT(in) :: dt
+REAL_T, INTENT(out) :: heat_source
 
 if (nmat.eq.num_materials) then
  ! do nothing

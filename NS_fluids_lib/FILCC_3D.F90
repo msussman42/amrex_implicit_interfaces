@@ -26,12 +26,12 @@ stop
        domlo,domhi,bc)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: domlo(SDIM), domhi(SDIM)
+      INTEGER_T, INTENT(in) :: domlo(SDIM), domhi(SDIM)
        ! q inherits attributes from the target.
-      REAL_T, intent(in), pointer :: q(D_DECL(:,:,:))
-      INTEGER_T, intent(in) :: bc(SDIM,2)
+      REAL_T, INTENT(in), pointer :: q(D_DECL(:,:,:))
+      INTEGER_T, INTENT(in) :: bc(SDIM,2)
 
-      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, INTENT(in) :: bfact
 
       INTEGER_T    nlft, nrgt, nbot, ntop, nup, ndwn
       INTEGER_T    ilo, ihi, jlo, jhi
@@ -406,13 +406,13 @@ stop
        domlo,domhi,bc)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: scomp
-      INTEGER_T, intent(in) :: domlo(SDIM), domhi(SDIM)
+      INTEGER_T, INTENT(in) :: scomp
+      INTEGER_T, INTENT(in) :: domlo(SDIM), domhi(SDIM)
        ! q inherits attributes from the target.
-      REAL_T, intent(in), pointer :: q(D_DECL(:,:,:),:)
-      INTEGER_T, intent(in) :: bc(SDIM,2,scomp)
+      REAL_T, INTENT(in), pointer :: q(D_DECL(:,:,:),:)
+      INTEGER_T, INTENT(in) :: bc(SDIM,2,scomp)
 
-      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, INTENT(in) :: bfact
 
       INTEGER_T    nlft, nrgt, nbot, ntop, nup, ndwn
       INTEGER_T    ilo, ihi, jlo, jhi
@@ -787,8 +787,8 @@ stop
       subroutine local_grid_type_to_box_type(grid_type,box_type)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: grid_type
-      INTEGER_T, intent(out) :: box_type(SDIM)
+      INTEGER_T, INTENT(in) :: grid_type
+      INTEGER_T, INTENT(out) :: box_type(SDIM)
       INTEGER_T dir
 
       do dir=1,SDIM
@@ -819,8 +819,8 @@ stop
       subroutine check_arr_idx(i,j,k,fablo,fabhi)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: i,j,k
-      INTEGER_T, intent(in) :: fablo(3),fabhi(3)
+      INTEGER_T, INTENT(in) :: i,j,k
+      INTEGER_T, INTENT(in) :: fablo(3),fabhi(3)
       INTEGER_T :: ii(3)
       INTEGER_T :: dir
      
@@ -846,12 +846,12 @@ stop
        domlo,domhi,bc,grid_type)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: domlo(SDIM), domhi(SDIM)
-      REAL_T, intent(in), pointer :: q(D_DECL(:,:,:))
-      INTEGER_T, intent(in) :: bc(SDIM,2)
+      INTEGER_T, INTENT(in) :: domlo(SDIM), domhi(SDIM)
+      REAL_T, INTENT(in), pointer :: q(D_DECL(:,:,:))
+      INTEGER_T, INTENT(in) :: bc(SDIM,2)
 
-      INTEGER_T, intent(in) :: grid_type
-      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, INTENT(in) :: grid_type
+      INTEGER_T, INTENT(in) :: bfact
 
       INTEGER_T :: box_type(SDIM)
       INTEGER_T :: ntofill(3,2)

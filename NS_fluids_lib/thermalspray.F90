@@ -211,12 +211,12 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T, intent(in) :: x(SDIM)
- REAL_T, intent(in) :: t
- REAL_T, intent(in) :: LS(num_materials)
- REAL_T, intent(out) :: VEL(SDIM)
+ REAL_T, INTENT(in) :: x(SDIM)
+ REAL_T, INTENT(in) :: t
+ REAL_T, INTENT(in) :: LS(num_materials)
+ REAL_T, INTENT(out) :: VEL(SDIM)
  INTEGER_T dir
- INTEGER_T, intent(in) :: velsolid_flag
+ INTEGER_T, INTENT(in) :: velsolid_flag
  REAL_T max_drop_rad,local_rad
  INTEGER_T nd
 
@@ -296,10 +296,10 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T, intent(in) :: x(SDIM)
- REAL_T, intent(in) :: t
- REAL_T, intent(in) :: LS(num_materials)
- REAL_T, intent(out) :: STATE(num_materials*num_state_material)
+ REAL_T, INTENT(in) :: x(SDIM)
+ REAL_T, INTENT(in) :: t
+ REAL_T, INTENT(in) :: LS(num_materials)
+ REAL_T, INTENT(out) :: STATE(num_materials*num_state_material)
  INTEGER_T im,ibase,n
 
  if ((num_materials.eq.4).and. &
@@ -457,17 +457,17 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T, intent(in) :: xwall
- REAL_T, intent(in) :: xghost(SDIM)
- REAL_T, intent(in) :: t
- REAL_T, intent(in) :: LS(num_materials)
+ REAL_T, INTENT(in) :: xwall
+ REAL_T, INTENT(in) :: xghost(SDIM)
+ REAL_T, INTENT(in) :: t
+ REAL_T, INTENT(in) :: LS(num_materials)
  REAL_T local_STATE(num_materials*num_state_material)
- REAL_T, intent(out) :: STATE
- REAL_T, intent(out) :: STATE_merge
- REAL_T, intent(in) :: STATE_in
- INTEGER_T, intent(in) :: dir,side
- REAL_T, intent(in) :: dx(SDIM)
- INTEGER_T, intent(in) :: istate,im
+ REAL_T, INTENT(out) :: STATE
+ REAL_T, INTENT(out) :: STATE_merge
+ REAL_T, INTENT(in) :: STATE_in
+ INTEGER_T, INTENT(in) :: dir,side
+ REAL_T, INTENT(in) :: dx(SDIM)
+ INTEGER_T, INTENT(in) :: istate,im
  INTEGER_T ibase,im_crit,im_loop
 
  if ((istate.ge.1).and. &

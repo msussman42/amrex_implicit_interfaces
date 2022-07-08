@@ -1257,9 +1257,9 @@ contains
       subroutine stress_index(one_dim_index,i,j)
       implicit none
 
-      INTEGER_T, intent(in) :: one_dim_index
-      INTEGER_T, intent(out) :: i
-      INTEGER_T, intent(out) :: j
+      INTEGER_T, INTENT(in) :: one_dim_index
+      INTEGER_T, INTENT(out) :: i
+      INTEGER_T, INTENT(out) :: j
 
       if (one_dim_index.eq.1) then
        i=1
@@ -1293,9 +1293,9 @@ contains
         !velocity u_tau at the image point
         !u_tau: friction velocity, u: velocity parallel to wall, 
         !y: coord direction normal to wall
-       REAL_T, intent(in) :: u_tau, u, y 
+       REAL_T, INTENT(in) :: u_tau, u, y 
         !rho_w: wall density, mu_w: wall molecular viscosity 
-       REAL_T, intent(in) :: K, B, rho_w, mu_w 
+       REAL_T, INTENT(in) :: K, B, rho_w, mu_w 
        REAL_T :: f
        REAL_T :: u_plus, y_plus
 
@@ -1353,8 +1353,8 @@ contains
       implicit none
         !derivative of incompressible wall function w.r.t. u_tau, to be 
         !called in Newton's method
-       REAL_T, intent(in) :: u_tau, u, y 
-       REAL_T, intent(in) :: K, B, rho_w, mu_w
+       REAL_T, INTENT(in) :: u_tau, u, y 
+       REAL_T, INTENT(in) :: K, B, rho_w, mu_w
        REAL_T :: fprime
        REAL_T :: u_plus
    
@@ -1377,42 +1377,42 @@ contains
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
-        u, & !intent(in) uimage_raster_solid_frame(dir)
-        uimage_tngt_mag, & !intent(in) 
-        wall_model_velocity, & ! intent(in)
-        dist_probe, & ! intent(in)
-        dist_fluid, & ! intent(in)
-        temperature_image, & !intent(in) 
-        temperature_wall, & ! intent(in)      
-        temperature_wall_max, & ! intent(in)
-        viscosity_molecular, & ! intent(in)      
-        viscosity_eddy_wall, & ! intent(in)      
-        y, & !intent(in) distance from image to wall
-        ughost_tngt, & ! intent(out)
-        im_fluid, &  ! intent(in)
-        critical_length) ! intent(in) used for sanity check
+        u, & !INTENT(in) uimage_raster_solid_frame(dir)
+        uimage_tngt_mag, & !INTENT(in) 
+        wall_model_velocity, & ! INTENT(in)
+        dist_probe, & ! INTENT(in)
+        dist_fluid, & ! INTENT(in)
+        temperature_image, & !INTENT(in) 
+        temperature_wall, & ! INTENT(in)      
+        temperature_wall_max, & ! INTENT(in)
+        viscosity_molecular, & ! INTENT(in)      
+        viscosity_eddy_wall, & ! INTENT(in)      
+        y, & !INTENT(in) distance from image to wall
+        ughost_tngt, & ! INTENT(out)
+        im_fluid, &  ! INTENT(in)
+        critical_length) ! INTENT(in) used for sanity check
       use probcommon_module
       implicit none
-      INTEGER_T, intent(in) :: dir ! 1,2,3
-      INTEGER_T, intent(in) :: data_dir ! 0,1,2
-      REAL_T, intent(in) :: dxmin
-      REAL_T, intent(in), pointer :: x_projection_raster(:)
-      REAL_T, intent(in), pointer :: dx(:)
-      REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
-      INTEGER_T, intent(in) :: im_fluid
-      REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
-      REAL_T, intent(in) :: uimage_tngt_mag
-      REAL_T, intent(in) :: wall_model_velocity
-      REAL_T, intent(in) :: dist_probe
-      REAL_T, intent(in) :: dist_fluid
-      REAL_T, intent(in) :: temperature_image
-      REAL_T, intent(in) :: temperature_wall
-      REAL_T, intent(in) :: temperature_wall_max
-      REAL_T, intent(in) :: viscosity_molecular
-      REAL_T, intent(in) :: viscosity_eddy_wall
-      REAL_T, intent(in) :: y !delta_r
-      REAL_T, intent(in) :: critical_length
-      REAL_T, intent(out) :: ughost_tngt  ! dir direction
+      INTEGER_T, INTENT(in) :: dir ! 1,2,3
+      INTEGER_T, INTENT(in) :: data_dir ! 0,1,2
+      REAL_T, INTENT(in) :: dxmin
+      REAL_T, INTENT(in), pointer :: x_projection_raster(:)
+      REAL_T, INTENT(in), pointer :: dx(:)
+      REAL_T, INTENT(in), pointer :: n_raster(:) ! points to solid
+      INTEGER_T, INTENT(in) :: im_fluid
+      REAL_T, INTENT(in) :: u !uimage_raster_solid_frame(dir)
+      REAL_T, INTENT(in) :: uimage_tngt_mag
+      REAL_T, INTENT(in) :: wall_model_velocity
+      REAL_T, INTENT(in) :: dist_probe
+      REAL_T, INTENT(in) :: dist_fluid
+      REAL_T, INTENT(in) :: temperature_image
+      REAL_T, INTENT(in) :: temperature_wall
+      REAL_T, INTENT(in) :: temperature_wall_max
+      REAL_T, INTENT(in) :: viscosity_molecular
+      REAL_T, INTENT(in) :: viscosity_eddy_wall
+      REAL_T, INTENT(in) :: y !delta_r
+      REAL_T, INTENT(in) :: critical_length
+      REAL_T, INTENT(out) :: ughost_tngt  ! dir direction
 
       REAL_T :: u_tau,tau_w,x_n,x_np1 !x_n, x_(n+1) --> u_tau
       REAL_T :: iter_diff
@@ -1597,42 +1597,42 @@ contains
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
-        u, & !intent(in) uimage_raster_solid_frame(dir)
-        uimage_tngt_mag, & !intent(in) 
-        wall_model_velocity, & ! intent(in)
-        dist_probe, & ! intent(in)
-        dist_fluid, & ! intent(in)
-        temperature_image, & !intent(in) 
-        temperature_wall, & ! intent(in)      
-        temperature_wall_max, & ! intent(in)      
-        viscosity_molecular, & ! intent(in)      
-        viscosity_eddy_wall, & ! intent(in)      
-        y, & !intent(in) distance from image to wall
-        ughost_tngt, & ! intent(out)
-        im_fluid, &  ! intent(in)
-        critical_length) ! intent(in) used for sanity check
+        u, & !INTENT(in) uimage_raster_solid_frame(dir)
+        uimage_tngt_mag, & !INTENT(in) 
+        wall_model_velocity, & ! INTENT(in)
+        dist_probe, & ! INTENT(in)
+        dist_fluid, & ! INTENT(in)
+        temperature_image, & !INTENT(in) 
+        temperature_wall, & ! INTENT(in)      
+        temperature_wall_max, & ! INTENT(in)      
+        viscosity_molecular, & ! INTENT(in)      
+        viscosity_eddy_wall, & ! INTENT(in)      
+        y, & !INTENT(in) distance from image to wall
+        ughost_tngt, & ! INTENT(out)
+        im_fluid, &  ! INTENT(in)
+        critical_length) ! INTENT(in) used for sanity check
       use probcommon_module
       implicit none
-      INTEGER_T, intent(in) :: dir ! 1,2,3
-      INTEGER_T, intent(in) :: data_dir ! 0,1,2
-      REAL_T, intent(in) :: dxmin
-      REAL_T, intent(in), pointer :: x_projection_raster(:)
-      REAL_T, intent(in), pointer :: dx(:)
-      REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
-      INTEGER_T, intent(in) :: im_fluid
-      REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
-      REAL_T, intent(in) :: uimage_tngt_mag
-      REAL_T, intent(in) :: wall_model_velocity
-      REAL_T, intent(in) :: dist_probe
-      REAL_T, intent(in) :: dist_fluid
-      REAL_T, intent(in) :: temperature_image
-      REAL_T, intent(in) :: temperature_wall
-      REAL_T, intent(in) :: temperature_wall_max
-      REAL_T, intent(in) :: viscosity_molecular
-      REAL_T, intent(in) :: viscosity_eddy_wall
-      REAL_T, intent(in) :: y !delta_r
-      REAL_T, intent(in) :: critical_length
-      REAL_T, intent(out) :: ughost_tngt  ! dir direction
+      INTEGER_T, INTENT(in) :: dir ! 1,2,3
+      INTEGER_T, INTENT(in) :: data_dir ! 0,1,2
+      REAL_T, INTENT(in) :: dxmin
+      REAL_T, INTENT(in), pointer :: x_projection_raster(:)
+      REAL_T, INTENT(in), pointer :: dx(:)
+      REAL_T, INTENT(in), pointer :: n_raster(:) ! points to solid
+      INTEGER_T, INTENT(in) :: im_fluid
+      REAL_T, INTENT(in) :: u !uimage_raster_solid_frame(dir)
+      REAL_T, INTENT(in) :: uimage_tngt_mag
+      REAL_T, INTENT(in) :: wall_model_velocity
+      REAL_T, INTENT(in) :: dist_probe
+      REAL_T, INTENT(in) :: dist_fluid
+      REAL_T, INTENT(in) :: temperature_image
+      REAL_T, INTENT(in) :: temperature_wall
+      REAL_T, INTENT(in) :: temperature_wall_max
+      REAL_T, INTENT(in) :: viscosity_molecular
+      REAL_T, INTENT(in) :: viscosity_eddy_wall
+      REAL_T, INTENT(in) :: y !delta_r
+      REAL_T, INTENT(in) :: critical_length
+      REAL_T, INTENT(out) :: ughost_tngt  ! dir direction
 
       if (is_in_probtype_list().eq.1) then
        call SUB_wallfunc( &
@@ -1642,20 +1642,20 @@ contains
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
-        u, & !intent(in) uimage_raster_solid_frame(dir)
-        uimage_tngt_mag, & !intent(in)
-        wall_model_velocity, & ! intent(in)
-        dist_probe, & ! intent(in)
-        dist_fluid, & ! intent(in)
-        temperature_image, & !intent(in) 
-        temperature_wall, & ! intent(in)      
-        temperature_wall_max, & ! intent(in)      
-        viscosity_molecular, & ! intent(in)      
-        viscosity_eddy_wall, & ! intent(in)      
-        y, & !intent(in) distance from image to wall
-        ughost_tngt, & ! intent(out)
-        im_fluid, &  ! intent(in)
-        critical_length) ! intent(in) used for sanity check
+        u, & !INTENT(in) uimage_raster_solid_frame(dir)
+        uimage_tngt_mag, & !INTENT(in)
+        wall_model_velocity, & ! INTENT(in)
+        dist_probe, & ! INTENT(in)
+        dist_fluid, & ! INTENT(in)
+        temperature_image, & !INTENT(in) 
+        temperature_wall, & ! INTENT(in)      
+        temperature_wall_max, & ! INTENT(in)      
+        viscosity_molecular, & ! INTENT(in)      
+        viscosity_eddy_wall, & ! INTENT(in)      
+        y, & !INTENT(in) distance from image to wall
+        ughost_tngt, & ! INTENT(out)
+        im_fluid, &  ! INTENT(in)
+        critical_length) ! INTENT(in) used for sanity check
       else
        call wallfunc_newtonsmethod( &
         dir, & ! =1,2,3
@@ -1664,20 +1664,20 @@ contains
         x_projection_raster, &
         dx, &
         n_raster, & ! points to solid
-        u, & !intent(in) uimage_raster_solid_frame(dir)
-        uimage_tngt_mag, & !intent(in)
-        wall_model_velocity, & ! intent(in)
-        dist_probe, & ! intent(in)
-        dist_fluid, & ! intent(in)
-        temperature_image, & !intent(in) 
-        temperature_wall, & ! intent(in)      
-        temperature_wall_max, & ! intent(in)      
-        viscosity_molecular, & ! intent(in)      
-        viscosity_eddy_wall, & ! intent(in)      
-        y, & !intent(in) distance from image to wall
-        ughost_tngt, & ! intent(out)
-        im_fluid, &  ! intent(in)
-        critical_length) ! intent(in) used for sanity check
+        u, & !INTENT(in) uimage_raster_solid_frame(dir)
+        uimage_tngt_mag, & !INTENT(in)
+        wall_model_velocity, & ! INTENT(in)
+        dist_probe, & ! INTENT(in)
+        dist_fluid, & ! INTENT(in)
+        temperature_image, & !INTENT(in) 
+        temperature_wall, & ! INTENT(in)      
+        temperature_wall_max, & ! INTENT(in)      
+        viscosity_molecular, & ! INTENT(in)      
+        viscosity_eddy_wall, & ! INTENT(in)      
+        y, & !INTENT(in) distance from image to wall
+        ughost_tngt, & ! INTENT(out)
+        im_fluid, &  ! INTENT(in)
+        critical_length) ! INTENT(in) used for sanity check
       endif
 
       end subroutine wallfunc_general
@@ -1693,13 +1693,13 @@ contains
       use probcommon_module
       implicit none
        
-      type(law_of_wall_parm_type), intent(in) :: LOW
-      INTEGER_T, intent(in) :: im_fluid
-      INTEGER_T, intent(in) :: im_solid
-      REAL_T, intent(in) :: x_fluid(SDIM)
-      INTEGER_T, intent(inout) :: im_secondary_image
-      REAL_T, intent(out) :: thermal_interp(num_materials)
-      REAL_T, intent(out) :: LS_interp(num_materials*(1+SDIM))
+      type(law_of_wall_parm_type), INTENT(in) :: LOW
+      INTEGER_T, INTENT(in) :: im_fluid
+      INTEGER_T, INTENT(in) :: im_solid
+      REAL_T, INTENT(in) :: x_fluid(SDIM)
+      INTEGER_T, INTENT(inout) :: im_secondary_image
+      REAL_T, INTENT(out) :: thermal_interp(num_materials)
+      REAL_T, INTENT(out) :: LS_interp(num_materials*(1+SDIM))
 
       REAL_T :: xsten(-3:3,SDIM)
       REAL_T :: xsten_center(-3:3,SDIM)
@@ -1845,7 +1845,7 @@ contains
       implicit none
 
       double precision ZEYU_delta
-      double precision, intent(in) :: s
+      double precision, INTENT(in) :: s
       double precision :: r
       
       ! integral_r=0 to r=2 d(r)dr =1 
@@ -2168,9 +2168,9 @@ end subroutine dynamic_contact_angle
        side_image, &  ! =0 if image on the left
        data_dir, &  ! normal dir=0..sdim-1
        uimage_raster, & ! in (at the probe)
-       wall_model_velocity, & ! intent(in)
-       dist_probe, & ! intent(in)
-       dist_fluid, & ! intent(in)
+       wall_model_velocity, & ! INTENT(in)
+       dist_probe, & ! INTENT(in)
+       dist_fluid, & ! INTENT(in)
        temperature_image, & ! in (at the probe)
        temperature_wall, & ! in
        temperature_wall_max, & ! in
@@ -2181,25 +2181,25 @@ end subroutine dynamic_contact_angle
        use probcommon_module
        implicit none
        
-       type(law_of_wall_parm_type), intent(in) :: LOW
-       INTEGER_T, intent(in) :: law_of_the_wall
-       INTEGER_T, intent(in) :: data_dir ! normal dir=0..sdim-1
-       INTEGER_T, intent(in) :: im_fluid
-       INTEGER_T, intent(in) :: im_solid
-       INTEGER_T, intent(in) :: side_solid
-       INTEGER_T, intent(in) :: side_image
-       INTEGER_T, intent(in) :: iSOLID,jSOLID,kSOLID
-       INTEGER_T, intent(in) :: iFLUID,jFLUID,kFLUID
-       INTEGER_T, intent(in) :: i_probe,j_probe,k_probe
-       REAL_T, dimension(SDIM), intent(in) :: uimage_raster
-       REAL_T, intent(in) :: wall_model_velocity
-       REAL_T, intent(in) :: dist_probe
-       REAL_T, intent(in) :: dist_fluid
-       REAL_T, intent(in) :: temperature_image
-       REAL_T, intent(in) :: temperature_wall
-       REAL_T, intent(in) :: temperature_wall_max
-       REAL_T, dimension(SDIM), intent(out) :: usolid_law_of_wall
-       REAL_T, intent(out) :: angle_ACT
+       type(law_of_wall_parm_type), INTENT(in) :: LOW
+       INTEGER_T, INTENT(in) :: law_of_the_wall
+       INTEGER_T, INTENT(in) :: data_dir ! normal dir=0..sdim-1
+       INTEGER_T, INTENT(in) :: im_fluid
+       INTEGER_T, INTENT(in) :: im_solid
+       INTEGER_T, INTENT(in) :: side_solid
+       INTEGER_T, INTENT(in) :: side_image
+       INTEGER_T, INTENT(in) :: iSOLID,jSOLID,kSOLID
+       INTEGER_T, INTENT(in) :: iFLUID,jFLUID,kFLUID
+       INTEGER_T, INTENT(in) :: i_probe,j_probe,k_probe
+       REAL_T, dimension(SDIM), INTENT(in) :: uimage_raster
+       REAL_T, INTENT(in) :: wall_model_velocity
+       REAL_T, INTENT(in) :: dist_probe
+       REAL_T, INTENT(in) :: dist_fluid
+       REAL_T, INTENT(in) :: temperature_image
+       REAL_T, INTENT(in) :: temperature_wall
+       REAL_T, INTENT(in) :: temperature_wall_max
+       REAL_T, dimension(SDIM), INTENT(out) :: usolid_law_of_wall
+       REAL_T, INTENT(out) :: angle_ACT
       
        !D_DECL is defined in SPACE.H in the BoxLib/Src/C_BaseLib
 
@@ -2352,8 +2352,8 @@ end subroutine dynamic_contact_angle
 
        nrad=3
 
-        !REAL_T, dimension(SDIM), intent(in) :: uimage_raster
-        !type(law_of_wall_parm_type), intent(in) :: LOW
+        !REAL_T, dimension(SDIM), INTENT(in) :: uimage_raster
+        !type(law_of_wall_parm_type), INTENT(in) :: LOW
         !LOW%usolid_raster 
        do dir=1,SDIM
         usolid_law_of_wall(dir)=zero
@@ -3052,9 +3052,9 @@ end subroutine dynamic_contact_angle
              LOW%n_raster, & ! points to solid
              uimage_raster_solid_frame(dir), &
              uimage_tngt_mag, &
-             wall_model_velocity, & ! intent(in)
-             dist_probe, & ! intent(in)
-             dist_fluid, & ! intent(in)
+             wall_model_velocity, & ! INTENT(in)
+             dist_probe, & ! INTENT(in)
+             dist_fluid, & ! INTENT(in)
              temperature_image, &
              temperature_wall, &
              temperature_wall_max, &
@@ -3452,9 +3452,9 @@ end subroutine dynamic_contact_angle
       subroutine safe_data_single(i,j,k,datafab,data_out)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: i,j,k
-      REAL_T, intent(in), pointer :: datafab(D_DECL(:,:,:))
-      REAL_T, intent(out) :: data_out
+      INTEGER_T, INTENT(in) :: i,j,k
+      REAL_T, INTENT(in), pointer :: datafab(D_DECL(:,:,:))
+      REAL_T, INTENT(out) :: data_out
       INTEGER_T datalo,datahi
       INTEGER_T dir
       INTEGER_T idata(3)
@@ -3480,9 +3480,9 @@ end subroutine dynamic_contact_angle
       subroutine safe_data(i,j,k,n,datafab,data_out)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: i,j,k,n
-      REAL_T, intent(in), pointer :: datafab(D_DECL(:,:,:),:)
-      REAL_T, intent(out) :: data_out
+      INTEGER_T, INTENT(in) :: i,j,k,n
+      REAL_T, INTENT(in), pointer :: datafab(D_DECL(:,:,:),:)
+      REAL_T, INTENT(out) :: data_out
       INTEGER_T datalo,datahi
       INTEGER_T dir
       INTEGER_T idata(3)
@@ -3508,9 +3508,9 @@ end subroutine dynamic_contact_angle
       subroutine safe_data3D(i,j,k,n,datafab,data_out)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: i,j,k,n
-      REAL_T, intent(in), pointer :: datafab(:,:,:,:)
-      REAL_T, intent(out) :: data_out
+      INTEGER_T, INTENT(in) :: i,j,k,n
+      REAL_T, INTENT(in), pointer :: datafab(:,:,:,:)
+      REAL_T, INTENT(out) :: data_out
       INTEGER_T datalo,datahi
       INTEGER_T dir
       INTEGER_T idata(3)
@@ -3536,9 +3536,9 @@ end subroutine dynamic_contact_angle
       subroutine safe_data_index(i,j,k,i_safe,j_safe,k_safe,datafab)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: i,j,k
-      INTEGER_T, intent(out) :: i_safe,j_safe,k_safe
-      REAL_T, intent(in), pointer :: datafab(D_DECL(:,:,:),:)
+      INTEGER_T, INTENT(in) :: i,j,k
+      INTEGER_T, INTENT(out) :: i_safe,j_safe,k_safe
+      REAL_T, INTENT(in), pointer :: datafab(D_DECL(:,:,:),:)
       INTEGER_T datalo,datahi
       INTEGER_T dir
       INTEGER_T idata(3)
@@ -3584,7 +3584,7 @@ end subroutine dynamic_contact_angle
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: im
+      INTEGER_T, INTENT(in) :: im
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im out of range"
@@ -3685,9 +3685,9 @@ end subroutine dynamic_contact_angle
       use probcommon_module
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: time
+      REAL_T, INTENT(in) :: time
       REAL_T startup_time
-      INTEGER_T, intent(in) :: bcflag,im
+      INTEGER_T, INTENT(in) :: bcflag,im
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im out of range"
@@ -3766,10 +3766,10 @@ end subroutine dynamic_contact_angle
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: im,bcflag
-      REAL_T, intent(in) :: time
-      REAL_T, intent(in) :: x,y,z
-      REAL_T, intent(out) :: temperature
+      INTEGER_T, INTENT(in) :: im,bcflag
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(in) :: x,y,z
+      REAL_T, INTENT(out) :: temperature
       REAL_T :: temp_slope
       REAL_T substrate_height
       REAL_T ice_vertical
@@ -4127,12 +4127,12 @@ end subroutine dynamic_contact_angle
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(out) :: FSI_prescribed_flag
-      INTEGER_T, intent(in) :: color,dir,blob_array_size,num_colors
-      REAL_T, intent(in) :: xrigid(SDIM)
+      INTEGER_T, INTENT(out) :: FSI_prescribed_flag
+      INTEGER_T, INTENT(in) :: color,dir,blob_array_size,num_colors
+      REAL_T, INTENT(in) :: xrigid(SDIM)
       REAL_T xrigid3D(3)
-      REAL_T, intent(out) :: vel
-      REAL_T, intent(in) :: blob_array(blob_array_size)
+      REAL_T, INTENT(out) :: vel
+      REAL_T, INTENT(in) :: blob_array(blob_array_size)
       INTEGER_T ibase
       INTEGER_T veldir,irow
       REAL_T blob_mass_for_velocity(3)
@@ -4425,7 +4425,7 @@ end subroutine dynamic_contact_angle
       subroutine normalize_vector(vin)
       IMPLICIT NONE
 
-      REAL_T, intent(inout) :: vin(SDIM)
+      REAL_T, INTENT(inout) :: vin(SDIM)
       INTEGER_T dir
       REAL_T mag
 
@@ -4454,7 +4454,7 @@ end subroutine dynamic_contact_angle
       use probcommon_module
       IMPLICIT NONE
 
-      REAL_T, intent(inout) :: LS(num_materials*(1+SDIM))
+      REAL_T, INTENT(inout) :: LS(num_materials*(1+SDIM))
       INTEGER_T :: im,dir
       REAL_T :: local_normal(SDIM)
 
@@ -4474,8 +4474,8 @@ end subroutine dynamic_contact_angle
       subroutine crossprod2d(a,b,c)
       IMPLICIT NONE
       
-      REAL_T, intent(in) :: a(SDIM),b(SDIM)
-      REAL_T, intent(out) :: c(3)
+      REAL_T, INTENT(in) :: a(SDIM),b(SDIM)
+      REAL_T, INTENT(out) :: c(3)
 
       c(1)=zero
       c(2)=zero
@@ -4487,8 +4487,8 @@ end subroutine dynamic_contact_angle
       subroutine crossprod(a,b,c)
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: a(3),b(3)
-      REAL_T, intent(out) :: c(3)
+      REAL_T, INTENT(in) :: a(3),b(3)
+      REAL_T, INTENT(out) :: c(3)
 
       c(1)=a(2)*b(3)-a(3)*b(2)
       c(2)=-(a(1)*b(3)-b(1)*a(3))
@@ -4500,8 +4500,8 @@ end subroutine dynamic_contact_angle
 subroutine global_xdist(x1,x2,dist)
 IMPLICIT NONE
  
-REAL_T, dimension(3),intent(in) :: x1,x2
-REAL_T, intent(out) :: dist
+REAL_T, dimension(3),INTENT(in) :: x1,x2
+REAL_T, INTENT(out) :: dist
 
  dist=sqrt( (x1(1)-x2(1))**2+ &
             (x1(2)-x2(2))**2+ &
@@ -4514,13 +4514,13 @@ subroutine global_checkinline(nnode,xnode,tol,xc, &
              inplane,unsigned_mindist,xclosest,normal_closest)
 IMPLICIT NONE
 
-INTEGER_T, intent(inout) :: inplane
-REAL_T, intent(inout) :: unsigned_mindist
-REAL_T, dimension(3), intent(inout) :: xclosest
-REAL_T, dimension(3), intent(inout) :: normal_closest
-REAL_T, intent(in) :: tol
-REAL_T, dimension(2,3), intent(in) :: xnode,nnode
-REAL_T, dimension(3), intent(in) :: xc
+INTEGER_T, INTENT(inout) :: inplane
+REAL_T, INTENT(inout) :: unsigned_mindist
+REAL_T, dimension(3), INTENT(inout) :: xclosest
+REAL_T, dimension(3), INTENT(inout) :: normal_closest
+REAL_T, INTENT(in) :: tol
+REAL_T, dimension(2,3), INTENT(in) :: xnode,nnode
+REAL_T, dimension(3), INTENT(in) :: xc
 REAL_T :: dottop,dotbot,t,curdist
 REAL_T, dimension(3) :: xnot,normal
 INTEGER_T :: dir
@@ -4596,11 +4596,11 @@ subroutine global_checkinplane(xnode,xclosest,tol, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: tol
-REAL_T, dimension(3), intent(in) :: xclosest
-REAL_T, dimension(3), intent(out) :: xclosest_project
-INTEGER_T, intent(out) :: inplane
-REAL_T, dimension(3,3), intent(in) :: xnode ! (ipoint,dir)
+REAL_T, INTENT(in) :: tol
+REAL_T, dimension(3), INTENT(in) :: xclosest
+REAL_T, dimension(3), INTENT(out) :: xclosest_project
+INTEGER_T, INTENT(out) :: inplane
+REAL_T, dimension(3,3), INTENT(in) :: xnode ! (ipoint,dir)
 REAL_T, dimension(3,3) :: AA,AINVERSE
 REAL_T :: det
 REAL_T :: tx_sum,tx_sum_new
@@ -4771,10 +4771,10 @@ end subroutine global_checkinplane
 subroutine check_outside_box(xcell,BB,LS,MASK)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: xcell(3)
-REAL_T, intent(in) :: BB(3,2)
-INTEGER_T, intent(out) :: MASK
-REAL_T, intent(out) :: LS
+REAL_T, INTENT(in) :: xcell(3)
+REAL_T, INTENT(in) :: BB(3,2)
+INTEGER_T, INTENT(out) :: MASK
+REAL_T, INTENT(out) :: LS
 REAL_T :: lenscale
 REAL_T :: test_lenscale
 INTEGER_T outside_flag
@@ -4817,10 +4817,10 @@ end subroutine check_outside_box
 subroutine check_inside_box(xcell,BB,LS,MASK)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: xcell(3)
-REAL_T, intent(in) :: BB(3,2)
-INTEGER_T, intent(out) :: MASK
-REAL_T, intent(out) :: LS
+REAL_T, INTENT(in) :: xcell(3)
+REAL_T, INTENT(in) :: BB(3,2)
+INTEGER_T, INTENT(out) :: MASK
+REAL_T, INTENT(out) :: LS
 REAL_T :: lenscale
 REAL_T :: test_lenscale
 INTEGER_T inside_flag
@@ -4864,9 +4864,9 @@ end subroutine check_inside_box
 subroutine get_crse_index(i,j,k,ic,jc,kc,dir)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: i,j,k
-INTEGER_T, intent(out) :: ic,jc,kc
-INTEGER_T, intent(in) :: dir
+INTEGER_T, INTENT(in) :: i,j,k
+INTEGER_T, INTENT(out) :: ic,jc,kc
+INTEGER_T, INTENT(in) :: dir
 
 ic=i
 jc=j
@@ -4915,10 +4915,10 @@ end subroutine get_crse_index
 
 subroutine maxind(k,S,n,m_out)
 IMPLICIT NONE
-INTEGER_T, intent(in) :: n
-INTEGER_T, intent(in) :: k
-REAL_T, intent(in) :: S(n,n)
-INTEGER_T, intent(out) :: m_out
+INTEGER_T, INTENT(in) :: n
+INTEGER_T, INTENT(in) :: k
+REAL_T, INTENT(in) :: S(n,n)
+INTEGER_T, INTENT(out) :: m_out
 INTEGER_T :: i
 
 if ((n.ge.2).and.(n.le.3)) then
@@ -4946,13 +4946,13 @@ end subroutine maxind
 subroutine EVAL_update(k,t,y,changed,evals,state,n)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: n
-INTEGER_T, intent(in) :: k
-REAL_T, intent(inout) :: y
-INTEGER_T, intent(inout) :: state
-INTEGER_T, intent(inout) :: changed(n)
-REAL_T, intent(inout) :: evals(n)
-REAL_T, intent(in) :: t
+INTEGER_T, INTENT(in) :: n
+INTEGER_T, INTENT(in) :: k
+REAL_T, INTENT(inout) :: y
+INTEGER_T, INTENT(inout) :: state
+INTEGER_T, INTENT(inout) :: changed(n)
+REAL_T, INTENT(inout) :: evals(n)
+REAL_T, INTENT(in) :: t
 
 if ((n.ge.2).and.(n.le.3)) then
  ! do nothing
@@ -4989,10 +4989,10 @@ end subroutine EVAL_update
 subroutine EVAL_rotate(k,l,i,j,S,n,sinrot,cosrot)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: n
-REAL_T, intent(inout) :: S(n,n)
-REAL_T, intent(in) :: sinrot,cosrot
-INTEGER_T, intent(in) :: k,l,i,j
+INTEGER_T, INTENT(in) :: n
+REAL_T, INTENT(inout) :: S(n,n)
+REAL_T, INTENT(in) :: sinrot,cosrot
+INTEGER_T, INTENT(in) :: k,l,i,j
 REAL_T skl,sij 
 
 if ((n.ge.2).and.(n.le.3)) then
@@ -5015,10 +5015,10 @@ end subroutine EVAL_rotate
 subroutine fort_jacobi_eigenvalue(S,evals,evecs,n)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: n
-REAL_T, intent(inout) :: S(n,n)
-REAL_T, intent(out) :: evals(n)
-REAL_T, intent(out) :: evecs(n,n)
+INTEGER_T, INTENT(in) :: n
+REAL_T, INTENT(inout) :: S(n,n)
+REAL_T, INTENT(out) :: evals(n)
+REAL_T, INTENT(out) :: evecs(n,n)
 REAL_T :: S_SAVE(n,n)
 INTEGER_T :: i,j,k,k_in,l,m,state
 REAL_T :: sinrot,cosrot,t,p,y,d,r
@@ -5303,9 +5303,9 @@ end subroutine fort_jacobi_eigenvalue
 subroutine project_to_positive_definite(S,n,min_eval)
 IMPLICIT NONE
 
-REAL_T, intent(in)    :: min_eval
-INTEGER_T, intent(in) :: n
-REAL_T, intent(inout) :: S(n,n)
+REAL_T, INTENT(in)    :: min_eval
+INTEGER_T, INTENT(in) :: n
+REAL_T, INTENT(inout) :: S(n,n)
 
 REAL_T :: S_local(n,n)
 REAL_T :: STS(n,n)
@@ -5419,9 +5419,9 @@ subroutine project_A_to_positive_definite(A, &
    viscoelastic_model,polymer_factor)
 IMPLICIT NONE
 
-REAL_T, intent(inout) :: A(3,3)
-INTEGER_T, intent(in) :: viscoelastic_model
-REAL_T, intent(in) :: polymer_factor
+REAL_T, INTENT(inout) :: A(3,3)
+INTEGER_T, INTENT(in) :: viscoelastic_model
+REAL_T, INTENT(in) :: polymer_factor
 INTEGER_T A_dim
 REAL_T min_eval
 
@@ -5671,7 +5671,7 @@ subroutine print_visual_descriptor(im,n_fortran)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: im,n_fortran
+INTEGER_T, INTENT(in) :: im,n_fortran
 INTEGER_T :: n_cpp
 
 if ((im.ge.1).and.(im.le.num_materials)) then
@@ -5726,16 +5726,16 @@ end subroutine print_visual_descriptor
        order,linearflag,coeffs,ncoeffs,sdim_parm)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: ncoeffs
-      INTEGER_T, intent(in) :: order
-      INTEGER_T, intent(in) :: npoints
-      INTEGER_T, intent(in) :: sdim_parm
-      INTEGER_T, intent(in) :: linearflag
-      REAL_T, intent(in) :: x0(sdim_parm)
-      REAL_T, intent(in) :: xpos(npoints,sdim_parm)
-      REAL_T, intent(in) :: wts(npoints)
-      REAL_T, intent(in) :: vals(npoints)
-      REAL_T, intent(out) :: coeffs(ncoeffs)
+      INTEGER_T, INTENT(in) :: ncoeffs
+      INTEGER_T, INTENT(in) :: order
+      INTEGER_T, INTENT(in) :: npoints
+      INTEGER_T, INTENT(in) :: sdim_parm
+      INTEGER_T, INTENT(in) :: linearflag
+      REAL_T, INTENT(in) :: x0(sdim_parm)
+      REAL_T, INTENT(in) :: xpos(npoints,sdim_parm)
+      REAL_T, INTENT(in) :: wts(npoints)
+      REAL_T, INTENT(in) :: vals(npoints)
+      REAL_T, INTENT(out) :: coeffs(ncoeffs)
       REAL_T AA(ncoeffs,ncoeffs)
       REAL_T BB(ncoeffs)
       INTEGER_T ncoeffs_test
@@ -5882,12 +5882,12 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: i,j,k,im
-      INTEGER_T, intent(in) :: nhalf
+      INTEGER_T, INTENT(in) :: i,j,k,im
+      INTEGER_T, INTENT(in) :: nhalf
       INTEGER_T :: dir
-      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T, intent(inout) :: LS
-      REAL_T, intent(in), pointer :: dist(D_DECL(:,:,:),:)
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, INTENT(inout) :: LS
+      REAL_T, INTENT(in), pointer :: dist(D_DECL(:,:,:),:)
       REAL_T n(SDIM)
       REAL_T nsave(SDIM)
       REAL_T RR,mag
@@ -5955,8 +5955,8 @@ end subroutine print_visual_descriptor
       subroutine grid_type_to_box_type3D(grid_type,box_type)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: grid_type
-      INTEGER_T, intent(out) :: box_type(3)
+      INTEGER_T, INTENT(in) :: grid_type
+      INTEGER_T, INTENT(out) :: box_type(3)
       INTEGER_T dir
 
       do dir=1,3
@@ -5989,12 +5989,12 @@ end subroutine print_visual_descriptor
       ngrow,grid_type,id)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: lo(3), hi(3)
-       ! intent(in) means the pointer cannot be reassigned.
-       ! The data itself inherits the intent attribute from the
+      INTEGER_T, INTENT(in) :: lo(3), hi(3)
+       ! INTENT(in) means the pointer cannot be reassigned.
+       ! The data itself inherits the INTENT attribute from the
        ! target.
-      REAL_T, intent(in), pointer :: data_array(:,:,:,:)
-      INTEGER_T, intent(in) :: ngrow,grid_type,id
+      REAL_T, INTENT(in), pointer :: data_array(:,:,:,:)
+      INTEGER_T, INTENT(in) :: ngrow,grid_type,id
 
        ! box_type(dir)=0 => CELL
        ! box_type(dir)=1 => NODE
@@ -6064,14 +6064,14 @@ end subroutine print_visual_descriptor
        ngrow,grid_type,id)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
-        ! intent(in) means the pointer cannot be reassigned.
-        ! The data itself inherits the intent attribute from the
+      INTEGER_T, INTENT(in) ::  lo(SDIM), hi(SDIM)
+        ! INTENT(in) means the pointer cannot be reassigned.
+        ! The data itself inherits the INTENT attribute from the
         ! target.
-      REAL_T, intent(in), pointer :: data_array(D_DECL(:,:,:),:)
-      INTEGER_T, intent(in) ::  ngrow
-      INTEGER_T, intent(in) ::  grid_type
-      INTEGER_T, intent(in) ::  id
+      REAL_T, INTENT(in), pointer :: data_array(D_DECL(:,:,:),:)
+      INTEGER_T, INTENT(in) ::  ngrow
+      INTEGER_T, INTENT(in) ::  grid_type
+      INTEGER_T, INTENT(in) ::  id
 
        ! box_type(dir)=0 => CELL
        ! box_type(dir)=1 => NODE
@@ -6151,14 +6151,14 @@ end subroutine print_visual_descriptor
        ngrow,grid_type,id)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
-        ! intent(in) means the pointer cannot be reassigned.
-        ! The data itself inherits the intent attribute from the
+      INTEGER_T, INTENT(in) ::  lo(SDIM), hi(SDIM)
+        ! INTENT(in) means the pointer cannot be reassigned.
+        ! The data itself inherits the INTENT attribute from the
         ! target.
-      INTEGER_T, intent(in), pointer :: data_array(D_DECL(:,:,:),:)
-      INTEGER_T, intent(in) ::  ngrow
-      INTEGER_T, intent(in) ::  grid_type
-      INTEGER_T, intent(in) ::  id
+      INTEGER_T, INTENT(in), pointer :: data_array(D_DECL(:,:,:),:)
+      INTEGER_T, INTENT(in) ::  ngrow
+      INTEGER_T, INTENT(in) ::  grid_type
+      INTEGER_T, INTENT(in) ::  id
 
        ! box_type(dir)=0 => CELL
        ! box_type(dir)=1 => NODE
@@ -6239,14 +6239,14 @@ end subroutine print_visual_descriptor
        ngrow,grid_type,id)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
-        ! intent(in) means the pointer cannot be reassigned.
-        ! The data itself inherits the intent attribute from the
+      INTEGER_T, INTENT(in) ::  lo(SDIM), hi(SDIM)
+        ! INTENT(in) means the pointer cannot be reassigned.
+        ! The data itself inherits the INTENT attribute from the
         ! target.
-      REAL_T, intent(in), pointer :: data_array1(D_DECL(:,:,:))
-      INTEGER_T, intent(in) ::  ngrow
-      INTEGER_T, intent(in) ::  grid_type
-      INTEGER_T, intent(in) ::  id
+      REAL_T, INTENT(in), pointer :: data_array1(D_DECL(:,:,:))
+      INTEGER_T, INTENT(in) ::  ngrow
+      INTEGER_T, INTENT(in) ::  grid_type
+      INTEGER_T, INTENT(in) ::  id
 
        ! box_type(dir)=0 => CELL
        ! box_type(dir)=1 => NODE
@@ -6326,14 +6326,14 @@ end subroutine print_visual_descriptor
        ngrow,grid_type,id)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) ::  lo(SDIM), hi(SDIM)
-        ! intent(in) means the pointer cannot be reassigned.
-        ! The data itself inherits the intent attribute from the
+      INTEGER_T, INTENT(in) ::  lo(SDIM), hi(SDIM)
+        ! INTENT(in) means the pointer cannot be reassigned.
+        ! The data itself inherits the INTENT attribute from the
         ! target.
-      INTEGER_T, intent(in), pointer :: data_array1(D_DECL(:,:,:))
-      INTEGER_T, intent(in) ::  ngrow
-      INTEGER_T, intent(in) ::  grid_type
-      INTEGER_T, intent(in) ::  id
+      INTEGER_T, INTENT(in), pointer :: data_array1(D_DECL(:,:,:))
+      INTEGER_T, INTENT(in) ::  ngrow
+      INTEGER_T, INTENT(in) ::  grid_type
+      INTEGER_T, INTENT(in) ::  id
 
        ! box_type(dir)=0 => CELL
        ! box_type(dir)=1 => NODE
@@ -6409,8 +6409,8 @@ end subroutine print_visual_descriptor
       subroutine h_coeffXY(r1,r2,ri,coeffs)
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: r1,r2,ri
-      REAL_T, intent(out) :: coeffs(3)
+      REAL_T, INTENT(in) :: r1,r2,ri
+      REAL_T, INTENT(out) :: coeffs(3)
 
       if (r2.gt.r1) then
    
@@ -6438,8 +6438,8 @@ end subroutine print_visual_descriptor
       subroutine h_coeffXYZ(x1,x2,y1,y2,xi,yi,coeffs)
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: x1,x2,y1,y2,xi,yi
-      REAL_T, intent(out) :: coeffs(9)
+      REAL_T, INTENT(in) :: x1,x2,y1,y2,xi,yi
+      REAL_T, INTENT(out) :: coeffs(9)
       INTEGER_T :: i,j,row
       REAL_T :: coeffs_x(3)
       REAL_T :: coeffs_y(3)
@@ -6472,8 +6472,8 @@ end subroutine print_visual_descriptor
       subroutine hvertical_coeffRZ(r1,r2,ri,coeffs)
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: r1,r2,ri
-      REAL_T, intent(out) :: coeffs(3)
+      REAL_T, INTENT(in) :: r1,r2,ri
+      REAL_T, INTENT(out) :: coeffs(3)
       INTEGER_T dir
 
       if ((r1.ge.zero).and.(r2.ge.zero).and.(ri.gt.zero).and. &
@@ -6505,8 +6505,8 @@ end subroutine print_visual_descriptor
       subroutine hhorizontal_coeffRZ(z1,z2,zi,coeffs)
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: z1,z2,zi
-      REAL_T, intent(out) :: coeffs(3)
+      REAL_T, INTENT(in) :: z1,z2,zi
+      REAL_T, INTENT(out) :: coeffs(3)
 
       if (z2.gt.z1) then
      
@@ -6544,19 +6544,19 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: overall_crossing_status
-      INTEGER_T, intent(in) :: vof_height_function
-      REAL_T, intent(in) :: htfunc_LS(-1:1,-1:1)
-      REAL_T, intent(in) :: htfunc_VOF(-1:1,-1:1)
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-      INTEGER_T, intent(in) :: itan,jtan
-      INTEGER_T, intent(in) :: normal_dir
-      REAL_T, intent(out) :: curvHT_LS
-      REAL_T, intent(out) :: curvHT_VOF
-      REAL_T, intent(out) :: curvHT_choice
-      REAL_T, intent(in) :: xcenter(SDIM)
-      REAL_T, intent(in) :: n1d
+      INTEGER_T, INTENT(in) :: overall_crossing_status
+      INTEGER_T, INTENT(in) :: vof_height_function
+      REAL_T, INTENT(in) :: htfunc_LS(-1:1,-1:1)
+      REAL_T, INTENT(in) :: htfunc_VOF(-1:1,-1:1)
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, INTENT(in) :: itan,jtan
+      INTEGER_T, INTENT(in) :: normal_dir
+      REAL_T, INTENT(out) :: curvHT_LS
+      REAL_T, INTENT(out) :: curvHT_VOF
+      REAL_T, INTENT(out) :: curvHT_choice
+      REAL_T, INTENT(in) :: xcenter(SDIM)
+      REAL_T, INTENT(in) :: n1d
 
       REAL_T hxR,hxL,hx,hxx
       REAL_T hyR,hyL,hy,hyy
@@ -7142,16 +7142,16 @@ end subroutine print_visual_descriptor
         phi0,nn,x,dist,sdim_parm)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: sdim_parm
+      INTEGER_T, INTENT(in) :: sdim_parm
       INTEGER_T :: dir
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: nhalf0
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: phi0
-      REAL_T, intent(out) :: dist
-      REAL_T, intent(in) :: nn(sdim_parm)
-      REAL_T, intent(in) :: xsten0(-nhalf0:nhalf0,sdim_parm)
-      REAL_T, intent(in) :: x(sdim_parm)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: nhalf0
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: phi0
+      REAL_T, INTENT(out) :: dist
+      REAL_T, INTENT(in) :: nn(sdim_parm)
+      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim_parm)
+      REAL_T, INTENT(in) :: x(sdim_parm)
  
       if (nhalf0.lt.1) then
        print *,"nhalf0 invalid"
@@ -7201,8 +7201,8 @@ end subroutine print_visual_descriptor
       subroutine arctan2(y,x,angle)
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: y,x
-      REAL_T, intent(out) :: angle
+      REAL_T, INTENT(in) :: y,x
+      REAL_T, INTENT(out) :: angle
 
       if (MOF_PI.eq.zero) then
        MOF_PI=four*atan(one)
@@ -7251,8 +7251,8 @@ end subroutine print_visual_descriptor
       subroutine minmod(x,y,z)
       IMPLICIT NONE
       
-      REAL_T, intent(in) :: x,y
-      REAL_T, intent(out) :: z
+      REAL_T, INTENT(in) :: x,y
+      REAL_T, INTENT(out) :: z
 
       if (x*y.le.zero) then
        z=zero
@@ -7270,10 +7270,10 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      REAL_T, intent(out) :: vol
-      REAL_T, intent(in) :: xlo1(SDIM),xhi1(SDIM)
-      REAL_T, intent(in) :: xlo2(SDIM),xhi2(SDIM)
-      REAL_T, intent(out) :: xloint(SDIM),xhiint(SDIM)
+      REAL_T, INTENT(out) :: vol
+      REAL_T, INTENT(in) :: xlo1(SDIM),xhi1(SDIM)
+      REAL_T, INTENT(in) :: xlo2(SDIM),xhi2(SDIM)
+      REAL_T, INTENT(out) :: xloint(SDIM),xhiint(SDIM)
       REAL_T vol1,vol2
       INTEGER_T dir
 
@@ -7327,8 +7327,8 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: x(SDIM)
-      REAL_T, intent(out) :: xT(SDIM)
+      REAL_T, INTENT(in) :: x(SDIM)
+      REAL_T, INTENT(out) :: xT(SDIM)
       INTEGER_T dir
      
       do dir=1,SDIM
@@ -7354,10 +7354,10 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: x(SDIM)
+      REAL_T, INTENT(in) :: x(SDIM)
       REAL_T x_ofs(SDIM)
-      REAL_T, intent(in) :: ofs(SDIM)
-      REAL_T, intent(out) :: xT(SDIM)
+      REAL_T, INTENT(in) :: ofs(SDIM)
+      REAL_T, INTENT(out) :: xT(SDIM)
       INTEGER_T dir
      
       do dir=1,SDIM
@@ -7382,10 +7382,10 @@ end subroutine print_visual_descriptor
       use probcommon_module
       use LegendreNodes
 
-      REAL_T,intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: bfact
+      REAL_T,INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
       INTEGER_T dir
-      REAL_T, intent(out) :: dxmin
+      REAL_T, INTENT(out) :: dxmin
       REAL_T delta
       REAL_T delta_gauss
       REAL_T RR
@@ -7441,10 +7441,10 @@ end subroutine print_visual_descriptor
       use probcommon_module
       use LegendreNodes
 
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: bfact
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
       INTEGER_T dir
-      REAL_T, intent(out) :: dxmax
+      REAL_T, INTENT(out) :: dxmax
       REAL_T delta,RR,xL,xR
 
       if (bfact.lt.1) then
@@ -7498,10 +7498,10 @@ end subroutine print_visual_descriptor
       use probcommon_module
       use LegendreNodes
 
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: bfact
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
       INTEGER_T dir
-      REAL_T, intent(out) :: dxmax
+      REAL_T, INTENT(out) :: dxmax
       REAL_T delta,xL,xR
 
       if (bfact.lt.1) then
@@ -7540,10 +7540,10 @@ end subroutine print_visual_descriptor
                       fablo,fabhi,ngrow)
       IMPLICIT NONE
 
-      INTEGER_T, intent(out) :: DIMDEC(fabdim)
-      INTEGER_T, intent(in) :: fablo(SDIM)
-      INTEGER_T, intent(in) :: fabhi(SDIM)
-      INTEGER_T, intent(in) :: ngrow
+      INTEGER_T, INTENT(out) :: DIMDEC(fabdim)
+      INTEGER_T, INTENT(in) :: fablo(SDIM)
+      INTEGER_T, INTENT(in) :: fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: ngrow
       INTEGER_T dir
 
       dir=1
@@ -7580,9 +7580,9 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: x(SDIM)
-      REAL_T, intent(in) :: vel(SDIM)
-      REAL_T, intent(out) :: velT(SDIM)
+      REAL_T, INTENT(in) :: x(SDIM)
+      REAL_T, INTENT(in) :: vel(SDIM)
+      REAL_T, INTENT(out) :: velT(SDIM)
       INTEGER_T dir
      
       do dir=1,SDIM
@@ -7687,7 +7687,7 @@ end subroutine print_visual_descriptor
       bind(c,name='fort_check_operation_flag_MAC')
 
       IMPLICIT NONE
-      INTEGER_T, intent(in) :: operation_flag
+      INTEGER_T, INTENT(in) :: operation_flag
 
       if ((operation_flag.eq.OP_PRESGRAD_MAC).or. &
           (operation_flag.eq.OP_PRES_CELL_TO_MAC).or. &
@@ -7712,8 +7712,8 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: im1,im2
-      INTEGER_T, intent(out) :: iten
+      INTEGER_T, INTENT(in) :: im1,im2
+      INTEGER_T, INTENT(out) :: iten
       INTEGER_T im,im_opp
       INTEGER_T im_iter
       INTEGER_T previous_count
@@ -7756,8 +7756,8 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(out) :: im1,im2
-      INTEGER_T, intent(in) :: iten
+      INTEGER_T, INTENT(out) :: im1,im2
+      INTEGER_T, INTENT(in) :: iten
       INTEGER_T im,im_opp,iten_test
 
       im1=0
@@ -7882,7 +7882,7 @@ end subroutine print_visual_descriptor
 
       REAL_T function hsprime(phi,cutoff)
       IMPLICIT NONE
-      REAL_T, intent(in) :: phi,cutoff
+      REAL_T, INTENT(in) :: phi,cutoff
 
       if ((phi.ge.cutoff).or.(phi.le.-cutoff)) then
        hsprime=0
@@ -7895,7 +7895,7 @@ end subroutine print_visual_descriptor
       INTEGER_T function sign_funct(LS)
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: LS
+      REAL_T, INTENT(in) :: LS
 
       if (LS.lt.zero) then
        sign_funct=-1
@@ -7910,7 +7910,7 @@ end subroutine print_visual_descriptor
 
       REAL_T function hssign(phi,cutoff)
       IMPLICIT NONE
-      REAL_T, intent(in) :: phi,cutoff
+      REAL_T, INTENT(in) :: phi,cutoff
 
       hssign=two*hs(phi,cutoff)-one
       return
@@ -8013,8 +8013,8 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      REAL_T, intent(inout) :: vfrac(num_materials)
-      REAL_T, intent(inout) :: cen(SDIM,num_materials)
+      REAL_T, INTENT(inout) :: vfrac(num_materials)
+      REAL_T, INTENT(inout) :: cen(SDIM,num_materials)
 
       INTEGER_T imaterial,dir
       REAL_T voftotal
@@ -8146,10 +8146,10 @@ end subroutine print_visual_descriptor
       subroutine gridvol(xsten,nhalf,rzflag,vol)
       IMPLICIT NONE
 
-      REAL_T, intent(out) :: vol
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-      INTEGER_T, intent(in) :: rzflag
+      REAL_T, INTENT(out) :: vol
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, INTENT(in) :: rzflag
       REAL_T RCENTER
 
       if (nhalf.lt.1) then
@@ -8201,11 +8201,11 @@ end subroutine print_visual_descriptor
       subroutine gridarea(xsten,nhalf,rzflag,dir,side,area)
       IMPLICIT NONE
 
-      REAL_T, intent(out) :: area
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-      INTEGER_T, intent(in) :: rzflag
-      INTEGER_T, intent(in) :: dir,side
+      REAL_T, INTENT(out) :: area
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, INTENT(in) :: rzflag
+      INTEGER_T, INTENT(in) :: dir,side
       INTEGER_T iside,dir2
       REAL_T RR,R1,R2
 
@@ -8353,12 +8353,12 @@ end subroutine print_visual_descriptor
       subroutine gridsten(x,xlo,i,j,k,fablo,bfact,dx,nhalf)
       IMPLICIT NONE 
 
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, intent(out) :: x(-nhalf:nhalf,SDIM)
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM)
-      INTEGER_T, intent(in) :: i,j,k,bfact
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, INTENT(out) :: x(-nhalf:nhalf,SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM)
+      INTEGER_T, INTENT(in) :: i,j,k,bfact
       INTEGER_T dir,icrit
       REAL_T, dimension(:), allocatable :: xsub
 
@@ -8394,14 +8394,14 @@ end subroutine print_visual_descriptor
                       caller_id)
       IMPLICIT NONE 
 
-      INTEGER_T, intent(in) :: caller_id
-      INTEGER_T, intent(in) :: nhalf
-      INTEGER_T, intent(in) :: grid_type
-      REAL_T, intent(out) :: x(-nhalf:nhalf,SDIM)
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM)
-      INTEGER_T, intent(in) :: i,j,k,bfact
+      INTEGER_T, INTENT(in) :: caller_id
+      INTEGER_T, INTENT(in) :: nhalf
+      INTEGER_T, INTENT(in) :: grid_type
+      REAL_T, INTENT(out) :: x(-nhalf:nhalf,SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM)
+      INTEGER_T, INTENT(in) :: i,j,k,bfact
       INTEGER_T dir,icrit
       REAL_T, dimension(:), allocatable :: xsub
       INTEGER_T :: box_type(SDIM)
@@ -8458,12 +8458,12 @@ end subroutine print_visual_descriptor
       subroutine gridstenND(x,xlo,i,j,k,fablo,bfact,dx,nhalf)
       IMPLICIT NONE 
 
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, intent(out) :: x(-nhalf:nhalf,SDIM)
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM)
-      INTEGER_T, intent(in) :: i,j,k,bfact
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, INTENT(out) :: x(-nhalf:nhalf,SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM)
+      INTEGER_T, INTENT(in) :: i,j,k,bfact
       INTEGER_T dir,icrit
       REAL_T, dimension(:), allocatable :: xsub
 
@@ -8538,13 +8538,13 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, intent(out) :: x(-nhalf:nhalf)
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM)
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, INTENT(out) :: x(-nhalf:nhalf)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM)
       REAL_T xdomlo,xofs,xabs,xnode
-      INTEGER_T, intent(in) :: i,bfact,dir
+      INTEGER_T, INTENT(in) :: i,bfact,dir
       INTEGER_T side
       INTEGER_T icell,imac,isten,signflag,ishift,i_e,i_n
 
@@ -8650,13 +8650,13 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, intent(out) :: x(-nhalf:nhalf)
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM)
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, INTENT(out) :: x(-nhalf:nhalf)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM)
       REAL_T xdomlo,xofs,xabs,xnode
-      INTEGER_T, intent(in) :: i,bfact,dir
+      INTEGER_T, INTENT(in) :: i,bfact,dir
       INTEGER_T side
       INTEGER_T icell,imac,isten,signflag,ishift,i_e,i_n
 
@@ -8839,10 +8839,10 @@ end subroutine print_visual_descriptor
        tilelo,tilehi,fablo,fabhi,growlo,growhi,ng)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(out) :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: ng
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(out) :: growlo(3),growhi(3)
+      INTEGER_T, INTENT(in) :: ng
       INTEGER_T dir2
 
       growlo(3)=0
@@ -8879,10 +8879,10 @@ end subroutine print_visual_descriptor
        tilelo,tilehi,fablo,fabhi,growlo,growhi,ng)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(out) :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: ng
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(out) :: growlo(3),growhi(3)
+      INTEGER_T, INTENT(in) :: ng
       INTEGER_T dir2
 
       growlo(3)=0
@@ -9333,9 +9333,9 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, intent(out) :: x(-nhalf:nhalf,SDIM)
-      INTEGER_T, intent(in) :: i,j,k,level
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, INTENT(out) :: x(-nhalf:nhalf,SDIM)
+      INTEGER_T, INTENT(in) :: i,j,k,level
       INTEGER_T isten,dir
       INTEGER_T dummy_input
  
@@ -9395,9 +9395,9 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nhalf,dir
-      REAL_T, intent(out) :: x(-nhalf:nhalf)
-      INTEGER_T, intent(in) :: i,level
+      INTEGER_T, INTENT(in) :: nhalf,dir
+      REAL_T, INTENT(out) :: x(-nhalf:nhalf)
+      INTEGER_T, INTENT(in) :: i,level
       INTEGER_T isten
  
       if (nhalf.lt.0) then
@@ -9432,11 +9432,11 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: caller_id
-      INTEGER_T, intent(in) :: nhalf
-      INTEGER_T, intent(in) :: grid_type
-      REAL_T, intent(out) :: x(-nhalf:nhalf,SDIM)
-      INTEGER_T, intent(in) :: i,j,k,level
+      INTEGER_T, INTENT(in) :: caller_id
+      INTEGER_T, INTENT(in) :: nhalf
+      INTEGER_T, INTENT(in) :: grid_type
+      REAL_T, INTENT(out) :: x(-nhalf:nhalf,SDIM)
+      INTEGER_T, INTENT(in) :: i,j,k,level
       INTEGER_T isten,dir,ii,jj,kk
       INTEGER_T box_type(SDIM)
       INTEGER_T dummy_input
@@ -9529,9 +9529,9 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, intent(out) :: x(-nhalf:nhalf,SDIM)
-      INTEGER_T, intent(in) :: i,j,k,level
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, INTENT(out) :: x(-nhalf:nhalf,SDIM)
+      INTEGER_T, INTENT(in) :: i,j,k,level
       INTEGER_T isten,dir
 
       if (nhalf.lt.0) then
@@ -9579,9 +9579,9 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nhalf,normdir
-      REAL_T, intent(out) :: x(-nhalf:nhalf)
-      INTEGER_T, intent(in) :: i,level
+      INTEGER_T, INTENT(in) :: nhalf,normdir
+      REAL_T, INTENT(out) :: x(-nhalf:nhalf)
+      INTEGER_T, INTENT(in) :: i,level
       INTEGER_T isten,ii
 
       ii=1
@@ -9838,8 +9838,8 @@ end subroutine print_visual_descriptor
       subroutine grid_type_to_box_type(grid_type,box_type)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: grid_type
-      INTEGER_T, intent(out) :: box_type(SDIM)
+      INTEGER_T, INTENT(in) :: grid_type
+      INTEGER_T, INTENT(out) :: box_type(SDIM)
       INTEGER_T dir
 
       do dir=1,SDIM
@@ -9872,8 +9872,8 @@ end subroutine print_visual_descriptor
       subroutine box_type_to_grid_type(grid_type,box_type)
       IMPLICIT NONE
 
-      INTEGER_T, intent(out) :: grid_type
-      INTEGER_T, intent(in) :: box_type(SDIM)
+      INTEGER_T, INTENT(out) :: grid_type
+      INTEGER_T, INTENT(in) :: box_type(SDIM)
 
       if ((box_type(1).eq.0).and. &
           (box_type(2).eq.0).and. &
@@ -9930,11 +9930,11 @@ end subroutine print_visual_descriptor
        grid_type)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: grid_type
-      INTEGER_T, intent(in) :: ifine,jfine,kfine
+      INTEGER_T, INTENT(in) :: grid_type
+      INTEGER_T, INTENT(in) :: ifine,jfine,kfine
       INTEGER_T fine_index(3)
-      INTEGER_T, intent(out) :: stenlo(3),stenhi(3)
-      INTEGER_T, intent(in) :: bfact_c,bfact_f
+      INTEGER_T, INTENT(out) :: stenlo(3),stenhi(3)
+      INTEGER_T, INTENT(in) :: bfact_c,bfact_f
       INTEGER_T dir2,denom
       INTEGER_T :: box_type(SDIM)
 
@@ -10003,11 +10003,11 @@ end subroutine print_visual_descriptor
        ic,jc,kc,stenlo,stenhi,bfact_c,bfact_f,grid_type)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: ic,jc,kc
-      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, INTENT(in) :: ic,jc,kc
+      INTEGER_T, INTENT(in) :: grid_type
       INTEGER_T coarse_index(3)
-      INTEGER_T, intent(out) :: stenlo(3),stenhi(3)
-      INTEGER_T, intent(in) :: bfact_c,bfact_f
+      INTEGER_T, INTENT(out) :: stenlo(3),stenhi(3)
+      INTEGER_T, INTENT(in) :: bfact_c,bfact_f
       INTEGER_T dir2
       INTEGER_T :: box_type(SDIM)
 
@@ -10075,12 +10075,12 @@ end subroutine print_visual_descriptor
        tilelo,tilehi,fablo,fabhi,growlo,growhi,ng,grid_type,caller_id)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: caller_id
-      INTEGER_T, intent(in) :: grid_type
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(out) :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: ng
+      INTEGER_T, INTENT(in) :: caller_id
+      INTEGER_T, INTENT(in) :: grid_type
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(out) :: growlo(3),growhi(3)
+      INTEGER_T, INTENT(in) :: ng
       INTEGER_T dir2
       INTEGER_T :: box_type(SDIM)
 
@@ -10146,10 +10146,10 @@ end subroutine print_visual_descriptor
        tilelo,tilehi,fablo,fabhi,growlo,growhi,ng)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(out) :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: ng
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(out) :: growlo(3),growhi(3)
+      INTEGER_T, INTENT(in) :: ng
       INTEGER_T dir2
 
       growlo(3)=0
@@ -10339,8 +10339,8 @@ end subroutine print_visual_descriptor
       subroutine strip_status(i,j,k,bfact,stripstat)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: i,j,k,bfact
-      INTEGER_T, intent(out) :: stripstat
+      INTEGER_T, INTENT(in) :: i,j,k,bfact
+      INTEGER_T, INTENT(out) :: stripstat
 
       if (bfact.lt.1) then
        print *,"bfact invalid32"
@@ -10367,10 +10367,10 @@ end subroutine print_visual_descriptor
       subroutine elementbox(i,j,k,bfact,dir,elemlo,elemhi)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: i,j,k,bfact,dir
+      INTEGER_T, INTENT(in) :: i,j,k,bfact,dir
       INTEGER_T dir2
-      INTEGER_T, intent(out) :: elemlo(3)
-      INTEGER_T, intent(out) :: elemhi(3)
+      INTEGER_T, INTENT(out) :: elemlo(3)
+      INTEGER_T, INTENT(out) :: elemhi(3)
 
       if ((dir.lt.0).or.(dir.ge.SDIM)) then
        print *,"dir invalid in elementbox"
@@ -10396,8 +10396,8 @@ end subroutine print_visual_descriptor
       subroutine strip_status_dir(i,j,k,bfact,dir,stripstat)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in)  :: i,j,k,bfact,dir
-      INTEGER_T, intent(out) :: stripstat
+      INTEGER_T, INTENT(in)  :: i,j,k,bfact,dir
+      INTEGER_T, INTENT(out) :: stripstat
 
       if (bfact.lt.2) then
        print *,"bfact invalid33"
@@ -10488,15 +10488,15 @@ end subroutine print_visual_descriptor
       use LegendreNodes
 
       IMPLICIT NONE
-      INTEGER_T, intent(in) :: nvar
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: grid_type ! -1:ggg; 0:lgg; 1:glg; 2:ggl
-      INTEGER_T, intent(in) :: stenhi(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xfine(SDIM)
-      REAL_T, intent(in) ::  &
+      INTEGER_T, INTENT(in) :: nvar
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: grid_type ! -1:ggg; 0:lgg; 1:glg; 2:ggl
+      INTEGER_T, INTENT(in) :: stenhi(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: xfine(SDIM)
+      REAL_T, INTENT(in) ::  &
         fcoarse(D_DECL(0:stenhi(1),0:stenhi(2),0:stenhi(3)),nvar)
-      REAL_T, intent(out) :: fxfine(nvar)
+      REAL_T, INTENT(out) :: fxfine(nvar)
  
       INTEGER_T i1
       INTEGER_T i,j,k
@@ -10743,23 +10743,23 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: levelrz_in
-      INTEGER_T, intent(in) :: dir,nc
-      REAL_T, intent(in) :: RRface(0:bfact)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: levelrz_in
+      INTEGER_T, INTENT(in) :: dir,nc
+      REAL_T, INTENT(in) :: RRface(0:bfact)
     
-      INTEGER_T, intent(in) :: operation_flag
-      REAL_T, intent(in) :: dx
-      INTEGER_T, intent(in) :: bctype(2)
+      INTEGER_T, INTENT(in) :: operation_flag
+      REAL_T, INTENT(in) :: dx
+      INTEGER_T, INTENT(in) :: bctype(2)
       INTEGER_T local_bctype(2)
-      REAL_T, intent(in) :: x_sep(2)
-      REAL_T, intent(in) :: bcvalue(2)
-      REAL_T, intent(in) :: vel(0:bfact)
-      REAL_T, intent(in) :: source_side(2)
+      REAL_T, INTENT(in) :: x_sep(2)
+      REAL_T, INTENT(in) :: bcvalue(2)
+      REAL_T, INTENT(in) :: vel(0:bfact)
+      REAL_T, INTENT(in) :: source_side(2)
       REAL_T local_source_side(2)
-      REAL_T, intent(in) :: source(0:bfact-1) 
-      REAL_T, intent(out) :: dest_grad(0:bfact)
-      REAL_T, intent(out) ::  dest_interp(0:bfact)
+      REAL_T, INTENT(in) :: source(0:bfact-1) 
+      REAL_T, INTENT(out) :: dest_grad(0:bfact)
+      REAL_T, INTENT(out) ::  dest_interp(0:bfact)
 
       INTEGER_T i1,j1,isten
       REAL_T y(0:bfact-1)
@@ -11352,12 +11352,12 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: dx
-      INTEGER_T, intent(in) :: maskSEM
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: source(0:bfact) 
-      REAL_T, intent(out) :: dest(0:bfact-1)
-      REAL_T, intent(out) :: destdiv(0:bfact-1)
+      REAL_T, INTENT(in) :: dx
+      INTEGER_T, INTENT(in) :: maskSEM
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in) :: source(0:bfact) 
+      REAL_T, INTENT(out) :: dest(0:bfact-1)
+      REAL_T, INTENT(out) :: destdiv(0:bfact-1)
 
       INTEGER_T i1,j1
       REAL_T y(0:bfact-1)
@@ -11513,11 +11513,11 @@ end subroutine print_visual_descriptor
         xtarget,WT)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nhalf
-      REAL_T, intent(in) :: xsten_center(-nhalf:nhalf,SDIM)
-      INTEGER_T, intent(in) :: stencil_offset(SDIM)
-      REAL_T, intent(in) :: xtarget(SDIM)
-      REAL_T, intent(out) :: WT
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, INTENT(in) :: xsten_center(-nhalf:nhalf,SDIM)
+      INTEGER_T, INTENT(in) :: stencil_offset(SDIM)
+      REAL_T, INTENT(in) :: xtarget(SDIM)
+      REAL_T, INTENT(out) :: WT
       INTEGER_T :: WT_ok
       INTEGER_T :: dir
       REAL_T :: denom
@@ -11610,8 +11610,8 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      type(deriv_from_grid_parm_type), intent(in) :: data_in 
-      type(interp_from_grid_out_parm_type), intent(out) :: data_out
+      type(deriv_from_grid_parm_type), INTENT(in) :: data_in 
+      type(interp_from_grid_out_parm_type), INTENT(out) :: data_out
 
       INTEGER_T caller_id
       INTEGER_T dir_local
@@ -11967,8 +11967,8 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      type(single_deriv_from_grid_parm_type), intent(in) :: data_in 
-      type(interp_from_grid_out_parm_type), intent(out) :: data_out
+      type(single_deriv_from_grid_parm_type), INTENT(in) :: data_in 
+      type(interp_from_grid_out_parm_type), INTENT(out) :: data_out
 
       INTEGER_T caller_id
       INTEGER_T dir_local
@@ -12293,8 +12293,8 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
  
-      type(interp_from_grid_parm_type), intent(in) :: data_in 
-      type(interp_from_grid_out_parm_type), intent(out) :: data_out
+      type(interp_from_grid_parm_type), INTENT(in) :: data_in 
+      type(interp_from_grid_out_parm_type), INTENT(out) :: data_out
       REAL_T :: xsten(-3:3,SDIM)
       REAL_T :: xsten_center(-3:3,SDIM)
       INTEGER_T nhalf
@@ -12438,8 +12438,8 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
  
-      type(single_interp_from_grid_parm_type), intent(in) :: data_in 
-      type(interp_from_grid_out_parm_type), intent(out) :: data_out
+      type(single_interp_from_grid_parm_type), INTENT(in) :: data_in 
+      type(interp_from_grid_out_parm_type), INTENT(out) :: data_out
       REAL_T :: xsten(-3:3,SDIM)
       REAL_T :: xsten_center(-3:3,SDIM)
       INTEGER_T nhalf
@@ -12560,9 +12560,9 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: auxcomp
-      REAL_T, intent(in) :: x(3)
-      INTEGER_T, intent(out) :: cell_index(3)
+      INTEGER_T, INTENT(in) :: auxcomp
+      REAL_T, INTENT(in) :: x(3)
+      INTEGER_T, INTENT(out) :: cell_index(3)
 
       INTEGER_T dir
 
@@ -12586,9 +12586,9 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: auxcomp
-      REAL_T, intent(in) :: x(3)
-      REAL_T, intent(out) :: LS
+      INTEGER_T, INTENT(in) :: auxcomp
+      REAL_T, INTENT(in) :: x(3)
+      REAL_T, INTENT(out) :: LS
       INTEGER_T, dimension(3) :: cell_index
       INTEGER_T, dimension(3) :: cell_lo
       REAL_T :: local_dx
@@ -12658,11 +12658,11 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: caller_id
-      INTEGER_T, intent(in) :: ncomp
-      REAL_T, dimension(2,2,2,ncomp), intent(in) :: data_stencil
-      REAL_T, intent(in) :: wt_dist(3)
-      REAL_T, intent(out) :: data_interp(ncomp)
+      INTEGER_T, INTENT(in) :: caller_id
+      INTEGER_T, INTENT(in) :: ncomp
+      REAL_T, dimension(2,2,2,ncomp), INTENT(in) :: data_stencil
+      REAL_T, INTENT(in) :: wt_dist(3)
+      REAL_T, INTENT(out) :: data_interp(ncomp)
       INTEGER_T :: dir
       REAL_T :: c00,c01,c10,c11,c0,c1
 
@@ -12702,11 +12702,11 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: caller_id
-      INTEGER_T, intent(in) :: ncomp
-      REAL_T, dimension(D_DECL(2,2,2),ncomp), intent(in) :: data_stencil
-      REAL_T, intent(in) :: wt_dist(SDIM)
-      REAL_T, intent(out) :: data_interp(ncomp)
+      INTEGER_T, INTENT(in) :: caller_id
+      INTEGER_T, INTENT(in) :: ncomp
+      REAL_T, dimension(D_DECL(2,2,2),ncomp), INTENT(in) :: data_stencil
+      REAL_T, INTENT(in) :: wt_dist(SDIM)
+      REAL_T, INTENT(out) :: data_interp(ncomp)
       INTEGER_T :: dir
       REAL_T :: c00,c01,c10,c11,c0,c1
 
@@ -13031,24 +13031,24 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: datatype
-      REAL_T, intent(in) :: warning_cutoff
-      REAL_T, intent(in) :: critical_cutoff_low
-      REAL_T, intent(in) :: critical_cutoff_high
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: growlo(SDIM),growhi(SDIM)
+      INTEGER_T, INTENT(in) :: datatype
+      REAL_T, INTENT(in) :: warning_cutoff
+      REAL_T, INTENT(in) :: critical_cutoff_low
+      REAL_T, INTENT(in) :: critical_cutoff_high
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: growlo(SDIM),growhi(SDIM)
       INTEGER_T growlotest(3),growhitest(3)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: scomp,ncomp,ndefined
-      INTEGER_T, intent(in) :: ngrow
-      INTEGER_T, intent(in) :: dir
-      INTEGER_T, intent(in) :: id
-      INTEGER_T, intent(in) :: verbose
-      INTEGER_T, intent(in) :: force_check
-      INTEGER_T, intent(in) :: gridno,ngrid,level,finest_level
-      REAL_T, intent(in), pointer :: mf(D_DECL(:,:,:),:)
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: scomp,ncomp,ndefined
+      INTEGER_T, INTENT(in) :: ngrow
+      INTEGER_T, INTENT(in) :: dir
+      INTEGER_T, INTENT(in) :: id
+      INTEGER_T, INTENT(in) :: verbose
+      INTEGER_T, INTENT(in) :: force_check
+      INTEGER_T, INTENT(in) :: gridno,ngrid,level,finest_level
+      REAL_T, INTENT(in), pointer :: mf(D_DECL(:,:,:),:)
       INTEGER_T i,j,k,dir2
       INTEGER_T box_type(SDIM)
       INTEGER_T n
@@ -13347,8 +13347,8 @@ end subroutine print_visual_descriptor
       subroutine abs_array_index3(i,j,k,Ni,Nj,Nk,abs_index)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: i,j,k,Ni,Nj,Nk
-      INTEGER_T, intent(out) :: abs_index
+      INTEGER_T, INTENT(in) :: i,j,k,Ni,Nj,Nk
+      INTEGER_T, INTENT(out) :: abs_index
 
       if ((i.lt.1).or.(i.gt.Ni).or. &
           (j.lt.1).or.(j.gt.Nj).or. &
@@ -13366,12 +13366,12 @@ end subroutine print_visual_descriptor
        bfact,dx,xlo,lo,x,cell_index)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: lo(SDIM)
-      REAL_T, intent(in) :: x(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xlo(SDIM)
-      INTEGER_T, intent(out) :: cell_index(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: lo(SDIM)
+      REAL_T, INTENT(in) :: x(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      INTEGER_T, INTENT(out) :: cell_index(SDIM)
 
       INTEGER_T lo_e,i1,e_index,dir
       REAL_T xnodes(bfact+1)
@@ -13426,13 +13426,13 @@ end subroutine print_visual_descriptor
        bfact,dx,xlo,lo,x,dir_mac,mac_cell_index)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: dir_mac
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: lo(SDIM)
-      REAL_T, intent(in) :: x(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xlo(SDIM)
-      INTEGER_T, intent(out) :: mac_cell_index(SDIM)
+      INTEGER_T, INTENT(in) :: dir_mac
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: lo(SDIM)
+      REAL_T, INTENT(in) :: x(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      INTEGER_T, INTENT(out) :: mac_cell_index(SDIM)
 
       INTEGER_T lo_e,e_index
       INTEGER_T i1
@@ -13625,7 +13625,7 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       INTEGER_T CTML_FSI_mat
-      INTEGER_T, intent(in) :: im
+      INTEGER_T, INTENT(in) :: im
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid16"
@@ -13660,7 +13660,7 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
       INTEGER_T fort_FSI_flag_valid
-      INTEGER_T, intent(in) :: im
+      INTEGER_T, INTENT(in) :: im
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid16"
@@ -13683,7 +13683,7 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       INTEGER_T is_ice
-      INTEGER_T, intent(in) :: im
+      INTEGER_T, INTENT(in) :: im
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid16"
@@ -13715,7 +13715,7 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       INTEGER_T :: is_FSI_rigid
-      INTEGER_T, intent(in) :: im
+      INTEGER_T, INTENT(in) :: im
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid16"
@@ -13754,7 +13754,7 @@ end subroutine print_visual_descriptor
       function swap1_0(in_flag,control_flag)
       IMPLICIT NONE
       INTEGER_T :: swap1_0
-      INTEGER_T, intent(in) :: in_flag,control_flag
+      INTEGER_T, INTENT(in) :: in_flag,control_flag
 
       if (control_flag.eq.0) then
        swap1_0=in_flag
@@ -13783,9 +13783,9 @@ end subroutine print_visual_descriptor
 
       REAL_T :: get_face_damping_factor
 
-      INTEGER_T, intent(in) :: project_option
-      REAL_T, intent(in) :: face_vol(2*num_materials)
-      REAL_T, intent(in) :: dt
+      INTEGER_T, INTENT(in) :: project_option
+      REAL_T, INTENT(in) :: face_vol(2*num_materials)
+      REAL_T, INTENT(in) :: dt
       INTEGER_T :: im
       INTEGER_T :: iside
       INTEGER_T :: volcomp
@@ -13824,7 +13824,7 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       INTEGER_T :: is_damped_material
-      INTEGER_T, intent(in) :: im
+      INTEGER_T, INTENT(in) :: im
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid16"
@@ -13854,7 +13854,7 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       INTEGER_T is_lag_part
-      INTEGER_T, intent(in) :: im
+      INTEGER_T, INTENT(in) :: im
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid17 in is_lag_part: im=",im
@@ -13884,7 +13884,7 @@ end subroutine print_visual_descriptor
       function fort_read_from_CAD(fsi_flag_local) &
       bind(c,name='fort_read_from_CAD')
       IMPLICIT NONE
-      INTEGER_T, intent(in) :: fsi_flag_local
+      INTEGER_T, INTENT(in) :: fsi_flag_local
       INTEGER_T fort_read_from_CAD
 
       fort_read_from_CAD=0
@@ -13917,11 +13917,10 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: drag_comp
-      INTEGER_T, intent(out) :: drag_im
+      INTEGER_T, INTENT(in) :: drag_comp
+      INTEGER_T, INTENT(out) :: drag_im
       INTEGER_T fort_drag_IQ_type
       INTEGER_T drag_mod
-      INTEGER_T nten_test
 
       drag_im=-1
       fort_drag_IQ_type=-1
@@ -13933,15 +13932,6 @@ end subroutine print_visual_descriptor
        print *,"(1) compile with the -g option"
        print *,"(2) break GLOBALUTIL.F90:12838"
        print *,"expecting num_materials>=2 num_materials=",num_materials
-       stop
-      endif
-      nten_test=((num_materials-1)*(num_materials-1)+num_materials-1)/2
-      if (num_interfaces.eq.nten_test) then
-       ! do nothing
-      else
-       print *,"num_interfaces.ne.nten_test"
-       print *,"num_interfaces= ",num_interfaces
-       print *,"nten_test= ",nten_test
        stop
       endif
 
@@ -14195,11 +14185,10 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: drag_comp
-      INTEGER_T, intent(out) :: drag_im
+      INTEGER_T, INTENT(in) :: drag_comp
+      INTEGER_T, INTENT(out) :: drag_im
       INTEGER_T fort_drag_type
       INTEGER_T drag_mod
-      INTEGER_T nten_test
 
       drag_im=-1
       fort_drag_type=-1
@@ -14211,15 +14200,6 @@ end subroutine print_visual_descriptor
        print *,"(1) compile with the -g option"
        print *,"(2) break GLOBALUTIL.F90:12838"
        print *,"expecting num_materials>=2 num_materials=",num_materials
-       stop
-      endif
-      nten_test=((num_materials-1)*(num_materials-1)+num_materials-1)/2
-      if (num_interfaces.eq.nten_test) then
-       ! do nothing
-      else
-       print *,"num_interfaces.ne.nten_test"
-       print *,"num_interfaces= ",num_interfaces
-       print *,"nten_test= ",nten_test
        stop
       endif
 
@@ -14413,8 +14393,8 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       INTEGER_T fort_is_rigid_base
-      INTEGER_T, intent(in) :: FSI_flag_local
-      INTEGER_T, intent(in) :: im
+      INTEGER_T, INTENT(in) :: FSI_flag_local
+      INTEGER_T, INTENT(in) :: im
       INTEGER_T dummy_input
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
@@ -14458,7 +14438,7 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       INTEGER_T is_rigid
-      INTEGER_T, intent(in) :: im
+      INTEGER_T, INTENT(in) :: im
       INTEGER_T dummy_input
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
@@ -14488,8 +14468,8 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       INTEGER_T fort_built_in_elastic_model
-      REAL_T, intent(in) :: elastic_visc_in
-      INTEGER_T, intent(in) :: viscoelastic_model_in
+      REAL_T, INTENT(in) :: elastic_visc_in
+      INTEGER_T, INTENT(in) :: viscoelastic_model_in
 
       if (elastic_visc_in.gt.zero) then
        if ((viscoelastic_model_in.eq.0).or. & ! FENE-CR
@@ -14522,7 +14502,7 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       INTEGER_T is_prescribed
-      INTEGER_T, intent(in) :: im
+      INTEGER_T, INTENT(in) :: im
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid18"
@@ -14615,10 +14595,10 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      REAL_T, intent(out) :: solid_dist
-      REAL_T, intent(in) :: LS(num_materials)
+      REAL_T, INTENT(out) :: solid_dist
+      REAL_T, INTENT(in) :: LS(num_materials)
       INTEGER_T im
-      INTEGER_T, intent(out) :: im_solid_primary
+      INTEGER_T, INTENT(out) :: im_solid_primary
 
       solid_dist=-99999.0
       im_solid_primary=0
@@ -14659,8 +14639,8 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      REAL_T, intent(out) :: solid_vof
-      REAL_T, intent(in) :: VOF(num_materials)
+      REAL_T, INTENT(out) :: solid_vof
+      REAL_T, INTENT(in) :: VOF(num_materials)
       INTEGER_T im
 
       solid_vof=zero
@@ -14684,9 +14664,9 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      REAL_T, intent(out) :: solid_vof
-      REAL_T, intent(in) :: VOF(num_materials)
-      INTEGER_T, intent(out) :: im_prescribed_primary
+      REAL_T, INTENT(out) :: solid_vof
+      REAL_T, INTENT(in) :: VOF(num_materials)
+      INTEGER_T, INTENT(out) :: im_prescribed_primary
       INTEGER_T im
 
       solid_vof=zero
@@ -14792,7 +14772,7 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: im
+      INTEGER_T, INTENT(in) :: im
    
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid19"
@@ -14816,9 +14796,9 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: iten
-      REAL_T, intent(in) :: LS(num_materials)
-      REAL_T, intent(out) :: LS_extend
+      INTEGER_T, INTENT(in) :: iten
+      REAL_T, INTENT(in) :: LS(num_materials)
+      REAL_T, INTENT(out) :: LS_extend
       INTEGER_T im,im_opp
 
       call get_inverse_iten(im,im_opp,iten)
@@ -14844,10 +14824,10 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: iten
-      REAL_T, intent(in) :: LS(num_materials)
-      REAL_T, intent(in) :: NRM(num_materials*SDIM)
-      REAL_T, intent(out) :: NRM_extend(SDIM)
+      INTEGER_T, INTENT(in) :: iten
+      REAL_T, INTENT(in) :: LS(num_materials)
+      REAL_T, INTENT(in) :: NRM(num_materials*SDIM)
+      REAL_T, INTENT(out) :: NRM_extend(SDIM)
       INTEGER_T im,im_opp,dir
 
       call get_inverse_iten(im,im_opp,iten)
@@ -14882,9 +14862,9 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: iten
-      REAL_T, intent(in) :: VOF(num_materials)
-      REAL_T, intent(out) :: VOF_extend
+      INTEGER_T, INTENT(in) :: iten
+      REAL_T, INTENT(in) :: VOF(num_materials)
+      REAL_T, INTENT(out) :: VOF_extend
       INTEGER_T im,im_opp
 
       call get_inverse_iten(im,im_opp,iten)
@@ -14959,14 +14939,14 @@ end subroutine print_visual_descriptor
       REAL_T t2_tilde(3)
       REAL_T t1_I(3)
       REAL_T t2_I(3)
-      REAL_T, intent(in) :: x2_I_test(3)
-      REAL_T, intent(in) :: x3_I_test(3)
+      REAL_T, INTENT(in) :: x2_I_test(3)
+      REAL_T, INTENT(in) :: x3_I_test(3)
       REAL_T x2_I(3)
       REAL_T x3_I(3)
       REAL_T y(4,3) ! y(j,dir)  j=1..4 dir=1..3
       REAL_T basis_vec(3,3) ! basis_vec(k,dir) k=1..3 dir=1..3
        ! T2I,T3I,TminusI,TplusI
-      REAL_T, intent(in) :: Tdata(4) ! Tdata(j) j=1..4
+      REAL_T, INTENT(in) :: Tdata(4) ! Tdata(j) j=1..4
        ! T_{-}+((T_{+}-T_{-})/mag_ntilde)((y_{j}-x_{-}) dot ntilde)
       REAL_T Tstar(4) ! Tstar(j) j=1..4 
       REAL_T wt_epsilon
@@ -15239,10 +15219,10 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: x,y,z,time
-      REAL_T, intent(in) :: ptb_dist_low,ptb_dist_high
-      INTEGER_T, intent(in) :: im_substrate
-      REAL_T, intent(out) :: dist
+      REAL_T, INTENT(in) :: x,y,z,time
+      REAL_T, INTENT(in) :: ptb_dist_low,ptb_dist_high
+      INTEGER_T, INTENT(in) :: im_substrate
+      REAL_T, INTENT(out) :: dist
       REAL_T :: xprime
       REAL_T :: yprime
       REAL_T :: zprime
@@ -15432,9 +15412,9 @@ end subroutine print_visual_descriptor
       subroutine cylinderdist(x,y,z,xcen,ycen,rad,zmin,zmax,dist)
       IMPLICIT NONE
     
-      REAL_T, intent(in) :: x,y,z,xcen,ycen,rad
-      REAL_T, intent(out) :: dist
-      REAL_T, intent(in) :: zmin,zmax
+      REAL_T, INTENT(in) :: x,y,z,xcen,ycen,rad
+      REAL_T, INTENT(out) :: dist
+      REAL_T, INTENT(in) :: zmin,zmax
 
       if (zmin.ge.zmax-1.0E-10) then 
        print *,"invalid parameters ",zmin,zmax
@@ -15463,8 +15443,8 @@ end subroutine print_visual_descriptor
       subroutine squaredist(x,y,xlo,xhi,ylo,yhi,dist)
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: x,y,xlo,xhi,ylo,yhi
-      REAL_T, intent(out) :: dist
+      REAL_T, INTENT(in) :: x,y,xlo,xhi,ylo,yhi
+      REAL_T, INTENT(out) :: dist
       REAL_T dist1
       REAL_T xmid,ymid
  
@@ -15526,9 +15506,9 @@ end subroutine print_visual_descriptor
       subroutine cubedist(xmin,xmax,ymin,ymax,zmin,zmax,x,y,z,dist)
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: xmin,xmax,ymin,ymax,zmin,zmax
-      REAL_T, intent(in) :: x,y,z
-      REAL_T, intent(out) :: dist
+      REAL_T, INTENT(in) :: xmin,xmax,ymin,ymax,zmin,zmax
+      REAL_T, INTENT(in) :: x,y,z
+      REAL_T, INTENT(out) :: dist
       REAL_T xcen,ycen,zcen,xrad,yrad,zrad
       REAL_T xdist,ydist,zdist
 
@@ -15584,8 +15564,8 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: plot_sdim
-      INTEGER_T, intent(in) :: add_sub_cells
+      INTEGER_T, INTENT(in) :: plot_sdim
+      INTEGER_T, INTENT(in) :: add_sub_cells
       character*80 Varname
       character*2 specstr
       character*2 matstr
@@ -16117,8 +16097,8 @@ end subroutine print_visual_descriptor
       subroutine dumpstring_headers_sanity(plot_sdim,ncomp)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: plot_sdim
-      INTEGER_T, intent(in) :: ncomp
+      INTEGER_T, INTENT(in) :: plot_sdim
+      INTEGER_T, INTENT(in) :: ncomp
       character*80 Varname
       character*3 matstr
       INTEGER_T ih,im,i
@@ -16190,29 +16170,29 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: n_root
-      character, dimension(n_root), intent(in) :: root_char_array
-      INTEGER_T, intent(in) :: data_dir
-      INTEGER_T, intent(in) :: plot_sdim
+      INTEGER_T, INTENT(in) :: n_root
+      character, dimension(n_root), INTENT(in) :: root_char_array
+      INTEGER_T, INTENT(in) :: data_dir
+      INTEGER_T, INTENT(in) :: plot_sdim
       INTEGER_T :: plot_sdim_macro
       INTEGER_T klo_plot,khi_plot
 
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: total_number_grids
-      INTEGER_T, intent(in) :: num_levels
-      INTEGER_T, intent(in) :: grids_per_level_array(num_levels)
-      INTEGER_T, intent(in) :: levels_array(total_number_grids)
-      INTEGER_T, intent(in) :: bfact_array(total_number_grids)
-      INTEGER_T, intent(in) :: gridno_array(total_number_grids)
-      INTEGER_T, intent(in) :: gridlo_array(total_number_grids*SDIM)
-      INTEGER_T, intent(in) :: gridhi_array(total_number_grids*SDIM)
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: SDC_outer_sweeps
-      INTEGER_T, intent(in) :: slab_step
-      INTEGER_T, intent(in) :: data_id
-      INTEGER_T, intent(in) :: nsteps
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: visual_revolve
+      INTEGER_T, INTENT(in) :: ncomp
+      INTEGER_T, INTENT(in) :: total_number_grids
+      INTEGER_T, INTENT(in) :: num_levels
+      INTEGER_T, INTENT(in) :: grids_per_level_array(num_levels)
+      INTEGER_T, INTENT(in) :: levels_array(total_number_grids)
+      INTEGER_T, INTENT(in) :: bfact_array(total_number_grids)
+      INTEGER_T, INTENT(in) :: gridno_array(total_number_grids)
+      INTEGER_T, INTENT(in) :: gridlo_array(total_number_grids*SDIM)
+      INTEGER_T, INTENT(in) :: gridhi_array(total_number_grids*SDIM)
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: SDC_outer_sweeps
+      INTEGER_T, INTENT(in) :: slab_step
+      INTEGER_T, INTENT(in) :: data_id
+      INTEGER_T, INTENT(in) :: nsteps
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: visual_revolve
 
       INTEGER_T strandid
 
@@ -16985,9 +16965,9 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: local_plus,local_minus
-      REAL_T, intent(in) :: wt_plus,wt_minus
-      REAL_T, intent(out) :: coeff
+      REAL_T, INTENT(in) :: local_plus,local_minus
+      REAL_T, INTENT(in) :: wt_plus,wt_minus
+      REAL_T, INTENT(out) :: coeff
 
       if ((wt_plus.ge.zero).and.(wt_minus.ge.zero).and. &
           (abs(wt_plus+wt_minus-one).le.VOFTOL)) then
@@ -17143,7 +17123,7 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: im
+      INTEGER_T, INTENT(in) :: im
       INTEGER_T :: ibase,stage
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
@@ -17196,9 +17176,9 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, value, intent(in) :: iten
-      REAL_T, value, intent(in) :: temperature
-      INTEGER_T, value, intent(in) :: default_flag
+      INTEGER_T, value, INTENT(in) :: iten
+      REAL_T, value, INTENT(in) :: temperature
+      INTEGER_T, value, INTENT(in) :: default_flag
       REAL_T new_latent_heat
       REAL_T sign_latent_heat
 
@@ -17275,12 +17255,12 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: caller_id 
-      REAL_T, intent(in) :: xpos(SDIM)
-      REAL_T, intent(in) :: time
-      REAL_T, intent(in) :: temperature(num_materials)
-      REAL_T, intent(in) :: tension(num_interfaces)
-      REAL_T, intent(out) :: new_tension(num_interfaces)
+      INTEGER_T, INTENT(in) :: caller_id 
+      REAL_T, INTENT(in) :: xpos(SDIM)
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(in) :: temperature(num_materials)
+      REAL_T, INTENT(in) :: tension(num_interfaces)
+      REAL_T, INTENT(out) :: new_tension(num_interfaces)
       REAL_T avgtemp
       INTEGER_T iten,im,im_opp,ibase,stage
 
@@ -17380,11 +17360,11 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: imattype
-      INTEGER_T, intent(in) :: im
-      REAL_T, intent(in) :: rho
-      REAL_T, intent(out) :: temperature
-      REAL_T, intent(in) :: internal_energy
+      INTEGER_T, INTENT(in) :: imattype
+      INTEGER_T, INTENT(in) :: im
+      REAL_T, INTENT(in) :: rho
+      REAL_T, INTENT(out) :: temperature
+      REAL_T, INTENT(in) :: internal_energy
       REAL_T cv
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
@@ -17422,10 +17402,10 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: imattype,im
-      REAL_T, intent(in) :: rho
-      REAL_T, intent(in) :: temperature
-      REAL_T, intent(out) :: internal_energy
+      INTEGER_T, INTENT(in) :: imattype,im
+      REAL_T, INTENT(in) :: rho
+      REAL_T, INTENT(in) :: temperature
+      REAL_T, INTENT(out) :: internal_energy
       REAL_T cv
 
 
@@ -17474,8 +17454,8 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
       
-      REAL_T, intent(in) :: x,y,z
-      REAL_T, intent(out) :: dist
+      REAL_T, INTENT(in) :: x,y,z
+      REAL_T, INTENT(out) :: dist
       REAL_T aspect,yprime,zprime,aspect2
 
       if (SDIM.eq.2) then
@@ -17509,11 +17489,11 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: x_point(SDIM)
-      REAL_T, intent(out) :: dist
+      REAL_T, INTENT(in) :: x_point(SDIM)
+      REAL_T, INTENT(out) :: dist
       INTEGER_T icomp
       REAL_T distarr(n_sites)
-      REAL_T, intent(in) :: nucleate_pos(4*n_sites)
+      REAL_T, INTENT(in) :: nucleate_pos(4*n_sites)
       REAL_T hugedist
       REAL_T xx(SDIM)
       REAL_T rr
@@ -20001,7 +19981,7 @@ end subroutine print_visual_descriptor
       subroutine air_parms(R,cp,cv,gamma_constant,omega)
       use probcommon_module
       IMPLICIT NONE
-      REAL_T, intent(out) :: R,cp,cv,gamma_constant,omega
+      REAL_T, INTENT(out) :: R,cp,cv,gamma_constant,omega
 
        ! PARAMETERS declared in PROBCOMMON.F90
       R=R_AIR_PARMS  ! ergs/(Kelvin g)
@@ -20023,10 +20003,10 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: xpos(SDIM)
-      REAL_T, intent(inout) :: rho
-      REAL_T, intent(inout) :: pres
-      INTEGER_T, intent(in) :: from_boundary_hydrostatic
+      REAL_T, INTENT(in) :: xpos(SDIM)
+      REAL_T, INTENT(inout) :: rho
+      REAL_T, INTENT(inout) :: pres
+      INTEGER_T, INTENT(in) :: from_boundary_hydrostatic
       REAL_T denfree,zfree
       REAL_T z_at_depth
 
@@ -21828,9 +21808,9 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: den
-      REAL_T, intent(out) :: massfrac_parm(num_species_var+1)
-      INTEGER_T, intent(in) :: im
+      REAL_T, INTENT(in) :: den
+      REAL_T, INTENT(out) :: massfrac_parm(num_species_var+1)
+      INTEGER_T, INTENT(in) :: im
       INTEGER_T :: ispec,var_comp
 
       if (num_species_var.eq.0) then
@@ -21855,10 +21835,10 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: imattype,im
-      REAL_T, intent(in) :: rho,internal_energy
-      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
-      REAL_T, intent(inout) :: pressure
+      INTEGER_T, INTENT(in) :: imattype,im
+      REAL_T, INTENT(in) :: rho,internal_energy
+      REAL_T, INTENT(in) :: massfrac_var(num_species_var+1)
+      REAL_T, INTENT(inout) :: pressure
       REAL_T :: T
 
       if (rho.le.zero) then
@@ -21930,10 +21910,10 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: imattype,im
-      REAL_T, intent(in) :: pressure,temperature
-      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
-      REAL_T, intent(out) :: dVdT
+      INTEGER_T, INTENT(in) :: imattype,im
+      REAL_T, INTENT(in) :: pressure,temperature
+      REAL_T, INTENT(in) :: massfrac_var(num_species_var+1)
+      REAL_T, INTENT(out) :: dVdT
 
 
       if (pressure.gt.zero) then
@@ -21995,10 +21975,10 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: imattype,im
-      REAL_T, intent(in) :: rho,internal_energy
-      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
-      REAL_T, intent(out) :: soundsqr
+      INTEGER_T, INTENT(in) :: imattype,im
+      REAL_T, INTENT(in) :: rho,internal_energy
+      REAL_T, INTENT(in) :: massfrac_var(num_species_var+1)
+      REAL_T, INTENT(out) :: soundsqr
 
 
       if (rho.le.zero) then
@@ -22073,10 +22053,10 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: imattype,im
-      REAL_T, intent(in) :: rho,temperature
-      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
-      REAL_T, intent(out) :: internal_energy
+      INTEGER_T, INTENT(in) :: imattype,im
+      REAL_T, INTENT(in) :: rho,temperature
+      REAL_T, INTENT(in) :: massfrac_var(num_species_var+1)
+      REAL_T, INTENT(out) :: internal_energy
       REAL_T local_internal_energy
 
       if (rho.gt.zero) then
@@ -22159,10 +22139,10 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: imattype,im
-      REAL_T, intent(in) :: rho,internal_energy
-      REAL_T, intent(in) :: massfrac_var(num_species_var+1)
-      REAL_T, intent(out) :: temperature
+      INTEGER_T, INTENT(in) :: imattype,im
+      REAL_T, INTENT(in) :: rho,internal_energy
+      REAL_T, INTENT(in) :: massfrac_var(num_species_var+1)
+      REAL_T, INTENT(out) :: temperature
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid71"
@@ -22257,8 +22237,8 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: time
-      REAL_T, intent(out) :: vel
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(out) :: vel
       REAL_T :: tcutoff
 
       if ((SDIM.eq.2).and. &
@@ -22291,8 +22271,8 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: time
-      REAL_T, intent(out) :: xx_vel,yy_vel,zz_vel
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(out) :: xx_vel,yy_vel,zz_vel
 
       xx_vel=zero 
       yy_vel=zero 
@@ -22482,9 +22462,9 @@ subroutine drop_slope_dist(x,y,z,time, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: x,y,z,time
-REAL_T, intent(out) :: dist,dist_truncate
-REAL_T, intent(in) :: maxtall
+REAL_T, INTENT(in) :: x,y,z,time
+REAL_T, INTENT(out) :: dist,dist_truncate
+REAL_T, INTENT(in) :: maxtall
 INTEGER_T im,im_opp,im_3,iten_13,iten_23,imloop
 INTEGER_T iten
 REAL_T cos_angle,sin_angle
@@ -22716,8 +22696,8 @@ end subroutine drop_slope_dist
 subroutine volfrac_from_massfrac(X,Y,WA,WV)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: Y,WA,WV
-REAL_T, intent(out) :: X
+REAL_T, INTENT(in) :: Y,WA,WV
+REAL_T, INTENT(out) :: X
 
 if ((Y.ge.zero).and.(Y.le.one)) then
  if ((WA.gt.zero).and.(WV.gt.zero)) then
@@ -22743,15 +22723,15 @@ subroutine MDOT_Kassemi(sigma,MolarMassFluid,R,Pgamma, &
   Tvapor_probe,MDOT)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: sigma
-REAL_T, intent(in) :: MolarMassFluid
-REAL_T, intent(in) :: R
-REAL_T, intent(in) :: Pgamma
-REAL_T, intent(in) :: Pvapor_probe
-INTEGER_T, intent(in) :: probe_ok_gradient
-REAL_T, intent(in) :: Tgamma
-REAL_T, intent(in) :: Tvapor_probe
-REAL_T, intent(out) :: MDOT
+REAL_T, INTENT(in) :: sigma
+REAL_T, INTENT(in) :: MolarMassFluid
+REAL_T, INTENT(in) :: R
+REAL_T, INTENT(in) :: Pgamma
+REAL_T, INTENT(in) :: Pvapor_probe
+INTEGER_T, INTENT(in) :: probe_ok_gradient
+REAL_T, INTENT(in) :: Tgamma
+REAL_T, INTENT(in) :: Tvapor_probe
+REAL_T, INTENT(out) :: MDOT
 
 if ((sigma.ge.zero).and.(sigma.lt.two).and. &
     (MolarMassFluid.gt.zero).and. &
@@ -22794,8 +22774,8 @@ end subroutine MDOT_Kassemi
 subroutine Pgamma_Clausius_Clapyron(Pgamma,PSAT,Tgamma,TSAT,L,R,WV)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: PSAT,Tgamma,TSAT,L,R,WV
-REAL_T, intent(out) :: Pgamma
+REAL_T, INTENT(in) :: PSAT,Tgamma,TSAT,L,R,WV
+REAL_T, INTENT(out) :: Pgamma
 
 if ((Tgamma.gt.zero).and.(TSAT.gt.zero)) then
  if (PSAT.gt.zero) then
@@ -22837,8 +22817,8 @@ subroutine X_from_Tgamma(X,Tgamma,TSAT, &
   L,R,WV)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: Tgamma,TSAT,L,R,WV
-REAL_T, intent(out) :: X
+REAL_T, INTENT(in) :: Tgamma,TSAT,L,R,WV
+REAL_T, INTENT(out) :: X
 
 if ((Tgamma.gt.zero).and.(TSAT.gt.zero)) then
  if (R.gt.zero) then
@@ -22890,8 +22870,8 @@ subroutine XMIN_from_TSAT(X,TSAT, &
   L,R,WV)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: TSAT,L,R,WV
-REAL_T, intent(out) :: X
+REAL_T, INTENT(in) :: TSAT,L,R,WV
+REAL_T, INTENT(out) :: X
 
 if (TSAT.gt.zero) then
  if (R.gt.zero) then
@@ -22940,8 +22920,8 @@ subroutine Tgamma_from_TSAT_and_X(Tgamma,TSAT, &
   X,L,R,WV,Tgamma_min,Tgamma_max)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: TSAT,X,L,R,WV,Tgamma_min,Tgamma_max
-REAL_T, intent(out) :: Tgamma
+REAL_T, INTENT(in) :: TSAT,X,L,R,WV,Tgamma_min,Tgamma_max
+REAL_T, INTENT(out) :: Tgamma
 
 if ((X.ge.zero).and.(X.le.one)) then
  if (TSAT.gt.zero) then
@@ -23015,8 +22995,8 @@ end subroutine Tgamma_from_TSAT_and_X
 subroutine massfrac_from_volfrac(X,Y,WA,WV)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: X,WA,WV
-REAL_T, intent(out) :: Y
+REAL_T, INTENT(in) :: X,WA,WV
+REAL_T, INTENT(out) :: Y
 
 if ((X.ge.zero).and.(X.le.one)) then
  if ((WA.gt.zero).and.(WV.gt.zero)) then
@@ -23042,12 +23022,12 @@ subroutine EOS_material(rho,massfrac_parm, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: imattype,im
-REAL_T, intent(in) :: rho
-REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
+INTEGER_T, INTENT(in) :: imattype,im
+REAL_T, INTENT(in) :: rho
+REAL_T, INTENT(in) :: massfrac_parm(num_species_var+1)
 REAL_T :: internal_energy
-REAL_T, intent(out) :: pressure
-REAL_T, intent(in) :: internal_energy_in
+REAL_T, INTENT(out) :: pressure
+REAL_T, INTENT(in) :: internal_energy_in
 INTEGER_T :: ispec
 
 
@@ -23102,10 +23082,10 @@ subroutine dVdT_material(dVdT,massfrac_parm, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: imattype,im
-REAL_T, intent(in) :: pressure_in,temperature
-REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
-REAL_T, intent(out) :: dVdT
+INTEGER_T, INTENT(in) :: imattype,im
+REAL_T, INTENT(in) :: pressure_in,temperature
+REAL_T, INTENT(in) :: massfrac_parm(num_species_var+1)
+REAL_T, INTENT(out) :: dVdT
 REAL_T :: pressure
 INTEGER_T :: ispec
 
@@ -23172,10 +23152,10 @@ subroutine DeDT_material(rho,massfrac_parm, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: imattype,im
-REAL_T, intent(in) :: rho,temperature
-REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
-REAL_T, intent(out) :: DeDT
+INTEGER_T, INTENT(in) :: imattype,im
+REAL_T, INTENT(in) :: rho,temperature
+REAL_T, INTENT(in) :: massfrac_parm(num_species_var+1)
+REAL_T, INTENT(out) :: DeDT
 REAL_T :: DT,T2,e1,e2
 
 
@@ -23231,12 +23211,12 @@ subroutine SOUNDSQR_material(rho,massfrac_parm, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: imattype,im
-REAL_T, intent(in) :: rho
-REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
+INTEGER_T, INTENT(in) :: imattype,im
+REAL_T, INTENT(in) :: rho
+REAL_T, INTENT(in) :: massfrac_parm(num_species_var+1)
 REAL_T :: internal_energy
-REAL_T, intent(out) :: soundsqr
-REAL_T, intent(in) :: internal_energy_in
+REAL_T, INTENT(out) :: soundsqr
+REAL_T, INTENT(in) :: internal_energy_in
 INTEGER_T :: ispec
 
 
@@ -23285,9 +23265,9 @@ subroutine INTERNAL_material_cutoff(rho,internal_energy, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: imattype,im
-REAL_T, intent(in) :: rho
-REAL_T, intent(out) :: internal_energy
+INTEGER_T, INTENT(in) :: imattype,im
+REAL_T, INTENT(in) :: rho
+REAL_T, INTENT(out) :: internal_energy
 REAL_T :: massfrac_parm(num_species_var+1)
 
 
@@ -23319,10 +23299,10 @@ subroutine INTERNAL_material(rho,massfrac_parm, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: imattype,im
-REAL_T, intent(in) :: rho,temperature
-REAL_T, intent(in) :: massfrac_parm(num_species_var+1)
-REAL_T, intent(out) :: internal_energy
+INTEGER_T, INTENT(in) :: imattype,im
+REAL_T, INTENT(in) :: rho,temperature
+REAL_T, INTENT(in) :: massfrac_parm(num_species_var+1)
+REAL_T, INTENT(out) :: internal_energy
 REAL_T local_internal_energy  ! this is an output
 
 if (rho.gt.zero) then
@@ -23837,8 +23817,8 @@ end subroutine local_shallow_water_velocity
 subroutine triangledist(x,y,xlo,xhi,ylo,yhi,dist)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: x,y,xlo,xhi,ylo,yhi
-REAL_T, intent(out) :: dist
+REAL_T, INTENT(in) :: x,y,xlo,xhi,ylo,yhi
+REAL_T, INTENT(out) :: dist
 REAL_T dist1,dist2,dist3
 REAL_T m,b
 
@@ -23866,8 +23846,8 @@ end subroutine triangledist
 subroutine polygondist(x,y,xlo,xhi,ylo,yhi,xwid,ywid,dist)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: x,y,xlo,xhi,ylo,yhi,xwid,ywid
-REAL_T, intent(out) :: dist
+REAL_T, INTENT(in) :: x,y,xlo,xhi,ylo,yhi,xwid,ywid
+REAL_T, INTENT(out) :: dist
 REAL_T :: dist1,dist2,dist3
 REAL_T dist4,dist5
 REAL_T m,b
@@ -23903,8 +23883,8 @@ end subroutine polygondist
 subroutine zalesakdist(dist,xx,yy)
 use probcommon_module
 IMPLICIT NONE
-REAL_T, intent(in) :: xx,yy
-REAL_T, intent(out) :: dist
+REAL_T, INTENT(in) :: xx,yy
+REAL_T, INTENT(out) :: dist
 REAL_T x,y
 REAL_T dist1,dist2
 
@@ -24167,8 +24147,8 @@ END SUBROUTINE Adist
 ! Cervone et al 2009, page 416
 subroutine deformdist(dist,x,y)
 IMPLICIT NONE
-REAL_T, intent(in) :: x,y
-REAL_T, intent(out) :: dist
+REAL_T, INTENT(in) :: x,y
+REAL_T, INTENT(out) :: dist
 
 dist=sqrt( (x-half)**2 + (y-0.75d0)**2 )-0.15d0
 
@@ -24178,8 +24158,8 @@ end subroutine deformdist
 subroutine streamdeform3D(s,x,y,z)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: x,y,z
-REAL_T, intent(out) :: s
+REAL_T, INTENT(in) :: x,y,z
+REAL_T, INTENT(out) :: s
 REAL_T :: sx,sy,sz
 
 sx=sin(Pi*x)
@@ -24193,9 +24173,9 @@ end subroutine streamdeform3D
 
 subroutine deform3duu(u,x,y,z,t,dx)
 IMPLICIT NONE
-REAL_T, intent(in) ::  x,y,z,t
-REAL_T, intent(out) ::  u
-REAL_T, intent(in) :: dx(SDIM)
+REAL_T, INTENT(in) ::  x,y,z,t
+REAL_T, INTENT(out) ::  u
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T aa
 
 
@@ -24207,9 +24187,9 @@ end subroutine deform3duu
 
 subroutine deform3dvv(u,x,y,z,t,dx)
 IMPLICIT NONE
-REAL_T, intent(in) ::  x,y,z,t
-REAL_T, intent(out) ::  u
-REAL_T, intent(in) :: dx(SDIM)
+REAL_T, INTENT(in) ::  x,y,z,t
+REAL_T, INTENT(out) ::  u
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T aa
 
 
@@ -24221,9 +24201,9 @@ end subroutine deform3dvv
 
 subroutine deform3dww(u,x,y,z,t,dx)
 IMPLICIT NONE
-REAL_T, intent(in) ::  x,y,z,t
-REAL_T, intent(out) ::  u
-REAL_T, intent(in) :: dx(SDIM)
+REAL_T, INTENT(in) ::  x,y,z,t
+REAL_T, INTENT(out) ::  u
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T aa
 
 
@@ -24247,8 +24227,8 @@ end subroutine deform3dww
 subroutine streamdeform(s,x,y)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: x,y
-REAL_T, intent(out) :: s
+REAL_T, INTENT(in) :: x,y
+REAL_T, INTENT(out) :: s
 REAL_T sx,sy
 
 sx=sin(Pi*x)
@@ -24261,9 +24241,9 @@ end subroutine streamdeform
 subroutine deformuu(u,x,y,t,dx)
 use probcommon_module
 IMPLICIT NONE
-REAL_T, intent(in) :: x,y,t
-REAL_T, intent(out) :: u
-REAL_T, intent(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: x,y,t
+REAL_T, INTENT(out) :: u
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T aa,s1,s2,s3,s4
 REAL_T x1,x2,y1,y2
 
@@ -24336,9 +24316,9 @@ end subroutine deformuu
 subroutine deformvv(v,x,y,t,dx)
 use probcommon_module
 IMPLICIT NONE
-REAL_T, intent(in) :: x,y,t
-REAL_T, intent(out) :: v
-REAL_T, intent(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: x,y,t
+REAL_T, INTENT(out) :: v
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T aa,s1,s2,s3,s4
 REAL_T x1,x2,y1,y2
 
@@ -24411,9 +24391,9 @@ end subroutine deformvv
 subroutine zalesakuu(u,x,y,z,time,dx)
 use probcommon_module
 IMPLICIT NONE
-REAL_T, intent(in) :: x,y,z,time
-REAL_T, intent(out) :: u
-REAL_T, intent(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: x,y,z,time
+REAL_T, INTENT(out) :: u
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (probtype.ne.28) then
  print *,"probtype invalid"
@@ -24450,9 +24430,9 @@ end subroutine zalesakuu
 subroutine zalesakvv(v,x,y,z,time,dx)
 use probcommon_module
 IMPLICIT NONE
-REAL_T, intent(in) :: x,y,z,time
-REAL_T, intent(out) :: v
-REAL_T, intent(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: x,y,z,time
+REAL_T, INTENT(out) :: v
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (probtype.ne.28) then
  print *,"probtype invalid"
@@ -24490,9 +24470,9 @@ end subroutine zalesakvv
 subroutine zalesakww(w,x,y,z,time,dx)
 use probcommon_module
 IMPLICIT NONE
-REAL_T, intent(in) :: x,y,z,time
-REAL_T, intent(out) :: w
-REAL_T, intent(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: x,y,z,time
+REAL_T, INTENT(out) :: w
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (probtype.ne.28) then
  print *,"probtype invalid"
@@ -24527,8 +24507,8 @@ end subroutine zalesakww
 subroutine circleuu(u,x,y,z)
 use probcommon_module
 IMPLICIT NONE
-REAL_T, intent(in) :: x,y,z
-REAL_T, intent(out) :: u
+REAL_T, INTENT(in) :: x,y,z
+REAL_T, INTENT(out) :: u
 
 u=zero
 if (adv_dir .eq. 1) then
@@ -24547,8 +24527,8 @@ end subroutine circleuu
 subroutine circlevv(v,x,y,z)
 use probcommon_module
 IMPLICIT NONE
-REAL_T, intent(in) :: x,y,z
-REAL_T, intent(out) :: v
+REAL_T, INTENT(in) :: x,y,z
+REAL_T, INTENT(out) :: v
 
 v=zero
 if (adv_dir .eq. 2) then
@@ -24567,8 +24547,8 @@ end subroutine circlevv
 subroutine circleww(w,x,y,z)
 use probcommon_module
 IMPLICIT NONE
-REAL_T, intent(in) :: x,y,z
-REAL_T, intent(out) :: w
+REAL_T, INTENT(in) :: x,y,z
+REAL_T, INTENT(out) :: w
 
 if (SDIM.ne.3) then
  print *,"dimension bust circleww"
@@ -24615,35 +24595,35 @@ subroutine point_updatetensor( &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: i,j,k
-INTEGER_T, intent(in) :: level
-INTEGER_T, intent(in) :: finest_level
-INTEGER_T, intent(in) :: im_critical
-INTEGER_T, intent(in) :: ncomp_visc
-INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
-INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
-INTEGER_T, intent(in) :: bfact
-REAL_T, intent(in) :: dx(SDIM),xlo(SDIM)
+INTEGER_T, INTENT(in) :: i,j,k
+INTEGER_T, INTENT(in) :: level
+INTEGER_T, INTENT(in) :: finest_level
+INTEGER_T, INTENT(in) :: im_critical
+INTEGER_T, INTENT(in) :: ncomp_visc
+INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
+INTEGER_T, INTENT(in) :: bfact
+REAL_T, INTENT(in) :: dx(SDIM),xlo(SDIM)
 
-REAL_T, intent(in), pointer :: visc(D_DECL(:,:,:),:)
+REAL_T, INTENT(in), pointer :: visc(D_DECL(:,:,:),:)
 
  ! D=(1/2)(gradU + gradU^Transpose)
  ! 1: sqrt(2 * D : D)
  ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
  ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
-REAL_T, intent(in), pointer :: tendata(D_DECL(:,:,:),:)
-REAL_T, intent(in), pointer :: vel(D_DECL(:,:,:),:)
+REAL_T, INTENT(in), pointer :: tendata(D_DECL(:,:,:),:)
+REAL_T, INTENT(in), pointer :: vel(D_DECL(:,:,:),:)
 
-REAL_T, intent(out) :: tnew(ENUM_NUM_TENSOR_TYPE)
-REAL_T, intent(in) :: told(ENUM_NUM_TENSOR_TYPE)
+REAL_T, INTENT(out) :: tnew(ENUM_NUM_TENSOR_TYPE)
+REAL_T, INTENT(in) :: told(ENUM_NUM_TENSOR_TYPE)
 
 INTEGER_T :: n
-REAL_T, intent(in) :: dt,elastic_time
-INTEGER_T, intent(in) :: viscoelastic_model
-REAL_T, intent(in) :: polymer_factor
-INTEGER_T, intent(in) :: transposegradu
-INTEGER_T, intent(in) :: bc(SDIM,2,SDIM)
-INTEGER_T, intent(in) :: irz
+REAL_T, INTENT(in) :: dt,elastic_time
+INTEGER_T, INTENT(in) :: viscoelastic_model
+REAL_T, INTENT(in) :: polymer_factor
+INTEGER_T, INTENT(in) :: transposegradu
+INTEGER_T, INTENT(in) :: bc(SDIM,2,SDIM)
+INTEGER_T, INTENT(in) :: irz
 INTEGER_T ii,jj,kk
 REAL_T visctensor(3,3)
 REAL_T gradu_FENECR(3,3)
@@ -25341,12 +25321,12 @@ subroutine smooth_init(center, r, Tsat, Tinf, x_in, Tout,delta)
 ! Tout: temperature out
 implicit none
 
-REAL_T,intent(in)  :: center(SDIM),x_in(SDIM)
-REAL_T,intent(in)  :: r
-REAL_T,intent(in)  :: Tinf,Tsat
+REAL_T,INTENT(in)  :: center(SDIM),x_in(SDIM)
+REAL_T,INTENT(in)  :: r
+REAL_T,INTENT(in)  :: Tinf,Tsat
 REAL_T             :: phi
-REAL_T,intent(in)  :: delta   ! size of smooth transition region
-REAL_T,intent(out) :: Tout
+REAL_T,INTENT(in)  :: delta   ! size of smooth transition region
+REAL_T,INTENT(out) :: Tout
 INTEGER_T          :: i
 REAL_T  :: H_local
 REAL_T  :: phi_shift
@@ -25372,8 +25352,8 @@ use probcommon_module
 
 IMPLICIT NONE
 
-REAL_T, intent(in) :: LS(num_materials)
-INTEGER_T, intent(out) :: im_primary
+REAL_T, INTENT(in) :: LS(num_materials)
+INTEGER_T, INTENT(out) :: im_primary
 INTEGER_T im,imtest
 INTEGER_T tessellate
 INTEGER_T is_rigid_local(num_materials)
@@ -25467,12 +25447,12 @@ subroutine tensor_Heaviside( &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: dxmin
-INTEGER_T, intent(in) :: im_parm ! 0..num_materials-1
-REAL_T, intent(out) :: HVAL
-INTEGER_T, intent(in) :: mask1,mask2
-REAL_T, intent(in) :: LS1(num_materials)
-REAL_T, intent(in) :: LS2(num_materials)
+REAL_T, INTENT(in) :: dxmin
+INTEGER_T, INTENT(in) :: im_parm ! 0..num_materials-1
+REAL_T, INTENT(out) :: HVAL
+INTEGER_T, INTENT(in) :: mask1,mask2
+REAL_T, INTENT(in) :: LS1(num_materials)
+REAL_T, INTENT(in) :: LS2(num_materials)
 INTEGER_T im1,im2
 REAL_T LS_avg
 REAL_T thickness_factor,shift_amount
@@ -25511,7 +25491,7 @@ INTEGER_T function project_option_is_validF(project_option)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: project_option
+INTEGER_T, INTENT(in) :: project_option
 
 if (project_option_momeqnF(project_option).eq.1) then
  project_option_is_validF=1
@@ -25529,7 +25509,7 @@ INTEGER_T function project_option_momeqnF(project_option)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: project_option
+INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
@@ -25556,7 +25536,7 @@ INTEGER_T function project_option_singular_possibleF(project_option)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: project_option
+INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
@@ -25582,7 +25562,7 @@ INTEGER_T function project_option_olddata_neededF(project_option)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: project_option
+INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
@@ -25608,7 +25588,7 @@ INTEGER_T function project_option_pressureF(project_option)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: project_option
+INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. &
      (project_option.eq.SOLVETYPE_INITPROJ).or. &
@@ -25635,7 +25615,7 @@ INTEGER_T function project_option_needs_scalingF(project_option)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: project_option
+INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
      (project_option.eq.SOLVETYPE_PRESCOR).or. & 
@@ -25662,7 +25642,7 @@ INTEGER_T function project_option_projectionF(project_option)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: project_option
+INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & 
      (project_option.eq.SOLVETYPE_PRESCOR).or. & 
@@ -25687,7 +25667,7 @@ end function project_option_projectionF
 INTEGER_T function is_GFM_freezing_modelF(freezing_model) 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: freezing_model
+INTEGER_T, INTENT(in) :: freezing_model
 
  if ((freezing_model.eq.0).or. &   !fully saturated
      (freezing_model.eq.5).or. &   !stefan model evap or condensation
@@ -25706,7 +25686,7 @@ end function is_GFM_freezing_modelF
 INTEGER_T function is_hydrate_freezing_modelF(freezing_model) 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: freezing_model
+INTEGER_T, INTENT(in) :: freezing_model
 
  if (freezing_model.eq.2) then
   is_hydrate_freezing_modelF=1
@@ -25722,7 +25702,7 @@ end function is_hydrate_freezing_modelF
 INTEGER_T function is_valid_freezing_modelF(freezing_model) 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: freezing_model
+INTEGER_T, INTENT(in) :: freezing_model
 
  if ((freezing_model.eq.5).or. & !Stefan model evaporation or condensation
      (freezing_model.eq.6).or. & !Palmore and Desjardins
@@ -25747,7 +25727,7 @@ end function is_valid_freezing_modelF
 REAL_T function round_time(time)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: time
+REAL_T, INTENT(in) :: time
 INTEGER_T :: int_time
 INTEGER_T :: power
 INTEGER_T :: i
@@ -25796,9 +25776,9 @@ INTEGER_T function is_multi_component_evapF(freezing_model, &
    evap_flag,latent_heat) 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: freezing_model
-INTEGER_T, intent(in) :: evap_flag
-REAL_T, intent(in) :: latent_heat
+INTEGER_T, INTENT(in) :: freezing_model
+INTEGER_T, INTENT(in) :: evap_flag
+REAL_T, INTENT(in) :: latent_heat
 
  if (latent_heat.eq.zero) then
   is_multi_component_evapF=0

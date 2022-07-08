@@ -12,8 +12,8 @@
   subroutine givens(a, b, c, s)
     implicit none
 
-    double precision, intent(in ) :: a, b
-    double precision, intent(out) :: c, s
+    double precision, INTENT(in ) :: a, b
+    double precision, INTENT(out) :: c, s
 
     if (abs(b) .le. 1.d-16) then
        c = 1.d0
@@ -39,10 +39,10 @@
   subroutine least_squares_QR(A, x, b, m, n, caller_id)
     implicit none
 
-    integer,          intent(in ) :: caller_id
-    integer,          intent(in ) :: m, n
-    double precision, intent(in ) :: A(m, n), b(m)
-    double precision, intent(out) :: x(n)
+    integer,          INTENT(in ) :: caller_id
+    integer,          INTENT(in ) :: m, n
+    double precision, INTENT(in ) :: A(m, n), b(m)
+    double precision, INTENT(out) :: x(n)
 
     integer i, j, k, it
     double precision R(m, n+1), y, z, c, s, temp1, temp2
@@ -210,13 +210,13 @@
     use probcommon_module
     implicit none
 
-    integer,          intent(in ) :: rij,rk, dim_in
-    integer,          intent(in ) :: is_fluid(num_materials)
-    double precision, intent(in ) ::  &
+    integer,          INTENT(in ) :: rij,rk, dim_in
+    integer,          INTENT(in ) :: is_fluid(num_materials)
+    double precision, INTENT(in ) ::  &
             pos_xyz(-rij:rij,-rij:rij,-rk:rk, dim_in), &
             ls(-rij:rij,-rij:rij,-rk:rk, num_materials), &
             weights(-rij:rij,-rij:rij,-rk:rk)
-    double precision, intent(out) :: ls_extrap(num_materials)
+    double precision, INTENT(out) :: ls_extrap(num_materials)
 
     integer caller_id
     integer i, j, k

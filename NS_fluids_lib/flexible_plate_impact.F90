@@ -44,8 +44,8 @@ subroutine flexible_substrateLS(x,Phi)
 use probcommon_module
 use global_utility_module
 implicit none
-REAL_T, intent(in), dimension(SDIM) :: x !spatial coordinates
-REAL_T, intent(out) :: Phi !LS dist, Phi>0 in the substrate
+REAL_T, INTENT(in), dimension(SDIM) :: x !spatial coordinates
+REAL_T, INTENT(out) :: Phi !LS dist, Phi>0 in the substrate
 
 REAL_T substrate_height
 
@@ -90,10 +90,10 @@ subroutine flexible_plate_impact_LS(x,t,LS,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-  INTEGER_T, intent(in) :: nmat
-  REAL_T, intent(in) :: x(SDIM)
-  REAL_T, intent(in) :: t
-  REAL_T, intent(out) :: LS(nmat)
+  INTEGER_T, INTENT(in) :: nmat
+  REAL_T, INTENT(in) :: x(SDIM)
+  REAL_T, INTENT(in) :: t
+  REAL_T, INTENT(out) :: LS(nmat)
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -138,10 +138,10 @@ subroutine flexible_plate_check_vel_rigid(x,t,vel,dir)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: vel
-INTEGER_T, intent(in) :: dir
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: vel
+INTEGER_T, INTENT(in) :: dir
 
 if (t.ge.0.0d0) then
  ! do nothing
@@ -177,12 +177,12 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-  REAL_T, intent(in) :: x(SDIM)
-  REAL_T, intent(in) :: dx(SDIM)
-  REAL_T, intent(in) :: t
-  REAL_T, intent(out) :: LS
-  REAL_T, intent(out) :: vel(SDIM)
-  REAL_T, intent(out) :: temperature
+  REAL_T, INTENT(in) :: x(SDIM)
+  REAL_T, INTENT(in) :: dx(SDIM)
+  REAL_T, INTENT(in) :: t
+  REAL_T, INTENT(out) :: LS
+  REAL_T, INTENT(out) :: vel(SDIM)
+  REAL_T, INTENT(out) :: temperature
   REAL_T :: LS_left,LS_right
   INTEGER_T :: dir
 
@@ -225,14 +225,14 @@ subroutine flexible_plate_impact_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: dx(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: VEL(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: VEL(SDIM)
 INTEGER_T dir
-INTEGER_T, intent(in) :: velsolid_flag
+INTEGER_T, INTENT(in) :: velsolid_flag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -310,10 +310,10 @@ end subroutine flexible_plate_impact_VEL
 subroutine EOS_flexible_plate_impact(rho,internal_energy,pressure, &
   imattype,im)
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im
- REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: internal_energy
- REAL_T, intent(out) :: pressure
+ INTEGER_T, INTENT(in) :: imattype,im
+ REAL_T, INTENT(in) :: rho
+ REAL_T, INTENT(in) :: internal_energy
+ REAL_T, INTENT(out) :: pressure
 
  if (imattype.eq.24) then
   pressure=rho*(DEF_VAPOR_GAMMA-1.0D0)*internal_energy
@@ -328,10 +328,10 @@ end subroutine EOS_flexible_plate_impact
 subroutine SOUNDSQR_flexible_plate_impact(rho,internal_energy,soundsqr, &
   imattype,im)
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im
- REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: internal_energy
- REAL_T, intent(out) :: soundsqr
+ INTEGER_T, INTENT(in) :: imattype,im
+ REAL_T, INTENT(in) :: rho
+ REAL_T, INTENT(in) :: internal_energy
+ REAL_T, INTENT(out) :: soundsqr
  REAL_T pressure
 
  if (imattype.eq.24) then
@@ -350,10 +350,10 @@ subroutine INTERNAL_flexible_plate_impact(rho,temperature, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im
- REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: temperature 
- REAL_T, intent(out) :: local_internal_energy
+ INTEGER_T, INTENT(in) :: imattype,im
+ REAL_T, INTENT(in) :: rho
+ REAL_T, INTENT(in) :: temperature 
+ REAL_T, INTENT(out) :: local_internal_energy
 
  call INTERNAL_default(rho,temperature,local_internal_energy, &
         imattype,im)
@@ -365,10 +365,10 @@ subroutine TEMPERATURE_flexible_plate_impact(rho,temperature,internal_energy, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im
- REAL_T, intent(in) :: rho
- REAL_T, intent(out) :: temperature 
- REAL_T, intent(in) :: internal_energy
+ INTEGER_T, INTENT(in) :: imattype,im
+ REAL_T, INTENT(in) :: rho
+ REAL_T, INTENT(out) :: temperature 
+ REAL_T, INTENT(in) :: internal_energy
 
  call TEMPERATURE_default(rho,temperature,internal_energy, &
         imattype,im)
@@ -382,11 +382,11 @@ subroutine flexible_plate_impact_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: PRES
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: PRES
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -404,13 +404,13 @@ subroutine flexible_plate_impact_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: nstate_mat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: nstate_mat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
 
 if (nmat.eq.num_materials) then
@@ -458,14 +458,14 @@ subroutine flexible_plate_impact_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(inout) :: LS(nmat)
-REAL_T, intent(in) :: LS_in(nmat)
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(inout) :: LS(nmat)
+REAL_T, INTENT(in) :: LS_in(nmat)
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -491,15 +491,15 @@ subroutine flexible_plate_impact_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: VEL
-REAL_T, intent(in) :: VEL_in
-INTEGER_T, intent(in) :: veldir,dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: VEL
+REAL_T, INTENT(in) :: VEL_in
+INTEGER_T, INTENT(in) :: veldir,dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
 
@@ -531,15 +531,15 @@ subroutine flexible_plate_impact_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: PRES
-REAL_T, intent(in) :: PRES_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: PRES
+REAL_T, INTENT(in) :: PRES_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -568,18 +568,18 @@ subroutine flexible_plate_impact_STATE_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
 REAL_T local_STATE(nmat*num_state_material)
-REAL_T, intent(inout) :: STATE
-REAL_T, intent(inout) :: STATE_merge
-REAL_T, intent(in) :: STATE_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
-INTEGER_T, intent(in) :: istate,im
+REAL_T, INTENT(inout) :: STATE
+REAL_T, INTENT(inout) :: STATE_merge
+REAL_T, INTENT(in) :: STATE_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: istate,im
 INTEGER_T ibase,im_crit,im_loop
 INTEGER_T local_bcflag
 
@@ -628,18 +628,18 @@ subroutine flexible_plate_impact_HEATSOURCE( &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: im
-REAL_T, intent(in) :: VFRAC(nmat)
-REAL_T, intent(in) :: time
-INTEGER_T, intent(in) :: nhalf
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, intent(in) :: temp(nmat)
-REAL_T, intent(in) :: den(nmat)
-REAL_T, intent(in) :: CV(nmat)
-REAL_T, intent(in) :: dt
-REAL_T, intent(out) :: heat_source
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: im
+REAL_T, INTENT(in) :: VFRAC(nmat)
+REAL_T, INTENT(in) :: time
+INTEGER_T, INTENT(in) :: nhalf
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+REAL_T, INTENT(in) :: temp(nmat)
+REAL_T, INTENT(in) :: den(nmat)
+REAL_T, INTENT(in) :: CV(nmat)
+REAL_T, INTENT(in) :: dt
+REAL_T, INTENT(out) :: heat_source
 
 if (nmat.eq.num_materials) then
  ! do nothing

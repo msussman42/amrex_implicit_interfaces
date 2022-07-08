@@ -13066,7 +13066,9 @@ void NavierStokes::alloc_DTDt(int alloc_flag) {
 
   // DTdt_MF=T_new - T_advect_MF
 
+ int num_materials_combine=num_materials;
  get_mm_scomp_solver(
+   num_materials_combine,
    SOLVETYPE_HEAT,
    state_index,
    scomp,

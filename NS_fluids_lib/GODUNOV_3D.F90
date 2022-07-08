@@ -15472,7 +15472,7 @@ stop
       REAL_T cell_vfrac(num_materials)
       REAL_T cell_mfrac(num_materials)
 
-      INTEGER_T is_solid_cell ! =0 no solid  1<=is_solid_cell<=num_materials+1 o.t.
+      INTEGER_T is_solid_cell !=0 no solid 1<=is_solid_cell<=num_materials+1 ot
 
       INTEGER_T dencomp
       INTEGER_T cellcomp

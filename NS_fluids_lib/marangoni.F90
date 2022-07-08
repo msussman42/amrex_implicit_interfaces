@@ -49,7 +49,7 @@ implicit none
 integer               :: flag
 REAL_T                :: delta
 REAL_T                :: delta2
-REAL_T,intent(in)     :: x,y,z
+REAL_T,INTENT(in)     :: x,y,z
 REAL_T,parameter      :: p1 = -0.94381
 REAL_T,parameter      :: p2 = 10.921
 REAL_T,parameter      :: p3 = -43.593
@@ -111,7 +111,7 @@ subroutine Temp_ST(T,r)
 
 implicit none
 
-REAL_T ,intent(in)   :: T
+REAL_T ,INTENT(in)   :: T
 REAL_T               :: r
 
 
@@ -139,7 +139,7 @@ subroutine dist_long_bubble(delta,delta2,x,y,z,dist)
 
 implicit none
 
-REAL_T,intent(in)        :: x,y,z
+REAL_T,INTENT(in)        :: x,y,z
 REAL_T                   :: delta   ! liquid film thickness
 REAL_T                   :: delta2  ! init dist from top
 REAL_T                   :: dist
@@ -188,8 +188,8 @@ subroutine cal_dist(x,y,dist)
 
 implicit none
 
-REAL_T,intent(in)    :: x(SDIM),y(SDIM)
-REAL_T,intent(out)   :: dist
+REAL_T,INTENT(in)    :: x(SDIM),y(SDIM)
+REAL_T,INTENT(out)   :: dist
 
 dist = sqrt((x(1)-y(1))**2.0d0 + (x(2)-y(2))**2.0d0) 
 
