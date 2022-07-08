@@ -125,7 +125,7 @@ AmrLevel::AmrLevel (Amr&            papa,
 
     int time_order=parent->Time_blockingFactor();
     int local_particles_flag=parent->global_AMR_particles_flag;
-    int nmat=parent->global_AMR_num_materials;
+    int local_nmat=parent->global_AMR_num_materials;
     int num_SoA_var=parent->global_AMR_num_SoA_var;
 
     if (level==0) {
@@ -135,8 +135,8 @@ AmrLevel::AmrLevel (Amr&            papa,
 
      for (int i=0;i<=time_order;i++) {
 
-      new_data_FSI[i].resize(nmat);
-      for (int j=0;j<nmat;j++) {
+      new_data_FSI[i].resize(local_nmat);
+      for (int j=0;j<local_nmat;j++) {
        new_data_FSI[i][j].initData_FSI(0,0);
       }
 
@@ -232,7 +232,7 @@ AmrLevel::restart (Amr&          papa,
      std::string FullPathName=FullPath;
      int time_order=parent->Time_blockingFactor();
      int local_particles_flag=parent->global_AMR_particles_flag;
-     int nmat=parent->global_AMR_num_materials;
+     int local_nmat=parent->global_AMR_num_materials;
 
      AmrLevel0_new_dataPC.resize(level_MAX_NUM_SLAB);
      new_data_FSI.resize(level_MAX_NUM_SLAB);
@@ -240,8 +240,8 @@ AmrLevel::restart (Amr&          papa,
      for (int i=0;i<=time_order;i++) {
 
        //TODO: restart the FSI data.
-      new_data_FSI[i].resize(nmat);
-      for (int j=0;j<nmat;j++) {
+      new_data_FSI[i].resize(local_nmat);
+      for (int j=0;j<local_nmat;j++) {
        new_data_FSI[i][j].initData_FSI(0,0);
       }
 
@@ -445,11 +445,11 @@ AmrLevel::~AmrLevel ()
     if (level==0) {
      int time_order=parent->Time_blockingFactor();
      int local_particles_flag=parent->global_AMR_particles_flag;
-     int nmat=parent->global_AMR_num_materials;
+     int local_nmat=parent->global_AMR_num_materials;
 
      for (int i=0;i<=time_order;i++) {
 
-      for (int j=0;j<nmat;j++) {
+      for (int j=0;j<local_nmat;j++) {
        new_data_FSI[i][j].clear_FSI();
       }
       new_data_FSI[i].resize(0);
@@ -546,11 +546,11 @@ if (level==0) {
 
  int time_order=parent->Time_blockingFactor();
  int local_particles_flag=parent->global_AMR_particles_flag;
- int nmat=parent->global_AMR_num_materials;
+ int local_nmat=parent->global_AMR_num_materials;
 
  for (int i=0;i<time_order;i++) {
 
-  for (int j=0;j<nmat;j++) {
+  for (int j=0;j<local_nmat;j++) {
    new_data_FSI[i][j].copyFrom_FSI(new_data_FSI[time_order][j]);
   }
 
@@ -589,11 +589,11 @@ if (level==0) {
 
  int time_order=parent->Time_blockingFactor();
  int local_particles_flag=parent->global_AMR_particles_flag;
- int nmat=parent->global_AMR_num_materials;
+ int local_nmat=parent->global_AMR_num_materials;
 
  for (int i=1;i<=time_order;i++) {
 
-  for (int j=0;j<nmat;j++) {
+  for (int j=0;j<local_nmat;j++) {
    new_data_FSI[i][j].copyFrom_FSI(new_data_FSI[0][j]);
   }
 

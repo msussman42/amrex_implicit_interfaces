@@ -36,28 +36,21 @@ stop
 
         ! centroid relative to the center (or centroid?) of the cell
       subroutine extract_vof_cen_batch(fluiddata,vofdark,voflight, &
-        cendark,cenlight,nmat)
+        cendark,cenlight)
       use global_utility_module
       use probcommon_module
 
       IMPLICIT NONE
 
-      INTEGER_T nmat
-      REAL_T fluiddata(nmat,2*SDIM+2)
-      REAL_T vofdark(nmat),voflight(nmat)
-      REAL_T cendark(nmat,SDIM)
-      REAL_T cenlight(nmat,SDIM)
+      REAL_T, intent(in) :: fluiddata(num_materials,2*SDIM+2)
+      REAL_T, intent(out) :: vofdark(num_materials),voflight(num_materials)
+      REAL_T, intent(out) :: cendark(num_materials,SDIM)
+      REAL_T, intent(out) :: cenlight(num_materials,SDIM)
       REAL_T cenall(SDIM)
       REAL_T volall
       INTEGER_T dir,im
 
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-
-      do im=1,nmat
+      do im=1,num_materials
        volall=fluiddata(im,2)
        if (volall.le.zero) then
         print *,"volume 0 bust"
@@ -101,7 +94,7 @@ stop
       ! voldark,volall,cendark,cenall
       ! called from: stackvolume_batch
       subroutine get_volume_data_batch(xsten,nhalf,dxin,bfact, &
-        voldata,nmat,cutflag,LS_sub,time)
+        voldata,cutflag,LS_sub,time)
 
       use MOF_routines_module
       use geometry_intersect_module
@@ -110,20 +103,21 @@ stop
 
       IMPLICIT NONE
 
-      procedure(sub_interface) :: LS_sub
+      procedure(sub_interface), intent(in) :: LS_sub
 
       REAL_T, intent(in) :: time
-      INTEGER_T nmat,nten,bfact,nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T dxin(SDIM)
-      REAL_T voldata(nmat,2*SDIM+2)
-      INTEGER_T imaterial,cutflag
+      INTEGER_T, intent(in) :: bfact,nhalf
+      REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, intent(in) :: dxin(SDIM)
+      REAL_T, intent(out) :: voldata(num_materials,2*SDIM+2)
+      INTEGER_T imaterial
+      INTEGER_T, intent(out) :: cutflag
       INTEGER_T i1,j1,k1,dir,minusflag,plusflag
-      REAL_T ltest(D_DECL(3,3,3),nmat)
-      REAL_T lnode(4*(SDIM-1),nmat)
-      REAL_T facearea(nmat)
-      REAL_T tempvol(nmat)
-      REAL_T tempcen(nmat,SDIM)
+      REAL_T ltest(D_DECL(3,3,3),num_materials)
+      REAL_T lnode(4*(SDIM-1),num_materials)
+      REAL_T facearea(num_materials)
+      REAL_T tempvol(num_materials)
+      REAL_T tempcen(num_materials,SDIM)
       REAL_T volall
       REAL_T cenall(SDIM)
       REAL_T xsten2(-1:1,SDIM)
@@ -137,13 +131,8 @@ stop
        print *,"nhalf invalid get volume data batch"
        stop
       endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      nten=num_interfaces
 
-      allocate(distbatch(nmat))
+      allocate(distbatch(num_materials))
 
       if (bfact.lt.1) then
        print *,"bfact invalid301"
@@ -189,8 +178,8 @@ stop
        enddo ! isten
       
         ! in: get_volume_data_batch
-       call LS_sub(xsten2,nhalf2,dxin,bfact,distbatch,nmat,time)
-       do imaterial=1,nmat
+       call LS_sub(xsten2,nhalf2,dxin,bfact,distbatch,num_materials,time)
+       do imaterial=1,num_materials
         ltest(D_DECL(i1+2,j1+2,k1+2),imaterial)= &
          distbatch(imaterial)
        enddo
@@ -199,7 +188,7 @@ stop
       enddo ! i1,j1,k1
 
       cutflag=0
-      do imaterial=1,nmat
+      do imaterial=1,num_materials
        minusflag=0
        plusflag=0
 
@@ -225,14 +214,14 @@ stop
        endif      
       enddo ! imaterial
 
-      call data_to_node(ltest,lnode,nmat,xsten,nhalf,SDIM)  
+      call data_to_node(ltest,lnode,num_materials,xsten,nhalf,SDIM)  
 
       call fast_cell_intersection_grid_batch(bfact,dxin,xsten,nhalf, &
        lnode, &
        tempvol, &
        tempcen,facearea,volall, &
        cenall,SDIM)
-      do imaterial=1,nmat
+      do imaterial=1,num_materials
        voldata(imaterial,1)=tempvol(imaterial)
        voldata(imaterial,2)=volall
        do dir=1,SDIM
@@ -250,17 +239,16 @@ stop
 ! voldark,vollight,volall,cendark,cenlight,cenall
 ! called from FORT_INITDATA
       recursive subroutine stackvolume_batch(xsten,nhalf,dxin,bfact, &
-        voldata,nmat,level,stack_max_level,LS_sub,time)
+        voldata,level,stack_max_level,LS_sub,time)
       use probcommon_module
       IMPLICIT NONE
 
       procedure(sub_interface) :: LS_sub
 
       INTEGER_T, intent(in) :: nhalf,bfact
-      INTEGER_T, intent(in) :: nmat 
       REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T, intent(in) :: dxin(SDIM)
-      REAL_T, intent(inout) :: voldata(nmat,2*SDIM+2)
+      REAL_T, intent(inout) :: voldata(num_materials,2*SDIM+2)
       INTEGER_T, intent(inout) :: stack_max_level
       INTEGER_T, intent(in) :: level
       REAL_T, intent(in) :: time
@@ -273,7 +261,7 @@ stop
       REAL_T, allocatable, dimension(:) :: dxin_fine
       REAL_T, allocatable, dimension(:,:) :: xsten_fine
 
-      allocate(localdata(nmat,2*SDIM+2))
+      allocate(localdata(num_materials,2*SDIM+2))
       allocate(dxin_fine(SDIM))
       allocate(xsten_fine(-nhalf:nhalf,SDIM))
     
@@ -292,10 +280,6 @@ stop
        print *,"nhalf invalid stackvolume batch"
        stop
       endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
 
       if (levelrz.eq.0) then
        ! do nothing
@@ -312,7 +296,7 @@ stop
       endif
 
       if (level.eq.0) then
-       do im=1,nmat
+       do im=1,num_materials
         do i1=1,2+2*SDIM
          voldata(im,i1)=zero
         enddo
@@ -321,10 +305,10 @@ stop
 
        ! in: stackvolume_batch
       call get_volume_data_batch(xsten,nhalf,dxin,bfact, &
-        localdata,nmat,cutflag,LS_sub,time)
+        localdata,cutflag,LS_sub,time)
 
       if ((level.eq.stack_max_level).or.(cutflag.eq.0)) then
-       do im=1,nmat
+       do im=1,num_materials
         do i1=1,2+2*SDIM
          voldata(im,i1)=voldata(im,i1)+localdata(im,i1)
         enddo
@@ -364,7 +348,7 @@ stop
 
         call stackvolume_batch( &
          xsten_fine,nhalf,dxin_fine,bfact, &
-         voldata,nmat,level+1,stack_max_level,LS_sub,time)
+         voldata,level+1,stack_max_level,LS_sub,time)
        enddo 
        enddo 
        enddo

@@ -67,8 +67,6 @@ void
 NavierStokes::allocate_maccoef(int project_option,int nsolve,
 		int create_hierarchy) {
 
- int nmat=num_materials;
-
  if (project_option_projection(project_option)==1) {
 
   // do nothing
@@ -244,8 +242,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   amrex::Error("create_hierarchy invalid");
 
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
- if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
-  amrex::Error("LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1)");
+ if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error("LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1)");
  
  new_localMF(ALPHACOEF_MF,nsolve,0,-1);
  new_localMF(ALPHANOVOLUME_MF,nsolve,0,-1);
@@ -358,7 +356,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    // defined in MACOPERATOR_3D.F90
   fort_scalarcoeff(
     &nsolve,
-    &nmat,
     xlo,dx,
     offdiagcheck.dataPtr(),
     ARLIM(offdiagcheck.loVect()),ARLIM(offdiagcheck.hiVect()),
@@ -393,14 +390,13 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  int GFM_flag=0;
  int adjust_temperature=0; 
- int nten=num_interfaces;
 
   // alpha T - div beta grad T = f
  if (project_option==SOLVETYPE_HEAT) {
 
   if (is_phasechange==1) {
     // alphanovolume=(rho cv/(dt*fact))+(1/vol) sum_face Aface k_m/(theta dx)
-   for (int im=0;im<2*nten;im++) {
+   for (int im=0;im<2*num_interfaces;im++) {
     Real LL=get_user_latent_heat(im+1,293.0,1);
     if (LL!=0.0) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
@@ -413,7 +409,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
      // do nothing
     } else
      amrex::Error("latent_heat[im] (LL) invalid");
-   } // im=0..2 nten-1
+   } // im=0..2 num_interfaces-1
   } else if (is_phasechange==0) {
    // do nothing
   } else
@@ -425,7 +421,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   if (is_phasechange==1) {
 
-   for (int im=0;im<2*nten;im++) {
+   for (int im=0;im<2*num_interfaces;im++) {
     Real LL=get_user_latent_heat(im+1,293.0,1);
     if (LL!=0.0) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
@@ -455,7 +451,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     } else
      amrex::Error("latent_heat[im] (LL) invalid");
      
-   } // im=0.. 2 nten -1
+   } // im=0.. 2 num_interfaces -1
 
   } else if (is_phasechange==0) {
    // do nothing
@@ -604,7 +600,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     &level,
     &finest_level,
     &nsolve,
-    &nmat,
     &project_option,
      // ONES_MF=1 if diag>0  ONES_MF=0 if diag==0.
     ones_fab.dataPtr(),ARLIM(ones_fab.loVect()),ARLIM(ones_fab.hiVect()),
@@ -796,7 +791,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     &level,
     &finest_level,
     &nsolve,
-    &nmat,
     &project_option,
     alpha.dataPtr(),
     ARLIM(alpha.loVect()),ARLIM(alpha.hiVect()),
@@ -1603,8 +1597,6 @@ void NavierStokes::apply_div(
   int idx_gphi,
   int nsolve) {
 
- int nmat=num_materials;
-
  if (project_option_momeqn(project_option)==1) {
   //do nothing
  } else if (project_option_momeqn(project_option)==0) {
@@ -1634,7 +1626,7 @@ void NavierStokes::apply_div(
   amrex::Error("ncomp_check invalid");
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>nmat))
+ if ((nparts<0)||(nparts>num_materials))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -1644,7 +1636,7 @@ void NavierStokes::apply_div(
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat)) {
+ } else if ((nparts>=1)&&(nparts<=num_materials)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -2241,8 +2233,6 @@ void NavierStokes::ADVECT_DIV() {
  
  bool use_tiling=ns_tiling;
 
- int nmat=num_materials;
-
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,0,700);
 
@@ -2308,8 +2298,7 @@ void NavierStokes::ADVECT_DIV() {
    divfab.dataPtr(),
    ARLIM(divfab.loVect()),ARLIM(divfab.hiVect()),
    tilelo,tilehi,
-   fablo,fabhi,&bfact,
-   &nmat);
+   fablo,fabhi,&bfact);
 
  } // mfi
 } // omp
@@ -2398,7 +2387,6 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
   amrex::Error("local div data not previously deleted");
 
  int finest_level=parent->finestLevel();
- int nmat=num_materials;
 
  int nsolve=1;
 
@@ -2443,7 +2431,7 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
  const Real* dx = geom.CellSize();
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>nmat))
+ if ((nparts<0)||(nparts>num_materials))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -2453,7 +2441,7 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat)) {
+ } else if ((nparts>=1)&&(nparts<=num_materials)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");

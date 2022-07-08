@@ -145,12 +145,12 @@
         nFSI, &
         ngrow_make_distance_in, &
         nparts, &
-        im_solid_map, & ! type: 0..nmat-1
+        im_solid_map, & ! type: 0..num_materials-1
         h_small, &  ! smallest mesh size from the max_level.
         cur_time, &
         dt, &
-        FSI_refine_factor, & ! 1..nmat
-        FSI_bounding_box_ngrow, & ! 1..nmat
+        FSI_refine_factor, & ! 1..num_materials
+        FSI_bounding_box_ngrow, & ! 1..num_materials
         touch_flag, &
         CTML_FSI_INIT, &
         CTML_force_model, &
@@ -225,7 +225,6 @@
       INTEGER_T, intent(in) :: ngrow_make_distance_in
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: im_solid_map(nparts)
-      INTEGER_T nmat
       REAL_T, intent(in) :: h_small ! smallest mesh size from the max_level
       REAL_T, intent(in) :: cur_time
       REAL_T, intent(in) :: dt
@@ -320,8 +319,6 @@
 
       FSIdata_ptr=>FSIdata
 
-      nmat=num_materials
-
       if (nthread_parm.ne.geom_nthreads) then
        print *,"nthread_parm invalid"
        stop
@@ -414,7 +411,7 @@
        print *,"CTML_FSI_init invalid"
        stop
       endif
-      do im_local=1,nmat
+      do im_local=1,num_materials
        if (FSI_flag(im_local).eq.4) then !CTML Goldstein et al
         if (CTML_force_model(im_local).eq.0) then
          ! do nothing
@@ -435,7 +432,7 @@
         print *,"fort_FSI_flag_valid invalid"
         stop
        endif
-      enddo ! im_local=1..nmat
+      enddo ! im_local=1..num_materials
 
       if (iter.lt.0) then
        print *,"iter invalid"
@@ -450,7 +447,7 @@
        stop
       endif
 
-      if ((nparts.lt.1).or.(nparts.gt.nmat)) then
+      if ((nparts.lt.1).or.(nparts.gt.num_materials)) then
        print *,"nparts invalid fort_headermsg"
        stop
       endif
@@ -807,7 +804,7 @@
 
        do partid=1,nparts
         im_part=im_solid_map(partid)+1
-        if ((im_part.lt.1).or.(im_part.gt.nmat)) then
+        if ((im_part.lt.1).or.(im_part.gt.num_materials)) then
          print *,"im_part invalid fort_headermsg"
          stop
         endif
@@ -861,7 +858,6 @@
            nparts, &
            partid, &
            ngrow_make_distance, &
-           nmat, &
            nFSI, &
            FSI_operation, &
            touch_flag, &
@@ -897,7 +893,7 @@
 
        enddo ! partid=1..nparts
 
-       if (nparts.gt.nmat-1) then
+       if (nparts.gt.num_materials-1) then
         print *,"nparts out of range"
         stop
        endif
@@ -1050,10 +1046,10 @@
         allocate(veldata3D(DIMV3D(FSIdata3D),3)) 
         veldata3D_ptr=>veldata3D
 
-        allocate(stressdata3D(DIMV3D(FSIdata3D),6*nmat)) 
+        allocate(stressdata3D(DIMV3D(FSIdata3D),6*num_materials)) 
         stressdata3D_ptr=>stressdata3D
 
-        allocate(stressflag3D(DIMV3D(FSIdata3D),nmat)) 
+        allocate(stressflag3D(DIMV3D(FSIdata3D),num_materials)) 
         stressflag3D_ptr=>stressflag3D
 
         allocate(xdata3D(DIMV3D(FSIdata3D),3))
@@ -1081,11 +1077,11 @@
           do dir=1,SDIM
            veldata3D(i,j,k,dir)=velfab(D_DECL(i,j,k),dir)
           enddo
-          do dir=1,6*nmat
+          do dir=1,6*num_materials
            stressdata3D(i,j,k,dir)=drag(D_DECL(i,j,k), &
              DRAGCOMP_PSTRESS+dir)
           enddo
-          do dir=1,nmat
+          do dir=1,num_materials
            stressflag3D(i,j,k,dir)=drag(D_DECL(i,j,k), &
              DRAGCOMP_FLAG+dir)
           enddo
@@ -1141,7 +1137,7 @@
            veldata3D(i,j,k,dir)=vel3D(dir)
           enddo ! dir=1..3
 
-          do im_local=1,nmat
+          do im_local=1,num_materials
            ibase=6*(im_local-1)
            do istress=1,3
            do jstress=1,3
@@ -1192,7 +1188,7 @@
            stressflag3D(i,j,k,im_local)=drag(D_DECL(i2d,j2d,k2d), &
                  DRAGCOMP_FLAG+im_local)
 
-          enddo ! im_local=1..nmat
+          enddo ! im_local=1..num_materials
 
           do nc=1,2
            masknbr3D(i,j,k,nc)=masknbr(D_DECL(i2d,j2d,k2d),nc)
@@ -1220,7 +1216,7 @@
 
         do partid=1,nparts
          im_part=im_solid_map(partid)+1
-         if ((im_part.lt.1).or.(im_part.gt.nmat)) then
+         if ((im_part.lt.1).or.(im_part.gt.num_materials)) then
           print *,"im_part invalid fort_headermsg"
           stop
          endif
@@ -1284,7 +1280,6 @@
             nparts, &
             partid, &
             ngrow_make_distance, &
-            nmat, &
             nFSI, &
             FSI_operation, &
             cur_time, &
@@ -1320,7 +1315,7 @@
 
         enddo ! partid=1..nparts
 
-        if (nparts.gt.nmat) then
+        if (nparts.gt.num_materials) then
          print *,"nparts out of range fort_headermsg"
          stop
         endif
@@ -1910,7 +1905,6 @@
         nthread_parm, &
         max_num_tiles_on_thread_proc, &
         tile_dim, & ! nthreads x max_num_tiles_on_thread_proc
-        nmat, &
         nparts, &
         im_solid_map) &
       bind(c,name='fort_fillcontainer')
@@ -1934,7 +1928,6 @@
       INTEGER_T, intent(in) :: num_grids_on_level_proc
       INTEGER_T, intent(in) :: max_num_tiles_on_thread_proc
       INTEGER_T, intent(in) :: tile_dim
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: tilelo_array(tile_dim*SDIM)
       INTEGER_T, intent(in) :: tilehi_array(tile_dim*SDIM)
       REAL_T, intent(in) :: cur_time,dt
@@ -1977,11 +1970,7 @@
        print *,"sci_max_level invalid"
        stop
       endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if ((nparts.lt.1).or.(nparts.gt.nmat)) then
+      if ((nparts.lt.1).or.(nparts.gt.num_materials)) then
        print *,"nparts invalid fort_fillcontainer"
        stop
       endif
@@ -2219,7 +2208,7 @@
 
         do partid=1,nparts
          im_part=im_solid_map(partid)+1
-         if ((im_part.lt.1).or.(im_part.gt.nmat)) then
+         if ((im_part.lt.1).or.(im_part.gt.num_materials)) then
           print *,"im_part invalid"
           stop
          endif
@@ -2230,7 +2219,7 @@
              (local_flag.eq.6).or. & !ice from CAD
              (local_flag.eq.7)) then !fluid from CAD
           call CLSVOF_FILLCONTAINER(lev77,sci_max_level,nthread_parm, &
-           dx3D,partid,im_part,nmat,cur_time,dt)
+           dx3D,partid,im_part,cur_time,dt)
          else if (local_flag.eq.1) then ! prescribed solid (EUL)
           ! do nothing
          else

@@ -184,7 +184,7 @@ REAL_T problen_act(3)
 INTEGER_T FSI_NPARTS
 INTEGER_T CTML_NPARTS
 INTEGER_T TOTAL_NPARTS
-INTEGER_T im_solid_mapF(MAX_PARTS) ! type: 0..nmat-1
+INTEGER_T im_solid_mapF(MAX_PARTS) ! type: 0..num_materials-1
 INTEGER_T CTML_partid_map(MAX_PARTS)
 INTEGER_T FSI_partid_map(MAX_PARTS)
 
@@ -3426,10 +3426,7 @@ REAL_T :: volm1,volp1
 REAL_T :: radradblob1,radradblob2
 INTEGER_T :: stand_alone_flag
 INTEGER_T :: orig_nodes
-INTEGER_T :: nmat
 INTEGER_T :: ctml_part_id
-
-  nmat=num_materials
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id out of range, part_id, TOTAL_NPARTS:",part_id,TOTAL_NPARTS
@@ -3654,15 +3651,12 @@ REAL_T, intent(in) :: curtime,dt
 INTEGER_T :: dir
 INTEGER_T, intent(in) :: istep
 INTEGER_T, intent(in) :: istop
-INTEGER_T :: nmat
 INTEGER_T :: ctml_part_id
 INTEGER_T :: inode_crit,inode
 INTEGER_T :: orig_nodes
 INTEGER_T :: orig_elements
 INTEGER_T :: local_nodes
 INTEGER_T :: local_elements
-
-  nmat=num_materials
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id out of range, part_id, TOTAL_NPARTS:",part_id,TOTAL_NPARTS
@@ -7752,11 +7746,8 @@ REAL_T, intent(in) :: CLSVOFtime
 INTEGER_T :: ifirst
 REAL_T :: paddle_pos,paddle_vel,CLSVOF_dt
 REAL_T :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
-INTEGER_T :: nmat
 INTEGER_T :: ctml_part_id
 INTEGER_T :: fsi_part_id
-
- nmat=num_materials
 
  if ((ioproc.ne.1).and.(ioproc.ne.0)) then
   print *,"ioproc invalid"
@@ -10432,7 +10423,6 @@ subroutine CLSVOF_FILLCONTAINER( &
  dx3D, &
  part_id, &
  im_part, &
- nmat, &
  cur_time, &
  dt)
 use global_utility_module
@@ -10445,7 +10435,6 @@ IMPLICIT NONE
  REAL_T, intent(in) :: dx3D(3)
  INTEGER_T, intent(in) :: part_id
  INTEGER_T, intent(in) :: im_part
- INTEGER_T, intent(in) :: nmat
  REAL_T, intent(in) :: cur_time
  REAL_T, intent(in) :: dt
 
@@ -10482,18 +10471,14 @@ IMPLICIT NONE
   print *,"part_id invalid"
   stop
  endif
- if ((part_id.lt.1).or.(part_id.ge.nmat)) then
+ if ((part_id.lt.1).or.(part_id.ge.num_materials)) then
   print *,"part_id invalid"
   stop
  endif
- if ((im_part.lt.1).or.(im_part.gt.nmat)) then
+ if ((im_part.lt.1).or.(im_part.gt.num_materials)) then
   print *,"im_part invalid"
   stop
  endif
- if (nmat.ne.num_materials) then
-  print *,"nmat invalid"
-  stop
- endif 
  if (nthread_parm.lt.1) then
   print *,"nthread_parm.lt.1"
   stop
@@ -11044,7 +11029,6 @@ subroutine CLSVOF_InitBox(  &
   nparts, &   ! =fort_num_local_aux_grids for aux
   part_id, &  ! =(auxcomp)
   ngrow_make_distance, & ! =3 for all cases
-  nmat, &
   nFSI, & ! =NCOMP_FSI (aux)
   FSI_operation, &
   touch_flag, &
@@ -11079,7 +11063,6 @@ IMPLICIT NONE
   INTEGER_T, intent(in) :: nparts
   INTEGER_T, intent(in) :: part_id
   INTEGER_T, intent(in) :: ngrow_make_distance
-  INTEGER_T, intent(in) :: nmat
   INTEGER_T, intent(in) :: nFSI
   INTEGER_T, intent(in) :: FSI_operation
   INTEGER_T, intent(inout) :: touch_flag
@@ -11380,8 +11363,8 @@ IMPLICIT NONE
     print *,"part_id invalid"
     stop
    endif
-   if ((nmat.lt.1).or.(nmat.gt.50)) then
-    print *,"nmat out of range"
+   if ((num_materials.lt.1).or.(num_materials.gt.50)) then
+    print *,"num_materials out of range"
     stop
    endif
 
@@ -11401,7 +11384,7 @@ IMPLICIT NONE
 
    else if (lev77.ge.1) then
 
-    if ((im_part.lt.1).or.(im_part.gt.nmat)) then
+    if ((im_part.lt.1).or.(im_part.gt.num_materials)) then
      print *,"im_part invalid"
      stop
     endif
@@ -11409,7 +11392,7 @@ IMPLICIT NONE
      print *,"nFSI invalid lev77>=1"
      stop
     endif
-    if ((nparts.lt.1).or.(nparts.ge.nmat)) then
+    if ((nparts.lt.1).or.(nparts.ge.num_materials)) then
      print *,"nparts invalid"
      stop
     endif
@@ -11435,7 +11418,7 @@ IMPLICIT NONE
     print *,"sdim_AMR=",sdim_AMR 
     print *,"im_part=",im_part
     print *,"part_id=",part_id
-    print *,"nmat=",nmat
+    print *,"num_materials=",num_materials
     print *,"FSI_operation=",FSI_operation
     print *,"iter= ",iter
     print *,"touch_flag=",touch_flag
@@ -13304,11 +13287,10 @@ end subroutine CLSVOF_InitBox
        lev77, &
        tid, &
        tilenum, &
-       im_part, & ! 1..nmat
+       im_part, & ! 1..num_materials
        nparts, &
        part_id, &
        ngrow_make_distance, &
-       nmat, &
        nFSI, &
        FSI_operation, &
        time, &
@@ -13338,11 +13320,10 @@ end subroutine CLSVOF_InitBox
       INTEGER_T, intent(in) :: lev77
       INTEGER_T, intent(in) :: tid
       INTEGER_T, intent(in) :: tilenum
-      INTEGER_T, intent(in) :: im_part ! 1..nmat
+      INTEGER_T, intent(in) :: im_part ! 1..num_materials
       INTEGER_T, intent(in) :: nparts
       INTEGER_T, intent(in) :: part_id
       INTEGER_T, intent(in) :: ngrow_make_distance
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: nFSI
       INTEGER_T, intent(in) :: FSI_operation
       REAL_T, intent(in) :: time
@@ -13499,11 +13480,11 @@ end subroutine CLSVOF_InitBox
         print *,"part_id invalid"
         stop
        endif
-       if ((nmat.lt.1).or.(nmat.gt.50)) then
-        print *,"nmat out of range"
+       if ((num_materials.lt.1).or.(num_materials.gt.50)) then
+        print *,"num_materials out of range"
         stop
        endif
-       if ((im_part.lt.1).or.(im_part.gt.nmat)) then
+       if ((im_part.lt.1).or.(im_part.gt.num_materials)) then
         print *,"im_part invalid"
         stop
        endif
@@ -13516,7 +13497,7 @@ end subroutine CLSVOF_InitBox
         print *,"sdim_AMR=",sdim_AMR 
         print *,"im_part=",im_part
         print *,"part_id=",part_id
-        print *,"nmat=",nmat
+        print *,"num_materials=",num_materials
         print *,"FSI_operation=",FSI_operation
         print *,"ioproc=",ioproc
         print '(A9,3(f12.6))',"problo3D ",problo3D(1),problo3D(2),problo3D(3)
@@ -13538,7 +13519,7 @@ end subroutine CLSVOF_InitBox
         print *,"nFSI invalid"
         stop
        endif
-       if ((nparts.lt.1).or.(nparts.ge.nmat)) then
+       if ((nparts.lt.1).or.(nparts.ge.num_materials)) then
         print *,"nparts invalid"
         stop
        endif
@@ -15211,7 +15192,6 @@ INTEGER_T :: part_id
 REAL_T, intent(in) :: CLSVOF_curtime,CLSVOF_dt
 REAL_T, intent(in) :: h_small
 REAL_T, intent(in) :: problo(3),probhi(3)
-INTEGER_T nmat
 INTEGER_T node_factor 
 INTEGER_T ctml_part_id 
 INTEGER_T fsi_part_id 
@@ -15221,9 +15201,7 @@ INTEGER_T, intent(in) :: FSI_bounding_box_ngrow(num_materials)
 INTEGER_T im_sanity_check
 INTEGER_T :: idir,ielem,im_part
 
-  nmat=num_materials
-
-  do im_sanity_check=1,nmat
+  do im_sanity_check=1,num_materials
    if ((FSI_refine_factor(im_sanity_check).lt.0).or. &
        (FSI_refine_factor(im_sanity_check).gt.100)) then
     print *,"FSI_refine_factor(im_sanity_check) invalid"
@@ -15253,7 +15231,7 @@ INTEGER_T :: idir,ielem,im_part
   if ((TOTAL_NPARTS.ge.1).and.(TOTAL_NPARTS.le.MAX_PARTS)) then
 
    if ((im_critical.lt.-1).and. &
-       (im_critical.ge.-nmat-1)) then
+       (im_critical.ge.-num_materials-1)) then
 
     ctml_part_id=0
     do part_id=1,TOTAL_NPARTS
@@ -15276,7 +15254,7 @@ INTEGER_T :: idir,ielem,im_part
          ctml_fib_mass_prev(ctml_part_id,inode)= &
             FSI_input_mass_list(inode)
         enddo ! inode=1,ctml_max_n_fib_nodes 
-       else if ((im_part.ge.1).and.(im_part.le.nmat)) then
+       else if ((im_part.ge.1).and.(im_part.le.num_materials)) then
         ! do nothing
        else
         print *,"im_part invalid"
@@ -15529,7 +15507,7 @@ INTEGER_T :: idir,ielem,im_part
     enddo ! part_id=1,TOTAL_NPARTS
 
    else if ((im_critical.ge.0).and. &
-            (im_critical.lt.nmat)) then
+            (im_critical.lt.num_materials)) then
 
     ctml_part_id=0
     do part_id=1,TOTAL_NPARTS
@@ -15566,7 +15544,7 @@ INTEGER_T :: idir,ielem,im_part
           FSI_output_element_list(4*(ielem-1)+inode)=ielem
          enddo
         enddo
-       else if ((im_part.ge.1).and.(im_part.le.nmat)) then
+       else if ((im_part.ge.1).and.(im_part.le.num_materials)) then
         ! do nothing
        else
         print *,"im_part invalid"
