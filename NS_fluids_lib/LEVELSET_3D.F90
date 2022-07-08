@@ -61,9 +61,9 @@ stop
         use geometry_intersect_module
         use MOF_routines_module
         IMPLICIT NONE
-        type(cell_CP_parm_type), intent(in) :: cell_CP_parm
-        REAL_T, intent(out) :: xCP(SDIM)
-        REAL_T, intent(out) :: xSOLID_BULK(SDIM)
+        type(cell_CP_parm_type), INTENT(in) :: cell_CP_parm
+        REAL_T, INTENT(out) :: xCP(SDIM)
+        REAL_T, INTENT(out) :: xSOLID_BULK(SDIM)
         INTEGER_T :: nhalf
         REAL_T :: xsten(-3:3,SDIM)
         INTEGER_T :: dir
@@ -154,13 +154,13 @@ stop
         use global_distance_module
         use probf90_module
         IMPLICIT NONE
-        type(cell_CP_parm_type), intent(in) :: cell_CP_parm
-        REAL_T, intent(in) :: xCP(SDIM)
-        REAL_T, intent(in) :: xSOLID_BULK(SDIM)
-        INTEGER_T, intent(in) :: cell_index(SDIM)
-        REAL_T, intent(out) :: LS_interp(num_materials)
-        INTEGER_T, intent(in) :: im_solid 
-        INTEGER_T, intent(out) :: im_fluid_critical
+        type(cell_CP_parm_type), INTENT(in) :: cell_CP_parm
+        REAL_T, INTENT(in) :: xCP(SDIM)
+        REAL_T, INTENT(in) :: xSOLID_BULK(SDIM)
+        INTEGER_T, INTENT(in) :: cell_index(SDIM)
+        REAL_T, INTENT(out) :: LS_interp(num_materials)
+        INTEGER_T, INTENT(in) :: im_solid 
+        INTEGER_T, INTENT(out) :: im_fluid_critical
         INTEGER_T :: nhalf
         REAL_T :: xsten(-1:1,SDIM)
         INTEGER_T :: dir
@@ -330,27 +330,27 @@ stop
         bfact,dx,xsten0, &
         time, &
         lsdata, &
-        dir,nmat, &
+        dir, &
         im,im_opp, &
         pforce)
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xsten0( &
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: xsten0( &
         -(2*ngrow_distance+1):(2*ngrow_distance+1), &
         SDIM)
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nmat,im,im_opp
-      INTEGER_T, intent(in) :: dir
-      REAL_T, intent(in) :: lsdata( &
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: im,im_opp
+      INTEGER_T, INTENT(in) :: dir
+      REAL_T, INTENT(in) :: lsdata( &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
-        nmat)
+        num_materials)
 
-      REAL_T, intent(out) :: pforce
+      REAL_T, INTENT(out) :: pforce
 
       INTEGER_T is_pforce_probtype
       REAL_T columnLS(-ngrow_distance:ngrow_distance)
@@ -394,24 +394,20 @@ stop
         stop
        endif
 
-       if (nmat.ne.2) then
-        print *,"this routine not designed for nmat<>2 yet"
-        print *,"if nmat>2, then extrapolate_LS must be called"
-        stop
-       endif
-       if (nmat.ne.num_materials) then
-        print *,"nmat invalid"
+       if (num_materials.ne.2) then
+        print *,"this routine not designed for num_materials<>2 yet"
+        print *,"if num_materials>2, then extrapolate_LS must be called"
         stop
        endif
        if (im.ge.im_opp) then
         print *,"im and im_opp invalid"
         stop
        endif
-       if ((im.lt.1).or.(im.gt.nmat)) then
+       if ((im.lt.1).or.(im.gt.num_materials)) then
         print *,"im invalid30"
         stop
        endif
-       if ((im_opp.lt.1).or.(im_opp.gt.nmat)) then
+       if ((im_opp.lt.1).or.(im_opp.gt.num_materials)) then
         print *,"im_opp invalid in init pforce im_opp=",im_opp
         stop
        endif
@@ -460,7 +456,6 @@ stop
         col_ht_LS, &
         col_ht_VOF, &
         dir+1,n1d, &
-        nmat, &
         SDIM)
 
        if (crossing_status.eq.1) then
@@ -503,7 +498,7 @@ stop
         finest_level, &
         bfact,dx, &
         xcenter, &
-        nrmcenter, & ! sdim x nmat components
+        nrmcenter, & ! sdim x num_materials components
         dircrit, &
         side, &
         signside, &
@@ -522,45 +517,41 @@ stop
         ZEYU_thet_d, &
         ZEYU_u_cl, &
         im3, &
-        nmat, &
         visc_coef, &
         unscaled_min_curvature_radius, &
-        nten, &
         im,im_opp,iten)
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: vof_height_function
-      INTEGER_T, intent(in) :: icenter,jcenter,kcenter
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xcenter(SDIM)
-      INTEGER_T, intent(in) :: dircrit
-      INTEGER_T, intent(in) :: side
-      INTEGER_T, intent(in) :: signside
-      INTEGER_T, intent(in) :: nten
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: im,im_opp
-      INTEGER_T, intent(out) :: im3
+      INTEGER_T, INTENT(in) :: vof_height_function
+      INTEGER_T, INTENT(in) :: icenter,jcenter,kcenter
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in) :: xcenter(SDIM)
+      INTEGER_T, INTENT(in) :: dircrit
+      INTEGER_T, INTENT(in) :: side
+      INTEGER_T, INTENT(in) :: signside
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: im,im_opp
+      INTEGER_T, INTENT(out) :: im3
       INTEGER_T :: imhold
       INTEGER_T :: im3_present_node
-      INTEGER_T, intent(in) :: iten
+      INTEGER_T, INTENT(in) :: iten
       INTEGER_T :: iten_test
-      REAL_T, intent(in) :: visc_coef
-      REAL_T, intent(in) :: unscaled_min_curvature_radius
-      REAL_T user_tension(nten)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: vol_sten
-      REAL_T, intent(in) :: area_sten(SDIM,2)
+      REAL_T, INTENT(in) :: visc_coef
+      REAL_T, INTENT(in) :: unscaled_min_curvature_radius
+      REAL_T user_tension(num_interfaces)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: vol_sten
+      REAL_T, INTENT(in) :: area_sten(SDIM,2)
       REAL_T :: curvHT_LS
       REAL_T :: curvHT_VOF
-      REAL_T, intent(out) :: curvHT_choice
-      REAL_T, intent(out) :: curvFD
-      REAL_T, intent(out) :: mgoni_force(SDIM)
+      REAL_T, INTENT(out) :: curvHT_choice
+      REAL_T, INTENT(out) :: curvFD
+      REAL_T, INTENT(out) :: mgoni_force(SDIM)
  
       INTEGER_T dir2
 
@@ -579,38 +570,38 @@ stop
       REAL_T htfunc_LS(-1:1,-1:1)
       REAL_T htfunc_VOF(-1:1,-1:1)
 
-      REAL_T, intent(in) :: xsten( &
+      REAL_T, INTENT(in) :: xsten( &
        -(2*ngrow_distance+1):(2*ngrow_distance+1), &
        SDIM)
               
       REAL_T xsten_curv(-2:2,SDIM)
 
-      REAL_T, intent(in) :: velsten( &
+      REAL_T, INTENT(in) :: velsten( &
        -1:1,-1:1,-1:1,SDIM)
 
-      REAL_T, intent(in) :: mgoni_temp( &
-       -1:1,-1:1,-1:1,nmat)
+      REAL_T, INTENT(in) :: mgoni_temp( &
+       -1:1,-1:1,-1:1,num_materials)
 
       REAL_T :: mgoni_tension(-1:1,-1:1,-1:1)
-      REAL_T :: local_tension(nten)
+      REAL_T :: local_tension(num_interfaces)
 
-      REAL_T, intent(in) :: lssten( &
+      REAL_T, INTENT(in) :: lssten( &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
-        nmat)
+        num_materials)
 
-      REAL_T, intent(in) :: vofsten( &
+      REAL_T, INTENT(in) :: vofsten( &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
-        nmat)
+        num_materials)
 
-      REAL_T, intent(in) :: nrmsten( &
-       -1:1,-1:1,-1:1,SDIM*nmat)
+      REAL_T, INTENT(in) :: nrmsten( &
+       -1:1,-1:1,-1:1,SDIM*num_materials)
 
-      REAL_T, intent(in) :: nrmcenter(SDIM*nmat)
-      REAL_T nrmtest(SDIM*nmat)
+      REAL_T, INTENT(in) :: nrmcenter(SDIM*num_materials)
+      REAL_T nrmtest(SDIM*num_materials)
 
       REAL_T ngrid(SDIM)
 
@@ -641,7 +632,6 @@ stop
       INTEGER_T iten_13,iten_23
       REAL_T gamma1,gamma2
       REAL_T cos_angle,sin_angle
-      INTEGER_T nten_test
 
       INTEGER_T klo_sten_short,khi_sten_short
       INTEGER_T klo_sten_ht,khi_sten_ht
@@ -651,8 +641,8 @@ stop
       REAL_T liquid_viscosity
       REAL_T nproject(SDIM)
       INTEGER_T use_DCA
-      REAL_T LSTEST(nmat)
-      REAL_T VOFTEST(nmat)
+      REAL_T LSTEST(num_materials)
+      REAL_T VOFTEST(num_materials)
       REAL_T LSTEST_EXTEND
       REAL_T LSMAX
       REAL_T mag,mag1,mag2,mag3
@@ -690,7 +680,7 @@ stop
       REAL_T delta_mgoni
       REAL_T volpos,facearea
       REAL_T cenpos(SDIM)
-      REAL_T temperature_cen(nmat)
+      REAL_T temperature_cen(num_materials)
       REAL_T grad_tension(SDIM)
       REAL_T RR
       REAL_T dnrm(SDIM)
@@ -705,8 +695,8 @@ stop
 
       INTEGER_T cell_lo(3),cell_hi(3)
 
-      REAL_T LS_CENTER(nmat)
-      REAL_T LS_OPP(nmat)
+      REAL_T LS_CENTER(num_materials)
+      REAL_T LS_OPP(num_materials)
       REAL_T LS_CENTER_EXTEND
       REAL_T LS_OPP_EXTEND
 
@@ -721,8 +711,8 @@ stop
       REAL_T ZEYU_d_closest
       REAL_T ZEYU_thet_s
       REAL_T ZEYU_thet_d_apparent
-      REAL_T, intent(out) :: ZEYU_thet_d
-      REAL_T, intent(out) :: ZEYU_u_cl
+      REAL_T, INTENT(out) :: ZEYU_thet_d
+      REAL_T, INTENT(out) :: ZEYU_u_cl
       REAL_T ZEYU_u_slip
       REAL_T ZEYU_mu_l
       REAL_T ZEYU_mu_g
@@ -736,7 +726,7 @@ stop
 
       INTEGER_T local_index(3)
       REAL_T local_x(SDIM)
-      REAL_T local_temperature(nmat)
+      REAL_T local_temperature(num_materials)
 
       INTEGER_T nhalf_height ! in: initheightLS
 
@@ -764,13 +754,6 @@ stop
       ZEYU_thet_d=zero
       totaludotn=zero
 
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid initheightLS nten nten test", &
-         nten,nten_test
-       stop
-      endif
-
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid initheightLS"
        stop
@@ -795,23 +778,19 @@ stop
        print *,"expecting ngrow_make_distance=3 in initheightLS"
        stop
       endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (im.ge.im_opp) then
        print *,"im and im_opp invalid"
        stop
       endif
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid31"
        stop
       endif
-      if ((im_opp.lt.1).or.(im_opp.gt.nmat)) then
+      if ((im_opp.lt.1).or.(im_opp.gt.num_materials)) then
        print *,"im_opp invalid init height mof im_opp=",im_opp
        stop
       endif
-      if ((iten.lt.1).or.(iten.gt.nten)) then
+      if ((iten.lt.1).or.(iten.gt.num_interfaces)) then
        print *,"iten invalid"
        stop
       endif
@@ -861,7 +840,7 @@ stop
        stop
       endif
 
-      do im_sort=1,nmat
+      do im_sort=1,num_materials
        LS_CENTER(im_sort)=lssten(0,0,0,im_sort)
        LS_OPP(im_sort)=lssten(ii,jj,kk,im_sort)
       enddo
@@ -872,7 +851,7 @@ stop
        ! do nothing
       else
        print *,"LS_CENTER is corrupt"
-       do im_sort=1,nmat
+       do im_sort=1,num_materials
         print *,"im_sort,LS_CENTER,LS_OPP ",im_sort,LS_CENTER(im_sort), &
            LS_OPP(im_sort)
        enddo
@@ -891,7 +870,7 @@ stop
 
       if (LS_CENTER_EXTEND*LS_OPP_EXTEND.gt.zero) then
        print *,"level set does not change sign"
-       print *,"nmat,iten= ",nmat,iten
+       print *,"num_materials,iten= ",num_materials,iten
        print *,"LS_CENTER_EXTEND ",LS_CENTER_EXTEND
        print *,"LS_OPP_EXTEND ",LS_OPP_EXTEND
        print *,"icenter,jcenter,kcenter ",icenter,jcenter,kcenter
@@ -916,7 +895,7 @@ stop
        stop
       endif
 
-      do im_sort=1,nmat
+      do im_sort=1,num_materials
        temperature_cen(im_sort)=mgoni_temp(0,0,0,im_sort)
       enddo
 
@@ -930,7 +909,7 @@ stop
        stop
       endif
 
-      do dir2=1,nten
+      do dir2=1,num_interfaces
        if (fort_tension(dir2).ge.zero) then
         ! do nothing
        else
@@ -943,7 +922,7 @@ stop
         print *,"user_tension(dir2) invalid"
         stop
        endif
-      enddo ! dir2=1,nten
+      enddo ! dir2=1,num_interfaces
 
       do dir2=1,SDIM
        mgoni_force(dir2)=zero
@@ -952,7 +931,7 @@ stop
       do i=-1,1
       do j=-1,1
       do k=klo_sten_short,khi_sten_short
-       do imhold=1,nmat
+       do imhold=1,num_materials
         LSTEST(imhold)=lssten(i,j,k,imhold)
        enddo
        call get_LS_extend(LSTEST,iten,LS1_save(D_DECL(i,j,k)))
@@ -1009,7 +988,7 @@ stop
          endif
         enddo !dir2=1,SDIM
 
-        do im_sort=1,nmat
+        do im_sort=1,num_materials
          local_temperature(im_sort)=mgoni_temp(iofs,jofs,kofs,im_sort)
         enddo
 
@@ -1108,7 +1087,7 @@ stop
       do j=-ngrow_distance,ngrow_distance
       do k=klo_sten_ht,khi_sten_ht
 
-       do imhold=1,nmat
+       do imhold=1,num_materials
         LSTEST(imhold)=lssten(i,j,k,imhold)
         VOFTEST(imhold)=vofsten(i,j,k,imhold)
        enddo
@@ -1121,13 +1100,13 @@ stop
 
        if ((abs(i).le.1).and.(abs(j).le.1).and.(abs(k).le.1)) then
   
-        if ((imhold.ge.1).and.(imhold.le.nmat)) then
+        if ((imhold.ge.1).and.(imhold.le.num_materials)) then
          if ((imhold.ne.im).and. &
              (imhold.ne.im_opp)) then
           if (im3.eq.0) then
            im3=imhold
            LSMAX=LSTEST(imhold)
-          else if ((im3.ge.1).and.(im3.le.nmat)) then
+          else if ((im3.ge.1).and.(im3.le.num_materials)) then
            if (LSTEST(imhold).gt.LSMAX) then
             im3=imhold
             LSMAX=LSTEST(imhold)
@@ -1155,7 +1134,7 @@ stop
       sin_angle=zero
       iten_13=0
       iten_23=0
-      if ((im3.ge.1).and.(im3.le.nmat)) then
+      if ((im3.ge.1).and.(im3.le.num_materials)) then
         ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
         ! theta_{ik}=0 => material i wets material k.
         ! im is material "i"  ("fluid" material)
@@ -1182,18 +1161,18 @@ stop
        stop
       endif
 
-      if (nmat.eq.1) then
-       print *,"nmat==1 not supported"
+      if (num_materials.eq.1) then
+       print *,"num_materials==1 not supported"
        stop
-      else if (nmat.eq.2) then
+      else if (num_materials.eq.2) then
        if (im3.ne.0) then
-        print *,"im3 invalid, nmat=",nmat
+        print *,"im3 invalid, num_materials=",num_materials
         stop
        endif
-      else if (nmat.gt.2) then
+      else if (num_materials.gt.2) then
        ! do nothing
       else
-       print *,"nmat invalid"
+       print *,"num_materials invalid"
        stop
       endif
 
@@ -1385,7 +1364,6 @@ stop
         col_ht_VOF, &
         dircrit, & ! 1<=dircrit<=SDIM
         n1d, & ! n1d==1 => im material on top, n1d==-1 => im on bottom.
-        nmat, &
         SDIM)
 
        if (crossing_status.eq.1) then
@@ -1436,7 +1414,7 @@ stop
       ! above: use height function 
       ! below: use finite difference 
 
-      if ((im3.lt.0).or.(im3.gt.nmat).or. &
+      if ((im3.lt.0).or.(im3.gt.num_materials).or. &
           (im3.eq.im).or.(im3.eq.im_opp)) then
        print *,"im3 invalid"
        stop
@@ -1451,7 +1429,7 @@ stop
 ! theta_{im,im3}=0 => material im wets material im3 (angle between im and im3)
 ! iten_13 corresponds to "im,im3"
 ! iten_23 corresponds to "im_opp,im3"
-! if nmat=4, 12 13 14 23 24 34
+! if num_materials=4, 12 13 14 23 24 34
 
 ! nsolid points into the solid material (im3)
 ! nfluid points into im (outward from im_opp)
@@ -1476,7 +1454,7 @@ stop
 
        if (im3.eq.0) then
         nfluid_def3(dir2)=nfluid_cen(dir2)
-       else if ((im3.ge.1).and.(im3.le.nmat)) then
+       else if ((im3.ge.1).and.(im3.le.num_materials)) then
         nfluid_def3(dir2)=nrmcenter(SDIM*(im3-1)+dir2)
        else
         print *,"im3 invalid"
@@ -1509,14 +1487,14 @@ stop
       do j=-1,1
       do k=klo_sten_short,khi_sten_short 
 
-       do im_sort=1,nmat
+       do im_sort=1,num_materials
         LSTEST(im_sort)=lssten(i,j,k,im_sort) 
        enddo
 
        ! nfluid is a normal to the im,im_opp interface
        ! and points towards the im material.
 
-       do imhold=1,nmat
+       do imhold=1,num_materials
         do dir2=1,SDIM
          nrmtest(SDIM*(imhold-1)+dir2)= &
            nrmsten(i,j,k,SDIM*(imhold-1)+dir2)
@@ -1542,7 +1520,7 @@ stop
         nfluid_save(D_DECL(i,j,k),dir2)=nfluid(dir2)
        enddo
 
-       if ((im3.ge.1).and.(im3.le.nmat)) then
+       if ((im3.ge.1).and.(im3.le.num_materials)) then
 
         if (is_rigid(im3).eq.1) then
 
@@ -1628,7 +1606,7 @@ stop
       enddo
       enddo ! i,j,k=-1,..,1
 
-      if ((im3.ge.1).and.(im3.le.nmat)) then
+      if ((im3.ge.1).and.(im3.le.num_materials)) then
 
        if (is_rigid(im3).eq.1) then
         
@@ -1849,7 +1827,7 @@ stop
        gamma2=zero
       else if (user_tension(iten).gt.zero) then
 
-       if ((im3.ge.1).and.(im3.le.nmat)) then
+       if ((im3.ge.1).and.(im3.le.num_materials)) then
 
         if ((im3.eq.im).or.(im3.eq.im_opp)) then
          print *,"im3 invalid" 
@@ -1902,7 +1880,7 @@ stop
       do j=-1,1
       do k=klo_sten_short,khi_sten_short
 
-       do imhold=1,nmat
+       do imhold=1,num_materials
         LSTEST(imhold)=lssten(i,j,k,imhold)
        enddo
 
@@ -2004,7 +1982,7 @@ stop
           ngrid(dir2)=n2
          else if ((imhold.ne.im3).and. &
                   (imhold.ge.1).and. &
-                  (imhold.le.nmat)) then 
+                  (imhold.le.num_materials)) then 
           ngrid(dir2)=n1
          else
           print *,"imhold invalid"
@@ -2113,7 +2091,7 @@ stop
          im3_present_node=1
         else if ((imhold.ne.im3).and. &
                  (imhold.ge.1).and. &
-                 (imhold.le.nmat)) then 
+                 (imhold.le.num_materials)) then 
          ! do nothing
         else
          print *,"imhold invalid"
@@ -2371,7 +2349,6 @@ stop
       subroutine fort_cellfaceinit( &
          tid, &
          tessellate, &  ! = 0,1, or 3
-         nten, &
          level, &
          finest_level, &
          cface,DIMS(cface), &
@@ -2382,7 +2359,7 @@ stop
          rz_flag, &
          xlo,dx, &
          time,ngrow, &
-         nmat,ncellfrac) &
+         ncellfrac) &
       bind(c,name='fort_cellfaceinit')
 
       use global_utility_module
@@ -2393,32 +2370,30 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: tessellate  ! =0,1, or 3
-      INTEGER_T, intent(in) :: nten
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: ncellfrac
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: ngrow
-      INTEGER_T, intent(in) :: DIMDEC(cface)
-      INTEGER_T, intent(in) :: DIMDEC(maskfab)
-      INTEGER_T, intent(in) :: DIMDEC(vofrecon)
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: tessellate  ! =0,1, or 3
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: ncellfrac
+      INTEGER_T, INTENT(in) :: ngrow
+      INTEGER_T, INTENT(in) :: DIMDEC(cface)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(vofrecon)
 
-      REAL_T, intent(out),target :: cface(DIMV(cface),ncellfrac)
+      REAL_T, INTENT(out),target :: cface(DIMV(cface),ncellfrac)
       REAL_T, pointer :: cface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: maskfab(DIMV(maskfab),2)
+      REAL_T, INTENT(in),target :: maskfab(DIMV(maskfab),2)
       REAL_T, pointer :: maskfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: vofrecon(DIMV(vofrecon),nmat*ngeom_recon)
+      REAL_T, INTENT(in),target :: vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
       REAL_T, pointer :: vofrecon_ptr(D_DECL(:,:,:),:)
 
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      INTEGER_T, intent(in) :: rz_flag
-      REAL_T, intent(in) :: time
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, INTENT(in) :: rz_flag
+      REAL_T, INTENT(in) :: time
 
       INTEGER_T i,j,k
       INTEGER_T im
@@ -2430,28 +2405,28 @@ stop
       INTEGER_T ncellfrac_test
       INTEGER_T vofcomp
       INTEGER_T vofcomp2
-      REAL_T vcenter(nmat)
-      REAL_T mofdata(nmat*ngeom_recon)
-      REAL_T mofdatavalid(nmat*ngeom_recon)
-      REAL_T local_facearea(nmat,nmat)
-      REAL_T local_facearea_dimensional(nmat,nmat)
-      REAL_T local_dist_to_line(nmat,nmat)
-      REAL_T local_dist(nmat,nmat)
-      REAL_T local_normal(nmat,nmat,SDIM)
-      REAL_T local_facefrac(nmat)
+      REAL_T vcenter(num_materials)
+      REAL_T mofdata(num_materials*ngeom_recon)
+      REAL_T mofdatavalid(num_materials*ngeom_recon)
+      REAL_T local_facearea(num_materials,num_materials)
+      REAL_T local_facearea_dimensional(num_materials,num_materials)
+      REAL_T local_dist_to_line(num_materials,num_materials)
+      REAL_T local_dist(num_materials,num_materials)
+      REAL_T local_normal(num_materials,num_materials,SDIM)
+      REAL_T local_facefrac(num_materials)
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
       REAL_T dummy_tri(SDIM+1,SDIM)
       INTEGER_T nmax,ivert
       INTEGER_T dir2
       INTEGER_T shapeflag
-      REAL_T multi_volume(nmat)
-      REAL_T multi_volume_offset(nmat)
-      REAL_T multi_cen(SDIM,nmat)
-      REAL_T multi_cen_offset(SDIM,nmat)
-      REAL_T multi_area(nmat)
+      REAL_T multi_volume(num_materials)
+      REAL_T multi_volume_offset(num_materials)
+      REAL_T multi_cen(SDIM,num_materials)
+      REAL_T multi_cen_offset(SDIM,num_materials)
+      REAL_T multi_area(num_materials)
       REAL_T total_facearea
-      REAL_T total_facearea_mat(nmat)
+      REAL_T total_facearea_mat(num_materials)
       REAL_T uncaptured_volume_fraction
       REAL_T vfrac_fluid_sum
       REAL_T vfrac_solid_sum
@@ -2469,8 +2444,7 @@ stop
       REAL_T areafrac
       INTEGER_T mask1,mask2
       INTEGER_T iten
-      INTEGER_T nten_test
-      INTEGER_T is_processed(nten)
+      INTEGER_T is_processed(num_interfaces)
       INTEGER_T nhalf_box
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T local_tessellate
@@ -2485,11 +2459,6 @@ stop
           (tessellate.ne.1).and. &
           (tessellate.ne.3)) then
        print *,"tessellate invalid1"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid CELLFACEINIT nten nten_test ",nten,nten_test
        stop
       endif
 
@@ -2509,9 +2478,9 @@ stop
        stop
       endif
 
-      ! (nmat,nmat,3+sdim)
+      ! (num_materials,num_materials,3+sdim)
       ! im_inside,im_outside,3+sdim --> area, dist_to_line, dist, line normal.
-      ncellfrac_test=nmat*nmat*(3+SDIM)
+      ncellfrac_test=num_materials*num_materials*(3+SDIM)
       if (ncellfrac_test.ne.ncellfrac) then
        print *,"ncellfrac invalid cellfaceinit: ", &
         ncellfrac,ncellfrac_test
@@ -2535,10 +2504,6 @@ stop
       call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow,-1,2894)
       call checkbound_array(fablo,fabhi,vofrecon_ptr,ngrow,-1,2895)
       
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid cellfaceinit"
        print *,"ngeom_recon=",ngeom_recon
@@ -2587,23 +2552,23 @@ stop
          bfact,level, &
          volcell,cencell,SDIM)   
         
-        do im=1,nmat*ngeom_recon
+        do im=1,num_materials*ngeom_recon
          mofdata(im)=vofrecon(D_DECL(i,j,k),im)
         enddo
 
          ! vcenter = volume fraction 
-        do im=1,nmat
+        do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
          vcenter(im)=mofdata(vofcomp)
         enddo ! im
 
         call check_full_cell_vfrac(vcenter, &
           tessellate, &  !=0,1, or 3
-          nmat,im_crit)
+          im_crit)
 
         iface=0
-        do im=1,nmat
-         do im_opp=1,nmat
+        do im=1,num_materials
+         do im_opp=1,num_materials
           iface=iface+1
           local_facearea(im,im_opp)=zero
           local_facearea_dimensional(im,im_opp)=zero
@@ -2615,12 +2580,12 @@ stop
          enddo ! im_opp
         enddo ! im
 
-        if (iface.ne.nmat*nmat) then
+        if (iface.ne.num_materials*num_materials) then
          print *,"iface invalid"
          stop
         endif
 
-        if ((im_crit.ge.1).and.(im_crit.le.nmat)) then
+        if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
          ! do nothing, there are no internal faces
         else if (im_crit.eq.0) then
 
@@ -2651,14 +2616,14 @@ stop
           geom_xtetlist_uncapt(1,1,1,tid+1), &
           nmax, &
           nmax, &
-          nmat,SDIM, &
+          SDIM, &
           shapeflag,3)
 
-         do iten=1,nten
+         do iten=1,num_interfaces
           is_processed(iten)=0
          enddo
 
-         do im=1,nmat
+         do im=1,num_materials
           total_facearea_mat(im)=zero
          enddo
 
@@ -2669,7 +2634,7 @@ stop
          vfrac_fluid_sum=zero
          vfrac_solid_sum=zero
 
-         do im=1,nmat
+         do im=1,num_materials
           if (is_rigid(im).eq.0) then
            nmat_fluid=nmat_fluid+1
            vfrac_fluid_sum=vfrac_fluid_sum+vcenter(im)
@@ -2680,7 +2645,7 @@ stop
            print *,"is_rigid invalid LEVELSET_3D.F90"
            stop
           endif
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
 
          if (abs(one-vfrac_fluid_sum).gt.VOFTOL) then
           print *,"vfrac_fluid_sum invalid"
@@ -2692,7 +2657,7 @@ stop
           stop
          endif
 
-         if (nmat_fluid+nmat_rigid.ne.nmat) then
+         if (nmat_fluid+nmat_rigid.ne.num_materials) then
           print *,"nmat_fluid or nmat_rigid invalid"
           stop
          endif
@@ -2708,7 +2673,7 @@ stop
                      one-vfrac_solid_sum))
 
             ! F,CEN,ORDER,SLOPE,INTERCEPT
-           do im=1,nmat
+           do im=1,num_materials
             if (is_rigid(im).eq.1) then
              vofcomp=(im-1)*ngeom_recon+1
              testflag=NINT(mofdatavalid(vofcomp+SDIM+1))
@@ -2753,7 +2718,6 @@ stop
                 geom_xtetlist_uncapt(1,1,1,tid+1), &
                 nmax, &
                 nmax, &
-                nmat, &
                 SDIM,caller_id)
 
                mofdatavalid(vofcomp+2*SDIM+2)=intercept
@@ -2762,12 +2726,12 @@ stop
 
                 if (multi_area(im).gt.zero) then
 
-                 do im_opp=1,nmat
+                 do im_opp=1,num_materials
                   local_facefrac(im_opp)=zero
                  enddo
                  total_facearea=zero
 
-                 do im_opp=1,nmat
+                 do im_opp=1,num_materials
                   if (im_opp.ne.im) then
                    call get_iten(im,im_opp,iten)
                    if (is_processed(iten).eq.0) then 
@@ -2786,10 +2750,10 @@ stop
                    print *,"im_opp or im bust"
                    stop
                   endif
-                 enddo !im_opp=1..nmat
+                 enddo !im_opp=1..num_materials
 
                  if (total_facearea.gt.zero) then
-                  do im_opp=1,nmat
+                  do im_opp=1,num_materials
                    if (im_opp.ne.im) then
                     call get_iten(im,im_opp,iten)
                     if (is_processed(iten).eq.0) then 
@@ -2811,7 +2775,6 @@ stop
                        xsten,nhalf, &
                        im,im, & ! distance from line(im) to point(im)
                        mofdata, &
-                       nmat, &
                        cencell, &  ! cell centroid. 
                        dist_tol, &
                        SDIM, &
@@ -2821,7 +2784,6 @@ stop
                        xsten,nhalf, &
                        im,im_opp, & ! distance from line(im) to point(im_opp)
                        mofdata, &
-                       nmat, &
                        cencell, &  ! cell centroid. 
                        dist_tol, &
                        SDIM, &
@@ -2851,7 +2813,7 @@ stop
                     print *,"im_opp or im bust"
                     stop
                    endif
-                  enddo ! im_opp=1..nmat
+                  enddo ! im_opp=1..num_materials
 
                   total_facearea_mat(im)=multi_area(im)
                  else
@@ -2897,7 +2859,7 @@ stop
                 print *,"i,j,k,xlo,volcell,xsten(cen) ", &
                    i,j,k,xlo(1),xlo(2),xlo(SDIM),volcell, &
                    xsten(0,1),xsten(1,1),xsten(2,1)
-                do im_local=1,nmat
+                do im_local=1,num_materials
                  print *,"in loop: im_local=",im_local
                  vofcomp=(im_local-1)*ngeom_recon+1
                  print *,"mofdatavalid(vofcomp)=",mofdatavalid(vofcomp)
@@ -2909,7 +2871,7 @@ stop
                   print *,"mofdatavalid(vofcomp+SDIM+1+dir2)=", &
                     mofdatavalid(vofcomp+SDIM+1+dir2)
                  enddo
-                enddo  ! im=1..nmat
+                enddo  ! im=1..num_materials
                 stop
                endif
   
@@ -2929,7 +2891,7 @@ stop
              stop
             endif
 
-           enddo ! im=1..nmat
+           enddo ! im=1..num_materials
            loop_counter=loop_counter+1
           enddo  ! while 
                  ! loop_counter<nmat_fluid and
@@ -2951,7 +2913,7 @@ stop
                    (uncaptured_volume_fraction.gt.zero))
 
            ! F,CEN,ORDER,SLOPE,INTERCEPT
-          do im=1,nmat
+          do im=1,num_materials
            if (is_rigid(im).eq.0) then
             vofcomp=(im-1)*ngeom_recon+1
             testflag=NINT(mofdatavalid(vofcomp+SDIM+1))
@@ -2985,7 +2947,6 @@ stop
                geom_xtetlist_uncapt(1,1,1,tid+1), &
                nmax, &
                nmax, &
-               nmat, &
                SDIM,3)
 
               mofdatavalid(vofcomp+2*SDIM+2)=intercept
@@ -2996,12 +2957,12 @@ stop
 
                 if (multi_area(im).gt.zero) then
 
-                 do im_opp=1,nmat
+                 do im_opp=1,num_materials
                   local_facefrac(im_opp)=zero
                  enddo
                  total_facearea=zero
 
-                 do im_opp=1,nmat
+                 do im_opp=1,num_materials
 
                   if ((is_rigid(im_opp).eq.0).or. &
                       (tessellate.eq.1)) then
@@ -3033,10 +2994,10 @@ stop
                    stop
                   endif
 
-                 enddo !im_opp=1..nmat
+                 enddo !im_opp=1..num_materials
 
                  if (total_facearea.gt.zero) then
-                  do im_opp=1,nmat
+                  do im_opp=1,num_materials
                    if ((is_rigid(im_opp).eq.0).or. &
                        (tessellate.eq.1)) then
 
@@ -3061,7 +3022,6 @@ stop
                         xsten,nhalf, &
                         im,im, & ! distance from line(im) to point(im)
                         mofdata, &
-                        nmat, &
                         cencell, &  ! cell centroid. 
                         dist_tol, &
                         SDIM, &
@@ -3071,7 +3031,6 @@ stop
                         xsten,nhalf, &
                         im,im_opp, & ! distance from line(im) to point(im_opp)
                         mofdata, &
-                        nmat, &
                         cencell, &  ! cell centroid. 
                         dist_tol, &
                         SDIM, &
@@ -3128,7 +3087,7 @@ stop
                  print *,"multi_volume(im)=",multi_volume(im)
                  print *,"multi_volume_offset(im)=",multi_volume_offset(im)
                  print *,"multi_area(im)=",multi_area(im)
-                 do vofcomp=1,nmat*ngeom_recon
+                 do vofcomp=1,num_materials*ngeom_recon
                   print *,"vofcomp,mofdatavalid(vofcomp) ",vofcomp, &
                    mofdatavalid(vofcomp)
                  enddo
@@ -3149,7 +3108,7 @@ stop
                   multi_volume(im)
                 print *,"num_processed_fluid=",num_processed_fluid
                 print *,"loop_counter=",loop_counter
-                do vofcomp=1,nmat*ngeom_recon
+                do vofcomp=1,num_materials*ngeom_recon
                  print *,"vofcomp,mofdatavalid(vofcomp) ",vofcomp, &
                    mofdatavalid(vofcomp)
                 enddo
@@ -3178,7 +3137,7 @@ stop
             stop
            endif
 
-          enddo ! im=1..nmat
+          enddo ! im=1..num_materials
           loop_counter=loop_counter+1
          enddo  ! while 
                 ! loop_counter<nmat_fluid and
@@ -3190,8 +3149,8 @@ stop
          stop
         endif
 
-        do im=1,nmat
-         do im_opp=1,nmat
+        do im=1,num_materials
+         do im_opp=1,num_materials
           if (im.ne.im_opp) then
            areafrac=local_facearea(im,im_opp)
            if (areafrac.lt.zero) then
@@ -3232,8 +3191,8 @@ stop
         enddo ! im
 
         iface=0
-        do im=1,nmat
-         do im_opp=1,nmat
+        do im=1,num_materials
+         do im_opp=1,num_materials
           iface=iface+1
           cface(D_DECL(i,j,k),iface)=local_facearea_dimensional(im,im_opp)
           iface=iface+1
@@ -3297,8 +3256,6 @@ stop
        time, &
        visc_coef, &
        unscaled_min_curvature_radius, &
-       nmat, &
-       nten, & 
        num_curv, &
        ngrow_distance_in) &
       bind(c,name='fort_curvstrip')
@@ -3310,84 +3267,82 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nhistory
-      INTEGER_T, intent(in) :: post_restart_flag
-      INTEGER_T, intent(in) :: vof_height_function
+      INTEGER_T, INTENT(in) :: nhistory
+      INTEGER_T, INTENT(in) :: post_restart_flag
+      INTEGER_T, INTENT(in) :: vof_height_function
       INTEGER_T :: vof_height_function_local
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: nten
-      INTEGER_T, intent(in) :: ngrow_distance_in
-      INTEGER_T, intent(in) :: num_curv
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: ngrow_distance_in
+      INTEGER_T, INTENT(in) :: num_curv
       INTEGER_T icurv
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(in) :: visc_coef
-      REAL_T, intent(in) :: unscaled_min_curvature_radius
+      REAL_T, INTENT(in) :: visc_coef
+      REAL_T, INTENT(in) :: unscaled_min_curvature_radius
 
-      INTEGER_T, intent(in) :: DIMDEC(history_dat)
-      INTEGER_T, intent(in) :: DIMDEC(maskcov)
-      INTEGER_T, intent(in) :: DIMDEC(masknbr)
-      INTEGER_T, intent(in) :: DIMDEC(LSPC)
-      INTEGER_T, intent(in) :: DIMDEC(recon)
-      INTEGER_T, intent(in) :: DIMDEC(curvfab)
-      INTEGER_T, intent(in) :: DIMDEC(velfab)
-      INTEGER_T, intent(in) :: DIMDEC(denfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(history_dat)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
+      INTEGER_T, INTENT(in) :: DIMDEC(masknbr)
+      INTEGER_T, INTENT(in) :: DIMDEC(LSPC)
+      INTEGER_T, INTENT(in) :: DIMDEC(recon)
+      INTEGER_T, INTENT(in) :: DIMDEC(curvfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(velfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(denfab)
 
-      INTEGER_T, intent(in) :: DIMDEC(vol)
-      INTEGER_T, intent(in) :: DIMDEC(areax)
-      INTEGER_T, intent(in) :: DIMDEC(areay)
-      INTEGER_T, intent(in) :: DIMDEC(areaz)
+      INTEGER_T, INTENT(in) :: DIMDEC(vol)
+      INTEGER_T, INTENT(in) :: DIMDEC(areax)
+      INTEGER_T, INTENT(in) :: DIMDEC(areay)
+      INTEGER_T, INTENT(in) :: DIMDEC(areaz)
 
-      REAL_T, intent(out) :: curv_min
-      REAL_T, intent(out) :: curv_max
+      REAL_T, INTENT(out) :: curv_min
+      REAL_T, INTENT(out) :: curv_max
 
-      REAL_T, intent(in),target :: maskcov(DIMV(maskcov))
+      REAL_T, INTENT(in),target :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: vol(DIMV(vol))
+      REAL_T, INTENT(in), target :: vol(DIMV(vol))
       REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: areax(DIMV(areax))
-      REAL_T, intent(in), target :: areay(DIMV(areay))
-      REAL_T, intent(in), target :: areaz(DIMV(areaz))
+      REAL_T, INTENT(in), target :: areax(DIMV(areax))
+      REAL_T, INTENT(in), target :: areay(DIMV(areay))
+      REAL_T, INTENT(in), target :: areaz(DIMV(areaz))
       REAL_T, pointer :: areax_ptr(D_DECL(:,:,:))
       REAL_T, pointer :: areay_ptr(D_DECL(:,:,:))
       REAL_T, pointer :: areaz_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(out),target :: history_dat(DIMV(history_dat),nhistory)
+      REAL_T, INTENT(out),target :: history_dat(DIMV(history_dat),nhistory)
       REAL_T, pointer :: history_dat_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: masknbr(DIMV(masknbr),4)
+      REAL_T, INTENT(in), target :: masknbr(DIMV(masknbr),4)
       REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: LSPC(DIMV(LSPC),nmat*(1+SDIM))
+      REAL_T, INTENT(in), target :: LSPC(DIMV(LSPC),num_materials*(1+SDIM))
       REAL_T, pointer :: LSPC_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon)
+      REAL_T, INTENT(in), target :: recon(DIMV(recon),num_materials*ngeom_recon)
       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out),target :: curvfab(DIMV(curvfab),num_curv)
+      REAL_T, INTENT(out),target :: curvfab(DIMV(curvfab),num_curv)
       REAL_T, pointer :: curvfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: velfab(DIMV(velfab),STATE_NCOMP_VEL)
+      REAL_T, INTENT(in), target :: velfab(DIMV(velfab),STATE_NCOMP_VEL)
       REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target ::  &
-              denfab(DIMV(denfab),nmat*num_state_material)
+      REAL_T, INTENT(in), target ::  &
+              denfab(DIMV(denfab),num_materials*num_state_material)
       REAL_T, pointer :: denfab_ptr(D_DECL(:,:,:),:)
 
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T istenlo(3),istenhi(3)
       INTEGER_T LSstenlo(3),LSstenhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: bfact_grid
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      INTEGER_T, intent(in) :: rz_flag
-      REAL_T, intent(in) :: time
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: bfact_grid
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, INTENT(in) :: rz_flag
+      REAL_T, INTENT(in) :: time
 
       INTEGER_T i,j,k
       INTEGER_T iside,jside,kside
       INTEGER_T iface,jface,kface
       INTEGER_T i1,j1,k1
       INTEGER_T ii,jj,kk
-      REAL_T LS(nmat)
-      REAL_T LS_fixed(nmat)
-      REAL_T LSSIDE(nmat)
-      REAL_T LSSIDE_fixed(nmat)
+      REAL_T LS(num_materials)
+      REAL_T LS_fixed(num_materials)
+      REAL_T LSSIDE(num_materials)
+      REAL_T LSSIDE_fixed(num_materials)
       REAL_T xcenter(SDIM)
       INTEGER_T dirloc,dircrossing,dirstar
       INTEGER_T sidestar
@@ -3399,12 +3354,11 @@ stop
       INTEGER_T vofcomp
       INTEGER_T im_majority
       INTEGER_T im_main,im_main_opp
-      INTEGER_T nten_test
       INTEGER_T iten
       INTEGER_T inormal
-      REAL_T nrmPROBE(SDIM*nmat)
-      REAL_T nrmFD(SDIM*nmat)
-      REAL_T nrm_local(SDIM*nmat)
+      REAL_T nrmPROBE(SDIM*num_materials)
+      REAL_T nrmFD(SDIM*num_materials)
+      REAL_T nrm_local(SDIM*num_materials)
       REAL_T nrm_mat(SDIM)
       REAL_T nrm_test(SDIM)
       REAL_T nrm_center(SDIM)
@@ -3423,31 +3377,31 @@ stop
 
       INTEGER_T im3
 
-      REAL_T LSCEN_hold(nmat)
-      REAL_T LSCEN_hold_fixed(nmat)
+      REAL_T LSCEN_hold(num_materials)
+      REAL_T LSCEN_hold_fixed(num_materials)
 
       REAL_T LCEN,LSIDE
       REAL_T LSLEFT_EXTEND,LSRIGHT_EXTEND
-      REAL_T LSLEFT_fixed(nmat)
-      REAL_T LSRIGHT_fixed(nmat)
+      REAL_T LSLEFT_fixed(num_materials)
+      REAL_T LSRIGHT_fixed(num_materials)
       REAL_T XLEFT,XRIGHT,XCEN
 
-      REAL_T LS_STAR_FIXED(-1:1,SDIM,nmat)
+      REAL_T LS_STAR_FIXED(-1:1,SDIM,num_materials)
       INTEGER_T im_star_majority(-1:1,SDIM)
 
       REAL_T velsten(-1:1,-1:1,-1:1,SDIM)
-      REAL_T nrmsten(-1:1,-1:1,-1:1,SDIM*nmat)
-      REAL_T mgoni_temp(-1:1,-1:1,-1:1,nmat)
+      REAL_T nrmsten(-1:1,-1:1,-1:1,SDIM*num_materials)
+      REAL_T mgoni_temp(-1:1,-1:1,-1:1,num_materials)
       REAL_T lssten( &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
-        nmat)
+        num_materials)
       REAL_T vofsten( &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
-        nmat)
+        num_materials)
 
       REAL_T, dimension(:,:), allocatable :: xsten0
       REAL_T, dimension(:,:), allocatable :: xsten_curv
@@ -3499,12 +3453,6 @@ stop
        stop
       endif
 
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid curvstrip nten nten_test ",nten,nten_test
-       stop
-      endif
-
       if (unscaled_min_curvature_radius.ge.zero) then
        ! do nothing
       else
@@ -3512,16 +3460,16 @@ stop
        stop
       endif
 
-      do i=1,nten
+      do i=1,num_interfaces
        if (fort_tension(i).ge.zero) then
         ! do nothing
        else
         print *,"fort_tension(i) invalid"
         stop
        endif
-      enddo ! i=1,nten
+      enddo ! i=1,num_interfaces
 
-      if (nhistory.eq.nten*2) then
+      if (nhistory.eq.num_interfaces*2) then
        ! do nothing
       else
        print *,"nhistory invalid"
@@ -3578,10 +3526,6 @@ stop
       history_dat_ptr=>history_dat
       call checkbound_array(fablo,fabhi,history_dat_ptr,1,-1,2902)
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid curv strip"
        print *,"ngeom_recon=",ngeom_recon
@@ -3613,9 +3557,9 @@ stop
       ! marangoni force
       ! dir/side flag
       ! im3
-      ! x nten
+      ! x num_interfaces
 
-      if (num_curv.ne.nten*(5+SDIM)) then
+      if (num_curv.ne.num_interfaces*(5+SDIM)) then
        print *,"num_curv invalid"
        stop
       endif
@@ -3654,11 +3598,11 @@ stop
          do icurv=1,num_curv
           curvfab(D_DECL(i,j,k),icurv)=zero
          enddo 
-         do im=1,nmat
+         do im=1,num_materials
           LS(im)=LSPC(D_DECL(i,j,k),im)
          enddo
 
-         call FIX_LS_tessellate(LS,LS_fixed,nmat)
+         call FIX_LS_tessellate(LS,LS_fixed)
 
          call get_primary_material(LS_fixed,im_majority)
 
@@ -3702,12 +3646,12 @@ stop
             jside=j+sidestar*jj
             kside=k+sidestar*kk
 
-            do im=1,nmat
+            do im=1,num_materials
              LSSIDE(im)=LSPC(D_DECL(iside,jside,kside),im)
             enddo
-            call FIX_LS_tessellate(LSSIDE,LSSIDE_fixed,nmat)
+            call FIX_LS_tessellate(LSSIDE,LSSIDE_fixed)
             call get_primary_material(LSSIDE_fixed,im_opp)
-            do im=1,nmat
+            do im=1,num_materials
              LS_STAR_FIXED(sidestar,dirstar,im)=LSSIDE_fixed(im)
             enddo
             im_star_majority(sidestar,dirstar)=im_opp
@@ -3718,7 +3662,7 @@ stop
 
            ! loop through all possible interfaces involving im_majority
            ! and initialize curvfab
-          do im_opp=1,nmat
+          do im_opp=1,num_materials
 
            donate_flag=0
   
@@ -3742,7 +3686,7 @@ stop
 
             do dirloc=1,SDIM
        
-             do im=1,nmat 
+             do im=1,num_materials 
               LSLEFT_fixed(im)=LS_STAR_FIXED(-1,dirloc,im)
               LSRIGHT_fixed(im)=LS_STAR_FIXED(1,dirloc,im)
              enddo
@@ -3824,7 +3768,7 @@ stop
             
               x1dside=xsten0(2*sidestar,dirstar)
   
-              do im=1,nmat
+              do im=1,num_materials
                LSSIDE_fixed(im)=LS_STAR_FIXED(sidestar,dirstar,im)
               enddo
               im_opp_test=im_star_majority(sidestar,dirstar)
@@ -3973,8 +3917,8 @@ stop
              call gridsten_level(xsten_curv,i,j,k,level,nhalf_height)
 
              ! get normals at the cell center.
-             do inormal=1,SDIM*nmat
-              nrmPROBE(inormal)=LSPC(D_DECL(i,j,k),nmat+inormal)
+             do inormal=1,SDIM*num_materials
+              nrmPROBE(inormal)=LSPC(D_DECL(i,j,k),num_materials+inormal)
              enddo ! inormal
 
               ! get normals at the cell center using finite differences. 
@@ -3991,7 +3935,7 @@ stop
                stop
               endif
 
-              do im_curv=1,nmat
+              do im_curv=1,num_materials
                LSRIGHT_EXTEND=LS_STAR_FIXED(1,dirstar,im_curv)
                LSLEFT_EXTEND=LS_STAR_FIXED(-1,dirstar,im_curv)
                LCEN=LS_fixed(im_curv)
@@ -4014,11 +3958,11 @@ stop
                 print *,"dirstar invalid"
                 stop
                endif
-              enddo ! im_curv=1..nmat
+              enddo ! im_curv=1..num_materials
 
              enddo ! dirstar=1..sdim
 
-             do im_curv=1,nmat
+             do im_curv=1,num_materials
               do dirloc=1,SDIM
                inormal=(im_curv-1)*SDIM+dirloc
                nrm_mat(dirloc)=nrmPROBE(inormal)
@@ -4146,7 +4090,7 @@ stop
                nrmPROBE(inormal)=nrm_mat(dirloc)
               enddo
 
-             enddo ! im_curv=1..nmat
+             enddo ! im_curv=1..num_materials
 
              if (1.eq.0) then
               print *,"xcenter ",xcenter(1),xcenter(2),xcenter(SDIM)
@@ -4160,23 +4104,23 @@ stop
              do j1=LSstenlo(2),LSstenhi(2)
              do k1=LSstenlo(3),LSstenhi(3)
 
-              do inormal=1,SDIM*nmat
-               call safe_data(i+i1,j+j1,k+k1,nmat+inormal, &
+              do inormal=1,SDIM*num_materials
+               call safe_data(i+i1,j+j1,k+k1,num_materials+inormal, &
                  LSPC_ptr,nrm_local(inormal))
               enddo
 
-              do im_curv=1,nmat
+              do im_curv=1,num_materials
                call safe_data(i+i1,j+j1,k+k1,im_curv, &
                  LSPC_ptr,LSCEN_hold(im_curv))
                vofcomp=(im_curv-1)*ngeom_recon+1
                call safe_data(i+i1,j+j1,k+k1,vofcomp, &
                  recon_ptr, &
                  vofsten(i1,j1,k1,im_curv))
-              enddo !im_curv=1..nmat
+              enddo !im_curv=1..num_materials
 
-              call FIX_LS_tessellate(LSCEN_hold,LSCEN_hold_fixed,nmat)
+              call FIX_LS_tessellate(LSCEN_hold,LSCEN_hold_fixed)
  
-              do im_curv=1,nmat
+              do im_curv=1,num_materials
 
                lssten(i1,j1,k1,im_curv)=LSCEN_hold_fixed(im_curv)
 
@@ -4213,7 +4157,7 @@ stop
                 stop
                endif
 
-              enddo ! im_curv=1..nmat
+              enddo ! im_curv=1..num_materials
 
              enddo
              enddo
@@ -4229,7 +4173,7 @@ stop
                 velfab(D_DECL(i+i1,j+j1,k+k1),dirloc)
               enddo
 
-              do im_curv=1,nmat
+              do im_curv=1,num_materials
                itemperature= &
                  (im_curv-1)*num_state_material+ENUM_TEMPERATUREVAR+1
                mgoni_temp(i1,j1,k1,im_curv)= &
@@ -4249,7 +4193,7 @@ stop
               finest_level, &
               bfact,dx, &
               xcenter, &
-              nrmPROBE, & !nmat x sdim components("nrmcenter" in initheightLS)
+              nrmPROBE, & !num_materials x sdim components("nrmcenter" in initheightLS)
               dircrossing, &
               sidestar, &
               signside, &
@@ -4268,10 +4212,8 @@ stop
               ZEYU_thet_d, &
               ZEYU_u_cl, &
               im3, &
-              nmat, &
               visc_coef, &
               unscaled_min_curvature_radius, &
-              nten, &
               im_main,im_main_opp,iten)
 
              if (DEBUG_CURVATURE.eq.1) then
@@ -4285,7 +4227,7 @@ stop
               bfact,dx,xsten0, &
               time, &
               lssten, &
-              dircrossing-1,nmat, &
+              dircrossing-1, &
               im_main,im_main_opp, &
               pforce_cell)
 
@@ -4364,7 +4306,6 @@ stop
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
        type_flag, &
-       nmat, &
        ncomp_type, &
        ncomp_source, &
        zero_diag_flag) &
@@ -4376,46 +4317,41 @@ stop
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xlo(SDIM)
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: ncomp_type
-      INTEGER_T, intent(in) :: ncomp_source
-      INTEGER_T, intent(in) :: zero_diag_flag
-      INTEGER_T, intent(out) :: type_flag(ncomp_type)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      INTEGER_T, INTENT(in) :: ncomp_type
+      INTEGER_T, INTENT(in) :: ncomp_source
+      INTEGER_T, INTENT(in) :: zero_diag_flag
+      INTEGER_T, INTENT(out) :: type_flag(ncomp_type)
 
-      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3), growhi(3)
-      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, INTENT(in) :: bfact
 
-      INTEGER_T, intent(in) ::  DIMDEC(source_fab)
-      INTEGER_T, intent(in) ::  DIMDEC(typefab)
+      INTEGER_T, INTENT(in) ::  DIMDEC(source_fab)
+      INTEGER_T, INTENT(in) ::  DIMDEC(typefab)
 
-      REAL_T, intent(in),target :: source_fab(DIMV(source_fab),ncomp_source)
+      REAL_T, INTENT(in),target :: source_fab(DIMV(source_fab),ncomp_source)
       REAL_T, pointer :: source_fab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out),target :: typefab(DIMV(typefab))
+      REAL_T, INTENT(out),target :: typefab(DIMV(typefab))
       REAL_T, pointer :: typefab_ptr(D_DECL(:,:,:))
 
       INTEGER_T i,j,k,im,base_type
 
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (bfact.lt.1) then
        print *,"bfact invalid91"
        stop
       endif
       if (zero_diag_flag.eq.0) then
-       if (ncomp_source.eq.nmat*(1+SDIM)) then
+       if (ncomp_source.eq.num_materials*(1+SDIM)) then
         ! do nothing
        else
         print *,"ncomp_source invalid"
         stop
        endif
-       if (ncomp_type.eq.nmat) then
+       if (ncomp_type.eq.num_materials) then
         ! do nothing
        else
         print *,"ncomp_type invalid"
@@ -4452,14 +4388,14 @@ stop
        if (zero_diag_flag.eq.0) then
 
         base_type=1
-        do im=2,nmat
+        do im=2,num_materials
          if (source_fab(D_DECL(i,j,k),im).gt. &
              source_fab(D_DECL(i,j,k),base_type)) then
           base_type=im
          endif
         enddo
 
-        do im=1,nmat
+        do im=1,num_materials
          if (is_rigid(im).eq.1) then
           if (source_fab(D_DECL(i,j,k),im).ge.zero) then
            base_type=im
@@ -4470,10 +4406,10 @@ stop
           print *,"is_rigid invalid LEVELSET_3D.F90"
           stop
          endif
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
         typefab(D_DECL(i,j,k))=base_type
-        if ((base_type.gt.nmat).or.(base_type.lt.1)) then
+        if ((base_type.gt.num_materials).or.(base_type.lt.1)) then
          print *,"base_type invalid"
          stop
         else
@@ -4513,13 +4449,11 @@ stop
        distribute_mdot_evenly, &
        constant_volume_mdot, &
        distribute_from_target, &
-       constant_density_all_time, & ! 1..nmat
+       constant_density_all_time, & ! 1..num_materials
        cur_time_slab, &
        dt, &
        dx, &
        xlo, &
-       nmat, &
-       nten, &
        nstate, &
        snew,DIMS(snew), &
        mdot, &
@@ -4575,110 +4509,108 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tid_current
-      INTEGER_T, intent(in) :: operation_flag
-      INTEGER_T, intent(in) :: nstate
-      INTEGER_T, intent(in) :: sweep_num
-      INTEGER_T, intent(in) :: tessellate
-      INTEGER_T, intent(in) :: nface_dst,ncellfrac
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      REAL_T, intent(in) :: cur_time_slab
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xlo(SDIM)
-      INTEGER_T, intent(in) :: levelbc(SDIM,2)
-      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
-      INTEGER_T, intent(in) :: ncomp_mdot_alloc
-      INTEGER_T, intent(in) :: ncomp_mdot
-      INTEGER_T, intent(in) :: material_type_lowmach(nmat)
-      INTEGER_T, intent(in) :: material_type_visual(nmat)
-      INTEGER_T, intent(in) :: distribute_mdot_evenly(2*nten)
-      INTEGER_T, intent(in) :: constant_volume_mdot(2*nten)
-      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
-      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
+      INTEGER_T, INTENT(in) :: tid_current
+      INTEGER_T, INTENT(in) :: operation_flag
+      INTEGER_T, INTENT(in) :: nstate
+      INTEGER_T, INTENT(in) :: sweep_num
+      INTEGER_T, INTENT(in) :: tessellate
+      INTEGER_T, INTENT(in) :: nface_dst,ncellfrac
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      REAL_T, INTENT(in) :: cur_time_slab
+      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      INTEGER_T, INTENT(in) :: levelbc(SDIM,2)
+      INTEGER_T, INTENT(in) :: velbc(SDIM,2,SDIM)
+      INTEGER_T, INTENT(in) :: ncomp_mdot_alloc
+      INTEGER_T, INTENT(in) :: ncomp_mdot
+      INTEGER_T, INTENT(in) :: material_type_lowmach(num_materials)
+      INTEGER_T, INTENT(in) :: material_type_visual(num_materials)
+      INTEGER_T, INTENT(in) :: distribute_mdot_evenly(2*num_interfaces)
+      INTEGER_T, INTENT(in) :: constant_volume_mdot(2*num_interfaces)
+      INTEGER_T, INTENT(in) :: distribute_from_target(2*num_interfaces)
+      INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials)
 
       INTEGER_T :: i,j,k
       INTEGER_T :: ii,jj,kk
       INTEGER_T :: iface,jface,kface
       INTEGER_T :: face_index
  
-      INTEGER_T, intent(in) :: rzflag
-      INTEGER_T, intent(in) :: num_colors
-      INTEGER_T, intent(in) :: arraysize
-      INTEGER_T, intent(in) :: mdot_arraysize
-      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: rzflag
+      INTEGER_T, INTENT(in) :: num_colors
+      INTEGER_T, INTENT(in) :: arraysize
+      INTEGER_T, INTENT(in) :: mdot_arraysize
+      INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3), growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(snew)
-      INTEGER_T, intent(in) :: DIMDEC(mdot)
-      INTEGER_T, intent(in) :: DIMDEC(mdot_complement)
-      INTEGER_T, intent(in) :: DIMDEC(LS)
-      INTEGER_T, intent(in) :: DIMDEC(VEL)
-      INTEGER_T, intent(in) :: DIMDEC(DEN)
-      INTEGER_T, intent(in) :: DIMDEC(VOF)
-      INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(yface)
-      INTEGER_T, intent(in) :: DIMDEC(zface)
-      INTEGER_T, intent(in) :: DIMDEC(areax)
-      INTEGER_T, intent(in) :: DIMDEC(areay)
-      INTEGER_T, intent(in) :: DIMDEC(areaz)
-      INTEGER_T, intent(in) :: DIMDEC(cellfab)
-      INTEGER_T, intent(in) :: DIMDEC(typefab)
-      INTEGER_T, intent(in) :: DIMDEC(color)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      REAL_T, intent(inout) ::level_blobdata(arraysize)
-      REAL_T, intent(inout) ::level_mdot_data(mdot_arraysize)
-      REAL_T, intent(inout) ::level_mdot_complement_data(mdot_arraysize)
-      REAL_T, intent(inout) ::level_mdot_data_redistribute(mdot_arraysize)
-      REAL_T, intent(inout) :: &
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: DIMDEC(snew)
+      INTEGER_T, INTENT(in) :: DIMDEC(mdot)
+      INTEGER_T, INTENT(in) :: DIMDEC(mdot_complement)
+      INTEGER_T, INTENT(in) :: DIMDEC(LS)
+      INTEGER_T, INTENT(in) :: DIMDEC(VEL)
+      INTEGER_T, INTENT(in) :: DIMDEC(DEN)
+      INTEGER_T, INTENT(in) :: DIMDEC(VOF)
+      INTEGER_T, INTENT(in) :: DIMDEC(xface)
+      INTEGER_T, INTENT(in) :: DIMDEC(yface)
+      INTEGER_T, INTENT(in) :: DIMDEC(zface)
+      INTEGER_T, INTENT(in) :: DIMDEC(areax)
+      INTEGER_T, INTENT(in) :: DIMDEC(areay)
+      INTEGER_T, INTENT(in) :: DIMDEC(areaz)
+      INTEGER_T, INTENT(in) :: DIMDEC(cellfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(typefab)
+      INTEGER_T, INTENT(in) :: DIMDEC(color)
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      REAL_T, INTENT(inout) ::level_blobdata(arraysize)
+      REAL_T, INTENT(inout) ::level_mdot_data(mdot_arraysize)
+      REAL_T, INTENT(inout) ::level_mdot_complement_data(mdot_arraysize)
+      REAL_T, INTENT(inout) ::level_mdot_data_redistribute(mdot_arraysize)
+      REAL_T, INTENT(inout) :: &
               level_mdot_complement_data_redistribute(mdot_arraysize)
-      REAL_T, intent(in) :: cum_blobdata(arraysize)
-      REAL_T, intent(in) :: cum_mdot_data(mdot_arraysize)
-      REAL_T, intent(in) :: cum_mdot_complement_data(mdot_arraysize)
-      INTEGER_T, intent(inout) :: level_blobtypedata(num_colors)
+      REAL_T, INTENT(in) :: cum_blobdata(arraysize)
+      REAL_T, INTENT(in) :: cum_mdot_data(mdot_arraysize)
+      REAL_T, INTENT(in) :: cum_mdot_complement_data(mdot_arraysize)
+      INTEGER_T, INTENT(inout) :: level_blobtypedata(num_colors)
 
-      REAL_T, intent(inout), target :: snew(DIMV(snew),nstate)
+      REAL_T, INTENT(inout), target :: snew(DIMV(snew),nstate)
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(inout), target :: mdot(DIMV(mdot),ncomp_mdot)
+      REAL_T, INTENT(inout), target :: mdot(DIMV(mdot),ncomp_mdot)
       REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(inout), target :: &
+      REAL_T, INTENT(inout), target :: &
               mdot_complement(DIMV(mdot_complement),ncomp_mdot)
       REAL_T, pointer :: mdot_complement_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: typefab(DIMV(typefab))
+      REAL_T, INTENT(in), target :: typefab(DIMV(typefab))
       REAL_T, pointer :: typefab_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, INTENT(in), target :: LS(DIMV(LS),num_materials*(1+SDIM))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: &
+      REAL_T, INTENT(in), target :: &
            VEL(DIMV(VEL),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T, pointer :: VEL_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: DEN(DIMV(DEN),nmat*num_state_material)
+      REAL_T, INTENT(in), target :: DEN(DIMV(DEN),num_materials*num_state_material)
       REAL_T, pointer :: DEN_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: VOF(DIMV(VOF),nmat*ngeom_recon)
+      REAL_T, INTENT(in), target :: VOF(DIMV(VOF),num_materials*ngeom_recon)
       REAL_T, pointer :: VOF_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: xface(DIMV(xface),nface_dst)
-      REAL_T, intent(in), target :: yface(DIMV(yface),nface_dst)
-      REAL_T, intent(in), target :: zface(DIMV(zface),nface_dst)
+      REAL_T, INTENT(in), target :: xface(DIMV(xface),nface_dst)
+      REAL_T, INTENT(in), target :: yface(DIMV(yface),nface_dst)
+      REAL_T, INTENT(in), target :: zface(DIMV(zface),nface_dst)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
       REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
       REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: areax(DIMV(areax))
-      REAL_T, intent(in), target :: areay(DIMV(areay))
-      REAL_T, intent(in), target :: areaz(DIMV(areaz))
+      REAL_T, INTENT(in), target :: areax(DIMV(areax))
+      REAL_T, INTENT(in), target :: areay(DIMV(areay))
+      REAL_T, INTENT(in), target :: areaz(DIMV(areaz))
       REAL_T, pointer :: areax_ptr(D_DECL(:,:,:))
       REAL_T, pointer :: areay_ptr(D_DECL(:,:,:))
       REAL_T, pointer :: areaz_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: cellfab(DIMV(cellfab),ncellfrac)
+      REAL_T, INTENT(in), target :: cellfab(DIMV(cellfab),ncellfrac)
       REAL_T, pointer :: cellfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: color(DIMV(color))
+      REAL_T, INTENT(in), target :: color(DIMV(color))
       REAL_T, pointer :: color_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, INTENT(in), target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
 
       INTEGER_T dir,side
@@ -4686,7 +4618,7 @@ stop
       INTEGER_T vofcomp
       INTEGER_T dencomp
       INTEGER_T base_type
-      INTEGER_T opposite_color(nmat)
+      INTEGER_T opposite_color(num_materials)
       INTEGER_T typeside
       INTEGER_T colorside
       INTEGER_T ic
@@ -4694,10 +4626,10 @@ stop
       INTEGER_T ic_base
       INTEGER_T ic_base_mdot
       INTEGER_T icolor
-      REAL_T local_facearea(nmat,nmat)
-      REAL_T local_dist_to_line(nmat,nmat)
-      REAL_T local_normal(nmat,nmat,SDIM)
-      REAL_T local_dist(nmat,nmat)
+      REAL_T local_facearea(num_materials,num_materials)
+      REAL_T local_dist_to_line(num_materials,num_materials)
+      REAL_T local_normal(num_materials,num_materials,SDIM)
+      REAL_T local_dist(num_materials,num_materials)
       REAL_T vfrac
       REAL_T vol
       REAL_T mass
@@ -4719,14 +4651,14 @@ stop
       INTEGER_T ml,mr
       INTEGER_T local_mask
       INTEGER_T ispec
-      REAL_T frac_pair(nmat,nmat)
-      REAL_T dist_pair(nmat,nmat)
+      REAL_T frac_pair(num_materials,num_materials)
+      REAL_T dist_pair(num_materials,num_materials)
       REAL_T areaface
-      INTEGER_T LS_change_sign(nmat)
-      INTEGER_T LS_plus(nmat)
-      INTEGER_T LS_minus(nmat)
-      REAL_T LScen(nmat)
-      REAL_T LSside(nmat)
+      INTEGER_T LS_change_sign(num_materials)
+      INTEGER_T LS_plus(num_materials)
+      INTEGER_T LS_minus(num_materials)
+      REAL_T LScen(num_materials)
+      REAL_T LSside(num_materials)
       REAL_T RR,dperim
       REAL_T fluid_velocity(SDIM)
       REAL_T solid_velocity(SDIM)
@@ -4762,10 +4694,9 @@ stop
       REAL_T updated_density
       REAL_T original_density
       REAL_T density_factor
-      REAL_T mofdata(nmat*ngeom_recon)
+      REAL_T mofdata(num_materials*ngeom_recon)
       INTEGER_T caller_id
       INTEGER_T nmax
-      INTEGER_T nten_test
       INTEGER_T im_alt,im_mdot,im_opp_mdot
       INTEGER_T im_source,im_dest
       INTEGER_T im_evenly
@@ -4807,21 +4738,11 @@ stop
        stop
       endif
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid fort_getcolorsum nten nten_test ",nten,nten_test
-       stop
-      endif
-
-      if (nface_dst.ne.nmat*nmat*2) then
+      if (nface_dst.ne.num_materials*num_materials*2) then
        print *,"nface_dst invalid"
        stop
       endif
-      if (ncellfrac.ne.nmat*nmat*(3+SDIM)) then
+      if (ncellfrac.ne.num_materials*num_materials*(3+SDIM)) then
        print *,"ncellfrac invalid"
        stop
       endif
@@ -4839,7 +4760,7 @@ stop
         print *,"ncomp_mdot_alloc invalid"
         stop
        endif
-       if (ncomp_mdot_alloc.eq.2*nten) then
+       if (ncomp_mdot_alloc.eq.2*num_interfaces) then
         ! do nothing
        else
         print *,"ncomp_mdot_alloc invalid"
@@ -4943,14 +4864,14 @@ stop
          stop
         endif
         base_type=NINT(typefab(D_DECL(i,j,k)))
-        if ((base_type.lt.1).or.(base_type.gt.nmat)) then
+        if ((base_type.lt.1).or.(base_type.gt.num_materials)) then
          print *,"base_type invalid"
          stop
         endif
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
 
-        do im=1,nmat*ngeom_recon
+        do im=1,num_materials*ngeom_recon
          mofdata(im)=VOF(D_DECL(i,j,k),im)
         enddo
 
@@ -5027,18 +4948,18 @@ stop
          stop
         endif
 
-        do im=1,nmat
+        do im=1,num_materials
          opposite_color(im)=0
         enddo
         opposite_color(base_type)=icolor
 
-        do im=1,nmat
+        do im=1,num_materials
          LS_change_sign(im)=0
          LS_plus(im)=0
          LS_minus(im)=0
         enddo
 
-        do im=1,nmat
+        do im=1,num_materials
          LScen(im)=LS(D_DECL(i,j,k),im)
         enddo
 
@@ -5063,7 +4984,7 @@ stop
 
          local_solid=0
 
-         do im=1,nmat
+         do im=1,num_materials
           LSside(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
           if (LScen(im)+LSside(im).ge.zero) then
            LS_plus(im)=1
@@ -5073,7 +4994,7 @@ stop
            print *,"LScen or LSside invalid"
            stop
           endif
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
 
          call get_primary_material(LSside,im_side_majority)
          if (is_rigid(im_side_majority).eq.1) then
@@ -5180,7 +5101,7 @@ stop
           ! do nothing
          else if (typeside.eq.base_type) then
            ! do nothing
-         else if ((typeside.ge.1).and.(typeside.le.nmat)) then
+         else if ((typeside.ge.1).and.(typeside.le.num_materials)) then
           if (colorside.eq.0) then
            ! do nothing
           else if ((colorside.gt.0).and. &
@@ -5229,7 +5150,7 @@ stop
          vol,cencell,SDIM)
 
         mass=zero
-        do im=1,nmat
+        do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
          vfrac=mofdata(vofcomp)
          if (vfrac.ge.-VOFTOL) then
@@ -5270,7 +5191,7 @@ stop
           print *,"vfrac underflow"
           stop
          endif
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
         mass=mass*vol
         if ((mass.gt.zero).and.(mass.le.1.0D+20)) then
@@ -5281,9 +5202,9 @@ stop
         endif
 
         if ((base_type.ge.1).and. &
-            (base_type.le.nmat)) then
+            (base_type.le.num_materials)) then
 
-         do im=1,nmat
+         do im=1,num_materials
           if ((LS_plus(im).eq.1).and.(LS_minus(im).eq.1)) then
            LS_change_sign(im)=1
           else if ((LS_plus(im).eq.1).and.(LS_minus(im).eq.0)) then
@@ -5294,7 +5215,7 @@ stop
            print *,"LS_plus or LS_minus invalid"
            stop
           endif
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
 
          do dir=1,SDIM
           dx_sten(dir)=xsten(1,dir)-xsten(-1,dir)
@@ -5340,8 +5261,8 @@ stop
          ! init temporary cell data: local_facearea, loca_dist_to_line,
          !   local_dist, and local_normal
          face_index=0
-         do im=1,nmat
-          do im_opp=1,nmat
+         do im=1,num_materials
+          do im_opp=1,num_materials
            face_index=face_index+1
             ! the following quantities were found in FORT_CELLFACEINIT
             ! face area between im and im_opp
@@ -5366,7 +5287,7 @@ stop
           stop
          endif
 
-         do im=1,nmat
+         do im=1,num_materials
           if ((opposite_color(im).ge.1).and. &
               (opposite_color(im).le.num_colors)) then
 
@@ -5533,7 +5454,7 @@ stop
             ic=ic+SDIM
             
              ! perimeter (internal faces)
-            do im_opp=1,nmat
+            do im_opp=1,num_materials
              if (im_opp.ne.im) then
               level_blobdata(ic)=level_blobdata(ic)+local_facearea(im,im_opp) 
              endif
@@ -5541,7 +5462,7 @@ stop
 
              ! perimeter decomposed by material.
             ic=ic+1
-            do im_opp=1,nmat
+            do im_opp=1,num_materials
              if (im_opp.ne.im) then
               level_blobdata(ic)=level_blobdata(ic)+local_facearea(im,im_opp) 
              endif
@@ -5549,8 +5470,8 @@ stop
             enddo ! im_opp
 
              ! contact line perimeter
-            do im1=1,nmat
-            do im2=1,nmat
+            do im1=1,num_materials
+            do im2=1,num_materials
              if ((im1.eq.im).or.(im2.eq.im)) then
               ! do nothing
              else if (im1.eq.im2) then
@@ -5575,8 +5496,8 @@ stop
               stop
              endif
              ic=ic+1
-            enddo ! im2=1..nmat
-            enddo ! im1=1..nmat
+            enddo ! im2=1..num_materials
+            enddo ! im1=1..num_materials
 
             if (ic.eq. &
                 (opposite_color(im)-1)*num_elements_blobclass+ &
@@ -5700,7 +5621,7 @@ stop
               stop
              endif
 
-             if (ncomp_mdot.eq.2*nten) then
+             if (ncomp_mdot.eq.2*num_interfaces) then
               ic_base_mdot=(opposite_color(im)-1)*ncomp_mdot
               do i_mdot=1,ncomp_mdot
                level_mdot_data(ic_base_mdot+i_mdot)= &
@@ -5821,8 +5742,8 @@ stop
               if (dir.eq.1) then
                areaface=areax(D_DECL(iface,jface,kface))
                face_index=0
-               do ml = 1, nmat
-               do mr = 1, nmat
+               do ml = 1, num_materials
+               do mr = 1, num_materials
                 !(ml,mr,2) 
                 face_index=face_index+1
                 frac_pair(ml,mr)=xface(D_DECL(iface,jface,kface),face_index)
@@ -5837,8 +5758,8 @@ stop
               else if (dir.eq.2) then
                areaface=areay(D_DECL(iface,jface,kface))
                face_index=0
-               do ml = 1, nmat
-               do mr = 1, nmat
+               do ml = 1, num_materials
+               do mr = 1, num_materials
                 !(ml,mr,2) 
                 face_index=face_index+1
                 frac_pair(ml,mr)=yface(D_DECL(iface,jface,kface),face_index)
@@ -5853,8 +5774,8 @@ stop
               else if ((dir.eq.3).and.(SDIM.eq.3)) then
                areaface=areaz(D_DECL(iface,jface,kface))
                face_index=0
-               do ml = 1, nmat
-               do mr = 1, nmat
+               do ml = 1, num_materials
+               do mr = 1, num_materials
                 !(ml,mr,2) 
                 face_index=face_index+1
                 frac_pair(ml,mr)=zface(D_DECL(iface,jface,kface),face_index)
@@ -5875,7 +5796,7 @@ stop
               ic=(opposite_color(im)-1)*num_elements_blobclass+BLB_PERIM+1
 
                ! ic component is blob_perim
-              do im_opp=1,nmat
+              do im_opp=1,num_materials
                if (im_opp.ne.im) then
                 if (side.eq.1) then
                  ml=im_opp
@@ -5891,11 +5812,11 @@ stop
                 level_blobdata(ic)=level_blobdata(ic)+ &
                         frac_pair(ml,mr)*areaface 
                endif
-              enddo !im_opp=1..nmat
+              enddo !im_opp=1..num_materials
 
-               ! perimeter decomposed (nmat components)
+               ! perimeter decomposed (num_materials components)
               ic=ic+1
-              do im_opp=1,nmat
+              do im_opp=1,num_materials
                if (im_opp.ne.im) then
                 if (side.eq.1) then
                  ml=im_opp
@@ -5911,7 +5832,7 @@ stop
                         frac_pair(ml,mr)*areaface 
                endif
                ic=ic+1
-              enddo ! im_opp=1..nmat
+              enddo ! im_opp=1..num_materials
               if (ic.eq. &
                   (opposite_color(im)-1)*num_elements_blobclass+ &
                    BLB_TRIPLE_PERIM+1) then
@@ -5936,7 +5857,7 @@ stop
               print *,"i,j,k,im,vfrac (before if) ",i,j,k,im,vfrac
              endif
 
-             do im_alt=1,nmat
+             do im_alt=1,num_materials
               if (im_alt.ne.im) then
                do ireverse=0,1
                 if (im_alt.lt.im) then
@@ -5950,7 +5871,7 @@ stop
                  stop
                 endif
                 call get_iten(im_mdot,im_opp_mdot,iten)
-                iten_shift=ireverse*nten+iten
+                iten_shift=ireverse*num_interfaces+iten
                 LL=get_user_latent_heat(iten_shift,293.0d0,1)
                 if (LL.eq.zero) then
                  ! do nothing
@@ -5992,7 +5913,7 @@ stop
                     if ((blob_cellvol_count.gt.zero).and. &
                         (blob_cell_count.gt.zero)) then
 
-                     if (ncomp_mdot.eq.2*nten) then
+                     if (ncomp_mdot.eq.2*num_interfaces) then
                       ic_base_mdot=(opposite_color(im)-1)*ncomp_mdot
                       mdot_total=cum_mdot_data(ic_base_mdot+iten_shift)
 
@@ -6141,7 +6062,7 @@ stop
                       (blob_mass.gt.zero).and. &
                       (blob_volume.gt.zero)) then
 
-                   if (ncomp_mdot.eq.2*nten) then
+                   if (ncomp_mdot.eq.2*num_interfaces) then
                     ic_base_mdot=(opposite_color(im)-1)*ncomp_mdot
 
                     original_density=blob_mass/blob_volume
@@ -6289,7 +6210,7 @@ stop
                print *,"im_alt or im bust"
                stop
               endif
-             enddo ! im_alt=1..nmat
+             enddo ! im_alt=1..num_materials
 
             else
              print *,"sweep_num invalid"
@@ -6308,7 +6229,7 @@ stop
            stop
           endif
 
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
 
         else
          print *,"base_type invalid"
@@ -6331,12 +6252,10 @@ stop
       subroutine fort_get_lowmach_divu( &
        tid_current, &
        sweep_num, & !sweep_num=0: sum V_T rho DT/Dt, sweep_num=1:sum mdot=0
-       constant_density_all_time, & ! 1..nmat
+       constant_density_all_time, & ! 1..num_materials
        dt, &
        dx, &
        xlo, &
-       nmat, &
-       nten, &
        mdot_local, & ! mdot_local initialized to 0
        DIMS(mdot_local), &
        mdot_global, & ! mdot_global incremented
@@ -6369,56 +6288,54 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tid_current
-      INTEGER_T, intent(in) :: sweep_num
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xlo(SDIM)
-      INTEGER_T, intent(in) :: material_type_lowmach(nmat)
-      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
+      INTEGER_T, INTENT(in) :: tid_current
+      INTEGER_T, INTENT(in) :: sweep_num
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      INTEGER_T, INTENT(in) :: material_type_lowmach(num_materials)
+      INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials)
 
-      INTEGER_T, intent(in) :: rzflag
-      INTEGER_T, intent(in) :: num_colors
-      INTEGER_T, intent(in) :: arraysize
-      INTEGER_T, intent(in) :: mdot_arraysize
-      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: rzflag
+      INTEGER_T, INTENT(in) :: num_colors
+      INTEGER_T, INTENT(in) :: arraysize
+      INTEGER_T, INTENT(in) :: mdot_arraysize
+      INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3), growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(mdot_local)
-      INTEGER_T, intent(in) :: DIMDEC(mdot_global)
-      INTEGER_T, intent(in) :: DIMDEC(LS)
-      INTEGER_T, intent(in) :: DIMDEC(DEN)
-      INTEGER_T, intent(in) :: DIMDEC(DTDt)
-      INTEGER_T, intent(in) :: DIMDEC(VOF)
-      INTEGER_T, intent(in) :: DIMDEC(typefab)
-      INTEGER_T, intent(in) :: DIMDEC(color)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      REAL_T, intent(in) ::level_blobdata(arraysize)
-      REAL_T, intent(inout) ::level_mdot_data(mdot_arraysize)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: DIMDEC(mdot_local)
+      INTEGER_T, INTENT(in) :: DIMDEC(mdot_global)
+      INTEGER_T, INTENT(in) :: DIMDEC(LS)
+      INTEGER_T, INTENT(in) :: DIMDEC(DEN)
+      INTEGER_T, INTENT(in) :: DIMDEC(DTDt)
+      INTEGER_T, INTENT(in) :: DIMDEC(VOF)
+      INTEGER_T, INTENT(in) :: DIMDEC(typefab)
+      INTEGER_T, INTENT(in) :: DIMDEC(color)
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      REAL_T, INTENT(in) ::level_blobdata(arraysize)
+      REAL_T, INTENT(inout) ::level_mdot_data(mdot_arraysize)
 
-      REAL_T, intent(inout), target :: mdot_local(DIMV(mdot_local))
+      REAL_T, INTENT(inout), target :: mdot_local(DIMV(mdot_local))
       REAL_T, pointer :: mdot_local_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: mdot_global(DIMV(mdot_global))
+      REAL_T, INTENT(inout), target :: mdot_global(DIMV(mdot_global))
       REAL_T, pointer :: mdot_global_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: typefab(DIMV(typefab))
+      REAL_T, INTENT(in), target :: typefab(DIMV(typefab))
       REAL_T, pointer :: typefab_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: LS(DIMV(LS),nmat*(1+SDIM))
+      REAL_T, INTENT(in), target :: LS(DIMV(LS),num_materials*(1+SDIM))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: DEN(DIMV(DEN),nmat*num_state_material)
+      REAL_T, INTENT(in), target :: DEN(DIMV(DEN),num_materials*num_state_material)
       REAL_T, pointer :: DEN_ptr(D_DECL(:,:,:),:)
        ! T_after_diffusion-T_adv
-      REAL_T, intent(in), target :: DTDt(DIMV(DTDt),nmat) 
+      REAL_T, INTENT(in), target :: DTDt(DIMV(DTDt),num_materials) 
       REAL_T, pointer :: DTDt_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: VOF(DIMV(VOF),nmat*ngeom_recon)
+      REAL_T, INTENT(in), target :: VOF(DIMV(VOF),num_materials*ngeom_recon)
       REAL_T, pointer :: VOF_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: color(DIMV(color))
+      REAL_T, INTENT(in), target :: color(DIMV(color))
       REAL_T, pointer :: color_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, INTENT(in), target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
 
       INTEGER_T :: i,j,k
@@ -6444,15 +6361,14 @@ stop
       INTEGER_T im
       INTEGER_T local_mask
       INTEGER_T ispec
-      REAL_T LScen(nmat)
+      REAL_T LScen(num_materials)
       INTEGER_T im_primary
       REAL_T blob_cellvol_count
       REAL_T mdot_local_scalar
       REAL_T mdot_sum_denom
       REAL_T mdot_sum_numerator
       REAL_T DTDt_local
-      REAL_T mofdata(nmat*ngeom_recon)
-      INTEGER_T nten_test
+      REAL_T mofdata(num_materials*ngeom_recon)
 
       if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
@@ -6470,16 +6386,6 @@ stop
 
       if (bfact.lt.1) then
        print *,"bfact invalid92"
-       stop
-      endif
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid get_lowmach_divu nten nten_test ",nten,nten_test
        stop
       endif
 
@@ -6548,18 +6454,18 @@ stop
          stop
         endif
         base_type=NINT(typefab(D_DECL(i,j,k)))
-        if ((base_type.lt.1).or.(base_type.gt.nmat)) then
+        if ((base_type.lt.1).or.(base_type.gt.num_materials)) then
          print *,"base_type invalid"
          stop
         endif
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
 
-        do im=1,nmat*ngeom_recon
+        do im=1,num_materials*ngeom_recon
          mofdata(im)=VOF(D_DECL(i,j,k),im)
         enddo
 
-        do im=1,nmat
+        do im=1,num_materials
          LScen(im)=LS(D_DECL(i,j,k),im)
         enddo
 
@@ -6823,18 +6729,18 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, INTENT(in) :: bfact
  
-      INTEGER_T, intent(in) ::  DIMDEC(color)
-      INTEGER_T, intent(in) :: max_colors_level
-      INTEGER_T, intent(in) :: level,base_level,arrsize
-      INTEGER_T, intent(in) :: domaincolormap(arrsize)
-      REAL_T, intent(inout),target :: color(DIMV(color))
+      INTEGER_T, INTENT(in) ::  DIMDEC(color)
+      INTEGER_T, INTENT(in) :: max_colors_level
+      INTEGER_T, INTENT(in) :: level,base_level,arrsize
+      INTEGER_T, INTENT(in) :: domaincolormap(arrsize)
+      REAL_T, INTENT(inout),target :: color(DIMV(color))
       REAL_T, pointer :: color_ptr(D_DECL(:,:,:))
 
       INTEGER_T  i, j, k, m, icolor
@@ -6885,25 +6791,25 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: typedim
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
+      INTEGER_T, INTENT(in) :: typedim
+      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: DIMDEC(typefab)
-      INTEGER_T, intent(in) :: DIMDEC(color)
-      INTEGER_T, intent(in) :: DIMDEC(ijk)
-      INTEGER_T, intent(in) :: number_grids,ipass
-      INTEGER_T, intent(inout) :: color_per_grid(number_grids)
-      INTEGER_T, intent(in) :: gridno
-      INTEGER_T, intent(in) :: max_colors_grid
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      INTEGER_T, INTENT(in) :: DIMDEC(typefab)
+      INTEGER_T, INTENT(in) :: DIMDEC(color)
+      INTEGER_T, INTENT(in) :: DIMDEC(ijk)
+      INTEGER_T, INTENT(in) :: number_grids,ipass
+      INTEGER_T, INTENT(inout) :: color_per_grid(number_grids)
+      INTEGER_T, INTENT(in) :: gridno
+      INTEGER_T, INTENT(in) :: max_colors_grid
 
-      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, INTENT(in),target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: typefab(DIMV(typefab))
+      REAL_T, INTENT(in),target :: typefab(DIMV(typefab))
       REAL_T, pointer :: typefab_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout),target :: color(DIMV(color))
+      REAL_T, INTENT(inout),target :: color(DIMV(color))
       REAL_T, pointer :: color_ptr(D_DECL(:,:,:))
-      INTEGER_T, intent(inout),target :: ijk(DIMV(ijk),SDIM)
+      INTEGER_T, INTENT(inout),target :: ijk(DIMV(ijk),SDIM)
       INTEGER_T, pointer :: ijk_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k,icolor,i1,j1,k1
@@ -7133,19 +7039,19 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: DIMDEC(color)
-      INTEGER_T, intent(in) :: max_colors_grid,number_grids,arrsize
-      INTEGER_T, intent(in) :: levelcolormap(arrsize)
-      REAL_T, intent(in),target :: mask(DIMV(mask))
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      INTEGER_T, INTENT(in) :: DIMDEC(color)
+      INTEGER_T, INTENT(in) :: max_colors_grid,number_grids,arrsize
+      INTEGER_T, INTENT(in) :: levelcolormap(arrsize)
+      REAL_T, INTENT(in),target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout),target :: color(DIMV(color))
+      REAL_T, INTENT(inout),target :: color(DIMV(color))
       REAL_T, pointer :: color_ptr(D_DECL(:,:,:))
 
       INTEGER_T i,j,k,icolor,testsize
@@ -7209,20 +7115,20 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: check_corners
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: DIMDEC(color)
-      INTEGER_T, intent(in) :: max_colors_level,arrsize
-      INTEGER_T, intent(out) :: level_color(arrsize,arrsize)
-      REAL_T, intent(in),target :: mask(DIMV(mask))
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: check_corners
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      INTEGER_T, INTENT(in) :: DIMDEC(color)
+      INTEGER_T, INTENT(in) :: max_colors_level,arrsize
+      INTEGER_T, INTENT(out) :: level_color(arrsize,arrsize)
+      REAL_T, INTENT(in),target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: color(DIMV(color),6)
+      REAL_T, INTENT(in),target :: color(DIMV(color),6)
       REAL_T, pointer :: color_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k,icolor,jcolor,testsize
@@ -7348,25 +7254,25 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      INTEGER_T, intent(in) :: bfact_f,bfact
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) ::  clo(SDIM),chi(SDIM)
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM)
+      INTEGER_T, INTENT(in) :: bfact_f,bfact
+      REAL_T, INTENT(in) :: xlo_fine(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) ::  clo(SDIM),chi(SDIM)
       INTEGER_T  growlo(3),growhi(3)
       INTEGER_T  stenlo(3),stenhi(3)
-      INTEGER_T, intent(in) ::  DIMDEC(crse)
-      INTEGER_T, intent(in) ::  DIMDEC(fine)
-      INTEGER_T, intent(in) ::  DIMDEC(typef)
-      INTEGER_T, intent(in) ::  DIMDEC(typec)
-      REAL_T, intent(inout),target :: crse(DIMV(crse))
+      INTEGER_T, INTENT(in) ::  DIMDEC(crse)
+      INTEGER_T, INTENT(in) ::  DIMDEC(fine)
+      INTEGER_T, INTENT(in) ::  DIMDEC(typef)
+      INTEGER_T, INTENT(in) ::  DIMDEC(typec)
+      REAL_T, INTENT(inout),target :: crse(DIMV(crse))
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: fine(DIMV(fine))
+      REAL_T, INTENT(in),target :: fine(DIMV(fine))
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: typef(DIMV(typef))
+      REAL_T, INTENT(in),target :: typef(DIMV(typef))
       REAL_T, pointer :: typef_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: typec(DIMV(typec))
+      REAL_T, INTENT(in),target :: typec(DIMV(typec))
       REAL_T, pointer :: typec_ptr(D_DECL(:,:,:))
 
       INTEGER_T icolor
@@ -7450,34 +7356,33 @@ stop
       use probf90_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: zero_diag_flag
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      INTEGER_T, intent(in) :: bfact_f,bfact
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: flo(SDIM),fhi(SDIM)
-      INTEGER_T, intent(in) :: clo(SDIM),chi(SDIM)
+      INTEGER_T, INTENT(in) :: zero_diag_flag
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM)
+      INTEGER_T, INTENT(in) :: bfact_f,bfact
+      REAL_T, INTENT(in) :: xlo_fine(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: flo(SDIM),fhi(SDIM)
+      INTEGER_T, INTENT(in) :: clo(SDIM),chi(SDIM)
       INTEGER_T  growlo(3),growhi(3)
       INTEGER_T  stenlo(3),stenhi(3)
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: DIMDEC(typef)
-      INTEGER_T, intent(in) :: DIMDEC(maskf)
+      INTEGER_T, INTENT(in) :: DIMDEC(crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: DIMDEC(typef)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskf)
 
-      REAL_T, intent(out),target :: crse(DIMV(crse),6)
+      REAL_T, INTENT(out),target :: crse(DIMV(crse),6)
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: fine(DIMV(fine))
+      REAL_T, INTENT(in),target :: fine(DIMV(fine))
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: typef(DIMV(typef))
+      REAL_T, INTENT(in),target :: typef(DIMV(typef))
       REAL_T, pointer :: typef_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: maskf(DIMV(maskf))
+      REAL_T, INTENT(in),target :: maskf(DIMV(maskf))
       REAL_T, pointer :: maskf_ptr(D_DECL(:,:,:))
 
       INTEGER_T i, j, k, ic, jc, kc,n
       INTEGER_T fine_type,fine_color
       INTEGER_T icrse,jcrse,alreadyhit,crse_color,crse_type
-      INTEGER_T nmat
       INTEGER_T ncomp_type
       REAL_T masktest
       REAL_T wt(SDIM)
@@ -7497,12 +7402,11 @@ stop
        stop
       endif
 
-      nmat=num_materials
-      ncomp_type=nmat
+      ncomp_type=num_materials
       if (zero_diag_flag.eq.1) then
        ncomp_type=2
       else if (zero_diag_flag.eq.0) then
-       ncomp_type=nmat
+       ncomp_type=num_materials
       else
        print *,"zero_diag_flag invalid"
        stop
@@ -7601,7 +7505,7 @@ stop
 ! facecut=A
 ! icefacecut=1
 ! mside=mass
-! slope: vof,ref centroid,order,slope,intercept  x nmat
+! slope: vof,ref centroid,order,slope,intercept  x num_materials
 ! vof: piecewise constant interp at coarse/fine borders
 ! mask=1 at interior cells, physical border cells, and fine-fine border cells.
 ! mask=0 at coarse-fine border cells.
@@ -7621,9 +7525,9 @@ stop
        freezing_model, &
        distribute_from_target, &
        solidheat_flag, &
-       microlayer_size, & ! 1..nmat
-       microlayer_substrate, & ! 1..nmat
-       microlayer_temperature_substrate, & ! 1..nmat
+       microlayer_size, & ! 1..num_materials
+       microlayer_substrate, & ! 1..num_materials
+       microlayer_temperature_substrate, & ! 1..num_materials
        spec_material_id_AMBIENT, & ! 1..num_species_var+1
        mass_fraction_id, &
        cavitation_vapor_density, &
@@ -7633,7 +7537,6 @@ stop
        project_option, &
        problo,probhi, &
        visc_coef, &
-       nten, &
        xlo,dx, &
        maskcov,DIMS(maskcov), &
        masknbr,DIMS(masknbr), &
@@ -7646,8 +7549,8 @@ stop
        DIMS(denstate), &
        mom_den, &
        DIMS(mom_den), &
-       viscstate,DIMS(viscstate), & ! 3 * nmat components
-       conductstate,DIMS(conductstate), & ! nmat components
+       viscstate,DIMS(viscstate), & ! 3 * num_materials components
+       conductstate,DIMS(conductstate), & ! num_materials components
        solxfab,DIMS(solxfab), &
        solyfab,DIMS(solyfab), &
        solzfab,DIMS(solzfab), &
@@ -7668,7 +7571,6 @@ stop
        fablo,fabhi,bfact, &
        presbc_arr, &
        velbc, &
-       nmat, &
        nparts, &
        nparts_def, &
        im_solid_map, &
@@ -7685,118 +7587,116 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: nparts_def
-      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
-      INTEGER_T, intent(in) :: nten
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: nparts
+      INTEGER_T, INTENT(in) :: nparts_def
+      INTEGER_T, INTENT(in) :: im_solid_map(nparts_def)
       REAL_T :: curv_min
       REAL_T :: curv_max
-      INTEGER_T, intent(in) :: isweep
-      INTEGER_T, intent(in) :: nrefine_vof
-      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, INTENT(in) :: isweep
+      INTEGER_T, INTENT(in) :: nrefine_vof
+      INTEGER_T, INTENT(in) :: level,finest_level
 
-      INTEGER_T, intent(in) :: solidheat_flag
-      REAL_T, intent(in) :: microlayer_size(nmat)
-      INTEGER_T, intent(in) :: microlayer_substrate(nmat)
-      REAL_T, intent(in) :: microlayer_temperature_substrate(nmat)
+      INTEGER_T, INTENT(in) :: solidheat_flag
+      REAL_T, INTENT(in) :: microlayer_size(num_materials)
+      INTEGER_T, INTENT(in) :: microlayer_substrate(num_materials)
+      REAL_T, INTENT(in) :: microlayer_temperature_substrate(num_materials)
 
-      INTEGER_T, intent(in) :: num_curv
-      REAL_T, intent(in) :: time
-      REAL_T, intent(in) :: dt
-      INTEGER_T, intent(in) :: project_option
-      REAL_T, intent(in) :: problo(SDIM),probhi(SDIM)
-      REAL_T, intent(in) :: visc_coef
-      INTEGER_T, intent(in) :: freezing_model(2*nten)
-      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+      INTEGER_T, INTENT(in) :: num_curv
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(in) :: dt
+      INTEGER_T, INTENT(in) :: project_option
+      REAL_T, INTENT(in) :: problo(SDIM),probhi(SDIM)
+      REAL_T, INTENT(in) :: visc_coef
+      INTEGER_T, INTENT(in) :: freezing_model(2*num_interfaces)
+      INTEGER_T, INTENT(in) :: distribute_from_target(2*num_interfaces)
       INTEGER_T :: veldir
-      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
-      INTEGER_T, intent(in) :: spec_material_id_AMBIENT(num_species_var+1)
-      INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
-      REAL_T, intent(in) :: cavitation_vapor_density(nmat)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: presbc_arr(SDIM,2)
-      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(maskcov)
-      INTEGER_T, intent(in) :: DIMDEC(masknbr)
-      INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(yface)
-      INTEGER_T, intent(in) :: DIMDEC(zface)
-      INTEGER_T, intent(in) :: DIMDEC(curv)
-      INTEGER_T, intent(in) :: DIMDEC(slope)
-      INTEGER_T, intent(in) :: DIMDEC(denstate)
-      INTEGER_T, intent(in) :: DIMDEC(mom_den)
-      INTEGER_T, intent(in) :: DIMDEC(viscstate)
-      INTEGER_T, intent(in) :: DIMDEC(conductstate)
-      INTEGER_T, intent(in) :: DIMDEC(solxfab)
-      INTEGER_T, intent(in) :: DIMDEC(solyfab)
-      INTEGER_T, intent(in) :: DIMDEC(solzfab)
-      INTEGER_T, intent(in) :: DIMDEC(cenDeDT)
-      INTEGER_T, intent(in) :: DIMDEC(cenden)
-      INTEGER_T, intent(in) :: DIMDEC(cenvof)
-      INTEGER_T, intent(in) :: DIMDEC(vol)
-      INTEGER_T, intent(in) :: DIMDEC(levelPC)
-      INTEGER_T, intent(in) :: DIMDEC(cenvisc)
-      INTEGER_T, intent(in) :: DIMDEC(vofC)
-      INTEGER_T, intent(in) :: DIMDEC(vofF)
-      INTEGER_T, intent(in) :: DIMDEC(massF)
-      REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+      INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials)
+      INTEGER_T, INTENT(in) :: spec_material_id_AMBIENT(num_species_var+1)
+      INTEGER_T, INTENT(in) :: mass_fraction_id(2*num_interfaces)
+      REAL_T, INTENT(in) :: cavitation_vapor_density(num_materials)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: presbc_arr(SDIM,2)
+      INTEGER_T, INTENT(in) :: velbc(SDIM,2,SDIM)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
+      INTEGER_T, INTENT(in) :: DIMDEC(masknbr)
+      INTEGER_T, INTENT(in) :: DIMDEC(xface)
+      INTEGER_T, INTENT(in) :: DIMDEC(yface)
+      INTEGER_T, INTENT(in) :: DIMDEC(zface)
+      INTEGER_T, INTENT(in) :: DIMDEC(curv)
+      INTEGER_T, INTENT(in) :: DIMDEC(slope)
+      INTEGER_T, INTENT(in) :: DIMDEC(denstate)
+      INTEGER_T, INTENT(in) :: DIMDEC(mom_den)
+      INTEGER_T, INTENT(in) :: DIMDEC(viscstate)
+      INTEGER_T, INTENT(in) :: DIMDEC(conductstate)
+      INTEGER_T, INTENT(in) :: DIMDEC(solxfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(solyfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(solzfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(cenDeDT)
+      INTEGER_T, INTENT(in) :: DIMDEC(cenden)
+      INTEGER_T, INTENT(in) :: DIMDEC(cenvof)
+      INTEGER_T, INTENT(in) :: DIMDEC(vol)
+      INTEGER_T, INTENT(in) :: DIMDEC(levelPC)
+      INTEGER_T, INTENT(in) :: DIMDEC(cenvisc)
+      INTEGER_T, INTENT(in) :: DIMDEC(vofC)
+      INTEGER_T, INTENT(in) :: DIMDEC(vofF)
+      INTEGER_T, INTENT(in) :: DIMDEC(massF)
+      REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: masknbr(DIMV(masknbr),4)
+      REAL_T, INTENT(in), target :: masknbr(DIMV(masknbr),4)
       REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: xface(DIMV(xface),FACECOMP_NCOMP)
+      REAL_T, INTENT(out), target :: xface(DIMV(xface),FACECOMP_NCOMP)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: yface(DIMV(yface),FACECOMP_NCOMP)
+      REAL_T, INTENT(out), target :: yface(DIMV(yface),FACECOMP_NCOMP)
       REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: zface(DIMV(zface),FACECOMP_NCOMP)
+      REAL_T, INTENT(out), target :: zface(DIMV(zface),FACECOMP_NCOMP)
       REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: curv(DIMV(curv),num_curv) 
+      REAL_T, INTENT(in), target :: curv(DIMV(curv),num_curv) 
       REAL_T, pointer :: curv_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: slope(DIMV(slope),nmat*ngeom_recon) 
+      REAL_T, INTENT(in), target :: slope(DIMV(slope),num_materials*ngeom_recon) 
       REAL_T, pointer :: slope_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: &
-              denstate(DIMV(denstate),nmat*num_state_material) 
+      REAL_T, INTENT(in), target :: &
+              denstate(DIMV(denstate),num_materials*num_state_material) 
       REAL_T, pointer :: denstate_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat) 
+      REAL_T, INTENT(in), target :: mom_den(DIMV(mom_den),num_materials) 
       REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: viscstate(DIMV(viscstate),3*nmat) 
+      REAL_T, INTENT(in), target :: viscstate(DIMV(viscstate),3*num_materials) 
       REAL_T, pointer :: viscstate_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: conductstate(DIMV(viscstate),nmat) 
+      REAL_T, INTENT(in), target :: conductstate(DIMV(viscstate),num_materials) 
       REAL_T, pointer :: conductstate_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: solxfab(DIMV(solxfab),nparts_def*SDIM) 
+      REAL_T, INTENT(in), target :: solxfab(DIMV(solxfab),nparts_def*SDIM) 
       REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: solyfab(DIMV(solyfab),nparts_def*SDIM) 
+      REAL_T, INTENT(in), target :: solyfab(DIMV(solyfab),nparts_def*SDIM) 
       REAL_T, pointer :: solyfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: solzfab(DIMV(solzfab),nparts_def*SDIM) 
+      REAL_T, INTENT(in), target :: solzfab(DIMV(solzfab),nparts_def*SDIM) 
       REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: cenDeDT(DIMV(cenDeDT))
+      REAL_T, INTENT(out), target :: cenDeDT(DIMV(cenDeDT))
       REAL_T, pointer :: cenDeDT_ptr(D_DECL(:,:,:))
-      REAL_T, intent(out), target :: cenden(DIMV(cenden))
+      REAL_T, INTENT(out), target :: cenden(DIMV(cenden))
       REAL_T, pointer :: cenden_ptr(D_DECL(:,:,:))
-      REAL_T, intent(out), target :: cenvof(DIMV(cenvof),nmat)  
+      REAL_T, INTENT(out), target :: cenvof(DIMV(cenvof),num_materials)  
       REAL_T, pointer :: cenvof_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: cenvisc(DIMV(cenvisc))
+      REAL_T, INTENT(out), target :: cenvisc(DIMV(cenvisc))
       REAL_T, pointer :: cenvisc_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: vol(DIMV(vol))
+      REAL_T, INTENT(in), target :: vol(DIMV(vol))
       REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: levelPC(DIMV(levelPC),nmat)
+      REAL_T, INTENT(in), target :: levelPC(DIMV(levelPC),num_materials)
       REAL_T, pointer :: levelPC_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: vofC(DIMV(vofC),nmat)
+      REAL_T, INTENT(in), target :: vofC(DIMV(vofC),num_materials)
       REAL_T, pointer :: vofC_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: vofF(DIMV(vofF),nrefine_vof)
+      REAL_T, INTENT(in), target :: vofF(DIMV(vofF),nrefine_vof)
       REAL_T, pointer :: vofF_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: massF(DIMV(massF),nrefine_vof)
+      REAL_T, INTENT(in), target :: massF(DIMV(massF),nrefine_vof)
       REAL_T, pointer :: massF_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
 
-      REAL_T, intent(in) :: den_interface(nten)
-      REAL_T, intent(in) :: visc_interface(nten)
-      REAL_T, intent(in) :: heatvisc_interface(nten)
-      REAL_T, intent(in) :: speciesvisc_interface(nten*num_species_var)
+      REAL_T, INTENT(in) :: den_interface(num_interfaces)
+      REAL_T, INTENT(in) :: visc_interface(num_interfaces)
+      REAL_T, INTENT(in) :: heatvisc_interface(num_interfaces)
+      REAL_T, INTENT(in) :: speciesvisc_interface(num_interfaces*num_species_var)
 
       INTEGER_T im1,jm1,km1
       INTEGER_T i,j,k,ii,jj,kk
@@ -7819,7 +7719,7 @@ stop
       REAL_T visc_total
       REAL_T DeDT,DeDT_total
 
-      REAL_T volmat(nmat)
+      REAL_T volmat(num_materials)
       REAL_T voltotal
       REAL_T voldepart
       REAL_T mass_total
@@ -7831,8 +7731,8 @@ stop
       INTEGER_T LS_consistent
       INTEGER_T LS_consistent_tension
 
-      REAL_T LSplus(nmat)
-      REAL_T LSminus(nmat)
+      REAL_T LSplus(num_materials)
+      REAL_T LSminus(num_materials)
       INTEGER_T im_main,im_main_opp,im_opp
       INTEGER_T ireverse
       INTEGER_T iten
@@ -7842,12 +7742,11 @@ stop
       INTEGER_T im_fluid_micro,im_solid_micro
 
       REAL_T gradh,gradh_tension,sign_test
-      INTEGER_T nten_test
       REAL_T one_over_mu
-      REAL_T localvisc(nmat)
+      REAL_T localvisc(num_materials)
       INTEGER_T null_viscosity
-       !0=>interior wall 1..nmat=>embedded wall 
-       !nmat+1=>domain wall 
+       !0=>interior wall 1..num_materials=>embedded wall 
+       !num_materials+1=>domain wall 
       INTEGER_T wall_flag_face 
       REAL_T wallVOF_face
       INTEGER_T imattype
@@ -7859,15 +7758,15 @@ stop
       REAL_T spec1(num_species_var+1)
       REAL_T spec2(num_species_var+1)
       REAL_T spec_test
-      REAL_T localvisc_plus(nmat)
-      REAL_T localvisc_minus(nmat)
-      REAL_T localheatvisc_plus(nmat)
-      REAL_T localheatvisc_minus(nmat)
+      REAL_T localvisc_plus(num_materials)
+      REAL_T localvisc_minus(num_materials)
+      REAL_T localheatvisc_plus(num_materials)
+      REAL_T localheatvisc_minus(num_materials)
       INTEGER_T implus_majority,imminus_majority
 
       REAL_T local_face(FACECOMP_NCOMP)
-      REAL_T local_volumes(2,nmat)
-      REAL_T local_masses(2,nmat)
+      REAL_T local_volumes(2,num_materials)
+      REAL_T local_masses(2,num_materials)
       INTEGER_T igridlo(3),igridhi(3)
 
       INTEGER_T dir_refine
@@ -7879,11 +7778,11 @@ stop
 
       REAL_T LSIDE(2)
       REAL_T LSIDE_tension(2)
-      REAL_T LSIDE_MAT(nmat)
-      REAL_T LSIDE_tension_MAT(nmat)
+      REAL_T LSIDE_MAT(num_materials)
+      REAL_T LSIDE_tension_MAT(num_materials)
 
       REAL_T DXMAXLS
-      REAL_T FFACE(nmat)
+      REAL_T FFACE(num_materials)
       INTEGER_T irefine
       INTEGER_T solid_present_flag
       REAL_T wtL,wtR,wtsum
@@ -7915,8 +7814,8 @@ stop
       INTEGER_T covered_face,coarse_fine_face
       INTEGER_T prescribed_flag
       INTEGER_T FD_curv_interp
-      REAL_T mofdata(nmat*ngeom_recon)
-      INTEGER_T micro_table(nmat,nmat)
+      REAL_T mofdata(num_materials*ngeom_recon)
+      INTEGER_T micro_table(num_materials,num_materials)
       REAL_T predict_face_afrac_solid !=0 if clamped or is_rigid
       REAL_T predict_face_afrac_prescribed !=0 if clamped or prescribed
       INTEGER_T is_solid_face
@@ -7965,7 +7864,7 @@ stop
        stop
       endif
 
-      if (nrefine_vof.ne.2*nmat*SDIM) then
+      if (nrefine_vof.ne.2*num_materials*SDIM) then
        print *,"nrefine_vof invalid"
        stop
       endif
@@ -7989,16 +7888,16 @@ stop
       ! marangoni force
       ! dir * side dir=1..sdim side=-1 or 1
       ! im3
-      ! x nten
-      if (num_curv.ne.nten*(5+SDIM)) then
+      ! x num_interfaces
+      if (num_curv.ne.num_interfaces*(5+SDIM)) then
        print *,"num_curv invalid"
        stop
       endif
-      if ((nparts.lt.0).or.(nparts.gt.nmat)) then
+      if ((nparts.lt.0).or.(nparts.gt.num_materials)) then
        print *,"nparts invalid fort_init_physics_vars"
        stop
       endif
-      if ((nparts_def.lt.1).or.(nparts_def.gt.nmat)) then
+      if ((nparts_def.lt.1).or.(nparts_def.gt.num_materials)) then
        print *,"nparts_def invalid fort_init_physics_vars"
        stop
       endif
@@ -8016,12 +7915,6 @@ stop
        stop
       endif
 
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid phys vars nten nten_test ",nten,nten_test
-       stop
-      endif
-
       if ((project_option.eq.SOLVETYPE_PRES).or. &
           (project_option.eq.SOLVETYPE_INITPROJ)) then
        ! do nothing
@@ -8030,10 +7923,6 @@ stop
        stop
       endif
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid init phys vars "
        print *,"ngeom_recon= ",ngeom_recon
@@ -8076,7 +7965,7 @@ stop
       call checkbound_array(fablo,fabhi,vofF_ptr,1,-1,227)
       call checkbound_array(fablo,fabhi,massF_ptr,1,-1,227)
 
-      do im=1,2*nten
+      do im=1,2*num_interfaces
 
        if (is_valid_freezing_modelF(freezing_model(im)).eq.1) then
         ! do nothing
@@ -8091,9 +7980,9 @@ stop
         stop
        endif
 
-      enddo !im=1,2*nten
+      enddo !im=1,2*num_interfaces
 
-      do im=1,nten
+      do im=1,num_interfaces
 
        if ((den_interface(im).ge.zero).and. &
            (visc_interface(im).ge.zero).and. &
@@ -8104,7 +7993,7 @@ stop
         stop
        endif
        do imspec=1,num_species_var
-        if (speciesvisc_interface(nten*(imspec-1)+im).ge.zero) then
+        if (speciesvisc_interface(num_interfaces*(imspec-1)+im).ge.zero) then
          !do nothing
         else
          print *,"species interface coeff wrong"
@@ -8112,9 +8001,9 @@ stop
         endif
        enddo
 
-      enddo ! im=1..nten
+      enddo ! im=1..num_interfaces
 
-      do im=1,nmat
+      do im=1,num_materials
 
        if (fort_material_type(im).eq.0) then
         ! do nothing
@@ -8151,7 +8040,7 @@ stop
         stop
        endif
         ! sanity check: the real viscosity coefficient(s) are derived from
-        ! viscstate(D_DECL(:,:,:),3*nmat)
+        ! viscstate(D_DECL(:,:,:),3*num_materials)
        mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
        if (mu.ge.zero) then
         ! do nothing
@@ -8160,27 +8049,27 @@ stop
         stop
        endif
 
-      enddo ! im=1..nmat  (checking parameters)
+      enddo ! im=1..num_materials  (checking parameters)
 
        ! create look-up table for thin liquid layer model 4
-      do im_fluid_micro=1,nmat
-      do im_solid_micro=1,nmat
+      do im_fluid_micro=1,num_materials
+      do im_solid_micro=1,num_materials
        micro_table(im_fluid_micro,im_solid_micro)=0
       enddo 
       enddo 
 
       if (solidheat_flag.eq.0) then ! diffuse in solid
-       do im=1,nmat-1
+       do im=1,num_materials-1
         if (is_rigid(im).eq.0) then
-         do im_opp=im+1,nmat
+         do im_opp=im+1,num_materials
           if (is_rigid(im_opp).eq.0) then
            call get_iten(im,im_opp,iten)
            do ireverse=0,1
-            if (get_user_latent_heat(iten+ireverse*nten,293.0d0,1).ne.zero) then
-             if (freezing_model(iten+ireverse*nten).eq.0) then
+            if (get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1).ne.zero) then
+             if (freezing_model(iten+ireverse*num_interfaces).eq.0) then
               im_solid_micro=microlayer_substrate(im)
               if ((im_solid_micro.ge.1).and. &
-                  (im_solid_micro.le.nmat)) then
+                  (im_solid_micro.le.num_materials)) then
                if (is_rigid(im_solid_micro).ne.1) then
                 print *,"is_rigid(im_solid_micro) invalid"
                 stop
@@ -8194,7 +8083,7 @@ stop
               endif 
               im_solid_micro=microlayer_substrate(im_opp)
               if ((im_solid_micro.ge.1).and. &
-                  (im_solid_micro.le.nmat)) then
+                  (im_solid_micro.le.num_materials)) then
                if (is_rigid(im_solid_micro).ne.1) then
                 print *,"is_rigid(im_solid_micro) invalid"
                 stop
@@ -8215,14 +8104,14 @@ stop
            print *,"is_rigid invalid LEVELSET_3D.F90"
            stop
           endif
-         enddo !im_opp=im+1,nmat
+         enddo !im_opp=im+1,num_materials
         else if (is_rigid(im).eq.1) then
          ! do nothing
         else
          print *,"is_rigid(im) invalid"
          stop
         endif
-       enddo ! do im=1,nmat-1
+       enddo ! do im=1,num_materials-1
       else if ((solidheat_flag.eq.1).or. & ! dirichlet
                (solidheat_flag.eq.2)) then ! neumann
        ! do nothing
@@ -8325,20 +8214,20 @@ stop
            stop
           endif
 
-          do im=1,nmat
-           irefine=veldir*2*nmat+(1-iside)*nmat+im
+          do im=1,num_materials
+           irefine=veldir*2*num_materials+(1-iside)*num_materials+im
            local_volumes(iside+1,im)=vofF(D_DECL(icell,jcell,kcell),irefine)
            local_masses(iside+1,im)=massF(D_DECL(icell,jcell,kcell),irefine)
-          enddo ! im=1..nmat
+          enddo ! im=1..num_materials
          enddo ! iside=0..1
 
          do iside=0,1
-         do im=1,nmat
+         do im=1,num_materials
           local_face(FACECOMP_VOFFACE+2*(im-1)+iside+1)= &
             local_volumes(iside+1,im)
           local_face(FACECOMP_MASSFACE+2*(im-1)+iside+1)= &
             local_masses(iside+1,im)
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
          enddo ! iside=0..1
 
          if (veldir.eq.0) then
@@ -8382,7 +8271,7 @@ stop
           stop
          endif
 
-         do im=1,nmat
+         do im=1,num_materials
           LSplus(im)=levelPC(D_DECL(i,j,k),im)
           LSminus(im)=levelPC(D_DECL(im1,jm1,km1),im)
          enddo
@@ -8390,8 +8279,8 @@ stop
          call get_primary_material(LSplus,implus_majority)
          call get_primary_material(LSminus,imminus_majority)
 
-         if ((implus_majority.lt.1).or.(implus_majority.gt.nmat).or. &
-             (imminus_majority.lt.1).or.(imminus_majority.gt.nmat)) then
+         if ((implus_majority.lt.1).or.(implus_majority.gt.num_materials).or. &
+             (imminus_majority.lt.1).or.(imminus_majority.gt.num_materials)) then
           print *,"implus_majority or imminus_majority invalid"
           stop
          endif
@@ -8514,14 +8403,14 @@ stop
             print *,"time=",time
             print *,"dt=",dt
             print *,"project_option=",project_option
-            print *,"nten=",nten
-            print *,"nmat=",nmat
+            print *,"num_interfaces=",num_interfaces
+            print *,"num_materials=",num_materials
             print *,"nparts=",nparts
             print *,"nparts_def=",nparts_def
             print *,"num_curv=",num_curv
             print *,"level=",level
             print *,"finest_level=",finest_level
-            do im=1,nmat
+            do im=1,num_materials
              print *,"im,FSI_flag(im) ",im,FSI_flag(im)
             enddo
             print *,"is_solid_face ",is_solid_face
@@ -8703,7 +8592,7 @@ stop
          do imspec=1,num_species_var
           facespecies_local(imspec)=zero
          enddo
-         do im=1,nmat
+         do im=1,num_materials
           localvisc_plus(im)=viscstate(D_DECL(i,j,k),im)
           localvisc_minus(im)=viscstate(D_DECL(im1,jm1,km1),im)
           localheatvisc_plus(im)=conductstate(D_DECL(i,j,k),im)
@@ -8717,12 +8606,12 @@ stop
           endif
           call get_iten(im_main,im_main_opp,iten)
 
-          do im=1,nmat
+          do im=1,num_materials
            LSIDE_MAT(im)=levelPC(D_DECL(im1,jm1,km1),im)
           enddo
           call get_LS_extend(LSIDE_MAT,iten,LSIDE(1))
 
-          do im=1,nmat
+          do im=1,num_materials
            LSIDE_MAT(im)=levelPC(D_DECL(i,j,k),im)
           enddo
           call get_LS_extend(LSIDE_MAT,iten,LSIDE(2))
@@ -8748,12 +8637,12 @@ stop
           endif
           call get_iten(im_tension,im_opp_tension,iten_tension)
 
-          do im=1,nmat
+          do im=1,num_materials
            LSIDE_tension_MAT(im)=levelPC(D_DECL(im1,jm1,km1),im)
           enddo
           call get_LS_extend(LSIDE_tension_MAT,iten_tension,LSIDE_tension(1))
 
-          do im=1,nmat
+          do im=1,num_materials
            LSIDE_tension_MAT(im)=levelPC(D_DECL(i,j,k),im)
           enddo
           call get_LS_extend(LSIDE_tension_MAT,iten_tension,LSIDE_tension(2))
@@ -8817,8 +8706,8 @@ stop
           call geom_avg(local_plus,local_minus,wtR,wtL,faceheat_local)
 
           do imspec=1,num_species_var
-           local_plus=fort_speciesviscconst((imspec-1)*nmat+implus_majority)
-           local_minus=fort_speciesviscconst((imspec-1)*nmat+imminus_majority)
+           local_plus=fort_speciesviscconst((imspec-1)*num_materials+implus_majority)
+           local_minus=fort_speciesviscconst((imspec-1)*num_materials+imminus_majority)
            call geom_avg(local_plus,local_minus,wtR,wtL, &
                    facespecies_local(imspec))
           enddo !do imspec=1,num_species_var
@@ -8862,8 +8751,8 @@ stop
           call geom_avg(local_plus,local_minus,wtR,wtL,faceheat_local)
 
           do imspec=1,num_species_var
-           local_plus=fort_speciesviscconst((imspec-1)*nmat+implus_majority)
-           local_minus=fort_speciesviscconst((imspec-1)*nmat+imminus_majority)
+           local_plus=fort_speciesviscconst((imspec-1)*num_materials+implus_majority)
+           local_minus=fort_speciesviscconst((imspec-1)*num_materials+imminus_majority)
            call geom_avg(local_plus,local_minus,wtR,wtL, &
                    facespecies_local(imspec))
           enddo
@@ -8893,9 +8782,9 @@ stop
              stop
             endif
             if ((im_fluid_micro.ge.1).and. &
-                (im_fluid_micro.le.nmat).and. &
+                (im_fluid_micro.le.num_materials).and. &
                 (im_solid_micro.ge.1).and. &
-                (im_solid_micro.le.nmat)) then
+                (im_solid_micro.le.num_materials)) then
              iten_micro=micro_table(im_fluid_micro,im_solid_micro)
             else if ((im_fluid_micro.eq.0).or. &
                      (im_solid_micro.eq.0)) then
@@ -8916,7 +8805,7 @@ stop
             ! temperature diffusion in the solid
             if (iten_micro.eq.0) then
              ! do nothing
-            else if ((iten_micro.ge.1).and.(iten_micro.le.nten)) then
+            else if ((iten_micro.ge.1).and.(iten_micro.le.num_interfaces)) then
              faceheat_local=zero ! internal TSAT dirichlet bc 
              do imspec=1,num_species_var
               facespecies_local(imspec)=zero
@@ -8960,9 +8849,9 @@ stop
                stop
               endif 
              endif 
-             if (get_user_latent_heat(iten+nten,293.0d0,1).ne.zero) then
-              if ((freezing_model(iten+nten).eq.0).or. &
-                  (freezing_model(iten+nten).eq.5)) then
+             if (get_user_latent_heat(iten+num_interfaces,293.0d0,1).ne.zero) then
+              if ((freezing_model(iten+num_interfaces).eq.0).or. &
+                  (freezing_model(iten+num_interfaces).eq.5)) then
                print *,"heatvisc_interface invalid"
                stop
               endif 
@@ -8998,15 +8887,15 @@ stop
            call geom_avg(local_plus,local_minus,wtR,wtL,faceheat_local)
 
            do imspec=1,num_species_var
-            local_plus=fort_speciesviscconst((imspec-1)*nmat+implus_majority)
-            local_minus=fort_speciesviscconst((imspec-1)*nmat+imminus_majority)
+            local_plus=fort_speciesviscconst((imspec-1)*num_materials+implus_majority)
+            local_minus=fort_speciesviscconst((imspec-1)*num_materials+imminus_majority)
             call geom_avg(local_plus,local_minus,wtR,wtL, &
                    facespecies_local(imspec))
            enddo
 
           else if (gradh.ne.zero) then
 
-           if ((im_main.gt.nmat).or.(im_main_opp.gt.nmat)) then
+           if ((im_main.gt.num_materials).or.(im_main_opp.gt.num_materials)) then
             print *,"im_main or im_main_opp bust 3"
             stop
            endif
@@ -9039,8 +8928,8 @@ stop
            endif
 
            do imspec=1,num_species_var
-            spec1(imspec)=fort_speciesviscconst((imspec-1)*nmat+im_main)
-            spec2(imspec)=fort_speciesviscconst((imspec-1)*nmat+im_main_opp)
+            spec1(imspec)=fort_speciesviscconst((imspec-1)*num_materials+im_main)
+            spec2(imspec)=fort_speciesviscconst((imspec-1)*num_materials+im_main_opp)
            enddo
   
              ! 1/s = (wL/sL + wR/sR)/(wL+wR)=(wL sR + wR sL)/(sL sR)*1/(wL+wR)
@@ -9108,9 +8997,9 @@ stop
               stop
              endif 
             endif 
-            if (get_user_latent_heat(iten+nten,293.0d0,1).ne.zero) then
-             if ((freezing_model(iten+nten).eq.0).or. &
-                 (freezing_model(iten+nten).eq.5)) then
+            if (get_user_latent_heat(iten+num_interfaces,293.0d0,1).ne.zero) then
+             if ((freezing_model(iten+num_interfaces).eq.0).or. &
+                 (freezing_model(iten+num_interfaces).eq.5)) then
               print *,"heatvisc_interface invalid"
               stop
              endif 
@@ -9147,7 +9036,7 @@ stop
              stop
             endif
 
-            spec_test=speciesvisc_interface((imspec-1)*nten+iten)
+            spec_test=speciesvisc_interface((imspec-1)*num_interfaces+iten)
             if (spec_test.eq.zero) then
              ! do nothing
             else if (spec_test.gt.zero) then
@@ -9169,12 +9058,12 @@ stop
            ! mu_face=sum F_i/(sum F_i/mu_i)
           voltotal=zero
           visc_total=zero
-          do im=1,nmat
+          do im=1,num_materials
            FFACE(im)=zero
           enddo
           is_zero_visc=0
           do iside=0,1
-          do im=1,nmat
+          do im=1,num_materials
            voldepart=local_face(FACECOMP_VOFFACE+2*(im-1)+iside+1)
            voltotal=voltotal+voldepart
            FFACE(im)=FFACE(im)+voldepart
@@ -9201,11 +9090,11 @@ stop
             print *,"voldepart invalid"
             stop
            endif   
-          enddo ! im=1..nmat
+          enddo ! im=1..num_materials
           enddo ! iside=0..1
 
           if (voltotal.gt.zero) then
-           do im=1,nmat
+           do im=1,num_materials
             FFACE(im)=FFACE(im)/voltotal
            enddo
           else
@@ -9222,8 +9111,8 @@ stop
            stop
           endif
 
-          do im=1,nmat
-           do im_opp=im+1,nmat 
+          do im=1,num_materials
+           do im_opp=im+1,num_materials 
  
             if ((FFACE(im).gt.VOFTOL).and. &
                 (FFACE(im_opp).gt.VOFTOL)) then
@@ -9246,8 +9135,8 @@ stop
              stop
             endif
 
-           enddo ! im_opp=1..nmat
-          enddo ! im=1..nmat
+           enddo ! im_opp=1..num_materials
+          enddo ! im=1..num_materials
 
          else
           print *,"solid_present_flag bust"
@@ -9351,7 +9240,7 @@ stop
            if (veldir.eq.0) then
             if (iside.eq.0) then
              if (abs(xstenMAC(0,1)).le.VOFTOL*dx(1)) then
-              wall_flag_face=nmat+1 !Neumann BC, RZ axis of symmetry
+              wall_flag_face=num_materials+1 !Neumann BC, RZ axis of symmetry
              else if (xstenMAC(0,1).gt.VOFTOL*dx(1)) then
               ! do nothing
              else
@@ -9384,7 +9273,7 @@ stop
            ! iside==0 => left cell   iside==1 => right cell
            ! this "special" volume fraction will be =1 if the 
            ! total volume fraction of solid materials exceeds 1/2
-          do im=1,nmat
+          do im=1,num_materials
            volmat(im)=vofC(D_DECL(icell,jcell,kcell),im)
           enddo
            ! voltotal=sum F_prescribed
@@ -9393,24 +9282,24 @@ stop
 
           if (is_clamped_face.ge.1) then
 
-           wall_flag_face=nmat+1
+           wall_flag_face=num_materials+1
 
           else if (is_clamped_face.eq.0) then
 
            if ((voltotal.ge.one-0.01D0).and. &
                (voltotal.le.one+VOFTOL)) then
             if ((im_prescribed_primary.ge.1).and. &
-                (im_prescribed_primary.le.nmat)) then
+                (im_prescribed_primary.le.num_materials)) then
              if (wall_flag_face.eq.0) then
               wall_flag_face=im_prescribed_primary !Neumann interior wall
               wallVOF_face=volmat(im_prescribed_primary)
              else if ((wall_flag_face.ge.1).and. &
-                      (wall_flag_face.le.nmat)) then
+                      (wall_flag_face.le.num_materials)) then
               if (volmat(im_prescribed_primary).gt.wallVOF_face) then
                wall_flag_face=im_prescribed_primary
                wallVOF_face=volmat(im_prescribed_primary)
               endif
-             else if (wall_flag_face.eq.nmat+1) then
+             else if (wall_flag_face.eq.num_materials+1) then
               ! do nothing
              else
               print *,"wall_flag_face invalid"
@@ -9434,7 +9323,7 @@ stop
           endif
 
           if ((wall_flag_face.ge.0).and. &
-              (wall_flag_face.le.nmat)) then
+              (wall_flag_face.le.num_materials)) then
 
            prescribed_flag=prescribed_exists()
 
@@ -9444,12 +9333,12 @@ stop
              ! by a prescribed material.
             if (is_prescribed_face.eq.1) then 
              if ((im_prescribed.ge.1).and. &
-                 (im_prescribed.le.nmat)) then
+                 (im_prescribed.le.num_materials)) then
               if (wall_flag_face.eq.0) then
                wall_flag_face=im_prescribed
                wallVOF_face=volmat(im_prescribed)
               else if ((wall_flag_face.ge.1).and. &
-                       (wall_flag_face.le.nmat)) then
+                       (wall_flag_face.le.num_materials)) then
                if (volmat(im_prescribed).gt.wallVOF_face) then
                 wall_flag_face=im_prescribed
                 wallVOF_face=volmat(im_prescribed)
@@ -9476,7 +9365,7 @@ stop
             stop
            endif
 
-          else if (wall_flag_face.eq.nmat+1) then
+          else if (wall_flag_face.eq.num_materials+1) then
            ! do nothing
           else
            print *,"wall_flag_face invalid"
@@ -9487,12 +9376,12 @@ stop
 
          voltotal=zero
          mass_total=zero
-         do im=1,nmat
+         do im=1,num_materials
           FFACE(im)=zero
          enddo
 
          do iside=0,1
-         do im=1,nmat
+         do im=1,num_materials
 
           voldepart=local_face(FACECOMP_VOFFACE+2*(im-1)+iside+1)
           voltotal=voltotal+voldepart
@@ -9500,7 +9389,7 @@ stop
           mass_total=mass_total+  &
            local_face(FACECOMP_MASSFACE+2*(im-1)+iside+1)
           
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
          enddo ! iside=0..1
 
          if ((mass_total.le.zero).or. &
@@ -9515,7 +9404,7 @@ stop
          endif
 
          if (voltotal.gt.zero) then
-          do im=1,nmat
+          do im=1,num_materials
            FFACE(im)=FFACE(im)/voltotal
           enddo
          else 
@@ -9527,8 +9416,8 @@ stop
 
          local_face(FACECOMP_FACEDEN+1)=one/density_for_mass_fraction_diffusion
 
-         do im=1,nmat
-          do im_opp=im+1,nmat
+         do im=1,num_materials
+          do im_opp=im+1,num_materials
            if ((FFACE(im).gt.VOFTOL).and. &
                (FFACE(im_opp).gt.VOFTOL)) then
             call get_iten(im,im_opp,iten)
@@ -9547,8 +9436,8 @@ stop
             print *,"FFACE invalid"
             stop
            endif
-          enddo ! im_opp=im+1..nmat
-         enddo ! im=1..nmat
+          enddo ! im_opp=im+1..num_materials
+         enddo ! im=1..num_materials
 
          local_face(FACECOMP_FACEVISC+1)=facevisc_local
          local_face(FACECOMP_FACEHEAT+1)=faceheat_local
@@ -9571,9 +9460,9 @@ stop
           ! mask_boundary=2 at right neumann boundary
           ! mask_boundary=0 otherwise
          if (mask_boundary.eq.1) then
-          wall_flag_face=nmat+1
+          wall_flag_face=num_materials+1
          else if (mask_boundary.eq.2) then
-          wall_flag_face=nmat+1
+          wall_flag_face=num_materials+1
          else if (mask_boundary.eq.0) then
           ! do nothing
          else 
@@ -9589,9 +9478,9 @@ stop
          if (wall_flag_face.eq.0) then
           local_face(FACECOMP_FACECUT+1)=one
          else if ((wall_flag_face.ge.1).and. &
-                  (wall_flag_face.le.nmat)) then
+                  (wall_flag_face.le.num_materials)) then
           local_face(FACECOMP_FACECUT+1)=zero
-         else if (wall_flag_face.eq.nmat+1) then
+         else if (wall_flag_face.eq.num_materials+1) then
           local_face(FACECOMP_FACECUT+1)=zero
          else
           print *,"wall_flag_face invalid"
@@ -9659,7 +9548,7 @@ stop
 
           if (gradh_tension.ne.zero) then
 
-           if ((im_tension.gt.nmat).or.(im_opp_tension.gt.nmat).or. &
+           if ((im_tension.gt.num_materials).or.(im_opp_tension.gt.num_materials).or. &
                (im_tension.lt.1).or.(im_opp_tension.lt.1)) then
             print *,"im_tension or im_opp_tension bust 4"
             stop
@@ -9752,8 +9641,8 @@ stop
                 endif
                endif
 
-               if ((im3L.lt.0).or.(im3L.gt.nmat).or. &
-                   (im3R.lt.0).or.(im3R.gt.nmat).or. &
+               if ((im3L.lt.0).or.(im3L.gt.num_materials).or. &
+                   (im3R.lt.0).or.(im3R.gt.num_materials).or. &
                    (dirL.lt.0).or.(dirL.gt.SDIM+1).or. &
                    (dirR.lt.0).or.(dirR.gt.SDIM+1)) then
                 print *,"curvature parameters invalid"
@@ -9763,7 +9652,7 @@ stop
                 print *,"im_opp_tension ",im_opp_tension
                 print *,"iten_tension ",iten_tension
                 print *,"i,j,k,veldir ",i,j,k,veldir
-                do im=1,nmat
+                do im=1,num_materials
                  print *,"im,LS_LEFT,LS_RIGHT ",im, &
                   levelPC(D_DECL(im1,jm1,km1),im),levelPC(D_DECL(i,j,k),im)
                 enddo
@@ -9774,8 +9663,8 @@ stop
                 ! March 10, 2018: 1.99, 2.03 RZ 24x48 HT
                 ! March 10, 2018: 1.00, 1.01 XY 24x48 HT
                 ! March 10, 2018: 1.93, 2.07 XYZ 32x32x32 HT
-               if (((im3L.ge.1).and.(im3L.le.nmat)).or. &
-                   ((im3R.ge.1).and.(im3R.le.nmat))) then
+               if (((im3L.ge.1).and.(im3L.le.num_materials)).or. &
+                   ((im3R.ge.1).and.(im3R.le.num_materials))) then
                 if (FD_curv_interp.eq.1) then
                  curv_interp_flag=0 ! interpolate curvFD
                 else if (FD_curv_interp.eq.0) then
@@ -9895,7 +9784,7 @@ stop
             print *,"gradh_tension=",gradh_tension
             print *,"LSIDE_tension(1) ",LSIDE_tension(1) 
             print *,"LSIDE_tension(2) ",LSIDE_tension(2) 
-            do im=1,nmat
+            do im=1,num_materials
              print *,"im,lsminus,lsplus ",im,LSminus(im),LSplus(im)
             enddo
             print *,"level,finest_level ",level,finest_level
@@ -9946,7 +9835,7 @@ stop
        do k=igridlo(3),igridhi(3)
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
-        do im=1,nmat*ngeom_recon
+        do im=1,num_materials*ngeom_recon
          mofdata(im)=slope(D_DECL(i,j,k),im)
         enddo
          ! before (mofdata): fluids tessellate
@@ -9965,11 +9854,11 @@ stop
          3)
 
         voltotal=zero
-        do im=1,nmat
+        do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
          volmat(im)=mofdata(vofcomp)
          voltotal=voltotal+volmat(im)
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
         if (abs(voltotal-one).gt.LSTOL) then
          print *,"voltotal invalid"
@@ -9983,7 +9872,7 @@ stop
 
         mass_total=zero
 
-        do im=1,nmat
+        do im=1,num_materials
 
          dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
          tempcomp=dencomp+1
@@ -10002,7 +9891,7 @@ stop
           voldepart,voldepart,voltotal, &
           constant_density_all_time, &
           delta_mass, &
-          im,nmat, &
+          im, &
           den) 
 
          if (den.gt.zero) then
@@ -10076,7 +9965,7 @@ stop
          delta_mass=den*volmat(im)
          mass_total=mass_total+delta_mass
          DeDT_total=DeDT_total+DeDT*delta_mass
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
         if (mass_total.gt.zero) then
          ! do nothing
@@ -10092,7 +9981,7 @@ stop
          stop
         endif
 
-        do im=1,nmat
+        do im=1,num_materials
          cenvof(D_DECL(i,j,k),im)=volmat(im)/voltotal
         enddo
 
@@ -10144,7 +10033,6 @@ stop
        tessellate, &
        ngrow_refine, &
        nrefine_vof, &
-       nten, &
        spec_material_id_AMBIENT, &
        mass_fraction_id, &
        cavitation_vapor_density, &
@@ -10159,7 +10047,6 @@ stop
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
-       nmat, &
        level,finest_level) &
       bind(c,name='fort_build_semirefinevof')
 
@@ -10171,48 +10058,45 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tessellate
-      INTEGER_T, intent(in) :: ngrow_refine
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: nrefine_vof
-      INTEGER_T, intent(in) :: nten
-      INTEGER_T :: nten_test
-      INTEGER_T, intent(in) :: spec_material_id_AMBIENT(num_species_var+1)
-      INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
-      REAL_T, intent(in) :: cavitation_vapor_density(nmat)
-      INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: nmat
+      INTEGER_T, INTENT(in) :: tessellate
+      INTEGER_T, INTENT(in) :: ngrow_refine
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: nrefine_vof
+      INTEGER_T, INTENT(in) :: spec_material_id_AMBIENT(num_species_var+1)
+      INTEGER_T, INTENT(in) :: mass_fraction_id(2*num_interfaces)
+      REAL_T, INTENT(in) :: cavitation_vapor_density(num_materials)
+      INTEGER_T, INTENT(in) :: level,finest_level
       INTEGER_T :: veldir
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(slope)
-      INTEGER_T, intent(in) :: DIMDEC(denstate)
-      INTEGER_T, intent(in) :: DIMDEC(mom_den)
-      INTEGER_T, intent(in) :: DIMDEC(vofF)
-      INTEGER_T, intent(in) :: DIMDEC(massF)
-      REAL_T, intent(in), target :: slope(DIMV(slope),nmat*ngeom_recon) 
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: DIMDEC(slope)
+      INTEGER_T, INTENT(in) :: DIMDEC(denstate)
+      INTEGER_T, INTENT(in) :: DIMDEC(mom_den)
+      INTEGER_T, INTENT(in) :: DIMDEC(vofF)
+      INTEGER_T, INTENT(in) :: DIMDEC(massF)
+      REAL_T, INTENT(in), target :: slope(DIMV(slope),num_materials*ngeom_recon) 
       REAL_T, pointer :: slope_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: denstate(DIMV(denstate), &
-              nmat*num_state_material) 
+      REAL_T, INTENT(in), target :: denstate(DIMV(denstate), &
+              num_materials*num_state_material) 
       REAL_T, pointer :: denstate_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: mom_den(DIMV(mom_den),nmat) 
+      REAL_T, INTENT(in), target :: mom_den(DIMV(mom_den),num_materials) 
       REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: vofF(DIMV(vofF),nrefine_vof)
+      REAL_T, INTENT(out), target :: vofF(DIMV(vofF),nrefine_vof)
       REAL_T, pointer :: vofF_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out), target :: massF(DIMV(massF),nrefine_vof)
+      REAL_T, INTENT(out), target :: massF(DIMV(massF),nrefine_vof)
       REAL_T, pointer :: massF_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k
       INTEGER_T dir2
       INTEGER_T iside
 
       INTEGER_T im,nmax
-      REAL_T mofdata(nmat*ngeom_recon)
+      REAL_T mofdata(num_materials*ngeom_recon)
 
-      REAL_T multi_volume(nmat)
-      REAL_T multi_cen(SDIM,nmat)
+      REAL_T multi_volume(num_materials)
+      REAL_T multi_cen(SDIM,num_materials)
       REAL_T voltotal_fluid
       REAL_T mass_total_fluid
       REAL_T voltotal_solid
@@ -10274,10 +10158,6 @@ stop
        stop
       endif
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid semirefine_vof "
        print *,"ngeom_recon= ",ngeom_recon
@@ -10288,13 +10168,8 @@ stop
        print *,"ngeom_raw= ",ngeom_raw
        stop
       endif
-      if (nrefine_vof.ne.2*nmat*SDIM) then
+      if (nrefine_vof.ne.2*num_materials*SDIM) then
        print *,"nrefine_vof invalid"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid semi refine vof nten nten_test ",nten,nten_test
        stop
       endif
 
@@ -10306,7 +10181,7 @@ stop
       call checkbound_array(fablo,fabhi,vofF_ptr,ngrow_refine,-1,227)
       call checkbound_array(fablo,fabhi,massF_ptr,ngrow_refine,-1,227)
 
-      do im=1,nmat
+      do im=1,num_materials
 
        if (fort_material_type(im).eq.0) then
         ! do nothing
@@ -10353,7 +10228,7 @@ stop
         stop
        endif
 
-      enddo ! im=1..nmat  (checking parameters)
+      enddo ! im=1..num_materials  (checking parameters)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,igridlo,igridhi, &
         ngrow_refine) 
@@ -10386,12 +10261,12 @@ stop
           endif
  
           if (check_donate.eq.0) then !RZ R=0 or RTZ R=0
-           do im=1,nmat
+           do im=1,num_materials
 
             if (iside.eq.-1) then
-             irefine=veldir*2*nmat+im
+             irefine=veldir*2*num_materials+im
             else if (iside.eq.1) then
-             irefine=veldir*2*nmat+nmat+im
+             irefine=veldir*2*num_materials+num_materials+im
             else
              print *,"iside invalid"
              stop
@@ -10399,7 +10274,7 @@ stop
 
             vofF(D_DECL(i,j,k),irefine)=zero
             massF(D_DECL(i,j,k),irefine)=zero
-           enddo ! im=1..nmat
+           enddo ! im=1..num_materials
           else if (check_donate.eq.1) then
 
            call CISBOXHALF(xsten_donate,1, &
@@ -10407,7 +10282,7 @@ stop
             bfact,level, & 
             voldonate,cendonate,SDIM)
 
-           do dir2=1,nmat*ngeom_recon
+           do dir2=1,num_materials*ngeom_recon
             mofdata(dir2)=slope(D_DECL(i,j,k),dir2)
            enddo 
            ! multi_cen is "absolute" (not relative to cell centroid)
@@ -10420,13 +10295,13 @@ stop
              geom_xtetlist(1,1,1,tid+1), &
              nmax, &
              nmax, &
-             nmat,SDIM,2)
+             SDIM,2)
        
            mass_total_fluid=zero
            voltotal_fluid=zero 
            mass_total_solid=zero
            voltotal_solid=zero 
-           do im=1,nmat
+           do im=1,num_materials
             dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
             den=denstate(D_DECL(i,j,k),dencomp)
             mom_den_local=mom_den(D_DECL(i,j,k),im)
@@ -10474,9 +10349,9 @@ stop
             endif
   
             if (iside.eq.-1) then 
-             irefine=veldir*2*nmat+im
+             irefine=veldir*2*num_materials+im
             else if (iside.eq.1) then
-             irefine=veldir*2*nmat+nmat+im
+             irefine=veldir*2*num_materials+num_materials+im
             else
              print *,"iside invalid"
              stop
@@ -10484,7 +10359,7 @@ stop
 
             vofF(D_DECL(i,j,k),irefine)=multi_volume(im)
             massF(D_DECL(i,j,k),irefine)=den_value*multi_volume(im)
-           enddo ! im=1,nmat
+           enddo ! im=1,num_materials
 
            if (tessellate.eq.0) then
             voltotal=voltotal_fluid
@@ -10502,7 +10377,7 @@ stop
             ! do nothing
            else
             print *,"voltotal or mass_total invalid"
-            print *,"voltotal, mass_total, nmat ",voltotal,mass_total,nmat
+            print *,"voltotal, mass_total, num_materials ",voltotal,mass_total,num_materials
             print *,"voldonate,volrecon ",voldonate,volrecon
             print *,"veldir ",veldir
             print *,"fablo ",fablo(1),fablo(2),fablo(SDIM)
@@ -10547,7 +10422,6 @@ stop
 ! add beta * (1/cv) * (u dot u/2) to temp
       subroutine fort_inc_temp( &
        beta, &
-       nmat, &
        level, &
        finest_level, &
        ncomp_state, &
@@ -10561,18 +10435,17 @@ stop
        use global_utility_module
        IMPLICIT NONE
 
-      REAL_T, intent(in) :: beta
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: ncomp_state
-      INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      REAL_T, INTENT(in) :: beta
+      INTEGER_T, INTENT(in) :: ncomp_state
+      INTEGER_T, INTENT(in) :: level,finest_level
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: DIMDEC(state)
-      INTEGER_T, intent(in) :: DIMDEC(maskcoef)
-      REAL_T, intent(inout), target :: state(DIMV(state),ncomp_state)
+      INTEGER_T, INTENT(in) :: DIMDEC(state)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskcoef)
+      REAL_T, INTENT(inout), target :: state(DIMV(state),ncomp_state)
       REAL_T, pointer :: state_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef))
+      REAL_T, INTENT(in), target :: maskcoef(DIMV(maskcoef))
       REAL_T, pointer :: maskcoef_ptr(D_DECL(:,:,:))
 
       INTEGER_T i,j,k
@@ -10585,10 +10458,6 @@ stop
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T ispec
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if ((level.le.finest_level).and.(level.ge.0)) then
        ! do nothing
       else
@@ -10596,7 +10465,7 @@ stop
        stop
       endif
 
-      do im=1,nmat
+      do im=1,num_materials
        imattype=fort_material_type(im)
        if (imattype.eq.999) then
         ! do nothing
@@ -10608,7 +10477,7 @@ stop
         stop
        endif
 
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       if ((beta.eq.one).or.(beta.eq.-one)) then
        ! do nothing
@@ -10621,7 +10490,7 @@ stop
        stop
       endif
 
-      do im=1,nmat
+      do im=1,num_materials
        if (fort_denconst(im).gt.zero) then
         ! do nothing
        else
@@ -10648,7 +10517,7 @@ stop
        local_mask=NINT(maskcoef(D_DECL(i,j,k)))
        if (local_mask.eq.1) then ! not covered
 
-        do im=1,nmat
+        do im=1,num_materials
          if (is_compressible_mat(im).eq.0) then
           ! do nothing
          else if (is_compressible_mat(im).eq.1) then
@@ -10733,7 +10602,7 @@ stop
           print *,"is_compressible_mat invalid"
           stop
          endif
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
        else if (local_mask.eq.0) then ! covered
         ! do nothing
@@ -10832,132 +10701,132 @@ stop
        use CISL_SANITY_MODULE
        IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: ncomp_denold
-      INTEGER_T, intent(in) :: ncomp_veldest
-      INTEGER_T, intent(in) :: ncomp_dendest
-      INTEGER_T, intent(in) :: ns_time_order
-      INTEGER_T, intent(in) :: divu_outer_sweeps
-      INTEGER_T, intent(in) :: num_divu_outer_sweeps
-      INTEGER_T, intent(in) :: operation_flag
-      INTEGER_T, intent(in) :: slab_step
-      INTEGER_T, intent(in) :: enable_spectral
-      INTEGER_T, intent(in) :: SDC_outer_sweeps 
-      INTEGER_T, intent(in) :: energyflag 
-      INTEGER_T, intent(in) :: constant_density_all_time(num_materials)
-      INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: nparts_def
-      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
-      REAL_T, intent(in) :: added_weight(num_materials)
-      INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: homflag
-      INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: project_option
-      INTEGER_T, intent(in) :: ncphys
-      INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM)
-      INTEGER_T, intent(in) :: presbc_in(SDIM,2)
-      REAL_T, intent(in) :: cur_time,dt
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: ncomp_denold
+      INTEGER_T, INTENT(in) :: ncomp_veldest
+      INTEGER_T, INTENT(in) :: ncomp_dendest
+      INTEGER_T, INTENT(in) :: ns_time_order
+      INTEGER_T, INTENT(in) :: divu_outer_sweeps
+      INTEGER_T, INTENT(in) :: num_divu_outer_sweeps
+      INTEGER_T, INTENT(in) :: operation_flag
+      INTEGER_T, INTENT(in) :: slab_step
+      INTEGER_T, INTENT(in) :: enable_spectral
+      INTEGER_T, INTENT(in) :: SDC_outer_sweeps 
+      INTEGER_T, INTENT(in) :: energyflag 
+      INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials)
+      INTEGER_T, INTENT(in) :: nparts
+      INTEGER_T, INTENT(in) :: nparts_def
+      INTEGER_T, INTENT(in) :: im_solid_map(nparts_def)
+      REAL_T, INTENT(in) :: added_weight(num_materials)
+      INTEGER_T, INTENT(in) :: nsolve
+      INTEGER_T, INTENT(in) :: homflag
+      INTEGER_T, INTENT(in) :: level,finest_level
+      INTEGER_T, INTENT(in) :: project_option
+      INTEGER_T, INTENT(in) :: ncphys
+      INTEGER_T, INTENT(in) :: velbc_in(SDIM,2,SDIM)
+      INTEGER_T, INTENT(in) :: presbc_in(SDIM,2)
+      REAL_T, INTENT(in) :: cur_time,dt
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(xp)
-      INTEGER_T, intent(in) :: DIMDEC(yp)
-      INTEGER_T, intent(in) :: DIMDEC(zp)
-      INTEGER_T, intent(in) :: DIMDEC(xvel)
-      INTEGER_T, intent(in) :: DIMDEC(yvel)
-      INTEGER_T, intent(in) :: DIMDEC(zvel)
-      INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(yface)
-      INTEGER_T, intent(in) :: DIMDEC(zface)
-      INTEGER_T, intent(in) :: DIMDEC(ax)
-      INTEGER_T, intent(in) :: DIMDEC(ay)
-      INTEGER_T, intent(in) :: DIMDEC(az)
-      INTEGER_T, intent(in) :: DIMDEC(vol)
-      INTEGER_T, intent(in) :: DIMDEC(rhs)
-      INTEGER_T, intent(in) :: DIMDEC(veldest)
-      INTEGER_T, intent(in) :: DIMDEC(dendest)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: DIMDEC(maskcoef)
-      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
-      INTEGER_T, intent(in) :: DIMDEC(levelPC)
-      INTEGER_T, intent(in) :: DIMDEC(solxfab)
-      INTEGER_T, intent(in) :: DIMDEC(solyfab)
-      INTEGER_T, intent(in) :: DIMDEC(solzfab)
-      INTEGER_T, intent(in) :: DIMDEC(cterm)
-      INTEGER_T, intent(in) :: DIMDEC(pold)
-      INTEGER_T, intent(in) :: DIMDEC(denold)
-      INTEGER_T, intent(in) :: DIMDEC(ustar)
-      INTEGER_T, intent(in) :: DIMDEC(mdotcell)
-      INTEGER_T, intent(in) :: DIMDEC(maskdivres)
-      INTEGER_T, intent(in) :: DIMDEC(maskres)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: DIMDEC(xp)
+      INTEGER_T, INTENT(in) :: DIMDEC(yp)
+      INTEGER_T, INTENT(in) :: DIMDEC(zp)
+      INTEGER_T, INTENT(in) :: DIMDEC(xvel)
+      INTEGER_T, INTENT(in) :: DIMDEC(yvel)
+      INTEGER_T, INTENT(in) :: DIMDEC(zvel)
+      INTEGER_T, INTENT(in) :: DIMDEC(xface)
+      INTEGER_T, INTENT(in) :: DIMDEC(yface)
+      INTEGER_T, INTENT(in) :: DIMDEC(zface)
+      INTEGER_T, INTENT(in) :: DIMDEC(ax)
+      INTEGER_T, INTENT(in) :: DIMDEC(ay)
+      INTEGER_T, INTENT(in) :: DIMDEC(az)
+      INTEGER_T, INTENT(in) :: DIMDEC(vol)
+      INTEGER_T, INTENT(in) :: DIMDEC(rhs)
+      INTEGER_T, INTENT(in) :: DIMDEC(veldest)
+      INTEGER_T, INTENT(in) :: DIMDEC(dendest)
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskcoef)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskSEM)
+      INTEGER_T, INTENT(in) :: DIMDEC(levelPC)
+      INTEGER_T, INTENT(in) :: DIMDEC(solxfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(solyfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(solzfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(cterm)
+      INTEGER_T, INTENT(in) :: DIMDEC(pold)
+      INTEGER_T, INTENT(in) :: DIMDEC(denold)
+      INTEGER_T, INTENT(in) :: DIMDEC(ustar)
+      INTEGER_T, INTENT(in) :: DIMDEC(mdotcell)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskdivres)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskres)
 
-      REAL_T, intent(in), target ::  xp(DIMV(xp),2+nsolve)
+      REAL_T, INTENT(in), target ::  xp(DIMV(xp),2+nsolve)
       REAL_T, pointer :: xp_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target ::  yp(DIMV(yp),2+nsolve)
+      REAL_T, INTENT(in), target ::  yp(DIMV(yp),2+nsolve)
       REAL_T, pointer :: yp_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target ::  zp(DIMV(zp),2+nsolve)
+      REAL_T, INTENT(in), target ::  zp(DIMV(zp),2+nsolve)
       REAL_T, pointer :: zp_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target ::  xvel(DIMV(xvel),nsolve)
+      REAL_T, INTENT(in), target ::  xvel(DIMV(xvel),nsolve)
       REAL_T, pointer :: xvel_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target ::  yvel(DIMV(yvel),nsolve)
+      REAL_T, INTENT(in), target ::  yvel(DIMV(yvel),nsolve)
       REAL_T, pointer :: yvel_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target ::  zvel(DIMV(zvel),nsolve)
+      REAL_T, INTENT(in), target ::  zvel(DIMV(zvel),nsolve)
       REAL_T, pointer :: zvel_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target ::  xface(DIMV(xface),ncphys)
+      REAL_T, INTENT(in), target ::  xface(DIMV(xface),ncphys)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target ::  yface(DIMV(yface),ncphys)
+      REAL_T, INTENT(in), target ::  yface(DIMV(yface),ncphys)
       REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target ::  zface(DIMV(zface),ncphys)
+      REAL_T, INTENT(in), target ::  zface(DIMV(zface),ncphys)
       REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target ::  ax(DIMV(ax))
-      REAL_T, intent(in), target ::  ay(DIMV(ay))
-      REAL_T, intent(in), target ::  az(DIMV(az))
+      REAL_T, INTENT(in), target ::  ax(DIMV(ax))
+      REAL_T, INTENT(in), target ::  ay(DIMV(ay))
+      REAL_T, INTENT(in), target ::  az(DIMV(az))
       REAL_T, pointer :: ax_ptr(D_DECL(:,:,:))
       REAL_T, pointer :: ay_ptr(D_DECL(:,:,:))
       REAL_T, pointer :: az_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in), target :: vol(DIMV(vol),1)
+      REAL_T, INTENT(in), target :: vol(DIMV(vol),1)
       REAL_T, pointer :: vol_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: rhs(DIMV(rhs),nsolve)
+      REAL_T, INTENT(inout), target :: rhs(DIMV(rhs),nsolve)
       REAL_T, pointer :: rhs_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: veldest(DIMV(veldest),ncomp_veldest)
+      REAL_T, INTENT(inout), target :: veldest(DIMV(veldest),ncomp_veldest)
       REAL_T, pointer :: veldest_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: dendest(DIMV(dendest),ncomp_dendest)
+      REAL_T, INTENT(inout), target :: dendest(DIMV(dendest),ncomp_dendest)
       REAL_T, pointer :: dendest_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, INTENT(in), target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef),1)
+      REAL_T, INTENT(in), target :: maskcoef(DIMV(maskcoef),1)
       REAL_T, pointer :: maskcoef_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
+      REAL_T, INTENT(in), target :: maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: levelPC(DIMV(levelPC),num_materials*(SDIM+1))
+      REAL_T, INTENT(in), target :: levelPC(DIMV(levelPC),num_materials*(SDIM+1))
       REAL_T, pointer :: levelPC_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: solxfab(DIMV(solxfab),SDIM*nparts_def)
-      REAL_T, intent(in), target :: solyfab(DIMV(solyfab),SDIM*nparts_def)
-      REAL_T, intent(in), target :: solzfab(DIMV(solzfab),SDIM*nparts_def)
+      REAL_T, INTENT(in), target :: solxfab(DIMV(solxfab),SDIM*nparts_def)
+      REAL_T, INTENT(in), target :: solyfab(DIMV(solyfab),SDIM*nparts_def)
+      REAL_T, INTENT(in), target :: solzfab(DIMV(solzfab),SDIM*nparts_def)
       REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
       REAL_T, pointer :: solyfab_ptr(D_DECL(:,:,:),:)
       REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: cterm(DIMV(cterm),nsolve)
+      REAL_T, INTENT(inout), target :: cterm(DIMV(cterm),nsolve)
       REAL_T, pointer :: cterm_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: pold(DIMV(pold),nsolve)
+      REAL_T, INTENT(in), target :: pold(DIMV(pold),nsolve)
       REAL_T, pointer :: pold_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: denold(DIMV(denold),ncomp_denold)
+      REAL_T, INTENT(in), target :: denold(DIMV(denold),ncomp_denold)
       REAL_T, pointer :: denold_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: ustar(DIMV(ustar),SDIM) 
+      REAL_T, INTENT(inout), target :: ustar(DIMV(ustar),SDIM) 
       REAL_T, pointer :: ustar_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: &
+      REAL_T, INTENT(in), target :: &
        mdotcell(DIMV(mdotcell),nsolve) !VELADVECT_MF if OP_ISCHEME_CELL
       REAL_T, pointer :: mdotcell_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: &
+      REAL_T, INTENT(in), target :: &
        maskdivres(DIMV(maskdivres),ncomp_dendest) !DEN_RECON_MF OP_ISCHEME_CELL
       REAL_T, pointer :: maskdivres_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: maskres(DIMV(maskres))
+      REAL_T, INTENT(in), target :: maskres(DIMV(maskres))
       REAL_T, pointer :: maskres_ptr(D_DECL(:,:,:))
 
       REAL_T DXMAXLS,cutoff
@@ -12962,111 +12831,111 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: ncomp_mgoni
-      INTEGER_T, intent(in) :: ncomp_xp
-      INTEGER_T, intent(in) :: ncomp_xgp
-      INTEGER_T, intent(in) :: simple_AMR_BC_flag
-      INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: tileloop
-      INTEGER_T, intent(in) :: spectral_loop
-      INTEGER_T, intent(in) :: ncfluxreg
-      INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: nparts_def
-      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
+      INTEGER_T, INTENT(in) :: ncomp_mgoni
+      INTEGER_T, INTENT(in) :: ncomp_xp
+      INTEGER_T, INTENT(in) :: ncomp_xgp
+      INTEGER_T, INTENT(in) :: simple_AMR_BC_flag
+      INTEGER_T, INTENT(in) :: nsolve
+      INTEGER_T, INTENT(in) :: tileloop
+      INTEGER_T, INTENT(in) :: spectral_loop
+      INTEGER_T, INTENT(in) :: ncfluxreg
+      INTEGER_T, INTENT(in) :: nparts
+      INTEGER_T, INTENT(in) :: nparts_def
+      INTEGER_T, INTENT(in) :: im_solid_map(nparts_def)
 
-      INTEGER_T, intent(in) :: blob_array_size
-      INTEGER_T, intent(in) :: num_colors
-      REAL_T, intent(in) :: blob_array(blob_array_size)
+      INTEGER_T, INTENT(in) :: blob_array_size
+      INTEGER_T, INTENT(in) :: num_colors
+      REAL_T, INTENT(in) :: blob_array(blob_array_size)
         
-      REAL_T, intent(in) :: added_weight(num_materials)
-      INTEGER_T, intent(in) :: slab_step
-      INTEGER_T, intent(in) :: operation_flag
-      INTEGER_T, intent(in) :: energyflag
-      INTEGER_T, intent(in) :: enable_spectral
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: ncphys  ! nflux for advection
-      INTEGER_T, intent(in) :: constant_density_all_time(num_materials)
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(in) :: time
-      REAL_T, intent(in) :: beta,visc_coef
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(semflux)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: DIMDEC(maskcoef)
-      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
-      INTEGER_T, intent(in) :: DIMDEC(xcut)
-      INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(xgp)
-      INTEGER_T, intent(in) :: DIMDEC(xp)
-      INTEGER_T, intent(in) :: DIMDEC(xvel)
-      INTEGER_T, intent(in) :: DIMDEC(pres)
-      INTEGER_T, intent(in) :: DIMDEC(vel)
-      INTEGER_T, intent(in) :: DIMDEC(den)
-      INTEGER_T, intent(in) :: DIMDEC(mgoni)
-      INTEGER_T, intent(in) :: DIMDEC(levelPC)
-      INTEGER_T, intent(in) :: DIMDEC(solfab)
-      INTEGER_T, intent(in) :: DIMDEC(colorfab)
-      INTEGER_T, intent(in) :: DIMDEC(typefab)
+      REAL_T, INTENT(in) :: added_weight(num_materials)
+      INTEGER_T, INTENT(in) :: slab_step
+      INTEGER_T, INTENT(in) :: operation_flag
+      INTEGER_T, INTENT(in) :: energyflag
+      INTEGER_T, INTENT(in) :: enable_spectral
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: ncphys  ! nflux for advection
+      INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials)
+      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(in) :: beta,visc_coef
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, INTENT(in) :: DIMDEC(semflux)
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskcoef)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskSEM)
+      INTEGER_T, INTENT(in) :: DIMDEC(xcut)
+      INTEGER_T, INTENT(in) :: DIMDEC(xface)
+      INTEGER_T, INTENT(in) :: DIMDEC(xgp)
+      INTEGER_T, INTENT(in) :: DIMDEC(xp)
+      INTEGER_T, INTENT(in) :: DIMDEC(xvel)
+      INTEGER_T, INTENT(in) :: DIMDEC(pres)
+      INTEGER_T, INTENT(in) :: DIMDEC(vel)
+      INTEGER_T, INTENT(in) :: DIMDEC(den)
+      INTEGER_T, INTENT(in) :: DIMDEC(mgoni)
+      INTEGER_T, INTENT(in) :: DIMDEC(levelPC)
+      INTEGER_T, INTENT(in) :: DIMDEC(solfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(colorfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(typefab)
 
        ! denbc for advect
-      INTEGER_T, intent(in) :: &
+      INTEGER_T, INTENT(in) :: &
               presbc_in(SDIM,2,num_materials*num_state_material) 
-      INTEGER_T, intent(in) :: velbc_in(SDIM,2,SDIM)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: velbc_in(SDIM,2,SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact,bfact_c,bfact_f
-      INTEGER_T, intent(in) :: rz_flag
-      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
-      INTEGER_T, intent(in) :: project_option
+      INTEGER_T, INTENT(in) :: bfact,bfact_c,bfact_f
+      INTEGER_T, INTENT(in) :: rz_flag
+      INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
+      INTEGER_T, INTENT(in) :: project_option
 
-      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, INTENT(in), target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in), target :: maskcoef(DIMV(maskcoef))
+      REAL_T, INTENT(in), target :: maskcoef(DIMV(maskcoef))
       REAL_T, pointer :: maskcoef_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
+      REAL_T, INTENT(in), target :: maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: &
+      REAL_T, INTENT(in), target :: &
               levelPC(DIMV(levelPC),num_materials*(1+SDIM))
       REAL_T, pointer :: levelPC_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: solfab(DIMV(solfab),nparts_def*SDIM)
+      REAL_T, INTENT(in), target :: solfab(DIMV(solfab),nparts_def*SDIM)
       REAL_T, pointer :: solfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: semflux(DIMV(semflux),ncfluxreg)
+      REAL_T, INTENT(inout), target :: semflux(DIMV(semflux),ncfluxreg)
       REAL_T, pointer :: semflux_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: xcut(DIMV(xcut),1)
+      REAL_T, INTENT(inout), target :: xcut(DIMV(xcut),1)
       REAL_T, pointer :: xcut_ptr(D_DECL(:,:,:),:)
        ! xflux for advection
-      REAL_T, intent(inout), target :: xface(DIMV(xface),ncphys) 
+      REAL_T, INTENT(inout), target :: xface(DIMV(xface),ncphys) 
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
        !holds Umac_old if 
        ! OP_UMAC_PLUS_VISC_CELL_TO_MAC or OP_U_COMP_CELL_MAC_TO_MAC
-      REAL_T, intent(inout), target :: xgp(DIMV(xgp),ncomp_xgp) 
+      REAL_T, INTENT(inout), target :: xgp(DIMV(xgp),ncomp_xgp) 
       REAL_T, pointer :: xgp_ptr(D_DECL(:,:,:),:)
 
         ! for regular edge pressure operation:
         ! 1st component reserved for cell velocity override indicator.
         ! 2nd component reserved for coarse/fine indicator.
         ! for gravity/surface tension: not used.
-      REAL_T, intent(inout), target :: xp(DIMV(xp),ncomp_xp)
+      REAL_T, INTENT(inout), target :: xp(DIMV(xp),ncomp_xp)
       REAL_T, pointer :: xp_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: xvel(DIMV(xvel),1)
+      REAL_T, INTENT(inout), target :: xvel(DIMV(xvel),1)
       REAL_T, pointer :: xvel_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: vel(DIMV(vel),SDIM)
+      REAL_T, INTENT(in), target :: vel(DIMV(vel),SDIM)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
        ! holds U_old(dir) if OP_U_COMP_CELL_MAC_TO_MAC
-      REAL_T, intent(in), target :: pres(DIMV(pres),1)
+      REAL_T, INTENT(in), target :: pres(DIMV(pres),1)
       REAL_T, pointer :: pres_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target ::  &
+      REAL_T, INTENT(in), target ::  &
               den(DIMV(den),num_materials*num_state_material)
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: mgoni(DIMV(mgoni),ncomp_mgoni)
+      REAL_T, INTENT(in), target :: mgoni(DIMV(mgoni),ncomp_mgoni)
       REAL_T, pointer :: mgoni_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: typefab(DIMV(typefab))
+      REAL_T, INTENT(in), target :: typefab(DIMV(typefab))
       REAL_T, pointer :: typefab_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: colorfab(DIMV(colorfab))
+      REAL_T, INTENT(in), target :: colorfab(DIMV(colorfab))
       REAL_T, pointer :: colorfab_ptr(D_DECL(:,:,:))
   
       INTEGER_T i,j,k,ii,jj,kk
@@ -15266,54 +15135,54 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: facewt_iter
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: local_face_index
-      INTEGER_T, intent(in) :: local_face_ncomp
-      REAL_T, intent(in) :: visc_coef
-      INTEGER_T, intent(in) :: uncoupled_viscosity
-      INTEGER_T, intent(in) :: project_option
-      REAL_T, intent(inout) :: min_face_wt(4)
-      REAL_T, intent(inout) :: max_face_wt(4)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: facewt_iter
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: nsolve
+      INTEGER_T, INTENT(in) :: local_face_index
+      INTEGER_T, INTENT(in) :: local_face_ncomp
+      REAL_T, INTENT(in) :: visc_coef
+      INTEGER_T, INTENT(in) :: uncoupled_viscosity
+      INTEGER_T, INTENT(in) :: project_option
+      REAL_T, INTENT(inout) :: min_face_wt(4)
+      REAL_T, INTENT(inout) :: max_face_wt(4)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(offdiagcheck)
-      INTEGER_T, intent(in) :: DIMDEC(cenden)
-      INTEGER_T, intent(in) :: DIMDEC(cenvisc)
-      INTEGER_T, intent(in) :: DIMDEC(xfwt)
-      INTEGER_T, intent(in) :: DIMDEC(yfwt)
-      INTEGER_T, intent(in) :: DIMDEC(zfwt)
-      INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(yface)
-      INTEGER_T, intent(in) :: DIMDEC(zface)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(inout),target :: offdiagcheck(DIMV(offdiagcheck),nsolve) 
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: DIMDEC(offdiagcheck)
+      INTEGER_T, INTENT(in) :: DIMDEC(cenden)
+      INTEGER_T, INTENT(in) :: DIMDEC(cenvisc)
+      INTEGER_T, INTENT(in) :: DIMDEC(xfwt)
+      INTEGER_T, INTENT(in) :: DIMDEC(yfwt)
+      INTEGER_T, INTENT(in) :: DIMDEC(zfwt)
+      INTEGER_T, INTENT(in) :: DIMDEC(xface)
+      INTEGER_T, INTENT(in) :: DIMDEC(yface)
+      INTEGER_T, INTENT(in) :: DIMDEC(zface)
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(inout),target :: offdiagcheck(DIMV(offdiagcheck),nsolve) 
       REAL_T, pointer :: offdiagcheck_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: cenden(DIMV(cenden)) 
+      REAL_T, INTENT(in),target :: cenden(DIMV(cenden)) 
       REAL_T, pointer :: cenden_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: cenvisc(DIMV(cenvisc)) 
+      REAL_T, INTENT(in),target :: cenvisc(DIMV(cenvisc)) 
       REAL_T, pointer :: cenvisc_ptr(D_DECL(:,:,:))
-      REAL_T, intent(out),target :: xfwt(DIMV(xfwt),nsolve)
+      REAL_T, INTENT(out),target :: xfwt(DIMV(xfwt),nsolve)
       REAL_T, pointer :: xfwt_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out),target :: yfwt(DIMV(yfwt),nsolve)
+      REAL_T, INTENT(out),target :: yfwt(DIMV(yfwt),nsolve)
       REAL_T, pointer :: yfwt_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out),target :: zfwt(DIMV(zfwt),nsolve)
+      REAL_T, INTENT(out),target :: zfwt(DIMV(zfwt),nsolve)
       REAL_T, pointer :: zfwt_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: xface(DIMV(xface),local_face_ncomp)
+      REAL_T, INTENT(in),target :: xface(DIMV(xface),local_face_ncomp)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: yface(DIMV(yface),local_face_ncomp)
+      REAL_T, INTENT(in),target :: yface(DIMV(yface),local_face_ncomp)
       REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: zface(DIMV(zface),local_face_ncomp)
+      REAL_T, INTENT(in),target :: zface(DIMV(zface),local_face_ncomp)
       REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, INTENT(in),target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-      INTEGER_T, intent(in) :: presbc_arr(SDIM,2,nsolve)
+      INTEGER_T, INTENT(in) :: presbc_arr(SDIM,2,nsolve)
   
       INTEGER_T i,j,k
       INTEGER_T iface,jface,kface
@@ -15776,70 +15645,70 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: solidheat_flag
-      INTEGER_T, intent(in) :: ngrow_distance_in
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: solidheat_flag
+      INTEGER_T, INTENT(in) :: ngrow_distance_in
 
-      INTEGER_T, intent(in) :: renormalize_only
-      INTEGER_T, intent(inout) :: num_LS_extrap
-      INTEGER_T, intent(in) :: num_LS_extrap_iter
-      INTEGER_T, intent(in) :: LS_extrap_iter
+      INTEGER_T, INTENT(in) :: renormalize_only
+      INTEGER_T, INTENT(inout) :: num_LS_extrap
+      INTEGER_T, INTENT(in) :: num_LS_extrap_iter
+      INTEGER_T, INTENT(in) :: LS_extrap_iter
 
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      REAL_T, intent(in) :: solid_time
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      REAL_T, INTENT(in) :: solid_time
 
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in), target :: dx(SDIM)
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: nparts_def
-      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: constant_density_all_time(num_materials)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in), target :: dx(SDIM)
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: nparts
+      INTEGER_T, INTENT(in) :: nparts_def
+      INTEGER_T, INTENT(in) :: im_solid_map(nparts_def)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials)
 
-      INTEGER_T, intent(in) :: DIMDEC(vofnew)
-      INTEGER_T, intent(in) :: DIMDEC(solxfab)
-      INTEGER_T, intent(in) :: DIMDEC(solyfab)
-      INTEGER_T, intent(in) :: DIMDEC(solzfab)
-      INTEGER_T, intent(in) :: DIMDEC(maskcov)
-      INTEGER_T, intent(in) :: DIMDEC(LS)
-      INTEGER_T, intent(in) :: DIMDEC(state_mof)
-      INTEGER_T, intent(in) :: DIMDEC(den)
-      INTEGER_T, intent(in) :: DIMDEC(vel)
-      INTEGER_T, intent(in) :: DIMDEC(velnew)
-      INTEGER_T, intent(in) :: DIMDEC(dennew)
-      INTEGER_T, intent(in) :: DIMDEC(lsnew)
-      REAL_T, intent(inout),target :: vofnew(DIMV(vofnew),num_materials*ngeom_raw)
+      INTEGER_T, INTENT(in) :: DIMDEC(vofnew)
+      INTEGER_T, INTENT(in) :: DIMDEC(solxfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(solyfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(solzfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
+      INTEGER_T, INTENT(in) :: DIMDEC(LS)
+      INTEGER_T, INTENT(in) :: DIMDEC(state_mof)
+      INTEGER_T, INTENT(in) :: DIMDEC(den)
+      INTEGER_T, INTENT(in) :: DIMDEC(vel)
+      INTEGER_T, INTENT(in) :: DIMDEC(velnew)
+      INTEGER_T, INTENT(in) :: DIMDEC(dennew)
+      INTEGER_T, INTENT(in) :: DIMDEC(lsnew)
+      REAL_T, INTENT(inout),target :: vofnew(DIMV(vofnew),num_materials*ngeom_raw)
       REAL_T, pointer :: vofnew_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: &
+      REAL_T, INTENT(in),target :: &
            vel(DIMV(vel),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(out),target :: &
+      REAL_T, INTENT(out),target :: &
            velnew(DIMV(velnew),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T, pointer :: velnew_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target ::  &
+      REAL_T, INTENT(in),target ::  &
               LS(DIMV(LS),num_materials*(1+SDIM))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: state_mof(DIMV(state_mof),num_materials*ngeom_raw)
+      REAL_T, INTENT(in),target :: state_mof(DIMV(state_mof),num_materials*ngeom_raw)
       REAL_T, pointer :: state_mof_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: den(DIMV(den),num_materials*num_state_material)
+      REAL_T, INTENT(in),target :: den(DIMV(den),num_materials*num_state_material)
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout),target :: &
+      REAL_T, INTENT(inout),target :: &
               dennew(DIMV(dennew),num_materials*num_state_material)
       REAL_T, pointer :: dennew_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout),target :: lsnew(DIMV(lsnew),num_materials*(1+SDIM))
+      REAL_T, INTENT(inout),target :: lsnew(DIMV(lsnew),num_materials*(1+SDIM))
       REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: solxfab(DIMV(solxfab),SDIM*nparts_def)
+      REAL_T, INTENT(in),target :: solxfab(DIMV(solxfab),SDIM*nparts_def)
       REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: solyfab(DIMV(solyfab),SDIM*nparts_def)
+      REAL_T, INTENT(in),target :: solyfab(DIMV(solyfab),SDIM*nparts_def)
       REAL_T, pointer :: solyfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: solzfab(DIMV(solzfab),SDIM*nparts_def)
+      REAL_T, INTENT(in),target :: solzfab(DIMV(solzfab),SDIM*nparts_def)
       REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: maskcov(DIMV(maskcov))
+      REAL_T, INTENT(in),target :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
 
       INTEGER_T i,j,k,dir
@@ -17260,7 +17129,7 @@ stop
        maskcov,DIMS(maskcov), &
        vofnew,DIMS(vofnew), &
        LS,DIMS(LS), &
-       xlo,dx,nmat) &
+       xlo,dx) &
       bind(c,name='fort_purgeflotsam')
 
       use global_utility_module
@@ -17271,37 +17140,36 @@ stop
       IMPLICIT NONE
 
 
-      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, INTENT(in) :: level,finest_level
 
-      REAL_T, intent(in) :: time
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: nmat
-      REAL_T, intent(inout) :: delta_mass(nmat)
-      INTEGER_T, intent(in) :: DIMDEC(maskcov)
-      INTEGER_T, intent(in) :: DIMDEC(vofnew)
-      INTEGER_T, intent(in) :: DIMDEC(LS)
-      INTEGER_T, intent(in) :: truncate_volume_fractions(nmat)
-      REAL_T, intent(in),target :: maskcov(DIMV(maskcov))
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(inout) :: delta_mass(num_materials)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
+      INTEGER_T, INTENT(in) :: DIMDEC(vofnew)
+      INTEGER_T, INTENT(in) :: DIMDEC(LS)
+      INTEGER_T, INTENT(in) :: truncate_volume_fractions(num_materials)
+      REAL_T, INTENT(in),target :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout),target :: vofnew(DIMV(vofnew),nmat*ngeom_raw)
+      REAL_T, INTENT(inout),target :: vofnew(DIMV(vofnew),num_materials*ngeom_raw)
       REAL_T, pointer :: vofnew_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target ::  LS(DIMV(LS),nmat)
+      REAL_T, INTENT(in),target ::  LS(DIMV(LS),num_materials)
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: truncate_thickness
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in) :: truncate_thickness
 
       INTEGER_T i,j,k,dir
       INTEGER_T im,im2,imcrit
       INTEGER_T vofcomprecon,vofcompraw
 
-      REAL_T mofdata(nmat*ngeom_recon)
-      REAL_T volmat(nmat)
-      REAL_T lspoint(nmat)
-      INTEGER_T sorted_list(nmat)
+      REAL_T mofdata(num_materials*ngeom_recon)
+      REAL_T volmat(num_materials)
+      REAL_T lspoint(num_materials)
+      INTEGER_T sorted_list(num_materials)
       REAL_T dxmax,dxmaxLS,LSbandsize,restore_sum
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
@@ -17321,10 +17189,6 @@ stop
  
       if (bfact.lt.1) then
        print *,"bfact invalid103"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat bust"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -17377,10 +17241,10 @@ stop
          print *,"volgrid invalid"
          stop
         endif
-        do dir=1,nmat*ngeom_recon
+        do dir=1,num_materials*ngeom_recon
          mofdata(dir)=zero 
         enddo
-        do im=1,nmat
+        do im=1,num_materials
          vofcomprecon=(im-1)*ngeom_recon+1
          vofcompraw=(im-1)*ngeom_raw+1
          volmat(im)=vofnew(D_DECL(i,j,k),vofcompraw)
@@ -17391,7 +17255,7 @@ stop
          enddo
         enddo ! im
         FSI_exclude=1
-        call sort_volume_fraction(volmat,FSI_exclude,sorted_list,nmat)
+        call sort_volume_fraction(volmat,FSI_exclude,sorted_list)
         imcrit=sorted_list(1)
         if (is_rigid(imcrit).eq.0) then
          ! do nothing
@@ -17399,7 +17263,7 @@ stop
          print *,"is_rigid(imcrit) invalid"
          stop
         endif
-        do im=1,nmat
+        do im=1,num_materials
          if (is_rigid(im).eq.0) then
 
           if (lspoint(im).gt.LSbandsize) then
@@ -17411,7 +17275,7 @@ stop
 
            restore_sum=zero
 
-           do im2=1,nmat
+           do im2=1,num_materials
             if (is_rigid(im2).eq.0) then
 
              if (im2.ne.im) then
@@ -17485,7 +17349,7 @@ stop
           print *,"is_rigid(im) invalid"
           stop
          endif
-        enddo ! im=1...nmat
+        enddo ! im=1...num_materials
 
          ! sum F_fluid=1  sum F_solid <=1
         call make_vfrac_sum_ok_base( &
@@ -17494,7 +17358,7 @@ stop
           bfact,dx, &
           tessellate,mofdata,SDIM,14)
 
-        do im=1,nmat
+        do im=1,num_materials
          vofcompraw=(im-1)*ngeom_raw+1
          vofcomprecon=(im-1)*ngeom_recon+1
          vofnew(D_DECL(i,j,k),vofcompraw)=mofdata(vofcomprecon)
@@ -17504,7 +17368,7 @@ stop
 
          delta_mass(im)=delta_mass(im)+ &
            volgrid*(mofdata(vofcomprecon)-volmat(im))
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
        else if (mask_test.eq.0) then
         ! do nothing
@@ -17523,7 +17387,7 @@ stop
       subroutine fort_initrecalesce( &
        recalesce_material_in, &
        recalesce_state_old_in, &
-       recalesce_num_state_in,nmat) &
+       recalesce_num_state_in) &
       bind(c,name='fort_initrecalesce')
 
       use probcommon_module
@@ -17532,16 +17396,12 @@ stop
       IMPLICIT NONE
 
 
-      INTEGER_T, intent(in) :: recalesce_num_state_in,nmat
+      INTEGER_T, INTENT(in) :: recalesce_num_state_in
       INTEGER_T i
-      INTEGER_T, intent(in) :: recalesce_material_in(nmat)
-      REAL_T, intent(in) :: recalesce_state_old_in(recalesce_num_state*nmat)
+      INTEGER_T, INTENT(in) :: recalesce_material_in(num_materials)
+      REAL_T, INTENT(in) :: recalesce_state_old_in(recalesce_num_state*num_materials)
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat bust"
-       stop
-      endif
-      if (nmat.gt.100) then
+      if (num_materials.gt.100) then
        print *,"too many materials"
        stop
       endif
@@ -17550,10 +17410,10 @@ stop
        stop
       endif
 
-      do i=1,nmat
+      do i=1,num_materials
        recalesce_material(i)=recalesce_material_in(i)
       enddo
-      do i=1,recalesce_num_state*nmat
+      do i=1,recalesce_num_state*num_materials
        recalesce_state_old(i)=recalesce_state_old_in(i)
       enddo
 
@@ -17635,11 +17495,11 @@ stop
       use global_utility_module
       use mass_transfer_module
 
-      type(accum_parm_type_count), intent(in) :: accum_PARM
-      INTEGER_T, intent(in) :: Np 
+      type(accum_parm_type_count), INTENT(in) :: accum_PARM
+      INTEGER_T, INTENT(in) :: Np 
        ! child link 1 (particle index), parent link 1 (i,j,k index),
        ! child link 2 (particle index), parent link 2 (i,j,k index), ...
-      INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
+      INTEGER_T, INTENT(inout) :: particle_link_data(Np*(1+SDIM))
 
       INTEGER_T :: interior_ID
       INTEGER_T :: dir
@@ -17779,17 +17639,17 @@ stop
 
       use global_utility_module
 
-      type(accum_parm_type_count), intent(in) :: accum_PARM
+      type(accum_parm_type_count), INTENT(in) :: accum_PARM
        !the pointer is never modified, but the target will be modified.
        !cell_particle_count(i,j,k,1)=number particles in the cell.
        !cell_particle_count(i,j,k,2)=particle id of first particle in list
-      INTEGER_T, intent(in), pointer, &
+      INTEGER_T, INTENT(in), pointer, &
         dimension(D_DECL(:,:,:),:) :: cell_particle_count
-      INTEGER_T, intent(in) :: Np 
-      type(particle_t), intent(in) :: particles(Np)
+      INTEGER_T, INTENT(in) :: Np 
+      type(particle_t), INTENT(in) :: particles(Np)
        ! child link 1 (particle index), parent link 1 (i,j,k index),
        ! child link 2 (particle index), parent link 2 (i,j,k index), ...
-      INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
+      INTEGER_T, INTENT(inout) :: particle_link_data(Np*(1+SDIM))
 
       INTEGER_T :: interior_ID
       INTEGER_T :: dir
@@ -17930,11 +17790,11 @@ stop
 
       IMPLICIT NONE
 
-      type(accum_parm_type_count), intent(in) :: accum_PARM
-      REAL_T, intent(in) :: xpart(SDIM)
-      INTEGER_T, intent(in) :: i,j,k
-      INTEGER_T, intent(out) :: isub,jsub,ksub
-      INTEGER_T, intent(out) :: sub_found
+      type(accum_parm_type_count), INTENT(in) :: accum_PARM
+      REAL_T, INTENT(in) :: xpart(SDIM)
+      INTEGER_T, INTENT(in) :: i,j,k
+      INTEGER_T, INTENT(out) :: isub,jsub,ksub
+      INTEGER_T, INTENT(out) :: sub_found
       INTEGER_T :: nhalf
       INTEGER_T :: dir
       REAL_T :: xsten(-3:3,SDIM)
@@ -17982,10 +17842,10 @@ stop
 
       IMPLICIT NONE
 
-      type(accum_parm_type_count), intent(in) :: accum_PARM
-      REAL_T, intent(out) :: xsub(SDIM)
-      INTEGER_T, intent(in) :: i,j,k
-      INTEGER_T, intent(in) :: isub,jsub,ksub
+      type(accum_parm_type_count), INTENT(in) :: accum_PARM
+      REAL_T, INTENT(out) :: xsub(SDIM)
+      INTEGER_T, INTENT(in) :: i,j,k
+      INTEGER_T, INTENT(in) :: isub,jsub,ksub
       INTEGER_T :: nhalf
       INTEGER_T :: dir
       REAL_T :: xsten(-3:3,SDIM)
@@ -18013,7 +17873,6 @@ stop
 
 
       subroutine interp_eul_lag_dist( &
-         nmat, &
          accum_PARM, &
          i,j,k, &
          xtarget, &  ! where to add the new particle
@@ -18026,14 +17885,13 @@ stop
 
       IMPLICIT NONE
 
-      type(accum_parm_type_count), intent(in) :: accum_PARM
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: i,j,k
-      REAL_T, target, intent(in) :: xtarget(SDIM)
-      INTEGER_T, intent(in) :: Np
-      INTEGER_T, intent(in) :: particle_link_data(Np*(1+SDIM))
-      REAL_T, intent(out) :: Q_interp(NUM_CELL_ELASTIC)
-      REAL_T, intent(out) :: LS_interp(nmat)
+      type(accum_parm_type_count), INTENT(in) :: accum_PARM
+      INTEGER_T, INTENT(in) :: i,j,k
+      REAL_T, target, INTENT(in) :: xtarget(SDIM)
+      INTEGER_T, INTENT(in) :: Np
+      INTEGER_T, INTENT(in) :: particle_link_data(Np*(1+SDIM))
+      REAL_T, INTENT(out) :: Q_interp(NUM_CELL_ELASTIC)
+      REAL_T, INTENT(out) :: LS_interp(num_materials)
 
       INTEGER_T :: nhalf
       INTEGER_T :: dir
@@ -18043,7 +17901,7 @@ stop
       REAL_T, target :: xpart(SDIM)
       REAL_T :: Qpart(NUM_CELL_ELASTIC)
       REAL_T :: Q_interp_local(NUM_CELL_ELASTIC)
-      REAL_T :: LS_interp_local(nmat)
+      REAL_T :: LS_interp_local(num_materials)
       INTEGER_T :: ibase
 
       REAL_T tmp,eps
@@ -18054,7 +17912,7 @@ stop
       type(interp_from_grid_out_parm_type) :: data_out_LS
 
       REAL_T, target, dimension(NUM_CELL_ELASTIC) :: data_interp_local
-      REAL_T, target, dimension(nmat) :: data_interp_local_LS
+      REAL_T, target, dimension(num_materials) :: data_interp_local_LS
 
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
@@ -18064,13 +17922,6 @@ stop
       INTEGER_T :: test_count,test_cell_particle_count
 
       INTEGER_T :: SoA_comp
-
-      if (nmat.eq.num_materials) then
-       ! do nothing
-      else
-       print *,"nmat invalid"
-       stop
-      endif
 
       eps=dx_local(1)/10.0d0
 
@@ -18097,7 +17948,6 @@ stop
       data_in%level=accum_PARM%level
       data_in%finest_level=accum_PARM%finest_level
       data_in%bfact=accum_PARM%bfact
-      data_in%nmat=num_materials
       data_in%dx=>dx_local
       data_in%xlo=>xlo_local
       data_in%fablo=>fablo_local
@@ -18163,16 +18013,16 @@ stop
         stop
        endif
 
-       if (nmat.gt.0) then
+       if (num_materials.gt.0) then
         data_in%scomp=1 
-        data_in%ncomp=nmat
+        data_in%ncomp=num_materials
         data_in%state=accum_PARM%LEVELSET
         call interp_from_grid_util(data_in,data_out_LS)
-        do dir=1,nmat
+        do dir=1,num_materials
          LS_interp_local(dir)=data_out_LS%data_interp(dir)
         enddo
        else
-        print *,"nmat invalid"
+        print *,"num_materials invalid"
         stop
        endif
 
@@ -18228,16 +18078,16 @@ stop
        stop
       endif
 
-      if (nmat.gt.0) then
+      if (num_materials.gt.0) then
        data_in%scomp=1 
-       data_in%ncomp=nmat
+       data_in%ncomp=num_materials
        data_in%state=accum_PARM%LEVELSET
        call interp_from_grid_util(data_in,data_out_LS)
-       do dir=1,nmat
+       do dir=1,num_materials
         LS_interp(dir)=data_out_LS%data_interp(dir)
        enddo
       else
-       print *,"nmat invalid"
+       print *,"num_materials invalid"
        stop
       endif
 
@@ -18279,7 +18129,6 @@ stop
         particle_nsubdivide, &
         particle_max_per_nsubdivide, &
         particle_min_per_nsubdivide, &
-        nmat, &
         tilelo,tilehi, &
         fablo,fabhi, &
         bfact, &
@@ -18313,60 +18162,58 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: single_particle_size
-      INTEGER_T, intent(in) :: isweep
-      INTEGER_T, intent(in) :: append_flag
-      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: single_particle_size
+      INTEGER_T, INTENT(in) :: isweep
+      INTEGER_T, INTENT(in) :: append_flag
+      INTEGER_T, INTENT(in) :: level,finest_level
 
-      INTEGER_T, intent(in) :: nmat
-
-      INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: particle_nsubdivide
-      INTEGER_T, intent(in) :: particle_max_per_nsubdivide
-      INTEGER_T, intent(in) :: particle_min_per_nsubdivide
-      REAL_T, intent(in)    :: cur_time_slab
-      REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
-      INTEGER_T, value, intent(in) :: Np ! pass by value
-      type(particle_t), intent(in), target :: particles(Np)
-      INTEGER_T, value, intent(in) :: N_real_comp ! pass by value
-      REAL_T, intent(in), target :: real_compALL(N_real_comp)
-      INTEGER_T, intent(inout) :: new_Pdata_size
-      REAL_T, intent(out) :: new_particles(new_Pdata_size)
-      INTEGER_T, intent(inout) :: Np_append
+      INTEGER_T, INTENT(in), target :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: particle_nsubdivide
+      INTEGER_T, INTENT(in) :: particle_max_per_nsubdivide
+      INTEGER_T, INTENT(in) :: particle_min_per_nsubdivide
+      REAL_T, INTENT(in)    :: cur_time_slab
+      REAL_T, INTENT(in), target :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, value, INTENT(in) :: Np ! pass by value
+      type(particle_t), INTENT(in), target :: particles(Np)
+      INTEGER_T, value, INTENT(in) :: N_real_comp ! pass by value
+      REAL_T, INTENT(in), target :: real_compALL(N_real_comp)
+      INTEGER_T, INTENT(inout) :: new_Pdata_size
+      REAL_T, INTENT(out) :: new_particles(new_Pdata_size)
+      INTEGER_T, INTENT(inout) :: Np_append
 
        ! child link 1, parent link 1,
        ! child link 2, parent link 2, ...
-      INTEGER_T, intent(inout) :: particle_link_data(Np*(1+SDIM))
-      INTEGER_T, intent(inout) :: particle_delete_flag(Np) ! 1=>delete
+      INTEGER_T, INTENT(inout) :: particle_link_data(Np*(1+SDIM))
+      INTEGER_T, INTENT(inout) :: particle_delete_flag(Np) ! 1=>delete
 
-      INTEGER_T, intent(in) :: DIMDEC(cell_particle_count)
-      INTEGER_T, intent(in) :: DIMDEC(tensorfab)
-      INTEGER_T, intent(in) :: DIMDEC(lsfab)
-      INTEGER_T, intent(in) :: DIMDEC(mfiner)
+      INTEGER_T, INTENT(in) :: DIMDEC(cell_particle_count)
+      INTEGER_T, INTENT(in) :: DIMDEC(tensorfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(lsfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(mfiner)
    
        ! first component: number of particles in the cell
        ! second component: link to the local particle container: 1..Np 
-      INTEGER_T, intent(inout), target :: cell_particle_count( &
+      INTEGER_T, INTENT(inout), target :: cell_particle_count( &
               DIMV(cell_particle_count), &
               2) 
       INTEGER_T, pointer, &
         dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
 
-      REAL_T, intent(in), target :: &
+      REAL_T, INTENT(in), target :: &
          tensorfab(DIMV(tensorfab),NUM_CELL_ELASTIC) 
       REAL_T, pointer :: tensorfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: lsfab(DIMV(lsfab),nmat) 
+      REAL_T, INTENT(in), target :: lsfab(DIMV(lsfab),num_materials) 
       REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: mfiner(DIMV(mfiner)) 
+      REAL_T, INTENT(in), target :: mfiner(DIMV(mfiner)) 
       REAL_T, pointer :: mfiner_ptr(D_DECL(:,:,:))
 
-      INTEGER_T, intent(in) :: viscoelastic_model(nmat)
+      INTEGER_T, INTENT(in) :: viscoelastic_model(num_materials)
        ! 0<=im_elastic_map<num_materials
-      INTEGER_T, intent(in) :: im_elastic_map(num_materials_viscoelastic)
-      REAL_T, intent(in) :: polymer_factor(nmat)
+      INTEGER_T, INTENT(in) :: im_elastic_map(num_materials_viscoelastic)
+      REAL_T, INTENT(in) :: polymer_factor(num_materials)
 
       type(accum_parm_type_count) :: accum_PARM
    
@@ -18388,7 +18235,7 @@ stop
       REAL_T, target :: xpart(SDIM)
       REAL_T :: xsub(SDIM)
       REAL_T :: tensor_sub(NUM_CELL_ELASTIC)
-      REAL_T :: LS_sub(nmat)
+      REAL_T :: LS_sub(num_materials)
       INTEGER_T :: im_primary_sub
       INTEGER_T :: im_particle
       INTEGER_T, allocatable, dimension(:,:) :: sub_particle_data
@@ -18413,7 +18260,7 @@ stop
 
       type(interp_from_grid_parm_type) :: data_in 
       type(interp_from_grid_out_parm_type) :: data_out_LS
-      REAL_T, target, dimension(nmat) :: data_interp_local_LS
+      REAL_T, target, dimension(num_materials) :: data_interp_local_LS
       REAL_T time_in_future
 
       cell_particle_count_ptr=>cell_particle_count
@@ -18453,7 +18300,7 @@ stop
       endif
 
       if ((num_materials_viscoelastic.ge.0).and. &
-          (num_materials_viscoelastic.le.nmat)) then
+          (num_materials_viscoelastic.le.num_materials)) then
        ! do nothing
       else
        print *,"num_materials_viscoelastic invalid"
@@ -18563,11 +18410,10 @@ stop
       data_out_LS%data_interp=>data_interp_local_LS
 
       data_in%scomp=1 
-      data_in%ncomp=nmat
+      data_in%ncomp=num_materials
       data_in%level=level
       data_in%finest_level=finest_level
       data_in%bfact=bfact
-      data_in%nmat=num_materials
       data_in%dx=>dx
       data_in%xlo=>xlo
       data_in%fablo=>fablo
@@ -18661,14 +18507,14 @@ stop
 
               data_in%xtarget=>xpart
               call interp_from_grid_util(data_in,data_out_LS)
-              do dir=1,nmat
+              do dir=1,num_materials
                LS_sub(dir)=data_out_LS%data_interp(dir)
               enddo
               call get_primary_material(LS_sub,im_primary_sub)
-              if ((im_primary_sub.ge.1).and.(im_primary_sub.le.nmat)) then
+              if ((im_primary_sub.ge.1).and.(im_primary_sub.le.num_materials)) then
                im_particle=particles(current_link)% &
                  extra_int(N_EXTRA_INT_MATERIAL_ID+1)
-               if ((im_particle.ge.1).and.(im_particle.le.nmat)) then
+               if ((im_particle.ge.1).and.(im_particle.le.num_materials)) then
                 if (im_particle.eq.im_primary_sub) then
                  ! do nothing
                 else if (im_particle.ne.im_primary_sub) then
@@ -18765,7 +18611,6 @@ stop
 
              ! add bulk particles
            call interp_eul_lag_dist( &
-             nmat, &
              accum_PARM, &
              i,j,k, &
              xsub, &
@@ -18776,7 +18621,7 @@ stop
 
            do ipart=1,num_materials_viscoelastic
             im_map=im_elastic_map(ipart)+1
-            if ((im_map.ge.1).and.(im_map.le.nmat)) then
+            if ((im_map.ge.1).and.(im_map.le.num_materials)) then
              do dir=1,ENUM_NUM_TENSOR_TYPE
               call stress_index(dir,ii,jj)
               Q(ii,jj)=tensor_sub((ipart-1)*ENUM_NUM_TENSOR_TYPE+dir)
@@ -18817,7 +18662,7 @@ stop
             enddo
             new_particles(ibase+SDIM+N_EXTRA_REAL_INSERT_TIME+1)=cur_time_slab
             call get_primary_material(LS_sub,im_primary_sub)
-            if ((im_primary_sub.ge.1).and.(im_primary_sub.le.nmat)) then
+            if ((im_primary_sub.ge.1).and.(im_primary_sub.le.num_materials)) then
              new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT_MATERIAL_ID+1)= &
               im_primary_sub
             else
@@ -18895,10 +18740,10 @@ stop
 
       implicit none
 
-      type(grid_parm_type), intent(in) :: grid_PARM
-      REAL_T, intent(in) :: xpart(SDIM)
-      REAL_T, intent(in) :: vel_time_slab
-      REAL_T, intent(out) :: u(SDIM)
+      type(grid_parm_type), INTENT(in) :: grid_PARM
+      REAL_T, INTENT(in) :: xpart(SDIM)
+      REAL_T, INTENT(in) :: vel_time_slab
+      REAL_T, INTENT(out) :: u(SDIM)
 
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
@@ -19054,9 +18899,9 @@ stop
 
       implicit none
 
-      type(grid_parm_type), intent(in) :: grid_PARM
-      REAL_T, intent(in) :: xpart1(SDIM)
-      REAL_T, intent(inout) :: xpart2(SDIM)
+      type(grid_parm_type), INTENT(in) :: grid_PARM
+      REAL_T, INTENT(in) :: xpart1(SDIM)
+      REAL_T, INTENT(inout) :: xpart2(SDIM)
       INTEGER_T bc_local
       INTEGER_T dir
       INTEGER_T dir_inner
@@ -19158,7 +19003,6 @@ stop
        ! called from NavierStokes2.cpp
       subroutine fort_move_particle_container( &
         tid, &
-        nmat, &
         tilelo,tilehi, &
         fablo,fabhi, &
         bfact, &
@@ -19186,36 +19030,35 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: level,finest_level
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: level,finest_level
 
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(in) :: vel_time_slab
+      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(in) :: vel_time_slab
 
-      INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
-      INTEGER_T, value, intent(in) :: Np ! pass by value
-      type(particle_t), intent(inout), target :: particles(Np)
+      INTEGER_T, INTENT(in), target :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in), target :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, value, INTENT(in) :: Np ! pass by value
+      type(particle_t), INTENT(inout), target :: particles(Np)
 
-      INTEGER_T, intent(in) :: DIMDEC(umac)
-      INTEGER_T, intent(in) :: DIMDEC(vmac)
-      INTEGER_T, intent(in) :: DIMDEC(wmac)
+      INTEGER_T, INTENT(in) :: DIMDEC(umac)
+      INTEGER_T, INTENT(in) :: DIMDEC(vmac)
+      INTEGER_T, INTENT(in) :: DIMDEC(wmac)
 
-      REAL_T, intent(in), target :: umac(DIMV(umac)) 
+      REAL_T, INTENT(in), target :: umac(DIMV(umac)) 
       REAL_T, pointer :: umac_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: vmac(DIMV(vmac)) 
+      REAL_T, INTENT(in), target :: vmac(DIMV(vmac)) 
       REAL_T, pointer :: vmac_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: wmac(DIMV(wmac)) 
+      REAL_T, INTENT(in), target :: wmac(DIMV(wmac)) 
       REAL_T, pointer :: wmac_ptr(D_DECL(:,:,:))
 
-      INTEGER_T, intent(in), target :: velbc_in(SDIM,2,SDIM)
-      INTEGER_T, intent(in) :: denbc_in(SDIM,2)
-      INTEGER_T, intent(in), target :: dombc(SDIM,2)
-      INTEGER_T, intent(in), target :: domlo(SDIM)
-      INTEGER_T, intent(in), target :: domhi(SDIM)
+      INTEGER_T, INTENT(in), target :: velbc_in(SDIM,2,SDIM)
+      INTEGER_T, INTENT(in) :: denbc_in(SDIM,2)
+      INTEGER_T, INTENT(in), target :: dombc(SDIM,2)
+      INTEGER_T, INTENT(in), target :: domlo(SDIM)
+      INTEGER_T, INTENT(in), target :: domhi(SDIM)
 
       REAL_T, target :: problo_arr(3)
       REAL_T, target :: probhi_arr(3)
@@ -19236,13 +19079,6 @@ stop
       umac_ptr=>umac
       vmac_ptr=>vmac
       wmac_ptr=>wmac
-
-      if (nmat.eq.num_materials) then
-       ! do nothing
-      else
-       print *,"nmat invalid"
-       stop
-      endif
 
       if (dt.gt.zero) then
        ! do nothing

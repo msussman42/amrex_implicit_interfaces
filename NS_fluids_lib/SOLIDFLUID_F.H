@@ -95,7 +95,6 @@ namespace amrex{
      int* nthread_parm,
      int* max_num_tiles_on_thread_proc,
      int* tile_dim,
-     int* nmat,
      int* nparts,
      int* im_solid_map);
 

@@ -29,7 +29,6 @@ extern "C"
      int* level,
      int* finest_level,
      int* nsolve,
-     int* nmat,
      int* project_option,
      Real* masksolv,AMREX_ARLIM_P(masksolvlo),AMREX_ARLIM_P(masksolvhi),
      Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
@@ -55,7 +54,6 @@ extern "C"
      int* level,
      int* finest_level,
      int* nsolve,
-     int* nmat,
      int* project_option,
      Real* alpha,
      AMREX_ARLIM_P(alphalo),AMREX_ARLIM_P(alphahi),
@@ -99,7 +97,6 @@ extern "C"
 
     void fort_scalarcoeff(
        int* nsolve,
-       int* nmat,
        const Real* xlo,
        const Real* dx,
        Real* offdiagcheck,

@@ -21,7 +21,6 @@ stop
 #endif
 
       subroutine fort_blb_init( &
-       num_materials_in, &
        blb_matrix_in, &
        blb_rhs_in, &
        blb_vel_in, &
@@ -44,28 +43,24 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: num_materials_in
-      INTEGER_T, intent(in) :: blb_matrix_in
-      INTEGER_T, intent(in) :: blb_rhs_in
-      INTEGER_T, intent(in) :: blb_vel_in
-      INTEGER_T, intent(in) :: blb_int_mom_in
-      INTEGER_T, intent(in) :: blb_energy_in
-      INTEGER_T, intent(in) :: blb_mass_vel_in
-      INTEGER_T, intent(in) :: blb_vol_in
-      INTEGER_T, intent(in) :: blb_cen_int_in
-      INTEGER_T, intent(in) :: blb_cen_act_in
-      INTEGER_T, intent(in) :: blb_perim_in
-      INTEGER_T, intent(in) :: blb_perim_mat_in
-      INTEGER_T, intent(in) :: blb_triple_perim_in
-      INTEGER_T, intent(in) :: blb_cell_cnt_in
-      INTEGER_T, intent(in) :: blb_cellvol_cnt_in
-      INTEGER_T, intent(in) :: blb_mass_in
-      INTEGER_T, intent(in) :: blb_pres_in
-      INTEGER_T, intent(in) :: num_elements_blobclass_in
-      INTEGER_T :: nmat
+      INTEGER_T, INTENT(in) :: blb_matrix_in
+      INTEGER_T, INTENT(in) :: blb_rhs_in
+      INTEGER_T, INTENT(in) :: blb_vel_in
+      INTEGER_T, INTENT(in) :: blb_int_mom_in
+      INTEGER_T, INTENT(in) :: blb_energy_in
+      INTEGER_T, INTENT(in) :: blb_mass_vel_in
+      INTEGER_T, INTENT(in) :: blb_vol_in
+      INTEGER_T, INTENT(in) :: blb_cen_int_in
+      INTEGER_T, INTENT(in) :: blb_cen_act_in
+      INTEGER_T, INTENT(in) :: blb_perim_in
+      INTEGER_T, INTENT(in) :: blb_perim_mat_in
+      INTEGER_T, INTENT(in) :: blb_triple_perim_in
+      INTEGER_T, INTENT(in) :: blb_cell_cnt_in
+      INTEGER_T, INTENT(in) :: blb_cellvol_cnt_in
+      INTEGER_T, INTENT(in) :: blb_mass_in
+      INTEGER_T, INTENT(in) :: blb_pres_in
+      INTEGER_T, INTENT(in) :: num_elements_blobclass_in
     
-      nmat=num_materials_in
-
       BLB_MATRIX=blb_matrix_in
       BLB_RHS=blb_rhs_in
       BLB_VEL=blb_vel_in
@@ -96,8 +91,8 @@ stop
           (BLB_CEN_ACT.eq.BLB_CEN_INT+AMREX_SPACEDIM).and. &
           (BLB_PERIM.eq.BLB_CEN_ACT+AMREX_SPACEDIM).and. &
           (BLB_PERIM_MAT.eq.BLB_PERIM+1).and. &
-          (BLB_TRIPLE_PERIM.eq.BLB_PERIM_MAT+nmat).and. &
-          (BLB_CELL_CNT.eq.BLB_TRIPLE_PERIM+nmat*nmat).and. &
+          (BLB_TRIPLE_PERIM.eq.BLB_PERIM_MAT+num_materials).and. &
+          (BLB_CELL_CNT.eq.BLB_TRIPLE_PERIM+num_materials*num_materials).and. &
           (BLB_CELLVOL_CNT.eq.BLB_CELL_CNT+1).and. &
           (BLB_MASS.eq.BLB_CELLVOL_CNT+1).and. &
           (BLB_PRES.eq.BLB_MASS+1).and. &
@@ -122,7 +117,7 @@ stop
        print *,"BLB_MASS ",BLB_MASS
        print *,"BLB_PRES ",BLB_PRES
        print *,"num_elements_blobclass ",num_elements_blobclass
-       print *,"nmat=",nmat
+       print *,"num_materials=",num_materials
        print *,"num_materials_in=",num_materials_in
        print *,"AMREX_SPACEDIM=",AMREX_SPACEDIM
        stop
@@ -288,137 +283,137 @@ stop
       
       IMPLICIT NONE
       
-      INTEGER_T, intent(in) :: cc_int_size
-      INTEGER_T, intent(in) :: ccmax_level
-      INTEGER_T, intent(in) :: ccn_cell(SDIM)
-      INTEGER_T, intent(in) :: ccbfact_space_order(0:ccmax_level)
-      INTEGER_T, intent(in) :: ccbfact_time_order
-      INTEGER_T, intent(in) :: ccnum_materials
+      INTEGER_T, INTENT(in) :: cc_int_size
+      INTEGER_T, INTENT(in) :: ccmax_level
+      INTEGER_T, INTENT(in) :: ccn_cell(SDIM)
+      INTEGER_T, INTENT(in) :: ccbfact_space_order(0:ccmax_level)
+      INTEGER_T, INTENT(in) :: ccbfact_time_order
+      INTEGER_T, INTENT(in) :: ccnum_materials
       
-      INTEGER_T, intent(in) :: ccnten
-      REAL_T, intent(in) :: ccgravity
-      INTEGER_T, intent(in) :: ccgravity_dir
-      INTEGER_T, intent(in) :: ccinvert_gravity
-      INTEGER_T, intent(in) :: ccFSI_flag(ccnum_materials)
-      REAL_T, intent(in) :: ccdamping_coefficient(ccnum_materials)
-      INTEGER_T, intent(in) :: ccnum_local_aux_grids
-      INTEGER_T, intent(in) :: ccZEYU_DCA_SELECT
-      INTEGER_T, intent(in) :: ccprescribe_temperature_outflow
-      INTEGER_T, intent(in) :: ccsolidheat_flag
-      INTEGER_T, intent(in) :: rz_flag
-      INTEGER_T, intent(in) :: ioproc
-      INTEGER_T, intent(in) :: ccprobtype,ccadv_dir,ccaxis_dir
+      INTEGER_T, INTENT(in) :: ccnten
+      REAL_T, INTENT(in) :: ccgravity
+      INTEGER_T, INTENT(in) :: ccgravity_dir
+      INTEGER_T, INTENT(in) :: ccinvert_gravity
+      INTEGER_T, INTENT(in) :: ccFSI_flag(ccnum_materials)
+      REAL_T, INTENT(in) :: ccdamping_coefficient(ccnum_materials)
+      INTEGER_T, INTENT(in) :: ccnum_local_aux_grids
+      INTEGER_T, INTENT(in) :: ccZEYU_DCA_SELECT
+      INTEGER_T, INTENT(in) :: ccprescribe_temperature_outflow
+      INTEGER_T, INTENT(in) :: ccsolidheat_flag
+      INTEGER_T, INTENT(in) :: rz_flag
+      INTEGER_T, INTENT(in) :: ioproc
+      INTEGER_T, INTENT(in) :: ccprobtype,ccadv_dir,ccaxis_dir
       
-      REAL_T, intent(in) :: ccdenfact,ccvelfact
-      REAL_T, intent(in) :: ccxblob,ccyblob,cczblob,ccradblob
-      REAL_T, intent(in) :: ccxblob2,ccyblob2,cczblob2,ccradblob2
-      REAL_T, intent(in) :: ccxblob3,ccyblob3,cczblob3,ccradblob3
-      REAL_T, intent(in) :: ccxblob4,ccyblob4,cczblob4,ccradblob4
-      REAL_T, intent(in) :: ccxblob5,ccyblob5,cczblob5,ccradblob5
-      REAL_T, intent(in) :: ccxblob6,ccyblob6,cczblob6,ccradblob6
-      REAL_T, intent(in) :: ccxblob7,ccyblob7,cczblob7,ccradblob7
-      REAL_T, intent(in) :: ccxblob8,ccyblob8,cczblob8,ccradblob8
-      REAL_T, intent(in) :: ccxblob9,ccyblob9,cczblob9,ccradblob9
-      REAL_T, intent(in) :: ccxblob10,ccyblob10,cczblob10,ccradblob10
-      REAL_T, intent(in) :: ccxactive,ccyactive,cczactive
-      REAL_T, intent(in) :: ccractivex,ccractivey,ccractivez
-      REAL_T, intent(in) :: ccadv_vel,ccrgasinlet
-      REAL_T, intent(in) :: ccvinletgas,cctwall
-      REAL_T, intent(in) :: ccadvbot
-      REAL_T, intent(in) :: ccinflow_pressure
-      REAL_T, intent(in) :: ccoutflow_pressure
-      REAL_T, intent(in) :: ccperiod_time
-      REAL_T, intent(in) :: ccproblox,ccprobloy,ccprobloz
-      REAL_T, intent(in) :: ccprobhix,ccprobhiy,ccprobhiz
-      REAL_T, intent(in) :: ccstop_time
+      REAL_T, INTENT(in) :: ccdenfact,ccvelfact
+      REAL_T, INTENT(in) :: ccxblob,ccyblob,cczblob,ccradblob
+      REAL_T, INTENT(in) :: ccxblob2,ccyblob2,cczblob2,ccradblob2
+      REAL_T, INTENT(in) :: ccxblob3,ccyblob3,cczblob3,ccradblob3
+      REAL_T, INTENT(in) :: ccxblob4,ccyblob4,cczblob4,ccradblob4
+      REAL_T, INTENT(in) :: ccxblob5,ccyblob5,cczblob5,ccradblob5
+      REAL_T, INTENT(in) :: ccxblob6,ccyblob6,cczblob6,ccradblob6
+      REAL_T, INTENT(in) :: ccxblob7,ccyblob7,cczblob7,ccradblob7
+      REAL_T, INTENT(in) :: ccxblob8,ccyblob8,cczblob8,ccradblob8
+      REAL_T, INTENT(in) :: ccxblob9,ccyblob9,cczblob9,ccradblob9
+      REAL_T, INTENT(in) :: ccxblob10,ccyblob10,cczblob10,ccradblob10
+      REAL_T, INTENT(in) :: ccxactive,ccyactive,cczactive
+      REAL_T, INTENT(in) :: ccractivex,ccractivey,ccractivez
+      REAL_T, INTENT(in) :: ccadv_vel,ccrgasinlet
+      REAL_T, INTENT(in) :: ccvinletgas,cctwall
+      REAL_T, INTENT(in) :: ccadvbot
+      REAL_T, INTENT(in) :: ccinflow_pressure
+      REAL_T, INTENT(in) :: ccoutflow_pressure
+      REAL_T, INTENT(in) :: ccperiod_time
+      REAL_T, INTENT(in) :: ccproblox,ccprobloy,ccprobloz
+      REAL_T, INTENT(in) :: ccprobhix,ccprobhiy,ccprobhiz
+      REAL_T, INTENT(in) :: ccstop_time
       
-      INTEGER_T, intent(in) :: ccnum_species_var
+      INTEGER_T, INTENT(in) :: ccnum_species_var
       
-      INTEGER_T, intent(in) :: ccnum_materials_viscoelastic
+      INTEGER_T, INTENT(in) :: ccnum_materials_viscoelastic
       INTEGER_T :: nelastic
       
-      INTEGER_T, intent(in) :: ccnum_state_material
-      INTEGER_T, intent(in) :: ccnum_state_base
-      INTEGER_T, intent(in) :: ccngeom_raw
-      INTEGER_T, intent(in) :: ccngeom_recon
+      INTEGER_T, INTENT(in) :: ccnum_state_material
+      INTEGER_T, INTENT(in) :: ccnum_state_base
+      INTEGER_T, INTENT(in) :: ccngeom_raw
+      INTEGER_T, INTENT(in) :: ccngeom_recon
       
-      INTEGER_T, intent(in) :: ccmaterial_type(ccnum_materials)
-      REAL_T, intent(in) :: ccDrhoDT(ccnum_materials)
-      REAL_T, intent(in) :: cctempconst(ccnum_materials)
-      REAL_T, intent(in) :: ccinitial_temperature(ccnum_materials)
-      REAL_T, intent(in) :: cctempcutoff(ccnum_materials)
-      REAL_T, intent(in) :: cctempcutoffmax(ccnum_materials)
-      REAL_T, intent(in) :: ccstiffPINF(ccnum_materials)
-      REAL_T, intent(in) :: ccR_Palmore_Desjardins
-      REAL_T, intent(in) :: ccstiffCP(ccnum_materials)
-      REAL_T, intent(in) :: ccstiffCV(ccnum_materials)
-      REAL_T, intent(in) :: ccstiffGAMMA(ccnum_materials)
-      REAL_T, intent(in) :: ccdenconst(ccnum_materials)
-      REAL_T, intent(in) :: ccden_floor(ccnum_materials)
-      REAL_T, intent(in) :: ccden_ceiling(ccnum_materials)
-      REAL_T, intent(in) :: cccavdenconst(ccnum_materials)
-      REAL_T, intent(in) :: ccviscconst(ccnum_materials)
+      INTEGER_T, INTENT(in) :: ccmaterial_type(ccnum_materials)
+      REAL_T, INTENT(in) :: ccDrhoDT(ccnum_materials)
+      REAL_T, INTENT(in) :: cctempconst(ccnum_materials)
+      REAL_T, INTENT(in) :: ccinitial_temperature(ccnum_materials)
+      REAL_T, INTENT(in) :: cctempcutoff(ccnum_materials)
+      REAL_T, INTENT(in) :: cctempcutoffmax(ccnum_materials)
+      REAL_T, INTENT(in) :: ccstiffPINF(ccnum_materials)
+      REAL_T, INTENT(in) :: ccR_Palmore_Desjardins
+      REAL_T, INTENT(in) :: ccstiffCP(ccnum_materials)
+      REAL_T, INTENT(in) :: ccstiffCV(ccnum_materials)
+      REAL_T, INTENT(in) :: ccstiffGAMMA(ccnum_materials)
+      REAL_T, INTENT(in) :: ccdenconst(ccnum_materials)
+      REAL_T, INTENT(in) :: ccden_floor(ccnum_materials)
+      REAL_T, INTENT(in) :: ccden_ceiling(ccnum_materials)
+      REAL_T, INTENT(in) :: cccavdenconst(ccnum_materials)
+      REAL_T, INTENT(in) :: ccviscconst(ccnum_materials)
 
-      REAL_T, intent(in) :: ccviscconst_eddy_wall(ccnum_materials)
-      REAL_T, intent(in) :: ccviscconst_eddy_bulk(ccnum_materials)
-      REAL_T, intent(in) :: ccheatviscconst_eddy_wall(ccnum_materials)
-      REAL_T, intent(in) :: ccheatviscconst_eddy_bulk(ccnum_materials)
+      REAL_T, INTENT(in) :: ccviscconst_eddy_wall(ccnum_materials)
+      REAL_T, INTENT(in) :: ccviscconst_eddy_bulk(ccnum_materials)
+      REAL_T, INTENT(in) :: ccheatviscconst_eddy_wall(ccnum_materials)
+      REAL_T, INTENT(in) :: ccheatviscconst_eddy_bulk(ccnum_materials)
 
-      REAL_T, intent(in) :: ccthermal_microlayer_size(ccnum_materials)
-      REAL_T, intent(in) :: ccshear_microlayer_size(ccnum_materials)
-      REAL_T, intent(in) :: ccbuoyancy_microlayer_size(ccnum_materials)
-      REAL_T, intent(in) :: ccphasechange_microlayer_size(ccnum_materials)
+      REAL_T, INTENT(in) :: ccthermal_microlayer_size(ccnum_materials)
+      REAL_T, INTENT(in) :: ccshear_microlayer_size(ccnum_materials)
+      REAL_T, INTENT(in) :: ccbuoyancy_microlayer_size(ccnum_materials)
+      REAL_T, INTENT(in) :: ccphasechange_microlayer_size(ccnum_materials)
 
-      INTEGER_T, intent(in) :: ccviscosity_state_model(ccnum_materials)
-      REAL_T, intent(in) :: ccelastic_viscosity(ccnum_materials)
-      REAL_T, intent(in) :: ccelastic_time(ccnum_materials)
-      INTEGER_T, intent(in) :: ccviscoelastic_model(ccnum_materials)
-      REAL_T, intent(in) :: cclame_coefficient(ccnum_materials)
-      INTEGER_T, intent(in) :: cclinear_elastic_model(ccnum_materials)
-      REAL_T, intent(in) :: ccshear_modulus(ccnum_materials)
-      INTEGER_T, intent(in) :: ccstore_elastic_data(ccnum_materials)
-      REAL_T, intent(in) :: ccheatflux_factor(ccnum_materials)
-      REAL_T, intent(in) :: ccheatviscconst(ccnum_materials)
-      REAL_T, intent(in) :: ccprerecalesce_heatviscconst(ccnum_materials)
-      REAL_T, intent(in) :: ccprerecalesce_viscconst(ccnum_materials)
-      REAL_T, intent(in) :: ccprerecalesce_stiffCP(ccnum_materials)
-      REAL_T, intent(in) :: ccprerecalesce_stiffCV(ccnum_materials)
-      REAL_T, intent(in) :: &
+      INTEGER_T, INTENT(in) :: ccviscosity_state_model(ccnum_materials)
+      REAL_T, INTENT(in) :: ccelastic_viscosity(ccnum_materials)
+      REAL_T, INTENT(in) :: ccelastic_time(ccnum_materials)
+      INTEGER_T, INTENT(in) :: ccviscoelastic_model(ccnum_materials)
+      REAL_T, INTENT(in) :: cclame_coefficient(ccnum_materials)
+      INTEGER_T, INTENT(in) :: cclinear_elastic_model(ccnum_materials)
+      REAL_T, INTENT(in) :: ccshear_modulus(ccnum_materials)
+      INTEGER_T, INTENT(in) :: ccstore_elastic_data(ccnum_materials)
+      REAL_T, INTENT(in) :: ccheatflux_factor(ccnum_materials)
+      REAL_T, INTENT(in) :: ccheatviscconst(ccnum_materials)
+      REAL_T, INTENT(in) :: ccprerecalesce_heatviscconst(ccnum_materials)
+      REAL_T, INTENT(in) :: ccprerecalesce_viscconst(ccnum_materials)
+      REAL_T, INTENT(in) :: ccprerecalesce_stiffCP(ccnum_materials)
+      REAL_T, INTENT(in) :: ccprerecalesce_stiffCV(ccnum_materials)
+      REAL_T, INTENT(in) :: &
         ccspeciesconst((ccnum_species_var+1)*ccnum_materials)
-      REAL_T, intent(in) :: &
+      REAL_T, INTENT(in) :: &
         ccspeciesviscconst((ccnum_species_var+1)*ccnum_materials)
-      REAL_T, intent(in) :: cclatent_heat(2*ccnten)
-      REAL_T, intent(in) :: cclatent_heat_slope(2*ccnten)
-      REAL_T, intent(in) :: cclatent_heat_T0(2*ccnten)
-      REAL_T, intent(in) :: cclatent_heat_min(2*ccnten)
-      REAL_T, intent(in) :: ccsaturation_temp(2*ccnten)
-      REAL_T, intent(in) :: ccreference_pressure(2*ccnten)
-      REAL_T, intent(in) :: ccmolar_mass(ccnum_materials)
-      REAL_T, intent(in) :: ccspecies_molar_mass(ccnum_species_var+1)
-      REAL_T, intent(in) :: cctension(ccnten)
-      REAL_T, intent(in) :: cctension_slope(ccnten)
-      REAL_T, intent(in) :: cctension_T0(ccnten)
-      REAL_T, intent(in) :: cctension_min(ccnten)
-      REAL_T, intent(in) :: ccprefreeze_tension(ccnten)
+      REAL_T, INTENT(in) :: cclatent_heat(2*ccnten)
+      REAL_T, INTENT(in) :: cclatent_heat_slope(2*ccnten)
+      REAL_T, INTENT(in) :: cclatent_heat_T0(2*ccnten)
+      REAL_T, INTENT(in) :: cclatent_heat_min(2*ccnten)
+      REAL_T, INTENT(in) :: ccsaturation_temp(2*ccnten)
+      REAL_T, INTENT(in) :: ccreference_pressure(2*ccnten)
+      REAL_T, INTENT(in) :: ccmolar_mass(ccnum_materials)
+      REAL_T, INTENT(in) :: ccspecies_molar_mass(ccnum_species_var+1)
+      REAL_T, INTENT(in) :: cctension(ccnten)
+      REAL_T, INTENT(in) :: cctension_slope(ccnten)
+      REAL_T, INTENT(in) :: cctension_T0(ccnten)
+      REAL_T, INTENT(in) :: cctension_min(ccnten)
+      REAL_T, INTENT(in) :: ccprefreeze_tension(ccnten)
       
-      INTEGER_T, intent(in) :: ccn_sites
-      REAL_T, intent(in) :: ccnucleation_init_time
-      REAL_T, intent(in) :: ccpos_sites(5000)
+      INTEGER_T, INTENT(in) :: ccn_sites
+      REAL_T, INTENT(in) :: ccnucleation_init_time
+      REAL_T, INTENT(in) :: ccpos_sites(5000)
      
-      REAL_T, intent(in) :: ccCarreau_alpha(ccnum_materials)
-      REAL_T, intent(in) :: ccCarreau_beta(ccnum_materials)
-      REAL_T, intent(in) :: ccCarreau_n(ccnum_materials)
-      REAL_T, intent(in) :: ccCarreau_mu_inf(ccnum_materials)
+      REAL_T, INTENT(in) :: ccCarreau_alpha(ccnum_materials)
+      REAL_T, INTENT(in) :: ccCarreau_beta(ccnum_materials)
+      REAL_T, INTENT(in) :: ccCarreau_n(ccnum_materials)
+      REAL_T, INTENT(in) :: ccCarreau_mu_inf(ccnum_materials)
 
-      INTEGER_T, intent(in) :: ccshear_thinning_fluid(ccnum_materials)
+      INTEGER_T, INTENT(in) :: ccshear_thinning_fluid(ccnum_materials)
 
-      REAL_T, intent(in) :: ccpolymer_factor(ccnum_materials)
-      REAL_T, intent(in) :: ccconcentration(ccnum_materials)
-      REAL_T, intent(in) :: ccetaL(ccnum_materials)
-      REAL_T, intent(in) :: ccetaS(ccnum_materials)
-      REAL_T, intent(in) :: ccetaP(ccnum_materials)
+      REAL_T, INTENT(in) :: ccpolymer_factor(ccnum_materials)
+      REAL_T, INTENT(in) :: ccconcentration(ccnum_materials)
+      REAL_T, INTENT(in) :: ccetaL(ccnum_materials)
+      REAL_T, INTENT(in) :: ccetaS(ccnum_materials)
+      REAL_T, INTENT(in) :: ccetaP(ccnum_materials)
 
-      REAL_T, intent(in) :: ccvisc_coef
+      REAL_T, INTENT(in) :: ccvisc_coef
 
 
       character*12 namestr1
@@ -427,7 +422,6 @@ stop
       INTEGER_T local_dir
       
       INTEGER_T im,iten
-      INTEGER_T nten
       INTEGER_T level,bfactmax
       REAL_T :: massfrac_parm(ccnum_species_var+1)
       INTEGER_T :: fort_double_size,fort_int_size
@@ -442,6 +436,12 @@ stop
       endif
       num_interfaces=( (num_materials-1)*(num_materials-1)+ &
              (num_materials-1) )/2
+      if (num_interfaces.eq.ccnten) then
+       ! do nothing
+      else
+       print *,"num_interfaces<>ccnten"
+       stop
+      endif
 
       ! USER DEFINED (used by "is_in_probtype_list")
       ! IN ORDER TO ADD A NEW TEST PROBLEM:
@@ -1329,35 +1329,27 @@ stop
        stop
       endif
       
-      nten=num_interfaces
-
-      if (nten.ne.ccnten) then
-       print *,"nten or ccnten invalid"
-       print *,"nten=",nten
-       print *,"ccnten=",ccnten
-       stop
-      endif
-      if (nten.ge.MAX_NUM_INTERFACES) then
+      if (num_interfaces.ge.MAX_NUM_INTERFACES) then
        print *,"too many surface tension coefficients, increase "
        print *,"MAX_NUM_INTERFACES"
-       print *,"nten= ",nten
+       print *,"num_interfaces= ",num_interfaces
        stop
       endif
-      do iten=1,nten
+      do iten=1,num_interfaces
        fort_latent_heat(iten)=cclatent_heat(iten)
-       fort_latent_heat(nten+iten)=cclatent_heat(nten+iten)
+       fort_latent_heat(num_interfaces+iten)=cclatent_heat(num_interfaces+iten)
        fort_latent_heat_slope(iten)=cclatent_heat_slope(iten)
-       fort_latent_heat_slope(nten+iten)=cclatent_heat_slope(nten+iten)
+       fort_latent_heat_slope(num_interfaces+iten)=cclatent_heat_slope(num_interfaces+iten)
        fort_latent_heat_T0(iten)=cclatent_heat_T0(iten)
-       fort_latent_heat_T0(nten+iten)=cclatent_heat_T0(nten+iten)
+       fort_latent_heat_T0(num_interfaces+iten)=cclatent_heat_T0(num_interfaces+iten)
        fort_latent_heat_min(iten)=cclatent_heat_min(iten)
-       fort_latent_heat_min(nten+iten)=cclatent_heat_min(nten+iten)
+       fort_latent_heat_min(num_interfaces+iten)=cclatent_heat_min(num_interfaces+iten)
 
        fort_saturation_temp(iten)=ccsaturation_temp(iten)
-       fort_saturation_temp(nten+iten)=ccsaturation_temp(nten+iten)
+       fort_saturation_temp(num_interfaces+iten)=ccsaturation_temp(num_interfaces+iten)
       
        fort_reference_pressure(iten)=ccreference_pressure(iten)
-       fort_reference_pressure(nten+iten)=ccreference_pressure(nten+iten)
+       fort_reference_pressure(num_interfaces+iten)=ccreference_pressure(num_interfaces+iten)
 
        fort_tension(iten)=cctension(iten)
        fort_tension_slope(iten)=cctension_slope(iten)
@@ -1485,7 +1477,7 @@ stop
      
        print *,"fort_visc_coef= ",fort_visc_coef
 
-       do iten=1,nten
+       do iten=1,num_interfaces
         print *,"iten,tension ",iten,fort_tension(iten)
         print *,"iten,tension_slope ",iten,fort_tension_slope(iten)
         if (fort_tension_slope(iten).le.zero) then
@@ -1500,15 +1492,15 @@ stop
         print *,"iten,fort_saturation_temp ",iten,fort_saturation_temp(iten)
         print *,"iten,fort_reference_pressure ",iten, &
           fort_reference_pressure(iten)
-        print *,"iten+nten,fort_saturation_temp ",iten+nten, &
-          fort_saturation_temp(iten+nten)
-        print *,"iten+nten,fort_reference_pressure ",iten+nten, &
-          fort_reference_pressure(iten+nten)
-       enddo ! iten=1..nten
+        print *,"iten+num_interfaces,fort_saturation_temp ",iten+num_interfaces, &
+          fort_saturation_temp(iten+num_interfaces)
+        print *,"iten+num_interfaces,fort_reference_pressure ",iten+num_interfaces, &
+          fort_reference_pressure(iten+num_interfaces)
+       enddo ! iten=1..num_interfaces
       endif
      
       if (ioproc.eq.1) then
-       do iten=1,2*nten
+       do iten=1,2*num_interfaces
         print *,"iten,fort_latent_heat ",iten,fort_latent_heat(iten)
         print *,"iten,fort_latent_heat_slope ",iten,fort_latent_heat_slope(iten)
         print *,"iten,fort_latent_heat_T0 ",iten,fort_latent_heat_T0(iten)
@@ -1519,7 +1511,7 @@ stop
          print *,"fort_latent_heat_slope must be non-positive"
          stop
         endif
-       enddo ! iten=1..2*nten
+       enddo ! iten=1..2*num_interfaces
       endif
 
       gravity=ccgravity
@@ -1781,16 +1773,16 @@ stop
       
       IMPLICIT NONE
       
-      INTEGER_T, intent(in) :: cc_int_size
-      INTEGER_T, intent(in) :: ccnum_materials
-      INTEGER_T, intent(in) :: ccnten
-      INTEGER_T, intent(in) :: ccnum_species_var
-      INTEGER_T, intent(in) :: ccnum_materials_viscoelastic
-      INTEGER_T, intent(in) :: ccnum_state_material
-      INTEGER_T, intent(in) :: ccnum_state_base
-      INTEGER_T, intent(in) :: ccngeom_raw
-      INTEGER_T, intent(in) :: ccngeom_recon
-      INTEGER_T, intent(in) :: ioproc
+      INTEGER_T, INTENT(in) :: cc_int_size
+      INTEGER_T, INTENT(in) :: ccnum_materials
+      INTEGER_T, INTENT(in) :: ccnten
+      INTEGER_T, INTENT(in) :: ccnum_species_var
+      INTEGER_T, INTENT(in) :: ccnum_materials_viscoelastic
+      INTEGER_T, INTENT(in) :: ccnum_state_material
+      INTEGER_T, INTENT(in) :: ccnum_state_base
+      INTEGER_T, INTENT(in) :: ccngeom_raw
+      INTEGER_T, INTENT(in) :: ccngeom_recon
+      INTEGER_T, INTENT(in) :: ioproc
 
       INTEGER_T :: local_var_int
       REAL_T :: local_var_double
@@ -1805,6 +1797,12 @@ stop
       endif
       num_interfaces=( (num_materials-1)*(num_materials-1)+ &
              (num_materials-1) )/2
+      if (num_interfaces.eq.ccnten) then
+       ! do nothing
+      else
+       print *,"num_interfaces<>ccnten"
+       stop
+      endif
 
       fort_double_size=SIZEOF(local_var_double)
       fort_int_size=SIZEOF(local_var_int)
