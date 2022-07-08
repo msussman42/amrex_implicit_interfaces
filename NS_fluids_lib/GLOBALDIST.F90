@@ -60,9 +60,9 @@ implicit none
 
 ! liquid +  solid - 
 
-INTEGER_T,intent(in)      :: coord_type
-INTEGER_T, intent(in)     :: cavity_type
-REAL_T,intent(in) :: x_in(SDIM)
+INTEGER_T,INTENT(in)      :: coord_type
+INTEGER_T, INTENT(in)     :: cavity_type
+REAL_T,INTENT(in) :: x_in(SDIM)
 REAL_T            :: x(SDIM)
 
 INTEGER_T         :: dist_sign
@@ -787,8 +787,8 @@ end subroutine cavity_distf_13
 subroutine cavity_distf_12(coord_type, x_in, dist)
 implicit none
 
-INTEGER_T,intent(in) :: coord_type
-REAL_T,intent(in) :: x_in(SDIM)
+INTEGER_T,INTENT(in) :: coord_type
+REAL_T,INTENT(in) :: x_in(SDIM)
 REAL_T            :: x(SDIM)
 
 REAL_T            :: dist,dist_temp
@@ -877,13 +877,13 @@ subroutine find_p_plane_dist_wb(flag,nv,vts,p,dist)
 ! if not, find the closest point of on the boundary 
 implicit none
 
-INTEGER_T,intent(in)  :: nv ! number of vertices 
-REAL_T,intent(in) :: vts(nv,SDIM)                          
+INTEGER_T,INTENT(in)  :: nv ! number of vertices 
+REAL_T,INTENT(in) :: vts(nv,SDIM)                          
      !vertices corrd in clockwise or counterclockwise
-REAL_T,intent(in) :: p(SDIM)
+REAL_T,INTENT(in) :: p(SDIM)
 REAL_T        :: pp(SDIM)
 INTEGER_T             :: i,j
-INTEGER_T,intent(in)  :: flag
+INTEGER_T,INTENT(in)  :: flag
 ! if flag = +1, then counter clockwise
 ! if flag = -1, then clockwise
 ! the normal of the plane always point to positive material.
@@ -999,10 +999,10 @@ end subroutine find_p_plane_dist_wb
 subroutine find_p_plane_dist(p,normal,d,dist)
 implicit none
 
-REAL_T, intent(in) :: p(SDIM)
-REAL_T, intent(in) :: normal(SDIM)
-REAL_T, intent(in) :: d
-REAL_T,intent(out)  :: dist
+REAL_T, INTENT(in) :: p(SDIM)
+REAL_T, INTENT(in) :: normal(SDIM)
+REAL_T, INTENT(in) :: d
+REAL_T,INTENT(out)  :: dist
 REAL_T             :: nn
 
 if(SDIM .ne. 3)then
@@ -1028,9 +1028,9 @@ subroutine plane_distf(p,normal,d,val)
 implicit none
 
 ! plane level set function 
-REAL_T, intent(in) :: p(SDIM)
-REAL_T, intent(in) :: normal(SDIM)
-REAL_T, intent(in) :: d
+REAL_T, INTENT(in) :: p(SDIM)
+REAL_T, INTENT(in) :: normal(SDIM)
+REAL_T, INTENT(in) :: d
 
 REAL_T             :: val
 
@@ -1047,8 +1047,8 @@ end subroutine plane_distf
 subroutine find_pp_plane(p,normal,d,pp)
 implicit none
 
-REAL_T,intent(in)   :: p(SDIM),normal(SDIM)
-REAL_T,intent(in)   :: d
+REAL_T,INTENT(in)   :: p(SDIM),normal(SDIM)
+REAL_T,INTENT(in)   :: d
 REAL_T              :: pp(SDIM)
 
 INTEGER_T                   :: i
@@ -1080,8 +1080,8 @@ implicit none
 ! for test point p
 ! if \phi(p) >= 0,  flag = 1
 ! if \phi(p) < 0,   flag = -1
-INTEGER_T    ,intent(in)   :: flag
-REAL_T, intent(in) :: p(SDIM)
+INTEGER_T    ,INTENT(in)   :: flag
+REAL_T, INTENT(in) :: p(SDIM)
 REAL_T             :: normal(SDIM)
 REAL_T             :: d
 
@@ -1126,7 +1126,7 @@ subroutine make_3points_plane(p1,p2,p3,normal,d)
 implicit none
 ! find a plane (normal,d) with 3 points p1,p2,p3
 
-REAL_T, intent(in)     :: p1(SDIM),P2(SDIM),p3(SDIM)
+REAL_T, INTENT(in)     :: p1(SDIM),P2(SDIM),p3(SDIM)
 
 REAL_T                 :: normal(SDIM)
 REAL_T                 :: d
@@ -1159,7 +1159,7 @@ implicit none
 ! otherwise
 ! --------> return the distance from x to the cloest point
 
-REAL_T,intent(in)      ::  p1(SDIM),p2(SDIM),x(SDIM)
+REAL_T,INTENT(in)      ::  p1(SDIM),p2(SDIM),x(SDIM)
 REAL_T                 ::  dist,dist1,dist2
 
 REAL_T                 :: diff10,diff21
@@ -1215,8 +1215,8 @@ end subroutine dist_point_to_line
 subroutine crossproduct(p1,p2,p3,oter)
 implicit none
 
-REAL_T,intent(in)       :: p1(SDIM),p2(SDIM),p3(SDIM)
-REAL_T,intent(out)      :: oter(SDIM)
+REAL_T,INTENT(in)       :: p1(SDIM),p2(SDIM),p3(SDIM)
+REAL_T,INTENT(out)      :: oter(SDIM)
 
 INTEGER_T                      :: i
 REAL_T                 :: p1p2(SDIM),p1p3(SDIM)
@@ -1242,7 +1242,7 @@ end subroutine crossproduct
 subroutine l2norm(x1,x2, x1x2norm)
 implicit none
 
-REAL_T,intent(in)  :: x1(SDIM),x2(SDIM)
+REAL_T,INTENT(in)  :: x1(SDIM),x2(SDIM)
 REAL_T             :: x1x2norm
 
 INTEGER_T                  :: i
@@ -1285,10 +1285,10 @@ subroutine melting_ls(x1,x2,y1,y2, x_in,dist)
 
 implicit none
 
-REAL_T,intent(in)  :: x1,x2,y1,y2
+REAL_T,INTENT(in)  :: x1,x2,y1,y2
 ! x1 x2 y1 y2 shape parameter
-REAL_T,intent(in)  ::  x_in(SDIM)
-REAL_T,intent(out) :: dist
+REAL_T,INTENT(in)  ::  x_in(SDIM)
+REAL_T,INTENT(out) :: dist
 
 REAL_T             :: x(SDIM)
 REAL_T             :: dist1,dist2,dist3
@@ -1354,7 +1354,7 @@ implicit none
 ! otherwise
 ! --------> return the distance from x to the cloest point
 
-REAL_T,intent(in)      ::  p1(SDIM),p2(SDIM),x(SDIM)
+REAL_T,INTENT(in)      ::  p1(SDIM),p2(SDIM),x(SDIM)
 REAL_T                 ::  dist
 
 
@@ -1422,8 +1422,8 @@ subroutine nozzle2d(x_cm,y_cm,Phi)
  !spatial coordinates, domain: x=[0:7000],y=[-300:2000] microns
  !  0<=x<=0.7cm
  ! -0.03 cm <= y <= 0.2 cm
- REAL_T, intent(in) :: x_cm, y_cm 
- REAL_T, intent(out) :: Phi !init to 0
+ REAL_T, INTENT(in) :: x_cm, y_cm 
+ REAL_T, INTENT(out) :: Phi !init to 0
  
  INTEGER :: nozzletype, insideflag
  REAL_T :: nl_width, nr_width, r, nl, nr !for nozzle entrance/exit
@@ -1704,9 +1704,9 @@ end subroutine nozzle2d
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: x,y,z,time
-      INTEGER_T, intent(in) :: im
-      REAL_T, intent(out) :: dist
+      REAL_T, INTENT(in) :: x,y,z,time
+      INTEGER_T, INTENT(in) :: im
+      REAL_T, INTENT(out) :: dist
       REAL_T tadv,xprime,yprime,zprime
       REAL_T distz,disty,steel_rate
       REAL_T xvec(SDIM)
@@ -1965,7 +1965,7 @@ end subroutine nozzle2d
       REAL_T dx(SDIM)
       REAL_T x,y,z,dist
       REAL_T tmp,dist0,dist12,x1,x2,y1,y2,xproj,yproj
-      INTEGER_T i,j,isSolid,im_project,nmat
+      INTEGER_T i,j,isSolid,im_project
       REAL_T xcen1,ycen1,zcen1
       REAL_T xcen2,ycen2,zcen2
 
@@ -1976,8 +1976,7 @@ end subroutine nozzle2d
        print *,"bfact invalid11"
        stop
       endif
-      nmat=num_materials
-      if ((im_project.lt.1).or.(im_project.gt.nmat)) then
+      if ((im_project.lt.1).or.(im_project.gt.num_materials)) then
        print *,"im_project invalid"
        stop
       endif
@@ -1995,11 +1994,11 @@ end subroutine nozzle2d
         print *,"no rigid body expected"
         stop
        else if (axis_dir.eq.10) then
-        if (im_project.eq.nmat) then
+        if (im_project.eq.num_materials) then
          call spheredist(x,y,z,dist) ! dist<0 in the sphere
          dist=-dist
         else
-         print *,"expecting im_project=nmat; nmat=",nmat
+         print *,"expecting im_project=num_materials; num_materials=",num_materials
          stop
         endif
        else
@@ -2104,7 +2103,7 @@ end subroutine nozzle2d
       subroutine crystal_centroid(rigid_centroid,im_project)
       IMPLICIT NONE
 
-      INTEGER_T nPoly,im_project,nmat
+      INTEGER_T nPoly,im_project
       parameter(nPoly=4)
 
       REAL_T rigid_centroid(SDIM)
@@ -2114,8 +2113,7 @@ end subroutine nozzle2d
       print *,"crystal_centroid needs to be updated"
       stop
 
-      nmat=num_materials
-      if ((im_project.lt.1).or.(im_project.gt.nmat)) then
+      if ((im_project.lt.1).or.(im_project.gt.num_materials)) then
        print *,"im_project invalid"
        stop
       endif
@@ -2274,13 +2272,12 @@ end subroutine nozzle2d
       REAL_T xSphere
       REAL_T ySphere
       REAL_T delta_sphere,hugedist
-      INTEGER_T i,nmat
+      INTEGER_T i
  
       hugedist=1.0D+10
  
-      nmat=num_materials
-      if (nmat.ne.3) then
-       print *,"nmat invalid in INIT_LS_SOLID_MELT"
+      if (num_materials.ne.3) then
+       print *,"num_materials invalid in INIT_LS_SOLID_MELT"
        stop
       endif
 
@@ -2329,13 +2326,12 @@ end subroutine nozzle2d
       REAL_T xSphere
       REAL_T ySphere
       REAL_T delta_sphere,hugedist
-      INTEGER_T i,nmat
+      INTEGER_T i
  
       hugedist=1.0D+10
  
-      nmat=num_materials
-      if (nmat.ne.3) then
-       print *,"nmat invalid in INIT_LS_LIQUID_MELT"
+      if (num_materials.ne.3) then
+       print *,"num_materials invalid in INIT_LS_LIQUID_MELT"
        stop
       endif
       if (radblob2.le.radblob) then
@@ -2403,13 +2399,12 @@ end subroutine nozzle2d
       REAL_T xSphere
       REAL_T ySphere
       REAL_T delta_sphere,hugedist
-      INTEGER_T i,nmat
+      INTEGER_T i
  
       hugedist=1.0D+10
  
-      nmat=num_materials
-      if (nmat.ne.3) then
-       print *,"nmat invalid in INIT_LS_GAS_MELT"
+      if (num_materials.ne.3) then
+       print *,"num_materials invalid in INIT_LS_GAS_MELT"
        stop
       endif
 
@@ -2459,13 +2454,12 @@ end subroutine nozzle2d
       REAL_T xSphere
       REAL_T ySphere
       REAL_T delta_sphere,hugedist
-      INTEGER_T i,nmat
+      INTEGER_T i
  
       hugedist=1.0D+10
  
-      nmat=num_materials
-      if (nmat.ne.3) then
-       print *,"nmat invalid in INIT_LS_SOLID_AM"
+      if (num_materials.ne.3) then
+       print *,"num_materials invalid in INIT_LS_SOLID_AM"
        stop
       endif
 
@@ -2512,13 +2506,11 @@ end subroutine nozzle2d
       REAL_T x,y,z,time,dist
       INTEGER_T nSphere
       REAL_T delta_sphere,hugedist
-      INTEGER_T nmat
  
       hugedist=1.0D+10
  
-      nmat=num_materials
-      if (nmat.ne.3) then
-       print *,"nmat invalid in INIT_LS_LIQUID_AM"
+      if (num_materials.ne.3) then
+       print *,"num_materials invalid in INIT_LS_LIQUID_AM"
        stop
       endif
       if (SDIM.eq.2) then
@@ -2560,13 +2552,12 @@ end subroutine nozzle2d
       REAL_T xSphere
       REAL_T ySphere
       REAL_T delta_sphere,hugedist
-      INTEGER_T i,nmat
+      INTEGER_T i
  
       hugedist=1.0D+10
  
-      nmat=num_materials
-      if (nmat.ne.3) then
-       print *,"nmat invalid in INIT_LS_GAS_AM"
+      if (num_materials.ne.3) then
+       print *,"num_materials invalid in INIT_LS_GAS_AM"
        stop
       endif
 
@@ -2632,15 +2623,14 @@ end subroutine nozzle2d
       REAL_T radx,radshrink
       REAL_T pipexlo,pipexhi
       REAL_T zmin,zmax
-      INTEGER_T i,j,iSphere,nmat
+      INTEGER_T i,j,iSphere
 
-      nmat=num_materials
-      if (nmat.lt.1) then
-       print *,"nmat invalid in soliddist"
+      if (num_materials.lt.1) then
+       print *,"num_materials invalid in soliddist"
        stop
       endif
 
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid11"
        stop
       endif
@@ -3398,9 +3388,9 @@ end subroutine nozzle2d
       subroutine tcylinderdist(x,y,z,xcen,ycen,rad,zmin,zmax,dist)
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: x,y,z,xcen,ycen,rad
-      REAL_T, intent(out) :: dist
-      REAL_T, intent(in) :: zmin,zmax
+      REAL_T, INTENT(in) :: x,y,z,xcen,ycen,rad
+      REAL_T, INTENT(out) :: dist
+      REAL_T, INTENT(in) :: zmin,zmax
 
       if (zmin.ge.zmax-1.0E-10) then
        print *,"invalid parameters ",zmin,zmax

@@ -34,11 +34,11 @@ stop
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: valu
-      REAL_T, intent(in) :: gridx(8),gridy(8),gridz(8),gridval(8)
-      INTEGER_T, intent(in) :: IV0,IV1
-      REAL_T, intent(out) :: XX(SDIM),YY(SDIM),ZZ(SDIM)
-      INTEGER_T, intent(in) :: icomp
+      REAL_T, INTENT(in) :: valu
+      REAL_T, INTENT(in) :: gridx(8),gridy(8),gridz(8),gridval(8)
+      INTEGER_T, INTENT(in) :: IV0,IV1
+      REAL_T, INTENT(out) :: XX(SDIM),YY(SDIM),ZZ(SDIM)
+      INTEGER_T, INTENT(in) :: icomp
       REAL_T tt
 
       if (abs(gridval(IV0)-valu).le.1.0D-10) then
@@ -75,10 +75,10 @@ stop
       subroutine addtrianglelist(trianglelist,itri,imaxtri,XX,YY,ZZ,NORMAL)
       IMPLICIT NONE
 
-      INTEGER_T, intent(inout) :: itri
-      INTEGER_T, intent(in) :: imaxtri
-      REAL_T, intent(inout) :: trianglelist(SDIM,imaxtri)
-      REAL_T, intent(in) :: XX(SDIM),YY(SDIM),ZZ(SDIM),NORMAL(SDIM)
+      INTEGER_T, INTENT(inout) :: itri
+      INTEGER_T, INTENT(in) :: imaxtri
+      REAL_T, INTENT(inout) :: trianglelist(SDIM,imaxtri)
+      REAL_T, INTENT(in) :: XX(SDIM),YY(SDIM),ZZ(SDIM),NORMAL(SDIM)
       REAL_T CPROD(SDIM),VEC1(3),VEC2(3),DOTPROD
 
 #if (AMREX_SPACEDIM==3)
@@ -166,12 +166,12 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(inout) :: itri
-      INTEGER_T, intent(in) :: IV0,IV1,IV2,IV3
-      INTEGER_T, intent(in) :: imaxtri
-      REAL_T, intent(inout) :: trianglelist(SDIM,imaxtri)
-      REAL_T, intent(in) :: valu
-      REAL_T, intent(in) :: gridx(8),gridy(8),gridz(8),gridval(8)
+      INTEGER_T, INTENT(inout) :: itri
+      INTEGER_T, INTENT(in) :: IV0,IV1,IV2,IV3
+      INTEGER_T, INTENT(in) :: imaxtri
+      REAL_T, INTENT(inout) :: trianglelist(SDIM,imaxtri)
+      REAL_T, INTENT(in) :: valu
+      REAL_T, INTENT(in) :: gridx(8),gridy(8),gridz(8),gridval(8)
       REAL_T AA(4,4),sourcex(4),bb(4),NORMAL(SDIM)
       REAL_T XX(SDIM),YY(SDIM),ZZ(SDIM)
       INTEGER_T istat,idxtri
@@ -249,12 +249,12 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(inout) :: itri
-      INTEGER_T, intent(in) :: IV0,IV1,IV2,IV3
-      INTEGER_T, intent(in) :: imaxtri
-      REAL_T, intent(inout) :: trianglelist(SDIM,imaxtri)
-      REAL_T, intent(in) :: valu
-      REAL_T, intent(in) :: gridx(8),gridy(8),gridz(8),gridval(8)
+      INTEGER_T, INTENT(inout) :: itri
+      INTEGER_T, INTENT(in) :: IV0,IV1,IV2,IV3
+      INTEGER_T, INTENT(in) :: imaxtri
+      REAL_T, INTENT(inout) :: trianglelist(SDIM,imaxtri)
+      REAL_T, INTENT(in) :: valu
+      REAL_T, INTENT(in) :: gridx(8),gridy(8),gridz(8),gridval(8)
       REAL_T AA(4,4),sourcex(4),bb(4),NORMAL(SDIM)
       REAL_T XX(SDIM),YY(SDIM),ZZ(SDIM)
       INTEGER_T istat,idxtri
@@ -390,12 +390,12 @@ stop
            levelset_node,gridval,ISUM,kkhi,nodehi,valu)
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: levelset_node(0:1,0:1,0:1)
-      REAL_T, intent(out) :: gridval(8)
+      REAL_T, INTENT(in) :: levelset_node(0:1,0:1,0:1)
+      REAL_T, INTENT(out) :: gridval(8)
       INTEGER_T :: N8(8)
-      INTEGER_T, intent(out) :: ISUM
-      INTEGER_T, intent(in) :: kkhi,nodehi
-      REAL_T, intent(in) :: valu
+      INTEGER_T, INTENT(out) :: ISUM
+      INTEGER_T, INTENT(in) :: kkhi,nodehi
+      REAL_T, INTENT(in) :: valu
       INTEGER_T :: itemp
 
       gridval(1)=levelset_node(0,0,0)
@@ -424,17 +424,17 @@ stop
            itri,imaxtri,xnode,kkhi,nodehi)
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: kkhi
-      INTEGER_T, intent(in) :: nodehi
-      REAL_T, intent(inout) :: gridval(8)
-      REAL_T, intent(inout) :: gridx(8)
-      REAL_T, intent(inout) :: gridy(8)
-      REAL_T, intent(inout) :: gridz(8)
-      REAL_T, intent(in) :: valu
-      REAL_T, intent(inout) :: trianglelist(SDIM,200)
-      REAL_T, intent(in) :: xnode(0:1,0:1,0:1,SDIM)
-      INTEGER_T, intent(inout) :: itri
-      INTEGER_T, intent(inout) :: imaxtri
+      INTEGER_T, INTENT(in) :: kkhi
+      INTEGER_T, INTENT(in) :: nodehi
+      REAL_T, INTENT(inout) :: gridval(8)
+      REAL_T, INTENT(inout) :: gridx(8)
+      REAL_T, INTENT(inout) :: gridy(8)
+      REAL_T, INTENT(inout) :: gridz(8)
+      REAL_T, INTENT(in) :: valu
+      REAL_T, INTENT(inout) :: trianglelist(SDIM,200)
+      REAL_T, INTENT(in) :: xnode(0:1,0:1,0:1,SDIM)
+      INTEGER_T, INTENT(inout) :: itri
+      INTEGER_T, INTENT(inout) :: imaxtri
       INTEGER_T :: dir
 
       if (SDIM.eq.2) then
@@ -515,7 +515,7 @@ stop
        mask,DIMS(mask), &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
-       level,gridno,nmat) &
+       level,gridno) &
       bind(c,name='fort_isogrid')
 
       use probcommon_module
@@ -525,24 +525,23 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: visual_tessellate_vfrac
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: visual_tessellate_vfrac
+      INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3), growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(recon)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: level,gridno
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: DIMDEC(recon)
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      INTEGER_T, INTENT(in) :: level,gridno
       INTEGER_T :: im
        ! vof,refcen,order,slope,int
-      REAL_T, intent(in), target :: recon(DIMV(recon),nmat*ngeom_recon) 
+      REAL_T, INTENT(in), target :: recon(DIMV(recon),num_materials*ngeom_recon) 
       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, INTENT(in), target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
       REAL_T valu
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
 
       character*2 matstr
 
@@ -591,7 +590,7 @@ stop
       INTEGER_T nmax
       INTEGER_T vofcomp
       REAL_T vfrac_sum_solid
-      REAL_T mofdata(nmat*ngeom_recon)
+      REAL_T mofdata(num_materials*ngeom_recon)
       INTEGER_T mask_local
       INTEGER_T vcdeb,imdeb
 
@@ -610,16 +609,11 @@ stop
        stop
       endif
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat bust"
-       stop
-      endif 
-
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1) 
       call box_to_dim( &
         DIMS(plt), &
         growlo,growhi)
-      allocate(reconlocal(DIMV(plt),nmat*ngeom_recon))
+      allocate(reconlocal(DIMV(plt),num_materials*ngeom_recon))
       reconlocal_ptr=>reconlocal
 
       call checkbound_array(fablo,fabhi,reconlocal_ptr,1,-1,4111)
@@ -630,7 +624,7 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
        call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
-       do dir=1,nmat*ngeom_recon
+       do dir=1,num_materials*ngeom_recon
         mofdata(dir)=recon(D_DECL(i,j,k),dir)
        enddo
 
@@ -640,7 +634,7 @@ stop
          ! after  (mofdata): fluids and solids tessellate
 
         vfrac_sum_solid=zero
-        do im=1,nmat
+        do im=1,num_materials
          if (is_rigid(im).eq.1) then
           vofcomp=(im-1)*ngeom_recon+1
           vfrac_sum_solid=vfrac_sum_solid+mofdata(vofcomp)
@@ -650,7 +644,7 @@ stop
           print *,"is_rigid invalid MARCHING_TETRA_3D.F90"
           stop
          endif
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
 
         if ((vfrac_sum_solid.gt.VOFTOL).and. &
             (vfrac_sum_solid.le.1.1)) then
@@ -681,7 +675,7 @@ stop
         stop
        endif
 
-       do dir=1,nmat*ngeom_recon
+       do dir=1,num_materials*ngeom_recon
         reconlocal(D_DECL(i,j,k),dir)=mofdata(dir)
        enddo
 
@@ -689,11 +683,11 @@ stop
       enddo ! j
       enddo ! i
 
-      do im=1,nmat
+      do im=1,num_materials
 
        if ((im.lt.1).or. &
            (im.gt.99).or. &
-           (im.gt.nmat)) then
+           (im.gt.num_materials)) then
         print *,"im out of range"
         stop
        endif
@@ -791,7 +785,7 @@ stop
          if (mask_local.eq.1) then
           call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
-          do dir=1,nmat*ngeom_recon
+          do dir=1,num_materials*ngeom_recon
            mofdata(dir)=reconlocal(D_DECL(i,j,k),dir)
           enddo
 
@@ -809,7 +803,7 @@ stop
            if (abs(mofdata(vcdeb)-0.3942).le.0.001) then
             print *,"------sanity check isogrid"
             print *,"i,j,k,im = ",i,j,k,im
-            do vcdeb=1,nmat*ngeom_recon
+            do vcdeb=1,num_materials*ngeom_recon
              print *,"vcdeb,mofdata(vcdeb) ",vcdeb,mofdata(vcdeb)
             enddo
             print *,"------end sanity check isogrid"
@@ -1008,7 +1002,7 @@ stop
        deallocate(Node)
        deallocate(IntElem)
 
-      enddo ! im=1..nmat
+      enddo ! im=1..num_materials
 
       deallocate(reconlocal)
  
@@ -1026,11 +1020,11 @@ stop
       IMPLICIT NONE
 
 
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: plotint
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: plotint
       INTEGER_T :: strandid
-      INTEGER_T, intent(in) :: arrdim,finest_level,nsteps,im
-      INTEGER_T, intent(in) :: grids_per_level(arrdim)
+      INTEGER_T, INTENT(in) :: arrdim,finest_level,nsteps,im
+      INTEGER_T, INTENT(in) :: grids_per_level(arrdim)
 
       character*25 namestr25 !./temptecplot ...
       character*7 newnamestr7 ! mat??ls ...
@@ -1397,17 +1391,17 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: lo(SDIM), hi(SDIM)
+      INTEGER_T, INTENT(in) :: lo(SDIM), hi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: DIMDEC(levelset)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: level,gridno
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in), target :: levelset(DIMV(levelset))
+      INTEGER_T, INTENT(in) :: DIMDEC(levelset)
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      INTEGER_T, INTENT(in) :: level,gridno
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in), target :: levelset(DIMV(levelset))
       REAL_T, pointer :: levelset_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, INTENT(in), target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
       REAL_T valu
 
       character*3 levstr
@@ -1677,30 +1671,30 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: sweep ! sweep=0 or 1
-      INTEGER_T, intent(in) :: ngrow
-      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: sweep ! sweep=0 or 1
+      INTEGER_T, INTENT(in) :: ngrow
+      INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(ls_old) !ls_oldxlo,ls_oldxhi,...
-      INTEGER_T, intent(in) :: DIMDEC(ls_new)
-      INTEGER_T, intent(in) :: DIMDEC(ls_grad_new)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: level
-      REAL_T, intent(in), target :: ls_old(DIMV(ls_old))
-      REAL_T, intent(inout), target :: ls_new(DIMV(ls_new))
-      REAL_T, intent(inout), target ::  &
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: DIMDEC(ls_old) !ls_oldxlo,ls_oldxhi,...
+      INTEGER_T, INTENT(in) :: DIMDEC(ls_new)
+      INTEGER_T, INTENT(in) :: DIMDEC(ls_grad_new)
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      INTEGER_T, INTENT(in) :: level
+      REAL_T, INTENT(in), target :: ls_old(DIMV(ls_old))
+      REAL_T, INTENT(inout), target :: ls_new(DIMV(ls_new))
+      REAL_T, INTENT(inout), target ::  &
         ls_grad_new(DIMV(ls_grad_new),SDIM)
       REAL_T, pointer :: ls_old_ptr(D_DECL(:,:,:))
       REAL_T, pointer :: ls_new_ptr(D_DECL(:,:,:))
       REAL_T, pointer :: ls_grad_new_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, INTENT(in), target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      REAL_T, intent(inout) :: minLS
-      REAL_T, intent(inout) :: maxLS
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, INTENT(inout) :: minLS
+      REAL_T, INTENT(inout) :: maxLS
 
       REAL_T valu
 
@@ -2269,8 +2263,8 @@ stop
       bind(c,name='fort_combinetrianglessingle')
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: arrdim,finest_level,nsteps
-      INTEGER_T, intent(in) :: grids_per_level(arrdim)
+      INTEGER_T, INTENT(in) :: arrdim,finest_level,nsteps
+      INTEGER_T, INTENT(in) :: grids_per_level(arrdim)
 
       character*3 levstr
       character*5 gridstr
