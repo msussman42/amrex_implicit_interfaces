@@ -364,11 +364,11 @@ contains
      ksource_physical, & ! fort_heatviscconst(im_source)
      ksource_model, & ! conductstate * fort_heatflux_factor(im_source)
      energy_source,LL)
-    REAL_T, intent(in) :: dF,dt
-    REAL_T, intent(in) :: ksource_physical
-    REAL_T, intent(in) :: ksource_model
-    REAL_T, intent(in) :: LL
-    REAL_T, intent(out) :: energy_source
+    REAL_T, INTENT(in) :: dF,dt
+    REAL_T, INTENT(in) :: ksource_physical
+    REAL_T, INTENT(in) :: ksource_model
+    REAL_T, INTENT(in) :: LL
+    REAL_T, INTENT(out) :: energy_source
 
     energy_source  = abs(LL) * dF ! [erg.g^-1]
   end subroutine Hydrate_energy_source_term

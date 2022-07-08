@@ -52,10 +52,10 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(out) :: LS(nmat)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(out) :: LS(nmat)
 REAL_T :: xstar,ystar,zstar
 REAL_T :: xprime,yprime
 REAL_T :: distline
@@ -267,14 +267,14 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xvec(SDIM)
-REAL_T, intent(in) :: dx(SDIM)
-REAL_T, intent(in) :: time
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: VEL(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xvec(SDIM)
+REAL_T, INTENT(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: time
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: VEL(SDIM)
 INTEGER_T dir
-INTEGER_T, intent(in) :: velsolid_flag
+INTEGER_T, INTENT(in) :: velsolid_flag
 REAL_T :: x,y,z
 
   if (nmat.eq.num_materials) then
@@ -405,11 +405,11 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: PRES
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: PRES
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -431,13 +431,13 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: nstate_mat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: nstate_mat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
 
 if (nmat.eq.num_materials) then
@@ -481,14 +481,14 @@ subroutine passive_advect_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(inout) :: LS(nmat)
-REAL_T, intent(in) :: LS_in(nmat)
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) ::  dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(inout) :: LS(nmat)
+REAL_T, INTENT(in) :: LS_in(nmat)
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) ::  dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -515,15 +515,15 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: VEL
-REAL_T, intent(in) :: VEL_in
-INTEGER_T, intent(in) :: veldir,dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: VEL
+REAL_T, INTENT(in) :: VEL_in
+INTEGER_T, INTENT(in) :: veldir,dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
 
@@ -556,15 +556,15 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: PRES
-REAL_T, intent(in) :: PRES_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: PRES
+REAL_T, INTENT(in) :: PRES_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -585,18 +585,18 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
 REAL_T :: local_STATE(nmat*num_state_material)
-REAL_T, intent(inout) :: STATE
-REAL_T, intent(inout) :: STATE_merge
-REAL_T, intent(in) :: STATE_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
-INTEGER_T, intent(in) :: istate,im
+REAL_T, INTENT(inout) :: STATE
+REAL_T, INTENT(inout) :: STATE_merge
+REAL_T, INTENT(in) :: STATE_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: istate,im
 INTEGER_T ibase,im_crit,im_loop
 INTEGER_T local_bcflag
 
@@ -638,12 +638,12 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-  REAL_T, intent(in) :: x(SDIM)
-  REAL_T, intent(in) :: dx(SDIM)
-  REAL_T, intent(in) :: t
-  REAL_T, intent(out) :: LS
-  REAL_T, intent(out) :: vel(SDIM)
-  REAL_T, intent(out) :: temperature
+  REAL_T, INTENT(in) :: x(SDIM)
+  REAL_T, INTENT(in) :: dx(SDIM)
+  REAL_T, INTENT(in) :: t
+  REAL_T, INTENT(out) :: LS
+  REAL_T, INTENT(out) :: vel(SDIM)
+  REAL_T, INTENT(out) :: temperature
   INTEGER_T :: velsolid_flag
   REAL_T :: LSarray(num_materials)
 
@@ -666,10 +666,10 @@ end subroutine passive_advect_clamped_LS
 subroutine passive_advect_CFL_HELPER(time,dir,uu,dx)
 use probcommon_module
 IMPLICIT NONE
-INTEGER_T, intent(in) :: dir
-REAL_T, intent(in) :: time
-REAL_T, intent(inout) :: uu
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: dir
+REAL_T, INTENT(in) :: time
+REAL_T, INTENT(inout) :: uu
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if ((dir.lt.0).or.(dir.ge.SDIM)) then
  print *,"dir invalid"

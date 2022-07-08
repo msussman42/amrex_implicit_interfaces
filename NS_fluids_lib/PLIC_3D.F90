@@ -77,34 +77,34 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: gridno
-      INTEGER_T, intent(in) :: level,finest_level,max_level
-      INTEGER_T, intent(in) :: nsteps
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: gridno
+      INTEGER_T, INTENT(in) :: level,finest_level,max_level
+      INTEGER_T, INTENT(in) :: nsteps
 
-      INTEGER_T, intent(in) :: continuous_mof
-      INTEGER_T, intent(in) :: force_cmof_at_triple_junctions
-      INTEGER_T, intent(in) :: partial_cmof_stencil_at_walls
-      INTEGER_T, intent(in) :: update_flag
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: vofbc(SDIM,2)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: ngrow
-      INTEGER_T, intent(in) :: DIMDEC(masknbr)
-      INTEGER_T, intent(in) :: DIMDEC(snew)
-      INTEGER_T, intent(in) :: DIMDEC(vof)
-      INTEGER_T, intent(in) :: DIMDEC(LS)
-      INTEGER_T, intent(in) :: DIMDEC(slopes)
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, INTENT(in) :: continuous_mof
+      INTEGER_T, INTENT(in) :: force_cmof_at_triple_junctions
+      INTEGER_T, INTENT(in) :: partial_cmof_stencil_at_walls
+      INTEGER_T, INTENT(in) :: update_flag
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: vofbc(SDIM,2)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: ngrow
+      INTEGER_T, INTENT(in) :: DIMDEC(masknbr)
+      INTEGER_T, INTENT(in) :: DIMDEC(snew)
+      INTEGER_T, INTENT(in) :: DIMDEC(vof)
+      INTEGER_T, INTENT(in) :: DIMDEC(LS)
+      INTEGER_T, INTENT(in) :: DIMDEC(slopes)
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
      
-      REAL_T, intent(in), target :: masknbr(DIMV(masknbr),4) 
-      REAL_T, intent(in), target :: vof(DIMV(vof),num_materials*ngeom_raw) 
-      REAL_T, intent(in), target :: LS(DIMV(LS),num_materials) 
-      REAL_T, intent(out), target :: slopes(DIMV(slopes),num_materials*ngeom_recon) 
+      REAL_T, INTENT(in), target :: masknbr(DIMV(masknbr),4) 
+      REAL_T, INTENT(in), target :: vof(DIMV(vof),num_materials*ngeom_raw) 
+      REAL_T, INTENT(in), target :: LS(DIMV(LS),num_materials) 
+      REAL_T, INTENT(out), target :: slopes(DIMV(slopes),num_materials*ngeom_recon) 
       REAL_T, pointer :: slopes_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: snew(DIMV(snew),num_materials*ngeom_raw+1) 
+      REAL_T, INTENT(inout), target :: snew(DIMV(snew),num_materials*ngeom_raw+1) 
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
       
       INTEGER_T i,j,k,dir
@@ -148,7 +148,6 @@ stop
       REAL_T xstenbox(-1:1,SDIM)
       INTEGER_T num_materials_in_cell
       INTEGER_T num_materials_in_stencil
-      INTEGER_T nten_test
       REAL_T volume_super
       REAL_T volume_super_mofdata
       REAL_T volsten

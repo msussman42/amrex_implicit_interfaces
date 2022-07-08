@@ -28867,7 +28867,7 @@ end subroutine initialize2d
       INTEGER_T borderlo(3)
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
-      INTEGER_T im,num_materials
+      INTEGER_T im
       REAL_T uwall(num_materials*ngeom_raw)
       REAL_T uboundary(num_materials*ngeom_raw)
       INTEGER_T vofcomp

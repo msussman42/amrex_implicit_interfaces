@@ -63,7 +63,7 @@ contains
 !!$    output(s):
 !!$    y     :    Ei(x), real number
 
-    REAL(kind=8),intent(in):: x
+    REAL(kind=8),INTENT(in):: x
     REAL(kind=8):: y, inc, xtok, kf
     REAL(kind=8), parameter::em_const=0.5772156649015329D0
     REAL(kind=8), parameter::tol=1.0D-15

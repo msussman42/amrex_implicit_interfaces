@@ -58,10 +58,10 @@ contains
    !! @ingroup moment_of_fluid
       subroutine mof2d_compute_analytic_gradient(angles, &
         volume, c, centroid)
-      double precision, dimension(1), intent(in) :: angles
-      double precision, intent(in) :: volume
-      double precision, dimension(2), intent(in) :: c
-      double precision, dimension(2), intent(out) :: centroid
+      double precision, dimension(1), INTENT(in) :: angles
+      double precision, INTENT(in) :: volume
+      double precision, dimension(2), INTENT(in) :: c
+      double precision, dimension(2), INTENT(out) :: centroid
 
       double precision :: n1,n2
       integer :: trap_flag,tri_flag

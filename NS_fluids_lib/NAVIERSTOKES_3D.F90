@@ -403,25 +403,25 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: plot_sdim
+      INTEGER_T, INTENT(in) :: plot_sdim
       INTEGER_T klo_plot,khi_plot
 
-      INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: nparts_def
-      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
-      INTEGER_T, intent(in) :: total_number_grids
-      INTEGER_T, intent(in) :: num_levels
-      INTEGER_T, intent(in) :: grids_per_level_array(num_levels)
-      INTEGER_T, intent(in) :: levels_array(total_number_grids)
-      INTEGER_T, intent(in) :: bfact_array(total_number_grids)
-      INTEGER_T, intent(in) :: gridno_array(total_number_grids)
-      INTEGER_T, intent(in) :: gridlo_array(total_number_grids*SDIM)
-      INTEGER_T, intent(in) :: gridhi_array(total_number_grids*SDIM)
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: nsteps
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: visual_revolve
-      INTEGER_T, intent(in) :: plotint
+      INTEGER_T, INTENT(in) :: nparts
+      INTEGER_T, INTENT(in) :: nparts_def
+      INTEGER_T, INTENT(in) :: im_solid_map(nparts_def)
+      INTEGER_T, INTENT(in) :: total_number_grids
+      INTEGER_T, INTENT(in) :: num_levels
+      INTEGER_T, INTENT(in) :: grids_per_level_array(num_levels)
+      INTEGER_T, INTENT(in) :: levels_array(total_number_grids)
+      INTEGER_T, INTENT(in) :: bfact_array(total_number_grids)
+      INTEGER_T, INTENT(in) :: gridno_array(total_number_grids)
+      INTEGER_T, INTENT(in) :: gridlo_array(total_number_grids*SDIM)
+      INTEGER_T, INTENT(in) :: gridhi_array(total_number_grids*SDIM)
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: nsteps
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: visual_revolve
+      INTEGER_T, INTENT(in) :: plotint
 
       INTEGER_T strandid
 
@@ -1235,40 +1235,40 @@ END SUBROUTINE SIMP
       IMPLICIT NONE
 
 
-      INTEGER_T, intent(in) :: nden
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: project_option
-      REAL_T, intent(in) :: compressible_dt_factor(num_materials)
-      INTEGER_T, intent(in) :: pressure_select_criterion
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: nden
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: project_option
+      REAL_T, INTENT(in) :: compressible_dt_factor(num_materials)
+      INTEGER_T, INTENT(in) :: pressure_select_criterion
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: dt
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: dt
 
-      INTEGER_T, intent(in) :: DIMDEC(maskcov)
-      INTEGER_T, intent(in) :: DIMDEC(vol)
-      INTEGER_T, intent(in) :: DIMDEC(lsnew)
-      INTEGER_T, intent(in) :: DIMDEC(csnd)
-      INTEGER_T, intent(in) :: DIMDEC(cvof)
-      INTEGER_T, intent(in) :: DIMDEC(den)
-      INTEGER_T, intent(in) :: DIMDEC(mdot)
-      REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
+      INTEGER_T, INTENT(in) :: DIMDEC(vol)
+      INTEGER_T, INTENT(in) :: DIMDEC(lsnew)
+      INTEGER_T, INTENT(in) :: DIMDEC(csnd)
+      INTEGER_T, INTENT(in) :: DIMDEC(cvof)
+      INTEGER_T, INTENT(in) :: DIMDEC(den)
+      INTEGER_T, INTENT(in) :: DIMDEC(mdot)
+      REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: vol(DIMV(vol))
+      REAL_T, INTENT(in), target :: vol(DIMV(vol))
       REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: lsnew(DIMV(lsnew),num_materials*(1+SDIM))
+      REAL_T, INTENT(in), target :: lsnew(DIMV(lsnew),num_materials*(1+SDIM))
       REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: csnd(DIMV(csnd),2) 
+      REAL_T, INTENT(inout), target :: csnd(DIMV(csnd),2) 
       REAL_T, pointer :: csnd_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: cvof(DIMV(cvof),num_materials) 
+      REAL_T, INTENT(in), target :: cvof(DIMV(cvof),num_materials) 
       REAL_T, pointer :: cvof_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: den(DIMV(den),nden) ! den,temp
+      REAL_T, INTENT(in), target :: den(DIMV(den),nden) ! den,temp
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: mdot(DIMV(mdot)) 
+      REAL_T, INTENT(inout), target :: mdot(DIMV(mdot)) 
       REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
 
       INTEGER_T i,j,k
@@ -1821,28 +1821,28 @@ END SUBROUTINE SIMP
       IMPLICIT NONE
 
 
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: dt
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: dt
 
-      INTEGER_T, intent(in) :: DIMDEC(vol)
-      INTEGER_T, intent(in) :: DIMDEC(csound)
-      INTEGER_T, intent(in) :: DIMDEC(mdot)
-      INTEGER_T, intent(in) :: DIMDEC(pnew)
-      INTEGER_T, intent(in) :: DIMDEC(divnew)
-      REAL_T, intent(in),target :: vol(DIMV(vol))
+      INTEGER_T, INTENT(in) :: DIMDEC(vol)
+      INTEGER_T, INTENT(in) :: DIMDEC(csound)
+      INTEGER_T, INTENT(in) :: DIMDEC(mdot)
+      INTEGER_T, INTENT(in) :: DIMDEC(pnew)
+      INTEGER_T, INTENT(in) :: DIMDEC(divnew)
+      REAL_T, INTENT(in),target :: vol(DIMV(vol))
       REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: csound(DIMV(csound),2) 
+      REAL_T, INTENT(in),target :: csound(DIMV(csound),2) 
       REAL_T, pointer :: csound_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: mdot(DIMV(mdot)) 
+      REAL_T, INTENT(in),target :: mdot(DIMV(mdot)) 
       REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: pnew(DIMV(pnew)) 
+      REAL_T, INTENT(in),target :: pnew(DIMV(pnew)) 
       REAL_T, pointer :: pnew_ptr(D_DECL(:,:,:))
-      REAL_T, intent(out),target :: divnew(DIMV(divnew)) 
+      REAL_T, INTENT(out),target :: divnew(DIMV(divnew)) 
       REAL_T, pointer :: divnew_ptr(D_DECL(:,:,:))
 
       INTEGER_T i,j,k
@@ -1967,85 +1967,85 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: plot_grid_type
-      INTEGER_T, intent(in) :: ncomp_tower
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: do_plot
-      INTEGER_T, intent(in) :: do_slice
-      INTEGER_T, intent(in) :: visual_nddata_format
+      INTEGER_T, INTENT(in) :: plot_grid_type
+      INTEGER_T, INTENT(in) :: ncomp_tower
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: do_plot
+      INTEGER_T, INTENT(in) :: do_slice
+      INTEGER_T, INTENT(in) :: visual_nddata_format
 
         ! x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,DEN,TEMP,KE
         ! nstate_slice=SLICECOMP_NCOMP
         ! (value of material with LS>0)
         ! nslice=domhi-domlo+3
-      INTEGER_T, intent(in) :: nslice,nstate_slice,slice_dir
-      REAL_T, intent(out) :: slice_data(nslice*nstate_slice)
-      REAL_T, intent(in) :: xslice(SDIM)
+      INTEGER_T, INTENT(in) :: nslice,nstate_slice,slice_dir
+      REAL_T, INTENT(out) :: slice_data(nslice*nstate_slice)
+      REAL_T, INTENT(in) :: xslice(SDIM)
  
-      INTEGER_T, intent(in) :: rz_flag
-      INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: nparts_def
-      INTEGER_T, intent(in) :: im_solid_map(nparts_def) 
-      INTEGER_T, intent(in) :: elastic_ncomp
-      INTEGER_T, intent(in) :: visual_tessellate_vfrac
+      INTEGER_T, INTENT(in) :: rz_flag
+      INTEGER_T, INTENT(in) :: nparts
+      INTEGER_T, INTENT(in) :: nparts_def
+      INTEGER_T, INTENT(in) :: im_solid_map(nparts_def) 
+      INTEGER_T, INTENT(in) :: elastic_ncomp
+      INTEGER_T, INTENT(in) :: visual_tessellate_vfrac
        ! x,u,pmg,den,temp,spec,mag vort,LS
-      INTEGER_T, intent(in) :: visual_ncomp
-      INTEGER_T, intent(in) :: vislo(SDIM), vishi(SDIM)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: lo(SDIM), hi(SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(fabout)
-      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
-      INTEGER_T, intent(in) :: DIMDEC(vel)
-      INTEGER_T, intent(in) :: DIMDEC(vof)
-      INTEGER_T, intent(in) :: DIMDEC(pres)
-      INTEGER_T, intent(in) :: DIMDEC(div)
-      INTEGER_T, intent(in) :: DIMDEC(divdat)
-      INTEGER_T, intent(in) :: DIMDEC(den)
-      INTEGER_T, intent(in) :: DIMDEC(mom_den)
-      INTEGER_T, intent(in) :: DIMDEC(elastic)
-      INTEGER_T, intent(in) :: DIMDEC(lsdist)
-      INTEGER_T, intent(in) :: DIMDEC(visc)
-      INTEGER_T, intent(in) :: DIMDEC(conduct)
-      INTEGER_T, intent(in) :: DIMDEC(trace)
-      INTEGER_T, intent(in) :: DIMDEC(elasticforce)
-      INTEGER_T, intent(in) :: DIMDEC(towerfab)
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: gridno
+      INTEGER_T, INTENT(in) :: visual_ncomp
+      INTEGER_T, INTENT(in) :: vislo(SDIM), vishi(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: lo(SDIM), hi(SDIM)
+      INTEGER_T, INTENT(in) :: DIMDEC(fabout)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskSEM)
+      INTEGER_T, INTENT(in) :: DIMDEC(vel)
+      INTEGER_T, INTENT(in) :: DIMDEC(vof)
+      INTEGER_T, INTENT(in) :: DIMDEC(pres)
+      INTEGER_T, INTENT(in) :: DIMDEC(div)
+      INTEGER_T, INTENT(in) :: DIMDEC(divdat)
+      INTEGER_T, INTENT(in) :: DIMDEC(den)
+      INTEGER_T, INTENT(in) :: DIMDEC(mom_den)
+      INTEGER_T, INTENT(in) :: DIMDEC(elastic)
+      INTEGER_T, INTENT(in) :: DIMDEC(lsdist)
+      INTEGER_T, INTENT(in) :: DIMDEC(visc)
+      INTEGER_T, INTENT(in) :: DIMDEC(conduct)
+      INTEGER_T, INTENT(in) :: DIMDEC(trace)
+      INTEGER_T, INTENT(in) :: DIMDEC(elasticforce)
+      INTEGER_T, INTENT(in) :: DIMDEC(towerfab)
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: gridno
        ! x,u,pmg,den,T,Y1..Yn,mag vort,LS
-      REAL_T, intent(out), target :: fabout(DIMV(fabout),visual_ncomp) 
+      REAL_T, INTENT(out), target :: fabout(DIMV(fabout),visual_ncomp) 
       REAL_T, pointer :: fabout_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: maskSEM(DIMV(maskSEM))
+      REAL_T, INTENT(in), target :: maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: &
+      REAL_T, INTENT(in), target :: &
          vel(DIMV(vel),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: vof(DIMV(vof),num_materials*ngeom_recon)
+      REAL_T, INTENT(in), target :: vof(DIMV(vof),num_materials*ngeom_recon)
       REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: pres(DIMV(pres))
+      REAL_T, INTENT(in), target :: pres(DIMV(pres))
       REAL_T, pointer :: pres_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: div(DIMV(div))
+      REAL_T, INTENT(in), target :: div(DIMV(div))
       REAL_T, pointer :: div_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: divdat(DIMV(divdat))
+      REAL_T, INTENT(in), target :: divdat(DIMV(divdat))
       REAL_T, pointer :: divdat_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: den(DIMV(den),num_state_material*num_materials)
+      REAL_T, INTENT(in), target :: den(DIMV(den),num_state_material*num_materials)
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: mom_den(DIMV(mom_den),num_materials)
+      REAL_T, INTENT(in), target :: mom_den(DIMV(mom_den),num_materials)
       REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: elastic(DIMV(elastic),elastic_ncomp)
+      REAL_T, INTENT(in), target :: elastic(DIMV(elastic),elastic_ncomp)
       REAL_T, pointer :: elastic_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: visc(DIMV(visc),num_materials)
+      REAL_T, INTENT(in), target :: visc(DIMV(visc),num_materials)
       REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: conduct(DIMV(conduct),num_materials)
+      REAL_T, INTENT(in), target :: conduct(DIMV(conduct),num_materials)
       REAL_T, pointer :: conduct_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: trace(DIMV(trace),5*num_materials)
+      REAL_T, INTENT(in), target :: trace(DIMV(trace),5*num_materials)
       REAL_T, pointer :: trace_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: elasticforce(DIMV(elasticforce),SDIM)
+      REAL_T, INTENT(in), target :: elasticforce(DIMV(elasticforce),SDIM)
       REAL_T, pointer :: elasticforce_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: towerfab(DIMV(towerfab),ncomp_tower)
+      REAL_T, INTENT(inout), target :: towerfab(DIMV(towerfab),ncomp_tower)
       REAL_T, pointer :: towerfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: lsdist(DIMV(lsdist),(SDIM+1)*num_materials)
+      REAL_T, INTENT(in), target :: lsdist(DIMV(lsdist),(SDIM+1)*num_materials)
       REAL_T, pointer :: lsdist_ptr(D_DECL(:,:,:),:)
       REAL_T xposnd(SDIM)
       REAL_T xposndT(SDIM)
@@ -2079,10 +2079,10 @@ END SUBROUTINE SIMP
       INTEGER_T im_crit
       INTEGER_T im_crit_SEM
 
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: probhi(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: dxfinest(SDIM)
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: probhi(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: dxfinest(SDIM)
       REAL_T dxelem
 
       character*3 levstr
@@ -3983,22 +3983,22 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: nparts_def
-      INTEGER_T, intent(in) :: im_solid_map(nparts_def)
-      INTEGER_T, intent(in) :: total_number_grids
-      INTEGER_T, intent(in) :: num_levels
-      INTEGER_T, intent(in) :: grids_per_level_array(num_levels)
-      INTEGER_T, intent(in) :: levels_array(total_number_grids)
-      INTEGER_T, intent(in) :: bfact_array(total_number_grids)
-      INTEGER_T, intent(in) :: gridno_array(total_number_grids)
-      INTEGER_T, intent(in) :: gridlo_array(total_number_grids*SDIM)
-      INTEGER_T, intent(in) :: gridhi_array(total_number_grids*SDIM)
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: nsteps
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: visual_revolve
-      INTEGER_T, intent(in) :: plotint
+      INTEGER_T, INTENT(in) :: nparts
+      INTEGER_T, INTENT(in) :: nparts_def
+      INTEGER_T, INTENT(in) :: im_solid_map(nparts_def)
+      INTEGER_T, INTENT(in) :: total_number_grids
+      INTEGER_T, INTENT(in) :: num_levels
+      INTEGER_T, INTENT(in) :: grids_per_level_array(num_levels)
+      INTEGER_T, INTENT(in) :: levels_array(total_number_grids)
+      INTEGER_T, INTENT(in) :: bfact_array(total_number_grids)
+      INTEGER_T, INTENT(in) :: gridno_array(total_number_grids)
+      INTEGER_T, INTENT(in) :: gridlo_array(total_number_grids*SDIM)
+      INTEGER_T, INTENT(in) :: gridhi_array(total_number_grids*SDIM)
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: nsteps
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: visual_revolve
+      INTEGER_T, INTENT(in) :: plotint
 
       INTEGER_T strandid
       INTEGER_T nwrite
@@ -4542,43 +4542,43 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: enable_spectral
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: operation_flag
-      INTEGER_T, intent(in) :: dir
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level_f
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact_f
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: ncomp_flux
-      INTEGER_T, intent(in) :: ncomp_den
-      INTEGER_T, intent(in) :: ncomp_vel
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: DIMDEC(den_fine)
-      INTEGER_T, intent(in) :: DIMDEC(vel_fine)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: DIMDEC(fine_LS)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T, INTENT(in) :: enable_spectral
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: operation_flag
+      INTEGER_T, INTENT(in) :: dir
+      INTEGER_T, INTENT(in) :: level_c
+      INTEGER_T, INTENT(in) :: level_f
+      INTEGER_T, INTENT(in) :: bfact_c
+      INTEGER_T, INTENT(in) :: bfact_f
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM)
+      REAL_T, INTENT(in) :: xlo_fine(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: ncomp_flux
+      INTEGER_T, INTENT(in) :: ncomp_den
+      INTEGER_T, INTENT(in) :: ncomp_vel
+      INTEGER_T, INTENT(in) :: DIMDEC(crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: DIMDEC(den_fine)
+      INTEGER_T, INTENT(in) :: DIMDEC(vel_fine)
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine_LS)
+      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, INTENT(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
       INTEGER_T mstenlo(3),mstenhi(3)
-      REAL_T, intent(in),target :: fine_LS(DIMV(fine_LS),num_materials)
+      REAL_T, INTENT(in),target :: fine_LS(DIMV(fine_LS),num_materials)
       REAL_T,pointer :: fine_LS_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, INTENT(in),target :: mask(DIMV(mask))
       REAL_T,pointer :: mask_ptr(D_DECL(:,:,:))
-      REAL_T, intent(out),target :: crse(DIMV(crse),ncomp_flux)
+      REAL_T, INTENT(out),target :: crse(DIMV(crse),ncomp_flux)
       REAL_T,pointer :: crse_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: fine(DIMV(fine),ncomp_flux)
+      REAL_T, INTENT(in),target :: fine(DIMV(fine),ncomp_flux)
       REAL_T,pointer :: fine_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: den_fine(DIMV(den_fine),ncomp_den)
+      REAL_T, INTENT(in),target :: den_fine(DIMV(den_fine),ncomp_den)
       REAL_T,pointer :: den_fine_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: vel_fine(DIMV(vel_fine),ncomp_vel)
+      REAL_T, INTENT(in),target :: vel_fine(DIMV(vel_fine),ncomp_vel)
       REAL_T,pointer :: vel_fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T flochi(SDIM)
       INTEGER_T ic,jc,kc
@@ -5299,49 +5299,49 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: enable_spectral
-      REAL_T, intent(in) :: dxc(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: operation_flag
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: dir
-      REAL_T, intent(in) :: problo(SDIM)
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xlo(SDIM)
-      INTEGER_T, intent(in) :: ncomp_flux
-      INTEGER_T, intent(in) :: ncomp_den
-      INTEGER_T, intent(in) :: ncomp_vel
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: DIMDEC(den_crse)
-      INTEGER_T, intent(in) :: DIMDEC(vel_crse)
-      INTEGER_T, intent(in) :: DIMDEC(masknbr)
-      INTEGER_T, intent(in) :: DIMDEC(masksem)
-      INTEGER_T, intent(in) :: DIMDEC(cmasksem)
-      INTEGER_T, intent(in) :: DIMDEC(coarseLS)
-      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
-      INTEGER_T, intent(in) :: loc(SDIM),hic(SDIM) ! coarse grid dimensions
+      INTEGER_T, INTENT(in) :: enable_spectral
+      REAL_T, INTENT(in) :: dxc(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: operation_flag
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: dir
+      REAL_T, INTENT(in) :: problo(SDIM)
+      INTEGER_T, INTENT(in) :: level_c
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: bfact_c
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      INTEGER_T, INTENT(in) :: ncomp_flux
+      INTEGER_T, INTENT(in) :: ncomp_den
+      INTEGER_T, INTENT(in) :: ncomp_vel
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: DIMDEC(den_crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(vel_crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(masknbr)
+      INTEGER_T, INTENT(in) :: DIMDEC(masksem)
+      INTEGER_T, INTENT(in) :: DIMDEC(cmasksem)
+      INTEGER_T, INTENT(in) :: DIMDEC(coarseLS)
+      INTEGER_T, INTENT(in) :: velbc(SDIM,2,SDIM)
+      INTEGER_T, INTENT(in) :: loc(SDIM),hic(SDIM) ! coarse grid dimensions
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T :: stenlo(3),stenhi(3)
       INTEGER_T :: mstenlo(3),mstenhi(3)
-      REAL_T, intent(out),target :: fine(DIMV(fine),ncomp_flux)
+      REAL_T, INTENT(out),target :: fine(DIMV(fine),ncomp_flux)
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: den_crse(DIMV(den_crse),ncomp_den)
+      REAL_T, INTENT(in),target :: den_crse(DIMV(den_crse),ncomp_den)
       REAL_T, pointer :: den_crse_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: vel_crse(DIMV(vel_crse),ncomp_vel)
+      REAL_T, INTENT(in),target :: vel_crse(DIMV(vel_crse),ncomp_vel)
       REAL_T, pointer :: vel_crse_ptr(D_DECL(:,:,:),:)
        ! =1 if fine-fine  =0 coarse-fine
-      REAL_T, intent(in),target :: masknbr(DIMV(masknbr))  
+      REAL_T, INTENT(in),target :: masknbr(DIMV(masknbr))  
       REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: masksem(DIMV(masksem))
+      REAL_T, INTENT(in),target :: masksem(DIMV(masksem))
       REAL_T, pointer :: masksem_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: cmasksem(DIMV(cmasksem))
+      REAL_T, INTENT(in),target :: cmasksem(DIMV(cmasksem))
       REAL_T, pointer :: cmasksem_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: coarseLS(DIMV(coarseLS),num_materials)
+      REAL_T, INTENT(in),target :: coarseLS(DIMV(coarseLS),num_materials)
       REAL_T, pointer :: coarseLS_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T clochi(SDIM)
@@ -6081,40 +6081,40 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: enable_spectral
-      REAL_T, intent(in) :: dxc(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: dir
-      REAL_T, intent(in) :: problo(SDIM)
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xlo(SDIM)
-      INTEGER_T, intent(in) :: ncomp_flux
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(masknbr)
-      INTEGER_T, intent(in) :: DIMDEC(masksem)
-      INTEGER_T, intent(in) :: DIMDEC(cmasksem)
-      INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
-      INTEGER_T, intent(in) :: loc(SDIM),hic(SDIM) ! coarse grid dimensions
+      INTEGER_T, INTENT(in) :: enable_spectral
+      REAL_T, INTENT(in) :: dxc(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: dir
+      REAL_T, INTENT(in) :: problo(SDIM)
+      INTEGER_T, INTENT(in) :: level_c
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: bfact_c
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      INTEGER_T, INTENT(in) :: ncomp_flux
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: DIMDEC(crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(masknbr)
+      INTEGER_T, INTENT(in) :: DIMDEC(masksem)
+      INTEGER_T, INTENT(in) :: DIMDEC(cmasksem)
+      INTEGER_T, INTENT(in) :: velbc(SDIM,2,SDIM)
+      INTEGER_T, INTENT(in) :: loc(SDIM),hic(SDIM) ! coarse grid dimensions
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T :: stenlo(3),stenhi(3)
       INTEGER_T :: mstenlo(3),mstenhi(3)
-      REAL_T, intent(inout),target ::   fine(DIMV(fine),ncomp_flux)
+      REAL_T, INTENT(inout),target ::   fine(DIMV(fine),ncomp_flux)
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target ::   crse(DIMV(crse),ncomp_flux)
+      REAL_T, INTENT(in),target ::   crse(DIMV(crse),ncomp_flux)
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
        ! =1 if fine-fine  =0 coarse-fine
-      REAL_T, intent(in),target ::   masknbr(DIMV(masknbr)) 
+      REAL_T, INTENT(in),target ::   masknbr(DIMV(masknbr)) 
       REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target ::   masksem(DIMV(masksem))
+      REAL_T, INTENT(in),target ::   masksem(DIMV(masksem))
       REAL_T, pointer :: masksem_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target ::   cmasksem(DIMV(cmasksem))
+      REAL_T, INTENT(in),target ::   cmasksem(DIMV(cmasksem))
       REAL_T, pointer :: cmasksem_ptr(D_DECL(:,:,:))
 
       INTEGER_T clochi(SDIM)
@@ -6636,27 +6636,27 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: sync_iter
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, intent(in) :: dir
-      INTEGER_T, intent(in) :: ncomp_flux
-      INTEGER_T, intent(in) :: DIMDEC(fluxtarg)
-      INTEGER_T, intent(in) :: DIMDEC(fluxhold)
-      INTEGER_T, intent(in) :: DIMDEC(maskcov)
-      INTEGER_T, intent(in) :: DIMDEC(masknbr)
-      INTEGER_T, intent(in) :: presbc(SDIM,2)
+      INTEGER_T, INTENT(in) :: sync_iter
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: dir
+      INTEGER_T, INTENT(in) :: ncomp_flux
+      INTEGER_T, INTENT(in) :: DIMDEC(fluxtarg)
+      INTEGER_T, INTENT(in) :: DIMDEC(fluxhold)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
+      INTEGER_T, INTENT(in) :: DIMDEC(masknbr)
+      INTEGER_T, INTENT(in) :: presbc(SDIM,2)
        ! maskcov=tag if not covered by level+1 or outside the domain.
-      REAL_T, intent(in),target :: maskcov(DIMV(maskcov))
+      REAL_T, INTENT(in),target :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
        ! =1 if fine-fine  =0 coarse-fine
-      REAL_T, intent(in),target :: masknbr(DIMV(masknbr))  
+      REAL_T, INTENT(in),target :: masknbr(DIMV(masknbr))  
       REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout),target :: fluxtarg(DIMV(fluxtarg),ncomp_flux) 
+      REAL_T, INTENT(inout),target :: fluxtarg(DIMV(fluxtarg),ncomp_flux) 
       REAL_T, pointer :: fluxtarg_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout),target :: fluxhold(DIMV(fluxhold),ncomp_flux) 
+      REAL_T, INTENT(inout),target :: fluxhold(DIMV(fluxhold),ncomp_flux) 
       REAL_T, pointer :: fluxhold_ptr(D_DECL(:,:,:),:)
       INTEGER_T i,j,k
       INTEGER_T iface,jface,kface
@@ -6886,67 +6886,67 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: ncomp_sum_int_user1
-      INTEGER_T, intent(in) :: ncomp_sum_int_user2
+      INTEGER_T, INTENT(in) :: ncomp_sum_int_user1
+      INTEGER_T, INTENT(in) :: ncomp_sum_int_user2
       INTEGER_T :: ncomp_sum_int_user12
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: adapt_quad_depth
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: adapt_quad_depth
       INTEGER_T :: max_level_adapt
-      INTEGER_T, intent(in) :: slice_dir
-      REAL_T, intent(in) :: xslice(SDIM)
-      INTEGER_T, intent(in) :: resultsize
-      INTEGER_T, intent(in) :: den_ncomp
-      INTEGER_T, intent(in) :: isweep  ! isweep=0 or 1
-      INTEGER_T, intent(in) :: coflow_num_cells,Z_dir,R_dir
-      REAL_T, intent(out) :: coflow_Z(0:coflow_num_cells)
-      REAL_T, intent(out) :: coflow_R_of_Z(0:coflow_num_cells)
+      INTEGER_T, INTENT(in) :: slice_dir
+      REAL_T, INTENT(in) :: xslice(SDIM)
+      INTEGER_T, INTENT(in) :: resultsize
+      INTEGER_T, INTENT(in) :: den_ncomp
+      INTEGER_T, INTENT(in) :: isweep  ! isweep=0 or 1
+      INTEGER_T, INTENT(in) :: coflow_num_cells,Z_dir,R_dir
+      REAL_T, INTENT(out) :: coflow_Z(0:coflow_num_cells)
+      REAL_T, INTENT(out) :: coflow_R_of_Z(0:coflow_num_cells)
 
-      REAL_T, intent(in), target :: problo(SDIM)
-      REAL_T, intent(in), target :: probhi(SDIM)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in), target :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in), target :: fablo(SDIM),fabhi(SDIM)
+      REAL_T, INTENT(in), target :: problo(SDIM)
+      REAL_T, INTENT(in), target :: probhi(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in), target :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: DIMDEC(cellten)
-      INTEGER_T, intent(in) :: DIMDEC(lsfab)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: DIMDEC(maskSEM)
-      INTEGER_T, intent(in) :: DIMDEC(drag)
-      INTEGER_T, intent(in) :: DIMDEC(slopes)
-      INTEGER_T, intent(in) :: DIMDEC(den)
-      INTEGER_T, intent(in) :: DIMDEC(vel)
-      INTEGER_T, intent(in) :: DIMDEC(visco)
-      REAL_T, intent(inout) ::  local_result(resultsize)
-      REAL_T, intent(in) ::  resultALL(resultsize)
-      INTEGER_T, intent(in) :: sumdata_type(resultsize)
-      INTEGER_T, intent(in) :: sumdata_sweep(resultsize)
-      REAL_T, intent(in) ::  time
-      REAL_T, intent(in), target :: cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)  
+      INTEGER_T, INTENT(in) :: DIMDEC(cellten)
+      INTEGER_T, INTENT(in) :: DIMDEC(lsfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskSEM)
+      INTEGER_T, INTENT(in) :: DIMDEC(drag)
+      INTEGER_T, INTENT(in) :: DIMDEC(slopes)
+      INTEGER_T, INTENT(in) :: DIMDEC(den)
+      INTEGER_T, INTENT(in) :: DIMDEC(vel)
+      INTEGER_T, INTENT(in) :: DIMDEC(visco)
+      REAL_T, INTENT(inout) ::  local_result(resultsize)
+      REAL_T, INTENT(in) ::  resultALL(resultsize)
+      INTEGER_T, INTENT(in) :: sumdata_type(resultsize)
+      INTEGER_T, INTENT(in) :: sumdata_sweep(resultsize)
+      REAL_T, INTENT(in) ::  time
+      REAL_T, INTENT(in), target :: cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)  
       REAL_T, pointer :: cellten_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: lsfab(DIMV(lsfab),num_materials)  
+      REAL_T, INTENT(in), target :: lsfab(DIMV(lsfab),num_materials)  
       REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target ::  maskSEM(DIMV(maskSEM))
+      REAL_T, INTENT(in), target ::  maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target ::  mask(DIMV(mask))
+      REAL_T, INTENT(in), target ::  mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target ::  drag(DIMV(drag),N_DRAG)
+      REAL_T, INTENT(in), target ::  drag(DIMV(drag),N_DRAG)
       REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: slopes(DIMV(slopes),num_materials*ngeom_recon)  
+      REAL_T, INTENT(in), target :: slopes(DIMV(slopes),num_materials*ngeom_recon)  
       REAL_T, pointer :: slopes_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: den(DIMV(den),den_ncomp)  
+      REAL_T, INTENT(in), target :: den(DIMV(den),den_ncomp)  
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
       ! includes pressure 
-      REAL_T, intent(in), target ::  &
+      REAL_T, INTENT(in), target ::  &
           vel(DIMV(vel),STATE_NCOMP_VEL+STATE_NCOMP_PRES) 
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: visco(DIMV(visco), &
+      REAL_T, INTENT(in), target :: visco(DIMV(visco), &
          ENUM_NUM_TENSOR_TYPE*num_materials_viscoelastic) 
       REAL_T, pointer :: visco_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: xlo(SDIM),dx(SDIM)
+      REAL_T, INTENT(in), target :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
@@ -7952,7 +7952,7 @@ END SUBROUTINE SIMP
 
       use probcommon_module
       IMPLICIT NONE
-      INTEGER_T, intent(out) :: cpp_number_regions
+      INTEGER_T, INTENT(out) :: cpp_number_regions
 
       cpp_number_regions=number_of_source_regions
 
@@ -7972,15 +7972,15 @@ END SUBROUTINE SIMP
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: isweep
-      REAL_T, intent(inout) :: cpp_energy_per_kelvin(number_of_source_regions)
-      REAL_T, intent(inout) :: cpp_mass(number_of_source_regions)
-      REAL_T, intent(inout) :: cpp_energy(number_of_source_regions)
-      REAL_T, intent(inout) :: cpp_volume(number_of_source_regions)
-      REAL_T, intent(inout) :: cpp_volume_raster(number_of_source_regions)
-      REAL_T, intent(inout) :: cpp_mass_after(number_of_source_regions)
-      REAL_T, intent(inout) :: cpp_energy_after(number_of_source_regions)
-      REAL_T, intent(inout) :: cpp_volume_after(number_of_source_regions)
+      INTEGER_T, INTENT(in) :: isweep
+      REAL_T, INTENT(inout) :: cpp_energy_per_kelvin(number_of_source_regions)
+      REAL_T, INTENT(inout) :: cpp_mass(number_of_source_regions)
+      REAL_T, INTENT(inout) :: cpp_energy(number_of_source_regions)
+      REAL_T, INTENT(inout) :: cpp_volume(number_of_source_regions)
+      REAL_T, INTENT(inout) :: cpp_volume_raster(number_of_source_regions)
+      REAL_T, INTENT(inout) :: cpp_mass_after(number_of_source_regions)
+      REAL_T, INTENT(inout) :: cpp_energy_after(number_of_source_regions)
+      REAL_T, INTENT(inout) :: cpp_volume_after(number_of_source_regions)
       INTEGER_T iregions
 
       do iregions=1,number_of_source_regions
@@ -8024,15 +8024,15 @@ END SUBROUTINE SIMP
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: isweep
-      REAL_T, intent(inout) :: cpp_energy_per_kelvin(number_of_source_regions)
-      REAL_T, intent(inout) :: cpp_mass(number_of_source_regions)
-      REAL_T, intent(inout) :: cpp_energy(number_of_source_regions)
-      REAL_T, intent(inout) :: cpp_volume(number_of_source_regions)
-      REAL_T, intent(inout) :: cpp_volume_raster(number_of_source_regions)
-      REAL_T, intent(inout) :: cpp_mass_after(number_of_source_regions)
-      REAL_T, intent(inout) :: cpp_energy_after(number_of_source_regions)
-      REAL_T, intent(inout) :: cpp_volume_after(number_of_source_regions)
+      INTEGER_T, INTENT(in) :: isweep
+      REAL_T, INTENT(inout) :: cpp_energy_per_kelvin(number_of_source_regions)
+      REAL_T, INTENT(inout) :: cpp_mass(number_of_source_regions)
+      REAL_T, INTENT(inout) :: cpp_energy(number_of_source_regions)
+      REAL_T, INTENT(inout) :: cpp_volume(number_of_source_regions)
+      REAL_T, INTENT(inout) :: cpp_volume_raster(number_of_source_regions)
+      REAL_T, INTENT(inout) :: cpp_mass_after(number_of_source_regions)
+      REAL_T, INTENT(inout) :: cpp_energy_after(number_of_source_regions)
+      REAL_T, INTENT(inout) :: cpp_volume_after(number_of_source_regions)
       INTEGER_T iregions
 
       do iregions=1,number_of_source_regions
@@ -8069,7 +8069,7 @@ END SUBROUTINE SIMP
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: isweep
+      INTEGER_T, INTENT(in) :: isweep
 
       INTEGER_T ithreads,iregions
 
@@ -8161,51 +8161,51 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tid_current
-      INTEGER_T, intent(in) :: isweep ! isweep=0 or 1
-      INTEGER_T, intent(in) :: nstate
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      REAL_T, intent(in) :: cur_time
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xlo(SDIM)
-      INTEGER_T, intent(in) :: constant_density_all_time(num_materials)
+      INTEGER_T, INTENT(in) :: tid_current
+      INTEGER_T, INTENT(in) :: isweep ! isweep=0 or 1
+      INTEGER_T, INTENT(in) :: nstate
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      REAL_T, INTENT(in) :: cur_time
+      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials)
 
-      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
       INTEGER_T :: growlo(3), growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(snew)
-      INTEGER_T, intent(in) :: DIMDEC(umacnew)
-      INTEGER_T, intent(in) :: DIMDEC(vmacnew)
-      INTEGER_T, intent(in) :: DIMDEC(wmacnew)
-      INTEGER_T, intent(in) :: DIMDEC(mdot)
-      INTEGER_T, intent(in) :: DIMDEC(DEN)
-      INTEGER_T, intent(in) :: DIMDEC(VOF)
-      INTEGER_T, intent(in) :: DIMDEC(volumefab)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: DIMDEC(snew)
+      INTEGER_T, INTENT(in) :: DIMDEC(umacnew)
+      INTEGER_T, INTENT(in) :: DIMDEC(vmacnew)
+      INTEGER_T, INTENT(in) :: DIMDEC(wmacnew)
+      INTEGER_T, INTENT(in) :: DIMDEC(mdot)
+      INTEGER_T, INTENT(in) :: DIMDEC(DEN)
+      INTEGER_T, INTENT(in) :: DIMDEC(VOF)
+      INTEGER_T, INTENT(in) :: DIMDEC(volumefab)
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
 
-      REAL_T, intent(inout), target :: snew(DIMV(snew),nstate)
+      REAL_T, INTENT(inout), target :: snew(DIMV(snew),nstate)
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(inout), target :: umacnew(DIMV(umacnew))
+      REAL_T, INTENT(inout), target :: umacnew(DIMV(umacnew))
       REAL_T, pointer :: umacnew_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: vmacnew(DIMV(vmacnew))
+      REAL_T, INTENT(inout), target :: vmacnew(DIMV(vmacnew))
       REAL_T, pointer :: vmacnew_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: wmacnew(DIMV(wmacnew))
+      REAL_T, INTENT(inout), target :: wmacnew(DIMV(wmacnew))
       REAL_T, pointer :: wmacnew_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(inout), target :: mdot(DIMV(mdot))
+      REAL_T, INTENT(inout), target :: mdot(DIMV(mdot))
       REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in), target :: DEN(DIMV(DEN),num_materials*num_state_material)
+      REAL_T, INTENT(in), target :: DEN(DIMV(DEN),num_materials*num_state_material)
       REAL_T, pointer :: DEN_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: VOF(DIMV(VOF),num_materials*ngeom_recon)
+      REAL_T, INTENT(in), target :: VOF(DIMV(VOF),num_materials*ngeom_recon)
       REAL_T, pointer :: VOF_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: volumefab(DIMV(volumefab))
+      REAL_T, INTENT(in), target :: volumefab(DIMV(volumefab))
       REAL_T, pointer :: volumefab_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: mask(DIMV(mask))
+      REAL_T, INTENT(in), target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
 
       INTEGER_T :: i,j,k
@@ -8977,23 +8977,23 @@ END SUBROUTINE SIMP
 
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: nsolve
-       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T, INTENT(in) :: nsolve
+       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T :: growlo(3),growhi(3)
-       INTEGER_T, intent(in) :: bfact
-       INTEGER_T, intent(in) :: DIMDEC(fabx)
-       INTEGER_T, intent(in) :: DIMDEC(faby)
-       INTEGER_T, intent(in) :: DIMDEC(fabz)
-       INTEGER_T, intent(in) :: DIMDEC(mask)
-       REAL_T, intent(in) :: beta
-       REAL_T, intent(in), target :: fabx(DIMV(fabx),nsolve)
-       REAL_T, intent(in), target :: faby(DIMV(faby),nsolve)
+       INTEGER_T, INTENT(in) :: bfact
+       INTEGER_T, INTENT(in) :: DIMDEC(fabx)
+       INTEGER_T, INTENT(in) :: DIMDEC(faby)
+       INTEGER_T, INTENT(in) :: DIMDEC(fabz)
+       INTEGER_T, INTENT(in) :: DIMDEC(mask)
+       REAL_T, INTENT(in) :: beta
+       REAL_T, INTENT(in), target :: fabx(DIMV(fabx),nsolve)
+       REAL_T, INTENT(in), target :: faby(DIMV(faby),nsolve)
 
-       REAL_T, intent(out), target :: fabz(DIMV(fabz),nsolve)
+       REAL_T, INTENT(out), target :: fabz(DIMV(fabz),nsolve)
        REAL_T, pointer :: fabz_ptr(D_DECL(:,:,:),:)
 
-       REAL_T, intent(in), target :: mask(DIMV(mask))
+       REAL_T, INTENT(in), target :: mask(DIMV(mask))
 
        INTEGER_T local_mask
        INTEGER_T :: nc
@@ -9063,22 +9063,22 @@ END SUBROUTINE SIMP
  
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: levelno,gridno
-       INTEGER_T, intent(in) :: nsolve
-       INTEGER_T, intent(in) :: debug_dot_product
+       INTEGER_T, INTENT(in) :: levelno,gridno
+       INTEGER_T, INTENT(in) :: nsolve
+       INTEGER_T, INTENT(in) :: debug_dot_product
        INTEGER_T imax,jmax,kmax
        REAL_T dotmax
-       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T growlo(3),growhi(3)
-       INTEGER_T, intent(in) :: bfact
-       INTEGER_T, intent(in) :: DIMDEC(rho)
-       INTEGER_T, intent(in) :: DIMDEC(rho2)
-       INTEGER_T, intent(in) :: DIMDEC(mask)
-       REAL_T, intent(out) :: mass1
-       REAL_T, intent(in), target :: rho(DIMV(rho),nsolve)
-       REAL_T, intent(in), target :: rho2(DIMV(rho2),nsolve)
-       REAL_T, intent(in), target :: mask(DIMV(mask))
+       INTEGER_T, INTENT(in) :: bfact
+       INTEGER_T, INTENT(in) :: DIMDEC(rho)
+       INTEGER_T, INTENT(in) :: DIMDEC(rho2)
+       INTEGER_T, INTENT(in) :: DIMDEC(mask)
+       REAL_T, INTENT(out) :: mass1
+       REAL_T, INTENT(in), target :: rho(DIMV(rho),nsolve)
+       REAL_T, INTENT(in), target :: rho2(DIMV(rho2),nsolve)
+       REAL_T, INTENT(in), target :: mask(DIMV(mask))
        REAL_T :: dm
        INTEGER_T local_mask
 
@@ -9183,28 +9183,28 @@ END SUBROUTINE SIMP
  
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: project_option
-       INTEGER_T, intent(in) :: color_count
-       REAL_T, intent(inout) :: fab_sum(color_count)
-       INTEGER_T, intent(inout) :: fab_flag(color_count)
-       INTEGER_T, intent(in) :: levelno,gridno
-       INTEGER_T, intent(in) :: nsolve
-       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T, INTENT(in) :: project_option
+       INTEGER_T, INTENT(in) :: color_count
+       REAL_T, INTENT(inout) :: fab_sum(color_count)
+       INTEGER_T, INTENT(inout) :: fab_flag(color_count)
+       INTEGER_T, INTENT(in) :: levelno,gridno
+       INTEGER_T, INTENT(in) :: nsolve
+       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T growlo(3),growhi(3)
-       INTEGER_T, intent(in) :: bfact
-       INTEGER_T, intent(in) :: DIMDEC(ones_fab)
-       INTEGER_T, intent(in) :: DIMDEC(type_fab)
-       INTEGER_T, intent(in) :: DIMDEC(color_fab)
-       INTEGER_T, intent(in) :: DIMDEC(alpha_fab)
-       INTEGER_T, intent(in) :: DIMDEC(mask_fab)
-       REAL_T, intent(in),target :: ones_fab(DIMV(ones_fab))
-       REAL_T, intent(in), target :: type_fab(DIMV(type_fab))
-       REAL_T, intent(in), target :: color_fab(DIMV(color_fab))
-       REAL_T, intent(in), target :: alpha_fab(DIMV(alpha_fab),nsolve)
-       REAL_T, intent(in), target :: mask_fab(DIMV(mask_fab))
-       INTEGER_T, intent(in) :: presbc(SDIM,2)
-       INTEGER_T, intent(in) :: type_flag(2)
+       INTEGER_T, INTENT(in) :: bfact
+       INTEGER_T, INTENT(in) :: DIMDEC(ones_fab)
+       INTEGER_T, INTENT(in) :: DIMDEC(type_fab)
+       INTEGER_T, INTENT(in) :: DIMDEC(color_fab)
+       INTEGER_T, INTENT(in) :: DIMDEC(alpha_fab)
+       INTEGER_T, INTENT(in) :: DIMDEC(mask_fab)
+       REAL_T, INTENT(in),target :: ones_fab(DIMV(ones_fab))
+       REAL_T, INTENT(in), target :: type_fab(DIMV(type_fab))
+       REAL_T, INTENT(in), target :: color_fab(DIMV(color_fab))
+       REAL_T, INTENT(in), target :: alpha_fab(DIMV(alpha_fab),nsolve)
+       REAL_T, INTENT(in), target :: mask_fab(DIMV(mask_fab))
+       INTEGER_T, INTENT(in) :: presbc(SDIM,2)
+       INTEGER_T, INTENT(in) :: type_flag(2)
 
        INTEGER_T icolor,nc
        INTEGER_T i,j,k
@@ -9423,30 +9423,30 @@ END SUBROUTINE SIMP
  
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: project_option
-       INTEGER_T, intent(in) :: color_count
-       REAL_T, intent(inout) :: fab_sum(color_count)
-       INTEGER_T, intent(in) :: fab_flag(color_count)
-       INTEGER_T, intent(in) :: levelno,gridno
-       INTEGER_T, intent(in) :: nsolve
-       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T, INTENT(in) :: project_option
+       INTEGER_T, INTENT(in) :: color_count
+       REAL_T, INTENT(inout) :: fab_sum(color_count)
+       INTEGER_T, INTENT(in) :: fab_flag(color_count)
+       INTEGER_T, INTENT(in) :: levelno,gridno
+       INTEGER_T, INTENT(in) :: nsolve
+       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T growlo(3),growhi(3)
-       INTEGER_T, intent(in) :: bfact
-       INTEGER_T, intent(in) :: DIMDEC(data_fab)
-       INTEGER_T, intent(in) :: DIMDEC(ones_fab)
-       INTEGER_T, intent(in) :: DIMDEC(type_fab)
-       INTEGER_T, intent(in) :: DIMDEC(color_fab)
-       INTEGER_T, intent(in) :: DIMDEC(alpha_fab)
-       INTEGER_T, intent(in) :: DIMDEC(mask_fab)
-       REAL_T, intent(in), target :: data_fab(DIMV(data_fab))
-       REAL_T, intent(in), target :: ones_fab(DIMV(ones_fab))
-       REAL_T, intent(in), target :: type_fab(DIMV(type_fab))
-       REAL_T, intent(in), target :: color_fab(DIMV(color_fab))
-       REAL_T, intent(in), target :: alpha_fab(DIMV(alpha_fab),nsolve)
-       REAL_T, intent(in), target :: mask_fab(DIMV(mask_fab))
-       INTEGER_T, intent(in) :: presbc(SDIM,2)
-       INTEGER_T, intent(in) :: type_flag(2)
+       INTEGER_T, INTENT(in) :: bfact
+       INTEGER_T, INTENT(in) :: DIMDEC(data_fab)
+       INTEGER_T, INTENT(in) :: DIMDEC(ones_fab)
+       INTEGER_T, INTENT(in) :: DIMDEC(type_fab)
+       INTEGER_T, INTENT(in) :: DIMDEC(color_fab)
+       INTEGER_T, INTENT(in) :: DIMDEC(alpha_fab)
+       INTEGER_T, INTENT(in) :: DIMDEC(mask_fab)
+       REAL_T, INTENT(in), target :: data_fab(DIMV(data_fab))
+       REAL_T, INTENT(in), target :: ones_fab(DIMV(ones_fab))
+       REAL_T, INTENT(in), target :: type_fab(DIMV(type_fab))
+       REAL_T, INTENT(in), target :: color_fab(DIMV(color_fab))
+       REAL_T, INTENT(in), target :: alpha_fab(DIMV(alpha_fab),nsolve)
+       REAL_T, INTENT(in), target :: mask_fab(DIMV(mask_fab))
+       INTEGER_T, INTENT(in) :: presbc(SDIM,2)
+       INTEGER_T, INTENT(in) :: type_flag(2)
 
        INTEGER_T icolor,nc
        INTEGER_T i,j,k
@@ -9681,33 +9681,33 @@ END SUBROUTINE SIMP
  
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: project_option
-       INTEGER_T, intent(in) :: color_count
-       REAL_T, intent(in) :: beta(color_count)
-       INTEGER_T, intent(in) :: singular_patch_flag(color_count)
-       INTEGER_T, intent(in) :: levelno,gridno
-       INTEGER_T, intent(in) :: nsolve
-       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T, INTENT(in) :: project_option
+       INTEGER_T, INTENT(in) :: color_count
+       REAL_T, INTENT(in) :: beta(color_count)
+       INTEGER_T, INTENT(in) :: singular_patch_flag(color_count)
+       INTEGER_T, INTENT(in) :: levelno,gridno
+       INTEGER_T, INTENT(in) :: nsolve
+       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T growlo(3),growhi(3)
-       INTEGER_T, intent(in) :: bfact
-       INTEGER_T, intent(in) :: DIMDEC(data_fab)
-       INTEGER_T, intent(in) :: DIMDEC(ones_fab)
-       INTEGER_T, intent(in) :: DIMDEC(type_fab)
-       INTEGER_T, intent(in) :: DIMDEC(color_fab)
-       INTEGER_T, intent(in) :: DIMDEC(alpha_fab)
-       INTEGER_T, intent(in) :: DIMDEC(mask_fab)
+       INTEGER_T, INTENT(in) :: bfact
+       INTEGER_T, INTENT(in) :: DIMDEC(data_fab)
+       INTEGER_T, INTENT(in) :: DIMDEC(ones_fab)
+       INTEGER_T, INTENT(in) :: DIMDEC(type_fab)
+       INTEGER_T, INTENT(in) :: DIMDEC(color_fab)
+       INTEGER_T, INTENT(in) :: DIMDEC(alpha_fab)
+       INTEGER_T, INTENT(in) :: DIMDEC(mask_fab)
 
-       REAL_T, intent(inout), target :: data_fab(DIMV(data_fab))
+       REAL_T, INTENT(inout), target :: data_fab(DIMV(data_fab))
        REAL_T, pointer :: data_fab_ptr(D_DECL(:,:,:))
 
-       REAL_T, intent(in), target :: ones_fab(DIMV(ones_fab))
-       REAL_T, intent(in), target :: type_fab(DIMV(type_fab))
-       REAL_T, intent(in), target :: color_fab(DIMV(color_fab))
-       REAL_T, intent(in), target :: alpha_fab(DIMV(alpha_fab),nsolve)
-       REAL_T, intent(in), target :: mask_fab(DIMV(mask_fab))
-       INTEGER_T, intent(in) :: presbc(SDIM,2)
-       INTEGER_T, intent(in) :: type_flag(2)
+       REAL_T, INTENT(in), target :: ones_fab(DIMV(ones_fab))
+       REAL_T, INTENT(in), target :: type_fab(DIMV(type_fab))
+       REAL_T, INTENT(in), target :: color_fab(DIMV(color_fab))
+       REAL_T, INTENT(in), target :: alpha_fab(DIMV(alpha_fab),nsolve)
+       REAL_T, INTENT(in), target :: mask_fab(DIMV(mask_fab))
+       INTEGER_T, INTENT(in) :: presbc(SDIM,2)
+       INTEGER_T, INTENT(in) :: type_flag(2)
 
        INTEGER_T nc
        INTEGER_T i,j,k
@@ -9970,30 +9970,30 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: gravity_dir_parm
-      INTEGER_T, intent(in) :: isweep
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(in) :: gravity_normalized  
-      REAL_T, intent(in) :: angular_velocity
-      INTEGER_T, intent(in) :: DIMDEC(presden)
-      INTEGER_T, intent(in) :: DIMDEC(state)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: gravity_dir_parm
+      INTEGER_T, INTENT(in) :: isweep
+      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(in) :: gravity_normalized  
+      REAL_T, INTENT(in) :: angular_velocity
+      INTEGER_T, INTENT(in) :: DIMDEC(presden)
+      INTEGER_T, INTENT(in) :: DIMDEC(state)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: domlo(SDIM),domhi(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
        ! pressure bc at exterior walls
-      INTEGER_T, intent(in) :: dombcpres(SDIM,2) 
+      INTEGER_T, INTENT(in) :: dombcpres(SDIM,2) 
        ! presbc at int or ext.
-      INTEGER_T, intent(in) :: presbc_arr(SDIM,2) 
+      INTEGER_T, INTENT(in) :: presbc_arr(SDIM,2) 
 
        !HYDROSTATIC_PRESSURE,HYDROSTATIC_DENSITY
-      REAL_T, intent(inout),target :: presden(DIMV(presden),2) 
+      REAL_T, INTENT(inout),target :: presden(DIMV(presden),2) 
       REAL_T, pointer :: presden_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: state(DIMV(state),num_materials*num_state_material) 
+      REAL_T, INTENT(in),target :: state(DIMV(state),num_materials*num_state_material) 
       REAL_T, pointer :: state_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
 
       REAL_T den_cell,pres_cell
 
@@ -10192,33 +10192,33 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(in) :: cur_time
-      INTEGER_T, intent(in) :: gravity_dir_parm
-      REAL_T, intent(in) :: gravity_normalized  
-      REAL_T, intent(in) :: angular_velocity
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: nstate
-      INTEGER_T, intent(in) :: dir
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(in) :: cur_time
+      INTEGER_T, INTENT(in) :: gravity_dir_parm
+      REAL_T, INTENT(in) :: gravity_normalized  
+      REAL_T, INTENT(in) :: angular_velocity
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: nstate
+      INTEGER_T, INTENT(in) :: dir
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(lsnew)
-      INTEGER_T, intent(in) :: DIMDEC(macnew)
-      INTEGER_T, intent(in) :: DIMDEC(facegrav)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: DIMDEC(xface)
+      INTEGER_T, INTENT(in) :: DIMDEC(lsnew)
+      INTEGER_T, INTENT(in) :: DIMDEC(macnew)
+      INTEGER_T, INTENT(in) :: DIMDEC(facegrav)
 
-      REAL_T, intent(in),target :: xface(DIMV(xface),FACECOMP_NCOMP)
+      REAL_T, INTENT(in),target :: xface(DIMV(xface),FACECOMP_NCOMP)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
+      REAL_T, INTENT(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
       REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout),target :: macnew(DIMV(macnew))
+      REAL_T, INTENT(inout),target :: macnew(DIMV(macnew))
       REAL_T, pointer :: macnew_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: facegrav(DIMV(facegrav))
+      REAL_T, INTENT(in),target :: facegrav(DIMV(facegrav))
       REAL_T, pointer :: facegrav_ptr(D_DECL(:,:,:))
  
       INTEGER_T i,j,k
@@ -10362,26 +10362,26 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: nden
-      INTEGER_T, intent(in) :: local_material_type(num_materials)
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: nden
+      INTEGER_T, INTENT(in) :: local_material_type(num_materials)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, INTENT(in) :: bfact
     
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
 
-      INTEGER_T, intent(in) :: DIMDEC(pres)
-      INTEGER_T, intent(in) :: DIMDEC(levelpc)
-      INTEGER_T, intent(in) :: DIMDEC(den)
-      REAL_T, intent(inout), target :: pres(DIMV(pres))
+      INTEGER_T, INTENT(in) :: DIMDEC(pres)
+      INTEGER_T, INTENT(in) :: DIMDEC(levelpc)
+      INTEGER_T, INTENT(in) :: DIMDEC(den)
+      REAL_T, INTENT(inout), target :: pres(DIMV(pres))
       REAL_T, pointer :: pres_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: levelpc(DIMV(levelpc),num_materials*(1+SDIM))
+      REAL_T, INTENT(in), target :: levelpc(DIMV(levelpc),num_materials*(1+SDIM))
       REAL_T, pointer :: levelpc_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: den(DIMV(den),nden) ! den,temp,Y
+      REAL_T, INTENT(in), target :: den(DIMV(den),nden) ! den,temp,Y
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T i,j,k
@@ -10507,14 +10507,14 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: fdomlo(SDIM)
-      INTEGER_T, intent(in) :: fdomhi(SDIM)
-      INTEGER_T, intent(inout) :: Z_dir !0..sdim-1
-      INTEGER_T, intent(inout) :: R_dir !0..sdim-1
-      INTEGER_T, intent(inout) :: num_cells;
-      REAL_T, intent(inout) :: coflow_Z(0:num_cells)
-      REAL_T, intent(inout) :: coflow_R_of_Z(0:num_cells)
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: fdomlo(SDIM)
+      INTEGER_T, INTENT(in) :: fdomhi(SDIM)
+      INTEGER_T, INTENT(inout) :: Z_dir !0..sdim-1
+      INTEGER_T, INTENT(inout) :: R_dir !0..sdim-1
+      INTEGER_T, INTENT(inout) :: num_cells;
+      REAL_T, INTENT(inout) :: coflow_Z(0:num_cells)
+      REAL_T, INTENT(inout) :: coflow_R_of_Z(0:num_cells)
       REAL_T R_of_Z_MASK(0:num_cells)
       REAL_T major,minor,wavelength,amplitude,minrad
       REAL_T masklo,maskhi,HH,SS
@@ -10689,25 +10689,25 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: velflag
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level_f
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact_f
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T, INTENT(in) :: velflag
+      INTEGER_T, INTENT(in) :: level_c
+      INTEGER_T, INTENT(in) :: level_f
+      INTEGER_T, INTENT(in) :: bfact_c
+      INTEGER_T, INTENT(in) :: bfact_f
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM)
+      REAL_T, INTENT(in) :: xlo_fine(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: ncomp
+      INTEGER_T, INTENT(in) :: DIMDEC(crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, INTENT(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, target, intent(out) :: crse(DIMV(crse),ncomp)
+      REAL_T, target, INTENT(out) :: crse(DIMV(crse),ncomp)
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
-      REAL_T, target, intent(in) :: fine(DIMV(fine),ncomp)
+      REAL_T, target, INTENT(in) :: fine(DIMV(fine),ncomp)
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
@@ -10720,7 +10720,7 @@ END SUBROUTINE SIMP
       REAL_T crse_value(ncomp)
       INTEGER_T fine_test
       INTEGER_T coarse_test
-      REAL_T velwt(nten)
+      REAL_T velwt(num_interfaces)
       INTEGER_T local_comp
       INTEGER_T avgdown_sweep
       INTEGER_T ncomp_expect
@@ -10734,7 +10734,7 @@ END SUBROUTINE SIMP
        print *,"velflag invalid"
        stop
       endif
-      ncomp_expect=nten+nten*ncomp_per_interface
+      ncomp_expect=num_interfaces+num_interfaces*ncomp_per_interface
 
       if (ncomp.eq.ncomp_expect) then
        ! do nothing
@@ -10782,7 +10782,7 @@ END SUBROUTINE SIMP
 
        do avgdown_sweep=0,1
 
-        do iten=1,nten
+        do iten=1,num_interfaces
          velwt(iten)=zero
         enddo
         voltotal=zero
@@ -10807,7 +10807,7 @@ END SUBROUTINE SIMP
                stop
               endif
 
-              do iten=1,nten
+              do iten=1,num_interfaces
                fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),iten))
                coarse_test=NINT(crse_value(iten)) ! crse_value init to 0
 
@@ -10845,7 +10845,7 @@ END SUBROUTINE SIMP
                  else if (fine_test.eq.coarse_test) then
                   velwt(iten)=velwt(iten)+volall
                   do dir2=1,ncomp_per_interface
-                   local_comp=nten+(iten-1)*ncomp_per_interface+dir2
+                   local_comp=num_interfaces+(iten-1)*ncomp_per_interface+dir2
                    crse_value(local_comp)=crse_value(local_comp)+ &
                     volall*fine(D_DECL(ifine,jfine,kfine),local_comp)
                   enddo
@@ -10861,7 +10861,7 @@ END SUBROUTINE SIMP
                 print *,"avgdown_sweep invalid"
                 stop
                endif
-              enddo ! iten=1..nten
+              enddo ! iten=1..num_interfaces
 
               voltotal=voltotal+volall
              endif ! wt(sdim).gt.0
@@ -10880,7 +10880,7 @@ END SUBROUTINE SIMP
          ! do nothing
         else if (avgdown_sweep.eq.1) then
 
-         do iten=1,nten
+         do iten=1,num_interfaces
 
           coarse_test=NINT(crse_value(iten))
           if (coarse_test.eq.0) then
@@ -10892,15 +10892,15 @@ END SUBROUTINE SIMP
            endif
            crse(D_DECL(ic,jc,kc),iten)=zero
            do dir2=1,ncomp_per_interface
-            crse(D_DECL(ic,jc,kc),nten+(iten-1)*ncomp_per_interface+dir2)=zero
+            crse(D_DECL(ic,jc,kc),num_interfaces+(iten-1)*ncomp_per_interface+dir2)=zero
            enddo
           else if ((coarse_test.eq.1).or. &
                    (coarse_test.eq.-1)) then
            if (velwt(iten).gt.zero) then
             crse(D_DECL(ic,jc,kc),iten)=coarse_test
             do dir2=1,ncomp_per_interface
-             crse(D_DECL(ic,jc,kc),nten+(iten-1)*ncomp_per_interface+dir2)= &
-              crse_value(nten+(iten-1)*ncomp_per_interface+dir2)/velwt(iten)
+             crse(D_DECL(ic,jc,kc),num_interfaces+(iten-1)*ncomp_per_interface+dir2)= &
+              crse_value(num_interfaces+(iten-1)*ncomp_per_interface+dir2)/velwt(iten)
             enddo
            else
             print *,"velwt invalid"
@@ -10911,7 +10911,7 @@ END SUBROUTINE SIMP
            stop
           endif
 
-         enddo ! iten=1..nten
+         enddo ! iten=1..num_interfaces
 
         else 
          print *,"avgdown_sweep invalid"
@@ -10951,24 +10951,24 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level_f
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact_f
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T, INTENT(in) :: level_c
+      INTEGER_T, INTENT(in) :: level_f
+      INTEGER_T, INTENT(in) :: bfact_c
+      INTEGER_T, INTENT(in) :: bfact_f
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM)
+      REAL_T, INTENT(in) :: xlo_fine(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: ncomp
+      INTEGER_T, INTENT(in) :: DIMDEC(crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, INTENT(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, target, intent(out) :: crse(DIMV(crse),ncomp)
+      REAL_T, target, INTENT(out) :: crse(DIMV(crse),ncomp)
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
-      REAL_T, target, intent(in) :: fine(DIMV(fine),ncomp)
+      REAL_T, target, INTENT(in) :: fine(DIMV(fine),ncomp)
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
@@ -11307,65 +11307,65 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: velcomp
+      INTEGER_T, INTENT(in) :: level,finest_level
+      INTEGER_T, INTENT(in) :: velcomp
       INTEGER_T :: veldir
-      INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: project_option
-      INTEGER_T, intent(in) :: DIMDEC(maskcov)
-      INTEGER_T, intent(in) :: DIMDEC(xface)
-      INTEGER_T, intent(in) :: DIMDEC(yface)
-      INTEGER_T, intent(in) :: DIMDEC(zface)
-      INTEGER_T, intent(in) :: DIMDEC(xgp)
-      INTEGER_T, intent(in) :: DIMDEC(ygp)
-      INTEGER_T, intent(in) :: DIMDEC(zgp)
-      INTEGER_T, intent(in) :: DIMDEC(xsrc)
-      INTEGER_T, intent(in) :: DIMDEC(ysrc)
-      INTEGER_T, intent(in) :: DIMDEC(zsrc)
-      INTEGER_T, intent(in) :: DIMDEC(xdest)
-      INTEGER_T, intent(in) :: DIMDEC(ydest)
-      INTEGER_T, intent(in) :: DIMDEC(zdest)
+      INTEGER_T, INTENT(in) :: nsolve
+      INTEGER_T, INTENT(in) :: project_option
+      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
+      INTEGER_T, INTENT(in) :: DIMDEC(xface)
+      INTEGER_T, INTENT(in) :: DIMDEC(yface)
+      INTEGER_T, INTENT(in) :: DIMDEC(zface)
+      INTEGER_T, INTENT(in) :: DIMDEC(xgp)
+      INTEGER_T, INTENT(in) :: DIMDEC(ygp)
+      INTEGER_T, INTENT(in) :: DIMDEC(zgp)
+      INTEGER_T, INTENT(in) :: DIMDEC(xsrc)
+      INTEGER_T, INTENT(in) :: DIMDEC(ysrc)
+      INTEGER_T, INTENT(in) :: DIMDEC(zsrc)
+      INTEGER_T, INTENT(in) :: DIMDEC(xdest)
+      INTEGER_T, INTENT(in) :: DIMDEC(ydest)
+      INTEGER_T, INTENT(in) :: DIMDEC(zdest)
 
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
+      INTEGER_T, INTENT(in) :: bfact
       INTEGER_T :: dir
-      INTEGER_T, intent(in) :: presbc_in(SDIM,2,nsolve)
+      INTEGER_T, INTENT(in) :: presbc_in(SDIM,2,nsolve)
 
-      REAL_T, intent(in), target :: maskcov(DIMV(maskcov))
+      REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: xface(DIMV(xface),FACECOMP_NCOMP)
+      REAL_T, INTENT(in), target :: xface(DIMV(xface),FACECOMP_NCOMP)
       REAL_T, pointer :: xface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: yface(DIMV(yface),FACECOMP_NCOMP)
+      REAL_T, INTENT(in), target :: yface(DIMV(yface),FACECOMP_NCOMP)
       REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in), target :: zface(DIMV(zface),FACECOMP_NCOMP)
+      REAL_T, INTENT(in), target :: zface(DIMV(zface),FACECOMP_NCOMP)
       REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: xgp(DIMV(xgp))
+      REAL_T, INTENT(in), target :: xgp(DIMV(xgp))
       REAL_T, pointer :: xgp_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: ygp(DIMV(ygp))
+      REAL_T, INTENT(in), target :: ygp(DIMV(ygp))
       REAL_T, pointer :: ygp_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: zgp(DIMV(zgp))
+      REAL_T, INTENT(in), target :: zgp(DIMV(zgp))
       REAL_T, pointer :: zgp_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in), target :: xsrc(DIMV(xsrc))
+      REAL_T, INTENT(in), target :: xsrc(DIMV(xsrc))
       REAL_T, pointer :: xsrc_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: ysrc(DIMV(ysrc))
+      REAL_T, INTENT(in), target :: ysrc(DIMV(ysrc))
       REAL_T, pointer :: ysrc_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: zsrc(DIMV(zsrc))
+      REAL_T, INTENT(in), target :: zsrc(DIMV(zsrc))
       REAL_T, pointer :: zsrc_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(out), target :: xdest(DIMV(xdest))
+      REAL_T, INTENT(out), target :: xdest(DIMV(xdest))
       REAL_T, pointer :: xdest_ptr(D_DECL(:,:,:))
-      REAL_T, intent(out), target :: ydest(DIMV(ydest))
+      REAL_T, INTENT(out), target :: ydest(DIMV(ydest))
       REAL_T, pointer :: ydest_ptr(D_DECL(:,:,:))
-      REAL_T, intent(out), target :: zdest(DIMV(zdest))
+      REAL_T, INTENT(out), target :: zdest(DIMV(zdest))
       REAL_T, pointer :: zdest_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      REAL_T, intent(in) :: dt
-      REAL_T, intent(in) :: cur_time
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(in) :: cur_time
  
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
@@ -11666,24 +11666,24 @@ END SUBROUTINE SIMP
        IMPLICIT NONE
 
        REAL_T :: local_diag
-       INTEGER_T, intent(in) :: bfact
-       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T, INTENT(in) :: bfact
+       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T :: growlo(3),growhi(3)
-       INTEGER_T, intent(in) :: DIMDEC(diag_reg)
-       INTEGER_T, intent(in) :: DIMDEC(resid)
-       INTEGER_T, intent(in) :: DIMDEC(xnew)
-       INTEGER_T, intent(in) :: DIMDEC(xold)
-       INTEGER_T, intent(in) :: DIMDEC(mask)
-       REAL_T, intent(in),target :: diag_reg(DIMV(diag_reg))
+       INTEGER_T, INTENT(in) :: DIMDEC(diag_reg)
+       INTEGER_T, INTENT(in) :: DIMDEC(resid)
+       INTEGER_T, INTENT(in) :: DIMDEC(xnew)
+       INTEGER_T, INTENT(in) :: DIMDEC(xold)
+       INTEGER_T, INTENT(in) :: DIMDEC(mask)
+       REAL_T, INTENT(in),target :: diag_reg(DIMV(diag_reg))
        REAL_T, pointer :: diag_reg_ptr(D_DECL(:,:,:))
-       REAL_T, intent(in),target :: resid(DIMV(resid))
+       REAL_T, INTENT(in),target :: resid(DIMV(resid))
        REAL_T, pointer :: resid_ptr(D_DECL(:,:,:))
-       REAL_T, intent(out),target :: xnew(DIMV(xnew))
+       REAL_T, INTENT(out),target :: xnew(DIMV(xnew))
        REAL_T, pointer :: xnew_ptr(D_DECL(:,:,:))
-       REAL_T, intent(in),target :: xold(DIMV(xold))
+       REAL_T, INTENT(in),target :: xold(DIMV(xold))
        REAL_T, pointer :: xold_ptr(D_DECL(:,:,:))
-       REAL_T, intent(in),target :: mask(DIMV(mask))
+       REAL_T, INTENT(in),target :: mask(DIMV(mask))
        REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
 
        INTEGER_T i,j,k
@@ -11756,19 +11756,19 @@ END SUBROUTINE SIMP
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: nsteps
-      INTEGER_T, intent(in) :: do_input
-      INTEGER_T, intent(in) :: visual_compare
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: visual_ncomp
-      INTEGER_T, intent(in) :: vislo(SDIM),vishi(SDIM) 
+      INTEGER_T, INTENT(in) :: nsteps
+      INTEGER_T, INTENT(in) :: do_input
+      INTEGER_T, INTENT(in) :: visual_compare
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: visual_ncomp
+      INTEGER_T, INTENT(in) :: vislo(SDIM),vishi(SDIM) 
 
-      INTEGER_T, intent(in) :: DIMDEC(fabin)
-      INTEGER_T, intent(in) :: DIMDEC(fabout)
+      INTEGER_T, INTENT(in) :: DIMDEC(fabin)
+      INTEGER_T, INTENT(in) :: DIMDEC(fabout)
        ! x,u,pmg,den,T,Y1..Yn,mag vort,LS
-      REAL_T, intent(inout),target :: fabout(DIMV(fabout),visual_ncomp) 
+      REAL_T, INTENT(inout),target :: fabout(DIMV(fabout),visual_ncomp) 
       REAL_T, pointer :: fabout_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout),target :: fabin(DIMV(fabin),visual_ncomp)
+      REAL_T, INTENT(inout),target :: fabin(DIMV(fabin),visual_ncomp)
       REAL_T, pointer :: fabin_ptr(D_DECL(:,:,:),:)
 
       REAL_T problo(SDIM),probhi(SDIM)
@@ -12225,9 +12225,9 @@ END SUBROUTINE SIMP
       use global_utility_module
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nsteps,nslice,nstate_slice,sliceint
-      REAL_T, intent(in) :: slice_data(nslice*nstate_slice)
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: nsteps,nslice,nstate_slice,sliceint
+      REAL_T, INTENT(in) :: slice_data(nslice*nstate_slice)
       INTEGER_T strandid
       INTEGER_T n
       INTEGER_T i
@@ -12308,16 +12308,16 @@ END SUBROUTINE SIMP
       use probf90_module
 
       IMPLICIT NONE
-      INTEGER_T, intent(in) :: bfact,level
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: bfact,level
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: domlo(SDIM), domhi(SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(u)
-      REAL_T, intent(inout),target :: u(DIMV(u),SDIM)
+      INTEGER_T, INTENT(in) :: domlo(SDIM), domhi(SDIM)
+      INTEGER_T, INTENT(in) :: DIMDEC(u)
+      REAL_T, INTENT(inout),target :: u(DIMV(u),SDIM)
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in) :: time
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k,dir
       REAL_T xx(SDIM)
@@ -12397,31 +12397,31 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: enable_spectral
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: spectral_override
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level_f
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact_f
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T, INTENT(in) :: enable_spectral
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: spectral_override
+      INTEGER_T, INTENT(in) :: level_c
+      INTEGER_T, INTENT(in) :: level_f
+      INTEGER_T, INTENT(in) :: bfact_c
+      INTEGER_T, INTENT(in) :: bfact_f
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM)
+      REAL_T, INTENT(in) :: xlo_fine(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: ncomp
+      INTEGER_T, INTENT(in) :: DIMDEC(crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, INTENT(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
       INTEGER_T mstenlo(3), mstenhi(3)
-      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, INTENT(in),target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-      REAL_T, intent(out),target :: crse(DIMV(crse),ncomp)
+      REAL_T, INTENT(out),target :: crse(DIMV(crse),ncomp)
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: fine(DIMV(fine),ncomp)
+      REAL_T, INTENT(in),target :: fine(DIMV(fine),ncomp)
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T flochi(SDIM)
       INTEGER_T ic,jc,kc
@@ -12749,24 +12749,24 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level_f
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact_f
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T, INTENT(in) :: level_c
+      INTEGER_T, INTENT(in) :: level_f
+      INTEGER_T, INTENT(in) :: bfact_c
+      INTEGER_T, INTENT(in) :: bfact_f
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM)
+      REAL_T, INTENT(in) :: xlo_fine(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: ncomp
+      INTEGER_T, INTENT(in) :: DIMDEC(crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, INTENT(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, intent(out),target :: crse(DIMV(crse),ncomp)
+      REAL_T, INTENT(out),target :: crse(DIMV(crse),ncomp)
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: fine(DIMV(fine),ncomp)
+      REAL_T, INTENT(in),target :: fine(DIMV(fine),ncomp)
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
@@ -12885,24 +12885,24 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level_f
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact_f
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T, INTENT(in) :: level_c
+      INTEGER_T, INTENT(in) :: level_f
+      INTEGER_T, INTENT(in) :: bfact_c
+      INTEGER_T, INTENT(in) :: bfact_f
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM)
+      REAL_T, INTENT(in) :: xlo_fine(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: ncomp
+      INTEGER_T, INTENT(in) :: DIMDEC(crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, INTENT(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, intent(out),target :: crse(DIMV(crse),ncomp)
+      REAL_T, INTENT(out),target :: crse(DIMV(crse),ncomp)
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: fine(DIMV(fine),ncomp)
+      REAL_T, INTENT(in),target :: fine(DIMV(fine),ncomp)
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
@@ -13057,24 +13057,24 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level_f
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact_f
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
-      INTEGER_T, intent(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
+      INTEGER_T, INTENT(in) :: level_c
+      INTEGER_T, INTENT(in) :: level_f
+      INTEGER_T, INTENT(in) :: bfact_c
+      INTEGER_T, INTENT(in) :: bfact_f
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM)
+      REAL_T, INTENT(in) :: xlo_fine(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: ncomp
+      INTEGER_T, INTENT(in) :: DIMDEC(crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
+      INTEGER_T, INTENT(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, intent(out),target :: crse(DIMV(crse),ncomp)
+      REAL_T, INTENT(out),target :: crse(DIMV(crse),ncomp)
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: fine(DIMV(fine),ncomp)
+      REAL_T, INTENT(in),target :: fine(DIMV(fine),ncomp)
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
@@ -13087,7 +13087,7 @@ END SUBROUTINE SIMP
       REAL_T crse_value(ncomp)
       INTEGER_T fine_test
       INTEGER_T coarse_test
-      REAL_T velwt(nten)
+      REAL_T velwt(num_interfaces)
       INTEGER_T icurv,istat
 
       if (ncomp.ne.num_interfaces*(SDIM+5)) then
@@ -13128,7 +13128,7 @@ END SUBROUTINE SIMP
        do n=1,ncomp
         crse_value(n)=zero
        enddo
-       do iten=1,nten
+       do iten=1,num_interfaces
         velwt(iten)=zero
        enddo
        voltotal=zero
@@ -13156,7 +13156,7 @@ END SUBROUTINE SIMP
               stop
              endif
 
-             do iten=1,nten
+             do iten=1,num_interfaces
               icurv=(iten-1)*(5+SDIM)
               istat=icurv+4+SDIM ! dir x side  dir=1..sdim side=-1 or 1
               fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),istat))
@@ -13197,7 +13197,7 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       do iten=1,nten
+       do iten=1,num_interfaces
         icurv=(iten-1)*(5+SDIM)
         istat=icurv+4+SDIM ! dir x side  dir=1..sdim side=-1 or 1
         coarse_test=NINT(crse_value(istat))
@@ -13226,7 +13226,7 @@ END SUBROUTINE SIMP
          stop
         endif
 
-       enddo ! iten=1..nten
+       enddo ! iten=1..num_interfaces
 
       enddo
       enddo
@@ -13254,23 +13254,23 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: bfact_c,bfact_f
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: bfact_c,bfact_f
+      INTEGER_T, INTENT(in) :: DIMDEC(crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T  growlo(3),growhi(3)
       INTEGER_T  stenlo(3),stenhi(3)
-      REAL_T, intent(out),target :: crse(DIMV(crse),num_materials*ngeom_raw)
+      REAL_T, INTENT(out),target :: crse(DIMV(crse),num_materials*ngeom_raw)
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: fine(DIMV(fine),num_materials*ngeom_raw)
+      REAL_T, INTENT(in),target :: fine(DIMV(fine),num_materials*ngeom_raw)
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T ifine,jfine,kfine
       INTEGER_T ic,jc,kc
       INTEGER_T dir
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxc(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxc(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM)
       INTEGER_T domlo(SDIM)
       INTEGER_T nhalf
       INTEGER_T nhalfgrid
@@ -13640,18 +13640,18 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: bfact_c,bfact_f
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
+      INTEGER_T, INTENT(in) :: bfact_c,bfact_f
+      INTEGER_T, INTENT(in) :: DIMDEC(crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, intent(out),target :: crse(DIMV(crse))
+      REAL_T, INTENT(out),target :: crse(DIMV(crse))
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: fine(DIMV(fine))
+      REAL_T, INTENT(in),target :: fine(DIMV(fine))
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:))
       INTEGER_T i,j,k,ic,jc,kc
-      REAL_T, intent(in) :: problo(SDIM),dxf(SDIM)
+      REAL_T, INTENT(in) :: problo(SDIM),dxf(SDIM)
  
       REAL_T wt(SDIM)
 
@@ -13761,36 +13761,36 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: pressure_error_flag
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: pressure_error_flag
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      REAL_T, intent(in) :: xlo(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
 
-      REAL_T, intent(in) :: vorterr(num_materials)
-      REAL_T, intent(in) :: pressure_error_cutoff(num_materials)
-      REAL_T, intent(in) :: temperature_error_cutoff(num_materials)
-      INTEGER_T, intent(in) :: DIMDEC(maskcov)
-      INTEGER_T, intent(in) :: DIMDEC(errnew)
-      INTEGER_T, intent(in) :: DIMDEC(LS)
-      INTEGER_T, intent(in) :: DIMDEC(den)
-      INTEGER_T, intent(in) :: DIMDEC(vort)
-      INTEGER_T, intent(in) :: DIMDEC(pres)
-      REAL_T, intent(in),target :: maskcov(DIMV(maskcov))
+      REAL_T, INTENT(in) :: vorterr(num_materials)
+      REAL_T, INTENT(in) :: pressure_error_cutoff(num_materials)
+      REAL_T, INTENT(in) :: temperature_error_cutoff(num_materials)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
+      INTEGER_T, INTENT(in) :: DIMDEC(errnew)
+      INTEGER_T, INTENT(in) :: DIMDEC(LS)
+      INTEGER_T, INTENT(in) :: DIMDEC(den)
+      INTEGER_T, INTENT(in) :: DIMDEC(vort)
+      INTEGER_T, INTENT(in) :: DIMDEC(pres)
+      REAL_T, INTENT(in),target :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout),target :: errnew(DIMV(errnew))
+      REAL_T, INTENT(inout),target :: errnew(DIMV(errnew))
       REAL_T, pointer :: errnew_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: den(DIMV(den),num_materials*num_state_material)
+      REAL_T, INTENT(in),target :: den(DIMV(den),num_materials*num_state_material)
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: LS(DIMV(LS),num_materials*(1+SDIM))
+      REAL_T, INTENT(in),target :: LS(DIMV(LS),num_materials*(1+SDIM))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: vort(DIMV(vort))
+      REAL_T, INTENT(in),target :: vort(DIMV(vort))
       REAL_T, pointer :: vort_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in),target :: pres(DIMV(pres))
+      REAL_T, INTENT(in),target :: pres(DIMV(pres))
       REAL_T, pointer :: pres_ptr(D_DECL(:,:,:))
 
       INTEGER_T i,j,k,im
@@ -13965,33 +13965,33 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: enable_spectral
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: spectral_override
-      INTEGER_T, intent(in) :: level_c
-      INTEGER_T, intent(in) :: level_f
-      INTEGER_T, intent(in) :: bfact_c
-      INTEGER_T, intent(in) :: bfact_f
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: dx(SDIM)
-      REAL_T, intent(in) :: xlo_fine(SDIM)
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: loc(SDIM), hic(SDIM)  ! cell centered
-      INTEGER_T, intent(in) :: lof(SDIM), hif(SDIM)  ! cell centered
+      INTEGER_T, INTENT(in) :: enable_spectral
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: spectral_override
+      INTEGER_T, INTENT(in) :: level_c
+      INTEGER_T, INTENT(in) :: level_f
+      INTEGER_T, INTENT(in) :: bfact_c
+      INTEGER_T, INTENT(in) :: bfact_f
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: xlo_fine(SDIM)
+      INTEGER_T, INTENT(in) :: ncomp
+      INTEGER_T, INTENT(in) :: DIMDEC(crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: DIMDEC(mask)
+      INTEGER_T, INTENT(in) :: loc(SDIM), hic(SDIM)  ! cell centered
+      INTEGER_T, INTENT(in) :: lof(SDIM), hif(SDIM)  ! cell centered
       INTEGER_T growlo(3), growhi(3)
       INTEGER_T stenlo(3), stenhi(3)
       INTEGER_T mstenlo(3), mstenhi(3)
-      INTEGER_T, intent(in) :: grid_type
+      INTEGER_T, INTENT(in) :: grid_type
       INTEGER_T dir2
-      REAL_T, intent(out),target :: crse(DIMV(crse),ncomp)
+      REAL_T, INTENT(out),target :: crse(DIMV(crse),ncomp)
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: fine(DIMV(fine),ncomp)
+      REAL_T, INTENT(in),target :: fine(DIMV(fine),ncomp)
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(in),target :: mask(DIMV(mask))
+      REAL_T, INTENT(in),target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
 
       INTEGER_T flochi(SDIM)
@@ -14370,27 +14370,27 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: finest_level
-      INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: ngrow,rzflag
-      INTEGER_T, intent(in) :: DIMDEC(vol)
-      INTEGER_T, intent(in) :: DIMDEC(areax)
-      INTEGER_T, intent(in) :: DIMDEC(areay)
-      INTEGER_T, intent(in) :: DIMDEC(areaz)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: ngrow,rzflag
+      INTEGER_T, INTENT(in) :: DIMDEC(vol)
+      INTEGER_T, INTENT(in) :: DIMDEC(areax)
+      INTEGER_T, INTENT(in) :: DIMDEC(areay)
+      INTEGER_T, INTENT(in) :: DIMDEC(areaz)
       
-      REAL_T, intent(out),target :: vol(DIMV(vol))
+      REAL_T, INTENT(out),target :: vol(DIMV(vol))
       REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
-      REAL_T, intent(out),target :: areax(DIMV(areax))
-      REAL_T, intent(out),target :: areay(DIMV(areay))
-      REAL_T, intent(out),target :: areaz(DIMV(areaz))
+      REAL_T, INTENT(out),target :: areax(DIMV(areax))
+      REAL_T, INTENT(out),target :: areay(DIMV(areay))
+      REAL_T, INTENT(out),target :: areaz(DIMV(areaz))
       REAL_T, pointer :: areax_ptr(D_DECL(:,:,:))
       REAL_T, pointer :: areay_ptr(D_DECL(:,:,:))
       REAL_T, pointer :: areaz_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k,dir
       REAL_T xsten(-3:3,SDIM)
@@ -14553,16 +14553,16 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T, intent(in) :: fablo(SDIM), fabhi(SDIM)
-      INTEGER_T, intent(in) :: bfact
-      INTEGER_T, intent(in) :: level,gridno
-      REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
-      INTEGER_T, value, intent(in) :: Np ! pass by value
-      INTEGER_T, value, intent(in) :: N_real_comp ! pass by value
-      type(particle_t), intent(in) :: particles(Np)
-      REAL_T, intent(in) :: real_compALL(N_real_comp)
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: level,gridno
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, value, INTENT(in) :: Np ! pass by value
+      INTEGER_T, value, INTENT(in) :: N_real_comp ! pass by value
+      type(particle_t), INTENT(in) :: particles(Np)
+      REAL_T, INTENT(in) :: real_compALL(N_real_comp)
 
       character*28 cennamestr28
       character*3 levstr
@@ -14682,11 +14682,11 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: plotint
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: plotint
       INTEGER_T :: strandid
-      INTEGER_T, intent(in) :: arrdim,finest_level,nsteps
-      INTEGER_T, intent(in) :: grids_per_level(arrdim)
+      INTEGER_T, INTENT(in) :: arrdim,finest_level,nsteps
+      INTEGER_T, INTENT(in) :: grids_per_level(arrdim)
 
       character*28 cennamestr28
       character*10 newcennamestr10

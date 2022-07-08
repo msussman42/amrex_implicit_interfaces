@@ -39,9 +39,9 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, intent(in) :: part_id
- INTEGER_T, intent(in) :: unit_id
- INTEGER_T, intent(out) :: file_format
+ INTEGER_T, INTENT(in) :: part_id
+ INTEGER_T, INTENT(in) :: unit_id
+ INTEGER_T, INTENT(out) :: file_format
  character(40) :: casname
 
  file_format=0
@@ -76,8 +76,8 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T, intent(in) :: nodes(3,3) ! dir,nodenum
- INTEGER_T, intent(inout) :: nodemap(3)
+ REAL_T, INTENT(in) :: nodes(3,3) ! dir,nodenum
+ INTEGER_T, INTENT(inout) :: nodemap(3)
  REAL_T a(3),b(3),c(3)
  INTEGER_T inode
  INTEGER_T dir
@@ -211,11 +211,11 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T, intent(in) :: dx_slice
- INTEGER_T, intent(inout) :: xmap3D(3)
- REAL_T, intent(inout) :: xslice3D(3)
- REAL_T, intent(out) :: problo3D(3)
- REAL_T, intent(out) :: probhi3D(3)
+ REAL_T, INTENT(in) :: dx_slice
+ INTEGER_T, INTENT(inout) :: xmap3D(3)
+ REAL_T, INTENT(inout) :: xslice3D(3)
+ REAL_T, INTENT(out) :: problo3D(3)
+ REAL_T, INTENT(out) :: probhi3D(3)
 
  if ((num_materials.eq.3).and.(probtype.eq.411)) then
 
@@ -245,10 +245,10 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, intent(in) :: nmat
- REAL_T, intent(in) :: x(SDIM)
- REAL_T, intent(in) :: t
- REAL_T, intent(out) :: LS(nmat)
+ INTEGER_T, INTENT(in) :: nmat
+ REAL_T, INTENT(in) :: x(SDIM)
+ REAL_T, INTENT(in) :: t
+ REAL_T, INTENT(out) :: LS(nmat)
  INTEGER_T im
 
  if ((num_materials.eq.3).and.(probtype.eq.411)) then
@@ -277,13 +277,13 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, intent(in) :: nmat
- REAL_T, intent(in) :: x(SDIM)
- REAL_T, intent(in) :: t
- REAL_T, intent(in) :: dx(SDIM)
- REAL_T, intent(in) :: LS(nmat)
- REAL_T, intent(out) :: VEL(SDIM)
- INTEGER_T, intent(in) :: velsolid_flag
+ INTEGER_T, INTENT(in) :: nmat
+ REAL_T, INTENT(in) :: x(SDIM)
+ REAL_T, INTENT(in) :: t
+ REAL_T, INTENT(in) :: dx(SDIM)
+ REAL_T, INTENT(in) :: LS(nmat)
+ REAL_T, INTENT(out) :: VEL(SDIM)
+ INTEGER_T, INTENT(in) :: velsolid_flag
  INTEGER_T dir
 
  if ((velsolid_flag.eq.0).or. &
@@ -319,11 +319,11 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, intent(in) :: nmat
- REAL_T, intent(in) :: x(SDIM)
- REAL_T, intent(in) :: t
- REAL_T, intent(in) :: LS(nmat)
- REAL_T, intent(out) :: PRES
+ INTEGER_T, INTENT(in) :: nmat
+ REAL_T, INTENT(in) :: x(SDIM)
+ REAL_T, INTENT(in) :: t
+ REAL_T, INTENT(in) :: LS(nmat)
+ REAL_T, INTENT(out) :: PRES
  REAL_T ymid
 
  ymid=half*(probloy+probhiy)
@@ -344,13 +344,13 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, intent(in) :: bcflag
- INTEGER_T, intent(in) :: nmat
- INTEGER_T, intent(in) :: nstate_mat
- REAL_T, intent(in) :: x(SDIM)
- REAL_T, intent(in) :: t
- REAL_T, intent(in) :: LS(nmat)
- REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+ INTEGER_T, INTENT(in) :: bcflag
+ INTEGER_T, INTENT(in) :: nmat
+ INTEGER_T, INTENT(in) :: nstate_mat
+ REAL_T, INTENT(in) :: x(SDIM)
+ REAL_T, INTENT(in) :: t
+ REAL_T, INTENT(in) :: LS(nmat)
+ REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
  INTEGER_T im,ibase,n
 
  if ((num_materials.eq.3).and. &
@@ -385,14 +385,14 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, intent(in) :: nmat
- REAL_T, intent(in) :: xwall
- REAL_T, intent(in) :: xghost(SDIM)
- REAL_T, intent(in) :: t
- REAL_T, intent(inout) :: LS(nmat)
- REAL_T, intent(in) :: LS_in(nmat)
- INTEGER_T, intent(in) :: dir,side
- REAL_T, intent(in) :: dx(SDIM)
+ INTEGER_T, INTENT(in) :: nmat
+ REAL_T, INTENT(in) :: xwall
+ REAL_T, INTENT(in) :: xghost(SDIM)
+ REAL_T, INTENT(in) :: t
+ REAL_T, INTENT(inout) :: LS(nmat)
+ REAL_T, INTENT(in) :: LS_in(nmat)
+ INTEGER_T, INTENT(in) :: dir,side
+ REAL_T, INTENT(in) :: dx(SDIM)
 
  if ((dir.ge.1).and.(dir.le.SDIM).and. &
      (side.ge.1).and.(side.le.2)) then
@@ -412,15 +412,15 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, intent(in) :: nmat
- REAL_T, intent(in) :: xwall
- REAL_T, intent(in) :: xghost(SDIM)
- REAL_T, intent(in) :: t
- REAL_T, intent(in) :: LS(nmat)
- REAL_T, intent(inout) :: VEL
- REAL_T, intent(in) :: VEL_in
- INTEGER_T, intent(in) :: veldir,dir,side
- REAL_T, intent(in) :: dx(SDIM)
+ INTEGER_T, INTENT(in) :: nmat
+ REAL_T, INTENT(in) :: xwall
+ REAL_T, INTENT(in) :: xghost(SDIM)
+ REAL_T, INTENT(in) :: t
+ REAL_T, INTENT(in) :: LS(nmat)
+ REAL_T, INTENT(inout) :: VEL
+ REAL_T, INTENT(in) :: VEL_in
+ INTEGER_T, INTENT(in) :: veldir,dir,side
+ REAL_T, INTENT(in) :: dx(SDIM)
  REAL_T local_VEL(SDIM)
  INTEGER_T velsolid_flag
 
@@ -447,15 +447,15 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, intent(in) :: nmat
- REAL_T, intent(in) :: xwall
- REAL_T, intent(in) :: xghost(SDIM)
- REAL_T, intent(in) :: t
- REAL_T, intent(in) :: LS(nmat)
- REAL_T, intent(inout) :: PRES
- REAL_T, intent(in) :: PRES_in
- INTEGER_T, intent(in) :: dir,side
- REAL_T, intent(in) :: dx(SDIM)
+ INTEGER_T, INTENT(in) :: nmat
+ REAL_T, INTENT(in) :: xwall
+ REAL_T, INTENT(in) :: xghost(SDIM)
+ REAL_T, INTENT(in) :: t
+ REAL_T, INTENT(in) :: LS(nmat)
+ REAL_T, INTENT(inout) :: PRES
+ REAL_T, INTENT(in) :: PRES_in
+ INTEGER_T, INTENT(in) :: dir,side
+ REAL_T, INTENT(in) :: dx(SDIM)
 
  if ((dir.ge.1).and.(dir.le.SDIM).and. &
      (side.ge.1).and.(side.le.2)) then
@@ -476,18 +476,18 @@ subroutine CAV3D_STATE_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
 REAL_T :: local_STATE(nmat*num_state_material)
-REAL_T, intent(inout) :: STATE
-REAL_T, intent(inout) :: STATE_merge
-REAL_T, intent(in) :: STATE_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
-INTEGER_T, intent(in) :: istate,im
+REAL_T, INTENT(inout) :: STATE
+REAL_T, INTENT(inout) :: STATE_merge
+REAL_T, INTENT(in) :: STATE_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: istate,im
 
 INTEGER_T ibase,im_crit,im_loop
 INTEGER_T local_bcflag
@@ -535,18 +535,18 @@ INTEGER_T local_bcflag
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, intent(in) :: nmat
- INTEGER_T, intent(in) :: im
- REAL_T, intent(in) :: VFRAC(nmat)
- REAL_T, intent(in) :: time
- INTEGER_T, intent(in) :: nhalf
- REAL_T, intent(in) :: x(SDIM)
- REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
- REAL_T, intent(in) :: temp(nmat)
- REAL_T, intent(in) :: den(nmat)
- REAL_T, intent(in) :: CV(nmat)
- REAL_T, intent(in) :: dt
- REAL_T, intent(out) :: heat_source
+ INTEGER_T, INTENT(in) :: nmat
+ INTEGER_T, INTENT(in) :: im
+ REAL_T, INTENT(in) :: VFRAC(nmat)
+ REAL_T, INTENT(in) :: time
+ INTEGER_T, INTENT(in) :: nhalf
+ REAL_T, INTENT(in) :: x(SDIM)
+ REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+ REAL_T, INTENT(in) :: temp(nmat)
+ REAL_T, INTENT(in) :: den(nmat)
+ REAL_T, INTENT(in) :: CV(nmat)
+ REAL_T, INTENT(in) :: dt
+ REAL_T, INTENT(out) :: heat_source
 
  if ((num_materials.eq.3).and.(probtype.eq.411)) then
   heat_source=zero

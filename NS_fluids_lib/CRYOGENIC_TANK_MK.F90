@@ -91,9 +91,9 @@ subroutine CRYOGENIC_TANK_MK_OPEN_CASFILE(part_id,unit_id,file_format)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: unit_id
-INTEGER_T, intent(out) :: file_format
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: unit_id
+INTEGER_T, INTENT(out) :: file_format
 INTEGER_T :: stat
 
  print *,"CRYOGENIC_TANK_MK_OPEN_CASFILE should not be called"
@@ -127,12 +127,12 @@ subroutine CRYOGENIC_TANK_MK_GET_OUTSIDE_POINT( &
  xcell,time,x_outside,im_part,part_id)
 use probcommon_module
 use global_utility_module
-REAL_T, intent(in) :: exterior_BB(3,2)
-REAL_T, intent(in) :: xcell(3)
-REAL_T, intent(in) :: time
-REAL_T, intent(out) :: x_outside(3)
-INTEGER_T, intent(in) :: im_part
-INTEGER_T, intent(in) :: part_id
+REAL_T, INTENT(in) :: exterior_BB(3,2)
+REAL_T, INTENT(in) :: xcell(3)
+REAL_T, INTENT(in) :: time
+REAL_T, INTENT(out) :: x_outside(3)
+INTEGER_T, INTENT(in) :: im_part
+INTEGER_T, INTENT(in) :: part_id
 INTEGER_T :: dir
 REAL_T :: BB_len
 
@@ -169,17 +169,17 @@ subroutine CRYOGENIC_TANK_MK_OVERRIDE_FSI_SIGN_LS_VEL_TEMP( &
 use probcommon_module
 use global_utility_module
 
-REAL_T, intent(in) :: exterior_BB(3,2)
-REAL_T, intent(in) :: interior_BB(3,2)
-REAL_T, intent(in) :: xcell(3)
-REAL_T, intent(in) :: time
-REAL_T, intent(out) :: LS
-REAL_T, intent(out) :: VEL(3)
-REAL_T, intent(out) :: TEMP
-INTEGER_T, intent(out) :: MASK
-INTEGER_T, intent(in) :: lev77 !lev77=-1 for aux, >=0 otherwise.
-INTEGER_T, intent(in) :: im_part
-INTEGER_T, intent(in) :: part_id
+REAL_T, INTENT(in) :: exterior_BB(3,2)
+REAL_T, INTENT(in) :: interior_BB(3,2)
+REAL_T, INTENT(in) :: xcell(3)
+REAL_T, INTENT(in) :: time
+REAL_T, INTENT(out) :: LS
+REAL_T, INTENT(out) :: VEL(3)
+REAL_T, INTENT(out) :: TEMP
+INTEGER_T, INTENT(out) :: MASK
+INTEGER_T, INTENT(in) :: lev77 !lev77=-1 for aux, >=0 otherwise.
+INTEGER_T, INTENT(in) :: im_part
+INTEGER_T, INTENT(in) :: part_id
 INTEGER_T :: dir
 
  if ((lev77.eq.-1).or. &
@@ -304,11 +304,11 @@ subroutine CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX(auxcomp, &
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-INTEGER_T, intent(in) :: auxcomp
-REAL_T, intent(inout) :: minnode(3)
-REAL_T, intent(inout) :: maxnode(3)
-INTEGER_T, intent(out) :: LS_FROM_SUBROUTINE
-INTEGER_T, intent(out) :: aux_ncells_max_side
+INTEGER_T, INTENT(in) :: auxcomp
+REAL_T, INTENT(inout) :: minnode(3)
+REAL_T, INTENT(inout) :: maxnode(3)
+INTEGER_T, INTENT(out) :: LS_FROM_SUBROUTINE
+INTEGER_T, INTENT(out) :: aux_ncells_max_side
 
  if ((auxcomp.ge.1).and. &
      (auxcomp.le.num_aux_expect)) then
@@ -421,9 +421,9 @@ subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE(part_id,unit_id,file_format)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: unit_id
-INTEGER_T, intent(out) :: file_format
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: unit_id
+INTEGER_T, INTENT(out) :: file_format
 INTEGER_T :: stat
 
  file_format=1 ! vtk format
@@ -694,8 +694,8 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   use global_utility_module
   IMPLICIT NONE
 
-  REAL_T, intent(in) :: x(SDIM)
-  REAL_T, intent(out) :: LS
+  REAL_T, INTENT(in) :: x(SDIM)
+  REAL_T, INTENT(out) :: LS
   REAL_T :: xlo,xhi,ylo,yhi,xcen
 
   if ((TANK_MK_NOZZLE_RAD.gt.0.0d0).and. &
@@ -742,10 +742,10 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   use global_utility_module
   IMPLICIT NONE
 
-  INTEGER_T, intent(in) :: nmat
-  REAL_T, intent(in) :: x(SDIM)
-  REAL_T, intent(in) :: t
-  REAL_T, intent(out) :: LS(nmat)
+  INTEGER_T, INTENT(in) :: nmat
+  REAL_T, INTENT(in) :: x(SDIM)
+  REAL_T, INTENT(in) :: t
+  REAL_T, INTENT(out) :: LS(nmat)
   REAL_T :: nozzle_dist,LS_A
   INTEGER_T :: caller_id
   REAL_T :: x3D(3)
@@ -891,9 +891,9 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   use global_utility_module
   IMPLICIT NONE
 
-  REAL_T, intent(in) :: x(SDIM)
-  REAL_T, intent(out) :: LS
-  INTEGER_T, intent(in) :: caller_id
+  REAL_T, INTENT(in) :: x(SDIM)
+  REAL_T, INTENT(out) :: LS
+  INTEGER_T, INTENT(in) :: caller_id
   REAL_T zdiff
   REAL_T angle_end_center
   REAL_T shell_R
@@ -974,13 +974,13 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   use probcommon_module
   IMPLICIT NONE
 
-  INTEGER_T, intent(in) :: nmat
-  REAL_T, intent(in) :: x(SDIM)
-  REAL_T, intent(in) :: t
-  REAL_T, intent(in) :: dx(SDIM)
-  REAL_T, intent(in) :: LS(nmat)
-  REAL_T, intent(out) :: VEL(SDIM)
-  INTEGER_T, intent(in) :: velsolid_flag
+  INTEGER_T, INTENT(in) :: nmat
+  REAL_T, INTENT(in) :: x(SDIM)
+  REAL_T, INTENT(in) :: t
+  REAL_T, INTENT(in) :: dx(SDIM)
+  REAL_T, INTENT(in) :: LS(nmat)
+  REAL_T, INTENT(out) :: VEL(SDIM)
+  INTEGER_T, INTENT(in) :: velsolid_flag
   INTEGER_T dir
 
   if (nmat.eq.num_materials) then
@@ -1018,7 +1018,7 @@ REAL_T function SOLID_TOP_HALF_DIST(P)
  ! Outside the tank > 0
  implicit none
 
- REAL_T, intent(in), dimension(SDIM) :: P
+ REAL_T, INTENT(in), dimension(SDIM) :: P
  REAL_T R,Z,FRZ,D1,D2
  
  if (SDIM.eq.2) then
@@ -1152,11 +1152,11 @@ subroutine EOS_CRYOGENIC_TANK_MK(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im,num_species_var_in
- REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, intent(in) :: internal_energy
- REAL_T, intent(out) :: pressure
+ INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+ REAL_T, INTENT(in) :: rho
+ REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+ REAL_T, INTENT(in) :: internal_energy
+ REAL_T, INTENT(out) :: pressure
  INTEGER_T :: dummy_input
 
  if (num_species_var_in.eq.num_species_var) then
@@ -1194,11 +1194,11 @@ subroutine dVdT_CRYOGENIC_TANK_MK(dVdT,massfrac_var, &
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-INTEGER_T, intent(in) :: imattype,im,num_species_var_in
-REAL_T, intent(in) :: pressure
-REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
-REAL_T, intent(in) :: temperature
-REAL_T, intent(out) :: dVdT
+INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+REAL_T, INTENT(in) :: pressure
+REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+REAL_T, INTENT(in) :: temperature
+REAL_T, INTENT(out) :: dVdT
 INTEGER_T :: dummy_input
 
  if (pressure.gt.0.0d0) then
@@ -1253,11 +1253,11 @@ subroutine SOUNDSQR_CRYOGENIC_TANK_MK(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im,num_species_var_in
- REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, intent(in) :: internal_energy
- REAL_T, intent(out) :: soundsqr
+ INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+ REAL_T, INTENT(in) :: rho
+ REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+ REAL_T, INTENT(in) :: internal_energy
+ REAL_T, INTENT(out) :: soundsqr
  REAL_T pressure
 
  if (num_species_var_in.eq.num_species_var) then
@@ -1299,11 +1299,11 @@ subroutine INTERNAL_CRYOGENIC_TANK_MK(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im,num_species_var_in
- REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, intent(in) :: temperature 
- REAL_T, intent(out) :: local_internal_energy
+ INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+ REAL_T, INTENT(in) :: rho
+ REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+ REAL_T, INTENT(in) :: temperature 
+ REAL_T, INTENT(out) :: local_internal_energy
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then ! vapor
@@ -1335,11 +1335,11 @@ subroutine TEMPERATURE_CRYOGENIC_TANK_MK(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, intent(in) :: imattype,im,num_species_var_in
- REAL_T, intent(in) :: rho
- REAL_T, intent(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, intent(out) :: temperature 
- REAL_T, intent(in) :: internal_energy
+ INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
+ REAL_T, INTENT(in) :: rho
+ REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
+ REAL_T, INTENT(out) :: temperature 
+ REAL_T, INTENT(in) :: internal_energy
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then  ! vapor
@@ -1377,9 +1377,9 @@ subroutine CRYOGENIC_TANK_MK_PRES_UTIL(x,PRES,rho_hyd)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(out) :: PRES
-REAL_T, intent(out) :: rho_hyd
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(out) :: PRES
+REAL_T, INTENT(out) :: rho_hyd
 INTEGER_T simple_hyd_p
 
 simple_hyd_p=1
@@ -1445,11 +1445,11 @@ subroutine CRYOGENIC_TANK_MK_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: PRES
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: PRES
 REAL_T :: rho_hyd
 
 if (num_materials.eq.nmat) then
@@ -1469,13 +1469,13 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: nstate_mat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: nstate_mat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
 REAL_T den,temperature,internal_energy,pressure,Pgamma
 REAL_T massfrac_parm(num_species_var+1)
@@ -1602,14 +1602,14 @@ subroutine CRYOGENIC_TANK_MK_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(inout) :: LS(nmat)
-REAL_T, intent(in) :: LS_in(nmat)
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(inout) :: LS(nmat)
+REAL_T, INTENT(in) :: LS_in(nmat)
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1636,15 +1636,15 @@ subroutine CRYOGENIC_TANK_MK_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: VEL
-REAL_T, intent(in) :: VEL_in
-INTEGER_T, intent(in) :: veldir,dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: VEL
+REAL_T, INTENT(in) :: VEL_in
+INTEGER_T, INTENT(in) :: veldir,dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
 
@@ -1677,15 +1677,15 @@ subroutine CRYOGENIC_TANK_MK_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: PRES
-REAL_T, intent(in) :: PRES_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: PRES
+REAL_T, INTENT(in) :: PRES_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1713,18 +1713,18 @@ subroutine CRYOGENIC_TANK_MK_STATE_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
 REAL_T local_STATE(nmat*num_state_material)
-REAL_T, intent(inout) :: STATE
-REAL_T, intent(inout) :: STATE_merge
-REAL_T, intent(in) :: STATE_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
-INTEGER_T, intent(in) :: istate,im
+REAL_T, INTENT(inout) :: STATE
+REAL_T, INTENT(inout) :: STATE_merge
+REAL_T, INTENT(in) :: STATE_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: istate,im
 INTEGER_T ibase,im_crit,im_loop
 INTEGER_T local_bcflag
 
@@ -1774,18 +1774,18 @@ subroutine CRYOGENIC_TANK_MK_HEATSOURCE( &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: im
-REAL_T, intent(in) :: VFRAC(nmat)
-REAL_T, intent(in) :: time
-INTEGER_T, intent(in) :: nhalf
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, intent(in) :: temp(nmat)
-REAL_T, intent(in) :: den(nmat)
-REAL_T, intent(in) :: CV(nmat)
-REAL_T, intent(in) :: dt
-REAL_T, intent(out) :: heat_source
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: im
+REAL_T, INTENT(in) :: VFRAC(nmat)
+REAL_T, INTENT(in) :: time
+INTEGER_T, INTENT(in) :: nhalf
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+REAL_T, INTENT(in) :: temp(nmat)
+REAL_T, INTENT(in) :: den(nmat)
+REAL_T, INTENT(in) :: CV(nmat)
+REAL_T, INTENT(in) :: dt
+REAL_T, INTENT(out) :: heat_source
 
 INTEGER_T dir
 REAL_T local_dx(SDIM)
@@ -1829,10 +1829,10 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nsum1,nsum2,isweep
-type(user_defined_sum_int_type), intent(in) :: GRID_DATA_IN
-REAL_T, intent(inout) :: increment_out1(nsum1)
-REAL_T, intent(inout) :: increment_out2(nsum2)
+INTEGER_T, INTENT(in) :: nsum1,nsum2,isweep
+type(user_defined_sum_int_type), INTENT(in) :: GRID_DATA_IN
+REAL_T, INTENT(inout) :: increment_out1(nsum1)
+REAL_T, INTENT(inout) :: increment_out2(nsum2)
 
 REAL_T massfrac_parm(num_species_var+1)
 REAL_T T1_probe(SDIM)  !ZBOT
@@ -1987,9 +1987,9 @@ use probcommon_module
 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: num_materials_in
-INTEGER_T, intent(in) :: num_threads_in
-INTEGER_T, intent(in) :: constant_density_all_time(num_materials_in)
+INTEGER_T, INTENT(in) :: num_materials_in
+INTEGER_T, INTENT(in) :: num_threads_in
+INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials_in)
 INTEGER_T :: im,iregion,dir
 
  if (num_materials_in.eq.num_materials) then
@@ -2083,10 +2083,10 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: region_id
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: cur_time
-REAL_T, intent(out) :: charfn_out
+INTEGER_T, INTENT(in) :: region_id
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: cur_time
+REAL_T, INTENT(out) :: charfn_out
 REAL_T :: TANK_MK_R_WIDTH
 REAL_T :: shell_R,shell_center,LS_SHELL,LS_A,LS_nozzle,zdiff
 INTEGER_T :: caller_id
@@ -2294,19 +2294,19 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: im
-INTEGER_T, intent(in) :: im_solid
-INTEGER_T, intent(in) :: near_interface
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: dx(SDIM)
-REAL_T, intent(in) :: cur_time
-REAL_T, intent(in) :: density
-REAL_T, intent(in) :: temperature
-REAL_T, intent(in) :: temperature_wall
-REAL_T, intent(in) :: temperature_wall_max
-REAL_T, intent(in) :: temperature_probe
-REAL_T, intent(in) :: nrm(SDIM) ! nrm points from solid to fluid
-REAL_T, intent(inout) :: thermal_k
+INTEGER_T, INTENT(in) :: im
+INTEGER_T, INTENT(in) :: im_solid
+INTEGER_T, INTENT(in) :: near_interface
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: cur_time
+REAL_T, INTENT(in) :: density
+REAL_T, INTENT(in) :: temperature
+REAL_T, INTENT(in) :: temperature_wall
+REAL_T, INTENT(in) :: temperature_wall_max
+REAL_T, INTENT(in) :: temperature_probe
+REAL_T, INTENT(in) :: nrm(SDIM) ! nrm points from solid to fluid
+REAL_T, INTENT(inout) :: thermal_k
 REAL_T :: Ra,Gr,Pr,psi,alpha
 REAL_T :: mu_w,rho_w,nu,thermal_conductivity,Cp,xi,R,thermal_diffusivity
 REAL_T :: gravity_local,expansion_coefficient
@@ -2549,42 +2549,42 @@ subroutine wallfunc_thermocorrelation( &
   x_projection_raster, &
   dx, &
   n_raster, & ! points to solid
-  u, & !intent(in) uimage_raster_solid_frame(dir)
-  uimage_tngt_mag, & !intent(in) 
-  wall_model_velocity, & ! intent(in)
-  dist_probe, & ! intent(in)
-  dist_fluid, & ! intent(in)
-  temperature_image, & !intent(in) 
-  temperature_wall, & ! intent(in)      
-  temperature_wall_max, & ! intent(in)      
-  viscosity_molecular, & ! intent(in)      
-  viscosity_eddy_wall, & ! intent(in)      
-  y, & !intent(in) distance from image to wall
-  ughost_tngt, & ! intent(out)
-  im_fluid, &  ! intent(in)
-  critical_length) ! intent(in) used for sanity check
+  u, & !INTENT(in) uimage_raster_solid_frame(dir)
+  uimage_tngt_mag, & !INTENT(in) 
+  wall_model_velocity, & ! INTENT(in)
+  dist_probe, & ! INTENT(in)
+  dist_fluid, & ! INTENT(in)
+  temperature_image, & !INTENT(in) 
+  temperature_wall, & ! INTENT(in)      
+  temperature_wall_max, & ! INTENT(in)      
+  viscosity_molecular, & ! INTENT(in)      
+  viscosity_eddy_wall, & ! INTENT(in)      
+  y, & !INTENT(in) distance from image to wall
+  ughost_tngt, & ! INTENT(out)
+  im_fluid, &  ! INTENT(in)
+  critical_length) ! INTENT(in) used for sanity check
 use probcommon_module
 implicit none
-INTEGER_T, intent(in) :: dir ! 1,2,3
-INTEGER_T, intent(in) :: data_dir ! 0,1,2
-REAL_T, intent(in) :: dxmin
-REAL_T, intent(in), pointer :: x_projection_raster(:)
-REAL_T, intent(in), pointer :: dx(:)
-REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
-INTEGER_T, intent(in) :: im_fluid
-REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
-REAL_T, intent(in) :: uimage_tngt_mag
-REAL_T, intent(in) :: wall_model_velocity
-REAL_T, intent(in) :: dist_probe
-REAL_T, intent(in) :: dist_fluid
-REAL_T, intent(in) :: temperature_image
-REAL_T, intent(in) :: temperature_wall
-REAL_T, intent(in) :: temperature_wall_max
-REAL_T, intent(in) :: viscosity_molecular
-REAL_T, intent(in) :: viscosity_eddy_wall
-REAL_T, intent(in) :: y !delta_r
-REAL_T, intent(in) :: critical_length
-REAL_T, intent(out) :: ughost_tngt  ! dir direction
+INTEGER_T, INTENT(in) :: dir ! 1,2,3
+INTEGER_T, INTENT(in) :: data_dir ! 0,1,2
+REAL_T, INTENT(in) :: dxmin
+REAL_T, INTENT(in), pointer :: x_projection_raster(:)
+REAL_T, INTENT(in), pointer :: dx(:)
+REAL_T, INTENT(in), pointer :: n_raster(:) ! points to solid
+INTEGER_T, INTENT(in) :: im_fluid
+REAL_T, INTENT(in) :: u !uimage_raster_solid_frame(dir)
+REAL_T, INTENT(in) :: uimage_tngt_mag
+REAL_T, INTENT(in) :: wall_model_velocity
+REAL_T, INTENT(in) :: dist_probe
+REAL_T, INTENT(in) :: dist_fluid
+REAL_T, INTENT(in) :: temperature_image
+REAL_T, INTENT(in) :: temperature_wall
+REAL_T, INTENT(in) :: temperature_wall_max
+REAL_T, INTENT(in) :: viscosity_molecular
+REAL_T, INTENT(in) :: viscosity_eddy_wall
+REAL_T, INTENT(in) :: y !delta_r
+REAL_T, INTENT(in) :: critical_length
+REAL_T, INTENT(out) :: ughost_tngt  ! dir direction
 
 REAL_T :: rho_w !wall density
 REAL_T :: mu_w  !mu_w: wall molecular viscosity
@@ -2819,43 +2819,43 @@ subroutine CRYOGENIC_TANK_MK_wallfunc( &
   x_projection_raster, &
   dx, &
   n_raster, & ! points to solid
-  u, & !intent(in) uimage_raster_solid_frame(dir)
-  uimage_tngt_mag, & !intent(in) 
-  wall_model_velocity, & ! intent(in)
-  dist_probe, & ! intent(in)
-  dist_fluid, & ! intent(in)
-  temperature_image, & !intent(in) 
-  temperature_wall, & ! intent(in)      
-  temperature_wall_max, & ! intent(in)      
-  viscosity_molecular, & ! intent(in)      
-  viscosity_eddy_wall, & ! intent(in)      
-  y, & !intent(in) distance from image to wall
-  ughost_tngt, & ! intent(out)
-  im_fluid, &  ! intent(in)
-  critical_length) ! intent(in) used for sanity check
+  u, & !INTENT(in) uimage_raster_solid_frame(dir)
+  uimage_tngt_mag, & !INTENT(in) 
+  wall_model_velocity, & ! INTENT(in)
+  dist_probe, & ! INTENT(in)
+  dist_fluid, & ! INTENT(in)
+  temperature_image, & !INTENT(in) 
+  temperature_wall, & ! INTENT(in)      
+  temperature_wall_max, & ! INTENT(in)      
+  viscosity_molecular, & ! INTENT(in)      
+  viscosity_eddy_wall, & ! INTENT(in)      
+  y, & !INTENT(in) distance from image to wall
+  ughost_tngt, & ! INTENT(out)
+  im_fluid, &  ! INTENT(in)
+  critical_length) ! INTENT(in) used for sanity check
 use probcommon_module
 use global_utility_module
 implicit none
-INTEGER_T, intent(in) :: dir ! 1,2,3
-INTEGER_T, intent(in) :: data_dir ! 0,1,2
-REAL_T, intent(in) :: dxmin
-REAL_T, intent(in), pointer :: x_projection_raster(:)
-REAL_T, intent(in), pointer :: dx(:)
-REAL_T, intent(in), pointer :: n_raster(:) ! points to solid
-INTEGER_T, intent(in) :: im_fluid
-REAL_T, intent(in) :: u !uimage_raster_solid_frame(dir)
-REAL_T, intent(in) :: uimage_tngt_mag
-REAL_T, intent(in) :: wall_model_velocity
-REAL_T, intent(in) :: dist_probe
-REAL_T, intent(in) :: dist_fluid
-REAL_T, intent(in) :: temperature_image
-REAL_T, intent(in) :: temperature_wall
-REAL_T, intent(in) :: temperature_wall_max
-REAL_T, intent(in) :: viscosity_molecular
-REAL_T, intent(in) :: viscosity_eddy_wall
-REAL_T, intent(in) :: y !delta_r
-REAL_T, intent(in) :: critical_length
-REAL_T, intent(out) :: ughost_tngt  ! dir direction
+INTEGER_T, INTENT(in) :: dir ! 1,2,3
+INTEGER_T, INTENT(in) :: data_dir ! 0,1,2
+REAL_T, INTENT(in) :: dxmin
+REAL_T, INTENT(in), pointer :: x_projection_raster(:)
+REAL_T, INTENT(in), pointer :: dx(:)
+REAL_T, INTENT(in), pointer :: n_raster(:) ! points to solid
+INTEGER_T, INTENT(in) :: im_fluid
+REAL_T, INTENT(in) :: u !uimage_raster_solid_frame(dir)
+REAL_T, INTENT(in) :: uimage_tngt_mag
+REAL_T, INTENT(in) :: wall_model_velocity
+REAL_T, INTENT(in) :: dist_probe
+REAL_T, INTENT(in) :: dist_fluid
+REAL_T, INTENT(in) :: temperature_image
+REAL_T, INTENT(in) :: temperature_wall
+REAL_T, INTENT(in) :: temperature_wall_max
+REAL_T, INTENT(in) :: viscosity_molecular
+REAL_T, INTENT(in) :: viscosity_eddy_wall
+REAL_T, INTENT(in) :: y !delta_r
+REAL_T, INTENT(in) :: critical_length
+REAL_T, INTENT(out) :: ughost_tngt  ! dir direction
 
  if (1.eq.0) then
   ! remark: "subroutine wallfunc_newtonsmethod" is 
@@ -2867,20 +2867,20 @@ REAL_T, intent(out) :: ughost_tngt  ! dir direction
    x_projection_raster, &
    dx, &
    n_raster, & ! points to solid
-   u, & !intent(in) uimage_raster_solid_frame(dir)
-   uimage_tngt_mag, & !intent(in) 
-   wall_model_velocity, & ! intent(in)
-   dist_probe, & ! intent(in)
-   dist_fluid, & ! intent(in)
-   temperature_image, & !intent(in) 
-   temperature_wall, & ! intent(in)      
-   temperature_wall_max, & ! intent(in)      
-   viscosity_molecular, & ! intent(in)      
-   viscosity_eddy_wall, & ! intent(in)      
-   y, & !intent(in) distance from image to wall
-   ughost_tngt, & ! intent(out)
-   im_fluid, &  ! intent(in)
-   critical_length) ! intent(in) used for sanity check
+   u, & !INTENT(in) uimage_raster_solid_frame(dir)
+   uimage_tngt_mag, & !INTENT(in) 
+   wall_model_velocity, & ! INTENT(in)
+   dist_probe, & ! INTENT(in)
+   dist_fluid, & ! INTENT(in)
+   temperature_image, & !INTENT(in) 
+   temperature_wall, & ! INTENT(in)      
+   temperature_wall_max, & ! INTENT(in)      
+   viscosity_molecular, & ! INTENT(in)      
+   viscosity_eddy_wall, & ! INTENT(in)      
+   y, & !INTENT(in) distance from image to wall
+   ughost_tngt, & ! INTENT(out)
+   im_fluid, &  ! INTENT(in)
+   critical_length) ! INTENT(in) used for sanity check
  else
   call wallfunc_thermocorrelation( &
    dir, & ! =1,2,3
@@ -2889,20 +2889,20 @@ REAL_T, intent(out) :: ughost_tngt  ! dir direction
    x_projection_raster, &
    dx, &
    n_raster, & ! points to solid
-   u, & !intent(in) uimage_raster_solid_frame(dir)
-   uimage_tngt_mag, & !intent(in) 
-   wall_model_velocity, & ! intent(in)
-   dist_probe, & ! intent(in)
-   dist_fluid, & ! intent(in)
-   temperature_image, & !intent(in) 
-   temperature_wall, & ! intent(in)      
-   temperature_wall_max, & ! intent(in)      
-   viscosity_molecular, & ! intent(in)      
-   viscosity_eddy_wall, & ! intent(in)      
-   y, & !intent(in) distance from image to wall
-   ughost_tngt, & ! intent(out)
-   im_fluid, &  ! intent(in)
-   critical_length) ! intent(in) used for sanity check
+   u, & !INTENT(in) uimage_raster_solid_frame(dir)
+   uimage_tngt_mag, & !INTENT(in) 
+   wall_model_velocity, & ! INTENT(in)
+   dist_probe, & ! INTENT(in)
+   dist_fluid, & ! INTENT(in)
+   temperature_image, & !INTENT(in) 
+   temperature_wall, & ! INTENT(in)      
+   temperature_wall_max, & ! INTENT(in)      
+   viscosity_molecular, & ! INTENT(in)      
+   viscosity_eddy_wall, & ! INTENT(in)      
+   y, & !INTENT(in) distance from image to wall
+   ughost_tngt, & ! INTENT(out)
+   im_fluid, &  ! INTENT(in)
+   critical_length) ! INTENT(in) used for sanity check
  endif
 
 end subroutine CRYOGENIC_TANK_MK_wallfunc
@@ -2928,23 +2928,23 @@ subroutine CRYOGENIC_TANK_MK_K_EFFECTIVE( &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: interface_mass_transfer_model
-INTEGER_T, intent(in) :: num_materials_in
-INTEGER_T, intent(in) :: num_species_var_in
-INTEGER_T, intent(in) :: ireverse
-INTEGER_T, intent(in) :: iten
-REAL_T, intent(in) :: molar_mass(num_materials_in)
-REAL_T, intent(in) :: species_molar_mass(num_species_var_in)
-REAL_T, intent(in) :: k_model_predict(2) ! src,dst
-REAL_T, intent(inout) :: k_model_correct(2) ! src,dst
-REAL_T, intent(in) :: k_physical_base(2) ! src, dst
-REAL_T, intent(in) :: T_probe_src
-REAL_T, intent(in) :: T_probe_dst
-INTEGER_T, intent(in) :: probe_ok_gradient_src
-INTEGER_T, intent(in) :: probe_ok_gradient_dst
-REAL_T, intent(in) :: LL
-REAL_T, intent(in) :: dxprobe_src
-REAL_T, intent(in) :: dxprobe_dst
+INTEGER_T, INTENT(in) :: interface_mass_transfer_model
+INTEGER_T, INTENT(in) :: num_materials_in
+INTEGER_T, INTENT(in) :: num_species_var_in
+INTEGER_T, INTENT(in) :: ireverse
+INTEGER_T, INTENT(in) :: iten
+REAL_T, INTENT(in) :: molar_mass(num_materials_in)
+REAL_T, INTENT(in) :: species_molar_mass(num_species_var_in)
+REAL_T, INTENT(in) :: k_model_predict(2) ! src,dst
+REAL_T, INTENT(inout) :: k_model_correct(2) ! src,dst
+REAL_T, INTENT(in) :: k_physical_base(2) ! src, dst
+REAL_T, INTENT(in) :: T_probe_src
+REAL_T, INTENT(in) :: T_probe_dst
+INTEGER_T, INTENT(in) :: probe_ok_gradient_src
+INTEGER_T, INTENT(in) :: probe_ok_gradient_dst
+REAL_T, INTENT(in) :: LL
+REAL_T, INTENT(in) :: dxprobe_src
+REAL_T, INTENT(in) :: dxprobe_dst
 
 REAL_T :: RA1,RA2
 

@@ -71,10 +71,10 @@ end subroutine pressure_input
 
 subroutine press_interp(t_input,t, press, N, p_output)                        
 implicit none
-INTEGER_T, intent(in) :: N
-REAL_T, intent(in) :: t(N), press(N)
-REAL_T, intent(in) :: t_input
-REAL_T, intent(out) :: p_output
+INTEGER_T, INTENT(in) :: N
+REAL_T, INTENT(in) :: t(N), press(N)
+REAL_T, INTENT(in) :: t_input
+REAL_T, INTENT(out) :: p_output
 INTEGER_T           :: m  
 REAL_T :: t_ms
 
@@ -113,8 +113,8 @@ implicit none
 ! 11.5x1.5 (mm) domain
 ! ls for nozzel geometry
 
-REAL_T, intent(in) :: x_i,y_i
-REAL_T, intent(out) :: ls
+REAL_T, INTENT(in) :: x_i,y_i
+REAL_T, INTENT(out) :: ls
 REAL_T   :: x, y
 REAL_T   :: d1,d2
 REAL_T   :: w1=0.3d0, w2=1.0d0, w=1.5d0 
@@ -180,8 +180,8 @@ end subroutine LS_geometry
 ! ls>0 in the water, ls<0 in the air
 subroutine LS_air_water(x_i,y_i,ls)
 implicit none
-REAL_T, intent(in) :: x_i,y_i
-REAL_T, intent(out) :: ls
+REAL_T, INTENT(in) :: x_i,y_i
+REAL_T, INTENT(out) :: ls
 REAL_T :: x, y
 REAL_T :: d1,d2,e2
 REAL_T :: w1=0.3d0, w2=1.0d0, w=1.5d0 
@@ -218,10 +218,10 @@ end subroutine LS_air_water
   use probcommon_module
   IMPLICIT NONE
 
-  INTEGER_T, intent(in) :: nmat
-  REAL_T, intent(in) :: x(SDIM)
-  REAL_T, intent(in) :: t
-  REAL_T, intent(out) :: LS(nmat)
+  INTEGER_T, INTENT(in) :: nmat
+  REAL_T, INTENT(in) :: x(SDIM)
+  REAL_T, INTENT(in) :: t
+  REAL_T, INTENT(out) :: LS(nmat)
   INTEGER_T im
 
   if (nmat.eq.num_materials) then
@@ -260,14 +260,14 @@ subroutine YAOHONG_INKJET_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: dx(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: VEL(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: VEL(SDIM)
 INTEGER_T dir
-INTEGER_T, intent(in) :: velsolid_flag
+INTEGER_T, INTENT(in) :: velsolid_flag
 
 REAL_T local_PI
 
@@ -325,11 +325,11 @@ subroutine YAOHONG_INKJET_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: PRES
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: PRES
 REAL_T :: zhi
 
 if (t.ge.zero) then
@@ -366,13 +366,13 @@ subroutine YAOHONG_INKJET_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
    use probcommon_module
    IMPLICIT NONE
 
-INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: nstate_mat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: nstate_mat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase
 
 if (nmat.eq.num_materials) then
@@ -421,14 +421,14 @@ subroutine YAOHONG_INKJET_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(inout) :: LS(nmat)
-REAL_T, intent(in) :: LS_in(nmat)
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(inout) :: LS(nmat)
+REAL_T, INTENT(in) :: LS_in(nmat)
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -455,15 +455,15 @@ subroutine YAOHONG_INKJET_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: VEL
-REAL_T, intent(in) :: VEL_in
-INTEGER_T, intent(in) :: veldir,dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: VEL
+REAL_T, INTENT(in) :: VEL_in
+INTEGER_T, INTENT(in) :: veldir,dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
@@ -497,15 +497,15 @@ subroutine YAOHONG_INKJET_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: PRES
-REAL_T, intent(in) :: PRES_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: PRES
+REAL_T, INTENT(in) :: PRES_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -540,7 +540,7 @@ use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T is_YAOHONG_INKJET_overlay
-INTEGER_T, intent(in) :: nmat,im
+INTEGER_T, INTENT(in) :: nmat,im
 
 if (nmat.eq.num_materials) then
  if (num_materials.eq.3) then
@@ -574,18 +574,18 @@ subroutine YAOHONG_INKJET_STATE_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
 REAL_T local_STATE(nmat*num_state_material)
-REAL_T, intent(inout) :: STATE
-REAL_T, intent(inout) :: STATE_merge
-REAL_T, intent(in) :: STATE_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
-INTEGER_T, intent(in) :: istate,im
+REAL_T, INTENT(inout) :: STATE
+REAL_T, INTENT(inout) :: STATE_merge
+REAL_T, INTENT(in) :: STATE_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: istate,im
 INTEGER_T ibase,im_crit,im_loop
 INTEGER_T local_bcflag
 

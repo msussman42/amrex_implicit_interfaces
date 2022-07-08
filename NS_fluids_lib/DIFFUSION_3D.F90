@@ -134,68 +134,68 @@ stop
 
        IMPLICIT NONE
 
-       INTEGER_T, intent(in) :: override_density(num_materials)
-       INTEGER_T, intent(in) :: constant_density_all_time(num_materials)
-       INTEGER_T, intent(in) :: grav_dir
-       REAL_T, intent(in) :: gravity_normalized
+       INTEGER_T, INTENT(in) :: override_density(num_materials)
+       INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials)
+       INTEGER_T, INTENT(in) :: grav_dir
+       REAL_T, INTENT(in) :: gravity_normalized
  
-       INTEGER_T, intent(in) :: nparts
-       INTEGER_T, intent(in) :: nparts_def
-       INTEGER_T, intent(in) :: im_solid_map(nparts_def)
-       INTEGER_T, intent(in) :: level
-       INTEGER_T, intent(in) :: finest_level
-       INTEGER_T, intent(in) :: rzflag
-       REAL_T, intent(in) :: angular_velocity
-       REAL_T, intent(in) :: visc_coef
-       INTEGER_T, intent(in) :: uncoupled_viscosity
-       INTEGER_T, intent(in) :: update_state
-       REAL_T, intent(in) :: dt
-       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T, INTENT(in) :: nparts
+       INTEGER_T, INTENT(in) :: nparts_def
+       INTEGER_T, INTENT(in) :: im_solid_map(nparts_def)
+       INTEGER_T, INTENT(in) :: level
+       INTEGER_T, INTENT(in) :: finest_level
+       INTEGER_T, INTENT(in) :: rzflag
+       REAL_T, INTENT(in) :: angular_velocity
+       REAL_T, INTENT(in) :: visc_coef
+       INTEGER_T, INTENT(in) :: uncoupled_viscosity
+       INTEGER_T, INTENT(in) :: update_state
+       REAL_T, INTENT(in) :: dt
+       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T :: growlo(3),growhi(3)
-       INTEGER_T, intent(in) :: bfact
+       INTEGER_T, INTENT(in) :: bfact
     
-       INTEGER_T, intent(in) :: DIMDEC(force)
-       INTEGER_T, intent(in) :: DIMDEC(tensor)
-       INTEGER_T, intent(in) :: DIMDEC(thermal)
-       INTEGER_T, intent(in) :: DIMDEC(recon)
-       INTEGER_T, intent(in) :: DIMDEC(solxfab)
-       INTEGER_T, intent(in) :: DIMDEC(solyfab)
-       INTEGER_T, intent(in) :: DIMDEC(solzfab)
-       INTEGER_T, intent(in) :: DIMDEC(uold)
-       INTEGER_T, intent(in) :: DIMDEC(unew)
-       INTEGER_T, intent(in) :: DIMDEC(lsnew)
-       INTEGER_T, intent(in) :: DIMDEC(den)
-       INTEGER_T, intent(in) :: DIMDEC(mu)
+       INTEGER_T, INTENT(in) :: DIMDEC(force)
+       INTEGER_T, INTENT(in) :: DIMDEC(tensor)
+       INTEGER_T, INTENT(in) :: DIMDEC(thermal)
+       INTEGER_T, INTENT(in) :: DIMDEC(recon)
+       INTEGER_T, INTENT(in) :: DIMDEC(solxfab)
+       INTEGER_T, INTENT(in) :: DIMDEC(solyfab)
+       INTEGER_T, INTENT(in) :: DIMDEC(solzfab)
+       INTEGER_T, INTENT(in) :: DIMDEC(uold)
+       INTEGER_T, INTENT(in) :: DIMDEC(unew)
+       INTEGER_T, INTENT(in) :: DIMDEC(lsnew)
+       INTEGER_T, INTENT(in) :: DIMDEC(den)
+       INTEGER_T, INTENT(in) :: DIMDEC(mu)
 
-       REAL_T, intent(out),target :: force(DIMV(force),AMREX_SPACEDIM)
+       REAL_T, INTENT(out),target :: force(DIMV(force),AMREX_SPACEDIM)
        REAL_T, pointer :: force_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(in),target :: tensor(DIMV(tensor),AMREX_SPACEDIM_SQR)
+       REAL_T, INTENT(in),target :: tensor(DIMV(tensor),AMREX_SPACEDIM_SQR)
        REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(in),target :: thermal(DIMV(thermal))
+       REAL_T, INTENT(in),target :: thermal(DIMV(thermal))
        REAL_T, pointer :: thermal_ptr(D_DECL(:,:,:))
-       REAL_T, intent(in),target :: &
+       REAL_T, INTENT(in),target :: &
                recon(DIMV(recon),num_materials*ngeom_recon)
        REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(in),target :: solxfab(DIMV(solxfab),nparts_def*SDIM)
-       REAL_T, intent(in),target :: solyfab(DIMV(solyfab),nparts_def*SDIM)
-       REAL_T, intent(in),target :: solzfab(DIMV(solzfab),nparts_def*SDIM)
+       REAL_T, INTENT(in),target :: solxfab(DIMV(solxfab),nparts_def*SDIM)
+       REAL_T, INTENT(in),target :: solyfab(DIMV(solyfab),nparts_def*SDIM)
+       REAL_T, INTENT(in),target :: solzfab(DIMV(solzfab),nparts_def*SDIM)
        REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
        REAL_T, pointer :: solyfab_ptr(D_DECL(:,:,:),:)
        REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(in),target :: uold(DIMV(uold),AMREX_SPACEDIM)
+       REAL_T, INTENT(in),target :: uold(DIMV(uold),AMREX_SPACEDIM)
        REAL_T, pointer :: uold_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(inout),target :: unew(DIMV(unew),STATE_NCOMP)
+       REAL_T, INTENT(inout),target :: unew(DIMV(unew),STATE_NCOMP)
        REAL_T, pointer :: unew_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
+       REAL_T, INTENT(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
        REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
-       REAL_T, intent(in),target :: den(DIMV(den))
+       REAL_T, INTENT(in),target :: den(DIMV(den))
        REAL_T, pointer :: den_ptr(D_DECL(:,:,:))
-       REAL_T, intent(in),target :: mu(DIMV(mu))
+       REAL_T, INTENT(in),target :: mu(DIMV(mu))
        REAL_T, pointer :: mu_ptr(D_DECL(:,:,:))
-       REAL_T, intent(in) ::  xlo(SDIM)
+       REAL_T, INTENT(in) ::  xlo(SDIM)
        REAL_T ::  xsten(-3:3,SDIM)
-       REAL_T, intent(in) ::  dx(SDIM)
+       REAL_T, INTENT(in) ::  dx(SDIM)
 
        INTEGER_T i,j,k,dir
        INTEGER_T im

@@ -5684,10 +5684,14 @@ NavierStokes::get_mm_scomp_solver(
  } else if (project_option==SOLVETYPE_HEAT) { 
   nsolve=1;
   nlist=num_materials_combine;
+  if ((num_materials_combine!=1)&&(num_materials_combine!=num_materials))
+   amrex::Error("num_materials_combine invalid");
  } else if ((project_option>=SOLVETYPE_SPEC)&&
             (project_option<SOLVETYPE_SPEC+num_species_var)) { 
   nsolve=1;
   nlist=num_materials_combine;
+  if ((num_materials_combine!=1)&&(num_materials_combine!=num_materials))
+   amrex::Error("num_materials_combine invalid");
  } else if (project_option==SOLVETYPE_VISC) { 
   nsolve=AMREX_SPACEDIM;
   nlist=1;
@@ -5767,7 +5771,7 @@ NavierStokes::get_mm_scomp_solver(
  if (ncomp_check!=nsolveMM)
   amrex::Error("ncomp_check invalid");
 
-} // get_mm_scomp_solver
+} // end subroutine get_mm_scomp_solver
 
 void
 NavierStokes::zero_independent_vel(int project_option,int idx,int nsolve) {
@@ -15257,7 +15261,6 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
-
 
  if (dt_slab<=0.0)
   amrex::Error("dt_slab must be positive");

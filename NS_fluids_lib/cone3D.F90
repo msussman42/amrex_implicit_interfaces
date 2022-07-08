@@ -217,10 +217,10 @@
   use probcommon_module
   IMPLICIT NONE
 
-  INTEGER_T, intent(in) :: nmat
-  REAL_T, intent(in) :: x(SDIM)
-  REAL_T, intent(in) :: t
-  REAL_T, intent(out) :: LS(nmat)
+  INTEGER_T, INTENT(in) :: nmat
+  REAL_T, INTENT(in) :: x(SDIM)
+  REAL_T, INTENT(in) :: t
+  REAL_T, INTENT(out) :: LS(nmat)
   INTEGER_T im
 
   if (nmat.eq.num_materials) then
@@ -378,14 +378,14 @@ subroutine CONE3D_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: dx(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: VEL(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: VEL(SDIM)
 INTEGER_T dir
-INTEGER_T, intent(in) :: velsolid_flag
+INTEGER_T, INTENT(in) :: velsolid_flag
 
 REAL_T local_PI
 
@@ -477,11 +477,11 @@ subroutine CONE3D_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: PRES
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: PRES
 
 REAL_T gravity_dz
 
@@ -511,13 +511,13 @@ subroutine CONE3D_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
    use probcommon_module
    IMPLICIT NONE
 
-INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, intent(in) :: nmat
-INTEGER_T, intent(in) :: nstate_mat
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(out) :: STATE(nmat*nstate_mat)
+INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+INTEGER_T, INTENT(in) :: nmat
+INTEGER_T, INTENT(in) :: nstate_mat
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase
 
 if (nmat.eq.num_materials) then
@@ -566,14 +566,14 @@ subroutine CONE3D_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(inout) :: LS(nmat)
-REAL_T, intent(in) :: LS_in(nmat)
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(inout) :: LS(nmat)
+REAL_T, INTENT(in) :: LS_in(nmat)
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -600,15 +600,15 @@ subroutine CONE3D_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: VEL
-REAL_T, intent(in) :: VEL_in
-INTEGER_T, intent(in) :: veldir,dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: VEL
+REAL_T, INTENT(in) :: VEL_in
+INTEGER_T, INTENT(in) :: veldir,dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
@@ -642,15 +642,15 @@ subroutine CONE3D_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
-REAL_T, intent(inout) :: PRES
-REAL_T, intent(in) :: PRES_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
+REAL_T, INTENT(inout) :: PRES
+REAL_T, INTENT(in) :: PRES_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -678,7 +678,7 @@ use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T is_CONE3D_overlay
-INTEGER_T, intent(in) :: nmat,im
+INTEGER_T, INTENT(in) :: nmat,im
 
 if (nmat.eq.num_materials) then
  if (num_materials.eq.2) then
@@ -712,18 +712,18 @@ subroutine CONE3D_STATE_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: nmat
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(nmat)
+INTEGER_T, INTENT(in) :: nmat
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(nmat)
 REAL_T local_STATE(nmat*num_state_material)
-REAL_T, intent(inout) :: STATE
-REAL_T, intent(inout) :: STATE_merge
-REAL_T, intent(in) :: STATE_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
-INTEGER_T, intent(in) :: istate,im
+REAL_T, INTENT(inout) :: STATE
+REAL_T, INTENT(inout) :: STATE_merge
+REAL_T, INTENT(in) :: STATE_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
+INTEGER_T, INTENT(in) :: istate,im
 INTEGER_T ibase,im_crit,im_loop
 INTEGER_T local_bcflag
 

@@ -27,9 +27,9 @@ CONTAINS
 
 ! option=0,1,2, ...
 subroutine RiverVelocity(x,y,z,vel,option,probloz,probhiz)
-        REAL_T, intent(in) :: x,y,z,probloz,probhiz
-        INTEGER_T, intent(in) :: option
-        REAL_T,intent(out) :: vel(SDIM)
+        REAL_T, INTENT(in) :: x,y,z,probloz,probhiz
+        INTEGER_T, INTENT(in) :: option
+        REAL_T,INTENT(out) :: vel(SDIM)
         REAL_T h,theta,velfreestream
         INTEGER_T dir
 
@@ -65,9 +65,9 @@ end subroutine RiverVelocity
 ! option is axis_dir in the inputs file.
 ! option=0,1,2,...
 SUBROUTINE RiverHeight(x,y,h,option)
-        INTEGER_T,intent(in) :: option
-        REAL_T,intent(in) :: x,y
-        REAL_T,intent(out) :: h
+        INTEGER_T,INTENT(in) :: option
+        REAL_T,INTENT(in) :: x,y
+        REAL_T,INTENT(out) :: h
         REAL_T :: a
 
         a = 0.05
@@ -90,9 +90,9 @@ END SUBROUTINE RiverHeight
 
 ! option=0,1,2, ...
 subroutine RiverPressure(x,y,z,t,p,gravity,denair,denwater,option)
-        REAL_T, intent(in)  :: x,y,z,t,gravity,denair,denwater
-        INTEGER_T, intent(in)  :: option
-        REAL_T, intent(out) :: p
+        REAL_T, INTENT(in)  :: x,y,z,t,gravity,denair,denwater
+        INTEGER_T, INTENT(in)  :: option
+        REAL_T, INTENT(out) :: p
         REAL_T h
 
      if (SDIM.eq.2) then

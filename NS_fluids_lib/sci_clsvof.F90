@@ -214,7 +214,7 @@ contains
 subroutine init2_FSI(part_id)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
+INTEGER_T, INTENT(in) :: part_id
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
   print *,"part_id invalid"
@@ -234,11 +234,11 @@ end subroutine init2_FSI
 subroutine init3_FSI(part_id,ifirst,do_2nd_part,ioproc,isout)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: ifirst
-INTEGER_T, intent(in) :: do_2nd_part
-INTEGER_T, intent(in) :: ioproc
-INTEGER_T, intent(in) :: isout
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: ifirst
+INTEGER_T, INTENT(in) :: do_2nd_part
+INTEGER_T, INTENT(in) :: ioproc
+INTEGER_T, INTENT(in) :: isout
 INTEGER_T inode,dir,it
 REAL_T x,y,z,z0,z90,t,dt,t1,t2,inflowvel
 REAL_T YK,ZK,lift0,lift90
@@ -477,8 +477,8 @@ return
 end subroutine init3_FSI
 
 subroutine init3_FSI_mesh_type(FSI_mesh_type,ifirst)
-type(mesh_type), intent(inout) :: FSI_mesh_type
-INTEGER_T, intent(in) :: ifirst
+type(mesh_type), INTENT(inout) :: FSI_mesh_type
+INTEGER_T, INTENT(in) :: ifirst
 INTEGER_T :: inode
 INTEGER_T :: dir
 
@@ -522,7 +522,7 @@ end subroutine init3_FSI_mesh_type
 
 
 subroutine init2_FSI_mesh_type(FSI_mesh_type)
-type(mesh_type), intent(inout) :: FSI_mesh_type
+type(mesh_type), INTENT(inout) :: FSI_mesh_type
 INTEGER_T :: inode
 INTEGER_T :: dir
 
@@ -548,8 +548,8 @@ return
 end subroutine init2_FSI_mesh_type
 
 subroutine init_FSI_mesh_type(FSI_mesh_type,allocate_intelem)
-type(mesh_type), intent(inout) :: FSI_mesh_type
-INTEGER_T, intent(in) :: allocate_intelem
+type(mesh_type), INTENT(inout) :: FSI_mesh_type
+INTEGER_T, INTENT(in) :: allocate_intelem
 INTEGER_T :: inode
 INTEGER_T :: dir
 
@@ -618,8 +618,8 @@ end subroutine init_FSI_mesh_type
 subroutine init_FSI(part_id,allocate_intelem)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: allocate_intelem
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: allocate_intelem
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
   print *,"part_id invalid"
@@ -640,12 +640,12 @@ subroutine xdist_project(x1,x2, &
       dist_project,dist_actual)
 IMPLICIT NONE
 
-type(mesh_type), intent(in) :: FSI_mesh_type
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: max_part_id
-REAL_T, dimension(3),intent(in) :: x1,x2
-REAL_T, intent(out) :: dist_project
-REAL_T, intent(out) :: dist_actual
+type(mesh_type), INTENT(in) :: FSI_mesh_type
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: max_part_id
+REAL_T, dimension(3),INTENT(in) :: x1,x2
+REAL_T, INTENT(out) :: dist_project
+REAL_T, INTENT(out) :: dist_actual
 INTEGER_T sdim_local
 INTEGER_T dir
 
@@ -691,8 +691,8 @@ end subroutine xdist_project
 subroutine xdistmin(x1,x2,dist)
 IMPLICIT NONE
 
-REAL_T, dimension(3),intent(in) :: x1,x2
-REAL_T, intent(out) :: dist
+REAL_T, dimension(3),INTENT(in) :: x1,x2
+REAL_T, INTENT(out) :: dist
 REAL_T, dimension(3) :: diff
 INTEGER_T :: dir
 
@@ -713,8 +713,8 @@ end subroutine xdistmin
 subroutine get_new_half_vols(x1,x2,xsplit,volL,volR)
 IMPLICIT NONE
 
-REAL_T, intent(in), dimension(3) :: x1,x2,xsplit
-REAL_T, intent(out) :: volL,volR
+REAL_T, INTENT(in), dimension(3) :: x1,x2,xsplit
+REAL_T, INTENT(out) :: volL,volR
 INTEGER_T :: dir
 
  volL=zero
@@ -737,11 +737,11 @@ end subroutine get_new_half_vols
 
 subroutine compare_core(nodej,nodejp1,coord_scale,compare_flag,ncore)
 IMPLICIT NONE
-INTEGER_T, intent(in) :: ncore
-INTEGER_T, intent(out) :: compare_flag
-REAL_T, intent(in) :: coord_scale
-REAL_T, intent(in) :: nodej(ncore)
-REAL_T, intent(in) :: nodejp1(ncore)
+INTEGER_T, INTENT(in) :: ncore
+INTEGER_T, INTENT(out) :: compare_flag
+REAL_T, INTENT(in) :: coord_scale
+REAL_T, INTENT(in) :: nodej(ncore)
+REAL_T, INTENT(in) :: nodejp1(ncore)
 REAL_T :: mag
 INTEGER_T :: dir
 
@@ -794,11 +794,11 @@ end subroutine compare_core
 subroutine compare_edge(edgej,edgejp1,coord_scale,compare_flag,overlap_size)
 use global_utility_module
 IMPLICIT NONE
-INTEGER_T, intent(out) :: compare_flag
-REAL_T, intent(out) :: overlap_size
-REAL_T, intent(in) :: coord_scale
-REAL_T, intent(in) :: edgej(6)
-REAL_T, intent(in) :: edgejp1(6)
+INTEGER_T, INTENT(out) :: compare_flag
+REAL_T, INTENT(out) :: overlap_size
+REAL_T, INTENT(in) :: coord_scale
+REAL_T, INTENT(in) :: edgej(6)
+REAL_T, INTENT(in) :: edgejp1(6)
 REAL_T :: overlap_start,overlap_end
 REAL_T :: mag
 REAL_T :: map_mag
@@ -1034,12 +1034,12 @@ subroutine compare_nodes(FSI_mesh_type, &
                 sorted_node_list, &
                 coord_scale,compare_flag)
 IMPLICIT NONE
-type(mesh_type), intent(in) :: FSI_mesh_type
-INTEGER_T, allocatable, intent(in) :: sorted_node_list(:)
-REAL_T, intent(in) :: coord_scale
-INTEGER_T, intent(in) :: jnode
-INTEGER_T, intent(in) :: jnodep1
-INTEGER_T, intent(out) :: compare_flag
+type(mesh_type), INTENT(in) :: FSI_mesh_type
+INTEGER_T, allocatable, INTENT(in) :: sorted_node_list(:)
+REAL_T, INTENT(in) :: coord_scale
+INTEGER_T, INTENT(in) :: jnode
+INTEGER_T, INTENT(in) :: jnodep1
+INTEGER_T, INTENT(out) :: compare_flag
 REAL_T :: nodej(3)
 REAL_T :: nodejp1(3)
 INTEGER_T :: dir
@@ -1061,10 +1061,10 @@ end subroutine compare_nodes
 
 subroutine tecplot_normals(FSI_mesh_type,part_id,max_part_id,view_refined)
 IMPLICIT NONE
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: max_part_id
-INTEGER_T, intent(in) :: view_refined
-type(mesh_type), intent(inout) :: FSI_mesh_type
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: max_part_id
+INTEGER_T, INTENT(in) :: view_refined
+type(mesh_type), INTENT(inout) :: FSI_mesh_type
 
 character*2 partstr
 character*20 auxfilename20
@@ -1198,12 +1198,12 @@ end subroutine tecplot_normals
 subroutine TopDownMergeSort(FSI_mesh_type,coord_scale,A,B,n, &
       sort_nodes_flag)
 IMPLICIT NONE
-type(mesh_type), intent(in) :: FSI_mesh_type
-REAL_T, intent(in) :: coord_scale
-INTEGER_T, intent(in) :: sort_nodes_flag
-INTEGER_T, intent(in) :: n
-INTEGER_T, allocatable, intent(inout) :: A(:)
-INTEGER_T, allocatable, intent(inout) :: B(:)
+type(mesh_type), INTENT(in) :: FSI_mesh_type
+REAL_T, INTENT(in) :: coord_scale
+INTEGER_T, INTENT(in) :: sort_nodes_flag
+INTEGER_T, INTENT(in) :: n
+INTEGER_T, allocatable, INTENT(inout) :: A(:)
+INTEGER_T, allocatable, INTENT(inout) :: B(:)
 
  print *,"in TopDownMergeSort: n,sort_nodes_flag=",n,sort_nodes_flag
 
@@ -1216,13 +1216,13 @@ end subroutine TopDownMergeSort
 recursive subroutine TopDownSplitMerge(FSI_mesh_type,coord_scale, &
  B,iBegin,iEnd,A,sort_nodes_flag)
 IMPLICIT NONE
-type(mesh_type), intent(in) :: FSI_mesh_type
-REAL_T, intent(in) :: coord_scale
-INTEGER_T, intent(in) :: sort_nodes_flag
-INTEGER_T, intent(in) :: iBegin
-INTEGER_T, intent(in) :: iEnd
-INTEGER_T, allocatable, intent(inout) :: A(:)
-INTEGER_T, allocatable, intent(inout) :: B(:)
+type(mesh_type), INTENT(in) :: FSI_mesh_type
+REAL_T, INTENT(in) :: coord_scale
+INTEGER_T, INTENT(in) :: sort_nodes_flag
+INTEGER_T, INTENT(in) :: iBegin
+INTEGER_T, INTENT(in) :: iEnd
+INTEGER_T, allocatable, INTENT(inout) :: A(:)
+INTEGER_T, allocatable, INTENT(inout) :: B(:)
 INTEGER_T :: iMiddle
 
  if (iEnd-iBegin.le.1) then
@@ -1243,14 +1243,14 @@ end subroutine TopDownSplitMerge
 subroutine TopDownMerge(FSI_mesh_type,coord_scale, &
  A,iBegin,iMiddle,iEnd,B,sort_nodes_flag)
 IMPLICIT NONE
-type(mesh_type), intent(in) :: FSI_mesh_type
-REAL_T, intent(in) :: coord_scale
-INTEGER_T, intent(in) :: sort_nodes_flag
-INTEGER_T, intent(in) :: iBegin
-INTEGER_T, intent(in) :: iMiddle
-INTEGER_T, intent(in) :: iEnd
-INTEGER_T, allocatable, intent(inout) :: A(:)
-INTEGER_T, allocatable, intent(inout) :: B(:)
+type(mesh_type), INTENT(in) :: FSI_mesh_type
+REAL_T, INTENT(in) :: coord_scale
+INTEGER_T, INTENT(in) :: sort_nodes_flag
+INTEGER_T, INTENT(in) :: iBegin
+INTEGER_T, INTENT(in) :: iMiddle
+INTEGER_T, INTENT(in) :: iEnd
+INTEGER_T, allocatable, INTENT(inout) :: A(:)
+INTEGER_T, allocatable, INTENT(inout) :: B(:)
 INTEGER_T :: i,j,k
 INTEGER_T :: compare_flag
 INTEGER_T :: dir
@@ -1327,12 +1327,12 @@ end subroutine TopDownMerge
 subroutine CopyArray(FSI_mesh_type,coord_scale, &
  A,iBegin,iEnd,B)
 IMPLICIT NONE
-type(mesh_type), intent(in) :: FSI_mesh_type
-REAL_T, intent(in) :: coord_scale
-INTEGER_T, intent(in) :: iBegin
-INTEGER_T, intent(in) :: iEnd
-INTEGER_T, allocatable, intent(inout) :: A(:)
-INTEGER_T, allocatable, intent(inout) :: B(:)
+type(mesh_type), INTENT(in) :: FSI_mesh_type
+REAL_T, INTENT(in) :: coord_scale
+INTEGER_T, INTENT(in) :: iBegin
+INTEGER_T, INTENT(in) :: iEnd
+INTEGER_T, allocatable, INTENT(inout) :: A(:)
+INTEGER_T, allocatable, INTENT(inout) :: B(:)
 INTEGER_T :: k
 
  do k=iBegin,iEnd-1
@@ -1343,9 +1343,9 @@ end subroutine CopyArray
 
 subroutine remove_duplicate_nodes(FSI_mesh_type,part_id,max_part_id)
 IMPLICIT NONE
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: max_part_id
-type(mesh_type), intent(inout) :: FSI_mesh_type
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: max_part_id
+type(mesh_type), INTENT(inout) :: FSI_mesh_type
 INTEGER_T, allocatable :: sorted_node_list(:)
 INTEGER_T, allocatable :: B_list(:)
 INTEGER_T, allocatable :: alternate_node_list(:)
@@ -1587,11 +1587,11 @@ end subroutine remove_duplicate_nodes
 subroutine print_edge( &
  FSI_mesh_type,edit_refined_data,ielem,inode,edge_data)
 IMPLICIT NONE
-INTEGER_T, intent(in) :: edit_refined_data
-type(mesh_type), intent(in) :: FSI_mesh_type
-INTEGER_T, intent(in) :: ielem
-INTEGER_T, intent(in) :: inode
-REAL_T, intent(out) :: edge_data(6)
+INTEGER_T, INTENT(in) :: edit_refined_data
+type(mesh_type), INTENT(in) :: FSI_mesh_type
+INTEGER_T, INTENT(in) :: ielem
+INTEGER_T, INTENT(in) :: inode
+REAL_T, INTENT(out) :: edge_data(6)
 INTEGER_T :: inodep1
 INTEGER_T :: local_nodes_per_elem
 INTEGER_T :: dir
@@ -1640,12 +1640,12 @@ subroutine init_EdgeNormal( &
    FSI_mesh_type,part_id,max_part_id,ioproc,isout,edit_refined_data, &
    generate_time)
 IMPLICIT NONE
-REAL_T, intent(in) :: generate_time
-INTEGER_T, intent(in) :: edit_refined_data
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: max_part_id
-type(mesh_type), intent(inout) :: FSI_mesh_type
-INTEGER_T, intent(in) :: ioproc,isout
+REAL_T, INTENT(in) :: generate_time
+INTEGER_T, INTENT(in) :: edit_refined_data
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: max_part_id
+type(mesh_type), INTENT(inout) :: FSI_mesh_type
+INTEGER_T, INTENT(in) :: ioproc,isout
 INTEGER_T, allocatable :: sorted_edge_list(:)
 INTEGER_T, allocatable :: B_list(:)
 INTEGER_T, allocatable :: edge_inode(:)
@@ -2130,14 +2130,14 @@ subroutine post_process_nodes_elements(initflag, &
   ioproc,isout,h_small)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: max_part_id
-type(mesh_type), intent(inout) :: FSI_mesh_type
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: max_part_id
+type(mesh_type), INTENT(inout) :: FSI_mesh_type
 
-REAL_T, intent(in) :: problo(3),probhi(3)
-INTEGER_T, intent(in) :: initflag
-INTEGER_T, intent(in) :: ioproc,isout
-REAL_T, intent(in) :: h_small
+REAL_T, INTENT(in) :: problo(3),probhi(3)
+INTEGER_T, INTENT(in) :: initflag
+INTEGER_T, INTENT(in) :: ioproc,isout
+REAL_T, INTENT(in) :: h_small
 INTEGER_T :: edit_refined_data
 INTEGER_T :: ielem,nodes_per_elem,dir
 INTEGER_T :: ilev_lag
@@ -3408,10 +3408,10 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: isout
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: isout
 INTEGER_T :: inode
-INTEGER_T, intent(in) :: ioproc
+INTEGER_T, INTENT(in) :: ioproc
 REAL_T, dimension(3) :: maxnode,minnode
 REAL_T, dimension(3) :: xval,xval1,xval2,xvalm1,xvalp1
 REAL_T, dimension(3) :: maxnodebefore,minnodebefore
@@ -3641,16 +3641,16 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: sdim
-INTEGER_T, intent(in) :: ifirst
-INTEGER_T, intent(in) :: isout
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: sdim
+INTEGER_T, INTENT(in) :: ifirst
+INTEGER_T, INTENT(in) :: isout
 INTEGER_T :: iface
-INTEGER_T, intent(in) :: ioproc
-REAL_T, intent(in) :: curtime,dt
+INTEGER_T, INTENT(in) :: ioproc
+REAL_T, INTENT(in) :: curtime,dt
 INTEGER_T :: dir
-INTEGER_T, intent(in) :: istep
-INTEGER_T, intent(in) :: istop
+INTEGER_T, INTENT(in) :: istep
+INTEGER_T, INTENT(in) :: istop
 INTEGER_T :: ctml_part_id
 INTEGER_T :: inode_crit,inode
 INTEGER_T :: orig_nodes
@@ -4381,11 +4381,11 @@ use global_utility_module
 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: sdim,ifirst,isout
-INTEGER_T, intent(in) :: ioproc
-REAL_T, intent(in) :: curtime,dt
-INTEGER_T, intent(in) :: istep,istop
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: sdim,ifirst,isout
+INTEGER_T, INTENT(in) :: ioproc
+REAL_T, INTENT(in) :: curtime,dt
+INTEGER_T, INTENT(in) :: istep,istop
 INTEGER_T :: inode,iface
 REAL_T, dimension(3) :: maxnode,minnode,xval,xval1
 REAL_T, dimension(3) :: maxnodebefore,minnodebefore
@@ -4618,9 +4618,9 @@ end subroutine init_from_cas
 subroutine convert_2D_to_3D_nodes_FSI(part_id,inode,stand_alone_flag)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: stand_alone_flag
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: inode
+INTEGER_T, INTENT(in) :: stand_alone_flag
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: inode
 INTEGER_T local_nodes,orig_nodes,dir
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
@@ -4715,8 +4715,8 @@ end subroutine convert_2D_to_3D_nodes_FSI
 subroutine convert_2D_to_3D_elements_FSI(part_id,iface)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: iface
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: iface
 INTEGER_T local_nodes,orig_nodes
 INTEGER_T iflag
 INTEGER_T local_elements,orig_elements
@@ -4771,7 +4771,7 @@ subroutine init_gingerbread2D(curtime,dt,ifirst,sdim,istop,istep,ioproc, &
 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
+INTEGER_T, INTENT(in) :: part_id
 INTEGER_T :: sdim,ifirst,isout
 INTEGER_T :: inode,iface,ioproc
 REAL_T :: curtime,dt
@@ -5003,7 +5003,7 @@ subroutine init_helix(curtime,dt,ifirst,sdim,istop,istep,ioproc, &
 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
+INTEGER_T, INTENT(in) :: part_id
 INTEGER_T :: sdim,ifirst,isout
 INTEGER_T :: inode,iface
 INTEGER_T :: inode_read
@@ -7010,8 +7010,8 @@ end subroutine gearinit
 subroutine timefluct(cur_time,value)
 IMPLICIT NONE
 
-  REAL_T, intent(in) :: cur_time
-  REAL_T, intent(out) :: value
+  REAL_T, INTENT(in) :: cur_time
+  REAL_T, INTENT(out) :: value
   REAL_T inittime, medtime, endtime, cur_timeW
 
   inittime = 0.0
@@ -7299,7 +7299,7 @@ REAL_T, dimension(3) :: maxnode,minnode,xval,xtemp
 INTEGER_T :: dir,istep,istop
 character(20) :: dwave,dwave2
 REAL_T :: xx,zz
-REAL_T, intent(in) :: paddle_pos,paddle_vel
+REAL_T, INTENT(in) :: paddle_pos,paddle_vel
 INTEGER_T :: local_ifirst
 INTEGER_T :: local_part_id
 
@@ -7508,7 +7508,7 @@ REAL_T, dimension(3) :: maxnode,minnode,xval,xtemp
 INTEGER_T :: dir,istep,istop
 INTEGER_T :: filler
 character(40) :: dwave
-REAL_T, intent(in) :: paddle_pos,paddle_vel
+REAL_T, INTENT(in) :: paddle_pos,paddle_vel
 INTEGER_T :: local_ifirst
 INTEGER_T :: local_part_id
 
@@ -7634,10 +7634,10 @@ subroutine overall_solid_advance(CLSVOF_curtime,CLSVOF_dt, &
   part_id,ioproc,isout)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: ioproc
-INTEGER_T, intent(in) :: isout
-REAL_T, intent(in) :: CLSVOF_curtime,CLSVOF_dt
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: ioproc
+INTEGER_T, INTENT(in) :: isout
+REAL_T, INTENT(in) :: CLSVOF_curtime,CLSVOF_dt
 INTEGER_T :: ifirst
 REAL_T :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
 
@@ -7739,10 +7739,10 @@ use global_utility_module
 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: ioproc
-INTEGER_T, intent(in) :: isout
-REAL_T, intent(in) :: CLSVOFtime
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: ioproc
+INTEGER_T, INTENT(in) :: isout
+REAL_T, INTENT(in) :: CLSVOFtime
 INTEGER_T :: ifirst
 REAL_T :: paddle_pos,paddle_vel,CLSVOF_dt
 REAL_T :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
@@ -8048,17 +8048,17 @@ subroutine checkinpointBIG( &
 use global_utility_module
 IMPLICIT NONE
 
-type(mesh_type), intent(in) :: FSI_mesh_type
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: max_part_id
-INTEGER_T, intent(in) :: inode,elemnum
-INTEGER_T, intent(inout) :: inplane
-REAL_T, intent(in) :: time 
-REAL_T, dimension(3), intent(inout) :: xclosest
-REAL_T, dimension(3), intent(inout) :: normal_closest
-REAL_T, dimension(3), intent(in) :: dx
-REAL_T, dimension(3), intent(in) :: xc
-REAL_T, intent(inout) :: unsigned_mindist
+type(mesh_type), INTENT(in) :: FSI_mesh_type
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: max_part_id
+INTEGER_T, INTENT(in) :: inode,elemnum
+INTEGER_T, INTENT(inout) :: inplane
+REAL_T, INTENT(in) :: time 
+REAL_T, dimension(3), INTENT(inout) :: xclosest
+REAL_T, dimension(3), INTENT(inout) :: normal_closest
+REAL_T, dimension(3), INTENT(in) :: dx
+REAL_T, dimension(3), INTENT(in) :: xc
+REAL_T, INTENT(inout) :: unsigned_mindist
 REAL_T :: curdist,mag
 INTEGER_T :: dir
 INTEGER_T :: nodes_per_elem
@@ -8174,23 +8174,23 @@ subroutine checkinlineBIG( &
 use global_utility_module
 IMPLICIT NONE
 
-type(mesh_type), intent(in) :: FSI_mesh_type
-REAL_T, intent(in) :: eul_over_lag_scale
+type(mesh_type), INTENT(in) :: FSI_mesh_type
+REAL_T, INTENT(in) :: eul_over_lag_scale
 REAL_T :: adjusted_tol
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: max_part_id
-INTEGER_T, intent(in) :: inode
-INTEGER_T, intent(in) :: elemnum
-INTEGER_T, intent(inout) :: inplane
-REAL_T, intent(in) :: time 
-REAL_T, dimension(3), intent(inout) :: xclosest
-REAL_T, dimension(3), intent(inout) :: normal_closest
-REAL_T, dimension(3), intent(in) :: dx
-REAL_T, dimension(3), intent(in) :: xc
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: max_part_id
+INTEGER_T, INTENT(in) :: inode
+INTEGER_T, INTENT(in) :: elemnum
+INTEGER_T, INTENT(inout) :: inplane
+REAL_T, INTENT(in) :: time 
+REAL_T, dimension(3), INTENT(inout) :: xclosest
+REAL_T, dimension(3), INTENT(inout) :: normal_closest
+REAL_T, dimension(3), INTENT(in) :: dx
+REAL_T, dimension(3), INTENT(in) :: xc
 INTEGER_T :: inodep1
 REAL_T :: local_normal
 REAL_T, dimension(2,3) :: xnode,nnode
-REAL_T, intent(inout) :: unsigned_mindist
+REAL_T, INTENT(inout) :: unsigned_mindist
 REAL_T :: mag
 INTEGER_T :: dir
 INTEGER_T :: nodes_per_elem
@@ -8335,10 +8335,10 @@ REAL_T, dimension(3) :: velparm
   enddo
 
   call global_checkinline(nnode,xnode,adjusted_tol,xc, &
-        inplane, &  ! intent(inout)
-        unsigned_mindist, & ! intent(inout)
-        xclosest, & ! intent(inout)
-        normal_closest) ! intent(inout)
+        inplane, &  ! INTENT(inout)
+        unsigned_mindist, & ! INTENT(inout)
+        xclosest, & ! INTENT(inout)
+        normal_closest) ! INTENT(inout)
 
  else
   print *,"inode invalid in checkinlineBIG"
@@ -8364,19 +8364,19 @@ subroutine checkinplaneBIG( &
 use global_utility_module
 IMPLICIT NONE
 
-type(mesh_type), intent(in) :: FSI_mesh_type
-REAL_T, intent(in) :: eul_over_lag_scale
+type(mesh_type), INTENT(in) :: FSI_mesh_type
+REAL_T, INTENT(in) :: eul_over_lag_scale
 REAL_T :: adjusted_tol
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: max_part_id
-INTEGER_T, intent(in) :: elemnum
-REAL_T, intent(in) :: time
-REAL_T, dimension(3), intent(in) :: xc
-REAL_T, dimension(3), intent(in) :: xclosest
-REAL_T, dimension(3), intent(out) :: xclosest_project
-REAL_T, dimension(3), intent(in) :: normal
-REAL_T, dimension(3), intent(out) :: normal_project
-INTEGER_T, intent(out) :: inplane
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: max_part_id
+INTEGER_T, INTENT(in) :: elemnum
+REAL_T, INTENT(in) :: time
+REAL_T, dimension(3), INTENT(in) :: xc
+REAL_T, dimension(3), INTENT(in) :: xclosest
+REAL_T, dimension(3), INTENT(out) :: xclosest_project
+REAL_T, dimension(3), INTENT(in) :: normal
+REAL_T, dimension(3), INTENT(out) :: normal_project
+INTEGER_T, INTENT(out) :: inplane
 INTEGER_T :: dir,i
 INTEGER_T :: nodes_per_elem
 REAL_T, dimension(3) :: xfoot
@@ -8474,12 +8474,12 @@ subroutine scinormalBIG(elemnum,normal, &
      time)
 IMPLICIT NONE
 
-type(mesh_type), intent(in) :: FSI_mesh_type
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: max_part_id
-INTEGER_T, intent(in) :: elemnum
-REAL_T, dimension(3), intent(out) :: normal
-REAL_T, intent(in) :: time
+type(mesh_type), INTENT(in) :: FSI_mesh_type
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: max_part_id
+INTEGER_T, INTENT(in) :: elemnum
+REAL_T, dimension(3), INTENT(out) :: normal
+REAL_T, INTENT(in) :: time
 INTEGER_T :: nodes_per_elem
 REAL_T, dimension(3,3) :: nodesave
 REAL_T, dimension(3) :: nodeavg
@@ -8629,12 +8629,12 @@ subroutine scinormal(elemnum,normal, &
     time)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: max_part_id
-type(mesh_type), intent(in) :: FSI_mesh_type
-INTEGER_T, intent(in) :: elemnum
-REAL_T, dimension(3), intent(out) :: normal
-REAL_T, intent(in) :: time
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: max_part_id
+type(mesh_type), INTENT(in) :: FSI_mesh_type
+INTEGER_T, INTENT(in) :: elemnum
+REAL_T, dimension(3), INTENT(out) :: normal
+REAL_T, INTENT(in) :: time
 INTEGER_T :: nodes_per_elem
 REAL_T, dimension(3,3) :: nodesave
 REAL_T, dimension(3) :: nodeavg
@@ -8737,8 +8737,8 @@ subroutine sciarea(elemnum,area,part_id)
 IMPLICIT NONE
 
 INTEGER_T :: part_id
-INTEGER_T, intent(in) :: elemnum
-REAL_T, intent(out) :: area
+INTEGER_T, INTENT(in) :: elemnum
+REAL_T, INTENT(out) :: area
 INTEGER_T :: nodes_per_elem
 REAL_T, dimension(3,3) :: nodesave
 INTEGER_T :: i,j
@@ -8795,7 +8795,7 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: ioproc,isout
+INTEGER_T, INTENT(in) :: ioproc,isout
 INTEGER_T :: part_id
 INTEGER_T :: ctml_part_id
 INTEGER_T :: fsi_part_id
@@ -8900,7 +8900,7 @@ use mpi
 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: ioproc,isout
+INTEGER_T, INTENT(in) :: ioproc,isout
 INTEGER_T :: ierr1
 double precision, dimension(:), allocatable :: sync_velocity
 double precision, dimension(:), allocatable :: temp_velocity
@@ -9041,12 +9041,12 @@ use global_utility_module
 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: FSI_operation
-INTEGER_T, intent(in) :: iter
-INTEGER_T, intent(in) :: auxcomp
-INTEGER_T, intent(in) :: ioproc
-INTEGER_T, intent(in) :: aux_isout
-INTEGER_T, intent(inout) :: FSI_touch_flag
+INTEGER_T, INTENT(in) :: FSI_operation
+INTEGER_T, INTENT(in) :: iter
+INTEGER_T, INTENT(in) :: auxcomp
+INTEGER_T, INTENT(in) :: ioproc
+INTEGER_T, INTENT(in) :: aux_isout
+INTEGER_T, INTENT(inout) :: FSI_touch_flag
 INTEGER_T :: lev77_local
 INTEGER_T :: tid_local
 INTEGER_T :: tilenum_local
@@ -9162,9 +9162,9 @@ use global_utility_module
 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: auxcomp
-INTEGER_T, intent(in) :: ioproc
-INTEGER_T, intent(in) :: aux_isout
+INTEGER_T, INTENT(in) :: auxcomp
+INTEGER_T, INTENT(in) :: ioproc
+INTEGER_T, INTENT(in) :: aux_isout
 
 INTEGER_T :: dir
 INTEGER_T :: inode
@@ -9621,44 +9621,44 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: im_critical
-INTEGER_T, intent(inout) :: num_nodes_list(num_materials)
-INTEGER_T, intent(inout) :: num_elements_list(num_materials)
-INTEGER_T, intent(in) :: FSI_input_num_nodes
-INTEGER_T, intent(in) :: FSI_input_num_elements
-REAL_T, intent(inout) :: FSI_input_node_list(3*FSI_input_num_nodes)
-INTEGER_T, intent(inout) :: FSI_input_element_list(4*FSI_input_num_elements)
-REAL_T, intent(inout) :: FSI_input_displacement_list(3*FSI_input_num_nodes)
-REAL_T, intent(inout) ::  &
+INTEGER_T, INTENT(in) :: im_critical
+INTEGER_T, INTENT(inout) :: num_nodes_list(num_materials)
+INTEGER_T, INTENT(inout) :: num_elements_list(num_materials)
+INTEGER_T, INTENT(in) :: FSI_input_num_nodes
+INTEGER_T, INTENT(in) :: FSI_input_num_elements
+REAL_T, INTENT(inout) :: FSI_input_node_list(3*FSI_input_num_nodes)
+INTEGER_T, INTENT(inout) :: FSI_input_element_list(4*FSI_input_num_elements)
+REAL_T, INTENT(inout) :: FSI_input_displacement_list(3*FSI_input_num_nodes)
+REAL_T, INTENT(inout) ::  &
         FSI_input_velocity_halftime_list(3*FSI_input_num_nodes)
-REAL_T, intent(inout) ::  &
+REAL_T, INTENT(inout) ::  &
         FSI_input_velocity_list(3*FSI_input_num_nodes)
-REAL_T, intent(inout) :: FSI_input_force_list(3*FSI_input_num_nodes)
-REAL_T, intent(inout) :: FSI_input_mass_list(FSI_input_num_nodes)
-REAL_T, intent(inout) :: FSI_input_temperature_list(FSI_input_num_nodes)
+REAL_T, INTENT(inout) :: FSI_input_force_list(3*FSI_input_num_nodes)
+REAL_T, INTENT(inout) :: FSI_input_mass_list(FSI_input_num_nodes)
+REAL_T, INTENT(inout) :: FSI_input_temperature_list(FSI_input_num_nodes)
 
-INTEGER_T, intent(in) :: FSI_output_num_nodes
-INTEGER_T, intent(in) :: FSI_output_num_elements
-REAL_T, intent(inout) :: FSI_output_node_list(3*FSI_output_num_nodes)
-INTEGER_T, intent(inout) :: FSI_output_element_list(4*FSI_output_num_elements)
-REAL_T, intent(inout) :: FSI_output_displacement_list(3*FSI_output_num_nodes)
-REAL_T, intent(inout) :: &
+INTEGER_T, INTENT(in) :: FSI_output_num_nodes
+INTEGER_T, INTENT(in) :: FSI_output_num_elements
+REAL_T, INTENT(inout) :: FSI_output_node_list(3*FSI_output_num_nodes)
+INTEGER_T, INTENT(inout) :: FSI_output_element_list(4*FSI_output_num_elements)
+REAL_T, INTENT(inout) :: FSI_output_displacement_list(3*FSI_output_num_nodes)
+REAL_T, INTENT(inout) :: &
         FSI_output_velocity_halftime_list(3*FSI_output_num_nodes)
-REAL_T, intent(inout) :: &
+REAL_T, INTENT(inout) :: &
         FSI_output_velocity_list(3*FSI_output_num_nodes)
-REAL_T, intent(inout) :: FSI_output_force_list(3*FSI_output_num_nodes)
-REAL_T, intent(inout) :: FSI_output_mass_list(FSI_output_num_nodes)
-REAL_T, intent(inout) :: FSI_output_temperature_list(FSI_output_num_nodes)
+REAL_T, INTENT(inout) :: FSI_output_force_list(3*FSI_output_num_nodes)
+REAL_T, INTENT(inout) :: FSI_output_mass_list(FSI_output_num_nodes)
+REAL_T, INTENT(inout) :: FSI_output_temperature_list(FSI_output_num_nodes)
 
-INTEGER_T, intent(in) :: nparts_in
-INTEGER_T, intent(in) :: im_solid_map_in(nparts_in)
+INTEGER_T, INTENT(in) :: nparts_in
+INTEGER_T, INTENT(in) :: im_solid_map_in(nparts_in)
 INTEGER_T :: initflag
-INTEGER_T, intent(in) :: ioproc,isout
-INTEGER_T, intent(in) :: CTML_FSI_INIT
-REAL_T, intent(in) :: dx_max_level(AMREX_SPACEDIM)
-REAL_T, intent(in) :: h_small
-REAL_T, intent(in) :: CLSVOFtime
-REAL_T, intent(in) :: problo(3),probhi(3)
+INTEGER_T, INTENT(in) :: ioproc,isout
+INTEGER_T, INTENT(in) :: CTML_FSI_INIT
+REAL_T, INTENT(in) :: dx_max_level(AMREX_SPACEDIM)
+REAL_T, INTENT(in) :: h_small
+REAL_T, INTENT(in) :: CLSVOFtime
+REAL_T, INTENT(in) :: problo(3),probhi(3)
 INTEGER_T :: test_NPARTS
 INTEGER_T :: part_id
 INTEGER_T :: dir
@@ -10021,7 +10021,7 @@ end subroutine CLSVOF_ReadHeader
 INTEGER_T function sign_valid(mask)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: mask
+INTEGER_T, INTENT(in) :: mask
 
 if ((mask.eq.FSI_FINE_SIGN_VEL_VALID).or. &  
     (mask.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID).or. &  
@@ -10043,7 +10043,7 @@ end function sign_valid
 INTEGER_T function vel_valid(mask)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: mask
+INTEGER_T, INTENT(in) :: mask
 
 if ((mask.eq.FSI_FINE_VEL_VALID).or. &  
     (mask.eq.FSI_FINE_SIGN_VEL_VALID).or. & 
@@ -10066,17 +10066,17 @@ subroutine check_overlap(part_id,ielem,time,minnode,maxnode, &
  tid,tilenum,dx3D,lev77,interior_flag,overlap,isweep)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: tid,tilenum
-INTEGER_T, intent(in) :: ielem
-INTEGER_T, intent(in) :: lev77
-INTEGER_T, intent(out) :: interior_flag
-INTEGER_T, intent(out) :: overlap
-INTEGER_T, intent(in) :: isweep
-REAL_T, intent(in) :: time
-REAL_T, intent(in) :: dx3D(3)
-REAL_T, intent(in) :: minnode(3)
-REAL_T, intent(in) :: maxnode(3)
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: tid,tilenum
+INTEGER_T, INTENT(in) :: ielem
+INTEGER_T, INTENT(in) :: lev77
+INTEGER_T, INTENT(out) :: interior_flag
+INTEGER_T, INTENT(out) :: overlap
+INTEGER_T, INTENT(in) :: isweep
+REAL_T, INTENT(in) :: time
+REAL_T, INTENT(in) :: dx3D(3)
+REAL_T, INTENT(in) :: minnode(3)
+REAL_T, INTENT(in) :: maxnode(3)
 INTEGER_T local_nelems
 INTEGER_T dir
 INTEGER_T tilelo,tilehi
@@ -10202,14 +10202,14 @@ subroutine check_overlap_nodeBIG(part_id,inode,time, &
  tid,tilenum,dx3D,lev77,overlap)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: tid,tilenum
-INTEGER_T, intent(in) :: inode
-INTEGER_T, intent(in) :: lev77
-INTEGER_T, intent(out) :: overlap
-REAL_T, intent(in) :: time
-REAL_T, intent(in) :: dx3D(3)
-REAL_T, intent(in) :: minnode(3)
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: tid,tilenum
+INTEGER_T, INTENT(in) :: inode
+INTEGER_T, INTENT(in) :: lev77
+INTEGER_T, INTENT(out) :: overlap
+REAL_T, INTENT(in) :: time
+REAL_T, INTENT(in) :: dx3D(3)
+REAL_T, INTENT(in) :: minnode(3)
 INTEGER_T local_nnodes
 INTEGER_T dir
 INTEGER_T tilelo,tilehi
@@ -10307,13 +10307,13 @@ subroutine get_minmax_nodeBIG( &
      ielem,time,minnode,maxnode)
 IMPLICIT NONE
 
-type(mesh_type), intent(in) :: FSI_mesh_type
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: max_part_id
-INTEGER_T, intent(in) :: ielem
-REAL_T, intent(in) :: time
-REAL_T, intent(out) :: minnode(3)
-REAL_T, intent(out) :: maxnode(3)
+type(mesh_type), INTENT(in) :: FSI_mesh_type
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: max_part_id
+INTEGER_T, INTENT(in) :: ielem
+REAL_T, INTENT(in) :: time
+REAL_T, INTENT(out) :: minnode(3)
+REAL_T, INTENT(out) :: maxnode(3)
 INTEGER_T inode,dir,node_id
 REAL_T nodetest
 REAL_T xtarget(3)
@@ -10380,10 +10380,10 @@ end subroutine get_minmax_nodeBIG
 subroutine get_contained_nodeBIG(part_id,inode,time,minnode)
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: part_id
-INTEGER_T, intent(in) :: inode
-REAL_T, intent(in) :: time
-REAL_T, intent(out) :: minnode(3)
+INTEGER_T, INTENT(in) :: part_id
+INTEGER_T, INTENT(in) :: inode
+REAL_T, INTENT(in) :: time
+REAL_T, INTENT(out) :: minnode(3)
 INTEGER_T dir
 REAL_T xtarget(3)
 REAL_T xfoot(3)
@@ -10429,14 +10429,14 @@ use global_utility_module
 
 IMPLICIT NONE
 
- INTEGER_T, intent(in) :: lev77
- INTEGER_T, intent(in) :: sci_max_level
- INTEGER_T, intent(in) :: nthread_parm
- REAL_T, intent(in) :: dx3D(3)
- INTEGER_T, intent(in) :: part_id
- INTEGER_T, intent(in) :: im_part
- REAL_T, intent(in) :: cur_time
- REAL_T, intent(in) :: dt
+ INTEGER_T, INTENT(in) :: lev77
+ INTEGER_T, INTENT(in) :: sci_max_level
+ INTEGER_T, INTENT(in) :: nthread_parm
+ REAL_T, INTENT(in) :: dx3D(3)
+ INTEGER_T, INTENT(in) :: part_id
+ INTEGER_T, INTENT(in) :: im_part
+ REAL_T, INTENT(in) :: cur_time
+ REAL_T, INTENT(in) :: dt
 
  INTEGER_T interior_flag
  INTEGER_T overlap
@@ -10933,8 +10933,8 @@ end subroutine CLSVOF_FILLCONTAINER
 INTEGER_T function is_less_than_list(t1,s1,t2,s2)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: t1,t2
-INTEGER_T, intent(in) :: s1,s2
+REAL_T, INTENT(in) :: t1,t2
+INTEGER_T, INTENT(in) :: s1,s2
 
  is_less_than_list=0
 
@@ -10972,8 +10972,8 @@ end function is_less_than_list
 INTEGER_T function is_equal_list(t1,s1,t2,s2)
 IMPLICIT NONE
 
-REAL_T, intent(in) :: t1,t2
-INTEGER_T, intent(in) :: s1,s2
+REAL_T, INTENT(in) :: t1,t2
+INTEGER_T, INTENT(in) :: s1,s2
 
  is_equal_list=0
 
@@ -11054,37 +11054,37 @@ use CTML_module
 
 IMPLICIT NONE
 
-  INTEGER_T, intent(in) :: iter
-  INTEGER_T, intent(in) :: sdim_AMR ! not used
-  INTEGER_T, intent(in) :: lev77
-  INTEGER_T, intent(in) :: tid
-  INTEGER_T, intent(in) :: tilenum
-  INTEGER_T, intent(in) :: im_part
-  INTEGER_T, intent(in) :: nparts
-  INTEGER_T, intent(in) :: part_id
-  INTEGER_T, intent(in) :: ngrow_make_distance
-  INTEGER_T, intent(in) :: nFSI
-  INTEGER_T, intent(in) :: FSI_operation
-  INTEGER_T, intent(inout) :: touch_flag
+  INTEGER_T, INTENT(in) :: iter
+  INTEGER_T, INTENT(in) :: sdim_AMR ! not used
+  INTEGER_T, INTENT(in) :: lev77
+  INTEGER_T, INTENT(in) :: tid
+  INTEGER_T, INTENT(in) :: tilenum
+  INTEGER_T, INTENT(in) :: im_part
+  INTEGER_T, INTENT(in) :: nparts
+  INTEGER_T, INTENT(in) :: part_id
+  INTEGER_T, INTENT(in) :: ngrow_make_distance
+  INTEGER_T, INTENT(in) :: nFSI
+  INTEGER_T, INTENT(in) :: FSI_operation
+  INTEGER_T, INTENT(inout) :: touch_flag
   INTEGER_T :: numtouch
-  REAL_T, intent(in) :: time,dt
-  REAL_T, intent(in) :: problo3D(3)
-  REAL_T, intent(in) :: probhi3D(3)
-  INTEGER_T, intent(in) :: xmap3D(3)
-  REAL_T, intent(in) :: dx3D(3)
-  REAL_T, intent(in) :: xlo3D_tile(3)
-  REAL_T, intent(in) :: xhi3D_tile(3)
-  INTEGER_T, intent(in) :: FSI_lo3D(3),FSI_hi3D(3)
-  INTEGER_T, intent(in) :: FSI_growlo3D(3),FSI_growhi3D(3)
-  INTEGER_T, intent(in) :: growlo3D(3),growhi3D(3)
-  REAL_T, intent(in), pointer :: xdata3D(:,:,:,:)
-  REAL_T, intent(in), pointer :: FSIdata3D(:,:,:,:)
-  REAL_T, intent(in), pointer :: masknbr3D(:,:,:,:)
+  REAL_T, INTENT(in) :: time,dt
+  REAL_T, INTENT(in) :: problo3D(3)
+  REAL_T, INTENT(in) :: probhi3D(3)
+  INTEGER_T, INTENT(in) :: xmap3D(3)
+  REAL_T, INTENT(in) :: dx3D(3)
+  REAL_T, INTENT(in) :: xlo3D_tile(3)
+  REAL_T, INTENT(in) :: xhi3D_tile(3)
+  INTEGER_T, INTENT(in) :: FSI_lo3D(3),FSI_hi3D(3)
+  INTEGER_T, INTENT(in) :: FSI_growlo3D(3),FSI_growhi3D(3)
+  INTEGER_T, INTENT(in) :: growlo3D(3),growhi3D(3)
+  REAL_T, INTENT(in), pointer :: xdata3D(:,:,:,:)
+  REAL_T, INTENT(in), pointer :: FSIdata3D(:,:,:,:)
+  REAL_T, INTENT(in), pointer :: masknbr3D(:,:,:,:)
   REAL_T, allocatable, target :: old_FSIdata(:,:,:,:)
   REAL_T, pointer :: old_FSIdata_ptr(:,:,:,:)
 
-  INTEGER_T, intent(in) :: CTML_force_model
-  INTEGER_T, intent(in) :: ioproc,isout
+  INTEGER_T, INTENT(in) :: CTML_force_model
+  INTEGER_T, INTENT(in) :: ioproc,isout
 
   REAL_T override_LS
   REAL_T override_VEL(3)
@@ -11729,11 +11729,11 @@ IMPLICIT NONE
           eul_over_lag_scale, &
           xx, & ! target point at which the signed distance is sought.
           xclosest, &
-          xclosest_project, & !intent(out)
-          normal, & ! intent(in)
-          normal_closest, & ! intent(out)
+          xclosest_project, & !INTENT(out)
+          normal, & ! INTENT(in)
+          normal_closest, & ! INTENT(out)
           ielem, &
-          element_node_edge_inplane, & !intent(out)
+          element_node_edge_inplane, & !INTENT(out)
           FSI_mesh_type, &
           part_id, &
           nparts, &
@@ -11746,12 +11746,12 @@ IMPLICIT NONE
           ! check distance to the edges of a triangular element.
           call checkinlineBIG( &
            eul_over_lag_scale, &
-           xclosest_project, & !intent(inout)
-           normal_closest, & ! intent(inout), initially normal of element.
+           xclosest_project, & !INTENT(inout)
+           normal_closest, & ! INTENT(inout), initially normal of element.
            inode,ielem, &
-           unsigned_mindist, & !intent(inout)
+           unsigned_mindist, & !INTENT(inout)
            xx, & ! target point at which the signed distance is sought.
-           element_node_edge_inplane, &  !intent(inout)
+           element_node_edge_inplane, &  !INTENT(inout)
            FSI_mesh_type, &
            part_id, &
            nparts, &
@@ -11759,12 +11759,12 @@ IMPLICIT NONE
           ! check distance to the nodes of a triangular element.
           ! normal_closest is the element normal.
           call checkinpointBIG( &
-           xclosest_project, & !intent(inout)
-           normal_closest, & ! intent(inout)
+           xclosest_project, & !INTENT(inout)
+           normal_closest, & ! INTENT(inout)
            inode,ielem, &
-           unsigned_mindist, & ! intent(inout)
+           unsigned_mindist, & ! INTENT(inout)
            xx, & ! target point at which the signed distance is sought.
-           element_node_edge_inplane, &  !intent(inout)
+           element_node_edge_inplane, &  !INTENT(inout)
            FSI_mesh_type, &
            part_id, &
            nparts, &
@@ -11990,10 +11990,10 @@ IMPLICIT NONE
             call checkinplaneBIG( &
              eul_over_lag_scale, &
              xx, & ! target point at which the signed distance is sought.
-             xcrit, & !intent(in)
-             xcrit_project, & ! intent(out)
-             ncrit, &         ! intent(in)
-             ncrit_closest, & ! intent(out)
+             xcrit, & !INTENT(in)
+             xcrit_project, & ! INTENT(out)
+             ncrit, &         ! INTENT(in)
+             ncrit_closest, & ! INTENT(out)
              ielem, &
              element_node_edge_inplane, &
              FSI_mesh_type, &
@@ -12814,11 +12814,11 @@ IMPLICIT NONE
                eul_over_lag_scale, &
                xcen, & ! not used
                xclosest, &
-               xclosest_project, & !intent(out)
-               normal, & ! intent(in)
-               normal_closest, & ! intent(out)
+               xclosest_project, & !INTENT(out)
+               normal, & ! INTENT(in)
+               normal_closest, & ! INTENT(out)
                ielem, &
-               element_node_edge_inplane, & !intent(out)
+               element_node_edge_inplane, & !INTENT(out)
                FSI_mesh_type, &
                part_id, &
                nparts, &
@@ -13316,34 +13316,34 @@ end subroutine CLSVOF_InitBox
 
        IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: sdim_AMR
-      INTEGER_T, intent(in) :: lev77
-      INTEGER_T, intent(in) :: tid
-      INTEGER_T, intent(in) :: tilenum
-      INTEGER_T, intent(in) :: im_part ! 1..num_materials
-      INTEGER_T, intent(in) :: nparts
-      INTEGER_T, intent(in) :: part_id
-      INTEGER_T, intent(in) :: ngrow_make_distance
-      INTEGER_T, intent(in) :: nFSI
-      INTEGER_T, intent(in) :: FSI_operation
-      REAL_T, intent(in) :: time
-      REAL_T, intent(in) :: problo3D(3)
-      REAL_T, intent(in) :: probhi3D(3)
-      INTEGER_T, intent(in) :: xmap3D(3)
-      REAL_T, intent(in) :: dx3D(3)
-      REAL_T, intent(in) :: xlo3D_tile(3)
-      REAL_T, intent(in) :: xhi3D_tile(3)
-      INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
-      INTEGER_T, intent(in) :: FSI_growlo(3),FSI_growhi(3)
-      INTEGER_T, intent(in) :: growlo3D(3),growhi3D(3)
-      REAL_T, intent(in), pointer :: xdata3D(:,:,:,:)
-      REAL_T, intent(in), pointer :: veldata3D(:,:,:,:)
-      REAL_T, intent(in), pointer :: stressdata3D(:,:,:,:)
-      REAL_T, intent(in), pointer :: stressflag3D(:,:,:,:)
-      REAL_T, intent(in), pointer :: masknbr3D(:,:,:,:)
-      REAL_T, intent(in), pointer :: maskfiner3D(:,:,:,:)
+      INTEGER_T, INTENT(in) :: sdim_AMR
+      INTEGER_T, INTENT(in) :: lev77
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: tilenum
+      INTEGER_T, INTENT(in) :: im_part ! 1..num_materials
+      INTEGER_T, INTENT(in) :: nparts
+      INTEGER_T, INTENT(in) :: part_id
+      INTEGER_T, INTENT(in) :: ngrow_make_distance
+      INTEGER_T, INTENT(in) :: nFSI
+      INTEGER_T, INTENT(in) :: FSI_operation
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(in) :: problo3D(3)
+      REAL_T, INTENT(in) :: probhi3D(3)
+      INTEGER_T, INTENT(in) :: xmap3D(3)
+      REAL_T, INTENT(in) :: dx3D(3)
+      REAL_T, INTENT(in) :: xlo3D_tile(3)
+      REAL_T, INTENT(in) :: xhi3D_tile(3)
+      INTEGER_T, INTENT(in) :: FSI_lo(3),FSI_hi(3)
+      INTEGER_T, INTENT(in) :: FSI_growlo(3),FSI_growhi(3)
+      INTEGER_T, INTENT(in) :: growlo3D(3),growhi3D(3)
+      REAL_T, INTENT(in), pointer :: xdata3D(:,:,:,:)
+      REAL_T, INTENT(in), pointer :: veldata3D(:,:,:,:)
+      REAL_T, INTENT(in), pointer :: stressdata3D(:,:,:,:)
+      REAL_T, INTENT(in), pointer :: stressflag3D(:,:,:,:)
+      REAL_T, INTENT(in), pointer :: masknbr3D(:,:,:,:)
+      REAL_T, INTENT(in), pointer :: maskfiner3D(:,:,:,:)
 
-      INTEGER_T, intent(in) :: ioproc,isout
+      INTEGER_T, INTENT(in) :: ioproc,isout
 
       REAL_T dxBB(3) ! set in find_grid_bounding_box_node
       REAL_T dxBB_probe(3) ! set in find_grid_bounding_box_node
@@ -13878,10 +13878,10 @@ end subroutine CLSVOF_InitBox
 
       subroutine flappingKinematics(numMotion,motionPara,r,t)
       IMPLICIT NONE
-      INTEGER_T, intent(in) :: numMotion
-      REAL_T, intent(in) :: motionPara(11,numMotion)
-      REAL_T, intent(out) :: r(3,4)
-      REAL_T, intent(in) :: t
+      INTEGER_T, INTENT(in) :: numMotion
+      REAL_T, INTENT(in) :: motionPara(11,numMotion)
+      REAL_T, INTENT(out) :: r(3,4)
+      REAL_T, INTENT(in) :: t
       REAL_T xPoint(3,numMotion),vTan(3,numMotion)
       REAL_T x0(3),v(3)
       REAL_T vNorm,theta,thetaMag,fTheta,phiTheta,theta0
@@ -14387,13 +14387,13 @@ end subroutine CLSVOF_InitBox
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: part_id
-      INTEGER_T, intent(in) :: max_part_id
-      type(mesh_type), intent(in) :: FSI_mesh_type
-      REAL_T, intent(out) :: velparm(3)
-      REAL_T, intent(in) :: time
-      REAL_T, intent(out) :: xtarget(3)
-      REAL_T, intent(inout) :: xfoot(3)
+      INTEGER_T, INTENT(in) :: part_id
+      INTEGER_T, INTENT(in) :: max_part_id
+      type(mesh_type), INTENT(in) :: FSI_mesh_type
+      REAL_T, INTENT(out) :: velparm(3)
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(out) :: xtarget(3)
+      REAL_T, INTENT(inout) :: xfoot(3)
       INTEGER_T dir
       REAL_T xtargetsave(3)
       REAL_T xfootsave(3)
@@ -14740,17 +14740,17 @@ subroutine find_grid_bounding_box( &
 use global_utility_module
 IMPLICIT NONE
 
- type(mesh_type), intent(in) :: FSI_mesh_type
- INTEGER_T, intent(in) :: part_id
- INTEGER_T, intent(in) :: max_part_id
- INTEGER_T, intent(out) :: null_intersection
- REAL_T, intent(in) :: minnode(3),maxnode(3)
- INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
- INTEGER_T, intent(in) :: FSI_growlo(3),FSI_growhi(3)
- INTEGER_T, intent(in) :: growlo3D(3),growhi3D(3)
- REAL_T, intent(in), pointer :: xdata3D(:,:,:,:)
- INTEGER_T, intent(out) :: gridloBB(3),gridhiBB(3)
- REAL_T, intent(out) :: dxBB(3)
+ type(mesh_type), INTENT(in) :: FSI_mesh_type
+ INTEGER_T, INTENT(in) :: part_id
+ INTEGER_T, INTENT(in) :: max_part_id
+ INTEGER_T, INTENT(out) :: null_intersection
+ REAL_T, INTENT(in) :: minnode(3),maxnode(3)
+ INTEGER_T, INTENT(in) :: FSI_lo(3),FSI_hi(3)
+ INTEGER_T, INTENT(in) :: FSI_growlo(3),FSI_growhi(3)
+ INTEGER_T, INTENT(in) :: growlo3D(3),growhi3D(3)
+ REAL_T, INTENT(in), pointer :: xdata3D(:,:,:,:)
+ INTEGER_T, INTENT(out) :: gridloBB(3),gridhiBB(3)
+ REAL_T, INTENT(out) :: dxBB(3)
  INTEGER_T dir
  INTEGER_T ii,jj,kk
  INTEGER_T i,j,k,incr,iter
@@ -14938,14 +14938,14 @@ subroutine find_grid_bounding_box_node( &
 use global_utility_module
 IMPLICIT NONE
 
- INTEGER_T, intent(in) :: ngrow_make_distance
- REAL_T, intent(in) :: probe_size
- REAL_T, intent(in) :: xnot(3)
- INTEGER_T, intent(in) :: FSI_lo(3),FSI_hi(3)
- INTEGER_T, intent(in) :: FSI_growlo(3),FSI_growhi(3)
- REAL_T, intent(in), pointer :: xdata3D(:,:,:,:)
- INTEGER_T, intent(out) :: gridloBB(3),gridhiBB(3)
- REAL_T, intent(out) :: dxBB(3)
+ INTEGER_T, INTENT(in) :: ngrow_make_distance
+ REAL_T, INTENT(in) :: probe_size
+ REAL_T, INTENT(in) :: xnot(3)
+ INTEGER_T, INTENT(in) :: FSI_lo(3),FSI_hi(3)
+ INTEGER_T, INTENT(in) :: FSI_growlo(3),FSI_growhi(3)
+ REAL_T, INTENT(in), pointer :: xdata3D(:,:,:,:)
+ INTEGER_T, INTENT(out) :: gridloBB(3),gridhiBB(3)
+ REAL_T, INTENT(out) :: dxBB(3)
  INTEGER_T dir,dirloc
  INTEGER_T idx(3),idxL(3),idxR(3)
  INTEGER_T iter,change
@@ -15155,49 +15155,49 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: im_critical
-INTEGER_T, intent(inout) :: num_nodes_list(num_materials)
-INTEGER_T, intent(inout) :: num_elements_list(num_materials)
-INTEGER_T, intent(in) :: FSI_input_num_nodes
-INTEGER_T, intent(in) :: FSI_input_num_elements
-REAL_T, intent(inout) :: FSI_input_node_list(3*FSI_input_num_nodes)
-INTEGER_T, intent(inout) :: FSI_input_element_list(4*FSI_input_num_elements)
-REAL_T, intent(inout) :: FSI_input_displacement_list(3*FSI_input_num_nodes)
-REAL_T, intent(inout) :: &
+INTEGER_T, INTENT(in) :: im_critical
+INTEGER_T, INTENT(inout) :: num_nodes_list(num_materials)
+INTEGER_T, INTENT(inout) :: num_elements_list(num_materials)
+INTEGER_T, INTENT(in) :: FSI_input_num_nodes
+INTEGER_T, INTENT(in) :: FSI_input_num_elements
+REAL_T, INTENT(inout) :: FSI_input_node_list(3*FSI_input_num_nodes)
+INTEGER_T, INTENT(inout) :: FSI_input_element_list(4*FSI_input_num_elements)
+REAL_T, INTENT(inout) :: FSI_input_displacement_list(3*FSI_input_num_nodes)
+REAL_T, INTENT(inout) :: &
         FSI_input_velocity_halftime_list(3*FSI_input_num_nodes)
-REAL_T, intent(inout) :: &
+REAL_T, INTENT(inout) :: &
         FSI_input_velocity_list(3*FSI_input_num_nodes)
-REAL_T, intent(inout) :: FSI_input_force_list(3*FSI_input_num_nodes)
-REAL_T, intent(inout) :: FSI_input_mass_list(FSI_input_num_nodes)
-REAL_T, intent(inout) :: FSI_input_temperature_list(FSI_input_num_nodes)
+REAL_T, INTENT(inout) :: FSI_input_force_list(3*FSI_input_num_nodes)
+REAL_T, INTENT(inout) :: FSI_input_mass_list(FSI_input_num_nodes)
+REAL_T, INTENT(inout) :: FSI_input_temperature_list(FSI_input_num_nodes)
 
-INTEGER_T, intent(in) :: FSI_output_num_nodes
-INTEGER_T, intent(in) :: FSI_output_num_elements
-REAL_T, intent(inout) :: FSI_output_node_list(3*FSI_output_num_nodes)
-INTEGER_T, intent(inout) :: FSI_output_element_list(4*FSI_output_num_elements)
-REAL_T, intent(inout) :: FSI_output_displacement_list(3*FSI_output_num_nodes)
-REAL_T, intent(inout) :: &
+INTEGER_T, INTENT(in) :: FSI_output_num_nodes
+INTEGER_T, INTENT(in) :: FSI_output_num_elements
+REAL_T, INTENT(inout) :: FSI_output_node_list(3*FSI_output_num_nodes)
+INTEGER_T, INTENT(inout) :: FSI_output_element_list(4*FSI_output_num_elements)
+REAL_T, INTENT(inout) :: FSI_output_displacement_list(3*FSI_output_num_nodes)
+REAL_T, INTENT(inout) :: &
         FSI_output_velocity_halftime_list(3*FSI_output_num_nodes)
-REAL_T, intent(inout) :: &
+REAL_T, INTENT(inout) :: &
         FSI_output_velocity_list(3*FSI_output_num_nodes)
-REAL_T, intent(inout) :: FSI_output_force_list(3*FSI_output_num_nodes)
-REAL_T, intent(inout) :: FSI_output_mass_list(FSI_output_num_nodes)
-REAL_T, intent(inout) :: FSI_output_temperature_list(FSI_output_num_nodes)
+REAL_T, INTENT(inout) :: FSI_output_force_list(3*FSI_output_num_nodes)
+REAL_T, INTENT(inout) :: FSI_output_mass_list(FSI_output_num_nodes)
+REAL_T, INTENT(inout) :: FSI_output_temperature_list(FSI_output_num_nodes)
 
 
-INTEGER_T, intent(in) :: current_step,plot_interval
+INTEGER_T, INTENT(in) :: current_step,plot_interval
 INTEGER_T :: initflag
-INTEGER_T, intent(in) :: ioproc,isout
+INTEGER_T, INTENT(in) :: ioproc,isout
 INTEGER_T :: part_id
-REAL_T, intent(in) :: CLSVOF_curtime,CLSVOF_dt
-REAL_T, intent(in) :: h_small
-REAL_T, intent(in) :: problo(3),probhi(3)
+REAL_T, INTENT(in) :: CLSVOF_curtime,CLSVOF_dt
+REAL_T, INTENT(in) :: h_small
+REAL_T, INTENT(in) :: problo(3),probhi(3)
 INTEGER_T node_factor 
 INTEGER_T ctml_part_id 
 INTEGER_T fsi_part_id 
 INTEGER_T :: inode_crit,inode
-INTEGER_T, intent(in) :: FSI_refine_factor(num_materials)
-INTEGER_T, intent(in) :: FSI_bounding_box_ngrow(num_materials)
+INTEGER_T, INTENT(in) :: FSI_refine_factor(num_materials)
+INTEGER_T, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
 INTEGER_T im_sanity_check
 INTEGER_T :: idir,ielem,im_part
 

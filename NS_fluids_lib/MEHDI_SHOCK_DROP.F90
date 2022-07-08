@@ -41,9 +41,9 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(out) :: LS(num_materials)
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(out) :: LS(num_materials)
 
 if ((num_materials.eq.3).and.(probtype.eq.415)) then
 
@@ -73,13 +73,13 @@ subroutine MITSUHIRO_LS_VEL(x,t,LS,VEL,velsolid_flag,dx)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: dx(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
-REAL_T, intent(out) :: VEL(SDIM)
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(num_materials)
+REAL_T, INTENT(out) :: VEL(SDIM)
 INTEGER_T dir
-INTEGER_T, intent(in) :: velsolid_flag
+INTEGER_T, INTENT(in) :: velsolid_flag
 
 if ((velsolid_flag.eq.0).or. &
     (velsolid_flag.eq.1)) then
@@ -112,10 +112,10 @@ subroutine MITSUHIRO_PRES(x,t,LS,PRES)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
-REAL_T, intent(out) :: PRES
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(num_materials)
+REAL_T, INTENT(out) :: PRES
 
 PRES=zero
 
@@ -129,11 +129,11 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, intent(in) :: bcflag !0=called from initialize  1=called from bc
-REAL_T, intent(in) :: x(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
-REAL_T, intent(out) :: STATE(num_materials*num_state_material)
+INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(num_materials)
+REAL_T, INTENT(out) :: STATE(num_materials*num_state_material)
 INTEGER_T im,ibase,n
 
 if ((num_materials.eq.4).and. &
@@ -173,13 +173,13 @@ subroutine MITSUHIRO_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(out) :: LS(num_materials)
-REAL_T, intent(in) :: LS_in(num_materials)
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) ::  dx(SDIM)
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(out) :: LS(num_materials)
+REAL_T, INTENT(in) :: LS_in(num_materials)
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) ::  dx(SDIM)
 
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
@@ -199,14 +199,14 @@ subroutine MITSUHIRO_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
-REAL_T, intent(out) :: VEL
-REAL_T, intent(in) :: VEL_in
-INTEGER_T, intent(in) :: veldir,dir,side
-REAL_T, intent(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(num_materials)
+REAL_T, INTENT(out) :: VEL
+REAL_T, INTENT(in) :: VEL_in
+INTEGER_T, INTENT(in) :: veldir,dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
 
@@ -232,14 +232,14 @@ subroutine MITSUHIRO_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
-REAL_T, intent(out) :: PRES
-REAL_T, intent(in) :: PRES_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(num_materials)
+REAL_T, INTENT(out) :: PRES
+REAL_T, INTENT(in) :: PRES_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
@@ -260,16 +260,16 @@ subroutine MITSUHIRO_STATE_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, intent(in) :: xwall
-REAL_T, intent(in) :: xghost(SDIM)
-REAL_T, intent(in) :: t
-REAL_T, intent(in) :: LS(num_materials)
+REAL_T, INTENT(in) :: xwall
+REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T, INTENT(in) :: t
+REAL_T, INTENT(in) :: LS(num_materials)
 REAL_T :: local_STATE(num_materials*num_state_material)
-REAL_T, intent(out) :: STATE
-REAL_T, intent(out) :: STATE_merge
-REAL_T, intent(in) :: STATE_in
-INTEGER_T, intent(in) :: dir,side
-REAL_T, intent(in) :: dx(SDIM)
+REAL_T, INTENT(out) :: STATE
+REAL_T, INTENT(out) :: STATE_merge
+REAL_T, INTENT(in) :: STATE_in
+INTEGER_T, INTENT(in) :: dir,side
+REAL_T, INTENT(in) :: dx(SDIM)
 INTEGER_T istate,im
 INTEGER_T ibase,im_crit,im_loop
 INTEGER_T local_bcflag

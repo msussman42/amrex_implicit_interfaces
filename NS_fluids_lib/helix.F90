@@ -119,10 +119,10 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T, intent(in) :: x(SDIM)
- REAL_T, intent(in) :: t
- REAL_T, intent(in) :: LS(num_materials)
- REAL_T, intent(out) :: STATE(num_materials*num_state_material)
+ REAL_T, INTENT(in) :: x(SDIM)
+ REAL_T, INTENT(in) :: t
+ REAL_T, INTENT(in) :: LS(num_materials)
+ REAL_T, INTENT(out) :: STATE(num_materials*num_state_material)
  INTEGER_T im,ibase,n
 
  if ((num_materials.eq.3).and. &
