@@ -532,6 +532,7 @@ Amr::InitAmr () {
     } else
      amrex::Error("global_AMR_particles_flag invalid");
 
+     //these variable definitions are needed by "SOA_NCOMP"
     int num_materials=global_AMR_num_materials;
     int num_species_var=global_AMR_num_species_var;
     int num_materials_viscoelastic=global_AMR_num_materials_viscoelastic;
@@ -957,10 +958,10 @@ Amr::restart (const std::string& filename)
 
 // SUSSMAN KLUGE RESTART
 
-    int num_materials=0;
-    is >> num_materials;
-    if (num_materials<=0)
-     amrex::Error("num_materials invalid in restart");
+    int local_num_materials=0;
+    is >> local_num_materials;
+    if (local_num_materials<=0)
+     amrex::Error("local_num_materials invalid in restart");
 
     AMR_max_phase_change_rate.resize(AMREX_SPACEDIM);
     AMR_min_phase_change_rate.resize(AMREX_SPACEDIM);
@@ -970,12 +971,17 @@ Amr::restart (const std::string& filename)
     }
 
     is >> AMR_volume_history_recorded;
-    AMR_volume_history.resize(num_materials);
-    for (int j=0;j<num_materials;j++) {
+    AMR_volume_history.resize(local_num_materials);
+    for (int j=0;j<local_num_materials;j++) {
      is >> AMR_volume_history[j];
      if (AMR_volume_history[j]<0.0)
       amrex::Error("cannot have negative volume_history");
     }
+
+    if (local_num_materials==global_AMR_num_materials) {
+     // do nothing
+    } else
+     amrex::Error("local_num_materials!=global_AMR_num_materials");
 
     int checkpoint_recalesce_data=0;
     for (int im=0;im<global_AMR_num_materials;im++) {
@@ -1216,10 +1222,15 @@ Amr::checkPoint ()
 
 // SUSSMAN KLUGE CHECKPOINT
 
-  int num_materials=AMR_volume_history.size();
-  if (num_materials<=0)
-   amrex::Error("num_materials invalid in checkpoint");
-  HeaderFile << num_materials << '\n';
+  int local_num_materials=AMR_volume_history.size();
+  if (local_num_materials<=0)
+   amrex::Error("local_num_materials invalid in checkpoint");
+  HeaderFile << local_num_materials << '\n';
+
+  if (local_num_materials==global_AMR_num_materials) {
+   // do nothing
+  } else
+   amrex::Error("local_num_materials!=global_AMR_num_materials");
 
   for (int j=0;j<AMREX_SPACEDIM;j++) {
    HeaderFile << AMR_max_phase_change_rate[j] << '\n';
@@ -1227,7 +1238,7 @@ Amr::checkPoint ()
   }
 
   HeaderFile << AMR_volume_history_recorded << '\n';
-  for (int j=0;j<num_materials;j++) {
+  for (int j=0;j<local_num_materials;j++) {
    HeaderFile << AMR_volume_history[j] << '\n';
    if (AMR_volume_history[j]<0.0) 
     amrex::Error("AMR_volume_history cannot be negative");
