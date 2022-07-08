@@ -2433,8 +2433,8 @@ stop
       INTEGER_T loop_counter
       INTEGER_T num_processed_fluid
       INTEGER_T num_processed_solid
-      INTEGER_T nmat_fluid
-      INTEGER_T nmat_rigid
+      INTEGER_T num_materials_fluid
+      INTEGER_T num_materials_rigid
       INTEGER_T testflag
       REAL_T intercept
       REAL_T volcell
@@ -2629,17 +2629,17 @@ stop
 
          uncaptured_volume_fraction=one
 
-         nmat_rigid=0
-         nmat_fluid=0
+         num_materials_rigid=0
+         num_materials_fluid=0
          vfrac_fluid_sum=zero
          vfrac_solid_sum=zero
 
          do im=1,num_materials
           if (is_rigid(im).eq.0) then
-           nmat_fluid=nmat_fluid+1
+           num_materials_fluid=num_materials_fluid+1
            vfrac_fluid_sum=vfrac_fluid_sum+vcenter(im)
           else if (is_rigid(im).eq.1) then
-           nmat_rigid=nmat_rigid+1
+           num_materials_rigid=num_materials_rigid+1
            vfrac_solid_sum=vfrac_solid_sum+vcenter(im)
           else
            print *,"is_rigid invalid LEVELSET_3D.F90"
@@ -2657,8 +2657,8 @@ stop
           stop
          endif
 
-         if (nmat_fluid+nmat_rigid.ne.num_materials) then
-          print *,"nmat_fluid or nmat_rigid invalid"
+         if (num_materials_fluid+num_materials_rigid.ne.num_materials) then
+          print *,"num_materials_fluid or num_materials_rigid invalid"
           stop
          endif
          num_processed_solid=0
@@ -2667,8 +2667,8 @@ stop
          if ((tessellate.eq.1).and.(vfrac_solid_sum.gt.zero)) then
 
           loop_counter=0
-          do while ((loop_counter.lt.nmat_rigid).and. &
-                    (num_processed_solid.lt.nmat_rigid).and. &
+          do while ((loop_counter.lt.num_materials_rigid).and. &
+                    (num_processed_solid.lt.num_materials_rigid).and. &
                     (uncaptured_volume_fraction.gt. &
                      one-vfrac_solid_sum))
 
@@ -2844,8 +2844,8 @@ stop
                 print *,"intercept=",intercept
                 print *,"mofdatavalid(vofcomp)=",mofdatavalid(vofcomp)
                 print *,"tessellate=",tessellate
-                print *,"nmat_rigid=",nmat_rigid
-                print *,"nmat_fluid=",nmat_fluid
+                print *,"num_materials_rigid=",num_materials_rigid
+                print *,"num_materials_fluid=",num_materials_fluid
                 print *,"vfrac_fluid_sum ",vfrac_fluid_sum
                 print *,"vfrac_solid_sum ",vfrac_solid_sum
                 print *,"loop_counter ",loop_counter
@@ -2894,8 +2894,8 @@ stop
            enddo ! im=1..num_materials
            loop_counter=loop_counter+1
           enddo  ! while 
-                 ! loop_counter<nmat_fluid and
-                 ! num_processed_fluid<nmat_fluid and
+                 ! loop_counter<num_materials_fluid and
+                 ! num_processed_fluid<num_materials_fluid and
                  ! uncaptured_volume_fraction>0
 
          else if ((tessellate.eq.0).or. &
@@ -2908,8 +2908,8 @@ stop
          endif
 
          loop_counter=0
-         do while ((loop_counter.lt.nmat_fluid).and. &
-                   (num_processed_fluid.lt.nmat_fluid).and. &
+         do while ((loop_counter.lt.num_materials_fluid).and. &
+                   (num_processed_fluid.lt.num_materials_fluid).and. &
                    (uncaptured_volume_fraction.gt.zero))
 
            ! F,CEN,ORDER,SLOPE,INTERCEPT
@@ -3140,8 +3140,8 @@ stop
           enddo ! im=1..num_materials
           loop_counter=loop_counter+1
          enddo  ! while 
-                ! loop_counter<nmat_fluid and
-                ! num_processed_fluid<nmat_fluid and
+                ! loop_counter<num_materials_fluid and
+                ! num_processed_fluid<num_materials_fluid and
                 ! uncaptured_volume_fraction>0
 
         else
@@ -15754,7 +15754,7 @@ stop
       REAL_T LS_virtual(num_materials)
       REAL_T LS_virtual_new(num_materials)
       REAL_T LS_virtual_max ! used for insuring tessellation property of LS
-      INTEGER_T nmat_fluid,nmat_solid,nmat_lag
+      INTEGER_T num_materials_fluid,num_materials_solid,num_materials_lag
       INTEGER_T at_center
       INTEGER_T ibase
       INTEGER_T partid
@@ -15935,9 +15935,9 @@ stop
       cell_CP_parm%time=time
       cell_CP_parm%LS=>LS
 
-      nmat_fluid=0
-      nmat_solid=0
-      nmat_lag=0
+      num_materials_fluid=0
+      num_materials_solid=0
+      num_materials_lag=0
 
       do im=1,num_materials
 
@@ -15948,18 +15948,18 @@ stop
        endif
 
        if (is_lag_part(im).eq.1) then
-        nmat_lag=nmat_lag+1
+        num_materials_lag=num_materials_lag+1
         if (is_rigid(im).eq.1) then
-         nmat_solid=nmat_solid+1
+         num_materials_solid=num_materials_solid+1
         else if (is_rigid(im).eq.0) then
-         nmat_fluid=nmat_fluid+1
+         num_materials_fluid=num_materials_fluid+1
         else
          print *,"is_rigid(im) invalid"
          stop
         endif
        else if (is_lag_part(im).eq.0) then
         if (is_rigid(im).eq.0) then
-         nmat_fluid=nmat_fluid+1
+         num_materials_fluid=num_materials_fluid+1
         else
          print *,"is_rigid(im) invalid"
          stop
@@ -15971,13 +15971,13 @@ stop
 
       enddo ! im=1..num_materials
 
-      if (nmat_lag.ne.nparts) then
-       print *,"nmat_lag invalid"
+      if (num_materials_lag.ne.nparts) then
+       print *,"num_materials_lag invalid"
        stop
       endif
 
-      if (nmat_fluid+nmat_solid.ne.num_materials) then
-       print *,"nmat_fluid and/or nmat_solid invalid"
+      if (num_materials_fluid+num_materials_solid.ne.num_materials) then
+       print *,"num_materials_fluid and/or num_materials_solid invalid"
        stop
       endif
 
@@ -16783,8 +16783,8 @@ stop
               enddo ! im_opp=1..num_materials
  
               if (im_primary_stencil.eq.0) then
-               if (nmat_fluid.ne.1) then
-                print *,"nmat_fluid invalid"
+               if (num_materials_fluid.ne.1) then
+                print *,"num_materials_fluid invalid"
                 stop
                endif
                if (LS_virtual(im).le.zero) then

@@ -188,16 +188,16 @@
 
 ! if 2D, nk should be 1, pos_z should be 0
 ! inputs:
-!   nmat = number of materials
 !   pos_xyz(ni,nj,nk,dim)
-!   ls(ni,nj,nk,nmat)
+!   ls(ni,nj,nk,num_materials)
 !   weights(ni,nj,nk)
-!   is_fluid(nmat)   =  1 if fluid and needs to be extrapolated, 0 otherwise
+!   is_fluid(num_materials)=1 if fluid and needs to be extrapolated, 0 otherwise
 !    is_fluid(im)=1 if material "im" is a fluid material (i.e. gets extrap)
 !    is_fluid(im)=0 if material "im" is not a fluid (i.e. does not get extrap)
 ! output:
-!   ls_extrap(im=1...nmat) = extrapolated distance for materials in which 
-!                            is_fluid(im).eq.1
+!   ls_extrap(im=1...num_materials)=
+!       extrapolated distance for materials in which 
+!       is_fluid(im).eq.1
   subroutine level_set_extrapolation( &
          pos_xyz, &
          ls, &
@@ -206,16 +206,17 @@
          ls_extrap, &
          rij, &
          rk, &
-         nmat, dim_in)
+         dim_in)
+    use probcommon_module
     implicit none
 
-    integer,          intent(in ) :: rij,rk, nmat, dim_in
-    integer,          intent(in ) :: is_fluid(nmat)
+    integer,          intent(in ) :: rij,rk, dim_in
+    integer,          intent(in ) :: is_fluid(num_materials)
     double precision, intent(in ) ::  &
             pos_xyz(-rij:rij,-rij:rij,-rk:rk, dim_in), &
-            ls(-rij:rij,-rij:rij,-rk:rk, nmat), &
+            ls(-rij:rij,-rij:rij,-rk:rk, num_materials), &
             weights(-rij:rij,-rij:rij,-rk:rk)
-    double precision, intent(out) :: ls_extrap(nmat)
+    double precision, intent(out) :: ls_extrap(num_materials)
 
     integer caller_id
     integer i, j, k
@@ -258,10 +259,10 @@
      stop
     endif
 
-    if (nmat.ge.1) then
+    if (num_materials.ge.1) then
      ! do nothing
     else
-     print *,"nmat invalid"
+     print *,"num_materials invalid"
      stop
     endif
 
@@ -299,11 +300,11 @@
     do i = 1, n
        var(i) = 0.d0
     enddo
-    do im = 1, nmat
+    do im = 1, num_materials
        ls_extrap(im) = 0.d0
     enddo
 
-    do im = 1, nmat
+    do im = 1, num_materials
        if (is_fluid(im) .eq. 1) then
           do i = 1, ni
              isten=i-rij-1
@@ -342,7 +343,7 @@
        else!is_fluid(im) = 0, soild
           ls_extrap(im) = ls(0,0,0, im)
        endif
-    enddo ! im=1..nmat
+    enddo ! im=1..num_materials
 
     deallocate(A)
     deallocate(b)

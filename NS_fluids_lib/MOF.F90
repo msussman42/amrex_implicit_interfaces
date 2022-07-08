@@ -12603,7 +12603,7 @@ contains
         bfact,dx,xsten0,nhalf0, &
         im, &
         dxmaxLS, &
-        nmat_slope,sdim)
+        num_materials_slope,sdim)
 
       use probcommon_module
       use geometry_intersect_module
@@ -12614,7 +12614,7 @@ contains
       INTEGER_T, INTENT(in) :: bfact
       INTEGER_T, INTENT(in) :: nhalf0
       INTEGER_T, INTENT(in) :: im
-      INTEGER_T, INTENT(in) :: nmat_slope
+      INTEGER_T, INTENT(in) :: num_materials_slope
       INTEGER_T, INTENT(in) :: sdim
       REAL_T, INTENT(in)    :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T, INTENT(in)    :: dx(sdim)
@@ -12635,10 +12635,10 @@ contains
       INTEGER_T i1,j1,k1
       INTEGER_T klo,khi,dir
 
-      REAL_T, INTENT(in)     :: ls_mof(D_DECL(-1:1,-1:1,-1:1),nmat_slope)
-      REAL_T, INTENT(out)    :: lsnormal(nmat_slope,sdim)
-      INTEGER_T, INTENT(out) :: lsnormal_valid(nmat_slope)
-      REAL_T, INTENT(out)    :: ls_intercept(nmat_slope)
+      REAL_T, INTENT(in)     :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials_slope)
+      REAL_T, INTENT(out)    :: lsnormal(num_materials_slope,sdim)
+      INTEGER_T, INTENT(out) :: lsnormal_valid(num_materials_slope)
+      REAL_T, INTENT(out)    :: ls_intercept(num_materials_slope)
       REAL_T dxplus,dxminus
       REAL_T LS_cen,LS_plus,LS_minus
       REAL_T slope_plus,slope_minus
@@ -12669,12 +12669,12 @@ contains
        stop
       endif
 
-      if ((im.lt.1).or.(im.gt.nmat_slope)) then
+      if ((im.lt.1).or.(im.gt.num_materials_slope)) then
        print *,"im invalid35"
        stop
       endif
-      if (nmat_slope.lt.1) then
-       print *,"nmat_slope invalid"
+      if (num_materials_slope.lt.1) then
+       print *,"num_materials_slope invalid"
        stop
       endif
 
@@ -14894,8 +14894,8 @@ contains
       INTEGER_T im_test
       INTEGER_T fastflag
 
-      INTEGER_T nmat_solid
-      INTEGER_T nmat_fluid
+      INTEGER_T num_materials_solid
+      INTEGER_T num_materials_fluid
       REAL_T vfrac_fluid_sum
       REAL_T vfrac_solid_sum
       REAL_T vfrac_mult
@@ -15058,8 +15058,8 @@ contains
 
       vfrac_fluid_sum=zero
       vfrac_solid_sum=zero
-      nmat_solid=0
-      nmat_fluid=0
+      num_materials_solid=0
+      num_materials_fluid=0
 
       im_raster_solid=0
       vfrac_raster_solid=zero
@@ -15068,7 +15068,7 @@ contains
        vofcomp=(im-1)*ngeom_recon+1
        if (is_rigid_local(im).eq.0) then
         vfrac_fluid_sum=vfrac_fluid_sum+mofdatasave(vofcomp)
-        nmat_fluid=nmat_fluid+1
+        num_materials_fluid=num_materials_fluid+1
        else if (is_rigid_local(im).eq.1) then
         if (im_raster_solid.eq.0) then
          im_raster_solid=im
@@ -15086,15 +15086,15 @@ contains
         endif
       
         vfrac_solid_sum=vfrac_solid_sum+mofdatasave(vofcomp)
-        nmat_solid=nmat_solid+1
+        num_materials_solid=num_materials_solid+1
        else
         print *,"is_rigid_local invalid"
         stop
        endif
       enddo ! im=1..num_materials
 
-      if (nmat_fluid+nmat_solid.ne.num_materials) then
-       print *,"nmat_fluid or nmat_solid invalid"
+      if (num_materials_fluid+num_materials_solid.ne.num_materials) then
+       print *,"num_materials_fluid or num_materials_solid invalid"
        stop
       endif
 
@@ -15220,10 +15220,10 @@ contains
          new_tessellate_local=1
         else if (local_tessellate.eq.2) then
          new_tessellate_local=2
-         if ((nmat_solid.eq.0).and.(nmat_fluid.eq.num_materials)) then
+         if ((num_materials_solid.eq.0).and.(num_materials_fluid.eq.num_materials)) then
           ! do nothing
          else
-          print *,"nmat_solid or nmat_fluid invalid"
+          print *,"num_materials_solid or num_materials_fluid invalid"
           stop
          endif
         else
@@ -15232,8 +15232,8 @@ contains
         endif
 
         loop_counter=0
-        do while ((loop_counter.lt.nmat_solid).and. &
-                  (num_processed_solid.lt.nmat_solid).and. &
+        do while ((loop_counter.lt.num_materials_solid).and. &
+                  (num_processed_solid.lt.num_materials_solid).and. &
                   (uncaptured_volume_fraction_solid.gt. &
                    one-vfrac_solid_sum).and. &
                   (uncaptured_volume_solid.gt.zero)) 
@@ -15262,7 +15262,7 @@ contains
             remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
            endif
           else if (((material_used(im_test).ge.1).and. &
-                    (material_used(im_test).le.nmat_solid)).or. &
+                    (material_used(im_test).le.num_materials_solid)).or. &
                     (is_rigid_local(im_test).eq.0)) then
            ! do nothing
           else
@@ -15295,7 +15295,7 @@ contains
            if (is_rigid_local(im).eq.1) then
              ! flag>0 for solids already processed.
             if ((material_used(im).ge.1).and. &
-                (material_used(im).le.nmat_solid)) then
+                (material_used(im).le.num_materials_solid)) then
              mofdatalocal(vofcomp+sdim+1)=material_used(im)
             else if (material_used(im).eq.0) then
              ! do nothing
@@ -15312,7 +15312,7 @@ contains
           enddo ! im=1..num_materials
 
           if ((num_processed_solid.gt.0).and. &
-              (num_processed_solid.lt.nmat_solid)) then
+              (num_processed_solid.lt.num_materials_solid)) then
            fastflag=0
           else if (num_processed_solid.eq.0) then
            fastflag=1
@@ -15398,9 +15398,9 @@ contains
              critical_material=im
             else if ((testflag_save.eq.0).or. & ! old flag=unprocessed
                      ((testflag.ge.1).and. &    ! new flag=processed
-                      (testflag.le.nmat_solid)).or. &
+                      (testflag.le.num_materials_solid)).or. &
                       ((material_used(im).ge.1).and. &
-                       (material_used(im).le.nmat_solid))) then
+                       (material_used(im).le.num_materials_solid))) then
              ! do nothing
             else
              print *,"testflag invalid"
@@ -15498,8 +15498,8 @@ contains
 
          loop_counter=loop_counter+1
         enddo  ! while 
-               ! loop_counter<nmat_solid and
-               ! num_processed_solid<nmat_solid and
+               ! loop_counter<num_materials_solid and
+               ! num_processed_solid<num_materials_solid and
                ! uncaptured_volume_fraction_solid>1-vfrac_solid_sum and
                ! uncaptured_volume_solid>0 
 
@@ -15525,8 +15525,8 @@ contains
         new_tessellate_local=local_tessellate ! =0,1, or 2
 
         loop_counter=0
-        do while ((loop_counter.lt.nmat_fluid).and. &
-                  (num_processed_fluid.lt.nmat_fluid).and. &
+        do while ((loop_counter.lt.num_materials_fluid).and. &
+                  (num_processed_fluid.lt.num_materials_fluid).and. &
                   (uncaptured_volume_fraction_fluid.gt.zero).and. &
                   (uncaptured_volume_fluid.gt.zero)) 
 
@@ -15613,7 +15613,7 @@ contains
              ! do nothing
             else if (is_rigid_local(im).eq.0) then
              if ((material_used(im).ge.1).and. &
-                 (material_used(im).le.nmat_fluid)) then
+                 (material_used(im).le.num_materials_fluid)) then
               mofdatalocal(vofcomp+sdim+1)=material_used(im)
              else if (material_used(im).eq.0) then
               ! do nothing
@@ -15627,7 +15627,7 @@ contains
             endif
            else if (local_tessellate.eq.2) then
             if ((material_used(im).ge.1).and. &
-                (material_used(im).le.nmat_fluid)) then
+                (material_used(im).le.num_materials_fluid)) then
              mofdatalocal(vofcomp+sdim+1)=material_used(im)
             else if (material_used(im).eq.0) then
              ! do nothing
@@ -15745,7 +15745,7 @@ contains
              critical_material=im
             else if ((testflag_save.eq.0).or. &
                      ((testflag_save.ge.1).and. &
-                      (testflag_save.le.nmat_fluid)).or. &
+                      (testflag_save.le.num_materials_fluid)).or. &
                      ((testflag.ge.1).and.(testflag.le.num_materials)).or. &
                      ((material_used(im).ge.1).and. &
                       (material_used(im).le.num_materials))) then
@@ -15855,8 +15855,8 @@ contains
 
          loop_counter=loop_counter+1
         enddo  ! while 
-               ! loop_counter<nmat_fluid and
-               ! num_processed_fluid<nmat_fluid and 
+               ! loop_counter<num_materials_fluid and
+               ! num_processed_fluid<num_materials_fluid and 
                ! uncaptured_volume_fraction_fluid>0 and 
                ! uncaptured_volume_fluid>0
 
@@ -17092,8 +17092,8 @@ contains
       INTEGER_T im_test
       INTEGER_T fastflag
 
-      INTEGER_T nmat_solid
-      INTEGER_T nmat_fluid
+      INTEGER_T num_materials_solid
+      INTEGER_T num_materials_fluid
       REAL_T vfrac_fluid_sum
       REAL_T vfrac_solid_sum
       REAL_T vfrac_mult
@@ -17246,8 +17246,8 @@ contains
 
       vfrac_fluid_sum=zero
       vfrac_solid_sum=zero
-      nmat_solid=0
-      nmat_fluid=0
+      num_materials_solid=0
+      num_materials_fluid=0
 
       im_raster_solid=0
       vfrac_raster_solid=zero
@@ -17256,7 +17256,7 @@ contains
        vofcomp=(im-1)*ngeom_recon+1
        if (is_rigid_local(im).eq.0) then
         vfrac_fluid_sum=vfrac_fluid_sum+mofdatasave(vofcomp)
-        nmat_fluid=nmat_fluid+1
+        num_materials_fluid=num_materials_fluid+1
        else if (is_rigid_local(im).eq.1) then
 
         if (im_raster_solid.eq.0) then
@@ -17275,14 +17275,14 @@ contains
         endif
       
         vfrac_solid_sum=vfrac_solid_sum+mofdatasave(vofcomp)
-        nmat_solid=nmat_solid+1
+        num_materials_solid=num_materials_solid+1
        else
         print *,"is_rigid invalid MOF.F90"
         stop
        endif
       enddo ! im
-      if (nmat_fluid+nmat_solid.ne.num_materials) then
-       print *,"nmat_fluid or nmat_solid invalid"
+      if (num_materials_fluid+num_materials_solid.ne.num_materials) then
+       print *,"num_materials_fluid or num_materials_solid invalid"
        stop
       endif
 
@@ -17402,10 +17402,10 @@ contains
          new_tessellate_local=1
         else if (local_tessellate.eq.2) then
          new_tessellate_local=2
-         if ((nmat_solid.eq.0).and.(nmat_fluid.eq.num_materials)) then
+         if ((num_materials_solid.eq.0).and.(num_materials_fluid.eq.num_materials)) then
           ! do nothing
          else
-          print *,"nmat_solid or nmat_fluid invalid"
+          print *,"num_materials_solid or num_materials_fluid invalid"
           stop
          endif
         else
@@ -17414,8 +17414,8 @@ contains
         endif
 
         loop_counter=0
-        do while ((loop_counter.lt.nmat_solid).and. &
-                  (num_processed_solid.lt.nmat_solid).and. &
+        do while ((loop_counter.lt.num_materials_solid).and. &
+                  (num_processed_solid.lt.num_materials_solid).and. &
                   (uncaptured_volume_fraction_solid.gt. &
                    one-vfrac_solid_sum).and. &
                   (uncaptured_volume_solid.gt.zero)) 
@@ -17444,7 +17444,7 @@ contains
             remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
            endif
           else if (((material_used(im_test).ge.1).and. &
-                    (material_used(im_test).le.nmat_solid)).or. &
+                    (material_used(im_test).le.num_materials_solid)).or. &
                     (is_rigid_local(im_test).eq.0)) then
            ! do nothing
           else
@@ -17477,7 +17477,7 @@ contains
            if (is_rigid_local(im).eq.1) then
              ! flag>0 for solids already processed.
             if ((material_used(im).ge.1).and. &
-                (material_used(im).le.nmat_solid)) then
+                (material_used(im).le.num_materials_solid)) then
              mofdatalocal(vofcomp+sdim+1)=material_used(im)
             else if (material_used(im).eq.0) then
              ! do nothing
@@ -17494,7 +17494,7 @@ contains
           enddo ! im=1..num_materials
 
           if ((num_processed_solid.gt.0).and. &
-              (num_processed_solid.lt.nmat_solid)) then
+              (num_processed_solid.lt.num_materials_solid)) then
            fastflag=0
           else if (num_processed_solid.eq.0) then
            fastflag=1
@@ -17563,9 +17563,9 @@ contains
              critical_material=im
             else if ((testflag_save.eq.0).or. & ! old flag=unprocessed
                      ((testflag.ge.1).and. &    ! new flag=processed
-                      (testflag.le.nmat_solid)).or. &
+                      (testflag.le.num_materials_solid)).or. &
                       ((material_used(im).ge.1).and. &
-                       (material_used(im).le.nmat_solid))) then
+                       (material_used(im).le.num_materials_solid))) then
              ! do nothing
             else
              print *,"testflag invalid"
@@ -17660,8 +17660,8 @@ contains
 
          loop_counter=loop_counter+1
         enddo  ! while 
-               ! loop_counter<nmat_solid and
-               ! num_processed_solid<nmat_solid and
+               ! loop_counter<num_materials_solid and
+               ! num_processed_solid<num_materials_solid and
                ! uncaptured_volume_fraction_solid>1-vfrac_solid_sum and
                ! uncaptured_volume_solid>0 
 
@@ -17687,8 +17687,8 @@ contains
         new_tessellate_local=local_tessellate 
 
         loop_counter=0
-        do while ((loop_counter.lt.nmat_fluid).and. &
-                  (num_processed_fluid.lt.nmat_fluid).and. &
+        do while ((loop_counter.lt.num_materials_fluid).and. &
+                  (num_processed_fluid.lt.num_materials_fluid).and. &
                   (uncaptured_volume_fraction_fluid.gt.zero).and. &
                   (uncaptured_volume_fluid.gt.zero)) 
 
@@ -17774,7 +17774,7 @@ contains
              ! do nothing
             else if (is_rigid_local(im).eq.0) then
              if ((material_used(im).ge.1).and. &
-                 (material_used(im).le.nmat_fluid)) then
+                 (material_used(im).le.num_materials_fluid)) then
               mofdatalocal(vofcomp+sdim+1)=material_used(im)
              else if (material_used(im).eq.0) then
               ! do nothing
@@ -17789,7 +17789,7 @@ contains
 
            else if (local_tessellate.eq.2) then
             if ((material_used(im).ge.1).and. &
-                (material_used(im).le.nmat_fluid)) then
+                (material_used(im).le.num_materials_fluid)) then
              mofdatalocal(vofcomp+sdim+1)=material_used(im)
             else if (material_used(im).eq.0) then
              ! do nothing
@@ -17889,7 +17889,7 @@ contains
              critical_material=im
             else if ((testflag_save.eq.0).or. &
                      ((testflag_save.ge.1).and. &
-                      (testflag_save.le.nmat_fluid)).or. &
+                      (testflag_save.le.num_materials_fluid)).or. &
                      ((testflag.ge.1).and.(testflag.le.num_materials)).or. &
                      ((material_used(im).ge.1).and. &
                       (material_used(im).le.num_materials))) then
@@ -17998,8 +17998,8 @@ contains
 
          loop_counter=loop_counter+1
         enddo  ! while 
-               ! loop_counter<nmat_fluid and
-               ! num_processed_fluid<nmat_fluid and 
+               ! loop_counter<num_materials_fluid and
+               ! num_processed_fluid<num_materials_fluid and 
                ! uncaptured_volume_fraction_fluid>0 and 
                ! uncaptured_volume_fluid>0
 
@@ -18133,8 +18133,8 @@ contains
       INTEGER_T im_test
       INTEGER_T fastflag
 
-      INTEGER_T nmat_solid
-      INTEGER_T nmat_fluid
+      INTEGER_T num_materials_solid
+      INTEGER_T num_materials_fluid
       REAL_T vfrac_fluid_sum
       REAL_T vfrac_solid_sum
       INTEGER_T num_processed_solid
@@ -18284,23 +18284,23 @@ contains
 
       vfrac_fluid_sum=zero
       vfrac_solid_sum=zero
-      nmat_solid=0
-      nmat_fluid=0
+      num_materials_solid=0
+      num_materials_fluid=0
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
        if (is_rigid_local(im).eq.0) then
         vfrac_fluid_sum=vfrac_fluid_sum+mofdatasave(vofcomp)
-        nmat_fluid=nmat_fluid+1
+        num_materials_fluid=num_materials_fluid+1
        else if (is_rigid_local(im).eq.1) then
         vfrac_solid_sum=vfrac_solid_sum+mofdatasave(vofcomp)
-        nmat_solid=nmat_solid+1
+        num_materials_solid=num_materials_solid+1
        else
         print *,"is_rigid invalid MOF.F90"
         stop
        endif
       enddo ! im
-      if (nmat_fluid+nmat_solid.ne.num_materials) then
-       print *,"nmat_fluid or nmat_solid invalid"
+      if (num_materials_fluid+num_materials_solid.ne.num_materials) then
+       print *,"num_materials_fluid or num_materials_solid invalid"
        stop
       endif
 
@@ -18366,14 +18366,14 @@ contains
        tessellate_local=1
 
        loop_counter=0
-       do while ((loop_counter.lt.nmat_solid).and. &
-                 (num_processed_solid.lt.nmat_solid).and. &
+       do while ((loop_counter.lt.num_materials_solid).and. &
+                 (num_processed_solid.lt.num_materials_solid).and. &
                  (uncaptured_volume_fraction_solid.gt. &
                   one-vfrac_solid_sum).and. &
                  (uncaptured_volume_solid.gt.zero)) 
 
         if (caller_id.eq.-1) then
-         print *,"loop_counter,nmat_solid ",loop_counter,nmat_solid
+         print *,"loop_counter,num_materials_solid ",loop_counter,num_materials_solid
         endif
 
         remaining_vfrac=zero
@@ -18401,7 +18401,7 @@ contains
            remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
           endif
          else if (((material_used(im_test).ge.1).and. &
-                   (material_used(im_test).le.nmat_solid)).or. &
+                   (material_used(im_test).le.num_materials_solid)).or. &
                    (is_rigid_local(im_test).eq.0)) then
           ! do nothing
          else
@@ -18442,7 +18442,7 @@ contains
           if (is_rigid_local(im).eq.1) then
             ! flag>0 for solids already processed.
            if ((material_used(im).ge.1).and. &
-               (material_used(im).le.nmat_solid)) then
+               (material_used(im).le.num_materials_solid)) then
             mofdatalocal(vofcomp+sdim+1)=material_used(im)
            else if (material_used(im).eq.0) then
             ! do nothing
@@ -18459,7 +18459,7 @@ contains
          enddo ! im=1..num_materials
 
          if ((num_processed_solid.gt.0).and. &
-             (num_processed_solid.lt.nmat_solid)) then
+             (num_processed_solid.lt.num_materials_solid)) then
           fastflag=0
          else if (num_processed_solid.eq.0) then
           fastflag=1
@@ -18530,9 +18530,9 @@ contains
             critical_material=im
            else if ((testflag_save.eq.0).or. & ! old flag=unprocessed
                     ((testflag.ge.1).and. &    ! new flag=processed
-                     (testflag.le.nmat_solid)).or. &
+                     (testflag.le.num_materials_solid)).or. &
                      ((material_used(im).ge.1).and. &
-                      (material_used(im).le.nmat_solid))) then
+                      (material_used(im).le.num_materials_solid))) then
             ! do nothing
            else
             print *,"testflag invalid"
@@ -18647,8 +18647,8 @@ contains
 
         loop_counter=loop_counter+1
        enddo  ! while 
-              ! loop_counter<nmat_solid and
-              ! num_processed_solid<nmat_solid and
+              ! loop_counter<num_materials_solid and
+              ! num_processed_solid<num_materials_solid and
               ! uncaptured_volume_fraction_solid>1-vfrac_solid_sum and
               ! uncaptured_volume_solid>0 
 
@@ -18660,13 +18660,13 @@ contains
        tessellate_local=0
 
        loop_counter=0
-       do while ((loop_counter.lt.nmat_fluid).and. &
-                 (num_processed_fluid.lt.nmat_fluid).and. &
+       do while ((loop_counter.lt.num_materials_fluid).and. &
+                 (num_processed_fluid.lt.num_materials_fluid).and. &
                  (uncaptured_volume_fraction_fluid.gt.zero).and. &
                  (uncaptured_volume_fluid.gt.zero)) 
 
         if (caller_id.eq.-1) then
-         print *,"loop_counter,nmat_fluid ",loop_counter,nmat_fluid
+         print *,"loop_counter,num_materials_fluid ",loop_counter,num_materials_fluid
         endif
 
         remaining_vfrac=zero
@@ -18740,7 +18740,7 @@ contains
            ! do nothing
           else if (is_rigid_local(im).eq.0) then
            if ((material_used(im).ge.1).and. &
-               (material_used(im).le.nmat_fluid)) then
+               (material_used(im).le.num_materials_fluid)) then
             mofdatalocal(vofcomp+sdim+1)=material_used(im)
            else if (material_used(im).eq.0) then
             ! do nothing
@@ -18829,7 +18829,7 @@ contains
             critical_material=im
            else if ((testflag_save.eq.0).or. &
                     ((testflag_save.ge.1).and. &
-                     (testflag_save.le.nmat_fluid)).or. &
+                     (testflag_save.le.num_materials_fluid)).or. &
                     ((testflag.ge.1).and.(testflag.le.num_materials)).or. &
                     ((material_used(im).ge.1).and. &
                      (material_used(im).le.num_materials))) then
@@ -18964,8 +18964,8 @@ contains
 
         loop_counter=loop_counter+1
        enddo  ! while 
-              ! loop_counter<nmat_fluid and
-              ! num_processed_fluid<nmat_fluid and 
+              ! loop_counter<num_materials_fluid and
+              ! num_processed_fluid<num_materials_fluid and 
               ! uncaptured_volume_fraction_fluid>0 and 
               ! uncaptured_volume_fluid>0
 
