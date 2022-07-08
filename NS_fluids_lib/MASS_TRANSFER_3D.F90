@@ -69,7 +69,6 @@ stop
        REAL_T, pointer :: dx(:)
        REAL_T, pointer :: xlo(:)
        REAL_T, pointer :: xI(:)
-       INTEGER_T, pointer :: nmat
        INTEGER_T, pointer :: fablo(:)
        INTEGER_T, pointer :: fabhi(:)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
@@ -131,7 +130,7 @@ stop
         latent_comp, &
         TSAT_array, &
         TSAT_flag_array, &  ! =0 if derived, =1 if T_interface(x,y,z,t) given.
-        x_I,time,nmat,nten,caller_id)
+        x_I,time,caller_id)
       use global_utility_module
       IMPLICIT NONE
 
@@ -146,12 +145,10 @@ stop
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
       REAL_T, pointer, intent(in) :: TSATFAB(D_DECL(:,:,:),:)
       INTEGER_T, intent(in) :: caller_id
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: latent_comp
       REAL_T, intent(out) :: T_I
-      REAL_T, intent(in)  :: TSAT_array(2*nten)
-      INTEGER_T, intent(in)  :: TSAT_flag_array(2*nten)
+      REAL_T, intent(in)  :: TSAT_array(2*num_interfaces)
+      INTEGER_T, intent(in)  :: TSAT_flag_array(2*num_interfaces)
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: x_I(SDIM)
@@ -166,7 +163,7 @@ stop
 #endif
 
       ncomp_per_tsat=EXTRAP_PER_TSAT
-      tsat_comp=nten+(iten-1)*ncomp_per_tsat+1
+      tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+1
 
       if (ntsat.eq.EXTRAP_NCOMP_TSAT) then
        ! do nothing
@@ -178,80 +175,69 @@ stop
        print *,"bfact invalid114"
        stop
       endif
-      if ((iten.ge.1).and.(iten.le.nten)) then
+      if ((iten.ge.1).and.(iten.le.num_interfaces)) then
        ! do nothing
       else
        print *,"iten invalid"
        stop
       endif
 
-      if (nmat.eq.num_materials) then
-       if (nten.eq.(((nmat-1)*(nmat-1)+nmat-1)/2)) then 
-        if ((latent_comp.ge.1).and.(latent_comp.le.2*nten)) then
-         if (time.ge.zero) then
-          if (use_tsatfab.eq.1) then
-           call interpfab_tsat( &
-             i,j,k, &
-             ireverse, &
-             iten, &
-             nten, &
-             ntsat, &
-             bfact, &
-             level, &
-             finest_level, &
-             dx,xlo, &
-             x_I, &
-             tsat_comp, &
-             fablo,fabhi, &
-             TSATFAB, &
-             T_I)
-          else if (use_tsatfab.eq.0) then
-           local_flag=TSAT_flag_array(latent_comp)
-           if (local_flag.eq.0) then
-            T_I=TSAT_array(latent_comp)
-           else if ((local_flag.ge.1).and.(local_flag.le.nmat)) then
+      if ((latent_comp.ge.1).and.(latent_comp.le.2*num_interfaces)) then
+       if (time.ge.zero) then
+        if (use_tsatfab.eq.1) then
+         call interpfab_tsat( &
+           i,j,k, &
+           ireverse, &
+           iten, &
+           ntsat, &
+           bfact, &
+           level, &
+           finest_level, &
+           dx,xlo, &
+           x_I, &
+           tsat_comp, &
+           fablo,fabhi, &
+           TSATFAB, &
+           T_I)
+        else if (use_tsatfab.eq.0) then
+         local_flag=TSAT_flag_array(latent_comp)
+         if (local_flag.eq.0) then
+          T_I=TSAT_array(latent_comp)
+         else if ((local_flag.ge.1).and.(local_flag.le.num_materials)) then
 #if (STANDALONE==0)
-            print *,"local_flag <> 0 not supported yet"
-            stop
+          print *,"local_flag <> 0 not supported yet"
+          stop
 #elif (STANDALONE==1)
-            T_I=exact_temperature(x_I,time,local_flag,probtype,nmat, &
-                   fort_heatviscconst)
+          T_I=exact_temperature(x_I,time,local_flag,probtype, &
+                fort_heatviscconst)
 #endif
-           else
-            print *,"local_flag invalid"
-            stop
-           endif
-          else
-           print *,"use_tsatfab invalid"
-           stop
-          endif
-
-          if (T_I.ge.TEMPERATURE_FLOOR) then
-           ! do nothing
-          else
-           print *,"T_I out of range T_I=",T_I
-           print *,"caller_id=",caller_id
-           print *,"latent_comp=",latent_comp
-           print *,"local_flag=",local_flag
-           do dir=1,SDIM
-            print *,"dir,x_I ",dir,x_I(dir)
-           enddo
-           stop
-          endif
          else
-          print *,"time invalid"
+          print *,"local_flag invalid"
           stop
          endif
         else
-         print *,"latent_comp invalid"
+         print *,"use_tsatfab invalid"
+         stop
+        endif
+
+        if (T_I.ge.TEMPERATURE_FLOOR) then
+         ! do nothing
+        else
+         print *,"T_I out of range T_I=",T_I
+         print *,"caller_id=",caller_id
+         print *,"latent_comp=",latent_comp
+         print *,"local_flag=",local_flag
+         do dir=1,SDIM
+          print *,"dir,x_I ",dir,x_I(dir)
+         enddo
          stop
         endif
        else
-        print *,"nten invalid"
+        print *,"time invalid"
         stop
        endif
       else
-       print *,"nmat invalid"
+       print *,"latent_comp invalid"
        stop
       endif
 
@@ -790,7 +776,7 @@ stop
        finest_level, &
        dx, &
        xlo,x, &
-       im,nmat,&
+       im, &
        comp, &
        lo,hi, &
        data, &
@@ -809,7 +795,7 @@ stop
       REAL_T, intent(in) :: x(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: comp
-      INTEGER_T, intent(in) :: im,nmat
+      INTEGER_T, intent(in) :: im
        ! datalox:datahix,dataloy:datahiy,dataloz:datahiz
       REAL_T, pointer, intent(in) :: data(D_DECL(:,:,:),:)
       REAL_T, pointer, intent(in) :: recon(D_DECL(:,:,:),:)
@@ -855,7 +841,7 @@ stop
        stop
       endif
 
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid20"
        stop
       endif
@@ -944,7 +930,6 @@ stop
        finest_level, &
        dx, &
        xlo,x, &
-       nmat,&
        lo,hi, &
        recon, & ! fluids tess, solids overlay
        dest)
@@ -961,9 +946,8 @@ stop
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: x(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, intent(in) :: nmat
       REAL_T, pointer, intent(in) :: recon(D_DECL(:,:,:),:)
-      REAL_T, intent(out) :: dest(nmat)
+      REAL_T, intent(out) :: dest(num_materials)
 
       INTEGER_T im
       INTEGER_T ic,jc,kc
@@ -971,7 +955,7 @@ stop
       INTEGER_T vofcomp
       INTEGER_T cell_index(SDIM)
 
-      REAL_T mofdata(nmat*ngeom_recon)
+      REAL_T mofdata(num_materials*ngeom_recon)
       REAL_T xsten(-3:3,SDIM)
       REAL_T volcell
       REAL_T cencell(SDIM)
@@ -1002,7 +986,7 @@ stop
         volcell,cencell,SDIM)
 
       local_data_fab=>recon
-      do im=1,nmat*ngeom_recon
+      do im=1,num_materials*ngeom_recon
        call safe_data(ic,jc,kc,im,local_data_fab,local_data_out)
        mofdata(im)=local_data_out
       enddo
@@ -1020,7 +1004,7 @@ stop
         SDIM, &
         4)
 
-      do im=1,nmat
+      do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
        dest(im)=mofdata(vofcomp)
       enddo
@@ -1325,7 +1309,6 @@ stop
        i,j,k, &
        ireverse, &
        iten, &
-       nten, &
        ntsat, &
        bfact, &
        level, &
@@ -1343,7 +1326,6 @@ stop
       INTEGER_T, intent(in) :: i,j,k
       INTEGER_T, intent(in) :: ireverse
       INTEGER_T, intent(in) :: iten
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: ntsat
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: level
@@ -1396,13 +1378,13 @@ stop
        print *,"bfact invalid114"
        stop
       endif
-      if ((comp.gt.nten).and.(comp.le.ntsat)) then
+      if ((comp.gt.num_interfaces).and.(comp.le.ntsat)) then
        ! do nothing
       else
        print *,"comp out of range"
        stop
       endif
-      if ((iten.ge.1).and.(iten.le.nten)) then
+      if ((iten.ge.1).and.(iten.le.num_interfaces)) then
        ! do nothing
       else
        print *,"iten invalid"
@@ -1484,8 +1466,8 @@ stop
        print *,"TSAT_weight invalid"
        print *,"VOFTOL=",VOFTOL
        print *,"VOFTOL_REDIST=",VOFTOL_REDIST
-       print *,"i,j,k,ireverse,iten,nten,ntsat,bfact ", &
-               i,j,k,ireverse,iten,nten,ntsat,bfact
+       print *,"i,j,k,ireverse,iten,num_interfaces,ntsat,bfact ", &
+               i,j,k,ireverse,iten,num_interfaces,ntsat,bfact
        print *,"level,finest_level,dx ",level,finest_level, &
                dx(1),dx(2),dx(SDIM)
        print *,"xlo,xtarget,comp ",xlo(1),xlo(2),xlo(SDIM), &
@@ -1501,8 +1483,6 @@ stop
       subroutine interpfab_curv( &
        interp_status, &  !interp_status=1 good, =0 not valid.
        curv_comp, &
-       nten, &
-       nmat, &
        bfact, &
        level, &
        finest_level, &
@@ -1517,8 +1497,6 @@ stop
 
       INTEGER_T, intent(out) :: interp_status
       INTEGER_T, intent(in) :: curv_comp
-      INTEGER_T, intent(in) :: nten
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: bfact
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
@@ -1526,8 +1504,8 @@ stop
       REAL_T, intent(in) :: dx(SDIM)
       REAL_T, intent(in) :: xtarget(SDIM)
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
-       ! first nmat+nten components are curvatures
-       ! second nmat+nten components are status (0=bad 1=good)
+       ! first num_materials+nten components are curvatures
+       ! second num_materials+nten components are status (0=bad 1=good)
       REAL_T, pointer, intent(in) :: data_in(D_DECL(:,:,:),:)
       REAL_T, intent(out) :: CURV_OUT
 
@@ -1544,19 +1522,8 @@ stop
       REAL_T local_CURV
       REAL_T local_weight
       REAL_T eps
-      INTEGER_T nten_test
       REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
       REAL_T local_data_out
-
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid interpfab_curv nten, nten_test ",nten,nten_test
-       stop
-      endif
 
       if (SDIM.eq.2) then
        k1lo=0
@@ -1573,7 +1540,7 @@ stop
        print *,"bfact invalid114"
        stop
       endif
-      if ((curv_comp.ge.1).and.(curv_comp.le.nmat+nten)) then
+      if ((curv_comp.ge.1).and.(curv_comp.le.num_materials+num_interfaces)) then
        ! do nothing
       else
        print *,"curv_comp out of range"
@@ -1598,7 +1565,7 @@ stop
        call gridsten_level(xsten,isten,jsten,ksten,level,nhalf)
 
        local_data_fab=>data_in
-       call safe_data(isten,jsten,ksten,nmat+nten+curv_comp, &
+       call safe_data(isten,jsten,ksten,num_materials+num_interfaces+curv_comp, &
            local_data_fab,local_data_out)
        CURV_FLAG=NINT(local_data_out)
 
@@ -1701,7 +1668,7 @@ stop
        x, &  ! normal probe position
        xI, & ! closest point on interface from a cell center.
        Tsat, &
-       im,nmat, &
+       im, &
        comp, &
        lo,hi, &
        tempfab, &
@@ -1724,7 +1691,7 @@ stop
       REAL_T, intent(in) :: xI(SDIM)
       REAL_T, intent(in) :: Tsat
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, intent(in) :: im,nmat,comp
+      INTEGER_T, intent(in) :: im,comp
       REAL_T, pointer, intent(in) :: tempfab(D_DECL(:,:,:),:)
       REAL_T, pointer, intent(in) :: LS(D_DECL(:,:,:),:)
       REAL_T, pointer, intent(in) :: recon(D_DECL(:,:,:),:)
@@ -1766,7 +1733,7 @@ stop
        print *,"comp out of range"
        stop
       endif
-      if ((im.lt.1).or.(im.gt.nmat)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid21"
        stop
       endif
@@ -1870,7 +1837,6 @@ stop
        xI, &
        Tsat, &
        im_target_probe, &
-       nmat, &
        comp_probe, &
        lo,hi, &
        tempfab, &
@@ -1896,7 +1862,6 @@ stop
       REAL_T, intent(in) :: Tsat
       INTEGER_T, intent(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, intent(in) :: im_target_probe
-      INTEGER_T, intent(in) :: nmat
       INTEGER_T, intent(in) :: comp_probe
       REAL_T, pointer, intent(in) :: tempfab(D_DECL(:,:,:),:)
       REAL_T, pointer, intent(in) :: LS(D_DECL(:,:,:),:)
@@ -1940,7 +1905,7 @@ stop
        stop
       endif
       if ((im_target_probe.lt.1).or. &
-          (im_target_probe.gt.nmat)) then
+          (im_target_probe.gt.num_materials)) then
        print *,"im_target_probe invalid21"
        stop
       endif
@@ -2136,7 +2101,6 @@ stop
        PROBE_PARMS%dx, &
        PROBE_PARMS%xlo, &
        PROBE_PARMS%xI, &
-       PROBE_PARMS%nmat, &
        PROBE_PARMS%fablo, &
        PROBE_PARMS%fabhi, &
        PROBE_PARMS%recon, &
@@ -2177,7 +2141,7 @@ stop
        if (PROBE_PARMS%imls_I.eq.im_target_probe(iprobe)) then
         LS_INT_OWN_counter=LS_INT_OWN_counter+1
        else if ((PROBE_PARMS%imls_I.ge.1).and. &
-                (PROBE_PARMS%imls_I.le.PROBE_PARMS%nmat)) then
+                (PROBE_PARMS%imls_I.le.num_materials)) then
         ! do nothing
        else
         print *,"imls_I invalid"
@@ -2208,7 +2172,6 @@ stop
          PROBE_PARMS%xlo, &
          PROBE_PARMS%xI, &
          im_target_probe(iprobe), &
-         PROBE_PARMS%nmat, &
          dencomp_probe(iprobe), &
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
@@ -2224,7 +2187,6 @@ stop
          PROBE_PARMS%xlo, &
          xtarget_probe, &
          im_target_probe(iprobe), &
-         PROBE_PARMS%nmat, &
          dencomp_probe(iprobe), &
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
@@ -2250,7 +2212,6 @@ stop
         PROBE_PARMS%xI, &
         T_I, &
         im_target_probe(iprobe), &
-        PROBE_PARMS%nmat, &
         tcomp_probe(iprobe), &
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
@@ -2280,7 +2241,6 @@ stop
         PROBE_PARMS%xlo, &
         xtarget_probe, &
         im_target_probe(iprobe), &
-        PROBE_PARMS%nmat, &
         tcomp_probe(iprobe), &
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
@@ -2326,7 +2286,6 @@ stop
          PROBE_PARMS%xI, &
          Y_I, &
          im_target_probe(iprobe), &
-         PROBE_PARMS%nmat, &
          Ycomp_probe(iprobe), &
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
@@ -2359,7 +2318,6 @@ stop
          PROBE_PARMS%xlo, &
          xtarget_probe, &
          im_target_probe(iprobe), &
-         PROBE_PARMS%nmat, &
          Ycomp_probe(iprobe), &
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
@@ -2401,7 +2359,6 @@ stop
          PROBE_PARMS%xlo, &
          PROBE_PARMS%xI, &
          im_target_probe(iprobe), &
-         PROBE_PARMS%nmat, &
          Ycomp_probe(iprobe), &
          PROBE_PARMS%fablo, &
          PROBE_PARMS%fabhi, &
@@ -2416,7 +2373,7 @@ stop
         stop
        endif
 
-       do imls=1,PROBE_PARMS%nmat
+       do imls=1,num_materials
          ! center -> target (cc_flag==1)
          ! tsat_flag==-1
          ! call center_centroid_interchange
@@ -2432,7 +2389,7 @@ stop
          PROBE_PARMS%fabhi, &
          PROBE_PARMS%LS, &
          LSPROBE(imls))
-       enddo ! imls=1..nmat
+       enddo ! imls=1..num_materials
 
        call get_primary_material(LSPROBE,im_primary_probe(iprobe))
 
@@ -2472,8 +2429,7 @@ stop
        else if ((im_primary_probe(iprobe).ne. &
                  im_target_probe(iprobe)).and. &
                 (im_primary_probe(iprobe).ge.1).and. &
-                (im_primary_probe(iprobe).le. &
-                PROBE_PARMS%nmat)) then
+                (im_primary_probe(iprobe).le.num_materials)) then
 
         POUT%probe_ok_gradient(iprobe)=0
 
@@ -2510,7 +2466,6 @@ stop
           PROBE_PARMS%xI, &
           T_I, &
           im_target_probe(iprobe), &
-          PROBE_PARMS%nmat, &
           tcomp_probe(iprobe), &
           PROBE_PARMS%fablo, &
           PROBE_PARMS%fabhi, &
@@ -2553,7 +2508,6 @@ stop
            PROBE_PARMS%xI, &
            Y_I, &
            im_target_probe(iprobe), &
-           PROBE_PARMS%nmat, &
            Ycomp_probe(iprobe), &
            PROBE_PARMS%fablo, &
            PROBE_PARMS%fabhi, &
@@ -2616,7 +2570,6 @@ stop
         PROBE_PARMS%xlo, &
         xtarget_probe, &
         im_target_probe(iprobe), &
-        PROBE_PARMS%nmat, &
         tcomp_probe(iprobe), &
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
@@ -2640,7 +2593,6 @@ stop
         PROBE_PARMS%xlo, &
         PROBE_PARMS%xI, &
         im_target_probe(iprobe), &
-        PROBE_PARMS%nmat, &
         tcomp_probe(iprobe), &
         PROBE_PARMS%fablo, &
         PROBE_PARMS%fabhi, &
@@ -3340,8 +3292,6 @@ stop
         ! Called from NavierStokes.cpp: 
         !   NavierStokes::level_phase_change_convert
       subroutine fort_nodedisplace( &
-       nmat, &
-       nten, &
        nburning, &
        tilelo,tilehi, &
        fablo,fabhi, &
@@ -3362,8 +3312,6 @@ stop
       IMPLICIT NONE
        
       INTEGER_T, intent(in) :: level,finest_level
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nburning
       INTEGER_T ncomp_per_burning
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -3376,12 +3324,12 @@ stop
       INTEGER_T, intent(in) :: DIMDEC(ucell)
       INTEGER_T, intent(in) :: DIMDEC(oldLS)
      
-      REAL_T, target, intent(out) ::  unode(DIMV(unode),2*nten*SDIM) 
+      REAL_T, target, intent(out) ::  unode(DIMV(unode),2*num_interfaces*SDIM) 
       REAL_T, pointer :: unode_ptr(D_DECL(:,:,:),:)
 
       REAL_T, target, intent(in) ::  ucell(DIMV(ucell),nburning) 
       REAL_T, pointer :: ucell_ptr(D_DECL(:,:,:),:)
-      REAL_T, target, intent(in) :: oldLS(DIMV(oldLS),nmat*(1+SDIM))
+      REAL_T, target, intent(in) :: oldLS(DIMV(oldLS),num_materials*(1+SDIM))
       REAL_T, pointer :: oldLS_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, intent(in) :: velbc(SDIM,2,SDIM)
@@ -3400,7 +3348,7 @@ stop
       INTEGER_T rigid_in_stencil
       INTEGER_T im
       INTEGER_T im_primary
-      REAL_T LS_local(nmat)
+      REAL_T LS_local(num_materials)
 
       nhalf=3
 
@@ -3410,16 +3358,6 @@ stop
 
       if (bfact.lt.1) then
        print *,"bfact invalid117"
-       stop
-      endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      if (nten.eq.((nmat-1)*(nmat-1)+nmat-1)/2) then
-       ! do nothing
-      else
-       print *,"nten invalid"
        stop
       endif
       ncomp_per_burning=EXTRAP_PER_BURNING
@@ -3495,7 +3433,7 @@ stop
        do i1=0,1
        do j1=0,1
        do k1=klosten,khisten
-        do im=1,nmat
+        do im=1,num_materials
          LS_local(im)=oldLS(D_DECL(i-i1,j-j1,k-k1),im)
         enddo
         call get_primary_material(LS_local,im_primary)
@@ -3511,7 +3449,7 @@ stop
        enddo
        enddo
 
-       do itencrit=1,nten
+       do itencrit=1,num_interfaces
        do ireverse=0,1
 
         if (ireverse.eq.0) then
@@ -3535,7 +3473,7 @@ stop
            ! do nothing
           else if ((sign_reverse*tag_local.eq.1).or. &
                    (sign_reverse*tag_local.eq.2)) then
-           scomp=nten+(itencrit-1)*ncomp_per_burning+dir
+           scomp=num_interfaces+(itencrit-1)*ncomp_per_burning+dir
            velnd=velnd+ucell(D_DECL(i-i1,j-j1,k-k1),scomp)
            totalwt=totalwt+one
           else if ((-sign_reverse*tag_local.eq.1).or. &
@@ -3599,12 +3537,12 @@ stop
           stop
          endif
 
-         scomp=(itencrit+ireverse*nten-1)*ncomp_per_burning+dir
+         scomp=(itencrit+ireverse*num_interfaces-1)*ncomp_per_burning+dir
          unode(D_DECL(i,j,k),scomp)=delta
         enddo ! dir=1..sdim
 
        enddo ! ireverse=0,1
-       enddo ! itencrit=1,nten
+       enddo ! itencrit=1,num_interfaces
 
       enddo
       enddo
@@ -3624,7 +3562,7 @@ stop
         !           (ii) some kind of Dirichlet temperature condition on
         !                interface that is changing phase.
         ! recon:
-        ! vof,ref centroid,order,slope,intercept  x nmat
+        ! vof,ref centroid,order,slope,intercept  x num_materials
       subroutine fort_convertmaterial( &
        tid, &
        im_outer, &     ! im_outer and im_opp_outer define an interface
@@ -3686,16 +3624,15 @@ stop
       INTEGER_T, intent(in) :: level
       INTEGER_T, intent(in) :: finest_level
       INTEGER_T, intent(in) :: ngrow_expansion_in
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nden
       INTEGER_T, intent(in) :: nstate
       INTEGER_T, intent(in) :: ntsat
       INTEGER_T, intent(in) :: supermesh_flag
-      REAL_T, intent(in) :: saturation_temp(2*nten)
-      INTEGER_T, intent(in) :: freezing_model(2*nten)
-      INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*nten)
-      INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
-      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
+      REAL_T, intent(in) :: saturation_temp(2*num_interfaces)
+      INTEGER_T, intent(in) :: freezing_model(2*num_interfaces)
+      INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*num_interfaces)
+      INTEGER_T, intent(in) :: mass_fraction_id(2*num_interfaces)
+      INTEGER_T, intent(in) :: distribute_from_target(2*num_interfaces)
       INTEGER_T, intent(in) :: constant_density_all_time(num_materials)
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, intent(in),target :: fablo(SDIM),fabhi(SDIM)
@@ -3725,10 +3662,10 @@ stop
       REAL_T, target, intent(in) :: conductstate(DIMV(conductstate),num_materials)
       REAL_T, pointer :: conductstate_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, intent(in) :: nodevel(DIMV(nodevel),2*nten*SDIM)
+      REAL_T, target, intent(in) :: nodevel(DIMV(nodevel),2*num_interfaces*SDIM)
       REAL_T, pointer :: nodevel_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, intent(out) :: JUMPFAB(DIMV(JUMPFAB),2*nten)
+      REAL_T, target, intent(out) :: JUMPFAB(DIMV(JUMPFAB),2*num_interfaces)
       REAL_T, target, intent(out) :: TgammaFAB(DIMV(TgammaFAB),ntsat)
       REAL_T, pointer :: JUMPFAB_ptr(D_DECL(:,:,:),:)
       REAL_T, pointer :: TgammaFAB_ptr(D_DECL(:,:,:),:)
@@ -3768,7 +3705,6 @@ stop
       INTEGER_T ireverse_crit
       REAL_T max_velnode
       REAL_T velnode_test
-      INTEGER_T nten_test
       INTEGER_T vcompsrc_snew,vcompdst_snew
       REAL_T oldvfrac(num_materials)
       REAL_T newvfrac(num_materials)
@@ -3876,7 +3812,7 @@ stop
       REAL_T cencell_ofs(SDIM)
       REAL_T tempcen(SDIM)
       INTEGER_T do_unsplit_advection
-      INTEGER_T interface_near(2*nten)
+      INTEGER_T interface_near(2*num_interfaces)
       INTEGER_T local_mask
       INTEGER_T im_primary_new
       INTEGER_T im_primary_old
@@ -4055,12 +3991,8 @@ stop
        EBVOFTOL=EBVOFTOL*dt
       endif
 
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
-       stop
-      endif
-       ! For Tsatfab: 1st nten components are the status, then next 2*nten
+       ! For Tsatfab: 1st num_interfaces 
+       ! components are the status, then next 2*num_interfaces
        ! components go:
        ! T_gamma_1,Y_gamma_1,
        ! T_gamma_2,Y_gamma_2, ....
@@ -4092,20 +4024,20 @@ stop
        do im_opp=im+1,num_materials
         do ireverse=0,1
          call get_iten(im,im_opp,iten)
-         local_freezing_model=freezing_model(iten+ireverse*nten)
-         distribute_from_targ=distribute_from_target(iten+ireverse*nten)
-         LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
+         local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
+         distribute_from_targ=distribute_from_target(iten+ireverse*num_interfaces)
+         LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
          mass_frac_id=0
 
          if (is_multi_component_evapF(local_freezing_model, &
-              Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+              Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
               LL).eq.0) then 
           ! do nothing
          else if (is_multi_component_evapF(local_freezing_model, &
-                   Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                   Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
                    LL).eq.1) then 
 
-          mass_frac_id=mass_fraction_id(iten+ireverse*nten)
+          mass_frac_id=mass_fraction_id(iten+ireverse*num_interfaces)
           if ((mass_frac_id.ge.1).and. &
               (mass_frac_id.le.num_species_var)) then
            ! do nothing
@@ -4123,7 +4055,7 @@ stop
          else
           print *,"local_freezing_model invalid in fort_convertmaterial"
           print *,"local_freezing_model= ",local_freezing_model
-          print *,"iten,ireverse,nten ",iten,ireverse,nten
+          print *,"iten,ireverse,num_interfaces ",iten,ireverse,num_interfaces
           stop
          endif
         enddo ! ireverse
@@ -4164,10 +4096,10 @@ stop
        if (local_mask.eq.1) then
 
         do ireverse=0,1 
-         if (JUMPFAB(D_DECL(i,j,k),iten_outer+ireverse*nten).eq.zero) then
+         if (JUMPFAB(D_DECL(i,j,k),iten_outer+ireverse*num_interfaces).eq.zero) then
           ! do nothing
          else
-          print *,"JUMPFAB(D_DECL(i,j,k),iten_outer+ireverse*nten) init bad"
+          print *,"JUMPFAB(D_DECL(i,j,k),iten_outer+ireverse*num_interfaces) init bad"
           stop
          endif
         enddo
@@ -4179,7 +4111,7 @@ stop
           volgrid,cengrid,SDIM)
 
         do_unsplit_advection=0
-        do im=1,2*nten
+        do im=1,2*num_interfaces
          interface_near(im)=0
         enddo
 
@@ -4215,7 +4147,7 @@ stop
              stop
             endif
 
-            LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
+            LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
 
             if ((is_rigid(im).eq.1).or. &
                 (is_rigid(im_opp).eq.1)) then
@@ -4237,7 +4169,7 @@ stop
               if ((F_STEN(im_source).gt.zero).and. &
                   (F_STEN(im_dest).gt.zero)) then
                if ((im.eq.im_outer).and.(im_opp.eq.im_opp_outer)) then
-                interface_near(iten+ireverse*nten)=1
+                interface_near(iten+ireverse*num_interfaces)=1
                 do_unsplit_advection=1
                else 
                 ! do nothing
@@ -4327,7 +4259,7 @@ stop
              call get_iten(im,im_opp,iten)
              do ireverse=0,1
                !interface_near==0 if im<>im_outer or im_opp<>im_opp_outer
-              if (interface_near(iten+ireverse*nten).eq.1) then
+              if (interface_near(iten+ireverse*num_interfaces).eq.1) then
                if (ireverse.eq.0) then
                 im_source=im
                 im_dest=im_opp
@@ -4338,8 +4270,8 @@ stop
                 print *,"ireverse invalid"
                 stop
                endif
-               if ((iten.ge.1).and.(iten.le.nten)) then
-                scomp=(iten+nten*ireverse-1)*SDIM
+               if ((iten.ge.1).and.(iten.le.num_interfaces)) then
+                scomp=(iten+num_interfaces*ireverse-1)*SDIM
                 velnode_test=zero
                 do udir=1,SDIM
                  velnode_test=velnode_test+ &
@@ -4367,7 +4299,7 @@ stop
                 print *,"im_dest_crit invalid"
                 stop
                endif
-              else if (interface_near(iten+ireverse*nten).eq.0) then
+              else if (interface_near(iten+ireverse*num_interfaces).eq.0) then
                ! do nothing
               else
                print *,"interface_near invalid"
@@ -4393,7 +4325,7 @@ stop
            print *,"im_source_crit invalid"
            stop
           endif
-          if ((iten_crit.lt.1).or.(iten_crit.gt.nten)) then
+          if ((iten_crit.lt.1).or.(iten_crit.gt.num_interfaces)) then
            print *,"iten_crit invalid"
            stop
           endif
@@ -4471,7 +4403,7 @@ stop
               stop
              endif
 
-             scomp=(iten_crit+ireverse_crit*nten-1)*SDIM
+             scomp=(iten_crit+ireverse_crit*num_interfaces-1)*SDIM
 
               ! node velocity initialized in "nodedisplace"
              do udir=1,SDIM
@@ -4681,7 +4613,7 @@ stop
                  geom_xtetlist_uncapt(1,1,1,tid+1),  &
                  nmax, &
                  nmax, &
-                 nmat,SDIM,shapeflag,102)
+                 SDIM,shapeflag,102)
 
                multi_volume_total=zero
                do u_im=1,num_materials
@@ -4744,12 +4676,12 @@ stop
             stop
            endif
 
-           if (interface_near(iten+ireverse*nten).ne.1) then
+           if (interface_near(iten+ireverse*num_interfaces).ne.1) then
             print *,"interface_near invalid"
             stop
            endif
 
-           Tgamma_default=saturation_temp(iten+ireverse*nten)
+           Tgamma_default=saturation_temp(iten+ireverse*num_interfaces)
            Ygamma_default=one
 
            Tsat_flag=NINT(TgammaFAB(D_DECL(i,j,k),iten))
@@ -4762,20 +4694,20 @@ stop
              stop
            endif
 
-           LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
-           local_freezing_model=freezing_model(iten+ireverse*nten)
-           distribute_from_targ=distribute_from_target(iten+ireverse*nten)
-           mass_frac_id=mass_fraction_id(iten+ireverse*nten)
+           LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+           local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
+           distribute_from_targ=distribute_from_target(iten+ireverse*num_interfaces)
+           mass_frac_id=mass_fraction_id(iten+ireverse*num_interfaces)
            
             ! TgammaFAB has valid values corresponding to the
             ! given value for "ireverse". 
            if ((Tsat_flag.eq.1).or.(Tsat_flag.eq.2)) then
              Tgamma_default=TgammaFAB(D_DECL(i,j,k), &
-              nten+(iten-1)*ncomp_per_tsat+1)
+              num_interfaces+(iten-1)*ncomp_per_tsat+1)
              if ((mass_frac_id.ge.1).and. &
                  (mass_frac_id.le.num_species_var)) then
               Ygamma_default=TgammaFAB(D_DECL(i,j,k), &
-               nten+(iten-1)*ncomp_per_tsat+2)
+               num_interfaces+(iten-1)*ncomp_per_tsat+2)
              else if (mass_frac_id.eq.0) then
               Ygamma_default=one
              else
@@ -4849,7 +4781,7 @@ stop
            do u_imaterial=1,num_materials*(1+SDIM)
             oldLS_point(u_imaterial)=LSold(D_DECL(i,j,k),u_imaterial)
            enddo
-           call normalize_LS_normals(nmat,oldLS_point)
+           call normalize_LS_normals(oldLS_point)
 
            vofcomp_raw_dest=(im_dest-1)*ngeom_raw+1
            vofcomp_recon_source=(im_source-1)*ngeom_recon+1
@@ -5263,11 +5195,11 @@ stop
              stop
             endif
             if (is_multi_component_evapF(local_freezing_model, &
-                 Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                 Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
                  LL).eq.0) then 
              ! do nothing
             else if (is_multi_component_evapF(local_freezing_model, &
-                      Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                      Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
                       LL).eq.1) then 
              if ((mass_frac_id.ge.1).and. &
                  (mass_frac_id.le.num_species_var)) then
@@ -5407,7 +5339,7 @@ stop
                u_xsten_updatecell,nhalf, &  ! absolute coordinate system
                mofdata, &
                xPOINT_supermesh, & ! absolute coordinate system
-               im_old_crit,nmat,SDIM)
+               im_old_crit,SDIM)
 
               ! im_old_crit=material at t=tn that occupies the new 
               ! centroid location
@@ -5853,7 +5785,7 @@ stop
              !for boiling: jump_strength>0
             jump_strength=jump_strength*dF*volgrid/dt
 
-            JUMPFAB(D_DECL(i,j,k),iten+ireverse*nten)=jump_strength
+            JUMPFAB(D_DECL(i,j,k),iten+ireverse*num_interfaces)=jump_strength
           
             if (dF.le.EBVOFTOL) then
              print *,"expecting dF>EBVOFTOL"
@@ -5927,7 +5859,6 @@ stop
               data_in%level=level
               data_in%finest_level=finest_level
               data_in%bfact=bfact
-              data_in%nmat=nmat
               data_in%dx=>dx
               data_in%xlo=>xlo
               data_in%fablo=>fablo
@@ -5951,7 +5882,7 @@ stop
                u_xsten_updatecell,nhalf, &  ! absolute coordinate system
                mofdata, &
                xstar, & ! absolute coordinate system
-               im_old_crit,nmat,SDIM)
+               im_old_crit,SDIM)
 
               tessellate=3
               call multi_get_volumePOINT( &
@@ -5960,7 +5891,7 @@ stop
                 u_xsten_updatecell,nhalf, &  ! absolute coordinate system
                 mofdata_new, &
                 xstar, & ! absolute coordinate system
-                im_new_crit,nmat,SDIM)
+                im_new_crit,SDIM)
 
               if ((newvfrac(im_dest).gt.zero).and. &
                   (newvfrac(im_dest).le.one+EBVOFTOL)) then
@@ -6243,7 +6174,7 @@ stop
              else
               print *,"local_freezing_model invalid in fort_convertmaterial(2)"
               print *,"local_freezing_model= ",local_freezing_model
-              print *,"iten,ireverse,nten ",iten,ireverse,nten
+              print *,"iten,ireverse,num_interfaces ",iten,ireverse,num_interfaces
               stop
              endif
 
@@ -6338,7 +6269,7 @@ stop
              stop
             endif
 
-            LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
+            LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
 
             if ((is_rigid(im).eq.1).or. &
                 (is_rigid(im_opp).eq.1)) then
@@ -6357,8 +6288,8 @@ stop
                print *,"ireverse invalid"
                stop
               endif
-              local_freezing_model=freezing_model(iten+ireverse*nten)
-              mass_frac_id=mass_fraction_id(iten+ireverse*nten)
+              local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
+              mass_frac_id=mass_fraction_id(iten+ireverse*num_interfaces)
 
               if (LL.gt.zero) then ! evaporation
                im_condensed=im_source
@@ -6391,11 +6322,11 @@ stop
               endif
 
               if (is_multi_component_evapF(local_freezing_model, &
-                   Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                   Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
                    LL).eq.0) then 
                ! do nothing
               else if (is_multi_component_evapF(local_freezing_model, &
-                        Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                        Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
                         LL).eq.1) then 
 
                if ((mass_frac_id.ge.1).and. &
@@ -6410,7 +6341,7 @@ stop
 
                 if ((Tsat_flag.eq.1).or.(Tsat_flag.eq.2)) then
                  Ygamma_default=TgammaFAB(D_DECL(i,j,k), &
-                   nten+(iten-1)*ncomp_per_tsat+2)
+                   num_interfaces+(iten-1)*ncomp_per_tsat+2)
                 else if ((Tsat_flag.eq.-1).or. &
                          (Tsat_flag.eq.-2)) then
                  ! do nothing
@@ -6505,8 +6436,6 @@ stop
         level, &
         finest_level, &
         xlo,dx, &
-        nmat, &
-        nten, &
         nburning, &
         ngrow, &
         tilelo,tilehi, &
@@ -6525,8 +6454,6 @@ stop
       INTEGER_T, intent(in) :: finest_level 
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nburning
       INTEGER_T, intent(in) :: ngrow
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -6541,7 +6468,7 @@ stop
       REAL_T, target, intent(inout) :: vel(DIMV(vel),nburning)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
+      REAL_T, target, intent(in) :: LS(DIMV(LS),num_materials*(SDIM+1))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T im,im_opp
@@ -6563,9 +6490,8 @@ stop
       REAL_T vel_sum(SDIM)
       REAL_T vel_local
       REAL_T dxmax,dxmaxLS,eps,extensionwidth,LL
-      REAL_T ls_local(nmat)
+      REAL_T ls_local(num_materials)
       INTEGER_T im_local
-      INTEGER_T nten_test
       INTEGER_T scomp,nhalf
       INTEGER_T ncomp_per
 
@@ -6603,16 +6529,7 @@ stop
        print *,"expecting ngrow_make_distance==3 in fort_extend_burning_vel"
        stop
       endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid velextend nten, nten_test ",nten,nten_test
-       stop
-      endif
-      if (nburning.eq.nten*(ncomp_per+1)) then
+      if (nburning.eq.num_interfaces*(ncomp_per+1)) then
        ! do nothing
       else
        print *,"nburning invalid"
@@ -6632,10 +6549,10 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      do im=1,nmat-1
-       do im_opp=im+1,nmat
+      do im=1,num_materials-1
+       do im_opp=im+1,num_materials
         do ireverse=0,1
-         if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
+         if ((im.gt.num_materials).or.(im_opp.gt.num_materials)) then
           print *,"im or im_opp bust"
           stop
          endif
@@ -6653,7 +6570,7 @@ stop
          endif
   
          call get_iten(im,im_opp,iten)
-         LL=get_user_latent_heat(iten+ireverse*nten,293.0d0,1)
+         LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
 
          if (LL.ne.zero) then
   
@@ -6661,13 +6578,13 @@ stop
           do i=growlo(1),growhi(1)
           do j=growlo(2),growhi(2)
           do k=growlo(3),growhi(3)
-           do im_local=1,nmat
+           do im_local=1,num_materials
             ls_local(im_local)=LS(D_DECL(i,j,k),im_local)
            enddo
            call get_primary_material(ls_local,im_local)
            if (is_rigid(im_local).eq.0) then
 
-            if ((im_dest.ge.1).and.(im_dest.le.nmat)) then
+            if ((im_dest.ge.1).and.(im_dest.le.num_materials)) then
              rtag_local=vel(D_DECL(i,j,k),iten)
              tag_local=NINT(rtag_local) 
               ! tag_local==0 if phase change rate not yet init.
@@ -6682,13 +6599,13 @@ stop
                if ((ls_local(im_source).ge.zero).and. &
                    (ls_local(im_dest).le.zero)) then
                 do dir=1,SDIM
-                 nrm(dir)=LS(D_DECL(i,j,k),nmat+(im_dest-1)*SDIM+dir)
+                 nrm(dir)=LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
                  xcp(dir)=xijk(0,dir)-ls_local(im_dest)*nrm(dir)
                 enddo ! dir
                else if ((ls_local(im_dest).ge.zero).and. &
                         (ls_local(im_source).le.zero)) then
                 do dir=1,SDIM
-                 nrm(dir)=LS(D_DECL(i,j,k),nmat+(im_source-1)*SDIM+dir)
+                 nrm(dir)=LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
                  xcp(dir)=xijk(0,dir)-ls_local(im_source)*nrm(dir)
                 enddo ! dir
                else if (abs(ls_local(im_source)).le. &
@@ -6703,7 +6620,7 @@ stop
                 ! then the algorithm to find the closest point will
                 ! not change.
                 do dir=1,SDIM
-                 nrm(dir)=LS(D_DECL(i,j,k),nmat+(im_dest-1)*SDIM+dir)
+                 nrm(dir)=LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
                  xcp(dir)=xijk(0,dir)-ls_local(im_dest)*nrm(dir)
                 enddo ! dir
                else if (abs(ls_local(im_dest)).le. &
@@ -6718,7 +6635,7 @@ stop
                 ! then the algorithm to find the closest point will
                 ! not change.
                 do dir=1,SDIM
-                 nrm(dir)=LS(D_DECL(i,j,k),nmat+(im_source-1)*SDIM+dir)
+                 nrm(dir)=LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
                  xcp(dir)=xijk(0,dir)-ls_local(im_source)*nrm(dir)
                 enddo ! dir
                else
@@ -6759,7 +6676,7 @@ stop
                  weight =one/((weight+eps)**four)
                  total_weight = total_weight+weight
                  do dir=1,ncomp_per
-                  scomp=nten+(iten-1)*ncomp_per+dir
+                  scomp=num_interfaces+(iten-1)*ncomp_per+dir
                   call safe_data(i_sp,j_sp,k_sp,scomp,vel_ptr,vel_local)
                   vel_sum(dir) = vel_sum(dir)+weight*vel_local 
                  enddo
@@ -6782,7 +6699,7 @@ stop
 
                if (total_weight.gt.zero) then
                 do dir=1,ncomp_per
-                 scomp=nten+(iten-1)*ncomp_per+dir
+                 scomp=num_interfaces+(iten-1)*ncomp_per+dir
                  vel(D_DECL(i,j,k),scomp)=vel_sum(dir)/total_weight
                 enddo
                 vel(D_DECL(i,j,k),iten)=two*sign_local
@@ -6807,7 +6724,7 @@ stop
                im,im_opp,ireverse,im_source,im_dest
               print *,"raw tag data ",vel(D_DECL(i,j,k),iten)
               print *,"level,finest_level ",level,finest_level
-              print *,"nmat,nten,nburning,ngrow ",nmat,nten,nburning,ngrow
+              print *,"num_materials,num_interfaces,nburning,ngrow ",num_materials,num_interfaces,nburning,ngrow
               stop
              endif
             else
@@ -6831,8 +6748,8 @@ stop
           stop
          endif 
         enddo ! ireverse=0..1
-       enddo ! im_opp=im+1..nmat
-      enddo ! im=1..nmat-1
+       enddo ! im_opp=im+1..num_materials
+      enddo ! im=1..num_materials-1
 
       return 
       end subroutine fort_extend_burning_vel
@@ -6842,8 +6759,6 @@ stop
         level, &
         finest_level, &
         xlo,dx, &
-        nmat, &
-        nten, &
         ncomp, &
         ngrow, &
         tilelo,tilehi, &
@@ -6861,8 +6776,6 @@ stop
       INTEGER_T, intent(in) :: finest_level 
       REAL_T, intent(in) :: xlo(SDIM)
       REAL_T, intent(in) :: dx(SDIM)
-      INTEGER_T, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: ncomp
       INTEGER_T, intent(in) :: ngrow
       INTEGER_T, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -6876,7 +6789,7 @@ stop
       REAL_T, target, intent(inout) :: drag(DIMV(drag),ncomp)
       REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1))
+      REAL_T, target, intent(in) :: LS(DIMV(LS),num_materials*(SDIM+1))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T im
@@ -6900,8 +6813,7 @@ stop
       REAL_T drag_sum(ncomp)
       REAL_T drag_local(ncomp)
       REAL_T dxmax,dxmaxLS,eps,extensionwidth
-      REAL_T ls_local(nmat)
-      INTEGER_T nten_test
+      REAL_T ls_local(num_materials)
       INTEGER_T nhalf
 
       nhalf=3
@@ -6929,15 +6841,6 @@ stop
        print *,"expecting ngrow_make_distance==3 in fort_extend_drag"
        stop
       endif
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid extend_drag nten, nten_test ",nten,nten_test
-       stop
-      endif
       if (ncomp.eq.N_DRAG) then
        ! do nothing
       else
@@ -6959,13 +6862,13 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
        ! im is the material on which a force is applied.
-      do im=1,nmat
+      do im=1,num_materials
   
        ! iterate over domain and check tag
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
-        do im_local=1,nmat
+        do im_local=1,num_materials
          ls_local(im_local)=LS(D_DECL(i,j,k),im_local)
         enddo
         rtag_local=drag(D_DECL(i,j,k),DRAGCOMP_FLAG+im)
@@ -6978,7 +6881,7 @@ stop
           ! the recipient level set function interface.
           call gridsten_level(xijk,i,j,k,level,nhalf)
           do dir=1,SDIM
-           nrm(dir)=LS(D_DECL(i,j,k),nmat+(im-1)*SDIM+dir)
+           nrm(dir)=LS(D_DECL(i,j,k),num_materials+(im-1)*SDIM+dir)
            xcp(dir)=xijk(0,dir)-ls_local(im)*nrm(dir)
           enddo ! dir
 
@@ -7038,7 +6941,7 @@ stop
                print *,"drag_type invalid"
                stop
               endif
-             else if ((drag_im.ge.0).and.(drag_im.lt.nmat)) then
+             else if ((drag_im.ge.0).and.(drag_im.lt.num_materials)) then
               ! do nothing
              else
               print *,"drag_im invalid"
@@ -7079,7 +6982,7 @@ stop
               print *,"drag_type invalid"
               stop
              endif
-            else if ((drag_im.ge.0).and.(drag_im.lt.nmat)) then
+            else if ((drag_im.ge.0).and.(drag_im.lt.num_materials)) then
              ! do nothing
             else
              print *,"drag_im invalid"
@@ -7106,14 +7009,14 @@ stop
            tag_local,rtag_local
          print *,"i,j,k ",i,j,k
          print *,"level,finest_level ",level,finest_level
-         print *,"nmat,nten,ngrow ",nmat,nten,ngrow
+         print *,"num_materials,num_interfaces,ngrow ",num_materials,num_interfaces,ngrow
          stop
         endif
 
        enddo ! k
        enddo ! j
        enddo ! i
-      enddo !im=1,nmat
+      enddo !im=1,num_materials
 
       return 
       end subroutine fort_extend_drag
@@ -7340,7 +7243,7 @@ stop
 
       end subroutine advance_TY_gamma
  
-      ! vof,ref centroid,order,slope,intercept  x nmat
+      ! vof,ref centroid,order,slope,intercept  x num_materials
       ! fort_fd_normal calls find_cut_geom_slope_CLSVOF:
       ! finds grad phi/|grad phi| where grad=(d/dx,d/dy,d/dz) or
       ! grad=(d/dr,d/dz) or
@@ -7364,8 +7267,6 @@ stop
        finest_level, &
        ngrow_distance_in, &
        nstate, &
-       nmat, &
-       nten, &
        nburning, &
        ntsat, &
        nden, &
@@ -7402,7 +7303,7 @@ stop
        interface_mass_transfer_model, &
        distribute_from_target, &
        mass_fraction_id, &
-       constant_density_all_time, & ! 1..nmat
+       constant_density_all_time, & ! 1..num_materials
        material_type_evap, &
        molar_mass, &
        species_molar_mass, &
@@ -7463,8 +7364,6 @@ stop
       REAL_T :: microscale_probe_size
       INTEGER_T, intent(in) :: ngrow_distance_in
       INTEGER_T, intent(in) :: nstate
-      INTEGER_T, target, intent(in) :: nmat
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: nburning
       INTEGER_T, intent(in) :: ntsat
       INTEGER_T, intent(in) :: nden
@@ -7472,40 +7371,40 @@ stop
       INTEGER_T, intent(in) :: do_the_nucleate
       INTEGER_T, intent(in) :: nucleate_pos_size
       REAL_T, target, intent(in) :: nucleate_pos(nucleate_pos_size)
-      REAL_T, target, intent(in) :: nucleation_temp(2*nten)
-      REAL_T, target, intent(in) :: nucleation_pressure(2*nten)
-      REAL_T, target, intent(in) :: nucleation_pmg(2*nten)
-      REAL_T, target, intent(in) :: nucleation_mach(2*nten)
-      REAL_T, target, intent(in) :: cavitation_pressure(nmat)
-      REAL_T, target, intent(in) :: cavitation_vapor_density(nmat)
-      REAL_T, target, intent(in) :: cavitation_tension(nmat)
-      INTEGER_T, intent(in) ::  microlayer_substrate(nmat)
-      REAL_T, intent(in) :: microlayer_angle(nmat)
-      REAL_T, intent(in) :: microlayer_size(nmat)
-      REAL_T, intent(in) :: macrolayer_size(nmat)
-      REAL_T, intent(in) :: max_contact_line_size(nmat)
+      REAL_T, target, intent(in) :: nucleation_temp(2*num_interfaces)
+      REAL_T, target, intent(in) :: nucleation_pressure(2*num_interfaces)
+      REAL_T, target, intent(in) :: nucleation_pmg(2*num_interfaces)
+      REAL_T, target, intent(in) :: nucleation_mach(2*num_interfaces)
+      REAL_T, target, intent(in) :: cavitation_pressure(num_materials)
+      REAL_T, target, intent(in) :: cavitation_vapor_density(num_materials)
+      REAL_T, target, intent(in) :: cavitation_tension(num_materials)
+      INTEGER_T, intent(in) ::  microlayer_substrate(num_materials)
+      REAL_T, intent(in) :: microlayer_angle(num_materials)
+      REAL_T, intent(in) :: microlayer_size(num_materials)
+      REAL_T, intent(in) :: macrolayer_size(num_materials)
+      REAL_T, intent(in) :: max_contact_line_size(num_materials)
       REAL_T, intent(in) :: R_Palmore_Desjardins
-      INTEGER_T, intent(in) :: use_exact_temperature(2*nten)
-      REAL_T, intent(in) :: reaction_rate(2*nten)
+      INTEGER_T, intent(in) :: use_exact_temperature(2*num_interfaces)
+      REAL_T, intent(in) :: reaction_rate(2*num_interfaces)
       REAL_T :: K_f(0:1)
-      REAL_T, intent(in) :: hardwire_Y_gamma(2*nten)
-      REAL_T, intent(in) :: hardwire_T_gamma(2*nten)
-      REAL_T, intent(in) :: accommodation_coefficient(2*nten)
-      REAL_T, intent(in) :: reference_pressure(2*nten)
-      REAL_T, intent(in) :: saturation_temp(2*nten)
-      REAL_T, intent(in) :: saturation_temp_curv(2*nten)
-      REAL_T, intent(in) :: saturation_temp_vel(2*nten)
-      REAL_T, intent(in) :: saturation_temp_min(2*nten)
-      REAL_T, intent(in) :: saturation_temp_max(2*nten)
-      INTEGER_T, intent(in) :: freezing_model(2*nten)
-      INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*nten)
-      INTEGER_T, intent(in) :: interface_mass_transfer_model(2*nten)
-      INTEGER_T, intent(in) :: distribute_from_target(2*nten)
-      INTEGER_T, intent(in) :: mass_fraction_id(2*nten)
-      INTEGER_T, intent(in), target :: material_type_evap(nmat)
-      REAL_T, intent(in) :: molar_mass(nmat)
+      REAL_T, intent(in) :: hardwire_Y_gamma(2*num_interfaces)
+      REAL_T, intent(in) :: hardwire_T_gamma(2*num_interfaces)
+      REAL_T, intent(in) :: accommodation_coefficient(2*num_interfaces)
+      REAL_T, intent(in) :: reference_pressure(2*num_interfaces)
+      REAL_T, intent(in) :: saturation_temp(2*num_interfaces)
+      REAL_T, intent(in) :: saturation_temp_curv(2*num_interfaces)
+      REAL_T, intent(in) :: saturation_temp_vel(2*num_interfaces)
+      REAL_T, intent(in) :: saturation_temp_min(2*num_interfaces)
+      REAL_T, intent(in) :: saturation_temp_max(2*num_interfaces)
+      INTEGER_T, intent(in) :: freezing_model(2*num_interfaces)
+      INTEGER_T, intent(in) :: Tanasawa_or_Schrage_or_Kassemi(2*num_interfaces)
+      INTEGER_T, intent(in) :: interface_mass_transfer_model(2*num_interfaces)
+      INTEGER_T, intent(in) :: distribute_from_target(2*num_interfaces)
+      INTEGER_T, intent(in) :: mass_fraction_id(2*num_interfaces)
+      INTEGER_T, intent(in), target :: material_type_evap(num_materials)
+      REAL_T, intent(in) :: molar_mass(num_materials)
       REAL_T, intent(in) :: species_molar_mass(num_species_var+1)
-      INTEGER_T, intent(in) :: constant_density_all_time(nmat)
+      INTEGER_T, intent(in) :: constant_density_all_time(num_materials)
       INTEGER_T, intent(in) :: use_supermesh
       INTEGER_T, intent(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, target, intent(in) :: fablo(SDIM),fabhi(SDIM)
@@ -7542,7 +7441,7 @@ stop
       REAL_T, intent(in), target :: maskcov(DIMV(maskcov)) 
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in), target :: conductstate(DIMV(conductstate),nmat)
+      REAL_T, intent(in), target :: conductstate(DIMV(conductstate),num_materials)
       REAL_T, pointer :: conductstate_ptr(D_DECL(:,:,:),:)
 
         ! destination vel: first nten components are the status.
@@ -7555,23 +7454,23 @@ stop
 
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
-        !DIMV(LS)=x,y,z  nmat=num. materials
-      REAL_T, target, intent(in) :: LS(DIMV(LS),nmat*(SDIM+1)) 
+        !DIMV(LS)=x,y,z  
+      REAL_T, target, intent(in) :: LS(DIMV(LS),num_materials*(SDIM+1)) 
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T, target, intent(inout) :: LSnew(DIMV(LSnew),nmat*(SDIM+1))
+      REAL_T, target, intent(inout) :: LSnew(DIMV(LSnew),num_materials*(SDIM+1))
       REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(inout) :: Snew(DIMV(Snew),nstate)
       REAL_T, pointer :: Snew_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: EOS(DIMV(EOS),nden)
       REAL_T, pointer :: EOS_ptr(D_DECL(:,:,:),:)
-       ! F,X,order,SL,I x nmat
-      REAL_T, target, intent(in) :: recon(DIMV(recon),nmat*ngeom_recon) 
+       ! F,X,order,SL,I x num_materials
+      REAL_T, target, intent(in) :: recon(DIMV(recon),num_materials*ngeom_recon) 
       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
       REAL_T, target, intent(in) :: pres(DIMV(pres)) 
       REAL_T, pointer :: pres_ptr(D_DECL(:,:,:))
       REAL_T, target, intent(in) :: pres_eos(DIMV(pres_eos)) 
       REAL_T, pointer :: pres_eos_ptr(D_DECL(:,:,:))
-      REAL_T, target, intent(in) :: curvfab(DIMV(curvfab),2*(nmat+nten)) 
+      REAL_T, target, intent(in) :: curvfab(DIMV(curvfab),2*(num_materials+nten)) 
       REAL_T, pointer :: curvfab_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, target :: i,j,k
@@ -7584,7 +7483,6 @@ stop
       INTEGER_T im_substrate_source
       INTEGER_T im_substrate_dest
       INTEGER_T, target :: im_source,im_dest
-      INTEGER_T nten_test
       INTEGER_T, target :: tcomp_source
       INTEGER_T, target :: tcomp_dest
       INTEGER_T, target :: Ycomp_source
@@ -7601,8 +7499,8 @@ stop
       REAL_T, target :: xdst_micro(SDIM)
       REAL_T nrmCP(SDIM)  ! closest point normal
       REAL_T theta_nrmCP(SDIM)
-      REAL_T, target :: LSINT(nmat*(SDIM+1))
-      REAL_T LShere(nmat)
+      REAL_T, target :: LSINT(num_materials*(SDIM+1))
+      REAL_T LShere(num_materials)
       type(probe_out_type) :: POUT
       REAL_T den_I_interp_SAT(2)
       REAL_T local_hardwire_T(0:1)
@@ -7648,9 +7546,9 @@ stop
       INTEGER_T iprobe_vapor
       INTEGER_T im_vapor
       REAL_T, target :: Y_TOLERANCE
-       ! iten=1..nten  ireverse=0..1
-      REAL_T temp_target_probe_history(2*nten,2)
-      REAL_T dxprobe_target_history(2*nten,2)
+       ! iten=1..num_interfaces  ireverse=0..1
+      REAL_T temp_target_probe_history(2*num_interfaces,2)
+      REAL_T dxprobe_target_history(2*num_interfaces,2)
 
       INTEGER_T use_tsatfab
       INTEGER_T ncomp_per_burning
@@ -7797,15 +7695,6 @@ stop
        stop
       endif
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten invalid ratemass nten, nten_test ",nten,nten_test
-       stop
-      endif
       ncomp_per_burning=EXTRAP_PER_BURNING
       if (nburning.eq.EXTRAP_NCOMP_BURNING) then
        ! do nothing
@@ -7820,10 +7709,10 @@ stop
        print *,"ntsat invalid"
        stop
       endif
-      if (nden.ne.nmat*num_state_material) then
+      if (nden.ne.num_materials*num_state_material) then
        print *,"nden invalid in rate mass change"
        print *,"nden=",nden
-       print *,"nmat=",nmat
+       print *,"num_materials=",num_materials
        print *,"num_state_material=",num_state_material
        stop
       endif
@@ -7858,7 +7747,7 @@ stop
 
        call checkbound_array(fablo,fabhi,conductstate_ptr,1,-1,1250)
 
-       ! nmat x (sdim+1) components
+       ! num_materials x (sdim+1) components
        call checkbound_array(fablo,fabhi, &
         burnvel_ptr, &
         ngrow_make_distance,-1,1250)
@@ -7922,7 +7811,7 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      do iten=1,2*nten
+      do iten=1,2*num_interfaces
        temp_target_probe_history(iten,1)=zero
        dxprobe_target_history(iten,1)=zero
        temp_target_probe_history(iten,2)=zero
@@ -7941,8 +7830,6 @@ stop
       create_in%finest_level=finest_level
       create_in%dx=>dx
       create_in%xlo=>xlo
-      create_in%nmat=nmat
-      create_in%nten=nten
       create_in%nstate=nstate
       create_in%fablo=>fablo
       create_in%fabhi=>fabhi
@@ -7977,7 +7864,6 @@ stop
       PROBE_PARMS%finest_level=>finest_level
       PROBE_PARMS%dx=>dx
       PROBE_PARMS%xlo=>xlo
-      PROBE_PARMS%nmat=>nmat
       PROBE_PARMS%fablo=>fablo
       PROBE_PARMS%fabhi=>fabhi
 
@@ -7998,17 +7884,17 @@ stop
         if (nucleation_flag.eq.0) then
 
          ! LEVELSET FUNCTION AT CELL CENTERS.
-         do im=1,nmat
+         do im=1,num_materials
           LShere(im)=LS(D_DECL(i,j,k),im)
          enddo
          call get_primary_material(LShere,im_primary)
 
          if (is_rigid(im_primary).eq.0) then
 
-          do im=1,nmat-1
-           do im_opp=im+1,nmat
+          do im=1,num_materials-1
+           do im_opp=im+1,num_materials
 
-            if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
+            if ((im.gt.num_materials).or.(im_opp.gt.num_materials)) then
              print *,"im or im_opp bust 9"
              stop
             endif
@@ -8016,10 +7902,10 @@ stop
 
             do ireverse=0,1
 
-             temp_target_probe_history(iten+ireverse*nten,1)=zero
-             dxprobe_target_history(iten+ireverse*nten,1)=zero
-             temp_target_probe_history(iten+ireverse*nten,2)=zero
-             dxprobe_target_history(iten+ireverse*nten,2)=zero
+             temp_target_probe_history(iten+ireverse*num_interfaces,1)=zero
+             dxprobe_target_history(iten+ireverse*num_interfaces,1)=zero
+             temp_target_probe_history(iten+ireverse*num_interfaces,2)=zero
+             dxprobe_target_history(iten+ireverse*num_interfaces,2)=zero
 
              valid_phase_change(ireverse)=0
 
@@ -8028,13 +7914,13 @@ stop
                   (im_primary-1)*num_state_material+ENUM_TEMPERATUREVAR+1)
 
              LL(ireverse)=get_user_latent_heat( &
-               iten+ireverse*nten,latent_heat_temperature,0)
+               iten+ireverse*num_interfaces,latent_heat_temperature,0)
 
-             K_f(ireverse)=reaction_rate(iten+ireverse*nten)
+             K_f(ireverse)=reaction_rate(iten+ireverse*num_interfaces)
 
-             local_freezing_model=freezing_model(iten+ireverse*nten)
+             local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
              local_Tanasawa_or_Schrage_or_Kassemi= &
-               Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten)
+               Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces)
 
              if (ireverse.eq.0) then
               im_source=im
@@ -8058,7 +7944,7 @@ stop
               stop
              endif
 
-             ispec=mass_fraction_id(iten+ireverse*nten)
+             ispec=mass_fraction_id(iten+ireverse*num_interfaces)
              if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
               molar_mass_vapor=species_molar_mass(ispec)
              else if (ispec.eq.0) then
@@ -8110,11 +7996,11 @@ stop
              else if (ispec.eq.0) then
 
               if (is_multi_component_evapF(local_freezing_model, &
-                   Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                   Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
                    LL(ireverse)).eq.0) then
                ! do nothing
               else if (is_multi_component_evapF(local_freezing_model, &
-                        Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                        Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
                         LL(ireverse)).eq.1) then
                print *,"ispec invalid"
                stop
@@ -8124,7 +8010,7 @@ stop
               stop
              endif
 
-             distribute_from_targ=distribute_from_target(iten+ireverse*nten)
+             distribute_from_targ=distribute_from_target(iten+ireverse*num_interfaces)
 
              if ((distribute_from_targ.ne.0).and. &
                  (distribute_from_targ.ne.1)) then
@@ -8162,8 +8048,8 @@ stop
 
               else if (LL(ireverse).ne.zero) then
 
-               local_hardwire_T(ireverse)=hardwire_T_gamma(iten+ireverse*nten)
-               local_hardwire_Y(ireverse)=hardwire_Y_gamma(iten+ireverse*nten)
+               local_hardwire_T(ireverse)=hardwire_T_gamma(iten+ireverse*num_interfaces)
+               local_hardwire_Y(ireverse)=hardwire_Y_gamma(iten+ireverse*num_interfaces)
                if ((local_hardwire_T(ireverse).gt.zero).and. &
                    (local_hardwire_Y(ireverse).gt.zero)) then
                 hardwire_flag(ireverse)=1
@@ -8175,8 +8061,8 @@ stop
                 stop
                endif
 
-               local_Tsat(ireverse)=saturation_temp(iten+ireverse*nten)
-               local_Tsat_base(ireverse)=saturation_temp(iten+ireverse*nten)
+               local_Tsat(ireverse)=saturation_temp(iten+ireverse*num_interfaces)
+               local_Tsat_base(ireverse)=saturation_temp(iten+ireverse*num_interfaces)
 
                debug_limiter=0
                if (1.eq.0) then
@@ -8208,7 +8094,7 @@ stop
                   LS_pos=LShere(im_source)
                   do dir=1,SDIM
                      ! xCP=x-phi grad phi   grad phi=(x-xCP)/phi
-                   nrmCP(dir)=LS(D_DECL(i,j,k),nmat+(im_source-1)*SDIM+dir)
+                   nrmCP(dir)=LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
                      ! Least squares slope: see Sussman and Puckett (2000)
                    xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
 
@@ -8225,7 +8111,7 @@ stop
                  else if (LShere(im_source).ge.zero) then
                   LS_pos=LShere(im_dest)
                   do dir=1,SDIM
-                   nrmCP(dir)=LS(D_DECL(i,j,k),nmat+(im_dest-1)*SDIM+dir)
+                   nrmCP(dir)=LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
 
                    xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
                    xdst(dir)=xI(dir)+ &
@@ -8290,21 +8176,21 @@ stop
                  endif
                     
                  if (is_multi_component_evapF(local_freezing_model, &
-                      Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                      Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
                       LL(ireverse)).eq.1) then
                   if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
                    Ycomp_source=(im_source-1)*num_state_material+2+ispec
                    Ycomp_dest=(im_dest-1)*num_state_material+2+ispec
                    FicksLawD(1)= &
-                    fort_speciesviscconst((ispec-1)*nmat+im_source)
+                    fort_speciesviscconst((ispec-1)*num_materials+im_source)
                    FicksLawD(2)= &
-                    fort_speciesviscconst((ispec-1)*nmat+im_dest)
+                    fort_speciesviscconst((ispec-1)*num_materials+im_dest)
                   else
                    print *,"ispec invalid"
                    stop
                   endif
                  else if (is_multi_component_evapF(local_freezing_model, &
-                           Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*nten), &
+                           Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
                            LL(ireverse)).eq.0) then
 
                   if (ispec.eq.0) then
@@ -8325,9 +8211,7 @@ stop
                   ! interp_status=0 no proper stencil available
                  call interpfab_curv( &
                   interp_status, & !interp_status=0 if CURV_weight==0.0
-                  nmat+iten, &
-                  nten, &
-                  nmat, &
+                  num_materials+iten, &
                   bfact, &
                   level, &
                   finest_level, &
@@ -8356,10 +8240,10 @@ stop
                    fablo,fabhi, &
                    Tsatfab_ptr, & ! not used since use_tsatfab==0
                    local_Tsat(ireverse), & !user def. interface temperature 
-                   iten+ireverse*nten, &
+                   iten+ireverse*num_interfaces, &
                    saturation_temp, &
                    use_exact_temperature, &
-                   xI,cur_time,nmat,nten,7)
+                   xI,cur_time,7)
                  else if (hardwire_flag(ireverse).eq.1) then
                   local_Tsat(ireverse)=local_hardwire_T(ireverse)
                  else
@@ -8430,7 +8314,7 @@ stop
                   stop
                  endif
 
-                 do imls=1,nmat*(SDIM+1)
+                 do imls=1,num_materials*(SDIM+1)
                   call interpfab( &
                    bfact, &
                    level, &
@@ -8441,12 +8325,12 @@ stop
                    fablo,fabhi, &
                    LS_ptr, &
                    LSINT(imls))
-                 enddo ! imls=1..nmat*(SDIM+1)
+                 enddo ! imls=1..num_materials*(SDIM+1)
 
                  call get_primary_material(LSINT,imls_I)
 
-                 TI_min=saturation_temp_min(iten+ireverse*nten)
-                 TI_max=saturation_temp_max(iten+ireverse*nten)
+                 TI_min=saturation_temp_min(iten+ireverse*num_interfaces)
+                 TI_max=saturation_temp_max(iten+ireverse*num_interfaces)
 
                  if ((local_freezing_model.eq.5).or. & !Stefan evap/cond
                      (local_freezing_model.eq.6)) then !Palmore/Desjardins
@@ -8568,7 +8452,7 @@ stop
 
                   if (interp_status.eq.1) then
                    delta_Tsat= &
-                    saturation_temp_curv(iten+ireverse*nten)*CURV_OUT_I
+                    saturation_temp_curv(iten+ireverse*num_interfaces)*CURV_OUT_I
                   else if (interp_status.eq.0) then
                    delta_Tsat=zero
                   else
@@ -8659,7 +8543,7 @@ stop
                    ! do not call "mdot_diff_func" (below) if 
                    ! user_override_TI_YI=1
                    call SUB_INTERFACE_TEMPERATURE( &
-                    interface_mass_transfer_model(iten+ireverse*nten), &
+                    interface_mass_transfer_model(iten+ireverse*num_interfaces), &
                     local_probe_constrain, &
                     ireverse, &
                     iten, &
@@ -8670,7 +8554,7 @@ stop
                     local_Tsat(ireverse), & ! intent(inout)
                     Y_predict, &  ! intent(inout)
                     user_override_TI_YI, & ! intent(inout)
-                    molar_mass, & ! index: 1..nmat
+                    molar_mass, & ! index: 1..num_materials
                     species_molar_mass, & ! index: 1..num_species_var
                     thermal_k_model_predict(1), &
                     thermal_k_model_predict(2), & ! ksrc,kdst
@@ -8781,10 +8665,10 @@ stop
                   TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi= &
                         local_Tanasawa_or_Schrage_or_Kassemi
                   TSAT_Y_PARMS%accommodation_coefficient= &
-                        accommodation_coefficient(iten+ireverse*nten) 
+                        accommodation_coefficient(iten+ireverse*num_interfaces) 
 
                   TSAT_Y_PARMS%reference_pressure= &
-                        reference_pressure(iten+ireverse*nten) 
+                        reference_pressure(iten+ireverse*num_interfaces) 
                   if (TSAT_Y_PARMS%reference_pressure.gt.zero) then
                    ! do nothing
                   else
@@ -8980,7 +8864,7 @@ stop
                       stop
                      endif
                      do dir=1,SDIM
-                      dir2=nmat+(im_substrate_source-1)*SDIM+dir
+                      dir2=num_materials+(im_substrate_source-1)*SDIM+dir
                       gradphi_substrate(dir)=LSINT(dir2)
                      enddo
                      call get_physical_dist(xI,LSINT(im_substrate_source), &
@@ -9010,7 +8894,7 @@ stop
                       stop
                      endif
                      do dir=1,SDIM
-                      dir2=nmat+(im_substrate_dest-1)*SDIM+dir
+                      dir2=num_materials+(im_substrate_dest-1)*SDIM+dir
                       gradphi_substrate(dir)=LSINT(dir2)
                      enddo
                      call get_physical_dist(xI,LSINT(im_substrate_dest), &
@@ -9077,7 +8961,7 @@ stop
                         (microlayer_size(im_probe).gt.zero).and. &
                         (macrolayer_size(im_probe).gt.zero).and. &
                         (microlayer_substrate_probe.ge.1).and. &
-                        (microlayer_substrate_probe.le.nmat)) then
+                        (microlayer_substrate_probe.le.num_materials)) then
                      icolor=NINT(colorfab(D_DECL(i,j,k)))
                      if ((icolor.gt.color_count).or.(icolor.le.0)) then
                       print *,"icolor invalid in fort_ratemasschange icolor=",&
@@ -9086,7 +8970,7 @@ stop
                       stop
                      endif
                      base_type=NINT(typefab(D_DECL(i,j,k)))
-                     if ((base_type.lt.1).or.(base_type.gt.nmat)) then
+                     if ((base_type.lt.1).or.(base_type.gt.num_materials)) then
                       print *,"base_type invalid"
                       stop
                      endif
@@ -9095,7 +8979,7 @@ stop
                      ic=(icolor-1)*num_elements_blobclass+BLB_TRIPLE_PERIM
 
                      im2=microlayer_substrate_probe
-                     if ((im2.ge.1).and.(im2.le.nmat)) then
+                     if ((im2.ge.1).and.(im2.le.num_materials)) then
                       if (base_type.eq.im_source) then
                        im1=im_dest
                       else if (base_type.eq.im_dest) then
@@ -9104,7 +8988,7 @@ stop
                        print *,"base_type invalid"
                        stop
                       endif
-                      ic=ic+(im1-1)*nmat+im2
+                      ic=ic+(im1-1)*num_materials+im2
                       contact_line_perim=blob_array(ic)
                      else 
                       print *,"im2 invalid"
@@ -9155,10 +9039,10 @@ stop
 
                    if (is_in_probtype_list().eq.1) then
                     call SUB_K_EFFECTIVE( &
-                     interface_mass_transfer_model(iten+ireverse*nten), &
+                     interface_mass_transfer_model(iten+ireverse*num_interfaces), &
                      ireverse, &
                      iten, &
-                     molar_mass, & ! index: 1..nmat
+                     molar_mass, & ! index: 1..num_materials
                      species_molar_mass, & ! index: 1..num_species_var
                      thermal_k_model_predict, &
                      thermal_k_model_correct, &
@@ -9184,7 +9068,7 @@ stop
                     !  veldst=kdst*DTdst/(LL * dxprobe_dest)
                     !  in: PROB.F90
                    call get_vel_phasechange( &
-                     interface_mass_transfer_model(iten+ireverse*nten), &
+                     interface_mass_transfer_model(iten+ireverse*num_interfaces), &
                      for_estdt, &
                      xI, &
                      ispec, &
@@ -9224,9 +9108,9 @@ stop
                      POUT%dxprobe_target(2), & ! dest
                      im_source,im_dest, &
                      prev_time,dt, &
-                     fort_alpha(iten+ireverse*nten), &
-                     fort_beta(iten+ireverse*nten), &
-                     fort_expansion_factor(iten+ireverse*nten), &
+                     fort_alpha(iten+ireverse*num_interfaces), &
+                     fort_beta(iten+ireverse*num_interfaces), &
+                     fort_expansion_factor(iten+ireverse*num_interfaces), &
                      K_f(ireverse), &
                      POUT%Y_I_interp(2), & ! Cmethane_in_hydrate (dest)
                      C_w0, &
@@ -9485,7 +9369,7 @@ stop
                     if ((interface_resolved.eq.1).and. &
                         (interp_status.eq.1)) then
                      delta_Tsat= &
-                      saturation_temp_vel(iten+ireverse*nten)* &
+                      saturation_temp_vel(iten+ireverse*num_interfaces)* &
                       (VEL_correct-VEL_predict)
                     else if ((interface_resolved.eq.0).or. &
                              (interp_status.eq.0)) then
@@ -9669,14 +9553,14 @@ stop
                   vel_phasechange(ireverse)=VEL_correct
 
                     ! source
-                  temp_target_probe_history(iten+ireverse*nten,1)= &
+                  temp_target_probe_history(iten+ireverse*num_interfaces,1)= &
                     POUT%T_probe(1)
-                  dxprobe_target_history(iten+ireverse*nten,1)= &
+                  dxprobe_target_history(iten+ireverse*num_interfaces,1)= &
                     POUT%dxprobe_target(1)
                     ! dest
-                  temp_target_probe_history(iten+ireverse*nten,2)= &
+                  temp_target_probe_history(iten+ireverse*num_interfaces,2)= &
                     POUT%T_probe(2)
-                  dxprobe_target_history(iten+ireverse*nten,2)= &
+                  dxprobe_target_history(iten+ireverse*num_interfaces,2)= &
                     POUT%dxprobe_target(2)
 
                   if (debugrate.eq.1) then
@@ -9826,11 +9710,11 @@ stop
               if (LShere(im_dest).ge.zero) then
                SIGNVEL=one
                nrmCP(dir)= &
-                  LS(D_DECL(i,j,k),nmat+(im_source-1)*SDIM+dir)
+                  LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
               else if (LShere(im_source).ge.zero) then
                SIGNVEL=-one
                nrmCP(dir)= &
-                  LS(D_DECL(i,j,k),nmat+(im_dest-1)*SDIM+dir)
+                  LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
               else
                print *,"LShere bust"
                stop
@@ -9847,7 +9731,7 @@ stop
               ! units of (1/rho_source)[k grad T]/L =
               ! (m^3/kg)(kelvin/m)kg(1/m)(1/s)(1/kelvin)=
               ! m/s 
-             if ((im_dest.ge.1).and.(im_dest.le.nmat)) then
+             if ((im_dest.ge.1).and.(im_dest.le.num_materials)) then
               if (ireverse.eq.0) then
                burnvel(D_DECL(i,j,k),iten)=one
                Tsatfab(D_DECL(i,j,k),iten)=one
@@ -9860,11 +9744,11 @@ stop
               endif
 
               if (local_Tsat(ireverse).gt.zero) then
-               Tsatfab(D_DECL(i,j,k),nten+ncomp_per_tsat*(iten-1)+1)= &
+               Tsatfab(D_DECL(i,j,k),num_interfaces+ncomp_per_tsat*(iten-1)+1)= &
                 local_Tsat(ireverse)
                if ((Y_predict_hold(ireverse).ge.zero).and. &
                    (Y_predict_hold(ireverse).le.one)) then
-                Tsatfab(D_DECL(i,j,k),nten+ncomp_per_tsat*(iten-1)+2)= &
+                Tsatfab(D_DECL(i,j,k),num_interfaces+ncomp_per_tsat*(iten-1)+2)= &
                  Y_predict_hold(ireverse) !default mass fraction=1 (saturated)
                else
                 print *,"Y_predict_hold(ireverse) invalid"
@@ -9885,13 +9769,13 @@ stop
 
                do dir=1,ncomp_per_burning
 
-                burnvel(D_DECL(i,j,k),nten+(iten-1)*ncomp_per_burning+dir)= &
+                burnvel(D_DECL(i,j,k),num_interfaces+(iten-1)*ncomp_per_burning+dir)= &
                  SIGNVEL*nrmCP(dir)*vel_phasechange(ireverse)
 
                 if (1.eq.0) then
                  print *,"i,j,k,prev_time,dt,iten,ireverse,dir,burn ", &
                   i,j,k,prev_time,dt,iten,ireverse,dir, &
-                  burnvel(D_DECL(i,j,k),nten+(iten-1)*ncomp_per_burning+dir)
+                  burnvel(D_DECL(i,j,k),num_interfaces+(iten-1)*ncomp_per_burning+dir)
                 endif
 
                enddo !dir=1,ncomp_per_burning (1..sdim)
@@ -9912,12 +9796,12 @@ stop
              stop
             endif
 
-           enddo ! im_opp=im+1,nmat
-          enddo ! im=1,nmat-1
+           enddo ! im_opp=im+1,num_materials
+          enddo ! im=1,num_materials-1
 
           velmag_sum=zero
-          do im=1,nmat-1
-           do im_opp=im+1,nmat
+          do im=1,num_materials-1
+           do im_opp=im+1,num_materials
             call get_iten(im,im_opp,iten)
             burnflag=NINT(burnvel(D_DECL(i,j,k),iten))
             if (burnflag.eq.0) then
@@ -9927,7 +9811,7 @@ stop
              local_velmag=zero
              do dir=1,ncomp_per_burning
               local_velmag=local_velmag+ &
-               burnvel(D_DECL(i,j,k),nten+(iten-1)*ncomp_per_burning+dir)**2
+               burnvel(D_DECL(i,j,k),num_interfaces+(iten-1)*ncomp_per_burning+dir)**2
              enddo
              local_velmag=sqrt(local_velmag)
              velmag_sum=velmag_sum+local_velmag
@@ -9935,8 +9819,8 @@ stop
              print *,"burnflag invalid"
              stop
             endif 
-           enddo !im_opp=im+1..nmat
-          enddo !im=1..nmat-1
+           enddo !im_opp=im+1..num_materials
+          enddo !im=1..num_materials-1
 
            ! factor of 2 in order to guarantee that characteristics do not
            ! collide.
@@ -9954,40 +9838,40 @@ stop
            print *,"velmag_sum x dt ",velmag_sum*dt
            print *,"i,j,k ",i,j,k
            print *,"im_primary ",im_primary
-           do imls=1,nmat
+           do imls=1,num_materials
             print *,"imls,LShere ",imls,LShere(imls)
            enddo
            print *,"xsten(0,1-3) ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
-           do im=1,nmat-1
-            do im_opp=im+1,nmat
+           do im=1,num_materials-1
+            do im_opp=im+1,num_materials
              call get_iten(im,im_opp,iten)
              latent_heat_temperature= &
               EOS(D_DECL(i,j,k), &
                   (im_primary-1)*num_state_material+ENUM_TEMPERATUREVAR+1)
              do ireverse=0,1
               print *,"im,im_opp,ireverse,latent_heat ",im,im_opp,ireverse, &
-                get_user_latent_heat(iten+ireverse*nten, &
+                get_user_latent_heat(iten+ireverse*num_interfaces, &
                  latent_heat_temperature,0)
               print *,"im,im_opp,ireverse,saturation_temp ", &
                 im,im_opp,ireverse, &
-                saturation_temp(iten+ireverse*nten)
+                saturation_temp(iten+ireverse*num_interfaces)
              enddo
             enddo
            enddo
-           do im=1,nmat
+           do im=1,num_materials
             print *,"im,T ",im,EOS(D_DECL(i,j,k), &
                     (im-1)*num_state_material+ENUM_TEMPERATUREVAR+1)
            enddo 
-           do iten=1,nten
+           do iten=1,num_interfaces
             do ireverse=0,1
              print *,"iten,ireverse,temp_probe(1) ", &
-               iten,ireverse,temp_target_probe_history(iten+ireverse*nten,1)
+               iten,ireverse,temp_target_probe_history(iten+ireverse*num_interfaces,1)
              print *,"iten,ireverse,temp_probe(2) ", &
-               iten,ireverse,temp_target_probe_history(iten+ireverse*nten,2)
+               iten,ireverse,temp_target_probe_history(iten+ireverse*num_interfaces,2)
              print *,"iten,ireverse,dxprobe(1) ", &
-               iten,ireverse,dxprobe_target_history(iten+ireverse*nten,1)
+               iten,ireverse,dxprobe_target_history(iten+ireverse*num_interfaces,1)
              print *,"iten,ireverse,dxprobe(2) ", &
-               iten,ireverse,dxprobe_target_history(iten+ireverse*nten,2)
+               iten,ireverse,dxprobe_target_history(iten+ireverse*num_interfaces,2)
             enddo
            enddo
            stop
@@ -10008,14 +9892,14 @@ stop
         else if (nucleation_flag.eq.1) then
          ! see RatePhaseChange in PROB.F90
          ! LEVELSET FUNCTION AT CELL CENTERS.
-         do im=1,nmat
+         do im=1,num_materials
           LShere(im)=LSnew(D_DECL(i,j,k),im)
          enddo
          call get_primary_material(LShere,im_primary)
          if (is_rigid(im_primary).eq.0) then
-          do im=1,nmat-1
-           do im_opp=im+1,nmat
-            if ((im.gt.nmat).or.(im_opp.gt.nmat)) then
+          do im=1,num_materials-1
+           do im_opp=im+1,num_materials
+            if ((im.gt.num_materials).or.(im_opp.gt.num_materials)) then
              print *,"im or im_opp bust 9"
              stop
             endif
@@ -10024,10 +9908,10 @@ stop
              EOS(D_DECL(i,j,k), &
                  (im_primary-1)*num_state_material+ENUM_TEMPERATUREVAR+1)
             do ireverse=0,1
-             LL(ireverse)=get_user_latent_heat(iten+ireverse*nten, &
+             LL(ireverse)=get_user_latent_heat(iten+ireverse*num_interfaces, &
                      latent_heat_temperature,0)
-             local_freezing_model=freezing_model(iten+ireverse*nten)
-             local_Tsat(ireverse)=saturation_temp(iten+ireverse*nten)
+             local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
+             local_Tsat(ireverse)=saturation_temp(iten+ireverse*num_interfaces)
 
              if (LL(ireverse).ne.zero) then
             
@@ -10066,7 +9950,7 @@ stop
                 print *,"bust compiling ratemasschange"
                 stop
 #endif
-               else if ((im_primary.ge.1).and.(im_primary.le.nmat)) then
+               else if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
                 ! do nothing
                else
                 print *,"im_primary invalid"

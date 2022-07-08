@@ -34,7 +34,6 @@
 #include <PLIC_F.H>
 #include <LEVEL_F.H>
 #include <MOF_REDIST_F.H>
-#include <ShallowWater_F.H>
 #include <SOLIDFLUID_F.H>
 #include <DERIVE_F.H>
 #include <MG_F.H>
@@ -1674,8 +1673,6 @@ void fortran_parameters() {
   pp.queryarr("speciesviscconst",speciesviscconst_temp,0,num_species_var*num_materials);
  }
 
- int nten=num_interfaces;
-
  Vector<Real> tension_slopetemp(num_interfaces);
  Vector<Real> tension_T0temp(num_interfaces);
  Vector<Real> tension_mintemp(num_interfaces);
@@ -2266,8 +2263,6 @@ NavierStokes::read_params ()
     if ((num_interfaces<1)||(num_interfaces>999))
      amrex::Error("num interfaces invalid");
 
-    int nten=num_interfaces;
-
     pp.query("use_supermesh",use_supermesh);
     if ((use_supermesh!=0)&&
         (use_supermesh!=1))
@@ -2819,7 +2814,7 @@ NavierStokes::read_params ()
     wall_model_velocity.resize(num_materials);
     interface_mass_transfer_model.resize(2*num_interfaces);
 
-    for (int i=0;i<2*nten;i++) {
+    for (int i=0;i<2*num_interfaces;i++) {
      interface_mass_transfer_model[i]=0;
     }
 
@@ -2830,7 +2825,7 @@ NavierStokes::read_params ()
     pp.queryarr("law_of_the_wall",law_of_the_wall,0,num_materials);
     pp.queryarr("wall_model_velocity",wall_model_velocity,0,num_materials);
     pp.queryarr("interface_mass_transfer_model",
-       interface_mass_transfer_model,0,2*nten);
+       interface_mass_transfer_model,0,2*num_interfaces);
 
     for (int i=0;i<num_materials;i++) {
      if ((law_of_the_wall[i]==0)||
@@ -3153,7 +3148,7 @@ NavierStokes::read_params ()
       std::cout << "wall_model_velocity i=" << i << " " << 
 	      wall_model_velocity[i] << '\n';
      }
-     for (int i=0;i<2*nten;i++) {
+     for (int i=0;i<2*num_interfaces;i++) {
       std::cout << "interface_mass_transfer_model i=" << i << " " << 
 	      interface_mass_transfer_model[i] << '\n';
      }
@@ -3230,24 +3225,24 @@ NavierStokes::read_params ()
     heatviscconst_eddy_bulk.resize(num_materials);
     viscosity_state_model.resize(num_materials);
     les_model.resize(num_materials);
-    viscconst_interface.resize(nten);
+    viscconst_interface.resize(num_interfaces);
     speciesconst.resize((num_species_var+1)*num_materials);
     speciesviscconst.resize((num_species_var+1)*num_materials);
-    speciesviscconst_interface.resize((num_species_var+1)*nten);
+    speciesviscconst_interface.resize((num_species_var+1)*num_interfaces);
     species_molar_mass.resize(num_species_var+1);
 
     for (int j=0;j<=num_species_var;j++)
      species_molar_mass[j]=1.0;
 
-    for (int i=0;i<nten;i++) {
+    for (int i=0;i<num_interfaces;i++) {
      viscconst_interface[i]=0.0;
      for (int j=0;j<=num_species_var;j++)
-      speciesviscconst_interface[j*nten+i]=0.0;
+      speciesviscconst_interface[j*num_interfaces+i]=0.0;
     }
-    pp.queryarr("viscconst_interface",viscconst_interface,0,nten);
+    pp.queryarr("viscconst_interface",viscconst_interface,0,num_interfaces);
     if (num_species_var>0) {
      pp.queryarr("speciesviscconst_interface",
-      speciesviscconst_interface,0,num_species_var*nten);
+      speciesviscconst_interface,0,num_species_var*num_interfaces);
 
      pp.queryarr("species_molar_mass",
       species_molar_mass,0,num_species_var);
@@ -3303,46 +3298,46 @@ NavierStokes::read_params ()
  
      // in: read_params
 
-    hardwire_Y_gamma.resize(2*nten);
-    hardwire_T_gamma.resize(2*nten);
-    accommodation_coefficient.resize(2*nten);
-    reference_pressure.resize(2*nten);
-    saturation_temp.resize(2*nten);
-    saturation_temp_curv.resize(2*nten);
-    saturation_temp_vel.resize(2*nten);
-    saturation_temp_min.resize(2*nten);
-    saturation_temp_max.resize(2*nten);
-    nucleation_temp.resize(2*nten);
-    nucleation_pressure.resize(2*nten);
-    nucleation_pmg.resize(2*nten);
-    nucleation_mach.resize(2*nten);
+    hardwire_Y_gamma.resize(2*num_interfaces);
+    hardwire_T_gamma.resize(2*num_interfaces);
+    accommodation_coefficient.resize(2*num_interfaces);
+    reference_pressure.resize(2*num_interfaces);
+    saturation_temp.resize(2*num_interfaces);
+    saturation_temp_curv.resize(2*num_interfaces);
+    saturation_temp_vel.resize(2*num_interfaces);
+    saturation_temp_min.resize(2*num_interfaces);
+    saturation_temp_max.resize(2*num_interfaces);
+    nucleation_temp.resize(2*num_interfaces);
+    nucleation_pressure.resize(2*num_interfaces);
+    nucleation_pmg.resize(2*num_interfaces);
+    nucleation_mach.resize(2*num_interfaces);
 
-    latent_heat.resize(2*nten);
-    latent_heat_slope.resize(2*nten);
-    latent_heat_T0.resize(2*nten);
-    latent_heat_min.resize(2*nten);
+    latent_heat.resize(2*num_interfaces);
+    latent_heat_slope.resize(2*num_interfaces);
+    latent_heat_T0.resize(2*num_interfaces);
+    latent_heat_min.resize(2*num_interfaces);
 
-    reaction_rate.resize(2*nten);
-    freezing_model.resize(2*nten);
-    Tanasawa_or_Schrage_or_Kassemi.resize(2*nten);
-    mass_fraction_id.resize(2*nten);
-    distribute_from_target.resize(2*nten);
-    distribute_mdot_evenly.resize(2*nten);
-    constant_volume_mdot.resize(2*nten);
+    reaction_rate.resize(2*num_interfaces);
+    freezing_model.resize(2*num_interfaces);
+    Tanasawa_or_Schrage_or_Kassemi.resize(2*num_interfaces);
+    mass_fraction_id.resize(2*num_interfaces);
+    distribute_from_target.resize(2*num_interfaces);
+    distribute_mdot_evenly.resize(2*num_interfaces);
+    constant_volume_mdot.resize(2*num_interfaces);
 
     constant_density_all_time.resize(num_materials);
 
-    tension.resize(nten);
-    tension_slope.resize(nten);
-    tension_T0.resize(nten);
-    tension_min.resize(nten);
+    tension.resize(num_interfaces);
+    tension_slope.resize(num_interfaces);
+    tension_T0.resize(num_interfaces);
+    tension_min.resize(num_interfaces);
 
-    prefreeze_tension.resize(nten);
+    prefreeze_tension.resize(num_interfaces);
 
      // (dir,side)  (1,1),(2,1),(3,1),(1,2),(2,2),(3,2)
     outflow_velocity_buffer_size.resize(2*AMREX_SPACEDIM);
 
-    cap_wave_speed.resize(nten);
+    cap_wave_speed.resize(num_interfaces);
 
     prerecalesce_stiffCP.resize(num_materials);
     prerecalesce_stiffCV.resize(num_materials);
@@ -3370,61 +3365,61 @@ NavierStokes::read_params ()
      phasechange_microlayer_size[i]=microlayer_size_default;
     }
 
-    for (int i=0;i<nten;i++) { 
+    for (int i=0;i<num_interfaces;i++) { 
      hardwire_Y_gamma[i]=0.0;
-     hardwire_Y_gamma[i+nten]=0.0;
+     hardwire_Y_gamma[i+num_interfaces]=0.0;
      hardwire_T_gamma[i]=0.0;
-     hardwire_T_gamma[i+nten]=0.0;
+     hardwire_T_gamma[i+num_interfaces]=0.0;
      accommodation_coefficient[i]=0.0;
-     accommodation_coefficient[i+nten]=0.0;
+     accommodation_coefficient[i+num_interfaces]=0.0;
      reference_pressure[i]=1.0e+6;
-     reference_pressure[i+nten]=1.0e+6;
+     reference_pressure[i+num_interfaces]=1.0e+6;
      saturation_temp[i]=0.0;
-     saturation_temp[i+nten]=0.0;
+     saturation_temp[i+num_interfaces]=0.0;
      saturation_temp_curv[i]=0.0;
-     saturation_temp_curv[i+nten]=0.0;
+     saturation_temp_curv[i+num_interfaces]=0.0;
      saturation_temp_vel[i]=0.0;
-     saturation_temp_vel[i+nten]=0.0;
+     saturation_temp_vel[i+num_interfaces]=0.0;
      saturation_temp_min[i]=0.0;
-     saturation_temp_min[i+nten]=0.0;
+     saturation_temp_min[i+num_interfaces]=0.0;
      saturation_temp_max[i]=1.0e+20;
-     saturation_temp_max[i+nten]=1.0e+20;
+     saturation_temp_max[i+num_interfaces]=1.0e+20;
      nucleation_temp[i]=0.0;
-     nucleation_temp[i+nten]=0.0;
+     nucleation_temp[i+num_interfaces]=0.0;
      nucleation_pressure[i]=0.0;
      nucleation_pmg[i]=0.0;
      nucleation_mach[i]=0.0;
-     nucleation_pressure[i+nten]=0.0;
-     nucleation_pmg[i+nten]=0.0;
-     nucleation_mach[i+nten]=0.0;
+     nucleation_pressure[i+num_interfaces]=0.0;
+     nucleation_pmg[i+num_interfaces]=0.0;
+     nucleation_mach[i+num_interfaces]=0.0;
 
      latent_heat[i]=0.0;
-     latent_heat[i+nten]=0.0;
+     latent_heat[i+num_interfaces]=0.0;
 
      latent_heat_slope[i]=0.0;
-     latent_heat_slope[i+nten]=0.0;
+     latent_heat_slope[i+num_interfaces]=0.0;
 
      latent_heat_T0[i]=0.0;
-     latent_heat_T0[i+nten]=0.0;
+     latent_heat_T0[i+num_interfaces]=0.0;
 
      latent_heat_min[i]=0.0;
-     latent_heat_min[i+nten]=0.0;
+     latent_heat_min[i+num_interfaces]=0.0;
 
      reaction_rate[i]=0.0;
-     reaction_rate[i+nten]=0.0;
+     reaction_rate[i+num_interfaces]=0.0;
      freezing_model[i]=0;
-     freezing_model[i+nten]=0;
+     freezing_model[i+num_interfaces]=0;
      Tanasawa_or_Schrage_or_Kassemi[i]=0;
-     Tanasawa_or_Schrage_or_Kassemi[i+nten]=0;
+     Tanasawa_or_Schrage_or_Kassemi[i+num_interfaces]=0;
      mass_fraction_id[i]=0;
-     mass_fraction_id[i+nten]=0;
+     mass_fraction_id[i+num_interfaces]=0;
      distribute_from_target[i]=0;
-     distribute_from_target[i+nten]=0;
+     distribute_from_target[i+num_interfaces]=0;
      distribute_mdot_evenly[i]=0;
-     distribute_mdot_evenly[i+nten]=0;
+     distribute_mdot_evenly[i+num_interfaces]=0;
      constant_volume_mdot[i]=0;
-     constant_volume_mdot[i+nten]=0;
-    } // i=0..nten-1
+     constant_volume_mdot[i+num_interfaces]=0;
+    } // i=0..num_interfaces-1
 
     for (int i=0;i<num_materials;i++) {
      constant_density_all_time[i]=1;
@@ -3478,10 +3473,10 @@ NavierStokes::read_params ()
 
     pp.queryarr("molar_mass",molar_mass,0,num_materials);
 
-    denconst_interface.resize(nten);
-    for (int i=0;i<nten;i++) 
+    denconst_interface.resize(num_interfaces);
+    for (int i=0;i<num_interfaces;i++) 
      denconst_interface[i]=0.0;
-    pp.queryarr("denconst_interface",denconst_interface,0,nten);
+    pp.queryarr("denconst_interface",denconst_interface,0,num_interfaces);
 
     pp.query("stokes_flow",stokes_flow);
     pp.query("cancel_advection",cancel_advection);
@@ -3583,7 +3578,7 @@ NavierStokes::read_params ()
     pp.queryarr("les_model",les_model,0,num_materials);
 
     heatviscconst.resize(num_materials);
-    heatviscconst_interface.resize(nten);
+    heatviscconst_interface.resize(num_interfaces);
     pp.queryarr("heatflux_factor",heatflux_factor,0,num_materials);
     pp.getarr("heatviscconst",heatviscconst,0,num_materials);
 
@@ -3597,11 +3592,11 @@ NavierStokes::read_params ()
       heatviscconst_max=heatviscconst[i];
     }
 
-    for (int i=0;i<nten;i++) {
+    for (int i=0;i<num_interfaces;i++) {
      heatviscconst_interface[i]=0.0;
     }
 
-    pp.queryarr("heatviscconst_interface",heatviscconst_interface,0,nten);
+    pp.queryarr("heatviscconst_interface",heatviscconst_interface,0,num_interfaces);
     if (num_species_var>0) {
      pp.queryarr("speciesconst",speciesconst,0,num_species_var*num_materials);
      pp.queryarr("speciesviscconst",speciesviscconst,0,num_species_var*num_materials);
@@ -3620,15 +3615,15 @@ NavierStokes::read_params ()
 
     pp.query("mglib_min_coeff_factor",mglib_min_coeff_factor);
 
-    pp.getarr("tension",tension,0,nten);
+    pp.getarr("tension",tension,0,num_interfaces);
 
     pp.query("unscaled_min_curvature_radius",unscaled_min_curvature_radius);
 
-    for (int i=0;i<nten;i++) 
+    for (int i=0;i<num_interfaces;i++) 
      prefreeze_tension[i]=tension[i];
-    pp.queryarr("prefreeze_tension",prefreeze_tension,0,nten);
+    pp.queryarr("prefreeze_tension",prefreeze_tension,0,num_interfaces);
 
-    for (int i=0;i<nten;i++) {
+    for (int i=0;i<num_interfaces;i++) {
      tension_slope[i]=0.0;
      tension_T0[i]=293.0;
      tension_min[i]=0.0;
@@ -3641,23 +3636,23 @@ NavierStokes::read_params ()
     pp.queryarr("outflow_velocity_buffer_size",
       outflow_velocity_buffer_size,0,2*AMREX_SPACEDIM);
 
-    pp.queryarr("tension_slope",tension_slope,0,nten);
-    pp.queryarr("tension_T0",tension_T0,0,nten);
-    pp.queryarr("tension_min",tension_min,0,nten);
+    pp.queryarr("tension_slope",tension_slope,0,num_interfaces);
+    pp.queryarr("tension_T0",tension_T0,0,num_interfaces);
+    pp.queryarr("tension_min",tension_min,0,num_interfaces);
 
     pp.queryarr("recalesce_model_parameters",recalesce_model_parameters,
        0,3*num_materials);
 
-    pp.queryarr("hardwire_Y_gamma",hardwire_Y_gamma,0,2*nten);
-    pp.queryarr("hardwire_T_gamma",hardwire_T_gamma,0,2*nten);
+    pp.queryarr("hardwire_Y_gamma",hardwire_Y_gamma,0,2*num_interfaces);
+    pp.queryarr("hardwire_T_gamma",hardwire_T_gamma,0,2*num_interfaces);
     pp.queryarr("accommodation_coefficient",
-		 accommodation_coefficient,0,2*nten);
-    pp.queryarr("reference_pressure",reference_pressure,0,2*nten);
-    pp.queryarr("saturation_temp",saturation_temp,0,2*nten);
-    pp.queryarr("saturation_temp_curv",saturation_temp_curv,0,2*nten);
-    pp.queryarr("saturation_temp_vel",saturation_temp_vel,0,2*nten);
-    pp.queryarr("saturation_temp_min",saturation_temp_min,0,2*nten);
-    pp.queryarr("saturation_temp_max",saturation_temp_max,0,2*nten);
+		 accommodation_coefficient,0,2*num_interfaces);
+    pp.queryarr("reference_pressure",reference_pressure,0,2*num_interfaces);
+    pp.queryarr("saturation_temp",saturation_temp,0,2*num_interfaces);
+    pp.queryarr("saturation_temp_curv",saturation_temp_curv,0,2*num_interfaces);
+    pp.queryarr("saturation_temp_vel",saturation_temp_vel,0,2*num_interfaces);
+    pp.queryarr("saturation_temp_min",saturation_temp_min,0,2*num_interfaces);
+    pp.queryarr("saturation_temp_max",saturation_temp_max,0,2*num_interfaces);
 
     pp.query("nucleation_period",nucleation_period);
     pp.query("nucleation_init_time",nucleation_init_time);
@@ -3712,27 +3707,27 @@ NavierStokes::read_params ()
       amrex::Error("phasechange_microlayer_size too small");
     }  // i=0..num_materials-1
 
-    pp.queryarr("nucleation_temp",nucleation_temp,0,2*nten);
-    pp.queryarr("nucleation_pressure",nucleation_pressure,0,2*nten);
-    pp.queryarr("nucleation_pmg",nucleation_pmg,0,2*nten);
-    pp.queryarr("nucleation_mach",nucleation_mach,0,2*nten);
+    pp.queryarr("nucleation_temp",nucleation_temp,0,2*num_interfaces);
+    pp.queryarr("nucleation_pressure",nucleation_pressure,0,2*num_interfaces);
+    pp.queryarr("nucleation_pmg",nucleation_pmg,0,2*num_interfaces);
+    pp.queryarr("nucleation_mach",nucleation_mach,0,2*num_interfaces);
 
-    pp.queryarr("latent_heat",latent_heat,0,2*nten);
-    pp.queryarr("latent_heat_slope",latent_heat_slope,0,2*nten);
-    pp.queryarr("latent_heat_T0",latent_heat_T0,0,2*nten);
-    pp.queryarr("latent_heat_min",latent_heat_min,0,2*nten);
+    pp.queryarr("latent_heat",latent_heat,0,2*num_interfaces);
+    pp.queryarr("latent_heat_slope",latent_heat_slope,0,2*num_interfaces);
+    pp.queryarr("latent_heat_T0",latent_heat_T0,0,2*num_interfaces);
+    pp.queryarr("latent_heat_min",latent_heat_min,0,2*num_interfaces);
 
 
-    pp.queryarr("reaction_rate",reaction_rate,0,2*nten);
-    pp.queryarr("freezing_model",freezing_model,0,2*nten);
+    pp.queryarr("reaction_rate",reaction_rate,0,2*num_interfaces);
+    pp.queryarr("freezing_model",freezing_model,0,2*num_interfaces);
     pp.queryarr("Tanasawa_or_Schrage_or_Kassemi",
-      Tanasawa_or_Schrage_or_Kassemi,0,2*nten);
-    pp.queryarr("mass_fraction_id",mass_fraction_id,0,2*nten);
+      Tanasawa_or_Schrage_or_Kassemi,0,2*num_interfaces);
+    pp.queryarr("mass_fraction_id",mass_fraction_id,0,2*num_interfaces);
 
      // set defaults for "distribute_from_target"
-    for (int iten=0;iten<nten;iten++) {
+    for (int iten=0;iten<num_interfaces;iten++) {
      for (int ireverse=0;ireverse<2;ireverse++) {
-      int iten_local=ireverse*nten+iten;
+      int iten_local=ireverse*num_interfaces+iten;
 
       if (freezing_model[iten_local]>=0) {
 
@@ -3827,9 +3822,9 @@ NavierStokes::read_params ()
      } // ireverse
     } // iten
 
-    pp.queryarr("distribute_from_target",distribute_from_target,0,2*nten);
-    pp.queryarr("distribute_mdot_evenly",distribute_mdot_evenly,0,2*nten);
-    pp.queryarr("constant_volume_mdot",constant_volume_mdot,0,2*nten);
+    pp.queryarr("distribute_from_target",distribute_from_target,0,2*num_interfaces);
+    pp.queryarr("distribute_mdot_evenly",distribute_mdot_evenly,0,2*num_interfaces);
+    pp.queryarr("constant_volume_mdot",constant_volume_mdot,0,2*num_interfaces);
 
     pp.queryarr("constant_density_all_time",constant_density_all_time,0,num_materials);
     for (int i=0;i<num_materials;i++) {
@@ -3844,9 +3839,9 @@ NavierStokes::read_params ()
       amrex::Error("material_type invalid");
     }
 
-    for (int iten=0;iten<nten;iten++) {
+    for (int iten=0;iten<num_interfaces;iten++) {
      for (int ireverse=0;ireverse<2;ireverse++) {
-      int iten_local=ireverse*nten+iten;
+      int iten_local=ireverse*num_interfaces+iten;
 
       int im1=0;
       int im2=0;
@@ -3976,38 +3971,38 @@ NavierStokes::read_params ()
     if (num_state_base!=2)
      amrex::Error("num_state_base invalid 10");
 
-    for (int i=0;i<nten;i++) {
+    for (int i=0;i<num_interfaces;i++) {
 
      if (is_valid_freezing_model(freezing_model[i])==1) {
       // do nothing
      } else
       amrex::Error("freezing_model invalid in read_params (i)");
-     if (is_valid_freezing_model(freezing_model[i+nten])==1) {
+     if (is_valid_freezing_model(freezing_model[i+num_interfaces])==1) {
       // do nothing
      } else
-      amrex::Error("freezing_model invalid in read_params (i+nten)");
+      amrex::Error("freezing_model invalid in read_params (i+num_interfaces)");
 
      if ((distribute_from_target[i]<0)||(distribute_from_target[i]>1))
       amrex::Error("distribute_from_target invalid in read_params (i)");
-     if ((distribute_from_target[i+nten]<0)||(distribute_from_target[i+nten]>1))
-      amrex::Error("distribute_from_target invalid in read_params (i+nten)");
+     if ((distribute_from_target[i+num_interfaces]<0)||(distribute_from_target[i+num_interfaces]>1))
+      amrex::Error("distribute_from_target invalid in read_params (i+num_interfaces)");
      if (mass_fraction_id[i]<0)
       amrex::Error("mass_fraction_id invalid in read_params (i)");
-     if (mass_fraction_id[i+nten]<0)
-      amrex::Error("mass_fraction_id invalid in read_params (i+nten)");
+     if (mass_fraction_id[i+num_interfaces]<0)
+      amrex::Error("mass_fraction_id invalid in read_params (i+num_interfaces)");
      if ((distribute_mdot_evenly[i]<0)||
          (distribute_mdot_evenly[i]>2))
       amrex::Error("distribute_mdot_evenly invalid in read_params (i)");
-     if ((distribute_mdot_evenly[i+nten]<0)||
-         (distribute_mdot_evenly[i+nten]>2))
-      amrex::Error("distribute_mdot_evenly invalid in read_params (i+nten)");
+     if ((distribute_mdot_evenly[i+num_interfaces]<0)||
+         (distribute_mdot_evenly[i+num_interfaces]>2))
+      amrex::Error("distribute_mdot_evenly invalid in read_params (i+num_interfaces)");
      if ((constant_volume_mdot[i]<-1)||
          (constant_volume_mdot[i]>1))
       amrex::Error("constant_volume_mdot invalid in read_params (i)");
-     if ((constant_volume_mdot[i+nten]<-1)||
-         (constant_volume_mdot[i+nten]>1))
-      amrex::Error("constant_volume_mdot invalid in read_params (i+nten)");
-    }  // i=0..nten-1
+     if ((constant_volume_mdot[i+num_interfaces]<-1)||
+         (constant_volume_mdot[i+num_interfaces]>1))
+      amrex::Error("constant_volume_mdot invalid in read_params (i+num_interfaces)");
+    }  // i=0..num_interfaces-1
 
 
     shock_timestep.resize(num_materials);
@@ -4537,7 +4532,7 @@ NavierStokes::read_params ()
      amrex::Error("prescribe_temperature_outflow invalid");
 
     is_phasechange=0;
-    for (int i=0;i<2*nten;i++) {
+    for (int i=0;i<2*num_interfaces;i++) {
      Real LL=get_user_latent_heat(i+1,293.0,1);
      if (LL!=0.0) {
       is_phasechange=1;
@@ -4550,10 +4545,10 @@ NavierStokes::read_params ()
      } else {
       amrex::Error("LL is NaN");
      } 
-    }  // i=0;i<2*nten
+    }  // i=0;i<2*num_interfaces
 
     hydrate_flag=0;
-    for (int i=0;i<2*nten;i++) {
+    for (int i=0;i<2*num_interfaces;i++) {
      Real LL=get_user_latent_heat(i+1,293.0,1);
      if (LL!=0.0) {
       if (is_hydrate_freezing_model(freezing_model[i])==1) {
@@ -4632,7 +4627,7 @@ NavierStokes::read_params ()
         amrex::Error("im or im_opp bust 200cpp");
        int iten;
        get_iten_cpp(im,im_opp,iten);
-       if ((iten<1)||(iten>nten))
+       if ((iten<1)||(iten>num_interfaces))
         amrex::Error("iten invalid");
        int im_source=im;
        int im_dest=im_opp;
@@ -4641,7 +4636,7 @@ NavierStokes::read_params ()
         im_dest=im;
        }
 
-       int indexEXP=iten+ireverse*nten-1;
+       int indexEXP=iten+ireverse*num_interfaces-1;
 
        Real LL=get_user_latent_heat(indexEXP+1,293.0,1);
 
@@ -4798,7 +4793,7 @@ NavierStokes::read_params ()
          temperature_source_rad[i] << '\n';
      }
  
-     for (int i=0;i<nten;i++) {
+     for (int i=0;i<num_interfaces;i++) {
       std::cout << "i= " << i << " denconst_interface "  << 
         denconst_interface[i] << '\n';
       std::cout << "i= " << i << " viscconst_interface "  << 
@@ -4808,10 +4803,10 @@ NavierStokes::read_params ()
       for (int j=0;j<num_species_var;j++) {
        std::cout << "i= " << i << " j= " << j << 
          " speciesviscconst_interface "  << 
-         speciesviscconst_interface[j*nten+i] << '\n';
+         speciesviscconst_interface[j*num_interfaces+i] << '\n';
       }
 
-     } // i=0 ... nten-1
+     } // i=0 ... num_interfaces-1
 
      for (int j=0;j<num_species_var;j++) {
       std::cout << " j= " << j << 
@@ -5023,119 +5018,119 @@ NavierStokes::read_params ()
      std::cout << "unscaled_min_curvature_radius=" << 
 	      unscaled_min_curvature_radius << '\n';
 
-     for (int i=0;i<nten;i++) {
+     for (int i=0;i<num_interfaces;i++) {
       std::cout << "hardwire_T_gamma i=" << i << "  " << 
        hardwire_T_gamma[i] << '\n';
-      std::cout << "hardwire_T_gamma i+nten=" << i+nten << "  " << 
-       hardwire_T_gamma[i+nten] << '\n';
+      std::cout << "hardwire_T_gamma i+num_interfaces=" << i+num_interfaces << "  " << 
+       hardwire_T_gamma[i+num_interfaces] << '\n';
 
       std::cout << "hardwire_Y_gamma i=" << i << "  " << 
        hardwire_Y_gamma[i] << '\n';
-      std::cout << "hardwire_Y_gamma i+nten=" << i+nten << "  " << 
-       hardwire_Y_gamma[i+nten] << '\n';
+      std::cout << "hardwire_Y_gamma i+num_interfaces=" << i+num_interfaces << "  " << 
+       hardwire_Y_gamma[i+num_interfaces] << '\n';
 
       std::cout << "accommodation_coefficient i=" << i << "  " << 
        accommodation_coefficient[i] << '\n';
-      std::cout << "accommodation_coefficient i+nten=" << i+nten << "  " << 
-       accommodation_coefficient[i+nten] << '\n';
+      std::cout << "accommodation_coefficient i+num_interfaces=" << i+num_interfaces << "  " << 
+       accommodation_coefficient[i+num_interfaces] << '\n';
 
       std::cout << "reference_pressure i=" << i << "  " << 
        reference_pressure[i] << '\n';
-      std::cout << "reference_pressure i+nten=" << i+nten << "  " << 
-       reference_pressure[i+nten] << '\n';
+      std::cout << "reference_pressure i+num_interfaces=" << i+num_interfaces << "  " << 
+       reference_pressure[i+num_interfaces] << '\n';
 
       std::cout << "saturation_temp i=" << i << "  " << 
        saturation_temp[i] << '\n';
-      std::cout << "saturation_temp i+nten=" << i+nten << "  " << 
-       saturation_temp[i+nten] << '\n';
+      std::cout << "saturation_temp i+num_interfaces=" << i+num_interfaces << "  " << 
+       saturation_temp[i+num_interfaces] << '\n';
 
       std::cout << "saturation_temp_curv i=" << i << "  " << 
        saturation_temp_curv[i] << '\n';
-      std::cout << "saturation_temp_curv i+nten=" << i+nten << "  " << 
-       saturation_temp_curv[i+nten] << '\n';
+      std::cout << "saturation_temp_curv i+num_interfaces=" << i+num_interfaces << "  " << 
+       saturation_temp_curv[i+num_interfaces] << '\n';
 
       std::cout << "saturation_temp_vel i=" << i << "  " << 
        saturation_temp_vel[i] << '\n';
-      std::cout << "saturation_temp_vel i+nten=" << i+nten << "  " << 
-       saturation_temp_vel[i+nten] << '\n';
+      std::cout << "saturation_temp_vel i+num_interfaces=" << i+num_interfaces << "  " << 
+       saturation_temp_vel[i+num_interfaces] << '\n';
 
       std::cout << "saturation_temp_min i=" << i << "  " << 
        saturation_temp_min[i] << '\n';
-      std::cout << "saturation_temp_max i+nten=" << i+nten << "  " << 
-       saturation_temp_max[i+nten] << '\n';
+      std::cout << "saturation_temp_max i+num_interfaces=" << i+num_interfaces << "  " << 
+       saturation_temp_max[i+num_interfaces] << '\n';
 
       std::cout << "nucleation_temp i=" << i << "  " << 
        nucleation_temp[i] << '\n';
-      std::cout << "nucleation_temp i+nten=" << i+nten << "  " << 
-       nucleation_temp[i+nten] << '\n';
+      std::cout << "nucleation_temp i+num_interfaces=" << i+num_interfaces << "  " << 
+       nucleation_temp[i+num_interfaces] << '\n';
 
       std::cout << "nucleation_pressure i=" << i << "  " << 
        nucleation_pressure[i] << '\n';
-      std::cout << "nucleation_pressure i+nten=" << i+nten << "  " << 
-       nucleation_pressure[i+nten] << '\n';
+      std::cout << "nucleation_pressure i+num_interfaces=" << i+num_interfaces << "  " << 
+       nucleation_pressure[i+num_interfaces] << '\n';
 
       std::cout << "nucleation_pmg i=" << i << "  " << 
        nucleation_pmg[i] << '\n';
-      std::cout << "nucleation_pmg i+nten=" << i+nten << "  " << 
-       nucleation_pmg[i+nten] << '\n';
+      std::cout << "nucleation_pmg i+num_interfaces=" << i+num_interfaces << "  " << 
+       nucleation_pmg[i+num_interfaces] << '\n';
 
       std::cout << "nucleation_mach i=" << i << "  " << 
        nucleation_mach[i] << '\n';
-      std::cout << "nucleation_mach i+nten=" << i+nten << "  " << 
-       nucleation_mach[i+nten] << '\n';
+      std::cout << "nucleation_mach i+num_interfaces=" << i+num_interfaces << "  " << 
+       nucleation_mach[i+num_interfaces] << '\n';
 
       std::cout << "latent_heat i=" << i << "  " << 
        latent_heat[i] << '\n';
-      std::cout << "latent_heat i+nten=" << i+nten << "  " << 
-       latent_heat[i+nten] << '\n';
+      std::cout << "latent_heat i+num_interfaces=" << i+num_interfaces << "  " << 
+       latent_heat[i+num_interfaces] << '\n';
 
       std::cout << "latent_heat_slope i=" << i << "  " << 
        latent_heat_slope[i] << '\n';
-      std::cout << "latent_heat_slope i+nten=" << i+nten << "  " << 
-       latent_heat_slope[i+nten] << '\n';
+      std::cout << "latent_heat_slope i+num_interfaces=" << i+num_interfaces << "  " << 
+       latent_heat_slope[i+num_interfaces] << '\n';
 
       if (latent_heat_slope[i]<=0.0) {
        //do nothing
       } else 
        amrex::Error("need latent_heat_slope[i]<=0.0)");
 
-      if (latent_heat_slope[i+nten]<=0.0) {
+      if (latent_heat_slope[i+num_interfaces]<=0.0) {
        //do nothing
       } else 
-       amrex::Error("need latent_heat_slope[i+nten]<=0.0)");
+       amrex::Error("need latent_heat_slope[i+num_interfaces]<=0.0)");
 
       std::cout << "latent_heat_T0 i=" << i << "  " << 
        latent_heat_T0[i] << '\n';
-      std::cout << "latent_heat_T0 i+nten=" << i+nten << "  " << 
-       latent_heat_T0[i+nten] << '\n';
+      std::cout << "latent_heat_T0 i+num_interfaces=" << i+num_interfaces << "  " << 
+       latent_heat_T0[i+num_interfaces] << '\n';
 
       std::cout << "latent_heat_min i=" << i << "  " << 
        latent_heat_min[i] << '\n';
-      std::cout << "latent_heat_min i+nten=" << i+nten << "  " << 
-       latent_heat_min[i+nten] << '\n';
+      std::cout << "latent_heat_min i+num_interfaces=" << i+num_interfaces << "  " << 
+       latent_heat_min[i+num_interfaces] << '\n';
 
       std::cout << "reaction_rate i=" << i << "  " << 
        reaction_rate[i] << '\n';
-      std::cout << "reaction_rate i+nten=" << i+nten << "  " << 
-       reaction_rate[i+nten] << '\n';
+      std::cout << "reaction_rate i+num_interfaces=" << i+num_interfaces << "  " << 
+       reaction_rate[i+num_interfaces] << '\n';
 
       std::cout << "freezing_model i=" << i << "  " << 
        freezing_model[i] << '\n';
-      std::cout << "freezing_model i+nten=" << i+nten << "  " << 
-       freezing_model[i+nten] << '\n';
+      std::cout << "freezing_model i+num_interfaces=" << i+num_interfaces << "  " << 
+       freezing_model[i+num_interfaces] << '\n';
       std::cout << "Tanasawa_or_Schrage_or_Kassemi i=" << i << "  " << 
        Tanasawa_or_Schrage_or_Kassemi[i] << '\n';
-      std::cout << "Tanasawa_or_Schrage_or_Kassemi i+nten=" << 
-       i+nten << "  " << 
-       Tanasawa_or_Schrage_or_Kassemi[i+nten] << '\n';
+      std::cout << "Tanasawa_or_Schrage_or_Kassemi i+num_interfaces=" << 
+       i+num_interfaces << "  " << 
+       Tanasawa_or_Schrage_or_Kassemi[i+num_interfaces] << '\n';
       std::cout << "mass_fraction_id i=" << i << "  " << 
        mass_fraction_id[i] << '\n';
-      std::cout << "mass_fraction_id i+nten=" << i+nten << "  " << 
-       mass_fraction_id[i+nten] << '\n';
+      std::cout << "mass_fraction_id i+num_interfaces=" << i+num_interfaces << "  " << 
+       mass_fraction_id[i+num_interfaces] << '\n';
       std::cout << "distribute_from_target i=" << i << "  " << 
        distribute_from_target[i] << '\n';
-      std::cout << "distribute_from_target i+nten=" << i+nten << "  " << 
-       distribute_from_target[i+nten] << '\n';
+      std::cout << "distribute_from_target i+num_interfaces=" << i+num_interfaces << "  " << 
+       distribute_from_target[i+num_interfaces] << '\n';
 
       std::cout << "tension i=" << i << "  " << tension[i] << '\n';
       std::cout << "tension_slope i=" << i << "  " << tension_slope[i] << '\n';
@@ -5153,13 +5148,13 @@ NavierStokes::read_params ()
        prefreeze_tension[i] << '\n';
       std::cout << "distribute_mdot_evenly i=" << i << "  " << 
        distribute_mdot_evenly[i] << '\n';
-      std::cout << "distribute_mdot_evenly i+nten=" << i+nten << "  " << 
-       distribute_mdot_evenly[i+nten] << '\n';
+      std::cout << "distribute_mdot_evenly i+num_interfaces=" << i+num_interfaces << "  " << 
+       distribute_mdot_evenly[i+num_interfaces] << '\n';
       std::cout << "constant_volume_mdot  i=" << i << "  " << 
        constant_volume_mdot[i] << '\n';
-      std::cout << "constant_volume_mdot  i+nten=" << i+nten << "  " << 
-       constant_volume_mdot[i+nten] << '\n';
-     }  // i=0..nten-1
+      std::cout << "constant_volume_mdot  i+num_interfaces=" << i+num_interfaces << "  " << 
+       constant_volume_mdot[i+num_interfaces] << '\n';
+     }  // i=0..num_interfaces-1
 
      for (int i=0;i<num_materials;i++) {
       std::cout << "constant_density_all_time i=" << i << "  " << 
@@ -9217,7 +9212,7 @@ void NavierStokes::post_restart() {
  }
 
  MultiFab& S_new = get_new_data(State_Type,slab_step+1);
- int nten=num_interfaces;
+ int num_interfaces=num_interfaces;
  int nc=S_new.nComp();
 
  fort_initdata_alloc(&nc,
@@ -9386,8 +9381,6 @@ NavierStokes::initData () {
 
  if (ngeom_raw!=AMREX_SPACEDIM+1)
   amrex::Error("ngeom_raw bust");
-
- int nten=num_interfaces;
 
  int max_level = parent->maxLevel();
 
@@ -11205,8 +11198,6 @@ void NavierStokes::make_marangoni_force() {
 
  resize_metrics(2);
 
- int nten=num_interfaces;
-
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
  int nstate=STATE_NCOMP;
@@ -11223,10 +11214,10 @@ void NavierStokes::make_marangoni_force() {
   // marangoni force
   // dir/side flag
   // im3
-  // x nten
+  // x num_interfaces
   // DIST_CURV_MF is calculated in:
   // NavierStokes::makeStateCurv
- int num_curv=nten*(5+AMREX_SPACEDIM);
+ int num_curv=num_interfaces*(5+AMREX_SPACEDIM);
  if (localMF[DIST_CURV_MF]->nComp()!=num_curv)
   amrex::Error("DIST_CURV invalid ncomp");
   
@@ -11282,7 +11273,6 @@ void NavierStokes::make_marangoni_force() {
   // declared in: GODUNOV_3D.F90
   fort_marangoniforce(
    &nstate,
-   &nten,
    &num_curv,
    xlo,dx,
    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
@@ -12668,7 +12658,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid level_phase_change_rate");
 
- int nten=num_interfaces;
  int nden=num_materials*num_state_material;
  int nburning=EXTRAP_NCOMP_BURNING;
  int ntsat=EXTRAP_NCOMP_TSAT;
@@ -12677,7 +12666,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- int n_normal=(num_materials+nten)*(AMREX_SPACEDIM+1);
+ int n_normal=(num_materials+num_interfaces)*(AMREX_SPACEDIM+1);
 
  const Real* dx = geom.CellSize();
 
@@ -12958,8 +12947,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    amrex::Error("localMF[FD_NRM_ND_MF] incorrect ngrow");
   debug_ixType(FD_NRM_ND_MF,-1,FD_NRM_ND_MF);
   
-  if (localMF[FD_CURV_CELL_MF]->nComp()!=2*(num_materials+nten))
-   amrex::Error("localMF[FD_CURV_CELL_MF]->nComp()!=2*(num_materials+nten)");
+  if (localMF[FD_CURV_CELL_MF]->nComp()!=2*(num_materials+num_interfaces))
+   amrex::Error("localMF[FD_CURV_CELL_MF]->nComp()!=2*(num_materials+num_interfaces)");
   if (localMF[FD_CURV_CELL_MF]->nGrow()!=ngrow_make_distance)
    amrex::Error("localMF[FD_CURV_CELL_MF] incorrect ngrow");
   debug_ixType(FD_CURV_CELL_MF,-1,FD_CURV_CELL_MF);
@@ -13125,8 +13114,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    if (conductivity_fab.nComp()!=num_materials)
     amrex::Error("conductivity_fab.nComp()!=num_materials");
 
-   Vector<int> use_exact_temperature(2*nten);
-   for (int im=0;im<2*nten;im++)
+   Vector<int> use_exact_temperature(2*num_interfaces);
+   for (int im=0;im<2*num_interfaces;im++)
     use_exact_temperature[im]=0;
 
    int tid_current=ns_thread();
@@ -13142,7 +13131,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     if (burnvelfab.nComp()!=nburning)
      amrex::Error("burnvelfab.nComp() incorrect");
 
-     // ntsat=nten*(ncomp_per_tsat+1)
+     // ntsat=num_interfaces*(ncomp_per_tsat+1)
      // e.g. for interface 12,
      //  component 1=0 if T_gamma,Y_gamma not defined
      //             =1 if T_gamma,Y_gamma defined in fort_ratemasschange
@@ -13361,7 +13350,7 @@ NavierStokes::level_phase_change_rate_extend() {
  int ncomp_per_burning=EXTRAP_PER_BURNING;
  int ncomp_per_tsat=EXTRAP_PER_TSAT;
 
-  // flag 1 .. nten, vel 1 .. nten
+  // flag 1 .. num_interfaces, vel 1 .. num_interfaces
  int nburning=EXTRAP_NCOMP_BURNING;
  int ntsat=EXTRAP_NCOMP_TSAT;
 
@@ -13401,7 +13390,7 @@ NavierStokes::level_phase_change_rate_extend() {
   } else
    amrex::Error("velflag invalid");
 
-  ncomp=nten+nten*ncomp_per_interface;
+  ncomp=num_interfaces+num_interfaces*ncomp_per_interface;
 
   Vector<int> scompBC_map;
   scompBC_map.resize(ncomp);
@@ -13697,7 +13686,7 @@ NavierStokes::level_phase_change_convertALL() {
    if ((iten<1)||(iten>num_interfaces))
     amrex::Error("iten invalid");
    Real LL0=get_user_latent_heat(iten,293.0,1);
-   Real LL1=get_user_latent_heat(iten+nten,293.0,1);
+   Real LL1=get_user_latent_heat(iten+num_interfaces,293.0,1);
    if ((LL0!=0.0)||(LL1!=0.0)) {
     n_phase_change++;
    } else if ((LL0==0.0)&&(LL1==0.0)) {
@@ -13724,7 +13713,7 @@ NavierStokes::level_phase_change_convertALL() {
     if ((iten<1)||(iten>num_interfaces))
      amrex::Error("iten invalid");
     Real LL0=get_user_latent_heat(iten,293.0,1);
-    Real LL1=get_user_latent_heat(iten+nten,293.0,1);
+    Real LL1=get_user_latent_heat(iten+num_interfaces,293.0,1);
     if ((LL0!=0.0)||(LL1!=0.0)) {
 
      for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -13859,12 +13848,12 @@ NavierStokes::level_phase_change_convert(
      (im_opp_outer>=1)&&(im_opp_outer<=num_materials)&&
      (im_outer<im_opp_outer)&&
      (i_phase_change>=0)&&
-     (i_phase_change<nten)&&
+     (i_phase_change<num_interfaces)&&
      (i_phase_change<n_phase_change)&&
-     (iten>=1)&&(iten<=nten)) {
+     (iten>=1)&&(iten<=num_interfaces)) {
 
   Real LL0=get_user_latent_heat(iten,293.0,1);
-  Real LL1=get_user_latent_heat(iten+nten,293.0,1);
+  Real LL1=get_user_latent_heat(iten+num_interfaces,293.0,1);
   if ((LL0!=0.0)||(LL1!=0.0)) {
    // do nothing
   } else
@@ -13872,7 +13861,7 @@ NavierStokes::level_phase_change_convert(
  } else
   amrex::Error("level_phase_change_convert: invalid parameters");
  
-  // first nten components are the status
+  // first num_interfaces components are the status
  int nburning=EXTRAP_NCOMP_BURNING;
  int ntsat=EXTRAP_NCOMP_TSAT;
 
@@ -13887,7 +13876,7 @@ NavierStokes::level_phase_change_convert(
 
  if (localMF[JUMP_STRENGTH_MF]->nGrow()!=ngrow_expansion)
   amrex::Error("jump strength invalid ngrow level_phase_change_conv");
- if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*nten)
+ if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*num_interfaces)
   amrex::Error("localMF[JUMP_STRENGTH_MF]->nComp() invalid");
 
  if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
@@ -13897,7 +13886,7 @@ NavierStokes::level_phase_change_convert(
 
  if (localMF[nodevel_MF]->nGrow()!=1)
   amrex::Error("localMF[nodevel_MF]->nGrow()  invalid");
- if (localMF[nodevel_MF]->nComp()!=2*nten*AMREX_SPACEDIM)
+ if (localMF[nodevel_MF]->nComp()!=2*num_interfaces*AMREX_SPACEDIM)
   amrex::Error("localMF[nodevel_MF]->nComp()  invalid");
  debug_ixType(nodevel_MF,-1,nodevel_MF);
 
@@ -13944,8 +13933,8 @@ NavierStokes::level_phase_change_convert(
     parent->AMR_min_phase_change_rate[dir]=0.0;
    }
 
-   for (int iten_local=0;iten_local<nten;iten_local++) {
-    int scomp=nten+iten_local*AMREX_SPACEDIM;
+   for (int iten_local=0;iten_local<num_interfaces;iten_local++) {
+    int scomp=num_interfaces+iten_local*AMREX_SPACEDIM;
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
      Real local_max=
       localMF[BURNING_VELOCITY_MF]->max(scomp+dir); //def nghost=0
@@ -13957,7 +13946,7 @@ NavierStokes::level_phase_change_convert(
      parent->AMR_min_phase_change_rate[dir]=
       min(parent->AMR_min_phase_change_rate[dir],local_min);
     } //dir=0..sdim-1
-   } //iten_local=0..nten-1
+   } //iten_local=0..num_interfaces-1
 
   }  // level==finest_level
 
@@ -13990,7 +13979,7 @@ NavierStokes::level_phase_change_convert(
     } else 
      amrex::Error("burnvelfab.nComp() invalid");
 
-    if (nodevelfab.nComp()==2*nten*AMREX_SPACEDIM) {
+    if (nodevelfab.nComp()==2*num_interfaces*AMREX_SPACEDIM) {
      // do nothing
     } else 
      amrex::Error("nodevelfab.nComp() invalid");
@@ -14035,7 +14024,7 @@ NavierStokes::level_phase_change_convert(
     FArrayBox& nodevelfab=(*localMF[nodevel_MF])[0];
     const Real* dxplot = geom.CellSize();
     int scomp=0;
-    int ncomp=2*nten*AMREX_SPACEDIM;
+    int ncomp=2*num_interfaces*AMREX_SPACEDIM;
     int dirplot=-1;
     int id=0;
     std::cout << "dt_slab = " << dt_slab << '\n';
@@ -14081,7 +14070,7 @@ NavierStokes::level_phase_change_convert(
     amrex::Error("conductivity_fab.nComp()!=num_materials");
 
    FArrayBox& nodevelfab=(*localMF[nodevel_MF])[mfi];
-   if (nodevelfab.nComp()==2*nten*AMREX_SPACEDIM) {
+   if (nodevelfab.nComp()==2*num_interfaces*AMREX_SPACEDIM) {
     // do nothing
    } else 
     amrex::Error("nodevelfab.nComp() invalid");
@@ -14181,8 +14170,8 @@ NavierStokes::level_phase_change_convert(
  localMF[JUMP_STRENGTH_MF]->FillBoundary(iten-1,1,geom.periodicity());
  avgDown_localMF(JUMP_STRENGTH_MF,iten-1,1,spectral_override);
 
- localMF[JUMP_STRENGTH_MF]->FillBoundary(nten+iten-1,1,geom.periodicity());
- avgDown_localMF(JUMP_STRENGTH_MF,nten+iten-1,1,spectral_override);
+ localMF[JUMP_STRENGTH_MF]->FillBoundary(num_interfaces+iten-1,1,geom.periodicity());
+ avgDown_localMF(JUMP_STRENGTH_MF,num_interfaces+iten-1,1,spectral_override);
 
  if (i_phase_change+1<n_phase_change) {
 
@@ -14261,8 +14250,8 @@ NavierStokes::phase_change_redistributeALL() {
  mdot_sum_complement.resize(thread_class::nthreads);
  mdot_sum2_complement.resize(thread_class::nthreads);
 
- allocate_array(ngrow_expansion,2*nten,-1,JUMP_STRENGTH_COMPLEMENT_MF); 
- copyALL(ngrow_expansion,2*nten,0,0,
+ allocate_array(ngrow_expansion,2*num_interfaces,-1,JUMP_STRENGTH_COMPLEMENT_MF); 
+ copyALL(ngrow_expansion,2*num_interfaces,0,0,
    JUMP_STRENGTH_COMPLEMENT_MF,JUMP_STRENGTH_MF);
 
  for (int im=1;im<=num_materials;im++) {
@@ -14272,10 +14261,10 @@ NavierStokes::phase_change_redistributeALL() {
      amrex::Error("im or im_opp bust 200cpp");
     int iten;
     get_iten_cpp(im,im_opp,iten);
-    if ((iten<1)||(iten>nten))
+    if ((iten<1)||(iten>num_interfaces))
      amrex::Error("iten invalid");
 
-    int indexEXP=iten+ireverse*nten-1;
+    int indexEXP=iten+ireverse*num_interfaces-1;
 
     Real LL=get_user_latent_heat(indexEXP+1,293.0,1);
     int distribute_from_targ=distribute_from_target[indexEXP];
@@ -14463,8 +14452,8 @@ NavierStokes::phase_change_redistributeALL() {
 
 
  for (int i=0;i<mdot_data.size();i++) {
-  if ((mdot_data[i].size()==2*nten)&&
-      (mdot_data_redistribute[i].size()==2*nten)&&
+  if ((mdot_data[i].size()==2*num_interfaces)&&
+      (mdot_data_redistribute[i].size()==2*num_interfaces)&&
       (mdot_data[i].size()==mdot_data_redistribute[i].size())) {
    // do nothing
   } else
@@ -14472,8 +14461,8 @@ NavierStokes::phase_change_redistributeALL() {
  }
 
  for (int i=0;i<mdot_comp_data.size();i++) {
-  if ((mdot_comp_data[i].size()==2*nten)&&
-      (mdot_comp_data_redistribute[i].size()==2*nten)&&
+  if ((mdot_comp_data[i].size()==2*num_interfaces)&&
+      (mdot_comp_data_redistribute[i].size()==2*num_interfaces)&&
       (mdot_comp_data[i].size()==mdot_comp_data_redistribute[i].size())) {
    // do nothing
   } else
@@ -14484,7 +14473,7 @@ NavierStokes::phase_change_redistributeALL() {
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "color_count=" << color_count << '\n';
    std::cout << "i=0..mdot_data.size()-1 (color_count) \n";
-   std::cout << "j=0..mdot_data_redistribute[i].size()-1 (2 * nten) \n";
+   std::cout << "j=0..mdot_data_redistribute[i].size()-1 (2 * num_interfaces) \n";
 
    for (int i=0;i<mdot_data.size();i++) {
 
@@ -14501,11 +14490,11 @@ NavierStokes::phase_change_redistributeALL() {
       " mdot_data[i][j]=" << mdot_data[i][j] << 
       " mdot_data_redistribute[i][j]=" <<
       mdot_data_redistribute[i][j] << '\n';
-    } // j=0..2*nten-1
-    if (j==2*nten) {
+    } // j=0..2*num_interfaces-1
+    if (j==2*num_interfaces) {
      // do nothing
     } else
-     amrex::Error("j!=2*nten");
+     amrex::Error("j!=2*num_interfaces");
 
    } // i=0..color_count-1
 
@@ -14524,11 +14513,11 @@ NavierStokes::phase_change_redistributeALL() {
       " mdot_comp_data[i][j]=" << mdot_comp_data[i][j] << 
       " mdot_comp_data_redistribute[i][j]=" <<
       mdot_comp_data_redistribute[i][j] << '\n';
-    } // j=0..2*nten-1
-    if (j==2*nten) {
+    } // j=0..2*num_interfaces-1
+    if (j==2*num_interfaces) {
      // do nothing
     } else
-     amrex::Error("j!=2*nten");
+     amrex::Error("j!=2*num_interfaces");
 
    } // i=0..color_count-1
   } else if (! ParallelDescriptor::IOProcessor()) {
@@ -14611,12 +14600,12 @@ NavierStokes::level_phase_change_redistribute(
   amrex::Error("expecting ngrow_distance==4");
 
  debug_ngrow(JUMP_STRENGTH_MF,ngrow_expansion,355);
- if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*nten)
-  amrex::Error("localMF[JUMP_STRENGTH_MF]->nComp()!=2*nten level_phase ...");
+ if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*num_interfaces)
+  amrex::Error("localMF[JUMP_STRENGTH_MF]->nComp()!=2*num_interfaces level_phase ...");
 
  debug_ngrow(JUMP_STRENGTH_COMPLEMENT_MF,ngrow_expansion,355);
- if (localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*nten)
-  amrex::Error("localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*nten");
+ if (localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*num_interfaces)
+  amrex::Error("localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*num_interfaces");
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,6001);
@@ -14644,7 +14633,7 @@ NavierStokes::level_phase_change_redistribute(
   if (localMF[donorflag_complement_MF]->nComp()!=1)
    amrex::Error("localMF[donorflag_complement_MF]->nComp() invalid");
 
-  if ((indexEXP>=0)&&(indexEXP<2*nten)) {
+  if ((indexEXP>=0)&&(indexEXP<2*num_interfaces)) {
    LL=get_user_latent_heat(indexEXP+1,293.0,1);
   } else
    amrex::Error("indexEXP invalid");
@@ -14677,7 +14666,7 @@ NavierStokes::level_phase_change_redistribute(
    amrex::Error("im_source invalid");
   if ((im_dest<1)||(im_dest>num_materials))
    amrex::Error("im_dest invalid");
-  if ((indexEXP<0)||(indexEXP>=2*nten))
+  if ((indexEXP<0)||(indexEXP>=2*num_interfaces))
    amrex::Error("indexEXP invalid");
   
   Vector< Real > mdot_sum_local;
@@ -14797,7 +14786,7 @@ NavierStokes::level_phase_change_redistribute(
    amrex::Error("im_source invalid");
   if ((im_dest<1)||(im_dest>num_materials))
    amrex::Error("im_dest invalid");
-  if ((indexEXP<0)||(indexEXP>=2*nten))
+  if ((indexEXP<0)||(indexEXP>=2*num_interfaces))
    amrex::Error("indexEXP invalid");
 
   if (thread_class::nthreads<1)
@@ -14883,7 +14872,7 @@ NavierStokes::level_phase_change_redistribute(
    amrex::Error("im_source invalid");
   if ((im_dest<1)||(im_dest>num_materials))
    amrex::Error("im_dest invalid");
-  if ((indexEXP<0)||(indexEXP>=2*nten))
+  if ((indexEXP<0)||(indexEXP>=2*num_interfaces))
    amrex::Error("indexEXP invalid");
 
   Vector< Real > mdot_lost_local;
@@ -15282,7 +15271,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
  if (is_phasechange==1) {
   if (project_option==SOLVETYPE_HEAT) { 
    face_comp_index=FACECOMP_FACEHEAT;
-   for (int im=0;im<2*nten;im++) {
+   for (int im=0;im<2*num_interfaces;im++) {
     Real LL=get_user_latent_heat(im+1,293.0,1);
     if (LL!=0.0) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
@@ -15295,11 +15284,11 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
      // do nothing
     } else
      amrex::Error("latent_heat[im] (LL) invalid");
-   } // im=0..2 nten-1
+   } // im=0..2 num_interfaces-1
   } else if ((project_option>=SOLVETYPE_SPEC)&&  
 	     (project_option<SOLVETYPE_SPEC+num_species_var)) { //mass fraction
    face_comp_index=FACECOMP_FACESPEC+project_option-SOLVETYPE_SPEC;
-   for (int im=0;im<2*nten;im++) {
+   for (int im=0;im<2*num_interfaces;im++) {
     Real LL=get_user_latent_heat(im+1,293.0,1);
     if (LL!=0.0) {
      if (is_GFM_freezing_model(freezing_model[im])==1) {
@@ -15328,7 +15317,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
      // do nothing
     } else
      amrex::Error("latent_heat[im] (LL) invalid");
-   } // im=0.. 2 nten -1
+   } // im=0.. 2 num_interfaces -1
   } else
    amrex::Error("project_option invalid");
 
@@ -15481,7 +15470,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     microlayer_temperature_substrate.dataPtr(), 
     &adjust_temperature,
     &nstate,
-    &ntsat, // nten*(ncomp_per_tsat+1)
+    &ntsat, // num_interfaces*(ncomp_per_tsat+1)
     &nden,  // num_materials*num_state_material
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
@@ -16956,7 +16945,6 @@ NavierStokes::split_scalar_advection() {
    &solidheat_flag, //0==diffuse in solid 1==dirichlet 2==neumann
    freezing_model.dataPtr(),
    distribute_from_target.dataPtr(),
-   &nten,
    constant_density_all_time.dataPtr(),
    velbc.dataPtr(),
    &EILE_flag,
@@ -20673,8 +20661,8 @@ void NavierStokes::MaxAdvectSpeed(
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
 
-  local_cap_wave_speed[tid].resize(nten); 
-  for (int iten=0;iten<nten;iten++) {
+  local_cap_wave_speed[tid].resize(num_interfaces); 
+  for (int iten=0;iten<num_interfaces;iten++) {
    local_cap_wave_speed[tid][iten]=cap_wave_speed[iten];
   }
 
@@ -20803,7 +20791,6 @@ void NavierStokes::MaxAdvectSpeed(
     &local_vel_max_cap_wave[tid_current],
     local_dt_min_thread.dataPtr(),
     &rzflag,
-    &nten,
     denconst.dataPtr(),
     &visc_coef,
     &gravity,
@@ -20834,7 +20821,7 @@ void NavierStokes::MaxAdvectSpeed(
 
   for (int tid=1;tid<thread_class::nthreads;tid++) {
 
-   for (int iten=0;iten<nten;iten++)
+   for (int iten=0;iten<num_interfaces;iten++)
     if (local_cap_wave_speed[tid][iten]>local_cap_wave_speed[0][iten])
      local_cap_wave_speed[0][iten]=local_cap_wave_speed[tid][iten];
 
@@ -20854,7 +20841,7 @@ void NavierStokes::MaxAdvectSpeed(
     local_vel_max_cap_wave[0]=local_vel_max_cap_wave[tid];
   } // tid=1..nthreads
 
-  for (int iten=0;iten<nten;iten++) {
+  for (int iten=0;iten<num_interfaces;iten++) {
    ParallelDescriptor::ReduceRealMax(local_cap_wave_speed[0][iten]);
   }
 
@@ -20872,7 +20859,7 @@ void NavierStokes::MaxAdvectSpeed(
 
  delete velcell;
 
- for (int iten=0;iten<nten;iten++)
+ for (int iten=0;iten<num_interfaces;iten++)
   cap_wave_speed[iten]=local_cap_wave_speed[0][iten];
 
  for (int dir=0;dir<=AMREX_SPACEDIM;dir++) {
@@ -23633,7 +23620,7 @@ void
 NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
 
  int scomp=0;
- int ncomp=nten*(AMREX_SPACEDIM+5);
+ int ncomp=num_interfaces*(AMREX_SPACEDIM+5);
 
  int finest_level=parent->finestLevel();
  if (level>=finest_level)
@@ -25400,7 +25387,6 @@ NavierStokes::makeCellFrac(
    fort_cellfaceinit( 
     &tid_current,
     &tessellate,  // = 0,1, or 3
-    &nten,
     &level,
     &finest_level,
     facefab.dataPtr(),
@@ -25464,8 +25450,8 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
   // marangoni force
   // dir/side flag
   // im3
-  // x nten
- int num_curv=nten*(AMREX_SPACEDIM+5); 
+  // x num_interfaces
+ int num_curv=num_interfaces*(AMREX_SPACEDIM+5); 
 
  resize_metrics(1);
 
@@ -25477,7 +25463,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
   amrex::Error("localMF[LEVELPC_MF]->nGrow() invalid");
 
  int nhistory=localMF[HISTORY_MF]->nComp();
- if (nhistory==nten*2) {
+ if (nhistory==num_interfaces*2) {
   // do nothing
  } else
   amrex::Error("nhistory invalid");

@@ -125,7 +125,6 @@ F90EXE_headers += probdata.H probdataf95.H PROB_F.H
 F90EXE_headers += PROB_CPP_PARMS_F.H 
 
 FEXE_headers += \
-  ShallowWater_F.H \
   DERIVE_F.H \
   GLOBALUTIL_F.H \
   TECPLOTUTIL_F.H \
@@ -141,7 +140,6 @@ FEXE_headers += \
   MOF_REDIST_F.H  \
   MOF_F.H mofdata.H
 
-F90EXE_sources += ShallowWater.F90
 F90EXE_sources += MASS_TRANSFER_3D.F90
 F90EXE_sources += PLIC_3D.F90
 F90EXE_sources += GODUNOV_3D.F90
@@ -154,7 +152,6 @@ F90EXE_sources += MOF_REDIST_3D.F90
 F90EXE_sources += MACOPERATOR_3D.F90
 F90EXE_sources += SOLIDFLUID.F90 
 
-F90EXE_headers += ShallowWater_F.H 
 F90EXE_headers += GLOBALUTIL_F.H 
 F90EXE_headers += TECPLOTUTIL_F.H 
 F90EXE_headers += MASS_TRANSFER_F.H 

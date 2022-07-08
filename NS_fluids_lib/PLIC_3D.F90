@@ -31,7 +31,7 @@ stop
 ! mask=1 at symmetric border cells
 ! update_flag=0 do not update error
 ! update_flag=1 update error
-! vof,ref centroid,order,slope,intercept  x nmat
+! vof,ref centroid,order,slope,intercept  x num_materials
 ! last comp. of solid <0 in solid
 ! vof is inputs, slopes is output.
 
@@ -58,7 +58,6 @@ stop
         slopes,DIMS(slopes), &
         nsteps, &
         time, &
-        nmat,nten, &
         update_flag, &
         total_calls, &
         total_iterations, &
@@ -83,12 +82,9 @@ stop
       INTEGER_T, intent(in) :: level,finest_level,max_level
       INTEGER_T, intent(in) :: nsteps
 
-      INTEGER_T, intent(in) :: nmat
-
       INTEGER_T, intent(in) :: continuous_mof
       INTEGER_T, intent(in) :: force_cmof_at_triple_junctions
       INTEGER_T, intent(in) :: partial_cmof_stencil_at_walls
-      INTEGER_T, intent(in) :: nten
       INTEGER_T, intent(in) :: update_flag
       REAL_T, intent(in) :: time
       INTEGER_T, intent(in) :: vofbc(SDIM,2)
@@ -104,11 +100,11 @@ stop
       REAL_T, intent(in) :: xlo(SDIM),dx(SDIM)
      
       REAL_T, intent(in), target :: masknbr(DIMV(masknbr),4) 
-      REAL_T, intent(in), target :: vof(DIMV(vof),nmat*ngeom_raw) 
-      REAL_T, intent(in), target :: LS(DIMV(LS),nmat) 
-      REAL_T, intent(out), target :: slopes(DIMV(slopes),nmat*ngeom_recon) 
+      REAL_T, intent(in), target :: vof(DIMV(vof),num_materials*ngeom_raw) 
+      REAL_T, intent(in), target :: LS(DIMV(LS),num_materials) 
+      REAL_T, intent(out), target :: slopes(DIMV(slopes),num_materials*ngeom_recon) 
       REAL_T, pointer :: slopes_ptr(D_DECL(:,:,:),:)
-      REAL_T, intent(inout), target :: snew(DIMV(snew),nmat*ngeom_raw+1) 
+      REAL_T, intent(inout), target :: snew(DIMV(snew),num_materials*ngeom_raw+1) 
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
       
       INTEGER_T i,j,k,dir
@@ -117,11 +113,11 @@ stop
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       INTEGER_T im
-      REAL_T mofdata(nmat*ngeom_recon)
-      REAL_T mofdata_super(nmat*ngeom_recon)
-      REAL_T vof_super(nmat)
-      REAL_T mofsten(nmat*ngeom_recon)
-      REAL_T multi_centroidA(nmat,SDIM)
+      REAL_T mofdata(num_materials*ngeom_recon)
+      REAL_T mofdata_super(num_materials*ngeom_recon)
+      REAL_T vof_super(num_materials)
+      REAL_T mofsten(num_materials*ngeom_recon)
+      REAL_T multi_centroidA(num_materials,SDIM)
 
       INTEGER_T vofcomprecon
       INTEGER_T vofcompraw
@@ -136,10 +132,10 @@ stop
       stop
 #endif
       REAL_T orderflag
-      INTEGER_T total_calls(nmat)
-      INTEGER_T total_iterations(nmat)
+      INTEGER_T total_calls(num_materials)
+      INTEGER_T total_iterations(num_materials)
       INTEGER_T i1,j1,k1
-      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),nmat)
+      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
       INTEGER_T nmax
 
@@ -150,8 +146,8 @@ stop
       INTEGER_T nhalf
       REAL_T xsten(-3:3,SDIM)
       REAL_T xstenbox(-1:1,SDIM)
-      INTEGER_T nmat_in_cell
-      INTEGER_T nmat_in_stencil
+      INTEGER_T num_materials_in_cell
+      INTEGER_T num_materials_in_stencil
       INTEGER_T nten_test
       REAL_T volume_super
       REAL_T volume_super_mofdata
@@ -159,8 +155,8 @@ stop
       REAL_T volmat
       REAL_T censten(SDIM)
       REAL_T cen_super(SDIM)
-      REAL_T voflist_center(nmat)
-      REAL_T voflist_stencil(nmat)
+      REAL_T voflist_center(num_materials)
+      REAL_T voflist_stencil(num_materials)
       REAL_T voflist_test
       INTEGER_T mof_verbose,use_ls_data,nhalfbox_sten
       REAL_T dxmaxLS
@@ -172,7 +168,7 @@ stop
       REAL_T vfrac_solid_sum
       REAL_T vfrac_solid_sum_center
       REAL_T vfrac_raster_solid
-      REAL_T vfrac_local(nmat)
+      REAL_T vfrac_local(num_materials)
       INTEGER_T im_raster_solid
       INTEGER_T mod_cmofsten
       INTEGER_T local_mod_cmofsten
@@ -198,11 +194,6 @@ stop
 
       if (bfact.lt.1) then
        print *,"bfact invalid170"
-       stop
-      endif
-      nten_test=num_interfaces
-      if (nten_test.ne.nten) then
-       print *,"nten inv. sloperecon nten, nten_test ",nten,nten_test
        stop
       endif
 
@@ -234,10 +225,6 @@ stop
 
       nmax=POLYGON_LIST_MAX ! in: SLOPE_RECON
 
-      if (nmat.ne.num_materials) then
-       print *,"nmat invalid"
-       stop
-      endif
       if (ngrow.lt.1) then
        print *,"ngrow invalid in slope recon"
        stop
@@ -327,7 +314,7 @@ stop
        enddo
        enddo
 
-       do im=1,nmat
+       do im=1,num_materials
 
         vofcomprecon=(im-1)*ngeom_recon+1
         vofcompraw=(im-1)*ngeom_raw+1
@@ -348,7 +335,7 @@ stop
          mofdata(vofcomprecon+dir-1)=zero
         enddo
 
-       enddo  ! im=1..nmat
+       enddo  ! im=1..num_materials
 
         ! sum of F_fluid=1
         ! sum of F_rigid<=1
@@ -367,7 +354,7 @@ stop
        mod_cmofsten=0
        local_mod_cmofsten=0
 
-       do im=1,nmat
+       do im=1,num_materials
         vofcomprecon=(im-1)*ngeom_recon+1
         voflist_center(im)=mofdata(vofcomprecon)
         voflist_stencil(im)=zero
@@ -379,7 +366,7 @@ stop
           im_raster_solid=im
           vfrac_raster_solid=voflist_center(im)
          else if ((im_raster_solid.ge.1).and. &
-                  (im_raster_solid.le.nmat).and. &
+                  (im_raster_solid.le.num_materials).and. &
                   (is_rigid(im_raster_solid).eq.1)) then
           if (vfrac_raster_solid.lt.voflist_center(im)) then
            im_raster_solid=im
@@ -396,7 +383,7 @@ stop
          stop
         endif
 
-       enddo ! im=1..nmat
+       enddo ! im=1..num_materials
 
        vfrac_solid_sum_center=vfrac_solid_sum
 
@@ -413,7 +400,7 @@ stop
         do i1=-1,1
         do j1=-1,1
         do k1=klosten,khisten
-         do im=1,nmat
+         do im=1,num_materials
           LS_stencil(D_DECL(i1,j1,k1),im)= &
             LS(D_DECL(i+i1,j+j1,k+k1),im)
           vofcompraw=(im-1)*ngeom_raw+1
@@ -441,15 +428,15 @@ stop
         enddo
         enddo  ! i1,j1,k1 
 
-        nmat_in_cell=0
-        nmat_in_stencil=0
-        do im=1,nmat
+        num_materials_in_cell=0
+        num_materials_in_stencil=0
+        do im=1,num_materials
          if (is_rigid(im).eq.0) then
           if (voflist_stencil(im).gt.VOFTOL) then
-           nmat_in_stencil=nmat_in_stencil+1
+           num_materials_in_stencil=num_materials_in_stencil+1
           endif
           if (voflist_center(im).gt.VOFTOL) then
-           nmat_in_cell=nmat_in_cell+1
+           num_materials_in_cell=num_materials_in_cell+1
           endif
          else if (is_rigid(im).eq.1) then
           ! do nothing
@@ -457,14 +444,14 @@ stop
           print *,"is_rigid invalid PLIC_3D.F90"
           stop
          endif
-        enddo ! im=1..nmat
+        enddo ! im=1..num_materials
  
-        if (nmat_in_cell.gt.nmat_in_stencil) then
-         print *,"nmat_in_cell invalid"
+        if (num_materials_in_cell.gt.num_materials_in_stencil) then
+         print *,"num_materials_in_cell invalid"
          stop
         endif
 
-        do im=1,nmat*ngeom_recon
+        do im=1,num_materials*ngeom_recon
          mofdata_super(im)=mofdata(im)
         enddo
 
@@ -509,7 +496,7 @@ stop
 
           if (mod_cmofsten.eq.0) then
 
-           do im=1,nmat
+           do im=1,num_materials
             vofcomprecon=(im-1)*ngeom_recon+1
             vofcompraw=(im-1)*ngeom_raw+1
             do dir=0,SDIM
@@ -521,7 +508,7 @@ stop
             do dir=SDIM+3,ngeom_recon
              mofsten(vofcomprecon+dir-1)=zero
             enddo
-           enddo  ! im=1..nmat
+           enddo  ! im=1..num_materials
 
            call CISBOX(xstenbox,nhalfbox_sten, &
             xlo,dx,i+i1,j+j1,k+k1, &
@@ -541,7 +528,7 @@ stop
            vfrac_fluid_sum=zero
            vfrac_solid_sum=zero
 
-           do im=1,nmat
+           do im=1,num_materials
             vofcomprecon=(im-1)*ngeom_recon+1
             vfrac_local(im)=mofsten(vofcomprecon)
 
@@ -553,7 +540,7 @@ stop
              print *,"is_rigid(im) invalid"
              stop
             endif
-           enddo ! im=1..nmat
+           enddo ! im=1..num_materials
 
            if (abs(vfrac_fluid_sum-one).le.VOFTOL) then
             ! do nothing
@@ -610,15 +597,15 @@ stop
          stop
         endif
 
-        if (nmat_in_cell.eq.1) then
+        if (num_materials_in_cell.eq.1) then
          continuous_mof_parm=0
-        else if ((nmat_in_cell.ge.2).and. &
-                 (nmat_in_cell.le.nmat)) then
+        else if ((num_materials_in_cell.ge.2).and. &
+                 (num_materials_in_cell.le.num_materials)) then
 
          continuous_mof_parm=continuous_mof_base
 
-         if ((nmat_in_stencil.ge.3).and. &
-             (nmat_in_stencil.le.nmat)) then
+         if ((num_materials_in_stencil.ge.3).and. &
+             (num_materials_in_stencil.le.num_materials)) then
 
           if (force_cmof_at_triple_junctions.eq.2) then
            continuous_mof_base=2
@@ -631,12 +618,12 @@ stop
           endif
 
           if (continuous_mof_base.eq.2) then ! CMOF
-           if (nmat_in_cell.eq.nmat_in_stencil) then
+           if (num_materials_in_cell.eq.num_materials_in_stencil) then
             continuous_mof_parm=2 ! CMOF
-           else if (nmat_in_cell.lt.nmat_in_stencil) then
+           else if (num_materials_in_cell.lt.num_materials_in_stencil) then
             continuous_mof_parm=2 ! CMOF
            else
-            print *,"nmat_in_cell invalid"
+            print *,"num_materials_in_cell invalid"
             stop
            endif
           else if (continuous_mof_base.eq.0) then
@@ -645,9 +632,9 @@ stop
            print *,"continuous_mof_base invalid"
            stop
           endif
-         else if (nmat_in_stencil.eq.2) then
-          if (nmat_in_cell.ne.2) then
-           print *,"nmat_in_cell invalid"
+         else if (num_materials_in_stencil.eq.2) then
+          if (num_materials_in_cell.ne.2) then
+           print *,"num_materials_in_cell invalid"
            stop
           endif
           if ((continuous_mof_base.eq.0).or. & ! MOF
@@ -661,12 +648,12 @@ stop
            stop
           endif
          else
-          print *,"nmat_in_cell or nmat_in_stencil invalid"
+          print *,"num_materials_in_cell or num_materials_in_stencil invalid"
           stop
          endif
         
         else
-         print *,"nmat_in_cell invalid"
+         print *,"num_materials_in_cell invalid"
          stop
         endif
 
@@ -683,13 +670,13 @@ stop
          do dir=1,SDIM
           cen_super(dir)=zero
          enddo
-         do im=1,nmat
+         do im=1,num_materials
           vofcomprecon=(im-1)*ngeom_recon+1
           do dir=1,SDIM
            mofdata_super(vofcomprecon+dir)=zero
           enddo
           vof_super(im)=zero
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
 
          do i1=-1,1
          do j1=-1,1
@@ -700,7 +687,7 @@ stop
             bfact,level, &
             volsten,censten,SDIM)
 
-          do im=1,nmat
+          do im=1,num_materials
            vofcomprecon=(im-1)*ngeom_recon+1
            vofcompraw=(im-1)*ngeom_raw+1
            do dir=0,SDIM
@@ -712,7 +699,7 @@ stop
            do dir=SDIM+3,ngeom_recon
             mofsten(vofcomprecon+dir-1)=zero
            enddo
-          enddo  ! im=1..nmat
+          enddo  ! im=1..num_materials
 
            ! sum of F_fluid=1
            ! sum of F_rigid<=1
@@ -729,7 +716,7 @@ stop
           im_raster_solid=0
           vfrac_raster_solid=zero
 
-          do im=1,nmat
+          do im=1,num_materials
            vofcomprecon=(im-1)*ngeom_recon+1
            vfrac_local(im)=mofsten(vofcomprecon)
 
@@ -740,7 +727,7 @@ stop
              im_raster_solid=im
              vfrac_raster_solid=vfrac_local(im)
             else if ((im_raster_solid.ge.1).and. &
-                     (im_raster_solid.le.nmat).and. &
+                     (im_raster_solid.le.num_materials).and. &
                      (is_rigid(im_raster_solid).eq.1)) then
              if (vfrac_raster_solid.lt.vfrac_local(im)) then
               im_raster_solid=im
@@ -756,7 +743,7 @@ stop
             print *,"is_rigid(im) invalid"
             stop
            endif
-          enddo ! im=1..nmat
+          enddo ! im=1..num_materials
 
           if (abs(vfrac_fluid_sum-one).le.VOFTOL) then
            ! do nothing
@@ -807,7 +794,7 @@ stop
             cen_super(dir)=cen_super(dir)+volsten*censten(dir)
            enddo
 
-           do im=1,nmat
+           do im=1,num_materials
 
             vofcomprecon=(im-1)*ngeom_recon+1
             volmat=volsten*vfrac_local(im)
@@ -826,7 +813,7 @@ stop
              stop
             endif
 
-           enddo ! im=1..nmat
+           enddo ! im=1..num_materials
 
           else if (local_mod_cmofsten.eq.1) then
            ! do nothing
@@ -855,7 +842,7 @@ stop
           cen_super(dir)=cen_super(dir)/volume_super
          enddo
 
-         do im=1,nmat
+         do im=1,num_materials
           vofcomprecon=(im-1)*ngeom_recon+1
           if (vof_super(im).gt.zero) then
            do dir=1,SDIM
@@ -886,7 +873,7 @@ stop
            stop
           endif
 
-         enddo ! im=1..nmat
+         enddo ! im=1..num_materials
 
          if (1.eq.0) then
           if (mod_cmofsten.eq.1) then
@@ -936,7 +923,7 @@ stop
 
         if (continuous_mof_parm.eq.2) then
            ! center cell centroids.
-         do im=1,nmat
+         do im=1,num_materials
           vofcomprecon=(im-1)*ngeom_recon+1
           do dir=1,SDIM
            mofdata_super(vofcomprecon+dir)=mofdata(vofcomprecon+dir)
@@ -949,7 +936,7 @@ stop
          stop
         endif
 
-        do im=1,nmat
+        do im=1,num_materials
          total_calls(im)=total_calls(im)+mof_calls(tid+1,im)
          total_iterations(im)= &
           total_iterations(im)+mof_iterations(tid+1,im)
@@ -960,7 +947,7 @@ stop
         stop
        endif
 
-       do dir=1,nmat*ngeom_recon
+       do dir=1,num_materials*ngeom_recon
         slopes(D_DECL(i,j,k),dir)=mofdata_super(dir)
        enddo
 
@@ -995,12 +982,10 @@ stop
           xsten,nhalf,dx,bfact, &
           voflist_center, &
           LS_stencil, &
-          nmat, &
-          nten, &
           err,time)
-         errsave=snew(D_DECL(i,j,k),nmat*ngeom_raw+1)
+         errsave=snew(D_DECL(i,j,k),num_materials*ngeom_raw+1)
          if (errsave.lt.err) then
-          snew(D_DECL(i,j,k),nmat*ngeom_raw+1)=err
+          snew(D_DECL(i,j,k),num_materials*ngeom_raw+1)=err
          endif
          if ((errsave.lt.zero).or.(err.lt.zero)) then
           print *,"err bust"

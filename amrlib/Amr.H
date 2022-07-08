@@ -113,15 +113,15 @@ public:
     int AMR_recalesce_flag(int im) const;
 
      // initialize class member "recalesce_state_new"
-    void recalesce_put_state(Vector<Real>& recalesce_state_in,int nmat); 
+    void recalesce_put_state(Vector<Real>& recalesce_state_in); 
      // get class member "recalesce_state_old"
-    void recalesce_get_state(Vector<Real>& recalesce_state_out,int nmat); 
-    void recalesce_init(int nmat);
+    void recalesce_get_state(Vector<Real>& recalesce_state_out); 
+    void recalesce_init();
 
      // copies new to old.
-    void recalesce_copy_new_to_old(int nmat);
+    void recalesce_copy_new_to_old();
      // copies old to new.
-    void recalesce_copy_old_to_new(int nmat);
+    void recalesce_copy_old_to_new();
 
     void print_cells_advanced();
 
@@ -214,7 +214,7 @@ protected:
     // The data ...
     //
 
-      // nmat x (stage,time,.....)
+      // num_materials x (stage,time,.....)
     Vector<Real> recalesce_state_old;
     Vector<Real> recalesce_state_new;
     

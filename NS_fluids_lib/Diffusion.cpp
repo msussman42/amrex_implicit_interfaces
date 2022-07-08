@@ -318,9 +318,6 @@ void NavierStokes::viscous_boundary_fluxes(
   
   bool use_tiling=ns_tiling;
 
-  int nmat=num_materials;
-  int nten=num_interfaces;
-
   if (project_option==SOLVETYPE_VISC) { 
    if (nsolve!=AMREX_SPACEDIM)
     amrex::Error("nsolve invalid");
@@ -338,7 +335,7 @@ void NavierStokes::viscous_boundary_fluxes(
 
   resize_levelset(2,LEVELPC_MF);
   debug_ngrow(LEVELPC_MF,2,120);
-  if (localMF[LEVELPC_MF]->nComp()!=nmat*(1+AMREX_SPACEDIM))
+  if (localMF[LEVELPC_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
    amrex::Error("levelpc mf has incorrect ncomp");
 
   resize_metrics(1);
@@ -427,8 +424,6 @@ void NavierStokes::viscous_boundary_fluxes(
      fablo,fabhi,&bfact,
      domlo,domhi,
      &dt_slab,
-     &nmat,
-     &nten,
      &solidheat_flag,
      &project_option,
      &cur_time_slab);
@@ -445,7 +440,7 @@ void NavierStokes::viscous_boundary_fluxes(
 // project_option = SOLVETYPE_HEAT (temp)
 // project_option = SOLVETYPE_VISC (cell centered velocity) 
 // project_option = SOLVETYPE_VISC,... (species)
-// combine_flag==0 (FVM -> GFM) (T[im]=T_interp im=1..nmat)
+// combine_flag==0 (FVM -> GFM) (T[im]=T_interp im=1..num_materials)
 // combine_flag==1 (GFM -> FVM)
 // combine_flag==2 (combine if vfrac<VOFTOL)
 // interface_cond_avail==1 if interface temperature and mass fraction are
@@ -461,8 +456,6 @@ void NavierStokes::combine_state_variable(
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
-
- int nmat=num_materials;
 
  if ((project_option==SOLVETYPE_PRES)||  // mac velocity
      (project_option==SOLVETYPE_VISC)) { // cell velocity
@@ -483,13 +476,12 @@ void NavierStokes::combine_state_variable(
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
- if (LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1))
-  amrex::Error("LS_new.nComp()!=nmat*(AMREX_SPACEDIM+1)");
+ if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error("LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1)");
  int nstate=STATE_NCOMP;
  if (S_new.nComp()!=nstate)
   amrex::Error("(S_new.nComp()!=nstate)");
 
- int nten=num_interfaces;
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
@@ -517,7 +509,7 @@ void NavierStokes::combine_state_variable(
    amrex::Error("update_flux invalid");
  } else if (project_option==SOLVETYPE_HEAT) { 
   nsolve=1;
-  num_materials_combine=nmat;
+  num_materials_combine=num_materials;
  } else if (project_option==SOLVETYPE_VISC) { 
   nsolve=AMREX_SPACEDIM;
 
@@ -530,7 +522,7 @@ void NavierStokes::combine_state_variable(
  } else if ((project_option>=SOLVETYPE_SPEC)&&
             (project_option<SOLVETYPE_SPEC+num_species_var)) { 
   nsolve=1;
-  num_materials_combine=nmat;
+  num_materials_combine=num_materials;
  } else
   amrex::Error("project_option invalid81");
 
@@ -562,7 +554,7 @@ void NavierStokes::combine_state_variable(
  }
 
  int nparts=im_solid_map.size();
- if ((nparts<0)||(nparts>nmat))
+ if ((nparts<0)||(nparts>num_materials))
   amrex::Error("nparts invalid");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
@@ -572,7 +564,7 @@ void NavierStokes::combine_state_variable(
  if (nparts==0) {
   im_solid_map_ptr=im_solid_map_null.dataPtr();
   nparts_def=1;
- } else if ((nparts>=1)&&(nparts<=nmat)) {
+ } else if ((nparts>=1)&&(nparts<=num_materials)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
   amrex::Error("nparts invalid");
@@ -638,8 +630,8 @@ void NavierStokes::combine_state_variable(
   std::cout << "update_flux= " << update_flux << '\n';
   amrex::Error("LEVEL_COMBINE->nGrow()<1");
  }
- if (LEVEL_COMBINE->nComp()!=nmat*(AMREX_SPACEDIM+1))
-  amrex::Error("LEVEL_COMBINE->nComp()!=nmat*(AMREX_SPACEDIM+1)");
+ if (LEVEL_COMBINE->nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error("LEVEL_COMBINE->nComp()!=num_materials*(AMREX_SPACEDIM+1)");
 
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,832);
@@ -653,13 +645,13 @@ void NavierStokes::combine_state_variable(
      (combine_flag==1)) { // GFM -> FVM
 
   signed_distance=LEVEL_COMBINE;
-  if (signed_distance->nComp()!=nmat*(1+AMREX_SPACEDIM))
+  if (signed_distance->nComp()!=num_materials*(1+AMREX_SPACEDIM))
    amrex::Error("signed_distance->nComp() invalid");
 
  } else if (combine_flag==2) { // combine if F==0
 
   signed_distance=localMF[SLOPE_RECON_MF];
-  if (signed_distance->nComp()!=nmat*ngeom_recon)
+  if (signed_distance->nComp()!=num_materials*ngeom_recon)
    amrex::Error("signed_distance->nComp() invalid");
 
  } else
@@ -753,11 +745,9 @@ void NavierStokes::combine_state_variable(
      fort_combinevelface(
       &tid_current,
       &hflag,
-      &nmat,
       &nparts,
       &nparts_def,
       im_solid_map_ptr,
-      &nten,
       &combine_idx,
       tilelo,tilehi,
       fablo,fabhi,
@@ -808,7 +798,7 @@ void NavierStokes::combine_state_variable(
     amrex::Error("combine_idx invalid");
 
     // GFM solver only solves for first component.
-   for (int im=1;im<nmat;im++) 
+   for (int im=1;im<num_materials;im++) 
     MultiFab::Copy(*cell_mf,*cell_mf,scomp[0],scomp[im],1,0);
 
   } else if (combine_flag==0) { // centroid -> center
@@ -823,13 +813,13 @@ void NavierStokes::combine_state_variable(
       (combine_flag==1)) { // GFM -> FVM
    if (nsolve!=1)
     amrex::Error("nsolve invalid");
-   new_combined=new MultiFab(grids,dmap,nsolve*nmat,0,
+   new_combined=new MultiFab(grids,dmap,nsolve*num_materials,0,
      MFInfo().SetTag("new_combined"),FArrayBoxFactory());
    if (combine_idx==-1) {
-    for (int im=0;im<nmat;im++) 
+    for (int im=0;im<num_materials;im++) 
      MultiFab::Copy(*new_combined,*cell_mf,scomp[im],im,1,0);
    } else if (combine_idx>=0) {
-    MultiFab::Copy(*new_combined,*cell_mf,0,0,nmat,0);
+    MultiFab::Copy(*new_combined,*cell_mf,0,0,num_materials,0);
    } else
     amrex::Error("combine_idx invalid");
   } else if (combine_flag==2) {
@@ -868,7 +858,7 @@ void NavierStokes::combine_state_variable(
    FArrayBox& newcell=(*new_combined)[mfi];
    FArrayBox& statefab=S_new[mfi];
 
-   // ntsat=nten*(ncomp_per_tsat+1)
+   // ntsat=num_interfaces*(ncomp_per_tsat+1)
    // e.g. for interface 12,
    //  component 1=0 if T_gamma,Y_gamma not defined
    //             =1 if T_gamma,Y_gamma defined in RATEMASSCHANGE
@@ -926,11 +916,9 @@ void NavierStokes::combine_state_variable(
     distribute_from_target.dataPtr(),
     saturation_temp.dataPtr(),
     &hydrate_flag,
-    &nmat,
     &nparts,
     &nparts_def,
     im_solid_map_ptr,
-    &nten,
     &nsolve,
     &project_option,
     &combine_idx,
@@ -978,10 +966,10 @@ void NavierStokes::combine_state_variable(
   if ((combine_flag==0)||  // FVM->GFM
       (combine_flag==1)) { // GFM->FVM
    if (combine_idx==-1) {
-    for (int im=0;im<nmat;im++)
+    for (int im=0;im<num_materials;im++)
      MultiFab::Copy(*cell_mf,*new_combined,im,scomp[im],1,0);
    } else if (combine_idx>=0) {
-    MultiFab::Copy(*cell_mf,*new_combined,0,0,nmat,0);
+    MultiFab::Copy(*cell_mf,*new_combined,0,0,num_materials,0);
    } else
     amrex::Error("combine_idx invalid");
 
@@ -1021,8 +1009,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- int nmat=num_materials;
- int nden=nmat*num_state_material;
+ int nden=num_materials*num_state_material;
 
  int nsolve=AMREX_SPACEDIM;
 
@@ -1158,7 +1145,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
    ARLIM(gradufab.loVect()),ARLIM(gradufab.hiVect()),
    tilelo,tilehi,
    fablo,fabhi,&bfact,&level,
-   &local_dt_slab,&rzflag,&nmat,&nden);
+   &local_dt_slab,&rzflag,&nden);
  }  // mfi  
 } // omp
 
