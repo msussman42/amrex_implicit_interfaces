@@ -77,7 +77,6 @@ namespace amrex{
 
      void fort_init_regions_list(
 	int* constant_density_all_time,
-	int* num_materials,
 	int* nthreads);
   
      void fort_delete_regions_list(int* ioproc);

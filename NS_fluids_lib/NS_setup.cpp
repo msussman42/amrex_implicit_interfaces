@@ -388,18 +388,16 @@ set_pressure_bc (BCRec&       bc,
 void
 NavierStokes::override_enable_spectral(int enable_spectral_in) {
 
- int nmat=num_materials;
-
  enable_spectral=enable_spectral_in;
 
  if (enable_spectral_in==1) {
 
   sem_interp_HIGH_PARM.interp_enable_spectral=enable_spectral_in;
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    int ibase=im*num_state_material;
    desc_lst.resetMapper(State_Type,STATECOMP_STATES+ibase+ENUM_TEMPERATUREVAR,
      &sem_interp_HIGH_PARM);
-  } // im=0..nmat-1
+  } // im=0..num_materials-1
 
   for (int imvel=0;imvel<STATECOMP_STATES;imvel++) {
    desc_lst.resetMapper(State_Type,imvel,&sem_interp_HIGH_PARM);
@@ -408,11 +406,11 @@ NavierStokes::override_enable_spectral(int enable_spectral_in) {
  } else if (enable_spectral_in==0) {
 
   sem_interp_LOW_PARM.interp_enable_spectral=enable_spectral_in;
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    int ibase=im*num_state_material;
    desc_lst.resetMapper(State_Type,STATECOMP_STATES+ibase+ENUM_TEMPERATUREVAR,
      &sem_interp_LOW_PARM);
-  } // im=0..nmat-1
+  } // im=0..num_materials-1
 
   for (int imvel=0;imvel<STATECOMP_STATES;imvel++) {
    desc_lst.resetMapper(State_Type,imvel,&sem_interp_LOW_PARM);
@@ -678,15 +676,12 @@ NavierStokes::variableSetUp ()
     std::cout << "prescribe_temperature_outflow= " << 
      prescribe_temperature_outflow << '\n';
     
-    int nmat=num_materials;
-    int nten=num_interfaces;
-
     int null_state_holds_data=0;
     int state_holds_data=1;
 
-    if ((nmat<1)||(nmat>999)) {
-     std::cout << "nmat= " << nmat << '\n';
-     amrex::Error("nmat invalid in ns setup variable setup");
+    if ((num_materials<1)||(num_materials>999)) {
+     std::cout << "num_materials= " << num_materials << '\n';
+     amrex::Error("num_materials invalid in ns setup variable setup");
     }
 
 
@@ -806,7 +801,7 @@ NavierStokes::variableSetUp ()
 
     int nparts=im_solid_map.size();
 
-    if ((nparts>=1)&&(nparts<nmat)) {
+    if ((nparts>=1)&&(nparts<num_materials)) {
  
      desc_lst.addDescriptor(Solid_State_Type,IndexType::TheCellType(),
       1,nparts*AMREX_SPACEDIM,&pc_interp,state_holds_data);
@@ -845,7 +840,7 @@ NavierStokes::variableSetUp ()
      for (int partid=0;partid<nparts;partid++) {
 
       int im_part=im_solid_map[partid];
-      if ((im_part<0)||(im_part>=nmat))
+      if ((im_part<0)||(im_part>=num_materials))
        amrex::Error("im_part invalid");
 
       std::stringstream im_string_stream(std::stringstream::in |
@@ -914,7 +909,7 @@ NavierStokes::variableSetUp ()
      amrex::Error("NUM_CELL_ELASTIC invalid");
 
     if ((num_materials_viscoelastic>=1)&&
-        (num_materials_viscoelastic<=nmat)) {
+        (num_materials_viscoelastic<=num_materials)) {
 
      desc_lst.addDescriptor(Tensor_Type,IndexType::TheCellType(),
       1,NUM_CELL_ELASTIC,
@@ -937,7 +932,7 @@ NavierStokes::variableSetUp ()
      for (int partid=0;partid<num_materials_viscoelastic;partid++) {
 
       int im_part=im_elastic_map[partid];
-      if ((im_part<0)||(im_part>=nmat))
+      if ((im_part<0)||(im_part>=num_materials))
        amrex::Error("im_part invalid");
 
       std::stringstream im_string_stream(std::stringstream::in |
@@ -1097,22 +1092,22 @@ NavierStokes::variableSetUp ()
 
 // LEVELSET ------------------------------------------------- 
 
-    int ncomp_ls=(AMREX_SPACEDIM+1)*nmat;
+    int ncomp_ls=(AMREX_SPACEDIM+1)*num_materials;
 
     desc_lst.addDescriptor(LS_Type,IndexType::TheCellType(),
      1,ncomp_ls,&pc_interp,state_holds_data);
 
-     // components 0..nmat * AMREX_SPACEDIM-1 are for interface normal vectors.
-     // components nmat * AMREX_SPACEDIM .. nmat * AMREX_SPACEDIM + 
-     //   nmat * (AMREX_SPACEDIM+1) are the same (except for the string name)
+     // components 0..num_materials * AMREX_SPACEDIM-1 are for interface normal vectors.
+     // components num_materials * AMREX_SPACEDIM .. num_materials * AMREX_SPACEDIM + 
+     //   num_materials * (AMREX_SPACEDIM+1) are the same (except for the string name)
      //   as for dest_lst.
-    int ncomp_LS_ghost=(2*AMREX_SPACEDIM+1)*nmat;
+    int ncomp_LS_ghost=(2*AMREX_SPACEDIM+1)*num_materials;
 
     desc_lstGHOST.addDescriptor(LS_Type,IndexType::TheCellType(),
      1,ncomp_LS_ghost,&pc_interp,null_state_holds_data);
 
     int dcomp=0;
-    for (int imls=0;imls<nmat;imls++) { 
+    for (int imls=0;imls<num_materials;imls++) { 
 
      std::stringstream im_string_stream(std::stringstream::in |
       std::stringstream::out);
@@ -1148,9 +1143,9 @@ NavierStokes::variableSetUp ()
       dcomp++;
      } // dir=0..AMREX_SPACEDIM-1
 
-    } // imls=0..nmat-1
+    } // imls=0..num_materials-1
 
-    if (dcomp!=AMREX_SPACEDIM*nmat)
+    if (dcomp!=AMREX_SPACEDIM*num_materials)
      amrex::Error("dcomp invalid");
 
     Vector<std::string> LS_names;
@@ -1160,7 +1155,7 @@ NavierStokes::variableSetUp ()
 
     dcomp=0;
   
-    for (int imls=0;imls<nmat;imls++) {
+    for (int imls=0;imls<num_materials;imls++) {
 
      std::stringstream im_string_stream(std::stringstream::in |
       std::stringstream::out);
@@ -1176,42 +1171,42 @@ NavierStokes::variableSetUp ()
 
       std::string nrm_extrap_str=" ";
       if (dir==0) {
-       set_x_vel_extrap_bc(LS_bcs[nmat+dcomp],phys_bc);
+       set_x_vel_extrap_bc(LS_bcs[num_materials+dcomp],phys_bc);
        nrm_extrap_str="x_norm"; 
        nrm_extrap_str+=im_string;
       } else if (dir==1) {
-       set_y_vel_extrap_bc(LS_bcs[nmat+dcomp],phys_bc);
+       set_y_vel_extrap_bc(LS_bcs[num_materials+dcomp],phys_bc);
        nrm_extrap_str="y_norm"; 
        nrm_extrap_str+=im_string;
       } else if ((dir==2)&&(AMREX_SPACEDIM==3)) {
-       set_z_vel_extrap_bc(LS_bcs[nmat+dcomp],phys_bc);
+       set_z_vel_extrap_bc(LS_bcs[num_materials+dcomp],phys_bc);
        nrm_extrap_str="z_norm"; 
        nrm_extrap_str+=im_string;
       } else 
        amrex::Error("dir invalid ns_setup");
 
-      LS_names[nmat+dcomp]=nrm_extrap_str;
+      LS_names[num_materials+dcomp]=nrm_extrap_str;
 
       dcomp++;
 
      } // dir=0..AMREX_SPACEDIM-1
 
-    }  // imls=0...nmat-1
+    }  // imls=0...num_materials-1
 
-    if (dcomp!=AMREX_SPACEDIM*nmat)
+    if (dcomp!=AMREX_SPACEDIM*num_materials)
      amrex::Error("dcomp invalid");
-    if (dcomp+nmat!=ncomp_ls)
+    if (dcomp+num_materials!=ncomp_ls)
      amrex::Error("dcomp invalid");
 
-     // GROUP_LS_FILL: grouplsBC for components 1..nmat
-     //                extrapBC for components nmat+1..nmat * (sdim+1)
+     // GROUP_LS_FILL: grouplsBC for components 1..num_materials
+     //                extrapBC for components num_materials+1..num_materials * (sdim+1)
     StateDescriptor::BndryFunc LS_fill_class(fort_ls_fill,
        fort_group_ls_fill);
 
-    ls_interp.LSInterp_nmat=nmat;
+    ls_interp.LSInterp_nmat=num_materials;
 
     desc_lstGHOST.setComponent(LS_Type,
-      AMREX_SPACEDIM*nmat,LS_names,
+      AMREX_SPACEDIM*num_materials,LS_names,
       LS_bcs,LS_fill_class,&ls_interp);
 
     Vector<std::string> LS_main_names;
@@ -1221,7 +1216,7 @@ NavierStokes::variableSetUp ()
 
     dcomp=0;
 
-    for (int imls=0;imls<nmat;imls++) {
+    for (int imls=0;imls<num_materials;imls++) {
 
      std::stringstream im_string_stream(std::stringstream::in |
       std::stringstream::out);
@@ -1237,38 +1232,38 @@ NavierStokes::variableSetUp ()
 
       std::string nrm_extrap_str=" ";
       if (dir==0) {
-       set_x_vel_extrap_bc(LS_main_bcs[nmat+dcomp],phys_bc);
+       set_x_vel_extrap_bc(LS_main_bcs[num_materials+dcomp],phys_bc);
        nrm_extrap_str="x_norm_main"; 
        nrm_extrap_str+=im_string;
       } else if (dir==1) {
-       set_y_vel_extrap_bc(LS_main_bcs[nmat+dcomp],phys_bc);
+       set_y_vel_extrap_bc(LS_main_bcs[num_materials+dcomp],phys_bc);
        nrm_extrap_str="y_norm_main"; 
        nrm_extrap_str+=im_string;
       } else if ((dir==2)&&(AMREX_SPACEDIM==3)) {
-       set_z_vel_extrap_bc(LS_main_bcs[nmat+dcomp],phys_bc);
+       set_z_vel_extrap_bc(LS_main_bcs[num_materials+dcomp],phys_bc);
        nrm_extrap_str="z_norm_main"; 
        nrm_extrap_str+=im_string;
       } else 
        amrex::Error("dir invalid ns_setup");
 
-      LS_main_names[nmat+dcomp]=nrm_extrap_str;
+      LS_main_names[num_materials+dcomp]=nrm_extrap_str;
 
       dcomp++;
      } // dir=0..sdim-1
 
-    }  // imls=0...nmat-1
+    }  // imls=0...num_materials-1
 
-    if (dcomp!=AMREX_SPACEDIM*nmat)
+    if (dcomp!=AMREX_SPACEDIM*num_materials)
      amrex::Error("dcomp invalid");
-    if (dcomp+nmat!=ncomp_ls)
+    if (dcomp+num_materials!=ncomp_ls)
      amrex::Error("dcomp invalid");
 
-     // GROUP_LS_FILL: grouplsBC for components 1..nmat
-     //                extrapBC for components nmat+1..nmat * (sdim+1)
+     // GROUP_LS_FILL: grouplsBC for components 1..num_materials
+     //                extrapBC for components num_materials+1..num_materials * (sdim+1)
     StateDescriptor::BndryFunc LS_main_fill_class(fort_ls_fill,
        fort_group_ls_fill);
 
-    ls_interp.LSInterp_nmat=nmat;
+    ls_interp.LSInterp_nmat=num_materials;
 
     desc_lst.setComponent(LS_Type,0,LS_main_names,
       LS_main_bcs,LS_main_fill_class,&ls_interp);
@@ -1314,11 +1309,11 @@ NavierStokes::variableSetUp ()
     // 2. reconstruct interior cells only.
     // 3. do extended filpatch; MOF used for coarse/fine and ext_dir cells.
     Vector<std::string> EXTMOF_names;
-    EXTMOF_names.resize(nmat*ngeom_recon);
+    EXTMOF_names.resize(num_materials*ngeom_recon);
     Vector<BCRec> EXTMOF_bcs;
-    EXTMOF_bcs.resize(nmat*ngeom_recon);
+    EXTMOF_bcs.resize(num_materials*ngeom_recon);
 
-    for (int im=0;im<nmat;im++) {
+    for (int im=0;im<num_materials;im++) {
 
      int ibase_extmof=im*ngeom_recon;
 
@@ -1388,12 +1383,12 @@ NavierStokes::variableSetUp ()
      if (ibase_extmof!=(im+1)*ngeom_recon-1)
       amrex::Error("ibase_extmof invalid");
 
-    }  // im=0..nmat-1  (vfrac, cen, order, slope,int)
+    }  // im=0..num_materials-1  (vfrac, cen, order, slope,int)
 
     StateDescriptor::BndryFunc EXTMOF_fill_class(fort_extmoffill,
        fort_group_extmoffill);
 
-    multi_extmof_interp.multiMOFInterp_nmat=nmat;
+    multi_extmof_interp.multiMOFInterp_nmat=num_materials;
     multi_extmof_interp.multiMOFInterp_ngeom_raw=ngeom_raw;
     multi_extmof_interp.multiMOFInterp_ngeom_recon=ngeom_recon;
 
@@ -1411,7 +1406,7 @@ NavierStokes::variableSetUp ()
     Vector<BCRec> BURNVEL_bcs;
     BURNVEL_bcs.resize(EXTRAP_NCOMP_BURNING);
 
-    for (int im=0;im<nten;im++) {
+    for (int im=0;im<num_interfaces;im++) {
 
      std::stringstream im_string_stream(std::stringstream::in |
         std::stringstream::out);
@@ -1424,11 +1419,11 @@ NavierStokes::variableSetUp ()
      BURNVEL_names[im]=status_str;
      set_extrap_bc(BURNVEL_bcs[im],phys_bc);
 
-    }  // im=0..nten-1  (status for burning velocity)
+    }  // im=0..num_interfaces-1  (status for burning velocity)
 
-    for (int im=0;im<nten;im++) {
+    for (int im=0;im<num_interfaces;im++) {
 
-     int ibase_burnvel=nten+im*EXTRAP_PER_BURNING;
+     int ibase_burnvel=num_interfaces+im*EXTRAP_PER_BURNING;
 
      std::stringstream im_string_stream(std::stringstream::in |
         std::stringstream::out);
@@ -1455,16 +1450,16 @@ NavierStokes::variableSetUp ()
      set_z_vel_extrap_bc(BURNVEL_bcs[ibase_burnvel],phys_bc);
 #endif    
 
-     if (ibase_burnvel!=nten+(im+1)*EXTRAP_PER_BURNING-1)
+     if (ibase_burnvel!=num_interfaces+(im+1)*EXTRAP_PER_BURNING-1)
       amrex::Error("ibase_burnvel invalid");
 
-    }  // im=0..nten-1  (burning velocity)
+    }  // im=0..num_interfaces-1  (burning velocity)
 
     StateDescriptor::BndryFunc BURNVEL_fill_class(fort_extrapfill,
        fort_group_extrapfill);
 
-    burnvel_interp.burnvel_nmat=nmat;
-    burnvel_interp.burnvel_nten=nten;
+    burnvel_interp.burnvel_nmat=num_materials;
+    burnvel_interp.burnvel_nten=num_interfaces;
     burnvel_interp.burnvel_ncomp_per=EXTRAP_PER_BURNING;
     burnvel_interp.burnvel_ncomp=EXTRAP_NCOMP_BURNING;
 
@@ -1476,7 +1471,7 @@ NavierStokes::variableSetUp ()
     Vector<BCRec> TSAT_bcs;
     TSAT_bcs.resize(EXTRAP_NCOMP_TSAT);
 
-    for (int im=0;im<nten;im++) {
+    for (int im=0;im<num_interfaces;im++) {
 
      std::stringstream im_string_stream(std::stringstream::in |
         std::stringstream::out);
@@ -1489,11 +1484,11 @@ NavierStokes::variableSetUp ()
      TSAT_names[im]=status_str;
      set_extrap_bc(TSAT_bcs[im],phys_bc);
 
-    }  // im=0..nten-1  (status for TSAT)
+    }  // im=0..num_interfaces-1  (status for TSAT)
 
-    for (int im=0;im<nten;im++) {
+    for (int im=0;im<num_interfaces;im++) {
 
-     int ibase_tsat=nten+im*EXTRAP_PER_TSAT;
+     int ibase_tsat=num_interfaces+im*EXTRAP_PER_TSAT;
 
      std::stringstream im_string_stream(std::stringstream::in |
         std::stringstream::out);
@@ -1513,16 +1508,16 @@ NavierStokes::variableSetUp ()
      TSAT_names[ibase_tsat]=massfrac_str;
      set_extrap_bc(TSAT_bcs[ibase_tsat],phys_bc);
 
-     if (ibase_tsat!=nten+(im+1)*EXTRAP_PER_TSAT-1)
+     if (ibase_tsat!=num_interfaces+(im+1)*EXTRAP_PER_TSAT-1)
       amrex::Error("ibase_tsat invalid");
 
-    }  // im=0..nten-1  (TSAT)
+    }  // im=0..num_interfaces-1  (TSAT)
 
     StateDescriptor::BndryFunc TSAT_fill_class(fort_extrapfill,
        fort_group_extrapfill);
 
-    tsat_interp.burnvel_nmat=nmat;
-    tsat_interp.burnvel_nten=nten;
+    tsat_interp.burnvel_nmat=num_materials;
+    tsat_interp.burnvel_nten=num_interfaces;
     //interface temperature and mass fraction
     tsat_interp.burnvel_ncomp_per=EXTRAP_PER_TSAT; 
     tsat_interp.burnvel_ncomp=EXTRAP_NCOMP_TSAT; 
@@ -1617,8 +1612,8 @@ NavierStokes::variableSetUp ()
     StateDescriptor::BndryFunc DRAG_fill_class(fort_extrapfill,
        fort_group_extrapfill);
 
-    drag_interp.burnvel_nmat=nmat;
-    drag_interp.burnvel_nten=nten;
+    drag_interp.burnvel_nmat=num_materials;
+    drag_interp.burnvel_nten=num_interfaces;
     drag_interp.burnvel_ncomp_per=0;
     drag_interp.burnvel_ncomp=N_DRAG;
 
@@ -1681,12 +1676,12 @@ NavierStokes::variableSetUp ()
       pres_str,bc,fort_pressurefill,&sem_interp_DEFAULT);
 
     Vector<std::string> MOFstate_names;
-    MOFstate_names.resize(num_state_material*nmat);
+    MOFstate_names.resize(num_state_material*num_materials);
 
     Vector<BCRec> MOFstate_bcs;
-    MOFstate_bcs.resize(num_state_material*nmat);
+    MOFstate_bcs.resize(num_state_material*num_materials);
 
-    for (int im=0;im<nmat;im++) {
+    for (int im=0;im<num_materials;im++) {
 
      int ibase_transport=im*num_state_material;
 
@@ -1764,11 +1759,11 @@ NavierStokes::variableSetUp ()
     override_enable_spectral(enable_spectral);
 
     Vector<std::string> MOF_names;
-    MOF_names.resize(nmat*ngeom_raw);
+    MOF_names.resize(num_materials*ngeom_raw);
     Vector<BCRec> MOF_bcs;
-    MOF_bcs.resize(nmat*ngeom_raw);
+    MOF_bcs.resize(num_materials*ngeom_raw);
 
-    for (int im=0;im<nmat;im++) {
+    for (int im=0;im<num_materials;im++) {
 
      int ibase_mof=im*ngeom_raw;
 
@@ -1820,7 +1815,7 @@ NavierStokes::variableSetUp ()
     StateDescriptor::BndryFunc MOF_fill_class(fort_moffill,
        fort_group_moffill);
 
-    multi_mof_interp.multiMOFInterp_nmat=nmat;
+    multi_mof_interp.multiMOFInterp_nmat=num_materials;
     multi_mof_interp.multiMOFInterp_ngeom_raw=ngeom_raw;
     multi_mof_interp.multiMOFInterp_ngeom_recon=ngeom_recon;
 
@@ -1845,9 +1840,6 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
  SDC_outer_sweeps=0;
  SDC_setup_step();
-
- int nmat=num_materials;
- int nten=num_interfaces;
 
  if ((adv_dir<1)||(adv_dir>2*AMREX_SPACEDIM+1))
   amrex::Error("adv_dir invalid");
@@ -1957,8 +1949,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
  Vector<Real> F_MAT;
  Vector<Real> MASS_MAT;
- F_MAT.resize(nmat);
- MASS_MAT.resize(nmat);
+ F_MAT.resize(num_materials);
+ MASS_MAT.resize(num_materials);
 
  std::fflush(NULL);
   // call FLUSH(6)
@@ -2092,7 +2084,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
   if (output_drop_distribution==1) {
 
-   for (int im=0;im<nmat;im++) {
+   for (int im=0;im<num_materials;im++) {
     std::cout << "-----------------------------------------------\n";
     Vector<int> sorted_blob_list;
     int material_blob_count=0;
@@ -2134,9 +2126,9 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
         gvol_modify=2.0*gvol_modify;
       }
 
-       // 1..nmat
+       // 1..num_materials
       int imbase=blobdata[iblob].im;
-      if ((imbase<1)||(imbase>nmat))
+      if ((imbase<1)||(imbase>num_materials))
        amrex::Error("imbase invalid");
 
       // r=(3V/(4pi))^(1/3)
@@ -2153,16 +2145,16 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
        // surface area in 3D
        // perimeter in 2D
-      for (int imnbr=0;imnbr<nmat;imnbr++) {
+      for (int imnbr=0;imnbr<num_materials;imnbr++) {
        std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 <<
        " im= " << imbase << " imnbr= " << imnbr+1 << 
        " perimnbr= " << 
        blobdata[iblob].blob_perim_mat[imnbr] << '\n';
-      } // imnbr=0..nmat-1
+      } // imnbr=0..num_materials-1
 
        // perimeter in 3D
        // "pointwise count" in 2D.
-      for (int im1=0;im1<nmat;im1++) {
+      for (int im1=0;im1<num_materials;im1++) {
        for (int im2=0;im2<im1;im2++) {
         if ((im1+1!=imbase)&&(im2+1!=imbase)) {
          Real triple_perim=blobdata[iblob].blob_triple_perim[im1][im2];
@@ -2272,7 +2264,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
      }  // isort1=0..material_blob_count-1
      std::cout << "-----------------------------------------------\n";
     } // material_blob_count>0
-   } // im=0..nmat-1
+   } // im=0..num_materials-1
 
   } else if (output_drop_distribution==0) {
    // do nothing
@@ -2298,11 +2290,11 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   std::cout << "TIME= "<<upper_slab_time<< 
      " vel_max_cap_wave=" << vel_max_cap_wave << '\n';
 
-  for (int iten=0;iten<nten;iten++) {
+  for (int iten=0;iten<num_interfaces;iten++) {
    std::cout << "TIME= "<<upper_slab_time<<" iten= " << iten <<
      " cap_wave_speed=" << cap_wave_speed[iten] << '\n';
   }
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    if (denconst[im]>0.0) {
     Real elastic_wave_speed=elastic_viscosity[im]/denconst[im];
     elastic_wave_speed=sqrt(elastic_wave_speed);
@@ -2324,7 +2316,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   std::cout << "TIME= "<<upper_slab_time<< " sound_max=" << USOUND << '\n';
   std::cout << "TIME= "<<upper_slab_time<< " max|U|/max|C|=" << UMACH << '\n';
 
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    F_MAT[im]=NS_sumdata[2*im+IQ_FE_SUM_COMP];
 
    std::cout <<"TIME= "<< upper_slab_time << " MAT="<<im<<" F=" << 
@@ -2335,8 +2327,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
       NS_sumdata[2*im+IQ_FE_SUM_COMP+1] << '\n';
   }
   if (parent->AMR_volume_history_recorded==0) {
-   parent->AMR_volume_history.resize(nmat);
-   for (int im=0;im<nmat;im++) {
+   parent->AMR_volume_history.resize(num_materials);
+   for (int im=0;im<num_materials;im++) {
     parent->AMR_volume_history[im]=F_MAT[im];
    } 
    parent->AMR_volume_history_recorded=1;
@@ -2345,7 +2337,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   } else
    amrex::Error("AMR_volume_history_recorded invalid");
 
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    Real F_ratio=0.0;
    if (parent->AMR_volume_history[im]==0.0) {
     // do nothing
@@ -2380,18 +2372,18 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
    std::cout <<"TIME= "<< upper_slab_time << " MAT="<<im<<" ARATIO=" << 
              A_ratio << '\n';
-  } // im=0..nmat-1
+  } // im=0..num_materials-1
 
-  for (int im=1;im<=nmat;im++) {
-   for (int im_opp=im+1;im_opp<=nmat;im_opp++) {
+  for (int im=1;im<=num_materials;im++) {
+   for (int im_opp=im+1;im_opp<=num_materials;im_opp++) {
     for (int ireverse=0;ireverse<=1;ireverse++) {
-     if ((im>nmat)||(im_opp>nmat))
+     if ((im>num_materials)||(im_opp>num_materials))
       amrex::Error("im or im_opp bust 200cpp");
      int iten,im_source,im_dest;
      get_iten_cpp(im,im_opp,iten);
      if (iten<1)
       amrex::Error("iten invalid");
-     Real LL=latent_heat[iten+ireverse*nten-1];
+     Real LL=latent_heat[iten+ireverse*num_interfaces-1];
      if ((ns_is_rigid(im-1)==1)||
          (ns_is_rigid(im_opp-1)==1)) {
       // do nothing
@@ -2412,11 +2404,11 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
      } // LL!=0
     } // ireverse
    } // im_opp
-  } // im=1..nmat
+  } // im=1..num_materials
 
    //minden1,mintemp1
    //minden2,mintemp2,....
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" min den=" <<
       NS_sumdata[2*im+IQ_MINSTATE_SUM_COMP] << '\n';
    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" min temp=" <<
@@ -2432,7 +2424,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 	   " mass="<<MASS_MAT[im]<< '\n';
 
    for (int ispec=0;ispec<num_species_var;ispec++) {
-    Real mass_spec=NS_sumdata[im+IQ_SPECIES_MASS_SUM_COMP+ispec*nmat];
+    Real mass_spec=NS_sumdata[im+IQ_SPECIES_MASS_SUM_COMP+ispec*num_materials];
     std::cout<<"TIME= "<<upper_slab_time<<" MAT="<<im<<
      " ispec="<<ispec<< " species mass="<<mass_spec<< '\n';
    }
@@ -2444,7 +2436,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<" energy=" <<
       NS_sumdata[im+IQ_ENERGY_SUM_COMP] << '\n';
   }
-  for (int im=0;im<nmat;im++) { 
+  for (int im=0;im<num_materials;im++) { 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     std::cout << "TIME= " << upper_slab_time << 
      " MAT="<<im<<" cendir=" << dir << 
@@ -2463,15 +2455,15 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    std::cout << "TIME= " << upper_slab_time << " MAT="<<im<<
      " KINETIC ENERGY=" <<
      NS_sumdata[IQ_KINETIC_ENERGY_SUM_COMP+im] << '\n';
-  } // im=0..nmat-1
+  } // im=0..num_materials-1
 
   for (int dir=0;dir<3;dir++) {
    std::cout << "TIME= "<<upper_slab_time<<" DIR= " << dir << " VORT SUM " << 
      NS_sumdata[IQ_VORT_SUM_COMP+dir] << '\n';
   }
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    std::cout << "TIME= "<<upper_slab_time<<
-    "material id (1..nmat) " << im+1 <<
+    "material id (1..num_materials) " << im+1 <<
     " ENSTROPHY " << NS_sumdata[IQ_ENSTROPHY_SUM_COMP+im] << '\n';
   }
   for (int im=0;im<ncomp_sum_int_user1;im++) {
@@ -2505,7 +2497,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
     r_moment << '\n';
 
   local_counter=0;
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im << 
      " DIR= " << dir << " DRAG " << 
@@ -2515,7 +2507,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   }
 
   local_counter=0;
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im << 
      " DIR= " << dir << " BODY DRAG " << 
@@ -2524,7 +2516,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    }
   }
 
-  if ((probtype==55)&&(axis_dir==5)&&(AMREX_SPACEDIM==2)&&(nmat==4)) {
+  if ((probtype==55)&&(axis_dir==5)&&(AMREX_SPACEDIM==2)&&(num_materials==4)) {
    std::cout << "TIME= "<<upper_slab_time<<" F1+F3= " << 
      F_MAT[0]+F_MAT[2] << '\n';
    std::cout << "TIME= "<<upper_slab_time<<" M1+M3= " << 
@@ -2532,7 +2524,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   }
 
    // melting of block of ice.
-  if ((probtype==59)&&(AMREX_SPACEDIM==2)&&(nmat==4)) {
+  if ((probtype==59)&&(AMREX_SPACEDIM==2)&&(num_materials==4)) {
    std::cout << "TIME= "<<upper_slab_time<<" F1+F3= " << 
      F_MAT[0]+F_MAT[2] << '\n';
    std::cout << "TIME= "<<upper_slab_time<<" M1+M3= " << 
@@ -2545,7 +2537,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    std::cout << "comp thick of gear is " << thick << '\n';
 
    local_counter=0;
-   for (int im=0;im<nmat;im++) {
+   for (int im=0;im<num_materials;im++) {
     for (int dir=0;dir<3;dir++) {
      Real power=NS_sumdata[IQ_DRAG_SUM_COMP+local_counter]*(3.0/thick)/1.0E7;
      std::cout << "TIME= "<<upper_slab_time<<" im= " << im << 
@@ -2576,7 +2568,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    Real dcoef=denconst[0]*UU*UU*radblob;
 
    local_counter=0;
-   for (int im=0;im<nmat;im++) {
+   for (int im=0;im<num_materials;im++) {
     for (int dir=0;dir<3;dir++) {
      Real dragcoeff=NS_sumdata[IQ_DRAG_SUM_COMP+local_counter];
      Real pdragcoeff=NS_sumdata[IQ_PDRAG_SUM_COMP+local_counter];  
@@ -2606,7 +2598,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    }
   } //probtype==32
 
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " PDRAG " << 
@@ -2616,7 +2608,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   }
 
   local_counter=0;
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " VISCOUSDRAG " << 
@@ -2626,7 +2618,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   }
 
   local_counter=0;
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " VISCOUS0DRAG " << 
@@ -2636,7 +2628,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   }
 
   local_counter=0;
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " VISCOELASTICDRAG " << 
@@ -2646,7 +2638,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   }
 
   local_counter=0;
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " BODYTORQUE " <<
@@ -2656,7 +2648,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   }
 
   local_counter=0;
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " TORQUE " <<
@@ -2667,7 +2659,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
 
   local_counter=0;
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " PTORQUE " <<
@@ -2677,7 +2669,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   }
 
   local_counter=0;
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " VISCOUSTORQUE " <<
@@ -2687,7 +2679,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   }
 
   local_counter=0;
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " VISCOUS0TORQUE " <<
@@ -2697,7 +2689,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   }
 
   local_counter=0;
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<3;dir++) {
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " DIR= " << dir << " VISCOELASTICTORQUE " <<
@@ -2706,13 +2698,13 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    }
   }
 
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
     " STEP_PERIM " <<
     NS_sumdata[IQ_STEP_PERIM_SUM_COMP+im] << '\n';
   }
 
-  for (int im=0;im<nmat;im++) {
+  for (int im=0;im<num_materials;im++) {
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
     std::cout << "TIME=" << upper_slab_time << " MAT="<<im<<

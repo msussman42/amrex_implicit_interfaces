@@ -19,7 +19,7 @@ extern "C" {
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      const int* tilelo,const int* tilehi,
      const int* fablo,const int* fabhi,int* bfact,
-     const int* level,const int* gridno,int* nmat);
+     const int* level,const int* gridno);
 
     void fort_combinetriangles(
      int* grids_per_level,int* finest_level,

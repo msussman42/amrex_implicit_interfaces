@@ -26,13 +26,12 @@ extern "C" {
        const int* fablo, const int* fabhi,
        int* bfact,
        int* level,
-       int* bcrec,int* ngrow,
-       int* nmat);
+       int* bcrec,int* ngrow);
 
      void fort_dermagtrace(
        int* level,
        int* finest_level,
-       int* im,  // im=0..nmat-1
+       int* im,  // im=0..num_materials-1
        Real* cellten,AMREX_ARLIM_P(celltenlo),AMREX_ARLIM_P(celltenhi),
        Real* dest,AMREX_ARLIM_P(destlo),AMREX_ARLIM_P(desthi),
        Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
@@ -48,7 +47,6 @@ extern "C" {
        int* ncomp_den,
        int* ncomp_visc,
        int* n_trace,
-       int* nmat,
        Real* polymer_factor,
        Real* etaS,
        Real* etaP,
@@ -96,7 +94,6 @@ extern "C" {
       int* rzflag,int* bcrec,
       Real* time,
       Real* visc_coef,
-      int* nmat,
       int* nparts,
       int* nparts_def,
       int* im_solid_map);
@@ -115,7 +112,7 @@ extern "C" {
       int* bfact, 
       int* velbc,
       Real* time,
-      int* num_integrate,int* nmat,int* ncomp_state,
+      int* num_integrate,int* ncomp_state,
       int* level,int* finest_level);
 
 
@@ -129,7 +126,7 @@ extern "C" {
       int* bfact, 
       int* velbc,
       Real* time,
-      int* nmat,int* ncomp_state,
+      int* ncomp_state,
       int* level,int* finest_level);
 
 
@@ -152,7 +149,6 @@ extern "C" {
       int* finest_level,
       Real* visc_coef,
       int* fortran_im,
-      int* nmat,
       Real* dt,
       Real* viscosity_coefficient,
       int* shear_thinning_flag,
@@ -189,7 +185,6 @@ extern "C" {
       int* level,
       int* finest_level,
       int* fortran_im,
-      int* nmat,
       Real* dt,
       Real* dat,AMREX_ARLIM_P(datlo),AMREX_ARLIM_P(dathi),
       Real* eosdata,AMREX_ARLIM_P(eosdatalo),AMREX_ARLIM_P(eosdatahi),
@@ -205,7 +200,6 @@ extern "C" {
       int* les_model,
       int* level,
       int* fortran_im,
-      int* nmat,
       Real* dt,
       Real* denstate,AMREX_ARLIM_P(denstatelo),AMREX_ARLIM_P(denstatehi),
       Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),

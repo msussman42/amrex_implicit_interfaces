@@ -35,7 +35,7 @@ stop
 
       IMPLICIT NONE
       
-      INTEGER_T, intent(in) :: cc_finest_level
+      INTEGER_T, INTENT(in) :: cc_finest_level
 
       if ((cc_finest_level.lt.0).or.(cc_finest_level.gt.1000)) then
        print *,"cc_finest_level invalid"
@@ -60,11 +60,11 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: slab_dt_type
-      INTEGER_T, intent(in) :: cc_time_order
+      INTEGER_T, INTENT(in) :: slab_dt_type
+      INTEGER_T, INTENT(in) :: cc_time_order
       INTEGER_T i1
-      REAL_T, intent(out) :: time_array(0:cc_time_order)
-      REAL_T, intent(in) :: slablow,slabhigh
+      REAL_T, INTENT(out) :: time_array(0:cc_time_order)
+      REAL_T, INTENT(in) :: slablow,slabhigh
       REAL_T yGL(0:cc_time_order)
       REAL_T slab_dt
 
@@ -132,21 +132,21 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: levelc,levelf
-      INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: ngeom_recon_test,ngeom_raw_test
-      INTEGER_T, intent(in) :: DIMDEC(dmof)
-      INTEGER_T, intent(in) :: DIMDEC(drecon)
-      INTEGER_T, intent(in) :: DIMDEC(fdmof)
-      INTEGER_T, intent(in) :: clo(SDIM),chi(SDIM)
-      INTEGER_T, intent(in) :: flo(SDIM),fhi(SDIM)
+      INTEGER_T, INTENT(in) :: levelc,levelf
+      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: ngeom_recon_test,ngeom_raw_test
+      INTEGER_T, INTENT(in) :: DIMDEC(dmof)
+      INTEGER_T, INTENT(in) :: DIMDEC(drecon)
+      INTEGER_T, INTENT(in) :: DIMDEC(fdmof)
+      INTEGER_T, INTENT(in) :: clo(SDIM),chi(SDIM)
+      INTEGER_T, INTENT(in) :: flo(SDIM),fhi(SDIM)
       INTEGER_T domlo(SDIM)
-      REAL_T, intent(in) :: datamof(DIMV(dmof),num_materials*ngeom_raw)
-      REAL_T, intent(out) :: datarecon(DIMV(drecon),num_materials*ngeom_recon)
-      REAL_T, intent(out) :: fdatamof(DIMV(fdmof),num_materials*ngeom_raw)
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM),dxc(SDIM)
+      REAL_T, INTENT(in) :: datamof(DIMV(dmof),num_materials*ngeom_raw)
+      REAL_T, INTENT(out) :: datarecon(DIMV(drecon),num_materials*ngeom_recon)
+      REAL_T, INTENT(out) :: fdatamof(DIMV(fdmof),num_materials*ngeom_raw)
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM),dxc(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
       REAL_T wt(SDIM)
@@ -490,18 +490,18 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: levelc,levelf
-      INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: DIMDEC(clsdata)
-      INTEGER_T, intent(in) :: DIMDEC(flsdata)
-      INTEGER_T, intent(in) :: clo(SDIM),chi(SDIM)
-      INTEGER_T, intent(in) :: flo(SDIM),fhi(SDIM)
+      INTEGER_T, INTENT(in) :: levelc,levelf
+      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
+      INTEGER_T, INTENT(in) :: ncomp
+      INTEGER_T, INTENT(in) :: DIMDEC(clsdata)
+      INTEGER_T, INTENT(in) :: DIMDEC(flsdata)
+      INTEGER_T, INTENT(in) :: clo(SDIM),chi(SDIM)
+      INTEGER_T, INTENT(in) :: flo(SDIM),fhi(SDIM)
       INTEGER_T domlo(SDIM)
-      REAL_T, intent(in) :: clsdata(DIMV(clsdata),ncomp)
-      REAL_T, intent(out) :: flsdata(DIMV(flsdata),ncomp)
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM),dxc(SDIM)
+      REAL_T, INTENT(in) :: clsdata(DIMV(clsdata),ncomp)
+      REAL_T, INTENT(out) :: flsdata(DIMV(flsdata),ncomp)
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM),dxc(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
       REAL_T wt(SDIM)
@@ -741,17 +741,17 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: levelc,levelf
-      INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: ngeom_recon_test,ngeom_raw_test
-      INTEGER_T, intent(in) :: DIMDEC(dmof)
-      INTEGER_T, intent(in) :: DIMDEC(fdmof)
-      INTEGER_T, intent(in) :: flo(SDIM),fhi(SDIM)
+      INTEGER_T, INTENT(in) :: levelc,levelf
+      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: ngeom_recon_test,ngeom_raw_test
+      INTEGER_T, INTENT(in) :: DIMDEC(dmof)
+      INTEGER_T, INTENT(in) :: DIMDEC(fdmof)
+      INTEGER_T, INTENT(in) :: flo(SDIM),fhi(SDIM)
       INTEGER_T domlo(SDIM)
-      REAL_T, intent(in) :: datamof(DIMV(dmof),num_materials*ngeom_recon)
-      REAL_T, intent(out) :: fdatamof(DIMV(fdmof),num_materials*ngeom_recon)
-      REAL_T, intent(in) :: problo(SDIM),dxf(SDIM),dxc(SDIM)
+      REAL_T, INTENT(in) :: datamof(DIMV(dmof),num_materials*ngeom_recon)
+      REAL_T, INTENT(out) :: fdatamof(DIMV(fdmof),num_materials*ngeom_recon)
+      REAL_T, INTENT(in) :: problo(SDIM),dxf(SDIM),dxc(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
       REAL_T wt(SDIM)
@@ -1093,19 +1093,19 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: velflag
-      INTEGER_T, intent(in) :: levelc,levelf
-      INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
-      REAL_T, intent(in) :: time
-      INTEGER_T, intent(in) :: nburning
-      INTEGER_T, intent(in) :: DIMDEC(cburn)
-      INTEGER_T, intent(in) :: DIMDEC(fburn)
-      INTEGER_T, intent(in) :: flo(SDIM),fhi(SDIM)
+      INTEGER_T, INTENT(in) :: velflag
+      INTEGER_T, INTENT(in) :: levelc,levelf
+      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
+      REAL_T, INTENT(in) :: time
+      INTEGER_T, INTENT(in) :: nburning
+      INTEGER_T, INTENT(in) :: DIMDEC(cburn)
+      INTEGER_T, INTENT(in) :: DIMDEC(fburn)
+      INTEGER_T, INTENT(in) :: flo(SDIM),fhi(SDIM)
       INTEGER_T domlo(SDIM)
-      REAL_T, intent(in) :: cburn(DIMV(cburn),nburning)
-      REAL_T, intent(out) :: fburn(DIMV(fburn),nburning)
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM),dxc(SDIM)
+      REAL_T, INTENT(in) :: cburn(DIMV(cburn),nburning)
+      REAL_T, INTENT(out) :: fburn(DIMV(fburn),nburning)
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM),dxc(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
       REAL_T wt(SDIM)
@@ -1568,23 +1568,23 @@ stop
 
       implicit none
 
-      INTEGER_T, intent(in) :: grid_type  ! -1..5
-      INTEGER_T, intent(in) :: levelc,levelf
-      INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
-      INTEGER_T, intent(in) :: zapflag
-      INTEGER_T, intent(in) :: crse_bx_lo(SDIM)
-      INTEGER_T, intent(in) :: crse_bx_hi(SDIM)
+      INTEGER_T, INTENT(in) :: grid_type  ! -1..5
+      INTEGER_T, INTENT(in) :: levelc,levelf
+      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
+      INTEGER_T, INTENT(in) :: zapflag
+      INTEGER_T, INTENT(in) :: crse_bx_lo(SDIM)
+      INTEGER_T, INTENT(in) :: crse_bx_hi(SDIM)
       INTEGER_T clo(SDIM),chi(SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(crse_data)
-      INTEGER_T, intent(in) :: DIMDEC(fine_data)
-      INTEGER_T, intent(in) :: fblo(SDIM), fbhi(SDIM)
+      INTEGER_T, INTENT(in) :: DIMDEC(crse_data)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine_data)
+      INTEGER_T, INTENT(in) :: fblo(SDIM), fbhi(SDIM)
       INTEGER_T flo(SDIM),fhi(SDIM)
-      INTEGER_T, intent(in) :: nvar
-      REAL_T, intent(in) :: crse_data(DIMV(crse_data),nvar)
-      REAL_T, intent(out) :: fine_data(DIMV(fine_data),nvar)
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: dxc(SDIM)
+      INTEGER_T, INTENT(in) :: nvar
+      REAL_T, INTENT(in) :: crse_data(DIMV(crse_data),nvar)
+      REAL_T, INTENT(out) :: fine_data(DIMV(fine_data),nvar)
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM)
+      REAL_T, INTENT(in) :: dxc(SDIM)
       INTEGER_T stenlo(3),stenhi(3)
       INTEGER_T stenlen(3)
       INTEGER_T growlo(3),growhi(3)
@@ -1809,17 +1809,17 @@ stop
 
       implicit none
 
-      INTEGER_T, intent(in) :: enable_spectral
-      INTEGER_T, intent(in) :: levelc,levelf
-      INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
-      INTEGER_T, intent(in) :: DIMDEC(crse)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: fblo(SDIM), fbhi(SDIM)
-      INTEGER_T, intent(in) :: nvar
-      REAL_T, intent(in) :: dxc(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: crse(DIMV(crse), nvar)
-      REAL_T, intent(out) :: fine(DIMV(fine), nvar)
+      INTEGER_T, INTENT(in) :: enable_spectral
+      INTEGER_T, INTENT(in) :: levelc,levelf
+      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
+      INTEGER_T, INTENT(in) :: DIMDEC(crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: fblo(SDIM), fbhi(SDIM)
+      INTEGER_T, INTENT(in) :: nvar
+      REAL_T, INTENT(in) :: dxc(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM)
+      REAL_T, INTENT(in) :: crse(DIMV(crse), nvar)
+      REAL_T, INTENT(out) :: fine(DIMV(fine), nvar)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3),stenlen(3)
 
@@ -2022,16 +2022,16 @@ stop
 
       implicit none
 
-      INTEGER_T, intent(in) :: levelc,levelf
-      INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
+      INTEGER_T, INTENT(in) :: levelc,levelf
+      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
       INTEGER_T dir
-      INTEGER_T, intent(in) :: DIMDEC(crse)
+      INTEGER_T, INTENT(in) :: DIMDEC(crse)
       INTEGER_T cdlo(SDIM), cdhi(SDIM)
-      INTEGER_T, intent(in) :: DIMDEC(fine)
-      INTEGER_T, intent(in) :: fblo(SDIM), fbhi(SDIM)
-      INTEGER_T, intent(in) :: nvar
-      REAL_T, intent(in) :: crse(DIMV(crse), nvar)
-      REAL_T, intent(out) :: fine(DIMV(fine), nvar)
+      INTEGER_T, INTENT(in) :: DIMDEC(fine)
+      INTEGER_T, INTENT(in) :: fblo(SDIM), fbhi(SDIM)
+      INTEGER_T, INTENT(in) :: nvar
+      REAL_T, INTENT(in) :: crse(DIMV(crse), nvar)
+      REAL_T, INTENT(out) :: fine(DIMV(fine), nvar)
       INTEGER_T stenlo(3),stenhi(3)
       INTEGER_T growlo(3),growhi(3)
 
@@ -2216,22 +2216,22 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: enable_spectral
-      INTEGER_T, intent(in) :: levelc,levelf
-      INTEGER_T, intent(in) :: bfact_coarse,bfact_fine
-      INTEGER_T, intent(in) :: nvar
-      INTEGER_T, intent(in) :: grid_type ! -1..5
-      INTEGER_T, intent(in) :: DIMDEC(cdata)
-      INTEGER_T, intent(in) :: DIMDEC(fdata)
-      INTEGER_T, intent(in) :: cloMAC(SDIM),chiMAC(SDIM)
+      INTEGER_T, INTENT(in) :: enable_spectral
+      INTEGER_T, INTENT(in) :: levelc,levelf
+      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
+      INTEGER_T, INTENT(in) :: nvar
+      INTEGER_T, INTENT(in) :: grid_type ! -1..5
+      INTEGER_T, INTENT(in) :: DIMDEC(cdata)
+      INTEGER_T, INTENT(in) :: DIMDEC(fdata)
+      INTEGER_T, INTENT(in) :: cloMAC(SDIM),chiMAC(SDIM)
       INTEGER_T clo(SDIM),chi(SDIM)
-      INTEGER_T, intent(in) :: floMAC(SDIM),fhiMAC(SDIM)
+      INTEGER_T, INTENT(in) :: floMAC(SDIM),fhiMAC(SDIM)
       INTEGER_T flo(SDIM),fhi(SDIM)
-      REAL_T, intent(in) :: cdata(DIMV(cdata),nvar)
-      REAL_T, intent(out) :: finedata(DIMV(fdata),nvar)
-      REAL_T, intent(in) :: problo(SDIM)
-      REAL_T, intent(in) :: dxf(SDIM)
-      REAL_T, intent(in) :: dxc(SDIM)
+      REAL_T, INTENT(in) :: cdata(DIMV(cdata),nvar)
+      REAL_T, INTENT(out) :: finedata(DIMV(fdata),nvar)
+      REAL_T, INTENT(in) :: problo(SDIM)
+      REAL_T, INTENT(in) :: dxf(SDIM)
+      REAL_T, INTENT(in) :: dxc(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
       INTEGER_T stenlen(3)

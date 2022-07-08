@@ -12,7 +12,6 @@ namespace amrex{
   extern "C" {
 
     void fort_blb_init(
-      int* num_materials_in,
       int* blb_matrix_in,
       int* blb_rhs_in,
       int* blb_vel_in,
@@ -94,7 +93,7 @@ namespace amrex{
        int* num_state_base, 
        int* ngeom_raw,
        int* ngeom_recon,
-       int* num_materials,
+       int* cpp_num_materials,
        int* material_type,
        int* cpp_num_interfaces,
        Real* DrhoDT,
@@ -175,7 +174,7 @@ namespace amrex{
        int* num_state_base, 
        int* ngeom_raw,
        int* ngeom_recon,
-       int* num_materials,
+       int* cpp_num_materials,
        int* cpp_num_interfaces,
        int* ioproc);
   }
