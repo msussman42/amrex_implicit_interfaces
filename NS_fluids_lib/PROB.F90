@@ -7429,7 +7429,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T, INTENT(in) :: nhalf
       REAL_T, INTENT(in) :: dx(SDIM) 
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T, INTENT(out) :: dist(num_materials)
+      REAL_T, INTENT(out) :: dist(:)
       REAL_T x,y,z
       INTEGER_T imaterial
       REAL_T distline
@@ -10625,7 +10625,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if (probtype.eq.701) then  ! xlo dir=1 side=1 groupmofBC rain
          if ((axis_dir.eq.0).or. &
              (axis_dir.eq.1)) then
-          call get_rain_vfrac(x,y,z,dx,vofarray,cenbc,time,dir,adv_vel)
+          call get_rain_vfrac(x,y,z,dx,vofarray,cenbc,time,dir)
           call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
          else if (axis_dir.eq.2) then
           do im=1,num_materials
@@ -10895,7 +10895,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if ((probtype.eq.701).and.(1.eq.0)) then ! yhi, groupmofBC 2D
-         call get_rain_vfrac(x,y,z,dx,vofarray,cenbc,time,dir,adv_vel)
+         call get_rain_vfrac(x,y,z,dx,vofarray,cenbc,time,dir)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         endif
 
@@ -11203,7 +11203,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! curvature sanity check (line in 2D, plane in 3D)
       else if ((probtype.eq.36).and.(axis_dir.eq.210)) then
 
-       call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+       call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
        call check_lsbc_extrap(LS,LSWALL)
 
       else if (probtype.eq.199) then  ! in grouplsBC
@@ -11235,16 +11235,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if ((probtype.eq.299).or. &
                (probtype.eq.301)) then !melting (boundary condition LS)
 
-       call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+       call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
        call check_lsbc_extrap(LS,LSWALL)
 
       else if (probtype.eq.209) then  ! River
-       call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+       call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
        call check_lsbc_extrap(LS,LSWALL)
 
        ! marangoni (heat pipe) problem
       else if ((probtype.eq.36).and.(axis_dir.eq.10)) then
-       call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+       call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
        call check_lsbc_extrap(LS,LSWALL)
       else
 
@@ -11275,7 +11275,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           ! ysl add level set function for BC 
          else if (probtype.eq.701) then ! xlo grouplsBC
           if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
-           call xloLS_rain(x,y,z,num_materials,LS,adv_vel,time,bigdist)
+           call xloLS_rain(x,y,z,LS,time,bigdist)
           else if (axis_dir.eq.2) then
            LS(1)=bigdist
            LS(2)=-bigdist
@@ -11285,39 +11285,39 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           endif
           call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.bubbleInPackedColumn).and.(1.eq.2)) then ! xlo 
-          call xloLS_pack(x,y,z,num_materials,LS,adv_vel,time,bigdist)
+          call xloLS_pack(x,y,z,LS,time,bigdist)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.110) then
-          call get_bump_dist(x,y,z,num_materials,LS,time)
+          call get_bump_dist(x,y,z,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
           ! xlo 2d - grouplsBC
          else if ((probtype.eq.801).and.(axis_dir.eq.dir-1)) then 
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.802) then ! xlo: dissolution grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  !  xlo: dir=1 side=1 grouplsBC 2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then ! xlo
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then  ! xlo, groupLSBC, 2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.41) then ! xlo, groupLSBC, 2d
-          call inletpipedist(x,y,z,num_materials,LS)
+          call inletpipedist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.532) then ! xlo
-          call get_jet_dist(x,y,z,num_materials,LS)
+          call get_jet_dist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.539) then ! xlo, sup injector - grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.202) then ! xlo, liquidlens - grouplsbc
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          endif
 
@@ -11339,25 +11339,25 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           enddo
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.41) then ! xlo 3D, grouplsbc
-          call inletpipedist(x,y,z,num_materials,LS)
+          call inletpipedist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then ! xlo
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
 
            ! airblast
          else if (probtype.eq.529) then  ! dir=1 side=1 grouplsBC
-          call get_jet_dist(x,y,z,num_materials,LS)
+          call get_jet_dist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! xlo dir=1 side=1 grouplsBC 3d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5501) then  ! xlo, grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then  ! xlo, grouplsBC, 3D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          endif
 
@@ -11378,49 +11378,49 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (SDIM.eq.2) then
 
          if (probtype.eq.110) then
-          call get_bump_dist(x,y,z,num_materials,LS,time)
+          call get_bump_dist(x,y,z,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! dir=1 side=2 (xhi) grouplsBC 2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.5700).and.(1.eq.0)) then ! xhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then  ! xhi, groupLSBC, 2D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.532) then ! xhi
-          call get_jet_dist(x,y,z,num_materials,LS)
+          call get_jet_dist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.539) then ! xhi, sup injector
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.41) then  ! xhi
-          call inletpipedist(x,y,z,num_materials,LS)
+          call inletpipedist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.202) then ! xhi, liquidlens, grouplsbc
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.25).and.(axis_dir.gt.0)) then ! xhi, bubble frm.
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          endif
 
          else if (SDIM.eq.3) then
 
          if ((probtype.eq.5700).and.(1.eq.0)) then ! xhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! xhi dir=1 side=2 3d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5501) then  ! xhi grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then  ! xhi grouplsBC, 3D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          endif
 
@@ -11439,17 +11439,17 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
           !ylo 2D bubble formation
          if ((probtype.eq.25).and.(axis_dir.gt.0)) then 
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
           ! ylo 2D grouplsBC
          else if ((probtype.eq.801).and.(axis_dir.eq.dir-1)) then
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then  ! ylo
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.41) then ! ylo
-          call inletpipedist(x,y,z,num_materials,LS)
+          call inletpipedist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.72) then
           local_LS=abs(x-xblob)-radblob
@@ -11460,47 +11460,47 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           enddo
           call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.53).or.(probtype.eq.537)) then ! ylo 2D
-          call get_jet_dist(x,y,z,num_materials,LS)
+          call get_jet_dist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
            ! 2D ylo, diesel injector, grouplsBC
          else if ((probtype.eq.538).or. &
                   (probtype.eq.539).or. &
                   (probtype.eq.541)) then
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
           ! 540 Rieber problem
          else if (probtype.eq.540) then !dir=2 side=1,2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then !ylo dir=2 side=1,2d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then ! ylo, groupLSBC, 2D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.bubbleInPackedColumn) then ! ylo grouplsBC
-          call yloLS_pack(x,y,z,num_materials,LS,adv_vel,time,bigdist)
+          call yloLS_pack(x,y,z,LS,time,bigdist)
           call check_lsbc_extrap(LS,LSWALL)
          endif
 
          else if (SDIM.eq.3) then
 
          if (probtype.eq.5700) then  ! ylo
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! ylo dir=2 side=1 3d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5501) then  ! ylo grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then  ! ylo, groupLSBC, 3D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.532) then  ! impinge from side, ylo
-          call get_jet_dist(x,y,z,num_materials,LS)
+          call get_jet_dist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
          endif
 
@@ -11525,7 +11525,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           enddo
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then ! yhi 2D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.14).or.(probtype.eq.16).or. &
                ((probtype.eq.25).and.(axis_dir.eq.0)) ) then
@@ -11542,20 +11542,20 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           call check_lsbc_extrap(LS,LSWALL)
           ! top y=ymax wall
          else if (probtype.eq.41) then
-          call inletpipedist(x,y,z,num_materials,LS)
+          call inletpipedist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.540) then  ! Rieber problem y=yhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.539) then ! yhi, sup injector
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then ! yhi, groupLSBC, 2D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.701) then ! yhi, groupLSBC, 2D
           if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
-           call yhiLS_rain(x,y,z,num_materials,LS,adv_vel,time,bigdist)
+           call yhiLS_rain(x,y,z,LS,time,bigdist)
            call check_lsbc_extrap(LS,LSWALL)
           else if (axis_dir.eq.2) then
            ! do nothing
@@ -11568,20 +11568,20 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          else if (SDIM.eq.3) then
 
          if (probtype.eq.5700) then ! yhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5501) then  ! yhi grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! yhi dir=2 side=2 3d
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then ! yhi, groupLSBC, 3D
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.532) then  ! impinge from side, yhi
-          call get_jet_dist(x,y,z,num_materials,LS)
+          call get_jet_dist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
          endif
 
@@ -11601,28 +11601,28 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if ((probtype.eq.538).or. &
              (probtype.eq.541)) then  ! zlo, diesel injector
 
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          
          else if ((probtype.eq.53).or.(probtype.eq.531).or. &  ! zlo 3D
                   (probtype.eq.530).or.(probtype.eq.536).or. &
                   (probtype.eq.537).or.(probtype.eq.532)) then
-          call get_jet_dist(x,y,z,num_materials,LS)
+          call get_jet_dist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
 
           ! 540 Rieber problem
          else if (probtype.eq.540) then  ! dir=3 side=1
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.59).or. &
                   (probtype.eq.710)) then  ! zlo dir=3 side=1 groupLSBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5501) then  ! zlo grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then  ! zlo grouplsBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then  ! microfluidics zlo
           do im=1,num_materials
@@ -11650,10 +11650,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           enddo
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.540) then  ! Rieber problem z=zhi
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then  ! zhi, groupLSBC
-          call materialdist_batch(xsten,nhalf,dx,bfact,LS,num_materials,time)
+          call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then  ! microfluidics zhi
           do im=1,num_materials
@@ -15763,7 +15763,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            velcell(veldir)=x_vel  ! xlo, velx
 
            if (probtype.eq.bubbleInPackedColumn) then ! xlo,velx
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if (SDIM.eq.2) then
   
             if ((probtype.eq.1).and.(axis_dir.eq.11)) then
@@ -15860,7 +15860,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            velcell(veldir)=y_vel  ! xlo, vely
 
            if (probtype.eq.bubbleInPackedColumn) then ! xlo,vely
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if (SDIM.eq.2) then
   
 ! xlo wall vertical pipe velocity
@@ -15903,7 +15903,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                ((yblob9.ne.zero).or.(yblob10.ne.zero))) then
             velcell(veldir)=yblob9
            else if (probtype.eq.bubbleInPackedColumn) then ! xlo,velz
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            endif
           else
            print *,"veldir invalid"
@@ -15923,7 +15923,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            velcell(veldir)=x_vel  ! ylo, velx
 
            if (probtype.eq.bubbleInPackedColumn) then ! ylo,velx
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if (SDIM.eq.2) then
 
               ! ylo, velx, 2D
@@ -15970,7 +15970,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            velcell(veldir)=y_vel   ! y velocity bottom wall (ylo, vely)
 
            if (probtype.eq.bubbleInPackedColumn) then ! ylo,vely
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if (SDIM.eq.2) then
   
              ! side=1, dir=2,veldir=2  (vely at ylo)
@@ -16049,7 +16049,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            endif
             ! ylo,zvel
            if (probtype.eq.bubbleInPackedColumn) then ! ylo,velz
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if (probtype.eq.532) then
             call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
            else if ((probtype.eq.53).or.(probtype.eq.530).or. &
@@ -16081,7 +16081,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            velcell(veldir)=x_vel  ! zlo, velx
   
            if (probtype.eq.bubbleInPackedColumn) then ! zlo,velx
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if ((probtype.eq.1).and.(axis_dir.eq.13)) then
             velcell(veldir)=zero
            else if ((probtype.eq.1).and.(axis_dir.lt.150)) then
@@ -16125,7 +16125,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            velcell(veldir)=y_vel  ! zlo, vely
   
            if (probtype.eq.bubbleInPackedColumn) then ! zlo,vely
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
 ! zlo face, y velocity
            else if (probtype.eq.530) then
             call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
@@ -16145,7 +16145,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
   
 ! zlo, velz 3D, velbc_override
            if (probtype.eq.bubbleInPackedColumn) then ! zlo,velz
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if ((probtype.eq.53).or.(probtype.eq.536).or. &
                (probtype.eq.537).or.(probtype.eq.530).or. &
                (probtype.eq.538).or.(probtype.eq.541)) then
@@ -16201,7 +16201,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            velcell(veldir)=x_vel  ! xhi, velx
 
            if (probtype.eq.bubbleInPackedColumn) then ! xhi,velx
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if (SDIM.eq.2) then
   
               ! xhi,xvel
@@ -16260,7 +16260,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            velcell(veldir)=y_vel  ! xhi, vely
 
            if (probtype.eq.bubbleInPackedColumn) then ! xhi,vely
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if (SDIM.eq.2) then
   
             if ((probtype.eq.36).and.(yblob10.ne.zero)) then
@@ -16297,7 +16297,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             z_vel = zero
            endif
            if (probtype.eq.bubbleInPackedColumn) then ! xhi,velz
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if ((probtype.eq.53).or.(probtype.eq.530).or. &
                (probtype.eq.531).or. &
                (probtype.eq.536).or.(probtype.eq.537).or. &
@@ -16332,7 +16332,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            velcell(veldir)=x_vel ! yhi, velx
 
            if (probtype.eq.bubbleInPackedColumn) then ! yhi,velx
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if (SDIM.eq.2) then
 
              ! yhi, velx, 2D
@@ -16376,7 +16376,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            velcell(veldir)=y_vel  ! yhi, vely
 
            if (probtype.eq.bubbleInPackedColumn) then ! yhi,vely
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if (SDIM.eq.2) then
   
             if ((probtype.eq.16).or. &
@@ -16411,7 +16411,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             else if (probtype.eq.701) then
              if ((axis_dir.eq.0).or.(axis_dir.eq.1)) then
               call get_rain_velocity(x,y,z,dx,velcell(veldir), &
-                      vely_rain,time,dir,adv_vel)  ! yhi veldir=2
+                      vely_rain,time,dir)  ! yhi veldir=2
              else if (axis_dir.eq.2) then
               velcell(veldir)=zero  ! yhi veldir=2
              else
@@ -16451,7 +16451,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            endif 
              ! yhi,zvel
            if (probtype.eq.bubbleInPackedColumn) then ! yhi,zvel
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if (probtype.eq.532) then
             call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
            else if ((probtype.eq.53).or.(probtype.eq.530).or. &
@@ -16481,7 +16481,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            velcell(veldir)=x_vel  ! zhi, velx
   
            if (probtype.eq.bubbleInPackedColumn) then ! zhi,velx
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if ((probtype.eq.1).and.(axis_dir.lt.150)) then
             velcell(veldir)=vinletgas
            else if (probtype.eq.58) then
@@ -16498,7 +16498,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            velcell(veldir)=y_vel  ! zhi, vely
   
            if (probtype.eq.bubbleInPackedColumn) then ! zhi,vely
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            endif
   
 ! zhi, velz
@@ -16518,7 +16518,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            velcell(veldir)=z_vel  ! zhi, velz
   
            if (probtype.eq.bubbleInPackedColumn) then ! zhi,velz
-            call Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+            call Pack_velbc(dir,side,veldir,velcell)
            else if ((probtype.eq.62).or.(probtype.eq.65)) then
             costheta=cos(xblob2)
             sintheta=sin(xblob2)
@@ -25639,6 +25639,7 @@ end subroutine initialize2d
         enddo ! im=1..num_materials
 
          ! in: fort_initdata
+         ! "level" = 0
         call stackvolume_batch(xsten,nhalf,dx,bfact,fluiddata, &
          0,max_levelstack,materialdist_batch,time)
         call extract_vof_cen_batch(fluiddata,vofdark,voflight, &

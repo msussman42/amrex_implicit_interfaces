@@ -986,7 +986,7 @@ void mof_ordering_override(Vector<int>& mof_ordering_local,
  int mof_error_ordering_local,
  Vector<int> FSI_flag_temp) {
 
- local_num_materials=mof_ordering_local.size();
+ int local_num_materials=mof_ordering_local.size();
 
  if (local_num_materials!=FSI_flag_temp.size())
   amrex::Error("FSI_flag_temp invalid size");
@@ -7692,7 +7692,7 @@ void NavierStokes::build_moment_from_FSILS(Real cur_time) {
     fsifab.dataPtr(),ARLIM(fsifab.loVect()),ARLIM(fsifab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
-    &num_materials,&nstate);
+    &nstate);
  }  // mfi  
 }//omp
  ns_reconcile_d_num(48);
@@ -9215,7 +9215,6 @@ void NavierStokes::post_restart() {
  }
 
  MultiFab& S_new = get_new_data(State_Type,slab_step+1);
- int num_interfaces=num_interfaces;
  int nc=S_new.nComp();
 
  fort_initdata_alloc(&nc,
@@ -9453,8 +9452,8 @@ NavierStokes::initData () {
   int recalesce_num_state=6;
   recalesce_state_old.resize(recalesce_num_state*num_materials);
   if (at_least_one==1) {
-   parent->recalesce_init(num_materials);
-   parent->recalesce_get_state(recalesce_state_old,num_materials);
+   parent->recalesce_init();
+   parent->recalesce_get_state(recalesce_state_old);
   } else if (at_least_one==0) {
    for (int im=0;im<recalesce_num_state*num_materials;im++) {
     recalesce_state_old[im]=-1.0;

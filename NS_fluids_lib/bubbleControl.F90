@@ -36,12 +36,12 @@ implicit none
  
 contains
 
-      subroutine Pack_velbc(dir,side,veldir,velcell,adv_vel,adv_dir)
+      subroutine Pack_velbc(dir,side,veldir,velcell)
+      use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T dir,side,veldir,adv_dir,dir2
+      INTEGER_T dir,side,veldir,dir2
       REAL_T velcell(SDIM)
-      REAL_T adv_vel
 
       do dir2=1,SDIM
        velcell(dir2)=zero
@@ -60,23 +60,23 @@ contains
       return
       end subroutine Pack_velbc
 
-      subroutine get_pack_vfrac(x,y,z,dx,vfrac,cenbc,time,nmat,dir)
+      subroutine get_pack_vfrac(x,y,z,dx,vfrac,cenbc,time,dir)
+      use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T nmat,dir
+      INTEGER_T dir
       REAL_T x,y,z,time
       INTEGER_T im
       REAL_T dx(SDIM)
-      REAL_T vfrac(nmat)
-      REAL_T cenbc(nmat,SDIM)
+      REAL_T vfrac(num_materials)
+      REAL_T cenbc(num_materials,SDIM)
 
       INTEGER_T dir2,i1,j1,nDrop
       REAL_T xgrid(SDIM)
-      REAL_T centroid(nmat,SDIM)
-      REAL_T areacentroid(nmat,SDIM)
-      REAL_T lsgrid(D_DECL(3,3,3),nmat)
-      REAL_T facearea(nmat)
-      REAL_T distbatch(nmat)
+      REAL_T centroid(num_materials,SDIM)
+      REAL_T lsgrid(D_DECL(3,3,3),num_materials)
+      REAL_T facearea(num_materials)
+      REAL_T distbatch(num_materials)
       REAL_T distleft,distright,dist
       REAL_T xleft,xright,LS
       REAL_T xp(5)
@@ -107,7 +107,7 @@ contains
       endif
 
       vfrac(2)=1.0-vfrac(1)
-      do im=3,nmat
+      do im=3,num_materials
          vfrac(im)=zero
       enddo
 
@@ -115,13 +115,12 @@ contains
       end subroutine get_pack_vfrac
 
 
-      subroutine xloLS_pack(x,y,z,nmat,VOF,adv_vel,time,bigdist)
+      subroutine xloLS_pack(x,y,z,VOF,time,bigdist)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T x,y,z,time
-      REAL_T adv_vel
-      INTEGER_T nmat
-      REAL_T VOF(nmat)
+      REAL_T VOF(num_materials)
       REAL_T LS
 
       INTEGER_T nDrop,iLoc,nLoc,insiderDrop
@@ -175,7 +174,7 @@ contains
          VOF(2)=-LS
        endif
 
-       do im=3,nmat
+       do im=3,num_materials
         VOF(im)=-bigdist
        enddo       
       endif 
@@ -183,13 +182,12 @@ contains
       end subroutine xloLS_pack
 
 
-      subroutine yloLS_pack(x,y,z,nmat,VOF,adv_vel,time,bigdist)
+      subroutine yloLS_pack(x,y,z,VOF,time,bigdist)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T x,y,z,time
-      REAL_T adv_vel
-      INTEGER_T nmat
-      REAL_T VOF(nmat)
+      REAL_T VOF(num_materials)
       REAL_T LS
 
       INTEGER_T nDrop,iLoc,nLoc,insiderDrop
@@ -216,7 +214,7 @@ contains
       LS=0.01-abs(x-xp(1))   ! 
       VOF(1)=-LS  ! GAS JET
       VOF(2)=LS 
-      do im=3,nmat
+      do im=3,num_materials
         VOF(im)=-bigdist
       enddo
 

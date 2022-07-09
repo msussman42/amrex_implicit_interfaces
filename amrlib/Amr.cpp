@@ -234,7 +234,7 @@ Amr::InitAmr () {
     //
     std::fflush(NULL);
     if (1==1) {
-     std::cout << "levelbld = getLevelBld() on processor " <<
+     std::cout << "prior to levelbld = getLevelBld() on processor " <<
          ParallelDescriptor::MyProc() << "\n";
     }
     std::fflush(NULL);
@@ -538,6 +538,23 @@ Amr::InitAmr () {
     int num_materials_viscoelastic=global_AMR_num_materials_viscoelastic;
 
     global_AMR_num_SoA_var=SOA_NCOMP;
+
+    std::fflush(NULL);
+    std::cout << "global_AMR_num_SoA_var= " << global_AMR_num_SoA_var <<
+	 " on processor " << ParallelDescriptor::MyProc() << "\n";
+    std::fflush(NULL);
+    std::fflush(NULL);
+    std::cout << "num_materials= " << num_materials <<
+	 " on processor " << ParallelDescriptor::MyProc() << "\n";
+    std::fflush(NULL);
+    std::fflush(NULL);
+    std::cout << "num_species_var= " << num_species_var <<
+	 " on processor " << ParallelDescriptor::MyProc() << "\n";
+    std::fflush(NULL);
+    std::fflush(NULL);
+    std::cout << "num_materials_viscoelastic= "<<num_materials_viscoelastic<<
+	 " on processor " << ParallelDescriptor::MyProc() << "\n";
+    std::fflush(NULL);
 
     m_gdb.reset(new AmrParGDB(this));
 
