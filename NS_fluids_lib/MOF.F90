@@ -12603,7 +12603,7 @@ contains
         bfact,dx,xsten0,nhalf0, &
         im, &
         dxmaxLS, &
-        num_materials_slope,sdim)
+        sdim)
 
       use probcommon_module
       use geometry_intersect_module
@@ -12614,7 +12614,6 @@ contains
       INTEGER_T, INTENT(in) :: bfact
       INTEGER_T, INTENT(in) :: nhalf0
       INTEGER_T, INTENT(in) :: im
-      INTEGER_T, INTENT(in) :: num_materials_slope
       INTEGER_T, INTENT(in) :: sdim
       REAL_T, INTENT(in)    :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T, INTENT(in)    :: dx(sdim)
@@ -12635,10 +12634,10 @@ contains
       INTEGER_T i1,j1,k1
       INTEGER_T klo,khi,dir
 
-      REAL_T, INTENT(in)     :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials_slope)
-      REAL_T, INTENT(out)    :: lsnormal(num_materials_slope,sdim)
-      INTEGER_T, INTENT(out) :: lsnormal_valid(num_materials_slope)
-      REAL_T, INTENT(out)    :: ls_intercept(num_materials_slope)
+      REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      REAL_T, INTENT(out)    :: lsnormal(num_materials,sdim)
+      INTEGER_T, INTENT(out) :: lsnormal_valid(num_materials)
+      REAL_T, INTENT(out)    :: ls_intercept(num_materials)
       REAL_T dxplus,dxminus
       REAL_T LS_cen,LS_plus,LS_minus
       REAL_T slope_plus,slope_minus
@@ -12669,12 +12668,12 @@ contains
        stop
       endif
 
-      if ((im.lt.1).or.(im.gt.num_materials_slope)) then
+      if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid35"
        stop
       endif
-      if (num_materials_slope.lt.1) then
-       print *,"num_materials_slope invalid"
+      if (num_materials.lt.1) then
+       print *,"num_materials invalid"
        stop
       endif
 
@@ -13336,7 +13335,7 @@ contains
           bfact,dx,xsten0,nhalf0, &
           imaterial, &
           dxmaxLS, &
-          num_materials,sdim)
+          sdim)
  
         else
          print *,"continuous_mof invalid"

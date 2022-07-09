@@ -21,14 +21,13 @@ stop
       IMPLICIT NONE
 
       abstract interface
-        subroutine sub_interface(xsten,nhalf,dx,bfact,dist,nmat,time)
+        subroutine sub_interface(xsten,nhalf,dx,bfact,dist,time)
         INTEGER_T, INTENT(in) :: bfact
         INTEGER_T, INTENT(in) :: nhalf
         REAL_T, INTENT(in) :: dx(SDIM) 
         REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-        INTEGER_T, INTENT(in) :: nmat
         REAL_T, INTENT(in) :: time
-        REAL_T, INTENT(out) :: dist(nmat)
+        REAL_T, INTENT(out) :: dist(:)
         end subroutine
       end interface
 
@@ -103,7 +102,7 @@ stop
 
       IMPLICIT NONE
 
-      procedure(sub_interface), INTENT(in) :: LS_sub
+      procedure(sub_interface) :: LS_sub
 
       REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(in) :: bfact,nhalf
@@ -178,7 +177,7 @@ stop
        enddo ! isten
       
         ! in: get_volume_data_batch
-       call LS_sub(xsten2,nhalf2,dxin,bfact,distbatch,num_materials,time)
+       call LS_sub(xsten2,nhalf2,dxin,bfact,distbatch,time)
        do imaterial=1,num_materials
         ltest(D_DECL(i1+2,j1+2,k1+2),imaterial)= &
          distbatch(imaterial)

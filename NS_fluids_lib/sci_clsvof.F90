@@ -9104,7 +9104,6 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
    fort_num_local_aux_grids, &
    auxcomp, &
    ngrow_local, &
-   fort_num_local_aux_grids, &
    nFSI_local, &
    FSI_operation, &
    FSI_touch_flag, &

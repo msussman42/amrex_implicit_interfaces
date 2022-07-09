@@ -372,8 +372,17 @@ BurnVelInterp::interp (Real time,
  int local_nmat=burnvel_nmat;
  int local_nten=burnvel_nten;
  int ncomp_check=local_nten+local_nten*burnvel_ncomp_per;
- if (burnvel_ncomp_per==0)
-  ncomp_check=N_DRAG;
+
+ if (burnvel_ncomp_per==0) {
+  int num_materials=local_nmat; //the macro N_DRAG depends on "num_materials"
+  if (num_materials>=2) {
+   ncomp_check=N_DRAG;
+  } else
+   amrex::Error("BurnVelInterp::interp => need num_materials>=2");
+ } else if (burnvel_ncomp_per>0) {
+  // do nothing
+ } else
+  amrex::Error("burnvel_ncomp_per invalid");
 
  if (ncomp_check==burnvel_ncomp) {
   // do nothing

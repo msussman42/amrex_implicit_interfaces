@@ -118,7 +118,6 @@ stop
        print *,"BLB_PRES ",BLB_PRES
        print *,"num_elements_blobclass ",num_elements_blobclass
        print *,"num_materials=",num_materials
-       print *,"num_materials_in=",num_materials_in
        print *,"AMREX_SPACEDIM=",AMREX_SPACEDIM
        stop
       endif

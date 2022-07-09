@@ -2814,7 +2814,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         int recalesce_num_state=6;
         recalesce_state_old.resize(recalesce_num_state*num_materials);
         recalesce_state_new.resize(recalesce_num_state*num_materials);
-        parent->recalesce_get_state(recalesce_state_old,num_materials);
+        parent->recalesce_get_state(recalesce_state_old);
 
         fort_initrecalesce(
          recalesce_material.dataPtr(),

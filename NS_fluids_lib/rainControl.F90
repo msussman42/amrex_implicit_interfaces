@@ -32,16 +32,16 @@ implicit none
 contains
 
 ! probtype=701
-      subroutine get_rain_vfrac(x,y,z,dx,vfrac,cenbc,time,nmat,dir,adv_vel)
+      subroutine get_rain_vfrac(x,y,z,dx,vfrac,cenbc,time,dir)
+      use probcommon_module
       IMPLICIT NONE
 
-      REAL_T adv_vel
-      INTEGER_T nmat,dir
+      INTEGER_T dir
       REAL_T x,y,z,time
       INTEGER_T im
       REAL_T dx(SDIM)
-      REAL_T vfrac(nmat)
-      REAL_T cenbc(nmat,SDIM)
+      REAL_T vfrac(num_materials)
+      REAL_T cenbc(num_materials,SDIM)
 
       INTEGER_T nDrop
       REAL_T LS
@@ -139,27 +139,26 @@ contains
       endif
 
       vfrac(2)=1.0-vfrac(1)
-      do im=3,nmat
+      do im=3,num_materials
          vfrac(im)=zero
       enddo
 
       return
       end subroutine get_rain_vfrac
 
-      subroutine get_rain_velocity(x,y,z,dx,vel,vel_rain,time,dir,nmat, &
-         adv_vel)
+      subroutine get_rain_velocity(x,y,z,dx,vel,vel_rain,time,dir)
+      use probcommon_module
       IMPLICIT NONE
 
-      REAL_T x,y,z,time,adv_vel
+      REAL_T x,y,z,time
       REAL_T dx(SDIM)
       REAL_T vel,vel_rain
 
-      INTEGER_T nmat
       INTEGER_T dir
-      REAL_T VOF(nmat)
-      REAL_T cenbc(nmat,SDIM)
+      REAL_T VOF(num_materials)
+      REAL_T cenbc(num_materials,SDIM)
 
-      call get_rain_vfrac(x,y,z,dx,VOF,cenbc,time,nmat,dir,adv_vel) 
+      call get_rain_vfrac(x,y,z,dx,VOF,cenbc,time,dir) 
 
       !if (x.gt.1.0.and.x.le.1.3) print*, "x12=",x, VOF(1)
 
@@ -175,13 +174,12 @@ contains
       return
       end subroutine get_rain_velocity
 
-      subroutine xloLS_rain(x,y,z,nmat,LSparm,adv_vel,time,bigdist)
+      subroutine xloLS_rain(x,y,z,LSparm,time,bigdist)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T x,y,z,time
-      REAL_T adv_vel
-      INTEGER_T nmat
-      REAL_T LSparm(nmat)
+      REAL_T LSparm(num_materials)
       REAL_T LS
 
       INTEGER_T nDrop,iLoc,nLoc,insiderDrop
@@ -244,7 +242,7 @@ contains
         print *,"maxDrop invalid"
         stop
        endif
-       do im=3,nmat
+       do im=3,num_materials
         LSparm(im)=-bigdist
        enddo
       endif
@@ -252,13 +250,12 @@ contains
       end subroutine xloLS_rain
 
 
-      subroutine yhiLS_rain(x,y,z,nmat,LSparm,adv_vel,time,bigdist)
+      subroutine yhiLS_rain(x,y,z,LSparm,time,bigdist)
+      use probcommon_module
       IMPLICIT NONE
 
       REAL_T x,y,z,time
-      REAL_T adv_vel
-      INTEGER_T nmat
-      REAL_T LSparm(nmat)
+      REAL_T LSparm(num_materials)
       REAL_T LS
 
       INTEGER_T nDrop,iLoc,nLoc,insiderDrop
@@ -323,7 +320,7 @@ contains
         stop
        endif
 
-       do im=3,nmat
+       do im=3,num_materials
           LSparm(im)=-bigdist
        enddo       
       endif

@@ -195,7 +195,6 @@ stop
           ! compare_distance is declared in: MOF.F90
          call compare_distance( &
           bfact,dx,xsten_donate,nhalf, &
-          num_materials, &
           xaccept_point, &
           xdonate_vert, &
           newLS, &
@@ -232,7 +231,7 @@ stop
         touch_hold, &
         minLS, &
         maxLS, &
-        num_materials,SDIM, &
+        SDIM, &
         center_stencil, &
         donateflag)
 
@@ -429,7 +428,7 @@ stop
              xsten,nhalf, &
              im, &
              dxmaxLS, &
-             num_materials,SDIM)
+             SDIM)
 
             if (lsnormal_valid(im).eq.1) then
              do dir=1,SDIM
@@ -1602,7 +1601,6 @@ stop
                 col_ht_VOF, &
                 normal_dir, &
                 n1d, & !n1d==1.0d0=>im on top,n1d==-1.0d0 => im on bot
-                num_materials, &
                 SDIM)
 
                if (crossing_status.eq.0) then
@@ -2217,7 +2215,7 @@ stop
        enddo
 
        FSI_exclude=1
-       call sort_volume_fraction(vcenter,FSI_exclude,sorted_list,num_materials)
+       call sort_volume_fraction(vcenter,FSI_exclude,sorted_list)
        im_crit=sorted_list(1)
        if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
         ! do nothing
@@ -2549,7 +2547,7 @@ stop
             ! to be the material with the dominant "nodal volume fraction"
          if (im_corner.eq.-1) then
           FSI_exclude=1
-          call sort_volume_fraction(FSUM,FSI_exclude,sorted_list,num_materials)
+          call sort_volume_fraction(FSUM,FSI_exclude,sorted_list)
           im_corner=sorted_list(1)
           if (is_rigid(im_corner).eq.0) then
            ! do nothing
@@ -3286,7 +3284,7 @@ stop
         call check_full_cell_vfrac( &
                 vcenter, &
                 tessellate, &  ! =0
-                num_materials,im_crit)
+                im_crit)
 
         if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
 
@@ -3317,7 +3315,7 @@ stop
            tessellate, &  ! =0
            bfact,dx,xsten,nhalf, &
            mofdata,xcorner, &
-           im_test,num_materials,SDIM)
+           im_test,SDIM)
           if ((im_test.ge.1).and.(im_test.le.num_materials)) then
            call put_istar(istar,istar_array) 
            stenfab(D_DECL(i,j,k),istar)=im_test
@@ -3578,7 +3576,7 @@ stop
         call check_full_cell_vfrac( &
           vcenter, &
           tessellate, & ! 0,1, or 3
-          num_materials,im_crit)
+          im_crit)
 
         do dir=1,SDIM
          do side=1,2
@@ -3646,7 +3644,7 @@ stop
           call project_slopes_to_face( &
            bfact,dx,xsten,nhalf, &
            mofdatavalid,mofdataproject, &
-           num_materials,SDIM,dir,side)
+           SDIM,dir,side)
 
            ! base case (also area fractions)
            ! multi_cen in absolute coordinate system (not relative to cell
@@ -3664,7 +3662,7 @@ stop
             geom_xtetlist_uncapt(1,1,1,tid+1), &
             nmax, &
             nmax, &
-            num_materials,SDIM, &
+            SDIM, &
             shapeflag,3) 
 
           total_vol=zero
@@ -4479,7 +4477,6 @@ stop
            nhalf, &
            mofdata_right, &
            mofdata_left, &
-           num_materials, &
            dir+1, &
            frac_pair, & ! left,right
            SDIM, &
