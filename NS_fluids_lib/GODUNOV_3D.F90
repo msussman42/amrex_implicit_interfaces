@@ -20404,7 +20404,8 @@ stop
       REAL_T vfrac_sum_fluid,vfrac_sum_solid
       INTEGER_T clamped_cell_in_element
       REAL_T xclamped(SDIM)
-      REAL_T LS_clamped
+      INTEGER_T iregions
+      REAL_T LS_clamped,charfn
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
       REAL_T xsten(-3:3,SDIM)
@@ -20502,6 +20503,18 @@ stop
           print *,"LS_clamped is NaN"
           stop
          endif
+
+         do iregions=1,number_of_source_regions
+          call SUB_CHARFN_REGION(iregions,xclamped,cur_time,charfn)
+          if (charfn.eq.one) then
+           clamped_cell_in_element=1
+          else if (charfn.eq.zero) then
+           ! do nothing
+          else
+           print *,"charfn invalid"
+           stop
+          endif
+         enddo !iregions=1,number_of_source_regions
 
          vfrac_sum_fluid=zero
          vfrac_sum_solid=zero

@@ -22667,8 +22667,15 @@ end subroutine initialize2d
       REAL_T, INTENT(in), target :: vfrac(DIMV(vfrac),nvar)
       REAL_T, pointer :: vfrac_ptr(D_DECL(:,:,:),:)
       REAL_T    x, y, z, rflag
-      INTEGER_T   i, j,k,np
-      INTEGER_T   tagflag
+      INTEGER_T i,j,k
+      INTEGER_T np
+      INTEGER_T iregions
+      INTEGER_T dir_local
+      REAL_T x_local(SDIM)
+      REAL_T LS_clamped,charfn
+      REAL_T vel_clamped(SDIM)
+      REAL_T temperature_clamped
+      INTEGER_T tagflag
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
 
@@ -22712,6 +22719,9 @@ end subroutine initialize2d
        x=xsten(0,1)
        y=xsten(0,2)
        z=xsten(0,SDIM)
+       do dir_local=1,SDIM
+        x_local(dir_local)=xsten(0,dir_local)
+       enddo
 
         ! GRIDS ARE CREATED AS FOLLOWS:
         ! 1. cells are tagged for refinement (tagflag==1) or not
@@ -22736,6 +22746,30 @@ end subroutine initialize2d
 
          ! updates "tagflag" and/or "rflag"
         call override_tagflag(xsten,nhalf,time,rflag,tagflag)
+
+        call SUB_clamped_LS(x_local,time,LS_clamped,vel_clamped, &
+          temperature_clamped,dx)
+        if (LS_clamped.ge.zero) then
+         rflag=one
+         tagflag=1
+        else if (LS_clamped.lt.zero) then
+         ! do nothing
+        else
+         print *,"LS_clamped invalid"
+         stop
+        endif
+        do iregions=1,number_of_source_regions
+         call SUB_CHARFN_REGION(iregions,x_local,time,charfn)
+         if (charfn.eq.one) then
+          rflag=one
+          tagflag=1
+         else if (charfn.eq.zero) then
+          ! do nothing
+         else
+          print *,"charfn invalid"
+          stop
+         endif
+        enddo !iregions=1,number_of_source_regions
 
         if (rflag.eq.one) then
          tagflag=1
