@@ -9342,6 +9342,7 @@ stop
        finest_level, &
        xlo,dx, &
        dt, &
+       maskfab,DIMS(maskfab), &
        conductstate,DIMS(conductstate), & ! num_materials components
        STATEFAB,DIMS(STATEFAB), &
        TgammaFAB,DIMS(TgammaFAB), &
@@ -9392,6 +9393,7 @@ stop
       REAL_T, INTENT(in) :: dx(SDIM)
       REAL_T, INTENT(in) :: dt
       INTEGER_T, INTENT(in) :: DIMDEC(conductstate)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskfab)
       INTEGER_T, INTENT(in) :: DIMDEC(STATEFAB)
       INTEGER_T, INTENT(in) :: DIMDEC(TgammaFAB)
       INTEGER_T, INTENT(in) :: DIMDEC(swept)
@@ -9409,8 +9411,11 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(areax)
       INTEGER_T, INTENT(in) :: DIMDEC(areay)
       INTEGER_T, INTENT(in) :: DIMDEC(areaz)
-      REAL_T, target, INTENT(in) :: conductstate(DIMV(conductstate),num_materials)
+      REAL_T, target, INTENT(in) :: &
+           conductstate(DIMV(conductstate),num_materials)
       REAL_T, pointer :: conductstate_ptr(D_DECL(:,:,:),:)
+      REAL_T, target, INTENT(in) :: maskfab(DIMV(maskfab)) 
+      REAL_T, pointer :: maskfab_ptr(D_DECL(:,:,:))
       REAL_T, target, INTENT(in) :: STATEFAB(DIMV(STATEFAB),nden) 
       REAL_T, pointer :: STATEFAB_ptr(D_DECL(:,:,:),:)
       REAL_T, target, INTENT(in) :: TgammaFAB(DIMV(TgammaFAB),ntsat) 
@@ -9524,6 +9529,7 @@ stop
       INTEGER_T dir_inner
       REAL_T T_or_Y_min_sanity
       REAL_T thermal_k(num_materials)
+      INTEGER_T maskcell
 
       nhalf=3
 
@@ -9622,6 +9628,9 @@ stop
       call checkbound_array(fablo,fabhi,STATEFAB_ptr,1,-1,234)
       call checkbound_array(fablo,fabhi,TgammaFAB_ptr,1,-1,234)
 
+      maskfab_ptr=>maskfab
+      call checkbound_array1(fablo,fabhi,maskfab_ptr,1,-1,234)
+
       swept_ptr=>swept
       call checkbound_array(fablo,fabhi,swept_ptr,0,-1,234)
 
@@ -9656,331 +9665,326 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       call gridsten_level(xsten,i,j,k,level,nhalf)
+       maskcell=NINT(maskfab(D_DECL(i,j,k)))
 
-       im_crit_save=-1 ! the dominant material in the center cell
-       im_dest_crit=-1
-       im_source_crit=-1
-       im_dest_substrate_crit=-1
-       im_source_substrate_crit=-1
-       iten_crit=-1
-       ireverse_crit=-1
-       TGRAD_MAX=-1.0e+10
+       if (maskcell.eq.1) then
 
-       do im=1,num_materials
-        LS_no_tess(im)=LS(D_DECL(i,j,k),im)
-        thermal_k(im)=conductstate(D_DECL(i,j,k),im)
-       enddo
-       call LS_tessellate(LS_no_tess,LS_center)
-       im_primary=1
-       do im=2,num_materials
-        if (LS_center(im).gt.LS_center(im_primary)) then
-         im_primary=im
-        endif
-       enddo
+        call gridsten_level(xsten,i,j,k,level,nhalf)
 
-       if (LS_center(im_primary).ge.zero) then
+        im_crit_save=-1 ! the dominant material in the center cell
+        im_dest_crit=-1
+        im_source_crit=-1
+        im_dest_substrate_crit=-1
+        im_source_substrate_crit=-1
+        iten_crit=-1
+        ireverse_crit=-1
+        TGRAD_MAX=-1.0e+10
 
         do im=1,num_materials
-         T_MIN(im)=zero
-         T_MAX(im)=zero
-         TorY_MIN(im)=zero
-         TorY_MAX(im)=zero
-         T_STATUS(im)=0
-         TorY_STATUS(im)=0
-        enddo ! im=1..num_materials
+         LS_no_tess(im)=LS(D_DECL(i,j,k),im)
+         thermal_k(im)=conductstate(D_DECL(i,j,k),im)
+        enddo
+        call LS_tessellate(LS_no_tess,LS_center)
+        im_primary=1
+        do im=2,num_materials
+         if (LS_center(im).gt.LS_center(im_primary)) then
+          im_primary=im
+         endif
+        enddo
 
-        do i1=-1,1 
-        do j1=-1,1 
-        do k1=k1lo,k1hi
+        if (LS_center(im_primary).ge.zero) then
+
          do im=1,num_materials
-          LS_no_tess(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
-         enddo
-         call LS_tessellate(LS_no_tess,LS_side)
-         im_side_primary=1
-         do im=2,num_materials
-          if (LS_side(im).gt.LS_side(im_side_primary)) then
-           im_side_primary=im
-          endif
-         enddo
-         TorY_test=T_fab(D_DECL(i+i1,j+j1,k+k1),im_side_primary)
-         if (TorY_test.ge.T_or_Y_min_sanity) then
-          ! do nothing
-         else
-          print *,"TorY_test= ",TorY_test
-          print *,"adjust_temperature=",adjust_temperature
-          print *,"i,j,k ",i,j,k
-          print *,"i1,j1,k1 ",i1,j1,k1
-          print *,"im_side_primary ",im_side_primary
-          print *,"im_primary ",im_primary
+          T_MIN(im)=zero
+          T_MAX(im)=zero
+          TorY_MIN(im)=zero
+          TorY_MAX(im)=zero
+          T_STATUS(im)=0
+          TorY_STATUS(im)=0
+         enddo ! im=1..num_materials
+
+         do i1=-1,1 
+         do j1=-1,1 
+         do k1=k1lo,k1hi
           do im=1,num_materials
-           print *,"im,T_fab ",im, &
-            T_fab(D_DECL(i+i1,j+j1,k+k1),im) 
+           LS_no_tess(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
           enddo
-          print *,"TorY_test.le.zero fort_stefansolver"
-          stop
-         endif
-         if (T_STATUS(im_side_primary).eq.0) then
-          T_MIN(im_side_primary)=TorY_test
-          T_MAX(im_side_primary)=TorY_test
-         else if (T_STATUS(im_side_primary).eq.1) then
-          if (TorY_test.gt.T_MAX(im_side_primary)) then
-           T_MAX(im_side_primary)=TorY_test
+          call LS_tessellate(LS_no_tess,LS_side)
+          im_side_primary=1
+          do im=2,num_materials
+           if (LS_side(im).gt.LS_side(im_side_primary)) then
+            im_side_primary=im
+           endif
+          enddo
+          TorY_test=T_fab(D_DECL(i+i1,j+j1,k+k1),im_side_primary)
+          if (TorY_test.ge.T_or_Y_min_sanity) then
+           ! do nothing
+          else
+           print *,"TorY_test= ",TorY_test
+           print *,"adjust_temperature=",adjust_temperature
+           print *,"i,j,k ",i,j,k
+           print *,"i1,j1,k1 ",i1,j1,k1
+           print *,"im_side_primary ",im_side_primary
+           print *,"im_primary ",im_primary
+           do im=1,num_materials
+            print *,"im,T_fab ",im, &
+             T_fab(D_DECL(i+i1,j+j1,k+k1),im) 
+           enddo
+           print *,"level, finest_level ",level,finest_level
+           print *,"TorY_test.le.zero fort_stefansolver"
+           stop
           endif
-          if (TorY_test.lt.T_MIN(im_side_primary)) then
+          if (T_STATUS(im_side_primary).eq.0) then
            T_MIN(im_side_primary)=TorY_test
+           T_MAX(im_side_primary)=TorY_test
+          else if (T_STATUS(im_side_primary).eq.1) then
+           if (TorY_test.gt.T_MAX(im_side_primary)) then
+            T_MAX(im_side_primary)=TorY_test
+           endif
+           if (TorY_test.lt.T_MIN(im_side_primary)) then
+            T_MIN(im_side_primary)=TorY_test
+           endif
+          else
+           print *,"T_STATUS(im_side_primary) invalid"
+           stop
           endif
-         else
-          print *,"T_STATUS(im_side_primary) invalid"
-          stop
-         endif
-         T_STATUS(im_side_primary)=1
+          T_STATUS(im_side_primary)=1
 
-         TorY_test=TorY_fab(D_DECL(i+i1,j+j1,k+k1),im_side_primary)
-         if (TorY_test.ge.T_or_Y_min_sanity) then
-          ! do nothing
-         else
-          print *,"TorY_test= ",TorY_test
-          print *,"adjust_temperature=",adjust_temperature
-          print *,"i,j,k ",i,j,k
-          print *,"i1,j1,k1 ",i1,j1,k1
-          print *,"im_side_primary ",im_side_primary
-          print *,"im_primary ",im_primary
-          do im=1,num_materials
-           print *,"im,TorY_fab ",im, &
-            TorY_fab(D_DECL(i+i1,j+j1,k+k1),im) 
-          enddo
-          print *,"TorY_test.le.zero fort_stefansolver"
-          stop
-         endif
-         if (TorY_STATUS(im_side_primary).eq.0) then
-          TorY_MIN(im_side_primary)=TorY_test
-          TorY_MAX(im_side_primary)=TorY_test
-         else if (TorY_STATUS(im_side_primary).eq.1) then
-          if (TorY_test.gt.TorY_MAX(im_side_primary)) then
-           TorY_MAX(im_side_primary)=TorY_test
+          TorY_test=TorY_fab(D_DECL(i+i1,j+j1,k+k1),im_side_primary)
+          if (TorY_test.ge.T_or_Y_min_sanity) then
+           ! do nothing
+          else
+           print *,"TorY_test= ",TorY_test
+           print *,"adjust_temperature=",adjust_temperature
+           print *,"i,j,k ",i,j,k
+           print *,"i1,j1,k1 ",i1,j1,k1
+           print *,"im_side_primary ",im_side_primary
+           print *,"im_primary ",im_primary
+           do im=1,num_materials
+            print *,"im,TorY_fab ",im, &
+             TorY_fab(D_DECL(i+i1,j+j1,k+k1),im) 
+           enddo
+           print *,"level, finest_level ",level,finest_level
+           print *,"TorY_test.le.zero fort_stefansolver"
+           stop
           endif
-          if (TorY_test.lt.TorY_MIN(im_side_primary)) then
+          if (TorY_STATUS(im_side_primary).eq.0) then
            TorY_MIN(im_side_primary)=TorY_test
+           TorY_MAX(im_side_primary)=TorY_test
+          else if (TorY_STATUS(im_side_primary).eq.1) then
+           if (TorY_test.gt.TorY_MAX(im_side_primary)) then
+            TorY_MAX(im_side_primary)=TorY_test
+           endif
+           if (TorY_test.lt.TorY_MIN(im_side_primary)) then
+            TorY_MIN(im_side_primary)=TorY_test
+           endif
+          else
+           print *,"TorY_STATUS(im_side_primary) invalid"
+           stop
           endif
-         else
-          print *,"TorY_STATUS(im_side_primary) invalid"
-          stop
-         endif
-         TorY_STATUS(im_side_primary)=1
+          TorY_STATUS(im_side_primary)=1
 
-        enddo
-        enddo
-        enddo ! i1,j1,k1
+         enddo
+         enddo
+         enddo ! i1,j1,k1
 
-        do im=1,num_materials-1
-         do im_opp=im+1,num_materials
-          do ireverse=0,1
-           if ((im.gt.num_materials).or.(im_opp.gt.num_materials)) then
-            print *,"im or im_opp bust 8"
-            stop
-           endif
-
-           call get_iten(im,im_opp,iten)
-           LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
-
-           Tgamma_STATUS=NINT(TgammaFAB(D_DECL(i,j,k),iten))
-
-           if (ireverse.eq.0) then
-            ! do nothing
-           else if (ireverse.eq.1) then
-            Tgamma_STATUS=-Tgamma_STATUS
-           else
-            print *,"ireverse invalid"
-            stop
-           endif
-
-           if ((Tgamma_STATUS.eq.1).or.(Tgamma_STATUS.eq.2)) then
-
-            local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
-            distribute_from_targ=distribute_from_target(iten+ireverse*num_interfaces)
-
-            if ((distribute_from_targ.ne.0).and. &
-                (distribute_from_targ.ne.1)) then
-             print *,"distribute_from_targ invalid"
+         do im=1,num_materials-1
+          do im_opp=im+1,num_materials
+           do ireverse=0,1
+            if ((im.gt.num_materials).or.(im_opp.gt.num_materials)) then
+             print *,"im or im_opp bust 8"
              stop
             endif
 
-            if ((is_rigid(im).eq.0).and. &
-                (is_rigid(im_opp).eq.0)) then
+            call get_iten(im,im_opp,iten)
+            LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
 
-             if (LL.ne.zero) then
+            Tgamma_STATUS=NINT(TgammaFAB(D_DECL(i,j,k),iten))
 
-              if (ireverse.eq.0) then
-               im_source=im
-               im_dest=im_opp
-              else if (ireverse.eq.1) then
-               im_source=im_opp
-               im_dest=im
-              else
-               print *,"ireverse invalid"
-               stop
-              endif
-              call check_recalesce_status(im_source,start_freezing)
+            if (ireverse.eq.0) then
+             ! do nothing
+            else if (ireverse.eq.1) then
+             Tgamma_STATUS=-Tgamma_STATUS
+            else
+             print *,"ireverse invalid"
+             stop
+            endif
 
-              if (start_freezing.eq.1) then
+            if ((Tgamma_STATUS.eq.1).or.(Tgamma_STATUS.eq.2)) then
 
-               ! local_freezing_model=0 (sharp interface stefan model)
-               ! local_freezing_model=1 (source term model)
-               ! local_freezing_model=2 (hydrate model)
-               ! local_freezing_model=3 (wildfire)
-               ! local_freezing_model=5 (evaporation/condensation)
-               ! local_freezing_model=6 (Palmore Desjardins)
-               ! local_freezing_model=7 (Cavitation)
-               if (is_GFM_freezing_modelF(local_freezing_model).eq.1) then 
+             local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
+             distribute_from_targ=distribute_from_target(iten+ireverse*num_interfaces)
 
-                if (project_option.eq.SOLVETYPE_HEAT) then
-                   ! default Tgamma
-                 Tgamma=saturation_temp(iten+ireverse*num_interfaces)
-                 TorYgamma_BC=Tgamma
-                 if (Tgamma.gt.zero) then
-                  tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+1
-                  Tgamma=TgammaFAB(D_DECL(i,j,k),tsat_comp)
+             if ((distribute_from_targ.ne.0).and. &
+                 (distribute_from_targ.ne.1)) then
+              print *,"distribute_from_targ invalid"
+              stop
+             endif
+
+             if ((is_rigid(im).eq.0).and. &
+                 (is_rigid(im_opp).eq.0)) then
+
+              if (LL.ne.zero) then
+
+               if (ireverse.eq.0) then
+                im_source=im
+                im_dest=im_opp
+               else if (ireverse.eq.1) then
+                im_source=im_opp
+                im_dest=im
+               else
+                print *,"ireverse invalid"
+                stop
+               endif
+               call check_recalesce_status(im_source,start_freezing)
+
+               if (start_freezing.eq.1) then
+
+                ! local_freezing_model=0 (sharp interface stefan model)
+                ! local_freezing_model=1 (source term model)
+                ! local_freezing_model=2 (hydrate model)
+                ! local_freezing_model=3 (wildfire)
+                ! local_freezing_model=5 (evaporation/condensation)
+                ! local_freezing_model=6 (Palmore Desjardins)
+                ! local_freezing_model=7 (Cavitation)
+                if (is_GFM_freezing_modelF(local_freezing_model).eq.1) then 
+
+                 if (project_option.eq.SOLVETYPE_HEAT) then
+                    ! default Tgamma
+                  Tgamma=saturation_temp(iten+ireverse*num_interfaces)
                   TorYgamma_BC=Tgamma
                   if (Tgamma.gt.zero) then
-                   ! do nothing
-                  else
-                   print *,"Tgamma must be positive1"
-                   stop
-                  endif
-                 else
-                  print *,"saturation temperature must be positive2"
-                  stop
-                 endif
-                else if ((project_option.ge.SOLVETYPE_SPEC).and. &
-                         (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
-                 Tgamma=saturation_temp(iten+ireverse*num_interfaces)
-                 TorYgamma_BC=one
-                 if (Tgamma.gt.zero) then
-                  tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+1
-                  Tgamma=TgammaFAB(D_DECL(i,j,k),tsat_comp)
-                  tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+2
-                  TorYgamma_BC=TgammaFAB(D_DECL(i,j,k),tsat_comp)
-                  if (Tgamma.gt.zero) then
-                   ! do nothing
-                  else
-                   print *,"Tgamma must be positive22"
-                   stop
-                  endif
-                  if ((TorYgamma_BC.ge.zero).and.(TorYgamma_BC.le.one)) then
-                   ! do nothing
-                  else
-                   print *,"TorYgamma_BC (aka Y) must be >= 0 and <=1"
-                   stop
-                  endif
-                 else
-                  print *,"saturation temperature must be positive33"
-                  stop
-                 endif
-                else
-                 print *,"project_option invalid"
-                 stop
-                endif
-
-                im_source_substrate=im_source
-                im_dest_substrate=im_dest
-
-                if (local_freezing_model.eq.0) then ! stefan
-
-                  ! Tgamma BC at thin filament interface.
-                  if (solidheat_flag.eq.0) then ! diffuse in solid
-                   if (microlayer_substrate(im_source).ne.0) then
-                    im_source_substrate=microlayer_substrate(im_source)
-                    if (is_rigid(im_source_substrate).ne.1) then
-                     print *,"is_rigid(im_source_substrate) invalid"
-                     stop
-                    endif
-                   endif
-                   if (microlayer_substrate(im_dest).ne.0) then
-                    im_dest_substrate=microlayer_substrate(im_dest)
-                    if (is_rigid(im_dest_substrate).ne.1) then
-                     print *,"is_rigid(im_dest_substrate) invalid"
-                     stop
-                    endif
-                   endif
-                  else if ((solidheat_flag.eq.1).or. & ! dirichlet 
-                           (solidheat_flag.eq.2)) then ! neumann 
-                   ! do nothing
-                  else
-                   print *,"solidheat_flag invalid"
-                   stop
-                  endif
-
-                else if (local_freezing_model.eq.5) then ! stefan evap/diff
-                  ! do nothing
-                else if (local_freezing_model.eq.6) then !Palmore/Desjardins
-                  ! do nothing
-                else
-                  print *,"local_freezing_model invalid 15"
-                  stop
-                endif
-
-                if ((im_source.eq.im_primary).or. &
-                    (im_source_substrate.eq.im_primary).or. &
-                    (im_dest.eq.im_primary).or. &
-                    (im_dest_substrate.eq.im_primary)) then
-
-                  im_crit=im_primary
-
-                   ! im_primary is found in the stencil
-                  if (TorY_STATUS(im_crit).eq.1) then
-
-                   if (LL.lt.zero) then ! freezing or condensation
-                    TGRAD_test=Tgamma-T_MIN(im_crit)
-                   else if (LL.gt.zero) then  ! melting or boiling
-                    TGRAD_test=T_MAX(im_crit)-Tgamma
+                   tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+1
+                   Tgamma=TgammaFAB(D_DECL(i,j,k),tsat_comp)
+                   TorYgamma_BC=Tgamma
+                   if (Tgamma.gt.zero) then
+                    ! do nothing
                    else
-                    print *,"LL invalid"
+                    print *,"Tgamma must be positive1"
+                    stop
+                   endif
+                  else
+                   print *,"saturation temperature must be positive2"
+                   stop
+                  endif
+                 else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                          (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+                  Tgamma=saturation_temp(iten+ireverse*num_interfaces)
+                  TorYgamma_BC=one
+                  if (Tgamma.gt.zero) then
+                   tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+1
+                   Tgamma=TgammaFAB(D_DECL(i,j,k),tsat_comp)
+                   tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+2
+                   TorYgamma_BC=TgammaFAB(D_DECL(i,j,k),tsat_comp)
+                   if (Tgamma.gt.zero) then
+                    ! do nothing
+                   else
+                    print *,"Tgamma must be positive22"
+                    stop
+                   endif
+                   if ((TorYgamma_BC.ge.zero).and.(TorYgamma_BC.le.one)) then
+                    ! do nothing
+                   else
+                    print *,"TorYgamma_BC (aka Y) must be >= 0 and <=1"
+                    stop
+                   endif
+                  else
+                   print *,"saturation temperature must be positive33"
+                   stop
+                  endif
+                 else
+                  print *,"project_option invalid"
+                  stop
+                 endif
+
+                 im_source_substrate=im_source
+                 im_dest_substrate=im_dest
+
+                 if (local_freezing_model.eq.0) then ! stefan
+
+                   ! Tgamma BC at thin filament interface.
+                   if (solidheat_flag.eq.0) then ! diffuse in solid
+                    if (microlayer_substrate(im_source).ne.0) then
+                     im_source_substrate=microlayer_substrate(im_source)
+                     if (is_rigid(im_source_substrate).ne.1) then
+                      print *,"is_rigid(im_source_substrate) invalid"
+                      stop
+                     endif
+                    endif
+                    if (microlayer_substrate(im_dest).ne.0) then
+                     im_dest_substrate=microlayer_substrate(im_dest)
+                     if (is_rigid(im_dest_substrate).ne.1) then
+                      print *,"is_rigid(im_dest_substrate) invalid"
+                      stop
+                     endif
+                    endif
+                   else if ((solidheat_flag.eq.1).or. & ! dirichlet 
+                            (solidheat_flag.eq.2)) then ! neumann 
+                    ! do nothing
+                   else
+                    print *,"solidheat_flag invalid"
                     stop
                    endif
 
-                   if (DEBUG_EVAPORATION.eq.1) then
-                    print *,"DEBUG_EVAPORATION STATEMENT 1"
-                    print *,"i,j,k,x,y,z ",i,j,k, &
-                        xsten(0,1),xsten(0,2),xsten(0,SDIM)
-                    print *,"im,im_opp,ireverse ",im,im_opp,ireverse
-                    print *,"im_source,im_dest ",im_source,im_dest
-                    print *,"LL ",LL
-                    print *,"project_option=",project_option
-                    print *,"Tgamma,TorYgamma_BC ",Tgamma,TorYgamma_BC
-                    print *,"im_crit=",im_crit
-                    print *,"T_MIN(im_crit) ",T_MIN(im_crit)
-                    print *,"T_MAX(im_crit) ",T_MAX(im_crit)
-                    print *,"TorY_MIN(im_crit) ",TorY_MIN(im_crit)
-                    print *,"TorY_MAX(im_crit) ",TorY_MAX(im_crit)
-                    print *,"TGRAD_test=",TGRAD_TEST
-                   endif
+                 else if (local_freezing_model.eq.5) then ! stefan evap/diff
+                   ! do nothing
+                 else if (local_freezing_model.eq.6) then !Palmore/Desjardins
+                   ! do nothing
+                 else
+                   print *,"local_freezing_model invalid 15"
+                   stop
+                 endif
 
-                    ! local_freezing_model=0 (sharp interface stefan model)
-                    ! local_freezing_model=1 (source term model)
-                    ! local_freezing_model=2 (hydrate model)
-                    ! local_freezing_model=3 (wildfire)
-                    ! local_freezing_model=5 (stefan evaporation/condensation)
-                    ! local_freezing_model=6 (Palmore/Desjardins)
-                    ! local_freezing_model=7 (Cavitation)
-                   if ((local_freezing_model.eq.0).or. & !stefan model
-                       ((local_freezing_model.eq.5).and. & !stefan:evap or cond
-                        (TGRAD_test.gt.zero)).or. &
-                       ((local_freezing_model.eq.6).and. & !Palmore/Desjardins
-                        (TGRAD_test.gt.zero))) then 
+                 if ((im_source.eq.im_primary).or. &
+                     (im_source_substrate.eq.im_primary).or. &
+                     (im_dest.eq.im_primary).or. &
+                     (im_dest_substrate.eq.im_primary)) then
 
-                    if (im_dest_crit.eq.-1) then
-                     im_crit_save=im_crit
-                     im_dest_crit=im_dest
-                     im_source_crit=im_source
-                     im_dest_substrate_crit=im_dest_substrate
-                     im_source_substrate_crit=im_source_substrate
-                     iten_crit=iten
-                     ireverse_crit=ireverse
-                     TGRAD_MAX=TGRAD_test
-                    else if ((im_dest_crit.ge.1).and. &
-                             (im_dest_crit.le.num_materials)) then
-                     if (TGRAD_test.gt.TGRAD_MAX) then
+                   im_crit=im_primary
+
+                    ! im_primary is found in the stencil
+                   if (TorY_STATUS(im_crit).eq.1) then
+
+                    if (LL.lt.zero) then ! freezing or condensation
+                     TGRAD_test=Tgamma-T_MIN(im_crit)
+                    else if (LL.gt.zero) then  ! melting or boiling
+                     TGRAD_test=T_MAX(im_crit)-Tgamma
+                    else
+                     print *,"LL invalid"
+                     stop
+                    endif
+
+                    if (DEBUG_EVAPORATION.eq.1) then
+                     print *,"DEBUG_EVAPORATION STATEMENT 1"
+                     print *,"i,j,k,x,y,z ",i,j,k, &
+                         xsten(0,1),xsten(0,2),xsten(0,SDIM)
+                     print *,"im,im_opp,ireverse ",im,im_opp,ireverse
+                     print *,"im_source,im_dest ",im_source,im_dest
+                     print *,"LL ",LL
+                     print *,"project_option=",project_option
+                     print *,"Tgamma,TorYgamma_BC ",Tgamma,TorYgamma_BC
+                     print *,"im_crit=",im_crit
+                     print *,"T_MIN(im_crit) ",T_MIN(im_crit)
+                     print *,"T_MAX(im_crit) ",T_MAX(im_crit)
+                     print *,"TorY_MIN(im_crit) ",TorY_MIN(im_crit)
+                     print *,"TorY_MAX(im_crit) ",TorY_MAX(im_crit)
+                     print *,"TGRAD_test=",TGRAD_TEST
+                    endif
+
+                     ! local_freezing_model=0 (sharp interface stefan model)
+                     ! local_freezing_model=1 (source term model)
+                     ! local_freezing_model=2 (hydrate model)
+                     ! local_freezing_model=3 (wildfire)
+                     ! local_freezing_model=5 (stefan evaporation/condensation)
+                     ! local_freezing_model=6 (Palmore/Desjardins)
+                     ! local_freezing_model=7 (Cavitation)
+                    if ((local_freezing_model.eq.0).or. & !stefan model
+                        ((local_freezing_model.eq.5).and. & !stefan:evap or cond
+                         (TGRAD_test.gt.zero)).or. &
+                        ((local_freezing_model.eq.6).and. & !Palmore/Desjardins
+                         (TGRAD_test.gt.zero))) then 
+
+                     if (im_dest_crit.eq.-1) then
                       im_crit_save=im_crit
                       im_dest_crit=im_dest
                       im_source_crit=im_source
@@ -9989,418 +9993,436 @@ stop
                       iten_crit=iten
                       ireverse_crit=ireverse
                       TGRAD_MAX=TGRAD_test
+                     else if ((im_dest_crit.ge.1).and. &
+                              (im_dest_crit.le.num_materials)) then
+                      if (TGRAD_test.gt.TGRAD_MAX) then
+                       im_crit_save=im_crit
+                       im_dest_crit=im_dest
+                       im_source_crit=im_source
+                       im_dest_substrate_crit=im_dest_substrate
+                       im_source_substrate_crit=im_source_substrate
+                       iten_crit=iten
+                       ireverse_crit=ireverse
+                       TGRAD_MAX=TGRAD_test
+                      endif
+                     else
+                      print *,"im_dest_crit invalid"
+                      stop
                      endif
+
+                    else if ((local_freezing_model.eq.5).and. &
+                             (TGRAD_test.le.zero)) then
+                     ! do nothing
+                    else if ((local_freezing_model.eq.6).and. &
+                             (TGRAD_test.le.zero)) then
+                     ! do nothing
                     else
-                     print *,"im_dest_crit invalid"
+                     print *,"local_freezing_model invalid 16"
                      stop
                     endif
 
-                   else if ((local_freezing_model.eq.5).and. &
-                            (TGRAD_test.le.zero)) then
-                    ! do nothing
-                   else if ((local_freezing_model.eq.6).and. &
-                            (TGRAD_test.le.zero)) then
+                   else if (TorY_STATUS(im_crit).eq.0) then
                     ! do nothing
                    else
-                    print *,"local_freezing_model invalid 16"
+                    print *,"TorY_STATUS(im_crit) invalid"
                     stop
                    endif
 
-                  else if (TorY_STATUS(im_crit).eq.0) then
+                 else if ((im_source.ne.im_primary).and. &
+                          (im_source_substrate.ne.im_primary).and. &
+                          (im_dest.ne.im_primary).and. &
+                          (im_dest_substrate.ne.im_primary)) then
                    ! do nothing
-                  else
-                   print *,"TorY_STATUS(im_crit) invalid"
-                   stop
-                  endif
+                 else
+                  print *,"LS_center invalid"
+                  stop
+                 endif
 
-                else if ((im_source.ne.im_primary).and. &
-                         (im_source_substrate.ne.im_primary).and. &
-                         (im_dest.ne.im_primary).and. &
-                         (im_dest_substrate.ne.im_primary)) then
-                  ! do nothing
+                else if (is_GFM_freezing_modelF(local_freezing_model).eq.0) then 
+                 ! do nothing
                 else
-                 print *,"LS_center invalid"
+                 print *,"freezing_model invalid in stefansolver"
+                 print *,"local_freezing_model= ",local_freezing_model
+                 print *,"iten,ireverse,num_interfaces ",iten,ireverse,num_interfaces
                  stop
                 endif
 
-               else if (is_GFM_freezing_modelF(local_freezing_model).eq.0) then 
+               else if (start_freezing.eq.0) then
                 ! do nothing
                else
-                print *,"freezing_model invalid in stefansolver"
-                print *,"local_freezing_model= ",local_freezing_model
-                print *,"iten,ireverse,num_interfaces ",iten,ireverse,num_interfaces
+                print *,"start_freezing invalid"
                 stop
                endif
 
-              else if (start_freezing.eq.0) then
+              else if (LL.eq.zero) then
                ! do nothing
               else
-               print *,"start_freezing invalid"
+               print *,"LL invalid"
                stop
               endif
 
-             else if (LL.eq.zero) then
+             else if ((is_rigid(im).eq.1).or. &
+                      (is_rigid(im_opp).eq.1)) then
               ! do nothing
              else
-              print *,"LL invalid"
+              print *,"is_rigid(im) or is_rigid(im_opp) invalid"
               stop
              endif
 
-            else if ((is_rigid(im).eq.1).or. &
-                     (is_rigid(im_opp).eq.1)) then
+            else if ((Tgamma_STATUS.eq.-1).or.(Tgamma_STATUS.eq.-2)) then
+             ! do nothing
+            else if (Tgamma_STATUS.eq.0) then
              ! do nothing
             else
-             print *,"is_rigid(im) or is_rigid(im_opp) invalid"
+             print *,"Tgamma_STATUS invalid"
              stop
             endif
 
-           else if ((Tgamma_STATUS.eq.-1).or.(Tgamma_STATUS.eq.-2)) then
-            ! do nothing
-           else if (Tgamma_STATUS.eq.0) then
-            ! do nothing
-           else
-            print *,"Tgamma_STATUS invalid"
-            stop
-           endif
+           enddo !ireverse=0,1
+          enddo ! im_opp=im+1..num_materials
+         enddo ! im=1..num_materials-1
 
-          enddo !ireverse=0,1
-         enddo ! im_opp=im+1..num_materials
-        enddo ! im=1..num_materials-1
-
-        if (im_dest_crit.eq.-1) then
-         ! do nothing
-        else if ((im_dest_crit.ge.1).and. &
-                 (im_dest_crit.le.num_materials)) then
-
-         SWEPTFACTOR=swept(D_DECL(i,j,k),im_dest_crit) !default:SWEPTFACTOR==1
-         if ((SWEPTFACTOR.lt.LSTOL).or. &
-             (SWEPTFACTOR.gt.one)) then
-          print *,"SWEPTFACTOR INVALID"
-          stop
-         endif
-         over_den=den(D_DECL(i,j,k))  ! 1/(rho)
-         over_cv=DeDT(D_DECL(i,j,k))  ! 1/(rho cv)
-         local_vol=vol(D_DECL(i,j,k))
-         single_material_den=STATEFAB(D_DECL(i,j,k), &
-           (im_primary-1)*num_state_material+1)
-
-         if ((over_den.gt.zero).and. &
-             (over_cv.gt.zero).and. &
-             (local_vol.gt.zero).and. &
-             (single_material_den.gt.zero)) then
+         if (im_dest_crit.eq.-1) then
           ! do nothing
-         else
-          print *,"over_den, over_cv, local_vol, or single_mat_den invalid"
-          stop
-         endif
+         else if ((im_dest_crit.ge.1).and. &
+                  (im_dest_crit.le.num_materials)) then
 
-         original_coeff=one/(dt*SWEPTFACTOR)
-         if (project_option.eq.SOLVETYPE_HEAT) then
-          original_coeff=original_coeff/over_cv
-         else if ((project_option.ge.SOLVETYPE_SPEC).and. &
-                  (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
-          original_coeff=original_coeff/over_den
-         else
-          print *,"project_option invalid"
-          stop
-         endif
+          SWEPTFACTOR=swept(D_DECL(i,j,k),im_dest_crit) !default:SWEPTFACTOR==1
+          if ((SWEPTFACTOR.lt.LSTOL).or. &
+              (SWEPTFACTOR.gt.one)) then
+           print *,"SWEPTFACTOR INVALID"
+           stop
+          endif
+          over_den=den(D_DECL(i,j,k))  ! 1/(rho)
+          over_cv=DeDT(D_DECL(i,j,k))  ! 1/(rho cv)
+          local_vol=vol(D_DECL(i,j,k))
+          single_material_den=STATEFAB(D_DECL(i,j,k), &
+            (im_primary-1)*num_state_material+1)
 
-         delta_coeff=zero
-         coeff_Tgamma=zero
+          if ((over_den.gt.zero).and. &
+              (over_cv.gt.zero).and. &
+              (local_vol.gt.zero).and. &
+              (single_material_den.gt.zero)) then
+           ! do nothing
+          else
+           print *,"over_den, over_cv, local_vol, or single_mat_den invalid"
+           stop
+          endif
 
-         im_crit=im_crit_save
+          original_coeff=one/(dt*SWEPTFACTOR)
+          if (project_option.eq.SOLVETYPE_HEAT) then
+           original_coeff=original_coeff/over_cv
+          else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                   (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+           original_coeff=original_coeff/over_den
+          else
+           print *,"project_option invalid"
+           stop
+          endif
 
-         iten=iten_crit
-         ireverse=ireverse_crit 
+          delta_coeff=zero
+          coeff_Tgamma=zero
 
-         im_source=im_source_crit
-         im_source_substrate=im_source_substrate_crit
-         im_dest=im_dest_crit
-         im_dest_substrate=im_dest_substrate_crit
+          im_crit=im_crit_save
 
-         LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
-         local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
-         distribute_from_targ=distribute_from_target(iten+ireverse*num_interfaces)
+          iten=iten_crit
+          ireverse=ireverse_crit 
 
-         if (project_option.eq.SOLVETYPE_HEAT) then
-          TorYgamma_BC=saturation_temp(iten+ireverse*num_interfaces)
-         else if ((project_option.ge.SOLVETYPE_SPEC).and. &
-                  (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
-          TorYgamma_BC=one
-         else
-          print *,"project_option invalid"
-          stop
-         endif
+          im_source=im_source_crit
+          im_source_substrate=im_source_substrate_crit
+          im_dest=im_dest_crit
+          im_dest_substrate=im_dest_substrate_crit
+
+          LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+          local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
+          distribute_from_targ=distribute_from_target(iten+ireverse*num_interfaces)
+
+          if (project_option.eq.SOLVETYPE_HEAT) then
+           TorYgamma_BC=saturation_temp(iten+ireverse*num_interfaces)
+          else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                   (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+           TorYgamma_BC=one
+          else
+           print *,"project_option invalid"
+           stop
+          endif
 
 
-         do dir=1,SDIM
-           ii=0
-           jj=0
-           kk=0
-           if (dir.eq.1) then
-            ii=1
-           else if (dir.eq.2) then
-            jj=1
-           else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
-            kk=1
-           else
-            print *,"dir invalid stefansolver"
-            stop
-           endif 
-           do side=-1,1,2
-            if (side.eq.-1) then
-             ic=i-ii
-             jc=j-jj
-             kc=k-kk
-             iface=i
-             jface=j
-             kface=k
-            else if (side.eq.1) then
-             ic=i+ii
-             jc=j+jj
-             kc=k+kk
-             iface=i+ii
-             jface=j+jj
-             kface=k+kk
-            else
-             print *,"side invalid"
-             stop
-            endif
-
-            call gridsten_level(xsten_side,ic,jc,kc,level,nhalf)
-
+          do dir=1,SDIM
+            ii=0
+            jj=0
+            kk=0
             if (dir.eq.1) then
-             aface=areax(D_DECL(iface,jface,kface))
+             ii=1
             else if (dir.eq.2) then
-             aface=areay(D_DECL(iface,jface,kface))
-            else if ((dir.eq.3).and.(SDIM.eq.3)) then
-             aface=areaz(D_DECL(iface,jface,kface))
+             jj=1
+            else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
+             kk=1
             else
-             print *,"dir invalid stefansolver 2"
+             print *,"dir invalid stefansolver"
              stop
-            endif
+            endif 
+            do side=-1,1,2
+             if (side.eq.-1) then
+              ic=i-ii
+              jc=j-jj
+              kc=k-kk
+              iface=i
+              jface=j
+              kface=k
+             else if (side.eq.1) then
+              ic=i+ii
+              jc=j+jj
+              kc=k+kk
+              iface=i+ii
+              jface=j+jj
+              kface=k+kk
+             else
+              print *,"side invalid"
+              stop
+             endif
 
-            do im_loop=1,num_materials
-             LS_no_tess(im_loop)=LS(D_DECL(ic,jc,kc),im_loop)
-            enddo
-            call LS_tessellate(LS_no_tess,LS_side)
+             call gridsten_level(xsten_side,ic,jc,kc,level,nhalf)
 
-            ! thermal diffusivity==0 where LS changes sign
-            ! and latent_heat <> 0.
-            at_interface=0
-            if ((LS_center(im_source)*LS_side(im_source).le.zero).and. &
-                (LS_center(im_dest)*LS_side(im_dest).le.zero)) then
-             at_interface=1
-             LS1=LS_center(im_source)-LS_center(im_dest)
-             LS2=LS_side(im_source)-LS_side(im_dest)
-             call get_default_scalar_diffusion(project_option, &
-                     thermal_k, &
-                     LS1,im_source,im_dest, &
-                     single_material_den, &
-                     heatcoeff)
-            else if ((LS_center(im_source_substrate)* &
-                      LS_side(im_source_substrate).le.zero).and. &
-                     (LS_center(im_dest_substrate)* &
-                      LS_side(im_dest_substrate).le.zero)) then
-             at_interface=1
-             LS1=LS_center(im_source_substrate)-LS_center(im_dest_substrate)
-             LS2=LS_side(im_source_substrate)-LS_side(im_dest_substrate)
-             call get_default_scalar_diffusion(project_option, &
-                     thermal_k, &
-                     LS1,im_source_substrate,im_dest_substrate, &
-                     single_material_den, &
-                     heatcoeff)
-            endif
+             if (dir.eq.1) then
+              aface=areax(D_DECL(iface,jface,kface))
+             else if (dir.eq.2) then
+              aface=areay(D_DECL(iface,jface,kface))
+             else if ((dir.eq.3).and.(SDIM.eq.3)) then
+              aface=areaz(D_DECL(iface,jface,kface))
+             else
+              print *,"dir invalid stefansolver 2"
+              stop
+             endif
 
-            if (at_interface.eq.1) then
+             do im_loop=1,num_materials
+              LS_no_tess(im_loop)=LS(D_DECL(ic,jc,kc),im_loop)
+             enddo
+             call LS_tessellate(LS_no_tess,LS_side)
 
-              ! cannot do tiling here.
-             if (adjust_temperature.eq.-1) then ! modify heatx,heaty,heatz
+             ! thermal diffusivity==0 where LS changes sign
+             ! and latent_heat <> 0.
+             at_interface=0
+             if ((LS_center(im_source)*LS_side(im_source).le.zero).and. &
+                 (LS_center(im_dest)*LS_side(im_dest).le.zero)) then
+              at_interface=1
+              LS1=LS_center(im_source)-LS_center(im_dest)
+              LS2=LS_side(im_source)-LS_side(im_dest)
+              call get_default_scalar_diffusion(project_option, &
+                      thermal_k, &
+                      LS1,im_source,im_dest, &
+                      single_material_den, &
+                      heatcoeff)
+             else if ((LS_center(im_source_substrate)* &
+                       LS_side(im_source_substrate).le.zero).and. &
+                      (LS_center(im_dest_substrate)* &
+                       LS_side(im_dest_substrate).le.zero)) then
+              at_interface=1
+              LS1=LS_center(im_source_substrate)-LS_center(im_dest_substrate)
+              LS2=LS_side(im_source_substrate)-LS_side(im_dest_substrate)
+              call get_default_scalar_diffusion(project_option, &
+                      thermal_k, &
+                      LS1,im_source_substrate,im_dest_substrate, &
+                      single_material_den, &
+                      heatcoeff)
+             endif
 
-              if (dir.eq.1) then
-               heatx(D_DECL(iface,jface,kface))=zero
-              else if (dir.eq.2) then
-               heaty(D_DECL(iface,jface,kface))=zero
-              else if ((dir.eq.3).and.(SDIM.eq.3)) then
-               heatz(D_DECL(iface,jface,kface))=zero
+             if (at_interface.eq.1) then
+
+               ! cannot do tiling here.
+              if (adjust_temperature.eq.-1) then ! modify heatx,heaty,heatz
+
+               if (dir.eq.1) then
+                heatx(D_DECL(iface,jface,kface))=zero
+               else if (dir.eq.2) then
+                heaty(D_DECL(iface,jface,kface))=zero
+               else if ((dir.eq.3).and.(SDIM.eq.3)) then
+                heatz(D_DECL(iface,jface,kface))=zero
+               else
+                print *,"dir invalid stefansolver 2B"
+                stop
+               endif
+              
+              else if ((adjust_temperature.eq.0).or. & ! modify coeff
+                       (adjust_temperature.eq.1)) then ! modify Snew and coeff
+               ! do nothing
               else
-               print *,"dir invalid stefansolver 2B"
+               print *,"adjust_temperature invalid"
                stop
               endif
-             
-             else if ((adjust_temperature.eq.0).or. & ! modify coeff
-                      (adjust_temperature.eq.1)) then ! modify Snew and coeff
+         
+              if (heatcoeff.lt.zero) then
+               print *,"heatcoeff invalid"
+               stop
+              endif
+
+              if (LS1*LS2.le.zero) then
+
+               if ((LS1.eq.zero).and.(LS2.eq.zero)) then
+                theta=half
+               else if ((LS1.ne.zero).or.(LS2.ne.zero)) then
+                theta=LS1/(LS1-LS2)
+               else
+                print *,"LS1 or LS2 invalid"
+                stop
+               endif
+               if ((theta.ge.zero).and.(theta.le.one+VOFTOL)) then
+                ! do nothing
+               else
+                print *,"theta invalid"
+                stop
+               endif
+               if (theta.le.theta_cutoff) then
+                theta=theta_cutoff
+               endif
+
+               do dir_inner=1,SDIM
+                x_interface(dir_inner)=theta*xsten_side(0,dir_inner)+ &
+                        (one-theta)*xsten(0,dir_inner)
+               enddo
+
+               if (project_option.eq.SOLVETYPE_HEAT) then
+                tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+1
+               else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                        (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+                tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+2
+               else
+                print *,"project_option invalid"
+                stop
+               endif
+
+               ngrow_tsat=1
+               call interpfab_tsat( &
+                i,j,k, &
+                ireverse, &
+                iten, &
+                ntsat, &
+                bfact, &
+                level, &
+                finest_level, &
+                dx,xlo, &
+                x_interface, &
+                tsat_comp, &
+                fablo,fabhi, &
+                TgammaFAB_ptr, &
+                TorYgamma_BC)  ! TorYgamma_BC here is an output
+
+               hx=abs(xsten(0,dir)-xsten(2*side,dir))
+               if ((levelrz.eq.3).and.(dir.eq.2)) then
+                hx=hx*xsten(side,1)
+               endif
+               side_coeff=aface*heatcoeff/(theta*hx)
+               delta_coeff=delta_coeff+side_coeff
+               coeff_Tgamma=coeff_Tgamma+TorYgamma_BC*side_coeff
+
+               if (DEBUG_EVAPORATION.eq.1) then
+                print *,"DEBUG_EVAPORATION STATEMENT 2"
+                print *,"project_option,i,j,k,dir,side ", &
+                        project_option,i,j,k,dir,side
+                print *,"im_source,im_dest,TorYgamma_BC ", &
+                        im_source,im_dest,TorYgamma_BC
+               endif
+              endif ! LS1 * LS2 <=0
+
+             else if (at_interface.eq.0) then
               ! do nothing
+             else
+              print *,"at_interface invalid in fort_stefansolver"
+              print *,"project_option=",project_option
+              print *,"solidheat_flag=",solidheat_flag
+              stop
+             endif
+
+            enddo ! side=-1,1,2
+          enddo ! dir=1..sdim
+        
+          if (adjust_temperature.eq.-1) then ! modify heatxyz
+            ! do nothing
+          else if ((adjust_temperature.eq.0).or. & ! modify coeff
+                   (adjust_temperature.eq.1)) then ! modify Snew and coeff
+  
+            if (delta_coeff.gt.zero) then
+
+              ! im_crit is material that dominates center cell.
+             if ((im_crit.lt.1).or. &
+                 (im_crit.gt.num_materials)) then
+              print *,"im_crit invalid"
+              stop
+             endif
+
+             delta_coeff=delta_coeff/local_vol
+             coeff_Tgamma=coeff_Tgamma/local_vol
+    
+             if (adjust_temperature.eq.1) then
+
+              TorY_test=TorY_fab(D_DECL(i,j,k),im_crit)
+              if (TorY_test.ge.T_or_Y_min_sanity) then
+               ! do nothing
+              else
+               print *,"TorY_test<T_or_Y_min_sanity"
+               stop
+              endif
+
+              T_adjust=(original_coeff*TorY_test+coeff_Tgamma)/ &
+                       (original_coeff+delta_coeff) 
+
+              do im_adjust=1,num_materials
+               if (project_option.eq.SOLVETYPE_HEAT) then
+                tcomp=STATECOMP_STATES+ &
+                 (im_adjust-1)*num_state_material+ &
+                 ENUM_TEMPERATUREVAR+1
+               else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                        (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+                tcomp=STATECOMP_STATES+ &
+                  (im_adjust-1)*num_state_material+ &
+                  ENUM_SPECIESVAR+1+ &
+                  project_option-SOLVETYPE_SPEC
+               else
+                print *,"project_option invalid"
+                stop
+               endif
+               Snew(D_DECL(i,j,k),tcomp)=T_adjust
+              enddo  ! im_adjust=1..num_materials
+
+              coeff(D_DECL(i,j,k))=T_adjust
+
+             else if (adjust_temperature.eq.0) then
+
+              coeff(D_DECL(i,j,k))=original_coeff+delta_coeff
+
              else
               print *,"adjust_temperature invalid"
               stop
-             endif
-        
-             if (heatcoeff.lt.zero) then
-              print *,"heatcoeff invalid"
-              stop
-             endif
+             endif  
 
-             if (LS1*LS2.le.zero) then
-
-              if ((LS1.eq.zero).and.(LS2.eq.zero)) then
-               theta=half
-              else if ((LS1.ne.zero).or.(LS2.ne.zero)) then
-               theta=LS1/(LS1-LS2)
-              else
-               print *,"LS1 or LS2 invalid"
-               stop
-              endif
-              if ((theta.ge.zero).and.(theta.le.one+VOFTOL)) then
-               ! do nothing
-              else
-               print *,"theta invalid"
-               stop
-              endif
-              if (theta.le.theta_cutoff) then
-               theta=theta_cutoff
-              endif
-
-              do dir_inner=1,SDIM
-               x_interface(dir_inner)=theta*xsten_side(0,dir_inner)+ &
-                       (one-theta)*xsten(0,dir_inner)
-              enddo
-
-              if (project_option.eq.SOLVETYPE_HEAT) then
-               tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+1
-              else if ((project_option.ge.SOLVETYPE_SPEC).and. &
-                       (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
-               tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+2
-              else
-               print *,"project_option invalid"
-               stop
-              endif
-
-              ngrow_tsat=1
-              call interpfab_tsat( &
-               i,j,k, &
-               ireverse, &
-               iten, &
-               ntsat, &
-               bfact, &
-               level, &
-               finest_level, &
-               dx,xlo, &
-               x_interface, &
-               tsat_comp, &
-               fablo,fabhi, &
-               TgammaFAB_ptr, &
-               TorYgamma_BC)  ! TorYgamma_BC here is an output
-
-              hx=abs(xsten(0,dir)-xsten(2*side,dir))
-              if ((levelrz.eq.3).and.(dir.eq.2)) then
-               hx=hx*xsten(side,1)
-              endif
-              side_coeff=aface*heatcoeff/(theta*hx)
-              delta_coeff=delta_coeff+side_coeff
-              coeff_Tgamma=coeff_Tgamma+TorYgamma_BC*side_coeff
-
-              if (DEBUG_EVAPORATION.eq.1) then
-               print *,"DEBUG_EVAPORATION STATEMENT 2"
-               print *,"project_option,i,j,k,dir,side ", &
-                       project_option,i,j,k,dir,side
-               print *,"im_source,im_dest,TorYgamma_BC ", &
-                       im_source,im_dest,TorYgamma_BC
-              endif
-             endif ! LS1 * LS2 <=0
-
-            else if (at_interface.eq.0) then
+            else if (delta_coeff.eq.zero) then
              ! do nothing
             else
-             print *,"at_interface invalid in fort_stefansolver"
-             print *,"project_option=",project_option
-             print *,"solidheat_flag=",solidheat_flag
+             print *,"delta_coeff invalid"
              stop
             endif
 
-           enddo ! side=-1,1,2
-         enddo ! dir=1..sdim
-       
-         if (adjust_temperature.eq.-1) then ! modify heatxyz
-           ! do nothing
-         else if ((adjust_temperature.eq.0).or. & ! modify coeff
-                  (adjust_temperature.eq.1)) then ! modify Snew and coeff
- 
-           if (delta_coeff.gt.zero) then
-
-             ! im_crit is material that dominates center cell.
-            if ((im_crit.lt.1).or. &
-                (im_crit.gt.num_materials)) then
-             print *,"im_crit invalid"
-             stop
-            endif
-
-            delta_coeff=delta_coeff/local_vol
-            coeff_Tgamma=coeff_Tgamma/local_vol
-   
-            if (adjust_temperature.eq.1) then
-
-             TorY_test=TorY_fab(D_DECL(i,j,k),im_crit)
-             if (TorY_test.ge.T_or_Y_min_sanity) then
-              ! do nothing
-             else
-              print *,"TorY_test<T_or_Y_min_sanity"
-              stop
-             endif
-
-             T_adjust=(original_coeff*TorY_test+coeff_Tgamma)/ &
-                      (original_coeff+delta_coeff) 
-
-             do im_adjust=1,num_materials
-              if (project_option.eq.SOLVETYPE_HEAT) then
-               tcomp=STATECOMP_STATES+ &
-                (im_adjust-1)*num_state_material+ &
-                ENUM_TEMPERATUREVAR+1
-              else if ((project_option.ge.SOLVETYPE_SPEC).and. &
-                       (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
-               tcomp=STATECOMP_STATES+ &
-                 (im_adjust-1)*num_state_material+ &
-                 ENUM_SPECIESVAR+1+ &
-                 project_option-SOLVETYPE_SPEC
-              else
-               print *,"project_option invalid"
-               stop
-              endif
-              Snew(D_DECL(i,j,k),tcomp)=T_adjust
-             enddo  ! im_adjust=1..num_materials
-
-             coeff(D_DECL(i,j,k))=T_adjust
-
-            else if (adjust_temperature.eq.0) then
-
-             coeff(D_DECL(i,j,k))=original_coeff+delta_coeff
-
-            else
-             print *,"adjust_temperature invalid"
-             stop
-            endif  
-
-           else if (delta_coeff.eq.zero) then
-            ! do nothing
-           else
-            print *,"delta_coeff invalid"
+          else
+            print *,"adjust_temperature invalid"
             stop
-           endif
+          endif
 
-         else
-           print *,"adjust_temperature invalid"
-           stop
+         else 
+          print *,"im_dest_crit invalid"
+          stop
          endif
 
-        else 
-         print *,"im_dest_crit invalid"
+        else if (LS_center(im_primary).lt.zero) then
+         ! do nothing (vacuum should not be found)
+        else
+         print *,"LS_center(im_primary) invalid"
          stop
         endif
 
-       else if (LS_center(im_primary).lt.zero) then
-        ! do nothing (vacuum should not be found)
+       else if (maskcell.eq.0) then
+        ! do nothing
        else
-        print *,"LS_center(im_primary) invalid"
+        print *,"maskcell invalid"
         stop
        endif
 
