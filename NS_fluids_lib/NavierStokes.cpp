@@ -15189,18 +15189,31 @@ NavierStokes::level_init_icemask() {
 
 
 // 1. called if "is_GFM_freezing_model"
+//
 // 2. multiphase_project->allocate_project_variables->stefan_solver_init
+//    (project_option=SOLVETYPE_HEAT or SOLVETYPE_SPEC)
 //    (adjust_temperature==1)
 //    coeffMF==localMF[OUTER_ITER_PRESSURE_MF]
+//
 // 3. multiphase_project->allocate_maccoef->stefan_solver_init
-//    update_SEM_forcesALL->allocate_maccoef->stefan_solver_init
+//    (project_option=SOLVETYPE_HEAT or SOLVETYPE_SPEC)
 //    (adjust_temperature==0)
 //    coeffMF==localMF[ALPHANOVOLUME_MF]
+//
 // 4. multiphase_project->allocate_FACE_WEIGHT->stefan_solver_init
-//    update_SEM_forcesALL->allocate_FACE_WEIGHT->stefan_solver_init
-//    diffusion_heatingALL->allocate_FACE_WEIGHT->stefan_solver_init
+//    (project_option=SOLVETYPE_HEAT or SOLVETYPE_SPEC)
 //    (adjust_temperature==-1)
 //    coeffMF==localMF[CELL_DEN_MF]
+//
+// 5. update_SEM_forcesALL->allocate_maccoef->
+//    (create_hierarchy=-1)
+//
+// 6. update_SEM_forcesALL->allocate_FACE_WEIGHT->
+//      (face_weight_op==SUB_OP_FOR_SDC)
+//
+// 7. diffusion_heatingALL->allocate_FACE_WEIGHT->
+//      (project_option==SOLVETYPE_VISC)
+//
 // if adjust_temperature==1,
 //  Snew=(c1 Tn + c2 TSAT)/(c1+c2)
 //  coeffMF=(c1 Tn + c2 TSAT)/(c1+c2)
@@ -15376,6 +15389,10 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 
  MultiFab* TorY_list_mf=getState_list(1,scomp,ncomp,cur_time_slab);
 
+ resize_maskfiner(1,MASKCOEF_MF);
+ debug_ngrow(MASKCOEF_MF,1,28); 
+ debug_ixType(MASKCOEF_MF,-1,MASKCOEF_MF);
+
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(LSmf->boxArray().d_numPts());
@@ -15396,6 +15413,11 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
    int bfact=parent->Space_blockingFactor(level);
 
    const Real* xlo = grid_loc[gridno].lo();
+
+   // mask=tag if not covered by level+1 or outside the domain.
+   // mask=1-tag if covered by level+1 and inside the domain.
+   // NavierStokes::maskfiner  (clear_phys_boundary==0)
+   FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
 
    FArrayBox& statefab=(*state_var_mf)[mfi];
 
@@ -15482,6 +15504,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     &finest_level,
     xlo,dx,
     &dt_slab,
+    maskfab.dataPtr(),
+    ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     conductivity_fab.dataPtr(), //num_materials components
     ARLIM(conductivity_fab.loVect()),ARLIM(conductivity_fab.hiVect()),
     statefab.dataPtr(),

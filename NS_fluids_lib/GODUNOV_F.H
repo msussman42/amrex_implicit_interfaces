@@ -548,6 +548,7 @@ extern "C"
     int* finest_level,
     const Real* xlo,const Real* dx,
     Real* dt,
+    Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi), 
     Real* conductstate,
     AMREX_ARLIM_P(conductstatelo),
     AMREX_ARLIM_P(conductstatehi), 
