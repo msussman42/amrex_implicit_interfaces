@@ -2582,7 +2582,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     int SEM_VISCOUS_SANITY_CHECK=0;
 
     if (SEM_VISCOUS_SANITY_CHECK==1) {
+
      amrex::Warning("SEM_VISCOUS_SANITY_CHECK==1");
+
+     if (enable_spectral==1) {
+      // do nothing
+     } else
+      amrex::Error("expecting enable_spectral=1");
 
      int update_placeholder=0;
      Vector<int> scomp;  
@@ -3900,8 +3906,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          update_SEM_forcesALL(SOLVETYPE_HEAT,
           BOUSSINESQ_TEMP_MF,
           update_spectralF,update_stableF);
-        } else if (enable_spectral==0) {
-         // do nothing
         } else
          amrex::Error("enable_spectral invalid");
 
@@ -3941,8 +3945,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          update_SEM_forcesALL(SOLVETYPE_VISC,
           REGISTER_MARK_MF,
           update_spectralF,update_stableF);
-        } else if (enable_spectral==0) {
-         // do nothing
         } else
          amrex::Error("enable_spectral invalid");
 
@@ -7533,7 +7535,8 @@ void NavierStokes::remove_FACE_WEIGHT_vars() {
 // NavierStokes::diffusion_heatingALL 
 void NavierStokes::allocate_FACE_WEIGHT(
  int nsolve,
- int project_option) {
+ int project_option,
+ int face_weight_op) {
  
  int finest_level=parent->finestLevel();
 
@@ -7701,10 +7704,15 @@ void NavierStokes::allocate_FACE_WEIGHT(
   amrex::Error("project_option invalid31");
 
  if (GFM_flag==1) {
-  stefan_solver_init(
-   localMF[CELL_DEN_MF],
-   adjust_temperature,
-   project_option);
+  if (face_weight_op==SUB_OP_FOR_MAIN) {
+   stefan_solver_init(
+    localMF[CELL_DEN_MF],
+    adjust_temperature,
+    project_option);
+  } else if (face_weight_op==SUB_OP_FOR_SDC) {
+   //do nothing
+  } else
+   amrex::Error("face_weight_op invalid");
  }
 
  const Real* dx = geom.CellSize();
@@ -9884,7 +9892,8 @@ void NavierStokes::multiphase_project(int project_option) {
    // calls fort_buidfacewt
    // BUILDFACEWT updates static variables min_face_wt and max_face_wt
    // max_face_wt[0][1] has max of (1/rho) or (visc_coef*mu) or (k) or (D)
-  ns_level.allocate_FACE_WEIGHT(nsolve,project_option);
+  int face_weight_op=SUB_OP_FOR_MAIN;
+  ns_level.allocate_FACE_WEIGHT(nsolve,project_option,face_weight_op);
 
   ns_level.allocate_pressure_work_vars(nsolve,project_option);
 
@@ -9978,13 +9987,14 @@ void NavierStokes::multiphase_project(int project_option) {
   ns_level.debug_ngrow(LEVELPC_MF,2,870);
  } // ilev=finest_level ... level
 
-    // initializes diagsing,mask_div_residual,mask_residual,
-    // ONES_MF,ONES_GROW_MF
-    //
-    //  i.e.
-    //  
-    // calls:fort_scalarcoeff,fort_mult_facewt, fort_dividedx, fort_nsgenerate
-    // initializes arrays holding the diagonal, ONES_MF, ONES_GROW_MF.
+ // initializes diagsing,mask_div_residual,mask_residual,
+ // ONES_MF,ONES_GROW_MF
+ //
+ //  i.e.
+ //  
+ // calls:fort_scalarcoeff,fort_mult_facewt, fort_dividedx, fort_nsgenerate
+ // initializes arrays holding the diagonal, ONES_MF, ONES_GROW_MF.
+ // create_hierarchy=-1,0,1
  int create_hierarchy=0;
  allocate_maccoefALL(project_option,nsolve,create_hierarchy);
 
@@ -10126,6 +10136,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   // initializes diagsing,mask_div_residual,mask_residual,
   // ONES_MF,ONES_GROW_MF
+  // create_hierarchy=-1,0,1
  create_hierarchy=1;
  allocate_maccoefALL(project_option,nsolve,create_hierarchy);
 
@@ -11699,8 +11710,9 @@ void NavierStokes::diffusion_heatingALL(
 
  int nsolve=AMREX_SPACEDIM;
  for (int ilev=finest_level;ilev>=level;ilev--) {
+  int face_weight_op=SUB_OP_FOR_MAIN;
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.allocate_FACE_WEIGHT(nsolve,SOLVETYPE_VISC);
+  ns_level.allocate_FACE_WEIGHT(nsolve,SOLVETYPE_VISC,face_weight_op);
  }
 
  for (int ilev=finest_level;ilev>=level;ilev--) {

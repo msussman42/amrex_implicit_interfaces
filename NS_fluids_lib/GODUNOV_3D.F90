@@ -20356,7 +20356,6 @@ stop
       INTEGER_T local_maskSEM
       INTEGER_T old_maskSEM
       INTEGER_T i,j,k
-      INTEGER_T inbr,jnbr,knbr
       INTEGER_T inormal
       INTEGER_T dir,side
       INTEGER_T iofs,jofs,kofs,kofs_hi
@@ -20370,7 +20369,6 @@ stop
       REAL_T vfractest(num_materials)
       REAL_T vfrac_fluid
       REAL_T vfrac_sum_fluid,vfrac_sum_solid
-      INTEGER_T touch_coarsefine
       INTEGER_T localbc
       INTEGER_T clamped_cell_in_element
       REAL_T xclamped(SDIM)
@@ -20608,11 +20606,13 @@ stop
         if (covered_count.gt.0) then
          if (uncovered_count.ne.0) then
           print *,"cannot have an element partially covered"
+          print *,"must have bfact_{l+1}>=2 * order_{l}"
           stop
          endif
         else if (uncovered_count.gt.0) then
          if (covered_count.ne.0) then
           print *,"cannot have an element partially covered"
+          print *,"must have bfact_{l+1}>=2 * order_{l}"
           stop
          endif
         else
@@ -20714,11 +20714,6 @@ stop
         enddo
         enddo ! iofs,jofs,kofs
 
-         ! if order (bfact) > 1,
-         ! 1. make sure no finest grid elements that neighbor uncovered
-         !    coarse grid elements are tagged as CISL-MOF.
-         ! 2. make sure no uncovered coarse grid elements are tagged as
-         !    CISL-MOF.
         if (bfact.eq.1) then
          ! do nothing
         else if ((bfact.ge.2).and.(bfact.le.16)) then
@@ -20730,148 +20725,14 @@ stop
           else if (local_maskSEM.eq.0) then
            if (level.eq.finest_level) then
             if (test_maskcov.eq.1) then
-
-             touch_coarsefine=0
-
-             do dir=1,SDIM
-              do side=1,2
-
-               inbr=i
-               jnbr=j
-               knbr=k
-
-               localbc=vofbc(dir,side)
-
-               if (side.eq.1) then
-                if (dir.eq.1) then
-                 inormal=i
-                 inbr=inormal-1
-                else if (dir.eq.2) then 
-                 inormal=j
-                 jnbr=inormal-1
-                else if ((dir.eq.3).and.(SDIM.eq.3)) then 
-                 inormal=k
-                 knbr=inormal-1
-                else
-                 print *,"dir invalid"
-                 stop
-                endif
-
-                 ! =1 fine-fine ghost =0 otherwise
-                test_masknbr=NINT(masknbr(D_DECL(inbr,jnbr,knbr)))
-
-                if (inormal.eq.fablo(dir)) then
-                 if (localbc.eq.INT_DIR) then
-                  if (test_masknbr.eq.1) then
-                   ! do nothing (fine-fine)
-                  else if (test_masknbr.eq.0) then
-                   touch_coarsefine=1
-                  else
-                   print *,"test_masknbr invalid"
-                   stop
-                  endif
-                 else if ((localbc.eq.EXT_DIR).or. &
-                          (localbc.eq.FOEXTRAP).or. &
-                          (localbc.eq.REFLECT_EVEN).or. &
-                          (localbc.eq.REFLECT_ODD)) then
-                  if (inormal.eq.domlo(dir)) then
-                   ! do nothing
-                  else
-                   print *,"inormal invalid"
-                   stop
-                  endif
-                 else
-                  print *,"localbc invalid"
-                  stop
-                 endif
-                else if ((inormal.gt.fablo(dir)).and. &
-                         (inormal.lt.fabhi(dir))) then
-                 ! do nothing
-                else
-                 print *,"inormal invalid"
-                 stop
-                endif
-               else if (side.eq.2) then
-                if (dir.eq.1) then
-                 inormal=i+bfact-1
-                 inbr=inormal+1
-                else if (dir.eq.2) then 
-                 inormal=j+bfact-1
-                 jnbr=inormal+1
-                else if ((dir.eq.3).and.(SDIM.eq.3)) then 
-                 inormal=k+bfact-1
-                 knbr=inormal+1
-                else
-                 print *,"dir invalid"
-                 stop
-                endif
-
-                 ! =1 fine-fine ghost =0 otherwise
-                test_masknbr=NINT(masknbr(D_DECL(inbr,jnbr,knbr)))
-
-                if (inormal.eq.fabhi(dir)) then
-                 if (localbc.eq.INT_DIR) then
-                  if (test_masknbr.eq.1) then
-                   ! do nothing (fine-fine)
-                  else if (test_masknbr.eq.0) then
-                   touch_coarsefine=1
-                  else
-                   print *,"test_masknbr invalid"
-                   stop
-                  endif
-                 else if ((localbc.eq.EXT_DIR).or. &
-                          (localbc.eq.FOEXTRAP).or. &
-                          (localbc.eq.REFLECT_EVEN).or. &
-                          (localbc.eq.REFLECT_ODD)) then
-                  if (inormal.eq.domhi(dir)) then
-                   ! do nothing
-                  else
-                   print *,"inormal invalid"
-                   stop
-                  endif
-                 else
-                  print *,"localbc invalid"
-                  stop
-                 endif
-                else if ((inormal.gt.fablo(dir)).and. &
-                         (inormal.lt.fabhi(dir))) then
-                 ! do nothing
-                else
-                 print *,"inormal invalid"
-                 stop
-                endif
-               else
-                print *,"side invalid"
-                stop
-               endif
-              enddo ! side
-             enddo ! dir
-
-             if (touch_coarsefine.eq.1) then
-              print *,"cant mask finest lev element next to coarse element"
-              print *,"i,j,k = ",i,j,k
-              print *,"level,finest_level ",level,finest_level
-              print *,"increase n_error_buf"
-              stop
-             else if (touch_coarsefine.eq.0) then
-              ! do nothing
-             else
-              print *,"touch_coarsefine invalid"
-              stop
-             endif
+             ! do nothing
             else 
-             print *,"test_maskcov invalid"
+             print *,"test_maskcov = 1 on the finest level"
              stop
             endif
            else if ((level.ge.0).and.(level.lt.finest_level)) then
             if (test_maskcov.eq.1) then
-             print *,"cannot mask a coarse element that has bfact>1."
-             print *,"i,j,k ",i,j,k
-             print *,"level=",level
-             print *,"finest_level=",finest_level
-             print *,"bfact=",bfact
-             print *,"increase n_error_buf"
-             stop
+             ! do nothing
             else if (test_maskcov.eq.0) then
              ! do nothing
             else

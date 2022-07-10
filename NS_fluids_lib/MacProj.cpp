@@ -37,6 +37,7 @@
 //              NavierStokes::multiphase_project
 namespace amrex{
 
+//create_hierarchy=-1,0,1
 void
 NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
 		int create_hierarchy) {
@@ -63,6 +64,7 @@ NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
 
 } // end subroutine allocate_maccoefALL
 
+//create_hierarchy=-1,0,1
 void
 NavierStokes::allocate_maccoef(int project_option,int nsolve,
 		int create_hierarchy) {
@@ -163,6 +165,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    amrex::Error("bfact invalid in allocate_maccoef");
 
  } else if ((create_hierarchy==0)||
+            (create_hierarchy==-1)||
    	    (use_mg_precond_in_mglib==0)||
 	    ((level>=1)&&(level<=finest_level))) {
   local_use_mg_precond=0;
@@ -184,7 +187,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  mac_op->laplacian_solvability=0; // nonsingular matrix
 
- if (create_hierarchy==0) {
+ if ((create_hierarchy==0)||
+     (create_hierarchy==-1)) {
   // do nothing
  } else if (create_hierarchy==1) {
 
@@ -460,9 +464,14 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  }
 
  if (GFM_flag==1) {
-  stefan_solver_init(localMF[ALPHANOVOLUME_MF],
+  if ((create_hierarchy==0)||(create_hierarchy==1)) {
+   stefan_solver_init(localMF[ALPHANOVOLUME_MF],
 		  adjust_temperature,
 		  project_option);
+  } else if (create_hierarchy==-1) {
+   // do nothing
+  } else
+   amrex::Error("create_hierarchy invalid");
  } else if (GFM_flag==0) {
   // do nothing
  } else
@@ -1935,6 +1944,11 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
  } else
   amrex::Error("SDC_outer_sweeps invalid update_SEM_forcesALL");
 
+ if (enable_spectral==1) {
+  // do nothing
+ } else
+  amrex::Error("enable_spectral invalid");
+
  if ((slab_step<-1)||(slab_step>ns_time_order))
   amrex::Error("slab_step invalid(1)");
 
@@ -2011,11 +2025,13 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
    ns_level.setVal_localMF(ONES_GROW_MF,1.0,0,1,1);
 
     // NavierStokes::allocate_FACE_WEIGHT declared in: NavierStokes3.cpp
-   ns_level.allocate_FACE_WEIGHT(nsolve,project_option);
+   int face_weight_op=SUB_OP_FOR_SDC;
+   ns_level.allocate_FACE_WEIGHT(nsolve,project_option,face_weight_op);
    ns_level.allocate_pressure_work_vars(nsolve,project_option);
   } // ilev=finest_level ... level
 
-  int create_hierarchy=0;
+   // create_hierarchy=-1,0,1
+  int create_hierarchy=-1;
   allocate_maccoefALL(project_option,nsolve,create_hierarchy);
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -2052,6 +2068,11 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
 // called if project_option==SOLVETYPE_PRES,SOLVETYPE_HEAT,SOLVETYPE_VISC
 void NavierStokes::update_SEM_forces(int project_option,
  int idx_source,int update_spectral,int update_stable) {
+
+ if (enable_spectral==1) {
+  // do nothing
+ } else
+  amrex::Error("enable_spectral invalid");
 
  if (dt_slab==1.0) {
   // do nothing
