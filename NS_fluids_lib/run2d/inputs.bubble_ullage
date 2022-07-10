@@ -118,7 +118,9 @@ amr.n_cell          = 128 256
 amr.max_level       = 1
 
 amr.regrid_int      = 1     # How often to regrid
-amr.max_grid_size   = 128   # 128 is optimal for MPI in 2D
+amr.max_grid_size   = 64   # 128 is optimal for MPI in 2D
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 2 2  # number of buffer cells in error est 
@@ -158,14 +160,14 @@ ns.fixed_dt_scales=0.0 0.0 0.0
 #ns.visual_phase_change_plot_int=1
 #ns.visual_nddata_format=2
 
-amr.check_int       = 200     # number of timesteps between checkpoints
+amr.check_int       = 50     # number of timesteps between checkpoints
 #amr.check_int       = 10     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 
 ns.slice_dir=1 # y (aka z) direction
 ns.xslice=0.0000001 0.0
 #amr.slice_int=2000
-amr.plot_int        = 200   # number of timesteps between plot files (200)
+amr.plot_int        = 50   # number of timesteps between plot files (200)
 #amr.plot_int        = 10   # number of timesteps between plot files
 #amr.plot_int        = 1   # number of timesteps between plot files
 amr.plot_file       = plt     # root name of HDF5 plot file
@@ -419,6 +421,7 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 200
+cg.restart_period=25
 mg.bot_atol = 1.0e-8
 mg.rtol_b = -0.01
 Lp.v = 1
