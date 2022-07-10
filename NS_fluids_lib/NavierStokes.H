@@ -335,9 +335,9 @@ public:
     void restore_active_pressure(int save_mf);
 
     void allocate_maccoefALL(int project_option,int nsolve,
-		    int create_hierarchy);
+		    int create_hierarchy); //-1,0,1
     void allocate_maccoef(int project_option,int nsolve,
-		    int create_hierarchy);
+		    int create_hierarchy); //-1,0,1
      
     void deallocate_maccoefALL(int project_option);
     void deallocate_maccoef(int project_option);
@@ -1072,7 +1072,8 @@ void apply_pressure_grad(
 
     void allocate_FACE_WEIGHT(
       int nsolve,
-      int project_option);
+      int project_option,
+      int face_weight_op); //SUB_OP_FOR_MAIN or SUB_OP_FOR_SDC
 
     void residual_correction_form(
       int homflag,int energyflag,
