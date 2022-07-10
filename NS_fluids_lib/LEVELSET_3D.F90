@@ -13472,7 +13472,9 @@ stop
 
          hx=hx*RR
 
-         if (hx.le.zero) then
+         if (hx.gt.zero) then
+          ! do nothing
+         else
           print *,"hx invalid"
           stop
          endif

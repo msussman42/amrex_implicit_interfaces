@@ -13180,6 +13180,7 @@ stop
 
       INTEGER_T istencil
       INTEGER_T maskcell
+      INTEGER_T maskleft,maskright
       REAL_T donate_data
       REAL_T donate_data_MAC(SDIM)
       REAL_T donate_density
@@ -13668,471 +13669,483 @@ stop
         do kcrse=growlo(3),growhi(3)
          nprocessed=nprocessed+1
 
-         nhalf=1
-         call gridstenMAC_level(xsten_MAC,icrse,jcrse,kcrse, &
-           level,nhalf,veldir-1,35)
+         maskleft=NINT(mask(D_DECL(icrse-iii,jcrse-jjj,kcrse-kkk)))
+         maskright=NINT(mask(D_DECL(icrse,jcrse,kcrse)))
 
-         check_accept=1
+         if ((maskleft.eq.1).or.(maskright.eq.1)) then
 
-         if (levelrz.eq.0) then
-          ! do nothing
-         else if (levelrz.eq.1) then
-          if (SDIM.ne.2) then
-           print *,"dimension bust"
+          nhalf=1
+          call gridstenMAC_level(xsten_MAC,icrse,jcrse,kcrse, &
+            level,nhalf,veldir-1,35)
+
+          check_accept=1
+
+          if (levelrz.eq.0) then
+           ! do nothing
+          else if (levelrz.eq.1) then
+           if (SDIM.ne.2) then
+            print *,"dimension bust"
+            stop
+           endif
+           if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
+               (veldir.eq.1)) then
+            check_accept=0
+           endif
+          else if (levelrz.eq.3) then
+           if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
+               (veldir.eq.1)) then
+            check_accept=0
+           endif
+          else
+           print *,"levelrz invalid vfrac split 2"
            stop
           endif
-          if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
-              (veldir.eq.1)) then
-           check_accept=0
-          endif
-         else if (levelrz.eq.3) then
-          if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
-              (veldir.eq.1)) then
-           check_accept=0
-          endif
-         else
-          print *,"levelrz invalid vfrac split 2"
-          stop
-         endif
 
-         if (check_accept.eq.1) then
+          if (check_accept.eq.1) then
 
-           do iside=-1,1,2
+            do iside=-1,1,2
 
-            iside_part=-iside
+             iside_part=-iside
 
-             ! control volume left of face
-            if (iside.eq.-1) then
-             ipart=icrse-iii 
-             jpart=jcrse-jjj 
-             kpart=kcrse-kkk
- 
-             ! control volume right of face
-            else if (iside.eq.1) then
-             ipart=icrse
-             jpart=jcrse
-             kpart=kcrse
-            else
-             print *,"iside invalid"
-             stop
-            endif
-
-            nhalf=1
-            call CISBOXHALF(xsten_accept,nhalf, &
-             xlo,dx,ipart,jpart,kpart,iside_part,veldir, &
-             bfact,level, &
-             volcell_accept,cencell_accept,SDIM)
- 
-            if (volcell_accept.gt.zero) then
-             ! do nothing
-            else
-             print *,"volcell_accept invalid"
-             stop
-            endif
-
-            do ihalf=-1,1
-            do dir2=1,SDIM
-             xsten_target(ihalf,dir2)=xsten_accept(ihalf,dir2)
-             xsten_depart(ihalf,dir2)=xsten_accept(ihalf,dir2)
-            enddo
-            enddo
-
-            ! veldata(momcomp)  momcomp=(im-1)*sdim+veldir
-            ! veldata(CISLCOMP_DEN_MOM+im)
-            !         icell=-1    icell=0  
-            !  imac=-1      imac=0     imac=1
-            !    *------------*----------*
-            ! MAC velocity on left side of cell control volume
-            usten_accept(-1)=unode(D_DECL(ipart,jpart,kpart))
-            nhalf=1
-             ! normdir=0..sdim-1
-            call gridstenMAC_level(xsten_MAC,ipart,jpart,kpart, &
-              level,nhalf,normdir,36)
-
-            if (levelrz.eq.0) then
-             ! do nothing
-            else if ((levelrz.eq.1).or. &
-                     (levelrz.eq.3)) then
-             if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
-                 (normdir.eq.0)) then
-              usten_accept(-1)=zero
+              ! control volume left of face
+             if (iside.eq.-1) then
+              ipart=icrse-iii 
+              jpart=jcrse-jjj 
+              kpart=kcrse-kkk
+  
+              ! control volume right of face
+             else if (iside.eq.1) then
+              ipart=icrse
+              jpart=jcrse
+              kpart=kcrse
+             else
+              print *,"iside invalid"
+              stop
              endif
-            else
-             print *,"levelrz invalid add to bucket mac"
-             stop
-            endif
-             ! MAC velocity on right side of cell control volume
-            usten_accept(1)=unode(D_DECL(ipart+ii,jpart+jj,kpart+kk))
 
-            if (usten_accept(-1).gt.zero) then
-             idonatelow=-1
-            else
-             idonatelow=0
-            endif
-            if (usten_accept(1).lt.zero) then
-             idonatehigh=1
-            else
-             idonatehigh=0
-            endif
+             nhalf=1
+             call CISBOXHALF(xsten_accept,nhalf, &
+              xlo,dx,ipart,jpart,kpart,iside_part,veldir, &
+              bfact,level, &
+              volcell_accept,cencell_accept,SDIM)
+  
+             if (volcell_accept.gt.zero) then
+              ! do nothing
+             else
+              print *,"volcell_accept invalid"
+              stop
+             endif
 
-            if (veldir.eq.normdir+1) then
-             veldir_comp=normdir+1
-             usten_accept(0)=ucell(D_DECL(ipart,jpart,kpart),veldir_comp)
-             u_minimum=min(usten_accept(-1),usten_accept(1))
-             u_maximum=max(usten_accept(-1),usten_accept(1))
-             if (usten_accept(0).lt.u_minimum) then
-              usten_accept(0)=u_minimum
+             do ihalf=-1,1
+             do dir2=1,SDIM
+              xsten_target(ihalf,dir2)=xsten_accept(ihalf,dir2)
+              xsten_depart(ihalf,dir2)=xsten_accept(ihalf,dir2)
+             enddo
+             enddo
+
+             ! veldata(momcomp)  momcomp=(im-1)*sdim+veldir
+             ! veldata(CISLCOMP_DEN_MOM+im)
+             !         icell=-1    icell=0  
+             !  imac=-1      imac=0     imac=1
+             !    *------------*----------*
+             ! MAC velocity on left side of cell control volume
+             usten_accept(-1)=unode(D_DECL(ipart,jpart,kpart))
+             nhalf=1
+              ! normdir=0..sdim-1
+             call gridstenMAC_level(xsten_MAC,ipart,jpart,kpart, &
+               level,nhalf,normdir,36)
+
+             if (levelrz.eq.0) then
+              ! do nothing
+             else if ((levelrz.eq.1).or. &
+                      (levelrz.eq.3)) then
+              if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
+                  (normdir.eq.0)) then
+               usten_accept(-1)=zero
+              endif
+             else
+              print *,"levelrz invalid add to bucket mac"
+              stop
              endif
-             if (usten_accept(0).gt.u_maximum) then
-              usten_accept(0)=u_maximum
+              ! MAC velocity on right side of cell control volume
+             usten_accept(1)=unode(D_DECL(ipart+ii,jpart+jj,kpart+kk))
+
+             if (usten_accept(-1).gt.zero) then
+              idonatelow=-1
+             else
+              idonatelow=0
              endif
-      
+             if (usten_accept(1).lt.zero) then
+              idonatehigh=1
+             else
+              idonatehigh=0
+             endif
+
+             if (veldir.eq.normdir+1) then
+              veldir_comp=normdir+1
+              usten_accept(0)=ucell(D_DECL(ipart,jpart,kpart),veldir_comp)
+              u_minimum=min(usten_accept(-1),usten_accept(1))
+              u_maximum=max(usten_accept(-1),usten_accept(1))
+              if (usten_accept(0).lt.u_minimum) then
+               usten_accept(0)=u_minimum
+              endif
+              if (usten_accept(0).gt.u_maximum) then
+               usten_accept(0)=u_maximum
+              endif
+       
+              if (iside_part.eq.-1) then
+               usten_accept(1)=usten_accept(0)
+               usten_accept(0)=half*(usten_accept(-1)+usten_accept(1))
+              else if (iside_part.eq.1) then
+               usten_accept(-1)=usten_accept(0)
+               usten_accept(0)=half*(usten_accept(-1)+usten_accept(1))
+              else
+               print *,"iside_part invalid"
+               stop
+              endif
+             else
+              usten_accept(0)=half*(usten_accept(-1)+usten_accept(1))
+             endif
+
+             idonate=ipart
+             jdonate=jpart
+             kdonate=kpart
+
+             do istate=1,nc_bucket
+              veldata(istate)=zero
+             enddo
+             veldata_MAC(veldir)=zero
+             veldata_MAC_mass(veldir)=zero
+
+             do istencil=idonatelow,idonatehigh
+
+               ! ipart,jpart,kpart is a cell index
+              if (normdir.eq.0) then
+               idonate=ipart+istencil
+              else if (normdir.eq.1) then
+               jdonate=jpart+istencil
+              else if ((normdir.eq.2).and.(SDIM.eq.3)) then
+               kdonate=kpart+istencil
+              else
+               print *,"normdir invalid"
+               stop
+              endif
+
+              iside_low=iside_part
+              iside_high=iside_part
+              if (veldir.eq.normdir+1) then
+               iside_low=-1
+               iside_high=1
+              endif
+
+              do isidedonate=iside_low,iside_high,2
+
+               call CISBOX(xsten_recon,1, &
+                xlo,dx,idonate,jdonate,kdonate, &
+                bfact,level, &
+                volcell_recon,cencell_recon,SDIM)
+
+               call CISBOXHALF(xsten_donate,1, &
+                xlo,dx,idonate,jdonate,kdonate,isidedonate,veldir, &
+                bfact,level, &
+                volcell_donate,cencell_donate,SDIM)
+
+               check_intersection=1
+
+               if (levelrz.eq.0) then
+                ! do nothing
+               else if (levelrz.eq.1) then
+                if (SDIM.ne.2) then
+                 print *,"dimension bust"
+                 stop
+                endif
+                if (xsten_recon(0,1).le.VOFTOL*dx(1)) then
+                 check_intersection=0
+                endif
+               else if (levelrz.eq.3) then
+                if (xsten_recon(0,1).le.VOFTOL*dx(1)) then
+                 check_intersection=0
+                endif
+               else
+                print *,"levelrz invalid add to bucket MAC 2"
+                stop
+               endif
+
+               if (check_intersection.eq.1) then 
+
+                usten_donate(-1)=unode(D_DECL(idonate,jdonate,kdonate))
+
+                nhalf=1
+                call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
+                 level,nhalf,normdir,37)
+
+                if (levelrz.eq.0) then
+                 ! do nothing
+                else if ((levelrz.eq.1).or. &
+                         (levelrz.eq.3)) then
+                 if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
+                     (normdir.eq.0)) then
+                  usten_donate(-1)=zero
+                 endif
+                else
+                 print *,"levelrz invalid add to bucket mac 3"
+                 stop
+                endif
+
+                usten_donate(1)=unode(D_DECL(idonate+ii,jdonate+jj,kdonate+kk))
+
+                if (veldir.eq.normdir+1) then
+
+                 veldir_comp=normdir+1
+                 usten_donate(0)= &
+                  ucell(D_DECL(idonate,jdonate,kdonate),veldir_comp)
+                 u_minimum=min(usten_donate(-1),usten_donate(1))
+                 u_maximum=max(usten_donate(-1),usten_donate(1))
+                 if (usten_donate(0).lt.u_minimum) then
+                  usten_donate(0)=u_minimum
+                 endif
+                 if (usten_donate(0).gt.u_maximum) then
+                  usten_donate(0)=u_maximum
+                 endif
+
+                 if (isidedonate.eq.-1) then
+                  usten_donate(1)=usten_donate(0)
+                  usten_donate(0)= &
+                   half*(usten_donate(-1)+usten_donate(1))
+                 else if (isidedonate.eq.1) then
+                  usten_donate(-1)=usten_donate(0)
+                  usten_donate(0)= &
+                   half*(usten_donate(-1)+usten_donate(1))
+                 else
+                  print *,"isidedonate invalid"
+                  stop
+                 endif
+                else
+                 usten_donate(0)= &
+                  half*(usten_donate(-1)+usten_donate(1))
+                endif
+
+                call derive_mappings( &
+                 xsten_accept, &
+                 xsten_donate, &
+                 xsten_target, &
+                 xsten_depart, &
+                 usten_accept, &
+                 usten_donate, &
+                 xdepartsize, &
+                 xtargetsize, &
+                 xloint, &
+                 xhiint, &
+                 volint, &
+                 coeff, &
+                 bfact,dx,map_forward,normdir)
+
+                if (volint.gt.zero) then  
+
+                 do dir2=1,num_materials*ngeom_recon
+                  mofdata_grid(dir2)= &
+                   PLICSLP(D_DECL(idonate,jdonate,kdonate),dir2)
+                 enddo
+  
+                 ! find departure volume within xsten_xrecon
+                 tessellate=0
+                 if (nmax.lt.10) then
+                  print *,"nmax bust 3"
+                  stop
+                 endif
+                 call multi_get_volume_grid_simple( &
+                   tessellate, &  !=0
+                   bfact,dx, &
+                   xsten_recon,1, &
+                   mofdata_grid, &
+                   xsten_depart,1, &
+                   multi_volume_grid,multi_cen_grid, &
+                   geom_xtetlist_uncapt(1,1,1,tid+1), &
+                   nmax, &
+                   nmax, &
+                   SDIM,3)
+
+                  ! Sanity check inside the istencil + isidedonate loops.
+                 LS_voltotal_depart=zero
+                 do im=1,num_materials
+                  if (is_rigid(im).eq.0) then 
+                   LS_voltotal_depart=LS_voltotal_depart+ &
+                    multi_volume_grid(im)
+                  else if (is_rigid(im).eq.1) then
+                   ! do nothing (fluids tessellate)
+                  else
+                   print *,"is_rigid invalid GODUNOV_3D.F90"
+                   stop
+                  endif
+                 enddo !im=1..num_materials
+
+                 if (LS_voltotal_depart.gt.zero) then
+                  ! do nothing
+                 else
+                  print *,"LS_voltotal_depart bust "
+                  print *,"LS_voltotal_depart ",LS_voltotal_depart
+                  stop
+                 endif
+
+                 !left half of cell (idonate,jdonate,kdonate)
+                 if (isidedonate.eq.-1) then
+                   idonate_MAC=idonate 
+                   jdonate_MAC=jdonate 
+                   kdonate_MAC=kdonate 
+
+                   !right half of cell (idonate,jdonate,kdonate)
+                 else if (isidedonate.eq.1) then
+                   idonate_MAC=idonate+iii 
+                   jdonate_MAC=jdonate+jjj 
+                   kdonate_MAC=kdonate+kkk 
+                 else
+                   print *,"isidedonate invalid"
+                   stop
+                 endif
+
+                 if (veldir.eq.1) then
+                  donate_data_MAC(veldir)= &
+                   xvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC)) 
+                 else if (veldir.eq.2) then
+                  donate_data_MAC(veldir)= &
+                   yvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC)) 
+                 else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+                  donate_data_MAC(veldir)= &
+                   zvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC)) 
+                 else
+                  print *,"veldir invalid"
+                  stop
+                 endif
+
+                  ! initialize momentum for each material.
+                 do im=1,num_materials
+
+                  ! density
+                  dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
+                  donate_data= &
+                   conserve(D_DECL(idonate,jdonate,kdonate), &
+                            CISLCOMP_STATES+dencomp_data) 
+                  massdepart_mom=donate_data*added_weight(im)
+
+                  if (massdepart_mom.gt.zero) then
+                   ! do nothing
+                  else
+                   print *,"density invalid in vfrac split 1"
+                   print *,"idonate,jdonate,kdonate ",idonate,jdonate,kdonate
+                   print *,"im ",im
+                   print *,"donate_data ",donate_data
+                   print *,"multi_volume_grid(im) ",multi_volume_grid(im)
+                   print *,"massdepart_mom ",massdepart_mom
+                   stop
+                  endif
+
+                  ! a few lines before:
+                  !   massdepart_mom=donate_data*added_weight(im)
+                  massdepart_mom=massdepart_mom*multi_volume_grid(im)
+
+                  mom2(veldir)=massdepart_mom*donate_data_MAC(veldir)
+
+                  veldata(CISLCOMP_DEN_MOM+im)= &
+                   veldata(CISLCOMP_DEN_MOM+im)+massdepart_mom
+
+                  momcomp=(im-1)*SDIM+veldir
+                  veldata(momcomp)=veldata(momcomp)+mom2(veldir) 
+
+                   ! this gets incremented for im=1..num_materials
+                  veldata_MAC_mass(veldir)=veldata_MAC_mass(veldir)+ &
+                      massdepart_mom
+
+                   ! this gets incremented for im=1..num_materials
+                  veldata_MAC(veldir)= &
+                   veldata_MAC(veldir)+mom2(veldir)
+
+                 enddo ! im=1,..,num_materials 
+
+                else if (volint.eq.zero) then
+                 ! do nothing
+                else
+                 print *,"volint bust"
+                 stop
+                endif 
+
+               else if (check_intersection.eq.0) then
+                ! do nothing
+               else
+                print *,"check_intersection invalid"
+                stop
+               endif
+
+              enddo  ! isidedonate=iside_low,iside_high,2
+
+             enddo  ! istencil=idonatelow,idonatehigh
+
+              ! left of cell
              if (iside_part.eq.-1) then
-              usten_accept(1)=usten_accept(0)
-              usten_accept(0)=half*(usten_accept(-1)+usten_accept(1))
+              ibucket=1
+
+              ! right of cell
              else if (iside_part.eq.1) then
-              usten_accept(-1)=usten_accept(0)
-              usten_accept(0)=half*(usten_accept(-1)+usten_accept(1))
+              ibucket=2
              else
               print *,"iside_part invalid"
               stop
              endif
-            else
-             usten_accept(0)=half*(usten_accept(-1)+usten_accept(1))
-            endif
 
-            idonate=ipart
-            jdonate=jpart
-            kdonate=kpart
+             do im=1,num_materials
 
-            do istate=1,nc_bucket
-             veldata(istate)=zero
-            enddo
-            veldata_MAC(veldir)=zero
-            veldata_MAC_mass(veldir)=zero
+              momcomp=(im-1)*SDIM+veldir
 
-            do istencil=idonatelow,idonatehigh
+              if (is_prescribed(im).eq.0) then
 
-              ! ipart,jpart,kpart is a cell index
-             if (normdir.eq.0) then
-              idonate=ipart+istencil
-             else if (normdir.eq.1) then
-              jdonate=jpart+istencil
-             else if ((normdir.eq.2).and.(SDIM.eq.3)) then
-              kdonate=kpart+istencil
-             else
-              print *,"normdir invalid"
-              stop
-             endif
-
-             iside_low=iside_part
-             iside_high=iside_part
-             if (veldir.eq.normdir+1) then
-              iside_low=-1
-              iside_high=1
-             endif
-
-             do isidedonate=iside_low,iside_high,2
-
-              call CISBOX(xsten_recon,1, &
-               xlo,dx,idonate,jdonate,kdonate, &
-               bfact,level, &
-               volcell_recon,cencell_recon,SDIM)
-
-              call CISBOXHALF(xsten_donate,1, &
-               xlo,dx,idonate,jdonate,kdonate,isidedonate,veldir, &
-               bfact,level, &
-               volcell_donate,cencell_donate,SDIM)
-
-              check_intersection=1
-
-              if (levelrz.eq.0) then
-               ! do nothing
-              else if (levelrz.eq.1) then
-               if (SDIM.ne.2) then
-                print *,"dimension bust"
+               ! increment for each material:im=1..num_materials (since using veldata)
+               if (veldir.eq.1) then
+                xmomside(D_DECL(ipart,jpart,kpart),ibucket)= &
+                 xmomside(D_DECL(ipart,jpart,kpart),ibucket)+ &
+                 veldata(momcomp)
+                xmassside(D_DECL(ipart,jpart,kpart),ibucket)= &
+                 xmassside(D_DECL(ipart,jpart,kpart),ibucket)+ &
+                 veldata(CISLCOMP_DEN_MOM+im)
+               else if (veldir.eq.2) then
+                ymomside(D_DECL(ipart,jpart,kpart),ibucket)= &
+                 ymomside(D_DECL(ipart,jpart,kpart),ibucket)+ &
+                 veldata(momcomp)
+                ymassside(D_DECL(ipart,jpart,kpart),ibucket)= &
+                 ymassside(D_DECL(ipart,jpart,kpart),ibucket)+ &
+                 veldata(CISLCOMP_DEN_MOM+im)
+               else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+                zmomside(D_DECL(ipart,jpart,kpart),ibucket)= &
+                 zmomside(D_DECL(ipart,jpart,kpart),ibucket)+ &
+                 veldata(momcomp)
+                zmassside(D_DECL(ipart,jpart,kpart),ibucket)= &
+                 zmassside(D_DECL(ipart,jpart,kpart),ibucket)+ &
+                 veldata(CISLCOMP_DEN_MOM+im)
+               else
+                print *,"veldir invalid"
                 stop
                endif
-               if (xsten_recon(0,1).le.VOFTOL*dx(1)) then
-                check_intersection=0
-               endif
-              else if (levelrz.eq.3) then
-               if (xsten_recon(0,1).le.VOFTOL*dx(1)) then
-                check_intersection=0
-               endif
-              else
-               print *,"levelrz invalid add to bucket MAC 2"
-               stop
-              endif
-
-              if (check_intersection.eq.1) then 
-
-               usten_donate(-1)=unode(D_DECL(idonate,jdonate,kdonate))
-
-               nhalf=1
-               call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
-                level,nhalf,normdir,37)
-
-               if (levelrz.eq.0) then
-                ! do nothing
-               else if ((levelrz.eq.1).or. &
-                        (levelrz.eq.3)) then
-                if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
-                    (normdir.eq.0)) then
-                 usten_donate(-1)=zero
-                endif
-               else
-                print *,"levelrz invalid add to bucket mac 3"
-                stop
-               endif
-
-               usten_donate(1)=unode(D_DECL(idonate+ii,jdonate+jj,kdonate+kk))
-
-               if (veldir.eq.normdir+1) then
-
-                veldir_comp=normdir+1
-                usten_donate(0)= &
-                 ucell(D_DECL(idonate,jdonate,kdonate),veldir_comp)
-                u_minimum=min(usten_donate(-1),usten_donate(1))
-                u_maximum=max(usten_donate(-1),usten_donate(1))
-                if (usten_donate(0).lt.u_minimum) then
-                 usten_donate(0)=u_minimum
-                endif
-                if (usten_donate(0).gt.u_maximum) then
-                 usten_donate(0)=u_maximum
-                endif
-
-                if (isidedonate.eq.-1) then
-                 usten_donate(1)=usten_donate(0)
-                 usten_donate(0)= &
-                  half*(usten_donate(-1)+usten_donate(1))
-                else if (isidedonate.eq.1) then
-                 usten_donate(-1)=usten_donate(0)
-                 usten_donate(0)= &
-                  half*(usten_donate(-1)+usten_donate(1))
-                else
-                 print *,"isidedonate invalid"
-                 stop
-                endif
-               else
-                usten_donate(0)= &
-                 half*(usten_donate(-1)+usten_donate(1))
-               endif
-
-               call derive_mappings( &
-                xsten_accept, &
-                xsten_donate, &
-                xsten_target, &
-                xsten_depart, &
-                usten_accept, &
-                usten_donate, &
-                xdepartsize, &
-                xtargetsize, &
-                xloint, &
-                xhiint, &
-                volint, &
-                coeff, &
-                bfact,dx,map_forward,normdir)
-
-               if (volint.gt.zero) then  
-
-                do dir2=1,num_materials*ngeom_recon
-                 mofdata_grid(dir2)= &
-                  PLICSLP(D_DECL(idonate,jdonate,kdonate),dir2)
-                enddo
- 
-                ! find departure volume within xsten_xrecon
-                tessellate=0
-                if (nmax.lt.10) then
-                 print *,"nmax bust 3"
-                 stop
-                endif
-                call multi_get_volume_grid_simple( &
-                  tessellate, &  !=0
-                  bfact,dx, &
-                  xsten_recon,1, &
-                  mofdata_grid, &
-                  xsten_depart,1, &
-                  multi_volume_grid,multi_cen_grid, &
-                  geom_xtetlist_uncapt(1,1,1,tid+1), &
-                  nmax, &
-                  nmax, &
-                  SDIM,3)
-
-                 ! Sanity check inside the istencil + isidedonate loops.
-                LS_voltotal_depart=zero
-                do im=1,num_materials
-                 if (is_rigid(im).eq.0) then 
-                  LS_voltotal_depart=LS_voltotal_depart+ &
-                   multi_volume_grid(im)
-                 else if (is_rigid(im).eq.1) then
-                  ! do nothing (fluids tessellate)
-                 else
-                  print *,"is_rigid invalid GODUNOV_3D.F90"
-                  stop
-                 endif
-                enddo !im=1..num_materials
-
-                if (LS_voltotal_depart.gt.zero) then
-                 ! do nothing
-                else
-                 print *,"LS_voltotal_depart bust "
-                 print *,"LS_voltotal_depart ",LS_voltotal_depart
-                 stop
-                endif
-
-                !left half of cell (idonate,jdonate,kdonate)
-                if (isidedonate.eq.-1) then
-                  idonate_MAC=idonate 
-                  jdonate_MAC=jdonate 
-                  kdonate_MAC=kdonate 
-
-                  !right half of cell (idonate,jdonate,kdonate)
-                else if (isidedonate.eq.1) then
-                  idonate_MAC=idonate+iii 
-                  jdonate_MAC=jdonate+jjj 
-                  kdonate_MAC=kdonate+kkk 
-                else
-                  print *,"isidedonate invalid"
-                  stop
-                endif
-
-                if (veldir.eq.1) then
-                 donate_data_MAC(veldir)= &
-                  xvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC)) 
-                else if (veldir.eq.2) then
-                 donate_data_MAC(veldir)= &
-                  yvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC)) 
-                else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-                 donate_data_MAC(veldir)= &
-                  zvel(D_DECL(idonate_MAC,jdonate_MAC,kdonate_MAC)) 
-                else
-                 print *,"veldir invalid"
-                 stop
-                endif
-
-                 ! initialize momentum for each material.
-                do im=1,num_materials
-
-                 ! density
-                 dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
-                 donate_data= &
-                  conserve(D_DECL(idonate,jdonate,kdonate), &
-                           CISLCOMP_STATES+dencomp_data) 
-                 massdepart_mom=donate_data*added_weight(im)
-
-                 if (massdepart_mom.gt.zero) then
-                  ! do nothing
-                 else
-                  print *,"density invalid in vfrac split 1"
-                  print *,"idonate,jdonate,kdonate ",idonate,jdonate,kdonate
-                  print *,"im ",im
-                  print *,"donate_data ",donate_data
-                  print *,"multi_volume_grid(im) ",multi_volume_grid(im)
-                  print *,"massdepart_mom ",massdepart_mom
-                  stop
-                 endif
-
-                 ! a few lines before:
-                 !   massdepart_mom=donate_data*added_weight(im)
-                 massdepart_mom=massdepart_mom*multi_volume_grid(im)
-
-                 mom2(veldir)=massdepart_mom*donate_data_MAC(veldir)
-
-                 veldata(CISLCOMP_DEN_MOM+im)= &
-                  veldata(CISLCOMP_DEN_MOM+im)+massdepart_mom
-
-                 momcomp=(im-1)*SDIM+veldir
-                 veldata(momcomp)=veldata(momcomp)+mom2(veldir) 
-
-                  ! this gets incremented for im=1..num_materials
-                 veldata_MAC_mass(veldir)=veldata_MAC_mass(veldir)+ &
-                     massdepart_mom
-
-                  ! this gets incremented for im=1..num_materials
-                 veldata_MAC(veldir)= &
-                  veldata_MAC(veldir)+mom2(veldir)
-
-                enddo ! im=1,..,num_materials 
-
-               else if (volint.eq.zero) then
-                ! do nothing
-               else
-                print *,"volint bust"
-                stop
-               endif 
-
-              else if (check_intersection.eq.0) then
+      
+              else if (is_prescribed(im).eq.1) then
                ! do nothing
               else
-               print *,"check_intersection invalid"
+               print *,"is_prescribed(im) invalid"
                stop
               endif
 
-             enddo  ! isidedonate=iside_low,iside_high,2
+             enddo ! im=1..num_materials
 
-            enddo  ! istencil=idonatelow,idonatehigh
+            enddo ! iside=-1,1,2
 
-             ! left of cell
-            if (iside_part.eq.-1) then
-             ibucket=1
+          else if (check_accept.eq.0) then
+           ! do nothing (buckets already init to 0)
+          else
+           print *,"check_accept bust"
+           stop
+          endif
 
-             ! right of cell
-            else if (iside_part.eq.1) then
-             ibucket=2
-            else
-             print *,"iside_part invalid"
-             stop
-            endif
-
-            do im=1,num_materials
-
-             momcomp=(im-1)*SDIM+veldir
-
-             if (is_prescribed(im).eq.0) then
-
-              ! increment for each material:im=1..num_materials (since using veldata)
-              if (veldir.eq.1) then
-               xmomside(D_DECL(ipart,jpart,kpart),ibucket)= &
-                xmomside(D_DECL(ipart,jpart,kpart),ibucket)+ &
-                veldata(momcomp)
-               xmassside(D_DECL(ipart,jpart,kpart),ibucket)= &
-                xmassside(D_DECL(ipart,jpart,kpart),ibucket)+ &
-                veldata(CISLCOMP_DEN_MOM+im)
-              else if (veldir.eq.2) then
-               ymomside(D_DECL(ipart,jpart,kpart),ibucket)= &
-                ymomside(D_DECL(ipart,jpart,kpart),ibucket)+ &
-                veldata(momcomp)
-               ymassside(D_DECL(ipart,jpart,kpart),ibucket)= &
-                ymassside(D_DECL(ipart,jpart,kpart),ibucket)+ &
-                veldata(CISLCOMP_DEN_MOM+im)
-              else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-               zmomside(D_DECL(ipart,jpart,kpart),ibucket)= &
-                zmomside(D_DECL(ipart,jpart,kpart),ibucket)+ &
-                veldata(momcomp)
-               zmassside(D_DECL(ipart,jpart,kpart),ibucket)= &
-                zmassside(D_DECL(ipart,jpart,kpart),ibucket)+ &
-                veldata(CISLCOMP_DEN_MOM+im)
-              else
-               print *,"veldir invalid"
-               stop
-              endif
-     
-             else if (is_prescribed(im).eq.1) then
-              ! do nothing
-             else
-              print *,"is_prescribed(im) invalid"
-              stop
-             endif
-
-            enddo ! im=1..num_materials
-
-           enddo ! iside=-1,1,2
-
-         else if (check_accept.eq.0) then
-          ! do nothing (buckets already init to 0)
+         else if ((maskleft.eq.0).and.(maskright.eq.0)) then
+          ! do nothing
          else
-          print *,"check_accept bust"
+          print *,"maskleft or maskright invalid"
           stop
          endif
 
@@ -20356,12 +20369,10 @@ stop
       INTEGER_T local_maskSEM
       INTEGER_T old_maskSEM
       INTEGER_T i,j,k
-      INTEGER_T inormal
-      INTEGER_T dir,side
+      INTEGER_T dir
       INTEGER_T iofs,jofs,kofs,kofs_hi
       INTEGER_T stripstat
       INTEGER_T test_maskcov
-      INTEGER_T test_masknbr
       INTEGER_T test_maskSEM
       INTEGER_T covered_count
       INTEGER_T uncovered_count
@@ -20369,7 +20380,6 @@ stop
       REAL_T vfractest(num_materials)
       REAL_T vfrac_fluid
       REAL_T vfrac_sum_fluid,vfrac_sum_solid
-      INTEGER_T localbc
       INTEGER_T clamped_cell_in_element
       REAL_T xclamped(SDIM)
       REAL_T LS_clamped
