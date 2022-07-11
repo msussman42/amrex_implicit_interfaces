@@ -687,7 +687,7 @@ Amr::AMR_checkInput ()
     if (max_level < 0)
         amrex::Error("checkInput: max_level not set");
     //
-    // 1. Check that blocking_factor is a power of 2 and no smaller than 4.
+    // 1. Check that blocking_factor is a power of 2 and no smaller than 2.
     // 2. Check that blocking_factor[i+1]<=blocking_factor[i].
     // 3. Check that blocking_factor[i]>=8 if i<max_level.
     //    (this last check insures that there are at least 4 coarse 
@@ -723,13 +723,15 @@ Amr::AMR_checkInput ()
 
          // the number of coarse grid proper nesting cells for level i+1
          // is blocking_factor[i]/2
-        if ((i>=0)&&(i<max_level)) {
-         if (Old_blockingFactor(i)<k)
-          amrex::Error("bfact_grid>=space_blocking_Factor required");
+        if ((i>=0)&&(i<=max_level)) {
          if (Old_blockingFactor(i)<2*k)
           amrex::Error("bfact_grid>=2*space_blocking_Factor required");
-        } else if (i==max_level) {
- 	 // do nothing
+	} else
+	 amrex::Error("i invalid");
+
+	if ((i>=0)&&(i<max_level)) {
+         if (Old_blockingFactor(i+1)<2*k)
+          amrex::Error("(Old_blockingFactor(i+1)<2*k)");
 	} else
 	 amrex::Error("i invalid");
 
