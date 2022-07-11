@@ -729,9 +729,13 @@ Amr::AMR_checkInput ()
 	} else
 	 amrex::Error("i invalid");
 
+         //cannot have an element that is partially covered by a finer
+         //grid.
 	if ((i>=0)&&(i<max_level)) {
          if (Old_blockingFactor(i+1)<2*k)
           amrex::Error("(Old_blockingFactor(i+1)<2*k)");
+        } else if (i==max_level) {
+         // do nothing
 	} else
 	 amrex::Error("i invalid");
 
