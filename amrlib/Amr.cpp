@@ -240,6 +240,7 @@ Amr::InitAmr () {
     std::fflush(NULL);
 
     //LevelBld* levelbld
+    //"getLevelBld" is declared in: NS_fluids_lib/NSBld.cpp
     levelbld = getLevelBld();
     //
     // Global function that define state variables.
@@ -2133,7 +2134,7 @@ Amr::grid_places (int              lbase,
             new_grids[lev].maxSize(Old_maxGridSize(lev));
         }
     }
-    else if ( !regrid_grids_file.empty() )     // Use grids in regrid_grids_file 
+    else if ( !regrid_grids_file.empty() )  // Use grids in regrid_grids_file 
     {
         new_finest = std::min(max_level,(finest_level+1));
         new_finest = std::min<int>(new_finest,regrid_ba.size());

@@ -620,9 +620,10 @@ AmrMesh::MakeNewGrids (int lbase, Real time, int& new_finest, Vector<BoxArray>& 
             blFcomp.simplify();
             bl_tagged.clear();
 
-            const IntVect& iv = IntVect(AMREX_D_DECL(n_error_buf[levf][0]/ref_ratio[levf][0],
-                                                     n_error_buf[levf][1]/ref_ratio[levf][1],
-                                                     n_error_buf[levf][2]/ref_ratio[levf][2]));
+            const IntVect& iv = IntVect(AMREX_D_DECL(
+                   n_error_buf[levf][0]/ref_ratio[levf][0],
+                   n_error_buf[levf][1]/ref_ratio[levf][1],
+                   n_error_buf[levf][2]/ref_ratio[levf][2]));
             blFcomp.accrete(iv);
             BoxList blF;
             blF.parallelComplementIn(mboxF,blFcomp);
