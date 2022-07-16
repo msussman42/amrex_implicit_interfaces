@@ -9231,7 +9231,11 @@ void NavierStokes::post_restart() {
    bfact_space_level[ilev]=parent->Space_blockingFactor(ilev);
    bfact_grid_level[ilev]=parent->Old_blockingFactor(ilev);
   }
+  int ioproc=ParallelDescriptor::IOProcessor();
+   //fort_initgridmap is declared in PROB.F90
   fort_initgridmap(
+    &verbose,
+    &ioproc,
     &max_level,
     bfact_space_level.dataPtr(),
     bfact_grid_level.dataPtr(),
@@ -9411,7 +9415,11 @@ NavierStokes::initData () {
    bfact_space_level[ilev]=parent->Space_blockingFactor(ilev);
    bfact_grid_level[ilev]=parent->Old_blockingFactor(ilev);
   }
+  int ioproc=ParallelDescriptor::IOProcessor();
+   //fort_initgridmap is declared in PROB.F90
   fort_initgridmap(
+   &verbose,
+   &ioproc,
    &max_level,
    bfact_space_level.dataPtr(),
    bfact_grid_level.dataPtr(),

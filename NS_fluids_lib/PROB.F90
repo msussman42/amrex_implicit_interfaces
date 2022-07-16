@@ -22772,10 +22772,21 @@ end subroutine initialize2d
          stop
         endif
         do iregions=1,number_of_source_regions
+
          call SUB_CHARFN_REGION(iregions,x_local,time,charfn)
+
          if (charfn.eq.one) then
+
+          if (1.eq.1) then
+           if (rflag.eq.zero) then
+            print *,"i,j,k,iregions,x_local,time ",i,j,k,iregions, &
+               x_local(1),x_local(2),x_local(SDIM),time
+           endif
+          endif
+
           rflag=one
           tagflag=1
+
          else if (charfn.eq.zero) then
           ! do nothing
          else
@@ -24278,6 +24289,8 @@ end subroutine initialize2d
 
 
        subroutine fort_initgridmap( &
+        verbose, &
+        ioproc, &
         max_level, &
         bfact_space_level, & 
         bfact_grid_level, & 
@@ -24291,6 +24304,8 @@ end subroutine initialize2d
 
        IMPLICIT NONE
 
+       INTEGER_T, INTENT(in) :: verbose
+       INTEGER_T, INTENT(in) :: ioproc
        INTEGER_T, INTENT(in) :: max_level
        INTEGER_T, INTENT(in) :: bfact_space_level(0:max_level)
        INTEGER_T, INTENT(in) :: bfact_grid_level(0:max_level)
@@ -24328,7 +24343,7 @@ end subroutine initialize2d
         if (bfact_grid_level(ilev).gt.bfactmax) then
          bfactmax=bfact_grid_level(ilev)
         endif
-       enddo ! ilev
+       enddo ! ilev=0,max_level
 
        max_ncell=0
        do dir=1,SDIM
@@ -24374,6 +24389,7 @@ end subroutine initialize2d
         print *,"cache_index_low ",cache_index_low
         print *,"cache_index_high ",cache_index_high
         print *,"bfactmax,max_ncell ",bfactmax,max_ncell
+        print *,"cache_max_level ",cache_max_level
 
         allocate(grid_cache(0:cache_max_level, &
          cache_index_low:cache_index_high,SDIM))
@@ -24385,6 +24401,24 @@ end subroutine initialize2d
         enddo
 
         do ilev=0,cache_max_level
+
+         if (verbose.gt.0) then
+          if (ioproc.eq.1) then
+           print *,"fort_initgridmap: ilev,bfact,dxlevel(1) ", &
+              ilev,bfact_space_level(ilev),dxlevel(1) 
+          else if (ioproc.eq.0) then
+           ! do nothing
+          else
+           print *,"ioproc invalid"
+           stop
+          endif
+         else if (verbose.le.0) then
+          ! do nothing
+         else
+          print *,"verbose invalid"
+          stop
+         endif
+
          do dir=1,SDIM
           if (domlo_level(dir).ne.0) then
            print *,"domlo_level invalid"
@@ -24404,14 +24438,14 @@ end subroutine initialize2d
            if (1.eq.0) then
             print *,"lev,inode,dir,x,xnxt ",ilev,inode,dir,xsten(0),xsten(1)
            endif
-          enddo ! i
-         enddo ! dir
+          enddo !i=domlo_level(dir)-2*bfactmax,domhi_level(dir)+2*bfactmax
+         enddo ! dir=1,SDIM
          do dir=1,SDIM
           dxlevel(dir)=half*dxlevel(dir)
           domlo_level(dir)=2*domlo_level(dir)
           domhi_level(dir)=2*(domhi_level(dir)+1)-1
          enddo
-        enddo !ilev
+        enddo !ilev=0,cache_max_level
 
        else if (grid_cache_allocated.eq.1) then
         ! do nothing

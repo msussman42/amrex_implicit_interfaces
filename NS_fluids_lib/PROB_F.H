@@ -68,6 +68,8 @@ namespace amrex{
       int* finest_level);
 
      void fort_initgridmap(
+      int* verbose,
+      int* ioproc,
       const int* max_level,
       int* bfact_space_level,
       int* bfact_grid_level,
