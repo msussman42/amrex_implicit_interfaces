@@ -105,12 +105,15 @@ namespace amrex{
       const Real* dx,const Real* xlo);
 
      void fort_vfracerror(
-      int* tag, AMREX_ARLIM_P(tlo), AMREX_ARLIM_P(thi),
+      int* tid_current,
+      int* error_set_count,
+      int* tag, 
+      AMREX_ARLIM_P(tlo), AMREX_ARLIM_P(thi),
       const int* tagval, const int* clearval,
-      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
+      Real* errfab, 
+      AMREX_ARLIM_P(err_lo), AMREX_ARLIM_P(err_hi),
       const int* tilelo, const int* tilehi, 
       const int* fablo, const int* fabhi,int* bfact, 
-      const int* nvar,
       const int* domain_lo, const int* domain_hi,
       const Real* dx, const Real* xlo,
       const Real* prob_lo, 

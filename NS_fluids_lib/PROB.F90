@@ -22616,28 +22616,37 @@ end subroutine initialize2d
        ! calc_error_indicator
        ! EOS_error_ind
       subroutine fort_vfracerror(  &
-       tag,DIMS(tag), &
+       tid_current, &
+       error_set_count, &
+       tag, &
+       DIMS(tag), &
        set,clear, &
-       vfrac,DIMS(vfrac), &
+       errfab, &
+       DIMS(errfab), &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
-       nvar, &
        domlo,domhi, &
-       dx,xlo,problo, &
+       dx,xlo, &
+       problo, &
        time, &
        level, &
        max_level, &
        max_level_for_use, &
        nblocks, &
        xblocks,yblocks,zblocks, &
-       rxblocks,ryblocks,rzblocks,ncoarseblocks, &
+       rxblocks,ryblocks,rzblocks, &
+       ncoarseblocks, &
        xcoarseblocks,ycoarseblocks,zcoarseblocks, &
        rxcoarseblocks,rycoarseblocks,rzcoarseblocks) &
       bind(c,name='fort_vfracerror')
 
       use global_utility_module
+      use geometry_intersect_module
 
       IMPLICIT NONE
+
+      INTEGER_T, INTENT(in) :: tid_current
+      INTEGER_T, INTENT(inout) :: error_set_count
 
       INTEGER_T, INTENT(in) :: nblocks,ncoarseblocks
       REAL_T, INTENT(in) :: xblocks(10),yblocks(10),zblocks(10)
@@ -22651,8 +22660,8 @@ end subroutine initialize2d
       REAL_T, INTENT(in) :: rzcoarseblocks(10)
 
       INTEGER_T, INTENT(in) :: DIMDEC(tag)
-      INTEGER_T, INTENT(in) :: DIMDEC(vfrac)
-      INTEGER_T, INTENT(in) :: nvar, set, clear
+      INTEGER_T, INTENT(in) :: DIMDEC(errfab)
+      INTEGER_T, INTENT(in) :: set, clear
       INTEGER_T, INTENT(in) :: level
       INTEGER_T, INTENT(in) :: max_level
       INTEGER_T, INTENT(in) :: max_level_for_use
@@ -22664,8 +22673,8 @@ end subroutine initialize2d
       REAL_T, INTENT(in) :: dx(SDIM), xlo(SDIM), problo(SDIM), time
       INTEGER_T, INTENT(out), target :: tag(DIMV(tag))
       INTEGER_T, pointer :: tag_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in), target :: vfrac(DIMV(vfrac),nvar)
-      REAL_T, pointer :: vfrac_ptr(D_DECL(:,:,:),:)
+      REAL_T, INTENT(in), target :: errfab(DIMV(errfab))
+      REAL_T, pointer :: errfab_ptr(D_DECL(:,:,:))
       REAL_T    x, y, z, rflag
       INTEGER_T i,j,k
       INTEGER_T np
@@ -22704,12 +22713,16 @@ end subroutine initialize2d
        print *,"nblocks or ncoarseblocks out of range"
        stop
       endif
+      if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
+       print *,"tid_current invalid"
+       stop
+      endif
 
       tag_ptr=>tag
-      vfrac_ptr=>vfrac
+      errfab_ptr=>errfab
 
       call checkbound_int_array1(fablo,fabhi,tag_ptr,0,-1,1400)
-      call checkbound_array(fablo,fabhi,vfrac_ptr,0,-1,1400)
+      call checkbound_array1(fablo,fabhi,errfab_ptr,0,-1,1400)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
@@ -22737,9 +22750,9 @@ end subroutine initialize2d
         !    forms minimal boxes surrounding all the tagged cells, making
         !    sure that appropriate proper nesting and blocking factor
         !    conditions are satisfied.
-        ! NOTE: vfrac(D_DECL(i,j,k),1) is initialized ultimately 
+        ! NOTE: errfab(D_DECL(i,j,k)) is initialized ultimately 
         !   from calc_error_indicator and EOS_error_ind
-       rflag=vfrac(D_DECL(i,j,k),1)
+       rflag=errfab(D_DECL(i,j,k))
        tagflag=0
 
        if (level.lt.max_level_for_use) then
@@ -22824,6 +22837,7 @@ end subroutine initialize2d
        endif
 
        if (tagflag.eq.1) then
+        error_set_count=error_set_count+1
         tag(D_DECL(i,j,k))=set
        endif
 

@@ -17215,11 +17215,41 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
  const Real* dx        = geom.CellSize();
  const Real* prob_lo   = geom.ProbLo();
 
+ Vector<int> error_set_count;
+ error_set_count.resize(thread_class::nthreads);
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  error_set_count[tid]=0;
+ }
+
  int local_time_order=parent->Time_blockingFactor();
  Real nudge_time=state[State_Type].slabTime(local_time_order);
+
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- int nc_error=S_new.nComp()-1;
- MultiFab* mf = getState(0,nc_error,1,nudge_time); 
+ if (STATECOMP_ERR+1==S_new.nComp()) {
+  // do nothing
+ } else
+  amrex::Error("S_new.nComp() invalid");
+
+ MultiFab* err_mf = getState(0,STATECOMP_ERR,1,nudge_time); 
+ if (err_mf->nComp()==1) {
+  // do nothing
+ } else
+  amrex::Error("err_mf->nComp()=!1");
+
+ Real err_norm1=err_mf->norm1();
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "errorEst: clearval,tagval,time,n_error_buf,ngrow " <<
+     clearval << ' ' << tagval << ' ' << time << ' ' << n_error_buf << ' ' <<
+     ngrow << '\n';
+   std::cout << "errorEst: max_level,level,bfact,time order,nudge_time " <<
+     max_level << ' ' << level << ' ' << bfact << ' ' <<  
+     local_time_order << ' ' << nudge_time << '\n';
+   std::cout << "errorEst: slab_step " << slab_step << '\n';
+   std::cout << "errorEst: err_norm1 " << err_norm1 << '\n';
+  }
+ }
 
  bool use_tiling=ns_tiling;
 
@@ -17229,7 +17259,7 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(mf->boxArray().d_numPts());
+ thread_class::init_d_numPts(err_mf->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -17240,7 +17270,7 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
   // then itags = older tag values.
  Vector<int>  itags;
 
- for (MFIter mfi(*mf,use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*err_mf,use_tiling); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
 
@@ -17268,17 +17298,16 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
   const int*  tlo   = tilegrid.loVect();
   const int*  thi   = tilegrid.hiVect();
 
-  FArrayBox& snewfab=(*mf)[mfi];
-  const Box& snew_box = snewfab.box();
-  if (snew_box==tilegrid) {
+  FArrayBox& errfab=(*err_mf)[mfi];
+  const Box& errfab_box = errfab.box();
+  if (errfab_box==tilegrid) {
    // do nothing
   } else
    amrex::Error("FIX errorEST for tiling");
 
-  Real*       dat   = snewfab.dataPtr();
-  const int*  dlo   = snew_box.loVect();
-  const int*  dhi   = snew_box.hiVect();
-  const int   ncomp = snewfab.nComp();
+  Real*       errfab_dat = errfab.dataPtr();
+  const int*  errlo   = errfab_box.loVect();
+  const int*  errhi   = errfab_box.hiVect();
 
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -17287,12 +17316,15 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
 
    // declared in PROB.F90
   fort_vfracerror(
-    tptr, ARLIM(tlo), ARLIM(thi), 
+    &tid_current,
+    &error_set_count[tid_current],
+    tptr, 
+    ARLIM(tlo), ARLIM(thi), 
     &tagval, &clearval, 
-    dat, ARLIM(dlo), ARLIM(dhi),
+    errfab_dat, 
+    ARLIM(errlo), ARLIM(errhi),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
-    &ncomp, 
     domain_lo, domain_hi,
     dx, xlo, prob_lo, 
     &upper_slab_time, 
@@ -17312,8 +17344,21 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
  } // mfi
 } // omp
  ns_reconcile_d_num(99);
+ for (int tid=1;tid<thread_class::nthreads;tid++) {
+  error_set_count[0]+=error_set_count[tid];
+ }
+ ParallelDescriptor::Barrier();
 
- delete mf;
+ ParallelDescriptor::ReduceIntSum(error_set_count[0]);
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "errorEst: level, error_set_count " << level << ' ' <<
+    error_set_count[0] << '\n';
+  }
+ }
+
+ delete err_mf;
+
 } // end subroutine errorEst
 
 void NavierStokes::GetDragALL() {
