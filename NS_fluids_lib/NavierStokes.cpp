@@ -449,6 +449,8 @@ Vector<int> NavierStokes::viscosity_state_model; // def=0
 //       (vii) lambda''=lambda*(1/(1+Tr(Q)/L^2))
 //       (vii) Q^{n+1}-Q^star=-(dt/lambda'')Q^{n+1}
 //       (viii) Q^{n+1}=lambda'' Q^n+1/(lambda''+dt)
+// 7=> Neo-Hookean (using Left Cauchy Green tensor B=F F^{T}
+//     Xia, Lu, Tryggvason 2018
 Vector<int> NavierStokes::viscoelastic_model; // def=0
 Vector<int> NavierStokes::les_model; // def=0
 
@@ -4177,12 +4179,12 @@ NavierStokes::read_params ()
      if (elastic_viscosity[i]>=0.0) {
       if (fort_built_in_elastic_model(&elastic_viscosity[i],
 			            &viscoelastic_model[i])==1) {
-       if (viscoelastic_model[i]==2) { // elastic model
+       if (viscoelastic_model[i]==3) { // incremental elastic model
         if (elastic_time[i]>=1.0e+8) {
          // do nothing
         } else
          amrex::Error("elastic time inconsistent with model");
-       } else if (viscoelastic_model[i]==3) { // incremental elastic model
+       } else if (viscoelastic_model[i]==7) { // incremental Neo-Hookean model
         if (elastic_time[i]>=1.0e+8) {
          // do nothing
         } else
@@ -4265,7 +4267,7 @@ NavierStokes::read_params ()
        } else
         amrex::Error("elastic_viscosity invalid");
 
-      } else if ((viscoelastic_model[i]==2)|| //Q=grad X + grad X^T
+      } else if ((viscoelastic_model[i]==7)|| //Neo-Hookean
    	         (viscoelastic_model[i]==3)|| //incremental model
    	         (viscoelastic_model[i]==4)) {//pres-vel coupling
        // do nothing
@@ -10697,6 +10699,7 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
        // viscoelastic_model==4 => FSI pressure velocity coupling (N/A here)
        // viscoelastic_model==5 => FENE-P
        // viscoelastic_model==6 => linear PTT
+       // viscoelastic_model==7 => incremental Neo-Hookean model
      if (fort_built_in_elastic_model(&elastic_viscosity[im],
 			           &viscoelastic_model[im])==1) {
       fort_maketensor_mac(

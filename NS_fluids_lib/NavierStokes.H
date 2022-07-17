@@ -1905,8 +1905,6 @@ protected:
      //       Oldroyd-B=lim_{L\rightarrow\infty} FENE_CR
      //       (i) lambda'=lambda
      // 3=> incremental elastic model 
-     //   (a) cell centered formulation
-     //   (b) face centered formulation
      //   DS/DT=2 (D0-Dp) - (SW-WS)
      //     mu=Lame coefficient (bulk modulus?)
      //     D0=D-tr(D)Id/DIM 
@@ -1936,6 +1934,8 @@ protected:
      //       (vii) lambda''=lambda*(1/(1+Tr(Q)/L^2))
      //       (vii) Q^{n+1}-Q^star=-(dt/lambda'')Q^{n+1}
      //       (viii) Q^{n+1}=lambda'' Q^n+1/(lambda''+dt)
+     // 7=> Neo-Hookean (using Left Cauchy Green tensor B=F F^{T}
+     //     Xia, Lu, Tryggvason 2018
     static Vector<int> viscoelastic_model; // def=0
     static Vector<int> viscosity_state_model; // def=0
     static Vector<int> les_model;
