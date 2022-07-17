@@ -5437,6 +5437,9 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
 else if (viscoelastic_model.eq.3) then ! incremental
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
  ! do nothing
+else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean
+ ! Xia, Lu, Tryggvason 2018
+ ! do nothing
 else
  print *,"viscoelastic_model invalid"
  stop
@@ -14475,6 +14478,7 @@ end subroutine print_visual_descriptor
        if ((viscoelastic_model_in.eq.0).or. & ! FENE-CR
            (viscoelastic_model_in.eq.1).or. & ! Oldroyd B
            (viscoelastic_model_in.eq.3).or. & ! incremental elastic model
+           (viscoelastic_model_in.eq.7).or. & ! incremental Neo-Hookean model
            (viscoelastic_model_in.eq.5).or. & ! FENE-P
            (viscoelastic_model_in.eq.6)) then ! linear PTT
         fort_built_in_elastic_model=1
@@ -24683,6 +24687,9 @@ else if (viscoelastic_model.eq.6) then ! linear PTT
 else if (viscoelastic_model.eq.3) then ! incremental model
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
  ! coeff=elastic_viscosity
+else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
+ ! Xia, Lu, Tryggvason 2018
+ ! coeff=elastic_viscosity
 else if (viscoelastic_model.eq.4) then !pressure velocity FSI coupling
  print *,"this routine should not be called if visc_model==4"
  stop
@@ -24723,6 +24730,9 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
  dumbbell_model=1
 else if (viscoelastic_model.eq.3) then ! incremental model
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+ dumbbell_model=0
+else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
+ ! Xia, Lu, Tryggvason 2018
  dumbbell_model=0
 else if (viscoelastic_model.eq.4) then!FSI pressure velocity coupling
  print *,"this routine should not be called if viscoelastic_model==4"
