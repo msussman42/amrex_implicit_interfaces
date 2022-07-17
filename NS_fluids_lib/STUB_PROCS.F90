@@ -33,8 +33,10 @@ contains
 subroutine INIT_STUB_MODULE()
 IMPLICIT NONE
 
-print *,"INIT_STUB_MODULE should not be called"
-stop
+ number_of_source_regions=0
+
+ print *,"INIT_STUB_MODULE should not be called"
+ stop
 
 return
 end subroutine INIT_STUB_MODULE
@@ -1123,8 +1125,6 @@ INTEGER_T :: im
    stop
   endif
  enddo ! im=1..num_materials
-
- number_of_source_regions=0
 
 end subroutine STUB_INIT_REGIONS_LIST
 
