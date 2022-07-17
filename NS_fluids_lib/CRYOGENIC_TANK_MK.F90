@@ -583,6 +583,9 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    ! Applications.
    ! ZBOT
   if (axis_dir.eq.0) then ! volume=pi(.09^2-0.08^2)*.02=pi(.01)(.17)(0.02)
+
+   number_of_source_regions=1 ! side heater
+
    TANK_MK_HEATER_WALL_MODEL = 0.1683d0
    TANK_MK_HEATER_LOW       = -0.1683d0
    TANK_MK_HEATER_HIGH      = TANK_MK_HEATER_LOW+0.0254d0
@@ -596,6 +599,8 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    ! TPCE
   else if ((axis_dir.eq.1).or. &
            (axis_dir.eq.2)) then ! heater on top
+
+   number_of_source_regions=3 ! heater A, inflow, outflow
 
    if (axis_dir.eq.1) then
     num_aux_expect=0
@@ -2014,15 +2019,13 @@ INTEGER_T :: im,iregion,dir
   endif
  enddo ! im=1..num_materials
 
- if (axis_dir.eq.0) then
-  number_of_source_regions=1 ! side heater
- else if ((axis_dir.eq.1).or. &
-          (axis_dir.eq.2)) then
-  number_of_source_regions=3 ! heater A, inflow, outflow
+ !number_of_source_regions is initialized in: INIT_CRYOGENIC_TANK_MK_MODULE()
+ if (number_of_source_regions.ge.0) then
+  ! do nothing
  else
-  print *,"axis_dir invalid"
+  print *,"number_of_source_regions invalid"
   stop
- endif
+ endif 
 
  number_of_threads_regions=num_threads_in
  allocate(regions_list(1:number_of_source_regions, &

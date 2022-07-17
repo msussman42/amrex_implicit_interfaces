@@ -22724,13 +22724,6 @@ end subroutine initialize2d
       call checkbound_int_array1(fablo,fabhi,tag_ptr,0,-1,1400)
       call checkbound_array1(fablo,fabhi,errfab_ptr,0,-1,1400)
 
-      if (1.eq.1) then
-       print *,"level, max_level_for_use ",level,max_level_for_use
-       print *,"level, number_of_source_regions ", &
-         level,number_of_source_regions
-      endif
-
-
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -22782,23 +22775,7 @@ end subroutine initialize2d
 
          call SUB_CHARFN_REGION(iregions,x_local,time,charfn)
 
-          if (1.eq.1) then
-           if ((i.eq.0).and. &
-               (j.ge.236).and. &
-               (j.le.239)) then
-            print *,"i,j,k,iregionsdebug,x_local,time ",i,j,k,iregions, &
-               x_local(1),x_local(2),x_local(SDIM),time
-           endif
-          endif
-
          if (charfn.eq.one) then
-
-          if (1.eq.1) then
-           if (rflag.eq.zero) then
-            print *,"i,j,k,iregions,x_local,time ",i,j,k,iregions, &
-               x_local(1),x_local(2),x_local(SDIM),time
-           endif
-          endif
 
           rflag=one
           tagflag=1
@@ -26273,8 +26250,6 @@ end subroutine initialize2d
         stop
        endif
       enddo ! im=1..num_materials
-
-      number_of_source_regions=0
 
       call SUB_INIT_REGIONS_LIST( &
        constant_density_all_time, &
