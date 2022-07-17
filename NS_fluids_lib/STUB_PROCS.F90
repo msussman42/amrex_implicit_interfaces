@@ -31,6 +31,7 @@ contains
 
   ! do any initial preparation needed
 subroutine INIT_STUB_MODULE()
+use probcommon_module
 IMPLICIT NONE
 
  number_of_source_regions=0
