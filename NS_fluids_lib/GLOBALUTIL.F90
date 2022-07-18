@@ -24635,7 +24635,8 @@ REAL_T gradV(3,3)
 REAL_T Q(3,3)
 REAL_T W_Jaumann(3,3)  ! W=(1/2)(grad V - (grad V)^T)
 REAL_T Aadvect(3,3)
-REAL_T Smult(3,3)
+REAL_T Smult_left(3,3)
+REAL_T Smult_right(3,3)
 REAL_T SA(3,3)
 REAL_T SAS(3,3)
 REAL_T NP(3,3)
@@ -24760,13 +24761,13 @@ enddo
 enddo 
 do ii=1,3
 do jj=1,3
- gradV(ii,jj)=tendata(D_DECL(i,j,k),n) !(veldir,dir)
+ gradV(ii,jj)=tendata(D_DECL(i,j,k),n) !(vel dir,deriv dir)
  if (transposegradu.eq.0) then
   !gradu(veldir,dir)
-  gradu_FENECR(ii,jj)=tendata(D_DECL(i,j,k),n)
+  gradu_FENECR(ii,jj)=gradV(ii,jj)
  else if (transposegradu.eq.1) then
   !gradu(dir,veldir)
-  gradu_FENECR(jj,ii)=tendata(D_DECL(i,j,k),n)
+  gradu_FENECR(jj,ii)=gradV(ii,jj)
  else
   print *,"transposegradu invalid"
   stop
@@ -24846,6 +24847,9 @@ else if (viscoelastic_model.eq.1) then !OLDROYD-B
 else if (viscoelastic_model.eq.3) then ! incremental model
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
  equilibrium_diagonal=zero
+else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
+ ! Xia, Lu, Tryggvason 2018
+ equilibrium_diagonal=zero
 else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
  print *,"this routine should not be called if visc_model==4"
  stop
@@ -24877,6 +24881,7 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
     (viscoelastic_model.eq.1).or. & !OLDROYD_B
     (viscoelastic_model.eq.5).or. & !FENE-P
     (viscoelastic_model.eq.6).or. & !linear PTT
+    (viscoelastic_model.eq.7).or. & !incremental Neo-Hookean
     (viscoelastic_model.eq.3)) then !incremental
 
  do ii=1,3 
@@ -24886,10 +24891,20 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
 
    !cfl cond: |u|dt<dx and dt|gradu|<1
   if (dumbbell_model.eq.1) then
-   Smult(ii,jj)=dt*gradu_FENECR(ii,jj) 
+   Smult_left(ii,jj)=dt*gradu_FENECR(ii,jj) 
+   Smult_right(ii,jj)=Smult_left(ii,jj)
   else if (viscoelastic_model.eq.3) then !incremental
    if (dumbbell_model.eq.0) then
-    Smult(ii,jj)=dt*W_Jaumann(ii,jj) 
+    Smult_left(ii,jj)=dt*W_Jaumann(ii,jj) 
+    Smult_right(ii,jj)=Smult_left(ii,jj)
+   else
+    print *,"dumbbell_model invalid"
+    stop
+   endif
+  else if (viscoelastic_model.eq.7) then !incremental Neo-Hookean
+   if (dumbbell_model.eq.0) then
+    Smult_left(ii,jj)=zero
+    Smult_right(ii,jj)=dt*gradV(jj,ii)
    else
     print *,"dumbbell_model invalid"
     stop
@@ -24899,14 +24914,25 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
    stop
   endif
 
-  if (Smult(ii,jj).le.-one+VOFTOL) then
-   Smult(ii,jj)=-one+VOFTOL
-  else if (Smult(ii,jj).ge.one-VOFTOL) then
-   Smult(ii,jj)=one-VOFTOL
-  else if (abs(Smult(ii,jj)).le.one) then
+  if (Smult_left(ii,jj).le.-one+VOFTOL) then
+   Smult_left(ii,jj)=-one+VOFTOL
+  else if (Smult_left(ii,jj).ge.one-VOFTOL) then
+   Smult_left(ii,jj)=one-VOFTOL
+  else if (abs(Smult_left(ii,jj)).le.one) then
    ! do nothing
   else
-   print *,"Smult(ii,jj) became corrupt"
+   print *,"Smult_left(ii,jj) became corrupt"
+   stop
+  endif
+
+  if (Smult_right(ii,jj).le.-one+VOFTOL) then
+   Smult_right(ii,jj)=-one+VOFTOL
+  else if (Smult_right(ii,jj).ge.one-VOFTOL) then
+   Smult_right(ii,jj)=one-VOFTOL
+  else if (abs(Smult_right(ii,jj)).le.one) then
+   ! do nothing
+  else
+   print *,"Smult_right(ii,jj) became corrupt"
    stop
   endif
 
@@ -24915,14 +24941,22 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
 
  do ii=1,3
 
-  Smult(ii,ii)=Smult(ii,ii)+one
+  Smult_left(ii,ii)=Smult_left(ii,ii)+one
+  Smult_right(ii,ii)=Smult_right(ii,ii)+one
 
    ! Aadvect <-- Q+I
   if (dumbbell_model.eq.1) then
    Aadvect(ii,ii)=Aadvect(ii,ii)+one
   else if (dumbbell_model.eq.0) then ! e.g. incremental model
-   ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-   ! do nothing
+   if (viscoelastic_model.eq.3) then ! incremental model
+    ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+    ! do nothing
+   else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
+    Aadvect(ii,ii)=Aadvect(ii,ii)+one
+   else
+    print *,"viscoelastic_model invalid"
+    stop
+   endif
   else
    print *,"dumbbell_model invalid"
    stop
@@ -24979,6 +25013,13 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
    print *,"dumbbell_model invalid"
    stop
   endif
+ else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
+  if (dumbbell_model.eq.0) then
+   ! do nothing
+  else
+   print *,"dumbbell_model invalid"
+   stop
+  endif
  else
   print *,"viscoelastic_model invalid"
   stop
@@ -24988,7 +25029,7 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
  do jj=1,3
   SA(ii,jj)=zero
   do kk=1,3
-   SA(ii,jj)=SA(ii,jj)+Smult(ii,kk)*Aadvect(kk,jj)
+   SA(ii,jj)=SA(ii,jj)+Smult_left(ii,kk)*Aadvect(kk,jj)
   enddo
  enddo
  enddo
@@ -24997,7 +25038,7 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
  do jj=1,3
   SAS(ii,jj)=zero
   do kk=1,3
-   SAS(ii,jj)=SAS(ii,jj)+SA(ii,kk)*Smult(jj,kk)
+   SAS(ii,jj)=SAS(ii,jj)+SA(ii,kk)*Smult_right(jj,kk)
   enddo
   Q(ii,jj)=SAS(ii,jj)
  enddo  ! jj=1..3
@@ -25022,8 +25063,15 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
   if (dumbbell_model.eq.1) then
    Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
   else if (dumbbell_model.eq.0) then ! e.g. incremental model
-   ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-   ! do nothing
+   if (viscoelastic_model.eq.3) then ! incremental model
+    ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+    ! do nothing
+   else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
+    Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
+   else
+    print *,"viscoelastic_model invalid"
+    stop
+   endif
   else
    print *,"dumbbell_model invalid"
    stop
@@ -25031,7 +25079,7 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
 
  enddo !ii=1,3
 
- ! note: for viscoelastic_model==3,
+ ! note: for viscoelastic_model==3,7,
  !  modtime=lambda_tilde=elastic_time >> 1
  !
  ! lambda_tilde=f(A)/lambda=(1/(lambda(1-tr(A)/L^2)))
