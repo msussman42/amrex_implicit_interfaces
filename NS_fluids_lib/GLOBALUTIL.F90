@@ -5439,15 +5439,18 @@ else if (viscoelastic_model.eq.3) then ! incremental
  ! do nothing
 else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean
  ! Xia, Lu, Tryggvason 2018
+ ! Df/Dt + f grad U=0  Left Cauchy Green tensor B=F F^T=(f^T f)^{-1}
  ! D(f^T f)/Dt=f^T Df/Dt + Df^T/Dt f =
  ! f^T(-f grad U)+(-grad U^T f^T)f  
- ! let Ainverse=f^T f
- ! D Ainverse/Dt + Ainverse grad U + grad U^T Ainverse = 0
+ ! let Binv=f^T f
+ ! D Binv/Dt + Binv grad U + grad U^T Binv = 0
+ ! D (Binv B)/Dt=D Binv/Dt B + Binv DB/Dt=
+ ! (-Binv grad U - grad U^T Binv)B + Binv DB/Dt = 0
+ ! -(grad U)B-B grad U^T + DB/Dt = 0
+ ! DB/Dt = (grad U)B + B(grad U)^T
  min_eval=0.001D0
  A_dim=3
  call project_to_positive_definite(A,A_dim,min_eval)
-
- FIX ME
 else
  print *,"viscoelastic_model invalid"
  stop
