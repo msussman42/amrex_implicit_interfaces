@@ -416,7 +416,7 @@ stop
        dx,xlo, &
        tensordata, &
        DIMS(tensordata), &
-       iproject,only_scalar, &
+       only_scalar, &
        time, &
        tilelo,tilehi, &
        fablo,fabhi, &
@@ -437,7 +437,7 @@ stop
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
       INTEGER_T i,j,k,n,dir,veldir
-      INTEGER_T, INTENT(in) :: iproject,ngrow,only_scalar
+      INTEGER_T, INTENT(in) :: ngrow,only_scalar
       INTEGER_T i1,j1
       INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
       INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
@@ -547,32 +547,6 @@ stop
         gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),2)/abs(rr)
        else
         print *,"levelrz invalid getshear 2"
-        stop
-       endif
-
-! project trace of gradu to zero (valid for incompressible flow)
-! ( iproject==0 if called from NavierStokes::tensor_advection_update() )
-       if (iproject.eq.1) then
-
-#if (AMREX_SPACEDIM==3)
-        a=(two*gradu(1,1)-gradu(2,2)-gradu(3,3))/three
-        b=(two*gradu(2,2)-gradu(1,1)-gradu(3,3))/three
-        c=(two*gradu(3,3)-gradu(1,1)-gradu(2,2))/three
-#elif (AMREX_SPACEDIM==2)
-        a=(gradu(1,1)-gradu(2,2)-gradu(3,3))/two
-        b=(gradu(2,2)-gradu(1,1)-gradu(3,3))/two
-        c=gradu(3,3)
-#else
-        print *,"dimension bust"
-        stop
-#endif
-        gradu(1,1)=a
-        gradu(2,2)=b
-        gradu(3,3)=c
-       else if (iproject.eq.0) then
-        ! do nothing
-       else 
-        print *,"iproject invalid"
         stop
        endif
 
@@ -1618,7 +1592,6 @@ stop
 
       INTEGER_T im  ! im=0..num_materials-1
       INTEGER_T i,j,k
-      INTEGER_T iproject,only_scalar
       REAL_T T11,T22,T33,traceA,modtime
       INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz
       INTEGER_T nbase
@@ -1700,9 +1673,6 @@ stop
       call checkbound_array(fablo,fabhi,vel,ngrow+1,-1,326)
       call checkbound_array(fablo,fabhi,visc,ngrow,-1,327)
 
-      iproject=0
-      only_scalar=1  ! mag(trace gradu)
-        
        ! in: fort_dermagtrace
        ! visc=sqrt(2*(a11**2+a22**2+a33**2+2*a12**2+2*a13**2+2*a23**2))
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 

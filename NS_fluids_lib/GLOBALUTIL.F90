@@ -5436,8 +5436,8 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
 
 else if (viscoelastic_model.eq.3) then ! incremental
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
- ! DA/Dt=2(D0-D^P)+WA+AW^T   A=S/mu A=I at t=0
- ! A^n+1 = (I+dt W)A^{*}(I+dt W)^T
+ ! DQ/Dt=2(D0-D^P)+WQ+QW^T   Q=S/mu Q=zero matrix at t=0 W=(grad U-grad U^T)/2
+ ! Q^n+1 = (I+dt W)Q^{*}(I+dt W)^T + dt * 2(D0-D^P)  trace Q=0
  ! discretely, A should maintain as positive definite because
  ! its value is limited by the D^P term?
  min_eval=0.01D0
@@ -24600,7 +24600,7 @@ subroutine point_updatetensor( &
  im_critical, &  ! 0<=im_critical<=num_materials-1
  ncomp_visc, & 
  visc, &
- tendata, & !tendata:fort_getshear,iproject=only_scalar=0
+ tendata, & !tendata:fort_getshear,only_scalar=0
  dx,xlo, &
  vel, &
  tnew, &

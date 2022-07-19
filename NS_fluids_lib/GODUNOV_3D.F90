@@ -9135,7 +9135,7 @@ stop
        im_critical, &  ! 0<=im_critical<=num_materials-1
        ncomp_visc, & 
        visc,DIMS(visc), &
-       tendata,DIMS(tendata), & !tendata:fort_getshear,iproject=only_scalar=0
+       tendata,DIMS(tendata), & !tendata:fort_getshear,only_scalar=0
        dx,xlo, &
        vel,DIMS(vel), &
        tnew,DIMS(tnew), &
@@ -9305,7 +9305,7 @@ stop
         im_critical, &  ! 0<=im_critical<=num_materials-1
         ncomp_visc, & 
         visc_ptr, &
-        tendata_ptr, & !tendata:fort_getshear,iproject=only_scalar=0
+        tendata_ptr, & !tendata:fort_getshear,only_scalar=0
         dx,xlo, &
         vel_ptr, &
         point_tnew, &
@@ -21442,7 +21442,7 @@ stop
        scomp_tensor, & !scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE
        ncomp_visc, & 
        visc,DIMS(visc), &
-       tendata,DIMS(tendata), & !tendata:fort_getshear,iproject=only_scalar=0
+       tendata,DIMS(tendata), & !tendata:fort_getshear,only_scalar=0
        dx,xlo, &
        vel,DIMS(vel), &
        tilelo, tilehi,  &
@@ -21687,7 +21687,7 @@ stop
          im_critical, &  ! 0<=im_critical<=num_materials-1
          ncomp_visc, & 
          visc_ptr, &
-         tendata_ptr, & !tendata:fort_getshear,iproject=only_scalar=0
+         tendata_ptr, & !tendata:fort_getshear,only_scalar=0
          dx,xlo, &
          vel_ptr, &
          point_tnew, &
