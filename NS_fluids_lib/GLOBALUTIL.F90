@@ -5436,7 +5436,13 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
 
 else if (viscoelastic_model.eq.3) then ! incremental
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
- ! do nothing
+ ! DA/Dt=2(D0-D^P)+WA+AW^T   A=S/mu A=I at t=0
+ ! A^n+1 = (I+dt W)A^{*}(I+dt W)^T
+ ! discretely, A should maintain as positive definite because
+ ! its value is limited by the D^P term?
+ min_eval=0.01D0
+ A_dim=3
+ call project_to_positive_definite(A,A_dim,min_eval)
 else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean
  ! Xia, Lu, Tryggvason 2018
  ! Df/Dt + f grad U=0  Left Cauchy Green tensor B=F F^T=(f^T f)^{-1}
@@ -5448,7 +5454,10 @@ else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean
  ! (-Binv grad U - grad U^T Binv)B + Binv DB/Dt = 0
  ! -(grad U)B-B grad U^T + DB/Dt = 0
  ! DB/Dt = (grad U)B + B(grad U)^T
- min_eval=0.001D0
+ ! equilibrium is B=I
+ ! discretely, B should maintain as positive definite:
+ ! B^n+1 = (I+dt grad U)Bstar(I+dt grad U)^T
+ min_eval=0.01D0
  A_dim=3
  call project_to_positive_definite(A,A_dim,min_eval)
 else
