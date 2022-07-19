@@ -5300,6 +5300,122 @@ endif
 return
 end subroutine fort_jacobi_eigenvalue
 
+
+
+subroutine project_to_traceless(S,n)
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: n
+REAL_T, INTENT(inout) :: S(n,n)
+
+REAL_T :: S_local(n,n)
+REAL_T :: STS(n,n)
+REAL_T :: evals_project(n)
+REAL_T :: XL(n,n)
+REAL_T :: evals_S(n)
+REAL_T :: evecs_S(n,n)
+REAL_T :: evals_STS(n)
+REAL_T :: evecs_STS(n,n)
+INTEGER_T :: i,j,k
+REAL_T :: max_eval_sqr
+REAL_T :: trace_S
+
+if (n.ge.2) then
+ ! do nothing
+else
+ print *,"expecting n>=2"
+ stop
+endif
+
+do i=1,n
+do j=1,n
+ S_local(i,j)=S(i,j)
+ STS(i,j)=zero
+ do k=1,n
+  STS(i,j)=STS(i,j)+S(k,i)*S(k,j)
+ enddo
+enddo
+enddo
+
+call fort_jacobi_eigenvalue(S_local,evals_S,evecs_S,n)
+call fort_jacobi_eigenvalue(STS,evals_STS,evecs_STS,n)
+
+max_eval_sqr=-1.0D+20
+do i=1,n
+ if (evals_STS(i).gt.max_eval_sqr) then
+  max_eval_sqr=evals_STS(i)
+ else if (evals_STS(i).le.max_eval_sqr) then
+  ! do nothing
+ else
+  print *,"evals_STS or max_eval_sqr invalid"
+  stop
+ endif
+
+ if (evals_STS(i).lt.zero) then
+  print *,"evals_STS(i) cannot be negative"
+  stop
+ else if (evals_STS(i).ge.zero) then
+  ! do nothing
+ else
+  print *,"evals_STS(i) is NaN"
+  stop
+ endif
+
+enddo
+
+if (max_eval_sqr.lt.zero) then
+ print *,"max_eval_sqr cannot be negative"
+ stop
+else if (max_eval_sqr.ge.zero) then
+ ! do nothing
+else
+ print *,"max_eval_sqr is NaN"
+ stop
+endif
+
+max_eval_sqr=max(max_eval_sqr,one)
+do i=1,n
+ if ((abs(evals_S(i)**2-evals_STS(i)).le.1.0D-12*max_eval_sqr).or. &
+     (1.eq.1)) then
+  ! do nothing
+ else
+  print *,"evals_S and evals_STS inconsistent"
+  print *,"max_eval_sqr= ",max_eval_sqr
+  print *,"i,n = ",i,n
+  print *,"evals_S(i)= ",evals_S(i)
+  print *,"evals_STS(i)= ",evals_STS(i)
+  stop
+ endif
+enddo
+
+trace_S=zero
+do i=1,n
+ trace_S=trace_S+evals_S(i)
+enddo
+
+do i=1,n
+ evals_project(i)=evals_S(i)-trace_S/n
+enddo
+ ! AX=X Lambda
+ ! A=X Lambda X^T
+do i=1,n
+do j=1,n
+ XL(i,j)=evecs_STS(i,j)*evals_project(j)
+enddo
+enddo
+do i=1,n
+do j=1,n
+ S(i,j)=zero
+ do k=1,n
+  S(i,j)=S(i,j)+XL(i,k)*evecs_STS(j,k)
+ enddo
+enddo
+enddo
+
+end subroutine project_to_traceless
+
+
+
 subroutine project_to_positive_definite(S,n,min_eval)
 IMPLICIT NONE
 
@@ -5415,7 +5531,7 @@ end subroutine project_to_positive_definite
 
  ! called from fort_updatetensor which is declared in GODUNOV_3D.F90.
  ! A=Q+I must be symmetric and positive definite.
-subroutine project_A_to_positive_definite(A, &
+subroutine project_A_to_positive_definite_or_traceless(A, &
    viscoelastic_model,polymer_factor)
 IMPLICIT NONE
 
@@ -5437,12 +5553,11 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
 else if (viscoelastic_model.eq.3) then ! incremental
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
  ! DQ/Dt=2(D0-D^P)+WQ+QW^T   Q=S/mu Q=zero matrix at t=0 W=(grad U-grad U^T)/2
- ! Q^n+1 = (I+dt W)Q^{*}(I+dt W)^T + dt * 2(D0-D^P)  trace Q=0
- ! discretely, A should maintain as positive definite because
- ! its value is limited by the D^P term?
- min_eval=0.01D0
+ ! Q^n+1 = (I+dt W)Q^{*}(I+dt W)^T + dt * 2(D0-D^P)  trace(Q)=0
+ ! trace(Q)=sum lambda(Q)  lambda(Q)=eigenvalues of Q
+ ! Q is traceless if trace(Q)=0 at t=0.
  A_dim=3
- call project_to_positive_definite(A,A_dim,min_eval)
+ call project_to_traceless(A,A_dim)
 else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean
  ! Xia, Lu, Tryggvason 2018
  ! Df/Dt + f grad U=0  Left Cauchy Green tensor B=F F^T=(f^T f)^{-1}
@@ -5465,7 +5580,7 @@ else
  stop
 endif
 return
-end subroutine project_A_to_positive_definite
+end subroutine project_A_to_positive_definite_or_traceless
 
 subroutine matrix_solve(AA,xx,bb,matstatus,numelem)
 IMPLICIT NONE
@@ -24664,6 +24779,7 @@ REAL_T SAS(3,3)
 REAL_T NP(3,3)
 REAL_T shear
 REAL_T modtime,trace_A,equilibrium_diagonal
+REAL_T inverse_tol
 
 REAL_T xsten(-3:3,SDIM)
 INTEGER_T nhalf
@@ -24933,9 +25049,22 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
     stop
    endif
   else if (viscoelastic_model.eq.7) then !incremental Neo-Hookean
+   ! Xia, Lu, Tryggvason 2018
+   ! Df/Dt + f grad U=0  Left Cauchy Green tensor B=F F^T=(f^T f)^{-1}
+   ! D(f^T f)/Dt=f^T Df/Dt + Df^T/Dt f =
+   ! f^T(-f grad U)+(-grad U^T f^T)f  
+   ! let Binv=f^T f
+   ! D Binv/Dt + Binv grad U + grad U^T Binv = 0
+   ! D (Binv B)/Dt=D Binv/Dt B + Binv DB/Dt=
+   ! (-Binv grad U - grad U^T Binv)B + Binv DB/Dt = 0
+   ! -(grad U)B-B grad U^T + DB/Dt = 0
+   ! DB/Dt = (grad U)B + B(grad U)^T
+   ! equilibrium is B=I
+   ! discretely, B should maintain as positive definite:
+   ! B^n+1 = (I+dt grad U)Bstar(I+dt grad U)^T
    if (dumbbell_model.eq.0) then
-    Smult_left(ii,jj)=zero
-    Smult_right(ii,jj)=dt*gradV(jj,ii)
+    Smult_left(ii,jj)=dt*gradu_FENECR(ii,jj) 
+    Smult_right(ii,jj)=Smult_left(ii,jj)
    else
     print *,"dumbbell_model invalid"
     stop
@@ -24945,10 +25074,12 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
    stop
   endif
 
-  if (Smult_left(ii,jj).le.-one+VOFTOL) then
-   Smult_left(ii,jj)=-one+VOFTOL
-  else if (Smult_left(ii,jj).ge.one-VOFTOL) then
-   Smult_left(ii,jj)=one-VOFTOL
+  inverse_tol=0.1d0
+
+  if (Smult_left(ii,jj).le.-one+inverse_tol) then
+   Smult_left(ii,jj)=-one+inverse_tol
+  else if (Smult_left(ii,jj).ge.one-inverse_tol) then
+   Smult_left(ii,jj)=one-inverse_tol
   else if (abs(Smult_left(ii,jj)).le.one) then
    ! do nothing
   else
@@ -24956,10 +25087,10 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
    stop
   endif
 
-  if (Smult_right(ii,jj).le.-one+VOFTOL) then
-   Smult_right(ii,jj)=-one+VOFTOL
-  else if (Smult_right(ii,jj).ge.one-VOFTOL) then
-   Smult_right(ii,jj)=one-VOFTOL
+  if (Smult_right(ii,jj).le.-one+inverse_tol) then
+   Smult_right(ii,jj)=-one+inverse_tol
+  else if (Smult_right(ii,jj).ge.one-inverse_tol) then
+   Smult_right(ii,jj)=one-inverse_tol
   else if (abs(Smult_right(ii,jj)).le.one) then
    ! do nothing
   else
@@ -24995,7 +25126,7 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
   endif
  enddo  ! ii=1,3
 
- call project_A_to_positive_definite(Aadvect, &
+ call project_A_to_positive_definite_or_traceless(Aadvect, &
          viscoelastic_model,polymer_factor)
 
  if (dumbbell_model.eq.1) then
@@ -25090,7 +25221,7 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
  endif
 
   ! Q=S A S^T at this stage
- call project_A_to_positive_definite(Q, &
+ call project_A_to_positive_definite_or_traceless(Q, &
        viscoelastic_model,polymer_factor)
 
  do ii=1,3
@@ -25151,17 +25282,23 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
   if (dumbbell_model.eq.1) then
    Aadvect(ii,ii)=Aadvect(ii,ii)+one
   else if (dumbbell_model.eq.0) then ! incremental model
-   ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-   !  or
-   ! Xia, Lu, Tryggvason (2018)
-   ! do nothing
+   if (viscoelastic_model.eq.3) then ! incremental model
+    ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+    ! do nothing
+   else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
+    ! Xia, Lu, Tryggvason 2018
+    Aadvect(ii,ii)=Aadvect(ii,ii)+one
+   else
+    print *,"viscoelastic_model invalid"
+    stop
+   endif
   else
    print *,"dumbbell_model invalid"
    stop
   endif
  enddo ! do ii=1,3
 
- call project_A_to_positive_definite(Aadvect, &
+ call project_A_to_positive_definite_or_traceless(Aadvect, &
          viscoelastic_model,polymer_factor)
 
  do ii=1,3
@@ -25174,10 +25311,16 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
   if (dumbbell_model.eq.1) then
    Q(ii,ii)=Q(ii,ii)-one
   else if (dumbbell_model.eq.0) then ! e.g. incremental model
-   ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-   !  or
-   ! Xia, Lu, Tryggvason (2018)
-   ! do nothing
+   if (viscoelastic_model.eq.3) then ! incremental model
+    ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+    ! do nothing
+   else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
+    ! Xia, Lu, Tryggvason (2018)
+    Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
+   else
+    print *,"viscoelastic_model invalid"
+    stop
+   endif
   else
    print *,"dumbbell_model invalid"
    stop

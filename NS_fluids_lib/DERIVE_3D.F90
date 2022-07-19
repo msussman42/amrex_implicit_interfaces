@@ -459,7 +459,6 @@ stop
 
       REAL_T visctensor(3,3),gradu(3,3)
       REAL_T shear
-      REAL_T a,b,c
       REAL_T rr
       REAL_T vort(3)
       INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz,nbase
@@ -577,8 +576,6 @@ stop
         vort(3)=gradu(2,1)-gradu(1,2)
         tensordata(D_DECL(i,j,k),1)= &
           sqrt(vort(1)**2+vort(2)**2+vort(3)**2)
-       else if (only_scalar.eq.3) then
-        tensordata(D_DECL(i,j,k),1)=abs(gradu(1,1)+gradu(2,2)+gradu(3,3))
        else if (only_scalar.eq.0) then
         tensordata(D_DECL(i,j,k),1)=shear
         n=2
@@ -1754,15 +1751,14 @@ stop
         else if ((T11.le.zero).or. &
                  (T22.le.zero).or. &
                  (T33.le.zero)) then
-         if ((fort_viscoelastic_model(im+1).eq.0).or. & !FENE-CR
-             (fort_viscoelastic_model(im+1).eq.1).or. & !Oldroyd-B 
-             (fort_viscoelastic_model(im+1).eq.5).or. & !FENE-P 
-             (fort_viscoelastic_model(im+1).eq.6)) then !linear PTT
+         if ((fort_viscoelastic_model(im+1).eq.0).or. &!FENE-CR
+             (fort_viscoelastic_model(im+1).eq.1).or. &!Oldroyd-B 
+             (fort_viscoelastic_model(im+1).eq.5).or. &!FENE-P 
+             (fort_viscoelastic_model(im+1).eq.7).or. &!incremental,neohookean
+             (fort_viscoelastic_model(im+1).eq.6)) then!linear PTT
           print *,"T11, T22, T33 must be positive"
           stop
-         else if ((fort_viscoelastic_model(im+1).eq.2).or. & !displacement grad
-                  (fort_viscoelastic_model(im+1).eq.3).or. & !incremental
-                  (fort_viscoelastic_model(im+1).eq.7).or. & !incremental
+         else if ((fort_viscoelastic_model(im+1).eq.3).or. & !incremental,plst
                   (fort_viscoelastic_model(im+1).eq.4)) then !pres vel coupling
           ! check nothing
          else

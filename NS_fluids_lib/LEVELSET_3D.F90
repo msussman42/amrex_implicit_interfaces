@@ -18631,14 +18631,28 @@ stop
              Q(2,1)=Q(1,2)
              Q(3,1)=Q(1,3)
              Q(3,2)=Q(2,3)
-             do ii=1,3
-              Q(ii,ii)=Q(ii,ii)+one
-             enddo
-             call project_A_to_positive_definite(Q, &
+
+             if (viscoelastic_model(im_map).eq.3) then ! incremental model
+              ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+              ! do nothing
+             else
+              do ii=1,3
+               Q(ii,ii)=Q(ii,ii)+one
+              enddo
+             endif
+
+             call project_A_to_positive_definite_or_traceless(Q, &
                viscoelastic_model(im_map),polymer_factor(im_map))
-             do ii=1,3
-              Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
-             enddo
+
+             if (viscoelastic_model(im_map).eq.3) then ! incremental model
+              ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+              ! do nothing
+             else
+              do ii=1,3
+               Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
+              enddo
+             endif
+
              do dir=1,ENUM_NUM_TENSOR_TYPE
               call stress_index(dir,ii,jj)
               tensor_sub((ipart-1)*ENUM_NUM_TENSOR_TYPE+dir)=Q(ii,jj)
@@ -18664,7 +18678,8 @@ stop
             enddo
             new_particles(ibase+SDIM+N_EXTRA_REAL_INSERT_TIME+1)=cur_time_slab
             call get_primary_material(LS_sub,im_primary_sub)
-            if ((im_primary_sub.ge.1).and.(im_primary_sub.le.num_materials)) then
+            if ((im_primary_sub.ge.1).and. &
+                (im_primary_sub.le.num_materials)) then
              new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT_MATERIAL_ID+1)= &
               im_primary_sub
             else
