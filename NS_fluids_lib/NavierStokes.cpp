@@ -458,7 +458,6 @@ int NavierStokes::transposegradu=0;
 
 Vector<int> NavierStokes::store_elastic_data; // def=0, 0...num_materials-1
 Vector<Real> NavierStokes::elastic_viscosity; // def=0
-Vector<Real> NavierStokes::elastic_regularization; // def=0
 Vector<Real> NavierStokes::lame_coefficient; // def=0
 Vector<int> NavierStokes::linear_elastic_model; // def=0
 Vector<Real> NavierStokes::shear_modulus; // def=0
@@ -2979,7 +2978,6 @@ NavierStokes::read_params ()
      amrex::Error("FSI_material_exists_presvel() invalid");
 
     elastic_viscosity.resize(num_materials);
-    elastic_regularization.resize(num_materials);
     lame_coefficient.resize(num_materials);
     linear_elastic_model.resize(num_materials);
     shear_modulus.resize(num_materials);
@@ -2989,7 +2987,6 @@ NavierStokes::read_params ()
 
     for (int im=0;im<num_materials;im++) {
      elastic_viscosity[im]=0.0;
-     elastic_regularization[im]=0.0;
      lame_coefficient[im]=0.0;
      linear_elastic_model[im]=0;
      shear_modulus[im]=0.0;
@@ -3015,7 +3012,6 @@ NavierStokes::read_params ()
       amrex::Error("fort_built_in_elastic_model invalid");
     } // i=0..num_materials-1
 
-    pp.queryarr("elastic_regularization",elastic_regularization,0,num_materials);
     pp.queryarr("damping_coefficient",damping_coefficient,0,num_materials);
     pp.queryarr("static_damping_coefficient",
 		static_damping_coefficient,0,num_materials);
@@ -4368,8 +4364,6 @@ NavierStokes::read_params ()
        std::cout << "etaP0=elastic_viscosity=" << etaP[i] << '\n';
        std::cout << "etaS=etaL0-etaP0= " << etaS[i] << '\n';
        std::cout << "elastic_viscosity= " << elastic_viscosity[i] << '\n';
-       std::cout << "elastic_regularization= " << 
-	       elastic_regularization[i] << '\n';
        std::cout << "store_elastic_data= " << store_elastic_data[i] << '\n';
        std::cout << "elastic_time= " << elastic_time[i] << '\n';
       }
@@ -12197,6 +12191,7 @@ void NavierStokes::tensor_advection_update() {
          &elastic_time[im],
          &viscoelastic_model[im],
          &polymer_factor[im],
+         &elastic_viscosity[im],
          &rzflag,
          velbc.dataPtr(),
          &transposegradu);
@@ -22916,7 +22911,8 @@ NavierStokes::particle_tensor_advection_update() {
    int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
    if (ncomp_visc!=3*num_materials) {
     std::cout << "ncomp= " <<
-     localMF[CELL_VISC_MATERIAL_MF]->nComp() << " num_materials= " << num_materials << '\n';
+     localMF[CELL_VISC_MATERIAL_MF]->nComp() << " num_materials= " << 
+       num_materials << '\n';
     amrex::Error("cell_visc_material ncomp invalid(6)");
    }
    debug_ngrow(HOLD_GETSHEAR_DATA_MF,0,9);
@@ -23070,6 +23066,7 @@ NavierStokes::particle_tensor_advection_update() {
           &elastic_time[im],
           &viscoelastic_model[im],
           &polymer_factor[im],
+          &elastic_viscosity[im],
           &rzflag,
           velbc.dataPtr(),
           &transposegradu);

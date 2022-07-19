@@ -650,7 +650,6 @@ stop
         viscosity_state_model, &
         viscoelastic_model, &
         elastic_viscosity, &
-        elastic_regularization, &
         etaL,etaP,etaS, &
         polymer_factor, &
         visc,DIMS(visc), &
@@ -686,7 +685,6 @@ stop
       REAL_T, INTENT(in) :: concentration,etaL,etaP,etaS
       REAL_T, INTENT(in) :: elastic_time
       REAL_T, INTENT(in) :: elastic_viscosity
-      REAL_T, INTENT(in) :: elastic_regularization
       INTEGER_T, INTENT(in) :: viscosity_state_model
       INTEGER_T, INTENT(in) :: viscoelastic_model
       REAL_T, INTENT(in) :: polymer_factor
@@ -725,7 +723,6 @@ stop
       INTEGER_T dir_local
       REAL_T Q(3,3)
       REAL_T traceA,modtime,viscoelastic_coeff
-      REAL_T bulk_modulus
 
       visc_ptr=>visc
 
@@ -742,14 +739,6 @@ stop
        print *,"im_parm invalid3"
        stop
       endif
-
-      if (elastic_regularization.ge.zero) then
-       ! do nothing
-      else
-       print *,"elastic_regularization must be >= 0.0"
-       stop
-      endif
-
 
       if (shear_thinning_fluid.eq.fort_shear_thinning_fluid(im_parm)) then
        ! do nothing
@@ -963,35 +952,19 @@ stop
         else if (viscoelastic_model.eq.4) then ! pressure velocity coupling
          ! do nothing
         else if (viscoelastic_model.eq.3) then !incremental
-         bulk_modulus=elastic_viscosity
-         if (bulk_modulus.gt.zero) then
-          if (visc_coef.gt.zero) then
-            ! notes: 
-            !  viscoelastic_coeff*visc_coef down below.
-            !  dd_group=dd*visc_coef in PROB.F90 
-            !  xflux*=-dt * visc_coef * (FACECOMP_FACEVISC component (c++))
-            !    in CROSSTERM
-           if (mu.ge.zero) then
-            if (elastic_regularization.ge.zero) then
-             mu=mu+dt*elastic_regularization*bulk_modulus  
-            else
-             print *,"elastic_regularization invalid"
-             stop
-            endif
-           else
-            print *,"mu invalid"
-            stop
-           endif
-          else if (visc_coef.eq.zero) then
-           ! do nothing
-          else
-           print *,"visc_coef invalid"
-           stop
-          endif
-         else if (bulk_modulus.eq.zero) then
+         ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+         if (elastic_viscosity.ge.zero) then
           ! do nothing
          else
-          print *,"bulk_modulus invalid"
+          print *,"elastic_viscosity invalid"
+          stop
+         endif
+        else if (viscoelastic_model.eq.7) then !incremental
+         ! Xia, Lu, Tryggvason 2018
+         if (elastic_viscosity.ge.zero) then
+          ! do nothing
+         else
+          print *,"elastic_viscosity invalid"
           stop
          endif
         else
@@ -1164,9 +1137,10 @@ stop
             stop
            endif
 
-           ! modtime=elastic_time >> 1 for 2,3
+           ! modtime=elastic_time >> 1 for 2,3,7
           else if ((viscoelastic_model.eq.4).or. & !pressure velocity coupling
-                   (viscoelastic_model.eq.3)) then !incremental
+                   (viscoelastic_model.eq.3).or. & !incremental (plastic)
+                   (viscoelastic_model.eq.7)) then !incremental (Neo-Hookean)
            modtime=elastic_time
           else
            print *,"viscoelastic_model invalid"
@@ -1192,6 +1166,10 @@ stop
             viscoelastic_coeff= &
              (visc(D_DECL(i,j,k),im_parm)-etaS)/(modtime+dt)
            else if (viscoelastic_model.eq.3) then !incremental
+            ! Maire et al
+            viscoelastic_coeff=elastic_viscosity
+           else if (viscoelastic_model.eq.7) then !incremental
+            ! Xia, Lu, Tryggvason
             viscoelastic_coeff=elastic_viscosity
            else if (viscoelastic_model.eq.4) then !pressure velocity coupling
             viscoelastic_coeff=elastic_viscosity
@@ -1814,6 +1792,7 @@ stop
           stop
          else if ((fort_viscoelastic_model(im+1).eq.2).or. & !displacement grad
                   (fort_viscoelastic_model(im+1).eq.3).or. & !incremental
+                  (fort_viscoelastic_model(im+1).eq.7).or. & !incremental
                   (fort_viscoelastic_model(im+1).eq.4)) then !pres vel coupling
           ! check nothing
          else
@@ -2691,8 +2670,8 @@ stop
                 stop
                endif
               else if (fort_built_in_elastic_model( &
-                       fort_elastic_viscosity(im_primary), &
-                       fort_viscoelastic_model(im_primary)).eq.0) then 
+                        fort_elastic_viscosity(im_primary), &
+                        fort_viscoelastic_model(im_primary)).eq.0) then 
                ! do nothing
               else
                print *,"fort_built_in_elastic_model invalid"

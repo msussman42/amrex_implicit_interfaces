@@ -1944,7 +1944,6 @@ protected:
 
     static Vector<int> store_elastic_data; // viscoelastic parameter
     static Vector<Real> elastic_viscosity; // viscoelastic parameter
-    static Vector<Real> elastic_regularization; // elastic parameter
     static Vector<Real> shear_modulus; // elastic parameter
     static Vector<Real> lame_coefficient; // elastic parameter
     static Vector<int> linear_elastic_model; // elastic parameter

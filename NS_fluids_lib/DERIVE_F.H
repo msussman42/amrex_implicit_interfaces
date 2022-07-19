@@ -161,7 +161,6 @@ extern "C" {
       int* viscosity_state_model,
       int* viscoelastic_model,
       Real* elastic_viscosity,
-      Real* elastic_regularization,
       Real* etaL,Real* etaP,Real* etaS,
       Real* polymer_factor,
       Real* dat,AMREX_ARLIM_P(datlo),AMREX_ARLIM_P(dathi),
