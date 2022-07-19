@@ -21,7 +21,7 @@ extern "C" {
        Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
        const Real* delta, const Real* xlo,
        Real* tensordata,AMREX_ARLIM_P(tendtlo),AMREX_ARLIM_P(tendthi),
-       int* iproject,int* only_scalar,Real* time,
+       int* only_scalar,Real* time,
        const int* tilelo, const int* tilehi,
        const int* fablo, const int* fabhi,
        int* bfact,

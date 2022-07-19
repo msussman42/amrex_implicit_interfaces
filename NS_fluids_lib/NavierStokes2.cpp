@@ -8959,7 +8959,6 @@ MultiFab* NavierStokes::derive_EOS_pressure(Vector<int> local_material_type) {
 void NavierStokes::level_getshear(
 	MultiFab* shear_output_mf,
 	MultiFab* vel_mf,
-	int iproject,
 	int only_scalar,
 	int destcomp,
 	int ngrow) {
@@ -9046,7 +9045,7 @@ void NavierStokes::level_getshear(
     dx,xlo,
     shear_output_fab.dataPtr(destcomp),
     ARLIM(shear_output_fab.loVect()),ARLIM(shear_output_fab.hiVect()),
-    &iproject,&only_scalar,
+    &only_scalar,
     &cur_time_slab,
     tilelo,tilehi,
     fablo,fabhi,
@@ -9105,11 +9104,10 @@ void NavierStokes::init_pressure_error_indicator() {
 
  MultiFab* velmf=getState(1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
 
- int iproject=0;
  int only_scalar=2; // magnitude of vorticity
  int destcomp=0;
  int ngrow_zero=0;
- level_getshear(vortmf,velmf,iproject,only_scalar,destcomp,ngrow_zero);
+ level_getshear(vortmf,velmf,only_scalar,destcomp,ngrow_zero);
 
  delete velmf;
 
@@ -9675,10 +9673,9 @@ void NavierStokes::getStateVISC() {
     // since D is symmetric, D:D=trace(D^2) 
     // is invariant to coordinate transformations.
     // if levelrz==1, gradu(3,3)=u/|r|
-    int iproject=0;
     int only_scalar=1;  // mag(trace gradu) 
     int destcomp=0;
-    level_getshear(gammadot_mf,vel,iproject,only_scalar,destcomp,ngrow);
+    level_getshear(gammadot_mf,vel,only_scalar,destcomp,ngrow);
 
    } else if (shear_thinning_fluid[im]==0) {
      // do nothing
@@ -10052,10 +10049,9 @@ void NavierStokes::getState_tracemag(int idx) {
    amrex::Error("ns_is_rigid(im) invalid");
 
   int idest=5*im;
-  int iproject=0;
   int only_scalar=1;  // mag(trace gradu)
   int ngrow_getshear=1;
-  level_getshear(localMF[idx],vel_data,iproject,only_scalar,
+  level_getshear(localMF[idx],vel_data,only_scalar,
      idest,ngrow_getshear);
 
   if (thread_class::nthreads<1)

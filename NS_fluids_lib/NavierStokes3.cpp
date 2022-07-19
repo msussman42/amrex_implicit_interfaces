@@ -821,14 +821,13 @@ void NavierStokes::tensor_advection_updateALL() {
    // 1: sqrt(2 * D : D)
    // 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
    // 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
-   int iproject=0;
    int only_scalar=0; 
    int destcomp=0;
    int ngrow_zero=0;
    ns_level.level_getshear(
        ns_level.localMF[HOLD_GETSHEAR_DATA_MF],
        ns_level.localMF[HOLD_VELOCITY_DATA_MF],
-       iproject,only_scalar,destcomp,ngrow_zero);
+       only_scalar,destcomp,ngrow_zero);
   }
 
    // tensor_advection_update is declared in: NavierStokes.cpp

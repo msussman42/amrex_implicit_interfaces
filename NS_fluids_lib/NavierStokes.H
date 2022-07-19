@@ -1150,7 +1150,6 @@ void apply_pressure_grad(
     void level_getshear(
       MultiFab* shear_output_mf,
       MultiFab* vel_mf,
-      int iproject,
       int only_scalar,
       int destcomp,
       int ngrow);
