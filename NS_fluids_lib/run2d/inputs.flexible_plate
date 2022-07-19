@@ -225,7 +225,6 @@ ns.heatviscconst=0.0 0.0 0.0
 #2.25E+6=beta/1E+3  beta=2.25E+9
 #note: bulk modulus of rubber: 1.5E+9 Pascal  1Pascal=kg/(m s^2)
 ns.elastic_viscosity=0.0 0.0 1.5e+9
-ns.elastic_regularization=0.0 0.0 0.0
 ns.lame_coefficient=0.0 0.0 0.0
 ns.shear_modulus=0.0 0.0 0.0
 ns.linear_elastic_model=0 0 1

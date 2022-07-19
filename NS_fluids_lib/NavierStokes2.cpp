@@ -9744,7 +9744,6 @@ void NavierStokes::getStateVISC() {
       &viscosity_state_model[im],
       &viscoelastic_model[im],
       &elastic_viscosity[im],
-      &elastic_regularization[im],
       &etaL[im],&etaP[im],&etaS[im],
       &polymer_factor[im],
       viscfab.dataPtr(),

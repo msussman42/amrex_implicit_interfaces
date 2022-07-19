@@ -358,6 +358,7 @@ extern "C"
     Real* elastic_time,
     int* viscoelastic_model,
     Real* polymer_factor,
+    Real* elastic_viscosity,
     int* irz,
     const int* bcrec,
     int* transposegradu);
@@ -387,6 +388,7 @@ extern "C"
     Real* elastic_time,
     int* viscoelastic_model,
     Real* polymer_factor,
+    Real* elastic_viscosity,
     int* irz,
     const int* bcrec,
     int* transposegradu);

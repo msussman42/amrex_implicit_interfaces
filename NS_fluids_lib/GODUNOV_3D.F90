@@ -8422,6 +8422,9 @@ stop
        else if (viscoelastic_model.eq.3) then ! incremental model
         ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
         ! coeff=elastic_viscosity
+       else if (viscoelastic_model.eq.7) then ! incremental model
+        ! Xia, Lu, Tryggvason 2018
+        ! coeff=elastic_viscosity*|f|^{5/3}
        else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
         print *,"this routine should not be called if visc_model==4"
         stop
@@ -8443,7 +8446,9 @@ stop
           print *,"A=Q+I should be positive definite"
           stop
          endif
-        else if (viscoelastic_model.eq.3) then ! incremental model
+        else if (viscoelastic_model.eq.3) then ! incremental model, plastic
+         ! do nothing
+        else if (viscoelastic_model.eq.7) then ! incremental model, Neo-Hookian 
          ! do nothing
         else if (viscoelastic_model.eq.4) then !pressure velocity coupling
          print *,"this routine should not be called if visc_model==4"
@@ -8480,7 +8485,9 @@ stop
         ! do nothing 
        else if (viscoelastic_model.eq.1) then !OLDROYD-B
         ! do nothing 
-       else if (viscoelastic_model.eq.3) then ! incremental model
+       else if (viscoelastic_model.eq.3) then ! incremental model,plastic
+        ! do nothing
+       else if (viscoelastic_model.eq.7) then ! incremental model,Neo-Hookean
         ! do nothing
        else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
         print *,"this routine should not be called if visc_model==4"
@@ -8496,7 +8503,8 @@ stop
         !  etaS=etaL-etaP=viscconst-elastic_viscosity 
         !  viscoelastic_coeff= &
         !   (visc(D_DECL(i,j,k),im_parm)-etaS)/(modtime+dt)
-        !  visc(D_DECL(i,j,k),num_materials+im_parm)=viscoelastic_coeff*visc_coef
+        !  visc(D_DECL(i,j,k),num_materials+im_parm)=
+        !     viscoelastic_coeff*visc_coef
         !  visc(D_DECL(i,j,k),2*num_materials+im_parm)=modtime
        do ii=1,3
        do jj=1,3
@@ -9139,6 +9147,7 @@ stop
        elastic_time, &
        viscoelastic_model, &
        polymer_factor, &
+       elastic_viscosity, &
        irz, &
        bc, &
        transposegradu) &
@@ -9187,6 +9196,7 @@ stop
       REAL_T, INTENT(in) :: dt,elastic_time
       INTEGER_T, INTENT(in) :: viscoelastic_model
       REAL_T, INTENT(in) :: polymer_factor
+      REAL_T, INTENT(in) :: elastic_viscosity
       INTEGER_T, INTENT(in) :: transposegradu
       INTEGER_T, INTENT(in) :: bc(SDIM,2,SDIM)
       INTEGER_T, INTENT(in) :: irz
@@ -9213,6 +9223,12 @@ stop
        print *,"polymer_factor out of range"
        stop
       endif
+      if (elastic_viscosity.gt.zero) then
+       ! do nothing
+      else
+       print *,"elastic_viscosity invalid"
+       stop
+      endif
 
       if (viscoelastic_model.eq.0) then ! FENE-CR
        ! coeff=(visc-etaS)/(modtime+dt)
@@ -9228,6 +9244,9 @@ stop
        ! modtime=elastic_time
       else if (viscoelastic_model.eq.3) then ! incremental model
        ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+       ! coeff=elastic_viscosity
+      else if (viscoelastic_model.eq.7) then ! incremental model
+       ! Xia, Lu, Tryggvason 2018
        ! coeff=elastic_viscosity
       else if (viscoelastic_model.eq.4) then !pressure velocity FSI coupling
        print *,"this routine should not be called if visc_model==4"
@@ -9298,6 +9317,7 @@ stop
         elastic_time, &
         viscoelastic_model, &
         polymer_factor, &
+        elastic_viscosity, &
         irz, &
         bc, &
         transposegradu) 
@@ -21432,6 +21452,7 @@ stop
        elastic_time, &
        viscoelastic_model, &
        polymer_factor, &
+       elastic_viscosity, &
        irz, &
        bc, &
        transposegradu) &
@@ -21486,6 +21507,7 @@ stop
       REAL_T, INTENT(in) :: dt,elastic_time
       INTEGER_T, INTENT(in) :: viscoelastic_model
       REAL_T, INTENT(in) :: polymer_factor
+      REAL_T, INTENT(in) :: elastic_viscosity
       INTEGER_T, INTENT(in) :: transposegradu
       INTEGER_T, INTENT(in) :: bc(SDIM,2,SDIM)
       INTEGER_T, INTENT(in) :: irz
@@ -21518,6 +21540,12 @@ stop
        print *,"polymer_factor out of range"
        stop
       endif
+      if (elastic_viscosity.gt.zero) then 
+       ! do nothing
+      else
+       print *,"elastic_viscosity out of range"
+       stop
+      endif
 
       if (viscoelastic_model.eq.0) then ! FENE-CR
        ! coeff=(visc-etaS)/(modtime+dt)
@@ -21533,6 +21561,9 @@ stop
        ! modtime=elastic_time
       else if (viscoelastic_model.eq.3) then ! incremental model
        ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+       ! coeff=elastic_viscosity
+      else if (viscoelastic_model.eq.7) then ! incremental model
+       ! Xia, Lu, Tryggvason 2018
        ! coeff=elastic_viscosity
       else if (viscoelastic_model.eq.4) then !pressure velocity FSI coupling
        print *,"this routine should not be called if visc_model==4"
@@ -21668,6 +21699,7 @@ stop
          elastic_time, &
          viscoelastic_model, &
          polymer_factor, &
+         elastic_viscosity, &
          irz, &
          bc, &
          transposegradu) 

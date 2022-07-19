@@ -5439,7 +5439,15 @@ else if (viscoelastic_model.eq.3) then ! incremental
  ! do nothing
 else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean
  ! Xia, Lu, Tryggvason 2018
- ! do nothing
+ ! D(f^T f)/Dt=f^T Df/Dt + Df^T/Dt f =
+ ! f^T(-f grad U)+(-grad U^T f^T)f  
+ ! let Ainverse=f^T f
+ ! D Ainverse/Dt + Ainverse grad U + grad U^T Ainverse = 0
+ min_eval=0.001D0
+ A_dim=3
+ call project_to_positive_definite(A,A_dim,min_eval)
+
+ FIX ME
 else
  print *,"viscoelastic_model invalid"
  stop
@@ -24592,6 +24600,7 @@ subroutine point_updatetensor( &
  elastic_time, &
  viscoelastic_model, &
  polymer_factor, &
+ elastic_viscosity, &
  irz, &
  bc, &
  transposegradu) 
@@ -24625,6 +24634,7 @@ INTEGER_T :: n
 REAL_T, INTENT(in) :: dt,elastic_time
 INTEGER_T, INTENT(in) :: viscoelastic_model
 REAL_T, INTENT(in) :: polymer_factor
+REAL_T, INTENT(in) :: elastic_viscosity
 INTEGER_T, INTENT(in) :: transposegradu
 INTEGER_T, INTENT(in) :: bc(SDIM,2,SDIM)
 INTEGER_T, INTENT(in) :: irz
@@ -24650,6 +24660,7 @@ INTEGER_T dir_local
 
 INTEGER_T dumbbell_model
 REAL_T magA,NP_dotdot_D,Y_plastic_parm_scaled,f_plastic
+REAL_T gamma_not
 
 nhalf=3
 
@@ -24670,6 +24681,12 @@ if (polymer_factor.ge.zero) then !1/L
  ! do nothing
 else
  print *,"polymer_factor out of range"
+ stop
+endif
+if (elastic_viscosity.gt.zero) then 
+ ! do nothing
+else
+ print *,"elastic_viscosity out of range"
  stop
 endif
 
@@ -24815,7 +24832,9 @@ do ii=1,3
    stop
   endif
  else if (dumbbell_model.eq.0) then ! e.g. incremental model
-  ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+  !   or
+  ! Xia, Lu, Tryggvason 2018
   ! do nothing
  else
   print *,"dumbbell_model invalid"
@@ -24949,9 +24968,10 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
    Aadvect(ii,ii)=Aadvect(ii,ii)+one
   else if (dumbbell_model.eq.0) then ! e.g. incremental model
    if (viscoelastic_model.eq.3) then ! incremental model
-    ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+    ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
     ! do nothing
    else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
+    ! Xia, Lu, Tryggvason 2018
     Aadvect(ii,ii)=Aadvect(ii,ii)+one
    else
     print *,"viscoelastic_model invalid"
@@ -24968,7 +24988,7 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
 
  if (dumbbell_model.eq.1) then
   ! do nothing
- else if (viscoelastic_model.eq.3) then !incremental
+ else if (viscoelastic_model.eq.3) then !incremental plastic model
   if (dumbbell_model.eq.0) then
    magA=zero
    do ii=1,3
@@ -24991,8 +25011,11 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
     NP_dotdot_D=NP_dotdot_D+NP(ii,jj)*visctensor(ii,jj)
    enddo
    enddo
-   ! scaled by the bulk modulus
-   Y_plastic_parm_scaled=(1.0d0/100.0d0)*sqrt(2.0d0/3.0d0)
+   ! "S" from Maire et al corresponds to "Aadvect" times the 
+   ! bulk modulus.
+   gamma_not=elastic_viscosity/100.0d0
+
+   Y_plastic_parm_scaled=(gamma_not/elastic_viscosity)*sqrt(2.0d0/3.0d0)
    f_plastic=magA-Y_plastic_parm_scaled
    do ii=1,3
    do jj=1,3
@@ -25064,9 +25087,10 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
    Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
   else if (dumbbell_model.eq.0) then ! e.g. incremental model
    if (viscoelastic_model.eq.3) then ! incremental model
-    ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+    ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
     ! do nothing
    else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
+    ! Xia, Lu, Tryggvason (2018)
     Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
    else
     print *,"viscoelastic_model invalid"
@@ -25114,8 +25138,10 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
  do ii=1,3
   if (dumbbell_model.eq.1) then
    Aadvect(ii,ii)=Aadvect(ii,ii)+one
-  else if (dumbbell_model.eq.0) then ! e.g. incremental model
-   ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+  else if (dumbbell_model.eq.0) then ! incremental model
+   ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+   !  or
+   ! Xia, Lu, Tryggvason (2018)
    ! do nothing
   else
    print *,"dumbbell_model invalid"
@@ -25136,7 +25162,9 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
   if (dumbbell_model.eq.1) then
    Q(ii,ii)=Q(ii,ii)-one
   else if (dumbbell_model.eq.0) then ! e.g. incremental model
-   ! e.g. Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+   ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+   !  or
+   ! Xia, Lu, Tryggvason (2018)
    ! do nothing
   else
    print *,"dumbbell_model invalid"
