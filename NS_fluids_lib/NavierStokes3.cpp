@@ -817,7 +817,7 @@ void NavierStokes::tensor_advection_updateALL() {
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
-   // get |grad U|,D,grad U 
+   // get sqrt(2 D:D),D,grad U 
    // 1: sqrt(2 * D : D)
    // 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
    // 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz

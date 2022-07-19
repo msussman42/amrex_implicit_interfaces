@@ -8424,7 +8424,7 @@ stop
         ! coeff=elastic_viscosity
        else if (viscoelastic_model.eq.7) then ! incremental model
         ! Xia, Lu, Tryggvason 2018
-        ! coeff=elastic_viscosity*|f|^{5/3}
+        ! coeff=elastic_viscosity*|Q+I|^{-5/6}
        else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
         print *,"this routine should not be called if visc_model==4"
         stop
@@ -8449,7 +8449,12 @@ stop
         else if (viscoelastic_model.eq.3) then ! incremental model, plastic
          ! do nothing
         else if (viscoelastic_model.eq.7) then ! incremental model, Neo-Hookian 
-         ! do nothing
+         if (Q(ii,ii)+one.gt.zero) then
+          ! do nothing
+         else
+          print *,"A=Q+I should be positive definite"
+          stop
+         endif
         else if (viscoelastic_model.eq.4) then !pressure velocity coupling
          print *,"this routine should not be called if visc_model==4"
          stop
@@ -21401,14 +21406,28 @@ stop
          Q(2,1)=Q(1,2)
          Q(3,1)=Q(1,3)
          Q(3,2)=Q(2,3)
-         do ii=1,3
-          Q(ii,ii)=Q(ii,ii)+one
-         enddo
-         call project_A_to_positive_definite(Q, &
+
+         if (viscoelastic_model(im_map).eq.3) then ! incremental model
+          ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+          ! do nothing
+         else
+          do ii=1,3
+           Q(ii,ii)=Q(ii,ii)+one
+          enddo
+         endif
+
+         call project_A_to_positive_definite_or_traceless(Q, &
            viscoelastic_model(im_map),polymer_factor(im_map))
-         do ii=1,3
-          Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
-         enddo
+
+         if (viscoelastic_model(im_map).eq.3) then ! incremental model
+          ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+          ! do nothing
+         else
+          do ii=1,3
+           Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
+          enddo
+         endif
+
          do dir=1,ENUM_NUM_TENSOR_TYPE
           call stress_index(dir,ii,jj)
           tensor_local((ipart-1)*ENUM_NUM_TENSOR_TYPE+dir)=Q(ii,jj)

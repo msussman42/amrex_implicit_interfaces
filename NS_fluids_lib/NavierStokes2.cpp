@@ -9668,12 +9668,11 @@ void NavierStokes::getStateVISC() {
 
    if (shear_thinning_fluid[im]==1) {
 
-    // since only_scalar==1, this routine calculates mag(trace gradu)=
-    //  sqrt(2 D:D)
+    // since only_scalar==1, this routine calculates: sqrt(2 D:D)
     // since D is symmetric, D:D=trace(D^2) 
     // is invariant to coordinate transformations.
     // if levelrz==1, gradu(3,3)=u/|r|
-    int only_scalar=1;  // mag(trace gradu) 
+    int only_scalar=1;  // sqrt(2 D:D)
     int destcomp=0;
     level_getshear(gammadot_mf,vel,only_scalar,destcomp,ngrow);
 
@@ -10049,7 +10048,7 @@ void NavierStokes::getState_tracemag(int idx) {
    amrex::Error("ns_is_rigid(im) invalid");
 
   int idest=5*im;
-  int only_scalar=1;  // mag(trace gradu)
+  int only_scalar=1;  // sqrt(2 D:D)
   int ngrow_getshear=1;
   level_getshear(localMF[idx],vel_data,only_scalar,
      idest,ngrow_getshear);
