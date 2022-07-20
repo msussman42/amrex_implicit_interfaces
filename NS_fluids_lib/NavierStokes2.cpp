@@ -7203,6 +7203,7 @@ void NavierStokes::output_zones(
    MultiFab* conductmf,
    MultiFab* magtracemf,
    MultiFab* elasticforcemf,
+   MultiFab* gradvelocitymf,
    int& grids_per_level,
    BoxArray& cgrids_minusBA,
    Real* slice_data,
@@ -7321,6 +7322,8 @@ void NavierStokes::output_zones(
  check_for_NAN(conductmf,9);
  check_for_NAN(magtracemf,10);
  check_for_NAN(elasticforcemf,10);
+ check_for_NAN(gradvelocitymf,10);
+
  int bfact=parent->Space_blockingFactor(level);
 
  if (level<=tecplot_finest_level) {
@@ -7417,6 +7420,10 @@ void NavierStokes::output_zones(
     MultiFab* elasticforcemfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      AMREX_SPACEDIM,1,
      MFInfo().SetTag("elasticforcemfminus"),FArrayBoxFactory());
+
+    MultiFab* gradvelocitymfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
+     AMREX_SPACEDIM_SQR,1,
+     MFInfo().SetTag("gradvelocitymfminus"),FArrayBoxFactory());
 
     MultiFab* towermfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      PLOTCOMP_NCOMP,1,
@@ -7518,6 +7525,14 @@ void NavierStokes::output_zones(
  
     ParallelDescriptor::Barrier();
 
+    // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+    gradvelocitymfminus->ParallelCopy(*gradvelocitymf,0,0,AMREX_SPACEDIM_SQR,
+		   1,1,geom.periodicity()); 
+
+    check_for_NAN(gradvelocitymfminus,20);
+ 
+    ParallelDescriptor::Barrier();
+
     towermfminus->setVal(0.0,0,PLOTCOMP_NCOMP,1);
 
     check_for_NAN(towermfminus,20);
@@ -7580,6 +7595,7 @@ void NavierStokes::output_zones(
      FArrayBox& conductfab=(*conductmfminus)[mfi];
      FArrayBox& magtracefab=(*magtracemfminus)[mfi];
      FArrayBox& elasticforcefab=(*elasticforcemfminus)[mfi];
+     FArrayBox& gradvelocityfab=(*gradvelocitymfminus)[mfi];
 
      FArrayBox& towerfab=(*towermfminus)[mfi];
      int ncomp_tower=towerfab.nComp();
@@ -7622,6 +7638,8 @@ void NavierStokes::output_zones(
       ARLIM(magtracefab.loVect()),ARLIM(magtracefab.hiVect()),
       elasticforcefab.dataPtr(),
       ARLIM(elasticforcefab.loVect()),ARLIM(elasticforcefab.hiVect()),
+      gradvelocityfab.dataPtr(),
+      ARLIM(gradvelocityfab.loVect()),ARLIM(gradvelocityfab.hiVect()),
       towerfab.dataPtr(), //towerfab
       ARLIM(towerfab.loVect()),ARLIM(towerfab.hiVect()),
       prob_lo,
@@ -7670,6 +7688,7 @@ void NavierStokes::output_zones(
     delete conductmfminus;
     delete magtracemfminus;
     delete elasticforcemfminus;
+    delete gradvelocitymfminus;
 
     delete towermfminus;
 
@@ -7748,6 +7767,9 @@ void NavierStokes::output_zones(
     MultiFab* elasticforcemfminus=elasticforcemf;
     check_for_NAN(elasticforcemfminus,20);
 
+    MultiFab* gradvelocitymfminus=gradvelocitymf;
+    check_for_NAN(gradvelocitymfminus,20);
+
     MultiFab* towermf=localMF[MULTIFAB_TOWER_PLT_MF];
     check_for_NAN(towermf,20);
  
@@ -7811,6 +7833,7 @@ void NavierStokes::output_zones(
      FArrayBox& conductfab=(*conductmfminus)[mfi];
      FArrayBox& magtracefab=(*magtracemfminus)[mfi];
      FArrayBox& elasticforcefab=(*elasticforcemfminus)[mfi];
+     FArrayBox& gradvelocityfab=(*gradvelocitymfminus)[mfi];
 
      FArrayBox& towerfab=(*towermf)[mfi];
      int ncomp_tower=towerfab.nComp();
@@ -7853,6 +7876,8 @@ void NavierStokes::output_zones(
       ARLIM(magtracefab.loVect()),ARLIM(magtracefab.hiVect()),
       elasticforcefab.dataPtr(),
       ARLIM(elasticforcefab.loVect()),ARLIM(elasticforcefab.hiVect()),
+      gradvelocityfab.dataPtr(),
+      ARLIM(gradvelocityfab.loVect()),ARLIM(gradvelocityfab.hiVect()),
       towerfab.dataPtr(), //towerfab
       ARLIM(towerfab.loVect()),ARLIM(towerfab.hiVect()),
       prob_lo,
