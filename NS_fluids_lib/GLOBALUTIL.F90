@@ -24890,6 +24890,12 @@ endif
 
 call gridsten_level(xsten,i,j,k,level,nhalf)
 
+ ! if levelrz==1,
+ !  gradU(3,3)=u/|r|
+ ! if levelrz==3,
+ !  gradU(2,2)+=u/|r|
+ !  gradU(1,2)-=v/|r|
+ ! tendata is intialized in: fort_getshear
  ! D=(1/2)(gradU + gradU^Transpose)
  ! tendata has: |D|, D, grad U
  ! 1: sqrt(2 * D : D)
