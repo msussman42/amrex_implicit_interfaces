@@ -19578,7 +19578,9 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  if (localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp()!=num_materials)
   amrex::Error("conductivity_data invalid ncomp");
 
-  // declared in: MacProj.cpp
+  // getStateDIV_ALL is declared in: MacProj.cpp
+  // getStateDIV_ALL computes the derived divergence of the MAC
+  // velocity field.
  int idx_source=-1;
  int scomp_src=0;
  int idx_mask=-1;
@@ -19744,8 +19746,10 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   MultiFab* denmf=ns_level.getStateDen(1,cur_time_slab); 
   ns_level.getStateMOM_DEN(MOM_DEN_MF,1,cur_time_slab); 
   MultiFab* lsdist=ns_level.getStateDist(1,cur_time_slab,12);
-  MultiFab* div_data=ns_level.getStateDIV_DATA(1,0,1,
-    cur_time_slab);
+   //getStateDIV_DATA is declared in: NavierStokes.cpp
+   //ngrow=1 scomp=0 ncomp=1  state[DIV_Type]
+   //this data goes in the "PLOTCOMP_STATE_DIV" component.
+  MultiFab* div_data=ns_level.getStateDIV_DATA(1,0,1,cur_time_slab);
   if (1==0) {
    std::cout << "level= " << ilev << " div_data norm0= " << 
     div_data->norm0() << '\n'; 
@@ -19789,6 +19793,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     ns_level.localMF[CELL_CONDUCTIVITY_MATERIAL_MF],
     ns_level.localMF[MAGTRACE_MF],
     ns_level.localMF[CELL_ELASTIC_FORCE_MF],
+    ns_level.localMF[CELLTENSOR_MF],
     grids_per_level_array[ilev],
     cgrids_minusBA_array[ilev],
     slice_data.dataPtr(), 
@@ -20149,6 +20154,21 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     icomp++;
     varnames[icomp]="Z_ELSTCFORCE";
    }
+
+   if (icomp+1==PLOTCOMP_GRAD_VELOCITY) {
+    // do nothing
+   } else
+    amrex::Error("icomp+1!=PLOTCOMP_GRAD_VELOCITY");
+
+   for (int igrad=0;igrad<AMREX_SPACEDIM_SQR;igrad++) {
+    std::stringstream igrad_string_stream(std::stringstream::in |
+     std::stringstream::out);
+    igrad_string_stream << std::setw(2) << std::setfill('0') << igrad+1;
+    std::string igrad_string=igrad_string_stream.str();
+    icomp++;
+    varnames[icomp]="GRADVEL"+igrad_string;
+   }
+
    if (icomp+1==PLOTCOMP_NCOMP) {
     // do nothing
    } else

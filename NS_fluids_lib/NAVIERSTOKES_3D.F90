@@ -984,6 +984,21 @@ stop
          index3d=index3d+plot_sdim
          index2d=index2d+SDIM
 
+         if (index3d.eq.PLOTCOMP_GRAD_VELOCITY) then
+          ! do nothing
+         else
+          print *,"(index3d.ne.PLOTCOMP_GRAD_VELOCITY)"
+          stop
+         endif
+
+          ! grad velocity
+         do ivar_gb=1,AMREX_SPACEDIM_SQR
+          index3d=index3d+1
+          index2d=index2d+1
+          zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
+            zone2d_gb(iz_gb)%var(index2d,i,j)
+         enddo
+
          if ((index3d.ne.nwrite3d).or. &
              (index2d.ne.nwrite2d)) then
           print *,"index mismatch in zone_revolve"
@@ -1933,6 +1948,8 @@ END SUBROUTINE SIMP
        trace,DIMS(trace), &
        elasticforce, &
        DIMS(elasticforce), &
+       gradvelocity, &
+       DIMS(gradvelocity), &
        towerfab, &
        DIMS(towerfab), &
        problo, &
@@ -2009,6 +2026,7 @@ END SUBROUTINE SIMP
       INTEGER_T, INTENT(in) :: DIMDEC(conduct)
       INTEGER_T, INTENT(in) :: DIMDEC(trace)
       INTEGER_T, INTENT(in) :: DIMDEC(elasticforce)
+      INTEGER_T, INTENT(in) :: DIMDEC(gradvelocity)
       INTEGER_T, INTENT(in) :: DIMDEC(towerfab)
       INTEGER_T, INTENT(in) :: level
       INTEGER_T, INTENT(in) :: finest_level
@@ -2043,6 +2061,9 @@ END SUBROUTINE SIMP
       REAL_T, pointer :: trace_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: elasticforce(DIMV(elasticforce),SDIM)
       REAL_T, pointer :: elasticforce_ptr(D_DECL(:,:,:),:)
+      REAL_T, INTENT(in), target :: &
+              gradvelocity(DIMV(gradvelocity),AMREX_SPACEDIM_SQR)
+      REAL_T, pointer :: gradvelocity_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(inout), target :: towerfab(DIMV(towerfab),ncomp_tower)
       REAL_T, pointer :: towerfab_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: lsdist(DIMV(lsdist),(SDIM+1)*num_materials)
@@ -2072,6 +2093,7 @@ END SUBROUTINE SIMP
       REAL_T conductnd(num_materials)
       REAL_T tracend(5*num_materials)
       REAL_T elasticforcend(SDIM)
+      REAL_T gradvelocitynd(AMREX_SPACEDIM_SQR)
       REAL_T writend(num_materials*200)
       INTEGER_T scomp,iw
       INTEGER_T istate,idissolution
@@ -2336,6 +2358,8 @@ END SUBROUTINE SIMP
       call checkbound_array(lo,hi,trace_ptr,1,-1,41123)
       elasticforce_ptr=>elasticforce
       call checkbound_array(lo,hi,elasticforce_ptr,1,-1,41124)
+      gradvelocity_ptr=>gradvelocity
+      call checkbound_array(lo,hi,gradvelocity_ptr,1,-1,41124)
       towerfab_ptr=>towerfab
       call checkbound_array(lo,hi,towerfab_ptr,1,-1,41125)
       vel_ptr=>vel
@@ -2577,6 +2601,9 @@ END SUBROUTINE SIMP
         do dir=1,SDIM
          elasticforcend(dir)=zero
         enddo
+        do dir=1,AMREX_SPACEDIM_SQR
+         gradvelocitynd(dir)=zero
+        enddo
 
          ! two types of low order interpolation:
          ! (a) the weights are the area of the intersection of the node control
@@ -2754,6 +2781,10 @@ END SUBROUTINE SIMP
           elasticforcend(dir)=elasticforcend(dir)+ &
             localwt*elasticforce(D_DECL(i-i1,j-j1,k-k1),dir)
          enddo
+         do dir=1,AMREX_SPACEDIM_SQR
+          gradvelocitynd(dir)=gradvelocitynd(dir)+ &
+            localwt*gradvelocity(D_DECL(i-i1,j-j1,k-k1),dir)
+         enddo
          call get_mach_number(visual_tessellate_vfrac, &
            velcell,dencell,vofcell,machcell)
 
@@ -2786,6 +2817,9 @@ END SUBROUTINE SIMP
         enddo
         do dir=1,SDIM
          elasticforcend(dir)=elasticforcend(dir)/sumweight
+        enddo
+        do dir=1,AMREX_SPACEDIM_SQR
+         gradvelocitynd(dir)=gradvelocitynd(dir)/sumweight
         enddo
 
         do dir=1,num_state_material*num_materials
@@ -3211,6 +3245,18 @@ END SUBROUTINE SIMP
          writend(scomp+iw)=elasticforcend(iw)
         enddo
         scomp=scomp+SDIM
+
+        if (scomp.eq.PLOTCOMP_GRAD_VELOCITY) then
+         ! do nothing
+        else
+         print *,"(scomp.ne.PLOTCOMP_GRAD_VELOCITY)"
+         stop
+        endif
+
+        do iw=1,AMREX_SPACEDIM_SQR
+         writend(scomp+iw)=gradvelocitynd(iw)
+        enddo
+        scomp=scomp+AMREX_SPACEDIM_SQR
 
         if (scomp.eq.PLOTCOMP_NCOMP) then
          ! do nothing

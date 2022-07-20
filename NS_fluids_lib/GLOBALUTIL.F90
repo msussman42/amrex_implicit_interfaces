@@ -15709,7 +15709,9 @@ end subroutine print_visual_descriptor
       character*2 specstr
       character*2 matstr
       character*2 matstropp
-      INTEGER_T ih,im,ispec,imls,im_opp,dir,i
+      INTEGER_T igrad
+      INTEGER_T im,imls,im_opp
+      INTEGER_T ih,ispec,dir,i
       INTEGER_T nparts,nparts_def,partid
       INTEGER_T plot_sdim_macro
       INTEGER_T test_nwrite
@@ -16221,6 +16223,34 @@ end subroutine print_visual_descriptor
        test_nwrite=test_nwrite+1
       endif
 
+      if (test_nwrite.eq.PLOTCOMP_GRAD_VELOCITY) then
+       ! do nothing
+      else
+       print *,"(test_nwrite.ne.PLOTCOMP_GRAD_VELOCITY)"
+       stop
+      endif
+
+      do igrad=1,AMREX_SPACEDIM_SQR
+
+       write(matstr,'(I2)') igrad
+       do i=1,2
+        if (matstr(i:i).eq.' ') then
+         matstr(i:i)='0'
+        endif
+       enddo
+
+       ih=1
+       Varname='GRADVEL'
+       ih=ih+7
+       do i=1,2
+        Varname(ih:ih)=matstr(i:i)
+        ih=ih+1
+       enddo
+       call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
+
+      enddo  ! igrad=1,AMREX_SPACEDIM_SQR
+
       if (test_nwrite.eq.PLOTCOMP_NCOMP) then
        ! do nothing
       else
@@ -16230,7 +16260,6 @@ end subroutine print_visual_descriptor
 
       return
       end subroutine dumpstring_headers
-
 
 
       subroutine dumpstring_headers_sanity(plot_sdim,ncomp)

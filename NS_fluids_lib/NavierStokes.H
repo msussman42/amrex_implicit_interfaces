@@ -930,6 +930,7 @@ protected:
       MultiFab* conductmf,
       MultiFab* magtracemf,
       MultiFab* elasticforcemf,
+      MultiFab* gradvelocitymf,
       int& grids_per_level,
       BoxArray& cgrids_minusBA,
       Real* slice_data,
