@@ -454,6 +454,7 @@ stop
       REAL_T, INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
+      FIX ME
       REAL_T, INTENT(out), target :: tensordata(DIMV(tensordata),20)
       REAL_T, pointer :: tensordata_ptr(D_DECL(:,:,:),:)
 

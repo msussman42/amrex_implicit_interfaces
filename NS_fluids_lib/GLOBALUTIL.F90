@@ -10319,7 +10319,7 @@ end subroutine print_visual_descriptor
       return
       end subroutine growntileboxNODE
 
-
+FIX ME
       subroutine tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
       IMPLICIT NONE
 
@@ -24776,10 +24776,10 @@ REAL_T, INTENT(in) :: dx(SDIM),xlo(SDIM)
 
 REAL_T, INTENT(in), pointer :: visc(D_DECL(:,:,:),:)
 
- ! D=(1/2)(gradU + gradU^Transpose)
- ! 1: sqrt(2 * D : D)
- ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
- ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
+! D=(1/2)(gradU + gradU^Transpose)
+! DERIVE_TENSOR_MAG+1: sqrt(2 * D : D)
+! DERIVE_TENSOR_RATE_DEFORM+1: D11,D12,D13,D21,D22,D23,D31,D32,D33
+! DERIVE_TENSOR_GRAD_VEL+1: ux,uy,uz,vx,vy,vz,wx,wy,wz
 REAL_T, INTENT(in), pointer :: tendata(D_DECL(:,:,:),:)
 REAL_T, INTENT(in), pointer :: vel(D_DECL(:,:,:),:)
 
@@ -24927,9 +24927,9 @@ call gridsten_level(xsten,i,j,k,level,nhalf)
  ! tendata is intialized in: fort_getshear
  ! D=(1/2)(gradU + gradU^Transpose)
  ! tendata has: |D|, D, grad U
- ! 1: sqrt(2 * D : D)
- ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
- ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
+ ! DERIVE_TENSOR_MAG+1: sqrt(2 * D : D)   
+ ! DERIVE_TENSOR_RATE_DEFORM+1: D11,D12,D13,D21,D22,D23,D31,D32,D33
+ ! DERIVE_TENSOR_GRAD_VEL+1: ux,uy,uz,vx,vy,vz,wx,wy,wz
 shear=tendata(D_DECL(i,j,k),1) ! sqrt(2 D:D)
 n=2
 do ii=1,3
