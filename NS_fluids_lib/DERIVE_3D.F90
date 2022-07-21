@@ -158,15 +158,15 @@ stop
       endif
 
       vof_ptr=>vof 
-      call checkbound_array(fablo,fabhi,vof_ptr,ngrow+1,-1,310)
+      call checkbound_array(fablo,fabhi,vof_ptr,ngrow+1,-1)
       visc_ptr=>visc
-      call checkbound_array(fablo,fabhi,visc_ptr,ngrow,-1,311)
+      call checkbound_array(fablo,fabhi,visc_ptr,ngrow,-1)
       vel_ptr=>vel
-      call checkbound_array(fablo,fabhi,vel_ptr,ngrow,-1,312)
+      call checkbound_array(fablo,fabhi,vel_ptr,ngrow,-1)
       denstate_ptr=>denstate
-      call checkbound_array(fablo,fabhi,denstate_ptr,ngrow,-1,313)
+      call checkbound_array(fablo,fabhi,denstate_ptr,ngrow,-1)
       cellten_ptr=>cellten
-      call checkbound_array(fablo,fabhi,cellten_ptr,ngrow,-1,314)
+      call checkbound_array(fablo,fabhi,cellten_ptr,ngrow,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
@@ -480,9 +480,9 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,cellten_ptr,ngrow,-1,64)
-      call checkbound_array(fablo,fabhi,vel_ptr,ngrow+1,-1,64)
-      call checkbound_array(fablo,fabhi,tensordata_ptr,ngrow,-1,65)
+      call checkbound_array(fablo,fabhi,cellten_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,vel_ptr,ngrow+1,-1)
+      call checkbound_array(fablo,fabhi,tensordata_ptr,ngrow,-1)
 
       if (levelrz.eq.0) then
        ! do nothing
@@ -882,15 +882,15 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,visc_ptr,ngrow,-1,316)
+      call checkbound_array(fablo,fabhi,visc_ptr,ngrow,-1)
       gammadot_ptr=>gammadot
-      call checkbound_array1(fablo,fabhi,gammadot_ptr,ngrow,-1,317)
+      call checkbound_array1(fablo,fabhi,gammadot_ptr,ngrow,-1)
       eosdata_ptr=>eosdata
-      call checkbound_array(fablo,fabhi,eosdata_ptr,ngrow,-1,318)
+      call checkbound_array(fablo,fabhi,eosdata_ptr,ngrow,-1)
       tensor_ptr=>tensor
-      call checkbound_array(fablo,fabhi,tensor_ptr,ngrow,-1,319)
+      call checkbound_array(fablo,fabhi,tensor_ptr,ngrow,-1)
       vel_ptr=>vel
-      call checkbound_array(fablo,fabhi,vel_ptr,ngrow,-1,320)
+      call checkbound_array(fablo,fabhi,vel_ptr,ngrow,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
@@ -905,7 +905,7 @@ stop
       else if (is_rigid(im_parm).eq.0) then
 
        vel_ptr=>vel
-       call checkbound_array(fablo,fabhi,vel_ptr,ngrow+1,-1,321)
+       call checkbound_array(fablo,fabhi,vel_ptr,ngrow+1,-1)
 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
@@ -1327,12 +1327,12 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,conduct_ptr,ngrow,-1,316)
+      call checkbound_array(fablo,fabhi,conduct_ptr,ngrow,-1)
       eosdata_ptr=>eosdata
-      call checkbound_array(fablo,fabhi,eosdata_ptr,ngrow+2,-1,318)
+      call checkbound_array(fablo,fabhi,eosdata_ptr,ngrow+2,-1)
 
       vof_ptr=>vof 
-      call checkbound_array(fablo,fabhi,vof_ptr,ngrow+2,-1,310)
+      call checkbound_array(fablo,fabhi,vof_ptr,ngrow+2,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
@@ -1670,12 +1670,12 @@ stop
        stop
       endif  
 
-      call checkbound_array(fablo,fabhi,cellten,ngrow,-1,64)
-      call checkbound_array(fablo,fabhi,dest_ptr,ngrow,-1,323)
-      call checkbound_array(fablo,fabhi,den,ngrow,-1,324)
-      call checkbound_array(fablo,fabhi,tensor,ngrow,-1,325)
-      call checkbound_array(fablo,fabhi,vel,ngrow+1,-1,326)
-      call checkbound_array(fablo,fabhi,visc,ngrow,-1,327)
+      call checkbound_array(fablo,fabhi,cellten,ngrow,-1)
+      call checkbound_array(fablo,fabhi,dest_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,den,ngrow,-1)
+      call checkbound_array(fablo,fabhi,tensor,ngrow,-1)
+      call checkbound_array(fablo,fabhi,vel,ngrow+1,-1)
+      call checkbound_array(fablo,fabhi,visc,ngrow,-1)
 
        ! in: fort_dermagtrace
        ! visc=sqrt(2*(a11**2+a22**2+a33**2+2*a12**2+2*a13**2+2*a23**2))
@@ -2104,32 +2104,32 @@ stop
       endif
 
         ! cell centered grad U
-      call checkbound_array(fablo,fabhi,tdata_ptr,0,-1,1252)
-      call checkbound_array(fablo,fabhi,viscoten_ptr,1,-1,1253)
-      call checkbound_array(fablo,fabhi,den_ptr,1,-1,1254)
-      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,1255)
-      call checkbound_array(fablo,fabhi,slrecon_ptr,1,-1,12560)
-      call checkbound_array(fablo,fabhi,levelpc_ptr,1,-1,1257)
-      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1,6600)
-      call checkbound_array1(fablo,fabhi,areax_ptr,0,0,6601)
-      call checkbound_array1(fablo,fabhi,areay_ptr,0,1,6602)
-      call checkbound_array1(fablo,fabhi,areaz_ptr,0,SDIM-1,6603)
+      call checkbound_array(fablo,fabhi,tdata_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,viscoten_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,slrecon_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,levelpc_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,areax_ptr,0,0)
+      call checkbound_array1(fablo,fabhi,areay_ptr,0,1)
+      call checkbound_array1(fablo,fabhi,areaz_ptr,0,SDIM-1)
 
-      call checkbound_array(fablo,fabhi,xface_ptr,0,0,1258)
-      call checkbound_array(fablo,fabhi,yface_ptr,0,1,1259)
-      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,1261)
+      call checkbound_array(fablo,fabhi,xface_ptr,0,0)
+      call checkbound_array(fablo,fabhi,yface_ptr,0,1)
+      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1)
 
-      call checkbound_array1(fablo,fabhi,cvisc_ptr,0,-1,1262)
-      call checkbound_array(fablo,fabhi,c_mat_visc_ptr,1,-1,1262)
+      call checkbound_array1(fablo,fabhi,cvisc_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,c_mat_visc_ptr,1,-1)
 
-      call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,6604)
-      call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,6604)
-      call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1,6604)
+      call checkbound_array(fablo,fabhi,solxfab_ptr,0,0)
+      call checkbound_array(fablo,fabhi,solyfab_ptr,0,1)
+      call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1)
 
-      call checkbound_array1(fablo,fabhi,pres_ptr,1,-1,6605)
-      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,6606)
+      call checkbound_array1(fablo,fabhi,pres_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1)
        ! DRAG_MF has ngrow_make_distance=3 ghost cells
-      call checkbound_array(fablo,fabhi,drag_ptr,3,-1,6607)
+      call checkbound_array(fablo,fabhi,drag_ptr,3,-1)
 
       if (bfact.lt.1) then
        print *,"bfact invalid5"
@@ -2966,9 +2966,9 @@ stop
       mask_ptr=>mask
       snew_ptr=>snew
       vol_ptr=>vol
-      call checkbound_array1(fablo,fabhi,mask_ptr,0,-1,1255)
-      call checkbound_array(fablo,fabhi,snew_ptr,0,-1,12561)
-      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1,6608)
+      call checkbound_array1(fablo,fabhi,mask_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,snew_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1)
 
       nhalf=1
 
@@ -3230,7 +3230,7 @@ stop
       REAL_T mu
 
       snew_ptr=>snew
-      call checkbound_array(fablo,fabhi,snew_ptr,0,-1,12562)
+      call checkbound_array(fablo,fabhi,snew_ptr,0,-1)
 
       if (ncomp_state.ne.STATE_NCOMP) then
        print *,"ncomp_state invalid"
@@ -3349,11 +3349,11 @@ stop
       velx_ptr=>velx
       vely_ptr=>vely
       velz_ptr=>velz
-      call checkbound_array1(fablo,fabhi,mask_ptr,0,-1,6609)
-      call checkbound_array(fablo,fabhi,vel_ptr,0,-1,6610)
-      call checkbound_array1(fablo,fabhi,velx_ptr,0,0,6610)
-      call checkbound_array1(fablo,fabhi,vely_ptr,0,1,6610)
-      call checkbound_array1(fablo,fabhi,velz_ptr,0,SDIM-1,6610)
+      call checkbound_array1(fablo,fabhi,mask_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,vel_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,velx_ptr,0,0)
+      call checkbound_array1(fablo,fabhi,vely_ptr,0,1)
+      call checkbound_array1(fablo,fabhi,velz_ptr,0,SDIM-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)

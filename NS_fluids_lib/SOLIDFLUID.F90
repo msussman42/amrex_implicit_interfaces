@@ -458,19 +458,19 @@
       endif
   
       call checkbound_array(fablo,fabhi,FSIdata_ptr, &
-        ngrow_make_distance_in,-1,2910)
+        ngrow_make_distance_in,-1)
       velfab_ptr=>velfab
       call checkbound_array(fablo,fabhi,velfab_ptr, &
-        ngrow_make_distance_in,-1,2910)
+        ngrow_make_distance_in,-1)
       drag_ptr=>drag
       call checkbound_array(fablo,fabhi,drag_ptr, &
-        ngrow_make_distance_in,-1,2910)
+        ngrow_make_distance_in,-1)
       masknbr_ptr=>masknbr
       call checkbound_array(fablo,fabhi,masknbr_ptr, &
-        ngrow_make_distance_in,-1,2910)
+        ngrow_make_distance_in,-1)
       maskfiner_ptr=>maskfiner
       call checkbound_array(fablo,fabhi,maskfiner_ptr, &
-       ngrow_make_distance_in,-1,2910)
+       ngrow_make_distance_in,-1)
 
       ! update ngrow_make_distance grow layers of FSIdata that do not overlap
       ! with another tile.
@@ -1395,7 +1395,7 @@
         contain_aux(auxcomp)%lo3D, &
         contain_aux(auxcomp)%hi3D, &
         contain_aux(auxcomp)%LS3D, &
-        ngrow_make_distance,-1,1113)
+        ngrow_make_distance,-1)
 
       nwrite=3+1
 
@@ -1595,25 +1595,25 @@
         contain_aux(auxcomp)%lo3D, &
         contain_aux(auxcomp)%hi3D, &
         contain_aux(auxcomp)%LS3D, &
-        ngrow_make_distance,-1,1113)
+        ngrow_make_distance,-1)
 
       call checkbound3D_array( &
         contain_aux(auxcomp)%lo3D, &
         contain_aux(auxcomp)%hi3D, &
         aux_xdata3D, &
-        ngrow_make_distance,-1,1113)
+        ngrow_make_distance,-1)
 
       call checkbound3D_array( &
         contain_aux(auxcomp)%lo3D, &
         contain_aux(auxcomp)%hi3D, &
         aux_FSIdata3D, &
-        ngrow_make_distance,-1,1113)
+        ngrow_make_distance,-1)
 
       call checkbound3D_array( &
         contain_aux(auxcomp)%lo3D, &
         contain_aux(auxcomp)%hi3D, &
         aux_masknbr3D, &
-        ngrow_make_distance,-1,1113)
+        ngrow_make_distance,-1)
 
       nwrite=3+3
 

@@ -132,13 +132,13 @@
        stop
       endif
 
-      call checkbound_array1(fablo,fabhi,solvemask_ptr,1,-1,81)
-      call checkbound_array1(fablo,fabhi,a_ptr,0,-1,81)
-      call checkbound_array1(fablo,fabhi,diagfab_ptr,1,-1,81)
-      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,81)
-      call checkbound_array1(fablo,fabhi,bx_ptr,0,0,81)
-      call checkbound_array1(fablo,fabhi,by_ptr,0,1,81)
-      call checkbound_array1(fablo,fabhi,bz_ptr,0,AMREX_SPACEDIM-1,81)
+      call checkbound_array1(fablo,fabhi,solvemask_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,a_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,diagfab_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,bx_ptr,0,0)
+      call checkbound_array1(fablo,fabhi,by_ptr,0,1)
+      call checkbound_array1(fablo,fabhi,bz_ptr,0,AMREX_SPACEDIM-1)
 
 
       if (isweep.eq.0) then
@@ -463,10 +463,10 @@
        print *,"level or mg_coarsest_level invalid"
        stop
       endif
-      call checkbound_array1(fablo,fabhi,masksing,1,-1,81)
-      call checkbound_array(fablo,fabhi,rhs,0,-1,81)
-      call checkbound_array(fablo,fabhi,res_ptr,0,-1,84)
-      call checkbound_array(fablo,fabhi,phi,0,-1,85)
+      call checkbound_array1(fablo,fabhi,masksing,1,-1)
+      call checkbound_array(fablo,fabhi,rhs,0,-1)
+      call checkbound_array(fablo,fabhi,res_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,phi,0,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
@@ -538,7 +538,7 @@
        print *,"nsolve invalid"
        stop
       endif
-      call checkbound_array(lo,hi,c_ptr,0,cdir,201)
+      call checkbound_array(lo,hi,c_ptr,0,cdir)
 
       if (avg.eq.1) then
        if (AMREX_SPACEDIM.eq.3) then
@@ -725,7 +725,7 @@
        stop
       endif
 
-      call checkbound_array(lo,hi,c_ptr,ngrow,-1,301)
+      call checkbound_array(lo,hi,c_ptr,ngrow,-1)
 
       if (avg.eq.1) then
        if (AMREX_SPACEDIM.eq.3) then
@@ -858,9 +858,9 @@
  
       phi_ptr=>phi
 
-      call checkbound_array(fablo,fabhi,phi_ptr,1,-1,113)
-      call checkbound_array(fablo,fabhi,bfab,1,-1,113)
-      call checkbound_array1(fablo,fabhi,mfab,1,-1,113)
+      call checkbound_array(fablo,fabhi,phi_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,bfab,1,-1)
+      call checkbound_array1(fablo,fabhi,mfab,1,-1)
 
       if (bfact.lt.1) then
        print *,"bfact invalid"

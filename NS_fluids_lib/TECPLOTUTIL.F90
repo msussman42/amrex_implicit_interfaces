@@ -430,9 +430,9 @@ stop
       datafab_ptr=>datafab
 
       if (data_dir.eq.-1) then 
-       call checkbound_array(lo,hi,datafab_ptr,0,-1,411)
+       call checkbound_array(lo,hi,datafab_ptr,0,-1)
       else if ((data_dir.ge.0).and.(data_dir.le.5)) then
-       call checkbound_array(lo,hi,datafab_ptr,0,data_dir,411)
+       call checkbound_array(lo,hi,datafab_ptr,0,data_dir)
       else
        print *,"data_dir invalid"
        stop

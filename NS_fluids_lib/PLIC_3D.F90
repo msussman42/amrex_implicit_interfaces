@@ -266,11 +266,11 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,masknbr,1,-1,12)
-      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,12)
-      call checkbound_array(fablo,fabhi,vof,1,-1,12)
-      call checkbound_array(fablo,fabhi,LS,1,-1,12)
-      call checkbound_array(fablo,fabhi,slopes_ptr,ngrow,-1,12)
+      call checkbound_array(fablo,fabhi,masknbr,1,-1)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,vof,1,-1)
+      call checkbound_array(fablo,fabhi,LS,1,-1)
+      call checkbound_array(fablo,fabhi,slopes_ptr,ngrow,-1)
 
       if (SDIM.eq.3) then
        klosten=-1

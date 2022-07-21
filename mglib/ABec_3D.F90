@@ -104,10 +104,10 @@
        stop
       endif
 
-      call checkbound_array1(fablo,fabhi,masksing,1,-1,81)
-      call checkbound_array1(fablo,fabhi,phi_ptr,1,-1,18)
-      call checkbound_array1(fablo,fabhi,diagfab,1,-1,19)
-      call checkbound_array1(fablo,fabhi,rhs,0,-1,23)
+      call checkbound_array1(fablo,fabhi,masksing,1,-1)
+      call checkbound_array1(fablo,fabhi,phi_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,diagfab,1,-1)
+      call checkbound_array1(fablo,fabhi,rhs,0,-1)
 
       if (num_sweeps.le.1) then
        print *,"num_sweeps invalid"
@@ -647,10 +647,10 @@
        stop
       endif
 
-      call checkbound_array1(fablo,fabhi,masksing,1,-1,81)
-      call checkbound_array1(fablo,fabhi,y_ptr,0,-1,18)
-      call checkbound_array1(fablo,fabhi,diagfab,1,-1,19)
-      call checkbound_array1(fablo,fabhi,x,1,-1,23)
+      call checkbound_array1(fablo,fabhi,masksing,1,-1)
+      call checkbound_array1(fablo,fabhi,y_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,diagfab,1,-1)
+      call checkbound_array1(fablo,fabhi,x,1,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
@@ -733,10 +733,10 @@
        print *,"bfact_top invalid"
        stop
       endif
-      call checkbound_array1(fablo,fabhi,y_ptr,0,-1,18)
-      call checkbound_array1(fablo,fabhi,bX,0,0,20)
-      call checkbound_array1(fablo,fabhi,bY,0,1,21)
-      call checkbound_array1(fablo,fabhi,bZ,0,AMREX_SPACEDIM-1,22)
+      call checkbound_array1(fablo,fabhi,y_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,bX,0,0)
+      call checkbound_array1(fablo,fabhi,bY,0,1)
+      call checkbound_array1(fablo,fabhi,bZ,0,AMREX_SPACEDIM-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)

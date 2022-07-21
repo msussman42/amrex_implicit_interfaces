@@ -19749,11 +19749,11 @@ end subroutine RatePhaseChange
       nmax=POLYGON_LIST_MAX 
 
       call checkbound_array(nucleate_in%fablo,nucleate_in%fabhi, &
-        nucleate_in%EOS,1,-1,1301)
+        nucleate_in%EOS,1,-1)
       call checkbound_array1(nucleate_in%fablo,nucleate_in%fabhi, &
-        nucleate_in%pres,1,-1,1301)
+        nucleate_in%pres,1,-1)
       call checkbound_array1(nucleate_in%fablo,nucleate_in%fabhi, &
-        nucleate_in%pres_eos,1,-1,1301)
+        nucleate_in%pres_eos,1,-1)
 
       if (nucleate_in%nstate.eq.STATE_NCOMP) then
        ! do nothing
@@ -22721,8 +22721,8 @@ end subroutine initialize2d
       tag_ptr=>tag
       errfab_ptr=>errfab
 
-      call checkbound_int_array1(fablo,fabhi,tag_ptr,0,-1,1400)
-      call checkbound_array1(fablo,fabhi,errfab_ptr,0,-1,1400)
+      call checkbound_int_array1(fablo,fabhi,tag_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,errfab_ptr,0,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
@@ -23439,9 +23439,9 @@ end subroutine initialize2d
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,solid_ptr,1,-1,1301)
-      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1301)
-      call checkbound_array(fablo,fabhi,SNEW_ptr,1,-1,1301)
+      call checkbound_array(fablo,fabhi,solid_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,SNEW_ptr,1,-1)
 
       if ((adv_dir.lt.1).or.(adv_dir.gt.2*SDIM+1)) then
        print *,"adv_dir invalid initdatasolid (10)"
@@ -23577,8 +23577,8 @@ end subroutine initialize2d
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,1303)
-      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,1303)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
 
       im_solid_thermal=im_solid_primary()
 
@@ -23775,11 +23775,11 @@ end subroutine initialize2d
       endif
 
       LS_ptr=>LS
-      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1302)
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
       area_ptr=>area
-      call checkbound_array1(fablo,fabhi,area_ptr,0,dir,1303)
+      call checkbound_array1(fablo,fabhi,area_ptr,0,dir)
       xflux_ptr=>xflux
-      call checkbound_array(fablo,fabhi,xflux_ptr,0,dir,1304)
+      call checkbound_array(fablo,fabhi,xflux_ptr,0,dir)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
@@ -24680,8 +24680,8 @@ end subroutine initialize2d
         stop
        endif
 
-       call checkbound_array(fablo,fabhi,scal_ptr,1,-1,1304)
-       call checkbound_array(fablo,fabhi,LS_ptr,1,-1,1305)
+       call checkbound_array(fablo,fabhi,scal_ptr,1,-1)
+       call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -26084,9 +26084,9 @@ end subroutine initialize2d
       LSnew_ptr=>LSnew
       MAC_ptr=>MAC
 
-      call checkbound_array(fablo,fabhi,Snew_ptr,1,-1,7)
-      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1,7)
-      call checkbound_array1(fablo,fabhi,MAC_ptr,0,dir,7)
+      call checkbound_array(fablo,fabhi,Snew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,MAC_ptr,0,dir)
 
       if (perturbation_mode.le.0) then
        print *,"perturbation_mode invalid"
@@ -26481,7 +26481,7 @@ end subroutine initialize2d
 
       velsolid_flag=0
 
-      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,1308)
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1)
 
       allocate(distbatch(num_materials))
 
@@ -27815,8 +27815,8 @@ end subroutine initialize2d
 
       vel_ptr=>vel
       velmac_ptr=>velmac
-      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,2400)
-      call checkbound_array1(fablo,fabhi,velmac_ptr,0,dir,2400)
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,velmac_ptr,0,dir)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)

@@ -6293,7 +6293,7 @@ end subroutine print_visual_descriptor
 
       subroutine checkbound3D_array(lo,hi, &
       data_array, &
-      ngrow,grid_type,id)
+      ngrow,grid_type)
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: lo(3), hi(3)
@@ -6301,7 +6301,7 @@ end subroutine print_visual_descriptor
        ! The data itself inherits the INTENT attribute from the
        ! target.
       REAL_T, INTENT(in), pointer :: data_array(:,:,:,:)
-      INTEGER_T, INTENT(in) :: ngrow,grid_type,id
+      INTEGER_T, INTENT(in) :: ngrow,grid_type
 
        ! box_type(dir)=0 => CELL
        ! box_type(dir)=1 => NODE
@@ -6316,7 +6316,7 @@ end subroutine print_visual_descriptor
 
       do dir2=1,3
        if (lodata(dir2).gt.hidata(dir2)) then
-        print *,"swapped bounds in checkbound 3d id=",id
+        print *,"swapped bounds in checkbound 3d put breakpoint here"
         print *,"dir2=",dir2
         stop
        endif
@@ -6328,7 +6328,7 @@ end subroutine print_visual_descriptor
 
       do dir2=1,3
        if (lo(dir2).lt.0) then
-        print *,"lo invalid in checkbound3D_array id=",id
+        print *,"lo invalid in checkbound3D_array put breakpoint here"
         print *,"dir2,dataxlo ",dir2,lodata(dir2)
         print *,"dir2,dataxhi ",dir2,hidata(dir2)
         print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
@@ -6342,20 +6342,16 @@ end subroutine print_visual_descriptor
        print *,"ngrow invalid in checkbound3D_array"
        stop
       endif
-      if (id.lt.0) then
-       print *,"id invalid in checkbound3D_array"
-       stop
-      endif
 
       do dir2=1,3
 
        if (lodata(dir2).gt.lo(dir2)-ngrow) then
-        print *,"lo mismatch id=",id
+        print *,"lo mismatch put breakpoint here"
         print *,"dir2=",dir2
         stop
        endif
        if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
-        print *,"hi mismatch id=",id
+        print *,"hi mismatch put breakpoint here"
         print *,"dir2=",dir2
         stop
        endif
@@ -6368,7 +6364,7 @@ end subroutine print_visual_descriptor
        ! grid_type=-1..5
       subroutine checkbound_array(lo,hi, &
        data_array, &
-       ngrow,grid_type,id)
+       ngrow,grid_type)
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) ::  lo(SDIM), hi(SDIM)
@@ -6378,7 +6374,6 @@ end subroutine print_visual_descriptor
       REAL_T, INTENT(in), pointer :: data_array(D_DECL(:,:,:),:)
       INTEGER_T, INTENT(in) ::  ngrow
       INTEGER_T, INTENT(in) ::  grid_type
-      INTEGER_T, INTENT(in) ::  id
 
        ! box_type(dir)=0 => CELL
        ! box_type(dir)=1 => NODE
@@ -6393,7 +6388,7 @@ end subroutine print_visual_descriptor
  
       do dir2=1,SDIM
        if (lodata(dir2).gt.hidata(dir2)) then
-        print *,"swapped bounds in checkbound_array id=",id
+        print *,"swapped bounds in checkbound_array put breakpoint here"
         print *,"grid_type=",grid_type
         print *,"dir2=",dir2
         stop
@@ -6406,7 +6401,7 @@ end subroutine print_visual_descriptor
 
       do dir2=1,SDIM
        if (lo(dir2).lt.0) then
-        print *,"lo invalid in checkbound_array id=",id
+        print *,"lo invalid in checkbound_array put breakpoint here"
         print *,"dir2,dataxlo ",dir2,lodata(dir2)
         print *,"dir2,dataxhi ",dir2,hidata(dir2)
         print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
@@ -6419,15 +6414,11 @@ end subroutine print_visual_descriptor
        print *,"ngrow invalid in checkbound_array"
        stop
       endif
-      if (id.lt.0) then
-       print *,"id invalid in checkbound_array"
-       stop
-      endif
 
       do dir2=1,SDIM
 
         if (lodata(dir2).gt.lo(dir2)-ngrow) then
-         print *,"checkbound_array:lo mismatch id=",id
+         print *,"checkbound_array:lo mismatch put breakpoint here"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
          print *,"dataxlo ",lodata(dir2)
@@ -6437,7 +6428,7 @@ end subroutine print_visual_descriptor
          stop
         endif
         if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
-         print *,"hi mismatch id=",id
+         print *,"hi mismatch put breakpoint here"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"box_type(dir2) ",box_type(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
@@ -6455,7 +6446,7 @@ end subroutine print_visual_descriptor
        ! grid_type=-1..5
       subroutine checkbound_array_INTEGER(lo,hi, &
        data_array, &
-       ngrow,grid_type,id)
+       ngrow,grid_type)
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) ::  lo(SDIM), hi(SDIM)
@@ -6465,7 +6456,6 @@ end subroutine print_visual_descriptor
       INTEGER_T, INTENT(in), pointer :: data_array(D_DECL(:,:,:),:)
       INTEGER_T, INTENT(in) ::  ngrow
       INTEGER_T, INTENT(in) ::  grid_type
-      INTEGER_T, INTENT(in) ::  id
 
        ! box_type(dir)=0 => CELL
        ! box_type(dir)=1 => NODE
@@ -6480,7 +6470,7 @@ end subroutine print_visual_descriptor
  
       do dir2=1,SDIM
        if (lodata(dir2).gt.hidata(dir2)) then
-        print *,"swapped bounds in checkbound_array id=",id
+        print *,"swapped bounds in checkbound_array put breakpoint here"
         print *,"grid_type=",grid_type
         print *,"dir2=",dir2
         stop
@@ -6493,7 +6483,7 @@ end subroutine print_visual_descriptor
 
       do dir2=1,SDIM
        if (lo(dir2).lt.0) then
-        print *,"lo invalid in checkbound_array id=",id
+        print *,"lo invalid in checkbound_array put breakpoint here"
         print *,"dir2,dataxlo ",dir2,lodata(dir2)
         print *,"dir2,dataxhi ",dir2,hidata(dir2)
         print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
@@ -6506,15 +6496,11 @@ end subroutine print_visual_descriptor
        print *,"ngrow invalid in checkbound_array"
        stop
       endif
-      if (id.lt.0) then
-       print *,"id invalid in checkbound_array"
-       stop
-      endif
 
       do dir2=1,SDIM
 
         if (lodata(dir2).gt.lo(dir2)-ngrow) then
-         print *,"checkbound_array:lo mismatch id=",id
+         print *,"checkbound_array:lo mismatch put breakpoint here"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
          print *,"dataxlo ",lodata(dir2)
@@ -6524,7 +6510,7 @@ end subroutine print_visual_descriptor
          stop
         endif
         if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
-         print *,"hi mismatch id=",id
+         print *,"hi mismatch put breakpoint here"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"box_type(dir2) ",box_type(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
@@ -6543,7 +6529,7 @@ end subroutine print_visual_descriptor
        ! grid_type=-1..5
       subroutine checkbound_array1(lo,hi, &
        data_array1, &
-       ngrow,grid_type,id)
+       ngrow,grid_type)
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) ::  lo(SDIM), hi(SDIM)
@@ -6553,7 +6539,6 @@ end subroutine print_visual_descriptor
       REAL_T, INTENT(in), pointer :: data_array1(D_DECL(:,:,:))
       INTEGER_T, INTENT(in) ::  ngrow
       INTEGER_T, INTENT(in) ::  grid_type
-      INTEGER_T, INTENT(in) ::  id
 
        ! box_type(dir)=0 => CELL
        ! box_type(dir)=1 => NODE
@@ -6568,7 +6553,7 @@ end subroutine print_visual_descriptor
  
       do dir2=1,SDIM
        if (lodata(dir2).gt.hidata(dir2)) then
-        print *,"swapped bounds in checkbound_array1 id=",id
+        print *,"swapped bounds in checkbound_array1 put breakpoint here"
         print *,"grid_type=",grid_type
         print *,"dir2=",dir2
         stop
@@ -6581,7 +6566,7 @@ end subroutine print_visual_descriptor
 
       do dir2=1,SDIM
        if (lo(dir2).lt.0) then
-        print *,"lo invalid in checkbound_array1 id=",id
+        print *,"lo invalid in checkbound_array1 put breakpoint here"
         print *,"dir2,dataxlo ",dir2,lodata(dir2)
         print *,"dir2,dataxhi ",dir2,hidata(dir2)
         print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
@@ -6594,15 +6579,11 @@ end subroutine print_visual_descriptor
        print *,"ngrow invalid in checkbound_array1"
        stop
       endif
-      if (id.lt.0) then
-       print *,"id invalid in checkbound_array1"
-       stop
-      endif
 
       do dir2=1,SDIM
 
         if (lodata(dir2).gt.lo(dir2)-ngrow) then
-         print *,"checkbound_array:lo mismatch id=",id
+         print *,"checkbound_array:lo mismatch put breakpoint here"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
          print *,"dataxlo ",lodata(dir2)
@@ -6612,7 +6593,7 @@ end subroutine print_visual_descriptor
          stop
         endif
         if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
-         print *,"hi mismatch id=",id
+         print *,"hi mismatch put breakpoint here"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"box_type(dir2) ",box_type(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
@@ -6630,7 +6611,7 @@ end subroutine print_visual_descriptor
        ! grid_type=-1..5
       subroutine checkbound_int_array1(lo,hi, &
        data_array1, &
-       ngrow,grid_type,id)
+       ngrow,grid_type)
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) ::  lo(SDIM), hi(SDIM)
@@ -6640,7 +6621,6 @@ end subroutine print_visual_descriptor
       INTEGER_T, INTENT(in), pointer :: data_array1(D_DECL(:,:,:))
       INTEGER_T, INTENT(in) ::  ngrow
       INTEGER_T, INTENT(in) ::  grid_type
-      INTEGER_T, INTENT(in) ::  id
 
        ! box_type(dir)=0 => CELL
        ! box_type(dir)=1 => NODE
@@ -6655,7 +6635,7 @@ end subroutine print_visual_descriptor
  
       do dir2=1,SDIM
        if (lodata(dir2).gt.hidata(dir2)) then
-        print *,"swapped bounds in checkbound_array1 id=",id
+        print *,"swapped bounds in checkbound_array1 put breakpoint here"
         print *,"grid_type=",grid_type
         print *,"dir2=",dir2
         stop
@@ -6668,7 +6648,7 @@ end subroutine print_visual_descriptor
 
       do dir2=1,SDIM
        if (lo(dir2).lt.0) then
-        print *,"lo invalid in checkbound_array1 id=",id
+        print *,"lo invalid in checkbound_array1 put breakpoint here"
         print *,"dir2,dataxlo ",dir2,lodata(dir2)
         print *,"dir2,dataxhi ",dir2,hidata(dir2)
         print *,"dir2,lo,ngrow ",dir2,lo(dir2),ngrow
@@ -6681,15 +6661,11 @@ end subroutine print_visual_descriptor
        print *,"ngrow invalid in checkbound_array1"
        stop
       endif
-      if (id.lt.0) then
-       print *,"id invalid in checkbound_array1"
-       stop
-      endif
 
       do dir2=1,SDIM
 
         if (lodata(dir2).gt.lo(dir2)-ngrow) then
-         print *,"checkbound_array:lo mismatch id=",id
+         print *,"checkbound_array:lo mismatch put breakpoint here"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
          print *,"dataxlo ",lodata(dir2)
@@ -6699,7 +6675,7 @@ end subroutine print_visual_descriptor
          stop
         endif
         if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
-         print *,"hi mismatch id=",id
+         print *,"hi mismatch put breakpoint here"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"box_type(dir2) ",box_type(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
@@ -13386,11 +13362,11 @@ end subroutine print_visual_descriptor
        if ((datatype.eq.0).or.(datatype.eq.1)) then
         call checkbound_array(fablo,fabhi, &
          mf, &
-         ngrow,dir,id)
+         ngrow,dir)
        else if (datatype.eq.2) then
         call checkbound_array(fablo,fabhi, &
          mf, &
-         1,-1,id)
+         1,-1)
        else
         print *,"datatype invalid"
         stop
@@ -25018,9 +24994,9 @@ else
  stop
 endif
 
-call checkbound_array(fablo,fabhi,visc,0,-1,9)
-call checkbound_array(fablo,fabhi,tendata,0,-1,9)
-call checkbound_array(fablo,fabhi,vel,1,-1,61)
+call checkbound_array(fablo,fabhi,visc,0,-1)
+call checkbound_array(fablo,fabhi,tendata,0,-1)
+call checkbound_array(fablo,fabhi,vel,1,-1)
 
 if ((transposegradu.ne.0).and. &
     (transposegradu.ne.1)) then
