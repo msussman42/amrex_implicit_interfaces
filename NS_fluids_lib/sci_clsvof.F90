@@ -11451,13 +11451,13 @@ IMPLICIT NONE
 
    call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
     FSIdata3D, &
-    ngrow_make_distance,-1,521)
+    ngrow_make_distance,-1)
    call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
     xdata3D, &
-    ngrow_make_distance,-1,521)
+    ngrow_make_distance,-1)
    call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
     masknbr3D, &
-    ngrow_make_distance,-1,521)
+    ngrow_make_distance,-1)
 
    if (lev77.eq.-1) then
     num_elements_container=FSI_mesh_type%NumIntElemsBIG
@@ -12602,7 +12602,7 @@ IMPLICIT NONE
 
     call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
      old_FSIdata_ptr, &
-     ngrow_make_distance,-1,521)
+     ngrow_make_distance,-1)
 
     do i=FSI_growlo3D(1),FSI_growhi3D(1)
     do j=FSI_growlo3D(2),FSI_growhi3D(2)
@@ -13534,22 +13534,22 @@ end subroutine CLSVOF_InitBox
 
        call checkbound3D_array(FSI_lo,FSI_hi, &
         xdata3D, &
-        ngrow_make_distance,-1,521)
+        ngrow_make_distance,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         veldata3D, &
-        ngrow_make_distance,-1,521)
+        ngrow_make_distance,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         stressdata3D, &
-        ngrow_make_distance,-1,521)
+        ngrow_make_distance,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         stressflag3D, &
-        ngrow_make_distance,-1,521)
+        ngrow_make_distance,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         masknbr3D, &
-        ngrow_make_distance,-1,521)
+        ngrow_make_distance,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         maskfiner3D, &
-        ngrow_make_distance,-1,521)
+        ngrow_make_distance,-1)
 
        num_nodes_container=contain_elem(lev77)% &
                            level_node_data(tid+1,part_id,tilenum+1)% &
@@ -14791,7 +14791,7 @@ IMPLICIT NONE
 
  call checkbound3D_array(FSI_lo,FSI_hi, &
   xdata3D, &
-  ngrow,-1,123)
+  ngrow,-1)
 
  do dir=1,3
   ii=0
@@ -14977,7 +14977,7 @@ IMPLICIT NONE
 
  call checkbound3D_array(FSI_lo,FSI_hi, &
    xdata3D, &
-   ngrow_make_distance,-1,521)
+   ngrow_make_distance,-1)
 
  interp_support=BoundingBoxRadNode
 

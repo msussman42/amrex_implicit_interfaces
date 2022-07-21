@@ -616,9 +616,9 @@ stop
       allocate(reconlocal(DIMV(plt),num_materials*ngeom_recon))
       reconlocal_ptr=>reconlocal
 
-      call checkbound_array(fablo,fabhi,reconlocal_ptr,1,-1,4111)
-      call checkbound_array(fablo,fabhi,recon_ptr,1,-1,4112)
-      call checkbound_array1(fablo,fabhi,mask_ptr,0,-1,4113)
+      call checkbound_array(fablo,fabhi,reconlocal_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,recon_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,mask_ptr,0,-1)
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -1441,8 +1441,8 @@ stop
       mask_ptr=>mask
 
       imaxtri=200
-      call checkbound_array1(lo,hi,levelset_ptr,1,-1,4114)
-      call checkbound_array1(lo,hi,mask_ptr,0,-1,4115)
+      call checkbound_array1(lo,hi,levelset_ptr,1,-1)
+      call checkbound_array1(lo,hi,mask_ptr,0,-1)
 
       valu=zero
 
@@ -1776,10 +1776,10 @@ stop
        stop
       endif
 
-      call checkbound_array1(fablo,fabhi,ls_old_ptr,ngrow,-1,4116)
-      call checkbound_array1(fablo,fabhi,ls_new_ptr,0,-1,4117)
-      call checkbound_array(fablo,fabhi,ls_grad_new_ptr,0,-1,4118)
-      call checkbound_array1(fablo,fabhi,mask_ptr,0,-1,4119)
+      call checkbound_array1(fablo,fabhi,ls_old_ptr,ngrow,-1)
+      call checkbound_array1(fablo,fabhi,ls_new_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,ls_grad_new_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,mask_ptr,0,-1)
 
         ! ok for 2D or 3D
         ! find closest point on the interface for each interior

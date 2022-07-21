@@ -74,7 +74,7 @@
        print *,"bfact_top invalid"
        stop
       endif
-      call checkbound_array1(lo,hi,c_ptr,0,-1,130)
+      call checkbound_array1(lo,hi,c_ptr,0,-1)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
       do k=growlo(3),growhi(3)
@@ -132,6 +132,7 @@
       REAL_T, intent(inout), target :: f(DIMV(f))
       REAL_T, pointer :: f_ptr(D_DECL(:,:,:))
       REAL_T, intent(in), target :: c(DIMV(c))
+      REAL_T, pointer :: c_ptr(D_DECL(:,:,:))
       INTEGER_T, intent(in) :: bfact,bfact_f,bfact_top
 !
       INTEGER_T i, i2, i2p1
@@ -153,8 +154,8 @@
        stop
       endif
       
-!
-      call checkbound_array1(lo,hi,c,0,-1,140)
+      c_ptr=>c
+      call checkbound_array1(lo,hi,c_ptr,0,-1)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
       do k=growlo(3),growhi(3)

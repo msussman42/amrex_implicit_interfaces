@@ -141,30 +141,30 @@ stop
        ! ONES_MF in c++
       masksolv_ptr=>masksolv
       maskcov_ptr=>maskcov
-      call checkbound_array1(fablo,fabhi,masksolv_ptr,0,-1,140)
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,140)
+      call checkbound_array1(fablo,fabhi,masksolv_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
       alpha_ptr=>alpha
-      call checkbound_array(fablo,fabhi,alpha_ptr,0,-1,140)
+      call checkbound_array(fablo,fabhi,alpha_ptr,0,-1)
       offdiagcheck_ptr=>offdiagcheck
-      call checkbound_array(fablo,fabhi,offdiagcheck_ptr,0,-1,140)
+      call checkbound_array(fablo,fabhi,offdiagcheck_ptr,0,-1)
       maskdivres_ptr=>maskdivres
-      call checkbound_array1(fablo,fabhi,maskdivres_ptr,0,-1,140)
+      call checkbound_array1(fablo,fabhi,maskdivres_ptr,0,-1)
       maskres_ptr=>maskres
-      call checkbound_array1(fablo,fabhi,maskres_ptr,0,-1,140)
+      call checkbound_array1(fablo,fabhi,maskres_ptr,0,-1)
       mdot_ptr=>mdot
-      call checkbound_array(fablo,fabhi,mdot_ptr,0,-1,140)
+      call checkbound_array(fablo,fabhi,mdot_ptr,0,-1)
       bx_ptr=>bx
       by_ptr=>by
       bz_ptr=>bz
-      call checkbound_array(fablo,fabhi,bx_ptr,0,0,140)
-      call checkbound_array(fablo,fabhi,by_ptr,0,1,140)
-      call checkbound_array(fablo,fabhi,bz_ptr,0,AMREX_SPACEDIM-1,140)
+      call checkbound_array(fablo,fabhi,bx_ptr,0,0)
+      call checkbound_array(fablo,fabhi,by_ptr,0,1)
+      call checkbound_array(fablo,fabhi,bz_ptr,0,AMREX_SPACEDIM-1)
       fwtx_ptr=>fwtx
       fwty_ptr=>fwty
       fwtz_ptr=>fwtz
-      call checkbound_array(fablo,fabhi,fwtx_ptr,0,0,140)
-      call checkbound_array(fablo,fabhi,fwty_ptr,0,1,140)
-      call checkbound_array(fablo,fabhi,fwtz_ptr,0,AMREX_SPACEDIM-1,140)
+      call checkbound_array(fablo,fabhi,fwtx_ptr,0,0)
+      call checkbound_array(fablo,fabhi,fwty_ptr,0,1)
+      call checkbound_array(fablo,fabhi,fwtz_ptr,0,AMREX_SPACEDIM-1)
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -451,19 +451,19 @@ stop
        nhalf=1
 
        mu_ptr=>mu
-       call checkbound_array1(fablo,fabhi,mu_ptr,1,-1,33)
+       call checkbound_array1(fablo,fabhi,mu_ptr,1,-1)
        den_ptr=>den
-       call checkbound_array1(fablo,fabhi,den_ptr,1,-1,33)
+       call checkbound_array1(fablo,fabhi,den_ptr,1,-1)
        offdiagcheck_ptr=>offdiagcheck
-       call checkbound_array(fablo,fabhi,offdiagcheck_ptr,0,-1,33)
+       call checkbound_array(fablo,fabhi,offdiagcheck_ptr,0,-1)
        cterm_ptr=>cterm
-       call checkbound_array(fablo,fabhi,cterm_ptr,0,-1,33)
+       call checkbound_array(fablo,fabhi,cterm_ptr,0,-1)
        c2_ptr=>c2
-       call checkbound_array(fablo,fabhi,c2_ptr,0,-1,33)
+       call checkbound_array(fablo,fabhi,c2_ptr,0,-1)
        DeDT_ptr=>DeDT
-       call checkbound_array1(fablo,fabhi,DeDT_ptr,1,-1,33)
+       call checkbound_array1(fablo,fabhi,DeDT_ptr,1,-1)
        lsnew_ptr=>lsnew
-       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,33)
+       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
 
        if (bfact.lt.1) then
         print *,"bfact too small"
@@ -849,9 +849,9 @@ stop
        offdiagcheck_ptr=>offdiagcheck
        savepres_ptr=>savepres
        newpres_ptr=>newpres
-       call checkbound_array1(fablo,fabhi,offdiagcheck_ptr,0,-1,33)
-       call checkbound_array1(fablo,fabhi,savepres_ptr,0,-1,33)
-       call checkbound_array1(fablo,fabhi,newpres_ptr,0,-1,33)
+       call checkbound_array1(fablo,fabhi,offdiagcheck_ptr,0,-1)
+       call checkbound_array1(fablo,fabhi,savepres_ptr,0,-1)
+       call checkbound_array1(fablo,fabhi,newpres_ptr,0,-1)
 
        if (bfact.lt.1) then
         print *,"bfact too small"
@@ -934,7 +934,7 @@ stop
         stop
        endif
        bx_ptr=>bx
-       call checkbound_array(fablo,fabhi,bx_ptr,0,dir,33)
+       call checkbound_array(fablo,fabhi,bx_ptr,0,dir)
 
        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi, &
                0,dir,13) 
@@ -1033,7 +1033,7 @@ stop
        endif
 
        bx_ptr=>bx
-       call checkbound_array(fablo,fabhi,bx_ptr,0,dir,33)
+       call checkbound_array(fablo,fabhi,bx_ptr,0,dir)
 
        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,14) 
        do i=growlo(1),growhi(1)
@@ -1126,8 +1126,8 @@ stop
        endif
        bx_ptr=>bx
        facewt_ptr=>facewt
-       call checkbound_array(fablo,fabhi,bx_ptr,0,dir,33)
-       call checkbound_array(fablo,fabhi,facewt_ptr,0,dir,33)
+       call checkbound_array(fablo,fabhi,bx_ptr,0,dir)
+       call checkbound_array(fablo,fabhi,facewt_ptr,0,dir)
 
        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,15) 
        do i=growlo(1),growhi(1)
@@ -1197,9 +1197,9 @@ stop
       cdata_ptr=>cdata
       fdata_ptr=>fdata
       cdiag_ptr=>cdiag
-      call checkbound_array1(lo,hi,cdata_ptr,0,-1,140)
-      call checkbound_array1(lof,hif,fdata_ptr,0,-1,140)
-      call checkbound_array1(lo,hi,cdiag_ptr,0,-1,140)
+      call checkbound_array1(lo,hi,cdata_ptr,0,-1)
+      call checkbound_array1(lof,hif,fdata_ptr,0,-1)
+      call checkbound_array1(lo,hi,cdiag_ptr,0,-1)
 
       call growntilebox(lof,hif,lof,hif,growlo,growhi,0) 
  
@@ -1329,15 +1329,15 @@ stop
       endif
 
       alpha_ptr=>alpha
-      call checkbound_array(fablo,fabhi,alpha_ptr,0,-1,140)
+      call checkbound_array(fablo,fabhi,alpha_ptr,0,-1)
       diag_reg_ptr=>diag_reg
-      call checkbound_array(fablo,fabhi,diag_reg_ptr,0,-1,140)
+      call checkbound_array(fablo,fabhi,diag_reg_ptr,0,-1)
       bx_ptr=>bx
       by_ptr=>by
       bz_ptr=>bz
-      call checkbound_array(fablo,fabhi,bx_ptr,0,0,140)
-      call checkbound_array(fablo,fabhi,by_ptr,0,1,140)
-      call checkbound_array(fablo,fabhi,bz_ptr,0,AMREX_SPACEDIM-1,140)
+      call checkbound_array(fablo,fabhi,bx_ptr,0,0)
+      call checkbound_array(fablo,fabhi,by_ptr,0,1)
+      call checkbound_array(fablo,fabhi,bz_ptr,0,AMREX_SPACEDIM-1)
 
       if (bfact.lt.1) then
        print *,"bfact too small"

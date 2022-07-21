@@ -2500,9 +2500,9 @@ stop
       cface_ptr=>cface
       maskfab_ptr=>maskfab
       vofrecon_ptr=>vofrecon
-      call checkbound_array(fablo,fabhi,cface_ptr,ngrow,-1,2893)
-      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow,-1,2894)
-      call checkbound_array(fablo,fabhi,vofrecon_ptr,ngrow,-1,2895)
+      call checkbound_array(fablo,fabhi,cface_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,vofrecon_ptr,ngrow,-1)
       
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid cellfaceinit"
@@ -3500,31 +3500,31 @@ stop
       endif
 
       maskcov_ptr=>maskcov
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,2896)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
       LSPC_ptr=>LSPC
-      call checkbound_array(fablo,fabhi,LSPC_ptr,ngrow_distance,-1,2897)
+      call checkbound_array(fablo,fabhi,LSPC_ptr,ngrow_distance,-1)
       recon_ptr=>recon
-      call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1,2898)
+      call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1)
       masknbr_ptr=>masknbr
-      call checkbound_array(fablo,fabhi,masknbr_ptr,1,-1,2899)
+      call checkbound_array(fablo,fabhi,masknbr_ptr,1,-1)
       curvfab_ptr=>curvfab
-      call checkbound_array(fablo,fabhi,curvfab_ptr,1,-1,2900)
+      call checkbound_array(fablo,fabhi,curvfab_ptr,1,-1)
       velfab_ptr=>velfab
-      call checkbound_array(fablo,fabhi,velfab_ptr,2,-1,2901)
+      call checkbound_array(fablo,fabhi,velfab_ptr,2,-1)
       denfab_ptr=>denfab
-      call checkbound_array(fablo,fabhi,denfab_ptr,2,-1,2902)
+      call checkbound_array(fablo,fabhi,denfab_ptr,2,-1)
 
       vol_ptr=>vol
-      call checkbound_array1(fablo,fabhi,vol_ptr,1,-1,6611)
+      call checkbound_array1(fablo,fabhi,vol_ptr,1,-1)
       areax_ptr=>areax
       areay_ptr=>areay
       areaz_ptr=>areaz
-      call checkbound_array1(fablo,fabhi,areax_ptr,1,0,6612)
-      call checkbound_array1(fablo,fabhi,areay_ptr,1,1,6613)
-      call checkbound_array1(fablo,fabhi,areaz_ptr,1,SDIM-1,6614)
+      call checkbound_array1(fablo,fabhi,areax_ptr,1,0)
+      call checkbound_array1(fablo,fabhi,areay_ptr,1,1)
+      call checkbound_array1(fablo,fabhi,areaz_ptr,1,SDIM-1)
 
       history_dat_ptr=>history_dat
-      call checkbound_array(fablo,fabhi,history_dat_ptr,1,-1,2902)
+      call checkbound_array(fablo,fabhi,history_dat_ptr,1,-1)
 
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid curv strip"
@@ -4377,8 +4377,8 @@ stop
 
       source_fab_ptr=>source_fab
       typefab_ptr=>typefab
-      call checkbound_array(fablo,fabhi,source_fab_ptr,1,-1,4001)
-      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1,4001)
+      call checkbound_array(fablo,fabhi,source_fab_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1) 
       do i=growlo(1),growhi(1)
@@ -4786,38 +4786,38 @@ stop
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=DXMAXLS
 
-      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,6615)
-      call checkbound_array(fablo,fabhi,mdot_ptr,0,-1,6615)
-      call checkbound_array(fablo,fabhi,mdot_complement_ptr,0,-1,6615)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,mdot_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,mdot_complement_ptr,0,-1)
 
       LS_ptr=>LS
-      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,6615)
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
       VEL_ptr=>VEL
-      call checkbound_array(fablo,fabhi,VEL_ptr,1,-1,6615)
+      call checkbound_array(fablo,fabhi,VEL_ptr,1,-1)
       DEN_ptr=>DEN
-      call checkbound_array(fablo,fabhi,DEN_ptr,1,-1,6615)
+      call checkbound_array(fablo,fabhi,DEN_ptr,1,-1)
       VOF_ptr=>VOF
-      call checkbound_array(fablo,fabhi,VOF_ptr,1,-1,6616)
+      call checkbound_array(fablo,fabhi,VOF_ptr,1,-1)
       xface_ptr=>xface
       yface_ptr=>yface
       zface_ptr=>zface
-      call checkbound_array(fablo,fabhi,xface_ptr,0,0,6618)
-      call checkbound_array(fablo,fabhi,yface_ptr,0,1,6619)
-      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,6620)
+      call checkbound_array(fablo,fabhi,xface_ptr,0,0)
+      call checkbound_array(fablo,fabhi,yface_ptr,0,1)
+      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1)
       areax_ptr=>areax
       areay_ptr=>areay
       areaz_ptr=>areaz
-      call checkbound_array1(fablo,fabhi,areax_ptr,0,0,6621)
-      call checkbound_array1(fablo,fabhi,areay_ptr,0,1,6622)
-      call checkbound_array1(fablo,fabhi,areaz_ptr,0,SDIM-1,6623)
+      call checkbound_array1(fablo,fabhi,areax_ptr,0,0)
+      call checkbound_array1(fablo,fabhi,areay_ptr,0,1)
+      call checkbound_array1(fablo,fabhi,areaz_ptr,0,SDIM-1)
       cellfab_ptr=>cellfab
-      call checkbound_array(fablo,fabhi,cellfab_ptr,0,-1,6624)
+      call checkbound_array(fablo,fabhi,cellfab_ptr,0,-1)
       typefab_ptr=>typefab
-      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1,6625)
+      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1)
       color_ptr=>color
-      call checkbound_array1(fablo,fabhi,color_ptr,1,-1,6626)
+      call checkbound_array1(fablo,fabhi,color_ptr,1,-1)
       mask_ptr=>mask
-      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,6627)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
   
       if (arraysize.ne.num_elements_blobclass*num_colors) then
        print *,"arraysize invalid"
@@ -6395,23 +6395,23 @@ stop
       endif
 
       mdot_local_ptr=>mdot_local
-      call checkbound_array1(fablo,fabhi,mdot_local_ptr,0,-1,6615)
+      call checkbound_array1(fablo,fabhi,mdot_local_ptr,0,-1)
       mdot_global_ptr=>mdot_global
-      call checkbound_array1(fablo,fabhi,mdot_global_ptr,0,-1,6615)
+      call checkbound_array1(fablo,fabhi,mdot_global_ptr,0,-1)
       LS_ptr=>LS
-      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,6615)
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
       DEN_ptr=>DEN
-      call checkbound_array(fablo,fabhi,DEN_ptr,0,-1,6615)
+      call checkbound_array(fablo,fabhi,DEN_ptr,0,-1)
       DTDt_ptr=>DTDt
-      call checkbound_array(fablo,fabhi,DTDt_ptr,0,-1,6615)
+      call checkbound_array(fablo,fabhi,DTDt_ptr,0,-1)
       VOF_ptr=>VOF
-      call checkbound_array(fablo,fabhi,VOF_ptr,1,-1,6616)
+      call checkbound_array(fablo,fabhi,VOF_ptr,1,-1)
       color_ptr=>color
-      call checkbound_array1(fablo,fabhi,color_ptr,1,-1,6626)
+      call checkbound_array1(fablo,fabhi,color_ptr,1,-1)
       typefab_ptr=>typefab
-      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1,6626)
+      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1)
       mask_ptr=>mask
-      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,6627)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
   
       if (arraysize.ne.num_elements_blobclass*num_colors) then
        print *,"arraysize invalid"
@@ -6746,7 +6746,7 @@ stop
       INTEGER_T  i, j, k, m, icolor
 
       color_ptr=>color
-      call checkbound_array1(fablo,fabhi,color_ptr,1,-1,4000)
+      call checkbound_array1(fablo,fabhi,color_ptr,1,-1)
 
       if (bfact.lt.1) then
        print *,"bfact invalid93"
@@ -6822,10 +6822,10 @@ stop
       typefab_ptr=>typefab
       color_ptr=>color
       ijk_ptr=>ijk
-      call checkbound_array1(lo,hi,mask_ptr,0,-1,4001)
-      call checkbound_array1(lo,hi,typefab_ptr,0,-1,4001)
-      call checkbound_array1(lo,hi,color_ptr,0,-1,4001)
-      call checkbound_array_INTEGER(lo,hi,ijk_ptr,0,-1,4001)
+      call checkbound_array1(lo,hi,mask_ptr,0,-1)
+      call checkbound_array1(lo,hi,typefab_ptr,0,-1)
+      call checkbound_array1(lo,hi,color_ptr,0,-1)
+      call checkbound_array_INTEGER(lo,hi,ijk_ptr,0,-1)
 
       if (gridno.ge.number_grids) then
        print *,"number_grids invalid"
@@ -7059,8 +7059,8 @@ stop
       mask_ptr=>mask
       color_ptr=>color
 
-      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,4000)
-      call checkbound_array1(fablo,fabhi,color_ptr,1,-1,4000)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,color_ptr,1,-1)
 
       if (bfact.lt.1) then
        print *,"bfact invalid94"
@@ -7139,8 +7139,8 @@ stop
 
       mask_ptr=>mask
       color_ptr=>color
-      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,4000)
-      call checkbound_array(fablo,fabhi,color_ptr,1,-1,4000)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,color_ptr,1,-1)
 
       if (bfact.lt.1) then
        print *,"bfact invalid95"
@@ -7301,8 +7301,8 @@ stop
       typef_ptr=>typef
       typec_ptr=>typec
 
-      call checkbound_array1(clo,chi,crse_ptr,0,-1,410)
-      call checkbound_array1(clo,chi,typec_ptr,0,-1,410)
+      call checkbound_array1(clo,chi,crse_ptr,0,-1)
+      call checkbound_array1(clo,chi,typec_ptr,0,-1)
  
       call growntilebox(clo,chi,clo,chi,growlo,growhi,0) 
       do ic=growlo(1),growhi(1)
@@ -7417,10 +7417,10 @@ stop
       typef_ptr=>typef
       maskf_ptr=>maskf
 
-      call checkbound_array(clo,chi,crse_ptr,0,-1,410)
-      call checkbound_array1(flo,fhi,fine_ptr,0,-1,410)
-      call checkbound_array1(flo,fhi,typef_ptr,0,-1,410)
-      call checkbound_array1(flo,fhi,maskf_ptr,0,-1,410)
+      call checkbound_array(clo,chi,crse_ptr,0,-1)
+      call checkbound_array1(flo,fhi,fine_ptr,0,-1)
+      call checkbound_array1(flo,fhi,typef_ptr,0,-1)
+      call checkbound_array1(flo,fhi,maskf_ptr,0,-1)
  
       call growntilebox(clo,chi,clo,chi,growlo,growhi,0) 
       do ic=growlo(1),growhi(1)
@@ -7936,34 +7936,34 @@ stop
 
       nmax=POLYGON_LIST_MAX ! in: fort_init_physics_vars
 
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,213)
-      call checkbound_array(fablo,fabhi,masknbr_ptr,1,-1,213)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,masknbr_ptr,1,-1)
 
-      call checkbound_array(fablo,fabhi,xface_ptr,0,0,213)
-      call checkbound_array(fablo,fabhi,yface_ptr,0,1,214)
-      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,215)
+      call checkbound_array(fablo,fabhi,xface_ptr,0,0)
+      call checkbound_array(fablo,fabhi,yface_ptr,0,1)
+      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1)
 
-      call checkbound_array1(fablo,fabhi,cenDeDT_ptr,1,-1,216)
-      call checkbound_array1(fablo,fabhi,cenden_ptr,1,-1,217)
-      call checkbound_array(fablo,fabhi,cenvof_ptr,1,-1,217)
-      call checkbound_array1(fablo,fabhi,cenvisc_ptr,1,-1,218)
+      call checkbound_array1(fablo,fabhi,cenDeDT_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,cenden_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,cenvof_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,cenvisc_ptr,1,-1)
 
-      call checkbound_array(fablo,fabhi,slope_ptr,1,-1,219)
-      call checkbound_array(fablo,fabhi,curv_ptr,1,-1,221)
-      call checkbound_array(fablo,fabhi,denstate_ptr,1,-1,223)
-      call checkbound_array(fablo,fabhi,mom_den_ptr,1,-1,223)
-      call checkbound_array(fablo,fabhi,viscstate_ptr,1,-1,224)
-      call checkbound_array(fablo,fabhi,conductstate_ptr,1,-1,224)
+      call checkbound_array(fablo,fabhi,slope_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,curv_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,denstate_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,mom_den_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,viscstate_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,conductstate_ptr,1,-1)
 
-      call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,225)
-      call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,225)
-      call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1,225)
+      call checkbound_array(fablo,fabhi,solxfab_ptr,0,0)
+      call checkbound_array(fablo,fabhi,solyfab_ptr,0,1)
+      call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1)
 
-      call checkbound_array1(fablo,fabhi,vol_ptr,1,-1,227)
-      call checkbound_array(fablo,fabhi,levelPC_ptr,2,-1,229) 
-      call checkbound_array(fablo,fabhi,vofC_ptr,1,-1,227)
-      call checkbound_array(fablo,fabhi,vofF_ptr,1,-1,227)
-      call checkbound_array(fablo,fabhi,massF_ptr,1,-1,227)
+      call checkbound_array1(fablo,fabhi,vol_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,levelPC_ptr,2,-1) 
+      call checkbound_array(fablo,fabhi,vofC_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,vofF_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,massF_ptr,1,-1)
 
       do im=1,2*num_interfaces
 
@@ -10175,11 +10175,11 @@ stop
 
       nmax=POLYGON_LIST_MAX ! in: BUILD_SEMIREFINEVOF
 
-      call checkbound_array(fablo,fabhi,slope_ptr,ngrow_refine,-1,219)
-      call checkbound_array(fablo,fabhi,denstate_ptr,ngrow_refine,-1,223)
-      call checkbound_array(fablo,fabhi,mom_den_ptr,ngrow_refine,-1,223)
-      call checkbound_array(fablo,fabhi,vofF_ptr,ngrow_refine,-1,227)
-      call checkbound_array(fablo,fabhi,massF_ptr,ngrow_refine,-1,227)
+      call checkbound_array(fablo,fabhi,slope_ptr,ngrow_refine,-1)
+      call checkbound_array(fablo,fabhi,denstate_ptr,ngrow_refine,-1)
+      call checkbound_array(fablo,fabhi,mom_den_ptr,ngrow_refine,-1)
+      call checkbound_array(fablo,fabhi,vofF_ptr,ngrow_refine,-1)
+      call checkbound_array(fablo,fabhi,massF_ptr,ngrow_refine,-1)
 
       do im=1,num_materials
 
@@ -10505,9 +10505,9 @@ stop
       endif
 
       state_ptr=>state
-      call checkbound_array(fablo,fabhi,state_ptr,0,-1,33)
+      call checkbound_array(fablo,fabhi,state_ptr,0,-1)
       maskcoef_ptr=>maskcoef
-      call checkbound_array1(fablo,fabhi,maskcoef_ptr,0,-1,134)
+      call checkbound_array1(fablo,fabhi,maskcoef_ptr,0,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do i=growlo(1),growhi(1)
@@ -11325,36 +11325,36 @@ stop
        endif
       enddo
 
-      call checkbound_array(fablo,fabhi,xp_ptr,0,0,33)
-      call checkbound_array(fablo,fabhi,yp_ptr,0,1,33)
-      call checkbound_array(fablo,fabhi,zp_ptr,0,SDIM-1,33)
+      call checkbound_array(fablo,fabhi,xp_ptr,0,0)
+      call checkbound_array(fablo,fabhi,yp_ptr,0,1)
+      call checkbound_array(fablo,fabhi,zp_ptr,0,SDIM-1)
 
-      call checkbound_array(fablo,fabhi,xvel_ptr,0,0,33)
-      call checkbound_array(fablo,fabhi,yvel_ptr,0,1,33)
-      call checkbound_array(fablo,fabhi,zvel_ptr,0,SDIM-1,33)
+      call checkbound_array(fablo,fabhi,xvel_ptr,0,0)
+      call checkbound_array(fablo,fabhi,yvel_ptr,0,1)
+      call checkbound_array(fablo,fabhi,zvel_ptr,0,SDIM-1)
 
-      call checkbound_array1(fablo,fabhi,ax_ptr,0,0,33)
-      call checkbound_array1(fablo,fabhi,ay_ptr,0,1,33)
-      call checkbound_array1(fablo,fabhi,az_ptr,0,SDIM-1,33)
+      call checkbound_array1(fablo,fabhi,ax_ptr,0,0)
+      call checkbound_array1(fablo,fabhi,ay_ptr,0,1)
+      call checkbound_array1(fablo,fabhi,az_ptr,0,SDIM-1)
 
-      call checkbound_array(fablo,fabhi,vol_ptr,0,-1,33)
-      call checkbound_array(fablo,fabhi,rhs_ptr,0,-1,33)
-      call checkbound_array(fablo,fabhi,veldest_ptr,0,-1,33)
-      call checkbound_array(fablo,fabhi,dendest_ptr,0,-1,33)
-      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,133)
-      call checkbound_array(fablo,fabhi,maskcoef_ptr,1,-1,134)
+      call checkbound_array(fablo,fabhi,vol_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,rhs_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,veldest_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,dendest_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,maskcoef_ptr,1,-1)
 
       levelPC_ptr=>levelPC
-      call checkbound_array(fablo,fabhi,levelPC_ptr,1,-1,135)
+      call checkbound_array(fablo,fabhi,levelPC_ptr,1,-1)
 
-      call checkbound_array(fablo,fabhi,cterm_ptr,0,-1,33)
-      call checkbound_array(fablo,fabhi,pold_ptr,0,-1,33)
-      call checkbound_array(fablo,fabhi,denold_ptr,0,-1,33)
-      call checkbound_array(fablo,fabhi,ustar_ptr,0,-1,33)
+      call checkbound_array(fablo,fabhi,cterm_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,pold_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,denold_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,ustar_ptr,0,-1)
 
-      call checkbound_array(fablo,fabhi,mdotcell_ptr,0,-1,33)
-      call checkbound_array(fablo,fabhi,maskdivres_ptr,0,-1,137)
-      call checkbound_array1(fablo,fabhi,maskres_ptr,0,-1,138)
+      call checkbound_array(fablo,fabhi,mdotcell_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,maskdivres_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,maskres_ptr,0,-1)
 
 
       if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
@@ -11365,14 +11365,14 @@ stop
       else if (project_option_is_validF(project_option).eq.1) then
 
          !local_face_var_mf
-       call checkbound_array(fablo,fabhi,xface_ptr,0,0,33)
-       call checkbound_array(fablo,fabhi,yface_ptr,0,1,33)
-       call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,33)
-       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
+       call checkbound_array(fablo,fabhi,xface_ptr,0,0)
+       call checkbound_array(fablo,fabhi,yface_ptr,0,1)
+       call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1)
+       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1)
          !local_fsi_ghost_mac_mf+dir
-       call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,136)
-       call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,136)
-       call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1,136)
+       call checkbound_array(fablo,fabhi,solxfab_ptr,0,0)
+       call checkbound_array(fablo,fabhi,solyfab_ptr,0,1)
+       call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1)
 
       else
        print *,"project_option invalid"
@@ -13369,33 +13369,33 @@ stop
       endif
 
        ! FACE_WEIGHT_MF
-      call checkbound_array(fablo,fabhi,xcut_ptr,0,dir,231)
-      call checkbound_array(fablo,fabhi,xgp_ptr,0,dir,2330)
-      call checkbound_array(fablo,fabhi,xvel_ptr,0,dir,2332)
-      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,234)
-      call checkbound_array(fablo,fabhi,pres_ptr,1,-1,234)
-      call checkbound_array(fablo,fabhi,den_ptr,1,-1,234)
+      call checkbound_array(fablo,fabhi,xcut_ptr,0,dir)
+      call checkbound_array(fablo,fabhi,xgp_ptr,0,dir)
+      call checkbound_array(fablo,fabhi,xvel_ptr,0,dir)
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,pres_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1)
 
-      call checkbound_array(fablo,fabhi,mgoni_ptr,1,-1,234)
-      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1,6625)
-      call checkbound_array1(fablo,fabhi,colorfab_ptr,1,-1,6626)
-      call checkbound_array(fablo,fabhi,levelPC_ptr,1,-1,234)
-      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,234)
-      call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1,234)
+      call checkbound_array(fablo,fabhi,mgoni_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,colorfab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,levelPC_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1)
 
       if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
           (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
        ! do nothing
       else if (project_option_is_validF(project_option).eq.1) then
          !local_face_var_mf
-       call checkbound_array(fablo,fabhi,xface_ptr,0,dir,263)
+       call checkbound_array(fablo,fabhi,xface_ptr,0,dir)
          !local_amrsync_pres_mf
-       call checkbound_array(fablo,fabhi,xp_ptr,0,dir,2331)
+       call checkbound_array(fablo,fabhi,xp_ptr,0,dir)
          !local_sem_fluxreg_mf
-       call checkbound_array(fablo,fabhi,semflux_ptr,1,-1,231)
+       call checkbound_array(fablo,fabhi,semflux_ptr,1,-1)
          !local_fsi_ghost_mac_mf+dir
-       call checkbound_array(fablo,fabhi,solfab_ptr,0,dir,234)
-       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
+       call checkbound_array(fablo,fabhi,solfab_ptr,0,dir)
+       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1)
       else
        print *,"project_option invalid"
        stop
@@ -15292,25 +15292,25 @@ stop
       endif 
 
       offdiagcheck_ptr=>offdiagcheck
-      call checkbound_array(fablo,fabhi,offdiagcheck_ptr,0,-1,241)
+      call checkbound_array(fablo,fabhi,offdiagcheck_ptr,0,-1)
       cenden_ptr=>cenden
-      call checkbound_array1(fablo,fabhi,cenden_ptr,1,-1,241)
+      call checkbound_array1(fablo,fabhi,cenden_ptr,1,-1)
       cenvisc_ptr=>cenvisc
-      call checkbound_array1(fablo,fabhi,cenvisc_ptr,1,-1,241)
+      call checkbound_array1(fablo,fabhi,cenvisc_ptr,1,-1)
       xfwt_ptr=>xfwt
       yfwt_ptr=>yfwt
       zfwt_ptr=>zfwt
-      call checkbound_array(fablo,fabhi,xfwt_ptr,0,0,242)
-      call checkbound_array(fablo,fabhi,yfwt_ptr,0,1,242)
-      call checkbound_array(fablo,fabhi,zfwt_ptr,0,SDIM-1,242)
+      call checkbound_array(fablo,fabhi,xfwt_ptr,0,0)
+      call checkbound_array(fablo,fabhi,yfwt_ptr,0,1)
+      call checkbound_array(fablo,fabhi,zfwt_ptr,0,SDIM-1)
       xface_ptr=>xface
       yface_ptr=>yface
       zface_ptr=>zface
-      call checkbound_array(fablo,fabhi,xface_ptr,0,0,244)
-      call checkbound_array(fablo,fabhi,yface_ptr,0,1,244)
-      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,244)
+      call checkbound_array(fablo,fabhi,xface_ptr,0,0)
+      call checkbound_array(fablo,fabhi,yface_ptr,0,1)
+      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1)
       mask_ptr=>mask
-      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,246)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
 
       if (facewt_iter.eq.0) then
 
@@ -15984,31 +15984,31 @@ stop
       endif
 
       vofnew_ptr=>vofnew
-      call checkbound_array(fablo,fabhi,vofnew_ptr,1,-1,26)
+      call checkbound_array(fablo,fabhi,vofnew_ptr,1,-1)
       velnew_ptr=>velnew
-      call checkbound_array(fablo,fabhi,velnew_ptr,1,-1,26)
+      call checkbound_array(fablo,fabhi,velnew_ptr,1,-1)
 
       solxfab_ptr=>solxfab
       solyfab_ptr=>solyfab
       solzfab_ptr=>solzfab
-      call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,26)
-      call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,26)
-      call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1,26)
+      call checkbound_array(fablo,fabhi,solxfab_ptr,0,0)
+      call checkbound_array(fablo,fabhi,solyfab_ptr,0,1)
+      call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1)
 
       maskcov_ptr=>maskcov
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,0,-1,26)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,0,-1)
       LS_ptr=>LS
-      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1,26)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
       state_mof_ptr=>state_mof
-      call checkbound_array(fablo,fabhi,state_mof_ptr,1,-1,26)
+      call checkbound_array(fablo,fabhi,state_mof_ptr,1,-1)
       vel_ptr=>vel
-      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,26)
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1)
       den_ptr=>den
-      call checkbound_array(fablo,fabhi,den_ptr,1,-1,26)
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1)
       dennew_ptr=>dennew
-      call checkbound_array(fablo,fabhi,dennew_ptr,1,-1,26)
+      call checkbound_array(fablo,fabhi,dennew_ptr,1,-1)
       lsnew_ptr=>lsnew
-      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,26)
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
 
       istenlo(3)=0
       istenhi(3)=0
@@ -17220,9 +17220,9 @@ stop
       maskcov_ptr=>maskcov
       vofnew_ptr=>vofnew
       LS_ptr=>LS
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,26)
-      call checkbound_array(fablo,fabhi,vofnew_ptr,1,-1,26)
-      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,26)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,vofnew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -17938,9 +17938,9 @@ stop
       enddo
 
       call checkbound_array(fablo_local,fabhi_local, &
-         accum_PARM%TENSOR,1,-1,19896)
+         accum_PARM%TENSOR,1,-1)
       call checkbound_array(fablo_local,fabhi_local, &
-         accum_PARM%LEVELSET,1,-1,19896)
+         accum_PARM%LEVELSET,1,-1)
 
       data_out%data_interp=>data_interp_local
       data_out_LS%data_interp=>data_interp_local_LS
@@ -18270,13 +18270,13 @@ stop
       tensorfab_ptr=>tensorfab
       lsfab_ptr=>lsfab
 
-      call checkbound_array(fablo,fabhi,tensorfab_ptr,1,-1,20355)
-      call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1,20355)
+      call checkbound_array(fablo,fabhi,tensorfab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1)
 
-      call checkbound_array1(fablo,fabhi,mfiner_ptr,1,-1,20370)
+      call checkbound_array1(fablo,fabhi,mfiner_ptr,1,-1)
 
       call checkbound_array_INTEGER(tilelo,tilehi, &
-              cell_particle_count_ptr,0,-1,20374)
+              cell_particle_count_ptr,0,-1)
 
       if (cur_time_slab.ge.zero) then
        ! do nothing
@@ -19132,9 +19132,9 @@ stop
       grid_PARM%problo=>problo_arr
       grid_PARM%probhi=>probhi_arr
 
-      call checkbound_array1(fablo,fabhi,umac_ptr,1,0,2871)
-      call checkbound_array1(fablo,fabhi,vmac_ptr,1,1,2871)
-      call checkbound_array1(fablo,fabhi,wmac_ptr,1,SDIM-1,2871)
+      call checkbound_array1(fablo,fabhi,umac_ptr,1,0)
+      call checkbound_array1(fablo,fabhi,vmac_ptr,1,1)
+      call checkbound_array1(fablo,fabhi,wmac_ptr,1,SDIM-1)
 
       num_RK_stages=2
       

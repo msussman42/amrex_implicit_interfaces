@@ -66,9 +66,9 @@
        stop
       endif
 
-      call checkbound_array1(fablo,fabhi,phi_ptr,0,-1,4141)
-      call checkbound_array1(fablo,fabhi,pp,0,-1,42)
-      call checkbound_array1(fablo,fabhi,yy,0,-1,42)
+      call checkbound_array1(fablo,fabhi,phi_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,pp,0,-1)
+      call checkbound_array1(fablo,fabhi,yy,0,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do k=growlo(3),growhi(3)
@@ -128,9 +128,9 @@
 
       pp_ptr=>pp
 
-      call checkbound_array1(fablo,fabhi,pp_ptr,0,-1,51)
-      call checkbound_array1(fablo,fabhi,rr,0,-1,52)
-      call checkbound_array1(fablo,fabhi,yy,0,-1,52)
+      call checkbound_array1(fablo,fabhi,pp_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,rr,0,-1)
+      call checkbound_array1(fablo,fabhi,yy,0,-1)
 
       if (bfact.lt.1) then
        print *,"bfact invalid"
@@ -211,8 +211,8 @@
        print *,"ncomp invalid"
        stop
       endif
-      call checkbound_array(fablo,fabhi,pp,0,-1,61)
-      call checkbound_array(fablo,fabhi,ww,0,-1,62)
+      call checkbound_array(fablo,fabhi,pp,0,-1)
+      call checkbound_array(fablo,fabhi,ww,0,-1)
 
       pw = zero
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 

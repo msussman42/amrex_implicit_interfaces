@@ -326,9 +326,9 @@ stop
       endif
 
       call checkbound_array(fablo,fabhi,LS_new_ptr, &
-              ngrow_make_distance+1,-1,2871)
+              ngrow_make_distance+1,-1)
       call checkbound_array(fablo,fabhi,LS_NRM_FD_ptr, &
-              ngrow_make_distance+1,-1,312)
+              ngrow_make_distance+1,-1)
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
       else
@@ -563,9 +563,9 @@ stop
        stop
       endif
  
-      call checkbound_array(fablo,fabhi,LS_new,ngrow_distance,-1,2873)
+      call checkbound_array(fablo,fabhi,LS_new,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,FD_NRM_ND_fab_ptr, &
-              ngrow_distance,-1,2874)
+              ngrow_distance,-1)
 
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
@@ -981,14 +981,14 @@ stop
       endif
 
       F_new_ptr=>F_new 
-      call checkbound_array(fablo,fabhi,F_new_ptr,ngrow_distance,-1,2875)
+      call checkbound_array(fablo,fabhi,F_new_ptr,ngrow_distance,-1)
       LS_new_ptr=>LS_new 
-      call checkbound_array(fablo,fabhi,LS_new_ptr,ngrow_distance,-1,2875)
+      call checkbound_array(fablo,fabhi,LS_new_ptr,ngrow_distance,-1)
       FD_NRM_ND_fab_ptr=>FD_NRM_ND_fab
       call checkbound_array(fablo,fabhi,FD_NRM_ND_fab_ptr, &
-              ngrow_distance,-1,2876)
+              ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,CURV_CELL_ptr, &
-              ngrow_make_distance,-1,2877)
+              ngrow_make_distance,-1)
 
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
@@ -1042,7 +1042,7 @@ stop
       allocate(F_tess(DIMV(F_tess),num_materials*ngeom_recon))
       
       F_tess_ptr=>F_tess
-      call checkbound_array(tilelo,tilehi,F_tess_ptr,ngrow_distance,-1,2875)
+      call checkbound_array(tilelo,tilehi,F_tess_ptr,ngrow_distance,-1)
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -1981,30 +1981,30 @@ stop
       enddo !im=1..num_materials
 
       maskfab_ptr=>maskfab
-      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow_distance,-1,2878)
+      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow_distance,-1)
       facepairX_ptr=>facepairX
       facepairY_ptr=>facepairY
       facepairZ_ptr=>facepairZ
       call checkbound_array(fablo,fabhi,facepairX_ptr, &
-        ngrow_distance,0,1871)
+        ngrow_distance,0)
       call checkbound_array(fablo,fabhi,facepairY_ptr, &
-        ngrow_distance,1,1871)
+        ngrow_distance,1)
       call checkbound_array(fablo,fabhi,facepairZ_ptr, &
-        ngrow_distance,SDIM-1,1871)
+        ngrow_distance,SDIM-1)
       facetest_ptr=>facetest
-      call checkbound_array(fablo,fabhi,facetest_ptr,ngrow_distance,-1,1872)
+      call checkbound_array(fablo,fabhi,facetest_ptr,ngrow_distance,-1)
       stenfab_ptr=>stenfab
-      call checkbound_array(fablo,fabhi,stenfab_ptr,ngrow_distance,-1,1873)
+      call checkbound_array(fablo,fabhi,stenfab_ptr,ngrow_distance,-1)
       vofrecon_ptr=>vofrecon
-      call checkbound_array(fablo,fabhi,vofrecon_ptr,ngrow_distance,-1,1874)
+      call checkbound_array(fablo,fabhi,vofrecon_ptr,ngrow_distance,-1)
       origdist_ptr=>origdist
-      call checkbound_array(fablo,fabhi,origdist_ptr,ngrow_distance,-1,1875)
-      call checkbound_array(fablo,fabhi,newfab_ptr,1,-1,1876)
-      call checkbound_array(fablo,fabhi,touchfab_ptr,0,-1,1876)
+      call checkbound_array(fablo,fabhi,origdist_ptr,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,newfab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,touchfab_ptr,0,-1)
       crsetouch_ptr=>crsetouch
       crsedist_ptr=>crsedist
-      call checkbound_array(fablo,fabhi,crsetouch_ptr,0,-1,1876)
-      call checkbound_array(fablo,fabhi,crsedist_ptr,0,-1,1876)
+      call checkbound_array(fablo,fabhi,crsetouch_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,crsedist_ptr,0,-1)
       
       if (ngeom_recon.eq.2*SDIM+3) then
        ! do nothing
@@ -3047,8 +3047,8 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,newfab_ptr,1,-1,2876)
-      call checkbound_array(fablo,fabhi,touchfab,0,-1,2876)
+      call checkbound_array(fablo,fabhi,newfab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,touchfab,0,-1)
       
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0)
@@ -3212,11 +3212,11 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,stenfab_ptr,ngrow_distance,-1,2877)
+      call checkbound_array(fablo,fabhi,stenfab_ptr,ngrow_distance,-1)
       maskfab_ptr=>maskfab
-      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow_distance,-1,2878)
+      call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow_distance,-1)
       vofrecon_ptr=>vofrecon
-      call checkbound_array(fablo,fabhi,vofrecon_ptr,ngrow_distance,-1,2879)
+      call checkbound_array(fablo,fabhi,vofrecon_ptr,ngrow_distance,-1)
       
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid steninit"
@@ -3483,9 +3483,9 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,facefab_ptr,ngrow,-1,2883)
-      call checkbound_array(fablo,fabhi,maskfab,ngrow,-1,2884)
-      call checkbound_array(fablo,fabhi,vofrecon,ngrow,-1,2885)
+      call checkbound_array(fablo,fabhi,facefab_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,maskfab,ngrow,-1)
+      call checkbound_array(fablo,fabhi,vofrecon,ngrow,-1)
       
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid faceinit"
@@ -3852,10 +3852,10 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,facetest_ptr,ngrow,-1,2886)
-      call checkbound_array(fablo,fabhi,facefab,ngrow,-1,2887)
-      call checkbound_array(fablo,fabhi,maskfab,ngrow,-1,2888)
-      call checkbound_array(fablo,fabhi,vofrecon,ngrow,-1,2889)
+      call checkbound_array(fablo,fabhi,facetest_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,facefab,ngrow,-1)
+      call checkbound_array(fablo,fabhi,maskfab,ngrow,-1)
+      call checkbound_array(fablo,fabhi,vofrecon,ngrow,-1)
       
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid faceinittest"
@@ -4173,9 +4173,9 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,dstfab_ptr,ngrow_dest,dir,2880)
-      call checkbound_array(fablo,fabhi,facefab,ngrow_source,-1,2881)
-      call checkbound_array(fablo,fabhi,vofrecon,ngrow_source,-1,2882)
+      call checkbound_array(fablo,fabhi,dstfab_ptr,ngrow_dest,dir)
+      call checkbound_array(fablo,fabhi,facefab,ngrow_source,-1)
+      call checkbound_array(fablo,fabhi,vofrecon,ngrow_source,-1)
       
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid faceprocess"

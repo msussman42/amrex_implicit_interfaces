@@ -3408,9 +3408,9 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,unode_ptr,1,-1,12)
-      call checkbound_array(fablo,fabhi,ucell_ptr,1,-1,12)
-      call checkbound_array(fablo,fabhi,oldLS_ptr,ngrow_distance,-1,1257)
+      call checkbound_array(fablo,fabhi,unode_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,ucell_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,oldLS_ptr,ngrow_distance,-1)
 
       if (dt.gt.zero) then
        ! do nothing
@@ -4062,18 +4062,18 @@ stop
        enddo ! im_opp
       enddo !im
 
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,1256)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
 
-      call checkbound_array(fablo,fabhi,JUMPFAB_ptr,ngrow_expansion,-1,1256)
-      call checkbound_array(fablo,fabhi,TgammaFAB_ptr,ngrow_expansion,-1,1256)
-      call checkbound_array(fablo,fabhi,LSold_ptr,ngrow_distance,-1,1257)
-      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1,1258)
-      call checkbound_array(fablo,fabhi,recon_ptr,1,-1,1259)
-      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,1261)
-      call checkbound_array(fablo,fabhi,EOS_ptr,1,-1,1262)
-      call checkbound_array(fablo,fabhi,swept_ptr,0,-1,1263)
-      call checkbound_array(fablo,fabhi,nodevel_ptr,1,-1,12)
-      call checkbound_array(fablo,fabhi,conductstate_ptr,1,-1,12)
+      call checkbound_array(fablo,fabhi,JUMPFAB_ptr,ngrow_expansion,-1)
+      call checkbound_array(fablo,fabhi,TgammaFAB_ptr,ngrow_expansion,-1)
+      call checkbound_array(fablo,fabhi,LSold_ptr,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,recon_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,EOS_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,swept_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,nodevel_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,conductstate_ptr,1,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       if (SDIM.eq.3) then
@@ -6544,8 +6544,8 @@ stop
 
       extensionwidth=dxmaxLS*ngrow_make_distance 
 
-      call checkbound_array(fablo,fabhi,vel_ptr,ngrow_make_distance,-1,1250)
-      call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1,1250)
+      call checkbound_array(fablo,fabhi,vel_ptr,ngrow_make_distance,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -6856,8 +6856,8 @@ stop
 
       extensionwidth=dxmaxLS*ngrow_make_distance 
 
-      call checkbound_array(fablo,fabhi,drag_ptr,ngrow_make_distance,-1,1250)
-      call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1,1250)
+      call checkbound_array(fablo,fabhi,drag_ptr,ngrow_make_distance,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -7730,38 +7730,38 @@ stop
        stop
       endif
 
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,1251)
-      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1,1253)
-      call checkbound_array(fablo,fabhi,Snew_ptr,1,-1,1253)
-      call checkbound_array(fablo,fabhi,EOS_ptr,ngrow_distance,-1,1254)
-      call checkbound_array1(fablo,fabhi,pres_ptr,ngrow_distance,-1,1255)
-      call checkbound_array1(fablo,fabhi,pres_eos_ptr,1,-1,1255)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,Snew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,EOS_ptr,ngrow_distance,-1)
+      call checkbound_array1(fablo,fabhi,pres_ptr,ngrow_distance,-1)
+      call checkbound_array1(fablo,fabhi,pres_eos_ptr,1,-1)
 
 
       if (nucleation_flag.eq.0) then
 
        typefab_ptr=>typefab
-       call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1,6625)
+       call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1)
        colorfab_ptr=>colorfab
-       call checkbound_array1(fablo,fabhi,colorfab_ptr,1,-1,6626)
+       call checkbound_array1(fablo,fabhi,colorfab_ptr,1,-1)
 
-       call checkbound_array(fablo,fabhi,conductstate_ptr,1,-1,1250)
+       call checkbound_array(fablo,fabhi,conductstate_ptr,1,-1)
 
        ! num_materials x (sdim+1) components
        call checkbound_array(fablo,fabhi, &
         burnvel_ptr, &
-        ngrow_make_distance,-1,1250)
+        ngrow_make_distance,-1)
        call checkbound_array(fablo,fabhi, &
         Tsatfab_ptr, &
-        ngrow_make_distance,-1,1250)
+        ngrow_make_distance,-1)
 
        call checkbound_array(fablo,fabhi, &
         curvfab_ptr, &
-        ngrow_make_distance,-1,1250)
+        ngrow_make_distance,-1)
 
        recon_ptr=>recon
-       call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1,1251)
-       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1,1252)
+       call checkbound_array(fablo,fabhi,recon_ptr,ngrow_distance,-1)
+       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
 
       else if (nucleation_flag.eq.1) then
        ! do nothing

@@ -1369,13 +1369,13 @@ END SUBROUTINE SIMP
       den_ptr=>den
       mdot_ptr=>mdot
 
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,44)
-      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1,44)
-      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,44)
-      call checkbound_array(fablo,fabhi,csnd_ptr,0,-1,44)
-      call checkbound_array(fablo,fabhi,cvof_ptr,0,-1,44)
-      call checkbound_array(fablo,fabhi,den_ptr,1,-1,44)
-      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,44)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,csnd_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,cvof_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
 
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=two*DXMAXLS
@@ -1875,15 +1875,15 @@ END SUBROUTINE SIMP
       endif
 
       vol_ptr=>vol
-      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1,44)
+      call checkbound_array1(fablo,fabhi,vol_ptr,0,-1)
       csound_ptr=>csound
-      call checkbound_array(fablo,fabhi,csound_ptr,0,-1,44)
+      call checkbound_array(fablo,fabhi,csound_ptr,0,-1)
       mdot_ptr=>mdot
-      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,44)
+      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
       pnew_ptr=>pnew
-      call checkbound_array1(fablo,fabhi,pnew_ptr,1,-1,44)
+      call checkbound_array1(fablo,fabhi,pnew_ptr,1,-1)
       divnew_ptr=>divnew
-      call checkbound_array1(fablo,fabhi,divnew_ptr,1,-1,44)
+      call checkbound_array1(fablo,fabhi,divnew_ptr,1,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
@@ -2304,9 +2304,9 @@ END SUBROUTINE SIMP
        allocate(plotfab(DIMV(plt),nstate_slice))
  
        fabout_ptr=>fabout
-       call checkbound_array(vislo,vishi,fabout_ptr,0,0,41110)
-       call checkbound_array(vislo,vishi,fabout_ptr,0,1,41111)
-       call checkbound_array(vislo,vishi,fabout_ptr,0,SDIM-1,41112)
+       call checkbound_array(vislo,vishi,fabout_ptr,0,0)
+       call checkbound_array(vislo,vishi,fabout_ptr,0,1)
+       call checkbound_array(vislo,vishi,fabout_ptr,0,SDIM-1)
        ! x,u,pmg,den,T,Y1..Yn,mag vort,LS
        if (visual_ncomp.ne.VISUALCOMP_NCOMP) then
         print *,"visual_ncomp invalid" 
@@ -2314,7 +2314,7 @@ END SUBROUTINE SIMP
        endif
 
        plotfab_ptr=>plotfab
-       call checkbound_array(lo,hi,plotfab_ptr,1,-1,41113)
+       call checkbound_array(lo,hi,plotfab_ptr,1,-1)
 
       else if (plot_grid_type.eq.1) then
        ! do nothing
@@ -2324,23 +2324,23 @@ END SUBROUTINE SIMP
       endif
 
       maskSEM_ptr=>maskSEM
-      call checkbound_array1(lo,hi,maskSEM_ptr,0,-1,1264)
+      call checkbound_array1(lo,hi,maskSEM_ptr,0,-1)
 
       pres_ptr=>pres
-      call checkbound_array1(lo,hi,pres_ptr,1,-1,41114)
+      call checkbound_array1(lo,hi,pres_ptr,1,-1)
       div_ptr=>div
-      call checkbound_array1(lo,hi,div_ptr,1,-1,41115)
+      call checkbound_array1(lo,hi,div_ptr,1,-1)
       divdat_ptr=>divdat
-      call checkbound_array1(lo,hi,divdat_ptr,1,-1,41116)
+      call checkbound_array1(lo,hi,divdat_ptr,1,-1)
       den_ptr=>den
-      call checkbound_array(lo,hi,den_ptr,1,-1,41117)
+      call checkbound_array(lo,hi,den_ptr,1,-1)
       mom_den_ptr=>mom_den
-      call checkbound_array(lo,hi,mom_den_ptr,1,-1,41118)
+      call checkbound_array(lo,hi,mom_den_ptr,1,-1)
       elastic_ptr=>elastic
 
       if ((num_materials_viscoelastic.ge.1).and. &
           (num_materials_viscoelastic.le.num_materials)) then
-       call checkbound_array(lo,hi,elastic_ptr,1,-1,41119)
+       call checkbound_array(lo,hi,elastic_ptr,1,-1)
       else if (num_materials_viscoelastic.eq.0) then
        ! do nothing
       else
@@ -2349,23 +2349,23 @@ END SUBROUTINE SIMP
       endif
 
       lsdist_ptr=>lsdist
-      call checkbound_array(lo,hi,lsdist_ptr,1,-1,41120)
+      call checkbound_array(lo,hi,lsdist_ptr,1,-1)
       visc_ptr=>visc
-      call checkbound_array(lo,hi,visc_ptr,1,-1,41121)
+      call checkbound_array(lo,hi,visc_ptr,1,-1)
       conduct_ptr=>conduct
-      call checkbound_array(lo,hi,conduct_ptr,1,-1,41122)
+      call checkbound_array(lo,hi,conduct_ptr,1,-1)
       trace_ptr=>trace
-      call checkbound_array(lo,hi,trace_ptr,1,-1,41123)
+      call checkbound_array(lo,hi,trace_ptr,1,-1)
       elasticforce_ptr=>elasticforce
-      call checkbound_array(lo,hi,elasticforce_ptr,1,-1,41124)
+      call checkbound_array(lo,hi,elasticforce_ptr,1,-1)
       gradvelocity_ptr=>gradvelocity
-      call checkbound_array(lo,hi,gradvelocity_ptr,1,-1,41124)
+      call checkbound_array(lo,hi,gradvelocity_ptr,1,-1)
       towerfab_ptr=>towerfab
-      call checkbound_array(lo,hi,towerfab_ptr,1,-1,41125)
+      call checkbound_array(lo,hi,towerfab_ptr,1,-1)
       vel_ptr=>vel
-      call checkbound_array(lo,hi,vel_ptr,1,-1,41126)
+      call checkbound_array(lo,hi,vel_ptr,1,-1)
       vof_ptr=>vof
-      call checkbound_array(lo,hi,vof_ptr,1,-1,41127)
+      call checkbound_array(lo,hi,vof_ptr,1,-1)
 
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
@@ -4762,17 +4762,17 @@ END SUBROUTINE SIMP
       endif
 
       crse_ptr=>crse
-      call checkbound_array(lo,hi,crse_ptr,0,dir,41128)
+      call checkbound_array(lo,hi,crse_ptr,0,dir)
       fine_ptr=>fine
-      call checkbound_array(lof,hif,fine_ptr,0,dir,41129)
+      call checkbound_array(lof,hif,fine_ptr,0,dir)
       mask_ptr=>mask
-      call checkbound_array1(lof,hif,mask_ptr,1,-1,41130)
+      call checkbound_array1(lof,hif,mask_ptr,1,-1)
       fine_LS_ptr=>fine_LS
-      call checkbound_array(lof,hif,fine_LS_ptr,1,-1,41131)
+      call checkbound_array(lof,hif,fine_LS_ptr,1,-1)
       den_fine_ptr=>den_fine
-      call checkbound_array(lof,hif,den_fine_ptr,1,-1,41132)
+      call checkbound_array(lof,hif,den_fine_ptr,1,-1)
       vel_fine_ptr=>vel_fine
-      call checkbound_array(lof,hif,vel_fine_ptr,1,-1,41133)
+      call checkbound_array(lof,hif,vel_fine_ptr,1,-1)
 
       grid_type=-1  ! ggg  (Gauss in all directions)
 
@@ -5527,19 +5527,19 @@ END SUBROUTINE SIMP
       endif
 
       fine_ptr=>fine
-      call checkbound_array(fablo,fabhi,fine_ptr,0,dir,41134)
+      call checkbound_array(fablo,fabhi,fine_ptr,0,dir)
       den_crse_ptr=>den_crse
-      call checkbound_array(loc,hic,den_crse_ptr,1,-1,41135)
+      call checkbound_array(loc,hic,den_crse_ptr,1,-1)
       vel_crse_ptr=>vel_crse
-      call checkbound_array(loc,hic,vel_crse_ptr,1,-1,41136)
+      call checkbound_array(loc,hic,vel_crse_ptr,1,-1)
       masknbr_ptr=>masknbr
-      call checkbound_array1(fablo,fabhi,masknbr_ptr,1,-1,41137)
+      call checkbound_array1(fablo,fabhi,masknbr_ptr,1,-1)
       masksem_ptr=>masksem
-      call checkbound_array1(fablo,fabhi,masksem_ptr,1,-1,41138)
+      call checkbound_array1(fablo,fabhi,masksem_ptr,1,-1)
       cmasksem_ptr=>cmasksem
-      call checkbound_array1(loc,hic,cmasksem_ptr,1,-1,41139)
+      call checkbound_array1(loc,hic,cmasksem_ptr,1,-1)
       coarseLS_ptr=>coarseLS
-      call checkbound_array(loc,hic,coarseLS_ptr,1,-1,41140)
+      call checkbound_array(loc,hic,coarseLS_ptr,1,-1)
 
       grid_type=-1  ! ggg  (Gauss in all directions)
 
@@ -6241,15 +6241,15 @@ END SUBROUTINE SIMP
       endif
 
       fine_ptr=>fine
-      call checkbound_array(fablo,fabhi,fine,0,dir,41141)
+      call checkbound_array(fablo,fabhi,fine,0,dir)
       crse_ptr=>crse
-      call checkbound_array(loc,hic,crse_ptr,0,dir,41142)
+      call checkbound_array(loc,hic,crse_ptr,0,dir)
       masknbr_ptr=>masknbr
-      call checkbound_array1(fablo,fabhi,masknbr_ptr,1,-1,41143)
+      call checkbound_array1(fablo,fabhi,masknbr_ptr,1,-1)
       masksem_ptr=>masksem
-      call checkbound_array1(fablo,fabhi,masksem_ptr,1,-1,41144)
+      call checkbound_array1(fablo,fabhi,masksem_ptr,1,-1)
       cmasksem_ptr=>cmasksem
-      call checkbound_array1(loc,hic,cmasksem_ptr,1,-1,41145)
+      call checkbound_array1(loc,hic,cmasksem_ptr,1,-1)
 
       grid_type=-1  ! ggg  (Gauss in all directions)
 
@@ -6732,13 +6732,13 @@ END SUBROUTINE SIMP
       endif
 
       fluxtarg_ptr=>fluxtarg
-      call checkbound_array(fablo,fabhi,fluxtarg_ptr,0,dir,41146)
+      call checkbound_array(fablo,fabhi,fluxtarg_ptr,0,dir)
       fluxhold_ptr=>fluxhold
-      call checkbound_array(fablo,fabhi,fluxhold_ptr,1,-1,41147)
+      call checkbound_array(fablo,fabhi,fluxhold_ptr,1,-1)
       masknbr_ptr=>masknbr
-      call checkbound_array1(fablo,fabhi,masknbr_ptr,1,-1,41148)
+      call checkbound_array1(fablo,fabhi,masknbr_ptr,1,-1)
       maskcov_ptr=>maskcov
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,41149)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
 
       if ((level.ge.0).and.(level.le.finest_level)) then
        ! do nothing
@@ -7159,17 +7159,17 @@ END SUBROUTINE SIMP
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      call checkbound_array(fablo,fabhi,cellten_ptr,0,-1,41150) 
-      call checkbound_array(fablo,fabhi,lsfab_ptr,2,-1,41151) 
-      call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,41152) 
-      call checkbound_array1(fablo,fabhi,mask_ptr,2,-1,41153) 
+      call checkbound_array(fablo,fabhi,cellten_ptr,0,-1) 
+      call checkbound_array(fablo,fabhi,lsfab_ptr,2,-1) 
+      call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1) 
+      call checkbound_array1(fablo,fabhi,mask_ptr,2,-1) 
        ! ngrow_distance=4
        ! ngrow_make_distance=3
-      call checkbound_array(fablo,fabhi,drag_ptr,3,-1,413) 
-      call checkbound_array(fablo,fabhi,slopes_ptr,2,-1,413) 
-      call checkbound_array(fablo,fabhi,den_ptr,1,-1,413) 
-      call checkbound_array(fablo,fabhi,vel_ptr,1,-1,413) 
-      call checkbound_array(fablo,fabhi,visco_ptr,1,-1,413) 
+      call checkbound_array(fablo,fabhi,drag_ptr,3,-1) 
+      call checkbound_array(fablo,fabhi,slopes_ptr,2,-1) 
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1) 
+      call checkbound_array(fablo,fabhi,vel_ptr,1,-1) 
+      call checkbound_array(fablo,fabhi,visco_ptr,1,-1) 
 
       GRID_DATA_PARM%ncomp_sum_int_user1=ncomp_sum_int_user1
       GRID_DATA_PARM%ncomp_sum_int_user2=ncomp_sum_int_user2
@@ -8354,16 +8354,16 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,snew_ptr,1,-1,6615)
-      call checkbound_array1(fablo,fabhi,umacnew_ptr,0,0,6615)
-      call checkbound_array1(fablo,fabhi,vmacnew_ptr,0,1,6615)
-      call checkbound_array1(fablo,fabhi,wmacnew_ptr,0,SDIM-1,6615)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,umacnew_ptr,0,0)
+      call checkbound_array1(fablo,fabhi,vmacnew_ptr,0,1)
+      call checkbound_array1(fablo,fabhi,wmacnew_ptr,0,SDIM-1)
 
-      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1,6615)
-      call checkbound_array(fablo,fabhi,DEN_ptr,1,-1,6615)
-      call checkbound_array(fablo,fabhi,VOF_ptr,1,-1,6616)
-      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,6627)
-      call checkbound_array1(fablo,fabhi,volumefab_ptr,1,-1,6627)
+      call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,DEN_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,VOF_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,volumefab_ptr,1,-1)
   
       do dir=1,SDIM
        if (fabhi(dir)-fablo(dir).le.0) then
@@ -9055,10 +9055,11 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       call checkbound_array1(fablo,fabhi,mask,0,-1,414) 
-       call checkbound_array(fablo,fabhi,fabx,0,-1,415) 
-       call checkbound_array(fablo,fabhi,faby,0,-1,416) 
-       call checkbound_array(fablo,fabhi,fabz_ptr,0,-1,417) 
+       call checkbound_array1(fablo,fabhi,mask,0,-1) 
+       call checkbound_array(fablo,fabhi,fabx,0,-1) 
+       call checkbound_array(fablo,fabhi,faby,0,-1) 
+       call checkbound_array(fablo,fabhi,fabz_ptr,0,-1) 
+
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
        do nc=1,nsolve
@@ -9137,9 +9138,9 @@ END SUBROUTINE SIMP
         print *,"nsolve invalid"
         stop
        endif
-       call checkbound_array1(fablo,fabhi,mask,0,-1,414) 
-       call checkbound_array(fablo,fabhi,rho,0,-1,415) 
-       call checkbound_array(fablo,fabhi,rho2,0,-1,416) 
+       call checkbound_array1(fablo,fabhi,mask,0,-1) 
+       call checkbound_array(fablo,fabhi,rho,0,-1) 
+       call checkbound_array(fablo,fabhi,rho2,0,-1) 
  
        mass1=zero
 
@@ -9293,11 +9294,11 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       call checkbound_array1(fablo,fabhi,ones_fab,0,-1,414) 
-       call checkbound_array1(fablo,fabhi,type_fab,0,-1,414) 
-       call checkbound_array1(fablo,fabhi,color_fab,0,-1,414) 
-       call checkbound_array(fablo,fabhi,alpha_fab,0,-1,414) 
-       call checkbound_array1(fablo,fabhi,mask_fab,0,-1,414) 
+       call checkbound_array1(fablo,fabhi,ones_fab,0,-1) 
+       call checkbound_array1(fablo,fabhi,type_fab,0,-1) 
+       call checkbound_array1(fablo,fabhi,color_fab,0,-1) 
+       call checkbound_array(fablo,fabhi,alpha_fab,0,-1) 
+       call checkbound_array1(fablo,fabhi,mask_fab,0,-1) 
 
        do icolor=1,color_count
         fab_sum(icolor)=zero
@@ -9537,12 +9538,12 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       call checkbound_array1(fablo,fabhi,data_fab,0,-1,414) 
-       call checkbound_array1(fablo,fabhi,ones_fab,0,-1,414) 
-       call checkbound_array1(fablo,fabhi,type_fab,0,-1,414) 
-       call checkbound_array1(fablo,fabhi,color_fab,0,-1,414) 
-       call checkbound_array(fablo,fabhi,alpha_fab,0,-1,414) 
-       call checkbound_array1(fablo,fabhi,mask_fab,0,-1,414) 
+       call checkbound_array1(fablo,fabhi,data_fab,0,-1) 
+       call checkbound_array1(fablo,fabhi,ones_fab,0,-1) 
+       call checkbound_array1(fablo,fabhi,type_fab,0,-1) 
+       call checkbound_array1(fablo,fabhi,color_fab,0,-1) 
+       call checkbound_array(fablo,fabhi,alpha_fab,0,-1) 
+       call checkbound_array1(fablo,fabhi,mask_fab,0,-1) 
 
        do icolor=1,color_count
         fab_sum(icolor)=zero
@@ -9798,12 +9799,12 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       call checkbound_array1(fablo,fabhi,data_fab_ptr,0,-1,414) 
-       call checkbound_array1(fablo,fabhi,ones_fab,0,-1,414) 
-       call checkbound_array1(fablo,fabhi,type_fab,0,-1,414) 
-       call checkbound_array1(fablo,fabhi,color_fab,0,-1,414) 
-       call checkbound_array(fablo,fabhi,alpha_fab,0,-1,414) 
-       call checkbound_array1(fablo,fabhi,mask_fab,0,-1,414) 
+       call checkbound_array1(fablo,fabhi,data_fab_ptr,0,-1) 
+       call checkbound_array1(fablo,fabhi,ones_fab,0,-1) 
+       call checkbound_array1(fablo,fabhi,type_fab,0,-1) 
+       call checkbound_array1(fablo,fabhi,color_fab,0,-1) 
+       call checkbound_array(fablo,fabhi,alpha_fab,0,-1) 
+       call checkbound_array1(fablo,fabhi,mask_fab,0,-1) 
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -10062,8 +10063,8 @@ END SUBROUTINE SIMP
 
       presden_ptr=>presden
       state_ptr=>state
-      call checkbound_array(fablo,fabhi,presden_ptr,1,-1,42)
-      call checkbound_array(fablo,fabhi,state_ptr,1,-1,42)
+      call checkbound_array(fablo,fabhi,presden_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,state_ptr,1,-1)
      
       if (isweep.eq.0) then
  
@@ -10331,10 +10332,10 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,xface_ptr,0,dir,42)
-      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,42)
-      call checkbound_array1(fablo,fabhi,macnew_ptr,0,dir,42)
-      call checkbound_array1(fablo,fabhi,facegrav_ptr,0,dir,42)
+      call checkbound_array(fablo,fabhi,xface_ptr,0,dir)
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,macnew_ptr,0,dir)
+      call checkbound_array1(fablo,fabhi,facegrav_ptr,0,dir)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,7)
 
@@ -10458,9 +10459,9 @@ END SUBROUTINE SIMP
       levelpc_ptr=>levelpc
       den_ptr=>den
 
-      call checkbound_array(fablo,fabhi,levelpc_ptr,1,-1,44)
-      call checkbound_array1(fablo,fabhi,pres_ptr,1,-1,44)
-      call checkbound_array(fablo,fabhi,den_ptr,1,-1,44)
+      call checkbound_array(fablo,fabhi,levelpc_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,pres_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1)
       do i=growlo(1),growhi(1)
@@ -10807,9 +10808,9 @@ END SUBROUTINE SIMP
       endif
 
       crse_ptr=>crse
-      call checkbound_array(lo,hi,crse_ptr,0,-1,41154)
+      call checkbound_array(lo,hi,crse_ptr,0,-1)
       fine_ptr=>fine
-      call checkbound_array(lof,hif,fine_ptr,0,-1,41155)
+      call checkbound_array(lof,hif,fine_ptr,0,-1)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
@@ -11060,9 +11061,9 @@ END SUBROUTINE SIMP
       endif
 
       crse_ptr=>crse
-      call checkbound_array(lo,hi,crse_ptr,0,-1,41156)
+      call checkbound_array(lo,hi,crse_ptr,0,-1)
       fine_ptr=>fine
-      call checkbound_array(lof,hif,fine_ptr,0,-1,41157)
+      call checkbound_array(lof,hif,fine_ptr,0,-1)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
@@ -11453,35 +11454,35 @@ END SUBROUTINE SIMP
        stop
       endif 
       maskcov_ptr=>maskcov
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,268)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
 
       xface_ptr=>xface
       yface_ptr=>yface
       zface_ptr=>zface
-      call checkbound_array(fablo,fabhi,xface_ptr,0,0,268)
-      call checkbound_array(fablo,fabhi,yface_ptr,0,1,269)
-      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1,270)
+      call checkbound_array(fablo,fabhi,xface_ptr,0,0)
+      call checkbound_array(fablo,fabhi,yface_ptr,0,1)
+      call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1)
 
       xgp_ptr=>xgp
       ygp_ptr=>ygp
       zgp_ptr=>zgp
-      call checkbound_array1(fablo,fabhi,xgp_ptr,0,0,2333)
-      call checkbound_array1(fablo,fabhi,ygp_ptr,0,1,2334)
-      call checkbound_array1(fablo,fabhi,zgp_ptr,0,SDIM-1,2335)
+      call checkbound_array1(fablo,fabhi,xgp_ptr,0,0)
+      call checkbound_array1(fablo,fabhi,ygp_ptr,0,1)
+      call checkbound_array1(fablo,fabhi,zgp_ptr,0,SDIM-1)
 
       xsrc_ptr=>xsrc
       ysrc_ptr=>ysrc
       zsrc_ptr=>zsrc
-      call checkbound_array1(fablo,fabhi,xsrc_ptr,0,0,2336)
-      call checkbound_array1(fablo,fabhi,ysrc_ptr,0,1,2337)
-      call checkbound_array1(fablo,fabhi,zsrc_ptr,0,SDIM-1,2338)
+      call checkbound_array1(fablo,fabhi,xsrc_ptr,0,0)
+      call checkbound_array1(fablo,fabhi,ysrc_ptr,0,1)
+      call checkbound_array1(fablo,fabhi,zsrc_ptr,0,SDIM-1)
 
       xdest_ptr=>xdest
       ydest_ptr=>ydest
       zdest_ptr=>zdest
-      call checkbound_array1(fablo,fabhi,xdest_ptr,0,0,2339)
-      call checkbound_array1(fablo,fabhi,ydest_ptr,0,1,2340)
-      call checkbound_array1(fablo,fabhi,zdest_ptr,0,SDIM-1,2341)
+      call checkbound_array1(fablo,fabhi,xdest_ptr,0,0)
+      call checkbound_array1(fablo,fabhi,ydest_ptr,0,1)
+      call checkbound_array1(fablo,fabhi,zdest_ptr,0,SDIM-1)
 
       do dir=0,SDIM-1
        ii=0
@@ -11742,11 +11743,11 @@ END SUBROUTINE SIMP
        xnew_ptr=>xnew
        xold_ptr=>xold
        resid_ptr=>resid
-       call checkbound_array1(fablo,fabhi,mask_ptr,1,-1,414) 
-       call checkbound_array1(fablo,fabhi,diag_reg_ptr,0,-1,415) 
-       call checkbound_array1(fablo,fabhi,xnew_ptr,1,-1,416) 
-       call checkbound_array1(fablo,fabhi,xold_ptr,1,-1,417) 
-       call checkbound_array1(fablo,fabhi,resid_ptr,0,-1,417) 
+       call checkbound_array1(fablo,fabhi,mask_ptr,1,-1) 
+       call checkbound_array1(fablo,fabhi,diag_reg_ptr,0,-1) 
+       call checkbound_array1(fablo,fabhi,xnew_ptr,1,-1) 
+       call checkbound_array1(fablo,fabhi,xold_ptr,1,-1) 
+       call checkbound_array1(fablo,fabhi,resid_ptr,0,-1) 
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
        do i=growlo(1),growhi(1)
@@ -11914,13 +11915,13 @@ END SUBROUTINE SIMP
       fabout_ptr=>fabout
       fabin_ptr=>fabin
 
-      call checkbound_array(vislo,vishi,fabout_ptr,0,0,41158)
-      call checkbound_array(vislo,vishi,fabout_ptr,0,1,41159)
-      call checkbound_array(vislo,vishi,fabout_ptr,0,SDIM-1,41160)
+      call checkbound_array(vislo,vishi,fabout_ptr,0,0)
+      call checkbound_array(vislo,vishi,fabout_ptr,0,1)
+      call checkbound_array(vislo,vishi,fabout_ptr,0,SDIM-1)
 
-      call checkbound_array(vislo,vishi,fabin_ptr,0,0,41161)
-      call checkbound_array(vislo,vishi,fabin_ptr,0,1,41162)
-      call checkbound_array(vislo,vishi,fabin_ptr,0,SDIM-1,41163)
+      call checkbound_array(vislo,vishi,fabin_ptr,0,0)
+      call checkbound_array(vislo,vishi,fabin_ptr,0,1)
+      call checkbound_array(vislo,vishi,fabin_ptr,0,SDIM-1)
 
       if (do_input.eq.1) then
 
@@ -12379,7 +12380,7 @@ END SUBROUTINE SIMP
       endif
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1) 
       u_ptr=>u
-      call checkbound_array(fablo,fabhi,u_ptr,1,-1,41164) 
+      call checkbound_array(fablo,fabhi,u_ptr,1,-1) 
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -12534,9 +12535,9 @@ END SUBROUTINE SIMP
       crse_ptr=>crse
       fine_ptr=>fine
       mask_ptr=>mask
-      call checkbound_array(lo,hi,crse_ptr,0,-1,41165)
-      call checkbound_array(lof,hif,fine_ptr,0,-1,41166)
-      call checkbound_array1(lof,hif,mask_ptr,1,-1,41167)
+      call checkbound_array(lo,hi,crse_ptr,0,-1)
+      call checkbound_array(lof,hif,fine_ptr,0,-1)
+      call checkbound_array1(lof,hif,mask_ptr,1,-1)
 
       grid_type=-1  ! ggg  (Gauss in all directions)
 
@@ -12847,8 +12848,8 @@ END SUBROUTINE SIMP
 
       crse_ptr=>crse
       fine_ptr=>fine
-      call checkbound_array(lo,hi,crse_ptr,0,-1,41168)
-      call checkbound_array(lof,hif,fine_ptr,0,-1,41169)
+      call checkbound_array(lo,hi,crse_ptr,0,-1)
+      call checkbound_array(lof,hif,fine_ptr,0,-1)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
@@ -12986,8 +12987,8 @@ END SUBROUTINE SIMP
 
       crse_ptr=>crse
       fine_ptr=>fine
-      call checkbound_array(lo,hi,crse_ptr,0,-1,41170)
-      call checkbound_array(lof,hif,fine_ptr,0,-1,41171)
+      call checkbound_array(lo,hi,crse_ptr,0,-1)
+      call checkbound_array(lof,hif,fine_ptr,0,-1)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
@@ -13160,8 +13161,8 @@ END SUBROUTINE SIMP
 
       crse_ptr=>crse
       fine_ptr=>fine
-      call checkbound_array(lo,hi,crse_ptr,0,-1,41172)
-      call checkbound_array(lof,hif,fine_ptr,0,-1,41173)
+      call checkbound_array(lo,hi,crse_ptr,0,-1)
+      call checkbound_array(lof,hif,fine_ptr,0,-1)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
@@ -13396,7 +13397,7 @@ END SUBROUTINE SIMP
 
       crse_ptr=>crse
       fine_ptr=>fine
-      call checkbound_array(lo,hi,crse_ptr,0,-1,41174)
+      call checkbound_array(lo,hi,crse_ptr,0,-1)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
@@ -13713,7 +13714,7 @@ END SUBROUTINE SIMP
       endif
       crse_ptr=>crse
       fine_ptr=>fine
-      call checkbound_array1(lo,hi,crse_ptr,0,-1,41175)
+      call checkbound_array1(lo,hi,crse_ptr,0,-1)
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
@@ -13875,12 +13876,12 @@ END SUBROUTINE SIMP
       vort_ptr=>vort
       pres_ptr=>pres
 
-      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1,44)
-      call checkbound_array(fablo,fabhi,LS_ptr,1,-1,44)
-      call checkbound_array1(fablo,fabhi,errnew_ptr,1,-1,44)
-      call checkbound_array(fablo,fabhi,den_ptr,1,-1,44)
-      call checkbound_array1(fablo,fabhi,vort_ptr,0,-1,44)
-      call checkbound_array1(fablo,fabhi,pres_ptr,1,-1,44)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,errnew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,den_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,vort_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,pres_ptr,1,-1)
 
       if (SDIM.eq.3) then
        kstencil_lo=-1
@@ -14133,9 +14134,9 @@ END SUBROUTINE SIMP
       fine_ptr=>fine
       mask_ptr=>mask
 
-      call checkbound_array(loc,hic,crse_ptr,0,grid_type,1301)
-      call checkbound_array(lof,hif,fine_ptr,0,grid_type,1301)
-      call checkbound_array1(lof,hif,mask_ptr,1,-1,1301)
+      call checkbound_array(loc,hic,crse_ptr,0,grid_type)
+      call checkbound_array(lof,hif,fine_ptr,0,grid_type)
+      call checkbound_array1(lof,hif,mask_ptr,1,-1)
 
       call growntileboxMAC(loc,hic,loc,hic,growlo,growhi,0,grid_type,9)
 
@@ -14477,10 +14478,10 @@ END SUBROUTINE SIMP
       areax_ptr=>areax
       areay_ptr=>areay
       areaz_ptr=>areaz
-      call checkbound_array1(fablo,fabhi,vol_ptr,ngrow,-1,1301)
-      call checkbound_array1(fablo,fabhi,areax_ptr,ngrow,0,1301)
-      call checkbound_array1(fablo,fabhi,areay_ptr,ngrow,1,1301)
-      call checkbound_array1(fablo,fabhi,areaz_ptr,ngrow,SDIM-1,1301)
+      call checkbound_array1(fablo,fabhi,vol_ptr,ngrow,-1)
+      call checkbound_array1(fablo,fabhi,areax_ptr,ngrow,0)
+      call checkbound_array1(fablo,fabhi,areay_ptr,ngrow,1)
+      call checkbound_array1(fablo,fabhi,areaz_ptr,ngrow,SDIM-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow)
       do i=growlo(1),growhi(1)

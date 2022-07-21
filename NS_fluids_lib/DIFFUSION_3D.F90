@@ -288,29 +288,29 @@ stop
        endif
 
        force_ptr=>force
-       call checkbound_array(fablo,fabhi,force_ptr,1,-1,42)
+       call checkbound_array(fablo,fabhi,force_ptr,1,-1)
        tensor_ptr=>tensor
-       call checkbound_array(fablo,fabhi,tensor_ptr,0,-1,42)
+       call checkbound_array(fablo,fabhi,tensor_ptr,0,-1)
        thermal_ptr=>thermal
-       call checkbound_array1(fablo,fabhi,thermal_ptr,1,-1,1330)
+       call checkbound_array1(fablo,fabhi,thermal_ptr,1,-1)
        recon_ptr=>recon
-       call checkbound_array(fablo,fabhi,recon_ptr,1,-1,1330)
+       call checkbound_array(fablo,fabhi,recon_ptr,1,-1)
        solxfab_ptr=>solxfab
        solyfab_ptr=>solyfab
        solzfab_ptr=>solzfab
-       call checkbound_array(fablo,fabhi,solxfab_ptr,0,0,1330)
-       call checkbound_array(fablo,fabhi,solyfab_ptr,0,1,1330)
-       call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1,1330)
+       call checkbound_array(fablo,fabhi,solxfab_ptr,0,0)
+       call checkbound_array(fablo,fabhi,solyfab_ptr,0,1)
+       call checkbound_array(fablo,fabhi,solzfab_ptr,0,SDIM-1)
        uold_ptr=>uold
-       call checkbound_array(fablo,fabhi,uold_ptr,1,-1,1330)
+       call checkbound_array(fablo,fabhi,uold_ptr,1,-1)
        unew_ptr=>unew
-       call checkbound_array(fablo,fabhi,unew_ptr,1,-1,1330)
+       call checkbound_array(fablo,fabhi,unew_ptr,1,-1)
        lsnew_ptr=>lsnew
-       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1,1251)
+       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
        den_ptr=>den
-       call checkbound_array1(fablo,fabhi,den_ptr,1,-1,1330)
+       call checkbound_array1(fablo,fabhi,den_ptr,1,-1)
        mu_ptr=>mu
-       call checkbound_array1(fablo,fabhi,mu_ptr,1,-1,1330)
+       call checkbound_array1(fablo,fabhi,mu_ptr,1,-1)
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
