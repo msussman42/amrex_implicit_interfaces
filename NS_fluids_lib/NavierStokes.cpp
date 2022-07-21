@@ -12116,7 +12116,7 @@ void NavierStokes::tensor_advection_update() {
        // do nothing
       } else
        amrex::Error("tendata_mf invalid nGrow()");
-      if (tendata_mf->nComp()==20) {
+      if (tendata_mf->nComp()==DERIVE_TENSOR_NCOMP) {
        // do nothing
       } else
        amrex::Error("tendata_mf invalid nComp()");
@@ -22942,7 +22942,7 @@ NavierStokes::particle_tensor_advection_update() {
     // do nothing
    } else
     amrex::Error("tendata_mf invalid nGrow()");
-   if (tendata_mf->nComp()==20) {
+   if (tendata_mf->nComp()==DERIVE_TENSOR_NCOMP) {
     // do nothing
    } else
     amrex::Error("tendata_mf invalid nComp()");

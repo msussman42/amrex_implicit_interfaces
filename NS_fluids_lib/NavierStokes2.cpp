@@ -9062,6 +9062,7 @@ void NavierStokes::level_getshear(
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+   //fort_getshear is declared in: DERIVE_3D.F90
   fort_getshear(
     cellten.dataPtr(),
     ARLIM(cellten.loVect()),ARLIM(cellten.hiVect()),
@@ -9747,7 +9748,7 @@ void NavierStokes::getStateVISC() {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // declared in: DERIVE_3D.F90
+    // fort_derviscosity is declared in: DERIVE_3D.F90
    fort_derviscosity(
       &level,
       &finest_level,
@@ -10131,7 +10132,7 @@ void NavierStokes::getState_tracemag(int idx) {
 
    int ngrow_magtrace=1;
 
-    //declared in: DERIVE_3D.F90
+    //fort_dermagtrace is declared in: DERIVE_3D.F90
    fort_dermagtrace(
     &level,
     &finest_level,  

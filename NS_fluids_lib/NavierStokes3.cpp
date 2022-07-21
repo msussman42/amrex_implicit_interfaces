@@ -813,14 +813,14 @@ void NavierStokes::tensor_advection_updateALL() {
     FACETENSOR_MF,
     simple_AMR_BC_flag_viscosity);
 
-  allocate_array(0,20,-1,HOLD_GETSHEAR_DATA_MF);
+  allocate_array(0,DERIVE_TENSOR_NCOMP,-1,HOLD_GETSHEAR_DATA_MF);
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    // get sqrt(2 D:D),D,grad U 
-   // 1: sqrt(2 * D : D)
-   // 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
-   // 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
+   // DERIVE_TENSOR_MAG: sqrt(2 * D : D)
+   // DERIVE_TENSOR_RATE_DEFORM: D11,D12,D13,D21,D22,D23,D31,D32,D33
+   // DERIVE_TENSOR_GRAD_VEL: ux,uy,uz,vx,vy,vz,wx,wy,wz
    int only_scalar=0; 
    int destcomp=0;
    int ngrow_zero=0;
