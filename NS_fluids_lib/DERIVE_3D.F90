@@ -104,7 +104,7 @@ stop
       INTEGER_T veldir,dir
       INTEGER_T flagcomp
       INTEGER_T vofcomp
-      INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz,nbase
+      INTEGER_T nbase
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
       INTEGER_T near_solid
@@ -136,11 +136,15 @@ stop
        print *,"im invalid1"
        stop
       endif
-      if (dt.lt.zero) then 
+      if (dt.ge.zero) then 
+       ! do nothing
+      else
        print *,"dt invalid"
        stop
       endif
-      if (cur_time.lt.zero) then 
+      if (cur_time.ge.zero) then 
+       ! do nothing
+      else
        print *,"cur_time invalid"
        stop
       endif
@@ -153,9 +157,6 @@ stop
        stop
       endif
 
-      ! compute u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
-      call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
-    
       vof_ptr=>vof 
       call checkbound_array(fablo,fabhi,vof_ptr,ngrow+1,-1,310)
       visc_ptr=>visc
@@ -202,11 +203,11 @@ stop
 
        do dir=1,SDIM
         if (dir.eq.1) then
-         nbase=ux-1
+         nbase=TENSOR_TRANSPOSE_UX-1
         else if (dir.eq.2) then
-         nbase=uy-1
+         nbase=TENSOR_TRANSPOSE_UY-1
         else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
-         nbase=uz-1
+         nbase=TENSOR_TRANSPOSE_UZ-1
         else
          print *,"dir invalid get shear"
          stop
