@@ -456,14 +456,15 @@ stop
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
       FIX ME
-      REAL_T, INTENT(out), target :: tensordata(DIMV(tensordata),20)
+      REAL_T, INTENT(out), target :: &
+           tensordata(DIMV(tensordata),DEROVE_TENSOR_NCOMP)
       REAL_T, pointer :: tensordata_ptr(D_DECL(:,:,:),:)
 
       REAL_T visctensor(3,3),gradu(3,3)
       REAL_T shear
       REAL_T rr
       REAL_T vort(3)
-      INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz,nbase
+      INTEGER_T nbase
 
       nhalf=1
 
@@ -479,9 +480,6 @@ stop
        print *,"num_state_base invalid"
        stop
       endif
-
-      ! compute u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
-      call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
 
       call checkbound_array(fablo,fabhi,cellten_ptr,ngrow,-1,64)
       call checkbound_array(fablo,fabhi,vel_ptr,ngrow+1,-1,64)
@@ -515,15 +513,13 @@ stop
        enddo
        enddo
 
-        !cellten:
-        !u_x,v_x,w_x,u_y,v_y,w_y,u_z,v_z,w_z
        do dir=1,SDIM
         if (dir.eq.1) then
-         nbase=ux-1
+         nbase=TENSOR_TRANSPOSE_UX-1
         else if (dir.eq.2) then
-         nbase=uy-1
+         nbase=TENSOR_TRANSPOSE_UY-1
         else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
-         nbase=uz-1
+         nbase=TENSOR_TRANSPOSE_UZ-1
         else
          print *,"dir invalid get shear"
          stop
@@ -571,28 +567,42 @@ stop
        shear=sqrt(two*shear)
 
        if (only_scalar.eq.1) then
-        tensordata(D_DECL(i,j,k),1)=shear
+        tensordata(D_DECL(i,j,k),DERIVE_TENSOR_MAG+1)=shear
        else if (only_scalar.eq.2) then
         vort(1)=gradu(3,2)-gradu(2,3)
         vort(2)=gradu(1,3)-gradu(3,1)
         vort(3)=gradu(2,1)-gradu(1,2)
-        tensordata(D_DECL(i,j,k),1)= &
+        tensordata(D_DECL(i,j,k),DERIVE_TENSOR_MAG+1)= &
           sqrt(vort(1)**2+vort(2)**2+vort(3)**2)
        else if (only_scalar.eq.0) then
-        tensordata(D_DECL(i,j,k),1)=shear
-        n=2
+        tensordata(D_DECL(i,j,k),DERIVE_TENSOR_MAG+1)=shear
+        n=DERIVE_TENSOR_RATE_REFORM+1
         do i1=1,3
         do j1=1,3
          tensordata(D_DECL(i,j,k),n)=visctensor(i1,j1)
          n=n+1
         enddo
         enddo
+        if (n.eq.DERIVE_TENSOR_GRAD_VEL+1) then
+         ! do nothing
+        else
+         print *,"n.eq.DERIVE_TENSOR_GRAD_VEL+1 failed"
+         stop
+        endif
+
         do i1=1,3
         do j1=1,3
          tensordata(D_DECL(i,j,k),n)=gradu(i1,j1) !gradu(veldir,dir)
          n=n+1
         enddo
         enddo
+
+        if (n.eq.DERIVE_TENSOR_NCOMP+1) then
+         ! do nothing
+        else
+         print *,"n.eq.DERIVE_TENSOR_NCOMP+1 failed"
+         stop
+        endif
        else 
         print *,"only_scalar invalid"
         stop
@@ -1592,7 +1602,6 @@ stop
       INTEGER_T im  ! im=0..num_materials-1
       INTEGER_T i,j,k
       REAL_T T11,T22,T33,traceA,modtime
-      INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz
       INTEGER_T nbase
       INTEGER_T dir,veldir
       REAL_T gradu(3,3)
@@ -1662,9 +1671,6 @@ stop
        stop
       endif  
 
-      ! compute u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
-      call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
- 
       call checkbound_array(fablo,fabhi,cellten,ngrow,-1,64)
       call checkbound_array(fablo,fabhi,dest_ptr,ngrow,-1,323)
       call checkbound_array(fablo,fabhi,den,ngrow,-1,324)
@@ -1690,11 +1696,11 @@ stop
 
        do dir=1,SDIM
         if (dir.eq.1) then
-         nbase=ux-1
+         nbase=TENSOR_TRANSPOSE_UX-1
         else if (dir.eq.2) then
-         nbase=uy-1
+         nbase=TENSOR_TRANSPOSE_UY-1
         else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
-         nbase=uz-1
+         nbase=TENSOR_TRANSPOSE_UZ-1
         else
          print *,"dir invalid get shear"
          stop

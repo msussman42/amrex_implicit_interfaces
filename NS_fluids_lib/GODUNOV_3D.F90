@@ -761,10 +761,7 @@ stop
       INTEGER_T ii,jj,kk,im1,jm1,km1
       REAL_T gradterm,alpha
       INTEGER_T side
-      INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz,nbase
-      INTEGER_T uxMM
-      INTEGER_T vyMM
-      INTEGER_T wzMM
+      INTEGER_T nbase
 
       INTEGER_T im
       REAL_T LSleft(num_materials)
@@ -822,7 +819,7 @@ stop
       INTEGER_T i_out,j_out,k_out
       INTEGER_T iflux,jflux,kflux
       INTEGER_T velcomp
-      INTEGER_T tcompMM
+      INTEGER_T tcomp
       REAL_T xflux_temp
       INTEGER_T uncoupled_viscosity_override
       INTEGER_T side_cell,side_face
@@ -949,9 +946,7 @@ stop
       call checkbound_array(fablo,fabhi,xflux_ptr,0,dir-1,1285)
       call checkbound_array(fablo,fabhi,xface,0,dir-1,1288)
 
-        ! mdata(i,j,k,dir)=1 if at least one adjoining cell is a fluid cell.
-        ! order: ux,vx,wx,uy,vy,wy,uz,vz,wz
-      call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
+      ! mdata(i,j,k,dir)=1 if at least one adjoining cell is a fluid cell.
 
       ii=0
       jj=0
@@ -959,31 +954,31 @@ stop
 
       if (dir.eq.1) then
        ii=1
-       nbase=ux-1
+       nbase=TENSOR_TRANSPOSE_UX-1
       else if (dir.eq.2) then
        jj=1
-       nbase=uy-1
+       nbase=TENSOR_TRANSPOSE_UY-1
       else if ((dir.eq.3).and.(SDIM.eq.3)) then
        kk=1
-       nbase=uz-1
+       nbase=TENSOR_TRANSPOSE_UZ-1
       else
        print *,"dir invalid crossterm"
        stop
       endif
 
       if (dir.eq.1) then  ! fluxes on x-face
-       coupling(1)=uy
-       coupling(2)=uz
+       coupling(1)=TENSOR_TRANSPOSE_UY
+       coupling(2)=TENSOR_TRANSPOSE_UZ
        dirtan(1)=2
        dirtan(2)=SDIM
       else if (dir.eq.2) then  ! fluxes on y-face
-       coupling(1)=vx
-       coupling(2)=vz
+       coupling(1)=TENSOR_TRANSPOSE_VX
+       coupling(2)=TENSOR_TRANSPOSE_VZ
        dirtan(1)=1
        dirtan(2)=SDIM
       else if ((dir.eq.3).and.(SDIM.eq.3)) then ! fluxes on z-face
-       coupling(1)=wx
-       coupling(2)=wy
+       coupling(1)=TENSOR_TRANSPOSE_WX
+       coupling(2)=TENSOR_TRANSPOSE_WY
        dirtan(1)=1
        dirtan(2)=2
       else
@@ -1188,9 +1183,9 @@ stop
            ! ux,vx, wx  or
            ! uy,vy, wy  or
            ! uz,vz, wz  
-          tcompMM=nbase+nc
+          tcomp=nbase+nc
 
-          local_flux_val=tdata(D_DECL(i,j,k),tcompMM)
+          local_flux_val=tdata(D_DECL(i,j,k),tcomp)
           if (abs(local_flux_val).le.OVERFLOW_CUTOFF) then
            ! do nothing
           else
@@ -1417,10 +1412,10 @@ stop
 
                   local_bcval(side)=zero
 
-                  tcompMM=coupling(nc)
+                  tcomp=coupling(nc)
   
                   if (nbr_covered_flag.eq.1) then 
-                   local_data_side(side)=c_tdata(D_DECL(ic,jc,kc),tcompMM)
+                   local_data_side(side)=c_tdata(D_DECL(ic,jc,kc),tcomp)
                   else if (nbr_covered_flag.eq.0) then
                    local_data_side(side)=zero
                    local_bctype(side)=SEM_EXTRAP
@@ -1477,9 +1472,9 @@ stop
                   ic,jc,kc, &
                   fablo,bfact,dx,nhalf)
 
-                 tcompMM=coupling(nc)
+                 tcomp=coupling(nc)
 
-                 local_data(isten+1)=c_tdata(D_DECL(ic,jc,kc),tcompMM)
+                 local_data(isten+1)=c_tdata(D_DECL(ic,jc,kc),tcomp)
                 enddo !isten=0..bfact-1
 
                 do isten=0,bfact
@@ -1656,9 +1651,9 @@ stop
                 ! ux,vx, wx  or
                 ! uy,vy, wy  or
                 ! uz,vz, wz  
-                tcompMM=nbase+nc
+                tcomp=nbase+nc
         
-                local_flux_val=tdata(D_DECL(ic,jc,kc),tcompMM)
+                local_flux_val=tdata(D_DECL(ic,jc,kc),tcomp)
 
                  ! use_dt=0
                  ! use_HO=1
@@ -1935,41 +1930,54 @@ stop
           endif
          enddo ! velcomp_alt=1..sdim
 
-         uxMM=ux
-         vyMM=vy
-         wzMM=wz
-
          wzterm=zero
 
          if (dir.eq.1) then
 
-          uxterm=tdata(D_DECL(i,j,k),uxMM)
-          vyterm=(tdata(D_DECL(i,j,k),vyMM)+tdata(D_DECL(i,j+1,k),vyMM)+ &
-           tdata(D_DECL(i-1,j,k),vyMM)+tdata(D_DECL(i-1,j+1,k),vyMM))/four
+          uxterm=tdata(D_DECL(i,j,k),TENSOR_TRANSPOSE_UX)
+
+          vyterm=(tdata(D_DECL(i,j,k),TENSOR_TRANSPOSE_VY)+ &
+                  tdata(D_DECL(i,j+1,k),TENSOR_TRANSPOSE_VY)+ &
+                  tdata(D_DECL(i-1,j,k),TENSOR_TRANSPOSE_VY)+ &
+                  tdata(D_DECL(i-1,j+1,k),TENSOR_TRANSPOSE_VY))/four
           if (SDIM.eq.3) then
            wzterm= &
-            (tdata(D_DECL(i,j,k),wzMM)+tdata(D_DECL(i,j,k+1),wzMM)+ &
-             tdata(D_DECL(i-1,j,k),wzMM)+tdata(D_DECL(i-1,j,k+1),wzMM))/four
+            (tdata(D_DECL(i,j,k),TENSOR_TRANSPOSE_WZ)+ &
+             tdata(D_DECL(i,j,k+1),TENSOR_TRANSPOSE_WZ)+ &
+             tdata(D_DECL(i-1,j,k),TENSOR_TRANSPOSE_WZ)+ &
+             tdata(D_DECL(i-1,j,k+1),TENSOR_TRANSPOSE_WZ))/four
           endif
 
          else if (dir.eq.2) then
 
-          uxterm=(tdata(D_DECL(i,j,k),uxMM)+tdata(D_DECL(i+1,j,k),uxMM)+ &
-           tdata(D_DECL(i,j-1,k),uxMM)+tdata(D_DECL(i+1,j-1,k),uxMM))/four
-          vyterm=tdata(D_DECL(i,j,k),vyMM)
+          uxterm=(tdata(D_DECL(i,j,k),TENSOR_TRANSPOSE_UX)+ &
+                  tdata(D_DECL(i+1,j,k),TENSOR_TRANSPOSE_UX)+ &
+                  tdata(D_DECL(i,j-1,k),TENSOR_TRANSPOSE_UX)+ &
+                  tdata(D_DECL(i+1,j-1,k),TENSOR_TRANSPOSE_UX))/four
+
+          vyterm=tdata(D_DECL(i,j,k),TENSOR_TRANSPOSE_VY)
+
           if (SDIM.eq.3) then
            wzterm= &
-            (tdata(D_DECL(i,j,k),wzMM)+tdata(D_DECL(i,j,k+1),wzMM)+ &
-             tdata(D_DECL(i,j-1,k),wzMM)+tdata(D_DECL(i,j-1,k+1),wzMM))/four
+            (tdata(D_DECL(i,j,k),TENSOR_TRANSPOSE_WZ)+ &
+             tdata(D_DECL(i,j,k+1),TENSOR_TRANSPOSE_WZ)+ &
+             tdata(D_DECL(i,j-1,k),TENSOR_TRANSPOSE_WZ)+ &
+             tdata(D_DECL(i,j-1,k+1),TENSOR_TRANSPOSE_WZ))/four
           endif
 
          else if ((dir.eq.3).and.(SDIM.eq.3)) then
 
-          uxterm=(tdata(D_DECL(i,j,k),uxMM)+tdata(D_DECL(i+1,j,k),uxMM)+ &
-           tdata(D_DECL(i,j,k-1),uxMM)+tdata(D_DECL(i+1,j,k-1),uxMM))/four
-          vyterm=(tdata(D_DECL(i,j,k),vyMM)+tdata(D_DECL(i,j+1,k),vyMM)+ &
-           tdata(D_DECL(i,j,k-1),vyMM)+tdata(D_DECL(i,j+1,k-1),vyMM))/four
-          wzterm=tdata(D_DECL(i,j,k),wzMM)
+          uxterm=(tdata(D_DECL(i,j,k),TENSOR_TRANSPOSE_UX)+ &
+                  tdata(D_DECL(i+1,j,k),TENSOR_TRANSPOSE_UX)+ &
+                  tdata(D_DECL(i,j,k-1),TENSOR_TRANSPOSE_UX)+ &
+                  tdata(D_DECL(i+1,j,k-1),TENSOR_TRANSPOSE_UX))/four
+
+          vyterm=(tdata(D_DECL(i,j,k),TENSOR_TRANSPOSE_VY)+ &
+                  tdata(D_DECL(i,j+1,k),TENSOR_TRANSPOSE_VY)+ &
+                  tdata(D_DECL(i,j,k-1),TENSOR_TRANSPOSE_VY)+ &
+                  tdata(D_DECL(i,j+1,k-1),TENSOR_TRANSPOSE_VY))/four
+
+          wzterm=tdata(D_DECL(i,j,k),TENSOR_TRANSPOSE_WZ)
 
          else
           print *,"dir invalid crossterm 6"
