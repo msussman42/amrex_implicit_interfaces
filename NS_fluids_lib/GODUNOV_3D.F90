@@ -967,18 +967,18 @@ stop
       endif
 
       if (dir.eq.1) then  ! fluxes on x-face
-       coupling(1)=TENSOR_TRANSPOSE_UY
-       coupling(2)=TENSOR_TRANSPOSE_UZ
+       coupling(1)=TENSOR_TRANSPOSE_UY  !VX+UY term
+       coupling(2)=TENSOR_TRANSPOSE_UZ  !WX+UZ term
        dirtan(1)=2
        dirtan(2)=SDIM
       else if (dir.eq.2) then  ! fluxes on y-face
-       coupling(1)=TENSOR_TRANSPOSE_VX
-       coupling(2)=TENSOR_TRANSPOSE_VZ
+       coupling(1)=TENSOR_TRANSPOSE_VX !UY+VX term
+       coupling(2)=TENSOR_TRANSPOSE_VZ !WY+VZ term
        dirtan(1)=1
        dirtan(2)=SDIM
       else if ((dir.eq.3).and.(SDIM.eq.3)) then ! fluxes on z-face
-       coupling(1)=TENSOR_TRANSPOSE_WX
-       coupling(2)=TENSOR_TRANSPOSE_WY
+       coupling(1)=TENSOR_TRANSPOSE_WX !UZ+WX term
+       coupling(2)=TENSOR_TRANSPOSE_WY !VZ+WY term
        dirtan(1)=1
        dirtan(2)=2
       else
@@ -6307,10 +6307,6 @@ stop
       end subroutine fort_extend_mac_vel
 
 
-
-
-
-
          ! 1=T11 2=T12 3=T22 4=T33 5=T13 6=T23
          ! rhoinverse is 1/den
       subroutine fort_tensorheat( &
@@ -6378,7 +6374,6 @@ stop
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
       REAL_T local_gradu(3,3)
-      INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz
       INTEGER_T nbase
       INTEGER_T grdcomp
       INTEGER_T imlocal
@@ -6433,9 +6428,6 @@ stop
       gradu_ptr=>gradu
       call checkbound_array(fablo,fabhi,gradu_ptr,0,-1,7)
 
-! u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
-      call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
-
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
  
       do i=growlo(1),growhi(1)
@@ -6450,11 +6442,11 @@ stop
        enddo 
        do dir=1,SDIM
         if (dir.eq.1) then
-         nbase=ux-1
+         nbase=TENSOR_TRANSPOSE_UX-1
         else if (dir.eq.2) then
-         nbase=uy-1
+         nbase=TENSOR_TRANSPOSE_UY-1
         else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
-         nbase=uz-1
+         nbase=TENSOR_TRANSPOSE_UZ-1
         else
          print *,"dir invalid viscoelastic heating"
          stop
@@ -6618,7 +6610,7 @@ stop
       INTEGER_T nhalf
       REAL_T local_gradu(3,3)
       REAL_T tensor(SDIM,SDIM)
-      INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz,nbase
+      INTEGER_T nbase
       INTEGER_T grdcomp
 
       nhalf=3
@@ -6665,9 +6657,6 @@ stop
       gradu_ptr=>gradu
       call checkbound_array(fablo,fabhi,gradu_ptr,0,-1,7)
 
-! u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
-      call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
-
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
  
       do i=growlo(1),growhi(1)
@@ -6682,12 +6671,16 @@ stop
          print *,"dimension bust"
          stop
         endif
-        if (xsten(0,1).le.zero) then
+        if (xsten(0,1).gt.zero) then
+         ! do nothing
+        else
          print *,"no neg domain in r-z"
          stop
         endif
        else if (irz.eq.3) then
-        if (xsten(-2,1).le.zero) then
+        if (xsten(-2,1).gt.zero) then
+         ! do nothing
+        else
          print *,"no neg domain in r-T"
          stop
         endif
@@ -6706,11 +6699,11 @@ stop
        enddo 
        do dir=1,SDIM
         if (dir.eq.1) then
-         nbase=ux-1
+         nbase=TENSOR_TRANSPOSE_UX-1
         else if (dir.eq.2) then
-         nbase=uy-1
+         nbase=TENSOR_TRANSPOSE_UY-1
         else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
-         nbase=uz-1
+         nbase=TENSOR_TRANSPOSE_UZ-1
         else
          print *,"dir invalid viscoelastic heating"
          stop
@@ -8313,7 +8306,7 @@ stop
       INTEGER_T, INTENT(in) :: irz
 
       INTEGER_T ii,jj
-      REAL_T Q(3,3),TQ(3,3)
+      REAL_T Q(3,3),TQ(3,3),Q_plus_I(3,3)
       INTEGER_T i,j,k
       INTEGER_T dir_local
       INTEGER_T im_elastic_p1
@@ -8326,6 +8319,7 @@ stop
 
        ! Q=A-I
       REAL_T trace_A
+      REAL_T determinant_factor
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
@@ -8472,6 +8466,8 @@ stop
         endif
        enddo ! ii=1,3
 
+       determinant_factor=one
+
        if (viscoelastic_model.eq.5) then !FENE-P          
         if (trace_A.gt.zero) then
          if (polymer_factor.gt.zero) then !1/L
@@ -8501,7 +8497,29 @@ stop
        else if (viscoelastic_model.eq.3) then ! incremental model,plastic
         ! do nothing
        else if (viscoelastic_model.eq.7) then ! incremental model,Neo-Hookean
-        ! do nothing
+        do ii=1,3
+        do jj=1,3
+         Q_plus_I(ii,jj)=Q(ii,jj)
+        enddo
+        enddo
+        do ii=1,3
+         Q_plus_I(ii,ii)=Q_plus_I(ii,ii)+one
+        enddo
+        call abs_value_determinant(Q_plus_I,3,determinant_factor)
+        if (determinant_factor.ge.zero) then
+         if (determinant_factor.gt.zero) then
+          determinant_factor=one/(determinant_factor**(five/six))
+         else if (determinant_factor.eq.zero) then
+          ! do nothing
+         else
+          print *,"determinant_factor invalid"
+          stop
+         endif
+        else
+         print *,"determinant_factor invalid"
+         stop
+        endif
+        
        else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
         print *,"this routine should not be called if visc_model==4"
         stop
@@ -8522,7 +8540,8 @@ stop
        do ii=1,3
        do jj=1,3
          ! FENE-P or FENE-CP visc(num_materials+im+1)=f(A)/lambda
-        TQ(ii,jj)=Q(ii,jj)*visc(D_DECL(i,j,k),num_materials+im_parm+1)
+        TQ(ii,jj)=Q(ii,jj)*determinant_factor* &
+             visc(D_DECL(i,j,k),num_materials+im_parm+1)
        enddo
        enddo
 
@@ -9188,11 +9207,11 @@ stop
       REAL_T, INTENT(in), target :: visc(DIMV(visc),ncomp_visc)
       REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
 
-       ! D=(1/2)(gradU + gradU^Transpose)
-       ! 1: sqrt(2 * D : D)
-       ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
-       ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
-      REAL_T, INTENT(in), target :: tendata(DIMV(tendata),20)
+      ! D=(1/2)(gradU + gradU^Transpose)
+      ! DERIVE_TENSOR_MAG+1: sqrt(2 * D : D)
+      ! DERIVE_TENSOR_RATE_DEFORM+1: D11,D12,D13,D21,D22,D23,D31,D32,D33
+      ! DERIVE_TENSOR_GRAD_VEL+1: ux,uy,uz,vx,vy,vz,wx,wy,wz
+      REAL_T, INTENT(in), target :: tendata(DIMV(tendata),DERIVE_TENSOR_NCOMP)
       REAL_T, pointer :: tendata_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
@@ -17557,7 +17576,7 @@ stop
       INTEGER_T nc
       REAL_T delta
       INTEGER_T side
-      INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz,nbase
+      INTEGER_T nbase
       REAL_T vplus(SDIM)
       REAL_T vminus(SDIM)
 
@@ -17774,22 +17793,18 @@ stop
 
       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,1264)
 
-      call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
-
-! compute u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
-
       ii=0
       jj=0
       kk=0
       if (dir.eq.1) then
        ii=1
-       nbase=ux-1
+       nbase=TENSOR_TRANSPOSE_UX-1
       else if (dir.eq.2) then
        jj=1
-       nbase=uy-1
+       nbase=TENSOR_TRANSPOSE_UY-1
       else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
        kk=1
-       nbase=uz-1
+       nbase=TENSOR_TRANSPOSE_UZ-1
       else
        print *,"dir invalid face gradients 2"
        stop
@@ -18256,7 +18271,6 @@ stop
             stop
            endif
 
- !ux,vx,wx,uy,vy,wy,uz,vz,wz
  ! grad u in cylindrical coordinates:
  !
  ! S= (grad u + grad u^T)/2 
@@ -18633,7 +18647,6 @@ stop
               jelem=j
               kelem=k
 
-              ! u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
               dcomp=nbase+1
 
               scomp=dcomp
@@ -21518,11 +21531,11 @@ stop
       REAL_T, INTENT(in), target :: visc(DIMV(visc),ncomp_visc)
       REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
 
-       ! D=(1/2)(gradU + gradU^Transpose)
-       ! 1: sqrt(2 * D : D)
-       ! 2..2+9-1: D11,D12,D13,D21,D22,D23,D31,D32,D33
-       ! 11..11+9-1: ux,uy,uz,vx,vy,vz,wx,wy,wz
-      REAL_T, INTENT(in), target :: tendata(DIMV(tendata),20)
+      ! D=(1/2)(gradU + gradU^Transpose)
+      ! DERIVE_TENSOR_MAG+1: sqrt(2 * D : D)
+      ! DERIVE_TENSOR_RATE_DEFORM+1: D11,D12,D13,D21,D22,D23,D31,D32,D33
+      ! DERIVE_TENSOR_GRAD_VEL+1: ux,uy,uz,vx,vy,vz,wx,wy,wz
+      REAL_T, INTENT(in), target :: tendata(DIMV(tendata),DERIVE_TENSOR_NCOMP)
       REAL_T, pointer :: tendata_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)

@@ -6979,7 +6979,8 @@ END SUBROUTINE SIMP
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(in), target ::  drag(DIMV(drag),N_DRAG)
       REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: slopes(DIMV(slopes),num_materials*ngeom_recon)  
+      REAL_T, INTENT(in), target :: &
+              slopes(DIMV(slopes),num_materials*ngeom_recon)  
       REAL_T, pointer :: slopes_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: den(DIMV(den),den_ncomp)  
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
@@ -7030,7 +7031,7 @@ END SUBROUTINE SIMP
       INTEGER_T i1,j1,k1,k1lo,k1hi
       REAL_T KECELL,dencore,Tcore,ecore,totalE
       INTEGER_T in_slice,nhalf
-      INTEGER_T ux,vx,wx,uy,vy,wy,uz,vz,wz,nbase,veldir
+      INTEGER_T nbase,veldir
       REAL_T gradu(3,3)
       REAL_T vort(3)
 
@@ -7158,9 +7159,6 @@ END SUBROUTINE SIMP
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      ! compute u_x,v_x,w_x, u_y,v_y,w_y, u_z,v_z,w_z;  
-      call tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
-
       call checkbound_array(fablo,fabhi,cellten_ptr,0,-1,41150) 
       call checkbound_array(fablo,fabhi,lsfab_ptr,2,-1,41151) 
       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1,41152) 
@@ -7212,11 +7210,11 @@ END SUBROUTINE SIMP
 
         do dir=1,SDIM
          if (dir.eq.1) then
-          nbase=ux-1
+          nbase=TENSOR_TRANSPOSE_UX-1
          else if (dir.eq.2) then
-          nbase=uy-1
+          nbase=TENSOR_TRANSPOSE_UY-1
          else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
-          nbase=uz-1
+          nbase=TENSOR_TRANSPOSE_UZ-1
          else
           print *,"dir invalid summass"
           stop
@@ -13830,7 +13828,8 @@ END SUBROUTINE SIMP
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(inout),target :: errnew(DIMV(errnew))
       REAL_T, pointer :: errnew_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in),target :: den(DIMV(den),num_materials*num_state_material)
+      REAL_T, INTENT(in),target :: &
+              den(DIMV(den),num_materials*num_state_material)
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in),target :: LS(DIMV(LS),num_materials*(1+SDIM))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)

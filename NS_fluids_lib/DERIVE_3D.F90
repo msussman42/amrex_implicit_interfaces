@@ -455,9 +455,8 @@ stop
       REAL_T, INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
 
-      FIX ME
       REAL_T, INTENT(out), target :: &
-           tensordata(DIMV(tensordata),DEROVE_TENSOR_NCOMP)
+           tensordata(DIMV(tensordata),DERIVE_TENSOR_NCOMP)
       REAL_T, pointer :: tensordata_ptr(D_DECL(:,:,:),:)
 
       REAL_T visctensor(3,3),gradu(3,3)
@@ -576,7 +575,7 @@ stop
           sqrt(vort(1)**2+vort(2)**2+vort(3)**2)
        else if (only_scalar.eq.0) then
         tensordata(D_DECL(i,j,k),DERIVE_TENSOR_MAG+1)=shear
-        n=DERIVE_TENSOR_RATE_REFORM+1
+        n=DERIVE_TENSOR_RATE_DEFORM+1
         do i1=1,3
         do j1=1,3
          tensordata(D_DECL(i,j,k),n)=visctensor(i1,j1)

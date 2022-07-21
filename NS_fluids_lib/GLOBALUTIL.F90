@@ -5300,7 +5300,97 @@ endif
 return
 end subroutine fort_jacobi_eigenvalue
 
+subroutine abs_value_determinant(S,n,determinant_out)
+IMPLICIT NONE
 
+INTEGER_T, INTENT(in) :: n
+REAL_T, INTENT(in) :: S(n,n)
+REAL_T, INTENT(out) :: determinant_out
+
+REAL_T :: S_local(n,n)
+REAL_T :: STS(n,n)
+REAL_T :: evals_S(n)
+REAL_T :: evecs_S(n,n)
+REAL_T :: evals_STS(n)
+REAL_T :: evecs_STS(n,n)
+INTEGER_T :: i,j,k
+REAL_T :: max_eval_sqr
+
+if (n.ge.2) then
+ ! do nothing
+else
+ print *,"expecting n>=2"
+ stop
+endif
+
+do i=1,n
+do j=1,n
+ S_local(i,j)=S(i,j)
+ STS(i,j)=zero
+ do k=1,n
+  STS(i,j)=STS(i,j)+S(k,i)*S(k,j)
+ enddo
+enddo
+enddo
+
+call fort_jacobi_eigenvalue(S_local,evals_S,evecs_S,n)
+call fort_jacobi_eigenvalue(STS,evals_STS,evecs_STS,n)
+
+max_eval_sqr=-1.0D+20
+do i=1,n
+ if (evals_STS(i).gt.max_eval_sqr) then
+  max_eval_sqr=evals_STS(i)
+ else if (evals_STS(i).le.max_eval_sqr) then
+  ! do nothing
+ else
+  print *,"evals_STS or max_eval_sqr invalid"
+  stop
+ endif
+
+ if (evals_STS(i).lt.zero) then
+  print *,"evals_STS(i) cannot be negative"
+  stop
+ else if (evals_STS(i).ge.zero) then
+  ! do nothing
+ else
+  print *,"evals_STS(i) is NaN"
+  stop
+ endif
+
+enddo ! i=1,n
+
+if (max_eval_sqr.lt.zero) then
+ print *,"max_eval_sqr cannot be negative"
+ stop
+else if (max_eval_sqr.ge.zero) then
+ ! do nothing
+else
+ print *,"max_eval_sqr is NaN"
+ stop
+endif
+
+max_eval_sqr=max(max_eval_sqr,one)
+do i=1,n
+ if ((abs(evals_S(i)**2-evals_STS(i)).le.1.0D-12*max_eval_sqr).or. &
+     (1.eq.1)) then
+  ! do nothing
+ else
+  print *,"evals_S and evals_STS inconsistent"
+  print *,"max_eval_sqr= ",max_eval_sqr
+  print *,"i,n = ",i,n
+  print *,"evals_S(i)= ",evals_S(i)
+  print *,"evals_STS(i)= ",evals_STS(i)
+  stop
+ endif
+enddo
+
+determinant_out=zero
+do i=1,n
+ determinant_out=determinant_out*evals_S(i)
+enddo
+determinant_out=abs(determinant_out)
+
+end subroutine abs_value_determinant
 
 subroutine project_to_traceless(S,n)
 IMPLICIT NONE
@@ -5533,22 +5623,94 @@ end subroutine project_to_positive_definite
  ! A=Q+I must be symmetric and positive definite.
 subroutine project_A_to_positive_definite_or_traceless(A, &
    viscoelastic_model,polymer_factor)
+use probcommon_module
 IMPLICIT NONE
 
 REAL_T, INTENT(inout) :: A(3,3)
 INTEGER_T, INTENT(in) :: viscoelastic_model
 REAL_T, INTENT(in) :: polymer_factor
 INTEGER_T A_dim
+INTEGER_T i,j
 REAL_T min_eval
+REAL_T, dimension(:,:), allocatable :: A_local
 
+if (SDIM.eq.2) then
+ if (levelrz.eq.1) then
+  A_dim=3
+ else if (levelrz.eq.3) then
+  A_dim=3
+ else if (levelrz.eq.0) then
+  A_dim=2
+ else
+  print *,"levelrz invalid"
+  stop
+ endif
+else if (SDIM.eq.3) then
+ if (levelrz.eq.3) then
+  A_dim=3
+ else if (levelrz.eq.0) then
+  A_dim=3
+ else
+  print *,"levelrz invalid"
+  stop
+ endif
+else
+ print *,"dimension bust"
+ stop
+endif
+
+allocate(A_local(A_dim,A_dim))
+
+if (A_dim.eq.3) then
+ ! do nothing
+else if (A_dim.eq.2) then
+ do j=1,3
+ do i=1,3
+  if ((i.eq.3).or.(j.eq.3)) then
+   if (i.eq.j) then
+    if ((A(i,j).eq.zero).or.(A(i,j).eq.one)) then
+     ! do nothing
+    else
+     print *,"A(i,j) failed sanity check"
+     stop
+    endif
+   else if (i.ne.j) then
+    if (A(i,j).eq.zero) then
+     ! do nothing
+    else
+     print *,"A(i,j) failed sanity check"
+     stop
+    endif
+   else
+    print *,"i,j invalid"
+    stop
+   endif
+  else if ((i.ne.3).and.(j.ne.3)) then
+   ! do nothing
+  else
+   print *,"i,j bust"
+   stop
+  endif
+ enddo !i=1,3
+ enddo !j=1,3
+else
+ print *,"A_dim invalid"
+ stop
+endif
+
+do j=1,A_dim
+do i=1,A_dim
+ A_local(i,j)=A(i,j)
+enddo
+enddo
+ 
 if ((viscoelastic_model.eq.0).or. & !FENE-CR
     (viscoelastic_model.eq.1).or. & !OLDROYD-B
     (viscoelastic_model.eq.5).or. & !FENE-P
     (viscoelastic_model.eq.6)) then !linear PTT
 
  min_eval=0.01D0*(polymer_factor**2)
- A_dim=3
- call project_to_positive_definite(A,A_dim,min_eval)
+ call project_to_positive_definite(A_local,A_dim,min_eval)
 
 else if (viscoelastic_model.eq.3) then ! incremental
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
@@ -5556,8 +5718,7 @@ else if (viscoelastic_model.eq.3) then ! incremental
  ! Q^n+1 = (I+dt W)Q^{*}(I+dt W)^T + dt * 2(D0-D^P)  trace(Q)=0
  ! trace(Q)=sum lambda(Q)  lambda(Q)=eigenvalues of Q
  ! Q is traceless if trace(Q)=0 at t=0.
- A_dim=3
- call project_to_traceless(A,A_dim)
+ call project_to_traceless(A_local,A_dim)
 else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean
  ! Xia, Lu, Tryggvason 2018
  ! Df/Dt + f grad U=0  Left Cauchy Green tensor B=F F^T=(f^T f)^{-1}
@@ -5573,12 +5734,20 @@ else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean
  ! discretely, B should maintain as positive definite:
  ! B^n+1 = (I+dt grad U)Bstar(I+dt grad U)^T
  min_eval=0.01D0
- A_dim=3
- call project_to_positive_definite(A,A_dim,min_eval)
+ call project_to_positive_definite(A_local,A_dim,min_eval)
 else
  print *,"viscoelastic_model invalid"
  stop
 endif
+
+do j=1,A_dim
+do i=1,A_dim
+ A(i,j)=A_local(i,j)
+enddo
+enddo
+
+deallocate(A_local)
+
 return
 end subroutine project_A_to_positive_definite_or_traceless
 
@@ -10318,45 +10487,6 @@ end subroutine print_visual_descriptor
       
       return
       end subroutine growntileboxNODE
-
-FIX ME
-      subroutine tensorcomp_matrix(ux,uy,uz,vx,vy,vz,wx,wy,wz)
-      IMPLICIT NONE
-
-      INTEGER_T ux,uy,uz
-      INTEGER_T vx,vy,vz
-      INTEGER_T wx,wy,wz
-
-      ux=1
-      vx=ux+1
-
-      if (SDIM.eq.3) then
-       wx=vx+1
-      else if (SDIM.eq.2) then
-       wx=vx
-      else
-       print *,"dimension bust"
-       stop
-      endif
-
-      uy=wx+1
-      vy=uy+1
-
-      if (SDIM.eq.3) then
-       wy=vy+1
-      else if (SDIM.eq.2) then
-       wy=vy
-      else
-       print *,"dimension bust"
-       stop
-      endif
-
-      uz=wy+1
-      vz=uz+1
-      wz=vz+1
-
-      return
-      end subroutine tensorcomp_matrix
 
       subroutine growntileboxTENSOR( &
        tilelo,tilehi,fablo,fabhi,growlo,growhi,dir)
@@ -24930,8 +25060,8 @@ call gridsten_level(xsten,i,j,k,level,nhalf)
  ! DERIVE_TENSOR_MAG+1: sqrt(2 * D : D)   
  ! DERIVE_TENSOR_RATE_DEFORM+1: D11,D12,D13,D21,D22,D23,D31,D32,D33
  ! DERIVE_TENSOR_GRAD_VEL+1: ux,uy,uz,vx,vy,vz,wx,wy,wz
-shear=tendata(D_DECL(i,j,k),1) ! sqrt(2 D:D)
-n=2
+shear=tendata(D_DECL(i,j,k),DERIVE_TENSOR_MAG+1) ! sqrt(2 D:D)
+n=DERIVE_TENSOR_RATE_DEFORM+1
 do ii=1,3
 do jj=1,3
  ! (1/2) (grad U + (grad U)^T)
@@ -24939,6 +25069,14 @@ do jj=1,3
  n=n+1
 enddo 
 enddo 
+
+if (n.eq.DERIVE_TENSOR_GRAD_VEL+1) then
+ ! do nothing
+else
+ print *,"n.eq.DERIVE_TENSOR_GRAD_VEL+1 failed"
+ stop
+endif
+
 do ii=1,3
 do jj=1,3
  gradV(ii,jj)=tendata(D_DECL(i,j,k),n) !(vel dir,deriv dir)
@@ -24956,6 +25094,14 @@ do jj=1,3
  n=n+1
 enddo 
 enddo 
+
+if (n.eq.DERIVE_TENSOR_NCOMP+1) then
+ ! do nothing
+else
+ print *,"n.eq.DERIVE_TENSOR_NCOMP+1 failed"
+ stop
+endif
+
 do ii=1,3
 do jj=1,3
  W_Jaumann(ii,jj)=half*(gradV(ii,jj)-gradV(jj,ii))
