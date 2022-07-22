@@ -6481,10 +6481,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         do dir=1,SDIM
          vel(dir)=zero
         enddo
-       else if (probtype.eq.710) then
-        do dir=1,SDIM
-         vel(dir)=zero
-        enddo
        else if (probtype.eq.32) then  ! flow past moving cylinder
         if (advbot.ne.zero) then
          vel(adv_dir)=advbot
@@ -7430,19 +7426,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          dist(3)=-distline
         endif
        endif
-
-        ! boiling from a cavity (materialdistbatch)
-       if (probtype.eq.710) then
-
-        if (num_materials.ne.3) then
-         print *,"num_materials invalid probtype=710"
-         stop
-        endif
-        dist(num_materials)=distsolid
-        call vapordist(xsten,nhalf,dx,bfact,dist(1))  ! positive in liquid
-        dist(2)=-dist(1)
-
-       endif  ! probtype=710
 
         ! Rieber problem (materialdistbatch)
        if ((probtype.eq.540).and.(SDIM.eq.3)) then  
@@ -8508,7 +8491,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       IMPLICIT NONE
       INTEGER_T, INTENT(in) :: bfact,nhalf
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T xparm(SDIM)
       REAL_T x,y,z
       REAL_T, INTENT(out) :: dist
       REAL_T, INTENT(in) :: dx(SDIM)
@@ -8611,17 +8593,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"axis_dir invalid"
         stop
        endif
-
-       ! vapordist: cavity boiling (2d or 3d)
-      else if (probtype.eq.710) then
-
-       xparm(1)=x  
-       xparm(2)=y  
-       if (SDIM.eq.3) then
-        xparm(SDIM)=z
-       endif
-       call cavity_distf_12(levelrz+1,xparm,dist)
-       dist=-dist
 
       else if (probtype.eq.92) then ! shock tube
        ! do nothing
@@ -10234,8 +10205,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            ! xlo
          call get_bump_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,time) 
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
-        else if ((probtype.eq.59).or. &
-                 (probtype.eq.710)) then  ! xlo dir=1 side=1 groupmofBC 2d
+        else if (probtype.eq.59) then  ! xlo dir=1 side=1 groupmofBC 2d
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
          ! xlo groupmofBC 2d
@@ -10321,8 +10291,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if (probtype.eq.529) then  ! dir=1 side=1 groupmofBC
          call get_jet_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
-        else if ((probtype.eq.59).or. &
-                 (probtype.eq.710)) then  ! xlo dir=1 side=1 groupmofBC 3d
+        else if (probtype.eq.59) then  ! xlo dir=1 side=1 groupmofBC 3d
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5501) then  ! xlo, groupmofBC
@@ -10350,8 +10319,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             ! xhi
          call get_bump_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc,time)  
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
-        else if ((probtype.eq.59).or. &
-                 (probtype.eq.710)) then  ! dir=1 side=2 (xhi) 2d
+        else if (probtype.eq.59) then  ! dir=1 side=2 (xhi) 2d
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
 
@@ -10389,8 +10357,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         if ((probtype.eq.5700).and.(1.eq.0)) then ! xhi
          call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc) 
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
-        else if ((probtype.eq.59).or. &
-                 (probtype.eq.710)) then  ! dir=1 side=2 (xhi) 3d groupmofBC
+        else if (probtype.eq.59) then  ! dir=1 side=2 (xhi) 3d groupmofBC
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5501) then  ! xhi groupmofBC
@@ -10457,7 +10424,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          ! 540 Rieber problem
          ! ylo dir=2 side=1 2d groupmofBC
         else if ((probtype.eq.59).or. &
-                 (probtype.eq.710).or. &
                  (probtype.eq.540)) then  
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
@@ -10471,8 +10437,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         if (probtype.eq.5700) then  ! ylo
          call get_microfluidic_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc) 
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
-        else if ((probtype.eq.59).or. &
-                 (probtype.eq.710)) then  ! ylo dir=2 side=1 3d groupmofbc
+        else if (probtype.eq.59) then  ! ylo dir=2 side=1 3d groupmofbc
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.5501) then  ! ylo groupmofBC
@@ -10548,8 +10513,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if (probtype.eq.5501) then  ! yhi groupmofBC
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
-        else if ((probtype.eq.59).or. &
-                 (probtype.eq.710)) then  ! yhi dir=2 side=2 3d groupmofBC
+        else if (probtype.eq.59) then  ! yhi dir=2 side=2 3d groupmofBC
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
         else if (probtype.eq.9) then ! yhi, groupmofBC, 3D
@@ -10587,7 +10551,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          ! 540 Rieber problem
          ! zlo dir=3 side=1 groupmofBC (3D)
         else if ((probtype.eq.59).or. &
-                 (probtype.eq.710).or. &
                  (probtype.eq.540)) then  
          call get_initial_vfrac(xsten,nhalf,dx,bfact,vofarray,cenbc)
          call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
@@ -10938,8 +10901,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          else if (probtype.eq.802) then ! xlo: dissolution grouplsBC
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
-         else if ((probtype.eq.59).or. &
-                  (probtype.eq.710)) then  !  xlo: dir=1 side=1 grouplsBC 2d
+         else if (probtype.eq.59) then  !  xlo: dir=1 side=1 grouplsBC 2d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5700) then ! xlo
@@ -10990,8 +10952,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          else if (probtype.eq.529) then  ! dir=1 side=1 grouplsBC
           call get_jet_dist(x,y,z,LS)
           call check_lsbc_extrap(LS,LSWALL)
-         else if ((probtype.eq.59).or. &
-                  (probtype.eq.710)) then  ! xlo dir=1 side=1 grouplsBC 3d
+         else if (probtype.eq.59) then  ! xlo dir=1 side=1 grouplsBC 3d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5501) then  ! xlo, grouplsBC
@@ -11021,8 +10982,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (probtype.eq.110) then
           call get_bump_dist(x,y,z,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
-         else if ((probtype.eq.59).or. &
-                  (probtype.eq.710)) then  ! dir=1 side=2 (xhi) grouplsBC 2d
+         else if (probtype.eq.59) then  ! dir=1 side=2 (xhi) grouplsBC 2d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if ((probtype.eq.5700).and.(1.eq.0)) then ! xhi
@@ -11053,8 +11013,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if ((probtype.eq.5700).and.(1.eq.0)) then ! xhi
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
-         else if ((probtype.eq.59).or. &
-                  (probtype.eq.710)) then  ! xhi dir=1 side=2 3d
+         else if (probtype.eq.59) then  ! xhi dir=1 side=2 3d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5501) then  ! xhi grouplsBC
@@ -11113,8 +11072,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          else if (probtype.eq.540) then !dir=2 side=1,2d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
-         else if ((probtype.eq.59).or. &
-                  (probtype.eq.710)) then !ylo dir=2 side=1,2d
+         else if (probtype.eq.59) then !ylo dir=2 side=1,2d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then ! ylo, groupLSBC, 2D
@@ -11130,8 +11088,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (probtype.eq.5700) then  ! ylo
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
-         else if ((probtype.eq.59).or. &
-                  (probtype.eq.710)) then  ! ylo dir=2 side=1 3d
+         else if (probtype.eq.59) then  ! ylo dir=2 side=1 3d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5501) then  ! ylo grouplsBC
@@ -11214,8 +11171,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          else if (probtype.eq.5501) then  ! yhi grouplsBC
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
-         else if ((probtype.eq.59).or. &
-                  (probtype.eq.710)) then  ! yhi dir=2 side=2 3d
+         else if (probtype.eq.59) then  ! yhi dir=2 side=2 3d
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.9) then ! yhi, groupLSBC, 3D
@@ -11255,8 +11211,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          else if (probtype.eq.540) then  ! dir=3 side=1
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
-         else if ((probtype.eq.59).or. &
-                  (probtype.eq.710)) then  ! zlo dir=3 side=1 groupLSBC
+         else if (probtype.eq.59) then  ! zlo dir=3 side=1 groupLSBC
           call materialdist_batch(xsten,nhalf,dx,bfact,LS,time)
           call check_lsbc_extrap(LS,LSWALL)
          else if (probtype.eq.5501) then  ! zlo grouplsBC
@@ -15411,9 +15366,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             else if (probtype.eq.59) then ! xvel,xlo,velbc_override 2d
              ! vel=solidvel in solid
              call mask_velocity(xsten,nhalf,dx,bfact,velcell,time)
-            else if (probtype.eq.710) then ! xvel,xlo,velbc_override 2d
-             ! vel=solidvel in solid
-             call mask_velocity(xsten,nhalf,dx,bfact,velcell,time)
             else if (probtype.eq.532) then
              call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell) ! xvel,xlo
             else if (probtype.eq.5700) then  ! xvel,xlo
@@ -15422,8 +15374,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
            else if (SDIM.eq.3) then
 
-            if ((probtype.eq.59).or. &
-                (probtype.eq.710)) then ! xvel,xlo,velbc_override 3d
+            if (probtype.eq.59) then ! xvel,xlo,velbc_override 3d
                ! vel=solvel in sol
              call mask_velocity(xsten,nhalf,dx,bfact,velcell,time) 
             else if (probtype.eq.5501) then  ! xvel,xlo,velbc_override
@@ -15655,8 +15606,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             ! ylo, yvel
             if (probtype.eq.532) then
              call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)
-            else if ((probtype.eq.59).or. &
-                     (probtype.eq.710)) then
+            else if (probtype.eq.59) then
                ! vel=solvel in sol
              call mask_velocity(xsten,nhalf,dx,bfact,velcell,time) 
             else if (probtype.eq.5501) then
@@ -16651,8 +16601,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           else if (probtype.eq.539) then  ! supnozzle xlo - presBDRYCOND
            ADV=inflow_pressure ! inlet side is all gas
 
-          else if (probtype.eq.710) then
-           ADV=-fort_denconst(1)*abs(gravity)*gravity_dz
           endif
 
          else if (SDIM.eq.3) then
@@ -16742,8 +16690,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           else if (probtype.eq.539) then  ! supnozzle xhi - presBDRYCOND
            ADV=outflow_pressure
 
-          else if (probtype.eq.710) then
-           ADV=-fort_denconst(1)*abs(gravity)*gravity_dz
           endif
 
          else if (SDIM.eq.3) then
@@ -16916,8 +16862,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             stop
            endif
 
-          else if (probtype.eq.710) then
-           ADV=-fort_denconst(1)*abs(gravity)*gravity_dz
           endif
 
           if (probtype.eq.41) then ! presBDRYCOND 2D yhi
@@ -17187,9 +17131,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       if ((istate.ge.1).and. &
           (istate.le.num_state_base)) then
        species_flag=0
-       if (istate.eq.1) then ! density
+       if (istate.eq.ENUM_DENVAR+1) then ! density
         try_merge=0
-       else if (istate.eq.2) then ! temperature
+       else if (istate.eq.ENUM_TEMPERATUREVAR+1) then ! temperature
         try_merge=1
        else
         print *,"istate invalid"
@@ -17236,9 +17180,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else if (local_homflag.eq.0) then
 
-       if (istate.eq.1) then
+       if (istate.eq.ENUM_DENVAR+1) then
         ADVwall=ADVwall_in   ! den
-       else if (istate.eq.2) then
+       else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
         ADVwall=ADVwall_in   ! T
        else if ((istate.gt.2).and. &
                 (istate.le.num_state_material)) then
@@ -17304,9 +17248,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         if (probtype.eq.82) then ! annulus: denBC
 
-         if (istate.eq.1) then ! den
+         if (istate.eq.ENUM_DENVAR+1) then ! den
           ! do nothing
-         else if (istate.eq.2) then ! temperature
+         else if (istate.eq.ENUM_TEMPERATUREVAR+1) then ! temperature
           if (dir.eq.1) then ! r direction
            if (side.eq.1) then
             ADV=fort_tempconst(1)
@@ -17331,10 +17275,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          ! HYDRATES
         else if (probtype.eq.199) then
 
-         if (istate.eq.1) then
+         if (istate.eq.ENUM_DENVAR+1) then
           call HYD_DENS_BC(time,dir,side,ADV,xwall,ADVwall, &
             x,y,z,dx,im)
-         else if (istate.eq.2) then
+         else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
           call HYD_TEMP_BC(time,dir,side,ADV,xwall,ADVwall, &
             x,y,z,dx,im)
          else
@@ -17346,10 +17290,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          ! UNIMATERIAL problem
         else if (probtype.eq.220) then
 
-         if (istate.eq.1) then
+         if (istate.eq.ENUM_DENVAR+1) then
           call UNIMAT_DENS_BC(time,dir,side,ADV,xwall,ADVwall, &
             x,y,z,dx,im)
-         else if (istate.eq.2) then
+         else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
           call UNIMAT_TEMP_BC(time,dir,side,ADV,xwall,ADVwall, &
             x,y,z,dx,im)
          else
@@ -17360,9 +17304,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if ((probtype.eq.299).or. &
                  (probtype.eq.301)) then !melting
 
-         if (istate.eq.1) then ! density boundary condition
+         if (istate.eq.ENUM_DENVAR+1) then ! density boundary condition
           ADV=ADVwall
-         else if (istate.eq.2) then ! temperature boundary condition
+         else if (istate.eq.ENUM_TEMPERATUREVAR+1) then ! temperature boundary condition
           ADV=fort_tempconst(2)  ! gas temperature
          else
           print *,"istate invalid"
@@ -17372,10 +17316,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          ! marangoni (heat pipe) problem
         else if ((probtype.eq.36).and.(axis_dir.eq.10)) then
 
-         if (istate.eq.1) then
+         if (istate.eq.ENUM_DENVAR+1) then
           print *,"density bc should be FOEXTRAP"
           stop
-         else if (istate.eq.2) then 
+         else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
            ! flag=0 (no buffer, do not start w/room temp in the bulk)
            ! second parameter would be the lateral buffer size. (delta)
            ! third parameter would be the front/back buffer size. (delta2)
@@ -17398,12 +17342,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           if (SDIM.eq.2) then
 
             ! xlo states (freezing singularity problem, boiling problem)
-           if ((probtype.eq.59).or. &
-               (probtype.eq.710)) then
+           if (probtype.eq.59) then
 
-            if (istate.eq.1) then
+            if (istate.eq.ENUM_DENVAR+1) then
              ! do nothing (density)
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ! bcflag=1 (calling from denBC - boundary conditions
              ! for density, temperature and species variables)
              call outside_temperature(time,x,y,z,ADV,im,1) 
@@ -17421,7 +17364,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              stop
             endif
              ! temperature (probtype==801)
-            if (istate.eq.2) then
+            if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              call vapordist(xsten,nhalf,dx,bfact,dist)
              if (dist.lt.zero) then
               ADV=fort_tempconst(2) ! vapor/ice temperature
@@ -17433,9 +17376,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             print *,"802 obsolete"
             stop
            else if (probtype.eq.532) then
-            if (istate.eq.1) then
+            if (istate.eq.ENUM_DENVAR+1) then
              ADV=fort_denconst(im)
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ADV=fort_tempconst(im)
             else
              print *,"istate invalid"
@@ -17443,9 +17386,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             endif 
            else if (probtype.eq.539) then ! xlo, sup, denBC
 
-            if (istate.eq.1) then
+            if (istate.eq.ENUM_DENVAR+1) then
              ADV=fort_denconst(im)
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ADV=fort_tempconst(im)
 ! Hack: inlet temperature (should not be called since outflow BC?)
              ADV=513.0
@@ -17456,9 +17399,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
            else if (probtype.eq.53) then ! xlo, denBC
 
-            if (istate.eq.1) then
+            if (istate.eq.ENUM_DENVAR+1) then
              ADV=fort_denconst(im)
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ADV=fort_tempconst(im)
             else
              print *,"istate invalid"
@@ -17469,9 +17412,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           else if (SDIM.eq.3) then
 
            if (probtype.eq.53) then
-            if (istate.eq.1) then
+            if (istate.eq.ENUM_DENVAR+1) then
              ADV=fort_denconst(im)
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ADV=fort_tempconst(im)
             else
              print *,"istate invalid"
@@ -17495,12 +17438,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           if (SDIM.eq.2) then
 
             ! xhi states (freezing singularity problem, boiling problem)
-           if ((probtype.eq.59).or. &
-               (probtype.eq.710)) then
+           if (probtype.eq.59) then
 
-            if (istate.eq.1) then
+            if (istate.eq.ENUM_DENVAR+1) then
              ! do nothing (density)
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ! bcflag=1 (calling from denBC)
              call outside_temperature(time,x,y,z,ADV,im,1) 
             else
@@ -17514,7 +17456,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              print *,"num_materials invalid probtype=801"
              stop
             endif
-            if (istate.eq.2) then
+            if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              call vapordist(xsten,nhalf,dx,bfact,dist)
              if (dist.lt.zero) then
               ADV=fort_tempconst(2) !vapor/ice temperature
@@ -17523,9 +17465,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              endif
             endif
            else if (probtype.eq.532) then
-            if (istate.eq.1) then
+            if (istate.eq.ENUM_DENVAR+1) then
              ADV=fort_denconst(im)
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ADV=fort_tempconst(im)
             else
              print *,"istate invalid"
@@ -17533,9 +17475,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             endif 
            else if (probtype.eq.539) then  ! xhi, sup, denBC
 
-            if (istate.eq.1) then
+            if (istate.eq.ENUM_DENVAR+1) then
              ADV=fort_denconst(im)
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ADV=fort_tempconst(im)
             else
              print *,"istate invalid"
@@ -17562,19 +17504,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
           if (SDIM.eq.2) then
 
-            ! cavity boil: ylo 2D
-           if (probtype.eq.710) then
-
-            if (istate.eq.1) then
-             ! do nothing (density)
-            else if (istate.eq.2) then
-             ! bcflag=1 (calling from denBC)
-             call outside_temperature(time,x,y,z,ADV,im,1) 
-            else
-             print *,"istate invalid"
-             stop
-            endif
-
             ! melting ice block on substrate (subroutine denBC) 
             ! ylo
             ! prescribe_temperature_outflow:
@@ -17582,12 +17511,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             ! 1=dirichlet at inflow and outflow
             ! 2=dirichlet at inflow and walls.
             ! 3=dirichlet at inflow, outflow, and walls.
-           else if ((prescribe_temperature_outflow.eq.3).and. &
-                    (probtype.eq.59)) then
+           if ((prescribe_temperature_outflow.eq.3).and. &
+               (probtype.eq.59)) then
 
-            if (istate.eq.1) then
+            if (istate.eq.ENUM_DENVAR+1) then
              ! do nothing (density)
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ! bcflag=1 (calling from denBC)
              call outside_temperature(time,x,y,z,ADV,im,1) 
             else
@@ -17603,7 +17532,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              stop
             endif
              ! ylo
-            if (istate.eq.2) then
+            if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              call vapordist(xsten,nhalf,dx,bfact,dist)
              if (dist.lt.zero) then
               ADV=fort_tempconst(2) ! vapor/ice temperature
@@ -17613,9 +17542,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             endif
            else if ((probtype.eq.538).or.(probtype.eq.53).or. &
                     (probtype.eq.541)) then
-            if (istate.eq.1) then
+            if (istate.eq.ENUM_DENVAR+1) then
              ADV=fort_denconst(im)
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ADV=fort_tempconst(im)
             else
              print *,"istate invalid"
@@ -17638,9 +17567,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             endif
 
             ! this density will never be used at the wall.
-            if (istate.eq.1) then 
+            if (istate.eq.ENUM_DENVAR+1) then 
              ADV=fort_denconst(im)
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ADV=water_temp
             else
              print *,"istate invalid"
@@ -17653,9 +17582,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
            ! ylo states
            if (probtype.eq.532) then
-            if (istate.eq.1) then
+            if (istate.eq.ENUM_DENVAR+1) then
              ADV=fort_denconst(im)
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ADV=fort_tempconst(im)
             else
              print *,"istate invalid"
@@ -17680,12 +17609,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
             ! in: subroutine denBC
             ! yhi states 2d (freezing singularity problem, boiling)
-           if ((probtype.eq.59).or. &
-               (probtype.eq.710)) then
+           if (probtype.eq.59) then
 
-            if (istate.eq.1) then
+            if (istate.eq.ENUM_DENVAR+1) then
              ! do nothing
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ! bcflag=1 (calling from denBC)
              call outside_temperature(time,x,y,z,ADV,im,1) 
             else
@@ -17699,7 +17627,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              print *,"num_materials invalid probtype=801"
              stop
             endif
-            if (istate.eq.2) then
+            if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              call vapordist(xsten,nhalf,dx,bfact,dist)
              if (dist.lt.zero) then
               ADV=fort_tempconst(2) ! vapor/ice temperature
@@ -17724,9 +17652,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             endif
 
             ! this density will never be used at the wall.
-            if (istate.eq.1) then
+            if (istate.eq.ENUM_DENVAR+1) then
              ADV=fort_denconst(im)
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ADV=water_temp
             else
              print *,"istate invalid"
@@ -17739,9 +17667,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
            ! 3d yhi states denBC
            if ((probtype.eq.532).or.(probtype.eq.541)) then
-            if (istate.eq.1) then
+            if (istate.eq.ENUM_DENVAR+1) then
              ADV=fort_denconst(im)
-            else if (istate.eq.2) then
+            else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ADV=fort_tempconst(im)
             else
              print *,"istate invalid"
@@ -17766,9 +17694,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           if ((prescribe_temperature_outflow.eq.3).and. &
               (probtype.eq.59)) then
 
-           if (istate.eq.1) then
+           if (istate.eq.ENUM_DENVAR+1) then
             ! do nothing (density)
-           else if (istate.eq.2) then
+           else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
              ! bcflag=1 (calling from denBC)
             call outside_temperature(time,x,y,z,ADV,im,1)
            else
@@ -17776,23 +17704,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             stop
            endif
 
-           ! cavity boil: zlo 3D
-          else if (probtype.eq.710) then
-
-           if (istate.eq.1) then
-            ! do nothing (density)
-           else if (istate.eq.2) then
-             ! bcflag=1 (calling from denBC)
-            call outside_temperature(time,x,y,z,ADV,im,1) 
-           else
-            print *,"istate invalid"
-            stop
-           endif
-
           else if (probtype.eq.53) then
-           if (istate.eq.1) then
+
+           if (istate.eq.ENUM_DENVAR+1) then
             ADV=fort_denconst(im)
-           else if (istate.eq.2) then
+           else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
             ADV=fort_tempconst(im)
            else
             print *,"istate invalid"
@@ -17802,9 +17718,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            ! zlo states
           else if ((probtype.eq.530).or.(probtype.eq.538).or. &
                    (probtype.eq.541)) then
-           if (istate.eq.1) then
+           if (istate.eq.ENUM_DENVAR+1) then
             ADV=fort_denconst(im)
-           else if (istate.eq.2) then
+           else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
             ADV=fort_tempconst(im)
            else
             print *,"istate invalid"
@@ -17826,9 +17742,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            endif
 
             ! this density will never be used at the wall.
-           if (istate.eq.1) then 
+           if (istate.eq.ENUM_DENVAR+1) then 
             ADV=fort_denconst(im) 
-           else if (istate.eq.2) then
+           else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
             ADV=water_temp
            else
             print *,"istate invalid"
@@ -17845,21 +17761,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           endif
           ADV=ADVwall
 
-           ! cavity boil: zhi 3D
-          if (probtype.eq.710) then
-             
-           if (istate.eq.1) then
-            ! do nothing
-           else if (istate.eq.2) then
-             ! bcflag=1 (calling from denBC)
-            call outside_temperature(time,x,y,z,ADV,im,1)
-           else
-            print *,"istate invalid"
-            stop
-           endif
-
            ! Benard convection zhi
-          else if (probtype.eq.603) then
+          if (probtype.eq.603) then
            water_temp=fort_tempconst(1)
            call init_massfrac_parm(fort_denconst(1),massfrac_parm,1)
            call INTERNAL_material(fort_denconst(1),massfrac_parm,  &
@@ -17874,9 +17777,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            endif
 
             ! this density will never be used at the wall.
-           if (istate.eq.1) then
+           if (istate.eq.ENUM_DENVAR+1) then
             ADV=fort_denconst(im)
-           else if (istate.eq.2) then
+           else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
             ADV=water_temp
            else
             print *,"istate invalid"
@@ -17890,9 +17793,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
 
-         if (istate.eq.1) then
+         if (istate.eq.ENUM_DENVAR+1) then
           ! do nothing: den
-         else if (istate.eq.2) then
+         else if (istate.eq.ENUM_TEMPERATUREVAR+1) then
           ! do nothing: T
          else
           print *,"istate invalid"
@@ -20479,14 +20382,6 @@ end subroutine RatePhaseChange
         local_buffer(ibuf)=buf
        endif
        side=2
-       ibuf=(side-1)*SDIM+dirbc
-       if (local_buffer(ibuf).eq.zero) then
-        local_buffer(ibuf)=buf
-       endif
-      else if (probtype.eq.710) then
-       dirbc=SDIM
-       side=2
-       buf=probhi(SDIM)-yblob2
        ibuf=(side-1)*SDIM+dirbc
        if (local_buffer(ibuf).eq.zero) then
         local_buffer(ibuf)=buf
@@ -24794,15 +24689,6 @@ end subroutine initialize2d
             scalc(ibase+ENUM_TEMPERATUREVAR+1)=temp_jwl
            endif
           endif  ! probtype=36
-           ! initial temperature for boiling cavity problem
-          if (probtype.eq.710) then
-           ! water phase
-           if (im.eq.1) then
-             ! bcflag=0 (calling from fort_initdata)
-            call outside_temperature(time,x,y,z,water_temp,im,0)
-            scalc(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  
-           endif ! im=1
-          endif
 
            ! initial temperature for melting ice block on a substrate.
           if (probtype.eq.59) then
@@ -26528,11 +26414,6 @@ end subroutine initialize2d
           x_vel=velcell(1)
           y_vel=velcell(2)
           z_vel=velcell(SDIM)
-
-        else if (probtype.eq.710) then
-           x_vel=zero
-           y_vel=zero
-           z_vel=zero
 
           ! in "initvelocity":
           ! melting ice block on substrate.

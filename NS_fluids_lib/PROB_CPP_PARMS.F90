@@ -263,6 +263,7 @@ stop
       use ZEYU_droplet_impact_module
       use STUB_module
       use GENERAL_PHASE_CHANGE_module
+      use CAVITY_PHASE_CHANGE_module
       use ICE_ON_SUBSTRATE_module
       use SIMPLE_PALMORE_DESJARDINS_module
       use SIMPLE_KASSEMI_module
@@ -453,7 +454,7 @@ stop
       ! 4. create new module file (e.g. by copying an existing module file)
       ! 5. update Make.package accordingly (2 places)
       ! 6. create inputs file
-      probtype_list_size=19
+      probtype_list_size=20
       used_probtypes(1)=2000 ! flexible_plate_impact
       used_probtypes(2)=421  ! CRYOGENIC_TANK1
       used_probtypes(3)=414  ! MITSUHIRO_MELTING
@@ -473,6 +474,7 @@ stop
       used_probtypes(17)=28  ! passive_advect_module
       used_probtypes(18)=29  ! passive_advect_module
       used_probtypes(19)=31  ! passive_advect_module
+      used_probtypes(20)=710 ! CAVITY_PHASE_CHANGE
       
       SUB_INIT_MODULE=>INIT_STUB_MODULE
       SUB_LS=>STUB_LS
@@ -778,6 +780,17 @@ stop
        SUB_PRES_BC=>flexible_plate_impact_PRES_BC
        SUB_STATE_BC=>flexible_plate_impact_STATE_BC
        SUB_HEATSOURCE=>flexible_plate_impact_HEATSOURCE
+      else if (probtype.eq.710) then
+       SUB_INIT_MODULE=>INIT_CAVITY_PHASE_CHANGE_MODULE
+       SUB_LS=>CAVITY_PHASE_CHANGE_LS
+       SUB_VEL=>CAVITY_PHASE_CHANGE_VEL
+       SUB_PRES=>CAVITY_PHASE_CHANGE_PRES
+       SUB_STATE=>CAVITY_PHASE_CHANGE_STATE
+       SUB_LS_BC=>CAVITY_PHASE_CHANGE_LS_BC
+       SUB_VEL_BC=>CAVITY_PHASE_CHANGE_VEL_BC
+       SUB_PRES_BC=>CAVITY_PHASE_CHANGE_PRES_BC
+       SUB_STATE_BC=>CAVITY_PHASE_CHANGE_STATE_BC
+       SUB_velfreestream=>CAVITY_PHASE_CHANGE_velfreestream
       else if (probtype.eq.55) then
        SUB_INIT_MODULE=>INIT_GENERAL_PHASE_CHANGE_MODULE
        SUB_check_vel_rigid=>GENERAL_PHASE_CHANGE_check_vel_rigid
