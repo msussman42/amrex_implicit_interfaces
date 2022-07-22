@@ -2500,7 +2500,7 @@ stop
 
               !facedir=1..sdim
               call gridstenMAC(xsten_face,xlo,imac,jmac,kmac,fablo,bfact, &
-               dx,nhalf,facedir-1,91)
+               dx,nhalf,facedir-1)
 
               ! im_primary is the forcing fluid at cell (icell,jcell,kcell) 
               ! which is applying a force/torque to im_test.

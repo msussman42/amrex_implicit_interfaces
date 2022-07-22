@@ -2868,7 +2868,7 @@ end subroutine dynamic_contact_angle
                call get_iten(im_fluid1,im_fluid2,iten)
                 ! in: subroutine getGhostVel
                call get_user_tension(xprobe_triple,LOW%time, &
-                 fort_tension,user_tension,thermal_interp,6)
+                 fort_tension,user_tension,thermal_interp)
                ! cos_angle and sin_angle correspond to the angle in im_fluid1
                call get_CL_iten(im_fluid1,im_fluid2,im_solid, &
                  iten_13,iten_23, &
@@ -13380,7 +13380,7 @@ end subroutine print_visual_descriptor
           growlotest,growhitest,ngrow)
         else if ((dir.ge.0).and.(dir.le.5)) then
          call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-          growlotest,growhitest,ngrow,dir,1)
+          growlotest,growhitest,ngrow,dir)
         else
          print *,"dir invalid aggressive worker 2"
          stop
@@ -22788,7 +22788,7 @@ if (probtype.eq.55) then
     marangoni_temp(imloop)=293.0
    enddo
    call get_user_tension(xvec,time, &
-     fort_tension,user_tension,marangoni_temp,1)
+     fort_tension,user_tension,marangoni_temp)
      ! find the angle between the "im,im_3" interface and the
      ! "im,im_opp" interface.
      ! i.e. between the liquid/substrate and liquid/gas interfaces.
