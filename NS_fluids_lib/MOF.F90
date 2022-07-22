@@ -13093,8 +13093,7 @@ contains
         multi_centroidA, &
         continuous_mof, &
         cmofsten, &
-        sdim, &
-        caller_id)
+        sdim)
 
       use probcommon_module
       use global_utility_module
@@ -13102,7 +13101,6 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT (IN) :: caller_id
       INTEGER_T, INTENT (IN) :: bfact,nhalf0
       INTEGER_T, INTENT (IN) :: use_ls_data
       INTEGER_T, INTENT (IN) :: mof_verbose
@@ -13393,7 +13391,7 @@ contains
         cmofsten, &
         xsten0,nhalf0,nhalf_box,bfact,dx, &
         tessellate, &  ! =0
-        mofdata,sdim,6)
+        mofdata,sdim)
 
        ! clear flag for all num_materials materials.
        ! vfrac,centroid,order,slope,intercept x num_materials
@@ -13981,7 +13979,7 @@ contains
        vofcomp=(imaterial-1)*ngeom_recon+1
        if (abs(voftest(imaterial)-mofdata(vofcomp)).ge.SANITY_TOL) then
         print *,"volume fraction changed"
-        print *,"caller_id=",caller_id
+        print *,"put breakpoint here to see the caller"
         print *,"imaterial,vofbefore,vofafter ",imaterial, &
           voftest(imaterial),mofdata(vofcomp)
         do imaterial2=1,num_materials
@@ -14255,7 +14253,7 @@ contains
         multi_centroidA, &
         continuous_mof, &
         cmofsten, &
-        sdim,1)
+        sdim)
 
        moferror=zero
        do im=1,num_materials
@@ -14319,7 +14317,7 @@ contains
         bfact,dx, &
         tessellate, &
         mofdata, &
-        sdim,errorid)
+        sdim)
       use probcommon_module
       use geometry_intersect_module
       use global_utility_module
@@ -14332,7 +14330,7 @@ contains
       INTEGER_T, INTENT(in) :: nhalf,nhalf_box
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
       REAL_T, INTENT(in) :: dx(sdim)
-      INTEGER_T, INTENT(in) :: tessellate,errorid
+      INTEGER_T, INTENT(in) :: tessellate
       REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
 
       INTEGER_T im,dir,vofcomp
@@ -14424,8 +14422,9 @@ contains
        else
         print *,"mofdata(vofcomp) invalid 2"
         print *,"mofdata(vofcomp)=",mofdata(vofcomp)
-        print *,"im,num_materials,ngeom_recon,sdim ",im,num_materials,ngeom_recon,sdim
-        print *,"errorid= ",errorid
+        print *,"im,num_materials,ngeom_recon,sdim ", &
+                im,num_materials,ngeom_recon,sdim
+        print *,"put breakpoint here to see the caller"
         stop
        endif
        if (is_rigid_local(im).eq.0) then
@@ -14454,7 +14453,7 @@ contains
 
       if (voffluid.le.zero) then
        print *,"vacuum bust in make_vfrac_sum_ok_base"
-       print *,"errorid= ",errorid
+       print *,"put breakpoint here to see the caller"
        print *,"num_materials= ",num_materials
        print *,"sdim= ",sdim
        print *,"voffluid= ",voffluid
@@ -14526,7 +14525,7 @@ contains
         bfact,dx, &
         tessellate, &
         mofdata,mofdatavalid, &
-        sdim,errorid)
+        sdim)
       use probcommon_module
       use geometry_intersect_module
       use global_utility_module
@@ -14540,7 +14539,7 @@ contains
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
       REAL_T, INTENT(in) :: dx(sdim)
 
-      INTEGER_T, INTENT(in) :: tessellate,errorid
+      INTEGER_T, INTENT(in) :: tessellate
       REAL_T, INTENT(in) :: mofdata(num_materials*ngeom_recon)
       REAL_T, INTENT(out) :: mofdatavalid(num_materials*ngeom_recon)
       INTEGER_T im
@@ -14629,7 +14628,7 @@ contains
       enddo ! im=1..num_materials
       if (voffluid.le.zero) then
        print *,"vacuum bust in make_vfrac_sum_ok_copy"
-       print *,"errorid= ",errorid
+       print *,"put breakpoint here to see the caller"
        print *,"num_materials= ",num_materials
        print *,"sdim= ",sdim
        print *,"voffluid= ",voffluid
@@ -14644,7 +14643,7 @@ contains
        bfact,dx, &
        tessellate, &
        mofdatavalid, &
-       sdim,errorid)
+       sdim)
 
       return
       end subroutine make_vfrac_sum_ok_copy
@@ -14839,7 +14838,7 @@ contains
        nlist_alloc, &
        nmax, &
        sdim, &
-       shapeflag,caller_id)
+       shapeflag)
 
       use probcommon_module
       use geometry_intersect_module
@@ -14852,7 +14851,7 @@ contains
       INTEGER_T, INTENT(in) :: nlist_alloc
       INTEGER_T, INTENT(in) :: nmax
       INTEGER_T, INTENT(in) :: tessellate !=0,1,2,3
-      INTEGER_T, INTENT(in) :: shapeflag,caller_id,bfact
+      INTEGER_T, INTENT(in) :: shapeflag,bfact
       INTEGER_T, INTENT(in) :: nhalf0,nhalf_grid
       REAL_T, INTENT(in) :: xtet(sdim+1,sdim)
       REAL_T, INTENT(in) :: mofdata(num_materials*(2*sdim+3))
@@ -14903,7 +14902,6 @@ contains
       INTEGER_T num_processed_total
       INTEGER_T loop_counter
       INTEGER_T new_tessellate_local
-      INTEGER_T sanity_check
       INTEGER_T is_rigid_local(num_materials)
       INTEGER_T nhalf_box
       INTEGER_T local_tessellate
@@ -14941,8 +14939,6 @@ contains
        print *,"ngeom_recon.ne.2*sdim+3"
        stop
       endif
-
-      sanity_check=0
 
       if (nmax.lt.4) then
        print *,"nmax invalid multi_get_volume_grid nmax=",nmax
@@ -14988,7 +14984,7 @@ contains
         nhalf_box, & ! =1 (=> do not use cmofsten)
         bfact,dx, &
         local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2
-        mofdata,mofdatavalid,sdim,1)
+        mofdata,mofdatavalid,sdim)
 
       do dir=1,num_materials*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -14996,27 +14992,6 @@ contains
       enddo
 
       call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell,cencell,sdim)
-
-      if (sanity_check.eq.1) then
-       sanity_check=0
-       if (tessellate.eq.1) then
-        if (caller_id.eq.7) then
-         if (shapeflag.eq.0) then
-          if (num_materials.eq.3) then
-           im_test=2
-           vofcomp=(im_test-1)*ngeom_recon+1 
-           if (mofdata(vofcomp).eq.one) then
-            im_test=3 
-            vofcomp=(im_test-1)*ngeom_recon+1 
-            if ((mofdata(vofcomp).gt.0.1).and.(mofdata(vofcomp).lt.0.9)) then
-             sanity_check=1
-            endif
-           endif
-          endif
-         endif
-        endif
-       endif
-      endif  ! sanity_check==1
 
       if (shapeflag.eq.0) then
  
@@ -15878,22 +15853,6 @@ contains
        stop
       endif
 
-      if (sanity_check.eq.1) then
-       print *,"-----------sanity check-----------------"
-       do im=1,num_materials
-        vofcomp=(im-1)*ngeom_recon+1
-        print *,"im,F ",im,mofdata(vofcomp)
-        do dir=1,sdim
-         print *,"im,dir,cen ",im,dir,mofdata(vofcomp+dir)
-        enddo
-        print *,"im,multi_volume ",im,multi_volume(im)
-        do dir=1,sdim
-         print *,"im,dir,multi_cen ",im,dir,multi_cen(dir,im)
-        enddo
-       enddo
-       print *,"-----------end sanity check-----------------"
-      endif
-
       return
       end subroutine multi_get_volume_grid
 
@@ -15911,8 +15870,7 @@ contains
        xtetlist, &
        nlist_alloc, &
        nmax, &
-       sdim, &
-       caller_id)
+       sdim)
 
       use probcommon_module
       use geometry_intersect_module
@@ -15925,7 +15883,7 @@ contains
       INTEGER_T, INTENT(in) :: nlist_in
       INTEGER_T, INTENT(in) :: nmax
       INTEGER_T, INTENT(in) :: tessellate
-      INTEGER_T, INTENT(in) :: sdim,caller_id,bfact
+      INTEGER_T, INTENT(in) :: sdim,bfact
       INTEGER_T, INTENT(in) :: nhalf0
       REAL_T, INTENT(in) :: xtetlist_in(4,3,nlist_alloc_in)
       REAL_T :: xtet(sdim+1,sdim)
@@ -16020,7 +15978,7 @@ contains
           nlist_alloc, &
           nmax, &
           sdim, &
-          shapeflag,caller_id)
+          shapeflag)
         do im=1,num_materials
          multi_volume(im)=multi_volume(im)+multi_volume_sub(im)
          multi_area(im)=multi_area(im)+multi_area_sub(im)
@@ -16125,8 +16083,7 @@ contains
        nlist_alloc_plus, &
        xtetlist_minus, &
        nlist_alloc_minus, &
-       nmax, &
-       caller_id)
+       nmax)
 
       use probcommon_module
       use geometry_intersect_module
@@ -16140,7 +16097,6 @@ contains
       INTEGER_T, INTENT(in) :: nmax
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: caller_id
       INTEGER_T, INTENT(in) :: bfact
       INTEGER_T, INTENT(in) :: nhalf0
       INTEGER_T, INTENT(in) :: dir_plus
@@ -16319,7 +16275,7 @@ contains
         bfact,dx, &
         normalize_tessellate, &  ! =0
         mofdata_plus,mofdatavalid_plus, &
-        sdim,3000)
+        sdim)
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
         xsten0_minus,nhalf0, &
@@ -16327,7 +16283,7 @@ contains
         bfact,dx, &
         normalize_tessellate, & ! =0
         mofdata_minus,mofdatavalid_minus, &
-        sdim,3000)
+        sdim)
 
       if ((tessellate_in.eq.1).or. &
           (tessellate_in.eq.3)) then
@@ -16353,8 +16309,7 @@ contains
         xtetlist_plus, &
         nlist_alloc_plus, &
         nmax, &
-        sdim, &
-        caller_id)
+        sdim)
 
        call multi_get_volume_tessellate( &
         tessellate_in, & ! =1 or 3
@@ -16364,8 +16319,7 @@ contains
         xtetlist_minus, &
         nlist_alloc_minus, &
         nmax, &
-        sdim, &
-        caller_id)
+        sdim)
 
       else if (tessellate_in.eq.0) then
        local_tessellate_in=0
@@ -16416,7 +16370,7 @@ contains
        nlist_alloc_plus, &
        nmax, &
        sdim, &
-       shapeflag,caller_id)
+       shapeflag)
 
       call Box_volumeFAST(bfact,dx, &
          xsten_thin,nhalf_thin, &
@@ -16618,7 +16572,8 @@ contains
            stop
          endif
 
-         if ((critical_material.ge.1).and.(critical_material.le.num_materials)) then
+         if ((critical_material.ge.1).and. &
+             (critical_material.le.num_materials)) then
           if ((material_used(critical_material).ge.1).and. &
               (material_used(critical_material).le.num_materials)) then
 
@@ -16635,8 +16590,7 @@ contains
              xtetlist_plus, &
              nlist_alloc_plus, &
              nmax, &
-             sdim, &
-             caller_id)
+             sdim)
 
             do im_opp=1,num_materials
              if (is_rigid_local(im_opp).eq.0) then
@@ -17040,8 +16994,7 @@ contains
        xtetlist, &
        nlist_alloc, &
        nmax, &
-       sdim, &
-       caller_id)
+       sdim)
 
       use probcommon_module
       use geometry_intersect_module
@@ -17054,7 +17007,7 @@ contains
       INTEGER_T, INTENT(in) :: tessellate ! =0,1,2,3
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: caller_id,bfact,nhalf0,nhalf_grid
+      INTEGER_T, INTENT(in) :: bfact,nhalf0,nhalf_grid
       REAL_T, INTENT(in) :: mofdata(num_materials*ngeom_recon)
       REAL_T mofdatalocal(num_materials*ngeom_recon)
       REAL_T mofdatasave(num_materials*ngeom_recon)
@@ -17101,7 +17054,6 @@ contains
       INTEGER_T num_processed_total
       INTEGER_T loop_counter
       INTEGER_T local_tessellate
-      INTEGER_T sanity_check
       INTEGER_T is_rigid_local(num_materials)
       INTEGER_T nhalf_box
       INTEGER_T im_raster_solid
@@ -17141,8 +17093,6 @@ contains
        print *,"ngeom_recon.ne.2*sdim+3"
        stop
       endif
-
-      sanity_check=0
 
       if (nmax.lt.4) then
        print *,"nmax invalid multi_get_volume_grid simple nmax=",nmax
@@ -17197,7 +17147,7 @@ contains
        nhalf_box, & !=1 (=> do not use cmofsten)
        bfact,dx, &
        local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2  
-       mofdata,mofdatavalid,sdim,101)
+       mofdata,mofdatavalid,sdim)
 
       do dir=1,num_materials*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
@@ -17205,15 +17155,6 @@ contains
       enddo
 
       call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell,cencell,sdim)
-
-      if (sanity_check.eq.1) then
-       sanity_check=0
-       if (tessellate.eq.1) then
-        if (caller_id.eq.101) then
-         sanity_check=1
-        endif
-       endif
-      endif ! sanity_check==1
 
       call Box_volumeFAST(bfact,dx,xsten_grid,nhalf_grid, &
          uncaptured_volume_target, &
@@ -18021,37 +17962,6 @@ contains
        stop
       endif
 
-      if (sanity_check.eq.1) then
-       print *,"-----------sanity check-----------------"
-       print *,"uncaptured_volume_target ",uncaptured_volume_target
-       do dir=1,sdim
-        print *,"dir,uncaptured_centroid_target ",dir, &
-           uncaptured_centroid_target(dir)
-       enddo
-       print *,"volcell ",volcell
-       do dir=1,sdim
-        print *,"dir,cencell ",dir,cencell(dir)
-       enddo
-       do im=1,num_materials
-        vofcomp=(im-1)*ngeom_recon+1
-        print *,"im,F ",im,mofdata(vofcomp)
-        do dir=1,sdim
-         print *,"im,dir,cen ",im,dir,mofdata(vofcomp+dir)
-        enddo
-        print *,"im,order ",im,dir,mofdata(vofcomp+sdim+1)
-        do dir=1,sdim
-         print *,"im,dir,slope ",im,dir,mofdata(vofcomp+sdim+1+dir)
-        enddo
-         ! F,centroid,order,slope,intercept
-        print *,"im,intercept ",im,dir,mofdata(vofcomp+2*sdim+2)
-        print *,"im,multi_volume ",im,multi_volume(im)
-        do dir=1,sdim
-         print *,"im,dir,multi_cen ",im,dir,multi_cen(dir,im)
-        enddo
-       enddo
-       print *,"-----------end sanity check-----------------"
-      endif
-
       return
       end subroutine multi_get_volume_grid_simple
 
@@ -18071,8 +17981,7 @@ contains
        xtetlist, &
        nlist_alloc, &
        nmax, &
-       sdim, &
-       caller_id)
+       sdim)
 
       use probcommon_module
       use geometry_intersect_module
@@ -18084,7 +17993,6 @@ contains
       INTEGER_T, INTENT(in) :: nmax
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: caller_id
       INTEGER_T, INTENT(in) :: bfact,nhalf0,nhalf_grid
       INTEGER_T, INTENT(in) :: normdir
       REAL_T, INTENT(in) :: coeff(2)
@@ -18141,7 +18049,6 @@ contains
       INTEGER_T num_processed_total
       INTEGER_T loop_counter
       INTEGER_T tessellate_local
-      INTEGER_T sanity_check
       INTEGER_T is_rigid_local(num_materials)
       INTEGER_T nhalf_box
 
@@ -18170,8 +18077,6 @@ contains
        print *,"ngeom_recon.ne.2*sdim+3"
        stop
       endif
-
-      sanity_check=0
 
       if (nmax.lt.4) then
        print *,"nmax invalid multi_get_volume_grid nmax=",nmax
@@ -18227,14 +18132,11 @@ contains
         nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         tessellate_local, & ! =0 (only tessellate_local==2 is used)
-        mofdata,mofdatavalid,sdim,102)
+        mofdata,mofdatavalid,sdim)
 
       do dir=1,num_materials*ngeom_recon
        mofdatalocal(dir)=mofdatavalid(dir)
        mofdatasave(dir)=mofdatavalid(dir)
-       if (caller_id.eq.-1) then
-        print *,"index,mofdatavalid ",dir,mofdatavalid(dir)
-       endif
       enddo
 
       call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell,cencell,sdim)
@@ -18272,13 +18174,6 @@ contains
       if (uncaptured_volume_solid.lt.zero) then
        print *,"uncaptured_volume_solid invalid"
        stop
-      endif
-
-      if (caller_id.eq.-1) then
-       print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
-       print *,"volcell ",volcell
-       print *,"VOFTOL ",VOFTOL
-       print *,"VOFTOL_MULTI_VOLUME ",VOFTOL_MULTI_VOLUME
       endif
 
       vfrac_fluid_sum=zero
@@ -18371,10 +18266,6 @@ contains
                   one-vfrac_solid_sum).and. &
                  (uncaptured_volume_solid.gt.zero)) 
 
-        if (caller_id.eq.-1) then
-         print *,"loop_counter,num_materials_solid ",loop_counter,num_materials_solid
-        endif
-
         remaining_vfrac=zero
         single_material=0
 
@@ -18411,11 +18302,6 @@ contains
 
         if ((single_material.gt.0).and. &
             (remaining_vfrac.lt.VOFTOL)) then
-
-         if (caller_id.eq.-1) then
-          print *,"solid:single_material ",single_material
-          print *,"solid:remaining_vfrac ",remaining_vfrac
-         endif
 
          vofcomp=(single_material-1)*ngeom_recon+1
          multi_volume(single_material)=uncaptured_volume_solid
@@ -18664,10 +18550,6 @@ contains
                  (uncaptured_volume_fraction_fluid.gt.zero).and. &
                  (uncaptured_volume_fluid.gt.zero)) 
 
-        if (caller_id.eq.-1) then
-         print *,"loop_counter,num_materials_fluid ",loop_counter,num_materials_fluid
-        endif
-
         remaining_vfrac=zero
         single_material=0
 
@@ -18707,10 +18589,6 @@ contains
         if ((single_material.gt.0).and. &
             (remaining_vfrac.lt.VOFTOL)) then
 
-         if (caller_id.eq.-1) then
-          print *,"fluid:single_material ",single_material
-          print *,"fluid:remaining_vfrac ",remaining_vfrac
-         endif
          vofcomp=(single_material-1)*ngeom_recon+1
          multi_volume(single_material)=uncaptured_volume_fluid
          multi_volume_map(single_material)=uncaptured_volume_fluid_map
@@ -18875,11 +18753,6 @@ contains
             voltemp_map,centemp_map, &
             xsten_grid,nhalf_grid,sdim) 
 
-           if (caller_id.eq.-1) then
-            print *,"critical_material,voltemp ",critical_material,voltemp
-            print *,"voltemp_map ",voltemp_map
-           endif
-
           else 
            print *,"fastflag invalid multi get volume grid and map 2"
            stop
@@ -18938,17 +18811,6 @@ contains
 
           material_used(critical_material)=num_processed_total
 
-          if (caller_id.eq.-1) then
-           print *,"critical_material ",critical_material
-           print *,"num_processed_fluid ",num_processed_fluid
-           print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
-           print *,"uncaptured_volume_fluid_map ",uncaptured_volume_fluid_map
-           print *,"multi_volume(critical_material) ", &
-             multi_volume(critical_material)
-           print *,"multi_volume_map(critical_material) ", &
-             multi_volume_map(critical_material)
-          endif
-
          else if (critical_material.eq.0) then
           ! do nothing
          else
@@ -18981,22 +18843,6 @@ contains
        print *,"uncaptured_volume_fluid or uncaptured_volume_solid invalid"
        stop
       endif
-
-      if (sanity_check.eq.1) then
-       print *,"-----------sanity check-----------------"
-       do im=1,num_materials
-        vofcomp=(im-1)*ngeom_recon+1
-        print *,"im,F ",im,mofdata(vofcomp)
-        do dir=1,sdim
-         print *,"im,dir,cen ",im,dir,mofdata(vofcomp+dir)
-        enddo
-        print *,"im,multi_volume ",im,multi_volume(im)
-        do dir=1,sdim
-         print *,"im,dir,multi_cen ",im,dir,multi_cen(dir,im)
-        enddo
-       enddo
-       print *,"-----------end sanity check-----------------"
-      endif ! sanity_check==1
 
       return
       end subroutine multi_get_volume_grid_and_map
@@ -19173,8 +19019,7 @@ contains
        xtetlist, &
        nlist_alloc, &
        nmax, &
-       sdim, &
-       caller_id)
+       sdim)
 
       use probcommon_module
       use geometry_intersect_module
@@ -19187,7 +19032,6 @@ contains
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T shapeflag
-      INTEGER_T, INTENT(in) :: caller_id
       INTEGER_T, INTENT(in) :: bfact,nhalf0
       INTEGER_T, INTENT(in) :: tessellate_in  ! =1 or 3
       REAL_T xtet(sdim+1,sdim)
@@ -19214,7 +19058,6 @@ contains
       REAL_T vfracsolid(num_materials)
       INTEGER_T vofcomp_solid
       INTEGER_T imcrit,im_solid
-      INTEGER_T sanity_check
       INTEGER_T is_rigid_local(num_materials)
       INTEGER_T nhalf_box
       INTEGER_T im_raster_solid
@@ -19246,8 +19089,6 @@ contains
        print *,"ngeom_recon.ne.2*sdim+3"
        stop
       endif
-
-      sanity_check=0
 
       if (nmax.lt.4) then
        print *,"nmax invalid multi_get_volume_tessellate nmax=",nmax
@@ -19286,7 +19127,7 @@ contains
        nhalf_box, & !=1 (=> do not use cmofsten)
        bfact,dx, &
        renorm_tessellate, & !=0
-       mofdata,sdim,1)
+       mofdata,sdim)
 
       fluid_vfrac_sum=zero
       solid_vfrac_sum=zero
@@ -19423,8 +19264,7 @@ contains
         nlist_alloc, &
         nmax, &
         sdim, &
-        shapeflag, &
-        caller_id) 
+        shapeflag) 
 
        call Box_volumeFAST(bfact,dx,xsten0,nhalf0, &
          volcell,cencell,sdim)
@@ -19523,31 +19363,6 @@ contains
         endif
        enddo ! im=1..num_materials
 
-       if (sanity_check.eq.1) then
-        if (caller_id.eq.7) then
-         if (num_materials.eq.3) then
-          print *,"-----------sanity multi_get_volume_tessellate------------"
-          do im=1,num_materials
-           vofcomp=(im-1)*ngeom_recon+1
-           print *,"im,F ",im,mofdata(vofcomp)
-           do dir=1,sdim
-            print *,"im,dir,cen ",im,dir,mofdata(vofcomp+dir)
-           enddo
-           print *,"im,multi_volume ",im,multi_volume(im)
-           do dir=1,sdim
-            print *,"im,dir,multi_cen ",im,dir,multi_cen(dir,im)
-           enddo
-          enddo
-          print *,"-----------end sanity multi_get_volume_tessellate-------"
-         endif
-        endif
-       else if (sanity_check.eq.0) then
-        ! do nothing
-       else
-        print *,"sanity_check invalid"
-        stop
-       endif 
-
       else
        print *,"solid_vfrac_sum invalid"
        stop
@@ -19605,14 +19420,12 @@ contains
        slope,imslope, &
        imcell,sdim, &
        center_stencil, &
-       donateflag, &
-       caller_id)
+       donateflag)
       use probcommon_module
       use geometry_intersect_module
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: caller_id
       INTEGER_T, INTENT(in) :: n_im,bfact,nhalf0
       INTEGER_T, INTENT(in) :: im_test(n_im)
       INTEGER_T, INTENT(in) :: imslope,imcell
@@ -19690,7 +19503,7 @@ contains
 
       if ((imcell.lt.1).or.(imcell.gt.num_materials)) then
        print *,"imcell invalid imcell=",imcell
-       print *,"caller_id=",caller_id
+       print *,"put breakpoint here to see caller"
        stop
       endif
       if ((imslope.lt.0).or.(imslope.gt.num_materials)) then
@@ -20389,7 +20202,7 @@ contains
          nhalf_box, & !=1 (=> do not use cmofsten)
          bfact,dx, &
          tessellate, & ! =0  (if tessellate==2 then is_rigid=0)
-         mofdata,mofdatavalid,sdim,3)
+         mofdata,mofdatavalid,sdim)
 
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
@@ -20587,7 +20400,7 @@ contains
         nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         tessellate, &  ! =0 (if tessellate==2, set is_rigid=0)
-        mofdata,mofdatavalid,sdim,30)
+        mofdata,mofdatavalid,sdim)
 
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
@@ -20690,7 +20503,7 @@ contains
               slopes, &
               im,im0,sdim, &
               center_stencil, &
-              donateflag,1)
+              donateflag)
             else if (inboxflag.eq.0) then
              ! do nothing
             else
@@ -20767,7 +20580,7 @@ contains
                 slopes, &
                 im,im0,sdim, &
                 center_stencil, &
-                donateflag,2)
+                donateflag)
               else if (inboxflag.eq.0) then
                ! do nothing
               else
@@ -20847,7 +20660,7 @@ contains
                     slopes, &
                     im,im0,sdim, &
                     center_stencil, &
-                    donateflag,3)
+                    donateflag)
                   else if (inboxflag.eq.0) then
                    ! do nothing
                   else
@@ -20941,7 +20754,7 @@ contains
             slopes, &
             im,im0,sdim, &
             center_stencil, &
-            donateflag,4)
+            donateflag)
          else if (inboxflag.eq.0) then
           ! do nothing
          else
@@ -21022,7 +20835,7 @@ contains
               slopes, &
               im,im0,sdim, &
               center_stencil, &
-              donateflag,5)
+              donateflag)
            else if (inboxflag.eq.0) then
             ! do nothing
            else
@@ -21165,7 +20978,7 @@ contains
         nhalf_box, & !=1 (=> do not use cmofsten)
         bfact,dx, &
         local_tessellate, & ! =0
-        mofdata,mofdatavalid,sdim,300)
+        mofdata,mofdatavalid,sdim)
 
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
@@ -21449,14 +21262,13 @@ contains
 
        ! called from: get_mach_number, 
        !        fort_derturbvisc, fort_derconductivity
-      subroutine get_primary_material_VFRAC(VFRAC,im_primary,caller_id)
+      subroutine get_primary_material_VFRAC(VFRAC,im_primary)
       use probcommon_module
       use geometry_intersect_module
       use global_utility_module
  
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: caller_id
       REAL_T, INTENT(in) :: VFRAC(num_materials)
       INTEGER_T, INTENT(out) :: im_primary
       INTEGER_T im
@@ -21532,7 +21344,7 @@ contains
 
       if (abs(sum_vfrac_fluid-one).gt.SANITY_TOL) then
        print *,"sum_vfrac_fluid invalid"
-       print *,"caller_id=",caller_id
+       print *,"put breakpoint here to see caller"
        print *,"sum_vfrac_fluid=",sum_vfrac_fluid
        print *,"sum_vfrac_solid=",sum_vfrac_solid
        print *,"im_crit_fluid=",im_crit_fluid

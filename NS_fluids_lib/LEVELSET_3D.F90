@@ -2448,7 +2448,6 @@ stop
       INTEGER_T nhalf_box
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T local_tessellate
-      INTEGER_T caller_id
  
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -2695,15 +2694,6 @@ stop
                ! perturb interface into the other materials
                mofdatavalid(vofcomp+2*SDIM+2)=intercept+half*FACETOL_DVOL*dx(1)
        
-               caller_id=3
- 
-               if (1.eq.0) then
-                if ((SDIM.eq.3).and. &
-                    (i.eq.12).and.(j.eq.56).and.(k.eq.9)) then
-                 caller_id=101
-                endif
-               endif
- 
                 ! solid case
                 ! in: FORT_CELLFACEINIT
                 ! no need to compute multi_area here.
@@ -2718,7 +2708,7 @@ stop
                 geom_xtetlist_uncapt(1,1,1,tid+1), &
                 nmax, &
                 nmax, &
-                SDIM,caller_id)
+                SDIM)
 
                mofdatavalid(vofcomp+2*SDIM+2)=intercept
 
@@ -4695,7 +4685,6 @@ stop
       REAL_T original_density
       REAL_T density_factor
       REAL_T mofdata(num_materials*ngeom_recon)
-      INTEGER_T caller_id
       INTEGER_T nmax
       INTEGER_T im_alt,im_mdot,im_opp_mdot
       INTEGER_T im_source,im_dest
@@ -4884,7 +4873,6 @@ stop
          !   b) else, only consider fluids.
         if ((tessellate.eq.1).or. &
             (tessellate.eq.3)) then
-         caller_id=15
          call multi_get_volume_tessellate( &
           tessellate, & ! =1 or 3
           bfact, &
@@ -4894,8 +4882,7 @@ stop
           geom_xtetlist(1,1,1,tid_current+1), &
           nmax, &
           nmax, &
-          SDIM, &
-          caller_id)
+          SDIM)
         else
          print *,"tessellate invalid"
          stop
@@ -15201,7 +15188,6 @@ stop
       REAL_T local_fwt
       INTEGER_T local_presbc
       REAL_T local_mask
-      INTEGER_T caller_id
       INTEGER_T face_vcomp
       REAL_T face_vol(2*num_materials)
       REAL_T face_damping_factor
@@ -15471,9 +15457,7 @@ stop
              ! eval_face_coeff is declared in: PROB.F90
              ! e.g. 1/rho or if damping is active,
              ! face_damping_factor/rho
-            caller_id=1
             call eval_face_coeff( &
-             caller_id, &
              level,finest_level, &
              cc,cc_ice,cc_group, &
              dd,dd_group, &
@@ -18899,7 +18883,7 @@ stop
      
         ncomp_interp=1
         call bilinear_interp_stencil(data_stencil, &
-          wt_dist,ncomp_interp,u(dir),dir)  ! caller_id=dir
+          wt_dist,ncomp_interp,u(dir)) 
 
        enddo ! dir=1..sdim
 
