@@ -991,13 +991,13 @@ stop
        if (spectral_loop.eq.0) then
 
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-          growlo,growhi,0,dir-1,34)
+          growlo,growhi,0,dir-1)
 
         do i=growlo(1),growhi(1)
         do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
 
-         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1,52)
+         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1)
 
          if (dir.eq.1) then
           inorm=i
@@ -1485,7 +1485,7 @@ stop
 
                  call gridstenMAC(xstenMAC,xlo, &
                   ic,jc,kc, &
-                  fablo,bfact,dx,nhalf,dir-1,53)
+                  fablo,bfact,dx,nhalf,dir-1)
 
                  RRface(isten)=xstenMAC(0,1)
 
@@ -1601,7 +1601,7 @@ stop
                kc=indexmid(SDIM)
 
                call gridstenMAC_level(xstenMAC, &
-                ic,jc,kc,level,nhalf,dir-1,54)
+                ic,jc,kc,level,nhalf,dir-1)
 
                if (isten.eq.bfact) then ! right side of element
 
@@ -1789,7 +1789,7 @@ stop
           ! does not include the right face of the tile unless
           ! tilehi==fabhi
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-         growlo,growhi,0,dir-1,35)
+         growlo,growhi,0,dir-1)
 
          ! u_x+v_y+w_z on flux face
          ! multiply by visc_constant
@@ -1799,7 +1799,7 @@ stop
 
           ! dir=1..sdim
          call gridstenMAC_level(xstenMAC, &
-           i,j,k,level,nhalf,dir-1,55)
+           i,j,k,level,nhalf,dir-1)
 
          im1=i-ii
          jm1=j-jj
@@ -2124,7 +2124,7 @@ stop
               kflux=index_flux(SDIM)
 
               call gridstenMAC_level(xstenMAC, &
-               iflux,jflux,kflux,level,nhalf,dir-1,56)
+               iflux,jflux,kflux,level,nhalf,dir-1)
 
               test_maskSEM=NINT(maskSEM(D_DECL(i_out,j_out,k_out)))
               maskcov=NINT(maskcoef(D_DECL(i_out,j_out,k_out)))
@@ -2784,7 +2784,7 @@ stop
       endif
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi, &
-              0,dirnormal,27)
+              0,dirnormal)
 
       if (1.eq.0) then
        print *,"dt_min before estdt loop: ",dt_min(0)
@@ -2809,7 +2809,7 @@ stop
         ivec(SDIM)=k
        endif
 
-       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dirnormal,31)
+       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dirnormal)
        hx=xstenMAC(1,dirnormal+1)-xstenMAC(-1,dirnormal+1)
 
        RR=one
@@ -4123,7 +4123,7 @@ stop
         ! 5. repeat for cell_velocity
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,mac_grow,normdir,28)
+        growlo,growhi,mac_grow,normdir)
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -4140,7 +4140,7 @@ stop
          stop
         endif
 
-        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir,32)
+        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir)
         hx=xstenMAC(1,normdir+1)-xstenMAC(-1,normdir+1)
         if (hx.gt.zero) then
          ! do nothing
@@ -5043,7 +5043,7 @@ stop
        endif
 
        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-        growloMAC,growhiMAC,0,dir,31) 
+        growloMAC,growhiMAC,0,dir) 
        do i=growloMAC(1),growhiMAC(1)
        do j=growloMAC(2),growhiMAC(2)
        do k=growloMAC(3),growhiMAC(3)
@@ -5055,7 +5055,7 @@ stop
         if ((local_mask_right.eq.1).or. &
             (local_mask_left.eq.1)) then
          
-         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir,34)
+         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
          do dir2=1,SDIM
           xmac(dir2)=xstenMAC(0,dir2)
          enddo 
@@ -5363,7 +5363,7 @@ stop
         kkk=0 
 
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-          igridlo,igridhi,0,veldir-1,19)
+          igridlo,igridhi,0,veldir-1)
 
         if (veldir.eq.1) then
          iii=1
@@ -5381,7 +5381,7 @@ stop
         do k=igridlo(3),igridhi(3)
 
           ! veldir=1..sdim
-         call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir-1,25)
+         call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir-1)
          do dir_local=1,SDIM
           xclamped(dir_local)=xsten(0,dir_local)
          enddo
@@ -5632,14 +5632,14 @@ stop
       call checkbound_array1(fablo,fabhi,xvel_ptr,ngrowmac,veldir-1)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-        igridlo,igridhi,ngrowmac,veldir-1,20)
+        igridlo,igridhi,ngrowmac,veldir-1)
 
       do i=igridlo(1),igridhi(1)
       do j=igridlo(2),igridhi(2)
       do k=igridlo(3),igridhi(3)
 
         ! veldir=1..sdim
-       call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir-1,26)
+       call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir-1)
 
        velmac=x_mac_old(D_DECL(i,j,k))
 
@@ -5817,7 +5817,7 @@ stop
       endif
 
        ! normdir=0..sdim-1
-      call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir,26)
+      call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir)
 
       do imlocal=1,num_materials
        call safe_data(i-ii,j-jj,k-kk,imlocal,LS_ptr,LSLEFT(imlocal))
@@ -6040,7 +6040,7 @@ stop
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,0,normdir,34)
+        growlo,growhi,0,normdir)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo_cell,growhi_cell,0) 
 
@@ -6079,7 +6079,7 @@ stop
        if ((mask_left.eq.1).or.(mask_right.eq.1)) then
 
          ! normdir=0..sdim-1
-        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir,26)
+        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,normdir)
         call gridsten_level(xclamped_minus_sten,i-ii,j-jj,k-kk,level,nhalf)
         call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
 
@@ -7389,7 +7389,7 @@ stop
       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-       growlo,growhi,0,dir,23)
+       growlo,growhi,0,dir)
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -7760,7 +7760,7 @@ stop
       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-       growlo,growhi,0,dir,24)
+       growlo,growhi,0,dir)
  
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -8152,7 +8152,7 @@ stop
       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,0,dir,25)
+        growlo,growhi,0,dir)
 
       call SDC_GQweights(bfact_time_order,bfact_time_order,GQws)
 
@@ -8699,13 +8699,13 @@ stop
       data_out%data_interp=>cell_data_deriv
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0, &
-              flux_grid_type,28) 
+              flux_grid_type) 
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       call gridstenMAC_level(xsten,i,j,k,level,nhalf,flux_grid_type,28)
+       call gridstenMAC_level(xsten,i,j,k,level,nhalf,flux_grid_type)
        do dir_local=1,SDIM
         xcenter(dir_local)=xsten(0,dir_local)
        enddo
@@ -11075,7 +11075,7 @@ stop
       
        ! data_dir=0,1, or 2. 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi, &
-              0,data_dir,29) 
+              0,data_dir) 
 
        ! A FAB (fortran array box) is tessellated into tiles.
        ! i.e. a single FAB can contain multiple tiles.
@@ -11304,7 +11304,7 @@ stop
 
               ! data_dir=0,1, or 2. 
               call gridstenMAC_level(xsten_MAC,i,j,k, &
-                level,nhalf,data_dir,35)
+                level,nhalf,data_dir)
 
               do dir=1,SDIM
                x_projection_raster(dir)=xsten_MAC(0,dir)
@@ -11554,7 +11554,7 @@ stop
 
        ! data_dir=0,1, or 2. 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi, &
-              0,data_dir,29) 
+              0,data_dir) 
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -13708,7 +13708,7 @@ stop
         endif
 
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-         growlo,growhi,0,veldir-1,32)
+         growlo,growhi,0,veldir-1)
 
          ! directionally_split_module vars:
          ! icrse,jcrse,kcrse,iside is a MAC index.
@@ -13725,7 +13725,7 @@ stop
 
           nhalf=1
           call gridstenMAC_level(xsten_MAC,icrse,jcrse,kcrse, &
-            level,nhalf,veldir-1,35)
+            level,nhalf,veldir-1)
 
           check_accept=1
 
@@ -13802,7 +13802,7 @@ stop
              nhalf=1
               ! normdir=0..sdim-1
              call gridstenMAC_level(xsten_MAC,ipart,jpart,kpart, &
-               level,nhalf,normdir,36)
+               level,nhalf,normdir)
 
              if (levelrz.eq.0) then
               ! do nothing
@@ -13926,7 +13926,7 @@ stop
 
                 nhalf=1
                 call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
-                 level,nhalf,normdir,37)
+                 level,nhalf,normdir)
 
                 if (levelrz.eq.0) then
                  ! do nothing
@@ -14272,7 +14272,7 @@ stop
 
          nhalf=1
          call gridstenMAC_level(xsten_MAC,icrse,jcrse,kcrse, &
-           level,nhalf,normdir,38)
+           level,nhalf,normdir)
 
          if (levelrz.eq.0) then
           ! do nothing
@@ -14386,7 +14386,7 @@ stop
 
            nhalf=1
            call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
-             level,nhalf,normdir,39)
+             level,nhalf,normdir)
 
            if (levelrz.eq.0) then
             ! do nothing
@@ -16918,13 +16918,13 @@ stop
       call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-       growlo,growhi,0,dir,33)
+       growlo,growhi,0,dir)
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir,50)
+       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
        do dir_local=1,SDIM
         xclamped_face(dir_local)=xstenMAC(0,dir_local)
        enddo
@@ -17792,7 +17792,7 @@ stop
          do k=growlo(3),growhi(3)
 
           !dir=1..sdim
-          call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1,51)
+          call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1)
 
           im1=i-ii
           jm1=j-jj
@@ -19017,7 +19017,7 @@ stop
 
        ! force_dir=0..sdim-1 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,0,force_dir,36)
+        growlo,growhi,0,force_dir)
 
        ! traverse the "force_dir" MAC grid.
       do i=growlo(1),growhi(1)
@@ -19025,7 +19025,7 @@ stop
       do k=growlo(3),growhi(3)
 
         ! force_dir=0..sdim-1 
-       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,force_dir,57)
+       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,force_dir)
        call grid_type_to_box_type(force_dir,box_type_MAC_CV)
 
        do dircomp=1,SDIM
@@ -19300,7 +19300,7 @@ stop
 
           ! dir=0..sdim-1 
          call gridstenMAC_level(xsten_flux,iflux,jflux,kflux, &
-                 level,nhalf,grid_type_flux,57)
+                 level,nhalf,grid_type_flux)
 
          do dir_local=1,SDIM
           x_at_flux_point(side_flux+1,dir_flux+1,dir_local)= &
@@ -20123,14 +20123,14 @@ stop
          stop
         endif
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-             growlo,growhi,0,cell_flag,30) 
+             growlo,growhi,0,cell_flag) 
 
         do i=growlo(1),growhi(1)
         do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
 
           !cell_flag=0..sdim-1
-         call gridstenMAC_level(xsten,i,j,k,level,nhalf,cell_flag,33)
+         call gridstenMAC_level(xsten,i,j,k,level,nhalf,cell_flag)
 
          assimilate_parm%xsten=>xsten
          if (is_in_probtype_list().eq.1) then

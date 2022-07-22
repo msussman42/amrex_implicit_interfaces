@@ -900,7 +900,7 @@ stop
       enddo
 
       call get_user_tension(xcenter,time, &
-       fort_tension,user_tension,temperature_cen,2)
+       fort_tension,user_tension,temperature_cen)
 
       if (unscaled_min_curvature_radius.ge.zero) then
        ! do nothing
@@ -993,7 +993,7 @@ stop
         enddo
 
         call get_user_tension(local_x,time, &
-         fort_tension,local_tension,local_temperature,2)
+         fort_tension,local_tension,local_temperature)
         mgoni_tension(iofs,jofs,kofs)=local_tension(iten)
        enddo
        enddo
@@ -8128,7 +8128,7 @@ stop
         endif
 
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-         igridlo,igridhi,0,veldir,16) 
+         igridlo,igridhi,0,veldir) 
 
           ! first init xface,yface,zface 
           ! then follow with the rest...
@@ -8158,7 +8158,7 @@ stop
          local_face(FACECOMP_FACEVEL+1)=zero
 
           ! veldir=0..sdim-1
-         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,veldir,21)
+         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,veldir)
 
          wtL=(xstenMAC(0,veldir+1)-xstenMAC(-1,veldir+1))
          wtR=(xstenMAC(1,veldir+1)-xstenMAC(0,veldir+1))
@@ -13426,13 +13426,13 @@ stop
 
        if (spectral_loop.eq.0) then
 
-        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,17)
+        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
         do i=growlo(1),growhi(1)
         do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
 
           ! dir=0..sdim-1
-         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir,22)
+         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
 
          is_clamped_face=-1
 
@@ -14726,7 +14726,7 @@ stop
             enddo ! im_heat
 
             call get_user_tension(xmac,time, &
-             fort_tension,user_tension,mgoni_temp,3)
+             fort_tension,user_tension,mgoni_temp)
 
             call get_iten(im,im_opp,iten)
             call get_scaled_tension(user_tension(iten),tension_scaled)
@@ -15316,7 +15316,7 @@ stop
          stop
         endif 
   
-        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,18)
+        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
 
         do i=growlo(1),growhi(1)
         do j=growlo(2),growhi(2)
@@ -16690,7 +16690,7 @@ stop
               local_XPOS, &
               time, &
               fort_tension,user_tension, &
-              local_temperature,2)
+              local_temperature)
              ! sigma_{i,j}cos(theta_{i,k})=sigma_{j,k}-sigma_{i,k}
              ! theta_{ik}=0 => material i wets material k.
              ! im is material "i"  ("fluid" material)
@@ -18842,9 +18842,9 @@ stop
 
          ! dir=1..sdim
         call gridstenMAC_level(xstenMAC_lo, &
-         imaclo(1),imaclo(2),imaclo(3),grid_PARM%level,nhalf,dir-1,23)
+         imaclo(1),imaclo(2),imaclo(3),grid_PARM%level,nhalf,dir-1)
         call gridstenMAC_level(xstenMAC_hi, &
-         imachi(1),imachi(2),imachi(3),grid_PARM%level,nhalf,dir-1,24)
+         imachi(1),imachi(2),imachi(3),grid_PARM%level,nhalf,dir-1)
 
         do dir_inner=1,SDIM
          dx_inner=xstenMAC_hi(0,dir_inner)-xstenMAC_lo(0,dir_inner)

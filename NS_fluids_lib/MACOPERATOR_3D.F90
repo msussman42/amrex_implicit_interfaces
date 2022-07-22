@@ -936,12 +936,11 @@ stop
        bx_ptr=>bx
        call checkbound_array(fablo,fabhi,bx_ptr,0,dir)
 
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi, &
-               0,dir,13) 
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir) 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
-        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir,20)
+        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
         RR=one
         if (levelrz.eq.0) then
          ! do nothing
@@ -1035,7 +1034,7 @@ stop
        bx_ptr=>bx
        call checkbound_array(fablo,fabhi,bx_ptr,0,dir)
 
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,14) 
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir) 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
@@ -1129,7 +1128,7 @@ stop
        call checkbound_array(fablo,fabhi,bx_ptr,0,dir)
        call checkbound_array(fablo,fabhi,facewt_ptr,0,dir)
 
-       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir,15) 
+       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir) 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
