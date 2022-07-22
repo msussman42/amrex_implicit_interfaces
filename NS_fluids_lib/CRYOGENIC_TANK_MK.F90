@@ -752,7 +752,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   REAL_T, INTENT(in) :: t
   REAL_T, INTENT(out) :: LS(nmat)
   REAL_T :: nozzle_dist,LS_A
-  INTEGER_T :: caller_id
+  INTEGER_T :: called_from_heater_source
   REAL_T :: x3D(3)
   INTEGER_T auxcomp
   REAL_T :: LS_heater_a
@@ -833,8 +833,9 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
      if (nozzle_dist.gt.LS(3)) then ! nozzle_dist>0 in the nozzle
       LS(3)=nozzle_dist
      endif
-     caller_id=0
-     call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,caller_id) !LS_A>0 in heater
+     called_from_heater_source=0
+     !LS_A>0 in heater
+     call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,called_from_heater_source) 
      if (LS_A.gt.LS(3)) then
       LS(3)=LS_A
      endif
@@ -889,16 +890,14 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
  end subroutine CRYOGENIC_TANK_MK_LS
 
    !LS>0 in heater A region.
-   !caller_id=0 if called from geometry routine
-   !caller_id=1 if called from heater source routine.
- subroutine CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS,caller_id)
+ subroutine CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS,called_from_heater_source)
   use probcommon_module
   use global_utility_module
   IMPLICIT NONE
 
   REAL_T, INTENT(in) :: x(SDIM)
   REAL_T, INTENT(out) :: LS
-  INTEGER_T, INTENT(in) :: caller_id
+  INTEGER_T, INTENT(in) :: called_from_heater_source
   REAL_T zdiff
   REAL_T angle_end_center
   REAL_T shell_R
@@ -927,12 +926,12 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
     shell_R=sqrt(r_cyl**2+zdiff**2)
     shell_center=TANK_MK_END_RADIUS-0.5d0*TANK_MK_HEATER_THICK
 
-    if (caller_id.eq.1) then
+    if (called_from_heater_source.eq.1) then
      LS=0.5d0*TANK_MK_HEATER_THICK-abs(shell_R-shell_center)
-    else if (caller_id.eq.0) then
+    else if (called_from_heater_source.eq.0) then
      LS=shell_R-TANK_MK_END_RADIUS+TANK_MK_HEATER_THICK
     else
-     print *,"caller_id invalid"
+     print *,"called_from_heater_source invalid"
      stop
     endif
 
@@ -2092,7 +2091,7 @@ REAL_T, INTENT(in) :: cur_time
 REAL_T, INTENT(out) :: charfn_out
 REAL_T :: TANK_MK_R_WIDTH
 REAL_T :: shell_R,shell_center,LS_SHELL,LS_A,LS_nozzle,zdiff
-INTEGER_T :: caller_id
+INTEGER_T :: called_from_heater_source
 REAL_T :: r_cyl
 REAL_T :: x3D(3)
 INTEGER_T auxcomp
@@ -2152,8 +2151,9 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
  else if (axis_dir.eq.1) then !TPCE
 
   if (region_id.eq.1) then
-   caller_id=1
-   call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,caller_id) !LS_A>0 in heater
+   called_from_heater_source=1
+   !LS_A>0 in heater
+   call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,called_from_heater_source) 
    if (LS_A.ge.0.0d0) then
     charfn_out=one
    else if (LS_A.le.0.0d0) then
@@ -2316,7 +2316,7 @@ REAL_T :: gravity_local,expansion_coefficient
 INTEGER_T :: turb_flag
 
 REAL_T :: LS_A
-INTEGER_T :: caller_id
+INTEGER_T :: called_from_heater_source
 REAL_T :: r_cyl
 REAL_T :: x3D(3)
 INTEGER_T auxcomp
@@ -2487,9 +2487,9 @@ if ((im.ge.1).and.(im.le.num_materials)) then
   if (im.eq.2) then ! vapor
    ! do nothing
   else if ((im.eq.1).or.(im.eq.3)) then ! liquid or solid
-   caller_id=1
+   called_from_heater_source=1
    if (axis_dir.eq.1) then
-    call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,caller_id)
+    call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,called_from_heater_source)
    else if (axis_dir.eq.2) then
     auxcomp=1 ! heater A (top)
     call interp_from_aux_grid(auxcomp,x3D,LS_A)

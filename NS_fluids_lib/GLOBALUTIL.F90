@@ -8673,11 +8673,9 @@ end subroutine print_visual_descriptor
       end subroutine gridsten
 
         ! -1<=grid_type<=5
-      subroutine gridstenMAC(x,xlo,i,j,k,fablo,bfact,dx,nhalf,grid_type, &
-                      caller_id)
+      subroutine gridstenMAC(x,xlo,i,j,k,fablo,bfact,dx,nhalf,grid_type)
       IMPLICIT NONE 
 
-      INTEGER_T, INTENT(in) :: caller_id
       INTEGER_T, INTENT(in) :: nhalf
       INTEGER_T, INTENT(in) :: grid_type
       REAL_T, INTENT(out) :: x(-nhalf:nhalf,SDIM)
@@ -8692,8 +8690,9 @@ end subroutine print_visual_descriptor
       if ((grid_type.ge.-1).and.(grid_type.le.5)) then
        ! do nothing
       else
-       print *,"grid_type invalid gridstenMAC: grid_type,caller_id", &
-          grid_type,caller_id
+       print *,"put breakpoint here to see the caller"
+       print *,"grid_type invalid gridstenMAC: grid_type ", &
+          grid_type
        stop
       endif
 
@@ -9711,11 +9710,10 @@ end subroutine print_visual_descriptor
 
 
        ! -1<=grid_type<=5
-      subroutine gridstenMAC_level(x,i,j,k,level,nhalf,grid_type,caller_id)
+      subroutine gridstenMAC_level(x,i,j,k,level,nhalf,grid_type)
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: caller_id
       INTEGER_T, INTENT(in) :: nhalf
       INTEGER_T, INTENT(in) :: grid_type
       REAL_T, INTENT(out) :: x(-nhalf:nhalf,SDIM)
@@ -9727,8 +9725,9 @@ end subroutine print_visual_descriptor
       if ((grid_type.ge.-1).and.(grid_type.le.5)) then
        ! do nothing
       else
-       print *,"grid_type invalid gridstenMAC_level: grid_type,caller_id", &
-          grid_type,caller_id
+       print *,"put breakpoint here to see the caller"
+       print *,"grid_type invalid gridstenMAC_level: grid_type ", &
+          grid_type
        stop
       endif
 
@@ -9752,10 +9751,10 @@ end subroutine print_visual_descriptor
        stop
       endif
       if ((level.lt.0).or.(level.gt.cache_max_level)) then
+       print *,"put breakpoint here to see the caller"
        print *,"level invalid gridstenMAC_level"
        print *,"level,cache_max_level ",level,cache_max_level
-       print *,"nhalf,grid_type,caller_id ", &
-               nhalf,grid_type,caller_id
+       print *,"nhalf,grid_type ",nhalf,grid_type
        print *,"x(0,1..sdim),i,j,k ",x(0,1),x(0,2),x(0,SDIM),i,j,k
        print *,"box_type ",box_type(1),box_type(2),box_type(SDIM)
 
@@ -10355,10 +10354,9 @@ end subroutine print_visual_descriptor
 
        ! -1<=grid_type<=5
       subroutine growntileboxMAC( &
-       tilelo,tilehi,fablo,fabhi,growlo,growhi,ng,grid_type,caller_id)
+       tilelo,tilehi,fablo,fabhi,growlo,growhi,ng,grid_type)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: caller_id
       INTEGER_T, INTENT(in) :: grid_type
       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
@@ -10373,10 +10371,10 @@ end subroutine print_visual_descriptor
       if ((grid_type.ge.-1).and.(grid_type.le.5)) then
        ! do nothing
       else
+       print *,"put breakpoint here to see the caller"
        print *,"grid_type invalid growntilebox mac"
        print *,"ng=",ng
        print *,"grid_type=",grid_type
-       print *,"caller_id=",caller_id
        stop
       endif 
 
@@ -10727,7 +10725,7 @@ end subroutine print_visual_descriptor
        ! grid element.
       subroutine SEM_INTERP_ELEMENT( &
        nvar,bfact,grid_type, &
-       stenhi,dx,xfine,fcoarse,fxfine,caller_id)
+       stenhi,dx,xfine,fcoarse,fxfine)
       use LagrangeInterpolationPolynomial
       use LegendreNodes
 
@@ -10758,7 +10756,6 @@ end subroutine print_visual_descriptor
       REAL_T INTERP_TOL
       REAL_T wtsum
       REAL_T local_data
-      INTEGER_T caller_id
       INTEGER_T :: box_type(SDIM)
 
       INTERP_TOL=1.0D-10
@@ -10921,9 +10918,9 @@ end subroutine print_visual_descriptor
          if (abs(local_data).le.1.0E+20) then
           fxfine(n)=fxfine(n)+local_data*wt
          else
+          print *,"put breakpoint here to see the caller"
           print *,"abs(local_data) overflow SEM_INTERP_ELEMENT"
           print *,"n,nvar,local_data ",n,nvar,local_data
-          print *,"caller_id=",caller_id
           stop
          endif
         enddo ! n=1..nvar
@@ -11857,7 +11854,6 @@ end subroutine print_visual_descriptor
       type(deriv_from_grid_parm_type), INTENT(in) :: data_in 
       type(interp_from_grid_out_parm_type), INTENT(out) :: data_out
 
-      INTEGER_T caller_id
       INTEGER_T dir_local
       INTEGER_T ilo(SDIM)
       INTEGER_T ihi(SDIM)
@@ -11903,9 +11899,8 @@ end subroutine print_visual_descriptor
       local_data_fab=>data_in%disp_data
  
       nhalf=3 
-      caller_id=10
       call gridstenMAC_level(xflux_sten,ilocal(1),ilocal(2),ilocal(SDIM), &
-        data_in%level,nhalf,data_in%grid_type_flux,caller_id)
+        data_in%level,nhalf,data_in%grid_type_flux)
 
       do dir_local=1,SDIM 
        xtarget(dir_local)=xflux_sten(0,dir_local)
@@ -11948,9 +11943,9 @@ end subroutine print_visual_descriptor
       enddo ! dir_local=1..sdim
 
       call gridstenMAC_level(xhi_sten,ihi(1),ihi(2),ihi(SDIM), &
-        data_in%level,nhalf,data_in%grid_type_data,caller_id)
+        data_in%level,nhalf,data_in%grid_type_data)
       call gridstenMAC_level(xlo_sten,ilo(1),ilo(2),ilo(SDIM), &
-        data_in%level,nhalf,data_in%grid_type_data,caller_id)
+        data_in%level,nhalf,data_in%grid_type_data)
 
       do dir_local=1,SDIM 
        if (ilo(dir_local).eq.ihi(dir_local)) then
@@ -12214,7 +12209,6 @@ end subroutine print_visual_descriptor
       type(single_deriv_from_grid_parm_type), INTENT(in) :: data_in 
       type(interp_from_grid_out_parm_type), INTENT(out) :: data_out
 
-      INTEGER_T caller_id
       INTEGER_T dir_local
       INTEGER_T ilo(SDIM)
       INTEGER_T ihi(SDIM)
@@ -12258,9 +12252,8 @@ end subroutine print_visual_descriptor
       local_data_fab=>data_in%disp_data
 
       nhalf=3 
-      caller_id=10
       call gridstenMAC_level(xflux_sten,ilocal(1),ilocal(2),ilocal(SDIM), &
-        data_in%level,nhalf,data_in%grid_type_flux,caller_id)
+        data_in%level,nhalf,data_in%grid_type_flux)
 
       do dir_local=1,SDIM 
        xtarget(dir_local)=xflux_sten(0,dir_local)
@@ -12303,9 +12296,9 @@ end subroutine print_visual_descriptor
       enddo ! dir_local=1..sdim
 
       call gridstenMAC_level(xhi_sten,ihi(1),ihi(2),ihi(SDIM), &
-        data_in%level,nhalf,data_in%grid_type_data,caller_id)
+        data_in%level,nhalf,data_in%grid_type_data)
       call gridstenMAC_level(xlo_sten,ilo(1),ilo(2),ilo(SDIM), &
-        data_in%level,nhalf,data_in%grid_type_data,caller_id)
+        data_in%level,nhalf,data_in%grid_type_data)
 
       do dir_local=1,SDIM 
        if (ilo(dir_local).eq.ihi(dir_local)) then
@@ -12841,13 +12834,11 @@ end subroutine print_visual_descriptor
       REAL_T :: wt_dist(3)
       INTEGER_T :: nc
       REAL_T :: LS_local(1)
-      INTEGER_T :: caller_id
       INTEGER_T :: dir
       INTEGER_T :: i,j,k
       INTEGER_T :: i1,j1,k1
 
       nc=1
-      caller_id=10
 
       if ((auxcomp.ge.1).and.(auxcomp.le.fort_num_local_aux_grids)) then
        call containing_cell_aux(auxcomp,x,cell_index)
@@ -12883,7 +12874,7 @@ end subroutine print_visual_descriptor
         enddo  ! j1
         enddo  ! k1
         call bilinear_interp_stencil3D(data_stencil,wt_dist,nc, &
-          LS_local(1),caller_id)
+          LS_local(1))
         LS=LS_local(1)
        else
         print *,"local_dx invalid"
@@ -12898,11 +12889,10 @@ end subroutine print_visual_descriptor
       end subroutine interp_from_aux_grid
 
       subroutine bilinear_interp_stencil3D(data_stencil,wt_dist, &
-                      ncomp,data_interp,caller_id)
+                      ncomp,data_interp)
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: caller_id
       INTEGER_T, INTENT(in) :: ncomp
       REAL_T, dimension(2,2,2,ncomp), INTENT(in) :: data_stencil
       REAL_T, INTENT(in) :: wt_dist(3)
@@ -12915,9 +12905,9 @@ end subroutine print_visual_descriptor
            (wt_dist(dir).le.one+VOFTOL)) then
         ! do nothing
        else
+        print *,"put breakpoint here to see the caller"
         print *,"wt_dist out of range"
         print *,"dir,wt_dist ",dir,wt_dist(dir)
-        print *,"caller_id= ",caller_id
         print *,"ncomp= ",ncomp
         stop
        endif
@@ -12942,11 +12932,10 @@ end subroutine print_visual_descriptor
       end subroutine bilinear_interp_stencil3D
 
       subroutine bilinear_interp_stencil(data_stencil,wt_dist, &
-                      ncomp,data_interp,caller_id)
+                      ncomp,data_interp)
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: caller_id
       INTEGER_T, INTENT(in) :: ncomp
       REAL_T, dimension(D_DECL(2,2,2),ncomp), INTENT(in) :: data_stencil
       REAL_T, INTENT(in) :: wt_dist(SDIM)
@@ -12959,9 +12948,9 @@ end subroutine print_visual_descriptor
            (wt_dist(dir).le.one+VOFTOL)) then
         ! do nothing
        else
+        print *,"put breakpoint here to see the caller"
         print *,"wt_dist out of range"
         print *,"dir,wt_dist ",dir,wt_dist(dir)
-        print *,"caller_id= ",caller_id
         print *,"ncomp= ",ncomp
         stop
        endif
@@ -17525,11 +17514,10 @@ end subroutine print_visual_descriptor
 
 
       subroutine get_user_tension(xpos,time, &
-        tension,new_tension,temperature,caller_id)
+        tension,new_tension,temperature)
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: caller_id 
       REAL_T, INTENT(in) :: xpos(SDIM)
       REAL_T, INTENT(in) :: time
       REAL_T, INTENT(in) :: temperature(num_materials)

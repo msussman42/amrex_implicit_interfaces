@@ -36,10 +36,9 @@
 ! 1. A = QR;
 ! 2. d=QTb;
 ! 3. solve Rx=d.
-  subroutine least_squares_QR(A, x, b, m, n, caller_id)
+  subroutine least_squares_QR(A, x, b, m, n)
     implicit none
 
-    integer,          INTENT(in ) :: caller_id
     integer,          INTENT(in ) :: m, n
     double precision, INTENT(in ) :: A(m, n), b(m)
     double precision, INTENT(out) :: x(n)
@@ -57,7 +56,8 @@
      else if (abs(A(i,j)).le.relative_error_factor) then
       ! do nothing
      else
-      print *,"i,j,A(i,j),m,n,caller_id ",i,j,A(i,j),m,n,caller_id
+      print *,"put breakpoint here to see the caller"
+      print *,"i,j,A(i,j),m,n ",i,j,A(i,j),m,n
       print *,"abs(A(i,j)) bust"
       stop
      endif
@@ -165,8 +165,8 @@
     if (residual_verify .le. 1.d-8) then
        ! do nothing
     else
+       print *,"put breakpoint here to see the caller"
        print *, "Error! ||ATAx - ATb|| = ", residual_verify
-       print *,"caller_id=",caller_id
        print *,"relative_error_factor ",relative_error_factor
        print *,"m,n = ",m,n
        do i=1,m
@@ -218,7 +218,6 @@
             weights(-rij:rij,-rij:rij,-rk:rk)
     double precision, INTENT(out) :: ls_extrap(num_materials)
 
-    integer caller_id
     integer i, j, k
     integer isten, jsten, ksten
     integer m, n, im
@@ -336,8 +335,7 @@
              enddo       
           enddo
 
-          caller_id=0
-          call least_squares_QR(A, var, b, m, n,caller_id)
+          call least_squares_QR(A, var, b, m, n)
 
           ls_extrap(im) = var(dim_in + 1)
        else!is_fluid(im) = 0, soild

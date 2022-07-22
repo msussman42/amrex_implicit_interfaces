@@ -2298,7 +2298,6 @@ stop
         ! u_max(sdim+1) is max c^2
       subroutine fort_estdt( &
         interface_mass_transfer_model, &
-        caller_id, &
         tid, &
         n_scales, &
         fixed_dt_scales, &
@@ -2357,7 +2356,6 @@ stop
       use hydrateReactor_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: caller_id
       INTEGER_T, INTENT(in) :: tid
       INTEGER_T, INTENT(in) :: n_scales
       REAL_T, INTENT(in) :: fixed_dt_scales(n_scales)
@@ -2556,16 +2554,6 @@ stop
       den_ptr=>den
       vof_ptr=>vof
       dist_ptr=>dist
-
-      if ((caller_id.eq.0).or. & !computeInitialDt
-          (caller_id.eq.1).or. & !computeNewDT
-          (caller_id.eq.2).or. & !do_the_advance
-          (caller_id.eq.3)) then !sum_integrated_quantities.
-       ! do nothing
-      else
-       print *,"caller_id invalid"
-       stop
-      endif
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -3595,17 +3583,6 @@ stop
        ! do nothing
       else
        print *,"local_gravity_coefficient is NaN"
-       stop
-      endif
-
-      if ((caller_id.eq.0).or. & !computeInitialDt
-          (caller_id.eq.3)) then !sum_integrated_quantities.
-       ! do nothing
-      else if ((caller_id.eq.1).or. & ! computeNewDT
-               (caller_id.eq.2)) then ! do_the_advance
-       ! do nothing
-      else
-       print *,"caller_id invalid"
        stop
       endif
 
@@ -11056,9 +11033,7 @@ stop
        ! the "-1" means that LS is a cell centered variable
        ! instead of a face centered (staggared) variable.
        ! valid values for position type for staggared variables
-       ! are 0,1,..,SDIM-1. The last parameter is a "unique" 
-       ! caller id that is printed to the screen if the sanity
-       ! check fails.
+       ! are 0,1,..,SDIM-1. 
       LSCP_ptr=>LSCP
       call checkbound_array(fablo,fabhi,LSCP_ptr,ngrow_distance,-1)
       LSFD_ptr=>LSFD
@@ -13314,7 +13289,6 @@ stop
 
       REAL_T massfrac_parm(num_species_var+1)
 
-      INTEGER_T caller_id
       REAL_T :: critical_cutoff_low
       REAL_T :: critical_cutoff_high
     
@@ -14463,15 +14437,6 @@ stop
               ! materials, but not the solid materials.  Solid materials are
               ! immersed into the domain.
 
-            if ((istencil.eq.-1).and. &
-                (icrse.eq.11).and.(jcrse.eq.16).and.(kcrse.eq.12).and. &
-                (level.eq.1).and. &
-                (1.eq.0)) then
-             caller_id=-1
-            else
-             caller_id=3
-            endif
-             
             call multi_get_volume_grid_and_map( &
               normdir, & ! normdir=0..sdim-1
               coeff, &
@@ -14486,7 +14451,7 @@ stop
               geom_xtetlist_uncapt(1,1,1,tid+1), &
               nmax, &
               nmax, &
-              SDIM,caller_id)
+              SDIM)
 
             if (null_velocity_flag.eq.1) then
              if (istencil.eq.0) then

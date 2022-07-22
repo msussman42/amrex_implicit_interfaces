@@ -275,7 +275,7 @@ stop
          xsten,nhalf,nhalf_box, &
          bfact_coarse,dxc, &
          tessellate, & !=0
-         mofdata,SDIM,304)
+         mofdata,SDIM)
 
        call multimaterial_MOF( &
          bfact_coarse,dxc,xsten,nhalf, &
@@ -290,7 +290,7 @@ stop
          multi_centroidA, &
          continuous_mof, &
          cmofsten, &
-         SDIM,5)
+         SDIM)
 
        do dir=1,num_materials*ngeom_recon
         datarecon(D_DECL(i,j,k),dir)=mofdata(dir)
@@ -382,7 +382,7 @@ stop
                geom_xtetlist(1,1,1,tid+1), &
                nmax, &
                nmax, &
-               SDIM,6)
+               SDIM)
 
               do im=1,num_materials
                vofcomp_new=(im-1)*ngeom_recon+1
@@ -932,7 +932,7 @@ stop
                geom_xtetlist(1,1,1,tid+1), &
                nmax, &
                nmax, &
-               SDIM,6)
+               SDIM)
 
               do im=1,num_materials
                vofcomp_new=(im-1)*ngeom_recon+1
@@ -1046,7 +1046,7 @@ stop
          xstenfine,nhalf,nhalf_box, &
          bfact_fine,dxf, &
          tessellate, & !=0
-         mofdata,SDIM,304)
+         mofdata,SDIM)
 
        call multimaterial_MOF( &
          bfact_fine,dxf,xstenfine,nhalf, &
@@ -1061,7 +1061,7 @@ stop
          multi_centroidA, &
          continuous_mof, &
          cmofsten, &
-         SDIM,6)
+         SDIM)
 
        do dir=1,num_materials*ngeom_recon
         fdatamof(D_DECL(ifine,jfine,kfine),dir)=mofdata(dir)

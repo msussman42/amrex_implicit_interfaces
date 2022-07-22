@@ -2177,7 +2177,6 @@ END SUBROUTINE SIMP
       REAL_T INTERP_TOL
       INTEGER_T local_maskSEM
       REAL_T local_data
-      INTEGER_T caller_id
       INTEGER_T current_index
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T ispec
@@ -2185,8 +2184,6 @@ END SUBROUTINE SIMP
       INTEGER_T nwrite3d
       INTEGER_T nwrite2d
 
-
-      caller_id=3
 
       nhalf=3
       nmax=POLYGON_LIST_MAX ! in: fort_cellgrid
@@ -3020,7 +3017,7 @@ END SUBROUTINE SIMP
            call SEM_INTERP_ELEMENT( &
             VISUALCOMP_NCOMP_INTERP, &
             bfact,grid_type, &
-            SEMhi,dx,xcrit,SEMloc,SEM_value,caller_id)
+            SEMhi,dx,xcrit,SEMloc,SEM_value)
 
            deallocate(SEMloc)
 
@@ -3844,11 +3841,10 @@ END SUBROUTINE SIMP
            enddo
            enddo
 
-           caller_id=4
            call SEM_INTERP_ELEMENT( &
             VISUALCOMP_NCOMP_INTERP, &
             bfact,grid_type, &
-            SEMhi,dx,xcrit,SEMloc,SEM_value,caller_id)
+            SEMhi,dx,xcrit,SEMloc,SEM_value)
 
            deallocate(SEMloc)
 
@@ -4657,9 +4653,6 @@ END SUBROUTINE SIMP
       INTEGER_T dencomp
       REAL_T LS_local(num_materials)
       INTEGER_T mat_freq(num_materials)
-      INTEGER_T caller_id
-
-      caller_id=6
 
       nhalf=1
 
@@ -5147,7 +5140,7 @@ END SUBROUTINE SIMP
 
           call SEM_INTERP_ELEMENT( &
            ncomp_flux,bfact_f,grid_type, &
-           flochi,dxf,xcoarse,ffine,crse_value,caller_id)
+           flochi,dxf,xcoarse,ffine,crse_value)
 
           voltotal=one
 
@@ -5422,9 +5415,7 @@ END SUBROUTINE SIMP
       REAL_T crse_data
       INTEGER_T dencomp
       INTEGER_T local_masknbr
-      INTEGER_T caller_id
 
-      caller_id=7
       nhalf=1
 
       INTERP_TOL=1.0E-4
@@ -5917,7 +5908,7 @@ END SUBROUTINE SIMP
 
             call SEM_INTERP_ELEMENT( &
              ncomp_flux,bfact_c,grid_type, &
-             clochi,dxc,xfine,ccrse,fine_value,caller_id)
+             clochi,dxc,xfine,ccrse,fine_value)
 
             voltotal=one
 
@@ -6191,9 +6182,7 @@ END SUBROUTINE SIMP
       INTEGER_T elem_test
       REAL_T crse_data
       INTEGER_T local_masknbr
-      INTEGER_T caller_id
 
-      caller_id=17
       nhalf=1
 
       INTERP_TOL=1.0E-4
@@ -6534,7 +6523,7 @@ END SUBROUTINE SIMP
 
             call SEM_INTERP_ELEMENT( &
              ncomp_flux,bfact_c,grid_type, &
-             clochi,dxc,xfine,ccrse,fine_value,caller_id)
+             clochi,dxc,xfine,ccrse,fine_value)
 
             voltotal=one
 
@@ -8295,7 +8284,6 @@ END SUBROUTINE SIMP
       REAL_T mofdata(num_materials*ngeom_recon)
       REAL_T mofdata_L(num_materials*ngeom_recon)
       REAL_T local_cellvol
-      INTEGER_T caller_id
       INTEGER_T nmax
 
       if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
@@ -8390,7 +8378,6 @@ END SUBROUTINE SIMP
          enddo
 
          tessellate=1 ! tessellate output (tessellate=3 => raster output)
-         caller_id=15
          call multi_get_volume_tessellate( &
            tessellate, & ! tessellate=1 
            bfact, &
@@ -8400,8 +8387,7 @@ END SUBROUTINE SIMP
            geom_xtetlist(1,1,1,tid_current+1), &
            nmax, &
            nmax, &
-           SDIM, &
-           caller_id)
+           SDIM)
 
          do dir=1,SDIM
           xtarget(dir)=xsten(0,dir)
@@ -8848,7 +8834,6 @@ END SUBROUTINE SIMP
           enddo
 
           tessellate=1 ! tessellate output (tessellate=3 => raster output)
-          caller_id=15
           call multi_get_volume_tessellate( &
            tessellate, & ! tessellate=1 
            bfact, &
@@ -8858,8 +8843,7 @@ END SUBROUTINE SIMP
            geom_xtetlist(1,1,1,tid_current+1), &
            nmax, &
            nmax, &
-           SDIM, &
-           caller_id)
+           SDIM)
 
           call multi_get_volume_tessellate( &
            tessellate, & ! tessellate=1 
@@ -8870,8 +8854,7 @@ END SUBROUTINE SIMP
            geom_xtetlist(1,1,1,tid_current+1), &
            nmax, &
            nmax, &
-           SDIM, &
-           caller_id)
+           SDIM)
 
           do local_dir=1,SDIM
            xtarget(local_dir)=xsten(0,local_dir)
@@ -11422,7 +11405,6 @@ END SUBROUTINE SIMP
       INTEGER_T icrit,side,bccrit
       INTEGER_T bc_comp
       REAL_T local_wt(nsolve)
-      INTEGER_T caller_id
       REAL_T maskleft,maskright
       INTEGER_T maskface
       INTEGER_T face_vcomp
@@ -11623,9 +11605,7 @@ END SUBROUTINE SIMP
          endif
 
           ! declared in: PROB.F90
-         caller_id=2
          call eval_face_coeff( &
-           caller_id, &
            level,finest_level, &
            AL,AL_ice,cc_group, &
            local_dd,local_dd_group, &
@@ -12490,9 +12470,7 @@ END SUBROUTINE SIMP
       INTEGER_T testmask,testmask2
       INTEGER_T local_enable_spectral
       INTEGER_T elem_test
-      INTEGER_T caller_id
 
-      caller_id=5
       nhalf=1
 
       INTERP_TOL=1.0E-4
@@ -12713,7 +12691,7 @@ END SUBROUTINE SIMP
 
         call SEM_INTERP_ELEMENT( &
          ncomp,bfact_f,grid_type, &
-         flochi,dxf,xcoarse,ffine,crse_value,caller_id)
+         flochi,dxf,xcoarse,ffine,crse_value)
 
         voltotal=one
 
@@ -14064,10 +14042,8 @@ END SUBROUTINE SIMP
       INTEGER_T khi
       INTEGER_T testmask,testmask2
       INTEGER_T local_enable_spectral
-      INTEGER_T caller_id
       INTEGER_T box_type(SDIM)
 
-      caller_id=8
       nhalf=1
 
       INTERP_TOL=1.0E-4
@@ -14281,7 +14257,7 @@ END SUBROUTINE SIMP
 
         call SEM_INTERP_ELEMENT( &
          ncomp,bfact_f,grid_type, &
-         flochi,dxf,xcoarse,ffine,crse_value,caller_id)
+         flochi,dxf,xcoarse,ffine,crse_value)
 
         voltotal=one
 

@@ -108,14 +108,11 @@ stop
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
       INTEGER_T near_solid
-      INTEGER_T caller_id
       INTEGER_T im_primary
       INTEGER_T im_local
       REAL_T VFRAC(num_materials)
      
       nhalf=1
-
-      caller_id=113
 
       if (ngrow.eq.1) then
        ! do nothing
@@ -193,7 +190,7 @@ stop
         vofcomp=(im_local-1)*ngeom_recon+1
         VFRAC(im_local)=vof(D_DECL(i,j,k),vofcomp)
        enddo
-       call get_primary_material_VFRAC(VFRAC,im_primary,caller_id)
+       call get_primary_material_VFRAC(VFRAC,im_primary)
 
        do veldir=1,3
        do dir=1,3
@@ -374,7 +371,7 @@ stop
           vofcomp=(im_local-1)*ngeom_recon+1
           VFRAC(im_local)=vof(D_DECL(i+i1,j+j1,k+k1),vofcomp)
          enddo
-         call get_primary_material_VFRAC(VFRAC,im_primary,caller_id)
+         call get_primary_material_VFRAC(VFRAC,im_primary)
          if (is_rigid(im_primary).eq.1) then
           near_solid=1
          else if (is_rigid(im_primary).eq.0) then
@@ -1272,7 +1269,6 @@ stop
       INTEGER_T im_primary_side
       INTEGER_T im_primary_probe
       REAL_T VFRAC(num_materials)
-      INTEGER_T caller_id
       INTEGER_T near_interface
       REAL_T nrm(SDIM)
 
@@ -1283,8 +1279,6 @@ stop
       endif
 
       nhalf=1
-
-      caller_id=1338
 
       conduct_ptr=>conduct
 
@@ -1355,7 +1349,7 @@ stop
         vofcomp=(im_local-1)*ngeom_recon+1
         VFRAC(im_local)=vof(D_DECL(i,j,k),vofcomp)
        enddo
-       call get_primary_material_VFRAC(VFRAC,im_primary_center,caller_id)
+       call get_primary_material_VFRAC(VFRAC,im_primary_center)
 
        do dir=1,SDIM
         ii=0
@@ -1383,7 +1377,7 @@ stop
           vofcomp=(im_local-1)*ngeom_recon+1
           VFRAC(im_local)=vof(D_DECL(i+side*ii,j+side*jj,k+side*kk),vofcomp)
          enddo
-         call get_primary_material_VFRAC(VFRAC,im_primary_side,caller_id)
+         call get_primary_material_VFRAC(VFRAC,im_primary_side)
 
          near_interface=0
          do dir_local=1,SDIM
@@ -1436,7 +1430,7 @@ stop
            vofcomp=(im_local-1)*ngeom_recon+1
            VFRAC(im_local)=vof(D_DECL(iprobe,jprobe,kprobe),vofcomp)
           enddo
-          call get_primary_material_VFRAC(VFRAC,im_primary_probe,caller_id)
+          call get_primary_material_VFRAC(VFRAC,im_primary_probe)
           if ((is_rigid(im_primary_probe).eq.1).or. &
               (im_primary_probe.ne.im_parm)) then
            near_interface=0

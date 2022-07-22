@@ -904,7 +904,6 @@ stop
       REAL_T curv_choice
       REAL_T mofdata(num_materials*ngeom_recon)
       INTEGER_T tessellate
-      INTEGER_T caller_id
       INTEGER_T nmax
       INTEGER_T LSstenlo(3),LSstenhi(3)
       INTEGER_T HTstenlo(3),HTstenhi(3)
@@ -1062,7 +1061,6 @@ stop
        !  sum F_fluid=1
        tessellate=3
 
-       caller_id=15
        call multi_get_volume_tessellate( &
          tessellate, & ! =1 or 3
          bfact, &
@@ -1072,8 +1070,7 @@ stop
          geom_xtetlist(1,1,1,tid_current+1), &
          nmax, &
          nmax, &
-         SDIM, &
-         caller_id)
+         SDIM)
 
        do im=1,num_materials*ngeom_recon
         F_tess(D_DECL(i,j,k),im)=mofdata(im)
@@ -3556,8 +3553,7 @@ stop
           geom_xtetlist_uncapt(1,1,1,tid+1), &
           nmax, &
           nmax, &
-          SDIM, &
-          3)  ! caller_id=3
+          SDIM) 
 
         else if ((tessellate.eq.0).or. &
                  (tessellate.eq.1)) then
@@ -4128,7 +4124,6 @@ stop
       REAL_T L_face
       INTEGER_T nmax
       INTEGER_T local_tessellate
-      INTEGER_T caller_id
 
       dstfab_ptr=>dstfab
 
@@ -4450,7 +4445,6 @@ stop
 
          enddo ! im=1..num_materials
 
-         caller_id=12
          if (tessellate.eq.0) then
           local_tessellate=1 ! is_rigid data has been zeroed out.
          else if ((tessellate.eq.1).or. &
@@ -4484,8 +4478,7 @@ stop
            nmax, &
            geom_xtetlist_old(1,1,1,tid+1), &
            nmax, &
-           nmax, &
-           caller_id)
+           nmax)
 
         else if ((left_face_ok.eq.0).or. &
                  (right_face_ok.eq.0)) then

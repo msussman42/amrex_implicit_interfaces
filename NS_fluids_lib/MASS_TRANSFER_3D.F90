@@ -130,7 +130,7 @@ stop
         latent_comp, &
         TSAT_array, &
         TSAT_flag_array, &  ! =0 if derived, =1 if T_interface(x,y,z,t) given.
-        x_I,time,caller_id)
+        x_I,time)
       use global_utility_module
       IMPLICIT NONE
 
@@ -144,7 +144,6 @@ stop
       INTEGER_T, INTENT(in) :: finest_level
       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       REAL_T, pointer, INTENT(in) :: TSATFAB(D_DECL(:,:,:),:)
-      INTEGER_T, INTENT(in) :: caller_id
       INTEGER_T, INTENT(in) :: latent_comp
       REAL_T, INTENT(out) :: T_I
       REAL_T, INTENT(in)  :: TSAT_array(2*num_interfaces)
@@ -223,8 +222,8 @@ stop
         if (T_I.ge.TEMPERATURE_FLOOR) then
          ! do nothing
         else
+         print *,"put breakpoint here to see the caller"
          print *,"T_I out of range T_I=",T_I
-         print *,"caller_id=",caller_id
          print *,"latent_comp=",latent_comp
          print *,"local_flag=",local_flag
          do dir=1,SDIM

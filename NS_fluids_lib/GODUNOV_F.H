@@ -397,7 +397,6 @@ extern "C"
 
    void fort_estdt(
       int* interface_mass_transfer_model,
-      int* caller_id,
       int* tid,
       int* n_scales,
       Real* fixed_dt_scales,
