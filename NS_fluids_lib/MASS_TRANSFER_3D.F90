@@ -1000,8 +1000,7 @@ stop
         geom_xtetlist(1,1,1,tid+1), &
         nmax, &
         nmax, &
-        SDIM, &
-        4)
+        SDIM)
 
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
@@ -4612,7 +4611,7 @@ stop
                  geom_xtetlist_uncapt(1,1,1,tid+1),  &
                  nmax, &
                  nmax, &
-                 SDIM,shapeflag,102)
+                 SDIM,shapeflag)
 
                multi_volume_total=zero
                do u_im=1,num_materials
@@ -5312,7 +5311,7 @@ stop
              multi_centroidA, &
              continuous_mof_parm, &
              cmofsten, &
-             SDIM,202)
+             SDIM)
 
              ! xPOINT_supermesh is needed in order to determine
              ! whether to interpolate old temperature and mass fraction
@@ -6212,7 +6211,7 @@ stop
                cmofsten, &
                u_xsten_updatecell,nhalf,nhalf_box, &
                bfact,dx, &
-               tessellate,mofdata,SDIM,106)
+               tessellate,mofdata,SDIM)
 
              do u_im=1,num_materials
               vofcomp_recon=(u_im-1)*ngeom_recon+1
@@ -8242,7 +8241,7 @@ stop
                    iten+ireverse*num_interfaces, &
                    saturation_temp, &
                    use_exact_temperature, &
-                   xI,cur_time,7)
+                   xI,cur_time)
                  else if (hardwire_flag(ireverse).eq.1) then
                   local_Tsat(ireverse)=local_hardwire_T(ireverse)
                  else

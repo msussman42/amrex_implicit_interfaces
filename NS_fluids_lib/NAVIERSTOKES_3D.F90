@@ -2412,7 +2412,7 @@ END SUBROUTINE SIMP
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
          nmax, &
-         SDIM,8)
+         SDIM)
        else if (visual_tessellate_vfrac.eq.0) then
         ! do nothing
        else
@@ -7256,8 +7256,7 @@ END SUBROUTINE SIMP
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
          nmax, &
-         SDIM, &
-         101)
+         SDIM)
 
          ! tessellate==1 (internal to stackerror)
          ! in: fort_summass
@@ -13505,7 +13504,7 @@ END SUBROUTINE SIMP
                  cmofsten, &
                  xstenfine,nhalf,nhalf_box, &
                  bfact_f,dxf, &
-                 tessellate,mofdatafine,SDIM,304)
+                 tessellate,mofdatafine,SDIM)
 
                call multimaterial_MOF( &
                 bfact_f,dxf,xstenfine,nhalf, &
@@ -13520,7 +13519,7 @@ END SUBROUTINE SIMP
                 multi_centroidA, &
                 continuous_mof, &
                 cmofsten, &
-                SDIM,3)
+                SDIM)
 
                call multi_get_volume_grid_simple( &
                 tessellate, &  !=0
@@ -13531,7 +13530,7 @@ END SUBROUTINE SIMP
                 geom_xtetlist(1,1,1,tid+1), &
                 nmax, &
                 nmax, &
-                SDIM,6)
+                SDIM)
 
               else
                print *,"fine_covered invalid"

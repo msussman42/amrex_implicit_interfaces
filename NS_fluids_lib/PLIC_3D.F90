@@ -344,7 +344,7 @@ stop
          xsten,nhalf,nhalf_box, &
          bfact,dx, &
          tessellate, & ! =0
-         mofdata,SDIM,6)
+         mofdata,SDIM)
 
        vfrac_fluid_sum=zero
        vfrac_solid_sum=zero
@@ -522,7 +522,7 @@ stop
             xstenbox,nhalfbox_sten,nhalf_box, &
             bfact,dx, &
             tessellate, & ! =0
-            mofsten,SDIM,6)
+            mofsten,SDIM)
 
            vfrac_fluid_sum=zero
            vfrac_solid_sum=zero
@@ -708,7 +708,7 @@ stop
             xstenbox,nhalfbox_sten,nhalf_box, &
             bfact,dx, &
             tessellate, & ! =0
-            mofsten,SDIM,6)
+            mofsten,SDIM)
 
           vfrac_fluid_sum=zero
           vfrac_solid_sum=zero
@@ -917,8 +917,7 @@ stop
           multi_centroidA, &
           continuous_mof_parm, &
           cmofsten, &
-          SDIM, &
-          2)
+          SDIM)
 
         if (continuous_mof_parm.eq.2) then
            ! center cell centroids.

@@ -1606,9 +1606,6 @@ stop
       INTEGER_T nhalf
       REAL_T INTERP_TOL
       INTEGER_T chi_loc(SDIM)
-      INTEGER_T caller_id
-
-      caller_id=1
 
       nhalf=1
 
@@ -1665,7 +1662,7 @@ stop
        endif
       enddo ! dir2
       
-      call growntileboxMAC(flo,fhi,flo,fhi,growlo,growhi,0,grid_type,60) 
+      call growntileboxMAC(flo,fhi,flo,fhi,growlo,growhi,0,grid_type) 
 
       do ifine=growlo(1),growhi(1)
       do jfine=growlo(2),growhi(2)
@@ -1692,8 +1689,8 @@ stop
         endif
        enddo ! dir2=1..sdim
 
-       call gridstenMAC_level(xsten,ifine,jfine,kfine,levelf,nhalf, &
-               grid_type,60)
+       call gridstenMAC_level(xsten,ifine,jfine,kfine,levelf,nhalf,grid_type)
+
        ic=stenlo(1)
        jc=stenlo(2)
        kc=stenlo(SDIM)
@@ -1841,9 +1838,7 @@ stop
       REAL_T, dimension(D_DECL(:,:,:),:),allocatable :: fcoarse
       REAL_T INTERP_TOL
       INTEGER_T chi_loc(SDIM)
-      INTEGER_T do_spectral_interp,caller_id
-
-      caller_id=2
+      INTEGER_T do_spectral_interp
 
       nhalf=1
 
@@ -1945,7 +1940,7 @@ stop
 
         call SEM_INTERP_ELEMENT( &
          nvar,bfact_coarse,grid_type, &
-         chi_loc,dxc,xfine,fcoarse,fine_value,caller_id)
+         chi_loc,dxc,xfine,fcoarse,fine_value)
 
         voltotal=one
 
@@ -2256,9 +2251,7 @@ stop
       REAL_T INTERP_TOL
       INTEGER_T chi_loc(SDIM)
       INTEGER_T khi
-      INTEGER_T do_spectral_interp,caller_id
-
-      caller_id=1
+      INTEGER_T do_spectral_interp
 
       nhalf=1
 
@@ -2318,7 +2311,7 @@ stop
        endif
       enddo ! dir2
       
-      call growntileboxMAC(flo,fhi,flo,fhi,growlo,growhi,0,grid_type,61) 
+      call growntileboxMAC(flo,fhi,flo,fhi,growlo,growhi,0,grid_type) 
 
       do ifine=growlo(1),growhi(1)
       do jfine=growlo(2),growhi(2)
@@ -2345,8 +2338,8 @@ stop
         endif
        enddo ! dir2=1..sdim
 
-       call gridstenMAC_level(xsten,ifine,jfine,kfine,levelf,nhalf, &
-               grid_type,61)
+       call gridstenMAC_level(xsten,ifine,jfine,kfine,levelf,nhalf,grid_type)
+
        ic=stenlo(1)
        jc=stenlo(2)
        kc=stenlo(SDIM)
@@ -2410,7 +2403,7 @@ stop
 
         call SEM_INTERP_ELEMENT( &
          nvar,bfact_coarse,grid_type, &
-         chi_loc,dxc,xfine,fcoarse,fine_value,caller_id)
+         chi_loc,dxc,xfine,fcoarse,fine_value)
 
         voltotal=one
 

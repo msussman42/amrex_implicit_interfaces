@@ -1195,12 +1195,6 @@ stop
            stop
           endif
 
-           ! use_dt=0
-           ! use_HO=0
-          call SEM_VISC_SANITY(101,dt,xstenMAC,nhalf,local_flux_val, &
-            dir,nc,0,0,project_option,bfact,enable_spectral, &
-            uncoupled_viscosity)
-
           gradterm=alpha*local_flux_val
 
           if (side_face.eq.0) then
@@ -1655,12 +1649,6 @@ stop
         
                 local_flux_val=tdata(D_DECL(ic,jc,kc),tcomp)
 
-                 ! use_dt=0
-                 ! use_HO=1
-                call SEM_VISC_SANITY(1,dt,xstenMAC,nhalf,local_flux_val, &
-                  dir,nc,0,1,project_option,bfact,enable_spectral, &
-                  uncoupled_viscosity)
-
                 gradterm=alpha*local_flux_val
 
                 if (side_cell.eq.0) then
@@ -2006,12 +1994,6 @@ stop
 
           local_flux_val=xflux(D_DECL(i,j,k),velcomp)+divterm
 
-           ! use_dt=0
-           ! use_HO=1
-          call SEM_VISC_SANITY(2,dt,xstenMAC,nhalf,local_flux_val, &
-            dir,velcomp,0,1,project_option,bfact,enable_spectral, &
-            uncoupled_viscosity)
-
           xflux(D_DECL(i,j,k),velcomp)=visc_constant*local_flux_val
 
          enddo  ! velcomp
@@ -2202,12 +2184,6 @@ stop
                do nc=1,SDIM
                 xflux_temp=xflux(D_DECL(iflux,jflux,kflux),nc)
               
-                 ! use_dt=1
-                 ! use_HO=1
-                call SEM_VISC_SANITY(3,dt,xstenMAC,nhalf,xflux_temp, &
-                  dir,nc,1,1,project_option,bfact,enable_spectral, &
-                  uncoupled_viscosity)
-
                 semflux(D_DECL(i_in,j_in,k_in),nbase+nc)=xflux_temp
                enddo ! nc
 
@@ -2219,14 +2195,6 @@ stop
 
                  local_flux_val_in=semflux(D_DECL(i_in,j_in,k_in),nbase+nc)
                  local_flux_val_out=semflux(D_DECL(i_out,j_out,k_out),nbase+nc)
-                  ! use_dt=1
-                  ! use_HO=1
-                 call SEM_VISC_SANITY(4,dt,xstenMAC,nhalf,local_flux_val_in, &
-                         dir,nc,1,1,project_option,bfact,enable_spectral, &
-                         uncoupled_viscosity)
-                 call SEM_VISC_SANITY(5,dt,xstenMAC,nhalf,local_flux_val_out, &
-                         dir,nc,1,1,project_option,bfact,enable_spectral, &
-                         uncoupled_viscosity)
 
                  avgflux(nc)=half*(local_flux_val_in+local_flux_val_out)
 
@@ -14012,7 +13980,7 @@ stop
                    geom_xtetlist_uncapt(1,1,1,tid+1), &
                    nmax, &
                    nmax, &
-                   SDIM,3)
+                   SDIM)
 
                   ! Sanity check inside the istencil + isidedonate loops.
                  LS_voltotal_depart=zero
@@ -15794,7 +15762,7 @@ stop
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
          nmax, &
-         SDIM,3)
+         SDIM)
 
         mass_sum=zero
         total_vol_cell=zero
@@ -17029,7 +16997,7 @@ stop
           geom_xtetlist(1,1,1,tid+1), &
           nmax, &
           nmax, &
-          SDIM,3)
+          SDIM)
 
          do im=1,num_materials
 

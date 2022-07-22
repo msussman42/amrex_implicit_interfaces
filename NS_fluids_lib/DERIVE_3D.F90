@@ -2272,8 +2272,7 @@ stop
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
          nmax, &
-         SDIM, &
-         101)
+         SDIM)
 
        ! first sweep - find the mass and centroid of materials
        if (isweep.eq.0) then
