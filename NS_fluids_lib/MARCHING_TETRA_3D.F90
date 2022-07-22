@@ -658,7 +658,7 @@ stop
           geom_xtetlist(1,1,1,tid+1), &
           nmax, &
           nmax, &
-          SDIM,7)
+          SDIM)
 
         else if ((vfrac_sum_solid.ge.-VOFTOL).and. &
                  (vfrac_sum_solid.le.VOFTOL)) then

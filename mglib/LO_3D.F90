@@ -557,7 +557,7 @@
       endif
 
       if ( cdir .eq. 0 ) then
-       call growntileboxMAC(lo,hi,lo,hi,growlo,growhi,0,cdir,101) 
+       call growntileboxMAC(lo,hi,lo,hi,growlo,growhi,0,cdir) 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
@@ -581,7 +581,7 @@
        enddo
        enddo
       else if (cdir .eq. 1 ) then
-       call growntileboxMAC(lo,hi,lo,hi,growlo,growhi,0,cdir,102) 
+       call growntileboxMAC(lo,hi,lo,hi,growlo,growhi,0,cdir) 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
@@ -605,7 +605,7 @@
        enddo
        enddo
       else if ((cdir .eq. 2 ).and.(AMREX_SPACEDIM.eq.3)) then
-       call growntileboxMAC(lo,hi,lo,hi,growlo,growhi,0,cdir,103) 
+       call growntileboxMAC(lo,hi,lo,hi,growlo,growhi,0,cdir) 
        do i=growlo(1),growhi(1)
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)

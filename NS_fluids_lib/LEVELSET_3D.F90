@@ -2596,7 +2596,7 @@ stop
            bfact,dx, &
            local_tessellate, & ! =0 
            mofdata,mofdatavalid, &
-           SDIM,3)
+           SDIM)
 
          shapeflag=0
 
@@ -2616,7 +2616,7 @@ stop
           nmax, &
           nmax, &
           SDIM, &
-          shapeflag,3)
+          shapeflag)
 
          do iten=1,num_interfaces
           is_processed(iten)=0
@@ -2937,7 +2937,7 @@ stop
                geom_xtetlist_uncapt(1,1,1,tid+1), &
                nmax, &
                nmax, &
-               SDIM,3)
+               SDIM)
 
               mofdatavalid(vofcomp+2*SDIM+2)=intercept
 
@@ -9837,8 +9837,7 @@ stop
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
          nmax, &
-         SDIM, &
-         3)
+         SDIM)
 
         voltotal=zero
         do im=1,num_materials
@@ -10282,7 +10281,7 @@ stop
              geom_xtetlist(1,1,1,tid+1), &
              nmax, &
              nmax, &
-             SDIM,2)
+             SDIM)
        
            mass_total_fluid=zero
            voltotal_fluid=zero 
@@ -11580,8 +11579,7 @@ stop
           local_div_val=divu/VOLTERM
 
           if ((local_div_val.ge.zero).or.(local_div_val.le.zero)) then
-           call SEM_VISC_SANITY(110,dt,xsten,nhalf,local_div_val, &
-            -1,veldir,1,0,project_option,bfact,enable_spectral,1)
+           ! do nothing
           else
            print *,"local_div_val invalid ",local_div_val
            print *,"divu invalid ",divu
@@ -11611,9 +11609,6 @@ stop
                    yvel(D_DECL(i,j+1,k),veldir)
            stop
           endif
-
-          call SEM_VISC_SANITY_CC(1,dt,CC,MSKDV,MSKRES,MDOT, &
-           VOLTERM,project_option,xsten,nhalf,veldir)
 
           local_rhs=rhs(D_DECL(i,j,k),veldir)
 
@@ -16898,7 +16893,7 @@ stop
               cmofsten, &
               xsten,nhalf,nhalf_box, &
               bfact,dx, &
-              tessellate,local_mof,SDIM,6)
+              tessellate,local_mof,SDIM)
             continuous_mof_parm=0
             mof_verbose=0
 
@@ -16915,7 +16910,7 @@ stop
              multi_centroidA, &
              continuous_mof_parm, &
              cmofsten, &
-             SDIM,2)
+             SDIM)
      
             tessellate_transfer=1 
             call multi_get_volume_tessellate( &
@@ -16926,8 +16921,7 @@ stop
              geom_xtetlist(1,1,1,tid+1), &
              nmax, &
              nmax, &
-             SDIM, &
-             2)
+             SDIM)
 
              ! change the solid material into the wetting fluid
              ! vfrac_solid_new(im_solid_max)
@@ -17050,7 +17044,7 @@ stop
            cmofsten, &
            xsten,nhalf,nhalf_box, &
            bfact,dx, &
-           tessellate,mofnew,SDIM,12)
+           tessellate,mofnew,SDIM)
 
          do im=1,num_materials*(1+SDIM)
           lsnew(D_DECL(i,j,k),im)=ls_hold(im)
@@ -17068,7 +17062,7 @@ stop
            cmofsten, &
            xsten,nhalf,nhalf_box, &
            bfact,dx, &
-           tessellate,mofnew,SDIM,13)
+           tessellate,mofnew,SDIM)
         else
          print *,"renormalize only invalid"
          stop
@@ -17342,7 +17336,7 @@ stop
           cmofsten, &
           xsten,nhalf,nhalf_box, &
           bfact,dx, &
-          tessellate,mofdata,SDIM,14)
+          tessellate,mofdata,SDIM)
 
         do im=1,num_materials
          vofcompraw=(im-1)*ngeom_raw+1

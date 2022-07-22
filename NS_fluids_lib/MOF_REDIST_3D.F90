@@ -206,7 +206,7 @@ stop
           im0_center, &
           SDIM, &
           center_stencil, &
-          donateflag,6)
+          donateflag)
 
         else
          print *,"donateIND invalid donateIND=",donateIND
@@ -3539,7 +3539,7 @@ stop
          bfact,dx, &
          normalize_tessellate, &  ! =0
          mofdata,mofdatavalid, &
-         SDIM,3000)
+         SDIM)
 
         if (tessellate.eq.3) then
 
@@ -3659,7 +3659,7 @@ stop
             nmax, &
             nmax, &
             SDIM, &
-            shapeflag,3) 
+            shapeflag) 
 
           total_vol=zero
           do im=1,num_materials

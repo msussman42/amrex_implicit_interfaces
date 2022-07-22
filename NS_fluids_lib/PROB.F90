@@ -121,7 +121,7 @@ stop
       REAL_T :: massfrac_parm(num_species_var+1)
 
       if (tessellate.eq.0) then
-       call get_primary_material_VFRAC(vof,im_primary,4)
+       call get_primary_material_VFRAC(vof,im_primary)
       else if ((tessellate.eq.1).or. &
                (tessellate.eq.3)) then
        im_primary=0
@@ -5736,7 +5736,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         xtrilist, &
         nmax, &
         nmax, &
-        SDIM,1)
+        SDIM)
 
        if (combine_materials.eq.1) then
         volcut(imat1b)=volcut(imat1a)
@@ -15052,13 +15052,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              ! enable_spectral=1
              ! uncoupled_viscosity=1
             local_div_val=divu/VOLTERM
-            call SEM_VISC_SANITY(10,dt,xsten,nhalf,local_div_val, &
-              -1,nc,1,1,project_option,bfact,1,1)
-
-             ! MSKDV=1.0d0
-             ! MSKRES=1.0d0
-            call SEM_VISC_SANITY_CC(2,dt,CC,1.0d0,1.0d0,MDOT, &
-              VOLTERM,project_option,xsten,nhalf,nc)
 
             local_POLD=pold(D_DECL(ic,jc,kc),nc)
             local_POLD_DUAL=dendest(D_DECL(ic,jc,kc),nc)
@@ -19578,7 +19571,7 @@ end subroutine RatePhaseChange
           nucleate_in%bfact, &
           nucleate_in%dx, &
           tessellate, &  ! =0
-          mofdata,SDIM,204)
+          mofdata,SDIM)
 
         call multimaterial_MOF( &
          nucleate_in%bfact, &
@@ -19595,7 +19588,7 @@ end subroutine RatePhaseChange
          multi_centroidA, &
          continuous_mof, &
          cmofsten, &
-         SDIM,4)
+         SDIM)
 
         local_tessellate=3
         call multi_get_volume_tessellate( &
@@ -19607,8 +19600,7 @@ end subroutine RatePhaseChange
          geom_xtetlist(1,1,1,nucleate_in%tid+1), &
          nmax, &
          nmax, &
-         SDIM, &
-         4)
+         SDIM)
 
         call CISBOX( &
          xsten,nhalf, &
@@ -25516,7 +25508,7 @@ end subroutine initialize2d
           xsten,nhalf,nhalf_box, &
           bfact,dx, &
           tessellate, &  ! =0
-          mofdata,SDIM,201)
+          mofdata,SDIM)
 
         do im=1,num_materials
          vofcomp_recon=(im-1)*ngeom_recon+1
@@ -28785,7 +28777,7 @@ end subroutine initialize2d
            xsten,nhalf,nhalf_box, &
            bfact,dx, &
            tessellate, &  ! =0
-           mofdata,SDIM,204)
+           mofdata,SDIM)
 
          call multimaterial_MOF( &
           bfact,dx,xsten,nhalf, &
@@ -28800,7 +28792,7 @@ end subroutine initialize2d
           multi_centroidA, &
           continuous_mof, &
           cmofsten, &
-          SDIM,4)
+          SDIM)
 
          do dir3=1,num_materials*ngeom_recon
           u(D_DECL(i,j,k),dir3)=mofdata(dir3)
