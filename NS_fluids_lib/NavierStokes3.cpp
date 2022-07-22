@@ -2578,53 +2578,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       // in: NavierStokes::do_the_advance (prior to nonlinear_advect)
     init_FSI_GHOST_MAC_MF_ALL(4);
 
-    int SEM_VISCOUS_SANITY_CHECK=0;
-
-    if (SEM_VISCOUS_SANITY_CHECK==1) {
-
-     amrex::Warning("SEM_VISCOUS_SANITY_CHECK==1");
-
-     if (enable_spectral==1) {
-      // do nothing
-     } else
-      amrex::Error("expecting enable_spectral=1");
-
-     int update_placeholder=0;
-     Vector<int> scomp;  
-     Vector<int> ncomp;  
-     int ncomp_check;
-     int state_index;
-      //num_materials_combine=1
-     get_mm_scomp_solver(
-       1,
-       SOLVETYPE_VISC,
-       state_index,
-       scomp,
-       ncomp,
-       ncomp_check);
-     int nsolve=AMREX_SPACEDIM;
-     if (state_index!=State_Type)
-      amrex::Error("state_index invalid");
-     if (ncomp_check!=nsolve)
-      amrex::Error("ncomp_check invalid");
-
-      // data at time = cur_time_slab
-     getState_localMF_listALL(
-       REGISTER_MARK_MF,1,
-       state_index,
-       scomp,
-       ncomp);
-
-     update_SEM_forcesALL(
-       SOLVETYPE_VISC,
-       REGISTER_MARK_MF,
-       update_placeholder,update_placeholder);
-
-    } else if (SEM_VISCOUS_SANITY_CHECK==0) {
-     // do nothing
-    } else
-     amrex::Error("SEM_VISCOUS_SANITY_CHECK invalid");
-
     int mass_transfer_active=0;
 
      // 1. ADVECTION (both Eulerian and Lagrangian materials)
