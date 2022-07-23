@@ -614,7 +614,7 @@ REAL_T,INTENT(in) :: x_in(SDIM)
 REAL_T            :: x(SDIM)
 
 INTEGER_T         :: dist_sign
-REAL_T            :: dist
+REAL_T, INTENT(out) :: dist
 REAL_T            :: dist1,dist2,dist3
 REAL_T            :: x1(SDIM),x2(SDIM),x3(SDIM)
 REAL_T            :: x4(SDIM),x5(SDIM)
@@ -1314,6 +1314,8 @@ elseif(cavity_type .eq. 6) then   ! 6--> 3D pyramid
    dist = -1.0d0*min(abs(dist1),abs(dist2),abs(dist3))
   endif
  endif
+else if (cavity_type.eq.7) then
+ dist=1.2d0-x(SDIM)  ! dist<0 in the solid (which is on top for this case)
 else
  print *, "invalid cavity type flag"
  stop
@@ -1340,7 +1342,8 @@ INTEGER_T,INTENT(in) :: coord_type
 REAL_T,INTENT(in) :: x_in(SDIM)
 REAL_T            :: x(SDIM)
 
-REAL_T            :: dist,dist_temp
+REAL_T, intent(out) :: dist
+REAL_T            :: dist_temp
 REAL_T            :: dist2
 REAL_T            :: center(SDIM)
 REAL_T            :: film_thickness     ! thickness of the film
@@ -1354,64 +1357,78 @@ do i = 1,SDIM
   x(i) = x_in(i)*scale_factor
 enddo
 
+if ((axis_dir.ge.1).and.(axis_dir.le.6)) then
 
-if(coord_type .eq. 1) then   ! 3D cartisian
- if(SDIM .ne. 3)then
-  print *, "coord_type is not consistent with dimension"
+ if(coord_type .eq. 1) then   ! 3D cartisian
+  if(SDIM .ne. 3)then
+   print *, "coord_type is not consistent with dimension"
+   stop
+  endif
+ elseif(coord_type .eq. 2) then ! R-Z axis symmetric
+  if(SDIM .ne. 2) then
+   print *,"coord_type is not consistent with dimension"
+   stop
+  endif
+ else
+  print *,"invalid coord_type"
   stop
  endif
-elseif(coord_type .eq. 2) then ! R-Z axis symmetric
- if(SDIM .ne. 2) then
-  print *,"coord_type is not consistent with dimension"
-  stop
+
+ if(coord_type .eq. 2)then 
+   center(1) = 0.0d0
+   center(2) = 0.05d0+film_thickness
+
+   call l2norm(center, x , dist_temp)
+   dist = 0.1d0 - dist_temp
+   if(film_thickness .lt. 0.0d0)then
+    print *,"film_thickness cannot be zero"
+    stop
+   elseif(film_thickness .lt. 1.0e-12)then
+    ! do nothing
+   else
+    if(x(1) .gt. 0.1d0)then
+     dist2 = 0.05d0+film_thickness - x(2)
+     dist = sign(min(abs(dist2),abs(dist)), dist2)
+    else
+      ! do nothing
+    endif
+   endif
  endif
+
+ if(coord_type .eq. 1)then 
+   center(1) = 0.0d0
+   center(2) = 0.0d0
+   center(SDIM) = 0.05d0+film_thickness
+   call l2norm(center, x , dist_temp)
+   dist = 0.1d0 - dist_temp
+   if(film_thickness .lt. 0.0d0)then
+    print *,"film_thickness cannot be zero"
+    stop
+   elseif(film_thickness .lt. 1.0e-12)then
+    ! do nothing
+   else
+    if(sqrt(x(1)**2.0d0 + x(2)**2.0d0) .gt. 0.1d0)then
+     dist2 = 0.05d0+film_thickness - x(SDIM)
+     dist = sign(min(abs(dist2),abs(dist)), dist2)
+    else
+      !  do nothing
+    endif
+   endif
+ endif
+
+else if (axis_dir.eq.7) then
+ center(1) = 0.0d0
+ center(2) = 0.0d0
+ center(SDIM) = 1.2d0
+ call l2norm(center, x , dist_temp)
+! vapor +   liquid -
+ dist=0.1d0-dist_temp
 else
- print *,"invalid coord_type"
+ print *,"axis_dir invalid"
  stop
 endif
 
 
-if(coord_type .eq. 2)then 
-  center(1) = 0.0d0
-  center(2) = 0.05d0+film_thickness
-
-  call l2norm(center, x , dist_temp)
-  dist = 0.1d0 - dist_temp
-  if(film_thickness .lt. 0.0d0)then
-   print *,"film_thickness cannot be zero"
-   stop
-  elseif(film_thickness .lt. 1.0e-12)then
-   ! do nothing
-  else
-   if(x(1) .gt. 0.1d0)then
-    dist2 = 0.05d0+film_thickness - x(2)
-    dist = sign(min(abs(dist2),abs(dist)), dist2)
-   else
-     ! do nothing
-   endif
-  endif
-endif
-
-if(coord_type .eq. 1)then 
-  center(1) = 0.0d0
-  center(2) = 0.0d0
-  center(SDIM) = 0.05d0+film_thickness
-  call l2norm(center, x , dist_temp)
-  dist = 0.1d0 - dist_temp
-  if(film_thickness .lt. 0.0d0)then
-   print *,"film_thickness cannot be zero"
-   stop
-  elseif(film_thickness .lt. 1.0e-12)then
-   ! do nothing
-  else
-   if(sqrt(x(1)**2.0d0 + x(2)**2.0d0) .gt. 0.1d0)then
-    dist2 = 0.05d0+film_thickness - x(SDIM)
-    dist = sign(min(abs(dist2),abs(dist)), dist2)
-   else
-     !  do nothing
-   endif
-  endif
-endif
 
 ! from cm to m         
  dist = dist/scale_factor

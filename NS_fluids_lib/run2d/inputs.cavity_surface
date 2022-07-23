@@ -114,15 +114,12 @@ ns.stiffCP=4217.0 2029.0 4217.0
 # latent_heat[2*max_num_tension]
 # Joule/kg
 ns.latent_heat=2257e+3 0.0 0.0 0.0 0.0 0.0  
-# if latent_heat<>0,
-# if nucleation_period==0.0, only nucleate one bubble, 
-# if nucleation_period>0.0, periodically nucleate bubbles.
-ns.nucleation_period=0.0
 ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0
 #ns.fixed_dt	  = 0.1     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 
-# cavity type 1-5
+# cavity type 1-7
+# make axis_dir=7 for bubble below substrate (substrate on top)
 ns.axis_dir=1
 ns.xblob3=0.0  # unused
 # see subroutine outside_temperature in PROB.F90
@@ -178,12 +175,9 @@ ns.tempcutoffmax=400.0 400.0 400.0
 ns.xblob=0.0  
 # 45 degrees: center-substrate=R * sin(pi/2 - theta)=2.83e-4
 # center=2.34+2.83=5.17e-4
-ns.yblob=0.0e-4  
+ns.yblob=0.0
 ns.zblob=0.0
-ns.radblob=0.0  # radius of nucleated seed.
-
-ns.n_sites=1
-ns.pos_sites=0.0 5.2e-3 0.0 0.4e-2 
+ns.radblob=0.0  
 
 # x,y center of surface of HOT plate (xblob2,yblob2) (inclined)
 ns.xblob2=0.0 
@@ -206,7 +200,7 @@ ns.probtype=710
 ns.prescribe_temperature_outflow=3
 
 #ns.lo_bc          = 3 3  # this option if heat source
-ns.lo_bc          = 3 5
+ns.lo_bc          = 3 5  # use "3 2" instead of "3 5" if axis_dir=7
 ns.hi_bc          = 3 2
 ns.temperature_lo_bc = 3 5
 ns.temperature_hi_bc = 3 2

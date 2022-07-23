@@ -3706,8 +3706,10 @@ end subroutine dynamic_contact_angle
        stop
       endif
 
-      if ((fort_initial_temperature(im).le.zero).or. &
-          (fort_tempconst(im).le.zero)) then
+      if ((fort_initial_temperature(im).gt.zero).and. &
+          (fort_tempconst(im).gt.zero)) then
+       ! do nothing
+      else
        print *,"fort_initial_temperature(im) invalid or"
        print *,"fort_tempconst(im) invalid"
        stop
@@ -4098,9 +4100,12 @@ end subroutine dynamic_contact_angle
         print *,"im_solid_temperature invalid"
         stop
        endif
+
        temperature=get_user_temperature(time,bcflag,1)
           ! thermal layer thickness
-       if (yblob3.le.zero) then
+       if (yblob3.gt.zero) then
+        ! do nothing
+       else
         print *,"yblob3 invalid"
         stop
        endif
