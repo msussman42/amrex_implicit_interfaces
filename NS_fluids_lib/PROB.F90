@@ -15135,7 +15135,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine SEM_MAC_TO_CELL
 
-      subroutine SUB_clamped_LS(x,t,LS,vel,temperature,dx)
+      subroutine SUB_clamped_LS(x,t,LS,vel,temperature,prescribed_flag,dx)
       IMPLICIT NONE
 
       REAL_T, INTENT(in) :: x(SDIM)
@@ -15144,10 +15144,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, INTENT(out) :: LS
       REAL_T, INTENT(out) :: vel(SDIM)
       REAL_T, INTENT(out) :: temperature
+      INTEGER_T, INTENT(out) :: prescribed_flag
 
       INTEGER_T dir
 
-      call SUB_clamped_LS_no_scale(x,t,LS,vel,temperature,dx)
+      call SUB_clamped_LS_no_scale(x,t,LS,vel,temperature,prescribed_flag,dx)
       do dir=1,SDIM
        if (vel_homflag.eq.1) then
         vel(dir)=zero
@@ -22211,6 +22212,7 @@ end subroutine initialize2d
       REAL_T LS_clamped,charfn
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
+      INTEGER_T prescribed_flag
       INTEGER_T tagflag
       REAL_T xsten(-1:1,SDIM)
       INTEGER_T nhalf
@@ -22288,10 +22290,17 @@ end subroutine initialize2d
         call override_tagflag(xsten,nhalf,time,rflag,tagflag)
 
         call SUB_clamped_LS(x_local,time,LS_clamped,vel_clamped, &
-          temperature_clamped,dx)
+          temperature_clamped,prescribed_flag,dx)
         if (LS_clamped.ge.zero) then
-         rflag=one
-         tagflag=1
+         if (prescribed_flag.eq.0) then
+          rflag=one
+          tagflag=1
+         else if (prescribed_flag.eq.1) then
+          ! do nothing
+         else
+          print *,"prescribed_flag invalid"
+          stop
+         endif
         else if (LS_clamped.lt.zero) then
          ! do nothing
         else

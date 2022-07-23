@@ -12348,6 +12348,7 @@ END SUBROUTINE SIMP
       REAL_T LS
       REAL_T vel(SDIM)
       REAL_T temperature
+      INTEGER_T prescribed_flag
 
       nhalf=1
 
@@ -12369,16 +12370,20 @@ END SUBROUTINE SIMP
        enddo
 
        if (fort_is_passive_advect_test().eq.1) then
-        call SUB_clamped_LS(xx,time,LS,vel,temperature,dx)
-        if (LS.eq.CLAMPED_EVERYWHERE_LS) then
-         do dir=1,SDIM
-          u(D_DECL(i,j,k),dir)=vel(dir)
-         enddo
-        else
-         print *,"expecting LS.eq.CLAMPED_EVERYWHERE_LS"
+        call SUB_clamped_LS(xx,time,LS,vel,temperature,prescribed_flag,dx)
+        if (prescribed_flag.eq.1) then
+         if (LS.eq.CLAMPED_EVERYWHERE_LS) then
+          do dir=1,SDIM
+           u(D_DECL(i,j,k),dir)=vel(dir)
+          enddo
+         else
+          print *,"expecting LS.eq.CLAMPED_EVERYWHERE_LS"
+          stop
+         endif
+        else if (prescribed_flag.ne.1) then
+         print *,"expecting prescribed_flag=1"
          stop
         endif
-
        else
         print *,"expecting fort_is_passive_advect_test().eq.1"
         stop

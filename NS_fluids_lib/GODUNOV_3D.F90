@@ -51,6 +51,7 @@ stop
       REAL_T :: RR
       REAL_T LS_clamped
       REAL_T temperature_clamped
+      INTEGER_T prescribed_flag
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid departure node split"
@@ -91,7 +92,7 @@ stop
       enddo
 
       call SUB_clamped_LS(x0,passive_veltime,LS_clamped, &
-         vel0_test,temperature_clamped,dx)
+         vel0_test,temperature_clamped,prescribed_flag,dx)
        
       if (LS_clamped.ge.zero) then 
        delta=dt*vel0_test(normdir+1)/RR
@@ -789,6 +790,7 @@ stop
       REAL_T vel_clamped_face(SDIM)
       REAL_T temperature_clamped_minus
       REAL_T temperature_clamped_plus
+      INTEGER_T prescribed_flag
       INTEGER_T is_clamped_face
       INTEGER_T nhalf
       INTEGER_T nbr_outside_domain_flag(2)
@@ -1842,9 +1844,9 @@ stop
 
           ! LS>0 if clamped
          call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
-              vel_clamped_minus,temperature_clamped_minus,dx)
+          vel_clamped_minus,temperature_clamped_minus,prescribed_flag,dx)
          call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
-              vel_clamped_plus,temperature_clamped_plus,dx)
+          vel_clamped_plus,temperature_clamped_plus,prescribed_flag,dx)
          if ((LS_clamped_minus.ge.zero).or. &
              (LS_clamped_plus.ge.zero)) then
           is_clamped_face=1
@@ -5274,6 +5276,7 @@ stop
       REAL_T LS_clamped
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
+      INTEGER_T prescribed_flag
 
       INTEGER_T dir_local
       INTEGER_T nhalf
@@ -5457,7 +5460,7 @@ stop
              momface_total=momface_total/massface_total
              ! LS>0 if clamped
              call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-                vel_clamped,temperature_clamped,dx)
+              vel_clamped,temperature_clamped,prescribed_flag,dx)
              if (LS_clamped.ge.zero) then
               momface_total=vel_clamped(veldir)
              else if (LS_clamped.lt.zero) then
@@ -5921,6 +5924,7 @@ stop
       INTEGER_T :: growlo_cell(3),growhi_cell(3)
       REAL_T :: LS_clamped_minus,LS_clamped_plus
       REAL_T :: temperature_clamped_minus,temperature_clamped_plus
+      INTEGER_T :: prescribed_flag
       REAL_T :: vel_clamped_minus(SDIM),vel_clamped_plus(SDIM)
       INTEGER_T :: need_closest_point
       REAL_T :: nrmCP_LEFT(SDIM)
@@ -6118,9 +6122,9 @@ stop
                   (is_rigid(imR).eq.0)) then
            ! LS>0 if clamped
           call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
-               vel_clamped_minus,temperature_clamped_minus,dx)
+           vel_clamped_minus,temperature_clamped_minus,prescribed_flag,dx)
           call SUB_clamped_LS(xclamped_plus,time,LS_clamped_plus, &
-               vel_clamped_plus,temperature_clamped_plus,dx)
+           vel_clamped_plus,temperature_clamped_plus,prescribed_flag,dx)
 
           if ((LS_clamped_minus.ge.zero).or. &
               (LS_clamped_plus.ge.zero)) then
@@ -15550,6 +15554,7 @@ stop
       REAL_T LS_clamped
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
+      INTEGER_T prescribed_flag
 
       DATA_FLOOR=zero
 
@@ -16022,7 +16027,7 @@ stop
           
            ! LS>0 if clamped
           call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-                vel_clamped,temperature_clamped,dx)
+            vel_clamped,temperature_clamped,prescribed_flag,dx)
 
           if (LS_clamped.ge.zero) then
            is_solid_cell=num_materials+1
@@ -16808,6 +16813,7 @@ stop
       REAL_T vel_clamped_face(SDIM)
       REAL_T temperature_clamped_minus
       REAL_T temperature_clamped_plus
+      INTEGER_T prescribed_flag
       INTEGER_T is_clamped_face
       INTEGER_T local_tessellate
 
@@ -17265,9 +17271,9 @@ stop
 
          ! LS>0 if clamped
        call SUB_clamped_LS(xclamped_minus,cur_time,LS_clamped_minus, &
-           vel_clamped_minus,temperature_clamped_minus,dx)
+        vel_clamped_minus,temperature_clamped_minus,prescribed_flag,dx)
        call SUB_clamped_LS(xclamped_plus,cur_time,LS_clamped_plus, &
-           vel_clamped_plus,temperature_clamped_plus,dx)
+        vel_clamped_plus,temperature_clamped_plus,prescribed_flag,dx)
        if ((LS_clamped_minus.ge.zero).or. &
            (LS_clamped_plus.ge.zero)) then
         is_clamped_face=1
@@ -17570,6 +17576,7 @@ stop
       REAL_T temperature_clamped_cen
       REAL_T temperature_clamped_minus
       REAL_T temperature_clamped_plus
+      INTEGER_T prescribed_flag
       INTEGER_T is_clamped_face
 
       nhalf=1
@@ -17936,9 +17943,9 @@ stop
 
            ! LS>0 if clamped
           call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
-                vel_clamped_minus,temperature_clamped_minus,dx)
+           vel_clamped_minus,temperature_clamped_minus,prescribed_flag,dx)
           call SUB_clamped_LS(xclamped_plus,time,LS_clamped_plus, &
-                vel_clamped_plus,temperature_clamped_plus,dx)
+           vel_clamped_plus,temperature_clamped_plus,prescribed_flag,dx)
           if ((LS_clamped_minus.ge.zero).or. &
               (LS_clamped_plus.ge.zero)) then
            is_clamped_face=1
@@ -18321,7 +18328,7 @@ stop
 
           ! LS>0 if clamped
          call SUB_clamped_LS(xclamped_cen,time,LS_clamped_cen, &
-                vel_clamped_cen,temperature_clamped_cen,dx)
+           vel_clamped_cen,temperature_clamped_cen,prescribed_flag,dx)
 
          im1=i-ii
          jm1=j-jj
@@ -18875,6 +18882,7 @@ stop
       REAL_T LS_clamped
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
+      INTEGER_T prescribed_flag
       INTEGER_T local_mask
       INTEGER_T mask_control_volume
       INTEGER_T mask_left,mask_right
@@ -19059,7 +19067,7 @@ stop
        endif
         ! LS>0 if clamped
        call SUB_clamped_LS(x_MAC_control_volume,cur_time,LS_clamped, &
-             vel_clamped,temperature_clamped,dx)
+         vel_clamped,temperature_clamped,prescribed_flag,dx)
        if (LS_clamped.ge.zero) then
         local_mask=0
        else if (LS_clamped.lt.zero) then
@@ -20388,6 +20396,7 @@ stop
       REAL_T LS_clamped,charfn
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
+      INTEGER_T prescribed_flag
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
@@ -20473,7 +20482,7 @@ stop
          enddo
           ! LS>0 if clamped
          call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-             vel_clamped,temperature_clamped,dx)
+           vel_clamped,temperature_clamped,prescribed_flag,dx)
 
          if (LS_clamped.ge.zero) then
           clamped_cell_in_element=1
@@ -20869,6 +20878,7 @@ stop
       REAL_T LS_clamped
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
+      INTEGER_T prescribed_flag
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
@@ -20928,7 +20938,7 @@ stop
 
         ! LS>0 if clamped
        call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-             vel_clamped,temperature_clamped,dx)
+         vel_clamped,temperature_clamped,prescribed_flag,dx)
 
        do im=1,num_materials
         ibase=STATECOMP_STATES+(im-1)*num_state_material
