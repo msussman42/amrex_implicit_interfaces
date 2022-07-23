@@ -11,9 +11,9 @@ stop_time =  120.0  # maximum problem time
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
-# coord_sys=2 RTZ
 # center of pipe is x=0 if RTZ, z is streamwise direction.
-geometry.coord_sys      = 2        
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ, 3=>RTHETA
+geometry.coord_sys_override = 3    # 0 => cart, 1 => RZ, 3=>RTHETA
 geometry.prob_lo   =  0.0  0.0  0.0
 geometry.prob_hi   =  1.27 6.283185306 1.270  # zhi was 18.492, 254.0
 geometry.is_periodic = 0 1 0         # MS 1 0 0 if periodic, 0 0 0 if not

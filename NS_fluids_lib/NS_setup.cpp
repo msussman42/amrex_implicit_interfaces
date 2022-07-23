@@ -486,28 +486,28 @@ NavierStokes::set_tensor_extrap_components(
  ibase_tensor_local++;
     
  if (AMREX_SPACEDIM==2) {
-  if ((CoordSys::CoordType) coord == CoordSys::RZ) {
+  if (coord == COORDSYS_RZ) {
     // no EXT_DIR BCs
    set_hoop_bc(bc,phys_bc);
-  } else if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+  } else if (coord == COORDSYS_CARTESIAN) {
    // placeholder: Q33 should always be 0
    // no EXT_DIR BCs
    set_hoop_bc(bc,phys_bc);
-  } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+  } else if (coord == COORDSYS_CYLINDRICAL) {
    // placeholder: Q33 should always be 0
    // no EXT_DIR BCs
    set_hoop_bc(bc,phys_bc);
   } else
-   amrex::Error("(CoordSys::CoordType) coord invalid");
+   amrex::Error("coord invalid");
  } else if (AMREX_SPACEDIM==3) {
-  if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+  if (coord == COORDSYS_CARTESIAN) {
    // no EXT_DIR BCs
    set_tensor_bc(bc,phys_bc,2,2);
-  } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+  } else if (coord == COORDSYS_CYLINDRICAL) {
    // no EXT_DIR BCs
    set_tensor_bc(bc,phys_bc,2,2);
   } else
-   amrex::Error("(CoordSys::CoordType) coord invalid");
+   amrex::Error("coord invalid");
   } else
    amrex::Error("sdim invalid");
  
@@ -582,28 +582,28 @@ NavierStokes::set_tensor_extrap_components_main(
  ibase_tensor_local++;
     
  if (AMREX_SPACEDIM==2) {
-  if ((CoordSys::CoordType) coord == CoordSys::RZ) {
+  if (coord == COORDSYS_RZ) {
     // no EXT_DIR BCs
    set_hoop_bc(bc,phys_bc);
-  } else if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+  } else if (coord == COORDSYS_CARTESIAN) {
    // placeholder: Q33 should always be 0
    // no EXT_DIR BCs
    set_hoop_bc(bc,phys_bc);
-  } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+  } else if (coord == COORDSYS_CYLINDRICAL) {
    // placeholder: Q33 should always be 0
    // no EXT_DIR BCs
    set_hoop_bc(bc,phys_bc);
   } else
-   amrex::Error("(CoordSys::CoordType) coord invalid");
+   amrex::Error("coord invalid");
  } else if (AMREX_SPACEDIM==3) {
-  if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+  if (coord == COORDSYS_CARTESIAN) {
    // no EXT_DIR BCs
    set_tensor_bc(bc,phys_bc,2,2);
-  } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+  } else if (coord == COORDSYS_CYLINDRICAL) {
    // no EXT_DIR BCs
    set_tensor_bc(bc,phys_bc,2,2);
   } else
-   amrex::Error("(CoordSys::CoordType) coord invalid");
+   amrex::Error("coord invalid");
   } else
    amrex::Error("sdim invalid");
  
@@ -692,14 +692,17 @@ NavierStokes::variableSetUp ()
     ParmParse ppgeom("geometry");
     int coord;
     ppgeom.get("coord_sys",coord);
+    int coord_override=coord;
+    ppgeom.query("coord_sys_override",coord_override);
+    coord=coord_override;
     
-    if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+    if (coord == COORDSYS_CARTESIAN) {
      //rz_flag=0 
-    } else if ((CoordSys::CoordType) coord == CoordSys::RZ) {
+    } else if (coord == COORDSYS_RZ) {
      //rz_flag=1
      if (AMREX_SPACEDIM!=2)
       amrex::Error("RZ only in 2D");
-    } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+    } else if (coord == COORDSYS_CYLINDRICAL) {
      //rz_flag=3
     } else
      amrex::Error("coord_sys invalid");
@@ -979,23 +982,23 @@ NavierStokes::variableSetUp ()
       MOFvelocity_names_tensor[ibase_tensor]=T33_str;
 
       if (AMREX_SPACEDIM==2) {
-       if ((CoordSys::CoordType) coord == CoordSys::RZ) {
+       if (coord == COORDSYS_RZ) {
         set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
-       } else if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+       } else if (coord == COORDSYS_CARTESIAN) {
 	   // placeholder: Q33 should always be 0
         set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
-       } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+       } else if (coord == COORDSYS_CYLINDRICAL) {
 	   // placeholder: Q33 should always be 0
         set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
        } else
-        amrex::Error("(CoordSys::CoordType) coord invalid");
+        amrex::Error("coord invalid");
       } else if (AMREX_SPACEDIM==3) {
-       if ((CoordSys::CoordType) coord == CoordSys::cartesian) {
+       if (coord == COORDSYS_CARTESIAN) {
         set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,2,2);
-       } else if ((CoordSys::CoordType) coord == CoordSys::CYLINDRICAL) {
+       } else if (coord == COORDSYS_CYLINDRICAL) {
         set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,2,2);
        } else
-        amrex::Error("(CoordSys::CoordType) coord invalid");
+        amrex::Error("coord invalid");
       } else
        amrex::Error("sdim invalid");
 

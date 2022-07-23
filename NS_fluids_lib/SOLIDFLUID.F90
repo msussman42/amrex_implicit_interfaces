@@ -15,6 +15,7 @@
 #include "AMReX_SPACE.H"
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
+#include "AMReX_ArrayLim_SUSSMAN.H"
 
 #include "EXTRAP_COMP.H"
 #include "SOLIDFLUID_F.H"

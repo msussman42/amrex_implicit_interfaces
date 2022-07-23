@@ -1121,6 +1121,10 @@ void read_geometry_raw(int& geometry_coord,
 
  ParmParse pp("geometry");
  pp.get("coord_sys",geometry_coord);
+ int geometry_coord_override=geometry_coord;
+ pp.query("coord_sys_override",geometry_coord_override);
+ geometry_coord=geometry_coord_override;
+
  pp.getarr("prob_lo",geometry_prob_lo,0,AMREX_SPACEDIM);
  pp.getarr("prob_hi",geometry_prob_hi,0,AMREX_SPACEDIM);
  geometry_is_periodic.resize(AMREX_SPACEDIM);
@@ -1154,11 +1158,11 @@ void fortran_parameters() {
 		 geometry_is_periodic,geometry_is_any_periodic);
 
  int rz_flag=0;
- if ((CoordSys::CoordType) geometry_coord == CoordSys::RZ)  
+ if (geomtry_coord == COORDSYS_RZ) 
   rz_flag=1;
- else if ((CoordSys::CoordType) geometry_coord == CoordSys::cartesian)  
+ else if (geometry_coord == COORDSYS_CARTESIAN)  
   rz_flag=0;
- else if ((CoordSys::CoordType) geometry_coord == CoordSys::CYLINDRICAL)  
+ else if (geometry_coord == COORDSYS_CYLINDRICAL)  
   rz_flag=3;
  else
   amrex::Error("CoordSys bust 1");
@@ -2093,6 +2097,7 @@ NavierStokes::read_geometry ()
     read_geometry_raw(geometry_coord,geometry_prob_lo,geometry_prob_hi,
 		    geometry_is_periodic,geometry_is_any_periodic);
 
+FIX ME
     if ((CoordSys::CoordType) geometry_coord == CoordSys::RZ)  
      if (AMREX_SPACEDIM==3)
       amrex::Error("No RZ in 3d");

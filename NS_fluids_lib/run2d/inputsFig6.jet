@@ -5,7 +5,7 @@ stop_time =  8.0  # period about 0.6 for dripping
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
-geometry.coord_sys      = 1        # 0 => cart, 1 => RZ  2=>R theta Z
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ  3=>R theta Z
 geometry.prob_lo   =  0.0 0.0
 # D=0.16  radius=.08
 geometry.prob_hi   =  0.8 3.2  # units are cm 20D (transition at 10D)
