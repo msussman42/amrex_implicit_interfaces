@@ -172,7 +172,8 @@ endif
 return
 end subroutine flexible_plate_check_vel_rigid
 
-subroutine flexible_plate_clamped_LS(x,t,LS,vel,temperature,dx)
+subroutine flexible_plate_clamped_LS(x,t,LS,vel, &
+     temperature,prescribed_flag,dx)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
@@ -183,10 +184,15 @@ IMPLICIT NONE
   REAL_T, INTENT(out) :: LS
   REAL_T, INTENT(out) :: vel(SDIM)
   REAL_T, INTENT(out) :: temperature
+  INTEGER_T, INTENT(out) :: prescribed_flag
   REAL_T :: LS_left,LS_right
   INTEGER_T :: dir
 
+
 if (probtype.eq.2000) then
+
+ prescribed_flag=0
+
  if (SDIM.eq.2) then
   call squaredist(x(1),x(2), & ! LS_right<0 in object
    xblob2+radblob2-radblob5, &

@@ -910,13 +910,14 @@ implicit none
        INTEGER_T, INTENT(in) :: dir
       end subroutine TEMPLATE_check_vel_rigid
 
-      subroutine TEMPLATE_clamped_LS(x,t,LS,vel,temperature,dx)
+      subroutine TEMPLATE_clamped_LS(x,t,LS,vel,temperature,prescribed_flag,dx)
        REAL_T, INTENT(in) :: x(SDIM)
        REAL_T, INTENT(in) :: dx(SDIM)
        REAL_T, INTENT(in) :: t
        REAL_T, INTENT(out) :: LS
        REAL_T, INTENT(out) :: vel(SDIM)
        REAL_T, INTENT(out) :: temperature
+       INTEGER_T, INTENT(out) :: prescribed_flag
       end subroutine TEMPLATE_clamped_LS
 
       subroutine TEMPLATE_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)

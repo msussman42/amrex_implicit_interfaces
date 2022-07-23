@@ -14602,6 +14602,7 @@ end subroutine print_visual_descriptor
       REAL_T LS
       REAL_T vel(SDIM)
       REAL_T temperature
+      INTEGER_T prescribed_flag
       INTEGER_T dir
 
       do dir=1,SDIM
@@ -14610,7 +14611,7 @@ end subroutine print_visual_descriptor
       enddo
       time_placeholder=zero
       call SUB_clamped_LS_no_scale(x_placeholder,time_placeholder,LS,vel, &
-             temperature,dx_placeholder)
+         temperature,prescribed_flag,dx_placeholder)
       if (LS.eq.CLAMPED_EVERYWHERE_LS) then
        fort_is_passive_advect_test=1
       else if (LS.ne.CLAMPED_EVERYWHERE_LS) then

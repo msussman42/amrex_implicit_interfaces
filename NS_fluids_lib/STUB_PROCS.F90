@@ -238,7 +238,7 @@ INTEGER_T, INTENT(in) :: dir
 return
 end subroutine STUB_check_vel_rigid
 
-subroutine STUB_clamped_LS(x,t,LS,vel,temperature,dx)
+subroutine STUB_clamped_LS(x,t,LS,vel,temperature,prescribed_flag,dx)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
@@ -249,6 +249,7 @@ REAL_T, INTENT(in) :: t
 REAL_T, INTENT(out) :: LS
 REAL_T, INTENT(out) :: vel(SDIM)
 REAL_T, INTENT(out) :: temperature
+INTEGER_T, INTENT(out) :: prescribed_flag
 INTEGER_T dir
 
  LS=CLAMPED_NO_WHERE_LS
@@ -256,6 +257,7 @@ INTEGER_T dir
   vel(dir)=zero
  enddo
  temperature=293.0d0
+ prescribed_flag=0
 
 return
 end subroutine STUB_clamped_LS

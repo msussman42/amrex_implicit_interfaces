@@ -4673,6 +4673,7 @@ stop
       REAL_T LS_clamped
       REAL_T VEL_clamped(SDIM)
       REAL_T temperature_clamped
+      INTEGER_T prescribed_flag
       REAL_T blob_cell_count
       REAL_T blob_cellvol_count
       REAL_T blob_mass
@@ -5070,7 +5071,7 @@ stop
          enddo
 
          call SUB_clamped_LS(xstencil_point,cur_time_slab,LS_clamped, &
-           VEL_clamped,temperature_clamped,dx)
+           VEL_clamped,temperature_clamped,prescribed_flag,dx)
 
          if (LS_clamped.ge.zero) then
           do dir=1,SDIM
@@ -7787,6 +7788,8 @@ stop
       REAL_T vel_clamped_plus(SDIM)
       REAL_T temperature_clamped_minus
       REAL_T temperature_clamped_plus
+      INTEGER_T prescribed_flag
+      INTEGER_T prescribed_exists_flag
       INTEGER_T is_clamped_face
       REAL_T vel_clamped_face(SDIM)
 
@@ -7799,7 +7802,6 @@ stop
       REAL_T mu
       INTEGER_T local_maskL,local_maskR,local_masknbr
       INTEGER_T covered_face,coarse_fine_face
-      INTEGER_T prescribed_flag
       INTEGER_T FD_curv_interp
       REAL_T mofdata(num_materials*ngeom_recon)
       INTEGER_T micro_table(num_materials,num_materials)
@@ -8282,9 +8284,9 @@ stop
 
           ! LS>0 if clamped
          call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
-                vel_clamped_minus,temperature_clamped_minus,dx)
+           vel_clamped_minus,temperature_clamped_minus,prescribed_flag,dx)
          call SUB_clamped_LS(xclamped_plus,time,LS_clamped_plus, &
-                vel_clamped_plus,temperature_clamped_plus,dx)
+           vel_clamped_plus,temperature_clamped_plus,prescribed_flag,dx)
          if ((LS_clamped_minus.ge.zero).or. &
              (LS_clamped_plus.ge.zero)) then
           is_clamped_face=1
@@ -9312,9 +9314,9 @@ stop
           if ((wall_flag_face.ge.0).and. &
               (wall_flag_face.le.num_materials)) then
 
-           prescribed_flag=prescribed_exists()
+           prescribed_exists_flag=prescribed_exists()
 
-           if (prescribed_flag.eq.1) then 
+           if (prescribed_exists_flag.eq.1) then 
 
              ! at least one of the face's adjoining cells is dominated
              ! by a prescribed material.
@@ -9345,10 +9347,10 @@ stop
              stop
             endif
 
-           else if (prescribed_flag.eq.0) then
+           else if (prescribed_exists_flag.eq.0) then
             ! do nothing
            else
-            print *,"prescribed_flag invalid 70"
+            print *,"prescribed_exists_flag invalid 70"
             stop
            endif
 
@@ -10880,6 +10882,7 @@ stop
       REAL_T LS_clamped
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
+      INTEGER_T prescribed_flag
 
       REAL_T local_div_val
 
@@ -11674,7 +11677,7 @@ stop
         if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & !velocity
             (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then !velocity increment
          call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-                vel_clamped,temperature_clamped,dx)
+           vel_clamped,temperature_clamped,prescribed_flag,dx)
         else
          print *,"operation_flag invalid:",operation_flag
          stop
@@ -11990,7 +11993,7 @@ stop
 
          ! LS>0 if clamped
         call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-                vel_clamped,temperature_clamped,dx)
+          vel_clamped,temperature_clamped,prescribed_flag,dx)
 
         use_face_pres_cen=1
 
@@ -13018,6 +13021,7 @@ stop
       REAL_T vel_clamped_minus(SDIM)
       REAL_T temperature_clamped_plus
       REAL_T temperature_clamped_minus
+      INTEGER_T prescribed_flag
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
       INTEGER_T is_clamped_face
@@ -13568,9 +13572,9 @@ stop
            xclamped_plus(dir2)=xclamped_plus_sten(0,dir2)
           enddo
           call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
-              vel_clamped_minus,temperature_clamped_minus,dx)
+           vel_clamped_minus,temperature_clamped_minus,prescribed_flag,dx)
           call SUB_clamped_LS(xclamped_plus,time,LS_clamped_plus, &
-              vel_clamped_plus,temperature_clamped_plus,dx)
+           vel_clamped_plus,temperature_clamped_plus,prescribed_flag,dx)
           if ((LS_clamped_plus.ge.zero).and. &
               (LS_clamped_minus.ge.zero)) then
            is_clamped_face=1
@@ -18760,6 +18764,7 @@ stop
       REAL_T LS_clamped
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
+      INTEGER_T prescribed_flag
       REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
 
       nhalf=3      
@@ -18772,7 +18777,7 @@ stop
       endif
 
       call SUB_clamped_LS(xpart,vel_time_slab,LS_clamped, &
-          vel_clamped,temperature_clamped,grid_PARM%dx)
+       vel_clamped,temperature_clamped,prescribed_flag,grid_PARM%dx)
 
       if (LS_clamped.ge.zero) then
 

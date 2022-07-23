@@ -446,6 +446,7 @@ stop
        REAL_T LS_clamped
        REAL_T vel_clamped(SDIM)
        REAL_T temperature_clamped
+       INTEGER_T prescribed_flag
        INTEGER_T is_clamped_cell
 
        nhalf=1
@@ -510,7 +511,7 @@ stop
         enddo
          ! LS>0 if clamped
         call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-                vel_clamped,temperature_clamped,dx)
+          vel_clamped,temperature_clamped,prescribed_flag,dx)
 
         if (LS_clamped.ge.zero) then
          is_clamped_cell=1
