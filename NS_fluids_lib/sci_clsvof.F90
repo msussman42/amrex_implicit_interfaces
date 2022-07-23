@@ -7,6 +7,7 @@
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
+#include "AMReX_ArrayLim_SUSSMAN.H"
 #include "EXTRAP_COMP.H"
 
 #define element_buffer_tol (0.0d0)

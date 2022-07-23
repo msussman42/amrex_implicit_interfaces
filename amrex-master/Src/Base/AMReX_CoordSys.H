@@ -23,9 +23,7 @@ class CoordSys
 {
 public:
 
-     // SUSSMAN
-    enum CoordType { undef = -1, cartesian = 0, RZ = 1, SPHERICAL = 2,
-      CYLINDRICAL=3 };
+    enum CoordType { undef = -1, cartesian = 0, RZ = 1, SPHERICAL = 2 };
     //! Nice ASCII output.
     friend std::ostream& operator<< (std::ostream&, const CoordSys& );
 
@@ -61,9 +59,6 @@ public:
 
     //! Is CoordType == RZ?
     bool IsRZ () const noexcept;
-    // SUSSMAN
-    //! Is CoordType == CYLINDRICAL?
-    bool IsCYLINDRICAL () const noexcept;
 
     //! Is CoordType == cartesion?
     bool IsCartesian () const noexcept {
@@ -283,16 +278,6 @@ CoordSys::IsRZ () const noexcept
 #if (AMREX_SPACEDIM == 3)
     return false;
 #endif
-}
-
-
-//SUSSMAN
-inline
-bool
-CoordSys::IsCYLINDRICAL () const noexcept
-{
-    BL_ASSERT(c_sys != undef);
-    return (c_sys == CYLINDRICAL);
 }
 
 }

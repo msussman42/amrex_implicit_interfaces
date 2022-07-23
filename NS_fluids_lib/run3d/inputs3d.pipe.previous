@@ -11,7 +11,6 @@ stop_time =  120.0  # maximum problem time
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
-# coord_sys=2 RTZ
 # center of pipe is x=0 if RTZ, z is streamwise direction.
 geometry.coord_sys      = 0        # 0 => cart (always in 3d)
 geometry.prob_lo   =  0.0 -1.270 -1.270 # center of pipe ALWAYS y=0.0,z=0.0

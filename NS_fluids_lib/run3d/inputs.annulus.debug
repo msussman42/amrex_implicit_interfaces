@@ -41,7 +41,8 @@ max_step  =  9999999    # maximum timestep
 max_step  =  100    # maximum timestep
 stop_time =  3000.0  
 
-geometry.coord_sys = 3
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ, 3=>RTHETA
+geometry.coord_sys_override = 3    # 0 => cart, 1 => RZ, 3=>RTHETA
 geometry.prob_lo   =  3.48 0.0 0.0
 geometry.prob_hi   =  6.02 6.28318530718 5.0 
 #geometry.prob_lo   =  20.0 0.0 0.0  #SMITH

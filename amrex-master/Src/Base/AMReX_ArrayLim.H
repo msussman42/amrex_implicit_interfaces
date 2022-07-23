@@ -154,7 +154,6 @@
 
 /*
 ** Fortran stuff ...
-SUSSMAN: add DIMS3D,DIMDEC3D,DIMV3D,ARG3D_L1,..,ARG3D_H1,...,ARG3D_H3
 */
 
 #if __STDC__==1 || defined(__INTEL_COMPILER)
@@ -181,16 +180,6 @@ SUSSMAN: add DIMS3D,DIMDEC3D,DIMV3D,ARG3D_L1,..,ARG3D_H1,...,ARG3D_H3
 #define ARG_H2(a) a##_h2
 #define DIMARG(a) a##(1),a##(2)
 
-#define DIMS3D(a) a##_lo, a##_hi
-#define DIMDEC3D(a) a##_lo(3), a##_hi(3)
-#define DIMV3D(a) a##_lo(1):a##_hi(1), a##_lo(2):a##_hi(2), a##_lo(3):a##_hi(3)
-#define ARG3D_L1(a) a##_lo(1)
-#define ARG3D_L2(a) a##_lo(2)
-#define ARG3D_L3(a) a##_lo(3)
-#define ARG3D_H1(a) a##_hi(1)
-#define ARG3D_H2(a) a##_hi(2)
-#define ARG3D_H3(a) a##_hi(3)
-
 #endif
 
 #if (AMREX_SPACEDIM == 3)
@@ -210,16 +199,6 @@ SUSSMAN: add DIMS3D,DIMDEC3D,DIMV3D,ARG3D_L1,..,ARG3D_H1,...,ARG3D_H3
 #define ARG_H2(a) a##_h2
 #define ARG_H3(a) a##_h3
 #define DIMARG(a) a##(1),a##(2),a##(3)
-
-#define DIMS3D(a) a##_lo, a##_hi
-#define DIMDEC3D(a) a##_lo(3), a##_hi(3)
-#define DIMV3D(a) a##_lo(1):a##_hi(1), a##_lo(2):a##_hi(2), a##_lo(3):a##_hi(3)
-#define ARG3D_L1(a) a##_lo(1)
-#define ARG3D_L2(a) a##_lo(2)
-#define ARG3D_L3(a) a##_lo(3)
-#define ARG3D_H1(a) a##_hi(1)
-#define ARG3D_H2(a) a##_hi(2)
-#define ARG3D_H3(a) a##_hi(3)
 
 #endif
 
@@ -247,16 +226,6 @@ SUSSMAN: add DIMS3D,DIMDEC3D,DIMV3D,ARG3D_L1,..,ARG3D_H1,...,ARG3D_H3
 #define ARG_H2(a) a/**/_h2
 #define DIMARG(a) a/**/(1),a/**/(2)
 
-#define DIMS3D(a) a/**/_l1, a/**/_l2, a/**/_l3, a/**/_h1, a/**/_h2, a/**/_h3
-#define DIMDEC3D(a) a/**/_l1, a/**/_l2, a/**/_l3, a/**/_h1, a/**/_h2, a/**/_h3
-#define DIMV3D(a) a/**/_l1:a/**/_h1, a/**/_l2:a/**/_h2, a/**/_l3:a/**/_h3
-#define ARG3D_L1(a) a/**/_l1
-#define ARG3D_L2(a) a/**/_l2
-#define ARG3D_L3(a) a/**/_l3
-#define ARG3D_H1(a) a/**/_h1
-#define ARG3D_H2(a) a/**/_h2
-#define ARG3D_H3(a) a/**/_h3
-
 #endif
 
 #if (AMREX_SPACEDIM == 3)
@@ -276,16 +245,6 @@ SUSSMAN: add DIMS3D,DIMDEC3D,DIMV3D,ARG3D_L1,..,ARG3D_H1,...,ARG3D_H3
 #define ARG_H2(a) a/**/_h2
 #define ARG_H3(a) a/**/_h3
 #define DIMARG(a) a/**/(1),a/**/(2),a/**/(3)
-
-#define DIMS3D(a) a/**/_l1, a/**/_l2, a/**/_l3, a/**/_h1, a/**/_h2, a/**/_h3
-#define DIMDEC3D(a) a/**/_l1, a/**/_l2, a/**/_l3, a/**/_h1, a/**/_h2, a/**/_h3
-#define DIMV3D(a) a/**/_l1:a/**/_h1, a/**/_l2:a/**/_h2, a/**/_l3:a/**/_h3
-#define ARG3D_L1(a) a/**/_l1
-#define ARG3D_L2(a) a/**/_l2
-#define ARG3D_L3(a) a/**/_l3
-#define ARG3D_H1(a) a/**/_h1
-#define ARG3D_H2(a) a/**/_h2
-#define ARG3D_H3(a) a/**/_h3
 
 #endif
 

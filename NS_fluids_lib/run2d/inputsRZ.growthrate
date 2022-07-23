@@ -23,7 +23,7 @@ stop_time =  0.13  # maximum problem time
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
-geometry.coord_sys      = 1        # 0 => cart, 1 => RZ  2=>R theta Z
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ  3=>R theta Z
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  1.0 2.0
 geometry.is_periodic = 0 1          
