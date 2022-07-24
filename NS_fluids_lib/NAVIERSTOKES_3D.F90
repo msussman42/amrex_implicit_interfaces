@@ -478,7 +478,7 @@ stop
        stop
       endif
 
-      if (levelrz.ne.1) then
+      if (levelrz.ne.COORDSYS_RZ) then
        print *,"levelrz invalid zones revolve"
        stop
       endif
@@ -2368,14 +2368,14 @@ END SUBROUTINE SIMP
        print *,"num_state_base invalid"
        stop
       endif
-      if (rz_flag.eq.0) then
+      if (rz_flag.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (rz_flag.eq.1) then
+      else if (rz_flag.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (rz_flag.eq.3) then
+      else if (rz_flag.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"rz_flag invalid in cellgrid"
@@ -4096,13 +4096,13 @@ END SUBROUTINE SIMP
       plot_sdim=SDIM
       plot_sdim_macro=SDIM
 
-      if ((levelrz.eq.0).or.(levelrz.eq.3)) then
+      if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
        if (visual_revolve.ne.0) then
         print *,"visual_revolve= ",visual_revolve
         print *,"visual_revolve invalid combine zones"
         stop
        endif
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
@@ -4143,7 +4143,7 @@ END SUBROUTINE SIMP
 
       if ((visual_revolve.ge.1).and.(visual_revolve.le.1024)) then
 
-       if (levelrz.ne.1) then
+       if (levelrz.ne.COORDSYS_RZ) then
         print *,"levelrz invalid combine zones 2"
         stop
        endif
@@ -4174,14 +4174,14 @@ END SUBROUTINE SIMP
         im_solid_map)
       else if (visual_revolve.eq.0) then
 
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if (levelrz.eq.1) then
+       else if (levelrz.eq.COORDSYS_RZ) then
         if (SDIM.ne.2) then
          print *,"dimension bust"
          stop
         endif
-       else if (levelrz.eq.3) then
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         ! do nothing
        else
         print *,"levelrz invalid combine zones 3"
@@ -7216,16 +7216,16 @@ END SUBROUTINE SIMP
 
         velcomp=1
 
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
-        else if (levelrz.eq.1) then
+        else if (levelrz.eq.COORDSYS_RZ) then
          if (SDIM.ne.2) then
           print *,"dimension bust"
           stop
          endif
          rr=xsten(0,1)
          gradu(3,3)=vel(D_DECL(i,j,k),velcomp)/abs(rr)
-        else if (levelrz.eq.3) then
+        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
          rr=xsten(0,1)
          gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),velcomp)/abs(rr)
          gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),velcomp+1)/abs(rr)
@@ -7299,15 +7299,15 @@ END SUBROUTINE SIMP
            bfact*dx(dir)/two
          enddo ! dir=1..sdim
 
-         if (levelrz.eq.0) then
+         if (levelrz.eq.COORDSYS_CARTESIAN) then
           ! do nothing
-         else if (levelrz.eq.1) then
+         else if (levelrz.eq.COORDSYS_RZ) then
           if (SDIM.ne.2) then
            print *,"dimension bust"
            stop
           endif
           volgrid=volgrid*two*Pi*xsten(0,1)
-         else if (levelrz.eq.3) then
+         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
           volgrid=volgrid*xsten(0,1)
          else
           print *,"levelrz invalid"
@@ -10341,9 +10341,9 @@ END SUBROUTINE SIMP
 
        local_macnew=macnew(D_DECL(i,j,k))+gravity_increment
 
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if (levelrz.eq.1) then
+       else if (levelrz.eq.COORDSYS_RZ) then
         if (SDIM.ne.2) then
          print *,"rz in 2d only"
          stop
@@ -10352,7 +10352,7 @@ END SUBROUTINE SIMP
             (xsten(0,1).le.VOFTOL*dx(1))) then
          local_macnew=zero
         endif
-       else if (levelrz.eq.3) then
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         ! do nothing
        else
         print *,"levelrz invalid"
@@ -14348,9 +14348,9 @@ END SUBROUTINE SIMP
 
        do n=1,ncomp
         crse(D_DECL(ic,jc,kc),n)=crse_value(n)/voltotal
-        if ((levelrz.eq.0).or.(levelrz.eq.3)) then
+        if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
          ! do nothing
-        else if (levelrz.eq.1) then
+        else if (levelrz.eq.COORDSYS_RZ) then
          if (SDIM.ne.2) then
           print *,"dimension bust"
           stop
@@ -14386,7 +14386,8 @@ END SUBROUTINE SIMP
        bfact, &
        level, &
        finest_level, &
-       ngrow,rzflag) &
+       ngrow, &
+       rzflag) &
       bind(c,name='fort_metrics')
 
       use global_utility_module
@@ -14432,7 +14433,7 @@ END SUBROUTINE SIMP
        stop
       endif
       if (SDIM.eq.3) then
-       if (levelrz.eq.1) then
+       if (levelrz.eq.COORDSYS_RZ) then
         print *,"cannot have levelrz=1"
         stop
        endif
@@ -14480,9 +14481,9 @@ END SUBROUTINE SIMP
         side=0
         call gridarea(xsten,nhalf,rzflag,dir,side,local_area)
         at_z_axis=0
-        if (rzflag.eq.0) then
+        if (rzflag.eq.COORDSYS_CARTESIAN) then
          ! do nothing
-        else if (rzflag.eq.1) then
+        else if (rzflag.eq.COORDSYS_RZ) then
          if (dir.eq.1) then
           ! do nothing
          else if (dir.eq.0) then
@@ -14493,7 +14494,7 @@ END SUBROUTINE SIMP
           print *,"dir invalid"
           stop
          endif
-        else if (rzflag.eq.3) then
+        else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
          if ((dir.eq.1).or.(dir.eq.SDIM-1)) then
           ! do nothing
          else if (dir.eq.0) then

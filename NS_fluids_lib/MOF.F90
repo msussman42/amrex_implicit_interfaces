@@ -7,6 +7,8 @@
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
 
+#include "EXTRAP_COMP.H"
+
 #define MOFDEB (0)
 
 #define MAXTET (5)
@@ -3437,9 +3439,9 @@ end subroutine intersection_volume_and_map
 
       if (mag.gt.zero) then
 
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if ((levelrz.eq.1).or.(levelrz.eq.3)) then
+       else if ((levelrz.eq.COORDSYS_RZ).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
 
         dircrit=1
         if (abs(y1_cross_y2(2)).gt.abs(y1_cross_y2(dircrit))) then
@@ -3498,9 +3500,9 @@ end subroutine intersection_volume_and_map
         stop
        endif
 
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if (levelrz.eq.1) then
+       else if (levelrz.eq.COORDSYS_RZ) then
 
         area=zero
         jac=abs(y1_cross_y2(dircrit))
@@ -3543,7 +3545,7 @@ end subroutine intersection_volume_and_map
         deallocate(xy)
         deallocate(w)
 
-       else if (levelrz.eq.3) then ! in: surface_area
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then ! in: surface_area
 
         area=zero
         jac=abs(y1_cross_y2(dircrit))
@@ -3730,7 +3732,7 @@ end subroutine intersection_volume_and_map
        centroid_def(dir)=centroid(dir)
       enddo ! dir
 
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
 
        if (sdim.eq.3) then
         volume=volzero/six
@@ -3741,7 +3743,7 @@ end subroutine intersection_volume_and_map
         stop
        endif
   
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
 
        if (sdim.ne.2) then
         print *,"dimension bust"
@@ -3804,7 +3806,7 @@ end subroutine intersection_volume_and_map
        deallocate(xyz)
        deallocate(w)
 
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
 
        if (sdim.eq.2) then
 
@@ -4024,7 +4026,7 @@ end subroutine intersection_volume_and_map
        centroid_def_map(dir)=centroid_map(dir)
       enddo ! dir
 
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
 
        if (sdim.eq.3) then
         volume=volzero/six
@@ -4037,7 +4039,7 @@ end subroutine intersection_volume_and_map
         stop
        endif
   
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
 
        if (sdim.ne.2) then
         print *,"dimension bust"
@@ -4122,7 +4124,7 @@ end subroutine intersection_volume_and_map
        deallocate(xyz)
        deallocate(w)
 
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
 
        if (sdim.eq.2) then
 
@@ -6739,9 +6741,9 @@ end subroutine volume_sanity_check
          slope(dir)*(xtarget(dir)-xsten(0,dir))
       enddo
 
-      if ((levelrz.eq.0).or.(levelrz.eq.1)) then
+      if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_RZ)) then
        ! do nothing
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        do dir=1,sdim
         xclosest(dir)=xtarget(dir)-dist_to_line*slope(dir)
        enddo
@@ -6892,13 +6894,13 @@ end subroutine volume_sanity_check
 
       if (sdim.eq.2) then
 
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         volume=one
         do dir=1,sdim
          volume=volume*(xsten(1,dir)-xsten(-1,dir))
          centroid(dir)=half*(xsten(1,dir)+xsten(-1,dir))
         enddo
-       else if (levelrz.eq.1) then
+       else if (levelrz.eq.COORDSYS_RZ) then
         volume=one
         do dir=1,sdim
          volume=volume*(xsten(1,dir)-xsten(-1,dir))
@@ -6913,7 +6915,7 @@ end subroutine volume_sanity_check
          volume=zero
          centroid(1)=zero
         endif
-       else if (levelrz.eq.3) then  ! in: Box_volumeFAST (2d)
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then  ! in: Box_volumeFAST (2d)
         volume=one
         do dir=1,sdim
          volume=volume*(xsten(1,dir)-xsten(-1,dir))
@@ -6934,13 +6936,13 @@ end subroutine volume_sanity_check
        endif
 
       else if (sdim.eq.3) then
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         volume=one
         do dir=1,sdim
          volume=volume*(xsten(1,dir)-xsten(-1,dir))
          centroid(dir)=half*(xsten(1,dir)+xsten(-1,dir))
         enddo
-       else if (levelrz.eq.3) then ! in: Box_volumeFAST (3d)
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then ! in: Box_volumeFAST (3d)
         volume=one
         do dir=1,sdim
          volume=volume*(xsten(1,dir)-xsten(-1,dir))
@@ -7011,7 +7013,7 @@ end subroutine volume_sanity_check
 
       if (sdim.eq.2) then
 
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         volume=one
         do dir=1,sdim
          dr=xsten(1,dir)-xsten(-1,dir)
@@ -7024,7 +7026,7 @@ end subroutine volume_sanity_check
          endif
         enddo ! dir=1..sdim
         volume_map=volume*coeff(1)
-       else if (levelrz.eq.1) then
+       else if (levelrz.eq.COORDSYS_RZ) then
         volume=one
         do dir=1,sdim
          dr=xsten(1,dir)-xsten(-1,dir)
@@ -7059,7 +7061,7 @@ end subroutine volume_sanity_check
          volume_map=zero
          centroid_map(1)=zero
         endif
-       else if (levelrz.eq.3) then  ! in: Box_volumeFAST (2d)
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then  ! in: Box_volumeFAST (2d)
         volume=one
         do dir=1,sdim
          dr=xsten(1,dir)-xsten(-1,dir)
@@ -7100,7 +7102,7 @@ end subroutine volume_sanity_check
        endif
 
       else if (sdim.eq.3) then
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         volume=one
         do dir=1,sdim
          dr=xsten(1,dir)-xsten(-1,dir)
@@ -7113,7 +7115,7 @@ end subroutine volume_sanity_check
          endif
         enddo ! dir=1..sdim
         volume_map=volume*coeff(1)
-       else if (levelrz.eq.3) then ! in: Box_volumeFAST (3d)
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then ! in: Box_volumeFAST (3d)
         volume=one
         do dir=1,sdim
          dr=xsten(1,dir)-xsten(-1,dir)
@@ -7338,14 +7340,14 @@ end subroutine volume_sanity_check
        print *,"getvolume: EBVOFTOL too small EBVOFTOL=",EBVOFTOL
        stop
       endif
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (sdim.ne.2) then
         print *,"levelrz invalid get volume"
         stop
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"levelrz invalid get volume 2"
@@ -7418,14 +7420,14 @@ end subroutine volume_sanity_check
        print *,"getvolumebatch: EBVOFTOL too small EBVOFTOL=",EBVOFTOL
        stop
       endif
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (sdim.ne.2) then
         print *,"sdim invalid"
         stop
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"levelrz invalid get volume batch"
@@ -8439,13 +8441,13 @@ contains
       REAL_T, INTENT(in) :: phi
       INTEGER_T dir
 
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (sdim.ne.2) then
         print *,"dimension bust"
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"levelrz invalid"
@@ -9011,8 +9013,8 @@ contains
        stop
       endif
 
-      if ((levelrz.eq.1).or.(levelrz.eq.3)) then
-       if ((levelrz.eq.1).and.(sdim.ne.2)) then
+      if ((levelrz.eq.COORDSYS_RZ).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
+       if ((levelrz.eq.COORDSYS_RZ).and.(sdim.ne.2)) then
         print *,"sdim invalid"
         stop
        endif
@@ -9026,7 +9028,7 @@ contains
         refcentroid_scale(dir)=refcentroid(dir)
        enddo ! dir
 
-      else if (levelrz.eq.0) then
+      else if (levelrz.eq.COORDSYS_CARTESIAN) then
 
        maxdx=xsten(1,1)-xsten(-1,1)
        do dir=2,sdim
@@ -9077,8 +9079,8 @@ contains
        stop
       endif
 
-      if ((levelrz.eq.1).or.(levelrz.eq.3)) then
-       if ((levelrz.eq.1).and.(sdim.ne.2)) then
+      if ((levelrz.eq.COORDSYS_RZ).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
+       if ((levelrz.eq.COORDSYS_RZ).and.(sdim.ne.2)) then
         print *,"sdim bust in scale_VOF_variables"
         stop
        endif
@@ -9089,7 +9091,7 @@ contains
         enddo
         dx_scale(dir)=dx(dir)
        enddo ! dir
-      else if (levelrz.eq.0) then
+      else if (levelrz.eq.COORDSYS_CARTESIAN) then
        maxdx=xsten(1,1)-xsten(-1,1)
        do dir=2,sdim
         if (xsten(1,dir)-xsten(-1,dir).gt.maxdx) then
@@ -9234,7 +9236,7 @@ contains
       endif
 
        ! intercept scaled directly
-       ! no scaling if levelrz==1 or levelrz==3
+       ! no scaling if levelrz==COORDSYS_RZ or levelrz==COORDSYS_CYLINDRICAL
       call scale_VOF_variables( &
         bfact,dx,xsten0,nhalf0, &
         intercept, &
@@ -10733,14 +10735,14 @@ contains
 
       if ((fastflag.eq.1).and. &
           (continuous_mof.eq.0).and. &
-          (levelrz.eq.0)) then
+          (levelrz.eq.COORDSYS_CARTESIAN)) then
 
        use_MilcentLemoine=1
 
       else if ((fastflag.eq.0).or. &
                (continuous_mof.eq.2).or. &
-               (levelrz.eq.1).or. &
-               (levelrz.eq.3)) then
+               (levelrz.eq.COORDSYS_RZ).or. &
+               (levelrz.eq.COORDSYS_CYLINDRICAL)) then
 
        use_MilcentLemoine=0
 
@@ -11315,19 +11317,19 @@ contains
        print *,"nhalf invalid"
        stop
       endif
-      if ((levelrz.eq.1).and.(sdim.ne.2)) then
+      if ((levelrz.eq.COORDSYS_RZ).and.(sdim.ne.2)) then
        print *,"dimension bust"
        stop
       endif
 
-      if ((levelrz.eq.0).or.(levelrz.eq.1)) then
+      if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_RZ)) then
        RR=one
        do dir=1,sdim
         slope(dir)=cen_ref(dir)-cen_free(dir)
        enddo
         ! mag=|slope|
        call prepare_normal(slope,RR,mag)
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        call RT_transform(cen_ref,cen_refXYZ) 
        call RT_transform(cen_free,cen_freeXYZ) 
        do dir=1,sdim
@@ -12114,9 +12116,9 @@ contains
        stop
       endif
 
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (sdim.ne.2) then
         print *,"sdim invalid"
         stop
@@ -12133,7 +12135,7 @@ contains
         print *,"cannot have r<0"
         stop
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        if (x_col(1).gt.zero) then
         ! do nothing
        else
@@ -12162,7 +12164,7 @@ contains
 
       lmin=-ngrow_distance
       lmax=ngrow_distance
-      if ((levelrz.eq.1).or.(levelrz.eq.3)) then
+      if ((levelrz.eq.COORDSYS_RZ).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
        if (dircrit.eq.1) then ! horizontal column
         do while (xsten0(2*lmin,dircrit).lt.zero)
          lmin=lmin+1
@@ -12172,7 +12174,7 @@ contains
          endif
         enddo
        endif
-      else if (levelrz.eq.0) then
+      else if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
       else
        print *,"levelrz invalid get col ht ls 2"
@@ -12325,10 +12327,10 @@ contains
            stop
           endif
 
-          if (levelrz.eq.3) then
-           print *,"vof_height_function not ready for levelrz==3"
+          if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+           print *,"vof_height_function not ready for levelrz==COORDSYS_CYLINDRICAL"
            stop
-          else if (levelrz.eq.1) then
+          else if (levelrz.eq.COORDSYS_RZ) then
            if (dircrit.eq.1) then ! horizontal column
 
             dr=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
@@ -12357,7 +12359,7 @@ contains
             stop
            endif
 
-          else if (levelrz.eq.0) then
+          else if (levelrz.eq.COORDSYS_CARTESIAN) then
 
            if (SDIM.eq.2) then
 
@@ -12429,10 +12431,10 @@ contains
          current_xbottom=xbottom
          vof_ratio_ht_power=1
 
-         if (levelrz.eq.3) then
-          print *,"vof_height_function not ready for levelrz==3"
+         if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+          print *,"vof_height_function not ready for levelrz==COORDSYS_CYLINDRICAL"
           stop
-         else if (levelrz.eq.1) then
+         else if (levelrz.eq.COORDSYS_RZ) then
           if (dircrit.eq.1) then ! horizontal column
            if (problox.ge.zero) then
             vof_ratio_ht_power=2
@@ -12466,7 +12468,7 @@ contains
            stop
           endif
 
-         else if (levelrz.eq.0) then
+         else if (levelrz.eq.COORDSYS_CARTESIAN) then
 
           if (SDIM.eq.2) then
 
@@ -14134,7 +14136,7 @@ contains
 
       continuous_mof=0
 
-      if (levelrz.ne.0) then
+      if (levelrz.ne.COORDSYS_CARTESIAN) then
        print *,"levelrz should be 0 for this sanity check"
        stop
       endif
@@ -16379,9 +16381,9 @@ contains
 
        ! can use "subroutine gridarea" instead (declared in GLOBALUTIL.F90).
       uncaptured_area=uncaptured_volume_START/(2.0*dxthin)
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if ((levelrz.eq.1).or.(levelrz.eq.3)) then
+      else if ((levelrz.eq.COORDSYS_RZ).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
        if (dir_plus.eq.1) then
         if ((xsten0_minus(0,dir_plus).lt.zero).and. &
             (xsten0_plus(0,dir_plus).gt.zero)) then

@@ -378,9 +378,9 @@ REAL_T dilated_time
      stop
     endif
 
-    if (levelrz.eq.0) then
+    if (levelrz.eq.COORDSYS_CARTESIAN) then
      ! do nothing
-    else if (levelrz.eq.1) then
+    else if (levelrz.eq.COORDSYS_RZ) then
      FSI(part_id)%solid_speed(1)=zero
      FSI(part_id)%solid_speed(2)=zero
     else
@@ -14142,9 +14142,9 @@ end subroutine CLSVOF_InitBox
        ! below 538,541=diesel injector
        else if ((probtype.eq.538).or.(probtype.eq.541)) then
 
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
-        else if (levelrz.eq.1) then ! place inlet at center of domain
+        else if (levelrz.eq.COORDSYS_RZ) then ! place inlet at center of domain
          xfoot(1)=xfoot(1)+0.0015
          xfoot(2)=xfoot(2)-0.0045
         else
@@ -14250,9 +14250,9 @@ end subroutine CLSVOF_InitBox
        if ((probtype.eq.538).or.(probtype.eq.541)) then
 
          ! if injector is shifted, then needle should be shifted too.
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
-        else if (levelrz.eq.1) then ! place inlet at center of domain
+        else if (levelrz.eq.COORDSYS_RZ) then ! place inlet at center of domain
          xfoot(1)=xfoot(1)+0.0015
          xfoot(2)=xfoot(2)-0.0045
         else
@@ -14486,9 +14486,9 @@ end subroutine CLSVOF_InitBox
        else if ((probtype.eq.538).or. & ! inputs.injA
                 (probtype.eq.541)) then
 
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
-        else if (levelrz.eq.1) then ! place inlet at center of domain
+        else if (levelrz.eq.COORDSYS_RZ) then ! place inlet at center of domain
          xtarget(1)=xtarget(1)-0.0015
          xtarget(2)=xtarget(2)+0.0045
         else
@@ -14602,9 +14602,9 @@ end subroutine CLSVOF_InitBox
            (probtype.eq.541)) then
 
          ! if injector is shifted, then needle should be shifted too.
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
-        else if (levelrz.eq.1) then ! place inlet at center of domain
+        else if (levelrz.eq.COORDSYS_RZ) then ! place inlet at center of domain
          xtarget(1)=xtarget(1)-0.0015
          xtarget(2)=xtarget(2)+0.0045
         else

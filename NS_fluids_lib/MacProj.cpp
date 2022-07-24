@@ -344,16 +344,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   FArrayBox& cterm = (*localMF[ALPHANOVOLUME_MF])[mfi];
   FArrayBox& lsfab = LS_new[mfi];
 
-  int rzflag=0;
-  if (geom.IsRZ())
-   rzflag=1;
-  else if (geom.IsCartesian())
-   rzflag=0;
-  else if (geom.IsCYLINDRICAL())
-   rzflag=3;
-  else
-   amrex::Error("CoordSys bust 51");
-
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
@@ -385,7 +375,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     &dt_diffuse,
     &cur_time_slab,
     &project_option,
-    &rzflag, 
+    &NS_geometry_coord, 
     &solidheat_flag);
 
  }  // mfi

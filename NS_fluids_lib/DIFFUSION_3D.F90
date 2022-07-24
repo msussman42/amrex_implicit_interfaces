@@ -250,14 +250,14 @@ stop
         stop
        endif
 
-       if (rzflag.eq.0) then
+       if (rzflag.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if (rzflag.eq.1) then
+       else if (rzflag.eq.COORDSYS_RZ) then
         if (SDIM.ne.2) then
          print *,"dimension bust"
          stop
         endif
-       else if (rzflag.eq.3) then
+       else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
         ! do nothing
        else 
         print *,"rzflag invalid"
@@ -546,7 +546,7 @@ stop
           ! angular_velocity<0 => clockwise
           ! in PROB.F90: 
           ! pres=pres+half*rho*(angular_velocity**2)*(xpos(1)**2)
-         if (rzflag.eq.3) then
+         if (rzflag.eq.COORDSYS_CYLINDRICAL) then
           if (RCEN.gt.zero) then
            ! do nothing
           else
@@ -558,7 +558,7 @@ stop
 
            ! DTEMP has no units.
           unp1(1)=unp1(1)+dt*DTEMP*(angular_velocity**2)*RCEN
-         else if (rzflag.eq.0) then
+         else if (rzflag.eq.COORDSYS_CARTESIAN) then
           ! assume that RCEN > eps > 0 ?
           ! coriolis force:
           ! -2 omega cross v =
@@ -568,7 +568,7 @@ stop
           ! = -2(-angular_vel. v,angular_velocity u)
           unp1(1)=unp1(1)+dt*( two*angular_velocity*un(2) )
           unp1(2)=unp1(2)-dt*( two*angular_velocity*un(1) )
-         else if (rzflag.eq.1) then
+         else if (rzflag.eq.COORDSYS_RZ) then
           if (SDIM.ne.2) then
            print *,"dimension bust"
            stop
@@ -595,14 +595,14 @@ stop
           stop
          endif
 
-         if (rzflag.eq.0) then
+         if (rzflag.eq.COORDSYS_CARTESIAN) then
           ! do nothing
-         else if (rzflag.eq.1) then
+         else if (rzflag.eq.COORDSYS_RZ) then
           if (SDIM.ne.2) then
            print *,"dimension bust"
            stop
           endif
-         else if (rzflag.eq.3) then
+         else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
 
           ut_comp=SDIM+1 ! u_theta/r
           ut_over_r=tensor(D_DECL(i,j,k),ut_comp)
@@ -621,9 +621,9 @@ stop
           stop
          endif
  
-         if (rzflag.eq.0) then
+         if (rzflag.eq.COORDSYS_CARTESIAN) then
           ! do nothing
-         else if (rzflag.eq.1) then
+         else if (rzflag.eq.COORDSYS_RZ) then
 
           if (SDIM.ne.2) then
            print *,"dimension bust"
@@ -653,7 +653,7 @@ stop
            stop
           endif
 
-         else if (rzflag.eq.3) then
+         else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
 
           if (RCEN.gt.zero) then
            ! do nothing

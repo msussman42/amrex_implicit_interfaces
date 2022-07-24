@@ -2439,10 +2439,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
 
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         pres_hydrostatic=pres_hydrostatic+ &
             half*rho_hydrostatic*(angular_velocity**2)*(xcell(1)**2)
-       else if (levelrz.eq.1) then
+       else if (levelrz.eq.COORDSYS_RZ) then
         if (SDIM.ne.2) then
          print *,"dimension bust"
          stop
@@ -2453,7 +2453,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          print *,"angular_velocity must be 0 for RZ for now"
          stop
         endif
-       else if (levelrz.eq.3) then
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         pres_hydrostatic=pres_hydrostatic+ &
            half*rho_hydrostatic*(angular_velocity**2)*(xcell(1)**2)
        else
@@ -5512,14 +5512,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       nmax=POLYGON_LIST_MAX ! get_symmetric_error
 
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"levelrz invalid get_symmetric error"
@@ -5818,14 +5818,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"levelrz invalid stackerror"
@@ -7665,7 +7665,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T x,y,dist
 
 
-      if (levelrz.ne.1) then
+      if (levelrz.ne.COORDSYS_RZ) then
        print *,"levelrz invalid min jetdist"
        stop
       endif
@@ -8281,7 +8281,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         zmin=xblob-5*radblob
         zmax=xblob+2*radblob
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          call cylinderdist(z,y,x,zblob,yblob,radblob,zmin,zmax,dist(1))
          dist(1)=-dist(1)
         else
@@ -8296,7 +8296,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            ! dist>0 outside the cylinder in cylinderdist
         zmin=zblob-1.0e+10
         zmax=zblob+radblob
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          call cylinderdist(x,y,z,xblob,yblob,radblob,zmin,zmax,dist(1))
          dist(1)=-dist(1)
         else
@@ -9264,7 +9264,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 ! vapor level set for gear test problem. (denliquid,visunburn)
 ! one can have a pool of liquid and/or an incoming jet.
        else if (probtype.eq.563) then
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          dist=zblob2-z
          if (radblob.gt.zero) then
           call cylinderdist(y,z,x,yblob,zblob,radblob,xblob-radblob, &
@@ -9556,9 +9556,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        sintheta=(x-xblob)/mag
        cos2theta=costheta**2-sintheta**2
        sin2theta=two*costheta*sintheta
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         dist=radblob+zblob*(two*(costheta**2)-one)/two - mag
-       else if (levelrz.eq.1) then 
+       else if (levelrz.eq.COORDSYS_RZ) then 
         dist=radblob+zblob*(three*(costheta**2)-one)/two - mag
 !       dist=radblob+zblob*(three*(cos2theta**2)-one)/two - mag
        else
@@ -14563,15 +14563,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            ic,jc,kc, &
            fablo,bfact,dx,nhalf,dir_main-1)
 
-          if (levelrz.eq.0) then
+          if (levelrz.eq.COORDSYS_CARTESIAN) then
            ! do nothing
-          else if (levelrz.eq.1) then
+          else if (levelrz.eq.COORDSYS_RZ) then
            RR=xstenMAC(0,1)
            if (SDIM.ne.2) then
             print *,"dimension bust"
             stop
            endif
-          else if (levelrz.eq.3) then
+          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
            RR=xstenMAC(0,1)
           else
            print *,"levelrz invalid"
@@ -14751,16 +14751,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
          if (dir_main.eq.1) then ! r direction
 
-          if (levelrz.eq.0) then
+          if (levelrz.eq.COORDSYS_CARTESIAN) then
            RR=one
-          else if (levelrz.eq.1) then
+          else if (levelrz.eq.COORDSYS_RZ) then
            if (SDIM.eq.2) then
             RR=xsten(0,1)
            else
             print *,"dimension bust"
             stop
            endif
-          else if (levelrz.eq.3) then
+          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
            RR=xsten(0,1)
           else
            print *,"levelrz invalid"
@@ -14774,7 +14774,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif 
 
-         if ((dir_main.eq.2).and.(levelrz.eq.3)) then ! theta direction
+         if ((dir_main.eq.2).and.(levelrz.eq.COORDSYS_CYLINDRICAL)) then ! theta direction
           RRTHETA=xsten(0,1)
          endif
 
@@ -15397,7 +15397,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
    
 ! gear problem
             else if (probtype.eq.563) then
-             if (levelrz.eq.0) then
+             if (levelrz.eq.COORDSYS_CARTESIAN) then
               if (radblob.gt.zero) then
                if (sqrt((y-yblob)**2+(z-zblob)**2).le.radblob) then
                 velcell(veldir)=advbot
@@ -15801,7 +15801,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             else if ((probtype.eq.22).and.(axis_dir.eq.13)) then
              call vbc(velcell(veldir),time,y,zero,error)
             else if (probtype.eq.32) then
-             if (levelrz.ne.0) then
+             if (levelrz.ne.COORDSYS_CARTESIAN) then
               print *,"levelrz invalid for probtype=32"
               stop
              endif
@@ -24528,11 +24528,11 @@ end subroutine initialize2d
               stop
              endif
 
-             if (levelrz.eq.0) then
+             if (levelrz.eq.COORDSYS_CARTESIAN) then
               zcrit=half*(problo_array(SDIM)+probhi_array(SDIM))+ &
                abs(radblob3)* &
                cos(two*Pi*(xpos(1)-problo_array(1))/problen_array(1)-Pi)
-             else if ((levelrz.eq.1).and.(SDIM.eq.2)) then
+             else if ((levelrz.eq.COORDSYS_RZ).and.(SDIM.eq.2)) then
               if (problo_array(1).eq.zero) then
                zcrit=half*(problo_array(SDIM)+probhi_array(SDIM))+ &
                 abs(radblob3)* &
@@ -25657,7 +25657,7 @@ end subroutine initialize2d
          stop
         endif
 
-        if ((levelrz.eq.0).or.(levelrz.eq.3)) then
+        if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
 
          do im=1,num_materials
          
@@ -25723,7 +25723,7 @@ end subroutine initialize2d
          stop
         endif
 
-        if ((levelrz.eq.0).or.(levelrz.eq.3)) then
+        if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
 
          MAC(D_DECL(i,j,k))=MAC(D_DECL(i,j,k))+ &
            perturbation_eps_vel*probhi_arr(1)*angular_velocity*sinprod
@@ -27230,7 +27230,7 @@ end subroutine initialize2d
             (z/zblob)*tanh(xtemp*x)/(cosh(xtemp*x)**2)
 ! gear
          else if (probtype.eq.563) then
-          if (levelrz.eq.0) then
+          if (levelrz.eq.COORDSYS_CARTESIAN) then
            if (radblob.gt.zero) then
             call cylinderdist(y,z,x,yblob,zblob,radblob,xblob-radblob, &
               xblob+radblob,dist)

@@ -739,9 +739,9 @@ stop
            local_cterm(velcomp)=one/(den_inverse*dt)
           else if (in_prescribed.eq.0) then
            local_cterm(velcomp)=one/(den_inverse*dt) ! den/dt
-           if (levelrz.eq.0) then
+           if (levelrz.eq.COORDSYS_CARTESIAN) then
             ! do nothing
-           else if (levelrz.eq.1) then
+           else if (levelrz.eq.COORDSYS_RZ) then
             if (SDIM.ne.2) then
              print *,"dimension bust"
              stop
@@ -752,7 +752,7 @@ stop
               stop
              endif
             endif
-           else if (levelrz.eq.3) then
+           else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
             if (veldir.eq.0) then
              if (xsten(0,1).le.zero) then
               print *,"r invalid"
@@ -943,15 +943,15 @@ stop
        do k=growlo(3),growhi(3)
         call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
         RR=one
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
-        else if (levelrz.eq.1) then
+        else if (levelrz.eq.COORDSYS_RZ) then
          if (SDIM.ne.2) then
           print *,"dimension bust"
           stop
          endif
           ! do nothing
-        else if (levelrz.eq.3) then
+        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
          if (dir.eq.1) then
           RR=xsten(0,1)
          endif

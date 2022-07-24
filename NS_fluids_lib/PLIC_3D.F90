@@ -10,6 +10,7 @@
 #include "AMReX_SPACE.H"
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
+#include "EXTRAP_COMP.H"
 
 #include "PLIC_F.H"
 
@@ -245,14 +246,14 @@ stop
        stop
       endif
 
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"levelrz invalid slope recon"

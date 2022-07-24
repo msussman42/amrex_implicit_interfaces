@@ -71,14 +71,14 @@ stop
       endif
 
       RR=one
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        if (normdir.eq.1) then
         RR=xstenMAC(0,1)
        endif
@@ -103,8 +103,8 @@ stop
        stop
       endif
 
-      if ((levelrz.eq.1).or. &
-          (levelrz.eq.3)) then
+      if ((levelrz.eq.COORDSYS_RZ).or. &
+          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
        if (normdir.eq.0) then
         if (x0(normdir+1).le.VOFTOL*dx(normdir+1)) then
          delta=zero
@@ -921,14 +921,14 @@ stop
        stop
       endif
 
-      if (rzflag.eq.0) then
+      if (rzflag.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (rzflag.eq.1) then
+      else if (rzflag.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (rzflag.eq.3) then
+      else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"rzflag invalid"
@@ -2703,14 +2703,14 @@ stop
        stop
       endif
 
-      if (rzflag.eq.0) then
+      if (rzflag.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (rzflag.eq.1) then
+      else if (rzflag.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (rzflag.eq.3) then
+      else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"rzflag invalid"
@@ -2783,11 +2783,11 @@ stop
        hx=xstenMAC(1,dirnormal+1)-xstenMAC(-1,dirnormal+1)
 
        RR=one
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if (levelrz.eq.1) then
+       else if (levelrz.eq.COORDSYS_RZ) then
         ! do nothing
-       else if (levelrz.eq.3) then
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         if (dirnormal.eq.1) then ! theta direction
          RR=xstenMAC(0,1)
         endif
@@ -2890,10 +2890,10 @@ stop
 
        uulocal=abs(velmac(D_DECL(i,j,k)))
 
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if ((levelrz.eq.1).or. &
-                (levelrz.eq.3)) then
+       else if ((levelrz.eq.COORDSYS_RZ).or. &
+                (levelrz.eq.COORDSYS_CYLINDRICAL)) then
         if ((dirnormal.eq.0).and. &
             (xstenMAC(0,1).gt.VOFTOL*dx(1))) then
          if (xstenMAC(0,1).ge.hxmac) then
@@ -3741,14 +3741,14 @@ stop
       endif
       vofcomp=(im_parm-1)*ngeom_recon+1
 
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"levelrz invalid dencor"
@@ -4047,14 +4047,14 @@ stop
        stop
       endif
   
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"levelrz invalid velmac override"
@@ -4120,14 +4120,14 @@ stop
         endif
 
         RR=one
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
-        else if (levelrz.eq.1) then
+        else if (levelrz.eq.COORDSYS_RZ) then
          if (SDIM.ne.2) then
           print *,"dimension bust"
           stop
          endif
-        else if (levelrz.eq.3) then
+        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
          if (normdir.eq.1) then
           RR=xstenMAC(0,1)
          endif
@@ -4236,14 +4236,14 @@ stop
         endif
 
         RR=one
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
-        else if (levelrz.eq.1) then
+        else if (levelrz.eq.COORDSYS_RZ) then
          if (SDIM.ne.2) then
           print *,"dimension bust"
           stop
          endif
-        else if (levelrz.eq.3) then
+        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
          if (normdir.eq.1) then
           RR=xsten(0,1)
          endif
@@ -5358,9 +5358,9 @@ stop
          enddo
 
          zapvel=0
-         if (levelrz.eq.0) then
+         if (levelrz.eq.COORDSYS_CARTESIAN) then
           ! do nothing
-         else if (levelrz.eq.1) then
+         else if (levelrz.eq.COORDSYS_RZ) then
           if (SDIM.ne.2) then
            print *,"dimension bust"
            stop
@@ -5369,7 +5369,7 @@ stop
               (veldir.eq.1)) then
            zapvel=1
           endif
-         else if (levelrz.eq.3) then
+         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
           if ((xsten(0,1).le.VOFTOL*dx(1)).and. &
               (veldir.eq.1)) then
            zapvel=1
@@ -5615,9 +5615,9 @@ stop
        velmac=x_mac_old(D_DECL(i,j,k))
 
        if (veldir.eq.1) then
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
-        else if (levelrz.eq.1) then
+        else if (levelrz.eq.COORDSYS_RZ) then
          if (SDIM.ne.2) then
           print *,"dimension bust"
           stop
@@ -5625,7 +5625,7 @@ stop
          if (xsten(0,1).le.VOFTOL*dx(1)) then
           velmac=zero
          endif
-        else if (levelrz.eq.3) then
+        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
          if (xsten(0,1).le.VOFTOL*dx(1)) then
            velmac=zero
          endif
@@ -5634,9 +5634,9 @@ stop
          stop
         endif
        else if (veldir.eq.2) then
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
-        else if (levelrz.eq.1) then
+        else if (levelrz.eq.COORDSYS_RZ) then
          if (SDIM.ne.2) then
           print *,"dimension bust"
           stop
@@ -5644,7 +5644,7 @@ stop
          if (xsten(0,1).le.VOFTOL*dx(1)) then
            velmac=zero
          endif
-        else if (levelrz.eq.3) then
+        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
          if (xsten(0,1).le.VOFTOL*dx(1)) then
            velmac=zero
          endif
@@ -5653,12 +5653,12 @@ stop
          stop
         endif
        else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
-        else if (levelrz.eq.1) then
+        else if (levelrz.eq.COORDSYS_RZ) then
          print *,"dimension bust"
          stop
-        else if (levelrz.eq.3) then
+        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
          if (xsten(0,1).le.VOFTOL*dx(1)) then
            velmac=zero
          endif
@@ -6407,9 +6407,9 @@ stop
         enddo ! veldir
        enddo ! dir
 
-       if (irz.eq.0) then
+       if (irz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if (irz.eq.1) then
+       else if (irz.eq.COORDSYS_RZ) then
         if (SDIM.ne.2) then
          print *,"dimension bust"
          stop
@@ -6418,7 +6418,7 @@ stop
          print *,"no neg domain in r-z"
          stop
         endif
-       else if (irz.eq.3) then
+       else if (irz.eq.COORDSYS_CYLINDRICAL) then
         if (xsten(-2,1).le.zero) then
          print *,"no neg domain in r-T"
          stop
@@ -6614,9 +6614,9 @@ stop
       do k=growlo(3),growhi(3)
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
-       if (irz.eq.0) then
+       if (irz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if (irz.eq.1) then
+       else if (irz.eq.COORDSYS_RZ) then
         if (SDIM.ne.2) then
          print *,"dimension bust"
          stop
@@ -6627,7 +6627,7 @@ stop
          print *,"no neg domain in r-z"
          stop
         endif
-       else if (irz.eq.3) then
+       else if (irz.eq.COORDSYS_CYLINDRICAL) then
         if (xsten(-2,1).gt.zero) then
          ! do nothing
         else
@@ -10310,7 +10310,7 @@ stop
                 TorYgamma_BC)  ! TorYgamma_BC here is an output
 
                hx=abs(xsten(0,dir)-xsten(2*side,dir))
-               if ((levelrz.eq.3).and.(dir.eq.2)) then
+               if ((levelrz.eq.COORDSYS_CYLINDRICAL).and.(dir.eq.2)) then
                 hx=hx*xsten(side,1)
                endif
                side_coeff=aface*heatcoeff/(theta*hx)
@@ -13476,14 +13476,14 @@ stop
        stop
       endif
 
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension crash"
         stop
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"levelrz invalid vfrac split"
@@ -13701,9 +13701,9 @@ stop
 
           check_accept=1
 
-          if (levelrz.eq.0) then
+          if (levelrz.eq.COORDSYS_CARTESIAN) then
            ! do nothing
-          else if (levelrz.eq.1) then
+          else if (levelrz.eq.COORDSYS_RZ) then
            if (SDIM.ne.2) then
             print *,"dimension bust"
             stop
@@ -13712,7 +13712,7 @@ stop
                (veldir.eq.1)) then
             check_accept=0
            endif
-          else if (levelrz.eq.3) then
+          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
            if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
                (veldir.eq.1)) then
             check_accept=0
@@ -13776,10 +13776,10 @@ stop
              call gridstenMAC_level(xsten_MAC,ipart,jpart,kpart, &
                level,nhalf,normdir)
 
-             if (levelrz.eq.0) then
+             if (levelrz.eq.COORDSYS_CARTESIAN) then
               ! do nothing
-             else if ((levelrz.eq.1).or. &
-                      (levelrz.eq.3)) then
+             else if ((levelrz.eq.COORDSYS_RZ).or. &
+                      (levelrz.eq.COORDSYS_CYLINDRICAL)) then
               if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
                   (normdir.eq.0)) then
                usten_accept(-1)=zero
@@ -13873,9 +13873,9 @@ stop
 
                check_intersection=1
 
-               if (levelrz.eq.0) then
+               if (levelrz.eq.COORDSYS_CARTESIAN) then
                 ! do nothing
-               else if (levelrz.eq.1) then
+               else if (levelrz.eq.COORDSYS_RZ) then
                 if (SDIM.ne.2) then
                  print *,"dimension bust"
                  stop
@@ -13883,7 +13883,7 @@ stop
                 if (xsten_recon(0,1).le.VOFTOL*dx(1)) then
                  check_intersection=0
                 endif
-               else if (levelrz.eq.3) then
+               else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
                 if (xsten_recon(0,1).le.VOFTOL*dx(1)) then
                  check_intersection=0
                 endif
@@ -13900,10 +13900,10 @@ stop
                 call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
                  level,nhalf,normdir)
 
-                if (levelrz.eq.0) then
+                if (levelrz.eq.COORDSYS_CARTESIAN) then
                  ! do nothing
-                else if ((levelrz.eq.1).or. &
-                         (levelrz.eq.3)) then
+                else if ((levelrz.eq.COORDSYS_RZ).or. &
+                         (levelrz.eq.COORDSYS_CYLINDRICAL)) then
                  if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
                      (normdir.eq.0)) then
                   usten_donate(-1)=zero
@@ -14192,9 +14192,9 @@ stop
         call gridsten_level(xsten_crse,icrse,jcrse,kcrse,level,nhalf)
 
         check_accept=1
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
-        else if (levelrz.eq.1) then
+        else if (levelrz.eq.COORDSYS_RZ) then
          if (SDIM.ne.2) then
           print *,"dimension bust"
           stop
@@ -14204,7 +14204,7 @@ stop
           print *,"icrse invalid"
           stop
          endif
-        else if (levelrz.eq.3) then
+        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
          if (xsten_crse(0,1).le.VOFTOL*dx(1)) then
           check_accept=0
           print *,"icrse invalid"
@@ -14246,10 +14246,10 @@ stop
          call gridstenMAC_level(xsten_MAC,icrse,jcrse,kcrse, &
            level,nhalf,normdir)
 
-         if (levelrz.eq.0) then
+         if (levelrz.eq.COORDSYS_CARTESIAN) then
           ! do nothing
-         else if ((levelrz.eq.1).or. &
-                  (levelrz.eq.3)) then
+         else if ((levelrz.eq.COORDSYS_RZ).or. &
+                  (levelrz.eq.COORDSYS_CYLINDRICAL)) then
           if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
               (normdir.eq.0)) then
            usten_accept(-1)=zero
@@ -14329,9 +14329,9 @@ stop
 
           check_intersection=1
 
-          if (levelrz.eq.0) then
+          if (levelrz.eq.COORDSYS_CARTESIAN) then
            ! do nothing
-          else if (levelrz.eq.1) then
+          else if (levelrz.eq.COORDSYS_RZ) then
            if (SDIM.ne.2) then
             print *,"dimension bust"
             stop
@@ -14341,7 +14341,7 @@ stop
             print *,"idonate invalid"
             stop
            endif
-          else if (levelrz.eq.3) then
+          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
            if (xsten_recon(0,1).le.VOFTOL*dx(1)) then
             check_intersection=0
             print *,"idonate invalid"
@@ -14360,10 +14360,10 @@ stop
            call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
              level,nhalf,normdir)
 
-           if (levelrz.eq.0) then
+           if (levelrz.eq.COORDSYS_CARTESIAN) then
             ! do nothing
-           else if ((levelrz.eq.1).or. &
-                    (levelrz.eq.3)) then
+           else if ((levelrz.eq.COORDSYS_RZ).or. &
+                    (levelrz.eq.COORDSYS_CYLINDRICAL)) then
 
             if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
                 (normdir.eq.0)) then
@@ -16950,10 +16950,10 @@ stop
        total_vol_face=zero
 
        at_RZ_face=0
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if ((levelrz.eq.1).or. &
-                (levelrz.eq.3)) then
+       else if ((levelrz.eq.COORDSYS_RZ).or. &
+                (levelrz.eq.COORDSYS_CYLINDRICAL)) then
         if ((dir.eq.0).and. &
             (xstenMAC(0,1).le.VOFTOL*dx(1))) then
          at_RZ_face=1
@@ -17697,14 +17697,14 @@ stop
        stop
       endif
 
-      if (rzflag.eq.0) then
+      if (rzflag.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (rzflag.eq.1) then
+      else if (rzflag.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (rzflag.eq.3) then
+      else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"rzflag invalid"
@@ -18160,15 +18160,15 @@ stop
 
            ! extra factor of r for theta gradient in cylindrical coordinates.
            RR=one
-           if (rzflag.eq.0) then
+           if (rzflag.eq.COORDSYS_CARTESIAN) then
             ! do nothing
-           else if (rzflag.eq.1) then
+           else if (rzflag.eq.COORDSYS_RZ) then
             if (SDIM.ne.2) then
              print *,"dimension bust"
              stop
             endif
             ! do nothing
-           else if (rzflag.eq.3) then
+           else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
             if (dir.eq.2) then ! theta direction  s_theta/r
              RR=xstenMAC(0,1)
             endif
@@ -19009,10 +19009,10 @@ stop
        enddo
 
         !rzflag=0 => volume and area independent of r.
-       if (rzflag.eq.0) then
+       if (rzflag.eq.COORDSYS_CARTESIAN) then
         !volume=dx dy dz
         rval=one
-       else if ((rzflag.eq.1).or.(rzflag.eq.3)) then
+       else if ((rzflag.eq.COORDSYS_RZ).or.(rzflag.eq.COORDSYS_CYLINDRICAL)) then
         !volume=(dtheta/2)*(r_{2}^2 - r_{1}^{2}) dz=dtheta*dz*dr r
         rval=x_MAC_control_volume(1)
        else
@@ -19076,8 +19076,8 @@ stop
         print *,"LS_clamped invalid"
         stop
        endif
-       if ((rzflag.eq.1).or. &
-           (rzflag.eq.3)) then
+       if ((rzflag.eq.COORDSYS_RZ).or. &
+           (rzflag.eq.COORDSYS_CYLINDRICAL)) then
         if (force_dir.eq.0) then
          if (abs(x_MAC_control_volume(force_dir+1)).le. &
              VOFTOL*dx(force_dir+1)) then
@@ -19096,7 +19096,7 @@ stop
          print *,"force_dir invalid"
          stop
         endif
-       else if (rzflag.eq.0) then
+       else if (rzflag.eq.COORDSYS_CARTESIAN) then
         ! do nothing
        else
         print *,"rzflag invalid"
@@ -19502,21 +19502,21 @@ stop
 
         if ((hx.gt.zero).and.(hy.gt.zero).and.(hz.gt.zero)) then
 
-         if (rzflag.eq.0) then
+         if (rzflag.eq.COORDSYS_CARTESIAN) then
           !areax=dz dy
           !areay=dx dz
           !areaz=dx dy
           !volume=dx dy dz
           rplus=one
           rminus=one
-         else if ((rzflag.eq.1).or.(rzflag.eq.3)) then
+         else if ((rzflag.eq.COORDSYS_RZ).or.(rzflag.eq.COORDSYS_CYLINDRICAL)) then
           ! areax=dz * dtheta * r
           ! areaz=(dtheta/2)*(r_{2}^2 - r_{1}^{2})=dtheta*dr*r
           ! areay=dr * dz
           ! volume=dtheta*dz*dr r
           rplus=x_at_flux_point(2,1,1)
           rminus=x_at_flux_point(1,1,1)
-          if (rzflag.eq.3) then
+          if (rzflag.eq.COORDSYS_CYLINDRICAL) then
            hy=hy*rval
           endif
          else
@@ -19573,9 +19573,9 @@ stop
 
          enddo ! dir_XD=1..sdim
                    
-         if (rzflag.eq.0) then
+         if (rzflag.eq.COORDSYS_CARTESIAN) then
            ! do nothing
-         else if (rzflag.eq.1) then
+         else if (rzflag.eq.COORDSYS_RZ) then
 
           if (SDIM.ne.2) then
            print *,"dimension bust"
@@ -19599,7 +19599,7 @@ stop
           endif
           force(dir_XD)=force(dir_XD)+Htensor_cen*bodyforce
 
-         else if (rzflag.eq.3) then
+         else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
           ! -T22/r
           dir_XD=1
 
@@ -19616,15 +19616,15 @@ stop
           stop
          endif 
 
-         if (rzflag.eq.0) then
+         if (rzflag.eq.COORDSYS_CARTESIAN) then
           ! do nothing
-         else if (rzflag.eq.1) then
+         else if (rzflag.eq.COORDSYS_RZ) then
           if (SDIM.ne.2) then
            print *,"dimension bust"
            stop
           endif
           ! do nothing
-         else if (rzflag.eq.3) then ! T12/r
+         else if (rzflag.eq.COORDSYS_CYLINDRICAL) then ! T12/r
           dir_XD=2
 
           if (rval.gt.zero) then

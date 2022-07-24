@@ -12,6 +12,8 @@
 #include "PROB_F.H"
 #include "LEVEL_F.H"
 
+#include "EXTRAP_COMP.H"
+
 #if (AMREX_SPACEDIM==3)
 #define SDIM 3
 #elif (AMREX_SPACEDIM==2)
@@ -1609,7 +1611,7 @@ end subroutine nozzle2d
       else if ((probtype.eq.41).and. &
                (axis_dir.eq.0).and.(SDIM.eq.3)) then
 ! x is free stream direction
-       if (levelrz.eq.0) then 
+       if (levelrz.eq.COORDSYS_CARTESIAN) then 
         dist=zblob2-sqrt(y**2+z**2)
        else
         print *,"levelrz invalid soliddist"
@@ -2304,7 +2306,7 @@ end subroutine nozzle2d
 
         ! selectgeom, dist<0 in the solid
       else if ((probtype.eq.32).and.(SDIM.eq.2)) then  
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         if (radblob.gt.zero) then
          dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
         else if (radblob.lt.zero) then

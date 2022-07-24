@@ -438,14 +438,14 @@ stop
        stop
       endif
 
-      if (rz_flag.eq.0) then
+      if (rz_flag.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (rz_flag.eq.1) then
+      else if (rz_flag.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (rz_flag.eq.3) then
+      else if (rz_flag.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"rz_flag invalid in cellgrid"
@@ -824,13 +824,13 @@ stop
       plot_sdim=SDIM
       plot_sdim_macro=SDIM
 
-      if ((levelrz.eq.0).or.(levelrz.eq.3)) then
+      if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
        if (visual_revolve.ne.0) then
         print *,"visual_revolve= ",visual_revolve
         print *,"visual_revolve invalid combine zones"
         stop
        endif
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
@@ -866,7 +866,7 @@ stop
 
       if ((visual_revolve.ge.1).and.(visual_revolve.le.1024)) then
 
-       if (levelrz.ne.1) then
+       if (levelrz.ne.COORDSYS_RZ) then
         print *,"levelrz invalid combine zones 2"
         stop
        endif
@@ -901,14 +901,14 @@ stop
         ncomp)
       else if (visual_revolve.eq.0) then
 
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if (levelrz.eq.1) then
+       else if (levelrz.eq.COORDSYS_RZ) then
         if (SDIM.ne.2) then
          print *,"dimension bust"
          stop
         endif
-       else if (levelrz.eq.3) then
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         ! do nothing
        else
         print *,"levelrz invalid combine zones 3"
