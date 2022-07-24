@@ -6,6 +6,7 @@
 #include <memory>
 #include <list>
 
+#include <local_thread_class.H>
 #include <AMReX_Box.H>
 #include <AMReX_Geometry.H>
 #include <AMReX_BoxArray.H>

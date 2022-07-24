@@ -1,6 +1,7 @@
 #ifndef _ABecLAPLACIAN_H_
 #define _ABecLAPLACIAN_H_
 
+#include <local_thread_class.H>
 #include <AMReX_Geometry.H>
 #include <AMReX_Array.H>
 #include <AMReX_Vector.H>

@@ -11,6 +11,7 @@
 #include <cmath>
 #endif
 
+#include <local_thread_class.H>
 #include <AMReX_CArena.H>
 #include <AMReX_REAL.H>
 #include <AMReX_Utility.H>
@@ -35,8 +36,10 @@ main (int   argc,
 {
 
     std::cout.imbue(std::locale("C"));
-    // mpi initialization; allocate m_geom
+
     amrex::Initialize(argc,argv);  
+    thread_class::Initialize();
+
     std::fflush(NULL);
     amrex::ParallelDescriptor::Barrier();
 
@@ -45,7 +48,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, 07/24/22, 15:40 on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, 07/24/22, 17:20 on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

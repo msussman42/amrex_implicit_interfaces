@@ -44,11 +44,8 @@
 #include <omp.h>
 #endif
 
-//SUSSMAN
-#ifndef IPAD_ISH
 #if defined(__APPLE__)
 #include <xmmintrin.h>
-#endif
 #endif
 
 #include <cstdio>
@@ -63,12 +60,6 @@
 #include <limits>
 #include <vector>
 #include <algorithm>
-
-// SUSSMAN
-int thread_class::nthreads;
-double thread_class::number_mfiter_loops=0.0;
-std::vector<double> thread_class::tile_d_numPts;
-double thread_class::boxarray_d_numPts=0.0;
 
 namespace amrex {
 
@@ -104,15 +95,12 @@ namespace {
     SignalHandler prev_handler_sigint;
     SignalHandler prev_handler_sigabrt;
     SignalHandler prev_handler_sigfpe;
-//SUSSMAN
-#ifndef IPAD_ISH
 #if defined(__linux__)
     int           prev_fpe_excepts;
     int           curr_fpe_excepts;
 #elif defined(__APPLE__)
     unsigned int  prev_fpe_mask;
     unsigned int  curr_fpe_excepts;
-#endif
 #endif
 }
 
@@ -496,8 +484,6 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
             pp.query("fpe_trap_zero", divbyzero);
             pp.query("fpe_trap_overflow", overflow);
 
-//SUSSMAN
-#ifndef IPAD_ISH
 #if defined(__linux__)
             curr_fpe_excepts = 0;
             if (invalid)   curr_fpe_excepts |= FE_INVALID;
@@ -523,7 +509,6 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
                 prev_handler_sigfpe = signal(SIGFPE,  BLBackTrace::handler);
 	    }
 #endif
-#endif
         }
     }
 
@@ -531,9 +516,6 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
 
     Arena::Initialize();
     amrex_mempool_init();
-
-    // SUSSMAN
-    thread_class::Initialize();
 
     //
     // Initialize random seed after we're running in parallel.
@@ -586,7 +568,6 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
 
     BL_TINY_PROFILE_INITIALIZE();
 
-      //SUSSMAN: m_geom=new Geometry()
     AMReX::push(new AMReX());
     return AMReX::top();
 }
@@ -787,92 +768,3 @@ AMReX::erase (AMReX* pamrex)
 }
 
 
-
-// SUSSMAN
-void 
-thread_class::Initialize() {
-
- nthreads=1;
-
-#ifdef _OPENMP
- int tid=0;
- int nthreads_local;
-#endif
-
-#ifdef _OPENMP
-#pragma omp parallel private(nthreads_local, tid)
-{
-
- /* Obtain thread number */
- tid = omp_get_thread_num();
-
- /* Only master thread does this */
- if (tid == 0) {
-  nthreads_local = omp_get_num_threads();
-  nthreads=nthreads_local;
- }
-}  /* All threads join master thread and disband */
-#endif
-
- if (nthreads<1)
-  amrex::Error("nthreads invalid");
-
- tile_d_numPts.resize(nthreads);
- for (int tid_local=0;tid_local<nthreads;tid_local++)
-  tile_d_numPts[tid_local]=0.0;
- number_mfiter_loops=0.0;
-
-} // end subroutine thread_class::Initialize
-
-// SUSSMAN
-void 
-thread_class::reconcile_d_numPts(int caller_id) {
-
- number_mfiter_loops=number_mfiter_loops+1.0;
-
- if (tile_d_numPts[0]==boxarray_d_numPts) {
-  // do nothing
- } else {
-  amrex::ParallelDescriptor::Barrier();
-  std::fflush(NULL);
-  amrex::ParallelDescriptor::Barrier();
-  for (int pid=0;pid<amrex::ParallelDescriptor::NProcs();pid++) {
-   amrex::ParallelDescriptor::Barrier();
-   if (amrex::ParallelDescriptor::MyProc()==pid) {
-    std::fflush(NULL);
-    std::cout << "on processor: " << pid << '\n';
-    std::cout << "tile_d_numPts[0]= " << tile_d_numPts[0] << '\n';
-    std::cout << "boxarray_d_numPts= " << boxarray_d_numPts << '\n';
-    std::cout << "number_mfiter_loops= " << number_mfiter_loops << '\n';
-    std::cout << "caller_id= " << caller_id << '\n';
-    std::fflush(NULL);
-   }
-  }  // pid=0..NProcs-1
-  amrex::ParallelDescriptor::Barrier();
-  std::fflush(NULL);
-  amrex::ParallelDescriptor::Barrier();
-  amrex::Error("reconcile_d_numPts found tile sum <> boxarray sum\n");
- }
-
-} // end subroutine thread_class::reconcile_d_numPts()
-
-// SUSSMAN
-void
-thread_class::init_d_numPts(double BA_d_numPts) {
-
- for (int tid_local=0;tid_local<nthreads;tid_local++) {
-  tile_d_numPts[tid_local] = 0.0;
- }
- boxarray_d_numPts=BA_d_numPts;
-
-} // end subroutine thread_class::init_d_numPts
-
-// SUSSMAN
-void 
-thread_class::sync_tile_d_numPts() {
-
- for (int tid_local=1;tid_local<nthreads;tid_local++) {
-  tile_d_numPts[0]+=tile_d_numPts[tid_local];
- }
-
-} // end subroutine thread_class::sync_tile_d_numPts()
