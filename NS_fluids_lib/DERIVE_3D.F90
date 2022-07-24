@@ -214,16 +214,16 @@ stop
         enddo
        enddo ! dir
 
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if (levelrz.eq.1) then
+       else if (levelrz.eq.COORDSYS_RZ) then
         if (SDIM.ne.2) then
          print *,"dimension bust"
          stop
         endif
         rr=xsten(0,1)
         g(3,3)=vel(D_DECL(i,j,k),1)/abs(rr)
-       else if (levelrz.eq.3) then
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         rr=xsten(0,1)
         g(2,2)=g(2,2)+vel(D_DECL(i,j,k),1)/abs(rr)
         g(1,2)=g(1,2)-vel(D_DECL(i,j,k),2)/abs(rr)
@@ -481,14 +481,14 @@ stop
       call checkbound_array(fablo,fabhi,vel_ptr,ngrow+1,-1)
       call checkbound_array(fablo,fabhi,tensordata_ptr,ngrow,-1)
 
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"levelrz invalid getshear"
@@ -525,16 +525,16 @@ stop
         enddo
        enddo ! dir=1..sdim
 
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if (levelrz.eq.1) then
+       else if (levelrz.eq.COORDSYS_RZ) then
         if (SDIM.ne.2) then
          print *,"dimension bust"
          stop
         endif
         rr=xsten(0,1)
         gradu(3,3)=vel(D_DECL(i,j,k),1)/abs(rr)
-       else if (levelrz.eq.3) then
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         rr=xsten(0,1)
         gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),1)/abs(rr)
         gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),2)/abs(rr)
@@ -1025,9 +1025,9 @@ stop
           if (SDIM.eq.3) then
            ! do nothing
           else if (SDIM.eq.2) then
-           if ((levelrz.eq.0).or.(levelrz.eq.3)) then
+           if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
             ! do nothing
-           else if (levelrz.eq.1) then
+           else if (levelrz.eq.COORDSYS_RZ) then
 
             if (i.lt.0) then
              if (Q(3,3).le.-half) then
@@ -1703,16 +1703,16 @@ stop
         enddo
        enddo ! dir
 
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if (levelrz.eq.1) then
+       else if (levelrz.eq.COORDSYS_RZ) then
         if (SDIM.ne.2) then
          print *,"dimension bust"
          stop
         endif
         rr=xsten(0,1)
         gradu(3,3)=vel(D_DECL(i,j,k),1)/abs(rr)
-       else if (levelrz.eq.3) then
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         rr=xsten(0,1)
         gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),1)/abs(rr)
         gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),2)/abs(rr)
@@ -2156,14 +2156,14 @@ stop
         stop
        endif
       enddo
-      if (rzflag.eq.0) then
+      if (rzflag.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (rzflag.eq.1) then
+      else if (rzflag.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (rzflag.eq.3) then
+      else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"rzflag invalid"
@@ -2220,15 +2220,15 @@ stop
           global_centroid(dir)= &
            globalsum(DRAGCOMP_IQ_COM+3*(im_test-1)+dir)/mass
          enddo
-         if (levelrz.eq.0) then
+         if (levelrz.eq.COORDSYS_CARTESIAN) then
           ! do nothing
-         else if (levelrz.eq.1) then
+         else if (levelrz.eq.COORDSYS_RZ) then
           if (SDIM.ne.2) then
            print *,"dimension bust"
            stop
           endif
           global_centroid(1)=zero
-         else if (levelrz.eq.3) then
+         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
           ! do nothing
          else
           print *,"levelrz invalid fort_getdrag"
@@ -3078,15 +3078,15 @@ stop
             centroid_term=mass* &
              (snew(D_DECL(i,j,k),vofcomp+dir)+cengrid(dir))
             if (dir.eq.1) then
-             if (levelrz.eq.0) then
+             if (levelrz.eq.COORDSYS_CARTESIAN) then
               ! do nothing
-             else if (levelrz.eq.1) then
+             else if (levelrz.eq.COORDSYS_RZ) then
               if (SDIM.ne.2) then
                print *,"dimension bust"
                stop
               endif
               centroid_term=zero
-             else if (levelrz.eq.3) then
+             else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
               ! do nothing
              else
               print *,"levelrz invalid integrate recalesce"

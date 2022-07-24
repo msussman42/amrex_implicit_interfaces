@@ -851,7 +851,7 @@ flux_magnitude=zero
 
 if ((num_materials.eq.3).and.(probtype.eq.422)) then
  heat_source=zero
- if (levelrz.eq.1) then
+ if (levelrz.eq.COORDSYS_RZ) then
   if ((abs(xsten(-1,1)).le.TANK2_HEATER_R).and.&
    (abs(xsten(1,1)).ge.TANK2_HEATER_R).and.&
    (xsten(1,2).ge.TANK2_HEATER_LOW).and.&
@@ -870,7 +870,7 @@ if ((num_materials.eq.3).and.(probtype.eq.422)) then
     stop
    endif
   endif
- else if (levelrz.eq.0) then
+ else if (levelrz.eq.COORDSYS_CARTESIAN) then
   if ((abs(xsten(-1,1)).le.TANK2_HEATER_R).and.&
    (abs(xsten(1,1)).ge.(-TANK2_HEATER_R)).and.&
    (xsten(1,2).ge.TANK2_HEATER_LOW).and.&

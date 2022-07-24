@@ -4047,13 +4047,13 @@ end subroutine dynamic_contact_angle
         else if (radblob2.eq.zero) then
          ! do nothing
         else if (radblob2.gt.zero) then ! angle of incline
-         if (levelrz.eq.1) then
+         if (levelrz.eq.COORDSYS_RZ) then
           if ((SDIM.ne.2).or.(xblob2.ne.zero)) then
            print *,"parameters not supported"
            stop
           endif
           zprime=yblob2+(z-yblob2)*cos(radblob2)-x*sin(radblob2)
-         else if (levelrz.eq.0) then
+         else if (levelrz.eq.COORDSYS_CARTESIAN) then
           if (SDIM.eq.2) then
            zprime=yblob2+(z-yblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
           else if (SDIM.eq.3) then
@@ -4344,15 +4344,15 @@ end subroutine dynamic_contact_angle
       REAL_T mag
       INTEGER_T dir
 
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        newphi=phi
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
        newphi=phi
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        mag=zero
        do dir=1,SDIM
         mag=mag+gradphi(dir)**2
@@ -4395,14 +4395,14 @@ end subroutine dynamic_contact_angle
       REAL_T mag
       INTEGER_T dir
 
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        if (rval.gt.zero) then
         gradphi(2)=gradphi(2)/rval
        else
@@ -5640,20 +5640,20 @@ REAL_T min_eval
 REAL_T, dimension(:,:), allocatable :: A_local
 
 if (SDIM.eq.2) then
- if (levelrz.eq.1) then
+ if (levelrz.eq.COORDSYS_RZ) then
   A_dim=3
- else if (levelrz.eq.3) then
+ else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
   A_dim=3
- else if (levelrz.eq.0) then
+ else if (levelrz.eq.COORDSYS_CARTESIAN) then
   A_dim=2
  else
   print *,"levelrz invalid"
   stop
  endif
 else if (SDIM.eq.3) then
- if (levelrz.eq.3) then
+ if (levelrz.eq.COORDSYS_CYLINDRICAL) then
   A_dim=3
- else if (levelrz.eq.0) then
+ else if (levelrz.eq.COORDSYS_CARTESIAN) then
   A_dim=3
  else
   print *,"levelrz invalid"
@@ -6215,9 +6215,9 @@ end subroutine print_visual_descriptor
 
       LS=dist(D_DECL(i,j,k),im)
 
-      if ((levelrz.eq.0).or.(levelrz.eq.1)) then
+      if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_RZ)) then
        ! do nothing
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
  
        dir=1
        n(dir)=(dist(D_DECL(i+1,j,k),im)-dist(D_DECL(i-1,j,k),im))/ &
@@ -6925,7 +6925,7 @@ end subroutine print_visual_descriptor
       gx=-half*(arclen**(-1.5d0))*arclenx
       gy=-half*(arclen**(-1.5d0))*arcleny
 
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! phi=h(x,y)-z  z=h(x,y)   (normal_dir=2)
         !arclen=1+hx^2+hy^2
         !g(x,y)=arclen^{-1/2}  
@@ -6933,7 +6933,7 @@ end subroutine print_visual_descriptor
         !div n=hxx g + hx gx +hyy g + hy gy - gz
         !gx=(-1/2)arclen^{-3/2}arclenx
        curvHT_LS=hxx*g+hx*gx+hyy*g+hy*gy
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
@@ -6964,7 +6964,7 @@ end subroutine print_visual_descriptor
         print *,"normal_dir invalid"
         stop
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        if (normal_dir.eq.1) then
          ! phi=h(y,z)-r
          ! grad phi=(-1,hy/r,hz)
@@ -7049,7 +7049,7 @@ end subroutine print_visual_descriptor
 
        if (vof_height_function.eq.1) then
 
-        if (levelrz.eq.1) then
+        if (levelrz.eq.COORDSYS_RZ) then
 
          if (SDIM.ne.2) then
           print *,"dimension bust"
@@ -7145,11 +7145,11 @@ end subroutine print_visual_descriptor
           stop
          endif
 
-        else if (levelrz.eq.3) then
+        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
 
-         print *,"VFRAC height function for levelrz==3 not ready yet"
+         print *,"VFRAC height function for levelrz==COORDSYS_CYLINDRICAL not ready yet"
 
-        else if (levelrz.eq.0) then
+        else if (levelrz.eq.COORDSYS_CARTESIAN) then
 
          if (SDIM.eq.2) then
 
@@ -7622,9 +7622,9 @@ end subroutine print_visual_descriptor
       do dir=1,SDIM
        xT(dir)=x(dir)
       enddo
-      if ((levelrz.eq.0).or.(levelrz.eq.1)) then
+      if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_RZ)) then
        ! do nothing
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        xT(1)=x(1)*cos(x(2))
        xT(2)=x(1)*sin(x(2))
       else
@@ -7652,9 +7652,9 @@ end subroutine print_visual_descriptor
        x_ofs(dir)=x(dir)+ofs(dir)
        xT(dir)=x_ofs(dir)
       enddo
-      if ((levelrz.eq.0).or.(levelrz.eq.1)) then
+      if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_RZ)) then
        ! do nothing
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        xT(1)=x_ofs(1)*cos(x_ofs(2))
        xT(2)=x_ofs(1)*sin(x_ofs(2))
       else
@@ -7698,11 +7698,11 @@ end subroutine print_visual_descriptor
         stop
        endif
        RR=one
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if (levelrz.eq.1) then
+       else if (levelrz.eq.COORDSYS_RZ) then
         ! do nothing
-       else if (levelrz.eq.3) then
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         if (dir.eq.2) then
          RR=problox
         endif
@@ -7753,11 +7753,11 @@ end subroutine print_visual_descriptor
         stop
        endif
        RR=one
-       if (levelrz.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if (levelrz.eq.1) then
+       else if (levelrz.eq.COORDSYS_RZ) then
         ! do nothing
-       else if (levelrz.eq.3) then
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         if (dir.eq.2) then
          RR=probhix
         endif
@@ -7876,9 +7876,9 @@ end subroutine print_visual_descriptor
       do dir=1,SDIM
        velT(dir)=vel(dir)
       enddo
-      if ((levelrz.eq.0).or.(levelrz.eq.1)) then
+      if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_RZ)) then
        ! do nothing
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        velT(1)=vel(1)*cos(x(2))+vel(2)*sin(x(2))
        velT(2)=-vel(1)*sin(x(2))+vel(2)*cos(x(2))
       else
@@ -8445,7 +8445,7 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      if (rzflag.eq.0) then
+      if (rzflag.eq.COORDSYS_CARTESIAN) then
        if (SDIM.eq.3) then
         vol=(xsten(1,1)-xsten(-1,1))*(xsten(1,2)-xsten(-1,2))* &
          (xsten(1,SDIM)-xsten(-1,SDIM))
@@ -8455,7 +8455,7 @@ end subroutine print_visual_descriptor
         print *,"dimension bust"
         stop
        endif
-      else if (rzflag.eq.1) then
+      else if (rzflag.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
@@ -8463,7 +8463,7 @@ end subroutine print_visual_descriptor
        RCENTER=half*abs(xsten(-1,1)+xsten(1,1))
        vol=two*Pi*RCENTER* &
          (xsten(1,1)-xsten(-1,1))*(xsten(1,2)-xsten(-1,2))
-      else if (rzflag.eq.3) then
+      else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
        RCENTER=half*abs(xsten(-1,1)+xsten(1,1))
        if (SDIM.eq.3) then
         vol=RCENTER* &
@@ -8523,9 +8523,9 @@ end subroutine print_visual_descriptor
        endif
       enddo  ! dir2
 
-      if (rzflag.eq.0) then
+      if (rzflag.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (rzflag.eq.1) then
+      else if (rzflag.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
@@ -8547,7 +8547,7 @@ end subroutine print_visual_descriptor
        endif
        area=area*two*Pi*RR
 
-      else if (rzflag.eq.3) then
+      else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
 
        dir2=1
        R1=xsten(-1,1)
@@ -11057,14 +11057,14 @@ end subroutine print_visual_descriptor
 
       dx_element=dx*bfact
 
-      if (levelrz_in.eq.0) then
+      if (levelrz_in.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz_in.eq.1) then
+      else if (levelrz_in.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz_in.eq.3) then
+      else if (levelrz_in.eq.COORDSYS_CYLINDRICAL) then
 
        if (operation_flag.eq.OP_UGRAD_MAC) then ! tensor derivatives
 
@@ -11533,14 +11533,14 @@ end subroutine print_visual_descriptor
 
       do isten=0,bfact
 
-       if (levelrz_in.eq.0) then
+       if (levelrz_in.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if (levelrz_in.eq.1) then
+       else if (levelrz_in.eq.COORDSYS_RZ) then
         if (SDIM.ne.2) then
          print *,"dimension bust"
          stop
         endif
-       else if (levelrz_in.eq.3) then
+       else if (levelrz_in.eq.COORDSYS_CYLINDRICAL) then
 
         if (operation_flag.eq.OP_UGRAD_MAC) then
 
@@ -13009,8 +13009,8 @@ end subroutine print_visual_descriptor
        stop
       endif 
       if (SDIM.eq.3) then
-       if ((levelrz.eq.0).or. &
-           (levelrz.eq.3)) then
+       if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+           (levelrz.eq.COORDSYS_CYLINDRICAL)) then
         ! do nothing
        else
         print *,"levelrz invalid"
@@ -13019,9 +13019,9 @@ end subroutine print_visual_descriptor
        knlo=0
        knhi=1
       else if (SDIM.eq.2) then
-       if ((levelrz.eq.0).or. &
-           (levelrz.eq.1).or. &
-           (levelrz.eq.3)) then
+       if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+           (levelrz.eq.COORDSYS_RZ).or. &
+           (levelrz.eq.COORDSYS_CYLINDRICAL)) then
         ! do nothing
        else
         print *,"levelrz invalid"
@@ -13125,11 +13125,11 @@ end subroutine print_visual_descriptor
          endif
         enddo ! dir
 
-        if (levelrz.eq.0) then
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
          rc=one
-        else if (levelrz.eq.1) then
+        else if (levelrz.eq.COORDSYS_RZ) then
          rc=one
-        else if (levelrz.eq.3) then
+        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
          rc=xsten(0,1)
          if (rc.le.zero) then
           print *,"rc invalid"
@@ -13157,16 +13157,16 @@ end subroutine print_visual_descriptor
          stop
         endif
         if (dir.eq.1) then
-         if (levelrz.eq.0) then
+         if (levelrz.eq.COORDSYS_CARTESIAN) then
           rp=one
           rm=one
           rc=one
-         else if ((levelrz.eq.1).or. &
-                  (levelrz.eq.3)) then
+         else if ((levelrz.eq.COORDSYS_RZ).or. &
+                  (levelrz.eq.COORDSYS_CYLINDRICAL)) then
           rp=half*(xsten(2,1)+xsten(0,1))
           rm=half*(xsten(-2,1)+xsten(0,1))
           rc=half*(rp+rm)
-          if (levelrz.eq.3) then
+          if (levelrz.eq.COORDSYS_CYLINDRICAL) then
            if (rc.le.zero) then
             print *,"rc invalid"
             stop
@@ -13187,12 +13187,12 @@ end subroutine print_visual_descriptor
           rm*nn(D_DECL(0,0,0),dir)  & 
           )/(rc*delx*four)
         else if (dir.eq.2) then
-         if ((levelrz.eq.0).or. &
-             (levelrz.eq.1)) then
+         if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+             (levelrz.eq.COORDSYS_RZ)) then
           rp=one
           rm=one
           rc=one
-         else if (levelrz.eq.3) then
+         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
           rp=half*(xsten(2,1)+xsten(0,1))
           rm=half*(xsten(-2,1)+xsten(0,1))
           rc=half*(rp+rm)
@@ -16528,7 +16528,7 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      if (levelrz.ne.1) then
+      if (levelrz.ne.COORDSYS_RZ) then
        print *,"levelrz invalid zones revolve"
        stop
       endif
@@ -22805,8 +22805,8 @@ if (probtype.eq.55) then
     ! 0 < angle < pi
    if (abs(cos_angle).lt.one-1.0D-2) then 
 
-    if (((SDIM.eq.3).and.(levelrz.eq.0)).or. &
-        ((SDIM.eq.2).and.(levelrz.eq.1))) then
+    if (((SDIM.eq.3).and.(levelrz.eq.COORDSYS_CARTESIAN)).or. &
+        ((SDIM.eq.2).and.(levelrz.eq.COORDSYS_RZ))) then
      term1=two/three-cos_angle+(cos_angle**3)/three
      if (term1.le.zero) then
       print *,"term1 invalid"
@@ -22816,7 +22816,7 @@ if (probtype.eq.55) then
      Vtarget=half*(four/three)*Pi*(radblob**3)
      radnew=(Vtarget/(Pi*term1))**(one/three)
      vert=-radnew*cos_angle
-    else if ((SDIM.eq.2).and.(levelrz.eq.0)) then
+    else if ((SDIM.eq.2).and.(levelrz.eq.COORDSYS_CARTESIAN)) then
      test_angle=acos(abs(cos_angle))  ! 0<test_angle<=pi/2
      if (cos_angle.ge.zero) then
       term1=test_angle-half*sin(two*test_angle)
@@ -24159,9 +24159,9 @@ REAL_T dist1,dist2
 x=xx
 y=yy
 if (axis_dir.eq.0) then
- if (levelrz.eq.0) then
+ if (levelrz.eq.COORDSYS_CARTESIAN) then
   ! do nothing
- else if (levelrz.eq.3) then
+ else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
   x=xx*cos(yy)+50.0d0
   y=xx*sin(yy)+50.0d0
  else
@@ -24202,9 +24202,9 @@ if (axis_dir.eq.0) then
  endif
 
 else if (axis_dir.eq.1) then
- if (levelrz.eq.3) then
+ if (levelrz.eq.COORDSYS_CYLINDRICAL) then
   dist=x-radblob
- else if (levelrz.eq.0) then
+ else if (levelrz.eq.COORDSYS_CARTESIAN) then
   dist=sqrt((x-xblob)**2+(y-yblob)**2)-radblob
  else
   print *,"levelrz invalid zalesak dist"
@@ -24673,9 +24673,9 @@ if ((SDIM.eq.2).and.(abs(z-y).gt.VOFTOL)) then
 endif 
 
 if (adv_vel.eq.zero) then
- if (levelrz.eq.0) then
+ if (levelrz.eq.COORDSYS_CARTESIAN) then
   u=-(Pi/314.0)*(y-50.0)
- else if (levelrz.eq.3) then
+ else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
   u=zero
  else
   print *,"zalesakuu: levelrz invalid"
@@ -24712,9 +24712,9 @@ if ((SDIM.eq.2).and.(abs(z-y).gt.VOFTOL)) then
 endif 
 
 if (adv_vel.eq.zero) then
- if (levelrz.eq.0) then
+ if (levelrz.eq.COORDSYS_CARTESIAN) then
   v=(Pi/314.0)*(x-50.0)
- else if (levelrz.eq.3) then
+ else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
   v=(Pi/314.0)*x
  else
   print *,"zalesakvv: levelrz invalid"
@@ -24746,7 +24746,7 @@ if (probtype.ne.28) then
  print *,"probtype invalid"
  stop
 endif
-if (levelrz.ne.0) then
+if (levelrz.ne.COORDSYS_CARTESIAN) then
  print *,"levelrz invalid zalesakvv"
  stop
 endif
@@ -25019,9 +25019,9 @@ endif
 
 call gridsten_level(xsten,i,j,k,level,nhalf)
 
- ! if levelrz==1,
+ ! if levelrz==COORDSYS_RZ,
  !  gradU(3,3)=u/|r|
- ! if levelrz==3,
+ ! if levelrz==COORDSYS_CYLINDRICAL,
  !  gradU(2,2)+=u/|r|
  !  gradU(1,2)-=v/|r|
  ! tendata is intialized in: fort_getshear

@@ -134,16 +134,6 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
 
  int finest_level=parent->finestLevel();
 
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 60");
-
  Real gravity_normalized=0.0;
  gravity_normalized=std::abs(gravity);
  if (invert_gravity==1)
@@ -299,7 +289,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
    &uncoupled_viscosity,
    &update_state,
    &dt_slab,
-   &rzflag,
+   &NS_geometry_coord,
    &nparts,
    &nparts_def,
    im_solid_map_ptr);
@@ -1057,16 +1047,6 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 2");
-
  const Real* dx = geom.CellSize();
 
  if (thread_class::nthreads<1)
@@ -1145,7 +1125,9 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
    ARLIM(gradufab.loVect()),ARLIM(gradufab.hiVect()),
    tilelo,tilehi,
    fablo,fabhi,&bfact,&level,
-   &local_dt_slab,&rzflag,&nden);
+   &local_dt_slab,
+   &NS_geometry_coord,
+   &nden);
  }  // mfi  
 } // omp
 

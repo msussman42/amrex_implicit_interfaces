@@ -738,14 +738,14 @@ if (probtype.eq.55) then
    endif
    if (radblob6.gt.zero) then
     if (LS(1).gt.-dx(1)) then
-     if (levelrz.eq.1) then
+     if (levelrz.eq.COORDSYS_RZ) then
       zmid=half*(yblob6+yblob)
       if (x(2).lt.zmid) then
        VEL(2)=abs(advbot)
       else
        VEL(2)=-abs(vinletgas)
       endif
-     else if (levelrz.eq.0) then
+     else if (levelrz.eq.COORDSYS_CARTESIAN) then
       xmid=half*(xblob6+xblob)
       if (x(1).lt.xmid) then
        VEL(1)=abs(advbot)
@@ -759,18 +759,18 @@ if (probtype.eq.55) then
     endif  ! liquid
    else if (radblob7.gt.zero) then
     if (LS(1).gt.-dx(1)) then
-     if (levelrz.eq.1) then
+     if (levelrz.eq.COORDSYS_RZ) then
       VEL(2)=abs(advbot)
-     else if (levelrz.eq.0) then
+     else if (levelrz.eq.COORDSYS_CARTESIAN) then
       VEL(1)=abs(advbot)
      else
       print *,"levelrz invalid init velocity 2"
       stop
      endif
     else if (LS(3).gt.-dx(1)) then
-     if (levelrz.eq.1) then
+     if (levelrz.eq.COORDSYS_RZ) then
       VEL(2)=-abs(vinletgas)
-     else if (levelrz.eq.0) then
+     else if (levelrz.eq.COORDSYS_CARTESIAN) then
       VEL(1)=-abs(vinletgas)
      else
       print *,"levelrz invalid probtype 55"

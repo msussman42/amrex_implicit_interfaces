@@ -5135,16 +5135,6 @@ NavierStokes::ColorSum(
  if (ngrow_distance!=4)
   amrex::Error("ngrow_distance invalid");
 
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 30");
-
  int num_colors=level_blobdata.size();
  if (num_colors==0) 
   amrex::Error("num_colors should be positive in ColorSum");
@@ -5516,7 +5506,7 @@ NavierStokes::ColorSum(
    &bfact,
    &level,
    &finest_level,
-   &rzflag,
+   &NS_geometry_coord,
    &num_colors,
    cum_blob_array.dataPtr(),
    cum_mdot_array.dataPtr(),
@@ -5804,16 +5794,6 @@ NavierStokes::LowMachDIVU(
  if (ngrow_distance!=4)
   amrex::Error("ngrow_distance invalid");
 
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 30");
-
  int num_colors=cum_blobdata.size();
  if (num_colors==0) 
   amrex::Error("num_colors should be positive in LowMachDIVU");
@@ -5997,7 +5977,7 @@ NavierStokes::LowMachDIVU(
    &bfact,
    &level,
    &finest_level,
-   &rzflag,
+   &NS_geometry_coord,
    &num_colors,
    cum_blob_array.dataPtr(),
    level_mdot_array[tid_current].dataPtr(),
@@ -11637,16 +11617,15 @@ void NavierStokes::diffusion_heatingALL(
   ns_level.debug_ngrow(VOLUME_MF,1,845);
  }
 
- if (geom.IsRZ()) {
-  //rzflag=1
+ if (NS_geometry_coord==COORDSYS_RZ) {
   if (AMREX_SPACEDIM!=2)
    amrex::Error("dimension bust");
- } else if (geom.IsCartesian()) {
-  //rzflag=0
- } else if (geom.IsCYLINDRICAL()) {
-  //rzflag=3
+ } else if (NS_geometry_coord==COORDSYS_CARTESIAN) {
+  // do nothing
+ } else if (NS_geometry_coord==COORDSYS_CYLINDRICAL) {
+  // do nothing
  } else
-  amrex::Error("CoordSys bust 61");
+  amrex::Error("NS_geometry_coord bust 61");
 
  min_face_wt.resize(thread_class::nthreads);
  max_face_wt.resize(thread_class::nthreads);

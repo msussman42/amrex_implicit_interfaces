@@ -263,8 +263,8 @@ stop
         ! r=rf-new du
         ! new du=rf-sqrt(rf^2-2 rf du) =2rf du/(rf+sqrt(rf^2-2 rf du))=
         ! du/(1/2+sqrt(1/4-du/(2rf))
-      if ((levelrz.eq.1).or. &
-          (levelrz.eq.3)) then
+      if ((levelrz.eq.COORDSYS_RZ).or. &
+          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
        if (normdir.eq.0) then
         if (rval.le.zero) then
          du=zero
@@ -288,7 +288,7 @@ stop
         print *,"normdir invalid"
         stop
        endif
-      else if (levelrz.eq.0) then
+      else if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
       else 
        print *,"levelrz invalid adjust du"
@@ -3385,14 +3385,14 @@ stop
        stop
       endif
 
-      if (levelrz.eq.0) then
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if (levelrz.eq.1) then
+      else if (levelrz.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.3) then
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
        print *,"levelrz invalid node displace"
@@ -3493,10 +3493,10 @@ stop
           stop
          endif
          delta=dt*velnd
-         if ((levelrz.eq.0).or. &
-             (levelrz.eq.1)) then
+         if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+             (levelrz.eq.COORDSYS_RZ)) then
           ! do nothing
-         else if (levelrz.eq.3) then
+         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
           if (dir.eq.2) then
            delta=delta/xstenND(0,1)
           endif
@@ -3505,10 +3505,10 @@ stop
           stop
          endif
 
-         if (levelrz.eq.0) then
+         if (levelrz.eq.COORDSYS_CARTESIAN) then
           ! do nothing
-         else if ((levelrz.eq.1).or. &
-                  (levelrz.eq.3)) then
+         else if ((levelrz.eq.COORDSYS_RZ).or. &
+                  (levelrz.eq.COORDSYS_CYLINDRICAL)) then
           if (dir.eq.1) then
            if (abs(xstenND(0,dir)).le.VOFTOL*dx(dir)) then
             delta=zero
@@ -8267,14 +8267,14 @@ stop
                  RR=one
                  call prepare_normal(nrmCP,RR,mag)
 
-                 if (levelrz.eq.0) then
+                 if (levelrz.eq.COORDSYS_CARTESIAN) then
                   ! do nothing
-                 else if (levelrz.eq.1) then
+                 else if (levelrz.eq.COORDSYS_RZ) then
                   if (SDIM.ne.2) then
                    print *,"dimension bust"
                    stop
                   endif
-                 else if (levelrz.eq.3) then
+                 else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
                   if (mag.gt.zero) then
                    do dir=1,SDIM
                     theta_nrmCP(dir)=nrmCP(dir)

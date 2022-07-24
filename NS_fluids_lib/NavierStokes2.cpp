@@ -1714,16 +1714,6 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
    Vector<int> velbc=getBCArray(State_Type,gridno,
      STATECOMP_VEL,STATE_NCOMP_VEL);
 
-   int rzflag=0;
-   if (geom.IsRZ())
-    rzflag=1;
-   else if (geom.IsCartesian())
-    rzflag=0;
-   else if (geom.IsCYLINDRICAL())
-    rzflag=3;
-   else
-    amrex::Error("CoordSys bust 21");
-
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
@@ -1770,7 +1760,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
      &bfact,
      &level,
      &finest_level,
-     &rzflag,
+     &NS_geometry_coord,
      domlo,domhi);
 
   } // mfi
@@ -2011,16 +2001,6 @@ void NavierStokes::init_divup_cell_vel_cell(
 
     Real beta=0.0;
 
-    int rzflag=0;
-    if (geom.IsRZ())
-     rzflag=1;
-    else if (geom.IsCartesian())
-     rzflag=0;
-    else if (geom.IsCYLINDRICAL())
-     rzflag=3;
-    else
-     amrex::Error("CoordSys bust 21");
-
     int local_energyflag=SUB_OP_DEFAULT;
     int local_enable_spectral=0;
     int simple_AMR_BC_flag=0;
@@ -2087,7 +2067,7 @@ void NavierStokes::init_divup_cell_vel_cell(
      fablo,fabhi,
      &bfact,&bfact_c,&bfact_f,
      &level,&finest_level,
-     &rzflag,
+     &NS_geometry_coord,
      domlo,domhi,
      &nparts,
      &nparts_def,
@@ -2851,16 +2831,6 @@ void NavierStokes::increment_face_velocity(
       Vector<int> velbc=getBCArray(State_Type,gridno,
         STATECOMP_VEL,STATE_NCOMP_VEL);
 
-      int rzflag=0;
-      if (geom.IsRZ())
-       rzflag=1;
-      else if (geom.IsCartesian())
-       rzflag=0;
-      else if (geom.IsCYLINDRICAL())
-       rzflag=3;
-      else
-       amrex::Error("CoordSys bust 20");
-
       int energyflag=SUB_OP_DEFAULT;
       int local_enable_spectral=enable_spectral;
       int simple_AMR_BC_flag=0;
@@ -2938,7 +2908,7 @@ void NavierStokes::increment_face_velocity(
        fablo,fabhi,
        &bfact,&bfact_c,&bfact_f, 
        &level,&finest_level,
-       &rzflag,
+       &NS_geometry_coord,
        domlo,domhi, 
        &nparts,
        &nparts_def,
@@ -3587,16 +3557,6 @@ void NavierStokes::doit_gradu_tensor(
   debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
  }
 
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 20");
-
  const Real* dx = geom.CellSize();
 
  MultiFab* sem_flux_mf;
@@ -3729,7 +3689,7 @@ void NavierStokes::doit_gradu_tensor(
      levelpcfab.dataPtr(),
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
      xlo,dx,
-     &rzflag,
+     &NS_geometry_coord,
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,&bfact_c,&bfact_f,
@@ -4125,16 +4085,6 @@ void NavierStokes::apply_pressure_grad(
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
 
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 20");
-
  const Real* dx = geom.CellSize();
 
  debug_ngrow(local_masksem_mf,1,841);
@@ -4318,7 +4268,7 @@ void NavierStokes::apply_pressure_grad(
      fablo,fabhi,
      &bfact,
      &level,
-     &rzflag,
+     &NS_geometry_coord,
      velbc.dataPtr(),
      &visc_coef,
      &nden,
@@ -4578,7 +4528,7 @@ void NavierStokes::apply_pressure_grad(
      fablo,fabhi, 
      &bfact,&bfact_c,&bfact_f,
      &level,&finest_level,
-     &rzflag,
+     &NS_geometry_coord,
      domlo,domhi,
      &nparts,
      &nparts_def,
@@ -5909,16 +5859,6 @@ void NavierStokes::process_potential_force_face() {
    if (ncfluxreg!=AMREX_SPACEDIM) 
     amrex::Error("ncfluxreg invalid");
 
-   int rzflag=0;
-   if (geom.IsRZ())
-    rzflag=1;
-   else if (geom.IsCartesian())
-    rzflag=0;
-   else if (geom.IsCYLINDRICAL())
-    rzflag=3;
-   else
-    amrex::Error("CoordSys bust 21");
-
    int local_energyflag=SUB_OP_DEFAULT;
    int local_project_option=SOLVETYPE_PRES;
    int local_enable_spectral=enable_spectral;
@@ -6001,7 +5941,7 @@ void NavierStokes::process_potential_force_face() {
     fablo,fabhi,
     &bfact,&bfact_c,&bfact_f,
     &level,&finest_level,
-    &rzflag,
+    &NS_geometry_coord,
     domlo,domhi,
     &nparts,
     &nparts_def,
@@ -6219,16 +6159,6 @@ void NavierStokes::metrics_data(int ngrow) {
   FArrayBox& areay=(*localMF[AREA_MF+1])[mfi];
   FArrayBox& areaz=(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
 
-  int rzflag=0;
-  if (geom.IsRZ())
-   rzflag=1;
-  else if (geom.IsCartesian())
-   rzflag=0;
-  else if (geom.IsCYLINDRICAL())
-   rzflag=3;
-  else
-   amrex::Error("CoordSys bust 21");
-
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
@@ -6246,7 +6176,8 @@ void NavierStokes::metrics_data(int ngrow) {
    &bfact,
    &level,
    &finest_level,
-   &ngrow,&rzflag);
+   &ngrow,
+   &NS_geometry_coord);
  }  // mfi
 }  // omp
  ns_reconcile_d_num(153);
@@ -7255,16 +7186,6 @@ void NavierStokes::output_zones(
 
  debug_ngrow(MASKSEM_MF,1,28);
 
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 22");
-
  int finest_level = parent->finestLevel();
  int tecplot_finest_level=finest_level;
  if (tecplot_max_level<tecplot_finest_level)
@@ -7651,7 +7572,7 @@ void NavierStokes::output_zones(
       &finest_level,
       &gridno,
       &visual_tessellate_vfrac,  // = 0,1,3
-      &rzflag,
+      &NS_geometry_coord,
       &nparts,
       &nparts_def,
       im_solid_map_ptr,
@@ -7889,7 +7810,7 @@ void NavierStokes::output_zones(
       &finest_level,
       &gridno,
       &visual_tessellate_vfrac,  // = 0,1,3
-      &rzflag,
+      &NS_geometry_coord,
       &nparts,
       &nparts_def,
       im_solid_map_ptr,
@@ -7945,16 +7866,6 @@ void NavierStokes::Sanity_output_zones(
  const Real* dx = geom.CellSize();
  const Real* prob_lo = geom.ProbLo();
  const Real* prob_hi = geom.ProbHi();
-
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 22");
 
  if (ParallelDescriptor::IOProcessor()) {
   std::cout << "in: Sanity_output_zones data_id=" << data_id <<
@@ -8090,7 +8001,7 @@ void NavierStokes::Sanity_output_zones(
      &level,
      &finest_level,
      &gridno,
-     &rzflag);
+     &NS_geometry_coord);
    }  // mfi
    ns_reconcile_d_num(157);
 
@@ -9697,7 +9608,7 @@ void NavierStokes::getStateVISC() {
     // since only_scalar==1, this routine calculates: sqrt(2 D:D)
     // since D is symmetric, D:D=trace(D^2) 
     // is invariant to coordinate transformations.
-    // if levelrz==1, gradu(3,3)=u/|r|
+    // if levelrz==COORDSYS_RZ, gradu(3,3)=u/|r|
     int only_scalar=1;  // sqrt(2 D:D)
     int destcomp=0;
     level_getshear(gammadot_mf,vel,only_scalar,destcomp,ngrow);

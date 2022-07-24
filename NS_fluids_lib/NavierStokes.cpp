@@ -12034,17 +12034,6 @@ void NavierStokes::tensor_advection_update() {
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
 
- FIX ME NS_geometry_coord
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 3");
-
  const Real* dx = geom.CellSize();
 
  int partid_test=0;
@@ -12165,7 +12154,7 @@ void NavierStokes::tensor_advection_update() {
          &viscoelastic_model[im],
          &polymer_factor[im],
          &elastic_viscosity[im],
-         &rzflag,
+         &NS_geometry_coord,
          velbc.dataPtr(),
          &transposegradu);
        } else {
@@ -12624,16 +12613,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  } else
   amrex::Error("expecting (ngrow_make_distance==3)");
 
- int rz_flag=0;
- if (geom.IsRZ())
-  rz_flag=1;
- else if (geom.IsCartesian())
-  rz_flag=0;
- else if (geom.IsCYLINDRICAL())
-  rz_flag=3;
- else
-  amrex::Error("CoordSys bust 1");
-
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
@@ -12848,7 +12827,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
 	 } else if (pos_sites_random_flag==1) {
 
-	  if ((rz_flag==1)&&(dir==0)) {
+	  if ((NS_geometry_coord==COORDSYS_RZ)&&(dir==0)) {
            xnucleate[dir]=0.0;
           } else if (dir==AMREX_SPACEDIM-1) {  // vertical coordinate
            xnucleate[dir]=pos_sites[nc*4+dir];
@@ -16037,16 +16016,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
   const int* domlo = domain.loVect(); 
   const int* domhi = domain.hiVect();
 
-  int rzflag=0;
-  if (geom.IsRZ())
-   rzflag=1;
-  else if (geom.IsCartesian())
-   rzflag=0;
-  else if (geom.IsCYLINDRICAL())
-   rzflag=3;
-  else
-   amrex::Error("CoordSys bust 20");
-
   if (init_fluxes==1) {
 
    int operation_flag=OP_ISCHEME_MAC;
@@ -16230,7 +16199,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       fablo,fabhi,
       &bfact,&bfact_c,&bfact_f, 
       &level,&finest_level,
-      &rzflag,domlo,domhi, 
+      &NS_geometry_coord,
+      domlo,domhi, 
       &nparts,
       &nparts_def,
       im_solid_map_ptr,
@@ -17493,16 +17463,6 @@ NavierStokes::GetDrag(int isweep) {
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 4");
-
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
@@ -17768,7 +17728,8 @@ NavierStokes::GetDrag(int isweep) {
    dragfab.dataPtr(),ARLIM(dragfab.loVect()),ARLIM(dragfab.hiVect()),
    tilelo,tilehi,
    fablo,fabhi,&bfact,
-   &rzflag,velbc.dataPtr(),&cur_time_slab,
+   &NS_geometry_coord,
+   velbc.dataPtr(),&cur_time_slab,
    &visc_coef,
    &nparts,
    &nparts_def,
@@ -20683,18 +20644,10 @@ void NavierStokes::MaxAdvectSpeed(
  }
 
  MultiFab* distmf=getStateDist(2,cur_time_slab,14);
- MultiFab* denmf=getStateDen(1,cur_time_slab);  // num_materials*num_state_material
- MultiFab* vofmf=getState(1,STATECOMP_MOF,num_materials*ngeom_raw,cur_time_slab);
-
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 5");
+  // num_materials*num_state_material
+ MultiFab* denmf=getStateDen(1,cur_time_slab);  
+ MultiFab* vofmf=
+    getState(1,STATECOMP_MOF,num_materials*ngeom_raw,cur_time_slab);
 
  const Real* dx = geom.CellSize();
 
@@ -20858,7 +20811,7 @@ void NavierStokes::MaxAdvectSpeed(
     local_vel_max_estdt[tid_current].dataPtr(),
     &local_vel_max_cap_wave[tid_current],
     local_dt_min_thread.dataPtr(),
-    &rzflag,
+    &NS_geometry_coord,
     denconst.dataPtr(),
     &visc_coef,
     &gravity,
@@ -22888,16 +22841,6 @@ NavierStokes::particle_tensor_advection_update() {
    if (localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL)
     amrex::Error("localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL");
 
-   int rzflag=0;
-   if (geom.IsRZ())
-    rzflag=1;
-   else if (geom.IsCartesian())
-    rzflag=0;
-   else if (geom.IsCYLINDRICAL())
-    rzflag=3;
-   else
-    amrex::Error("CoordSys bust 3");
-
    const Real* dx = geom.CellSize();
 
    int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
@@ -23059,7 +23002,7 @@ NavierStokes::particle_tensor_advection_update() {
           &viscoelastic_model[im],
           &polymer_factor[im],
           &elastic_viscosity[im],
-          &rzflag,
+          &NS_geometry_coord,
           velbc.dataPtr(),
           &transposegradu);
  
@@ -24650,16 +24593,6 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
  if (dist_timings==1)
   before_dist = ParallelDescriptor::second();
 
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 6");
-
  const Real* dx = geom.CellSize();
 
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
@@ -24821,7 +24754,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
     ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
-    &rzflag,
+    &NS_geometry_coord,
     xlo,dx,
     &cur_time_slab,
     &ngrow_distance,
@@ -24950,7 +24883,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
     tilelo,tilehi,
     fablo,fabhi,&bfact,
     vofbc.dataPtr(),
-    &rzflag,
+    &NS_geometry_coord,
     xlo,dx,
     &cur_time_slab,
     &ngrow_distance,
@@ -25114,16 +25047,6 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
  resize_mask_nbr(ngrow_source);
  debug_ngrow(MASK_NBR_MF,ngrow_source,90);
 
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 7");
-
  const Real* dx = geom.CellSize();
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -25175,7 +25098,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
     ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
-    &rzflag,
+    &NS_geometry_coord,
     xlo,dx,
     &cur_time_slab,
     &nface_src,&nface_dst);
@@ -25212,16 +25135,6 @@ NavierStokes::makeFaceFrac(
  debug_ngrow(SLOPE_RECON_MF,ngrow,90);
  resize_mask_nbr(ngrow);
  debug_ngrow(MASK_NBR_MF,ngrow,90);
-
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 7");
 
  const Real* dx = geom.CellSize();
 
@@ -25269,7 +25182,7 @@ NavierStokes::makeFaceFrac(
     ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
-    &rzflag,
+    &NS_geometry_coord,
     xlo,dx,
     &cur_time_slab,
     &ngrow,
@@ -25314,16 +25227,6 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
 
  if (localMF[FACEFRAC_MF]->nComp()!=nface)
   amrex::Error("localMF[FACEFRAC_MF]->nComp() invalid");
-
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 7");
 
  const Real* dx = geom.CellSize();
 
@@ -25373,7 +25276,7 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
     ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
-    &rzflag,
+    &NS_geometry_coord,
     xlo,dx,
     &cur_time_slab,
     &ngrow,
@@ -25410,16 +25313,6 @@ NavierStokes::makeCellFrac(
  debug_ngrow(SLOPE_RECON_MF,ngrow_resize,90);
  resize_mask_nbr(ngrow_resize);
  debug_ngrow(MASK_NBR_MF,ngrow_resize,90);
-
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 8");
 
  const Real* dx = geom.CellSize();
 
@@ -25467,7 +25360,7 @@ NavierStokes::makeCellFrac(
     ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
-    &rzflag,
+    &NS_geometry_coord,
     xlo,dx,
     &cur_time_slab,
     &ngrow,
@@ -25490,16 +25383,6 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid makeStateCurv");
-
- int rzflag=0;
- if (geom.IsRZ())
-  rzflag=1;
- else if (geom.IsCartesian())
-  rzflag=0;
- else if (geom.IsCYLINDRICAL())
-  rzflag=3;
- else
-  amrex::Error("CoordSys bust 9");
 
  if (ngrow_distance!=4)
   amrex::Error("ngrow_distance invalid");
@@ -25654,7 +25537,7 @@ NavierStokes::makeStateCurv(int project_option,int post_restart_flag) {
      fablo,fabhi, 
      &bfact_space,
      &bfact_grid,
-     &rzflag,
+     &NS_geometry_coord,
      xlo,dx,
      &cur_time_slab,
      &visc_coef,
