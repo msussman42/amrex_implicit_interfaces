@@ -80,4 +80,4 @@
 
 #endif /*else of __cplusplus*/
 
-#endif /*BL_ARRAYLIM_H*/
+#endif /*AMREX_ARRAYLIM_SUSSMAN_H_*/

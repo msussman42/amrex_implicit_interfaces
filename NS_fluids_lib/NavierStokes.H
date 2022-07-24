@@ -1,6 +1,7 @@
 #ifndef _NavierStokes_H_
 #define _NavierStokes_H_
 
+#include <local_thread_class.H>
 #include <AMReX_Geometry.H>
 #include <AmrLevel.H>
 #include <LevelBld.H>

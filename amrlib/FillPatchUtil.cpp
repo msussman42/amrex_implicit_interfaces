@@ -1,4 +1,5 @@
 
+#include <local_thread_class.H>
 #include <AMReX_Utility.H>
 #include <FillPatchUtil.H>
 #include <cmath>
