@@ -689,7 +689,6 @@ public:
     *
     * \param other the other pc to copy from
     * \param local whether to call redistribute after
-    * SUSSMAN: "if (not local) Redistribute();"
     */
     void copyParticles (const ParticleContainerType& other, bool local=false);
 

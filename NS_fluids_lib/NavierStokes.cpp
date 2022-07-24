@@ -9987,7 +9987,11 @@ NavierStokes::init(
    if (level==0) {
     My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
     My_ParticleContainer& old_PC=oldns->newDataPC(ns_time_order);
-     //clears new_PC first
+
+    new_PC.clearParticles();
+    //make sure hierarchy is initialized.
+    new_PC.Redistribute();
+
     new_PC.copyParticles(old_PC,local_copy);
    } else if (level>0) {
     // do nothing

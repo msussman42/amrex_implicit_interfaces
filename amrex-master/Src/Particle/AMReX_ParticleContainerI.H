@@ -979,8 +979,6 @@ copyParticles (const ParticleContainerType& other, F&& f, bool local)
 {
     BL_PROFILE("ParticleContainer::copyParticles");
     clearParticles();
-     //SUSSMAN KLUGE to initialize the hierarchy first.
-    Redistribute();
     addParticles(other, std::forward<F>(f), local);
 }
 
@@ -1965,23 +1963,8 @@ ParticleContainer<NStructReal, NStructInt, NArrayReal, NArrayInt>::OK (int lev_m
     if (lev_max == -1)
         lev_max = finestLevel();
 
-     //SUSSMAN
-    int npart_out_range=numParticlesOutOfRange(*this, lev_min, lev_max, nGrow);
+    return (numParticlesOutOfRange(*this, lev_min, lev_max, nGrow)==0);
 
-     //SUSSMAN
-    if (npart_out_range==0) {
-     // do nothing
-    } else if (npart_out_range!=0) {
-     std::cout << "npart_out_range= " << npart_out_range << '\n';
-     std::cout << "lev_min= " << lev_min << '\n';
-     std::cout << "lev_max= " << lev_max << '\n';
-     std::cout << "nGrow= " << nGrow << '\n';
-    } else {
-     amrex::Error("npart_out_range bust");
-    }
-
-     //SUSSMAN
-    return (npart_out_range == 0);
 }
 
 template <int NStructReal, int NStructInt, int NArrayReal, int NArrayInt>

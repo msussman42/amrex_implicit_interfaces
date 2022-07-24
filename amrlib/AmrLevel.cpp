@@ -558,14 +558,16 @@ if (level==0) {
    // do nothing
   } else if (local_particles_flag==1) {
 
-   // dest PC is cleared prior to copy.
-   // do not redistribute inside of copyParticles since lev_max is not
-   // used.
    //amrex-master/Src/Particle/AMReX_Particles.H
    //void copyParticles (const ParticleContainerType& other,bool local=false);
    bool local=true;  
+   AmrLevel0_new_dataPC[i]->clearParticles();
+    //make sure hierarchy is initialized.
+   AmrLevel0_new_dataPC[i]->Redistribute();
+
    AmrLevel0_new_dataPC[i]->copyParticles(
         *AmrLevel0_new_dataPC[time_order],local);
+
    int lev_min=0;
    int nGrow_Redistribute=0;
    int local_Redistribute=0;
@@ -600,14 +602,17 @@ if (level==0) {
   if (local_particles_flag==0) {
    // do nothing
   } else if (local_particles_flag==1) {
-   // dest PC is cleared prior to copy.
-   // do not redistribute inside of copyParticles since lev_max is not
-   // used.
+
    //amrex-master/Src/Particle/AMReX_Particles.H
    //void copyParticles (const ParticleContainerType& other,bool local=false);
    bool local=true;
+   AmrLevel0_new_dataPC[i]->clearParticles();
+    //make sure hierarchy is initialized.
+   AmrLevel0_new_dataPC[i]->Redistribute();
+
    AmrLevel0_new_dataPC[i]->copyParticles(
       *AmrLevel0_new_dataPC[0],local);
+
    int lev_min=0;
    int nGrow_Redistribute=0;
    int local_Redistribute=0;
