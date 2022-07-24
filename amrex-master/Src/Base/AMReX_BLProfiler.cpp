@@ -502,27 +502,6 @@ void BLProfiler::Finalize(bool bFlushing, bool memCheck) {
       delete mFortProfsInt[i];
     }
 
-
-    // SUSSMAN
-    ParallelDescriptor::Barrier();
-    if (1==1) {
-     for(std::map<std::string, 
-         ProfStats>::const_iterator it = mProfStats.begin();
-         it != mProfStats.end(); ++it) {
-      std::string profName(it->first);
-      ProfStats &pstats = mProfStats[profName];
-      pstats.nCalls=0;
-      pstats.totalTime=0.0;
-      pstats.minTime=0.0;
-      pstats.maxTime=0.0;
-      pstats.avgTime=0.0;
-      pstats.variance=0.0;
-     }
-    }
-    ParallelDescriptor::Barrier();
-    // END SUSSMAN
-
-
     bInitialized = false;
   }
 #endif
