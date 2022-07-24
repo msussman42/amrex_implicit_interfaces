@@ -5186,8 +5186,21 @@ NavierStokes::read_params ()
      std::cout << "projection_velocity_scale " << 
        projection_velocity_scale << '\n';
 
-     int init_snan=FArrayBox::get_init_snan();
+      //Since init_snan is not public (see AMReX_FArrayBox.H)
+      //we do this code.
+      //In the next version, queryAdd will be used! so one
+      //can grab this variable (publicly) from the ParmParse 
+      //table without worrying about the initialization.
+#if defined(AMREX_DEBUG) || defined(AMREX_TESTING)
+     bool init_snan  = true;
+#else
+     bool init_snan  = false;
+#endif
+     ParmParse ppfab("fab");
+     ppfab.query("init_snan",init_snan);
+
      std::cout << "init_snan= " << init_snan << '\n';
+
      int do_initval=FArrayBox::get_do_initval();
      std::cout << "do_initval= " << do_initval << '\n';
      Real initval=FArrayBox::get_initval();

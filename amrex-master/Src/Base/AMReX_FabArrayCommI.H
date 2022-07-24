@@ -569,22 +569,12 @@ FabArray<FAB>::ParallelCopy (const FabArray<FAB>& src,
             if (actual_n_rcvs > 0) {
                 Vector<MPI_Status> stats(N_rcvs);
                 ParallelDescriptor::Waitall(recv_reqs, stats);
-// #ifdef AMREX_DEBUG
-		// SUSSMAN
+#ifdef AMREX_DEBUG
                 if (!CheckRcvStats(stats, recv_size, SeqNum))
                 {
-			// SUSSMAN
-		    std::cout << "src.boxArray() \n";
-                    std::cout << src.boxArray() << '\n';
-		    std::cout << "src.DistributionMap() \n";
-                    std::cout << src.DistributionMap() << '\n';
-		    std::cout << "dest boxArray() \n";
-                    std::cout << boxArray() << '\n';
-		    std::cout << "dest DistributionMap() \n";
-                    std::cout << DistributionMap() << '\n';
-                    amrex::Abort("ParallelCopy failed with wrong message size");
+                 amrex::Abort("ParallelCopy failed with wrong message size");
                 }
-// #endif
+#endif
             }
 
             bool is_thread_safe = thecpc.m_threadsafe_rcv;
