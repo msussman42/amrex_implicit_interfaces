@@ -58,6 +58,8 @@ BCRec NavierStokes::phys_bc;
 BCRec NavierStokes::temperature_phys_bc;
 BCRec NavierStokes::species_phys_bc;
 
+int  NavierStokes::NS_geometry_coord=-1;
+
 int  NavierStokes::profile_debug=0;
 bool NavierStokes::ns_tiling=false;
 
@@ -1157,16 +1159,6 @@ void fortran_parameters() {
  read_geometry_raw(geometry_coord,geometry_prob_lo,geometry_prob_hi,
 		 geometry_is_periodic,geometry_is_any_periodic);
 
- int rz_flag=0;
- if (geomtry_coord == COORDSYS_RZ) 
-  rz_flag=1;
- else if (geometry_coord == COORDSYS_CARTESIAN)  
-  rz_flag=0;
- else if (geometry_coord == COORDSYS_CYLINDRICAL)  
-  rz_flag=3;
- else
-  amrex::Error("CoordSys bust 1");
-
  Real problox=geometry_prob_lo[0];
  Real probloy=geometry_prob_lo[1];
  Real probloz=geometry_prob_lo[AMREX_SPACEDIM-1];
@@ -1915,7 +1907,7 @@ void fortran_parameters() {
   &time_blocking_factor,
   &prescribe_temperature_outflow,
   &solidheat_flag,
-  &rz_flag,
+  &geometry_coord,
   FSI_flag_temp.dataPtr(),
   damping_coefficient_temp.dataPtr(),
   &num_local_aux_grids_temp,
@@ -2086,7 +2078,9 @@ void
 NavierStokes::read_geometry ()
 {
     //
-    // Must load coord here because CoordSys hasn't read it in yet.
+    // Must load coord here because 
+    // 1. CoordSys hasn't read it in yet.
+    // 2. geometry.coord_sys_override needs to be queried for too.
     //
     int geometry_coord;
     Vector<Real> geometry_prob_lo;
@@ -2097,12 +2091,12 @@ NavierStokes::read_geometry ()
     read_geometry_raw(geometry_coord,geometry_prob_lo,geometry_prob_hi,
 		    geometry_is_periodic,geometry_is_any_periodic);
 
-FIX ME
-    if ((CoordSys::CoordType) geometry_coord == CoordSys::RZ)  
+    if (geometry_coord == COORDSYS_RZ) {
      if (AMREX_SPACEDIM==3)
       amrex::Error("No RZ in 3d");
+    }
 
-    if (((CoordSys::CoordType) geometry_coord == CoordSys::RZ) && 
+    if ((geometry_coord == COORDSYS_RZ) && 
         (phys_bc.lo(0) != Symmetry)) {
         phys_bc.setLo(0,Symmetry);
         temperature_phys_bc.setLo(0,Symmetry);
@@ -2112,6 +2106,7 @@ FIX ME
             std::cout << "\n WARNING: Setting phys_bc at xlo to Symmetry\n\n";
     }
 
+    NS_geometry_coord=geometry_coord;
 
 } // end subroutine read_geometry
 
@@ -2510,6 +2505,7 @@ NavierStokes::read_params ()
     int geometry_is_any_periodic;
     read_geometry_raw(geometry_coord,geometry_prob_lo,geometry_prob_hi,
 		 geometry_is_periodic,geometry_is_any_periodic);
+    NS_geometry_coord=geometry_coord;
 
     int geometry_is_all_periodic=1;
 
@@ -10639,16 +10635,6 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
     if (ENUM_NUM_TENSOR_TYPE!=2*AMREX_SPACEDIM)
      amrex::Error("ENUM_NUM_TENSOR_TYPE invalid");
 
-    int rzflag=0;
-    if (geom.IsRZ())
-     rzflag=1;
-    else if (geom.IsCartesian())
-     rzflag=0;
-    else if (geom.IsCYLINDRICAL())
-     rzflag=3;
-    else
-     amrex::Error("CoordSys bust 2");
-
     const Real* dx = geom.CellSize();
 
     if (thread_class::nthreads<1)
@@ -10721,7 +10707,7 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
        &elastic_time[im],
        &viscoelastic_model[im],
        &polymer_factor[im],
-       &rzflag);
+       &NS_geometry_coord);
      } else
       amrex::Error("fort_built_in_elastic_model invalid");
     }  // mfi  
@@ -10884,16 +10870,6 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
     getStateTensor_localMF(VISCOTEN_MF,1,scomp_tensor,ENUM_NUM_TENSOR_TYPE,
      cur_time_slab);
 
-    int rzflag=0;
-    if (geom.IsRZ())
-     rzflag=1;
-    else if (geom.IsCartesian())
-     rzflag=0;
-    else if (geom.IsCYLINDRICAL())
-     rzflag=3;
-    else
-     amrex::Error("CoordSys bust 2");
-
     const Real* dx = geom.CellSize();
 
     if (thread_class::nthreads<1)
@@ -10950,7 +10926,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
        &elastic_time[im],
        &viscoelastic_model[im],
        &polymer_factor[im],
-       &rzflag);
+       &NS_geometry_coord);
      } else
       amrex::Error("fort_built_in_elastic_model invalid");
     }  // mfi  
@@ -11059,16 +11035,6 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
    if (localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
     amrex::Error("localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1)");
 
-   int rzflag=0;
-   if (geom.IsRZ())
-    rzflag=1;
-   else if (geom.IsCartesian())
-    rzflag=0;
-   else if (geom.IsCYLINDRICAL())
-    rzflag=3;
-   else
-    amrex::Error("CoordSys bust 2");
-
    const Real* dx = geom.CellSize();
 
    if (thread_class::nthreads<1)
@@ -11152,7 +11118,8 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
       tilelo,tilehi,
       fablo,fabhi,&bfact,&level,
       &local_dt_slab,
-      &rzflag,&im,&nden);
+      &NS_geometry_coord,
+      &im,&nden);
     } else
      amrex::Error("fort_built_in_elastic_model invalid");
    }  // mfi  
@@ -12067,6 +12034,7 @@ void NavierStokes::tensor_advection_update() {
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type,slab_step+1);
 
+ FIX ME NS_geometry_coord
  int rzflag=0;
  if (geom.IsRZ())
   rzflag=1;

@@ -697,15 +697,16 @@ NavierStokes::variableSetUp ()
     coord=coord_override;
     
     if (coord == COORDSYS_CARTESIAN) {
-     //rz_flag=0 
+     //do nothing
     } else if (coord == COORDSYS_RZ) {
-     //rz_flag=1
      if (AMREX_SPACEDIM!=2)
       amrex::Error("RZ only in 2D");
     } else if (coord == COORDSYS_CYLINDRICAL) {
-     //rz_flag=3
+     //do nothing
     } else
-     amrex::Error("coord_sys invalid");
+     amrex::Error("COORDSYS invalid");
+
+    NS_geometry_coord=coord;
 
     BCRec phys_bc_pres;
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -1884,16 +1885,6 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
  const Real* fine_dx = ns_fine.geom.CellSize();
 
- int rz_flag=0;
- if (geom.IsRZ())
-  rz_flag=1;
- else if (geom.IsCartesian())
-  rz_flag=0;
- else if (geom.IsCYLINDRICAL())
-  rz_flag=3;
- else
-  amrex::Error("geom bust 1");
-
  Real problo[AMREX_SPACEDIM];
  Real probhi[AMREX_SPACEDIM];
  Real problen[AMREX_SPACEDIM];
@@ -1905,14 +1896,14 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   prob_volume*=problen[dir];
  }
 
- if (rz_flag==0) {
+ if (NS_geometry_coord==COORDSYS_CARTESIAN) {
   // do nothing
- } else if (rz_flag==1) {
+ } else if (NS_geometry_coord==COORDSYS_RZ) {
   prob_volume*=(2.0*NS_PI*problen[0]/2.0);
- } else if (rz_flag==3) {
+ } else if (NS_geometry_coord==COORDSYS_CYLINDRICAL) {
   prob_volume*=(2.0*NS_PI);
  } else
-  amrex::Error("rz_Flag invalid");
+  amrex::Error("NS_geometry_coord invalid");
 
 
  metrics_dataALL(1);
@@ -2355,17 +2346,19 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    Real A_ratio=F_ratio;
    if (F_ratio>0.0) {
     if (AMREX_SPACEDIM==2) {
-     if ((rz_flag==1)||(rz_flag==3)) {
+     if ((NS_geometry_coord==COORDSYS_RZ)||
+         (NS_geometry_coord==COORDSYS_CYLINDRICAL)) {
       A_ratio=exp(log(A_ratio)*2.0/3.0);
-     } else if (rz_flag==0) {
+     } else if (NS_geometry_coord==COORDSYS_CARTESIAN) {
       A_ratio=exp(log(A_ratio)/2.0);
      } else
-      amrex::Error("rz_flag invalid"); 
+      amrex::Error("NS_geometry_coord invalid"); 
     } else if (AMREX_SPACEDIM==3) {
-     if ((rz_flag==0)||(rz_flag==3)) {
+     if ((NS_geometry_coord==COORDSYS_CARTESIAN)||
+         (NS_geometry_coord==COORDSYS_CYLINDRICAL)) {
       A_ratio=exp(log(A_ratio)*2.0/3.0);
      } else
-      amrex::Error("rz_flag invalid"); 
+      amrex::Error("NS_geometry_coord invalid"); 
     } else
      amrex::Error("dimension bust");
    } else if (F_ratio==0.0) {
@@ -2783,15 +2776,15 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   if ((probtype==801)&&(axis_dir==3)) {
    Real bubble_volume=NS_sumdata[IQ_FE_SUM_COMP+2];
    Real radbubble=0.0;
-   if (rz_flag==0) {
+   if (NS_geometry_coord==COORDSYS_CARTESIAN) {
     radbubble=sqrt(4.0*bubble_volume/NS_PI);
 
    // 4/3 pi r^3 = 2V
    // r=(3V/(2 pi))^{1/3}
-   } else if (rz_flag==1) {
+   } else if (NS_geometry_coord==COORDSYS_RZ) {
     radbubble=exp(log(3.0*bubble_volume/(2.0*NS_PI))/3.0);
    } else
-    amrex::Error("rz_flag invalid");
+    amrex::Error("NS_geometry_coord invalid");
 
    std::cout << "TIME= " << upper_slab_time << " EFFECTIVE RAD=  " << 
     radbubble << '\n';
@@ -2808,13 +2801,13 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    if (AMREX_SPACEDIM==2) {
     // 4/3 pi r^3 = V
     // r=(3V/(4 pi))^{1/3}
-    if (rz_flag==1) {
+    if (NS_geometry_coord==COORDSYS_RZ) {
      radbubble=exp(log(3.0*bubble_volume/(4.0*NS_PI))/3.0);
-    } else if (rz_flag==0) {
+    } else if (NS_geometry_coord==COORDSYS_CARTESIAN) {
     // pi r^2 = 2V
      radbubble=sqrt(2.0*bubble_volume/NS_PI);
     } else
-     amrex::Error("rz_flag invalid");
+     amrex::Error("NS_geometry_coord invalid");
    } else if (AMREX_SPACEDIM==3) {
     radbubble=exp(log(3.0*bubble_volume/(4.0*NS_PI))/3.0);
    } else
