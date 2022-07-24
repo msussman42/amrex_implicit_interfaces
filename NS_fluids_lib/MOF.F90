@@ -3441,7 +3441,8 @@ end subroutine intersection_volume_and_map
 
        if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
-       else if ((levelrz.eq.COORDSYS_RZ).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
+       else if ((levelrz.eq.COORDSYS_RZ).or. &
+                (levelrz.eq.COORDSYS_CYLINDRICAL)) then
 
         dircrit=1
         if (abs(y1_cross_y2(2)).gt.abs(y1_cross_y2(dircrit))) then
