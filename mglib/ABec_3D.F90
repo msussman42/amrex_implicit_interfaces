@@ -3,6 +3,7 @@
 #define BL_LANG_FORT
 #endif
 
+#include <AMReX_FORT_INTEGER.H>
 #include <AMReX_REAL.H>
 
 #include "AMReX_SPACE.H"

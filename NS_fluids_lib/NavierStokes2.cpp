@@ -29,6 +29,7 @@
 #include <LEVEL_F.H>
 #include <SOLIDFLUID_F.H>
 #include <DERIVE_F.H>
+#include <INDEX_TYPE_MACROS.H>
 
 #define GEOM_GROW   1
 #define bogus_value 1.e20
@@ -3784,13 +3785,13 @@ void NavierStokes::FillBoundaryTENSOR(
  if ((sc<0)||(sc>=mf->nComp()))
   amrex::Error("sc out of range");
 
- IndexType mactyp=IndexType::TheUMACType();
+ IndexType mactyp=TheUMACType;
  if (dir==0) {
-  mactyp=IndexType::TheUMACType();
+  mactyp=TheUMACType;
  } else if (dir==1) {
-  mactyp=IndexType::TheVMACType();
+  mactyp=TheVMACType;
  } else if ((dir==2)&&(AMREX_SPACEDIM==3)) {
-  mactyp=IndexType::TheWMACType();
+  mactyp=TheWMACType;
  } else
   amrex::Error("dir invalid FillBoundaryTENSOR");
 

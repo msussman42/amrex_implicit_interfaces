@@ -1,9 +1,9 @@
-!     $Id: CG_3D.F,v 1.5 2000/08/24 16:02:46 car Exp $
 #undef  BL_LANG_CC
 #ifndef BL_LANG_FORT
 #define BL_LANG_FORT
 #endif
 
+#include <AMReX_FORT_INTEGER.H>
 #include "AMReX_SPACE.H"
 #include <AMReX_REAL.H>
 #include <AMReX_CONSTANTS.H>

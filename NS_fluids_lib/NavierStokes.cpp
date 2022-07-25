@@ -37,6 +37,7 @@
 #include <SOLIDFLUID_F.H>
 #include <DERIVE_F.H>
 #include <MG_F.H>
+#include <INDEX_TYPE_MACROS.H>
 
 #ifdef MVAHABFSI
 #include <CTMLFSI_F.H>
@@ -6007,17 +6008,17 @@ void NavierStokes::debug_ixType_raw(MultiFab* mf,int grid_type,int counter) {
   if (grid_type==-1) {
    compare_typ=IndexType::TheCellType();
   } else if (grid_type==0) {
-   compare_typ=IndexType::TheUMACType();
+   compare_typ=TheUMACType;
   } else if (grid_type==1) {
-   compare_typ=IndexType::TheVMACType();
+   compare_typ=TheVMACType;
   } else if ((grid_type==2)&&(AMREX_SPACEDIM==3)) {
-   compare_typ=IndexType::TheWMACType();
+   compare_typ=TheWMACType;
   } else if (grid_type==3) {
-   compare_typ=IndexType::TheYUMACType();
+   compare_typ=TheYUMACType;
   } else if ((grid_type==4)&&(AMREX_SPACEDIM==3)) {
-   compare_typ=IndexType::TheZUMACType();
+   compare_typ=TheZUMACType;
   } else if ((grid_type==5)&&(AMREX_SPACEDIM==3)) {
-   compare_typ=IndexType::TheZVMACType();
+   compare_typ=TheZVMACType;
   } else
    amrex::Error("grid_type invalid");
 
@@ -6052,17 +6053,17 @@ void NavierStokes::debug_boxArray(MultiFab* mf,int grid_type,int counter) {
   if (grid_type==-1) {
    compare_typ=IndexType::TheCellType();
   } else if (grid_type==0) {
-   compare_typ=IndexType::TheUMACType();
+   compare_typ=TheUMACType;
   } else if (grid_type==1) {
-   compare_typ=IndexType::TheVMACType();
+   compare_typ=TheVMACType;
   } else if ((grid_type==2)&&(AMREX_SPACEDIM==3)) {
-   compare_typ=IndexType::TheWMACType();
+   compare_typ=TheWMACType;
   } else if (grid_type==3) {
-   compare_typ=IndexType::TheYUMACType();
+   compare_typ=TheYUMACType;
   } else if ((grid_type==4)&&(AMREX_SPACEDIM==3)) {
-   compare_typ=IndexType::TheZUMACType();
+   compare_typ=TheZUMACType;
   } else if ((grid_type==5)&&(AMREX_SPACEDIM==3)) {
-   compare_typ=IndexType::TheZVMACType();
+   compare_typ=TheZVMACType;
   } else
    amrex::Error("grid_type invalid");
 

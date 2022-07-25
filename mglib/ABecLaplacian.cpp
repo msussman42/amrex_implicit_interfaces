@@ -17,6 +17,7 @@
 #include <CG_F.H>
 #include <MG_F.H>
 #include <Zeyu_Matrix_Functions.H>
+#include <INDEX_TYPE_MACROS.H>
 
 #define SCALAR_WORK_NCOMP 9
 
@@ -412,19 +413,14 @@ ABecLaplacian::makeCoefficients (
   //
  const IndexType iType(fine.boxArray()[0].ixType());
 
- const IndexType cType(D_DECL(IndexType::CELL,IndexType::CELL,IndexType::CELL));
- const IndexType xType(D_DECL(IndexType::NODE,IndexType::CELL,IndexType::CELL));
- const IndexType yType(D_DECL(IndexType::CELL,IndexType::NODE,IndexType::CELL));
- const IndexType zType(D_DECL(IndexType::CELL,IndexType::CELL,IndexType::NODE));
-
  int cdir;
- if (iType == cType) {
+ if (iType == IndexType::TheCellType()) {
   cdir = -1;
- } else if (iType == xType) {
+ } else if (iType == TheUMACType) {
   cdir = 0;
- } else if (iType == yType) {
+ } else if (iType == TheVMACType) {
   cdir = 1;
- } else if ((iType == zType)&&(AMREX_SPACEDIM==3)) {
+ } else if ((iType == TheWMACType)&&(AMREX_SPACEDIM==3)) {
   cdir = 2;
  } else {
   amrex::Error("ABecLaplacian::makeCoeffients: Bad index type");

@@ -5,6 +5,7 @@
 
 #define STANDALONE 0
 
+#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
