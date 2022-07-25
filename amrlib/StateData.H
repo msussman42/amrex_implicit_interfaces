@@ -18,7 +18,7 @@
 #include <AMReX_RealBox.H>
 
 #include <StateDescriptor.H>
-#include <Amr.H>
+#include <AMReX_AmrCore.H>
 
 namespace amrex {
 
@@ -38,7 +38,7 @@ public:
     //
     // Constructor that properly initializes data members.
     //
-    StateData (Amr& papa,
+    StateData (AmrCore& papa,
 	       int level,
 	       int max_level,
                const Box& p_domain,
@@ -59,7 +59,7 @@ public:
     //
     // Initializes data members if you used default constructor.
     //
-    void define (Amr& papa,
+    void define (AmrCore& papa,
 		 int level,
 		 int max_level,
                  const Box& p_domain,
@@ -125,7 +125,7 @@ public:
     //
     // Initializes state data from a checkpoint file.
     //
-    void restart (Amr& papa,
+    void restart (AmrCore& papa,
 		  int time_order,
                   int slab_dt_type, // 0=SEM 1=evenly spaced
                   int MAX_NUM_SLAB,

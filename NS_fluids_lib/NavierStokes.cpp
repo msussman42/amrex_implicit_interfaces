@@ -1147,7 +1147,7 @@ void read_geometry_raw(int& geometry_coord,
 } // end subroutine read_geometry_raw
 
 // this routine is called from main.cpp prior to:
-//  1. Amr* amrptr = new Amr();
+//  1. AmrCore* amrptr = new AmrCore();
 //  2. amrptr->init(strt_time,stop_time);
 void fortran_parameters() {
 
@@ -5365,7 +5365,7 @@ NavierStokes::NavierStokes ()
 }
 
 // constructor
-NavierStokes::NavierStokes (Amr&            papa,
+NavierStokes::NavierStokes (AmrCore&        papa,
                             int             lev,
                             const Geometry& level_geom,
                             const BoxArray& bl,
@@ -5866,7 +5866,7 @@ NavierStokes::init_regrid_history() {
 }
 
 void
-NavierStokes::restart (Amr&          papa,
+NavierStokes::restart (AmrCore&      papa,
                        std::istream& is,
 		       int old_finest_level,
 		       int new_finest_level) {
@@ -9184,7 +9184,7 @@ void NavierStokes::ns_header_msg_level(
 
 } // end subroutine ns_header_msg_level
 
-// called from Amr::restart 
+// called from AmrCore::restart 
 void NavierStokes::post_restart() {
 
  ParmParse ppmain;
@@ -21067,9 +21067,9 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,int caller_id) {
 } // subroutine estTimeStep
 
 // post_regrid is called from either:
-// 1. Amr::initialInit, 
-// 2. Amr::regrid_level_0_on_restart, or
-// 3. Amr::regrid 
+// 1. AmrCore::initialInit, 
+// 2. AmrCore::regrid_level_0_on_restart, or
+// 3. AmrCore::regrid 
 void NavierStokes::post_regrid (int lbase,
   int start_level,int new_finest,int initialInit_flag,Real time) {
 

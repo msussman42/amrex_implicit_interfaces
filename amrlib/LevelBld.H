@@ -5,7 +5,7 @@
 #include <AMReX_REAL.H>
 #include <AMReX_Box.H>
 #include <AMReX_Geometry.H>
-#include <Amr.H>
+#include <AMReX_AmrCore.H>
 #include <AmrLevel.H>
 
 namespace amrex {
@@ -19,7 +19,7 @@ public:
     virtual void variableSetUp () = 0;
     virtual void variableCleanUp () = 0;
     virtual AmrLevel* operator() () = 0;
-    virtual AmrLevel* operator() (Amr&            papa,
+    virtual AmrLevel* operator() (AmrCore&        papa,
                                   int             lev,
                                   const Geometry& geom_lev,
                                   const BoxArray& ba,

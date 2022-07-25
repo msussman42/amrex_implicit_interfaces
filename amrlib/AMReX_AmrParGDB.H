@@ -3,9 +3,7 @@
 
 #include <AMReX_ParGDB.H>
 
-// SUSSMAN: "AmrCore" replaced by "Amr"
-
-#include <Amr.H>
+#include <AMReX_AmrCore.H>
 
 namespace amrex {
 
@@ -14,8 +12,7 @@ class AmrParGDB
 {
 public:
 
-	// SUSSMAN: replace "AmrCore" with "Amr"
-    explicit AmrParGDB (Amr* amr) noexcept
+    explicit AmrParGDB (AmrCore* amr) noexcept
 	: m_amrcore(amr),
           m_geom(amr->maxLevel()+1),
           m_has_geom(amr->maxLevel()+1, 0),
@@ -51,8 +48,7 @@ public:
 
 protected:
 
-      // SUSSMAN: replace "AmrCore" with "Amr"
-    Amr*                    m_amrcore;
+    AmrCore*                    m_amrcore;
     Vector<Geometry>            m_geom;
     Vector<int>                 m_has_geom;
     Vector<DistributionMapping> m_dmap;

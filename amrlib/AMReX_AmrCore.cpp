@@ -34,7 +34,7 @@
 #include <AMReX_Cluster.H>
 #include <LevelBld.H>
 #include <AmrLevel.H>
-#include <Amr.H>
+#include <AMReX_AmrCore.H>
 #include <StateData.H>
 
 #include <INTERP_F.H>
@@ -53,8 +53,8 @@ namespace amrex {
 // Static class members.  
 // Set defaults in Initialize()!!!
 //
-Vector<BoxArray>       Amr::initial_ba;
-Vector<BoxArray>       Amr::regrid_ba;
+Vector<BoxArray>       AmrCore::initial_ba;
+Vector<BoxArray>       AmrCore::regrid_ba;
 
 
 namespace
@@ -90,7 +90,7 @@ namespace
 //}
 
 int
-Amr::Old_blockingFactor(int lev) const
+AmrCore::Old_blockingFactor(int lev) const
 {
  int local_blocking=blocking_factor[lev][0];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -104,7 +104,7 @@ Amr::Old_blockingFactor(int lev) const
 
 
 int
-Amr::Old_maxGridSize(int lev) const
+AmrCore::Old_maxGridSize(int lev) const
 {
  int local_max_grid_size=max_grid_size[lev][0];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -118,25 +118,25 @@ Amr::Old_maxGridSize(int lev) const
 
 
 int 
-Amr::Time_blockingFactor () const 
+AmrCore::Time_blockingFactor () const 
 {   
     return time_blocking_factor;
 }
    
 int 
-Amr::get_MAX_NUM_SLAB () const 
+AmrCore::get_MAX_NUM_SLAB () const 
 {   
     return MAX_NUM_SLAB;
 }
    
 int 
-Amr::get_slab_dt_type () const 
+AmrCore::get_slab_dt_type () const 
 {   
     return slab_dt_type;
 }   
 
 void
-Amr::Initialize ()
+AmrCore::Initialize ()
 {
     if (initialized) return;
     //
@@ -157,29 +157,29 @@ Amr::Initialize ()
     plot_headerversion       = VisMF::Header::Version_v1;
     checkpoint_headerversion = VisMF::Header::Version_v1;
 
-    amrex::ExecOnFinalize(Amr::Finalize);
+    amrex::ExecOnFinalize(AmrCore::Finalize);
 
     initialized = true;
 }
 
 void
-Amr::Finalize ()
+AmrCore::Finalize ()
 {
-    Amr::regrid_ba.clear();
-    Amr::initial_ba.clear();
+    AmrCore::regrid_ba.clear();
+    AmrCore::initial_ba.clear();
 
     initialized = false;
 }
 
 
 std::ostream&
-Amr::DataLog (int i)
+AmrCore::DataLog (int i)
 {
     return *datalog[i];
 }
 
 int 
-Amr::AMR_recalesce_flag(int im) const {
+AmrCore::AMR_recalesce_flag(int im) const {
 
  if ((im<1)||(im>global_AMR_num_materials))
   amrex::Error("im out of range");
@@ -190,7 +190,7 @@ Amr::AMR_recalesce_flag(int im) const {
 
 
 Vector<std::unique_ptr<AmrLevel> >&
-Amr::getAmrLevels () noexcept
+AmrCore::getAmrLevels () noexcept
 {
     return amr_level;
 }
@@ -204,7 +204,7 @@ Amr::getAmrLevels () noexcept
 // 2. Initialize()
 // 3. InitAmr()
 //  a. levelbld = getLevelBld();
-Amr::Amr () 
+AmrCore::AmrCore () 
   : AmrMesh() {
 
      // init default values for some parameters.
@@ -213,10 +213,10 @@ Amr::Amr ()
      // ...
     InitAmr();
 
-} // end subroutine Amr::Amr () 
+} // end subroutine AmrCore::AmrCore () 
 
 void
-Amr::InitAmr () {
+AmrCore::InitAmr () {
 
     AMR_max_phase_change_rate.resize(AMREX_SPACEDIM);
     AMR_min_phase_change_rate.resize(AMREX_SPACEDIM);
@@ -561,7 +561,7 @@ Amr::InitAmr () {
 
 } // subroutine InitAmr
 
-Amr::~Amr ()
+AmrCore::~AmrCore ()
 {
     if (level_steps[0] > last_checkpoint)
         checkPoint();
@@ -578,11 +578,11 @@ Amr::~Amr ()
 
     levelbld->variableCleanUp();
 
-    Amr::Finalize();
+    AmrCore::Finalize();
 }
 
 void
-Amr::setRecordGridInfo (const std::string& filename)
+AmrCore::setRecordGridInfo (const std::string& filename)
 {
     record_grid_info = true;
     if (ParallelDescriptor::IOProcessor())
@@ -591,11 +591,11 @@ Amr::setRecordGridInfo (const std::string& filename)
         if (!gridlog.good())
             amrex::FileOpenFailed(filename);
     }
-    ParallelDescriptor::Barrier("Amr::setRecordGridInfo");
+    ParallelDescriptor::Barrier("AmrCore::setRecordGridInfo");
 }
 
 void
-Amr::setRecordRunInfo (const std::string& filename)
+AmrCore::setRecordRunInfo (const std::string& filename)
 {
     record_run_info = true;
     if (ParallelDescriptor::IOProcessor())
@@ -604,11 +604,11 @@ Amr::setRecordRunInfo (const std::string& filename)
         if (!runlog.good())
             amrex::FileOpenFailed(filename);
     }
-    ParallelDescriptor::Barrier("Amr::setRecordRunInfo");
+    ParallelDescriptor::Barrier("AmrCore::setRecordRunInfo");
 }
 
 void
-Amr::setRecordRunInfoTerse (const std::string& filename)
+AmrCore::setRecordRunInfoTerse (const std::string& filename)
 {
     record_run_info_terse = true;
     if (ParallelDescriptor::IOProcessor())
@@ -617,11 +617,11 @@ Amr::setRecordRunInfoTerse (const std::string& filename)
         if (!runlog_terse.good())
             amrex::FileOpenFailed(filename);
     }
-    ParallelDescriptor::Barrier("Amr::setRecordRunInfoTerse");
+    ParallelDescriptor::Barrier("AmrCore::setRecordRunInfoTerse");
 }
 
 void
-Amr::setRecordDataInfo (int i, const std::string& filename)
+AmrCore::setRecordDataInfo (int i, const std::string& filename)
 {
     if (ParallelDescriptor::IOProcessor())
     {
@@ -630,17 +630,17 @@ Amr::setRecordDataInfo (int i, const std::string& filename)
         if (!datalog[i]->good())
             amrex::FileOpenFailed(filename);
     }
-    ParallelDescriptor::Barrier("Amr::setRecordDataInfo");
+    ParallelDescriptor::Barrier("AmrCore::setRecordDataInfo");
 }
 
 void
-Amr::setDt(Real dt)
+AmrCore::setDt(Real dt)
 {
  dt_AMR=dt;
 }
 
 int
-Amr::okToContinue () noexcept
+AmrCore::okToContinue () noexcept
 {
     int ok = true;
     for (int i = 0; ok && (i <= finest_level); i++)
@@ -649,7 +649,7 @@ Amr::okToContinue () noexcept
 }
 
 void
-Amr::writeDEBUG_PlotFile(int num,int SDC_outer_sweeps,int slab_step) {
+AmrCore::writeDEBUG_PlotFile(int num,int SDC_outer_sweeps,int slab_step) {
 
  int do_plot=1;
  int do_slice=((slice_int>0) ? 1 : 0);
@@ -660,7 +660,7 @@ Amr::writeDEBUG_PlotFile(int num,int SDC_outer_sweeps,int slab_step) {
 }
 
 void
-Amr::writePlotFile (int do_plot,int do_slice,
+AmrCore::writePlotFile (int do_plot,int do_slice,
                     int SDC_outer_sweeps,int slab_step) {
 
  if ((do_plot==1)||
@@ -681,7 +681,7 @@ Amr::writePlotFile (int do_plot,int do_slice,
 
 
 void
-Amr::AMR_checkInput ()
+AmrCore::AMR_checkInput ()
 {
     FabArrayBase::Initialize();
 
@@ -709,7 +709,7 @@ Amr::AMR_checkInput ()
         while ( k > 0 && (k%2 == 0) )
             k /= 2;
         if (k != 1)
-            amrex::Error("Amr::checkInputs: blocking_factor not power of 2");
+            amrex::Error("AmrCore::checkInputs: blocking_factor not power of 2");
     } // i=0 .. max_level
 
     for (int i = 0; i <= max_level; i++) {
@@ -827,7 +827,7 @@ Amr::AMR_checkInput ()
 // geom[i].define(index_domain)  i=0...max_level and
 // m_gdb.reset(new AmrParGDB(this));
 void
-Amr::init (Real strt_time,
+AmrCore::init (Real strt_time,
            Real stop_time)
 {
     if (!restart_file.empty() && restart_file != "init")
@@ -851,7 +851,7 @@ Amr::init (Real strt_time,
 }
 
 void
-Amr::initialInit (Real strt_time,
+AmrCore::initialInit (Real strt_time,
                   Real stop_time)
 {
  AMR_checkInput();
@@ -910,7 +910,7 @@ Amr::initialInit (Real strt_time,
 } // subroutine initialInit
 
 void
-Amr::restart (const std::string& filename)
+AmrCore::restart (const std::string& filename)
 {
     double dRestartTime0 = ParallelDescriptor::second();
 
@@ -962,7 +962,7 @@ Amr::restart (const std::string& filename)
     }
 
     if (spdim != AMREX_SPACEDIM) {
-     std::cerr << "Amr::restart(): bad spacedim = " << spdim << '\n';
+     std::cerr << "AmrCore::restart(): bad spacedim = " << spdim << '\n';
      amrex::Abort();
     }
 
@@ -1089,7 +1089,7 @@ Amr::restart (const std::string& filename)
     } else if ((max_level>=0)&&(max_level<mx_lev)) {
 
        if (ParallelDescriptor::IOProcessor())
-          amrex::Warning("Amr::restart(): max_level is lower than before");
+          amrex::Warning("AmrCore::restart(): max_level is lower than before");
 
         //just in case max_level reduced to be below the restarted
         //max_level which is  "mx_lev"
@@ -1162,7 +1162,7 @@ Amr::restart (const std::string& filename)
              std::cout << "Problem at level " << lev << '\n';
              std::cout << "Domain according to     inputs file is " <<  inputs_domain[lev] << '\n';
              std::cout << "Domain according to checkpoint file is " << restart_domain      << '\n';
-             std::cout << "Amr::restart() failed -- box from inputs file does not equal box from restart file" << std::endl;
+             std::cout << "AmrCore::restart() failed -- box from inputs file does not equal box from restart file" << std::endl;
           }
           amrex::Abort();
        }
@@ -1183,7 +1183,7 @@ Amr::restart (const std::string& filename)
 }
 
 void
-Amr::checkPoint ()
+AmrCore::checkPoint ()
 {
  if (!checkpoint_files_output) return;
 
@@ -1317,7 +1317,7 @@ Amr::checkPoint ()
   HeaderFile.precision(old_prec);
 
   if (!HeaderFile.good())
-   amrex::Error("Amr::checkpoint() failed");
+   amrex::Error("AmrCore::checkpoint() failed");
  }
 
  //
@@ -1341,7 +1341,7 @@ Amr::checkPoint ()
 
 
 void
-Amr::regrid_level_0_on_restart()
+AmrCore::regrid_level_0_on_restart()
 {
 
 
@@ -1399,7 +1399,7 @@ Amr::regrid_level_0_on_restart()
 
 
 void
-Amr::timeStep (Real time,
+AmrCore::timeStep (Real time,
                Real stop_time)
 {
 
@@ -1492,7 +1492,7 @@ Amr::timeStep (Real time,
 
 }  // subroutine timeStep
 
-void Amr::recalesce_copy_new_to_old() {
+void AmrCore::recalesce_copy_new_to_old() {
 
  int recalesce_num_state=6;
 
@@ -1513,7 +1513,7 @@ void Amr::recalesce_copy_new_to_old() {
 
 
 
-void Amr::recalesce_copy_old_to_new() {
+void AmrCore::recalesce_copy_old_to_new() {
 
  int recalesce_num_state=6;
 
@@ -1531,7 +1531,7 @@ void Amr::recalesce_copy_old_to_new() {
 
 
 
-void Amr::recalesce_init() {
+void AmrCore::recalesce_init() {
 
  int recalesce_num_state=6;
 
@@ -1546,7 +1546,7 @@ void Amr::recalesce_init() {
 } // recalesce_init
 
 
-void Amr::recalesce_get_state(Vector<Real>& recalesce_state_out) { 
+void AmrCore::recalesce_get_state(Vector<Real>& recalesce_state_out) { 
 
  int recalesce_num_state=6;
 
@@ -1561,7 +1561,7 @@ void Amr::recalesce_get_state(Vector<Real>& recalesce_state_out) {
 } // recalesce_get_state
 
 
-void Amr::recalesce_put_state(Vector<Real>& recalesce_state_in) {
+void AmrCore::recalesce_put_state(Vector<Real>& recalesce_state_in) {
 
  int recalesce_num_state=6;
 
@@ -1577,7 +1577,7 @@ void Amr::recalesce_put_state(Vector<Real>& recalesce_state_in) {
 
 
 void
-Amr::coarseTimeStep (Real stop_time)
+AmrCore::coarseTimeStep (Real stop_time)
 {
     const double run_strt = ParallelDescriptor::second() ;
 
@@ -1777,7 +1777,7 @@ Amr::coarseTimeStep (Real stop_time)
 } // end subroutine coarseTimeStep
 
 void
-Amr::defBaseLevel (Real strt_time)
+AmrCore::defBaseLevel (Real strt_time)
 {
 
     if (finest_level==0) {
@@ -1811,20 +1811,20 @@ Amr::defBaseLevel (Real strt_time)
 } // subroutine defBaseLevel
 
 void
-Amr::ErrorEst (int lev, TagBoxArray& tags, Real time, int ngrow)
+AmrCore::ErrorEst (int lev, TagBoxArray& tags, Real time, int ngrow)
 {
     amr_level[lev]->errorEst(tags,TagBox::CLEAR,TagBox::SET,time, 
 		    n_error_buf[lev][0], ngrow);
 }
 
 BoxArray
-Amr::GetAreaNotToTag (int lev)
+AmrCore::GetAreaNotToTag (int lev)
 {
     return BoxArray(amr_level[lev]->getAreaNotToTag());
 }
 
 void
-Amr::ManualTagsPlacement (int lev, TagBoxArray& tags, const Vector<IntVect>& bf_lev)
+AmrCore::ManualTagsPlacement (int lev, TagBoxArray& tags, const Vector<IntVect>& bf_lev)
 {
     amr_level[lev]->manual_tags_placement(tags, bf_lev);
 }
@@ -1835,12 +1835,12 @@ Amr::ManualTagsPlacement (int lev, TagBoxArray& tags, const Vector<IntVect>& bf_
 //  (note: defBaseLevel is also called from initialInit)
 // levelbld is called from defBaseLevel, timeStep, regrid, bldFineLevels
 void
-Amr::regrid (int  lbase,
+AmrCore::regrid (int  lbase,
              Real time,
              bool initial)
 {
 
- BL_PROFILE("Amr::regrid()");
+ BL_PROFILE("AmrCore::regrid()");
 
  if (std::abs(time-cumtime)>1.0e-13)
   amrex::Error("time<>cumtime in regrid");
@@ -1993,7 +1993,7 @@ Amr::regrid (int  lbase,
 } // end subroutine regrid
 
 void 
-Amr::print_cells_advanced() {
+AmrCore::print_cells_advanced() {
 
  for (int lev = 0; lev <= max_level; lev++) {
   std::cout << "LEVEL= " << lev << " CELLS ADVANCED= " <<
@@ -2002,7 +2002,7 @@ Amr::print_cells_advanced() {
 }
 
 void
-Amr::printGridInfo (std::ostream& os,
+AmrCore::printGridInfo (std::ostream& os,
                     int           min_lev,
                     int           max_lev)
 {
@@ -2046,7 +2046,7 @@ Amr::printGridInfo (std::ostream& os,
 }
 
 void
-Amr::printGridSummary (std::ostream& os,
+AmrCore::printGridSummary (std::ostream& os,
                        int           min_lev,
                        int           max_lev)
 {
@@ -2075,13 +2075,13 @@ Amr::printGridSummary (std::ostream& os,
 
 // new_finest cannot be greater than finest_level+1
 void
-Amr::grid_places (int              lbase,
+AmrCore::grid_places (int              lbase,
                   Real time,
                   int&             new_finest,
                   Vector<BoxArray>& new_grids)
 {
 
-    BL_PROFILE("Amr::grid_places()");
+    BL_PROFILE("AmrCore::grid_places()");
 
     const Real strttime = amrex::second();
 
@@ -2175,9 +2175,9 @@ Amr::grid_places (int              lbase,
 
 // called from initialInit
 void
-Amr::bldFineLevels (Real strt_time)
+AmrCore::bldFineLevels (Real strt_time)
 {
- BL_PROFILE("Amr::bldFineLevels()");
+ BL_PROFILE("AmrCore::bldFineLevels()");
  if (max_level<=0)
   amrex::Error("max_level invalid in bldFineLevels");
 

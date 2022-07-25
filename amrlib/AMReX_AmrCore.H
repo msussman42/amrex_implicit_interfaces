@@ -1,6 +1,6 @@
 
-#ifndef AMREX_Amr_H_
-#define AMREX_Amr_H_ 
+#ifndef AMREX_AmrCore_H_
+#define AMREX_AmrCore_H_ 
 
 #include <fstream>
 #include <memory>
@@ -27,23 +27,23 @@ class BoxDomain;
 //
 // Manages hierarchy of levels for time-dependent AMR computations.
 //
-// The Amr class is designed to manage parts of the computation  which do
+// The AmrCore class is designed to manage parts of the computation  which do
 // not belong on a single level, like establishing and updating the hierarchy
 // of levels, global timestepping, and managing the different AmrLevels
 //
 
-class Amr
+class AmrCore
   : public AmrMesh
 {
 public:
     //
     // The constructor.
     //
-    Amr ();
+    AmrCore ();
     //
     // The destructor.
     //
-    virtual ~Amr ();
+    virtual ~AmrCore ();
 
     AmrParGDB* GetParGDB () const noexcept { return m_gdb.get(); }
 
@@ -266,55 +266,55 @@ private:
     //
     // Disallowed
     //
-    Amr (const Amr& rhs);
-    Amr& operator= (const Amr& rhs);
+    AmrCore (const AmrCore& rhs);
+    AmrCore& operator= (const AmrCore& rhs);
 };
 
 
 inline
 int 
-Amr::Space_blockingFactor (int lev) const   
+AmrCore::Space_blockingFactor (int lev) const   
 {   
     return space_blocking_factor[lev];
 }  
 
 inline
 Real
-Amr::getDt() 
+AmrCore::getDt() 
 {
     return dt_AMR;
 }
 
 inline
 int
-Amr::checkInt () const
+AmrCore::checkInt () const
 {
     return check_int;
 }
 
 inline
 Real
-Amr::checkPer () const
+AmrCore::checkPer () const
 {
     return check_per;
 }
 
 inline
 int
-Amr::plotInt () const
+AmrCore::plotInt () const
 {
     return plot_int;
 }
 inline
 int
-Amr::sliceInt () const
+AmrCore::sliceInt () const
 {
     return slice_int;
 }
 
 inline
 Real
-Amr::plotPer () const
+AmrCore::plotPer () const
 {
     return plot_per;
 }
@@ -322,39 +322,39 @@ Amr::plotPer () const
 
 inline
 int
-Amr::levelSteps (int i) const
+AmrCore::levelSteps (int i) const
 {
     return level_steps[i];
 }
 
 inline
 int
-Amr::levelCount (int i) const
+AmrCore::levelCount (int i) const
 {
     return level_count[i];
 }
 
 inline
 Real
-Amr::cumTime () const
+AmrCore::cumTime () const
 {
     return cumtime;
 }
 
 inline
 int
-Amr::regridInt () const
+AmrCore::regridInt () const
 {
     return regrid_int;
 }
 
 inline
 const std::string&
-Amr::theRestartFile () const
+AmrCore::theRestartFile () const
 {
     return restart_file;
 }
 
 } /* namespace amrex */
 
-#endif /*AMREX_Amr_H_*/
+#endif /*AMREX_AmrCore_H_*/

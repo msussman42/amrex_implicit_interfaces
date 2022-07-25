@@ -14,7 +14,7 @@
 #include <AMReX_BCRec.H>
 #include <AMReX_VisMF.H>
 #include <Interpolater.H>
-#include <Amr.H>
+#include <AMReX_AmrCore.H>
 #include <StateDescriptor.H>
 #include <StateData.H>
 
@@ -82,7 +82,7 @@ public:
     //
     // Restart from a checkpoint file.
     //
-    virtual void restart (Amr&          papa,
+    virtual void restart (AmrCore&      papa,
                           std::istream& is,
 			  int old_finest_level,
 			  int new_finest_level);
@@ -305,7 +305,7 @@ protected:
     //
     AmrLevel () noexcept;
 
-    AmrLevel (Amr&            papa,
+    AmrLevel (AmrCore&        papa,
               int             lev,
               const Geometry& level_geom,
               const BoxArray& bl,
@@ -323,7 +323,7 @@ protected:
     BoxArray grids;                   // Cell-centered locations of grids.
     DistributionMapping dmap;         // Distribution of grids among processes
     Vector<RealBox> grid_loc;          // Physical locations of each grid.
-    Amr* parent;                      // Pointer to parent AMR structure.
+    AmrCore* parent;                   // Pointer to parent AMR structure.
     static DescriptorList desc_lst;   // List of state variables.
     static DescriptorList desc_lstGHOST; 
     Vector<StateData> state;           // Array of state data.

@@ -15,8 +15,7 @@ public:
 
     typedef Particle<NStructReal, NStructInt> ParticleType;
 
-      //SUSSMAN: replace "AmrCore" with "Amr" 
-    AmrParticleContainer (Amr* amr_core)
+    AmrParticleContainer (AmrCore* amr_core)
         : ParticleContainer<NStructReal, NStructInt, NArrayReal, NArrayInt>(amr_core->GetParGDB())
     {
     }

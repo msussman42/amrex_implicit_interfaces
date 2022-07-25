@@ -43,7 +43,7 @@ class NSBld
     virtual void variableSetUp () override;
     virtual void variableCleanUp () override;
     virtual AmrLevel *operator() () override;
-    virtual AmrLevel *operator() (Amr&            papa,
+    virtual AmrLevel *operator() (AmrCore&        papa,
                                   int             lev,
                                   const Geometry& level_geom,
                                   const BoxArray& ba,
@@ -117,7 +117,7 @@ public:
 
     NavierStokes ();
 
-    NavierStokes (Amr&            papa,
+    NavierStokes (AmrCore&        papa,
                   int             lev,
                   const Geometry& level_geom,
                   const BoxArray& bl,
@@ -126,7 +126,7 @@ public:
 
     virtual ~NavierStokes ();
 
-    virtual void restart (Amr&          papa,
+    virtual void restart (AmrCore&      papa,
                           std::istream& is,
 			  int old_finest_level,
 			  int new_finest_level);
