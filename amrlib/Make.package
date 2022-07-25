@@ -1,6 +1,6 @@
 
 CEXE_sources += PhysBCFunctSUSSMAN.cpp \
-                Amr.cpp AmrLevel.cpp \
+                AMReX_AmrCore.cpp AmrLevel.cpp \
                 AMReX_AmrMesh.cpp \
                 AMReX_Cluster.cpp \
                 Interpolater.cpp StateData.cpp \
@@ -8,7 +8,7 @@ CEXE_sources += PhysBCFunctSUSSMAN.cpp \
 
 CEXE_headers += AMReX_ArrayLim_SUSSMAN.H \
                 PhysBCFunctSUSSMAN.H \
-                Amr.H AmrLevel.H \
+                AMReX_AmrCore.H AmrLevel.H \
                 AMReX_AmrMesh.H \
                 AMReX_Cluster.H  \
                 LevelBld.H Interpolater.H StateData.H \
@@ -19,7 +19,7 @@ CEXE_headers += AMReX_AmrParGDB.H AMReX_AmrParticles.H
 
 FEXE_headers += INTERP_F.H
 
-F90EXE_sources += INTERP_3D.F90 ARRAYLIM_$(DIM)D.F90
+F90EXE_sources += INTERP_3D.F90 
 
 VPATH_LOCATIONS += $(MOF_HOME)/amrlib
 INCLUDE_LOCATIONS += $(MOF_HOME)/amrlib

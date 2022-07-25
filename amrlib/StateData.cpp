@@ -24,7 +24,7 @@ const Real INVALID_TIME = -1.0e200;
 
 // for each AmrLevel, there is a class of type "StateData" and within StateData
 // there is an array of MultiFabs called "new_data"
-// 1. class Amr
+// 1. class AmrCore
 // 2. Vector<std::unique_ptr<AmrLevel> > amr_level; 
 // 3. Vector<StateData> state;  
 //    cell centered data, MAC data, stress tensor data 
@@ -55,7 +55,7 @@ StateData::StateData ()
 }
 
 StateData::StateData (
-  Amr& papa,
+  AmrCore& papa,
   int level,
   int max_level,
   const Box& p_domain,
@@ -76,7 +76,7 @@ StateData::StateData (
 
 void
 StateData::define (
-  Amr& papa,
+  AmrCore& papa,
   int level,
   int max_level,
   const Box& p_domain,
@@ -190,7 +190,7 @@ StateData::define (
 // this constructs a variable of type "StateData" from checkpoint data.
 void
 StateData::restart (
-  Amr& papa,
+  AmrCore& papa,
   int time_order,
   int slab_dt_type, // 0=SEM 1=evenly spaced
   int MAX_NUM_SLAB,

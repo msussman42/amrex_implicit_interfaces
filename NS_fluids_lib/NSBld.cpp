@@ -38,7 +38,7 @@ NSBld::operator()()
 }
 
 AmrLevel*
-NSBld::operator()(Amr &papa, 
+NSBld::operator()(AmrCore &papa, 
 		  int lev, 
 		  const Geometry &level_geom,
                   const BoxArray &ba,

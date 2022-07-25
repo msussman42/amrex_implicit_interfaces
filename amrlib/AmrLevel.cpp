@@ -86,7 +86,7 @@ AmrLevel::AmrLevel () noexcept
 }
 
 // constructor
-AmrLevel::AmrLevel (Amr&            papa,
+AmrLevel::AmrLevel (AmrCore&        papa,
                     int             lev,
                     const Geometry& level_geom,
                     const BoxArray& ba,
@@ -188,7 +188,7 @@ AmrLevel::AmrLevel (Amr&            papa,
 
 
 void
-AmrLevel::restart (Amr&          papa,
+AmrLevel::restart (AmrCore&      papa,
                    std::istream& is,
 		   int old_finest_level,
 		   int new_finest_level) {

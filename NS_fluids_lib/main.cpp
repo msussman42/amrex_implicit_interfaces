@@ -20,7 +20,7 @@
 #include <AMReX_ParmParse.H>
 #include <AMReX_ParallelDescriptor.H>
 
-#include <Amr.H>
+#include <AMReX_AmrCore.H>
 
 using namespace amrex;
 
@@ -48,7 +48,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, 07/25/22, 18:20 on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, 07/26/22, 19:30 on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
@@ -122,11 +122,11 @@ main (int   argc,
       // 2. Initialize()
       // 3. InitAmr() 
       //   a.  levelbld = getLevelBld();
-    Amr* amrptr = new Amr();
+    AmrCore* amrptr = new AmrCore();
 
     amrex::ParallelDescriptor::Barrier();
 
-      // Amr::init 
+      // AmrCore::init 
     amrptr->init(strt_time,stop_time);
 
     amrex::ParallelDescriptor::Barrier();
@@ -142,7 +142,7 @@ main (int   argc,
 	BL_PROFILE_INITIALIZE();
         std::fflush(NULL);
 
-         // coarseTimeStep is in amrlib/Amr.cpp
+         // coarseTimeStep is in amrlib/AMReX_AmrCore.cpp
         amrptr->coarseTimeStep(stop_time); // synchronizes internally
 
         amrex::ParallelDescriptor::Barrier();
