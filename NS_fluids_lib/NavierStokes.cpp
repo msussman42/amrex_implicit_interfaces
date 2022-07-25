@@ -15761,11 +15761,13 @@ void NavierStokes::aggressive_debug(
   for (MFIter mfi(*mf,false); mfi.isValid(); ++mfi) {
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
-   const Box& growntilegrid = mfi.growntileboxTENSOR(datatype,ngrow,dir);
    const Box& fabgrid = mfi.validbox();
 
    if (fabgrid!=mfBA[gridno])
     amrex::Error("fabgrid!=mfBA[gridno]");
+
+   const Box& growntilegrid = growntileboxTENSOR(mf,
+     datatype,ngrow,dir,tilegrid,fabgrid);
 
    const int* tilelo=tilegrid.loVect();
    const int* tilehi=tilegrid.hiVect();

@@ -130,8 +130,6 @@ public:
     //! Return the dir-nodal (or all nodal if dir<0) Box at the current index.
     Box nodaltilebox (int dir=-1) const noexcept;
 
-        // SUSSMAN
-    Box growntileboxTENSOR (int datatype,int ng,int dir) const noexcept;
 
     //! Return the tile box at the current index grown to include ghost cells.
     Box growntilebox (int ng=-1000000) const noexcept;
