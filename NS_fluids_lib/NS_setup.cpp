@@ -13,6 +13,7 @@
 #include <sstream>
 #include <fstream>
 #include <cmath>
+#include <INDEX_TYPE_MACROS.H>
 
 namespace amrex{
 
@@ -724,9 +725,9 @@ NavierStokes::variableSetUp ()
 
      // AmrLevel.H, protected: static DescriptorList desc_lst
      // ngrow=0
-    desc_lst.addDescriptor(Umac_Type,IndexType::TheUMACType(),
+    desc_lst.addDescriptor(Umac_Type,TheUMACType,
        0,1,&umac_interp,state_holds_data);
-    desc_lstGHOST.addDescriptor(Umac_Type,IndexType::TheUMACType(),
+    desc_lstGHOST.addDescriptor(Umac_Type,TheUMACType,
        0,1,&umac_interp,null_state_holds_data);
     set_x_vel_bc(bc,phys_bc);
 
@@ -745,9 +746,9 @@ NavierStokes::variableSetUp ()
 // Vmac_Type  -------------------------------------------
 
      // ngrow=0
-    desc_lst.addDescriptor(Vmac_Type,IndexType::TheVMACType(),
+    desc_lst.addDescriptor(Vmac_Type,TheVMACType,
       0,1,&umac_interp,state_holds_data);
-    desc_lstGHOST.addDescriptor(Vmac_Type,IndexType::TheVMACType(),
+    desc_lstGHOST.addDescriptor(Vmac_Type,TheVMACType,
       0,1,&umac_interp,null_state_holds_data);
     set_y_vel_bc(bc,phys_bc);
 
@@ -762,9 +763,9 @@ NavierStokes::variableSetUp ()
 #if (AMREX_SPACEDIM == 3)
 
       // ngrow=0
-    desc_lst.addDescriptor(Wmac_Type,IndexType::TheWMACType(),
+    desc_lst.addDescriptor(Wmac_Type,TheWMACType,
       0,1,&umac_interp,state_holds_data);
-    desc_lstGHOST.addDescriptor(Wmac_Type,IndexType::TheWMACType(),
+    desc_lstGHOST.addDescriptor(Wmac_Type,TheWMACType,
       0,1,&umac_interp,null_state_holds_data);
     set_z_vel_bc(bc,phys_bc);
 
@@ -1053,10 +1054,10 @@ NavierStokes::variableSetUp ()
      set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorXU_Type);
 
      //ngrow=1
-     desc_lst.addDescriptor(TensorYU_Type,IndexType::TheYUMACType(),
+     desc_lst.addDescriptor(TensorYU_Type,TheYUMACType,
       1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
-     desc_lstGHOST.addDescriptor(TensorYU_Type,IndexType::TheYUMACType(),
+     desc_lstGHOST.addDescriptor(TensorYU_Type,TheYUMACType,
       1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
 
@@ -1065,10 +1066,10 @@ NavierStokes::variableSetUp ()
      set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorYU_Type);
 
       //ngrow=1
-     desc_lst.addDescriptor(TensorZU_Type,IndexType::TheZUMACType(),
+     desc_lst.addDescriptor(TensorZU_Type,TheZUMACType,
       1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
-     desc_lstGHOST.addDescriptor(TensorZU_Type,IndexType::TheZUMACType(),
+     desc_lstGHOST.addDescriptor(TensorZU_Type,TheZUMACType,
       1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
 
@@ -1077,10 +1078,10 @@ NavierStokes::variableSetUp ()
      set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorZU_Type);
 
      //ngrow=1
-     desc_lst.addDescriptor(TensorZV_Type,IndexType::TheZVMACType(),
+     desc_lst.addDescriptor(TensorZV_Type,TheZVMACType,
       1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
-     desc_lstGHOST.addDescriptor(TensorZV_Type,IndexType::TheZVMACType(),
+     desc_lstGHOST.addDescriptor(TensorZV_Type,TheZVMACType,
       1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
 

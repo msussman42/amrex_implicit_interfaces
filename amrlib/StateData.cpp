@@ -10,6 +10,7 @@
 #include <AMReX_Utility.H>
 #include <StateData.H>
 #include <StateDescriptor.H>
+#include <INDEX_TYPE_MACROS.H>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -544,49 +545,49 @@ StateData::get_grid_type(IndexType local_typ,int& grid_type) {
  if (local_typ.cellCentered()) {
   grid_type=-1;
   // CELL - CELL - CELL
- } else if (local_typ==IndexType::TheXUMACType()) {
+ } else if (local_typ==TheXUMACType) {
   grid_type=-1;
   amrex::Error("expecting TheXUMACType==cellCentered");
   // CELL - CELL - CELL
- } else if (local_typ==IndexType::TheYVMACType()) {
+ } else if (local_typ==TheYVMACType) {
   grid_type=-1;
   amrex::Error("expecting TheYVMACType==cellCentered");
   // CELL - CELL - CELL
- } else if ((local_typ==IndexType::TheZWMACType())&&
+ } else if ((local_typ==TheZWMACType)&&
             (AMREX_SPACEDIM==3)) {
   grid_type=-1;
   amrex::Error("expecting TheZWMACType==cellCentered");
   // NODE - CELL - CELL
- } else if (local_typ==IndexType::TheUMACType()) {
+ } else if (local_typ==TheUMACType) {
   grid_type=0;
   // CELL - NODE - CELL
- } else if (local_typ==IndexType::TheVMACType()) {
+ } else if (local_typ==TheVMACType) {
   grid_type=1;
   // CELL - CELL - NODE 
- } else if ((local_typ==IndexType::TheWMACType())&&
+ } else if ((local_typ==TheWMACType)&&
             (AMREX_SPACEDIM==3)) {
   grid_type=2;
   // NODE - NODE - CELL
- } else if (local_typ==IndexType::TheYUMACType()) {
+ } else if (local_typ==TheYUMACType) {
   grid_type=3;
   // NODE - NODE - CELL
- } else if (local_typ==IndexType::TheXVMACType()) {
+ } else if (local_typ==TheXVMACType) {
   grid_type=3;
   amrex::Error("expecting TheXVMACType==TheYUMACType");
   // NODE - CELL - NODE 
- } else if ((local_typ==IndexType::TheZUMACType())&&
+ } else if ((local_typ==TheZUMACType)&&
             (AMREX_SPACEDIM==3)) {
   grid_type=4;
   // NODE - CELL - NODE 
- } else if ((local_typ==IndexType::TheXWMACType())&&
+ } else if ((local_typ==TheXWMACType)&&
             (AMREX_SPACEDIM==3)) {
   grid_type=4;
   amrex::Error("expecting TheZUMACType==TheXWMACType");
- } else if ((local_typ==IndexType::TheZVMACType())&&
+ } else if ((local_typ==TheZVMACType)&&
             (AMREX_SPACEDIM==3)) {
   grid_type=5;
   // CELL - NODE - NODE 
- } else if ((local_typ==IndexType::TheYWMACType())&&
+ } else if ((local_typ==TheYWMACType)&&
             (AMREX_SPACEDIM==3)) {
   grid_type=5;
   amrex::Error("expecting TheZVMACType==TheYWMACType");

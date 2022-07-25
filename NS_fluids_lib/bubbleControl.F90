@@ -1,6 +1,7 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
+#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"

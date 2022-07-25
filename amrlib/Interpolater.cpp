@@ -5,6 +5,7 @@
 #include <AMReX_Geometry.H>
 #include <Interpolater.H>
 #include <INTERP_F.H>
+#include <INDEX_TYPE_MACROS.H>
 #include <EXTRAP_COMP.H>
 
 namespace amrex {
@@ -459,45 +460,45 @@ PCInterp::CoarseBox (const Box& fine,int bfactc,int bfactf,int grid_type)
 
   // NODE - CELL - CELL
  } else if (grid_type==0) {
-  if ((fine.ixType()==IndexType::TheUMACType())&&
-      (crse.ixType()==IndexType::TheUMACType())) {
+  if ((fine.ixType()==TheUMACType)&&
+      (crse.ixType()==TheUMACType)) {
    // do nothing
   } else
    amrex::Error("fine or crse box has wrong grid_type");
 
    // CELL - NODE - CELL
  } else if (grid_type==1) {
-  if ((fine.ixType()==IndexType::TheVMACType())&&
-      (crse.ixType()==IndexType::TheVMACType())) {
+  if ((fine.ixType()==TheVMACType)&&
+      (crse.ixType()==TheVMACType)) {
    // do nothing
   } else
    amrex::Error("fine or crse box has wrong grid_type");
 
    // CELL - CELL - NODE
  } else if ((grid_type==2)&&(AMREX_SPACEDIM==3)) {
-  if ((fine.ixType()==IndexType::TheWMACType())&&
-      (crse.ixType()==IndexType::TheWMACType())) {
+  if ((fine.ixType()==TheWMACType)&&
+      (crse.ixType()==TheWMACType)) {
    // do nothing
   } else
    amrex::Error("fine or crse box has wrong grid_type");
    // NODE - NODE - CELL 
  } else if (grid_type==3) {
-  if ((fine.ixType()==IndexType::TheYUMACType())&&
-      (crse.ixType()==IndexType::TheYUMACType())) {
+  if ((fine.ixType()==TheYUMACType)&&
+      (crse.ixType()==TheYUMACType)) {
    // do nothing
   } else
    amrex::Error("fine or crse box has wrong grid_type");
    // NODE - CELL - NODE 
  } else if ((grid_type==4)&&(AMREX_SPACEDIM==3)) {
-  if ((fine.ixType()==IndexType::TheZUMACType())&&
-      (crse.ixType()==IndexType::TheZUMACType())) {
+  if ((fine.ixType()==TheZUMACType)&&
+      (crse.ixType()==TheZUMACType)) {
    // do nothing
   } else
    amrex::Error("fine or crse box has wrong grid_type");
    // CELL - NODE - NODE
  } else if ((grid_type==5)&&(AMREX_SPACEDIM==3)) {
-  if ((fine.ixType()==IndexType::TheZVMACType())&&
-      (crse.ixType()==IndexType::TheZVMACType())) {
+  if ((fine.ixType()==TheZVMACType)&&
+      (crse.ixType()==TheZVMACType)) {
    // do nothing
   } else
    amrex::Error("fine or crse box has wrong grid_type");
@@ -555,7 +556,7 @@ PCInterp::interp (
    amrex::Error("typ invalid");
   // NODE - CELL - CELL
  } else if (grid_type==0) {
-  if ((typ==IndexType::TheUMACType())&&
+  if ((typ==TheUMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
@@ -564,7 +565,7 @@ PCInterp::interp (
    amrex::Error("typ invalid");
    // CELL - NODE - CELL
  } else if (grid_type==1) {
-  if ((typ==IndexType::TheVMACType())&&
+  if ((typ==TheVMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
@@ -573,7 +574,7 @@ PCInterp::interp (
    amrex::Error("typ invalid");
    // CELL - CELL - NODE
  } else if ((grid_type==2)&&(AMREX_SPACEDIM==3)) {
-  if ((typ==IndexType::TheWMACType())&&
+  if ((typ==TheWMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
@@ -582,7 +583,7 @@ PCInterp::interp (
    amrex::Error("typ invalid");
    // NODE - NODE - CELL 
  } else if (grid_type==3) {
-  if ((typ==IndexType::TheYUMACType())&&
+  if ((typ==TheYUMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
@@ -591,7 +592,7 @@ PCInterp::interp (
    amrex::Error("typ invalid");
    // NODE - CELL - NODE 
  } else if ((grid_type==4)&&(AMREX_SPACEDIM==3)) {
-  if ((typ==IndexType::TheZUMACType())&&
+  if ((typ==TheZUMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
@@ -600,7 +601,7 @@ PCInterp::interp (
    amrex::Error("typ invalid");
    // CELL - NODE - NODE
  } else if ((grid_type==5)&&(AMREX_SPACEDIM==3)) {
-  if ((typ==IndexType::TheZVMACType())&&
+  if ((typ==TheZVMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
@@ -965,7 +966,7 @@ PCInterpNull::interp (
    amrex::Error("typ invalid");
   // NODE - CELL - CELL
  } else if (grid_type==0) {
-  if ((typ==IndexType::TheUMACType())&&
+  if ((typ==TheUMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
@@ -974,7 +975,7 @@ PCInterpNull::interp (
    amrex::Error("typ invalid");
    // CELL - NODE - CELL
  } else if (grid_type==1) {
-  if ((typ==IndexType::TheVMACType())&&
+  if ((typ==TheVMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
@@ -983,7 +984,7 @@ PCInterpNull::interp (
    amrex::Error("typ invalid");
    // CELL - CELL - NODE
  } else if ((grid_type==2)&&(AMREX_SPACEDIM==3)) {
-  if ((typ==IndexType::TheWMACType())&&
+  if ((typ==TheWMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
@@ -992,7 +993,7 @@ PCInterpNull::interp (
    amrex::Error("typ invalid");
    // NODE - NODE - CELL 
  } else if (grid_type==3) {
-  if ((typ==IndexType::TheYUMACType())&&
+  if ((typ==TheYUMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
@@ -1001,7 +1002,7 @@ PCInterpNull::interp (
    amrex::Error("typ invalid");
    // NODE - CELL - NODE 
  } else if ((grid_type==4)&&(AMREX_SPACEDIM==3)) {
-  if ((typ==IndexType::TheZUMACType())&&
+  if ((typ==TheZUMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
@@ -1010,7 +1011,7 @@ PCInterpNull::interp (
    amrex::Error("typ invalid");
    // CELL - NODE - NODE
  } else if ((grid_type==5)&&(AMREX_SPACEDIM==3)) {
-  if ((typ==IndexType::TheZVMACType())&&
+  if ((typ==TheZVMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
@@ -1067,20 +1068,20 @@ UMACInterp::CoarseBox(const Box& fine,int bfactc,int bfactf,int grid_type)
  Box crse = amrex::coarsen(fine,2);
 
  if (grid_type==0) {
-  if ((fine.ixType()==IndexType::TheUMACType())&&
-      (crse.ixType()==IndexType::TheUMACType())) {
+  if ((fine.ixType()==TheUMACType)&&
+      (crse.ixType()==TheUMACType)) {
    // do nothing
   } else
    amrex::Error("fine or crse box has wrong grid_type");
  } else if (grid_type==1) {
-  if ((fine.ixType()==IndexType::TheVMACType())&&
-      (crse.ixType()==IndexType::TheVMACType())) {
+  if ((fine.ixType()==TheVMACType)&&
+      (crse.ixType()==TheVMACType)) {
    // do nothing
   } else
    amrex::Error("fine or crse box has wrong grid_type");
  } else if ((grid_type==2)&&(AMREX_SPACEDIM==3)) {
-  if ((fine.ixType()==IndexType::TheWMACType())&&
-      (crse.ixType()==IndexType::TheWMACType())) {
+  if ((fine.ixType()==TheWMACType)&&
+      (crse.ixType()==TheWMACType)) {
    // do nothing
   } else
    amrex::Error("fine or crse box has wrong grid_type");
@@ -1128,7 +1129,7 @@ UMACInterp::interp(
  Box crse_bx(CoarseBox(fine_bx,bfactc,bfactf,grid_type));
 
  if (grid_type==0) {
-  if ((typ==IndexType::TheUMACType())&&
+  if ((typ==TheUMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
@@ -1136,7 +1137,7 @@ UMACInterp::interp(
   } else
    amrex::Error("typ invalid");
  } else if (grid_type==1) {
-  if ((typ==IndexType::TheVMACType())&&
+  if ((typ==TheVMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
@@ -1144,7 +1145,7 @@ UMACInterp::interp(
   } else
    amrex::Error("typ invalid");
  } else if ((grid_type==2)&&(AMREX_SPACEDIM==3)) {
-  if ((typ==IndexType::TheWMACType())&&
+  if ((typ==TheWMACType)&&
       (fine.box().ixType()==typ)&&
       (crse.box().ixType()==typ)&&
       (crse_bx.ixType()==typ)) {
