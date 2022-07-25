@@ -6948,6 +6948,128 @@ void NavierStokes::tecplot_debug(FArrayBox& fabdata,
  }
 } // end subroutine NavierStokes::tecplot_debug
 
+// datatype=0 standard case
+// datatype=1 face grad U
+// datatype=2 cell grad U
+Box NavierStokes::growntileboxTENSOR(int datatype,int ng,int mf_ng,int dir,
+ Box tilebox_bx,Box vbx_box) {
+
+ Box bx = tilebox();
+ const Box& vbx = validbox();
+
+ if (datatype==0) {
+
+  if (ng < -100) ng = fabArray.nGrow();
+  for (int d=0; d<BL_SPACEDIM; ++d) {
+   if (bx.smallEnd(d) == vbx.smallEnd(d)) {
+    bx.growLo(d, ng);
+   }
+   if (bx.bigEnd(d) == vbx.bigEnd(d)) {
+    bx.growHi(d, ng);
+   }
+  } // d
+
+ } else if ((datatype==1)||(datatype==2)) {
+
+  if ((dir<0)||(dir>=BL_SPACEDIM))
+   amrex::Error("dir invalid");
+  if (ng!=0)
+   amrex::Error("ng invalid");
+  
+  for (int d=0; d<BL_SPACEDIM; ++d) {
+
+   if (!typ.cellCentered(d))
+    amrex::Error("tensor box should be cell centered");
+
+   if (d!=dir) {
+    if (bx.smallEnd(d) == vbx.smallEnd(d)) {
+     bx.growLo(d,1);
+    }
+    if (bx.bigEnd(d) == vbx.bigEnd(d)) {
+     bx.growHi(d, 1);
+    }
+   } else if (d==dir) {
+    if (datatype==1) {
+     if (bx.bigEnd(d) == vbx.bigEnd(d)) {
+      bx.growHi(d, 1);
+     }
+    } else if (datatype==2) {
+     // do nothing
+    } else
+     amrex::Error("datatype invalid");
+   }
+  } // d
+
+ } else
+  amrex::Error("datatype invalid");
+
+ return bx;
+
+
+} // end subroutine Box NavierStokes::growntileboxTENSOR
+
+
+
+bool NavierStokes::contains_nanTENSOR(MultiFab* mf,
+  int datatype,int scomp,int dir) {
+
+ if ((scomp<0)||(scomp>=nComp()))
+  amrex::Error("scomp invalid");
+ if ((dir<0)||(dir>=AMREX_SPACEDIM))
+  amrex::Error("dir invalid");
+
+ bool r = false;
+
+#ifdef _OPENMP
+#pragma omp parallel reduction(|:r)
+#endif
+ for (MFIter mfi(*mf,true); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  int ng=0;
+  const Box& bx = mfi.growntileboxTENSOR(datatype,ng,dir);
+
+  if (this->FabArray<FArrayBox>::get(mfi).contains_nan(bx,scomp,1))
+   r = true;
+ } // mfi
+
+ ParallelDescriptor::ReduceBoolOr(r);
+
+ return r;
+} // subroutine contains_nanTENSOR
+
+// SUSSMAN
+bool
+MultiFab::contains_infTENSOR (int datatype,int scomp,int dir) const {
+
+ if ((scomp<0)||(scomp>=nComp()))
+  amrex::Error("scomp invalid");
+ if ((dir<0)||(dir>=BL_SPACEDIM))
+  amrex::Error("dir invalid");
+
+ bool r = false;
+
+#ifdef _OPENMP
+#pragma omp parallel reduction(|:r)
+#endif
+ for (MFIter mfi(*this,true); mfi.isValid(); ++mfi) {
+  int ng=0;
+  const Box& bx = mfi.growntileboxTENSOR(datatype,ng,dir);
+
+  if (this->FabArray<FArrayBox>::get(mfi).contains_inf(bx,scomp,1))
+   r = true;
+ } // mfi
+
+ ParallelDescriptor::ReduceBoolOr(r);
+
+ return r;
+} // subroutine contains_infTENSOR
+
 
 
 // datatype=0 normal

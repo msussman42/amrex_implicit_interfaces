@@ -633,8 +633,6 @@ public:
     bool contains_nan (bool local=false) const;
     bool contains_nan (int scomp, int ncomp, int ngrow = 0, bool local=false) const;
     bool contains_nan (int scomp, int ncomp, const IntVect& ngrow, bool local=false) const;
-     //SUSSMAN
-    bool contains_nanTENSOR (int datatype,int scomp,int dir) const;
     /**
     * \brief Are there any Infs in the MF?
     * This may return false, even if the MF contains Infs, if the machine
@@ -644,8 +642,6 @@ public:
     bool contains_inf (bool local=false) const;
     bool contains_inf (int scomp, int ncomp, int ngrow = 0, bool local=false) const;
     bool contains_inf (int scomp, int ncomp, const IntVect& ngrow, bool local=false) const;
-     // SUSSMAN
-    bool contains_infTENSOR (int datatype,int scomp,int dir) const;
 
     /**
     * \brief Sum values in overlapped cells.  The destination is limited to valid cells.
