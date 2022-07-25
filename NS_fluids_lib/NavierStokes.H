@@ -692,6 +692,14 @@ protected:
 
     void FillBoundaryTENSOR(MultiFab* mf,int sc,int dir);
 
+    Box growntileboxTENSOR(
+     MultiFab* mf,int datatype,int ng,int dir,
+     const Box& tilebox_box,const Box& vbx_box);
+    bool contains_nanTENSOR(MultiFab* mf,
+      int datatype,int scomp,int dir);
+    bool contains_infTENSOR(MultiFab* mf,
+      int datatype,int scomp,int dir);
+
     void check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
       int sc,int dir,int id);
     void check_for_NAN_TENSOR(int datatype,MultiFab* mf,int id);

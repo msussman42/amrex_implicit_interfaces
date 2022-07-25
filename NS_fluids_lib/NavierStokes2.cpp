@@ -6951,46 +6951,46 @@ void NavierStokes::tecplot_debug(FArrayBox& fabdata,
 // datatype=0 standard case
 // datatype=1 face grad U
 // datatype=2 cell grad U
-Box NavierStokes::growntileboxTENSOR(int datatype,int ng,int mf_ng,int dir,
- Box tilebox_bx,Box vbx_box) {
+Box NavierStokes::growntileboxTENSOR(
+ MultiFab* mf,int datatype,int ng,int dir,
+ const Box& tilebox_box,const Box& vbx_box) {
 
- Box bx = tilebox();
- const Box& vbx = validbox();
+ Box bx = tilebox_box;
 
  if (datatype==0) {
 
-  if (ng < -100) ng = fabArray.nGrow();
-  for (int d=0; d<BL_SPACEDIM; ++d) {
-   if (bx.smallEnd(d) == vbx.smallEnd(d)) {
+  if (ng < -100) ng = mf->nGrow();
+  for (int d=0; d<AMREX_SPACEDIM; ++d) {
+   if (bx.smallEnd(d) == vbx_box.smallEnd(d)) {
     bx.growLo(d, ng);
    }
-   if (bx.bigEnd(d) == vbx.bigEnd(d)) {
+   if (bx.bigEnd(d) == vbx_box.bigEnd(d)) {
     bx.growHi(d, ng);
    }
   } // d
 
  } else if ((datatype==1)||(datatype==2)) {
 
-  if ((dir<0)||(dir>=BL_SPACEDIM))
+  if ((dir<0)||(dir>=AMREX_SPACEDIM))
    amrex::Error("dir invalid");
   if (ng!=0)
    amrex::Error("ng invalid");
   
-  for (int d=0; d<BL_SPACEDIM; ++d) {
+  for (int d=0; d<AMREX_SPACEDIM; ++d) {
 
-   if (!typ.cellCentered(d))
+   if (!mf->ixType().cellCentered(d))
     amrex::Error("tensor box should be cell centered");
 
    if (d!=dir) {
-    if (bx.smallEnd(d) == vbx.smallEnd(d)) {
+    if (bx.smallEnd(d) == vbx_box.smallEnd(d)) {
      bx.growLo(d,1);
     }
-    if (bx.bigEnd(d) == vbx.bigEnd(d)) {
+    if (bx.bigEnd(d) == vbx_box.bigEnd(d)) {
      bx.growHi(d, 1);
     }
    } else if (d==dir) {
     if (datatype==1) {
-     if (bx.bigEnd(d) == vbx.bigEnd(d)) {
+     if (bx.bigEnd(d) == vbx_box.bigEnd(d)) {
       bx.growHi(d, 1);
      }
     } else if (datatype==2) {
@@ -7005,15 +7005,13 @@ Box NavierStokes::growntileboxTENSOR(int datatype,int ng,int mf_ng,int dir,
 
  return bx;
 
-
 } // end subroutine Box NavierStokes::growntileboxTENSOR
-
 
 
 bool NavierStokes::contains_nanTENSOR(MultiFab* mf,
   int datatype,int scomp,int dir) {
 
- if ((scomp<0)||(scomp>=nComp()))
+ if ((scomp<0)||(scomp>=mf->nComp()))
   amrex::Error("scomp invalid");
  if ((dir<0)||(dir>=AMREX_SPACEDIM))
   amrex::Error("dir invalid");
@@ -7027,14 +7025,14 @@ bool NavierStokes::contains_nanTENSOR(MultiFab* mf,
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
   const Box& tilegrid = mfi.tilebox();
-  const int* tilelo=tilegrid.loVect();
-  const int* tilehi=tilegrid.hiVect();
-  const int* fablo=fabgrid.loVect();
-  const int* fabhi=fabgrid.hiVect();
+  const Box& fabgrid = grids[gridno];
   int ng=0;
-  const Box& bx = mfi.growntileboxTENSOR(datatype,ng,dir);
 
-  if (this->FabArray<FArrayBox>::get(mfi).contains_nan(bx,scomp,1))
+  const Box& bx = growntileboxTENSOR(mf,datatype,ng,dir,
+    tilegrid,fabgrid);
+
+  FArrayBox& fab_mf=(*mf)[mfi];
+  if (fab_mf.contains_nan(bx,scomp,1))
    r = true;
  } // mfi
 
@@ -7043,11 +7041,10 @@ bool NavierStokes::contains_nanTENSOR(MultiFab* mf,
  return r;
 } // subroutine contains_nanTENSOR
 
-// SUSSMAN
-bool
-MultiFab::contains_infTENSOR (int datatype,int scomp,int dir) const {
+bool NavierStokes::contains_infTENSOR(MultiFab* mf,
+   int datatype,int scomp,int dir) {
 
- if ((scomp<0)||(scomp>=nComp()))
+ if ((scomp<0)||(scomp>=mf->nComp()))
   amrex::Error("scomp invalid");
  if ((dir<0)||(dir>=BL_SPACEDIM))
   amrex::Error("dir invalid");
@@ -7057,11 +7054,18 @@ MultiFab::contains_infTENSOR (int datatype,int scomp,int dir) const {
 #ifdef _OPENMP
 #pragma omp parallel reduction(|:r)
 #endif
- for (MFIter mfi(*this,true); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*mf,true); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
   int ng=0;
-  const Box& bx = mfi.growntileboxTENSOR(datatype,ng,dir);
 
-  if (this->FabArray<FArrayBox>::get(mfi).contains_inf(bx,scomp,1))
+  const Box& bx = growntileboxTENSOR(mf,datatype,ng,dir,
+    tilegrid,fabgrid);
+
+  FArrayBox& fab_mf=(*mf)[mfi];
+  if (fab_mf.contains_inf(bx,scomp,1))
    r = true;
  } // mfi
 
@@ -7069,8 +7073,6 @@ MultiFab::contains_infTENSOR (int datatype,int scomp,int dir) const {
 
  return r;
 } // subroutine contains_infTENSOR
-
-
 
 // datatype=0 normal
 // datatype=1 tensor face
@@ -7090,7 +7092,7 @@ void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
 
  std::fflush(NULL);
 
- if (mf->contains_nanTENSOR(datatype,sc,dir)==true) {
+ if (contains_nanTENSOR(mf,datatype,sc,dir)==true) {
   std::cout << "id= " << id << '\n';
   std::cout << "sc= " << sc << '\n';
   std::cout << "dir= " << dir << '\n';
@@ -7103,7 +7105,7 @@ void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
   std::cout << "mfBA= " << mfBA << '\n';
   amrex::Error("mf contains nan ::check_for_NAN_TENSOR_base");
  }
- if (mf->contains_infTENSOR(datatype,sc,dir)==true) {
+ if (contains_infTENSOR(mf,datatype,sc,dir)==true) {
   std::cout << "id= " << id << '\n';
   std::cout << "sc= " << sc << '\n';
   std::cout << "dir= " << dir << '\n';
