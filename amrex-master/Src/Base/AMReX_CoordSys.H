@@ -1,13 +1,15 @@
 
 #ifndef AMREX_COORDSYS_H_
 #define AMREX_COORDSYS_H_
+#include <AMReX_Config.H>
 
-#include <limits>
 #include <AMReX.H>
 #include <AMReX_REAL.H>
 #include <AMReX_Array.H>
 #include <AMReX_Vector.H>
 #include <AMReX_Box.H>
+
+#include <limits>
 
 namespace amrex {
 
@@ -45,6 +47,9 @@ public:
 //    //! Initialize after construction.
 //    void define (const Real* cell_dx);
 
+    //! Is ok?
+    bool Ok () const noexcept { return ok; }
+
     //! Set the CoordType.
     void SetCoord (CoordType coord) noexcept { c_sys = coord; }
 
@@ -55,10 +60,14 @@ public:
     int CoordInt () const  noexcept { return static_cast<int>(c_sys); }
 
     //! Is CoordType == SPHERICAL?
-    bool IsSPHERICAL () const noexcept;
+    bool IsSPHERICAL () const noexcept {
+        BL_ASSERT(c_sys != undef); return (c_sys == SPHERICAL);
+    }
 
     //! Is CoordType == RZ?
-    bool IsRZ () const noexcept;
+    bool IsRZ () const noexcept {
+        BL_ASSERT(c_sys != undef); return (c_sys == RZ);
+    }
 
     //! Is CoordType == cartesion?
     bool IsCartesian () const noexcept {
@@ -99,7 +108,7 @@ public:
     //! Returns location of cell center in specified direction.
     Real CellCenter (int point, int dir) const noexcept
     {
-        BL_ASSERT(ok); return offset[dir] + dx[dir]*(0.5+ (Real)point);
+        BL_ASSERT(ok); return offset[dir] + dx[dir]*((Real)0.5+ (Real)point);
     }
 
     //! Return location of cell center.
@@ -253,32 +262,6 @@ protected:
                         std::numeric_limits<Real>::infinity())};
     bool ok = false;
 };
-
-inline
-bool
-CoordSys::IsSPHERICAL () const noexcept
-{
-    BL_ASSERT(c_sys != undef);
-#if (AMREX_SPACEDIM <= 2)
-    return (c_sys == SPHERICAL);
-#endif
-#if (AMREX_SPACEDIM == 3)
-    return false;
-#endif
-}
-
-inline
-bool
-CoordSys::IsRZ () const noexcept
-{
-    BL_ASSERT(c_sys != undef);
-#if (AMREX_SPACEDIM <= 2)
-    return (c_sys == RZ);
-#endif
-#if (AMREX_SPACEDIM == 3)
-    return false;
-#endif
-}
 
 }
 

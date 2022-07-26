@@ -1,10 +1,7 @@
 
 #ifndef AMREX_Amr_H_
 #define AMREX_Amr_H_
-
-#include <fstream>
-#include <memory>
-#include <list>
+#include <AMReX_Config.H>
 
 #include <AMReX_Box.H>
 #include <AMReX_Geometry.H>
@@ -12,15 +9,17 @@
 #include <AMReX_Array.H>
 #include <AMReX_Vector.H>
 #include <AMReX_BCRec.H>
-
 #include <AMReX_AmrCore.H>
+
+#include <iosfwd>
+#include <list>
+#include <memory>
 
 namespace amrex {
 
 class AmrLevel;
 class LevelBld;
-class BoxDomain;
-#if defined(BL_USE_SENSEI_INSITU)
+#if defined(AMREX_USE_SENSEI_INSITU) && !defined(AMREX_NO_SENSEI_AMR_INST)
 class AmrInSituBridge;
 #endif
 
@@ -39,9 +38,10 @@ class Amr
 
 public:
     //! The constructor.
-    Amr ();
+    Amr (LevelBld* a_levelbld /* One must pass LevelBld* as an argument now*/);
 
-    Amr (const RealBox* rb, int max_level_in, const Vector<int>& n_cell_in, int coord);
+    Amr (const RealBox* rb, int max_level_in, const Vector<int>& n_cell_in, int coord,
+        LevelBld* a_levelbld /* One must pass LevelBld* as an argument now*/);
 
     Amr (const Amr& rhs) = delete;
     Amr& operator= (const Amr& rhs) = delete;
@@ -178,6 +178,8 @@ public:
     static void fillDerivePlotVarList ();
     static void fillDeriveSmallPlotVarList ();
 
+    static void setComputeNewDtOnRegrid (int flag) { compute_new_dt_on_regrid = flag; }
+
     static void Initialize ();
     static void Finalize ();
     //! AmrLevel lev.
@@ -194,6 +196,10 @@ public:
     int numGrids (int lev) noexcept;
     //! More work to be done?
     int okToContinue () noexcept;
+    //! Rebuild grid hierarchy finer than lbase.
+    virtual void regrid (int  lbase,
+                         Real time,
+                         bool initial = false) override;
     //! Regrid only!
     void RegridOnly (Real time, bool do_io = true);
     //! Should we regrid this level?
@@ -210,9 +216,9 @@ public:
     Real coarseTimeStepDt (Real stop_time);
     //! Retrieve derived data. User is responsible for deleting pointer.
     std::unique_ptr<MultiFab> derive (const std::string& name,
-				      Real           time,
-				      int            lev,
-				      int            ngrow);
+                                      Real           time,
+                                      int            lev,
+                                      int            ngrow);
     //! Name of the restart chkpoint file.
     const std::string& theRestartFile () const noexcept { return restart_chkfile; }
     //! Name of the restart plotfile.
@@ -326,8 +332,10 @@ protected:
     //! Initialize grid hierarchy -- called by Amr::init.
     void initialInit (Real strt_time, Real stop_time,
                       const BoxArray* lev0_grids = 0, const Vector<int>* pmap = 0);
+#ifndef AMREX_NO_PROBINIT
     //! Read the probin file.
     void readProbinFile (int& init);
+#endif
     //! Check for valid input.
     void checkInput ();
     //! Restart from a checkpoint file.
@@ -336,10 +344,6 @@ protected:
     void defBaseLevel (Real start_time, const BoxArray* lev0_grids = 0, const Vector<int>* pmap = 0);
     //! Define and initialize refined levels.
     void bldFineLevels (Real start_time);
-    //! Rebuild grid hierarchy finer than lbase.
-    virtual void regrid (int  lbase,
-                         Real time,
-                         bool initial = false) override;
     //! Regrid level 0 on restart.
     virtual void regrid_level_0_on_restart ();
     //! Define new grid locations (called from regrid) and put into new_grids.
@@ -362,15 +366,15 @@ protected:
                            int  niter,
                            Real stop_time);
 
-    // pure virtural function in AmrCore
+    // pure virtual function in AmrCore
     virtual void MakeNewLevelFromScratch (int /*lev*/, Real /*time*/, const BoxArray& /*ba*/, const DistributionMapping& /*dm*/) override
-	{ amrex::Abort("How did we get here!"); }
+        { amrex::Abort("How did we get here!"); }
     virtual void MakeNewLevelFromCoarse (int /*lev*/, Real /*time*/, const BoxArray& /*ba*/, const DistributionMapping& /*dm*/) override
-	{ amrex::Abort("How did we get here!"); }
+        { amrex::Abort("How did we get here!"); }
     virtual void RemakeLevel (int /*lev*/, Real /*time*/, const BoxArray& /*ba*/, const DistributionMapping& /*dm*/) override
-	{ amrex::Abort("How did we get here!"); }
+        { amrex::Abort("How did we get here!"); }
     virtual void ClearLevel (int /*lev*/) override
-	{ amrex::Abort("How did we get here!"); }
+        { amrex::Abort("How did we get here!"); }
 
     //! Whether to write a plotfile now
     bool writePlotNow () noexcept;
@@ -442,7 +446,9 @@ protected:
     int              sub_cycle;
     std::string      restart_chkfile;
     std::string      restart_pltfile;
+#ifndef AMREX_NO_PROBINIT
     std::string      probin_file;
+#endif
     LevelBld*        levelbld;
     bool             abort_on_stream_retry_failure;
     int              stream_max_tries;
@@ -464,8 +470,9 @@ protected:
     static Vector<BoxArray> initial_ba;
     //! Array of BoxArrays read in to externally define grid hierarchy at each regrid
     static Vector<BoxArray> regrid_ba;
+    static int compute_new_dt_on_regrid;
 
-#if defined(BL_USE_SENSEI_INSITU)
+#if defined(AMREX_USE_SENSEI_INSITU) && !defined(AMREX_NO_SENSEI_AMR_INST)
     static AmrInSituBridge *insitu_bridge;
 #endif
 

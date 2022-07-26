@@ -1,17 +1,17 @@
 
-#include <algorithm>
-#include <iostream>
-#include <cmath>
-
 #include <AMReX_Print.H>
 #include <AMReX_BoxArray.H>
 #include <AMReX_BoxList.H>
 #include <AMReX_BLProfiler.H>
 #include <AMReX_ParallelDescriptor.H>
 
-#ifdef _OPENMP
+#ifdef AMREX_USE_OMP
 #include <omp.h>
 #endif
+
+#include <algorithm>
+#include <iostream>
+#include <cmath>
 
 namespace amrex {
 
@@ -152,7 +152,7 @@ BoxList::BoxList ()
 {}
 
 BoxList::BoxList (const Box& bx)
-    : 
+    :
     m_lbox(1,bx),
     btype(bx.ixType())
 {
@@ -186,30 +186,30 @@ BoxList::BoxList(const Box& bx, const IntVect& tilesize)
     int ntiles = 1;
     IntVect nt;
     for (int d=0; d<AMREX_SPACEDIM; d++) {
-	nt[d] = (bx.length(d)+tilesize[d]-1)/tilesize[d];
-	ntiles *= nt[d];
+        nt[d] = (bx.length(d)+tilesize[d]-1)/tilesize[d];
+        ntiles *= nt[d];
     }
 
     IntVect small, big, ijk;  // note that the initial values are all zero.
     ijk[0] = -1;
     for (int t=0; t<ntiles; ++t) {
-	for (int d=0; d<AMREX_SPACEDIM; d++) {
-	    if (ijk[d]<nt[d]-1) {
-		ijk[d]++;
-		break;
-	    } else {
-		ijk[d] = 0;
-	    }
-	}
+        for (int d=0; d<AMREX_SPACEDIM; d++) {
+            if (ijk[d]<nt[d]-1) {
+                ijk[d]++;
+                break;
+            } else {
+                ijk[d] = 0;
+            }
+        }
 
-	for (int d=0; d<AMREX_SPACEDIM; d++) {
-	    small[d] = ijk[d]*tilesize[d];
-	    big[d] = std::min(small[d]+tilesize[d]-1, bx.length(d)-1);
-	}
+        for (int d=0; d<AMREX_SPACEDIM; d++) {
+            small[d] = ijk[d]*tilesize[d];
+            big[d] = std::min(small[d]+tilesize[d]-1, bx.length(d)-1);
+        }
 
-	Box tbx(small, big, btype);
-	tbx.shift(bx.smallEnd());
-	push_back(tbx);
+        Box tbx(small, big, btype);
+        tbx.shift(bx.smallEnd());
+        push_back(tbx);
     }
 }
 
@@ -247,7 +247,11 @@ BoxList::ok () const noexcept
 bool
 BoxList::isDisjoint () const
 {
-    return BoxArray(*this).isDisjoint();
+    if (this->size() <= 1) {
+        return true;
+    } else {
+        return BoxArray(*this).isDisjoint();
+    }
 }
 
 bool
@@ -329,12 +333,12 @@ BoxList::complementIn (const Box& b, const BoxArray& ba)
 
     if (ba.size() == 0)
     {
-	clear();
-	push_back(b);
+        clear();
+        push_back(b);
     }
     else if (ba.size() == 1)
     {
-	*this = amrex::boxDiff(b, ba[0]);
+        *this = amrex::boxDiff(b, ba[0]);
     }
     else
     {
@@ -346,18 +350,18 @@ BoxList::complementIn (const Box& b, const BoxArray& ba)
         BoxList bl_mesh(mbox & b);
 
 #if (AMREX_SPACEDIM == 1)
-        Real s_avgbox = npts_avgbox;
+        Real s_avgbox = static_cast<Real>(npts_avgbox);
 #elif (AMREX_SPACEDIM == 2)
-        Real s_avgbox = std::sqrt(npts_avgbox);
+        Real s_avgbox = static_cast<Real>(std::sqrt(npts_avgbox));
 #elif (AMREX_SPACEDIM == 3)
-        Real s_avgbox = std::cbrt(npts_avgbox);
+        Real s_avgbox = static_cast<Real>(std::cbrt(npts_avgbox));
 #endif
 
         const int block_size = 4 * std::max(1,static_cast<int>(std::ceil(s_avgbox/4.))*4);
         bl_mesh.maxSize(block_size);
         const int N = bl_mesh.size();
 
-#ifdef _OPENMP
+#ifdef AMREX_USE_OMP
         bool start_omp_parallel = !omp_in_parallel();
         const int nthreads = omp_get_max_threads();
 #else
@@ -366,7 +370,7 @@ BoxList::complementIn (const Box& b, const BoxArray& ba)
 
         if (start_omp_parallel)
         {
-#ifdef _OPENMP
+#ifdef AMREX_USE_OMP
             Vector<BoxList> bl_priv(nthreads, BoxList(mytyp));
 #pragma omp parallel
             {
@@ -435,11 +439,11 @@ BoxList::parallelComplementIn (const Box& b, BoxArray const& ba)
         BoxList bl_mesh(mbox & b);
 
 #if (AMREX_SPACEDIM == 1)
-        Real s_avgbox = npts_avgbox;
+        Real s_avgbox = static_cast<Real>(npts_avgbox);
 #elif (AMREX_SPACEDIM == 2)
-        Real s_avgbox = std::sqrt(npts_avgbox);
+        Real s_avgbox = static_cast<Real>(std::sqrt(npts_avgbox));
 #elif (AMREX_SPACEDIM == 3)
-        Real s_avgbox = std::cbrt(npts_avgbox);
+        Real s_avgbox = static_cast<Real>(std::cbrt(npts_avgbox));
 #endif
 
         const int block_size = 4 * std::max(1,static_cast<int>(std::ceil(s_avgbox/4.))*4);
@@ -455,7 +459,7 @@ BoxList::parallelComplementIn (const Box& b, BoxArray const& ba)
 
         Vector<Box> local_boxes;
 
-#ifdef _OPENMP
+#ifdef AMREX_USE_OMP
         bool start_omp_parallel = !omp_in_parallel();
         const int nthreads = omp_get_max_threads();
 #else
@@ -464,7 +468,7 @@ BoxList::parallelComplementIn (const Box& b, BoxArray const& ba)
 
         if (start_omp_parallel)
         {
-#ifdef _OPENMP
+#ifdef AMREX_USE_OMP
             Vector<BoxList> bl_priv(nthreads, BoxList(mytyp));
             int ntot = 0;
 #pragma omp parallel reduction(+:ntot)
@@ -603,7 +607,7 @@ BoxList::shiftHalf (const IntVect& iv)
 BoxList
 boxDiff (const Box& b1in, const Box& b2)
 {
-   BL_ASSERT(b1in.sameType(b2));  
+   BL_ASSERT(b1in.sameType(b2));
    BoxList bl_diff(b1in.ixType());
    boxDiff(bl_diff,b1in,b2);
    return bl_diff;
@@ -759,9 +763,9 @@ BoxList::minimalBox () const
         const_iterator bli = begin(), End = end();
         minbox = *bli;
         while ( bli != End )
-	{
+        {
             minbox.minBox(*bli++);
-	}
+        }
     }
     return minbox;
 }

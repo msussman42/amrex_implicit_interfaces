@@ -1,5 +1,6 @@
 
 #include <AMReX_PPMUtil.H>
+#include <AMReX_INT.H>
 #include <cstdio>
 #include <cstdlib>
 
@@ -22,7 +23,7 @@ int loadPalette (const std::string& filename,
     }
 
     std::fseek(fp, 0, SEEK_END);
-    long length = std::ftell(fp);
+    Long length = std::ftell(fp);
     std::fseek(fp, 0, SEEK_SET);
 
     /* check for RGB or RGBA palette */
@@ -48,7 +49,7 @@ int loadPalette (const std::string& filename,
         amrex::Abort("loadPalette: fread() failed to read B");
     }
 
-    if ( num_elements == 4 ) 
+    if ( num_elements == 4 )
     {
         if (std::fread(a.data(), 1, NCOLOR, fp) != NCOLOR)
         {

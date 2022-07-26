@@ -1,12 +1,12 @@
 
-#include <iostream>
-#include <limits>
-
 #include <AMReX_BLassert.H>
 #include <AMReX.H>
 #include <AMReX_Box.H>
 #include <AMReX_Print.H>
 #include <AMReX_ParallelDescriptor.H>
+
+#include <iostream>
+#include <limits>
 
 namespace amrex {
 
@@ -48,26 +48,26 @@ operator>> (std::istream& is,
     if (c == '(')
     {
         is >> lo >> hi;
-	is >> c;
-	// Read an optional IndexType
-	is.putback(c);
-	if ( c == '(' )
-	{
-	    is >> typ;
-	}
+        is >> c;
+        // Read an optional IndexType
+        is.putback(c);
+        if ( c == '(' )
+        {
+            is >> typ;
+        }
         is.ignore(BL_IGNORE_MAX,')');
     }
     else if (c == '<')
     {
-	is.putback(c);
+        is.putback(c);
         is >> lo >> hi;
-	is >> c;
-	// Read an optional IndexType
-	is.putback(c);
-	if ( c == '<' )
-	{
-	    is >> typ;
-	}
+        is >> c;
+        // Read an optional IndexType
+        is.putback(c);
+        if ( c == '<' )
+        {
+            is >> typ;
+        }
         //is.ignore(BL_IGNORE_MAX,'>');
     }
     else
@@ -87,20 +87,20 @@ BoxCommHelper::BoxCommHelper (const Box& bx, int* p_)
     : p(p_)
 {
     if (p == 0) {
-	v.resize(3*AMREX_SPACEDIM);
-	p = &v[0];
+        v.resize(3*AMREX_SPACEDIM);
+        p = &v[0];
     }
 
-    AMREX_D_EXPR(p[0]               = bx.smallend[0],
-	   p[1]               = bx.smallend[1],
-	   p[2]               = bx.smallend[2]);
-    AMREX_D_EXPR(p[0+AMREX_SPACEDIM]   = bx.bigend[0],
-	   p[1+AMREX_SPACEDIM]   = bx.bigend[1],
-	   p[2+AMREX_SPACEDIM]   = bx.bigend[2]);
+    AMREX_D_EXPR(p[0]                = bx.smallend[0],
+                 p[1]                = bx.smallend[1],
+                 p[2]                = bx.smallend[2]);
+    AMREX_D_EXPR(p[0+AMREX_SPACEDIM] = bx.bigend[0],
+                 p[1+AMREX_SPACEDIM] = bx.bigend[1],
+                 p[2+AMREX_SPACEDIM] = bx.bigend[2]);
     const IntVect& typ = bx.btype.ixType();
     AMREX_D_EXPR(p[0+AMREX_SPACEDIM*2] = typ[0],
-	   p[1+AMREX_SPACEDIM*2] = typ[1],
-	   p[2+AMREX_SPACEDIM*2] = typ[2]);
+                 p[1+AMREX_SPACEDIM*2] = typ[1],
+                 p[2+AMREX_SPACEDIM*2] = typ[2]);
 }
 
 void
@@ -126,7 +126,7 @@ AllGatherBoxes (Vector<Box>& bxs, int n_extra_reserve)
     if (count_tot == 0) return;
 
     if (count_tot > static_cast<Long>(std::numeric_limits<int>::max())) {
-        amrex::Abort("AllGatherBoxes: not many boxes");
+        amrex::Abort("AllGatherBoxes: too many boxes");
     }
 
     Vector<Box> recv_buffer;
@@ -161,7 +161,7 @@ AllGatherBoxes (Vector<Box>& bxs, int n_extra_reserve)
     if (count_tot == 0) return;
 
     if (count_tot > static_cast<Long>(std::numeric_limits<int>::max())) {
-        amrex::Abort("AllGatherBoxes: not many boxes");
+        amrex::Abort("AllGatherBoxes: too many boxes");
     }
 
     Vector<Box> recv_buffer;

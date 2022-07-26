@@ -1,10 +1,11 @@
 #ifndef BL_AMRCORE_H_
 #define BL_AMRCORE_H_
-
-#include <ostream>
-#include <memory>
+#include <AMReX_Config.H>
 
 #include <AMReX_AmrMesh.H>
+
+#include <iosfwd>
+#include <memory>
 
 namespace amrex {
 
@@ -39,8 +40,8 @@ public:
 
     AmrCore (Geometry const& level_0_geom, AmrInfo const& amr_info);
 
-    AmrCore (AmrCore&& rhs) = default;
-    AmrCore& operator= (AmrCore&& rhs) = default;
+    AmrCore (AmrCore&& rhs);
+    AmrCore& operator= (AmrCore&& rhs);
 
     AmrCore (const AmrCore& rhs) = delete;
     AmrCore& operator= (const AmrCore& rhs) = delete;
@@ -54,7 +55,7 @@ public:
     /**
      * \brief Initialize BoxArray, DistributionMapping and data from scratch.
      * Calling this function requires the derive class implement its own MakeNewLevelFromScratch
-     * to allocate and intialize data.
+     * to allocate and initialize data.
      * Also note usually one needs to average the fine data down to coarse level after this.
      */
     void InitFromScratch (Real time);

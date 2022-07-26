@@ -1,5 +1,6 @@
 #ifndef AMREX_GPU_UTILITY_H_
 #define AMREX_GPU_UTILITY_H_
+#include <AMReX_Config.H>
 
 #include <AMReX_GpuQualifiers.H>
 #include <AMReX_GpuTypes.H>
@@ -10,8 +11,9 @@
 #include <AMReX_INT.H>
 #include <AMReX_Array.H>
 #include <AMReX_Array4.H>
-#include <iostream>
+#include <iosfwd>
 #include <cmath>
+#include <cstring>
 
 #ifdef AMREX_USE_CUDA
 #include <cuda.h>
@@ -25,7 +27,7 @@ namespace Gpu {
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     T LDG (Array4<T> const& a, int i, int j, int k) noexcept {
 #ifdef __CUDA_ARCH__
-        return __ldg(a.ptr(i,j,k,n));
+        return __ldg(a.ptr(i,j,k));
 #else
         return a(i,j,k);
 #endif
@@ -162,7 +164,7 @@ namespace Gpu {
     struct StreamItInfo
     {
         bool device_sync;
-        StreamItInfo () noexcept 
+        StreamItInfo () noexcept
             : device_sync(true) {}
         StreamItInfo& DisableDeviceSync () noexcept {
             device_sync = false;
@@ -201,6 +203,16 @@ namespace Gpu {
         bool m_threadsafe;
         bool m_sync;
     };
+
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+void* memcpy (void* dest, const void* src, std::size_t count)
+{
+#ifdef __HIP_DEVICE_COMPILE__
+    return ::memcpy(dest, src, count);
+#else
+    return std::memcpy(dest, src, count);
+#endif
+}
 
 } // namespace Gpu
 

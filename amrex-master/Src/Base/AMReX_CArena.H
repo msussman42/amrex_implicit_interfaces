@@ -1,5 +1,8 @@
 #ifndef BL_CARENA_H
 #define BL_CARENA_H
+#include <AMReX_Config.H>
+
+#include <AMReX_Arena.H>
 
 #include <cstddef>
 #include <set>
@@ -8,8 +11,6 @@
 #include <unordered_set>
 #include <functional>
 #include <string>
-
-#include <AMReX_Arena.H>
 
 namespace amrex {
 
@@ -34,7 +35,7 @@ public:
 
     CArena (const CArena& rhs) = delete;
     CArena& operator= (const CArena& rhs) = delete;
-    
+
     //! The destructor.
     virtual ~CArena () override;
 
@@ -47,6 +48,16 @@ public:
     */
     virtual void free (void* ap) override final;
 
+    virtual std::size_t freeUnused () override final;
+
+    /**
+     * \brief Does the device have enough free memory for allocating this
+     * much memory?  For CPU builds, this always return true.  This is not a
+     * const funciton because it may attempt to release memory back to the
+     * system.
+     */
+    virtual bool hasFreeDeviceMemory (std::size_t sz) override;
+
     //! The current amount of heap space used by the CArena object.
     std::size_t heap_space_used () const noexcept;
 
@@ -58,10 +69,15 @@ public:
 
     void PrintUsage (std::string const& name) const;
 
+    void PrintUsage (std::ostream& os, std::string const& name, std::string const& space) const;
+
     //! The default memory hunk size to grab from the heap.
     constexpr static std::size_t DefaultHunkSize = 1024*1024*8;
 
 protected:
+
+    virtual std::size_t freeUnused_protected () override final;
+
     //! The nodes in our free list and block list.
     class Node
     {
@@ -76,7 +92,7 @@ protected:
             return m_block < rhs.m_block;
         }
 
-        //! The equality operator. 
+        //! The equality operator.
         bool operator== (const Node& rhs) const noexcept
         {
             return m_block == rhs.m_block;

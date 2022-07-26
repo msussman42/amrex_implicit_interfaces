@@ -12,10 +12,12 @@ endif
 
 ########################################################################
 
-ifeq ($(USE_HIP),TRUE)
-  GCC_VERSION_COMP = g++
-else ifeq ($(USE_CUDA),TRUE)
-  GCC_VERSION_COMP = g++
+ifeq ($(USE_CUDA),TRUE)
+  ifdef NVCC_CCBIN
+    GCC_VERSION_COMP = $(NVCC_CCBIN)
+  else
+    GCC_VERSION_COMP = g++
+  endif
 else
   GCC_VERSION_COMP = $(CXX)
 endif
@@ -25,10 +27,6 @@ gcc_major_version = $(shell $(GCC_VERSION_COMP) -dumpfullversion -dumpversion | 
 gcc_minor_version = $(shell $(GCC_VERSION_COMP) -dumpfullversion -dumpversion | head -1 | sed -e 's;.*  *;;' | sed -e 's;[^.]*\.;;' | sed -e 's;\..*;;')
 
 COMP_VERSION = $(gcc_version)
-
-DEFINES += -DBL_GCC_VERSION=$(gcc_version)
-DEFINES += -DBL_GCC_MAJOR_VERSION=$(gcc_major_version)
-DEFINES += -DBL_GCC_MINOR_VERSION=$(gcc_minor_version)
 
 ########################################################################
 
@@ -40,49 +38,23 @@ ifeq ($(EXPORT_DYNAMIC),TRUE)
   GENERIC_GNU_FLAGS += -rdynamic -fno-omit-frame-pointer
 endif
 
-#SUSSMAN
-ifeq ($(AMREX_CCOMP),gnu)
-CXXFLAGS =
-CFLAGS   =
-FFLAGS   =
-F90FLAGS =
-endif
-
+gcc_major_ge_5 = $(shell expr $(gcc_major_version) \>= 5)
+gcc_major_ge_6 = $(shell expr $(gcc_major_version) \>= 6)
+gcc_major_ge_7 = $(shell expr $(gcc_major_version) \>= 7)
 gcc_major_ge_8 = $(shell expr $(gcc_major_version) \>= 8)
-#SUSSMAN
+gcc_major_ge_9 = $(shell expr $(gcc_major_version) \>= 9)
 gcc_major_ge_10 = $(shell expr $(gcc_major_version) \>= 10)
+gcc_major_ge_11 = $(shell expr $(gcc_major_version) \>= 11)
 
 ifeq ($(THREAD_SANITIZER),TRUE)
-  CXXFLAGS += -fsanitize=thread
-  CFLAGS += -fsanitize=thread
-  LINKFLAGS += -fsanitize=thread
+  GENERIC_GNU_FLAGS += -fsanitize=thread
 endif
-#SUSSMAN
 ifeq ($(FSANITIZER),TRUE)
-  CXXFLAGS += -fsanitize=address
-  CXXFLAGS += -fsanitize=undefined
-  CFLAGS += -fsanitize=address
-  CFLAGS += -fsanitize=undefined
-  LINKFLAGS += -fsanitize=address
-  LINKFLAGS += -fsanitize=undefined
+  GENERIC_GNU_FLAGS += -fsanitize=address -fsanitize=undefined
   ifeq ($(gcc_major_ge_8),1)
-    CXXFLAGS += -fsanitize=pointer-compare -fsanitize=pointer-subtract
-    CXXFLAGS += -fsanitize=builtin -fsanitize=pointer-overflow
-    CXXFLAGS += -fsanitize=bounds
-    CXXFLAGS += -fsanitize=integer-divide-by-zero
-    CXXFLAGS += -fsanitize=float-divide-by-zero
-    CFLAGS += -fsanitize=pointer-compare -fsanitize=pointer-subtract
-    CFLAGS += -fsanitize=builtin -fsanitize=pointer-overflow
-    CFLAGS += -fsanitize=bounds
-    CFLAGS += -fsanitize=integer-divide-by-zero
-    CFLAGS += -fsanitize=float-divide-by-zero
-    LINKFLAGS += -fsanitize=pointer-compare -fsanitize=pointer-subtract
-    LINKFLAGS += -fsanitize=builtin -fsanitize=pointer-overflow
-    LINKFLAGS += -fsanitize=bounds
-    LINKFLAGS += -fsanitize=integer-divide-by-zero
-    LINKFLAGS += -fsanitize=float-divide-by-zero
+    GENERIC_GNU_FLAGS += -fsanitize=pointer-compare -fsanitize=pointer-subtract
+    GENERIC_GNU_FLAGS += -fsanitize=builtin -fsanitize=pointer-overflow
   endif
-#  LIBRARIES += -lubsan -lasan
 endif
 
 ifeq ($(USE_OMP),TRUE)
@@ -98,67 +70,113 @@ ifeq ($(AMREX_CCOMP),gnu)
 CXX = g++
 CC  = gcc
 
+CXXFLAGS =
+CFLAGS   =
+
 ########################################################################
 
 CXXFLAGS += -Werror=return-type
 CFLAGS   += -Werror=return-type
 
 ifeq ($(DEBUG),TRUE)
+  ifeq ($(gcc_major_ge_11),1)
+    CXXFLAGS += -gdwarf-4 -O0 -ggdb -ftrapv
+    CFLAGS   += -gdwarf-4 -O0 -ggdb -ftrapv
+  else
+    CXXFLAGS += -g -O0 -ggdb -ftrapv
+    CFLAGS   += -g -O0 -ggdb -ftrapv
+  endif
+else
+  ifeq ($(gcc_major_ge_11),1)
+    CXXFLAGS += -gdwarf-4 -O3
+    CFLAGS   += -gdwarf-4 -O3
+  else
+    CXXFLAGS += -g -O3
+    CFLAGS   += -g -O3
+  endif
+endif
 
-  CXXFLAGS += -g -O0 -ggdb -Wall -Wno-sign-compare -ftrapv -Wno-unused-but-set-variable
-  CFLAGS   += -g -O0 -ggdb -Wall -Wno-sign-compare -ftrapv -Wno-unused-but-set-variable
+ifeq ($(WARN_ALL),TRUE)
+  warning_flags = -Wall -Wextra
 
-  ifneq ($(gcc_major_version),$(filter $(gcc_major_version),4 5))
-    CXXFLAGS += -Wnull-dereference
-    CFLAGS += -Wnull-dereference
+  ifeq ($(WARN_SIGN_COMPARE),FALSE)
+    warning_flags += -Wno-sign-compare
+  endif
+
+  ifneq ($(USE_CUDA),TRUE)
+    # With -Wpedantic I got 650 MB of warnings
+    warning_flags += -Wpedantic
+  endif
+
+  ifeq ($(gcc_major_ge_6),1)
+    warning_flags += -Wnull-dereference
+  endif
+
+  ifeq ($(gcc_major_ge_5),1)
+    warning_flags += -Wfloat-conversion
   endif
 
   ifneq ($(WARN_SHADOW),FALSE)
-    CXXFLAGS += -Wshadow
-    CFLAGS += -Wshadow
+    warning_flags += -Wshadow
   endif
 
-else
+  ifeq ($(gcc_major_version),7)
+    warning_flags += -Wno-array-bounds
+  endif
 
-  CXXFLAGS += -g -O3
-  CFLAGS   += -g -O3
+  ifeq ($(gcc_major_ge10),1)
+    warning_flags += -Wextra-semi
+  endif
 
+  CXXFLAGS += $(warning_flags) -Woverloaded-virtual
+  CFLAGS += $(warning_flags)
 endif
 
+ifeq ($(WARN_ERROR),TRUE)
+  CXXFLAGS += -Werror
+  CFLAGS += -Werror
+endif
 
 ifeq ($(USE_GPROF),TRUE)
-
   CXXFLAGS += -pg
   CFLAGS += -pg
-
 endif
 
 
 ifeq ($(USE_COMPILE_PIC),TRUE)
-
   CXXFLAGS = -fPIC
   CFLAGS = -fPIC
+endif
 
+ifeq ($(ERROR_DEPRECATED),TRUE)
+  CXXFLAGS += -Werror=deprecated
+  CFLAGS += -Werror=deprecated
 endif
 
 ########################################################################
 
-ifeq ($(gcc_major_version),4)
-  CXXFLAGS += -std=c++11
-else ifeq ($(gcc_major_version),5)
-  CXXFLAGS += -std=c++14
-#SUSSMAN
-else ifeq ($(gcc_major_ge_10),1)
-  CXXFLAGS += -std=c++14
+ifdef CXXSTD
+  CXXSTD := $(strip $(CXXSTD))
+  ifeq ($(shell expr $(gcc_major_version) \< 5),1)
+    ifneq ($(NO_CONFIG_CHECKING),TRUE)
+      ifeq ($(CXXSTD),c++14)
+        $(error C++14 support requires GCC 5 or newer.)
+      endif
+    endif
+  endif
+  CXXFLAGS += -std=$(CXXSTD)
+else
+  ifeq ($(gcc_major_version),5)
+    CXXFLAGS += -std=c++14
+  endif
 endif
-CFLAGS     += -std=gnu99
+
+CFLAGS   += -std=gnu99
 
 ########################################################################
 
 CXXFLAGS += $(GENERIC_GNU_FLAGS) -pthread
 CFLAGS   += $(GENERIC_GNU_FLAGS)
-FFLAGS   += $(GENERIC_GNU_FLAGS)
-F90FLAGS += $(GENERIC_GNU_FLAGS)
 
 endif # AMREX_CCOMP == gnu
 
@@ -170,6 +188,9 @@ ifeq ($(AMREX_FCOMP),gnu)
 
 FC  = gfortran
 F90 = gfortran
+
+FFLAGS   =
+F90FLAGS =
 
 ########################################################################
 
@@ -208,6 +229,8 @@ FMODULES =  -J$(fmoddir) -I $(fmoddir)
 
 ########################################################################
 
+ifneq ($(BL_NO_FORT),TRUE)
+
 # ask gfortran the name of the library to link in.  First check for the
 # static version.  If it returns only the name w/o a path, then it
 # was not found.  In that case, ask for the shared-object version.
@@ -220,13 +243,11 @@ else
   LIBRARY_LOCATIONS += $(dir $(gfortran_libso))
 endif
 
-#SUSSMAN (libquadmath cannot be found on the android linux distribution?)
-#override XTRALIBS += -lgfortran -lquadmath
-override XTRALIBS += -lgfortran 
+override XTRALIBS += -lgfortran -lquadmath
 
 FFLAGS   += $(GENERIC_GNU_FLAGS)
 F90FLAGS += $(GENERIC_GNU_FLAGS)
 
+endif  # BL_NO_FORT
+
 endif # AMREX_FCOMP == gnu
-
-

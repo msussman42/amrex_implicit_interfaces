@@ -1,16 +1,17 @@
 
 #ifndef BL_BOXARRAY_H
 #define BL_BOXARRAY_H
-
-#include <iostream>
-#include <cstddef>
-#include <map>
-#include <unordered_map>
+#include <AMReX_Config.H>
 
 #include <AMReX_IndexType.H>
 #include <AMReX_BoxList.H>
 #include <AMReX_Array.H>
 #include <AMReX_Vector.H>
+
+#include <iosfwd>
+#include <cstddef>
+#include <map>
+#include <unordered_map>
 
 namespace amrex
 {
@@ -39,6 +40,9 @@ namespace amrex
     BoxArray coarsen (const BoxArray& ba, int ratio);
     BoxArray coarsen (const BoxArray& ba, const IntVect& ratio);
 
+    BoxArray refine  (const BoxArray& ba, int ratio);
+    BoxArray refine  (const BoxArray& ba, const IntVect& ratio);
+
     //! Find the ghost cells of a given BoxArray.
     BoxList GetBndryCells (const BoxArray& ba, int ngrow);
 
@@ -48,7 +52,6 @@ namespace amrex
     //! Note that two BoxArrays that match are not necessarily equal.
     bool match (const BoxArray& x, const BoxArray& y);
 
-// \cond CODEGEN
 struct BARef
 {
     BARef ();
@@ -75,7 +78,7 @@ struct BARef
 
     inline bool HasHashMap () const {
         bool r;
-#ifdef _OPENMP
+#ifdef AMREX_USE_OMP
 #pragma omp atomic read
 #endif
         r = has_hashmap;
@@ -176,22 +179,36 @@ struct BATbndryReg
         IntVect nodal = a_typ.ixType();
         m_hishft += nodal;
         const int d = a_face.coordDir();
-        if (m_face.isLow()) {
-            m_loshft[d] = nodal[d] - a_out_rad;
-            m_hishft[d] = nodal[d] + a_in_rad - 1;
+        if (nodal[d]) {
+            // InterpFaceRegister & SyncRegister in IAMR
+            if (m_face.isLow()) {
+                m_loshft[d] = 0;
+                m_hishft[d] = 0;
+            } else {
+                m_loshft[d] = 1;
+                m_hishft[d] = 1;
+            }
+            m_doilo = IntVect(0);
+            m_doihi = nodal;
         } else {
-            m_loshft[d] = 1 - a_in_rad;
-            m_hishft[d] = a_out_rad;
-        }
-        m_doilo = IntVect(a_extent_rad);
-        m_doihi = IntVect(a_extent_rad);
-        m_doihi += nodal;
-        if (m_face.isLow()) {  // domain of influence in index space
-            m_doilo[d] = std::max(0, a_out_rad - nodal[d]);
-            m_doihi[d] = 0;
-        } else {
-            m_doilo[d] = 0;
-            m_doihi[d] = a_out_rad;
+            // BndryRegister
+            if (m_face.isLow()) {
+                m_loshft[d] = nodal[d] - a_out_rad;
+                m_hishft[d] = nodal[d] + a_in_rad - 1;
+            } else {
+                m_loshft[d] = 1 - a_in_rad;
+                m_hishft[d] = a_out_rad;
+            }
+            m_doilo = IntVect(a_extent_rad);
+            m_doihi = IntVect(a_extent_rad);
+            m_doihi += nodal;
+            if (m_face.isLow()) {  // domain of influence in index space
+                m_doilo[d] = a_out_rad;
+                m_doihi[d] = 0;
+            } else {
+                m_doilo[d] = 0;
+                m_doihi[d] = a_out_rad;
+            }
         }
     }
 
@@ -218,9 +235,9 @@ struct BATbndryReg
     IntVect coarsen_ratio () const noexcept { return m_crse_ratio; }
 
     friend bool operator== (BATbndryReg const& a, BATbndryReg const& b) noexcept {
-        return a.m_face == b.m_face and a.m_typ == b.m_typ and a.m_crse_ratio == b.m_crse_ratio
-            and a.m_loshft == b.m_loshft and a.m_hishft == b.m_hishft
-            and a.m_doilo == b.m_doilo and a.m_doihi == b.m_doihi;
+        return a.m_face == b.m_face && a.m_typ == b.m_typ && a.m_crse_ratio == b.m_crse_ratio
+            && a.m_loshft == b.m_loshft && a.m_hishft == b.m_hishft
+            && a.m_doilo == b.m_doilo && a.m_doihi == b.m_doihi;
     }
 
     Orientation m_face;
@@ -480,25 +497,13 @@ struct BATransformer
     }
 
     friend bool operator== (BATransformer const& a, BATransformer const& b) noexcept {
-        switch (a.m_bat_type)
-        {
-        case BATType::bndryReg:
-            switch (b.m_bat_type)
-            {
-            case BATType::bndryReg:
-                return a.m_op.m_bndryReg == b.m_op.m_bndryReg;
-            default:
-                return false;
-            }
-        default:
-            switch (b.m_bat_type)
-            {
-            case BATType::bndryReg:
-                return false;
-            default:
-                return a.index_type() == b.index_type()
-                    and a.coarsen_ratio() == b.coarsen_ratio();
-            }
+        if (a.m_bat_type != BATType::bndryReg && b.m_bat_type != BATType::bndryReg) {
+            return a.index_type() == b.index_type()
+                && a.coarsen_ratio() == b.coarsen_ratio();
+        } else if (a.m_bat_type == BATType::bndryReg && b.m_bat_type == BATType::bndryReg) {
+            return a.m_op.m_bndryReg == b.m_op.m_bndryReg;
+        } else {
+            return false;
         }
     }
 
@@ -555,7 +560,7 @@ public:
     BoxArray (const BoxArray& rhs, const BATransformer& trans);
 
     BoxArray (BoxList&& bl, IntVect const& max_grid_size);
-    
+
     /**
     * \brief Initialize the BoxArray from a single box.
     * It is an error if the BoxArray has already been initialized.
@@ -626,8 +631,9 @@ public:
     BoxArray& coarsen (int refinement_ratio);
 
     //! Coarsen each Box in the BoxArray to the specified ratio.
-    bool coarsenable(int refinement_ratio, int min_width=1) const;
-    bool coarsenable(const IntVect& refinement_ratio, int min_width=1) const;
+    bool coarsenable (int refinement_ratio, int min_width=1) const;
+    bool coarsenable (const IntVect& refinement_ratio, int min_width=1) const;
+    bool coarsenable (const IntVect& refinement_ratio, const IntVect& min_width) const;
 
     //! Coarsen each Box in the BoxArray to the specified ratio.
     BoxArray& coarsen (const IntVect& refinement_ratio);
@@ -722,13 +728,17 @@ public:
     bool contains (const IntVect& v) const;
 
     /**
-    * \brief True if the Box is within any of the Boxes in the List.
+    * \brief True if the Box is contained in this BoxArray(+ng).
     * The Box must also have the same IndexType as those in this BoxArray.
     */
-    bool contains (const Box& b, bool assume_disjoint_ba = false) const;
+    bool contains (const Box& b, bool assume_disjoint_ba = false,
+                   const IntVect& ng = IntVect(0)) const;
 
-    //! True if all Boxes in bl are contained in this BoxArray.
-    bool contains (const BoxArray& bl, bool assume_disjoint_ba = false) const;
+    /**
+     * \brief True if all Boxes in ba are contained in this BoxArray(+ng).
+     */
+    bool contains (const BoxArray& ba, bool assume_disjoint_ba = false,
+                   const IntVect& ng = IntVect(0)) const;
 
     //! Return smallest Box that contains all Boxes in this BoxArray.
     Box minimalBox () const;
@@ -755,10 +765,10 @@ public:
 
     //! intersect Box and BoxArray(+ghostcells), then store the result in isects
     void intersections (const Box& bx, std::vector< std::pair<int,Box> >& isects,
-			bool first_only, int ng) const;
+                        bool first_only, int ng) const;
 
     void intersections (const Box& bx, std::vector< std::pair<int,Box> >& isects,
-			bool first_only, const IntVect& ng) const;
+                        bool first_only, const IntVect& ng) const;
 
     //! Return box - boxarray
     BoxList complementIn (const Box& b) const;
@@ -800,15 +810,17 @@ public:
     //! Make ourselves unique.
     void uniqify ();
 
+    BoxList const& simplified_list () const; // For regular AMR grids only!!!
+    BoxArray simplified () const; // For regular AMR grids only!!!
+
+    BATransformer const& transformer () const;
+
     friend class AmrMesh;
     friend class FabArrayBase;
 
 private:
     //!  Update BoxArray index type according the box type, and then convert boxes to cell-centered.
     void type_update ();
-
-    BoxList const& simplified_list () const; // For regular AMR grids only
-    BoxArray simplified () const;
 
     BARef::HashType& getHashMap () const;
 

@@ -1,5 +1,92 @@
-[![Citing](http://joss.theoj.org/papers/10.21105/joss.01370/status.svg)](https://doi.org/10.21105/joss.01370)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2555438.svg)](https://doi.org/10.5281/zenodo.2555438)
+<div align="center">
+<img src="https://github.com/amrex-codes/amrex-codes.github.io/blob/main/images/AMReX_logo_small_banner_500.png" alt="AMReX Logo">
+
+<p align="center">
+  <a href="https://doi.org/10.21105/joss.01370">
+  <img src="http://joss.theoj.org/papers/10.21105/joss.01370/status.svg" alt="Citing">
+  </a>
+  <a href="https://doi.org/10.5281/zenodo.2555438">
+  <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.2555438.svg" alt="DOI">
+  </a>
+  <img src="https://github.com/AMReX-codes/amrex/workflows/cmake/badge.svg?branch=development" alt="CI: CMake on Development">
+</p>
+
+
+<p>
+A software framework for massively parallel block-structured adaptive mesh
+refinement applications.
+</p>
+
+[Overview](#Overview) -
+[Features](#Features) -
+[Documentation](#Documentation) -
+[Gallery](#Gallery) -
+[Get Help](#get-help) -
+[Contribute](#Contribute) -
+[License](#License) -
+[Citation](#Citation)
+
+</div>
+
+## Overview
+
+AMReX is a software framework designed to accelerate scientific discovery for
+applications solving partial differential equations on block-structured meshes. Its
+massively parallel adaptive mesh refinement (AMR) algorithms focus computational
+resources and allow scalable performance on heterogeneous architectures so that
+scientists can efficiently resolve details in large simulations.
+AMReX is developed at [LBNL](https://www.lbl.gov/), [NREL](https://www.nrel.gov/),
+and [ANL](https://www.anl.gov/) as part of the Block-Structured
+AMR Co-Design Center in the Department of Energy's Exascale Computing Project.
+
+More information is available at the [AMReX website](https://amrex-codes.github.io/).
+
+## Features
+
+- C++ and Fortran interfaces
+- Support for cell-centered, face-centered, edge-centered, and nodal data
+- Support for hyperbolic, parabolic, and elliptic solves on a hierarchical adaptive grid structure
+- Optional subcycling in time for time-dependent PDEs
+- Support for particles
+- Embedded boundary description of irregular geometry
+- Parallelization via flat MPI, OpenMP, hybrid MPI/OpenMP, or MPI/MPI
+- GPU Acceleration with CUDA (NVidia), HIP (AMD) or SYCL (Intel) backends
+- Parallel I/O
+- Plotfile format supported by Amrvis, VisIt, ParaView and yt
+- Built-in profiling tools
+
+## Documentation
+
+Four types of documentation are available:
+- [User's Guide](https://amrex-codes.github.io/amrex/docs_html/) -- For more information about AMReX features and functions
+- [Example Codes](https://amrex-codes.github.io/amrex/tutorials_html/#example-codes) -- The fastest way to start your own project
+- [Guided Tutorials](https://amrex-codes.github.io/amrex/tutorials_html/GuidedTutorials.html) -- Learn basic AMReX topics in a progressive way
+- [Technical Reference](https://amrex-codes.github.io/amrex/doxygen/) -- Conveniently searchable code documentation via Doxygen
+
+## Gallery
+
+AMReX supports several Exascale Computing Project software applications, such as
+ExaSky, WarpX, Pele(Combustion), Astro, and MFiX-Exa. AMReX has also been used
+in a wide variety of other scientific simulations, some of which, can be seen
+in our application [gallery](https://amrex-codes.github.io/amrex/gallery.html).
+
+<div align="center">
+<img src="https://github.com/amrex-codes/amrex-codes.github.io/blob/main/images/gallery_small.gif" alt="Gallery Slideshow">
+</div>
+
+## Get Help
+
+You can also view questions
+and ask your own on our [GitHub Discussions](https://github.com/AMReX-Codes/amrex/discussions) page.  
+To obtain additional help, simply post an issue.
+
+## Contribute
+
+We are always happy to have users contribute to the AMReX source code. To
+contribute, issue a pull request against the development branch.
+Any level of changes are welcomed: documentation, bug fixes, new test problems,
+new solvers, etc. For more details on how to contribute to AMReX, please see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
@@ -22,67 +109,6 @@ distribute copies to the public, prepare derivative works, and perform
 publicly and display publicly, and to permit other to do so.
 
 License for AMReX can be found at [LICENSE](LICENSE).
-
-## Development Model
-
-Development generally follows the following ideas:
-
-  * New features are committed to the `development` branch.
-
-    Nightly regression testing is used to ensure that no answers
-    change (or if they do, that the changes were expected).
-
-    If a change is critical, we can cherry-pick the commit from
-    `development` to `master`.
-
-  * Bug fixes, questions and contributions of new features are welcome!
-
-       * Bugs should be reported through GitHub issues
-       * We suggest asking questions through GitHub issues as well
-       * *Any contributions of new features that have the potential
-         to change answers should be done via pull requests.*
-         A pull request should be generated from your fork of
-         amrex and target the `development` branch.
-
-         If there are a number of small commits making up the PR, we may
-         wish to squash commits upon merge to have a clean history.
-         *Please ensure that your PR title and first post are descriptive,
-         since these will be used for a squashed commit message.*
-
-         Please note the following:
-            If you choose to make contributions to the code 
-            then you hereby grant a non-exclusive, royalty-free perpetual license 
-            to install, use, modify, prepare derivative works, 
-            incorporate into other computer software,
-            distribute, and sublicense such enhancements or derivative works
-            thereof, in binary and source code form.
-
-  * On the first workday of each month, we perform a merge of
-    `development` into `master`.  For this merge to take place, we
-    need to be passing the regression tests.
-
-    To accommodate this need, we close the merge window into
-    `development` a few days before the merge day.  While the merge
-    window is closed, only bug fixes should be pushed into
-    `development`.  Once the merge from `development` -> `master` is
-    done, the merge window reopens.
-
-## Core Developers
-
-People who make a number of substantive contributions will be named
-"core developers" of AMReX.  The criteria for becoming a core
-developer are flexible, but generally involve one of the following:
-
-  * 100 non-trivial commits to `amrex/Src/`  *and/or*
-
-  * addition of a new algorithm / module  *and/or*
-
-  * substantial input into the code design process or testing
-
-If a core developer is inactive for multiple years, we may reassess their
-status as a core developer.
-
-The current list of core developers is: Ann Almgren (LBNL), Vince Beckner, John Bell (LBNL), Johannes Blaschke (LBNL), Cy Chan (LBNL), Marcus Day (LBNL), Brian Friesen (NERSC), Kevin Gott (NERSC), Daniel Graves (LBNL), Max Katz (NVIDIA), Andrew Myers (LBNL), Tan Nguyen (LBNL), Andrew Nonaka (LBNL), Michele Rosso (LBNL), Sam Williams (LBNL), Weiqun Zhang (LBNL), Michael Zingale (Stonybrook University).
 
 ## Citation
 

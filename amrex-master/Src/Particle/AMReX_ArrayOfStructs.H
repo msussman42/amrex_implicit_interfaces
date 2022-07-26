@@ -1,5 +1,6 @@
 #ifndef AMREX_ARRAYOFSTRUCTS_H_
 #define AMREX_ARRAYOFSTRUCTS_H_
+#include <AMReX_Config.H>
 
 #include <AMReX_Particle.H>
 #include <AMReX_GpuContainers.H>
@@ -75,7 +76,7 @@ public:
     RealType*       dataPtr ()       { return data(); }
 
     std::pair<int,int> dataShape () const {
-	return std::make_pair(SizeInReal, static_cast<int>(m_data.size()));
+        return std::make_pair(SizeInReal, static_cast<int>(m_data.size()));
     }
 
     void push_back (const ParticleType& p) { return m_data.push_back(p); }
@@ -93,12 +94,12 @@ public:
         m_data.swap(other.m_data);
     }
 
-    void resize(size_t count) { m_data.resize(count); }
+    void resize (size_t count) { m_data.resize(count); }
 
-    Iterator erase( ConstIterator first, ConstIterator second) { return m_data.erase(first, second); }
+    Iterator erase ( ConstIterator first, ConstIterator second) { return m_data.erase(first, second); }
 
     template< class InputIt >
-    void insert( Iterator pos, InputIt first, InputIt last ) { m_data.insert(pos, first, last); }
+    void insert ( Iterator pos, InputIt first, InputIt last ) { m_data.insert(pos, first, last); }
 
     typename ParticleVector::iterator begin () { return m_data.begin(); }
     typename ParticleVector::const_iterator begin () const { return m_data.begin(); }

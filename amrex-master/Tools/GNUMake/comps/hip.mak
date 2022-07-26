@@ -1,58 +1,143 @@
+# Setup for HIP, using hipcc (HCC and clang will use the same compiler name).
 
-# hipcc_version       := $(shell hipcc --version | tail -1 | awk 'BEGIN {FS = ","} {print $$2}' | awk '{print $$2}')
-# hipcc_major_version := $(shell hipcc --version | tail -1 | awk 'BEGIN {FS = ","} {print $$2}' | awk '{print $$2}' | awk 'BEGIN {FS = "."} {print $$1}')
-# hipcc_minor_version := $(shell hipcc --version | tail -1 | awk 'BEGIN {FS = ","} {print $$2}' | awk '{print $$2}' | awk 'BEGIN {FS = "."} {print $$2}')
-# 
-# DEFINES += -DAMREX_HIPCC_VERSION=$(hipcc_version)
-# DEFINES += -DAMREX_HIPCC_MAJOR_VERSION=$(hipcc_major_version)
-# DEFINES += -DAMREX_HIPCC_MINOR_VERSION=$(hipcc_minor_version)
-
-HIPCC_HOST_COMP ?= $(AMREX_CCOMP)
-
-lowercase_hipcc_host_comp = $(shell echo $(HIPCC_HOST_COMP) | tr A-Z a-z)
-
-ifeq ($(lowercase_hipcc_host_comp),$(filter $(lowercase_hipcc_host_comp),gcc gnu g++))
-  lowercase_hipcc_host_comp = gnu
-  AMREX_CCOMP = gnu
-  ifndef GNU_DOT_MAK_INCLUDED
-    include $(AMREX_HOME)/Tools/GNUMake/comps/gnu.mak
+ifneq ($(NO_CONFIG_CHECKING),TRUE)
+  HIP_PATH=$(realpath $(shell hipconfig --path))
+  hipcc_version := $(shell hipcc --version | grep "HIP version: " | cut -d" " -f3)
+  hipcc_major_version := $(shell hipcc --version | grep "HIP version: " | cut -d" " -f3 | cut -d. -f1)
+  hipcc_minor_version := $(shell hipcc --version | grep "HIP version: " | cut -d" " -f3 | cut -d. -f2)
+  ifeq ($(HIP_PATH),)
+    $(error hipconfig failed. Is the HIP toolkit available?)
   endif
 endif
 
-#ifeq ($(lowercase_hipcc_host_comp),gnu)
-#  ifeq ($(gcc_major_version),4)
-#    CXXFLAGS_FROM_HOST := -ccbin=g++ -Xcompiler='$(CXXFLAGS) --std=c++11' --std=c++11
-#  else
-#    CXXFLAGS_FROM_HOST := -ccbin=g++ -Xcompiler='$(CXXFLAGS) --std=c++14' --std=c++14
-#  endif
-#  CFLAGS_FROM_HOST := $(CXXFLAGS_FROM_HOST)
-#else ifeq ($(lowercase_hipcc_host_comp),pgi)
-#  CXXFLAGS_FROM_HOST := -ccbin=pgc++ -Xcompiler='$(CXXFLAGS)' --std=c++11
-#  CFLAGS_FROM_HOST := $(CXXFLAGS_FROM_HOST)
-#else
-#  CXXFLAGS_FROM_HOST := -ccbin=$(CXX) -Xcompiler='$(CXXFLAGS)'
-#  CFLAGS_FROM_HOST := $(CXXFLAGS_FROM_HOST)
-#endif
+CXX = $(HIP_PATH)/bin/hipcc
+CC  = $(HIP_PATH)/bin/hipcc
+FC = gfortran
+F90 = gfortran
 
-CXXFLAGS_FROM_HOST := -ccbin=$(CXX) --std=c++14
-CFLAGS_FROM_HOST := -ccbin=$(CXX)
-
-HIPCC_FLAGS = -Wno-deprecated-gpu-targets -m64 -arch=compute_$(CUDA_ARCH) -code=sm_$(CUDA_ARCH) -maxrregcount=$(CUDA_MAXREGCOUNT)
-
-ifeq ($(DEBUG),TRUE)
-  HIPCC_FLAGS += -g -G
+ifdef CXXSTD
+  CXXSTD := $(strip $(CXXSTD))
 else
-  HIPCC_FLAGS += -lineinfo --ptxas-options=-O3,-v
+  CXXSTD := c++17
 endif
 
-ifneq ($(USE_CUDA_FAST_MATH),FALSE)
-  HIPCC_FLAGS += --use_fast_math
+# Generic flags, always used
+CXXFLAGS = -std=$(CXXSTD) -m64
+CFLAGS   = -std=c99 -m64
+
+FFLAGS   = -ffixed-line-length-none -fno-range-check -fno-second-underscore
+F90FLAGS = -ffree-line-length-none -fno-range-check -fno-second-underscore -fimplicit-none
+
+FMODULES =  -J$(fmoddir) -I $(fmoddir)
+
+# rdc support
+ifeq ($(USE_GPU_RDC),TRUE)
+  HIPCC_FLAGS += -fgpu-rdc
 endif
 
-CXXFLAGS = $(CXXFLAGS_FROM_HOST) $(HIPCC_FLAGS) -dc
-CFLAGS   =   $(CFLAGS_FROM_HOST) $(HIPCC_FLAGS) -dc
+# amd gpu target
+HIPCC_FLAGS += --amdgpu-target=$(AMD_ARCH)
 
-CXXFLAGS += --expt-relaxed-constexpr --expt-extended-lambda
+CXXFLAGS += $(HIPCC_FLAGS)
 
-CXX = hipcc
-CC  = hipcc
+# add fopenmp targetting the gnu library
+ifeq ($(USE_OMP),TRUE)
+  CXXFLAGS += -fopenmp=libgomp
+  CFLAGS   += -fopenmp=libgomp
+  HIPCC_FLAGS += -fopenmp=libgomp
+endif
+
+ifneq ($(BL_NO_FORT),TRUE)
+
+# Taken straight from gnu 
+# ask gfortran the name of the library to link in.  First check for the
+# static version.  If it returns only the name w/o a path, then it
+# was not found.  In that case, ask for the shared-object version.
+gfortran_liba  = $(shell $(F90) -print-file-name=libgfortran.a)
+gfortran_libso = $(shell $(F90) -print-file-name=libgfortran.so)
+
+ifneq ($(gfortran_liba),libgfortran.a)  # if found the full path is printed, thus `neq`.
+  LIBRARY_LOCATIONS += $(dir $(gfortran_liba))
+else
+  LIBRARY_LOCATIONS += $(dir $(gfortran_libso))
+endif
+
+override XTRALIBS += -lgfortran -lquadmath
+
+endif  # BL_NO_FORT
+
+# =============================================================================================
+
+ifeq ($(HIP_COMPILER),clang)
+
+  ifeq ($(DEBUG),TRUE)
+    CXXFLAGS += -g -O0 #-ftrapv
+    CFLAGS   += -g -O0 #-ftrapv
+
+    FFLAGS   += -g -O0 -ggdb -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv
+    F90FLAGS += -g -O0 -ggdb -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv
+
+  else  # DEBUG=FALSE flags
+
+    CXXFLAGS += -g -O3 -munsafe-fp-atomics
+    CFLAGS   += -g -O3
+    FFLAGS   += -g -O3
+    F90FLAGS += -g -O3
+
+  endif
+
+  CXXFLAGS += -Wno-pass-failed  # disable this warning
+
+  ifeq ($(WARN_ALL),TRUE)
+    warning_flags = -Wall -Wextra -Wunreachable-code -Wnull-dereference
+    warning_flags += -Wfloat-conversion -Wextra-semi
+
+    warning_flags += -Wpedantic
+
+    ifneq ($(WARN_SHADOW),FALSE)
+      warning_flags += -Wshadow
+    endif
+
+    CXXFLAGS += $(warning_flags) -Woverloaded-virtual
+    CFLAGS += $(warning_flags)
+  endif
+
+  ifeq ($(WARN_ERROR),TRUE)
+    CXXFLAGS += -Werror -Wno-deprecated-declarations -Wno-gnu-zero-variadic-macro-arguments
+    CFLAGS += -Werror
+  endif
+
+  # Generic HIP info
+  ROC_PATH=$(realpath $(dir $(HIP_PATH)))
+  SYSTEM_INCLUDE_LOCATIONS += $(HIP_PATH)/include
+
+  # rocRand
+  SYSTEM_INCLUDE_LOCATIONS += $(ROC_PATH)/include/hiprand $(ROC_PATH)/include/rocrand
+  LIBRARY_LOCATIONS += $(ROC_PATH)/lib
+  LIBRARIES += -Wl,--rpath=$(ROC_PATH)/lib -lhiprand -lrocrand
+
+  # rocPrim - Header only
+  SYSTEM_INCLUDE_LOCATIONS += $(ROC_PATH)/include/rocprim
+
+  # rocThrust - Header only
+  # SYSTEM_INCLUDE_LOCATIONS += $(ROC_PATH)/include/rocthrust
+
+  ifeq ($(USE_ROCTX),TRUE)
+  # rocTracer
+  CXXFLAGS += -DAMREX_USE_ROCTX
+  HIPCC_FLAGS += -DAMREX_USE_ROCTX
+  SYSTEM_INCLUDE_LOCATIONS += $(ROC_PATH)/include/roctracer $(ROC_PATH)/include/rocprofiler
+  LIBRARY_LOCATIONS += $(ROC_PATH)/lib
+  LIBRARIES += -lroctracer64 -lroctx64
+  endif
+
+  # hipcc passes a lot of unused arguments to clang
+  LEGACY_DEPFLAGS += -Wno-unused-command-line-argument
+
+# =============================================================================================
+
+else ifeq ($(HIP_COMPILER),nvcc)
+  $(error HIP_COMPILER nvcc is not supported at this time. Use USE_CUDA to compile for NVIDIA platforms.)
+endif
+
+# =============================================================================================
