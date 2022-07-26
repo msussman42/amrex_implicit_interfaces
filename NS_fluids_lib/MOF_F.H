@@ -14,7 +14,7 @@
      int* MOF_TURN_OFF_LS_in,
      int* nthreads,
      int* nmax_in);
-  };
+  }
 #endif
 
 #endif

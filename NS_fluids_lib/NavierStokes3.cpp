@@ -23,7 +23,6 @@
 #include <SOLIDFLUID_F.H>
 #include <DERIVE_F.H>
 #include <DIFFUSION_F.H>
-#include <Zeyu_Matrix_Functions.H>
 
 namespace amrex{
 
@@ -169,7 +168,7 @@ NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
 } //omp
  ns_reconcile_d_num(169);
 
- S_crse.copy(crse_S_fine_MAC,0,scomp,ncomp);
+ S_crse.ParallelCopy(crse_S_fine_MAC,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
 
  const Box& domain = geom.Domain();
@@ -187,13 +186,13 @@ NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
     crse_S_fine_MAC.shift(pshift);
 
     ParallelDescriptor::Barrier();
-    S_crse.copy(crse_S_fine_MAC,0,scomp,ncomp);
+    S_crse.ParallelCopy(crse_S_fine_MAC,0,scomp,ncomp);
     ParallelDescriptor::Barrier();
 
     pshift[local_dir]=-2*domain.length(local_dir);
     crse_S_fine_MAC.shift(pshift);
 
-    S_crse.copy(crse_S_fine_MAC,0,scomp,ncomp);
+    S_crse.ParallelCopy(crse_S_fine_MAC,0,scomp,ncomp);
     ParallelDescriptor::Barrier();
    } else if (!geom.isPeriodic(local_dir)) {
     // do nothing
@@ -4112,7 +4111,7 @@ void cross_check(Vector<int>& levelcolormap,
 
 void NavierStokes::correct_colors(
  int idx_color,int base_level,
- Vector<int> domaincolormap,int total_colors,
+ Vector<int> domaincolormap,
  int max_colors_level) {
 
  int finest_level=parent->finestLevel();
@@ -4371,7 +4370,7 @@ void NavierStokes::avgDownColor(int idx_color,int idx_type) {
    MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
  MultiFab type_coarse_fine(crse_S_fine_BA,crse_dmap,1,0,
    MFInfo().SetTag("type_coarse_fine"),FArrayBoxFactory());
- type_coarse_fine.copy(*localMF[idx_type],0,0,1);
+ type_coarse_fine.ParallelCopy(*localMF[idx_type],0,0,1);
 
  ParallelDescriptor::Barrier();
 
@@ -4434,7 +4433,7 @@ void NavierStokes::avgDownColor(int idx_color,int idx_type) {
 } //omp
  ns_reconcile_d_num(177);
 
- S_crse->copy(crse_S_fine,0,0,1);
+ S_crse->ParallelCopy(crse_S_fine,0,0,1);
 }
 
 
@@ -4551,7 +4550,7 @@ MultiFab* NavierStokes::CopyFineToCoarseColor(
 } // omp
  ns_reconcile_d_num(178);
 
- mf->copy(crse_S_fine,0,0,6);
+ mf->ParallelCopy(crse_S_fine,0,0,6);
 
  delete maskfinemf;
 
@@ -5026,8 +5025,7 @@ void NavierStokes::sync_colors(
     colormax[ilev]=total_colors;
     NavierStokes& ns_level=getLevel(ilev);
     
-    ns_level.correct_colors(idx_color,level,domaincolormap,
-     total_colors,max_colors_level);
+    ns_level.correct_colors(idx_color,level,domaincolormap,max_colors_level);
      // if coarse_type=fine_type, then coarse_color=fine_color otherwise
      // coarse_color=0.
     if (ilev<finest_level)
@@ -9114,23 +9112,23 @@ void NavierStokes::set_local_tolerances(int project_option) {
  if (project_option_singular_possible(project_option)==1) {
   save_mac_abs_tol=mac_abs_tol;
   save_atol_b=0.01*save_mac_abs_tol;
-  pp.query("bot_atol",save_atol_b);
+  pp.queryAdd("bot_atol",save_atol_b);
   save_min_rel_error=minimum_relative_error;
  } else if (project_option==SOLVETYPE_HEAT) {
   save_mac_abs_tol=thermal_abs_tol;
   save_atol_b=0.01*save_mac_abs_tol; 
-  pp.query("thermal_bot_atol",save_atol_b);
+  pp.queryAdd("thermal_bot_atol",save_atol_b);
   save_min_rel_error=diffusion_minimum_relative_error;
  } else if (project_option==SOLVETYPE_VISC) {
   save_mac_abs_tol=visc_abs_tol;
   save_atol_b=0.01*save_mac_abs_tol; 
-  pp.query("visc_bot_atol",save_atol_b);
+  pp.queryAdd("visc_bot_atol",save_atol_b);
   save_min_rel_error=diffusion_minimum_relative_error;
  } else if ((project_option>=SOLVETYPE_SPEC)&&
 	    (project_option<SOLVETYPE_SPEC+num_species_var)) {
   save_mac_abs_tol=visc_abs_tol;
   save_atol_b=0.01*save_mac_abs_tol; 
-  pp.query("visc_bot_atol",save_atol_b);
+  pp.queryAdd("visc_bot_atol",save_atol_b);
   save_min_rel_error=diffusion_minimum_relative_error;
  } else
   amrex::Error("project_option invalid 51");
@@ -10525,7 +10523,7 @@ void NavierStokes::multiphase_project(int project_option) {
           } else if (pAp<0.0) { 
            meets_tol=1;
           } else {
-           std::cout << "pAp= " << pAp << endl;
+           std::cout << "pAp= " << pAp << '\n';
            amrex::Error("pAp invalid in main solver");
           }
          } else if (rho0==0.0) {

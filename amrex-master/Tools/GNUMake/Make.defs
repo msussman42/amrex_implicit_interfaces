@@ -446,6 +446,7 @@ else ifeq ($(USE_CUDA),TRUE)
   endif
 endif
 
+#SUSSMAN
 ifdef AMREX_CCOMP
   lowercase_amrex_ccomp = $(shell echo $(AMREX_CCOMP) | tr A-Z a-z)
   ifeq ($(lowercase_amrex_ccomp),$(filter $(lowercase_amrex_ccomp),gcc gnu g++))
@@ -481,6 +482,7 @@ endif
 
 lowercase_comp = $(shell echo $(COMP) | tr A-Z a-z)
 
+#SUSSMAN
 ifeq ($(lowercase_comp),$(filter $(lowercase_comp),gcc gnu g++ g++-8))
   lowercase_comp = gnu
   AMREX_FCOMP ?= gnu

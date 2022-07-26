@@ -98,7 +98,7 @@ namespace amrex{
      int* nparts,
      int* im_solid_map);
 
-  };
+  }
 
 }/* namespace amrex */
 

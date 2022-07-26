@@ -579,12 +579,13 @@ StateDescriptor::sameInterps (Vector<int> scompBC_map,
 
     range.push_back(std::pair<int,int>(SComp,NComp));
 
-#ifndef NDEBUG
     int local_sum = 0;
-    for (int i = 0; i < range.size(); i++)
-        local_sum += range[i].second;
-    BL_ASSERT(local_sum == ncomp_in);
-#endif
+    for (unsigned int i = 0; i < range.size(); i++)
+     local_sum += range[i].second;
+    if (local_sum==ncomp_in) {
+     //do nothing
+    } else
+     amrex::Error("local_sum==ncomp_in violated");
 
     return range;
 }

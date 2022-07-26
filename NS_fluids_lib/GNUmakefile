@@ -72,16 +72,24 @@ CTML_FBC = FALSE
 # -fno-range-check
 #    Disable range checking on results of simplification of constant
 #    expressions during compilation.
-#COMP	  = g++
-#FCOMP = gfortran
-COMP	  = g++-8
-FCOMP = gfortran-8
-AMREX_CCOMP=g++-8
-AMREX_FCOMP=gfortran-8
-CXX = g++-8
-CC = g++-8
-FC = gfortran-8
-F90 = gfortran-8
+
+MAC_LAPTOP = FALSE
+LINUX_DESKTOP = TRUE
+
+ifeq ($(LINUX_DESKTOP),TRUE)
+ COMP	  = g++
+ FCOMP = gfortran
+endif
+ifeq ($(MAC_LAPTOP),TRUE)
+ COMP	  = g++-8
+ FCOMP = gfortran-8
+ AMREX_CCOMP=g++-8
+ AMREX_FCOMP=gfortran-8
+ CXX = g++-8
+ CC = g++-8
+ FC = gfortran-8
+ F90 = gfortran-8
+endif
 
 # total view:
 #  1. ssh -YX sussman@hpc-login.rcc.fsu.edu (same password as FSUID)

@@ -666,7 +666,7 @@ AmrLevel::FillPatch (AmrLevel & old,
  std::vector< std::pair<int,int> > ranges = 
    desc.sameInterps(scompBC_map,ncomp);
 
- for (int igroup = 0; igroup < ranges.size(); igroup++) {
+ for (unsigned int igroup = 0; igroup < ranges.size(); igroup++) {
   const int     scomp_range = ranges[igroup].first;
   const int     ncomp_range = ranges[igroup].second;
   Interpolater* mapper = desc.interp(scompBC_map[scomp_range]);
@@ -849,7 +849,7 @@ AmrLevel::FillCoarsePatchGHOST (
 
  const Box& pdomain = state[index].getDomain();
 
- for (int igroup = 0; igroup < ranges.size(); igroup++) {
+ for (unsigned int igroup = 0; igroup < ranges.size(); igroup++) {
 
   const int     scomp_range  = ranges[igroup].first;
   const int     ncomp_range  = ranges[igroup].second;
@@ -1023,7 +1023,7 @@ AmrLevel::InterpBordersGHOST (
  std::vector< std::pair<int,int> > ranges = 
    descGHOST.sameInterps(scompBC_map,ncomp);
 
- for (int igroup = 0; igroup < ranges.size(); igroup++) {
+ for (unsigned int igroup = 0; igroup < ranges.size(); igroup++) {
   const int     scomp_range  = ranges[igroup].first;
   const int     ncomp_range  = ranges[igroup].second;
   Interpolater* mapper = descGHOST.interp(scompBC_map[scomp_range]);
@@ -1161,7 +1161,7 @@ AmrLevel::InterpBorders (
  std::vector< std::pair<int,int> > ranges = 
    desc.sameInterps(scompBC_map,ncomp);
 
- for (int igroup = 0; igroup < ranges.size(); igroup++) {
+ for (unsigned int igroup = 0; igroup < ranges.size(); igroup++) {
   const int     scomp_range  = ranges[igroup].first;
   const int     ncomp_range  = ranges[igroup].second;
   Interpolater* mapper = desc.interp(scompBC_map[scomp_range]);
@@ -1295,7 +1295,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
  std::vector< std::pair<int,int> > ranges = 
    desc.sameInterps(scompBC_map,ncomp);
 
- for (int igroup = 0; igroup < ranges.size(); igroup++) {
+ for (unsigned int igroup = 0; igroup < ranges.size(); igroup++) {
   const int     scomp_range  = ranges[igroup].first;
   const int     ncomp_range  = ranges[igroup].second;
   Interpolater* mapper = desc.interp(scompBC_map[scomp_range]);

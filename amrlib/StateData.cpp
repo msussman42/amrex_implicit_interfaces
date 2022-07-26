@@ -1040,8 +1040,10 @@ StateData::checkPoint (const std::string& name,
      //   name=Level_<level num>/SD_<state index>
      //
      // mf_name=Level_<level num>/SD_<state index>_New_MF<slab index>
-    std::string NewSuffix[StateData_MAX_NUM_SLAB];
-    std::string mf_name[StateData_MAX_NUM_SLAB];
+    Vector<std::string> NewSuffix;
+    NewSuffix.resize(StateData_MAX_NUM_SLAB);
+    Vector<std::string> mf_name;
+    mf_name.resize(StateData_MAX_NUM_SLAB);
     for (int i=0;i<=bfact_time_order;i++) {
      std::stringstream slab_string_stream(std::stringstream::in |
       std::stringstream::out);

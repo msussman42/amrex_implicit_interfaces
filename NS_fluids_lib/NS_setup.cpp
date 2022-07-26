@@ -694,7 +694,7 @@ NavierStokes::variableSetUp ()
     int coord;
     ppgeom.get("coord_sys",coord);
     int coord_override=coord;
-    ppgeom.query("coord_sys_override",coord_override);
+    ppgeom.queryAdd("coord_sys_override",coord_override);
     coord=coord_override;
     
     if (coord == COORDSYS_CARTESIAN) {

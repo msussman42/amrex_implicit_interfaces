@@ -772,8 +772,9 @@ protected:
 
     void correct_colors(
      int idx_color,int base_level,
-     Vector<int> domaincolormap,int total_colors,
+     Vector<int> domaincolormap,
      int max_colors_level);
+
     void assign_colors(
      int& fully_covered,
      int idx_color,int idx_type,
@@ -1290,7 +1291,7 @@ void apply_pressure_grad(
     void init_FSI_GHOST_MAC_MF_predict();
 
     void init_FSI_GHOST_MAC_MF_ALL(int caller_id);
-    void init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history);
+    void init_FSI_GHOST_MAC_MF(int dealloc_history);
 
     void assimilate_state_data();
 
@@ -1868,7 +1869,6 @@ protected:
     static int num_materials;
     static int num_interfaces;
 
-    static int use_supermesh; //def=0
     static int ncomp_sum_int_user1; //def=0
     static int ncomp_sum_int_user2; //def=0
     static int ncomp_sum_int_user12; //def=0

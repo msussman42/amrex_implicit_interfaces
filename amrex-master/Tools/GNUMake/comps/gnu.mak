@@ -182,6 +182,7 @@ endif # AMREX_CCOMP == gnu
 
 
 
+#SUSSMAN
 ifeq ($(AMREX_CCOMP),g++-8)
 
 CXX = g++-8
@@ -371,6 +372,7 @@ endif  # BL_NO_FORT
 endif # AMREX_FCOMP == gnu
 
 
+#SUSSMAN
 ifeq ($(AMREX_FCOMP),gfortran-8)
 
 FC  = gfortran-8

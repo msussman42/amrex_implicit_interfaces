@@ -364,7 +364,6 @@ int  NavierStokes::num_SoA_var=0;
 int  NavierStokes::num_materials=0;
 int  NavierStokes::num_interfaces=0;
 
-int  NavierStokes::use_supermesh=0;
 int  NavierStokes::ncomp_sum_int_user1=0;
 int  NavierStokes::ncomp_sum_int_user2=0;
 int  NavierStokes::ncomp_sum_int_user12=0;
@@ -1125,7 +1124,7 @@ void read_geometry_raw(int& geometry_coord,
  ParmParse pp("geometry");
  pp.get("coord_sys",geometry_coord);
  int geometry_coord_override=geometry_coord;
- pp.query("coord_sys_override",geometry_coord_override);
+ pp.queryAdd("coord_sys_override",geometry_coord_override);
  geometry_coord=geometry_coord_override;
 
  pp.getarr("prob_lo",geometry_prob_lo,0,AMREX_SPACEDIM);
@@ -1133,7 +1132,7 @@ void read_geometry_raw(int& geometry_coord,
  geometry_is_periodic.resize(AMREX_SPACEDIM);
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   geometry_is_periodic[dir]=0;
- pp.queryarr("is_periodic",geometry_is_periodic,0,AMREX_SPACEDIM);
+ pp.queryAdd("is_periodic",geometry_is_periodic,AMREX_SPACEDIM);
  geometry_is_any_periodic=0;
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   if (geometry_is_periodic[dir]==0) {
@@ -1258,7 +1257,7 @@ void fortran_parameters() {
 
  ParmParse ppmain;
  fort_stop_time=-1.0;
- ppmain.query("stop_time",fort_stop_time);
+ ppmain.queryAdd("stop_time",fort_stop_time);
 
  int ns_max_level;
  ParmParse ppamr("amr");
@@ -1267,11 +1266,11 @@ void fortran_parameters() {
  ns_space_blocking_factor.resize(ns_max_level+1);
  for (int lev=0;lev<=ns_max_level;lev++)
   ns_space_blocking_factor[lev]=2;
- ppamr.queryarr("space_blocking_factor",
-   ns_space_blocking_factor,0,ns_max_level+1);
+ ppamr.queryAdd("space_blocking_factor",
+   ns_space_blocking_factor,ns_max_level+1);
 
  int time_blocking_factor=1;
- ppamr.query("time_blocking_factor",time_blocking_factor); 
+ ppamr.queryAdd("time_blocking_factor",time_blocking_factor); 
 
  Vector<int> ns_n_cell(AMREX_SPACEDIM);
  ppamr.getarr("n_cell",ns_n_cell,0,AMREX_SPACEDIM);
@@ -1300,50 +1299,50 @@ void fortran_parameters() {
  pp.get("zblob",zblob);
  pp.get("radblob",radblob);
 
- pp.query("xblob2",xblob2);
- pp.query("yblob2",yblob2);
- pp.query("zblob2",zblob2);
- pp.query("radblob2",radblob2);
+ pp.queryAdd("xblob2",xblob2);
+ pp.queryAdd("yblob2",yblob2);
+ pp.queryAdd("zblob2",zblob2);
+ pp.queryAdd("radblob2",radblob2);
 
- pp.query("xblob3",xblob3);
- pp.query("yblob3",yblob3);
- pp.query("zblob3",zblob3);
- pp.query("radblob3",radblob3);
+ pp.queryAdd("xblob3",xblob3);
+ pp.queryAdd("yblob3",yblob3);
+ pp.queryAdd("zblob3",zblob3);
+ pp.queryAdd("radblob3",radblob3);
 
- pp.query("xblob4",xblob4);
- pp.query("yblob4",yblob4);
- pp.query("zblob4",zblob4);
- pp.query("radblob4",radblob4);
+ pp.queryAdd("xblob4",xblob4);
+ pp.queryAdd("yblob4",yblob4);
+ pp.queryAdd("zblob4",zblob4);
+ pp.queryAdd("radblob4",radblob4);
 
- pp.query("xblob5",xblob5);
- pp.query("yblob5",yblob5);
- pp.query("zblob5",zblob5);
- pp.query("radblob5",radblob5);
+ pp.queryAdd("xblob5",xblob5);
+ pp.queryAdd("yblob5",yblob5);
+ pp.queryAdd("zblob5",zblob5);
+ pp.queryAdd("radblob5",radblob5);
 
- pp.query("xblob6",xblob6);
- pp.query("yblob6",yblob6);
- pp.query("zblob6",zblob6);
- pp.query("radblob6",radblob6);
+ pp.queryAdd("xblob6",xblob6);
+ pp.queryAdd("yblob6",yblob6);
+ pp.queryAdd("zblob6",zblob6);
+ pp.queryAdd("radblob6",radblob6);
 
- pp.query("xblob7",xblob7);
- pp.query("yblob7",yblob7);
- pp.query("zblob7",zblob7);
- pp.query("radblob7",radblob7);
+ pp.queryAdd("xblob7",xblob7);
+ pp.queryAdd("yblob7",yblob7);
+ pp.queryAdd("zblob7",zblob7);
+ pp.queryAdd("radblob7",radblob7);
 
- pp.query("xblob8",xblob8);
- pp.query("yblob8",yblob8);
- pp.query("zblob8",zblob8);
- pp.query("radblob8",radblob8);
+ pp.queryAdd("xblob8",xblob8);
+ pp.queryAdd("yblob8",yblob8);
+ pp.queryAdd("zblob8",zblob8);
+ pp.queryAdd("radblob8",radblob8);
 
- pp.query("xblob9",xblob9);
- pp.query("yblob9",yblob9);
- pp.query("zblob9",zblob9);
- pp.query("radblob9",radblob9);
+ pp.queryAdd("xblob9",xblob9);
+ pp.queryAdd("yblob9",yblob9);
+ pp.queryAdd("zblob9",zblob9);
+ pp.queryAdd("radblob9",radblob9);
 
- pp.query("xblob10",xblob10);
- pp.query("yblob10",yblob10);
- pp.query("zblob10",zblob10);
- pp.query("radblob10",radblob10);
+ pp.queryAdd("xblob10",xblob10);
+ pp.queryAdd("yblob10",yblob10);
+ pp.queryAdd("zblob10",zblob10);
+ pp.queryAdd("radblob10",radblob10);
 
  xactive=0.0;
  yactive=0.0;
@@ -1353,18 +1352,18 @@ void fortran_parameters() {
  ractivey=0.0;
  ractivez=0.0;
 
- pp.query("xactive",xactive);
- pp.query("yactive",yactive);
- pp.query("zactive",zactive);
- pp.query("ractive",ractive);
+ pp.queryAdd("xactive",xactive);
+ pp.queryAdd("yactive",yactive);
+ pp.queryAdd("zactive",zactive);
+ pp.queryAdd("ractive",ractive);
  if (ractive>0.0) {
   ractivex=ractive;
   ractivey=ractive;
   ractivez=ractive;
  }
- pp.query("ractivex",ractivex);
- pp.query("ractivey",ractivey);
- pp.query("ractivez",ractivez);
+ pp.queryAdd("ractivex",ractivex);
+ pp.queryAdd("ractivey",ractivey);
+ pp.queryAdd("ractivez",ractivez);
 
  pp.get("adv_dir",adv_dir);
  if ((adv_dir<1)||(adv_dir>2*AMREX_SPACEDIM+1))
@@ -1375,9 +1374,9 @@ void fortran_parameters() {
  pp.get("vinletgas",vinletgas);
  pp.get("twall",twall);
  pp.get("advbot",advbot);
- pp.query("inflow_pressure",inflow_pressure);
- pp.query("outflow_pressure",outflow_pressure);
- pp.query("period_time",period_time);
+ pp.queryAdd("inflow_pressure",inflow_pressure);
+ pp.queryAdd("outflow_pressure",outflow_pressure);
+ pp.queryAdd("period_time",period_time);
 
  int num_species_var=0;
  int num_materials=0;
@@ -1399,17 +1398,17 @@ void fortran_parameters() {
 
   // this is local variable, not static variable
  int MOFITERMAX=DEFAULT_MOFITERMAX;  
- pp.query("MOFITERMAX",MOFITERMAX);
+ pp.queryAdd("MOFITERMAX",MOFITERMAX);
  if ((MOFITERMAX<0)||(MOFITERMAX>50))
   amrex::Error("mof iter max invalid in navierstokes");
 
  int MOF_TURN_OFF_LS=0;  // this is local variable, not static variable
- pp.query("MOF_TURN_OFF_LS",MOF_TURN_OFF_LS);
+ pp.queryAdd("MOF_TURN_OFF_LS",MOF_TURN_OFF_LS);
  if ((MOF_TURN_OFF_LS!=0)&&(MOF_TURN_OFF_LS!=1))
   amrex::Error("mof turn off ls invalid in navierstokes");
 
  int MOF_DEBUG_RECON=0;  // this is local variable, not static variable
- pp.query("MOF_DEBUG_RECON",MOF_DEBUG_RECON);
+ pp.queryAdd("MOF_DEBUG_RECON",MOF_DEBUG_RECON);
  if ((MOF_DEBUG_RECON!=0)&&(MOF_DEBUG_RECON!=1)&&
      (MOF_DEBUG_RECON!=2))
   amrex::Error("mof debug recon invalid in navierstokes");
@@ -1450,13 +1449,13 @@ void fortran_parameters() {
   shear_modulus_temp[im]=0.0;
   store_elastic_data_temp[im]=0;
  }
- pp.queryarr("elastic_viscosity",elastic_viscosity_temp,0,num_materials);
- pp.queryarr("elastic_time",elastic_time_temp,0,num_materials);
- pp.queryarr("viscoelastic_model",viscoelastic_model_temp,0,num_materials);
+ pp.queryAdd("elastic_viscosity",elastic_viscosity_temp,num_materials);
+ pp.queryAdd("elastic_time",elastic_time_temp,num_materials);
+ pp.queryAdd("viscoelastic_model",viscoelastic_model_temp,num_materials);
 
- pp.queryarr("lame_coefficient",lame_coefficient_temp,0,num_materials);
- pp.queryarr("linear_elastic_model",linear_elastic_model_temp,0,num_materials);
- pp.queryarr("shear_modulus",shear_modulus_temp,0,num_materials);
+ pp.queryAdd("lame_coefficient",lame_coefficient_temp,num_materials);
+ pp.queryAdd("linear_elastic_model",linear_elastic_model_temp,num_materials);
+ pp.queryAdd("shear_modulus",shear_modulus_temp,num_materials);
 
  for (int im=0;im<num_materials;im++) {
   if (elastic_viscosity_temp[im]>0.0) {
@@ -1564,53 +1563,53 @@ void fortran_parameters() {
   polymer_factor_temp[im]=0.0;
  } // im=0..num_materials-1
 
- pp.queryarr("polymer_factor",polymer_factor_temp,0,num_materials);
+ pp.queryAdd("polymer_factor",polymer_factor_temp,num_materials);
 
- pp.queryarr("Carreau_alpha",Carreau_alpha_temp,0,num_materials);
- pp.queryarr("Carreau_beta",Carreau_beta_temp,0,num_materials);
- pp.queryarr("Carreau_n",Carreau_n_temp,0,num_materials);
- pp.queryarr("Carreau_mu_inf",Carreau_mu_inf_temp,0,num_materials);
+ pp.queryAdd("Carreau_alpha",Carreau_alpha_temp,num_materials);
+ pp.queryAdd("Carreau_beta",Carreau_beta_temp,num_materials);
+ pp.queryAdd("Carreau_n",Carreau_n_temp,num_materials);
+ pp.queryAdd("Carreau_mu_inf",Carreau_mu_inf_temp,num_materials);
 
  for (int im=0;im<(num_species_var+1)*num_materials;im++) {
   speciesviscconst_temp[im]=0.0;
   speciesconst_temp[im]=0.0;
  }
 
- pp.queryarr("FSI_flag",FSI_flag_temp,0,num_materials);
- pp.queryarr("damping_coefficient",damping_coefficient_temp,0,num_materials);
+ pp.queryAdd("FSI_flag",FSI_flag_temp,num_materials);
+ pp.queryAdd("damping_coefficient",damping_coefficient_temp,num_materials);
 
  int num_local_aux_grids_temp=0;
- pp.query("num_local_aux_grids",num_local_aux_grids_temp);
+ pp.queryAdd("num_local_aux_grids",num_local_aux_grids_temp);
 
- pp.queryarr("tempcutoff",tempcutofftemp,0,num_materials);
- pp.queryarr("tempcutoffmax",tempcutoffmaxtemp,0,num_materials);
+ pp.queryAdd("tempcutoff",tempcutofftemp,num_materials);
+ pp.queryAdd("tempcutoffmax",tempcutoffmaxtemp,num_materials);
 
  pp.getarr("tempconst",tempconst_temp,0,num_materials);
  for (int im=0;im<num_materials;im++)
   initial_temperature_temp[im]=tempconst_temp[im];
- pp.queryarr("initial_temperature",initial_temperature_temp,0,num_materials);
+ pp.queryAdd("initial_temperature",initial_temperature_temp,num_materials);
 
   //Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
   //DrhoDT has units of 1/(Degrees Kelvin)
- pp.queryarr("DrhoDT",DrhoDTtemp,0,num_materials);
+ pp.queryAdd("DrhoDT",DrhoDTtemp,num_materials);
 
- pp.queryarr("stiffPINF",stiffPINFtemp,0,num_materials);
+ pp.queryAdd("stiffPINF",stiffPINFtemp,num_materials);
 
- pp.queryarr("stiffCP",stiffCPtemp,0,num_materials);
+ pp.queryAdd("stiffCP",stiffCPtemp,num_materials);
  for (int im=0;im<num_materials;im++)
   stiffCVtemp[im]=stiffCPtemp[im];
- pp.queryarr("stiffCV",stiffCVtemp,0,num_materials);
+ pp.queryAdd("stiffCV",stiffCVtemp,num_materials);
 
  Vector<Real> prerecalesce_stiffCP_temp(num_materials);
  for (int im=0;im<num_materials;im++)
   prerecalesce_stiffCP_temp[im]=stiffCPtemp[im];
- pp.queryarr("precalesce_stiffCP",prerecalesce_stiffCP_temp,0,num_materials);
+ pp.queryAdd("precalesce_stiffCP",prerecalesce_stiffCP_temp,num_materials);
  Vector<Real> prerecalesce_stiffCV_temp(num_materials);
  for (int im=0;im<num_materials;im++)
   prerecalesce_stiffCV_temp[im]=stiffCVtemp[im];
- pp.queryarr("precalesce_stiffCV",prerecalesce_stiffCV_temp,0,num_materials);
+ pp.queryAdd("precalesce_stiffCV",prerecalesce_stiffCV_temp,num_materials);
 
- pp.queryarr("stiffGAMMA",stiffGAMMAtemp,0,num_materials);
+ pp.queryAdd("stiffGAMMA",stiffGAMMAtemp,num_materials);
 
  pp.getarr("denconst",denconst_temp,0,num_materials);
 
@@ -1619,9 +1618,9 @@ void fortran_parameters() {
   den_ceiling_temp[im]=1.0e+20;
   den_floor_temp[im]=0.0;
  }
- pp.queryarr("cavitation_vapor_density",cavdenconst_temp,0,num_materials);
- pp.queryarr("density_floor",den_floor_temp,0,num_materials);
- pp.queryarr("density_ceiling",den_ceiling_temp,0,num_materials);
+ pp.queryAdd("cavitation_vapor_density",cavdenconst_temp,num_materials);
+ pp.queryAdd("density_floor",den_floor_temp,num_materials);
+ pp.queryAdd("density_ceiling",den_ceiling_temp,num_materials);
 
  pp.getarr("viscconst",viscconst_temp,0,num_materials);
  for (int im=0;im<num_materials;im++) {
@@ -1635,40 +1634,40 @@ void fortran_parameters() {
   buoyancy_microlayer_size_temp[im]=microlayer_size_default;
   phasechange_microlayer_size_temp[im]=microlayer_size_default;
  }
- pp.queryarr("viscconst_eddy_wall",viscconst_eddy_wall_temp,0,num_materials);
- pp.queryarr("viscconst_eddy_bulk",viscconst_eddy_bulk_temp,0,num_materials);
- pp.queryarr("heatviscconst_eddy_wall",heatviscconst_eddy_wall_temp,0,num_materials);
- pp.queryarr("heatviscconst_eddy_bulk",heatviscconst_eddy_bulk_temp,0,num_materials);
+ pp.queryAdd("viscconst_eddy_wall",viscconst_eddy_wall_temp,num_materials);
+ pp.queryAdd("viscconst_eddy_bulk",viscconst_eddy_bulk_temp,num_materials);
+ pp.queryAdd("heatviscconst_eddy_wall",heatviscconst_eddy_wall_temp,num_materials);
+ pp.queryAdd("heatviscconst_eddy_bulk",heatviscconst_eddy_bulk_temp,num_materials);
 
- pp.queryarr("thermal_microlayer_size",thermal_microlayer_size_temp,0,num_materials);
- pp.queryarr("shear_microlayer_size",shear_microlayer_size_temp,0,num_materials);
- pp.queryarr("buoyancy_microlayer_size",buoyancy_microlayer_size_temp,0,num_materials);
- pp.queryarr("phasechange_microlayer_size", 
-   phasechange_microlayer_size_temp,0,num_materials);
+ pp.queryAdd("thermal_microlayer_size",thermal_microlayer_size_temp,num_materials);
+ pp.queryAdd("shear_microlayer_size",shear_microlayer_size_temp,num_materials);
+ pp.queryAdd("buoyancy_microlayer_size",buoyancy_microlayer_size_temp,num_materials);
+ pp.queryAdd("phasechange_microlayer_size", 
+   phasechange_microlayer_size_temp,num_materials);
 
  Vector<Real> prerecalesce_viscconst_temp(num_materials);
  for (int im=0;im<num_materials;im++)
   prerecalesce_viscconst_temp[im]=viscconst_temp[im];
- pp.queryarr("precalesce_viscconst",prerecalesce_viscconst_temp,0,num_materials);
+ pp.queryAdd("precalesce_viscconst",prerecalesce_viscconst_temp,num_materials);
 
  for (int im=0;im<num_materials;im++) {
   viscosity_state_model_temp[im]=0;
   heatflux_factor_temp[im]=1.0;
  }
- pp.queryarr("viscosity_state_model",
-  viscosity_state_model_temp,0,num_materials);
+ pp.queryAdd("viscosity_state_model",
+  viscosity_state_model_temp,num_materials);
 
- pp.queryarr("heatflux_factor",heatflux_factor_temp,0,num_materials);
+ pp.queryAdd("heatflux_factor",heatflux_factor_temp,num_materials);
  pp.getarr("heatviscconst",heatviscconst_temp,0,num_materials);
 
  Vector<Real> prerecalesce_heatviscconst_temp(num_materials);
  for (int im=0;im<num_materials;im++)
   prerecalesce_heatviscconst_temp[im]=heatviscconst_temp[im];
- pp.queryarr("precalesce_heatviscconst",prerecalesce_heatviscconst_temp,0,num_materials);
+ pp.queryAdd("precalesce_heatviscconst",prerecalesce_heatviscconst_temp,num_materials);
 
  if (num_species_var>0) {
-  pp.queryarr("speciesconst",speciesconst_temp,0,num_species_var*num_materials);
-  pp.queryarr("speciesviscconst",speciesviscconst_temp,0,num_species_var*num_materials);
+  pp.queryAdd("speciesconst",speciesconst_temp,num_species_var*num_materials);
+  pp.queryAdd("speciesviscconst",speciesviscconst_temp,num_species_var*num_materials);
  }
 
  Vector<Real> tension_slopetemp(num_interfaces);
@@ -1684,9 +1683,9 @@ void fortran_parameters() {
  Vector<Real> prefreeze_tensiontemp(num_interfaces);
 
  pp.getarr("tension",tensiontemp,0,num_interfaces);
- pp.queryarr("tension_slope",tension_slopetemp,0,num_interfaces);
- pp.queryarr("tension_T0",tension_T0temp,0,num_interfaces);
- pp.queryarr("tension_min",tension_mintemp,0,num_interfaces);
+ pp.queryAdd("tension_slope",tension_slopetemp,num_interfaces);
+ pp.queryAdd("tension_T0",tension_T0temp,num_interfaces);
+ pp.queryAdd("tension_min",tension_mintemp,num_interfaces);
 
  Vector<Real> latent_heat_temp(2*num_interfaces);
  Vector<Real> latent_heat_slopetemp(2*num_interfaces);
@@ -1716,10 +1715,10 @@ void fortran_parameters() {
   latent_heat_mintemp[i]=0.0;
   latent_heat_mintemp[i+num_interfaces]=0.0;
  }
- pp.queryarr("latent_heat",latent_heat_temp,0,2*num_interfaces);
- pp.queryarr("latent_heat_slope",latent_heat_slopetemp,0,2*num_interfaces);
- pp.queryarr("latent_heat_T0",latent_heat_T0temp,0,2*num_interfaces);
- pp.queryarr("latent_heat_min",latent_heat_mintemp,0,2*num_interfaces);
+ pp.queryAdd("latent_heat",latent_heat_temp,2*num_interfaces);
+ pp.queryAdd("latent_heat_slope",latent_heat_slopetemp,2*num_interfaces);
+ pp.queryAdd("latent_heat_T0",latent_heat_T0temp,2*num_interfaces);
+ pp.queryAdd("latent_heat_min",latent_heat_mintemp,2*num_interfaces);
 
  for (int i=0;i<2*num_interfaces;i++) { 
 
@@ -1730,11 +1729,11 @@ void fortran_parameters() {
 
  } //i=0...2*num_interfaces-1
 
- pp.queryarr("saturation_temp",saturation_temp_temp,0,2*num_interfaces);
- pp.queryarr("reference_pressure",reference_pressure_temp,0,2*num_interfaces);
+ pp.queryAdd("saturation_temp",saturation_temp_temp,2*num_interfaces);
+ pp.queryAdd("reference_pressure",reference_pressure_temp,2*num_interfaces);
 
  Real R_Palmore_Desjardins_temp=8.31446261815324e+7;  // ergs/(mol Kelvin)
- pp.query("R_Palmore_Desjardins",R_Palmore_Desjardins_temp);
+ pp.queryAdd("R_Palmore_Desjardins",R_Palmore_Desjardins_temp);
 
  Vector<Real> molar_mass_temp(num_materials);
  Vector<Real> species_molar_mass_temp(num_species_var+1);
@@ -1744,14 +1743,14 @@ void fortran_parameters() {
  for (int im=0;im<num_species_var+1;im++) {
   species_molar_mass_temp[im]=1.0;
  }
- pp.queryarr("molar_mass",molar_mass_temp,0,num_materials);
+ pp.queryAdd("molar_mass",molar_mass_temp,num_materials);
 
- pp.queryarr("species_molar_mass",
-   species_molar_mass_temp,0,num_species_var);
+ pp.queryAdd("species_molar_mass",
+   species_molar_mass_temp,num_species_var);
 
  for (int im=0;im<num_interfaces;im++)
   prefreeze_tensiontemp[im]=tensiontemp[im];
- pp.queryarr("prefreeze_tension",prefreeze_tensiontemp,0,num_interfaces);
+ pp.queryAdd("prefreeze_tension",prefreeze_tensiontemp,num_interfaces);
 
  int ioproc=0;
  if (ParallelDescriptor::IOProcessor())
@@ -1844,14 +1843,14 @@ void fortran_parameters() {
   amrex::Error("num_state_base invalid 9");
 
  int prescribe_temperature_outflow=0;
- pp.query("prescribe_temperature_outflow",prescribe_temperature_outflow);
+ pp.queryAdd("prescribe_temperature_outflow",prescribe_temperature_outflow);
  if ((prescribe_temperature_outflow<0)||
      (prescribe_temperature_outflow>3))
   amrex::Error("prescribe_temperature_outflow invalid (fortran_parameters)");
 
   // 0=diffuse in solid 1=dirichlet 2=neumann
  int solidheat_flag=0;
- pp.query("solidheat_flag",solidheat_flag);
+ pp.queryAdd("solidheat_flag",solidheat_flag);
  if ((solidheat_flag<0)||
      (solidheat_flag>2))
   amrex::Error("solidheat_flag invalid (fortran_parameters)");
@@ -1859,18 +1858,18 @@ void fortran_parameters() {
  Real gravity_temp=0.0; 
  int gravity_dir_temp=AMREX_SPACEDIM;
  int invert_gravity_temp=0;
- pp.query("gravity",gravity_temp);
- pp.query("gravity_dir",gravity_dir_temp);
- pp.query("invert_gravity",invert_gravity_temp);
+ pp.queryAdd("gravity",gravity_temp);
+ pp.queryAdd("gravity_dir",gravity_dir_temp);
+ pp.queryAdd("invert_gravity",invert_gravity_temp);
  if ((gravity_dir_temp<1)||(gravity_dir_temp>AMREX_SPACEDIM))
   amrex::Error("gravity dir invalid");
 
  int n_sites=0;
- pp.query("n_sites",n_sites);
+ pp.queryAdd("n_sites",n_sites);
  Real nucleation_init_time=0.0;
- pp.query("nucleation_init_time",nucleation_init_time);
+ pp.queryAdd("nucleation_init_time",nucleation_init_time);
 
- pp.query("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT_temp);
+ pp.queryAdd("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT_temp);
  if ((ZEYU_DCA_SELECT_temp==-1)||
      ((ZEYU_DCA_SELECT_temp>=1)&&
       (ZEYU_DCA_SELECT_temp<=8))) {
@@ -2025,7 +2024,7 @@ void fortran_parameters() {
  }
 
  int mof_error_ordering_local=0;
- pp.query("mof_error_ordering",mof_error_ordering_local);
+ pp.queryAdd("mof_error_ordering",mof_error_ordering_local);
  if ((mof_error_ordering_local!=0)&&
      (mof_error_ordering_local!=1))
   amrex::Error("mof_error_ordering_local invalid");
@@ -2039,7 +2038,7 @@ void fortran_parameters() {
   mof_error_ordering_local,
   FSI_flag_temp);
 
- pp.queryarr("mof_ordering",mof_ordering_local,0,num_materials);
+ pp.queryAdd("mof_ordering",mof_ordering_local,num_materials);
  for (int i=0;i<num_materials;i++) {
   if ((mof_ordering_local[i]<0)||
       (mof_ordering_local[i]>num_materials+1))
@@ -2195,19 +2194,19 @@ NavierStokes::read_params ()
 {
     ParmParse pp("ns");
 
-    pp.query("check_nan",check_nan);
-    pp.query("v",verbose);
-    pp.query("fab_verbose",fab_verbose);
-    pp.query("output_drop_distribution",output_drop_distribution);
-    pp.query("show_timings",show_timings);
-    pp.query("show_mem",show_mem);
+    pp.queryAdd("check_nan",check_nan);
+    pp.queryAdd("v",verbose);
+    pp.queryAdd("fab_verbose",fab_verbose);
+    pp.queryAdd("output_drop_distribution",output_drop_distribution);
+    pp.queryAdd("show_timings",show_timings);
+    pp.queryAdd("show_mem",show_mem);
 
-    pp.query("slice_dir",slice_dir);
+    pp.queryAdd("slice_dir",slice_dir);
     xslice.resize(AMREX_SPACEDIM);
     if ((slice_dir>=0)&&(slice_dir<AMREX_SPACEDIM)) {
      for (int i=0;i<AMREX_SPACEDIM;i++)
       xslice[i]=0.0;
-     pp.queryarr("xslice",xslice,0,AMREX_SPACEDIM);
+     pp.queryAdd("xslice",xslice,AMREX_SPACEDIM);
     } else
      amrex::Error("slice_dir invalid");
 
@@ -2223,7 +2222,7 @@ NavierStokes::read_params ()
      }
     } 
 
-    pp.query("nblocks",nblocks);
+    pp.queryAdd("nblocks",nblocks);
 
     int nblocks_size=( (nblocks==0) ? 1 : nblocks );
     xblocks.resize(nblocks_size);
@@ -2265,22 +2264,17 @@ NavierStokes::read_params ()
     if ((num_interfaces<1)||(num_interfaces>999))
      amrex::Error("num interfaces invalid");
 
-    pp.query("use_supermesh",use_supermesh);
-    if ((use_supermesh!=0)&&
-        (use_supermesh!=1))
-     amrex::Error("use_supermesh invalid");
-
     ncomp_sum_int_user1=0;
-    pp.query("ncomp_sum_int_user",ncomp_sum_int_user1);
+    pp.queryAdd("ncomp_sum_int_user",ncomp_sum_int_user1);
     if (ncomp_sum_int_user1==0) {
-     pp.query("ncomp_sum_int_user1",ncomp_sum_int_user1);
+     pp.queryAdd("ncomp_sum_int_user1",ncomp_sum_int_user1);
     }
     if (ncomp_sum_int_user1>=0) {
      // do nothing
     } else
      amrex::Error("ncomp_sum_int_user1 invalid");
 
-    pp.query("ncomp_sum_int_user2",ncomp_sum_int_user2);
+    pp.queryAdd("ncomp_sum_int_user2",ncomp_sum_int_user2);
     if (ncomp_sum_int_user2>=0) {
      // do nothing
     } else
@@ -2334,7 +2328,7 @@ NavierStokes::read_params ()
     ns_n_error_buf.resize(ns_max_level);
     for (int ilev=0;ilev<ns_max_level;ilev++) 
      ns_n_error_buf[ilev]=1;
-    ppamr.queryarr("n_error_buf",ns_n_error_buf,0,ns_max_level);
+    ppamr.queryAdd("n_error_buf",ns_n_error_buf,ns_max_level);
 
     ns_max_grid_size.resize(ns_max_level+1);
     for (int ilev=0;ilev<=ns_max_level;ilev++) {
@@ -2362,22 +2356,22 @@ NavierStokes::read_params ()
      amrex::Error("cnt_max_grid_size invalid");
 
     int def_n_proper=1;
-    ppamr.query("n_proper",def_n_proper);
+    ppamr.queryAdd("n_proper",def_n_proper);
 
     int local_plotfile_on_restart=0;
-    ppamr.query("plotfile_on_restart",local_plotfile_on_restart);
+    ppamr.queryAdd("plotfile_on_restart",local_plotfile_on_restart);
     int local_checkpoint_on_restart=0;
-    ppamr.query("checkpoint_on_restart",local_checkpoint_on_restart);
+    ppamr.queryAdd("checkpoint_on_restart",local_checkpoint_on_restart);
     int local_regrid_on_restart=0;
-    ppamr.query("regrid_on_restart",local_regrid_on_restart);
+    ppamr.queryAdd("regrid_on_restart",local_regrid_on_restart);
 
     tecplot_max_level=ns_max_level;
     max_level_for_use=ns_max_level;
-    pp.query("tecplot_max_level",tecplot_max_level);
-    pp.query("max_level_for_use",max_level_for_use);
+    pp.queryAdd("tecplot_max_level",tecplot_max_level);
+    pp.queryAdd("max_level_for_use",max_level_for_use);
 
     int max_level_two_materials=999;
-    pp.query("max_level_two_materials",max_level_two_materials);
+    pp.queryAdd("max_level_two_materials",max_level_two_materials);
     if (max_level_two_materials==999) {
      // do nothing
     } else {
@@ -2392,7 +2386,7 @@ NavierStokes::read_params ()
     radius_cutoff.resize(num_materials);
     for (int i=0;i<num_materials;i++)
      radius_cutoff[i]=999;
-    pp.queryarr("radius_cutoff",radius_cutoff,0,num_materials);
+    pp.queryAdd("radius_cutoff",radius_cutoff,num_materials);
     for (int i=0;i<num_materials;i++) {
      if (radius_cutoff[i]==999) {
       // do nothing
@@ -2414,8 +2408,6 @@ NavierStokes::read_params ()
      amrex::Error("max_level_for_use invalid"); 
 
     if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "use_supermesh " << 
-       use_supermesh << '\n';
      std::cout << "ncomp_sum_int_user1 " << 
        ncomp_sum_int_user1 << '\n';
      std::cout << "ncomp_sum_int_user2 " << 
@@ -2432,7 +2424,7 @@ NavierStokes::read_params ()
       num_elements_blobclass << '\n';
     }
 
-    pp.query("ncoarseblocks",ncoarseblocks);
+    pp.queryAdd("ncoarseblocks",ncoarseblocks);
     int ncoarseblocks_size=( (ncoarseblocks==0) ? 1 : ncoarseblocks );
     xcoarseblocks.resize(ncoarseblocks_size);
     ycoarseblocks.resize(ncoarseblocks_size);
@@ -2484,10 +2476,10 @@ NavierStokes::read_params ()
      species_lo_bc[i]=lo_bc[i];
      species_hi_bc[i]=hi_bc[i];
     }
-    pp.queryarr("temperature_lo_bc",temperature_lo_bc,0,AMREX_SPACEDIM);
-    pp.queryarr("temperature_hi_bc",temperature_hi_bc,0,AMREX_SPACEDIM);
-    pp.queryarr("species_lo_bc",species_lo_bc,0,AMREX_SPACEDIM);
-    pp.queryarr("species_hi_bc",species_hi_bc,0,AMREX_SPACEDIM);
+    pp.queryAdd("temperature_lo_bc",temperature_lo_bc,AMREX_SPACEDIM);
+    pp.queryAdd("temperature_hi_bc",temperature_hi_bc,AMREX_SPACEDIM);
+    pp.queryAdd("species_lo_bc",species_lo_bc,AMREX_SPACEDIM);
+    pp.queryAdd("species_hi_bc",species_hi_bc,AMREX_SPACEDIM);
     for (int i = 0; i < AMREX_SPACEDIM; i++) {
      temperature_phys_bc.setLo(i,temperature_lo_bc[i]);
      temperature_phys_bc.setHi(i,temperature_hi_bc[i]);
@@ -2586,7 +2578,7 @@ NavierStokes::read_params ()
      amrex::Error("default value for cfl is 1/2");
     }
 
-    pp.query("enable_spectral",enable_spectral);
+    pp.queryAdd("enable_spectral",enable_spectral);
 
     if (enable_spectral==1) {
 
@@ -2602,16 +2594,16 @@ NavierStokes::read_params ()
     } else
      amrex::Error("enable_spectral invalid");
 
-    pp.query("continuous_mof",continuous_mof);
-    pp.query("force_cmof_at_triple_junctions",force_cmof_at_triple_junctions);
-    pp.query("partial_cmof_stencil_at_walls",partial_cmof_stencil_at_walls);
+    pp.queryAdd("continuous_mof",continuous_mof);
+    pp.queryAdd("force_cmof_at_triple_junctions",force_cmof_at_triple_junctions);
+    pp.queryAdd("partial_cmof_stencil_at_walls",partial_cmof_stencil_at_walls);
 
-    pp.query("init_shrink",init_shrink);
-    pp.query("dt_max",dt_max);
+    pp.queryAdd("init_shrink",init_shrink);
+    pp.queryAdd("dt_max",dt_max);
 
-    pp.query("change_max",change_max);
+    pp.queryAdd("change_max",change_max);
     change_max_init=change_max;
-    pp.query("change_max_init",change_max_init);
+    pp.queryAdd("change_max_init",change_max_init);
 
     fixed_dt_scales.resize(n_scales);
     current_dt_group.resize(n_scales);
@@ -2621,7 +2613,7 @@ NavierStokes::read_params ()
      current_dt_group[iscale]=0.0;
      hold_dt_factors[iscale]=1.0;
     }
-    pp.queryarr("fixed_dt_scales",fixed_dt_scales,0,n_scales);
+    pp.queryAdd("fixed_dt_scales",fixed_dt_scales,n_scales);
 
     for (int iscale=0;iscale<current_dt_group.size();iscale++) {
      if (fixed_dt_scales[iscale]>=0.0) {
@@ -2630,26 +2622,26 @@ NavierStokes::read_params ()
       amrex::Error("fixed_dt_scales[iscale] invalid");
     }
 
-    pp.query("fixed_dt",fixed_dt);
+    pp.queryAdd("fixed_dt",fixed_dt);
     fixed_dt_init=fixed_dt;
-    pp.query("fixed_dt_init",fixed_dt_init);
+    pp.queryAdd("fixed_dt_init",fixed_dt_init);
 
-    pp.query("min_velocity_for_dt",min_velocity_for_dt);
+    pp.queryAdd("min_velocity_for_dt",min_velocity_for_dt);
     if (min_velocity_for_dt<0.0)
      amrex::Error("min_velocity_for_dt invalid");
 
-    pp.query("min_stefan_velocity_for_dt",min_stefan_velocity_for_dt);
+    pp.queryAdd("min_stefan_velocity_for_dt",min_stefan_velocity_for_dt);
     if (min_stefan_velocity_for_dt<0.0)
      amrex::Error("min_stefan_velocity_for_dt invalid");
 
-    pp.query("fixed_dt_velocity",fixed_dt_velocity);
-    pp.query("sum_interval",sum_interval);
+    pp.queryAdd("fixed_dt_velocity",fixed_dt_velocity);
+    pp.queryAdd("sum_interval",sum_interval);
 
-    pp.query("profile_debug",profile_debug);
+    pp.queryAdd("profile_debug",profile_debug);
     if ((profile_debug!=0)&&(profile_debug!=1))
      amrex::Error("profile_debug invalid");
 
-    pp.query("ns_tiling",ns_tiling);
+    pp.queryAdd("ns_tiling",ns_tiling);
     if (ns_tiling==true) {
      // do nothing
     } else if (ns_tiling==false) {
@@ -2660,9 +2652,9 @@ NavierStokes::read_params ()
     if (thread_class::nthreads<1)
      amrex::Error("thread_class::nthreads invalid ns init");
 
-    pp.query("gravity",gravity);
-    pp.query("gravity_dir",gravity_dir);
-    pp.query("invert_gravity",invert_gravity);
+    pp.queryAdd("gravity",gravity);
+    pp.queryAdd("gravity_dir",gravity_dir);
+    pp.queryAdd("invert_gravity",invert_gravity);
     if ((gravity_dir<1)||(gravity_dir>AMREX_SPACEDIM))
      amrex::Error("gravity dir invalid");
 
@@ -2677,7 +2669,7 @@ NavierStokes::read_params ()
 
     if (gravity_reference_wavelen_default>0.0) {
      gravity_reference_wavelen=gravity_reference_wavelen_default;
-     pp.query("gravity_reference_wavelen",gravity_reference_wavelen);
+     pp.queryAdd("gravity_reference_wavelen",gravity_reference_wavelen);
      if ((gravity_reference_wavelen>0.0)&&
          (gravity_reference_wavelen<=
 	  gravity_reference_wavelen_default*(1.0001))) {
@@ -2689,7 +2681,7 @@ NavierStokes::read_params ()
 
     pp.get("visc_coef",visc_coef);
 
-    pp.query("include_viscous_heating",include_viscous_heating);
+    pp.queryAdd("include_viscous_heating",include_viscous_heating);
     if ((include_viscous_heating<0)||
         (include_viscous_heating>1))
      amrex::Error("include_viscous_heating invalid");
@@ -2728,24 +2720,24 @@ NavierStokes::read_params ()
 	    partial_cmof_stencil_at_walls << '\n';
     }
 
-    pp.query("FD_curv_interp",FD_curv_interp);
+    pp.queryAdd("FD_curv_interp",FD_curv_interp);
     if ((FD_curv_interp!=0)&&
         (FD_curv_interp!=1))
      amrex::Error("FD_curv_interp invalid");
 
-    pp.query("vof_height_function",vof_height_function);
+    pp.queryAdd("vof_height_function",vof_height_function);
     if ((vof_height_function!=0)&&
         (vof_height_function!=1))
      amrex::Error("vof_height_function invalid");
 
     custom_nucleation_model=0;
-    pp.query("custom_nucleation_model",custom_nucleation_model);
+    pp.queryAdd("custom_nucleation_model",custom_nucleation_model);
     if ((custom_nucleation_model!=0)&&
         (custom_nucleation_model!=1))
      amrex::Error("custom_nucleation_model invalid");
 
     n_sites=0;
-    pp.query("n_sites",n_sites);
+    pp.queryAdd("n_sites",n_sites);
     pos_sites.resize(4);
     for (int dir=0;dir<4;dir++)
      pos_sites[dir]=0.0;
@@ -2759,7 +2751,7 @@ NavierStokes::read_params ()
      amrex::Error("n_sites invalid(2)");
     }
    
-    pp.query("pos_sites_random_flag",pos_sites_random_flag);
+    pp.queryAdd("pos_sites_random_flag",pos_sites_random_flag);
 
     pp.get("denfact",denfact);
     pp.get("velfact",velfact);
@@ -2773,19 +2765,19 @@ NavierStokes::read_params ()
     visual_ncell.resize(AMREX_SPACEDIM);
     for (int dir=0;dir<AMREX_SPACEDIM;dir++)
      visual_ncell[dir]=8;
-    pp.queryarr("visual_ncell",visual_ncell,0,AMREX_SPACEDIM);
-    pp.query("visual_compare",visual_compare);
+    pp.queryAdd("visual_ncell",visual_ncell,AMREX_SPACEDIM);
+    pp.queryAdd("visual_compare",visual_compare);
 
-    pp.query("visual_tessellate_vfrac",visual_tessellate_vfrac);
-    pp.query("visual_revolve",visual_revolve);
-    pp.query("visual_output_raw_State_Type",visual_output_raw_State_Type);
-    pp.query("visual_output_raw_mac_Type",visual_output_raw_mac_Type);
-    pp.query("visual_phase_change_plot_int",visual_phase_change_plot_int);
-    pp.query("visual_buoyancy_plot_int",visual_buoyancy_plot_int);
-    pp.query("visual_divergence_plot_int",visual_divergence_plot_int);
-    pp.query("visual_WALLVEL_plot_int",visual_WALLVEL_plot_int);
-    pp.query("visual_drag_plot_int",visual_drag_plot_int);
-    pp.query("visual_nddata_format",visual_nddata_format);
+    pp.queryAdd("visual_tessellate_vfrac",visual_tessellate_vfrac);
+    pp.queryAdd("visual_revolve",visual_revolve);
+    pp.queryAdd("visual_output_raw_State_Type",visual_output_raw_State_Type);
+    pp.queryAdd("visual_output_raw_mac_Type",visual_output_raw_mac_Type);
+    pp.queryAdd("visual_phase_change_plot_int",visual_phase_change_plot_int);
+    pp.queryAdd("visual_buoyancy_plot_int",visual_buoyancy_plot_int);
+    pp.queryAdd("visual_divergence_plot_int",visual_divergence_plot_int);
+    pp.queryAdd("visual_WALLVEL_plot_int",visual_WALLVEL_plot_int);
+    pp.queryAdd("visual_drag_plot_int",visual_drag_plot_int);
+    pp.queryAdd("visual_nddata_format",visual_nddata_format);
 
     if ((visual_tessellate_vfrac!=0)&&
         (visual_tessellate_vfrac!=1)&&
@@ -2810,7 +2802,7 @@ NavierStokes::read_params ()
     } else
      amrex::Error("dimension bust");
 
-    pp.query("adapt_quad_depth",adapt_quad_depth);
+    pp.queryAdd("adapt_quad_depth",adapt_quad_depth);
 
     law_of_the_wall.resize(num_materials);
     wall_model_velocity.resize(num_materials);
@@ -2824,10 +2816,10 @@ NavierStokes::read_params ()
      law_of_the_wall[i]=0;
      wall_model_velocity[i]=0.0;
     }
-    pp.queryarr("law_of_the_wall",law_of_the_wall,0,num_materials);
-    pp.queryarr("wall_model_velocity",wall_model_velocity,0,num_materials);
-    pp.queryarr("interface_mass_transfer_model",
-       interface_mass_transfer_model,0,2*num_interfaces);
+    pp.queryAdd("law_of_the_wall",law_of_the_wall,num_materials);
+    pp.queryAdd("wall_model_velocity",wall_model_velocity,num_materials);
+    pp.queryAdd("interface_mass_transfer_model",
+       interface_mass_transfer_model,2*num_interfaces);
 
     for (int i=0;i<num_materials;i++) {
      if ((law_of_the_wall[i]==0)||
@@ -2839,7 +2831,7 @@ NavierStokes::read_params ()
      }
     }
 
-    pp.query("wall_slip_weight",wall_slip_weight);
+    pp.queryAdd("wall_slip_weight",wall_slip_weight);
     if ((wall_slip_weight>=0.0)&&
         (wall_slip_weight<=1.0)) {
      // do nothing
@@ -2847,7 +2839,7 @@ NavierStokes::read_params ()
      amrex::Error("wall_slip_weight invalid");
     }
 
-    pp.query("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT);
+    pp.queryAdd("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT);
     if ((ZEYU_DCA_SELECT==-1)||
         ((ZEYU_DCA_SELECT>=1)&&
 	 (ZEYU_DCA_SELECT<=8))) {
@@ -2869,30 +2861,30 @@ NavierStokes::read_params ()
      material_type_lowmach[i]=material_type[i];
      material_type_visual[i]=material_type[i];
     }
-    pp.queryarr("material_type_evap",material_type_evap,0,num_materials);
-    pp.queryarr("material_type_lowmach",material_type_lowmach,0,num_materials);
+    pp.queryAdd("material_type_evap",material_type_evap,num_materials);
+    pp.queryAdd("material_type_lowmach",material_type_lowmach,num_materials);
     for (int i=0;i<num_materials;i++) {
      material_type_visual[i]=material_type_lowmach[i];
     }
-    pp.queryarr("material_type_visual",material_type_visual,0,num_materials);
+    pp.queryAdd("material_type_visual",material_type_visual,num_materials);
  
     for (int i=0;i<num_materials;i++) {
      FSI_flag[i]=0;
      FSI_refine_factor[i]=1;
      FSI_bounding_box_ngrow[i]=3;
     }
-    pp.queryarr("FSI_flag",FSI_flag,0,num_materials);
-    pp.query("num_local_aux_grids",num_local_aux_grids);
-    pp.query("FSI_interval",FSI_interval);
-    pp.queryarr("FSI_refine_factor",FSI_refine_factor,0,num_materials);
-    pp.queryarr("FSI_bounding_box_ngrow",FSI_bounding_box_ngrow,0,num_materials);
+    pp.queryAdd("FSI_flag",FSI_flag,num_materials);
+    pp.queryAdd("num_local_aux_grids",num_local_aux_grids);
+    pp.queryAdd("FSI_interval",FSI_interval);
+    pp.queryAdd("FSI_refine_factor",FSI_refine_factor,num_materials);
+    pp.queryAdd("FSI_bounding_box_ngrow",FSI_bounding_box_ngrow,num_materials);
 
     CTML_force_model.resize(num_materials);
     for (int i=0;i<num_materials;i++) {
      CTML_force_model[i]=0;
     }
-    pp.query("CTML_FSI_numsolids",CTML_FSI_numsolids);
-    pp.queryarr("CTML_force_model",CTML_force_model,0,num_materials);
+    pp.queryAdd("CTML_FSI_numsolids",CTML_FSI_numsolids);
+    pp.queryAdd("CTML_force_model",CTML_force_model,num_materials);
     for (int i=0;i<num_materials;i++) {
      if (FSI_flag[i]==4) {
       if (FSI_interval==1) {
@@ -2969,7 +2961,7 @@ NavierStokes::read_params ()
     } else
      amrex::Error("FSI_material_exists_presvel() invalid");
 
-    pp.query("extend_pressure_into_solid",extend_pressure_into_solid);
+    pp.queryAdd("extend_pressure_into_solid",extend_pressure_into_solid);
 
     if (FSI_material_exists_presvel()==1) {
      if (extend_pressure_into_solid!=1)
@@ -2996,12 +2988,12 @@ NavierStokes::read_params ()
      static_damping_coefficient[im]=0.0;
      store_elastic_data[im]=0;
     }
-    pp.queryarr("elastic_viscosity",elastic_viscosity,0,num_materials);
+    pp.queryAdd("elastic_viscosity",elastic_viscosity,num_materials);
 
     viscoelastic_model.resize(num_materials);
     for (int i=0;i<num_materials;i++)
      viscoelastic_model[i]=0;
-    pp.queryarr("viscoelastic_model",viscoelastic_model,0,num_materials);
+    pp.queryAdd("viscoelastic_model",viscoelastic_model,num_materials);
 
     for (int i=0;i<num_materials;i++) {
      if (fort_built_in_elastic_model(&elastic_viscosity[i],
@@ -3014,13 +3006,13 @@ NavierStokes::read_params ()
       amrex::Error("fort_built_in_elastic_model invalid");
     } // i=0..num_materials-1
 
-    pp.queryarr("damping_coefficient",damping_coefficient,0,num_materials);
-    pp.queryarr("static_damping_coefficient",
-		static_damping_coefficient,0,num_materials);
-    pp.queryarr("lame_coefficient",lame_coefficient,0,num_materials);
-    pp.queryarr("linear_elastic_model",linear_elastic_model,0,num_materials);
-    pp.queryarr("shear_modulus",shear_modulus,0,num_materials);
-    pp.query("particles_flag",particles_flag);
+    pp.queryAdd("damping_coefficient",damping_coefficient,num_materials);
+    pp.queryAdd("static_damping_coefficient",
+		static_damping_coefficient,num_materials);
+    pp.queryAdd("lame_coefficient",lame_coefficient,num_materials);
+    pp.queryAdd("linear_elastic_model",linear_elastic_model,num_materials);
+    pp.queryAdd("shear_modulus",shear_modulus,num_materials);
+    pp.queryAdd("particles_flag",particles_flag);
 
     for (int im=0;im<num_materials;im++) {
      if (fort_built_in_elastic_model(&elastic_viscosity[im],
@@ -3108,15 +3100,15 @@ NavierStokes::read_params ()
 
      //smooth_type: 0=GSRB 1=ICRB 2=ILU  3=Jacobi
     ParmParse pplp("Lp");
-    pplp.query("smooth_type",smooth_type);
-    pplp.query("bottom_smooth_type",bottom_smooth_type);
-    pplp.query("use_mg_precond_in_mglib",use_mg_precond_in_mglib);
+    pplp.queryAdd("smooth_type",smooth_type);
+    pplp.queryAdd("bottom_smooth_type",bottom_smooth_type);
+    pplp.queryAdd("use_mg_precond_in_mglib",use_mg_precond_in_mglib);
 
-    pplp.query("bottom_bottom_tol_factor",bottom_bottom_tol_factor);
+    pplp.queryAdd("bottom_bottom_tol_factor",bottom_bottom_tol_factor);
 
     ParmParse ppmg("mg");
-    ppmg.query("presmooth",global_presmooth);
-    ppmg.query("postsmooth",global_postsmooth);
+    ppmg.queryAdd("presmooth",global_presmooth);
+    ppmg.queryAdd("postsmooth",global_postsmooth);
     if (global_presmooth!=global_postsmooth)
      amrex::Error("global_presmooth!=global_postsmooth");
 
@@ -3159,14 +3151,14 @@ NavierStokes::read_params ()
     pp.get("adv_dir",adv_dir);
     pp.get("adv_vel",adv_vel);
     pp.get("rgasinlet",rgasinlet);
-    pp.query("slipcoeff",slipcoeff);
+    pp.queryAdd("slipcoeff",slipcoeff);
     pp.get("vinletgas",vinletgas);
 
     pp.get("twall",twall);
 
-    pp.query("krylov_subspace_max_num_outer_iter",krylov_subspace_max_num_outer_iter);
+    pp.queryAdd("krylov_subspace_max_num_outer_iter",krylov_subspace_max_num_outer_iter);
 
-    pp.query("EILE_flag",EILE_flag);
+    pp.queryAdd("EILE_flag",EILE_flag);
 
     if ((EILE_flag==1)|| // EILE
         (EILE_flag==2)|| // EI
@@ -3183,17 +3175,17 @@ NavierStokes::read_params ()
      amrex::Error("num species var invalid");
 
     MOFITERMAX=DEFAULT_MOFITERMAX;
-    pp.query("MOFITERMAX",MOFITERMAX);
+    pp.queryAdd("MOFITERMAX",MOFITERMAX);
     if ((MOFITERMAX<0)||(MOFITERMAX>50))
      amrex::Error("mof iter max invalid in navierstokes");
 
     MOF_TURN_OFF_LS=0;  
-    pp.query("MOF_TURN_OFF_LS",MOF_TURN_OFF_LS);
+    pp.queryAdd("MOF_TURN_OFF_LS",MOF_TURN_OFF_LS);
     if ((MOF_TURN_OFF_LS!=0)&&(MOF_TURN_OFF_LS!=1))
      amrex::Error("mof turn off ls invalid in navierstokes");
 
     MOF_DEBUG_RECON=0; 
-    pp.query("MOF_DEBUG_RECON",MOF_DEBUG_RECON);
+    pp.queryAdd("MOF_DEBUG_RECON",MOF_DEBUG_RECON);
     if ((MOF_DEBUG_RECON!=0)&&(MOF_DEBUG_RECON!=1)&&
         (MOF_DEBUG_RECON!=2))
      amrex::Error("mof debug recon invalid in navierstokes");
@@ -3238,13 +3230,13 @@ NavierStokes::read_params ()
      for (int j=0;j<=num_species_var;j++)
       speciesviscconst_interface[j*num_interfaces+i]=0.0;
     }
-    pp.queryarr("viscconst_interface",viscconst_interface,0,num_interfaces);
+    pp.queryAdd("viscconst_interface",viscconst_interface,num_interfaces);
     if (num_species_var>0) {
-     pp.queryarr("speciesviscconst_interface",
-      speciesviscconst_interface,0,num_species_var*num_interfaces);
+     pp.queryAdd("speciesviscconst_interface",
+      speciesviscconst_interface,num_species_var*num_interfaces);
 
-     pp.queryarr("species_molar_mass",
-      species_molar_mass,0,num_species_var);
+     pp.queryAdd("species_molar_mass",
+      species_molar_mass,num_species_var);
     }
      // in: read_params
 
@@ -3256,10 +3248,10 @@ NavierStokes::read_params ()
     }
 
     if (num_species_var>0) {
-     pp.queryarr("spec_material_id_LIQUID",spec_material_id_LIQUID,
-       0,num_species_var);
-     pp.queryarr("spec_material_id_AMBIENT",spec_material_id_AMBIENT,
-       0,num_species_var);
+     pp.queryAdd("spec_material_id_LIQUID",spec_material_id_LIQUID,
+       num_species_var);
+     pp.queryAdd("spec_material_id_AMBIENT",spec_material_id_AMBIENT,
+       num_species_var);
     }
     
     vorterr.resize(num_materials);
@@ -3291,9 +3283,9 @@ NavierStokes::read_params ()
      cavitation_vapor_density[i]=0.0; 
      cavitation_tension[i]=0.0; 
     }
-    pp.queryarr("cavitation_pressure",cavitation_pressure,0,num_materials);
-    pp.queryarr("cavitation_vapor_density",cavitation_vapor_density,0,num_materials);
-    pp.queryarr("cavitation_tension",cavitation_tension,0,num_materials);
+    pp.queryAdd("cavitation_pressure",cavitation_pressure,num_materials);
+    pp.queryAdd("cavitation_vapor_density",cavitation_vapor_density,num_materials);
+    pp.queryAdd("cavitation_tension",cavitation_tension,num_materials);
  
      // in: read_params
 
@@ -3429,14 +3421,14 @@ NavierStokes::read_params ()
     for (int i=0;i<num_materials;i++) {
      density_floor[i]=0.0;
     }
-    pp.queryarr("density_floor",density_floor,0,num_materials);
+    pp.queryAdd("density_floor",density_floor,num_materials);
 
     density_ceiling.resize(num_materials);
     for (int i=0;i<num_materials;i++) {
      density_ceiling[i]=1.0e+20;
     }
 
-    pp.queryarr("density_ceiling",density_ceiling,0,num_materials);
+    pp.queryAdd("density_ceiling",density_ceiling,num_materials);
 
     denconst.resize(num_materials);
     pp.getarr("denconst",denconst,0,num_materials);
@@ -3470,20 +3462,20 @@ NavierStokes::read_params ()
      molar_mass[i]=1.0;
     }
 
-    pp.queryarr("molar_mass",molar_mass,0,num_materials);
+    pp.queryAdd("molar_mass",molar_mass,num_materials);
 
     denconst_interface.resize(num_interfaces);
     for (int i=0;i<num_interfaces;i++) 
      denconst_interface[i]=0.0;
-    pp.queryarr("denconst_interface",denconst_interface,0,num_interfaces);
+    pp.queryAdd("denconst_interface",denconst_interface,num_interfaces);
 
-    pp.query("stokes_flow",stokes_flow);
-    pp.query("cancel_advection",cancel_advection);
+    pp.queryAdd("stokes_flow",stokes_flow);
+    pp.queryAdd("cancel_advection",cancel_advection);
 
     added_weight.resize(num_materials);
     for (int i=0;i<num_materials;i++) 
      added_weight[i]=1.0;
-    pp.queryarr("added_weight",added_weight,0,num_materials);
+    pp.queryAdd("added_weight",added_weight,num_materials);
 
     for (int i=0;i<(num_species_var+1)*num_materials;i++) {
      speciesconst[i]=0.0;
@@ -3504,41 +3496,41 @@ NavierStokes::read_params ()
      temperature_error_cutoff[i]=0.0;
     }
 
-    pp.queryarr("tempcutoff",tempcutoff,0,num_materials);
-    pp.queryarr("tempcutoffmax",tempcutoffmax,0,num_materials);
+    pp.queryAdd("tempcutoff",tempcutoff,num_materials);
+    pp.queryAdd("tempcutoffmax",tempcutoffmax,num_materials);
 
-    pp.queryarr("stiffPINF",stiffPINF,0,num_materials);
-    pp.queryarr("stiffCP",stiffCP,0,num_materials);
+    pp.queryAdd("stiffPINF",stiffPINF,num_materials);
+    pp.queryAdd("stiffCP",stiffCP,num_materials);
     for (int i=0;i<num_materials;i++)
      stiffCV[i]=stiffCP[i];
 
-    pp.queryarr("stiffCV",stiffCV,0,num_materials);
-    pp.queryarr("stiffGAMMA",stiffGAMMA,0,num_materials);
+    pp.queryAdd("stiffCV",stiffCV,num_materials);
+    pp.queryAdd("stiffGAMMA",stiffGAMMA,num_materials);
 
-    pp.query("angular_velocity",angular_velocity);
+    pp.queryAdd("angular_velocity",angular_velocity);
 
-    pp.query("uncoupled_viscosity",uncoupled_viscosity);
+    pp.queryAdd("uncoupled_viscosity",uncoupled_viscosity);
 
      //Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
      //DrhoDT has units of 1/(Degrees Kelvin)
-    pp.queryarr("DrhoDT",DrhoDT,0,num_materials);
+    pp.queryAdd("DrhoDT",DrhoDT,num_materials);
 
-    pp.queryarr("override_density",override_density,0,num_materials);
+    pp.queryAdd("override_density",override_density,num_materials);
 
     pp.getarr("vorterr",vorterr,0,num_materials);
-    pp.query("pressure_error_flag",pressure_error_flag);
+    pp.queryAdd("pressure_error_flag",pressure_error_flag);
     pp.getarr("pressure_error_cutoff",pressure_error_cutoff,0,num_materials);
-    pp.queryarr("temperature_error_cutoff",temperature_error_cutoff,0,num_materials);
+    pp.queryAdd("temperature_error_cutoff",temperature_error_cutoff,num_materials);
 
-    pp.query("temperature_source",temperature_source);
-    pp.queryarr("temperature_source_cen",temperature_source_cen,0,AMREX_SPACEDIM);
-    pp.queryarr("temperature_source_rad",temperature_source_rad,0,AMREX_SPACEDIM);
+    pp.queryAdd("temperature_source",temperature_source);
+    pp.queryAdd("temperature_source_cen",temperature_source_cen,AMREX_SPACEDIM);
+    pp.queryAdd("temperature_source_rad",temperature_source_rad,AMREX_SPACEDIM);
 
     pp.getarr("tempconst",tempconst,0,num_materials);
     for (int i=0;i<num_materials;i++)
      initial_temperature[i]=tempconst[i]; 
-    pp.queryarr("initial_temperature",initial_temperature,0,num_materials);
-    pp.query("initial_temperature_diffuse_duration",
+    pp.queryAdd("initial_temperature",initial_temperature,num_materials);
+    pp.queryAdd("initial_temperature_diffuse_duration",
      initial_temperature_diffuse_duration);
     if (initial_temperature_diffuse_duration<0.0)
      amrex::Error("initial_temperature_diffuse_duration<0.0");
@@ -3560,25 +3552,25 @@ NavierStokes::read_params ()
      heatviscconst_eddy_wall[i]=0.0;
      heatviscconst_eddy_bulk[i]=0.0;
     }
-    pp.queryarr("viscconst_eddy_wall",viscconst_eddy_wall,0,num_materials);
-    pp.queryarr("viscconst_eddy_bulk",viscconst_eddy_bulk,0,num_materials);
-    pp.queryarr("heatviscconst_eddy_wall",heatviscconst_eddy_wall,0,num_materials);
-    pp.queryarr("heatviscconst_eddy_bulk",heatviscconst_eddy_bulk,0,num_materials);
+    pp.queryAdd("viscconst_eddy_wall",viscconst_eddy_wall,num_materials);
+    pp.queryAdd("viscconst_eddy_bulk",viscconst_eddy_bulk,num_materials);
+    pp.queryAdd("heatviscconst_eddy_wall",heatviscconst_eddy_wall,num_materials);
+    pp.queryAdd("heatviscconst_eddy_bulk",heatviscconst_eddy_bulk,num_materials);
 
     for (int i=0;i<num_materials;i++)
      viscosity_state_model[i]=0;
-    pp.queryarr("viscosity_state_model",viscosity_state_model,0,num_materials);
+    pp.queryAdd("viscosity_state_model",viscosity_state_model,num_materials);
     heatflux_factor.resize(num_materials);
     
     for (int i=0;i<num_materials;i++) {
      heatflux_factor[i]=1.0;
      les_model[i]=0;
     }
-    pp.queryarr("les_model",les_model,0,num_materials);
+    pp.queryAdd("les_model",les_model,num_materials);
 
     heatviscconst.resize(num_materials);
     heatviscconst_interface.resize(num_interfaces);
-    pp.queryarr("heatflux_factor",heatflux_factor,0,num_materials);
+    pp.queryAdd("heatflux_factor",heatflux_factor,num_materials);
     pp.getarr("heatviscconst",heatviscconst,0,num_materials);
 
     heatviscconst_min=heatviscconst[0];
@@ -3595,10 +3587,10 @@ NavierStokes::read_params ()
      heatviscconst_interface[i]=0.0;
     }
 
-    pp.queryarr("heatviscconst_interface",heatviscconst_interface,0,num_interfaces);
+    pp.queryAdd("heatviscconst_interface",heatviscconst_interface,num_interfaces);
     if (num_species_var>0) {
-     pp.queryarr("speciesconst",speciesconst,0,num_species_var*num_materials);
-     pp.queryarr("speciesviscconst",speciesviscconst,0,num_species_var*num_materials);
+     pp.queryAdd("speciesconst",speciesconst,num_species_var*num_materials);
+     pp.queryAdd("speciesviscconst",speciesviscconst,num_species_var*num_materials);
     }
 
     for (int i=0;i<num_materials;i++) {
@@ -3607,20 +3599,20 @@ NavierStokes::read_params ()
      prerecalesce_viscconst[i]=viscconst[i];
      prerecalesce_heatviscconst[i]=heatviscconst[i];
     }
-    pp.queryarr("prerecalesce_viscconst",prerecalesce_viscconst,0,num_materials);
-    pp.queryarr("prerecalesce_heatviscconst",prerecalesce_heatviscconst,0,num_materials);
-    pp.queryarr("prerecalesce_stiffCP",prerecalesce_stiffCP,0,num_materials);
-    pp.queryarr("prerecalesce_stiffCV",prerecalesce_stiffCV,0,num_materials);
+    pp.queryAdd("prerecalesce_viscconst",prerecalesce_viscconst,num_materials);
+    pp.queryAdd("prerecalesce_heatviscconst",prerecalesce_heatviscconst,num_materials);
+    pp.queryAdd("prerecalesce_stiffCP",prerecalesce_stiffCP,num_materials);
+    pp.queryAdd("prerecalesce_stiffCV",prerecalesce_stiffCV,num_materials);
 
-    pp.query("mglib_min_coeff_factor",mglib_min_coeff_factor);
+    pp.queryAdd("mglib_min_coeff_factor",mglib_min_coeff_factor);
 
     pp.getarr("tension",tension,0,num_interfaces);
 
-    pp.query("unscaled_min_curvature_radius",unscaled_min_curvature_radius);
+    pp.queryAdd("unscaled_min_curvature_radius",unscaled_min_curvature_radius);
 
     for (int i=0;i<num_interfaces;i++) 
      prefreeze_tension[i]=tension[i];
-    pp.queryarr("prefreeze_tension",prefreeze_tension,0,num_interfaces);
+    pp.queryAdd("prefreeze_tension",prefreeze_tension,num_interfaces);
 
     for (int i=0;i<num_interfaces;i++) {
      tension_slope[i]=0.0;
@@ -3632,53 +3624,53 @@ NavierStokes::read_params ()
     for (int i=0;i<2*AMREX_SPACEDIM;i++) {
      outflow_velocity_buffer_size[i]=0.0;
     }
-    pp.queryarr("outflow_velocity_buffer_size",
-      outflow_velocity_buffer_size,0,2*AMREX_SPACEDIM);
+    pp.queryAdd("outflow_velocity_buffer_size",
+      outflow_velocity_buffer_size,2*AMREX_SPACEDIM);
 
-    pp.queryarr("tension_slope",tension_slope,0,num_interfaces);
-    pp.queryarr("tension_T0",tension_T0,0,num_interfaces);
-    pp.queryarr("tension_min",tension_min,0,num_interfaces);
+    pp.queryAdd("tension_slope",tension_slope,num_interfaces);
+    pp.queryAdd("tension_T0",tension_T0,num_interfaces);
+    pp.queryAdd("tension_min",tension_min,num_interfaces);
 
-    pp.queryarr("recalesce_model_parameters",recalesce_model_parameters,
-       0,3*num_materials);
+    pp.queryAdd("recalesce_model_parameters",recalesce_model_parameters,
+       3*num_materials);
 
-    pp.queryarr("hardwire_Y_gamma",hardwire_Y_gamma,0,2*num_interfaces);
-    pp.queryarr("hardwire_T_gamma",hardwire_T_gamma,0,2*num_interfaces);
-    pp.queryarr("accommodation_coefficient",
-		 accommodation_coefficient,0,2*num_interfaces);
-    pp.queryarr("reference_pressure",reference_pressure,0,2*num_interfaces);
-    pp.queryarr("saturation_temp",saturation_temp,0,2*num_interfaces);
-    pp.queryarr("saturation_temp_curv",saturation_temp_curv,0,2*num_interfaces);
-    pp.queryarr("saturation_temp_vel",saturation_temp_vel,0,2*num_interfaces);
-    pp.queryarr("saturation_temp_min",saturation_temp_min,0,2*num_interfaces);
-    pp.queryarr("saturation_temp_max",saturation_temp_max,0,2*num_interfaces);
+    pp.queryAdd("hardwire_Y_gamma",hardwire_Y_gamma,2*num_interfaces);
+    pp.queryAdd("hardwire_T_gamma",hardwire_T_gamma,2*num_interfaces);
+    pp.queryAdd("accommodation_coefficient",
+		 accommodation_coefficient,2*num_interfaces);
+    pp.queryAdd("reference_pressure",reference_pressure,2*num_interfaces);
+    pp.queryAdd("saturation_temp",saturation_temp,2*num_interfaces);
+    pp.queryAdd("saturation_temp_curv",saturation_temp_curv,2*num_interfaces);
+    pp.queryAdd("saturation_temp_vel",saturation_temp_vel,2*num_interfaces);
+    pp.queryAdd("saturation_temp_min",saturation_temp_min,2*num_interfaces);
+    pp.queryAdd("saturation_temp_max",saturation_temp_max,2*num_interfaces);
 
-    pp.query("nucleation_period",nucleation_period);
-    pp.query("nucleation_init_time",nucleation_init_time);
+    pp.queryAdd("nucleation_period",nucleation_period);
+    pp.queryAdd("nucleation_init_time",nucleation_init_time);
 
-    pp.query("perturbation_on_restart",perturbation_on_restart);
-    pp.query("perturbation_mode",perturbation_mode);
-    pp.query("perturbation_eps_temp",perturbation_eps_temp);
-    pp.query("perturbation_eps_vel",perturbation_eps_vel);
+    pp.queryAdd("perturbation_on_restart",perturbation_on_restart);
+    pp.queryAdd("perturbation_mode",perturbation_mode);
+    pp.queryAdd("perturbation_eps_temp",perturbation_eps_temp);
+    pp.queryAdd("perturbation_eps_vel",perturbation_eps_vel);
    
-    pp.query("solidheat_flag",solidheat_flag);
+    pp.queryAdd("solidheat_flag",solidheat_flag);
     if ((solidheat_flag<0)||(solidheat_flag>2))
      amrex::Error("solidheat_flag invalid"); 
  
-    pp.queryarr("microlayer_substrate",microlayer_substrate,0,num_materials);
-    pp.queryarr("microlayer_angle",microlayer_angle,0,num_materials);
-    pp.queryarr("microlayer_size",microlayer_size,0,num_materials);
-    pp.queryarr("macrolayer_size",macrolayer_size,0,num_materials);
-    pp.queryarr("max_contact_line_size",
-                max_contact_line_size,0,num_materials);
-    pp.queryarr("microlayer_temperature_substrate",
-     microlayer_temperature_substrate,0,num_materials);
+    pp.queryAdd("microlayer_substrate",microlayer_substrate,num_materials);
+    pp.queryAdd("microlayer_angle",microlayer_angle,num_materials);
+    pp.queryAdd("microlayer_size",microlayer_size,num_materials);
+    pp.queryAdd("macrolayer_size",macrolayer_size,num_materials);
+    pp.queryAdd("max_contact_line_size",
+                max_contact_line_size,num_materials);
+    pp.queryAdd("microlayer_temperature_substrate",
+     microlayer_temperature_substrate,num_materials);
 
-    pp.queryarr("thermal_microlayer_size",thermal_microlayer_size,0,num_materials);
-    pp.queryarr("shear_microlayer_size",shear_microlayer_size,0,num_materials);
-    pp.queryarr("buoyancy_microlayer_size",buoyancy_microlayer_size,0,num_materials);
-    pp.queryarr("phasechange_microlayer_size",
-	phasechange_microlayer_size,0,num_materials);
+    pp.queryAdd("thermal_microlayer_size",thermal_microlayer_size,num_materials);
+    pp.queryAdd("shear_microlayer_size",shear_microlayer_size,num_materials);
+    pp.queryAdd("buoyancy_microlayer_size",buoyancy_microlayer_size,num_materials);
+    pp.queryAdd("phasechange_microlayer_size",
+	phasechange_microlayer_size,num_materials);
 
     for (int i=0;i<num_materials;i++) {
      if (microlayer_temperature_substrate[i]<0.0)
@@ -3706,22 +3698,22 @@ NavierStokes::read_params ()
       amrex::Error("phasechange_microlayer_size too small");
     }  // i=0..num_materials-1
 
-    pp.queryarr("nucleation_temp",nucleation_temp,0,2*num_interfaces);
-    pp.queryarr("nucleation_pressure",nucleation_pressure,0,2*num_interfaces);
-    pp.queryarr("nucleation_pmg",nucleation_pmg,0,2*num_interfaces);
-    pp.queryarr("nucleation_mach",nucleation_mach,0,2*num_interfaces);
+    pp.queryAdd("nucleation_temp",nucleation_temp,2*num_interfaces);
+    pp.queryAdd("nucleation_pressure",nucleation_pressure,2*num_interfaces);
+    pp.queryAdd("nucleation_pmg",nucleation_pmg,2*num_interfaces);
+    pp.queryAdd("nucleation_mach",nucleation_mach,2*num_interfaces);
 
-    pp.queryarr("latent_heat",latent_heat,0,2*num_interfaces);
-    pp.queryarr("latent_heat_slope",latent_heat_slope,0,2*num_interfaces);
-    pp.queryarr("latent_heat_T0",latent_heat_T0,0,2*num_interfaces);
-    pp.queryarr("latent_heat_min",latent_heat_min,0,2*num_interfaces);
+    pp.queryAdd("latent_heat",latent_heat,2*num_interfaces);
+    pp.queryAdd("latent_heat_slope",latent_heat_slope,2*num_interfaces);
+    pp.queryAdd("latent_heat_T0",latent_heat_T0,2*num_interfaces);
+    pp.queryAdd("latent_heat_min",latent_heat_min,2*num_interfaces);
 
 
-    pp.queryarr("reaction_rate",reaction_rate,0,2*num_interfaces);
-    pp.queryarr("freezing_model",freezing_model,0,2*num_interfaces);
-    pp.queryarr("Tanasawa_or_Schrage_or_Kassemi",
-      Tanasawa_or_Schrage_or_Kassemi,0,2*num_interfaces);
-    pp.queryarr("mass_fraction_id",mass_fraction_id,0,2*num_interfaces);
+    pp.queryAdd("reaction_rate",reaction_rate,2*num_interfaces);
+    pp.queryAdd("freezing_model",freezing_model,2*num_interfaces);
+    pp.queryAdd("Tanasawa_or_Schrage_or_Kassemi",
+      Tanasawa_or_Schrage_or_Kassemi,2*num_interfaces);
+    pp.queryAdd("mass_fraction_id",mass_fraction_id,2*num_interfaces);
 
      // set defaults for "distribute_from_target"
     for (int iten=0;iten<num_interfaces;iten++) {
@@ -3821,11 +3813,11 @@ NavierStokes::read_params ()
      } // ireverse
     } // iten
 
-    pp.queryarr("distribute_from_target",distribute_from_target,0,2*num_interfaces);
-    pp.queryarr("distribute_mdot_evenly",distribute_mdot_evenly,0,2*num_interfaces);
-    pp.queryarr("constant_volume_mdot",constant_volume_mdot,0,2*num_interfaces);
+    pp.queryAdd("distribute_from_target",distribute_from_target,2*num_interfaces);
+    pp.queryAdd("distribute_mdot_evenly",distribute_mdot_evenly,2*num_interfaces);
+    pp.queryAdd("constant_volume_mdot",constant_volume_mdot,2*num_interfaces);
 
-    pp.queryarr("constant_density_all_time",constant_density_all_time,0,num_materials);
+    pp.queryAdd("constant_density_all_time",constant_density_all_time,num_materials);
     for (int i=0;i<num_materials;i++) {
      if (material_type[i]==0) {
       // do nothing
@@ -3930,7 +3922,7 @@ NavierStokes::read_params ()
      } // ireverse
     } // iten
 
-    pp.query("R_Palmore_Desjardins",R_Palmore_Desjardins);
+    pp.queryAdd("R_Palmore_Desjardins",R_Palmore_Desjardins);
 
     for (int im=0;im<num_materials;im++) {
 
@@ -4007,7 +3999,7 @@ NavierStokes::read_params ()
     shock_timestep.resize(num_materials);
     for (int i=0;i<num_materials;i++) 
      shock_timestep[i]=0;
-    pp.queryarr("shock_timestep",shock_timestep,0,num_materials);
+    pp.queryAdd("shock_timestep",shock_timestep,num_materials);
 
     int all_advective=1;
 
@@ -4028,7 +4020,7 @@ NavierStokes::read_params ()
      projection_pressure_scale=1.0e+6;
     }
 
-    pp.query("projection_pressure_scale",projection_pressure_scale);
+    pp.queryAdd("projection_pressure_scale",projection_pressure_scale);
     if (projection_pressure_scale<=0.0)
      amrex::Error("projection pressure scale invalid");
 
@@ -4051,7 +4043,7 @@ NavierStokes::read_params ()
     } else
      amrex::Error("FSI_material_exists_presvel() invalid");
 
-    pp.query("num_divu_outer_sweeps",num_divu_outer_sweeps);
+    pp.queryAdd("num_divu_outer_sweeps",num_divu_outer_sweeps);
 
     if (some_materials_compressible()==1) {
      if (num_divu_outer_sweeps<2) 
@@ -4070,7 +4062,7 @@ NavierStokes::read_params ()
     } else
      amrex::Error("FSI_material_exists_presvel() invalid");
      
-    pp.query("post_init_pressure_solve",post_init_pressure_solve);
+    pp.queryAdd("post_init_pressure_solve",post_init_pressure_solve);
     if ((post_init_pressure_solve<0)||(post_init_pressure_solve>1))
      amrex::Error("post_init_pressure_solve out of range");
 
@@ -4114,7 +4106,7 @@ NavierStokes::read_params ()
       amrex::Error("geometry_is_periodic[dir] invalid"); 
     } // dir=0..sdim-1
 
-    pp.query("pressure_select_criterion",pressure_select_criterion);
+    pp.queryAdd("pressure_select_criterion",pressure_select_criterion);
     if ((pressure_select_criterion<0)||
         (pressure_select_criterion>2))
      amrex::Error("pressure_select_criterion invalid");
@@ -4134,7 +4126,7 @@ NavierStokes::read_params ()
      compressible_dt_factor[i]=1.0;
     }
 
-    pp.queryarr("compressible_dt_factor",
+    pp.queryAdd("compressible_dt_factor",
        compressible_dt_factor);
 
     for (int i=0;i<num_materials;i++) {
@@ -4145,14 +4137,14 @@ NavierStokes::read_params ()
       amrex::Error("compressible_dt_factor invalid");
     }
 
-    pp.query("disable_advection",disable_advection);
+    pp.queryAdd("disable_advection",disable_advection);
 
     if ((disable_advection==0)||(disable_advection==1)) {
      // do nothing
     } else
      amrex::Error("disable_advection invalid 1");
 
-    pp.query("disable_pressure_solve",disable_pressure_solve);
+    pp.queryAdd("disable_pressure_solve",disable_pressure_solve);
 
     if ((disable_pressure_solve==0)||(disable_pressure_solve==1)) {
      // do nothing
@@ -4171,7 +4163,7 @@ NavierStokes::read_params ()
      polymer_factor[i]=0.0;
     }  // i=0..num_materials-1
 
-    pp.queryarr("elastic_time",elastic_time,0,num_materials);
+    pp.queryAdd("elastic_time",elastic_time,num_materials);
 
     for (int i=0;i<num_materials;i++) {
      if (elastic_viscosity[i]>=0.0) {
@@ -4201,12 +4193,12 @@ NavierStokes::read_params ()
       amrex::Error("elastic_viscosity invalid");
     } // i=0..num_materials-1
 
-    pp.queryarr("polymer_factor",polymer_factor,0,num_materials);
+    pp.queryAdd("polymer_factor",polymer_factor,num_materials);
 
-    pp.queryarr("Carreau_alpha",Carreau_alpha,0,num_materials);
-    pp.queryarr("Carreau_beta",Carreau_beta,0,num_materials);
-    pp.queryarr("Carreau_n",Carreau_n,0,num_materials);
-    pp.queryarr("Carreau_mu_inf",Carreau_mu_inf,0,num_materials);
+    pp.queryAdd("Carreau_alpha",Carreau_alpha,num_materials);
+    pp.queryAdd("Carreau_beta",Carreau_beta,num_materials);
+    pp.queryAdd("Carreau_n",Carreau_n,num_materials);
+    pp.queryAdd("Carreau_mu_inf",Carreau_mu_inf,num_materials);
 
     etaL.resize(num_materials);
     etaP.resize(num_materials);
@@ -4387,14 +4379,14 @@ NavierStokes::read_params ()
 
     } // i=0..num_materials-1
 
-    pp.query("wait_time",wait_time);
+    pp.queryAdd("wait_time",wait_time);
 
     pp.get("advbot",advbot);
-    pp.query("inflow_pressure",inflow_pressure);
-    pp.query("outflow_pressure",outflow_pressure);
+    pp.queryAdd("inflow_pressure",inflow_pressure);
+    pp.queryAdd("outflow_pressure",outflow_pressure);
 
-    pp.query("multilevel_maxcycle",multilevel_maxcycle);
-    pp.query("multilevel_restart_period",multilevel_restart_period);
+    pp.queryAdd("multilevel_maxcycle",multilevel_maxcycle);
+    pp.queryAdd("multilevel_restart_period",multilevel_restart_period);
     if ((multilevel_maxcycle>1)&&(multilevel_restart_period>1)) {
      // do nothing
     } else
@@ -4405,17 +4397,17 @@ NavierStokes::read_params ()
     ParmParse ppcg("cg");
 
     int cg_restart_period=-1;
-    ppcg.query("restart_period",cg_restart_period);
+    ppcg.queryAdd("restart_period",cg_restart_period);
     int cg_maxiter=-1;
-    ppcg.query("maxiter",cg_maxiter);
+    ppcg.queryAdd("maxiter",cg_maxiter);
 
-    ppmac.query( "mac_abs_tol",mac_abs_tol);
+    ppmac.queryAdd( "mac_abs_tol",mac_abs_tol);
       // mac.visc_abs_tol (not ns.visc_abs_tol)
-    ppmac.query( "visc_abs_tol",visc_abs_tol);
+    ppmac.queryAdd( "visc_abs_tol",visc_abs_tol);
     thermal_abs_tol=visc_abs_tol;
-    ppmac.query( "thermal_abs_tol",thermal_abs_tol);
-    pp.query( "minimum_relative_error",minimum_relative_error);
-    pp.query( "diffusion_minimum_relative_error",
+    ppmac.queryAdd( "thermal_abs_tol",thermal_abs_tol);
+    pp.queryAdd( "minimum_relative_error",minimum_relative_error);
+    pp.queryAdd( "diffusion_minimum_relative_error",
       diffusion_minimum_relative_error);
     if (mac_abs_tol<=0.0)
      amrex::Error("mac_abs_tol must be positive");
@@ -4435,50 +4427,50 @@ NavierStokes::read_params ()
        xblob9,yblob9,zblob9,radblob9,
        xblob10,yblob10,zblob10,radblob10 );
 
-    pp.query("xblob2",xblob2);
-    pp.query("yblob2",yblob2);
-    pp.query("zblob2",zblob2);
-    pp.query("radblob2",radblob2);
+    pp.queryAdd("xblob2",xblob2);
+    pp.queryAdd("yblob2",yblob2);
+    pp.queryAdd("zblob2",zblob2);
+    pp.queryAdd("radblob2",radblob2);
 
-    pp.query("xblob3",xblob3);
-    pp.query("yblob3",yblob3);
-    pp.query("zblob3",zblob3);
-    pp.query("radblob3",radblob3);
+    pp.queryAdd("xblob3",xblob3);
+    pp.queryAdd("yblob3",yblob3);
+    pp.queryAdd("zblob3",zblob3);
+    pp.queryAdd("radblob3",radblob3);
 
-    pp.query("xblob4",xblob4);
-    pp.query("yblob4",yblob4);
-    pp.query("zblob4",zblob4);
-    pp.query("radblob4",radblob4);
+    pp.queryAdd("xblob4",xblob4);
+    pp.queryAdd("yblob4",yblob4);
+    pp.queryAdd("zblob4",zblob4);
+    pp.queryAdd("radblob4",radblob4);
 
-    pp.query("xblob5",xblob5);
-    pp.query("yblob5",yblob5);
-    pp.query("zblob5",zblob5);
-    pp.query("radblob5",radblob5);
+    pp.queryAdd("xblob5",xblob5);
+    pp.queryAdd("yblob5",yblob5);
+    pp.queryAdd("zblob5",zblob5);
+    pp.queryAdd("radblob5",radblob5);
 
-    pp.query("xblob6",xblob6);
-    pp.query("yblob6",yblob6);
-    pp.query("zblob6",zblob6);
-    pp.query("radblob6",radblob6);
+    pp.queryAdd("xblob6",xblob6);
+    pp.queryAdd("yblob6",yblob6);
+    pp.queryAdd("zblob6",zblob6);
+    pp.queryAdd("radblob6",radblob6);
 
-    pp.query("xblob7",xblob7);
-    pp.query("yblob7",yblob7);
-    pp.query("zblob7",zblob7);
-    pp.query("radblob7",radblob7);
+    pp.queryAdd("xblob7",xblob7);
+    pp.queryAdd("yblob7",yblob7);
+    pp.queryAdd("zblob7",zblob7);
+    pp.queryAdd("radblob7",radblob7);
 
-    pp.query("xblob8",xblob8);
-    pp.query("yblob8",yblob8);
-    pp.query("zblob8",zblob8);
-    pp.query("radblob8",radblob8);
+    pp.queryAdd("xblob8",xblob8);
+    pp.queryAdd("yblob8",yblob8);
+    pp.queryAdd("zblob8",zblob8);
+    pp.queryAdd("radblob8",radblob8);
 
-    pp.query("xblob9",xblob9);
-    pp.query("yblob9",yblob9);
-    pp.query("zblob9",zblob9);
-    pp.query("radblob9",radblob9);
+    pp.queryAdd("xblob9",xblob9);
+    pp.queryAdd("yblob9",yblob9);
+    pp.queryAdd("zblob9",zblob9);
+    pp.queryAdd("radblob9",radblob9);
 
-    pp.query("xblob10",xblob10);
-    pp.query("yblob10",yblob10);
-    pp.query("zblob10",zblob10);
-    pp.query("radblob10",radblob10);
+    pp.queryAdd("xblob10",xblob10);
+    pp.queryAdd("yblob10",yblob10);
+    pp.queryAdd("zblob10",zblob10);
+    pp.queryAdd("radblob10",radblob10);
 
     xactive=0.0;
     yactive=0.0;
@@ -4488,32 +4480,32 @@ NavierStokes::read_params ()
     ractivey=0.0;
     ractivez=0.0;
 
-    pp.query("xactive",xactive);
-    pp.query("yactive",yactive);
-    pp.query("zactive",zactive);
-    pp.query("ractive",ractive);
+    pp.queryAdd("xactive",xactive);
+    pp.queryAdd("yactive",yactive);
+    pp.queryAdd("zactive",zactive);
+    pp.queryAdd("ractive",ractive);
     if (ractive>0.0) {
      ractivex=ractive;
      ractivey=ractive;
      ractivez=ractive;
     }
-    pp.query("ractivex",ractivex);
-    pp.query("ractivey",ractivey);
-    pp.query("ractivez",ractivez);
+    pp.queryAdd("ractivex",ractivex);
+    pp.queryAdd("ractivey",ractivey);
+    pp.queryAdd("ractivez",ractivez);
 
      // 0 - MGPCG  1-PCG 2-MINV=I
-    pp.query("project_solver_type",project_solver_type);
-    pp.query("initial_cg_cycles",initial_cg_cycles);
+    pp.queryAdd("project_solver_type",project_solver_type);
+    pp.queryAdd("initial_cg_cycles",initial_cg_cycles);
 
-    pp.query("initial_project_cycles",initial_project_cycles);
+    pp.queryAdd("initial_project_cycles",initial_project_cycles);
     if (initial_project_cycles<1)
      amrex::Error("must do at least 1 jacobi sweep at the beginning");
     initial_viscosity_cycles=initial_project_cycles;
-    pp.query("initial_viscosity_cycles",initial_viscosity_cycles);
+    pp.queryAdd("initial_viscosity_cycles",initial_viscosity_cycles);
     if (initial_viscosity_cycles<1)
      amrex::Error("must do at least 1 jacobi sweep at the beginning (visc)");
     initial_thermal_cycles=initial_viscosity_cycles;
-    pp.query("initial_thermal_cycles",initial_thermal_cycles);
+    pp.queryAdd("initial_thermal_cycles",initial_thermal_cycles);
     if (initial_thermal_cycles<1)
      amrex::Error("must do at least 1 jacobi sweep at the beginning (therm)");
 
@@ -4523,7 +4515,7 @@ NavierStokes::read_params ()
      amrex::Error("project_solver_type invalid");
 
     prescribe_temperature_outflow=0;
-    pp.query("prescribe_temperature_outflow",prescribe_temperature_outflow);
+    pp.queryAdd("prescribe_temperature_outflow",prescribe_temperature_outflow);
     if ((prescribe_temperature_outflow<0)||
         (prescribe_temperature_outflow>3))
      amrex::Error("prescribe_temperature_outflow invalid");
@@ -4584,12 +4576,12 @@ NavierStokes::read_params ()
     }  // i=0..num_materials-1
 
      //default=1
-    pp.query("particle_nsubdivide",particle_nsubdivide);
+    pp.queryAdd("particle_nsubdivide",particle_nsubdivide);
      //default=3
-    pp.query("particle_max_per_nsubdivide",
+    pp.queryAdd("particle_max_per_nsubdivide",
 	    particle_max_per_nsubdivide);
      //default=1
-    pp.query("particle_min_per_nsubdivide",
+    pp.queryAdd("particle_min_per_nsubdivide",
 	    particle_min_per_nsubdivide);
 
     if ((particle_nsubdivide<1)||
@@ -4605,14 +4597,14 @@ NavierStokes::read_params ()
         (particles_flag>1))
      amrex::Error("particles_flag invalid");
 
-    pp.queryarr("truncate_volume_fractions",truncate_volume_fractions,0,num_materials);
+    pp.queryAdd("truncate_volume_fractions",truncate_volume_fractions,num_materials);
     for (int i=0;i<num_materials;i++) {
      if ((truncate_volume_fractions[i]<0)||
          (truncate_volume_fractions[i]>1))
       amrex::Error("truncate_volume_fractions invalid");
     }
 
-    pp.query("truncate_thickness",truncate_thickness);
+    pp.queryAdd("truncate_thickness",truncate_thickness);
     if (truncate_thickness<1.0)
      amrex::Error("truncate_thickness too small");
 
@@ -4727,7 +4719,7 @@ NavierStokes::read_params ()
     } // i=0..num_species_var-1
 
     mof_error_ordering=0; 
-    pp.query("mof_error_ordering",mof_error_ordering);
+    pp.queryAdd("mof_error_ordering",mof_error_ordering);
     if ((mof_error_ordering!=0)&&
         (mof_error_ordering!=1))
      amrex::Error("mof_error_ordering invalid");
@@ -4740,7 +4732,7 @@ NavierStokes::read_params ()
       mof_error_ordering,
       FSI_flag);
 
-    pp.queryarr("mof_ordering",mof_ordering,0,num_materials);
+    pp.queryAdd("mof_ordering",mof_ordering,num_materials);
     for (int i=0;i<num_materials;i++) {
      if ((mof_ordering[i]<0)||
          (mof_ordering[i]>num_materials+1))
@@ -5198,7 +5190,7 @@ NavierStokes::read_params ()
      bool init_snan  = false;
 #endif
      ParmParse ppfab("fab");
-     ppfab.query("init_snan",init_snan);
+     ppfab.queryAdd("init_snan",init_snan);
 
      std::cout << "init_snan= " << init_snan << '\n';
 
@@ -6682,10 +6674,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
   amrex::Error("ngrow_distance invalid");
 
  int nparts_ghost=nparts;
- int ghost_state_type=Solid_State_Type;
  if (nparts==0) {
   nparts_ghost=1;
-  ghost_state_type=State_Type;
  } else if ((nparts>=1)&&(nparts<=num_materials)) {
   // do nothing
  } else {
@@ -6832,7 +6822,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   int dealloc_history=0;
-  ns_level.init_FSI_GHOST_MAC_MF(caller_id,dealloc_history);
+  ns_level.init_FSI_GHOST_MAC_MF(dealloc_history);
  } // ilev=level...finest_level
 
   // GNBC DEBUGGING
@@ -6936,17 +6926,15 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
 //
 //  NavierStokes::prepare_post_process (caller_id=2)
 //
-void NavierStokes::init_FSI_GHOST_MAC_MF(int caller_id,int dealloc_history) {
+void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
 
  int finest_level=parent->finestLevel();
  int nparts=im_solid_map.size();
  bool use_tiling=ns_tiling;
 
  int nparts_ghost=nparts;
- int ghost_state_type=Solid_State_Type;
  if (nparts==0) {
   nparts_ghost=1;
-  ghost_state_type=State_Type;
  } else if ((nparts>=1)&&(nparts<=num_materials)) {
   // do nothing
  } else {
@@ -7170,10 +7158,8 @@ void NavierStokes::assimilate_state_data() {
  bool use_tiling=ns_tiling;
 
  int nparts_ghost=nparts;
- int ghost_state_type=Solid_State_Type;
  if (nparts==0) {
   nparts_ghost=1;
-  ghost_state_type=State_Type;
  } else if ((nparts>=1)&&(nparts<=num_materials)) {
   // do nothing
  } else {
@@ -9189,7 +9175,7 @@ void NavierStokes::post_restart() {
 
  ParmParse ppmain;
  Real local_stop_time=-1.0;
- ppmain.query("stop_time",local_stop_time);
+ ppmain.queryAdd("stop_time",local_stop_time);
 
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
@@ -13182,7 +13168,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      material_type_evap.dataPtr(),
      molar_mass.dataPtr(),
      species_molar_mass.dataPtr(),
-     &use_supermesh,
      tilelo,tilehi,
      fablo,fabhi,&bfact,
      xlo,dx,
@@ -13264,7 +13249,6 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      material_type_evap.dataPtr(),
      molar_mass.dataPtr(),
      species_molar_mass.dataPtr(),
-     &use_supermesh,
      tilelo,tilehi,
      fablo,fabhi,&bfact,
      xlo,dx,
@@ -14089,7 +14073,6 @@ NavierStokes::level_phase_change_convert(
     &nden,
     &nstate,
     &ntsat,
-    &use_supermesh,
     saturation_temp.dataPtr(),
     freezing_model.dataPtr(),
     Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
@@ -20416,8 +20399,10 @@ void NavierStokes::writeSanityCheckData(
  } // ilev=0...tecplot_finest_level
 
  int n_root=root_string.length();
- char root_char_array[n_root+1];
- strcpy(root_char_array,root_string.c_str());
+ Vector<char> root_char_array;
+ root_char_array.resize(n_root+1);
+ for (int i_string=0;i_string<n_root;i_string++)
+  root_char_array[i_string]=root_string[i_string];
 
  if (temp_number_grids!=total_number_grids)
   amrex::Error("temp_number_grids invalid");
@@ -20430,7 +20415,7 @@ void NavierStokes::writeSanityCheckData(
 
   // declared in: TECPLOTUTIL.F90
   fort_combinezones_sanity(
-   root_char_array,
+   root_char_array.dataPtr(),
    &n_root,
    &data_dir,
    &total_number_grids,
@@ -21400,326 +21385,6 @@ NavierStokes::post_init (Real stop_time)
 
 }  // end subroutine post_init
 
-// HH is m+1 x m
-// yy is m x 1
-// solve H^T H y = H^T beta e1  (slow, since H is m+1xm  H^T H is mxm
-//   Gaussian elimination for mxm system has a cost of O(m^3))
-//  Givens' rotation approach has a cost of O(m^2)
-//  ( min_y ||Hy - beta e1|| )
-// status==1 success
-// status==0 poor conditioning
-// HT is m x m+1
-// HH=  h11 h12 h13 ... h1m
-//      h21 h22 h23 ... h2m
-//          h32 h33 ... h3m
-//              h43 ... h4m
-//                  .
-//                  .
-//               hm,m-1 hmm
-//                      hm+1,m
-//
-// HT= h11 h21
-//     h12 h22 h32
-//     h13 h23 h33 h43
-//         .
-//         .
-//         .
-//     h1m h2m h3m h4m ... hmm hm+1,m
-//
-// beta_vec_input[m+1]
-// HH_input[m+1][m]
-//
-void GMRES_HELPER(Real** HH_input,Real* beta_vec_input,Real* yy,int m) {
-
- if (m>=1) {
-  // do nothing
- } else
-  amrex::Error("m invalid in GMRES_HELPER");
-
- Real** HH=new Real*[m+1];
- for (int i=0;i<m+1;i++) 
-  HH[i]=new Real[m];
-
- Real* sn=new Real[m];
- Real* cs=new Real[m];
- Real* h=new Real[m+1];
- Real* beta_vec=new Real[m+1];
- Real beta1;
- Real beta2;
-
- for (int i=0;i<m+1;i++) {
-  for (int j=0;j<m;j++) {
-   if ((HH_input[i][j]>=0.0)||
-       (HH_input[i][j]<=0.0)) {
-    HH[i][j]=HH_input[i][j];
-   } else
-    amrex::Error("HH_input bust");
-  }
-  if ((beta_vec_input[i]>=0.0)||
-      (beta_vec_input[i]<=0.0)) {
-   beta_vec[i]=beta_vec_input[i];
-  } else
-   amrex::Error("beta_vec_input bust");
- } // i=0..m
-
- for (int i=0;i<m;i++) {
-  sn[i]=0.0;
-  cs[i]=0.0;
- }
- for (int i=0;i<m+1;i++) {
-  h[i]=0.0;
- }
-
- for (int k=1;k<=m;k++) {
-
-  for (int i=1;i<=m+1;i++)
-   h[i-1]=0.0;
-  for (int i=1;i<=k+1;i++)
-   h[i-1]=HH[i-1][k-1];
-
-  for (int i=1;i<=k-1;i++) {
-   Real temp=cs[i-1]*h[i-1]+sn[i-1]*h[i];
-   h[i]=-sn[i-1]*h[i-1]+cs[i-1]*h[i];
-   h[i-1]=temp;
-  }
-  Real cs_k=0.0;
-  Real sn_k=0.0;
-  Real v1=h[k-1];
-  Real v2=h[k];
-  if (v1==0.0) {
-   cs_k=0.0;
-   sn_k=1.0;
-  } else if (v1!=0.0) {
-   Real t=sqrt(v1*v1+v2*v2);
-   if (t>0.0) {
-    cs_k=std::abs(v1)/t;
-    sn_k=cs_k*v2/v1; 
-   } else {
-    std::cout << "t= " << t << '\n';
-    amrex::Error("t invalid");
-   }
-  } else
-   amrex::Error("v1 is corrupt");
-
-    // the rotation matrix:  ( cs  sn 
-    //                         -sn cs ) 
-  h[k-1]=cs_k*h[k-1]+sn_k*h[k];
-  h[k]=0.0;
-
-  for (int i=1;i<=k+1;i++)
-   HH[i-1][k-1]=h[i-1];
-
-  cs[k-1]=cs_k;
-  sn[k-1]=sn_k;
-
-  beta1=beta_vec[k-1];
-  beta2=beta_vec[k];
-  beta_vec[k-1]=cs[k-1]*beta1+sn[k-1]*beta2;
-  beta_vec[k]=-sn[k-1]*beta1+cs[k-1]*beta2;
-
- } // k=1..m
-
- for (int k=m;k>=1;k--) {
-
-  yy[k-1]=beta_vec[k-1];
-  for (int j=k+1;j<=m;j++)
-   yy[k-1]-=HH[k-1][j-1]*yy[j-1];
-  Real hdiag=HH[k-1][k-1];
-  if (std::abs(hdiag)>0.0) 
-   yy[k-1]/=hdiag;
-  else
-   amrex::Error("hdiag became 0");
-
- } // k=m ... 1 
-
- delete [] sn;
- delete [] cs;
- delete [] h;
- delete [] beta_vec;
-
- for (int i=0;i<m+1;i++) 
-  delete [] HH[i];
- delete [] HH;
-
-} // end subroutine GMRES_HELPER
-
-
-void GMRES_MIN_CPP(Real** HH,Real beta, Real* yy,
-		int m,int m_small,
-		int caller_id,int project_option,
-                int mg_level,int& status) {
-
-#define profile_gmres 0
-
-#if (profile_gmres==1)
- std::string subname="GMRES_MIN_CPP";
- std::stringstream id_string_stream(std::stringstream::in |
-   std::stringstream::out);
- id_string_stream << caller_id;
- std::string profname=subname+id_string_stream.str();
-
- BLProfiler bprof(profname);
-#endif
-
- status=1; // status==1 means success, status==0 means poor conditioning.
-
- if ((m_small>=1)&&(m_small<=m)) {
-  // do nothing
- } else
-  amrex::Error("m_small invalid");
-
- Real** HH_small=new Real*[m_small+1];
- for (int i=0;i<m_small+1;i++) { 
-  HH_small[i]=new Real[m_small];
-  for (int j=0;j<m_small;j++) 
-   HH_small[i][j]=HH[i][j];
- }
-
- Real** HCOPY=new Real*[m_small+1];
- for (int i=0;i<m_small+1;i++) 
-  HCOPY[i]=new Real[m_small];
-
- for (int i=0;i<m_small+1;i++) { 
-  for (int j=0;j<m_small;j++) {
-
-   if (HH[i][j]<0.0) {
-    // do nothing
-   } else if (HH[i][j]>0.0) {
-    // do nothing
-   } else if (HH[i][j]==0.0) {
-    // do nothing
-   } else {
-    amrex::Error("HH[i][j] corrupt");
-   }
-   if (i>=j+2) {
-    if (HH[i][j]==0.0) {
-     // do nothing
-    } else
-     amrex::Error("HH should be 0");
-   } else if (i<j+2) {
-    // check nothing
-   } else
-    amrex::Error("i or j became corrupt");
-
-   if (HH_small[i][j]<0.0) {
-    // do nothing
-   } else if (HH_small[i][j]>0.0) {
-    // do nothing
-   } else if (HH_small[i][j]==0.0) {
-    // do nothing
-   } else {
-    amrex::Error("HH_small[i][j] corrupt");
-   }
-   if (i>=j+2) {
-    if (HH_small[i][j]==0.0) {
-     // do nothing
-    } else
-     amrex::Error("HH_small should be 0");
-   } else if (i<j+2) {
-    // check nothing
-   } else
-    amrex::Error("i or j became corrupt");
-
-   HCOPY[i][j]=HH[i][j];
-  } // j=0;j<m_small
- } //  i=0;i<m_small+1
-
- if (beta>0.0) {
-  // do nothing
- } else {
-  std::cout << "beta= " << beta << '\n';
-  amrex::Error("beta invalid");
- }
-
- Real* delta_y=new Real[m_small];
-
- Real* beta_vec=new Real[m_small+1];
- for (int i=0;i<m_small+1;i++) {
-  beta_vec[i]=0.0;
- }
- beta_vec[0]=beta;
-
- GMRES_HELPER(HCOPY,beta_vec,yy,m_small);
-
- for (int i=0;i<m_small+1;i++) {
-  if (i==0) {
-   beta_vec[i]=beta;
-  } else if ((i>=1)&&(i<m_small+1)) {
-   beta_vec[i]=0.0;
-  } else
-   amrex::Error("i invalid");
-
-  for (int j=0;j<m_small;j++)
-   beta_vec[i]-=HCOPY[i][j]*yy[j];
- } // i=0..m_small+1
-
- GMRES_HELPER(HCOPY,beta_vec,delta_y,m_small);
-
- Real norm_y=0.0;
- Real norm_delta_y=0.0;
- for (int i=0;i<m_small;i++) { 
-  norm_y+=yy[i]*yy[i];
-  norm_delta_y+=delta_y[i]*delta_y[i];
- }
-
- if (norm_delta_y>=0.0) {
-  norm_delta_y=sqrt(norm_delta_y);
- } else
-  amrex::Error("norm_delta_y invalid");
-
- if (norm_y>0.0) {
-  norm_y=sqrt(norm_y);
-  double relative_error=norm_delta_y/norm_y;
-
-  if (relative_error>0.01) {
-   status=0;
-   if (1==0) {
-    std::cout << "caller_id= " << caller_id << '\n';
-    std::cout << "project_option= " << project_option << '\n';
-    std::cout << "mg_level= " << mg_level << '\n';
-    std::cout << "relative_error= " << relative_error << '\n';
-    std::cout << "beta= " << beta << '\n';
-    std::cout << "norm_y= " << norm_y << '\n';
-    std::cout << "norm_delta_y= " << norm_delta_y << '\n';
-    std::cout << "m_small= " << m_small << '\n';
-    amrex::Error("relative_error large, decrease ns.mglib_min_coeff_factor");
-   }
-  }
- } else if (norm_y==0.0) {
-  status=0;
-  if ((norm_delta_y!=0.0)||(1==0)) {
-   std::cout << "caller_id= " << caller_id << '\n';
-   std::cout << "project_option= " << project_option << '\n';
-   std::cout << "mg_level= " << mg_level << '\n';
-   std::cout << "beta= " << beta << '\n';
-   std::cout << "norm_y= " << norm_y << '\n';
-   std::cout << "norm_delta_y= " << norm_delta_y << '\n';
-   std::cout << "m_small= " << m_small << '\n';
-   amrex::Error("norm_y became zero, and norm_delta_y might be invalid too");
-  }
-
- } else
-  amrex::Error("norm_y invalid");
-
- delete [] beta_vec;
-
- delete [] delta_y;
-
- for (int i=0;i<m_small+1;i++) 
-  delete [] HCOPY[i];
- delete [] HCOPY;
-
- for (int i=0;i<m_small+1;i++) 
-  delete [] HH_small[i];
- delete [] HH_small;
-
-#if (profile_gmres==1)
- bprof.stop();
-#endif 
-
-#undef profile_gmres
-
-} // subroutine GMRES_MIN_CPP
 
 // status==1 success
 // status==0 failure
@@ -23431,7 +23096,7 @@ NavierStokes::level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine) {
  }// mfi
 } //omp
  ns_reconcile_d_num(108);
- S_crse.copy(crse_S_fine,0,scomp,ncomp);
+ S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
 } // subroutine level_avgDown_tag
 
@@ -23542,7 +23207,7 @@ NavierStokes::level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine,
  }// mfi
 } //omp
  ns_reconcile_d_num(109);
- S_crse.copy(crse_S_fine,0,scomp,ncomp);
+ S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
 
 } // end subroutine level_avgDownBURNING
@@ -23643,7 +23308,7 @@ NavierStokes::level_avgDownDRAG(MultiFab& S_crse,MultiFab& S_fine) {
  }// mfi
 } //omp
  ns_reconcile_d_num(109);
- S_crse.copy(crse_S_fine,0,scomp,ncomp);
+ S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
 
 } // end subroutine level_avgDownDRAG
@@ -23744,7 +23409,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
  }// mfi
 } //omp
  ns_reconcile_d_num(110);
- S_crse.copy(crse_S_fine,0,scomp,ncomp);
+ S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
 
 } // subroutine level_avgDownCURV
@@ -23870,7 +23535,7 @@ NavierStokes::avgDown(MultiFab& S_crse,MultiFab& S_fine,
  }// mfi
 } //omp
  ns_reconcile_d_num(111);
- S_crse.copy(crse_S_fine,0,scomp,ncomp);
+ S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
 }  // subroutine avgDown
 
@@ -24014,7 +23679,7 @@ void NavierStokes::MOFavgDown() {
  } // mfi
 } //omp
  ns_reconcile_d_num(112);
- S_crse.copy(crse_S_fine,0,STATECOMP_MOF,num_materials*ngeom_raw);
+ S_crse.ParallelCopy(crse_S_fine,0,STATECOMP_MOF,num_materials*ngeom_raw);
  ParallelDescriptor::Barrier();
 }
 
@@ -24109,7 +23774,7 @@ void NavierStokes::avgDownError() {
  } // mfi
 } //omp
  ns_reconcile_d_num(113);
- S_crse.copy(crse_S_fine,0,STATECOMP_ERR,1);
+ S_crse.ParallelCopy(crse_S_fine,0,STATECOMP_ERR,1);
  ParallelDescriptor::Barrier();
 } // subroutine avgDownError
 

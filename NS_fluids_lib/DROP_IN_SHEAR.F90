@@ -315,25 +315,6 @@ REAL_T :: initial_time
   im_solid_materialdist=im_solid_primary()
   initial_time=zero
 
-   ! TODO (supermesh prototype code first)
-   !       (i) quadratic least squares for heat flux and mass fraction
-   !           flux
-   !       (ii) twin material for capturing thermal layer. 
-   ! for evaporation and boiling JCP paper:
-   ! AMR, MOF, Space-time spectral
-   ! 1. evaporating drop in shear
-   ! 2. forced convective boiling from heated cylinder/sphere
-   ! 3. i) planar boiling/evaporation front
-   !    ii) expansing vapor bubble in superheated liquid.
-   !    iii) nucleate boiling in either quiescent or flowing liquid.
-   !    iv) pool boiling in quiescent or flowing liquid 
-   ! 4. verification of space-time spectral accuracy for a problem
-   !    using the Boussinesq approximation. (no phase change)
-   ! for freezing and melting JCP paper?
-   ! 1. static freezing test
-   ! 2. ice cube melting on top of water on top of substrate.
-   ! 3. thermal spray - convective heat transfer melting and solidification.
-   ! 4. same as (3) for the evaporation and boiling JCP paper.
   if (probtype.eq.424) then
 
    do im=1,nmat

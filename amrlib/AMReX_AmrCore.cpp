@@ -276,7 +276,7 @@ AmrCore::InitAmr () {
     // Check for command line flags.
     //
     verbose = 0;
-    pp.query("v",verbose);
+    pp.queryAdd("v",verbose);
 
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "Amr.verbose= " << verbose << '\n';
@@ -303,11 +303,11 @@ AmrCore::InitAmr () {
      viscoelastic_model_temp[im]=0;
      store_elastic_data_temp[im]=0;
     }
-    ppns.queryarr("elastic_viscosity",elastic_viscosity_temp,0,
+    ppns.queryAdd("elastic_viscosity",elastic_viscosity_temp,
 		  global_AMR_num_materials);
-    ppns.queryarr("elastic_time",elastic_time_temp,0,
+    ppns.queryAdd("elastic_time",elastic_time_temp,
 		  global_AMR_num_materials);
-    ppns.queryarr("viscoelastic_model",viscoelastic_model_temp,0,
+    ppns.queryAdd("viscoelastic_model",viscoelastic_model_temp,
 		  global_AMR_num_materials);
 
     for (int im=0;im<global_AMR_num_materials;im++) {
@@ -339,7 +339,7 @@ AmrCore::InitAmr () {
     for (int im=0;im<global_AMR_num_materials;im++) {
      recalesce_flag[im]=0;
     }
-    ppns.queryarr("recalesce_flag",recalesce_flag,0,global_AMR_num_materials);
+    ppns.queryAdd("recalesce_flag",recalesce_flag,global_AMR_num_materials);
     for (int im=0;im<global_AMR_num_materials;im++) {
      if ((recalesce_flag[im]!=0)&&
          (recalesce_flag[im]!=1)&&
@@ -347,27 +347,27 @@ AmrCore::InitAmr () {
       amrex::Error("recalesce_flag invalid");
     }
 
-    pp.query("regrid_on_restart",regrid_on_restart);
+    pp.queryAdd("regrid_on_restart",regrid_on_restart);
     if ((regrid_on_restart!=0)&&(regrid_on_restart!=1))
      amrex::Error("regrid_on_restart invalid");
 
-    pp.query("plotfile_on_restart",plotfile_on_restart);
-    pp.query("checkpoint_on_restart",checkpoint_on_restart);
+    pp.queryAdd("plotfile_on_restart",plotfile_on_restart);
+    pp.queryAdd("checkpoint_on_restart",checkpoint_on_restart);
 
-    pp.query("checkpoint_files_output", checkpoint_files_output);
+    pp.queryAdd("checkpoint_files_output", checkpoint_files_output);
 
     plot_nfiles = ParallelDescriptor::NProcs();
     checkpoint_nfiles = ParallelDescriptor::NProcs();
 
-    pp.query("refine_grid_layout", refine_grid_layout);
+    pp.queryAdd("refine_grid_layout", refine_grid_layout);
 
-    pp.query("mffile_nstreams", mffile_nstreams);
-    pp.query("probinit_natonce", probinit_natonce);
+    pp.queryAdd("mffile_nstreams", mffile_nstreams);
+    pp.queryAdd("probinit_natonce", probinit_natonce);
 
     probinit_natonce = 
      std::max(1, std::min(ParallelDescriptor::NProcs(), probinit_natonce));
 
-    pp.query("file_name_digits", file_name_digits);
+    pp.queryAdd("file_name_digits", file_name_digits);
 
     if (pp.contains("run_log")) {
      std::string log_file_name;
@@ -389,7 +389,7 @@ AmrCore::InitAmr () {
      int num_datalogs = pp.countval("data_log");
      datalog.resize(num_datalogs);
      Vector<std::string> data_file_names(num_datalogs);
-     pp.queryarr("data_log",data_file_names,0,num_datalogs);
+     pp.queryAdd("data_log",data_file_names,num_datalogs);
      for (int i_data = 0; i_data < num_datalogs; i_data++) 
       setRecordDataInfo(i_data,data_file_names[i_data]);
     }
@@ -397,7 +397,7 @@ AmrCore::InitAmr () {
     //
     // Restart or run from scratch?
     //
-    pp.query("restart", restart_file);
+    pp.queryAdd("restart", restart_file);
     int nlev     = max_level+1;
 
     level_cells_advanced.resize(nlev);
@@ -428,26 +428,26 @@ AmrCore::InitAmr () {
     // Read other amr specific values.
     //
     check_file_root = "chk";
-    pp.query("check_file",check_file_root);
+    pp.queryAdd("check_file",check_file_root);
 
     check_int = -1;
-    int got_check_int = pp.query("check_int",check_int);
+    int got_check_int = pp.queryAdd("check_int",check_int);
 
     check_per = -1.0;
-    int got_check_per = pp.query("check_per",check_per);
+    int got_check_per = pp.queryAdd("check_per",check_per);
 
     if (got_check_int == 1 && got_check_per == 1) {
      amrex::Error("Must only specify amr.check_int OR amr.check_per");
     }
 
     plot_file_root = "plt";
-    pp.query("plot_file",plot_file_root);
+    pp.queryAdd("plot_file",plot_file_root);
 
     plot_int = -1;
-    int got_plot_int = pp.query("plot_int",plot_int);
+    int got_plot_int = pp.queryAdd("plot_int",plot_int);
 
     plot_per = -1.0;
-    int got_plot_per = pp.query("plot_per",plot_per);
+    int got_plot_per = pp.queryAdd("plot_per",plot_per);
 
     if (got_plot_int == 1 && got_plot_per == 1) {
      amrex::Error("Must only specify amr.plot_int OR amr.plot_per");
@@ -458,7 +458,7 @@ AmrCore::InitAmr () {
     if (got_plot_int==1) {
      slice_int=plot_int;
 
-     int got_slice_int=pp.query("slice_int",slice_int);
+     int got_slice_int=pp.queryAdd("slice_int",slice_int);
      if ((got_slice_int!=0)&&(got_slice_int!=1))
       amrex::Error("got_slice_int invalid");
 
@@ -466,15 +466,15 @@ AmrCore::InitAmr () {
       amrex::Error("slice_int should be less than or equal to plot_int");
     }
 
-    pp.queryarr("space_blocking_factor",space_blocking_factor);
-    pp.query("time_blocking_factor",time_blocking_factor);
-    pp.query("MAX_NUM_SLAB",MAX_NUM_SLAB);
+    pp.queryAdd("space_blocking_factor",space_blocking_factor);
+    pp.queryAdd("time_blocking_factor",time_blocking_factor);
+    pp.queryAdd("MAX_NUM_SLAB",MAX_NUM_SLAB);
     if (time_blocking_factor+1>MAX_NUM_SLAB)
      amrex::Error("MAX_NUM_SLAB too small");
     if (time_blocking_factor<1)
      amrex::Error("time_blocking_factor too small");
 
-    pp.query("slab_dt_type",slab_dt_type);
+    pp.queryAdd("slab_dt_type",slab_dt_type);
     if ((slab_dt_type!=0)&&
         (slab_dt_type!=1))
      amrex::Error("slab_dt_type invalid");
@@ -486,7 +486,7 @@ AmrCore::InitAmr () {
 
      int numvals = pp.countval("regrid_int");
      if (numvals == 1) {
-      pp.query("regrid_int",regrid_int);
+      pp.queryAdd("regrid_int",regrid_int);
      } else {
       amrex::Error("specify just one regrid_int value");
      }
@@ -526,7 +526,7 @@ AmrCore::InitAmr () {
      amrex::Error("global_AMR_num_species_var invalid");
 
     global_AMR_particles_flag=0;
-    ppns.query("particles_flag",global_AMR_particles_flag);
+    ppns.queryAdd("particles_flag",global_AMR_particles_flag);
     if ((global_AMR_particles_flag==0)||
         (global_AMR_particles_flag==1)) {
      //do nothing

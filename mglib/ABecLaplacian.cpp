@@ -16,7 +16,6 @@
 #include <ABec_F.H>
 #include <CG_F.H>
 #include <MG_F.H>
-#include <Zeyu_Matrix_Functions.H>
 #include <INDEX_TYPE_MACROS.H>
 
 #define SCALAR_WORK_NCOMP 9
@@ -666,7 +665,7 @@ ABecLaplacian::makeCoefficients (
  } else
   amrex::Error("avg invalid");
 
- crse.copy(crse_fine,0,0,nComp_expect);
+ crse.ParallelCopy(crse_fine,0,0,nComp_expect);
  ParallelDescriptor::Barrier();
 
  if ((avg==0)||(avg==1)) {
@@ -739,14 +738,6 @@ ABecLaplacian::buildMatrix() {
      // after this step: bcoefs[level] ~ (area_coarse/dx_coarse)/2^d
     bmf.mult(0.25);
    } // dir=0..sdim-1
-
-   Real denom=0.0;
-   if (AMREX_SPACEDIM==2) {
-    denom=0.25;
-   } else if (AMREX_SPACEDIM==3) {
-    denom=0.125;
-   } else
-    amrex::Error("dimension bust");
 
   } else if (level==0) {
    // do nothing
@@ -957,16 +948,16 @@ ABecLaplacian::ABecLaplacian (
 
  ParmParse ppcg("cg");
 
- ppcg.query("mglib_blocking_factor", mglib_blocking_factor);
+ ppcg.queryAdd("mglib_blocking_factor", mglib_blocking_factor);
  if (mglib_blocking_factor>=2) {
   // do nothing
  } else
   amrex::Error("expecting cg.mglib_blocking_factor>=2");
 
- ppcg.query("maxiter", CG_def_maxiter);
- ppcg.query("restart_period", CG_def_restart_period);
- ppcg.query("v", CG_def_verbose);
- ppcg.query("verbose", CG_def_verbose);
+ ppcg.queryAdd("maxiter", CG_def_maxiter);
+ ppcg.queryAdd("restart_period", CG_def_restart_period);
+ ppcg.queryAdd("v", CG_def_verbose);
+ ppcg.queryAdd("verbose", CG_def_verbose);
 
  CG_maxiter = CG_def_maxiter;
  CG_restart_period = CG_def_restart_period;
@@ -988,11 +979,11 @@ ABecLaplacian::ABecLaplacian (
     
  ParmParse ppmg("mg");
 
- ppmg.query("nu_0", MG_def_nu_0);
- ppmg.query("nu_f", MG_def_nu_f);
- ppmg.query("v", MG_def_verbose);
- ppmg.query("verbose", MG_def_verbose);
- ppmg.query("nu_b", MG_def_nu_b);
+ ppmg.queryAdd("nu_0", MG_def_nu_0);
+ ppmg.queryAdd("nu_f", MG_def_nu_f);
+ ppmg.queryAdd("v", MG_def_verbose);
+ ppmg.queryAdd("verbose", MG_def_verbose);
+ ppmg.queryAdd("nu_b", MG_def_nu_b);
 
  MG_nu_0    = MG_def_nu_0;
  MG_nu_f    = MG_def_nu_f;
@@ -2689,7 +2680,6 @@ ABecLaplacian::CG_solve(
  Real beta=0.0;
  Real rho=1.0;
  Real rho_old=1.0;
- Real omega=1.0;
  Real alpha=1.0;
  CG_p_search_SOLN[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostSOLN); 
  CG_p_search[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostRHS); 
@@ -2866,47 +2856,47 @@ ABecLaplacian::CG_solve(
       } else if (pAp<0.0) {
        restart_flag=1;
       } else {
-       std::cout << "pAp (1)= " << pAp << endl;
+       std::cout << "pAp (1)= " << pAp << '\n';
        std::cout << "laplacian_solvability (all BCs masked off?)= " << 
          laplacian_solvability << '\n';
        std::cout << "cfd_level= " << cfd_level << '\n';
        std::cout << "cfd_project_option= " << cfd_project_option << '\n';
        std::cout << "cfd_mglib_min_coeff_factor= " << 
        	cfd_mglib_min_coeff_factor << '\n';
-       std::cout << "level (mglib)= " << level << endl;
+       std::cout << "level (mglib)= " << level << '\n';
        std::cout << "mglib_blocking_factor= " << 
-         mglib_blocking_factor << endl;
-       std::cout << "smooth_type= " << smooth_type << endl;
-       std::cout << "bottom_smooth_type= " << bottom_smooth_type << endl;
-       std::cout << "local_presmooth= " << local_presmooth << endl;
-       std::cout << "local_postsmooth= " << local_postsmooth << endl;
-       std::cout << "use_PCG= " << use_PCG << endl;
-       std::cout << "rnorm= " << rnorm << endl;
-       std::cout << "rnorm_init= " << rnorm_init << endl;
-       std::cout << "nit= " << nit << endl;
-       std::cout << "LPboxArray(level)=" << LPboxArray(level) << endl;
+         mglib_blocking_factor << '\n';
+       std::cout << "smooth_type= " << smooth_type << '\n';
+       std::cout << "bottom_smooth_type= " << bottom_smooth_type << '\n';
+       std::cout << "local_presmooth= " << local_presmooth << '\n';
+       std::cout << "local_postsmooth= " << local_postsmooth << '\n';
+       std::cout << "use_PCG= " << use_PCG << '\n';
+       std::cout << "rnorm= " << rnorm << '\n';
+       std::cout << "rnorm_init= " << rnorm_init << '\n';
+       std::cout << "nit= " << nit << '\n';
+       std::cout << "LPboxArray(level)=" << LPboxArray(level) << '\n';
        amrex::Error("pAp invalid in bottom solver (1) ");
       }
      } else if (pAp<0.0) {
-      std::cout << "pAp (2) = " << pAp << endl;
+      std::cout << "pAp (2) = " << pAp << '\n';
       std::cout << "laplacian_solvability (all BCs masked off?)= " << 
         laplacian_solvability << '\n';
       std::cout << "cfd_level= " << cfd_level << '\n';
       std::cout << "cfd_project_option= " << cfd_project_option << '\n';
       std::cout << "cfd_mglib_min_coeff_factor= " << 
               cfd_mglib_min_coeff_factor << '\n';
-      std::cout << "level (mglib)= " << level << endl;
+      std::cout << "level (mglib)= " << level << '\n';
       std::cout << "mglib_blocking_factor= " << 
-        mglib_blocking_factor << endl;
-      std::cout << "smooth_type= " << smooth_type << endl;
-      std::cout << "bottom_smooth_type= " << bottom_smooth_type << endl;
-      std::cout << "local_presmooth= " << local_presmooth << endl;
-      std::cout << "local_postsmooth= " << local_postsmooth << endl;
-      std::cout << "use_PCG= " << use_PCG << endl;
-      std::cout << "rnorm= " << rnorm << endl;
-      std::cout << "rnorm_init= " << rnorm_init << endl;
-      std::cout << "nit= " << nit << endl;
-      std::cout << "LPboxArray(level)=" << LPboxArray(level) << endl;
+        mglib_blocking_factor << '\n';
+      std::cout << "smooth_type= " << smooth_type << '\n';
+      std::cout << "bottom_smooth_type= " << bottom_smooth_type << '\n';
+      std::cout << "local_presmooth= " << local_presmooth << '\n';
+      std::cout << "local_postsmooth= " << local_postsmooth << '\n';
+      std::cout << "use_PCG= " << use_PCG << '\n';
+      std::cout << "rnorm= " << rnorm << '\n';
+      std::cout << "rnorm_init= " << rnorm_init << '\n';
+      std::cout << "nit= " << nit << '\n';
+      std::cout << "LPboxArray(level)=" << LPboxArray(level) << '\n';
       amrex::Error("pAp invalid in bottom solver (2) ");
      } else
       amrex::Error("pAp is NaN");
@@ -2960,7 +2950,6 @@ ABecLaplacian::CG_solve(
      beta=0.0;
      rho=1.0;
      rho_old=1.0;
-     omega=1.0;
      alpha=1.0;
      CG_p_search[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostRHS); 
      CG_p_search_SOLN[coarsefine]->setVal(0.0,0,nsolve_ABec,nghostSOLN); 
@@ -3664,7 +3653,7 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
  thread_class::reconcile_d_numPts(11);
 
- c.copy(crse_S_fine,0,0,nsolve_ABec);
+ c.ParallelCopy(crse_S_fine,0,0,nsolve_ABec);
  ParallelDescriptor::Barrier();
 
 #if (profile_solver==1)
@@ -3720,7 +3709,7 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
  DistributionMapping crse_dmap=fdmap;
  MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,nsolve_ABec,0,
    MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
- crse_S_fine.copy(c,0,0,nsolve_ABec);
+ crse_S_fine.ParallelCopy(c,0,0,nsolve_ABec);
 
  int bfact_coarse=get_bfact_array(clevel);
  int bfact_fine=get_bfact_array(flevel);
