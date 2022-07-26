@@ -450,6 +450,8 @@ ifdef AMREX_CCOMP
   lowercase_amrex_ccomp = $(shell echo $(AMREX_CCOMP) | tr A-Z a-z)
   ifeq ($(lowercase_amrex_ccomp),$(filter $(lowercase_amrex_ccomp),gcc gnu g++))
     AMREX_CCOMP = gnu
+  else ifeq ($(lowercase_amrex_ccomp),g++-8)
+    AMREX_CCOMP = g++-8
   else ifeq ($(lowercase_amrex_ccomp),intel)
     AMREX_CCOMP = intel
   else ifeq ($(lowercase_amrex_ccomp),dpcpp)
@@ -479,7 +481,7 @@ endif
 
 lowercase_comp = $(shell echo $(COMP) | tr A-Z a-z)
 
-ifeq ($(lowercase_comp),$(filter $(lowercase_comp),gcc gnu g++))
+ifeq ($(lowercase_comp),$(filter $(lowercase_comp),gcc gnu g++ g++-8))
   lowercase_comp = gnu
   AMREX_FCOMP ?= gnu
   AMREX_CCOMP ?= gnu

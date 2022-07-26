@@ -72,8 +72,16 @@ CTML_FBC = FALSE
 # -fno-range-check
 #    Disable range checking on results of simplification of constant
 #    expressions during compilation.
-COMP	  = g++
-FCOMP = gfortran
+#COMP	  = g++
+#FCOMP = gfortran
+COMP	  = g++-8
+FCOMP = gfortran-8
+AMREX_CCOMP=g++-8
+AMREX_FCOMP=gfortran-8
+CXX = g++-8
+CC = g++-8
+FC = gfortran-8
+F90 = gfortran-8
 
 # total view:
 #  1. ssh -YX sussman@hpc-login.rcc.fsu.edu (same password as FSUID)
@@ -124,7 +132,7 @@ USE_OMP = FALSE
 #EBASE = amr
 EBASE = amr
 
-AMREX_PARTICLES = TRUE
+USE_PARTICLES = TRUE
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs 
 
