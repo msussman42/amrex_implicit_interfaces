@@ -951,11 +951,11 @@ NavierStokes::AllinterpScalarMAC(
  DistributionMapping crse_dmap=fdmap;
  MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,nsolve,0,
    MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
- crse_S_fine.copy(pcoarse,0,0,nsolve);
+ crse_S_fine.ParallelCopy(pcoarse,0,0,nsolve);
 
  MultiFab crse_diagsing_fine(crse_S_fine_BA,crse_dmap,1,0,
    MFInfo().SetTag("crse_diagsing_fine"),FArrayBoxFactory());
- crse_diagsing_fine.copy(*cdiagsing,0,0,1);
+ crse_diagsing_fine.ParallelCopy(*cdiagsing,0,0,1);
 
  int bfact_f=parent->Space_blockingFactor(level);
  int bfact=parent->Space_blockingFactor(level-1);
@@ -1099,7 +1099,7 @@ NavierStokes::Allaverage(
  ns_reconcile_d_num(38);
 
 // src,scomp,dcomp,ncomp
- S_crse.copy(crse_S_fine,0,dcomp,1);
+ S_crse.ParallelCopy(crse_S_fine,0,dcomp,1);
 
 } // Allaverage
 

@@ -23,9 +23,6 @@ CEXE_headers += INDEX_TYPE_MACROS.H
 CEXE_headers += DRAG_COMP.H 
 CEXE_headers += NavierStokes.H 
 
-CEXE_sources += Zeyu_Matrix_Functions.cpp
-CEXE_headers += Zeyu_Matrix_Functions.H 
-
 F90EXE_headers += \
   level_set_extrapolation.F90 \
   specfun.F90 \

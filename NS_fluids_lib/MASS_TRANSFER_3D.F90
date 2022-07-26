@@ -40,7 +40,6 @@ stop
       ! p1=>t1
       type probe_parm_type
        INTEGER_T :: tid
-       INTEGER_T :: use_supermesh
        INTEGER_T :: probe_constrain
        REAL_T, pointer :: Y_TOLERANCE
        INTEGER_T, pointer :: local_freezing_model
@@ -1843,9 +1842,7 @@ stop
        recon, &
        dest, &
        dxprobe_target, &
-       material_found_in_cell, &
-       VOF_pos_probe_counter, &
-       use_supermesh)
+       VOF_pos_probe_counter)
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
@@ -1867,9 +1864,7 @@ stop
       REAL_T, pointer, INTENT(in) :: recon(D_DECL(:,:,:),:)
       REAL_T, INTENT(out) :: dest
       REAL_T, INTENT(inout) :: dxprobe_target !interpfab_filament_probe
-      INTEGER_T, INTENT(out) :: material_found_in_cell
       INTEGER_T, INTENT(inout) :: VOF_pos_probe_counter
-      INTEGER_T, INTENT(in) :: use_supermesh
 
       INTEGER_T ic,jc,kc
 
@@ -1946,38 +1941,11 @@ stop
       enddo
       mag=sqrt(mag)
 
-      material_found_in_cell=0
-
       if (mag.ge.zero) then
        if ((VF_sten.ge.-VOFTOL).and. &
            (VF_sten.le.one+VOFTOL)) then
         if (VF_sten.ge.VOFTOL) then
-
-         if (use_supermesh.eq.1) then 
-
-          dxprobe_target=zero
-          do dir=1,SDIM
-           dxprobe_target=dxprobe_target+(XC_sten(dir)-xI(dir))**2
-          enddo
-          dxprobe_target=sqrt(dxprobe_target)
-          if (dxprobe_target.gt.zero) then
-           dest=T_sten
-           material_found_in_cell=1
-          else if (dxprobe_target.eq.zero) then
-           ! do nothing
-          else
-           print *,"dxprobe_target invalid 1"
-           print *,"dxprobe_target= ",dxprobe_target
-           stop
-          endif
-
-         else if (use_supermesh.eq.0) then ! GFM
-          ! do nothing
-         else
-          print *,"use_supermesh invalid"
-          stop
-         endif
-
+         ! do nothing
         else if (VF_sten.le.VOFTOL) then
          ! do nothing
         else
@@ -1993,19 +1961,13 @@ stop
        stop
       endif
 
-      if (material_found_in_cell.eq.1) then
-       ! do nothing
-      else if (material_found_in_cell.eq.0) then
-       dest=T_sten
-       dxprobe_target=zero
-       do dir=1,SDIM
-        dxprobe_target=dxprobe_target+(xtarget(dir)-xI(dir))**2
-       enddo
-       dxprobe_target=sqrt(dxprobe_target)
-      else
-       print *,"material_found_in_cell invalid"
-       stop
-      endif
+      dest=T_sten
+      dxprobe_target=zero
+      do dir=1,SDIM
+       dxprobe_target=dxprobe_target+(xtarget(dir)-xI(dir))**2
+      enddo
+      dxprobe_target=sqrt(dxprobe_target)
+
       if (dxprobe_target.gt.zero) then
        ! do nothing
       else
@@ -2058,7 +2020,6 @@ stop
       REAL_T dist_probe_sanity
       INTEGER_T imls
       INTEGER_T dir
-      INTEGER_T material_found_in_cell
       INTEGER_T mtype
       REAL_T LSPROBE(num_materials)
       REAL_T F_tess(num_materials)
@@ -2473,18 +2434,9 @@ stop
           PROBE_PARMS%recon, &
           POUT%T_probe(iprobe), &
           POUT%dxprobe_target(iprobe), &
-          material_found_in_cell, &
-          VOF_pos_probe_counter, &
-          PROBE_PARMS%use_supermesh)
+          VOF_pos_probe_counter)
 
-         if (material_found_in_cell.eq.0) then
-          POUT%probe_ok_gradient(iprobe)=0
-         else if (material_found_in_cell.eq.1) then
-          POUT%probe_ok_gradient(iprobe)=1
-         else
-          print *,"material_found_in_cell invalid"
-          stop
-         endif
+         POUT%probe_ok_gradient(iprobe)=0
 
          if (DEBUG_TRIPLE.eq.1) then
           if ((DEBUG_I.eq.PROBE_PARMS%i).and. &
@@ -2515,9 +2467,7 @@ stop
            PROBE_PARMS%recon, &
            POUT%Y_probe(iprobe), &
            POUT%dxprobe_target(iprobe), &
-           material_found_in_cell, &
-           dummy_VOF_pos_probe_counter, &
-           PROBE_PARMS%use_supermesh)
+           dummy_VOF_pos_probe_counter)
 
           if ((POUT%Y_probe(iprobe).ge.-VOFTOL).and. &
               (POUT%Y_probe(iprobe).le.zero)) then
@@ -3571,7 +3521,6 @@ stop
        nden, &
        nstate, &
        ntsat, &
-       supermesh_flag, &
        saturation_temp, &
        freezing_model, &
        Tanasawa_or_Schrage_or_Kassemi, &
@@ -3626,7 +3575,6 @@ stop
       INTEGER_T, INTENT(in) :: nden
       INTEGER_T, INTENT(in) :: nstate
       INTEGER_T, INTENT(in) :: ntsat
-      INTEGER_T, INTENT(in) :: supermesh_flag
       REAL_T, INTENT(in) :: saturation_temp(2*num_interfaces)
       INTEGER_T, INTENT(in) :: freezing_model(2*num_interfaces)
       INTEGER_T, INTENT(in) :: Tanasawa_or_Schrage_or_Kassemi(2*num_interfaces)
@@ -5840,18 +5788,9 @@ stop
                xPOINT_GFM(udir)=u_xsten_updatecell(0,udir)
               enddo
 
-              if (supermesh_flag.eq.1) then
-               do udir=1,SDIM
-                xstar(udir)=xPOINT_supermesh(udir)
-               enddo
-              else if (supermesh_flag.eq.0) then
-               do udir=1,SDIM
-                xstar(udir)=xPOINT_GFM(udir)
-               enddo
-              else
-               print *,"supermesh_flag invalid"
-               stop
-              endif
+              do udir=1,SDIM
+               xstar(udir)=xPOINT_GFM(udir)
+              enddo
 
               data_out%data_interp=>cell_data_interp
 
@@ -5989,39 +5928,7 @@ stop
                 !(1) order in slope recon of im_source
                 !(2) order in slope recon of im_dest
                else if (oldvfrac(im_source).ge.one-VOFTOL) then
-                if (supermesh_flag.eq.0) then
-                 SWEPTFACTOR=zero
-                else if (supermesh_flag.eq.1) then
-
-                 if (((order_probe(2).ge.1).and. &
-                      (order_probe(2).le.num_materials)).or. &
-                     ((order_probe(1).ge.1).and. &
-                      (order_probe(1).le.num_materials))) then
-
-                  if ((LS_dest_old.eq.zero).and.(LS_dest_new.gt.zero)) then
-                   SWEPTFACTOR=one
-                  else if ((LS_dest_old.lt.zero).and.(LS_dest_new.eq.zero)) then
-                   SWEPTFACTOR=LSTOL
-                  else if ((LS_dest_old.ge.zero).or. &
-                           (LS_dest_new.le.zero)) then
-                   SWEPTFACTOR=one
-                  else if (LS_dest_new-LS_dest_old.gt.zero) then
-                   SWEPTFACTOR=-LS_dest_old/ &
-                        (LS_dest_new-LS_dest_old)
-                  else
-                   print *,"LS_dest_new or LS_dest_old invalid"
-                   stop
-                  endif
-
-                 else
-                  print *,"im_dest material disappeared at tnp1"
-                  stop
-                 endif
-
-                else
-                 print *,"supermesh_flag invalid"
-                 stop
-                endif
+                SWEPTFACTOR=zero
 
                 if (SWEPTFACTOR.le.LSTOL) then
                  SWEPTFACTOR=LSTOL
@@ -7306,7 +7213,6 @@ stop
        material_type_evap, &
        molar_mass, &
        species_molar_mass, &
-       use_supermesh, &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
        xlo,dx, &
@@ -7404,7 +7310,6 @@ stop
       REAL_T, INTENT(in) :: molar_mass(num_materials)
       REAL_T, INTENT(in) :: species_molar_mass(num_species_var+1)
       INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials)
-      INTEGER_T, INTENT(in) :: use_supermesh
       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, target, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -7627,14 +7532,6 @@ stop
 
       Y_TOLERANCE=0.01D0
 
-      if ((use_supermesh.eq.0).or. &
-          (use_supermesh.eq.1)) then
-       ! do nothing
-      else
-       print *,"use_supermesh invalid"
-       stop
-      endif
-
       if (nucleation_flag.eq.0) then
        ! do nothing
       else if (nucleation_flag.eq.1) then
@@ -7848,7 +7745,6 @@ stop
       create_in%dt=dt
 
       PROBE_PARMS%tid=tid
-      PROBE_PARMS%use_supermesh=use_supermesh
 
       PROBE_PARMS%Y_TOLERANCE=>Y_TOLERANCE
 

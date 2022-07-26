@@ -961,7 +961,7 @@ void NavierStokes::avgDown_and_Copy_localMF(
 } //omp
    ns_reconcile_d_num(128);
 
-   S_crse_MAC.copy(crse_S_fine_MAC,0,scomp_flux,ncomp_flux);
+   S_crse_MAC.ParallelCopy(crse_S_fine_MAC,0,scomp_flux,ncomp_flux);
    ParallelDescriptor::Barrier();
 
    const Box& domain = geom.Domain();
@@ -971,13 +971,13 @@ void NavierStokes::avgDown_and_Copy_localMF(
     crse_S_fine_MAC.shift(pshift);
 
     ParallelDescriptor::Barrier();
-    S_crse_MAC.copy(crse_S_fine_MAC,0,scomp_flux,ncomp_flux);
+    S_crse_MAC.ParallelCopy(crse_S_fine_MAC,0,scomp_flux,ncomp_flux);
     ParallelDescriptor::Barrier();
 
     pshift[dir]=-2*domain.length(dir);
     crse_S_fine_MAC.shift(pshift);
 
-    S_crse_MAC.copy(crse_S_fine_MAC,0,scomp_flux,ncomp_flux);
+    S_crse_MAC.ParallelCopy(crse_S_fine_MAC,0,scomp_flux,ncomp_flux);
     ParallelDescriptor::Barrier();
    }  // isPeriodic(dir)
 
@@ -1096,9 +1096,9 @@ void NavierStokes::interp_and_Copy_localMF(
 	MFInfo().SetTag("coarse_LS_fine"),FArrayBoxFactory());
    // FabArray.H     
    // scomp,dcomp,ncomp,s_nghost,d_nghost
-  coarse_mask_sem_fine->copy(*coarse_lev.localMF[MASKSEM_MF],0,0,
+  coarse_mask_sem_fine->ParallelCopy(*coarse_lev.localMF[MASKSEM_MF],0,0,
     1,1,1,geom.periodicity());
-  coarse_LS_fine->copy(*coarse_lev.localMF[LEVELPC_MF],0,0,
+  coarse_LS_fine->ParallelCopy(*coarse_lev.localMF[LEVELPC_MF],0,0,
     num_materials,1,1,geom.periodicity());
 
   coarse_den_fine=new MultiFab(crse_S_fine_BA,crse_dmap,ncomp_den,1,
@@ -1107,9 +1107,9 @@ void NavierStokes::interp_and_Copy_localMF(
 		  MFInfo().SetTag("coarse_vel_fine"),FArrayBoxFactory());
     // FabArray.H     
     // scomp,dcomp,ncomp,s_nghost,d_nghost
-  coarse_den_fine->copy(*coarse_lev.localMF[idx_den_MF],0,0,
+  coarse_den_fine->ParallelCopy(*coarse_lev.localMF[idx_den_MF],0,0,
     ncomp_den,1,1,geom.periodicity());
-  coarse_vel_fine->copy(*coarse_lev.localMF[idx_vel_MF],0,0,
+  coarse_vel_fine->ParallelCopy(*coarse_lev.localMF[idx_vel_MF],0,0,
     ncomp_vel,1,1,geom.periodicity());
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -1385,7 +1385,7 @@ void NavierStokes::interp_flux_localMF(
 	MFInfo().SetTag("coarse_mask_sem_fine"),FArrayBoxFactory());
    // FabArray.H     
    // scomp,dcomp,ncomp,s_nghost,d_nghost
-  coarse_mask_sem_fine->copy(*coarse_lev.localMF[MASKSEM_MF],0,0,
+  coarse_mask_sem_fine->ParallelCopy(*coarse_lev.localMF[MASKSEM_MF],0,0,
     1,1,1,geom.periodicity());
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -1410,7 +1410,7 @@ void NavierStokes::interp_flux_localMF(
      // overwrite covered fluxes with valid neighbor fluxes.
    coarse_lev.sync_flux_var(dir,coarse_flux_MF,ncomp_flux);
 
-   crse_S_fine_MAC.copy(*coarse_lev.localMF[coarse_flux_MF+dir],0,0,
+   crse_S_fine_MAC.ParallelCopy(*coarse_lev.localMF[coarse_flux_MF+dir],0,0,
     ncomp_flux,0,0,geom.periodicity());
 
    ParallelDescriptor::Barrier();

@@ -607,7 +607,7 @@ namespace amrex{
 	int* dombc,
 	const int* domlo,
 	const int* domhi);
-  };
+  }
 
 }/* namespace amrex */
 
