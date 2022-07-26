@@ -1,8 +1,6 @@
 #ifndef AMREX_ErrorList_H_
 #define AMREX_ErrorList_H_
-
-#include <string>
-#include <memory>
+#include <AMReX_Config.H>
 
 #include <AMReX_Array.H>
 #include <AMReX_Vector.H>
@@ -11,6 +9,9 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_TagBox.H>
 #include <AMReX_Geometry.H>
+
+#include <string>
+#include <memory>
 
 namespace amrex {
 
@@ -82,7 +83,7 @@ extern "C"
     */
     typedef void (*ErrorFunc3DDefault)(int* tag, const int* tlo, const int* thi,
                                        const int* tagval, const int* clearval,
-         			       amrex::Real* data, const int* data_lo, const int* data_hi,
+                                       amrex::Real* data, const int* data_lo, const int* data_hi,
                                        const int* lo, const int * hi, const int* nvar,
                                        const int* domain_lo, const int* domain_hi,
                                        const amrex::Real* dx, const amrex::Real* xlo,
@@ -381,6 +382,8 @@ std::ostream& operator << (std::ostream& os, const ErrorList& elst);
     int m_max_level = 1000;
     Real m_min_time = std::numeric_limits<Real>::lowest();
     Real m_max_time = std::numeric_limits<Real>::max();
+    int m_volume_weighting = 0;
+    int m_derefine = 0;
     RealBox m_realbox;
 
     AMRErrorTagInfo& SetMaxLevel (int max_level) noexcept {
@@ -399,13 +402,21 @@ std::ostream& operator << (std::ostream& os, const ErrorList& elst);
       m_realbox = realbox;
       return *this;
     }
+    AMRErrorTagInfo& SetVolumeWeighting (int volume_weighting) noexcept {
+      m_volume_weighting = volume_weighting;
+      return *this;
+    }
+    AMRErrorTagInfo& SetDerefine (int derefine) noexcept {
+      m_derefine = derefine;
+      return *this;
+    }
   };
 
   class AMRErrorTag
   {
   public:
 
-    enum TEST {GRAD=0, LESS, GREATER, VORT, BOX, USER};
+    enum TEST {GRAD=0, RELGRAD, LESS, GREATER, VORT, BOX, USER};
 
     struct UserFunc
     {

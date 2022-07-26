@@ -1,7 +1,7 @@
 
 #include <AMReX_GpuUtility.H>
 
-#ifdef _OPENMP
+#ifdef AMREX_USE_OMP
 #include <omp.h>
 #endif
 
@@ -38,8 +38,14 @@ StreamIter::init() noexcept
     amrex::ignore_unused(m_threadsafe);
     amrex::ignore_unused(m_sync);
 #if defined(AMREX_USE_GPU)
+    if (m_sync) {
+#ifdef AMREX_USE_OMP
+#pragma omp single
+#endif
+        Gpu::streamSynchronize();
+    }
     Gpu::Device::setStreamIndex(m_i);
-#elif defined(_OPENMP)
+#elif defined(AMREX_USE_OMP)
     int nthreads = omp_get_num_threads();
     if (nthreads > 1) {
         int tid = omp_get_thread_num();
@@ -59,7 +65,7 @@ StreamIter::init() noexcept
 StreamIter::~StreamIter () {
 #ifdef AMREX_USE_GPU
     if (m_sync) {
-        Gpu::synchronize();
+        Gpu::streamSynchronizeAll();
     }
     AMREX_GPU_ERROR_CHECK();
     Gpu::Device::resetStreamIndex();
@@ -79,4 +85,3 @@ StreamIter::operator++ () noexcept
 #endif
 
 }}
-

@@ -1,5 +1,6 @@
 #ifndef AMREX_RAND_H
 #define AMREX_RAND_H
+#include <AMReX_Config.H>
 
 #include <AMReX.H>
 #include <AMReX_GpuQualifiers.H>
@@ -17,11 +18,7 @@ namespace amrex
     *  distribution between 0.0 and 1.0 (0.0 included, 1.0 excluded)
     *
     */
-#ifdef AMREX_USE_CUDA
-    AMREX_GPU_HOST_DEVICE Real Random ();
-#else
     Real Random ();
-#endif
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     Real Random (RandomEngine const& random_engine)
@@ -54,11 +51,7 @@ namespace amrex
     *  distribution with mean 'mean' and standard deviation 'stddev'.
     *
     */
-#ifdef AMREX_USE_CUDA
-    AMREX_GPU_HOST_DEVICE Real RandomNormal (Real mean, Real stddev);
-#else
     Real RandomNormal (Real mean, Real stddev);
-#endif
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     Real RandomNormal (Real mean, Real stddev, RandomEngine const& random_engine)
@@ -93,11 +86,7 @@ namespace amrex
     *  The GPU version of this function relies on the cuRAND library
     *
     */
-#ifdef AMREX_USE_CUDA
-    AMREX_GPU_HOST_DEVICE unsigned int RandomPoisson (Real lambda);
-#else
     unsigned int RandomPoisson (Real lambda);
-#endif
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     unsigned int RandomPoisson (Real lambda, RandomEngine const& random_engine)
@@ -107,9 +96,8 @@ namespace amrex
 #elif defined(__HIP_DEVICE_COMPILE__)
         return hiprand_poisson(random_engine.rand_state, lambda);
 #elif defined (__SYCL_DEVICE_ONLY__)
-        amrex::ignore_unused(lambda,random_engine);
-        amrex::Abort("RandomPossion not supported in DPC++ device code");
-        return 0; // xxxxx DPCPP todo: Poisson distribution
+        mkl::rng::device::poisson<unsigned int> distr(lambda);
+        return mkl::rng::device::generate(distr, *random_engine.engine);
 #else
         amrex::ignore_unused(random_engine);
         return RandomPoisson(lambda);
@@ -123,26 +111,17 @@ namespace amrex
     * The CPU version of this function uses C++11's mt19937.
     * The GPU version uses CURAND's XORWOW generator.
     */
-#ifdef AMREX_USE_CUDA
-    AMREX_GPU_HOST_DEVICE unsigned int Random_int (unsigned int n); // [0,n-1]
-#else
     unsigned int Random_int (unsigned int n); // [0,n-1]
-#endif
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     unsigned int Random_int (unsigned int n, RandomEngine const& random_engine)
     {
 #if AMREX_DEVICE_COMPILE
 #if defined(__SYCL_DEVICE_ONLY__)
-        if (n <= static_cast<unsigned int>(std::numeric_limits<std::int32_t>::max())) {
-            mkl::rng::device::uniform<std::int32_t> distr(0,static_cast<std::int32_t>(n));
-            return mkl::rng::device::generate(distr, *random_engine.engine);
-        } else {
-            amrex::Abort("Random_int not supported in DPC++ device code, if n > INT_MAX");
-            return 0; // xxxxx DPCPP todo: unsigned uniform distribution
-        }
+        mkl::rng::device::uniform<unsigned int> distr(0,n);
+        return mkl::rng::device::generate(distr, *random_engine.engine);
 #else
-        int rand;
+        unsigned int rand;
         constexpr unsigned int RAND_M = 4294967295; // 2**32-1
         do {
             AMREX_HIP_OR_CUDA( rand = hiprand(random_engine.rand_state);,
@@ -156,12 +135,6 @@ namespace amrex
 #endif
     }
 
-#ifdef AMREX_USE_GPU
-    // Locking mechanism functions for locking and unlocking
-    AMREX_GPU_DEVICE int get_state (int tid);
-    AMREX_GPU_DEVICE void free_state (int tid);
-#endif
-
     /**
     * \brief Generates one pseudorandom unsigned long which is
     *  uniformly distributed on [0,n-1]-interval for each call.
@@ -169,7 +142,13 @@ namespace amrex
     * The CPU version of this function uses C++11's mt19937.
     * There is no GPU version.
     */
-    AMREX_GPU_HOST ULong Random_long (ULong n); // [0,n-1]
+    ULong Random_long (ULong n); // [0,n-1]
+
+    namespace detail {
+        inline ULong DefaultGpuSeed () {
+            return ParallelDescriptor::MyProc()*1234567ULL + 12345ULL;
+        }
+    }
 
     /** \brief Set the seed of the random number generator.
     *
@@ -183,9 +162,10 @@ namespace amrex
     *  INTEGER seed
     *  call blinitrand(seed)
     */
-    void InitRandom (ULong seed, int nprocs=ParallelDescriptor::NProcs());
+    void InitRandom (ULong cpu_seed, int nprocs=ParallelDescriptor::NProcs(),
+                     ULong gpu_seed = detail::DefaultGpuSeed());
 
-    void ResetRandomSeed (ULong seed);
+    void ResetRandomSeed (ULong cpu_seed, ULong gpu_seed = detail::DefaultGpuSeed());
 
     /**
     * \brief Save and restore random state.

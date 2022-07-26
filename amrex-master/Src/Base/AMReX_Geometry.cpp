@@ -1,7 +1,4 @@
 
-
-#include <iostream>
-
 #include <AMReX_Algorithm.H>
 #include <AMReX_BoxArray.H>
 #include <AMReX_Geometry.H>
@@ -9,8 +6,11 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_Utility.H>
 #include <AMReX_SPACE.H>
+#include <AMReX_COORDSYS_C.H>
 
 #include <AMReX_OpenMP.H>
+
+#include <iostream>
 
 namespace amrex {
 
@@ -110,28 +110,46 @@ void
 Geometry::Setup (const RealBox* rb, int coord, int const* isper) noexcept
 {
     Geometry* gg = AMReX::top()->getDefaultGeometry();
- 
+
     if (gg->ok) return;
 
-    BL_ASSERT(!OpenMP::in_parallel());
+    AMREX_ASSERT(!OpenMP::in_parallel());
 
     ParmParse pp("geometry");
 
     if (coord >=0 && coord <= 2) {
-        gg->SetCoord( (CoordType) coord );        
+        gg->SetCoord( (CoordType) coord );
     } else {
         coord = 0;  // default is Cartesian coordinates
-        pp.query("coord_sys",coord);
-        gg->SetCoord( (CoordType) coord );        
+        pp.queryAdd("coord_sys",coord);
+        gg->SetCoord( (CoordType) coord );
     }
 
     if (rb == nullptr) {
         Vector<Real> prob_lo(AMREX_SPACEDIM);
         Vector<Real> prob_hi(AMREX_SPACEDIM);
-        pp.getarr("prob_lo",prob_lo,0,AMREX_SPACEDIM);
-        BL_ASSERT(prob_lo.size() == AMREX_SPACEDIM);
-        pp.getarr("prob_hi",prob_hi,0,AMREX_SPACEDIM);
-        BL_ASSERT(prob_hi.size() == AMREX_SPACEDIM);
+        Vector<Real> prob_extent(AMREX_SPACEDIM);
+
+        for (int i = 0; i < AMREX_SPACEDIM; i++) { prob_lo[i] = 0.; }
+        pp.queryAdd("prob_lo", prob_lo, AMREX_SPACEDIM);
+        AMREX_ASSERT(prob_lo.size() == AMREX_SPACEDIM);
+
+        bool read_prob_hi = pp.queryarr("prob_hi",prob_hi,0,AMREX_SPACEDIM);
+        AMREX_ASSERT(prob_hi.size() == AMREX_SPACEDIM);
+
+        bool read_prob_extent = pp.queryarr("prob_extent",prob_extent,0,AMREX_SPACEDIM);
+        AMREX_ASSERT(prob_extent.size() == AMREX_SPACEDIM);
+
+        // We enforce that one and only one of prob_hi vs prob_extent is input
+        AMREX_ALWAYS_ASSERT(  read_prob_hi || read_prob_extent);
+        AMREX_ALWAYS_ASSERT(!(read_prob_hi && read_prob_extent));
+
+        if (read_prob_extent)
+        {
+            for (int i = 0; i < AMREX_SPACEDIM; i++)
+                prob_hi[i] = prob_lo[i] + prob_extent[i];
+        }
+
         gg->prob_domain.setLo(prob_lo);
         gg->prob_domain.setHi(prob_hi);
         gg->SetOffset(prob_lo.data());
@@ -147,7 +165,7 @@ Geometry::Setup (const RealBox* rb, int coord, int const* isper) noexcept
     if (isper == nullptr)
     {
         Vector<int> is_per(AMREX_SPACEDIM,0);
-        pp.queryarr("is_periodic",is_per,0,AMREX_SPACEDIM);
+        pp.queryAdd("is_periodic", is_per);
         for (int n = 0; n < AMREX_SPACEDIM; n++) {
             gg->is_periodic[n] = is_per[n];
         }
@@ -189,7 +207,7 @@ Geometry::ResetDefaultCoord (int coord) noexcept
 void
 Geometry::GetVolume (MultiFab&       vol,
                      const BoxArray& grds,
-		     const DistributionMapping& dm,
+                     const DistributionMapping& dm,
                      int             ngrow) const
 {
     vol.define(grds,dm,1,ngrow,MFInfo(),FArrayBoxFactory());
@@ -197,14 +215,38 @@ Geometry::GetVolume (MultiFab&       vol,
 }
 
 void
-Geometry::GetVolume (MultiFab&       vol) const
+Geometry::GetVolume (MultiFab& vol) const
 {
-#ifdef _OPENMP
+    const auto a_dx = CellSizeArray();
+    if (IsCartesian()) {
+        vol.setVal(AMREX_D_TERM(a_dx[0],*a_dx[1],*a_dx[2]), 0, 1, vol.nGrowVect());
+    } else {
+#if (AMREX_SPACEDIM == 3)
+        amrex::Abort("Geometry::GetVolume: for 3d, only Cartesian is supported");
+#else
+#ifdef AMREX_USE_GPU
+        if (Gpu::inLaunchRegion()) {
+            GpuArray<Real,AMREX_SPACEDIM> a_offset{{AMREX_D_DECL(offset[0],offset[1],offset[2])}};
+            int coord = (int) c_sys;
+            auto const& ma = vol.arrays();
+            ParallelFor(vol, vol.nGrowVect(),
+            [=] AMREX_GPU_DEVICE (int box_no, int i, int j, int k) noexcept
+            {
+                amrex_setvol(makeSingleCellBox(i,j,k), ma[box_no], a_offset, a_dx, coord);
+            });
+            Gpu::streamSynchronize();
+        } else
+#endif
+        {
+#ifdef AMREX_USE_OMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
-    for (MFIter mfi(vol,TilingIfNotGPU()); mfi.isValid(); ++mfi)
-    {
-	CoordSys::SetVolume(vol[mfi], mfi.growntilebox());
+            for (MFIter mfi(vol,TilingIfNotGPU()); mfi.isValid(); ++mfi)
+            {
+                CoordSys::SetVolume(vol[mfi], mfi.growntilebox());
+            }
+        }
+#endif
     }
 }
 
@@ -220,18 +262,35 @@ Geometry::GetVolume (FArrayBox&      vol,
 #if (AMREX_SPACEDIM <= 2)
 void
 Geometry::GetDLogA (MultiFab&       dloga,
-                    const BoxArray& grds, 
+                    const BoxArray& grds,
                     const DistributionMapping& dm,
                     int             dir,
                     int             ngrow) const
 {
     dloga.define(grds,dm,1,ngrow,MFInfo(),FArrayBoxFactory());
-#ifdef _OPENMP
+
+#ifdef AMREX_USE_GPU
+    if (Gpu::inLaunchRegion()) {
+        auto const& ma = dloga.arrays();
+        GpuArray<Real,AMREX_SPACEDIM> a_offset{AMREX_D_DECL(offset[0],offset[1],offset[2])};
+        GpuArray<Real,AMREX_SPACEDIM> a_dx    {AMREX_D_DECL(    dx[0],    dx[1],    dx[2])};
+        int coord = (int) c_sys;
+        ParallelFor(dloga, IntVect(ngrow),
+        [=] AMREX_GPU_DEVICE (int box_no, int i, int j, int k) noexcept
+        {
+            amrex_setdloga(makeSingleCellBox(i,j,k), ma[box_no], a_offset, a_dx, dir, coord);
+        });
+        Gpu::streamSynchronize();
+    } else
+#endif
+    {
+#ifdef AMREX_USE_OMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
-    for (MFIter mfi(dloga,TilingIfNotGPU()); mfi.isValid(); ++mfi)
-    {
-	CoordSys::SetDLogA(dloga[mfi], mfi.growntilebox(), dir);
+        for (MFIter mfi(dloga,TilingIfNotGPU()); mfi.isValid(); ++mfi)
+        {
+            CoordSys::SetDLogA(dloga[mfi], mfi.growntilebox(), dir);
+        }
     }
 }
 #endif
@@ -239,7 +298,7 @@ Geometry::GetDLogA (MultiFab&       dloga,
 void
 Geometry::GetFaceArea (MultiFab&       area,
                        const BoxArray& grds,
-		       const DistributionMapping& dm,
+                       const DistributionMapping& dm,
                        int             dir,
                        int             ngrow) const
 {
@@ -254,12 +313,46 @@ void
 Geometry::GetFaceArea (MultiFab&       area,
                        int             dir) const
 {
-#ifdef _OPENMP
+    const auto a_dx = CellSizeArray();
+
+    if (IsCartesian()) {
+#if (AMREX_SPACEDIM == 1)
+        amrex::ignore_unused(a_dx);
+        const Real a0 = 1._rt;
+#elif (AMREX_SPACEDIM == 2)
+        const Real a0 = (dir == 0) ? a_dx[1] : a_dx[0];
+#else
+        const Real a0 = (dir == 0) ? a_dx[1]*a_dx[2]
+            : ((dir == 1) ? a_dx[0]*a_dx[2] : a_dx[0]*a_dx[1]);
+#endif
+        area.setVal(a0, 0, 1, area.nGrowVect());
+    } else {
+#if (AMREX_SPACEDIM == 3)
+        amrex::Abort("Geometry::GetFaceArea:: for 3d, only Cartesian is supported");
+#else
+#ifdef AMREX_USE_GPU
+        if (Gpu::inLaunchRegion()) {
+            GpuArray<Real,AMREX_SPACEDIM> a_offset{AMREX_D_DECL(offset[0],offset[1],offset[2])};
+            int coord = (int) c_sys;
+            auto const& ma = area.arrays();
+            ParallelFor(area, area.nGrowVect(),
+            [=] AMREX_GPU_DEVICE (int box_no, int i, int j, int k) noexcept
+            {
+                amrex_setarea(makeSingleCellBox(i,j,k), ma[box_no], a_offset, a_dx, dir, coord);
+            });
+            Gpu::streamSynchronize();
+        } else
+#endif
+        {
+#ifdef AMREX_USE_OMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
-    for (MFIter mfi(area,TilingIfNotGPU()); mfi.isValid(); ++mfi)
-    {
-	CoordSys::SetFaceArea(area[mfi],mfi.growntilebox(),dir);
+            for (MFIter mfi(area,TilingIfNotGPU()); mfi.isValid(); ++mfi)
+            {
+                CoordSys::SetFaceArea(area[mfi],mfi.growntilebox(),dir);
+            }
+        }
+#endif
     }
 }
 
@@ -275,19 +368,29 @@ Geometry::GetFaceArea (FArrayBox&      area,
 
 void
 Geometry::periodicShift (const Box&      target,
-                         const Box&      src, 
+                         const Box&      src,
                          Vector<IntVect>& out) const noexcept
 {
     out.resize(0);
 
     Box locsrc(src);
 
-    int nist,njst,nkst;
-    int niend,njend,nkend;
-    nist = njst = nkst = 0;
-    niend = njend = nkend = 0;
-    AMREX_D_TERM( nist , =njst , =nkst ) = -1;
-    AMREX_D_TERM( niend , =njend , =nkend ) = +1;
+    int nist  = -1;
+    int niend =  1;
+#if (AMREX_SPACEDIM > 1)
+    int njst  = -1;
+    int njend =  1;
+#else
+    int njst  = 0;
+    int njend = 0;
+#endif
+#if (AMREX_SPACEDIM > 2)
+    int nkst  = -1;
+    int nkend =  1;
+#else
+    int nkst  = 0;
+    int nkend = 0;
+#endif
 
     int ri,rj,rk;
     for (ri = nist; ri <= niend; ri++)
@@ -400,10 +503,9 @@ Geometry::computeRoundoffDomain ()
     {
         offset[k] = prob_domain.lo(k);
         dx[k] = prob_domain.length(k)/(Real(domain.length(k)));
-        inv_dx[k] = 1.0/dx[k];
+        inv_dx[k] = 1.0_rt/dx[k];
     }
 
-    roundoff_domain = prob_domain;
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim)
     {
         int ilo = Domain().smallEnd(idim);
@@ -413,40 +515,37 @@ Geometry::computeRoundoffDomain ()
         Real idx = InvCellSize(idim);
         Real deltax = CellSize(idim);
 
-#ifdef AMREX_SINGLE_PRECISION_PARTICLES
-        Real tolerance = std::max(1.e-4*deltax, 1.e-10*phi);
-#else
-        Real tolerance = std::max(1.e-8*deltax, 1.e-14*phi);
-#endif
-        // bisect the point at which the cell no longer maps to inside the domain
-        Real lo = static_cast<Real>(phi) - Real(0.5)*static_cast<Real>(deltax);
-        Real hi = static_cast<Real>(phi) + Real(0.5)*static_cast<Real>(deltax);
+        Real ftol = std::max(1.e-4_rt*deltax, 2.e-7_rt*phi);
+        Real dtol = std::max(1.e-8_rt*deltax, 1.e-14_rt*phi);
 
-        Real mid = bisect(lo, hi,
-                          [=] AMREX_GPU_HOST_DEVICE (Real x) -> Real
-                          {
-                              int i = int(Math::floor((x - plo)*idx)) + ilo;
-                              bool inside = i >= ilo and i <= ihi;
-                              return static_cast<Real>(inside) - Real(0.5);
-                          }, tolerance);
-        roundoff_domain.setHi(idim, mid - tolerance);
+        roundoff_hi_f[idim] = detail::bisect_prob_hi<float> (plo, phi, idx, ilo, ihi, ftol);
+        roundoff_hi_d[idim] = detail::bisect_prob_hi<double>(plo, phi, idx, ilo, ihi, dtol);
     }
 }
 
 bool
-Geometry::outsideRoundoffDomain (AMREX_D_DECL(Real x, Real y, Real z)) const
+Geometry::outsideRoundoffDomain (AMREX_D_DECL(ParticleReal x, ParticleReal y, ParticleReal z)) const
 {
-    bool outside = AMREX_D_TERM(x <  roundoff_domain.lo(0)
-                             || x >= roundoff_domain.hi(0),
-                             || y <  roundoff_domain.lo(1)
-                             || y >= roundoff_domain.hi(1),
-                             || z <  roundoff_domain.lo(2)
-                             || z >= roundoff_domain.hi(2));
+#ifdef AMREX_SINGLE_PRECISION_PARTICLES
+    bool outside = AMREX_D_TERM(x <  prob_domain.lo(0)
+                             || x >= roundoff_hi_f[0],
+                             || y <  prob_domain.lo(1)
+                             || y >= roundoff_hi_f[1],
+                             || z <  prob_domain.lo(2)
+                             || z >= roundoff_hi_f[2]);
+#else
+    bool outside = AMREX_D_TERM(x <  prob_domain.lo(0)
+                             || x >= roundoff_hi_d[0],
+                             || y <  prob_domain.lo(1)
+                             || y >= roundoff_hi_d[1],
+                             || z <  prob_domain.lo(2)
+                             || z >= roundoff_hi_d[2]);
+#endif
     return outside;
 }
 
 bool
-Geometry::insideRoundoffDomain (AMREX_D_DECL(Real x, Real y, Real z)) const
+Geometry::insideRoundoffDomain (AMREX_D_DECL(ParticleReal x, ParticleReal y, ParticleReal z)) const
 {
     return !outsideRoundoffDomain(AMREX_D_DECL(x, y, z));
 }

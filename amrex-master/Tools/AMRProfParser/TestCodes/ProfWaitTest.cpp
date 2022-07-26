@@ -52,7 +52,7 @@ void WaitRegion() {
     {
       ParallelDescriptor::Send(&data[j], 1, i, SeqNum);
       j++;
-    } 
+    }
   }
 
   for (int i=0; i<nSends; ++i)
@@ -62,7 +62,7 @@ void WaitRegion() {
 
     amrex::Print() << "Wait: " << endl;
     for (int i=0; i<nProcs; i++)
-    { amrex::Print() << "data[" << i << "] = " << data[i] << endl; } 
+    { amrex::Print() << "data[" << i << "] = " << data[i] << endl; }
 
   BL_PROFILE_REGION_STOP("R::Wait");
 }
@@ -98,14 +98,14 @@ void WaitAllRegion() {
     {
       ParallelDescriptor::Send(&data[j], 1, i, SeqNum);
       j++;
-    } 
+    }
   }
 
   ParallelDescriptor::Waitall(rreqs, stats);
 
     amrex::Print() << "Waitall: " << endl;
     for (int i=0; i<nProcs; i++)
-    { amrex::Print() << "data[" << i << "] = " << data[i] << endl; } 
+    { amrex::Print() << "data[" << i << "] = " << data[i] << endl; }
 
   BL_PROFILE_REGION_STOP("R::WaitAll");
 }
@@ -142,7 +142,7 @@ void WaitSomeRegion() {
     {
       ParallelDescriptor::Send(&data[j], 1, i, SeqNum);
       j++;
-    } 
+    }
   }
 
   int finished = 0;
@@ -155,9 +155,9 @@ void WaitSomeRegion() {
 
     amrex::Print() << "Waitsome: " << endl;
     for (int i=0; i<indx.size(); i++)
-    { amrex::Print() << myProc << " :data[" << i+1 << "] = " << data[i+1] << endl; } 
+    { amrex::Print() << myProc << " :data[" << i+1 << "] = " << data[i+1] << endl; }
   }
-  amrex::Print() << myProc << " :data[" << myProc+1 << "] = " << data[myProc] << endl; 
+  amrex::Print() << myProc << " :data[" << myProc+1 << "] = " << data[myProc] << endl;
 
   BL_PROFILE_REGION_STOP("R::WaitSome");
 }
@@ -194,7 +194,7 @@ void WaitAnyRegion() {
     {
       ParallelDescriptor::Send(&data[j], 1, i, SeqNum);
       j++;
-    } 
+    }
   }
 
   amrex::Print() << "Waitany: " << endl;
@@ -221,27 +221,27 @@ int main(int argc, char *argv[]) {
 /*
   amrex::ParallelDescriptor::Barrier();
   {
-    BL_PROFILE_REGION_START("USleep1");
-    BL_PROFILE("USleep1()");
-    amrex::Print() << "USleep1." << std::endl;
-    amrex::USleep(1);
-    BL_PROFILE_REGION_STOP("USleep1");
+    BL_PROFILE_REGION_START("Sleep1");
+    BL_PROFILE("Sleep1()");
+    amrex::Print() << "Sleep1." << std::endl;
+    amrex::Sleep(1);
+    BL_PROFILE_REGION_STOP("Sleep1");
   }
   amrex::ParallelDescriptor::Barrier();
   {
-    BL_PROFILE_REGION_START("USleep2");
-    BL_PROFILE("USleep2()");
-    amrex::Print() << "USleep2." << std::endl;
-    amrex::USleep(2);
-    BL_PROFILE_REGION_STOP("USleep2");
+    BL_PROFILE_REGION_START("Sleep2");
+    BL_PROFILE("Sleep2()");
+    amrex::Print() << "Sleep2." << std::endl;
+    amrex::Sleep(2);
+    BL_PROFILE_REGION_STOP("Sleep2");
   }
   amrex::ParallelDescriptor::Barrier();
   {
-    BL_PROFILE_REGION_START("USleep3");
-    BL_PROFILE("USleep3()");
-    amrex::Print() << "USleep3." << std::endl;
-    amrex::USleep(3);
-    BL_PROFILE_REGION_STOP("USleep3");
+    BL_PROFILE_REGION_START("Sleep3");
+    BL_PROFILE("Sleep3()");
+    amrex::Print() << "Sleep3." << std::endl;
+    amrex::Sleep(3);
+    BL_PROFILE_REGION_STOP("Sleep3");
   }
   amrex::ParallelDescriptor::Barrier();
 */

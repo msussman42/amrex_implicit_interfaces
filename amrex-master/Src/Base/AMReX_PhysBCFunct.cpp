@@ -44,7 +44,6 @@ BndryFuncArray::operator () (Box const& /*bx*/, FArrayBox& dest,
     }
 }
 
-#if !(defined(AMREX_USE_CUDA) && defined(AMREX_USE_GPU_PRAGMA) && defined(AMREX_GPU_PRAGMA_NO_HOST))
 void
 CpuBndryFuncFab::operator() (Box const& bx, FArrayBox& dest,
                              const int dcomp, const int numcomp,
@@ -67,7 +66,7 @@ CpuBndryFuncFab::operator() (Box const& bx, FArrayBox& dest,
     } else if (bx.ixType().nodeCentered()) {
         fab_filnd(bx, dest.array(dcomp), numcomp, domain, dx, xlo, &(bcr[bcomp]));
     } else {
-        amrex::Abort("CpuBndryFuncFab: mixed index types are not supported");
+        fab_filfc(bx, dest.array(dcomp), numcomp, domain, dx, xlo, &(bcr[bcomp]));
     }
 
     if (f_user != nullptr)
@@ -76,6 +75,5 @@ CpuBndryFuncFab::operator() (Box const& bx, FArrayBox& dest,
                &(bcr[bcomp]), 0, orig_comp);
     }
 }
-#endif
 
 }

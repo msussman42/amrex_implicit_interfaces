@@ -1,5 +1,6 @@
 #ifndef AMREX_INTVECT_H_
 #define AMREX_INTVECT_H_
+#include <AMReX_Config.H>
 
 #include <AMReX_INT.H>
 #include <AMReX_ccse-mpi.H>
@@ -49,20 +50,20 @@ public:
 
     class shift_hasher {
     private:
-	static constexpr unsigned shift1 = sizeof(size_t)>=8 ? 20 : 10;
-	static constexpr unsigned shift2 = sizeof(size_t)>=8 ? 40 : 20;
+        static constexpr unsigned shift1 = sizeof(size_t)>=8 ? 20 : 10;
+        static constexpr unsigned shift2 = sizeof(size_t)>=8 ? 40 : 20;
     public:
-	std::size_t operator()(const IntVect& vec) const noexcept
+        std::size_t operator()(const IntVect& vec) const noexcept
         {
-	    AMREX_D_DECL(std::size_t ret0 = vec[0], ret1 = vec[1], ret2 = vec[2]);
+            AMREX_D_DECL(std::size_t ret0 = vec[0], ret1 = vec[1], ret2 = vec[2]);
 #if AMREX_SPACEDIM == 1
-	    return ret0;
+            return ret0;
 #elif AMREX_SPACEDIM == 2
-	    return ret0 ^ (ret1 << shift1);
+            return ret0 ^ (ret1 << shift1);
 #else
-	    return ret0 ^ (ret1 << shift1) ^ (ret2 << shift2);
+            return ret0 ^ (ret1 << shift1) ^ (ret2 << shift2);
 #endif
-	}
+        }
     };
 
     using hasher = shift_hasher;
@@ -133,6 +134,17 @@ public:
         return Dim3{vect[0],vect[1],vect[2]};
 #endif
     }
+
+#if __cplusplus >= 201402L
+    template< typename T = int >
+    AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+    Array<T, AMREX_SPACEDIM>
+    toArray () const noexcept {
+        return Array<T, AMREX_SPACEDIM>{
+            AMREX_D_DECL(T(vect[0]), T(vect[1]), T(vect[2]))
+        };
+    }
+#endif
 
   ///
   /**
@@ -245,7 +257,7 @@ public:
     {
         return AMREX_D_TERM(vect[0] != rhs[0], || vect[1] != rhs[1], || vect[2] != rhs[2]);
     }
-    //! Return ture if this is lexicographically less than rhs.
+    //! Return true if this is lexicographically less than rhs.
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     bool operator< (const IntVect& rhs) const noexcept
     {
@@ -262,19 +274,19 @@ public:
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     bool operator<= (const IntVect& rhs) const noexcept
     {
-	return !(rhs < *this);
+        return !(rhs < *this);
     }
-    //! Retrun true if this is lexicographically greater than rhs.
+    //! Return true if this is lexicographically greater than rhs.
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     bool operator> (const IntVect& rhs) const noexcept
     {
-	return rhs < *this;
+        return rhs < *this;
     }
-    //! Retrun true if this is lexicographically greater than or equal to rhs.
+    //! Return true if this is lexicographically greater than or equal to rhs.
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     bool operator>= (const IntVect& rhs) const noexcept
     {
-	return !(*this < rhs);
+        return !(*this < rhs);
     }
     /**
     * \brief Returns true if this is less than argument for all components.
@@ -520,19 +532,11 @@ public:
 
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     static constexpr IntVect TheMaxVector () noexcept {
-#if !defined(__CUDACC__) || (__CUDACC_VER_MAJOR__ != 9) || (__CUDACC_VER_MINOR__ != 2)
         return IntVect(std::numeric_limits<int>::max());
-#else
-        return IntVect(INT_MAX);
-#endif
     }
     AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
     static constexpr IntVect TheMinVector () noexcept {
-#if !defined(__CUDACC__) || (__CUDACC_VER_MAJOR__ != 9) || (__CUDACC_VER_MINOR__ != 2)
         return IntVect(std::numeric_limits<int>::lowest());
-#else
-        return IntVect(INT_MIN);
-#endif
     }
 
 private:
@@ -590,7 +594,7 @@ IntVect::maxDir(bool a_doAbsValue) const noexcept
     int retval = 0;
     if(a_doAbsValue)
     {
-        int maxval = abs((*this)[0]);
+        int maxval = amrex::Math::abs((*this)[0]);
         for(int idir = 1; idir < SpaceDim; idir++)
         {
             int curval = amrex::Math::abs((*this)[idir]);

@@ -1,3 +1,4 @@
+AMREX_HOME ?= ../../..
 
 TOP = $(AMREX_HOME)
 USE_EB =FALSE
@@ -7,9 +8,9 @@ USE_EB =FALSE
 PRECISION     = DOUBLE
 DEBUG	      = TRUE
 DEBUG	      = FALSE
-#DIM	      = 3
-DIM	      = 2
-DIM           = 1
+DIM	      = 3
+#DIM	       = 2
+#DIM           = 1
 COMP          = g++
 #USE_MPI       = TRUE 
 USE_MPI       = FALSE
@@ -18,8 +19,9 @@ USE_MPI       = FALSE
 #
 #EBASE = Add
 ### this has no main EBASE = ComputeAmrDataNorms
+EBASE = ComparePlotfiles
 #EBASE = DiffFab
-EBASE = DiffSameDomainRefined
+#EBASE = DiffSameDomainRefined
 #EBASE = DiffSameDomainRefinedComposite
 #EBASE = DiffSameDomainRefinedStag
 #EBASE = DiffSameGrid2
@@ -38,7 +40,6 @@ include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 DEFINES += -DBL_NOLINEVALUES -DBL_PARALLEL_IO
 
 include Make.package
-#include ../Make.package
 include $(AMREX_HOME)/Src/Base/Make.package
 include $(AMREX_HOME)/Src/Boundary/Make.package
 #include $(AMREX_HOME)/Src/Amr/Make.package

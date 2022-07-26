@@ -1,5 +1,6 @@
 #ifndef AMREX_MATH_H_
 #define AMREX_MATH_H_
+#include <AMReX_Config.H>
 
 #include <AMReX_GpuQualifiers.H>
 #include <AMReX_Extension.H>
@@ -42,6 +43,8 @@ using sycl::ceil;
 using sycl::copysign;
 using sycl::floor;
 using sycl::round;
+using sycl::isfinite;
+using sycl::isinf;
 
 #else
 
@@ -50,6 +53,8 @@ using std::ceil;
 using std::copysign;
 using std::floor;
 using std::round;
+using std::isfinite;
+using std::isinf;
 
 #endif
 

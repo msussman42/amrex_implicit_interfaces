@@ -24,15 +24,10 @@ MOF_HOME = ..
 
 PRECISION = DOUBLE
 DEBUG	  = TRUE
-FSANITIZER = FALSE
 USE_ASSERTION = TRUE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
 DIM       = 2
-iPAD_ISH = FALSE
-FSU_HPC = FALSE
-CYGWIN    = FALSE
-CYGWIN_ZENBOOK = FALSE
 MEHDI_VAHAB_FSI = FALSE
 CTML_FIB = TRUE
 CTML_ESH = FALSE
@@ -58,38 +53,6 @@ CTML_FBC = FALSE
 # ./lmp_serial -in rod.LAMMPS_script
 # VMD to visualize "rod_LAMMPS_atom.dcd"
 #
-# CYGWIN:
-# CYGWIN=TRUE
-#  (causes: -Wl,--image-base -Wl,0x10000000)
-#  CYGWIN packages needed:
-#  1. default installation
-#  2. cmake
-#  3. editors
-#  4. gcc (search)
-#  5. mingw (search)
-#  6. X11 
-#  7. libc++
-#  8. cpp (search)
-#  9. gfortran
-# 10. g++
-# 11. make
-# 12. vim
-# 13. emacs
-# 14. procps (search)  (corresponds to "top")
-#
-# iPAD iSH:
-# iPAD_ISH=TRUE
-#  iSH packages needed:
-#  1. apk add vim
-#  2. apk add build-base
-#  3. apk add curl
-#  4. apk add gfortran
-#  5. apk add openssh
-#  6. apk add python3
-#  7. apk add perl
-#  8. apk add gdb
-#  9. apk add texlive
-#
 # heaviside: scl enable devtoolset-2 python27 bash
 # bromwich or compute1: scl enable devtoolset-8 bash
 # Bromwich PGI:
@@ -111,7 +74,6 @@ CTML_FBC = FALSE
 #    expressions during compilation.
 COMP	  = g++
 FCOMP = gfortran
-PYTHONCOMP = python
 
 # total view:
 #  1. ssh -YX sussman@hpc-login.rcc.fsu.edu (same password as FSUID)
@@ -143,8 +105,6 @@ PYTHONCOMP = python
 # bromwich or compute1 GNU MPI:
 #  "module load mpi/openmpi-4-gcc8"
 # csh: command >& out_and_err_file &
-# if "ImportError: no module named site" then give command:
-#  "export PYTHONHOME="
 # spear-login.rcc.fsu.edu
 # ifort -g -O0 -traceback -check bounds,uninit,pointers
 # mpirun -np 2 valgrind -v --leak-check=full --show-reachable=yes --log-file=run.out.%p ../../amr3d.gnu.DEBUG.MPI.ex inputs3d.skirted  1> run.out 2> run.err &
@@ -165,44 +125,9 @@ USE_OMP = FALSE
 EBASE = amr
 
 AMREX_PARTICLES = TRUE
-BL_NO_FORT = TRUE
-BUILD_f90_F90_dependencies = TRUE
-ifeq ($(BL_NO_FORT),TRUE)
-  CPPFLAGS += -DBL_NO_FORT
-endif
-
-ifeq ($(iPAD_ISH),TRUE)
- PYTHONCOMP = python3
- HOSTNAME = unknown
-endif
-ifeq ($(FSU_HPC),TRUE)
- PYTHONCOMP = python3
- HOSTNAME = hpc_rcc_fsu
-endif
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs 
 
-ifeq ($(CYGWIN),TRUE)
- CXXFLAGS+=-Wl,--image-base -Wl,0x10000000
- CFLAGS+=-Wl,--image-base -Wl,0x10000000
- FFLAGS+=-Wl,--image-base -Wl,0x10000000
- F90FLAGS+=-Wl,--image-base -Wl,0x10000000
-endif
-ifeq ($(CYGWIN_ZENBOOK),TRUE)
- CXXFLAGS+=-DCYGWINZENBOOK
- CFLAGS+=-DCYGWINZENBOOK
- FFLAGS+=-DCYGWINZENBOOK
- F90FLAGS+=-DCYGWINZENBOOK
-endif
-
-ifeq ($(iPAD_ISH),TRUE)
- CPPFLAGS+=-DIPAD_ISH
- CXXFLAGS+=-DIPAD_ISH
- CFLAGS+=-DIPAD_ISH
- FFLAGS+=-DIPAD_ISH
- F90FLAGS+=-DIPAD_ISH
- MODDEP=$(AMREX_HOME)/Tools/F_scripts/dep3.py
-endif
 $(info MODDEP=$(MODDEP))
 
 ifeq ($(MEHDI_VAHAB_FSI),TRUE)
@@ -211,10 +136,6 @@ ifeq ($(MEHDI_VAHAB_FSI),TRUE)
  CFLAGS+=-DMVAHABFSI
  FFLAGS+=-DMVAHABFSI
  F90FLAGS+=-DMVAHABFSI
-endif
-
-ifeq ($(FSANITIZER),TRUE)
-#LIBRARY_LOCATIONS+=/usr/local/rh/devtoolset-8/root/usr/lib/gcc/x86_64-redhat-linux/8/32/
 endif
 
 ifeq ($(CTML_FIB),TRUE)

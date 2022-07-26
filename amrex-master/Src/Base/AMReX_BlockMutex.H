@@ -1,12 +1,13 @@
 #ifndef AMREX_BLOCK_MUTEX_H_
 #define AMREX_BLOCK_MUTEX_H_
+#include <AMReX_Config.H>
 
 #include <AMReX_Gpu.H>
 
 namespace amrex {
 
 #ifdef AMREX_USE_GPU
-    
+
 struct BlockMutex
 {
     union state_t
@@ -23,7 +24,7 @@ struct BlockMutex
     static void init_states (state_t* state, int N) noexcept;
 
     explicit BlockMutex (int N) noexcept;
-    
+
     ~BlockMutex ();
 
     void operator= (BlockMutex const&) = delete;
@@ -83,6 +84,6 @@ private:
     int m_nstates;
     state_t* m_state;
 };
-#endif  
+#endif
 }
 #endif

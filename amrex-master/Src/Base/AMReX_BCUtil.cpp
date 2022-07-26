@@ -1,6 +1,9 @@
 #include <AMReX_BCUtil.H>
 #include <AMReX_PhysBCFunct.H>
 
+// CUDA 11.6 bug: https://github.com/AMReX-Codes/amrex/issues/2607
+#if !defined(__CUDACC__) || (__CUDACC_VER_MAJOR__ != 11) || (__CUDACC_VER_MINOR__ != 6)
+
 namespace amrex
 {
 
@@ -37,15 +40,12 @@ void FillDomainBoundary (MultiFab& phi, const Geometry& geom, const Vector<BCRec
 
     AMREX_ALWAYS_ASSERT(phi.ixType().cellCentered());
 
-#if !(defined(AMREX_USE_CUDA) && defined(AMREX_USE_GPU_PRAGMA) && defined(AMREX_GPU_PRAGMA_NO_HOST))
     if (Gpu::inLaunchRegion())
     {
-#endif  
         GpuBndryFuncFab<dummy_gpu_fill_extdir> gpu_bndry_func(dummy_gpu_fill_extdir{});
         PhysBCFunct<GpuBndryFuncFab<dummy_gpu_fill_extdir> > physbcf
             (geom, bc, gpu_bndry_func);
         physbcf(phi, 0, phi.nComp(), phi.nGrowVect(), 0.0, 0);
-#if !(defined(AMREX_USE_CUDA) && defined(AMREX_USE_GPU_PRAGMA) && defined(AMREX_GPU_PRAGMA_NO_HOST))
     }
     else
     {
@@ -53,7 +53,8 @@ void FillDomainBoundary (MultiFab& phi, const Geometry& geom, const Vector<BCRec
         PhysBCFunct<CpuBndryFuncFab> physbcf(geom, bc, cpu_bndry_func);
         physbcf(phi, 0, phi.nComp(), phi.nGrowVect(), 0.0, 0);
     }
-#endif
 }
 
 }
+
+#endif

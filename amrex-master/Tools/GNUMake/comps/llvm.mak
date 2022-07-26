@@ -19,16 +19,12 @@ clang_minor_version = $(shell $(CXX) --version | head -1 | sed -e 's/.*version.*
 
 COMP_VERSION = $(clang_version)
 
-DEFINES += -DBL_CLANG_VERSION='$(clang_version)'
-DEFINES += -DBL_CLANG_MAJOR_VERSION='$(clang_major_version)'
-DEFINES += -DBL_CLANG_MINOR_VERSION='$(clang_minor_version)'
-
 ########################################################################
 
 ifeq ($(DEBUG),TRUE)
 
-  CXXFLAGS += -g -O0 -Wall -Wextra -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -ftrapv
-  CFLAGS   += -g -O0 -Wall -Wextra -Wno-sign-compare -Wno-unused-parameter -Wno-unused-variable -ftrapv
+  CXXFLAGS += -g -O0 -ftrapv
+  CFLAGS   += -g -O0 -ftrapv
 
   FFLAGS   += -g -O0 -ggdb -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv
   F90FLAGS += -g -O0 -ggdb -fbounds-check -fbacktrace -Wuninitialized -Wunused -ffpe-trap=invalid,zero -finit-real=snan -finit-integer=2147483647 -ftrapv
@@ -42,9 +38,39 @@ else
 
 endif
 
+ifeq ($(WARN_ALL),TRUE)
+  warning_flags = -Wall -Wextra -Wno-sign-compare -Wunreachable-code -Wnull-dereference
+  warning_flags += -Wfloat-conversion -Wextra-semi
+
+  ifneq ($(USE_CUDA),TRUE)
+    warning_flags += -Wpedantic
+  endif
+
+  ifneq ($(WARN_SHADOW),FALSE)
+    warning_flags += -Wshadow
+  endif
+
+  CXXFLAGS += $(warning_flags) -Woverloaded-virtual
+  CFLAGS += $(warning_flags)
+endif
+
+ifeq ($(WARN_ERROR),TRUE)
+  CXXFLAGS += -Werror
+  CFLAGS += -Werror
+endif
+
+# disable some warnings
+CXXFLAGS += -Wno-pass-failed -Wno-c++17-extensions
+
 ########################################################################
 
-CXXFLAGS += -std=c++14
+ifdef CXXSTD
+  CXXSTD := $(strip $(CXXSTD))
+else
+  CXXSTD := c++14
+endif
+
+CXXFLAGS += -std=$(CXXSTD)
 CFLAGS   += -std=c99
 
 FFLAGS   += -ffixed-line-length-none -fno-range-check -fno-second-underscore
@@ -80,6 +106,8 @@ F90FLAGS += $(GENERIC_COMP_FLAGS)
 
 ########################################################################
 
+ifneq ($(BL_NO_FORT),TRUE)
+
 # ask gfortran the name of the library to link in.  First check for the
 # static version.  If it returns only the name w/o a path, then it
 # was not found.  In that case, ask for the shared-object version.
@@ -93,6 +121,8 @@ else
 endif
 
 override XTRALIBS += -lgfortran -lquadmath
+
+endif
 
 ifeq ($(FSANITIZER),TRUE)
   override XTRALIBS += -lubsan

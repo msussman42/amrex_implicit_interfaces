@@ -19,10 +19,6 @@ gcc_minor_version = $(shell $(CXX) -dumpversion | head -1 | sed -e 's;.*  *;;' |
 
 COMP_VERSION = $(gcc_version)
 
-DEFINES += -DBL_GCC_VERSION='$(gcc_version)'
-DEFINES += -DBL_GCC_MAJOR_VERSION=$(gcc_major_version)
-DEFINES += -DBL_GCC_MINOR_VERSION=$(gcc_minor_version)
-
 ########################################################################
 
 ifeq ($(DEBUG),TRUE)
@@ -54,12 +50,19 @@ endif
 
 ########################################################################
 
-ifeq ($(gcc_major_version),4)
-  CXXFLAGS += -std=c++11
-else ifeq ($(gcc_major_version),5)
+ifdef CXXSTD
+  CXXSTD := $(strip $(CXXSTD))
+  ifeq ($(shell expr $(gcc_major_version) \< 5),1)
+    ifeq ($(CXXSTD),c++14)
+      $(error C++14 support requires GCC 5 or newer.)
+    endif
+  endif
+  CXXFLAGS += -std=$(CXXSTD)
+else
   CXXFLAGS += -std=c++14
 endif
-CFLAGS     += -std=gnu99
+
+CFLAGS   += -std=gnu99
 
 FFLAGS   += -mismatch
 F90FLAGS += -mismatch -u
@@ -89,4 +92,3 @@ FFLAGS   += $(GENERIC_FORT_FLAGS)
 F90FLAGS += $(GENERIC_FORT_FLAGS)
 
 ########################################################################
-

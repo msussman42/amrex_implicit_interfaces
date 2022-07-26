@@ -21,6 +21,10 @@ ifeq ($(USE_OMP),TRUE)
   GENERIC_IBM_FLAGS += -qsmp=omp
 endif
 
+ifeq ($(USE_OMP_OFFLOAD),TRUE)
+  GENERIC_IBM_FLAGS += -qsmp=omp:noauto -qoffload -qtgtarch=sm_$(CUDA_ARCH)
+endif
+
 ########################################################################
 ########################################################################
 ########################################################################
@@ -57,7 +61,13 @@ endif
 
 ########################################################################
 
-CXXFLAGS += -std=c++1y
+ifdef CXXSTD
+  CXXSTD := $(strip $(CXXSTD))
+else
+  CXXSTD := c++1y
+endif
+
+CXXFLAGS += -std=$(CXXSTD)
 CFLAGS   += -std=gnu99
 
 ########################################################################
@@ -138,10 +148,6 @@ ifeq ($(USE_CUDA),TRUE)
     F90FLAGS += -Xptxas -maxrregcount=$(CUDA_MAXREGCOUNT)
     FFLAGS   += -Xptxas -maxrregcount=$(CUDA_MAXREGCOUNT)
   endif
-
-  DEFINES += -DAMREX_USE_CUDA_FORTRAN
-
-  LINK_WITH_FORTRAN_COMPILER = TRUE
 endif
 
 LINK_WITH_FORTRAN_COMPILER ?= $(USE_F_INTERFACES)
