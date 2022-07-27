@@ -391,6 +391,29 @@ public:
      // 1 - use MOF error
     static int mof_error_ordering;
 
+    static Vector<int> store_elastic_data; // viscoelastic parameter
+
+     // this is set according to store_elastic_data
+    static int num_materials_viscoelastic;
+
+     // 0=fluid, tessellating 
+     // 1=prescribed motion, non-tessellating, PROB.F90 solid 
+     // 2=prescribed motion, non-tessellating, sci_clsvof.F90 solid 
+     // 3=rigid FSI interior, tessellating, ice 
+     //    (expansion/triple point dynamics allowed)
+     // 4=link w/Kourosh, FSI, sci_clsvof.F90, fluids tessellate the
+     //   computational domain, and the CTML elastic solid is embedded
+     //   within the domain (non-tessellating) as if it was a rigid solid.
+     // 5=FSI, tessellating, rigid (PROB.F90)
+     // 6=FSI ice, represented as a tessellating fluid
+     //   (initial geometry: sci_clsvof.F90)
+     // 7=fluid, tessellating (initial geometry: sci_clsvof.F90)
+     // 8=FSI, non-tessellating link w/Kourosh, pres-vel coupling.
+     
+    static Vector<int>  FSI_flag; 
+
+    static Vector<int> material_type; // 0 incomp   
+
 protected:
 
     void SDC_setup_step();
@@ -1540,21 +1563,7 @@ protected:
     static Vector<Real> wall_model_velocity;  // def=0.0
     static Vector<int> interface_mass_transfer_model;  // def=0
     static Real        wall_slip_weight; // def=0.0
-     // 1..7 "1" corresponds to the GNBC option.
-     // 0=fluid, tessellating 
-     // 1=prescribed motion, non-tessellating, PROB.F90 solid 
-     // 2=prescribed motion, non-tessellating, sci_clsvof.F90 solid 
-     // 3=rigid FSI interior, tessellating, ice 
-     //    (expansion/triple point dynamics allowed)
-     // 4=link w/Kourosh, FSI, sci_clsvof.F90, fluids tessellate the
-     //   computational domain, and the CTML elastic solid is embedded
-     //   within the domain (non-tessellating) as if it was a rigid solid.
-     // 5=FSI, tessellating, rigid (PROB.F90)
-     // 6=FSI ice, represented as a tessellating fluid
-     //   (initial geometry: sci_clsvof.F90)
-     // 7=fluid, tessellating (initial geometry: sci_clsvof.F90)
-     // 8=FSI, non-tessellating link w/Kourosh, pres-vel coupling.
-    static Vector<int>  FSI_flag; 
+
     static int FSI_interval; //default=1
 
     static int         CTML_FSI_numsolids;
@@ -1881,9 +1890,6 @@ protected:
     static int ncomp_sum_int_user2; //def=0
     static int ncomp_sum_int_user12; //def=0
 
-     // this is set according to store_elastic_data
-    static int num_materials_viscoelastic;
-
      // den,denA,E,T,P,species,configuration tensor
     static int num_state_material;
     static int num_state_base;
@@ -1960,7 +1966,6 @@ protected:
 
     static int transposegradu; //def=0
 
-    static Vector<int> store_elastic_data; // viscoelastic parameter
     static Vector<Real> elastic_viscosity; // viscoelastic parameter
     static Vector<Real> shear_modulus; // elastic parameter
     static Vector<Real> lame_coefficient; // elastic parameter
@@ -2095,7 +2100,7 @@ protected:
     static Vector<Real> speciesviscconst_interface;
       // num_species
     static Vector<Real> species_molar_mass;  // def=1
-    static Vector<int> material_type; // 0 incomp   
+
      //0 incomp; material_type_evap needed for the Kassemi model.
     static Vector<int> material_type_evap; 
     static Vector<int> material_type_lowmach; // 0 incomp   
