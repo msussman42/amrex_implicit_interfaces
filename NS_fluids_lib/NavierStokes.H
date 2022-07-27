@@ -370,6 +370,27 @@ public:
 
     void explicit_fluxes(int state_idx,int scomp,int iupdate,MultiFab* Un);
 
+    static Real inflow_pressure;
+    static Real outflow_pressure;
+    static Real period_time;
+    static int  MOF_TURN_OFF_LS;
+    static int  MOF_DEBUG_RECON;
+    static Real visc_coef; 
+     // 1..7 "1" corresponds to the GNBC option.
+    static int ZEYU_DCA_SELECT;  // DCA=dynamic contact angle
+    static int num_local_aux_grids; //default is 0
+    static Real R_Palmore_Desjardins;
+    static int prescribe_temperature_outflow;
+     // default is solidheat_flag=0
+    static int solidheat_flag;  // 0=diffuse in solid 1=dirichlet 2=neumann
+    static Real gravity;
+    static int  invert_gravity;
+    static int  gravity_dir;
+    static Real nucleation_init_time; //def 0.0
+     // 0 - centroid furthest from uncaptured centroid
+     // 1 - use MOF error
+    static int mof_error_ordering;
+
 protected:
 
     void SDC_setup_step();
@@ -1441,8 +1462,6 @@ protected:
     static Real init_shrink;   // reduction factor of first esimated timestep
     static Real cfl;           // desired maximum cfl
 
-    static int  MOF_TURN_OFF_LS;
-    static int  MOF_DEBUG_RECON;
     static int  MOFITERMAX;
 // default: tessellating fluid => default==1
 //          non-tesselating or tesselating solid => default==0
@@ -1499,12 +1518,8 @@ protected:
     static int        fab_verbose; // 1=curv 2=error heat 3=both
     static int        output_drop_distribution;
     static int        extend_pressure_into_solid; // default=0
-    static Real       gravity;
     static Real       gravity_reference_wavelen;
-    static int        invert_gravity;
-    static int        gravity_dir;
     static int        NUM_SCALARS;      // number of non-velocity components
-    static Real       visc_coef; 
 
     static int include_viscous_heating; // default=0
      //smooth_type: 0=GSRB 1=ICRB 2=ILU  3=Jacobi
@@ -1526,7 +1541,6 @@ protected:
     static Vector<int> interface_mass_transfer_model;  // def=0
     static Real        wall_slip_weight; // def=0.0
      // 1..7 "1" corresponds to the GNBC option.
-    static int         ZEYU_DCA_SELECT;  // DCA=dynamic contact angle
      // 0=fluid, tessellating 
      // 1=prescribed motion, non-tessellating, PROB.F90 solid 
      // 2=prescribed motion, non-tessellating, sci_clsvof.F90 solid 
@@ -1618,7 +1632,6 @@ protected:
     static Vector<Real> nucleation_mach; 
     static Vector<Real> nucleation_temp; 
     static Real nucleation_period; 
-    static Real nucleation_init_time; //def 0.0
     static int pos_sites_random_flag; //default=1
     static int n_sites;
     static Vector<Real> pos_sites;
@@ -1675,8 +1688,6 @@ protected:
     static Vector<Real> latent_heat_min; 
     static Vector<Real> latent_heat_T0; 
     static Vector<Real> latent_heat_slope; //should be non-positive 
-
-    static Real R_Palmore_Desjardins;
 
     static Vector<Real> reaction_rate; 
      // freezing_model:
@@ -1744,10 +1755,7 @@ protected:
 
     static Vector<Real> FSI_force_integral;
 
-    static int num_local_aux_grids; //default is 0
-
     static int ngrow_expansion;  // should always be 2
-    static int prescribe_temperature_outflow;
 
      // 0=volume fraction  1=mass fraction 2=impedance fraction
     static int pressure_select_criterion; 
@@ -2006,9 +2014,6 @@ protected:
     static Real adv_vel;
     static int axis_dir;
 
-     // 0 - centroid furthest from uncaptured centroid
-     // 1 - use MOF error
-    static int mof_error_ordering;
     static Vector<int> mof_ordering;
 
     static Real rgasinlet;
@@ -2090,8 +2095,6 @@ protected:
     static Vector<Real> speciesviscconst_interface;
       // num_species
     static Vector<Real> species_molar_mass;  // def=1
-     // default is solidheat_flag=0
-    static int solidheat_flag;  // 0=diffuse in solid 1=dirichlet 2=neumann
     static Vector<int> material_type; // 0 incomp   
      //0 incomp; material_type_evap needed for the Kassemi model.
     static Vector<int> material_type_evap; 
@@ -2099,9 +2102,6 @@ protected:
     static Vector<int> material_type_visual; // 0 incomp   
     static Real wait_time;
     static Real advbot;
-    static Real inflow_pressure;
-    static Real outflow_pressure;
-    static Real period_time;
 
 // mg.bot_atol
 // mg.visc_bot_atol

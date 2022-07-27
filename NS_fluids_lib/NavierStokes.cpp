@@ -1251,9 +1251,9 @@ void fortran_parameters() {
  Real vinletgas;
  Real twall;
  Real advbot;
- Real inflow_pressure=0.0;
- Real outflow_pressure=0.0;
- Real period_time=0.0;
+ Real inflow_pressure=NavierStokes::inflow_pressure;
+ Real outflow_pressure=NavierStokes::outflow_pressure;
+ Real period_time=NavierStokes::period_time;
 
  ParmParse ppmain;
  fort_stop_time=-1.0;
@@ -1265,7 +1265,7 @@ void fortran_parameters() {
  Vector<int> ns_space_blocking_factor;
  ns_space_blocking_factor.resize(ns_max_level+1);
  for (int lev=0;lev<=ns_max_level;lev++)
-  ns_space_blocking_factor[lev]=2;
+  ns_space_blocking_factor[lev]=1;
  ppamr.queryAdd("space_blocking_factor",
    ns_space_blocking_factor,ns_max_level+1);
 
@@ -1402,12 +1402,12 @@ void fortran_parameters() {
  if ((MOFITERMAX<0)||(MOFITERMAX>50))
   amrex::Error("mof iter max invalid in navierstokes");
 
- int MOF_TURN_OFF_LS=0;  // this is local variable, not static variable
+ int MOF_TURN_OFF_LS=NavierStokes::MOF_TURN_OFF_LS;
  pp.queryAdd("MOF_TURN_OFF_LS",MOF_TURN_OFF_LS);
  if ((MOF_TURN_OFF_LS!=0)&&(MOF_TURN_OFF_LS!=1))
   amrex::Error("mof turn off ls invalid in navierstokes");
 
- int MOF_DEBUG_RECON=0;  // this is local variable, not static variable
+ int MOF_DEBUG_RECON=NavierStokes::MOF_DEBUG_RECON; 
  pp.queryAdd("MOF_DEBUG_RECON",MOF_DEBUG_RECON);
  if ((MOF_DEBUG_RECON!=0)&&(MOF_DEBUG_RECON!=1)&&
      (MOF_DEBUG_RECON!=2))
@@ -1533,9 +1533,9 @@ void fortran_parameters() {
  Vector<Real> etaS_temp(num_materials);
  Vector<Real> etaP_temp(num_materials);
 
- Real visc_coef_temp=0.0;
+ Real visc_coef_temp=NavierStokes::visc_coef;
 
- int ZEYU_DCA_SELECT_temp=-1;  // -1=static angle
+ int ZEYU_DCA_SELECT_temp=NavierStokes::ZEYU_DCA_SELECT;  // -1=static angle
 
  pp.get("visc_coef",visc_coef_temp);
 
@@ -1578,7 +1578,7 @@ void fortran_parameters() {
  pp.queryAdd("FSI_flag",FSI_flag_temp,num_materials);
  pp.queryAdd("damping_coefficient",damping_coefficient_temp,num_materials);
 
- int num_local_aux_grids_temp=0;
+ int num_local_aux_grids_temp=NavierStokes::num_local_aux_grids;
  pp.queryAdd("num_local_aux_grids",num_local_aux_grids_temp);
 
  pp.queryAdd("tempcutoff",tempcutofftemp,num_materials);
@@ -1732,7 +1732,8 @@ void fortran_parameters() {
  pp.queryAdd("saturation_temp",saturation_temp_temp,2*num_interfaces);
  pp.queryAdd("reference_pressure",reference_pressure_temp,2*num_interfaces);
 
- Real R_Palmore_Desjardins_temp=8.31446261815324e+7;  // ergs/(mol Kelvin)
+  // ergs/(mol Kelvin)
+ Real R_Palmore_Desjardins_temp=NavierStokes::R_Palmore_Desjardins; 
  pp.queryAdd("R_Palmore_Desjardins",R_Palmore_Desjardins_temp);
 
  Vector<Real> molar_mass_temp(num_materials);
@@ -1842,22 +1843,22 @@ void fortran_parameters() {
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid 9");
 
- int prescribe_temperature_outflow=0;
+ int prescribe_temperature_outflow=NavierStokes::prescribe_temperature_outflow;
  pp.queryAdd("prescribe_temperature_outflow",prescribe_temperature_outflow);
  if ((prescribe_temperature_outflow<0)||
      (prescribe_temperature_outflow>3))
   amrex::Error("prescribe_temperature_outflow invalid (fortran_parameters)");
 
   // 0=diffuse in solid 1=dirichlet 2=neumann
- int solidheat_flag=0;
+ int solidheat_flag=NavierStokes::solidheat_flag;
  pp.queryAdd("solidheat_flag",solidheat_flag);
  if ((solidheat_flag<0)||
      (solidheat_flag>2))
   amrex::Error("solidheat_flag invalid (fortran_parameters)");
 
- Real gravity_temp=0.0; 
- int gravity_dir_temp=AMREX_SPACEDIM;
- int invert_gravity_temp=0;
+ Real gravity_temp=NavierStokes::gravity; 
+ int gravity_dir_temp=NavierStokes::gravity_dir;
+ int invert_gravity_temp=NavierStokes::invert_gravity;
  pp.queryAdd("gravity",gravity_temp);
  pp.queryAdd("gravity_dir",gravity_dir_temp);
  pp.queryAdd("invert_gravity",invert_gravity_temp);
@@ -1866,7 +1867,7 @@ void fortran_parameters() {
 
  int n_sites=0;
  pp.queryAdd("n_sites",n_sites);
- Real nucleation_init_time=0.0;
+ Real nucleation_init_time=NavierStokes::nucleation_init_time;
  pp.queryAdd("nucleation_init_time",nucleation_init_time);
 
  pp.queryAdd("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT_temp);
@@ -2023,7 +2024,8 @@ void fortran_parameters() {
         start_initialization << '\n';
  }
 
- int mof_error_ordering_local=0;
+ int mof_error_ordering_local=NavierStokes::mof_error_ordering;
+;
  pp.queryAdd("mof_error_ordering",mof_error_ordering_local);
  if ((mof_error_ordering_local!=0)&&
      (mof_error_ordering_local!=1))
@@ -4396,9 +4398,9 @@ NavierStokes::read_params ()
     ParmParse ppmac("mac");
     ParmParse ppcg("cg");
 
-    int cg_restart_period=-1;
+    int cg_restart_period=2000;
     ppcg.queryAdd("restart_period",cg_restart_period);
-    int cg_maxiter=-1;
+    int cg_maxiter=200;
     ppcg.queryAdd("maxiter",cg_maxiter);
 
     ppmac.queryAdd( "mac_abs_tol",mac_abs_tol);
@@ -5179,11 +5181,9 @@ NavierStokes::read_params ()
      std::cout << "projection_velocity_scale " << 
        projection_velocity_scale << '\n';
 
-      //Since init_snan is not public (see AMReX_FArrayBox.H)
-      //we do this code.
-      //In the next version, queryAdd will be used! so one
-      //can grab this variable (publicly) from the ParmParse 
-      //table without worrying about the initialization.
+      //in AMReX_MemPool.cpp and AMReX_FArrayBox.cpp: 
+      // ParmParse pp("fab");
+      // pp.queryAdd("init_snan", init_snan);
 #if defined(AMREX_DEBUG) || defined(AMREX_TESTING)
      bool init_snan  = true;
 #else
