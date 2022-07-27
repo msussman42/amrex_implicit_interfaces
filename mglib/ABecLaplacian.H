@@ -124,6 +124,9 @@ public:
     void LP_update(MultiFab& sol,Real alpha,
      MultiFab& y,const MultiFab& p,int level);
 
+    static int CG_def_maxiter;
+    static int CG_def_restart_period;
+
 protected:
 
    void Bottom_Krylov_checkpoint(
@@ -155,8 +158,6 @@ protected:
 
     static int CG_MG_defaults_reported;
 
-    static int CG_def_maxiter;
-    static int CG_def_restart_period;
     static int CG_def_verbose;
 
     //

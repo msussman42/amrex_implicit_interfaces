@@ -1381,7 +1381,6 @@ void fortran_parameters() {
  int num_species_var=0;
  int num_materials=0;
  int num_interfaces=0;
- int num_materials_viscoelastic_temp=0;
 
  int num_state_material=ENUM_SPECIESVAR;  // den,T
  int num_state_base=ENUM_SPECIESVAR;  // den,T
@@ -1428,7 +1427,6 @@ void fortran_parameters() {
  Vector<Real> lame_coefficient_temp;
  Vector<int> linear_elastic_model_temp;
  Vector<Real> shear_modulus_temp;
- Vector<int> store_elastic_data_temp;
 
  elastic_viscosity_temp.resize(num_materials);
  elastic_time_temp.resize(num_materials);
@@ -1437,7 +1435,7 @@ void fortran_parameters() {
  lame_coefficient_temp.resize(num_materials);
  linear_elastic_model_temp.resize(num_materials);
  shear_modulus_temp.resize(num_materials);
- store_elastic_data_temp.resize(num_materials);
+ NavierStokes::store_elastic_data.resize(num_materials);
  for (int im=0;im<num_materials;im++) {
 
   elastic_viscosity_temp[im]=0.0;
@@ -1447,7 +1445,7 @@ void fortran_parameters() {
   lame_coefficient_temp[im]=0.0;
   linear_elastic_model_temp[im]=0;
   shear_modulus_temp[im]=0.0;
-  store_elastic_data_temp[im]=0;
+  NavierStokes::store_elastic_data[im]=0;
  }
  pp.queryAdd("elastic_viscosity",elastic_viscosity_temp,num_materials);
  pp.queryAdd("elastic_time",elastic_time_temp,num_materials);
@@ -1461,7 +1459,7 @@ void fortran_parameters() {
   if (elastic_viscosity_temp[im]>0.0) {
    if (fort_built_in_elastic_model(&elastic_viscosity_temp[im],
               		         &viscoelastic_model_temp[im])==1) {
-    store_elastic_data_temp[im]=1;
+    NavierStokes::store_elastic_data[im]=1;
    } else if (fort_built_in_elastic_model(&elastic_viscosity_temp[im],
                                         &viscoelastic_model_temp[im])==0) {
     // do nothing
@@ -1473,14 +1471,14 @@ void fortran_parameters() {
    amrex::Error("elastic_viscosity_temp[im] invalid");
  } // im=0..num_materials-1 
 
- num_materials_viscoelastic_temp=0;
+ NavierStokes::num_materials_viscoelastic=0;
  for (int im=0;im<num_materials;im++) {
-  if (store_elastic_data_temp[im]==1) {
-   num_materials_viscoelastic_temp++;
-  } else if (store_elastic_data_temp[im]==0) {
+  if (NavierStokes::store_elastic_data[im]==1) {
+   NavierStokes::num_materials_viscoelastic++;
+  } else if (NavierStokes::store_elastic_data[im]==0) {
    // do nothing
   } else
-   amrex::Error("store_elastic_data_temp invalid");
+   amrex::Error("NavierStokes::store_elastic_data invalid");
  } // im=0..num_materials-1 
 
  Vector<Real> denconst_temp(num_materials);
@@ -1517,8 +1515,11 @@ void fortran_parameters() {
  Vector<Real> heatviscconst_temp(num_materials);
  Vector<Real> speciesconst_temp((num_species_var+1)*num_materials);
  Vector<Real> speciesviscconst_temp((num_species_var+1)*num_materials);
- Vector<int> material_type_temp(num_materials);
- Vector<int> FSI_flag_temp(num_materials);
+
+ NavierStokes::material_type.resize(num_materials);
+
+ NavierStokes::FSI_flag.resize(num_materials);
+
  Vector<Real> damping_coefficient_temp(num_materials);
 
  Vector<Real> Carreau_alpha_temp(num_materials);
@@ -1539,7 +1540,7 @@ void fortran_parameters() {
 
  pp.get("visc_coef",visc_coef_temp);
 
- pp.getarr("material_type",material_type_temp,0,num_materials);
+ pp.getarr("material_type",NavierStokes::material_type,0,num_materials);
 
  for (int im=0;im<num_materials;im++) {
 
@@ -1551,7 +1552,7 @@ void fortran_parameters() {
   DrhoDTtemp[im]=0.0;
   tempcutofftemp[im]=1.0e-8;
   tempcutoffmaxtemp[im]=1.0e+99;
-  FSI_flag_temp[im]=0;
+  NavierStokes::FSI_flag[im]=0;
   damping_coefficient_temp[im]=0.0;
 
   Carreau_alpha_temp[im]=1.0;
@@ -1575,7 +1576,7 @@ void fortran_parameters() {
   speciesconst_temp[im]=0.0;
  }
 
- pp.queryAdd("FSI_flag",FSI_flag_temp,num_materials);
+ pp.queryAdd("FSI_flag",NavierStokes::FSI_flag,num_materials);
  pp.queryAdd("damping_coefficient",damping_coefficient_temp,num_materials);
 
  int num_local_aux_grids_temp=NavierStokes::num_local_aux_grids;
@@ -1733,8 +1734,7 @@ void fortran_parameters() {
  pp.queryAdd("reference_pressure",reference_pressure_temp,2*num_interfaces);
 
   // ergs/(mol Kelvin)
- Real R_Palmore_Desjardins_temp=NavierStokes::R_Palmore_Desjardins; 
- pp.queryAdd("R_Palmore_Desjardins",R_Palmore_Desjardins_temp);
+ pp.queryAdd("R_Palmore_Desjardins",NavierStokes::R_Palmore_Desjardins);
 
  Vector<Real> molar_mass_temp(num_materials);
  Vector<Real> species_molar_mass_temp(num_species_var+1);
@@ -1763,7 +1763,7 @@ void fortran_parameters() {
  fort_override_MAIN_GLOBALS(
   &cc_int_size,
   &num_species_var,
-  &num_materials_viscoelastic_temp,
+  &NavierStokes::num_materials_viscoelastic,
   &num_state_material,
   &num_state_base,
   &ngeom_raw,
@@ -1781,39 +1781,39 @@ void fortran_parameters() {
   } else
    amrex::Error("damping_coefficient_temp[im] invalid");
 
-  if (material_type_temp[im]==999) {
+  if (NavierStokes::material_type[im]==999) {
 
     // non-tessellating cases.
-   if ((FSI_flag_temp[im]!=1)&& // prescribed PROB.F90 rigid solid
-       (FSI_flag_temp[im]!=2)&& // prescribed sci_clsvof.F90 rigid solid
-       (FSI_flag_temp[im]!=4)&& // FSI CTML solid
-       (FSI_flag_temp[im]!=8))  // FSI pressure-velocity coupling
-    amrex::Error("FSI_flag_temp invalid");
+   if ((NavierStokes::FSI_flag[im]!=1)&& // prescribed PROB.F90 rigid solid
+       (NavierStokes::FSI_flag[im]!=2)&& // prescribed sci_clsvof.F90 rigid solid
+       (NavierStokes::FSI_flag[im]!=4)&& // FSI CTML solid
+       (NavierStokes::FSI_flag[im]!=8))  // FSI pressure-velocity coupling
+    amrex::Error("NavierStokes::FSI_flag invalid");
 
-  } else if (material_type_temp[im]==0) {
+  } else if (NavierStokes::material_type[im]==0) {
 
-   if ((FSI_flag_temp[im]!=0)&& // fluid tessellating
-       (FSI_flag_temp[im]!=7)&& // fluid tessellating
-       (FSI_flag_temp[im]!=3)&& // ice   tessellating
-       (FSI_flag_temp[im]!=6)&& // ice   tessellating
-       (FSI_flag_temp[im]!=5))  // FSI PROB.F90 rigid solid. tessellating
-    amrex::Error("FSI_flag_temp invalid");
+   if ((NavierStokes::FSI_flag[im]!=0)&& // fluid tessellating
+       (NavierStokes::FSI_flag[im]!=7)&& // fluid tessellating
+       (NavierStokes::FSI_flag[im]!=3)&& // ice   tessellating
+       (NavierStokes::FSI_flag[im]!=6)&& // ice   tessellating
+       (NavierStokes::FSI_flag[im]!=5))  // FSI PROB.F90 rigid solid. tessellating
+    amrex::Error("NavierStokes::FSI_flag invalid");
 
-  } else if ((material_type_temp[im]>0)&& 
-             (material_type_temp[im]<999)) {
+  } else if ((NavierStokes::material_type[im]>0)&& 
+             (NavierStokes::material_type[im]<999)) {
 
-   if ((FSI_flag_temp[im]!=0)&&   // tessallating
-       (FSI_flag_temp[im]!=7))    // fluid, tessellating
-    amrex::Error("FSI_flag_temp invalid");
+   if ((NavierStokes::FSI_flag[im]!=0)&&   // tessallating
+       (NavierStokes::FSI_flag[im]!=7))    // fluid, tessellating
+    amrex::Error("NavierStokes::FSI_flag invalid");
 
   } else {
    amrex::Error("material type invalid");
   }
 
   int imp1=im+1;
-  if (fort_is_rigid_base(&FSI_flag_temp[im],&imp1)==1) {
+  if (fort_is_rigid_base(&NavierStokes::FSI_flag[im],&imp1)==1) {
    shear_thinning_fluid_temp[im]=0;
-  } else if (fort_is_rigid_base(&FSI_flag_temp[im],&imp1)==0) {
+  } else if (fort_is_rigid_base(&NavierStokes::FSI_flag[im],&imp1)==0) {
    shear_thinning_fluid_temp[im]=0;
    if ((probtype==2)&&(axis_dir>0)&&(im==0))
     shear_thinning_fluid_temp[im]=1;
@@ -1909,7 +1909,7 @@ void fortran_parameters() {
   &prescribe_temperature_outflow,
   &solidheat_flag,
   &geometry_coord,
-  FSI_flag_temp.dataPtr(),
+  NavierStokes::FSI_flag.dataPtr(),
   damping_coefficient_temp.dataPtr(),
   &num_local_aux_grids_temp,
   &ZEYU_DCA_SELECT_temp,
@@ -1939,13 +1939,13 @@ void fortran_parameters() {
   &problox,&probloy,&probloz,
   &probhix,&probhiy,&probhiz,
   &num_species_var,
-  &num_materials_viscoelastic_temp,
+  &NavierStokes::num_materials_viscoelastic,
   &num_state_material,
   &num_state_base,
   &ngeom_raw,
   &ngeom_recon,
   &num_materials,
-  material_type_temp.dataPtr(),
+  NavierStokes::material_type.dataPtr(),
   &num_interfaces,
   DrhoDTtemp.dataPtr(),
   tempconst_temp.dataPtr(),
@@ -1953,7 +1953,7 @@ void fortran_parameters() {
   tempcutofftemp.dataPtr(),
   tempcutoffmaxtemp.dataPtr(),
   stiffPINFtemp.dataPtr(),
-  &R_Palmore_Desjardins_temp,
+  &NavierStokes::R_Palmore_Desjardins,
   stiffCPtemp.dataPtr(),
   stiffCVtemp.dataPtr(),
   stiffGAMMAtemp.dataPtr(),
@@ -1977,7 +1977,7 @@ void fortran_parameters() {
   lame_coefficient_temp.dataPtr(),
   linear_elastic_model_temp.dataPtr(),
   shear_modulus_temp.dataPtr(),
-  store_elastic_data_temp.dataPtr(),
+  NavierStokes::store_elastic_data.dataPtr(),
   heatflux_factor_temp.dataPtr(),
   heatviscconst_temp.dataPtr(),
   prerecalesce_heatviscconst_temp.dataPtr(),
@@ -2038,7 +2038,7 @@ void fortran_parameters() {
   axis_dir,radblob3,
   radblob4,radblob7,
   mof_error_ordering_local,
-  FSI_flag_temp);
+  NavierStokes::FSI_flag);
 
  pp.queryAdd("mof_ordering",mof_ordering_local,num_materials);
  for (int i=0;i<num_materials;i++) {
@@ -4398,9 +4398,9 @@ NavierStokes::read_params ()
     ParmParse ppmac("mac");
     ParmParse ppcg("cg");
 
-    int cg_restart_period=2000;
+    int cg_restart_period=ABecLaplacian::CG_def_restart_period;
     ppcg.queryAdd("restart_period",cg_restart_period);
-    int cg_maxiter=200;
+    int cg_maxiter=ABecLaplacian::CG_def_maxiter;
     ppcg.queryAdd("maxiter",cg_maxiter);
 
     ppmac.queryAdd( "mac_abs_tol",mac_abs_tol);
