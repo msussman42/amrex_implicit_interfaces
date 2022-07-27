@@ -414,6 +414,15 @@ public:
 
     static Vector<int> material_type; // 0 incomp   
 
+    static int num_species_var; 
+    static int num_materials;
+    static int num_interfaces;
+
+    static int num_state_material;
+    static int num_state_base;
+    static int ngeom_raw;
+    static int ngeom_recon;
+
 protected:
 
     void SDC_setup_step();
@@ -1882,19 +1891,9 @@ protected:
 
     static int num_SoA_var; //number of Structure of Array variables
 
-    static int num_species_var; 
-    static int num_materials;
-    static int num_interfaces;
-
     static int ncomp_sum_int_user1; //def=0
     static int ncomp_sum_int_user2; //def=0
     static int ncomp_sum_int_user12; //def=0
-
-     // den,denA,E,T,P,species,configuration tensor
-    static int num_state_material;
-    static int num_state_base;
-    static int ngeom_raw;
-    static int ngeom_recon;
 
     static Vector<Real> compressible_dt_factor;  //def=1.0
     static int disable_advection;

@@ -1378,21 +1378,17 @@ void fortran_parameters() {
  pp.queryAdd("outflow_pressure",outflow_pressure);
  pp.queryAdd("period_time",period_time);
 
- int num_species_var=0;
- int num_materials=0;
- int num_interfaces=0;
+ NavierStokes::num_state_material=ENUM_SPECIESVAR;  // den,T
+ NavierStokes::num_state_base=ENUM_SPECIESVAR;  // den,T
+ NavierStokes::ngeom_raw=AMREX_SPACEDIM+1;
+ NavierStokes::ngeom_recon=ENUM_NUM_MOF_VAR;
 
- int num_state_material=ENUM_SPECIESVAR;  // den,T
- int num_state_base=ENUM_SPECIESVAR;  // den,T
- int ngeom_raw=AMREX_SPACEDIM+1;
- int ngeom_recon=ENUM_NUM_MOF_VAR;
-
- pp.get("num_materials",num_materials);
- if ((num_materials<2)||(num_materials>999))
+ pp.get("num_materials",NavierStokes::num_materials);
+ if ((NavierStokes::num_materials<2)||(NavierStokes::num_materials>999))
   amrex::Error("num materials invalid");
 
- num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2;
- if ((num_interfaces<1)||(num_interfaces>999))
+ NavierStokes::num_interfaces=( (NavierStokes::num_materials-1)*(NavierStokes::num_materials-1)+NavierStokes::num_materials-1 )/2;
+ if ((NavierStokes::num_interfaces<1)||(NavierStokes::num_interfaces>999))
   amrex::Error("num interfaces invalid");
 
   // this is local variable, not static variable
@@ -1412,13 +1408,13 @@ void fortran_parameters() {
      (MOF_DEBUG_RECON!=2))
   amrex::Error("mof debug recon invalid in navierstokes");
 
- pp.get("num_species_var",num_species_var);
- if (num_species_var<0)
+ pp.get("num_species_var",NavierStokes::num_species_var);
+ if (NavierStokes::num_species_var<0)
   amrex::Error("num species var invalid");
 
- num_state_base=ENUM_SPECIESVAR;   // den,Temperature
- num_state_material=ENUM_SPECIESVAR;  // den,Temperature
- num_state_material+=num_species_var;
+ NavierStokes::num_state_base=ENUM_SPECIESVAR;   // den,Temperature
+ NavierStokes::num_state_material=ENUM_SPECIESVAR;  // den,Temperature
+ NavierStokes::num_state_material+=NavierStokes::num_species_var;
 
  Vector<Real> elastic_viscosity_temp;
  Vector<Real> elastic_time_temp;
@@ -1428,15 +1424,15 @@ void fortran_parameters() {
  Vector<int> linear_elastic_model_temp;
  Vector<Real> shear_modulus_temp;
 
- elastic_viscosity_temp.resize(num_materials);
- elastic_time_temp.resize(num_materials);
- viscoelastic_model_temp.resize(num_materials);
+ elastic_viscosity_temp.resize(NavierStokes::num_materials);
+ elastic_time_temp.resize(NavierStokes::num_materials);
+ viscoelastic_model_temp.resize(NavierStokes::num_materials);
 
- lame_coefficient_temp.resize(num_materials);
- linear_elastic_model_temp.resize(num_materials);
- shear_modulus_temp.resize(num_materials);
- NavierStokes::store_elastic_data.resize(num_materials);
- for (int im=0;im<num_materials;im++) {
+ lame_coefficient_temp.resize(NavierStokes::num_materials);
+ linear_elastic_model_temp.resize(NavierStokes::num_materials);
+ shear_modulus_temp.resize(NavierStokes::num_materials);
+ NavierStokes::store_elastic_data.resize(NavierStokes::num_materials);
+ for (int im=0;im<NavierStokes::num_materials;im++) {
 
   elastic_viscosity_temp[im]=0.0;
   elastic_time_temp[im]=0.0;
@@ -1447,15 +1443,15 @@ void fortran_parameters() {
   shear_modulus_temp[im]=0.0;
   NavierStokes::store_elastic_data[im]=0;
  }
- pp.queryAdd("elastic_viscosity",elastic_viscosity_temp,num_materials);
- pp.queryAdd("elastic_time",elastic_time_temp,num_materials);
- pp.queryAdd("viscoelastic_model",viscoelastic_model_temp,num_materials);
+ pp.queryAdd("elastic_viscosity",elastic_viscosity_temp,NavierStokes::num_materials);
+ pp.queryAdd("elastic_time",elastic_time_temp,NavierStokes::num_materials);
+ pp.queryAdd("viscoelastic_model",viscoelastic_model_temp,NavierStokes::num_materials);
 
- pp.queryAdd("lame_coefficient",lame_coefficient_temp,num_materials);
- pp.queryAdd("linear_elastic_model",linear_elastic_model_temp,num_materials);
- pp.queryAdd("shear_modulus",shear_modulus_temp,num_materials);
+ pp.queryAdd("lame_coefficient",lame_coefficient_temp,NavierStokes::num_materials);
+ pp.queryAdd("linear_elastic_model",linear_elastic_model_temp,NavierStokes::num_materials);
+ pp.queryAdd("shear_modulus",shear_modulus_temp,NavierStokes::num_materials);
 
- for (int im=0;im<num_materials;im++) {
+ for (int im=0;im<NavierStokes::num_materials;im++) {
   if (elastic_viscosity_temp[im]>0.0) {
    if (fort_built_in_elastic_model(&elastic_viscosity_temp[im],
               		         &viscoelastic_model_temp[im])==1) {
@@ -1469,70 +1465,70 @@ void fortran_parameters() {
    // do nothing
   } else
    amrex::Error("elastic_viscosity_temp[im] invalid");
- } // im=0..num_materials-1 
+ } // im=0..NavierStokes::num_materials-1 
 
  NavierStokes::num_materials_viscoelastic=0;
- for (int im=0;im<num_materials;im++) {
+ for (int im=0;im<NavierStokes::num_materials;im++) {
   if (NavierStokes::store_elastic_data[im]==1) {
    NavierStokes::num_materials_viscoelastic++;
   } else if (NavierStokes::store_elastic_data[im]==0) {
    // do nothing
   } else
    amrex::Error("NavierStokes::store_elastic_data invalid");
- } // im=0..num_materials-1 
+ } // im=0..NavierStokes::num_materials-1 
 
- Vector<Real> denconst_temp(num_materials);
- Vector<Real> den_ceiling_temp(num_materials);
- Vector<Real> den_floor_temp(num_materials);
- Vector<Real> cavdenconst_temp(num_materials);
+ Vector<Real> denconst_temp(NavierStokes::num_materials);
+ Vector<Real> den_ceiling_temp(NavierStokes::num_materials);
+ Vector<Real> den_floor_temp(NavierStokes::num_materials);
+ Vector<Real> cavdenconst_temp(NavierStokes::num_materials);
 
- Vector<Real> stiffPINFtemp(num_materials);
- Vector<Real> stiffCPtemp(num_materials);
- Vector<Real> stiffCVtemp(num_materials);
- Vector<Real> stiffGAMMAtemp(num_materials);
+ Vector<Real> stiffPINFtemp(NavierStokes::num_materials);
+ Vector<Real> stiffCPtemp(NavierStokes::num_materials);
+ Vector<Real> stiffCVtemp(NavierStokes::num_materials);
+ Vector<Real> stiffGAMMAtemp(NavierStokes::num_materials);
 
  //Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
  //DrhoDT has units of 1/(Degrees Kelvin)
- Vector<Real> DrhoDTtemp(num_materials);
- Vector<Real> tempcutofftemp(num_materials);
- Vector<Real> tempcutoffmaxtemp(num_materials);
- Vector<Real> tempconst_temp(num_materials);
- Vector<Real> initial_temperature_temp(num_materials);
- Vector<Real> viscconst_temp(num_materials);
+ Vector<Real> DrhoDTtemp(NavierStokes::num_materials);
+ Vector<Real> tempcutofftemp(NavierStokes::num_materials);
+ Vector<Real> tempcutoffmaxtemp(NavierStokes::num_materials);
+ Vector<Real> tempconst_temp(NavierStokes::num_materials);
+ Vector<Real> initial_temperature_temp(NavierStokes::num_materials);
+ Vector<Real> viscconst_temp(NavierStokes::num_materials);
 
- Vector<Real> viscconst_eddy_wall_temp(num_materials);
- Vector<Real> viscconst_eddy_bulk_temp(num_materials);
- Vector<Real> heatviscconst_eddy_wall_temp(num_materials);
- Vector<Real> heatviscconst_eddy_bulk_temp(num_materials);
+ Vector<Real> viscconst_eddy_wall_temp(NavierStokes::num_materials);
+ Vector<Real> viscconst_eddy_bulk_temp(NavierStokes::num_materials);
+ Vector<Real> heatviscconst_eddy_wall_temp(NavierStokes::num_materials);
+ Vector<Real> heatviscconst_eddy_bulk_temp(NavierStokes::num_materials);
 
- Vector<Real> thermal_microlayer_size_temp(num_materials);
- Vector<Real> shear_microlayer_size_temp(num_materials);
- Vector<Real> buoyancy_microlayer_size_temp(num_materials);
- Vector<Real> phasechange_microlayer_size_temp(num_materials);
+ Vector<Real> thermal_microlayer_size_temp(NavierStokes::num_materials);
+ Vector<Real> shear_microlayer_size_temp(NavierStokes::num_materials);
+ Vector<Real> buoyancy_microlayer_size_temp(NavierStokes::num_materials);
+ Vector<Real> phasechange_microlayer_size_temp(NavierStokes::num_materials);
 
- Vector<int> viscosity_state_model_temp(num_materials);
- Vector<Real> heatflux_factor_temp(num_materials);
- Vector<Real> heatviscconst_temp(num_materials);
- Vector<Real> speciesconst_temp((num_species_var+1)*num_materials);
- Vector<Real> speciesviscconst_temp((num_species_var+1)*num_materials);
+ Vector<int> viscosity_state_model_temp(NavierStokes::num_materials);
+ Vector<Real> heatflux_factor_temp(NavierStokes::num_materials);
+ Vector<Real> heatviscconst_temp(NavierStokes::num_materials);
+ Vector<Real> speciesconst_temp((NavierStokes::num_species_var+1)*NavierStokes::num_materials);
+ Vector<Real> speciesviscconst_temp((NavierStokes::num_species_var+1)*NavierStokes::num_materials);
 
- NavierStokes::material_type.resize(num_materials);
+ NavierStokes::material_type.resize(NavierStokes::num_materials);
 
- NavierStokes::FSI_flag.resize(num_materials);
+ NavierStokes::FSI_flag.resize(NavierStokes::num_materials);
 
- Vector<Real> damping_coefficient_temp(num_materials);
+ Vector<Real> damping_coefficient_temp(NavierStokes::num_materials);
 
- Vector<Real> Carreau_alpha_temp(num_materials);
- Vector<Real> Carreau_beta_temp(num_materials);
- Vector<Real> Carreau_n_temp(num_materials);
- Vector<Real> Carreau_mu_inf_temp(num_materials);
- Vector<int> shear_thinning_fluid_temp(num_materials);
- Vector<Real> polymer_factor_temp(num_materials);
+ Vector<Real> Carreau_alpha_temp(NavierStokes::num_materials);
+ Vector<Real> Carreau_beta_temp(NavierStokes::num_materials);
+ Vector<Real> Carreau_n_temp(NavierStokes::num_materials);
+ Vector<Real> Carreau_mu_inf_temp(NavierStokes::num_materials);
+ Vector<int> shear_thinning_fluid_temp(NavierStokes::num_materials);
+ Vector<Real> polymer_factor_temp(NavierStokes::num_materials);
 
- Vector<Real> concentration_temp(num_materials);
- Vector<Real> etaL_temp(num_materials);
- Vector<Real> etaS_temp(num_materials);
- Vector<Real> etaP_temp(num_materials);
+ Vector<Real> concentration_temp(NavierStokes::num_materials);
+ Vector<Real> etaL_temp(NavierStokes::num_materials);
+ Vector<Real> etaS_temp(NavierStokes::num_materials);
+ Vector<Real> etaP_temp(NavierStokes::num_materials);
 
  Real visc_coef_temp=NavierStokes::visc_coef;
 
@@ -1540,9 +1536,9 @@ void fortran_parameters() {
 
  pp.get("visc_coef",visc_coef_temp);
 
- pp.getarr("material_type",NavierStokes::material_type,0,num_materials);
+ pp.getarr("material_type",NavierStokes::material_type,0,NavierStokes::num_materials);
 
- for (int im=0;im<num_materials;im++) {
+ for (int im=0;im<NavierStokes::num_materials;im++) {
 
   stiffPINFtemp[im]=0.0;
   stiffCPtemp[im]=4.1855e+7;
@@ -1562,69 +1558,69 @@ void fortran_parameters() {
   shear_thinning_fluid_temp[im]=0;
 
   polymer_factor_temp[im]=0.0;
- } // im=0..num_materials-1
+ } // im=0..NavierStokes::num_materials-1
 
- pp.queryAdd("polymer_factor",polymer_factor_temp,num_materials);
+ pp.queryAdd("polymer_factor",polymer_factor_temp,NavierStokes::num_materials);
 
- pp.queryAdd("Carreau_alpha",Carreau_alpha_temp,num_materials);
- pp.queryAdd("Carreau_beta",Carreau_beta_temp,num_materials);
- pp.queryAdd("Carreau_n",Carreau_n_temp,num_materials);
- pp.queryAdd("Carreau_mu_inf",Carreau_mu_inf_temp,num_materials);
+ pp.queryAdd("Carreau_alpha",Carreau_alpha_temp,NavierStokes::num_materials);
+ pp.queryAdd("Carreau_beta",Carreau_beta_temp,NavierStokes::num_materials);
+ pp.queryAdd("Carreau_n",Carreau_n_temp,NavierStokes::num_materials);
+ pp.queryAdd("Carreau_mu_inf",Carreau_mu_inf_temp,NavierStokes::num_materials);
 
- for (int im=0;im<(num_species_var+1)*num_materials;im++) {
+ for (int im=0;im<(NavierStokes::num_species_var+1)*NavierStokes::num_materials;im++) {
   speciesviscconst_temp[im]=0.0;
   speciesconst_temp[im]=0.0;
  }
 
- pp.queryAdd("FSI_flag",NavierStokes::FSI_flag,num_materials);
- pp.queryAdd("damping_coefficient",damping_coefficient_temp,num_materials);
+ pp.queryAdd("FSI_flag",NavierStokes::FSI_flag,NavierStokes::num_materials);
+ pp.queryAdd("damping_coefficient",damping_coefficient_temp,NavierStokes::num_materials);
 
  int num_local_aux_grids_temp=NavierStokes::num_local_aux_grids;
  pp.queryAdd("num_local_aux_grids",num_local_aux_grids_temp);
 
- pp.queryAdd("tempcutoff",tempcutofftemp,num_materials);
- pp.queryAdd("tempcutoffmax",tempcutoffmaxtemp,num_materials);
+ pp.queryAdd("tempcutoff",tempcutofftemp,NavierStokes::num_materials);
+ pp.queryAdd("tempcutoffmax",tempcutoffmaxtemp,NavierStokes::num_materials);
 
- pp.getarr("tempconst",tempconst_temp,0,num_materials);
- for (int im=0;im<num_materials;im++)
+ pp.getarr("tempconst",tempconst_temp,0,NavierStokes::num_materials);
+ for (int im=0;im<NavierStokes::num_materials;im++)
   initial_temperature_temp[im]=tempconst_temp[im];
- pp.queryAdd("initial_temperature",initial_temperature_temp,num_materials);
+ pp.queryAdd("initial_temperature",initial_temperature_temp,NavierStokes::num_materials);
 
   //Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
   //DrhoDT has units of 1/(Degrees Kelvin)
- pp.queryAdd("DrhoDT",DrhoDTtemp,num_materials);
+ pp.queryAdd("DrhoDT",DrhoDTtemp,NavierStokes::num_materials);
 
- pp.queryAdd("stiffPINF",stiffPINFtemp,num_materials);
+ pp.queryAdd("stiffPINF",stiffPINFtemp,NavierStokes::num_materials);
 
- pp.queryAdd("stiffCP",stiffCPtemp,num_materials);
- for (int im=0;im<num_materials;im++)
+ pp.queryAdd("stiffCP",stiffCPtemp,NavierStokes::num_materials);
+ for (int im=0;im<NavierStokes::num_materials;im++)
   stiffCVtemp[im]=stiffCPtemp[im];
- pp.queryAdd("stiffCV",stiffCVtemp,num_materials);
+ pp.queryAdd("stiffCV",stiffCVtemp,NavierStokes::num_materials);
 
- Vector<Real> prerecalesce_stiffCP_temp(num_materials);
- for (int im=0;im<num_materials;im++)
+ Vector<Real> prerecalesce_stiffCP_temp(NavierStokes::num_materials);
+ for (int im=0;im<NavierStokes::num_materials;im++)
   prerecalesce_stiffCP_temp[im]=stiffCPtemp[im];
- pp.queryAdd("precalesce_stiffCP",prerecalesce_stiffCP_temp,num_materials);
- Vector<Real> prerecalesce_stiffCV_temp(num_materials);
- for (int im=0;im<num_materials;im++)
+ pp.queryAdd("precalesce_stiffCP",prerecalesce_stiffCP_temp,NavierStokes::num_materials);
+ Vector<Real> prerecalesce_stiffCV_temp(NavierStokes::num_materials);
+ for (int im=0;im<NavierStokes::num_materials;im++)
   prerecalesce_stiffCV_temp[im]=stiffCVtemp[im];
- pp.queryAdd("precalesce_stiffCV",prerecalesce_stiffCV_temp,num_materials);
+ pp.queryAdd("precalesce_stiffCV",prerecalesce_stiffCV_temp,NavierStokes::num_materials);
 
- pp.queryAdd("stiffGAMMA",stiffGAMMAtemp,num_materials);
+ pp.queryAdd("stiffGAMMA",stiffGAMMAtemp,NavierStokes::num_materials);
 
- pp.getarr("denconst",denconst_temp,0,num_materials);
+ pp.getarr("denconst",denconst_temp,0,NavierStokes::num_materials);
 
- for (int im=0;im<num_materials;im++) {
+ for (int im=0;im<NavierStokes::num_materials;im++) {
   cavdenconst_temp[im]=0.0;
   den_ceiling_temp[im]=1.0e+20;
   den_floor_temp[im]=0.0;
  }
- pp.queryAdd("cavitation_vapor_density",cavdenconst_temp,num_materials);
- pp.queryAdd("density_floor",den_floor_temp,num_materials);
- pp.queryAdd("density_ceiling",den_ceiling_temp,num_materials);
+ pp.queryAdd("cavitation_vapor_density",cavdenconst_temp,NavierStokes::num_materials);
+ pp.queryAdd("density_floor",den_floor_temp,NavierStokes::num_materials);
+ pp.queryAdd("density_ceiling",den_ceiling_temp,NavierStokes::num_materials);
 
- pp.getarr("viscconst",viscconst_temp,0,num_materials);
- for (int im=0;im<num_materials;im++) {
+ pp.getarr("viscconst",viscconst_temp,0,NavierStokes::num_materials);
+ for (int im=0;im<NavierStokes::num_materials;im++) {
   viscconst_eddy_wall_temp[im]=0.0;
   viscconst_eddy_bulk_temp[im]=0.0;
   heatviscconst_eddy_wall_temp[im]=0.0;
@@ -1635,67 +1631,67 @@ void fortran_parameters() {
   buoyancy_microlayer_size_temp[im]=microlayer_size_default;
   phasechange_microlayer_size_temp[im]=microlayer_size_default;
  }
- pp.queryAdd("viscconst_eddy_wall",viscconst_eddy_wall_temp,num_materials);
- pp.queryAdd("viscconst_eddy_bulk",viscconst_eddy_bulk_temp,num_materials);
- pp.queryAdd("heatviscconst_eddy_wall",heatviscconst_eddy_wall_temp,num_materials);
- pp.queryAdd("heatviscconst_eddy_bulk",heatviscconst_eddy_bulk_temp,num_materials);
+ pp.queryAdd("viscconst_eddy_wall",viscconst_eddy_wall_temp,NavierStokes::num_materials);
+ pp.queryAdd("viscconst_eddy_bulk",viscconst_eddy_bulk_temp,NavierStokes::num_materials);
+ pp.queryAdd("heatviscconst_eddy_wall",heatviscconst_eddy_wall_temp,NavierStokes::num_materials);
+ pp.queryAdd("heatviscconst_eddy_bulk",heatviscconst_eddy_bulk_temp,NavierStokes::num_materials);
 
- pp.queryAdd("thermal_microlayer_size",thermal_microlayer_size_temp,num_materials);
- pp.queryAdd("shear_microlayer_size",shear_microlayer_size_temp,num_materials);
- pp.queryAdd("buoyancy_microlayer_size",buoyancy_microlayer_size_temp,num_materials);
+ pp.queryAdd("thermal_microlayer_size",thermal_microlayer_size_temp,NavierStokes::num_materials);
+ pp.queryAdd("shear_microlayer_size",shear_microlayer_size_temp,NavierStokes::num_materials);
+ pp.queryAdd("buoyancy_microlayer_size",buoyancy_microlayer_size_temp,NavierStokes::num_materials);
  pp.queryAdd("phasechange_microlayer_size", 
-   phasechange_microlayer_size_temp,num_materials);
+   phasechange_microlayer_size_temp,NavierStokes::num_materials);
 
- Vector<Real> prerecalesce_viscconst_temp(num_materials);
- for (int im=0;im<num_materials;im++)
+ Vector<Real> prerecalesce_viscconst_temp(NavierStokes::num_materials);
+ for (int im=0;im<NavierStokes::num_materials;im++)
   prerecalesce_viscconst_temp[im]=viscconst_temp[im];
- pp.queryAdd("precalesce_viscconst",prerecalesce_viscconst_temp,num_materials);
+ pp.queryAdd("precalesce_viscconst",prerecalesce_viscconst_temp,NavierStokes::num_materials);
 
- for (int im=0;im<num_materials;im++) {
+ for (int im=0;im<NavierStokes::num_materials;im++) {
   viscosity_state_model_temp[im]=0;
   heatflux_factor_temp[im]=1.0;
  }
  pp.queryAdd("viscosity_state_model",
-  viscosity_state_model_temp,num_materials);
+  viscosity_state_model_temp,NavierStokes::num_materials);
 
- pp.queryAdd("heatflux_factor",heatflux_factor_temp,num_materials);
- pp.getarr("heatviscconst",heatviscconst_temp,0,num_materials);
+ pp.queryAdd("heatflux_factor",heatflux_factor_temp,NavierStokes::num_materials);
+ pp.getarr("heatviscconst",heatviscconst_temp,0,NavierStokes::num_materials);
 
- Vector<Real> prerecalesce_heatviscconst_temp(num_materials);
- for (int im=0;im<num_materials;im++)
+ Vector<Real> prerecalesce_heatviscconst_temp(NavierStokes::num_materials);
+ for (int im=0;im<NavierStokes::num_materials;im++)
   prerecalesce_heatviscconst_temp[im]=heatviscconst_temp[im];
- pp.queryAdd("precalesce_heatviscconst",prerecalesce_heatviscconst_temp,num_materials);
+ pp.queryAdd("precalesce_heatviscconst",prerecalesce_heatviscconst_temp,NavierStokes::num_materials);
 
- if (num_species_var>0) {
-  pp.queryAdd("speciesconst",speciesconst_temp,num_species_var*num_materials);
-  pp.queryAdd("speciesviscconst",speciesviscconst_temp,num_species_var*num_materials);
+ if (NavierStokes::num_species_var>0) {
+  pp.queryAdd("speciesconst",speciesconst_temp,NavierStokes::num_species_var*NavierStokes::num_materials);
+  pp.queryAdd("speciesviscconst",speciesviscconst_temp,NavierStokes::num_species_var*NavierStokes::num_materials);
  }
 
- Vector<Real> tension_slopetemp(num_interfaces);
- Vector<Real> tension_T0temp(num_interfaces);
- Vector<Real> tension_mintemp(num_interfaces);
- for (int im=0;im<num_interfaces;im++) {
+ Vector<Real> tension_slopetemp(NavierStokes::num_interfaces);
+ Vector<Real> tension_T0temp(NavierStokes::num_interfaces);
+ Vector<Real> tension_mintemp(NavierStokes::num_interfaces);
+ for (int im=0;im<NavierStokes::num_interfaces;im++) {
   tension_slopetemp[im]=0.0;
   tension_T0temp[im]=293.0;
   tension_mintemp[im]=0.0;
  }
- Vector<Real> tensiontemp(num_interfaces);
+ Vector<Real> tensiontemp(NavierStokes::num_interfaces);
 
- Vector<Real> prefreeze_tensiontemp(num_interfaces);
+ Vector<Real> prefreeze_tensiontemp(NavierStokes::num_interfaces);
 
- pp.getarr("tension",tensiontemp,0,num_interfaces);
- pp.queryAdd("tension_slope",tension_slopetemp,num_interfaces);
- pp.queryAdd("tension_T0",tension_T0temp,num_interfaces);
- pp.queryAdd("tension_min",tension_mintemp,num_interfaces);
+ pp.getarr("tension",tensiontemp,0,NavierStokes::num_interfaces);
+ pp.queryAdd("tension_slope",tension_slopetemp,NavierStokes::num_interfaces);
+ pp.queryAdd("tension_T0",tension_T0temp,NavierStokes::num_interfaces);
+ pp.queryAdd("tension_min",tension_mintemp,NavierStokes::num_interfaces);
 
- Vector<Real> latent_heat_temp(2*num_interfaces);
- Vector<Real> latent_heat_slopetemp(2*num_interfaces);
- Vector<Real> latent_heat_T0temp(2*num_interfaces);
- Vector<Real> latent_heat_mintemp(2*num_interfaces);
+ Vector<Real> latent_heat_temp(2*NavierStokes::num_interfaces);
+ Vector<Real> latent_heat_slopetemp(2*NavierStokes::num_interfaces);
+ Vector<Real> latent_heat_T0temp(2*NavierStokes::num_interfaces);
+ Vector<Real> latent_heat_mintemp(2*NavierStokes::num_interfaces);
 
- Vector<Real> saturation_temp_temp(2*num_interfaces);
- Vector<Real> reference_pressure_temp(2*num_interfaces);
- for (int i=0;i<num_interfaces;i++) { 
+ Vector<Real> saturation_temp_temp(2*NavierStokes::num_interfaces);
+ Vector<Real> reference_pressure_temp(2*NavierStokes::num_interfaces);
+ for (int i=0;i<NavierStokes::num_interfaces;i++) { 
 
   if (tension_slopetemp[i]<=0.0) {
    // do nothing
@@ -1703,55 +1699,55 @@ void fortran_parameters() {
    amrex::Error("tension_slope must be non-positive(1)");
 
   saturation_temp_temp[i]=0.0;
-  saturation_temp_temp[i+num_interfaces]=0.0;
+  saturation_temp_temp[i+NavierStokes::num_interfaces]=0.0;
   reference_pressure_temp[i]=1.0e+6;
-  reference_pressure_temp[i+num_interfaces]=1.0e+6;
+  reference_pressure_temp[i+NavierStokes::num_interfaces]=1.0e+6;
 
   latent_heat_temp[i]=0.0;
-  latent_heat_temp[i+num_interfaces]=0.0;
+  latent_heat_temp[i+NavierStokes::num_interfaces]=0.0;
   latent_heat_slopetemp[i]=0.0;
-  latent_heat_slopetemp[i+num_interfaces]=0.0;
+  latent_heat_slopetemp[i+NavierStokes::num_interfaces]=0.0;
   latent_heat_T0temp[i]=0.0;
-  latent_heat_T0temp[i+num_interfaces]=0.0;
+  latent_heat_T0temp[i+NavierStokes::num_interfaces]=0.0;
   latent_heat_mintemp[i]=0.0;
-  latent_heat_mintemp[i+num_interfaces]=0.0;
+  latent_heat_mintemp[i+NavierStokes::num_interfaces]=0.0;
  }
- pp.queryAdd("latent_heat",latent_heat_temp,2*num_interfaces);
- pp.queryAdd("latent_heat_slope",latent_heat_slopetemp,2*num_interfaces);
- pp.queryAdd("latent_heat_T0",latent_heat_T0temp,2*num_interfaces);
- pp.queryAdd("latent_heat_min",latent_heat_mintemp,2*num_interfaces);
+ pp.queryAdd("latent_heat",latent_heat_temp,2*NavierStokes::num_interfaces);
+ pp.queryAdd("latent_heat_slope",latent_heat_slopetemp,2*NavierStokes::num_interfaces);
+ pp.queryAdd("latent_heat_T0",latent_heat_T0temp,2*NavierStokes::num_interfaces);
+ pp.queryAdd("latent_heat_min",latent_heat_mintemp,2*NavierStokes::num_interfaces);
 
- for (int i=0;i<2*num_interfaces;i++) { 
+ for (int i=0;i<2*NavierStokes::num_interfaces;i++) { 
 
   if (latent_heat_slopetemp[i]<=0.0) {
    // do nothing
   } else
    amrex::Error("latent_heat_slope must be non-positive(1)");
 
- } //i=0...2*num_interfaces-1
+ } //i=0...2*NavierStokes::num_interfaces-1
 
- pp.queryAdd("saturation_temp",saturation_temp_temp,2*num_interfaces);
- pp.queryAdd("reference_pressure",reference_pressure_temp,2*num_interfaces);
+ pp.queryAdd("saturation_temp",saturation_temp_temp,2*NavierStokes::num_interfaces);
+ pp.queryAdd("reference_pressure",reference_pressure_temp,2*NavierStokes::num_interfaces);
 
   // ergs/(mol Kelvin)
  pp.queryAdd("R_Palmore_Desjardins",NavierStokes::R_Palmore_Desjardins);
 
- Vector<Real> molar_mass_temp(num_materials);
- Vector<Real> species_molar_mass_temp(num_species_var+1);
- for (int im=0;im<num_materials;im++) {
+ Vector<Real> molar_mass_temp(NavierStokes::num_materials);
+ Vector<Real> species_molar_mass_temp(NavierStokes::num_species_var+1);
+ for (int im=0;im<NavierStokes::num_materials;im++) {
   molar_mass_temp[im]=1.0;
  }
- for (int im=0;im<num_species_var+1;im++) {
+ for (int im=0;im<NavierStokes::num_species_var+1;im++) {
   species_molar_mass_temp[im]=1.0;
  }
- pp.queryAdd("molar_mass",molar_mass_temp,num_materials);
+ pp.queryAdd("molar_mass",molar_mass_temp,NavierStokes::num_materials);
 
  pp.queryAdd("species_molar_mass",
-   species_molar_mass_temp,num_species_var);
+   species_molar_mass_temp,NavierStokes::num_species_var);
 
- for (int im=0;im<num_interfaces;im++)
+ for (int im=0;im<NavierStokes::num_interfaces;im++)
   prefreeze_tensiontemp[im]=tensiontemp[im];
- pp.queryAdd("prefreeze_tension",prefreeze_tensiontemp,num_interfaces);
+ pp.queryAdd("prefreeze_tension",prefreeze_tensiontemp,NavierStokes::num_interfaces);
 
  int ioproc=0;
  if (ParallelDescriptor::IOProcessor())
@@ -1762,19 +1758,19 @@ void fortran_parameters() {
   // declared in PROB_CPP_PARMS.F90
  fort_override_MAIN_GLOBALS(
   &cc_int_size,
-  &num_species_var,
+  &NavierStokes::num_species_var,
   &NavierStokes::num_materials_viscoelastic,
-  &num_state_material,
-  &num_state_base,
-  &ngeom_raw,
-  &ngeom_recon,
-  &num_materials,
-  &num_interfaces,
+  &NavierStokes::num_state_material,
+  &NavierStokes::num_state_base,
+  &NavierStokes::ngeom_raw,
+  &NavierStokes::ngeom_recon,
+  &NavierStokes::num_materials,
+  &NavierStokes::num_interfaces,
   &ioproc);
 
  ParallelDescriptor::Barrier();
 
- for (int im=0;im<num_materials;im++) {
+ for (int im=0;im<NavierStokes::num_materials;im++) {
 
   if (damping_coefficient_temp[im]>=0.0) {
    // do nothing
@@ -1838,10 +1834,10 @@ void fortran_parameters() {
   if (etaL_temp[im]-etaP_temp[im]>0.0)
    concentration_temp[im]=etaP_temp[im]/(etaL_temp[im]-etaP_temp[im]);  
 
- } //im=0..num_materials-1
+ } //im=0..NavierStokes::num_materials-1
 
- if (num_state_base!=2)
-  amrex::Error("num_state_base invalid 9");
+ if (NavierStokes::num_state_base!=2)
+  amrex::Error("NavierStokes::num_state_base invalid 9");
 
  int prescribe_temperature_outflow=NavierStokes::prescribe_temperature_outflow;
  pp.queryAdd("prescribe_temperature_outflow",prescribe_temperature_outflow);
@@ -1938,15 +1934,15 @@ void fortran_parameters() {
   &period_time,
   &problox,&probloy,&probloz,
   &probhix,&probhiy,&probhiz,
-  &num_species_var,
+  &NavierStokes::num_species_var,
   &NavierStokes::num_materials_viscoelastic,
-  &num_state_material,
-  &num_state_base,
-  &ngeom_raw,
-  &ngeom_recon,
-  &num_materials,
+  &NavierStokes::num_state_material,
+  &NavierStokes::num_state_base,
+  &NavierStokes::ngeom_raw,
+  &NavierStokes::ngeom_recon,
+  &NavierStokes::num_materials,
   NavierStokes::material_type.dataPtr(),
-  &num_interfaces,
+  &NavierStokes::num_interfaces,
   DrhoDTtemp.dataPtr(),
   tempconst_temp.dataPtr(),
   initial_temperature_temp.dataPtr(),
@@ -2031,7 +2027,7 @@ void fortran_parameters() {
      (mof_error_ordering_local!=1))
   amrex::Error("mof_error_ordering_local invalid");
  Vector<int> mof_ordering_local;
- mof_ordering_local.resize(num_materials);
+ mof_ordering_local.resize(NavierStokes::num_materials);
 
  mof_ordering_override(mof_ordering_local,
   probtype,
@@ -2040,10 +2036,10 @@ void fortran_parameters() {
   mof_error_ordering_local,
   NavierStokes::FSI_flag);
 
- pp.queryAdd("mof_ordering",mof_ordering_local,num_materials);
- for (int i=0;i<num_materials;i++) {
+ pp.queryAdd("mof_ordering",mof_ordering_local,NavierStokes::num_materials);
+ for (int i=0;i<NavierStokes::num_materials;i++) {
   if ((mof_ordering_local[i]<0)||
-      (mof_ordering_local[i]>num_materials+1))
+      (mof_ordering_local[i]>NavierStokes::num_materials+1))
    amrex::Error("mof_ordering_local invalid");
  }
 
@@ -2059,7 +2055,7 @@ void fortran_parameters() {
 
  if (ioproc==1) {
   std::cout << "in c++ code, after fort_override\n";
-  for (int im=0;im<num_materials;im++) {
+  for (int im=0;im<NavierStokes::num_materials;im++) {
    std::cout << "im= " << im << " mof_ordering_local= " <<
     mof_ordering_local[im] << '\n';
   }
