@@ -23,7 +23,7 @@ MOF_HOME = ..
 #
 
 PRECISION = DOUBLE
-DEBUG	  = TRUE
+DEBUG	  = FALSE
 USE_ASSERTION = TRUE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
@@ -73,15 +73,20 @@ CTML_FBC = FALSE
 #    Disable range checking on results of simplification of constant
 #    expressions during compilation.
 
-MAC_LAPTOP = TRUE
+MAC_LAPTOP = FALSE
 LINUX_DESKTOP = FALSE
+HPC_INTEL = TRUE
 
+ifeq ($(HPC_INTEL),TRUE)
+ COMP = intel
+ FCOMP = intel
+endif
 ifeq ($(LINUX_DESKTOP),TRUE)
- COMP	  = g++
+ COMP = g++
  FCOMP = gfortran
 endif
 ifeq ($(MAC_LAPTOP),TRUE)
- COMP	  = g++-8
+ COMP = g++-8
  FCOMP = gfortran-8
  AMREX_CCOMP=g++-8
  AMREX_FCOMP=gfortran-8
