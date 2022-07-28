@@ -510,17 +510,9 @@ amrex::Initialize (int& argc, char**& argv, bool build_parm_parse,
     //
     // Initialize random seed after we're running in parallel.
     //
-    //SUSSMAN
-#ifdef BL_USE_MPI
-    int nprocs_local=ParallelDescriptor::NProcs();
-    int myproc_p_1=ParallelDescriptor::MyProc()+1;
-#else
-    int nprocs_local=1;
-    int myproc_p_1=1;
-#endif
 
-    //SUSSMAN
-    amrex::InitRandom(myproc_p_1, nprocs_local);
+    amrex::InitRandom(ParallelDescriptor::MyProc()+1, 
+		      ParallelDescriptor::NProcs());
 
     // For thread safety, we should do these initializations here.
     BaseFab_Initialize();

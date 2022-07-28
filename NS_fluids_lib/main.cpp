@@ -22,7 +22,7 @@ main (int   argc,
       char* argv[])
 {
 
-//    std::cout.imbue(std::locale("C"));
+    std::cout.imbue(std::locale("C"));
 
     amrex::Initialize(argc,argv);  
 
