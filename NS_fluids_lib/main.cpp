@@ -1,16 +1,3 @@
-// #include <winstd.H>
-
-#include <algorithm>
-#include <vector>
-
-#if defined(BL_OLD_STL)
-#include <stdio.h>
-#include <math.h>
-#else
-#include <cstdio>
-#include <cmath>
-#endif
-
 #include <local_thread_class.H>
 #include <AMReX_CArena.H>
 #include <AMReX_REAL.H>
@@ -35,9 +22,10 @@ main (int   argc,
       char* argv[])
 {
 
-    std::cout.imbue(std::locale("C"));
+//    std::cout.imbue(std::locale("C"));
 
     amrex::Initialize(argc,argv);  
+
     thread_class::Initialize();
 
     std::fflush(NULL);
