@@ -6,6 +6,15 @@
 # For post processing:
 # git clone https://github.com/AMReX-Codes/amrex.git
 # git clone https://github.com/AMReX-Combustion/PeleAnalysis.git 
+# For libamrex (in the amrex-master directory):
+# ./configure -h
+# example:
+# (1)
+# ./configure --dim 2 --with-fortran no --with-mpi no --with-omp no --comp gnu 
+#    --debug no --enable-particle yes --enable-fortran-api no 
+#    --enable-linear-solver no --sensei-amr-inst no --enable-probinit no
+# (2) make
+# (3) tmp_build_dir/o/2d.gnu.EXE/libamrex.a 
 AMREX_HOME = ../amrex-master
 MOF_HOME = ..
 
@@ -22,6 +31,7 @@ MOF_HOME = ..
 # endif
 #
 
+USE_LIBAMREX = TRUE
 PRECISION = DOUBLE
 DEBUG	  = TRUE
 USE_ASSERTION = TRUE
@@ -131,11 +141,10 @@ endif
 # csh: command >& out_and_err_file &
 # spear-login.rcc.fsu.edu
 # ifort -g -O0 -traceback -check bounds,uninit,pointers
-# mpirun -np 2 valgrind -v --leak-check=full --show-reachable=yes --log-file=run.out.%p ../../amr3d.gnu.DEBUG.MPI.ex inputs3d.skirted  1> run.out 2> run.err &
+# mpirun -np 2 valgrind -v --leak-check=full --show-reachable=yes 
+#   --log-file=run.out.%p ../../amr3d.gnu.DEBUG.MPI.ex inputs3d.skirted  
+#   1> run.out 2> run.err &
 #
-# bromwich intel:
-# source /usr/local/intel/parallel_studio_xe_2018/psxevars.csh (csh) or
-# source /usr/local/intel/parallel_studio_xe_2018/psxevars.sh (bash)
 # NASA SUPERCOMPUTER
 #FCOMP = intel
 #COMP = intel
@@ -187,8 +196,15 @@ ifeq ($(MEHDI_VAHAB_FSI),TRUE)
 include $(MOF_HOME)/Vicar3D/Make.package
 endif
 
+ifeq ($(USE_LIBAMREX),FALSE)
 include $(AMREX_HOME)/Src/Base/Make.package
 include $(AMREX_HOME)/Src/Particle/Make.package
+endif
+LIBAMREX_FILE_DIR = $(AMREX_HOME)/tmp_build_dir/o/2d.gnu.EXE/
+ifeq ($(USE_LIBAMREX),TRUE)
+LDFLAGS += -L$(LIBAMREX_FILE_DIR)
+override XTRALIBS += -lamrex
+endif
 
 include ./Make.package
 include $(MOF_HOME)/amrlib/Make.package

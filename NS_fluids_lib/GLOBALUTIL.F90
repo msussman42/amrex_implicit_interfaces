@@ -17081,23 +17081,27 @@ end subroutine print_visual_descriptor
        ! cos_thetad is the output cosine of the dynamic angle.
        ! vis is viscosity of material 0 (liquid)
        ! imodel=0 static imodel=1 Jiang   imodel=2 Kistler
+       ! DCA_select_model was written by Yongsheng Lian and
+       ! students of his.
       subroutine DCA_select_model(normal,vel_n,cos_thetae,vis, &
         user_tension_scalar, &
         cos_thetad,imodel)
       implicit none
 
-      INTEGER_T imodel
-      REAL_T normal(SDIM)
-      REAL_T vel_n
-      REAL_T cos_thetae  
-      REAL_T cos_thetad  
-      REAL_T vis 
-      REAL_T user_tension_scalar
+      INTEGER_T, intent(in) :: imodel
+      REAL_T, intent(in) :: normal(SDIM)
+      REAL_T, intent(in) :: vel_n
+      REAL_T, intent(in) :: cos_thetae  
+      REAL_T, intent(out) :: cos_thetad  
+      REAL_T, intent(in) :: vis 
+      REAL_T, intent(in) :: user_tension_scalar
       REAL_T capillary,f_Hoff_inver,temp,temp1 
 
       complex(kind=8) :: temp2
 
-      if (user_tension_scalar.le.zero) then
+      if (user_tension_scalar.gt.zero) then
+       ! do nothing
+      else
        print *,"user_tension_scalar should be positive"
        stop
       endif
@@ -17147,7 +17151,7 @@ end subroutine print_visual_descriptor
 
       IMPLICIT NONE
 
-      INTEGER_T use_DCA
+      INTEGER_T, intent(out) :: use_DCA
       INTEGER_T im_solid_DCA
 
       im_solid_DCA=im_solid_primary()

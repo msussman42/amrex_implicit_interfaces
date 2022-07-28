@@ -270,6 +270,7 @@ int  NavierStokes::visual_output_raw_mac_Type=0;
 int  NavierStokes::visual_phase_change_plot_int=0; 
 int  NavierStokes::visual_buoyancy_plot_int=0; 
 int  NavierStokes::visual_divergence_plot_int=0; 
+//set visual_WALLVEL_plot_int>0 in order to generate WALLVEL*.plt files.
 int  NavierStokes::visual_WALLVEL_plot_int=0; 
 int  NavierStokes::visual_drag_plot_int=0; 
 //default: tecplot nodes
@@ -1532,8 +1533,6 @@ void fortran_parameters() {
 
  Real visc_coef_temp=NavierStokes::visc_coef;
 
- int ZEYU_DCA_SELECT_temp=NavierStokes::ZEYU_DCA_SELECT;  // -1=static angle
-
  pp.get("visc_coef",visc_coef_temp);
 
  pp.getarr("material_type",NavierStokes::material_type,0,NavierStokes::num_materials);
@@ -1866,13 +1865,13 @@ void fortran_parameters() {
  Real nucleation_init_time=NavierStokes::nucleation_init_time;
  pp.queryAdd("nucleation_init_time",nucleation_init_time);
 
- pp.queryAdd("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT_temp);
- if ((ZEYU_DCA_SELECT_temp==-1)||
-     ((ZEYU_DCA_SELECT_temp>=1)&&
-      (ZEYU_DCA_SELECT_temp<=8))) {
+ pp.queryAdd("ZEYU_DCA_SELECT",NavierStokes::ZEYU_DCA_SELECT);
+ if ((NavierStokes::ZEYU_DCA_SELECT==-1)||
+     ((NavierStokes::ZEYU_DCA_SELECT>=1)&&
+      (NavierStokes::ZEYU_DCA_SELECT<=8))) {
   // do nothing
  } else
-  amrex::Error("ZEYU_DCA_SELECT_temp invalid");
+  amrex::Error("NavierStokes::ZEYU_DCA_SELECT invalid");
 
  Vector<Real> temp_pos_sites(4);
  for (int dir=0;dir<4;dir++)
@@ -1908,7 +1907,7 @@ void fortran_parameters() {
   NavierStokes::FSI_flag.dataPtr(),
   damping_coefficient_temp.dataPtr(),
   &num_local_aux_grids_temp,
-  &ZEYU_DCA_SELECT_temp,
+  &NavierStokes::ZEYU_DCA_SELECT,
   &denfact,
   &velfact,
   &n_sites,
