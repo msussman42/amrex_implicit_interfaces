@@ -751,6 +751,10 @@ stop
       endif
 
        ! -1 if use static angle
+       ! if (probtype.eq.5501).and.(sdim.eq.3) then use_DCA=[-1,0,1,2]
+       ! otherwise, if ZEYU_DCA_SELECT=-1 then use_DCA=-1 (static model)
+       ! else if ZEYU_DCA_SELECT in [1,...,8], then
+       !  use_DCA=ZEYU_DCA_SELECT+100.
       call get_use_DCA(use_DCA)
       ZEYU_thet_d=zero
       totaludotn=zero
@@ -1726,6 +1730,7 @@ stop
             ZEYU_thet_d=acos(cos_angle)
 
             ! modify cos_angle (initialized above as static angle)
+            ! THESE CASES if probtype=5501, from Yongsheng Lian.
             ! use_DCA=-1 static angle
             ! use_DCA=0 static angle
             ! use_DCA=1 Jiang
@@ -1740,7 +1745,11 @@ stop
            else if ((use_DCA.ge.101).and. & ! fort_ZEYU_DCA_SELECT>=1
                     (use_DCA.le.108)) then
             if (use_DCA.eq.101) then
-             ! do nothing (GNBC model)
+             ! do nothing (GNBC model) since initheightLS handles only
+             ! those models in which tangential wall velocity is input,
+             ! and dynamic angle is output.
+             ! FOR THE OPPOSITE CASE (angle is input, and wall velocity is
+             ! output), one sets ns.law_of_the_wall=2.
 
              ! cases 2,...,8 for Zeyu's code.
              ! case 2 Jiang 1970 ...
