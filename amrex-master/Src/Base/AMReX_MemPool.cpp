@@ -42,13 +42,10 @@ void amrex_mempool_init ()
         pp.queryAdd("init_snan", init_snan);
 
         int nthreads = OpenMP::get_max_threads();
-	std::cout << "SUSSMAN memory pool resize\n";
         the_memory_pool.resize(nthreads);
         for (int i=0; i<nthreads; ++i) {
- 	 std::cout << "SUSSMAN memory pool SetCpuMemory i = " << i << '\n';
          the_memory_pool[i] = 
            std::make_unique<CArena>(0, ArenaInfo().SetCpuMemory());
- 	 std::cout << "AFTER: SUSSMAN SetCpuMemory i = " << i << '\n';
         }
 
 #ifdef AMREX_USE_OMP

@@ -78,13 +78,8 @@ LINUX_DESKTOP = FALSE
 HPC_INTEL = TRUE
 
 ifeq ($(HPC_INTEL),TRUE)
-# COMP = gnu_intel
-# AMREX_CCOMP=gnu
-# AMREX_FCOMP=intel
-# FCOMP = intel
  COMP = intel
  FCOMP = intel
-# LINK_WITH_FORTRAN_COMPILER=TRUE
 endif
 ifeq ($(LINUX_DESKTOP),TRUE)
  COMP = g++
@@ -197,6 +192,5 @@ include $(MOF_HOME)/amrlib/Make.package
 
 include $(MOF_HOME)/mglib/Make.package
 
-#include $(AMREX_HOME)/Src/F_Interfaces/Base/Make.package
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 
