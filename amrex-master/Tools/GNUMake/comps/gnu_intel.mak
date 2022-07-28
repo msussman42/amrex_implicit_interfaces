@@ -1,0 +1,359 @@
+GNU_DOT_MAK_INCLUDED = TRUE
+
+#SUSSMAN (the whole file)
+
+########################################################################
+
+ifndef AMREX_CCOMP
+  AMREX_CCOMP = gnu
+endif
+
+ifndef AMREX_FCOMP
+  AMREX_FCOMP = intel
+endif
+
+########################################################################
+
+ifeq ($(USE_CUDA),TRUE)
+  ifdef NVCC_CCBIN
+    GCC_VERSION_COMP = $(NVCC_CCBIN)
+  else
+    GCC_VERSION_COMP = g++
+  endif
+else
+  GCC_VERSION_COMP = $(CXX)
+endif
+
+gcc_version       = $(shell $(GCC_VERSION_COMP) -dumpfullversion -dumpversion | head -1 | sed -e 's;.*  *;;')
+gcc_major_version = $(shell $(GCC_VERSION_COMP) -dumpfullversion -dumpversion | head -1 | sed -e 's;.*  *;;' | sed -e 's;\..*;;')
+gcc_minor_version = $(shell $(GCC_VERSION_COMP) -dumpfullversion -dumpversion | head -1 | sed -e 's;.*  *;;' | sed -e 's;[^.]*\.;;' | sed -e 's;\..*;;')
+
+COMP_VERSION = $(gcc_version)
+
+########################################################################
+
+GENERIC_GNU_FLAGS =
+
+ifeq ($(EXPORT_DYNAMIC),TRUE)
+  CPPFLAGS += -DAMREX_EXPORT_DYNAMIC
+  LIBRARIES += -ldl
+  GENERIC_GNU_FLAGS += -rdynamic -fno-omit-frame-pointer
+endif
+
+gcc_major_ge_5 = $(shell expr $(gcc_major_version) \>= 5)
+gcc_major_ge_6 = $(shell expr $(gcc_major_version) \>= 6)
+gcc_major_ge_7 = $(shell expr $(gcc_major_version) \>= 7)
+gcc_major_ge_8 = $(shell expr $(gcc_major_version) \>= 8)
+gcc_major_ge_9 = $(shell expr $(gcc_major_version) \>= 9)
+gcc_major_ge_10 = $(shell expr $(gcc_major_version) \>= 10)
+gcc_major_ge_11 = $(shell expr $(gcc_major_version) \>= 11)
+
+ifeq ($(THREAD_SANITIZER),TRUE)
+  GENERIC_GNU_FLAGS += -fsanitize=thread
+endif
+ifeq ($(FSANITIZER),TRUE)
+  GENERIC_GNU_FLAGS += -fsanitize=address -fsanitize=undefined
+  ifeq ($(gcc_major_ge_8),1)
+    GENERIC_GNU_FLAGS += -fsanitize=pointer-compare -fsanitize=pointer-subtract
+    GENERIC_GNU_FLAGS += -fsanitize=builtin -fsanitize=pointer-overflow
+  endif
+endif
+
+ifeq ($(USE_OMP),TRUE)
+  GENERIC_GNU_FLAGS += -fopenmp
+endif
+
+########################################################################
+########################################################################
+########################################################################
+
+ifeq ($(AMREX_CCOMP),gnu)
+
+CXX = g++
+CC  = gcc
+
+CXXFLAGS =
+CFLAGS   =
+
+########################################################################
+
+CXXFLAGS += -Werror=return-type
+CFLAGS   += -Werror=return-type
+
+ifeq ($(DEBUG),TRUE)
+  ifeq ($(gcc_major_ge_11),1)
+    CXXFLAGS += -gdwarf-4 -O0 -ggdb -ftrapv
+    CFLAGS   += -gdwarf-4 -O0 -ggdb -ftrapv
+  else
+    CXXFLAGS += -g -O0 -ggdb -ftrapv
+    CFLAGS   += -g -O0 -ggdb -ftrapv
+  endif
+else
+  ifeq ($(gcc_major_ge_11),1)
+    CXXFLAGS += -gdwarf-4 -O3
+    CFLAGS   += -gdwarf-4 -O3
+  else
+    CXXFLAGS += -g -O3
+    CFLAGS   += -g -O3
+  endif
+endif
+
+ifeq ($(WARN_ALL),TRUE)
+  warning_flags = -Wall -Wextra
+
+  ifeq ($(WARN_SIGN_COMPARE),FALSE)
+    warning_flags += -Wno-sign-compare
+  endif
+
+  ifneq ($(USE_CUDA),TRUE)
+    # With -Wpedantic I got 650 MB of warnings
+    warning_flags += -Wpedantic
+  endif
+
+  ifeq ($(gcc_major_ge_6),1)
+    warning_flags += -Wnull-dereference
+  endif
+
+  ifeq ($(gcc_major_ge_5),1)
+    warning_flags += -Wfloat-conversion
+  endif
+
+  ifneq ($(WARN_SHADOW),FALSE)
+    warning_flags += -Wshadow
+  endif
+
+  ifeq ($(gcc_major_version),7)
+    warning_flags += -Wno-array-bounds
+  endif
+
+  ifeq ($(gcc_major_ge10),1)
+    warning_flags += -Wextra-semi
+  endif
+
+  CXXFLAGS += $(warning_flags) -Woverloaded-virtual
+  CFLAGS += $(warning_flags)
+endif
+
+ifeq ($(WARN_ERROR),TRUE)
+  CXXFLAGS += -Werror
+  CFLAGS += -Werror
+endif
+
+ifeq ($(USE_GPROF),TRUE)
+  CXXFLAGS += -pg
+  CFLAGS += -pg
+endif
+
+
+ifeq ($(USE_COMPILE_PIC),TRUE)
+  CXXFLAGS = -fPIC
+  CFLAGS = -fPIC
+endif
+
+ifeq ($(ERROR_DEPRECATED),TRUE)
+  CXXFLAGS += -Werror=deprecated
+  CFLAGS += -Werror=deprecated
+endif
+
+########################################################################
+
+ifdef CXXSTD
+  CXXSTD := $(strip $(CXXSTD))
+  ifeq ($(shell expr $(gcc_major_version) \< 5),1)
+    ifneq ($(NO_CONFIG_CHECKING),TRUE)
+      ifeq ($(CXXSTD),c++14)
+        $(error C++14 support requires GCC 5 or newer.)
+      endif
+    endif
+  endif
+  CXXFLAGS += -std=$(CXXSTD)
+else
+  ifeq ($(gcc_major_version),5)
+    CXXFLAGS += -std=c++14
+  endif
+endif
+
+CFLAGS   += -std=gnu99
+
+########################################################################
+
+CXXFLAGS += $(GENERIC_GNU_FLAGS) -pthread
+CFLAGS   += $(GENERIC_GNU_FLAGS)
+
+endif # AMREX_CCOMP == gnu
+
+
+
+#SUSSMAN
+ifeq ($(AMREX_CCOMP),g++-8)
+
+CXX = g++-8
+CC  = g++-8
+
+CXXFLAGS =
+CFLAGS   =
+
+########################################################################
+
+CXXFLAGS += -Werror=return-type
+CFLAGS   += -Werror=return-type
+
+ifeq ($(DEBUG),TRUE)
+  ifeq ($(gcc_major_ge_11),1)
+    CXXFLAGS += -gdwarf-4 -O0 -ggdb -ftrapv
+    CFLAGS   += -gdwarf-4 -O0 -ggdb -ftrapv
+  else
+    CXXFLAGS += -g -O0 -ggdb -ftrapv
+    CFLAGS   += -g -O0 -ggdb -ftrapv
+  endif
+else
+  ifeq ($(gcc_major_ge_11),1)
+    CXXFLAGS += -gdwarf-4 -O3
+    CFLAGS   += -gdwarf-4 -O3
+  else
+    CXXFLAGS += -g -O3
+    CFLAGS   += -g -O3
+  endif
+endif
+
+
+ifeq ($(WARN_ALL),TRUE)
+  warning_flags = -Wall -Wextra
+
+  ifeq ($(WARN_SIGN_COMPARE),FALSE)
+    warning_flags += -Wno-sign-compare
+  endif
+
+  ifneq ($(USE_CUDA),TRUE)
+    # With -Wpedantic I got 650 MB of warnings
+    warning_flags += -Wpedantic
+  endif
+
+  ifeq ($(gcc_major_ge_6),1)
+    warning_flags += -Wnull-dereference
+  endif
+
+  ifeq ($(gcc_major_ge_5),1)
+    warning_flags += -Wfloat-conversion
+  endif
+
+  ifneq ($(WARN_SHADOW),FALSE)
+    warning_flags += -Wshadow
+  endif
+
+  ifeq ($(gcc_major_version),7)
+    warning_flags += -Wno-array-bounds
+  endif
+
+  ifeq ($(gcc_major_ge10),1)
+    warning_flags += -Wextra-semi
+  endif
+
+  CXXFLAGS += $(warning_flags) -Woverloaded-virtual
+  CFLAGS += $(warning_flags)
+endif
+
+ifeq ($(WARN_ERROR),TRUE)
+  CXXFLAGS += -Werror
+  CFLAGS += -Werror
+endif
+
+ifeq ($(USE_GPROF),TRUE)
+  CXXFLAGS += -pg
+  CFLAGS += -pg
+endif
+
+
+ifeq ($(USE_COMPILE_PIC),TRUE)
+  CXXFLAGS = -fPIC
+  CFLAGS = -fPIC
+endif
+
+ifeq ($(ERROR_DEPRECATED),TRUE)
+  CXXFLAGS += -Werror=deprecated
+  CFLAGS += -Werror=deprecated
+endif
+
+########################################################################
+
+ifdef CXXSTD
+  CXXSTD := $(strip $(CXXSTD))
+  ifeq ($(shell expr $(gcc_major_version) \< 5),1)
+    ifneq ($(NO_CONFIG_CHECKING),TRUE)
+      ifeq ($(CXXSTD),c++14)
+        $(error C++14 support requires GCC 5 or newer.)
+      endif
+    endif
+  endif
+  CXXFLAGS += -std=$(CXXSTD)
+else
+  ifeq ($(gcc_major_version),5)
+    CXXFLAGS += -std=c++14
+  endif
+endif
+
+CFLAGS   += -std=gnu99
+
+########################################################################
+
+CXXFLAGS += $(GENERIC_GNU_FLAGS) -pthread
+CFLAGS   += $(GENERIC_GNU_FLAGS)
+
+endif # AMREX_CCOMP == g++-8
+
+########################################################################
+########################################################################
+########################################################################
+
+
+FC  = ifort
+F90 = ifort
+
+FFLAGS   =
+F90FLAGS =
+
+########################################################################
+
+ifeq ($(DEBUG),TRUE)
+
+  FFLAGS   += -g -O0 -traceback -check bounds,uninit,pointers
+  F90FLAGS += -g -O0 -traceback -check bounds,uninit,pointers
+
+else
+
+  FFLAGS   += -g -O2 -ip -qopt-report=5 -qopt-report-phase=vec
+  F90FLAGS += -g -O2 -ip -qopt-report=5 -qopt-report-phase=vec
+
+endif
+
+F90FLAGS += -implicitnone
+FMODULES = -module $(fmoddir) -I$(fmoddir)
+
+GENERIC_COMP_FLAGS =
+
+ifeq ($(USE_OMP),TRUE)
+  ifeq ($(firstword $(sort 16.0 $(intel_version))), 16.0) 
+    GENERIC_COMP_FLAGS += -qopenmp
+  else
+    GENERIC_COMP_FLAGS += -openmp
+  endif
+endif
+
+FFLAGS   += $(GENERIC_COMP_FLAGS)
+F90FLAGS += $(GENERIC_COMP_FLAGS)
+
+########################################################################
+
+override XTRALIBS += -lifcore
+
+ifeq ($(USE_OMP),TRUE)
+  override XTRALIBS += -lifcoremt
+endif
+
+LINK_WITH_FORTRAN_COMPILER ?= $(USE_F_INTERFACES)
+
+ifeq ($(LINK_WITH_FORTRAN_COMPILER),TRUE)
+  override XTRALIBS += -lstdc++
+endif
+
+
