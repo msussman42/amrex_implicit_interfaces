@@ -24,7 +24,6 @@ CEXE_headers += DRAG_COMP.H
 CEXE_headers += NavierStokes.H 
 
 F90EXE_headers += \
-  level_set_extrapolation.F90 \
   specfun.F90 \
   tetrahedron_keast_rule.F90 \
   triangle_fekete_rule.F90 \
@@ -68,7 +67,6 @@ F90EXE_headers += \
  
 F90EXE_sources += \
   FILCC_3D.F90 \
-  level_set_extrapolation.F90 \
   specfun.F90 \
   tetrahedron_keast_rule.F90 \
   triangle_fekete_rule.F90 \

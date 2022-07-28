@@ -87,8 +87,8 @@ CTML_FBC = FALSE
 #    expressions during compilation.
 
 MAC_LAPTOP = FALSE
-LINUX_DESKTOP = TRUE
-HPC_INTEL = FALSE
+LINUX_DESKTOP = FALSE
+HPC_INTEL = TRUE
 
 ifeq ($(HPC_INTEL),TRUE)
  COMP = intel
@@ -202,6 +202,9 @@ include $(AMREX_HOME)/Src/Particle/Make.package
 endif
 LIBAMREX_FILE_DIR = $(AMREX_HOME)/tmp_build_dir/o/2d.gnu.EXE/
 ifeq ($(USE_LIBAMREX),TRUE)
+INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Base
+INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Base/Parser
+INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Particle
 LDFLAGS += -L$(LIBAMREX_FILE_DIR)
 override XTRALIBS += -lamrex
 endif
