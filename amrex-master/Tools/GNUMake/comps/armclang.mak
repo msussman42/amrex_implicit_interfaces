@@ -100,9 +100,8 @@ F90FLAGS += $(GENERIC_COMP_FLAGS)
 
 ########################################################################
 
-ifneq ($(BL_NO_FORT),TRUE)
-  override XTRALIBS += -lflang
-endif
+#SUSSMAN
+override XTRALIBS += -lflang
 
 ifeq ($(FSANITIZER),TRUE)
   override XTRALIBS += -lubsan

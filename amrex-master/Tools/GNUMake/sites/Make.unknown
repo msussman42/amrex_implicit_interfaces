@@ -27,13 +27,8 @@ ifeq ($(USE_MPI),TRUE)
   FC  := mpif90
   F90 := mpif90
 
-  ifeq ($(LINK_WITH_FORTRAN_COMPILER),TRUE)
-    MPI_OTHER_COMP := mpicxx
-  else ifeq ($(BL_NO_FORT),TRUE)
-    MPI_OTHER_COMP := mpicxx
-  else
-    MPI_OTHER_COMP := mpif90
-  endif
+   #SUSSMAN
+  MPI_OTHER_COMP := mpif90
 
   # error codes - find flag that displays the link line wrapper. 
   code_sml := $(shell $(MPI_OTHER_COMP) -showme:link > /dev/null 2>&1; echo $$?)

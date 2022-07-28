@@ -34,6 +34,7 @@ F90EXE_headers += \
   river.F90 \
   shockdrop.F90 \
   marangoni.F90 \
+  AMReX_local_fort_mod.F90 \
   GLOBALUTIL.F90 \
   sample_user_defined.F90 \
   YAOHONG_INKJET.F90 \
@@ -77,6 +78,7 @@ F90EXE_sources += \
   river.F90 \
   shockdrop.F90 \
   marangoni.F90 \
+  AMReX_local_fort_mod.F90 \
   GLOBALUTIL.F90 \
   sample_user_defined.F90 \
   YAOHONG_INKJET.F90 \

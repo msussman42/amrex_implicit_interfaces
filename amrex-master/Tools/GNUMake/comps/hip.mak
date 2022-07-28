@@ -47,7 +47,7 @@ ifeq ($(USE_OMP),TRUE)
   HIPCC_FLAGS += -fopenmp=libgomp
 endif
 
-ifneq ($(BL_NO_FORT),TRUE)
+#SUSSMAN
 
 # Taken straight from gnu 
 # ask gfortran the name of the library to link in.  First check for the
@@ -64,7 +64,6 @@ endif
 
 override XTRALIBS += -lgfortran -lquadmath
 
-endif  # BL_NO_FORT
 
 # =============================================================================================
 
