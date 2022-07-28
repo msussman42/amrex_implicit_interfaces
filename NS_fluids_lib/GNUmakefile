@@ -78,7 +78,9 @@ LINUX_DESKTOP = FALSE
 HPC_INTEL = TRUE
 
 ifeq ($(HPC_INTEL),TRUE)
- COMP = intel
+ COMP = gnu_intel
+ AMREX_CCOMP=gnu
+ AMREX_FCOMP=intel
  FCOMP = intel
 endif
 ifeq ($(LINUX_DESKTOP),TRUE)
