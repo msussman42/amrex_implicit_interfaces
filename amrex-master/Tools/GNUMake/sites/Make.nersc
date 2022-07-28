@@ -63,18 +63,11 @@ ifeq ($(which_computer),$(filter $(which_computer),perlmutter))
     endif
 
     comm := ,
-    ifneq ($(BL_NO_FORT),TRUE)
-      ifdef NPE_VERSION
+    #SUSSMAN
+    ifdef NPE_VERSION
         LIBRARIES += $(subst -Wl$(comm),-Xlinker=,$(wordlist 2,1024,$(shell mpifort -show)))
-      else
-        LIBRARIES += $(subst -Wl$(comm),-Xlinker=,$(shell ftn --cray-print-opts=libs))
-      endif
     else
-      ifdef NPE_VERSION
-        LIBRARIES += $(subst -Wl$(comm),-Xlinker=,$(wordlist 2,1024,$(shell mpicxx -show)))
-      else
-        LIBRARIES += $(subst -Wl$(comm),-Xlinker=,$(shell CC --cray-print-opts=libs))
-      endif
+        LIBRARIES += $(subst -Wl$(comm),-Xlinker=,$(shell ftn --cray-print-opts=libs))
     endif
 
     ifneq ($(CUDA_ROOT),)

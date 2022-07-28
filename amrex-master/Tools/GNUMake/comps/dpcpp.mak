@@ -143,11 +143,10 @@ endif
 
 ########################################################################
 
-ifneq ($(BL_NO_FORT),TRUE)
-  override XTRALIBS += -lifcore
-  ifeq ($(USE_OMP),TRUE)
-    override XTRALIBS += -lifcoremt
-  endif
+#SUSSMAN
+override XTRALIBS += -lifcore
+ifeq ($(USE_OMP),TRUE)
+  override XTRALIBS += -lifcoremt
 endif
 
 LDFLAGS += -fsycl-device-lib=libc,libm-fp32,libm-fp64

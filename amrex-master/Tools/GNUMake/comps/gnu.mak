@@ -348,7 +348,7 @@ FMODULES =  -J$(fmoddir) -I $(fmoddir)
 
 ########################################################################
 
-ifneq ($(BL_NO_FORT),TRUE)
+#SUSSMAN
 
 # ask gfortran the name of the library to link in.  First check for the
 # static version.  If it returns only the name w/o a path, then it
@@ -366,8 +366,6 @@ override XTRALIBS += -lgfortran -lquadmath
 
 FFLAGS   += $(GENERIC_GNU_FLAGS)
 F90FLAGS += $(GENERIC_GNU_FLAGS)
-
-endif  # BL_NO_FORT
 
 endif # AMREX_FCOMP == gnu
 
@@ -418,7 +416,7 @@ FMODULES =  -J$(fmoddir) -I $(fmoddir)
 
 ########################################################################
 
-ifneq ($(BL_NO_FORT),TRUE)
+#SUSSMAN
 
 # ask gfortran the name of the library to link in.  First check for the
 # static version.  If it returns only the name w/o a path, then it
@@ -437,6 +435,5 @@ override XTRALIBS += -lgfortran -lquadmath
 FFLAGS   += $(GENERIC_GNU_FLAGS)
 F90FLAGS += $(GENERIC_GNU_FLAGS)
 
-endif  # BL_NO_FORT
 
 endif # AMREX_FCOMP == gfortran-8

@@ -17,9 +17,8 @@ ifneq (,$(filter $(which_computer),poplar redwood tulip))
     else
       mpicxx_link_flags := $(shell mpicxx -link_info)
       LIBRARIES += $(filter -Wl%,$(mpicxx_link_flags))
-      ifneq ($(BL_NO_FORT),TRUE)
-        LIBRARIES += -lmpifort
-      endif
+       #SUSSMAN
+      LIBRARIES += -lmpifort
       LIBRARIES += -lmpi
     endif
 

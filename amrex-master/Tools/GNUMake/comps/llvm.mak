@@ -106,7 +106,7 @@ F90FLAGS += $(GENERIC_COMP_FLAGS)
 
 ########################################################################
 
-ifneq ($(BL_NO_FORT),TRUE)
+#SUSSMAN
 
 # ask gfortran the name of the library to link in.  First check for the
 # static version.  If it returns only the name w/o a path, then it
@@ -121,8 +121,6 @@ else
 endif
 
 override XTRALIBS += -lgfortran -lquadmath
-
-endif
 
 ifeq ($(FSANITIZER),TRUE)
   override XTRALIBS += -lubsan
