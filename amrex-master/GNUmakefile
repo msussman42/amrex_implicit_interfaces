@@ -1,7 +1,7 @@
 AMREX_INSTALL_DIR = tmp_install_dir
 DIM = 2
 BL_NO_FORT = TRUE
-USE_MPI = TRUE
+USE_MPI = FALSE
 USE_OMP = FALSE
 USE_CUDA = FALSE
 USE_HIP = FALSE
@@ -29,6 +29,10 @@ AMREX_NO_PROBINIT = TRUE
 
 
 AMREX_HOME := $(shell pwd)
+
+#SUSSMAN
+#CXXSTD = gnu++14
+CXXSTD = c++17
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 

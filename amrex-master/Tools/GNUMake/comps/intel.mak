@@ -37,14 +37,23 @@ endif
 
 ########################################################################
 
+#SUSSMAN
 ifdef CXXSTD
   CXXSTD := $(strip $(CXXSTD))
-  ifneq ($(firstword $(sort 17.0 $(intel_version))), 17.0)
-    ifeq ($(CXXSTD),c++14)
+  ifeq ($(CXXSTD),gnu++14)
+   CXXFLAGS += -std=$(CXXSTD)
+  else
+   ifeq ($(CXXSTD),c++17)
+    CXXFLAGS += -std=$(CXXSTD)
+   else
+    ifneq ($(firstword $(sort 17.0 $(intel_version))), 17.0)
+     ifeq ($(CXXSTD),c++14)
       $(error C++14 support requires Intel icpc 17.0 or newer.)
+     endif
     endif
+    CXXFLAGS += -std=$(CXXSTD)
+   endif
   endif
-  CXXFLAGS += -std=$(CXXSTD)
 else
   ifeq ($(firstword $(sort 17.0 $(intel_version))), 17.0)
     CXXFLAGS += -std=c++14

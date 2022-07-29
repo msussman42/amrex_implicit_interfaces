@@ -155,11 +155,18 @@ endif
 
 ########################################################################
 
+#SUSSMAN
 ifdef CXXSTD
   CXXSTD := $(strip $(CXXSTD))
   ifeq ($(shell expr $(gcc_major_version) \< 5),1)
     ifneq ($(NO_CONFIG_CHECKING),TRUE)
       ifeq ($(CXXSTD),c++14)
+        $(error C++14 support requires GCC 5 or newer.)
+      endif
+      ifeq ($(CXXSTD),c++17)
+        $(error C++17 support requires GCC 5 or newer.)
+      endif
+      ifeq ($(CXXSTD),gnu++14)
         $(error C++14 support requires GCC 5 or newer.)
       endif
     endif
@@ -273,12 +280,18 @@ ifeq ($(ERROR_DEPRECATED),TRUE)
 endif
 
 ########################################################################
-
+#SUSSMAN
 ifdef CXXSTD
   CXXSTD := $(strip $(CXXSTD))
   ifeq ($(shell expr $(gcc_major_version) \< 5),1)
     ifneq ($(NO_CONFIG_CHECKING),TRUE)
       ifeq ($(CXXSTD),c++14)
+        $(error C++14 support requires GCC 5 or newer.)
+      endif
+      ifeq ($(CXXSTD),c++17)
+        $(error C++17 support requires GCC 5 or newer.)
+      endif
+      ifeq ($(CXXSTD),gnu++14)
         $(error C++14 support requires GCC 5 or newer.)
       endif
     endif
