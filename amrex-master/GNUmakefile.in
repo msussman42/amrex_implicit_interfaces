@@ -1,6 +1,10 @@
 
 AMREX_HOME := $(shell pwd)
 
+#SUSSMAN
+#CXXSTD = gnu++14
+CXXSTD = c++17
+
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
 ifeq ($(USE_CUDA),TRUE)

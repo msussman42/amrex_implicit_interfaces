@@ -89,6 +89,8 @@ CTML_FBC = FALSE
 MAC_LAPTOP = FALSE
 LINUX_DESKTOP = FALSE
 HPC_INTEL = TRUE
+#CXXSTD = gnu++14
+CXXSTD = c++17
 
 ifeq ($(HPC_INTEL),TRUE)
  COMP = intel
@@ -150,7 +152,7 @@ endif
 #COMP = intel
 #COMP = PGI 
 #FCOMP = PGI
-USE_MPI = TRUE
+USE_MPI = FALSE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
 USE_OMP = FALSE
@@ -200,7 +202,7 @@ ifeq ($(USE_LIBAMREX),FALSE)
 include $(AMREX_HOME)/Src/Base/Make.package
 include $(AMREX_HOME)/Src/Particle/Make.package
 endif
-LIBAMREX_FILE_DIR = $(AMREX_HOME)/tmp_build_dir/o/2d.gnu.MPI.EXE/
+LIBAMREX_FILE_DIR = $(AMREX_HOME)/tmp_build_dir/o/2d.gnu.EXE/
 ifeq ($(USE_LIBAMREX),TRUE)
 INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Base
 INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Base/Parser
