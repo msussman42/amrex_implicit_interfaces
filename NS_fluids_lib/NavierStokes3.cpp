@@ -1266,6 +1266,12 @@ void advance_recalesce(
  Vector<Real>& TSAT, // size=2*num_interfaces
  Real time)
  {
+
+  if (visc_factor>=0.0) {
+   //do nothing
+  } else
+   amrex::Error("visc_factor invalid");
+
   int local_num_materials=heat_conduct.size();
   int local_num_interfaces=
    ( (local_num_materials-1)*(local_num_materials-1) + 
@@ -8667,6 +8673,11 @@ void NavierStokes::check_outer_solver_convergence(
         Real save_mac_abs_tol_in,
         int& meets_tol) {
 
+ if (error0>=0.0) {
+  // do nothing
+ } else
+  amrex::Error("error0 must be nonnegative");
+
  if (error_n<=save_mac_abs_tol_in) {
   meets_tol=1;
  } else if (error_n>=save_mac_abs_tol_in) {
@@ -8935,6 +8946,11 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
 } // subroutine Prepare_UMAC_for_solver
 
 void NavierStokes::remove_UMAC_for_solver(int project_option) {
+
+ if (project_option_is_valid(project_option)==1) {
+  // do nothing
+ } else
+  amrex::Error("project_option_is_valid(project_option)==1 failed");
 
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))

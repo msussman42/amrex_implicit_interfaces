@@ -24,7 +24,6 @@ stop
 
 ! probtype==710
 module CAVITY_PHASE_CHANGE_module
-
 implicit none                   
 
 REAL_T :: DEF_VAPOR_GAMMA
@@ -605,6 +604,7 @@ end subroutine dist_point_to_lined
 !  5--> spherical reentrant
 
 subroutine cavity_distf_13(cavity_type, coord_type, x_in, dist)
+use probcommon_module
 implicit none
 
 ! liquid +  solid - 
@@ -1316,7 +1316,42 @@ elseif(cavity_type .eq. 6) then   ! 6--> 3D pyramid
   endif
  endif
 else if (cavity_type.eq.7) then
- dist=1.2d0-x(SDIM)  ! dist<0 in the solid (which is on top for this case)
+ if(coord_type .eq. 2)then   !  R-Z  axis symmetric
+  if(SDIM.ne.2)then
+   print *,"R-Z, SDIM should be 2"
+   stop
+  endif
+  dist=zblob-x(SDIM)  ! dist<0 in the solid (which is on top for this case)
+ elseif(coord_type.eq.1)then   ! 3-D cartesian
+  if(SDIM.ne.3)then
+   print *,"3d cartesian, SDIM should be 3"
+   stop
+  endif
+  dist1=tan(radblob2)*x(1)+zblob-x(SDIM)
+  dist=dsign(dist1*cos(radblob2),dist1)
+ else
+  print *,"coord_type error"        
+  stop
+ endif
+else if (cavity_type.eq.8) then
+ if(coord_type .eq. 2)then   !  R-Z  axis symmetric
+  if(SDIM.ne.2)then
+   print *,"R-Z, SDIM should be 2"
+   stop
+  endif
+  dist=x(SDIM)-zblob  ! dist<0 in the solid (which is on bot for this case)
+ elseif(coord_type.eq.1)then   ! 3-D cartesian
+  if(SDIM.ne.3)then
+   print *,"3d cartesian, SDIM should be 3"
+   stop
+  endif
+  dist1=x(SDIM)-(tan(radblob2)*x(1)+zblob)
+  dist=dsign(dist1*cos(radblob2),dist1)
+ else
+  print *,"coord_type error"        
+  stop
+ endif
+
 else
  print *, "invalid cavity type flag"
  stop
@@ -1417,13 +1452,26 @@ if ((axis_dir.ge.1).and.(axis_dir.le.6)) then
    endif
  endif
 
-else if (axis_dir.eq.7) then
+else if (axis_dir.eq.7.or.axis_dir.eq.8) then
+ 
+ if(coord_type .eq. 2)then 
+
  center(1) = 0.0d0
  center(2) = 0.0d0
  center(SDIM) = 1.2d0
  call l2norm(center, x , dist_temp)
 ! vapor +   liquid -
- dist=0.1d0-dist_temp
+ dist=radblob-dist_temp
+ elseif(coord_type .eq. 1)then
+  center(1) = xblob
+  center(2) = yblob
+  center(SDIM) =zblob+xblob*tan(radblob2)
+  call l2norm(center,x,dist_temp)
+  dist=radblob-dist_temp
+ else
+ print *,"coord_type invalid"
+ stop
+ endif
 else
  print *,"axis_dir invalid"
  stop

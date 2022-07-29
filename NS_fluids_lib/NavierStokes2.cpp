@@ -6846,7 +6846,7 @@ void NavierStokes::output_triangles() {
      auto& particles_grid_tile = localPC.GetParticles(level)
       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
      auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
-     int Np=particles_AoS.size();
+     unsigned int Np=particles_AoS.size();
      auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
      int N_arrays=particles_SoA.size();
      if (N_arrays==NUM_CELL_ELASTIC) {
@@ -6854,8 +6854,8 @@ void NavierStokes::output_triangles() {
      } else
       amrex::Error("N_arrays invalid");
 
-     int k=0;
-     int N_real_comp=NUM_CELL_ELASTIC*Np;
+     unsigned int k=0;
+     unsigned int N_real_comp=NUM_CELL_ELASTIC*Np;
 
      Vector<Real> real_compALL(N_real_comp);
      for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
@@ -6867,7 +6867,7 @@ void NavierStokes::output_triangles() {
       } else
        amrex::Error("real_comp.size()!=Np");
 
-      for (int j=0;j<Np;j++) {
+      for (unsigned int j=0;j<Np;j++) {
        real_compALL[k]=real_comp[j]; 
        k++;
 

@@ -193,98 +193,106 @@ AmrLevel::restart (AmrCore&      papa,
 		   int old_finest_level,
 		   int new_finest_level) {
 
-    parent = &papa;
+ int max_level=parent->maxLevel();
 
-    int max_level=parent->maxLevel();
+ if ((old_finest_level>=0)&&
+     (new_finest_level>=0)&&
+     (old_finest_level<=max_level)&&
+     (new_finest_level<=max_level)) {
+  //do nothing
+ } else
+  amrex::Error("old_finest_level or new_finest_level invalid");
 
-    is >> level;
-    is >> geom;
+ parent = &papa;
 
-    grids.readFrom(is);
+ is >> level;
+ is >> geom;
 
-    int nstate;
-    is >> nstate;
+ grids.readFrom(is);
 
-    int ndesc = desc_lst.size();
+ int nstate;
+ is >> nstate;
 
-    if (nstate!=ndesc)
-     amrex::Error("nstate and ndesc do not match");
+ int ndesc = desc_lst.size();
 
-    dmap.define(grids);
+ if (nstate!=ndesc)
+  amrex::Error("nstate and ndesc do not match");
 
-    parent->SetBoxArray(level, grids);
-    parent->SetDistributionMap(level, dmap);
-    int level_MAX_NUM_SLAB=parent->get_MAX_NUM_SLAB();
-    int level_slab_dt_type=parent->get_slab_dt_type();
+ dmap.define(grids);
 
-      // e.g. chkfile=./chk<nsteps>
-    std::string chkfile=papa.theRestartFile();
-    std::string Level_string = amrex::Concatenate("Level_", level, 1);
-    std::string FullPath = chkfile;
-    if (!FullPath.empty() && FullPath[FullPath.length()-1] != '/') {
-     FullPath += '/';
-    }
-    FullPath += Level_string;
+ parent->SetBoxArray(level, grids);
+ parent->SetDistributionMap(level, dmap);
+ int level_MAX_NUM_SLAB=parent->get_MAX_NUM_SLAB();
+ int level_slab_dt_type=parent->get_slab_dt_type();
 
-    if (level==0) {
+   // e.g. chkfile=./chk<nsteps>
+ std::string chkfile=papa.theRestartFile();
+ std::string Level_string = amrex::Concatenate("Level_", level, 1);
+ std::string FullPath = chkfile;
+ if (!FullPath.empty() && FullPath[FullPath.length()-1] != '/') {
+  FullPath += '/';
+ }
+ FullPath += Level_string;
 
-     // SUSSMAN restart the particle data
-     std::string FullPathName=FullPath;
-     int time_order=parent->Time_blockingFactor();
-     int local_particles_flag=parent->global_AMR_particles_flag;
-     int local_nmat=parent->global_AMR_num_materials;
+ if (level==0) {
 
-     AmrLevel0_new_dataPC.resize(level_MAX_NUM_SLAB);
-     new_data_FSI.resize(level_MAX_NUM_SLAB);
+  // SUSSMAN restart the particle data
+  std::string FullPathName=FullPath;
+  int time_order=parent->Time_blockingFactor();
+  int local_particles_flag=parent->global_AMR_particles_flag;
+  int local_nmat=parent->global_AMR_num_materials;
 
-     for (int i=0;i<=time_order;i++) {
+  AmrLevel0_new_dataPC.resize(level_MAX_NUM_SLAB);
+  new_data_FSI.resize(level_MAX_NUM_SLAB);
 
-       //TODO: restart the FSI data.
-      new_data_FSI[i].resize(local_nmat);
-      for (int j=0;j<local_nmat;j++) {
-       new_data_FSI[i][j].initData_FSI(0,0);
-      }
+  for (int i=0;i<=time_order;i++) {
 
-      if (local_particles_flag==0) {
-       // do nothing
-      } else if (local_particles_flag==1) {
+    //TODO: restart the FSI data.
+   new_data_FSI[i].resize(local_nmat);
+   for (int j=0;j<local_nmat;j++) {
+    new_data_FSI[i][j].initData_FSI(0,0);
+   }
 
-       //The actual particle data will be read from the restart file
-       //later (in NavierStokes.cpp) when "post_restart" is called.
-       //Particle data needs the AMR hierarchy to already be built before
-       //being read from the restart file and redistributed appropriately.
-       
-      } else
-       amrex::Error("local_particles_flag invalid");
+   if (local_particles_flag==0) {
+    // do nothing
+   } else if (local_particles_flag==1) {
 
-     }//for (int i=0;i<=time_order;i++) 
+    //The actual particle data will be read from the restart file
+    //later (in NavierStokes.cpp) when "post_restart" is called.
+    //Particle data needs the AMR hierarchy to already be built before
+    //being read from the restart file and redistributed appropriately.
+    
+   } else
+    amrex::Error("local_particles_flag invalid");
 
-    } else if (level>0) {
-     // do nothing
-    } else
-     amrex::Error("level invalid");
+  }//for (int i=0;i<=time_order;i++) 
 
-    state.resize(ndesc);
-    for (int icomp = 0; icomp < ndesc; icomp++)
-    {
-     int time_order = parent->Time_blockingFactor();
-     state[icomp].restart(
-        papa,
-        time_order,
-        level_slab_dt_type,
-        level_MAX_NUM_SLAB,
-        level,
-	max_level,
-        is, 
-        geom.Domain(),
-        grids,
-        dmap,
-        desc_lst[icomp],
-        desc_lstGHOST[icomp],
-        papa.theRestartFile());
-    }
+ } else if (level>0) {
+  // do nothing
+ } else
+  amrex::Error("level invalid");
 
-    finishConstructor();
+ state.resize(ndesc);
+ for (int icomp = 0; icomp < ndesc; icomp++)
+ {
+  int time_order = parent->Time_blockingFactor();
+  state[icomp].restart(
+     papa,
+     time_order,
+     level_slab_dt_type,
+     level_MAX_NUM_SLAB,
+     level,
+     max_level,
+     is, 
+     geom.Domain(),
+     grids,
+     dmap,
+     desc_lst[icomp],
+     desc_lstGHOST[icomp],
+     papa.theRestartFile());
+ }
+
+ finishConstructor();
 }  // end subroutine AmrLevel::restart
 
 void

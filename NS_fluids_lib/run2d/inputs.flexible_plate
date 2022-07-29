@@ -32,22 +32,7 @@ mg.rtol_b = -0.01
 Lp.v = 1
 
 ns.num_materials=3  # material 1=drop material 2=gas material 3=substrate
-# reference: Bell (LBNL), Colella (LBNL), Glaz (1987)
-#            Colella (LBNL) and Woodward
-# u^{n+1,(0)}=u^n
-# (grad p/rho)^{n+1(0)}=0
-# for k=1...ns.num_divu_outer_sweeps
-#  u^advect^{n+1,(k)}=CISL_ADVECTION( u^{n+1}(k-1),u^n )
-#  u^*^{n+1,(k)}=u^advect^{n+1,(k)}+ 
-#                dt div (2 mu D)^*^{n+1,k} +
-#                dt div tau_flexible^{n+1,k-1} -
-#                dt (grad p/rho)^{n+1(k-1)}
-#  U^{n+1,(k)}=u^advect^{n+1,(k)}+ 
-#                dt div (2 mu D)^*^{n+1,k} +
-#                dt div tau_flexible^{n+1,k-1} -
-#                dt (grad p/rho)^{n+1(k)} 
-#      
-ns.num_divu_outer_sweeps=2
+ns.num_divu_outer_sweeps=1
 ns.num_species_var=0
 # 0=no limiter 1=minmod 2=minmod with slope=0 at interface 
 # 3=no limiter with slope=0 at interface
@@ -67,7 +52,7 @@ ns.MOFITERMAX=15
 amr.n_cell=32 64 # ZEYU Production run effective fine grid resolution 512^2
 #amr.max_level =  0   # Yongsheng 2= 43.2 points per diameter
 amr.max_level=0 # ZEYU
-ns.particles_flag=1
+ns.particles_flag=0
 ns.particle_nsubdivide=1
 ns.particle_min_per_nsubdivide=0
 ns.particle_max_per_nsubdivide=100
@@ -81,20 +66,10 @@ ns.initial_viscosity_cycles=1
 ns.initial_thermal_cycles=1
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
-# FOR INDEFINITE MATRICES:
-# if all walls are "symmetry": we force sum p_{ij} = 0 
-# (null space vector as extra row) and we force
-# sum rhs_{ij}=0 (null space vector as extra column)
-# Note: the "A" weighted error (appropriately scaled) is now checked
-# for convergence criteria too,  R^{T} A R < C * tolerance , along
-# with the standard check: R^{T} R < tolerance
-#  R=residual 
-
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 
-# ZEYU
 ns.shock_timestep=2 2 2
 
 amr.regrid_int      = 1       # how often to regrid
@@ -121,9 +96,9 @@ ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.1      # scale back initial timestep
 #ns.visc_coef      = 0.16     # coef of viscosity Yongsheng
-ns.visc_coef=1.0 # ZEYU - leave as 1.0
+ns.visc_coef=1.0 
 #ns.gravity=0.0  # Yongsheng
-ns.gravity        = -9.8  # ZEYU
+ns.gravity        = -9.8  
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 45 degrees=>sigma_{SV}=sigma_{LV}  and
 # sigma_{SL}/sigma_{LV}=1-2^{-1/2}
@@ -243,22 +218,20 @@ ns.polymer_factor=0.0 0.0 1.0e-9   # parameter, 1/L
 # viscoelastic_model=6 Linear PTT 
 #     f_R=(1+Tr(A-I)/L^2)(A-I)
 #     f_S=A-I
+# viscoelastic_model=7 Neo-Hookean (using Left Cauchy Green tensor B=F F^{T}
+#         Xia, Lu, Tryggvason 2018
+#
 # LAG-EUL FSI
 #ns.viscoelastic_model=0 0 4
 # EUL-EUL FSI
 #ns.viscoelastic_model=0 0 3
-ns.viscoelastic_model=0 0 0
+ns.viscoelastic_model=0 0 7
 ns.viscconst=8.9e-4 0.0000181 1.0e-3 #  MKS
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng
 ns.denconst=997.0 1.25 1000.0 
+#12,13,23
+ns.denconst_interface=0.0 1000.0 1000.0 
 ns.added_weight=1.0 1.0 1000.0
-# if pressure_error_cutoff=0.0 then pressure is not used as an AMR
-# criteria, otherwise if pressure_error_flag==0, then check the
-# magnitude of pressure, if pressure_error_flag==1, then check the
-# pressure variation (not exactly gradient).
-# if temperature_error_cutoff=0.0 then temperature is not used as an AMR
-# criteria, otherwise check the
-# temperature variation (not exactly gradient).
 ns.pressure_error_cutoff=0.0 0.0 0.0
 ns.tempconst=293.0 293.0 293.0
 # ----------------  PROBLEM DEPENDENT INPUTS

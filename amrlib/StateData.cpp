@@ -90,7 +90,12 @@ StateData::define (
   int slab_dt_type, // 0=SEM 1=evenly spaced
   int MAX_NUM_SLAB)
 {
- 
+
+    if (max_level>=0) {
+     // do nothing
+    } else
+     amrex::Error("max_level>=0 violated");
+
     if (dt<=0.0) {
      std::cout << "dt = " << dt << '\n';
      amrex::Error("dt invalid in StateData define");
@@ -204,6 +209,11 @@ StateData::restart (
   const StateDescriptor& dGHOST,
   const std::string&     chkfile)
 {
+    if (max_level>=0) {
+     // do nothing
+    } else
+     amrex::Error("max_level>=0 violated");
+
     StateData_MAX_NUM_SLAB=MAX_NUM_SLAB;
     if (StateData_MAX_NUM_SLAB<33)
      amrex::Error("StateData_MAX_NUM_SLAB too small");
@@ -975,6 +985,16 @@ StateData::get_time_bounding_box(Real time,Real &nudge_time,
 void
 StateData::CopyNewToOld(int level,int max_level) {
 
+ if (max_level>=0) {
+  // do nothing
+ } else
+  amrex::Error("max_level>=0 violated");
+
+ if (level>=0) {
+  // do nothing
+ } else
+  amrex::Error("level>=0 violated");
+
  int state_holds_data = desc->get_state_holds_data();
 
  if (state_holds_data==1) {
@@ -999,6 +1019,16 @@ StateData::CopyNewToOld(int level,int max_level) {
 
 void
 StateData::CopyOldToNew(int level,int max_level) {
+
+ if (max_level>=0) {
+  // do nothing
+ } else
+  amrex::Error("max_level>=0 violated");
+
+ if (level>=0) {
+  // do nothing
+ } else
+  amrex::Error("level>=0 violated");
 
  int state_holds_data = desc->get_state_holds_data();
 
@@ -1035,6 +1065,11 @@ StateData::checkPoint (const std::string& name,
      // do nothing
     } else
      amrex::Error("level invalid");
+
+    if (max_level>=0) {
+     // do nothing
+    } else
+     amrex::Error("max_level invalid");
 
      // on input:  
      //   name=Level_<level num>/SD_<state index>
