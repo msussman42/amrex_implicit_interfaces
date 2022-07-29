@@ -33,7 +33,7 @@ MOF_HOME = ..
 
 USE_LIBAMREX = TRUE
 PRECISION = DOUBLE
-DEBUG	  = TRUE
+DEBUG	  = FALSE
 USE_ASSERTION = TRUE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
@@ -126,13 +126,13 @@ endif
 #  For memory debugging: "DEBUG" "OPEN MemoryScape"
 #  Memory Debugging Options=Extreme
 # module load gnu openmpi (version 8.3.1)
-# module load intel openmpi (not working June 2022)
+# module load intel openmpi (for main program only; libraries use gnu openmpi)
 # mecfd_q  (dedicated nodes)
 # mecfd18_q (dedicated nodes)
 # backfill
 # engineering_q
 # engineering_long
-# hpc-login.rcc.fsu.edu  "module load intel openmpi" (not working June, 2022)  
+# hpc-login.rcc.fsu.edu  "module load intel openmpi" (main program)  
 #                        "module load gnu openmpi (version 8.3.1)"
 # sussman + same password as FSUID
 #   https://rcc.fsu.edu/manage
@@ -150,7 +150,7 @@ endif
 #COMP = intel
 #COMP = PGI 
 #FCOMP = PGI
-USE_MPI = FALSE
+USE_MPI = TRUE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
 USE_OMP = FALSE
@@ -200,7 +200,7 @@ ifeq ($(USE_LIBAMREX),FALSE)
 include $(AMREX_HOME)/Src/Base/Make.package
 include $(AMREX_HOME)/Src/Particle/Make.package
 endif
-LIBAMREX_FILE_DIR = $(AMREX_HOME)/tmp_build_dir/o/2d.gnu.EXE/
+LIBAMREX_FILE_DIR = $(AMREX_HOME)/tmp_build_dir/o/2d.gnu.MPI.EXE/
 ifeq ($(USE_LIBAMREX),TRUE)
 INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Base
 INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Base/Parser
