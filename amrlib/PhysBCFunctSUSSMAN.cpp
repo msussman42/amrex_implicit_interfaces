@@ -23,7 +23,10 @@ PhysBCFunctSUSSMAN::FillBoundary (
   int ncomp,
   int bfact) {
 
+ std::cout << "level= " << level << " time= " << time << " dcomp= " 
+	 << dcomp << " ncomp= " << ncomp << " bfact= " << bfact << '\n';
  amrex::Error("this routine should never be called");
+ 
 
 }
 

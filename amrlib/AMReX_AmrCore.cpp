@@ -493,19 +493,13 @@ AmrCore::InitAmr () {
 
     }
 
-    //
-    // SUSSMAN:
-    // Now check offset; CoordSys does not need it anymore though.
-    //
     Vector<int> n_cell(AMREX_SPACEDIM);
     pp.getarr("n_cell",n_cell,0,AMREX_SPACEDIM);
     IntVect lo(IntVect::TheZeroVector()), hi(n_cell);
     hi -= IntVect::TheUnitVector();
 
-    Real offset[AMREX_SPACEDIM];
     for (i = 0; i < AMREX_SPACEDIM; i++) {
      const Real delta = geom[0].ProbLength(i)/(Real)n_cell[i];
-     offset[i]        = geom[0].ProbLo(i) + delta*lo[i];
      if ((lo[i]==0)&&(delta>0.0)) {
       // do nothing
      } else
@@ -650,6 +644,11 @@ AmrCore::okToContinue () noexcept
 
 void
 AmrCore::writeDEBUG_PlotFile(int num,int SDC_outer_sweeps,int slab_step) {
+
+ if (num>=0) {
+  //do nothing
+ } else
+  amrex::Error("num should be nonnegative");
 
  int do_plot=1;
  int do_slice=((slice_int>0) ? 1 : 0);

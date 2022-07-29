@@ -132,6 +132,11 @@ multiMOFInterp::interp (Real time,
   int grid_type)
 {
 
+ if (time>=0.0) {
+  //do nothing
+ } else 
+  amrex::Error("time invalid");
+
  if (grid_type==-1) {
   // do nothing
  } else
@@ -241,6 +246,11 @@ multiEXTMOFInterp::interp (Real time,
   int grid_type)
 {
 
+ if (time>=0.0) {
+  //do nothing
+ } else 
+  amrex::Error("time invalid");
+
  if (grid_type==-1) {
   // do nothing
  } else
@@ -342,6 +352,11 @@ BurnVelInterp::interp (Real time,
   int bfactc,int bfactf,
   int grid_type)
 {
+
+ if (time>=0.0) {
+  //do nothing
+ } else 
+  amrex::Error("time invalid");
 
  if (grid_type==-1) {
   // do nothing
@@ -534,6 +549,11 @@ PCInterp::interp (
  int grid_type)
 {
 
+ if (time>=0.0) {
+  //do nothing
+ } else 
+  amrex::Error("time invalid");
+
  if ((ncomp<1)||(ncomp>9999))
   amrex::Error("invalid ncomp PCInterp::interp");
 
@@ -690,6 +710,11 @@ LSInterp::interp (
  int grid_type)
 {
 
+ if (time>=0.0) {
+  //do nothing
+ } else 
+  amrex::Error("time invalid");
+
  if (grid_type==-1) {
   // do nothing
  } else
@@ -782,6 +807,11 @@ SEMInterp::interp (
  int grid_type)
 {
 
+ if (time>=0.0) {
+  //do nothing
+ } else 
+  amrex::Error("time invalid");
+
  if (grid_type==-1) {
   // do nothing
  } else
@@ -865,6 +895,11 @@ maskSEMInterp::interp (
  int grid_type)
 {
 
+ if (time>=0.0) {
+  //do nothing
+ } else 
+  amrex::Error("time invalid");
+
  if (grid_type==-1) {
   // do nothing
  } else
@@ -943,6 +978,11 @@ PCInterpNull::interp (
  int bfactc,int bfactf,
  int grid_type)
 {
+
+ if (time>=0.0) {
+  //do nothing
+ } else 
+  amrex::Error("time invalid");
 
  if ((ncomp<1)||(ncomp>9999))
   amrex::Error("invalid ncomp PCInterpNull::interp");
@@ -1116,6 +1156,11 @@ UMACInterp::interp(
  int bfactc,int bfactf,
  int grid_type)
 {
+
+ if (time>=0.0) {
+  //do nothing
+ } else 
+  amrex::Error("time invalid");
 
  if ((ncomp<1)||(ncomp>9999))
   amrex::Error("invalid ncomp umac interp");

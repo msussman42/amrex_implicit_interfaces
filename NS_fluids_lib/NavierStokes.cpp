@@ -12044,7 +12044,8 @@ void NavierStokes::tensor_advection_update() {
    if (store_elastic_data[im]==1) {
 
     int partid=0;
-    while ((im_elastic_map[partid]!=im)&&(partid<im_elastic_map.size())) {
+    while ((im_elastic_map[partid]!=im)&&
+	   (partid<im_elastic_map.size())) {
      partid++;
     }
 
@@ -12052,6 +12053,8 @@ void NavierStokes::tensor_advection_update() {
      //do nothing
     } else
      amrex::Error("partid invalid");
+
+    partid_test++;
 
     if (partid<im_elastic_map.size()) {
 
@@ -12063,7 +12066,8 @@ void NavierStokes::tensor_advection_update() {
       int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
       if (ncomp_visc!=3*num_materials) {
        std::cout << "ncomp= " <<
-        localMF[CELL_VISC_MATERIAL_MF]->nComp() << " num_materials= " << num_materials << '\n';
+        localMF[CELL_VISC_MATERIAL_MF]->nComp() << " num_materials= " << 
+	   num_materials << '\n';
        amrex::Error("cell_visc_material ncomp invalid(6)");
       }
 
@@ -21054,6 +21058,17 @@ void NavierStokes::post_regrid (int lbase,
   int start_level,int new_finest,int initialInit_flag,Real time) {
 
   const int max_level = parent->maxLevel();
+
+  if ((lbase>=0)&&(lbase<=max_level)) {
+   //do nothing
+  } else
+   amrex::Error("lbase invalid");
+
+  if ((start_level>=0)&&(start_level<=max_level)) {
+   //do nothing
+  } else
+   amrex::Error("start_level invalid");
+
   Real dt_amr=parent->getDt(); // returns dt_AMR
   int nstate=state.size();
   if (nstate!=NUM_STATE_TYPE)
@@ -21121,6 +21136,12 @@ void NavierStokes::computeNewDt (int finest_level,
 
   int max_level = parent->maxLevel();
 
+  if ((finest_level>=0)&&(finest_level<=max_level)) {
+   // do nothing
+  } else
+   amrex::Error("finest_level invalid");
+
+
   if (level==0) {
 
    int caller_id=1;
@@ -21186,6 +21207,13 @@ void NavierStokes::computeInitialDt (int finest_level,
    std::cout << "start: computeInitialDt \n";
   }
  }
+
+ int max_level = parent->maxLevel();
+
+ if ((finest_level>=0)&&(finest_level<=max_level)) {
+   // do nothing
+ } else
+   amrex::Error("finest_level invalid");
 
  if (level!=0)
   amrex::Error("level invalid computeInitialDt");
@@ -22069,7 +22097,7 @@ void NavierStokes::assimilate_Q_from_particles(
    auto& particles_grid_tile = localPC.GetParticles(level)
      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
    auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
-   int Np=particles_AoS.size();
+   unsigned int Np=particles_AoS.size();
    auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
    int N_arrays=particles_SoA.size();
    if (N_arrays==NUM_CELL_ELASTIC) {
@@ -22077,8 +22105,8 @@ void NavierStokes::assimilate_Q_from_particles(
    } else
     amrex::Error("N_arrays invalid");
 
-   int k=0;
-   int N_real_comp=NUM_CELL_ELASTIC*Np;
+   unsigned int k=0;
+   unsigned int N_real_comp=NUM_CELL_ELASTIC*Np;
 
    Vector<Real> real_compALL(N_real_comp);
    for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
@@ -22089,7 +22117,7 @@ void NavierStokes::assimilate_Q_from_particles(
     } else
      amrex::Error("real_comp.size()!=Np");
 
-    for (int j=0;j<Np;j++) {
+    for (unsigned int j=0;j<Np;j++) {
      real_compALL[k]=real_comp[j]; 
      k++;
 
@@ -22257,7 +22285,7 @@ NavierStokes::init_particle_container(int append_flag) {
       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
  
     auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
-    int Np=particles_AoS.size();
+    unsigned int Np=particles_AoS.size();
     auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
     int N_arrays=particles_SoA.size();
     if (N_arrays==NUM_CELL_ELASTIC) {
@@ -22265,8 +22293,8 @@ NavierStokes::init_particle_container(int append_flag) {
     } else
      amrex::Error("N_arrays invalid");
 
-    int k=0;
-    int N_real_comp=NUM_CELL_ELASTIC*Np;
+    unsigned int k=0;
+    unsigned int N_real_comp=NUM_CELL_ELASTIC*Np;
 
     Vector<Real> real_compALL(N_real_comp);
     for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
@@ -22277,7 +22305,7 @@ NavierStokes::init_particle_container(int append_flag) {
      } else
       amrex::Error("real_comp.size()!=Np");
 
-     for (int j=0;j<Np;j++) {
+     for (unsigned int j=0;j<Np;j++) {
       real_compALL[k]=real_comp[j]; 
       k++;
 
@@ -22300,13 +22328,13 @@ NavierStokes::init_particle_container(int append_flag) {
      // i_particle_link_2,i2,j2,k2,  ...
     particle_link_data.resize(Np*(1+AMREX_SPACEDIM));
 
-    for (int i_link=0;i_link<Np*(1+AMREX_SPACEDIM);i_link++)
+    for (unsigned int i_link=0;i_link<Np*(1+AMREX_SPACEDIM);i_link++)
      particle_link_data[i_link]=0;
 
       // 1 if particle should be deleted.
     Vector< int > particle_delete_flag; 
     particle_delete_flag.resize(Np);
-    for (int i_delete=0;i_delete<Np;i_delete++)
+    for (unsigned int i_delete=0;i_delete<Np;i_delete++)
      particle_delete_flag[i_delete]=0;
 
     int Np_append=0;  // number of particles to append
@@ -22369,8 +22397,8 @@ NavierStokes::init_particle_container(int append_flag) {
      }
     } // isweep=0...1
 
-    int Np_delete=0;
-    for (int i_delete=0;i_delete<Np;i_delete++) {
+    unsigned int Np_delete=0;
+    for (unsigned int i_delete=0;i_delete<Np;i_delete++) {
      if (particle_delete_flag[i_delete]==1) {
       Np_delete++;
      } else if (particle_delete_flag[i_delete]==0) {
@@ -22385,7 +22413,7 @@ NavierStokes::init_particle_container(int append_flag) {
      amrex::Error("Np_delete invalid");
 
     Vector< My_ParticleContainer::ParticleType > mirrorPC_AoS;
-    int Np_mirror_AoS=Np-Np_delete+Np_append;
+    unsigned int Np_mirror_AoS=Np-Np_delete+Np_append;
     mirrorPC_AoS.resize(Np_mirror_AoS);
 
     int N_real_comp_mirror=NUM_CELL_ELASTIC*Np_mirror_AoS;
@@ -22394,8 +22422,8 @@ NavierStokes::init_particle_container(int append_flag) {
      //save the existing particle data to:
      //1. mirrorPC_AoS
      //2. mirror_real_compALL
-    int i_mirror=0;
-    for (int i_delete=0;i_delete<Np;i_delete++) {
+    unsigned int i_mirror=0;
+    for (unsigned int i_delete=0;i_delete<Np;i_delete++) {
      if (particle_delete_flag[i_delete]==1) {
       // do nothing
      } else if (particle_delete_flag[i_delete]==0) {
@@ -22590,7 +22618,7 @@ NavierStokes::particle_tensor_advection_update() {
       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
  
     auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
-    int Np=particles_AoS.size();
+    unsigned int Np=particles_AoS.size();
     auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
     int N_arrays=particles_SoA.size();
     if (N_arrays==NUM_CELL_ELASTIC) {
@@ -22598,8 +22626,8 @@ NavierStokes::particle_tensor_advection_update() {
     } else
      amrex::Error("N_arrays invalid");
 
-    int k=0;
-    int N_real_comp=NUM_CELL_ELASTIC*Np;
+    unsigned int k=0;
+    unsigned int N_real_comp=NUM_CELL_ELASTIC*Np;
 
     Vector<Real> real_compALL(N_real_comp);
     for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
@@ -22610,7 +22638,7 @@ NavierStokes::particle_tensor_advection_update() {
      } else
       amrex::Error("real_comp.size()!=Np");
 
-     for (int j=0;j<Np;j++) {
+     for (unsigned int j=0;j<Np;j++) {
       real_compALL[k]=real_comp[j]; 
       k++;
 
@@ -22696,7 +22724,7 @@ NavierStokes::particle_tensor_advection_update() {
           } else
            amrex::Error("real_comp.size()!=Np");
 
-          for (int j=0;j<Np;j++) {
+          for (unsigned int j=0;j<Np;j++) {
 	   k=dir*Np+j;
 	   real_comp[j]=real_compALL[k];
 	  }

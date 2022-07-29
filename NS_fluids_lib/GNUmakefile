@@ -31,13 +31,13 @@ MOF_HOME = ..
 # endif
 #
 
-USE_LIBAMREX = TRUE
+USE_LIBAMREX = FALSE
 PRECISION = DOUBLE
-DEBUG	  = FALSE
+DEBUG	  = TRUE
 USE_ASSERTION = TRUE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
-DIM       = 2
+DIM       = 3
 
 BL_NO_FORT = TRUE
 
@@ -87,14 +87,20 @@ CTML_FBC = FALSE
 #    expressions during compilation.
 
 MAC_LAPTOP = FALSE
-LINUX_DESKTOP = FALSE
-HPC_INTEL = TRUE
+LINUX_DESKTOP = TRUE
+HPC_INTEL = FALSE
+HPC_GNU = FALSE
+
 #CXXSTD = gnu++14
 CXXSTD = c++17
 
 ifeq ($(HPC_INTEL),TRUE)
  COMP = intel
  FCOMP = intel
+endif
+ifeq ($(HPC_GNU),TRUE)
+ COMP = g++
+ FCOMP = gfortran
 endif
 ifeq ($(LINUX_DESKTOP),TRUE)
  COMP = g++

@@ -359,6 +359,10 @@ Real
 ABecLaplacian::LPnorm(MultiFab &in, int level) const
 {
 
+ if (level>=0) {
+  //do nothing
+ } else
+  amrex::Error("level invalid");
 
 #if (profile_solver==1)
  std::string subname="ABecLaplacian::norm";
@@ -2385,6 +2389,11 @@ ABecLaplacian::CG_check_for_convergence(
   int& error_close_to_zero,
   int level) {
 
+ if (level>=0) {
+  //do nothing
+ } else
+  amrex::Error("level invalid");
+
  if ((coarsefine==0)||
      (coarsefine==1)) {
   // do nothing
@@ -3404,6 +3413,10 @@ ABecLaplacian::MG_coarsestSmooth(MultiFab& solL,MultiFab& rhsL,
    int presmooth,int postsmooth)
 {
 
+ if (eps_abs>=0.0) {
+  //do nothing
+ } else
+  amrex::Error("eps_abs invalid");
 
  int ncomp=solL.nComp();
  if (ncomp!=nsolve_ABec)
