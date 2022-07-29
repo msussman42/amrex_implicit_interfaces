@@ -185,7 +185,7 @@ ns.material_type=0 0 0
 # EUL-EUL FSI
 ns.FSI_flag=0 0 0
 # EUL-EUL FSI
-ns.damping_coefficient=0.0 0.0 1.0e+7 # typical dt=3.8e-8
+ns.damping_coefficient=0.0 0.0 0.0
 # LAG-EUL FSI
 #ns.FSI_flag=0 0 8
 ns.heatviscconst=0.0 0.0 0.0
