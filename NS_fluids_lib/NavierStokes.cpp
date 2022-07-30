@@ -2497,6 +2497,10 @@ NavierStokes::read_params ()
 		 geometry_is_periodic,geometry_is_any_periodic);
     NS_geometry_coord=geometry_coord;
 
+    if (ParallelDescriptor::IOProcessor()) {
+     std::cout << "NS_geometry_coord= " << NS_geometry_coord << '\n';
+    }
+
     int geometry_is_all_periodic=1;
 
     if (geometry_is_any_periodic==1) {
@@ -10831,7 +10835,8 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
  // visc_coef.  
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*num_materials) {
   std::cout << "ncomp= " <<
-   localMF[CELL_VISC_MATERIAL_MF]->nComp() << " num_materials= " << num_materials << '\n';
+   localMF[CELL_VISC_MATERIAL_MF]->nComp() << 
+   " num_materials= " << num_materials << '\n';
   amrex::Error("cell_visc_material ncomp invalid(1)");
  }
  if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<1)

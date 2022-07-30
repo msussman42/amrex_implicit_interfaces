@@ -8457,15 +8457,12 @@ stop
          Q_plus_I(ii,ii)=Q_plus_I(ii,ii)+one
         enddo
         call abs_value_determinant(Q_plus_I,3,determinant_factor)
-        if (determinant_factor.ge.zero) then
-         if (determinant_factor.gt.zero) then
-          determinant_factor=one/(determinant_factor**(five/six))
-         else if (determinant_factor.eq.zero) then
-          ! do nothing
-         else
-          print *,"determinant_factor invalid"
-          stop
-         endif
+
+        if (determinant_factor.gt.zero) then
+         determinant_factor=one/(determinant_factor**(five/six))
+        else if (determinant_factor.eq.zero) then
+         print *,"determinant_factor must be positive"
+         stop
         else
          print *,"determinant_factor invalid"
          stop
