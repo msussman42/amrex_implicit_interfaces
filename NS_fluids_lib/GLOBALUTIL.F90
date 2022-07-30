@@ -25835,55 +25835,6 @@ endif
 end subroutine get_primary_material
 
 
-subroutine tensor_Heaviside( &
-    dxmin, &
-    im_parm, & ! 0..num_materials-1
-    mask1,mask2, &
-    LS1,LS2, &
-    HVAL)
-use probcommon_module
-IMPLICIT NONE
-
-REAL_T, INTENT(in) :: dxmin
-INTEGER_T, INTENT(in) :: im_parm ! 0..num_materials-1
-REAL_T, INTENT(out) :: HVAL
-INTEGER_T, INTENT(in) :: mask1,mask2
-REAL_T, INTENT(in) :: LS1(num_materials)
-REAL_T, INTENT(in) :: LS2(num_materials)
-INTEGER_T im1,im2
-REAL_T LS_avg
-REAL_T thickness_factor,shift_amount
-
-if ((im_parm.ge.0).and.(im_parm.lt.num_materials)) then
- ! do nothing
-else
- print *,"im_parm invalid"
- stop
-endif
-
-thickness_factor=half
-shift_amount=thickness_factor*dxmin
-
-if ((mask1.eq.0).or.(mask2.eq.0)) then
- HVAL=zero
-else if ((mask1.eq.1).and.(mask2.eq.1)) then
- call get_primary_material(LS1,im1)
- call get_primary_material(LS2,im2)
- if ((im1.eq.im_parm+1).and.(im2.eq.im_parm+1)) then
-  LS_avg=half*(LS1(im_parm+1)+LS2(im_parm+1))-shift_amount
-  HVAL=hs(LS_avg,shift_amount)
- else
-  print *,"im1 or im2 invalid"
-  stop
- endif
-else
- print *,"mask1 or mask2 invalid"
- stop
-endif
-
-end subroutine tensor_Heaviside
-
-
 INTEGER_T function project_option_is_validF(project_option) 
 use probcommon_module
 IMPLICIT NONE
