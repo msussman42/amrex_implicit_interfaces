@@ -1594,8 +1594,6 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
  if (localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error("(localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))");
 
-  // https://ccse.lbl.gov/
-  // https://github.com/AMReX-Codes/amrex/
  bool use_tiling=ns_tiling;
 
   // density, temperature

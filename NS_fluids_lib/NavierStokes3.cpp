@@ -3248,12 +3248,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       } // ilev=finest_level ... level
 
       Real beta=1.0;
-      int velmac_op=OP_INTERPOLATE_BASE;
       int dest_idx=-1;  // update State_Type
 
        // maintain conservation of energy for compressible materials.
       increment_KE_ALL(beta);
-      VELMAC_TO_CELLALL(velmac_op,dest_idx);
+      VELMAC_TO_CELLALL(OP_INTERPOLATE_BASE,dest_idx);
       beta=-1.0;
       increment_KE_ALL(beta);
 
@@ -11719,9 +11718,21 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 
         // note: tensor_advection_updateALL is called before veldiffuseALL.
         // VISCOTEN_MF initialized in NavierStokes::make_viscoelastic_tensor
-	// fort_maketensor called from ::make_viscoelastic_tensor
+	// fort_maketensor called from ::make_viscoelastic_tensor.
 	// We are currently in vel_elastic_ALL
        make_viscoelastic_tensorALL(im);
+
+       if (1==1) {
+        writeSanityCheckData(
+         "VISCOTEN",
+         "VISCOTEN",
+         im,
+         localMF[VISCOTEN_MF]->nComp(),
+         VISCOTEN_MF,
+         -1, // State_Type==-1
+         -1, // data_dir==-1
+         parent->levelSteps(0)); 
+       }
 
         //interpolate Q to CC,XY,XZ,YZ locations.
         // NavierStokes::make_viscoelastic_tensorMACALL is declared in
@@ -11789,12 +11800,11 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
    
    // average down the MAC velocity, set the boundary conditions.
   make_MAC_velocity_consistentALL();
-  int velmac_op=OP_INTERPOLATE_INCREMENT; 
   int dest_idx=-1;   //update State_Type
 
    // declared in: NavierStokes2.cpp
    // increment: State_Type+=interp_mac_to_cell(Umac_new-REGISTER_MARK_MAC)
-  VELMAC_TO_CELLALL(velmac_op,dest_idx);
+  VELMAC_TO_CELLALL(OP_INTERPOLATE_INCREMENT,dest_idx);
 
    //vel_elastic_ALL called from veldiffuseALL
   if (viscoelastic_force_only==0) { 

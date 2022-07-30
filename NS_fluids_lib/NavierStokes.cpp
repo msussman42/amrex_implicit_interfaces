@@ -10523,7 +10523,7 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
 	fill_state_idx,scompBC_map);
  } // scomp_extrap=0..ENUM_NUM_TENSOR_TYPE-1
 
- if (1==0) {
+ if (1==1) {
   int caller_id=10+flux_grid_type;
   writeSanityCheckData(
    "FLUX_MF",
@@ -10611,7 +10611,8 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
  // visc_coef.  
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*num_materials) {
   std::cout << "ncomp= " <<
-   localMF[CELL_VISC_MATERIAL_MF]->nComp() << " num_materials= " << num_materials << '\n';
+   localMF[CELL_VISC_MATERIAL_MF]->nComp() << 
+   " num_materials= " << num_materials << '\n';
   amrex::Error("cell_visc_material ncomp invalid(1)");
  }
  if (localMF[CELL_VISC_MATERIAL_MF]->nGrow()<1)
@@ -10680,7 +10681,7 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
       amrex::Error("tid_current invalid");
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-       // declared in: GODUNOV_3D.F90
+       // fort_maketensor_mac is declared in: GODUNOV_3D.F90
        // viscoelastic_model==0 => FENE-CR
        // viscoelastic_model==1 => Oldroyd B
        // viscoelastic_model==3 => incremental elastic model
@@ -10722,14 +10723,8 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
    } else
     amrex::Error("partid could not be found: make_viscoelastic_tensor");
 
-  } else if (store_elastic_data[im]==0) {
-
-   if (viscoelastic_model[im]!=0)
-    amrex::Error("viscoelastic_model[im]!=0");
-
-  } else
-   amrex::Error("elastic_time/elastic_viscosity invalid");
-
+  } else 
+   amrex::Error("expecting (store_elastic_data[im]==1) ");
 
  } else if (ns_is_rigid(im)==1) {
   amrex::Error("expecting ns_is_rigid(im)==0");

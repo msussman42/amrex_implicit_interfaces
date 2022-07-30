@@ -18817,7 +18817,8 @@ stop
       REAL_T, INTENT(in), target :: maskcoef(DIMV(maskcoef))
       REAL_T, pointer :: maskcoef_ptr(D_DECL(:,:,:))
 
-      REAL_T, target, INTENT(in) :: levelpc(DIMV(levelpc),num_materials*(1+SDIM))
+      REAL_T, target, INTENT(in) :: &
+              levelpc(DIMV(levelpc),num_materials*(1+SDIM))
       REAL_T, pointer :: levelpc_ptr(D_DECL(:,:,:),:)
 
       REAL_T, INTENT(in), target :: xfacefab(DIMV(xfacefab),FACECOMP_NCOMP)
@@ -18837,12 +18838,11 @@ stop
       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T :: i,j,k
       INTEGER_T :: dir_flux,side_flux
-      INTEGER_T :: side_comp
       REAL_T :: xstenMAC(-3:3,SDIM)
       REAL_T :: xsten_flux(-3:3,SDIM)
       INTEGER_T nhalf
       INTEGER_T dircomp
-      INTEGER_T dir_deriv,dir_XD
+      INTEGER_T dir_row,dir_column
       REAL_T, target :: x_MAC_control_volume(SDIM)
       REAL_T DISP_TEN(3,3)
       REAL_T dxmin
@@ -18850,11 +18850,9 @@ stop
       INTEGER_T im_LS
 
       INTEGER_T dir_local
-      INTEGER_T side_local
       REAL_T :: LS_control_volume(num_materials)
-      REAL_T :: LS_right(num_materials)
-      REAL_T :: LS_left(num_materials)
       REAL_T, target :: cell_data_interp(num_materials*(1+SDIM))
+      REAL_T, target :: cell_data_tensor_interp(ENUM_NUM_TENSOR_TYPE)
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
       INTEGER_T, target :: fablo_local(SDIM)
@@ -18863,19 +18861,16 @@ stop
       type(deriv_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
 
-      REAL_T xflux_local(-1:1,SDIM,SDIM)
-      REAL_T yflux_local(-1:1,SDIM,SDIM)
-      REAL_T zflux_local(-1:1,SDIM,SDIM)
-      REAL_T center_flux(SDIM,SDIM)
+      REAL_T xflux_local(0:1,3,3)
+      REAL_T yflux_local(0:1,3,3)
+      REAL_T zflux_local(0:1,3,3)
+      REAL_T center_flux(3,3)
       REAL_T center_hoop_22
 
       REAL_T LS_at_flux_point(2,SDIM,num_materials*(1+SDIM))
-      REAL_T LS_plus_at_flux_point(2,SDIM,num_materials*(1+SDIM))
-      REAL_T LS_minus_at_flux_point(2,SDIM,num_materials*(1+SDIM))
       INTEGER_T mask_flux_point(2,SDIM)
-      INTEGER_T mask_plus_flux_point(2,SDIM)
-      INTEGER_T mask_minus_flux_point(2,SDIM)
       REAL_T x_at_flux_point(2,SDIM,SDIM)
+      REAL_T x_at_flux_point_local(SDIM)
       REAL_T hx,hy,hz,rplus,rminus,rval
       REAL_T LS_clamped
       REAL_T vel_clamped(SDIM)
@@ -18883,25 +18878,19 @@ stop
       INTEGER_T prescribed_flag
       INTEGER_T local_mask
       INTEGER_T mask_control_volume
-      INTEGER_T mask_left,mask_right
       REAL_T force(SDIM)
       REAL_T bodyforce
       REAL_T deninv
       REAL_T XFORCE_local
-      REAL_T Htensor_cen
-      REAL_T Htensor(SDIM,2)
       INTEGER_T box_type_MAC_CV(SDIM)
       INTEGER_T box_type_flux(SDIM)
-      INTEGER_T box_type_adj(SDIM)
       INTEGER_T grid_type_flux
       INTEGER_T grid_type_sanity
-      INTEGER_T grid_type_adj
       INTEGER_T iflux_array(SDIM)
-      INTEGER_T iadj_array(SDIM)
       INTEGER_T iflux,jflux,kflux
-      INTEGER_T iadj,jadj,kadj
       INTEGER_T itensor
       REAL_T local_tensor_data(ENUM_NUM_TENSOR_TYPE)
+      INTEGER_T ii,jj
 
       UMACNEW_ptr=>UMACNEW
 
@@ -19010,7 +18999,8 @@ stop
        if (rzflag.eq.COORDSYS_CARTESIAN) then
         !volume=dx dy dz
         rval=one
-       else if ((rzflag.eq.COORDSYS_RZ).or.(rzflag.eq.COORDSYS_CYLINDRICAL)) then
+       else if ((rzflag.eq.COORDSYS_RZ).or. &
+                (rzflag.eq.COORDSYS_CYLINDRICAL)) then
         !volume=(dtheta/2)*(r_{2}^2 - r_{1}^{2}) dz=dtheta*dz*dr r
         rval=x_MAC_control_volume(1)
        else
@@ -19107,8 +19097,56 @@ stop
 
         ! im_elastic_p1 dominates the center of the MAC control volume.
        if (mask_control_volume.eq.1) then
- 
-        center_hoop_22=zero
+
+        data_out%data_interp=>cell_data_tensor_interp
+        data_in%ncomp=ENUM_NUM_TENSOR_TYPE
+        data_in%scomp=1
+
+        data_in%index_flux(1)=i
+        data_in%index_flux(2)=j
+        if (SDIM.eq.3) then
+         data_in%index_flux(SDIM)=k
+        else if (SDIM.eq.2) then
+         !do nothing
+        else
+         print *,"dimension bust"
+         stop
+        endif
+        data_in%grid_type_flux=force_dir ! dir=0..sdim-1
+        do dir_local=1,SDIM
+         data_in%box_type_flux(dir_local)=0
+        enddo
+        data_in%box_type_flux(force_dir+1)=1
+
+        do dir_local=1,SDIM
+         data_in%box_type_data(dir_local)=0
+        enddo
+        data_in%grid_type_data=-1
+        data_in%disp_data=>MACFLUX_CC
+        data_in%dir_deriv=-1
+
+        call deriv_from_grid_util(data_in,data_out)
+
+        do itensor=1,ENUM_NUM_TENSOR_TYPE
+         local_tensor_data(itensor)=cell_data_tensor_interp(itensor)
+        enddo
+
+        do ii=1,3
+        do jj=1,3
+         center_flux(ii,jj)=zero
+        enddo
+        enddo
+
+        do itensor=1,ENUM_NUM_TENSOR_TYPE
+         call stress_index(itensor,ii,jj)
+         center_flux(ii,jj)=local_tensor_data(itensor)
+        enddo
+        center_flux(2,1)=center_flux(1,2)
+        center_flux(3,1)=center_flux(1,3)
+        center_flux(3,2)=center_flux(2,3)
+
+         ! if 2d, t(3,3)=0 if XY, t(3,3)=2 xd/r if rz, t(3,3)=0 if rt.
+        center_hoop_22=center_flux(3,3)
 
          ! traverse all the flux face centroids associated with the
          ! "force_dir" MAC grid control volume (i,j,k)
@@ -19156,6 +19194,16 @@ stop
          endif
 
          call box_type_to_grid_type(grid_type_flux,box_type_flux)
+
+          ! grid_type_flux=-1,3,4, or 5
+         call gridstenMAC_level(xsten_flux,iflux,jflux,kflux, &
+                 level,nhalf,grid_type_flux)
+         do dir_local=1,SDIM
+          x_at_flux_point(side_flux+1,dir_flux+1,dir_local)= &
+                  xsten_flux(0,dir_local)
+          x_at_flux_point_local(dir_local)= &
+                  xsten_flux(0,dir_local)
+         enddo ! dir_local=1..sdim
        
          do itensor=1,ENUM_NUM_TENSOR_TYPE
           if (grid_type_flux.eq.-1) then
@@ -19187,43 +19235,38 @@ stop
           stop
          endif
 
-         DISP_TEN(1,1)=local_tensor_data(1)
-         DISP_TEN(1,2)=local_tensor_data(2)
-         DISP_TEN(2,2)=local_tensor_data(3)
-         ! if 2d, t(3,3)=0 if XY, t(3,3)=2 xd/r if rz, t(3,3)=0 if rt.
-         DISP_TEN(3,3)=local_tensor_data(4)
-         DISP_TEN(1,3)=zero
-         DISP_TEN(2,3)=zero
-#if (AMREX_SPACEDIM==3)
-         DISP_TEN(1,3)=local_tensor_data(5)
-         DISP_TEN(2,3)=local_tensor_data(6)
-#endif
+         do ii=1,3
+         do jj=1,3
+          DISP_TEN(ii,jj)=zero
+         enddo
+         enddo
+
+          ! if 2d, t(3,3)=0 if XY, t(3,3)=2 xd/r if rz, t(3,3)=0 if rt.
+         do itensor=1,ENUM_NUM_TENSOR_TYPE
+          call stress_index(itensor,ii,jj)
+          DISP_TEN(ii,jj)=local_tensor_data(itensor)
+         enddo
          DISP_TEN(2,1)=DISP_TEN(1,2)
          DISP_TEN(3,1)=DISP_TEN(1,3)
          DISP_TEN(3,2)=DISP_TEN(2,3)
 
-         if (side_flux.eq.0) then
-          side_comp=-1
-         else if (side_flux.eq.1) then 
-          side_comp=1
-         else
-          print *,"side_flux invalid"
-          stop
-         endif 
-         do dir_XD=1,SDIM
-          do dir_deriv=1,SDIM
+         do dir_row=1,3
+          do dir_column=1,3
            if (dir_flux.eq.0) then
-            xflux_local(side_comp,dir_XD,dir_deriv)=DISP_TEN(dir_XD,dir_deriv)
+            xflux_local(side_flux,dir_row,dir_column)= &
+              DISP_TEN(dir_row,dir_column)
            else if (dir_flux.eq.1) then
-            yflux_local(side_comp,dir_XD,dir_deriv)=DISP_TEN(dir_XD,dir_deriv)
+            yflux_local(side_flux,dir_row,dir_column)= &
+              DISP_TEN(dir_row,dir_column)
            else if ((dir_flux.eq.2).and.(SDIM.eq.3)) then
-            zflux_local(side_comp,dir_XD,dir_deriv)=DISP_TEN(dir_XD,dir_deriv)
+            zflux_local(side_flux,dir_row,dir_column)= &
+              DISP_TEN(dir_row,dir_column)
            else
             print *,"dir_flux invalid"
             stop
            endif
-          enddo ! dir_deriv
-         enddo ! dir_XD
+          enddo ! dir_column
+         enddo ! dir_row
 
          data_out%data_interp=>cell_data_interp
 
@@ -19257,7 +19300,7 @@ stop
 
          do im_LS=1,num_materials*(1+SDIM)
           LS_at_flux_point(side_flux+1,dir_flux+1,im_LS)= &
-                  cell_data_interp(im_LS)
+             cell_data_interp(im_LS)
          enddo
 
          call get_primary_material(cell_data_interp,local_mask)
@@ -19270,222 +19313,28 @@ stop
           print *,"local_mask invalid"
           stop
          endif
-         mask_flux_point(side_flux+1,dir_flux+1)=local_mask
-
-          ! dir=0..sdim-1 
-         call gridstenMAC_level(xsten_flux,iflux,jflux,kflux, &
-                 level,nhalf,grid_type_flux)
-
-         do dir_local=1,SDIM
-          x_at_flux_point(side_flux+1,dir_flux+1,dir_local)= &
-                  xsten_flux(0,dir_local)
-         enddo
-
-          ! if the level set function changes sign across a 
-          ! (nonconvectional) flux face,
-          ! then we ignore the elastic force.
-         iadj_array(1)=iflux
-         iadj_array(2)=jflux
-         if (SDIM.eq.3) then
-          iadj_array(SDIM)=kflux
-         endif
-         do dir_local=1,SDIM
-          box_type_adj(dir_local)=box_type_flux(dir_local)
-         enddo
-
-          ! first, get the index for the adjacent element on the high
-          ! side of the flux face.
-          ! Beware of the distinction between "dir_flux" and
-          ! "force_dir".
-         if (box_type_flux(dir_flux+1).eq.1) then
-          box_type_adj(dir_flux+1)=0
-         else if (box_type_flux(dir_flux+1).eq.0) then
-          box_type_adj(dir_flux+1)=1
-          iadj_array(dir_flux+1)=iadj_array(dir_flux+1)+1
-         else
-          print *,"box_type_adj invalid"
-          stop
-         endif
-
-         iadj=iadj_array(1)
-         jadj=iadj_array(2)
-         if (SDIM.eq.3) then
-          kadj=iadj_array(SDIM)
-         else
-          kadj=0
-         endif
-
-         call box_type_to_grid_type(grid_type_adj,box_type_adj)
-         if (grid_type_adj.eq.force_dir) then
+         ! LS>0 if clamped
+         call SUB_clamped_LS(x_at_flux_point_local,cur_time,LS_clamped, &
+          vel_clamped,temperature_clamped,prescribed_flag,dx)
+         if (LS_clamped.ge.zero) then
+          local_mask=0
+         else if (LS_clamped.lt.zero) then
           ! do nothing
          else
-          print *,"expecting the adjoining LS to live on the same MAC grid"
+          print *,"LS_clamped invalid"
           stop
          endif
 
-         data_out%data_interp=>cell_data_interp
-
-          !type(deriv_from_grid_parm_type) :: data_in
-         data_in%ncomp=num_materials*(1+SDIM)
-         data_in%scomp=1
-
-         data_in%index_flux(1)=iadj
-         data_in%index_flux(2)=jadj
-         if (SDIM.eq.3) then
-          data_in%index_flux(SDIM)=kadj
-         else if (SDIM.eq.2) then
-          !do nothing
-         else
-          print *,"dimension bust"
-          stop
-         endif
-         
-         data_in%grid_type_flux=grid_type_adj
-         do dir_local=1,SDIM
-          data_in%box_type_flux(dir_local)=box_type_adj(dir_local)
-         enddo
-
-         do dir_local=1,SDIM
-          data_in%box_type_data(dir_local)=0
-         enddo
-         data_in%grid_type_data=-1
-         data_in%disp_data=>levelpc
-         data_in%dir_deriv=-1
-
-         call deriv_from_grid_util(data_in,data_out)
-
-         do im_LS=1,num_materials*(1+SDIM)
-          LS_plus_at_flux_point(side_flux+1,dir_flux+1,im_LS)= &
-                  cell_data_interp(im_LS)
-         enddo
-         call get_primary_material(cell_data_interp,local_mask)
-         if ((local_mask.eq.im_elastic_p1).and. &
-             (cell_data_interp(im_elastic_p1).gt.zero)) then
-          local_mask=1
-         else if ((local_mask.ge.1).and.(local_mask.le.num_materials)) then
-          local_mask=0
-         else
-          print *,"local_mask invalid"
-          stop
-         endif
-         mask_plus_flux_point(side_flux+1,dir_flux+1)=local_mask
-
-         data_in%index_flux(dir_flux+1)=data_in%index_flux(dir_flux+1)-1
-         call deriv_from_grid_util(data_in,data_out)
-
-         do im_LS=1,num_materials*(1+SDIM)
-          LS_minus_at_flux_point(side_flux+1,dir_flux+1,im_LS)= &
-                  cell_data_interp(im_LS)
-         enddo
-         call get_primary_material(cell_data_interp,local_mask)
-         if ((local_mask.eq.im_elastic_p1).and. &
-             (cell_data_interp(im_elastic_p1).gt.zero)) then
-          local_mask=1
-         else if ((local_mask.ge.1).and.(local_mask.le.num_materials)) then
-          local_mask=0
-         else
-          print *,"local_mask invalid"
-          stop
-         endif
-         mask_minus_flux_point(side_flux+1,dir_flux+1)=local_mask
-
-          ! if 2d, t(3,3)=0 if XY, t(3,3)=2 xd/r if rz, t(3,3)=0 if rt.
-         center_hoop_22=center_hoop_22+DISP_TEN(3,3)
+         mask_flux_point(side_flux+1,dir_flux+1)=local_mask
 
         enddo ! side_flux=0..1
         enddo ! dir_flux=0..sdim-1
 
-         ! if 2d, t(3,3)=0 if XY, t(3,3)=2 xd/r if rz, t(3,3)=0 if rt.
-        center_hoop_22=center_hoop_22/(2*SDIM)
-
          ! divergence of fluxes goes here.
-         ! first we find fluxes at the MAC grid location by way of 
-         ! averaging
-        do dir_XD=1,SDIM
-         do dir_deriv=1,SDIM
-          center_flux(dir_XD,dir_deriv)=zero
-
-          xflux_local(0,dir_XD,dir_deriv)=half*( &
-            xflux_local(-1,dir_XD,dir_deriv)+ &
-            xflux_local(1,dir_XD,dir_deriv))
-          center_flux(dir_XD,dir_deriv)= &
-            center_flux(dir_XD,dir_deriv)+ &
-            xflux_local(0,dir_XD,dir_deriv)
-
-          yflux_local(0,dir_XD,dir_deriv)=half*( &
-            yflux_local(-1,dir_XD,dir_deriv)+ &
-            yflux_local(1,dir_XD,dir_deriv))
-          center_flux(dir_XD,dir_deriv)= &
-            center_flux(dir_XD,dir_deriv)+ &
-            yflux_local(0,dir_XD,dir_deriv)
-
-          if (SDIM.eq.3) then
-           zflux_local(0,dir_XD,dir_deriv)=half*( &
-            zflux_local(-1,dir_XD,dir_deriv)+ &
-            zflux_local(1,dir_XD,dir_deriv))
-           center_flux(dir_XD,dir_deriv)= &
-            center_flux(dir_XD,dir_deriv)+ &
-            zflux_local(0,dir_XD,dir_deriv)
-          else if (SDIM.eq.2) then
-           ! do nothing
-          else
-           print *,"dimension bust"
-           stop
-          endif
-          center_flux(dir_XD,dir_deriv)= &
-           center_flux(dir_XD,dir_deriv)/SDIM
-         enddo ! dir_deriv
-        enddo ! dir_XD
 
          ! [n dot tau dot n] = - sigma kappa
          ! [n dot tau dot tj] = 0
     
-         ! the Heaviside function is biased "alpha dx" units into the 
-         ! viscoelastic material. 
-         ! declared in: GLOBALUTIL.F90 
-        call tensor_Heaviside( &
-          dxmin, &
-          im_elastic, & ! 0..num_materials-1
-          mask_control_volume,mask_control_volume, &
-          LS_control_volume,LS_control_volume, &
-          Htensor_cen)
-
-        if ((Htensor_cen.ge.zero).and.(Htensor_cen.le.one)) then
-         ! do nothing
-        else
-         print *,"Htensor_cen invalid"
-         stop
-        endif
-
-         ! find "H" at the flux locations.
-        do dir_local=1,SDIM
-        do side_local=1,2
-
-         mask_left=mask_minus_flux_point(side_local,dir_local)
-         mask_right=mask_plus_flux_point(side_local,dir_local)
-         do im_LS=1,num_materials
-          LS_left(im_LS)=LS_minus_at_flux_point(side_local,dir_local,im_LS)
-          LS_right(im_LS)=LS_plus_at_flux_point(side_local,dir_local,im_LS)
-         enddo
-
-          ! declared in: GLOBALUTIL.F90
-         call tensor_Heaviside( &
-          dxmin, &
-          im_elastic, & ! 0..num_materials-1
-          mask_left,mask_right, &
-          LS_left,LS_right, &
-          Htensor(dir_local,side_local))
-
-         if ((Htensor(dir_local,side_local).ge.zero).and. &
-             (Htensor(dir_local,side_local).le.one)) then
-          ! do nothing
-         else
-          print *,"Htensor(dir_local,side_local) invalid"
-          stop
-         endif
-        enddo ! side_local=1,2
-        enddo ! dir_local=1,SDIM
-
          !x_at_flux_point(side_flux+1,dir_flux+1,dir_local)
 
         dir_local=1
@@ -19507,7 +19356,8 @@ stop
           !volume=dx dy dz
           rplus=one
           rminus=one
-         else if ((rzflag.eq.COORDSYS_RZ).or.(rzflag.eq.COORDSYS_CYLINDRICAL)) then
+         else if ((rzflag.eq.COORDSYS_RZ).or. &
+                  (rzflag.eq.COORDSYS_CYLINDRICAL)) then
           ! areax=dz * dtheta * r
           ! areaz=(dtheta/2)*(r_{2}^2 - r_{1}^{2})=dtheta*dr*r
           ! areay=dr * dz
@@ -19522,9 +19372,9 @@ stop
           stop
          endif
 
-         do dir_XD=1,SDIM
+         do dir_row=1,SDIM
 
-          force(dir_XD)=zero
+          force(dir_row)=zero
 
           dir_local=1
 
@@ -19532,9 +19382,11 @@ stop
               (rminus.ge.zero).and. &
               (rval.gt.zero).and. &
               (hx.gt.zero)) then
-           force(dir_XD)=force(dir_XD)+ &
-            (rplus*Htensor(dir_local,2)*xflux_local(1,dir_XD,dir_local)- &
-             rminus*Htensor(dir_local,1)*xflux_local(-1,dir_XD,dir_local))/ &
+           force(dir_row)=force(dir_row)+ &
+            (rplus*mask_flux_point(2,dir_local)* &
+                   xflux_local(1,dir_row,dir_local)- &
+             rminus*mask_flux_point(1,dir_local)* &
+                    xflux_local(0,dir_row,dir_local))/ &
             (rval*hx)
           else
            print *,"rplus=",rplus
@@ -19547,9 +19399,9 @@ stop
 
           if (hy.gt.zero) then
            dir_local=2
-           force(dir_XD)=force(dir_XD)+ &
-            (Htensor(dir_local,2)*yflux_local(1,dir_XD,dir_local)- &
-             Htensor(dir_local,1)*yflux_local(-1,dir_XD,dir_local))/hy
+           force(dir_row)=force(dir_row)+ &
+            (mask_flux_point(2,dir_local)*yflux_local(1,dir_row,dir_local)- &
+             mask_flux_point(1,dir_local)*yflux_local(0,dir_row,dir_local))/hy
           else
            print *,"hy=",hy
            print *,"hy invalid"
@@ -19559,9 +19411,9 @@ stop
           if (SDIM.eq.3) then
            if (hz.gt.zero) then
             dir_local=SDIM
-            force(dir_XD)=force(dir_XD)+ &
-             (Htensor(dir_local,2)*zflux_local(1,dir_XD,dir_local)- &
-              Htensor(dir_local,1)*zflux_local(-1,dir_XD,dir_local))/hz
+            force(dir_row)=force(dir_row)+ &
+             (mask_flux_point(2,dir_local)*zflux_local(1,dir_row,dir_local)- &
+              mask_flux_point(1,dir_local)*zflux_local(0,dir_row,dir_local))/hz
            else
             print *,"hz=",hz
             print *,"hz invalid"
@@ -19569,7 +19421,7 @@ stop
            endif
           endif
 
-         enddo ! dir_XD=1..sdim
+         enddo ! dir_row=1..sdim
                    
          if (rzflag.eq.COORDSYS_CARTESIAN) then
            ! do nothing
@@ -19581,7 +19433,7 @@ stop
           endif
            ! -T33/r
            ! center_hoop_22=2 * xdisp/r
-          dir_XD=1
+          dir_row=1
           if (rval.gt.zero) then
            bodyforce=-center_hoop_22/rval
           else
@@ -19595,11 +19447,11 @@ stop
            print *,"bodyforce overflow bodyforce,rval:",bodyforce,rval
            stop
           endif
-          force(dir_XD)=force(dir_XD)+Htensor_cen*bodyforce
+          force(dir_row)=force(dir_row)+bodyforce
 
          else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
           ! -T22/r
-          dir_XD=1
+          dir_row=1
 
           if (rval.gt.zero) then
            bodyforce=-center_flux(2,2)/rval
@@ -19608,7 +19460,7 @@ stop
            stop
           endif
 
-          force(dir_XD)=force(dir_XD)+Htensor_cen*bodyforce
+          force(dir_row)=force(dir_row)+bodyforce
          else
           print *,"rzflag invalid"
           stop
@@ -19623,7 +19475,7 @@ stop
           endif
           ! do nothing
          else if (rzflag.eq.COORDSYS_CYLINDRICAL) then ! T12/r
-          dir_XD=2
+          dir_row=2
 
           if (rval.gt.zero) then
            bodyforce=center_flux(1,2)/rval
@@ -19632,7 +19484,7 @@ stop
            stop
           endif
 
-          force(dir_XD)=force(dir_XD)+Htensor_cen*bodyforce
+          force(dir_row)=force(dir_row)+bodyforce
          else
           print *,"rzflag invalid"
           stop
@@ -19642,28 +19494,28 @@ stop
           print *,"im_elastic should not be an is_prescribed material"
           stop
          else if (is_prescribed(im_elastic_p1).eq.0) then
-          do dir_XD=1,SDIM
-           force(dir_XD)=force(dir_XD)*dt
+          do dir_row=1,SDIM
+           force(dir_row)=force(dir_row)*dt
           enddo
          else
           print *,"is_prescribed invalid"
           stop
          endif
 
-         do dir_XD=1,SDIM
+         do dir_row=1,SDIM
           deninv=xfacefab(D_DECL(i,j,k),FACECOMP_FACEDEN+1)
 
           if (deninv.ge.zero) then 
-           if (abs(force(dir_XD)).lt.OVERFLOW_CUTOFF) then
+           if (abs(force(dir_row)).lt.OVERFLOW_CUTOFF) then
             ! do nothing
            else
-            print *,"elastic overflow dir_XD,force ",dir_XD,force(dir_XD)
+            print *,"elastic overflow dir_row,force ",dir_row,force(dir_row)
             print *,"i,j,k,deninv ",i,j,k,deninv
             stop
            endif
  
-           if (dir_XD.eq.force_dir+1) then
-            XFORCE_local=force(dir_XD)*deninv
+           if (dir_row.eq.force_dir+1) then
+            XFORCE_local=force(dir_row)*deninv
             UMACNEW(D_DECL(i,j,k))=UMACNEW(D_DECL(i,j,k))+XFORCE_local
            endif
 
@@ -19671,7 +19523,7 @@ stop
            print *,"deninv invalid"
            stop
           endif
-         enddo ! dir_XD = 1 ..sdim
+         enddo ! dir_row = 1 ..sdim
 
         else
          print *,"hx,hy, or hz invalid"
