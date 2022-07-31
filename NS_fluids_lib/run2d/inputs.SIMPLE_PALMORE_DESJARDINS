@@ -142,7 +142,6 @@ ns.speciesconst=0.22132139799031397 0.20030719855787860 # case 2
 ns.viscconst=0.0 0.0 # CODY ~ (not used, must be zero)
 ns.elastic_viscosity=0.0 0.0 
 ns.viscoelastic_model=0 0 0 0
-ns.added_weight=1.0 1.0  # default
 ns.elastic_time=0.0 0.0 
 # 0.001 is the ambient gas density.
 # The computer program stores the mixture density=

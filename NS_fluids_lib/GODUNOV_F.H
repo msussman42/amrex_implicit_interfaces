@@ -739,7 +739,6 @@ extern "C"
    void fort_vfrac_split(
      int* nprocessed,
      int* tid,
-     Real* added_weight,
      Real* density_floor,
      Real* density_ceiling,
      int* solidheat_flag,

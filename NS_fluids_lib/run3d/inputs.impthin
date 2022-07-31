@@ -37,7 +37,7 @@
 #  if |y|<yc
 #   if (d1>0)
 #    d1=-sqrt( (yc-|y|)^2
-#   else
+#   otherwise
 #    d1=-sqrt( (yc-|y|)^2 + d1^2 )
 #   endif
 #  endif

@@ -69,7 +69,7 @@ amr.blocking_factor = 8 8 8 8 8 8 8    # block factor in grid generation
 # directionally split semi-Lagrangian method. This is to insure
 # positive definiteness of the configuration tensor.  
 # note: log conformation approach does not avoid the problem since
-# A=exp(S), A'=exp(S)S'=A S' , S'=A^{-1}A' , |S'|_2 >> 1 if A close to
+# A=exp(S), A'=exp(S)S'=A S' , S'=A^{-1}A' , |S'|_2 >> 1 given A close to
 # indefinite.
 amr.space_blocking_factor = 1 1 1 1 1 1
 amr.time_blocking_factor=1
@@ -133,22 +133,22 @@ ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=36
 
-# if first material and Carreau_beta==0 for first material,
+# given first material and Carreau_beta==0 for first material,
 #  probtype==2, axis_dir>0, then 
 #  "call viscosity(axis_dir,visc(i,j),shear)"
 #  VISCOSITY=visc_coef * visc(i,j)
 # otherwise:
-#  if Carreau_beta==0, then
+#  given Carreau_beta==0, then
 #   VISCOSITY=visc_coef * viscconst
-#  else if (Carreau_beta>0) then
-#   if visco-elastic then
+#  otherwise given (Carreau_beta>0) then
+#   given visco-elastic then
 #    VISCOSITY=visc_coef * ( etaL0-etaP0+ 
 #     etaP0*(1+(beta*gamma_dot)**alpha)**( (n-1)/alpha )  )
 #    =
 #    VISCOSITY=visc_coef * ( etaS+ 
 #     etaP0*(1+(beta*gamma_dot)**alpha)**( (n-1)/alpha )  )
 #
-#   else
+#   otherwise
 #    VISCOSITY=visc_coef * (
 #      mu_inf + (etaL0-mu_inf)* 
 #      (1+(beta*gamma_dot)**alpha)**((n-1)/alpha) )
@@ -192,7 +192,6 @@ ns.Carreau_alpha=2.0 0.0
 ns.Carreau_beta=1.0 0.0
 ns.Carreau_n=0.5 0.0
 
-ns.added_weight=1000.0 1.0
 
 #ns.mem_debug = 1
 #ns.v = 1

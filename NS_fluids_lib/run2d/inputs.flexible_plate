@@ -229,9 +229,6 @@ ns.viscoelastic_model=0 0 7
 ns.viscconst=8.9e-4 0.0000181 1.0e-3 #  MKS
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng
 ns.denconst=997.0 1.25 1000.0 
-#12,13,23
-ns.denconst_interface=0.0 1000.0 1000.0 
-ns.added_weight=1.0 1.0 1000.0
 ns.pressure_error_cutoff=0.0 0.0 0.0
 ns.tempconst=293.0 293.0 293.0
 # ----------------  PROBLEM DEPENDENT INPUTS

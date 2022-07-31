@@ -299,7 +299,6 @@ ns.viscconst=0.0179 0.000172 10.0 100.0 # dimensional
 # ns.viscconst=0.02 0.0001 1.0 1.0 # dimensional before
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
-ns.added_weight=1.0 1.0 1.0 1.0
 ns.elastic_time=0.0 0.0 0.0 0.0
 ns.denconst=0.99984 0.001292 0.917 8.96
 # 0 fluid, tessellating (default)
