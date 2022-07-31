@@ -12950,7 +12950,6 @@ stop
       subroutine fort_vfrac_split( &
        nprocessed, &
        tid, &
-       added_weight, &
        density_floor, &
        density_ceiling, &
        solidheat_flag, &
@@ -13143,7 +13142,6 @@ stop
     
       REAL_T, INTENT(in) :: density_floor(num_materials)
       REAL_T, INTENT(in) :: density_ceiling(num_materials)
-      REAL_T, INTENT(in) :: added_weight(num_materials)
 
       INTEGER_T, INTENT(in) :: velbc(SDIM,2)
 
@@ -13406,10 +13404,6 @@ stop
        if ((density_ceiling(im).le.zero).or. &
            (density_ceiling(im).lt.fort_denconst(im))) then
         print *,"density_ceiling invalid"
-        stop
-       endif
-       if (added_weight(im).le.zero) then
-        print *,"added_weight invalid"
         stop
        endif
 
@@ -14050,7 +14044,7 @@ stop
                   donate_data= &
                    conserve(D_DECL(idonate,jdonate,kdonate), &
                             CISLCOMP_STATES+dencomp_data) 
-                  massdepart_mom=donate_data*added_weight(im)
+                  massdepart_mom=donate_data
 
                   if (massdepart_mom.gt.zero) then
                    ! do nothing
@@ -14065,7 +14059,7 @@ stop
                   endif
 
                   ! a few lines before:
-                  !   massdepart_mom=donate_data*added_weight(im)
+                  !   massdepart_mom=donate_data
                   massdepart_mom=massdepart_mom*multi_volume_grid(im)
 
                   mom2(veldir)=massdepart_mom*donate_data_MAC(veldir)
@@ -14513,7 +14507,7 @@ stop
               stop
              endif
              massdepart=donate_density
-             massdepart_mom=donate_density*added_weight(im)
+             massdepart_mom=donate_density
 
              if (massdepart.gt.zero) then
               ! do nothing

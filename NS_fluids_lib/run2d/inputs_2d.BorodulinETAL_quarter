@@ -215,7 +215,6 @@ ns.viscconst=0.010016 0.0 # dynamic viscosity mu  (kinematic is mu/rho)CGS
 #ns.cancel_advection=1
 ns.elastic_viscosity=0.0 0.0 
 ns.viscoelastic_model=0 0 0 0
-ns.added_weight=1.0 1.0  # default
 ns.elastic_time=0.0 0.0 
 # 0.001 is the ambient gas density.
 # The computer program stores the mixture density=

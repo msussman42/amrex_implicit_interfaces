@@ -1,10 +1,6 @@
 max_step  = 8000   # maximum timestep
 #max_step  =  2    # maximum timestep
 stop_time =  0.5  # maximum problem time SHORT
-
-# ------------------ Dimention version 08/02/18 ---------------
-# ------------------  INPUTS TO CLASS AMR ---------------------
-# set up for bubble
 # 3D
 #geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 # 2D
@@ -19,7 +15,6 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  6.0 30.0    # D* 4 4 10
 
-# 0=Sussman and Puckett algorithm 
 # 1=EILE (default), -1=Weymouth Yue
 # 2=always EI   3=always LE
 ns.EILE_flag=-1
@@ -82,8 +77,8 @@ amr.blocking_factor = 8 8 2    # block factor in grid generation
 # directionally split semi-Lagrangian method. This is to insure
 # positive definiteness of the configuration tensor.  
 # note: log conformation approach does not avoid the problem since
-# A=exp(S), A'=exp(S)S'=A S' , S'=A^{-1}A' , |S'|_2 >> 1 if A close to
-# indefinite.
+# A=exp(S), A'=exp(S)S'=A S' , S'=A^{-1}A' , |S'|_2 >> 1, given that
+# A close to indefinite.
 amr.space_blocking_factor = 1 1 1 1 1 1
 amr.time_blocking_factor=1
 ns.num_SDC_outer_sweeps=1
@@ -146,22 +141,22 @@ ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=36
 
-# if first material and Carreau_beta==0 for first material,
+# given (a) first material and (b) Carreau_beta==0 for first material,
 #  probtype==2, axis_dir>0, then 
 #  "call viscosity(axis_dir,visc(i,j),shear)"
 #  VISCOSITY=visc_coef * visc(i,j)
 # otherwise:
-#  if Carreau_beta==0, then
+#  given Carreau_beta==0, then
 #   VISCOSITY=visc_coef * viscconst
-#  else if (Carreau_beta>0) then
-#   if visco-elastic then
+#  alternatively, given (Carreau_beta>0) then
+#   given visco-elastic then
 #    VISCOSITY=visc_coef * ( etaL0-etaP0+ 
 #     etaP0*(1+(beta*gamma_dot)**alpha)**( (n-1)/alpha )  )
 #    =
 #    VISCOSITY=visc_coef * ( etaS+ 
 #     etaP0*(1+(beta*gamma_dot)**alpha)**( (n-1)/alpha )  )
 #
-#   else
+#   alternatively
 #    VISCOSITY=visc_coef * (
 #      mu_inf + (etaL0-mu_inf)* 
 #      (1+(beta*gamma_dot)**alpha)**((n-1)/alpha) )
@@ -205,7 +200,6 @@ ns.Carreau_beta=1.0 0.0
 ns.Carreau_n=0.5 0.0
 
 #TUNABLE
-ns.added_weight=1000.0 1.0
 
 #ns.mem_debug = 1
 #ns.v = 1

@@ -1,5 +1,5 @@
 # Shetabivash, Dolatabadi, Paraschivoiu, JCP 2020 test problem
-max_step  =  9999999    # maximum timestep
+max_step  = 999999    # maximum timestep
 
 stop_time = 20.0
 
@@ -59,7 +59,7 @@ amr.n_error_buf     = 4 4 4 4 # number of buffer cells in error est
 amr.grid_eff        = 0.8     # what constitutes an efficient grid
 ns.ns_tiling=false
 amr.blocking_factor = 8 8 8 8  # block factor in grid generation
-amr.check_int       = 500   
+amr.check_int       = 500
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 200 # 200
@@ -68,7 +68,7 @@ amr.plot_file       = plt
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 1024
 amr.file_name_digits=7
-#amr.restart         = chk0137500
+#amr.restart         = chk0000750
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -102,9 +102,9 @@ ns.fixed_dt_scales=0.0 0.0 0.0
 #triple point: (silicone) theta_liq=60.0, theta_ice=132.0, theta_gas=168.0
 #contact line: theta_L_initial=45 degrees
 # LG,LI,LS,IG,GS,SI  (SI not used)
-ns.tension=0.831 0.232 0.243 0.968 0.831 0.243
+#ns.tension=0.831 0.232 0.243 0.968 0.831 0.243
 # if theta_L_initial=33 degrees then:
-#ns.tension=0.831 0.232 0.134 0.968 0.831 0.243
+ns.tension=0.831 0.232 0.134 0.968 0.831 0.243
 
 #ns.unscaled_min_curvature_radius=10.0
 

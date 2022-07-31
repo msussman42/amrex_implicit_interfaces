@@ -141,7 +141,7 @@ ns.probtype=36
 # otherwise:
 #  if Carreau_beta==0, then
 #   VISCOSITY=visc_coef * viscconst
-#  else if (Carreau_beta>0) then
+#  otherwise if (Carreau_beta>0) then
 #   if visco-elastic then
 #    VISCOSITY=visc_coef * ( etaL0-etaP0+ 
 #     etaP0*(1+(beta*gamma_dot)**alpha)**( (n-1)/alpha )  )
@@ -149,7 +149,7 @@ ns.probtype=36
 #    VISCOSITY=visc_coef * ( etaS+ 
 #     etaP0*(1+(beta*gamma_dot)**alpha)**( (n-1)/alpha )  )
 #
-#   else
+#   otherwise
 #    VISCOSITY=visc_coef * (
 #      mu_inf + (etaL0-mu_inf)* 
 #      (1+(beta*gamma_dot)**alpha)**((n-1)/alpha) )
@@ -192,7 +192,6 @@ ns.Carreau_alpha=2.0 0.0
 ns.Carreau_beta=1.0 0.0
 ns.Carreau_n=0.5 0.0
 
-ns.added_weight=1000.0 1.0
 
 #ns.mem_debug = 1
 #ns.v = 1

@@ -238,7 +238,6 @@ ns.speciesviscconst=0.0 0.282 0.0 0.0
 ns.viscconst=0.02 0.0001 1.0 1.0 # dimensional
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
-ns.added_weight=1.0 1.0 1.0 1.0
 ns.elastic_time=0.0 0.0 0.0 0.0
 ns.denconst=1.0 0.001 0.934 0.934
 ns.FSI_flag=0 0 3 1  # ice is a very viscous fluid

@@ -775,9 +775,6 @@ Vector<Real> NavierStokes::denconst_interface;
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
 
-// passed to fort_mac_to_cell, fort_cell_to_mac, fort_vfrac_split
-Vector<Real> NavierStokes::added_weight; // def=1.0
-
 Vector<Real> NavierStokes::stiffPINF;
 Vector<Real> NavierStokes::prerecalesce_stiffCP;  // def=4.1855E+7
 Vector<Real> NavierStokes::prerecalesce_stiffCV;  // def=4.1855E+7
@@ -3473,11 +3470,6 @@ NavierStokes::read_params ()
     pp.queryAdd("stokes_flow",stokes_flow);
     pp.queryAdd("cancel_advection",cancel_advection);
 
-    added_weight.resize(num_materials);
-    for (int i=0;i<num_materials;i++) 
-     added_weight[i]=1.0;
-    pp.queryAdd("added_weight",added_weight,num_materials);
-
     for (int i=0;i<(num_species_var+1)*num_materials;i++) {
      speciesconst[i]=0.0;
      speciesviscconst[i]=0.0;
@@ -4890,7 +4882,6 @@ NavierStokes::read_params ()
       std::cout << "stiffCP i=" << i << " " << stiffCP[i] << '\n';
       std::cout << "stiffCV i=" << i << " " << stiffCV[i] << '\n';
       std::cout << "stiffGAMMA i=" << i << " " << stiffGAMMA[i] << '\n';
-      std::cout << "added_weight i=" << i << " " << added_weight[i] << '\n';
       std::cout << "denconst i=" << i << " " << denconst[i] << '\n';
       std::cout << "density_floor i=" << i << " " << density_floor[i] << '\n';
       std::cout << "density_ceiling i="<<i<<" "<< density_ceiling[i] << '\n';
@@ -16206,7 +16197,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &nparts,
       &nparts_def,
       im_solid_map_ptr,
-      added_weight.dataPtr(),
       blob_array.dataPtr(),
       &blob_array_size,
       &num_colors,
@@ -16329,7 +16319,6 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &nparts,
       &nparts_def,
       im_solid_map_ptr,
-      added_weight.dataPtr(),
       &level, 
       &finest_level,
       &project_option_visc,
@@ -16915,7 +16904,6 @@ NavierStokes::split_scalar_advection() {
   fort_vfrac_split(
    &nprocessed[tid_current],
    &tid_current,
-   added_weight.dataPtr(),
    density_floor.dataPtr(),
    density_ceiling.dataPtr(),
    &solidheat_flag, //0==diffuse in solid 1==dirichlet 2==neumann

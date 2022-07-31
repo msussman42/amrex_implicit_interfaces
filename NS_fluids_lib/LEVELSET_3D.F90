@@ -10640,7 +10640,6 @@ stop
        nparts, &
        nparts_def, &
        im_solid_map, &
-       added_weight, &
        level, &
        finest_level, &
        project_option, &
@@ -10714,7 +10713,6 @@ stop
       INTEGER_T, INTENT(in) :: nparts
       INTEGER_T, INTENT(in) :: nparts_def
       INTEGER_T, INTENT(in) :: im_solid_map(nparts_def)
-      REAL_T, INTENT(in) :: added_weight(num_materials)
       INTEGER_T, INTENT(in) :: nsolve
       INTEGER_T, INTENT(in) :: homflag
       INTEGER_T, INTENT(in) :: level,finest_level
@@ -11004,12 +11002,6 @@ stop
         ! do nothing
        else
         print *,"imattype invalid fort_mac_to_cell"
-        stop
-       endif
-       if (added_weight(im).gt.zero) then
-        ! do nothing
-       else
-        print *,"added_weight invalid"
         stop
        endif
       enddo ! im=1..num_materials
@@ -11936,13 +11928,7 @@ stop
             print *,"side invalid"
             stop
            endif
-           if (added_weight(im).gt.zero) then
-            mass_side(side)=mass_side(side)+ &
-             ASIDE(side,sidecomp)*added_weight(im) 
-           else
-            print *,"added_weight invalid"
-            stop
-           endif
+           mass_side(side)=mass_side(side)+ASIDE(side,sidecomp) 
           enddo ! im=1..num_materials
 
          enddo ! side=1..2
@@ -12813,7 +12799,6 @@ stop
        nparts, &
        nparts_def, &
        im_solid_map, &
-       added_weight, &
        blob_array, &
        blob_array_size, &
        num_colors, &
@@ -12842,7 +12827,6 @@ stop
       INTEGER_T, INTENT(in) :: num_colors
       REAL_T, INTENT(in) :: blob_array(blob_array_size)
         
-      REAL_T, INTENT(in) :: added_weight(num_materials)
       INTEGER_T, INTENT(in) :: slab_step
       INTEGER_T, INTENT(in) :: operation_flag
       INTEGER_T, INTENT(in) :: energyflag
@@ -13342,13 +13326,6 @@ stop
       endif
 
       do im=1,num_materials
-
-       if (added_weight(im).gt.zero) then
-        ! do nothing
-       else
-        print *,"added_weight invalid"
-        stop
-       endif
 
        if (fort_denconst(im).gt.zero) then
         ! do nothing
@@ -13932,13 +13909,6 @@ stop
                  ! do nothing
                 else
                  print *,"DMface invalid"
-                 stop
-                endif
-
-                if (added_weight(im).gt.zero) then
-                 DMface=DMface*added_weight(im)
-                else
-                 print *,"added_weight invalid"
                  stop
                 endif
 

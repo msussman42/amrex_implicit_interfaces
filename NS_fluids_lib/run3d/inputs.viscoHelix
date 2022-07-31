@@ -213,7 +213,6 @@ ns.Carreau_n=1 1 0.0
 # uncoupled_viscosity=1 => div (mu grad U)
 ns.uncoupled_viscosity=1
 
-#ns.added_weight=1000.0 1.0 1.0
 
 #ns.mem_debug = 1
 #ns.v = 1
