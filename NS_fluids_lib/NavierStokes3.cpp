@@ -11722,7 +11722,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 	// We are currently in vel_elastic_ALL
        make_viscoelastic_tensorALL(im);
 
-       if (1==1) {
+       if (1==0) {
         writeSanityCheckData(
          "VISCOTEN",
          "VISCOTEN",
