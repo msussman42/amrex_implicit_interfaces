@@ -10523,7 +10523,7 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
 	fill_state_idx,scompBC_map);
  } // scomp_extrap=0..ENUM_NUM_TENSOR_TYPE-1
 
- if (1==1) {
+ if (1==0) {
   int caller_id=10+flux_grid_type;
   writeSanityCheckData(
    "FLUX_MF",

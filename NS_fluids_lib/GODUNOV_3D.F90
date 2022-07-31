@@ -8462,6 +8462,12 @@ stop
          determinant_factor=one/(determinant_factor**(five/six))
         else if (determinant_factor.eq.zero) then
          print *,"determinant_factor must be positive"
+         do ii=1,3
+         do jj=1,3
+          print *,"ii,jj,Q_plus_I ",ii,jj,Q_plus_I(ii,jj)
+         enddo
+         enddo
+         print *,"determinant_factor: ",determinant_factor
          stop
         else
          print *,"determinant_factor invalid"

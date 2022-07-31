@@ -5390,7 +5390,7 @@ do i=1,n
  endif
 enddo
 
-determinant_out=zero
+determinant_out=one
 do i=1,n
  determinant_out=determinant_out*evals_S(i)
 enddo
