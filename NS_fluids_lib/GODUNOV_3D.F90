@@ -18704,17 +18704,7 @@ stop
        !  du/dt + u dot grad u = -grad p/rho + div(H tau_elastic)/rho
        !  H=1 in the elastic solid
        !  H=0 in the fluid
-       !  In Sussman, Smereka, Osher, 1994, let H be approximated as
-       !  H(LS)=H_epsilon(LS)  i.e.
-       !  if LS>epsilon => H_epsilon=1
-       !  if LS<-epsilon => H_epsilon=0
-       !  Biased Heaviside function:
-       !  Yokoi, K., Onishi, R., Deng, X.-L., & Sussman, M. (2016). 
-       !   Density-Scaled Balanced Continuum Surface Force Model with 
-       !   a Level Set Based Curvature Interpolation Technique.
-       !   International Journal of Computational Methods, 13(4).
-       !   H approximated as H_epsilon(LS-epsilon)
-       ! called from NavierStokes2.cpp:
+       ! fort_mac_elastic_force is called from NavierStokes2.cpp:
        ! void NavierStokes::MAC_GRID_ELASTIC_FORCE
       subroutine fort_mac_elastic_force( &
        im_elastic, & ! 0..num_materials-1
@@ -18851,7 +18841,7 @@ stop
 
       INTEGER_T dir_local
       REAL_T :: LS_control_volume(num_materials)
-      REAL_T, target :: cell_data_interp(num_materials*(1+SDIM))
+      REAL_T, target :: cell_data_LS_interp(num_materials*(1+SDIM))
       REAL_T, target :: cell_data_tensor_interp(ENUM_NUM_TENSOR_TYPE)
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
@@ -18968,6 +18958,12 @@ stop
        print *,"bfact invalid"
        stop
       endif
+      if ((force_dir.ge.0).and.(force_dir.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"force_dir invalid"
+       stop
+      endif
 
        !type(deriv_from_grid_parm_type) :: data_in
       data_in%level=level
@@ -19008,7 +19004,7 @@ stop
         stop
        endif
 
-       data_out%data_interp=>cell_data_interp
+       data_out%data_interp=>cell_data_LS_interp
 
        data_in%ncomp=num_materials*(1+SDIM)
        data_in%scomp=1
@@ -19039,13 +19035,13 @@ stop
        call deriv_from_grid_util(data_in,data_out)
 
        do im_LS=1,num_materials
-        LS_control_volume(im_LS)=cell_data_interp(im_LS)
+        LS_control_volume(im_LS)=cell_data_LS_interp(im_LS)
        enddo
 
        call get_primary_material(LS_control_volume,local_mask)
 
        if ((local_mask.eq.im_elastic_p1).and. &
-           (cell_data_interp(im_elastic_p1).gt.zero)) then
+           (cell_data_LS_interp(im_elastic_p1).gt.zero)) then
         local_mask=1
        else if ((local_mask.ge.1).and.(local_mask.le.num_materials)) then
         local_mask=0
@@ -19268,7 +19264,7 @@ stop
           enddo ! dir_column
          enddo ! dir_row
 
-         data_out%data_interp=>cell_data_interp
+         data_out%data_interp=>cell_data_LS_interp
 
           !type(deriv_from_grid_parm_type) :: data_in
          data_in%ncomp=num_materials*(1+SDIM)
@@ -19300,12 +19296,12 @@ stop
 
          do im_LS=1,num_materials*(1+SDIM)
           LS_at_flux_point(side_flux+1,dir_flux+1,im_LS)= &
-             cell_data_interp(im_LS)
+             cell_data_LS_interp(im_LS)
          enddo
 
-         call get_primary_material(cell_data_interp,local_mask)
+         call get_primary_material(cell_data_LS_interp,local_mask)
          if ((local_mask.eq.im_elastic_p1).and. &
-             (cell_data_interp(im_elastic_p1).gt.zero)) then
+             (cell_data_LS_interp(im_elastic_p1).gt.zero)) then
           local_mask=1
          else if ((local_mask.ge.1).and.(local_mask.le.num_materials)) then
           local_mask=0
