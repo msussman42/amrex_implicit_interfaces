@@ -18840,7 +18840,8 @@ stop
       INTEGER_T im_LS
 
       INTEGER_T dir_local
-      REAL_T :: LS_control_volume(num_materials)
+      REAL_T :: LS_control_volume_left(num_materials)
+      REAL_T :: LS_control_volume_right(num_materials)
       REAL_T, target :: cell_data_LS_interp(num_materials*(1+SDIM))
       REAL_T, target :: cell_data_tensor_interp(ENUM_NUM_TENSOR_TYPE)
       REAL_T, target :: dx_local(SDIM)
@@ -18867,12 +18868,13 @@ stop
       REAL_T temperature_clamped
       INTEGER_T prescribed_flag
       INTEGER_T local_mask
+      INTEGER_T local_mask_left
+      INTEGER_T local_mask_right
       INTEGER_T mask_control_volume
       REAL_T force(SDIM)
       REAL_T bodyforce
       REAL_T deninv
       REAL_T XFORCE_local
-      INTEGER_T box_type_MAC_CV(SDIM)
       INTEGER_T box_type_flux(SDIM)
       INTEGER_T grid_type_flux
       INTEGER_T grid_type_sanity
@@ -18880,7 +18882,7 @@ stop
       INTEGER_T iflux,jflux,kflux
       INTEGER_T itensor
       REAL_T local_tensor_data(ENUM_NUM_TENSOR_TYPE)
-      INTEGER_T ii,jj
+      INTEGER_T ii,jj,kk
 
       UMACNEW_ptr=>UMACNEW
 
@@ -18985,7 +18987,6 @@ stop
 
         ! force_dir=0..sdim-1 
        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,force_dir)
-       call grid_type_to_box_type(force_dir,box_type_MAC_CV)
 
        do dircomp=1,SDIM
         x_MAC_control_volume(dircomp)=xstenMAC(0,dircomp)
@@ -19004,51 +19005,41 @@ stop
         stop
        endif
 
-       data_out%data_interp=>cell_data_LS_interp
-
-       data_in%ncomp=num_materials*(1+SDIM)
-       data_in%scomp=1
-
-       data_in%index_flux(1)=i
-       data_in%index_flux(2)=j
-       if (SDIM.eq.3) then
-        data_in%index_flux(SDIM)=k
-       else if (SDIM.eq.2) then
-        !do nothing
+       ii=0
+       jj=0
+       kk=0
+       if (force_dir.eq.0) then
+        ii=1
+       else if (force_dir.eq.1) then
+        jj=1
+       else if ((force_dir.eq.2).and.(SDIM.eq.3)) then
+        kk=1
        else
-        print *,"dimension bust"
+        print *,"force_dir invalid"
         stop
-       endif
-       data_in%grid_type_flux=force_dir ! dir=0..sdim-1
-       do dir_local=1,SDIM
-        data_in%box_type_flux(dir_local)=0
-       enddo
-       data_in%box_type_flux(force_dir+1)=1
-
-       do dir_local=1,SDIM
-        data_in%box_type_data(dir_local)=0
-       enddo
-       data_in%grid_type_data=-1
-       data_in%disp_data=>levelpc
-       data_in%dir_deriv=-1
-
-       call deriv_from_grid_util(data_in,data_out)
-
+       endif 
+ 
        do im_LS=1,num_materials
-        LS_control_volume(im_LS)=cell_data_LS_interp(im_LS)
+        LS_control_volume_left(im_LS)=levelpc(D_DECL(i-ii,j-jj,k-kk),im_LS)
+        LS_control_volume_right(im_LS)=levelpc(D_DECL(i,j,k),im_LS)
        enddo
 
-       call get_primary_material(LS_control_volume,local_mask)
+       call get_primary_material(LS_control_volume_left,local_mask_left)
+       call get_primary_material(LS_control_volume_right,local_mask_right)
 
-       if ((local_mask.eq.im_elastic_p1).and. &
-           (cell_data_LS_interp(im_elastic_p1).gt.zero)) then
+       if ((local_mask_left.eq.im_elastic_p1).or. &
+           (local_mask_right.eq.im_elastic_p1)) then
         local_mask=1
-       else if ((local_mask.ge.1).and.(local_mask.le.num_materials)) then
+       else if ((local_mask_left.ge.1).and. &
+                (local_mask_left.le.num_materials).and. &
+                (local_mask_right.ge.1).and. &
+                (local_mask_right.le.num_materials)) then
         local_mask=0
        else
         print *,"local_mask invalid"
         stop
        endif
+
         ! LS>0 if clamped
        call SUB_clamped_LS(x_MAC_control_volume,cur_time,LS_clamped, &
          vel_clamped,temperature_clamped,prescribed_flag,dx)
