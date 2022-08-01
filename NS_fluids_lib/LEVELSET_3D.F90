@@ -18475,7 +18475,8 @@ stop
                LS_sub(dir)=data_out_LS%data_interp(dir)
               enddo
               call get_primary_material(LS_sub,im_primary_sub)
-              if ((im_primary_sub.ge.1).and.(im_primary_sub.le.num_materials)) then
+              if ((im_primary_sub.ge.1).and. &
+                  (im_primary_sub.le.num_materials)) then
                im_particle=particles(current_link)% &
                  extra_int(N_EXTRA_INT_MATERIAL_ID+1)
                if ((im_particle.ge.1).and.(im_particle.le.num_materials)) then

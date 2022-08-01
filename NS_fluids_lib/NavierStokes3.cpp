@@ -732,7 +732,8 @@ void NavierStokes::correct_Q_with_particles() {
 
  int finest_level=parent->finestLevel();
 
- if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=num_materials)) {
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=num_materials)) {
 
   if ((level==0)&&(level<=finest_level)) {
    // do nothing

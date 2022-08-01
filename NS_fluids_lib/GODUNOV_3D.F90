@@ -21040,6 +21040,7 @@ stop
 
       subroutine traverse_particles_Q( &
        accum_PARM, &
+       LSfab, &
        matrixfab, &
        tensor_fab, &
        ncomp_accumulate)
@@ -21051,6 +21052,7 @@ stop
       type(accum_parm_type), INTENT(in) :: accum_PARM
        ! pointers are always INTENT(in).
        ! the actual data INTENT attribute is inherited from the target.
+      REAL_T, pointer, INTENT(in) :: LSfab(D_DECL(:,:,:),:)
       REAL_T, pointer, INTENT(in) :: tensor_fab(D_DECL(:,:,:),:)
       REAL_T, pointer, INTENT(in) :: matrixfab(D_DECL(:,:,:),:)
 
@@ -21068,7 +21070,8 @@ stop
       REAL_T xc(SDIM)
       INTEGER_T npart_local
 
-      REAL_T, target :: cell_data_interp(NUM_CELL_ELASTIC)
+      REAL_T, target :: cell_data_tensor_interp(NUM_CELL_ELASTIC)
+      REAL_T, target :: cell_data_LS_interp(num_materials*(1+SDIM))
       REAL_T, target :: dx_local(SDIM)
       REAL_T, target :: xlo_local(SDIM)
       INTEGER_T, target :: fablo_local(SDIM)
@@ -21078,6 +21081,12 @@ stop
 
       type(interp_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
+
+      REAL_T :: LSlocal(num_materials)
+      INTEGER_T :: im
+      INTEGER_T :: im_primary
+      INTEGER_T :: im_primary_part
+      INTEGER_T :: im_particle_direct
 
       do dir=1,SDIM
        dx_local(dir)=accum_PARM%dx(dir)
@@ -21096,10 +21105,9 @@ stop
        stop
       endif
 
+      call checkbound_array(tilelo_local,tilehi_local,LSfab,2,-1)
       call checkbound_array(tilelo_local,tilehi_local,matrixfab,0,-1)
       call checkbound_array(fablo_local,fabhi_local,tensor_fab,1,-1)
-
-      data_out%data_interp=>cell_data_interp
 
       data_in%level=accum_PARM%level
       data_in%finest_level=accum_PARM%finest_level
@@ -21109,10 +21117,7 @@ stop
       data_in%xlo=>xlo_local
       data_in%fablo=>fablo_local
       data_in%fabhi=>fabhi_local
-      data_in%ncomp=NUM_CELL_ELASTIC
       data_in%scomp=1
-
-      data_in%state=>tensor_fab
 
       nhalf=3
 
@@ -21147,16 +21152,27 @@ stop
       do interior_ID=1,npart_local
 
        if (accum_PARM%Npart.ge.0) then
+
         do dir=1,SDIM
          xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
         enddo ! dir=1..sdim
+
+        im_particle_direct= &
+           accum_PARM%particles(interior_ID)% &
+           extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+
+        if ((im_particle_direct.ge.1).and. &
+            (im_particle_direct.le.num_materials)) then
+         ! do nothing
+        else
+         print *,"im_particle_direct invalid"
+         stop
+        endif
+
         do dir=1,NUM_CELL_ELASTIC
          k=(dir-1)*npart_local+interior_ID
          Qpart(dir)=accum_PARM%real_compALL(k)
         enddo ! dir=1..NUM_CELL_ELASTIC
-
-        data_in%xtarget=>xpart
-        call interp_from_grid_util(data_in,data_out)
 
         call containing_cell(accum_PARM%bfact, &
           accum_PARM%dx, &
@@ -21164,6 +21180,10 @@ stop
           accum_PARM%fablo, &
           xpart, &
           cell_index)
+
+        i=cell_index(1)
+        j=cell_index(2)
+        k=cell_index(SDIM)
 
         interior_ok=1
         do dir=1,SDIM
@@ -21174,9 +21194,26 @@ stop
         enddo
 
         if (interior_ok.eq.1) then
-         i=cell_index(1)
-         j=cell_index(2)
-         k=cell_index(SDIM)
+
+         do im=1,num_materials
+          LSlocal(im)=LSfab(D_DECL(i,j,k),im)
+         enddo
+         call get_primary_material(LSlocal,im_primary)
+
+         data_out%data_interp=>cell_data_tensor_interp
+         data_in%ncomp=NUM_CELL_ELASTIC
+         data_in%state=>tensor_fab
+         data_in%xtarget=>xpart
+         call interp_from_grid_util(data_in,data_out)
+
+         data_out%data_interp=>cell_data_LS_interp
+         data_in%ncomp=num_materials*(1+SDIM)
+         data_in%state=>LSfab
+         data_in%xtarget=>xpart
+         call interp_from_grid_util(data_in,data_out)
+
+         call get_primary_material(cell_data_LS_interp,im_primary_part)
+
          call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
          tmp=0.0d0
          do dir=1,SDIM
@@ -21187,13 +21224,33 @@ stop
          w_p=(1.0d0/(eps+tmp))
 
          if (w_p.gt.zero) then
-          matrixfab(D_DECL(i,j,k),1)= &
-           matrixfab(D_DECL(i,j,k),1)+w_p
-          do dir=1,NUM_CELL_ELASTIC
-           matrixfab(D_DECL(i,j,k),1+dir)= &
-            matrixfab(D_DECL(i,j,k),1+dir)+ &
-            w_p*(data_out%data_interp(dir)-Qpart(dir))
-          enddo
+
+          if (im_primary_part.eq.im_primary) then
+
+           if (im_primary_part.eq.im_particle_direct) then
+
+            matrixfab(D_DECL(i,j,k),1)= &
+             matrixfab(D_DECL(i,j,k),1)+w_p
+            do dir=1,NUM_CELL_ELASTIC
+             matrixfab(D_DECL(i,j,k),1+dir)= &
+              matrixfab(D_DECL(i,j,k),1+dir)+ &
+              w_p*(data_out%data_interp(dir)-Qpart(dir))
+            enddo
+
+           else if (im_primary_part.ne.im_particle_direct) then
+            ! do nothing
+           else
+            print *,"im_primary_part or im_particle_direct bust"
+            stop
+           endif
+
+          else if (im_primary_part.ne.im_primary) then
+           ! do nothing
+          else
+           print *,"im_primary_part or im_primary bust"
+           stop
+          endif
+
          else
           print *,"w_p invalid"
           stop
@@ -21232,6 +21289,8 @@ stop
         real_compALL, &
         N_real_comp, & ! pass by value
         ncomp_accumulate, & 
+        LSfab, &  
+        DIMS(LSfab), &
         TNEWfab, &  
         DIMS(TNEWfab), &
         tensor_fab, &      
@@ -21265,6 +21324,7 @@ stop
       INTEGER_T, INTENT(in) :: im_elastic_map(num_materials_viscoelastic)
       REAL_T, INTENT(in) :: polymer_factor(num_materials)
 
+      INTEGER_T, INTENT(in) :: DIMDEC(LSfab) 
       INTEGER_T, INTENT(in) :: DIMDEC(matrixfab) 
       INTEGER_T, INTENT(in) :: DIMDEC(TNEWfab) 
       INTEGER_T, INTENT(in) :: DIMDEC(tensor_fab) 
@@ -21272,6 +21332,11 @@ stop
         DIMV(matrixfab), &
         ncomp_accumulate)
       REAL_T, pointer :: matrixfab_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, INTENT(inout), target :: LSfab( & 
+        DIMV(LSfab), &
+        num_materials*(1+SDIM))
+      REAL_T, pointer :: LSfab_ptr(D_DECL(:,:,:),:)
 
       REAL_T, INTENT(inout), target :: TNEWfab( & 
         DIMV(TNEWfab), &
@@ -21304,6 +21369,7 @@ stop
 
       nhalf=3
 
+      LSfab_ptr=>LSfab
       matrixfab_ptr=>matrixfab
       TNEWfab_ptr=>TNEWfab
       tensor_fab_ptr=>tensor_fab
@@ -21345,6 +21411,7 @@ stop
        stop
       endif
 
+      call checkbound_array(tilelo,tilehi,LSfab_ptr,2,-1)
       call checkbound_array(tilelo,tilehi,matrixfab_ptr,0,-1)
       call checkbound_array(fablo,fabhi,TNEWfab_ptr,1,-1)
       call checkbound_array(fablo,fabhi,tensor_fab_ptr,1,-1)
@@ -21368,6 +21435,7 @@ stop
 
       call traverse_particles_Q( &
         accum_PARM, &
+        LSfab_ptr, &
         matrixfab_ptr, &
         tensor_fab_ptr, &
         ncomp_accumulate)
