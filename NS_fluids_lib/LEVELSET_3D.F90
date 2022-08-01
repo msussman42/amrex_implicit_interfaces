@@ -17363,7 +17363,8 @@ stop
       INTEGER_T, INTENT(in) :: recalesce_num_state_in
       INTEGER_T i
       INTEGER_T, INTENT(in) :: recalesce_material_in(num_materials)
-      REAL_T, INTENT(in) :: recalesce_state_old_in(recalesce_num_state*num_materials)
+      REAL_T, INTENT(in) :: &
+           recalesce_state_old_in(recalesce_num_state*num_materials)
 
       if (num_materials.gt.100) then
        print *,"too many materials"
@@ -17837,6 +17838,7 @@ stop
 
 
       subroutine interp_eul_lag_dist( &
+         im_elastic_map, &
          accum_PARM, &
          i,j,k, &
          xtarget, &  ! where to add the new particle
@@ -17848,6 +17850,9 @@ stop
       use global_utility_module
 
       IMPLICIT NONE
+
+       ! 0<=im_elastic_map<num_materials
+      INTEGER_T, INTENT(in) :: im_elastic_map(num_materials_viscoelastic)
 
       type(accum_parm_type_count), INTENT(in) :: accum_PARM
       INTEGER_T, INTENT(in) :: i,j,k
@@ -17870,6 +17875,16 @@ stop
 
       REAL_T tmp,eps
       REAL_T w_p
+
+      REAL_T :: LSlocal(num_materials)
+      INTEGER_T :: im
+      INTEGER_T :: im_primary
+      INTEGER_T :: im_primary_part
+      INTEGER_T :: im_particle_direct
+      INTEGER_T :: im_primary_sub
+      INTEGER_T :: ipart
+      INTEGER_T :: im_map
+      INTEGER_T :: dir_tensor
 
       type(interp_from_grid_parm_type) :: data_in 
       type(interp_from_grid_out_parm_type) :: data_out
@@ -17904,6 +17919,11 @@ stop
       call checkbound_array(fablo_local,fabhi_local, &
          accum_PARM%LEVELSET,1,-1)
 
+      do im=1,num_materials
+       LSlocal(im)=accum_PARM%LEVELSET(D_DECL(i,j,k),im)
+      enddo
+      call get_primary_material(LSlocal,im_primary)
+
       data_out%data_interp=>data_interp_local
       data_out_LS%data_interp=>data_interp_local_LS
 
@@ -17935,9 +17955,11 @@ stop
       current_link=accum_PARM%cell_particle_count(D_DECL(i,j,k),2)
 
       do while ((current_link.ge.1).and.(current_link.le.Np))
+
        do dir=1,SDIM
         xpart(dir)=accum_PARM%particles(current_link)%pos(dir)
        enddo 
+
        do dir=1,NUM_CELL_ELASTIC
         SoA_comp=(dir-1)*Np+current_link
         if ((SoA_comp.ge.1).and. &
@@ -17949,6 +17971,18 @@ stop
         endif
        enddo !dir=1,NUM_CELL_ELASTIC
 
+       im_particle_direct= &
+         accum_PARM%particles(current_link)% &
+         extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+
+       if ((im_particle_direct.ge.1).and. &
+           (im_particle_direct.le.num_materials)) then
+        ! do nothing
+       else
+        print *,"im_particle_direct invalid"
+        stop
+       endif
+
        tmp=0.0d0
        do dir=1,SDIM
         tmp=tmp+(xpart(dir)-xtarget(dir))**2
@@ -17957,8 +17991,6 @@ stop
 
        w_p=1.0d0/(eps+tmp)
  
-       A_VEL=A_VEL+w_p
-
        data_in%xtarget=>xpart
 
         ! bilinear interpolation
@@ -17985,6 +18017,7 @@ stop
         do dir=1,num_materials
          LS_interp_local(dir)=data_out_LS%data_interp(dir)
         enddo
+        call get_primary_material(LS_interp_local,im_primary_part)
        else
         print *,"num_materials invalid"
         stop
@@ -18000,9 +18033,29 @@ stop
         stop
        endif
 
-       do dir=1,NUM_CELL_ELASTIC
-        b_VEL(dir)=b_VEL(dir)+w_p*(Q_interp_local(dir)-Qpart(dir))
-       enddo
+       if (w_p.gt.zero) then
+        if (im_primary_part.eq.im_primary) then
+         if (im_primary_part.eq.im_particle_direct) then
+          A_VEL=A_VEL+w_p
+          do dir=1,NUM_CELL_ELASTIC
+           b_VEL(dir)=b_VEL(dir)+w_p*(Q_interp_local(dir)-Qpart(dir))
+          enddo
+         else if (im_primary_part.ne.im_particle_direct) then
+          ! do nothing
+         else
+          print *,"im_primary_part or im_particle_direct bust"
+          stop
+         endif
+        else if (im_primary_part.ne.im_primary) then
+         ! do nothing
+        else
+         print *,"im_primary_part or im_primary bust"
+         stop
+        endif
+       else
+        print *,"w_p invalid"
+        stop
+       endif
 
        ibase=(current_link-1)*(1+SDIM)
        current_link=particle_link_data(ibase+1)
@@ -18050,6 +18103,7 @@ stop
        do dir=1,num_materials
         LS_interp(dir)=data_out_LS%data_interp(dir)
        enddo
+       call get_primary_material(LS_interp,im_primary_sub)
       else
        print *,"num_materials invalid"
        stop
@@ -18065,9 +18119,29 @@ stop
       else if (accum_PARM%append_flag.eq.1) then
 
        if (A_VEL.gt.zero) then
-        do dir=1,NUM_CELL_ELASTIC
-         Q_interp(dir)=Q_interp(dir)-b_VEL(dir)/A_VEL
-        enddo
+
+        do ipart=1,num_materials_viscoelastic
+         im_map=im_elastic_map(ipart)+1
+         if ((im_map.ge.1).and.(im_map.le.num_materials)) then
+          if ((im_map.eq.im_primary).and. &
+              (im_map.eq.im_primary_sub)) then
+           do dir=1,ENUM_NUM_TENSOR_TYPE
+            dir_tensor=(ipart-1)*ENUM_NUM_TENSOR_TYPE+dir
+            Q_interp(dir_tensor)=Q_interp(dir_tensor)-b_VEL(dir_tensor)/A_VEL
+           enddo
+          else if ((im_map.ne.im_primary).or. &
+                   (im_map.ne.im_primary_sub)) then
+           ! do nothing
+          else
+           print *,"im_map, im_primary, or im_primary_sub bust"
+           stop
+          endif
+         else
+          print *,"im_map invalid"
+          stop
+         endif
+        enddo !ipart=1,num_materials_viscoelastic
+
        else if (A_VEL.eq.zero) then
         ! do nothing
        else
@@ -18576,6 +18650,7 @@ stop
 
              ! add bulk particles
            call interp_eul_lag_dist( &
+             im_elastic_map, &
              accum_PARM, &
              i,j,k, &
              xsub, &
