@@ -363,6 +363,17 @@ extern "C"
     const int* bcrec,
     int* transposegradu);
 
+   void fort_extrapolate_tensor(
+    int* level,
+    int* finest_level,
+    int* im,
+    const Real* dx,const Real* xlo,
+    Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+    Real* tensor_new,AMREX_ARLIM_P(tnewlo),AMREX_ARLIM_P(tnewhi),
+    Real* tensor_old,AMREX_ARLIM_P(toldlo),AMREX_ARLIM_P(toldhi),
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact);
 
    void fort_update_particle_tensor(
     int* tid,

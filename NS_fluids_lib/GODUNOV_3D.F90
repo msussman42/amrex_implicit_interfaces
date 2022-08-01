@@ -9319,6 +9319,118 @@ stop
       return
       end subroutine fort_updatetensor
 
+        ! called from tensor_advecton_update() in NavierStokes.cpp
+      subroutine fort_extrapolate_tensor( &
+       level, &
+       finest_level, &
+       im_critical, &  ! 0<=im_critical<=num_materials-1
+       dx,xlo, &
+       LS,DIMS(LS), &
+       tnew,DIMS(tnew), &
+       told,DIMS(told), &
+       tilelo, tilehi,  &
+       fablo, fabhi, &
+       bfact) &
+      bind(c,name='fort_extrapolate_tensor')
+
+      use probcommon_module
+      use global_utility_module
+      IMPLICIT NONE
+
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: im_critical
+      INTEGER_T, INTENT(in) :: DIMDEC(LS)
+      INTEGER_T, INTENT(in) :: DIMDEC(tnew)
+      INTEGER_T, INTENT(in) :: DIMDEC(told)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
+      INTEGER_T :: growlo(3), growhi(3)
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in) :: dx(SDIM),xlo(SDIM)
+
+      REAL_T, INTENT(in), target :: &
+            LS(DIMV(LS),num_materials*(1+SDIM))
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, INTENT(out), target :: tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE)
+      REAL_T, pointer :: tnew_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, INTENT(in), target :: told(DIMV(told),ENUM_NUM_TENSOR_TYPE)
+      REAL_T, pointer :: told_ptr(D_DECL(:,:,:),:)
+
+      INTEGER_T :: i,j,k
+
+      tnew_ptr=>tnew
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid60"
+       stop
+      endif
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid 34"
+       stop
+      endif
+
+      if ((im_critical.lt.0).or.(im_critical.ge.num_materials)) then
+       print *,"im_critical invalid27"
+       stop
+      endif
+
+      LS_ptr=>LS
+      call checkbound_array(fablo,fabhi,LS_ptr,2,-1)
+
+      call checkbound_array(fablo,fabhi,tnew_ptr,0,-1)
+
+      told_ptr=>told
+      call checkbound_array(fablo,fabhi,told_ptr,2,-1)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       do dir_local=1,ENUM_NUM_TENSOR_TYPE
+        point_told(dir_local)=told(D_DECL(i,j,k),dir_local)
+       enddo
+
+       call point_updatetensor( &
+        i,j,k, &
+        level, &
+        finest_level, &
+        im_critical, &  ! 0<=im_critical<=num_materials-1
+        ncomp_visc, & 
+        visc_ptr, &
+        tendata_ptr, & !tendata:fort_getshear,only_scalar=0
+        dx,xlo, &
+        vel_ptr, &
+        point_tnew, &
+        point_told, &
+        tilelo, tilehi,  &
+        fablo, fabhi, &
+        bfact,  &
+        dt, &
+        elastic_time, &
+        viscoelastic_model, &
+        polymer_factor, &
+        elastic_viscosity, &
+        irz, &
+        bc, &
+        transposegradu) 
+
+       do dir_local=1,ENUM_NUM_TENSOR_TYPE
+        tnew(D_DECL(i,j,k),dir_local)=point_tnew(dir_local)
+       enddo
+
+      enddo
+      enddo
+      enddo
+
+      return
+      end subroutine fort_extrapolate_tensor
+
+
 
        ! adjust_temperature==1  modify temperature (Snew and coeff)
        ! adjust_temperature==0  modify coefficient (coeff)

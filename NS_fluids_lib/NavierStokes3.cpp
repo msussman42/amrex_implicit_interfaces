@@ -785,7 +785,8 @@ void NavierStokes::tensor_advection_updateALL() {
 
  int finest_level=parent->finestLevel();
 
- if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=num_materials)) {
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=num_materials)) {
 
   correct_Q_with_particles();
 
@@ -845,6 +846,12 @@ void NavierStokes::tensor_advection_updateALL() {
    // do nothing
   } else
    amrex::Error("particles_flag invalid");
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.tensor_extrapolation();
+  }
+  avgDownALL_TENSOR();
 
   delete_array(HOLD_GETSHEAR_DATA_MF);
   delete_array(HOLD_VELOCITY_DATA_MF);
