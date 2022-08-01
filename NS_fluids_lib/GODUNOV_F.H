@@ -1112,6 +1112,9 @@ extern "C"
      Real* real_compALL,
      int N_real_comp, //pass by value just in case "long" on the c++ side.
      int* ncomp_accumulate,
+     Real* LSfab,
+     AMREX_ARLIM_P(LSfablo),
+     AMREX_ARLIM_P(LSfabhi),
      Real* TNEWfab,
      AMREX_ARLIM_P(TNEWfablo),
      AMREX_ARLIM_P(TNEWfabhi),

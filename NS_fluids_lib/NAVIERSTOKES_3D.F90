@@ -14884,9 +14884,11 @@ END SUBROUTINE SIMP
 
           do i=1,Part_nparticles
            read(5,*) &
-             (xref(istruct),istruct=1,SDIM+N_EXTRA_REAL+N_EXTRA_INT+NUM_CELL_ELASTIC)
+             (xref(istruct),istruct=1, &
+              SDIM+N_EXTRA_REAL+N_EXTRA_INT+NUM_CELL_ELASTIC)
            write(12,*) &
-             (xref(istruct),istruct=1,SDIM+N_EXTRA_REAL+N_EXTRA_INT+NUM_CELL_ELASTIC)
+             (xref(istruct),istruct=1, &
+              SDIM+N_EXTRA_REAL+N_EXTRA_INT+NUM_CELL_ELASTIC)
           enddo
 
          else

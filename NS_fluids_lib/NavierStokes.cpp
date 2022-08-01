@@ -4590,7 +4590,9 @@ NavierStokes::read_params ()
         (particles_flag>1))
      amrex::Error("particles_flag invalid");
 
-    pp.queryAdd("truncate_volume_fractions",truncate_volume_fractions,num_materials);
+    pp.queryAdd("truncate_volume_fractions",truncate_volume_fractions,
+		num_materials);
+
     for (int i=0;i<num_materials;i++) {
      if ((truncate_volume_fractions[i]<0)||
          (truncate_volume_fractions[i]>1))
@@ -9291,6 +9293,13 @@ void NavierStokes::post_restart() {
     using My_ParticleContainer =
       AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
+     //N_EXTRA_REAL_INSERT_TIME==0
+    if (N_EXTRA_REAL>0) {
+     //do nothing
+    } else
+     amrex::Error("N_EXTRA_REAL invalid");
+
+     //N_EXTRA_INT_MATERIAL_ID==0
     if (N_EXTRA_INT>0) {
      //do nothing
     } else
@@ -12249,9 +12258,9 @@ void NavierStokes::tensor_extrapolation() {
       MultiFab* tensor_source_mf=
        getStateTensor(2,scomp_tensor,ENUM_NUM_TENSOR_TYPE,cur_time_slab);
 
-        //LEVELPC_MF is up to date since "allocate_levelset_ALL" was
-	//called from "make_physics_varsALL" which was called after
-	//the phase change update and before this routine was called.
+      //LEVELPC_MF is up to date since "allocate_levelset_ALL" was
+      //called from "make_physics_varsALL" which was called after
+      //the phase change update and before this routine was called.
       resize_levelset(2,LEVELPC_MF);
 
       if (thread_class::nthreads<1)
@@ -22160,6 +22169,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 
 }  // end subroutine prepare_post_process
 
+//called from NavierStokes3.cpp: NavierStokes::correct_Q_with_particles()
 void NavierStokes::assimilate_Q_from_particles(
    AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC) {
 
@@ -22175,7 +22185,8 @@ void NavierStokes::assimilate_Q_from_particles(
  } else
   amrex::Error("level out of range");
 
- if ((num_materials_viscoelastic>=1)&&(num_materials_viscoelastic<=num_materials)) {
+ if ((num_materials_viscoelastic>=1)&& 
+     (num_materials_viscoelastic<=num_materials)) {
 
   const Real* dx = geom.CellSize();
 
@@ -22202,6 +22213,11 @@ void NavierStokes::assimilate_Q_from_particles(
   int ncomp_accumulate=NCOMP_SUM_WEIGHTS;
 
   MultiFab* tensor_mf=getStateTensor(1,0,NUM_CELL_ELASTIC,cur_time_slab);
+
+  //LEVELPC_MF is up to date since "allocate_levelset_ALL" was
+  //called from "make_physics_varsALL" which was called after
+  //the phase change update and before this routine was called.
+  resize_levelset(2,LEVELPC_MF);
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -22280,6 +22296,8 @@ void NavierStokes::assimilate_Q_from_particles(
    FArrayBox& TNEWfab=Tensor_new[mfi];
 
    FArrayBox& tensor_fab=(*tensor_mf)[mfi];
+
+   FArrayBox& LSfab=(*localMF[LEVELPC_MF])[mfi];
  
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -22295,12 +22313,15 @@ void NavierStokes::assimilate_Q_from_particles(
     &bfact,
     &level,
     &finest_level,
-    xlo,dx,
+    xlo,
+    dx,
     particles_AoS.data(),
     Np,  //pass by value
     real_compALL.dataPtr(),
     N_real_comp,  //pass by value
     &ncomp_accumulate,
+    LSfab.dataPtr(),
+    ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
     TNEWfab.dataPtr(),
     ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
     tensor_fab.dataPtr(),
