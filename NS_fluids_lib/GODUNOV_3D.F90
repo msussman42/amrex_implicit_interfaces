@@ -9360,8 +9360,45 @@ stop
       REAL_T, pointer :: told_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T :: i,j,k
+      INTEGER_T :: i1,j1,k1
+      INTEGER_T :: k1low,k1high
+
+      INTEGER_T :: dir_local
+      INTEGER_T :: nhalf
+      INTEGER_T :: im
+      INTEGER_T :: im_local
+      INTEGER_T :: im_sten
+
+      REAL_T x_sten(-3:3,SDIM)
+      REAL_T x_extrap(-3:3,SDIM)
+      REAL_T LS_local(num_materials)
+      REAL_T LS_sten(num_materials)
+      REAL_T Q_extrap(ENUM_NUM_TENSOR_TYPE)
+      REAL_T wtsum
+      REAL_T wt_local
+
+      nhalf=3
+
+      k1low=0
+      k1high=0
+      if (SDIM.eq.3) then
+       k1low=-2
+       k1high=2
+      else if (SDIM.eq.2) then
+       ! do nothing
+      else
+       print *,"dimension bust"
+       stop
+      endif
 
       tnew_ptr=>tnew
+
+      if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"ENUM_NUM_TENSOR_TYPE INVALID"
+       stop
+      endif
 
       if (bfact.lt.1) then
        print *,"bfact invalid60"
@@ -9391,37 +9428,85 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       do dir_local=1,ENUM_NUM_TENSOR_TYPE
-        point_told(dir_local)=told(D_DECL(i,j,k),dir_local)
-       enddo
+       call gridsten_level(x_sten,i,j,k,level,nhalf)
 
-       call point_updatetensor( &
-        i,j,k, &
-        level, &
-        finest_level, &
-        im_critical, &  ! 0<=im_critical<=num_materials-1
-        ncomp_visc, & 
-        visc_ptr, &
-        tendata_ptr, & !tendata:fort_getshear,only_scalar=0
-        dx,xlo, &
-        vel_ptr, &
-        point_tnew, &
-        point_told, &
-        tilelo, tilehi,  &
-        fablo, fabhi, &
-        bfact,  &
-        dt, &
-        elastic_time, &
-        viscoelastic_model, &
-        polymer_factor, &
-        elastic_viscosity, &
-        irz, &
-        bc, &
-        transposegradu) 
-
-       do dir_local=1,ENUM_NUM_TENSOR_TYPE
-        tnew(D_DECL(i,j,k),dir_local)=point_tnew(dir_local)
+       do im=1,num_materials
+        LS_local(im)=LS(D_DECL(i,j,k),im)
        enddo
+       call get_primary_material(LS_local,im_local)
+
+       if ((im_local.eq.im_critical+1).and. &
+           (LS_local(im_critical+1).ge.zero)) then
+        ! do nothing
+       else if ((im_local.ne.im_critical+1).or. &
+                (LS_local(im_critical+1).lt.zero)) then
+
+        if ((im_local.ge.1).and.(im_local.le.num_materials)) then
+
+         do dir_local=1,ENUM_NUM_TENSOR_TYPE
+          Q_extrap(dir_local)=zero
+         enddo
+         wtsum=zero
+
+         do i1=-2,2
+         do j1=-2,2
+         do k1=k1low,k1high
+          do im=1,num_materials
+           LS_sten(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
+          enddo
+          call get_primary_material(LS_sten,im_sten)
+          if ((im_sten.eq.im_critical+1).and. &
+              (LS_sten(im_critical+1).ge.zero)) then
+           call gridsten_level(x_extrap,i+i1,j+j1,k+k1,level,nhalf)
+           wt_local=zero
+           do dir_local=1,SDIM
+            wt_local=wt_local+(x_extrap(0,dir_local)-x_sten(0,dir_local))**2
+           enddo
+           if (wt_local.gt.zero) then
+            wt_local=one/wt_local
+           else
+            print *,"wt_local invalid"
+            stop
+           endif
+           wtsum=wtsum+wt_local
+           do dir_local=1,ENUM_NUM_TENSOR_TYPE
+            Q_extrap(dir_local)=Q_extrap(dir_local)+ &
+               wt_local*Told(D_DECL(i+i1,j+j1,k+k1),dir_local)
+           enddo
+          else if ((im_sten.ne.im_critical+1).or. &
+                   (LS_sten(im_critical+1).lt.zero)) then
+           ! do nothing
+          else
+           print *,"im_sten or LS_sten invalid"
+           stop
+          endif
+         enddo !k1
+         enddo !j1
+         enddo !i1
+           
+         if (wtsum.eq.zero) then
+          ! do nothing
+         else if (wtsum.gt.zero) then
+          do dir_local=1,ENUM_NUM_TENSOR_TYPE
+           Q_extrap(dir_local)=Q_extrap(dir_local)/wtsum
+          enddo
+         else
+          print *,"wtsum invalid"
+          stop
+         endif
+
+         do dir_local=1,ENUM_NUM_TENSOR_TYPE
+          tnew(D_DECL(i,j,k),dir_local)=Q_extrap(dir_local)
+         enddo
+
+        else
+         print *,"im_local invalid"
+         stop
+        endif
+       else
+        print *,"im_local or LS_local invalid"
+        stop
+       endif
 
       enddo
       enddo
@@ -9429,8 +9514,6 @@ stop
 
       return
       end subroutine fort_extrapolate_tensor
-
-
 
        ! adjust_temperature==1  modify temperature (Snew and coeff)
        ! adjust_temperature==0  modify coefficient (coeff)

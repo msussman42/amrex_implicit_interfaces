@@ -5013,7 +5013,7 @@ void NavierStokes::sync_colors(
 
    std::vector<bool> level_color_bool;
    level_color_bool.resize(arrsize2);
-   for (Long k=0;k<level_color_bool.size();k++) {
+   for (unsigned long k=0;k<level_color_bool.size();k++) {
     if (level_color_array[0][k]==0)
      level_color_bool[k]=false;
     else if (level_color_array[0][k]==1)
