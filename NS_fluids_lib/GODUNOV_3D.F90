@@ -21067,7 +21067,6 @@ stop
       INTEGER_T i,j,k
       REAL_T xsten(-3:3,SDIM)
       REAL_T tmp,w_p
-      REAL_T xc(SDIM)
       INTEGER_T npart_local
 
       REAL_T, target :: cell_data_tensor_interp(NUM_CELL_ELASTIC)
@@ -21217,8 +21216,7 @@ stop
          call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
          tmp=0.0d0
          do dir=1,SDIM
-          xc(dir)=xsten(0,dir)
-          tmp=tmp+(xpart(dir)-xc(dir))**2
+          tmp=tmp+(xpart(dir)-xsten(0,dir))**2
          enddo
          tmp=sqrt(tmp)
          w_p=(1.0d0/(eps+tmp))
@@ -21357,12 +21355,16 @@ stop
       INTEGER_T growhi(3)
       INTEGER_T i,j,k
       INTEGER_T dir
+      INTEGER_T dir_tensor
+      INTEGER_T im
+      INTEGER_T im_primary
       REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
 
       REAL_T A_matrix,B_matrix
       REAL_T lambda
       REAL_T tensor_local(NUM_CELL_ELASTIC)
+      REAL_T LSlocal(num_materials)
 
       INTEGER_T ipart,im_map,ii,jj
       REAL_T Q(3,3)
@@ -21444,6 +21446,12 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
        call gridsten_level(xsten,i,j,k,level,nhalf)
+
+       do im=1,num_materials
+        LSlocal(im)=LSfab(D_DECL(i,j,k),im)
+       enddo
+       call get_primary_material(LSlocal,im_primary)
+
        A_matrix=matrixfab(D_DECL(i,j,k),1) ! sum w(xp)
        do dir=1,NUM_CELL_ELASTIC
         B_matrix=matrixfab(D_DECL(i,j,k),1+dir) !sum w*(Q(xp)-Q_p)
@@ -21463,39 +21471,62 @@ stop
        do ipart=1,num_materials_viscoelastic
         im_map=im_elastic_map(ipart)+1
         if ((im_map.ge.1).and.(im_map.le.num_materials)) then
-         do dir=1,ENUM_NUM_TENSOR_TYPE
-          call stress_index(dir,ii,jj)
-          Q(ii,jj)=tensor_local((ipart-1)*ENUM_NUM_TENSOR_TYPE+dir)
-         enddo
-         Q(2,1)=Q(1,2)
-         Q(3,1)=Q(1,3)
-         Q(3,2)=Q(2,3)
 
-         if (viscoelastic_model(im_map).eq.3) then ! incremental model
-          ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-          ! do nothing
-         else
-          do ii=1,3
-           Q(ii,ii)=Q(ii,ii)+one
+         if (im_map.eq.im_primary) then
+
+          do dir=1,ENUM_NUM_TENSOR_TYPE
+           call stress_index(dir,ii,jj)
+           Q(ii,jj)=tensor_local((ipart-1)*ENUM_NUM_TENSOR_TYPE+dir)
           enddo
-         endif
+          Q(2,1)=Q(1,2)
+          Q(3,1)=Q(1,3)
+          Q(3,2)=Q(2,3)
 
-         call project_A_to_positive_definite_or_traceless(Q, &
+          if (viscoelastic_model(im_map).eq.3) then ! incremental model
+           ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+           ! do nothing
+          else
+           do ii=1,3
+            Q(ii,ii)=Q(ii,ii)+one
+           enddo
+          endif
+
+          call project_A_to_positive_definite_or_traceless(Q, &
            viscoelastic_model(im_map),polymer_factor(im_map))
 
-         if (viscoelastic_model(im_map).eq.3) then ! incremental model
-          ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
-          ! do nothing
-         else
-          do ii=1,3
-           Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
+          if (viscoelastic_model(im_map).eq.3) then ! incremental model
+           ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+           ! do nothing
+          else
+           do ii=1,3
+            Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
+           enddo
+          endif
+
+          do dir=1,ENUM_NUM_TENSOR_TYPE
+           call stress_index(dir,ii,jj)
+           tensor_local((ipart-1)*ENUM_NUM_TENSOR_TYPE+dir)=Q(ii,jj)
           enddo
+
+         else if (im_map.ne.im_primary) then
+
+          if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
+            ! restore to original values.
+           do dir=1,ENUM_NUM_TENSOR_TYPE
+            dir_tensor=(ipart-1)*ENUM_NUM_TENSOR_TYPE+dir
+            tensor_local(dir_tensor)=tensor_fab(D_DECL(i,j,k),dir_tensor)
+           enddo 
+
+          else
+           print *,"im_primary invalid"
+           stop
+          endif
+
+         else
+          print *,"im_map or im_primary bust"
+          stop
          endif
 
-         do dir=1,ENUM_NUM_TENSOR_TYPE
-          call stress_index(dir,ii,jj)
-          tensor_local((ipart-1)*ENUM_NUM_TENSOR_TYPE+dir)=Q(ii,jj)
-         enddo
         else
          print *,"im_map invalid"
          stop
@@ -21599,6 +21630,7 @@ stop
       INTEGER_T interior_ID
       INTEGER_T cell_index(SDIM)
       INTEGER_T in_tile_flag
+      INTEGER_T :: im_particle_direct
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -21742,10 +21774,23 @@ stop
         xpart(dir_local)=particles(interior_ID)%pos(dir_local)
        enddo ! dir_local=1..sdim
 
+       im_particle_direct= &
+          particles(interior_ID)% &
+          extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+
+       if ((im_particle_direct.ge.1).and. &
+           (im_particle_direct.le.num_materials)) then
+        ! do nothing
+       else
+        print *,"im_particle_direct invalid"
+        stop
+       endif
+
        do dir_local=scomp_tensor+1,scomp_tensor+ENUM_NUM_TENSOR_TYPE
         k=(dir_local-1)*Np+interior_ID
         point_told(dir_local-scomp_tensor)=real_compALL(k)
-       enddo ! dir=1..NUM_CELL_ELASTIC
+       enddo ! dir_local=scomp_tensor+1..scomp_tensor+ENUM_NUM_TENSOR_TYPE
+
        call containing_cell(bfact,dx,xlo,fablo,xpart,cell_index)
        in_tile_flag=1
        do dir_local=1,SDIM
@@ -21763,29 +21808,42 @@ stop
          k=cell_index(SDIM)
         endif
 
-        call point_updatetensor( &
-         i,j,k, &
-         level, &
-         finest_level, &
-         im_critical, &  ! 0<=im_critical<=num_materials-1
-         ncomp_visc, & 
-         visc_ptr, &
-         tendata_ptr, & !tendata:fort_getshear,only_scalar=0
-         dx,xlo, &
-         vel_ptr, &
-         point_tnew, &
-         point_told, &
-         tilelo, tilehi,  &
-         fablo, fabhi, &
-         bfact,  &
-         dt, &
-         elastic_time, &
-         viscoelastic_model, &
-         polymer_factor, &
-         elastic_viscosity, &
-         irz, &
-         bc, &
-         transposegradu) 
+        if (im_particle_direct.eq.im_critical+1) then
+
+         call point_updatetensor( &
+          i,j,k, &
+          level, &
+          finest_level, &
+          im_critical, &  ! 0<=im_critical<=num_materials-1
+          ncomp_visc, & 
+          visc_ptr, &
+          tendata_ptr, & !tendata:fort_getshear,only_scalar=0
+          dx,xlo, &
+          vel_ptr, &
+          point_tnew, &
+          point_told, &
+          tilelo, tilehi,  &
+          fablo, fabhi, &
+          bfact,  &
+          dt, &
+          elastic_time, &
+          viscoelastic_model, &
+          polymer_factor, &
+          elastic_viscosity, &
+          irz, &
+          bc, &
+          transposegradu) 
+   
+        else if (im_particle_direct.ne.im_critical+1) then
+
+         do dir_local=1,ENUM_NUM_TENSOR_TYPE
+          point_tnew(dir_local)=zero
+         enddo
+
+        else
+         print *,"im_particle_direct invalid"
+         stop
+        endif
 
         do dir_local=scomp_tensor+1,scomp_tensor+ENUM_NUM_TENSOR_TYPE
          k=(dir_local-1)*Np+interior_ID
