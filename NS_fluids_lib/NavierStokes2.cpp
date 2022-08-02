@@ -1653,6 +1653,9 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
    const Real* xlo = grid_loc[gridno].lo();
 
     // fab = Fortran Array Block
+    
+   int grid_type_CC=-1;
+   FArrayBox& MAC_CCfab=(*localMF[VISCOTEN_MF])[mfi];
 
    int grid_type_X=0;
    FArrayBox& MAC_Xfab=(*localMF[MAC_ELASTIC_FLUX_X_MF])[mfi];
@@ -1704,6 +1707,9 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
      &dt_slab,
      &cur_time_slab,
      xlo,dx,
+     &grid_type_CC,
+     MAC_CCfab.dataPtr(),
+     ARLIM(MAC_CCfab.loVect()),ARLIM(MAC_CCfab.hiVect()),
      &grid_type_X,
      MAC_Xfab.dataPtr(),
      ARLIM(MAC_Xfab.loVect()),ARLIM(MAC_Xfab.hiVect()),
@@ -2983,12 +2989,9 @@ void NavierStokes::increment_KE(Real beta) {
 } // subroutine increment_KE
 
 
-// velmac_op=OP_INTERPOLATE_INCREMENT or OP_INTERPOLATE_BASE
 // dest_idx==-1 => destination is the state data.
 // dest_idx>=0  => destination is localMF[dest_idx]
-void NavierStokes::VELMAC_TO_CELLALL(
-  int velmac_op,
-  int dest_idx) {
+void NavierStokes::VELMAC_TO_CELLALL(int dest_idx) {
 
  int finest_level=parent->finestLevel();
 
@@ -2999,7 +3002,7 @@ void NavierStokes::VELMAC_TO_CELLALL(
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.VELMAC_TO_CELL(velmac_op,dest_idx);
+  ns_level.VELMAC_TO_CELL(dest_idx);
  }
 
  if (dest_idx==-1) {
@@ -3008,28 +3011,21 @@ void NavierStokes::VELMAC_TO_CELLALL(
   Vector<int> scompBC_map;
   scompBC_map.resize(AMREX_SPACEDIM);
 
-  if ((velmac_op==OP_INTERPOLATE_BASE)||   //velocity
-      (velmac_op==OP_INTERPOLATE_INCREMENT)) { //velocity increment
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    scompBC_map[dir]=STATECOMP_VEL+dir;
-   }
-    //scomp=0
-   GetStateFromLocalALL(dest_idx,localMF[dest_idx]->nGrow(),0,
-     STATE_NCOMP_VEL,State_Type,scompBC_map);
-  } else 
-   amrex::Error("velmac_op invalid");
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   scompBC_map[dir]=STATECOMP_VEL+dir;
+  }
+   //scomp=0
+  GetStateFromLocalALL(dest_idx,localMF[dest_idx]->nGrow(),0,
+    STATE_NCOMP_VEL,State_Type,scompBC_map);
 	  
  } else
   amrex::Error("dest_idx invalid");
 
 } // end subroutine VELMAC_TO_CELLALL
 
-// velmac_op=OP_INTERPOLATE_INCREMENT or OP_INTERPOLATE_BASE
 // dest_idx==-1 => destination is the state data.
 // dest_idx>=0  => destination is localMF[dest_idx]
-void NavierStokes::VELMAC_TO_CELL(
-  int velmac_op,
-  int dest_idx) {
+void NavierStokes::VELMAC_TO_CELL(int dest_idx) {
  
  bool use_tiling=ns_tiling;
 
@@ -3103,13 +3099,7 @@ void NavierStokes::VELMAC_TO_CELL(
  MultiFab* save_face_velocity[AMREX_SPACEDIM];
  MultiFab* dest_velocity=nullptr;
 
- if (velmac_op==OP_INTERPOLATE_BASE) { //mac velocity (not the increment)
-  operation_flag=OP_VEL_MAC_TO_CELL;
- } else if (velmac_op==OP_INTERPOLATE_INCREMENT) { //mac velocity increment
-  operation_flag=OP_FORCE_MAC_TO_CELL;
-  local_enable_spectral=0;
- } else 
-  amrex::Error("velmac_op invalid");
+ operation_flag=OP_VEL_MAC_TO_CELL;
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    //ngrow=0
@@ -3117,29 +3107,11 @@ void NavierStokes::VELMAC_TO_CELL(
   save_face_velocity[dir]=face_velocity[dir];
  }
 
- if (velmac_op==OP_INTERPOLATE_BASE) { //velocity
-  // do nothing
- } else if (velmac_op==OP_INTERPOLATE_INCREMENT) { //mac velocity increment
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   save_face_velocity[dir]=localMF[REGISTER_MARK_MAC_MF+dir];
-  }
- } else 
-  amrex::Error("velmac_op invalid");
-
  if (dest_idx==-1) {
-  if ((velmac_op==OP_INTERPOLATE_BASE)||   //u^{mac->cell}
-      (velmac_op==OP_INTERPOLATE_INCREMENT)) { //u_increment^{mac->cell}
-   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
-   dest_velocity=&S_new;
-  } else
-   amrex::Error("velmac_op invalid");
+  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+  dest_velocity=&S_new;
  } else if (dest_idx>=0) {
-  if (velmac_op==OP_INTERPOLATE_BASE) {   //u^{mac->cell}
-   dest_velocity=localMF[dest_idx];
-  } else if (velmac_op==OP_INTERPOLATE_INCREMENT) {
-   amrex::Error("increment option not allowed if dest_idx>=0");
-  } else
-   amrex::Error("velmac_op invalid");
+  dest_velocity=localMF[dest_idx];
  } else
   amrex::Error("dest_idx invalid");
 
@@ -7300,29 +7272,29 @@ void NavierStokes::output_zones(
  } else
   amrex::Error("elastic_ncomp invalid");
 
- check_for_NAN(localMF[MASKSEM_MF],1);
- check_for_NAN(velmf,1);
- check_for_NAN(localMF[SLOPE_RECON_MF],2); // id==2
- check_for_NAN(presmf,3);
- check_for_NAN(divmf,4);
- check_for_NAN(div_data,5);
- check_for_NAN(denmf,6);
- check_for_NAN(mom_denmf,6);
+ check_for_NAN(localMF[MASKSEM_MF]);
+ check_for_NAN(velmf);
+ check_for_NAN(localMF[SLOPE_RECON_MF]);
+ check_for_NAN(presmf);
+ check_for_NAN(divmf);
+ check_for_NAN(div_data);
+ check_for_NAN(denmf);
+ check_for_NAN(mom_denmf);
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
-  check_for_NAN(viscoelasticmf,6);
+  check_for_NAN(viscoelasticmf);
  } else if (num_materials_viscoelastic==0) {
   // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
- check_for_NAN(lsdistmf,7);
- check_for_NAN(viscmf,9);
- check_for_NAN(conductmf,9);
- check_for_NAN(magtracemf,10);
- check_for_NAN(elasticforcemf,10);
- check_for_NAN(gradvelocitymf,10);
+ check_for_NAN(lsdistmf);
+ check_for_NAN(viscmf);
+ check_for_NAN(conductmf);
+ check_for_NAN(magtracemf);
+ check_for_NAN(elasticforcemf);
+ check_for_NAN(gradvelocitymf);
 
  int bfact=parent->Space_blockingFactor(level);
 
@@ -7436,37 +7408,37 @@ void NavierStokes::output_zones(
     maskSEM_minus->ParallelCopy(*localMF[MASKSEM_MF],0,0,
      1,0,0,geom.periodicity());
 
-    check_for_NAN(maskSEM_minus,11);
+    check_for_NAN(maskSEM_minus);
 
      // FabArray.H     
      // scomp,dcomp,ncomp,s_nghost,d_nghost
     velmfminus->ParallelCopy(*velmf,0,0,
      STATE_NCOMP_VEL+STATE_NCOMP_PRES,1,1,geom.periodicity());
 
-    check_for_NAN(velmfminus,11);
+    check_for_NAN(velmfminus);
  
     vofmfminus->ParallelCopy(*localMF[SLOPE_RECON_MF],0,0,
      num_materials*ngeom_recon,1,1,geom.periodicity());
 
-    check_for_NAN(vofmfminus,12);
+    check_for_NAN(vofmfminus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     presmfminus->ParallelCopy(*presmf,0,0,1,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(presmfminus,13);
+    check_for_NAN(presmfminus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     divmfminus->ParallelCopy(*divmf,0,0,1,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(divmfminus,14);
+    check_for_NAN(divmfminus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     div_data_minus->ParallelCopy(*div_data,0,0,1,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(div_data_minus,15);
+    check_for_NAN(div_data_minus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     denmfminus->ParallelCopy(*denmf,0,0,nden,
@@ -7476,8 +7448,8 @@ void NavierStokes::output_zones(
     mom_denmfminus->ParallelCopy(*mom_denmf,0,0,num_materials,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(denmfminus,16);
-    check_for_NAN(mom_denmfminus,16);
+    check_for_NAN(denmfminus);
+    check_for_NAN(mom_denmfminus);
 
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=num_materials)) {
@@ -7485,7 +7457,7 @@ void NavierStokes::output_zones(
      viscoelasticmfminus->ParallelCopy(*viscoelasticmf,0,0,
       elastic_ncomp,
       1,1,geom.periodicity()); 
-     check_for_NAN(viscoelasticmfminus,16);
+     check_for_NAN(viscoelasticmfminus);
     } else if (num_materials_viscoelastic==0) {
      // do nothing
     } else
@@ -7495,25 +7467,25 @@ void NavierStokes::output_zones(
     lsdistmfminus->ParallelCopy(*lsdistmf,0,0,num_materials*(1+AMREX_SPACEDIM),
      1,1,geom.periodicity()); 
 
-    check_for_NAN(lsdistmfminus,18);
+    check_for_NAN(lsdistmfminus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     viscmfminus->ParallelCopy(*viscmf,0,0,num_materials,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(viscmfminus,19);
+    check_for_NAN(viscmfminus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     conductmfminus->ParallelCopy(*conductmf,0,0,num_materials,
                    1,1,geom.periodicity());
 
-    check_for_NAN(conductmfminus,19);
+    check_for_NAN(conductmfminus);
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     magtracemfminus->ParallelCopy(*magtracemf,0,0,5*num_materials,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(magtracemfminus,20);
+    check_for_NAN(magtracemfminus);
  
     ParallelDescriptor::Barrier();
 
@@ -7521,7 +7493,7 @@ void NavierStokes::output_zones(
     elasticforcemfminus->ParallelCopy(*elasticforcemf,0,0,AMREX_SPACEDIM,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(elasticforcemfminus,20);
+    check_for_NAN(elasticforcemfminus);
  
     ParallelDescriptor::Barrier();
 
@@ -7529,13 +7501,13 @@ void NavierStokes::output_zones(
     gradvelocitymfminus->ParallelCopy(*gradvelocitymf,0,0,AMREX_SPACEDIM_SQR,
 		   1,1,geom.periodicity()); 
 
-    check_for_NAN(gradvelocitymfminus,20);
+    check_for_NAN(gradvelocitymfminus);
  
     ParallelDescriptor::Barrier();
 
     towermfminus->setVal(0.0,0,PLOTCOMP_NCOMP,1);
 
-    check_for_NAN(towermfminus,20);
+    check_for_NAN(towermfminus);
 
     ParallelDescriptor::Barrier();
 
@@ -7720,58 +7692,58 @@ void NavierStokes::output_zones(
     ParallelDescriptor::Barrier();
 
     MultiFab* maskSEM_minus=localMF[MASKSEM_MF];
-    check_for_NAN(maskSEM_minus,11);
+    check_for_NAN(maskSEM_minus);
 
     MultiFab* velmfminus=velmf;
-    check_for_NAN(velmfminus,11);
+    check_for_NAN(velmfminus);
  
     MultiFab* vofmfminus=localMF[SLOPE_RECON_MF];
-    check_for_NAN(vofmfminus,12);
+    check_for_NAN(vofmfminus);
 
     MultiFab* presmfminus=presmf;
-    check_for_NAN(presmfminus,13);
+    check_for_NAN(presmfminus);
 
     MultiFab* divmfminus=divmf;
-    check_for_NAN(divmfminus,14);
+    check_for_NAN(divmfminus);
 
     MultiFab* div_data_minus=div_data;
-    check_for_NAN(div_data_minus,15);
+    check_for_NAN(div_data_minus);
 
     MultiFab* denmfminus=denmf;
     MultiFab* mom_denmfminus=mom_denmf;
 
-    check_for_NAN(denmfminus,16);
-    check_for_NAN(mom_denmfminus,16);
+    check_for_NAN(denmfminus);
+    check_for_NAN(mom_denmfminus);
 
     MultiFab* viscoelasticmfminus=viscoelasticmf;
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=num_materials)) {
-     check_for_NAN(viscoelasticmfminus,16);
+     check_for_NAN(viscoelasticmfminus);
     } else if (num_materials_viscoelastic==0) {
      // do nothing
     } else
      amrex::Error("num_materials_viscoelastic invalid:writeTECPLOT_File");
 
     MultiFab* lsdistmfminus=lsdistmf;
-    check_for_NAN(lsdistmfminus,18);
+    check_for_NAN(lsdistmfminus);
 
     MultiFab* viscmfminus=viscmf;
-    check_for_NAN(viscmfminus,19);
+    check_for_NAN(viscmfminus);
 
     MultiFab* conductmfminus=conductmf;
-    check_for_NAN(conductmfminus,19);
+    check_for_NAN(conductmfminus);
 
     MultiFab* magtracemfminus=magtracemf;
-    check_for_NAN(magtracemfminus,20);
+    check_for_NAN(magtracemfminus);
  
     MultiFab* elasticforcemfminus=elasticforcemf;
-    check_for_NAN(elasticforcemfminus,20);
+    check_for_NAN(elasticforcemfminus);
 
     MultiFab* gradvelocitymfminus=gradvelocitymf;
-    check_for_NAN(gradvelocitymfminus,20);
+    check_for_NAN(gradvelocitymfminus);
 
     MultiFab* towermf=localMF[MULTIFAB_TOWER_PLT_MF];
-    check_for_NAN(towermf,20);
+    check_for_NAN(towermf);
  
     ParallelDescriptor::Barrier();
 
@@ -8012,8 +7984,8 @@ void NavierStokes::Sanity_output_zones(
     ncomp,0,0,geom.periodicity());
 
    if ((data_dir>=-1)&&(data_dir<=5)) {
-    check_for_NAN(datamf,1);
-    check_for_NAN(datamfminus,11);
+    check_for_NAN(datamf);
+    check_for_NAN(datamfminus);
    } else
     amrex::Error("data_dir invalid");
  

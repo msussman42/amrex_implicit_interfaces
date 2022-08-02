@@ -8529,10 +8529,10 @@ void NavierStokes::ns_header_msg_level(
 
      if (verbose>0) {
       if (ParallelDescriptor::IOProcessor()) {
-       std::cout << "check_for_NAN(S_new_coarse,200)\n";
+       std::cout << "check_for_NAN(S_new_coarse)\n";
       }
       std::fflush(NULL);
-      check_for_NAN(S_new_coarse,200);
+      check_for_NAN(S_new_coarse);
      }
 
       //ngrow=0
@@ -8554,10 +8554,10 @@ void NavierStokes::ns_header_msg_level(
 
      if (verbose>0) {
       if (ParallelDescriptor::IOProcessor()) {
-       std::cout << "check_for_NAN(Solid_new_coarse,200)\n";
+       std::cout << "check_for_NAN(Solid_new_coarse)\n";
       }
       std::fflush(NULL);
-      check_for_NAN(Solid_new_coarse,201);
+      check_for_NAN(Solid_new_coarse);
      }
 
       //ngrow=0
@@ -8570,10 +8570,10 @@ void NavierStokes::ns_header_msg_level(
 
      if (verbose>0) {
       if (ParallelDescriptor::IOProcessor()) {
-       std::cout << "check_for_NAN(LS_new_coarse,200)\n";
+       std::cout << "check_for_NAN(LS_new_coarse)\n";
       }
       std::fflush(NULL);
-      check_for_NAN(LS_new_coarse,202);
+      check_for_NAN(LS_new_coarse);
      }
 
      for (int partid=0;partid<nparts;partid++) {
@@ -10706,7 +10706,7 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
 }//omp
     ns_reconcile_d_num(54);
 
-    check_for_NAN(localMF[VISCOTEN_MF],2001);
+    check_for_NAN(localMF[VISCOTEN_MF]);
 
    } else
     amrex::Error("partid could not be found: make_viscoelastic_tensor");
@@ -10920,7 +10920,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
 }//omp
     ns_reconcile_d_num(54);
 
-    check_for_NAN(localMF[VISCOTEN_MF],2001);
+    check_for_NAN(localMF[VISCOTEN_MF]);
 
    } else
     amrex::Error("partid could not be found: make_viscoelastic_tensor");
@@ -19683,14 +19683,13 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  getStateALL(1,cur_time_slab,0,
    AMREX_SPACEDIM,HOLD_VELOCITY_DATA_MF);
 
- int velmac_op=OP_INTERPOLATE_BASE;
  int dest_idx=-1; // we put the interpolant in State_Type so that the
                   // command MultiFab* velmf=ns_level.getState( ... 
                   // gets the interpolated data.  We have to restore
                   // HOLD_VELOCITY_DATA_MF at the end.  Note: this should
 		  // be done after getStateVISC_ALL() since the WALE model
 		  // for eddy viscosity depends on the velocity.
- VELMAC_TO_CELLALL(velmac_op,dest_idx);
+ VELMAC_TO_CELLALL(dest_idx);
 
  int tecplot_finest_level=finest_level;
  if ((tecplot_max_level<tecplot_finest_level)&&

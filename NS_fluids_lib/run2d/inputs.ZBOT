@@ -113,15 +113,21 @@ ns.heatviscconst_eddy_bulk=0.0 0.0 0.0
 # 0.15/16=0.009375
 # 0.15/8=0.01875
 #amr.n_cell          = 16 64
-amr.n_cell          = 8 32
+#amr.n_cell          = 8 32
+amr.n_cell          = 64 256  # this resolution agrees with experiments.
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
+#speed up analysis? 128 = 2procs, 64= 4procs, 32=16procs
 amr.max_grid_size   = 128    # 128 is optimal for MPI in 2D
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 1 1 1 1 1 # number of buffer cells in error est 
-amr.blocking_factor = 8 2 # block factor in grid generation
+amr.blocking_factor = 8 4 # block factor in grid generation
+# level0, level1, ...
+amr.space_blocking_factor=1 1 # make 2 1 for 2nd order in space
+amr.time_blocking_factor=1    # make 2 for 2nd order in time
+ns.enable_spectral=0          # make 1 for 2nd order
 ns.nblocks=0
 #ns.nblocks=1
 ns.xblocks=0.0
@@ -145,10 +151,8 @@ ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 ns.shock_timestep=2 2 2 
 #advection, surface tension, gravity
 #dt cannot exceed the fixed_dt_scales values.
-#0.1 is used for 64x256 grid.
-#0.4 is used for 16x64 grid. 
-#0.8 is used for  8x32 grid. 
-ns.fixed_dt_scales=0.0 0.8 0.8
+#0.05 is used for 64x256 grid.
+ns.fixed_dt_scales=0.0 0.05 0.05
 #ns.fixed_dt	    = 5.0e-5   # Hardwire dt
 
 # ----------------------------------------------------------
@@ -242,6 +246,10 @@ ns.molar_mass = 0.2 0.2 1  # 1..num_materials
 ns.denconst= 1400.0 5.3421449445 1190.0
 ns.mglib_min_coeff_factor=1000.0
 cg.mglib_blocking_factor=2
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+cg.maxiter = 200
+cg.restart_period=25
 
 #ns.speciesconst= 1.0 1.0 1.0  #Kassemi
 
@@ -281,16 +289,16 @@ ns.viscconst=4.48E-04 1.093e-6 1.0
 # (5.3)(0.2)(0.05)/100 < mu  mu>5.3e-4
 #ns.viscconst_eddy_wall=5.0e-3 0.0 0.0 #YANG
 #ns.viscconst_eddy_bulk=5.0e-3 5.3e-4 0.0 #YANG
-ns.viscconst_eddy_wall=2.0e-2 0.0 0.0
-ns.viscconst_eddy_bulk=2.0e-2 1.0e-3 0.0
-ns.wall_model_velocity=0.005 0.0 0.0
+#ns.viscconst_eddy_wall=2.0e-2 0.0 0.0
+#ns.viscconst_eddy_bulk=2.0e-2 1.0e-3 0.0
+#ns.wall_model_velocity=0.005 0.0 0.0
 #ns.heatflux_factor=1.0 1.0 1.0 #YANG
-ns.heatflux_factor=16.0 0.0 1.0
+#ns.heatflux_factor=16.0 0.0 1.0
 ns.interface_mass_transfer_model=0 0 0 0 0 0
 #ns.interface_mass_transfer_model=1 0 0 0 0 0 #YANG
-ns.law_of_the_wall=1 0 0
-ns.les_model=1 0 0
-ns.visual_WALLVEL_plot_int=100  # 100 for standard tests.
+#ns.law_of_the_wall=1 0 0
+#ns.les_model=1 0 0
+#ns.visual_WALLVEL_plot_int=100  # 100 for standard tests.
 
 # Initial temeparture [K]
 ns.tempconst=295.41 295.41 295.41
@@ -447,7 +455,6 @@ cg.verbose = 0
 
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-cg.maxiter = 200
 mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
 Lp.v = 1
