@@ -18909,26 +18909,23 @@ stop
        dt, &
        cur_time, &
        xlo,dx, &
-       grid_type_CC, &
-       MACFLUX_CC, &
-       DIMS(MACFLUX_CC), &
-       grid_type_XY, &
-       MACFLUX_XY, &
-       DIMS(MACFLUX_XY), &
-       grid_type_XZ, &
-       MACFLUX_XZ, &
-       DIMS(MACFLUX_XZ), &
-       grid_type_YZ, &
-       MACFLUX_YZ, &
-       DIMS(MACFLUX_YZ), &
+       grid_type_X, &
+       MACFLUX_X, &
+       DIMS(MACFLUX_X), &
+       grid_type_Y, &
+       MACFLUX_Y, &
+       DIMS(MACFLUX_Y), &
+       grid_type_Z, &
+       MACFLUX_Z, &
+       DIMS(MACFLUX_Z), &
        visc,DIMS(visc), &
        mask,DIMS(mask), &  ! 1=fine/fine 0=coarse/fine
        maskcoef,DIMS(maskcoef), & ! 1=not cov by level+1 or outside.
        levelpc,DIMS(levelpc), &
-       xfacefab, &
-       DIMS(xfacefab), &
-       UMACNEW, &
-       DIMS(UMACNEW), &
+       rhoinvfab, &
+       DIMS(rhoinvfab), &
+       SNEW, &
+       DIMS(SNEW), &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -18956,40 +18953,33 @@ stop
       REAL_T, INTENT(in) :: dt 
       REAL_T, INTENT(in) :: cur_time
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM) 
-      INTEGER_T, INTENT(in) :: grid_type_CC
-      INTEGER_T, INTENT(in) :: DIMDEC(MACFLUX_CC)
-      INTEGER_T, INTENT(in) :: grid_type_XY
-      INTEGER_T, INTENT(in) :: DIMDEC(MACFLUX_XY)
-      INTEGER_T, INTENT(in) :: grid_type_XZ
-      INTEGER_T, INTENT(in) :: DIMDEC(MACFLUX_XZ)
-      INTEGER_T, INTENT(in) :: grid_type_YZ
-      INTEGER_T, INTENT(in) :: DIMDEC(MACFLUX_YZ)
+      INTEGER_T, INTENT(in) :: grid_type_X
+      INTEGER_T, INTENT(in) :: DIMDEC(MACFLUX_X)
+      INTEGER_T, INTENT(in) :: grid_type_Y
+      INTEGER_T, INTENT(in) :: DIMDEC(MACFLUX_Y)
+      INTEGER_T, INTENT(in) :: grid_type_Z
+      INTEGER_T, INTENT(in) :: DIMDEC(MACFLUX_Z)
       INTEGER_T, INTENT(in) :: DIMDEC(visc)
       INTEGER_T, INTENT(in) :: DIMDEC(mask)
       INTEGER_T, INTENT(in) :: DIMDEC(maskcoef)
       INTEGER_T, INTENT(in) :: DIMDEC(levelpc)
-      INTEGER_T, INTENT(in) :: DIMDEC(xfacefab)
-      INTEGER_T, INTENT(in) :: DIMDEC(UMACNEW)
+      INTEGER_T, INTENT(in) :: DIMDEC(rhoinvfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(SNEW)
 
-      REAL_T, INTENT(in), target :: MACFLUX_CC( &
-             DIMV(MACFLUX_CC), &
+      REAL_T, INTENT(in), target :: MACFLUX_X( &
+             DIMV(MACFLUX_X), &
              ENUM_NUM_TENSOR_TYPE)
-      REAL_T, pointer :: MACFLUX_CC_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: MACFLUX_X_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, INTENT(in), target :: MACFLUX_XY( &
-             DIMV(MACFLUX_XY), &
+      REAL_T, INTENT(in), target :: MACFLUX_Y( &
+             DIMV(MACFLUX_Y), &
              ENUM_NUM_TENSOR_TYPE)
-      REAL_T, pointer :: MACFLUX_XY_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: MACFLUX_Y_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, INTENT(in), target :: MACFLUX_XZ( &
-             DIMV(MACFLUX_XZ), &
+      REAL_T, INTENT(in), target :: MACFLUX_Z( &
+             DIMV(MACFLUX_Z), &
              ENUM_NUM_TENSOR_TYPE)
-      REAL_T, pointer :: MACFLUX_XZ_ptr(D_DECL(:,:,:),:)
-
-      REAL_T, INTENT(in), target :: MACFLUX_YZ( &
-             DIMV(MACFLUX_YZ), &
-             ENUM_NUM_TENSOR_TYPE)
-      REAL_T, pointer :: MACFLUX_YZ_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: MACFLUX_Z_ptr(D_DECL(:,:,:),:)
 
       REAL_T, INTENT(in), target :: visc(DIMV(visc),ncomp_visc)
       REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
@@ -19004,11 +18994,11 @@ stop
               levelpc(DIMV(levelpc),num_materials*(1+SDIM))
       REAL_T, pointer :: levelpc_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, INTENT(in), target :: xfacefab(DIMV(xfacefab),FACECOMP_NCOMP)
-      REAL_T, pointer :: xfacefab_ptr(D_DECL(:,:,:),:)
+      REAL_T, INTENT(in), target :: rhoinvfab(DIMV(rhoinvfab))
+      REAL_T, pointer :: rhoinvfab_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, INTENT(inout), target :: UMACNEW(DIMV(UMACNEW))
-      REAL_T, pointer :: UMACNEW_ptr(D_DECL(:,:,:))
+      REAL_T, INTENT(inout), target :: SNEW(DIMV(SNEW))
+      REAL_T, pointer :: SNEW_ptr(D_DECL(:,:,:))
 
       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
