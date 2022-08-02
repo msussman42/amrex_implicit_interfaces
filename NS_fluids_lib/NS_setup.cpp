@@ -1038,7 +1038,7 @@ NavierStokes::variableSetUp ()
        &pc_interp);
 
      } // partid=0..nparts-1
-
+FIX ME
      //ngrow=1
      desc_lst.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
       1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,

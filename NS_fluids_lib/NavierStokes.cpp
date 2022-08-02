@@ -389,12 +389,11 @@ int  NavierStokes::LS_Type=Wmac_Type+1;
 int  NavierStokes::DIV_Type=LS_Type+1;
 int  NavierStokes::Solid_State_Type=DIV_Type+1;
 int  NavierStokes::Tensor_Type=Solid_State_Type+1;
-int  NavierStokes::TensorXU_Type=Tensor_Type+1;
-int  NavierStokes::TensorYU_Type=TensorXU_Type+1;
-int  NavierStokes::TensorZU_Type=TensorYU_Type+1;
-int  NavierStokes::TensorZV_Type=TensorZU_Type+1;
+int  NavierStokes::TensorX_Type=Tensor_Type+1;
+int  NavierStokes::TensorY_Type=TensorX_Type+1;
+int  NavierStokes::TensorZ_Type=TensorY_Type+1;
 
-int  NavierStokes::NUM_STATE_TYPE=TensorZV_Type+1;
+int  NavierStokes::NUM_STATE_TYPE=TensorZ_Type+1;
 
 
 Vector<Real> NavierStokes::compressible_dt_factor; 
@@ -3065,18 +3064,16 @@ NavierStokes::read_params ()
         (num_materials_viscoelastic<=num_materials)) {
      Tensor_Type=NUM_STATE_TYPE;
 
-     TensorXU_Type=Tensor_Type+1;
-     TensorYU_Type=TensorXU_Type+1;
-     TensorZU_Type=TensorYU_Type+1;
-     TensorZV_Type=TensorZU_Type+1;
+     TensorX_Type=Tensor_Type+1;
+     TensorY_Type=TensorX_Type+1;
+     TensorZ_Type=TensorY_Type+1;
 
-     NUM_STATE_TYPE=TensorZV_Type+1;
+     NUM_STATE_TYPE=TensorZ_Type+1;
     } else if (num_materials_viscoelastic==0) {
      Tensor_Type=-1;
-     TensorXU_Type=-1;
-     TensorYU_Type=-1;
-     TensorZU_Type=-1;
-     TensorZV_Type=-1;
+     TensorX_Type=-1;
+     TensorY_Type=-1;
+     TensorZ_Type=-1;
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
@@ -4829,10 +4826,9 @@ NavierStokes::read_params ()
       im_solid_map.size() << '\n';
      std::cout << "Solid_State_Type= " << Solid_State_Type << '\n';
      std::cout << "Tensor_Type= " << Tensor_Type << '\n';
-     std::cout << "TensorXU_Type= " << TensorXU_Type << '\n';
-     std::cout << "TensorYU_Type= " << TensorYU_Type << '\n';
-     std::cout << "TensorZU_Type= " << TensorZU_Type << '\n';
-     std::cout << "TensorZV_Type= " << TensorZV_Type << '\n';
+     std::cout << "TensorX_Type= " << TensorX_Type << '\n';
+     std::cout << "TensorY_Type= " << TensorY_Type << '\n';
+     std::cout << "TensorZ_Type= " << TensorZ_Type << '\n';
      std::cout << "NUM_CELL_ELASTIC= " << NUM_CELL_ELASTIC << '\n';
      std::cout << "NUM_STATE_TYPE= " << NUM_STATE_TYPE << '\n';
 
@@ -9825,19 +9821,15 @@ void NavierStokes::init_boundary() {
    MultiFab::Copy(Tensor_new,*tensormf,0,0,
      NUM_CELL_ELASTIC,1);
    delete tensormf;
-  } else if ((k==TensorXU_Type)&&
+  } else if ((k==TensorX_Type)&&
              (num_materials_viscoelastic>=1)&&
              (num_materials_viscoelastic<=num_materials)) {
    // do nothing
-  } else if ((k==TensorYU_Type)&&
+  } else if ((k==TensorY_Type)&&
              (num_materials_viscoelastic>=1)&&
              (num_materials_viscoelastic<=num_materials)) {
    // do nothing
-  } else if ((k==TensorZU_Type)&&
-             (num_materials_viscoelastic>=1)&&
-             (num_materials_viscoelastic<=num_materials)) {
-   // do nothing
-  } else if ((k==TensorZV_Type)&&
+  } else if ((k==TensorZ_Type)&&
              (num_materials_viscoelastic>=1)&&
              (num_materials_viscoelastic<=num_materials)) {
    // do nothing
@@ -10427,10 +10419,9 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
 
  int finest_level=parent->finestLevel();
 
- if ((fill_state_idx==TensorXU_Type)||
-     (fill_state_idx==TensorYU_Type)||
-     ((fill_state_idx==TensorZU_Type)&&(AMREX_SPACEDIM==3))||
-     ((fill_state_idx==TensorZV_Type)&&(AMREX_SPACEDIM==3))) {
+ if ((fill_state_idx==TensorX_Type)||
+     (fill_state_idx==TensorY_Type)||
+     ((fill_state_idx==TensorZ_Type)&&(AMREX_SPACEDIM==3))) {
   //do nothing
  } else
   amrex::Error("fill_state_idx invalid");
@@ -10440,10 +10431,9 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
  } else
   amrex::Error("level invalid");
 
- if ((flux_grid_type==-1)|| //cell center
-     (flux_grid_type==3)||  //X,Y Node, Z Cell
-     ((flux_grid_type==4)&&(AMREX_SPACEDIM==3))|| //X,Z Node, Y cell
-     ((flux_grid_type==5)&&(AMREX_SPACEDIM==3))) {//Y,Z Node, X cell
+ if ((flux_grid_type==0)|| //X MAC
+     (flux_grid_type==1)|| //Y MAC
+     ((flux_grid_type==2)&&(AMREX_SPACEDIM==3))) { //Z MAC
   // do nothing
  } else
   amrex::Error("flux_grid_type invalid");
@@ -10540,7 +10530,7 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
 
 } // end subroutine make_viscoelastic_tensorMACALL
 
-
+FIX ME
 void NavierStokes::make_viscoelastic_tensorMAC(int im,
   int flux_mf,int flux_grid_type,int fill_state_idx) {
 
@@ -19596,15 +19586,6 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   //d) restore the saved velocity
  getStateALL(1,cur_time_slab,0,
    AMREX_SPACEDIM,HOLD_VELOCITY_DATA_MF);
- for (int ilev=finest_level;ilev>=0;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    //ngrow=0
-    //Umac_Type
-   ns_level.getStateMAC_localMF(HOLD_VELOCITY_DATA_MAC_MF+dir, 
-		 0,dir,cur_time_slab);
-  } //dir=0,...,sdim-1
- } //ilev
 
  int viscoelastic_force_only=1;
  vel_elastic_ALL(viscoelastic_force_only);
@@ -19625,16 +19606,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   MultiFab::Copy(S_new,*ns_level.localMF[HOLD_VELOCITY_DATA_MF],
     0,0,AMREX_SPACEDIM,1);
   ns_level.delete_localMF(HOLD_VELOCITY_DATA_MF,1);
-
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   MultiFab& Smac_new=ns_level.get_new_data(Umac_Type+dir,slab_step+1);
-     // dst,src,scomp,dcomp,ncomp,ngrow
-   MultiFab::Copy(Smac_new,*ns_level.localMF[HOLD_VELOCITY_DATA_MAC_MF+dir],
-    0,0,1,0);
-   ns_level.delete_localMF(HOLD_VELOCITY_DATA_MAC_MF+dir,1);
-  } //dir=0,...,sdim-1
-
- }  // ilev
+ }  // ilev=finest_level ... 0
 
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 

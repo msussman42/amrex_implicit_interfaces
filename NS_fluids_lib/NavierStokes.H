@@ -1595,10 +1595,9 @@ protected:
     static int DIV_Type;
     static int Solid_State_Type;
     static int Tensor_Type;
-    static int TensorXU_Type;
-    static int TensorYU_Type;
-    static int TensorZU_Type;
-    static int TensorZV_Type;
+    static int TensorX_Type;
+    static int TensorY_Type;
+    static int TensorZ_Type;
     static int NUM_STATE_TYPE;
 
     static Vector<Real> tension_min;
