@@ -11700,19 +11700,6 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     // Umac_Type
-     // ngrow=0
-     // REGISTER_MARK_MAC_MF is needed by "VELMAC_TO_CELLALL" in order to
-     // interpolate the increment from the MAC grid to the CELL grid.
-     // 1. increment=UMAC_new - localMF[REGISTER_MARK_MAC_MF]
-     // 2. UCELL_new+=interp_mac_to_cell(increment)
-    ns_level.getStateMAC_localMF(REGISTER_MARK_MAC_MF+dir,0,dir,cur_time_slab);
-   }
-  }
-
   for (int im=0;im<num_materials;im++) {
     if (ns_is_rigid(im)==0) {
      if ((elastic_time[im]>0.0)&&
@@ -11742,14 +11729,16 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
          parent->levelSteps(0)); 
        }
 
-        //interpolate Q to CC,XY,XZ,YZ locations.
+       FIX ME  DO NOT FORGET TO BYPASS UMAC update if for graphing purposes
+	       (UMAC update happens after marangonin force anyway ...)
+        //interpolate Q to X,Y,Z locations.
         // NavierStokes::make_viscoelastic_tensorMACALL is declared in
 	//   NavierStokes.cpp
 	// make_viscoelastic_tensorMACALL -> make_viscoelastic_tensorMAC
 	// -> fort_maketensor_mac
-       int flux_grid_type=-1;
+       int flux_grid_type=0;
        make_viscoelastic_tensorMACALL(im,
-         MAC_ELASTIC_FLUX_CC_MF,flux_grid_type,TensorXU_Type);
+          MAC_ELASTIC_FLUX_X_MF,flux_grid_type,TensorXU_Type);
        flux_grid_type=3;
        make_viscoelastic_tensorMACALL(im,
          MAC_ELASTIC_FLUX_XY_MF,flux_grid_type,TensorYU_Type);
