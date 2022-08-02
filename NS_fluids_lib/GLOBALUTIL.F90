@@ -13260,7 +13260,6 @@ end subroutine print_visual_descriptor
        ndefined, &
        ngrow, &
        dir, &
-       id, &
        verbose, &
        force_check, &
        gridno,ngrid,level,finest_level, &
@@ -13283,7 +13282,6 @@ end subroutine print_visual_descriptor
       INTEGER_T, INTENT(in) :: scomp,ncomp,ndefined
       INTEGER_T, INTENT(in) :: ngrow
       INTEGER_T, INTENT(in) :: dir
-      INTEGER_T, INTENT(in) :: id
       INTEGER_T, INTENT(in) :: verbose
       INTEGER_T, INTENT(in) :: force_check
       INTEGER_T, INTENT(in) :: gridno,ngrid,level,finest_level
@@ -13368,7 +13366,7 @@ end subroutine print_visual_descriptor
        endif
 
        if (verbose.eq.2) then
-        print *,"AGGRESSIVE WORKER id= ",id
+        print *,"using gdb, put a break statement here to see the caller"
         print *,"AGGRESSIVE WORKER gridno,ngrid,level,finest_level= ", &
          gridno,ngrid,level,finest_level
         print *,"AGGRESSIVE WORKER scomp,ncomp,ndefined,ngrow=", &
@@ -13469,8 +13467,8 @@ end subroutine print_visual_descriptor
 
          if (val.ge.critical_cutoff_high) then
           print *,"val.ge.critical_cutoff_high ",val,critical_cutoff_high
-          print *,"val overflow val,dir,i,j,k,n,scomp,id ", &
-           val,dir,i,j,k,n,scomp,id
+          print *,"val overflow val,dir,i,j,k,n,scomp ", &
+           val,dir,i,j,k,n,scomp
           print *,"bfact,level,finest_level ",bfact,level,finest_level
           do dir2=1,SDIM
            print *,"dir2,fablo,fabhi ",dir2,fablo(dir2),fabhi(dir2)
@@ -13482,8 +13480,8 @@ end subroutine print_visual_descriptor
           ! do nothing
          else if (val.le.critical_cutoff_low) then
           print *,"val.le.critical_cutoff_low ",val,critical_cutoff_low
-          print *,"val out of bounds val,dir,i,j,k,n,scomp,id ", &
-           val,dir,i,j,k,n,scomp,id
+          print *,"val out of bounds val,dir,i,j,k,n,scomp ", &
+           val,dir,i,j,k,n,scomp
           print *,"bfact,level,finest_level ",bfact,level,finest_level
           do dir2=1,SDIM
            print *,"dir2,fablo,fabhi ",dir2,fablo(dir2),fabhi(dir2)
@@ -13491,8 +13489,8 @@ end subroutine print_visual_descriptor
           enddo
           stop
          else
-          print *,"val undefined val,dir,i,j,k,n,scomp,id ", &
-           val,dir,i,j,k,n,scomp,id
+          print *,"val undefined val,dir,i,j,k,n,scomp ", &
+           val,dir,i,j,k,n,scomp
           print *,"bfact,level,finest_level ",bfact,level,finest_level
           do dir2=1,SDIM
            print *,"dir2,fablo,fabhi ",dir2,fablo(dir2),fabhi(dir2)

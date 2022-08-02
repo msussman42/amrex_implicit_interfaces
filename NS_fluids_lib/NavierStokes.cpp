@@ -15847,7 +15847,7 @@ void NavierStokes::aggressive_debug(
   MultiFab* mf,
   int scomp,int ncomp,
   int ngrow,
-  int dir,int id,
+  int dir,
   Real warning_cutoff) {
 
  if (((verbose==0)||(verbose==1))&&(force_check==0)) {
@@ -15867,7 +15867,6 @@ void NavierStokes::aggressive_debug(
    std::cout << "AGGRESSIVE DEBUG ncomp= " << ncomp << '\n';
    std::cout << "AGGRESSIVE DEBUG ngrow= " << ngrow << '\n';
    std::cout << "AGGRESSIVE DEBUG dir= " << dir << '\n';
-   std::cout << "AGGRESSIVE DEBUG id= " << id << '\n';
   }
 
   const BoxArray mfBA=mf->boxArray();
@@ -15919,7 +15918,8 @@ void NavierStokes::aggressive_debug(
     &scomp,
     &ncomp,
     &ndefined,
-    &ngrow,&dir,&id,
+    &ngrow,
+    &dir,
     &verbose,
     &force_check,
     &gridno,&ngrid,&level,&finest_level,

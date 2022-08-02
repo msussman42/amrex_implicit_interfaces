@@ -13063,7 +13063,6 @@ stop
        ndefined, &
        ngrow, &
        dir, &
-       id, &
        verbose, &
        force_check, &
        gridno, &
@@ -13085,7 +13084,6 @@ stop
       INTEGER_T, INTENT(in) :: scomp,ncomp,ndefined
       INTEGER_T, INTENT(in) :: ngrow
       INTEGER_T, INTENT(in) :: dir
-      INTEGER_T, INTENT(in) :: id
       INTEGER_T, INTENT(in) :: verbose
       INTEGER_T, INTENT(in) :: force_check
       INTEGER_T, INTENT(in) :: gridno,ngrid,level,finest_level
@@ -13121,7 +13119,6 @@ stop
         ndefined, &
         ngrow, &
         dir, &
-        id, &
         verbose, &
         force_check, &
         gridno,ngrid,level,finest_level, &
@@ -13809,10 +13806,11 @@ stop
        growlo,growhi, &
        bfact, &
        dx, &
-       0, &
+       0, & !scomp=0
        num_materials*ngeom_recon, &
        num_materials*ngeom_recon, &
-       ngrow,-1,19, &
+       ngrow, &
+       -1, & ! dir
        verbose, &
        force_check, &
        gridno,ngrid, &
@@ -13830,10 +13828,11 @@ stop
        growlo,growhi, &
        bfact, &
        dx, &
-       0, &
+       0, &  !scomp=0
        nc_conserve, &
        nc_conserve, &
-       ngrow,-1,20, &
+       ngrow, &
+       -1, & !dir
        verbose, &
        force_check, &
        gridno,ngrid, &

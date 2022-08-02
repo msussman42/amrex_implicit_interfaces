@@ -3750,17 +3750,17 @@ void NavierStokes::doit_gradu_tensor(
    std::cout << "itensor_iter= " << itensor_iter << '\n';
   }
   std::fflush(NULL);
-  check_for_NAN(localMF[idx_vel],100);
+  check_for_NAN(localMF[idx_vel]);
 
   if (itensor_iter==1) {  // cell grad U
    datatype=2;
-   check_for_NAN_TENSOR(datatype,localMF[idx_cell],101);
+   check_for_NAN_TENSOR(datatype,localMF[idx_cell]);
   } else if (itensor_iter==0) { // face grad U
    datatype=1;
-   check_for_NAN_TENSOR(datatype,localMF[idx_face],102);
+   check_for_NAN_TENSOR(datatype,localMF[idx_face]);
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    check_for_NAN_TENSOR_base(datatype,localMF[LSTENSOR_MF],dir,dir,103);
-    check_for_NAN_TENSOR_base(datatype,localMF[MASKSOLIDTENSOR_MF],dir,dir,104);
+    check_for_NAN_TENSOR_base(datatype,localMF[LSTENSOR_MF],dir,dir);
+    check_for_NAN_TENSOR_base(datatype,localMF[MASKSOLIDTENSOR_MF],dir,dir);
    }
   } else
    amrex::Error("itensor_iter invalid");
@@ -4311,9 +4311,9 @@ void NavierStokes::apply_pressure_grad(
     std::cout << "energyflag= " << energyflag << '\n';
    }
    std::fflush(NULL);
-   check_for_NAN(localMF[pboth_mf],200);
+   check_for_NAN(localMF[pboth_mf]);
    for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-    check_for_NAN(localMF[gp_mf+data_dir],201);
+    check_for_NAN(localMF[gp_mf+data_dir]);
    }
   } else if (check_nan==0) {
    // do nothing
@@ -7071,7 +7071,7 @@ bool NavierStokes::contains_infTENSOR(MultiFab* mf,
 // datatype=1 tensor face
 // datatype=2 tensor cell
 void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
-  int sc,int dir,int id) {
+  int sc,int dir) {
 
  int finest_level=parent->finestLevel();
  int ncomp=mf->nComp();
@@ -7086,7 +7086,6 @@ void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
  std::fflush(NULL);
 
  if (contains_nanTENSOR(mf,datatype,sc,dir)==true) {
-  std::cout << "id= " << id << '\n';
   std::cout << "sc= " << sc << '\n';
   std::cout << "dir= " << dir << '\n';
   std::cout << "ncomp= " << ncomp << '\n';
@@ -7099,7 +7098,6 @@ void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
   amrex::Error("mf contains nan ::check_for_NAN_TENSOR_base");
  }
  if (contains_infTENSOR(mf,datatype,sc,dir)==true) {
-  std::cout << "id= " << id << '\n';
   std::cout << "sc= " << sc << '\n';
   std::cout << "dir= " << dir << '\n';
   std::cout << "ncomp= " << ncomp << '\n';
@@ -7121,7 +7119,7 @@ void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
   mf,
   sc,ncomp_tensor,
   ngrow_tensor,
-  dir,id,
+  dir,
   warning_cutoff);
 
  std::fflush(NULL);
@@ -7130,11 +7128,10 @@ void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
 
 
 
-
 // datatype=0 normal
 // datatype=1 face grad U
 // datatype=2 cell grad U
-void NavierStokes::check_for_NAN_TENSOR(int datatype,MultiFab* mf,int id) {
+void NavierStokes::check_for_NAN_TENSOR(int datatype,MultiFab* mf) {
 
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
@@ -7163,7 +7160,7 @@ void NavierStokes::check_for_NAN_TENSOR(int datatype,MultiFab* mf,int id) {
    else
     amrex::Error("sc invalid");
 
-   check_for_NAN_TENSOR_base(datatype,mf,sc,dir,id);
+   check_for_NAN_TENSOR_base(datatype,mf,sc,dir);
  }  // sc=0...AMREX_SPACEDIM_SQR-1
 
  
@@ -7172,7 +7169,7 @@ void NavierStokes::check_for_NAN_TENSOR(int datatype,MultiFab* mf,int id) {
 } // subroutine check_for_NAN_TENSOR
 
 
-void NavierStokes::check_for_NAN(MultiFab* mf,int id) {
+void NavierStokes::check_for_NAN(MultiFab* mf) {
 
  int finest_level=parent->finestLevel();
  int scomp=0;
@@ -7185,7 +7182,6 @@ void NavierStokes::check_for_NAN(MultiFab* mf,int id) {
  for (int sc=0;sc<ncomp;sc++) {
   for (int ng=0;ng<=ngrow;ng++) {
    if (mf->contains_nan(sc,1,ng)==true) { // scomp,ncomp,ngrow
-    std::cout << "id= " << id << '\n';
     std::cout << "sc= " << sc << '\n';
     std::cout << "ng= " << ng << '\n';
     std::cout << "ncomp= " << ncomp << '\n';
@@ -7200,7 +7196,6 @@ void NavierStokes::check_for_NAN(MultiFab* mf,int id) {
    ParallelDescriptor::Barrier();
 
    if (mf->contains_inf(sc,1,ng)==true) {
-    std::cout << "id= " << id << '\n';
     std::cout << "sc= " << sc << '\n';
     std::cout << "ng= " << ng << '\n';
     std::cout << "ncomp= " << ncomp << '\n';
@@ -7228,7 +7223,7 @@ void NavierStokes::check_for_NAN(MultiFab* mf,int id) {
   mf,
   scomp,ncomp,
   ngrow,
-  dir,id,
+  dir,
   warning_cutoff);  
 
  std::fflush(NULL);

@@ -741,7 +741,7 @@ protected:
       MultiFab* mf,
       int scomp,int ncomp,
       int ngrow,
-      int dir,int id,
+      int dir,
       Real warning_cutoff);
 
     void FillBoundaryTENSOR(MultiFab* mf,int sc,int dir);
@@ -755,9 +755,9 @@ protected:
       int datatype,int scomp,int dir);
 
     void check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
-      int sc,int dir,int id);
-    void check_for_NAN_TENSOR(int datatype,MultiFab* mf,int id);
-    void check_for_NAN(MultiFab* mf,int id);
+      int sc,int dir);
+    void check_for_NAN_TENSOR(int datatype,MultiFab* mf);
+    void check_for_NAN(MultiFab* mf);
 
     void split_scalar_advection(); 
     void SEM_scalar_advection (int init_fluxes,int source_term,
@@ -1201,10 +1201,11 @@ void apply_pressure_grad(
     void increment_KE(Real beta);
     void increment_KE_ALL(Real beta);
 
-    void INCREMENT_REGISTERS_ALL(int source_mf,int caller_id);
-    void INCREMENT_REGISTERS(int source_mf,int caller_id);
-    void push_back_state_register(int idx_MF,Real time,int caller_id);
-    void SET_STOKES_MARK(int idx_MF,int caller_id);
+    void INCREMENT_REGISTERS_ALL(int source_mf);
+    void INCREMENT_REGISTERS(int source_mf);
+    void push_back_state_register(int idx_MF,Real time);
+    void SET_STOKES_MARK(int idx_MF);
+
     void APPLY_VISCOUS_HEATING(int source_mf);
     void APPLY_VISCOUS_HEATINGALL(int source_mf);
 
