@@ -1038,56 +1038,46 @@ NavierStokes::variableSetUp ()
        &pc_interp);
 
      } // partid=0..nparts-1
-FIX ME
-     //ngrow=1
-     desc_lst.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
-      1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
+
+     //ngrow=0
+     desc_lst.addDescriptor(TensorX_Type,TheUMACType,
+      0,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
-     desc_lstGHOST.addDescriptor(TensorXU_Type,IndexType::TheCellType(),
-      1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
+     desc_lstGHOST.addDescriptor(TensorX_Type,TheUMACType,
+      0,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
 
-     std::string MAC_postfix_str="XU";
-      //modifies dest_lstGHOST
-     set_tensor_extrap_components(coord,MAC_postfix_str,TensorXU_Type,0);
+     std::string MAC_postfix_str="X";
+      //modifies dest_lstGHOST, ibase_tensor=0
+     set_tensor_extrap_components(coord,MAC_postfix_str,TensorX_Type,0);
       //modifies dest_lst
-     set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorXU_Type);
+     set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorX_Type);
 
-     //ngrow=1
-     desc_lst.addDescriptor(TensorYU_Type,TheYUMACType,
-      1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
+     //ngrow=0
+     desc_lst.addDescriptor(TensorY_Type,TheVMACType,
+      0,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
-     desc_lstGHOST.addDescriptor(TensorYU_Type,TheYUMACType,
-      1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
-      null_state_holds_data);
-
-     MAC_postfix_str="YU";
-     set_tensor_extrap_components(coord,MAC_postfix_str,TensorYU_Type,0);
-     set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorYU_Type);
-
-      //ngrow=1
-     desc_lst.addDescriptor(TensorZU_Type,TheZUMACType,
-      1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
-      null_state_holds_data);
-     desc_lstGHOST.addDescriptor(TensorZU_Type,TheZUMACType,
-      1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
+     desc_lstGHOST.addDescriptor(TensorY_Type,TheVMACType,
+      0,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
 
-     MAC_postfix_str="ZU";
-     set_tensor_extrap_components(coord,MAC_postfix_str,TensorZU_Type,0);
-     set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorZU_Type);
+     MAC_postfix_str="Y";
+      //ibase_tensor=0
+     set_tensor_extrap_components(coord,MAC_postfix_str,TensorY_Type,0);
+     set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorY_Type);
 
-     //ngrow=1
-     desc_lst.addDescriptor(TensorZV_Type,TheZVMACType,
-      1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
+      //ngrow=0
+     desc_lst.addDescriptor(TensorZ_Type,TheWMACType,
+      0,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
-     desc_lstGHOST.addDescriptor(TensorZV_Type,TheZVMACType,
-      1,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
+     desc_lstGHOST.addDescriptor(TensorZ_Type,TheWMACType,
+      0,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
       null_state_holds_data);
 
-     MAC_postfix_str="ZV";
-     set_tensor_extrap_components(coord,MAC_postfix_str,TensorZV_Type,0);
-     set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorZV_Type);
+     MAC_postfix_str="Z";
+      //ibase_tensor=0
+     set_tensor_extrap_components(coord,MAC_postfix_str,TensorZ_Type,0);
+     set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorZ_Type);
 
     } else if (num_materials_viscoelastic==0) {
      // do nothing

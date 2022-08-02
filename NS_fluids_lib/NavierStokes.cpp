@@ -10530,17 +10530,15 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
 
 } // end subroutine make_viscoelastic_tensorMACALL
 
-FIX ME
 void NavierStokes::make_viscoelastic_tensorMAC(int im,
   int flux_mf,int flux_grid_type,int fill_state_idx) {
 
  int finest_level=parent->finestLevel();
  bool use_tiling=ns_tiling;
 
- if ((flux_grid_type==-1)|| //cell center
-     (flux_grid_type==3)||  //X,Y Node, Z Cell
-     ((flux_grid_type==4)&&(AMREX_SPACEDIM==3))|| //X,Z Node, Y cell
-     ((flux_grid_type==5)&&(AMREX_SPACEDIM==3))) {//Y,Z Node, X cell
+ if ((flux_grid_type==0)|| //X MAC
+     (flux_grid_type==1)|| //Y MAC
+     ((flux_grid_type==2)&&(AMREX_SPACEDIM==3))) { //Z MAC
   // do nothing
  } else
   amrex::Error("flux_grid_type invalid");
