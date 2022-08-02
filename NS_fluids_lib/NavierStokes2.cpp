@@ -1560,8 +1560,6 @@ void NavierStokes::avgDownEdge_localMF(int idxMF,int scomp,int ncomp,
 
 } // avgDownEdge_localMF
 
-// input: XD at MAC locations, levelset function(s), normal(s)
-// output: get_new_data(Umac_Type+dir,slab_step+1)  dir=0..sdim-1
 void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
 
  if ((im_elastic>=0)&&(im_elastic<num_materials)) {
@@ -1592,7 +1590,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
  resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,103);
  if (localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
-  amrex::Error("(localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))");
+  amrex::Error("(localMF[LEVELPC_MF]->nComp() invalid");
 
  bool use_tiling=ns_tiling;
 
@@ -1613,43 +1611,24 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
  debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,3);
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  debug_ngrow(FACE_VAR_MF+dir,0,101); 
-
-  MultiFab& UMAC_new=get_new_data(Umac_Type+dir,slab_step+1);
-  if (UMAC_new.nGrow()==0) {
-   // do nothing
-  } else
-   amrex::Error("UMAC_new invalid ngrow");
-
-  if (UMAC_new.nComp()!=1)
-   amrex::Error("UMAC_new.nComp()!=1");
-
-  if (localMF[AREA_MF+dir]->boxArray()!=UMAC_new.boxArray())
-   amrex::Error("localMF[AREA_MF+dir]->boxArray()!=UMAC_new.boxArray()");
- } // dir=0..sdim-1
+ debug_ngrow(CELL_DEN_MF,1,5);
+ if (localMF[CELL_DEN_MF]->nComp()!=1)
+  amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
  const Box& domain = geom.Domain();
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
 
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+
+ int nstate=STATE_NCOMP;
+ if (nstate!=S_new.nComp())
+  amrex::Error("nstate invalid");
+
  const Real* dx = geom.CellSize();
 
   // outer loop: each force component u_t = F_elastic/density  u,v,w
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-
-  MultiFab& UMAC_new=get_new_data(Umac_Type+dir,slab_step+1);
-  if (UMAC_new.nGrow()==0) {
-   // do nothing
-  } else
-   amrex::Error("UMAC_new invalid ngrow");
-
-  if (UMAC_new.nComp()!=1)
-   amrex::Error("UMAC_new.nComp()!=1");
-
-  if (localMF[AREA_MF+dir]->boxArray()!=UMAC_new.boxArray())
-   amrex::Error("localMF[AREA_MF+dir]->boxArray()!=UMAC_new.boxArray()");
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -1675,30 +1654,26 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
 
     // fab = Fortran Array Block
 
-   int grid_type_CC=-1;
-   FArrayBox& MAC_CCfab=(*localMF[MAC_ELASTIC_FLUX_CC_MF])[mfi];
+   int grid_type_X=0;
+   FArrayBox& MAC_Xfab=(*localMF[MAC_ELASTIC_FLUX_X_MF])[mfi];
 
-   int grid_type_XY=3;
-   FArrayBox& MAC_XYfab=(*localMF[MAC_ELASTIC_FLUX_XY_MF])[mfi];
+   int grid_type_Y=1;
+   FArrayBox& MAC_Yfab=(*localMF[MAC_ELASTIC_FLUX_Y_MF])[mfi];
 
 #if (AMREX_SPACEDIM==2)
-   int grid_type_XZ=3;
-   FArrayBox& MAC_XZfab=(*localMF[MAC_ELASTIC_FLUX_XY_MF])[mfi];
-   int grid_type_YZ=3;
-   FArrayBox& MAC_YZfab=(*localMF[MAC_ELASTIC_FLUX_XY_MF])[mfi];
+   int grid_type_Z=AMREX_SPACEDIM-1;
+   FArrayBox& MAC_Zfab=(*localMF[MAC_ELASTIC_FLUX_Y_MF])[mfi];
 #elif (AMREX_SPACEDIM==3)
-   int grid_type_XZ=4;
-   FArrayBox& MAC_XZfab=(*localMF[MAC_ELASTIC_FLUX_XZ_MF])[mfi];
-   int grid_type_YZ=5;
-   FArrayBox& MAC_YZfab=(*localMF[MAC_ELASTIC_FLUX_YZ_MF])[mfi];
+   int grid_type_Z=AMREX_SPACEDIM-1;
+   FArrayBox& MAC_Zfab=(*localMF[MAC_ELASTIC_FLUX_Z_MF])[mfi];
 #else
    amrex::Error("dimension bust");
 #endif
 
-   FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
+   FArrayBox& rhoinversefab=(*localMF[CELL_DEN_MF])[mfi];
 
     // output
-   FArrayBox& UMACNEWfab=UMAC_new[mfi];
+   FArrayBox& SNEWfab=S_new[mfi];
 
    // mask=1.0 at interior fine bc ghost cells
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
@@ -1720,8 +1695,8 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
 
     // declared in: GODUNOV_3D.F90
    fort_mac_elastic_force(
-     &im_elastic,
-     &partid,
+     &im_elastic, // 0..num_materials-1
+     &partid, //0..num_materials_viscoelastic-1
      &dir, // dir=0,1,..sdim-1  
      &ncomp_visc, 
      &visc_coef,
@@ -1729,18 +1704,15 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
      &dt_slab,
      &cur_time_slab,
      xlo,dx,
-     &grid_type_CC,
-     MAC_CCfab.dataPtr(),
-     ARLIM(MAC_CCfab.loVect()),ARLIM(MAC_CCfab.hiVect()),
-     &grid_type_XY,
-     MAC_XYfab.dataPtr(),
-     ARLIM(MAC_XYfab.loVect()),ARLIM(MAC_XYfab.hiVect()),
-     &grid_type_XZ,
-     MAC_XZfab.dataPtr(),
-     ARLIM(MAC_XZfab.loVect()),ARLIM(MAC_XZfab.hiVect()),
-     &grid_type_YZ,
-     MAC_YZfab.dataPtr(),
-     ARLIM(MAC_YZfab.loVect()),ARLIM(MAC_YZfab.hiVect()),
+     &grid_type_X,
+     MAC_Xfab.dataPtr(),
+     ARLIM(MAC_Xfab.loVect()),ARLIM(MAC_Xfab.hiVect()),
+     &grid_type_Y,
+     MAC_Yfab.dataPtr(),
+     ARLIM(MAC_Yfab.loVect()),ARLIM(MAC_Yfab.hiVect()),
+     &grid_type_Z,
+     MAC_Zfab.dataPtr(),
+     ARLIM(MAC_Zfab.loVect()),ARLIM(MAC_Zfab.hiVect()),
      viscfab.dataPtr(),
      ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
      maskfab.dataPtr(), // mask=1.0 at interior fine bc ghost cells
@@ -1750,10 +1722,10 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
      ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()),
      levelpcfab.dataPtr(),
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-     xface.dataPtr(),
-     ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
-     UMACNEWfab.dataPtr(),
-     ARLIM(UMACNEWfab.loVect()),ARLIM(UMACNEWfab.hiVect()), 
+     rhoinversefab.dataPtr(),
+     ARLIM(rhoinversefab.loVect()),ARLIM(rhoinversefab.hiVect()),
+     SNEWfab.dataPtr(STATECOMP_VEL+dir), //dir=0 ... sdim-1
+     ARLIM(SNEWfab.loVect()),ARLIM(SNEWfab.hiVect()), 
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,
@@ -1766,11 +1738,6 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
 } // omp
   ns_reconcile_d_num(132);
  } // dir = 0..sdim-1
-
-  //1. avgDownMacState
-  //2. tempmac=getStateMAC
-  //3. copy tempmac to Umac_new.
- make_MAC_velocity_consistent();
 
 } // end subroutine MAC_GRID_ELASTIC_FORCE
 

@@ -11732,8 +11732,6 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
          parent->levelSteps(0)); 
        }
 
-       FIX ME  DO NOT FORGET TO BYPASS UMAC update if for graphing purposes
-	       (UMAC update happens after marangonin force anyway ...)
         //interpolate Q to X,Y,Z locations.
         // NavierStokes::make_viscoelastic_tensorMACALL is declared in
 	//   NavierStokes.cpp
