@@ -18909,6 +18909,9 @@ stop
        dt, &
        cur_time, &
        xlo,dx, &
+       grid_type_CC, &
+       MACFLUX_CC, &
+       DIMS(MACFLUX_CC), &
        grid_type_X, &
        MACFLUX_X, &
        DIMS(MACFLUX_X), &
@@ -18953,6 +18956,8 @@ stop
       REAL_T, INTENT(in) :: dt 
       REAL_T, INTENT(in) :: cur_time
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM) 
+      INTEGER_T, INTENT(in) :: grid_type_CC
+      INTEGER_T, INTENT(in) :: DIMDEC(MACFLUX_CC)
       INTEGER_T, INTENT(in) :: grid_type_X
       INTEGER_T, INTENT(in) :: DIMDEC(MACFLUX_X)
       INTEGER_T, INTENT(in) :: grid_type_Y
@@ -18965,6 +18970,11 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(levelpc)
       INTEGER_T, INTENT(in) :: DIMDEC(rhoinvfab)
       INTEGER_T, INTENT(in) :: DIMDEC(SNEW)
+
+      REAL_T, INTENT(in), target :: MACFLUX_CC( &
+             DIMV(MACFLUX_CC), &
+             ENUM_NUM_TENSOR_TYPE)
+      REAL_T, pointer :: MACFLUX_CC_ptr(D_DECL(:,:,:),:)
 
       REAL_T, INTENT(in), target :: MACFLUX_X( &
              DIMV(MACFLUX_X), &
@@ -18995,7 +19005,7 @@ stop
       REAL_T, pointer :: levelpc_ptr(D_DECL(:,:,:),:)
 
       REAL_T, INTENT(in), target :: rhoinvfab(DIMV(rhoinvfab))
-      REAL_T, pointer :: rhoinvfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer :: rhoinvfab_ptr(D_DECL(:,:,:))
 
       REAL_T, INTENT(inout), target :: SNEW(DIMV(SNEW))
       REAL_T, pointer :: SNEW_ptr(D_DECL(:,:,:))
@@ -19010,30 +19020,22 @@ stop
       INTEGER_T, INTENT(in) :: rzflag 
       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T :: i,j,k
+      INTEGER_T :: ii,jj,kk
       INTEGER_T :: dir_flux,side_flux
-      REAL_T :: xstenMAC(-3:3,SDIM)
+      REAL_T :: xstenCELL(-3:3,SDIM)
       REAL_T :: xsten_flux(-3:3,SDIM)
       INTEGER_T nhalf
       INTEGER_T dircomp
       INTEGER_T dir_row,dir_column
-      REAL_T, target :: x_MAC_control_volume(SDIM)
+      REAL_T, target :: x_CELL_control_volume(SDIM)
       REAL_T DISP_TEN(3,3)
       REAL_T dxmin
       INTEGER_T im_elastic_p1
       INTEGER_T im_LS
 
       INTEGER_T dir_local
-      REAL_T :: LS_control_volume_left(num_materials)
-      REAL_T :: LS_control_volume_right(num_materials)
-      REAL_T, target :: cell_data_LS_interp(num_materials*(1+SDIM))
-      REAL_T, target :: cell_data_tensor_interp(ENUM_NUM_TENSOR_TYPE)
-      REAL_T, target :: dx_local(SDIM)
-      REAL_T, target :: xlo_local(SDIM)
-      INTEGER_T, target :: fablo_local(SDIM)
-      INTEGER_T, target :: fabhi_local(SDIM)
-
-      type(deriv_from_grid_parm_type) :: data_in
-      type(interp_from_grid_out_parm_type) :: data_out
+      REAL_T :: LS_control_volume(num_materials)
+      REAL_T :: LS_outside(num_materials)
 
       REAL_T xflux_local(0:1,3,3)
       REAL_T yflux_local(0:1,3,3)
@@ -19041,7 +19043,6 @@ stop
       REAL_T center_flux(3,3)
       REAL_T center_hoop_22
 
-      REAL_T LS_at_flux_point(2,SDIM,num_materials*(1+SDIM))
       INTEGER_T mask_flux_point(2,SDIM)
       REAL_T x_at_flux_point(2,SDIM,SDIM)
       REAL_T x_at_flux_point_local(SDIM)
@@ -19051,8 +19052,6 @@ stop
       REAL_T temperature_clamped
       INTEGER_T prescribed_flag
       INTEGER_T local_mask
-      INTEGER_T local_mask_left
-      INTEGER_T local_mask_right
       INTEGER_T mask_control_volume
       REAL_T force(SDIM)
       REAL_T bodyforce
@@ -19065,18 +19064,11 @@ stop
       INTEGER_T iflux,jflux,kflux
       INTEGER_T itensor
       REAL_T local_tensor_data(ENUM_NUM_TENSOR_TYPE)
-      INTEGER_T ii,jj,kk
 
-      UMACNEW_ptr=>UMACNEW
+      SNEW_ptr=>SNEW
 
       im_elastic_p1=im_elastic+1
 
-      do dir_local=1,SDIM
-       dx_local(dir_local)=dx(dir_local)
-       xlo_local(dir_local)=xlo(dir_local)
-       fablo_local(dir_local)=fablo(dir_local)
-       fabhi_local(dir_local)=fabhi(dir_local)
-      enddo
       if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
        ! do nothing
       else
@@ -19085,13 +19077,16 @@ stop
       endif
 
       MACFLUX_CC_ptr=>MACFLUX_CC
-      call checkbound_array(fablo,fabhi,MACFLUX_CC_ptr,1,grid_type_CC)
-      MACFLUX_XY_ptr=>MACFLUX_XY
-      call checkbound_array(fablo,fabhi,MACFLUX_XY_ptr,1,grid_type_XY)
-      MACFLUX_XZ_ptr=>MACFLUX_XZ
-      call checkbound_array(fablo,fabhi,MACFLUX_XZ_ptr,1,grid_type_XZ)
-      MACFLUX_YZ_ptr=>MACFLUX_YZ
-      call checkbound_array(fablo,fabhi,MACFLUX_YZ_ptr,1,grid_type_YZ)
+      call checkbound_array(fablo,fabhi,MACFLUX_CC_ptr,0,grid_type_CC)
+
+      MACFLUX_X_ptr=>MACFLUX_X
+      call checkbound_array(fablo,fabhi,MACFLUX_X_ptr,0,grid_type_X)
+
+      MACFLUX_Y_ptr=>MACFLUX_Y
+      call checkbound_array(fablo,fabhi,MACFLUX_Y_ptr,0,grid_type_Y)
+
+      MACFLUX_Z_ptr=>MACFLUX_Z
+      call checkbound_array(fablo,fabhi,MACFLUX_Z_ptr,0,grid_type_Z)
 
       visc_ptr=>visc
       call checkbound_array(fablo,fabhi,visc_ptr,1,-1)
@@ -19101,10 +19096,11 @@ stop
       call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1)
       levelpc_ptr=>levelpc
       call checkbound_array(fablo,fabhi,levelpc_ptr,2,-1)
-      xfacefab_ptr=>xfacefab
-      call checkbound_array(fablo,fabhi,xfacefab_ptr,0,force_dir)
 
-      call checkbound_array1(fablo,fabhi,UMACNEW_ptr,0,force_dir)
+      rhoinvfab_ptr=>rhoinvfab
+      call checkbound_array1(fablo,fabhi,rhoinvfab_ptr,0,-1)
+
+      call checkbound_array1(fablo,fabhi,SNEW_ptr,0,-1)
 
       nhalf=3
   
@@ -19150,29 +19146,17 @@ stop
        stop
       endif
 
-       !type(deriv_from_grid_parm_type) :: data_in
-      data_in%level=level
-      data_in%finest_level=finest_level
-      data_in%bfact=bfact ! bfact=kind of spectral element grid 
-      data_in%dx=>dx_local
-      data_in%xlo=>xlo_local
-      data_in%fablo=>fablo_local
-      data_in%fabhi=>fabhi_local
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
-       ! force_dir=0..sdim-1 
-      call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,0,force_dir)
-
-       ! traverse the "force_dir" MAC grid.
+       ! traverse the cell centered grid.
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-        ! force_dir=0..sdim-1 
-       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,force_dir)
+       call gridsten_level(xstenCELL,i,j,k,level,nhalf)
 
        do dircomp=1,SDIM
-        x_MAC_control_volume(dircomp)=xstenMAC(0,dircomp)
+        x_CELL_control_volume(dircomp)=xstenCELL(0,dircomp)
        enddo
 
         !rzflag=0 => volume and area independent of r.
@@ -19182,41 +19166,29 @@ stop
        else if ((rzflag.eq.COORDSYS_RZ).or. &
                 (rzflag.eq.COORDSYS_CYLINDRICAL)) then
         !volume=(dtheta/2)*(r_{2}^2 - r_{1}^{2}) dz=dtheta*dz*dr r
-        rval=x_MAC_control_volume(1)
+        rval=x_CELL_control_volume(1)
        else
         print *,"rzflag invalid"
         stop
        endif
 
-       ii=0
-       jj=0
-       kk=0
-       if (force_dir.eq.0) then
-        ii=1
-       else if (force_dir.eq.1) then
-        jj=1
-       else if ((force_dir.eq.2).and.(SDIM.eq.3)) then
-        kk=1
+       if (rval.gt.zero) then
+        ! do nothing
        else
-        print *,"force_dir invalid"
+        print *,"rval invalid"
         stop
-       endif 
- 
+       endif
+
        do im_LS=1,num_materials
-        LS_control_volume_left(im_LS)=levelpc(D_DECL(i-ii,j-jj,k-kk),im_LS)
-        LS_control_volume_right(im_LS)=levelpc(D_DECL(i,j,k),im_LS)
+        LS_control_volume(im_LS)=levelpc(D_DECL(i,j,k),im_LS)
        enddo
 
-       call get_primary_material(LS_control_volume_left,local_mask_left)
-       call get_primary_material(LS_control_volume_right,local_mask_right)
+       call get_primary_material(LS_control_volume,local_mask)
 
-       if ((local_mask_left.eq.im_elastic_p1).or. &
-           (local_mask_right.eq.im_elastic_p1)) then
+       if (local_mask.eq.im_elastic_p1) then
         local_mask=1
-       else if ((local_mask_left.ge.1).and. &
-                (local_mask_left.le.num_materials).and. &
-                (local_mask_right.ge.1).and. &
-                (local_mask_right.le.num_materials)) then
+       else if ((local_mask.ge.1).and. &
+                (local_mask.le.num_materials)) then
         local_mask=0
        else
         print *,"local_mask invalid"
@@ -19224,7 +19196,7 @@ stop
        endif
 
         ! LS>0 if clamped
-       call SUB_clamped_LS(x_MAC_control_volume,cur_time,LS_clamped, &
+       call SUB_clamped_LS(x_CELL_control_volume,cur_time,LS_clamped, &
          vel_clamped,temperature_clamped,prescribed_flag,dx)
        if (LS_clamped.ge.zero) then
         local_mask=0
@@ -19232,32 +19204,6 @@ stop
         ! do nothing
        else
         print *,"LS_clamped invalid"
-        stop
-       endif
-       if ((rzflag.eq.COORDSYS_RZ).or. &
-           (rzflag.eq.COORDSYS_CYLINDRICAL)) then
-        if (force_dir.eq.0) then
-         if (abs(x_MAC_control_volume(force_dir+1)).le. &
-             VOFTOL*dx(force_dir+1)) then
-          local_mask=0
-         else if (abs(x_MAC_control_volume(force_dir+1)).ge. &
-                  VOFTOL*dx(force_dir+1)) then
-          ! do nothing
-         else
-          print *,"x_MAC_control_volume bust"
-          stop
-         endif
-        else if ((force_dir.eq.1).or. &
-                 (force_dir.eq.SDIM-1)) then
-         ! do nothing
-        else
-         print *,"force_dir invalid"
-         stop
-        endif
-       else if (rzflag.eq.COORDSYS_CARTESIAN) then
-        ! do nothing
-       else
-        print *,"rzflag invalid"
         stop
        endif
 
@@ -19268,37 +19214,8 @@ stop
         ! im_elastic_p1 dominates the center of the MAC control volume.
        if (mask_control_volume.eq.1) then
 
-        data_out%data_interp=>cell_data_tensor_interp
-        data_in%ncomp=ENUM_NUM_TENSOR_TYPE
-        data_in%scomp=1
-
-        data_in%index_flux(1)=i
-        data_in%index_flux(2)=j
-        if (SDIM.eq.3) then
-         data_in%index_flux(SDIM)=k
-        else if (SDIM.eq.2) then
-         !do nothing
-        else
-         print *,"dimension bust"
-         stop
-        endif
-        data_in%grid_type_flux=force_dir ! dir=0..sdim-1
-        do dir_local=1,SDIM
-         data_in%box_type_flux(dir_local)=0
-        enddo
-        data_in%box_type_flux(force_dir+1)=1
-
-        do dir_local=1,SDIM
-         data_in%box_type_data(dir_local)=0
-        enddo
-        data_in%grid_type_data=-1
-        data_in%disp_data=>MACFLUX_CC
-        data_in%dir_deriv=-1
-
-        call deriv_from_grid_util(data_in,data_out)
-
         do itensor=1,ENUM_NUM_TENSOR_TYPE
-         local_tensor_data(itensor)=cell_data_tensor_interp(itensor)
+         local_tensor_data(itensor)=MACFLUX_CC(D_DECL(i,j,k),itensor)
         enddo
 
         do ii=1,3
@@ -19332,28 +19249,15 @@ stop
          do dir_local=1,SDIM
           box_type_flux(dir_local)=0
          enddo
-         box_type_flux(force_dir+1)=1
+         box_type_flux(dir_flux+1)=1
 
-         if (dir_flux.eq.force_dir) then
-          box_type_flux(force_dir+1)=0
-          if (side_flux.eq.1) then
-           ! do nothing
-          else if (side_flux.eq.0) then
-           iflux_array(dir_flux+1)=iflux_array(dir_flux+1)-1
-          else
-           print *,"side_flux invalid"
-           stop
-          endif
+         if (side_flux.eq.0) then
+          ! do nothing
+         else if (side_flux.eq.1) then
+          iflux_array(dir_flux+1)=iflux_array(dir_flux+1)+1
          else
-          box_type_flux(dir_flux+1)=1
-          if (side_flux.eq.0) then
-           ! do nothing
-          else if (side_flux.eq.1) then
-           iflux_array(dir_flux+1)=iflux_array(dir_flux+1)+1
-          else
-           print *,"side_flux invalid"
-           stop
-          endif
+          print *,"side_flux invalid"
+          stop
          endif
          iflux=iflux_array(1)
          jflux=iflux_array(2)
@@ -19365,7 +19269,7 @@ stop
 
          call box_type_to_grid_type(grid_type_flux,box_type_flux)
 
-          ! grid_type_flux=-1,3,4, or 5
+          ! grid_type_flux=0,1, or 2
          call gridstenMAC_level(xsten_flux,iflux,jflux,kflux, &
                  level,nhalf,grid_type_flux)
          do dir_local=1,SDIM
@@ -19376,22 +19280,18 @@ stop
          enddo ! dir_local=1..sdim
        
          do itensor=1,ENUM_NUM_TENSOR_TYPE
-          if (grid_type_flux.eq.-1) then
-           grid_type_sanity=grid_type_CC
+          if (grid_type_flux.eq.0) then
+           grid_type_sanity=grid_type_X
            local_tensor_data(itensor)= &
-             MACFLUX_CC(D_DECL(iflux,jflux,kflux),itensor) 
-          else if (grid_type_flux.eq.3) then
-           grid_type_sanity=grid_type_XY
+             MACFLUX_X(D_DECL(iflux,jflux,kflux),itensor) 
+          else if (grid_type_flux.eq.1) then
+           grid_type_sanity=grid_type_Y
            local_tensor_data(itensor)= &
-             MACFLUX_XY(D_DECL(iflux,jflux,kflux),itensor) 
-          else if ((grid_type_flux.eq.4).and.(SDIM.eq.3)) then
-           grid_type_sanity=grid_type_XZ
+             MACFLUX_Y(D_DECL(iflux,jflux,kflux),itensor) 
+          else if ((grid_type_flux.eq.SDIM-1).and.(SDIM.eq.3)) then
+           grid_type_sanity=grid_type_Z
            local_tensor_data(itensor)= &
-             MACFLUX_XZ(D_DECL(iflux,jflux,kflux),itensor) 
-          else if ((grid_type_flux.eq.5).and.(SDIM.eq.3)) then
-           grid_type_sanity=grid_type_YZ
-           local_tensor_data(itensor)= &
-             MACFLUX_YZ(D_DECL(iflux,jflux,kflux),itensor) 
+             MACFLUX_Z(D_DECL(iflux,jflux,kflux),itensor) 
           else
            print *,"grid_type_flux invalid"
            stop
@@ -19438,46 +19338,35 @@ stop
           enddo ! dir_column
          enddo ! dir_row
 
-         data_out%data_interp=>cell_data_LS_interp
-
-          !type(deriv_from_grid_parm_type) :: data_in
-         data_in%ncomp=num_materials*(1+SDIM)
-         data_in%scomp=1
-
-         data_in%index_flux(1)=iflux
-         data_in%index_flux(2)=jflux
-         if (SDIM.eq.3) then
-          data_in%index_flux(SDIM)=kflux
-         else if (SDIM.eq.2) then
-          !do nothing
+         ii=0
+         jj=0
+         kk=0
+         if (dir_flux.eq.0) then
+          ii=1
+         else if (dir_flux.eq.1) then
+          jj=1
+         else if ((dir_flux.eq.2).and.(SDIM.eq.3)) then
+          kk=1
          else
-          print *,"dimension bust"
+          print *,"dir_flux invalid"
           stop
          endif
-         data_in%grid_type_flux=grid_type_flux
-         do dir_local=1,SDIM
-          data_in%box_type_flux(dir_local)=box_type_flux(dir_local)
-         enddo
+         do im_LS=1,num_materials
+          if (side_flux.eq.0) then
+           LS_outside(im_LS)=levelpc(D_DECL(i-ii,j-jj,k-kk),im_LS)
+          else if (side_flux.eq.1) then
+           LS_outside(im_LS)=levelpc(D_DECL(i+ii,j+jj,k+kk),im_LS)
+          else
+           print *,"side_flux invalid"
+           stop
+          endif
+         enddo !im_LS=1...num_materials
 
-         do dir_local=1,SDIM
-          data_in%box_type_data(dir_local)=0
-         enddo
-         data_in%grid_type_data=-1
-         data_in%disp_data=>levelpc
-         data_in%dir_deriv=-1
-
-         call deriv_from_grid_util(data_in,data_out)
-
-         do im_LS=1,num_materials*(1+SDIM)
-          LS_at_flux_point(side_flux+1,dir_flux+1,im_LS)= &
-             cell_data_LS_interp(im_LS)
-         enddo
-
-         call get_primary_material(cell_data_LS_interp,local_mask)
-         if ((local_mask.eq.im_elastic_p1).and. &
-             (cell_data_LS_interp(im_elastic_p1).gt.zero)) then
+         call get_primary_material(LS_outside,local_mask)
+         if (local_mask.eq.im_elastic_p1) then
           local_mask=1
-         else if ((local_mask.ge.1).and.(local_mask.le.num_materials)) then
+         else if ((local_mask.ge.1).and. &
+                  (local_mask.le.num_materials)) then
           local_mask=0
          else
           print *,"local_mask invalid"
@@ -19533,7 +19422,14 @@ stop
           ! areay=dr * dz
           ! volume=dtheta*dz*dr r
           rplus=x_at_flux_point(2,1,1)
-          rminus=x_at_flux_point(1,1,1)
+          if (i.eq.0) then
+           rminus=zero
+          else if (i.gt.0) then
+           rminus=x_at_flux_point(1,1,1)
+          else
+           print *,"i invalid"
+           stop
+          endif
           if (rzflag.eq.COORDSYS_CYLINDRICAL) then
            hy=hy*rval
           endif
@@ -19673,7 +19569,7 @@ stop
          endif
 
          do dir_row=1,SDIM
-          deninv=xfacefab(D_DECL(i,j,k),FACECOMP_FACEDEN+1)
+          deninv=rhoinvfab(D_DECL(i,j,k))
 
           if (deninv.ge.zero) then 
            if (abs(force(dir_row)).lt.OVERFLOW_CUTOFF) then
@@ -19686,7 +19582,7 @@ stop
  
            if (dir_row.eq.force_dir+1) then
             XFORCE_local=force(dir_row)*deninv
-            UMACNEW(D_DECL(i,j,k))=UMACNEW(D_DECL(i,j,k))+XFORCE_local
+            SNEW(D_DECL(i,j,k))=SNEW(D_DECL(i,j,k))+XFORCE_local
            endif
 
           else

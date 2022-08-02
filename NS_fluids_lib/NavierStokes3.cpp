@@ -3260,7 +3260,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        // maintain conservation of energy for compressible materials.
       increment_KE_ALL(beta);
-      VELMAC_TO_CELLALL(OP_INTERPOLATE_BASE,dest_idx);
+      VELMAC_TO_CELLALL(dest_idx);
       beta=-1.0;
       increment_KE_ALL(beta);
 
@@ -11695,7 +11695,7 @@ void NavierStokes::avgDownALL_TENSOR() {
 // VISCOELASTIC, CTML FORCE
 // if viscoelastic_force_only==0, then the following command is given 
 // prior to this routine:
-//  SET_STOKES_MARK(REGISTER_MARK_MF,108);
+//  SET_STOKES_MARK(REGISTER_MARK_MF);
 void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 
  int finest_level=parent->finestLevel();
@@ -11732,11 +11732,22 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
          parent->levelSteps(0)); 
        }
 
+       if (localMF[VISCOTEN_MF]->nComp()==ENUM_NUM_TENSOR_TYPE) {
+        // do nothing
+       } else
+        amrex::Error("localMF[VISCOTEN_MF]->nComp() invalid");
+
+       if (localMF[VISCOTEN_MF]->nGrow()==1) {
+        // do nothing
+       } else
+        amrex::Error("localMF[VISCOTEN_MF]->nGrow() invalid");
+
         //interpolate Q to X,Y,Z locations.
         // NavierStokes::make_viscoelastic_tensorMACALL is declared in
 	//   NavierStokes.cpp
 	// make_viscoelastic_tensorMACALL -> make_viscoelastic_tensorMAC
 	// -> fort_maketensor_mac
+
        int flux_grid_type=0;
        make_viscoelastic_tensorMACALL(im,
          MAC_ELASTIC_FLUX_X_MF,flux_grid_type,TensorX_Type);
@@ -12110,7 +12121,7 @@ void NavierStokes::veldiffuseALL() {
    ncomp);
 
   // register_mark=unew (1 ghost)
- SET_STOKES_MARK(REGISTER_MARK_MF,103);
+ SET_STOKES_MARK(REGISTER_MARK_MF);
 
  show_norm2_id(REGISTER_MARK_MF,1);
 
@@ -12202,7 +12213,7 @@ void NavierStokes::veldiffuseALL() {
  } else 
   amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
 
- SET_STOKES_MARK(REGISTER_MARK_MF,106); //register_mark=unew
+ SET_STOKES_MARK(REGISTER_MARK_MF); //register_mark=unew
 
  show_norm2_id(REGISTER_MARK_MF,4);
 
@@ -12214,7 +12225,7 @@ void NavierStokes::veldiffuseALL() {
   //  init_gradu_tensorALL(VISCHEAT_SOURCE_MF,...)
   //  diffusion_heatingALL(VISCHEAT_SOURCE_MF,VISCHEAT_MF);
   //
- SET_STOKES_MARK(VISCHEAT_SOURCE_MF,107);
+ SET_STOKES_MARK(VISCHEAT_SOURCE_MF);
 
   // spectral_override==1 => order derived from "enable_spectral"
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
@@ -12932,7 +12943,7 @@ void NavierStokes::prepare_advect_vars(Real time) {
   getStateMAC_localMF(ADVECT_REGISTER_FACE_MF+dir,0,dir,time);
  } // dir
   // advect_register has 1 ghost initialized.
- push_back_state_register(ADVECT_REGISTER_MF,time,201);
+ push_back_state_register(ADVECT_REGISTER_MF,time);
 
 } // end subroutine prepare_advect_vars(Real time)
 

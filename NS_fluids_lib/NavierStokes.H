@@ -1190,13 +1190,9 @@ void apply_pressure_grad(
     void make_MAC_velocity_consistentALL();
     void make_MAC_velocity_consistent();
 
-    void VELMAC_TO_CELLALL(
-      int velmac_op, //OP_INTERPOLATE_INCREMENT or OP_INTERPOLATE_BASE
-      int dest_idx);
+    void VELMAC_TO_CELLALL(int dest_idx);
 
-    void VELMAC_TO_CELL(
-      int velmac_op, //OP_INTERPOLATE_INCREMENT or OP_INTERPOLATE_BASE
-      int dest_idx);
+    void VELMAC_TO_CELL(int dest_idx);
 
     void increment_KE(Real beta);
     void increment_KE_ALL(Real beta);
