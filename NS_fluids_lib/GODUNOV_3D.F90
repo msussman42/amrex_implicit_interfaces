@@ -8629,10 +8629,9 @@ stop
        stop
       endif
 
-      if ((flux_grid_type.eq.-1).or. &
-          (flux_grid_type.eq.3).or. &
-          ((flux_grid_type.eq.4).and.(SDIM.eq.3)).or. &
-          ((flux_grid_type.eq.5).and.(SDIM.eq.3))) then
+      if ((flux_grid_type.eq.0).or. &
+          (flux_grid_type.eq.1).or. &
+          ((flux_grid_type.eq.2).and.(SDIM.eq.3))) then
        ! do nothing
       else
        print *,"flux_grid_type invalid"
