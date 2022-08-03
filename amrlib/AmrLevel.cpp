@@ -988,9 +988,9 @@ AmrLevel::InterpBordersGHOST (
  if (level<0)
   amrex::Error("level invalid in InterpBordersGHOST");
 
- BL_ASSERT(ncomp <= (mf.nComp()-scomp));
+ BL_ASSERT(ncomp<=(mf.nComp()-scomp));
 
- BL_ASSERT(0 <= index && index < desc_lstGHOST.size());
+ BL_ASSERT((0<=index)&&(index<desc_lstGHOST.size()));
 
  if (scompBC_map.size()!=ncomp)
   amrex::Error("scompBC_map has invalid size");
@@ -998,8 +998,8 @@ AmrLevel::InterpBordersGHOST (
  int ngrow=mf.nGrow();
  const BoxArray& mf_BA = mf.boxArray();
 
- if (ngrow<=0)
-  amrex::Error("ngrow<=0 in InterpBordersGHOST");
+ if (ngrow<0)
+  amrex::Error("ngrow<0 in InterpBordersGHOST");
 
  DistributionMapping dm=mf.DistributionMap();
 
@@ -1019,8 +1019,8 @@ AmrLevel::InterpBordersGHOST (
   MultiFab::Copy(*cmf_part,cmf,scomp,0,ncomp,0);
  }  // level>0
  
- int                     DComp   = scomp;
- const StateDescriptor&  descGHOST = desc_lstGHOST[index];
+ int DComp = scomp;
+ const StateDescriptor& descGHOST = desc_lstGHOST[index];
  IndexType desc_typ(descGHOST.getType());
  int desc_grid_type=-1;
  StateData::get_grid_type(desc_typ,desc_grid_type);
@@ -1136,8 +1136,8 @@ AmrLevel::InterpBorders (
  int ngrow=mf.nGrow();
  const BoxArray& mf_BA = mf.boxArray();
 
- if (ngrow<=0)
-  amrex::Error("ngrow<=0 in InterpBorders");
+ if (ngrow<0)
+  amrex::Error("ngrow<0 in InterpBorders");
 
  DistributionMapping dm=mf.DistributionMap();
 
