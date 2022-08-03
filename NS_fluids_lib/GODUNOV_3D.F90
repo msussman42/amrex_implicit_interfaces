@@ -19077,7 +19077,7 @@ stop
       endif
 
       MACFLUX_CC_ptr=>MACFLUX_CC
-      call checkbound_array(fablo,fabhi,MACFLUX_CC_ptr,0,grid_type_CC)
+      call checkbound_array(fablo,fabhi,MACFLUX_CC_ptr,1,grid_type_CC)
 
       MACFLUX_X_ptr=>MACFLUX_X
       call checkbound_array(fablo,fabhi,MACFLUX_X_ptr,0,grid_type_X)
@@ -19100,7 +19100,7 @@ stop
       rhoinvfab_ptr=>rhoinvfab
       call checkbound_array1(fablo,fabhi,rhoinvfab_ptr,0,-1)
 
-      call checkbound_array1(fablo,fabhi,SNEW_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,SNEW_ptr,1,-1)
 
       nhalf=3
   

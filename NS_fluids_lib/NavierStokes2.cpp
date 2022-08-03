@@ -1628,7 +1628,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
  const Real* dx = geom.CellSize();
 
   // outer loop: each force component u_t = F_elastic/density  u,v,w
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+ for (int force_dir=0;force_dir<AMREX_SPACEDIM;force_dir++) {
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -1700,7 +1700,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
    fort_mac_elastic_force(
      &im_elastic, // 0..num_materials-1
      &partid, //0..num_materials_viscoelastic-1
-     &dir, // dir=0,1,..sdim-1  
+     &force_dir, // force_dir=0,1,..sdim-1  
      &ncomp_visc, 
      &visc_coef,
      velbc.dataPtr(),
@@ -1730,7 +1730,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
      rhoinversefab.dataPtr(),
      ARLIM(rhoinversefab.loVect()),ARLIM(rhoinversefab.hiVect()),
-     SNEWfab.dataPtr(STATECOMP_VEL+dir), //dir=0 ... sdim-1
+     SNEWfab.dataPtr(STATECOMP_VEL+force_dir), //force_dir=0 ... sdim-1
      ARLIM(SNEWfab.loVect()),ARLIM(SNEWfab.hiVect()), 
      tilelo,tilehi,
      fablo,fabhi,
@@ -1743,7 +1743,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
   } // mfi
 } // omp
   ns_reconcile_d_num(132);
- } // dir = 0..sdim-1
+ } // force_dir = 0..sdim-1
 
 } // end subroutine MAC_GRID_ELASTIC_FORCE
 

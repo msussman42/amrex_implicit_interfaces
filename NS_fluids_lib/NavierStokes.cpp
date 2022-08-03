@@ -10460,10 +10460,12 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
   ns_level.make_viscoelastic_tensorMAC(im,
      flux_mf,flux_grid_type,fill_state_idx);
  }
+
  if (localMF_grow[VISCOTEN_MF]==1) {
   // do nothing
  } else 
   amrex::Error("VISCOTEN_MF has incorrect Ngrow");
+
  if (localMF_grow[flux_mf]==0) {
   // do nothing
  } else 
@@ -10478,10 +10480,16 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
   // do nothing
  } else 
   amrex::Error("VISCOTEN_MF has incorrect nComp");
+
  if (localMF[flux_mf]->nComp()==ENUM_NUM_TENSOR_TYPE) {
   // do nothing
  } else 
   amrex::Error("flux_mf has incorrect nComp");
+
+ if (localMF[flux_mf]->nGrow()==0) {
+  // do nothing
+ } else 
+  amrex::Error("flux_mf has incorrect nGrow");
 
  int Q_grid_type=-1;
  debug_boxArray(localMF[VISCOTEN_MF],Q_grid_type,VISCOTEN_MF);
