@@ -8650,7 +8650,7 @@ stop
       tensor_ptr=>tensor
       call checkbound_array(fablo,fabhi,visc_ptr,1,-1)
       call checkbound_array(fablo,fabhi,tensor_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,tensorMAC_ptr,1,flux_grid_type)
+      call checkbound_array(fablo,fabhi,tensorMAC_ptr,0,flux_grid_type)
 
       do dir_local=1,SDIM
        dx_local(dir_local)=dx(dir_local)
@@ -8674,7 +8674,7 @@ stop
       data_out%data_interp=>cell_data_deriv
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0, &
-              flux_grid_type) 
+         flux_grid_type) 
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
