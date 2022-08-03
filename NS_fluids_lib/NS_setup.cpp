@@ -128,6 +128,7 @@ set_tensor_bc (BCRec&       bc,
      // do nothing
     } else
      amrex::Error("dir1 invalid");
+
     if ((dir2>=0)&&(dir2<AMREX_SPACEDIM)) {
      // do nothing
     } else
@@ -175,7 +176,7 @@ set_hoop_bc (BCRec& bc,const BCRec& phys_bc)
  } else
   amrex::Error("bl_spacedim invalid");
 
-} // subroutine set_hoop_bc
+} // end subroutine set_hoop_bc
 
 
 static

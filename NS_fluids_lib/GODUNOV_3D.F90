@@ -8487,10 +8487,10 @@ stop
         ! in fort_derviscosity:
         !  etaS=etaL-etaP=viscconst-elastic_viscosity 
         !  viscoelastic_coeff= &
-        !   (visc(D_DECL(i,j,k),im_parm)-etaS)/(modtime+dt)
-        !  visc(D_DECL(i,j,k),num_materials+im_parm)=
+        !   (visc(D_DECL(i,j,k),im_parm+1)-etaS)/(modtime+dt)
+        !  visc(D_DECL(i,j,k),num_materials+im_parm+1)=
         !     viscoelastic_coeff*visc_coef
-        !  visc(D_DECL(i,j,k),2*num_materials+im_parm)=modtime
+        !  visc(D_DECL(i,j,k),2*num_materials+im_parm+1)=modtime
        do ii=1,3
        do jj=1,3
          ! FENE-P or FENE-CP visc(num_materials+im+1)=f(A)/lambda
