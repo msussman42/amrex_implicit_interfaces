@@ -9283,6 +9283,7 @@ stop
         point_told(dir_local)=told(D_DECL(i,j,k),dir_local)
        enddo
 
+        !point_updatetensor is declared in: GLOBALUTIL.F90
        call point_updatetensor( &
         i,j,k, &
         level, &
@@ -18897,9 +18898,9 @@ stop
        !  du/dt + u dot grad u = -grad p/rho + div(H tau_elastic)/rho
        !  H=1 in the elastic solid
        !  H=0 in the fluid
-       ! fort_mac_elastic_force is called from NavierStokes2.cpp:
+       ! fort_elastic_force is called from NavierStokes2.cpp:
        ! void NavierStokes::MAC_GRID_ELASTIC_FORCE
-      subroutine fort_mac_elastic_force( &
+      subroutine fort_elastic_force( &
        im_elastic, & ! 0..num_materials-1
        partid, & ! 0..num_materials_viscoelastic-1
        force_dir, & ! 0..sdim-1
@@ -18936,7 +18937,7 @@ stop
        finest_level, &
        rzflag, &
        domlo,domhi) &
-      bind(c,name='fort_mac_elastic_force')
+      bind(c,name='fort_elastic_force')
 
       use probcommon_module
       use global_utility_module
@@ -19232,7 +19233,9 @@ stop
         center_flux(3,1)=center_flux(1,3)
         center_flux(3,2)=center_flux(2,3)
 
-         ! if 2d, t(3,3)=0 if XY, t(3,3)=2 xd/r if rz, t(3,3)=0 if rt.
+! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
+!         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
+!         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
         center_hoop_22=center_flux(3,3)
 
          ! traverse all the flux face centroids associated with the
@@ -19311,7 +19314,12 @@ stop
          enddo
          enddo
 
-          ! if 2d, t(3,3)=0 if XY, t(3,3)=2 xd/r if rz, t(3,3)=0 if rt.
+! grad u=| u_r  u_t/r-v/r  u_z  |
+!        | v_r  v_t/r+u/r  v_z  |
+!        | w_r  w_t/r      w_z  |
+! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
+!         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
+!         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
          do itensor=1,ENUM_NUM_TENSOR_TYPE
           call stress_index(itensor,ii,jj)
           DISP_TEN(ii,jj)=local_tensor_data(itensor)
@@ -19490,15 +19498,17 @@ stop
          enddo ! dir_row=1..sdim
                    
          if (rzflag.eq.COORDSYS_CARTESIAN) then
-           ! do nothing
+          bodyforce=zero
          else if (rzflag.eq.COORDSYS_RZ) then
 
           if (SDIM.ne.2) then
            print *,"dimension bust"
            stop
           endif
+! div S = | (r S_11)_r/r + (S_12)_t/r - S_22/r  + (S_13)_z |
+!         | (r S_21)_r/r + (S_22)_t/r + S_12/r  + (S_23)_z |
+!         | (r S_31)_r/r + (S_32)_t/r +           (S_33)_z |
            ! -T33/r
-           ! center_hoop_22=2 * xdisp/r
           dir_row=1
           if (rval.gt.zero) then
            bodyforce=-center_hoop_22/rval
@@ -19533,7 +19543,7 @@ stop
          endif 
 
          if (rzflag.eq.COORDSYS_CARTESIAN) then
-          ! do nothing
+          bodyforce=zero
          else if (rzflag.eq.COORDSYS_RZ) then
           if (SDIM.ne.2) then
            print *,"dimension bust"
@@ -19608,7 +19618,7 @@ stop
       enddo ! i
       
       return 
-      end subroutine fort_mac_elastic_force
+      end subroutine fort_elastic_force
 
         ! NavierStokes::veldiffuseALL() (NavierStokes3.cpp)
         ! NavierStokes::assimilate_state_data() (NavierStokes.cpp)

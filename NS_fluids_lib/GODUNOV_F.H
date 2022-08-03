@@ -944,7 +944,7 @@ extern "C"
      int* uncoupled_viscosity,
      int* homflag);
 
-   void fort_mac_elastic_force(
+   void fort_elastic_force(
      int* im_elastic, // 0..num_materials-1
      int* partid, // 0..num_materials_viscoelastic-1
      int* dir, //0..sdim-1

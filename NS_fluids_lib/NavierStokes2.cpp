@@ -1560,7 +1560,7 @@ void NavierStokes::avgDownEdge_localMF(int idxMF,int scomp,int ncomp,
 
 } // avgDownEdge_localMF
 
-void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
+void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_elastic) {
 
  if ((im_elastic>=0)&&(im_elastic<num_materials)) {
    if (ns_is_rigid(im_elastic)==0) {
@@ -1697,7 +1697,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // declared in: GODUNOV_3D.F90
-   fort_mac_elastic_force(
+   fort_elastic_force(
      &im_elastic, // 0..num_materials-1
      &partid, //0..num_materials_viscoelastic-1
      &force_dir, // force_dir=0,1,..sdim-1  
@@ -1745,7 +1745,7 @@ void NavierStokes::MAC_GRID_ELASTIC_FORCE(int im_elastic) {
   ns_reconcile_d_num(132);
  } // force_dir = 0..sdim-1
 
-} // end subroutine MAC_GRID_ELASTIC_FORCE
+} // end subroutine CELL_GRID_ELASTIC_FORCE
 
 // PEDGE_MF allocated in allocate_pressure_work_vars
 void NavierStokes::init_divup_cell_vel_cell(

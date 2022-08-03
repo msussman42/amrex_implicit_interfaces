@@ -526,6 +526,10 @@ stop
         enddo
        enddo ! dir=1..sdim
 
+! grad u=| u_r  u_t/r-v/r  u_z  |
+!        | v_r  v_t/r+u/r  v_z  |
+!        | w_r  w_t/r      w_z  |
+
        if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
        else if (levelrz.eq.COORDSYS_RZ) then
@@ -533,12 +537,22 @@ stop
          print *,"dimension bust"
          stop
         endif
-        rr=xsten(0,1)
-        gradu(3,3)=vel(D_DECL(i,j,k),1)/abs(rr)
+        rr=abs(xsten(0,1))
+        if (rr.gt.zero) then
+         gradu(3,3)=vel(D_DECL(i,j,k),1)/rr
+        else
+         print *,"rr invalid"
+         stop
+        endif
        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        rr=xsten(0,1)
-        gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),1)/abs(rr)
-        gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),2)/abs(rr)
+        rr=abs(xsten(0,1))
+        if (rr.gt.zero) then
+         gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),1)/rr
+         gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),2)/rr
+        else
+         print *,"rr invalid"
+         stop
+        endif
        else
         print *,"levelrz invalid getshear 2"
         stop

@@ -11765,13 +11765,13 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
         amrex::Error("dimension bust");
 
          // find divergence of the X,Y,Z variables.
-	 // NavierStokes::MAC_GRID_ELASTIC_FORCE is declared in
+	 // NavierStokes::CELL_GRID_ELASTIC_FORCE is declared in
 	 //    NavierStokes2.cpp
-	 // MAC_GRID_ELASTIC_FORCE -> fort_mac_elastic_force ->
+	 // CELL_GRID_ELASTIC_FORCE -> fort_elastic_force ->
 	 // tensor_Heaviside
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
-        ns_level.MAC_GRID_ELASTIC_FORCE(im);
+        ns_level.CELL_GRID_ELASTIC_FORCE(im);
        }
 
        delete_array(VISCOTEN_MF);
