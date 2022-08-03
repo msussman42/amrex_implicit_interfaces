@@ -10452,8 +10452,8 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
  } else 
   amrex::Error("flux_mf should not be allocated");
 
-  //ngrow=1  localMF[flux_mf] initialized to 0.0.
- allocate_array(1,ENUM_NUM_TENSOR_TYPE,flux_grid_type,flux_mf);
+  //ngrow=0  localMF[flux_mf] initialized to 0.0.
+ allocate_array(0,ENUM_NUM_TENSOR_TYPE,flux_grid_type,flux_mf);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -10464,7 +10464,7 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
   // do nothing
  } else 
   amrex::Error("VISCOTEN_MF has incorrect Ngrow");
- if (localMF_grow[flux_mf]==1) {
+ if (localMF_grow[flux_mf]==0) {
   // do nothing
  } else 
   amrex::Error("flux_mf has incorrect Ngrow");
@@ -10509,7 +10509,7 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
   scompBC_map.resize(1);
   scompBC_map[0]=scomp_extrap;
    // idx,ngrow,scomp,ncomp,index,scompBC_map
-  PCINTERP_fill_bordersALL(flux_mf,1,scomp_extrap,1,
+  PCINTERP_fill_bordersALL(flux_mf,0,scomp_extrap,1,
 	fill_state_idx,scompBC_map);
  } // scomp_extrap=0..ENUM_NUM_TENSOR_TYPE-1
 

@@ -223,7 +223,8 @@ void FillPatchTwoLevels (
      " ncomp=" << ncomp << " levelc= " << levelc <<
      " levelf= " << levelf << " do_the_interp= " << do_the_interp << '\n';
     std::cout << "mf_target.boxArray() " << mf_target.boxArray() << '\n';
-    std::cout << "mf_target.DistributionMap() " << mf_target.DistributionMap() << '\n';
+    std::cout << "mf_target.DistributionMap() " << 
+      mf_target.DistributionMap() << '\n';
     std::cout << "fmf.boxArray() " << fmf.boxArray() << '\n';
     std::cout << "fmf.DistributionMap() " << fmf.DistributionMap() << '\n';
     std::cout << "cmf.boxArray() " << cmf.boxArray() << '\n';
@@ -363,8 +364,8 @@ void FillPatchTwoLevels (
 
    ParallelDescriptor::Barrier();
     // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost,period
-   mf_target.ParallelCopy(mf_fine_patch, 0, dcomp, ncomp, IntVect{0}, ngrow_vec,
-		   fgeom.periodicity());
+   mf_target.ParallelCopy(mf_fine_patch, 0, dcomp, ncomp, IntVect{0}, 
+      ngrow_vec,fgeom.periodicity());
    ParallelDescriptor::Barrier();
 
   } else {
