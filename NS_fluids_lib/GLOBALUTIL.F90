@@ -5642,7 +5642,7 @@ REAL_T, dimension(:,:), allocatable :: A_local
 
 if (SDIM.eq.2) then
  if (levelrz.eq.COORDSYS_RZ) then
-  A_dim=3
+  A_dim=2
  else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
   A_dim=3
  else if (levelrz.eq.COORDSYS_CARTESIAN) then
@@ -5674,10 +5674,11 @@ else if (A_dim.eq.2) then
  do i=1,3
   if ((i.eq.3).or.(j.eq.3)) then
    if (i.eq.j) then
-    if ((A(i,j).eq.zero).or.(A(i,j).eq.one)) then
+    if (A(i,j).ge.zero) then
      ! do nothing
     else
      print *,"A(i,j) failed sanity check"
+     print *,"i,j,A(i,j) ",i,j,A(i,j)
      stop
     endif
    else if (i.ne.j) then
