@@ -25021,7 +25021,9 @@ else
 endif
 
 call gridsten_level(xsten,i,j,k,level,nhalf)
-
+ ! grad u=| u_r  u_t/r-v/r  u_z  |
+ !        | v_r  v_t/r+u/r  v_z  |
+ !        | w_r  w_t/r      w_z  |
  ! if levelrz==COORDSYS_RZ,
  !  gradU(3,3)=u/|r|
  ! if levelrz==COORDSYS_CYLINDRICAL,
@@ -25117,7 +25119,26 @@ do ii=1,3
   ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
   !   or
   ! Xia, Lu, Tryggvason 2018
-  ! do nothing
+
+  if (viscoelastic_model.eq.3) then ! incremental model
+   ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
+   ! do nothing
+  else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
+   ! Xia, Lu, Tryggvason 2018
+   if (Q(ii,ii)+one.gt.zero) then
+    ! do nothing
+   else
+    print *,"A=Q+I should be positive definite"
+    stop
+   endif
+  else if (viscoelastic_model.eq.4) then!FSI pressure velocity coupling
+   print *,"this routine should not be called if viscoelastic_model==4"
+   stop
+  else
+   print *,"viscoelastic_model invalid"
+   stop
+  endif
+
  else
   print *,"dumbbell_model invalid"
   stop
