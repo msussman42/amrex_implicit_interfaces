@@ -841,6 +841,13 @@ stop
        stop
       endif
 
+      if (ENUM_NUM_TENSOR_TYPE.eq.2*AMREX_SPACEDIM) then
+       ! do nothing
+      else
+       print *,"expecting ENUM_NUM_TENSOR_TYPE.eq.2*AMREX_SPACEDIM"
+       stop
+      endif
+
       if (fort_built_in_elastic_model(elastic_viscosity, &
               viscoelastic_model).eq.1) then
        ! do nothing
@@ -1030,7 +1037,7 @@ stop
            Q(ii,jj)=zero
           enddo
           enddo
-          do dir_local=1,2*AMREX_SPACEDIM
+          do dir_local=1,ENUM_NUM_TENSOR_TYPE
            call stress_index(dir_local,ii,jj)
            Q(ii,jj)=tensor(D_DECL(i,j,k),dir_local)
           enddo
