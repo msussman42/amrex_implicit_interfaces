@@ -858,6 +858,7 @@ stop
        print *,"dt invalid in fort_derviscosity"
        stop
       endif
+
       if (polymer_factor.ge.zero) then
        ! do nothing
       else
@@ -1040,35 +1041,11 @@ stop
           if (SDIM.eq.3) then
            ! do nothing
           else if (SDIM.eq.2) then
-           if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
+           if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+               (levelrz.eq.COORDSYS_CYLINDRICAL)) then
             ! do nothing
            else if (levelrz.eq.COORDSYS_RZ) then
-
-            if (i.lt.0) then
-             if (Q(3,3).le.-half) then
-              Q(3,3)=-half
-             else if (Q(3,3).ge.-half) then
-              ! do nothing
-             else
-              print *,"Q(3,3) bust"
-              stop
-             endif
-            else if (i.eq.0) then
-             if (Q(3,3).ge.half) then
-              Q(3,3)=half
-             else if (Q(3,3).le.half) then
-              ! do nothing
-             else
-              print *,"Q(3,3) bust"
-              stop
-             endif
-            else if (i.gt.0) then
-             ! do nothing
-            else
-             print *,"i invalid"
-             stop
-            endif
-
+            ! do nothing
            else
             print *,"levelrz invalid"
             stop
@@ -1149,9 +1126,7 @@ stop
           endif
          
            ! etaS=etaL-etaP=viscconst-elastic_viscosity 
-          if (modtime+dt.le.zero) then
-           viscoelastic_coeff=zero
-          else
+          if (modtime+dt.gt.zero) then
            if ((viscoelastic_model.eq.0).or. &!FENE-CR(lambda_tilde=f(A)/lambda)
                (viscoelastic_model.eq.1).or. &!Oldroyd-B(modtime=elastic_time)
                (viscoelastic_model.eq.5).or. &!FENE-P (lambda_tilde=f(A)/lambda
@@ -1171,7 +1146,13 @@ stop
             print *,"viscoelastic_model invalid"
             stop
            endif
+          else
+           print *,"expecting modtime+dt to be positive"
+           print *,"modtime=",modtime
+           print *,"dt=",dt
+           stop
           endif
+
           if (viscoelastic_coeff.ge.zero) then
            ! do nothing
           else
@@ -1179,7 +1160,8 @@ stop
            stop
           endif
 
-          visc(D_DECL(i,j,k),num_materials+im_parm)=viscoelastic_coeff*visc_coef
+          visc(D_DECL(i,j,k),num_materials+im_parm)= &
+             viscoelastic_coeff*visc_coef
           visc(D_DECL(i,j,k),2*num_materials+im_parm)=modtime
 
         else if ((elastic_time.eq.zero).and. &
