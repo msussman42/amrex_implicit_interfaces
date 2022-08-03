@@ -10571,15 +10571,27 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
   // do nothing
  } else 
   amrex::Error("VISCOTEN_MF should be allocated");
+
+ if (localMF[VISCOTEN_MF]->nGrow()==1) {
+  // do nothing
+ } else 
+  amrex::Error("VISCOTEN_MF invalid nGrow");
+
  if (localMF[VISCOTEN_MF]->nComp()==ENUM_NUM_TENSOR_TYPE) {
   // do nothing
  } else
   amrex::Error("VISCOTEN_MF invalid nComp");
 
- if (localMF_grow[flux_mf]==1) {
+ if (localMF_grow[flux_mf]==0) {
   // do nothing
  } else 
   amrex::Error("flux_mf should be allocated");
+
+ if (localMF[flux_mf]->nGrow()==0) {
+  // do nothing
+ } else
+  amrex::Error("flux_mf invalid nGrow");
+
  if (localMF[flux_mf]->nComp()==ENUM_NUM_TENSOR_TYPE) {
   // do nothing
  } else
