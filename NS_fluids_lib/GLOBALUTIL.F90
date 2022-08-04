@@ -16253,7 +16253,7 @@ end subroutine print_visual_descriptor
        enddo
 
        ih=1
-       Varname='DT'
+       Varname='DT'  ! sqrt(2 * D:D)
        ih=ih+2
        do i=1,2
         Varname(ih:ih)=matstr(i:i)
@@ -16263,7 +16263,7 @@ end subroutine print_visual_descriptor
        test_nwrite=test_nwrite+1
 
        ih=1
-       Varname='TR'
+       Varname='TR' ! Tr(A)
        ih=ih+2
        do i=1,2
         Varname(ih:ih)=matstr(i:i)
@@ -16273,7 +16273,7 @@ end subroutine print_visual_descriptor
        test_nwrite=test_nwrite+1
 
        ih=1
-       Varname='TRT'
+       Varname='TRT' ! Tr(A) * (mu_L - eta_S)/eta_P if FENE-CR+Carreau
        ih=ih+3
        do i=1,2
         Varname(ih:ih)=matstr(i:i)
@@ -16283,7 +16283,7 @@ end subroutine print_visual_descriptor
        test_nwrite=test_nwrite+1
 
        ih=1
-       Varname='TRTF'
+       Varname='TRTF'  ! TRT * f(A)
        ih=ih+4
        do i=1,2
         Varname(ih:ih)=matstr(i:i)
