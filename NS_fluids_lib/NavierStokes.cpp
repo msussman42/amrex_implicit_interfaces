@@ -11033,7 +11033,8 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
    int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
    if (ncomp_visc!=3*num_materials) {
     std::cout << "ncomp= " <<
-     localMF[CELL_VISC_MATERIAL_MF]->nComp() << " num_materials= " << num_materials << '\n';
+     localMF[CELL_VISC_MATERIAL_MF]->nComp() << 
+     " num_materials= " << num_materials << '\n';
     amrex::Error("cell_visc_material ncomp invalid (3)");
    }
 
@@ -12071,6 +12072,11 @@ void NavierStokes::tensor_advection_update() {
 
       int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE;
 
+       //CELL_VISC_MATERIAL_MF is build in NavierStokes::getStateVISC_ALL()
+       //getStateVISC_ALL is called from:
+       //  NavierStokes::make_physics_varsALL
+       //  NavierStokes::writeTECPLOT_File
+       //NavierStokes::init_gradu_tensor_and_material_visc_ALL
       int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
       if (ncomp_visc!=3*num_materials) {
        std::cout << "ncomp= " <<

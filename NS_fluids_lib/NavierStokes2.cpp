@@ -455,6 +455,7 @@ void NavierStokes::maskfiner_localMF(int idx_MF,int ngrow,
 //called from:
 //NavierStokes::make_physics_varsALL
 //NavierStokes::writeTECPLOT_File
+//NavierStokes::init_gradu_tensor_and_material_visc_ALL
 void NavierStokes::getStateVISC_ALL() {
 
  if (level!=0)
