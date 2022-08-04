@@ -24921,6 +24921,7 @@ REAL_T NP(3,3)
 REAL_T shear
 REAL_T modtime,trace_A,equilibrium_diagonal
 REAL_T inverse_tol
+REAL_T inverse_tol_hoop
 
 REAL_T xsten(-3:3,SDIM)
 INTEGER_T nhalf
@@ -25332,13 +25333,14 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
    stop
   endif
 
-  inverse_tol=0.51d0
+  inverse_tol=0.05d0
+  inverse_tol_hoop=0.51d0
 
   if (Smult_left(ii,jj).le.-one+inverse_tol) then
    Smult_left(ii,jj)=-one+inverse_tol
   else if (Smult_left(ii,jj).ge.one-inverse_tol) then
    Smult_left(ii,jj)=one-inverse_tol
-  else if (abs(Smult_left(ii,jj)).le.half) then
+  else if (abs(Smult_left(ii,jj)).lt.one) then
    ! do nothing
   else
    print *,"Smult_left(ii,jj) became corrupt"
@@ -25349,7 +25351,7 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
    Smult_right(ii,jj)=-one+inverse_tol
   else if (Smult_right(ii,jj).ge.one-inverse_tol) then
    Smult_right(ii,jj)=one-inverse_tol
-  else if (abs(Smult_right(ii,jj)).le.one) then
+  else if (abs(Smult_right(ii,jj)).lt.one) then
    ! do nothing
   else
    print *,"Smult_right(ii,jj) became corrupt"
@@ -25591,10 +25593,10 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
   if ((levelrz.eq.COORDSYS_RZ).and.(SDIM.eq.2)) then
    S_hoop=dt*save_hoop_term ! dt u/r
 
-   if (S_hoop.le.-one+inverse_tol) then
-    S_hoop=-one+inverse_tol
-   else if (S_hoop.ge.one-inverse_tol) then
-    S_hoop=one-inverse_tol
+   if (S_hoop.le.-one+inverse_tol_hoop) then
+    S_hoop=-one+inverse_tol_hoop
+   else if (S_hoop.ge.one-inverse_tol_hoop) then
+    S_hoop=one-inverse_tol_hoop
    else if (abs(S_hoop).le.half) then
     ! do nothing
    else
