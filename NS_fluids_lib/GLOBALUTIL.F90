@@ -24854,6 +24854,7 @@ subroutine point_updatetensor( &
  im_critical, &  ! 0<=im_critical<=num_materials-1
  ncomp_visc, & 
  visc, &
+ one_over_den, &
  tendata, & !tendata:fort_getshear,only_scalar=0
  dx,xlo, &
  vel, &
@@ -24885,6 +24886,7 @@ INTEGER_T, INTENT(in) :: bfact
 REAL_T, INTENT(in) :: dx(SDIM),xlo(SDIM)
 
 REAL_T, INTENT(in), pointer :: visc(D_DECL(:,:,:),:)
+REAL_T, INTENT(in), pointer :: one_over_den(D_DECL(:,:,:))
 
 ! D=(1/2)(gradU + gradU^Transpose)
 ! DERIVE_TENSOR_MAG+1: sqrt(2 * D : D)
@@ -24928,6 +24930,17 @@ INTEGER_T dir_local
 INTEGER_T dumbbell_model
 REAL_T magA,NP_dotdot_D,Y_plastic_parm_scaled,f_plastic
 REAL_T gamma_not
+INTEGER_T implicit_hoop
+REAL_T save_hoop_term
+REAL_T Q_hoop_old
+REAL_T force_coef
+REAL_T one_over_den_local
+REAL_T S_hoop
+REAL_T r_hoop
+REAL_T explicit_hoop
+REAL_T u_coef
+REAL_T Q_coef
+REAL_T improved_hoop
 
 nhalf=3
 
@@ -25018,6 +25031,7 @@ else
 endif
 
 call checkbound_array(fablo,fabhi,visc,0,-1)
+call checkbound_array1(fablo,fabhi,one_over_den,0,-1)
 call checkbound_array(fablo,fabhi,tendata,0,-1)
 call checkbound_array(fablo,fabhi,vel,1,-1)
 
@@ -25098,6 +25112,13 @@ enddo
 
 save_hoop_term=gradV(3,3)  ! u/r
 
+if (abs(save_hoop_term).ge.zero) then
+ ! do nothing
+else
+ print *,"save_hoop_term corruption"
+ stop
+endif
+
 if (n.eq.DERIVE_TENSOR_NCOMP+1) then
  ! do nothing
 else
@@ -25135,6 +25156,25 @@ else
  stop
 endif
 
+! e.g. visc_coef * elastic_viscosity/(modtime+dt)
+force_coef=visc(D_DECL(i,j,k),num_materials+im_critical+1)
+
+if (force_coef.gt.zero) then
+ ! do nothing
+else
+ print *,"expecting force_coef>0"
+ stop
+endif
+
+one_over_den_local=one_over_den(D_DECL(i,j,k))
+
+if (one_over_den_local.gt.zero) then
+ ! do nothing
+else
+ print *,"one_over_den_local invalid"
+ stop
+endif
+
 trace_A=zero
 do ii=1,3
  trace_A=trace_A+Q(ii,ii)+one
@@ -25143,6 +25183,12 @@ do ii=1,3
    ! do nothing
   else
    print *,"A=Q+I should be positive definite"
+   stop
+  endif
+  if (Q_hoop_old.gt.-one) then
+   ! do nothing
+  else
+   print *,"Q_hoop_old invalid"
    stop
   endif
  else if (dumbbell_model.eq.0) then ! e.g. incremental model
@@ -25159,6 +25205,12 @@ do ii=1,3
     ! do nothing
    else
     print *,"A=Q+I should be positive definite"
+    stop
+   endif
+   if (Q_hoop_old.gt.-one) then
+    ! do nothing
+   else
+    print *,"Q_hoop_old invalid"
     stop
    endif
   else if (viscoelastic_model.eq.4) then!FSI pressure velocity coupling
@@ -25280,13 +25332,13 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
    stop
   endif
 
-  inverse_tol=0.5d0
+  inverse_tol=0.51d0
 
   if (Smult_left(ii,jj).le.-one+inverse_tol) then
    Smult_left(ii,jj)=-one+inverse_tol
   else if (Smult_left(ii,jj).ge.one-inverse_tol) then
    Smult_left(ii,jj)=one-inverse_tol
-  else if (abs(Smult_left(ii,jj)).le.one) then
+  else if (abs(Smult_left(ii,jj)).le.half) then
    ! do nothing
   else
    print *,"Smult_left(ii,jj) became corrupt"
@@ -25537,20 +25589,51 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
   ! do nothing
  else if (implicit_hoop.eq.1) then
   if ((levelrz.eq.COORDSYS_RZ).and.(SDIM.eq.2)) then
-   S_hoop=dt*save_hoop_term
+   S_hoop=dt*save_hoop_term ! dt u/r
 
    if (S_hoop.le.-one+inverse_tol) then
     S_hoop=-one+inverse_tol
    else if (S_hoop.ge.one-inverse_tol) then
     S_hoop=one-inverse_tol
-   else if (abs(S_hoop).le.one) then
+   else if (abs(S_hoop).le.half) then
     ! do nothing
    else
     print *,"S_hoop became corrupt"
     stop
    endif
-   explicit_hoop=(Q_hoop_old*(one+two*S_hoop)+two*S_hoop
-   explicit_hoop=explicit_hoop/
+   r_hoop=xsten(0,1)
+   if (r_hoop.gt.zero) then
+    explicit_hoop=Q_hoop_old*(one+two*S_hoop)+two*S_hoop
+    explicit_hoop=modtime*explicit_hoop/(modtime+dt)
+    if (explicit_hoop.gt.-one) then
+     u_coef=(Q_hoop_old+one)*two*dt/r_hoop
+     u_coef=modtime*u_coef/(modtime+dt)
+     if (u_coef.gt.zero) then
+      Q_coef=force_coef*one_over_den_local*dt/r_hoop
+      if (Q_coef.gt.zero) then
+       improved_hoop=explicit_hoop/(one+Q_coef*u_coef)
+       if (improved_hoop.gt.-one) then
+        Q(3,3)=improved_hoop
+       else
+        print *,"improved_hoop invalid"
+        stop
+       endif
+      else
+       print *,"expecting Q_coef to be positive"
+       stop
+      endif
+     else
+      print *,"expecting u_coef to be positive"
+      stop
+     endif
+    else
+     print *,"explicit_hoop invalid"
+     stop
+    endif
+   else
+    print *,"expecting r_hoop>0"
+    stop
+   endif
   else
    print *,"levelrz or sdim invalid"
    stop
@@ -25559,7 +25642,6 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
   print *,"implicit_hoop invalid"
   stop
  endif
-
 
 else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
  print *,"this routine should not be called if viscoelastic_model==4"
