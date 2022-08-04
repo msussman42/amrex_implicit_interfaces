@@ -631,9 +631,9 @@ stop
         level, &
         finest_level, &
         visc_coef, &
-        im_parm, &
+        im_parm, & !1<=im_parm<=num_materials
         dt, &
-        viscosity_coefficient, & ! viscconst
+        viscosity_coefficient, & ! viscconst(im_parm)
         shear_thinning_fluid, &
         Carreau_alpha, &
         Carreau_beta, &
@@ -667,7 +667,7 @@ stop
       INTEGER_T, INTENT(in) :: level
       INTEGER_T, INTENT(in) :: finest_level
       REAL_T, INTENT(in) :: visc_coef
-      INTEGER_T, INTENT(in) :: im_parm
+      INTEGER_T, INTENT(in) :: im_parm !1<=im_parm<=num_materials
       INTEGER_T, INTENT(in) :: ncompvisc
       REAL_T, INTENT(in) :: dt
       REAL_T, INTENT(in) :: viscosity_coefficient
@@ -889,13 +889,13 @@ stop
        print *,"viscosity_coefficient invalid"
        stop
       endif
+
       if (visc_coef.ge.zero) then
        ! do nothing
       else
        print *,"visc_coef invalid"
        stop
       endif
-
 
       if (ncompvisc.ne.3*num_materials) then
        print *,"ncompvisc invalid"
@@ -944,6 +944,7 @@ stop
          stop
         endif
 
+         !viscconst(im_parm) in default case.
         mu=get_user_viscconst(im_parm,density,temperature)
 
         if ((viscoelastic_model.eq.0).or. & !FENE-CR
@@ -1705,8 +1706,12 @@ stop
         do veldir=1,SDIM
          gradu(veldir,dir)=cellten(D_DECL(i,j,k),nbase+veldir) 
         enddo
-       enddo ! dir
+       enddo ! dir=1..sdim
 
+! in RZ:
+! grad u=| u_r  0  u_z  |
+!        | 0   u/r  0   |
+!        | w_r  0  w_z  |
        if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
        else if (levelrz.eq.COORDSYS_RZ) then

@@ -12073,6 +12073,11 @@ void NavierStokes::tensor_advection_update() {
       int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE;
 
        //CELL_VISC_MATERIAL_MF is build in NavierStokes::getStateVISC_ALL()
+       //  1. CELL_VISC_MATERIAL(im)=viscconst(im)  (def) im=1..num_materials
+       //  2. CELL_VISC_MATERIAL(num_materials+im)=viscoelastic_coeff *
+       //     visc_coef  (def) im=1..num_materials
+       //     e.g. viscoelastic_coef=elastic_viscosity/(modtime+dt)
+       //  3. CELL_VISC_MATERIAL(2*num_materials+im)=modtime
        //getStateVISC_ALL is called from:
        //  NavierStokes::make_physics_varsALL
        //  NavierStokes::writeTECPLOT_File
