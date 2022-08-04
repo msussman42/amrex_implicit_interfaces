@@ -9120,6 +9120,8 @@ stop
        im_critical, &  ! 0<=im_critical<=num_materials-1
        ncomp_visc, & 
        visc,DIMS(visc), &
+       one_over_den, &
+       DIMS(one_over_den), &
        tendata,DIMS(tendata), & !tendata:fort_getshear,only_scalar=0
        dx,xlo, &
        vel,DIMS(vel), &
@@ -9147,6 +9149,7 @@ stop
       INTEGER_T, INTENT(in) :: im_critical
       INTEGER_T, INTENT(in) :: ncomp_visc
       INTEGER_T, INTENT(in) :: DIMDEC(visc)
+      INTEGER_T, INTENT(in) :: DIMDEC(one_over_den)
       INTEGER_T, INTENT(in) :: DIMDEC(tendata)
       INTEGER_T, INTENT(in) :: DIMDEC(vel)
       INTEGER_T, INTENT(in) :: DIMDEC(tnew)
@@ -9159,6 +9162,9 @@ stop
 
       REAL_T, INTENT(in), target :: visc(DIMV(visc),ncomp_visc)
       REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, INTENT(in), target :: one_over_den(DIMV(one_over_den))
+      REAL_T, pointer :: one_over_den_ptr(D_DECL(:,:,:))
 
       ! D=(1/2)(gradU + gradU^Transpose)
       ! DERIVE_TENSOR_MAG+1: sqrt(2 * D : D)
@@ -9258,6 +9264,8 @@ stop
 
       visc_ptr=>visc
       call checkbound_array(fablo,fabhi,visc_ptr,0,-1)
+      one_over_den_ptr=>one_over_den
+      call checkbound_array1(fablo,fabhi,one_over_den_ptr,0,-1)
       tendata_ptr=>tendata
       call checkbound_array(fablo,fabhi,tendata_ptr,0,-1)
       vel_ptr=>vel
@@ -9291,6 +9299,7 @@ stop
         im_critical, &  ! 0<=im_critical<=num_materials-1
         ncomp_visc, & 
         visc_ptr, &
+        one_over_den_ptr, &
         tendata_ptr, & !tendata:fort_getshear,only_scalar=0
         dx,xlo, &
         vel_ptr, &
@@ -21450,6 +21459,8 @@ stop
        scomp_tensor, & !scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE
        ncomp_visc, & 
        visc,DIMS(visc), &
+       one_over_den, &
+       DIMS(one_over_den), &
        tendata,DIMS(tendata), & !tendata:fort_getshear,only_scalar=0
        dx,xlo, &
        vel,DIMS(vel), &
@@ -21485,6 +21496,7 @@ stop
       INTEGER_T, INTENT(in) :: im_critical
       INTEGER_T, INTENT(in) :: ncomp_visc
       INTEGER_T, INTENT(in) :: DIMDEC(visc)
+      INTEGER_T, INTENT(in) :: DIMDEC(one_over_den)
       INTEGER_T, INTENT(in) :: DIMDEC(tendata)
       INTEGER_T, INTENT(in) :: DIMDEC(vel)
       INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
@@ -21498,6 +21510,9 @@ stop
 
       REAL_T, INTENT(in), target :: visc(DIMV(visc),ncomp_visc)
       REAL_T, pointer :: visc_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, INTENT(in), target :: one_over_den(DIMV(one_over_den))
+      REAL_T, pointer :: one_over_den_ptr(D_DECL(:,:,:))
 
       ! D=(1/2)(gradU + gradU^Transpose)
       ! DERIVE_TENSOR_MAG+1: sqrt(2 * D : D)
@@ -21649,6 +21664,8 @@ stop
 
       visc_ptr=>visc
       call checkbound_array(fablo,fabhi,visc_ptr,0,-1)
+      one_over_den_ptr=>one_over_den
+      call checkbound_array1(fablo,fabhi,one_over_den_ptr,0,-1)
       tendata_ptr=>tendata
       call checkbound_array(fablo,fabhi,tendata_ptr,0,-1)
       vel_ptr=>vel
@@ -21711,6 +21728,7 @@ stop
           im_critical, &  ! 0<=im_critical<=num_materials-1
           ncomp_visc, & 
           visc_ptr, &
+          one_over_den_ptr, &
           tendata_ptr, & !tendata:fort_getshear,only_scalar=0
           dx,xlo, &
           vel_ptr, &

@@ -12036,6 +12036,8 @@ void NavierStokes::tensor_advection_update() {
 
  debug_ngrow(CELLTENSOR_MF,1,9);
 
+ debug_ngrow(CELL_DEN_MF,1,9);
+
  debug_ngrow(HOLD_VELOCITY_DATA_MF,1,9);
  if (localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL)
   amrex::Error("localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL");
@@ -12128,6 +12130,7 @@ void NavierStokes::tensor_advection_update() {
        const Real* xlo = grid_loc[gridno].lo();
 
        FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
+       FArrayBox& one_over_den_fab=(*localMF[CELL_DEN_MF])[mfi];
        FArrayBox& velfab=(*localMF[HOLD_VELOCITY_DATA_MF])[mfi];
        FArrayBox& tensor_new_fab=Tensor_new[mfi];
        FArrayBox& tensor_source_mf_fab=(*tensor_source_mf)[mfi];
@@ -12159,6 +12162,9 @@ void NavierStokes::tensor_advection_update() {
          &im,
          &ncomp_visc,
          viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+         one_over_den_fab.dataPtr(),
+	 ARLIM(one_over_den_fab.loVect()),
+	 ARLIM(one_over_den_fab.hiVect()),
          tendata.dataPtr(),ARLIM(tendata.loVect()),ARLIM(tendata.hiVect()),
          dx,xlo,
          velfab.dataPtr(),
@@ -22706,6 +22712,8 @@ NavierStokes::particle_tensor_advection_update() {
 
    debug_ngrow(CELLTENSOR_MF,1,9);
 
+   debug_ngrow(CELL_DEN_MF,1,9);
+
    debug_ngrow(HOLD_VELOCITY_DATA_MF,1,9);
    if (localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL)
     amrex::Error("localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL");
@@ -22759,6 +22767,7 @@ NavierStokes::particle_tensor_advection_update() {
     const Real* xlo = grid_loc[gridno].lo();
 
     FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
+    FArrayBox& one_over_den_fab=(*localMF[CELL_DEN_MF])[mfi];
     FArrayBox& velfab=(*localMF[HOLD_VELOCITY_DATA_MF])[mfi];
     FArrayBox& tendata=(*tendata_mf)[mfi];
     Vector<int> velbc=getBCArray(State_Type,gridno,
@@ -22859,6 +22868,9 @@ NavierStokes::particle_tensor_advection_update() {
           &scomp_tensor,
           &ncomp_visc,
           viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
+          one_over_den_fab.dataPtr(),
+	  ARLIM(one_over_den_fab.loVect()),
+	  ARLIM(one_over_den_fab.hiVect()),
           tendata.dataPtr(),ARLIM(tendata.loVect()),ARLIM(tendata.hiVect()),
           dx,xlo,
           velfab.dataPtr(),
