@@ -82,7 +82,6 @@ amr.grid_eff        = 0.7   # what constitutes an efficient grid
 amr.blocking_factor = 4 4 4 4 4 4 4    # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1 1 1
 amr.time_blocking_factor=1
-ns.num_SDC_outer_sweeps=1
 ns.enable_spectral=0
 amr.regrid_int      = 1       # how often to regrid
 amr.check_int       = 500    # number of timesteps between checkpoints
