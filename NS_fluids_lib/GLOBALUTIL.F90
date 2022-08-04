@@ -17285,17 +17285,23 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      if (temperature.le.zero) then
+      if (temperature.gt.zero) then
+       ! do nothing
+      else
        print *,"temperature invalid"
        stop
       endif
-      if (density.le.zero) then
+      if (density.gt.zero) then
+       ! do nothing
+      else
        print *,"density invalid in get_user_viscconst"
        stop
       endif
 
-      if ((fort_viscconst(im).lt.zero).or. &
-          (fort_prerecalesce_viscconst(im).lt.zero)) then
+      if ((fort_viscconst(im).ge.zero).and. &
+          (fort_prerecalesce_viscconst(im).ge.zero)) then
+       ! do nothing
+      else
        print *,"fortran viscconst invalid"
        stop
       endif
@@ -24951,29 +24957,48 @@ else
  stop
 endif
 
+implicit_hoop=0
+
 if (viscoelastic_model.eq.0) then ! FENE-CR
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
+ implicit_hoop=1
 else if (viscoelastic_model.eq.1) then ! Oldroyd-B
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=elastic_time
+ implicit_hoop=1
 else if (viscoelastic_model.eq.5) then ! FENE-P
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
+ implicit_hoop=0
 else if (viscoelastic_model.eq.6) then ! linear PTT
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=elastic_time
+ implicit_hoop=0
 else if (viscoelastic_model.eq.3) then ! incremental model
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
  ! coeff=elastic_viscosity
+ implicit_hoop=0
 else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
  ! Xia, Lu, Tryggvason 2018
  ! coeff=elastic_viscosity
+ implicit_hoop=1
 else if (viscoelastic_model.eq.4) then !pressure velocity FSI coupling
  print *,"this routine should not be called if visc_model==4"
  stop
 else
  print *,"viscoelastic_model invalid"
+ stop
+endif
+
+if (levelrz.eq.COORDSYS_CARTESIAN) then
+ implicit_hoop=0
+else if (levelrz.eq.COORDSYS_RZ) then
+ !do nothing
+else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+ implicit_hoop=0
+else
+ print *,"levelrz invalid"
  stop
 endif
 
@@ -25071,6 +25096,8 @@ do jj=1,3
 enddo 
 enddo 
 
+save_hoop_term=gradV(3,3)  ! u/r
+
 if (n.eq.DERIVE_TENSOR_NCOMP+1) then
  ! do nothing
 else
@@ -25096,6 +25123,8 @@ enddo
 Q(2,1)=Q(1,2)
 Q(3,1)=Q(1,3)
 Q(3,2)=Q(2,3)
+
+Q_hoop_old=Q(3,3)
 
  ! modtime=lambda/f(A)
 modtime=visc(D_DECL(i,j,k),2*num_materials+im_critical+1)
@@ -25146,6 +25175,7 @@ do ii=1,3
  endif
 enddo ! ii=1,3
 
+ ! f(A)=1/(1-trace(A)/L^2)
  ! (1/lambda)*(f(A)A-I)=
  ! (f(A)/lambda)*(A-I/f(A))=
  ! (f(A)/lambda)*(Q+I-I/f(A))
@@ -25250,7 +25280,7 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
    stop
   endif
 
-  inverse_tol=0.1d0
+  inverse_tol=0.5d0
 
   if (Smult_left(ii,jj).le.-one+inverse_tol) then
    Smult_left(ii,jj)=-one+inverse_tol
@@ -25502,6 +25532,34 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
    stop
   endif
  enddo
+
+ if (implicit_hoop.eq.0) then
+  ! do nothing
+ else if (implicit_hoop.eq.1) then
+  if ((levelrz.eq.COORDSYS_RZ).and.(SDIM.eq.2)) then
+   S_hoop=dt*save_hoop_term
+
+   if (S_hoop.le.-one+inverse_tol) then
+    S_hoop=-one+inverse_tol
+   else if (S_hoop.ge.one-inverse_tol) then
+    S_hoop=one-inverse_tol
+   else if (abs(S_hoop).le.one) then
+    ! do nothing
+   else
+    print *,"S_hoop became corrupt"
+    stop
+   endif
+   explicit_hoop=(Q_hoop_old*(one+two*S_hoop)+two*S_hoop
+   explicit_hoop=explicit_hoop/
+  else
+   print *,"levelrz or sdim invalid"
+   stop
+  endif
+ else
+  print *,"implicit_hoop invalid"
+  stop
+ endif
+
 
 else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
  print *,"this routine should not be called if viscoelastic_model==4"
