@@ -1,6 +1,6 @@
 max_step  = 8000   # maximum timestep
 #max_step  =  2    # maximum timestep
-stop_time =  10.0  # maximum problem time 
+stop_time =  20.0  # maximum problem time 
 # 3D
 #geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 # 2D
