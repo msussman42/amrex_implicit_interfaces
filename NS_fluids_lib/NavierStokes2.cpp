@@ -6779,8 +6779,16 @@ void NavierStokes::output_triangles() {
       [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
      auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
      unsigned int Np=particles_AoS.size();
+
      auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
-     int N_arrays=particles_SoA.size();
+     int N_arrays=localPC.NumRealComps();
+     unsigned int Np_SoA=particles_SoA.size();
+
+     if (Np==Np_SoA) {
+      // do nothing
+     } else
+      amrex::Error("expecting Np==Np_SoA");
+
      if (N_arrays==NUM_CELL_ELASTIC) {
       //do nothing
      } else

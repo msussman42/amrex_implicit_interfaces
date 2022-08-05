@@ -22260,8 +22260,16 @@ void NavierStokes::assimilate_Q_from_particles(
      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
    auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
    unsigned int Np=particles_AoS.size();
+
    auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
-   int N_arrays=particles_SoA.size();
+   int N_arrays=localPC.NumRealComps();
+   unsigned int Np_SoA=particles_SoA.size();
+
+   if (Np==Np_SoA) {
+    // do nothing
+   } else
+    amrex::Error("expecting Np==Np_SoA");
+
    if (N_arrays==NUM_CELL_ELASTIC) {
     //do nothing
    } else
@@ -22453,8 +22461,16 @@ NavierStokes::init_particle_container(int append_flag) {
  
     auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
     unsigned int Np=particles_AoS.size();
+
     auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
-    int N_arrays=particles_SoA.size();
+    int N_arrays=localPC.NumRealComps();
+    unsigned int Np_SoA=particles_SoA.size();
+
+    if (Np==Np_SoA) {
+     // do nothing
+    } else
+     amrex::Error("expecting Np==Np_SoA");
+
     if (N_arrays==NUM_CELL_ELASTIC) {
      //do nothing
     } else {
@@ -22791,8 +22807,16 @@ NavierStokes::particle_tensor_advection_update() {
  
     auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
     unsigned int Np=particles_AoS.size();
+
     auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
-    int N_arrays=particles_SoA.size();
+    int N_arrays=localPC.NumRealComps();
+    unsigned int Np_SoA=particles_SoA.size();
+
+    if (Np==Np_SoA) {
+     // do nothing
+    } else
+     amrex::Error("expecting Np==Np_SoA");
+
     if (N_arrays==NUM_CELL_ELASTIC) {
      //do nothing
     } else
