@@ -18456,7 +18456,7 @@ stop
       data_in%xlo=>xlo
       data_in%fablo=>fablo
       data_in%fabhi=>fabhi
-      data_in%state=lsfab_ptr
+      data_in%state=>lsfab
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
