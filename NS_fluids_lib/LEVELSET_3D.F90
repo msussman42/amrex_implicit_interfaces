@@ -18246,7 +18246,7 @@ stop
       REAL_T, INTENT(in), target :: lsfab(DIMV(lsfab),num_materials) 
       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: lsfab_ptr
       REAL_T, INTENT(in), target :: mfiner(DIMV(mfiner)) 
-      REAL_T, pointer :: mfiner_ptr(D_DECL(:,:,:))
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: mfiner_ptr
 
       INTEGER_T, INTENT(in) :: viscoelastic_model(num_materials)
        ! 0<=im_elastic_map<num_materials
@@ -18391,6 +18391,8 @@ stop
        !accum_PARM%TENSOR is pointer, tensorfab is target
       accum_PARM%TENSOR=>tensorfab 
       accum_PARM%LEVELSET=>lsfab 
+      call checkbound_array(fablo,fabhi,accum_PARM%TENSOR,1,-1)
+      call checkbound_array(fablo,fabhi,accum_PARM%LEVELSET,1,-1)
 
       accum_PARM%cell_particle_count=>cell_particle_count
 
