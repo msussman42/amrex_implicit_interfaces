@@ -31,7 +31,7 @@ MOF_HOME = ..
 # endif
 #
 
-USE_LIBAMREX = FALSE
+USE_LIBAMREX = TRUE
 PRECISION = DOUBLE
 DEBUG	  = TRUE
 USE_ASSERTION = TRUE
@@ -87,8 +87,8 @@ CTML_FBC = FALSE
 #    expressions during compilation.
 
 MAC_LAPTOP = FALSE
-LINUX_DESKTOP = TRUE
-HPC_INTEL = FALSE
+LINUX_DESKTOP = FALSE
+HPC_INTEL = TRUE
 HPC_GNU = FALSE
 
 #CXXSTD = gnu++14
@@ -209,7 +209,7 @@ ifeq ($(USE_LIBAMREX),FALSE)
 include $(AMREX_HOME)/Src/Base/Make.package
 include $(AMREX_HOME)/Src/Particle/Make.package
 endif
-LIBAMREX_FILE_DIR = $(AMREX_HOME)/tmp_build_dir/o/2d.gnu.EXE/
+LIBAMREX_FILE_DIR = $(AMREX_HOME)/tmp_build_dir/o/2d.gnu.DEBUG.EXE/
 ifeq ($(USE_LIBAMREX),TRUE)
 INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Base
 INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Base/Parser
