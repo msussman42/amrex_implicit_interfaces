@@ -176,7 +176,7 @@ stop
         REAL_T shortest_dist_to_fluid
         REAL_T dist_stencil_to_bulk
         REAL_T :: LS_interp_low_order(num_materials)
-        REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
+        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: local_data_fab
         REAL_T local_data_out
 
         INTEGER_T LSstenlo(3)
@@ -17421,8 +17421,8 @@ stop
         INTEGER_T :: N_real_comp
         REAL_T, pointer, dimension(:) :: real_compALL
         INTEGER_T :: nsubdivide
-        REAL_T, pointer :: TENSOR(D_DECL(:,:,:),:)
-        REAL_T, pointer :: LEVELSET(D_DECL(:,:,:),:)
+        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: TENSOR
+        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LEVELSET
         !cell_particle_count(i,j,k,1)=number particles in the cell.
         !cell_particle_count(i,j,k,2)=particle id of first particle in list
         INTEGER_T, pointer, dimension(D_DECL(:,:,:),:) :: &
@@ -17439,11 +17439,11 @@ stop
         INTEGER_T :: finest_level
         REAL_T, pointer :: dx(:)
         REAL_T, pointer :: xlo(:)
-        REAL_T, pointer :: umac(D_DECL(:,:,:))
-        REAL_T, pointer :: vmac(D_DECL(:,:,:))
-        REAL_T, pointer :: wmac(D_DECL(:,:,:))
-        INTEGER_T, pointer :: velbc(:,:,:)
-        INTEGER_T, pointer :: dombc(:,:)
+        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: umac
+        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: vmac
+        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: wmac
+        INTEGER_T, pointer, dimension(:,:,:) :: velbc
+        INTEGER_T, pointer, dimension(:,:) :: dombc
         INTEGER_T, pointer :: domlo(:)
         INTEGER_T, pointer :: domhi(:)
         REAL_T, pointer :: problo(:)
@@ -18242,9 +18242,9 @@ stop
 
       REAL_T, INTENT(in), target :: &
          tensorfab(DIMV(tensorfab),NUM_CELL_ELASTIC) 
-      REAL_T, pointer :: tensorfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: tensorfab_ptr
       REAL_T, INTENT(in), target :: lsfab(DIMV(lsfab),num_materials) 
-      REAL_T, pointer :: lsfab_ptr(D_DECL(:,:,:),:)
+      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: lsfab_ptr
       REAL_T, INTENT(in), target :: mfiner(DIMV(mfiner)) 
       REAL_T, pointer :: mfiner_ptr(D_DECL(:,:,:))
 
@@ -18821,7 +18821,7 @@ stop
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
       INTEGER_T prescribed_flag
-      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: local_data_fab
 
       nhalf=3      
 
@@ -19104,11 +19104,11 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(wmac)
 
       REAL_T, INTENT(in), target :: umac(DIMV(umac)) 
-      REAL_T, pointer :: umac_ptr(D_DECL(:,:,:))
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: umac_ptr
       REAL_T, INTENT(in), target :: vmac(DIMV(vmac)) 
-      REAL_T, pointer :: vmac_ptr(D_DECL(:,:,:))
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: vmac_ptr
       REAL_T, INTENT(in), target :: wmac(DIMV(wmac)) 
-      REAL_T, pointer :: wmac_ptr(D_DECL(:,:,:))
+      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: wmac_ptr
 
       INTEGER_T, INTENT(in), target :: velbc_in(SDIM,2,SDIM)
       INTEGER_T, INTENT(in) :: denbc_in(SDIM,2)
