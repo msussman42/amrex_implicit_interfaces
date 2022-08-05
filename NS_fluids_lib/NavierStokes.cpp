@@ -22457,8 +22457,10 @@ NavierStokes::init_particle_container(int append_flag) {
     int N_arrays=particles_SoA.size();
     if (N_arrays==NUM_CELL_ELASTIC) {
      //do nothing
-    } else
+    } else {
+     std::cout << "N_arrays= " << N_arrays << '\n';
      amrex::Error("N_arrays invalid");
+    }
 
     unsigned int k=0;
     unsigned int N_real_comp=NUM_CELL_ELASTIC*Np;
