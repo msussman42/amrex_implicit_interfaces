@@ -23,8 +23,11 @@ ifeq ($(DEBUG),TRUE)
 
   CXXFLAGS += -g -O0 -traceback -Wcheck
   CFLAGS   += -g -O0 -traceback -Wcheck
-  FFLAGS   += -g -O0 -traceback -check bounds,uninit,pointers
-  F90FLAGS += -g -O0 -traceback -check bounds,uninit,pointers
+#SUSSMAN
+#  FFLAGS   += -g -O0 -traceback -check bounds,uninit,pointers
+#  F90FLAGS += -g -O0 -traceback -check bounds,uninit,pointers
+  FFLAGS   += -g -O0 -traceback -check all
+  F90FLAGS += -g -O0 -traceback -check all
 
 else
 
