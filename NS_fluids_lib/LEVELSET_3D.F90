@@ -17770,6 +17770,10 @@ stop
        print *,"accum_PARM%Npart ",accum_PARM%Npart
        print *,"accum_PARM%N_real_comp ",accum_PARM%N_real_comp
        print *,"accum_PARM%nsubdivide ",accum_PARM%nsubdivide
+       print *,"LBOUND(accum_PARM%TENSOR) ",LBOUND(accum_PARM%TENSOR)
+       print *,"UBOUND(accum_PARM%TENSOR) ",UBOUND(accum_PARM%TENSOR)
+       print *,"LBOUND(accum_PARM%LEVELSET) ",LBOUND(accum_PARM%LEVELSET)
+       print *,"UBOUND(accum_PARM%LEVELSET) ",UBOUND(accum_PARM%LEVELSET)
       endif
 
       eps=dx_local(1)/10.0d0
