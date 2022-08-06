@@ -98,13 +98,14 @@ AmrLevel::AmrLevel (AmrCore&        papa,
     dmap(dm)
 {
 
+    parent = &papa;
+
     if (grids.size()<1) {
      std::cout << "lev= " << lev << " time= " << time << '\n';
      amrex::Error("AmrLevel: grids.size<1");
     }
 
     level  = lev;
-    parent = &papa;
 
     int max_level=parent->maxLevel();
 
@@ -193,6 +194,8 @@ AmrLevel::restart (AmrCore&      papa,
 		   int old_finest_level,
 		   int new_finest_level) {
 
+ parent = &papa;
+
  int max_level=parent->maxLevel();
 
  if ((old_finest_level>=0)&&
@@ -202,8 +205,6 @@ AmrLevel::restart (AmrCore&      papa,
   //do nothing
  } else
   amrex::Error("old_finest_level or new_finest_level invalid");
-
- parent = &papa;
 
  is >> level;
  is >> geom;
