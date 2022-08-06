@@ -17406,54 +17406,55 @@ stop
        end type particle_t
 
        type accum_parm_type_count
-        INTEGER_T, pointer :: fablo(:)
-        INTEGER_T, pointer :: fabhi(:)
-        INTEGER_T, pointer :: tilelo(:)
-        INTEGER_T, pointer :: tilehi(:)
+        INTEGER_T :: fablo(SDIM)
+        INTEGER_T :: fabhi(SDIM)
+        INTEGER_T :: tilelo(SDIM)
+        INTEGER_T :: tilehi(SDIM)
         INTEGER_T :: append_flag
         INTEGER_T :: bfact
         INTEGER_T :: level
         INTEGER_T :: finest_level
-        REAL_T, pointer :: dx(:)
-        REAL_T, pointer :: xlo(:)
+        REAL_T :: dx(SDIM)
+        REAL_T :: xlo(SDIM)
         INTEGER_T :: Npart
-        type(particle_t), pointer, dimension(:) :: particles
+!        type(particle_t), pointer, dimension(:) :: particlesptr
         INTEGER_T :: N_real_comp
-        REAL_T, pointer, dimension(:) :: real_compALL
+!        REAL_T, pointer, dimension(:) :: real_compALLptr
         INTEGER_T :: nsubdivide
-        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: TENSOR
-        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LEVELSET
+!        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: TENSORptr
+!        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LEVELSETptr
         !cell_particle_count(i,j,k,1)=number particles in the cell.
         !cell_particle_count(i,j,k,2)=particle id of first particle in list
-        INTEGER_T, pointer, dimension(D_DECL(:,:,:),:) :: &
-           cell_particle_count
+!        INTEGER_T, pointer, dimension(D_DECL(:,:,:),:) :: &
+!           cell_particle_count
        end type accum_parm_type_count
 
        type grid_parm_type
-        INTEGER_T, pointer :: fablo(:)
-        INTEGER_T, pointer :: fabhi(:)
-        INTEGER_T, pointer :: tilelo(:)
-        INTEGER_T, pointer :: tilehi(:)
+        INTEGER_T :: fablo(SDIM)
+        INTEGER_T :: fabhi(SDIM)
+        INTEGER_T :: tilelo(SDIM)
+        INTEGER_T :: tilehi(SDIM)
         INTEGER_T :: bfact
         INTEGER_T :: level
         INTEGER_T :: finest_level
-        REAL_T, pointer :: dx(:)
-        REAL_T, pointer :: xlo(:)
+        REAL_T :: dx(SDIM)
+        REAL_T :: xlo(SDIM)
         REAL_T, pointer, dimension(D_DECL(:,:,:)) :: umac
         REAL_T, pointer, dimension(D_DECL(:,:,:)) :: vmac
         REAL_T, pointer, dimension(D_DECL(:,:,:)) :: wmac
-        INTEGER_T, pointer, dimension(:,:,:) :: velbc
-        INTEGER_T, pointer, dimension(:,:) :: dombc
-        INTEGER_T, pointer :: domlo(:)
-        INTEGER_T, pointer :: domhi(:)
-        REAL_T, pointer :: problo(:)
-        REAL_T, pointer :: probhi(:)
+        INTEGER_T, dimension(SDIM,2,SDIM) :: velbc
+        INTEGER_T, dimension(SDIM,2) :: dombc
+        INTEGER_T :: domlo(SDIM)
+        INTEGER_T :: domhi(SDIM)
+        REAL_T :: problo(SDIM)
+        REAL_T :: probhi(SDIM)
        end type grid_parm_type
 
       contains
 
       subroutine count_particles( &
        accum_PARM, &
+       cell_particle_count, &
        particle_link_data, &
        Np)
 
@@ -17465,6 +17466,8 @@ stop
        ! child link 1 (particle index), parent link 1 (i,j,k index),
        ! child link 2 (particle index), parent link 2 (i,j,k index), ...
       INTEGER_T, INTENT(inout) :: particle_link_data(Np*(1+SDIM))
+      INTEGER_T, INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
+           cell_particle_count
 
       INTEGER_T :: interior_ID
       INTEGER_T :: dir
@@ -17479,19 +17482,7 @@ stop
       INTEGER_T :: ibase_new
       INTEGER_T :: i_parent,j_parent,k_parent
 
-      REAL_T, target :: dx_local(SDIM)
-      REAL_T, target :: xlo_local(SDIM)
-      INTEGER_T, target :: fablo_local(SDIM)
-      INTEGER_T, target :: fabhi_local(SDIM)
-
       local_ngrow=1
-
-      do dir=1,SDIM
-       dx_local(dir)=accum_PARM%dx(dir)
-       xlo_local(dir)=accum_PARM%xlo(dir)
-       fablo_local(dir)=accum_PARM%fablo(dir)
-       fabhi_local(dir)=accum_PARM%fabhi(dir)
-      enddo
 
       do interior_ID=1,accum_PARM%Npart
 
@@ -17520,7 +17511,7 @@ stop
 
         ok_to_add_link=1
 
-        previous_link=accum_PARM%cell_particle_count(D_DECL(i,j,k),2)
+        previous_link=cell_particle_count(D_DECL(i,j,k),2)
         if (previous_link.eq.0) then
          ! do nothing; no particles attached to cell (i,j,k)
         else if ((previous_link.ge.1).and. &
@@ -17554,10 +17545,10 @@ stop
           stop
          endif
 
-         accum_PARM%cell_particle_count(D_DECL(i,j,k),1)= &
-           accum_PARM%cell_particle_count(D_DECL(i,j,k),1)+1
+         cell_particle_count(D_DECL(i,j,k),1)= &
+           cell_particle_count(D_DECL(i,j,k),1)+1
 
-         accum_PARM%cell_particle_count(D_DECL(i,j,k),2)=interior_ID
+         cell_particle_count(D_DECL(i,j,k),2)=interior_ID
 
          ibase_new=(interior_ID-1)*(SDIM+1)
          particle_link_data(ibase_new+1)=previous_link
@@ -17690,6 +17681,11 @@ stop
       subroutine interp_eul_lag_dist( &
          im_elastic_map, &
          accum_PARM, &
+         particlesptr, &
+         real_compALLptr, &
+         TENSORptr, &
+         LEVELSETptr, &
+         cell_particle_count, &
          i,j,k, &
          xtarget, &  ! where to add the new particle
          particle_link_data, &
@@ -17705,6 +17701,12 @@ stop
       INTEGER_T, INTENT(in) :: im_elastic_map(num_materials_viscoelastic)
 
       type(accum_parm_type_count), INTENT(in) :: accum_PARM
+      type(particle_t), INTENT(in), pointer, dimension(:) :: particlesptr
+      REAL_T, INTENT(in), pointer, dimension(:) :: real_compALLptr
+      REAL_T, INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: TENSORptr
+      REAL_T, INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: LEVELSETptr
+      INTEGER_T, INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
+         cell_particle_count
       INTEGER_T, INTENT(in) :: i,j,k
       REAL_T, target, INTENT(in) :: xtarget(SDIM)
       INTEGER_T, value, INTENT(in) :: Np
@@ -17743,18 +17745,11 @@ stop
       REAL_T, target, dimension(NUM_CELL_ELASTIC) :: data_interp_local
       REAL_T, target, dimension(num_materials) :: data_interp_local_LS
 
-      REAL_T, target :: dx_local(SDIM)
-      REAL_T, target :: xlo_local(SDIM)
-      INTEGER_T, target :: fablo_local(SDIM)
-      INTEGER_T, target :: fabhi_local(SDIM)
-      INTEGER_T, target :: tilelo_local(SDIM)
-      INTEGER_T, target :: tilehi_local(SDIM)
-
       INTEGER_T :: test_count,test_cell_particle_count
 
       INTEGER_T :: SoA_comp
 
-      if (1.eq.1) then
+      if (1.eq.0) then
        print *,"num_materials_viscoelastic ",num_materials_viscoelastic
        print *,"i,j,k ",i,j,k
        print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
@@ -17770,10 +17765,10 @@ stop
        print *,"accum_PARM%Npart ",accum_PARM%Npart
        print *,"accum_PARM%N_real_comp ",accum_PARM%N_real_comp
        print *,"accum_PARM%nsubdivide ",accum_PARM%nsubdivide
-       print *,"LBOUND(accum_PARM%TENSOR) ",LBOUND(accum_PARM%TENSOR)
-       print *,"UBOUND(accum_PARM%TENSOR) ",UBOUND(accum_PARM%TENSOR)
-       print *,"LBOUND(accum_PARM%LEVELSET) ",LBOUND(accum_PARM%LEVELSET)
-       print *,"UBOUND(accum_PARM%LEVELSET) ",UBOUND(accum_PARM%LEVELSET)
+       print *,"LBOUND(TENSORptr) ",LBOUND(TENSORptr)
+       print *,"UBOUND(TENSORptr) ",UBOUND(TENSORptr)
+       print *,"LBOUND(LEVELSETptr) ",LBOUND(LEVELSETptr)
+       print *,"UBOUND(LEVELSETptr) ",UBOUND(LEVELSETptr)
       endif
 
       eps=dx_local(1)/10.0d0
@@ -17782,32 +17777,22 @@ stop
       call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
 
       do dir=1,SDIM
-       dx_local(dir)=accum_PARM%dx(dir)
-       xlo_local(dir)=accum_PARM%xlo(dir)
-       fablo_local(dir)=accum_PARM%fablo(dir)
-       fabhi_local(dir)=accum_PARM%fabhi(dir)
-       tilelo_local(dir)=accum_PARM%tilelo(dir)
-       tilehi_local(dir)=accum_PARM%tilehi(dir)
 
-       if (1.eq.1) then
-        print *,"dir,dx_local(dir) ",dir,dx_local(dir)
-        print *,"dir,xlo_local(dir) ",dir,xlo_local(dir)
-        print *,"dir,fablo_local(dir) ",dir,fablo_local(dir)
-        print *,"dir,fabhi_local(dir) ",dir,fabhi_local(dir)
-        print *,"dir,tilelo_local(dir) ",dir,tilelo_local(dir)
-        print *,"dir,tilehi_local(dir) ",dir,tilehi_local(dir)
+       if (1.eq.0) then
+        print *,"dir,accum_PARM%dx(dir) ",dir,accum_PARM%dx(dir)
+        print *,"dir,accum_PARM%xlo(dir) ",dir,accum_PARM%xlo(dir)
        endif
       enddo
 
       call checkbound_array(fablo_local,fabhi_local, &
-         accum_PARM%TENSOR,1,-1)
+         TENSORptr,1,-1)
       call checkbound_array(fablo_local,fabhi_local, &
-         accum_PARM%LEVELSET,1,-1)
+         LEVELSETptr,1,-1)
       call checkbound_array_INTEGER(tilelo_local,tilehi_local, &
-         accum_PARM%cell_particle_count,0,-1)
+         cell_particle_count,0,-1)
 
       do im=1,num_materials
-       LSlocal(im)=accum_PARM%LEVELSET(D_DECL(i,j,k),im)
+       LSlocal(im)=LEVELSETptr(D_DECL(i,j,k),im)
       enddo
       call get_primary_material(LSlocal,im_primary)
 
@@ -17823,7 +17808,7 @@ stop
       data_in%xlo=>xlo_local
       data_in%fablo=>fablo_local
       data_in%fabhi=>fabhi_local
-      data_in%state=accum_PARM%TENSOR
+      data_in%state=TENSORptr
 
        ! data(xtarget)=interp_data(xtarget)-lambda
        ! lambda=
@@ -17834,24 +17819,23 @@ stop
        b_VEL(dir)=zero
       enddo
 
-      test_cell_particle_count= &
-        accum_PARM%cell_particle_count(D_DECL(i,j,k),1)
+      test_cell_particle_count=cell_particle_count(D_DECL(i,j,k),1)
 
       test_count=0
 
-      current_link=accum_PARM%cell_particle_count(D_DECL(i,j,k),2)
+      current_link=cell_particle_count(D_DECL(i,j,k),2)
 
       do while ((current_link.ge.1).and.(current_link.le.Np))
 
        do dir=1,SDIM
-        xpart(dir)=accum_PARM%particles(current_link)%pos(dir)
+        xpart(dir)=particlesptr(current_link)%pos(dir)
        enddo 
 
        do dir=1,NUM_CELL_ELASTIC
         SoA_comp=(dir-1)*Np+current_link
         if ((SoA_comp.ge.1).and. &
             (SoA_comp.le.accum_PARM%N_real_comp)) then
-         Qpart(dir)=accum_PARM%real_compALL(SoA_comp)
+         Qpart(dir)=accum_PARM%real_compALLptr(SoA_comp)
         else
          print *,"SoA_comp invalid"
          stop
@@ -17859,8 +17843,7 @@ stop
        enddo !dir=1,NUM_CELL_ELASTIC
 
        im_particle_direct= &
-         accum_PARM%particles(current_link)% &
-         extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+         particlesptr(current_link)%extra_int(N_EXTRA_INT_MATERIAL_ID+1)
 
        if ((im_particle_direct.ge.1).and. &
            (im_particle_direct.le.num_materials)) then
@@ -17884,7 +17867,7 @@ stop
        if (NUM_CELL_ELASTIC.gt.0) then
         data_in%scomp=1 
         data_in%ncomp=NUM_CELL_ELASTIC
-        data_in%state=accum_PARM%TENSOR
+        data_in%state=TENSORptr
         call interp_from_grid_util(data_in,data_out)
         do dir=1,NUM_CELL_ELASTIC
          Q_interp_local(dir)=data_out%data_interp(dir)
@@ -17899,7 +17882,7 @@ stop
        if (num_materials.gt.0) then
         data_in%scomp=1 
         data_in%ncomp=num_materials
-        data_in%state=accum_PARM%LEVELSET
+        data_in%state=LEVELSETptr
         call interp_from_grid_util(data_in,data_out_LS)
         do dir=1,num_materials
          LS_interp_local(dir)=data_out_LS%data_interp(dir)
@@ -17970,7 +17953,7 @@ stop
       if (NUM_CELL_ELASTIC.gt.0) then
        data_in%scomp=1 
        data_in%ncomp=NUM_CELL_ELASTIC
-       data_in%state=accum_PARM%TENSOR
+       data_in%state=TENSORptr
        call interp_from_grid_util(data_in,data_out)
        do dir=1,NUM_CELL_ELASTIC
         Q_interp(dir)=data_out%data_interp(dir)
@@ -17985,7 +17968,7 @@ stop
       if (num_materials.gt.0) then
        data_in%scomp=1 
        data_in%ncomp=num_materials
-       data_in%state=accum_PARM%LEVELSET
+       data_in%state=LEVELSETptr
        call interp_from_grid_util(data_in,data_out_LS)
        do dir=1,num_materials
         LS_interp(dir)=data_out_LS%data_interp(dir)
@@ -18103,8 +18086,10 @@ stop
       REAL_T, INTENT(in), target :: xlo(SDIM),dx(SDIM)
       INTEGER_T, value, INTENT(in) :: Np ! pass by value
       type(particle_t), INTENT(in), target :: particles(Np)
+      type(particle_t), pointer :: particlesptr(:)
       INTEGER_T, value, INTENT(in) :: N_real_comp ! pass by value
       REAL_T, INTENT(in), target :: real_compALL(N_real_comp)
+      REAL_T, pointer :: real_compALLptr(:)
       INTEGER_T, INTENT(inout) :: new_Pdata_size
       REAL_T, INTENT(out) :: new_particles(new_Pdata_size)
       INTEGER_T, INTENT(inout) :: Np_append
@@ -18263,37 +18248,33 @@ stop
 
       accum_PARM%append_flag=append_flag
 
-      accum_PARM%fablo=>fablo 
-      accum_PARM%fabhi=>fabhi
-      accum_PARM%tilelo=>tilelo 
-      accum_PARM%tilehi=>tilehi
+      do dir=1,SDIM
+       accum_PARM%fablo(dir)=fablo(dir)
+       accum_PARM%fabhi(dir)=fabhi(dir)
+       accum_PARM%tilelo(dir)=tilelo(dir)
+       accum_PARM%tilehi(dir)=tilehi(dir)
+       accum_PARM%dx(dir)=dx(dir)
+       accum_PARM%xlo(dir)=xlo(dir)
+      enddo
       accum_PARM%bfact=bfact
       accum_PARM%level=level
       accum_PARM%finest_level=finest_level
-      accum_PARM%dx=>dx
-      accum_PARM%xlo=>xlo
 
       accum_PARM%nsubdivide=particle_nsubdivide
 
-       !accum_PARM%TENSOR is pointer, tensorfab is target
-      accum_PARM%TENSOR=>tensorfab 
-      accum_PARM%LEVELSET=>lsfab 
-      call checkbound_array(fablo,fabhi,accum_PARM%TENSOR,1,-1)
-      call checkbound_array(fablo,fabhi,accum_PARM%LEVELSET,1,-1)
+      particlesptr=>particles
 
-      accum_PARM%cell_particle_count=>cell_particle_count
-      call checkbound_array_INTEGER(tilelo,tilehi, &
-              accum_PARM%cell_particle_count,0,-1)
-
-      accum_PARM%particles=>particles
       accum_PARM%Npart=Np
-      accum_PARM%real_compALL=>real_compALL
+
+      real_compALLptr=>real_compALL
+
       accum_PARM%N_real_comp=N_real_comp
 
       if (isweep.eq.0) then
        if (append_flag.eq.1) then
         call count_particles( &
          accum_PARM, &
+         cell_particle_count_ptr, &
          particle_link_data, &
          Np)
        else if (append_flag.eq.0) then
