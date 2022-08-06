@@ -17461,7 +17461,7 @@ stop
       use mass_transfer_module
 
       type(accum_parm_type_count), INTENT(in) :: accum_PARM
-      INTEGER_T, INTENT(in) :: Np 
+      INTEGER_T, value, INTENT(in) :: Np 
        ! child link 1 (particle index), parent link 1 (i,j,k index),
        ! child link 2 (particle index), parent link 2 (i,j,k index), ...
       INTEGER_T, INTENT(inout) :: particle_link_data(Np*(1+SDIM))
@@ -17595,156 +17595,6 @@ stop
       end subroutine count_particles
 
 
-      subroutine update_particle_link_data( &
-       accum_PARM, &
-       cell_particle_count, &
-       particles, &
-       particle_link_data, &
-       Np)
-
-      use global_utility_module
-
-      type(accum_parm_type_count), INTENT(in) :: accum_PARM
-       !the pointer is never modified, but the target will be modified.
-       !cell_particle_count(i,j,k,1)=number particles in the cell.
-       !cell_particle_count(i,j,k,2)=particle id of first particle in list
-      INTEGER_T, INTENT(in), pointer, &
-        dimension(D_DECL(:,:,:),:) :: cell_particle_count
-      INTEGER_T, INTENT(in) :: Np 
-      type(particle_t), INTENT(in) :: particles(Np)
-       ! child link 1 (particle index), parent link 1 (i,j,k index),
-       ! child link 2 (particle index), parent link 2 (i,j,k index), ...
-      INTEGER_T, INTENT(inout) :: particle_link_data(Np*(1+SDIM))
-
-      INTEGER_T :: interior_ID
-      INTEGER_T :: dir
-      REAL_T, target :: xpart(SDIM)
-      INTEGER_T cell_index(SDIM)
-      INTEGER_T interior_ok
-      INTEGER_T i,j,k
-      INTEGER_T :: ok_to_add_link
-      INTEGER_T :: previous_link
-      INTEGER_T :: ibase
-      INTEGER_T :: ibase_new
-      INTEGER_T :: i_parent,j_parent,k_parent
-
-      REAL_T, target :: dx_local(SDIM)
-      REAL_T, target :: xlo_local(SDIM)
-      INTEGER_T, target :: fablo_local(SDIM)
-      INTEGER_T, target :: fabhi_local(SDIM)
-
-      do dir=1,SDIM
-       dx_local(dir)=accum_PARM%dx(dir)
-       xlo_local(dir)=accum_PARM%xlo(dir)
-       fablo_local(dir)=accum_PARM%fablo(dir)
-       fabhi_local(dir)=accum_PARM%fabhi(dir)
-      enddo
-
-      do interior_ID=1,accum_PARM%Npart
-
-       do dir=1,SDIM
-        xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
-       enddo
-       call containing_cell(accum_PARM%bfact, &
-         accum_PARM%dx, &
-         accum_PARM%xlo, &
-         accum_PARM%fablo, &
-         xpart, &
-         cell_index)
-
-       interior_ok=1
-       do dir=1,SDIM
-        if ((cell_index(dir).lt.accum_PARM%tilelo(dir)).or. &
-            (cell_index(dir).gt.accum_PARM%tilehi(dir))) then
-         interior_ok=0
-        endif
-       enddo
-
-       if (interior_ok.eq.1) then
-
-        i=cell_index(1)
-        j=cell_index(2)
-        k=cell_index(SDIM)
-
-        ok_to_add_link=1
-
-        previous_link=cell_particle_count(D_DECL(i,j,k),2)
-        if (previous_link.eq.0) then
-         ! do nothing; no particles attached to cell (i,j,k)
-        else if ((previous_link.ge.1).and. &
-                 (previous_link.le.Np)) then
-         ibase=(previous_link-1)*(SDIM+1)
-         ! child link 1 (particle index), parent link 1 (i,j,k index),
-         ! child link 2 (particle index), parent link 2 (i,j,k index), ...
-         i_parent=particle_link_data(ibase+2) 
-         j_parent=particle_link_data(ibase+3) 
-         k_parent=particle_link_data(ibase+1+SDIM) 
-         if ((i.eq.i_parent).and. &
-             (j.eq.j_parent)) then
-          ! do nothing
-         else
-          ok_to_add_link=0
-         endif
-         if (SDIM.eq.3) then
-          if (k.eq.k_parent) then
-           ! do nothing
-          else
-           ok_to_add_link=0
-          endif
-         endif
-        else
-         print *,"previous_link invalid"
-         stop
-        endif
-
-        if (ok_to_add_link.eq.1) then
-
-         if (previous_link.eq.interior_ID) then
-          print *,"links should be unique"
-          stop
-         endif
-
-         cell_particle_count(D_DECL(i,j,k),1)= &
-           cell_particle_count(D_DECL(i,j,k),1)+1
-
-         cell_particle_count(D_DECL(i,j,k),2)=interior_ID
-
-         ibase_new=(interior_ID-1)*(SDIM+1)
-         particle_link_data(ibase_new+1)=previous_link
-         particle_link_data(ibase_new+2)=i 
-         particle_link_data(ibase_new+3)=j
-         if (SDIM.eq.3) then 
-          particle_link_data(ibase_new+SDIM+1)=k
-         endif
-
-        else if (ok_to_add_link.eq.0) then
-         print *,"ok_to_add_link==0"
-         print *,"the parent of a particle added to (i,j,k) should"
-         print *,"always be (i,j,k)"
-         print *,"i,j,k ",i,j,k
-         print *,"i_parent,j_parent,k_parent ", &
-           i_parent,j_parent,k_parent
-         print *,"previous_link,interior_ID ", &
-            previous_link,interior_ID 
-         stop
-        else
-         print *,"ok_to_add_link invalid"
-         stop
-        endif
-
-       else if (interior_ok.eq.0) then
-        ! do nothing
-       else
-        print *,"interior_ok invalid"
-        stop
-       endif
-
-      enddo ! do interior_ID=1,accum_PARM%Npart
-
-      return
-      end subroutine update_particle_link_data
-
-
       subroutine containing_sub_box( &
          accum_PARM, &
          xpart, &
@@ -17857,7 +17707,7 @@ stop
       type(accum_parm_type_count), INTENT(in) :: accum_PARM
       INTEGER_T, INTENT(in) :: i,j,k
       REAL_T, target, INTENT(in) :: xtarget(SDIM)
-      INTEGER_T, INTENT(in) :: Np
+      INTEGER_T, value, INTENT(in) :: Np
       INTEGER_T, INTENT(in) :: particle_link_data(Np*(1+SDIM))
       REAL_T, INTENT(out) :: Q_interp(NUM_CELL_ELASTIC)
       REAL_T, INTENT(out) :: LS_interp(num_materials)
@@ -17897,10 +17747,30 @@ stop
       REAL_T, target :: xlo_local(SDIM)
       INTEGER_T, target :: fablo_local(SDIM)
       INTEGER_T, target :: fabhi_local(SDIM)
+      INTEGER_T, target :: tilelo_local(SDIM)
+      INTEGER_T, target :: tilehi_local(SDIM)
 
       INTEGER_T :: test_count,test_cell_particle_count
 
       INTEGER_T :: SoA_comp
+
+      if (1.eq.1) then
+       print *,"num_materials_viscoelastic ",num_materials_viscoelastic
+       print *,"i,j,k ",i,j,k
+       print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
+       print *,"Np= ",Np
+       print *,"num_materials=",num_materials
+       print *,"im_elastic_map(1) ",im_elastic_map(1)
+       print *,"accum_PARM%fablo(1) ",accum_PARM%fablo(1)
+       print *,"accum_PARM%fablo(2) ",accum_PARM%fablo(2)
+       print *,"accum_PARM%fablo(SDIM) ",accum_PARM%fablo(SDIM)
+       print *,"accum_PARM%tilelo(1) ",accum_PARM%tilelo(1)
+       print *,"accum_PARM%tilelo(2) ",accum_PARM%tilelo(2)
+       print *,"accum_PARM%tilelo(SDIM) ",accum_PARM%tilelo(SDIM)
+       print *,"accum_PARM%Npart ",accum_PARM%Npart
+       print *,"accum_PARM%N_real_comp ",accum_PARM%N_real_comp
+       print *,"accum_PARM%nsubdivide ",accum_PARM%nsubdivide
+      endif
 
       eps=dx_local(1)/10.0d0
 
@@ -17912,12 +17782,25 @@ stop
        xlo_local(dir)=accum_PARM%xlo(dir)
        fablo_local(dir)=accum_PARM%fablo(dir)
        fabhi_local(dir)=accum_PARM%fabhi(dir)
+       tilelo_local(dir)=accum_PARM%tilelo(dir)
+       tilehi_local(dir)=accum_PARM%tilehi(dir)
+
+       if (1.eq.1) then
+        print *,"dir,dx_local(dir) ",dir,dx_local(dir)
+        print *,"dir,xlo_local(dir) ",dir,xlo_local(dir)
+        print *,"dir,fablo_local(dir) ",dir,fablo_local(dir)
+        print *,"dir,fabhi_local(dir) ",dir,fabhi_local(dir)
+        print *,"dir,tilelo_local(dir) ",dir,tilelo_local(dir)
+        print *,"dir,tilehi_local(dir) ",dir,tilehi_local(dir)
+       endif
       enddo
 
       call checkbound_array(fablo_local,fabhi_local, &
          accum_PARM%TENSOR,1,-1)
       call checkbound_array(fablo_local,fabhi_local, &
          accum_PARM%LEVELSET,1,-1)
+      call checkbound_array_INTEGER(tilelo_local,tilehi_local, &
+         accum_PARM%cell_particle_count,0,-1)
 
       do im=1,num_materials
        LSlocal(im)=accum_PARM%LEVELSET(D_DECL(i,j,k),im)
@@ -18395,6 +18278,8 @@ stop
       call checkbound_array(fablo,fabhi,accum_PARM%LEVELSET,1,-1)
 
       accum_PARM%cell_particle_count=>cell_particle_count
+      call checkbound_array_INTEGER(tilelo,tilehi, &
+              accum_PARM%cell_particle_count,0,-1)
 
       accum_PARM%particles=>particles
       accum_PARM%Npart=Np
