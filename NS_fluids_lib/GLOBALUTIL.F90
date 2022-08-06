@@ -11854,11 +11854,12 @@ end subroutine print_visual_descriptor
 
        ! data_in%dir_deriv=1..sdim (derivative)
        ! data_in%dir_deriv=-1 (interp)
-      subroutine deriv_from_grid_util(data_in,data_out)
+      subroutine deriv_from_grid_util(data_in,disp_dataptr,data_out)
       use probcommon_module
       IMPLICIT NONE
 
       type(deriv_from_grid_parm_type), INTENT(in) :: data_in 
+      REAL_T, INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: disp_dataptr
       type(interp_from_grid_out_parm_type), INTENT(out) :: data_out
 
       INTEGER_T dir_local
@@ -11879,7 +11880,6 @@ end subroutine print_visual_descriptor
       REAL_T dx_top
       REAL_T, target :: xtarget(SDIM)
       INTEGER_T nhalf
-      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
       REAL_T :: local_data_out
       REAL_T, allocatable, dimension(:) :: local_data_max
       REAL_T, allocatable, dimension(:) :: local_data_min
@@ -11903,8 +11903,6 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      local_data_fab=>data_in%disp_data
- 
       nhalf=3 
       call gridstenMAC_level(xflux_sten,ilocal(1),ilocal(2),ilocal(SDIM), &
         data_in%level,nhalf,data_in%grid_type_flux)
@@ -12087,7 +12085,7 @@ end subroutine print_visual_descriptor
         if ((wt_bot.gt.zero).and.(abs(wt_top).ge.zero)) then 
          data_comp=data_in%scomp+nc-1
          call safe_data(isten,jsten,ksten,data_comp, &
-           local_data_fab,local_data_out)
+           disp_dataptr,local_data_out)
 
          if (local_data_out.gt.local_data_max(nc)) then
           local_data_max(nc)=local_data_out
@@ -12119,7 +12117,7 @@ end subroutine print_visual_descriptor
         data_in2%level=data_in%level
         data_in2%finest_level=data_in%finest_level
         data_in2%bfact=data_in%bfact
-        data_in2%xtarget=>xtarget
+        data_in2%xtarget=xtarget
         if ((data_in%dx(1).gt.zero).and. &
             (data_in%dx(2).gt.zero).and. &
             (data_in%dx(SDIM).gt.zero)) then
@@ -12128,13 +12126,12 @@ end subroutine print_visual_descriptor
          print *,"data_in%dx bust"
          stop
         endif
-        data_in2%dx=>data_in%dx
-        data_in2%xlo=>data_in%xlo
-        data_in2%fablo=>data_in%fablo
-        data_in2%fabhi=>data_in%fabhi
-        data_in2%state=>data_in%disp_data
+        data_in2%dx=data_in%dx
+        data_in2%xlo=data_in%xlo
+        data_in2%fablo=data_in%fablo
+        data_in2%fabhi=data_in%fabhi
         allocate(data_out2%data_interp(data_in2%ncomp))
-        call interp_from_grid_util(data_in2,data_out2)
+        call interp_from_grid_util(data_in2,disp_dataptr,data_out2)
         do nc=1,data_in%ncomp
 
          scaling=abs(local_data_max(nc))
@@ -12209,11 +12206,12 @@ end subroutine print_visual_descriptor
 
        ! data_in%dir_deriv=1..sdim (derivative)
        ! data_in%dir_deriv=-1 (interp)
-      subroutine single_deriv_from_grid_util(data_in,data_out)
+      subroutine single_deriv_from_grid_util(data_in,disp_dataptr,data_out)
       use probcommon_module
       IMPLICIT NONE
 
       type(single_deriv_from_grid_parm_type), INTENT(in) :: data_in 
+      REAL_T, INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: disp_dataptr
       type(interp_from_grid_out_parm_type), INTENT(out) :: data_out
 
       INTEGER_T dir_local
@@ -12232,7 +12230,6 @@ end subroutine print_visual_descriptor
       REAL_T dx_top
       REAL_T, target :: xtarget(SDIM)
       INTEGER_T nhalf
-      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
       REAL_T :: local_data_out
       REAL_T :: local_data_max
       REAL_T :: local_data_min
@@ -12255,8 +12252,6 @@ end subroutine print_visual_descriptor
        print *,"dir_FD invalid"
        stop
       endif
-
-      local_data_fab=>data_in%disp_data
 
       nhalf=3 
       call gridstenMAC_level(xflux_sten,ilocal(1),ilocal(2),ilocal(SDIM), &
@@ -12421,7 +12416,7 @@ end subroutine print_visual_descriptor
         enddo ! dir_local=1..sdim
 
         if ((wt_bot.gt.zero).and.(abs(wt_top).ge.zero)) then 
-         call safe_data_single(isten,jsten,ksten,local_data_fab,local_data_out)
+         call safe_data_single(isten,jsten,ksten,disp_dataptr,local_data_out)
 
          if (local_data_out.gt.local_data_max) then
           local_data_max=local_data_out
@@ -12456,14 +12451,13 @@ end subroutine print_visual_descriptor
         data_in2%level=data_in%level
         data_in2%finest_level=data_in%finest_level
         data_in2%bfact=data_in%bfact
-        data_in2%xtarget=>xtarget
-        data_in2%dx=>data_in%dx
-        data_in2%xlo=>data_in%xlo
-        data_in2%fablo=>data_in%fablo
-        data_in2%fabhi=>data_in%fabhi
-        data_in2%state=>data_in%disp_data
+        data_in2%xtarget=xtarget
+        data_in2%dx=data_in%dx
+        data_in2%xlo=data_in%xlo
+        data_in2%fablo=data_in%fablo
+        data_in2%fabhi=data_in%fabhi
         allocate(data_out2%data_interp(1))
-        call single_interp_from_grid_util(data_in2,data_out2)
+        call single_interp_from_grid_util(data_in2,disp_dataptr,data_out2)
 
         scaling=abs(local_data_max)
         if (scaling.lt.abs(local_data_min)) then
@@ -12533,11 +12527,12 @@ end subroutine print_visual_descriptor
 
 #undef SANITY_CHECK
 
-      subroutine interp_from_grid_util(data_in,data_out)
+      subroutine interp_from_grid_util(data_in,stateptr,data_out)
       use probcommon_module
       IMPLICIT NONE
  
       type(interp_from_grid_parm_type), INTENT(in) :: data_in 
+      REAL_T, INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: stateptr 
       type(interp_from_grid_out_parm_type), INTENT(out) :: data_out
       REAL_T :: xsten(-3:3,SDIM)
       REAL_T :: xsten_center(-3:3,SDIM)
@@ -12551,7 +12546,6 @@ end subroutine print_visual_descriptor
       INTEGER_T isten,jsten,ksten
       INTEGER_T im
       REAL_T, allocatable, dimension(:) :: local_data
-      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
      
       if ((data_in%level.ge.0).and. &
           (data_in%level.le.data_in%finest_level).and. &
@@ -12589,8 +12583,6 @@ end subroutine print_visual_descriptor
       endif
 
       allocate(local_data(data_in%ncomp))
-
-      local_data_fab=>data_in%state
 
       nhalf=3
 
@@ -12641,7 +12633,7 @@ end subroutine print_visual_descriptor
 
        do im=1,data_in%ncomp
         call safe_data(isten,jsten,ksten,data_in%scomp+im-1, &
-                local_data_fab,local_data(im))
+                stateptr,local_data(im))
         if ((local_data(im).ge.-1.0D+30).and. &
             (local_data(im).le.1.0D+30)) then
 
@@ -12678,11 +12670,12 @@ end subroutine print_visual_descriptor
       end subroutine interp_from_grid_util
 
 
-      subroutine single_interp_from_grid_util(data_in,data_out)
+      subroutine single_interp_from_grid_util(data_in,stateptr,data_out)
       use probcommon_module
       IMPLICIT NONE
  
       type(single_interp_from_grid_parm_type), INTENT(in) :: data_in 
+      REAL_T, INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: stateptr 
       type(interp_from_grid_out_parm_type), INTENT(out) :: data_out
       REAL_T :: xsten(-3:3,SDIM)
       REAL_T :: xsten_center(-3:3,SDIM)
@@ -12695,7 +12688,6 @@ end subroutine print_visual_descriptor
       REAL_T WT,total_WT
       INTEGER_T isten,jsten,ksten
       REAL_T :: local_data
-      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
      
       if ((data_in%level.ge.0).and. &
           (data_in%level.le.data_in%finest_level).and. &
@@ -12767,7 +12759,7 @@ end subroutine print_visual_descriptor
         stop
        endif
 
-       call safe_data_single(isten,jsten,ksten,local_data_fab,local_data)
+       call safe_data_single(isten,jsten,ksten,stateptr,local_data)
        if ((local_data.ge.-1.0D+30).and. &
            (local_data.le.1.0D+30)) then
 

@@ -8263,11 +8263,6 @@ stop
       INTEGER_T im_elastic_p1
       REAL_T xcenter(SDIM)
 
-      REAL_T, target :: dx_local(SDIM)
-      REAL_T, target :: xlo_local(SDIM)
-      INTEGER_T, target :: fablo_local(SDIM)
-      INTEGER_T, target :: fabhi_local(SDIM)
-
        ! Q=A-I
       REAL_T trace_A
       REAL_T determinant_factor
@@ -8328,13 +8323,6 @@ stop
 
       call checkbound_array(fablo,fabhi,visc_ptr,1,-1)
       call checkbound_array(fablo,fabhi,tensor_ptr,1,-1)
-
-      do dir_local=1,SDIM
-       dx_local(dir_local)=dx(dir_local)
-       xlo_local(dir_local)=xlo(dir_local)
-       fablo_local(dir_local)=fablo(dir_local)
-       fabhi_local(dir_local)=fabhi(dir_local)
-      enddo
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -8574,11 +8562,6 @@ stop
       type(deriv_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
 
-      REAL_T, target :: dx_local(SDIM)
-      REAL_T, target :: xlo_local(SDIM)
-      INTEGER_T, target :: fablo_local(SDIM)
-      INTEGER_T, target :: fabhi_local(SDIM)
-
       REAL_T, target :: cell_data_deriv(1)
 
       INTEGER_T itensor
@@ -8652,21 +8635,14 @@ stop
       call checkbound_array(fablo,fabhi,tensor_ptr,1,-1)
       call checkbound_array(fablo,fabhi,tensorMAC_ptr,0,flux_grid_type)
 
-      do dir_local=1,SDIM
-       dx_local(dir_local)=dx(dir_local)
-       xlo_local(dir_local)=xlo(dir_local)
-       fablo_local(dir_local)=fablo(dir_local)
-       fabhi_local(dir_local)=fabhi(dir_local)
-      enddo
-
       !type(deriv_from_grid_parm_type) :: data_in
       data_in%level=level
       data_in%finest_level=finest_level
       data_in%bfact=bfact ! bfact=kind of spectral element grid 
-      data_in%dx=>dx_local
-      data_in%xlo=>xlo_local
-      data_in%fablo=>fablo_local
-      data_in%fabhi=>fabhi_local
+      data_in%dx=dx
+      data_in%xlo=xlo
+      data_in%fablo=fablo
+      data_in%fabhi=fabhi
 
       data_in%grid_type_flux=flux_grid_type
       call grid_type_to_box_type(flux_grid_type,data_in%box_type_flux)
@@ -8698,7 +8674,6 @@ stop
 
        do itensor=1,ENUM_NUM_TENSOR_TYPE
 
-         data_in%disp_data=>tensor
          data_in%dir_deriv=-1
          data_in%grid_type_data=-1
          do dir_local=1,SDIM
@@ -8707,7 +8682,7 @@ stop
          data_in%ncomp=1
          data_in%scomp=itensor
 
-         call deriv_from_grid_util(data_in,data_out)
+         call deriv_from_grid_util(data_in,tensor_ptr,data_out)
 
          tensorMAC(D_DECL(i,j,k),itensor)=cell_data_deriv(1)
        enddo ! itensor=1..ENUM_NUM_TENSOR_TYPE
@@ -20923,26 +20898,28 @@ stop
        end type particle_t
 
        type accum_parm_type
-        INTEGER_T, pointer :: fablo(:)
-        INTEGER_T, pointer :: fabhi(:)
-        INTEGER_T, pointer :: tilelo(:)
-        INTEGER_T, pointer :: tilehi(:)
+        INTEGER_T :: fablo(SDIM)
+        INTEGER_T :: fabhi(SDIM)
+        INTEGER_T :: tilelo(SDIM)
+        INTEGER_T :: tilehi(SDIM)
         INTEGER_T :: bfact
         INTEGER_T :: level
         INTEGER_T :: finest_level
         INTEGER_T :: ncomp_accumulate
-        REAL_T, pointer :: dx(:)
-        REAL_T, pointer :: xlo(:)
+        REAL_T :: dx(SDIM)
+        REAL_T :: xlo(SDIM)
         INTEGER_T :: Npart
-        type(particle_t), pointer, dimension(:) :: particles
+!        type(particle_t), INTENT(in), pointer, dimension(:) :: particlesptr
         INTEGER_T :: N_real_comp
-        REAL_T, pointer, dimension(:) :: real_compALL
+!        REAL_T, INTENT(in), pointer, dimension(:) :: real_compALLptr
        end type accum_parm_type
 
       contains
 
       subroutine traverse_particles_Q( &
        accum_PARM, &
+       particlesptr, &
+       real_compALLptr, &
        LSfab, &
        matrixfab, &
        tensor_fab, &
@@ -20953,6 +20930,8 @@ stop
 
       INTEGER_T, INTENT(in) :: ncomp_accumulate
       type(accum_parm_type), INTENT(in) :: accum_PARM
+      type(particle_t), INTENT(in), pointer, dimension(:) :: particlesptr
+      REAL_T, INTENT(in), pointer, dimension(:) :: real_compALLptr
        ! pointers are always INTENT(in).
        ! the actual data INTENT attribute is inherited from the target.
       REAL_T, pointer, INTENT(in) :: LSfab(D_DECL(:,:,:),:)
@@ -20974,12 +20953,6 @@ stop
 
       REAL_T, target :: cell_data_tensor_interp(NUM_CELL_ELASTIC)
       REAL_T, target :: cell_data_LS_interp(num_materials*(1+SDIM))
-      REAL_T, target :: dx_local(SDIM)
-      REAL_T, target :: xlo_local(SDIM)
-      INTEGER_T, target :: fablo_local(SDIM)
-      INTEGER_T, target :: fabhi_local(SDIM)
-      INTEGER_T, target :: tilelo_local(SDIM)
-      INTEGER_T, target :: tilehi_local(SDIM)
 
       type(interp_from_grid_parm_type) :: data_in
       type(interp_from_grid_out_parm_type) :: data_out
@@ -20989,15 +20962,6 @@ stop
       INTEGER_T :: im_primary
       INTEGER_T :: im_primary_part
       INTEGER_T :: im_particle_direct
-
-      do dir=1,SDIM
-       dx_local(dir)=accum_PARM%dx(dir)
-       xlo_local(dir)=accum_PARM%xlo(dir)
-       fablo_local(dir)=accum_PARM%fablo(dir)
-       fabhi_local(dir)=accum_PARM%fabhi(dir)
-       tilelo_local(dir)=accum_PARM%tilelo(dir)
-       tilehi_local(dir)=accum_PARM%tilehi(dir)
-      enddo
 
       if (NUM_CELL_ELASTIC.eq. &
           num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) then
@@ -21015,10 +20979,10 @@ stop
       data_in%finest_level=accum_PARM%finest_level
       data_in%bfact=accum_PARM%bfact
 
-      data_in%dx=>dx_local
-      data_in%xlo=>xlo_local
-      data_in%fablo=>fablo_local
-      data_in%fabhi=>fabhi_local
+      data_in%dx=accum_PARM%dx
+      data_in%xlo=accum_PARM%xlo
+      data_in%fablo=accum_PARM%fablo
+      data_in%fabhi=accum_PARM%fabhi
       data_in%scomp=1
 
       nhalf=3
@@ -21056,12 +21020,11 @@ stop
        if (accum_PARM%Npart.ge.0) then
 
         do dir=1,SDIM
-         xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
+         xpart(dir)=particlesptr(interior_ID)%pos(dir)
         enddo ! dir=1..sdim
 
         im_particle_direct= &
-           accum_PARM%particles(interior_ID)% &
-           extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+           particlesptr(interior_ID)%extra_int(N_EXTRA_INT_MATERIAL_ID+1)
 
         if ((im_particle_direct.ge.1).and. &
             (im_particle_direct.le.num_materials)) then
@@ -21073,7 +21036,7 @@ stop
 
         do dir=1,NUM_CELL_ELASTIC
          k=(dir-1)*npart_local+interior_ID
-         Qpart(dir)=accum_PARM%real_compALL(k)
+         Qpart(dir)=real_compALLptr(k)
         enddo ! dir=1..NUM_CELL_ELASTIC
 
         call containing_cell(accum_PARM%bfact, &
@@ -21104,15 +21067,13 @@ stop
 
          data_out%data_interp=>cell_data_tensor_interp
          data_in%ncomp=NUM_CELL_ELASTIC
-         data_in%state=>tensor_fab
-         data_in%xtarget=>xpart
-         call interp_from_grid_util(data_in,data_out)
+         data_in%xtarget=xpart
+         call interp_from_grid_util(data_in,tensor_fab,data_out)
 
          data_out%data_interp=>cell_data_LS_interp
          data_in%ncomp=num_materials*(1+SDIM)
-         data_in%state=>LSfab
-         data_in%xtarget=>xpart
-         call interp_from_grid_util(data_in,data_out)
+         data_in%xtarget=xpart
+         call interp_from_grid_util(data_in,LSfab,data_out)
 
          call get_primary_material(cell_data_LS_interp,im_primary_part)
 
@@ -21251,6 +21212,8 @@ stop
 
       type(particle_t), INTENT(in), target :: particles(Np)
       REAL_T, INTENT(in), target :: real_compALL(N_real_comp)
+      type(particle_t), pointer, dimension(:) :: particlesptr
+      REAL_T, pointer, dimension(:) :: real_compALLptr
 
       type(accum_parm_type) :: accum_PARM
 
@@ -21321,18 +21284,20 @@ stop
       call checkbound_array(fablo,fabhi,TNEWfab_ptr,1,-1)
       call checkbound_array(fablo,fabhi,tensor_fab_ptr,1,-1)
 
-      accum_PARM%fablo=>fablo 
-      accum_PARM%fabhi=>fabhi
-      accum_PARM%tilelo=>tilelo 
-      accum_PARM%tilehi=>tilehi
+      accum_PARM%fablo=fablo 
+      accum_PARM%fabhi=fabhi
+      accum_PARM%tilelo=tilelo 
+      accum_PARM%tilehi=tilehi
       accum_PARM%bfact=bfact
       accum_PARM%level=level
       accum_PARM%finest_level=finest_level
       accum_PARM%ncomp_accumulate=ncomp_accumulate
-      accum_PARM%dx=>dx
-      accum_PARM%xlo=>xlo
-      accum_PARM%particles=>particles
-      accum_PARM%real_compALL=>real_compALL
+      accum_PARM%dx=dx
+      accum_PARM%xlo=xlo
+
+      particlesptr=>particles
+      real_compALLptr=>real_compALL
+
       accum_PARM%Npart=Np
       accum_PARM%N_real_comp=N_real_comp
 
@@ -21340,6 +21305,8 @@ stop
 
       call traverse_particles_Q( &
         accum_PARM, &
+        particlesptr, &
+        real_compALLptr, &
         LSfab_ptr, &
         matrixfab_ptr, &
         tensor_fab_ptr, &
