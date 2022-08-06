@@ -5797,19 +5797,17 @@ stop
               data_in%level=level
               data_in%finest_level=finest_level
               data_in%bfact=bfact
-              data_in%dx=>dx
-              data_in%xlo=>xlo
-              data_in%fablo=>fablo
-              data_in%fabhi=>fabhi
-
-              data_in%state=>LSold
+              data_in%dx=dx
+              data_in%xlo=xlo
+              data_in%fablo=fablo
+              data_in%fabhi=fabhi
 
               data_in%ncomp=num_materials*(1+SDIM)
               data_in%scomp=1
 
-              data_in%xtarget=>xstar
+              data_in%xtarget=xstar
 
-              call interp_from_grid_util(data_in,data_out)
+              call interp_from_grid_util(data_in,LSold_ptr,data_out)
 
               LS_dest_old=cell_data_interp(im_dest)
 
