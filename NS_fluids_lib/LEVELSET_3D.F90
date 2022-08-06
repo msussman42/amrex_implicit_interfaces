@@ -17439,9 +17439,9 @@ stop
         INTEGER_T :: finest_level
         REAL_T :: dx(SDIM)
         REAL_T :: xlo(SDIM)
-        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: umac
-        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: vmac
-        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: wmac
+!        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: umacptr
+!        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: vmacptr
+!        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: wmacptr
         INTEGER_T, dimension(SDIM,2,SDIM) :: velbc
         INTEGER_T, dimension(SDIM,2) :: dombc
         INTEGER_T :: domlo(SDIM)
@@ -17454,6 +17454,7 @@ stop
 
       subroutine count_particles( &
        accum_PARM, &
+       particlesptr, &
        cell_particle_count, &
        particle_link_data, &
        Np)
@@ -17462,6 +17463,7 @@ stop
       use mass_transfer_module
 
       type(accum_parm_type_count), INTENT(in) :: accum_PARM
+      type(particle_t), INTENT(in), pointer, dimension(:) :: particlesptr
       INTEGER_T, value, INTENT(in) :: Np 
        ! child link 1 (particle index), parent link 1 (i,j,k index),
        ! child link 2 (particle index), parent link 2 (i,j,k index), ...
@@ -17487,7 +17489,7 @@ stop
       do interior_ID=1,accum_PARM%Npart
 
        do dir=1,SDIM
-        xpart(dir)=accum_PARM%particles(interior_ID)%pos(dir)
+        xpart(dir)=particlesptr(interior_ID)%pos(dir)
        enddo
        call containing_cell(accum_PARM%bfact, &
          accum_PARM%dx, &
@@ -17771,7 +17773,7 @@ stop
        print *,"UBOUND(LEVELSETptr) ",UBOUND(LEVELSETptr)
       endif
 
-      eps=dx_local(1)/10.0d0
+      eps=accum_PARM%dx(1)/10.0d0
 
       nhalf=3
       call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
@@ -17782,13 +17784,14 @@ stop
         print *,"dir,accum_PARM%dx(dir) ",dir,accum_PARM%dx(dir)
         print *,"dir,accum_PARM%xlo(dir) ",dir,accum_PARM%xlo(dir)
        endif
+
       enddo
 
-      call checkbound_array(fablo_local,fabhi_local, &
+      call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
          TENSORptr,1,-1)
-      call checkbound_array(fablo_local,fabhi_local, &
+      call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
          LEVELSETptr,1,-1)
-      call checkbound_array_INTEGER(tilelo_local,tilehi_local, &
+      call checkbound_array_INTEGER(accum_PARM%tilelo,accum_PARM%tilehi, &
          cell_particle_count,0,-1)
 
       do im=1,num_materials
@@ -17804,10 +17807,13 @@ stop
       data_in%level=accum_PARM%level
       data_in%finest_level=accum_PARM%finest_level
       data_in%bfact=accum_PARM%bfact
-      data_in%dx=>dx_local
-      data_in%xlo=>xlo_local
-      data_in%fablo=>fablo_local
-      data_in%fabhi=>fabhi_local
+
+      do dir=1,SDIM
+       data_in%dx(dir)=accum_PARM%dx(dir)
+       data_in%xlo(dir)=accum_PARM%xlo(dir)
+       data_in%fablo(dir)=accum_PARM%fablo(dir)
+       data_in%fabhi(dir)=accum_PARM%fabhi(dir)
+      enddo
       data_in%state=TENSORptr
 
        ! data(xtarget)=interp_data(xtarget)-lambda
@@ -17835,7 +17841,7 @@ stop
         SoA_comp=(dir-1)*Np+current_link
         if ((SoA_comp.ge.1).and. &
             (SoA_comp.le.accum_PARM%N_real_comp)) then
-         Qpart(dir)=accum_PARM%real_compALLptr(SoA_comp)
+         Qpart(dir)=real_compALLptr(SoA_comp)
         else
          print *,"SoA_comp invalid"
          stop
@@ -18274,6 +18280,7 @@ stop
        if (append_flag.eq.1) then
         call count_particles( &
          accum_PARM, &
+         particlesptr, &
          cell_particle_count_ptr, &
          particle_link_data, &
          Np)
@@ -18524,6 +18531,11 @@ stop
            call interp_eul_lag_dist( &
              im_elastic_map, &
              accum_PARM, &
+             particlesptr, &
+             real_compALLptr, &
+             tensorfab_ptr, &
+             lsfab_ptr, &
+             cell_particle_count_ptr, &
              i,j,k, &
              xsub, &
              particle_link_data, &
@@ -18659,7 +18671,12 @@ stop
       return
       end subroutine fort_init_particle_container
 
-      subroutine interp_mac_velocity(grid_PARM,xpart, &
+      subroutine interp_mac_velocity( &
+        grid_PARM, &
+        umacptr, &
+        vmacptr, &
+        wmacptr, &
+        xpart, &
         vel_time_slab,u)
       use global_utility_module
       use probcommon_module
@@ -18668,6 +18685,9 @@ stop
       implicit none
 
       type(grid_parm_type), INTENT(in) :: grid_PARM
+      REAL_T, INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: umacptr
+      REAL_T, INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: vmacptr
+      REAL_T, INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: wmacptr
       REAL_T, INTENT(in) :: xpart(SDIM)
       REAL_T, INTENT(in) :: vel_time_slab
       REAL_T, INTENT(out) :: u(SDIM)
@@ -18792,11 +18812,11 @@ stop
          jsten=jmac-imaclo(2)+1
          ksten=kmac-imaclo(3)+1
          if (dir.eq.1) then
-          local_data_fab=>grid_PARM%umac
+          local_data_fab=>umacptr
          else if (dir.eq.2) then
-          local_data_fab=>grid_PARM%vmac
+          local_data_fab=>vmacptr
          else if ((dir.eq.3).and.(SDIM.eq.3)) then
-          local_data_fab=>grid_PARM%wmac
+          local_data_fab=>wmacptr
          else
           print *,"dir invalid"
           stop
@@ -18992,7 +19012,7 @@ stop
       REAL_T, target :: probhi_arr(3)
 
       INTEGER_T interior_ID
-      INTEGER_T dir
+      INTEGER_T dir,side,veldir
       REAL_T xpart1(SDIM)
       REAL_T xpart2(SDIM)
       REAL_T xpart3(SDIM)
@@ -19023,25 +19043,29 @@ stop
       probhi_arr(2)=probhiy
       probhi_arr(3)=probhiz
 
-      grid_PARM%fablo=>fablo
-      grid_PARM%fabhi=>fabhi
-      grid_PARM%tilelo=>tilelo
-      grid_PARM%tilehi=>tilehi
+      do dir=1,SDIM
+       grid_PARM%fablo(dir)=fablo(dir)
+       grid_PARM%fabhi(dir)=fabhi(dir)
+       grid_PARM%tilelo(dir)=tilelo(dir)
+       grid_PARM%tilehi(dir)=tilehi(dir)
+       grid_PARM%dx(dir)=dx(dir)
+       grid_PARM%xlo(dir)=xlo(dir)
+       do side=1,2
+        grid_PARM%dombc(dir,side)=dombc(dir,side)
+       enddo
+       grid_PARM%domlo(dir)=domlo(dir)
+       grid_PARM%domhi(dir)=domhi(dir)
+       grid_PARM%problo(dir)=problo_arr(dir)
+       grid_PARM%probhi(dir)=probhi_arr(dir)
+       do veldir=1,SDIM
+        do side=1,2
+         grid_PARM%velbc(dir,side,veldir)=velbc_in(dir,side,veldir)
+        enddo
+       enddo
+      enddo ! dir=1,sdim
       grid_PARM%bfact=bfact
       grid_PARM%level=level
       grid_PARM%finest_level=finest_level
-      grid_PARM%dx=>dx
-      grid_PARM%xlo=>xlo
-      grid_PARM%umac=>umac
-      grid_PARM%vmac=>vmac
-      grid_PARM%wmac=>wmac
-
-      grid_PARM%velbc=>velbc_in
-      grid_PARM%dombc=>dombc
-      grid_PARM%domlo=>domlo
-      grid_PARM%domhi=>domhi
-      grid_PARM%problo=>problo_arr
-      grid_PARM%probhi=>probhi_arr
 
       call checkbound_array1(fablo,fabhi,umac_ptr,1,0)
       call checkbound_array1(fablo,fabhi,vmac_ptr,1,1)
@@ -19055,7 +19079,12 @@ stop
        do dir=1,SDIM
         xpart1(dir)=particles(interior_ID)%pos(dir)
        enddo
-       call interp_mac_velocity(grid_PARM,xpart1, &
+       call interp_mac_velocity( &
+        grid_PARM, &
+        umac_ptr, &
+        vmac_ptr, &
+        wmac_ptr, &
+        xpart1, &
         vel_time_slab,u1)
 
        if (num_RK_stages.eq.4) then
@@ -19065,7 +19094,12 @@ stop
         enddo
         call check_cfl_BC(grid_PARM,xpart1,xpart2)
 
-        call interp_mac_velocity(grid_PARM,xpart2, &
+        call interp_mac_velocity( &
+         grid_PARM, &
+         umac_ptr, &
+         vmac_ptr, &
+         wmac_ptr, &
+         xpart2, &
          vel_time_slab,u2)
 
         do dir=1,SDIM
@@ -19074,7 +19108,12 @@ stop
 
         call check_cfl_BC(grid_PARM,xpart1,xpart3)
 
-        call interp_mac_velocity(grid_PARM,xpart3, &
+        call interp_mac_velocity( &
+         grid_PARM, &
+         umac_ptr, &
+         vmac_ptr, &
+         wmac_ptr, &
+         xpart3, &
          vel_time_slab,u3)
 
         do dir=1,SDIM
@@ -19083,7 +19122,12 @@ stop
 
         call check_cfl_BC(grid_PARM,xpart1,xpart4)
 
-        call interp_mac_velocity(grid_PARM,xpart4, &
+        call interp_mac_velocity( &
+         grid_PARM, &
+         umac_ptr, &
+         vmac_ptr, &
+         wmac_ptr, &
+         xpart4, &
          vel_time_slab,u4)
 
         do dir=1,SDIM
@@ -19096,7 +19140,12 @@ stop
         enddo
         call check_cfl_BC(grid_PARM,xpart1,xpart2)
 
-        call interp_mac_velocity(grid_PARM,xpart2, &
+        call interp_mac_velocity( &
+         grid_PARM, &
+         umac_ptr, &
+         vmac_ptr, &
+         wmac_ptr, &
+         xpart2, &
          vel_time_slab,u2)
 
         do dir=1,SDIM
