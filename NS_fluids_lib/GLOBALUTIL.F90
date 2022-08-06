@@ -5686,6 +5686,7 @@ else if (A_dim.eq.2) then
      ! do nothing
     else
      print *,"A(i,j) failed sanity check"
+     print *,"i,j,A(i,j) ",i,j,A(i,j)
      stop
     endif
    else
@@ -12712,8 +12713,6 @@ end subroutine print_visual_descriptor
        endif
       enddo 
        
-      local_data_fab=>data_in%state
-
       nhalf=3
 
       call containing_cell( &

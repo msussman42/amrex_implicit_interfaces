@@ -18540,6 +18540,11 @@ stop
            do ipart=1,num_materials_viscoelastic
             im_map=im_elastic_map(ipart)+1
             if ((im_map.ge.1).and.(im_map.le.num_materials)) then
+             do ii=1,3
+             do jj=1,3
+              Q(ii,jj)=zero
+             enddo
+             enddo
              do dir=1,ENUM_NUM_TENSOR_TYPE
               call stress_index(dir,ii,jj)
               Q(ii,jj)=tensor_sub((ipart-1)*ENUM_NUM_TENSOR_TYPE+dir)

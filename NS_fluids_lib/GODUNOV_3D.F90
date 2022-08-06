@@ -20971,9 +20971,9 @@ stop
        stop
       endif
 
-      call checkbound_array(tilelo_local,tilehi_local,LSfab,2,-1)
-      call checkbound_array(tilelo_local,tilehi_local,matrixfab,0,-1)
-      call checkbound_array(fablo_local,fabhi_local,tensor_fab,1,-1)
+      call checkbound_array(accum_PARM%tilelo,accum_PARM%tilehi,LSfab,2,-1)
+      call checkbound_array(accum_PARM%tilelo,accum_PARM%tilehi,matrixfab,0,-1)
+      call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi,tensor_fab,1,-1)
 
       data_in%level=accum_PARM%level
       data_in%finest_level=accum_PARM%finest_level
@@ -21343,6 +21343,12 @@ stop
         if ((im_map.ge.1).and.(im_map.le.num_materials)) then
 
          if (im_map.eq.im_primary) then
+
+          do ii=1,3
+          do jj=1,3
+           Q(ii,jj)=zero
+          enddo
+          enddo
 
           do dir=1,ENUM_NUM_TENSOR_TYPE
            call stress_index(dir,ii,jj)
