@@ -162,11 +162,11 @@ module probcommon_module_types
       INTEGER_T :: box_type_data(SDIM)
       INTEGER_T :: grid_type_flux  ! -1..5
       INTEGER_T :: grid_type_data  ! -1..5
-      REAL_T, pointer :: dx(:)
-      REAL_T, pointer :: xlo(:)
-      INTEGER_T, pointer :: fablo(:)
-      INTEGER_T, pointer :: fabhi(:)
-      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: disp_data
+      REAL_T :: dx(SDIM)
+      REAL_T :: xlo(SDIM)
+      INTEGER_T :: fablo(SDIM)
+      INTEGER_T :: fabhi(SDIM)
+!      REAL_T, INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: disp_dataptr
       end type deriv_from_grid_parm_type
 
        ! used by single_deriv_from_grid_util
@@ -180,11 +180,11 @@ module probcommon_module_types
       INTEGER_T :: box_type_data(SDIM)
       INTEGER_T :: grid_type_flux  ! -1..5
       INTEGER_T :: grid_type_data  ! -1..5
-      REAL_T, pointer :: dx(:)
-      REAL_T, pointer :: xlo(:)
-      INTEGER_T, pointer :: fablo(:)
-      INTEGER_T, pointer :: fabhi(:)
-      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: disp_data
+      REAL_T :: dx(SDIM)
+      REAL_T :: xlo(SDIM)
+      INTEGER_T :: fablo(SDIM)
+      INTEGER_T :: fabhi(SDIM)
+!      REAL_T, INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: disp_dataptr
       end type single_deriv_from_grid_parm_type
 
        ! used by interp_from_grid_util
@@ -194,12 +194,12 @@ module probcommon_module_types
       INTEGER_T :: level
       INTEGER_T :: finest_level
       INTEGER_T :: bfact
-      REAL_T, pointer :: xtarget(:)
-      REAL_T, pointer :: dx(:)
-      REAL_T, pointer :: xlo(:)
-      INTEGER_T, pointer :: fablo(:)
-      INTEGER_T, pointer :: fabhi(:)
-      REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: state 
+      REAL_T :: xtarget(SDIM)
+      REAL_T :: dx(SDIM)
+      REAL_T :: xlo(SDIM)
+      INTEGER_T :: fablo(SDIM)
+      INTEGER_T :: fabhi(SDIM)
+!      REAL_T, INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: stateptr 
       end type interp_from_grid_parm_type
 
 
@@ -208,12 +208,12 @@ module probcommon_module_types
       INTEGER_T :: level
       INTEGER_T :: finest_level
       INTEGER_T :: bfact
-      REAL_T, pointer :: xtarget(:)
-      REAL_T, pointer :: dx(:)
-      REAL_T, pointer :: xlo(:)
-      INTEGER_T, pointer :: fablo(:)
-      INTEGER_T, pointer :: fabhi(:)
-      REAL_T, pointer, dimension(D_DECL(:,:,:)) :: state 
+      REAL_T :: xtarget(SDIM)
+      REAL_T :: dx(SDIM)
+      REAL_T :: xlo(SDIM)
+      INTEGER_T :: fablo(SDIM)
+      INTEGER_T :: fabhi(SDIM)
+!      REAL_T, INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: stateptr 
       end type single_interp_from_grid_parm_type
 
 

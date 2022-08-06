@@ -17814,7 +17814,6 @@ stop
        data_in%fablo(dir)=accum_PARM%fablo(dir)
        data_in%fabhi(dir)=accum_PARM%fabhi(dir)
       enddo
-      data_in%state=TENSORptr
 
        ! data(xtarget)=interp_data(xtarget)-lambda
        ! lambda=
@@ -17867,14 +17866,13 @@ stop
 
        w_p=1.0d0/(eps+tmp)
  
-       data_in%xtarget=>xpart
+       data_in%xtarget=xpart
 
         ! bilinear interpolation
        if (NUM_CELL_ELASTIC.gt.0) then
         data_in%scomp=1 
         data_in%ncomp=NUM_CELL_ELASTIC
-        data_in%state=TENSORptr
-        call interp_from_grid_util(data_in,data_out)
+        call interp_from_grid_util(data_in,TENSORptr,data_out)
         do dir=1,NUM_CELL_ELASTIC
          Q_interp_local(dir)=data_out%data_interp(dir)
         enddo
@@ -17888,8 +17886,7 @@ stop
        if (num_materials.gt.0) then
         data_in%scomp=1 
         data_in%ncomp=num_materials
-        data_in%state=LEVELSETptr
-        call interp_from_grid_util(data_in,data_out_LS)
+        call interp_from_grid_util(data_in,LEVELSETptr,data_out_LS)
         do dir=1,num_materials
          LS_interp_local(dir)=data_out_LS%data_interp(dir)
         enddo
@@ -17953,14 +17950,13 @@ stop
       endif
 
        ! xtarget might not coincide with an Eulerian grid cell.
-      data_in%xtarget=>xtarget
+      data_in%xtarget=xtarget
 
        ! bilinear interpolation
       if (NUM_CELL_ELASTIC.gt.0) then
        data_in%scomp=1 
        data_in%ncomp=NUM_CELL_ELASTIC
-       data_in%state=TENSORptr
-       call interp_from_grid_util(data_in,data_out)
+       call interp_from_grid_util(data_in,TENSORptr,data_out)
        do dir=1,NUM_CELL_ELASTIC
         Q_interp(dir)=data_out%data_interp(dir)
        enddo
@@ -17974,8 +17970,7 @@ stop
       if (num_materials.gt.0) then
        data_in%scomp=1 
        data_in%ncomp=num_materials
-       data_in%state=LEVELSETptr
-       call interp_from_grid_util(data_in,data_out_LS)
+       call interp_from_grid_util(data_in,LEVELSETptr,data_out_LS)
        do dir=1,num_materials
         LS_interp(dir)=data_out_LS%data_interp(dir)
        enddo
@@ -18331,11 +18326,10 @@ stop
       data_in%level=level
       data_in%finest_level=finest_level
       data_in%bfact=bfact
-      data_in%dx=>dx
-      data_in%xlo=>xlo
-      data_in%fablo=>fablo
-      data_in%fabhi=>fabhi
-      data_in%state=>lsfab
+      data_in%dx=dx
+      data_in%xlo=xlo
+      data_in%fablo=fablo
+      data_in%fabhi=fabhi
 
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
@@ -18422,8 +18416,8 @@ stop
                xpart(dir)=particles(current_link)%pos(dir)
               enddo 
 
-              data_in%xtarget=>xpart
-              call interp_from_grid_util(data_in,data_out_LS)
+              data_in%xtarget=xpart
+              call interp_from_grid_util(data_in,lsfab_ptr,data_out_LS)
               do dir=1,num_materials
                LS_sub(dir)=data_out_LS%data_interp(dir)
               enddo
