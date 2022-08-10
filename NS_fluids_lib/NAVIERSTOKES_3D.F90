@@ -14559,7 +14559,7 @@ END SUBROUTINE SIMP
         tid, &
         xlo,dx, &
         particles, & ! a list of particles in the elastic structure
-        Np, & !  Np = number of particles
+        Np, & !  Np = number of particles, pass by value
         real_compALL, &
         N_real_comp, & ! pass by value
         tilelo,tilehi, &
@@ -14676,7 +14676,16 @@ END SUBROUTINE SIMP
 
        do dir=1,N_EXTRA_INT
         int_to_real_var=particles(ipart_counter)%extra_int(dir)
-        write(12,'(E25.16)',ADVANCE="NO") int_to_real_var
+        if ((dir.lt.N_EXTRA_INT).or. &
+            (NUM_CELL_ELASTIC.gt.0)) then
+         write(12,'(E25.16)',ADVANCE="NO") int_to_real_var
+        else if ((dir.eq.N_EXTRA_INT).and. &
+                 (NUM_CELL_ELASTIC.eq.0)) then
+         write(12,'(E25.16)') int_to_real_var
+        else
+         print *,"dir or NUM_CELL_ELASTIC invalid"
+         stop
+        endif
        enddo ! dir=1..N_EXTRA_INT
 
        do dir=1,NUM_CELL_ELASTIC
