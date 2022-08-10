@@ -6784,10 +6784,20 @@ void NavierStokes::output_triangles() {
      int N_arrays=localPC.NumRealComps();
      unsigned int Np_SoA=particles_SoA.size();
 
-     if (Np==Np_SoA) {
+     unsigned int Np_SoA_expect=Np;
+     if (num_materials_viscoelastic==0)
+      Np_SoA_expect=0;
+
+     if (Np_SoA_expect==Np_SoA) {
       // do nothing
-     } else
-      amrex::Error("expecting Np==Np_SoA");
+     } else {
+      std::cout << "N_arrays=" << N_arrays << '\n';
+      std::cout << "NUM_CELL_ELASTIC=" << NUM_CELL_ELASTIC << '\n';
+      std::cout << "Np=" << Np << '\n';
+      std::cout << "Np_SoA=" << Np_SoA << '\n';
+      std::cout << "Np_SoA_expect=" << Np_SoA_expect << '\n';
+      amrex::Error("expecting Np_SoA_expect==Np_SoA");
+     }
 
      if (N_arrays==NUM_CELL_ELASTIC) {
       //do nothing
@@ -6800,7 +6810,7 @@ void NavierStokes::output_triangles() {
      Vector<Real> real_compALL(N_real_comp);
      for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
       My_ParticleContainer::RealVector& 
-	      real_comp=particles_SoA.GetRealData(dir);
+         real_comp=particles_SoA.GetRealData(dir);
 
       if (real_comp.size()==Np) {
        //do nothing

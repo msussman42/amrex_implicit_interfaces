@@ -19333,7 +19333,8 @@ void NavierStokes::writeInterfaceReconstruction() {
  for (int ilev=finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   grids_per_level[ilev]=ns_level.grids.size();
-  ns_level.output_triangles();  // NavierStokes2.cpp: num_materials materials at once
+   // NavierStokes2.cpp: num_materials materials at once
+  ns_level.output_triangles();  
  }
  ParallelDescriptor::Barrier();
  if (ParallelDescriptor::IOProcessor()) {
@@ -22435,10 +22436,14 @@ NavierStokes::init_particle_container(int append_flag) {
     int N_arrays=localPC.NumRealComps();
     unsigned int Np_SoA=particles_SoA.size();
 
-    if (Np==Np_SoA) {
+    unsigned int Np_SoA_expect=Np;
+    if (num_materials_viscoelastic==0)
+     Np_SoA_expect=0;
+
+    if (Np_SoA_expect==Np_SoA) {
      // do nothing
     } else
-     amrex::Error("expecting Np==Np_SoA");
+     amrex::Error("expecting Np_SoA_expect==Np_SoA");
 
     if (N_arrays==NUM_CELL_ELASTIC) {
      //do nothing
