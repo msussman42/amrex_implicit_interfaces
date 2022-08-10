@@ -293,6 +293,10 @@ implicit none
 !  UNSCALED_MUSHY_THICK (user definable in fortran plug-in files)
 ! added June 17, 2022:
 !  fort_latent_heat_slope, fort_latent_heat_T0, fort_latent_heat_min
+! deleted August 10, 2022:
+!   fort_lame_coefficient 
+!   fort_shear_modulus 
+!   fort_linear_elastic_model 
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
       !num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2

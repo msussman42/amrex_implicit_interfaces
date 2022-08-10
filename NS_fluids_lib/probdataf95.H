@@ -113,9 +113,6 @@
       INTEGER_T fort_viscoelastic_model(MAX_NUM_MATERIALS)
       REAL_T fort_elastic_viscosity(MAX_NUM_MATERIALS)
       REAL_T fort_elastic_time(MAX_NUM_MATERIALS)
-      REAL_T fort_lame_coefficient(MAX_NUM_MATERIALS)
-      INTEGER_T fort_linear_elastic_model(MAX_NUM_MATERIALS)
-      REAL_T fort_shear_modulus(MAX_NUM_MATERIALS)
       INTEGER_T fort_store_elastic_data(MAX_NUM_MATERIALS)
 
       REAL_T fort_Carreau_alpha(MAX_NUM_MATERIALS)

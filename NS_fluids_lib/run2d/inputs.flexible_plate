@@ -200,9 +200,6 @@ ns.heatviscconst=0.0 0.0 0.0
 #2.25E+6=beta/1E+3  beta=2.25E+9
 #note: bulk modulus of rubber: 1.5E+9 Pascal  1Pascal=kg/(m s^2)
 ns.elastic_viscosity=0.0 0.0 1.5e+9
-ns.lame_coefficient=0.0 0.0 0.0
-ns.shear_modulus=0.0 0.0 0.0
-ns.linear_elastic_model=0 0 1
 # elastic_time is not used for viscoelastic_model==2 or 3?
 ns.elastic_time=0.0 0.0 1.0e+9
 ns.polymer_factor=0.0 0.0 1.0e-9   # parameter, 1/L
@@ -225,7 +222,8 @@ ns.polymer_factor=0.0 0.0 1.0e-9   # parameter, 1/L
 #ns.viscoelastic_model=0 0 4
 # EUL-EUL FSI
 #ns.viscoelastic_model=0 0 3
-ns.viscoelastic_model=0 0 7
+#ns.viscoelastic_model=0 0 7
+ns.viscoelastic_model=0 0 0
 ns.viscconst=8.9e-4 0.0000181 1.0e-3 #  MKS
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng
 ns.denconst=997.0 1.25 1000.0 

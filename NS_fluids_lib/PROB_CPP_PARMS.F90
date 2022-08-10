@@ -206,9 +206,6 @@ stop
         ccelastic_viscosity, &
         ccelastic_time, &
         ccviscoelastic_model, &
-        cclame_coefficient, &
-        cclinear_elastic_model, &
-        ccshear_modulus, &
         ccstore_elastic_data, &
         ccheatflux_factor, &
         ccheatviscconst, &
@@ -369,9 +366,6 @@ stop
       REAL_T, INTENT(in) :: ccelastic_viscosity(ccnum_materials)
       REAL_T, INTENT(in) :: ccelastic_time(ccnum_materials)
       INTEGER_T, INTENT(in) :: ccviscoelastic_model(ccnum_materials)
-      REAL_T, INTENT(in) :: cclame_coefficient(ccnum_materials)
-      INTEGER_T, INTENT(in) :: cclinear_elastic_model(ccnum_materials)
-      REAL_T, INTENT(in) :: ccshear_modulus(ccnum_materials)
       INTEGER_T, INTENT(in) :: ccstore_elastic_data(ccnum_materials)
       REAL_T, INTENT(in) :: ccheatflux_factor(ccnum_materials)
       REAL_T, INTENT(in) :: ccheatviscconst(ccnum_materials)
@@ -1288,9 +1282,6 @@ stop
        fort_elastic_viscosity(im)=ccelastic_viscosity(im)
        fort_elastic_time(im)=ccelastic_time(im)
        fort_viscoelastic_model(im)=ccviscoelastic_model(im)
-       fort_lame_coefficient(im)=cclame_coefficient(im)
-       fort_linear_elastic_model(im)=cclinear_elastic_model(im)
-       fort_shear_modulus(im)=ccshear_modulus(im)
        fort_store_elastic_data(im)=ccstore_elastic_data(im)
        fort_heatflux_factor(im)=ccheatflux_factor(im)
        fort_heatviscconst(im)=ccheatviscconst(im)
@@ -1445,10 +1436,6 @@ stop
         print *,"im,fort_elastic_viscosity ",im,fort_elastic_viscosity(im)
         print *,"im,fort_elastic_time ",im,fort_elastic_time(im)
         print *,"im,fort_viscoelastic_model ",im,fort_viscoelastic_model(im)
-        print *,"im,fort_lame_coefficient ",im,fort_lame_coefficient(im)
-        print *,"im,fort_linear_elastic_model ",im, &
-                fort_linear_elastic_model(im)
-        print *,"im,fort_shear_modulus ",im,fort_shear_modulus(im)
         print *,"im,fort_store_elastic_data ",im,fort_store_elastic_data(im)
         print *,"im,fort_im_elastic_map ",im,fort_im_elastic_map(im)
 

@@ -1963,9 +1963,6 @@ protected:
     static int transposegradu; //def=0
 
     static Vector<Real> elastic_viscosity; // viscoelastic parameter
-    static Vector<Real> shear_modulus; // elastic parameter
-    static Vector<Real> lame_coefficient; // elastic parameter
-    static Vector<int> linear_elastic_model; // elastic parameter
      // for freezing:
      // 1. nonlinear advection
      // 2. calculate mass flux at the liquid/ice interface

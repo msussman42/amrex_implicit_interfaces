@@ -460,9 +460,6 @@ int NavierStokes::transposegradu=0;
 
 Vector<int> NavierStokes::store_elastic_data; // def=0, 0...num_materials-1
 Vector<Real> NavierStokes::elastic_viscosity; // def=0
-Vector<Real> NavierStokes::lame_coefficient; // def=0
-Vector<int> NavierStokes::linear_elastic_model; // def=0
-Vector<Real> NavierStokes::shear_modulus; // def=0
 Vector<Real> NavierStokes::damping_coefficient; // def=0
 Vector<Real> NavierStokes::static_damping_coefficient; // def=0
 
@@ -1417,17 +1414,10 @@ void fortran_parameters() {
  Vector<Real> elastic_time_temp;
  Vector<int> viscoelastic_model_temp;
 
- Vector<Real> lame_coefficient_temp;
- Vector<int> linear_elastic_model_temp;
- Vector<Real> shear_modulus_temp;
-
  elastic_viscosity_temp.resize(NavierStokes::num_materials);
  elastic_time_temp.resize(NavierStokes::num_materials);
  viscoelastic_model_temp.resize(NavierStokes::num_materials);
 
- lame_coefficient_temp.resize(NavierStokes::num_materials);
- linear_elastic_model_temp.resize(NavierStokes::num_materials);
- shear_modulus_temp.resize(NavierStokes::num_materials);
  NavierStokes::store_elastic_data.resize(NavierStokes::num_materials);
  for (int im=0;im<NavierStokes::num_materials;im++) {
 
@@ -1435,18 +1425,13 @@ void fortran_parameters() {
   elastic_time_temp[im]=0.0;
   viscoelastic_model_temp[im]=0;
 
-  lame_coefficient_temp[im]=0.0;
-  linear_elastic_model_temp[im]=0;
-  shear_modulus_temp[im]=0.0;
   NavierStokes::store_elastic_data[im]=0;
  }
- pp.queryAdd("elastic_viscosity",elastic_viscosity_temp,NavierStokes::num_materials);
+ pp.queryAdd("elastic_viscosity",elastic_viscosity_temp,
+   NavierStokes::num_materials);
  pp.queryAdd("elastic_time",elastic_time_temp,NavierStokes::num_materials);
- pp.queryAdd("viscoelastic_model",viscoelastic_model_temp,NavierStokes::num_materials);
-
- pp.queryAdd("lame_coefficient",lame_coefficient_temp,NavierStokes::num_materials);
- pp.queryAdd("linear_elastic_model",linear_elastic_model_temp,NavierStokes::num_materials);
- pp.queryAdd("shear_modulus",shear_modulus_temp,NavierStokes::num_materials);
+ pp.queryAdd("viscoelastic_model",viscoelastic_model_temp,
+	NavierStokes::num_materials);
 
  for (int im=0;im<NavierStokes::num_materials;im++) {
   if (elastic_viscosity_temp[im]>0.0) {
@@ -1965,9 +1950,6 @@ void fortran_parameters() {
   elastic_viscosity_temp.dataPtr(),
   elastic_time_temp.dataPtr(),
   viscoelastic_model_temp.dataPtr(),
-  lame_coefficient_temp.dataPtr(),
-  linear_elastic_model_temp.dataPtr(),
-  shear_modulus_temp.dataPtr(),
   NavierStokes::store_elastic_data.dataPtr(),
   heatflux_factor_temp.dataPtr(),
   heatviscconst_temp.dataPtr(),
@@ -2969,18 +2951,12 @@ NavierStokes::read_params ()
      amrex::Error("FSI_material_exists_presvel() invalid");
 
     elastic_viscosity.resize(num_materials);
-    lame_coefficient.resize(num_materials);
-    linear_elastic_model.resize(num_materials);
-    shear_modulus.resize(num_materials);
     damping_coefficient.resize(num_materials);
     static_damping_coefficient.resize(num_materials);
     store_elastic_data.resize(num_materials);
 
     for (int im=0;im<num_materials;im++) {
      elastic_viscosity[im]=0.0;
-     lame_coefficient[im]=0.0;
-     linear_elastic_model[im]=0;
-     shear_modulus[im]=0.0;
      damping_coefficient[im]=0.0;
      static_damping_coefficient[im]=0.0;
      store_elastic_data[im]=0;
@@ -3006,9 +2982,6 @@ NavierStokes::read_params ()
     pp.queryAdd("damping_coefficient",damping_coefficient,num_materials);
     pp.queryAdd("static_damping_coefficient",
 		static_damping_coefficient,num_materials);
-    pp.queryAdd("lame_coefficient",lame_coefficient,num_materials);
-    pp.queryAdd("linear_elastic_model",linear_elastic_model,num_materials);
-    pp.queryAdd("shear_modulus",shear_modulus,num_materials);
     pp.queryAdd("particles_flag",particles_flag);
 
     for (int im=0;im<num_materials;im++) {
@@ -4323,10 +4296,6 @@ NavierStokes::read_params ()
      if (ParallelDescriptor::IOProcessor()) {
       std::cout << "for material " << i << '\n';
 
-      std::cout << "lame_coefficient[i]=" << lame_coefficient[i] << '\n';
-      std::cout << "linear_elastic_model[i]=" << 
-	      linear_elastic_model[i] << '\n';
-      std::cout << "shear_modulus[i]=" << shear_modulus[i] << '\n';
       std::cout << "damping_coefficient[i]=" << damping_coefficient[i] << '\n';
       std::cout << "static_damping_coefficient[i]=" << 
 	      static_damping_coefficient[i] << '\n';
