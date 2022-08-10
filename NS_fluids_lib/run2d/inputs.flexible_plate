@@ -217,13 +217,14 @@ ns.polymer_factor=0.0 0.0 1.0e-9   # parameter, 1/L
 #     f_S=A-I
 # viscoelastic_model=7 Neo-Hookean (using Left Cauchy Green tensor B=F F^{T}
 #         Xia, Lu, Tryggvason 2018
+# for INCOMPRESSIBLE Neo-Hookean model, there is not "determinant factor"
 #
 # LAG-EUL FSI
 #ns.viscoelastic_model=0 0 4
 # EUL-EUL FSI
 #ns.viscoelastic_model=0 0 3
 #ns.viscoelastic_model=0 0 7
-ns.viscoelastic_model=0 0 0
+ns.viscoelastic_model=0 0 7
 ns.viscconst=8.9e-4 0.0000181 1.0e-3 #  MKS
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng
 ns.denconst=997.0 1.25 1000.0 
