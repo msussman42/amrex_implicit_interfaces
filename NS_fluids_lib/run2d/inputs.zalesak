@@ -36,9 +36,9 @@ ns.num_species_var=0
 amr.n_cell    = 24 24
 amr.max_level = 2
 
-ns.particles_flag=0
+ns.particles_flag=1
 ns.particle_nsubdivide=1
-ns.particle_min_per_nsubdivide=0
+ns.particle_min_per_nsubdivide=1
 ns.particle_max_per_nsubdivide=100
 
 ns.profile_debug=0
