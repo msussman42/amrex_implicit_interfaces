@@ -8447,7 +8447,8 @@ stop
         call abs_value_determinant(Q_plus_I,3,determinant_factor)
 
         if (determinant_factor.gt.zero) then
-         determinant_factor=one/(determinant_factor**(five/six))
+!         determinant_factor=one/(determinant_factor**(five/six))
+         determinant_factor=one  !*incompressible* Neo-Hookean model.
         else if (determinant_factor.eq.zero) then
          print *,"determinant_factor must be positive"
          do ii=1,3
