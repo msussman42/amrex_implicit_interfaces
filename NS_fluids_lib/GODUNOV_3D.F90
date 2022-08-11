@@ -21135,6 +21135,10 @@ stop
       return
       end subroutine traverse_particles_Q
 
+       ! correct_Q_with_particles is called first thing from:
+       !  NavierStokes3.cpp: NavierStokes::tensor_advection_updateALL
+       ! assimilate_Q_from_particles is called from:
+       !  NavierStokes3.cpp: NavierStokes::correct_Q_with_particles
        ! called from NavierStokes.cpp:
        ! NavierStokes::assimilate_Q_from_particles()
       subroutine fort_assimilate_Q_from_particles( &
@@ -21351,6 +21355,7 @@ stop
           enddo
           enddo
 
+FIX ME
           do dir=1,ENUM_NUM_TENSOR_TYPE
            call stress_index(dir,ii,jj)
            Q(ii,jj)=tensor_local((ipart-1)*ENUM_NUM_TENSOR_TYPE+dir)
