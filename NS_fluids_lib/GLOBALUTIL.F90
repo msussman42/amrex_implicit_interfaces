@@ -9200,12 +9200,42 @@ end subroutine print_visual_descriptor
       return
       end subroutine growntilebox_TILE
 
+      subroutine partition_unity_weight(x1,x2,dx,wt)
+      REAL_T, intent(in) :: x1(SDIM)
+      REAL_T, intent(in) :: x2(SDIM)
+      REAL_T, intent(in) :: dx(SDIM)
+      REAL_T, intent(out) :: wt
+
+      REAL_T mag
+      INTEGER_T dir
+
+      mag=zero
+      do dir=1,SDIM
+       mag=mag+(x1(dir)-x2(dir))**2
+      enddo
+
+      if (dx(1).gt.zero) then
+
+       if (mag.ge.zero) then
+        wt=one/(mag+dx(1)**2)
+       else
+        print *,"mag invalid"
+        stop
+       endif
+
+      else
+       print *,"dx(1) invalid"
+       stop
+      endif
+
+      return
+      end subroutine partition_unity_weight
 
       subroutine intersect_weight_avg(ic,i,bfact_c,bfact_f,wt)
       use probcommon_module
 
-      INTEGER_T ic,i,bfact_c,bfact_f
-      REAL_T wt
+      INTEGER_T, intent(in) :: ic,i,bfact_c,bfact_f
+      REAL_T, intent(out) :: wt
       INTEGER_T nhalf,dir_index
       INTEGER_T fablo(SDIM)
       REAL_T intlo,inthi
