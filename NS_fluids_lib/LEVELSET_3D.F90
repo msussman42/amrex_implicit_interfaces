@@ -17679,7 +17679,11 @@ stop
 
       end subroutine sub_box_cell_center
 
-
+       ! partition of unity interpolation:
+       ! Q(xtarget)=( sum_{particles} Q_{p} w(xtarget,xp) +
+       !              sum_{grid} Q_{grid} w(xtarget,xgrid) ) /
+       !            ( sum_{particles} w(xtarget,xp) +
+       !              sum_{grid} w(xtarget,xgrid) )
       subroutine interp_eul_lag_dist( &
          im_elastic_map, &
          accum_PARM, &
