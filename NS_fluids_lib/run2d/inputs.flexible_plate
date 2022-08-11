@@ -52,9 +52,9 @@ ns.MOFITERMAX=15
 amr.n_cell=32 64 # ZEYU Production run effective fine grid resolution 512^2
 #amr.max_level =  0   # Yongsheng 2= 43.2 points per diameter
 amr.max_level=0 # ZEYU
-ns.particles_flag=0
+ns.particles_flag=1
 ns.particle_nsubdivide=1
-ns.particle_min_per_nsubdivide=0
+ns.particle_min_per_nsubdivide=1
 ns.particle_max_per_nsubdivide=100
 
 ns.truncate_thickness=2.0
@@ -92,7 +92,8 @@ ns.dt_cutoff      = 1.0e-10  # level 0 timestep below which we halt
 
 mac.mac_abs_tol    = 1.0e-10
 
-ns.cfl            = 0.5      # cfl number for hyperbolic system
+#ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.cfl            = 0.005      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.1      # scale back initial timestep
 #ns.visc_coef      = 0.16     # coef of viscosity Yongsheng
@@ -199,7 +200,8 @@ ns.heatviscconst=0.0 0.0 0.0
 #1500=sqrt(beta/rho)
 #2.25E+6=beta/1E+3  beta=2.25E+9
 #note: bulk modulus of rubber: 1.5E+9 Pascal  1Pascal=kg/(m s^2)
-ns.elastic_viscosity=0.0 0.0 1.5e+9
+#ns.elastic_viscosity=0.0 0.0 1.5e+9
+ns.elastic_viscosity=0.0 0.0 1.5e+3
 # elastic_time is not used for viscoelastic_model==2 or 3?
 ns.elastic_time=0.0 0.0 1.0e+9
 ns.polymer_factor=0.0 0.0 1.0e-9   # parameter, 1/L
