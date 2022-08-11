@@ -17727,11 +17727,9 @@ stop
       INTEGER_T :: current_link
       REAL_T, target :: xpart(SDIM)
       REAL_T :: Qpart(NUM_CELL_ELASTIC)
-      REAL_T :: Q_interp_local(NUM_CELL_ELASTIC)
       REAL_T :: LS_interp_local(num_materials)
       INTEGER_T :: ibase
 
-      REAL_T tmp,eps
       REAL_T w_p
 
       REAL_T :: LSlocal(num_materials)
@@ -17777,19 +17775,8 @@ stop
        print *,"UBOUND(LEVELSETptr) ",UBOUND(LEVELSETptr)
       endif
 
-      eps=accum_PARM%dx(1)/10.0d0
-
       nhalf=3
       call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
-
-      do dir=1,SDIM
-
-       if (1.eq.0) then
-        print *,"dir,accum_PARM%dx(dir) ",dir,accum_PARM%dx(dir)
-        print *,"dir,accum_PARM%xlo(dir) ",dir,accum_PARM%xlo(dir)
-       endif
-
-      enddo
 
       call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
          TENSORptr,1,-1)
@@ -17819,10 +17806,6 @@ stop
        data_in%fabhi(dir)=accum_PARM%fabhi(dir)
       enddo
 
-       ! data(xtarget)=interp_data(xtarget)-lambda
-       ! lambda=
-       !  sum_p w_p(interp_data(xp)-particle_data_p)/
-       !  sum_P w_p
       A_VEL=zero
       do dir=1,NUM_CELL_ELASTIC
        b_VEL(dir)=zero
@@ -17862,30 +17845,9 @@ stop
         stop
        endif
 
-       tmp=0.0d0
-       do dir=1,SDIM
-        tmp=tmp+(xpart(dir)-xtarget(dir))**2
-       enddo
-       tmp=sqrt(tmp)
+       call partition_unity_weight(xpart,xtarget,accum_PARM%dx,w_p)
 
-       w_p=1.0d0/(eps+tmp)
- 
        data_in%xtarget=xpart
-
-        ! bilinear interpolation
-       if (NUM_CELL_ELASTIC.gt.0) then
-        data_in%scomp=1 
-        data_in%ncomp=NUM_CELL_ELASTIC
-        call interp_from_grid_util(data_in,TENSORptr,data_out)
-        do dir=1,NUM_CELL_ELASTIC
-         Q_interp_local(dir)=data_out%data_interp(dir)
-        enddo
-       else if (NUM_CELL_ELASTIC.eq.0) then
-        ! do nothing
-       else
-        print *,"NUM_CELL_ELASTIC invalid"
-        stop
-       endif
 
        if (num_materials.gt.0) then
         data_in%scomp=1 
@@ -17915,7 +17877,7 @@ stop
          if (im_primary_part.eq.im_particle_direct) then
           A_VEL=A_VEL+w_p
           do dir=1,NUM_CELL_ELASTIC
-           b_VEL(dir)=b_VEL(dir)+w_p*(Q_interp_local(dir)-Qpart(dir))
+           b_VEL(dir)=b_VEL(dir)+w_p*Qpart(dir)
           enddo
          else if (im_primary_part.ne.im_particle_direct) then
           ! do nothing
@@ -17994,6 +17956,7 @@ stop
       else if (accum_PARM%append_flag.eq.1) then
 
        if (A_VEL.gt.zero) then
+        call partition_unity_weight(xtarget,xtarget,accum_PARM%dx,w_p)
 
         do ipart=1,num_materials_viscoelastic
          im_map=im_elastic_map(ipart)+1
@@ -18002,7 +17965,9 @@ stop
               (im_map.eq.im_primary_sub)) then
            do dir=1,ENUM_NUM_TENSOR_TYPE
             dir_tensor=(ipart-1)*ENUM_NUM_TENSOR_TYPE+dir
-            Q_interp(dir_tensor)=Q_interp(dir_tensor)-b_VEL(dir_tensor)/A_VEL
+            Q_interp(dir_tensor)= &
+                  (b_VEL(dir_tensor)+w_p*Q_interp(dir_tensor))/ &
+                  (A_VEL+w_p)
            enddo
           else if ((im_map.ne.im_primary).or. &
                    (im_map.ne.im_primary_sub)) then

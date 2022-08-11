@@ -20940,7 +20940,6 @@ stop
       REAL_T, pointer, INTENT(in) :: matrixfab(D_DECL(:,:,:),:)
 
       INTEGER_T :: nhalf
-      REAL_T :: eps
       INTEGER_T :: interior_ID
       INTEGER_T :: dir
       REAL_T, target :: xpart(SDIM)
@@ -20949,10 +20948,10 @@ stop
       INTEGER_T interior_ok
       INTEGER_T i,j,k
       REAL_T xsten(-3:3,SDIM)
-      REAL_T tmp,w_p
+      REAL_T xgrid(SDIM)
+      REAL_T w_p
       INTEGER_T npart_local
 
-      REAL_T, target :: cell_data_tensor_interp(NUM_CELL_ELASTIC)
       REAL_T, target :: cell_data_LS_interp(num_materials*(1+SDIM))
 
       type(interp_from_grid_parm_type) :: data_in
@@ -20987,15 +20986,6 @@ stop
       data_in%scomp=1
 
       nhalf=3
-
-      eps=accum_PARM%dx(1)/10.0d0
-
-      if (eps.gt.zero) then
-       ! do nothing
-      else
-       print *,"eps invalid"
-       stop
-      endif
 
       if (accum_PARM%Npart.ge.0) then
        npart_local=accum_PARM%Npart
@@ -21066,11 +21056,6 @@ stop
          enddo
          call get_primary_material(LSlocal,im_primary)
 
-         data_out%data_interp=>cell_data_tensor_interp
-         data_in%ncomp=NUM_CELL_ELASTIC
-         data_in%xtarget=xpart
-         call interp_from_grid_util(data_in,tensor_fab,data_out)
-
          data_out%data_interp=>cell_data_LS_interp
          data_in%ncomp=num_materials*(1+SDIM)
          data_in%xtarget=xpart
@@ -21079,12 +21064,10 @@ stop
          call get_primary_material(cell_data_LS_interp,im_primary_part)
 
          call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
-         tmp=0.0d0
          do dir=1,SDIM
-          tmp=tmp+(xpart(dir)-xsten(0,dir))**2
+          xgrid(dir)=xsten(0,dir)
          enddo
-         tmp=sqrt(tmp)
-         w_p=(1.0d0/(eps+tmp))
+         call partition_unity_weight(xpart,xgrid,accum_PARM%dx,w_p)
 
          if (w_p.gt.zero) then
 
@@ -21096,8 +21079,7 @@ stop
              matrixfab(D_DECL(i,j,k),1)+w_p
             do dir=1,NUM_CELL_ELASTIC
              matrixfab(D_DECL(i,j,k),1+dir)= &
-              matrixfab(D_DECL(i,j,k),1+dir)+ &
-              w_p*(data_out%data_interp(dir)-Qpart(dir))
+              matrixfab(D_DECL(i,j,k),1+dir)+w_p*Qpart(dir)
             enddo
 
            else if (im_primary_part.ne.im_particle_direct) then
@@ -21230,10 +21212,11 @@ stop
       INTEGER_T im
       INTEGER_T im_primary
       REAL_T xsten(-3:3,SDIM)
+      REAL_T xgrid(SDIM)
       INTEGER_T nhalf
 
+      REAL_T wp
       REAL_T A_matrix,B_matrix
-      REAL_T lambda
       REAL_T tensor_local(NUM_CELL_ELASTIC)
       REAL_T LSlocal(num_materials)
 
@@ -21321,6 +21304,10 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
        call gridsten_level(xsten,i,j,k,level,nhalf)
+       do dir=1,SDIM
+        xgrid(dir)=xsten(0,dir)
+       enddo
+       call partition_unity_weight(xgrid,xgrid,dx,wp)
 
        do im=1,num_materials
         LSlocal(im)=LSfab(D_DECL(i,j,k),im)
@@ -21329,14 +21316,17 @@ stop
 
        A_matrix=matrixfab(D_DECL(i,j,k),1) ! sum w(xp)
        do dir=1,NUM_CELL_ELASTIC
-        B_matrix=matrixfab(D_DECL(i,j,k),1+dir) !sum w*(Q(xp)-Q_p)
+        B_matrix=matrixfab(D_DECL(i,j,k),1+dir) !sum w*Q_p
         tensor_local(dir)=tensor_fab(D_DECL(i,j,k),dir)
         if (A_matrix.eq.zero) then
          ! do nothing
         else if (A_matrix.gt.zero) then
-         ! lambda=sum (interp(Q)-Q_p)w_p/sum w_p
-         lambda=B_matrix/A_matrix
-         tensor_local(dir)=tensor_local(dir)-lambda
+         if (wp.gt.zero) then
+          tensor_local(dir)=(B_matrix+wp*tensor_local(dir))/(A_matrix+wp)
+         else
+          print *,"wp invalid"
+          stop
+         endif 
         else
          print *,"A_matrix invalid"
          stop
@@ -21355,7 +21345,6 @@ stop
           enddo
           enddo
 
-FIX ME
           do dir=1,ENUM_NUM_TENSOR_TYPE
            call stress_index(dir,ii,jj)
            Q(ii,jj)=tensor_local((ipart-1)*ENUM_NUM_TENSOR_TYPE+dir)
