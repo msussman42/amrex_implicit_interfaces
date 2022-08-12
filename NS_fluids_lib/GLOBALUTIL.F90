@@ -25631,7 +25631,7 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
     if (explicit_hoop.gt.-one) then
      u_coef=(Q_hoop_old+one)*two*dt/r_hoop
      u_coef=modtime*u_coef/(modtime+dt)
-     if (u_coef.gt.zero) then
+     if (u_coef.ge.zero) then
       Q_coef=force_coef*one_over_den_local*dt/r_hoop
       if (Q_coef.gt.zero) then
        improved_hoop=explicit_hoop/(one+Q_coef*u_coef)
@@ -25646,7 +25646,10 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
        stop
       endif
      else
-      print *,"expecting u_coef to be positive"
+      print *,"expecting u_coef to be non negative"
+      print *,"u_coef= ",u_coef
+      print *,"modtime= ",modtime
+      print *,"dt= ",dt
       stop
      endif
     else
