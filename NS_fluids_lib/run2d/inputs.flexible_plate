@@ -52,7 +52,7 @@ ns.MOFITERMAX=15
 amr.n_cell=32 64 # ZEYU Production run effective fine grid resolution 512^2
 #amr.max_level =  0   # Yongsheng 2= 43.2 points per diameter
 amr.max_level=0 # ZEYU
-ns.particles_flag=1
+ns.particles_flag=0
 ns.particle_nsubdivide=1
 ns.particle_min_per_nsubdivide=1
 ns.particle_max_per_nsubdivide=100
@@ -98,8 +98,8 @@ ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.1      # scale back initial timestep
 #ns.visc_coef      = 0.16     # coef of viscosity Yongsheng
 ns.visc_coef=1.0 
-#ns.gravity=0.0  # Yongsheng
-ns.gravity        = -9.8  
+ns.gravity=0.0  # Yongsheng
+#ns.gravity        = -9.8  
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 45 degrees=>sigma_{SV}=sigma_{LV}  and
 # sigma_{SL}/sigma_{LV}=1-2^{-1/2}
@@ -201,7 +201,7 @@ ns.heatviscconst=0.0 0.0 0.0
 #2.25E+6=beta/1E+3  beta=2.25E+9
 #note: bulk modulus of rubber: 1.5E+9 Pascal  1Pascal=kg/(m s^2)
 #ns.elastic_viscosity=0.0 0.0 1.5e+9
-ns.elastic_viscosity=0.0 0.0 1.5e+3
+ns.elastic_viscosity=0.0 0.0 1.5e+5
 # elastic_time is not used for viscoelastic_model==2 or 3?
 ns.elastic_time=0.0 0.0 1.0e+9
 ns.polymer_factor=0.0 0.0 1.0e-9   # parameter, 1/L
@@ -229,7 +229,7 @@ ns.polymer_factor=0.0 0.0 1.0e-9   # parameter, 1/L
 ns.viscoelastic_model=0 0 7
 ns.viscconst=8.9e-4 0.0000181 1.0e-3 #  MKS
 #ns.denconst=1.0 0.001226 1.0 #Yongsheng
-ns.denconst=997.0 1.25 1000.0 
+ns.denconst=997.0 1.25 100000.0 
 ns.pressure_error_cutoff=0.0 0.0 0.0
 ns.tempconst=293.0 293.0 293.0
 # ----------------  PROBLEM DEPENDENT INPUTS
