@@ -122,7 +122,14 @@ ns.gravity=0.0  # Yongsheng
 #  if theta=90 degrees,
 #  sigma_SV=sigma_SL
 #  12=LV,13=SL,23=SV
-ns.tension=0.073 0.073 0.073  #ZEYU  N/m
+#ns.tension=0.073 0.073 0.073  #ZEYU  N/m
+#triple point: 
+#sin(theta3)/sigma12 = sin(theta1)/sigma23=sin(thea2)/sigma13
+#gamma1=(sigma12-sigma23+sigma13)/2
+#gamma2=(sigma12-sigma23-sigma13)/2
+#gamma3=(-sigma12+sigma23+sigma13)/2
+#dry: sigma13=sigma12 sigma23=0
+ns.tension=0.073 0.073 0.0
 # law_of_the_wall and ZEYU_DCA_SELECT not used for flexible plate problem
 #ns.tension=72.0 144.9 72.0  #Kensuke hydrophobic surface dyne/cm
 #law_of_the_wall=0 0 0 if static angle condition or non-GNBC dynamic angle 
