@@ -58,7 +58,7 @@ ns.particle_min_per_nsubdivide=1
 ns.particle_max_per_nsubdivide=100
 
 ns.mof_error_ordering=0  #centroid furthest from uncaptured centroid
-ns.mof_ordering=1 2 4 #non-wetting drop has highest priority.  gas lowest.
+ns.mof_ordering=1 4 2 #non-wetting drop has highest priority.  gas lowest.
 
 ns.truncate_thickness=2.0
 
