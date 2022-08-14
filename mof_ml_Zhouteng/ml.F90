@@ -305,9 +305,8 @@ Module DecisionTree
     Class(Decision_Tree) :: self
     Character(100) :: tmp
     Character(100) :: string
-    Real(PS),allocatable :: line(:)
     Integer :: error
-    Integer :: i,j
+    Integer :: i
 
     tmp = 'dt_coef.dat'
     Open(82, file=tmp, status='unknown')
@@ -408,7 +407,6 @@ Module RandomForest
     Class(Random_Forest) :: self
     Character(100) :: tmp
     Character(100) :: string
-    Real(PS),allocatable :: line(:)
     Integer :: error
     Integer :: i,j
 

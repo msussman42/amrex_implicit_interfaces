@@ -1,0 +1,5 @@
+F90EXE_sources += ml.F90
+F90EXE_headers += ml.F90
+
+VPATH_LOCATIONS += $(MOF_HOME)/mof_ml_Zhouteng
+INCLUDE_LOCATIONS += $(MOF_HOME)/mof_ml_Zhouteng

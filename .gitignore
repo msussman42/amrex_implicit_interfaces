@@ -18,6 +18,9 @@ NS_fluids_lib/test
 NS_fluids_lib/amr*
 NS_fluids_lib/run2d/test*
 NS_fluids_lib/run3d/test*
+mof_ml_Zhouteng/*.o
+mof_ml_Zhouteng/*.exec
+mof_ml_Zhouteng/*.dat
 markerLS/Exec/tmp_build_dir
 markerLS/Exec/main*
 TAGS

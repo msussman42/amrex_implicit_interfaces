@@ -1,7 +1,8 @@
-PRESICION=DOUBLE_PRECISION
+#PRESICION=DOUBLE_PRECISION
+PRESICION=DEFAULT_IS_DOUBLE_PRECISION
 
 gendata_compile:
-	gfortran -cpp -D$(PRESICION) -o gen_data.exec  generate_data.f90
+	gfortran -D$(PRESICION) -o gen_data.exec  generate_data.F90
 
 gendata:
 	./gen_data.exec
@@ -11,20 +12,20 @@ training:
 	python training.py
 
 predict_compile:
-	gfortran -c -cpp -D$(PRESICION) -o ml.o ml.f90
-	gfortran -c -cpp -D$(PRESICION) -o predict.o predict.f90
+	gfortran -c -D$(PRESICION) -o ml.o ml.F90
+	gfortran -c -D$(PRESICION) -o predict.o predict.F90
 	gfortran ml.o predict.o -o predict.exec
 
 predict:
 	./predict.exec
 
 all:
-	gfortran -cpp -D$(PRESICION) -o gen_data.exec  generate_data.f90
+	gfortran -D$(PRESICION) -o gen_data.exec  generate_data.F90
 	./gen_data.exec
 	python convert2binary.py
 	python training.py
-	gfortran -c -cpp -D$(PRESICION) -o ml.o ml.f90
-	gfortran -c -cpp -D$(PRESICION) -o predict.o predict.f90
+	gfortran -c -D$(PRESICION) -o ml.o ml.F90
+	gfortran -c -D$(PRESICION) -o predict.o predict.F90
 	gfortran ml.o predict.o -o predict.exec
 	./predict.exec
 
