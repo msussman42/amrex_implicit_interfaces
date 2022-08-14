@@ -93,7 +93,7 @@ ns.dt_cutoff      = 1.0e-10  # level 0 timestep below which we halt
 mac.mac_abs_tol    = 1.0e-10
 
 #ns.cfl            = 0.5      # cfl number for hyperbolic system
-ns.cfl            = 0.005      # cfl number for hyperbolic system
+ns.cfl            = 0.05      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.1      # scale back initial timestep
 #ns.visc_coef      = 0.16     # coef of viscosity Yongsheng
@@ -158,7 +158,8 @@ ns.rgasinlet=0.0
 ns.vinletgas=0.0
 #INITIAL DROP SPEED
 #ns.advbot=77.0 # Yongsheng
-ns.advbot=1.0 # m/s
+#ns.advbot=1.0 # m/s
+ns.advbot=0.1 # m/s
 ns.adv_vel=0.0
 ns.adv_dir=2       # inflow direction in the falling drop direction.
 # 0.0 0.4 Yongsheng
