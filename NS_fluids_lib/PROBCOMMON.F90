@@ -22,7 +22,11 @@ stop
 
 
 module probcommon_module_types
-
+#ifdef ZHOUTENGYEML
+      use NeuralNetwork
+      use DecisionTree
+      use RandomForest
+#endif
 
       type law_of_wall_parm_type
       INTEGER_T :: level
@@ -297,6 +301,12 @@ implicit none
 !   fort_lame_coefficient 
 !   fort_shear_modulus 
 !   fort_linear_elastic_model 
+
+#ifdef ZHOUTENGYEML
+      Type(Neural_Network) :: NN_ZHOUTENG_GLOBAL
+      Type(Decision_Tree) :: DT_ZHOUTENG_GLOBAL
+      Type(Random_Forest) :: RF_ZHOUTENG_GLOBAL
+#endif
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
       !num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2

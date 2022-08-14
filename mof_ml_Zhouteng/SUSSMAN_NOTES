@@ -1,0 +1,20 @@
+1. modify "num_sampling" in generate_data.f90
+2. download miniconda
+    (a) Miniconda3 Linux 64-bit (Python version: Python 3.9)
+    (b) bash ./Miniconda3-py39_4.12.0-Linux-x86_64.sh
+    (c) ~/.bashrc at the end has miniconda setup commands.
+    (d) open new window
+    (e) conda install numpy
+    (f) conda install scikit-learn
+3. (a) make gendata (build and run the executable file)
+   (b) make gendata_compile (build the executable file)
+   (c) data is in *.dat (ascii) and *.npy (binary) format.
+4. (a) make training 
+   (b) nn_coef.dat (neural network), dt_coef.dat (decision tree), and 
+       rf_coef.dat (random forest) contain network weights.
+5. (standalone) (a) make predict_compile
+                (b) ./predict.exec
+6. (integrated) (a) set ZHOUTENG_YE_ML = TRUE in GNUmakefile
+                (b) search "DT_ZHOUTENG_GLOBAL" in PROB_CPP_PARMS.F90
+                    for the rest.
+
