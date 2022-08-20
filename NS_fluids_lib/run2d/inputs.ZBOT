@@ -248,7 +248,7 @@ ns.mglib_min_coeff_factor=1000.0
 cg.mglib_blocking_factor=2
 ns.multilevel_maxcycle=200
 ns.multilevel_restart_period=25
-cg.maxiter = 200
+cg.maxiter = 400
 cg.restart_period=25
 
 #ns.speciesconst= 1.0 1.0 1.0  #Kassemi
@@ -455,11 +455,11 @@ cg.verbose = 0
 
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-mg.bot_atol = 1.0e-12
+mg.bot_atol = 1.0e-10
 mg.rtol_b = -0.01
 Lp.v = 1
 
-mac.mac_abs_tol    = 1.0e-10
+mac.mac_abs_tol    = 1.0e-8
 
 
 ns.pressure_error_cutoff=0.0 0.0 0.0
