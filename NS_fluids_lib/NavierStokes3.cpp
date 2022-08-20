@@ -12828,6 +12828,11 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf) {
   amrex::Error("level invalid INCREMENT_REGISTERS_ALL");
  int finest_level=parent->finestLevel();
 
+ if (source_mf==REGISTER_MARK_MF) {
+  // do nothing
+ } else
+  amrex::Error("expecting source_mf==REGISTER_MARK_MF");
+
   // 1. allocate REGISTER_CURRENT_MF
   // 2. REGISTER_CURRENT_MF=unew-source_mf
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -12860,6 +12865,11 @@ void NavierStokes::INCREMENT_REGISTERS(int source_mf) {
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
+
+ if (source_mf==REGISTER_MARK_MF) {
+  // do nothing
+ } else
+  amrex::Error("expecting source_mf==REGISTER_MARK_MF");
 
  int nsolve=AMREX_SPACEDIM;
 

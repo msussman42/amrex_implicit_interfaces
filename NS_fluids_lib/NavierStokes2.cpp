@@ -2525,7 +2525,9 @@ void NavierStokes::increment_face_velocity(
   } else
    amrex::Error("project_option invalid21");
 
-  if (beta!=0.0)
+  if (beta==0.0) {
+   // do nothing
+  } else
    amrex::Error("beta invalid");
 
  } else if (operation_flag==OP_UNEW_USOL_MAC_TO_MAC) { // unew^{f}=unew^{f}
@@ -2549,7 +2551,9 @@ void NavierStokes::increment_face_velocity(
   } else
    amrex::Error("project_option invalid22");
   
-  if (beta!=0.0)
+  if (beta==0.0) {
+   //do nothing
+  } else
    amrex::Error("beta invalid");
 
   //unew^{f}=unew^{f}+beta*diffuse_register^{c->f}
@@ -2576,7 +2580,9 @@ void NavierStokes::increment_face_velocity(
   } else
    amrex::Error("project_option invalid23");
 
-  if ((beta!=1.0)&&(beta!=-1.0))
+  if ((beta==1.0)||(beta==-1.0)) {
+   //do nothing
+  } else
    amrex::Error("beta invalid");
 
   // unew^{f} = 
