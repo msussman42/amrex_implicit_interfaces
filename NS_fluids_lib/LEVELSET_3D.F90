@@ -13020,6 +13020,7 @@ stop
       REAL_T temperature_clamped
       INTEGER_T is_clamped_face
       INTEGER_T local_compressible
+      INTEGER_T local_elastic
 
       REAL_T test_current_icefacecut
       REAL_T test_current_icemask
@@ -13423,6 +13424,7 @@ stop
          is_clamped_face=-1
 
          local_compressible=0
+         local_elastic=0
          im_left=0
          im_right=0
 
@@ -13536,6 +13538,17 @@ stop
           enddo
           call get_primary_material(LSleft,im_left)
           call get_primary_material(LSright,im_right)
+
+          if ((fort_elastic_viscosity(im_left).gt.zero).or. &
+              (fort_elastic_viscosity(im_right).gt.zero)) then
+           local_elastic=1
+          else if ((fort_elastic_viscosity(im_left).eq.zero).and. &
+                   (fort_elastic_viscosity(im_right).eq.zero)) then
+           local_elastic=0
+          else
+           print *,"fort_elastic_viscosity invalid"
+           stop
+          endif
 
           if ((is_compressible_mat(im_left).eq.1).and. &
               (is_compressible_mat(im_right).eq.1)) then
@@ -13948,9 +13961,18 @@ stop
                   ! local_vel_MAC=xvel
                   ! local_vel_old_MAC=xgp (a copy of xvel)
                  velmaterialMAC=local_vel_old_MAC
-                 primary_velmaterial= &
-                       velmaterialMAC+beta*vel(D_DECL(ic,jc,kc),velcomp)
                  secondary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp)
+
+                 if (local_elastic.eq.0) then
+                  primary_velmaterial= &
+                    velmaterialMAC+beta*vel(D_DECL(ic,jc,kc),velcomp)
+                 else if (local_elastic.eq.1) then
+                  primary_velmaterial=secondary_velmaterial
+                 else
+                  print *,"local_elastic invalid"
+                  stop
+                 endif
+                
                  if ((beta.eq.-one).or.(beta.eq.one)) then
                    ! do nothing
                  else
