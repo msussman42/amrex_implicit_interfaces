@@ -2566,7 +2566,7 @@ void NavierStokes::increment_face_velocity(
    } else
     amrex::Error("expecting idx_velcell==REGISTER_CURRENT_MF");
 
-   primary_vel_data=idx_velcell;  // " ucell^{n} "
+   primary_vel_data=idx_velcell;  // " ucell^{n+1}-ucell^{n} "
    secondary_vel_data=CURRENT_CELL_VEL_MF;  //ucell^{n+1}
   } else
    amrex::Error("idx_velcell invalid");
@@ -2739,6 +2739,8 @@ void NavierStokes::increment_face_velocity(
     } else
      amrex::Error("Umac_old->boxArray() invalid");
 
+     //if operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC then
+     //this variable is actually the latest velocity u^{n+1}
     U_old=localMF[CURRENT_CELL_VEL_MF];
    } else
     amrex::Error("operation_flag invalid");
@@ -2869,7 +2871,7 @@ void NavierStokes::increment_face_velocity(
        xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()), //holds Umac_old
        xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), //xp(holds AMRSYNC)
        xvel.dataPtr(),ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()), 
-       primary_velfab.dataPtr(),
+       primary_velfab.dataPtr(), // vel
        ARLIM(primary_velfab.loVect()),ARLIM(primary_velfab.hiVect()),
        pres.dataPtr(dir), // pres holds U_old
        ARLIM(pres.loVect()),ARLIM(pres.hiVect()),
