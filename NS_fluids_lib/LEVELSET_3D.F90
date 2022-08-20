@@ -13784,7 +13784,9 @@ stop
             enddo ! im=1..num_materials
            enddo ! side=1,2
 
-           if (volface.le.zero) then
+           if (volface.gt.zero) then
+            ! do nothing
+           else
             print *,"not_prescribed_volface ",not_prescribed_volface
             print *,"fluid_volface ",fluid_volface
             print *,"volface ",volface
@@ -13949,7 +13951,9 @@ stop
                  primary_velmaterial= &
                        velmaterialMAC+beta*vel(D_DECL(ic,jc,kc),velcomp)
                  secondary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp)
-                 if ((beta.ne.-one).and.(beta.ne.one)) then
+                 if ((beta.eq.-one).or.(beta.eq.one)) then
+                   ! do nothing
+                 else
                   print *,"beta invalid"
                   stop
                  endif
@@ -13992,6 +13996,7 @@ stop
                  print *,"is_lag_part(im) invalid"
                  stop
                 endif
+
                 mass_sum=mass_sum+DMface
                 velsum_primary=velsum_primary+DMface*primary_velmaterial
                 velsum_secondary=velsum_secondary+DMface*secondary_velmaterial
