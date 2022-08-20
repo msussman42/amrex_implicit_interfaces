@@ -11814,7 +11814,8 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
    if (localMF[REGISTER_MARK_MF]->nGrow()<1)
     amrex::Error("REGISTER_MARK_MF invalid ngrow");
 
-    // umacnew+=INTERP_TO_MAC(unew-register_mark)
+    // umacnew+=INTERP_TO_MAC(unew-register_mark)  or
+    // umacnew=INTERP_TO_MAC(unew) if stiff elastic material.
    INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
 
     // register_mark=unew
@@ -12845,7 +12846,9 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf) {
  increment_face_velocityALL(
    operation_flag,
    SOLVETYPE_VISC,
-   REGISTER_CURRENT_MF,beta,blobdata);
+   REGISTER_CURRENT_MF, //dummy parameter name: "idx_velcell"
+   beta,
+   blobdata);
 
  delete_array(REGISTER_CURRENT_MF);
 

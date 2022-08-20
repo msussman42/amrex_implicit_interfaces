@@ -2443,7 +2443,8 @@ void NavierStokes::increment_face_velocityALL(
     operation_flag,
     project_option,
     idx_velcell,
-    beta,blobdata); 
+    beta,
+    blobdata); 
    // avgDownMacState, getStateMAC to fill EXT_DIR BC.
   ns_level.make_MAC_velocity_consistent();
   ParallelDescriptor::Barrier();
@@ -2560,8 +2561,13 @@ void NavierStokes::increment_face_velocity(
        (idx_velcell==DELTA_CELL_VEL_MF))
     amrex::Error("idx_velcell collision");
 
-   primary_vel_data=idx_velcell;  // increment
-   secondary_vel_data=CURRENT_CELL_VEL_MF; 
+   if (idx_velcell==REGISTER_CURRENT_MF) {
+    // do nothing
+   } else
+    amrex::Error("expecting idx_velcell==REGISTER_CURRENT_MF");
+
+   primary_vel_data=idx_velcell;  // " ucell^{n} "
+   secondary_vel_data=CURRENT_CELL_VEL_MF;  //ucell^{n+1}
   } else
    amrex::Error("idx_velcell invalid");
 
