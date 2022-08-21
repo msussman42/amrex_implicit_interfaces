@@ -10552,6 +10552,49 @@ contains
       return
       end subroutine slope_to_angle
 
+       ! fastflag=1
+       ! use_initial_guess=0
+       ! intercept_init=0.0d0
+       ! calls multi_rotatefunc
+      subroutine find_angle_init_from_angle_recon_and_F( &
+        bfact,dx,xsten0,nhalf0, &
+        refvfrac, &
+        continuous_mof, &
+        cmofsten, &
+        xtetlist_vof,nlist_vof, &
+        xtetlist_cen,nlist_cen, &
+        nlist_alloc, &
+        angle_init, &
+        angle_recon, &
+        nmax, &
+        sdim)
+      use probcommon_module
+      use geometry_intersect_module
+      use global_utility_module
+      IMPLICIT NONE
+
+#include "mofdata.H"
+
+      INTEGER_T, INTENT(in) :: sdim
+      INTEGER_T, INTENT(in) :: continuous_mof
+      INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      INTEGER_T, INTENT(in) :: bfact,nhalf0
+      INTEGER_T, INTENT(in) :: nlist_alloc
+      INTEGER_T, INTENT(in) :: nlist_vof
+      INTEGER_T, INTENT(in) :: nlist_cen
+      INTEGER_T, INTENT(in) :: nmax
+      REAL_T, INTENT(in) :: xtetlist_vof(4,3,nlist_alloc)
+      REAL_T, INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
+      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      REAL_T, INTENT(in) :: dx(sdim)
+      REAL_T, INTENT(in) :: refvfrac
+      REAL_T, INTENT(in) :: angle_recon(sdim-1)
+      REAL_T, INTENT(out) :: angle_init(sdim-1)
+
+
+      return
+      end subroutine find_angle_init_from_angle_recon_and_F
+
         ! refcentroid and centroidA relative to cell centroid of the
         ! super cell.
         ! xsten0(0,dir) is center of cell, not the cell centroid
