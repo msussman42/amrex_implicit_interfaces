@@ -19610,7 +19610,7 @@ stop
         !     NavierStokes::init_boundary() 
         !     fort_assimilate_statedata(...)
         ! put ns.wall_slip_weight=0.5 for example in the inputs file.
-        ! ns.wall_slip_weight=0.0 => do not strengthen the slip BC
+        ! ns.wall_slip_weight=0.0 (default) => do not strengthen the slip BC
         ! ns.wall_slip_weight=1.0 => strongest imposition of slip BC
       subroutine fort_assimilate_statedata( &
        isweep, &
@@ -19837,6 +19837,7 @@ stop
 
       cell_flag=-1
 
+       ! wall_slip_weight=zero is the default.
       if ((wall_slip_weight.ge.zero).and. &
           (wall_slip_weight.le.one)) then
        ! do nothing
@@ -19974,6 +19975,7 @@ stop
          stop
         endif
 
+         ! static_damping_coefficient=zero is the default.
          ! cell centered velocity
         if (static_damping_coefficient(im_primary).gt.zero) then
          ! v_t = -mu v =>  v^{n+1} - v^{n} = -mu dt v^{n+1}
@@ -20143,6 +20145,7 @@ stop
                 half*(state(D_DECL(ileft,jleft,kleft),veldir)+ &
                       state(D_DECL(iright,jright,kright),veldir))
 
+              !wall_slip_weight=0.0 is the default.
              if (cell_flag+1.eq.veldir) then
               if (veldir.eq.1) then
                macx(D_DECL(i,j,k))= &
@@ -20189,6 +20192,7 @@ stop
          enddo
          call get_primary_material(LS_stencil,im_stencil)
 
+         ! static_damping_coefficient=zero is the default.
          local_damping=static_damping_coefficient(im_stencil)
          if (local_damping.gt.zero) then
           if (cell_flag.eq.0) then
