@@ -775,6 +775,7 @@ stop
        SUB_PRES_BC=>flexible_plate_impact_PRES_BC
        SUB_STATE_BC=>flexible_plate_impact_STATE_BC
        SUB_HEATSOURCE=>flexible_plate_impact_HEATSOURCE
+       SUB_ASSIMILATE=>flexible_plate_impact_ASSIMILATE
       else if (probtype.eq.710) then
        SUB_INIT_MODULE=>INIT_CAVITY_PHASE_CHANGE_MODULE
        SUB_LS=>CAVITY_PHASE_CHANGE_LS

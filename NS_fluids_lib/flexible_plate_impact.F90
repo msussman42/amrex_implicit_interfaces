@@ -665,4 +665,167 @@ endif
 return
 end subroutine flexible_plate_impact_HEATSOURCE
 
+
+subroutine flexible_plate_impact_ASSIMILATE( &
+     assimilate_in,assimilate_out, &
+     i,j,k,cell_flag)
+use probcommon_module
+use geometry_intersect_module
+IMPLICIT NONE
+
+type(assimilate_parm_type), INTENT(in) :: assimilate_in
+type(assimilate_out_parm_type), INTENT(inout) :: assimilate_out
+INTEGER_T, INTENT(in) :: i,j,k,cell_flag
+
+INTEGER_T :: nstate,nstate_test
+REAL_T :: xcrit(SDIM)
+REAL_T :: LS_normal(SDIM)
+REAL_T :: LS_test
+REAL_T :: t_upper,t_lower
+REAL_T :: LS_seed,LS_seed_buffer
+
+INTEGER_T :: number_intervals
+INTEGER_T :: dir
+INTEGER_T :: im
+REAL_T VEL_DROP(SDIM)
+REAL_T ldata(D_DECL(3,3,3))
+INTEGER_T :: i1,j1,k1,k1lo,k1hi
+REAL_T :: xdata(SDIM)
+REAL_T :: LS_normal_data(SDIM)
+REAL_T :: vfrac_seed
+REAL_T :: volcell
+REAL_T :: facearea_seed
+REAL_T :: centroid_seed(SDIM)
+REAL_T :: cencell(SDIM)
+
+nstate=assimilate_in%nstate
+
+nstate_test=STATE_NCOMP
+if (nstate.eq.nstate_test) then
+ ! do nothing
+else
+ print *,"nstate invalid"
+ print *,"nstate=",nstate
+ print *,"nstate_test=",nstate_test
+ stop
+endif
+
+if ((num_materials.eq.3).and. &
+    (num_state_material.ge.2).and. & 
+    (probtype.eq.2000)) then
+
+ do dir=1,SDIM
+  xcrit(dir)=assimilate_in%xsten(0,dir)
+ enddo
+ 
+ if (assimilate_in%nhalf.ge.2) then
+  ! do nothing
+ else
+  print *,"(assimilate_in%nhalf.ge.2) violated"
+  stop
+ endif
+
+ call flexible_plate_clamped_LS(xcrit,assimilate_in%cur_time, &
+   LS_clamped,vel_clamped,temperature_clamped, &
+   prescribed_flag,assimilate_in%dx)
+
+ if (LS_clamped.ge.zero) then
+
+  if (cell_flag.eq.0) then ! MAC GRID X
+   assimilate_out%macx(D_DECL(i,j,k))=vel_clamped(1)
+  else if (cell_flag.eq.1) then ! MAC GRID Y
+   assimilate_out%macy(D_DECL(i,j,k))=vel_clamped(2)
+  else if ((cell_flag.eq.2).and.(SDIM.eq.3)) then ! MAC GRID Z
+   assimilate_out%macz(D_DECL(i,j,k))=vel_clamped(SDIM)
+  else if (cell_flag.eq.-1) then
+   do dir=1,SDIM
+    assimilate_out%state(D_DECL(i,j,k),STATECOMP_VEL+dir)=vel_clamped(dir)
+   enddo
+
+   call flexible_plate_impact_LS(xcrit,assimilate_in%cur_time, &
+      LS_flexible,num_materials)
+
+   do im=1,num_materials
+    assimilate_out%LS_state(D_DECL(i,j,k),im)=LS_flexible(im)
+   enddo
+
+   k1hi=0
+   if (SDIM.eq.3) then
+    k1lo=-1
+    k1hi=1
+   else if (SDIM.eq.2) then
+    ! do nothing
+   else
+    print *,"dimension bust"
+    stop
+   endif
+
+   do im=1,num_materials
+
+    do i1=-1,1
+    do j1=-1,1
+    do k1=k1lo,k1hi
+     xdata(1)=assimilate_in%xsten(2*i1,1)
+     xdata(2)=assimilate_in%xsten(2*j1,2)
+     if (SDIM.eq.3) then
+      xdata(SDIM)=assimilate_in%xsten(2*k1,SDIM)
+     endif
+     call flexible_plate_impact_LS(xcrit,assimilate_in%cur_time, &
+       LS_flexible,num_materials)
+     ldata(D_DECL(i1+2,j1+2,k1+2))=LS_flexible(im)
+    enddo
+    enddo
+    enddo
+    call getvolume( &
+     assimilate_in%bfact, &
+     assimilate_in%dx, &
+     assimilate_in%xsten, &
+     assimilate_in%nhalf, &
+     ldata, &
+     vfrac_override, &
+     facearea_temp, &
+     centroid_override, &
+     VOFTOL, &
+     SDIM)
+    call CISBOX( &
+     assimilate_in%xsten, &
+     assimilate_in%nhalf, &
+     assimilate_in%xlo, &
+     assimilate_in%dx, &
+     i,j,k, &
+     assimilate_in%bfact, &
+     assimilate_in%level, &
+     volcell,cencell,SDIM)
+
+    vfrac_comp=(im-1)*ngeom_raw+1
+    assimilate_out%state(D_DECL(i,j,k),STATECOMP_MOF+vfrac_comp)= &
+        vfrac_override
+    do dir=1,SDIM
+     assimilate_out%state(D_DECL(i,j,k),STATECOMP_MOF+vfrac_comp+dir)= &
+      centroid_override(dir)-cencell(dir)
+    enddo
+
+   enddo !do im=3,num_materials
+
+  else 
+   print *,"cell_flag invalid"
+   stop
+  endif
+ else if (LS_clamped.lt.zero) then
+  ! do nothing
+ else
+  print *,"LS_clamped invalid"
+  stop
+ endif
+
+else
+ print *,"num_materials,num_state_material, or probtype invalid"
+ stop
+endif
+
+return
+end subroutine flexible_plate_impact_ASSIMILATE
+
+
+
 end module flexible_plate_impact_module
