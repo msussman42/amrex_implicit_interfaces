@@ -187,6 +187,7 @@ IMPLICIT NONE
   REAL_T, INTENT(out) :: temperature
   INTEGER_T, INTENT(out) :: prescribed_flag
   REAL_T :: LS_left,LS_right
+  REAL_T :: clamped_height
   INTEGER_T :: dir
 
 
@@ -194,18 +195,20 @@ if (probtype.eq.2000) then
 
  prescribed_flag=0
 
+ clamped_height=two*radblob3
+
  if (SDIM.eq.2) then
   call squaredist(x(1),x(2), & ! LS_right<0 in object
    xblob2+radblob2-radblob5, &
    xblob2+radblob2, &
-   yblob2-radblob3, &
-   yblob2+radblob3, &
+   yblob2-clamped_height, &
+   yblob2+clamped_height, &
    LS_right)
   call squaredist(x(1),x(2), & ! LS_left<0 in object
    xblob2-radblob2, &
    xblob2-radblob2+radblob5, &
-   yblob2-radblob3, &
-   yblob2+radblob3, &
+   yblob2-clamped_height, &
+   yblob2+clamped_height, &
    LS_left)
   LS_left=-LS_left
   LS_right=-LS_right
@@ -679,24 +682,24 @@ INTEGER_T, INTENT(in) :: i,j,k,cell_flag
 
 INTEGER_T :: nstate,nstate_test
 REAL_T :: xcrit(SDIM)
-REAL_T :: LS_normal(SDIM)
-REAL_T :: LS_test
-REAL_T :: t_upper,t_lower
-REAL_T :: LS_seed,LS_seed_buffer
-
-INTEGER_T :: number_intervals
 INTEGER_T :: dir
 INTEGER_T :: im
-REAL_T VEL_DROP(SDIM)
 REAL_T ldata(D_DECL(3,3,3))
 INTEGER_T :: i1,j1,k1,k1lo,k1hi
 REAL_T :: xdata(SDIM)
-REAL_T :: LS_normal_data(SDIM)
-REAL_T :: vfrac_seed
 REAL_T :: volcell
-REAL_T :: facearea_seed
-REAL_T :: centroid_seed(SDIM)
 REAL_T :: cencell(SDIM)
+REAL_T :: LS_clamped
+REAL_T :: temperature_clamped
+REAL_T :: vel_clamped(SDIM)
+INTEGER_T :: prescribed_flag
+REAL_T :: LS_flexible(num_materials)
+REAL_T :: VFRAC_flexible(num_materials)
+REAL_T :: vfrac_override
+REAL_T :: vfrac_sum
+REAL_T :: centroid_override(SDIM)
+REAL_T :: facearea_temp
+INTEGER_T :: vfrac_comp
 
 nstate=assimilate_in%nstate
 
@@ -749,6 +752,7 @@ if ((num_materials.eq.3).and. &
     assimilate_out%LS_state(D_DECL(i,j,k),im)=LS_flexible(im)
    enddo
 
+   k1lo=0
    k1hi=0
    if (SDIM.eq.3) then
     k1lo=-1
@@ -770,12 +774,13 @@ if ((num_materials.eq.3).and. &
      if (SDIM.eq.3) then
       xdata(SDIM)=assimilate_in%xsten(2*k1,SDIM)
      endif
-     call flexible_plate_impact_LS(xcrit,assimilate_in%cur_time, &
+     call flexible_plate_impact_LS(xdata,assimilate_in%cur_time, &
        LS_flexible,num_materials)
      ldata(D_DECL(i1+2,j1+2,k1+2))=LS_flexible(im)
     enddo
     enddo
     enddo
+     ! getvolume is declared in MOF.F90
     call getvolume( &
      assimilate_in%bfact, &
      assimilate_in%dx, &
@@ -798,6 +803,7 @@ if ((num_materials.eq.3).and. &
      volcell,cencell,SDIM)
 
     vfrac_comp=(im-1)*ngeom_raw+1
+    VFRAC_flexible(im)=vfrac_override
     assimilate_out%state(D_DECL(i,j,k),STATECOMP_MOF+vfrac_comp)= &
         vfrac_override
     do dir=1,SDIM
@@ -805,7 +811,22 @@ if ((num_materials.eq.3).and. &
       centroid_override(dir)-cencell(dir)
     enddo
 
-   enddo !do im=3,num_materials
+   enddo !do im=1,num_materials
+
+   vfrac_sum=zero
+   do im=1,num_materials
+    vfrac_sum=vfrac_sum+VFRAC_flexible(im)
+   enddo
+   if (vfrac_sum.gt.VOFTOL) then
+    do im=1,num_materials
+     vfrac_comp=(im-1)*ngeom_raw+1
+     assimilate_out%state(D_DECL(i,j,k),STATECOMP_MOF+vfrac_comp)= &
+       VFRAC_flexible(im)/vfrac_sum
+    enddo !do im=1,num_materials
+   else
+    print *,"vfrac_sum invalid"
+    stop
+   endif 
 
   else 
    print *,"cell_flag invalid"
