@@ -18048,7 +18048,11 @@ stop
         enddo
 
        else if (A_X0.eq.zero) then
-        ! do nothing
+
+        do dir=1,SDIM
+         X0_interp(dir)=xtarget(dir)
+        enddo
+
        else
         print *,"A_X0 invalid"
         stop
@@ -18180,6 +18184,7 @@ stop
       REAL_T, target :: xpart(SDIM)
       REAL_T :: xsub(SDIM)
       REAL_T :: tensor_sub(NUM_CELL_ELASTIC)
+      REAL_T :: X0_sub(SDIM)
       REAL_T :: LS_sub(num_materials)
       INTEGER_T :: im_primary_sub
       INTEGER_T :: im_particle
@@ -18252,7 +18257,7 @@ stop
        stop
       endif
 
-      if (N_EXTRA_REAL.ge.1) then
+      if (N_EXTRA_REAL.eq.1+SDIM) then
        ! do nothing
       else
        print *,"N_EXTRA_REAL invalid"
@@ -18569,7 +18574,8 @@ stop
              particle_link_data, &
              Np, &
              tensor_sub, &
-             LS_sub)
+             LS_sub, &
+             X0_sub)
 
            do ipart=1,num_materials_viscoelastic
             im_map=im_elastic_map(ipart)+1
@@ -18632,6 +18638,9 @@ stop
                tensor_sub(dir)
             enddo
             new_particles(ibase+SDIM+N_EXTRA_REAL_INSERT_TIME+1)=cur_time_slab
+            do dir=1,SDIM
+             new_particles(ibase+SDIM+N_EXTRA_REAL_X0+dir)=X0_sub(dir)
+            enddo
             call get_primary_material(LS_sub,im_primary_sub)
             if ((im_primary_sub.ge.1).and. &
                 (im_primary_sub.le.num_materials)) then
