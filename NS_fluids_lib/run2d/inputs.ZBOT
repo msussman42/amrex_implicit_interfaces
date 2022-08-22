@@ -114,20 +114,23 @@ ns.heatviscconst_eddy_bulk=0.0 0.0 0.0
 # 0.15/8=0.01875
 #amr.n_cell          = 16 64
 #amr.n_cell          = 8 32
-amr.n_cell          = 64 256  # this resolution agrees with experiments.
-amr.max_level       = 0
+#amr.n_cell          = 64 256  # this resolution agrees with experiments.
+#amr.max_level       = 0
+amr.n_cell          = 32 128  # 2nd order level 0, 1st order level 1.
+amr.max_level       = 1
 
 amr.regrid_int      = 1     # How often to regrid
 #speed up analysis? 128 = 2procs, 64= 4procs, 32=16procs
-amr.max_grid_size   = 128    # 128 is optimal for MPI in 2D
+#amr.max_grid_size   = 128    # 128 is optimal for MPI in 2D
+amr.max_grid_size   = 64    # try 64
 
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 1 1 1 1 1 # number of buffer cells in error est 
 amr.blocking_factor = 8 4 # block factor in grid generation
 # level0, level1, ...
-amr.space_blocking_factor=1 1 # make 2 1 for 2nd order in space
-amr.time_blocking_factor=1    # make 2 for 2nd order in time
-ns.enable_spectral=0          # make 1 for 2nd order
+amr.space_blocking_factor=2 1 # make 2 1 for 2nd order in space
+amr.time_blocking_factor=2    # make 2 for 2nd order in time
+ns.enable_spectral=1          # make 1 for 2nd order
 ns.nblocks=0
 #ns.nblocks=1
 ns.xblocks=0.0
