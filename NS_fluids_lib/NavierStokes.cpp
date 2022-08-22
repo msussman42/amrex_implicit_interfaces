@@ -9259,7 +9259,8 @@ void NavierStokes::post_restart() {
       AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
      //N_EXTRA_REAL_INSERT_TIME==0
-    if (N_EXTRA_REAL>0) {
+     //N_EXTRA_REAL_X0==1
+    if (N_EXTRA_REAL==1+AMREX_SPACEDIM) {
      //do nothing
     } else
      amrex::Error("N_EXTRA_REAL invalid");
