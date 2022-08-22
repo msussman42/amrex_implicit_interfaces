@@ -17724,7 +17724,8 @@ stop
          particle_link_data, &
          Np, &
          Q_interp, &
-         LS_interp)
+         LS_interp, &
+         X0_interp)
       use probcommon_module
       use global_utility_module
 
@@ -17746,14 +17747,17 @@ stop
       INTEGER_T, INTENT(in) :: particle_link_data(Np*(1+SDIM))
       REAL_T, INTENT(out) :: Q_interp(NUM_CELL_ELASTIC)
       REAL_T, INTENT(out) :: LS_interp(num_materials)
+      REAL_T, INTENT(out) :: X0_interp(SDIM)
 
       INTEGER_T :: nhalf
       INTEGER_T :: dir
       REAL_T :: xsten(-3:3,SDIM)
       REAL_T A_VEL,b_VEL(NUM_CELL_ELASTIC)
+      REAL_T A_X0,b_X0(SDIM)
       INTEGER_T :: current_link
       REAL_T, target :: xpart(SDIM)
       REAL_T :: Qpart(NUM_CELL_ELASTIC)
+      REAL_T :: X0part(SDIM)
       REAL_T :: LS_interp_local(num_materials)
       INTEGER_T :: ibase
 
@@ -17834,8 +17838,12 @@ stop
       enddo
 
       A_VEL=zero
+      A_X0=zero
       do dir=1,NUM_CELL_ELASTIC
        b_VEL(dir)=zero
+      enddo
+      do dir=1,SDIM
+       b_X0(dir)=zero
       enddo
 
       test_cell_particle_count=cell_particle_count(D_DECL(i,j,k),1)
@@ -17860,6 +17868,11 @@ stop
          stop
         endif
        enddo !dir=1,NUM_CELL_ELASTIC
+
+       do dir=1,SDIM
+        X0part(dir)= &
+           particlesptr(current_link)%extra_state(N_EXTRA_REAL_X0+dir)
+       enddo !dir=1,SDIM
 
        im_particle_direct= &
          particlesptr(current_link)%extra_int(N_EXTRA_INT_MATERIAL_ID+1)
@@ -17900,6 +17913,12 @@ stop
        endif
 
        if (w_p.gt.zero) then
+
+        A_X0=A_X0+w_p
+        do dir=1,SDIM
+         b_X0(dir)=b_X0(dir)+w_p*X0part(dir)
+        enddo
+
         if (im_primary_part.eq.im_primary) then
          if (im_primary_part.eq.im_particle_direct) then
           A_VEL=A_VEL+w_p
@@ -17980,6 +17999,12 @@ stop
         print *,"expecting A_VEL==0 if append_flag==0"
         stop
        endif
+       if (A_X0.eq.zero) then
+        ! do nothing
+       else
+        print *,"expecting A_X0==0 if append_flag==0"
+        stop
+       endif
       else if (accum_PARM%append_flag.eq.1) then
 
        if (A_VEL.gt.zero) then
@@ -18013,6 +18038,19 @@ stop
         ! do nothing
        else
         print *,"A_VEL invalid"
+        stop
+       endif
+
+       if (A_X0.gt.zero) then
+
+        do dir=1,SDIM
+         X0_interp(dir)=b_X0(dir)/A_X0
+        enddo
+
+       else if (A_X0.eq.zero) then
+        ! do nothing
+       else
+        print *,"A_X0 invalid"
         stop
        endif
 
