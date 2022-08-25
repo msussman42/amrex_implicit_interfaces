@@ -386,6 +386,8 @@ public:
     static Real gravity;
     static int  invert_gravity;
     static int  gravity_dir;
+    static Vector<Real> gravity_vector;
+
     static Real nucleation_init_time; //def 0.0
      // 0 - centroid furthest from uncaptured centroid
      // 1 - use MOF error

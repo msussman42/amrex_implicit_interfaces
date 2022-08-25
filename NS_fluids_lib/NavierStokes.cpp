@@ -190,6 +190,9 @@ Real NavierStokes::gravity_reference_wavelen = 0.0;
 
 int NavierStokes::gravity_dir = AMREX_SPACEDIM;
 int NavierStokes::invert_gravity = 0;
+
+Vector<Real> NavierStokes::gravity_vector;
+
 int  NavierStokes::sum_interval = -1;
 int  NavierStokes::NUM_SCALARS  = 0;
 
@@ -1835,11 +1838,28 @@ void fortran_parameters() {
  Real gravity_temp=NavierStokes::gravity; 
  int gravity_dir_temp=NavierStokes::gravity_dir;
  int invert_gravity_temp=NavierStokes::invert_gravity;
- pp.queryAdd("gravity",gravity_temp);
- pp.queryAdd("gravity_dir",gravity_dir_temp);
- pp.queryAdd("invert_gravity",invert_gravity_temp);
+ Vector<Real> gravity_vector_temp(AMREX_SPACEDIM);
+
+ bool gravity_in_table=pp.contains("gravity");
+ bool gravity_dir_in_table=pp.contains("gravity_dir");
+ bool invert_gravity_in_table=pp.contains("invert_gravity");
+ bool gravity_vector_in_table=pp.contains("gravity_vector");
+
+ if (gravity_vector_in_table==true) {
+  if ((gravity_in_table==false)&&
+      (gravity_dir_in_table==false)&&
+      (invert_gravity_in_table==false)) {
+   // do nothing
+  } else
+   amrex::Error("gravity parm conflict");
+ }
+
+ pp.query("gravity",gravity_temp);
+ pp.query("gravity_dir",gravity_dir_temp);
+ pp.query("invert_gravity",invert_gravity_temp);
  if ((gravity_dir_temp<1)||(gravity_dir_temp>AMREX_SPACEDIM))
   amrex::Error("gravity dir invalid");
+ pp.queryarr("gravity_vector",gravity_vector_temp);
 
  int n_sites=0;
  pp.queryAdd("n_sites",n_sites);
@@ -2631,11 +2651,28 @@ NavierStokes::read_params ()
     if (thread_class::nthreads<1)
      amrex::Error("thread_class::nthreads invalid ns init");
 
-    pp.queryAdd("gravity",gravity);
-    pp.queryAdd("gravity_dir",gravity_dir);
-    pp.queryAdd("invert_gravity",invert_gravity);
+    gravity_vector.resize(AMREX_SPACEDIM);
+
+    bool gravity_in_table=pp.contains("gravity");
+    bool gravity_dir_in_table=pp.contains("gravity_dir");
+    bool invert_gravity_in_table=pp.contains("invert_gravity");
+    bool gravity_vector_in_table=pp.contains("gravity_vector");
+
+    if (gravity_vector_in_table==true) {
+     if ((gravity_in_table==false)&&
+         (gravity_dir_in_table==false)&&
+         (invert_gravity_in_table==false)) {
+      // do nothing
+     } else
+      amrex::Error("gravity parm conflict");
+    }
+
+    pp.query("gravity",gravity);
+    pp.query("gravity_dir",gravity_dir);
+    pp.query("invert_gravity",invert_gravity);
     if ((gravity_dir<1)||(gravity_dir>AMREX_SPACEDIM))
      amrex::Error("gravity dir invalid");
+    pp.queryarr("gravity_vector",gravity_vector);
 
     Real gravity_reference_wavelen_default=0.0;
     for (int local_dir=0;local_dir<AMREX_SPACEDIM;local_dir++) {
