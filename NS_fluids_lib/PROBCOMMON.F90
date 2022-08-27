@@ -301,7 +301,10 @@ implicit none
 !   fort_lame_coefficient 
 !   fort_shear_modulus 
 !   fort_linear_elastic_model 
-
+! added August 27, 2022:
+!   gravity_vector(SDIM)
+! deleted August 27, 2022:
+!   gravity,gravity_dir,invert_gravity
 #ifdef ZHOUTENGYEML
       Type(Neural_Network) :: NN_ZHOUTENG_GLOBAL
       Type(Decision_Tree) :: DT_ZHOUTENG_GLOBAL

@@ -1771,11 +1771,11 @@ void fortran_parameters() {
 
   } else if (NavierStokes::material_type[im]==0) {
 
-   if ((NavierStokes::FSI_flag[im]!=0)&& // fluid tessellating
-       (NavierStokes::FSI_flag[im]!=7)&& // fluid tessellating
-       (NavierStokes::FSI_flag[im]!=3)&& // ice   tessellating
-       (NavierStokes::FSI_flag[im]!=6)&& // ice   tessellating
-       (NavierStokes::FSI_flag[im]!=5))  // FSI PROB.F90 rigid solid. tessellating
+   if ((NavierStokes::FSI_flag[im]!=0)&& //fluid tessellating
+       (NavierStokes::FSI_flag[im]!=7)&& //fluid tessellating
+       (NavierStokes::FSI_flag[im]!=3)&& //ice   tessellating
+       (NavierStokes::FSI_flag[im]!=6)&& //ice   tessellating
+       (NavierStokes::FSI_flag[im]!=5)) //FSI PROB.F90 rigid solid tessellating
     amrex::Error("NavierStokes::FSI_flag invalid");
 
   } else if ((NavierStokes::material_type[im]>0)&& 
@@ -1846,20 +1846,36 @@ void fortran_parameters() {
  bool gravity_vector_in_table=pp.contains("gravity_vector");
 
  if (gravity_vector_in_table==true) {
+
   if ((gravity_in_table==false)&&
       (gravity_dir_in_table==false)&&
       (invert_gravity_in_table==false)) {
    // do nothing
   } else
    amrex::Error("gravity parm conflict");
- }
 
- pp.query("gravity",gravity_temp);
- pp.query("gravity_dir",gravity_dir_temp);
- pp.query("invert_gravity",invert_gravity_temp);
- if ((gravity_dir_temp<1)||(gravity_dir_temp>AMREX_SPACEDIM))
-  amrex::Error("gravity dir invalid");
- pp.queryarr("gravity_vector",gravity_vector_temp);
+  pp.getarr("gravity_vector",gravity_vector_temp);
+
+ } else if (gravity_vector_in_table==false) {
+
+  pp.query("gravity",gravity_temp);
+  pp.query("gravity_dir",gravity_dir_temp);
+  pp.query("invert_gravity",invert_gravity_temp);
+  if ((gravity_dir_temp<1)||(gravity_dir_temp>AMREX_SPACEDIM))
+   amrex::Error("gravity dir invalid");
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+   gravity_vector_temp[dir]=0.0;
+
+  if (invert_gravity_temp==0) {
+   gravity_vector_temp[gravity_dir_temp-1]=-std::abs(gravity_temp);
+  } else if (invert_gravity_temp==1) {
+   gravity_vector_temp[gravity_dir_temp-1]=std::abs(gravity_temp);
+  } else
+   amrex::Error("invert_gravity_temp invalid");
+
+ } else
+  amrex::Error("gravity_vector_in_table invalid");
 
  int n_sites=0;
  pp.queryAdd("n_sites",n_sites);
@@ -1992,9 +2008,7 @@ void fortran_parameters() {
   tension_T0temp.dataPtr(),
   tension_mintemp.dataPtr(),
   prefreeze_tensiontemp.dataPtr(),
-  &gravity_temp,
-  &gravity_dir_temp,
-  &invert_gravity_temp,
+  gravity_vector_temp.dataPtr(),
   &fort_stop_time,
   Carreau_alpha_temp.dataPtr(),
   Carreau_beta_temp.dataPtr(),
