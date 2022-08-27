@@ -1400,12 +1400,14 @@ if(fort_material_type(2).eq.0) then
   ! P_2=P_1 + rho*g*(z_1-z_2)  [g>0]
   if (x(dir_z).ge.TANK_MK_INTERFACE_LOCATION) then
    PRES=TANK_MK_INITIAL_PRESSURE+&
-       fort_denconst(2)*(TANK_MK_HEIGHT/two-x(dir_z))*(abs(gravity)) 
+       fort_denconst(2)*(TANK_MK_HEIGHT/two-x(dir_z))* &
+       (abs(gravity_vector(dir_z))) 
   elseif (x(dir_z).lt.TANK_MK_INTERFACE_LOCATION) then
    PRES=TANK_MK_INITIAL_PRESSURE+&
        fort_denconst(2)*(TANK_MK_HEIGHT/two-TANK_MK_INTERFACE_LOCATION)* &
-       (abs(gravity))+ &
-       fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(dir_z))*(abs(gravity))
+       (abs(gravity_vector(dir_z)))+ &
+       fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(dir_z))* &
+       (abs(gravity_vector(dir_z)))
   else
    print *,"x(dir_z) is invalid in CRYOGENIC_TANK_MK_PRES!"
    stop
@@ -1413,7 +1415,7 @@ if(fort_material_type(2).eq.0) then
 
  else if (simple_hyd_p.eq.1) then
   rho_hyd=fort_denconst(1)
-  PRES=-abs(gravity)*rho_hyd*(x(dir_z)-probhiy-probhiy)
+  PRES=-abs(gravity_vector(dir_z))*rho_hyd*(x(dir_z)-probhiy-probhiy)
  else
   print *,"simple_hyd_p invalid"
   stop
@@ -1425,14 +1427,16 @@ elseif (fort_material_type(2).eq.TANK_MK_MATERIAL_TYPE) then
  rho_hyd=fort_denconst(2)
  if (x(dir_z).ge.TANK_MK_INTERFACE_LOCATION) then
   PRES=TANK_MK_INITIAL_PRESSURE*&
-       exp((TANK_MK_END_CENTER+TANK_MK_END_RADIUS-x(dir_z))*abs(gravity)/&
+       exp((TANK_MK_END_CENTER+TANK_MK_END_RADIUS-x(dir_z))* &
+       abs(gravity_vector(dir_z))/&
            (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2)))
  elseif (x(dir_z).lt.TANK_MK_INTERFACE_LOCATION) then
   PRES=TANK_MK_INITIAL_PRESSURE*&
        exp((TANK_MK_END_CENTER+TANK_MK_END_RADIUS-TANK_MK_INTERFACE_LOCATION)*&
-            abs(gravity)/&
+            abs(gravity_vector(dir_z))/&
            (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2)))+&
-       fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(dir_z))*(abs(gravity))
+       fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(dir_z))* &
+                        (abs(gravity_vector(dir_z)))
  else
   print *,"x(dir_z) is invalid in CRYOGENIC_TANK_MK_PRES!"
   stop
@@ -2433,7 +2437,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
         (near_interface.eq.1).and. &
         (temperature_wall_max.gt.temperature_probe)) then
      thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
-     gravity_local=abs(gravity)
+     gravity_local=abs(gravity_vector(SDIM))
 
      call SUB_UNITLESS_EXPANSION_FACTOR(im,temperature_wall_max, &
        temperature_probe,expansion_coefficient)
@@ -2708,7 +2712,7 @@ if ((xi.gt.0.0d0).and. &
     (n_raster(1).eq.one)) then
 
  thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
- gravity_local=abs(gravity)
+ gravity_local=abs(gravity_vector(SDIM))
  Pr=nu/thermal_diffusivity
 
  call SUB_UNITLESS_EXPANSION_FACTOR(im_fluid,temperature_wall_max, &

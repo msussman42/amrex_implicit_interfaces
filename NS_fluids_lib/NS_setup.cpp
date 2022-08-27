@@ -1918,11 +1918,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 
  build_masksemALL();
 
- Vector<Real> dt_min;
- dt_min.resize(n_scales+1);
- for (int iscale=0;iscale<dt_min.size();iscale++) {
-  dt_min[iscale]=1.0E+30;
- }
+ Real dt_min=1.0E+30;;
 
  Real vel_max_estdt[AMREX_SPACEDIM+1];
  Real vel_max_cap_wave=0.0;
@@ -2738,10 +2734,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   std::cout << "TIME= " << upper_slab_time << " MAXVEL COLLIDE=  " 
    << maxvel_collide << '\n';
 
-  for (int iscale=0;iscale<dt_min.size();iscale++) {
-   std::cout << "TIME= " << upper_slab_time << " iscale=  " << iscale << ' '
-	   << " dt_min= " << dt_min[iscale] << '\n';
-  }
+  std::cout << "TIME= " << upper_slab_time << " dt_min= " << dt_min << '\n';
 
   Real leftwt=NS_sumdata[IQ_LEFT_PRESSURE_SUM_COMP+2];
   Real rightwt=NS_sumdata[IQ_LEFT_PRESSURE_SUM_COMP+3];

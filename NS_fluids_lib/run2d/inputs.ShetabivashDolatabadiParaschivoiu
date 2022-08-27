@@ -95,12 +95,6 @@ ns.gravity        = -9.8 # m/s^2
 #
 # LG,LI,LS,IG,GS,SI 
 #
-#advection, surface tension, gravity
-#Note: if gravity turned off, then surface tension force can be significantly
-#reduced so that advection and freezing time steps
-#can be used instead (simulation would run 100 times faster, giving similar
-#freezing times?).  
-ns.fixed_dt_scales=0.0 0.0 0.0
 ns.tension=0.0729 0.0254 0.0256 0.0683 0.0729 0.0239 #49.5 degrees substrate
 #ns.tension=0.0729 0.0254 0.0665 0.0683 0.0729 0.0239 #85.0 degrees substrate
 # specific heat of glass: 0.84E+3 J/(kg K)

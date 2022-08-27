@@ -134,15 +134,6 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
 
  int finest_level=parent->finestLevel();
 
- Real gravity_normalized=0.0;
- gravity_normalized=std::abs(gravity);
- if (invert_gravity==1)
-  gravity_normalized=-gravity_normalized;
- else if (invert_gravity==0) {
-  // do nothing
- } else
-  amrex::Error("invert_gravity invalid");
-
  const Real* dx = geom.CellSize();
 
  int nparts=im_solid_map.size();
@@ -258,8 +249,6 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
   fort_hoopimplicit(
    override_density.dataPtr(), 
    constant_density_all_time.dataPtr(),
-   &gravity_normalized,
-   &gravity_dir,
    forcefab.dataPtr(),
    ARLIM(forcefab.loVect()),ARLIM(forcefab.hiVect()),
    tensorfab.dataPtr(),
@@ -1086,13 +1075,6 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
   FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
   Real local_dt_slab=dt_slab;
-  if (hold_dt_factors[0]==1.0) {
-   // do nothing
-  } else if ((hold_dt_factors[0]>0.0)&&
-             (hold_dt_factors[0]<1.0)) {
-   local_dt_slab*=hold_dt_factors[0];
-  } else
-   amrex::Error("hold_dt_factors[0] invalid");
 
   int tid_current=0;
 #ifdef _OPENMP

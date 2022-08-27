@@ -2131,16 +2131,6 @@ void NavierStokes::SEM_advectALL(int source_term) {
       //ngrow,dir,time
       //Umac_Type
      ns_level.getStateMAC_localMF(UMAC_MF+dir,0,dir,vel_time_slab);
-
-     if (hold_dt_factors[0]==1.0) {
-      // do nothing
-     } else if ((hold_dt_factors[0]>0.0)&&
-    	        (hold_dt_factors[0]<1.0)) {
-       //scomp,ncomp,ngrow
-      ns_level.localMF[UMAC_MF+dir]->mult(hold_dt_factors[0],0,1,0);
-     } else
-      amrex::Error("hold_dt_factors[0] invalid");
-
     }  //dir=0,...,sdim-1
    } //ilev=finest_level ... level
 
@@ -2448,15 +2438,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
    SDC_setup_step();
 
-   if (current_dt_group.size()!=n_scales)
-    amrex::Error("current_dt_group.size() invalid");
-   if (hold_dt_factors.size()!=n_scales)
-    amrex::Error("hold_dt_factors.size() invalid");
-
-   for (int iscale=0;iscale<current_dt_group.size();iscale++) {
-    hold_dt_factors[iscale]=1.0;
-   }
-
    int local_num_divu_outer_sweeps=num_divu_outer_sweeps;
 
    if ((slab_step==-1)||(slab_step==ns_time_order)) {
@@ -2464,63 +2445,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
    } else if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
     if (dt_slab>0.0) {
-     int ignore_advection=0;
-     int ignore_surface_tension=0;
-     int ignore_gravity=0;
-
-     if (fixed_dt_scales[0]==0.0) {
-      //do nothing
-     } else if (fixed_dt_scales[0]>0.0) {
-      ignore_advection=1;
-     } else
-      amrex::Error("fixed_dt_scales[0] invalid");
-
-     if (fixed_dt_scales[1]==0.0) {
-      //do nothing
-     } else if (fixed_dt_scales[1]>0.0) {
-      ignore_surface_tension=1;
-     } else
-      amrex::Error("fixed_dt_scales[1] invalid");
-
-     if (fixed_dt_scales[2]==0.0) {
-      //do nothing
-     } else if (fixed_dt_scales[2]>0.0) {
-      ignore_gravity=1;
-     } else
-      amrex::Error("fixed_dt_scales[2] invalid");
-
-     if (ignore_advection==0) {
-      // do nothing
-     } else if (ignore_advection==1) {
-      if (current_dt_group[0]<dt_slab)
-       hold_dt_factors[0]=current_dt_group[0]/dt_slab;
-     } else
-      amrex::Error("ignore_advection invalid");
-
-      //for both surface tension and gravity, dt = K/sqrt(coeff)
-      //dt_large = K/sqrt(alpha * coeff) = dt_small/sqrt(alpha)
-      //alpha=(dt_small/dt_large)^2
-      // 
-     if (ignore_surface_tension==0) {
-      // do nothing
-     } else if (ignore_surface_tension==1) {
-      if (current_dt_group[1]<dt_slab) {
-       hold_dt_factors[1]=current_dt_group[1]/dt_slab;
-       hold_dt_factors[1]*=hold_dt_factors[1];
-      }
-     } else
-      amrex::Error("ignore_surface_tension invalid");
-
-     if (ignore_gravity==0) {
-      // do nothing
-     } else if (ignore_gravity==1) {
-      if (current_dt_group[2]<dt_slab) {
-       hold_dt_factors[2]=current_dt_group[2]/dt_slab;
-       hold_dt_factors[2]*=hold_dt_factors[2];
-      }
-     } else
-      amrex::Error("ignore_gravity invalid");
-
+     // do nothing
     } else
      amrex::Error("dt_slab must be positive");
 
@@ -2531,10 +2456,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
    if (verbose>0) {
     std::fflush(NULL);
     if (ParallelDescriptor::IOProcessor()) {
-     for (int iscale=0;iscale<hold_dt_factors.size();iscale++) {
-      std::cout << "iscale hold_dt_factors " << iscale << ' ' <<
-	  hold_dt_factors[iscale] << '\n';
-     }
      std::cout << "dt_slab= " << dt_slab << '\n';
     }
     std::fflush(NULL);

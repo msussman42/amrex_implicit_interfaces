@@ -544,7 +544,8 @@ endif
   PRES=TANK2_INITIAL_PRESSURE
  elseif (x(2).lt.TANK2_LIQUID_HEIGHT) then
   PRES=TANK2_INITIAL_PRESSURE +&
-    fort_denconst(1)*(TANK2_LIQUID_HEIGHT-x(2))*(abs(gravity))
+    fort_denconst(1)*(TANK2_LIQUID_HEIGHT-x(2))* &
+    (abs(gravity_vector(SDIM)))
  else
   print *,"x(2) is invalid in CRYOGENIC_TANK2_PRES!"
   stop

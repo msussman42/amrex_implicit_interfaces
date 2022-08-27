@@ -2270,8 +2270,6 @@ stop
       subroutine fort_estdt( &
         interface_mass_transfer_model, &
         tid, &
-        n_scales, &
-        fixed_dt_scales, &
         enable_spectral, &
         AMR_min_phase_change_rate, &
         AMR_max_phase_change_rate, &
@@ -2306,7 +2304,6 @@ stop
         rzflag, &
         denconst, &
         visc_coef, &
-        ns_gravity, &
         gravity_reference_wavelen_in, &
         dirnormal, &
         nparts, &
@@ -2328,8 +2325,6 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: tid
-      INTEGER_T, INTENT(in) :: n_scales
-      REAL_T, INTENT(in) :: fixed_dt_scales(n_scales)
       INTEGER_T, INTENT(in) :: nparts
       INTEGER_T, INTENT(in) :: nparts_def
       INTEGER_T, INTENT(in) :: im_solid_map(nparts_def)
@@ -2376,11 +2371,10 @@ stop
       INTEGER_T, INTENT(in) :: bfact
       REAL_T, INTENT(inout) :: uu_estdt_max(SDIM+1)
       REAL_T, INTENT(inout) :: u_max_cap_wave
-      REAL_T, INTENT(inout) :: dt_min(0:n_scales)
+      REAL_T, INTENT(inout) :: dt_min
       REAL_T user_tension(num_interfaces)
       REAL_T, INTENT(in) :: denconst(num_materials)
       REAL_T, INTENT(in) :: visc_coef
-      REAL_T, INTENT(in) :: ns_gravity
       REAL_T, INTENT(in) :: gravity_reference_wavelen_in
       REAL_T :: gravity_reference_wavelen
 
@@ -2469,51 +2463,16 @@ stop
       REAL_T effective_velocity
       REAL_T local_elastic_time
       REAL_T ugrav
-      REAL_T local_gravity_coefficient
+      REAL_T local_gravity_mag
 
       INTEGER_T istenlo(3),istenhi(3)
       INTEGER_T ivec(3)
       INTEGER_T triple_flag
       INTEGER_T im_sub
 
-      INTEGER_T ignore_advection
-      INTEGER_T ignore_surface_tension
-      INTEGER_T ignore_gravity
-
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
        print *,"tid invalid in fort_estdt"
-       stop
-      endif
-      if (n_scales.eq.3) then
-       ! do nothing
-      else
-       print *,"n_scales invalid"
-       stop
-      endif
-
-      if (fixed_dt_scales(1).eq.zero) then
-       ignore_advection=0
-      else if (fixed_dt_scales(1).gt.zero) then
-       ignore_advection=1
-      else
-       print *,"fixed_dt_scales(1) invalid"
-       stop
-      endif
-      if (fixed_dt_scales(2).eq.zero) then
-       ignore_surface_tension=0
-      else if (fixed_dt_scales(2).gt.zero) then
-       ignore_surface_tension=1
-      else
-       print *,"fixed_dt_scales(2) invalid"
-       stop
-      endif
-      if (fixed_dt_scales(3).eq.zero) then
-       ignore_gravity=0
-      else if (fixed_dt_scales(3).gt.zero) then
-       ignore_gravity=1
-      else
-       print *,"fixed_dt_scales(3) invalid"
        stop
       endif
 
@@ -2758,7 +2717,7 @@ stop
               0,dirnormal)
 
       if (1.eq.0) then
-       print *,"dt_min before estdt loop: ",dt_min(0)
+       print *,"dt_min before estdt loop: ",dt_min
        print *,"weymouth_factor= ",weymouth_factor
       endif
 
@@ -2953,7 +2912,7 @@ stop
             if (elastic_wave_speed.gt.zero) then
              elastic_wave_speed=sqrt(elastic_wave_speed)
              dthold=hx/elastic_wave_speed
-             dt_min(0)=min(dt_min(0),dthold)
+             dt_min=min(dt_min,dthold)
             else if (elastic_wave_speed.eq.zero) then
              ! do nothing
             else
@@ -3439,7 +3398,7 @@ stop
 
        effective_velocity=abs(uu_estdt_phase_change/weymouth_factor)
        if (effective_velocity.gt.zero) then
-        dt_min(0)=min(dt_min(0),hx/effective_velocity)
+        dt_min=min(dt_min,hx/effective_velocity)
        else if (effective_velocity.eq.zero) then
         ! do nothing
        else
@@ -3449,14 +3408,7 @@ stop
 
        effective_velocity=abs(uu_estdt/weymouth_factor)+sqrt(cc)
        if (effective_velocity.gt.zero) then
-        if (ignore_advection.eq.0) then
-         dt_min(0)=min(dt_min(0),hx/effective_velocity)
-        else if (ignore_advection.eq.1) then
-         dt_min(1)=min(dt_min(1),hx/effective_velocity)
-        else
-         print *,"ignore_advection invalid"
-         stop
-        endif
+        dt_min=min(dt_min,hx/effective_velocity)
        else if (effective_velocity.eq.zero) then
         ! do nothing
        else
@@ -3524,14 +3476,7 @@ stop
           dthold=dthold/three
          endif
 
-         if (ignore_surface_tension.eq.0) then
-          dt_min(0)=min(dt_min(0),dthold)
-         else if (ignore_surface_tension.eq.1) then
-          dt_min(2)=min(dt_min(2),dthold)
-         else
-          print *,"ignore_surface_tension invalid"
-          stop
-         endif
+         dt_min=min(dt_min,dthold)
         else
          print *,"level_cap_wave_speed is NaN"
          stop
@@ -3548,16 +3493,14 @@ stop
       enddo
       enddo  ! i,j,k
 
-      local_gravity_coefficient=abs(ns_gravity)
-
-      if (local_gravity_coefficient.ge.zero) then
-       ! do nothing
-      else
-       print *,"local_gravity_coefficient is NaN"
-       stop
+      local_gravity_mag=gravity_vector(1)**2+ &
+        gravity_vector(2)**2
+      if (SDIM.eq.3) then
+       local_gravity_mag=local_gravity_mag+gravity_vector(SDIM)**2
       endif
+      local_gravity_mag=sqrt(local_gravity_mag)
 
-      if (local_gravity_coefficient.gt.zero) then
+      if (local_gravity_mag.gt.zero) then
 
        if (denmax.gt.zero) then
 
@@ -3572,27 +3515,21 @@ stop
           gravity_reference_wavelen=gravity_reference_wavelen_in
           call SUB_reference_wavelen(gravity_reference_wavelen)
           if (gravity_reference_wavelen.gt.zero) then
+            ! gravity_wave_speed is declared in PROB.F90
            call gravity_wave_speed(gravity_reference_wavelen, &
-             local_gravity_coefficient,ugrav)
+             local_gravity_mag,ugrav)
           else
            print *,"gravity_reference_wavelen invalid"
            stop
           endif
           if (ugrav.gt.zero) then
            dthold=dxmin/ugrav 
-           if (ignore_gravity.eq.0) then
-            dt_min(0)=min(dt_min(0),dthold)
-           else if (ignore_gravity.eq.1) then
-            dt_min(3)=min(dt_min(3),dthold)
-           else
-            print *,"ignore_gravity invalid"
-            stop
-           endif
+           dt_min=min(dt_min,dthold)
           else
            print *,"ugrav invalid 1"
            print *,"uu_estdt ",uu_estdt
            print *,"denjump ",denjump
-           print *,"local_gravity_coefficient ",local_gravity_coefficient
+           print *,"local_gravity_mag ",local_gravity_mag
            print *,"dxmin ",dxmin
            print *,"denmax ",denmax
            stop
@@ -3609,10 +3546,10 @@ stop
         stop
        endif
 
-      else if (local_gravity_coefficient.eq.zero) then
+      else if (local_gravity_mag.eq.zero) then
        ! do nothing
       else
-       print *,"local_gravity_coefficient is NaN"
+       print *,"local_gravity_mag is NaN"
        stop
       endif 
 
@@ -3647,7 +3584,6 @@ stop
        momden,DIMS(momden), &
        recon,DIMS(recon), &
        xlo,dx, &
-       gravity_normalized, & !gravity_normalized>0 unless invert_gravity
        DrhoDT, &
        override_density, &
        level,finest_level) &
@@ -3695,7 +3631,6 @@ stop
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
       INTEGER_T, INTENT(in) :: override_density(num_materials)
       REAL_T, INTENT(in) :: DrhoDT(num_materials)
-      REAL_T, INTENT(in) :: gravity_normalized
      
       INTEGER_T i,j,k
       INTEGER_T dir
@@ -3753,14 +3688,6 @@ stop
        ! do nothing
       else
        print *,"levelrz invalid dencor"
-       stop
-      endif
-      if (gravity_normalized.ge.zero) then
-       ! do nothing
-      else if (gravity_normalized.le.zero) then
-       ! do nothing
-      else
-       print *,"gravity_normalized is NaN"
        stop
       endif
 

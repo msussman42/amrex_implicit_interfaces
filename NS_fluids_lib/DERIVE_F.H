@@ -63,8 +63,6 @@ extern "C" {
       Real* globalsum,
       int* globalsum_sweep,
       Real* localsum,
-      Real* gravity_normalized,
-      int* gravdir,
       Real* tdata,AMREX_ARLIM_P(tdatalo),AMREX_ARLIM_P(tdatahi),
       Real* viscoten,AMREX_ARLIM_P(viscotenlo),AMREX_ARLIM_P(viscotenhi),
       Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),

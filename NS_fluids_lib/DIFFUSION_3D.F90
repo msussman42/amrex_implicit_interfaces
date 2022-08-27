@@ -99,8 +99,6 @@ stop
        subroutine fort_hoopimplicit( &
          override_density, &
          constant_density_all_time, & ! 1..num_materials
-         gravity_normalized, & ! gravity_normalized>0 unless invert_gravity
-         grav_dir, &
          force,DIMS(force), &
          tensor,DIMS(tensor), &
          thermal,DIMS(thermal), &
@@ -137,8 +135,6 @@ stop
 
        INTEGER_T, INTENT(in) :: override_density(num_materials)
        INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials)
-       INTEGER_T, INTENT(in) :: grav_dir
-       REAL_T, INTENT(in) :: gravity_normalized
  
        INTEGER_T, INTENT(in) :: nparts
        INTEGER_T, INTENT(in) :: nparts_def
@@ -198,7 +194,8 @@ stop
        REAL_T ::  xsten(-3:3,SDIM)
        REAL_T, INTENT(in) ::  dx(SDIM)
 
-       INTEGER_T i,j,k,dir
+       INTEGER_T i,j,k
+       INTEGER_T dir
        INTEGER_T im
        REAL_T un(AMREX_SPACEDIM)
        REAL_T unp1(AMREX_SPACEDIM)
@@ -268,23 +265,11 @@ stop
         print *,"num_state_base invalid"
         stop
        endif
-       if ((grav_dir.lt.1).or.(grav_dir.gt.SDIM)) then
-        print *,"gravity dir invalid hoopimplicit"
-        stop
-       endif
 
        if (angular_velocity.ge.zero) then
         ! do nothing
        else
         print *,"angular_velocity cannot be negative"
-        stop
-       endif
-       if (gravity_normalized.ge.zero) then
-        ! do nothing
-       else if (gravity_normalized.le.zero) then
-        ! do nothing
-       else
-        print *,"gravity_normalized is NaN"
         stop
        endif
 
@@ -530,12 +515,12 @@ stop
          endif
 
           ! gravity force (temperature dependence)
-          ! gravity_normalized>0 means that gravity is directed downwards.
-          ! if invert_gravity==1, then gravity_normalized<0 (pointing upwards)
-          ! units of gravity_normalized: m/s^2
+          ! units of gravity: m/s^2
           ! DTEMP has no units.
          if (abs(DTEMP).ge.zero) then
-          unp1(grav_dir)=unp1(grav_dir)-dt*gravity_normalized*DTEMP
+          do dir=1,SDIM
+           unp1(dir)=unp1(dir)+dt*gravity_vector(dir)*DTEMP
+          enddo
          else
           print *,"DTEMP is NaN"
           stop

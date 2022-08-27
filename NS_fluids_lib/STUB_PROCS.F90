@@ -832,8 +832,6 @@ end subroutine STUB_ICE_SUBSTRATE_DISTANCE
 
 subroutine STUB_correct_pres_rho_hydrostatic( &
   i,j,k,level, &
-  gravity_normalized, &
-  gravity_dir_parm, &
   angular_velocity, &
   dt, &
   rho_hydrostatic, &
@@ -842,9 +840,7 @@ subroutine STUB_correct_pres_rho_hydrostatic( &
 IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: i,j,k,level
-INTEGER_T, INTENT(in) :: gravity_dir_parm
 REAL_T, INTENT(in) :: angular_velocity
-REAL_T, INTENT(in) :: gravity_normalized
 REAL_T, INTENT(in) :: dt
 REAL_T, INTENT(inout) :: rho_hydrostatic
 REAL_T, INTENT(inout) :: pres_hydrostatic
@@ -1401,10 +1397,18 @@ IMPLICIT NONE
 REAL_T, INTENT(inout) :: wavelen
 REAL_T :: default_wavelen
 INTEGER_T :: dir_local
+INTEGER_T :: dir_crit
 
+ dir_crit=1
+ do dir_local=2,SDIM
+  if (abs(gravity_vector(dir_local)).gt. &
+      abs(gravity_vector(dir_crit))) then
+   dir_crit=dir_local
+  endif
+ enddo 
  default_wavelen=zero
  do dir_local=1,SDIM
-  if (gravity_dir.ne.dir_local) then
+  if (dir_crit.ne.dir_local) then
    default_wavelen=max(default_wavelen,problen_array(dir_local))
   endif
  enddo

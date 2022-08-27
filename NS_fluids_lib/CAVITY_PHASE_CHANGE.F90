@@ -1649,7 +1649,7 @@ REAL_T, INTENT(in) :: x(SDIM)
 REAL_T, INTENT(in) :: t
 REAL_T, INTENT(in) :: LS(nmat)
 REAL_T, INTENT(out) :: PRES
-REAL_T :: gravity_dz
+REAL_T :: gravity_dz,grav_mag
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -1659,17 +1659,20 @@ else
 endif
 PRES=zero
 
-if (gravity_dir.eq.1) then
+if (gravity_vector(1).ne.zero) then
  gravity_dz=x(1)-probhix
-else if (gravity_dir.eq.2) then
+ grav_mag=gravity_vector(1)
+else if (gravity_vector(2).ne.zero) then
  gravity_dz=x(2)-probhiy
-else if ((gravity_dir.eq.3).and.(SDIM.eq.3)) then
+ grav_mag=gravity_vector(2)
+else if (gravity_vector(SDIM).ne.zero) then
  gravity_dz=x(SDIM)-probhiz
+ grav_mag=gravity_vector(SDIM)
 else
  print *,"gravity_dir invalid"
  stop
 endif
-PRES=-fort_denconst(1)*abs(gravity)*gravity_dz
+PRES=-fort_denconst(1)*abs(grav_mag)*gravity_dz
 
 return 
 end subroutine CAVITY_PHASE_CHANGE_PRES

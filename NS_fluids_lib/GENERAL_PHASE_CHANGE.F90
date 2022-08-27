@@ -380,29 +380,30 @@ REAL_T :: initial_time
      ! thickness of initial gas layer at outflow
     if (radblob10.gt.zero) then
      if ((nmat.eq.4).and.(im_solid_materialdist.eq.nmat)) then
-      if (gravity_dir.eq.1) then
+     
+      if (gravity_vector(1).ne.zero) then
        if (radblob10.lt.problenx) then 
-        LS(3)=x(gravity_dir)-(probhix-radblob10)
+        LS(3)=x(1)-(probhix-radblob10)
        else
         print *,"radblob10 invalid"
         stop
        endif
-      else if (gravity_dir.eq.2) then
+      else if (gravity_vector(2).ne.zero) then
        if (radblob10.lt.probleny) then 
-        LS(3)=x(gravity_dir)-(probhiy-radblob10)
+        LS(3)=x(2)-(probhiy-radblob10)
        else
         print *,"radblob10 invalid"
         stop
        endif
-      else if ((gravity_dir.eq.3).and.(SDIM.eq.3)) then
+      else if ((gravity_vector(SDIM).ne.zero).and.(SDIM.eq.3)) then
        if (radblob10.lt.problenz) then 
-        LS(3)=x(gravity_dir)-(probhiz-radblob10)
+        LS(3)=x(SDIM)-(probhiz-radblob10)
        else
         print *,"radblob10 invalid"
         stop
        endif
       else
-       print *,"gravity_dir invalid"
+       print *,"gravity_vector invalid"
        stop
       endif
       if (LS(3).lt.zero) then
@@ -1037,14 +1038,14 @@ endif
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
 
- if (gravity_dir.eq.1) then
+ if (gravity_vector(1).ne.zero) then
   gravity_dz=xghost(1)-probhix
- else if (gravity_dir.eq.2) then
+ else if (gravity_vector(2).ne.zero) then
   gravity_dz=xghost(2)-probhiy
- else if ((gravity_dir.eq.3).and.(SDIM.eq.3)) then
+ else if ((gravity_vector(SDIM).ne.zero).and.(SDIM.eq.3)) then
   gravity_dz=xghost(SDIM)-probhiz
  else
-  print *,"gravity_dir invalid"
+  print *,"gravity_vector invalid"
   stop
  endif
  call GENERAL_PHASE_CHANGE_PRES(xghost,t,LS,PRES,nmat)

@@ -199,8 +199,6 @@ extern "C" {
       int* presbc,int* dombc,
       const int* domlo,const int* domhi,
       const Real* xlo,const Real* dx,Real* dt,
-      Real* gravity_normalized,
-      int* gravity_dir,
       Real* angular_velocity,
       int* isweep);
 
@@ -431,8 +429,6 @@ extern "C" {
     void fort_addgravity(
       Real* dt,
       Real* cur_time,
-      Real* gravity_normalized,
-      int* gravity_dir,
       Real* angular_velocity,
       int* level,
       int* finest_level,

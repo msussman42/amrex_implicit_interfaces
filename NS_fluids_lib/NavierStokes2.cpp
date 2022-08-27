@@ -2160,13 +2160,7 @@ void NavierStokes::init_divup_cell_vel_cell(
     if (operation_flag_interp_macvel==OP_VEL_MAC_TO_CELL) {
      //do nothing
     } else if (operation_flag_interp_macvel==OP_VEL_DIVUP_TO_CELL) { 
-     if (hold_dt_factors[0]==1.0) {
-      // do nothing
-     } else if ((hold_dt_factors[0]>0.0)&&
-    	       (hold_dt_factors[0]<1.0)) {
-      local_dt_slab*=hold_dt_factors[0];
-     } else
-      amrex::Error("hold_dt_factors[0] invalid");
+     //do nothing
     } else
      amrex::Error("operation_flag_interp_macvel invalid");
 
@@ -5349,14 +5343,6 @@ void NavierStokes::increment_potential_force() {
  if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error("LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1)");
 
- Real gravity_normalized=std::abs(gravity);
- if (invert_gravity==1)
-  gravity_normalized=-gravity_normalized;
- else if (invert_gravity==0) {
-  // do nothing
- } else
-  amrex::Error("invert_gravity invalid");
-
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
   debug_ngrow(POTENTIAL_FORCE_EDGE_MF+dir,0,261);
@@ -5406,8 +5392,6 @@ void NavierStokes::increment_potential_force() {
    fort_addgravity(
      &dt_slab,
      &cur_time_slab,
-     &gravity_normalized,
-     &gravity_dir,
      &angular_velocity,
      &level,
      &finest_level,
@@ -5535,15 +5519,6 @@ void NavierStokes::init_gravity_potential() {
  for (int m=0;m<2*AMREX_SPACEDIM;m++)
   dombcpres[m]=b_rec[m];
 
- Real gravity_normalized=std::abs(gravity);
-
- if (invert_gravity==1)
-  gravity_normalized=-gravity_normalized;
- else if (invert_gravity==0) {
-  // do nothing
- } else
-  amrex::Error("invert_gravity invalid");
-
  int bfact=parent->Space_blockingFactor(level);
 
   // isweep=0 => interior cells updated, coarse_lev.avgDown_localMF,
@@ -5579,13 +5554,6 @@ void NavierStokes::init_gravity_potential() {
     Vector<int> presbc=getBCArray(State_Type,gridno,STATECOMP_PRES,1);
 
     Real local_dt_slab_gravity=dt_slab;
-    if (hold_dt_factors[2]==1.0) {
-     // do nothing
-    } else if ((hold_dt_factors[2]>0.0)&&
-               (hold_dt_factors[2]<1.0)) {
-     local_dt_slab_gravity*=hold_dt_factors[2];
-    } else
-     amrex::Error("hold_dt_factors[2] invalid");
 
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -5613,8 +5581,6 @@ void NavierStokes::init_gravity_potential() {
      domlo,domhi,
      xlo,dx,
      &local_dt_slab_gravity,
-     &gravity_normalized,
-     &gravity_dir,
      &angular_velocity,
      &isweep);
   } // mfi
@@ -5818,13 +5784,6 @@ void NavierStokes::process_potential_force_face() {
    int ncomp_mgoni=mgonifab.nComp();
 
    Real local_dt_slab_surface_tension=dt_slab;
-   if (hold_dt_factors[1]==1.0) {
-    // do nothing
-   } else if ((hold_dt_factors[1]>0.0)&&
-              (hold_dt_factors[1]<1.0)) {
-    local_dt_slab_surface_tension*=hold_dt_factors[1];
-   } else
-    amrex::Error("hold_dt_factors[1] invalid");
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -6556,13 +6515,6 @@ void NavierStokes::move_particles(
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     Real local_dt_slab=dt_slab;
-    if (hold_dt_factors[0]==1.0) {
-     // do nothing
-    } else if ((hold_dt_factors[0]>0.0)&&
-   	       (hold_dt_factors[0]<1.0)) {
-     local_dt_slab*=hold_dt_factors[0];
-    } else
-     amrex::Error("hold_dt_factors[0] invalid");
 
      // declared in: LEVELSET_3D.F90
     fort_move_particle_container( 

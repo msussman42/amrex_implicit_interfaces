@@ -548,12 +548,17 @@ protected:
     void delete_localMF(int idx_MF,int ncomp); 
     void delete_localMF_if_exist(int idx_MF,int ncomp); 
 
-    void MaxAdvectSpeedALL(Vector<Real>& dt_min,
-        Real* vel_max_estdt,
-	Real& vel_max_cap_wave,int caller_id);
-    void MaxAdvectSpeed(Vector<Real>& dt_min,
-        Real* vel_max_estdt,
-        Real& vel_max_cap_wave,int caller_id);
+    void MaxAdvectSpeedALL(
+      Real& dt_min,
+      Real* vel_max_estdt,
+      Real& vel_max_cap_wave,
+      int caller_id);
+    void MaxAdvectSpeed(
+      Real& dt_min,
+      Real* vel_max_estdt,
+      Real& vel_max_cap_wave,
+      int caller_id);
+
     void DumpProcNum();
 
       // interpolates coarsedata from level-1 to level.
@@ -1518,10 +1523,6 @@ protected:
     static Real change_max;    // maximum change in dt over a timestep
     static Real change_max_init; // maximum change in dt over a timestep
 
-    static int n_scales;
-    static Vector<Real> current_dt_group; //0,...,n_scales-1
-    static Vector<Real> hold_dt_factors;  //0,...,n_scales-1
-    static Vector<Real> fixed_dt_scales;  //0,...,n_scales-1
     static Real fixed_dt;      // set > 0 to specify dt
     static Real fixed_dt_init; // set > 0 to specify dt
     static Real min_velocity_for_dt; // dt<dx/min_velocity_for_dt
