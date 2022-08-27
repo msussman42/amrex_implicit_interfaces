@@ -2673,20 +2673,36 @@ NavierStokes::read_params ()
     bool gravity_vector_in_table=pp.contains("gravity_vector");
 
     if (gravity_vector_in_table==true) {
+
      if ((gravity_in_table==false)&&
          (gravity_dir_in_table==false)&&
          (invert_gravity_in_table==false)) {
       // do nothing
      } else
       amrex::Error("gravity parm conflict");
-    }
 
-    pp.query("gravity",gravity);
-    pp.query("gravity_dir",gravity_dir);
-    pp.query("invert_gravity",invert_gravity);
-    if ((gravity_dir<1)||(gravity_dir>AMREX_SPACEDIM))
-     amrex::Error("gravity dir invalid");
-    pp.queryarr("gravity_vector",gravity_vector);
+     pp.getarr("gravity_vector",gravity_vector);
+
+    } else if (gravity_vector_in_table==false) {
+
+     pp.query("gravity",gravity);
+     pp.query("gravity_dir",gravity_dir);
+     pp.query("invert_gravity",invert_gravity);
+     if ((gravity_dir<1)||(gravity_dir>AMREX_SPACEDIM))
+      amrex::Error("gravity dir invalid");
+
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+      gravity_vector[dir]=0.0;
+
+     if (invert_gravity==0) {
+      gravity_vector[gravity_dir-1]=-std::abs(gravity);
+     } else if (invert_gravity==1) {
+      gravity_vector[gravity_dir-1]=std::abs(gravity);
+     } else
+      amrex::Error("invert_gravity invalid");
+
+    } else
+     amrex::Error("gravity_vector_in_table invalid");
 
     Real gravity_reference_wavelen_default=0.0;
     for (int local_dir=0;local_dir<AMREX_SPACEDIM;local_dir++) {
