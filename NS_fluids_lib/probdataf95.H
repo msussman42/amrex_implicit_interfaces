@@ -105,7 +105,7 @@
       REAL_T density_at_depth
       REAL_T global_pressure_scale
       REAL_T global_velocity_scale
-      REAL_T gravity
+      REAL_T gravity_vector(AMREX_SPACEDIM)
 
       INTEGER_T num_species_var
       INTEGER_T num_materials_viscoelastic
@@ -142,7 +142,6 @@
       REAL_T fort_damping_coefficient(MAX_NUM_MATERIALS)
       INTEGER_T fort_material_type(MAX_NUM_MATERIALS)
       INTEGER_T fort_ZEYU_DCA_SELECT
-      INTEGER_T gravity_dir,invert_gravity
       INTEGER_T pres_homflag
       INTEGER_T vel_homflag
       INTEGER_T temp_homflag

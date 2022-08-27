@@ -228,9 +228,7 @@ stop
         cctension_T0, &
         cctension_min, &
         ccprefreeze_tension, &
-        ccgravity, &
-        ccgravity_dir, &
-        ccinvert_gravity, &
+        ccgravity_vector, &
         ccstop_time, &
         ccCarreau_alpha, &
         ccCarreau_beta, &
@@ -289,9 +287,7 @@ stop
       INTEGER_T, INTENT(in) :: ccnum_materials
       
       INTEGER_T, INTENT(in) :: ccnten
-      REAL_T, INTENT(in) :: ccgravity
-      INTEGER_T, INTENT(in) :: ccgravity_dir
-      INTEGER_T, INTENT(in) :: ccinvert_gravity
+      REAL_T, INTENT(in) :: ccgravity_vector(SDIM)
       INTEGER_T, INTENT(in) :: ccFSI_flag(ccnum_materials)
       REAL_T, INTENT(in) :: ccdamping_coefficient(ccnum_materials)
       INTEGER_T, INTENT(in) :: ccnum_local_aux_grids
@@ -1531,9 +1527,9 @@ stop
        enddo ! iten=1..2*num_interfaces
       endif
 
-      gravity=ccgravity
-      gravity_dir=ccgravity_dir
-      invert_gravity=ccinvert_gravity
+      do local_dir=1,SDIM
+       gravity_vector(local_dir)=ccgravity_vector(local_dir)
+      enddo
       
        ! in: GLOBALUTIL.F90
       call init_density_at_depth()
@@ -1683,9 +1679,7 @@ stop
         probhix,probhiy,probhiz
        print *,"fort: problenx,y,z ",problenx,probleny,problenz
       
-       if ((gravity_dir.lt.1).or.(gravity_dir.gt.SDIM).or. &
-           (invert_gravity.lt.0).or.(invert_gravity.gt.1).or. &
-           (ls_homflag.lt.0).or.(ls_homflag.gt.1).or. &
+       if ((ls_homflag.lt.0).or.(ls_homflag.gt.1).or. &
            (pres_homflag.lt.0).or.(pres_homflag.gt.1).or. &
            (vel_homflag.lt.0).or.(vel_homflag.gt.1).or. &
            (temp_homflag.lt.0).or.(temp_homflag.gt.1).or. &
@@ -1698,8 +1692,8 @@ stop
         stop
        endif
       
-       print *,"fort:gravity,gravity_dir,invert_gravity ",gravity, &
-        gravity_dir,invert_gravity
+       print *,"fort:gravity(1,..,sdim) ",gravity_vector(1), &
+        gravity_vector(2),gravity_vector(SDIM)
        print *,"fort:pres,vel,temp,spec,ls homflag ",pres_homflag, &
         vel_homflag,temp_homflag,species_homflag,ls_homflag
       
