@@ -1669,7 +1669,7 @@ else if (gravity_vector(SDIM).ne.zero) then
  gravity_dz=x(SDIM)-probhiz
  grav_mag=gravity_vector(SDIM)
 else
- print *,"gravity_dir invalid"
+ print *,"gravity_vector invalid"
  stop
 endif
 PRES=-fort_denconst(1)*abs(grav_mag)*gravity_dz
