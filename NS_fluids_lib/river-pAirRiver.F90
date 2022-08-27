@@ -90,8 +90,9 @@ END SUBROUTINE RiverHeight
 
 
 ! option=0,1,2, ...
-subroutine RiverPressure(x,y,z,t,p,gravity,denair,denwater,option)
-        REAL_T, INTENT(in)  :: x,y,z,t,gravity,denair,denwater
+subroutine RiverPressure(x,y,z,t,p,denair,denwater,option)
+use probcommon_module
+        REAL_T, INTENT(in)  :: x,y,z,t,denair,denwater
         INTEGER_T, INTENT(in)  :: option
         REAL_T, INTENT(out) :: p
         REAL_T h
@@ -104,22 +105,22 @@ subroutine RiverPressure(x,y,z,t,p,gravity,denair,denwater,option)
      endif
      call RiverHeight(x,y,h,option)
      if (z.ge.h) then
-      p=denair*abs(gravity)*(h-z)
+      p=denair*abs(gravity_vector(SDIM))*(h-z)
       if (x.lt.0.0) then
-       p=p+abs(gravity)
+       p=p+abs(gravity_vector(SDIM))
       else if (x.gt.4.0) then
        ! do nothing
       else
-       p=p+(abs(gravity)*((4.0-x)/4.0))
+       p=p+(abs(gravity_vector(SDIM))*((4.0-x)/4.0))
       endif
      else
-      p=denwater*abs(gravity)*(h-z)
+      p=denwater*abs(gravity_vector(SDIM))*(h-z)
       if (x.lt.0.0) then
-       p=p+abs(gravity)
+       p=p+abs(gravity_vector(SDIM))
       else if (x.gt.4.0) then
        ! do nothing
       else
-       p=p+(abs(gravity)*((4.0-x)/4.0))
+       p=p+(abs(gravity_vector(SDIM))*((4.0-x)/4.0))
       endif
      endif
    

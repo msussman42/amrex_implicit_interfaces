@@ -83,12 +83,6 @@ ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = -9.8 # m/s^2
 
-#advection, surface tension, gravity
-#Note: if gravity turned off, then surface tension force can be significantly
-#reduced so that advection and freezing time steps
-#can be used instead (simulation would run 100 times faster, giving similar
-#freezing times?).  
-ns.fixed_dt_scales=0.0 0.0 0.0
 # 12,13,14,23,24,34
 # LG,LI,LS,IG,GS,SI  
 #initial theta_liquid (CL_tensions_from_angles.f):

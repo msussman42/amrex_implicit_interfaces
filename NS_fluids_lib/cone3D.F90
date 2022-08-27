@@ -502,7 +502,7 @@ else
  stop
 endif
 
-PRES=-fort_denconst(1)*abs(gravity)*gravity_dz
+PRES=-fort_denconst(1)*abs(gravity_vector(SDIM))*gravity_dz
 
 return 
 end subroutine CONE3D_PRES

@@ -9970,9 +9970,6 @@ END SUBROUTINE SIMP
 ! centrifugal force:
 ! F=mass r w^2   w units: radians/s   mass r w^2 = kg m/s^2
 !
-! gravity_normalized>0 means that gravity is directed downwards.
-! if invert_gravity==1, then gravity_normalized<0 (pointing upwards)
-
       subroutine fort_init_potential( &
        presden,DIMS(presden), &
        state,DIMS(state), &
@@ -9985,8 +9982,6 @@ END SUBROUTINE SIMP
        domlo,domhi, &
        xlo,dx, &
        dt, &
-       gravity_normalized, &
-       gravity_dir_parm, &
        angular_velocity, &
        isweep) &
       bind(c,name='fort_init_potential')
@@ -9997,10 +9992,8 @@ END SUBROUTINE SIMP
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: gravity_dir_parm
       INTEGER_T, INTENT(in) :: isweep
       REAL_T, INTENT(in) :: dt
-      REAL_T, INTENT(in) :: gravity_normalized  
       REAL_T, INTENT(in) :: angular_velocity
       INTEGER_T, INTENT(in) :: DIMDEC(presden)
       INTEGER_T, INTENT(in) :: DIMDEC(state)
@@ -10037,11 +10030,6 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      if ((gravity_dir_parm.lt.1).or.(gravity_dir_parm.gt.SDIM)) then
-       print *,"gravity dir invalid fort_init_potential"
-       stop
-      endif
-
       presden_ptr=>presden
       state_ptr=>state
       call checkbound_array(fablo,fabhi,presden_ptr,1,-1)
@@ -10054,14 +10042,17 @@ END SUBROUTINE SIMP
        do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
 
+         ! e.g. for gravity force:
+         ! grad p/rho = \vec{g}
+         ! grad p = rho\vec{g}
+         ! p = rho \vec{g} \cdot \vec{x} 
          ! includes centrifugal force but not "coriolis force"
-         ! p=dt( -|g| z + (1/2)Omega^2 r^2 )
+         ! if rho=1,
+         !  p=dt( \vec{g} \cdot \vec{x} + (1/2)Omega^2 r^2 )
          ! general_hydrostatic_pressure_density is declared in:
          !  PROB.F90
         call general_hydrostatic_pressure_density( &
           i,j,k,level, &
-          gravity_normalized, &
-          gravity_dir_parm, &
           angular_velocity, &
           dt, &
           den_cell, &
@@ -10116,11 +10107,9 @@ END SUBROUTINE SIMP
             ! outflow wall
            if (local_bctype.eq.EXT_DIR) then
 
-             ! p=dt( -|g| z + (1/2)Omega^2 r^2 )
+             ! p=dt( \vec{g}\cdot\vec{x} + (1/2)Omega^2 r^2 )
             call general_hydrostatic_pressure_density( &
              i,j,k,level, &
-             gravity_normalized, &
-             gravity_dir_parm, &
              angular_velocity, &
              dt, &
              den_cell,pres_cell, &
@@ -10192,13 +10181,9 @@ END SUBROUTINE SIMP
       end subroutine fort_init_potential
 
 ! NavierStokes3.cpp: NavierStokes::increment_potential_force()
-! gravity_normalized>0 means that gravity is directed downwards.
-! if invert_gravity==1, then gravity_normalized<0 (pointing upwards)
       subroutine fort_addgravity( &
        dt, &
        cur_time, &
-       gravity_normalized, &
-       gravity_dir_parm, &
        angular_velocity, &
        level, &
        finest_level, &
@@ -10220,8 +10205,6 @@ END SUBROUTINE SIMP
 
       REAL_T, INTENT(in) :: dt
       REAL_T, INTENT(in) :: cur_time
-      INTEGER_T, INTENT(in) :: gravity_dir_parm
-      REAL_T, INTENT(in) :: gravity_normalized  
       REAL_T, INTENT(in) :: angular_velocity
       INTEGER_T, INTENT(in) :: level
       INTEGER_T, INTENT(in) :: finest_level
@@ -10280,10 +10263,6 @@ END SUBROUTINE SIMP
       endif
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
-       stop
-      endif
-      if ((gravity_dir_parm.lt.1).or.(gravity_dir_parm.gt.SDIM)) then
-       print *,"gravity dir invalid addgravity"
        stop
       endif
       if (dt.gt.zero) then

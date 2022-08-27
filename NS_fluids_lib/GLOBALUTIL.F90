@@ -1471,7 +1471,7 @@ contains
       endif
 
       thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
-      gravity_local=abs(gravity)
+      gravity_local=abs(gravity_vector(SDIM))
 
       if (mu_w.eq.viscosity_molecular) then
        ! do nothing
@@ -23662,13 +23662,13 @@ else if ((probtype.eq.46).and.(SDIM.eq.2)) then
  endif
 else if (fort_material_type(1).eq.13) then
 
- if (abs(gravity).eq.zero) then
-  print *,"gravity invalid"
+ if (abs(gravity_vector(SDIM)).eq.zero) then
+  print *,"gravity_vector(SDIM) invalid"
   stop
  endif
 
  if (1.eq.0) then
-  print *,"abs(gravity)= ",abs(gravity)
+  print *,"abs(gravity_vector(SDIM))= ",abs(gravity_vector(SDIM))
   print *,"denconst(1)= ",fort_denconst(1)
  endif
 
@@ -23697,29 +23697,29 @@ else if (fort_material_type(1).eq.13) then
  call EOS_tait_ADIABATIC_rhohydro(surface_den,surface_pressure)
  call EOS_tait_ADIABATIC_rhohydro(depth_den,depth_pressure)
  pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
- do while (pgrad.le.abs(gravity))
+ do while (pgrad.le.abs(gravity_vector(SDIM)))
   depth_den=two*depth_den
   call EOS_tait_ADIABATIC_rhohydro(depth_den,depth_pressure)
   pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
   if (1.eq.0) then
    print *,"depth_den,pgrad ",depth_den,pgrad
   endif
- enddo ! while (pgrad.le.abs(gravity))
+ enddo ! while (pgrad.le.abs(gravity_vector(SDIM)))
  a=surface_den
  b=depth_den
  c=half*(surface_den+depth_den)
  call EOS_tait_ADIABATIC_rhohydro(c,depth_pressure)
  pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
- tol=abs(gravity)*1.0D-3
- do while (abs(pgrad-abs(gravity)).gt.tol)
+ tol=abs(gravity_vector(SDIM))*1.0D-3
+ do while (abs(pgrad-abs(gravity_vector(SDIM))).gt.tol)
   if (1.eq.0) then
    print *,"a,b,c ",a,b,c
    print *,"pgrad ",pgrad
   endif
-  if (pgrad.gt.abs(gravity)) then
+  if (pgrad.gt.abs(gravity_vector(SDIM))) then
    b=c
    c=half*(a+b)
-  else if (pgrad.lt.abs(gravity)) then
+  else if (pgrad.lt.abs(gravity_vector(SDIM))) then
    a=c
    c=half*(a+b)
   else

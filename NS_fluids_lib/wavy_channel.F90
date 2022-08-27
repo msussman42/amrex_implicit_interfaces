@@ -570,7 +570,7 @@ else
 endif
 
 if (axis_dir.eq.0) then ! wavy channel
- PRES=-fort_denconst(1)*abs(gravity)*gravity_dz
+ PRES=-fort_denconst(1)*abs(gravity_vector(SDIM))*gravity_dz
 else if (axis_dir.eq.1) then ! Tomas
  PRES=zero
 else

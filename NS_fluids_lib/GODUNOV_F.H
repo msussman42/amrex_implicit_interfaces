@@ -416,8 +416,6 @@ extern "C"
    void fort_estdt(
       int* interface_mass_transfer_model,
       int* tid,
-      int* n_scales,
-      Real* fixed_dt_scales,
       int* enable_spectral,
       Real* AMR_min_phase_change_rate,
       Real* AMR_max_phase_change_rate,
@@ -452,7 +450,6 @@ extern "C"
       int* rzflag,
       Real* denconst,
       Real* visc_coef,
-      Real* ns_gravity,
       Real* gravity_reference_wavelen_in,
       int* dir,
       int* nparts,
@@ -836,7 +833,6 @@ extern "C"
      Real* momden,AMREX_ARLIM_P(momdenlo),AMREX_ARLIM_P(momdenhi), 
      Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi), 
      const Real* xlo,const Real* dx,
-     Real* gravity_normalized,
      Real* DrhoDT,
      int* override_density,
      int* level,int* finest_level);

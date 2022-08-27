@@ -1828,8 +1828,6 @@ stop
        ! NavierStokes::GetDrag is called from
        !  NavierStokes::volWgtSumALL
        ! fort_getdrag is called from NavierStokes::GetDrag
-       ! gravity_normalized>0 if pointing downwards
-       ! 1<=gravity_dir<=dim
        ! see DRAG_COMP.H
       subroutine fort_getdrag( &
        tid, &
@@ -1839,8 +1837,6 @@ stop
        globalsum, &
        globalsum_sweep, &
        localsum, &
-       gravity_normalized, &
-       gravdir, &
        tdata,DIMS(tdata), &  ! grad U (CELLTENSOR_MF)
        viscoten,DIMS(viscoten), &  ! viscoelastic configuration tensor
        den,DIMS(den), & 
@@ -1894,8 +1890,6 @@ stop
       REAL_T, INTENT(in) :: globalsum(N_DRAG_IQ)
       INTEGER_T, INTENT(in) :: globalsum_sweep(N_DRAG_IQ)
       REAL_T, INTENT(inout) :: localsum(N_DRAG_IQ)
-      REAL_T, INTENT(in) :: gravity_normalized
-      INTEGER_T, INTENT(in) :: gravdir
       REAL_T, INTENT(in) :: visc_coef
       INTEGER_T, INTENT(in) :: rzflag
       REAL_T, INTENT(in) :: time
@@ -2183,10 +2177,6 @@ stop
        print *,"isweep invalid"
        stop
       endif
-      if ((gravdir.lt.1).or.(gravdir.gt.SDIM)) then
-       print *,"gravdir invalid"
-       stop
-      endif
       if (ENUM_NUM_TENSOR_TYPE.ne.2*SDIM) then
        print *,"ENUM_NUM_TENSOR_TYPE invalid"
        stop
@@ -2359,11 +2349,10 @@ stop
           endif
           mass=local_density*volgrid*mofdata_tess(vofcomp)
           do dir=1,SDIM
-           gravvector(dir)=zero
+           gravvector(dir)=mass*gravity_vector(dir)
            rvec(dir)=mofdata_tess(vofcomp+dir)+ &
             cengrid(dir)-global_centroid(dir)
           enddo
-          gravvector(gravdir)=-mass*gravity_normalized
           if (SDIM.eq.2) then
            rvec(3)=zero
            gravvector(3)=zero
