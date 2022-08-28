@@ -1642,6 +1642,7 @@ end subroutine CAVITY_PHASE_CHANGE_VEL
 
 subroutine CAVITY_PHASE_CHANGE_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: nmat
@@ -1649,7 +1650,8 @@ REAL_T, INTENT(in) :: x(SDIM)
 REAL_T, INTENT(in) :: t
 REAL_T, INTENT(in) :: LS(nmat)
 REAL_T, INTENT(out) :: PRES
-REAL_T :: gravity_dz,grav_mag
+INTEGER_T :: gravity_dir
+REAL_T :: gravity_dz
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -1659,20 +1661,19 @@ else
 endif
 PRES=zero
 
-if (gravity_vector(1).ne.zero) then
- gravity_dz=x(1)-probhix
- grav_mag=gravity_vector(1)
-else if (gravity_vector(2).ne.zero) then
- gravity_dz=x(2)-probhiy
- grav_mag=gravity_vector(2)
-else if (gravity_vector(SDIM).ne.zero) then
- gravity_dz=x(SDIM)-probhiz
- grav_mag=gravity_vector(SDIM)
+call fort_derive_gravity_dir(gravity_vector,gravity_dir)
+
+if (gravity_dir.eq.1) then
+ gravity_dz=x(gravity_dir)-probhix
+else if (gravity_dir.eq.2) then
+ gravity_dz=x(gravity_dir)-probhiy
+else if ((gravity_dir.eq.SDIM).and.(SDIM.eq.3)) then
+ gravity_dz=x(gravity_dir)-probhiz
 else
- print *,"gravity_vector invalid"
+ print *,"gravity_dir invalid"
  stop
 endif
-PRES=-fort_denconst(1)*abs(grav_mag)*gravity_dz
+PRES=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*gravity_dz
 
 return 
 end subroutine CAVITY_PHASE_CHANGE_PRES

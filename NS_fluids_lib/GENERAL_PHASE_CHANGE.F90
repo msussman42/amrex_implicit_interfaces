@@ -301,6 +301,9 @@ REAL_T :: dist_gas,dist_liquid,dist_ice,dist_liq2,distsolid
 INTEGER_T :: im
 INTEGER_T :: im_solid_materialdist
 REAL_T :: initial_time
+INTEGER_T :: gravity_dir
+
+  call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -381,23 +384,23 @@ REAL_T :: initial_time
     if (radblob10.gt.zero) then
      if ((nmat.eq.4).and.(im_solid_materialdist.eq.nmat)) then
      
-      if (gravity_vector(1).ne.zero) then
+      if (gravity_dir.eq.1) then
        if (radblob10.lt.problenx) then 
-        LS(3)=x(1)-(probhix-radblob10)
+        LS(3)=x(gravity_dir)-(probhix-radblob10)
        else
         print *,"radblob10 invalid"
         stop
        endif
-      else if (gravity_vector(2).ne.zero) then
+      else if (gravity_dir.eq.2) then
        if (radblob10.lt.probleny) then 
-        LS(3)=x(2)-(probhiy-radblob10)
+        LS(3)=x(gravity_dir)-(probhiy-radblob10)
        else
         print *,"radblob10 invalid"
         stop
        endif
-      else if ((gravity_vector(SDIM).ne.zero).and.(SDIM.eq.3)) then
+      else if ((gravity_dir.eq.SDIM).and.(SDIM.eq.3)) then
        if (radblob10.lt.problenz) then 
-        LS(3)=x(SDIM)-(probhiz-radblob10)
+        LS(3)=x(gravity_dir)-(probhiz-radblob10)
        else
         print *,"radblob10 invalid"
         stop
@@ -1026,7 +1029,8 @@ REAL_T, INTENT(in) :: PRES_in
 INTEGER_T, INTENT(in) :: dir,side
 REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T base_pres
-REAL_T gravity_dz
+REAL_T    :: gravity_dz
+INTEGER_T :: gravity_dir
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1035,17 +1039,19 @@ else
  stop
 endif
 
+call fort_derive_gravity_dir(gravity_vector,gravity_dir)
+
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
 
- if (gravity_vector(1).ne.zero) then
-  gravity_dz=xghost(1)-probhix
- else if (gravity_vector(2).ne.zero) then
-  gravity_dz=xghost(2)-probhiy
- else if ((gravity_vector(SDIM).ne.zero).and.(SDIM.eq.3)) then
-  gravity_dz=xghost(SDIM)-probhiz
+ if (gravity_dir.eq.1) then
+  gravity_dz=xghost(gravity_dir)-probhix
+ else if (gravity_dir.eq.2) then
+  gravity_dz=xghost(gravity_dir)-probhiy
+ else if ((gravity_dir.eq.SDIM).and.(SDIM.eq.3)) then
+  gravity_dz=xghost(gravity_dir)-probhiz
  else
-  print *,"gravity_vector invalid"
+  print *,"gravity_dir invalid"
   stop
  endif
  call GENERAL_PHASE_CHANGE_PRES(xghost,t,LS,PRES,nmat)

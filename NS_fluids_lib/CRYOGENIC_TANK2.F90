@@ -523,6 +523,7 @@ end subroutine TEMPERATURE_CRYOGENIC_TANK2
 ! might be called at initialization, so put a placeholder pressure here.
 subroutine CRYOGENIC_TANK2_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: nmat
@@ -530,6 +531,7 @@ REAL_T, INTENT(in) :: x(SDIM)
 REAL_T, INTENT(in) :: t
 REAL_T, INTENT(in) :: LS(nmat)
 REAL_T, INTENT(out) :: PRES
+INTEGER_T gravity_dir
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -540,12 +542,14 @@ endif
 
 !PRES=TANK2_INITIAL_GAS_PRESSURE 
 
+ call fort_derive_gravity_dir(gravity_vector,gravity_dir)
+
  if (x(2).ge.TANK2_LIQUID_HEIGHT) then
   PRES=TANK2_INITIAL_PRESSURE
  elseif (x(2).lt.TANK2_LIQUID_HEIGHT) then
   PRES=TANK2_INITIAL_PRESSURE +&
     fort_denconst(1)*(TANK2_LIQUID_HEIGHT-x(2))* &
-    (abs(gravity_vector(SDIM)))
+    (abs(gravity_vector(gravity_dir)))
  else
   print *,"x(2) is invalid in CRYOGENIC_TANK2_PRES!"
   stop

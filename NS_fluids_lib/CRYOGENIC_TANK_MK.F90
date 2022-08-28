@@ -1380,14 +1380,18 @@ end subroutine TEMPERATURE_CRYOGENIC_TANK_MK
 ! might be called at initialization, so put a placeholder pressure here.
 subroutine CRYOGENIC_TANK_MK_PRES_UTIL(x,PRES,rho_hyd)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 REAL_T, INTENT(in) :: x(SDIM)
 REAL_T, INTENT(out) :: PRES
 REAL_T, INTENT(out) :: rho_hyd
 INTEGER_T simple_hyd_p
+INTEGER_T gravity_dir
 
 simple_hyd_p=1
+
+call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 
 !PRES=TANK_MK_INITIAL_GAS_PRESSURE
 if(fort_material_type(2).eq.0) then
@@ -1401,13 +1405,13 @@ if(fort_material_type(2).eq.0) then
   if (x(dir_z).ge.TANK_MK_INTERFACE_LOCATION) then
    PRES=TANK_MK_INITIAL_PRESSURE+&
        fort_denconst(2)*(TANK_MK_HEIGHT/two-x(dir_z))* &
-       (abs(gravity_vector(dir_z))) 
+       (abs(gravity_vector(gravity_dir))) 
   elseif (x(dir_z).lt.TANK_MK_INTERFACE_LOCATION) then
    PRES=TANK_MK_INITIAL_PRESSURE+&
        fort_denconst(2)*(TANK_MK_HEIGHT/two-TANK_MK_INTERFACE_LOCATION)* &
-       (abs(gravity_vector(dir_z)))+ &
+       (abs(gravity_vector(gravity_dir)))+ &
        fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(dir_z))* &
-       (abs(gravity_vector(dir_z)))
+       (abs(gravity_vector(gravity_dir)))
   else
    print *,"x(dir_z) is invalid in CRYOGENIC_TANK_MK_PRES!"
    stop
@@ -1415,7 +1419,7 @@ if(fort_material_type(2).eq.0) then
 
  else if (simple_hyd_p.eq.1) then
   rho_hyd=fort_denconst(1)
-  PRES=-abs(gravity_vector(dir_z))*rho_hyd*(x(dir_z)-probhiy-probhiy)
+  PRES=-abs(gravity_vector(gravity_dir))*rho_hyd*(x(dir_z)-probhiy-probhiy)
  else
   print *,"simple_hyd_p invalid"
   stop
@@ -1428,15 +1432,15 @@ elseif (fort_material_type(2).eq.TANK_MK_MATERIAL_TYPE) then
  if (x(dir_z).ge.TANK_MK_INTERFACE_LOCATION) then
   PRES=TANK_MK_INITIAL_PRESSURE*&
        exp((TANK_MK_END_CENTER+TANK_MK_END_RADIUS-x(dir_z))* &
-       abs(gravity_vector(dir_z))/&
+       abs(gravity_vector(gravity_dir))/&
            (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2)))
  elseif (x(dir_z).lt.TANK_MK_INTERFACE_LOCATION) then
   PRES=TANK_MK_INITIAL_PRESSURE*&
        exp((TANK_MK_END_CENTER+TANK_MK_END_RADIUS-TANK_MK_INTERFACE_LOCATION)*&
-            abs(gravity_vector(dir_z))/&
+            abs(gravity_vector(gravity_dir))/&
            (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2)))+&
        fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(dir_z))* &
-                        (abs(gravity_vector(dir_z)))
+                        (abs(gravity_vector(gravity_dir)))
  else
   print *,"x(dir_z) is invalid in CRYOGENIC_TANK_MK_PRES!"
   stop
@@ -2317,7 +2321,9 @@ REAL_T, INTENT(in) :: nrm(SDIM) ! nrm points from solid to fluid
 REAL_T, INTENT(inout) :: thermal_k
 REAL_T :: Ra,Gr,Pr,psi,alpha
 REAL_T :: mu_w,rho_w,nu,thermal_conductivity,Cp,xi,R,thermal_diffusivity
-REAL_T :: gravity_local,expansion_coefficient
+REAL_T :: gravity_local
+INTEGER_T :: gravity_dir
+REAL_T :: expansion_coefficient
 INTEGER_T :: turb_flag
 
 REAL_T :: LS_A
@@ -2326,6 +2332,8 @@ REAL_T :: r_cyl
 REAL_T :: x3D(3)
 INTEGER_T auxcomp
 
+
+ call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 
  x3D(1)=x(dir_x)
  x3D(2)=x(dir_z)
@@ -2437,7 +2445,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
         (near_interface.eq.1).and. &
         (temperature_wall_max.gt.temperature_probe)) then
      thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
-     gravity_local=abs(gravity_vector(SDIM))
+     gravity_local=abs(gravity_vector(gravity_dir))
 
      call SUB_UNITLESS_EXPANSION_FACTOR(im,temperature_wall_max, &
        temperature_probe,expansion_coefficient)
@@ -2572,6 +2580,7 @@ subroutine wallfunc_thermocorrelation( &
   im_fluid, &  ! INTENT(in)
   critical_length) ! INTENT(in) used for sanity check
 use probcommon_module
+use global_utility_module
 implicit none
 INTEGER_T, INTENT(in) :: dir ! 1,2,3
 INTEGER_T, INTENT(in) :: data_dir ! 0,1,2
@@ -2599,6 +2608,7 @@ REAL_T :: mu_w  !mu_w: wall molecular viscosity
 REAL_T :: thermal_conductivity
 REAL_T :: thermal_diffusivity
 REAL_T :: gravity_local
+INTEGER_T :: gravity_dir
 REAL_T :: expansion_coefficient
 REAL_T :: Cp
 REAL_T :: Jtemp,Jtemp_no_area,dtemp,vtemp
@@ -2609,6 +2619,8 @@ REAL_T :: nu
 REAL_T :: xi
 REAL_T :: R
 REAL_T :: macro_scale_thickness
+
+call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 
 if ((im_fluid.lt.1).or.(im_fluid.gt.num_materials)) then
  print *,"im_fluid invalid in wallfunc_thermocorrelation"
@@ -2712,7 +2724,7 @@ if ((xi.gt.0.0d0).and. &
     (n_raster(1).eq.one)) then
 
  thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
- gravity_local=abs(gravity_vector(SDIM))
+ gravity_local=abs(gravity_vector(gravity_dir))
  Pr=nu/thermal_diffusivity
 
  call SUB_UNITLESS_EXPANSION_FACTOR(im_fluid,temperature_wall_max, &
