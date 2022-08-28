@@ -2738,8 +2738,8 @@ NavierStokes::read_params ()
      std::cout << "include_viscous_heating " << include_viscous_heating << '\n';
 
      std::cout << "gravity_vector 0..sdim-1: " << 
-       gravity_vector[0] << 
-       gravity_vector[1] <<
+       gravity_vector[0] << ' ' <<
+       gravity_vector[1] << ' ' <<
        gravity_vector[AMREX_SPACEDIM-1] << '\n';
      std::cout << "gravity_reference_wavelen " << 
 	  gravity_reference_wavelen << '\n';
