@@ -2023,7 +2023,9 @@ stop
       REAL_T volgrid,mass,local_density
       REAL_T cengrid(SDIM)
       REAL_T global_centroid(SDIM)
-      REAL_T rvec(3),gravvector(3),rcross(3)
+      REAL_T rvec(3)
+      REAL_T gravvector(3)
+      REAL_T rcross(3)
       REAL_T pressure_rcross(3)
       REAL_T viscous0_rcross(3)
       REAL_T viscous_rcross(3)

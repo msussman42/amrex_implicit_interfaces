@@ -615,6 +615,7 @@ end function GAMMA_MIX
 ! might be called at initialization, so put a placeholder pressure here.
 subroutine CRYOGENIC_TANK1_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: nmat
@@ -622,6 +623,7 @@ REAL_T, INTENT(in) :: x(SDIM)
 REAL_T, INTENT(in) :: t
 REAL_T, INTENT(in) :: LS(nmat)
 REAL_T, INTENT(out) :: PRES
+INTEGER_T gravity_dir
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -632,12 +634,14 @@ endif
 
 !PRES=TANK1_INITIAL_GAS_PRESSURE 
 
+ call fort_derive_gravity_dir(gravity_vector,gravity_dir)
+
  if (x(2).ge.TANK1_LIQUID_HEIGHT) then
   PRES=TANK1_INITIAL_MIX_PRESSURE
  elseif (x(2).lt.TANK1_LIQUID_HEIGHT) then
   PRES=TANK1_INITIAL_MIX_PRESSURE +&
     fort_denconst(1)*(TANK1_LIQUID_HEIGHT-x(2))* &
-    (abs(gravity_vector(SDIM)))
+    (abs(gravity_vector(gravity_dir)))
  else
   print *,"x(2) is invalid in CRYOGENIC_TANK1_PRES!"
   stop

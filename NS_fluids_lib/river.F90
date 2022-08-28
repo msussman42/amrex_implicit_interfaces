@@ -92,45 +92,49 @@ END SUBROUTINE RiverHeight
 ! option=0,1,2, ...
 subroutine RiverPressure(x,y,z,t,p,denair,denwater,option)
 use probcommon_module
-        REAL_T, INTENT(in)  :: x,y,z,t,denair,denwater
-        INTEGER_T, INTENT(in)  :: option
-        REAL_T, INTENT(out) :: p
-        REAL_T h
+use global_utility_module
+REAL_T, INTENT(in)  :: x,y,z,t,denair,denwater
+INTEGER_T, INTENT(in)  :: option
+REAL_T, INTENT(out) :: p
+REAL_T h
+INTEGER_T :: gravity_dir
 
-     if (SDIM.eq.2) then
-      if (abs(z-y).gt.1.0E-8) then
-       print *,"expecting z=y"
-       stop
-      endif
-     endif
-     call RiverHeight(x,y,h,option)
-     if (z.ge.h) then
+ call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 
-      p=denair*abs(gravity_vector(SDIM))*(h-z)
+ if (SDIM.eq.2) then
+  if (abs(z-y).gt.1.0E-8) then
+   print *,"expecting z=y"
+   stop
+  endif
+ endif
+ call RiverHeight(x,y,h,option)
+ if (z.ge.h) then
 
-      if (1.eq.1) then
-       if (x.lt.0.0) then
-        p=p+abs(gravity_vector(SDIM))
-       else if (x.gt.4.0) then
-        ! do nothing
-       else
-        p=p+(abs(gravity_vector(SDIM))*((4.0-x)/4.0))
-       endif
-      endif
-     else
+  p=denair*abs(gravity_vector(gravity_dir))*(h-z)
 
-      p=denwater*abs(gravity_vector(SDIM))*(h-z)
+  if (1.eq.1) then
+   if (x.lt.0.0) then
+    p=p+abs(gravity_vector(gravity_dir))
+   else if (x.gt.4.0) then
+    ! do nothing
+   else
+    p=p+(abs(gravity_vector(gravity_dir))*((4.0-x)/4.0))
+   endif
+  endif
+ else
 
-      if (1.eq.1) then
-       if (x.lt.0.0) then
-        p=p+abs(gravity_vector(SDIM))
-       else if (x.gt.4.0) then
-        ! do nothing
-       else
-        p=p+(abs(gravity_vector(SDIM))*((4.0-x)/4.0))
-       endif
-      endif
-     endif
+  p=denwater*abs(gravity_vector(gravity_dir))*(h-z)
+
+  if (1.eq.1) then
+   if (x.lt.0.0) then
+    p=p+abs(gravity_vector(gravity_dir))
+   else if (x.gt.4.0) then
+    ! do nothing
+   else
+    p=p+(abs(gravity_vector(gravity_dir))*((4.0-x)/4.0))
+   endif
+  endif
+ endif
    
 end subroutine RiverPressure
 

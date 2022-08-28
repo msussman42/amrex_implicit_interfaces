@@ -476,6 +476,7 @@ end subroutine CONE3D_VEL
   !****************************************************
 subroutine CONE3D_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: nmat
@@ -483,26 +484,23 @@ REAL_T, INTENT(in) :: x(SDIM)
 REAL_T, INTENT(in) :: t
 REAL_T, INTENT(in) :: LS(nmat)
 REAL_T, INTENT(out) :: PRES
-
+INTEGER_T gravity_dir
 REAL_T gravity_dz
 
-if (SDIM.eq.2) then
- gravity_dz=x(SDIM)-probhiy
-else if (SDIM.eq.3) then
- if (1.eq.0) then
-  gravity_dz=x(SDIM)-probhiz
- else if (1.eq.1) then
-  gravity_dz=x(2)-probhiy
- else
-  print *,"do not know what the gravity orientation is"
-  stop
- endif
+call fort_derive_gravity_dir(gravity_vector,gravity_dir)
+
+if (gravity_dir.eq.1) then
+ gravity_dz=x(gravity_dir)-probhix
+else if (gravity_dir.eq.2) then
+ gravity_dz=x(gravity_dir)-probhiy
+else if ((gravity_dir.eq.3).and.(SDIM.eq.3)) then
+ gravity_dz=x(gravity_dir)-probhiz
 else
- print *,"dimension bust"
+ print *,"gravity_dir invalid"
  stop
 endif
 
-PRES=-fort_denconst(1)*abs(gravity_vector(SDIM))*gravity_dz
+PRES=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*gravity_dz
 
 return 
 end subroutine CONE3D_PRES

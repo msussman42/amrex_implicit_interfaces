@@ -2684,13 +2684,19 @@ NavierStokes::read_params ()
     int gravity_max_index=0;
     fort_derive_gravity_dir(gravity_vector.dataPtr(),&gravity_max_index);
 
-    for (int local_dir=0;local_dir<AMREX_SPACEDIM;local_dir++) {
-     if (local_dir!=gravity_max_index) {
-      gravity_reference_wavelen_default=
-       std::max(gravity_reference_wavelen_default,
-        geometry_prob_hi[local_dir]-geometry_prob_lo[local_dir]);
-     }
-    } //local_dir
+    if ((gravity_max_index>=1)&&
+        (gravity_max_index<=AMREX_SPACEDIM)) {
+
+     for (int local_dir=0;local_dir<AMREX_SPACEDIM;local_dir++) {
+      if (local_dir+1!=gravity_max_index) {
+       gravity_reference_wavelen_default=
+        std::max(gravity_reference_wavelen_default,
+         geometry_prob_hi[local_dir]-geometry_prob_lo[local_dir]);
+      }
+     } //local_dir=0 ... sdim-1
+
+    } else
+     amrex::Error("gravity_max_index invalid");
 
     if (gravity_reference_wavelen_default>0.0) {
      gravity_reference_wavelen=gravity_reference_wavelen_default;

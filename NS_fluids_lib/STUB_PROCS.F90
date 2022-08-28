@@ -1393,22 +1393,18 @@ end subroutine STUB_K_EFFECTIVE
 
 subroutine STUB_reference_wavelen(wavelen)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 REAL_T, INTENT(inout) :: wavelen
 REAL_T :: default_wavelen
 INTEGER_T :: dir_local
-INTEGER_T :: dir_crit
+INTEGER_T :: gravity_dir
 
- dir_crit=1
- do dir_local=2,SDIM
-  if (abs(gravity_vector(dir_local)).gt. &
-      abs(gravity_vector(dir_crit))) then
-   dir_crit=dir_local
-  endif
- enddo 
+ call fort_derive_gravity_dir(gravity_vector,gravity_dir)
+
  default_wavelen=zero
  do dir_local=1,SDIM
-  if (dir_crit.ne.dir_local) then
+  if (gravity_dir.ne.dir_local) then
    default_wavelen=max(default_wavelen,problen_array(dir_local))
   endif
  enddo

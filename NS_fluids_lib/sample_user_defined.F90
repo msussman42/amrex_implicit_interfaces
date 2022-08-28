@@ -96,24 +96,30 @@ contains
 
  subroutine USERDEF_PRES(x,t,LS,PRES)
  use probcommon_module
+ use global_utility_module
  IMPLICIT NONE
 
  REAL_T x(SDIM)
  REAL_T t
  REAL_T LS(num_materials)
  REAL_T PRES
- REAL_T gravity_dz
+ REAL_T :: gravity_dz
+ INTEGER_T :: gravity_dir
 
- if (SDIM.eq.2) then
-  gravity_dz=x(SDIM)-probhiy
- else if (SDIM.eq.3) then
-  gravity_dz=x(SDIM)-probhiz
+ call fort_derive_gravity_dir(gravity_vector,gravity_dir)
+
+ if (gravity_dir.eq.1) then
+  gravity_dz=x(gravity_dir)-probhix
+ else if (gravity_dir.eq.2) then
+  gravity_dz=x(gravity_dir)-probhiy
+ else if ((gravity_dir.eq.SDIM).and.(SDIM.eq.3)) then
+  gravity_dz=x(gravity_dir)-probhiz
  else
   print *,"dimension bust"
   stop
  endif
 
- PRES=-fort_denconst(1)*abs(gravity_vector(SDIM))*gravity_dz
+ PRES=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*gravity_dz
 
  return 
  end subroutine USERDEF_PRES
