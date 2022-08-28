@@ -40,6 +40,8 @@ extern "C"
 
    void fort_check_operation_flag_MAC(int* operation_flag);
 
+   void fort_derive_gravity_dir(Real* gravity_vector_in,int* gravity_dir);
+
 }
 
 }/* namespace amrex */

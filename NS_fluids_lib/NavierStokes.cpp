@@ -2682,11 +2682,7 @@ NavierStokes::read_params ()
     Real gravity_reference_wavelen_default=0.0;
 
     int gravity_max_index=0;
-    for (int local_dir=1;local_dir<AMREX_SPACEDIM;local_dir++) {
-     if (std::abs(gravity_vector[local_dir])>
-         std::abs(gravity_vector[gravity_max_index]))
-      gravity_max_index=local_dir;
-    }
+    fort_derive_gravity_dir(gravity_vector.dataPtr(),&gravity_max_index);
 
     for (int local_dir=0;local_dir<AMREX_SPACEDIM;local_dir++) {
      if (local_dir!=gravity_max_index) {

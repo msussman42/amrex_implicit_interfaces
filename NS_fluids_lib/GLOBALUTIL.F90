@@ -1428,7 +1428,6 @@ contains
       REAL_T :: ughost_tngt_mag
       REAL_T :: thermal_conductivity
       REAL_T :: thermal_diffusivity
-      REAL_T :: gravity_local
       REAL_T :: Cp
       REAL_T :: u_abs
 
@@ -1471,7 +1470,6 @@ contains
       endif
 
       thermal_diffusivity=thermal_conductivity/(rho_w*Cp)
-      gravity_local=abs(gravity_vector(SDIM))
 
       if (mu_w.eq.viscosity_molecular) then
        ! do nothing
@@ -7973,6 +7971,44 @@ end subroutine print_visual_descriptor
 
       return
       end subroutine cramers_rule
+
+      subroutine fort_derive_gravity_dir(gravity_vector_in,gravity_dir) &
+      bind(c,name='fort_derive_gravity_dir')
+      IMPLICIT NONE
+
+      REAL_T, INTENT(in) :: gravity_vector_in(SDIM)
+      INTEGER_T, INTENT(out)  :: gravity_dir
+      INTEGER_T :: dir
+
+      gravity_dir=1
+      do dir=2,SDIM
+       if (abs(gravity_vector_in(dir)).gt. &
+           abs(gravity_vector_in(gravity_dir))) then
+        gravity_dir=dir
+       else if (abs(gravity_vector_in(dir)).le. &
+                abs(gravity_vector_in(gravity_dir))) then
+        !do nothing
+       else
+        print *,"gravity_vector_in invalid"
+        stop
+       endif
+      enddo !dir==2..sdim
+
+      return
+      end subroutine fort_derive_gravity_dir
+
+      subroutine fort_derive_gravity(gravity_vector_in,gravity) 
+      IMPLICIT NONE
+
+      REAL_T, INTENT(in) :: gravity_vector_in(SDIM)
+      REAL_T, INTENT(out)  :: gravity
+      INTEGER_T :: gravity_dir
+
+      call fort_derive_gravity_dir(gravity_vector_in,gravity_dir)
+      gravity=gravity_vector_in(gravity_dir)
+
+      return
+      end subroutine fort_derive_gravity
 
       subroutine fort_check_operation_flag_MAC(operation_flag) &
       bind(c,name='fort_check_operation_flag_MAC')
@@ -23641,7 +23677,9 @@ IMPLICIT NONE
 REAL_T depth,pgrad,a,b,c,tol
 REAL_T surface_den,depth_den
 REAL_T surface_pressure,depth_pressure
+REAL_T gravity
 
+call fort_derive_gravity(gravity_vector,gravity)
 
 density_at_depth=one
 
@@ -23662,13 +23700,12 @@ else if ((probtype.eq.46).and.(SDIM.eq.2)) then
  endif
 else if (fort_material_type(1).eq.13) then
 
- if (abs(gravity_vector(SDIM)).eq.zero) then
-  print *,"gravity_vector(SDIM) invalid"
+ if (abs(gravity).eq.zero) then
+  print *,"gravity invalid"
   stop
  endif
 
  if (1.eq.0) then
-  print *,"abs(gravity_vector(SDIM))= ",abs(gravity_vector(SDIM))
   print *,"denconst(1)= ",fort_denconst(1)
  endif
 
@@ -23697,29 +23734,29 @@ else if (fort_material_type(1).eq.13) then
  call EOS_tait_ADIABATIC_rhohydro(surface_den,surface_pressure)
  call EOS_tait_ADIABATIC_rhohydro(depth_den,depth_pressure)
  pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
- do while (pgrad.le.abs(gravity_vector(SDIM)))
+ do while (pgrad.le.abs(gravity))
   depth_den=two*depth_den
   call EOS_tait_ADIABATIC_rhohydro(depth_den,depth_pressure)
   pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
   if (1.eq.0) then
    print *,"depth_den,pgrad ",depth_den,pgrad
   endif
- enddo ! while (pgrad.le.abs(gravity_vector(SDIM)))
+ enddo ! while (pgrad.le.abs(gravity))
  a=surface_den
  b=depth_den
  c=half*(surface_den+depth_den)
  call EOS_tait_ADIABATIC_rhohydro(c,depth_pressure)
  pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
- tol=abs(gravity_vector(SDIM))*1.0D-3
- do while (abs(pgrad-abs(gravity_vector(SDIM))).gt.tol)
+ tol=abs(gravity)*1.0D-3
+ do while (abs(pgrad-abs(gravity)).gt.tol)
   if (1.eq.0) then
    print *,"a,b,c ",a,b,c
    print *,"pgrad ",pgrad
   endif
-  if (pgrad.gt.abs(gravity_vector(SDIM))) then
+  if (pgrad.gt.abs(gravity)) then
    b=c
    c=half*(a+b)
-  else if (pgrad.lt.abs(gravity_vector(SDIM))) then
+  else if (pgrad.lt.abs(gravity)) then
    a=c
    c=half*(a+b)
   else
@@ -25704,7 +25741,8 @@ real*8 SSflux(0:ncell)
 real*8 QQflux(0:ncell)
 real*8 start_elevation
 integer skip,nstep,i
-real*8 local_gravity,time
+real*8 local_gravity
+real*8 time
 real*8 elevation_right,elevation_left,u_right,u_left
 real*8 maxu,maxc,den,mom,uu,cc,dt,lambda
 real*8 denleft,denright,momleft,momright,pleft,pright
@@ -25721,8 +25759,8 @@ delta_x_grid=(probhi-problo)/SHALLOW_N
 
 skip=2000
 
-local_gravity=980.0
-start_elevation=22.862
+local_gravity=980.0d0
+start_elevation=22.862d0
 
 time=0.0
 nstep=0
