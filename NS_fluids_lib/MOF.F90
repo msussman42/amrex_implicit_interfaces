@@ -10591,7 +10591,72 @@ contains
       REAL_T, INTENT(in) :: angle_recon(sdim-1)
       REAL_T, INTENT(out) :: angle_init(sdim-1)
 
+      INTEGER_T fastflag
+      INTEGER_T use_initial_guess
+      REAL_T intercept_init
+      INTEGER_T use_MilcentLemoine
+      INTEGER_T tid
 
+      tid=0
+
+      fastflag=1
+      use_initial_guess=0
+      intercept_init=0.0d0
+
+      if (continuous_mof.eq.0) then
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
+        use_MilcentLemoine=1
+       else if ((levelrz.eq.COORDSYS_RZ).or. &
+                (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+        use_MilcentLemoine=0
+       else
+        print *,"fastflag,continuous_mof, or levelrz invalid"
+        stop
+       endif
+      else if (continuous_mof.eq.2) then
+       use_MilcentLemoine=0
+      else
+       print *,"fastflag,continuous_mof, or levelrz invalid"
+       stop
+      endif
+      if (nhalf0.lt.1) then
+       print *,"nhalf0 invalid"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid135"
+       stop
+      endif
+      if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
+       ! do nothing
+      else
+       print *,"nlist_alloc invalid"
+       stop
+      endif
+      if ((MOFITERMAX.lt.num_materials+3).or.(MOFITERMAX.gt.50)) then
+       print *,"MOFITERMAX out of range find_angle_init_from_angle ..."
+       stop
+      endif
+      if ((sdim.ne.3).and.(sdim.ne.2)) then
+       print *,"sdim invalid find_cut_geom_slope"
+       stop
+      endif 
+      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
+       print *,"num_materials invalid find cut geom slope"
+       stop
+      endif
+      if ((critical_material.lt.1).or.(critical_material.gt.num_materials)) then
+       print *,"critical_material invalid"
+       stop
+      endif
+
+      call scale_MOF_variables( &
+       bfact,dx,xsten0,nhalf0, &
+       refcentroid, &
+       dx_scale,xsten0_scale, &
+       refcentroid_scale, &
+       sdim,maxdx)
+       
       return
       end subroutine find_angle_init_from_angle_recon_and_F
 
