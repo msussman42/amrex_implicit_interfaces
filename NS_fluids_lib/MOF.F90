@@ -10557,10 +10557,14 @@ contains
       return
       end subroutine slope_to_angle
 
+       ! Zhouteng Ye algorithm for machine learning.
        ! fastflag=1
        ! use_initial_guess=0
        ! intercept_init=0.0d0
        ! calls multi_rotatefunc
+       ! 1. find x(refvfrac,angle_recon,F)
+       ! 2. n_init=(x - xcell)
+       ! 3. call slope_to_angle(n_init,angle_init,sdim)
       subroutine angle_init_from_angle_recon_and_F( &
         bfact,dx,xsten0,nhalf0, &
         refvfrac, &
@@ -10605,14 +10609,26 @@ contains
       REAL_T refcentroid(sdim)
       REAL_T refcentroid_scale(sdim)
       INTEGER_T dir
+      INTEGER_T itet,nn
       REAL_T :: xsten0_scale(-nhalf0:nhalf0,sdim)
       REAL_T :: dx_scale(sdim)
+      REAL_T :: angle_init_local(sdim-1)
+      INTEGER_T local_nlist_vof
+      INTEGER_T local_nlist_cen
+      REAL_T, dimension(:,:,:), allocatable :: local_xtetlist_vof
+      REAL_T, dimension(:,:,:), allocatable :: local_xtetlist_cen
+      REAL_T :: f_placeholder(sdim)
+      REAL_T :: intercept_placeholder
+      REAL_T :: cen_derive_placeholder(sdim)
+      REAL_T :: cen_free_placeholder(sdim)
+      REAL_T :: npredict(sdim)
+      REAL_T :: mag 
 
       tid=0
 
       fastflag=1
       use_initial_guess=0
-      intercept_init=0.0d0
+      intercept_init=zero
       do dir=1,sdim
        refcentroid(dir)=zero
       enddo
@@ -10647,10 +10663,6 @@ contains
        print *,"nlist_alloc invalid"
        stop
       endif
-      if ((MOFITERMAX.lt.num_materials+3).or.(MOFITERMAX.gt.50)) then
-       print *,"MOFITERMAX out of range angle_init_from_angle_recon_and_F"
-       stop
-      endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim invalid angle_init_from_angle_recon_and_F"
        stop
@@ -10674,7 +10686,58 @@ contains
        print *,"fastflag invalid"
        stop
       endif
-FIX ME
+
+      allocate(local_xtetlist_vof(4,3,local_nlist_vof)) 
+      allocate(local_xtetlist_cen(4,3,local_nlist_cen)) 
+      do itet=1,sdim+1
+       do dir=1,sdim
+        do nn=1,local_nlist_vof
+         local_xtetlist_vof(itet,dir,nn)=zero
+        enddo 
+        do nn=1,local_nlist_cen
+         local_xtetlist_cen(itet,dir,nn)=zero
+        enddo 
+       enddo  !dir=1,sdim
+      enddo  !itet=1,sdim+1
+
+      do dir=1,sdim-1
+       angle_init_local(dir)=angle_recon(dir)
+      enddo
+
+      call multi_rotatefunc( &
+       use_MilcentLemoine, &
+       bfact,dx_scale,xsten0_scale,nhalf0, &
+       local_xtetlist_vof,local_nlist_vof, &
+       local_xtetlist_cen,local_nlist_cen, &
+       nmax, &
+       refcentroid_scale,refvfrac, &
+       continuous_mof, &
+       cmofsten, &
+       angle_init_local, &
+       f_placeholder, &
+       intercept_placeholder, &
+       cen_derive_placeholder, & !relative to supermesh centroid (CMOF case)
+       use_initial_guess,fastflag,sdim)
+
+      do dir=1,sdim
+       cen_free_placeholder(dir)=zero
+      enddo
+
+      ! cen_derive_placeholder-cen_free_placeholder
+      ! normal points from light to dark
+      call find_predict_slope( &
+        npredict, & !intent(out)
+        mag, & !intent(out)
+        cen_free_placeholder, & !centroid of uncaptured region
+        cen_derive_placeholder, &
+        bfact,dx_scale,xsten0_scale,nhalf0,sdim)
+
+      ! -pi < angle < pi
+      call slope_to_angle(npredict,angle_init,sdim)
+
+      deallocate(local_xtetlist_vof)
+      deallocate(local_xtetlist_cen)
+
       return
       end subroutine angle_init_from_angle_recon_and_F
 
@@ -11878,8 +11941,12 @@ FIX ME
 
           ! centroid_ref-centroid_free
           ! normal points from light to dark
-          call find_predict_slope(npredict,mag,centroid_free,centroid_ref, &
-           bfact,dx,xsten0,nhalf0,sdim)
+          call find_predict_slope( &
+            npredict, & !intent(out)
+            mag, & !intent(out)
+            centroid_free, & !centroid of uncaptured region
+            centroid_ref, &
+            bfact,dx,xsten0,nhalf0,sdim)
          
           if (mag.gt.VOFTOL*dx(1)) then
 
