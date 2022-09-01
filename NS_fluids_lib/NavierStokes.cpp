@@ -9498,7 +9498,8 @@ NavierStokes::initData () {
 
  Real dt_amr=parent->getDt(); // returns dt_AMR
 
-  // velocity,pres,state x num_materials,interface variables x num_materials, error ind
+  // velocity,pres,state x num_materials,
+  // interface variables x num_materials, error ind
  MultiFab& S_new = get_new_data(State_Type,slab_step+1);
  int nc=S_new.nComp();
  int nc_expect=STATE_NCOMP;
@@ -21943,6 +21944,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   amrex::Error("level invalid prepare_post_process");
 
  const int finest_level = parent->finestLevel();
+ NavierStokes& ns_finest=getLevel(finest_level);
 
   // init VOLUME_MF and AREA_MF
  metrics_dataALL(1);
@@ -22006,6 +22008,9 @@ NavierStokes::prepare_post_process(int post_init_flag) {
  int caller_id=1;
 
  if (post_init_flag==1) { // called from post_init_state
+
+  ns_finest.MOF_training();
+
   VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
    init_vof_prev_time,SLOPE_RECON_MF);
   int keep_all_interfaces=1;
@@ -22023,6 +22028,9 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   post_restart_flag=0;
   caller_id=2;
  } else if (post_init_flag==2) { // called from post_restart
+
+  ns_finest.MOF_training();
+
   VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
     init_vof_prev_time,SLOPE_RECON_MF);
   if (1==0) {

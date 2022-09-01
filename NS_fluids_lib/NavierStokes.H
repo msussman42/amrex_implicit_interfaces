@@ -807,6 +807,8 @@ protected:
     void build_masksemALL();
     void build_masksem(int mask_sweep);
 
+    void MOF_training();
+
      // update_flag=0 do not update
      // update_flag=1 update S_old
      // update_flag=2 update S_new
