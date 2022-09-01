@@ -8391,7 +8391,7 @@ void NavierStokes::VOF_Recon_resize(int ngrow,int dest_mf) {
  } else
   amrex::Error("localMF[dest_mf]->nGrow() invalid");
 
-} // subroutine VOF_Recon_resize
+} // end subroutine VOF_Recon_resize
 
 // vof,ref centroid,order,slope,intercept  x num_materials
 // update_flag=0 do not update the error
@@ -8614,7 +8614,40 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
 
  delete lsdata;
 
-}  // subroutine VOF_Recon
+}  // end subroutine VOF_Recon
+
+
+
+void NavierStokes::MOF_training() {
+
+ int finest_level=parent->finestLevel();
+
+ if (level==finest_level) {
+  //do nothing
+ } else
+  amrex::Error("MOF_training only on finest level");
+
+ int bfact=parent->Space_blockingFactor(level);
+
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+
+ const Real* dx = geom.CellSize();
+ const Box& domain = geom.Domain();
+ const int* domlo = domain.loVect();
+ const int* domhi = domain.hiVect();
+
+  // in: PLIC_3D.F90
+ fort_MOF_training(
+   &finest_level,
+   &bfact,
+   domlo,domhi,
+   dx,
+   &continuous_mof);
+
+}  // end subroutine MOF_training
+
+
 
 // called from: 
 //  NavierStokes::sum_integrated_quantities
