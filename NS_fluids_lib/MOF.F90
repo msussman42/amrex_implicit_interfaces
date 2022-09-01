@@ -7148,9 +7148,12 @@ end subroutine volume_sanity_check
         if (rval.ne.zero) then
          volume_map=volume_map*abs(rval)
          centroid_map(1)=rval+dr*dr/(12.0*rval)
-        else
+        else if (rval.eq.zero) then
          volume_map=zero
          centroid_map(1)=zero
+        else
+         print *,"rval is NaN"
+         stop
         endif
 
        else
@@ -7244,9 +7247,11 @@ end subroutine volume_sanity_check
       enddo
       enddo  ! i1,j1,k1
 
-      if (volume.le.zero) then
-        print *,"volume invalid"
-        stop
+      if (volume.gt.zero) then
+       ! do nothing
+      else
+       print *,"volume invalid"
+       stop
       endif
       do dir=1,sdim
        centroid(dir)=centroid(dir)/volume
@@ -10556,7 +10561,7 @@ contains
        ! use_initial_guess=0
        ! intercept_init=0.0d0
        ! calls multi_rotatefunc
-      subroutine find_angle_init_from_angle_recon_and_F( &
+      subroutine angle_init_from_angle_recon_and_F( &
         bfact,dx,xsten0,nhalf0, &
         refvfrac, &
         continuous_mof, &
@@ -10596,12 +10601,21 @@ contains
       REAL_T intercept_init
       INTEGER_T use_MilcentLemoine
       INTEGER_T tid
+      REAL_T maxdx
+      REAL_T refcentroid(sdim)
+      REAL_T refcentroid_scale(sdim)
+      INTEGER_T dir
+      REAL_T :: xsten0_scale(-nhalf0:nhalf0,sdim)
+      REAL_T :: dx_scale(sdim)
 
       tid=0
 
       fastflag=1
       use_initial_guess=0
       intercept_init=0.0d0
+      do dir=1,sdim
+       refcentroid(dir)=zero
+      enddo
 
       if (continuous_mof.eq.0) then
        if (levelrz.eq.COORDSYS_CARTESIAN) then
@@ -10610,13 +10624,13 @@ contains
                 (levelrz.eq.COORDSYS_CYLINDRICAL)) then
         use_MilcentLemoine=0
        else
-        print *,"fastflag,continuous_mof, or levelrz invalid"
+        print *,"levelrz invalid"
         stop
        endif
       else if (continuous_mof.eq.2) then
        use_MilcentLemoine=0
       else
-       print *,"fastflag,continuous_mof, or levelrz invalid"
+       print *,"continuous_mof invalid"
        stop
       endif
       if (nhalf0.lt.1) then
@@ -10634,19 +10648,15 @@ contains
        stop
       endif
       if ((MOFITERMAX.lt.num_materials+3).or.(MOFITERMAX.gt.50)) then
-       print *,"MOFITERMAX out of range find_angle_init_from_angle ..."
+       print *,"MOFITERMAX out of range angle_init_from_angle_recon_and_F"
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
-       print *,"sdim invalid find_cut_geom_slope"
+       print *,"sdim invalid angle_init_from_angle_recon_and_F"
        stop
       endif 
       if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
-       print *,"num_materials invalid find cut geom slope"
-       stop
-      endif
-      if ((critical_material.lt.1).or.(critical_material.gt.num_materials)) then
-       print *,"critical_material invalid"
+       print *,"num_materials invalid angle_init_from_angle_recon_and_F"
        stop
       endif
 
@@ -10656,9 +10666,17 @@ contains
        dx_scale,xsten0_scale, &
        refcentroid_scale, &
        sdim,maxdx)
-       
+      
+      if (fastflag.eq.1) then
+       local_nlist_vof=1
+       local_nlist_cen=1
+      else
+       print *,"fastflag invalid"
+       stop
+      endif
+FIX ME
       return
-      end subroutine find_angle_init_from_angle_recon_and_F
+      end subroutine angle_init_from_angle_recon_and_F
 
         ! refcentroid and centroidA relative to cell centroid of the
         ! super cell.
@@ -10835,9 +10853,16 @@ contains
        print *,"critical_material invalid"
        stop
       endif
-      if ((continuous_mof.eq.0).or. &
-          (continuous_mof.eq.2)) then
-       ! do nothing
+      if (continuous_mof.eq.0) then
+       if (nhalf0.lt.1) then
+        print *,"nhalf0 invalid"
+        stop
+       endif
+      else if (continuous_mof.eq.2) then
+       if (nhalf0.lt.3) then
+        print *,"nhalf0 invalid"
+        stop
+       endif
       else
        print *,"continuous_mof invalid"
        stop
