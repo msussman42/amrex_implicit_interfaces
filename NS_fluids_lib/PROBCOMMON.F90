@@ -306,9 +306,14 @@ implicit none
 ! deleted August 27, 2022:
 !   gravity,gravity_dir,invert_gravity
 #ifdef ZHOUTENGYEML
-      Type(Neural_Network) :: NN_ZHOUTENG_GLOBAL
-      Type(Decision_Tree) :: DT_ZHOUTENG_GLOBAL
-      Type(Random_Forest) :: RF_ZHOUTENG_GLOBAL
+      Type training_model_type
+        Type(Neural_Network) :: NN_ZHOUTENG_LOCAL
+        Type(Decision_Tree) :: DT_ZHOUTENG_LOCAL
+        Type(Random_Forest) :: RF_ZHOUTENG_LOCAL
+      end Type training_model_type
+      Type(training_model_type), dimension(:,:,:) :: training_array
+      INTEGER_T :: training_lo(3)
+      INTEGER_T :: training_hi(3)
 #endif
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10

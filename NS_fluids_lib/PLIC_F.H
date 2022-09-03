@@ -11,6 +11,13 @@ namespace amrex{
 
 extern "C"
 {
+      void fort_MOF_training(
+       int* finest_level,
+       int* bfact,
+       const int* domlo,const int* domhi,
+       const Real* dx, 
+       int* continuous_mof);
+
       void fort_sloperecon(
         int* tid,
         const int* gridno,
@@ -22,7 +29,8 @@ extern "C"
         const int* tilelo,const int* tilehi,
         const int* fablo,const int* fabhi,
         int* bfact,
-        const Real* xlo,const Real* dx,
+        const Real* xlo,
+	const Real* dx,
         Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
         Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
         Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
