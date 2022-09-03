@@ -9020,7 +9020,8 @@ contains
        stop
       endif
 
-      if ((levelrz.eq.COORDSYS_RZ).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      if ((levelrz.eq.COORDSYS_RZ).or. &
+          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
        if ((levelrz.eq.COORDSYS_RZ).and.(sdim.ne.2)) then
         print *,"sdim invalid"
         stop
@@ -10479,7 +10480,7 @@ contains
  
 ! 3D: x=cos(theta)sin(phi)  y=sin(theta)sin(phi)  z=cos(phi)
 ! 2D: (cos(theta),sin(theta)) 
-
+! arctan2: -pi < angle < pi (declared in GLOBALUTIL.F90)
       subroutine slope_to_angle(nn,angle,sdim)
 
       use probcommon_module
@@ -10574,6 +10575,7 @@ contains
         xtetlist_cen,nlist_cen, &
         nlist_alloc, &
         angle_init, &
+        refcen, &
         angle_recon, &
         nmax, &
         sdim)
@@ -10598,6 +10600,7 @@ contains
       REAL_T, INTENT(in) :: dx(sdim)
       REAL_T, INTENT(in) :: refvfrac
       REAL_T, INTENT(in) :: angle_recon(sdim-1)
+      REAL_T, INTENT(out) :: refcen(sdim)
       REAL_T, INTENT(out) :: angle_init(sdim-1)
 
       INTEGER_T fastflag
@@ -10677,7 +10680,8 @@ contains
        refcentroid, &
        dx_scale,xsten0_scale, &
        refcentroid_scale, &
-       sdim,maxdx)
+       sdim, &
+       maxdx)
       
       if (fastflag.eq.1) then
        local_nlist_vof=1
@@ -10729,11 +10733,14 @@ contains
         npredict, & !intent(out)
         mag, & !intent(out)
         cen_free_placeholder, & !centroid of uncaptured region
-        cen_derive_placeholder, &
+        cen_derive_placeholder, &!relative to supermesh centroid(CMOF=2)
         bfact,dx_scale,xsten0_scale,nhalf0,sdim)
 
       ! -pi < angle < pi
       call slope_to_angle(npredict,angle_init,sdim)
+      do dir=1,sdim
+       refcen(dir)=cen_derive_placeholder(dir)*maxdx
+      enddo
 
       deallocate(local_xtetlist_vof)
       deallocate(local_xtetlist_cen)
