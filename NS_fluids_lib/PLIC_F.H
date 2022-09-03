@@ -12,6 +12,10 @@ namespace amrex{
 extern "C"
 {
       void fort_MOF_training(
+       int* op_training,
+       int* cpp_training_lo,
+       int* cpp_training_hi,
+       int* i,j,k,
        int* finest_level,
        int* bfact,
        const int* domlo,const int* domhi,
