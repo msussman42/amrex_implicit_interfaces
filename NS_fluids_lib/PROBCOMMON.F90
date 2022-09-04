@@ -22,11 +22,10 @@ stop
 
 
 module probcommon_module_types
-#ifdef ZHOUTENGYEML
+
       use NeuralNetwork
       use DecisionTree
       use RandomForest
-#endif
 
       type law_of_wall_parm_type
       INTEGER_T :: level
@@ -305,7 +304,7 @@ implicit none
 !   gravity_vector(SDIM)
 ! deleted August 27, 2022:
 !   gravity,gravity_dir,invert_gravity
-#ifdef ZHOUTENGYEML
+
       Type training_model_type
         Type(Neural_Network) :: NN_ZHOUTENG_LOCAL
         Type(Decision_Tree) :: DT_ZHOUTENG_LOCAL
@@ -314,7 +313,6 @@ implicit none
       Type(training_model_type), dimension(:,:,:) :: training_array
       INTEGER_T :: training_lo(3)
       INTEGER_T :: training_hi(3)
-#endif
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
       !num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2
