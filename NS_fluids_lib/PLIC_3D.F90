@@ -342,11 +342,12 @@ stop
         ! sum of F_rigid<=1
        nhalf_box=1
        call make_vfrac_sum_ok_base( &
-         cmofsten, &
+         cmofsten, &  ! INTENT(in)
          xsten,nhalf,nhalf_box, &
          bfact,dx, &
          tessellate, & ! =0
-         mofdata,SDIM)
+         mofdata, &  ! INTENT(inout)
+         SDIM)
 
        vfrac_fluid_sum=zero
        vfrac_solid_sum=zero
@@ -1056,17 +1057,28 @@ stop
       INTEGER_T nmax
       INTEGER_T, parameter :: num_sampling=10000
       INTEGER_T, parameter :: float_size=4
-      Real(float_size) :: targe(num_sampling)
-      Real(float_size) :: vof(num_sampling)
-      Real(float_size) :: phi(num_sampling)
-      Real(float_size) :: theta(num_sampling)
-      Real(float_size) :: data(8,num_sampling)
-      Real(float_size) :: xc0(3), nr(3)
-      Real(float_size) :: angle_init(2), angle_exact(2)
-      Real(float_size) :: err_temp
+      Real(float_size) :: vof_training(num_sampling)
+      Real(float_size) :: phi_training(num_sampling)
+      Real(float_size) :: theta_training(num_sampling)
+      Real(float_size) :: data_training(8,num_sampling)
+      Real(float_size) :: xc0(3)
+      Real(float_size) :: nr(3)
 
+      REAL_T :: angle_exact_db(2)
+      REAL_T :: angle_init_db(2)
+      REAL_T :: refvfrac
+      REAL_T :: refcen(SDIM)
+      REAL_T :: nr_db(3)
+
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+
+      INTEGER_T dir
+      INTEGER_T i1,j1,k1
+      INTEGER_T i_training
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T klosten,khisten
+      INTEGER_T tid
    
       tid=0
 
@@ -1181,7 +1193,6 @@ stop
 
       else if (op_training.eq.1) then
 
-       nhalf=3
        call gridsten_level(xsten,i,j,k,finest_level,nhalf)
 
        do dir=1,3
@@ -1199,23 +1210,23 @@ stop
         endif
        enddo ! do dir=1,3
 
-       Call random_number(vof)
-       Call random_number(phi)
-       Call random_number(theta)
-       theta=(theta-half) * Pi * two
-       phi=(phi-half) * Pi * two
-       Do i = 1, num_sampling
+       Call random_number(vof_training)
+       Call random_number(phi_training)
+       Call random_number(theta_training)
+       theta_training=(theta_training-half) * Pi * two
+       phi_training=(phi_training-half) * Pi * two
+       Do i_training = 1, num_sampling
         if (SDIM.eq.2) then
-         angle_exact_db(1)=phi(i)
+         angle_exact_db(1)=phi_training(i_training)
          angle_exact_db(2)=zero
         else if (SDIM.eq.3) then
-         angle_exact_db(1)=phi(i)
-         angle_exact_db(2)=theta(i)
+         angle_exact_db(1)=phi_training(i_training)
+         angle_exact_db(2)=theta_training(i_training)
         else
          print *,"sdim invalid"
          stop
         endif
-        refvfrac=vof(i)
+        refvfrac=vof_training(i_training)
         call angle_to_slope(angle_exact_db,nr_db,SDIM)
         call angle_init_from_angle_recon_and_F( &
           bfact,dx,xsten,nhalf, &
@@ -1227,7 +1238,7 @@ stop
           geom_xtetlist_old(1,1,1,tid+1), &
           nmax, &
           nmax, &
-          angle_init, &
+          angle_init_db, &
           refcen, &
           angle_exact_db, &
           nmax, &
@@ -1239,15 +1250,15 @@ stop
         do dir=1,SDIM
          xc0(dir)=refcen(dir)
         enddo
-        data(1,i) = xc0(1)
-        data(2,i) = xc0(2)
-        data(3,i) = xc0(3)
-        data(4,i) = vof(i)
-        data(5,i) = angle_exact(1)
-        data(6,i) = angle_exact(2)
-        data(7,i) = angle_init(1)
-        data(8,i) = angle_init(2)
-       End Do
+        data_training(1,i_training) = xc0(1)
+        data_training(2,i_training) = xc0(2)
+        data_training(3,i_training) = xc0(3)
+        data_training(4,i_training) = vof_training(i_training)
+        data_training(5,i_training) = angle_exact_db(1)
+        data_training(6,i_training) = angle_exact_db(2)
+        data_training(7,i_training) = angle_init_db(1)
+        data_training(8,i_training) = angle_init_db(2)
+       End Do ! i_training = 1, num_sampling
 
        close(10)
 
@@ -1255,11 +1266,11 @@ stop
        open(11,file='exact_f.dat',status='unknown')
        open(12,file='exact_angle.dat',status='unknown')
        open(13,file='initial_angle.dat',status='unknown')
-       Do i = 1, num_sampling
-        Write(10,'(3F16.12)')data(1:3,i)
-        Write(11,'(F16.12)')data(4,i)
-        Write(12,'(2F16.12)')data(5:6,i)
-        Write(13,'(2F16.12)')data(7:8,i)
+       Do i_training = 1, num_sampling
+        Write(10,'(3F16.12)')data_training(1:3,i_training)
+        Write(11,'(F16.12)')data_training(4,i_training)
+        Write(12,'(2F16.12)')data_training(5:6,i_training)
+        Write(13,'(2F16.12)')data_training(7:8,i_training)
        End Do
        close(10)
        close(11)
