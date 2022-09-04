@@ -1268,7 +1268,7 @@ stop
         !      now: E25.16
        Do i_training = 1, num_sampling
         Write(10,'(3E25.16)')data_training(1:3,i_training)
-        Write(11,'(E25,16)')data_training(4,i_training)
+        Write(11,'(E25.16)')data_training(4,i_training)
         Write(12,'(2E25.16)')data_training(5:6,i_training)
         Write(13,'(2E25.16)')data_training(7:8,i_training)
        End Do

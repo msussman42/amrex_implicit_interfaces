@@ -310,7 +310,10 @@ implicit none
         Type(Decision_Tree) :: DT_ZHOUTENG_LOCAL
         Type(Random_Forest) :: RF_ZHOUTENG_LOCAL
       end Type training_model_type
-      Type(training_model_type), dimension(:,:,:) :: training_array
+
+      Type(training_model_type), allocatable, dimension(:,:,:) :: &
+        training_array
+
       INTEGER_T :: training_lo(3)
       INTEGER_T :: training_hi(3)
 
