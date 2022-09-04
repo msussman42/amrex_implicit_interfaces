@@ -22009,7 +22009,9 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 
  if (post_init_flag==1) { // called from post_init_state
 
+#ifdef ZHOUTENGYEML
   ns_finest.MOF_training();
+#endif
 
   VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
    init_vof_prev_time,SLOPE_RECON_MF);
@@ -22029,7 +22031,9 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   caller_id=2;
  } else if (post_init_flag==2) { // called from post_restart
 
+#ifdef ZHOUTENGYEML
   ns_finest.MOF_training();
+#endif
 
   VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
     init_vof_prev_time,SLOPE_RECON_MF);
