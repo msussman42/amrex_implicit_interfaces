@@ -20,7 +20,7 @@ Module NeuralNetwork
   ! interface for choose activation type
   Interface
     Function Sub_Interface(n, X)
-      INTERGER_T,  Intent(in) :: n
+      INTEGER_T,  Intent(in) :: n
       REAL_T, Intent(in), Dimension(n) :: X
       REAL_T, Dimension(n) :: Sub_Interface
     End Function Sub_Interface
@@ -28,12 +28,12 @@ Module NeuralNetwork
 
   ! neural network coefficients
   Type :: Neural_Network
-    INTERGER_T :: n_inputs
-    INTERGER_T :: n_outputs
+    INTEGER_T :: n_inputs
+    INTEGER_T :: n_outputs
     REAL_T, Allocatable :: Inputs(:)
     REAL_T, Allocatable :: Outputs(:)
-    INTERGER_T :: layers
-    INTERGER_T, Allocatable :: Layer_Size(:)
+    INTEGER_T :: layers
+    INTEGER_T, Allocatable :: Layer_Size(:)
     Type(Ragged_Vector), Allocatable :: Activations(:)
     Type(Ragged_Vector), Allocatable :: Intercepts(:)
     Type(Ragged_Matrix), Allocatable :: Coefs(:)
@@ -56,8 +56,8 @@ Module NeuralNetwork
     Character(100) :: tmp
     Character(100) :: string
     REAL_T,allocatable :: line(:)
-    INTERGER_T :: error
-    INTERGER_T :: i,j
+    INTEGER_T :: error
+    INTEGER_T :: i,j
 
     tmp = 'nn_coef.dat'
 
@@ -240,7 +240,7 @@ Module NeuralNetwork
 
   function Activation_softmax(n,X)
     Implicit None
-    INTERGER_T, Intent(in) :: n
+    INTEGER_T, Intent(in) :: n
     REAL_T, Intent(in), dimension(n) :: X
     REAL_T, dimension(n) :: tmp
     REAL_T, dimension(n) :: Activation_softmax
@@ -259,23 +259,23 @@ Module DecisionTree
 
   !↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓Decision Tree Variables↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
   Type Nodes
-    INTERGER_T  :: children_left
-    INTERGER_T  :: children_right
-    INTERGER_T  :: feature
+    INTEGER_T  :: children_left
+    INTEGER_T  :: children_right
+    INTEGER_T  :: feature
     REAL_T :: threshold
     REAL_T, Allocatable :: Values(:)
     ! Contains
   End Type Nodes
 
   type Trees
-    INTERGER_T :: node_count
-    INTERGER_T :: max_depth
+    INTEGER_T :: node_count
+    INTEGER_T :: max_depth
     Type(Nodes), Allocatable :: Node(:)
   End type Trees
 
   Type :: Decision_Tree
-    INTERGER_T :: n_inputs
-    INTERGER_T :: n_outputs
+    INTEGER_T :: n_inputs
+    INTEGER_T :: n_outputs
     REAL_T, Allocatable :: Inputs(:)
     REAL_T, Allocatable :: Outputs(:)
     Type(Trees) :: Tree
@@ -294,8 +294,8 @@ Module DecisionTree
     Class(Decision_Tree) :: self
     Character(100) :: tmp
     Character(100) :: string
-    INTERGER_T :: error
-    INTERGER_T :: i
+    INTEGER_T :: error
+    INTEGER_T :: i
 
     tmp = 'dt_coef.dat'
     Open(82, file=tmp, status='unknown')
@@ -359,24 +359,24 @@ Module RandomForest
 
   !↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓Decision Tree Variables↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
   Type Nodes
-    INTERGER_T  :: children_left
-    INTERGER_T  :: children_right
-    INTERGER_T  :: feature
+    INTEGER_T  :: children_left
+    INTEGER_T  :: children_right
+    INTEGER_T  :: feature
     REAL_T :: threshold
     REAL_T, Allocatable :: Values(:)
     ! Contains
   End Type Nodes
 
   type Trees
-    INTERGER_T :: node_count
-    INTERGER_T :: max_depth
+    INTEGER_T :: node_count
+    INTEGER_T :: max_depth
     Type(Nodes), Allocatable :: Node(:)
   End type Trees
 
   Type :: Random_Forest
-    INTERGER_T :: n_inputs
-    INTERGER_T :: n_outputs
-    INTERGER_T :: tree_count
+    INTEGER_T :: n_inputs
+    INTEGER_T :: n_outputs
+    INTEGER_T :: tree_count
     REAL_T, Allocatable :: Inputs(:)
     REAL_T, Allocatable :: Outputs(:)
     Type(Trees), Allocatable :: Tree(:)
@@ -395,8 +395,8 @@ Module RandomForest
     Class(Random_Forest) :: self
     Character(100) :: tmp
     Character(100) :: string
-    INTERGER_T :: error
-    INTERGER_T :: i,j
+    INTEGER_T :: error
+    INTEGER_T :: i,j
 
     tmp = 'rf_coef.dat'
     Open(83, file=tmp, status='unknown')
