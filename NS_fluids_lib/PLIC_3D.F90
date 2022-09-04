@@ -1056,13 +1056,11 @@ stop
 
       INTEGER_T nmax
       INTEGER_T, parameter :: num_sampling=10000
-      INTEGER_T, parameter :: float_size=4
-      Real(float_size) :: vof_training(num_sampling)
-      Real(float_size) :: phi_training(num_sampling)
-      Real(float_size) :: theta_training(num_sampling)
-      Real(float_size) :: data_training(8,num_sampling)
-      Real(float_size) :: xc0(3)
-      Real(float_size) :: nr(3)
+      REAL_T :: vof_training(num_sampling)
+      REAL_T :: phi_training(num_sampling)
+      REAL_T :: theta_training(num_sampling)
+      REAL_T :: data_training(8,num_sampling)
+      REAL_T :: xc0(3)
 
       REAL_T :: angle_exact_db(2)
       REAL_T :: angle_init_db(2)
@@ -1266,11 +1264,13 @@ stop
        open(11,file='exact_f.dat',status='unknown')
        open(12,file='exact_angle.dat',status='unknown')
        open(13,file='initial_angle.dat',status='unknown')
+        ! previous: F16.12
+        !      now: E25.16
        Do i_training = 1, num_sampling
-        Write(10,'(3F16.12)')data_training(1:3,i_training)
-        Write(11,'(F16.12)')data_training(4,i_training)
-        Write(12,'(2F16.12)')data_training(5:6,i_training)
-        Write(13,'(2F16.12)')data_training(7:8,i_training)
+        Write(10,'(3E25.16)')data_training(1:3,i_training)
+        Write(11,'(E25,16)')data_training(4,i_training)
+        Write(12,'(2E25.16)')data_training(5:6,i_training)
+        Write(13,'(2E25.16)')data_training(7:8,i_training)
        End Do
        close(10)
        close(11)
