@@ -311,7 +311,7 @@ implicit none
         Type(Random_Forest) :: RF_ZHOUTENG_LOCAL
       end Type training_model_type
 
-      Type(training_model_type), allocatable, dimension(:,:,:) :: &
+      Type(training_model_type), allocatable, dimension(:,:,:,:) :: &
         training_array
 
       INTEGER_T :: training_lo(3)

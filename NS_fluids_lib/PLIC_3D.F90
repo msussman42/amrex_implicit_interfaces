@@ -104,9 +104,11 @@ stop
       REAL_T, INTENT(in), target :: masknbr(DIMV(masknbr),4) 
       REAL_T, INTENT(in), target :: vof(DIMV(vof),num_materials*ngeom_raw) 
       REAL_T, INTENT(in), target :: LS(DIMV(LS),num_materials) 
-      REAL_T, INTENT(out), target :: slopes(DIMV(slopes),num_materials*ngeom_recon) 
+      REAL_T, INTENT(out), target :: &
+              slopes(DIMV(slopes),num_materials*ngeom_recon) 
       REAL_T, pointer :: slopes_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(inout), target :: snew(DIMV(snew),num_materials*ngeom_raw+1) 
+      REAL_T, INTENT(inout), target :: &
+              snew(DIMV(snew),num_materials*ngeom_raw+1) 
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
       
       INTEGER_T i,j,k,dir
@@ -1069,6 +1071,7 @@ stop
       INTEGER_T i1,j1,k1
       INTEGER_T i_training
       INTEGER_T sysret
+      INTEGER_T cmof_idx
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T klosten,khisten
       INTEGER_T tid
@@ -1177,7 +1180,8 @@ stop
        allocate(training_array( &
           training_lo(1):training_hi(1), &
           training_lo(2):training_hi(2), &
-          training_lo(3):training_hi(3)))
+          training_lo(3):training_hi(3), &
+          0:1))
 
        do dir=1,3
         cpp_training_lo(dir)=training_lo(dir)
@@ -1370,9 +1374,10 @@ stop
        ! 3. angle_output=DT%predict(angle_{predict},F_{ref})
        ! 4. call angle_to_slope(angle_{output},n_{MachineLearning}
 
-       call training_array(i,j,k)%NN_ZHOUTENG_LOCAL%Initialization()
-       call training_array(i,j,k)%DT_ZHOUTENG_LOCAL%Initialization()
-       call training_array(i,j,k)%RF_ZHOUTENG_LOCAL%Initialization()
+       cmof_idx=continuous_mof/2
+       call training_array(i,j,k,cmof_idx)%NN_ZHOUTENG_LOCAL%Initialization()
+       call training_array(i,j,k,cmof_idx)%DT_ZHOUTENG_LOCAL%Initialization()
+       call training_array(i,j,k,cmof_idx)%RF_ZHOUTENG_LOCAL%Initialization()
 
       else
        print *,"op_training invalid"
