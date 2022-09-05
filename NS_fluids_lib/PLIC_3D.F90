@@ -1242,6 +1242,32 @@ stop
           nmax, &
           SDIM)
 
+        if (SDIM.eq.2) then
+         angle_init_db(2)=zero
+        else if (SDIM.eq.3) then
+         ! do nothing
+        else
+         print *,"sdim invalid"
+         stop
+        endif
+
+        do dir=1,2
+         if ((angle_init_db(dir).ge.-Pi).and. &
+             (angle_init_db(dir).le.Pi)) then
+          ! do nothing
+         else
+          print *,"angle_init_db invalid"
+          stop
+         endif
+         if ((angle_exact_db(dir).ge.-Pi).and. &
+             (angle_exact_db(dir).le.Pi)) then
+          ! do nothing
+         else
+          print *,"angle_exact_db invalid"
+          stop
+         endif
+        enddo !dir=1,2
+
         do dir=1,3
          xc0(dir)=zero
         enddo
@@ -1258,7 +1284,33 @@ stop
         data_training(8,i_training) = angle_init_db(2)
        End Do ! i_training = 1, num_sampling
 
-       close(10)
+! unit number 5: standard input
+! unit number 6: standard output
+   
+       call execute_command_line('rm exact_centroid.dat',wait=.true., &
+               exitstat=sysret)
+       call execute_command_line('rm exact_f.dat',wait=.true., &
+               exitstat=sysret)
+       call execute_command_line('rm exact_angle.dat',wait=.true., &
+               exitstat=sysret)
+       call execute_command_line('rm initial_angle.dat',wait=.true., &
+               exitstat=sysret)
+
+       call execute_command_line('rm exact_centroid.npy',wait=.true., &
+               exitstat=sysret)
+       call execute_command_line('rm exact_f.npy',wait=.true., &
+               exitstat=sysret)
+       call execute_command_line('rm exact_angle.npy',wait=.true., &
+               exitstat=sysret)
+       call execute_command_line('rm initial_angle.npy',wait=.true., &
+               exitstat=sysret)
+
+       call execute_command_line('rm nn_coef.dat',wait=.true., &
+               exitstat=sysret)
+       call execute_command_line('rm dt_coef.dat',wait=.true., &
+               exitstat=sysret)
+       call execute_command_line('rm rf_coef.dat',wait=.true., &
+               exitstat=sysret)
 
        open(10,file='exact_centroid.dat',status='unknown')
        open(11,file='exact_f.dat',status='unknown')
@@ -1277,6 +1329,30 @@ stop
        close(12)
        close(13)
 
+       call execute_command_line('python convert2binary.py',wait=.true., &
+               exitstat=sysret)
+
+       call execute_command_line('python training.py',wait=.true., &
+               exitstat=sysret)
+
+       call execute_command_line('rm exact_centroid.dat',wait=.true., &
+               exitstat=sysret)
+       call execute_command_line('rm exact_f.dat',wait=.true., &
+               exitstat=sysret)
+       call execute_command_line('rm exact_angle.dat',wait=.true., &
+               exitstat=sysret)
+       call execute_command_line('rm initial_angle.dat',wait=.true., &
+               exitstat=sysret)
+
+       call execute_command_line('rm exact_centroid.npy',wait=.true., &
+               exitstat=sysret)
+       call execute_command_line('rm exact_f.npy',wait=.true., &
+               exitstat=sysret)
+       call execute_command_line('rm exact_angle.npy',wait=.true., &
+               exitstat=sysret)
+       call execute_command_line('rm initial_angle.npy',wait=.true., &
+               exitstat=sysret)
+
       else if (op_training.eq.2) then
 
        do dir=1,3
@@ -1293,6 +1369,15 @@ stop
          stop
         endif
        enddo ! do dir=1,3
+
+       ! 1. call find_predict_slope(ref_centroid,n_predict)
+       ! 2. call slope_to_angle(n_{predict},angle_{predict})
+       ! 3. angle_output=DT%predict(angle_{predict},F_{ref})
+       ! 4. call angle_to_slope(angle_{output},n_{MachineLearning}
+
+       call training_array(i,j,k)%NN_ZHOUTENG_LOCAL%Initialization()
+       call training_array(i,j,k)%DT_ZHOUTENG_LOCAL%Initialization()
+       call training_array(i,j,k)%RF_ZHOUTENG_LOCAL%Initialization()
 
       else
        print *,"op_training invalid"
