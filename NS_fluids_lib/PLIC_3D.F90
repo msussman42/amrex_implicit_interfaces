@@ -1074,6 +1074,7 @@ stop
       INTEGER_T dir
       INTEGER_T i1,j1,k1
       INTEGER_T i_training
+      INTEGER_T sysret
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T klosten,khisten
       INTEGER_T tid
