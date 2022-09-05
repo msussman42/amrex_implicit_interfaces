@@ -3282,13 +3282,15 @@ stop
       INTEGER_T dir,itencrit
 
       REAL_T delta,velnd,totalwt
-      INTEGER_T scomp,tag_local
+      INTEGER_T scomp,tag_local,nhalf
       INTEGER_T ireverse
       INTEGER_T sign_reverse
       INTEGER_T rigid_in_stencil
       INTEGER_T im
       INTEGER_T im_primary
       REAL_T LS_local(num_materials)
+
+      nhalf=3
 
       unode_ptr=>unode
       ucell_ptr=>ucell
@@ -3701,14 +3703,12 @@ stop
       REAL_T thermal_k_model_predict(2)  ! source,dest
       REAL_T thermal_k_physical_base(2)  ! source,dest
 
-      INTEGER_T, parameter :: nhalf=3
-
-      INTEGER_T nmax,nhalf0
+      INTEGER_T nmax,nhalf,nhalf0
       INTEGER_T klosten,khisten
       INTEGER_T symmetry_flag,ntetbox
-      REAL_T u_xsten_grid(-nhalf:nhalf,SDIM)
+      REAL_T u_xsten_grid(-3:3,SDIM)
       REAL_T dxgrid(SDIM)
-      REAL_T u_xsten_updatecell(-nhalf:nhalf,SDIM)
+      REAL_T u_xsten_updatecell(-3:3,SDIM)
       REAL_T u_xsten_departmap(-1:1,SDIM)
       REAL_T absolute_voltotal
       REAL_T voltotal
@@ -3814,7 +3814,7 @@ stop
       REAL_T intercept_dest
       REAL_T LS_dest_old,LS_dest_new
       REAL_T mass_frac_limit
-      INTEGER_T, parameter :: nhalf_box=1
+      INTEGER_T nhalf_box
       INTEGER_T im_local
       INTEGER_T im_trust
       INTEGER_T im_distrust
@@ -3846,6 +3846,8 @@ stop
        stop
       endif
 
+      nhalf_box=1
+      nhalf=3
       nhalf0=1
 
       recon_ncomp=num_materials*ngeom_recon
@@ -6375,11 +6377,9 @@ stop
       INTEGER_T tag_local
       REAL_T rtag_local
 
-      INTEGER_T, parameter :: nhalf=3
-
-      REAL_T xijk(-nhalf:nhalf,SDIM)
+      REAL_T xijk(-3:3,SDIM)
       REAL_T xcp(SDIM)
-      REAL_T xsp(-nhalf:nhalf,SDIM)
+      REAL_T xsp(-3:3,SDIM)
       REAL_T nrm(SDIM)
       REAL_T weight,total_weight
       REAL_T vel_sum(SDIM)
@@ -6387,8 +6387,10 @@ stop
       REAL_T dxmax,dxmaxLS,eps,extensionwidth,LL
       REAL_T ls_local(num_materials)
       INTEGER_T im_local
-      INTEGER_T scomp
+      INTEGER_T scomp,nhalf
       INTEGER_T ncomp_per
+
+      nhalf=3
 
       vel_ptr=>vel
       LS_ptr=>LS
@@ -6698,16 +6700,18 @@ stop
       INTEGER_T tag_local
       REAL_T rtag_local
 
-      INTEGER_T, parameter :: nhalf=3
-      REAL_T xijk(-nhalf:nhalf,SDIM)
+      REAL_T xijk(-3:3,SDIM)
       REAL_T xcp(SDIM)
-      REAL_T xsp(-nhalf:nhalf,SDIM)
+      REAL_T xsp(-3:3,SDIM)
       REAL_T nrm(SDIM)
       REAL_T weight,total_weight
       REAL_T drag_sum(ncomp)
       REAL_T drag_local(ncomp)
       REAL_T dxmax,dxmaxLS,eps,extensionwidth
       REAL_T ls_local(num_materials)
+      INTEGER_T nhalf
+
+      nhalf=3
 
       drag_ptr=>drag
       LS_ptr=>LS
@@ -7362,8 +7366,6 @@ stop
       REAL_T, target, INTENT(in) :: curvfab(DIMV(curvfab),2*(num_materials+num_interfaces)) 
       REAL_T, pointer :: curvfab_ptr(D_DECL(:,:,:),:)
 
-      INTEGER_T, parameter :: nhalf=3
-
       INTEGER_T, target :: i,j,k
       INTEGER_T dir,dir2
       INTEGER_T im,im_opp,ireverse,iten
@@ -7382,7 +7384,7 @@ stop
       INTEGER_T burnflag
       REAL_T dxmin,dxmax
       REAL_T, target :: dxmaxLS
-      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xsten(-3:3,SDIM)
       REAL_T, target :: xI(SDIM)
       REAL_T, target :: xsrc(SDIM)
       REAL_T, target :: xdst(SDIM)
@@ -7419,6 +7421,7 @@ stop
       REAL_T LSSIGN,SIGNVEL
       INTEGER_T found_path
       INTEGER_T, target :: debugrate
+      INTEGER_T nhalf
       REAL_T RR,mag
       INTEGER_T for_estdt
       INTEGER_T local_mask
@@ -7485,6 +7488,8 @@ stop
 #if (STANDALONE==1)
       REAL_T DTsrc,DTdst,velsrc,veldst,velsum
 #endif
+
+      nhalf=3
 
       TI_YI_ptr=>TI_YI
 

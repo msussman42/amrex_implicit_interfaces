@@ -145,8 +145,8 @@ stop
       INTEGER_T continuous_mof_base
      
       INTEGER_T klosten,khisten
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T xstenbox(-1:1,SDIM)
       INTEGER_T num_materials_in_cell
       INTEGER_T num_materials_in_stencil
@@ -163,7 +163,7 @@ stop
       REAL_T dxmaxLS
       INTEGER_T debugslope
       INTEGER_T tessellate
-      INTEGER_T nhalf_box
+      INTEGER_T, parameter :: nhalf_box=1
 
       REAL_T vfrac_fluid_sum
       REAL_T vfrac_solid_sum
@@ -177,8 +177,6 @@ stop
 
 #include "mofdata.H"
 
-      nhalf_box=1
-
       slopes_ptr=>slopes
       snew_ptr=>snew
 
@@ -190,7 +188,6 @@ stop
       endif
 
       debugslope=0
-      nhalf=3
       nhalfbox_sten=1
 
       if (bfact.lt.1) then
@@ -340,7 +337,6 @@ stop
 
         ! sum of F_fluid=1
         ! sum of F_rigid<=1
-       nhalf_box=1
        call make_vfrac_sum_ok_base( &
          cmofsten, &  ! INTENT(in)
          xsten,nhalf,nhalf_box, &
@@ -519,7 +515,6 @@ stop
 
            ! sum of F_fluid=1
            ! sum of F_rigid<=1
-           nhalf_box=1
            call make_vfrac_sum_ok_base( &
             cmofsten, &
             xstenbox,nhalfbox_sten,nhalf_box, &
@@ -705,7 +700,6 @@ stop
 
            ! sum of F_fluid=1
            ! sum of F_rigid<=1
-          nhalf_box=1
           call make_vfrac_sum_ok_base( &
             cmofsten, &
             xstenbox,nhalfbox_sten,nhalf_box, &
