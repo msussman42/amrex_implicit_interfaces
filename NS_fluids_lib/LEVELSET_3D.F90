@@ -65,8 +65,8 @@ stop
         type(cell_CP_parm_type), INTENT(in) :: cell_CP_parm
         REAL_T, INTENT(out) :: xCP(SDIM)
         REAL_T, INTENT(out) :: xSOLID_BULK(SDIM)
-        INTEGER_T :: nhalf
-        REAL_T :: xsten(-3:3,SDIM)
+        INTEGER_T, parameter :: nhalf=3
+        REAL_T :: xsten(-nhalf:nhalf,SDIM)
         INTEGER_T :: dir
         REAL_T :: nslope_cell(SDIM)
         REAL_T :: LS_cell
@@ -79,7 +79,6 @@ stop
 
          if (is_rigid(CP%im_solid_max).eq.1) then
 
-          nhalf=3
           call gridsten_level(xsten,CP%i,CP%j,CP%k,CP%level,nhalf)
 
            ! positive in the rigid body
@@ -162,8 +161,8 @@ stop
         REAL_T, INTENT(out) :: LS_interp(num_materials)
         INTEGER_T, INTENT(in) :: im_solid 
         INTEGER_T, INTENT(out) :: im_fluid_critical
-        INTEGER_T :: nhalf
-        REAL_T :: xsten(-1:1,SDIM)
+        INTEGER_T, parameter :: nhalf=1
+        REAL_T :: xsten(-nhalf:nhalf,SDIM)
         INTEGER_T :: dir
         INTEGER_T :: local_index(SDIM)
         INTEGER_T :: i2,j2,k2
@@ -186,8 +185,6 @@ stop
 
         LSstenlo(3)=0
         LSstenhi(3)=0
-
-        nhalf=1
 
          ! cell_index is containing cell for xCP
         do dir=1,SDIM
@@ -2424,8 +2421,8 @@ stop
       REAL_T local_dist(num_materials,num_materials)
       REAL_T local_normal(num_materials,num_materials,SDIM)
       REAL_T local_facefrac(num_materials)
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T dummy_tri(SDIM+1,SDIM)
       INTEGER_T nmax,ivert
       INTEGER_T dir2
@@ -2455,7 +2452,7 @@ stop
       INTEGER_T mask1,mask2
       INTEGER_T iten
       INTEGER_T is_processed(num_interfaces)
-      INTEGER_T nhalf_box
+      INTEGER_T, parameter :: nhalf_box=1
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T local_tessellate
  
@@ -2471,10 +2468,6 @@ stop
        stop
       endif
 
-      nhalf=3
-
-      nhalf_box=1
- 
       nmax=POLYGON_LIST_MAX ! in: CELLFACEINIT
 
       do ivert=1,SDIM+1
@@ -3411,7 +3404,7 @@ stop
       REAL_T area_sten(SDIM,2)
       INTEGER_T side_index
 
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=3
       INTEGER_T nhalf_height ! in: fort_curvstrip
       INTEGER_T mask1,mask2
       INTEGER_T local_mask
@@ -3427,7 +3420,6 @@ stop
        stop
       endif 
  
-      nhalf=3
       allocate(xsten0(-nhalf:nhalf,SDIM))
       allocate(xsten_curv( &
        -(2*ngrow_distance+1):(2*ngrow_distance+1), &
@@ -4640,9 +4632,9 @@ stop
       REAL_T pressure_local
       REAL_T xsten_stencil(-3:3,SDIM)
       REAL_T xstencil_point(SDIM)
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T dx_sten(SDIM)
-      INTEGER_T nhalf
       REAL_T cencell(SDIM)
       INTEGER_T i1,j1,k1
       INTEGER_T k1lo,k1hi
@@ -4713,7 +4705,6 @@ stop
        stop
       endif
 
-      nhalf=3
       nmax=POLYGON_LIST_MAX ! in: fort_getcolorsum
 
       snew_ptr=>snew
@@ -6352,9 +6343,9 @@ stop
       REAL_T pressure_local
       REAL_T pressure_sum
       REAL_T dVdT
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T dx_sten(SDIM)
-      INTEGER_T nhalf
       REAL_T cencell(SDIM)
       INTEGER_T im
       INTEGER_T local_mask
@@ -6372,8 +6363,6 @@ stop
        print *,"tid_current invalid"
        stop
       endif
-
-      nhalf=3
 
       if (dt.gt.zero) then
        ! do nothing
@@ -7784,9 +7773,9 @@ stop
       INTEGER_T irefine
       INTEGER_T solid_present_flag
       REAL_T wtL,wtR,wtsum
-      REAL_T xstenMAC(-3:3,SDIM)
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xstenMAC(-nhalf:nhalf,SDIM)
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       REAL_T local_plus
       REAL_T local_minus
@@ -7831,8 +7820,6 @@ stop
       INTEGER_T local_tessellate
 
 ! fort_init_physics_vars code starts here:
-
-      nhalf=3
 
       maskcov_ptr=>maskcov
       masknbr_ptr=>masknbr
@@ -10836,8 +10823,8 @@ stop
       INTEGER_T sidecomp,ibase
       INTEGER_T ii,jj,kk
       INTEGER_T iface,jface,kface
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       INTEGER_T imattype
       REAL_T AXL,AXR
       REAL_T AYL,AYR
@@ -10900,8 +10887,6 @@ stop
       REAL_T, dimension(:,:), allocatable :: comparepface
       REAL_T, dimension(:,:), allocatable :: comparevelface
       REAL_T, dimension(:,:), allocatable :: comparestate
-
-      nhalf=3
 
       vol_ptr=>vol
       rhs_ptr=>rhs
@@ -12933,9 +12918,9 @@ stop
       INTEGER_T dir,dir2,side
       INTEGER_T velcomp,iboundary
       REAL_T cutedge,RR
-      REAL_T xstenMAC(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xstenMAC(-nhalf:nhalf,SDIM)
       REAL_T xmac(SDIM)
-      INTEGER_T nhalf
       REAL_T DXMAXLS
       REAL_T local_vel_MAC
       REAL_T local_vel_old_MAC
@@ -13005,8 +12990,8 @@ stop
       INTEGER_T face_velocity_override
       INTEGER_T FSI_prescribed_flag
 
-      REAL_T xclamped_minus_sten(-3:3,SDIM)
-      REAL_T xclamped_plus_sten(-3:3,SDIM)
+      REAL_T xclamped_minus_sten(-nhalf:nhalf,SDIM)
+      REAL_T xclamped_plus_sten(-nhalf:nhalf,SDIM)
       REAL_T xclamped_minus(SDIM)
       REAL_T xclamped_plus(SDIM)
       REAL_T LS_clamped_plus
@@ -13033,8 +13018,6 @@ stop
       DEBUG_PRESCRIBED=0
       DEBUG_PRESCRIBED_VEL_TOT=zero
       DEBUG_PRESCRIBED_VEL_DEN=zero
-
-      nhalf=3
 
       semflux_ptr=>semflux
       xcut_ptr=>xcut
@@ -15714,8 +15697,10 @@ stop
       REAL_T cencell(SDIM)
       REAL_T censolid_new(num_materials,SDIM)
 
-      REAL_T xsten(-9:9,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=9
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xsten_debug(-nhalf:nhalf,SDIM)
+
       REAL_T mofnew(num_materials*ngeom_recon)
       INTEGER_T istenlo(3),istenhi(3)
       INTEGER_T LSstenlo(3),LSstenhi(3)
@@ -15785,9 +15770,7 @@ stop
       REAL_T xSOLID_BULK(SDIM)
       REAL_T local_XPOS(SDIM)
       REAL_T local_mag
-      INTEGER_T nhalf_box
-
-      nhalf_box=1
+      INTEGER_T, parameter :: nhalf_box=1
 
       if (renormalize_only.eq.1) then
        if (num_LS_extrap_iter.eq.1) then
@@ -15829,8 +15812,6 @@ stop
        print *,"tid invalid"
        stop
       endif
-
-      nhalf=9
 
       if (bfact.lt.1) then
        print *,"bfact invalid102"
@@ -16648,9 +16629,9 @@ stop
              do i1=LSstenlo(1),LSstenhi(1)
              do j1=LSstenlo(2),LSstenhi(2)
              do k1=LSstenlo(3),LSstenhi(3)
-              call gridsten_level(xsten,i+i1,j+j1,k+k1,level,nhalf)
+              call gridsten_level(xsten_debug,i+i1,j+j1,k+k1,level,nhalf)
               print *,"i1,j1,k1,x,y,z ",i1,j1,k1, &
-                      xsten(0,1),xsten(0,2),xsten(0,SDIM)
+                 xsten_debug(0,1),xsten_debug(0,2),xsten_debug(0,SDIM)
               do im=1,num_materials
                print *,"i1,j1,k1,im,LS_extend ",i1,j1,k1,im, &
                        LS_extend(D_DECL(i1,j1,k1),im)
@@ -16660,6 +16641,7 @@ stop
              enddo
 
              stop
+
             else if (abs(LS_solid_new(im_solid_max)).ge.VOFTOL*dxmaxLS) then
              ! do nothing
             else
@@ -17162,22 +17144,18 @@ stop
       REAL_T lspoint(num_materials)
       INTEGER_T sorted_list(num_materials)
       REAL_T dxmax,dxmaxLS,LSbandsize,restore_sum
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T volgrid
       REAL_T cengrid(SDIM)
       INTEGER_T mask_test
       INTEGER_T FSI_exclude
       INTEGER_T tessellate
-      INTEGER_T nhalf_box
+      INTEGER_T, parameter :: nhalf_box=1
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       tessellate=0
 
-      nhalf_box=1
-
-      nhalf=3
- 
       if (bfact.lt.1) then
        print *,"bfact invalid103"
        stop
@@ -17630,13 +17608,12 @@ stop
       INTEGER_T, INTENT(in) :: i,j,k
       INTEGER_T, INTENT(out) :: isub,jsub,ksub
       INTEGER_T, INTENT(out) :: sub_found
-      INTEGER_T :: nhalf
+      INTEGER_T, parameter :: nhalf=3
       INTEGER_T :: dir
-      REAL_T :: xsten(-3:3,SDIM)
+      REAL_T :: xsten(-nhalf:nhalf,SDIM)
       INTEGER_T :: isub_local(3)
       REAL_T :: dx_sub
 
-      nhalf=3
       call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
       sub_found=1
       isub_local(3)=0
@@ -17681,9 +17658,9 @@ stop
       REAL_T, INTENT(out) :: xsub(SDIM)
       INTEGER_T, INTENT(in) :: i,j,k
       INTEGER_T, INTENT(in) :: isub,jsub,ksub
-      INTEGER_T :: nhalf
+      INTEGER_T, parameter :: nhalf=3
       INTEGER_T :: dir
-      REAL_T :: xsten(-3:3,SDIM)
+      REAL_T :: xsten(-nhalf:nhalf,SDIM)
       REAL_T :: dx_sub
       INTEGER_T isub_local(3)
 
@@ -17691,7 +17668,6 @@ stop
       isub_local(2)=jsub
       isub_local(3)=ksub
 
-      nhalf=3
       call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
        ! x=xlo + (isub+1/2)*dx
       do dir=1,SDIM
@@ -17749,9 +17725,9 @@ stop
       REAL_T, INTENT(out) :: LS_interp(num_materials)
       REAL_T, INTENT(out) :: X0_interp(SDIM)
 
-      INTEGER_T :: nhalf
+      INTEGER_T, parameter :: nhalf=3
       INTEGER_T :: dir
-      REAL_T :: xsten(-3:3,SDIM)
+      REAL_T :: xsten(-nhalf:nhalf,SDIM)
       REAL_T A_VEL,b_VEL(NUM_CELL_ELASTIC)
       REAL_T A_X0,b_X0(SDIM)
       INTEGER_T :: current_link
@@ -17806,7 +17782,6 @@ stop
        print *,"UBOUND(LEVELSETptr) ",UBOUND(LEVELSETptr)
       endif
 
-      nhalf=3
       call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
 
       call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
@@ -18742,10 +18717,10 @@ stop
       INTEGER_T imaclo(3)
       INTEGER_T imachi(3)
       INTEGER_T cell_index(SDIM)
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T xstenMAC_lo(-3:3,SDIM)
-      REAL_T xstenMAC_hi(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xstenMAC_lo(-nhalf:nhalf,SDIM)
+      REAL_T xstenMAC_hi(-nhalf:nhalf,SDIM)
       REAL_T dx_inner
       REAL_T wt_dist(SDIM)
       REAL_T local_data
@@ -18756,8 +18731,6 @@ stop
       REAL_T temperature_clamped
       INTEGER_T prescribed_flag
       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: local_data_fab
-
-      nhalf=3      
 
       if (vel_time_slab.ge.zero) then
        ! do nothing
