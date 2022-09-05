@@ -172,14 +172,14 @@ stop
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T mof_verbose,use_ls_data
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T xstenfine(-3:3,SDIM)
-      REAL_T xstengrid(-1:1,SDIM)
-      INTEGER_T nhalf
-      INTEGER_T nhalfgrid
+      INTEGER_T, parameter :: nhalf=3
+      INTEGER_T, parameter :: nhalfgrid=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xstenfine(-nhalf:nhalf,SDIM)
+      REAL_T xstengrid(-nhalfgrid:nhalfgrid,SDIM)
       INTEGER_T n_overlap
       INTEGER_T tessellate
-      INTEGER_T nhalf_box
+      INTEGER_T, parameter :: nhalf_box=1
 
       INTEGER_T tid
 #ifdef _OPENMP
@@ -196,11 +196,6 @@ stop
       endif 
 
       tessellate=0
-
-      nhalf_box=1
-
-      nhalf=3
-      nhalfgrid=1
 
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid"
@@ -520,11 +515,11 @@ stop
       REAL_T cencoarse(SDIM)
       REAL_T voltemp
       REAL_T centemp(SDIM)
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T xstenfine(-3:3,SDIM)
-      REAL_T xstengrid(-1:1,SDIM)
-      INTEGER_T nhalf
-      INTEGER_T nhalfgrid
+      INTEGER_T, parameter :: nhalf=3
+      INTEGER_T, parameter :: nhalfgrid=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xstenfine(-nhalf:nhalf,SDIM)
+      REAL_T xstengrid(-nhalfgrid:nhalfgrid,SDIM)
       INTEGER_T n_overlap
       REAL_T LS_FINE(ncomp)
       REAL_T LS_COARSE(ncomp)
@@ -542,9 +537,6 @@ stop
        print *,"tid invalid"
        stop
       endif 
-
-      nhalf=3
-      nhalfgrid=1
 
       if (ncomp.ne.(SDIM+1)*num_materials) then
        print *,"ncomp invalid"
@@ -772,10 +764,11 @@ stop
       REAL_T voltemp
       REAL_T multi_volume(num_materials)
       REAL_T multi_cen(SDIM,num_materials)
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T xstenfine(-3:3,SDIM)
-      REAL_T xstengrid(-1:1,SDIM)
-      INTEGER_T nhalf,nhalfgrid
+      INTEGER_T, parameter :: nhalf=3
+      INTEGER_T, parameter :: nhalfgrid=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xstenfine(-nhalf:nhalf,SDIM)
+      REAL_T xstengrid(-nhalfgrid:nhalfgrid,SDIM)
       INTEGER_T n_overlap
       INTEGER_T tessellate
 
@@ -786,7 +779,7 @@ stop
       REAL_T multi_centroidA(num_materials,SDIM)
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
-      INTEGER_T nhalf_box
+      INTEGER_T, parameter :: nhalf_box=1
 
       INTEGER_T tid
 #ifdef _OPENMP
@@ -801,11 +794,6 @@ stop
        print *,"tid invalid"
        stop
       endif 
-
-      nhalf=3
-      nhalfgrid=1
-
-      nhalf_box=1
 
       tessellate=0
 
@@ -1118,10 +1106,11 @@ stop
       INTEGER_T dir
       INTEGER_T iten
       INTEGER_T im
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T xstenfine(-3:3,SDIM)
-      REAL_T xstengrid(-1:1,SDIM)
-      INTEGER_T nhalf,nhalfgrid
+      INTEGER_T, parameter :: nhalf=3
+      INTEGER_T, parameter :: nhalfgrid=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xstenfine(-nhalf:nhalf,SDIM)
+      REAL_T xstengrid(-nhalfgrid:nhalfgrid,SDIM)
       INTEGER_T n_overlap
 
       INTEGER_T iflag,iflag_sign,hitflag
@@ -1149,9 +1138,6 @@ stop
        print *,"velflag invalid"
        stop
       endif
-
-      nhalf=3
-      nhalfgrid=1
 
       if ((levelc.ne.levelf-1).or.(levelc.lt.0)) then
        print *,"levelc or levelf invalid"
@@ -1601,14 +1587,12 @@ stop
       REAL_T voltotal,volall
       REAL_T fine_value(nvar)
 
-      REAL_T xsten(-1:1,SDIM)
-      REAL_T xstenND(-1:1,SDIM)
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xstenND(-nhalf:nhalf,SDIM)
       REAL_T xfine(SDIM)
-      INTEGER_T nhalf
       REAL_T INTERP_TOL
       INTEGER_T chi_loc(SDIM)
-
-      nhalf=1
 
       INTERP_TOL=1.0E-4
 
@@ -1832,16 +1816,14 @@ stop
       REAL_T voltotal,volall
       INTEGER_T grid_type
 
-      REAL_T xsten(-1:1,SDIM)
-      REAL_T xstenND(-1:1,SDIM)
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xstenND(-nhalf:nhalf,SDIM)
       REAL_T xfine(SDIM)
-      INTEGER_T nhalf
       REAL_T, dimension(D_DECL(:,:,:),:),allocatable :: fcoarse
       REAL_T INTERP_TOL
       INTEGER_T chi_loc(SDIM)
       INTEGER_T do_spectral_interp
-
-      nhalf=1
 
       INTERP_TOL=1.0E-4
 
@@ -2244,17 +2226,15 @@ stop
       REAL_T fine_value(nvar)
       REAL_T voltotal,volall
 
-      REAL_T xsten(-1:1,SDIM)
-      REAL_T xstenND(-1:1,SDIM)
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xstenND(-nhalf:nhalf,SDIM)
       REAL_T xfine(SDIM)
-      INTEGER_T nhalf
       REAL_T, dimension(D_DECL(:,:,:),:),allocatable :: fcoarse
       REAL_T INTERP_TOL
       INTEGER_T chi_loc(SDIM)
       INTEGER_T khi
       INTEGER_T do_spectral_interp
-
-      nhalf=1
 
       INTERP_TOL=1.0E-4
 

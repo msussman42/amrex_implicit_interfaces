@@ -964,9 +964,6 @@ stop
       REAL_T, INTENT(inout) :: uu
       REAL_T, INTENT(in) :: dx(SDIM)
       REAL_T utest,uscale
-      INTEGER_T nhalf
-
-      nhalf=1
 
       if ((dir.lt.0).or.(dir.ge.SDIM)) then
        print *,"dir invalid"
@@ -2375,15 +2372,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, INTENT(out) :: rho_hydrostatic
       REAL_T, INTENT(out) :: pres_hydrostatic
       REAL_T, INTENT(in),pointer :: state_ptr(D_DECL(:,:,:),:)
-      REAL_T xsten(-1:1,SDIM)
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T xcell(SDIM)
-      INTEGER_T nhalf
       INTEGER_T :: local_dir
       INTEGER_T :: gravity_dir
 
       call fort_derive_gravity_dir(gravity_vector,gravity_dir)
-
-      nhalf=1
 
       if (dt.gt.zero) then
        ! do nothing
@@ -3090,7 +3085,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       INTEGER_T bfact,nhalf
       REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T xsten2(-1:1,SDIM)
+
+      INTEGER_T, parameter :: nhalf2=1
+      REAL_T xsten2(-nhalf2:nhalf2,SDIM)
+
       REAL_T dx(SDIM)
       REAL_T cenbc(num_materials,SDIM)
       REAL_T vfrac(num_materials)
@@ -3103,9 +3101,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T facearea(num_materials)
       REAL_T pipexlo,pipexhi,vfrac_sum
       REAL_T EBVOFTOL
-      INTEGER_T nhalf2,isten
+      INTEGER_T isten
 
-      nhalf2=1
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -3490,8 +3487,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T nrefine,bfact,nhalf
       REAL_T time
       REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T xsten2(-1:1,SDIM)
-      INTEGER_T nhalf2
+      INTEGER_T, parameter :: nhalf2=1
+      REAL_T xsten2(-nhalf2:nhalf2,SDIM)
       REAL_T dx(SDIM)
       REAL_T vfrac
       REAL_T cen(SDIM)
@@ -3504,9 +3501,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T volbox,volbox_node
       REAL_T cenbox(SDIM)
       REAL_T cenbox_node(SDIM)
-
- 
-      nhalf2=1
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -5447,8 +5441,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, INTENT(in) :: mofdata_tess(num_materials*ngeom_recon)
       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,SDIM)  ! top level
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)     ! refined
-      REAL_T :: xsten_test(-1:1,SDIM)
-      INTEGER_T nhalf_test,isten
+      INTEGER_T, parameter :: nhalf_test=1
+      REAL_T :: xsten_test(-nhalf_test:nhalf_test,SDIM)
+      INTEGER_T isten
       REAL_T, INTENT(in) :: dx(SDIM)
       REAL_T dxlevel(SDIM)
       REAL_T, INTENT(out) :: errorparm(2*num_materials)
@@ -5478,8 +5473,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T local_LS
       INTEGER_T inode
      
-      nhalf_test=1
- 
       if (nhalf.lt.3) then
        print *,"nhalf invalid get symmetric error"
        stop
@@ -6511,8 +6504,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       INTEGER_T, INTENT(in) :: bfact,nhalf
       REAL_T,  INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T xsten2(-1:1,SDIM)
-      INTEGER_T nhalf2
+      INTEGER_T, parameter :: nhalf2=1
+      REAL_T xsten2(-nhalf2:nhalf2,SDIM)
       REAL_T, INTENT(in) :: dx(SDIM)
       REAL_T, INTENT(out) :: cenbc(num_materials,SDIM)
       REAL_T, INTENT(out) :: vfrac(num_materials)
@@ -6528,8 +6521,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T initial_time
 
       initial_time=zero
-
-      nhalf2=1
 
       im_solid_microfluidic=im_solid_primary()
 
@@ -6625,12 +6616,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       subroutine microfluidic_velbc(xsten,nhalf,dir,side,vel)
       IMPLICIT NONE
 
-      INTEGER_T nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T dx(SDIM)
       REAL_T x,y,z
-      REAL_T vel(SDIM)
-      INTEGER_T dir,side,dir2,veldir
+      REAL_T, INTENT(inout) :: vel(SDIM)
+      INTEGER_T, INTENT(in) :: dir,side
+      INTEGER_T :: dir2,veldir
       REAL_T LX,LY,LZ,xscale,yscale,zscale
       REAL_T dxscale,dyscale,dzscale
       REAL_T xterm,yterm,zterm
@@ -6972,10 +6964,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       use global_distance_module
       IMPLICIT NONE
 
-      INTEGER_T bfact,nhalf
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T x,y,z,dist
-      REAL_T dx(SDIM)
+      INTEGER_T, INTENT(in) :: bfact,nhalf
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T x,y,z
+      REAL_T, INTENT(out) :: dist
+      REAL_T, INTENT(in) :: dx(SDIM)
       REAL_T xmin,xmax,ymin,ymax,temprad
 
       if (bfact.lt.1) then
@@ -7677,7 +7670,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       INTEGER_T, INTENT(in) :: bfact,nhalf
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T xsten2(-1:1,SDIM)
+      INTEGER_T, parameter :: nhalf2=1
+      REAL_T xsten2(-nhalf2:nhalf2,SDIM)
 
       REAL_T, INTENT(in) :: dx(SDIM)
       REAL_T, INTENT(out) :: cenbc(num_materials,SDIM)
@@ -7690,9 +7684,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T facearea(num_materials)
       REAL_T distbatch(num_materials)
       REAL_T EBVOFTOL
-      INTEGER_T nhalf2
 
-      nhalf2=1
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -7755,7 +7747,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       INTEGER_T, INTENT(in) :: bfact,nhalf
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T xsten2(-1:1,SDIM)
+      INTEGER_T, parameter :: nhalf2=1
+      REAL_T xsten2(-nhalf2:nhalf2,SDIM)
       REAL_T, INTENT(in) :: dx(SDIM)
       REAL_T, INTENT(out) :: cenbc(num_materials,SDIM)
       REAL_T, INTENT(out) :: vfrac(num_materials)
@@ -7768,12 +7761,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T facearea(num_materials)
       REAL_T, dimension(:), allocatable :: distbatch
       REAL_T EBVOFTOL
-      INTEGER_T nhalf2
       REAL_T LS_center
 
       initial_time=zero
 
-      nhalf2=1
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -7863,12 +7854,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       subroutine get_jetbend_velocity(xsten,nhalf,dx,bfact,vel)
       IMPLICIT NONE
 
-      INTEGER_T nhalf,bfact
-      REAL_T xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, INTENT(in) :: nhalf,bfact
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T x,y,z
-      REAL_T dx(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
       REAL_T cenbc(num_materials,SDIM)
-      REAL_T vel(SDIM)
+      REAL_T, INTENT(inout) :: vel(SDIM)
 
       INTEGER_T dir2
       REAL_T vfrac(num_materials)
@@ -9645,7 +9636,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       INTEGER_T, INTENT(in) :: bfact,nhalf
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T xsten2(-1:1,SDIM)
+      INTEGER_T, parameter :: nhalf2=1
+      REAL_T xsten2(-nhalf2:nhalf2,SDIM)
 
       REAL_T, INTENT(in) :: time
       INTEGER_T im
@@ -9659,9 +9651,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T facearea(num_materials)
       REAL_T distbatch(num_materials)
       REAL_T EBVOFTOL
-      INTEGER_T nhalf2
 
-      nhalf2=1
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -10611,10 +10601,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       IMPLICIT NONE
 
-      INTEGER_T dir,side,im,nhalf,bfact
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T time,VOF,xwall,VOFwall,x,y,z
-      REAL_T dx(SDIM)
+      INTEGER_T, INTENT(in) :: dir,side,im,nhalf,bfact
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(inout) :: VOF
+      REAL_T :: xwall
+      REAL_T, INTENT(inout) :: VOFwall
+      REAL_T :: x,y,z
+      REAL_T, INTENT(in) :: dx(SDIM)
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid ls bc"
@@ -11802,11 +11796,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T local_interp(bfact+1)
       REAL_T local_interp_den(bfact+1)
       INTEGER_T ii,jj,kk
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T xsten_coarse(-3:3,SDIM)
-      REAL_T xsten_fine(-3:3,SDIM)
-      REAL_T xsten_face(-3:3,SDIM)
-      INTEGER_T nhalf,nc
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xsten_coarse(-nhalf:nhalf,SDIM)
+      REAL_T xsten_fine(-nhalf:nhalf,SDIM)
+      REAL_T xsten_face(-nhalf:nhalf,SDIM)
+      INTEGER_T nc
       INTEGER_T side
        ! 0=fine-fine neighbor  1=fine-wall neighbor  
        ! -1=fine (current) -coarse neighbor -2=coarse (current) -fine neighbor
@@ -12105,8 +12100,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"operation_flag invalid20"
        stop
       endif
-
-      nhalf=3
 
       ii=0
       jj=0
@@ -13985,10 +13978,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T indexlo(SDIM)
       INTEGER_T indexhi(SDIM)
       INTEGER_T indexmid(SDIM)
-      REAL_T xstenMAC(-3:3,SDIM)
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xstenMAC(-nhalf:nhalf,SDIM)
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T RR,RRTHETA,RR_DIVIDE
-      INTEGER_T nhalf,ibase,nc2
+      INTEGER_T ibase,nc2
       REAL_T divu,CC,CC_DUAL,MDOT,RHS
       REAL_T local_POLD
       REAL_T local_POLD_DUAL
@@ -14383,8 +14377,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"operation_flag invalid26:",operation_flag
        stop
       endif
-
-      nhalf=3
 
       ii=0
       jj=0
@@ -16153,10 +16145,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        xsten,nhalf,dx,bfact)
       IMPLICIT NONE
 
-      INTEGER_T dir,side,nhalf,bfact
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T time,ADV,xwall,ADVwall,x,y,z
-      REAL_T dx(SDIM)
+      INTEGER_T, INTENT(in) :: dir,side,nhalf,bfact
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(inout) :: ADV
+      REAL_T :: xwall
+      REAL_T, INTENT(inout) :: ADVwall
+      REAL_T :: x,y,z
+      REAL_T, INTENT(in) :: dx(SDIM)
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid scalar bc"
@@ -16242,10 +16238,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        xsten,nhalf,dx,bfact)
       IMPLICIT NONE
 
-      INTEGER_T dir,side,nhalf,bfact
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T time,ADV,xwall,ADVwall,x,y,z
-      REAL_T dx(SDIM)
+      INTEGER_T, INTENT(in) :: dir,side,nhalf,bfact
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(inout) :: ADV
+      REAL_T :: xwall
+      REAL_T, INTENT(inout) :: ADVwall
+      REAL_T :: x,y,z
+      REAL_T, INTENT(in) :: dx(SDIM)
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid extrap bc"
@@ -16347,8 +16347,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine extrapBC
 
-
-
       subroutine presBDRYCOND(time,dir,side,ADV,ADVwall_in, &
         xsten,nhalf,dx,bfact)
       use global_utility_module
@@ -16367,11 +16365,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       IMPLICIT NONE
 
 
-      INTEGER_T dir,side,nhalf,bfact
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T time,ADV,xwall,ADVwall,x,y,z
-      REAL_T ADVwall_in
-      REAL_T dx(SDIM)
+      INTEGER_T, INTENT(in) :: dir,side,nhalf,bfact
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(inout) :: ADV
+      REAL_T :: xwall
+      REAL_T :: ADVwall
+      REAL_T :: x,y,z
+      REAL_T, INTENT(inout) :: ADVwall_in
+      REAL_T, INTENT(in) :: dx(SDIM)
       REAL_T pipexlo,pipexhi
       REAL_T rhohydro
       REAL_T base_pres
@@ -19198,8 +19200,8 @@ end subroutine RatePhaseChange
       INTEGER_T im_liquid
       REAL_T LL
       INTEGER_T make_seed ! 0 no seed, 1 yes to seed
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T prev_time,cur_time,dt
       REAL_T saturation_pres
       REAL_T total_density
@@ -19231,12 +19233,9 @@ end subroutine RatePhaseChange
       REAL_T cen_dst(SDIM)
       REAL_T vfluid_sum
       REAL_T VOF_source,VOF_dest
-      INTEGER_T nhalf_box
+      INTEGER_T, parameter :: nhalf_box=1
       INTEGER_T local_tessellate
 
-      nhalf_box=1
-
-      nhalf=3
       nmax=POLYGON_LIST_MAX 
 
       call checkbound_array(nucleate_in%fablo,nucleate_in%fabhi, &
@@ -22168,10 +22167,8 @@ end subroutine initialize2d
       REAL_T temperature_clamped
       INTEGER_T prescribed_flag
       INTEGER_T tagflag
-      REAL_T xsten(-1:1,SDIM)
-      INTEGER_T nhalf
-
-      nhalf=1
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -22373,8 +22370,8 @@ end subroutine initialize2d
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
       INTEGER_T icomp
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       INTEGER_T extrecon_scomp
       INTEGER_T mask_scomp
       INTEGER_T burnvel_scomp
@@ -22401,7 +22398,6 @@ end subroutine initialize2d
       burnvel_scomp=EXTRAPCOMP_BURNVEL
       tsat_scomp=EXTRAPCOMP_TSAT
 
-      nhalf=3
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
        print *,"level invalid in fill 12"
        stop
@@ -22560,10 +22556,9 @@ end subroutine initialize2d
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
       INTEGER_T box_type(SDIM)
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
-      nhalf=3
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -22889,9 +22884,9 @@ end subroutine initialize2d
       REAL_T distsolid
       REAL_T temp_solid_mat
       REAL_T vel(SDIM)
-      REAL_T xsten(-1:1,SDIM)
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       INTEGER_T im
-      INTEGER_T nhalf
       INTEGER_T partid
 
       solid_ptr=>solid
@@ -22911,7 +22906,6 @@ end subroutine initialize2d
        stop
       endif
 
-      nhalf=1
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -23032,11 +23026,9 @@ end subroutine initialize2d
       REAL_T distsolid
       REAL_T disttest
       REAL_T temp_solid_mat
-      REAL_T xsten(-1:1,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       INTEGER_T im_solid_thermal
-
-      nhalf=1
 
       snew_ptr=>snew
       lsnew_ptr=>lsnew
@@ -23219,8 +23211,8 @@ end subroutine initialize2d
 
       INTEGER_T i,j,k,ii,jj,kk
       INTEGER_T side
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T dist
       REAL_T LSleft,LSright
       REAL_T nn
@@ -23233,7 +23225,6 @@ end subroutine initialize2d
 
       im_solid_tempflux=im_solid_primary()
  
-      nhalf=3 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -23797,16 +23788,14 @@ end subroutine initialize2d
        REAL_T, INTENT(in) :: dx(SDIM)
        REAL_T, INTENT(in) :: problo(SDIM)
        REAL_T, INTENT(in) :: probhi(SDIM)
-       REAL_T xsten(-1:1)
-       INTEGER_T nhalf
+       INTEGER_T, parameter :: nhalf=1
+       REAL_T xsten(-nhalf:nhalf)
        INTEGER_T bfactmax
        INTEGER_T ilev,max_ncell,dir,inode,i
        INTEGER_T ncell(SDIM)
        REAL_T dxlevel(SDIM)
        INTEGER_T domlo_level(SDIM)
        INTEGER_T domhi_level(SDIM)
-
-       nhalf=1
 
        if (max_level.lt.0) then
         print *,"max_level invalid"
@@ -24042,9 +24031,11 @@ end subroutine initialize2d
        REAL_T cendark(num_materials,SDIM)
        REAL_T cenlight(num_materials,SDIM)
 
-       INTEGER_T nhalf,nhalf2,nmax
-       REAL_T xsten(-3:3,SDIM)
-       REAL_T xsten2(-1:1,SDIM)
+       INTEGER_T, parameter :: nhalf=3
+       INTEGER_T, parameter :: nhalf2=1
+       INTEGER_T :: nmax
+       REAL_T xsten(-nhalf:nhalf,SDIM)
+       REAL_T xsten2(-nhalf2:nhalf2,SDIM)
 
        INTEGER_T i1,j1,k1,k1lo,k1hi
        REAL_T xpos(SDIM)
@@ -24093,7 +24084,7 @@ end subroutine initialize2d
        INTEGER_T tessellate
        INTEGER_T bcflag
        INTEGER_T from_boundary_hydrostatic
-       INTEGER_T nhalf_box
+       INTEGER_T, parameter :: nhalf_box=1
        INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
        REAL_T theta_initdata
        REAL_T concentration_initdata
@@ -24109,8 +24100,6 @@ end subroutine initialize2d
        REAL_T a1,a2,D2
        REAL_T pz,pz_sanity,fpz,gpz
        REAL_T T_HOT,T_COLD
-
-       nhalf_box=1
 
        scal_ptr=>scal
        LS_ptr=>LS
@@ -24143,8 +24132,6 @@ end subroutine initialize2d
        im_solid_initdata=im_solid_primary()
 
        nmax=POLYGON_LIST_MAX ! in: fort_initdata
-       nhalf=3
-       nhalf2=1
 
        if (bfact.lt.1) then
         print *,"bfact too small"
@@ -25512,14 +25499,12 @@ end subroutine initialize2d
       REAL_T, pointer :: MAC_ptr(D_DECL(:,:,:))
 
 
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       INTEGER_T i,j,k,ii,jj,kk,dir2,im,velcomp,tcomp
       REAL_T problo_arr(SDIM)
       REAL_T probhi_arr(SDIM)
       REAL_T sinprod
-
-      nhalf=3
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -25942,17 +25927,15 @@ end subroutine initialize2d
       REAL_T vfracbatch(num_materials)
       REAL_T drat
       REAL_T temp,dens,ccnt
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T xvec(SDIM)
       INTEGER_T dir
-      INTEGER_T nhalf
       REAL_T jumpval,alpha
 
       REAL_T, allocatable, dimension(:) :: distbatch
       INTEGER_T velsolid_flag
  
-      nhalf=3
-
       vel_ptr=>vel
 
       if (bfact.lt.1) then
@@ -27259,12 +27242,10 @@ end subroutine initialize2d
 
       INTEGER_T i,j,k,ii,jj,kk
       INTEGER_T dirloc
-      REAL_T xsten(-1:1,SDIM)
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten_cell(SDIM)
-      INTEGER_T nhalf
       INTEGER_T velcomp
-
-      nhalf=1
 
       if ((dir.lt.0).or.(dir.ge.SDIM)) then
        print *,"dir invalid forcevelocity"
@@ -27371,10 +27352,8 @@ end subroutine initialize2d
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
       INTEGER_T velcomp
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
-
-      nhalf=3
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -27527,10 +27506,8 @@ end subroutine initialize2d
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
       INTEGER_T velcomp
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
-
-      nhalf=3
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -27680,11 +27657,9 @@ end subroutine initialize2d
       INTEGER_T IWALL(3)
       INTEGER_T velcomp
       INTEGER_T im_vel
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       INTEGER_T nparts
-
-      nhalf=3
 
       u_ptr=>u
 
@@ -27853,11 +27828,10 @@ end subroutine initialize2d
       INTEGER_T IWALL(3)
       INTEGER_T velcomp
       INTEGER_T im_vel
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       INTEGER_T nparts
 
-      nhalf=3
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -28020,10 +27994,8 @@ end subroutine initialize2d
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
       INTEGER_T velcomp,veldir
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
-
-      nhalf=3
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       u_ptr=>u
 
@@ -28254,10 +28226,9 @@ end subroutine initialize2d
       INTEGER_T im
       REAL_T uwall(num_materials*ngeom_raw)
       REAL_T uboundary(num_materials*ngeom_raw)
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
-      nhalf=3
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
        print *,"level invalid in fill 6"
        stop
@@ -28427,10 +28398,10 @@ end subroutine initialize2d
 
       INTEGER_T tessellate
 
-      INTEGER_T nhalf
-      INTEGER_T nhalf_box
+      INTEGER_T, parameter :: nhalf=3
+      INTEGER_T, parameter :: nhalf_box=1
 
-      REAL_T xsten(-3:3,SDIM)
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       INTEGER_T tid,nmax
 #ifdef _OPENMP
       INTEGER_T omp_get_thread_num
@@ -28458,9 +28429,6 @@ end subroutine initialize2d
       endif
 
       tessellate=0
-
-      nhalf=3
-      nhalf_box=1
 
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
@@ -28711,11 +28679,10 @@ end subroutine initialize2d
       
       REAL_T uwall(ncomp)
       REAL_T uboundary(ncomp)
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       INTEGER_T ncomp_ho,icomp
 
-      nhalf=3
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
        print *,"level invalid in fill 10"
        stop
@@ -28935,10 +28902,9 @@ end subroutine initialize2d
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
       INTEGER_T nc
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
-      nhalf=3
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -29080,10 +29046,9 @@ end subroutine initialize2d
       INTEGER_T icomplo,icomphi
       INTEGER_T scomp_spec,num_state_material_test
       INTEGER_T dencomp
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
-      nhalf=3
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -29258,10 +29223,9 @@ end subroutine initialize2d
       INTEGER_T IWALL(3)
       INTEGER_T im,ipart
       INTEGER_T icomplo,icomphi
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
-      nhalf=3
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
@@ -29425,10 +29389,9 @@ end subroutine initialize2d
       INTEGER_T borderlo(3)
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
-      nhalf=3
       if (grid_type.eq.-1) then
        ! do nothing
       else
@@ -29564,10 +29527,8 @@ end subroutine initialize2d
       INTEGER_T IWALL(3)
       INTEGER_T im,icomp,istate
       INTEGER_T scomp_spec,num_state_material_test
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
-
-      nhalf=3
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
        ! c++ index
       if (scomp.ne.STATECOMP_STATES) then
@@ -29726,13 +29687,11 @@ end subroutine initialize2d
       INTEGER_T IWALL(3)
       INTEGER_T ipart,im,istate
       INTEGER_T icomp_total
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       INTEGER_T check_scomp,check_ncomp,max_ncomp
       
-      nhalf=3
-
       if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
        ! do nothing
       else

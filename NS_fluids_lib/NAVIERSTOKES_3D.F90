@@ -2150,15 +2150,16 @@ END SUBROUTINE SIMP
       REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: reconfab
       INTEGER_T debug_slice
       REAL_T denslice,tempslice,eslice,KEslice
-      INTEGER_T nhalf,bfact_finest
-      REAL_T xstenND(-3:3,SDIM)
-      REAL_T xsten_corner(-3:3,SDIM)
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T xsten1D(-3:3)
-      REAL_T xsten1DL(-3:3)
-      REAL_T xsten1D_finest(-3:3)
-      REAL_T xsten_fablo(-3:3,SDIM)
-      REAL_T xsten_fabhi(-3:3,SDIM)
+      INTEGER_T bfact_finest
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xstenND(-nhalf:nhalf,SDIM)
+      REAL_T xsten_corner(-nhalf:nhalf,SDIM)
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xsten1D(-nhalf:nhalf)
+      REAL_T xsten1DL(-nhalf:nhalf)
+      REAL_T xsten1D_finest(-nhalf:nhalf)
+      REAL_T xsten_fablo(-nhalf:nhalf,SDIM)
+      REAL_T xsten_fabhi(-nhalf:nhalf,SDIM)
       REAL_T dxleft,dxright,dxmin
       REAL_T mofdata(num_materials*ngeom_recon)
       INTEGER_T nmax
@@ -2186,7 +2187,6 @@ END SUBROUTINE SIMP
       INTEGER_T nwrite2d
 
 
-      nhalf=3
       nmax=POLYGON_LIST_MAX ! in: fort_cellgrid
       bfact_finest=2
       INTERP_TOL=1.0E-4
@@ -4637,10 +4637,10 @@ END SUBROUTINE SIMP
       REAL_T voltotal
       REAL_T volall
       REAL_T wt(SDIM)
-      REAL_T xsten(-1:1,SDIM)
-      REAL_T xsten_fine(-1:1,SDIM)
-      REAL_T xstenND(-1:1,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xsten_fine(-nhalf:nhalf,SDIM)
+      REAL_T xstenND(-nhalf:nhalf,SDIM)
       REAL_T crse_value(ncomp_flux)
       REAL_T dxelem_f
       REAL_T xcoarse(SDIM)
@@ -4654,8 +4654,6 @@ END SUBROUTINE SIMP
       INTEGER_T dencomp
       REAL_T LS_local(num_materials)
       INTEGER_T mat_freq(num_materials)
-
-      nhalf=1
 
       INTERP_TOL=1.0E-4
 
@@ -5398,10 +5396,10 @@ END SUBROUTINE SIMP
       REAL_T voltotal
       REAL_T volall
       REAL_T wt(SDIM)
-      REAL_T xsten(-1:1,SDIM)
-      REAL_T xsten_coarse(-1:1,SDIM)
-      REAL_T xstenND(-1:1,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xsten_coarse(-nhalf:nhalf,SDIM)
+      REAL_T xstenND(-nhalf:nhalf,SDIM)
       REAL_T fine_value(ncomp_flux)
       REAL_T dxelem_c
       REAL_T xfine(SDIM)
@@ -5416,8 +5414,6 @@ END SUBROUTINE SIMP
       REAL_T crse_data
       INTEGER_T dencomp
       INTEGER_T local_masknbr
-
-      nhalf=1
 
       INTERP_TOL=1.0E-4
 
@@ -6169,10 +6165,10 @@ END SUBROUTINE SIMP
       REAL_T voltotal
       REAL_T volall
       REAL_T wt(SDIM)
-      REAL_T xsten(-1:1,SDIM)
-      REAL_T xsten_coarse(-1:1,SDIM)
-      REAL_T xstenND(-1:1,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xsten_coarse(-nhalf:nhalf,SDIM)
+      REAL_T xstenND(-nhalf:nhalf,SDIM)
       REAL_T fine_value(ncomp_flux)
       REAL_T dxelem_c
       REAL_T xfine(SDIM)
@@ -6183,8 +6179,6 @@ END SUBROUTINE SIMP
       INTEGER_T elem_test
       REAL_T crse_data
       INTEGER_T local_masknbr
-
-      nhalf=1
 
       INTERP_TOL=1.0E-4
 
@@ -6985,6 +6979,8 @@ END SUBROUTINE SIMP
 
       REAL_T, INTENT(in), target :: xlo(SDIM),dx(SDIM)
 
+      INTEGER_T, parameter :: nhalf=3
+
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
       INTEGER_T dir
@@ -6993,8 +6989,8 @@ END SUBROUTINE SIMP
       INTEGER_T vofcomp
       INTEGER_T dirMAC
       REAL_T xcen,xcrit
-      REAL_T, target :: xsten(-3:3,SDIM)
-      REAL_T xstenMAC(-3:3,SDIM)
+      REAL_T, target :: xsten(-nhalf:nhalf,SDIM)
+      REAL_T xstenMAC(-nhalf:nhalf,SDIM)
       REAL_T mofdata(num_materials*ngeom_recon)
       REAL_T mofdata_tess(num_materials*ngeom_recon)
       INTEGER_T stack_error_level
@@ -7020,7 +7016,7 @@ END SUBROUTINE SIMP
       REAL_T LScen_material(SDIM)
       INTEGER_T i1,j1,k1,k1lo,k1hi
       REAL_T KECELL,dencore,Tcore,ecore,totalE
-      INTEGER_T in_slice,nhalf
+      INTEGER_T in_slice
       INTEGER_T nbase,veldir
       REAL_T gradu(3,3)
       REAL_T vort(3)
@@ -7062,7 +7058,6 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      nhalf=3
       nmax=POLYGON_LIST_MAX  ! in: fort_summass
 
       cellten_ptr=>cellten
@@ -8230,7 +8225,8 @@ END SUBROUTINE SIMP
       REAL_T, INTENT(inout), target :: mdot(DIMV(mdot))
       REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:))
 
-      REAL_T, INTENT(in), target :: DEN(DIMV(DEN),num_materials*num_state_material)
+      REAL_T, INTENT(in), target :: &
+              DEN(DIMV(DEN),num_materials*num_state_material)
       REAL_T, pointer :: DEN_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: VOF(DIMV(VOF),num_materials*ngeom_recon)
       REAL_T, pointer :: VOF_ptr(D_DECL(:,:,:),:)
@@ -8239,15 +8235,17 @@ END SUBROUTINE SIMP
       REAL_T, INTENT(in), target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
 
+      INTEGER_T, parameter :: nhalf=3
+
       INTEGER_T :: i,j,k
       INTEGER_T :: im
       INTEGER_T :: dir
       INTEGER_T :: local_dir
       INTEGER_T :: local_mask,local_mask_L
       INTEGER_T :: tessellate
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T xsten_L(-3:3,SDIM)
-      REAL_T xsten_R(-3:3,SDIM)
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xsten_L(-nhalf:nhalf,SDIM)
+      REAL_T xsten_R(-nhalf:nhalf,SDIM)
       REAL_T xtarget(SDIM)
       INTEGER_T iregions
       INTEGER_T ispec
@@ -8278,7 +8276,6 @@ END SUBROUTINE SIMP
       INTEGER_T imattype
       INTEGER_T dencomp
       INTEGER_T ii,jj,kk
-      INTEGER_T nhalf
       REAL_T mofdata(num_materials*ngeom_recon)
       REAL_T mofdata_L(num_materials*ngeom_recon)
       REAL_T local_cellvol
@@ -8303,7 +8300,6 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      nhalf=3
       nmax=POLYGON_LIST_MAX ! in: fort_regionsum
 
       snew_ptr=>snew
@@ -10238,10 +10234,8 @@ END SUBROUTINE SIMP
 
       REAL_T gravity_increment
 
-      REAL_T xsten(-1:1,SDIM)
-      INTEGER_T nhalf
-
-      nhalf=1
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       xface_ptr=>xface
       lsnew_ptr=>lsnew
@@ -12323,14 +12317,12 @@ END SUBROUTINE SIMP
 
       INTEGER_T i,j,k,dir
       REAL_T xx(SDIM)
-      REAL_T xsten(-1:1,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T LS
       REAL_T vel(SDIM)
       REAL_T temperature
       INTEGER_T prescribed_flag
-
-      nhalf=1
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -12440,9 +12432,9 @@ END SUBROUTINE SIMP
       REAL_T voltotal
       REAL_T volall
       REAL_T wt(SDIM)
-      REAL_T xsten(-1:1,SDIM)
-      REAL_T xstenND(-1:1,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xstenND(-nhalf:nhalf,SDIM)
       REAL_T crse_value(ncomp)
       REAL_T dxelem_f
       REAL_T xcoarse(SDIM)
@@ -12452,8 +12444,6 @@ END SUBROUTINE SIMP
       INTEGER_T testmask,testmask2
       INTEGER_T local_enable_spectral
       INTEGER_T elem_test
-
-      nhalf=1
 
       INTERP_TOL=1.0E-4
 
@@ -13277,8 +13267,10 @@ END SUBROUTINE SIMP
       REAL_T, INTENT(in) :: dxc(SDIM)
       REAL_T, INTENT(in) :: dxf(SDIM)
       INTEGER_T domlo(SDIM)
-      INTEGER_T nhalf
-      INTEGER_T nhalfgrid
+
+      INTEGER_T, parameter :: nhalf=3
+      INTEGER_T, parameter :: nhalfgrid=1
+
       INTEGER_T n_overlap
  
       INTEGER_T im
@@ -13290,9 +13282,9 @@ END SUBROUTINE SIMP
       REAL_T temp_vfrac
       REAL_T temp_cen(SDIM)
 
-      REAL_T xstencoarse(-3:3,SDIM)
-      REAL_T xstenfine(-3:3,SDIM)
-      REAL_T xstengrid(-1:1,SDIM)
+      REAL_T xstencoarse(-nhalf:nhalf,SDIM)
+      REAL_T xstenfine(-nhalf:nhalf,SDIM)
+      REAL_T xstengrid(-nhalfgrid:nhalfgrid,SDIM)
 
       REAL_T mofdatafine(num_materials*ngeom_recon)
       REAL_T mofdatacoarse(num_materials*ngeom_recon)
@@ -13312,7 +13304,8 @@ END SUBROUTINE SIMP
       INTEGER_T fine_covered
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
       INTEGER_T nmax
-      INTEGER_T nhalf_box
+      INTEGER_T, parameter :: nhalf_box=1
+
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       INTEGER_T tid
@@ -13328,8 +13321,6 @@ END SUBROUTINE SIMP
        print *,"tid invalid"
        stop
       endif 
-
-      nhalf_box=1
 
       nmax=POLYGON_LIST_MAX ! in: MOFAVGDOWN
 
@@ -13352,8 +13343,6 @@ END SUBROUTINE SIMP
       do dir=1,SDIM
        domlo(dir)=0
       enddo
-      nhalf=3
-      nhalfgrid=1
 
       crse_ptr=>crse
       fine_ptr=>fine
@@ -13809,10 +13798,8 @@ END SUBROUTINE SIMP
       REAL_T local_vort
       INTEGER_T local_mask
       REAL_T DXMAXLS
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
-
-      nhalf=3
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       call get_dxmaxLS(dx,bfact,DXMAXLS)
 
@@ -14012,9 +13999,9 @@ END SUBROUTINE SIMP
 
       REAL_T wt(SDIM)
 
-      REAL_T xsten(-1:1,SDIM)
-      REAL_T xstenND(-1:1,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, parameter :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xstenND(-nhalf:nhalf,SDIM)
       REAL_T crse_value(ncomp)
       REAL_T dxelem_f
       REAL_T xcoarse(SDIM)
@@ -14025,8 +14012,6 @@ END SUBROUTINE SIMP
       INTEGER_T testmask,testmask2
       INTEGER_T local_enable_spectral
       INTEGER_T box_type(SDIM)
-
-      nhalf=1
 
       INTERP_TOL=1.0E-4
 
@@ -14398,12 +14383,12 @@ END SUBROUTINE SIMP
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T i,j,k,dir
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf,side
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T side
       REAL_T local_area
       INTEGER_T at_z_axis
 
-      nhalf=3
       if (bfact.lt.1) then
        print *,"bfact invalid167" 
        stop

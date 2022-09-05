@@ -8643,6 +8643,8 @@ void NavierStokes::MOF_training() {
  int cpp_i=0;
  int cpp_j=0;
  int cpp_k=0;
+ int local_continuous_mof=0;
+
   // in: PLIC_3D.F90
  fort_MOF_training(
    &op_training,
@@ -8653,13 +8655,15 @@ void NavierStokes::MOF_training() {
    &bfact,
    domlo,domhi,
    dx,
-   &continuous_mof);
+   &local_continuous_mof);
 
  ParallelDescriptor::Barrier();
 
  for (cpp_i=cpp_training_lo[0];cpp_i<=cpp_training_hi[0];cpp_i++) {
  for (cpp_j=cpp_training_lo[1];cpp_j<=cpp_training_hi[1];cpp_j++) {
  for (cpp_k=cpp_training_lo[2];cpp_k<=cpp_training_hi[2];cpp_k++) {
+ for (local_continuous_mof=0;local_continuous_mof<=2; 
+		             local_continuous_mof+=2) {
   op_training=1;  // generate data and do python processing.
   ParallelDescriptor::Barrier();
   if (ParallelDescriptor::IOProcessor()) {
@@ -8672,7 +8676,7 @@ void NavierStokes::MOF_training() {
     &bfact,
     domlo,domhi,
     dx,
-    &continuous_mof);
+    &local_continuous_mof);
   }
   ParallelDescriptor::Barrier();
   op_training=2;  // read network data
@@ -8685,8 +8689,9 @@ void NavierStokes::MOF_training() {
    &bfact,
    domlo,domhi,
    dx,
-   &continuous_mof);
+   &local_continuous_mof);
   ParallelDescriptor::Barrier();
+ } //local_continuous_mof
  } //cpp_k
  } //cpp_j
  } //cpp_i
