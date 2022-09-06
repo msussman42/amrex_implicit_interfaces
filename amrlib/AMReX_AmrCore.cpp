@@ -1072,6 +1072,10 @@ AmrCore::restart (const std::string& filename)
          level_cells_advanced[i] = 0.0;
         }
 
+       } else if (max_level==mx_lev) {
+        // do nothing
+       } else {
+        amrex::Error("max_level,mx_lev bust");
        }
 
        if (regrid_on_restart and max_level > 0)
@@ -1087,7 +1091,6 @@ AmrCore::restart (const std::string& filename)
             // internal to amr_level -> restart are the commands:
             // parent->SetBoxArray(level, grids);
             // parent->SetDistributionMap(level, dmap);
-	    // new_finest_level = finest_level
            amr_level[lev]->restart(*this, is,old_finest_level,finest_level);
            this->SetBoxArray(lev, amr_level[lev]->boxArray());
            this->SetDistributionMap(lev, amr_level[lev]->DistributionMap());
@@ -1103,25 +1106,21 @@ AmrCore::restart (const std::string& filename)
     } else if ((max_level>=0)&&(max_level<mx_lev)) {
 
        if (ParallelDescriptor::IOProcessor())
-          amrex::Warning("AmrCore::restart(): max_level is lower than before");
+        amrex::Warning("AmrCore::restart(): max_level is lower than before");
 
         //just in case max_level reduced to be below the restarted
         //max_level which is  "mx_lev"
-       int new_finest_level = std::min(max_level,finest_level);
+       finest_level = std::min(max_level,finest_level);
 
-       finest_level = new_finest_level;
        fort_override_finest_level(&finest_level);
  
        // These are just used to hold the extra stuff we have to read in.
        Geometry   geom_dummy;
        int         int_dummy;
-       IntVect intvect_dummy;
 
        for (i = 0          ; i <= max_level; i++) is >> geom[i];
          // discard the previous levels in which level>max_level.
        for (i = max_level+1; i <= mx_lev   ; i++) is >> geom_dummy;
-
-       for (i = max_level; i <  mx_lev   ; i++) is >> intvect_dummy;
 
        for (i = 0          ; i <= max_level; i++) is >> level_steps[i];
        for (i = max_level+1; i <= mx_lev   ; i++) is >> int_dummy;
@@ -1146,13 +1145,12 @@ AmrCore::restart (const std::string& filename)
        // Read levels.
        //
        int lev;
-       for (lev = 0; lev <= new_finest_level; lev++)
+       for (lev = 0; lev <= finest_level; lev++)
        {
            amr_level[lev].reset((*levelbld)());
             // internal to amr_level -> restart are the commands:
             // parent->SetBoxArray(level, grids);
             // parent->SetDistributionMap(level, dmap);
-	    // new_finest_level = finest_level
            amr_level[lev]->restart(*this, is,old_finest_level,finest_level);
            this->SetBoxArray(lev, amr_level[lev]->boxArray());
            this->SetDistributionMap(lev, amr_level[lev]->DistributionMap());
@@ -1160,7 +1158,7 @@ AmrCore::restart (const std::string& filename)
        //
        // Build any additional data structures.
        //
-       for (lev = 0; lev <= new_finest_level; lev++)
+       for (lev = 0; lev <= finest_level; lev++)
            amr_level[lev]->post_restart();
 
     } else
@@ -1174,8 +1172,10 @@ AmrCore::restart (const std::string& filename)
           if (ParallelDescriptor::IOProcessor())
           {
              std::cout << "Problem at level " << lev << '\n';
-             std::cout << "Domain according to     inputs file is " <<  inputs_domain[lev] << '\n';
-             std::cout << "Domain according to checkpoint file is " << restart_domain      << '\n';
+             std::cout << "Domain according to inputs file is " <<  
+		     inputs_domain[lev] << '\n';
+             std::cout << "Domain according to checkpoint file is " << 
+		     restart_domain << '\n';
              std::cout << "AmrCore::restart() failed -- box from inputs file does not equal box from restart file" << std::endl;
           }
           amrex::Abort();
@@ -1191,7 +1191,7 @@ AmrCore::restart (const std::string& filename)
 
         if (ParallelDescriptor::IOProcessor())
         {
-            std::cout << "Restart time = " << dRestartTime << " seconds." << '\n';
+         std::cout << "Restart time = " << dRestartTime << " seconds." << '\n';
         }
     }
 }
