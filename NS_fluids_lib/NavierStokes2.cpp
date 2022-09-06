@@ -8645,41 +8645,9 @@ void NavierStokes::MOF_training() {
  int cpp_k=0;
  int local_continuous_mof=0;
 
+ if (mof_machine_learning==1) {
+
   // in: PLIC_3D.F90
- fort_MOF_training(
-   &op_training,
-   cpp_training_lo,
-   cpp_training_hi,
-   &cpp_i,&cpp_j,&cpp_k,
-   &finest_level,
-   &bfact,
-   domlo,domhi,
-   dx,
-   &local_continuous_mof);
-
- ParallelDescriptor::Barrier();
-
- for (cpp_i=cpp_training_lo[0];cpp_i<=cpp_training_hi[0];cpp_i++) {
- for (cpp_j=cpp_training_lo[1];cpp_j<=cpp_training_hi[1];cpp_j++) {
- for (cpp_k=cpp_training_lo[2];cpp_k<=cpp_training_hi[2];cpp_k++) {
- for (local_continuous_mof=0;local_continuous_mof<=2; 
-		             local_continuous_mof+=2) {
-  op_training=1;  // generate data and do python processing.
-  ParallelDescriptor::Barrier();
-  if (ParallelDescriptor::IOProcessor()) {
-   fort_MOF_training(
-    &op_training,
-    cpp_training_lo,
-    cpp_training_hi,
-    &cpp_i,&cpp_j,&cpp_k,
-    &finest_level,
-    &bfact,
-    domlo,domhi,
-    dx,
-    &local_continuous_mof);
-  }
-  ParallelDescriptor::Barrier();
-  op_training=2;  // read network data
   fort_MOF_training(
    &op_training,
    cpp_training_lo,
@@ -8690,11 +8658,50 @@ void NavierStokes::MOF_training() {
    domlo,domhi,
    dx,
    &local_continuous_mof);
+
   ParallelDescriptor::Barrier();
- } //local_continuous_mof
- } //cpp_k
- } //cpp_j
- } //cpp_i
+
+  for (cpp_i=cpp_training_lo[0];cpp_i<=cpp_training_hi[0];cpp_i++) {
+  for (cpp_j=cpp_training_lo[1];cpp_j<=cpp_training_hi[1];cpp_j++) {
+  for (cpp_k=cpp_training_lo[2];cpp_k<=cpp_training_hi[2];cpp_k++) {
+  for (local_continuous_mof=0;local_continuous_mof<=2; 
+ 		              local_continuous_mof+=2) {
+   op_training=1;  // generate data and do python processing.
+   ParallelDescriptor::Barrier();
+   if (ParallelDescriptor::IOProcessor()) {
+    fort_MOF_training(
+     &op_training,
+     cpp_training_lo,
+     cpp_training_hi,
+     &cpp_i,&cpp_j,&cpp_k,
+     &finest_level,
+     &bfact,
+     domlo,domhi,
+     dx,
+     &local_continuous_mof);
+   }
+   ParallelDescriptor::Barrier();
+   op_training=2;  // read network data
+   fort_MOF_training(
+    &op_training,
+    cpp_training_lo,
+    cpp_training_hi,
+    &cpp_i,&cpp_j,&cpp_k,
+    &finest_level,
+    &bfact,
+    domlo,domhi,
+    dx,
+    &local_continuous_mof);
+   ParallelDescriptor::Barrier();
+  } //local_continuous_mof
+  } //cpp_k
+  } //cpp_j
+  } //cpp_i
+
+ } else if (mof_machine_learning==0) {
+  // do nothing
+ } else
+  amrex::Error("mof_machine_learning invalid");
 
 }  // end subroutine MOF_training
 

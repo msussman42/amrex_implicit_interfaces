@@ -314,6 +314,8 @@ implicit none
       Type(training_model_type), allocatable, dimension(:,:,:,:) :: &
         training_array
 
+      INTEGER_T :: training_finest_level=-1
+
       INTEGER_T :: training_lo(3)
       INTEGER_T :: training_hi(3)
 

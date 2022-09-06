@@ -1078,6 +1078,13 @@ stop
    
       tid=0
 
+      if (finest_level.eq.fort_finest_level) then
+       training_finest_level=finest_level
+      else
+       print *,"finest_level and fort_finest_level mismatch"
+       stop
+      endif
+
       if (SDIM.eq.3) then
        klosten=-1
        khisten=1
@@ -1386,7 +1393,6 @@ stop
 
       return
       end subroutine fort_MOF_training
-
 
       end module plic_cpp_module
 
