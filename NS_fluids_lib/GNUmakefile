@@ -41,8 +41,6 @@ DIM       = 2
 
 BL_NO_FORT = TRUE
 
-ZHOUTENG_YE_ML = FALSE
-
 MEHDI_VAHAB_FSI = FALSE
 CTML_FIB = TRUE
 CTML_ESH = FALSE
@@ -88,8 +86,8 @@ CTML_FBC = FALSE
 #    Disable range checking on results of simplification of constant
 #    expressions during compilation.
 
-MAC_LAPTOP = FALSE
-LINUX_DESKTOP = TRUE
+MAC_LAPTOP = TRUE
+LINUX_DESKTOP = FALSE
 HPC_INTEL = FALSE
 HPC_GNU = FALSE
 
@@ -182,12 +180,6 @@ ifeq ($(MEHDI_VAHAB_FSI),TRUE)
  F90FLAGS+=-DMVAHABFSI
 endif
 
-ifeq ($(ZHOUTENG_YE_ML),TRUE)
- CPPFLAGS+=-DZHOUTENGYEML
- FFLAGS+=-DZHOUTENGYEML
- F90FLAGS+=-DZHOUTENGYEML
-endif
-
 ifeq ($(CTML_FIB),TRUE)
  CPPFLAGS+=-DINCLUDE_FIB
  FFLAGS+=-DINCLUDE_FIB
@@ -211,10 +203,6 @@ endif
 
 ifeq ($(MEHDI_VAHAB_FSI),TRUE)
 include $(MOF_HOME)/Vicar3D/Make.package
-endif
-
-ifeq ($(ZHOUTENG_YE_ML),TRUE)
-include $(MOF_HOME)/mof_ml_Zhouteng/Make.package
 endif
 
 ifeq ($(USE_LIBAMREX),FALSE)

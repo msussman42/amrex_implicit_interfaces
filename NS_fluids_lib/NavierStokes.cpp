@@ -141,6 +141,8 @@ on an interface, growth rate of perturbations, pressure drop)
 */
 
 int  NavierStokes::continuous_mof=2;
+int  NavierStokes::mof_machine_learning=0;
+
 // =1 EXT_DIR,REFLECT_EVEN,embedded; =2 same as 1 plus triple points.
 int  NavierStokes::force_cmof_at_triple_junctions=1;
 int  NavierStokes::partial_cmof_stencil_at_walls=1;
@@ -2600,8 +2602,12 @@ NavierStokes::read_params ()
      amrex::Error("enable_spectral invalid");
 
     pp.queryAdd("continuous_mof",continuous_mof);
-    pp.queryAdd("force_cmof_at_triple_junctions",force_cmof_at_triple_junctions);
-    pp.queryAdd("partial_cmof_stencil_at_walls",partial_cmof_stencil_at_walls);
+    pp.queryAdd("mof_machine_learning",mof_machine_learning);
+
+    pp.queryAdd("force_cmof_at_triple_junctions",
+		force_cmof_at_triple_junctions);
+    pp.queryAdd("partial_cmof_stencil_at_walls",
+		partial_cmof_stencil_at_walls);
 
     pp.queryAdd("init_shrink",init_shrink);
     pp.queryAdd("dt_max",dt_max);
@@ -2747,6 +2753,7 @@ NavierStokes::read_params ()
      std::cout << "cfl " << cfl << '\n';
      std::cout << "enable_spectral " << enable_spectral << '\n';
      std::cout << "continuous_mof " << continuous_mof << '\n';
+     std::cout << "mof_machine_learning " << mof_machine_learning << '\n';
      std::cout << "force_cmof_at_triple_junctions " << 
        force_cmof_at_triple_junctions << '\n';
      std::cout << "partial_cmof_stencil_at_walls " << 
@@ -21953,9 +21960,14 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 // (i) NavierStokes::initData ()
 // (ii) NavierStokes::post_restart()
 
-
-
-
+ if (post_init_flag==1) { // called from post_init_state
+  ns_finest.MOF_training();
+ } else if (post_init_flag==2) { // called from post_restart
+  ns_finest.MOF_training();
+ } else if (post_init_flag==0) { // called from writePlotFile
+  // do nothing
+ } else
+  amrex::Error("post_init_flag invalid");
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -22015,14 +22027,11 @@ NavierStokes::prepare_post_process(int post_init_flag) {
  int post_restart_flag=0;
  int caller_id=1;
 
+ VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
+  init_vof_prev_time,SLOPE_RECON_MF);
+
  if (post_init_flag==1) { // called from post_init_state
 
-#ifdef ZHOUTENGYEML
-  ns_finest.MOF_training();
-#endif
-
-  VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
-   init_vof_prev_time,SLOPE_RECON_MF);
   int keep_all_interfaces=1;
   makeStateDistALL(keep_all_interfaces);
   caller_id=1;
@@ -22031,20 +22040,15 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   project_option=SOLVETYPE_INITPROJ;
   post_restart_flag=0;
   caller_id=1;
+
  } else if (post_init_flag==0) { // called from writePlotFile
-  VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
-    init_vof_prev_time,SLOPE_RECON_MF);
+
   project_option=SOLVETYPE_INITPROJ;
   post_restart_flag=0;
   caller_id=2;
+
  } else if (post_init_flag==2) { // called from post_restart
 
-#ifdef ZHOUTENGYEML
-  ns_finest.MOF_training();
-#endif
-
-  VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
-    init_vof_prev_time,SLOPE_RECON_MF);
   if (1==0) {
    int keep_all_interfaces=0;
    makeStateDistALL(keep_all_interfaces);
@@ -22055,6 +22059,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   project_option=SOLVETYPE_INITPROJ;  // initial project
   post_restart_flag=1;
   caller_id=3;
+
  } else
   amrex::Error("post_init_flag invalid 21429");
 
