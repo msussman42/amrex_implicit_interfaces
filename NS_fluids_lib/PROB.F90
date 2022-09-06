@@ -19220,6 +19220,10 @@ end subroutine RatePhaseChange
       INTEGER_T mof_verbose
       INTEGER_T continuous_mof
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
+
+      INTEGER_T :: grid_index(SDIM)
+      INTEGER_T, parameter :: grid_level=-1
+
       INTEGER_T tessellate
       INTEGER_T ibasesrc,ibasedst
       INTEGER_T ibase_raw,ibase_recon
@@ -19279,6 +19283,12 @@ end subroutine RatePhaseChange
 
        LL=nucleate_in%LL
        make_seed=0
+
+       grid_index(1)=i
+       grid_index(2)=j
+       if (SDIM.eq.3) then
+        grid_index(SDIM)=k
+       endif
 
        call gridsten_level(xsten,i,j,k,nucleate_in%level,nhalf)
 
@@ -19445,6 +19455,8 @@ end subroutine RatePhaseChange
          multi_centroidA, &
          continuous_mof, &
          cmofsten, &
+         grid_index, &
+         grid_level, &
          SDIM)
 
         local_tessellate=3
@@ -28380,6 +28392,10 @@ end subroutine initialize2d
       INTEGER_T use_ls_data,mof_verbose
       INTEGER_T continuous_mof
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
+
+      INTEGER_T :: grid_index(SDIM)
+      INTEGER_T, parameter :: grid_level=-1
+
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),1)  ! not used
       REAL_T multi_centroidA(num_materials,SDIM)
       REAL_T mofdata(num_materials*ngeom_recon)
@@ -28511,6 +28527,12 @@ end subroutine initialize2d
         do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
 
+         grid_index(1)=i
+         grid_index(2)=j
+         if (SDIM.eq.3) then
+          grid_index(SDIM)=k
+         endif
+
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
          IWALL(1)=i
@@ -28604,6 +28626,8 @@ end subroutine initialize2d
           multi_centroidA, &
           continuous_mof, &
           cmofsten, &
+          grid_index, &
+          grid_level, &
           SDIM)
 
          do dir3=1,num_materials*ngeom_recon

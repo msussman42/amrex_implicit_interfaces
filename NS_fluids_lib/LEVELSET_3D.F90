@@ -15750,6 +15750,10 @@ stop
       INTEGER_T im_local
       INTEGER_T continuous_mof_parm
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
+
+      INTEGER_T :: grid_index(SDIM)
+      INTEGER_T, parameter :: grid_level=-1
+
       REAL_T user_tension(num_interfaces)
       INTEGER_T iten
       REAL_T cos_angle,sin_angle
@@ -16002,6 +16006,12 @@ stop
       do k=growlo(3),growhi(3)
 
        local_maskcov=NINT(maskcov(D_DECL(i,j,k)))
+
+       grid_index(1)=i
+       grid_index(2)=j
+       if (SDIM.eq.3) then
+        grid_index(SDIM)=k
+       endif
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
@@ -16903,6 +16913,8 @@ stop
              multi_centroidA, &
              continuous_mof_parm, &
              cmofsten, &
+             grid_index, &
+             grid_level, &
              SDIM)
      
             tessellate_transfer=1 

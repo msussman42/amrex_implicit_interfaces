@@ -3800,6 +3800,10 @@ stop
 
       INTEGER_T continuous_mof_parm
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
+
+      INTEGER_T :: grid_index(SDIM)
+      INTEGER_T, parameter :: grid_level=-1
+
       INTEGER_T use_ls_data
       INTEGER_T mof_verbose
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
@@ -4028,6 +4032,12 @@ stop
       do k=growlo(3),growhi(3)
 
        local_mask=NINT(maskcov(D_DECL(i,j,k)))
+
+       grid_index(1)=i
+       grid_index(2)=j
+       if (SDIM.eq.3) then
+        grid_index(SDIM)=k
+       endif
 
        if (local_mask.eq.1) then
 
@@ -5249,6 +5259,8 @@ stop
              multi_centroidA, &
              continuous_mof_parm, &
              cmofsten, &
+             grid_index, &
+             grid_level, &
              SDIM)
 
              ! xPOINT_supermesh is needed in order to determine

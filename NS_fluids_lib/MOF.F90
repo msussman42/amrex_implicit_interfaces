@@ -13304,6 +13304,8 @@ contains
         multi_centroidA, &
         continuous_mof, &
         cmofsten, &
+        grid_index, &
+        grid_level, &
         sdim)
 
       use probcommon_module
@@ -13320,6 +13322,8 @@ contains
       INTEGER_T, INTENT (IN) :: nmax
       INTEGER_T, INTENT (IN) :: continuous_mof
       INTEGER_T, INTENT (IN) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      INTEGER_T, INTENT (IN) :: grid_index(sdim)
+      INTEGER_T, INTENT (IN) :: grid_level
 
        ! D_DECL(i,j,k) = i,j  in 2D
        !               = i,j,k in 3D
@@ -14285,7 +14289,10 @@ contains
       REAL_T shrink_factor
       INTEGER_T mof_verbose
       INTEGER_T use_ls_data
-      INTEGER_T isten,bfact
+      INTEGER_T isten
+      INTEGER_T grid_index(3)
+      INTEGER_T, parameter :: grid_level=-1
+      INTEGER_T bfact
       REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: LS_stencil
       INTEGER_T i1,j1,k1,k1lo,k1hi
       INTEGER_T nhalf0
@@ -14451,6 +14458,10 @@ contains
        mof_verbose=0
        use_ls_data=0
 
+       do dir=1,sdim
+        grid_index(dir)=0
+       enddo
+
        call multimaterial_MOF( &
         bfact,dx,xsten0,nhalf0, &
         mof_verbose, &
@@ -14464,6 +14475,8 @@ contains
         multi_centroidA, &
         continuous_mof, &
         cmofsten, &
+        grid_index, &
+        grid_level, &
         sdim)
 
        moferror=zero
