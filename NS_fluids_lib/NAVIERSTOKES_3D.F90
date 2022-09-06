@@ -13268,6 +13268,9 @@ END SUBROUTINE SIMP
       REAL_T, INTENT(in) :: dxf(SDIM)
       INTEGER_T domlo(SDIM)
 
+      INTEGER_T :: grid_index(SDIM)
+      INTEGER_T, parameter :: grid_level=-1
+
       INTEGER_T, parameter :: nhalf=3
       INTEGER_T, parameter :: nhalfgrid=1
 
@@ -13353,6 +13356,12 @@ END SUBROUTINE SIMP
       do ic=growlo(1),growhi(1)
       do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
+
+       grid_index(1)=ic
+       grid_index(2)=jc
+       if (SDIM.eq.3) then
+        grid_index(SDIM)=kc
+       endif
 
         ! coarse centroids and volume fractions are initialized
         ! to zero.
@@ -13493,6 +13502,8 @@ END SUBROUTINE SIMP
                 multi_centroidA, &
                 continuous_mof, &
                 cmofsten, &
+                grid_index, &
+                grid_level, &
                 SDIM)
 
                call multi_get_volume_grid_simple( &

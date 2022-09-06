@@ -116,6 +116,9 @@ stop
 
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
+      INTEGER_T :: grid_index(SDIM)
+      INTEGER_T :: grid_level=-1
+
       INTEGER_T im
       REAL_T mofdata(num_materials*ngeom_recon)
       REAL_T mofdata_super(num_materials*ngeom_recon)
@@ -292,6 +295,12 @@ stop
       do i = igridlo(1),igridhi(1)
       do j = igridlo(2),igridhi(2)
       do k = igridlo(3),igridhi(3)
+
+       grid_index(1)=i
+       grid_index(2)=j
+       if (SDIM.eq.3) then
+        grid_index(SDIM)=k
+       endif
 
        if ((update_flag.eq.0).or.(update_flag.eq.1)) then
         ! do nothing
@@ -916,6 +925,8 @@ stop
           multi_centroidA, &
           continuous_mof_parm, &
           cmofsten, &
+          grid_index, &
+          grid_level, &
           SDIM)
 
         if (continuous_mof_parm.eq.2) then

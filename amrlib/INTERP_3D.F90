@@ -152,7 +152,11 @@ stop
       INTEGER_T stenlo(3),stenhi(3)
       REAL_T wt(SDIM)
 
-      INTEGER_T i,j,k,ifine,jfine,kfine
+      INTEGER_T :: grid_index(SDIM)
+      INTEGER_T, parameter :: grid_level=-1
+
+      INTEGER_T i,j,k
+      INTEGER_T ifine,jfine,kfine
       INTEGER_T ic,jc,kc
       REAL_T testwt
 
@@ -263,7 +267,8 @@ stop
 
        enddo  ! im
 
-       call gridsten(xsten,problo,i,j,k,domlo,bfact_coarse,dxc,nhalf)
+!      call gridsten(xsten,problo,i,j,k,domlo,bfact_coarse,dxc,nhalf)
+       call gridsten_level(xsten,i,j,k,levelc,nhalf)
 
         ! sum F_fluid=1  sum F_solid <= 1
        call make_vfrac_sum_ok_base( &
@@ -272,6 +277,12 @@ stop
          bfact_coarse,dxc, &
          tessellate, & !=0
          mofdata,SDIM)
+
+       grid_index(1)=i
+       grid_index(2)=j
+       if (SDIM.eq.3) then
+        grid_index(SDIM)=k
+       endif
 
        call multimaterial_MOF( &
          bfact_coarse,dxc,xsten,nhalf, &
@@ -286,6 +297,8 @@ stop
          multi_centroidA, &
          continuous_mof, &
          cmofsten, &
+         grid_index, &
+         grid_level, &
          SDIM)
 
        do dir=1,num_materials*ngeom_recon
@@ -753,6 +766,9 @@ stop
       INTEGER_T ic,jc,kc
       REAL_T testwt
 
+      INTEGER_T :: grid_index(SDIM)
+      INTEGER_T, parameter :: grid_level=-1
+
       INTEGER_T dir
       INTEGER_T nmax,im,vofcomp_old,vofcomp_new
       REAL_T mofdata(num_materials*ngeom_recon)
@@ -1026,8 +1042,15 @@ stop
 
        enddo  ! im
 
-       call gridsten(xstenfine,problo,ifine,jfine,kfine, &
-         domlo,bfact_fine,dxf,nhalf)
+!      call gridsten(xstenfine,problo,ifine,jfine,kfine, &
+!        domlo,bfact_fine,dxf,nhalf)
+       call gridsten_level(xstenfine,ifine,jfine,kfine,levelf,nhalf)
+
+       grid_index(1)=ifine
+       grid_index(2)=jfine
+       if (SDIM.eq.3) then
+        grid_index(SDIM)=kfine
+       endif
 
         ! sum F_fluid=1  sum F_solid<=1
        call make_vfrac_sum_ok_base( &
@@ -1050,6 +1073,8 @@ stop
          multi_centroidA, &
          continuous_mof, &
          cmofsten, &
+         grid_index, &
+         grid_level, &
          SDIM)
 
        do dir=1,num_materials*ngeom_recon
