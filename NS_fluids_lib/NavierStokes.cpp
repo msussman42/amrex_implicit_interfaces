@@ -21949,6 +21949,14 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   // init VOLUME_MF and AREA_MF
  metrics_dataALL(1);
 
+//note: fort_initgridmap is called from:
+// (i) NavierStokes::initData ()
+// (ii) NavierStokes::post_restart()
+
+
+
+
+
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
 
