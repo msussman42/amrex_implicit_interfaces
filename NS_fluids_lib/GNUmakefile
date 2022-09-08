@@ -153,6 +153,7 @@ endif
 # mpirun -np 2 valgrind -v --leak-check=full --show-reachable=yes 
 #   --log-file=run.out.%p ../../amr3d.gnu.DEBUG.MPI.ex inputs3d.skirted  
 #   1> run.out 2> run.err &
+# ``Memory error checking in C and C++: Comparing Sanitizers and Valgrind.''
 #
 # NASA SUPERCOMPUTER
 #FCOMP = intel
