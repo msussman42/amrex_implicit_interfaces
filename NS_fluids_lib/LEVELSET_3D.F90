@@ -13005,7 +13005,7 @@ stop
       REAL_T temperature_clamped
       INTEGER_T is_clamped_face
       INTEGER_T local_compressible
-      INTEGER_T local_elastic
+      INTEGER_T :: local_elastic
 
       REAL_T test_current_icefacecut
       REAL_T test_current_icemask
@@ -13522,9 +13522,11 @@ stop
           call get_primary_material(LSleft,im_left)
           call get_primary_material(LSright,im_right)
 
+          local_elastic=0
+
           if ((fort_elastic_viscosity(im_left).gt.zero).or. &
               (fort_elastic_viscosity(im_right).gt.zero)) then
-           local_elastic=1
+!          local_elastic=1
           else if ((fort_elastic_viscosity(im_left).eq.zero).and. &
                    (fort_elastic_viscosity(im_right).eq.zero)) then
            local_elastic=0
