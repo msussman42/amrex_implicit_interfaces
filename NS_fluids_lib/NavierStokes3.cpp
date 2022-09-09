@@ -11735,8 +11735,8 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
    if (localMF[REGISTER_MARK_MF]->nGrow()<1)
     amrex::Error("REGISTER_MARK_MF invalid ngrow");
 
-    // umacnew+=INTERP_TO_MAC(unew-register_mark)  or
-    // umacnew=INTERP_TO_MAC(unew) if stiff elastic material.
+    // umacnew+=INTERP_TO_MAC(unew-register_mark)  
+    // (umacnew=INTERP_TO_MAC(unew) is disabled; too dissipative)
    INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
 
     // register_mark=unew
