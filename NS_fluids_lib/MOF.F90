@@ -13441,6 +13441,15 @@ contains
        stop
       endif
 
+      if (grid_level.eq.-1) then
+       ! do nothing
+      else if (grid_level.eq.training_finest_level) then
+       ! do nothing
+      else
+       print *,"grid_level invalid"
+       stop
+      endif
+
       if (nhalf0.lt.3) then
        print *,"nhalf0 invalid"
        stop
