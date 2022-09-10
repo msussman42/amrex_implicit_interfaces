@@ -10754,6 +10754,8 @@ contains
         ! output: intercept,centroidA,nslope
         ! called from: individual_MOF and multimaterial_MOF
       subroutine find_cut_geom_slope( &
+        grid_index, &
+        grid_level, &
         ls_mof, &
         lsnormal, &
         lsnormal_valid, &
@@ -10768,7 +10770,8 @@ contains
         nlist_alloc, &
         centroidA, &
         nmax, &
-        critical_material,fastflag, &
+        critical_material, &
+        fastflag, &
         sdim)
 
       use probcommon_module
@@ -10780,6 +10783,8 @@ contains
 #include "mofdata.H"
 
       INTEGER_T, INTENT(in) :: sdim
+      INTEGER_T, INTENT(in) :: grid_index(sdim)
+      INTEGER_T, INTENT(in) :: grid_level
       INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, INTENT(in) :: bfact,nhalf0
@@ -10867,6 +10872,14 @@ contains
       REAL_T nLS(sdim)
 
       INTEGER_T singular_flag
+
+      INTEGER_T ksten_low,ksten_high
+      INTEGER_T i1,j1,k1
+      INTEGER_T mof_stencil_ok
+      INTEGER_T grid_index_ML(sdim)
+      INTEGER_T iML,jML,kML,cmofML
+      REAL_T angle_init_ML(2)
+      REAL_T angle_output(2)
 
       REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
       REAL_T, INTENT(in) :: lsnormal(num_materials,sdim)
@@ -11025,7 +11038,13 @@ contains
 
       dx_normalize=dx_scale(1)
       if (dx_normalize.gt.one) then
-        dx_normalize=one
+       dx_normalize=one
+      else if ((dx_normalize.gt.zero).and. &
+               (dx_normalize.le.one)) then
+       ! do nothing
+      else
+       print *,"dx_normalize invalid"
+       stop
       endif
   
       tol=dx_scale(1)*GAUSSNEWTONTOL
@@ -11063,12 +11082,114 @@ contains
 
       if ((continuous_mof.eq.0).or. &
           (continuous_mof.eq.2)) then
+
          ! -pi < angle < pi
        call slope_to_angle(npredict,angle_init,sdim)
        nguess=nguess+1
        do dir=1,sdim-1
         angle_array(dir,nguess)=angle_init(dir)
        enddo
+
+       if (grid_level.eq.training_finest_level) then
+        mof_stencil_ok=1
+        if (continuous_mof.eq.0) then
+         ! do nothing
+        else if (continuous_mof.eq.2) then
+
+         if (sdim.eq.3) then
+          ksten_low=-1
+          ksten_high=1
+         else if (sdim.eq.2) then
+          ksten_low=0
+          ksten_high=0
+         else
+          print *,"sdim invalid"
+          stop
+         endif
+
+         do i1=-1,1
+         do j1=-1,1
+         do k1=ksten_low,ksten_high
+          if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
+           ! do nothing
+          else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
+           mof_stencil_ok=0
+          else
+           print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
+           stop
+          endif
+         enddo
+         enddo
+         enddo ! i1,j1,k1
+
+        else
+         print *,"continuous_mof invalid"
+         stop
+        endif
+
+        if (mof_stencil_ok.eq.1) then
+
+         if (fastflag.eq.1) then
+          nguess=nguess+1
+
+          do dir=1,sdim
+           grid_index_ML(dir)=grid_index(dir)/bfact
+           grid_index_ML(dir)=grid_index(dir)-bfact*grid_index_ML(dir)
+          enddo
+          dir=1
+          if (levelrz.eq.COORDSYS_CARTESIAN) then
+           ! do nothing
+          else if (levelrz.eq.COORDSYS_RZ) then
+           grid_index_ML(dir)=grid_index(dir)
+          else
+           print *,"levelrz invalid"
+           stop
+          endif
+          iML=grid_index_ML(1)
+          jML=grid_index_ML(2)
+          if (sdim.eq.2) then
+           kML=0
+          else if (sdim.eq.3) then
+           kML=grid_index_ML(sdim)
+          else
+           print *,"sdim invalid"
+           stop
+          endif
+          do dir=1,sdim-1
+           angle_init_ML(dir)=angle_init(dir)
+          enddo
+          if (sdim.eq.2) then
+           angle_init_ML(2)=zero
+          endif
+          cmofML=continuous_mof/2
+          angle_output= &
+               training_array(iML,jML,kML,cmofML)%DT_ZHOUTENG_LOCAL% &
+               predict(angle_init_ML)
+
+          do dir=1,sdim-1
+           angle_array(dir,nguess)=angle_output(dir)
+          enddo
+         else if (fastflag.eq.0) then
+          ! do nothing
+         else
+          print *,"fastflag invalid"
+          stop
+         endif
+
+        else if (mof_stencil_ok.eq.0) then
+         ! do nothing
+        else
+         print *,"mof_stencil_ok invalid"
+         stop
+        endif
+
+       else if (grid_level.eq.-1) then
+        ! do nothing
+       else
+        print *,"grid_level invalid"
+        stop
+       endif
+
       else
        print *,"continuous_mof invalid"
        stop
@@ -11141,8 +11262,8 @@ contains
 
       iter=0
 
-      delta_theta=Pi/180.0  ! 1 degree=pi/180
-      delta_theta_max=10.0*Pi/180  ! 10 degrees
+      delta_theta=Pi/180.0d0  ! 1 degree=pi/180
+      delta_theta_max=10.0d0*Pi/180.0d0  ! 10 degrees
 
       do while ((iter.lt.MOFITERMAX).and. &
                 (err.gt.tol).and. &
@@ -11573,6 +11694,8 @@ contains
 ! xcell is cell center (not cell centroid)
 
       subroutine individual_MOF( &
+        grid_index, &
+        grid_level, &
         tid, &
         ls_mof, &
         lsnormal, &
@@ -11584,7 +11707,7 @@ contains
         nlist_alloc, &
         nmax, &
         mofdata, &
-        imaterial_count, &
+        imaterial_count, & !imaterial_count-1=#mat already reconstructed
         uncaptured_volume_vof, &
         uncaptured_volume_cen, &
         multi_centroidA, &
@@ -11601,6 +11724,8 @@ contains
       INTEGER_T, INTENT(IN) :: nlist_alloc 
       INTEGER_T, INTENT(IN) :: tid
       INTEGER_T, INTENT(in) :: sdim 
+      INTEGER_T, INTENT (IN) :: grid_index(sdim)
+      INTEGER_T, INTENT (IN) :: grid_level
       INTEGER_T, INTENT (IN) :: nhalf0
       INTEGER_T, INTENT (IN) :: bfact
       REAL_T, INTENT (IN), DIMENSION(sdim) :: dx
@@ -11706,7 +11831,8 @@ contains
        print *,"num_materials invalid individual mof"
        stop
       endif
-      if ((imaterial_count.lt.1).or.(imaterial_count.gt.num_materials)) then
+      if ((imaterial_count.lt.1).or. &
+          (imaterial_count.gt.num_materials)) then
        print *,"imaterial_count invalid"
        stop
       endif
@@ -11752,6 +11878,7 @@ contains
         stop
       endif
 
+       ! imaterial_count-1=number of materials already reconstructed.
       if ((imaterial_count.gt.1).and. &
           (imaterial_count.le.num_materials)) then
        fastflag=0
@@ -11916,7 +12043,6 @@ contains
        print *,"sdim,num_materials ",sdim,num_materials
        stop
       endif
-
        
          ! if uncaptured_volume_vof=0, then there is no need to find the
          ! slope since "single_material_takes_all=1". 
@@ -12041,6 +12167,8 @@ contains
           ! cell.
           ! find_cut_geom_slope called from: individual_MOF
         call find_cut_geom_slope( &
+          grid_index, &
+          grid_level, &
           ls_mof, &
           lsnormal, &
           lsnormal_valid, &
@@ -12102,9 +12230,11 @@ contains
          stop
         endif
 
-        if ((critical_material.lt.1).or.(critical_material.gt.num_materials)) then
+        if ((critical_material.lt.1).or. &
+            (critical_material.gt.num_materials)) then
          print *,"bust individual_MOF"
-         print *,"sdim,num_materials,critical_material ",sdim,num_materials,critical_material
+         print *,"sdim,num_materials,critical_material ", &
+                 sdim,num_materials,critical_material
          print *,"ngeom_recon= ",ngeom_recon
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
@@ -13690,6 +13820,8 @@ contains
           ! This call is for the reconstruction of is_rigid=1 materials;
           ! continuous_mof_rigid=0
           call find_cut_geom_slope( &
+           grid_index, &
+           grid_level, &
            ls_mof, &
            lsnormal, &
            lsnormal_valid, &
@@ -13991,6 +14123,8 @@ contains
         do while ((imaterial_count.le.num_materials).and. &
                   (uncaptured_volume_vof.gt.zero))
          call individual_MOF( &
+          grid_index, &
+          grid_level, &
           tid, &
           ls_mof, &
           lsnormal, &
@@ -14002,7 +14136,7 @@ contains
           nlist_alloc, &
           nmax, &
           mofdata, &
-          imaterial_count, &
+          imaterial_count, & !imaterial_count-1=#mat already reconstructed.
           uncaptured_volume_vof, &
           uncaptured_volume_cen, &
           multi_centroidA, &
@@ -14077,6 +14211,8 @@ contains
          do while ((imaterial_count.le.num_materials).and. &
                    (uncaptured_volume_vof.gt.zero))
           call individual_MOF( &
+           grid_index, &
+           grid_level, &
            tid, &
            ls_mof, &
            lsnormal, &
