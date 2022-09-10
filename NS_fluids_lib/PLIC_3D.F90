@@ -414,8 +414,8 @@ stop
             LS(D_DECL(i+i1,j+j1,k+k1),im)
           vofcompraw=(im-1)*ngeom_raw+1
           voflist_test=vof(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
-          if ((voflist_test.lt.-0.1).or. &
-              (voflist_test.gt.1.1)) then
+          if ((voflist_test.lt.-0.1d0).or. &
+              (voflist_test.gt.1.1d0)) then
            print *,"voflist_test invalid"
            print *,"im,voflist_test= ",im,voflist_test
            print *,"i1,j1,k1 ",i1,j1,k1
@@ -423,8 +423,8 @@ stop
            print *,"igridlo ",igridlo(1),igridlo(2),igridlo(3)
            print *,"igridhi ",igridhi(1),igridhi(2),igridhi(3)
            stop
-          else if ((voflist_test.ge.-0.1).and. &
-                   (voflist_test.le.1.1)) then
+          else if ((voflist_test.ge.-0.1d0).and. &
+                   (voflist_test.le.1.1d0)) then
            if (voflist_test.gt.voflist_stencil(im)) then
             voflist_stencil(im)=voflist_test
            endif
@@ -911,6 +911,26 @@ stop
         endif
 
         mof_verbose=0
+
+        grid_level=-1
+
+        if (level.eq.training_finest_level) then
+         if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+             (levelrz.eq.COORDSYS_RZ)) then
+          grid_level=level
+         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+          ! do nothing
+         else
+          print *,"levelrz invalid"
+          stop
+         endif
+        else if ((level.ge.0).and. &
+                 (level.le.finest_level)) then
+         ! do nothing
+        else
+         print *,"level invalid"
+         stop
+        endif
 
         call multimaterial_MOF( &
           bfact,dx,xsten,nhalf, &
