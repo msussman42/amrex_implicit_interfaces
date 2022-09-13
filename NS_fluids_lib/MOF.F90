@@ -10760,7 +10760,8 @@ contains
         lsnormal, &
         lsnormal_valid, &
         bfact,dx,xsten0,nhalf0, &
-        refcentroid,refvfrac, &
+        refcentroid, & ! relative to cell centroid of the super cell.
+        refvfrac, &
         npredict, &
         continuous_mof, &
         cmofsten, &
@@ -10932,7 +10933,8 @@ contains
        print *,"num_materials invalid find cut geom slope"
        stop
       endif
-      if ((critical_material.lt.1).or.(critical_material.gt.num_materials)) then
+      if ((critical_material.lt.1).or. &
+          (critical_material.gt.num_materials)) then
        print *,"critical_material invalid"
        stop
       endif
