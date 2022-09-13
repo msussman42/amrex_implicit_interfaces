@@ -1101,6 +1101,14 @@ stop
       INTEGER_T dir
       INTEGER_T i1,j1,k1
       INTEGER_T i_training
+
+      REAL_T :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      REAL_T :: lsnormal(num_materials,SDIM)
+      INTEGER_T :: lsnormal_valid(num_materials)
+      INTEGER_T :: grid_index(SDIM)
+      INTEGER_T :: grid_level
+
+
       INTEGER_T sysret
       INTEGER_T cmof_idx
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -1245,22 +1253,26 @@ stop
         endif
        enddo ! do dir=1,3
 
-       Call random_number(vof_training)
-       Call random_number(phi_training)
-       Call random_number(theta_training)
-       theta_training=(theta_training-half) * Pi * two
+       Call random_number(vof_training) ! 0<=vof_training<1
+
+       Call random_number(phi_training) ! 0<=phi_training<1
        phi_training=(phi_training-half) * Pi * two
+
+       if (SDIM.eq.2) then
+        Do i_training = 1, num_sampling
+         theta_training(i_training)=zero ! 0<=theta_training<1
+        enddo
+       else if (SDIM.eq.3) then
+        Call random_number(theta_training)
+        theta_training=(theta_training-half) * Pi * two
+       else
+        print *,"sdim invalid"
+        stop
+       endif
+
        Do i_training = 1, num_sampling
-        if (SDIM.eq.2) then
-         angle_exact_db(1)=phi_training(i_training)
-         angle_exact_db(2)=zero
-        else if (SDIM.eq.3) then
-         angle_exact_db(1)=phi_training(i_training)
-         angle_exact_db(2)=theta_training(i_training)
-        else
-         print *,"sdim invalid"
-         stop
-        endif
+        angle_exact_db(1)=phi_training(i_training)
+        angle_exact_db(2)=theta_training(i_training)
         refvfrac=vof_training(i_training)
         call angle_to_slope(angle_exact_db,nr_db,SDIM)
         call angle_init_from_angle_recon_and_F( &
@@ -1304,6 +1316,43 @@ stop
           stop
          endif
         enddo !dir=1,2
+
+        do dir=1,SDIM
+         grid_index(dir)=0
+        enddo
+        grid_level=-1
+        fastflag=1
+        critical_material=1
+        do im=1,num_materials
+         lsnormal_valid(im)=0
+        enddo
+
+        call find_cut_geom_slope( &
+         grid_index, &
+         grid_level, &
+         ls_mof, &
+         lsnormal, &
+         lsnormal_valid, &
+         bfact,dx,xsten,nhalf, &
+         refcen, & ! relative to cell centroid of the super cell.
+         refvfrac, &
+
+         FIX ME
+        npredict, &
+        continuous_mof, &
+        cmofsten, &
+        nslope,intercept, &
+        xtetlist_vof,nlist_vof, &
+        xtetlist_cen,nlist_cen, &
+        nlist_alloc, &
+        centroidA, &
+        nmax, &
+        critical_material, &
+        fastflag, &
+        sdim)
+
+
+
 
         do dir=1,3
          xc0(dir)=zero
