@@ -1089,11 +1089,14 @@ stop
       REAL_T :: data_training(8,num_sampling)
       REAL_T :: xc0(3)
 
+      REAL_T :: angle_exact_sanity(2)
       REAL_T :: angle_exact_db(2)
       REAL_T :: angle_init_db(2)
       REAL_T :: refvfrac
+      REAL_T :: vof_single 
       REAL_T :: refcen(SDIM)
       REAL_T :: nr_db(3)
+      INTEGER_T :: try_new_vfrac
 
       INTEGER_T, parameter :: nhalf=3
       REAL_T xsten(-nhalf:nhalf,SDIM)
@@ -1107,7 +1110,15 @@ stop
       INTEGER_T :: lsnormal_valid(num_materials)
       INTEGER_T :: grid_index(SDIM)
       INTEGER_T :: grid_level
-
+      REAL_T :: npredict(SDIM)
+      REAL_T :: nslope(SDIM)
+      REAL_T :: intercept
+      REAL_T :: centroid_null(SDIM)
+      REAL_T :: centroidA(SDIM)
+      REAL_T :: mag_centroid
+      INTEGER_T :: critical_material
+      INTEGER_T :: im
+      INTEGER_T :: fastflag
 
       INTEGER_T sysret
       INTEGER_T cmof_idx
@@ -1273,9 +1284,15 @@ stop
        Do i_training = 1, num_sampling
         angle_exact_db(1)=phi_training(i_training)
         angle_exact_db(2)=theta_training(i_training)
-        refvfrac=vof_training(i_training)
         call angle_to_slope(angle_exact_db,nr_db,SDIM)
-        call angle_init_from_angle_recon_and_F( &
+
+        try_new_vfrac=1
+
+        do while (try_new_vfrac.eq.1)
+
+         refvfrac=vof_training(i_training)
+
+         call angle_init_from_angle_recon_and_F( &
           bfact,dx,xsten,nhalf, &
           refvfrac, & 
           continuous_mof, & 
@@ -1291,40 +1308,62 @@ stop
           nmax, &
           SDIM)
 
-        if (SDIM.eq.2) then
-         angle_init_db(2)=zero
-        else if (SDIM.eq.3) then
-         ! do nothing
-        else
-         print *,"sdim invalid"
-         stop
-        endif
-
-        do dir=1,2
-         if ((angle_init_db(dir).ge.-Pi).and. &
-             (angle_init_db(dir).le.Pi)) then
+         if (SDIM.eq.2) then
+          angle_init_db(2)=zero
+         else if (SDIM.eq.3) then
           ! do nothing
          else
-          print *,"angle_init_db invalid"
+          print *,"sdim invalid"
           stop
          endif
-         if ((angle_exact_db(dir).ge.-Pi).and. &
-             (angle_exact_db(dir).le.Pi)) then
-          ! do nothing
-         else
-          print *,"angle_exact_db invalid"
-          stop
-         endif
-        enddo !dir=1,2
 
-        do dir=1,SDIM
-         grid_index(dir)=0
-        enddo
-        grid_level=-1
-        fastflag=1
-        critical_material=1
-        do im=1,num_materials
-         lsnormal_valid(im)=0
+         do dir=1,2
+          if ((angle_init_db(dir).ge.-Pi).and. &
+              (angle_init_db(dir).le.Pi)) then
+           ! do nothing
+          else
+           print *,"angle_init_db invalid"
+           stop
+          endif
+          if ((angle_exact_db(dir).ge.-Pi).and. &
+              (angle_exact_db(dir).le.Pi)) then
+           ! do nothing
+          else
+           print *,"angle_exact_db invalid"
+           stop
+          endif
+         enddo !dir=1,2
+
+         do dir=1,SDIM
+          grid_index(dir)=0
+          centroid_null(dir)=zero
+         enddo
+         grid_level=-1
+         fastflag=1
+         critical_material=1
+         do im=1,num_materials
+          lsnormal_valid(im)=0
+         enddo
+         call find_predict_slope( &
+          npredict, & ! intent(out)
+          mag_centroid, & ! intent(out)
+          centroid_null, & ! centroid of uncaptured region
+          refcen, & ! relative to cell centroid of the super cell.
+          bfact,dx,xsten,nhalf,SDIM)
+
+         try_new_vfrac=0
+
+         if (mag_centroid.gt.VOFTOL*dx(1)) then
+          ! do nothing
+         else if (mag_centroid.le.VOFTOL*dx(1)) then
+          try_new_vfrac=1
+          Call random_number(vof_single)
+          vof_training(i_training)=vof_single
+         else
+          print *,"mag_centroid bust"
+          stop
+         endif
+
         enddo
 
         call find_cut_geom_slope( &
@@ -1336,23 +1375,23 @@ stop
          bfact,dx,xsten,nhalf, &
          refcen, & ! relative to cell centroid of the super cell.
          refvfrac, &
+         npredict, &
+         continuous_mof, &
+         cmofsten, &
+         nslope, &
+         intercept, &
+         geom_xtetlist(1,1,1,tid+1), &
+         nmax, &
+         geom_xtetlist_old(1,1,1,tid+1), &
+         nmax, &
+         nmax, &
+         centroidA, &
+         nmax, &
+         critical_material, &
+         fastflag, &
+         SDIM)
 
-         FIX ME
-        npredict, &
-        continuous_mof, &
-        cmofsten, &
-        nslope,intercept, &
-        xtetlist_vof,nlist_vof, &
-        xtetlist_cen,nlist_cen, &
-        nlist_alloc, &
-        centroidA, &
-        nmax, &
-        critical_material, &
-        fastflag, &
-        sdim)
-
-
-
+        call slope_to_angle(nslope,angle_exact_sanity,SDIM)
 
         do dir=1,3
          xc0(dir)=zero
