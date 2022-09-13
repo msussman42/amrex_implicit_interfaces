@@ -12080,7 +12080,7 @@ contains
             npredict, & !intent(out)
             mag, & !intent(out)
             centroid_free, & !centroid of uncaptured region
-            centroid_ref, &
+            centroid_ref, &  !absolute coordinate system
             bfact,dx,xsten0,nhalf0,sdim)
          
           if (mag.gt.VOFTOL*dx(1)) then
@@ -12152,7 +12152,11 @@ contains
 
          ! centroid_ref-centroid_free
          ! normal points from light to dark
-        call find_predict_slope(npredict,mag,centroid_free,centroid_ref, &
+        call find_predict_slope( &
+          npredict, & !intent(out)
+          mag, & !intent(out)
+          centroid_free, & !centroid of uncaptured region
+          centroid_ref, &  !absolute coordinate system
           bfact,dx,xsten0,nhalf0,sdim)
 
         if (mag.lt.MLSVOFTOL*dx(1)) then
