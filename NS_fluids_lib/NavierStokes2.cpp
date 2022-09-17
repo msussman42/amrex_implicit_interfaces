@@ -8637,8 +8637,8 @@ void NavierStokes::MOF_training() {
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
 
- int cpp_training_lo[3];
- int cpp_training_hi[3];
+ int cpp_training_lo[AMREX_SPACEDIM];
+ int cpp_training_hi[AMREX_SPACEDIM];
  int op_training=0;  // 0=alloc
  int cpp_i=0;
  int cpp_j=0;
@@ -8663,7 +8663,9 @@ void NavierStokes::MOF_training() {
 
   for (cpp_i=cpp_training_lo[0];cpp_i<=cpp_training_hi[0];cpp_i++) {
   for (cpp_j=cpp_training_lo[1];cpp_j<=cpp_training_hi[1];cpp_j++) {
+#if (AMREX_SPACEDIM==3)
   for (cpp_k=cpp_training_lo[2];cpp_k<=cpp_training_hi[2];cpp_k++) {
+#endif
   for (local_continuous_mof=0;local_continuous_mof<=2; 
  		              local_continuous_mof+=2) {
    op_training=1;  // generate data and do python processing.
@@ -8694,7 +8696,9 @@ void NavierStokes::MOF_training() {
     &local_continuous_mof);
    ParallelDescriptor::Barrier();
   } //local_continuous_mof
+#if (AMREX_SPACEDIM==3)
   } //cpp_k
+#endif
   } //cpp_j
   } //cpp_i
 

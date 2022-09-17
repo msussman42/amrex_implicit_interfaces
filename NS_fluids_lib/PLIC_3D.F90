@@ -704,6 +704,7 @@ stop
            enddo
            orderflag=zero
            mofsten(vofcomprecon+SDIM+1)=orderflag
+            !VFRAC,REF CENTROID,ORDER,SLOPE,INTERCEPT
            do dir=SDIM+3,ngeom_recon
             mofsten(vofcomprecon+dir-1)=zero
            enddo
@@ -1072,8 +1073,8 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: op_training
-      INTEGER_T, INTENT(inout) :: cpp_training_lo(3)
-      INTEGER_T, INTENT(inout) :: cpp_training_hi(3)
+      INTEGER_T, INTENT(inout) :: cpp_training_lo(SDIM)
+      INTEGER_T, INTENT(inout) :: cpp_training_hi(SDIM)
       INTEGER_T, INTENT(in) :: i,j,k
       INTEGER_T, INTENT(in) :: finest_level
       INTEGER_T, INTENT(in) :: continuous_mof
@@ -1082,20 +1083,21 @@ stop
       REAL_T, INTENT(in) :: dx(SDIM)
 
       INTEGER_T nmax
-      INTEGER_T, parameter :: num_sampling=10000
+      INTEGER_T, parameter :: num_sampling=40000
       REAL_T :: vof_training(num_sampling)
       REAL_T :: phi_training(num_sampling)
       REAL_T :: theta_training(num_sampling)
-      REAL_T :: data_training(8,num_sampling)
-      REAL_T :: xc0(3)
+       ! centroid, VOF, angle_exact, angle_init
+      REAL_T :: data_training(NTRAINING,num_sampling)
+      REAL_T :: xc0(SDIM)
 
-      REAL_T :: angle_exact_sanity(2)
-      REAL_T :: angle_exact_db(2)
-      REAL_T :: angle_init_db(2)
+      REAL_T :: angle_exact_sanity(SDIM-1)
+      REAL_T :: angle_exact_db(SDIM-1)
+      REAL_T :: angle_init_db(SDIM-1)
       REAL_T :: refvfrac
       REAL_T :: vof_single 
       REAL_T :: refcen(SDIM)
-      REAL_T :: nr_db(3)
+      REAL_T :: nr_db(SDIM)
       INTEGER_T :: try_new_vfrac
 
       INTEGER_T, parameter :: nhalf=3
@@ -1199,7 +1201,7 @@ stop
 
       if (op_training.eq.0) then
 
-       do dir=1,3
+       do dir=1,SDIM
         training_lo(dir)=0
         training_hi(dir)=0
        enddo 
@@ -1236,12 +1238,10 @@ stop
        endif
 
        allocate(training_array( &
-          training_lo(1):training_hi(1), &
-          training_lo(2):training_hi(2), &
-          training_lo(3):training_hi(3), &
-          0:1))
+         D_DECL(training_lo(1):training_hi(1),training_lo(2):training_hi(2),training_lo(SDIM):training_hi(SDIM) ), &
+                  0:1))
 
-       do dir=1,3
+       do dir=1,SDIM
         cpp_training_lo(dir)=training_lo(dir)
         cpp_training_hi(dir)=training_hi(dir)
        enddo
@@ -1250,7 +1250,7 @@ stop
 
        call gridsten_level(xsten,i,j,k,finest_level,nhalf)
 
-       do dir=1,3
+       do dir=1,SDIM
         if (cpp_training_lo(dir).eq.training_lo(dir)) then
          ! do nothing
         else
@@ -1263,7 +1263,7 @@ stop
          print *,"mismatch cpp_training_hi and training_hi"
          stop
         endif
-       enddo ! do dir=1,3
+       enddo ! do dir=1,sdim
 
        print *,"generating training data num_sampling,i,j,k,continuous_mof ", &
           num_sampling,i,j,k,continuous_mof
@@ -1275,10 +1275,10 @@ stop
 
        if (SDIM.eq.2) then
         Do i_training = 1, num_sampling
-         theta_training(i_training)=zero ! 0<=theta_training<1
+         theta_training(i_training)=zero
         enddo
        else if (SDIM.eq.3) then
-        Call random_number(theta_training)
+        Call random_number(theta_training) ! 0<=theta_training<1
         theta_training=(theta_training-half) * Pi * two
        else
         print *,"sdim invalid"
@@ -1287,7 +1287,9 @@ stop
 
        Do i_training = 1, num_sampling
         angle_exact_db(1)=phi_training(i_training)
-        angle_exact_db(2)=theta_training(i_training)
+        if (SDIM.eq.3) then
+         angle_exact_db(SDIM-1)=theta_training(i_training)
+        endif
         call angle_to_slope(angle_exact_db,nr_db,SDIM)
 
         try_new_vfrac=1
@@ -1322,16 +1324,7 @@ stop
            nmax, &
            SDIM)
 
-          if (SDIM.eq.2) then
-           angle_init_db(2)=zero
-          else if (SDIM.eq.3) then
-           ! do nothing
-          else
-           print *,"sdim invalid"
-           stop
-          endif
-
-          do dir=1,2
+          do dir=1,SDIM-1
            if ((angle_init_db(dir).ge.-Pi).and. &
                (angle_init_db(dir).le.Pi)) then
             ! do nothing
@@ -1346,7 +1339,7 @@ stop
             print *,"angle_exact_db invalid"
             stop
            endif
-          enddo !dir=1,2
+          enddo !dir=1,sdim-1
 
           do dir=1,SDIM
            grid_index(dir)=0
@@ -1472,20 +1465,25 @@ stop
          endif
         enddo ! dir=1..sdim
 
-        do dir=1,3
-         xc0(dir)=zero
-        enddo
         do dir=1,SDIM
          xc0(dir)=refcen(dir)
         enddo
-        data_training(1,i_training) = xc0(1)
-        data_training(2,i_training) = xc0(2)
-        data_training(3,i_training) = xc0(3)
-        data_training(4,i_training) = vof_training(i_training)
-        data_training(5,i_training) = angle_exact_db(1)
-        data_training(6,i_training) = angle_exact_db(2)
-        data_training(7,i_training) = angle_init_db(1)
-        data_training(8,i_training) = angle_init_db(2)
+
+        if (NTRAINING.eq.ANGLE_INIT_TRAIN2) then
+         !do nothing
+        else
+         print *,"ntraining or angle_init_train2 invalid"
+         stop
+        endif
+
+        do dir=1,SDIM
+         data_training(dir,i_training) = xc0(dir)
+        enddo
+        data_training(VOFTRAIN,i_training) = vof_training(i_training)
+        do dir=1,SDIM-1
+         data_training(VOFTRAIN+dir,i_training) = angle_exact_db(dir)
+         data_training(ANGLE_EXACT_TRAIN2+dir,i_training) = angle_init_db(dir)
+        enddo
        End Do ! i_training = 1, num_sampling
 
 ! unit number 5: standard input
@@ -1523,11 +1521,13 @@ stop
         ! previous: F16.12
         !      now: E25.16
        Do i_training = 1, num_sampling
-        Write(10,'(3E25.16)')data_training(1:3,i_training)
-        Write(11,'(E25.16)')data_training(4,i_training)
-        Write(12,'(2E25.16)')data_training(5:6,i_training)
-        Write(13,'(2E25.16)')data_training(7:8,i_training)
-       End Do
+        Write(10,'(3E25.16)')data_training(1:SDIM,i_training)
+        Write(11,'(E25.16)')data_training(VOFTRAIN,i_training)
+        Write(12,'(2E25.16)') &
+           data_training(ANGLE_EXACT_TRAIN1:ANGLE_EXACT_TRAIN2,i_training)
+        Write(13,'(2E25.16)') &
+           data_training(ANGLE_INIT_TRAIN1:ANGLE_INIT_TRAIN2,i_training)
+       End Do ! Do i_training = 1, num_sampling
        close(10)
        close(11)
        close(12)
@@ -1559,7 +1559,7 @@ stop
 
       else if (op_training.eq.2) then
 
-       do dir=1,3
+       do dir=1,SDIM
         if (cpp_training_lo(dir).eq.training_lo(dir)) then
          ! do nothing
         else
@@ -1572,7 +1572,7 @@ stop
          print *,"mismatch cpp_training_hi and training_hi"
          stop
         endif
-       enddo ! do dir=1,3
+       enddo ! do dir=1,sdim
 
        ! 1. call find_predict_slope(ref_centroid,n_predict)
        ! 2. call slope_to_angle(n_{predict},angle_{predict})
@@ -1580,9 +1580,12 @@ stop
        ! 4. call angle_to_slope(angle_{output},n_{MachineLearning}
 
        cmof_idx=continuous_mof/2
-       call training_array(i,j,k,cmof_idx)%NN_ZHOUTENG_LOCAL%Initialization()
-       call training_array(i,j,k,cmof_idx)%DT_ZHOUTENG_LOCAL%Initialization()
-       call training_array(i,j,k,cmof_idx)%RF_ZHOUTENG_LOCAL%Initialization()
+       call training_array(D_DECL(i,j,k),cmof_idx)% &
+         NN_ZHOUTENG_LOCAL%Initialization()
+       call training_array(D_DECL(i,j,k),cmof_idx)% &
+         DT_ZHOUTENG_LOCAL%Initialization()
+       call training_array(D_DECL(i,j,k),cmof_idx)% &
+         RF_ZHOUTENG_LOCAL%Initialization()
 
       else
        print *,"op_training invalid"

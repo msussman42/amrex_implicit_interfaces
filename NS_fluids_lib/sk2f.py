@@ -53,6 +53,7 @@ def dt_sk2f(dt):
     dt_output.write('! max_depth\n')
     dt_output.write('%d\n'%dt.tree_.max_depth)
 
+# try formatting, e.g., {:.2e} 1.00e+09
     for i in range(dt.tree_.node_count):
         dt_output.write('! node %d\n'%(i+1))
         dt_output.write('%d\n'%(dt.tree_.children_left[i]+1))
