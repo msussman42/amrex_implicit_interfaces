@@ -10892,6 +10892,8 @@ contains
       INTEGER_T local_nlist_vof
       INTEGER_T local_nlist_cen
 
+      INTEGER_T training_nguess
+
       INTEGER_T use_MilcentLemoine
 
       INTEGER_T tid
@@ -11086,6 +11088,8 @@ contains
        stop
       endif
 
+      training_nguess=0
+
       if ((continuous_mof.eq.0).or. &
           (continuous_mof.eq.2)) then
 
@@ -11096,103 +11100,121 @@ contains
         angle_array(dir,nguess)=angle_init(dir)
        enddo
 
-       if (grid_level.eq.training_finest_level) then
-        mof_stencil_ok=1
-        if (continuous_mof.eq.0) then
-         ! do nothing
-        else if (continuous_mof.eq.2) then
+       if (training_finest_level.eq.-1) then
+        ! do nothing
+       else if (training_finest_level.ge.0) then
 
-         if (sdim.eq.3) then
-          ksten_low=-1
-          ksten_high=1
-         else if (sdim.eq.2) then
-          ksten_low=0
-          ksten_high=0
-         else
-          print *,"sdim invalid"
-          stop
-         endif
+        if (grid_level.eq.training_finest_level) then
+         mof_stencil_ok=1
+         if (continuous_mof.eq.0) then
+          ! do nothing
+         else if (continuous_mof.eq.2) then
 
-         do i1=-1,1
-         do j1=-1,1
-         do k1=ksten_low,ksten_high
-          if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
-           ! do nothing
-          else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
-           mof_stencil_ok=0
-          else
-           print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
-           stop
-          endif
-         enddo
-         enddo
-         enddo ! i1,j1,k1
-
-        else
-         print *,"continuous_mof invalid"
-         stop
-        endif
-
-        if (mof_stencil_ok.eq.1) then
-
-         if (fastflag.eq.1) then
-          nguess=nguess+1
-
-          do dir=1,sdim
-           grid_index_ML(dir)=grid_index(dir)/bfact
-           grid_index_ML(dir)=grid_index(dir)-bfact*grid_index_ML(dir)
-          enddo
-          dir=1
-          if (levelrz.eq.COORDSYS_CARTESIAN) then
-           ! do nothing
-          else if (levelrz.eq.COORDSYS_RZ) then
-           grid_index_ML(dir)=grid_index(dir)
-          else
-           print *,"levelrz invalid"
-           stop
-          endif
-          iML=grid_index_ML(1)
-          jML=grid_index_ML(2)
-          if (sdim.eq.2) then
-           kML=0
-          else if (sdim.eq.3) then
-           kML=grid_index_ML(sdim)
+          if (sdim.eq.3) then
+           ksten_low=-1
+           ksten_high=1
+          else if (sdim.eq.2) then
+           ksten_low=0
+           ksten_high=0
           else
            print *,"sdim invalid"
            stop
           endif
-          do dir=1,sdim-1
-           angle_init_ML(dir)=angle_init(dir)
-          enddo
-          if (sdim.eq.2) then
-           angle_init_ML(2)=zero
-          endif
-          cmofML=continuous_mof/2
-          angle_output= &
-               training_array(iML,jML,kML,cmofML)%DT_ZHOUTENG_LOCAL% &
-               predict(angle_init_ML)
 
-          do dir=1,sdim-1
-           angle_array(dir,nguess)=angle_output(dir)
+          do i1=-1,1
+          do j1=-1,1
+          do k1=ksten_low,ksten_high
+           if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
+            ! do nothing
+           else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
+            mof_stencil_ok=0
+           else
+            print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
+            stop
+           endif
           enddo
-         else if (fastflag.eq.0) then
-          ! do nothing
+          enddo
+          enddo ! i1,j1,k1
+
          else
-          print *,"fastflag invalid"
+          print *,"continuous_mof invalid"
           stop
          endif
 
-        else if (mof_stencil_ok.eq.0) then
+         if (mof_stencil_ok.eq.1) then
+
+          if (fastflag.eq.1) then
+           nguess=nguess+1
+
+           do dir=1,sdim
+            grid_index_ML(dir)=grid_index(dir)/bfact
+            grid_index_ML(dir)=grid_index(dir)-bfact*grid_index_ML(dir)
+           enddo
+           dir=1
+           if (levelrz.eq.COORDSYS_CARTESIAN) then
+            ! do nothing
+           else if (levelrz.eq.COORDSYS_RZ) then
+            grid_index_ML(dir)=grid_index(dir)
+           else
+            print *,"levelrz invalid"
+            stop
+           endif
+           iML=grid_index_ML(1)
+           jML=grid_index_ML(2)
+           if (sdim.eq.2) then
+            kML=0
+           else if (sdim.eq.3) then
+            kML=grid_index_ML(sdim)
+           else
+            print *,"sdim invalid"
+            stop
+           endif
+           do dir=1,sdim-1
+            angle_init_ML(dir)=angle_init(dir)
+           enddo
+           if (sdim.eq.2) then
+            angle_init_ML(2)=zero
+           endif
+           cmofML=continuous_mof/2
+            ! choices: NN, DT, RF
+           angle_output= &
+             training_array(iML,jML,kML,cmofML)%DT_ZHOUTENG_LOCAL% &
+             predict(angle_init_ML)
+
+           training_nguess=nguess
+
+           do dir=1,sdim-1
+            angle_array(dir,nguess)=angle_output(dir)
+           enddo
+
+           if (1.eq.1) then
+            print *,"grid_idx,grid_idx_ML,angle_init,angle_output,nguess ", &
+              grid_index,grid_index_ML,angle_init,angle_output,nguess
+            print *,"refvfrac ",refvfrac
+           endif
+          else if (fastflag.eq.0) then
+           ! do nothing
+          else
+           print *,"fastflag invalid"
+           stop
+          endif
+
+         else if (mof_stencil_ok.eq.0) then
+          ! do nothing
+         else
+          print *,"mof_stencil_ok invalid"
+          stop
+         endif
+
+        else if (grid_level.eq.-1) then
          ! do nothing
         else
-         print *,"mof_stencil_ok invalid"
+         print *,"grid_level invalid"
          stop
         endif
 
-       else if (grid_level.eq.-1) then
-        ! do nothing
        else
-        print *,"grid_level invalid"
+        print *,"training_finest_level invalid"
         stop
        endif
 
@@ -11243,6 +11265,11 @@ contains
         iicrit=iter
        else if (err.lt.err_array(iicrit)) then
         iicrit=iter
+       endif
+       if (1.eq.1) then
+        if (training_nguess.ge.1) then
+         print *,"iter,err,angle_guess ",iter,err,angle_init
+        endif
        endif
       enddo ! iter=1..nguess
 

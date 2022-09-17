@@ -8157,12 +8157,21 @@ end subroutine print_visual_descriptor
       return
       end subroutine planearea
 
- 
+      REAL_T function angle_err(a1,a2) 
+      IMPLICIT NONE
+
+      REAL_T, INTENT(in) :: a1,a2
+
+      angle_err=min(abs(a1-a2),abs(a1-a2+two*Pi))
+      angle_err=min(angle_err,abs(a1-a2-two*Pi))
+
+      return
+      end function angle_err
 
       REAL_T function getcutvol(r,L)
       IMPLICIT NONE
 
-      REAL_T r,L
+      REAL_T, INTENT(in) :: r,L
  
       getcutvol=Pi*r*r*(r+sqrt(r*r-L*L))- &
         (Pi/three)*(r**3+(r*r-L*L)**(3.0/2.0))
