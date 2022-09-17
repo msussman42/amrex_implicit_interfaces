@@ -10014,7 +10014,7 @@ contains
       return
       end subroutine single_find_intercept
 
- 
+        ! "Find the actual centroid given the angle" 
         ! xcell is center of cell, not the cell centroid
         ! refcentroid_scale is passed into this routine.
         ! refcentroid_scale is relative to cell centroid of the super cell.
@@ -10708,19 +10708,23 @@ contains
        angle_init_local(dir)=angle_recon(dir)
       enddo
 
+        ! find the actual centroid given the angle.
       call multi_rotatefunc( &
        use_MilcentLemoine, &
        bfact,dx_scale,xsten0_scale,nhalf0, &
        local_xtetlist_vof,local_nlist_vof, &
        local_xtetlist_cen,local_nlist_cen, &
        nmax, &
-       refcentroid_scale,refvfrac, &
+       refcentroid_scale, &
+       refvfrac, &
        continuous_mof, &
        cmofsten, &
-       angle_init_local, &
-       f_placeholder, &
+       angle_init_local, & ! INTENT(in)
+       f_placeholder, & ! INTENT(out); ||xref-xact||
+        !INTENT(out)
        intercept_placeholder, &
-       cen_derive_placeholder, & !relative to supermesh centroid (CMOF case)
+        !relative to supermesh centroid (CMOF case); INTENT(out)
+       cen_derive_placeholder, & 
        use_initial_guess,fastflag,sdim)
 
       do dir=1,sdim

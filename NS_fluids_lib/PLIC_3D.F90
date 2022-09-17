@@ -1292,80 +1292,105 @@ stop
 
          refvfrac=vof_training(i_training)
 
-         call angle_init_from_angle_recon_and_F( &
-          bfact,dx,xsten,nhalf, &
-          refvfrac, & 
-          continuous_mof, & 
-          cmofsten, & 
-          geom_xtetlist(1,1,1,tid+1), &
-          nmax, &
-          geom_xtetlist_old(1,1,1,tid+1), &
-          nmax, &
-          nmax, &
-          angle_init_db, &
-          refcen, &
-          angle_exact_db, &
-          nmax, &
-          SDIM)
-
-         if (SDIM.eq.2) then
-          angle_init_db(2)=zero
-         else if (SDIM.eq.3) then
+         if ((refvfrac.ge.zero).and. &
+             (refvfrac.lt.VOFTOL)) then
           ! do nothing
-         else
-          print *,"sdim invalid"
+         else if ((refvfrac.gt.one-VOFTOL).and. &
+                  (refvfrac.le.one)) then
+          ! do nothing
+         else if ((refvfrac.ge.VOFTOL).and. &
+                  (refvfrac.le.one-VOFTOL)) then
+
+           ! given the slope, find the centroid.
+          call angle_init_from_angle_recon_and_F( &
+           bfact,dx,xsten,nhalf, &
+           refvfrac, & 
+           continuous_mof, & 
+           cmofsten, & 
+           geom_xtetlist(1,1,1,tid+1), &
+           nmax, &
+           geom_xtetlist_old(1,1,1,tid+1), &
+           nmax, &
+           nmax, &
+           angle_init_db, & ! INTENT(out)
+           refcen, &  ! INTENT(out)
+           angle_exact_db, & ! INTENT(in)
+           nmax, &
+           SDIM)
+
+          if (SDIM.eq.2) then
+           angle_init_db(2)=zero
+          else if (SDIM.eq.3) then
+           ! do nothing
+          else
+           print *,"sdim invalid"
+           stop
+          endif
+
+          do dir=1,2
+           if ((angle_init_db(dir).ge.-Pi).and. &
+               (angle_init_db(dir).le.Pi)) then
+            ! do nothing
+           else
+            print *,"angle_init_db invalid"
+            stop
+           endif
+           if ((angle_exact_db(dir).ge.-Pi).and. &
+               (angle_exact_db(dir).le.Pi)) then
+            ! do nothing
+           else
+            print *,"angle_exact_db invalid"
+            stop
+           endif
+          enddo !dir=1,2
+
+          do dir=1,SDIM
+           grid_index(dir)=0
+           centroid_null(dir)=zero
+          enddo
+          grid_level=-1
+          fastflag=1
+          critical_material=1
+          do im=1,num_materials
+           lsnormal_valid(im)=0
+          enddo
+          call find_predict_slope( &
+           npredict, & ! INTENT(out)
+           mag_centroid, & ! INTENT(out)
+           centroid_null, & ! centroid of uncaptured region
+            ! relative to cell centroid of the super cell; INTENT(in)
+           refcen, & 
+           bfact,dx,xsten,nhalf,SDIM)
+
+          try_new_vfrac=0
+
+          if (mag_centroid.gt.VOFTOL*dx(1)) then
+           ! do nothing
+          else if (mag_centroid.le.VOFTOL*dx(1)) then
+           try_new_vfrac=1
+          else
+           print *,"mag_centroid bust"
+           stop
+          endif
+
+         else 
+          print *,"refvfrac out of range"
           stop
          endif
 
-         do dir=1,2
-          if ((angle_init_db(dir).ge.-Pi).and. &
-              (angle_init_db(dir).le.Pi)) then
-           ! do nothing
-          else
-           print *,"angle_init_db invalid"
-           stop
-          endif
-          if ((angle_exact_db(dir).ge.-Pi).and. &
-              (angle_exact_db(dir).le.Pi)) then
-           ! do nothing
-          else
-           print *,"angle_exact_db invalid"
-           stop
-          endif
-         enddo !dir=1,2
-
-         do dir=1,SDIM
-          grid_index(dir)=0
-          centroid_null(dir)=zero
-         enddo
-         grid_level=-1
-         fastflag=1
-         critical_material=1
-         do im=1,num_materials
-          lsnormal_valid(im)=0
-         enddo
-         call find_predict_slope( &
-          npredict, & ! intent(out)
-          mag_centroid, & ! intent(out)
-          centroid_null, & ! centroid of uncaptured region
-          refcen, & ! relative to cell centroid of the super cell.
-          bfact,dx,xsten,nhalf,SDIM)
-
-         try_new_vfrac=0
-
-         if (mag_centroid.gt.VOFTOL*dx(1)) then
-          ! do nothing
-         else if (mag_centroid.le.VOFTOL*dx(1)) then
-          try_new_vfrac=1
+         if (try_new_vfrac.eq.1) then
           Call random_number(vof_single)
           vof_training(i_training)=vof_single
+         else if (try_new_vfrac.eq.0) then
+          ! do nothing
          else
-          print *,"mag_centroid bust"
+          print *,"try_new_vfrac invalid"
           stop
          endif
 
-        enddo
+        enddo ! do while (try_new_vfrac.eq.1)
 
+         ! find the slope given the centroid.
         call find_cut_geom_slope( &
          grid_index, &
          grid_level, &
@@ -1373,13 +1398,14 @@ stop
          lsnormal, &
          lsnormal_valid, &
          bfact,dx,xsten,nhalf, &
-         refcen, & ! relative to cell centroid of the super cell.
+          ! relative to cell centroid of the super cell; INTENT(in)
+         refcen, & 
          refvfrac, &
          npredict, &
          continuous_mof, &
          cmofsten, &
-         nslope, &
-         intercept, &
+         nslope, & ! INTENT(out)
+         intercept, & ! INTENT(out)
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
          geom_xtetlist_old(1,1,1,tid+1), &
