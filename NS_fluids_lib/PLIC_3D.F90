@@ -1104,6 +1104,7 @@ stop
       INTEGER_T dir
       INTEGER_T i1,j1,k1
       INTEGER_T i_training
+      REAL_T training_tol
 
       REAL_T :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
       REAL_T :: lsnormal(num_materials,SDIM)
@@ -1264,6 +1265,9 @@ stop
         endif
        enddo ! do dir=1,3
 
+       print *,"generating training data num_sampling,i,j,k,continuous_mof ", &
+          num_sampling,i,j,k,continuous_mof
+
        Call random_number(vof_training) ! 0<=vof_training<1
 
        Call random_number(phi_training) ! 0<=phi_training<1
@@ -1411,6 +1415,7 @@ stop
          geom_xtetlist_old(1,1,1,tid+1), &
          nmax, &
          nmax, &
+          ! relative to cell centroid of the super cell; INTENT(out)
          centroidA, &
          nmax, &
          critical_material, &
@@ -1418,6 +1423,54 @@ stop
          SDIM)
 
         call slope_to_angle(nslope,angle_exact_sanity,SDIM)
+
+        training_tol=1.0D-3
+        if ((refvfrac.le.0.1d0).or.(refvfrac.ge.0.99d0)) then
+         training_tol=one
+        endif
+
+        do dir=1,SDIM-1
+         if ((angle_exact_sanity(dir).ge.-Pi).and. &
+             (angle_exact_sanity(dir).le.Pi)) then
+          ! do nothing
+         else
+          print *,"angle_exact_sanity invalid"
+          stop
+         endif
+
+         if (angle_err(angle_exact_sanity(dir),angle_exact_db(dir)).le. &
+             training_tol) then
+          ! do nothing
+         else 
+          print *,"i_training= ",i_training
+          print *,"training_tol=",training_tol
+          print *,"dir=",dir
+          print *,"angle_exact_sanity=",angle_exact_sanity
+          print *,"angle_exact_db=",angle_exact_db
+          print *,"refvfrac= ",refvfrac
+          print *,"refcen= ",refcen
+          print *,"centroidA= ",centroidA
+          print *,"|angle_exact_sanity-angle_exact_db|>tol"
+          stop
+         endif
+        enddo ! dir=1..sdim-1
+
+        do dir=1,SDIM
+         if (abs(refcen(dir)-centroidA(dir)).le.training_tol*dx(1)) then
+          ! do nothing
+         else
+          print *,"i_training= ",i_training
+          print *,"training_tol=",training_tol
+          print *,"dir=",dir
+          print *,"angle_exact_sanity=",angle_exact_sanity
+          print *,"angle_exact_db=",angle_exact_db
+          print *,"refvfrac= ",refvfrac
+          print *,"refcen= ",refcen
+          print *,"centroidA= ",centroidA
+          print *,"|refcen-centroidA|>tol"
+          stop
+         endif
+        enddo ! dir=1..sdim
 
         do dir=1,3
          xc0(dir)=zero

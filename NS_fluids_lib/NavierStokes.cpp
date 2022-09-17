@@ -130,14 +130,6 @@ continuous_mof=2 (if same number of materials in center cell as in stencil)
 NOTE: rigid materials are not counted as materials in a cell.  Rigid 
 materials are immersed into the fluid(s). 
 
-future work:
-use machine learning techniques in order to quickly derive an initial
-guess for the MOF reconstruction.  Also, getting the intercept given
-the volume fraction and slope.
-
-calibrate sub-scale model parameters for any given problem, so that 
-certain basic benchmark tests give the expected results. (e.g. drag
-on an interface, growth rate of perturbations, pressure drop)
 */
 
 int  NavierStokes::continuous_mof=2;
