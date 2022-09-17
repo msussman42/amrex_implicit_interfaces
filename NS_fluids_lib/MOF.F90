@@ -10883,8 +10883,8 @@ contains
       INTEGER_T mof_stencil_ok
       INTEGER_T grid_index_ML(sdim)
       INTEGER_T iML,jML,kML,cmofML
-      REAL_T angle_init_ML(2)
-      REAL_T angle_output(2)
+      REAL_T angle_init_ML(sdim-1)
+      REAL_T angle_output(sdim-1)
 
       REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
       REAL_T, INTENT(in) :: lsnormal(num_materials,sdim)
@@ -11172,13 +11172,10 @@ contains
            do dir=1,sdim-1
             angle_init_ML(dir)=angle_init(dir)
            enddo
-           if (sdim.eq.2) then
-            angle_init_ML(2)=zero
-           endif
            cmofML=continuous_mof/2
             ! choices: NN, DT, RF
            angle_output= &
-             training_array(iML,jML,kML,cmofML)%DT_ZHOUTENG_LOCAL% &
+             training_array(D_DECL(iML,jML,kML),cmofML)%DT_ZHOUTENG_LOCAL% &
              predict(angle_init_ML)
 
            training_nguess=nguess

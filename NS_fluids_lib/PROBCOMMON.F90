@@ -311,13 +311,13 @@ implicit none
         Type(Random_Forest) :: RF_ZHOUTENG_LOCAL
       end Type training_model_type
 
-      Type(training_model_type), allocatable, dimension(:,:,:,:) :: &
+      Type(training_model_type), allocatable, dimension(D_DECL(:,:,:),:) :: &
         training_array
 
       INTEGER_T :: training_finest_level=-1
 
-      INTEGER_T :: training_lo(3)
-      INTEGER_T :: training_hi(3)
+      INTEGER_T :: training_lo(SDIM)
+      INTEGER_T :: training_hi(SDIM)
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
       !num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2
