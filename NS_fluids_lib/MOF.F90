@@ -10883,7 +10883,7 @@ contains
       INTEGER_T mof_stencil_ok
       INTEGER_T grid_index_ML(sdim)
       INTEGER_T iML,jML,kML,cmofML
-      REAL_T angle_init_ML(sdim-1)
+      REAL_T angle_init_ML(sdim) !angle,vfrac
       REAL_T angle_output(sdim-1)
 
       REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
@@ -11169,9 +11169,12 @@ contains
             print *,"sdim invalid"
             stop
            endif
+
            do dir=1,sdim-1
             angle_init_ML(dir)=angle_init(dir)
            enddo
+           angle_init_ML(sdim)=refvfrac
+
            cmofML=continuous_mof/2
             ! choices: NN, DT, RF
            angle_output= &
@@ -11184,11 +11187,12 @@ contains
             angle_array(dir,nguess)=angle_output(dir)
            enddo
 
-           if (1.eq.1) then
+           if (1.eq.0) then
             print *,"grid_idx,grid_idx_ML,angle_init,angle_output,nguess ", &
               grid_index,grid_index_ML,angle_init,angle_output,nguess
             print *,"refvfrac ",refvfrac
            endif
+
           else if (fastflag.eq.0) then
            ! do nothing
           else
@@ -11263,7 +11267,7 @@ contains
        else if (err.lt.err_array(iicrit)) then
         iicrit=iter
        endif
-       if (1.eq.1) then
+       if (1.eq.0) then
         if (training_nguess.ge.1) then
          print *,"iter,err,angle_guess ",iter,err,angle_init
         endif

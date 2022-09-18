@@ -1083,7 +1083,7 @@ stop
       REAL_T, INTENT(in) :: dx(SDIM)
 
       INTEGER_T nmax
-      INTEGER_T, parameter :: num_sampling=10000
+      INTEGER_T, parameter :: num_sampling=40000
       REAL_T :: vof_training(num_sampling)
       REAL_T :: phi_training(num_sampling)
       REAL_T :: theta_training(num_sampling)
@@ -1094,6 +1094,7 @@ stop
       REAL_T :: angle_exact_sanity(SDIM-1)
       REAL_T :: angle_exact_db(SDIM-1)
       REAL_T :: angle_init_db(SDIM-1)
+      REAL_T :: angle_and_vfrac(SDIM)
       REAL_T :: refvfrac
       REAL_T :: vof_single 
       REAL_T :: refcen(SDIM)
@@ -1421,8 +1422,15 @@ stop
         call slope_to_angle(nslope,angle_exact_sanity,SDIM)
 
         training_tol=1.0D-3
-        if ((refvfrac.le.0.1d0).or.(refvfrac.ge.0.99d0)) then
+        if ((refvfrac.ge.zero).and.(refvfrac.le.0.1d0)) then
          training_tol=one
+        else if ((refvfrac.ge.0.1d0).and.(refvfrac.le.0.9d0)) then
+         ! do nothing
+        else if ((refvfrac.le.one).and.(refvfrac.ge.0.9d0)) then
+         training_tol=one
+        else
+         print *,"refvfrac out of range"
+         stop
         endif
 
         do dir=1,SDIM-1
@@ -1552,6 +1560,7 @@ stop
         endif
 
        End Do ! Do i_training = 1, num_sampling
+
        close(10)
        close(11)
        close(12)
@@ -1582,7 +1591,7 @@ stop
                exitstat=sysret)
 
         ! sanity test for sk2f.py
-       if (1.eq.1) then
+       if (1.eq.0) then
         cmof_idx=continuous_mof/2
         call training_array(D_DECL(i,j,k),cmof_idx)% &
          NN_ZHOUTENG_LOCAL%Initialization()
@@ -1595,48 +1604,60 @@ stop
         DT_cost=zero
         RF_cost=zero
         Do i_training = 1, num_sampling
+
          do dir=1,SDIM-1
           angle_init_db(dir)=data_training(ANGLE_EXACT_TRAIN2+dir,i_training)
           angle_exact_db_data(dir)=data_training(VOFTRAIN+dir,i_training)
+          angle_and_vfrac(dir)=angle_init_db(dir)
          enddo
+         refvfrac=data_training(VOFTRAIN,i_training)
+         angle_and_vfrac(SDIM)=refvfrac
 
          angle_exact_db= &
            training_array(D_DECL(i,j,k),cmof_idx)%DT_ZHOUTENG_LOCAL% &
-             predict(angle_init_db)
+             predict(angle_and_vfrac)
          do dir=1,SDIM-1
           DT_cost=DT_cost+(angle_exact_db(dir)-angle_exact_db_data(dir))**2
          enddo
 
-         print *,"DT; i_training ",i_training
-         print *,"angle_init_db ",angle_init_db
-         print *,"angle_exact_db_data ",angle_exact_db_data
-         print *,"angle_exact_db ",angle_exact_db
+         if (1.eq.0) then
+          print *,"DT; i_training ",i_training
+          print *,"angle_init_db ",angle_init_db
+          print *,"angle_exact_db_data ",angle_exact_db_data
+          print *,"angle_exact_db ",angle_exact_db
+          print *,"angle_and_vfrac ",angle_and_vfrac
+         endif
 
          angle_exact_db= &
            training_array(D_DECL(i,j,k),cmof_idx)%NN_ZHOUTENG_LOCAL% &
-             predict(angle_init_db)
+             predict(angle_and_vfrac)
          do dir=1,SDIM-1
           NN_cost=NN_cost+(angle_exact_db(dir)-angle_exact_db_data(dir))**2
          enddo
 
-         print *,"NN; i_training ",i_training
-         print *,"angle_init_db ",angle_init_db
-         print *,"angle_exact_db_data ",angle_exact_db_data
-         print *,"angle_exact_db ",angle_exact_db
+         if (1.eq.0) then
+          print *,"NN; i_training ",i_training
+          print *,"angle_init_db ",angle_init_db
+          print *,"angle_exact_db_data ",angle_exact_db_data
+          print *,"angle_exact_db ",angle_exact_db
+          print *,"angle_and_vfrac ",angle_and_vfrac
+         endif
 
          angle_exact_db= &
            training_array(D_DECL(i,j,k),cmof_idx)%RF_ZHOUTENG_LOCAL% &
-             predict(angle_init_db)
+             predict(angle_and_vfrac)
          do dir=1,SDIM-1
           RF_cost=RF_cost+(angle_exact_db(dir)-angle_exact_db_data(dir))**2
          enddo
 
-         print *,"RF; i_training ",i_training
-         print *,"angle_init_db ",angle_init_db
-         print *,"angle_exact_db_data ",angle_exact_db_data
-         print *,"angle_exact_db ",angle_exact_db
+         if (1.eq.0) then
+          print *,"RF; i_training ",i_training
+          print *,"angle_init_db ",angle_init_db
+          print *,"angle_exact_db_data ",angle_exact_db_data
+          print *,"angle_exact_db ",angle_exact_db
 
-         stop
+          stop
+         endif
 
         enddo ! i_training = 1, num_sampling
 
