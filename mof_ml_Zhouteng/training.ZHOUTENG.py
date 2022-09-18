@@ -14,40 +14,9 @@ exact_angle = np.load(data_dir+'/exact_angle.npy')
 exact_centroid = np.load(data_dir+'/exact_centroid.npy')
 initial_angle = np.load(data_dir+'/initial_angle.npy')
 
-exact_f_shape=exact_f.shape
-print ('exact_f_shape ',exact_f_shape)
-exact_angle_shape=exact_angle.shape
-print ('exact_angle_shape ',exact_angle_shape)
-initial_angle_shape=initial_angle.shape
-print ('initial_angle_shape ',initial_angle_shape)
-
-num_sampling=exact_angle_shape[0]
-print ('num_sampling ',num_sampling)
-num_shape_dim=len(exact_angle_shape)
-
-amrex_spacedim=0
-if (num_shape_dim==1):
-    amrex_spacedim=2
-if (num_shape_dim==2):
-    amrex_spacedim=exact_angle_shape[1]+1
-print ('amrex_spacedim (python) ',amrex_spacedim)
-
-exact_f = exact_f.reshape([num_sampling,1])
-initial_angle=initial_angle.reshape([num_sampling,amrex_spacedim-1])
-exact_angle=exact_angle.reshape([num_sampling,amrex_spacedim-1])
+exact_f = exact_f.reshape([len(exact_f),1])
 inputs = np.hstack((initial_angle,exact_f))
-
 outputs = exact_angle.copy()
-if (amrex_spacedim==2):
-    outputs=outputs.reshape([num_sampling, ])
-if (amrex_spacedim==3):
-    outputs=outputs.reshape([num_sampling,amrex_spacedim-1])
-
-inputs_shape=inputs.shape
-outputs_shape=outputs.shape
-
-print ('inputs_shape ',inputs_shape)
-print ('outputs_shape ',outputs_shape)
 
 nn = MLPRegressor()
 nn.fit(inputs, outputs)
@@ -57,12 +26,9 @@ rf = RandomForestRegressor(max_depth=20,n_estimators=10)
 rf.fit(inputs, outputs)
 rf.output_coef_path = ''
 
-#dt = DecisionTreeRegressor(max_depth=20)
-dt = DecisionTreeRegressor(max_depth=40)
+dt = DecisionTreeRegressor(max_depth=20)
 dt.fit(inputs, outputs)
 dt.output_coef_path = ''
-
-outputs=outputs.reshape([num_sampling,amrex_spacedim-1])
 
 print('R2 score for DT: ',dt.score(inputs[:1000,:],outputs[:1000,:]))
 print('R2 score for RF: ',rf.score(inputs[:1000,:],outputs[:1000,:]))

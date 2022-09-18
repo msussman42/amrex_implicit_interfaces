@@ -13,7 +13,7 @@ program gen_data
   Real(sp) :: vof(num_sampling)
   Real(sp) :: phi(num_sampling)
   Real(sp) :: theta(num_sampling)
-  Real(sp) :: data(5,num_sampling)
+  Real(sp) :: data(8,num_sampling)
   Real(sp) :: xc0(3), nr(3)
   Real(sp) :: angle_init(2), angle_exact(2)
   Real(sp) :: err_temp
@@ -24,7 +24,7 @@ program gen_data
   theta=theta * pi
   phi=(phi-0.5_dp) * pi * 2.0_dp
   Do i = 1, num_sampling
-    angle_exact = (/phi(i),pi*0.5_dp/)
+    angle_exact = (/phi(i),theta(i)/)
     ! Convert the exact angle to normal vector
     Call Angle2Norm(angle_exact,nr)
     ! Normalization for normal vector, so that sun of nr = 1
@@ -37,9 +37,12 @@ program gen_data
     Call Norm2Angle(angle_init,nr)
     data(1,i) = xc0(1)
     data(2,i) = xc0(2)
-    data(3,i) = vof(i)
-    data(4,i) = angle_exact(1)
-    data(5,i) = angle_init(1)
+    data(3,i) = xc0(3)
+    data(4,i) = vof(i)
+    data(5,i) = angle_exact(1)
+    data(6,i) = angle_exact(2)
+    data(7,i) = angle_init(1)
+    data(8,i) = angle_init(2)
   End Do
 
   close(10)
@@ -49,10 +52,10 @@ program gen_data
   open(12,file='exact_angle.dat',status='unknown')
   open(13,file='initial_angle.dat',status='unknown')
   Do i = 1, num_sampling
-    Write(10,'(2E25.16)')data(1:2,i)
-    Write(11,'(E25.16)')data(3,i)
-    Write(12,'(E25.16)')data(4,i)
-    Write(13,'(E25.16)')data(5,i)
+    Write(10,'(3F16.12)')data(1:3,i)
+    Write(11,'(F16.12)')data(4,i)
+    Write(12,'(2F16.12)')data(5:6,i)
+    Write(13,'(2F16.12)')data(7:8,i)
   End Do
   close(10)
   close(11)
