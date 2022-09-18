@@ -1123,6 +1123,9 @@ stop
       INTEGER_T :: im
       INTEGER_T :: fastflag
 
+      REAL_T :: DT_cost,NN_cost,RF_cost
+      REAL_T :: angle_exact_db_data(SDIM-1)
+
       INTEGER_T sysret
       INTEGER_T cmof_idx
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -1521,12 +1524,33 @@ stop
         ! previous: F16.12
         !      now: E25.16
        Do i_training = 1, num_sampling
-        Write(10,'(3E25.16)')data_training(1:SDIM,i_training)
+
+        if (SDIM.eq.3) then
+         Write(10,'(3E25.16)')data_training(1:SDIM,i_training)
+        else if (SDIM.eq.2) then
+         Write(10,'(2E25.16)')data_training(1:SDIM,i_training)
+        else
+         print *,"dimension bust"
+         stop
+        endif
+
         Write(11,'(E25.16)')data_training(VOFTRAIN,i_training)
-        Write(12,'(2E25.16)') &
+
+        if (SDIM.eq.3) then
+         Write(12,'(2E25.16)') &
            data_training(ANGLE_EXACT_TRAIN1:ANGLE_EXACT_TRAIN2,i_training)
-        Write(13,'(2E25.16)') &
+         Write(13,'(2E25.16)') &
            data_training(ANGLE_INIT_TRAIN1:ANGLE_INIT_TRAIN2,i_training)
+        else if (SDIM.eq.2) then
+         Write(12,'(E25.16)') &
+           data_training(ANGLE_EXACT_TRAIN1:ANGLE_EXACT_TRAIN2,i_training)
+         Write(13,'(E25.16)') &
+           data_training(ANGLE_INIT_TRAIN1:ANGLE_INIT_TRAIN2,i_training)
+        else
+         print *,"dimension bust"
+         stop
+        endif
+
        End Do ! Do i_training = 1, num_sampling
        close(10)
        close(11)
@@ -1556,6 +1580,72 @@ stop
                exitstat=sysret)
        call execute_command_line('rm initial_angle.npy',wait=.true., &
                exitstat=sysret)
+
+        ! sanity test for sk2f.py
+       if (1.eq.1) then
+        cmof_idx=continuous_mof/2
+        call training_array(D_DECL(i,j,k),cmof_idx)% &
+         NN_ZHOUTENG_LOCAL%Initialization()
+        call training_array(D_DECL(i,j,k),cmof_idx)% &
+         DT_ZHOUTENG_LOCAL%Initialization()
+        call training_array(D_DECL(i,j,k),cmof_idx)% &
+         RF_ZHOUTENG_LOCAL%Initialization()
+
+        NN_cost=zero
+        DT_cost=zero
+        RF_cost=zero
+        Do i_training = 1, num_sampling
+         do dir=1,SDIM-1
+          angle_init_db(dir)=data_training(ANGLE_EXACT_TRAIN2+dir,i_training)
+          angle_exact_db_data(dir)=data_training(VOFTRAIN+dir,i_training)
+         enddo
+
+         angle_exact_db= &
+           training_array(D_DECL(i,j,k),cmof_idx)%DT_ZHOUTENG_LOCAL% &
+             predict(angle_init_db)
+         do dir=1,SDIM-1
+          DT_cost=DT_cost+(angle_exact_db(dir)-angle_exact_db_data(dir))**2
+         enddo
+
+         print *,"DT; i_training ",i_training
+         print *,"angle_init_db ",angle_init_db
+         print *,"angle_exact_db_data ",angle_exact_db_data
+         print *,"angle_exact_db ",angle_exact_db
+
+         angle_exact_db= &
+           training_array(D_DECL(i,j,k),cmof_idx)%NN_ZHOUTENG_LOCAL% &
+             predict(angle_init_db)
+         do dir=1,SDIM-1
+          NN_cost=NN_cost+(angle_exact_db(dir)-angle_exact_db_data(dir))**2
+         enddo
+
+         print *,"NN; i_training ",i_training
+         print *,"angle_init_db ",angle_init_db
+         print *,"angle_exact_db_data ",angle_exact_db_data
+         print *,"angle_exact_db ",angle_exact_db
+
+         angle_exact_db= &
+           training_array(D_DECL(i,j,k),cmof_idx)%RF_ZHOUTENG_LOCAL% &
+             predict(angle_init_db)
+         do dir=1,SDIM-1
+          RF_cost=RF_cost+(angle_exact_db(dir)-angle_exact_db_data(dir))**2
+         enddo
+
+         print *,"RF; i_training ",i_training
+         print *,"angle_init_db ",angle_init_db
+         print *,"angle_exact_db_data ",angle_exact_db_data
+         print *,"angle_exact_db ",angle_exact_db
+
+         stop
+
+        enddo ! i_training = 1, num_sampling
+
+        print *,"FORTRAN: DT cost ",DT_cost
+        print *,"FORTRAN: NN cost ",NN_cost
+        print *,"FORTRAN: RF cost ",RF_cost
+
+        stop
+       endif
 
       else if (op_training.eq.2) then
 

@@ -23,7 +23,7 @@ def nn_sk2f(nn):
 
     for i in range(len(nn.intercepts_)):
         for j in range(len(nn.intercepts_[i])):
-            nn_output.write('%f '%nn.intercepts_[i][j])
+            nn_output.write('%.15e '%nn.intercepts_[i][j])
         nn_output.write('\n')
     nn_output.write('! coefs\n')
     for i in range(len(nn.coefs_)):
@@ -31,7 +31,7 @@ def nn_sk2f(nn):
         coef = np.transpose(nn.coefs_[i])
         for j in range(len(coef)):
             for k in range(len(coef[j])):
-                nn_output.write('%f '%coef[j][k])
+                nn_output.write('%.15e '%coef[j][k])
             nn_output.write('\n')
     nn_output.write('! activations\n')
     nn_output.write(nn.activation)
@@ -59,9 +59,9 @@ def dt_sk2f(dt):
         dt_output.write('%d\n'%(dt.tree_.children_left[i]+1))
         dt_output.write('%d\n'%(dt.tree_.children_right[i]+1))
         dt_output.write('%d\n'%(dt.tree_.feature[i]+1))
-        dt_output.write('%f\n'%dt.tree_.threshold[i])
+        dt_output.write('%.15e\n'%dt.tree_.threshold[i])
         for j in range(dt.tree_.n_outputs):
-            dt_output.write('%f '%dt.tree_.value[i,j])
+            dt_output.write('%.15e '%dt.tree_.value[i,j])
         dt_output.write('\n')
 
 def rf_sk2f(rf):
@@ -89,7 +89,7 @@ def rf_sk2f(rf):
             rf_output.write('%d\n'%(tree1.children_left[i]+1))
             rf_output.write('%d\n'%(tree1.children_right[i]+1))
             rf_output.write('%d\n'%(tree1.feature[i]+1))
-            rf_output.write('%f\n'%tree1.threshold[i])
+            rf_output.write('%.15e\n'%tree1.threshold[i])
             for j in range(tree1.n_outputs):
-                rf_output.write('%f '%tree1.value[i,j])
+                rf_output.write('%.15e '%tree1.value[i,j])
             rf_output.write('\n')
