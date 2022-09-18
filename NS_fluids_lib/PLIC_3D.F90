@@ -1083,7 +1083,7 @@ stop
       REAL_T, INTENT(in) :: dx(SDIM)
 
       INTEGER_T nmax
-      INTEGER_T, parameter :: num_sampling=40000
+      INTEGER_T, parameter :: num_sampling=10000
       REAL_T :: vof_training(num_sampling)
       REAL_T :: phi_training(num_sampling)
       REAL_T :: theta_training(num_sampling)

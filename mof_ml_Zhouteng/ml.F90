@@ -1,24 +1,16 @@
-#ifdef SINGLE_PRECISION
-#  define setsp           4
-#else
-#  define setsp           8
-#endif
-
 Module NeuralNetwork
 
   Implicit None
   Private
   Public :: Neural_Network
 
-  Integer, Parameter :: PS = setsp
-
   !↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓Neural Networks variables↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
   Type Ragged_Vector
-    Real(PS), Allocatable :: Vec(:)
+    real(8), Allocatable :: Vec(:)
   End Type Ragged_vector
 
   Type Ragged_Matrix
-    Real(PS), Allocatable :: Mat(:,:)
+    real(8), Allocatable :: Mat(:,:)
   End Type Ragged_Matrix
 
   Type :: NN_activation
@@ -28,10 +20,9 @@ Module NeuralNetwork
   ! interface for choose activation type
   Interface
     Function Sub_Interface(n, X)
-      Import :: PS
       Integer,  Intent(in) :: n
-      Real(PS), Intent(in), Dimension(n) :: X
-      Real(PS), Dimension(n) :: Sub_Interface
+      real(8), Intent(in), Dimension(n) :: X
+      real(8), Dimension(n) :: Sub_Interface
     End Function Sub_Interface
   End Interface
 
@@ -39,8 +30,8 @@ Module NeuralNetwork
   Type :: Neural_Network
     Integer :: n_inputs
     Integer :: n_outputs
-    Real(PS), Allocatable :: Inputs(:)
-    Real(PS), Allocatable :: Outputs(:)
+    real(8), Allocatable :: Inputs(:)
+    real(8), Allocatable :: Outputs(:)
     Integer :: layers
     Integer, Allocatable :: Layer_Size(:)
     Type(Ragged_Vector), Allocatable :: Activations(:)
@@ -64,7 +55,7 @@ Module NeuralNetwork
     Class(Neural_Network) :: self
     Character(100) :: tmp
     Character(100) :: string
-    Real(PS),allocatable :: line(:)
+    real(8),allocatable :: line(:)
     Integer :: error
     Integer :: i,j
 
@@ -149,8 +140,8 @@ Module NeuralNetwork
   function Predict(self, input)
     Implicit None
     Class(Neural_Network) :: self
-    Real(PS) :: input(self%n_inputs)
-    Real(PS) :: Predict(self%n_outputs)
+    real(8) :: input(self%n_inputs)
+    real(8) :: Predict(self%n_outputs)
     integer :: i
 
     self%activations(1)%vec = input
@@ -218,41 +209,41 @@ Module NeuralNetwork
   function Activation_logistic(n,X)
     Implicit None
     integer, Intent(in) :: n
-    Real(PS), Intent(in), dimension(n) :: X
-    Real(PS), dimension(n) :: Activation_logistic
+    real(8), Intent(in), dimension(n) :: X
+    real(8), dimension(n) :: Activation_logistic
     Activation_logistic = 1.0 / (1.0+exp(-X))
   End function Activation_logistic
 
   function Activation_tanh(n,X)
     Implicit None
     integer, Intent(in) :: n
-    Real(PS), Intent(in), dimension(n) :: X
-    Real(PS), dimension(n) :: Activation_tanh
+    real(8), Intent(in), dimension(n) :: X
+    real(8), dimension(n) :: Activation_tanh
     Activation_tanh = tanh(X)
   End function Activation_tanh
 
   function Activation_ReLU(n,X)
     Implicit None
     integer, Intent(in) :: n
-    Real(PS), Intent(in), dimension(n) :: X
-    Real(PS), dimension(n) :: Activation_ReLU
+    real(8), Intent(in), dimension(n) :: X
+    real(8), dimension(n) :: Activation_ReLU
       Activation_ReLU = max(X,0.d0)
     End function Activation_ReLU
 
   function Activation_identity(n,X)
     Implicit None
     integer, Intent(in) :: n
-    Real(PS), Intent(in), dimension(n) :: X
-    Real(PS), dimension(n) :: Activation_identity
+    real(8), Intent(in), dimension(n) :: X
+    real(8), dimension(n) :: Activation_identity
     Activation_identity = X
   End function Activation_identity
 
   function Activation_softmax(n,X)
     Implicit None
     Integer, Intent(in) :: n
-    Real(PS), Intent(in), dimension(n) :: X
-    Real(PS), dimension(n) :: tmp
-    Real(PS), dimension(n) :: Activation_softmax
+    real(8), Intent(in), dimension(n) :: X
+    real(8), dimension(n) :: tmp
+    real(8), dimension(n) :: Activation_softmax
     tmp = exp(X - maxval(X))/sum(tmp)
     Activation_softmax = 1.0 / (1.0+exp(-X))
   End function Activation_softmax
@@ -266,15 +257,13 @@ Module DecisionTree
   Private
   Public :: Decision_Tree
 
-  Integer, Parameter :: PS = setsp
-
   !↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓Decision Tree Variables↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
   Type Nodes
     Integer  :: children_left
     Integer  :: children_right
     Integer  :: feature
-    Real(PS) :: threshold
-    Real(PS), Allocatable :: Values(:)
+    real(8) :: threshold
+    real(8), Allocatable :: Values(:)
     ! Contains
   End Type Nodes
 
@@ -287,8 +276,8 @@ Module DecisionTree
   Type :: Decision_Tree
     Integer :: n_inputs
     Integer :: n_outputs
-    Real(PS), Allocatable :: Inputs(:)
-    Real(PS), Allocatable :: Outputs(:)
+    real(8), Allocatable :: Inputs(:)
+    real(8), Allocatable :: Outputs(:)
     Type(Trees) :: Tree
   Contains
     Procedure :: Initialization
@@ -338,8 +327,8 @@ Module DecisionTree
   function Predict(self, input)
     Implicit None
     Class(Decision_Tree) :: self
-    Real(PS) :: input(self%n_inputs)
-    Real(PS) :: Predict(self%n_outputs)
+    real(8) :: input(self%n_inputs)
+    real(8) :: Predict(self%n_outputs)
 
     integer :: i,n
 
@@ -367,15 +356,14 @@ Module RandomForest
   Private
   Public :: Random_Forest 
 
-  Integer, Parameter :: PS = setsp
 
   !↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓Decision Tree Variables↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
   Type Nodes
     Integer  :: children_left
     Integer  :: children_right
     Integer  :: feature
-    Real(PS) :: threshold
-    Real(PS), Allocatable :: Values(:)
+    real(8) :: threshold
+    real(8), Allocatable :: Values(:)
     ! Contains
   End Type Nodes
 
@@ -389,8 +377,8 @@ Module RandomForest
     Integer :: n_inputs
     Integer :: n_outputs
     Integer :: tree_count
-    Real(PS), Allocatable :: Inputs(:)
-    Real(PS), Allocatable :: Outputs(:)
+    real(8), Allocatable :: Inputs(:)
+    real(8), Allocatable :: Outputs(:)
     Type(Trees), Allocatable :: Tree(:)
   Contains
     Procedure :: Initialization
@@ -447,12 +435,12 @@ Module RandomForest
   function Predict(self, input)
     Implicit None
     Class(Random_Forest) :: self
-    Real(PS) :: input(self%n_inputs)
-    Real(PS) :: Predict(self%n_outputs)
+    real(8) :: input(self%n_inputs)
+    real(8) :: Predict(self%n_outputs)
 
     integer :: i, j, n
 
-    Predict = 0.0_PS
+    Predict = 0.0d0
     Do j = 1, Self%tree_count
       n=1
       Do i = 1, Self%tree(j)%max_depth
