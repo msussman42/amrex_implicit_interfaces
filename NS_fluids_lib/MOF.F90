@@ -10893,6 +10893,7 @@ contains
       INTEGER_T local_nlist_cen
 
       INTEGER_T training_nguess
+      INTEGER_T local_MOFITERMAX
 
       INTEGER_T use_MilcentLemoine
 
@@ -11296,10 +11297,20 @@ contains
 
       iter=0
 
+      local_MOFITERMAX=MOFITERMAX
+      if (training_nguess.ge.1) then
+       local_MOFITERMAX=0
+      else if (training_nguess.eq.0) then
+       ! do nothing
+      else
+       print *,"training_nguess invalid"
+       stop
+      endif
+
       delta_theta=Pi/180.0d0  ! 1 degree=pi/180
       delta_theta_max=10.0d0*Pi/180.0d0  ! 10 degrees
 
-      do while ((iter.lt.MOFITERMAX).and. &
+      do while ((iter.lt.local_MOFITERMAX).and. &
                 (err.gt.tol).and. &
                 (err_local_min.gt.local_tol))
 
@@ -11570,7 +11581,7 @@ contains
        intercept_array(iter+2)=intopt
 
        iter=iter+1
-      enddo ! while error>tol and iter<MOFITERMAX
+      enddo ! while error>tol and iter<local_MOFITERMAX
 
       iicrit=iter
       do ii=0,iter
@@ -13763,6 +13774,7 @@ contains
         print *,"dir,dx ",dir,xsten0(1,dir)-xsten0(-1,dir)
        enddo
        print *,"MOFITERMAX ",MOFITERMAX
+       print *,"local_MOFITERMAX ",local_MOFITERMAX
       else if (mof_verbose.eq.0) then
        ! do nothing
       else
