@@ -19830,10 +19830,14 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } else
    amrex::Error("num_materials_viscoelastic invalid:writeTECPLOT_File");
 
+   //plot_grid_type==0 data interpolated to nodes.
+   //plot_grid_type==1 data lives at the cells.
   for (int plot_grid_type=0;plot_grid_type<=1;plot_grid_type++) {
 
    ParallelDescriptor::Barrier();
 
+   //plot_grid_type==0 data interpolated to nodes.
+   //plot_grid_type==1 data lives at the cells.
    ns_level.output_zones(
     plot_grid_type,
     visual_fab_output,

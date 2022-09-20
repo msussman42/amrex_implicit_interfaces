@@ -7153,6 +7153,8 @@ void NavierStokes::check_for_NAN(MultiFab* mf) {
  std::fflush(NULL);
 } // end subroutine check_for_NAN
 
+//plot_grid_type==0 data interpolated to nodes.
+//plot_grid_type==1 data lives at the cells.
 void NavierStokes::output_zones(
    int plot_grid_type,
    FArrayBox& visual_fab_output,
@@ -7285,6 +7287,7 @@ void NavierStokes::output_zones(
 
  if (level<=tecplot_finest_level) {
 
+   //plot_grid_type==0 data interpolated to nodes.
   if (plot_grid_type==0) {
 
    BoxArray cgrids(grids);
@@ -7656,6 +7659,8 @@ void NavierStokes::output_zones(
    } else 
     amrex::Error("grids_per_level is corrupt");
 
+   //plot_grid_type==1 data lives at the cells.
+   //data is output "as is" to "BOXLIB" format.
   } else if (plot_grid_type==1) {
 
    BoxArray cgrids(grids);
