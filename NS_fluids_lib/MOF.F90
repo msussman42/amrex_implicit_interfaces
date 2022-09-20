@@ -13774,7 +13774,6 @@ contains
         print *,"dir,dx ",dir,xsten0(1,dir)-xsten0(-1,dir)
        enddo
        print *,"MOFITERMAX ",MOFITERMAX
-       print *,"local_MOFITERMAX ",local_MOFITERMAX
       else if (mof_verbose.eq.0) then
        ! do nothing
       else

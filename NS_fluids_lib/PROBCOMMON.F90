@@ -315,7 +315,6 @@ implicit none
         training_array
 
       INTEGER_T :: training_finest_level=-1
-
       INTEGER_T :: training_lo(SDIM)
       INTEGER_T :: training_hi(SDIM)
 

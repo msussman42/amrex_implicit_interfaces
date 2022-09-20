@@ -1926,7 +1926,7 @@ END SUBROUTINE SIMP
 
        ! called from: NavierStokes2.cpp
       subroutine fort_cellgrid( &
-       plot_grid_type, &
+       plot_grid_type, & !0=interp to nodes   1=data "as is"
        ncomp_tower, &
        tid, &
        bfact, &
@@ -2270,7 +2270,7 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      if (plot_grid_type.eq.0) then
+      if (plot_grid_type.eq.0) then ! interp to nodes
        igridlo(3)=0
        igridhi(3)=0
        iproblo(3)=0
@@ -2279,7 +2279,7 @@ END SUBROUTINE SIMP
         igridhi(dir)=hi(dir)+1
         iproblo(dir)=0
        enddo
-      else if (plot_grid_type.eq.1) then
+      else if (plot_grid_type.eq.1) then ! data "as is"
        call growntilebox(tilelo,tilehi,lo,hi,igridlo,igridhi,1)
       else
        print *,"plot_grid_type invalid"
@@ -2294,7 +2294,7 @@ END SUBROUTINE SIMP
 
       allocate(reconfab(DIMV(plt),num_materials*ngeom_recon))
 
-      if (plot_grid_type.eq.0) then
+      if (plot_grid_type.eq.0) then ! interp to nodes.
 
          ! nstate_slice=SLICECOMP_NCOMP
          ! for the material with LS>0,
@@ -2314,7 +2314,7 @@ END SUBROUTINE SIMP
        plotfab_ptr=>plotfab
        call checkbound_array(lo,hi,plotfab_ptr,1,-1)
 
-      else if (plot_grid_type.eq.1) then
+      else if (plot_grid_type.eq.1) then ! 1=data "as is"
        ! do nothing
       else
        print *,"plot_grid_type invalid"
@@ -2387,10 +2387,10 @@ END SUBROUTINE SIMP
       do j=igridlo(2),igridhi(2) 
       do i=igridlo(1),igridhi(1) 
 
-       if (plot_grid_type.eq.0) then
+       if (plot_grid_type.eq.0) then ! interp to nodes (after complement)
          ! iproblo=0
         call gridsten(xsten,problo,i,j,k,iproblo,bfact,dx,nhalf)
-       else if (plot_grid_type.eq.1) then
+       else if (plot_grid_type.eq.1) then ! data "as is"
         call gridsten_level(xsten,i,j,k,level,nhalf)
        else
         print *,"plot_grid_type invalid"
@@ -2444,7 +2444,7 @@ END SUBROUTINE SIMP
          endif
        enddo
 
-       if (plot_grid_type.eq.0) then
+       if (plot_grid_type.eq.0) then !interp to nodes.
 
         igridlo(3)=0
         igridhi(3)=0
@@ -2471,7 +2471,7 @@ END SUBROUTINE SIMP
          igridhi(dir)=hi(dir)+1
         enddo
 
-       else if (plot_grid_type.eq.1) then
+       else if (plot_grid_type.eq.1) then ! data "as is"
         i1lo=0
         i1hi=0
 
@@ -2490,8 +2490,9 @@ END SUBROUTINE SIMP
        write(filename32,'(A14,A10,A3,A5)') &
          './temptecplot/','tempnddata',levstr,gridstr
 
+        !visual_nddata_format.eq.0 -> tecplot nodes
        if ((visual_nddata_format.eq.0).and. &
-           (plot_grid_type.eq.0)) then
+           (plot_grid_type.eq.0)) then ! 0="interp to nodes"
 
         print *,"filename32 ",filename32
 
@@ -2500,8 +2501,10 @@ END SUBROUTINE SIMP
          write(11,*) lo(dir),hi(dir)
         enddo
 
-       else if ((visual_nddata_format.ne.0).or. &
-                (plot_grid_type.eq.1)) then
+        !visual_nddata_format.eq.1 -> plt file cells
+        !visual_nddata_format.eq.2 -> tecplot cells (piecewise const interp)
+       else if ((visual_nddata_format.ne.0).or. & 
+                (plot_grid_type.eq.1)) then ! data "as is"
 
         if (1.eq.0) then
          print *,"ignoring box for nddata*.tec output (lo123,hi123): ", &
@@ -2519,10 +2522,10 @@ END SUBROUTINE SIMP
        do j=igridlo(2),igridhi(2) 
        do i=igridlo(1),igridhi(1) 
 
-        if (plot_grid_type.eq.0) then
+        if (plot_grid_type.eq.0) then ! interp to nodes
           ! iproblo=0
          call gridstenND(xstenND,problo,i,j,k,iproblo,bfact,dx,nhalf)
-        else if (plot_grid_type.eq.1) then
+        else if (plot_grid_type.eq.1) then ! data "as is"
          call gridsten_level(xstenND,i,j,k,level,nhalf)
         else
          print *,"plot_grid_type invalid"
@@ -2640,10 +2643,10 @@ END SUBROUTINE SIMP
           endif
          endif
 
-         if (plot_grid_type.eq.0) then
+         if (plot_grid_type.eq.0) then !interp to nodes.
           ! iproblo=0
           call gridsten(xsten,problo,i-i1,j-j1,k-k1,iproblo,bfact,dx,nhalf)
-         else if (plot_grid_type.eq.1) then
+         else if (plot_grid_type.eq.1) then ! data "as is"
           call gridsten_level(xsten,i,j,k,level,nhalf)
          else
           print *,"plot_grid_type invalid"
@@ -2653,7 +2656,7 @@ END SUBROUTINE SIMP
          localwt=one  ! area of intersection of node CV with given cell CV
          localwtLS=one
 
-         if (plot_grid_type.eq.0) then
+         if (plot_grid_type.eq.0) then !interp to nodes
 
           do dir=1,SDIM
            dxleft=xsten(0,dir)-xsten(-1,dir)
@@ -2705,7 +2708,7 @@ END SUBROUTINE SIMP
            print *,"localwtLS invalid"
            stop
           endif
-         else if (plot_grid_type.eq.1) then
+         else if (plot_grid_type.eq.1) then ! data "as is"
           ! do nothing
          else
           print *,"plot_grid_type invalid"
@@ -2845,7 +2848,7 @@ END SUBROUTINE SIMP
          lsdistnd(dir)=lsdistnd(dir)/sumweightLS
         enddo
 
-        if (plot_grid_type.eq.0) then
+        if (plot_grid_type.eq.0) then !interp to nodes
 
          if (bfact.eq.1) then
           ! do nothing
@@ -3077,7 +3080,7 @@ END SUBROUTINE SIMP
           stop
          endif
 
-        else if (plot_grid_type.eq.1) then
+        else if (plot_grid_type.eq.1) then ! data "as is"
          ! do nothing
         else
          print *,"plot_grid_type invalid"
@@ -3289,8 +3292,8 @@ END SUBROUTINE SIMP
          towerfab(D_DECL(i,j,k),iw)=writend(iw)
         enddo        
 
-        if ((visual_nddata_format.eq.0).and. &
-            (plot_grid_type.eq.0)) then
+        if ((visual_nddata_format.eq.0).and. & ! tecplot format
+            (plot_grid_type.eq.0)) then ! interp to nodes
   
          do iw=1,scomp
           if (iw.lt.scomp) then
@@ -3305,7 +3308,7 @@ END SUBROUTINE SIMP
           endif
          enddo ! iw=1..scomp
 
-        else if ((visual_nddata_format.ne.0).or. &
+        else if ((visual_nddata_format.ne.0).or. & !=1 plt file;=2tecplot cells
                  (plot_grid_type.eq.1)) then
 
          ! do nothing
@@ -3337,7 +3340,7 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      if (plot_grid_type.eq.0) then
+      if (plot_grid_type.eq.0) then ! interp to nodes
 
        if (do_slice.eq.1) then
 
@@ -3879,7 +3882,7 @@ END SUBROUTINE SIMP
 
        deallocate(plotfab)
 
-      else if (plot_grid_type.eq.1) then
+      else if (plot_grid_type.eq.1) then ! data "as is"
        ! do nothing
       else
        print *,"plot_grid_type invalid"
