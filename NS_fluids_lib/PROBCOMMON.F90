@@ -322,6 +322,8 @@ implicit none
 
        ! Given nsamples, allocate placeholders:
        !  branch_list_data and branch_list_stack. 
+       ! nsamples * log_{2}(nsamples)
+       !
        ! create root branch, put all the data in the root.
        ! add this branch to the data list and the stack list.
        !
@@ -333,10 +335,15 @@ implicit none
        !   splitingrule=0
        !  endif
        !  if branch.ndata>1 then
-       !   find median(branch,splittingrule)
+       !   find median(branch,splittingrule); the median routine
+       !   sorts the data in the "splittingrule" direction and then
+       !   splits the data in half.
        !   add two branches to both the data list and the stack list.
        !  endif
-       ! 
+       !
+       ! Note: the decision tree data will be used for the first cut
+       ! if the cmof_stencil is full (or using MOF); regardless of the
+       ! number of materials in the (super) cell. 
       Type branch_type
        INTEGER_T :: ndata
        INTEGER_T :: parent_id
@@ -344,7 +351,6 @@ implicit none
        INTEGER_T :: parent_splittingrule
        INTEGER_T :: children_splittingrule
        INTEGER_T :: median_index
-       REAL_T :: median_value
        REAL_T, pointer :: data_in(:,:) !datanum, data_idx
        REAL_T, pointer :: data_out(:,:) !datanum, data_idx
        INTEGER_T :: children_id(2)
