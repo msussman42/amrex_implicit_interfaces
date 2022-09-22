@@ -305,6 +305,9 @@ implicit none
 ! deleted August 27, 2022:
 !   gravity,gravity_dir,invert_gravity
 
+      INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_IN=AMREX_SPACEDIM
+      INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_OUT=AMREX_SPACEDIM-1
+
       Type training_model_type
         Type(Neural_Network) :: NN_ZHOUTENG_LOCAL
         Type(Decision_Tree) :: DT_ZHOUTENG_LOCAL
@@ -313,10 +316,52 @@ implicit none
 
       Type(training_model_type), allocatable, dimension(D_DECL(:,:,:),:) :: &
         training_array
-
       INTEGER_T :: training_finest_level=-1
       INTEGER_T :: training_lo(SDIM)
       INTEGER_T :: training_hi(SDIM)
+
+       ! Given nsamples, allocate placeholders:
+       !  branch_list_data and branch_list_stack. 
+       ! create root branch, put all the data in the root.
+       ! add this branch to the data list and the stack list.
+       !
+       ! while stack list not empty
+       !  pop branch off of the stack.
+       !  splittingrule=branch.parent_splittingrule
+       !  splittingrule++
+       !  if splittingrule==ndim then
+       !   splitingrule=0
+       !  endif
+       !  if branch.ndata>1 then
+       !   find median(branch,splittingrule)
+       !   add two branches to both the data list and the stack list.
+       !  endif
+       ! 
+      Type branch_type
+       INTEGER_T :: ndata
+       INTEGER_T :: parent_id
+       INTEGER_T :: current_id
+       INTEGER_T :: parent_splittingrule
+       INTEGER_T :: children_splittingrule
+       INTEGER_T :: median_index
+       REAL_T :: median_value
+       REAL_T, pointer :: data_in(:,:) !datanum, data_idx
+       REAL_T, pointer :: data_out(:,:) !datanum, data_idx
+       INTEGER_T :: children_id(2)
+      end Type branch_type
+
+      Type tree_type
+       INTEGER_T :: nbranches_data
+       INTEGER_T :: nbranches_stack
+       Type(branch_type), pointer :: branch_list_data(:)
+       Type(branch_type), pointer :: branch_list_stack(:)
+      end Type tree_type
+
+      Type(tree_type), allocatable, dimension(D_DECL(:,:,:),:) :: &
+          decision_tree_array
+      INTEGER_T :: decision_tree_finest_level=-1
+      INTEGER_T :: decision_tree_lo(SDIM)
+      INTEGER_T :: decision_tree_hi(SDIM)
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
       !num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2
