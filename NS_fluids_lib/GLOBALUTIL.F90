@@ -26402,6 +26402,72 @@ REAL_T, INTENT(in) :: latent_heat
 
 end function is_multi_component_evapF
 
+subroutine initialize_decision_tree(data_in,data_out, &
+        nsamples,ndim_in,ndim_out,tree_var)
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: nsamples
+INTEGER_T, INTENT(in) :: ndim_in
+INTEGER_T, INTENT(in) :: ndim_out
+REAL_T, INTENT(in) :: data_in(nsamples,ndim_in)
+REAL_T, INTENT(in) :: data_out(nsamples,ndim_out)
+Type(tree_type), INTENT(out) :: tree_var
+Type(branch_type) :: root_branch
+
+ tree_var%nbranches_data=0
+ tree_var%nbranches_stack=0
+ nlevels=1
+ nsamples_copy=nsamples
+ max_branches=1
+ nbranches_level=1
+ while (nsamples_copy.gt.0) do
+  nsamples_copy=nsamples_copy/2
+  nbranches_level=2*nbranches_level
+  max_branches=max_branches+nbranches_level
+  nlevels=nlevels+1
+ enddo
+
+ allocate(tree_var%branch_list_data(max_branches))
+ allocate(tree_var%branch_list_stack(max_branches))
+
+ root_branch%ndata=nsamples
+ root_branch%parent_id=-1
+ root_branch%current_id=1
+ root_branch%parent_splittingrule=-1
+ root_branch%children_splittingrule=1
+ allocate(root_branch%data_in(nsamples,ndim_in))
+ allocate(root_branch%data_in(nsamples,ndim_out))
+ do idata=1,nsamples
+  do dir=1,ndim_in
+   root_branch%data_in(idata,dir)=data_in(idata,dir)
+  enddo
+  do dir=1,ndim_out
+   root_branch%data_out(idata,dir)=data_out(idata,dir)
+  enddo
+ enddo
+  ! sort the data according to data_in, children_splitingrule,
+  ! initialize "median_intex"
+ call sort_branch_data(root_branch)
+ tree_var%nbranches_data=1
+ tree_var%nbranches_stack=1
+ copy_branch(tree_var%branch_list_data(1),root_branch)
+ copy_branch(tree_var%branch_list_stack(1),root_branch)
+ while (tree_var%nbranches_stack.gt.0) do
+  call pop_branch_off_stack(tree_var,pop_branch)
+  if (pop_branch%parent_id.eq.-1) then
+   !do nothing
+  else if (pop_branch%parent_id.ge.1) then
+   splittingrule=pop_branch%parent_splitting_rule+1
+   if (splittingrule.gt.ndim_in) then
+    splittingrule=1
+   endif
+   pop_branch%children_splitting_rule=splittingrule
+   call sort_branch_data(pop_branch)
+   child1_branch%ndata=pop_branch%median_index
+   child2_branch%ndata=pop_branch%ndata-pop_branch%median_index
+     .....(copy data etc ...)
+ enddo
+end subroutine initialize_decision_tree
 
 end module global_utility_module
 

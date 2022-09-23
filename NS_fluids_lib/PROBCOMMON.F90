@@ -322,7 +322,6 @@ implicit none
 
        ! Given nsamples, allocate placeholders:
        !  branch_list_data and branch_list_stack. 
-       ! nsamples * log_{2}(nsamples)
        !
        ! create root branch, put all the data in the root.
        ! add this branch to the data list and the stack list.
