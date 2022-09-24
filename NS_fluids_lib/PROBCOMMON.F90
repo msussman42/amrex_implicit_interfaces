@@ -305,8 +305,8 @@ implicit none
 ! deleted August 27, 2022:
 !   gravity,gravity_dir,invert_gravity
 
-      INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_IN=AMREX_SPACEDIM
-      INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_OUT=AMREX_SPACEDIM-1
+      INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
+      INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1
 
       Type training_model_type
         Type(Neural_Network) :: NN_ZHOUTENG_LOCAL
@@ -350,8 +350,8 @@ implicit none
        INTEGER_T :: parent_splittingrule
        INTEGER_T :: children_splittingrule
        INTEGER_T :: median_index
-       REAL_T, pointer :: data_in(:,:) !datanum, data_idx
-       REAL_T, pointer :: data_out(:,:) !datanum, data_idx
+       REAL_T, pointer :: data_decisions(:,:) !datanum, data_idx
+       REAL_T, pointer :: data_classify(:,:) !datanum, data_idx
        INTEGER_T :: child1_id
        INTEGER_T :: child2_id
       end Type branch_type

@@ -26403,14 +26403,14 @@ REAL_T, INTENT(in) :: latent_heat
 end function is_multi_component_evapF
 
 subroutine initialize_decision_tree(data_in,data_out, &
-        nsamples,ndim_in,ndim_out,tree_var)
+        nsamples,ndim_decisions,ndim_classify,tree_var)
 IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: nsamples
-INTEGER_T, INTENT(in) :: ndim_in
-INTEGER_T, INTENT(in) :: ndim_out
-REAL_T, INTENT(in) :: data_in(nsamples,ndim_in)
-REAL_T, INTENT(in) :: data_out(nsamples,ndim_out)
+INTEGER_T, INTENT(in) :: ndim_decisions
+INTEGER_T, INTENT(in) :: ndim_classify
+REAL_T, INTENT(in) :: data_decisions(nsamples,ndim_decisions)
+REAL_T, INTENT(in) :: data_classify(nsamples,ndim_classify)
 Type(tree_type), INTENT(out) :: tree_var
 Type(branch_type) :: root_branch
 
@@ -26435,20 +26435,21 @@ Type(branch_type) :: root_branch
  root_branch%current_id=1
  root_branch%parent_splittingrule=-1
  root_branch%children_splittingrule=-1
- allocate(root_branch%data_in(nsamples,ndim_in))
- allocate(root_branch%data_in(nsamples,ndim_out))
+ allocate(root_branch%data_in(nsamples,ndim_decisions))
+ allocate(root_branch%data_in(nsamples,ndim_classify))
  do idata=1,nsamples
   do dir=1,ndim_in
-   root_branch%data_in(idata,dir)=data_in(idata,dir)
+   root_branch%data_decisions(idata,dir)=data_decisions(idata,dir)
   enddo
   do dir=1,ndim_out
-   root_branch%data_out(idata,dir)=data_out(idata,dir)
+   root_branch%data_classify(idata,dir)=data_classify(idata,dir)
   enddo
  enddo
  tree_var%nbranches_data=1
  tree_var%nbranches_stack=1
  copy_branch(tree_var%branch_list_data(1),root_branch)
  copy_branch(tree_var%branch_list_stack(1),root_branch)
+
  while (tree_var%nbranches_stack.gt.0) do
   call pop_branch_off_stack(tree_var,pop_branch)
   if (pop_branch%parent_id.eq.-1) then
@@ -26462,8 +26463,11 @@ Type(branch_type) :: root_branch
    print *,"pop_branch%parent_id invalid"
    stop
   endif
+
   pop_branch%children_splitting_rule=splittingrule
-  call sort_branch_data(pop_branch,pop_branch%median_index)
+
+  call sort_branch_data(pop_branch,splittingrule,pop_branch%median_index)
+
   child1_branch%ndata=pop_branch%median_index
   child2_branch%ndata=pop_branch%ndata-pop_branch%median_index
   copy_branch_data(child1_branch,pop_branch,1,pop_branch%median_index)
@@ -26471,17 +26475,26 @@ Type(branch_type) :: root_branch
           pop_branch%ndata)
   child1_branch%parent_id=pop_branch%current_id
   child2_branch%parent_id=pop_branch%current_id
-  call push_tree_data(tree_var,child1_branch,child1_id)
-  call push_tree_data(tree_var,child2_branch,child2_id)
-  pop_branch%child1_id=child1_id
-  pop_branch%child2_id=child2_id
-   ! child1_id,child2_id,children_splitting_rule,median_index
-  call update_children_data(tree_var,pop_branch%current_id,pop_branch)
-
+  child1_branch%parent_splitting_rule=splittingrule
+  child2_branch%parent_splitting_rule=splittingrule
+  
+  child1_id=tree_var%nbranches_data+1
+  child2_id=tree_var%nbranches_data+2
   child1_branch%current_id=child1_id
   child2_branch%current_id=child2_id
 
+  call push_tree_data(tree_var,child1_branch,child1_id)
+  call push_tree_data(tree_var,child2_branch,child2_id)
+  call push_branch_on_stack(tree_var,child1_branch)
+  call push_branch_on_stack(tree_var,child2_branch)
+
+  pop_branch%child1_id=child1_id
+  pop_branch%child2_id=child2_id
+   ! child1_id,child2_id,children_splitting_rule,median_index
+  call update_children_link_data(tree_var,pop_branch%current_id,pop_branch)
+
  enddo
+
 end subroutine initialize_decision_tree
 
 end module global_utility_module
