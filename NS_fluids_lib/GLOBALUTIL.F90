@@ -26434,7 +26434,7 @@ Type(branch_type) :: root_branch
  root_branch%parent_id=-1
  root_branch%current_id=1
  root_branch%parent_splittingrule=-1
- root_branch%children_splittingrule=1
+ root_branch%children_splittingrule=-1
  allocate(root_branch%data_in(nsamples,ndim_in))
  allocate(root_branch%data_in(nsamples,ndim_out))
  do idata=1,nsamples
@@ -26445,9 +26445,6 @@ Type(branch_type) :: root_branch
    root_branch%data_out(idata,dir)=data_out(idata,dir)
   enddo
  enddo
-  ! sort the data according to data_in, children_splitingrule,
-  ! initialize "median_intex"
- call sort_branch_data(root_branch)
  tree_var%nbranches_data=1
  tree_var%nbranches_stack=1
  copy_branch(tree_var%branch_list_data(1),root_branch)
@@ -26455,17 +26452,35 @@ Type(branch_type) :: root_branch
  while (tree_var%nbranches_stack.gt.0) do
   call pop_branch_off_stack(tree_var,pop_branch)
   if (pop_branch%parent_id.eq.-1) then
-   !do nothing
+   splittingrule=1
   else if (pop_branch%parent_id.ge.1) then
    splittingrule=pop_branch%parent_splitting_rule+1
    if (splittingrule.gt.ndim_in) then
     splittingrule=1
    endif
-   pop_branch%children_splitting_rule=splittingrule
-   call sort_branch_data(pop_branch)
-   child1_branch%ndata=pop_branch%median_index
-   child2_branch%ndata=pop_branch%ndata-pop_branch%median_index
-     .....(copy data etc ...)
+  else
+   print *,"pop_branch%parent_id invalid"
+   stop
+  endif
+  pop_branch%children_splitting_rule=splittingrule
+  call sort_branch_data(pop_branch,pop_branch%median_index)
+  child1_branch%ndata=pop_branch%median_index
+  child2_branch%ndata=pop_branch%ndata-pop_branch%median_index
+  copy_branch_data(child1_branch,pop_branch,1,pop_branch%median_index)
+  copy_branch_data(child2_branch,pop_branch,pop_branch%median_index+1, &
+          pop_branch%ndata)
+  child1_branch%parent_id=pop_branch%current_id
+  child2_branch%parent_id=pop_branch%current_id
+  call push_tree_data(tree_var,child1_branch,child1_id)
+  call push_tree_data(tree_var,child2_branch,child2_id)
+  pop_branch%child1_id=child1_id
+  pop_branch%child2_id=child2_id
+   ! child1_id,child2_id,children_splitting_rule,median_index
+  call update_children_data(tree_var,pop_branch%current_id,pop_branch)
+
+  child1_branch%current_id=child1_id
+  child2_branch%current_id=child2_id
+
  enddo
 end subroutine initialize_decision_tree
 

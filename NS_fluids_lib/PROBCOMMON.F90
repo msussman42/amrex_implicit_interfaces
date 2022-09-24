@@ -352,7 +352,8 @@ implicit none
        INTEGER_T :: median_index
        REAL_T, pointer :: data_in(:,:) !datanum, data_idx
        REAL_T, pointer :: data_out(:,:) !datanum, data_idx
-       INTEGER_T :: children_id(2)
+       INTEGER_T :: child1_id
+       INTEGER_T :: child2_id
       end Type branch_type
 
       Type tree_type
