@@ -26402,8 +26402,231 @@ REAL_T, INTENT(in) :: latent_heat
 
 end function is_multi_component_evapF
 
-subroutine initialize_decision_tree(data_in,data_out, &
+subroutine TopDownMergeSortReal(data_to_sort,A,B,n)
+IMPLICIT NONE
+INTEGER_T, INTENT(in) :: n
+REAL_T, allocatable, INTENT(in) :: data_to_sort(:)
+INTEGER_T, allocatable, INTENT(inout) :: A(:)
+INTEGER_T, allocatable, INTENT(inout) :: B(:)
+
+ call CopyArrayReal(A,0,n,B)
+ call TopDownSplitMergeReal(data_to_sort,B,0,n,A)
+
+end subroutine TopDownMergeSortReal
+
+
+recursive subroutine TopDownSplitMergeReal(data_to_sort,B,iBegin,iEnd,A)
+IMPLICIT NONE
+REAL_T, allocatable, INTENT(in) :: data_to_sort(:)
+INTEGER_T, INTENT(in) :: iBegin
+INTEGER_T, INTENT(in) :: iEnd
+INTEGER_T, allocatable, INTENT(inout) :: A(:)
+INTEGER_T, allocatable, INTENT(inout) :: B(:)
+INTEGER_T :: iMiddle
+
+ if (iEnd-iBegin.le.1) then
+  ! do nothing
+ else
+  iMiddle=(iEnd+iBegin)/2
+  call TopDownSplitMergeReal(data_to_sort,A,iBegin,iMiddle,B)
+  call TopDownSplitMergeReal(data_to_sort,A,iMiddle,iEnd,B)
+  call TopDownMergeReal(data_to_sort,B,iBegin,iMiddle,iEnd,A)
+ endif
+
+end subroutine TopDownSplitMergeReal
+
+subroutine TopDownMergeReal(data_to_sort,A,iBegin,iMiddle,iEnd,B)
+IMPLICIT NONE
+REAL_T, allocatable, INTENT(in) :: data_to_sort(:)
+INTEGER_T, INTENT(in) :: iBegin
+INTEGER_T, INTENT(in) :: iMiddle
+INTEGER_T, INTENT(in) :: iEnd
+INTEGER_T, allocatable, INTENT(inout) :: A(:)
+INTEGER_T, allocatable, INTENT(inout) :: B(:)
+INTEGER_T :: i,j,k,compare_flag
+
+ i=iBegin
+ j=iMiddle
+ k=iBegin
+
+ do while (k.lt.iEnd)
+   !Ai<Aj compare_flag=-1
+   !Ai>Aj compare_flag=1
+
+  compare_flag=0
+
+  if ((i.lt.iMiddle).and.(j.lt.iEnd)) then
+
+   if (data_to_sort(A(i+1)).lt.data_to_sort(A(j+1))) then
+    compare_flag=-1
+   else if (data_to_sort(A(i+1)).gt.data_to_sort(A(j+1))) then
+    compare_flag=1
+   else if (data_to_sort(A(i+1)).eq.data_to_sort(A(j+1))) then
+    compare_flag=0
+   else
+    print *,"data_to_sort NaN"
+    stop
+   endif
+
+  else if ((i.ge.iMiddle).or.(j.ge.iEnd)) then
+   ! do nothing
+  else
+   print *,"i,j bust"
+   stop
+  endif
+
+  if ((i.lt.iMiddle).and. &
+      ((j.ge.iEnd).or.(compare_flag.le.0))) then
+   B(k+1)=A(i+1)
+   i=i+1
+  else
+   B(k+1)=A(j+1)
+   j=j+1
+  endif
+  k=k+1 
+ enddo ! do while (k.lt.iEnd)
+
+end subroutine TopDownMergeReal
+
+
+subroutine CopyArrayReal(A,iBegin,iEnd,B)
+IMPLICIT NONE
+INTEGER_T, INTENT(in) :: iBegin
+INTEGER_T, INTENT(in) :: iEnd
+INTEGER_T, allocatable, INTENT(inout) :: A(:)
+INTEGER_T, allocatable, INTENT(inout) :: B(:)
+INTEGER_T :: k
+
+ do k=iBegin,iEnd-1
+  B(k+1)=A(k+1)
+ enddo
+
+end subroutine CopyArrayReal
+
+subroutine sort_branch_data(source_branch,splittingrule,median_index)
+use probcommon_module
+
+Type(branch_type), INTENT(inout) :: source_branch
+INTEGER_T, INTENT(in) :: splittingrule
+INTEGER_T, INTENT(out) :: median_index
+INTEGER_T, allocatable :: A_list(:)
+INTEGER_T, allocatable :: B_list(:)
+REAL_T, allocatable :: data_to_sort(:)
+Type(branch_type) :: save_branch
+INTEGER_T :: datalo(2)
+INTEGER_T :: datahi(2)
+INTEGER_T :: idata,dir
+
+ datalo=LBOUND(source_branch%data_decisions)
+ datahi=UBOUND(source_branch%data_decisions)
+
+ call copy_branch(save_branch,source_branch)
+
+ if ((datalo(1).eq.1).and.(datalo(2).eq.1)) then
+  if (datahi(1).eq.source_branch%ndata) then
+   allocate(A_list(datahi(1)))
+   allocate(B_list(datahi(1)))
+   allocate(data_to_sort(datahi(1)))
+   do idata=1,datahi(1)
+    A_list(idata)=idata
+    B_list(idata)=idata
+    data_to_sort(idata)=source_branch%data_decisions(idata,splittingrule)
+   enddo
+   call TopDownMergeSortReal(data_to_sort,A_list,B_list,datahi(1))
+
+    !sanity check
+   do idata=1,datahi(1)-1
+    if (data_to_sort(A_list(idata)).le.data_to_sort(A_list(idata+1))) then
+     ! do nothing
+    else
+     print *,"data_to_sort not sorted properly"
+     stop
+    endif
+   enddo
+
+   do idata=1,datahi(1)
+    do dir=1,datahi(2)
+     source_branch%data_decisions(idata,dir)= &
+            save_branch%data_decisions(A_list(idata),dir)
+    enddo
+   enddo
+
+   datalo=LBOUND(source_branch%data_classify)
+   datahi=UBOUND(source_branch%data_classify)
+
+   do idata=1,datahi(1)
+    do dir=1,datahi(2)
+     source_branch%data_classify(idata,dir)= &
+            save_branch%data_classify(A_list(idata),dir)
+    enddo
+   enddo
+
+   median_index=datahi(1)/2
+
+  else
+   print *,"datahi invalid"
+   stop
+  endif
+ else
+  print *,"datalo invalid"
+  stop
+ endif
+
+end subroutine sort_branch_data
+
+subroutine copy_branch(dest_branch,source_branch)
+use probcommon_module
+IMPLICIT NONE
+
+Type(branch_type), INTENT(in) :: source_branch
+Type(branch_type), INTENT(out) :: dest_branch
+INTEGER_T :: datalo(2)
+INTEGER_T :: datahi(2)
+
+ dest_branch%ndata=source_branch%ndata
+ dest_branch%parent_id=source_branch%parent_id
+ dest_branch%current_id=source_branch%current_id
+ dest_branch%parent_splittingrule=source_branch%parent_splittingrule
+ dest_branch%children_splittingrule=source_branch%children_splittingrule
+ dest_branch%median_index=source_branch%median_index
+ dest_branch%child1_id=source_branch%child1_id
+ dest_branch%child2_id=source_branch%child2_id
+
+ datalo=LBOUND(source_branch%data_decisions)
+ datahi=UBOUND(source_branch%data_decisions)
+ if ((datalo(1).eq.1).and.(datalo(2).eq.1)) then
+  if (datahi(1).eq.source_branch%ndata) then
+   allocate(dest_branch%data_decisions(datahi(1),datahi(2)))
+   dest_branch%data_decisions=source_branch%data_decisions
+  else
+   print *,"datahi(1) invalid"
+   stop
+  endif
+ else
+  print *,"datalo invalid"
+  stop
+ endif
+     
+ datalo=LBOUND(source_branch%data_classify)
+ datahi=UBOUND(source_branch%data_classify)
+ if ((datalo(1).eq.1).and.(datalo(2).eq.1)) then
+  if (datahi(1).eq.source_branch%ndata) then
+   allocate(dest_branch%data_classify(datahi(1),datahi(2)))
+   dest_branch%data_classify=source_branch%data_classify
+  else
+   print *,"datahi(1) invalid"
+   stop
+  endif
+ else
+  print *,"datalo invalid"
+  stop
+ endif
+
+end subroutine copy_branch
+
+subroutine initialize_decision_tree(data_decisions,data_classify, &
         nsamples,ndim_decisions,ndim_classify,tree_var)
+use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: nsamples
@@ -26413,18 +26636,31 @@ REAL_T, INTENT(in) :: data_decisions(nsamples,ndim_decisions)
 REAL_T, INTENT(in) :: data_classify(nsamples,ndim_classify)
 Type(tree_type), INTENT(out) :: tree_var
 Type(branch_type) :: root_branch
+Type(branch_type) :: pop_branch
+Type(branch_type) :: child1_branch
+Type(branch_type) :: child2_branch
+
+INTEGER_T :: nsamples_copy
+INTEGER_T :: max_branches
+INTEGER_T :: nbranches_level
+INTEGER_T :: idata
+INTEGER_T :: dir
+INTEGER_T :: splittingrule
+INTEGER_T :: child1_id
+INTEGER_T :: child2_id
+INTEGER_T :: datahi_decisions(2)
+INTEGER_T :: datahi_classify(2)
+INTEGER_T :: stack_id
 
  tree_var%nbranches_data=0
  tree_var%nbranches_stack=0
- nlevels=1
  nsamples_copy=nsamples
  max_branches=1
  nbranches_level=1
- while (nsamples_copy.gt.0) do
+ do while (nsamples_copy.gt.0) 
   nsamples_copy=nsamples_copy/2
   nbranches_level=2*nbranches_level
   max_branches=max_branches+nbranches_level
-  nlevels=nlevels+1
  enddo
 
  allocate(tree_var%branch_list_data(max_branches))
@@ -26435,28 +26671,38 @@ Type(branch_type) :: root_branch
  root_branch%current_id=1
  root_branch%parent_splittingrule=-1
  root_branch%children_splittingrule=-1
- allocate(root_branch%data_in(nsamples,ndim_decisions))
- allocate(root_branch%data_in(nsamples,ndim_classify))
+ allocate(root_branch%data_decisions(nsamples,ndim_decisions))
+ allocate(root_branch%data_classify(nsamples,ndim_classify))
  do idata=1,nsamples
-  do dir=1,ndim_in
+  do dir=1,ndim_decisions
    root_branch%data_decisions(idata,dir)=data_decisions(idata,dir)
   enddo
-  do dir=1,ndim_out
+  do dir=1,ndim_classify
    root_branch%data_classify(idata,dir)=data_classify(idata,dir)
   enddo
  enddo
  tree_var%nbranches_data=1
  tree_var%nbranches_stack=1
- copy_branch(tree_var%branch_list_data(1),root_branch)
- copy_branch(tree_var%branch_list_stack(1),root_branch)
+ call copy_branch(tree_var%branch_list_data(1),root_branch)
+ call copy_branch(tree_var%branch_list_stack(1),root_branch)
 
- while (tree_var%nbranches_stack.gt.0) do
-  call pop_branch_off_stack(tree_var,pop_branch)
+ do while (tree_var%nbranches_stack.gt.0) 
+
+  call copy_branch(pop_branch, &
+         tree_var%branch_list_stack(tree_var%nbranches_stack))
+
+  deallocate(tree_var% &
+     branch_list_stack(tree_var%nbranches_stack)%data_decisions)
+  deallocate(tree_var% &
+     branch_list_stack(tree_var%nbranches_stack)%data_classify)
+
+  tree_var%nbranches_stack=tree_var%nbranches_stack-1
+
   if (pop_branch%parent_id.eq.-1) then
    splittingrule=1
   else if (pop_branch%parent_id.ge.1) then
-   splittingrule=pop_branch%parent_splitting_rule+1
-   if (splittingrule.gt.ndim_in) then
+   splittingrule=pop_branch%parent_splittingrule+1
+   if (splittingrule.gt.ndim_decisions) then
     splittingrule=1
    endif
   else
@@ -26464,34 +26710,76 @@ Type(branch_type) :: root_branch
    stop
   endif
 
-  pop_branch%children_splitting_rule=splittingrule
+  pop_branch%children_splittingrule=splittingrule
 
   call sort_branch_data(pop_branch,splittingrule,pop_branch%median_index)
 
+  datahi_decisions=UBOUND(pop_branch%data_decisions)
+  datahi_classify=UBOUND(pop_branch%data_classify)
+
   child1_branch%ndata=pop_branch%median_index
   child2_branch%ndata=pop_branch%ndata-pop_branch%median_index
-  copy_branch_data(child1_branch,pop_branch,1,pop_branch%median_index)
-  copy_branch_data(child2_branch,pop_branch,pop_branch%median_index+1, &
-          pop_branch%ndata)
+
+  allocate(child1_branch% &
+     data_decisions(child1_branch%ndata,datahi_decisions(2)))
+  allocate(child1_branch% &
+     data_classify(child1_branch%ndata,datahi_classify(2)))
+
+  allocate(child2_branch% &
+     data_decisions(child2_branch%ndata,datahi_decisions(2)))
+  allocate(child2_branch% &
+     data_classify(child2_branch%ndata,datahi_classify(2)))
+
+  do idata=1,child1_branch%ndata
+   do dir=1,datahi_decisions(2)
+    child1_branch%data_decisions(idata,dir)= &
+      pop_branch%data_decisions(idata,dir)
+   enddo
+   do dir=1,datahi_classify(2)
+    child1_branch%data_classify(idata,dir)= &
+      pop_branch%data_classify(idata,dir)
+   enddo
+  enddo
+
+  do idata=1,child2_branch%ndata
+   do dir=1,datahi_decisions(2)
+    child2_branch%data_decisions(idata,dir)= &
+      pop_branch%data_decisions(idata+pop_branch%median_index,dir)
+   enddo
+   do dir=1,datahi_classify(2)
+    child2_branch%data_classify(idata,dir)= &
+      pop_branch%data_classify(idata+pop_branch%median_index,dir)
+   enddo
+  enddo
+
   child1_branch%parent_id=pop_branch%current_id
   child2_branch%parent_id=pop_branch%current_id
-  child1_branch%parent_splitting_rule=splittingrule
-  child2_branch%parent_splitting_rule=splittingrule
+  child1_branch%parent_splittingrule=splittingrule
+  child2_branch%parent_splittingrule=splittingrule
   
   child1_id=tree_var%nbranches_data+1
   child2_id=tree_var%nbranches_data+2
   child1_branch%current_id=child1_id
   child2_branch%current_id=child2_id
 
-  call push_tree_data(tree_var,child1_branch,child1_id)
-  call push_tree_data(tree_var,child2_branch,child2_id)
-  call push_branch_on_stack(tree_var,child1_branch)
-  call push_branch_on_stack(tree_var,child2_branch)
+  call copy_branch(tree_var%branch_list_data(child1_id),child1_branch)
+  call copy_branch(tree_var%branch_list_data(child2_id),child2_branch)
+  tree_var%nbranches_data=tree_var%nbranches_data+2
+
+  stack_id=tree_var%nbranches_stack
+  call copy_branch(tree_var%branch_list_stack(stack_id+1),child1_branch)
+  call copy_branch(tree_var%branch_list_stack(stack_id+2),child2_branch)
+  tree_var%nbranches_stack=tree_var%nbranches_stack+2
 
   pop_branch%child1_id=child1_id
   pop_branch%child2_id=child2_id
-   ! child1_id,child2_id,children_splitting_rule,median_index
-  call update_children_link_data(tree_var,pop_branch%current_id,pop_branch)
+
+  deallocate(tree_var% &
+     branch_list_data(pop_branch%current_id)%data_decisions)
+  deallocate(tree_var% &
+     branch_list_data(pop_branch%current_id)%data_classify)
+  call copy_branch(tree_var% &
+     branch_list_data(pop_branch%current_id),pop_branch)
 
  enddo
 
