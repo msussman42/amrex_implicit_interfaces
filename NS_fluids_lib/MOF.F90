@@ -10883,7 +10883,7 @@ contains
       INTEGER_T mof_stencil_ok
       INTEGER_T grid_index_ML(sdim)
       INTEGER_T iML,jML,kML,cmofML
-      REAL_T angle_init_ML(sdim) !angle,vfrac
+      REAL_T angle_init_ML(MOF_TRAINING_NDIM_DECISIONS) !angle,vfrac
       REAL_T angle_output(sdim-1)
 
       REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
@@ -11101,6 +11101,126 @@ contains
         angle_array(dir,nguess)=angle_init(dir)
        enddo
 
+       if (decision_tree_finest_level.eq.-1) then
+        ! do nothing
+       else if (decision_tree_finest_level.ge.0) then
+
+        if (grid_level.eq.decision_tree_finest_level) then
+         mof_stencil_ok=1
+         if (continuous_mof.eq.0) then
+          ! do nothing
+         else if (continuous_mof.eq.2) then
+
+          if (sdim.eq.3) then
+           ksten_low=-1
+           ksten_high=1
+          else if (sdim.eq.2) then
+           ksten_low=0
+           ksten_high=0
+          else
+           print *,"sdim invalid"
+           stop
+          endif
+
+          do i1=-1,1
+          do j1=-1,1
+          do k1=ksten_low,ksten_high
+           if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
+            ! do nothing
+           else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
+            mof_stencil_ok=0
+           else
+            print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
+            stop
+           endif
+          enddo
+          enddo
+          enddo ! i1,j1,k1
+
+         else
+          print *,"continuous_mof invalid"
+          stop
+         endif
+
+         if (mof_stencil_ok.eq.1) then
+
+          if (fastflag.eq.1) then
+           nguess=nguess+1
+
+           do dir=1,sdim
+            grid_index_ML(dir)=grid_index(dir)/bfact
+            grid_index_ML(dir)=grid_index(dir)-bfact*grid_index_ML(dir)
+           enddo
+           dir=1
+           if (levelrz.eq.COORDSYS_CARTESIAN) then
+            ! do nothing
+           else if (levelrz.eq.COORDSYS_RZ) then
+            grid_index_ML(dir)=grid_index(dir)
+           else
+            print *,"levelrz invalid"
+            stop
+           endif
+           iML=grid_index_ML(1)
+           jML=grid_index_ML(2)
+           if (sdim.eq.2) then
+            kML=0
+           else if (sdim.eq.3) then
+            kML=grid_index_ML(sdim)
+           else
+            print *,"sdim invalid"
+            stop
+           endif
+
+           do dir=1,sdim-1
+            angle_init_ML(dir)=angle_init(dir)
+           enddo
+           angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac
+
+           cmofML=continuous_mof/2
+
+           call decision_tree_predict(angle_init_ML,angle_output, &
+             MOF_TRAINING_NDIM_DECISIONS, &
+             MOF_TRAINING_NDIM_CLASSIFY, &
+             decision_tree_array(D_DECL(iML,jML,kML),cmofML))
+
+           training_nguess=nguess
+
+           do dir=1,sdim-1
+            angle_array(dir,nguess)=angle_output(dir)
+           enddo
+
+           if (1.eq.0) then
+            print *,"grid_idx,grid_idx_ML,angle_init,angle_output,nguess ", &
+              grid_index,grid_index_ML,angle_init,angle_output,nguess
+            print *,"refvfrac ",refvfrac
+           endif
+
+          else if (fastflag.eq.0) then
+           ! do nothing
+          else
+           print *,"fastflag invalid"
+           stop
+          endif
+
+         else if (mof_stencil_ok.eq.0) then
+          ! do nothing
+         else
+          print *,"mof_stencil_ok invalid"
+          stop
+         endif
+
+        else if (grid_level.eq.-1) then
+         ! do nothing
+        else
+         print *,"grid_level invalid"
+         stop
+        endif
+
+       else
+        print *,"training_finest_level invalid"
+        stop
+       endif
+
        if (training_finest_level.eq.-1) then
         ! do nothing
        else if (training_finest_level.ge.0) then
@@ -11174,7 +11294,7 @@ contains
            do dir=1,sdim-1
             angle_init_ML(dir)=angle_init(dir)
            enddo
-           angle_init_ML(sdim)=refvfrac
+           angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac
 
            cmofML=continuous_mof/2
             ! choices: NN, DT, RF

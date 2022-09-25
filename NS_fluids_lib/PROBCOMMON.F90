@@ -320,25 +320,6 @@ implicit none
       INTEGER_T :: training_lo(SDIM)
       INTEGER_T :: training_hi(SDIM)
 
-       ! Given nsamples, allocate placeholders:
-       !  branch_list_data and branch_list_stack. 
-       !
-       ! create root branch, put all the data in the root.
-       ! add this branch to the data list and the stack list.
-       !
-       ! while stack list not empty
-       !  pop branch off of the stack.
-       !  splittingrule=branch.parent_splittingrule
-       !  splittingrule++
-       !  if splittingrule==ndim then
-       !   splitingrule=0
-       !  endif
-       !  if branch.ndata>1 then
-       !   find median(branch,splittingrule); the median routine
-       !   sorts the data in the "splittingrule" direction and then
-       !   splits the data in half.
-       !   add two branches to both the data list and the stack list.
-       !  endif
        !
        ! Note: the decision tree data will be used for the first cut
        ! if the cmof_stencil is full (or using MOF); regardless of the
@@ -366,8 +347,8 @@ implicit none
       Type(tree_type), allocatable, dimension(D_DECL(:,:,:),:) :: &
           decision_tree_array
       INTEGER_T :: decision_tree_finest_level=-1
-      INTEGER_T :: decision_tree_lo(SDIM)
-      INTEGER_T :: decision_tree_hi(SDIM)
+      INTEGER_T :: decision_tree_lo(3)
+      INTEGER_T :: decision_tree_hi(3)
 
       INTEGER_T, PARAMETER :: MAX_NUM_MATERIALS=10
       !num_interfaces=( (num_materials-1)*(num_materials-1)+num_materials-1 )/2

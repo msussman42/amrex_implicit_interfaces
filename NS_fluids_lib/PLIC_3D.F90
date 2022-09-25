@@ -1739,7 +1739,7 @@ stop
       REAL_T :: angle_exact_sanity(SDIM-1)
       REAL_T :: angle_exact_db(SDIM-1)
       REAL_T :: angle_init_db(SDIM-1)
-      REAL_T :: angle_and_vfrac(SDIM)
+      REAL_T :: angle_and_vfrac(MOF_TRAINING_NDIM_DECISIONS)
       REAL_T :: refvfrac
       REAL_T :: vof_single 
       REAL_T :: refcen(SDIM)
@@ -1769,10 +1769,9 @@ stop
       INTEGER_T :: im
       INTEGER_T :: fastflag
 
-      REAL_T :: DT_cost,NN_cost,RF_cost
+      REAL_T :: DT_cost
       REAL_T :: angle_exact_db_data(SDIM-1)
 
-      INTEGER_T sysret
       INTEGER_T cmof_idx
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T klosten,khisten
@@ -1781,7 +1780,7 @@ stop
       tid=0
 
       if (finest_level.eq.fort_finest_level) then
-       training_finest_level=finest_level
+       decision_tree_finest_level=finest_level
       else
        print *,"finest_level and fort_finest_level mismatch"
        stop
@@ -1817,14 +1816,6 @@ stop
 
       nmax=POLYGON_LIST_MAX 
 
-      if ((continuous_mof.eq.0).or. & ! MOF
-          (continuous_mof.eq.2)) then ! CMOF
-       ! do nothing
-      else
-       print *,"continuous_mof invalid"
-       stop
-      endif
-
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid"
        stop
@@ -1844,78 +1835,59 @@ stop
       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
-       print *,"levelrz invalid fort_MOF_training"
+       print *,"levelrz invalid fort_MOF_DT_training"
        stop
       endif
 
-      if (op_training.eq.0) then
+      do dir=1,3
+       decision_tree_lo(dir)=0
+       decision_tree_hi(dir)=0
+      enddo 
 
-       do dir=1,SDIM
-        training_lo(dir)=0
-        training_hi(dir)=0
-       enddo 
-
-       do dir=1,SDIM
-        if (domlo(dir).eq.0) then
-         ! do nothing
-        else
-         print *,"expecting domlo=0"
-         stop
-        endif
-        training_hi(dir)=domlo(dir)+bfact-1
-        if (training_hi(dir).le.domhi(dir)) then
-         ! do nothing 
-        else
-         print *,"training_hi invalid"
-         stop
-        endif
-       enddo ! dir=1..sdim
-
-       if (levelrz.eq.COORDSYS_CARTESIAN) then
+      do dir=1,SDIM
+       if (domlo(dir).eq.0) then
         ! do nothing
-       else if (levelrz.eq.COORDSYS_RZ) then
-        dir=1
-        training_hi(dir)=domhi(dir)
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        dir=1
-        training_hi(dir)=domhi(dir)
-        dir=2
-        training_hi(dir)=domhi(dir)
        else
-        print *,"levelrz invalid fort_MOF_training"
+        print *,"expecting domlo=0"
         stop
        endif
+       decision_tree_hi(dir)=domlo(dir)+bfact-1
+       if (decision_tree_hi(dir).le.domhi(dir)) then
+        ! do nothing 
+       else
+        print *,"decision_tree_hi invalid"
+        stop
+       endif
+      enddo ! dir=1..sdim
 
-       allocate(training_array( &
-         D_DECL(training_lo(1):training_hi(1),training_lo(2):training_hi(2),training_lo(SDIM):training_hi(SDIM) ), &
-                  0:1))
+      if (levelrz.eq.COORDSYS_CARTESIAN) then
+       ! do nothing
+      else if (levelrz.eq.COORDSYS_RZ) then
+       dir=1
+       decision_tree_hi(dir)=domhi(dir)
+      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+       dir=1
+       decision_tree_hi(dir)=domhi(dir)
+       dir=2
+       decision_tree_hi(dir)=domhi(dir)
+      else
+       print *,"levelrz invalid fort_MOF_DT_training"
+       stop
+      endif
 
-       do dir=1,SDIM
-        cpp_training_lo(dir)=training_lo(dir)
-        cpp_training_hi(dir)=training_hi(dir)
-       enddo
+      allocate(decision_tree_array( &
+        D_DECL(decision_tree_lo(1):decision_tree_hi(1),decision_tree_lo(2):decision_tree_hi(2),decision_tree_lo(SDIM):decision_tree_hi(SDIM) ), &
+                0:1))
 
-      else if (op_training.eq.1) then
+      do i=decision_tree_lo(1),decision_tree_hi(1)
+      do j=decision_tree_lo(2),decision_tree_hi(2)
+      do k=decision_tree_lo(3),decision_tree_hi(3)
+      do local_continuous_mof=0,2,2
 
        call gridsten_level(xsten,i,j,k,finest_level,nhalf)
 
-       do dir=1,SDIM
-        if (cpp_training_lo(dir).eq.training_lo(dir)) then
-         ! do nothing
-        else
-         print *,"mismatch cpp_training_lo and training_lo"
-         stop
-        endif
-        if (cpp_training_hi(dir).eq.training_hi(dir)) then
-         ! do nothing
-        else
-         print *,"mismatch cpp_training_hi and training_hi"
-         stop
-        endif
-       enddo ! do dir=1,sdim
-
-       print *,"generating training data num_sampling,i,j,k,continuous_mof ", &
-          num_sampling,i,j,k,continuous_mof
+       print *,"DT: training data num_sampling,i,j,k,continuous_mof ", &
+          num_sampling,i,j,k,local_continuous_mof
 
        Call random_number(vof_training) ! 0<=vof_training<1
 
@@ -1960,7 +1932,7 @@ stop
           call angle_init_from_angle_recon_and_F( &
            bfact,dx,xsten,nhalf, &
            refvfrac, & 
-           continuous_mof, & 
+           local_continuous_mof, & 
            cmofsten, & 
            geom_xtetlist(1,1,1,tid+1), &
            nmax, &
@@ -2048,7 +2020,7 @@ stop
          refcen, & 
          refvfrac, &
          npredict, &
-         continuous_mof, &
+         local_continuous_mof, &
          cmofsten, &
          nslope, & ! INTENT(out)
          intercept, & ! INTENT(out)
@@ -2121,146 +2093,40 @@ stop
          endif
         enddo ! dir=1..sdim
 
-        do dir=1,SDIM
-         xc0(dir)=refcen(dir)
-        enddo
-
-        if (NTRAINING.eq.ANGLE_INIT_TRAIN2) then
-         !do nothing
-        else
-         print *,"ntraining or angle_init_train2 invalid"
-         stop
-        endif
-
-        do dir=1,SDIM
-         data_training(dir,i_training) = xc0(dir)
-        enddo
-        data_training(VOFTRAIN,i_training) = vof_training(i_training)
+        data_decisions(i_training,MOF_TRAINING_NDIM_DECISIONS) = &
+           vof_training(i_training)
         do dir=1,SDIM-1
-         data_training(VOFTRAIN+dir,i_training) = angle_exact_db(dir)
-         data_training(ANGLE_EXACT_TRAIN2+dir,i_training) = angle_init_db(dir)
+         data_classify(i_training,dir) = angle_exact_db(dir)
+         data_decisions(i_training,dir) = angle_init_db(dir)
         enddo
        End Do ! i_training = 1, num_sampling
 
-! unit number 5: standard input
-! unit number 6: standard output
-   
-       call execute_command_line('rm exact_centroid.dat',wait=.true., &
-               exitstat=sysret)
-       call execute_command_line('rm exact_f.dat',wait=.true., &
-               exitstat=sysret)
-       call execute_command_line('rm exact_angle.dat',wait=.true., &
-               exitstat=sysret)
-       call execute_command_line('rm initial_angle.dat',wait=.true., &
-               exitstat=sysret)
+       cmof_idx=local_continuous_mof/2
 
-       call execute_command_line('rm exact_centroid.npy',wait=.true., &
-               exitstat=sysret)
-       call execute_command_line('rm exact_f.npy',wait=.true., &
-               exitstat=sysret)
-       call execute_command_line('rm exact_angle.npy',wait=.true., &
-               exitstat=sysret)
-       call execute_command_line('rm initial_angle.npy',wait=.true., &
-               exitstat=sysret)
+       call initialize_decision_tree(data_decisions,data_classify, &
+               num_sampling,MOF_TRAINING_NDIM_DECISIONS, &
+               MOF_TRAINING_NDIM_CLASSIFY, &
+               decision_tree_array(D_DECL(i,j,k),cmof_idx))
 
-       call execute_command_line('rm nn_coef.dat',wait=.true., &
-               exitstat=sysret)
-       call execute_command_line('rm dt_coef.dat',wait=.true., &
-               exitstat=sysret)
-       call execute_command_line('rm rf_coef.dat',wait=.true., &
-               exitstat=sysret)
+        ! sanity test
+       if (1.eq.1) then
 
-       open(10,file='exact_centroid.dat',status='unknown')
-       open(11,file='exact_f.dat',status='unknown')
-       open(12,file='exact_angle.dat',status='unknown')
-       open(13,file='initial_angle.dat',status='unknown')
-        ! previous: F16.12
-        !      now: E25.16
-       Do i_training = 1, num_sampling
-
-        if (SDIM.eq.3) then
-         Write(10,'(3E25.16)')data_training(1:SDIM,i_training)
-        else if (SDIM.eq.2) then
-         Write(10,'(2E25.16)')data_training(1:SDIM,i_training)
-        else
-         print *,"dimension bust"
-         stop
-        endif
-
-        Write(11,'(E25.16)')data_training(VOFTRAIN,i_training)
-
-        if (SDIM.eq.3) then
-         Write(12,'(2E25.16)') &
-           data_training(ANGLE_EXACT_TRAIN1:ANGLE_EXACT_TRAIN2,i_training)
-         Write(13,'(2E25.16)') &
-           data_training(ANGLE_INIT_TRAIN1:ANGLE_INIT_TRAIN2,i_training)
-        else if (SDIM.eq.2) then
-         Write(12,'(E25.16)') &
-           data_training(ANGLE_EXACT_TRAIN1:ANGLE_EXACT_TRAIN2,i_training)
-         Write(13,'(E25.16)') &
-           data_training(ANGLE_INIT_TRAIN1:ANGLE_INIT_TRAIN2,i_training)
-        else
-         print *,"dimension bust"
-         stop
-        endif
-
-       End Do ! Do i_training = 1, num_sampling
-
-       close(10)
-       close(11)
-       close(12)
-       close(13)
-
-       call execute_command_line('python convert2binary.py',wait=.true., &
-               exitstat=sysret)
-
-       call execute_command_line('python training.py',wait=.true., &
-               exitstat=sysret)
-
-       call execute_command_line('rm exact_centroid.dat',wait=.true., &
-               exitstat=sysret)
-       call execute_command_line('rm exact_f.dat',wait=.true., &
-               exitstat=sysret)
-       call execute_command_line('rm exact_angle.dat',wait=.true., &
-               exitstat=sysret)
-       call execute_command_line('rm initial_angle.dat',wait=.true., &
-               exitstat=sysret)
-
-       call execute_command_line('rm exact_centroid.npy',wait=.true., &
-               exitstat=sysret)
-       call execute_command_line('rm exact_f.npy',wait=.true., &
-               exitstat=sysret)
-       call execute_command_line('rm exact_angle.npy',wait=.true., &
-               exitstat=sysret)
-       call execute_command_line('rm initial_angle.npy',wait=.true., &
-               exitstat=sysret)
-
-        ! sanity test for sk2f.py
-       if (1.eq.0) then
-        cmof_idx=continuous_mof/2
-        call training_array(D_DECL(i,j,k),cmof_idx)% &
-         NN_ZHOUTENG_LOCAL%Initialization()
-        call training_array(D_DECL(i,j,k),cmof_idx)% &
-         DT_ZHOUTENG_LOCAL%Initialization()
-        call training_array(D_DECL(i,j,k),cmof_idx)% &
-         RF_ZHOUTENG_LOCAL%Initialization()
-
-        NN_cost=zero
         DT_cost=zero
-        RF_cost=zero
         Do i_training = 1, num_sampling
 
          do dir=1,SDIM-1
-          angle_init_db(dir)=data_training(ANGLE_EXACT_TRAIN2+dir,i_training)
-          angle_exact_db_data(dir)=data_training(VOFTRAIN+dir,i_training)
+          angle_init_db(dir)=data_decisions(i_training,dir)
+          angle_exact_db_data(dir)=data_classify(i_training,dir)
           angle_and_vfrac(dir)=angle_init_db(dir)
          enddo
-         refvfrac=data_training(VOFTRAIN,i_training)
-         angle_and_vfrac(SDIM)=refvfrac
+         refvfrac=data_decisions(i_training,MOF_TRAINING_NDIM_DECISIONS)
+         angle_and_vfrac(MOF_TRAINING_NDIM_DECISIONS)=refvfrac
 
-         angle_exact_db= &
-           training_array(D_DECL(i,j,k),cmof_idx)%DT_ZHOUTENG_LOCAL% &
-             predict(angle_and_vfrac)
+         call decision_tree_predict(angle_and_vfrac,angle_exact_db, &
+           MOF_TRAINING_NDIM_DECISIONS, &
+           MOF_TRAINING_NDIM_CLASSIFY, &
+           decision_tree_array(D_DECL(i,j,k),cmof_idx))
+
          do dir=1,SDIM-1
           DT_cost=DT_cost+(angle_exact_db(dir)-angle_exact_db_data(dir))**2
          enddo
@@ -2273,80 +2139,17 @@ stop
           print *,"angle_and_vfrac ",angle_and_vfrac
          endif
 
-         angle_exact_db= &
-           training_array(D_DECL(i,j,k),cmof_idx)%NN_ZHOUTENG_LOCAL% &
-             predict(angle_and_vfrac)
-         do dir=1,SDIM-1
-          NN_cost=NN_cost+(angle_exact_db(dir)-angle_exact_db_data(dir))**2
-         enddo
-
-         if (1.eq.0) then
-          print *,"NN; i_training ",i_training
-          print *,"angle_init_db ",angle_init_db
-          print *,"angle_exact_db_data ",angle_exact_db_data
-          print *,"angle_exact_db ",angle_exact_db
-          print *,"angle_and_vfrac ",angle_and_vfrac
-         endif
-
-         angle_exact_db= &
-           training_array(D_DECL(i,j,k),cmof_idx)%RF_ZHOUTENG_LOCAL% &
-             predict(angle_and_vfrac)
-         do dir=1,SDIM-1
-          RF_cost=RF_cost+(angle_exact_db(dir)-angle_exact_db_data(dir))**2
-         enddo
-
-         if (1.eq.0) then
-          print *,"RF; i_training ",i_training
-          print *,"angle_init_db ",angle_init_db
-          print *,"angle_exact_db_data ",angle_exact_db_data
-          print *,"angle_exact_db ",angle_exact_db
-
-          stop
-         endif
-
         enddo ! i_training = 1, num_sampling
 
         print *,"FORTRAN: DT cost ",DT_cost
-        print *,"FORTRAN: NN cost ",NN_cost
-        print *,"FORTRAN: RF cost ",RF_cost
 
         stop
        endif
 
-      else if (op_training.eq.2) then
-
-       do dir=1,SDIM
-        if (cpp_training_lo(dir).eq.training_lo(dir)) then
-         ! do nothing
-        else
-         print *,"mismatch cpp_training_lo and training_lo"
-         stop
-        endif
-        if (cpp_training_hi(dir).eq.training_hi(dir)) then
-         ! do nothing
-        else
-         print *,"mismatch cpp_training_hi and training_hi"
-         stop
-        endif
-       enddo ! do dir=1,sdim
-
-       ! 1. call find_predict_slope(ref_centroid,n_predict)
-       ! 2. call slope_to_angle(n_{predict},angle_{predict})
-       ! 3. angle_output=DT%predict(angle_{predict},F_{ref})
-       ! 4. call angle_to_slope(angle_{output},n_{MachineLearning}
-
-       cmof_idx=continuous_mof/2
-       call training_array(D_DECL(i,j,k),cmof_idx)% &
-         NN_ZHOUTENG_LOCAL%Initialization()
-       call training_array(D_DECL(i,j,k),cmof_idx)% &
-         DT_ZHOUTENG_LOCAL%Initialization()
-       call training_array(D_DECL(i,j,k),cmof_idx)% &
-         RF_ZHOUTENG_LOCAL%Initialization()
-
-      else
-       print *,"op_training invalid"
-       stop
-      endif
+      enddo !local_continuous_mof=0,2,2
+      enddo !k
+      enddo !j
+      enddo !i
 
       return
       end subroutine fort_MOF_DT_training
