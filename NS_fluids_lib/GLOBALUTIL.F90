@@ -26516,6 +26516,7 @@ Type(branch_type) :: save_branch
 INTEGER_T :: datalo(2)
 INTEGER_T :: datahi(2)
 INTEGER_T :: idata,dir
+REAL_T    :: data1,data2
 
  datalo=LBOUND(source_branch%data_decisions)
  datahi=UBOUND(source_branch%data_decisions)
@@ -26559,6 +26560,17 @@ INTEGER_T :: idata,dir
      source_branch%data_classify(idata,dir)= &
             save_branch%data_classify(A_list(idata),dir)
     enddo
+   enddo
+    !sanity check
+   do idata=1,datahi(1)-1
+    data1=source_branch%data_decisions(idata,splittingrule)
+    data2=source_branch%data_decisions(idata+1,splittingrule)
+    if (data1.le.data2) then
+     ! do nothing
+    else
+     print *,"source_branch not sorted properly"
+     stop
+    endif
    enddo
 
    median_index=datahi(1)/2
@@ -26784,6 +26796,70 @@ INTEGER_T :: stack_id
  enddo
 
 end subroutine initialize_decision_tree
+
+subroutine decision_tree_predict(data_decision,data_classified, &
+  ndim_decisions,ndim_classify,tree_var)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: ndim_decisions
+INTEGER_T, INTENT(in) :: ndim_classify
+REAL_T, INTENT(in) :: data_decision(ndim_decisions)
+REAL_T, INTENT(out) :: data_classified(ndim_classify)
+Type(tree_type), INTENT(in) :: tree_var
+INTEGER_T :: current_id
+INTEGER_T :: current_ndata
+INTEGER_T :: splittingrule
+INTEGER_T :: median_index
+INTEGER_T :: dir
+REAL_T :: data1,data2
+
+ current_id=1
+ current_ndata=tree_var%branch_list_data(current_id)%ndata
+
+ do while (current_ndata.ge.2)
+  splittingrule=tree_var%branch_list_data(current_id)%children_splittingrule
+  if ((splittingrule.ge.1).and. &
+      (splittingrule.le.ndim_decisions)) then
+   median_index=tree_var%branch_list_data(current_id)%median_index
+   if ((median_index.ge.1).and. &
+       (median_index.lt.current_ndata)) then
+    data1=tree_var%branch_list_data(current_id)% &
+     data_decisions(median_index,splittingrule)
+    data2=tree_var%branch_list_data(current_id)% &
+     data_decisions(median_index+1,splittingrule)
+    if (data_decision(splittingrule).le.half*(data1+data2)) then
+     current_id=tree_var%branch_list_data(current_id)%child1_id
+    else if (data_decision(splittingrule).gt.half*(data1+data2)) then
+     current_id=tree_var%branch_list_data(current_id)%child2_id
+    else
+     print *,"data_decision bust"
+     stop
+    endif
+    current_ndata=tree_var%branch_list_data(current_id)%ndata
+   else
+    print *,"median_index invalid"
+    stop
+   endif
+  else
+   print *,"splittingrule invalid"
+   stop
+  endif
+ enddo 
+
+ if (current_ndata.eq.1) then
+  ! do nothing
+ else
+  print *,"current_ndata invalid"
+  stop
+ endif
+
+ do dir=1,ndim_classify
+  data_classified(dir)=tree_var%branch_list_data(current_id)% &
+     data_classify(1,dir)
+ enddo
+
+end subroutine decision_tree_predict
 
 end module global_utility_module
 
