@@ -2080,7 +2080,7 @@ stop
          if (abs(refcen(dir)-centroidA(dir)).le.training_tol*dx(1)) then
           ! do nothing
          else
-          print *,"i_training= ",i_training
+          print *,"DTfortran:i_training= ",i_training
           print *,"training_tol=",training_tol
           print *,"dir=",dir
           print *,"angle_exact_sanity=",angle_exact_sanity
@@ -2132,7 +2132,7 @@ stop
          enddo
 
          if (1.eq.0) then
-          print *,"DT; i_training ",i_training
+          print *,"DT(fortran); i_training ",i_training
           print *,"angle_init_db ",angle_init_db
           print *,"angle_exact_db_data ",angle_exact_db_data
           print *,"angle_exact_db ",angle_exact_db
