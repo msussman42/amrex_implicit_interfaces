@@ -8650,6 +8650,13 @@ void NavierStokes::MOF_training() {
  int cpp_k=0;
  int local_continuous_mof=0;
 
+  // in: PLIC_3D.F90
+ fort_MOF_DT_training(
+   &finest_level,
+   &bfact,
+   domlo,domhi,
+   dx);
+
  if (mof_machine_learning==1) {
 
   // in: PLIC_3D.F90
