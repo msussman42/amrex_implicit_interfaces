@@ -26524,7 +26524,8 @@ REAL_T    :: data1,data2
  call copy_branch(save_branch,source_branch)
 
  if ((datalo(1).eq.1).and.(datalo(2).eq.1)) then
-  if (datahi(1).eq.source_branch%ndata) then
+  if ((datahi(1).eq.source_branch%ndata).and. &
+      (datahi(2).ge.splittingrule)) then
    allocate(A_list(datahi(1)))
    allocate(B_list(datahi(1)))
    allocate(data_to_sort(datahi(1)))
@@ -26555,13 +26556,26 @@ REAL_T    :: data1,data2
    datalo=LBOUND(source_branch%data_classify)
    datahi=UBOUND(source_branch%data_classify)
 
-   do idata=1,datahi(1)
-    do dir=1,datahi(2)
-     source_branch%data_classify(idata,dir)= &
+   if ((datalo(1).eq.1).and.(datalo(2).eq.1)) then
+    if (datahi(1).eq.source_branch%ndata) then
+
+     do idata=1,datahi(1)
+      do dir=1,datahi(2)
+       source_branch%data_classify(idata,dir)= &
             save_branch%data_classify(A_list(idata),dir)
-    enddo
-   enddo
-    !sanity check
+      enddo
+     enddo
+
+    else
+     print *,"datahi invalid"
+     stop
+    endif
+   else
+    print *,"datalo invalid"
+    stop
+   endif
+
+   !sanity check
    do idata=1,datahi(1)-1
     data1=source_branch%data_decisions(idata,splittingrule)
     data2=source_branch%data_decisions(idata+1,splittingrule)
@@ -26574,6 +26588,13 @@ REAL_T    :: data1,data2
    enddo
 
    median_index=datahi(1)/2
+
+   deallocate(A_list)
+   deallocate(B_list)
+   deallocate(data_to_sort)
+
+   deallocate(save_branch%data_decisions)
+   deallocate(save_branch%data_classify)
 
   else
    print *,"datahi invalid"
@@ -26675,6 +26696,26 @@ INTEGER_T :: stack_id
   max_branches=max_branches+nbranches_level
  enddo
 
+ print *,"nsamples,max_branches ",nsamples,max_branches
+ print *,"ndim_decisions,ndim_classify ",ndim_decisions,ndim_classify
+
+ datahi_decisions=UBOUND(data_decisions)
+ datahi_classify=UBOUND(data_classify)
+ if ((datahi_decisions(2).eq.ndim_decisions).and. &
+     (datahi_decisions(1).eq.nsamples)) then
+  ! do nothing
+ else
+  print *,"datahi_decisions failed"
+  stop
+ endif
+ if ((datahi_classify(2).eq.ndim_classify).and. &
+     (datahi_classify(1).eq.nsamples)) then
+  ! do nothing
+ else
+  print *,"datahi_classify failed"
+  stop
+ endif
+
  allocate(tree_var%branch_list_data(max_branches))
  allocate(tree_var%branch_list_stack(max_branches))
 
@@ -26710,88 +26751,117 @@ INTEGER_T :: stack_id
 
   tree_var%nbranches_stack=tree_var%nbranches_stack-1
 
-  if (pop_branch%parent_id.eq.-1) then
-   splittingrule=1
-  else if (pop_branch%parent_id.ge.1) then
-   splittingrule=pop_branch%parent_splittingrule+1
-   if (splittingrule.gt.ndim_decisions) then
+  if (pop_branch%ndata.ge.2) then
+
+   if (pop_branch%parent_id.eq.-1) then
     splittingrule=1
+   else if (pop_branch%parent_id.ge.1) then
+    splittingrule=pop_branch%parent_splittingrule+1
+    if (splittingrule.gt.ndim_decisions) then
+     splittingrule=1
+    endif
+   else
+    print *,"pop_branch%parent_id invalid"
+    stop
    endif
+
+   pop_branch%children_splittingrule=splittingrule
+
+   call sort_branch_data(pop_branch,splittingrule,pop_branch%median_index)
+
+   datahi_decisions=UBOUND(pop_branch%data_decisions)
+   datahi_classify=UBOUND(pop_branch%data_classify)
+ 
+   if ((datahi_decisions(2).eq.ndim_decisions).and. &
+       (datahi_decisions(1).eq.pop_branch%ndata)) then
+    ! do nothing
+   else
+    print *,"datahi_decisions failed"
+    stop
+   endif
+   if ((datahi_classify(2).eq.ndim_classify).and. &
+       (datahi_classify(1).eq.pop_branch%ndata)) then
+    ! do nothing
+   else
+    print *,"datahi_classify failed"
+    stop
+   endif
+
+   child1_branch%ndata=pop_branch%median_index
+   child2_branch%ndata=pop_branch%ndata-pop_branch%median_index
+
+   allocate(child1_branch% &
+     data_decisions(child1_branch%ndata,ndim_decisions))
+   allocate(child1_branch% &
+     data_classify(child1_branch%ndata,ndim_classify))
+
+   allocate(child2_branch% &
+     data_decisions(child2_branch%ndata,ndim_decisions))
+   allocate(child2_branch% &
+     data_classify(child2_branch%ndata,ndim_classify))
+
+   do idata=1,child1_branch%ndata
+    do dir=1,ndim_decisions
+     child1_branch%data_decisions(idata,dir)= &
+       pop_branch%data_decisions(idata,dir)
+    enddo
+    do dir=1,ndim_classify
+     child1_branch%data_classify(idata,dir)= &
+       pop_branch%data_classify(idata,dir)
+    enddo
+   enddo
+
+   do idata=1,child2_branch%ndata
+    do dir=1,ndim_decisions
+     child2_branch%data_decisions(idata,dir)= &
+       pop_branch%data_decisions(idata+pop_branch%median_index,dir)
+    enddo
+    do dir=1,ndim_classify
+     child2_branch%data_classify(idata,dir)= &
+       pop_branch%data_classify(idata+pop_branch%median_index,dir)
+    enddo
+   enddo
+
+   child1_branch%parent_id=pop_branch%current_id
+   child2_branch%parent_id=pop_branch%current_id
+   child1_branch%parent_splittingrule=splittingrule
+   child2_branch%parent_splittingrule=splittingrule
+   
+   child1_id=tree_var%nbranches_data+1
+   child2_id=tree_var%nbranches_data+2
+   child1_branch%current_id=child1_id
+   child2_branch%current_id=child2_id
+
+   child1_branch%child1_id=-1
+   child1_branch%child2_id=-1
+   child2_branch%child1_id=-1
+   child2_branch%child2_id=-1
+
+   call copy_branch(tree_var%branch_list_data(child1_id),child1_branch)
+   call copy_branch(tree_var%branch_list_data(child2_id),child2_branch)
+   tree_var%nbranches_data=tree_var%nbranches_data+2
+
+   stack_id=tree_var%nbranches_stack
+   call copy_branch(tree_var%branch_list_stack(stack_id+1),child1_branch)
+   call copy_branch(tree_var%branch_list_stack(stack_id+2),child2_branch)
+   tree_var%nbranches_stack=tree_var%nbranches_stack+2
+
+   pop_branch%child1_id=child1_id
+   pop_branch%child2_id=child2_id
+
+   deallocate(tree_var% &
+      branch_list_data(pop_branch%current_id)%data_decisions)
+   deallocate(tree_var% &
+      branch_list_data(pop_branch%current_id)%data_classify)
+   call copy_branch(tree_var% &
+      branch_list_data(pop_branch%current_id),pop_branch)
+
+  else if (pop_branch%ndata.eq.1) then
+   ! do nothing
   else
-   print *,"pop_branch%parent_id invalid"
+   print *,"pop_branch%ndata invalid"
    stop
   endif
-
-  pop_branch%children_splittingrule=splittingrule
-
-  call sort_branch_data(pop_branch,splittingrule,pop_branch%median_index)
-
-  datahi_decisions=UBOUND(pop_branch%data_decisions)
-  datahi_classify=UBOUND(pop_branch%data_classify)
-
-  child1_branch%ndata=pop_branch%median_index
-  child2_branch%ndata=pop_branch%ndata-pop_branch%median_index
-
-  allocate(child1_branch% &
-     data_decisions(child1_branch%ndata,datahi_decisions(2)))
-  allocate(child1_branch% &
-     data_classify(child1_branch%ndata,datahi_classify(2)))
-
-  allocate(child2_branch% &
-     data_decisions(child2_branch%ndata,datahi_decisions(2)))
-  allocate(child2_branch% &
-     data_classify(child2_branch%ndata,datahi_classify(2)))
-
-  do idata=1,child1_branch%ndata
-   do dir=1,datahi_decisions(2)
-    child1_branch%data_decisions(idata,dir)= &
-      pop_branch%data_decisions(idata,dir)
-   enddo
-   do dir=1,datahi_classify(2)
-    child1_branch%data_classify(idata,dir)= &
-      pop_branch%data_classify(idata,dir)
-   enddo
-  enddo
-
-  do idata=1,child2_branch%ndata
-   do dir=1,datahi_decisions(2)
-    child2_branch%data_decisions(idata,dir)= &
-      pop_branch%data_decisions(idata+pop_branch%median_index,dir)
-   enddo
-   do dir=1,datahi_classify(2)
-    child2_branch%data_classify(idata,dir)= &
-      pop_branch%data_classify(idata+pop_branch%median_index,dir)
-   enddo
-  enddo
-
-  child1_branch%parent_id=pop_branch%current_id
-  child2_branch%parent_id=pop_branch%current_id
-  child1_branch%parent_splittingrule=splittingrule
-  child2_branch%parent_splittingrule=splittingrule
-  
-  child1_id=tree_var%nbranches_data+1
-  child2_id=tree_var%nbranches_data+2
-  child1_branch%current_id=child1_id
-  child2_branch%current_id=child2_id
-
-  call copy_branch(tree_var%branch_list_data(child1_id),child1_branch)
-  call copy_branch(tree_var%branch_list_data(child2_id),child2_branch)
-  tree_var%nbranches_data=tree_var%nbranches_data+2
-
-  stack_id=tree_var%nbranches_stack
-  call copy_branch(tree_var%branch_list_stack(stack_id+1),child1_branch)
-  call copy_branch(tree_var%branch_list_stack(stack_id+2),child2_branch)
-  tree_var%nbranches_stack=tree_var%nbranches_stack+2
-
-  pop_branch%child1_id=child1_id
-  pop_branch%child2_id=child2_id
-
-  deallocate(tree_var% &
-     branch_list_data(pop_branch%current_id)%data_decisions)
-  deallocate(tree_var% &
-     branch_list_data(pop_branch%current_id)%data_classify)
-  call copy_branch(tree_var% &
-     branch_list_data(pop_branch%current_id),pop_branch)
 
  enddo
 
