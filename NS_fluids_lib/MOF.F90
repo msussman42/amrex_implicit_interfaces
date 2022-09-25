@@ -11190,7 +11190,7 @@ contains
            enddo
 
            if (1.eq.0) then
-            print *,"grid_idx,grid_idx_ML,angle_init,angle_output,nguess ", &
+            print *,"DT:grid_idx,grid_idx_ML,angle_init,angle_output,nguess ", &
               grid_index,grid_index_ML,angle_init,angle_output,nguess
             print *,"refvfrac ",refvfrac
            endif
@@ -11217,7 +11217,7 @@ contains
         endif
 
        else
-        print *,"training_finest_level invalid"
+        print *,"decision_tree_finest_level invalid"
         stop
        endif
 
