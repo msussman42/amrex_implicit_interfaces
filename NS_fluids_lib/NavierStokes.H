@@ -1519,6 +1519,7 @@ protected:
      // continuous_mof = 0 => regular MOF
      // continuous_mof = 2 => CMOF ("continuous MOF ")
     static int  continuous_mof; // default is 2
+    static int  mof_decision_tree_learning; // default is 10000
     static int  mof_machine_learning; // default is 0
 
      // =1 EXT_DIR,REFLECT_EVEN,embedded; =2 same as 1 plus triple points.

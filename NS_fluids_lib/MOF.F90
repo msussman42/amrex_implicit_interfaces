@@ -11101,6 +11101,53 @@ contains
         angle_array(dir,nguess)=angle_init(dir)
        enddo
 
+       do dir=1,sdim
+        grid_index_ML(dir)=grid_index(dir)/bfact
+        grid_index_ML(dir)=grid_index(dir)-bfact*grid_index_ML(dir)
+       enddo
+
+       dir=1
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
+        ! do nothing
+       else if (levelrz.eq.COORDSYS_RZ) then
+        grid_index_ML(dir)=grid_index(dir)
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+        grid_index_ML(dir)=grid_index(dir)
+       else
+        print *,"levelrz invalid"
+        stop
+       endif
+
+       dir=2
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
+        ! do nothing
+       else if (levelrz.eq.COORDSYS_RZ) then
+        ! do nothing
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+        grid_index_ML(dir)=grid_index(dir)
+       else
+        print *,"levelrz invalid"
+        stop
+       endif
+
+       iML=grid_index_ML(1)
+       jML=grid_index_ML(2)
+       if (sdim.eq.2) then
+        kML=0
+       else if (sdim.eq.3) then
+        kML=grid_index_ML(sdim)
+       else
+        print *,"sdim invalid"
+        stop
+       endif
+
+       if (1.eq.0) then
+        print *,"fort_finest_level ",fort_finest_level
+        print *,"grid_level ",grid_level
+        print *,"decision_tree_finest_level ",decision_tree_finest_level
+        print *,"grid_index_ML ",grid_index_ML
+       endif
+
        if (decision_tree_finest_level.eq.-1) then
         ! do nothing
        else if (decision_tree_finest_level.ge.0) then
@@ -11147,30 +11194,6 @@ contains
           if (fastflag.eq.1) then
            nguess=nguess+1
 
-           do dir=1,sdim
-            grid_index_ML(dir)=grid_index(dir)/bfact
-            grid_index_ML(dir)=grid_index(dir)-bfact*grid_index_ML(dir)
-           enddo
-           dir=1
-           if (levelrz.eq.COORDSYS_CARTESIAN) then
-            ! do nothing
-           else if (levelrz.eq.COORDSYS_RZ) then
-            grid_index_ML(dir)=grid_index(dir)
-           else
-            print *,"levelrz invalid"
-            stop
-           endif
-           iML=grid_index_ML(1)
-           jML=grid_index_ML(2)
-           if (sdim.eq.2) then
-            kML=0
-           else if (sdim.eq.3) then
-            kML=grid_index_ML(sdim)
-           else
-            print *,"sdim invalid"
-            stop
-           endif
-
            do dir=1,sdim-1
             angle_init_ML(dir)=angle_init(dir)
            enddo
@@ -11212,7 +11235,7 @@ contains
         else if (grid_level.eq.-1) then
          ! do nothing
         else
-         print *,"grid_level invalid"
+         print *,"grid_level (decision tree check) invalid"
          stop
         endif
 
@@ -11267,30 +11290,6 @@ contains
           if (fastflag.eq.1) then
            nguess=nguess+1
 
-           do dir=1,sdim
-            grid_index_ML(dir)=grid_index(dir)/bfact
-            grid_index_ML(dir)=grid_index(dir)-bfact*grid_index_ML(dir)
-           enddo
-           dir=1
-           if (levelrz.eq.COORDSYS_CARTESIAN) then
-            ! do nothing
-           else if (levelrz.eq.COORDSYS_RZ) then
-            grid_index_ML(dir)=grid_index(dir)
-           else
-            print *,"levelrz invalid"
-            stop
-           endif
-           iML=grid_index_ML(1)
-           jML=grid_index_ML(2)
-           if (sdim.eq.2) then
-            kML=0
-           else if (sdim.eq.3) then
-            kML=grid_index_ML(sdim)
-           else
-            print *,"sdim invalid"
-            stop
-           endif
-
            do dir=1,sdim-1
             angle_init_ML(dir)=angle_init(dir)
            enddo
@@ -11331,7 +11330,7 @@ contains
         else if (grid_level.eq.-1) then
          ! do nothing
         else
-         print *,"grid_level invalid"
+         print *,"grid_level (training_finest_level) invalid"
          stop
         endif
 
@@ -13742,7 +13741,8 @@ contains
 
       if (grid_level.eq.-1) then
        ! do nothing
-      else if (grid_level.eq.training_finest_level) then
+      else if ((grid_level.eq.training_finest_level).or. &
+               (grid_level.eq.decision_tree_finest_level)) then
        ! do nothing
       else
        print *,"grid_level invalid"

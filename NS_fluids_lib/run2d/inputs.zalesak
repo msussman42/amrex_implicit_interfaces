@@ -28,7 +28,8 @@ mg.rtol_b = -0.01
 Lp.v = 0
 
 ns.continuous_mof=0 
-ns.mof_machine_learning=1
+ns.mof_decision_tree_machine_learning=10000
+ns.mof_machine_learning=10000
 ns.EILE_flag=-1 # -1=Weymouth and Yue 1=alternate EI and LE
 ns.MOFITERMAX=15
 ns.num_materials=2

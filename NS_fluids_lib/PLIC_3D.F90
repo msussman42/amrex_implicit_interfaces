@@ -360,8 +360,6 @@ stop
        vfrac_solid_sum=zero
        im_raster_solid=0
        vfrac_raster_solid=zero
-       mod_cmofsten=0
-       local_mod_cmofsten=0
 
        do im=1,num_materials
         vofcomprecon=(im-1)*ngeom_recon+1
@@ -467,9 +465,12 @@ stop
         call Box_volumeFAST(bfact,dx,xsten,nhalf, &
           volume_super,cen_super,SDIM)
 
+        ! mod_cmofsten=1 near domain walls, near a solid dominated cell.
         mod_cmofsten=0
+        local_mod_cmofsten=0
 
-         ! check if fluid cell near a wall.
+        ! check if fluid cell near a domain wall or near a solid
+        ! dominated cell.
         if (vfrac_solid_sum_center.lt.half) then
          do i1=-1,1
          do j1=-1,1
@@ -588,6 +589,7 @@ stop
 
         continuous_mof_base=continuous_mof
 
+        ! mod_cmofsten=1 near domain walls, near a solid dominated cell.
         if (mod_cmofsten.eq.1) then
          if (force_cmof_at_triple_junctions.eq.0) then
           ! do nothing
@@ -915,7 +917,8 @@ stop
 
         grid_level=-1
 
-        if (level.eq.training_finest_level) then
+        if ((level.eq.training_finest_level).or. &
+            (level.eq.decision_tree_finest_level))  then
          if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
              (levelrz.eq.COORDSYS_RZ)) then
           grid_level=level
@@ -1054,6 +1057,7 @@ stop
 
 
       subroutine fort_MOF_training( &
+        num_samples, &
         op_training, & !0=alloc 1=create data,python proc 2=read network data
         cpp_training_lo, &
         cpp_training_hi, &
@@ -1072,6 +1076,7 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: num_samples
       INTEGER_T, INTENT(in) :: op_training
       INTEGER_T, INTENT(inout) :: cpp_training_lo(SDIM)
       INTEGER_T, INTENT(inout) :: cpp_training_hi(SDIM)
@@ -1083,12 +1088,11 @@ stop
       REAL_T, INTENT(in) :: dx(SDIM)
 
       INTEGER_T nmax
-      INTEGER_T, parameter :: num_sampling=40000
-      REAL_T :: vof_training(num_sampling)
-      REAL_T :: phi_training(num_sampling)
-      REAL_T :: theta_training(num_sampling)
+      REAL_T :: vof_training(num_samples)
+      REAL_T :: phi_training(num_samples)
+      REAL_T :: theta_training(num_samples)
        ! centroid, VOF, angle_exact, angle_init
-      REAL_T :: data_training(NTRAINING,num_sampling)
+      REAL_T :: data_training(NTRAINING,num_samples)
       REAL_T :: xc0(SDIM)
 
       REAL_T :: angle_exact_sanity(SDIM-1)
@@ -1134,6 +1138,13 @@ stop
       INTEGER_T tid
    
       tid=0
+
+      if (num_samples.gt.0) then
+       ! do nothing
+      else
+       print *,"num_samples invalid"
+       stop
+      endif
 
       if (finest_level.eq.fort_finest_level) then
        training_finest_level=finest_level
@@ -1269,8 +1280,8 @@ stop
         endif
        enddo ! do dir=1,sdim
 
-       print *,"generating training data num_sampling,i,j,k,continuous_mof ", &
-          num_sampling,i,j,k,continuous_mof
+       print *,"training data num_samples,i,j,k,continuous_mof ", &
+          num_samples,i,j,k,continuous_mof
 
        Call random_number(vof_training) ! 0<=vof_training<1
 
@@ -1278,7 +1289,7 @@ stop
        phi_training=(phi_training-half) * Pi * two
 
        if (SDIM.eq.2) then
-        Do i_training = 1, num_sampling
+        Do i_training = 1, num_samples
          theta_training(i_training)=zero
         enddo
        else if (SDIM.eq.3) then
@@ -1289,7 +1300,7 @@ stop
         stop
        endif
 
-       Do i_training = 1, num_sampling
+       Do i_training = 1, num_samples
         angle_exact_db(1)=phi_training(i_training)
         if (SDIM.eq.3) then
          angle_exact_db(SDIM-1)=theta_training(i_training)
@@ -1495,7 +1506,7 @@ stop
          data_training(VOFTRAIN+dir,i_training) = angle_exact_db(dir)
          data_training(ANGLE_EXACT_TRAIN2+dir,i_training) = angle_init_db(dir)
         enddo
-       End Do ! i_training = 1, num_sampling
+       End Do ! i_training = 1, num_samples
 
 ! unit number 5: standard input
 ! unit number 6: standard output
@@ -1531,7 +1542,7 @@ stop
        open(13,file='initial_angle.dat',status='unknown')
         ! previous: F16.12
         !      now: E25.16
-       Do i_training = 1, num_sampling
+       Do i_training = 1, num_samples
 
         if (SDIM.eq.3) then
          Write(10,'(3E25.16)')data_training(1:SDIM,i_training)
@@ -1559,7 +1570,7 @@ stop
          stop
         endif
 
-       End Do ! Do i_training = 1, num_sampling
+       End Do ! Do i_training = 1, num_samples
 
        close(10)
        close(11)
@@ -1603,7 +1614,7 @@ stop
         NN_cost=zero
         DT_cost=zero
         RF_cost=zero
-        Do i_training = 1, num_sampling
+        Do i_training = 1, num_samples
 
          do dir=1,SDIM-1
           angle_init_db(dir)=data_training(ANGLE_EXACT_TRAIN2+dir,i_training)
@@ -1659,7 +1670,7 @@ stop
           stop
          endif
 
-        enddo ! i_training = 1, num_sampling
+        enddo ! i_training = 1, num_samples
 
         print *,"FORTRAN: DT cost ",DT_cost
         print *,"FORTRAN: NN cost ",NN_cost
@@ -1708,6 +1719,7 @@ stop
 
 
       subroutine fort_MOF_DT_training( &
+        num_samples, &
         finest_level, &
         bfact, &
         domlo,domhi, &
@@ -1721,20 +1733,20 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T :: i,j,k
+      INTEGER_T, INTENT(in) :: num_samples
       INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T :: local_continuous_mof
       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T, INTENT(in) :: bfact
       REAL_T, INTENT(in) :: dx(SDIM)
 
+      INTEGER_T :: i,j,k
+      INTEGER_T :: local_continuous_mof
       INTEGER_T nmax
-      INTEGER_T, parameter :: num_sampling=40000
-      REAL_T :: vof_training(num_sampling)
-      REAL_T :: phi_training(num_sampling)
-      REAL_T :: theta_training(num_sampling)
-      REAL_T :: data_decisions(num_sampling,MOF_TRAINING_NDIM_DECISIONS)
-      REAL_T :: data_classify(num_sampling,MOF_TRAINING_NDIM_CLASSIFY)
+      REAL_T :: vof_training(num_samples)
+      REAL_T :: phi_training(num_samples)
+      REAL_T :: theta_training(num_samples)
+      REAL_T :: data_decisions(num_samples,MOF_TRAINING_NDIM_DECISIONS)
+      REAL_T :: data_classify(num_samples,MOF_TRAINING_NDIM_CLASSIFY)
 
       REAL_T :: angle_exact_sanity(SDIM-1)
       REAL_T :: angle_exact_db(SDIM-1)
@@ -1779,377 +1791,387 @@ stop
    
       tid=0
 
-      if (finest_level.eq.fort_finest_level) then
-       decision_tree_finest_level=finest_level
-      else
-       print *,"finest_level and fort_finest_level mismatch"
-       stop
-      endif
+      if (num_samples.eq.0) then
 
-      if (SDIM.eq.3) then
-       klosten=-1
-       khisten=1
-      else if (SDIM.eq.2) then
-       klosten=0
-       khisten=0
-      else
-       print *,"dimension bust"
-       stop
-      endif
-      do i1=-1,1
-      do j1=-1,1
-      do k1=klosten,khisten
-       cmofsten(D_DECL(i1,j1,k1))=1
-      enddo
-      enddo
-      enddo
+       decision_tree_finest_level=-1
 
-      if (bfact.lt.1) then
-       print *,"bfact invalid170"
-       stop
-      endif
+      else if (num_samples.gt.0) then
 
-      if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
-       stop
-      endif
+       if (finest_level.eq.fort_finest_level) then
+        decision_tree_finest_level=finest_level
+       else
+        print *,"finest_level and fort_finest_level mismatch"
+        stop
+       endif
 
-      nmax=POLYGON_LIST_MAX 
-
-      if (ngeom_recon.ne.2*SDIM+3) then
-       print *,"ngeom_recon invalid"
-       stop
-      endif
-      if (ngeom_raw.ne.SDIM+1) then
-       print *,"ngeom_raw invalid"
-       stop
-      endif
-
-      if (levelrz.eq.COORDSYS_CARTESIAN) then
-       ! do nothing
-      else if (levelrz.eq.COORDSYS_RZ) then
-       if (SDIM.ne.2) then
+       if (SDIM.eq.3) then
+        klosten=-1
+        khisten=1
+       else if (SDIM.eq.2) then
+        klosten=0
+        khisten=0
+       else
         print *,"dimension bust"
         stop
        endif
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       ! do nothing
-      else
-       print *,"levelrz invalid fort_MOF_DT_training"
-       stop
-      endif
+       do i1=-1,1
+       do j1=-1,1
+       do k1=klosten,khisten
+        cmofsten(D_DECL(i1,j1,k1))=1
+       enddo
+       enddo
+       enddo
 
-      do dir=1,3
-       decision_tree_lo(dir)=0
-       decision_tree_hi(dir)=0
-      enddo 
+       if (bfact.lt.1) then
+        print *,"bfact invalid170"
+        stop
+       endif
 
-      do dir=1,SDIM
-       if (domlo(dir).eq.0) then
+       if (num_state_base.ne.2) then
+        print *,"num_state_base invalid"
+        stop
+       endif
+
+       nmax=POLYGON_LIST_MAX 
+
+       if (ngeom_recon.ne.2*SDIM+3) then
+        print *,"ngeom_recon invalid"
+        stop
+       endif
+       if (ngeom_raw.ne.SDIM+1) then
+        print *,"ngeom_raw invalid"
+        stop
+       endif
+
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
+        ! do nothing
+       else if (levelrz.eq.COORDSYS_RZ) then
+        if (SDIM.ne.2) then
+         print *,"dimension bust"
+         stop
+        endif
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         ! do nothing
        else
-        print *,"expecting domlo=0"
-        stop
-       endif
-       decision_tree_hi(dir)=domlo(dir)+bfact-1
-       if (decision_tree_hi(dir).le.domhi(dir)) then
-        ! do nothing 
-       else
-        print *,"decision_tree_hi invalid"
-        stop
-       endif
-      enddo ! dir=1..sdim
-
-      if (levelrz.eq.COORDSYS_CARTESIAN) then
-       ! do nothing
-      else if (levelrz.eq.COORDSYS_RZ) then
-       dir=1
-       decision_tree_hi(dir)=domhi(dir)
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       dir=1
-       decision_tree_hi(dir)=domhi(dir)
-       dir=2
-       decision_tree_hi(dir)=domhi(dir)
-      else
-       print *,"levelrz invalid fort_MOF_DT_training"
-       stop
-      endif
-
-      allocate(decision_tree_array( &
-        D_DECL(decision_tree_lo(1):decision_tree_hi(1),decision_tree_lo(2):decision_tree_hi(2),decision_tree_lo(SDIM):decision_tree_hi(SDIM) ), &
-                0:1))
-
-      do i=decision_tree_lo(1),decision_tree_hi(1)
-      do j=decision_tree_lo(2),decision_tree_hi(2)
-      do k=decision_tree_lo(3),decision_tree_hi(3)
-      do local_continuous_mof=0,2,2
-
-       call gridsten_level(xsten,i,j,k,finest_level,nhalf)
-
-       print *,"DT: training data num_sampling,i,j,k,continuous_mof ", &
-          num_sampling,i,j,k,local_continuous_mof
-
-       Call random_number(vof_training) ! 0<=vof_training<1
-
-       Call random_number(phi_training) ! 0<=phi_training<1
-       phi_training=(phi_training-half) * Pi * two
-
-       if (SDIM.eq.2) then
-        Do i_training = 1, num_sampling
-         theta_training(i_training)=zero
-        enddo
-       else if (SDIM.eq.3) then
-        Call random_number(theta_training) ! 0<=theta_training<1
-        theta_training=(theta_training-half) * Pi * two
-       else
-        print *,"sdim invalid"
+        print *,"levelrz invalid fort_MOF_DT_training"
         stop
        endif
 
-       Do i_training = 1, num_sampling
-        angle_exact_db(1)=phi_training(i_training)
-        if (SDIM.eq.3) then
-         angle_exact_db(SDIM-1)=theta_training(i_training)
+       do dir=1,3
+        decision_tree_lo(dir)=0
+        decision_tree_hi(dir)=0
+       enddo 
+
+       do dir=1,SDIM
+        if (domlo(dir).eq.0) then
+         ! do nothing
+        else
+         print *,"expecting domlo=0"
+         stop
         endif
-        call angle_to_slope(angle_exact_db,nr_db,SDIM)
+        decision_tree_hi(dir)=domlo(dir)+bfact-1
+        if (decision_tree_hi(dir).le.domhi(dir)) then
+         ! do nothing 
+        else
+         print *,"decision_tree_hi invalid"
+         stop
+        endif
+       enddo ! dir=1..sdim
 
-        try_new_vfrac=1
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
+        ! do nothing
+       else if (levelrz.eq.COORDSYS_RZ) then
+        dir=1
+        decision_tree_hi(dir)=domhi(dir)
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+        dir=1
+        decision_tree_hi(dir)=domhi(dir)
+        dir=2
+        decision_tree_hi(dir)=domhi(dir)
+       else
+        print *,"levelrz invalid fort_MOF_DT_training"
+        stop
+       endif
 
-        do while (try_new_vfrac.eq.1)
+       allocate(decision_tree_array( &
+         D_DECL(decision_tree_lo(1):decision_tree_hi(1),decision_tree_lo(2):decision_tree_hi(2),decision_tree_lo(SDIM):decision_tree_hi(SDIM) ), &
+                 0:1))
 
-         refvfrac=vof_training(i_training)
+       do i=decision_tree_lo(1),decision_tree_hi(1)
+       do j=decision_tree_lo(2),decision_tree_hi(2)
+       do k=decision_tree_lo(3),decision_tree_hi(3)
+       do cmof_idx=0,1
 
-         if ((refvfrac.ge.zero).and. &
-             (refvfrac.lt.VOFTOL)) then
-          ! do nothing
-         else if ((refvfrac.gt.one-VOFTOL).and. &
-                  (refvfrac.le.one)) then
-          ! do nothing
-         else if ((refvfrac.ge.VOFTOL).and. &
-                  (refvfrac.le.one-VOFTOL)) then
+        local_continuous_mof=2*cmof_idx
 
-           ! given the slope, find the centroid.
-          call angle_init_from_angle_recon_and_F( &
-           bfact,dx,xsten,nhalf, &
-           refvfrac, & 
-           local_continuous_mof, & 
-           cmofsten, & 
-           geom_xtetlist(1,1,1,tid+1), &
-           nmax, &
-           geom_xtetlist_old(1,1,1,tid+1), &
-           nmax, &
-           nmax, &
-           angle_init_db, & ! INTENT(out)
-           refcen, &  ! INTENT(out)
-           angle_exact_db, & ! INTENT(in)
-           nmax, &
-           SDIM)
+        call gridsten_level(xsten,i,j,k,finest_level,nhalf)
 
-          do dir=1,SDIM-1
-           if ((angle_init_db(dir).ge.-Pi).and. &
-               (angle_init_db(dir).le.Pi)) then
-            ! do nothing
-           else
-            print *,"angle_init_db invalid"
-            stop
-           endif
-           if ((angle_exact_db(dir).ge.-Pi).and. &
-               (angle_exact_db(dir).le.Pi)) then
-            ! do nothing
-           else
-            print *,"angle_exact_db invalid"
-            stop
-           endif
-          enddo !dir=1,sdim-1
+        print *,"DT: training data num_samples,i,j,k,continuous_mof ", &
+           num_samples,i,j,k,local_continuous_mof
 
-          do dir=1,SDIM
-           grid_index(dir)=0
-           centroid_null(dir)=zero
-          enddo
-          grid_level=-1
-          fastflag=1
-          critical_material=1
-          do im=1,num_materials
-           lsnormal_valid(im)=0
-          enddo
-          call find_predict_slope( &
-           npredict, & ! INTENT(out)
-           mag_centroid, & ! INTENT(out)
-           centroid_null, & ! centroid of uncaptured region
-            ! relative to cell centroid of the super cell; INTENT(in)
-           refcen, & 
-           bfact,dx,xsten,nhalf,SDIM)
+        Call random_number(vof_training) ! 0<=vof_training<1
 
-          try_new_vfrac=0
+        Call random_number(phi_training) ! 0<=phi_training<1
+        phi_training=(phi_training-half) * Pi * two
 
-          if (mag_centroid.gt.VOFTOL*dx(1)) then
+        if (SDIM.eq.2) then
+         Do i_training = 1, num_samples
+          theta_training(i_training)=zero
+         enddo
+        else if (SDIM.eq.3) then
+         Call random_number(theta_training) ! 0<=theta_training<1
+         theta_training=(theta_training-half) * Pi * two
+        else
+         print *,"sdim invalid"
+         stop
+        endif
+
+        Do i_training = 1, num_samples
+         angle_exact_db(1)=phi_training(i_training)
+         if (SDIM.eq.3) then
+          angle_exact_db(SDIM-1)=theta_training(i_training)
+         endif
+         call angle_to_slope(angle_exact_db,nr_db,SDIM)
+
+         try_new_vfrac=1
+
+         do while (try_new_vfrac.eq.1)
+
+          refvfrac=vof_training(i_training)
+
+          if ((refvfrac.ge.zero).and. &
+              (refvfrac.lt.VOFTOL)) then
            ! do nothing
-          else if (mag_centroid.le.VOFTOL*dx(1)) then
-           try_new_vfrac=1
-          else
-           print *,"mag_centroid bust"
+          else if ((refvfrac.gt.one-VOFTOL).and. &
+                   (refvfrac.le.one)) then
+           ! do nothing
+          else if ((refvfrac.ge.VOFTOL).and. &
+                   (refvfrac.le.one-VOFTOL)) then
+
+            ! given the slope, find the centroid.
+           call angle_init_from_angle_recon_and_F( &
+            bfact,dx,xsten,nhalf, &
+            refvfrac, & 
+            local_continuous_mof, & 
+            cmofsten, & 
+            geom_xtetlist(1,1,1,tid+1), &
+            nmax, &
+            geom_xtetlist_old(1,1,1,tid+1), &
+            nmax, &
+            nmax, &
+            angle_init_db, & ! INTENT(out)
+            refcen, &  ! INTENT(out)
+            angle_exact_db, & ! INTENT(in)
+            nmax, &
+            SDIM)
+
+           do dir=1,SDIM-1
+            if ((angle_init_db(dir).ge.-Pi).and. &
+                (angle_init_db(dir).le.Pi)) then
+             ! do nothing
+            else
+             print *,"angle_init_db invalid"
+             stop
+            endif
+            if ((angle_exact_db(dir).ge.-Pi).and. &
+                (angle_exact_db(dir).le.Pi)) then
+             ! do nothing
+            else
+             print *,"angle_exact_db invalid"
+             stop
+            endif
+           enddo !dir=1,sdim-1
+
+           do dir=1,SDIM
+            grid_index(dir)=0
+            centroid_null(dir)=zero
+           enddo
+           grid_level=-1
+           fastflag=1
+           critical_material=1
+           do im=1,num_materials
+            lsnormal_valid(im)=0
+           enddo
+           call find_predict_slope( &
+            npredict, & ! INTENT(out)
+            mag_centroid, & ! INTENT(out)
+            centroid_null, & ! centroid of uncaptured region
+             ! relative to cell centroid of the super cell; INTENT(in)
+            refcen, & 
+            bfact,dx,xsten,nhalf,SDIM)
+
+           try_new_vfrac=0
+
+           if (mag_centroid.gt.VOFTOL*dx(1)) then
+            ! do nothing
+           else if (mag_centroid.le.VOFTOL*dx(1)) then
+            try_new_vfrac=1
+           else
+            print *,"mag_centroid bust"
+            stop
+           endif
+
+          else 
+           print *,"refvfrac out of range"
            stop
           endif
 
-         else 
+          if (try_new_vfrac.eq.1) then
+           Call random_number(vof_single)
+           vof_training(i_training)=vof_single
+          else if (try_new_vfrac.eq.0) then
+           ! do nothing
+          else
+           print *,"try_new_vfrac invalid"
+           stop
+          endif
+
+         enddo ! do while (try_new_vfrac.eq.1)
+
+          ! find the slope given the centroid.
+         call find_cut_geom_slope( &
+          grid_index, &
+          grid_level, &
+          ls_mof, &
+          lsnormal, &
+          lsnormal_valid, &
+          bfact,dx,xsten,nhalf, &
+           ! relative to cell centroid of the super cell; INTENT(in)
+          refcen, & 
+          refvfrac, &
+          npredict, &
+          local_continuous_mof, &
+          cmofsten, &
+          nslope, & ! INTENT(out)
+          intercept, & ! INTENT(out)
+          geom_xtetlist(1,1,1,tid+1), &
+          nmax, &
+          geom_xtetlist_old(1,1,1,tid+1), &
+          nmax, &
+          nmax, &
+           ! relative to cell centroid of the super cell; INTENT(out)
+          centroidA, &
+          nmax, &
+          critical_material, &
+          fastflag, &
+          SDIM)
+
+         call slope_to_angle(nslope,angle_exact_sanity,SDIM)
+
+         training_tol=1.0D-3
+         if ((refvfrac.ge.zero).and.(refvfrac.le.0.1d0)) then
+          training_tol=one
+         else if ((refvfrac.ge.0.1d0).and.(refvfrac.le.0.9d0)) then
+          ! do nothing
+         else if ((refvfrac.le.one).and.(refvfrac.ge.0.9d0)) then
+          training_tol=one
+         else
           print *,"refvfrac out of range"
           stop
          endif
 
-         if (try_new_vfrac.eq.1) then
-          Call random_number(vof_single)
-          vof_training(i_training)=vof_single
-         else if (try_new_vfrac.eq.0) then
-          ! do nothing
-         else
-          print *,"try_new_vfrac invalid"
-          stop
-         endif
+         do dir=1,SDIM-1
+          if ((angle_exact_sanity(dir).ge.-Pi).and. &
+              (angle_exact_sanity(dir).le.Pi)) then
+           ! do nothing
+          else
+           print *,"angle_exact_sanity invalid"
+           stop
+          endif
 
-        enddo ! do while (try_new_vfrac.eq.1)
+          if (angle_err(angle_exact_sanity(dir),angle_exact_db(dir)).le. &
+              training_tol) then
+           ! do nothing
+          else 
+           print *,"i_training= ",i_training
+           print *,"training_tol=",training_tol
+           print *,"dir=",dir
+           print *,"angle_exact_sanity=",angle_exact_sanity
+           print *,"angle_exact_db=",angle_exact_db
+           print *,"refvfrac= ",refvfrac
+           print *,"refcen= ",refcen
+           print *,"centroidA= ",centroidA
+           print *,"|angle_exact_sanity-angle_exact_db|>tol"
+           stop
+          endif
+         enddo ! dir=1..sdim-1
 
-         ! find the slope given the centroid.
-        call find_cut_geom_slope( &
-         grid_index, &
-         grid_level, &
-         ls_mof, &
-         lsnormal, &
-         lsnormal_valid, &
-         bfact,dx,xsten,nhalf, &
-          ! relative to cell centroid of the super cell; INTENT(in)
-         refcen, & 
-         refvfrac, &
-         npredict, &
-         local_continuous_mof, &
-         cmofsten, &
-         nslope, & ! INTENT(out)
-         intercept, & ! INTENT(out)
-         geom_xtetlist(1,1,1,tid+1), &
-         nmax, &
-         geom_xtetlist_old(1,1,1,tid+1), &
-         nmax, &
-         nmax, &
-          ! relative to cell centroid of the super cell; INTENT(out)
-         centroidA, &
-         nmax, &
-         critical_material, &
-         fastflag, &
-         SDIM)
+         do dir=1,SDIM
+          if (abs(refcen(dir)-centroidA(dir)).le.training_tol*dx(1)) then
+           ! do nothing
+          else
+           print *,"DTfortran:i_training= ",i_training
+           print *,"training_tol=",training_tol
+           print *,"dir=",dir
+           print *,"angle_exact_sanity=",angle_exact_sanity
+           print *,"angle_exact_db=",angle_exact_db
+           print *,"refvfrac= ",refvfrac
+           print *,"refcen= ",refcen
+           print *,"centroidA= ",centroidA
+           print *,"|refcen-centroidA|>tol"
+           stop
+          endif
+         enddo ! dir=1..sdim
 
-        call slope_to_angle(nslope,angle_exact_sanity,SDIM)
+         data_decisions(i_training,MOF_TRAINING_NDIM_DECISIONS) = &
+            vof_training(i_training)
+         do dir=1,SDIM-1
+          data_classify(i_training,dir) = angle_exact_db(dir)
+          data_decisions(i_training,dir) = angle_init_db(dir)
+         enddo
+        End Do ! i_training = 1, num_samples
 
-        training_tol=1.0D-3
-        if ((refvfrac.ge.zero).and.(refvfrac.le.0.1d0)) then
-         training_tol=one
-        else if ((refvfrac.ge.0.1d0).and.(refvfrac.le.0.9d0)) then
-         ! do nothing
-        else if ((refvfrac.le.one).and.(refvfrac.ge.0.9d0)) then
-         training_tol=one
-        else
-         print *,"refvfrac out of range"
-         stop
+        call initialize_decision_tree(data_decisions,data_classify, &
+                num_samples,MOF_TRAINING_NDIM_DECISIONS, &
+                MOF_TRAINING_NDIM_CLASSIFY, &
+                decision_tree_array(D_DECL(i,j,k),cmof_idx))
+
+         ! sanity test
+        if (1.eq.1) then
+
+         DT_cost=zero
+         Do i_training = 1, num_samples
+
+          do dir=1,SDIM-1
+           angle_init_db(dir)=data_decisions(i_training,dir)
+           angle_exact_db_data(dir)=data_classify(i_training,dir)
+           angle_and_vfrac(dir)=angle_init_db(dir)
+          enddo
+          refvfrac=data_decisions(i_training,MOF_TRAINING_NDIM_DECISIONS)
+          angle_and_vfrac(MOF_TRAINING_NDIM_DECISIONS)=refvfrac
+
+          call decision_tree_predict(angle_and_vfrac,angle_exact_db, &
+            MOF_TRAINING_NDIM_DECISIONS, &
+            MOF_TRAINING_NDIM_CLASSIFY, &
+            decision_tree_array(D_DECL(i,j,k),cmof_idx))
+
+          do dir=1,SDIM-1
+           DT_cost=DT_cost+(angle_exact_db(dir)-angle_exact_db_data(dir))**2
+          enddo
+
+          if (1.eq.0) then
+           print *,"DT(fortran); i_training ",i_training
+           print *,"angle_init_db ",angle_init_db
+           print *,"angle_exact_db_data ",angle_exact_db_data
+           print *,"angle_exact_db ",angle_exact_db
+           print *,"angle_and_vfrac ",angle_and_vfrac
+          endif
+
+         enddo ! i_training = 1, num_samples
+
+         print *,"FORTRAN: DT cost ",DT_cost
+
         endif
 
-        do dir=1,SDIM-1
-         if ((angle_exact_sanity(dir).ge.-Pi).and. &
-             (angle_exact_sanity(dir).le.Pi)) then
-          ! do nothing
-         else
-          print *,"angle_exact_sanity invalid"
-          stop
-         endif
+       enddo !local_continuous_mof=0,2,2
+       enddo !k
+       enddo !j
+       enddo !i
 
-         if (angle_err(angle_exact_sanity(dir),angle_exact_db(dir)).le. &
-             training_tol) then
-          ! do nothing
-         else 
-          print *,"i_training= ",i_training
-          print *,"training_tol=",training_tol
-          print *,"dir=",dir
-          print *,"angle_exact_sanity=",angle_exact_sanity
-          print *,"angle_exact_db=",angle_exact_db
-          print *,"refvfrac= ",refvfrac
-          print *,"refcen= ",refcen
-          print *,"centroidA= ",centroidA
-          print *,"|angle_exact_sanity-angle_exact_db|>tol"
-          stop
-         endif
-        enddo ! dir=1..sdim-1
-
-        do dir=1,SDIM
-         if (abs(refcen(dir)-centroidA(dir)).le.training_tol*dx(1)) then
-          ! do nothing
-         else
-          print *,"DTfortran:i_training= ",i_training
-          print *,"training_tol=",training_tol
-          print *,"dir=",dir
-          print *,"angle_exact_sanity=",angle_exact_sanity
-          print *,"angle_exact_db=",angle_exact_db
-          print *,"refvfrac= ",refvfrac
-          print *,"refcen= ",refcen
-          print *,"centroidA= ",centroidA
-          print *,"|refcen-centroidA|>tol"
-          stop
-         endif
-        enddo ! dir=1..sdim
-
-        data_decisions(i_training,MOF_TRAINING_NDIM_DECISIONS) = &
-           vof_training(i_training)
-        do dir=1,SDIM-1
-         data_classify(i_training,dir) = angle_exact_db(dir)
-         data_decisions(i_training,dir) = angle_init_db(dir)
-        enddo
-       End Do ! i_training = 1, num_sampling
-
-       cmof_idx=local_continuous_mof/2
-
-       call initialize_decision_tree(data_decisions,data_classify, &
-               num_sampling,MOF_TRAINING_NDIM_DECISIONS, &
-               MOF_TRAINING_NDIM_CLASSIFY, &
-               decision_tree_array(D_DECL(i,j,k),cmof_idx))
-
-        ! sanity test
-       if (1.eq.1) then
-
-        DT_cost=zero
-        Do i_training = 1, num_sampling
-
-         do dir=1,SDIM-1
-          angle_init_db(dir)=data_decisions(i_training,dir)
-          angle_exact_db_data(dir)=data_classify(i_training,dir)
-          angle_and_vfrac(dir)=angle_init_db(dir)
-         enddo
-         refvfrac=data_decisions(i_training,MOF_TRAINING_NDIM_DECISIONS)
-         angle_and_vfrac(MOF_TRAINING_NDIM_DECISIONS)=refvfrac
-
-         call decision_tree_predict(angle_and_vfrac,angle_exact_db, &
-           MOF_TRAINING_NDIM_DECISIONS, &
-           MOF_TRAINING_NDIM_CLASSIFY, &
-           decision_tree_array(D_DECL(i,j,k),cmof_idx))
-
-         do dir=1,SDIM-1
-          DT_cost=DT_cost+(angle_exact_db(dir)-angle_exact_db_data(dir))**2
-         enddo
-
-         if (1.eq.0) then
-          print *,"DT(fortran); i_training ",i_training
-          print *,"angle_init_db ",angle_init_db
-          print *,"angle_exact_db_data ",angle_exact_db_data
-          print *,"angle_exact_db ",angle_exact_db
-          print *,"angle_and_vfrac ",angle_and_vfrac
-         endif
-
-        enddo ! i_training = 1, num_sampling
-
-        print *,"FORTRAN: DT cost ",DT_cost
-
-        stop
-       endif
-
-      enddo !local_continuous_mof=0,2,2
-      enddo !k
-      enddo !j
-      enddo !i
+      else
+       print *,"num_samples invalid"
+       stop
+      endif
 
       return
       end subroutine fort_MOF_DT_training

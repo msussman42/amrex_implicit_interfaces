@@ -13,12 +13,14 @@ extern "C"
 {
 
       void fort_MOF_DT_training(
+       int* num_samples,
        int* finest_level,
        int* bfact,
        const int* domlo,const int* domhi,
        const Real* dx);
 
       void fort_MOF_training(
+       int* num_samples,
        int* op_training,
        int* cpp_training_lo,
        int* cpp_training_hi,
