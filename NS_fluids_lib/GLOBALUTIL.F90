@@ -26902,11 +26902,53 @@ INTEGER_T :: splittingrule
 INTEGER_T :: median_index
 INTEGER_T :: dir
 REAL_T :: data1,data2
+INTEGER_T :: datalo(2)
+INTEGER_T :: datahi(2)
+
+ if ((tree_var%nbranches_data.ge.1).and. &
+     (tree_var%nbranches_stack.eq.0)) then
+  ! do nothing
+ else
+  print *,"nbranches data or stack invalid"
+  stop
+ endif
 
  current_id=1
  current_ndata=tree_var%branch_list_data(current_id)%ndata
 
  do while (current_ndata.ge.2)
+
+  if (current_id.le.tree_var%nbranches_data) then
+   ! do nothing
+  else
+   print *,"current_id invalid"
+   stop
+  endif
+
+  datalo=LBOUND(tree_var%branch_list_data(current_id)%data_decisions)
+  datahi=UBOUND(tree_var%branch_list_data(current_id)%data_decisions)
+  if ((datalo(1).eq.1).and. &
+      (datalo(2).eq.1).and. &
+      (datahi(1).eq.current_ndata).and. &
+      (datahi(2).eq.ndim_decisions)) then
+   ! do nothing
+  else
+   print *,"datalo or datahi invalid"
+   stop
+  endif
+
+  datalo=LBOUND(tree_var%branch_list_data(current_id)%data_classify)
+  datahi=UBOUND(tree_var%branch_list_data(current_id)%data_classify)
+  if ((datalo(1).eq.1).and. &
+      (datalo(2).eq.1).and. &
+      (datahi(1).eq.current_ndata).and. &
+      (datahi(2).eq.ndim_classify)) then
+   ! do nothing
+  else
+   print *,"datalo or datahi invalid"
+   stop
+  endif
+
   splittingrule=tree_var%branch_list_data(current_id)%children_splittingrule
   if ((splittingrule.ge.1).and. &
       (splittingrule.le.ndim_decisions)) then
