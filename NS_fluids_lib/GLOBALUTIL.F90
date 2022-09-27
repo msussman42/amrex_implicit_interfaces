@@ -26790,71 +26790,90 @@ INTEGER_T :: stack_id
    child1_branch%ndata=pop_branch%median_index
    child2_branch%ndata=pop_branch%ndata-pop_branch%median_index
 
-   allocate(child1_branch% &
+   if ((child1_branch%ndata.ge.1).and. &
+       (child2_branch%ndata.ge.1)) then
+
+    allocate(child1_branch% &
      data_decisions(child1_branch%ndata,ndim_decisions))
-   allocate(child1_branch% &
+    allocate(child1_branch% &
      data_classify(child1_branch%ndata,ndim_classify))
 
-   allocate(child2_branch% &
+    allocate(child2_branch% &
      data_decisions(child2_branch%ndata,ndim_decisions))
-   allocate(child2_branch% &
+    allocate(child2_branch% &
      data_classify(child2_branch%ndata,ndim_classify))
 
-   do idata=1,child1_branch%ndata
-    do dir=1,ndim_decisions
-     child1_branch%data_decisions(idata,dir)= &
+    do idata=1,child1_branch%ndata
+     do dir=1,ndim_decisions
+      child1_branch%data_decisions(idata,dir)= &
        pop_branch%data_decisions(idata,dir)
-    enddo
-    do dir=1,ndim_classify
-     child1_branch%data_classify(idata,dir)= &
+     enddo
+     do dir=1,ndim_classify
+      child1_branch%data_classify(idata,dir)= &
        pop_branch%data_classify(idata,dir)
+     enddo
     enddo
-   enddo
 
-   do idata=1,child2_branch%ndata
-    do dir=1,ndim_decisions
-     child2_branch%data_decisions(idata,dir)= &
+    do idata=1,child2_branch%ndata
+     do dir=1,ndim_decisions
+      child2_branch%data_decisions(idata,dir)= &
        pop_branch%data_decisions(idata+pop_branch%median_index,dir)
-    enddo
-    do dir=1,ndim_classify
-     child2_branch%data_classify(idata,dir)= &
+     enddo
+     do dir=1,ndim_classify
+      child2_branch%data_classify(idata,dir)= &
        pop_branch%data_classify(idata+pop_branch%median_index,dir)
+     enddo
     enddo
-   enddo
 
-   child1_branch%parent_id=pop_branch%current_id
-   child2_branch%parent_id=pop_branch%current_id
-   child1_branch%parent_splittingrule=splittingrule
-   child2_branch%parent_splittingrule=splittingrule
+    child1_branch%parent_id=pop_branch%current_id
+    child2_branch%parent_id=pop_branch%current_id
+    child1_branch%parent_splittingrule=splittingrule
+    child2_branch%parent_splittingrule=splittingrule
    
-   child1_id=tree_var%nbranches_data+1
-   child2_id=tree_var%nbranches_data+2
-   child1_branch%current_id=child1_id
-   child2_branch%current_id=child2_id
+    child1_id=tree_var%nbranches_data+1
+    child2_id=tree_var%nbranches_data+2
+    stack_id=tree_var%nbranches_stack
 
-   child1_branch%child1_id=-1
-   child1_branch%child2_id=-1
-   child2_branch%child1_id=-1
-   child2_branch%child2_id=-1
+    if ((child2_id.ge.3).and. &
+        (child2_id.le.max_branches).and. &
+        (stack_id.ge.0).and. &
+        (stack_id+2.lt.child2_id)) then
+     ! do nothing
+    else
+     print *,"child2_id or stack_id invalid"
+     stop
+    endif
 
-   call copy_branch(tree_var%branch_list_data(child1_id),child1_branch)
-   call copy_branch(tree_var%branch_list_data(child2_id),child2_branch)
-   tree_var%nbranches_data=tree_var%nbranches_data+2
+    child1_branch%current_id=child1_id
+    child2_branch%current_id=child2_id
 
-   stack_id=tree_var%nbranches_stack
-   call copy_branch(tree_var%branch_list_stack(stack_id+1),child1_branch)
-   call copy_branch(tree_var%branch_list_stack(stack_id+2),child2_branch)
-   tree_var%nbranches_stack=tree_var%nbranches_stack+2
+    child1_branch%child1_id=-1
+    child1_branch%child2_id=-1
+    child2_branch%child1_id=-1
+    child2_branch%child2_id=-1
 
-   pop_branch%child1_id=child1_id
-   pop_branch%child2_id=child2_id
+    call copy_branch(tree_var%branch_list_data(child1_id),child1_branch)
+    call copy_branch(tree_var%branch_list_data(child2_id),child2_branch)
+    tree_var%nbranches_data=child2_id
 
-   deallocate(tree_var% &
+    call copy_branch(tree_var%branch_list_stack(stack_id+1),child1_branch)
+    call copy_branch(tree_var%branch_list_stack(stack_id+2),child2_branch)
+    tree_var%nbranches_stack=stack_id+2
+
+    pop_branch%child1_id=child1_id
+    pop_branch%child2_id=child2_id
+
+    deallocate(tree_var% &
       branch_list_data(pop_branch%current_id)%data_decisions)
-   deallocate(tree_var% &
+    deallocate(tree_var% &
       branch_list_data(pop_branch%current_id)%data_classify)
-   call copy_branch(tree_var% &
-      branch_list_data(pop_branch%current_id),pop_branch)
+    call copy_branch(tree_var% &
+       branch_list_data(pop_branch%current_id),pop_branch)
+
+   else
+    print *,"child1 or child2 ndata incorrect"
+    stop
+   endif
 
   else if (pop_branch%ndata.eq.1) then
    ! do nothing
