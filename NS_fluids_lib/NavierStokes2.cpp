@@ -8652,15 +8652,17 @@ void NavierStokes::MOF_training() {
 
   // in: PLIC_3D.F90
  fort_MOF_DT_training(
+   &mof_decision_tree_learning,
    &finest_level,
    &bfact,
    domlo,domhi,
    dx);
 
- if (mof_machine_learning==1) {
+ if (mof_machine_learning>0) {
 
   // in: PLIC_3D.F90
   fort_MOF_training(
+   &mof_machine_learning,
    &op_training,
    cpp_training_lo,
    cpp_training_hi,
@@ -8684,6 +8686,7 @@ void NavierStokes::MOF_training() {
    ParallelDescriptor::Barrier();
    if (ParallelDescriptor::IOProcessor()) {
     fort_MOF_training(
+     &mof_machine_learning,
      &op_training,
      cpp_training_lo,
      cpp_training_hi,
@@ -8697,6 +8700,7 @@ void NavierStokes::MOF_training() {
    ParallelDescriptor::Barrier();
    op_training=2;  // read network data
    fort_MOF_training(
+    &mof_machine_learning,
     &op_training,
     cpp_training_lo,
     cpp_training_hi,
