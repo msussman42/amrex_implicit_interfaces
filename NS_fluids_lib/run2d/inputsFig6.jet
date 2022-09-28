@@ -92,7 +92,6 @@ ns.tension        = 73.0     # denionized water 0.073 kg/s^2
 #ns.tension=0.0
 #ns.fixed_dt	  = 0.04       # hardwire dt
 ns.sum_interval   = 10       # timesteps between computing mass 
-ns.usekluge       = 0
 
 ns.axis_dir=5  # axis_dir=1 standard pipe problem, =2 inflow for liquid only
                # axis_dir=3 inflow for gas only 

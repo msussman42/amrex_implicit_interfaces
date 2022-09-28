@@ -91,7 +91,6 @@ ns.tension        =0.025   # 0.5 or 2.0 (bouncing)
                              # 1/23 (fig5) 1/40 (fig6)
 ns.fixed_dt	  = 0.0032   # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
-ns.usekluge       = 0
 
 ns.axis_dir=141  # drop collision  (two different drops)
 ns.multiLS=2     # two drops instead of two bubbles

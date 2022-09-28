@@ -82,7 +82,6 @@ ns.gravityangle = 0.0
 ns.tension        = 73.0e-6  # cgsx10^-6 (scale velocity by 10^-3)
 #ns.fixed_dt	  = 1.0e-4   # hardwire dt
 ns.sum_interval   = -1        # timesteps between computing mass 
-ns.usekluge       = 0
 ns.overlap=1.0
 
 ns.axis_dir=1

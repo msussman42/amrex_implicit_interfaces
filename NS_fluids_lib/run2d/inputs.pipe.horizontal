@@ -87,7 +87,6 @@ ns.gravityangle = 0.0
 ns.tension        = 72.8
 #ns.fixed_dt	  = 0.04     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
-ns.usekluge       = 0
 
 ns.axis_dir=1
 ns.vorterr=999999.0

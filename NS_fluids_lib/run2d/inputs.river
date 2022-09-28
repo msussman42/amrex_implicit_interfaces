@@ -77,7 +77,6 @@ ns.gravity        = -9.8
 ns.tension        = 0.073 0.0 0.0  
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 20        # timesteps between computing mass 
-ns.usekluge       = 0
 
 #MATT  (option)
 ns.axis_dir=0

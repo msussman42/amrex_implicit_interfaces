@@ -86,7 +86,6 @@ ns.tension        = 34.7   # interfacial tension force
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 proj.pres_interp    = 1
-ns.usekluge       = 0
 ns.RUNGAKUTTA = 0
 ns.centerpressure=1
 ns.visctimestep=1

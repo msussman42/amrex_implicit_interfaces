@@ -58,7 +58,6 @@ ns.gravity        = 0.0    # body force  -980.0
 ns.tension        = 0.0   # 70.0
 #ns.fixed_dt	  = 0.04       # hardwire dt
 ns.sum_interval   = 10        # timesteps between computing mass 
-ns.usekluge       = 0
 
 ns.axis_dir=0  
 ns.vorterr=999999.0

@@ -95,7 +95,6 @@ ns.do_sync_proj   = 1        # 1 => do Sync Project
 ns.do_MLsync_proj = 0
 ns.do_reflux      = 0        # 1 => do refluxing
 ns.do_mac_proj    = 1        # 1 => do MAC projection
-ns.usekluge       = 0
 ns.RUNGAKUTTA = 0
 ns.centerpressure=1
 ns.visctimestep=1

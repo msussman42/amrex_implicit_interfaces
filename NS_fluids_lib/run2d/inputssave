@@ -93,7 +93,6 @@ ns.gravityangle    = 0.0
 ns.tension         = 7.20e-5  # GALLIUM surface tension, real 7200, divide by U^2 
 #ns.fixed_dt	   = 0.2     # hardwire dt
 ns.sum_interval    = 1        # timesteps between computing mass 
-ns.usekluge        = 0
 ns.RUNGAKUTTA      = 0
 ns.centerpressure  = 1
 ns.visctimestep    = 1

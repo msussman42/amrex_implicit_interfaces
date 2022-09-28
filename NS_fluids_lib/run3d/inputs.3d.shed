@@ -79,7 +79,6 @@ ns.tension        = 0.0
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 proj.pres_interp    = 1
-ns.usekluge       = 0
 
 ns.axis_dir=0
 ns.vorterr=999999.0

@@ -125,7 +125,6 @@ ns.tension_T0     = 383.0
 ns.tension_slope  = -0.096625
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 20        # timesteps between computing mass 
-ns.usekluge       = 0
 
 ns.axis_dir=10
 ns.vorterr=0.0 0.0

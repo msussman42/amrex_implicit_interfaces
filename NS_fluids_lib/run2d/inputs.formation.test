@@ -90,7 +90,6 @@ ns.gravityangle   = 0.0
 ns.tension        = 0.0631 # interfacial tension force
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
-ns.usekluge       = 0
 ns.RUNGAKUTTA = 0
 ns.centerpressure=1
 ns.visctimestep=1
