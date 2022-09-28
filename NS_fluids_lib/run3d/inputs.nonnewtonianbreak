@@ -99,7 +99,6 @@ ns.tension        = 17.8
 #ns.fixed_dt	  = 0.005    # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
 proj.pres_interp    = 1
-ns.usekluge       = 0
 ns.RUNGAKUTTA = 0
 ns.centerpressure=1
 ns.visctimestep=1

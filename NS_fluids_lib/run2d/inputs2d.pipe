@@ -98,7 +98,6 @@ ns.gravityangle = 4.71238898      #for x-direction
 ns.tension        = 72.75
 #ns.fixed_dt	  = 0.04       # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
-ns.usekluge       = 0
 
 ns.axis_dir=1  # horizontal pipe 
                # axis_dir=1 standard pipe problem, =2 inflow for liquid only

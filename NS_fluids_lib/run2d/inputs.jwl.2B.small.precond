@@ -84,7 +84,6 @@ ns.gravityangle = 0.0
 ns.tension        = 0.00
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
-ns.usekluge       = 0
 ns.RUNGAKUTTA = 0
 ns.centerpressure=1
 ns.visctimestep=1

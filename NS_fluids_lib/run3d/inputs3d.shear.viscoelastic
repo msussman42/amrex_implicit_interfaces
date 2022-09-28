@@ -81,7 +81,6 @@ ns.gravityangle = 0.0
 ns.tension        = 25.0   # interfacial tension force
 #ns.fixed_dt	  = 0.0025   # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
-ns.usekluge       = 0
 
 ns.axis_dir=11 # LS<0 inside of drop ("gas")  LS>0 outside drop ("liquid")
 ns.vorterr=999999.0

@@ -84,7 +84,6 @@ ns.gravityangle = 0.0
 ns.tension        = 2.4e-6  # cgsx10^-6 (scale velocity by 10^-3)
 #ns.fixed_dt	  = 0.02     # hardwire dt
 ns.sum_interval   = 1000     # timesteps between computing mass 
-ns.usekluge       = 0
 ns.RUNGAKUTTA = 0
 ns.centerpressure=1
 ns.visctimestep=1

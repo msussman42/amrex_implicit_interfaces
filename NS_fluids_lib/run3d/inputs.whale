@@ -73,7 +73,6 @@ ns.tension        = 0.0
 #ns.fixed_dt	  = 0.004    # dz_coarse=1/64  max_level=1 => dz=1/128
                              # u dt = (1/2) dz  dt=1/256
 ns.sum_interval   = 20       # timesteps between computing mass 
-ns.usekluge       = 0
 
 ns.axis_dir=2  # 0 whaletailup, 2 whalenormal, 3 open mouth, 
                # 4 animated whalenormal 5 whaletaildown 6 whalepregnant

@@ -95,7 +95,6 @@ ns.gravity        = -980.0   # 1.321=L g/U^2
 ns.tension        = 0.0 0.0 0.0  # 0.0025=sigma/(rho U^2 L)
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 20        # timesteps between computing mass 
-ns.usekluge       = 0
 
 ns.axis_dir=0
 ns.vorterr=0.0 0.0

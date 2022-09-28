@@ -86,7 +86,6 @@ ns.gravityangle = 0.0
 ns.tension        = 0.0
 #ns.fixed_dt	  = 0.0001     
 ns.sum_interval   = 10        # timesteps between computing mass 
-ns.usekluge       = 0
 
 ns.axis_dir=0
 ns.vorterr=999999.0

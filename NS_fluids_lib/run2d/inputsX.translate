@@ -67,7 +67,6 @@ ns.gravityangle = 0.0
 ns.tension        = 0.0     # interfacial tension force
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
-ns.usekluge       = 0
 
 ns.axis_dir=6  # axis_dir=6 => check difference between original shape.
 ns.vorterr=999999.0

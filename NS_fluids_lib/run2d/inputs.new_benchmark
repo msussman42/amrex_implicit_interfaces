@@ -86,7 +86,6 @@ ns.gravityangle = 0.0
 ns.tension        = 0.0
 ns.fixed_dt	  = 0.001    # 200^2 use 0.001 100^2 use 0.002 50^2 use 0.004
 ns.sum_interval   = 1        # timesteps between computing mass 
-ns.usekluge       = 0
 
 ns.axis_dir=1  # 0=notched disk 2=circle 1=new benchmark test
 ns.vorterr=999999.0

@@ -84,7 +84,6 @@ ns.gravityangle = 3.1415927  # force=-|g|cos(gangle)
 ns.tension        = 40.0     # page 4, YH notes.
 #ns.fixed_dt	  = 0.04       # hardwire dt
 ns.sum_interval   = 10       # timesteps between computing mass 
-ns.usekluge       = 0
 
 ns.axis_dir=8  # axis_dir=7 dirichlet BC axis_dir=8 neumann BC YH
 ns.vorterr=999999.0
