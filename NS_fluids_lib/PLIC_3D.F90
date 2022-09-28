@@ -1136,7 +1136,12 @@ stop
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T klosten,khisten
       INTEGER_T tid
-   
+      INTEGER_T, parameter :: SANITY_CHECK_CENTROID=1
+  
+      if (SANITY_CHECK_CENTROID.eq.1) then
+       print *,"SANITY_CHECK_CENTROID=1"
+      endif
+ 
       tid=0
 
       if (num_samples.gt.0) then
@@ -1402,90 +1407,99 @@ stop
 
         enddo ! do while (try_new_vfrac.eq.1)
 
+        if (SANITY_CHECK_CENTROID.eq.1) then
+         
          ! find the slope given the centroid.
-        call find_cut_geom_slope( &
-         grid_index, &
-         grid_level, &
-         ls_mof, &
-         lsnormal, &
-         lsnormal_valid, &
-         bfact,dx,xsten,nhalf, &
-          ! relative to cell centroid of the super cell; INTENT(in)
-         refcen, & 
-         refvfrac, &
-         npredict, &
-         continuous_mof, &
-         cmofsten, &
-         nslope, & ! INTENT(out)
-         intercept, & ! INTENT(out)
-         geom_xtetlist(1,1,1,tid+1), &
-         nmax, &
-         geom_xtetlist_old(1,1,1,tid+1), &
-         nmax, &
-         nmax, &
-          ! relative to cell centroid of the super cell; INTENT(out)
-         centroidA, &
-         nmax, &
-         critical_material, &
-         fastflag, &
-         SDIM)
+         call find_cut_geom_slope( &
+          grid_index, &
+          grid_level, &
+          ls_mof, &
+          lsnormal, &
+          lsnormal_valid, &
+          bfact,dx,xsten,nhalf, &
+           ! relative to cell centroid of the super cell; INTENT(in)
+          refcen, & 
+          refvfrac, &
+          npredict, &
+          continuous_mof, &
+          cmofsten, &
+          nslope, & ! INTENT(out)
+          intercept, & ! INTENT(out)
+          geom_xtetlist(1,1,1,tid+1), &
+          nmax, &
+          geom_xtetlist_old(1,1,1,tid+1), &
+          nmax, &
+          nmax, &
+           ! relative to cell centroid of the super cell; INTENT(out)
+          centroidA, &
+          nmax, &
+          critical_material, &
+          fastflag, &
+          SDIM)
 
-        call slope_to_angle(nslope,angle_exact_sanity,SDIM)
+         call slope_to_angle(nslope,angle_exact_sanity,SDIM)
 
-        training_tol=1.0D-3
-        if ((refvfrac.ge.zero).and.(refvfrac.le.0.1d0)) then
-         training_tol=one
-        else if ((refvfrac.ge.0.1d0).and.(refvfrac.le.0.9d0)) then
+         training_tol=1.0D-3
+         if ((refvfrac.ge.zero).and.(refvfrac.le.0.1d0)) then
+          training_tol=one
+         else if ((refvfrac.ge.0.1d0).and.(refvfrac.le.0.9d0)) then
+          ! do nothing
+         else if ((refvfrac.le.one).and.(refvfrac.ge.0.9d0)) then
+          training_tol=one
+         else
+          print *,"refvfrac out of range"
+          stop
+         endif
+
+         do dir=1,SDIM-1
+          if ((angle_exact_sanity(dir).ge.-Pi).and. &
+              (angle_exact_sanity(dir).le.Pi)) then
+           ! do nothing
+          else
+           print *,"angle_exact_sanity invalid"
+           stop
+          endif
+ 
+          if (angle_err(angle_exact_sanity(dir),angle_exact_db(dir)).le. &
+              training_tol) then
+           ! do nothing
+          else 
+           print *,"i_training= ",i_training
+           print *,"training_tol=",training_tol
+           print *,"dir=",dir
+           print *,"angle_exact_sanity=",angle_exact_sanity
+           print *,"angle_exact_db=",angle_exact_db
+           print *,"refvfrac= ",refvfrac
+           print *,"refcen= ",refcen
+           print *,"centroidA= ",centroidA
+           print *,"|angle_exact_sanity-angle_exact_db|>tol"
+           stop
+          endif
+         enddo ! dir=1..sdim-1
+
+         do dir=1,SDIM
+          if (abs(refcen(dir)-centroidA(dir)).le.training_tol*dx(1)) then
+           ! do nothing
+          else
+           print *,"i_training= ",i_training
+           print *,"training_tol=",training_tol
+           print *,"dir=",dir
+           print *,"angle_exact_sanity=",angle_exact_sanity
+           print *,"angle_exact_db=",angle_exact_db
+           print *,"refvfrac= ",refvfrac
+           print *,"refcen= ",refcen
+           print *,"centroidA= ",centroidA
+           print *,"|refcen-centroidA|>tol"
+           stop
+          endif
+         enddo ! dir=1..sdim
+
+        else if (SANITY_CHECK_CENTROID.eq.0) then
          ! do nothing
-        else if ((refvfrac.le.one).and.(refvfrac.ge.0.9d0)) then
-         training_tol=one
         else
-         print *,"refvfrac out of range"
+         print *,"SANITY_CHECK_CENTROID invalid"
          stop
         endif
-
-        do dir=1,SDIM-1
-         if ((angle_exact_sanity(dir).ge.-Pi).and. &
-             (angle_exact_sanity(dir).le.Pi)) then
-          ! do nothing
-         else
-          print *,"angle_exact_sanity invalid"
-          stop
-         endif
-
-         if (angle_err(angle_exact_sanity(dir),angle_exact_db(dir)).le. &
-             training_tol) then
-          ! do nothing
-         else 
-          print *,"i_training= ",i_training
-          print *,"training_tol=",training_tol
-          print *,"dir=",dir
-          print *,"angle_exact_sanity=",angle_exact_sanity
-          print *,"angle_exact_db=",angle_exact_db
-          print *,"refvfrac= ",refvfrac
-          print *,"refcen= ",refcen
-          print *,"centroidA= ",centroidA
-          print *,"|angle_exact_sanity-angle_exact_db|>tol"
-          stop
-         endif
-        enddo ! dir=1..sdim-1
-
-        do dir=1,SDIM
-         if (abs(refcen(dir)-centroidA(dir)).le.training_tol*dx(1)) then
-          ! do nothing
-         else
-          print *,"i_training= ",i_training
-          print *,"training_tol=",training_tol
-          print *,"dir=",dir
-          print *,"angle_exact_sanity=",angle_exact_sanity
-          print *,"angle_exact_db=",angle_exact_db
-          print *,"refvfrac= ",refvfrac
-          print *,"refcen= ",refcen
-          print *,"centroidA= ",centroidA
-          print *,"|refcen-centroidA|>tol"
-          stop
-         endif
-        enddo ! dir=1..sdim
 
         do dir=1,SDIM
          xc0(dir)=refcen(dir)
@@ -1788,7 +1802,12 @@ stop
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T klosten,khisten
       INTEGER_T tid
+      INTEGER_T, parameter :: SANITY_CHECK_CENTROID=1
    
+      if (SANITY_CHECK_CENTROID.eq.1) then
+       print *,"SANITY_CHECK_CENTROID=1"
+      endif
+
       tid=0
 
       if (num_samples.eq.0) then
@@ -2028,90 +2047,99 @@ stop
 
          enddo ! do while (try_new_vfrac.eq.1)
 
-          ! find the slope given the centroid.
-         call find_cut_geom_slope( &
-          grid_index, &
-          grid_level, &
-          ls_mof, &
-          lsnormal, &
-          lsnormal_valid, &
-          bfact,dx,xsten,nhalf, &
-           ! relative to cell centroid of the super cell; INTENT(in)
-          refcen, & 
-          refvfrac, &
-          npredict, &
-          local_continuous_mof, &
-          cmofsten, &
-          nslope, & ! INTENT(out)
-          intercept, & ! INTENT(out)
-          geom_xtetlist(1,1,1,tid+1), &
-          nmax, &
-          geom_xtetlist_old(1,1,1,tid+1), &
-          nmax, &
-          nmax, &
-           ! relative to cell centroid of the super cell; INTENT(out)
-          centroidA, &
-          nmax, &
-          critical_material, &
-          fastflag, &
-          SDIM)
+         if (SANITY_CHECK_CENTROID.eq.1) then
 
-         call slope_to_angle(nslope,angle_exact_sanity,SDIM)
+           ! find the slope given the centroid.
+          call find_cut_geom_slope( &
+           grid_index, &
+           grid_level, &
+           ls_mof, &
+           lsnormal, &
+           lsnormal_valid, &
+           bfact,dx,xsten,nhalf, &
+            ! relative to cell centroid of the super cell; INTENT(in)
+           refcen, & 
+           refvfrac, &
+           npredict, &
+           local_continuous_mof, &
+           cmofsten, &
+           nslope, & ! INTENT(out)
+           intercept, & ! INTENT(out)
+           geom_xtetlist(1,1,1,tid+1), &
+           nmax, &
+           geom_xtetlist_old(1,1,1,tid+1), &
+           nmax, &
+           nmax, &
+            ! relative to cell centroid of the super cell; INTENT(out)
+           centroidA, &
+           nmax, &
+           critical_material, &
+           fastflag, &
+           SDIM)
 
-         training_tol=1.0D-3
-         if ((refvfrac.ge.zero).and.(refvfrac.le.0.1d0)) then
-          training_tol=one
-         else if ((refvfrac.ge.0.1d0).and.(refvfrac.le.0.9d0)) then
+          call slope_to_angle(nslope,angle_exact_sanity,SDIM)
+
+          training_tol=1.0D-3
+          if ((refvfrac.ge.zero).and.(refvfrac.le.0.1d0)) then
+           training_tol=one
+          else if ((refvfrac.ge.0.1d0).and.(refvfrac.le.0.9d0)) then
+           ! do nothing
+          else if ((refvfrac.le.one).and.(refvfrac.ge.0.9d0)) then
+           training_tol=one
+          else
+           print *,"refvfrac out of range"
+           stop
+          endif
+
+          do dir=1,SDIM-1
+           if ((angle_exact_sanity(dir).ge.-Pi).and. &
+               (angle_exact_sanity(dir).le.Pi)) then
+            ! do nothing
+           else
+            print *,"angle_exact_sanity invalid"
+            stop
+           endif
+
+           if (angle_err(angle_exact_sanity(dir),angle_exact_db(dir)).le. &
+               training_tol) then
+            ! do nothing
+           else 
+            print *,"i_training= ",i_training
+            print *,"training_tol=",training_tol
+            print *,"dir=",dir
+            print *,"angle_exact_sanity=",angle_exact_sanity
+            print *,"angle_exact_db=",angle_exact_db
+            print *,"refvfrac= ",refvfrac
+            print *,"refcen= ",refcen
+            print *,"centroidA= ",centroidA
+            print *,"|angle_exact_sanity-angle_exact_db|>tol"
+            stop
+           endif
+          enddo ! dir=1..sdim-1
+
+          do dir=1,SDIM
+           if (abs(refcen(dir)-centroidA(dir)).le.training_tol*dx(1)) then
+            ! do nothing
+           else
+            print *,"DTfortran:i_training= ",i_training
+            print *,"training_tol=",training_tol
+            print *,"dir=",dir
+            print *,"angle_exact_sanity=",angle_exact_sanity
+            print *,"angle_exact_db=",angle_exact_db
+            print *,"refvfrac= ",refvfrac
+            print *,"refcen= ",refcen
+            print *,"centroidA= ",centroidA
+            print *,"|refcen-centroidA|>tol"
+            stop
+           endif
+          enddo ! dir=1..sdim
+
+         else if (SANITY_CHECK_CENTROID.eq.0) then
           ! do nothing
-         else if ((refvfrac.le.one).and.(refvfrac.ge.0.9d0)) then
-          training_tol=one
          else
-          print *,"refvfrac out of range"
+          print *,"SANITY_CHECK_CENTROID invalid"
           stop
          endif
-
-         do dir=1,SDIM-1
-          if ((angle_exact_sanity(dir).ge.-Pi).and. &
-              (angle_exact_sanity(dir).le.Pi)) then
-           ! do nothing
-          else
-           print *,"angle_exact_sanity invalid"
-           stop
-          endif
-
-          if (angle_err(angle_exact_sanity(dir),angle_exact_db(dir)).le. &
-              training_tol) then
-           ! do nothing
-          else 
-           print *,"i_training= ",i_training
-           print *,"training_tol=",training_tol
-           print *,"dir=",dir
-           print *,"angle_exact_sanity=",angle_exact_sanity
-           print *,"angle_exact_db=",angle_exact_db
-           print *,"refvfrac= ",refvfrac
-           print *,"refcen= ",refcen
-           print *,"centroidA= ",centroidA
-           print *,"|angle_exact_sanity-angle_exact_db|>tol"
-           stop
-          endif
-         enddo ! dir=1..sdim-1
-
-         do dir=1,SDIM
-          if (abs(refcen(dir)-centroidA(dir)).le.training_tol*dx(1)) then
-           ! do nothing
-          else
-           print *,"DTfortran:i_training= ",i_training
-           print *,"training_tol=",training_tol
-           print *,"dir=",dir
-           print *,"angle_exact_sanity=",angle_exact_sanity
-           print *,"angle_exact_db=",angle_exact_db
-           print *,"refvfrac= ",refvfrac
-           print *,"refcen= ",refcen
-           print *,"centroidA= ",centroidA
-           print *,"|refcen-centroidA|>tol"
-           stop
-          endif
-         enddo ! dir=1..sdim
 
          data_decisions(i_training,MOF_TRAINING_NDIM_DECISIONS) = &
             vof_training(i_training)
