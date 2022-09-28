@@ -1136,11 +1136,10 @@ stop
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T klosten,khisten
       INTEGER_T tid
-      INTEGER_T, parameter :: SANITY_CHECK_CENTROID=1
+      INTEGER_T, parameter :: SANITY_CHECK_CENTROID=0
   
-      if (SANITY_CHECK_CENTROID.eq.1) then
-       print *,"SANITY_CHECK_CENTROID=1"
-      endif
+      print *,"SANITY_CHECK_CENTROID (fort_MOF_training) =", &
+        SANITY_CHECK_CENTROID
  
       tid=0
 
@@ -1802,11 +1801,10 @@ stop
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T klosten,khisten
       INTEGER_T tid
-      INTEGER_T, parameter :: SANITY_CHECK_CENTROID=1
+      INTEGER_T, parameter :: SANITY_CHECK_CENTROID=0
    
-      if (SANITY_CHECK_CENTROID.eq.1) then
-       print *,"SANITY_CHECK_CENTROID=1"
-      endif
+      print *,"SANITY_CHECK_CENTROID (fort_MOF_DT_training) =", &
+        SANITY_CHECK_CENTROID
 
       tid=0
 
