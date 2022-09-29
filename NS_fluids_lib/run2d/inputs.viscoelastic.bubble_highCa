@@ -42,7 +42,6 @@ ns.minimum_relative_error=1.0e-18
 # M.OHTA: scale set in order that initial residual O(1)
 ns.projection_pressure_scale=10000.0
 # M.OHTA use LS height function technique
-# M.OHTA 2 should be ok, 3 is conservative choice
 
 # M.OHTA 1 is faster and works well with new version
 # water is 2nd order, gas is 1st order (both first order is ok too)

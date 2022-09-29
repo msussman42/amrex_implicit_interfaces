@@ -3,7 +3,10 @@ max_step  =  99999    # maximum timestep
 stop_time =  3.0  # maximum problem time
 ns.num_materials=3
 ns.num_species_var=0
-ns.MOFITERMAX=15
+
+ns.continuous_mof=0
+ns.mof_decision_tree_learning=300000
+ns.mof_machine_learning=0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
