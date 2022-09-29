@@ -1136,7 +1136,7 @@ stop
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T klosten,khisten
       INTEGER_T tid
-      INTEGER_T, parameter :: SANITY_CHECK_CENTROID=1
+      INTEGER_T, parameter :: SANITY_CHECK_CENTROID=0
   
       print *,"SANITY_CHECK_CENTROID (fort_MOF_training) =", &
         SANITY_CHECK_CENTROID
@@ -1479,6 +1479,14 @@ stop
          else
           print *,"refvfrac out of range"
           stop
+         endif
+
+         if (SDIM.eq.3) then
+          dir=SDIM-1
+          if ((abs(angle_exact_sanity(dir)).le.1.0D-2).and. &
+              (abs(angle_exact_db(dir)).le.1.0D-2)) then
+           angle_exact_sanity=angle_exact_db
+          endif
          endif
 
          do dir=1,SDIM-1
@@ -2148,6 +2156,14 @@ stop
           else
            print *,"refvfrac out of range"
            stop
+          endif
+
+          if (SDIM.eq.3) then
+           dir=SDIM-1
+           if ((abs(angle_exact_sanity(dir)).le.1.0D-2).and. &
+               (abs(angle_exact_db(dir)).le.1.0D-2)) then
+            angle_exact_sanity=angle_exact_db
+           endif
           endif
 
           do dir=1,SDIM-1
