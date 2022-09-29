@@ -7482,6 +7482,64 @@ end subroutine print_visual_descriptor
       return
       end function atan_verify
 
+      subroutine put_angle_in_range(angle_init,angle_init_range,sdim)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, INTENT(in) :: sdim
+      REAL_T, INTENT(in) :: angle_init(sdim-1)
+      REAL_T, INTENT(out) :: angle_init_range(sdim-1)
+      INTEGER_T :: dir
+
+      do dir=1,sdim-1
+       angle_init_range(dir)=angle_init(dir)
+      enddo
+
+      if (sdim.eq.2) then
+       if ((angle_init(1).ge.-Pi-VOFTOL).and. &
+           (angle_init(1).le.Pi+VOFTOL)) then
+        ! do nothing
+       else
+        print *,"angle_init(1) out of range"
+        stop
+       endif
+      else if (sdim.eq.3) then
+       if ((angle_init(1).ge.-Pi-VOFTOL).and. &
+           (angle_init(1).le.Pi+VOFTOL)) then
+        ! do nothing
+       else
+        print *,"angle_init(1) out of range"
+        stop
+       endif
+       if ((angle_init(sdim-1).ge.-Pi-VOFTOL).and. &
+           (angle_init(sdim-1).le.Pi+VOFTOL)) then
+        if (angle_init(sdim-1).ge.zero) then
+         ! do nothing
+        else if (angle_init(sdim-1).le.zero) then
+         angle_init_range(sdim-1)=-angle_init_range(sdim-1)
+         if (angle_init(1).le.zero) then
+          angle_init_range(1)=angle_init(1)+Pi
+         else if (angle_init(1).ge.zero) then
+          angle_init_range(1)=angle_init(1)-Pi
+         else
+          print *,"angle_init(1) is NaN"
+          stop
+         endif
+        else
+         print *,"angle_init(sdim-1) is NaN"
+         stop
+        endif
+       else
+        print *,"angle_init(sdim-1) out of range"
+        stop
+       endif
+      else
+       print *,"sdim invalid"
+       stop
+      endif
+                      
+      end subroutine put_angle_in_range
+
 ! -pi < angle < pi 
 ! if (x,y) in first quadrant, then 0<theta<pi/2
 ! if (x,y) in fourth quadrant, then -pi/2<theta<0
