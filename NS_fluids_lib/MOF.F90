@@ -10574,9 +10574,9 @@ contains
         xtetlist_vof,nlist_vof, &
         xtetlist_cen,nlist_cen, &
         nlist_alloc, &
-        angle_init, &
+        angle_init, & ! INTENT(out)
         refcen, &
-        angle_recon, &
+        angle_recon, & ! INTENT(in)
         nmax, &
         sdim)
       use probcommon_module
