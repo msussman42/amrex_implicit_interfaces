@@ -1136,7 +1136,7 @@ stop
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T klosten,khisten
       INTEGER_T tid
-      INTEGER_T, parameter :: SANITY_CHECK_CENTROID=0
+      INTEGER_T, parameter :: SANITY_CHECK_CENTROID=1
   
       print *,"SANITY_CHECK_CENTROID (fort_MOF_training) =", &
         SANITY_CHECK_CENTROID
@@ -1468,6 +1468,8 @@ stop
            print *,"dir=",dir
            print *,"angle_exact_sanity=",angle_exact_sanity
            print *,"angle_exact_db=",angle_exact_db
+           print *,"angle_init_db=",angle_init_db
+           print *,"nr_db=",nr_db
            print *,"refvfrac= ",refvfrac
            print *,"refcen= ",refcen
            print *,"centroidA= ",centroidA
@@ -1485,6 +1487,8 @@ stop
            print *,"dir=",dir
            print *,"angle_exact_sanity=",angle_exact_sanity
            print *,"angle_exact_db=",angle_exact_db
+           print *,"angle_init_db=",angle_init_db
+           print *,"nr_db=",nr_db
            print *,"refvfrac= ",refvfrac
            print *,"refcen= ",refcen
            print *,"centroidA= ",centroidA
@@ -2107,6 +2111,8 @@ stop
             print *,"dir=",dir
             print *,"angle_exact_sanity=",angle_exact_sanity
             print *,"angle_exact_db=",angle_exact_db
+            print *,"angle_init_db=",angle_init_db
+            print *,"nr_db=",nr_db
             print *,"refvfrac= ",refvfrac
             print *,"refcen= ",refcen
             print *,"centroidA= ",centroidA
@@ -2124,6 +2130,8 @@ stop
             print *,"dir=",dir
             print *,"angle_exact_sanity=",angle_exact_sanity
             print *,"angle_exact_db=",angle_exact_db
+            print *,"angle_init_db=",angle_init_db
+            print *,"nr_db=",nr_db
             print *,"refvfrac= ",refvfrac
             print *,"refcen= ",refcen
             print *,"centroidA= ",centroidA
