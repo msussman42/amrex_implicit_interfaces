@@ -10478,8 +10478,9 @@ contains
       return
       end subroutine advance_angle
  
-! 3D: x=cos(theta)sin(phi)  y=sin(theta)sin(phi)  z=cos(phi)
-! 2D: (cos(theta),sin(theta)) 
+! angle=(phi,theta)
+! 3D: x=cos(phi)sin(theta)  y=sin(phi)sin(theta)  z=cos(theta)
+! 2D: (cos(phi),sin(phi)) 
 ! arctan2: -pi < angle < pi (declared in GLOBALUTIL.F90)
       subroutine slope_to_angle(nn,angle,sdim)
 
@@ -10518,7 +10519,7 @@ contains
 
       if (sdim.eq.3) then
 
-        ! tan(theta)=y/x   sin(theta)/cos(theta)=y/x
+        ! tan(phi)=y/x   sin(phi)/cos(phi)=y/x
        call arctan2(y,x,angle(1))
        if ((y.eq.zero).and.(x.eq.zero)) then
         if (z.eq.zero) then
@@ -10535,19 +10536,19 @@ contains
          stop
         endif
        else if (abs(x).ge.abs(y)) then
-        ! tan(phi)=x/(z cos(theta))
-        ! sin(phi)/cos(phi)=x/(z cos(theta))
-        ! z=cos(phi)  x=sin(phi)cos(theta)  y=x tan(theta)=sin(phi)sin(theta)
+        ! tan(theta)=x/(z cos(phi))
+        ! sin(theta)/cos(theta)=x/(z cos(phi))
+        ! z=cos(theta)  x=sin(theta)cos(phi) y=x tan(phi)=sin(theta)sin(phi)
         call arctan2(x/cos(angle(1)),z,angle(sdim-1))
        else
-        ! tan(phi)=y/(z sin(theta)
-        ! sin(phi)/cos(phi)=y/(z sin(theta))
-        ! z=cos(phi) y=sin(theta)sin(phi)  x=y/tan(theta)=cos(theta)sin(phi)
+        ! tan(theta)=y/(z sin(phi)
+        ! sin(theta)/cos(theta)=y/(z sin(phi))
+        ! z=cos(theta) y=sin(theta)sin(phi)  x=y/tan(phi)=cos(phi)sin(theta)
         call arctan2(y/sin(angle(1)),z,angle(sdim-1))
        endif 
 
       else if (sdim.eq.2) then
-        ! tan(theta)=y/x   sin(theta)/cos(theta)=y/x
+        ! tan(phi)=y/x   sin(phi)/cos(phi)=y/x
        call arctan2(y,x,angle(1))
  
       else
@@ -10884,6 +10885,7 @@ contains
       INTEGER_T grid_index_ML(sdim)
       INTEGER_T iML,jML,kML,cmofML
       REAL_T angle_init_ML(MOF_TRAINING_NDIM_DECISIONS) !angle,vfrac
+      REAL_T angle_init_range(sdim-1)
       REAL_T angle_output(sdim-1)
 
       REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
@@ -11194,8 +11196,10 @@ contains
           if (fastflag.eq.1) then
            nguess=nguess+1
 
+           call put_angle_in_range(angle_init,angle_init_range,sdim)
+
            do dir=1,sdim-1
-            angle_init_ML(dir)=angle_init(dir)
+            angle_init_ML(dir)=angle_init_range(dir)
            enddo
            angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac
 
@@ -11290,8 +11294,10 @@ contains
           if (fastflag.eq.1) then
            nguess=nguess+1
 
+           call put_angle_in_range(angle_init,angle_init_range,sdim)
+
            do dir=1,sdim-1
-            angle_init_ML(dir)=angle_init(dir)
+            angle_init_ML(dir)=angle_init_range(dir)
            enddo
            angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac
 

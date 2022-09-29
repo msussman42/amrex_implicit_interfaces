@@ -1290,25 +1290,33 @@ stop
        Call random_number(vof_training) ! 0<=vof_training<1
 
        Call random_number(phi_training) ! 0<=phi_training<1
-       phi_training=(phi_training-half) * Pi * two
 
        if (SDIM.eq.2) then
+        phi_training=(phi_training-half) * Pi * two
         Do i_training = 1, num_samples
          theta_training(i_training)=zero
         enddo
        else if (SDIM.eq.3) then
         Call random_number(theta_training) ! 0<=theta_training<1
-        theta_training=(theta_training-half) * Pi * two
+        phi_training=(phi_training-half) * Pi * two
+        theta_training=theta_training * Pi 
        else
         print *,"sdim invalid"
         stop
        endif
 
        Do i_training = 1, num_samples
-        angle_exact_db(1)=phi_training(i_training)
-        if (SDIM.eq.3) then
+
+        if (SDIM.eq.2) then
+         angle_exact_db(1)=phi_training(i_training)
+        else if (SDIM.eq.3) then
+         angle_exact_db(1)=phi_training(i_training)
          angle_exact_db(SDIM-1)=theta_training(i_training)
+        else
+         print *,"dimension bust"
+         stop
         endif
+
         call angle_to_slope(angle_exact_db,nr_db,SDIM)
 
         try_new_vfrac=1
@@ -1359,6 +1367,29 @@ stop
             stop
            endif
           enddo !dir=1,sdim-1
+
+          if (SDIM.eq.2) then
+           ! do nothing
+          else if (SDIM.eq.3) then
+           dir=SDIM-1
+           if ((angle_init_db(dir).ge.zero).and. &
+               (angle_init_db(dir).le.Pi)) then
+            ! do nothing
+           else
+            print *,"angle_init_db invalid"
+            stop
+           endif
+           if ((angle_exact_db(dir).ge.zero).and. &
+               (angle_exact_db(dir).le.Pi)) then
+            ! do nothing
+           else
+            print *,"angle_exact_db invalid"
+            stop
+           endif
+          else
+           print *,"dimension bust"
+           stop
+          endif
 
           do dir=1,SDIM
            grid_index(dir)=0
@@ -1713,11 +1744,6 @@ stop
         endif
        enddo ! do dir=1,sdim
 
-       ! 1. call find_predict_slope(ref_centroid,n_predict)
-       ! 2. call slope_to_angle(n_{predict},angle_{predict})
-       ! 3. angle_output=DT%predict(angle_{predict},F_{ref})
-       ! 4. call angle_to_slope(angle_{output},n_{MachineLearning}
-
        cmof_idx=continuous_mof/2
        call training_array(D_DECL(i,j,k),cmof_idx)% &
          NN_ZHOUTENG_LOCAL%Initialization()
@@ -1933,25 +1959,33 @@ stop
         Call random_number(vof_training) ! 0<=vof_training<1
 
         Call random_number(phi_training) ! 0<=phi_training<1
-        phi_training=(phi_training-half) * Pi * two
 
         if (SDIM.eq.2) then
+         phi_training=(phi_training-half) * Pi * two
          Do i_training = 1, num_samples
           theta_training(i_training)=zero
          enddo
         else if (SDIM.eq.3) then
          Call random_number(theta_training) ! 0<=theta_training<1
-         theta_training=(theta_training-half) * Pi * two
+         phi_training=(phi_training-half) * Pi * two
+         theta_training=theta_training * Pi
         else
          print *,"sdim invalid"
          stop
         endif
 
         Do i_training = 1, num_samples
-         angle_exact_db(1)=phi_training(i_training)
-         if (SDIM.eq.3) then
+
+         if (SDIM.eq.2) then
+          angle_exact_db(1)=phi_training(i_training)
+         else if (SDIM.eq.3) then
+          angle_exact_db(1)=phi_training(i_training)
           angle_exact_db(SDIM-1)=theta_training(i_training)
+         else
+          print *,"dimension bust"
+          stop
          endif
+
          call angle_to_slope(angle_exact_db,nr_db,SDIM)
 
          try_new_vfrac=1
@@ -2002,6 +2036,29 @@ stop
              stop
             endif
            enddo !dir=1,sdim-1
+
+           if (SDIM.eq.2) then
+            ! do nothing
+           else if (SDIM.eq.3) then
+            dir=SDIM-1
+            if ((angle_init_db(dir).ge.zero).and. &
+                (angle_init_db(dir).le.Pi)) then
+             ! do nothing
+            else
+             print *,"angle_init_db invalid"
+             stop
+            endif
+            if ((angle_exact_db(dir).ge.zero).and. &
+                (angle_exact_db(dir).le.Pi)) then
+             ! do nothing
+            else
+             print *,"angle_exact_db invalid"
+             stop
+            endif
+           else
+            print *,"dimension bust"
+            stop
+           endif
 
            do dir=1,SDIM
             grid_index(dir)=0
