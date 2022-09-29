@@ -263,8 +263,6 @@ ns.truncate_thickness=2.0
 # -------- Advection ---------------------------------------
 # ----------------------------------------------------------
 
-# 0=no limiter,  1=minmod
-# 2=minmod with slope=0 at interface 
 # 3=no limiter with slope=0 at interface
 
 # ----------------------------------------------------------

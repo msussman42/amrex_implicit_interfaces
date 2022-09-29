@@ -52,11 +52,9 @@ ns.use_coupling_terms=1  # M.OHTA always choose  this case.
 ns.viscous_relative_tol=1.0e-6
 # OCTOBER 22 - EILE_flag=-1 performs best
 ns.EILE_flag=-1  # EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
-ns.mass_relaxation_factor=0.0
 # water is 1st order, gas is 1st order 
 # JAN18 - make 2 2 if high Reynolds number.
 
-# recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
 ns.truncate_volume_fractions= 1 1 1 1
 ns.truncate_thickness= 2
 

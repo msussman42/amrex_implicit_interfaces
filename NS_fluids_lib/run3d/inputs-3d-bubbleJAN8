@@ -37,10 +37,8 @@ ns.projection_pressure_scale=100.0
 # OCTOBER 22
 # OCTOBER 22 - EILE_flag=-1 performs best
 ns.EILE_flag=-1  # EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)
-ns.mass_relaxation_factor=0.0
 # water is 1st order, gas is 1st order 
 
-# recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
 
 ns.minimum_relative_error=1.0e-18
 ns.initial_project_cycles=10  # number of initial jacobi iterations
