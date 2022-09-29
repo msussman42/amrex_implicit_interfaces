@@ -46,7 +46,6 @@ ns.projection_pressure_scale=10000.0
 
 # M.OHTA 1 is faster and works well with new version
 # water is 2nd order, gas is 1st order (both first order is ok too)
-# recommend minmod limiter=1 (versus no limiter=0 - very dispersive)
 
 ns.initial_project_cycles=10  # number of initial jacobi iterations
 ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get

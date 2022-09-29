@@ -26898,6 +26898,7 @@ REAL_T, INTENT(out) :: data_classified(ndim_classify)
 Type(tree_type), INTENT(in) :: tree_var
 INTEGER_T :: current_id
 INTEGER_T :: current_ndata
+INTEGER_T :: previous_ndata
 INTEGER_T :: splittingrule
 INTEGER_T :: median_index
 INTEGER_T :: dir
@@ -26967,7 +26968,14 @@ INTEGER_T :: datahi(2)
      print *,"data_decision bust"
      stop
     endif
+    previous_ndata=current_ndata
     current_ndata=tree_var%branch_list_data(current_id)%ndata
+    if (current_ndata.le.previous_ndata/2+1) then
+     !do nothing
+    else
+     print *,"current_ndata too large"
+     stop
+    endif
    else
     print *,"median_index invalid"
     stop
