@@ -320,6 +320,9 @@ implicit none
       INTEGER_T :: training_lo(SDIM)
       INTEGER_T :: training_hi(SDIM)
 
+      !https://www.stat.cmu.edu/~cshalizi/350-2006/lecture-10.pdf
+      !S=sum_{c \in leaves(T)} n_{c} V_{c}
+      !V_{c}=(1/n_{c})sum_{i \in C} (y_{i}-m_{c})^{2}
       Type branch_type
        INTEGER_T :: ndata
        INTEGER_T :: parent_id
