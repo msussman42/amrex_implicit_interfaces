@@ -26673,6 +26673,291 @@ REAL_T    :: data1,data2
 
 end subroutine sort_branch_data
 
+subroutine statistics_branch_data( &
+   ndim_classify, &
+   source_branch, &
+   splittingrule, &
+   variance_reduction)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: ndim_classify
+INTEGER_T, INTENT(in) :: splittingrule
+Type(branch_type), INTENT(in) :: source_branch
+REAL_T, INTENT(out) :: variance_reduction
+INTEGER_T :: datalo(2)
+INTEGER_T :: datahi(2)
+INTEGER_T :: datalo_classify(2)
+INTEGER_T :: datahi_classify(2)
+INTEGER_T :: idata,dir
+REAL_T :: mean(ndim_classify)
+REAL_T :: mean_child1(ndim_classify)
+REAL_T :: mean_child2(ndim_classify)
+REAL_T :: variance
+REAL_T :: variance_child1
+REAL_T :: variance_child2
+
+ datalo=LBOUND(source_branch%data_decisions)
+ datahi=UBOUND(source_branch%data_decisions)
+
+ datalo_classify=LBOUND(source_branch%data_classify)
+ datahi_classify=UBOUND(source_branch%data_classify)
+
+ if ((datalo(1).eq.1).and. &
+     (datalo(2).eq.1).and. &
+     (datalo_classify(1).eq.1).and. &
+     (datalo_classify(2).eq.1)) then
+  if ((datahi(1).eq.source_branch%ndata).and. &
+      (datahi(1).ge.2).and. &
+      (datahi(2).ge.splittingrule).and. &
+      (datahi_classify(1).eq.source_branch%ndata).and. &
+      (datahi_classify(2).eq.ndim_classify)) then
+
+   do dir=1,ndim_classify
+    mean(dir)=zero
+    mean_child1(dir)=zero
+    mean_child2(dir)=zero
+   enddo
+
+   do idata=1,datahi_classify(1)
+    do dir=1,ndim_classify
+     mean(dir)=mean(dir)+source_branch%data_classify(idata,dir)
+     if (idata.le.source_branch%median_index) then
+      mean_child1(dir)=mean_child1(dir)+ &
+          source_branch%data_classify(idata,dir)
+     else if ((idata.gt.source_branch%median_index).and. &
+              (idata.le.source_branch%ndata)) then
+      mean_child2(dir)=mean_child2(dir)+ &
+          source_branch%data_classify(idata,dir)
+     else
+      print *,"idata invalid"
+      stop
+     endif
+    enddo
+   enddo
+   do dir=1,ndim_classify
+    mean(dir)=mean(dir)/source_branch%ndata
+    mean_child1(dir)=mean_child1(dir)/source_branch%median_index
+    mean_child2(dir)=mean_child2(dir)/ &
+        (source_branch%ndata-source_branch%median_index)
+   enddo
+   variance=zero
+   variance_child1=zero
+   variance_child2=zero
+    
+   do idata=1,datahi_classify(1)
+    do dir=1,ndim_classify
+     variance=variance+ &
+        (source_branch%data_classify(idata,dir)-mean(dir))**2
+     if (idata.le.source_branch%median_index) then
+      variance_child1=variance_child1+ &
+        (source_branch%data_classify(idata,dir)-mean_child1(dir))**2
+     else if ((idata.gt.source_branch%median_index).and. &
+              (idata.le.source_branch%ndata)) then
+      variance_child2=variance_child2+ &
+        (source_branch%data_classify(idata,dir)-mean_child2(dir))**2
+     else
+      print *,"idata invalid"
+      stop
+     endif
+    enddo
+   enddo
+
+  else
+   print *,"datahi invalid"
+   stop
+  endif
+ else
+  print *,"datalo invalid"
+  stop
+ endif
+
+ variance_reduction=variance-(variance_child1+variance_child2)
+ if (variance_reduction.ge.zero) then
+  ! do nothing
+ else
+  print *,"variance_reduction invalid"
+  stop
+ endif
+
+end subroutine statistics_branch_data
+
+
+subroutine children_branch_data( &
+   tree_var, &
+   ndim_decisions, &
+   ndim_classify, &
+   current_level, &
+   current_branch_id, &
+   source_branch, &
+   splittingrule)
+use probcommon_module
+IMPLICIT NONE
+
+Type(tree_type), INTENT(inout) :: tree_var
+INTEGER_T, INTENT(in) :: ndim_decisions
+INTEGER_T, INTENT(in) :: ndim_classify
+INTEGER_T, INTENT(in) :: splittingrule
+Type(branch_type), INTENT(inout) :: source_branch
+INTEGER_T, INTENT(in) :: current_level
+INTEGER_T, INTENT(inout) :: current_branch_id
+INTEGER_T :: datalo(2)
+INTEGER_T :: datahi(2)
+INTEGER_T :: datalo_classify(2)
+INTEGER_T :: datahi_classify(2)
+INTEGER_T :: idata,dir
+REAL_T, allocatable :: save_data_decisions(:,:)
+REAL_T, allocatable :: save_data_classify(:,:)
+
+INTEGER_T :: local_ndata
+INTEGER_T :: local_parent_id
+INTEGER_T :: local_parent_level
+INTEGER_T :: local_current_id
+INTEGER_T :: local_current_level
+INTEGER_T :: local_splittingrule
+INTEGER_T :: local_median_index
+INTEGER_T :: local_child1_id
+INTEGER_T :: local_child_level
+INTEGER_T :: local_child2_id
+
+ datalo=LBOUND(source_branch%data_decisions)
+ datahi=UBOUND(source_branch%data_decisions)
+
+ datalo_classify=LBOUND(source_branch%data_classify)
+ datahi_classify=UBOUND(source_branch%data_classify)
+
+ if ((datalo(1).eq.1).and. &
+     (datalo(2).eq.1).and. &
+     (datalo_classify(1).eq.1).and. &
+     (datalo_classify(2).eq.1)) then
+  if ((datahi(1).eq.source_branch%ndata).and. &
+      (datahi(1).ge.2).and. &
+      (datahi(2).ge.splittingrule).and. &
+      (datahi(2).eq.ndim_decisions).and. &
+      (datahi_classify(1).eq.source_branch%ndata).and. &
+      (datahi_classify(2).eq.ndim_classify)) then
+
+   source_branch%splittingrule=splittingrule
+
+   current_branch_id=current_branch_id+2
+   tree_var%branch_list_level(current_level+1)%nbranches=current_branch_id
+
+   source_branch%child1_id=current_branch_id-1
+   source_branch%child2_id=current_branch_id
+   source_branch%child_level=current_level+1
+
+   if (source_branch%current_level.eq.current_level) then
+    ! do nothing
+   else
+    print *,"current_level invalid"
+    stop
+   endif
+
+   local_ndata=source_branch%median_index
+   local_parent_id=source_branch%current_id
+   local_parent_level=current_level
+   local_current_id=current_branch_id-1
+   local_current_level=current_level+1
+   local_splittingrule=-1
+   local_median_index=-1
+   local_child1_id=-1
+   local_child2_id=-1
+   local_child_level=-1
+
+   allocate(save_data_decisions(local_ndata,ndim_decisions))
+   allocate(save_data_classify(local_ndata,ndim_classify))
+
+   do idata=1,local_ndata
+    do dir=1,ndim_decisions
+     save_data_decisions(idata,dir)=source_branch%data_decisions(idata,dir)
+    enddo
+   enddo
+   do idata=1,local_ndata
+    do dir=1,ndim_classify
+     save_data_classify(idata,dir)=source_branch%data_classify(idata,dir)
+    enddo
+   enddo
+
+   call init_branch( &
+    tree_var%branch_list_level(local_current_level)% &
+       branch_list(local_current_id), &
+    ndim_decisions, &
+    ndim_classify, &
+    save_data_decisions, &
+    save_data_classify, &
+    local_ndata, &
+    local_parent_id, &
+    local_parent_level, &
+    local_current_id, &
+    local_current_level, &
+    local_splittingrule, &
+    local_median_index, &
+    local_child1_id, &
+    local_child2_id, &
+    local_child_level)
+
+   deallocate(save_data_decisions)
+   deallocate(save_data_classify)
+
+   local_ndata=source_branch%ndata-source_branch%median_index
+   local_parent_id=source_branch%current_id
+   local_parent_level=current_level
+   local_current_id=current_branch_id
+   local_current_level=current_level+1
+   local_splittingrule=-1
+   local_median_index=-1
+   local_child1_id=-1
+   local_child2_id=-1
+   local_child_level=-1
+
+   allocate(save_data_decisions(local_ndata,ndim_decisions))
+   allocate(save_data_classify(local_ndata,ndim_classify))
+
+   do idata=1,local_ndata
+    do dir=1,ndim_decisions
+     save_data_decisions(idata,dir)= &
+          source_branch%data_decisions(idata+source_branch%median_index,dir)
+    enddo
+   enddo
+   do idata=1,local_ndata
+    do dir=1,ndim_classify
+     save_data_classify(idata,dir)= &
+          source_branch%data_classify(idata+source_branch%median_index,dir)
+    enddo
+   enddo
+
+   call init_branch( &
+    tree_var%branch_list_level(local_current_level)% &
+       branch_list(local_current_id), &
+    ndim_decisions, &
+    ndim_classify, &
+    save_data_decisions, &
+    save_data_classify, &
+    local_ndata, &
+    local_parent_id, &
+    local_parent_level, &
+    local_current_id, &
+    local_current_level, &
+    local_splittingrule, &
+    local_median_index, &
+    local_child1_id, &
+    local_child2_id, &
+    local_child_level)
+
+   deallocate(save_data_decisions)
+   deallocate(save_data_classify)
+
+  else
+   print *,"datahi invalid"
+   stop
+  endif
+ else
+  print *,"datalo invalid"
+  stop
+ endif
+
+end subroutine children_branch_data
+
 subroutine test_variance_results( &
    ndim_classify, &
    splittingrule, &
@@ -26682,11 +26967,16 @@ subroutine test_variance_results( &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: ndim_clssify
+INTEGER_T, INTENT(in) :: ndim_classify
 INTEGER_T, INTENT(in) :: splittingrule
 Type(tree_type), INTENT(inout) :: tree_var
 INTEGER_T, INTENT(in) :: current_level
 REAL_T, INTENT(out) :: variance_reduction
+INTEGER_T :: nbranches
+INTEGER_T :: ibranch
+INTEGER_T :: local_ndata
+INTEGER_T :: local_median_index
+REAL_T :: local_variance_reduction
 
  nbranches=tree_var%branch_list_level(current_level)%nbranches
  if (nbranches.eq.tree_var%nbranches_level(current_level)) then
@@ -26723,15 +27013,24 @@ REAL_T, INTENT(out) :: variance_reduction
 end subroutine test_variance_results
 
 subroutine init_new_tree_level( &
+   ndim_decisions, &
+   ndim_classify, &
    splittingrule, &
    tree_var, &
    current_level)
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, INTENT(in) :: ndim_decisions
+INTEGER_T, INTENT(in) :: ndim_classify
 INTEGER_T, INTENT(in) :: splittingrule
 Type(tree_type), INTENT(inout) :: tree_var
 INTEGER_T, INTENT(in) :: current_level
+INTEGER_T :: nbranches
+INTEGER_T :: current_branch_id
+INTEGER_T :: ibranch
+INTEGER_T :: local_ndata
+INTEGER_T :: local_median_index
 
  nbranches=tree_var%branch_list_level(current_level)%nbranches
  if (nbranches.eq.tree_var%nbranches_level(current_level)) then
@@ -26741,6 +27040,7 @@ INTEGER_T, INTENT(in) :: current_level
   stop
  endif
 
+ current_branch_id=0
  do ibranch=1,nbranches
   local_ndata=tree_var%branch_list_level(current_level)% &
           branch_list(ibranch)%ndata
@@ -26752,13 +27052,18 @@ INTEGER_T, INTENT(in) :: current_level
     splittingrule, & 
     local_median_index)
    call children_branch_data( &
+    tree_var, &
+    ndim_decisions, &
+    ndim_classify, &
+    current_level, &
+    current_branch_id, &
     tree_var%branch_list_level(current_level)%branch_list(ibranch), &
     splittingrule)
   else
    print *,"local_ndata invalid"
    stop
   endif
- enddo
+ enddo ! ibranch=1,nbranches
 
 end subroutine init_new_tree_level
 
@@ -26775,12 +27080,9 @@ subroutine init_branch( &
    current_level, &
    splittingrule, &
    median_index, &
-   mean, &
-   variance, &
    child1_id, &
    child2_id, &
-   child1_level, &
-   child2_level)
+   child_level)
 use probcommon_module
 IMPLICIT NONE
 
@@ -26788,20 +27090,17 @@ Type(branch_type), INTENT(out) :: dest_branch
 INTEGER_T, INTENT(in) :: ndim_decisions
 INTEGER_T, INTENT(in) :: ndim_classify
 INTEGER_T, INTENT(in) :: ndata
-REAL_T, INTENT(in), :: data_decisions(ndata,ndim_decisions)
-REAL_T, INTENT(in), :: data_classify(ndata,ndim_classify)
+REAL_T, INTENT(in) :: data_decisions(ndata,ndim_decisions)
+REAL_T, INTENT(in) :: data_classify(ndata,ndim_classify)
 INTEGER_T, INTENT(in) :: parent_id
 INTEGER_T, INTENT(in) :: parent_level
 INTEGER_T, INTENT(in) :: current_id
 INTEGER_T, INTENT(in) :: current_level
 INTEGER_T, INTENT(in) :: splittingrule
 INTEGER_T, INTENT(in) :: median_index
-REAL_T, INTENT(in) :: mean(ndim_classify)
-REAL_T, INTENT(in) :: variance(ndim_classify)
 INTEGER_T, INTENT(in) :: child1_id
 INTEGER_T, INTENT(in) :: child2_id
-INTEGER_T, INTENT(in) :: child1_level
-INTEGER_T, INTENT(in) :: child2_level
+INTEGER_T, INTENT(in) :: child_level
 
  dest_branch%ndata=ndata
  dest_branch%parent_id=parent_id
@@ -26812,19 +27111,13 @@ INTEGER_T, INTENT(in) :: child2_level
  dest_branch%median_index=median_index
  dest_branch%child1_id=child1_id
  dest_branch%child2_id=child2_id
- dest_branch%child1_level=child1_level
- dest_branch%child2_level=child2_level
+ dest_branch%child_level=child_level
 
  allocate(dest_branch%data_decisions(ndata,ndim_decisions))
  dest_branch%data_decisions=data_decisions
  allocate(dest_branch%data_classify(ndata,ndim_classify))
  dest_branch%data_classify=data_classify
     
- allocate(dest_branch%mean(ndim_classify)) 
- allocate(dest_branch%variance(ndim_classify)) 
- dest_branch%mean=mean
- dest_branch%variance=variance
-
 end subroutine init_branch
 
 subroutine initialize_decision_tree(data_decisions,data_classify, &
@@ -26850,15 +27143,15 @@ INTEGER_T :: local_current_id
 INTEGER_T :: local_current_level
 INTEGER_T :: local_splittingrule
 INTEGER_T :: local_median_index
-REAL_T :: local_mean(ndim_classify)
-REAL_T :: local_variance(ndim_classify)
 INTEGER_T :: local_child1_id
-INTEGER_T :: local_child1_level
+INTEGER_T :: local_child_level
 INTEGER_T :: local_child2_id
-INTEGER_T :: local_child2_level
 REAL_T :: local_variance_reduction
 REAL_T :: max_variance_reduction
 INTEGER_T :: max_splittingrule
+INTEGER_T :: local_nbranches
+INTEGER_T :: local_nbranches_next_level
+INTEGER_T :: ibranch
 
  tree_var%max_number_tree_levels=1
  tree_var%number_tree_levels=1
@@ -26903,15 +27196,12 @@ INTEGER_T :: max_splittingrule
  local_current_level=1
  local_splittingrule=-1
  local_median_index=-1
- local_mean=zero
- local_variance=zero
  local_child1_id=-1
  local_child2_id=-1
- local_child1_level=2
- local_child2_level=2
+ local_child_level=2
 
  call init_branch( &
-  tree_var%branch_list_level(1)%branch_list(1), &
+  tree_var%branch_list_level(local_current_level)%branch_list(1), &
   ndim_decisions, &
   ndim_classify, &
   data_decisions, &
@@ -26923,14 +27213,41 @@ INTEGER_T :: max_splittingrule
   local_current_level, &
   local_splittingrule, &
   local_median_index, &
-  local_mean, &
-  local_variance, &
   local_child1_id, &
   local_child2_id, &
-  local_child1_level, &
-  local_child2_level)
+  local_child_level)
 
  do while (local_current_level.lt.tree_var%max_number_tree_levels)
+
+   local_nbranches=tree_var%branch_list_level(local_current_level)%nbranches
+   allocate(tree_var%branch_list_level(local_current_level+1)% &
+        branch_list(2*local_nbranches))
+
+   local_nbranches_next_level=0
+
+   do ibranch=1,local_nbranches
+    local_ndata=tree_var%branch_list_level(local_current_level)% &
+            branch_list(ibranch)%ndata
+    if (local_ndata.ge.2) then
+     local_nbranches_next_level=local_nbranches_next_level+2
+    else if (local_ndata.eq.1) then
+     ! do nothing
+    else
+     print *,"local_ndata invalid"
+     stop
+    endif
+   enddo !ibranch=1,local_nbranches
+
+   tree_var%branch_list_level(local_current_level+1)%nbranches= &
+       local_nbranches_next_level
+
+   if ((local_nbranches_next_level.ge.0).and. &
+       (local_nbranches_next_level.le.2*local_nbranches)) then
+    ! do nothing
+   else
+    print *,"local_nbranches_next_level invalid"
+    stop
+   endif
 
    max_variance_reduction=zero
    max_splittingrule=0
@@ -26960,12 +27277,14 @@ INTEGER_T :: max_splittingrule
    enddo
 
    call init_new_tree_level( &
+     ndim_decisions, &
+     ndim_classify, &
      max_splittingrule, &
      tree_var, &
      local_current_level)
 
    local_current_level=local_current_level+1
- enddo 
+ enddo !while (local_current_level.lt.tree_var%max_number_tree_levels)
 
 end subroutine initialize_decision_tree
 
@@ -27073,12 +27392,12 @@ INTEGER_T :: datahi(2)
      current_id=tree_var%branch_list_level(prev_level)% &
           branch_list(prev_id)%child1_id
      current_level=tree_var%branch_list_level(prev_level)% &
-          branch_list(prev_id)%child1_level
+          branch_list(prev_id)%child_level
     else if (data_decision(splittingrule).gt.half*(data1+data2)) then
      current_id=tree_var%branch_list_level(prev_level)% &
           branch_list(prev_id)%child2_id
      current_level=tree_var%branch_list_level(prev_level)% &
-          branch_list(prev_id)%child2_level
+          branch_list(prev_id)%child_level
     else
      print *,"data_decision bust"
      stop
