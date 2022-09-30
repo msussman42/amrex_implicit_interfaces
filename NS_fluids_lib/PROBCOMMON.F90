@@ -347,6 +347,7 @@ implicit none
       end Type level_branch_type
 
       Type tree_type
+       INTEGER_T :: max_number_tree_levels
        INTEGER_T :: number_tree_levels
        INTEGER_T, pointer :: nbranches_level(:) 
        Type(level_branch_type), pointer :: branch_list_level(:)
