@@ -26570,16 +26570,26 @@ INTEGER_T, INTENT(out) :: median_index
 INTEGER_T, allocatable :: A_list(:)
 INTEGER_T, allocatable :: B_list(:)
 REAL_T, allocatable :: data_to_sort(:)
-Type(branch_type) :: save_branch
+REAL_T, allocatable :: save_data_decisions(:,:)
+REAL_T, allocatable :: save_data_classify(:,:)
 INTEGER_T :: datalo(2)
 INTEGER_T :: datahi(2)
+INTEGER_T :: datalo_classify(2)
+INTEGER_T :: datahi_classify(2)
 INTEGER_T :: idata,dir
 REAL_T    :: data1,data2
 
  datalo=LBOUND(source_branch%data_decisions)
  datahi=UBOUND(source_branch%data_decisions)
 
- call copy_branch(save_branch,source_branch)
+ allocate(save_data_decisions(datahi(1),datahi(2)))
+ save_data_decisions=source_branch%data_decisions
+
+ datalo_classify=LBOUND(source_branch%data_classify)
+ datahi_classify=UBOUND(source_branch%data_classify)
+
+ allocate(save_data_classify(datahi_classify(1),datahi_classify(2)))
+ save_data_classify=source_branch%data_classify
 
  if ((datalo(1).eq.1).and.(datalo(2).eq.1)) then
   if ((datahi(1).eq.source_branch%ndata).and. &
@@ -26607,20 +26617,17 @@ REAL_T    :: data1,data2
    do idata=1,datahi(1)
     do dir=1,datahi(2)
      source_branch%data_decisions(idata,dir)= &
-            save_branch%data_decisions(A_list(idata),dir)
+            save_data_decisions(A_list(idata),dir)
     enddo
    enddo
 
-   datalo=LBOUND(source_branch%data_classify)
-   datahi=UBOUND(source_branch%data_classify)
+   if ((datalo_classify(1).eq.1).and.(datalo_classify(2).eq.1)) then
+    if (datahi_classify(1).eq.source_branch%ndata) then
 
-   if ((datalo(1).eq.1).and.(datalo(2).eq.1)) then
-    if (datahi(1).eq.source_branch%ndata) then
-
-     do idata=1,datahi(1)
-      do dir=1,datahi(2)
+     do idata=1,datahi_classify(1)
+      do dir=1,datahi_classify(2)
        source_branch%data_classify(idata,dir)= &
-            save_branch%data_classify(A_list(idata),dir)
+            save_data_classify(A_list(idata),dir)
       enddo
      enddo
 
@@ -26646,13 +26653,14 @@ REAL_T    :: data1,data2
    enddo
 
    median_index=datahi(1)/2
+   source_branch%median_index=median_index
 
    deallocate(A_list)
    deallocate(B_list)
    deallocate(data_to_sort)
 
-   deallocate(save_branch%data_decisions)
-   deallocate(save_branch%data_classify)
+   deallocate(save_data_decisions)
+   deallocate(save_data_classify)
 
   else
    print *,"datahi invalid"
@@ -26665,55 +26673,159 @@ REAL_T    :: data1,data2
 
 end subroutine sort_branch_data
 
-subroutine copy_branch(dest_branch,source_branch)
+subroutine test_variance_results( &
+   ndim_classify, &
+   splittingrule, &
+   tree_var, &
+   current_level, &
+   variance_reduction)
 use probcommon_module
 IMPLICIT NONE
 
-Type(branch_type), INTENT(in) :: source_branch
+INTEGER_T, INTENT(in) :: ndim_clssify
+INTEGER_T, INTENT(in) :: splittingrule
+Type(tree_type), INTENT(inout) :: tree_var
+INTEGER_T, INTENT(in) :: current_level
+REAL_T, INTENT(out) :: variance_reduction
+
+ nbranches=tree_var%branch_list_level(current_level)%nbranches
+ if (nbranches.eq.tree_var%nbranches_level(current_level)) then
+  ! do nothing
+ else
+  print *,"nbranches corrupt"
+  stop
+ endif
+
+ variance_reduction=zero
+
+ do ibranch=1,nbranches
+  local_ndata=tree_var%branch_list_level(current_level)% &
+          branch_list(ibranch)%ndata
+  if (local_ndata.eq.1) then
+   ! do nothing
+  else if (local_ndata.ge.2) then
+   call sort_branch_data( &
+    tree_var%branch_list_level(current_level)%branch_list(ibranch), &
+    splittingrule, & 
+    local_median_index)
+   call statistics_branch_data( &
+    ndim_classify, &
+    tree_var%branch_list_level(current_level)%branch_list(ibranch), &
+    splittingrule, & 
+    local_variance_reduction)
+   variance_reduction=variance_reduction+local_variance_reduction
+  else
+   print *,"local_ndata invalid"
+   stop
+  endif
+ enddo
+
+end subroutine test_variance_results
+
+subroutine init_new_tree_level( &
+   splittingrule, &
+   tree_var, &
+   current_level)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: splittingrule
+Type(tree_type), INTENT(inout) :: tree_var
+INTEGER_T, INTENT(in) :: current_level
+
+ nbranches=tree_var%branch_list_level(current_level)%nbranches
+ if (nbranches.eq.tree_var%nbranches_level(current_level)) then
+  ! do nothing
+ else
+  print *,"nbranches corrupt"
+  stop
+ endif
+
+ do ibranch=1,nbranches
+  local_ndata=tree_var%branch_list_level(current_level)% &
+          branch_list(ibranch)%ndata
+  if (local_ndata.eq.1) then
+   ! do nothing
+  else if (local_ndata.ge.2) then
+   call sort_branch_data( &
+    tree_var%branch_list_level(current_level)%branch_list(ibranch), &
+    splittingrule, & 
+    local_median_index)
+   call children_branch_data( &
+    tree_var%branch_list_level(current_level)%branch_list(ibranch), &
+    splittingrule)
+  else
+   print *,"local_ndata invalid"
+   stop
+  endif
+ enddo
+
+end subroutine init_new_tree_level
+
+subroutine init_branch( &
+   dest_branch, &
+   ndim_decisions, &
+   ndim_classify, &
+   data_decisions, &
+   data_classify, &
+   ndata, &
+   parent_id, &
+   parent_level, &
+   current_id, &
+   current_level, &
+   splittingrule, &
+   median_index, &
+   mean, &
+   variance, &
+   child1_id, &
+   child2_id, &
+   child1_level, &
+   child2_level)
+use probcommon_module
+IMPLICIT NONE
+
 Type(branch_type), INTENT(out) :: dest_branch
-INTEGER_T :: datalo(2)
-INTEGER_T :: datahi(2)
+INTEGER_T, INTENT(in) :: ndim_decisions
+INTEGER_T, INTENT(in) :: ndim_classify
+INTEGER_T, INTENT(in) :: ndata
+REAL_T, INTENT(in), :: data_decisions(ndata,ndim_decisions)
+REAL_T, INTENT(in), :: data_classify(ndata,ndim_classify)
+INTEGER_T, INTENT(in) :: parent_id
+INTEGER_T, INTENT(in) :: parent_level
+INTEGER_T, INTENT(in) :: current_id
+INTEGER_T, INTENT(in) :: current_level
+INTEGER_T, INTENT(in) :: splittingrule
+INTEGER_T, INTENT(in) :: median_index
+REAL_T, INTENT(in) :: mean(ndim_classify)
+REAL_T, INTENT(in) :: variance(ndim_classify)
+INTEGER_T, INTENT(in) :: child1_id
+INTEGER_T, INTENT(in) :: child2_id
+INTEGER_T, INTENT(in) :: child1_level
+INTEGER_T, INTENT(in) :: child2_level
 
- dest_branch%ndata=source_branch%ndata
- dest_branch%parent_id=source_branch%parent_id
- dest_branch%current_id=source_branch%current_id
- dest_branch%parent_splittingrule=source_branch%parent_splittingrule
- dest_branch%children_splittingrule=source_branch%children_splittingrule
- dest_branch%median_index=source_branch%median_index
- dest_branch%child1_id=source_branch%child1_id
- dest_branch%child2_id=source_branch%child2_id
+ dest_branch%ndata=ndata
+ dest_branch%parent_id=parent_id
+ dest_branch%parent_level=parent_level
+ dest_branch%current_id=current_id
+ dest_branch%current_level=current_level
+ dest_branch%splittingrule=splittingrule
+ dest_branch%median_index=median_index
+ dest_branch%child1_id=child1_id
+ dest_branch%child2_id=child2_id
+ dest_branch%child1_level=child1_level
+ dest_branch%child2_level=child2_level
 
- datalo=LBOUND(source_branch%data_decisions)
- datahi=UBOUND(source_branch%data_decisions)
- if ((datalo(1).eq.1).and.(datalo(2).eq.1)) then
-  if (datahi(1).eq.source_branch%ndata) then
-   allocate(dest_branch%data_decisions(datahi(1),datahi(2)))
-   dest_branch%data_decisions=source_branch%data_decisions
-  else
-   print *,"datahi(1) invalid"
-   stop
-  endif
- else
-  print *,"datalo invalid"
-  stop
- endif
-     
- datalo=LBOUND(source_branch%data_classify)
- datahi=UBOUND(source_branch%data_classify)
- if ((datalo(1).eq.1).and.(datalo(2).eq.1)) then
-  if (datahi(1).eq.source_branch%ndata) then
-   allocate(dest_branch%data_classify(datahi(1),datahi(2)))
-   dest_branch%data_classify=source_branch%data_classify
-  else
-   print *,"datahi(1) invalid"
-   stop
-  endif
- else
-  print *,"datalo invalid"
-  stop
- endif
+ allocate(dest_branch%data_decisions(ndata,ndim_decisions))
+ dest_branch%data_decisions=data_decisions
+ allocate(dest_branch%data_classify(ndata,ndim_classify))
+ dest_branch%data_classify=data_classify
+    
+ allocate(dest_branch%mean(ndim_classify)) 
+ allocate(dest_branch%variance(ndim_classify)) 
+ dest_branch%mean=mean
+ dest_branch%variance=variance
 
-end subroutine copy_branch
+end subroutine init_branch
 
 subroutine initialize_decision_tree(data_decisions,data_classify, &
         nsamples,ndim_decisions,ndim_classify,tree_var)
@@ -26738,8 +26850,8 @@ INTEGER_T :: local_current_id
 INTEGER_T :: local_current_level
 INTEGER_T :: local_splittingrule
 INTEGER_T :: local_median_index
-REAL_T :: local_mean
-REAL_T :: local_variance
+REAL_T :: local_mean(ndim_classify)
+REAL_T :: local_variance(ndim_classify)
 INTEGER_T :: local_child1_id
 INTEGER_T :: local_child1_level
 INTEGER_T :: local_child2_id
@@ -26800,6 +26912,8 @@ INTEGER_T :: max_splittingrule
 
  call init_branch( &
   tree_var%branch_list_level(1)%branch_list(1), &
+  ndim_decisions, &
+  ndim_classify, &
   data_decisions, &
   data_classify, &
   local_ndata, &
@@ -26821,7 +26935,9 @@ INTEGER_T :: max_splittingrule
    max_variance_reduction=zero
    max_splittingrule=0
    do local_splittingrule=1,ndim_decisions
+
     call test_variance_results( &
+     ndim_classify, &
      local_splittingrule, &
      tree_var, &
      local_current_level, &
