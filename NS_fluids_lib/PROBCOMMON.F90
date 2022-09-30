@@ -331,8 +331,8 @@ implicit none
        INTEGER_T :: current_level
        INTEGER_T :: splittingrule
        INTEGER_T :: median_index
-       REAL_T :: mean
-       REAL_T :: variance
+       REAL_T, pointer :: mean(:)
+       REAL_T, pointer :: variance(:)
        REAL_T, pointer :: data_decisions(:,:) !datanum, data_idx
        REAL_T, pointer :: data_classify(:,:) !datanum, data_idx
        INTEGER_T :: child1_id
