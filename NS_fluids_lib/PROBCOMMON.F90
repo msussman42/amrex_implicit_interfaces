@@ -320,28 +320,33 @@ implicit none
       INTEGER_T :: training_lo(SDIM)
       INTEGER_T :: training_hi(SDIM)
 
-       !
-       ! Note: the decision tree data will be used for the first cut
-       ! if the cmof_stencil is full (or using MOF); regardless of the
-       ! number of materials in the (super) cell. 
       Type branch_type
        INTEGER_T :: ndata
        INTEGER_T :: parent_id
+       INTEGER_T :: parent_level
        INTEGER_T :: current_id
-       INTEGER_T :: parent_splittingrule
-       INTEGER_T :: children_splittingrule
+       INTEGER_T :: current_level
+       INTEGER_T :: splittingrule
        INTEGER_T :: median_index
+       REAL_T :: mean
+       REAL_T :: variance
        REAL_T, pointer :: data_decisions(:,:) !datanum, data_idx
        REAL_T, pointer :: data_classify(:,:) !datanum, data_idx
        INTEGER_T :: child1_id
+       INTEGER_T :: child1_level
        INTEGER_T :: child2_id
+       INTEGER_T :: child2_level
       end Type branch_type
 
+      Type level_branch_type
+        INTEGER_T :: nbranches
+        Type(branch_type), pointer :: branch_list(:)
+      end Type level_branch_type
+
       Type tree_type
-       INTEGER_T :: nbranches_data
-       INTEGER_T :: nbranches_stack
-       Type(branch_type), pointer :: branch_list_data(:)
-       Type(branch_type), pointer :: branch_list_stack(:)
+       INTEGER_T :: number_tree_levels
+       INTEGER_T, pointer :: nbranches_level(:) 
+       Type(level_branch_type), pointer :: branch_list_level(:)
       end Type tree_type
 
       Type(tree_type), allocatable, dimension(D_DECL(:,:,:),:) :: &
