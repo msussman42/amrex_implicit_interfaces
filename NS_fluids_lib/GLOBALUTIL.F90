@@ -26561,12 +26561,14 @@ INTEGER_T :: k
 
 end subroutine CopyArrayReal
 
-subroutine sort_branch_data(source_branch,splittingrule,median_index)
+subroutine sort_branch_data(source_branch,splittingrule, &
+     median_index,median_value)
 use probcommon_module
 
 Type(branch_type), INTENT(inout) :: source_branch
 INTEGER_T, INTENT(in) :: splittingrule
 INTEGER_T, INTENT(out) :: median_index
+REAL_T, INTENT(out) :: median_value
 INTEGER_T, allocatable :: A_list(:)
 INTEGER_T, allocatable :: B_list(:)
 REAL_T, allocatable :: data_to_sort(:)
@@ -26654,6 +26656,9 @@ REAL_T    :: data1,data2
 
    median_index=datahi(1)/2
    source_branch%median_index=median_index
+   source_branch%median_value= &
+     half*(source_branch%data_decisions(median_index,splittingrule)+ &
+           source_branch%data_decisions(median_index+1,splittingrule))
 
    deallocate(A_list)
    deallocate(B_list)
@@ -26737,9 +26742,16 @@ REAL_T :: variance_child2
    enddo
    do dir=1,ndim_classify
     mean(dir)=mean(dir)/source_branch%ndata
-    mean_child1(dir)=mean_child1(dir)/source_branch%median_index
-    mean_child2(dir)=mean_child2(dir)/ &
+
+    if ((source_branch%median_index.ge.1).and. &
+        (source_branch%median_index.lt.source_branch%ndata)) then
+     mean_child1(dir)=mean_child1(dir)/source_branch%median_index
+     mean_child2(dir)=mean_child2(dir)/ &
         (source_branch%ndata-source_branch%median_index)
+    else
+     print *,"median_index invalid"
+     stop
+    endif
    enddo
    variance=zero
    variance_child1=zero
@@ -26816,6 +26828,7 @@ INTEGER_T :: local_current_id
 INTEGER_T :: local_current_level
 INTEGER_T :: local_splittingrule
 INTEGER_T :: local_median_index
+INTEGER_T :: local_median_value
 INTEGER_T :: local_child1_id
 INTEGER_T :: local_child_level
 INTEGER_T :: local_child2_id
@@ -26860,6 +26873,7 @@ INTEGER_T :: local_child2_id
    local_current_level=current_level+1
    local_splittingrule=-1
    local_median_index=-1
+   local_median_value=zero
    local_child1_id=-1
    local_child2_id=-1
    local_child_level=-1
@@ -26892,6 +26906,7 @@ INTEGER_T :: local_child2_id
     local_current_level, &
     local_splittingrule, &
     local_median_index, &
+    local_median_value, &
     local_child1_id, &
     local_child2_id, &
     local_child_level)
@@ -26906,6 +26921,7 @@ INTEGER_T :: local_child2_id
    local_current_level=current_level+1
    local_splittingrule=-1
    local_median_index=-1
+   local_median_value=zero
    local_child1_id=-1
    local_child2_id=-1
    local_child_level=-1
@@ -26940,6 +26956,7 @@ INTEGER_T :: local_child2_id
     local_current_level, &
     local_splittingrule, &
     local_median_index, &
+    local_median_value, &
     local_child1_id, &
     local_child2_id, &
     local_child_level)
@@ -26976,6 +26993,7 @@ INTEGER_T :: nbranches
 INTEGER_T :: ibranch
 INTEGER_T :: local_ndata
 INTEGER_T :: local_median_index
+REAL_T :: local_median_value
 REAL_T :: local_variance_reduction
 
  nbranches=tree_var%branch_list_level(current_level)%nbranches
@@ -26997,7 +27015,8 @@ REAL_T :: local_variance_reduction
    call sort_branch_data( &
     tree_var%branch_list_level(current_level)%branch_list(ibranch), &
     splittingrule, & 
-    local_median_index)
+    local_median_index, &
+    local_median_value)
    call statistics_branch_data( &
     ndim_classify, &
     tree_var%branch_list_level(current_level)%branch_list(ibranch), &
@@ -27031,6 +27050,7 @@ INTEGER_T :: current_branch_id
 INTEGER_T :: ibranch
 INTEGER_T :: local_ndata
 INTEGER_T :: local_median_index
+REAL_T :: local_median_value
 
  nbranches=tree_var%branch_list_level(current_level)%nbranches
  if (nbranches.eq.tree_var%nbranches_level(current_level)) then
@@ -27050,7 +27070,8 @@ INTEGER_T :: local_median_index
    call sort_branch_data( &
     tree_var%branch_list_level(current_level)%branch_list(ibranch), &
     splittingrule, & 
-    local_median_index)
+    local_median_index, &
+    local_median_value)
    call children_branch_data( &
     tree_var, &
     ndim_decisions, &
@@ -27080,6 +27101,7 @@ subroutine init_branch( &
    current_level, &
    splittingrule, &
    median_index, &
+   median_value, &
    child1_id, &
    child2_id, &
    child_level)
@@ -27098,6 +27120,7 @@ INTEGER_T, INTENT(in) :: current_id
 INTEGER_T, INTENT(in) :: current_level
 INTEGER_T, INTENT(in) :: splittingrule
 INTEGER_T, INTENT(in) :: median_index
+REAL_T, INTENT(in) :: median_value
 INTEGER_T, INTENT(in) :: child1_id
 INTEGER_T, INTENT(in) :: child2_id
 INTEGER_T, INTENT(in) :: child_level
@@ -27109,6 +27132,7 @@ INTEGER_T, INTENT(in) :: child_level
  dest_branch%current_level=current_level
  dest_branch%splittingrule=splittingrule
  dest_branch%median_index=median_index
+ dest_branch%median_value=median_value
  dest_branch%child1_id=child1_id
  dest_branch%child2_id=child2_id
  dest_branch%child_level=child_level
@@ -27143,6 +27167,7 @@ INTEGER_T :: local_current_id
 INTEGER_T :: local_current_level
 INTEGER_T :: local_splittingrule
 INTEGER_T :: local_median_index
+REAL_T :: local_median_value
 INTEGER_T :: local_child1_id
 INTEGER_T :: local_child_level
 INTEGER_T :: local_child2_id
@@ -27196,6 +27221,7 @@ INTEGER_T :: ibranch
  local_current_level=1
  local_splittingrule=-1
  local_median_index=-1
+ local_median_value=zero
  local_child1_id=-1
  local_child2_id=-1
  local_child_level=2
@@ -27213,6 +27239,7 @@ INTEGER_T :: ibranch
   local_current_level, &
   local_splittingrule, &
   local_median_index, &
+  local_median_value, &
   local_child1_id, &
   local_child2_id, &
   local_child_level)
@@ -27307,7 +27334,7 @@ INTEGER_T :: previous_ndata
 INTEGER_T :: splittingrule
 INTEGER_T :: median_index
 INTEGER_T :: dir
-REAL_T :: data1,data2
+REAL_T :: median_value
 INTEGER_T :: datalo(2)
 INTEGER_T :: datahi(2)
 
@@ -27376,24 +27403,20 @@ INTEGER_T :: datahi(2)
       (splittingrule.le.ndim_decisions)) then
    median_index=tree_var%branch_list_level(current_level)% &
           branch_list(current_id)%median_index
+   median_value=tree_var%branch_list_level(current_level)% &
+          branch_list(current_id)%median_value
    if ((median_index.ge.1).and. &
        (median_index.lt.current_ndata)) then
-    data1=tree_var%branch_list_level(current_level)% &
-          branch_list(current_id)% &
-          data_decisions(median_index,splittingrule)
-    data2=tree_var%branch_list_level(current_level)% &
-          branch_list(current_id)% &
-          data_decisions(median_index+1,splittingrule)
 
     prev_id=current_id
     prev_level=current_level
 
-    if (data_decision(splittingrule).le.half*(data1+data2)) then
+    if (data_decision(splittingrule).le.median_value) then
      current_id=tree_var%branch_list_level(prev_level)% &
           branch_list(prev_id)%child1_id
      current_level=tree_var%branch_list_level(prev_level)% &
           branch_list(prev_id)%child_level
-    else if (data_decision(splittingrule).gt.half*(data1+data2)) then
+    else if (data_decision(splittingrule).gt.median_value) then
      current_id=tree_var%branch_list_level(prev_level)% &
           branch_list(prev_id)%child2_id
      current_level=tree_var%branch_list_level(prev_level)% &
@@ -27402,6 +27425,14 @@ INTEGER_T :: datahi(2)
      print *,"data_decision bust"
      stop
     endif
+
+    if (current_level.eq.prev_level+1) then
+     ! do nothing
+    else
+     print *,"current_level invalid"
+     stop
+    endif
+
     previous_ndata=current_ndata
     current_ndata=tree_var%branch_list_level(current_level)% &
          branch_list(current_id)%ndata
