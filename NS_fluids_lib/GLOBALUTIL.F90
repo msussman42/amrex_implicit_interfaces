@@ -26660,11 +26660,13 @@ REAL_T    :: data1,data2
 
    median_index=datahi(1)/2
    source_branch%median_index=median_index
+
    if ((median_index.ge.1).and. &
        (median_index.lt.datahi(1))) then
-    source_branch%median_value= &
+    median_value= &
      half*(source_branch%data_decisions(median_index,splittingrule)+ &
            source_branch%data_decisions(median_index+1,splittingrule))
+    source_branch%median_value=median_value
    else
     print *,"median_index invalid"
     stop
@@ -26872,7 +26874,9 @@ INTEGER_T :: local_child2_id
    if (source_branch%current_level.eq.current_level) then
     ! do nothing
    else
-    print *,"current_level invalid"
+    print *,"current_level invalid(1)"
+    print *,"current_level=",current_level
+    print *,"source_branch%current_level=",source_branch%current_level
     stop
    endif
 
@@ -27013,7 +27017,10 @@ REAL_T :: local_variance_reduction
  if (nbranches.eq.tree_var%nbranches_level(current_level)) then
   ! do nothing
  else
-  print *,"nbranches corrupt"
+  print *,"nbranches corrupt(1)"
+  print *,"nbranches=",nbranches
+  print *,"tree_var%nbranches_level(current_level)= ", &
+    tree_var%nbranches_level(current_level)
   stop
  endif
 
@@ -27069,7 +27076,10 @@ REAL_T :: local_median_value
  if (nbranches.eq.tree_var%nbranches_level(current_level)) then
   ! do nothing
  else
-  print *,"nbranches corrupt"
+  print *,"nbranches corrupt(2)"
+  print *,"nbranches=",nbranches
+  print *,"tree_var%nbranches_level(current_level)= ", &
+    tree_var%nbranches_level(current_level)
   stop
  endif
 
@@ -27231,6 +27241,7 @@ INTEGER_T :: ibranch
   stop
  endif
 
+ tree_var%nbranches_level(1)=1
  tree_var%branch_list_level(1)%nbranches=1
  allocate(tree_var%branch_list_level(1)%branch_list(1))
 
@@ -27285,12 +27296,18 @@ INTEGER_T :: ibranch
     endif
    enddo !ibranch=1,local_nbranches
 
+   tree_var%nbranches_level(local_current_level+1)= &
+       local_nbranches_next_level
    tree_var%branch_list_level(local_current_level+1)%nbranches= &
        local_nbranches_next_level
 
    if ((local_nbranches_next_level.ge.0).and. &
        (local_nbranches_next_level.le.2*local_nbranches)) then
-    ! do nothing
+
+    if (local_nbranches_next_level.gt.0) then
+     tree_var%number_tree_levels=local_current_level+1
+    endif
+
    else
     print *,"local_nbranches_next_level invalid"
     stop
@@ -27377,7 +27394,10 @@ INTEGER_T :: datahi(2)
   if (current_level.le.tree_var%number_tree_levels) then
    ! do nothing
   else
-   print *,"current_level invalid"
+   print *,"current_level invalid(2)"
+   print *,"current_level=",current_level
+   print *,"tree_var%number_tree_levels=", &
+     tree_var%number_tree_levels
    stop
   endif
 
@@ -27449,14 +27469,18 @@ INTEGER_T :: datahi(2)
     if (current_level.eq.prev_level+1) then
      ! do nothing
     else
-     print *,"current_level invalid"
+     print *,"current_level invalid(3)"
+     print *,"current_level=",current_level
+     print *,"prev_level=",prev_level
      stop
     endif
 
     previous_ndata=current_ndata
     current_ndata=tree_var%branch_list_level(current_level)% &
          branch_list(current_id)%ndata
-    if (current_ndata.le.previous_ndata/2+1) then
+    if ((current_ndata.le.previous_ndata/2+1).and. &
+        (current_ndata.ge.1).and. &
+        (current_ndata.ge.previous_ndata/2)) then
      !do nothing
     else
      print *,"current_ndata too large"
@@ -27470,7 +27494,7 @@ INTEGER_T :: datahi(2)
    print *,"splittingrule invalid"
    stop
   endif
- enddo 
+ enddo !do while (current_ndata.ge.2)
 
  if (current_ndata.eq.1) then
   ! do nothing
