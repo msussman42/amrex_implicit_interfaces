@@ -26593,8 +26593,10 @@ REAL_T    :: data1,data2
  allocate(save_data_classify(datahi_classify(1),datahi_classify(2)))
  save_data_classify=source_branch%data_classify
 
- if ((datalo(1).eq.1).and.(datalo(2).eq.1)) then
+ if ((datalo(1).eq.1).and. &
+     (datalo(2).eq.1)) then
   if ((datahi(1).eq.source_branch%ndata).and. &
+      (datahi(1).ge.2).and.  &
       (datahi(2).ge.splittingrule)) then
    allocate(A_list(datahi(1)))
    allocate(B_list(datahi(1)))
@@ -26623,8 +26625,10 @@ REAL_T    :: data1,data2
     enddo
    enddo
 
-   if ((datalo_classify(1).eq.1).and.(datalo_classify(2).eq.1)) then
-    if (datahi_classify(1).eq.source_branch%ndata) then
+   if ((datalo_classify(1).eq.1).and. &
+       (datalo_classify(2).eq.1)) then
+    if ((datahi_classify(1).eq.source_branch%ndata).and. &
+        (datahi_classify(1).ge.2)) then
 
      do idata=1,datahi_classify(1)
       do dir=1,datahi_classify(2)
@@ -26656,9 +26660,15 @@ REAL_T    :: data1,data2
 
    median_index=datahi(1)/2
    source_branch%median_index=median_index
-   source_branch%median_value= &
+   if ((median_index.ge.1).and. &
+       (median_index.lt.datahi(1))) then
+    source_branch%median_value= &
      half*(source_branch%data_decisions(median_index,splittingrule)+ &
            source_branch%data_decisions(median_index+1,splittingrule))
+   else
+    print *,"median_index invalid"
+    stop
+   endif
 
    deallocate(A_list)
    deallocate(B_list)
@@ -26828,7 +26838,7 @@ INTEGER_T :: local_current_id
 INTEGER_T :: local_current_level
 INTEGER_T :: local_splittingrule
 INTEGER_T :: local_median_index
-INTEGER_T :: local_median_value
+REAL_T :: local_median_value
 INTEGER_T :: local_child1_id
 INTEGER_T :: local_child_level
 INTEGER_T :: local_child2_id
@@ -26963,6 +26973,9 @@ INTEGER_T :: local_child2_id
 
    deallocate(save_data_decisions)
    deallocate(save_data_classify)
+
+   deallocate(source_branch%data_decisions)
+   deallocate(source_branch%data_classify)
 
   else
    print *,"datahi invalid"
@@ -27124,6 +27137,13 @@ REAL_T, INTENT(in) :: median_value
 INTEGER_T, INTENT(in) :: child1_id
 INTEGER_T, INTENT(in) :: child2_id
 INTEGER_T, INTENT(in) :: child_level
+
+ if (ndata.ge.1) then
+  ! do nothing
+ else
+  print *,"ndata invalid"
+  stop
+ endif
 
  dest_branch%ndata=ndata
  dest_branch%parent_id=parent_id
