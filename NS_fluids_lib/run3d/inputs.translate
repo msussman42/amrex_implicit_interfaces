@@ -33,7 +33,7 @@ ns.minimum_relative_error=1.0e-18
 ns.projection_pressure_scale=100.0
 
 ns.continuous_mof=0
-ns.mof_decision_tree_learning=300000
+ns.mof_decision_tree_learning=1000000
 ns.mof_machine_learning=0
 
 # OCTOBER 22 - EILE_flag=-1 performs best
