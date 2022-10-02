@@ -2041,9 +2041,11 @@ INTEGER_T :: im,iregion,dir
 
  do iregion=1,number_of_source_regions
   regions_list(iregion,0)%region_material_id=0
-  regions_list(iregion,0)%region_dt=0.0d0
+  regions_list(iregion,0)%region_dt=0.0d0  ! timestep
   regions_list(iregion,0)%region_mass_flux=0.0d0
   regions_list(iregion,0)%region_volume_flux=0.0d0
+    ! default region_temperature_prescribe=0.0 => homogeneous
+    ! flux condition.
   regions_list(iregion,0)%region_temperature_prescribe=0.0d0
   do dir=1,SDIM
    regions_list(iregion,0)%region_velocity_prescribe(dir)=0.0d0
@@ -2059,17 +2061,18 @@ INTEGER_T :: im,iregion,dir
   regions_list(iregion,0)%region_energy_after=0.0d0 
  enddo ! iregion=1,number_of_source_regions
 
- if (axis_dir.eq.0) then
-  regions_list(1,0)%region_material_id=3
+ if (axis_dir.eq.0) then 
+  regions_list(1,0)%region_material_id=3 !heater
   regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
  else if ((axis_dir.eq.1).or. &
-          (axis_dir.eq.2)) then
-  regions_list(1,0)%region_material_id=3
+          (axis_dir.eq.2)) then 
+  regions_list(1,0)%region_material_id=3 ! heater
   regions_list(1,0)%region_energy_flux=TANK_MK_HEATER_WATTS ! Watts=J/s
    ! inflow
   regions_list(2,0)%region_material_id=1
   regions_list(2,0)%region_volume_flux=xblob5
   regions_list(2,0)%region_mass_flux=xblob5*fort_denconst(1)
+   ! make xblob6 = 0 if homogeneous flux condition.
   regions_list(2,0)%region_temperature_prescribe=xblob6
   if (TANK_MK_NOZZLE_RAD.gt.0.0d0) then
    regions_list(2,0)%region_velocity_prescribe(SDIM)= &
@@ -2079,6 +2082,8 @@ INTEGER_T :: im,iregion,dir
    stop
   endif
    ! outflow
+   ! default region_temperature_prescribe=0.0 => homogeneous
+   ! flux condition.
   regions_list(3,0)%region_material_id=1
   regions_list(3,0)%region_volume_flux=-xblob5
   regions_list(3,0)%region_mass_flux=-xblob5*fort_denconst(1)

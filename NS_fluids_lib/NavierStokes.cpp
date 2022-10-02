@@ -134,9 +134,9 @@ materials are immersed into the fluid(s).
 
 int  NavierStokes::continuous_mof=2;
 #if (AMREX_SPACEDIM==2)
-int  NavierStokes::mof_decision_tree_learning=10000;
+int  NavierStokes::mof_decision_tree_learning=40000;
 #elif (AMREX_SPACEDIM==3)
-int  NavierStokes::mof_decision_tree_learning=300000;
+int  NavierStokes::mof_decision_tree_learning=1000000;
 #else
 something wrong
 #endif

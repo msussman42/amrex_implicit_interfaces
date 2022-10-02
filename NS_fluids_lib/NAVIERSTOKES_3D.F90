@@ -8278,11 +8278,13 @@ END SUBROUTINE SIMP
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T imattype
       INTEGER_T dencomp
+      INTEGER_T temperature_comp
+      INTEGER_T species_comp
       INTEGER_T ii,jj,kk
       REAL_T mofdata(num_materials*ngeom_recon)
       REAL_T mofdata_L(num_materials*ngeom_recon)
       REAL_T local_cellvol
-      INTEGER_T nmax
+      INTEGER_T, PARAMETER :: nmax=POLYGON_LIST_MAX ! in: fort_regionsum
 
       if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
@@ -8302,8 +8304,6 @@ END SUBROUTINE SIMP
        print *,"number_of_source_regions invalid"
        stop
       endif
-
-      nmax=POLYGON_LIST_MAX ! in: fort_regionsum
 
       snew_ptr=>snew
       umacnew_ptr=>umacnew
@@ -8412,13 +8412,17 @@ END SUBROUTINE SIMP
             if ((charfn.eq.zero).or.(charfn.eq.one)) then
 
              imattype=fort_material_type(im)
+
              dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
+             temperature_comp=(im-1)*num_state_material+1+ENUM_TEMPERATUREVAR
+             species_comp=(im-1)*num_state_material+1+ENUM_SPECIESVAR
+
              local_den=DEN(D_DECL(i,j,k),dencomp)
-             local_temp=DEN(D_DECL(i,j,k),dencomp+1)
+             local_temp=DEN(D_DECL(i,j,k),temperature_comp)
 
              call init_massfrac_parm(local_den,massfrac_parm,im)
              do ispec=1,num_species_var
-               massfrac_parm(ispec)=DEN(D_DECL(i,j,k),dencomp+1+ispec)
+               massfrac_parm(ispec)=DEN(D_DECL(i,j,k),species_comp-1+ispec)
                if (massfrac_parm(ispec).ge.zero) then
                 ! do nothing
                else
@@ -8560,7 +8564,7 @@ END SUBROUTINE SIMP
                    else if ((vfrac.gt.zero).and. &
                             (vfrac.le.one+VOFTOL)) then
                     snew(D_DECL(i,j,k), &
-                       STATECOMP_STATES+dencomp+1)=temperature_prescribe
+                     STATECOMP_STATES+temperature_comp)=temperature_prescribe
                    else
                     print *,"vfrac invalid"
                     stop
@@ -8703,8 +8707,8 @@ END SUBROUTINE SIMP
                  endif
                  
                  if (temperature_new.gt.zero) then
-                  snew(D_DECL(i,j,k),STATECOMP_STATES+dencomp+1)= &
-                       temperature_new
+                  snew(D_DECL(i,j,k),STATECOMP_STATES+temperature_comp)= &
+                    temperature_new
                  else
                   print *,"temperature_new invalid"
                   stop
@@ -8761,6 +8765,7 @@ END SUBROUTINE SIMP
               print *,"isweep invalid"
               stop
              endif
+
             else
              print *,"charfn invalid"
              stop
@@ -8880,7 +8885,6 @@ END SUBROUTINE SIMP
              if ((charfn.eq.zero).or.(charfn.eq.one)) then
 
               imattype=fort_material_type(im)
-              dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
 
               region_volume_flux=regions_list(iregions,0)%region_volume_flux
               region_volume_raster=regions_list(iregions,0)%region_volume_raster
