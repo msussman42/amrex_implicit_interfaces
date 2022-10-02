@@ -27313,8 +27313,16 @@ INTEGER_T :: ibranch
     stop
    endif
 
-   max_variance_reduction=zero
-   max_splittingrule=0
+   allocate(max_variance_reduction(local_nbranches))
+   allocate(local_variance_reduction(local_nbranches))
+   allocate(max_splittingrule(local_nbranches))
+
+   do ibranch=1,local_nbranches
+    max_variance_reduction(ibranch)=zero
+    local_variance_reduction(ibranch)=zero
+    max_splittingrule(ibranch)=0
+   enddo
+
    do local_splittingrule=1,ndim_decisions
 
     call test_variance_results( &
@@ -27338,7 +27346,7 @@ INTEGER_T :: ibranch
       stop
      endif
     endif
-   enddo
+   enddo !do local_splittingrule=1,ndim_decisions
 
    call init_new_tree_level( &
      ndim_decisions, &
@@ -27346,6 +27354,10 @@ INTEGER_T :: ibranch
      max_splittingrule, &
      tree_var, &
      local_current_level)
+
+   deallocate(max_variance_reduction)
+   deallocate(local_variance_reduction)
+   deallocate(max_splittingrule)
 
    local_current_level=local_current_level+1
  enddo !while (local_current_level.lt.tree_var%max_number_tree_levels)
