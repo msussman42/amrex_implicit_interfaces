@@ -24735,7 +24735,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
   after_dist = ParallelDescriptor::second();
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "level= " << level << '\n';
-   std::cout << "dist time " << after_dist-before_dist << '\n';
+   std::cout << "dist cpu time " << after_dist-before_dist << '\n';
   }
  }
 

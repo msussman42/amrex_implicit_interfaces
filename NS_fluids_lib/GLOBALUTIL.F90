@@ -27360,7 +27360,7 @@ INTEGER_T :: ibranch
      stop
     endif
 
-    if (1.eq.0) then
+    if (1.eq.1) then
      do ibranch=1,local_nbranches
       local_variance_reduction(ibranch)=total_variance_reduction
      enddo
