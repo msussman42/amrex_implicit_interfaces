@@ -26993,6 +26993,7 @@ INTEGER_T :: local_child2_id
 end subroutine children_branch_data
 
 subroutine test_variance_results( &
+   nbranches, &
    ndim_classify, &
    splittingrule, &
    tree_var, &
@@ -27001,20 +27002,20 @@ subroutine test_variance_results( &
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, INTENT(in) :: nbranches
 INTEGER_T, INTENT(in) :: ndim_classify
 INTEGER_T, INTENT(in) :: splittingrule
 Type(tree_type), INTENT(inout) :: tree_var
 INTEGER_T, INTENT(in) :: current_level
-REAL_T, INTENT(out) :: variance_reduction
-INTEGER_T :: nbranches
+REAL_T, INTENT(out) :: variance_reduction(nbranches)
 INTEGER_T :: ibranch
 INTEGER_T :: local_ndata
 INTEGER_T :: local_median_index
 REAL_T :: local_median_value
 REAL_T :: local_variance_reduction
 
- nbranches=tree_var%branch_list_level(current_level)%nbranches
- if (nbranches.eq.tree_var%nbranches_level(current_level)) then
+ if ((nbranches.eq.tree_var%nbranches_level(current_level)).and. &
+     (nbranches.eq.tree_var%branch_list_level(current_level)%nbranches)) then
   ! do nothing
  else
   print *,"nbranches corrupt(1)"
@@ -27024,7 +27025,9 @@ REAL_T :: local_variance_reduction
   stop
  endif
 
- variance_reduction=zero
+ do ibranch=1,nbranches
+  variance_reduction(ibranch)=zero
+ enddo
 
  do ibranch=1,nbranches
   local_ndata=tree_var%branch_list_level(current_level)% &
@@ -27042,16 +27045,18 @@ REAL_T :: local_variance_reduction
     tree_var%branch_list_level(current_level)%branch_list(ibranch), &
     splittingrule, & 
     local_variance_reduction)
-   variance_reduction=variance_reduction+local_variance_reduction
+   variance_reduction(ibranch)=variance_reduction(ibranch)+ &
+       local_variance_reduction
   else
    print *,"local_ndata invalid"
    stop
   endif
- enddo
+ enddo ! do ibranch=1,nbranches
 
 end subroutine test_variance_results
 
 subroutine init_new_tree_level( &
+   nbranches, &
    ndim_decisions, &
    ndim_classify, &
    splittingrule, &
@@ -27060,20 +27065,20 @@ subroutine init_new_tree_level( &
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T, INTENT(in) :: nbranches
 INTEGER_T, INTENT(in) :: ndim_decisions
 INTEGER_T, INTENT(in) :: ndim_classify
-INTEGER_T, INTENT(in) :: splittingrule
+INTEGER_T, INTENT(in) :: splittingrule(nbranches)
 Type(tree_type), INTENT(inout) :: tree_var
 INTEGER_T, INTENT(in) :: current_level
-INTEGER_T :: nbranches
 INTEGER_T :: current_branch_id
 INTEGER_T :: ibranch
 INTEGER_T :: local_ndata
 INTEGER_T :: local_median_index
 REAL_T :: local_median_value
 
- nbranches=tree_var%branch_list_level(current_level)%nbranches
- if (nbranches.eq.tree_var%nbranches_level(current_level)) then
+ if ((nbranches.eq.tree_var%nbranches_level(current_level)).and. &
+     (nbranches.eq.tree_var%branch_list_level(current_level)%nbranches)) then
   ! do nothing
  else
   print *,"nbranches corrupt(2)"
@@ -27092,7 +27097,7 @@ REAL_T :: local_median_value
   else if (local_ndata.ge.2) then
    call sort_branch_data( &
     tree_var%branch_list_level(current_level)%branch_list(ibranch), &
-    splittingrule, & 
+    splittingrule(ibranch), & 
     local_median_index, &
     local_median_value)
    call children_branch_data( &
@@ -27102,7 +27107,7 @@ REAL_T :: local_median_value
     current_level, &
     current_branch_id, &
     tree_var%branch_list_level(current_level)%branch_list(ibranch), &
-    splittingrule)
+    splittingrule(ibranch))
   else
    print *,"local_ndata invalid"
    stop
@@ -27201,9 +27206,12 @@ REAL_T :: local_median_value
 INTEGER_T :: local_child1_id
 INTEGER_T :: local_child_level
 INTEGER_T :: local_child2_id
-REAL_T :: local_variance_reduction
-REAL_T :: max_variance_reduction
-INTEGER_T :: max_splittingrule
+
+REAL_T, allocatable :: local_variance_reduction(:)
+REAL_T, allocatable :: max_variance_reduction(:)
+INTEGER_T, allocatable :: max_splittingrule(:)
+REAL_T :: total_variance_reduction
+
 INTEGER_T :: local_nbranches
 INTEGER_T :: local_nbranches_next_level
 INTEGER_T :: ibranch
@@ -27322,33 +27330,75 @@ INTEGER_T :: ibranch
     local_variance_reduction(ibranch)=zero
     max_splittingrule(ibranch)=0
    enddo
+   total_variance_reduction=zero
 
    do local_splittingrule=1,ndim_decisions
 
     call test_variance_results( &
+     local_nbranches, &
      ndim_classify, &
      local_splittingrule, &
      tree_var, &
      local_current_level, &
      local_variance_reduction)
 
-    if (local_splittingrule.eq.1) then
-     max_variance_reduction=local_variance_reduction
-     max_splittingrule=local_splittingrule
-    else if (local_splittingrule.gt.1) then
-     if (local_variance_reduction.gt.max_variance_reduction) then
-      max_variance_reduction=local_variance_reduction
-      max_splittingrule=local_splittingrule
-     else if (local_variance_reduction.le.max_variance_reduction) then
-      ! do nothing
+    total_variance_reduction=zero
+    do ibranch=1,local_nbranches
+     if (local_variance_reduction(ibranch).ge.zero) then
+      total_variance_reduction=total_variance_reduction+ &
+       local_variance_reduction(ibranch)
      else
-      print *,"NaN encountered"
+      print *,"local_variation_reduction is NaN"
       stop
      endif
+    enddo
+
+    if (total_variance_reduction.ge.zero) then
+     ! do nothing
+    else
+     print *,"total_variation_reduction is NaN"
+     stop
     endif
+
+    if (1.eq.0) then
+     do ibranch=1,local_nbranches
+      local_variance_reduction(ibranch)=total_variance_reduction
+     enddo
+    endif
+
+    if (local_splittingrule.eq.1) then
+     do ibranch=1,local_nbranches
+      max_variance_reduction(ibranch)=local_variance_reduction(ibranch)
+      max_splittingrule(ibranch)=local_splittingrule
+     enddo
+    else if ((local_splittingrule.gt.1).and. &
+             (local_splittingrule.le.ndim_decisions)) then
+
+     do ibranch=1,local_nbranches
+
+      if (local_variance_reduction(ibranch).gt. &
+          max_variance_reduction(ibranch)) then
+       max_variance_reduction(ibranch)=local_variance_reduction(ibranch)
+       max_splittingrule(ibranch)=local_splittingrule
+      else if (local_variance_reduction(ibranch).le. &
+               max_variance_reduction(ibranch)) then
+       ! do nothing
+      else
+       print *,"NaN encountered"
+       stop
+      endif
+
+     enddo ! do ibranch=1,local_nbranches
+
+    else
+     print *,"local_splittingrule invalid"
+     stop
+    endif
+
    enddo !do local_splittingrule=1,ndim_decisions
 
    call init_new_tree_level( &
+     local_nbranches, &
      ndim_decisions, &
      ndim_classify, &
      max_splittingrule, &
