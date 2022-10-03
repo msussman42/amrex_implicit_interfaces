@@ -15,6 +15,8 @@ cg.verbose = 0
 ns.continuous_mof=0
 ns.mof_decision_tree_learning=40000
 ns.mof_machine_learning=0
+ns.force_cmof_at_triple_junctions=0
+
 ns.EILE_flag=-1 # -1=Weymouth and Yue 1=alternate EI and LE
 ns.MOFITERMAX=15
 ns.adapt_quad_depth=5
