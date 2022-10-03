@@ -6118,7 +6118,8 @@ end subroutine volume_sanity_check
        print *,"sdim invalid tets_box_planes_super"
        stop
       endif
-      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
+      if ((num_materials.lt.1).or. &
+          (num_materials.gt.MAX_NUM_MATERIALS)) then
        print *,"num_materials invalid tets box planes super"
        stop
       endif
@@ -8895,7 +8896,9 @@ contains
        stop
       endif
 
-      if (volcell.le.zero) then
+      if (volcell.gt.zero) then
+       ! do nothing
+      else
        print *,"volcell bust"
        stop
       endif
