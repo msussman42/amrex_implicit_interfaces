@@ -8302,28 +8302,25 @@ contains
       return
       end subroutine get_order_algorithm
 
-      subroutine get_MOFITERMAX(MOFITERMAX_out)
-      IMPLICIT NONE
-
-      INTEGER_T, INTENT(out) :: MOFITERMAX_out
-
-#include "mofdata.H"
-
-      MOFITERMAX_out=MOFITERMAX
-
-      return
-      end subroutine get_MOFITERMAX
-
-      subroutine set_MOFITERMAX(MOFITERMAX_in)
+      subroutine set_MOFITERMAX(MOFITERMAX_in,MOFITERMAX_AFTER_PREDICT_in)
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: MOFITERMAX_in
+      INTEGER_T, INTENT(in) :: MOFITERMAX_AFTER_PREDICT_in
 
 #include "mofdata.H"
 
       MOFITERMAX=MOFITERMAX_in
-      if ((MOFITERMAX.lt.0).or.(MOFITERMAX.gt.50)) then
+      MOFITERMAX_AFTER_PREDICT=MOFITERMAX_AFTER_PREDICT_in
+      if ((MOFITERMAX.lt.0).or. &
+          (MOFITERMAX.gt.50)) then
        print *,"MOFITERMAX invalid in set mofitermax"
+       stop
+      endif
+      if ((MOFITERMAX_AFTER_PREDICT.lt.0).or. &
+          (MOFITERMAX_AFTER_PREDICT.gt.50).or. &
+          (MOFITERMAX_AFTER_PREDICT.gt.MOFITERMAX)) then
+       print *,"MOFITERMAX_AFTER_PREDICT invalid in set mofitermax"
        stop
       endif
 
@@ -10931,7 +10928,8 @@ contains
        stop
       endif
 
-      if ((MOFITERMAX.lt.num_materials+3).or.(MOFITERMAX.gt.50)) then
+      if ((MOFITERMAX.lt.num_materials+3).or. &
+          (MOFITERMAX.gt.50)) then
        print *,"MOFITERMAX out of range find cut geom slope"
        stop
       endif
@@ -11427,7 +11425,7 @@ contains
 
       local_MOFITERMAX=MOFITERMAX
       if (training_nguess.ge.1) then
-       local_MOFITERMAX=0
+       local_MOFITERMAX=MOFITERMAX_AFTER_PREDICT
       else if (training_nguess.eq.0) then
        ! do nothing
       else
@@ -13903,6 +13901,7 @@ contains
         print *,"dir,dx ",dir,xsten0(1,dir)-xsten0(-1,dir)
        enddo
        print *,"MOFITERMAX ",MOFITERMAX
+       print *,"MOFITERMAX_AFTER_PREDICT ",MOFITERMAX_AFTER_PREDICT
       else if (mof_verbose.eq.0) then
        ! do nothing
       else
@@ -14549,6 +14548,7 @@ contains
         print *,"dir,xsten0(0,dir) ",dir,xsten0(0,dir)
        enddo
        print *,"MOFITERMAX ",MOFITERMAX
+       print *,"MOFITERMAX_AFTER_PREDICT ",MOFITERMAX_AFTER_PREDICT
       else if (mof_verbose.eq.0) then
        ! do nothing
       else
@@ -14838,6 +14838,8 @@ contains
 
       print *,"sdim= ",sdim
       print *,"MOFITERMAX= ",MOFITERMAX
+      print *,"MOFITERMAX_AFTER_PREDICT= ", &
+         MOFITERMAX_AFTER_PREDICT
       print *,"nsamples= ",nsamples
       print *,"shrink_factor=",shrink_factor
       do im=1,num_materials
@@ -22297,6 +22299,7 @@ contains
       subroutine fort_initmof( &
        order_algorithm_in, &
        MOFITERMAX_in, &
+       MOFITERMAX_AFTER_PREDICT_in, &
        MOF_DEBUG_RECON_in, &
        MOF_TURN_OFF_LS_in, &
        nthreads, &
@@ -22312,6 +22315,7 @@ contains
       INTEGER_T, INTENT(in) :: nmax_in,nthreads
       INTEGER_T, INTENT(in) :: order_algorithm_in(num_materials)
       INTEGER_T, INTENT(in) :: MOFITERMAX_in
+      INTEGER_T, INTENT(in) :: MOFITERMAX_AFTER_PREDICT_in
       INTEGER_T, INTENT(in) :: MOF_DEBUG_RECON_in
       INTEGER_T, INTENT(in) :: MOF_TURN_OFF_LS_in
       INTEGER_T sdim,nmax_test
@@ -22330,7 +22334,8 @@ contains
       MOF_DEBUG_RECON=MOF_DEBUG_RECON_in
       MOF_TURN_OFF_LS=MOF_TURN_OFF_LS_in
 
-      call set_MOFITERMAX(MOFITERMAX_in)
+      call set_MOFITERMAX(MOFITERMAX_in, &
+                          MOFITERMAX_AFTER_PREDICT_in)
 
       if (nthreads.lt.1) then
        print *,"nthreads invalid"
