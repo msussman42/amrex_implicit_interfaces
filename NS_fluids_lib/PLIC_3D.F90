@@ -425,6 +425,7 @@ stop
            stop
           else if ((voflist_test.ge.-0.1d0).and. &
                    (voflist_test.le.1.1d0)) then
+            ! voflist_stencil(im)=max_{3x3x3 stencil} F(im,stencil)
            if (voflist_test.gt.voflist_stencil(im)) then
             voflist_stencil(im)=voflist_test
            endif
@@ -472,206 +473,229 @@ stop
         ! near a solid dominated cell.
         mod_continuous_mof_parm=0
 
-        ! check if fluid cell near a domain/symmetry wall or near a solid
-        ! dominated cell.
-        if (vfrac_solid_sum_center.lt.half) then
-         do i1=-1,1
-         do j1=-1,1
-         do k1=klosten,khisten
+        if ((level.lt.finest_level).or. &
+            (level.ne.decision_tree_finest_level)) then
 
-          do dir=1,SDIM
-           if (dir.eq.1) then
-            loc_indx=i+i1
-           else if (dir.eq.2) then
-            loc_indx=j+j1
-           else if ((dir.eq.3).and.(SDIM.eq.3)) then
-            loc_indx=k+k1
-           else
-            print *,"dir invalid"
-            stop
-           endif
-           if (loc_indx.lt.fablo(dir)) then
-            if (vofbc(dir,1).ne.INT_DIR) then
-             mod_continuous_mof_parm=1
-            endif
-           else if (loc_indx.gt.fabhi(dir)) then
-            if (vofbc(dir,2).ne.INT_DIR) then
-             mod_continuous_mof_parm=1
-            endif
-           else if ((loc_indx.ge.fablo(dir)).and. &
-                    (loc_indx.le.fabhi(dir))) then
-            ! do nothing
-           else
-            print *,"loc_indx invalid"
-            stop
-           endif
-          enddo ! dir=1..sdim
+         ! always use MOF on the coarser levels or if decision tree data
+         ! is not available.
+         continuous_mof_base=0 
+         continuous_mof_parm=0
 
-          if (mod_continuous_mof_parm.eq.0) then
+        else if ((level.eq.finest_level).and. &
+                 (level.eq.decision_tree_finest_level)) then
 
-           do im=1,num_materials
-            vofcomprecon=(im-1)*ngeom_recon+1
-            vofcompraw=(im-1)*ngeom_raw+1
-            do dir=0,SDIM
-             mofsten(vofcomprecon+dir)= &
-              vof(D_DECL(i+i1,j+j1,k+k1),vofcompraw+dir)
-            enddo
-            orderflag=zero
-            mofsten(vofcomprecon+SDIM+1)=orderflag
-            do dir=SDIM+3,ngeom_recon
-             mofsten(vofcomprecon+dir-1)=zero
-            enddo
-           enddo  ! im=1..num_materials
+         ! check if fluid cell near a domain/symmetry wall or near a solid
+         ! dominated cell.
+         if (vfrac_solid_sum_center.lt.half) then
+          do i1=-1,1
+          do j1=-1,1
+          do k1=klosten,khisten
 
-           call CISBOX(xstenbox,nhalfbox_sten, &
-            xlo,dx,i+i1,j+j1,k+k1, &
-            bfact,level, &
-            volsten,censten,SDIM)
-
-           ! sum of F_fluid=1
-           ! sum of F_rigid<=1
-           call make_vfrac_sum_ok_base( &
-            cmofsten, &
-            xstenbox,nhalfbox_sten,nhalf_box, &
-            bfact,dx, &
-            tessellate, & ! =0
-            mofsten,SDIM)
-
-           vfrac_fluid_sum=zero
-           vfrac_solid_sum=zero
-
-           do im=1,num_materials
-            vofcomprecon=(im-1)*ngeom_recon+1
-            vfrac_local(im)=mofsten(vofcomprecon)
-
-            if (is_rigid(im).eq.0) then
-             vfrac_fluid_sum=vfrac_fluid_sum+vfrac_local(im)
-            else if (is_rigid(im).eq.1) then
-             vfrac_solid_sum=vfrac_solid_sum+vfrac_local(im)
+           do dir=1,SDIM
+            if (dir.eq.1) then
+             loc_indx=i+i1
+            else if (dir.eq.2) then
+             loc_indx=j+j1
+            else if ((dir.eq.3).and.(SDIM.eq.3)) then
+             loc_indx=k+k1
             else
-             print *,"is_rigid(im) invalid"
+             print *,"dir invalid"
              stop
             endif
-           enddo ! im=1..num_materials
-
-           if (abs(vfrac_fluid_sum-one).le.VOFTOL) then
-            ! do nothing
-           else
-            print *,"vfrac_fluid_sum invalid"
-            stop
-           endif
-
-           if (vfrac_solid_sum.ge.half) then
-            if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
-             print *,"expecting i1 or j1 or k1 not 0"
+            if (loc_indx.lt.fablo(dir)) then
+             if (vofbc(dir,1).ne.INT_DIR) then
+              mod_continuous_mof_parm=1
+             endif
+            else if (loc_indx.gt.fabhi(dir)) then
+             if (vofbc(dir,2).ne.INT_DIR) then
+              mod_continuous_mof_parm=1
+             endif
+            else if ((loc_indx.ge.fablo(dir)).and. &
+                     (loc_indx.le.fabhi(dir))) then
+             ! do nothing
+            else
+             print *,"loc_indx invalid"
              stop
             endif
-            mod_continuous_mof_parm=1
-           else if (vfrac_solid_sum.lt.half) then
+           enddo ! dir=1..sdim
+
+            ! this next code section will set 
+            ! mod_continuous_mof_parm=1 if there is a 
+            ! "rigid" dominated cell in the 3x3x3 stencil.
+            ! If (mod_continuous_mof_parm) already is equal to 1,
+            ! then this code section does not have
+            ! to be done.
+           if (mod_continuous_mof_parm.eq.0) then
+
+            do im=1,num_materials
+             vofcomprecon=(im-1)*ngeom_recon+1
+             vofcompraw=(im-1)*ngeom_raw+1
+             do dir=0,SDIM
+              mofsten(vofcomprecon+dir)= &
+               vof(D_DECL(i+i1,j+j1,k+k1),vofcompraw+dir)
+             enddo
+             orderflag=zero
+             mofsten(vofcomprecon+SDIM+1)=orderflag
+             do dir=SDIM+3,ngeom_recon
+              mofsten(vofcomprecon+dir-1)=zero
+             enddo
+            enddo  ! im=1..num_materials
+
+            call CISBOX(xstenbox,nhalfbox_sten, &
+             xlo,dx,i+i1,j+j1,k+k1, &
+             bfact,level, &
+             volsten,censten,SDIM)
+
+            ! sum of F_fluid=1
+            ! sum of F_rigid<=1
+            call make_vfrac_sum_ok_base( &
+             cmofsten, &
+             xstenbox,nhalfbox_sten,nhalf_box, &
+             bfact,dx, &
+             tessellate, & ! =0
+             mofsten,SDIM)
+
+            vfrac_fluid_sum=zero
+            vfrac_solid_sum=zero
+
+            do im=1,num_materials
+             vofcomprecon=(im-1)*ngeom_recon+1
+             vfrac_local(im)=mofsten(vofcomprecon)
+
+             if (is_rigid(im).eq.0) then
+              vfrac_fluid_sum=vfrac_fluid_sum+vfrac_local(im)
+             else if (is_rigid(im).eq.1) then
+              vfrac_solid_sum=vfrac_solid_sum+vfrac_local(im)
+             else
+              print *,"is_rigid(im) invalid"
+              stop
+             endif
+            enddo ! im=1..num_materials
+
+            if (abs(vfrac_fluid_sum-one).le.VOFTOL) then
+             ! do nothing
+            else
+             print *,"vfrac_fluid_sum invalid"
+             stop
+            endif
+
+            if (vfrac_solid_sum.ge.half) then
+             if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
+              print *,"expecting i1 or j1 or k1 not 0"
+              stop
+             endif
+             mod_continuous_mof_parm=1
+            else if (vfrac_solid_sum.lt.half) then
+             ! do nothing
+            else
+             print *,"vfrac_solid_sum invalid"
+             stop
+            endif
+
+           else if (mod_continuous_mof_parm.eq.1) then
             ! do nothing
            else
-            print *,"vfrac_solid_sum invalid"
+            print *,"mod_continuous_mof_parm invalid"
             stop
            endif
-
-          else if (mod_continuous_mof_parm.eq.1) then
-           ! do nothing
-          else
-           print *,"mod_continuous_mof_parm invalid"
-           stop
-          endif
-         enddo !k1
-         enddo !j1
-         enddo !i1
-        else if (vfrac_solid_sum_center.ge.half) then
-         ! do nothing (ok to use MOF)
-        else
-         print *,"vfrac_solid_sum_center invalid"
-         stop
-        endif
-
-        continuous_mof_base=continuous_mof
-
-        ! mod_continuous_mof_parm=1 near domain/symmetry walls,
-        ! and near a solid dominated cell.
-        if (mod_continuous_mof_parm.eq.1) then
-         if (force_cmof_at_triple_junctions.eq.0) then
-          ! do nothing
-         ! force_cmof_at_triple_junctions=1 EXT_DIR,REFLECT_EVEN,embedded; 
-         ! force_cmof_at_triple_junctions=2 same as 1 plus triple points.
-         else if ((force_cmof_at_triple_junctions.eq.1).or. &
-                  (force_cmof_at_triple_junctions.eq.2)) then
-          continuous_mof_base=2
+          enddo !k1
+          enddo !j1
+          enddo !i1
+         else if (vfrac_solid_sum_center.ge.half) then
+          ! do nothing (ok to use MOF)
          else
-          print *,"force_cmof_at_triple_junctions invalid"
+          print *,"vfrac_solid_sum_center invalid"
           stop
          endif
-        else if (mod_continuous_mof_parm.eq.0) then
-         ! do nothing
-        else
-         print *,"mod_continuous_mof_parm invalid"
-         stop
-        endif
 
-        if (num_materials_in_cell.eq.1) then
-         continuous_mof_parm=0
-        else if ((num_materials_in_cell.ge.2).and. &
-                 (num_materials_in_cell.le.num_materials)) then
+         continuous_mof_base=continuous_mof
 
-         continuous_mof_parm=continuous_mof_base
-
-         if ((num_materials_in_stencil.ge.3).and. &
-             (num_materials_in_stencil.le.num_materials)) then
-
-          ! force_cmof_at_triple_junctions=1 EXT_DIR,REFLECT_EVEN,embedded; 
-          ! force_cmof_at_triple_junctions=2 same as 1 plus triple points.
-          if (force_cmof_at_triple_junctions.eq.2) then
-           continuous_mof_base=2
-          else if ((force_cmof_at_triple_junctions.eq.0).or. &
-                   (force_cmof_at_triple_junctions.eq.1)) then
+         ! mod_continuous_mof_parm=1 near domain/symmetry walls,
+         ! and near a solid dominated cell.
+         if (mod_continuous_mof_parm.eq.1) then
+          if (force_cmof_at_triple_junctions.eq.0) then
            ! do nothing
+
+           !force_cmof_at_triple_junctions=1 EXT_DIR,REFLECT_EVEN,embedded; 
+           !force_cmof_at_triple_junctions=2 same as 1 plus triple points.
+          else if ((force_cmof_at_triple_junctions.eq.1).or. &
+                   (force_cmof_at_triple_junctions.eq.2)) then
+           continuous_mof_base=2
           else
            print *,"force_cmof_at_triple_junctions invalid"
            stop
           endif
+         else if (mod_continuous_mof_parm.eq.0) then
+          ! do nothing
+         else
+          print *,"mod_continuous_mof_parm invalid"
+          stop
+         endif
 
-          if (continuous_mof_base.eq.2) then ! CMOF
-           if (num_materials_in_cell.eq.num_materials_in_stencil) then
-            continuous_mof_parm=2 ! CMOF
-           else if (num_materials_in_cell.lt.num_materials_in_stencil) then
-            continuous_mof_parm=2 ! CMOF
+         if (num_materials_in_cell.eq.1) then
+          continuous_mof_parm=0
+         else if ((num_materials_in_cell.ge.2).and. &
+                  (num_materials_in_cell.le.num_materials)) then
+
+          continuous_mof_parm=continuous_mof_base
+
+          if ((num_materials_in_stencil.ge.3).and. &
+              (num_materials_in_stencil.le.num_materials)) then
+
+           ! force_cmof_at_triple_junctions=1 EXT_DIR,REFLECT_EVEN,embedded; 
+           ! force_cmof_at_triple_junctions=2 same as 1 plus triple points.
+           if (force_cmof_at_triple_junctions.eq.2) then
+            continuous_mof_base=2
+           else if ((force_cmof_at_triple_junctions.eq.0).or. &
+                    (force_cmof_at_triple_junctions.eq.1)) then
+            ! do nothing
            else
+            print *,"force_cmof_at_triple_junctions invalid"
+            stop
+           endif
+
+           if (continuous_mof_base.eq.2) then ! CMOF
+            if (num_materials_in_cell.eq.num_materials_in_stencil) then
+             continuous_mof_parm=2 ! CMOF
+            else if (num_materials_in_cell.lt.num_materials_in_stencil) then
+             continuous_mof_parm=2 ! CMOF
+            else
+             print *,"num_materials_in_cell invalid"
+             stop
+            endif
+           else if (continuous_mof_base.eq.0) then
+            ! do nothing
+           else
+            print *,"continuous_mof_base invalid"
+            stop
+           endif
+          else if (num_materials_in_stencil.eq.2) then
+           if (num_materials_in_cell.ne.2) then
             print *,"num_materials_in_cell invalid"
             stop
            endif
-          else if (continuous_mof_base.eq.0) then
-           ! do nothing
-          else
-           print *,"continuous_mof_base invalid"
-           stop
-          endif
-         else if (num_materials_in_stencil.eq.2) then
-          if (num_materials_in_cell.ne.2) then
-           print *,"num_materials_in_cell invalid"
-           stop
-          endif
-          if ((continuous_mof_base.eq.0).or. & ! MOF
-              (continuous_mof_base.eq.2)) then ! CMOF
-           if (continuous_mof_parm.ne.continuous_mof_base) then
-            print *,"continuous_mof_parm.ne.continuous_mof_base"
+           if ((continuous_mof_base.eq.0).or. & ! MOF
+               (continuous_mof_base.eq.2)) then ! CMOF
+            if (continuous_mof_parm.ne.continuous_mof_base) then
+             print *,"continuous_mof_parm.ne.continuous_mof_base"
+             stop
+            endif
+           else
+            print *,"continuous_mof_base invalid"
             stop
            endif
           else
-           print *,"continuous_mof_base invalid"
+           print *,"num_materials_in_cell or num_materials_in_stencil invalid"
            stop
           endif
+        
          else
-          print *,"num_materials_in_cell or num_materials_in_stencil invalid"
+          print *,"num_materials_in_cell invalid"
           stop
          endif
-        
+
         else
-         print *,"num_materials_in_cell invalid"
+         print *,"level or decision_tree_finest_level invalid"
          stop
         endif
 
@@ -770,8 +794,11 @@ stop
           mod_cmofsten=0
 
           if (vfrac_solid_sum_center.ge.half) then
+
            ! do nothing, we can do the full cmof stencil in masked
-           ! off is_rigid=1 cells
+           ! off is_rigid=1 cells (for reconstructing the fluid
+           ! interfaces)
+
           else if (vfrac_solid_sum_center.lt.half) then
 
            if (vfrac_solid_sum.ge.half) then
@@ -907,7 +934,7 @@ stop
              (levelrz.eq.COORDSYS_RZ)) then
           grid_level=level
          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          ! do nothing
+          grid_level=level
          else
           print *,"levelrz invalid"
           stop
