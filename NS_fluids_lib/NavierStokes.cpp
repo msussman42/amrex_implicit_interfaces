@@ -50,6 +50,7 @@ namespace amrex{
 #define mf_check_inf_bounds 1
 
 #define DEFAULT_MOFITERMAX 15
+#define DEFAULT_MOFITERMAX_AFTER_PREDICT 0
 
 #define PCOPY_DEBUG 0
 //
@@ -97,6 +98,7 @@ Real NavierStokes::cfl          = 0.5;
 int  NavierStokes::MOF_TURN_OFF_LS=0;
 int  NavierStokes::MOF_DEBUG_RECON=0;
 int  NavierStokes::MOFITERMAX=DEFAULT_MOFITERMAX;
+int  NavierStokes::MOFITERMAX_AFTER_PREDICT=DEFAULT_MOFITERMAX_AFTER_PREDICT;
 
 /*
  continuous_mof=0
@@ -1387,6 +1389,14 @@ void fortran_parameters() {
  if ((MOFITERMAX<0)||(MOFITERMAX>50))
   amrex::Error("mof iter max invalid in navierstokes");
 
+  // this is local variable, not static variable
+ int MOFITERMAX_AFTER_PREDICT=DEFAULT_MOFITERMAX_AFTER_PREDICT;  
+ pp.queryAdd("MOFITERMAX_AFTER_PREDICT",MOFITERMAX_AFTER_PREDICT);
+ if ((MOFITERMAX_AFTER_PREDICT<0)|| 
+     (MOFITERMAX_AFTER_PREDICT>50)||
+     (MOFITERMAX_AFTER_PREDICT>MOFITERMAX))
+  amrex::Error("mof iter max after predict invalid in navierstokes");
+
  int MOF_TURN_OFF_LS=NavierStokes::MOF_TURN_OFF_LS;
  pp.queryAdd("MOF_TURN_OFF_LS",MOF_TURN_OFF_LS);
  if ((MOF_TURN_OFF_LS!=0)&&(MOF_TURN_OFF_LS!=1))
@@ -2052,6 +2062,7 @@ void fortran_parameters() {
  fort_initmof(
    mof_ordering_local.dataPtr(),
    &MOFITERMAX,
+   &MOFITERMAX_AFTER_PREDICT,
    &MOF_DEBUG_RECON,
    &MOF_TURN_OFF_LS,
    &thread_class::nthreads,
@@ -3209,6 +3220,13 @@ NavierStokes::read_params ()
     pp.queryAdd("MOFITERMAX",MOFITERMAX);
     if ((MOFITERMAX<0)||(MOFITERMAX>50))
      amrex::Error("mof iter max invalid in navierstokes");
+
+    MOFITERMAX_AFTER_PREDICT=DEFAULT_MOFITERMAX_AFTER_PREDICT;  
+    pp.queryAdd("MOFITERMAX_AFTER_PREDICT",MOFITERMAX_AFTER_PREDICT);
+    if ((MOFITERMAX_AFTER_PREDICT<0)||
+	(MOFITERMAX_AFTER_PREDICT>50)||
+	(MOFITERMAX_AFTER_PREDICT>MOFITERMAX))
+     amrex::Error("mof iter max after predict invalid in navierstokes");
 
     MOF_TURN_OFF_LS=0;  
     pp.queryAdd("MOF_TURN_OFF_LS",MOF_TURN_OFF_LS);
@@ -5189,7 +5207,10 @@ NavierStokes::read_params ()
      std::cout << "num_species_var " << num_species_var << '\n';
      std::cout << "num_materials " << num_materials << '\n';
      std::cout << "num_interfaces " << num_interfaces << '\n';
-     std::cout << "MOFITERMAX= " << MOFITERMAX << '\n';
+     std::cout << "MOFITERMAX= " << 
+	     MOFITERMAX << '\n';
+     std::cout << "MOFITERMAX_AFTER_PREDICT= " << 
+	     MOFITERMAX_AFTER_PREDICT << '\n';
      std::cout << "MOF_DEBUG_RECON= " << MOF_DEBUG_RECON << '\n';
      std::cout << "MOF_TURN_OFF_LS= " << MOF_TURN_OFF_LS << '\n';
 

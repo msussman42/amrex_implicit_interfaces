@@ -1502,6 +1502,8 @@ protected:
     static Real cfl;           // desired maximum cfl
 
     static int  MOFITERMAX;
+    static int  MOFITERMAX_AFTER_PREDICT;
+
 // default: tessellating fluid => default==1
 //          non-tesselating or tesselating solid => default==0
     static Vector<int> truncate_volume_fractions;  

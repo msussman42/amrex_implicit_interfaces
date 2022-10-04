@@ -10,6 +10,7 @@
     void fort_initmof(
      int * order_algorithm_in,
      int* MOFITERMAX,
+     int* MOFITERMAX_AFTER_PREDICT,
      int* MOF_DEBUG_RECON_in,
      int* MOF_TURN_OFF_LS_in,
      int* nthreads,
