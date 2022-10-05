@@ -145,7 +145,7 @@ something wrong
 int  NavierStokes::mof_machine_learning=0;
 
 // =1 EXT_DIR,REFLECT_EVEN,embedded; =2 same as 1 plus triple points.
-int  NavierStokes::force_cmof_at_triple_junctions=1;
+int  NavierStokes::force_cmof_at_triple_junctions=0;
 int  NavierStokes::partial_cmof_stencil_at_walls=1;
 
 int  NavierStokes::enable_spectral=0;
