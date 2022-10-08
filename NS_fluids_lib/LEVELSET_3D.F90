@@ -8560,9 +8560,10 @@ stop
 
           call get_dxmaxLS(dx,bfact,DXMAXLS)
 
-          if (covered_face.eq.2) then
+          if (covered_face.eq.2) then !maskL=maskR=0
            gradh_tension=zero
-          else if ((covered_face.eq.0).or.(covered_face.eq.1)) then
+          else if ((covered_face.eq.0).or. & !maskL=maskR=1
+                   (covered_face.eq.1)) then !maskL=1 or maskR=1
            call fluid_interface_tension(LSminus,LSplus,gradh_tension, &
             im_opp_tension,im_tension)
           else
@@ -8618,6 +8619,7 @@ stop
          endif
 
          if (gradh_tension.ne.zero) then
+
           if (im_tension.ge.im_opp_tension) then
            print *,"fluid_interface_tension bust"
            stop
@@ -9535,8 +9537,10 @@ stop
 
           if (gradh_tension.ne.zero) then
 
-           if ((im_tension.gt.num_materials).or.(im_opp_tension.gt.num_materials).or. &
-               (im_tension.lt.1).or.(im_opp_tension.lt.1)) then
+           if ((im_tension.gt.num_materials).or. &
+               (im_opp_tension.gt.num_materials).or. &
+               (im_tension.lt.1).or. &
+               (im_opp_tension.lt.1)) then
             print *,"im_tension or im_opp_tension bust 4"
             stop
            endif

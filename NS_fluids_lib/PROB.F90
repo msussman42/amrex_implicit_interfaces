@@ -4887,6 +4887,72 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine fixed_face
 
+      subroutine merge_levelset(xpos,time,LS,LS_merge)
+      use global_utility_module
+
+      IMPLICIT NONE
+      REAL_T, INTENT(in) :: xpos(SDIM)
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(in) :: LS(num_materials)
+      REAL_T, INTENT(out) :: LS_merge(num_materials)
+
+      do im=1,num_materials
+       LS_merge(im)=LS(im)
+      enddo
+      do im=1,num_materials
+       if (is_ice(im).eq.1) then
+        if (is_rigid(im).eq.0) then
+         do im_opp=1,num_materials
+          if (im_opp.ne.im) then
+           if (is_rigid(im_opp).eq.0) then
+            call get_iten(im,im_opp,iten)
+            call get_user_tension( &
+             xpos,time,fort_tension,user_tension,293.0d0)
+            if (user_tension(iten).eq.zero) then
+             default_flag=1
+             LH1=get_user_latent_heat(iten,293.0d0,default_flag)
+             LH2=get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
+             if ((LH1.ne.zero).or.(LH2.ne.zero)) then
+
+             else if ((LH1.eq.zero).and.(LH2.eq.zero)) then
+              ! do nothing
+             else
+              print *,"LH1 or LH2 invalid"
+              stop
+             endif
+            else if (user_tension(iten).ne.zero) then
+             ! do nothing
+            else
+             print *,"user_tension invalid"
+             stop
+            endif
+           else if (is_rigid(im_opp).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid(im_opp) invalid"
+            stop
+           endif
+          else if (im_opp.eq.im) then
+           ! do nothing
+          else
+           print *,"im_opp bust"
+           stop
+          endif
+         enddo !im_opp=1,num_materials
+        else
+         print *,"is_rigid invalid"
+         stop
+        endif
+       else if (is_ice(im).eq.0) then
+        ! do nothing
+       else
+        print *,"is_ice invalid"
+        stop
+       endif
+      enddo !im=1,num_materials
+
+      end subroutine merge_levelset
+
       subroutine fluid_interface_tension(LSleft,LSright,gradh,im_opp,im)
 
       use global_utility_module
@@ -4897,6 +4963,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, INTENT(in) :: LSleft(num_materials)
       REAL_T, INTENT(in) :: LSright(num_materials)
       REAL_T, INTENT(out) :: gradh
+      REAL_T :: LSleft_merge(num_materials)
+      REAL_T :: LSright_merge(num_materials)
       REAL_T psiL,psiR,HLEFT,HRIGHT
       INTEGER_T imL,imR
       INTEGER_T iten
@@ -4905,8 +4973,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       im_opp=0
       gradh=zero
 
-      call get_primary_material(LSleft,imL)
-      call get_primary_material(LSright,imR)
+      call merge_levelset(LSleft,LSleft_merge)
+      call merge_levelset(LSright,LSright_merge)
+
+      call get_primary_material(LSleft_merge,imL)
+      call get_primary_material(LSright_merge,imR)
 
       if ((imL.lt.1).or.(imL.gt.num_materials).or. &
           (imR.lt.1).or.(imR.gt.num_materials)) then
@@ -4936,8 +5007,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
 
        call get_iten(imL,imR,iten)
-       call get_LS_extend(LSleft,iten,psiL) ! psiL>0 fluid im
-       call get_LS_extend(LSright,iten,psiR) ! psiR>0 fluid im
+       call get_LS_extend(LSleft_merge,iten,psiL) ! psiL>0 fluid im
+       call get_LS_extend(LSright_merge,iten,psiR) ! psiR>0 fluid im
 
        call HSCALE(psiL,im,im_opp,HLEFT)
        call HSCALE(psiR,im,im_opp,HRIGHT)
