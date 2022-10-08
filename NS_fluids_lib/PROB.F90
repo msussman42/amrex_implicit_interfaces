@@ -259,7 +259,7 @@ stop
 
       if ((im_secondary.ge.1).and. &
           (im_secondary.le.num_materials)) then
-        ! get_teriary_material is declared in MOF.F90
+        ! get_tertiary_material is declared in MOF.F90
         ! is_rigid(im_tertiary)=0
        call get_tertiary_material(LS,im_primary,im_secondary,im_tertiary)
       else
@@ -4913,6 +4913,39 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              LH1=get_user_latent_heat(iten,293.0d0,default_flag)
              LH2=get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
              if ((LH1.ne.zero).or.(LH2.ne.zero)) then
+              call get_primary_material(LS_merge,im_primary)
+              call get_secondary_material(LS_merge,im_primary,im_secondary)
+              call get_tertiary_material(LS, &
+                im_primary,im_secondary,im_tertiary)
+              if (im_tertiary.eq.0) then
+               ! do nothing (there is no surface tension in this case)
+              else if ((im_tertiary.ge.1).and. &
+                       (im_tertiary.le.num_materials)) then
+               LS_merge(im)=-99999.0d0 ! delete the ice.
+               if (im_primary.eq.im) then ! ice was primary
+                if (im_secondary.eq.im_opp) then !water was secondary
+                 LS_merge(im_opp)=-LS_merge(im_tertiary)
+                else if (im_secondary.ne.im_opp) then
+                 LS_merge(im_opp)=-LS_merge(im_secondary)
+                else
+                 print *,"im_secondary bust"
+                 stop
+                endif
+               else if (im_primary.eq.im_opp) then !water is primary
+                if (im_secondary.eq.im) then
+                 LS_merge(im_opp)=-LS_merge(im_tertiary)
+                else
+                 ! do nothing
+                endif
+               else if (im_secondary.eq.im) then
+                LS_merge(im_opp)=-LS_merge(im_primary)
+               else
+                ! do nothing
+               endif
+              else
+               print *,"im_tertiary invalid"
+               stop
+              endif
 
              else if ((LH1.eq.zero).and.(LH2.eq.zero)) then
               ! do nothing
