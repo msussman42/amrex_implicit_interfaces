@@ -8051,7 +8051,8 @@ stop
           if (is_rigid(im_opp).eq.0) then
            call get_iten(im,im_opp,iten)
            do ireverse=0,1
-            if (get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1).ne.zero) then
+            if (get_user_latent_heat(iten+ireverse*num_interfaces, &
+                  293.0d0,1).ne.zero) then
              if (freezing_model(iten+ireverse*num_interfaces).eq.0) then
               im_solid_micro=microlayer_substrate(im)
               if ((im_solid_micro.ge.1).and. &
