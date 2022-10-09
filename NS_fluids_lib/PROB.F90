@@ -4925,8 +4925,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              LH1=get_user_latent_heat(iten,293.0d0,default_flag)
              LH2=get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
              if ((LH1.ne.zero).or.(LH2.ne.zero)) then
-              call get_primary_material(LS_merge,im_primary)
-              call get_secondary_material(LS_merge,im_primary,im_secondary)
+              call get_primary_material(LS,im_primary)
+              call get_secondary_material(LS,im_primary,im_secondary)
               call get_tertiary_material(LS, &
                 im_primary,im_secondary,im_tertiary)
               if (im_tertiary.eq.0) then
@@ -4936,16 +4936,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                LS_merge(im)=-99999.0d0 ! delete the ice.
                if (im_primary.eq.im) then ! ice was primary
                 if (im_secondary.eq.im_opp) then !water was secondary
-                 LS_merge(im_opp)=-LS_merge(im_tertiary)
+                 LS_merge(im_opp)=-LS(im_tertiary)
                 else if (im_secondary.ne.im_opp) then
-                 LS_merge(im_opp)=-LS_merge(im_secondary)
+                 LS_merge(im_opp)=-LS(im_secondary)
                 else
                  print *,"im_secondary bust"
                  stop
                 endif
                else if (im_primary.eq.im_opp) then !water is primary
                 if (im_secondary.eq.im) then ! ice is secondary
-                 LS_merge(im_opp)=-LS_merge(im_tertiary)
+                 LS_merge(im_opp)=-LS(im_tertiary)
                 else
                  ! do nothing
                 endif
@@ -4953,7 +4953,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                         (im_primary.ne.im_opp)) then
 
                 if (im_secondary.eq.im) then
-                 LS_merge(im_opp)=-LS_merge(im_primary) !water replaces ice.
+                 LS_merge(im_opp)=-LS(im_primary) !water replaces ice.
                 else
                  ! do nothing
                 endif
@@ -5007,6 +5007,142 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       end subroutine merge_levelset
 
+
+      subroutine merge_normal(xpos,time,LS,nrm,nrm_merge)
+      use global_utility_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+      REAL_T, INTENT(in) :: xpos(SDIM)
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(in) :: LS(num_materials)
+      REAL_T, INTENT(in) :: nrm(num_materials*SDIM)
+      REAL_T, INTENT(out) :: nrm_merge(num_materials*SDIM)
+      INTEGER_T im,im_opp
+      INTEGER_T iten
+      INTEGER_T dir
+      INTEGER_T default_flag
+      REAL_T LH1,LH2
+      INTEGER_T im_primary
+      INTEGER_T im_secondary
+      INTEGER_T im_tertiary
+      REAL_T :: user_tension(num_interfaces)
+      REAL_T :: def_thermal(num_materials)
+
+      do im=1,num_materials
+       def_thermal(im)=293.0d0
+      enddo
+      do im=1,num_materials*SDIM
+       nrm_merge(im)=nrm(im)
+      enddo
+      do im=1,num_materials
+       if (is_ice(im).eq.1) then
+        if (is_rigid(im).eq.0) then
+         do im_opp=1,num_materials
+          if (im_opp.ne.im) then
+           if (is_rigid(im_opp).eq.0) then
+            call get_iten(im,im_opp,iten)
+            call get_user_tension( &
+             xpos,time,fort_tension,user_tension,def_thermal)
+            if (user_tension(iten).eq.zero) then
+             default_flag=1
+             LH1=get_user_latent_heat(iten,293.0d0,default_flag)
+             LH2=get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
+             if ((LH1.ne.zero).or.(LH2.ne.zero)) then
+              call get_primary_material(LS,im_primary)
+              call get_secondary_material(LS,im_primary,im_secondary)
+              call get_tertiary_material(LS, &
+                im_primary,im_secondary,im_tertiary)
+              if (im_tertiary.eq.0) then
+               ! do nothing (there is no surface tension in this case)
+              else if ((im_tertiary.ge.1).and. &
+                       (im_tertiary.le.num_materials)) then
+               if (im_primary.eq.im) then ! ice was primary
+                if (im_secondary.eq.im_opp) then !water was secondary
+                 do dir=1,SDIM
+                  nrm_merge((im_opp-1)*SDIM+dir)= &
+                        -nrm((im_tertiary-1)*SDIM+dir)
+                 enddo
+                else if (im_secondary.ne.im_opp) then
+                 do dir=1,SDIM
+                  nrm_merge((im_opp-1)*SDIM+dir)= &
+                        -nrm((im_secondary-1)*SDIM+dir)
+                 enddo
+                else
+                 print *,"im_secondary bust"
+                 stop
+                endif
+               else if (im_primary.eq.im_opp) then !water is primary
+                if (im_secondary.eq.im) then ! ice is secondary
+                 do dir=1,SDIM
+                  nrm_merge((im_opp-1)*SDIM+dir)= &
+                        -nrm((im_tertiary-1)*SDIM+dir)
+                 enddo
+                else
+                 ! do nothing
+                endif
+               else if ((im_primary.ne.im).and. &
+                        (im_primary.ne.im_opp)) then
+
+                if (im_secondary.eq.im) then
+                 do dir=1,SDIM
+                  nrm_merge((im_opp-1)*SDIM+dir)= &
+                        -nrm((im_primary-1)*SDIM+dir)
+                 enddo
+                else
+                 ! do nothing
+                endif
+
+               else
+                print *,"im_primary invalid"
+                stop
+               endif
+
+              else
+               print *,"im_tertiary invalid"
+               stop
+              endif
+
+             else if ((LH1.eq.zero).and.(LH2.eq.zero)) then
+              ! do nothing
+             else
+              print *,"LH1 or LH2 invalid"
+              stop
+             endif
+            else if (user_tension(iten).ne.zero) then
+             ! do nothing
+            else
+             print *,"user_tension invalid"
+             stop
+            endif
+           else if (is_rigid(im_opp).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid(im_opp) invalid"
+            stop
+           endif
+          else if (im_opp.eq.im) then
+           ! do nothing
+          else
+           print *,"im_opp bust"
+           stop
+          endif
+         enddo !im_opp=1,num_materials
+        else
+         print *,"is_rigid invalid"
+         stop
+        endif
+       else if (is_ice(im).eq.0) then
+        ! do nothing
+       else
+        print *,"is_ice invalid"
+        stop
+       endif
+      enddo !im=1,num_materials
+
+      end subroutine merge_normal
+
+
       subroutine merge_vof(xpos,time,vof,vof_merge)
       use global_utility_module
       use MOF_routines_module
@@ -5016,7 +5152,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, INTENT(in) :: time
       REAL_T, INTENT(in) :: vof(num_materials)
       REAL_T, INTENT(out) :: vof_merge(num_materials)
-      REAL_T save_vof
       INTEGER_T im,im_opp
       INTEGER_T iten
       INTEGER_T default_flag
@@ -5042,9 +5177,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              LH1=get_user_latent_heat(iten,293.0d0,default_flag)
              LH2=get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
              if ((LH1.ne.zero).or.(LH2.ne.zero)) then
-              save_vof=vof_merge(im) ! ice vfrac
               vof_merge(im)=zero
-              vof_merge(im_opp)=vof_merge(im_opp)+save_vof
+              vof_merge(im_opp)=vof(im_opp)+vof(im)
              else if ((LH1.eq.zero).and.(LH2.eq.zero)) then
               ! do nothing
              else

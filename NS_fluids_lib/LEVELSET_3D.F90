@@ -4128,7 +4128,7 @@ stop
                  LSPC_ptr,LSCEN_hold(im_curv))
                vofcomp=(im_curv-1)*ngeom_recon+1
                call safe_data(i+i1,j+j1,k+k1,vofcomp, &
-                 recon_ptr,vof_hold)
+                 recon_ptr,vof_hold(im_curv))
               enddo !im_curv=1..num_materials
 
               call merge_normal(xcenter,time, &
