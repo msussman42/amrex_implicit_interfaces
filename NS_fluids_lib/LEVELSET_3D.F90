@@ -3352,9 +3352,14 @@ stop
       INTEGER_T im_main,im_main_opp
       INTEGER_T iten
       INTEGER_T inormal
+
       REAL_T nrmPROBE(SDIM*num_materials)
+      REAL_T nrmPROBE_merge(SDIM*num_materials)
+      REAL_T LS_PROBE(num_materials)
+
       REAL_T nrmFD(SDIM*num_materials)
       REAL_T nrm_local(SDIM*num_materials)
+      REAL_T nrm_local_merge(SDIM*num_materials)
       REAL_T nrm_mat(SDIM)
       REAL_T nrm_test(SDIM)
       REAL_T nrm_center(SDIM)
@@ -3922,6 +3927,12 @@ stop
              do inormal=1,SDIM*num_materials
               nrmPROBE(inormal)=LSPC(D_DECL(i,j,k),num_materials+inormal)
              enddo ! inormal
+             do im_curv=1,num_materials
+              LS_PROBE(im_curv)=LSPC(D_DECL(i,j,k),im_curv)
+             enddo
+             call merge_normal(xcenter,time, &
+               LS_PROBE, &
+               nrmPROBE,nrmPROBE_merge)
 
               ! get normals at the cell center using finite differences. 
              do dirstar=1,SDIM
@@ -3967,7 +3978,7 @@ stop
              do im_curv=1,num_materials
               do dirloc=1,SDIM
                inormal=(im_curv-1)*SDIM+dirloc
-               nrm_mat(dirloc)=nrmPROBE(inormal)
+               nrm_mat(dirloc)=nrmPROBE_merge(inormal)
                nrm_test(dirloc)=nrmFD(inormal)
               enddo ! dirloc=1..sdim
               RR=one
@@ -4011,10 +4022,11 @@ stop
                 do dirloc=1,SDIM
                  print *,"dirloc,nrm_center ",dirloc,nrm_center(dirloc)
                 enddo
-                print *,"nrmPROBE points towards im_curv= ",im_curv
+                print *,"nrmPROBE_merge points towards im_curv= ",im_curv
                 do dirloc=1,SDIM
                  inormal=(im_curv-1)*SDIM+dirloc
-                 print *,"dirloc,nrmPROBE ",dirloc,nrmPROBE(inormal)
+                 print *,"dirloc,nrmPROBE_merge ", &
+                    dirloc,nrmPROBE_merge(inormal)
                 enddo
                 print *,"nrmFD points towards im_curv= ",im_curv
                 do dirloc=1,SDIM
@@ -4089,7 +4101,7 @@ stop
 
               do dirloc=1,SDIM
                inormal=(im_curv-1)*SDIM+dirloc
-               nrmPROBE(inormal)=nrm_mat(dirloc)
+               nrmPROBE_merge(inormal)=nrm_mat(dirloc)
               enddo
 
              enddo ! im_curv=1..num_materials
@@ -4119,14 +4131,16 @@ stop
                  recon_ptr,vof_hold)
               enddo !im_curv=1..num_materials
 
+              call merge_normal(xcenter,time, &
+                 LSCEN_hold, &
+                 nrm_local,nrm_local_merge)
+
               call merge_levelset(xcenter,time,LSCEN_hold,LSCEN_hold_merge)
               call merge_vof(xcenter,time,vof_hold,vof_hold_merge)
 
               do im_curv=1,num_materials
                vofsten(i1,j1,k1,im_curv)=vof_hold_merge(im_curv)
               enddo
-
-FIX ME LS_merge, VOF_merge
 
               call FIX_LS_tessellate(LSCEN_hold_merge,LSCEN_hold_fixed)
  
@@ -4137,7 +4151,7 @@ FIX ME LS_merge, VOF_merge
                if ((abs(i1).le.1).and.(abs(j1).le.1).and.(abs(k1).le.1)) then
                 do dirloc=1,SDIM
                  inormal=(im_curv-1)*SDIM+dirloc
-                 nrm_mat(dirloc)=nrm_local(inormal)
+                 nrm_mat(dirloc)=nrm_local_merge(inormal)
                 enddo
                 RR=one
                 if (levelrz.eq.COORDSYS_CARTESIAN) then
@@ -4204,7 +4218,7 @@ FIX ME LS_merge, VOF_merge
               bfact,dx, &
               xcenter, &
               !num_materials x sdim components("nrmcenter" in initheightLS)
-              nrmPROBE, &
+              nrmPROBE_merge, &
               dircrossing, &
               sidestar, &
               signside, &
