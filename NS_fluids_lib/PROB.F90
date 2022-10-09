@@ -371,7 +371,8 @@ stop
              endif
              call get_iten(im,im_opp,iten)
              do ireverse=0,1
-              LL(ireverse)=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+              LL(ireverse)= &
+               get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
              enddo
             else if (is_ice(im_tertiary).eq.1) then
              ! do nothing
@@ -4889,14 +4890,25 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       subroutine merge_levelset(xpos,time,LS,LS_merge)
       use global_utility_module
+      use MOF_routines_module
 
       IMPLICIT NONE
       REAL_T, INTENT(in) :: xpos(SDIM)
       REAL_T, INTENT(in) :: time
       REAL_T, INTENT(in) :: LS(num_materials)
       REAL_T, INTENT(out) :: LS_merge(num_materials)
+      INTEGER_T im,im_opp
+      INTEGER_T iten
+      INTEGER_T default_flag
+      REAL_T LH1,LH2
+      INTEGER_T im_primary
+      INTEGER_T im_secondary
+      INTEGER_T im_tertiary
+      REAL_T :: user_tension(num_interfaces)
+      REAL_T :: def_thermal(num_materials)
 
       do im=1,num_materials
+       def_thermal(im)=293.0d0
        LS_merge(im)=LS(im)
       enddo
       do im=1,num_materials
@@ -4907,7 +4919,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            if (is_rigid(im_opp).eq.0) then
             call get_iten(im,im_opp,iten)
             call get_user_tension( &
-             xpos,time,fort_tension,user_tension,293.0d0)
+             xpos,time,fort_tension,user_tension,def_thermal)
             if (user_tension(iten).eq.zero) then
              default_flag=1
              LH1=get_user_latent_heat(iten,293.0d0,default_flag)
@@ -4932,16 +4944,25 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                  stop
                 endif
                else if (im_primary.eq.im_opp) then !water is primary
-                if (im_secondary.eq.im) then
+                if (im_secondary.eq.im) then ! ice is secondary
                  LS_merge(im_opp)=-LS_merge(im_tertiary)
                 else
                  ! do nothing
                 endif
-               else if (im_secondary.eq.im) then
-                LS_merge(im_opp)=-LS_merge(im_primary)
+               else if ((im_primary.ne.im).and. &
+                        (im_primary.ne.im_opp)) then
+
+                if (im_secondary.eq.im) then
+                 LS_merge(im_opp)=-LS_merge(im_primary) !water replaces ice.
+                else
+                 ! do nothing
+                endif
+
                else
-                ! do nothing
+                print *,"im_primary invalid"
+                stop
                endif
+
               else
                print *,"im_tertiary invalid"
                stop
@@ -4986,12 +5007,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       end subroutine merge_levelset
 
-      subroutine fluid_interface_tension(LSleft,LSright,gradh,im_opp,im)
+      subroutine fluid_interface_tension( &
+         xpos,time,LSleft,LSright,gradh,im_opp,im)
 
       use global_utility_module
 
       IMPLICIT NONE
 
+      REAL_T, INTENT(in) :: xpos(SDIM)
+      REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(out) :: im_opp,im
       REAL_T, INTENT(in) :: LSleft(num_materials)
       REAL_T, INTENT(in) :: LSright(num_materials)
@@ -5006,8 +5030,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       im_opp=0
       gradh=zero
 
-      call merge_levelset(LSleft,LSleft_merge)
-      call merge_levelset(LSright,LSright_merge)
+      call merge_levelset(xpos,time,LSleft,LSleft_merge)
+      call merge_levelset(xpos,time,LSright,LSright_merge)
 
       call get_primary_material(LSleft_merge,imL)
       call get_primary_material(LSright_merge,imR)
@@ -5040,8 +5064,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
 
        call get_iten(imL,imR,iten)
-       call get_LS_extend(LSleft_merge,iten,psiL) ! psiL>0 fluid im
-       call get_LS_extend(LSright_merge,iten,psiR) ! psiR>0 fluid im
+       call get_LS_extend(LSleft_merge,iten,psiL) ! psiL>0 if fluid im
+       call get_LS_extend(LSright_merge,iten,psiR) ! psiR>0 if fluid im
 
        call HSCALE(psiL,im,im_opp,HLEFT)
        call HSCALE(psiR,im,im_opp,HRIGHT)

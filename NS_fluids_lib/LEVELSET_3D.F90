@@ -3333,6 +3333,7 @@ stop
       INTEGER_T i1,j1,k1
       INTEGER_T ii,jj,kk
       REAL_T LS(num_materials)
+      REAL_T LS_merge(num_materials)
       REAL_T LS_fixed(num_materials)
       REAL_T LSSIDE(num_materials)
       REAL_T LSSIDE_fixed(num_materials)
@@ -3594,7 +3595,9 @@ stop
           LS(im)=LSPC(D_DECL(i,j,k),im)
          enddo
 
-         call FIX_LS_tessellate(LS,LS_fixed)
+         call merge_levelset(xcenter,time,LS,LS_merge)
+
+         call FIX_LS_tessellate(LS_merge,LS_fixed)
 
          call get_primary_material(LS_fixed,im_majority)
 
@@ -3602,7 +3605,7 @@ stop
 
           ! do nothing, all interface forces are 0
   
-         else if ((xsten0(0,1).le.VOFTOL*dx(1)).and. &
+         else if ((xcenter(1).le.VOFTOL*dx(1)).and. &
                   (levelrz.eq.COORDSYS_RZ)) then
          
           ! do nothing, all interface forces are 0
@@ -3641,7 +3644,8 @@ stop
             do im=1,num_materials
              LSSIDE(im)=LSPC(D_DECL(iside,jside,kside),im)
             enddo
-            call FIX_LS_tessellate(LSSIDE,LSSIDE_fixed)
+            call merge_levelset(xcenter,time,LSSIDE,LS_merge)
+            call FIX_LS_tessellate(LS_merge,LSSIDE_fixed)
             call get_primary_material(LSSIDE_fixed,im_opp)
             do im=1,num_materials
              LS_STAR_FIXED(sidestar,dirstar,im)=LSSIDE_fixed(im)
@@ -4109,6 +4113,7 @@ stop
                  recon_ptr, &
                  vofsten(i1,j1,k1,im_curv))
               enddo !im_curv=1..num_materials
+FIX ME LS_merge, VOF_merge
 
               call FIX_LS_tessellate(LSCEN_hold,LSCEN_hold_fixed)
  
@@ -4185,7 +4190,8 @@ stop
               finest_level, &
               bfact,dx, &
               xcenter, &
-              nrmPROBE, & !num_materials x sdim components("nrmcenter" in initheightLS)
+              !num_materials x sdim components("nrmcenter" in initheightLS)
+              nrmPROBE, &
               dircrossing, &
               sidestar, &
               signside, &
@@ -7775,6 +7781,7 @@ stop
       REAL_T wtL,wtR,wtsum
       INTEGER_T, parameter :: nhalf=3
       REAL_T xstenMAC(-nhalf:nhalf,SDIM)
+      REAL_T xstenMAC_center(SDIM)
       REAL_T xsten(-nhalf:nhalf,SDIM)
 
       REAL_T local_plus
@@ -8159,6 +8166,9 @@ stop
 
           ! veldir=0..sdim-1
          call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,veldir)
+         do dir2=1,SDIM
+          xstenMAC_center(dir2)=xstenMAC(0,dir2)
+         enddo
 
          wtL=(xstenMAC(0,veldir+1)-xstenMAC(-1,veldir+1))
          wtR=(xstenMAC(1,veldir+1)-xstenMAC(0,veldir+1))
@@ -8564,7 +8574,9 @@ stop
            gradh_tension=zero
           else if ((covered_face.eq.0).or. & !maskL=maskR=1
                    (covered_face.eq.1)) then !maskL=1 or maskR=1
-           call fluid_interface_tension(LSminus,LSplus,gradh_tension, &
+           call fluid_interface_tension( &
+            xstenMAC_center,time, &
+            LSminus,LSplus,gradh_tension, &
             im_opp_tension,im_tension)
           else
            print *,"covered_face invalid"
@@ -9228,16 +9240,16 @@ stop
                    (levelrz.eq.COORDSYS_CYLINDRICAL)) then
            if (veldir.eq.0) then
             if (iside.eq.0) then
-             if (abs(xstenMAC(0,1)).le.VOFTOL*dx(1)) then
+             if (abs(xstenMAC_center(1)).le.VOFTOL*dx(1)) then
               wall_flag_face=num_materials+1 !Neumann BC, RZ axis of symmetry
-             else if (xstenMAC(0,1).gt.VOFTOL*dx(1)) then
+             else if (xstenMAC_center(1).gt.VOFTOL*dx(1)) then
               ! do nothing
              else
               print *,"xstenMAC invalid"
               stop
              endif
             else if (iside.eq.1) then
-             if (xstenMAC(0,1).gt.-VOFTOL*dx(1)) then
+             if (xstenMAC_center(1).gt.-VOFTOL*dx(1)) then
               ! do nothing
              else
               print *,"xstenMAC invalid"
@@ -9486,9 +9498,9 @@ stop
          else if (levelrz.eq.COORDSYS_RZ) then
           if (SDIM.eq.2) then
            if (veldir.eq.0) then
-            if (abs(xstenMAC(0,1)).le.VOFTOL*dx(1)) then ! at r=0 face
+            if (abs(xstenMAC_center(1)).le.VOFTOL*dx(1)) then ! at r=0 face
              zeroradius_flag=1
-            else if (xstenMAC(0,1).ge.-VOFTOL*dx(1)) then
+            else if (xstenMAC_center(1).ge.-VOFTOL*dx(1)) then
              ! do nothing
             else
              print *,"xstenMAC invalid"
@@ -12925,7 +12937,7 @@ stop
       REAL_T cutedge,RR
       INTEGER_T, parameter :: nhalf=3
       REAL_T xstenMAC(-nhalf:nhalf,SDIM)
-      REAL_T xmac(SDIM)
+      REAL_T xstenMAC_center(SDIM)
       REAL_T DXMAXLS
       REAL_T local_vel_MAC
       REAL_T local_vel_old_MAC
@@ -13408,6 +13420,9 @@ stop
 
           ! dir=0..sdim-1
          call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
+         do dir2=1,SDIM
+          xstenMAC_center(dir2)=xstenMAC(0,dir2)
+         enddo
 
          is_clamped_face=-1
 
@@ -13422,7 +13437,7 @@ stop
           RR=one
          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
           if (dir.eq.1) then
-           RR=xstenMAC(0,1)
+           RR=xstenMAC_center(1)
           else
            RR=one
           endif
@@ -13510,7 +13525,7 @@ stop
           stop
          endif
 
-          ! set LSleft, LSright, localLS, xmac
+          ! set LSleft, LSright, localLS
          if ((operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC).or. & 
              (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
              (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. &
@@ -13550,10 +13565,6 @@ stop
            print *,"is_compressible invalid"
            stop
           endif
-
-          do dir2=1,SDIM
-           xmac(dir2)=xstenMAC(0,dir2)
-          enddo
 
           call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level,nhalf)
           call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
@@ -13625,12 +13636,12 @@ stop
             stop
            endif
            if ((dir.eq.0).and. &
-               (xstenMAC(0,1).le.VOFTOL*dx(1))) then
+               (xstenMAC_center(1).le.VOFTOL*dx(1))) then
             at_RZ_face=1
            endif
           else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
            if ((dir.eq.0).and. &
-               (xstenMAC(0,1).le.VOFTOL*dx(1))) then
+               (xstenMAC_center(1).le.VOFTOL*dx(1))) then
             at_RZ_face=1
            endif
           else
@@ -13735,12 +13746,12 @@ stop
             stop
            endif
            if ((dir.eq.0).and. &
-               (xstenMAC(0,1).le.VOFTOL*dx(1))) then
+               (xstenMAC_center(1).le.VOFTOL*dx(1))) then
             at_RZ_face=1
            endif
           else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
            if ((dir.eq.0).and. &
-               (xstenMAC(0,1).le.VOFTOL*dx(1))) then
+               (xstenMAC_center(1).le.VOFTOL*dx(1))) then
             at_RZ_face=1
            endif
           else
@@ -14090,9 +14101,11 @@ stop
                     call get_rigid_velocity( &
                      FSI_prescribed_flag, &
                      colorface,dir+1,uedge_rigid, &
-                     xmac,blob_array, &
+                     xstenMAC_center, &
+                     blob_array, &
                      blob_array_size,num_colors) 
-                    call SUB_check_vel_rigid(xmac,time,uedge_rigid,dir+1)
+                    call SUB_check_vel_rigid(xstenMAC_center, &
+                      time,uedge_rigid,dir+1)
 
                     uedge=test_current_icemask*uedge+ &
                           (one-test_current_icemask)*uedge_rigid
@@ -14297,7 +14310,7 @@ stop
             print *,"dimension bust"
             stop
            endif
-           if ((xstenMAC(0,1).le.VOFTOL*dx(1)).and. &
+           if ((xstenMAC_center(1).le.VOFTOL*dx(1)).and. &
                (dir.eq.0)) then
             if (at_reflect_wall.ne.1) then
              print *,"at_reflect_wall fails sanity check"
@@ -14602,7 +14615,7 @@ stop
             print *,"dimension bust"
             stop
            endif
-           if ((xstenMAC(0,1).le.VOFTOL*dx(1)).and. &
+           if ((xstenMAC_center(1).le.VOFTOL*dx(1)).and. &
                (dir.eq.0)) then
             if (at_reflect_wall.ne.1) then
              print *,"at_reflect_wall fails sanity check"
@@ -14703,7 +14716,9 @@ stop
                 (is_clamped_face.eq.3)) then
              gradh=zero
             else if (is_clamped_face.eq.0) then
-             call fluid_interface_tension(LSleft,LSright,gradh,im_opp,im)
+             call fluid_interface_tension( &
+               xstenMAC_center,time, &
+               LSleft,LSright,gradh,im_opp,im)
             else
              print *,"is_clamped_face invalid"
              stop
@@ -14721,7 +14736,7 @@ stop
               mgoni(D_DECL(im1,jm1,km1),tcomp))
             enddo ! im_heat
 
-            call get_user_tension(xmac,time, &
+            call get_user_tension(xstenMAC_center,time, &
              fort_tension,user_tension,mgoni_temp)
 
             call get_iten(im,im_opp,iten)
