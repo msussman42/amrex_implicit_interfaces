@@ -5007,6 +5007,84 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       end subroutine merge_levelset
 
+      subroutine merge_vof(xpos,time,vof,vof_merge)
+      use global_utility_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+      REAL_T, INTENT(in) :: xpos(SDIM)
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(in) :: vof(num_materials)
+      REAL_T, INTENT(out) :: vof_merge(num_materials)
+      REAL_T save_vof
+      INTEGER_T im,im_opp
+      INTEGER_T iten
+      INTEGER_T default_flag
+      REAL_T LH1,LH2
+      REAL_T :: user_tension(num_interfaces)
+      REAL_T :: def_thermal(num_materials)
+
+      do im=1,num_materials
+       def_thermal(im)=293.0d0
+       vof_merge(im)=vof(im)
+      enddo
+      do im=1,num_materials
+       if (is_ice(im).eq.1) then
+        if (is_rigid(im).eq.0) then
+         do im_opp=1,num_materials
+          if (im_opp.ne.im) then
+           if (is_rigid(im_opp).eq.0) then
+            call get_iten(im,im_opp,iten)
+            call get_user_tension( &
+             xpos,time,fort_tension,user_tension,def_thermal)
+            if (user_tension(iten).eq.zero) then
+             default_flag=1
+             LH1=get_user_latent_heat(iten,293.0d0,default_flag)
+             LH2=get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
+             if ((LH1.ne.zero).or.(LH2.ne.zero)) then
+              save_vof=vof_merge(im) ! ice vfrac
+              vof_merge(im)=zero
+              vof_merge(im_opp)=vof_merge(im_opp)+save_vof
+             else if ((LH1.eq.zero).and.(LH2.eq.zero)) then
+              ! do nothing
+             else
+              print *,"LH1 or LH2 invalid"
+              stop
+             endif
+            else if (user_tension(iten).ne.zero) then
+             ! do nothing
+            else
+             print *,"user_tension invalid"
+             stop
+            endif
+           else if (is_rigid(im_opp).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid(im_opp) invalid"
+            stop
+           endif
+          else if (im_opp.eq.im) then
+           ! do nothing
+          else
+           print *,"im_opp bust"
+           stop
+          endif
+         enddo !im_opp=1,num_materials
+        else
+         print *,"is_rigid invalid"
+         stop
+        endif
+       else if (is_ice(im).eq.0) then
+        ! do nothing
+       else
+        print *,"is_ice invalid"
+        stop
+       endif
+      enddo !im=1,num_materials
+
+      end subroutine merge_vof
+
+
       subroutine fluid_interface_tension( &
          xpos,time,LSleft,LSright,gradh,im_opp,im)
 
