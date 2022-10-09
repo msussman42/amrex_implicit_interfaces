@@ -3332,11 +3332,13 @@ stop
       INTEGER_T iface,jface,kface
       INTEGER_T i1,j1,k1
       INTEGER_T ii,jj,kk
+
       REAL_T LS(num_materials)
       REAL_T LS_merge(num_materials)
       REAL_T LS_fixed(num_materials)
       REAL_T LSSIDE(num_materials)
       REAL_T LSSIDE_fixed(num_materials)
+
       REAL_T xcenter(SDIM)
       INTEGER_T dirloc,dircrossing,dirstar
       INTEGER_T sidestar
@@ -3372,7 +3374,11 @@ stop
       INTEGER_T im3
 
       REAL_T LSCEN_hold(num_materials)
+      REAL_T LSCEN_hold_merge(num_materials)
       REAL_T LSCEN_hold_fixed(num_materials)
+
+      REAL_T vof_hold(num_materials)
+      REAL_T vof_hold_merge(num_materials)
 
       REAL_T LCEN,LSIDE
       REAL_T LSLEFT_EXTEND,LSRIGHT_EXTEND
@@ -4110,12 +4116,19 @@ stop
                  LSPC_ptr,LSCEN_hold(im_curv))
                vofcomp=(im_curv-1)*ngeom_recon+1
                call safe_data(i+i1,j+j1,k+k1,vofcomp, &
-                 recon_ptr, &
-                 vofsten(i1,j1,k1,im_curv))
+                 recon_ptr,vof_hold)
               enddo !im_curv=1..num_materials
+
+              call merge_levelset(xcenter,time,LSCEN_hold,LSCEN_hold_merge)
+              call merge_vof(xcenter,time,vof_hold,vof_hold_merge)
+
+              do im_curv=1,num_materials
+               vofsten(i1,j1,k1,im_curv)=vof_hold_merge(im_curv)
+              enddo
+
 FIX ME LS_merge, VOF_merge
 
-              call FIX_LS_tessellate(LSCEN_hold,LSCEN_hold_fixed)
+              call FIX_LS_tessellate(LSCEN_hold_merge,LSCEN_hold_fixed)
  
               do im_curv=1,num_materials
 
@@ -4201,6 +4214,7 @@ FIX ME LS_merge, VOF_merge
               mgoni_temp, &
               lssten, &
               vofsten, &
+              !3x3x3x num_materials x sdim components
               nrmsten, &
               vol_sten, &
               area_sten, &
@@ -8574,6 +8588,8 @@ FIX ME LS_merge, VOF_merge
            gradh_tension=zero
           else if ((covered_face.eq.0).or. & !maskL=maskR=1
                    (covered_face.eq.1)) then !maskL=1 or maskR=1
+             ! fluid_interface_tension is declared in: PROB.F90
+             ! "merge_levelset" is called inside of "fluid_interface_tension"
            call fluid_interface_tension( &
             xstenMAC_center,time, &
             LSminus,LSplus,gradh_tension, &
@@ -8618,8 +8634,11 @@ FIX ME LS_merge, VOF_merge
 
           if (LSIDE(1)*LSIDE(2).le.zero) then
            LS_consistent=1
-          else
+          else if (LSIDE(1)*LSIDE(2).gt.zero) then
            LS_consistent=0
+          else
+           print *,"LSIDE is NaN"
+           stop
           endif
          else if (gradh.eq.zero) then
           LS_consistent=0
@@ -8896,7 +8915,8 @@ FIX ME LS_merge, VOF_merge
 
           else if (gradh.ne.zero) then
 
-           if ((im_main.gt.num_materials).or.(im_main_opp.gt.num_materials)) then
+           if ((im_main.gt.num_materials).or. &
+               (im_main_opp.gt.num_materials)) then
             print *,"im_main or im_main_opp bust 3"
             stop
            endif
@@ -12925,7 +12945,7 @@ FIX ME LS_merge, VOF_merge
       REAL_T pgrad
       REAL_T pgrad_gravity ! grad ppot/den_pot  ppot=dt * rho g z
       REAL_T pgrad_tension
-      REAL_T gradh
+      REAL_T gradh_tension
       REAL_T dplus,dminus
        !OP_PRES_CELL_TO_MAC (1)use_face_pres,(2) grid flag, 2+1
       REAL_T plocal(2+nsolve)
@@ -14680,7 +14700,7 @@ FIX ME LS_merge, VOF_merge
           enddo  ! side=1,2
 
           pgrad_gravity=zero
-          gradh=zero
+          gradh_tension=zero
           pgrad_tension=zero
 
           call fixed_face( &
@@ -14697,28 +14717,28 @@ FIX ME LS_merge, VOF_merge
            partid_prescribed) 
 
            ! at_wall==1 if FOEXTRAP or REFLECT_EVEN BC for pressure.
-           ! gradh represents (H_{i}-H_{i-1})
+           ! gradh_tension represents (H_{i}-H_{i-1})
           if (at_wall.eq.1) then
-           ! do nothing, gradh=0 on a wall
+           ! do nothing, gradh_tension=0 on a wall
           else if (at_reflect_wall.eq.1) then
-           ! do nothing, gradh=0 at a reflecting wall 
+           ! do nothing, gradh_tension=0 at a reflecting wall 
           else if (at_reflect_wall.eq.2) then
-           ! do nothing, gradh=0 at a reflecting wall 
+           ! do nothing, gradh_tension=0 at a reflecting wall 
           else if ((at_reflect_wall.eq.0).and. &
                    (at_wall.eq.0)) then
 
-           ! gradh=0 if FSI_flag(im) or FSI_flag(im_opp) = 1,2,4,8
+           ! gradh_tension=0 if FSI_flag(im) or FSI_flag(im_opp) = 1,2,4,8
            if (is_solid_face.eq.1) then
-            gradh=zero
+            gradh_tension=zero
            else if (is_solid_face.eq.0) then
             if ((is_clamped_face.eq.1).or. &
                 (is_clamped_face.eq.2).or. &
                 (is_clamped_face.eq.3)) then
-             gradh=zero
+             gradh_tension=zero
             else if (is_clamped_face.eq.0) then
              call fluid_interface_tension( &
                xstenMAC_center,time, &
-               LSleft,LSright,gradh,im_opp,im)
+               LSleft,LSright,gradh_tension,im_opp,im)
             else
              print *,"is_clamped_face invalid"
              stop
@@ -14728,7 +14748,7 @@ FIX ME LS_merge, VOF_merge
             stop
            endif
 
-           if (gradh.ne.zero) then
+           if (gradh_tension.ne.zero) then
 
             do im_heat=1,num_materials
              tcomp=(im_heat-1)*num_state_material+ENUM_TEMPERATUREVAR+1
@@ -14749,7 +14769,7 @@ FIX ME LS_merge, VOF_merge
 
              ! pgrad_tension is combined with pgrad_gravity at the very end.
             pgrad_tension=-(local_tension_force+ &
-                    pforce_scaled*local_face(FACECOMP_PFORCE+1))*gradh
+             pforce_scaled*local_face(FACECOMP_PFORCE+1))*gradh_tension
             pgrad_tension=dt*pgrad_tension/hx
             if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
                 (local_face(FACECOMP_FACECUT+1).le.half)) then
@@ -14764,10 +14784,10 @@ FIX ME LS_merge, VOF_merge
              stop
             endif
 
-           else if (gradh.eq.zero) then
+           else if (gradh_tension.eq.zero) then
              ! do nothing
            else
-            print *,"gradh bust"
+            print *,"gradh_tension bust"
             stop
            endif 
           else
