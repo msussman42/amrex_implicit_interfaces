@@ -24,6 +24,8 @@ geometry.prob_hi   =  6.0 6.0 60.0    # D* 4 4 10
 ns.EILE_flag=-1
 ns.continuous_mof=2
 ns.vof_height_function=1
+ns.mof_decision_tree_learning=1000000 # default: 1000000
+ns.MOFITERMAX_AFTER_PREDICT=0
 
 ns.MOFITERMAX=15
 ns.num_divu_outer_sweeps=1
