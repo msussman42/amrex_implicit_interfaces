@@ -1,5 +1,5 @@
 # Shetabivash, Dolatabadi, Paraschivoiu, JCP 2020 test problem
-max_step  = 999999    # maximum timestep
+max_step  =  9999999    # maximum timestep
 
 stop_time = 20.0
 
@@ -25,6 +25,9 @@ ns.MOFITERMAX=15
 ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=2
+ns.vof_height_function=0
+ns.mof_decision_tree_learning=4000 # default: 40000
+ns.MOFITERMAX_AFTER_PREDICT=5
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
 ns.mof_error_ordering=0
@@ -37,14 +40,14 @@ cg.verbose = 0
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-mg.bot_atol = 1.0e-12
-mg.rtol_b = -0.01
-Lp.v = 0
 
 ns.multilevel_maxcycle=200
 ns.multilevel_restart_period=25
 cg.restart_period=25
 cg.maxiter = 200
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
@@ -68,7 +71,7 @@ amr.plot_file       = plt
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 1024
 amr.file_name_digits=7
-#amr.restart         = chk0000750
+#amr.restart         = chk0137500
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -96,9 +99,9 @@ ns.gravity        = -9.8 # m/s^2
 #triple point: (silicone) theta_liq=60.0, theta_ice=132.0, theta_gas=168.0
 #contact line: theta_L_initial=45 degrees
 # LG,LI,LS,IG,GS,SI  (SI not used)
-#ns.tension=0.831 0.232 0.243 0.968 0.831 0.243
+ns.tension=0.831 0.232 0.243 0.968 0.831 0.243
 # if theta_L_initial=33 degrees then:
-ns.tension=0.831 0.232 0.134 0.968 0.831 0.243
+#ns.tension=0.831 0.232 0.134 0.968 0.831 0.243
 
 #ns.unscaled_min_curvature_radius=10.0
 
