@@ -4933,8 +4933,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                ! do nothing (there is no surface tension in this case)
               else if ((im_tertiary.ge.1).and. &
                        (im_tertiary.le.num_materials)) then
+
                LS_merge(im)=-99999.0d0 ! delete the ice.
+
                if (im_primary.eq.im) then ! ice was primary
+
                 if (im_secondary.eq.im_opp) then !water was secondary
                  LS_merge(im_opp)=-LS(im_tertiary)
                 else if (im_secondary.ne.im_opp) then
@@ -4943,19 +4946,36 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                  print *,"im_secondary bust"
                  stop
                 endif
+
                else if (im_primary.eq.im_opp) then !water is primary
+
                 if (im_secondary.eq.im) then ! ice is secondary
                  LS_merge(im_opp)=-LS(im_tertiary)
                 else
                  ! do nothing
                 endif
+
                else if ((im_primary.ne.im).and. &
                         (im_primary.ne.im_opp)) then
 
+                ! water replaces ice
                 if (im_secondary.eq.im) then
-                 LS_merge(im_opp)=-LS(im_primary) !water replaces ice.
-                else
+                 LS_merge(im_opp)=LS(im) 
+                else if (im_secondary.eq.im_opp) then
                  ! do nothing
+                else if ((im_secondary.ne.im).and. &
+                         (im_secondary.ne.im_opp)) then
+                 if (LS(im).gt.LS(im_opp)) then
+                  LS_merge(im_opp)=LS(im) 
+                 else if (LS(im).le.LS(im_opp)) then
+                  ! do nothing
+                 else
+                  print *,"LS(im) invalid"
+                  stop 
+                 endif
+                else
+                 print *,"im_secondary invalid"
+                 stop
                 endif
 
                else
@@ -4974,7 +4994,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               print *,"LH1 or LH2 invalid"
               stop
              endif
-            else if (user_tension(iten).ne.zero) then
+            else if (user_tension(iten).gt.zero) then
              ! do nothing
             else
              print *,"user_tension invalid"
@@ -5057,6 +5077,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                ! do nothing (there is no surface tension in this case)
               else if ((im_tertiary.ge.1).and. &
                        (im_tertiary.le.num_materials)) then
+
                if (im_primary.eq.im) then ! ice was primary
                 if (im_secondary.eq.im_opp) then !water was secondary
                  do dir=1,SDIM
@@ -5072,7 +5093,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                  print *,"im_secondary bust"
                  stop
                 endif
+
                else if (im_primary.eq.im_opp) then !water is primary
+
                 if (im_secondary.eq.im) then ! ice is secondary
                  do dir=1,SDIM
                   nrm_merge((im_opp-1)*SDIM+dir)= &
@@ -5081,16 +5104,34 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                 else
                  ! do nothing
                 endif
+
                else if ((im_primary.ne.im).and. &
                         (im_primary.ne.im_opp)) then
 
+                ! water replaces ice
                 if (im_secondary.eq.im) then
                  do dir=1,SDIM
                   nrm_merge((im_opp-1)*SDIM+dir)= &
-                        -nrm((im_primary-1)*SDIM+dir)
+                        nrm((im-1)*SDIM+dir)
                  enddo
-                else
+                else if (im_secondary.eq.im_opp) then
                  ! do nothing
+                else if ((im_secondary.ne.im).and. &
+                         (im_secondary.ne.im_opp)) then
+                 if (LS(im).gt.LS(im_opp)) then
+                  do dir=1,SDIM
+                   nrm_merge((im_opp-1)*SDIM+dir)= &
+                        nrm((im-1)*SDIM+dir)
+                  enddo
+                 else if (LS(im).le.LS(im_opp)) then
+                  ! do nothing
+                 else
+                  print *,"LS(im) invalid"
+                  stop 
+                 endif
+                else
+                 print *,"im_secondary invalid"
+                 stop
                 endif
 
                else
@@ -5109,7 +5150,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               print *,"LH1 or LH2 invalid"
               stop
              endif
-            else if (user_tension(iten).ne.zero) then
+            else if (user_tension(iten).gt.zero) then
              ! do nothing
             else
              print *,"user_tension invalid"
@@ -5185,7 +5226,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               print *,"LH1 or LH2 invalid"
               stop
              endif
-            else if (user_tension(iten).ne.zero) then
+            else if (user_tension(iten).gt.zero) then
              ! do nothing
             else
              print *,"user_tension invalid"
