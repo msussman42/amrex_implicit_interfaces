@@ -13668,12 +13668,17 @@ contains
       REAL_T, dimension(:), allocatable :: moferror_array
       INTEGER_T order_count,order_stack_count
       INTEGER_T irank,iflex,jflex,kflex,is_valid
-      INTEGER_T n_ndef,place_index,n_orderings
+      ! n_ndef=number of "is_rigid==0" materials with order_algorithm_in=0
+      INTEGER_T n_ndef
+      INTEGER_T number_of_open_places
+      INTEGER_T n_orderings
       !0 if place open, 1 if place taken.
       INTEGER_T placeholder(num_materials)
-      !list of available places (size of list >= n_ndef)
+      !list of available places 1...number_of_open_places
+      !number_of_open_places >= n_ndef
       INTEGER_T placelist(num_materials)
       !list of fluid materials that need an ordering
+      !flexlist(1..n_ndef)
       INTEGER_T flexlist(num_materials) 
       INTEGER_T temp_order(num_materials)
       INTEGER_T argmin_order
@@ -14167,22 +14172,24 @@ contains
 
       !n_ndef=number of "is_rigid==0" materials with order_algorithm_in=0
       !placelist: list of available places (size of list >= n_ndef)
-      place_index=0
+      number_of_open_places=0
       do imaterial=1,num_materials
        !0 if place open, 1 if place taken.
        if (placeholder(imaterial).eq.0) then ! the "imaterial" place is open.
-        place_index=place_index+1
-        placelist(place_index)=imaterial
+        number_of_open_places=number_of_open_places+1
+        placelist(number_of_open_places)=imaterial
        endif
       enddo  ! imaterial
-      if (place_index.lt.n_ndef) then
-       print *,"place_index invalid"
+      if (number_of_open_places.lt.n_ndef) then
+       print *,"number_of_open_places invalid"
        stop
       endif
 
       if (n_ndef.eq.0) then
        ! do nothing
-      else if ((n_ndef.ge.1).and.(n_ndef.le.num_materials)) then
+      else if ((n_ndef.ge.1).and. &
+               (n_ndef.le.num_materials).and. &
+               (n_ndef.le.number_of_open_places)) then
        call nfact(n_ndef,n_orderings) 
         ! order_algorithm_in(flexlist(1..n_ndef))=
         !  placelist(order_array(*,1..n_ndef))
@@ -14198,7 +14205,7 @@ contains
         enddo
         call push_order_stack(order_stack,order_stack_count, &
          temp_order,n_orderings,n_ndef)
-       enddo  ! i
+       enddo  ! irank=1..n_ndef
        do while (order_stack_count.gt.0)
         call pop_order_stack(order_stack,order_stack_count, &
          temp_order,n_orderings,n_ndef)
@@ -14354,13 +14361,20 @@ contains
            print *,"imaterial invalid"
            stop
           endif
-          irank=order_array(order_count,iflex)
-          if ((irank.lt.1).or.(irank.gt.n_ndef)) then
-           print *,"irank invalid"
+
+          if ((is_rigid_local(imaterial).eq.0).and. &
+              (order_algorithm_in(imaterial).eq.0)) then
+           irank=order_array(order_count,iflex)
+           if ((irank.lt.1).or.(irank.gt.n_ndef)) then
+            print *,"irank invalid"
+            stop
+           endif
+           order_algorithm_in(imaterial)=placelist(irank)
+          else
+           print *,"is_rigid_local or order_algorithm_in invalid"
            stop
           endif
-          order_algorithm_in(imaterial)=placelist(irank)
-         enddo ! iflex
+         enddo ! iflex=1...n_ndef
         
          if (continuous_mof.eq.0) then
 
