@@ -13669,9 +13669,12 @@ contains
       INTEGER_T order_count,order_stack_count
       INTEGER_T irank,iflex,jflex,kflex,is_valid
       INTEGER_T n_ndef,place_index,n_orderings
+      !0 if place open, 1 if place taken.
       INTEGER_T placeholder(num_materials)
+      !list of available places (size of list >= n_ndef)
       INTEGER_T placelist(num_materials)
-      INTEGER_T flexlist(num_materials)
+      !list of fluid materials that need an ordering
+      INTEGER_T flexlist(num_materials) 
       INTEGER_T temp_order(num_materials)
       INTEGER_T argmin_order
       REAL_T min_error,mof_err
@@ -14087,8 +14090,12 @@ contains
            order_algorithm_in(imaterial)=num_materials+1
           else if (mofdata(vofcomp).le.VOFTOL) then
            order_algorithm_in(imaterial)=num_materials+1  ! was "1"
-          else
+          else if ((mofdata(vofcomp).gt.VOFTOL).and. &
+                   (mofdata(vofcomp).lt.one-VOFTOL)) then
            ! do nothing
+          else
+           print *,"mofdata(vofcomp) invalid"
+           stop
           endif
          endif
 
@@ -14125,23 +14132,28 @@ contains
        enddo ! imaterial=1..num_materials
       endif
 
+      ! n_ndef=number of "is_rigid==0" materials with order_algorithm_in=0
       n_ndef=0
       do imaterial=1,num_materials
        placeholder(imaterial)=0 ! 0 if place open, 1 if place taken
        placelist(imaterial)=0  ! list of available places (>=n_ndef)
-       flexlist(imaterial)=0   ! list of materials that need an ordering
-      enddo
+       flexlist(imaterial)=0 ! list of fluid materials that need an ordering
+      enddo !imaterial=1..num_materials
+
+
       do imaterial=1,num_materials
        if (is_rigid_local(imaterial).eq.1) then
         ! do nothing
        else if (is_rigid_local(imaterial).eq.0) then
         if (order_algorithm_in(imaterial).eq.0) then
          n_ndef=n_ndef+1
+         !flexlist: list of fluid materials that need an ordering
          flexlist(n_ndef)=imaterial
         else if (order_algorithm_in(imaterial).gt.num_materials) then
          ! do nothing
         else if ((order_algorithm_in(imaterial).ge.1).and. &
                  (order_algorithm_in(imaterial).le.num_materials)) then
+          !0 if place open, 1 if place taken.
          placeholder(order_algorithm_in(imaterial))=1
         else
          print *,"order_algorithm_in(imaterial) invalid"
@@ -14153,19 +14165,14 @@ contains
        endif
       enddo ! imaterial=1..num_materials
 
-        ! placelist: list of available places >= n_ndef
+      !n_ndef=number of "is_rigid==0" materials with order_algorithm_in=0
+      !placelist: list of available places (size of list >= n_ndef)
       place_index=0
       do imaterial=1,num_materials
-       if (is_rigid_local(imaterial).eq.1) then
-        ! do nothing
-       else if (is_rigid_local(imaterial).eq.0) then
-        if (placeholder(imaterial).eq.0) then
-         place_index=place_index+1
-         placelist(place_index)=imaterial
-        endif
-       else
-        print *,"is_rigid_local invalid"
-        stop
+       !0 if place open, 1 if place taken.
+       if (placeholder(imaterial).eq.0) then ! the "imaterial" place is open.
+        place_index=place_index+1
+        placelist(place_index)=imaterial
        endif
       enddo  ! imaterial
       if (place_index.lt.n_ndef) then
@@ -14340,6 +14347,7 @@ contains
           mofdata_in(dir)=mofdata(dir)
          enddo
 
+         !flexlist: list of fluid materials that need an ordering
          do iflex=1,n_ndef
           imaterial=flexlist(iflex)
           if ((imaterial.lt.1).or.(imaterial.gt.num_materials)) then
