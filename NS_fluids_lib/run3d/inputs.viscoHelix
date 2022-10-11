@@ -36,7 +36,7 @@ ns.MOFITERMAX=15
 ns.continuous_mof=0 #for the structure interfaces it is always MOF anyway.
 
 #ns.mof_error_ordering=0
-#ns.mof_ordering=0 2 0 1 
+#ns.mof_ordering=0 1 0 1 
 
 ## multigrid class
 #mg.verbose = 2

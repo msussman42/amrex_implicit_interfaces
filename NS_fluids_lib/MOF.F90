@@ -14141,7 +14141,7 @@ contains
       n_ndef=0
       do imaterial=1,num_materials
        placeholder(imaterial)=0 ! 0 if place open, 1 if place taken
-       placelist(imaterial)=0  ! list of available places (>=n_ndef)
+       placelist(imaterial)=0  ! list of available places (list size>=n_ndef)
        flexlist(imaterial)=0 ! list of fluid materials that need an ordering
       enddo !imaterial=1..num_materials
 
@@ -14356,7 +14356,27 @@ contains
 
          !flexlist: list of fluid materials that need an ordering
          do iflex=1,n_ndef
+
           imaterial=flexlist(iflex)
+          if (iflex.gt.1) then
+           if (flexlist(iflex).gt.flexlist(iflex-1)) then
+            ! do nothing
+           else
+            print *,"flexlist(iflex) or flexlist(iflex-1) bad"
+            stop
+           endif
+          else if (iflex.lt.n_ndef) then
+           if (flexlist(iflex).lt.flexlist(iflex+1)) then
+            ! do nothing
+           else
+            print *,"flexlist(iflex) or flexlist(iflex+1) bad"
+            stop
+           endif
+          else
+           print *,"iflex invalid"
+           stop
+          endif
+
           if ((imaterial.lt.1).or.(imaterial.gt.num_materials)) then
            print *,"imaterial invalid"
            stop
@@ -14364,16 +14384,34 @@ contains
 
           if ((is_rigid_local(imaterial).eq.0).and. &
               (order_algorithm_in(imaterial).eq.0)) then
+
            irank=order_array(order_count,iflex)
-           if ((irank.lt.1).or.(irank.gt.n_ndef)) then
+
+           if ((irank.gt.1).and.(irank.le.n_ndef)) then
+            if (placelist(irank).ge.placelist(irank-1)) then
+             ! do nothing
+            else
+             print *,"placelist(irank) or placelist(irank-1) bad"
+             stop
+            endif
+           else if ((irank.ge.1).and.(irank.lt.n_ndef)) then
+            if (placelist(irank+1).ge.placelist(irank)) then
+             ! do nothing
+            else
+             print *,"placelist(irank+1) or placelist(irank) bad"
+             stop
+            endif
+           else
             print *,"irank invalid"
             stop
            endif
+
            order_algorithm_in(imaterial)=placelist(irank)
           else
            print *,"is_rigid_local or order_algorithm_in invalid"
            stop
           endif
+
          enddo ! iflex=1...n_ndef
         
          if (continuous_mof.eq.0) then

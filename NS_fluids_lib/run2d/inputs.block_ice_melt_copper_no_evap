@@ -75,7 +75,7 @@ ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=2 # 0=MOF 2=CMOF 
 ns.mof_error_ordering=0
 # water,air,ice,substrate
-ns.mof_ordering=0 2 0 1 
+ns.mof_ordering=3 1 2 1 
 
 # multigrid class
 mg.verbose = 0

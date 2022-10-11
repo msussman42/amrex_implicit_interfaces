@@ -24,7 +24,7 @@ ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=2
 ns.mof_error_ordering=0
 # water,air,ice
-ns.mof_ordering=0 2 0 
+ns.mof_ordering=0 1 0 
 
 # multigrid class
 mg.verbose = 0
