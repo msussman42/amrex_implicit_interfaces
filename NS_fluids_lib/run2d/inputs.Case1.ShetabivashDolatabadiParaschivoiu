@@ -25,7 +25,7 @@ ns.MOFITERMAX=15
 ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=2
-ns.vof_height_function=0
+ns.vof_height_function=1
 ns.mof_decision_tree_learning=4000 # default: 40000
 ns.MOFITERMAX_AFTER_PREDICT=5
 # 0 - centroid furthest from uncaptured centroid

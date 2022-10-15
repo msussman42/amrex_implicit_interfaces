@@ -605,7 +605,7 @@ Vector<Real> NavierStokes::microlayer_temperature_substrate;
 int NavierStokes::custom_nucleation_model=0;
 
 int NavierStokes::FD_curv_interp=1;
-int NavierStokes::vof_height_function=0;
+int NavierStokes::vof_height_function=1;
 
 Vector<Real> NavierStokes::cavitation_pressure;
 Vector<Real> NavierStokes::cavitation_vapor_density;
