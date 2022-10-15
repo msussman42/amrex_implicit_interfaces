@@ -78,7 +78,7 @@ ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = -9.8 # m/s^2
 
-ns.vof_height_function=0
+ns.vof_height_function=1
 
 #
 #
