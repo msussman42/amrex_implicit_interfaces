@@ -103,8 +103,6 @@ ns.tension=0.831 0.232 0.243 0.968 0.831 0.243
 # if theta_L_initial=33 degrees then:
 #ns.tension=0.831 0.232 0.134 0.968 0.831 0.243
 
-#ns.unscaled_min_curvature_radius=10.0
-
 # specific heat of glass: 0.84E+3 J/(kg K)
 # specific heat of water: 4.186E+3 J/(kg K)
 # specific heat of ice: 2.05E+3 J/(kg K)

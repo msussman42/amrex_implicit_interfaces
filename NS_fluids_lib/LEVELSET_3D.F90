@@ -440,6 +440,7 @@ stop
         dx_col(dir2)=xsten0(1,dir2)-xsten0(-1,dir2)
        enddo
 
+        ! calling from: initpforce
        call get_col_ht_LS( &
         local_vof_height, & !=0
         crossing_status, &
@@ -904,7 +905,7 @@ stop
       call get_user_tension(xcenter,time, &
        fort_tension,user_tension,temperature_cen)
 
-      if (unscaled_min_curvature_radius.ge.zero) then
+      if (unscaled_min_curvature_radius.ge.two) then
        ! do nothing
       else
        print *,"unscaled_min_curvature_radius invalid"
@@ -1398,6 +1399,7 @@ stop
       enddo ! jwidth=-1,1
       enddo ! iwidth=-1,1
 
+       ! analyze_heights is declared in: GLOBALUTIL.F90
       call analyze_heights( &
         htfunc_LS, &
         htfunc_VOF, &
@@ -2303,9 +2305,7 @@ stop
        curvFD=curvFD+dnrm(dir2)
       enddo
 
-      if (unscaled_min_curvature_radius.eq.zero) then
-       ! do nothing
-      else if (unscaled_min_curvature_radius.gt.zero) then
+      if (unscaled_min_curvature_radius.ge.two) then
        maxcurv=one/(unscaled_min_curvature_radius*dxmax)
        if (levelrz.eq.COORDSYS_CARTESIAN) then
         if (SDIM.eq.2) then
@@ -2323,6 +2323,7 @@ stop
         print *,"initheightLS: levelrz invalid (b)"
         stop
        endif
+
        if (curvFD.gt.maxcurv) then
         curvFD=maxcurv
        else if (curvFD.lt.-maxcurv) then
@@ -2333,6 +2334,18 @@ stop
         print *,"curvFD is NaN"
         stop
        endif
+
+       if (curvHT_choice.gt.maxcurv) then
+        curvHT_choice=maxcurv
+       else if (curvHT_choice.lt.-maxcurv) then
+        curvHT_choice=-maxcurv
+       else if (abs(curvHT_choice).le.maxcurv) then
+        ! do nothing
+       else
+        print *,"curvHT_choice is NaN"
+        stop
+       endif
+
       else
        print *,"unscaled_min_curvature_radius invalid"
        stop
@@ -3457,7 +3470,7 @@ stop
        stop
       endif
 
-      if (unscaled_min_curvature_radius.ge.zero) then
+      if (unscaled_min_curvature_radius.ge.two) then
        ! do nothing
       else
        print *,"unscaled_min_curvature radius invalid"
