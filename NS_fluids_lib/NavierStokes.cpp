@@ -547,7 +547,7 @@ Vector<Real> NavierStokes::tension_min;
 Vector<Real> NavierStokes::tension_T0;
 Vector<Real> NavierStokes::tension;
 
-Real NavierStokes::unscaled_min_curvature_radius=0.0;
+Real NavierStokes::unscaled_min_curvature_radius=2.0;
 Vector<Real> NavierStokes::prefreeze_tension;
 Vector<Real> NavierStokes::recalesce_model_parameters;
 
@@ -3653,6 +3653,12 @@ NavierStokes::read_params ()
     pp.getarr("tension",tension,0,num_interfaces);
 
     pp.queryAdd("unscaled_min_curvature_radius",unscaled_min_curvature_radius);
+    if (unscaled_min_curvature_radius<2.0) {
+     amrex::Error("must have unscaled_min_curvature_radius>=2.0");
+    } else if (unscaled_min_curvature_radius>=2.0) {
+     //do nothing
+    } else
+     amrex::Error("unscaled_min_curvature_radius = NaN");
 
     for (int i=0;i<num_interfaces;i++) 
      prefreeze_tension[i]=tension[i];

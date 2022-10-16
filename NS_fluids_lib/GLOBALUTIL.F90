@@ -7148,7 +7148,7 @@ end subroutine print_visual_descriptor
 
         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
 
-         print *,"VFRAC height function for levelrz==COORDSYS_CYLINDRICAL not ready yet"
+         print *,"VFRAC height function invalid:levelrz=COORDSYS_CYLINDRICAL"
 
         else if (levelrz.eq.COORDSYS_CARTESIAN) then
 

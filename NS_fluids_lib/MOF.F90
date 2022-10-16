@@ -12604,8 +12604,9 @@ contains
       INTEGER_T lmin,lmax
       INTEGER_T lvof_min,lvof_max
       INTEGER_T lcrit
-      REAL_T xbottom,xtop
-      REAL_T current_xbottom
+      REAL_T xbottom_stencil
+      REAL_T xtop_stencil
+      REAL_T xbottom_adjusted
       INTEGER_T vof_ratio_ht_power
       REAL_T X_AT_ABS_LSMIN,ABS_LSMIN,LSTEST
 
@@ -12613,7 +12614,9 @@ contains
       REAL_T charfn(-ngrow_distance:ngrow_distance)
       REAL_T LS
       REAL_T vof_top_sum,vof_bot_sum
-      REAL_T dr,dz,volcell,vof_crit
+      REAL_T dr,dz
+      REAL_T volcell
+      REAL_T vof_crit
       REAL_T dx_norm,dx_tan1,dx_tan2
 
       if (ngrow_distance.ne.4) then
@@ -12718,8 +12721,8 @@ contains
        endif
       enddo
 
-      xbottom=xsten0(2*lmin-1,dircrit)
-      xtop=xsten0(2*lmax+1,dircrit)
+      xbottom_stencil=xsten0(2*lmin-1,dircrit)
+      xtop_stencil=xsten0(2*lmax+1,dircrit)
 
       lcrit=0
       crossing_status=0
@@ -12806,18 +12809,46 @@ contains
          ls2=lsdata(-(l+1))
          x1=xsten0(-2*l,dircrit)
          x2=xsten0(-(2*l+2),dircrit)
-         if (ls1.eq.zero) then
-          ht_from_LS=x1
-         else if (ls2.eq.zero) then
-          ht_from_LS=x2
+         if (x1.gt.x2) then
+          ! LS=LS1+slope(x-x1)  xzero=-LS1/slope+x1
+          if (ls1.eq.zero) then
+           ht_from_LS=x1
+          else if (ls2.eq.zero) then
+           ht_from_LS=x2
+          else if ((ls1.ne.zero).and. &
+                   (ls2.ne.zero)) then
+           slope=(ls1-ls2)/(x1-x2)
+           if (slope.ne.zero) then
+            ht_from_LS=x1-ls1/slope
+           else
+            print *,"slope invalid"
+            stop
+           endif
+          else
+           print *,"ls1 or ls2 invalid"
+           stop
+          endif
          else
-          slope=(ls1-ls2)/(x1-x2)
-          ht_from_LS=x1-ls1/slope
+          print *,"x1 or x2 invalid"
+          stop
          endif
-        endif   
-       endif
-      enddo ! l=0,ngrow_make_distance
+        else if ((ls1*ls2.ge.zero).or. &
+                 ((ls1-ls2)*n1d.le.zero)) then
+         ! do nothing
+        else
+         print *,"ls1 or ls2 invalid"
+         stop
+        endif  
 
+       else if ((crossing_status.ne.0).or. &
+                (-(l+1).lt.lmin)) then
+        ! do nothing
+       else
+        print *,"crossing_status or -(l+1) problem"
+        stop
+       endif
+
+      enddo ! l=0,ngrow_make_distance
 
          ! given volume for column, find the interface.
          ! for RZ, if dircrit=1, then column extends to r=0
@@ -12885,7 +12916,7 @@ contains
           endif
 
           if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           print *,"vof_height_function not ready for levelrz==COORDSYS_CYLINDRICAL"
+           print *,"vof_height_function not ready:levelrz:COORDSYS_CYLINDRICAL"
            stop
           else if (levelrz.eq.COORDSYS_RZ) then
            if (dircrit.eq.1) then ! horizontal column
@@ -12893,6 +12924,7 @@ contains
             dr=xsten0(2*l_vof+1,dircrit)-xsten0(2*l_vof-1,dircrit)
             dz=dx_col(2)
             if ((dz.gt.zero).and.(dr.gt.zero)) then
+              !2 pi r * dr * dz
              volcell=Pi*(xsten0(2*l_vof-1,dircrit)+ &
                          xsten0(2*l_vof+1,dircrit))*dz*dr
             else
@@ -12985,22 +13017,24 @@ contains
           vof_bot_sum=vof_bot_sum+volcell
          enddo !l_vof=lmin,lmax
 
-         current_xbottom=xbottom
+         xbottom_adjusted=xbottom_stencil
          vof_ratio_ht_power=1
 
          if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          print *,"vof_height_function not ready for levelrz==COORDSYS_CYLINDRICAL"
+          print *,"vof_height_function not ready:levelrz=COORDSYS_CYLINDRICAL"
           stop
          else if (levelrz.eq.COORDSYS_RZ) then
+
           if (dircrit.eq.1) then ! horizontal column
+
            if (problox.ge.zero) then
             vof_ratio_ht_power=2
-            current_xbottom=zero
-            dr=xsten0(2*lmin-1,dircrit)-current_xbottom
+            xbottom_adjusted=zero
+            dr=xsten0(2*lmin-1,dircrit)-xbottom_adjusted
             dz=dx_col(2)
             if ((dz.gt.zero).and.(dr.ge.zero)) then
              volcell=Pi*(xsten0(2*lmin-1,dircrit)+ &
-                         current_xbottom)*dr*dz
+                         xbottom_adjusted)*dr*dz
             else
              print *,"dz or dr invalid"
              stop
@@ -13009,9 +13043,10 @@ contains
             print *,"expecting  problox>=0"
             stop
            endif  
+
           else if (dircrit.eq.2) then ! vertical column
 
-           dz=xsten0(2*lmin-1,dircrit)-current_xbottom
+           dz=xsten0(2*lmin-1,dircrit)-xbottom_adjusted
            dr=dx_col(1)
            if ((dz.ge.zero).and.(dr.gt.zero)) then
             volcell=two*Pi*x_col_avg(1)*dz*dr
@@ -13030,7 +13065,7 @@ contains
           if (SDIM.eq.2) then
 
            if (dircrit.eq.1) then ! horizontal column
-            dr=xsten0(2*lmin-1,dircrit)-current_xbottom
+            dr=xsten0(2*lmin-1,dircrit)-xbottom_adjusted
             dz=dx_col(2)
             if ((dz.gt.zero).and.(dr.ge.zero)) then
              volcell=dr*dz
@@ -13039,7 +13074,7 @@ contains
              stop
             endif
            else if (dircrit.eq.2) then ! vertical column
-            dz=xsten0(2*lmin-1,dircrit)-current_xbottom
+            dz=xsten0(2*lmin-1,dircrit)-xbottom_adjusted
             dr=dx_col(1)
             if ((dz.ge.zero).and.(dr.gt.zero)) then
              volcell=dz*dr
@@ -13054,7 +13089,7 @@ contains
 
           else if (SDIM.eq.3) then
 
-           dx_norm=xsten0(2*lmin-1,dircrit)-current_xbottom
+           dx_norm=xsten0(2*lmin-1,dircrit)-xbottom_adjusted
            if (dx_norm.ge.zero) then
             if (dircrit.eq.1) then ! horizontal column
              dx_tan1=dx_col(2)
@@ -13095,18 +13130,19 @@ contains
          if (vof_bot_sum.gt.zero) then
           if (vof_ratio_ht_power.eq.1) then
            ht_from_VOF= &
-             vof_top_sum*(xtop-current_xbottom)/vof_bot_sum+current_xbottom
+             vof_top_sum*(xtop_stencil-xbottom_adjusted)/vof_bot_sum+ &
+               xbottom_adjusted
           else if (vof_ratio_ht_power.eq.2) then
            dr=dx_col(1)
-           ht_from_VOF=(xtop**2)*vof_top_sum/vof_bot_sum
+           ht_from_VOF=(xtop_stencil**2)*vof_top_sum/vof_bot_sum
            if (ht_from_VOF.ge.zero) then
             ht_from_VOF=sqrt(ht_from_VOF)
-            if (abs(ht_from_VOF-xbottom).le.VOFTOL*dr) then
-             ht_from_VOF=xbottom
-            else if (abs(ht_from_VOF-xtop).le.VOFTOL*dr) then
-             ht_from_VOF=xtop
-            else if ((ht_from_VOF.ge.xbottom).and. &
-                     (ht_from_VOF.le.xtop)) then
+            if (abs(ht_from_VOF-xbottom_stencil).le.VOFTOL*dr) then
+             ht_from_VOF=xbottom_stencil
+            else if (abs(ht_from_VOF-xtop_stencil).le.VOFTOL*dr) then
+             ht_from_VOF=xtop_stencil
+            else if ((ht_from_VOF.ge.xbottom_stencil).and. &
+                     (ht_from_VOF.le.xtop_stencil)) then
              ! do nothing
             else
              print*,"ht_from_VOF invalid"
@@ -13117,6 +13153,7 @@ contains
             print *,"ht_from_VOF invalid"
             stop
            endif
+
           else 
            print *,"vof_ratio_ht_power invalid"
            stop
