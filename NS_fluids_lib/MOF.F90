@@ -12678,15 +12678,23 @@ contains
 
       lmin=-ngrow_distance
       lmax=ngrow_distance
-      if ((levelrz.eq.COORDSYS_RZ).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      if ((levelrz.eq.COORDSYS_RZ).or. &
+          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
        if (dircrit.eq.1) then ! horizontal column
         do while (xsten0(2*lmin,dircrit).lt.zero)
          lmin=lmin+1
-         if (2*lmin.gt.2*ngrow_distance+1) then
+         if ((2*lmin.gt.2*ngrow_distance+1).or. &
+             (lmin.gt.lmax)) then
           print *,"lmin too big"
           stop
          endif
-        enddo
+        enddo ! while (xsten0(2*lmin,dircrit).lt.zero)
+        if (xsten0(2*lmin,dircrit).gt.zero) then
+         ! do nothing
+        else
+         print *,"xsten0(2*lmin,dircrit).gt.zero not true"
+         stop
+        endif
        endif
       else if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
@@ -12702,6 +12710,11 @@ contains
        if (LSTEST.lt.ABS_LSMIN) then
         ABS_LSMIN=LSTEST
         X_AT_ABS_LSMIN=xsten0(2*l,dircrit)
+       else if (LSTEST.ge.ABS_LSMIN) then
+        ! do nothing
+       else
+        print *,"LSTEST or ABS_LSMIN is NaN"
+        stop
        endif
       enddo
 
@@ -12716,8 +12729,11 @@ contains
        LS=lsdata(l)
        if (LS.ge.zero) then
         charfn(l)=one
-       else
+       else if (LS.le.zero) then
         charfn(l)=-one
+       else
+        print *,"LS is NaN"
+        stop
        endif
         
       enddo  ! l=lmin,lmax
@@ -12740,17 +12756,44 @@ contains
          ls2=lsdata(l+1)
          x1=xsten0(2*l,dircrit)
          x2=xsten0(2*l+2,dircrit)
+         if (x1.lt.x2) then
           ! LS=LS1+slope(x-x1)  xzero=-LS1/slope+x1
-         if (ls1.eq.zero) then
-          ht_from_LS=x1
-         else if (ls2.eq.zero) then 
-          ht_from_LS=x2
+          if (ls1.eq.zero) then
+           ht_from_LS=x1
+          else if (ls2.eq.zero) then 
+           ht_from_LS=x2
+          else if ((ls1.ne.zero).and. &
+                   (ls2.ne.zero)) then
+           slope=(ls1-ls2)/(x1-x2)
+           if (slope.ne.zero) then
+            ht_from_LS=x1-ls1/slope
+           else
+            print *,"slope invalid"
+            stop
+           endif
+          else
+           print *,"ls1 or ls2 invalid"
+           stop
+          endif
          else
-          slope=(ls1-ls2)/(x1-x2)
-          ht_from_LS=x1-ls1/slope
+          print *,"x1 or x2 invalid"
+          stop
          endif
-        endif   
+        else if ((ls1*ls2.ge.zero).or. &
+                 ((ls2-ls1)*n1d.le.zero)) then
+         ! do nothing
+        else
+         print *,"ls1 or ls2 invalid"
+         stop
+        endif
+       else if ((crossing_status.ne.0).or.(l+1.gt.lmax)) then
+        ! do nothing
+       else
+        print *,"crossing_status or l+1 problem"
+        stop
        endif
+
+
         ! second: check lower half of stencil for a crossing
        if ((crossing_status.eq.0).and. &
            (-(l+1).ge.lmin)) then 
