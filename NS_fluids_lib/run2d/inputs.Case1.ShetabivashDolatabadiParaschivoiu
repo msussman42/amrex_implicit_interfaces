@@ -26,7 +26,7 @@ ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=2
 ns.vof_height_function=1
-ns.mof_decision_tree_learning=4000 # default: 40000
+ns.mof_decision_tree_learning=40000 # default: 40000
 ns.MOFITERMAX_AFTER_PREDICT=5
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
@@ -99,7 +99,8 @@ ns.gravity        = -9.8 # m/s^2
 #triple point: (silicone) theta_liq=60.0, theta_ice=132.0, theta_gas=168.0
 #contact line: theta_L_initial=45 degrees
 # LG,LI,LS,IG,GS,SI  (SI not used)
-ns.tension=0.831 0.232 0.243 0.968 0.831 0.243
+#ns.tension=0.831 0.232 0.243 0.968 0.831 0.243 # 180 degrees for gas angle.
+ns.tension=0.831 0.0 0.243 0.968 0.831 0.243 # 180 degrees for gas angle.
 # if theta_L_initial=33 degrees then:
 #ns.tension=0.831 0.232 0.134 0.968 0.831 0.243
 
@@ -150,7 +151,10 @@ ns.heatviscconst=62 0.62 31 386 # W/(m K)
 # 12 13 14 23 24 34  
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 ns.damping_coefficient=0.0 0.0 0.0 0.0
-ns.viscconst=0.000557 0.0000279 0.0279 100.0 # dimensional Pa s
+#ns.viscconst=0.000557 0.0000279 0.0279 100.0 # dimensional Pa s
+#Remove parasitic currents by increasing the liquid viscosity (perhaps
+#increase the gas viscosity too).
+ns.viscconst=0.026 0.00279 0.0279 100.0 # dimensional Pa s
 ns.denconst=2580 129 2350 8960
 ns.FSI_flag=0 0 3 1
 ns.recalesce_flag=0 0 0 0

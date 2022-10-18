@@ -23077,6 +23077,11 @@ if (probtype.eq.55) then
 
   else
    print *,"parameter conflict for probtype=55"
+   print *,"axis_dir = ",axis_dir
+   print *,"xblob,yblob,zblob = ",xblob,yblob,zblob
+   print *,"xblob2,yblob2,zblob2 = ",xblob2,yblob2,zblob2
+   print *,"radblob ",radblob
+   print *,"radblob3 ",radblob3
    stop
   endif
 
