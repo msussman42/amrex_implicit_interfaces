@@ -6,13 +6,18 @@
 # domain: 2mm x 2mm
 # density (kg/m^3): air=1.29  water=1000  ice=917
 # viscosity (Pa s): air=1.7E-5  water=1.7E-3  ice=1.7E-3
+# In order to reduce parasitic currents, make water viscosity=8.5E-2
 # thermal diffusivity (alpha=k/(rho Cp) m^2/s):
 # air=2E-5  water=1.32E-7  ice=1.18E-6
+# thermal conductivity:
+# air=2E-5 * 1.29 * 1E+3 = 0.026
+# water=1.3E-7 * 1000 * 4.2E+3 = 0.546
+# ice=1.2E-6 * 917 * 2.0E+3 = 2.2
 # Cp (J/(kg degrees Celcius)): air=1E+3  water=4.21E+3  ice=2.03E+3
 # latent heat=334 kJ/kg
-# \Delta t/t_{diff} = dimensionless time step
+# \Delta t/t_{diff} = dimensionless time step = 1.3E-6
 # t_{diff}=h^2/alpha_{l} seconds=10/1.32=7.58 seconds
-# \Delta x/h = dimensionless grid spacing
+# \Delta x/h = dimensionless grid spacing = 6.7E-3
 # T_w=-20 degrees Celcius
 # T_l=T_g=20 degrees Celcius
 max_step  =  9999999    # maximum timestep
@@ -23,7 +28,7 @@ stop_time = 20.0
 # set up for bubble
 geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
-geometry.prob_hi=0.015 0.01  # meters
+geometry.prob_hi=0.002 0.002  # meters
 ns.slice_dir=1
 ns.xslice=0.0 0.0
 ns.EILE_flag=-1
@@ -42,7 +47,7 @@ ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=2
 ns.vof_height_function=1
-ns.mof_decision_tree_learning=4000 # default: 40000
+ns.mof_decision_tree_learning=10000 # default: 40000
 ns.MOFITERMAX_AFTER_PREDICT=5
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
@@ -68,7 +73,7 @@ Lp.v = 0
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
-amr.n_cell=96 64
+amr.n_cell=64 64
 amr.max_level = 0
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
@@ -115,15 +120,13 @@ ns.gravity        = -9.8 # m/s^2
 #triple point: (silicone) theta_liq=60.0, theta_ice=132.0, theta_gas=168.0
 #contact line: theta_L_initial=45 degrees
 # LG,LI,LS,IG,GS,SI  (SI not used)
-ns.tension=0.831 0.232 0.243 0.968 0.831 0.243
-# if theta_L_initial=33 degrees then:
-#ns.tension=0.831 0.232 0.134 0.968 0.831 0.243
+ns.tension=0.072 0.0 0.072 0.072 0.072 0.072
 
 # specific heat of glass: 0.84E+3 J/(kg K)
 # specific heat of water: 4.186E+3 J/(kg K)
 # specific heat of ice: 2.05E+3 J/(kg K)
 # material 1=liquid 2=gas  3=ice 4=solid  
-ns.stiffCP = 1.10e+3 1.10e+3 1.10e+3 3.850e+2  # dimensional J/(kg K)
+ns.stiffCP = 4.21e+3 1.0e+3 2.03e+3 2.03e+2  # dimensional J/(kg K)
 # units of latent_heat: 1 J/kg=10^7 erg/(1000 g)=10^4 erg/g
 # L=334 J/g=3.34E+9 erg/g=334 J/(kg/1000)=3.34E+5 J/kg
 # <0 if condensation or solidification
@@ -131,12 +134,12 @@ ns.stiffCP = 1.10e+3 1.10e+3 1.10e+3 3.850e+2  # dimensional J/(kg K)
 # latent_heat[2*max_num_tension]
 #12 13 14 23 24 34 then reverse
 # dimensional J/kg:
-ns.latent_heat = 0.0 -1.81e+5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+ns.latent_heat = 0.0 -3.34e+5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 # 1->2 liquid-> gas
 # 1->3 liquid->ice 
 # ....
 #12 13 14 23 24 34 then reverse
-ns.saturation_temp = 0.0 1683 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+ns.saturation_temp = 0.0 273.0  0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 # 
 ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt
@@ -162,35 +165,35 @@ ns.material_type=0 0 0 999
 # air: k=0.024 W/(M K)
 # water: k=0.58 W/(M K)
 # MKS: cp=4.1855 J/((kg/1000)K)=4.1855E+3 J/(kg K)
-ns.heatviscconst=62 0.62 31 386 # W/(m K)
+ns.heatviscconst=0.546 0.026 2.2 386 # W/(m K)
 # 12 13 14 23 24 34  
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 ns.damping_coefficient=0.0 0.0 0.0 0.0
-ns.viscconst=0.000557 0.0000279 0.0279 100.0 # dimensional Pa s
-ns.denconst=2580 129 2350 8960
+ns.viscconst=0.09 0.001 1.0 100.0 # dimensional Pa s
+ns.denconst=1000 1.29 917.0 10000.0
 ns.FSI_flag=0 0 3 1
 ns.recalesce_flag=0 0 0 0
 # solidheat_flag=0=>diffuse in solid 
 # solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=1
-ns.tempconst=1683 1683 1683 1663  
-ns.initial_temperature=1683 1683 1683 1663  
+ns.tempconst=293.0 293.0 293.0 253.0  
+ns.initial_temperature=293.0 293.0 293.0 253.0
 ns.xblob=0.0  # center of water drop
-ns.yblob=0.000625 #4*dxcoarse=0.0000625
+ns.yblob=0.000125 #4*dxcoarse=0.000125
 ns.zblob=0.0
 ns.xblob2=0.0 # center of surface of cold plate (xblob2,yblob2) (inclined)  
-ns.yblob2=0.000625 #dxcoarse=0.001/64  4*dxcoarse=0.001/16=0.0000625
+ns.yblob2=0.000125 #dxcoarse=0.002/64  4*dxcoarse=0.002/16=0.000125
 ns.zblob2=0.0
 ns.radblob2=0.0 # zero degrees incline (radians)
 # thickness of underside of droplet that is already frozen
-ns.radblob3=0.0003125 #dimensionless 2*dxcoarse=0.001/32=0.00003125
+ns.radblob3=0.0000625 #dimensionless 2*dxcoarse=0.002/32=0.0000625
 # effective radius of water/ice drop: volume=(1/2)  (4/3)pi r^3=
 # 3.2724923E-11 m^3
 #ns.zblob4=0.0000625
 #transitional substrate temperature
 ns.zblob4=0.0 #substrate tempreture=wall temperature(atylo)
-ns.radblob=500.0e-5 # meters
+ns.radblob=1.0e-3 # meters
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55
