@@ -12721,9 +12721,10 @@ NavierStokes::prepare_displacement(int mac_grow) {
 
     Vector<int> velbc=getBCArray(State_Type,gridno,normdir,1);
 
-    FArrayBox& unodetemp=(*temp_mac_velocity)[mfi]; // macgrow
-    FArrayBox& unode=(*localMF[MAC_VELOCITY_MF+normdir])[mfi]; // macgrow
-    FArrayBox& ucell=(*localMF[CELL_VELOCITY_MF])[mfi];
+    FArrayBox& umactemp=(*temp_mac_velocity)[mfi]; // macgrow
+    FArrayBox& umac_displace=
+	 (*localMF[MAC_VELOCITY_MF+normdir])[mfi]; // macgrow
+    FArrayBox& ucell_displace=(*localMF[CELL_VELOCITY_MF])[mfi];
 
     prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
 
@@ -12746,9 +12747,12 @@ NavierStokes::prepare_displacement(int mac_grow) {
      &vel_time_slab,
      &dir_absolute_direct_split,
      &normdir,
-     unodetemp.dataPtr(),ARLIM(unodetemp.loVect()),ARLIM(unodetemp.hiVect()),
-     unode.dataPtr(),ARLIM(unode.loVect()),ARLIM(unode.hiVect()),
-     ucell.dataPtr(),ARLIM(ucell.loVect()),ARLIM(ucell.hiVect()),
+     umactemp.dataPtr(),
+     ARLIM(umactemp.loVect()),ARLIM(umactemp.hiVect()),
+     umac_displace.dataPtr(),
+     ARLIM(umac_displace.loVect()),ARLIM(umac_displace.hiVect()),
+     ucell_displace.dataPtr(),
+     ARLIM(ucell_displace.loVect()),ARLIM(ucell_displace.hiVect()),
      xlo,dx,
      &mac_grow,
      &map_forward_direct_split[normdir],
@@ -16698,6 +16702,9 @@ NavierStokes::split_scalar_advection() {
  int ngrow_mass=2;
  int ngrow_scalar=1;
 
+  // 2 ghost cells needed in order to define the displacement MAC
+  // velocity for left/right strip of a MAC grid control volume
+  // being transported into a target MAC grid control volume.
  int mac_grow=2; 
  int ngrow_mac_old=2;
 
@@ -17056,9 +17063,9 @@ NavierStokes::split_scalar_advection() {
   FArrayBox& masknbrfab=(*localMF[MASK_NBR_MF])[mfi];
 
    // velocity * dt
-  FArrayBox& unode=(*localMF[MAC_VELOCITY_MF+normdir_here])[mfi];
-  if (unode.nComp()!=1)
-   amrex::Error("unode has invalid ncomp");
+  FArrayBox& umac_displace=(*localMF[MAC_VELOCITY_MF+normdir_here])[mfi];
+  if (umac_displace.nComp()!=1)
+   amrex::Error("umac_displace has invalid ncomp");
 
     // this is the original data
   FArrayBox& LSfab=(*localMF[LS_RECON_MF])[mfi];
@@ -17093,7 +17100,7 @@ NavierStokes::split_scalar_advection() {
   FArrayBox& ymassside=(*side_bucket_mass[1])[mfi];
   FArrayBox& zmassside=(*side_bucket_mass[AMREX_SPACEDIM-1])[mfi];
 
-  FArrayBox& ucellfab=(*localMF[CELL_VELOCITY_MF])[mfi];
+  FArrayBox& ucell_displace=(*localMF[CELL_VELOCITY_MF])[mfi];
 
   prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
 
@@ -17148,12 +17155,16 @@ NavierStokes::split_scalar_advection() {
    LSdestfab.dataPtr(),
    ARLIM(LSdestfab.loVect()),ARLIM(LSdestfab.hiVect()),
     // other vars.
-   ucellfab.dataPtr(),ARLIM(ucellfab.loVect()),ARLIM(ucellfab.hiVect()),
+   ucell_displace.dataPtr(),
+   ARLIM(ucell_displace.loVect()),
+   ARLIM(ucell_displace.hiVect()),
    vof0fab.dataPtr(),ARLIM(vof0fab.loVect()),ARLIM(vof0fab.hiVect()),
    maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
    masknbrfab.dataPtr(),
    ARLIM(masknbrfab.loVect()),ARLIM(masknbrfab.hiVect()),
-   unode.dataPtr(),ARLIM(unode.loVect()),ARLIM(unode.hiVect()),
+   umac_displace.dataPtr(),
+   ARLIM(umac_displace.loVect()),
+   ARLIM(umac_displace.hiVect()),
    xlo,dx,
     // local variables
    consfab.dataPtr(),ARLIM(consfab.loVect()),ARLIM(consfab.hiVect()),
@@ -17236,11 +17247,6 @@ NavierStokes::split_scalar_advection() {
    FArrayBox& yvmac_new=(*umac_new[1])[mfi];
    FArrayBox& zvmac_new=(*umac_new[AMREX_SPACEDIM-1])[mfi];
 
-    // velocity * dt
-   FArrayBox& unode=(*localMF[MAC_VELOCITY_MF+normdir_here])[mfi];
-   if (unode.nComp()!=1)
-    amrex::Error("unode has invalid ncomp");
-
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
@@ -17251,7 +17257,6 @@ NavierStokes::split_scalar_advection() {
     &normdir_here,
     tilelo,tilehi,
     fablo,fabhi,&bfact,
-    unode.dataPtr(),ARLIM(unode.loVect()),ARLIM(unode.hiVect()),
     xmomside.dataPtr(),ARLIM(xmomside.loVect()),ARLIM(xmomside.hiVect()),
     ymomside.dataPtr(),ARLIM(ymomside.loVect()),ARLIM(ymomside.hiVect()),
     zmomside.dataPtr(),ARLIM(zmomside.loVect()),ARLIM(zmomside.hiVect()),
