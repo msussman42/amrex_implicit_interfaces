@@ -195,8 +195,6 @@
 #define bicg_AU_MF 198
 #define bicg_RESID_MF 199
 
-#define CELL_VELOCITY_MF 200
-
 #define spectralF_MF 201
 #define spectralF_GP_MF 202
 
