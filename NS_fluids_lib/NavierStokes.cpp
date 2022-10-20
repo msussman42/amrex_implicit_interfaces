@@ -16693,7 +16693,11 @@ NavierStokes::split_scalar_advection() {
      (dir_absolute_direct_split>=AMREX_SPACEDIM))
   amrex::Error("dir_absolute_direct_split invalid");
 
- int ngrow=2;
+  // 2 ghost cells needed in order to form (rho u)^{mac,old} in the
+  // mac grid ghost cell.
+ int ngrow_mass=2;
+ int ngrow_scalar=1;
+
  int mac_grow=2; 
  int ngrow_mac_old=2;
 
@@ -16703,11 +16707,11 @@ NavierStokes::split_scalar_advection() {
   amrex::Error("NUM_CELL_ELASTIC invalid");
 
   // vof,ref centroid,order,slope,intercept  x num_materials
- VOF_Recon_resize(ngrow,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,ngrow,36);
- resize_maskfiner(ngrow,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,ngrow,36);
- debug_ngrow(VOF_PREV_TIME_MF,1,38);
+ VOF_Recon_resize(ngrow_mass,SLOPE_RECON_MF);
+ debug_ngrow(SLOPE_RECON_MF,ngrow_mass,36);
+ resize_maskfiner(ngrow_mass,MASKCOEF_MF);
+ debug_ngrow(MASKCOEF_MF,ngrow_mass,36);
+ debug_ngrow(VOF_PREV_TIME_MF,ngrow_scalar,38);
  if (localMF[VOF_PREV_TIME_MF]->nComp()!=num_materials)
   amrex::Error("vof prev time invalid ncomp");
 
@@ -16741,7 +16745,7 @@ NavierStokes::split_scalar_advection() {
   amrex::Error("divu_outer_sweeps invalid split_scalar_advection");
 
   // in: split_scalar_advection
- getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
+ getStateDen_localMF(DEN_RECON_MF,ngrow_mass,advect_time_slab);
 
  //  (rho Y)_t + div(rho u Y)=div(D rho grad Y)
 
@@ -16750,14 +16754,15 @@ NavierStokes::split_scalar_advection() {
  // rho_im=rho(z)+rho0* DrhoDT * (T_im - T0_im)
  // if override_density(im)=0 or 2, density is not modified:
  // Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
- getStateMOM_DEN(MOM_DEN_MF,ngrow,advect_time_slab);
+ getStateMOM_DEN(MOM_DEN_MF,ngrow_mass,advect_time_slab);
 
  int TENSOR_RECON_MF_local=TENSOR_RECON_MF;
  int Tensor_Type_local=Tensor_Type;
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
-  getStateTensor_localMF(TENSOR_RECON_MF_local,1,0,
+  getStateTensor_localMF(TENSOR_RECON_MF_local,
+   ngrow_scalar,0,
    NUM_CELL_ELASTIC,
    advect_time_slab);
  } else if (num_materials_viscoelastic==0) {
@@ -16768,10 +16773,10 @@ NavierStokes::split_scalar_advection() {
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type_local,slab_step+1);
 
- getStateDist_localMF(LS_RECON_MF,1,advect_time_slab,10);
+ getStateDist_localMF(LS_RECON_MF,ngrow_scalar,advect_time_slab,10);
 
    // the pressure from before will be copied to the new pressure.
- getState_localMF(VELADVECT_MF,ngrow,
+ getState_localMF(VELADVECT_MF,ngrow_mass,
   STATECOMP_VEL,
   STATE_NCOMP_VEL+STATE_NCOMP_PRES,
   advect_time_slab); 
@@ -16808,10 +16813,10 @@ NavierStokes::split_scalar_advection() {
  if (LS_recon_ncomp!=num_materials*(1+AMREX_SPACEDIM))
    amrex::Error("LS_recon invalid");
 
- debug_ngrow(LS_RECON_MF,1,40);
+ debug_ngrow(LS_RECON_MF,ngrow_scalar,40);
 
- resize_mask_nbr(ngrow);
- debug_ngrow(MASK_NBR_MF,ngrow,28); 
+ resize_mask_nbr(ngrow_mass);
+ debug_ngrow(MASK_NBR_MF,ngrow_mass,28); 
 
  MultiFab* umac_new[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -16821,8 +16826,9 @@ NavierStokes::split_scalar_advection() {
  int ngrid=grids.size();
 
  int nc_conserve=CISLCOMP_CONS_NCOMP;
- MultiFab* conserve=new MultiFab(grids,dmap,nc_conserve,ngrow,
-	MFInfo().SetTag("conserve"),FArrayBoxFactory());
+ MultiFab* conserve=new MultiFab(grids,dmap,nc_conserve,
+    ngrow_mass,
+    MFInfo().SetTag("conserve"),FArrayBoxFactory());
 
  int nc_bucket=CISLCOMP_NCOMP;
 
@@ -16865,7 +16871,7 @@ NavierStokes::split_scalar_advection() {
    velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
    tilelo,tilehi,
    fablo,fabhi,&bfact,
-   &ngrow,
+   &ngrow_mass,
    &normdir_here,
    &nc_conserve,
    &den_recon_ncomp);
@@ -16938,7 +16944,7 @@ NavierStokes::split_scalar_advection() {
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,
-     &ngrow,  //=2
+     &ngrow_mass,  //=2
      &ngrow_mac_old, //=2
      &veldir);
   }  // mfi
@@ -17160,7 +17166,7 @@ NavierStokes::split_scalar_advection() {
    xmassside.dataPtr(),ARLIM(xmassside.loVect()),ARLIM(xmassside.hiVect()),
    ymassside.dataPtr(),ARLIM(ymassside.loVect()),ARLIM(ymassside.hiVect()),
    zmassside.dataPtr(),ARLIM(zmassside.loVect()),ARLIM(zmassside.hiVect()),
-   &ngrow,
+   &ngrow_mass,
    &ngrow_mac_old,
    &nc_conserve,
    &map_forward_direct_split[normdir_here],
