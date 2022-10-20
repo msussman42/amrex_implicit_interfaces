@@ -783,9 +783,6 @@ extern "C"
      Real* tennew,AMREX_ARLIM_P(tennewlo),AMREX_ARLIM_P(tennewhi), 
      Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi), 
       // other vars.
-     Real* ucell_displace,
-     AMREX_ARLIM_P(ucell_displacelo),
-     AMREX_ARLIM_P(ucell_displacehi),
      Real* vof0,AMREX_ARLIM_P(vof0lo),AMREX_ARLIM_P(vof0hi),
      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
      Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
@@ -1092,8 +1089,6 @@ extern "C"
      AMREX_ARLIM_P(umactemplo),AMREX_ARLIM_P(umactemphi),
      Real* umac_displace,
      AMREX_ARLIM_P(umac_displacelo),AMREX_ARLIM_P(umac_displacehi),
-     Real* ucell_displace,
-     AMREX_ARLIM_P(ucell_displacelo),AMREX_ARLIM_P(ucell_displacehi),
      const Real* xlo,const Real* dx,
      int* mac_grow,
      int* map_forward,

@@ -3849,7 +3849,6 @@ stop
        normdir, &
        umactemp,DIMS(umactemp), &
        umac_displace,DIMS(umac_displace), &
-       ucell_displace,DIMS(ucell_displace), &
        xlo,dx, &
        mac_grow, &
        map_forward, &
@@ -3881,15 +3880,11 @@ stop
       REAL_T, INTENT(in) :: dt,time,vel_time,passive_veltime
       INTEGER_T, INTENT(in) :: DIMDEC(umactemp)
       INTEGER_T, INTENT(in) :: DIMDEC(umac_displace)
-      INTEGER_T, INTENT(in) :: DIMDEC(ucell_displace)
      
       REAL_T, INTENT(in), target :: umactemp(DIMV(umactemp)) 
       REAL_T, pointer :: umactemp_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(inout), target :: umac_displace(DIMV(umac_displace)) 
       REAL_T, pointer :: umac_displace_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(inout), target ::  &
-              ucell_displace(DIMV(ucell_displace),STATE_NCOMP_VEL) 
-      REAL_T, pointer :: ucell_displace_ptr(D_DECL(:,:,:),:)
       INTEGER_T, INTENT(in) :: velbc(SDIM,2)
 
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
@@ -3901,7 +3896,6 @@ stop
       REAL_T hx
       REAL_T RR
       REAL_T xstenMAC(-3:3,SDIM)
-      REAL_T xsten(-3:3,SDIM)
       INTEGER_T nhalf
       INTEGER_T localbc
 
@@ -3909,7 +3903,6 @@ stop
 
       umactemp_ptr=>umactemp
       umac_displace_ptr=>umac_displace
-      ucell_displace_ptr=>ucell_displace
 
       if (bfact.ge.1) then
        ! do nothing
@@ -3992,7 +3985,6 @@ stop
 
       call checkbound_array1(fablo,fabhi,umactemp_ptr,mac_grow,normdir)
       call checkbound_array1(fablo,fabhi,umac_displace_ptr,mac_grow,normdir)
-      call checkbound_array(fablo,fabhi,ucell_displace_ptr,mac_grow,-1)
 
       if (dt.gt.zero) then
        ! do nothing
@@ -4019,7 +4011,6 @@ stop
         ! 2. adjust velocity if RZ.
         ! 3. override velocity if it is a passive advection problem.
         ! 4. copy into mac_velocity
-        ! 5. repeat for cell_velocity
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,mac_grow,normdir)
@@ -4118,7 +4109,7 @@ stop
          print *,"in: velmac_override"
          print *,"MAC: displacement exceeds grid cell"
          print *,"reduce cfl"
-         print *,"utemp ",utemp(D_DECL(i,j,k))
+         print *,"umactemp ",umactemp(D_DECL(i,j,k))
          print *,"delta (u dt) = ",delta
          print *,"hx=    ",hx
          print *,"dt=    ",dt
@@ -4135,120 +4126,6 @@ stop
          ! find displacements 
         umac_displace(D_DECL(i,j,k))=delta
 
-      enddo
-      enddo
-      enddo  ! i,j,k
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi, &
-         growlo,growhi,mac_grow) 
-
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
-      do k=growlo(3),growhi(3)
-
-        if (normdir.eq.0) then
-         idx=i
-        else if (normdir.eq.1) then
-         idx=j
-        else if ((normdir.eq.2).and.(SDIM.eq.3)) then
-         idx=k
-        else
-         print *,"normdir invalid"
-         stop
-        endif
-
-        call gridsten_level(xsten,i,j,k,level,nhalf)
-        hx=xsten(1,normdir+1)-xsten(-1,normdir+1)
-        if (hx.le.zero) then
-         print *,"xsten bust"
-         stop
-        endif
-
-        RR=one
-        if (levelrz.eq.COORDSYS_CARTESIAN) then
-         ! do nothing
-        else if (levelrz.eq.COORDSYS_RZ) then
-         if (SDIM.ne.2) then
-          print *,"dimension bust"
-          stop
-         endif
-        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-         if (normdir.eq.1) then
-          RR=xsten(0,1)
-         endif
-        else
-         print *,"levelrz invalid velmac override"
-         stop
-        endif
-
-        delta=ucell_displace(D_DECL(i,j,k),normdir+1)
-
-        side=0
-
-        if (idx.lt.fablo(normdir+1)) then
-         side=1
-        else if (idx.gt.fabhi(normdir+1)) then
-         side=2
-        else if ((idx.ge.fablo(normdir+1)).and. &
-                 (idx.le.fabhi(normdir+1))) then
-         ! do nothing
-        else
-         print *,"idx invalid"
-         stop
-        endif
-
-        if ((side.eq.1).or.(side.eq.2)) then
-         localbc=velbc(normdir+1,side)
-
-         if (localbc.eq.REFLECT_ODD) then
-          delta=zero
-         else if (localbc.eq.EXT_DIR) then
-          call velbc_override(vel_time,normdir+1,side,normdir+1, &
-           delta, &
-           xsten,nhalf,dx,bfact)
-         else if (localbc.eq.INT_DIR) then
-          ! do nothing
-         else if (localbc.eq.REFLECT_EVEN) then
-          ! do nothing
-         else if (localbc.eq.FOEXTRAP) then
-          ! do nothing
-         else
-          print *,"localbc invalid"
-          stop
-         endif  ! cases for localbc 
-        else if (side.eq.0) then
-         ! do nothing
-        else
-         print *,"side invalid"
-         stop
-        endif  
-
-        delta=delta*dt/RR
-
-          ! modifies "delta" if "CLAMPED" or RZ. 
-        call departure_node_split( &
-          xsten,nhalf,dx,bfact, &
-          delta,passive_veltime, &
-          normdir,dt,map_forward)
-
-        if (abs(delta).ge.(one-0.001)*hx) then
-         print *,"in: velmac_override"
-         print *,"CELL: displacement exceeds grid cell"
-         print *,"reduce cfl"
-         print *,"ucell_displace ",ucell_displace(D_DECL(i,j,k),normdir+1)
-         print *,"delta= ",delta
-         print *,"hx=    ",hx
-         print *,"dt=    ",dt
-         print *,"dir_absolute_direct_split= ",dir_absolute_direct_split
-         print *,"normdir= ",normdir
-         print *,"i,j,k ",i,j,k 
-         print *,"level,finest_level ",level,finest_level
-         print *,"SDC_outer_sweeps,ns_time_order ", &
-            SDC_outer_sweeps,ns_time_order
-         stop
-        endif
-        
-        ucell_displace(D_DECL(i,j,k),normdir+1)=delta
       enddo
       enddo
       enddo  ! i,j,k
@@ -13074,8 +12951,6 @@ stop
        snew,DIMS(snew), &  ! this is the result
        tennew,DIMS(tennew), & 
        LSnew,DIMS(LSnew), &
-       ucell_displace, &  !other vars
-       DIMS(ucell_displace), &  
        vof0,DIMS(vof0), &  
        mask,DIMS(mask), & !mask=1 if not covered by level+1 or outside domain
        masknbr,DIMS(masknbr), &
@@ -13122,6 +12997,7 @@ stop
       INTEGER_T, INTENT(in) :: nc_conserve
       INTEGER_T, INTENT(in) :: ngrow_mass
       INTEGER_T, PARAMETER :: ngrow_scalar=1
+      INTEGER_T, PARAMETER :: ngrow_mac_displace=2
       INTEGER_T, INTENT(in) :: ngrow_mac_old
       INTEGER_T, INTENT(in) :: solidheat_flag
       INTEGER_T, INTENT(in) :: freezing_model(2*num_interfaces)
@@ -13162,7 +13038,6 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(tennew)
       INTEGER_T, INTENT(in) :: DIMDEC(LSnew)
        ! other vars
-      INTEGER_T, INTENT(in) :: DIMDEC(ucell_displace)
       INTEGER_T, INTENT(in) :: DIMDEC(vof0)
       INTEGER_T, INTENT(in) :: DIMDEC(mask)
       INTEGER_T, INTENT(in) :: DIMDEC(masknbr)
@@ -13204,10 +13079,6 @@ stop
       REAL_T, INTENT(inout), target :: LSnew(DIMV(LSnew),num_materials)
       REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
        ! other vars
-       ! displacement
-      REAL_T, INTENT(in), target ::  &
-           ucell_displace(DIMV(ucell_displace),STATE_NCOMP_VEL)
-      REAL_T, pointer :: ucell_displace_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: vof0(DIMV(vof0),num_materials)
       REAL_T, pointer :: vof0_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: mask(DIMV(mask))
@@ -13355,7 +13226,6 @@ stop
 
       REAL_T warning_cutoff
       INTEGER_T momcomp
-      REAL_T u_minimum,u_maximum
 
       REAL_T cutoff,DXMAXLS
       INTEGER_T all_incomp
@@ -13375,7 +13245,6 @@ stop
       velfab_ptr=>velfab
       PLICSLP_ptr=>PLICSLP
 
-      ucell_displace_ptr=>ucell_displace
       vof0_ptr=>vof0
       mask_ptr=>mask
       masknbr_ptr=>masknbr
@@ -13605,16 +13474,15 @@ stop
       call checkbound_array(fablo,fabhi,tennew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
        ! other vars
-      call checkbound_array(fablo,fabhi,ucell_displace_ptr,ngrow_mass,-1)
       call checkbound_array(fablo,fabhi,vof0_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,mask_ptr,ngrow_mass,-1)
       call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow_mass,-1)
      
        ! example: imac=0, left side; then the parcel at imac=-1, left side
-       ! might be advected: need icell=-2 and imac=-1 displacement
-       ! information.
+       ! might be advected: imac=-1, left side is in icell=-2.  icell=-2 is
+       ! advected using imac=-2 and imac=-1.
       call checkbound_array1(fablo,fabhi,umac_displace_ptr, &
-              ngrow_mass-1,normdir)
+              ngrow_mac_displace,normdir)
 
       if (dt.gt.zero) then
        ! do nothing
@@ -13914,16 +13782,7 @@ stop
 
              if (veldir.eq.normdir+1) then
               veldir_comp=normdir+1
-              usten_accept(0)= &
-                ucell_displace(D_DECL(ipart,jpart,kpart),veldir_comp)
-              u_minimum=min(usten_accept(-1),usten_accept(1))
-              u_maximum=max(usten_accept(-1),usten_accept(1))
-              if (usten_accept(0).lt.u_minimum) then
-               usten_accept(0)=u_minimum
-              endif
-              if (usten_accept(0).gt.u_maximum) then
-               usten_accept(0)=u_maximum
-              endif
+              usten_accept(0)=half*(usten_accept(-1)+usten_accept(1))
        
               if (iside_part.eq.-1) then
                usten_accept(1)=usten_accept(0)
@@ -13952,6 +13811,10 @@ stop
              do istencil=idonatelow,idonatehigh
 
                ! ipart,jpart,kpart is a cell index
+               ! istencil =-1,0, or 1.
+               ! ipart=icrse-iii or icrse (for example)
+               ! -2    -2   -1   -1    0
+               !  |----------|----------|
               if (normdir.eq.0) then
                idonate=ipart+istencil
               else if (normdir.eq.1) then
@@ -14032,15 +13895,7 @@ stop
 
                  veldir_comp=normdir+1
                  usten_donate(0)= &
-                  ucell_displace(D_DECL(idonate,jdonate,kdonate),veldir_comp)
-                 u_minimum=min(usten_donate(-1),usten_donate(1))
-                 u_maximum=max(usten_donate(-1),usten_donate(1))
-                 if (usten_donate(0).lt.u_minimum) then
-                  usten_donate(0)=u_minimum
-                 endif
-                 if (usten_donate(0).gt.u_maximum) then
-                  usten_donate(0)=u_maximum
-                 endif
+                   half*(usten_donate(-1)+usten_donate(1))
 
                  if (isidedonate.eq.-1) then
                   usten_donate(1)=usten_donate(0)

@@ -12676,10 +12676,6 @@ NavierStokes::prepare_displacement(int mac_grow) {
 
  int finest_level=parent->finestLevel();
 
- getState_localMF(CELL_VELOCITY_MF,mac_grow,
-  STATECOMP_VEL,STATE_NCOMP_VEL,
-  vel_time_slab);
-
  for (int normdir=0;normdir<AMREX_SPACEDIM;normdir++) {
 
    //Umac_Type
@@ -12724,7 +12720,6 @@ NavierStokes::prepare_displacement(int mac_grow) {
     FArrayBox& umactemp=(*temp_mac_velocity)[mfi]; // macgrow
     FArrayBox& umac_displace=
 	 (*localMF[MAC_VELOCITY_MF+normdir])[mfi]; // macgrow
-    FArrayBox& ucell_displace=(*localMF[CELL_VELOCITY_MF])[mfi];
 
     prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
 
@@ -12751,8 +12746,6 @@ NavierStokes::prepare_displacement(int mac_grow) {
      ARLIM(umactemp.loVect()),ARLIM(umactemp.hiVect()),
      umac_displace.dataPtr(),
      ARLIM(umac_displace.loVect()),ARLIM(umac_displace.hiVect()),
-     ucell_displace.dataPtr(),
-     ARLIM(ucell_displace.loVect()),ARLIM(ucell_displace.hiVect()),
      xlo,dx,
      &mac_grow,
      &map_forward_direct_split[normdir],
@@ -12781,16 +12774,6 @@ NavierStokes::prepare_displacement(int mac_grow) {
 
   localMF[MAC_VELOCITY_MF+normdir]->FillBoundary(geom.periodicity());
  } // normdir=0..sdim-1
-
- if (cancel_advection==0) {
-  // do nothing
- } else if (cancel_advection==1) {
-  localMF[CELL_VELOCITY_MF]->setVal(0.0);
- } else {
-  amrex::Error("cancel_advection invalid");
- }
-
- localMF[CELL_VELOCITY_MF]->FillBoundary(geom.periodicity());
 
 }  // end subroutine prepare_displacement
 
@@ -17100,8 +17083,6 @@ NavierStokes::split_scalar_advection() {
   FArrayBox& ymassside=(*side_bucket_mass[1])[mfi];
   FArrayBox& zmassside=(*side_bucket_mass[AMREX_SPACEDIM-1])[mfi];
 
-  FArrayBox& ucell_displace=(*localMF[CELL_VELOCITY_MF])[mfi];
-
   prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
 
   Real local_dt_slab=dt_slab;
@@ -17155,9 +17136,6 @@ NavierStokes::split_scalar_advection() {
    LSdestfab.dataPtr(),
    ARLIM(LSdestfab.loVect()),ARLIM(LSdestfab.hiVect()),
     // other vars.
-   ucell_displace.dataPtr(),
-   ARLIM(ucell_displace.loVect()),
-   ARLIM(ucell_displace.hiVect()),
    vof0fab.dataPtr(),ARLIM(vof0fab.loVect()),ARLIM(vof0fab.hiVect()),
    maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
    masknbrfab.dataPtr(),

@@ -507,7 +507,6 @@ void NavierStokes::nonlinear_advection() {
    ns_level.delete_localMF(VOF_PREV_TIME_MF,1);
 
    ns_level.delete_localMF(MAC_VELOCITY_MF,AMREX_SPACEDIM);
-   ns_level.delete_localMF(CELL_VELOCITY_MF,1);
 
     // sanity check
    ns_level.debug_ngrow(MASKCOEF_MF,1,6003);
