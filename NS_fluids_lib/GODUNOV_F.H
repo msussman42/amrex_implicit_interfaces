@@ -801,7 +801,7 @@ extern "C"
      Real* xmassside,AMREX_ARLIM_P(xmasssidelo),AMREX_ARLIM_P(xmasssidehi),
      Real* ymassside,AMREX_ARLIM_P(ymasssidelo),AMREX_ARLIM_P(ymasssidehi),
      Real* zmassside,AMREX_ARLIM_P(zmasssidelo),AMREX_ARLIM_P(zmasssidehi),
-     int* ngrow,
+     int* ngrow_mass,
      int* ngrow_mac_old,
      int* nc_conserve,
      int* map_forward,

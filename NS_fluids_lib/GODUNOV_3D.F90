@@ -13098,7 +13098,7 @@ stop
        xmassside,DIMS(xmassside), & ! 1..2
        ymassside,DIMS(ymassside), &
        zmassside,DIMS(zmassside), &
-       ngrow, &
+       ngrow_mass, &
        ngrow_mac_old, &
        nc_conserve, &
        map_forward, &
@@ -13126,7 +13126,9 @@ stop
       INTEGER_T, INTENT(in) :: tid
 
       INTEGER_T, INTENT(in) :: nc_conserve
-      INTEGER_T, INTENT(in) :: ngrow,ngrow_mac_old
+      INTEGER_T, INTENT(in) :: ngrow_mass
+      INTEGER_T, PARAMETER :: ngrow_scalar=1
+      INTEGER_T, INTENT(in) :: ngrow_mac_old
       INTEGER_T, INTENT(in) :: solidheat_flag
       INTEGER_T, INTENT(in) :: freezing_model(2*num_interfaces)
       INTEGER_T, INTENT(in) :: distribute_from_target(2*num_interfaces)
@@ -13464,10 +13466,10 @@ stop
        stop
       endif
 
-      if (ngrow.eq.2) then
+      if (ngrow_mass.eq.2) then
        ! do nothing
       else
-       print *,"ngrow invalid"
+       print *,"ngrow_mass invalid"
        stop
       endif
 
@@ -13596,23 +13598,24 @@ stop
        ! ghost cells.
 
        ! original data
-      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,den_ptr,ngrow,-1)
-      call checkbound_array(fablo,fabhi,mom_den_ptr,ngrow,-1)
-      call checkbound_array(fablo,fabhi,tensor_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,velfab_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_scalar,-1)
+      call checkbound_array(fablo,fabhi,den_ptr,ngrow_mass,-1)
+      call checkbound_array(fablo,fabhi,mom_den_ptr,ngrow_mass,-1)
+      call checkbound_array(fablo,fabhi,tensor_ptr,ngrow_scalar,-1)
+      call checkbound_array(fablo,fabhi,velfab_ptr,ngrow_mass,-1)
        ! slope data
-      call checkbound_array(fablo,fabhi,PLICSLP_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,PLICSLP_ptr,ngrow_mass,-1)
        ! new data
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,tennew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
        ! other vars
-      call checkbound_array(fablo,fabhi,ucell_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,ucell_ptr,ngrow_mass,-1)
       call checkbound_array(fablo,fabhi,vof0_ptr,1,-1)
-      call checkbound_array1(fablo,fabhi,mask_ptr,ngrow,-1)
-      call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow,-1)
-      call checkbound_array1(fablo,fabhi,unode_ptr,ngrow-1,normdir)
+      call checkbound_array1(fablo,fabhi,mask_ptr,ngrow_mass,-1)
+      call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow_mass,-1)
+      FIX ME
+      call checkbound_array1(fablo,fabhi,unode_ptr,ngrow_mass-1,normdir)
 
       if (dt.gt.zero) then
        ! do nothing
@@ -13672,7 +13675,7 @@ stop
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,conserve_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,conserve_ptr,ngrow_mass,-1)
      
       if (DO_SANITY_CHECK.eq.1) then
        print *,"SANITY CHECK AFTER CONSERVE dir_counter= ",dir_counter
@@ -13708,7 +13711,7 @@ stop
     
       force_check=0
       datatype=0 
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow)
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow_mass)
  
       warning_cutoff=two
       call aggressive_worker( &
@@ -13722,7 +13725,7 @@ stop
        0, & !scomp=0
        num_materials*ngeom_recon, &
        num_materials*ngeom_recon, &
-       ngrow, &
+       ngrow_mass, &
        -1, & ! dir
        verbose, &
        force_check, &
@@ -13744,7 +13747,7 @@ stop
        0, &  !scomp=0
        nc_conserve, &
        nc_conserve, &
-       ngrow, &
+       ngrow_mass, &
        -1, & !dir
        verbose, &
        force_check, &
