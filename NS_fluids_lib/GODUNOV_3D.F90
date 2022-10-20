@@ -3847,9 +3847,9 @@ stop
        vel_time, &
        dir_absolute_direct_split, &
        normdir, &
-       utemp,DIMS(utemp), &
-       unode,DIMS(unode), &
-       ucell,DIMS(ucell), &
+       umactemp,DIMS(umactemp), &
+       umac_displace,DIMS(umac_displace), &
+       ucell_displace,DIMS(ucell_displace), &
        xlo,dx, &
        mac_grow, &
        map_forward, &
@@ -3879,16 +3879,17 @@ stop
       INTEGER_T :: growlo(3),growhi(3)
       INTEGER_T, INTENT(in) :: bfact
       REAL_T, INTENT(in) :: dt,time,vel_time,passive_veltime
-      INTEGER_T, INTENT(in) :: DIMDEC(utemp)
-      INTEGER_T, INTENT(in) :: DIMDEC(unode)
-      INTEGER_T, INTENT(in) :: DIMDEC(ucell)
+      INTEGER_T, INTENT(in) :: DIMDEC(umactemp)
+      INTEGER_T, INTENT(in) :: DIMDEC(umac_displace)
+      INTEGER_T, INTENT(in) :: DIMDEC(ucell_displace)
      
-      REAL_T, INTENT(in), target :: utemp(DIMV(utemp)) 
-      REAL_T, pointer :: utemp_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(inout), target :: unode(DIMV(unode)) 
-      REAL_T, pointer :: unode_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(inout), target :: ucell(DIMV(ucell),STATE_NCOMP_VEL) 
-      REAL_T, pointer :: ucell_ptr(D_DECL(:,:,:),:)
+      REAL_T, INTENT(in), target :: umactemp(DIMV(umactemp)) 
+      REAL_T, pointer :: umactemp_ptr(D_DECL(:,:,:))
+      REAL_T, INTENT(inout), target :: umac_displace(DIMV(umac_displace)) 
+      REAL_T, pointer :: umac_displace_ptr(D_DECL(:,:,:))
+      REAL_T, INTENT(inout), target ::  &
+              ucell_displace(DIMV(ucell_displace),STATE_NCOMP_VEL) 
+      REAL_T, pointer :: ucell_displace_ptr(D_DECL(:,:,:),:)
       INTEGER_T, INTENT(in) :: velbc(SDIM,2)
 
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
@@ -3906,9 +3907,9 @@ stop
 
       nhalf=3
 
-      utemp_ptr=>utemp
-      unode_ptr=>unode
-      ucell_ptr=>ucell
+      umactemp_ptr=>umactemp
+      umac_displace_ptr=>umac_displace
+      ucell_displace_ptr=>ucell_displace
 
       if (bfact.ge.1) then
        ! do nothing
@@ -3989,9 +3990,9 @@ stop
        stop
       endif
 
-      call checkbound_array1(fablo,fabhi,utemp_ptr,mac_grow,normdir)
-      call checkbound_array1(fablo,fabhi,unode_ptr,mac_grow,normdir)
-      call checkbound_array(fablo,fabhi,ucell_ptr,mac_grow,-1)
+      call checkbound_array1(fablo,fabhi,umactemp_ptr,mac_grow,normdir)
+      call checkbound_array1(fablo,fabhi,umac_displace_ptr,mac_grow,normdir)
+      call checkbound_array(fablo,fabhi,ucell_displace_ptr,mac_grow,-1)
 
       if (dt.gt.zero) then
        ! do nothing
@@ -4064,7 +4065,7 @@ stop
          stop
         endif
 
-        delta=utemp(D_DECL(i,j,k))
+        delta=umactemp(D_DECL(i,j,k))
 
         side=0
 
@@ -4132,7 +4133,7 @@ stop
         endif
       
          ! find displacements 
-        unode(D_DECL(i,j,k))=delta
+        umac_displace(D_DECL(i,j,k))=delta
 
       enddo
       enddo
@@ -4180,7 +4181,7 @@ stop
          stop
         endif
 
-        delta=ucell(D_DECL(i,j,k),normdir+1)
+        delta=ucell_displace(D_DECL(i,j,k),normdir+1)
 
         side=0
 
@@ -4234,7 +4235,7 @@ stop
          print *,"in: velmac_override"
          print *,"CELL: displacement exceeds grid cell"
          print *,"reduce cfl"
-         print *,"ucell ",ucell(D_DECL(i,j,k),normdir+1)
+         print *,"ucell_displace ",ucell_displace(D_DECL(i,j,k),normdir+1)
          print *,"delta= ",delta
          print *,"hx=    ",hx
          print *,"dt=    ",dt
@@ -4247,7 +4248,7 @@ stop
          stop
         endif
         
-        ucell(D_DECL(i,j,k),normdir+1)=delta
+        ucell_displace(D_DECL(i,j,k),normdir+1)=delta
       enddo
       enddo
       enddo  ! i,j,k
@@ -5106,7 +5107,6 @@ stop
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
-       unode,DIMS(unode), &
        xmomside,DIMS(xmomside), &
        ymomside,DIMS(ymomside), &
        zmomside,DIMS(zmomside), &
@@ -5137,8 +5137,6 @@ stop
       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, INTENT(in) :: bfact
 
-      INTEGER_T, INTENT(in) :: DIMDEC(unode) 
-
       INTEGER_T, INTENT(in) :: DIMDEC(xmomside) 
       INTEGER_T, INTENT(in) :: DIMDEC(ymomside) 
       INTEGER_T, INTENT(in) :: DIMDEC(zmomside) 
@@ -5152,9 +5150,6 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(zvmac) 
 
       INTEGER_T, INTENT(in) :: DIMDEC(mask) 
-
-      REAL_T, INTENT(in), target :: unode(DIMV(unode))
-      REAL_T, pointer :: unode_ptr(D_DECL(:,:,:))
 
       REAL_T, INTENT(in), target :: xmomside(DIMV(xmomside),2)
       REAL_T, pointer :: xmomside_ptr(D_DECL(:,:,:),:)
@@ -5212,7 +5207,6 @@ stop
       nhalf=1
 
       mask_ptr=>mask
-      unode_ptr=>unode
       xmomside_ptr=>xmomside
       ymomside_ptr=>ymomside
       zmomside_ptr=>zmomside
@@ -5238,8 +5232,6 @@ stop
        print *,"level invalid build newmac"
        stop
       endif
-
-      call checkbound_array1(fablo,fabhi,unode_ptr,0,normdir)
 
       call checkbound_array(fablo,fabhi,xmomside_ptr,1,-1)
       call checkbound_array(fablo,fabhi,ymomside_ptr,1,-1)
@@ -13082,11 +13074,13 @@ stop
        snew,DIMS(snew), &  ! this is the result
        tennew,DIMS(tennew), & 
        LSnew,DIMS(LSnew), &
-       ucell,DIMS(ucell), &  ! other vars
+       ucell_displace, &  !other vars
+       DIMS(ucell_displace), &  
        vof0,DIMS(vof0), &  
        mask,DIMS(mask), & !mask=1 if not covered by level+1 or outside domain
        masknbr,DIMS(masknbr), &
-       unode,DIMS(unode), & ! vel*dt
+       umac_displace, & ! vel*dt
+       DIMS(umac_displace), & 
        xlo,dx, &
        conserve,DIMS(conserve), & ! local variables
        xvel,DIMS(xvel), & 
@@ -13168,11 +13162,11 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(tennew)
       INTEGER_T, INTENT(in) :: DIMDEC(LSnew)
        ! other vars
-      INTEGER_T, INTENT(in) :: DIMDEC(ucell)
+      INTEGER_T, INTENT(in) :: DIMDEC(ucell_displace)
       INTEGER_T, INTENT(in) :: DIMDEC(vof0)
       INTEGER_T, INTENT(in) :: DIMDEC(mask)
       INTEGER_T, INTENT(in) :: DIMDEC(masknbr)
-      INTEGER_T, INTENT(in) :: DIMDEC(unode)
+      INTEGER_T, INTENT(in) :: DIMDEC(umac_displace)
        ! local variables
       INTEGER_T, INTENT(in) :: DIMDEC(conserve)
       INTEGER_T, INTENT(in) :: DIMDEC(xvel)
@@ -13211,8 +13205,9 @@ stop
       REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
        ! other vars
        ! displacement
-      REAL_T, INTENT(in), target :: ucell(DIMV(ucell),STATE_NCOMP_VEL)
-      REAL_T, pointer :: ucell_ptr(D_DECL(:,:,:),:)
+      REAL_T, INTENT(in), target ::  &
+           ucell_displace(DIMV(ucell_displace),STATE_NCOMP_VEL)
+      REAL_T, pointer :: ucell_displace_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: vof0(DIMV(vof0),num_materials)
       REAL_T, pointer :: vof0_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: mask(DIMV(mask))
@@ -13220,8 +13215,8 @@ stop
       ! =1 int. =1 fine-fine in domain =0 o.t.
       REAL_T, INTENT(in), target :: masknbr(DIMV(masknbr)) 
       REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in), target :: unode(DIMV(unode))
-      REAL_T, pointer :: unode_ptr(D_DECL(:,:,:))
+      REAL_T, INTENT(in), target :: umac_displace(DIMV(umac_displace))
+      REAL_T, pointer :: umac_displace_ptr(D_DECL(:,:,:))
        ! local variables
       REAL_T, INTENT(in), target :: conserve(DIMV(conserve),nc_conserve)
       REAL_T, pointer :: conserve_ptr(D_DECL(:,:,:),:)
@@ -13380,11 +13375,11 @@ stop
       velfab_ptr=>velfab
       PLICSLP_ptr=>PLICSLP
 
-      ucell_ptr=>ucell
+      ucell_displace_ptr=>ucell_displace
       vof0_ptr=>vof0
       mask_ptr=>mask
       masknbr_ptr=>masknbr
-      unode_ptr=>unode
+      umac_displace_ptr=>umac_displace
       conserve_ptr=>conserve
 
       snew_ptr=>snew
@@ -13610,12 +13605,16 @@ stop
       call checkbound_array(fablo,fabhi,tennew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
        ! other vars
-      call checkbound_array(fablo,fabhi,ucell_ptr,ngrow_mass,-1)
+      call checkbound_array(fablo,fabhi,ucell_displace_ptr,ngrow_mass,-1)
       call checkbound_array(fablo,fabhi,vof0_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,mask_ptr,ngrow_mass,-1)
       call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow_mass,-1)
-      FIX ME
-      call checkbound_array1(fablo,fabhi,unode_ptr,ngrow_mass-1,normdir)
+     
+       ! example: imac=0, left side; then the parcel at imac=-1, left side
+       ! might be advected: need icell=-2 and imac=-1 displacement
+       ! information.
+      call checkbound_array1(fablo,fabhi,umac_displace_ptr, &
+              ngrow_mass-1,normdir)
 
       if (dt.gt.zero) then
        ! do nothing
@@ -13803,7 +13802,8 @@ stop
          if ((maskleft.eq.1).or.(maskright.eq.1)) then
 
           nhalf=1
-          call gridstenMAC_level(xsten_MAC,icrse,jcrse,kcrse, &
+          call gridstenMAC_level(xsten_MAC, &
+            icrse,jcrse,kcrse, &
             level,nhalf,veldir-1)
 
           check_accept=1
@@ -13853,7 +13853,9 @@ stop
 
              nhalf=1
              call CISBOXHALF(xsten_accept,nhalf, &
-              xlo,dx,ipart,jpart,kpart,iside_part,veldir, &
+              xlo,dx, &
+              ipart,jpart,kpart, &
+              iside_part,veldir, &
               bfact,level, &
               volcell_accept,cencell_accept,SDIM)
   
@@ -13877,7 +13879,7 @@ stop
              !  imac=-1      imac=0     imac=1
              !    *------------*----------*
              ! MAC velocity on left side of cell control volume
-             usten_accept(-1)=unode(D_DECL(ipart,jpart,kpart))
+             usten_accept(-1)=umac_displace(D_DECL(ipart,jpart,kpart))
              nhalf=1
               ! normdir=0..sdim-1
              call gridstenMAC_level(xsten_MAC,ipart,jpart,kpart, &
@@ -13896,7 +13898,8 @@ stop
               stop
              endif
               ! MAC velocity on right side of cell control volume
-             usten_accept(1)=unode(D_DECL(ipart+ii,jpart+jj,kpart+kk))
+             usten_accept(1)= &
+                umac_displace(D_DECL(ipart+ii,jpart+jj,kpart+kk))
 
              if (usten_accept(-1).gt.zero) then
               idonatelow=-1
@@ -13911,7 +13914,8 @@ stop
 
              if (veldir.eq.normdir+1) then
               veldir_comp=normdir+1
-              usten_accept(0)=ucell(D_DECL(ipart,jpart,kpart),veldir_comp)
+              usten_accept(0)= &
+                ucell_displace(D_DECL(ipart,jpart,kpart),veldir_comp)
               u_minimum=min(usten_accept(-1),usten_accept(1))
               u_maximum=max(usten_accept(-1),usten_accept(1))
               if (usten_accept(0).lt.u_minimum) then
@@ -14001,7 +14005,8 @@ stop
 
                if (check_intersection.eq.1) then 
 
-                usten_donate(-1)=unode(D_DECL(idonate,jdonate,kdonate))
+                usten_donate(-1)= &
+                  umac_displace(D_DECL(idonate,jdonate,kdonate))
 
                 nhalf=1
                 call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
@@ -14020,13 +14025,14 @@ stop
                  stop
                 endif
 
-                usten_donate(1)=unode(D_DECL(idonate+ii,jdonate+jj,kdonate+kk))
+                usten_donate(1)= &
+                  umac_displace(D_DECL(idonate+ii,jdonate+jj,kdonate+kk))
 
                 if (veldir.eq.normdir+1) then
 
                  veldir_comp=normdir+1
                  usten_donate(0)= &
-                  ucell(D_DECL(idonate,jdonate,kdonate),veldir_comp)
+                  ucell_displace(D_DECL(idonate,jdonate,kdonate),veldir_comp)
                  u_minimum=min(usten_donate(-1),usten_donate(1))
                  u_maximum=max(usten_donate(-1),usten_donate(1))
                  if (usten_donate(0).lt.u_minimum) then
@@ -14066,7 +14072,8 @@ stop
                  xhiint, &
                  volint, &
                  coeff, &
-                 bfact,dx,map_forward,normdir)
+                 bfact,dx, &
+                 map_forward,normdir)
 
                 if (volint.gt.zero) then  
 
@@ -14347,7 +14354,7 @@ stop
          enddo
          enddo
 
-         usten_accept(-1)=unode(D_DECL(icrse,jcrse,kcrse))
+         usten_accept(-1)=umac_displace(D_DECL(icrse,jcrse,kcrse))
 
          nhalf=1
          call gridstenMAC_level(xsten_MAC,icrse,jcrse,kcrse, &
@@ -14366,7 +14373,7 @@ stop
           stop
          endif
 
-         usten_accept(1)=unode(D_DECL(icrse+ii,jcrse+jj,kcrse+kk))
+         usten_accept(1)=umac_displace(D_DECL(icrse+ii,jcrse+jj,kcrse+kk))
 
          if (usten_accept(-1).gt.zero) then
           idonatelow=-1
@@ -14461,7 +14468,7 @@ stop
 
           if (check_intersection.eq.1) then 
 
-           usten_donate(-1)=unode(D_DECL(idonate,jdonate,kdonate))
+           usten_donate(-1)=umac_displace(D_DECL(idonate,jdonate,kdonate))
 
            nhalf=1
            call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
@@ -14482,7 +14489,8 @@ stop
             stop
            endif
 
-           usten_donate(1)=unode(D_DECL(idonate+ii,jdonate+jj,kdonate+kk))
+           usten_donate(1)= &
+              umac_displace(D_DECL(idonate+ii,jdonate+jj,kdonate+kk))
 
            usten_donate(0)=half*(usten_donate(-1)+usten_donate(1))
 
