@@ -19,10 +19,11 @@ geometry.is_periodic = 0 0 0
 
 ns.EILE_flag=-1
 ns.continuous_mof=2
-ns.force_cmof_at_triple_junctions=0
 ns.partial_cmof_stencil_at_walls=1
 ns.MOFITERMAX=15
 ns.vof_height_function=1
+ns.mof_decision_tree_learning=10000 # default: 40000
+ns.MOFITERMAX_AFTER_PREDICT=15
 ns.FD_curv_interp=1
 
 # 0MGPCG 1PCG 2 MINV=I
