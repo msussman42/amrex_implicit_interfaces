@@ -144,8 +144,6 @@ something wrong
 #endif
 int  NavierStokes::mof_machine_learning=0;
 
-// =1 EXT_DIR,REFLECT_EVEN,embedded; =2 same as 1 plus triple points.
-int  NavierStokes::force_cmof_at_triple_junctions=0;
 int  NavierStokes::partial_cmof_stencil_at_walls=1;
 
 int  NavierStokes::enable_spectral=0;
@@ -2615,8 +2613,6 @@ NavierStokes::read_params ()
     pp.queryAdd("mof_machine_learning",mof_machine_learning);
     pp.queryAdd("mof_decision_tree_learning",mof_decision_tree_learning);
 
-    pp.queryAdd("force_cmof_at_triple_junctions",
-		force_cmof_at_triple_junctions);
     pp.queryAdd("partial_cmof_stencil_at_walls",
 		partial_cmof_stencil_at_walls);
 
@@ -2767,8 +2763,6 @@ NavierStokes::read_params ()
      std::cout << "mof_machine_learning " << mof_machine_learning << '\n';
      std::cout << "mof_decision_tree_learning " << 
 	     mof_decision_tree_learning << '\n';
-     std::cout << "force_cmof_at_triple_junctions " << 
-       force_cmof_at_triple_junctions << '\n';
      std::cout << "partial_cmof_stencil_at_walls " << 
 	    partial_cmof_stencil_at_walls << '\n';
     }

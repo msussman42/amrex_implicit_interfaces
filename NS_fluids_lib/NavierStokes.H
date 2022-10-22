@@ -1524,10 +1524,7 @@ protected:
     static int  mof_decision_tree_learning; // default is 10000
     static int  mof_machine_learning; // default is 0
 
-     // =1 EXT_DIR,REFLECT_EVEN,embedded; =2 same as 1 plus triple points.
-     // default is 1
-    static int  force_cmof_at_triple_junctions; 
-    static int  partial_cmof_stencil_at_walls;  // default is 0
+    static int  partial_cmof_stencil_at_walls;  // default is 1
     static Real change_max;    // maximum change in dt over a timestep
     static Real change_max_init; // maximum change in dt over a timestep
 
