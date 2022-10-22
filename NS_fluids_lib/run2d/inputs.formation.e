@@ -30,7 +30,6 @@ ns.FD_curv_interp=1
 ns.project_solver_type=0
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
-Lp.gpucount=1
 
 # multigrid class
 #mg.verbose = 2
