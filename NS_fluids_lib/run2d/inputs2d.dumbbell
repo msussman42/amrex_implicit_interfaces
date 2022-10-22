@@ -139,26 +139,3 @@ ns.hi_bc          = 2 1
 #fab.precision = FLOAT     # output in FLOAT or DOUBLE
 fab.precision = DOUBLE    # output in FLOAT or DOUBLE
 
-# --------------------------------------------------------------------
-# -----       CONTOUR PLOTTING ONLY AVAILABLE IN 2-D           -------
-# --------------------------------------------------------------------
-# uncomment the next line to set a default level for contour plotting
-# contour.level = 1
-#
-# These variables control interactive contour plotting on UNIX systems
-# file_name   = root name of postscript file (will be appended with ".ps")
-# var_name    = name of thermodynamic variable to plot
-# device      = 1  => XWINDOW, 2 = POSTSCRIPT, 3 = both
-# freq        = intervals between plots (-1 = off)
-# n_cont      = number of contour lines per plot
-# sho_grd     = 0 => don't show grid placement, 1 => show grid placement
-#               2 => show grid placement and overlay velocity vector plot
-#               3 => same as 2 except show Up and not Ud
-# win_siz     = number of pixels in max window direction
-#
-#   file_name  var_name   device  freq  n_cont  sho_grd win_siz sval sdir sstr
-#  ---------  --------   ------  ----  ------  ------- ------- ---- ---- ---- 
-contour.verbose = 1
-contour.plot = triple triple  1    10     -1      2      400    0.0   -1  0
-contour.plot = triple triple  2   100     -1      2      400    0.0   -1  0
-

@@ -20,7 +20,6 @@ ns.cwater=1.0E+8
 ns.cvapor=1.0E+8
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
-Lp.gpucount=1
 
 # multigrid class
 #mg.verbose = 1

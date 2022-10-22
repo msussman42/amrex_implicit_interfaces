@@ -13724,7 +13724,9 @@ contains
       REAL_T, INTENT (OUT), DIMENSION(num_materials,sdim) :: multi_centroidA
 
       INTEGER_T imaterial2
-      INTEGER_T imaterial,vofcomp,dir
+      INTEGER_T imaterial
+      INTEGER_T vofcomp
+      INTEGER_T dir
       INTEGER_T imaterial_count
 
       REAL_T uncaptured_volume_vof
@@ -13747,7 +13749,10 @@ contains
       REAL_T, dimension(:,:,:), allocatable :: centroidA_array
       REAL_T, dimension(:), allocatable :: moferror_array
       INTEGER_T order_count,order_stack_count
-      INTEGER_T irank,iflex,jflex,kflex,is_valid
+      INTEGER_T irank
+      INTEGER_T iflex,jflex,kflex
+      INTEGER_T iflex2
+      INTEGER_T is_valid
       ! n_ndef=number of "is_rigid==0" materials with order_algorithm_in=0
       INTEGER_T n_ndef
       INTEGER_T number_of_open_places
@@ -14438,6 +14443,12 @@ contains
          do iflex=1,n_ndef
 
           imaterial=flexlist(iflex)
+          if (order_algorithm_in(imaterial).eq.0) then
+           ! do nothing
+          else
+           print *,"order_algorithm_in(imaterial) invalid"
+           stop
+          endif
           if (iflex.gt.1) then
            if (flexlist(iflex).gt.flexlist(iflex-1)) then
             ! do nothing
@@ -14489,6 +14500,26 @@ contains
            order_algorithm_in(imaterial)=placelist(irank)
           else
            print *,"is_rigid_local or order_algorithm_in invalid"
+           print *,"n_ndef,num_materials ",n_ndef,num_materials
+           print *,"n_orderings ",n_orderings
+           print *,"argmin_order ",argmin_order
+           print *,"min_error ",min_error
+           print *,"order_count ",order_count
+           print *,"iflex=",iflex
+           print *,"imaterial=",imaterial
+           print *,"flexlist(iflex) ",flexlist(iflex)
+           do iflex2=1,n_ndef
+            print *,"iflex2,flexlist(iflex2) ",iflex2,flexlist(iflex2)
+           enddo
+           print *,"is_rigid_local(imaterial) ",is_rigid_local(imaterial)
+           print *,"order_algorithm_in(imaterial) ", &
+             order_algorithm_in(imaterial) 
+           do imaterial2=1,num_materials
+            print *,"imat2,order_algorithm_in,is_rigid_local ", &
+              imaterial2, &
+              order_algorithm_in(imaterial2), &
+              is_rigid_local(imaterial2)
+           enddo
            stop
           endif
 
@@ -14598,7 +14629,13 @@ contains
           print *,"argmin_order=",argmin_order
           print *,"min_error=",min_error
          endif 
-        enddo ! order_count
+
+         do iflex=1,n_ndef
+          imaterial=flexlist(iflex)
+          order_algorithm_in(imaterial)=0
+         enddo
+
+        enddo ! do order_count=1,n_orderings
 
         if ((argmin_order.lt.1).or.(argmin_order.gt.n_orderings)) then
          print *,"argmin_order invalid"
@@ -14619,7 +14656,7 @@ contains
            print *,"is_rigid invalid MOF.F90"
            stop
           endif
-         enddo ! imaterial
+         enddo ! do imaterial = 1,num_materials
         endif
 
         deallocate(mofdata_array)
