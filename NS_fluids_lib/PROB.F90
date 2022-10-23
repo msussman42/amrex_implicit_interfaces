@@ -24371,7 +24371,8 @@ end subroutine initialize2d
        subroutine fort_initdata( &
         tid, &
         adapt_quad_depth, &
-        level,max_level, &
+        level, &
+        max_level, &
         time, &
         tilelo,tilehi, &
         fablo,fabhi, &
@@ -24380,7 +24381,8 @@ end subroutine initialize2d
         saturation_temp, &
         scal,DIMS(scal), &
         LS,DIMS(LS), &
-        dx,xlo,xhi) &
+        dx,xlo,xhi, &
+        centroid_noise_factor) &
        bind(c,name='fort_initdata')
 
        use MOF_routines_module
@@ -24409,7 +24411,8 @@ end subroutine initialize2d
        INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T growlo(3),growhi(3)
        INTEGER_T, INTENT(in) :: bfact
-       INTEGER_T, INTENT(in) :: level,max_level
+       INTEGER_T, INTENT(in) :: level
+       INTEGER_T, INTENT(in) :: max_level
        INTEGER_T, INTENT(in) :: nc
        INTEGER_T imls
        REAL_T, INTENT(in) :: saturation_temp(2*num_interfaces)
@@ -24425,6 +24428,9 @@ end subroutine initialize2d
 
        REAL_T, INTENT(in) :: dx(SDIM)
        REAL_T, INTENT(in) :: xlo(SDIM), xhi(SDIM)
+       REAL_T, INTENT(in) :: centroid_noise_factor(num_materials)
+
+       REAL_T centroid_noise,noise_amplitude
        INTEGER_T ibase
        INTEGER_T ic,jc,kc,n,im
        INTEGER_T dir
@@ -24510,6 +24516,14 @@ end subroutine initialize2d
        REAL_T a1,a2,D2
        REAL_T pz,pz_sanity,fpz,gpz
        REAL_T T_HOT,T_COLD
+
+       if ((level.ge.0).and. &
+           (level.le.max_level)) then
+        ! do nothing
+       else
+        print *,"level invalid"
+        stop
+       endif
 
        scal_ptr=>scal
        LS_ptr=>LS
@@ -25743,12 +25757,34 @@ end subroutine initialize2d
          mofdata(vofcomp_recon+SDIM+1)=zero ! order
          mofdata(vofcomp_recon+2*SDIM+2)=zero ! intercept
          do dir=1,SDIM
-          mofdata(vofcomp_recon+dir)=scalc(vofcomp_raw+dir) ! centroid
+
+          if (level.eq.max_level) then
+           if (centroid_noise_factor(im).eq.zero) then
+            centroid_noise=zero
+           else if (centroid_noise_factor(im).gt.zero) then
+            Call random_number(noise_amplitude)
+            centroid_noise=(two*noise_amplitude-one)* &
+               centroid_noise_factor(im)*dx(1)
+           else
+            print *,"centroid_noise_factor invalid"
+            stop
+           endif
+          else if ((level.lt.max_level).and. &
+                   (level.ge.0)) then
+           centroid_noise=zero
+          else
+           print *,"level invalid"
+           stop
+          endif
+          
+           ! centroid relative to centroid of cell; not cell center.
+          mofdata(vofcomp_recon+dir)=scalc(vofcomp_raw+dir)+centroid_noise
           mofdata(vofcomp_recon+SDIM+dir+1)=zero ! slope
          enddo
         enddo  ! im=1..num_materials
 
         ! sum F_fluid=1  sum F_solid <= 1
+        ! centroids are projected to the cell in question.
         call make_vfrac_sum_ok_base( &
           cmofsten, &
           xsten,nhalf,nhalf_box, &
