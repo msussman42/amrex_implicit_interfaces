@@ -144,6 +144,41 @@ something wrong
 #endif
 int  NavierStokes::mof_machine_learning=0;
 
+//stability (or well posedness) theory for linear operator P: Pu=f
+//P represents the linearized NavierStokes equations for two phase
+//flows with surface tension (see e.g. Yaohong Wang's thesis).
+//f represents a delta function source term for the centroid variable which
+//mimics centroid initialization.
+//the operator P is well posed if P^{-1} exists:
+//u=P^{-1}f
+//||u||<=||P^{-1}|| ||f||
+//if P has a zero eigenvalue, i.e. a non-trivial null space, then
+//P^{-1} cannot be defined, and there does not exist a "C" such that
+//||u||<=C||f||.
+//suppose Pu^{null}=0 and ||u^{null}||>0 then
+//if Pu=f, then P(u+alpha u^{null})=f for any alpha.
+//||u+alpha u^{null}||>=||alpha u^{null}||-||u||   (||A||<=||A-B||+||B||) 
+//pick alpha=2C ||f||/||u^{null}|| which leads to contradiction.
+//In practice, instability is manifested by lack of convergence, a
+//difference between simulation and experiments, or in some cases,
+//solution "blow up."
+//CMOF advection fixes the problem because suppose x=x^{checkerboard}
+//then MOF advection has x^{n+1}=x^{n} (assuming zero velocity), but
+//CMOF advection has x^{n+1}=x^{n}/3 (lim_{n\rightarrow\infty}||x^{n}||=0)
+//(centroid relative to
+//to cell center).   i.e. CMOF advection automatically removes any checkerboard
+//mode from appearing in x.  Albeit, CMOF advection leads to a less accurate
+//method than MOF (when MOF converges), but CMOF, as we report here 
+//anecdotedly, is shown to be more robust than MOF.
+//Remark: if high frequency O(h) noise is added to the centroid, then if there
+//is any surface tension and viscosity, then the noise should be dissipated
+//by the method (i.e. "exact" solution is smooth).  But, MOF solutions exhibit
+//persistant noisy data for many surface tension driven flows with viscosity,
+//differing from what is expected from the PDE model and from experiments, 
+//whereas CMOF solutions are consistent with both.
+
+Vector<Real> NavierStokes::centroid_noise_factor; 
+
 int  NavierStokes::partial_cmof_stencil_at_walls=1;
 
 int  NavierStokes::enable_spectral=0;
@@ -2613,6 +2648,12 @@ NavierStokes::read_params ()
     pp.queryAdd("mof_machine_learning",mof_machine_learning);
     pp.queryAdd("mof_decision_tree_learning",mof_decision_tree_learning);
 
+    centroid_noise_factor.resize(num_materials);
+    for (int i=0;i<num_materials;i++) {
+     centroid_noise_factor[i]=0.0;
+    }
+    pp.queryAdd("centroid_noise_factor",centroid_noise_factor,num_materials);
+
     pp.queryAdd("partial_cmof_stencil_at_walls",
 		partial_cmof_stencil_at_walls);
 
@@ -2765,6 +2806,11 @@ NavierStokes::read_params ()
 	     mof_decision_tree_learning << '\n';
      std::cout << "partial_cmof_stencil_at_walls " << 
 	    partial_cmof_stencil_at_walls << '\n';
+     for (int i=0;i<num_materials;i++) {
+      std::cout << "i= " << i << " centroid_noise_factor[i]=" <<
+       centroid_noise_factor[i] << '\n';
+     }
+     
     }
 
     pp.queryAdd("FD_curv_interp",FD_curv_interp);
@@ -9670,7 +9716,8 @@ NavierStokes::initData () {
    LS_new[mfi].dataPtr(),
    ARLIM(LS_new[mfi].loVect()),
    ARLIM(LS_new[mfi].hiVect()),
-   dx,xlo,xhi);  
+   dx,xlo,xhi,
+   centroid_noise_factor.dataPtr()); 
 
   if (1==0) {
    FArrayBox& snewfab=S_new[mfi];

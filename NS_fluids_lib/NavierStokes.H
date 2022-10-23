@@ -1523,6 +1523,7 @@ protected:
     static int  continuous_mof; // default is 2
     static int  mof_decision_tree_learning; // default is 10000
     static int  mof_machine_learning; // default is 0
+    static Vector<Real> centroid_noise_factor; //default is 0.0
 
     static int  partial_cmof_stencil_at_walls;  // default is 1
     static Real change_max;    // maximum change in dt over a timestep

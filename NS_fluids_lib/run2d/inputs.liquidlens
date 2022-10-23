@@ -142,6 +142,7 @@ ns.yblob=0.5009765625
 ns.zblob=0.0  
 #ns.zblob2=0.5  
 ns.zblob2=0.5009765625
+#ns.centroid_noise_factor=0.1 0.1 0.1
 ns.radblob=0.15
 ns.denfact=1.0
 ns.velfact=0.0
