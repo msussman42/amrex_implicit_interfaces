@@ -25787,9 +25787,10 @@ end subroutine initialize2d
         ! centroids are projected to the cell in question.
         call make_vfrac_sum_ok_base( &
           cmofsten, &
-          xsten,nhalf,nhalf_box, &
+          xsten,nhalf, &
+          nhalf_box, & !nhalf_box=1=>cmofsten is not used(standard MOF here)
           bfact,dx, &
-          tessellate, &  ! =0
+          tessellate, & ! =0
           mofdata,SDIM)
 
         do im=1,num_materials
@@ -25806,7 +25807,9 @@ end subroutine initialize2d
 
         scalc(nc)=err
 
-        if (volcell.le.zero) then
+        if (volcell.gt.zero) then
+         ! do nothing
+        else
          print *,"volcell invalid in INITDATA: ",volcell
          stop
         endif 
@@ -25824,7 +25827,10 @@ end subroutine initialize2d
          endif
         enddo !im=1..num_materials
 
-        if ((vfracsum_test.le.half).or.(vfracsum_test.gt.1.5)) then
+        if ((vfracsum_test.gt.half).and. &
+            (vfracsum_test.le.1.5d0)) then
+         ! do nothing
+        else
          print *,"FAILED: vfracsum_test= ",vfracsum_test
          do im=1,num_materials
           vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
@@ -25866,8 +25872,22 @@ end subroutine initialize2d
         enddo !imls=1..num_materials 
 
         do im=1,num_materials
+
          vofcomp_raw=STATECOMP_MOF+(im-1)*ngeom_raw+1
+         vofcomp_recon=(im-1)*ngeom_recon+1
+
+         if (abs(voflist(im)-mofdata(vofcomp_recon)).le.1.0E-12) then
+          ! do nothing
+         else
+          print *,"voflist and mofdata mismatch"
+          stop
+         endif
+
          scalc(vofcomp_raw)=voflist(im)
+         do dir=1,SDIM
+          scalc(vofcomp_raw+dir)=mofdata(vofcomp_recon+dir)
+         enddo
+
         enddo ! im=1..num_materials
 
         do n=1,nc
