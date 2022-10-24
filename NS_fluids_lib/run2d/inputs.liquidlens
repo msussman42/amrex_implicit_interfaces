@@ -54,7 +54,7 @@ mg.rtol_b = -0.01
 #Lp.v = 1
 
 ns.MOFITERMAX=15
-ns.continuous_mof=2
+ns.continuous_mof=0
 ns.EILE_flag=1
 ns.vof_height_function=1
 ns.mof_decision_tree_learning=4000 # default: 40000
@@ -142,7 +142,7 @@ ns.yblob=0.5009765625
 ns.zblob=0.0  
 #ns.zblob2=0.5  
 ns.zblob2=0.5009765625
-#ns.centroid_noise_factor=0.1 0.1 0.1
+ns.centroid_noise_factor=0.3 0.3 0.3
 ns.radblob=0.15
 ns.denfact=1.0
 ns.velfact=0.0
