@@ -169,7 +169,8 @@ ns.heatviscconst=0.546 0.026 2.2 386 # W/(m K)
 # 12 13 14 23 24 34  
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 ns.damping_coefficient=0.0 0.0 0.0 0.0
-ns.viscconst=0.09 0.001 1.0 100.0 # dimensional Pa s
+#ns.viscconst=1.7e-3 1.7e-5 1.0 100.0 # dimensional Pa s NO DAMPING
+ns.viscconst=0.09 0.001 1.0 100.0 # dimensional Pa s DAMPING
 ns.denconst=1000 1.29 917.0 10000.0
 ns.FSI_flag=0 0 3 1
 ns.recalesce_flag=0 0 0 0

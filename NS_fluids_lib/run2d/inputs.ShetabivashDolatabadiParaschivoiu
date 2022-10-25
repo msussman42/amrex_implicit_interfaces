@@ -7,7 +7,7 @@ stop_time = 20.0
 # set up for bubble
 geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
-geometry.prob_hi=0.001 0.002  # meters
+geometry.prob_hi=0.001 0.001  # meters
 ns.slice_dir=1
 ns.xslice=0.0 0.0
 ns.EILE_flag=-1
@@ -25,6 +25,9 @@ ns.MOFITERMAX=15
 ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=2
+ns.vof_height_function=1
+ns.mof_decision_tree_learning=4000 # default: 40000
+ns.MOFITERMAX_AFTER_PREDICT=15
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
 ns.mof_error_ordering=0
@@ -37,7 +40,11 @@ cg.verbose = 0
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-cg.maxiter = 400
+
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+cg.restart_period=25
+cg.maxiter = 200
 mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
 Lp.v = 0
@@ -45,8 +52,8 @@ Lp.v = 0
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
-amr.n_cell=64 128
-amr.max_level = 1
+amr.n_cell=64 64
+amr.max_level = 0
 # water, gas, ice, substrate
 # -1=> always adapt  0=> never adapt
 # 0- 1 level 1- 2 levels  2- 3 levels
@@ -55,16 +62,16 @@ amr.n_error_buf     = 4 4 4 4 # number of buffer cells in error est
 amr.grid_eff        = 0.8     # what constitutes an efficient grid
 ns.ns_tiling=false
 amr.blocking_factor = 8 8 8 8  # block factor in grid generation
-amr.check_int       = 200   
+amr.check_int       = 500
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 1 # 200
-#amr.plot_int        = 1000 # static freezing test 10
+amr.plot_int        = 200 # 200
+#amr.plot_int        = 500 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 1024
 amr.file_name_digits=7
-#amr.restart         = chk0066000
+#amr.restart         = chk0137500
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -77,31 +84,25 @@ ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-8
+#ns.gravity        = 0.0 # thermal effects only
 ns.gravity        = -9.8 # m/s^2
-# 1. on the substrate (if there is ice):
-#   sigma_{SG}-sigma_{SI}=sigma_{IG}cos(theta_I_substrate)
-#   theta_I_substrate=49.5 degrees
-#   sigma_{SG}=sigma_{IG}
-#   sigma_{IG}-sigma_{SI}=sigma_{IG}cos(theta_I_substrate)
-#   sigma_{IG}(1-cos(theta_I_substrate))=sigma_{SI}
-# 2. on the substrate (if there is supposed to be liquid, but ice seed is
-#    there instead):
-#   sigma_{SG}-sigma_{SL}=sigma_{LG}cos(theta_L_substrate)
-#   theta_L_substrate=49.5 degrees
-#   sigma_{SG}=sigma_{LG}
-#   sigma_{LG}(1-cos(theta_L_substrate))=sigma_{SL}
-# 3. at the triple point:
-#   sin(theta_I)/sigma_{LG}=sin(theta_L)/sigma_{IG}=sin(theta_G)/sigma_{LI}
+
+# 12,13,14,23,24,34
+# LG,LI,LS,IG,GS,SI  
+#initial theta_liquid (CL_tensions_from_angles.f):
+# sigma_{SG}-sigma_{SL}=sigma_{LG}cos(theta_L_initial)
+#    let sigma_{SG}=sigma_{LG} =>
+# 1-sigma_{SL}/sigma_{LG}=cos(theta_L_initial)
 #
-# LG,LI,LS,IG,GS,SI 
-#
-ns.tension=0.0729 0.0254 0.0256 0.0683 0.0729 0.0239 #49.5 degrees substrate
-#ns.tension=0.0729 0.0254 0.0665 0.0683 0.0729 0.0239 #85.0 degrees substrate
+#contact line: theta_L_initial=45 degrees
+# LG,LI,LS,IG,GS,SI  (SI used)
+ns.tension=0.072 0.0 0.021 0.072 0.072 0.021
+
 # specific heat of glass: 0.84E+3 J/(kg K)
 # specific heat of water: 4.186E+3 J/(kg K)
 # specific heat of ice: 2.05E+3 J/(kg K)
 # material 1=liquid 2=gas  3=ice 4=solid  
-ns.stiffCP = 4.1855e+3 2.098e+3 2.090e+3 2.090e+3  # dimensional J/(kg K)
+ns.stiffCP = 4.21e+3 1.0e+3 2.03e+3 2.03e+2  # dimensional J/(kg K)
 # units of latent_heat: 1 J/kg=10^7 erg/(1000 g)=10^4 erg/g
 # L=334 J/g=3.34E+9 erg/g=334 J/(kg/1000)=3.34E+5 J/kg
 # <0 if condensation or solidification
@@ -109,13 +110,16 @@ ns.stiffCP = 4.1855e+3 2.098e+3 2.090e+3 2.090e+3  # dimensional J/(kg K)
 # latent_heat[2*max_num_tension]
 #12 13 14 23 24 34 then reverse
 # dimensional J/kg:
-ns.latent_heat = 0.0 -3.34e+5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+#thermal effects only
+#ns.latent_heat = 0.0 -3.34e+5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
+ns.latent_heat = 0.0 -3.34 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
 # 1->2 liquid-> gas
 # 1->3 liquid->ice 
 # ....
 #12 13 14 23 24 34 then reverse
-ns.saturation_temp = 0.0 273.15 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+ns.saturation_temp = 0.0 273.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 # 
+ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt
 ns.sum_interval   = 10        # timesteps between computing mass 
 
@@ -139,41 +143,44 @@ ns.material_type=0 0 0 999
 # air: k=0.024 W/(M K)
 # water: k=0.58 W/(M K)
 # MKS: cp=4.1855 J/((kg/1000)K)=4.1855E+3 J/(kg K)
-ns.heatviscconst=0.5964 0.0241 2.266 2.266 # W/(m K)
+ns.heatviscconst=0.546 0.026 2.2 386 # W/(m K)
 # 12 13 14 23 24 34  
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
-ns.viscconst=0.001 0.000012 100.0 100.0 # dimensional Pa s
-ns.denconst=998.4 1.497 998.4 998.4
+ns.damping_coefficient=0.0 0.0 0.0 0.0
+ns.viscconst=1.7e-3 1.7e-5 1.0 100.0 # dimensional Pa s NO DAMPING
+#ns.viscconst=0.09 0.001 1.0 100.0 # dimensional Pa s DAMPING
+#ns.denconst=1000.0 1.29 1000.0 10000.0 #thermal effects only
+ns.denconst=1000.0 1.29 917.0 10000.0
 ns.FSI_flag=0 0 3 1
 ns.recalesce_flag=0 0 0 0
 # solidheat_flag=0=>diffuse in solid 
 # solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=1
-ns.tempconst=273.15 273.15 273.15 271.15  
-ns.initial_temperature=273.15 273.15 273.15 271.15  
+ns.tempconst=273.0 273.0 273.0 271.0
+ns.initial_temperature=273.0 273.0 273.0 271.0
 ns.xblob=0.0  # center of water drop
-# See "drop_slope_dist" in GLOBALUTIL.F90
-# drop is positioned to get proper volume and contact angle at t=0.
-ns.yblob=0.0000625 #4*dxcoarse=0.0000625
+# dxcoarse=0.001/64=1.5625e-5
+ns.yblob=0.0000625 #4*dxcoarse=6.25e-5
 ns.zblob=0.0
 ns.xblob2=0.0 # center of surface of cold plate (xblob2,yblob2) (inclined)  
 ns.yblob2=0.0000625 #dxcoarse=0.001/64  4*dxcoarse=0.001/16=0.0000625
 ns.zblob2=0.0
-#ns.zblob4=0.0000625 #transitional substrate temperature
-ns.zblob4=0.0 # substrate temperature=wall temperature (at ylo)
 ns.radblob2=0.0 # zero degrees incline (radians)
 # thickness of underside of droplet that is already frozen
 ns.radblob3=0.00003125 #dimensionless 2*dxcoarse=0.001/32=0.00003125
 # effective radius of water/ice drop: volume=(1/2)  (4/3)pi r^3=
 # 3.2724923E-11 m^3
-ns.radblob=250.0e-6 # meters
+#ns.zblob4=0.0000625
+#transitional substrate temperature
+ns.zblob4=0.0 #substrate tempreture=wall temperature(atylo)
+ns.radblob=500.0e-6 # meters
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55
 
 #ns.mem_debug = 1
-#ns.v = 1
+#ns.v = 2
 ns.output_drop_distribution=1
 #ns.show_mem=1
 #ns.d = 1
