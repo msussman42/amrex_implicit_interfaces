@@ -19668,8 +19668,10 @@ contains
 
       REAL_T, INTENT(in) :: LS(num_materials)
       REAL_T, INTENT(out) :: LS_new(num_materials)
+      REAL_T :: LS_new_hold(num_materials)
       REAL_T LS_primary
-      INTEGER_T im,im_primary
+      REAL_T LS_max_rest
+      INTEGER_T im,im_primary,im_rest
       INTEGER_T tessellate
       INTEGER_T is_rigid_local(num_materials)
 
@@ -19724,6 +19726,27 @@ contains
        print *,"is_rigid invalid MOF.F90"
        stop
       endif
+
+      do im=1,num_materials
+       LS_new_hold(im)=LS_new(im)
+      enddo
+
+      do im=1,num_materials
+       LS_max_rest=-99999.0d0
+       do im_rest=1,num_materials
+        if (im_rest.ne.im) then
+         if (LS_new_hold(im_rest).gt.LS_max_rest) then
+          LS_max_rest=LS_new_hold(im_rest)
+         else if (LS_new_hold(im_rest).le.LS_max_rest) then
+          ! do nothing
+         else
+          print *,"LS_max_rest bust"
+          stop
+         endif
+        endif
+       enddo ! im_rest=1..num_materials
+       LS_new(im)=half*(LS_new(im)-LS_max_rest)
+      enddo ! im=1..num_materials
 
       end subroutine LS_tessellate
 
