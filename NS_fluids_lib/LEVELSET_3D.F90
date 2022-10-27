@@ -7733,7 +7733,8 @@ stop
       REAL_T, INTENT(in) :: den_interface(num_interfaces)
       REAL_T, INTENT(in) :: visc_interface(num_interfaces)
       REAL_T, INTENT(in) :: heatvisc_interface(num_interfaces)
-      REAL_T, INTENT(in) :: speciesvisc_interface(num_interfaces*num_species_var)
+      REAL_T, INTENT(in) :: &
+          speciesvisc_interface(num_interfaces*num_species_var)
 
       INTEGER_T im1,jm1,km1
       INTEGER_T i,j,k,ii,jj,kk
@@ -7753,13 +7754,19 @@ stop
       INTEGER_T im
       INTEGER_T nmax
       INTEGER_T vofcomp
+
+      INTEGER_T thick_flag
+
       REAL_T visc_total
+      REAL_T visc_total_thick
       REAL_T DeDT,DeDT_total
 
       REAL_T volmat(num_materials)
       REAL_T voltotal
+      REAL_T voltotal_thick
       REAL_T voldepart
       REAL_T mass_total
+      REAL_T mass_total_thick
       REAL_T delta_mass
       REAL_T den
       REAL_T density_for_mass_fraction_diffusion
@@ -7818,6 +7825,8 @@ stop
       REAL_T LSIDE_MAT(num_materials)
       REAL_T LSIDE_tension_MAT(num_materials)
 
+      REAL_T LS_FIXED(num_materials)
+
       REAL_T DXMAXLS
       REAL_T FFACE(num_materials)
       INTEGER_T irefine
@@ -7869,6 +7878,7 @@ stop
       INTEGER_T ispec
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T local_tessellate
+      REAL_T cutoff
 
 ! fort_init_physics_vars code starts here:
 
@@ -9933,7 +9943,42 @@ stop
 
         mass_total=zero
 
+        voltotal_thick=zero
+        visc_total_thick=zero
+        mass_total_thick=zero
+        thick_flag=0
+
         do im=1,num_materials
+         LSIDE_MAT(im)=levelPC(D_DECL(i,j,k),im)
+        enddo
+        call LS_tessellate(LSIDE_MAT,LS_FIXED)
+
+        do im=1,num_materials
+
+         if (material_thickness(im).gt.zero) then
+          cutoff=DXMAXLS*material_thickness(im)
+          volmat_thick(im)=hs(LS_FIXED(im)+cutoff,cutoff)
+          if (volmat_thick(im).gt.zero) then
+           thick_flag=1
+          else if (volmat_thick(im).eq.zero) then
+           ! do nothing
+          else
+           print *,"volmat_thick invalid"
+           stop
+          endif
+         else if (material_thickness(im).eq.zero) then
+          cutoff=zero
+          volmat_thick(im)=hs(LS_FIXED(im),cutoff)
+         else
+          print *,"material_thickness invalid"
+          stop
+         endif 
+
+         voltotal_thick=voltotal_thick+volmat_thick(im)
+         mass_total_thick=mass_total_thick+volmat_thick(im)*fort_denconst(im)
+         mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
+         one_over_mu=one/(mu+VISCINVTOL)
+         visc_total_thick=visc_total_thick+one_over_mu*volmat(im)
 
          dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
          tempcomp=dencomp+1
@@ -10046,14 +10091,25 @@ stop
          cenvof(D_DECL(i,j,k),im)=volmat(im)/voltotal
         enddo
 
-        cenden(D_DECL(i,j,k))=voltotal/mass_total 
+        if (thick_flag.eq.0) then
+         local_cenden=voltotal/mass_total
+         local_cenvisc=one/((visc_total/voltotal)+VISCINVTOL)  
+        else if (thick_flag.eq.1) then
+         local_cenden=voltotal_thick/mass_total_thick
+         local_cenvisc= &
+             one/((visc_total_thick/voltotal_thick)+VISCINVTOL)  
+        else
+         print *,"thick_flag invalid"
+         stop
+        endif
+
+        cenden(D_DECL(i,j,k))=local_cenden
         cenDeDT(D_DECL(i,j,k))=voltotal/DeDT_total
 
         if (null_viscosity.eq.1) then
          cenvisc(D_DECL(i,j,k))=zero
         else if (null_viscosity.eq.0) then
-         cenvisc(D_DECL(i,j,k))= &
-          one/((visc_total/voltotal)+VISCINVTOL)  ! mu
+         cenvisc(D_DECL(i,j,k))=local_cenvisc
         else
          print *,"null_viscosity invalid"
          stop
