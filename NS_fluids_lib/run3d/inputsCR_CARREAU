@@ -6,7 +6,6 @@
 max_step  = 8000   # maximum timestep
 #max_step  =  2    # maximum timestep
 stop_time =  300  # maximum problem time
-thickness = 0.1
 
 # ------------------ Dimention version 08/02/18 ---------------
 # ------------------  INPUTS TO CLASS AMR ---------------------

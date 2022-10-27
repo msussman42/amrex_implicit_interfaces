@@ -237,8 +237,6 @@ stop
       REAL_T LL(0:1)
       REAL_T dxmax
       REAL_T SCALED_MUSHY_THICK
-      REAL_T :: user_tension(num_interfaces)
-      REAL_T :: def_thermal(num_materials)
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -297,20 +295,7 @@ stop
        LL(ireverse)=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
       enddo
 
-      do im_loop=1,num_materials
-       def_thermal(im_loop)=293.0d0
-      enddo
-      call get_user_tension( &
-        xtarget,time,fort_tension,user_tension,def_thermal)
-
-      if (user_tension(iten).eq.zero) then
-       SCALED_MUSHY_THICK=zero
-      else if (user_tension(iten).gt.zero) then
-       SCALED_MUSHY_THICK=UNSCALED_MUSHY_THICK*dxmax
-      else
-       print *,"user_tension invalid"
-       stop
-      endif
+      SCALED_MUSHY_THICK=UNSCALED_MUSHY_THICK*dxmax
 
       ! is_ice=1 if FSI_flag==3 or 6.
       if ((is_ice(im).eq.0).and. &
