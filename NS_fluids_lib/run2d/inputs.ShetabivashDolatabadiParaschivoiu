@@ -1,4 +1,5 @@
 # Shetabivash, Dolatabadi, Paraschivoiu, JCP 2020 test problem
+# Figure 12, rho_ice/rho_liq=0.85
 max_step  =  9999999    # maximum timestep
 
 stop_time = 20.0
@@ -7,7 +8,7 @@ stop_time = 20.0
 # set up for bubble
 geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
-geometry.prob_hi=0.001 0.001  # meters
+geometry.prob_hi=0.0005 0.0005  # meters
 ns.slice_dir=1
 ns.xslice=0.0 0.0
 ns.EILE_flag=-1
@@ -96,7 +97,9 @@ ns.gravity        = -9.8 # m/s^2
 #
 #contact line: theta_L_initial=45 degrees
 # LG,LI,LS,IG,GS,SI  (SI used)
-ns.tension=0.072 0.0 0.021 0.072 0.072 0.021
+#ns.tension=0.072 0.0 0.021 0.072 0.072 0.021
+#contact line: theta_L_initial=90 degrees
+ns.tension=0.072 0.0 0.072 0.072 0.072 0.072
 
 # specific heat of glass: 0.84E+3 J/(kg K)
 # specific heat of water: 4.186E+3 J/(kg K)
@@ -150,7 +153,8 @@ ns.damping_coefficient=0.0 0.0 0.0 0.0
 ns.viscconst=1.7e-3 1.7e-5 1.0 100.0 # dimensional Pa s NO DAMPING
 #ns.viscconst=0.09 0.001 1.0 100.0 # dimensional Pa s DAMPING
 #ns.denconst=1000.0 1.29 1000.0 10000.0 #thermal effects only
-ns.denconst=1000.0 1.29 917.0 10000.0
+#ns.denconst=1000.0 1.29 917.0 10000.0
+ns.denconst=1000.0 1.29 850.0 10000.0
 ns.FSI_flag=0 0 3 1
 ns.recalesce_flag=0 0 0 0
 # solidheat_flag=0=>diffuse in solid 
@@ -160,21 +164,21 @@ ns.solidheat_flag=1
 ns.tempconst=273.0 273.0 273.0 271.0
 ns.initial_temperature=273.0 273.0 273.0 271.0
 ns.xblob=0.0  # center of water drop
-# dxcoarse=0.001/64=1.5625e-5
-ns.yblob=0.0000625 #4*dxcoarse=6.25e-5
+# dxcoarse=0.0005/64
+ns.yblob=0.00003125 #4*dxcoarse=3.125e-5
 ns.zblob=0.0
 ns.xblob2=0.0 # center of surface of cold plate (xblob2,yblob2) (inclined)  
-ns.yblob2=0.0000625 #dxcoarse=0.001/64  4*dxcoarse=0.001/16=0.0000625
+ns.yblob2=0.00003125 #dxcoarse=0.0005/64  4*dxcoarse=0.001/32=0.00003125
 ns.zblob2=0.0
 ns.radblob2=0.0 # zero degrees incline (radians)
 # thickness of underside of droplet that is already frozen
-ns.radblob3=0.00003125 #dimensionless 2*dxcoarse=0.001/32=0.00003125
+ns.radblob3=0.000015625 #dimensionless 2*dxcoarse=0.0005/32=0.000015625
 # effective radius of water/ice drop: volume=(1/2)  (4/3)pi r^3=
 # 3.2724923E-11 m^3
 #ns.zblob4=0.0000625
 #transitional substrate temperature
 ns.zblob4=0.0 #substrate tempreture=wall temperature(atylo)
-ns.radblob=500.0e-6 # meters
+ns.radblob=250.0e-6 # meters
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55
