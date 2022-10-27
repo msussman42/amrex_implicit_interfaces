@@ -11,7 +11,6 @@
 # bubble radius should double at 3E-7
 # when dimensionless time=3E-7/5E-8=(3/5)*10=6
 stop_time = 6.0  # T=L/U=5E-5/1E+3=5E-8
-thickness = 0.1
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble

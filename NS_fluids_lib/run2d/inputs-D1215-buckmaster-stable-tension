@@ -7,7 +7,6 @@ max_step  = 20001     # maximum timestep
 #max_step  =  2    # maximum timestep
 stop_time =  30.0  # maximum problem time scale by 1/10 (U=1/10)
 wait_for_key=1
-thickness = 0.1
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble

@@ -6,7 +6,6 @@
 max_step  =  999999    # maximum timestep
 #max_step  =  2        # maximum timestep
 stop_time =  1.1e+9    # maximum problem time  (divide by U to get real time)
-thickness = 0.1
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
