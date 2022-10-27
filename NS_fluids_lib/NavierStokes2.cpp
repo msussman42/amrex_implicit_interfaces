@@ -5082,6 +5082,7 @@ void NavierStokes::make_physics_vars(int project_option) {
     &local_curv_max[tid_current],
     &isweep,
     &nrefine_vof,
+    material_thickness.dataPtr(),
     denconst_interface.dataPtr(),
     viscconst_interface.dataPtr(),
     heatviscconst_interface.dataPtr(),

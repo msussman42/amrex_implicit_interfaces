@@ -7552,6 +7552,7 @@ stop
        curv_max, &
        isweep, &
        nrefine_vof, &
+       material_thickness, &
        den_interface, &
        visc_interface, &
        heatvisc_interface, &
@@ -7726,6 +7727,8 @@ stop
       REAL_T, pointer :: massF_ptr(D_DECL(:,:,:),:)
 
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+
+      REAL_T, INTENT(in) :: material_thickness(num_materials)
 
       REAL_T, INTENT(in) :: den_interface(num_interfaces)
       REAL_T, INTENT(in) :: visc_interface(num_interfaces)
@@ -8015,6 +8018,15 @@ stop
        endif
 
       enddo !im=1,2*num_interfaces
+
+      do im=1,num_materials
+       if (material_thickness(im).ge.zero) then
+        !do nothing
+       else
+        print *,"material_thickness invalid"
+        stop
+       endif
+      enddo !im=1,num_materials
 
       do im=1,num_interfaces
 

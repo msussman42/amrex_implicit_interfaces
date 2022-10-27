@@ -193,6 +193,8 @@ int NavierStokes::particle_min_per_nsubdivide=1;
 int NavierStokes::particles_flag=0; 
 
 Real NavierStokes::truncate_thickness=2.0;  
+Vector<Real> NavierStokes::material_thickness; 
+
 Real NavierStokes::init_shrink  = 1.0;
 Real NavierStokes::change_max   = 1.1;
 Real NavierStokes::change_max_init = 1.1;
@@ -4696,6 +4698,12 @@ NavierStokes::read_params ()
     if (truncate_thickness<1.0)
      amrex::Error("truncate_thickness too small");
 
+    material_thickness.resize(num_materials);
+    for (int im=0;im<num_materials;im++) {
+     material_thickness[im]=0.0;
+    }
+    pp.queryAdd("material_thickness",material_thickness,num_materials);
+
     for (int im=1;im<=num_materials;im++) {
      for (int im_opp=im+1;im_opp<=num_materials;im_opp++) {
       for (int ireverse=0;ireverse<=1;ireverse++) {
@@ -4910,6 +4918,11 @@ NavierStokes::read_params ()
       prescribe_temperature_outflow << '\n';
      std::cout << "solidheat_flag= " << solidheat_flag << '\n';
      std::cout << "truncate_thickness= " << truncate_thickness << '\n';
+
+     for (int i=0;i<num_materials;i++) {
+      std::cout << "i=" << i << " material_thickness= " << 
+         material_thickness[i] << '\n';
+     }
 
      for (int i=0;i<num_materials;i++) {
       std::cout << "i= " << i << " compressible_dt_factor= " <<
