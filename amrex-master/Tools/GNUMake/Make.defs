@@ -455,6 +455,8 @@ ifdef AMREX_CCOMP
     AMREX_CCOMP = g++-8
   else ifeq ($(lowercase_amrex_ccomp),intel)
     AMREX_CCOMP = intel
+  else ifeq ($(lowercase_amrex_ccomp),nasaintel)
+    AMREX_CCOMP = nasaintel
   else ifeq ($(lowercase_amrex_ccomp),dpcpp)
     AMREX_CCOMP = dpcpp
   else ifeq ($(lowercase_amrex_ccomp),cray)
@@ -476,7 +478,7 @@ ifdef AMREX_CCOMP
   else ifeq ($(lowercase_amrex_ccomp),armclang)
     AMREX_CCOMP = armclang
   else
-    $(error Unknown compiler $(AMREX_CCOMP). Supported compilers are gnu, intel, dpcpp, cray, pgi, nvhpc, ibm, llvm, nag, nec, and armclang)
+    $(error Unknown compiler $(AMREX_CCOMP). Supported compilers are gnu, intel, nasaintel, dpcpp, cray, pgi, nvhpc, ibm, llvm, nag, nec, and armclang)
   endif
 endif
 
@@ -489,6 +491,11 @@ ifeq ($(lowercase_comp),$(filter $(lowercase_comp),gcc gnu g++ g++-8))
   AMREX_CCOMP ?= gnu
   $(info Loading $(AMREX_HOME)/Tools/GNUMake/comps/gnu.mak...)
   include        $(AMREX_HOME)/Tools/GNUMake/comps/gnu.mak
+else ifeq ($(lowercase_comp),nasaintel)
+  AMREX_FCOMP ?= intel
+  AMREX_CCOMP ?= intel
+  $(info Loading $(AMREX_HOME)/Tools/GNUMake/comps/nasaintel.mak...)
+  include        $(AMREX_HOME)/Tools/GNUMake/comps/nasaintel.mak
 else ifeq ($(lowercase_comp),intel)
   AMREX_FCOMP ?= intel
   AMREX_CCOMP ?= intel
@@ -552,7 +559,7 @@ else ifeq ($(lowercase_comp),hip)
   $(info Loading $(AMREX_HOME)/Tools/GNUMake/comps/hip.mak...)
   include        $(AMREX_HOME)/Tools/GNUMake/comps/hip.mak
 else
-  $(error Unknown compiler $(COMP). Supported compilers are gnu, intel, dpcpp, cray, pgi, nvhpc, ibm, llvm, nag, and nec)
+  $(error Unknown compiler $(COMP). Supported compilers are gnu, intel, nasaintel, dpcpp, cray, pgi, nvhpc, ibm, llvm, nag, and nec)
 endif
 
 CXXFLAGS += $(XTRA_CXXFLAGS)
