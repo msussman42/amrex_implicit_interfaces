@@ -174,7 +174,6 @@ stop
       REAL_T vfrac_local(num_materials)
       INTEGER_T im_raster_solid
       INTEGER_T mod_cmofsten
-      INTEGER_T loc_indx
 
 #include "mofdata.H"
 

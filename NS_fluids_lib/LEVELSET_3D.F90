@@ -18,7 +18,6 @@
 
 #define nsum 64
 #define nsum2 32
-#define VISCINVTOL (1.0D-8)
 #define CURVWT (1.0D-3)
 
 #define DEBUG_THERMAL_COEFF 0
@@ -7762,6 +7761,7 @@ stop
       REAL_T DeDT,DeDT_total
 
       REAL_T volmat(num_materials)
+      REAL_T volmat_thick
       REAL_T voltotal
       REAL_T voltotal_thick
       REAL_T voldepart
@@ -7878,7 +7878,12 @@ stop
       INTEGER_T ispec
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T local_tessellate
+
       REAL_T cutoff
+      REAL_T local_cenvisc
+      REAL_T local_cenden
+
+      REAL_T, PARAMETER :: VISCINVTOL=1.0D-8
 
 ! fort_init_physics_vars code starts here:
 
@@ -8334,18 +8339,88 @@ stop
          do im=1,num_materials
           LSplus(im)=levelPC(D_DECL(i,j,k),im)
           LSminus(im)=levelPC(D_DECL(im1,jm1,km1),im)
+          LSIDE_MAT(im)=half*(LSplus(im)+LSminus(im))
          enddo
+         call LS_tessellate(LSIDE_MAT,LS_FIXED)
+
+          ! MAC grid 1/rho and mu
+         null_viscosity=0
+         voltotal_thick=zero
+         visc_total_thick=zero
+         mass_total_thick=zero
+         thick_flag=0
+
+         do im=1,num_materials
+
+          if (material_thickness(im).gt.zero) then
+           cutoff=DXMAXLS*material_thickness(im)
+           volmat_thick=hs(LS_FIXED(im)+cutoff,cutoff)
+           if (volmat_thick.gt.zero) then
+            thick_flag=1
+           else if (volmat_thick.eq.zero) then
+            ! do nothing
+           else
+            print *,"volmat_thick invalid"
+            stop
+           endif
+          else if (material_thickness(im).eq.zero) then
+           cutoff=zero
+           volmat_thick=hs(LS_FIXED(im),cutoff)
+          else
+           print *,"material_thickness invalid"
+           stop
+          endif 
+
+          voltotal_thick=voltotal_thick+volmat_thick
+          mass_total_thick=mass_total_thick+volmat_thick*fort_denconst(im)
+          mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
+          one_over_mu=one/(mu+VISCINVTOL)
+          visc_total_thick=visc_total_thick+one_over_mu*volmat_thick
+
+          if (mu.lt.zero) then
+           print *,"mu gone negative"
+           stop
+          else if (mu.eq.zero) then
+            ! MAC grid 1/rho and mu
+           if (volmat_thick.gt.zero) then
+            null_viscosity=1
+           endif
+          else if (mu.gt.zero) then
+           ! do nothing
+          else
+           print *,"mu NaN"
+           stop
+          endif
+
+         enddo ! im=1..num_materials
+
+         if (mass_total_thick.gt.zero) then
+          ! do nothing
+         else
+          print *,"mass_total_thick invalid"
+          stop
+         endif
+         if (voltotal_thick.gt.zero) then
+          ! do nothing
+         else
+          print *,"voltotal_thick invalid"
+          stop
+         endif
+
           ! checks rigid and non-rigid materials.
          call get_primary_material(LSplus,implus_majority)
          call get_primary_material(LSminus,imminus_majority)
 
-         if ((implus_majority.lt.1).or.(implus_majority.gt.num_materials).or. &
-             (imminus_majority.lt.1).or.(imminus_majority.gt.num_materials)) then
+         if ((implus_majority.lt.1).or. &
+             (implus_majority.gt.num_materials).or. &
+             (imminus_majority.lt.1).or. &
+             (imminus_majority.gt.num_materials)) then
           print *,"implus_majority or imminus_majority invalid"
           stop
          endif
 
-         if ((time.ge.zero).and.(dt.ge.zero)) then
+         if ((time.ge.zero).and. &
+             (dt.ge.zero)) then
           ! do nothing
          else
           print *,"fort_init_physics_vars:"
@@ -8775,8 +8850,10 @@ stop
           call geom_avg(local_plus,local_minus,wtR,wtL,faceheat_local)
 
           do imspec=1,num_species_var
-           local_plus=fort_speciesviscconst((imspec-1)*num_materials+implus_majority)
-           local_minus=fort_speciesviscconst((imspec-1)*num_materials+imminus_majority)
+           local_plus= &
+            fort_speciesviscconst((imspec-1)*num_materials+implus_majority)
+           local_minus= &
+            fort_speciesviscconst((imspec-1)*num_materials+imminus_majority)
            call geom_avg(local_plus,local_minus,wtR,wtL, &
                    facespecies_local(imspec))
           enddo !do imspec=1,num_species_var
@@ -8820,8 +8897,10 @@ stop
           call geom_avg(local_plus,local_minus,wtR,wtL,faceheat_local)
 
           do imspec=1,num_species_var
-           local_plus=fort_speciesviscconst((imspec-1)*num_materials+implus_majority)
-           local_minus=fort_speciesviscconst((imspec-1)*num_materials+imminus_majority)
+           local_plus= &
+            fort_speciesviscconst((imspec-1)*num_materials+implus_majority)
+           local_minus= &
+            fort_speciesviscconst((imspec-1)*num_materials+imminus_majority)
            call geom_avg(local_plus,local_minus,wtR,wtL, &
                    facespecies_local(imspec))
           enddo
@@ -8956,8 +9035,10 @@ stop
            call geom_avg(local_plus,local_minus,wtR,wtL,faceheat_local)
 
            do imspec=1,num_species_var
-            local_plus=fort_speciesviscconst((imspec-1)*num_materials+implus_majority)
-            local_minus=fort_speciesviscconst((imspec-1)*num_materials+imminus_majority)
+            local_plus= &
+             fort_speciesviscconst((imspec-1)*num_materials+implus_majority)
+            local_minus= &
+             fort_speciesviscconst((imspec-1)*num_materials+imminus_majority)
             call geom_avg(local_plus,local_minus,wtR,wtL, &
                    facespecies_local(imspec))
            enddo
@@ -8998,8 +9079,10 @@ stop
            endif
 
            do imspec=1,num_species_var
-            spec1(imspec)=fort_speciesviscconst((imspec-1)*num_materials+im_main)
-            spec2(imspec)=fort_speciesviscconst((imspec-1)*num_materials+im_main_opp)
+            spec1(imspec)= &
+             fort_speciesviscconst((imspec-1)*num_materials+im_main)
+            spec2(imspec)= &
+             fort_speciesviscconst((imspec-1)*num_materials+im_main_opp)
            enddo
   
              ! 1/s = (wL/sL + wR/sR)/(wL+wR)=(wL sR + wR sL)/(sL sR)*1/(wL+wR)
@@ -9484,7 +9567,16 @@ stop
 
          density_for_mass_fraction_diffusion=mass_total/voltotal
 
-         local_face(FACECOMP_FACEDEN+1)=one/density_for_mass_fraction_diffusion
+         if (thick_flag.eq.1) then
+          local_cenden=voltotal_thick/mass_total_thick
+         else if (thick_flag.eq.0) then
+          local_cenden=one/density_for_mass_fraction_diffusion
+         else
+          print *,"thick_flag invalid"
+          stop
+         endif 
+
+         local_face(FACECOMP_FACEDEN+1)=local_cenden
 
          do im=1,num_materials
           do im_opp=im+1,num_materials
@@ -9509,7 +9601,26 @@ stop
           enddo ! im_opp=im+1..num_materials
          enddo ! im=1..num_materials
 
-         local_face(FACECOMP_FACEVISC+1)=facevisc_local
+         if (thick_flag.eq.1) then
+          local_cenvisc= &
+            one/((visc_total_thick/voltotal_thick)+VISCINVTOL)  
+          if (null_viscosity.eq.1) then
+           local_cenvisc=zero
+          else if (null_viscosity.eq.0) then
+           ! do nothing
+          else
+           print *,"null_viscosity invalid"
+           stop
+          endif
+         else if (thick_flag.eq.0) then
+          local_cenvisc=facevisc_local
+         else
+          print *,"thick_flag invalid"
+          stop
+         endif 
+
+         local_face(FACECOMP_FACEVISC+1)=local_cenvisc
+
          local_face(FACECOMP_FACEHEAT+1)=faceheat_local
          do imspec=1,num_species_var
           local_face(FACECOMP_FACESPEC+imspec)= &
@@ -9897,7 +10008,6 @@ stop
 
       else if (isweep.eq.1) then
 
-
         ! cenden, cenvof, cenDeDT, cenvisc, initialized in this loop.
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,igridlo,igridhi,1) 
@@ -9934,15 +10044,21 @@ stop
         if (abs(voltotal-one).gt.LSTOL) then
          print *,"voltotal invalid"
          stop
+        else if (abs(voltotal-one).le.LSTOL) then
+         ! do nothing
+        else
+         print *,"voltotal invalid"
+         stop
         endif
 
         DeDT_total=zero
 
-        null_viscosity=0
         visc_total=zero
 
         mass_total=zero
 
+         ! Cell grid 1/rho and mu
+        null_viscosity=0
         voltotal_thick=zero
         visc_total_thick=zero
         mass_total_thick=zero
@@ -9957,10 +10073,10 @@ stop
 
          if (material_thickness(im).gt.zero) then
           cutoff=DXMAXLS*material_thickness(im)
-          volmat_thick(im)=hs(LS_FIXED(im)+cutoff,cutoff)
-          if (volmat_thick(im).gt.zero) then
+          volmat_thick=hs(LS_FIXED(im)+cutoff,cutoff)
+          if (volmat_thick.gt.zero) then
            thick_flag=1
-          else if (volmat_thick(im).eq.zero) then
+          else if (volmat_thick.eq.zero) then
            ! do nothing
           else
            print *,"volmat_thick invalid"
@@ -9968,17 +10084,17 @@ stop
           endif
          else if (material_thickness(im).eq.zero) then
           cutoff=zero
-          volmat_thick(im)=hs(LS_FIXED(im),cutoff)
+          volmat_thick=hs(LS_FIXED(im),cutoff)
          else
           print *,"material_thickness invalid"
           stop
          endif 
 
-         voltotal_thick=voltotal_thick+volmat_thick(im)
-         mass_total_thick=mass_total_thick+volmat_thick(im)*fort_denconst(im)
+         voltotal_thick=voltotal_thick+volmat_thick
+         mass_total_thick=mass_total_thick+volmat_thick*fort_denconst(im)
          mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
          one_over_mu=one/(mu+VISCINVTOL)
-         visc_total_thick=visc_total_thick+one_over_mu*volmat(im)
+         visc_total_thick=visc_total_thick+one_over_mu*volmat_thick
 
          dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
          tempcomp=dencomp+1
@@ -10077,6 +10193,18 @@ stop
          ! do nothing
         else
          print *,"mass_total invalid"
+         stop
+        endif
+        if (mass_total_thick.gt.zero) then
+         ! do nothing
+        else
+         print *,"mass_total_thick invalid"
+         stop
+        endif
+        if (voltotal_thick.gt.zero) then
+         ! do nothing
+        else
+         print *,"voltotal_thick invalid"
          stop
         endif
 
