@@ -136,6 +136,11 @@ ifeq ($(findstring raijin, $(host_name)), raijin)
   which_computer := raijin
 endif
 
+ifeq ($(findstring nasaintel, $(host_name_env)), nasaintel)
+  which_site := nasaintel
+  which_computer := nasaintel
+endif
+
 ifneq (,$(filter $(host_name_env),poplar redwood tulip))
   which_site := frontier-coe
   which_computer := $(host_name_env)

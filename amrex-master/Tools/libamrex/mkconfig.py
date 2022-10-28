@@ -37,6 +37,9 @@ def doit(defines, undefines, comp, allow_diff_comp):
         elif comp == "intel":
             comp_macro = "__INTEL_COMPILER"
             comp_id    = "Intel"
+        elif comp == "nasaintel":
+            comp_macro = "__INTEL_COMPILER"
+            comp_id    = "Intel"
         elif comp == "cray":
             comp_macro = "_CRAYC"
             comp_id    = "Cray"
@@ -94,7 +97,7 @@ if __name__ == "__main__":
                         default="")
     parser.add_argument("--comp",
                         help="compiler",
-                        choices=["gnu","g++-8","intel","cray","pgi","nvhpc","llvm","nag","nec","ibm",
+                        choices=["gnu","g++-8","intel","nasaintel","cray","pgi","nvhpc","llvm","nag","nec","ibm",
                                  "armclang","hip","dpcpp"]) #SUSSMAN
     parser.add_argument("--allow-different-compiler",
                         help="allow an application to use a different compiler than the one used to build libamrex",

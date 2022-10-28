@@ -86,15 +86,26 @@ CTML_FBC = FALSE
 #    Disable range checking on results of simplification of constant
 #    expressions during compilation.
 
-MAC_LAPTOP = TRUE
+MAC_LAPTOP = FALSE
 LINUX_DESKTOP = FALSE
 HPC_INTEL = FALSE
 HPC_GNU = FALSE
+NASA_INTEL = TRUE
 
 #CXXSTD = gnu++14
 #CXXSTD = c++17
 CXXSTD = c++14
 
+ifeq ($(NASA_INTEL),TRUE)
+#module purge
+#module load mpi-hpe/mpt
+#module load comp-intel/2020.4.304
+ HOSTNAME=nasaintel
+ COMP = nasaintel
+ FCOMP = intel
+ AMREX_CCOMP=nasaintel
+ AMREX_FCOMP=intel
+endif
 ifeq ($(HPC_INTEL),TRUE)
  COMP = intel
  FCOMP = intel
@@ -155,7 +166,6 @@ endif
 #   1> run.out 2> run.err &
 # ``Memory error checking in C and C++: Comparing Sanitizers and Valgrind.''
 #
-# NASA SUPERCOMPUTER
 #FCOMP = intel
 #COMP = intel
 #COMP = PGI 
