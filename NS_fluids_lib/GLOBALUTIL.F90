@@ -8354,6 +8354,11 @@ end subroutine print_visual_descriptor
          hs=zero
         else if (hs.gt.one) then
          hs=one
+        else if ((hs.ge.zero).and.(hs.le.one)) then
+         ! do nothing
+        else
+         print *,"hs() is NaN"
+         stop
         endif
       endif
 

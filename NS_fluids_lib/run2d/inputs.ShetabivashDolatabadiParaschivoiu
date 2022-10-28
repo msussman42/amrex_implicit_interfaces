@@ -155,6 +155,7 @@ ns.viscconst=1.7e-3 1.7e-5 1.0 100.0 # dimensional Pa s NO DAMPING
 #ns.denconst=1000.0 1.29 1000.0 10000.0 #thermal effects only
 #ns.denconst=1000.0 1.29 917.0 10000.0
 ns.denconst=1000.0 1.29 850.0 10000.0
+ns.material_thickness=1.5 0.0 1.5 1.5
 ns.FSI_flag=0 0 3 1
 ns.recalesce_flag=0 0 0 0
 # solidheat_flag=0=>diffuse in solid 
