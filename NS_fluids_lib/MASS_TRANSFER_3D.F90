@@ -7308,6 +7308,9 @@ stop
           do im=1,num_materials-1
            do im_opp=im+1,num_materials
 
+            vel_phasechange(0)=zero
+            vel_phasechange(1)=zero
+
             if ((im.gt.num_materials).or.(im_opp.gt.num_materials)) then
              print *,"im or im_opp bust 9"
              stop
@@ -7408,7 +7411,8 @@ stop
              else if (ispec.eq.0) then
 
               if (is_multi_component_evapF(local_freezing_model, &
-                   Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
+                   Tanasawa_or_Schrage_or_Kassemi( &
+                   iten+ireverse*num_interfaces), &
                    LL(ireverse)).eq.0) then
                ! do nothing
               else if (is_multi_component_evapF(local_freezing_model, &
@@ -7543,7 +7547,7 @@ stop
                       microscale_probe_size*dxmin*nrmCP(dir)
                   enddo ! dir=1..sdim
                  else
-                  print *,"LShere bust"
+                  print *,"LShere bust1"
                   print *,"LShere(im_dest) ",LShere(im_dest)
                   print *,"LShere(im_source) ",LShere(im_source)
                   stop
@@ -7557,7 +7561,7 @@ stop
                  found_path=0
 
                 else
-                 print *,"LShere bust"
+                 print *,"LShere bust2"
                  print *,"LShere(im_dest) ",LShere(im_dest)
                  print *,"LShere(im_source) ",LShere(im_source)
                  stop
@@ -8984,7 +8988,7 @@ stop
                         (abs(LShere(im_dest)).gt.two*dxmaxLS)) then
                 ! do nothing
                else
-                print *,"LShere bust:"
+                print *,"LShere bust3:"
                 print *,"LShere(im_source) ",LShere(im_source)
                 print *,"LShere(im_dest) ",LShere(im_dest)
                 stop
@@ -9054,7 +9058,9 @@ stop
                nrmCP(dir)= &
                   LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
               else
-               print *,"LShere bust"
+               print *,"LShere bust4"
+               print *,"LShere(im_dest) ",LShere(im_dest)
+               print *,"LShere(im_source) ",LShere(im_source)
                stop
               endif
              enddo ! dir=1..sdim
@@ -9126,6 +9132,7 @@ stop
                print *,"vel_phasechange(ireverse) cannot be NaN"
                stop
               endif
+
              else
               print *,"im_dest bust"
               stop
@@ -9153,7 +9160,8 @@ stop
              local_velmag=zero
              do dir=1,ncomp_per_burning
               local_velmag=local_velmag+ &
-               burnvel(D_DECL(i,j,k),num_interfaces+(iten-1)*ncomp_per_burning+dir)**2
+               burnvel(D_DECL(i,j,k), &
+                 num_interfaces+(iten-1)*ncomp_per_burning+dir)**2
              enddo
              local_velmag=sqrt(local_velmag)
              velmag_sum=velmag_sum+local_velmag
