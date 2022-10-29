@@ -232,7 +232,6 @@ stop
       INTEGER_T im_ice
       INTEGER_T im_FSI_rigid
       INTEGER_T im_dest,im_source
-      INTEGER_T im_loop
       INTEGER_T iten
       REAL_T LL(0:1)
       REAL_T dxmax
@@ -19966,8 +19965,6 @@ end subroutine RatePhaseChange
        kdst_physical, &
        Tsrc_probe, &
        Tdst_probe, &
-       probe_ok_gradient_src, &
-       probe_ok_gradient_dst, &
        Tsat, &
        Tsrc_INT,Tdst_INT, &
        LL, &
@@ -20022,8 +20019,6 @@ end subroutine RatePhaseChange
       REAL_T, INTENT(in) :: ksrc_physical,kdst_physical
       REAL_T, INTENT(in) :: Tsrc_probe
       REAL_T, INTENT(in) :: Tdst_probe
-      INTEGER_T, INTENT(in) :: probe_ok_gradient_src
-      INTEGER_T, INTENT(in) :: probe_ok_gradient_dst
       REAL_T, INTENT(in) :: Tsat
       REAL_T, INTENT(in) :: LL
       REAL_T, INTENT(in) :: source_perim_factor,dest_perim_factor
@@ -20218,25 +20213,9 @@ end subroutine RatePhaseChange
          ! is disallowed; i.e. no evaporation occurs.
         ! Tsrc_probe is the probe temperature in the source
         DTsrc=Tsrc_probe-Tsat 
-        if (probe_ok_gradient_src.eq.1) then
-         ! do nothing
-        else if (probe_ok_gradient_src.eq.0) then
-         DTsrc=zero
-        else
-         print *,"probe_ok_gradient_src invalid"
-         stop
-        endif
     
         ! Tdst_probe is the probe temperature in the destination
         DTdst=Tdst_probe-Tsat  
-        if (probe_ok_gradient_dst.eq.1) then
-         ! do nothing
-        else if (probe_ok_gradient_dst.eq.0) then
-         DTdst=zero
-        else
-         print *,"probe_ok_gradient_dst invalid"
-         stop
-        endif
 
         velsrc=ksrc_derived*DTsrc/(LL*dxprobe_source)
         veldst=kdst_derived*DTdst/(LL*dxprobe_dest)
@@ -20491,8 +20470,6 @@ end subroutine RatePhaseChange
         kdst_physical, &
         Tsrc_probe, &
         Tdst_probe, &
-        probe_ok_gradient_src, &
-        probe_ok_gradient_dst, &
         Tsat, &
         LL, &
         dxprobe_source, &

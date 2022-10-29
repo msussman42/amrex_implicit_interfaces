@@ -86,11 +86,11 @@ CTML_FBC = FALSE
 #    Disable range checking on results of simplification of constant
 #    expressions during compilation.
 
-MAC_LAPTOP = FALSE
+MAC_LAPTOP = TRUE
 LINUX_DESKTOP = FALSE
 HPC_INTEL = FALSE
 HPC_GNU = FALSE
-NASA_INTEL = TRUE
+NASA_INTEL = FALSE
 
 #CXXSTD = gnu++14
 #CXXSTD = c++17

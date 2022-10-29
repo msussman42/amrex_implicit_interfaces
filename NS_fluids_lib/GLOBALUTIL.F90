@@ -23130,7 +23130,6 @@ end subroutine volfrac_from_massfrac
 ! Cryogenics 89(2018) 1-15, equation (6)
 subroutine MDOT_Kassemi(sigma,MolarMassFluid,R,Pgamma, &
   Pvapor_probe, &
-  probe_ok_gradient, &
   Tgamma, &
   Tvapor_probe,MDOT)
 IMPLICIT NONE
@@ -23140,7 +23139,6 @@ REAL_T, INTENT(in) :: MolarMassFluid
 REAL_T, INTENT(in) :: R
 REAL_T, INTENT(in) :: Pgamma
 REAL_T, INTENT(in) :: Pvapor_probe
-INTEGER_T, INTENT(in) :: probe_ok_gradient
 REAL_T, INTENT(in) :: Tgamma
 REAL_T, INTENT(in) :: Tvapor_probe
 REAL_T, INTENT(out) :: MDOT
@@ -23153,17 +23151,10 @@ if ((sigma.ge.zero).and.(sigma.lt.two).and. &
     (Tgamma.gt.zero).and. &
     (Tvapor_probe.gt.zero)) then
 
- if (probe_ok_gradient.eq.1) then
-  MDOT=(2.0d0*sigma/(2.0d0-sigma))* &
+ MDOT=(2.0d0*sigma/(2.0d0-sigma))* &
    sqrt(MolarMassFluid/(2.0d0*Pi*R))* &
    (1.0d0/sqrt(Tgamma))* &
    (Pgamma-Pvapor_probe)
- else if (probe_ok_gradient.eq.0) then
-  MDOT=zero
- else
-  print *,"probe_ok_gradient invalid"
-  stop
- endif
 
 else
  print *,"parameter problems in MDOT_Kassemi"
