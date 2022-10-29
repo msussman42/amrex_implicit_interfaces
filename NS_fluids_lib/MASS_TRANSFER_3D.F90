@@ -3,8 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#define STANDALONE 0
-
 #define DEBUG_TRIPLE 0
 #define DEBUG_ACTIVE_CELL 0
 #define DEBUG_I 22
@@ -61,7 +59,7 @@ stop
        INTEGER_T, pointer :: dencomp_dest
        REAL_T, pointer :: dxprobe_dest
        REAL_T, pointer, dimension(:) :: LSINT
-       INTEGER_T, pointer :: imls_I
+       INTEGER_T :: imls_I
        REAL_T, pointer :: dxmaxLS
        INTEGER_T, pointer :: bfact
        INTEGER_T, pointer :: level
@@ -157,10 +155,6 @@ stop
       INTEGER_T :: ncomp_per_tsat
       INTEGER_T :: tsat_comp
 
-#if (STANDALONE==1)
-      REAL_T, external   :: exact_temperature
-#endif
-
       ncomp_per_tsat=EXTRAP_PER_TSAT
       tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+1
 
@@ -203,13 +197,8 @@ stop
          if (local_flag.eq.0) then
           T_I=TSAT_array(latent_comp)
          else if ((local_flag.ge.1).and.(local_flag.le.num_materials)) then
-#if (STANDALONE==0)
           print *,"local_flag <> 0 not supported yet"
           stop
-#elif (STANDALONE==1)
-          T_I=exact_temperature(x_I,time,local_flag,probtype, &
-                fort_heatviscconst)
-#endif
          else
           print *,"local_flag invalid"
           stop
@@ -3540,17 +3529,11 @@ stop
        swept,DIMS(swept) ) &
       bind(c,name='fort_convertmaterial')
 
-#if (STANDALONE==0)
       use probf90_module
-#elif (STANDALONE==1)
-      use probcommon_module
-#endif
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
-#if (STANDALONE==0)
       use hydrateReactor_module
-#endif
       use mass_transfer_module
 
       IMPLICIT NONE
@@ -3663,10 +3646,8 @@ stop
       REAL_T Ygamma_default
       INTEGER_T Tsat_flag
       REAL_T energy_source
-#if (STANDALONE==0)
       INTEGER_T ccomp
       REAL_T amount_used,methaneC_old,methaneC_new
-#endif
       REAL_T cvtotal,wttotal,Ftemp
       INTEGER_T im_weight
       INTEGER_T tcomp_wt
@@ -5747,14 +5728,7 @@ stop
              do im_weight=1,num_materials
               vofcomp_recon=(im_weight-1)*ngeom_recon+1
               Ftemp=recon(D_DECL(i,j,k),vofcomp_recon)*fort_denconst(im_weight)
-#if (STANDALONE==0)
               local_cv_or_cp=get_user_stiffCP(im_weight)
-#elif (STANDALONE==1)
-              local_cv_or_cp=fort_stiffCP(im_weight)
-#else
-              print *,"bust compiling fort_convertmaterial"
-              stop
-#endif
               cvtotal=cvtotal+Ftemp*local_cv_or_cp
               wttotal=wttotal+Ftemp
              enddo
@@ -6016,8 +5990,6 @@ stop
              else if &
                (is_hydrate_freezing_modelF(local_freezing_model).eq.1) then 
 
-#if (STANDALONE==0)
-
               if (distribute_from_targ.ne.0) then
                print *,"distribute_from_targ invalid"
                stop
@@ -6065,13 +6037,6 @@ stop
                print *,"dF invalid"
                stop
               endif
-#elif (STANDALONE==1)
-              print *,"local_freezing_model cannot be 2 (fort_convertmaterial)"
-              stop
-#else
-              print *,"bust compiling fort_convertmaterial"
-              stop
-#endif
 
              else if (local_freezing_model.eq.7) then ! Cavitation
               print *,"FIX ME: cavitation case not considered here"
@@ -6079,7 +6044,8 @@ stop
              else
               print *,"local_freezing_model invalid in fort_convertmaterial(2)"
               print *,"local_freezing_model= ",local_freezing_model
-              print *,"iten,ireverse,num_interfaces ",iten,ireverse,num_interfaces
+              print *,"iten,ireverse,num_interfaces ", &
+                 iten,ireverse,num_interfaces
               stop
              endif
 
@@ -7234,17 +7200,11 @@ stop
        curvfab,DIMS(curvfab) ) &
       bind(c,name='fort_ratemasschange')
 
-#if (STANDALONE==0)
       use probf90_module
-#elif (STANDALONE==1)
-      use probcommon_module
-#endif
       use global_utility_module
       use MOF_routines_module
       use mass_transfer_module
-#if (STANDALONE==0)
       use hydrateReactor_module
-#endif
 
       IMPLICIT NONE
 
@@ -7371,7 +7331,8 @@ stop
       REAL_T, pointer :: pres_ptr(D_DECL(:,:,:))
       REAL_T, target, INTENT(in) :: pres_eos(DIMV(pres_eos)) 
       REAL_T, pointer :: pres_eos_ptr(D_DECL(:,:,:))
-      REAL_T, target, INTENT(in) :: curvfab(DIMV(curvfab),2*(num_materials+num_interfaces)) 
+      REAL_T, target, INTENT(in) :: &
+          curvfab(DIMV(curvfab),2*(num_materials+num_interfaces)) 
       REAL_T, pointer :: curvfab_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, parameter :: nhalf=3
@@ -7382,7 +7343,7 @@ stop
       INTEGER_T imls
       INTEGER_T im_ambient
       INTEGER_T im_primary
-      INTEGER_T, target :: imls_I
+      INTEGER_T :: imls_I
       INTEGER_T im_substrate_source
       INTEGER_T im_substrate_dest
       INTEGER_T, target :: im_source,im_dest
@@ -7493,10 +7454,6 @@ stop
       REAL_T TEMP_PROBE_dest
 
       INTEGER_T debug_limiter
-
-#if (STANDALONE==1)
-      REAL_T DTsrc,DTdst,velsrc,veldst,velsum
-#endif
 
       TI_YI_ptr=>TI_YI
 
@@ -7662,39 +7619,32 @@ stop
        stop
       endif
 
-      if (STANDALONE.eq.0) then
-       if (arraysize.ne.num_elements_blobclass*color_count) then
-        print *,"arraysize invalid rate mass change (get stat==1)"
-        print *,"arraysize=",arraysize
-        print *,"num_elements_blobclass=",num_elements_blobclass
-        print *,"color_count=",color_count
-        stop
-       endif
-      else if (STANDALONE.eq.1) then
-       ! check nothing
-      else
-       print *,"STANDALONE invalid"
+      if (arraysize.ne.num_elements_blobclass*color_count) then
+       print *,"arraysize invalid rate mass change (get stat==1)"
+       print *,"arraysize=",arraysize
+       print *,"num_elements_blobclass=",num_elements_blobclass
+       print *,"color_count=",color_count
        stop
       endif
 
-         ! SANDIPAN HOOK HERE
-         ! pseudo code:
-         ! if typefab(D_DECL(i,j,k))=im_vapor then
-         !  color = colorfab(D_DECL(i,j,k))
-         !  vapor bubble statistics are in 
-         !   blob_array((color-1)*num_elements_blobclass + l)
-         !  l=1..num_elements_blobclass
-         ! MDOT=(1-den_vapor/den_liquid)*(F^Vapor_new - F^Vapor_old)*
-         !  volume/dt^2
-         ! =(1-den_vapor/den_liquid)*(Vvapor_new - Vvapor_old)/dt^2
-         ! MDOT should have the same units as volume * div u/dt
-         ! units of volume * div u/dt = m^3 (1/m)(m/s)(1/s)=1/s^2
-         ! for standard phase change:
-         ! units: cm^3/s^2
-         ! jump_strength=(denratio_factor/dt)*dF*volgrid/dt
-         ! if evaporation then expansion_term should be positive.
-         ! FOR CODY: if pressure falls below some cavitation pressure, then
-         ! material is cavitated. (velocity of phase change is dx/dt?)
+       ! SANDIPAN HOOK HERE
+       ! pseudo code:
+       ! if typefab(D_DECL(i,j,k))=im_vapor then
+       !  color = colorfab(D_DECL(i,j,k))
+       !  vapor bubble statistics are in 
+       !   blob_array((color-1)*num_elements_blobclass + l)
+       !  l=1..num_elements_blobclass
+       ! MDOT=(1-den_vapor/den_liquid)*(F^Vapor_new - F^Vapor_old)*
+       !  volume/dt^2
+       ! =(1-den_vapor/den_liquid)*(Vvapor_new - Vvapor_old)/dt^2
+       ! MDOT should have the same units as volume * div u/dt
+       ! units of volume * div u/dt = m^3 (1/m)(m/s)(1/s)=1/s^2
+       ! for standard phase change:
+       ! units: cm^3/s^2
+       ! jump_strength=(denratio_factor/dt)*dF*volgrid/dt
+       ! if evaporation then expansion_term should be positive.
+       ! FOR CODY: if pressure falls below some cavitation pressure, then
+       ! material is cavitated. (velocity of phase change is dx/dt?)
 
 
       call get_dxmin(dx,bfact,dxmin)
@@ -8074,8 +8024,8 @@ stop
                  endif
                     
                  if (is_multi_component_evapF(local_freezing_model, &
-                  Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
-                  LL(ireverse)).eq.1) then
+                   Tanasawa_or_Schrage_or_Kassemi( &
+                   iten+ireverse*num_interfaces),LL(ireverse)).eq.1) then
                   if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
                    Ycomp_source=(im_source-1)*num_state_material+2+ispec
                    Ycomp_dest=(im_dest-1)*num_state_material+2+ispec
@@ -8088,8 +8038,8 @@ stop
                    stop
                   endif
                  else if (is_multi_component_evapF(local_freezing_model, &
-                  Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
-                  LL(ireverse)).eq.0) then
+                  Tanasawa_or_Schrage_or_Kassemi( &
+                  iten+ireverse*num_interfaces),LL(ireverse)).eq.0) then
 
                   if (ispec.eq.0) then
                    Ycomp_source=0
@@ -8225,373 +8175,205 @@ stop
                    LSINT(imls))
                  enddo ! imls=1..num_materials*(SDIM+1)
 
+                  ! checks rigid materials and fluids (all materials)
                  call get_primary_material(LSINT,imls_I)
-
-                 TI_min=saturation_temp_min(iten+ireverse*num_interfaces)
-                 TI_max=saturation_temp_max(iten+ireverse*num_interfaces)
-
-                 if ((local_freezing_model.eq.5).or. & !Stefan evap/cond
-                     (local_freezing_model.eq.6)) then !Palmore/Desjardins
-
-                  if (LL(ireverse).gt.zero) then ! evaporation
-                   TI_max=local_Tsat(ireverse)
-                  else if (LL(ireverse).lt.zero) then ! condensation
-                   TI_min=local_Tsat(ireverse)
-                  else
-                   print *,"LL(ireverse) invalid"
-                   stop
-                  endif
-
-                 else if &
-                   (is_valid_freezing_modelF(local_freezing_model).eq.1) then
-                  ! do nothing
-                 else
-                  print *,"local_freezing_model invalid"
-                  stop
-                 endif
-                          
-                 if ((TI_max.ge.TI_min).and.(TI_min.ge.zero)) then
-                  ! do nothing
-                 else
-                  print *,"TI_max or TI_min invalid"
-                  stop
-                 endif
-
-                 PROBE_PARMS%probe_constrain=local_probe_constrain
-
-                 PROBE_PARMS%dxprobe_source=>dxprobe_source
-                 PROBE_PARMS%dxprobe_dest=>dxprobe_dest
-                 PROBE_PARMS%local_freezing_model=>local_freezing_model
-                 PROBE_PARMS%LL=>LL(ireverse)
-                 PROBE_PARMS%i=>i
-                 PROBE_PARMS%j=>j
-                 PROBE_PARMS%k=>k
-                 PROBE_PARMS%xsrc=>xsrc 
-                 PROBE_PARMS%xdst=>xdst
-                 PROBE_PARMS%xsrc_micro=>xsrc_micro 
-                 PROBE_PARMS%xdst_micro=>xdst_micro
-                 PROBE_PARMS%LSINT=>LSINT
-                 PROBE_PARMS%imls_I=>imls_I
-                 PROBE_PARMS%im_source=>im_source
-                 PROBE_PARMS%im_dest=>im_dest
-                 PROBE_PARMS%tcomp_source=>tcomp_source
-                 PROBE_PARMS%Ycomp_source=>Ycomp_source
-                 PROBE_PARMS%dencomp_source=>dencomp_source
-                 PROBE_PARMS%tcomp_dest=>tcomp_dest
-                 PROBE_PARMS%Ycomp_dest=>Ycomp_dest
-                 PROBE_PARMS%dencomp_dest=>dencomp_dest
-                 PROBE_PARMS%xI=>xI
-
-                 do iprobe=1,2
-
-                  if (iprobe.eq.1) then
-                   im_probe=im_source
-                  else if (iprobe.eq.2) then
-                   im_probe=im_dest
-                  else
-                   print *,"iprobe invalid"
-                   stop
-                  endif
-
-                  thermal_k_model_predict(iprobe)= &
-                   conductstate(D_DECL(i,j,k),im_probe)* &
-                   fort_heatflux_factor(im_probe)
-                  thermal_k_model_correct(iprobe)= &
-                      thermal_k_model_predict(iprobe)
-                  thermal_k_physical_base(iprobe)= &
-                      get_user_heatviscconst(im_probe)
-
-                  if (fort_heatflux_factor(im_probe).ge.zero) then
-                   ! do nothing
-                  else
-                   print *,"fort_heatflux_factor(im_probe) invalid"
-                   stop
-                  endif
-                  if (thermal_k_model_predict(iprobe).ge.zero) then
-                   ! do nothing
-                  else
-                   print *,"thermal_k_model_predict(iprobe) invalid"
-                   stop
-                  endif
-                  if (thermal_k_physical_base(iprobe).ge.zero) then
-                   ! do nothing
-                  else
-                   print *,"thermal_k_physical_base(iprobe) invalid"
-                   stop
-                  endif
-
-                 enddo ! iprobe=1,2
-
-
-                 if (LL(ireverse).gt.zero) then ! evaporation
-                  iprobe_vapor=2  ! destination
-                  molar_mass_ambient=molar_mass(im_dest)
-                 else if (LL(ireverse).lt.zero) then ! condensation
-                  iprobe_vapor=1  ! source
-                  molar_mass_ambient=molar_mass(im_source)
-                 else
-                  print *,"LL invalid"
-                  stop
-                 endif
-
-
-                  ! for T_INTERFACE= TSAT - eps1 K - eps2 V
-                  ! 1. T_I^(0)=TSAT - eps1 K - eps2 ( 0 )
-                  ! 2. n=0, V^{0}=0
-                  ! 2. while not converged
-                  ! 3.  V^{n+1}=-[k grad T dot n]/L=
-                  !     [(Tprobe^1(T_I^{n}) - T_I^{n})/dxprobe^1 -
-                  !     (Tprobe^2(T_I^{n}) - T_I^{n})/dxprobe^2 ]/L
-                  !     n points from material 1 to material 2.
-                  ! 4.  T_I^{n+1}=T_I^{n} - eps2 (V^{n+1}-V^{n})
-                  ! 5.  convergence when |T_{I}^{n+1}-T_{I}^{n}|<tol
-                  !
-                 if (hardwire_flag(ireverse).eq.0) then
-
-                  if (interp_status.eq.1) then
-                   delta_Tsat= &
-                    saturation_temp_curv(iten+ireverse*num_interfaces)* &
-                    CURV_OUT_I
-                  else if (interp_status.eq.0) then
-                   delta_Tsat=zero
-                  else
-                   print *,"interp_status invalid"
-                   stop
-                  endif
-
-                   ! T_Gamma = Tsat - eps1 * kappa
-                  local_Tsat(ireverse)=local_Tsat(ireverse)-delta_Tsat
-
-                  if (local_Tsat(ireverse).lt.TI_min) then
-                   local_Tsat(ireverse)=TI_min
-                  endif
-                  if (local_Tsat(ireverse).gt.TI_max) then
-                   local_Tsat(ireverse)=TI_max
-                  endif
-
-                  Y_predict=one
-
-                 else if (hardwire_flag(ireverse).eq.1) then
-
-                  local_Tsat(ireverse)=local_hardwire_T(ireverse)
-                  Y_predict=local_hardwire_Y(ireverse)
-
-                 else
-                  print *,"hardwire_flag(ireverse) invalid"
-                  stop
-                 endif
-             
-                  ! initially probe_ok==0 since the probe values have
-                  ! never been calculated at this point.
-                  ! if local_probe_constrain==0, then the probes do not
-                  ! have to be calculated again. 
-                 probe_ok=0
- 
-                 !iprobe=1 source
-                 !iprobe=2 dest
-                 if (probe_ok.eq.1) then
-                  ! do nothing
-                 else if (probe_ok.eq.0) then
-                  ! if local_probe_constrain==1, then
-                  !  probe values depend on interface values.
-                  ! if local_probe_constrain==0, then
-                  !  probe values are insensitive to the interface values.
-                  call probe_interpolation( &
-                   PROBE_PARMS, &
-                   local_Tsat(ireverse), &
-                   Y_predict, &
-                   POUT)
-                 else
-                  print *,"probe_ok invalid"
-                  stop
-                 endif
-
-                 if (local_probe_constrain.eq.0) then
-                  probe_ok=1 ! do not have to recompute the probes
-                 else if (local_probe_constrain.eq.1) then
-                  probe_ok=0 ! probes depend on TI, so they must be recalc.
-                 else
-                  print *,"local_probe_constrain invalid"
-                  stop
-                 endif
-
-                 interp_valid_flag_initial(1)=POUT%interp_valid_flag(1)
-                 interp_valid_flag_initial(2)=POUT%interp_valid_flag(2)
-
-                 interface_resolved=1
-
-                 if ((interp_valid_flag_initial(1).eq.1).and. &
-                     (interp_valid_flag_initial(2).eq.1)) then
-                  ! do nothing (valid grid probe on both sides of Gamma)
-                 else if ((interp_valid_flag_initial(1).eq.0).or. &
-                          (interp_valid_flag_initial(1).eq.2).or. &
-                          (interp_valid_flag_initial(2).eq.0).or. &
-                          (interp_valid_flag_initial(2).eq.2)) then
-                   ! flag=0 =>neither grid probe or supermesh probe are valid
-                   ! flag=2 =>grid probe invalid; supermesh probe is valid
-                  interface_resolved=0
-                 else
-                  print *,"interp_valid_flag_initial invalid"
-                  stop
-                 endif
-
-                 user_override_TI_YI=0
-
-                 if (hardwire_flag(ireverse).eq.0) then
-                  if (is_in_probtype_list().eq.1) then
-                   ! do not call "mdot_diff_func" (below) if 
-                   ! user_override_TI_YI=1
-                   call SUB_INTERFACE_TEMPERATURE( &
-                    interface_mass_transfer_model(iten+ireverse*num_interfaces), &
-                    local_probe_constrain, &
-                    ireverse, &
-                    iten, &
-                    xI, &
-                    cur_time, &
-                    prev_time, &
-                    dt, &
-                    local_Tsat(ireverse), & ! INTENT(inout)
-                    Y_predict, &  ! INTENT(inout)
-                    user_override_TI_YI, & ! INTENT(inout)
-                    molar_mass, & ! index: 1..num_materials
-                    species_molar_mass, & ! index: 1..num_species_var
-                    thermal_k_model_predict(1), &
-                    thermal_k_model_predict(2), & ! ksrc,kdst
-                    thermal_k_physical_base(1), &
-                    thermal_k_physical_base(2), & ! ksrc,kdst
-                    POUT%T_probe(1), & ! source
-                    POUT%T_probe(2), & ! dest
-                    POUT%probe_ok_gradient(1), & ! source
-                    POUT%probe_ok_gradient(2), & ! dest
-                    LL(ireverse), &
-                    POUT%dxprobe_target(1), & ! source
-                    POUT%dxprobe_target(2), & ! dest
-                    num_materials, &
-                    num_species_var)
-                  endif
-                 else if (hardwire_flag(ireverse).eq.1) then
-                  ! do nothing
-                 else
-                  print *,"hardwire_flag invalid"
-                  stop
-                 endif
-
-                 trial_and_error=0
-
-                 if (local_probe_constrain.eq.0) then
-                  if ((interface_resolved.eq.1).and. &
-                      (interp_status.eq.1)) then
-                   ! do nothing
-                  else if ((interface_resolved.eq.0).or. &
-                           (interp_status.eq.0)) then
-                   if (hardwire_flag(ireverse).eq.0) then
-                    if (user_override_TI_YI.eq.0) then
-                     call apply_TI_limiter( &
-                      TI_min,TI_max, &
-                      PROBE_PARMS, &
-                      local_Tsat(ireverse), &
-                      Y_predict, &
-                      POUT)
-
-                     trial_and_error=1
-
-                    else if (user_override_TI_YI.eq.1) then
+                 if (found_path.eq.1) then
+                  if ((imls_I.eq.im_dest).or. &
+                      (imls_I.eq.im_source)) then
+                   call get_secondary_material(LSINT,imls_I,imls_I2)
+                   if (imls_I2.ne.imls_I) then
+                    if ((imls_I2.eq.im_dest).or. &
+                        (imls_I2.eq.im_source)) then
                      ! do nothing
-                    else
-                     print *,"user_override_TI_YI invalid"
-                     stop
+                    else 
+                     found_path=0
                     endif
-
-                   else if (hardwire_flag(ireverse).eq.1) then
-                    ! do nothing
                    else
-                    print *,"hardwire_flag(ireverse) invalid"
+                    print *,"expecting imls_I2.ne.imls_I"
                     stop
                    endif
                   else
-                   print *,"interface_resolved or interp_status invalid"
-                   stop
+                   found_path=0
                   endif
- 
-                 else if (local_probe_constrain.eq.1) then
-                  ! do nothing; interface temperature does not depend on
-                  ! probe values.
                  else
-                  print *,"local_probe_constrain invalid"
+                  print *,"expecting found_path.eq.1"
                   stop
                  endif
 
-                 TSAT_predict=local_Tsat(ireverse)
+                 if (found_path.eq.1) then
 
-                 TSAT_correct=TSAT_predict
+                  TI_min=saturation_temp_min(iten+ireverse*num_interfaces)
+                  TI_max=saturation_temp_max(iten+ireverse*num_interfaces)
 
-                 if (debug_limiter.eq.1) then
-                  print *,"debug_limiter=1 (1) "
-                  print *,"i,j,k,bfact,level,finest_level,im_source,im_dest ",&
-                    i,j,k,bfact, &
-                    level,finest_level,im_source,im_dest
-                  print *,"ireverse, local_probe_constrain ",ireverse, &
-                   local_probe_constrain
-                  print *,"interp_status,interface_resolved ",interp_status, &
-                   interface_resolved
-                  print *,"TI_min,TI_max,local_Tsat(ireverse) ", &
-                   TI_min,TI_max,local_Tsat(ireverse) 
-                  print *,"hardwire_flag(ireverse) ",hardwire_flag(ireverse)
-                  print *,"user_override_TI_YI ",user_override_TI_YI
-                  print *,"T_I_interp(1) ",POUT%T_I_interp(1)
-                  print *,"T_I_interp(2) ",POUT%T_I_interp(2)
-                  print *,"T_probe(1) ",POUT%T_probe(1)
-                  print *,"T_probe(2) ",POUT%T_probe(2)
-                  print *,"POUT%interp_valid_flag(1) ",POUT%interp_valid_flag(1)
-                  print *,"POUT%interp_valid_flag(2) ",POUT%interp_valid_flag(2)
-                 endif
+                  if ((local_freezing_model.eq.5).or. & !Stefan evap/cond
+                      (local_freezing_model.eq.6)) then !Palmore/Desjardins
 
-                 VEL_predict=zero
-                 VEL_correct=zero
+                   if (LL(ireverse).gt.zero) then ! evaporation
+                    TI_max=local_Tsat(ireverse)
+                   else if (LL(ireverse).lt.zero) then ! condensation
+                    TI_min=local_Tsat(ireverse)
+                   else
+                    print *,"LL(ireverse) invalid"
+                    stop
+                   endif
 
-                 TSAT_iter=0
-                 TSAT_converge=0
-
-                 TI_YI_counter=0
-                 TI_YI_best_guess_index=0
-
-!    local_freezing_model=5  fully saturated evaporation?
-!    local_freezing_model=6  Palmore/Desjardins
-!    local_freezing_model=7  Cavitation (a seed must exist)
-
-                 do while (TSAT_converge.eq.0) 
-
-                  TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi= &
-                        local_Tanasawa_or_Schrage_or_Kassemi
-                  TSAT_Y_PARMS%accommodation_coefficient= &
-                        accommodation_coefficient(iten+ireverse*num_interfaces) 
-
-                  TSAT_Y_PARMS%reference_pressure= &
-                        reference_pressure(iten+ireverse*num_interfaces) 
-                  if (TSAT_Y_PARMS%reference_pressure.gt.zero) then
+                  else if &
+                    (is_valid_freezing_modelF(local_freezing_model).eq.1) then
                    ! do nothing
                   else
-                   print *,"expecting TSAT_Y_PARMS%reference_pressure>0"
-                   print *,"TSAT_Y_PARMS%reference_pressure=", &
-                     TSAT_Y_PARMS%reference_pressure
+                   print *,"local_freezing_model invalid"
+                   stop
+                  endif
+                           
+                  if ((TI_max.ge.TI_min).and.(TI_min.ge.zero)) then
+                   ! do nothing
+                  else
+                   print *,"TI_max or TI_min invalid"
                    stop
                   endif
 
-                  TSAT_Y_PARMS%universal_gas_constant_R= &
-                        R_Palmore_Desjardins
-                  TSAT_Y_PARMS%molar_mass_ambient=molar_mass_ambient
-                  TSAT_Y_PARMS%molar_mass_vapor=molar_mass_vapor
-                  TSAT_Y_PARMS%iprobe_vapor=iprobe_vapor
-                  TSAT_Y_PARMS%material_type_evap=>material_type_evap
+                  PROBE_PARMS%probe_constrain=local_probe_constrain
 
+                  PROBE_PARMS%dxprobe_source=>dxprobe_source
+                  PROBE_PARMS%dxprobe_dest=>dxprobe_dest
+                  PROBE_PARMS%local_freezing_model=>local_freezing_model
+                  PROBE_PARMS%LL=>LL(ireverse)
+                  PROBE_PARMS%i=>i
+                  PROBE_PARMS%j=>j
+                  PROBE_PARMS%k=>k
+                  PROBE_PARMS%xsrc=>xsrc 
+                  PROBE_PARMS%xdst=>xdst
+                  PROBE_PARMS%xsrc_micro=>xsrc_micro 
+                  PROBE_PARMS%xdst_micro=>xdst_micro
+                  PROBE_PARMS%LSINT=>LSINT
+                  PROBE_PARMS%imls_I=imls_I
+                  PROBE_PARMS%im_source=>im_source
+                  PROBE_PARMS%im_dest=>im_dest
+                  PROBE_PARMS%tcomp_source=>tcomp_source
+                  PROBE_PARMS%Ycomp_source=>Ycomp_source
+                  PROBE_PARMS%dencomp_source=>dencomp_source
+                  PROBE_PARMS%tcomp_dest=>tcomp_dest
+                  PROBE_PARMS%Ycomp_dest=>Ycomp_dest
+                  PROBE_PARMS%dencomp_dest=>dencomp_dest
+                  PROBE_PARMS%xI=>xI
+
+                  do iprobe=1,2
+
+                   if (iprobe.eq.1) then
+                    im_probe=im_source
+                   else if (iprobe.eq.2) then
+                    im_probe=im_dest
+                   else
+                    print *,"iprobe invalid"
+                    stop
+                   endif
+
+                   thermal_k_model_predict(iprobe)= &
+                    conductstate(D_DECL(i,j,k),im_probe)* &
+                    fort_heatflux_factor(im_probe)
+                   thermal_k_model_correct(iprobe)= &
+                       thermal_k_model_predict(iprobe)
+                   thermal_k_physical_base(iprobe)= &
+                       get_user_heatviscconst(im_probe)
+
+                   if (fort_heatflux_factor(im_probe).ge.zero) then
+                    ! do nothing
+                   else
+                    print *,"fort_heatflux_factor(im_probe) invalid"
+                    stop
+                   endif
+                   if (thermal_k_model_predict(iprobe).ge.zero) then
+                    ! do nothing
+                   else
+                    print *,"thermal_k_model_predict(iprobe) invalid"
+                    stop
+                   endif
+                   if (thermal_k_physical_base(iprobe).ge.zero) then
+                    ! do nothing
+                   else
+                    print *,"thermal_k_physical_base(iprobe) invalid"
+                    stop
+                   endif
+
+                  enddo ! iprobe=1,2
+
+
+                  if (LL(ireverse).gt.zero) then ! evaporation
+                   iprobe_vapor=2  ! destination
+                   molar_mass_ambient=molar_mass(im_dest)
+                  else if (LL(ireverse).lt.zero) then ! condensation
+                   iprobe_vapor=1  ! source
+                   molar_mass_ambient=molar_mass(im_source)
+                  else
+                   print *,"LL invalid"
+                   stop
+                  endif
+
+
+                   ! for T_INTERFACE= TSAT - eps1 K - eps2 V
+                   ! 1. T_I^(0)=TSAT - eps1 K - eps2 ( 0 )
+                   ! 2. n=0, V^{0}=0
+                   ! 2. while not converged
+                   ! 3.  V^{n+1}=-[k grad T dot n]/L=
+                   !     [(Tprobe^1(T_I^{n}) - T_I^{n})/dxprobe^1 -
+                   !     (Tprobe^2(T_I^{n}) - T_I^{n})/dxprobe^2 ]/L
+                   !     n points from material 1 to material 2.
+                   ! 4.  T_I^{n+1}=T_I^{n} - eps2 (V^{n+1}-V^{n})
+                   ! 5.  convergence when |T_{I}^{n+1}-T_{I}^{n}|<tol
+                   !
+                  if (hardwire_flag(ireverse).eq.0) then
+
+                   if (interp_status.eq.1) then
+                    delta_Tsat= &
+                     saturation_temp_curv(iten+ireverse*num_interfaces)* &
+                     CURV_OUT_I
+                   else if (interp_status.eq.0) then
+                    delta_Tsat=zero
+                   else
+                    print *,"interp_status invalid"
+                    stop
+                   endif
+
+                    ! T_Gamma = Tsat - eps1 * kappa
+                   local_Tsat(ireverse)=local_Tsat(ireverse)-delta_Tsat
+
+                   if (local_Tsat(ireverse).lt.TI_min) then
+                    local_Tsat(ireverse)=TI_min
+                   endif
+                   if (local_Tsat(ireverse).gt.TI_max) then
+                    local_Tsat(ireverse)=TI_max
+                   endif
+
+                   Y_predict=one
+
+                  else if (hardwire_flag(ireverse).eq.1) then
+
+                   local_Tsat(ireverse)=local_hardwire_T(ireverse)
+                   Y_predict=local_hardwire_Y(ireverse)
+
+                  else
+                   print *,"hardwire_flag(ireverse) invalid"
+                   stop
+                  endif
+              
+                   ! initially probe_ok==0 since the probe values have
+                   ! never been calculated at this point.
+                   ! if local_probe_constrain==0, then the probes do not
+                   ! have to be calculated again. 
+                  probe_ok=0
+  
                   !iprobe=1 source
                   !iprobe=2 dest
                   if (probe_ok.eq.1) then
-                   ! do nothing (probes do not depend on TI)
-                  else if (probe_ok.eq.0) then ! probes depend on TI
+                   ! do nothing
+                  else if (probe_ok.eq.0) then
+                   ! if local_probe_constrain==1, then
+                   !  probe values depend on interface values.
+                   ! if local_probe_constrain==0, then
+                   !  probe values are insensitive to the interface values.
                    call probe_interpolation( &
                     PROBE_PARMS, &
-                    TSAT_predict, &
+                    local_Tsat(ireverse), &
                     Y_predict, &
                     POUT)
                   else
@@ -8599,98 +8381,309 @@ stop
                    stop
                   endif
 
-                  if (TSAT_iter.eq.0) then
-                   fully_saturated=0
+                  if (local_probe_constrain.eq.0) then
+                   probe_ok=1 ! do not have to recompute the probes
+                  else if (local_probe_constrain.eq.1) then
+                   probe_ok=0 ! probes depend on TI, so they must be recalc.
+                  else
+                   print *,"local_probe_constrain invalid"
+                   stop
+                  endif
 
-                   T_gamma_a=TSAT_predict
-                   T_gamma_b=TSAT_predict
-                   Y_gamma_a=Y_predict
-                   Y_gamma_b=Y_predict
+                  interp_valid_flag_initial(1)=POUT%interp_valid_flag(1)
+                  interp_valid_flag_initial(2)=POUT%interp_valid_flag(2)
 
-                   if (POUT%at_interface.eq.1) then
+                  interface_resolved=1
+
+                  if ((interp_valid_flag_initial(1).eq.1).and. &
+                      (interp_valid_flag_initial(2).eq.1)) then
+                   ! do nothing (valid grid probe on both sides of Gamma)
+                  else if ((interp_valid_flag_initial(1).eq.0).or. &
+                           (interp_valid_flag_initial(1).eq.2).or. &
+                           (interp_valid_flag_initial(2).eq.0).or. &
+                           (interp_valid_flag_initial(2).eq.2)) then
+                    ! flag=0 =>neither grid probe or supermesh probe are valid
+                    ! flag=2 =>grid probe invalid; supermesh probe is valid
+                   interface_resolved=0
+                  else
+                   print *,"interp_valid_flag_initial invalid"
+                   stop
+                  endif
+
+                  user_override_TI_YI=0
+
+                  if (hardwire_flag(ireverse).eq.0) then
+                   if (is_in_probtype_list().eq.1) then
+                    ! do not call "mdot_diff_func" (below) if 
+                    ! user_override_TI_YI=1
+                    call SUB_INTERFACE_TEMPERATURE( &
+                     interface_mass_transfer_model( &
+                       iten+ireverse*num_interfaces), &
+                     local_probe_constrain, &
+                     ireverse, &
+                     iten, &
+                     xI, &
+                     cur_time, &
+                     prev_time, &
+                     dt, &
+                     local_Tsat(ireverse), & ! INTENT(inout)
+                     Y_predict, &  ! INTENT(inout)
+                     user_override_TI_YI, & ! INTENT(inout)
+                     molar_mass, & ! index: 1..num_materials
+                     species_molar_mass, & ! index: 1..num_species_var
+                     thermal_k_model_predict(1), &
+                     thermal_k_model_predict(2), & ! ksrc,kdst
+                     thermal_k_physical_base(1), &
+                     thermal_k_physical_base(2), & ! ksrc,kdst
+                     POUT%T_probe(1), & ! source
+                     POUT%T_probe(2), & ! dest
+                     POUT%probe_ok_gradient(1), & ! source
+                     POUT%probe_ok_gradient(2), & ! dest
+                     LL(ireverse), &
+                     POUT%dxprobe_target(1), & ! source
+                     POUT%dxprobe_target(2), & ! dest
+                     num_materials, &
+                     num_species_var)
+                   endif
+                  else if (hardwire_flag(ireverse).eq.1) then
+                   ! do nothing
+                  else
+                   print *,"hardwire_flag invalid"
+                   stop
+                  endif
+
+                  trial_and_error=0
+
+                  if (local_probe_constrain.eq.0) then
+                   if ((interface_resolved.eq.1).and. &
+                       (interp_status.eq.1)) then
+                    ! do nothing
+                   else if ((interface_resolved.eq.0).or. &
+                            (interp_status.eq.0)) then
                     if (hardwire_flag(ireverse).eq.0) then
-
                      if (user_override_TI_YI.eq.0) then
+                      call apply_TI_limiter( &
+                       TI_min,TI_max, &
+                       PROBE_PARMS, &
+                       local_Tsat(ireverse), &
+                       Y_predict, &
+                       POUT)
 
-                       ! 3=Kassemi model
-                      if (local_Tanasawa_or_Schrage_or_Kassemi.eq.3) then
-                       fully_saturated=2
-                       Y_predict=one
-                       X_predict=one
-                       Y_gamma_a=Y_predict
-                       Y_gamma_b=Y_predict
-
-                       T_gamma_a=TSAT_predict
-                       T_gamma_b=TSAT_predict
-                      else if ((POUT%Y_probe(iprobe_vapor).ge. &
-                                one-Y_TOLERANCE).and. &
-                               (POUT%Y_probe(iprobe_vapor).le.one).and. &
-                               (Y_predict.eq.one)) then
-                       fully_saturated=1
-                      else if ((POUT%Y_probe(iprobe_vapor).le. &
-                                one-Y_TOLERANCE).and. &
-                               (POUT%Y_probe(iprobe_vapor).ge.zero).and. &
-                               (Y_predict.eq.one)) then
-                        ! declared in PROBCOMMON.F90
-                       Y_predict=one-EVAP_BISECTION_TOL
-                       call volfrac_from_massfrac(X_predict,Y_predict, &
-                        molar_mass_ambient,molar_mass_vapor) ! WA,WV
-                       call Tgamma_from_TSAT_and_X(TSAT_predict, &
-                        local_Tsat(ireverse), &
-                        X_predict,LL(ireverse),R_Palmore_Desjardins, &
-                        molar_mass_vapor,TI_min,TI_max)
-
-                       T_gamma_a=TSAT_predict
-                       T_gamma_b=TSAT_predict
-                       Y_gamma_a=Y_predict
-                       Y_gamma_b=Y_predict
-                      else
-                       print *,"mass fraction bust"
-                       stop
-                      endif
-
-                      if (fully_saturated.eq.1) then ! Tgamma=Tboil
-                       ! do nothing
-                      else if (fully_saturated.eq.2) then ! Kassemi
-                       if (LL(ireverse).gt.zero) then ! evaporation
-                        T_gamma_a=TI_min
-                        X_gamma_a=one
-                        Y_gamma_a=one
-                       else if (LL(ireverse).lt.zero) then ! condensation
-                        T_gamma_b=TI_max
-                        X_gamma_b=one
-                        Y_gamma_b=one
-                       else
-                        print *,"LL(ireverse) invalid"
-                        stop
-                       endif
-                      else if (fully_saturated.eq.0) then
-                       if (LL(ireverse).gt.zero) then ! evaporation
-                        T_gamma_a=TI_min
-                        call X_from_Tgamma(X_gamma_a,T_gamma_a, &
-                         local_Tsat(ireverse), &
-                         LL(ireverse),R_Palmore_Desjardins, &
-                         molar_mass_vapor) ! WV
-                        call massfrac_from_volfrac(X_gamma_a,Y_gamma_a, &
-                         molar_mass_ambient,molar_mass_vapor) ! WA,WV
-                       else if (LL(ireverse).lt.zero) then ! condensation
-                        T_gamma_b=TI_max
-                        call X_from_Tgamma(X_gamma_b,T_gamma_b, &
-                         local_Tsat(ireverse), &
-                         LL(ireverse),R_Palmore_Desjardins, &
-                         molar_mass_vapor) ! WV
-                        call massfrac_from_volfrac(X_gamma_b,Y_gamma_b, &
-                         molar_mass_ambient,molar_mass_vapor) ! WA,WV
-                       else
-                        print *,"LL(ireverse) invalid"
-                        stop
-                       endif
-                      else
-                       print *,"fully_saturated invalid"
-                       stop
-                      endif
+                      trial_and_error=1
 
                      else if (user_override_TI_YI.eq.1) then
+                      ! do nothing
+                     else
+                      print *,"user_override_TI_YI invalid"
+                      stop
+                     endif
+
+                    else if (hardwire_flag(ireverse).eq.1) then
+                     ! do nothing
+                    else
+                     print *,"hardwire_flag(ireverse) invalid"
+                     stop
+                    endif
+                   else
+                    print *,"interface_resolved or interp_status invalid"
+                    stop
+                   endif
+  
+                  else if (local_probe_constrain.eq.1) then
+                   ! do nothing; interface temperature does not depend on
+                   ! probe values.
+                  else
+                   print *,"local_probe_constrain invalid"
+                   stop
+                  endif
+
+                  TSAT_predict=local_Tsat(ireverse)
+
+                  TSAT_correct=TSAT_predict
+
+                  if (debug_limiter.eq.1) then
+                   print *,"debug_limiter=1 (1) "
+                   print *,"i,j,k,bfact,level,finest_level,im_source,im_dest ",&
+                     i,j,k,bfact, &
+                     level,finest_level,im_source,im_dest
+                   print *,"ireverse, local_probe_constrain ",ireverse, &
+                    local_probe_constrain
+                   print *,"interp_status,interface_resolved ",interp_status, &
+                    interface_resolved
+                   print *,"TI_min,TI_max,local_Tsat(ireverse) ", &
+                    TI_min,TI_max,local_Tsat(ireverse) 
+                   print *,"hardwire_flag(ireverse) ",hardwire_flag(ireverse)
+                   print *,"user_override_TI_YI ",user_override_TI_YI
+                   print *,"T_I_interp(1) ",POUT%T_I_interp(1)
+                   print *,"T_I_interp(2) ",POUT%T_I_interp(2)
+                   print *,"T_probe(1) ",POUT%T_probe(1)
+                   print *,"T_probe(2) ",POUT%T_probe(2)
+                   print *,"POUT%interp_valid_flag(1) ",POUT%interp_valid_flag(1)
+                   print *,"POUT%interp_valid_flag(2) ",POUT%interp_valid_flag(2)
+                  endif
+
+                  VEL_predict=zero
+                  VEL_correct=zero
+
+                  TSAT_iter=0
+                  TSAT_converge=0
+
+                  TI_YI_counter=0
+                  TI_YI_best_guess_index=0
+
+!    local_freezing_model=5  fully saturated evaporation?
+!    local_freezing_model=6  Palmore/Desjardins
+!    local_freezing_model=7  Cavitation (a seed must exist)
+
+                  do while (TSAT_converge.eq.0) 
+
+                   TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi= &
+                         local_Tanasawa_or_Schrage_or_Kassemi
+                   TSAT_Y_PARMS%accommodation_coefficient= &
+                         accommodation_coefficient(iten+ireverse*num_interfaces) 
+
+                   TSAT_Y_PARMS%reference_pressure= &
+                         reference_pressure(iten+ireverse*num_interfaces) 
+                   if (TSAT_Y_PARMS%reference_pressure.gt.zero) then
+                    ! do nothing
+                   else
+                    print *,"expecting TSAT_Y_PARMS%reference_pressure>0"
+                    print *,"TSAT_Y_PARMS%reference_pressure=", &
+                      TSAT_Y_PARMS%reference_pressure
+                    stop
+                   endif
+
+                   TSAT_Y_PARMS%universal_gas_constant_R= &
+                         R_Palmore_Desjardins
+                   TSAT_Y_PARMS%molar_mass_ambient=molar_mass_ambient
+                   TSAT_Y_PARMS%molar_mass_vapor=molar_mass_vapor
+                   TSAT_Y_PARMS%iprobe_vapor=iprobe_vapor
+                   TSAT_Y_PARMS%material_type_evap=>material_type_evap
+
+                   !iprobe=1 source
+                   !iprobe=2 dest
+                   if (probe_ok.eq.1) then
+                    ! do nothing (probes do not depend on TI)
+                   else if (probe_ok.eq.0) then ! probes depend on TI
+                    call probe_interpolation( &
+                     PROBE_PARMS, &
+                     TSAT_predict, &
+                     Y_predict, &
+                     POUT)
+                   else
+                    print *,"probe_ok invalid"
+                    stop
+                   endif
+
+                   if (TSAT_iter.eq.0) then
+                    fully_saturated=0
+
+                    T_gamma_a=TSAT_predict
+                    T_gamma_b=TSAT_predict
+                    Y_gamma_a=Y_predict
+                    Y_gamma_b=Y_predict
+
+                    if (POUT%at_interface.eq.1) then
+                     if (hardwire_flag(ireverse).eq.0) then
+
+                      if (user_override_TI_YI.eq.0) then
+
+                        ! 3=Kassemi model
+                       if (local_Tanasawa_or_Schrage_or_Kassemi.eq.3) then
+                        fully_saturated=2
+                        Y_predict=one
+                        X_predict=one
+                        Y_gamma_a=Y_predict
+                        Y_gamma_b=Y_predict
+
+                        T_gamma_a=TSAT_predict
+                        T_gamma_b=TSAT_predict
+                       else if ((POUT%Y_probe(iprobe_vapor).ge. &
+                                 one-Y_TOLERANCE).and. &
+                                (POUT%Y_probe(iprobe_vapor).le.one).and. &
+                                (Y_predict.eq.one)) then
+                        fully_saturated=1
+                       else if ((POUT%Y_probe(iprobe_vapor).le. &
+                                 one-Y_TOLERANCE).and. &
+                                (POUT%Y_probe(iprobe_vapor).ge.zero).and. &
+                                (Y_predict.eq.one)) then
+                         ! declared in PROBCOMMON.F90
+                        Y_predict=one-EVAP_BISECTION_TOL
+                        call volfrac_from_massfrac(X_predict,Y_predict, &
+                         molar_mass_ambient,molar_mass_vapor) ! WA,WV
+                        call Tgamma_from_TSAT_and_X(TSAT_predict, &
+                         local_Tsat(ireverse), &
+                         X_predict,LL(ireverse),R_Palmore_Desjardins, &
+                         molar_mass_vapor,TI_min,TI_max)
+
+                        T_gamma_a=TSAT_predict
+                        T_gamma_b=TSAT_predict
+                        Y_gamma_a=Y_predict
+                        Y_gamma_b=Y_predict
+                       else
+                        print *,"mass fraction bust"
+                        stop
+                       endif
+
+                       if (fully_saturated.eq.1) then ! Tgamma=Tboil
+                        ! do nothing
+                       else if (fully_saturated.eq.2) then ! Kassemi
+                        if (LL(ireverse).gt.zero) then ! evaporation
+                         T_gamma_a=TI_min
+                         X_gamma_a=one
+                         Y_gamma_a=one
+                        else if (LL(ireverse).lt.zero) then ! condensation
+                         T_gamma_b=TI_max
+                         X_gamma_b=one
+                         Y_gamma_b=one
+                        else
+                         print *,"LL(ireverse) invalid"
+                         stop
+                        endif
+                       else if (fully_saturated.eq.0) then
+                        if (LL(ireverse).gt.zero) then ! evaporation
+                         T_gamma_a=TI_min
+                         call X_from_Tgamma(X_gamma_a,T_gamma_a, &
+                          local_Tsat(ireverse), &
+                          LL(ireverse),R_Palmore_Desjardins, &
+                          molar_mass_vapor) ! WV
+                         call massfrac_from_volfrac(X_gamma_a,Y_gamma_a, &
+                          molar_mass_ambient,molar_mass_vapor) ! WA,WV
+                        else if (LL(ireverse).lt.zero) then ! condensation
+                         T_gamma_b=TI_max
+                         call X_from_Tgamma(X_gamma_b,T_gamma_b, &
+                          local_Tsat(ireverse), &
+                          LL(ireverse),R_Palmore_Desjardins, &
+                          molar_mass_vapor) ! WV
+                         call massfrac_from_volfrac(X_gamma_b,Y_gamma_b, &
+                          molar_mass_ambient,molar_mass_vapor) ! WA,WV
+                        else
+                         print *,"LL(ireverse) invalid"
+                         stop
+                        endif
+                       else
+                        print *,"fully_saturated invalid"
+                        stop
+                       endif
+
+                      else if (user_override_TI_YI.eq.1) then
+
+                       if (Y_predict.eq.one) then
+                        fully_saturated=1
+                       else if ((Y_predict.ge.zero).and. &
+                                (Y_predict.lt.one)) then
+                        ! do nothing
+                       else
+                        print *,"Y_predict invalid"
+                        stop
+                       endif
+
+                      else
+                       print *,"user_override_TI_YI invalid"
+                       stop
+                      endif
+
+                     else if (hardwire_flag(ireverse).eq.1) then
 
                       if (Y_predict.eq.one) then
                        fully_saturated=1
@@ -8703,723 +8696,643 @@ stop
                       endif
 
                      else
-                      print *,"user_override_TI_YI invalid"
+                      print *,"hardwire_flag(ireverse) invalid"
                       stop
                      endif
+                    else if (POUT%at_interface.eq.0) then
+                     ! do nothing
+                    else
+                     print *,"at_interface invalid fort_ratemasschange"
+                     print *,"at_interface=",POUT%at_interface
+                     stop
+                    endif
 
-                    else if (hardwire_flag(ireverse).eq.1) then
+                    T_gamma_a_init=T_gamma_a
+                    T_gamma_b_init=T_gamma_b
+                    Y_gamma_a_init=Y_gamma_a
+                    Y_gamma_b_init=Y_gamma_b
+                   else if (TSAT_iter.gt.0) then
+                    ! do nothing
+                   else
+                    print *,"TSAT_iter invalid"
+                    stop
+                   endif
 
-                     if (Y_predict.eq.one) then
-                      fully_saturated=1
-                     else if ((Y_predict.ge.zero).and. &
-                              (Y_predict.lt.one)) then
-                      ! do nothing
+                   den_I_interp_SAT(1)=POUT%den_I_interp(1) ! iprobe=1 source
+                   den_I_interp_SAT(2)=POUT%den_I_interp(2) ! iprobe=2 dest
+
+                   !iprobe=1 source
+                   !iprobe=2 dest
+
+                   if (POUT%at_interface.eq.1) then
+                       
+                    microlayer_substrate_source=0
+                    microlayer_substrate_dest=0
+
+                    im_substrate_source=microlayer_substrate(im_source)
+                    im_substrate_dest=microlayer_substrate(im_dest)
+
+                    if (microlayer_size(im_source).gt.zero) then
+                     if (im_substrate_source.gt.0) then
+                      if (is_rigid(im_substrate_source).ne.1) then
+                       print *,"is_rigid(im_substrate_source).ne.1"
+                       stop
+                      endif
+                      do dir=1,SDIM
+                       dir2=num_materials+(im_substrate_source-1)*SDIM+dir
+                       gradphi_substrate(dir)=LSINT(dir2)
+                      enddo
+                      call get_physical_dist(xI,LSINT(im_substrate_source), &
+                       gradphi_substrate,newphi_substrate);
+                      if (newphi_substrate.ge.-macrolayer_size(im_source)) then
+                       microlayer_substrate_source=im_substrate_source
+                      endif
+                     else if (im_substrate_source.eq.0) then
+                      print *,"microlayer material must have corresponding"
+                      print *,"substrate. im_source,im_dest=",im_source,im_dest
+                      stop
                      else
-                      print *,"Y_predict invalid"
+                      print *,"im_substrate_source invalid"
                       stop
                      endif
-
+                    else if (microlayer_size(im_source).eq.zero) then
+                     ! do nothing
                     else
-                     print *,"hardwire_flag(ireverse) invalid"
+                     print *,"microlayer_size(im_source) invalid"
                      stop
                     endif
-                   else if (POUT%at_interface.eq.0) then
-                    ! do nothing
-                   else
-                    print *,"at_interface invalid fort_ratemasschange"
-                    print *,"at_interface=",POUT%at_interface
-                    stop
-                   endif
 
-                   T_gamma_a_init=T_gamma_a
-                   T_gamma_b_init=T_gamma_b
-                   Y_gamma_a_init=Y_gamma_a
-                   Y_gamma_b_init=Y_gamma_b
-                  else if (TSAT_iter.gt.0) then
-                   ! do nothing
-                  else
-                   print *,"TSAT_iter invalid"
-                   stop
-                  endif
-
-                  den_I_interp_SAT(1)=POUT%den_I_interp(1) ! iprobe=1 source
-                  den_I_interp_SAT(2)=POUT%den_I_interp(2) ! iprobe=2 dest
-
-                  !iprobe=1 source
-                  !iprobe=2 dest
-
-                  if (POUT%at_interface.eq.1) then
-                      
-                   microlayer_substrate_source=0
-                   microlayer_substrate_dest=0
-
-                   im_substrate_source=microlayer_substrate(im_source)
-                   im_substrate_dest=microlayer_substrate(im_dest)
-
-                   if (microlayer_size(im_source).gt.zero) then
-                    if (im_substrate_source.gt.0) then
-                     if (is_rigid(im_substrate_source).ne.1) then
-                      print *,"is_rigid(im_substrate_source).ne.1"
+                    if (microlayer_size(im_dest).gt.zero) then
+                     if (im_substrate_dest.gt.0) then
+                      if (is_rigid(im_substrate_dest).ne.1) then
+                       print *,"is_rigid(im_substrate_dest).ne.1"
+                       stop
+                      endif
+                      do dir=1,SDIM
+                       dir2=num_materials+(im_substrate_dest-1)*SDIM+dir
+                       gradphi_substrate(dir)=LSINT(dir2)
+                      enddo
+                      call get_physical_dist(xI,LSINT(im_substrate_dest), &
+                       gradphi_substrate,newphi_substrate);
+                      if (newphi_substrate.ge.-macrolayer_size(im_dest)) then
+                       microlayer_substrate_dest=im_substrate_dest
+                      endif
+                     else if (im_substrate_dest.eq.0) then
+                      print *,"microlayer material must have corresponding"
+                      print *,"substrate. im_source,im_dest=",im_source,im_dest
                       stop
-                     endif
-                     do dir=1,SDIM
-                      dir2=num_materials+(im_substrate_source-1)*SDIM+dir
-                      gradphi_substrate(dir)=LSINT(dir2)
-                     enddo
-                     call get_physical_dist(xI,LSINT(im_substrate_source), &
-                      gradphi_substrate,newphi_substrate);
-                     if (newphi_substrate.ge.-macrolayer_size(im_source)) then
-                      microlayer_substrate_source=im_substrate_source
-                     endif
-                    else if (im_substrate_source.eq.0) then
-                     print *,"microlayer material must have corresponding"
-                     print *,"substrate. im_source,im_dest=",im_source,im_dest
-                     stop
-                    else
-                     print *,"im_substrate_source invalid"
-                     stop
-                    endif
-                   else if (microlayer_size(im_source).eq.zero) then
-                    ! do nothing
-                   else
-                    print *,"microlayer_size(im_source) invalid"
-                    stop
-                   endif
-
-                   if (microlayer_size(im_dest).gt.zero) then
-                    if (im_substrate_dest.gt.0) then
-                     if (is_rigid(im_substrate_dest).ne.1) then
-                      print *,"is_rigid(im_substrate_dest).ne.1"
-                      stop
-                     endif
-                     do dir=1,SDIM
-                      dir2=num_materials+(im_substrate_dest-1)*SDIM+dir
-                      gradphi_substrate(dir)=LSINT(dir2)
-                     enddo
-                     call get_physical_dist(xI,LSINT(im_substrate_dest), &
-                      gradphi_substrate,newphi_substrate);
-                     if (newphi_substrate.ge.-macrolayer_size(im_dest)) then
-                      microlayer_substrate_dest=im_substrate_dest
-                     endif
-                    else if (im_substrate_dest.eq.0) then
-                     print *,"microlayer material must have corresponding"
-                     print *,"substrate. im_source,im_dest=",im_source,im_dest
-                     stop
-                    else
-                     print *,"im_substrate_dest invalid"
-                     stop
-                    endif
-                   else if (microlayer_size(im_dest).eq.zero) then
-                    ! do nothing
-                   else
-                    print *,"microlayer_size(im_dest) invalid"
-                    stop
-                   endif
-
-                   if ((local_freezing_model.eq.5).or. & !stefan evap/cond
-                       (local_freezing_model.eq.6)) then !Palmore/Desjardins
-                    if (vapor_den.gt.zero) then
-                     if (LL(ireverse).gt.zero) then ! evaporation
-                      den_I_interp_SAT(2)=vapor_den ! dest
-                     else if (LL(ireverse).lt.zero) then ! condensation
-                      den_I_interp_SAT(1)=vapor_den ! source
                      else
-                      print *,"LL invalid"
+                      print *,"im_substrate_dest invalid"
                       stop
                      endif
+                    else if (microlayer_size(im_dest).eq.zero) then
+                     ! do nothing
                     else
-                     print *,"vapor_den invalid"
-                     stop
-                    endif  
-                   else if &
-                    (is_valid_freezing_modelF(local_freezing_model).eq.1) then
-                    ! do nothing
-                   else
-                    print *,"local_freezing_model invalid 14"
-                    stop
-                   endif 
-
-                   source_perim_factor=one
-                   dest_perim_factor=one
-
-                   do iprobe=1,2
-
-                    if (iprobe.eq.1) then
-                     im_probe=im_source
-                     microlayer_substrate_probe=microlayer_substrate_source
-                    else if (iprobe.eq.2) then
-                     im_probe=im_dest
-                     microlayer_substrate_probe=microlayer_substrate_dest
-                    else
-                     print *,"iprobe invalid"
+                     print *,"microlayer_size(im_dest) invalid"
                      stop
                     endif
- 
-                    if ((local_freezing_model.eq.0).and. &
-                        (max_contact_line_size(im_probe).gt.zero).and. &
-                        (microlayer_size(im_probe).gt.zero).and. &
-                        (macrolayer_size(im_probe).gt.zero).and. &
-                        (microlayer_substrate_probe.ge.1).and. &
-                        (microlayer_substrate_probe.le.num_materials)) then
-                     icolor=NINT(colorfab(D_DECL(i,j,k)))
-                     if ((icolor.gt.color_count).or.(icolor.le.0)) then
-                      print *,"icolor invalid in fort_ratemasschange icolor=",&
-                        icolor
-                      print *,"i,j,k ",i,j,k
-                      stop
-                     endif
-                     base_type=NINT(typefab(D_DECL(i,j,k)))
-                     if ((base_type.lt.1).or.(base_type.gt.num_materials)) then
-                      print *,"base_type invalid"
-                      stop
-                     endif
 
-                      ! ic+1 is blob_triple_perim index
-                     ic=(icolor-1)*num_elements_blobclass+BLB_TRIPLE_PERIM
-
-                     im2=microlayer_substrate_probe
-                     if ((im2.ge.1).and.(im2.le.num_materials)) then
-                      if (base_type.eq.im_source) then
-                       im1=im_dest
-                      else if (base_type.eq.im_dest) then
-                       im1=im_source
+                    if ((local_freezing_model.eq.5).or. & !stefan evap/cond
+                        (local_freezing_model.eq.6)) then !Palmore/Desjardins
+                     if (vapor_den.gt.zero) then
+                      if (LL(ireverse).gt.zero) then ! evaporation
+                       den_I_interp_SAT(2)=vapor_den ! dest
+                      else if (LL(ireverse).lt.zero) then ! condensation
+                       den_I_interp_SAT(1)=vapor_den ! source
                       else
+                       print *,"LL invalid"
+                       stop
+                      endif
+                     else
+                      print *,"vapor_den invalid"
+                      stop
+                     endif  
+                    else if &
+                     (is_valid_freezing_modelF(local_freezing_model).eq.1) then
+                     ! do nothing
+                    else
+                     print *,"local_freezing_model invalid 14"
+                     stop
+                    endif 
+
+                    source_perim_factor=one
+                    dest_perim_factor=one
+
+                    do iprobe=1,2
+
+                     if (iprobe.eq.1) then
+                      im_probe=im_source
+                      microlayer_substrate_probe=microlayer_substrate_source
+                     else if (iprobe.eq.2) then
+                      im_probe=im_dest
+                      microlayer_substrate_probe=microlayer_substrate_dest
+                     else
+                      print *,"iprobe invalid"
+                      stop
+                     endif
+  
+                     if ((local_freezing_model.eq.0).and. &
+                         (max_contact_line_size(im_probe).gt.zero).and. &
+                         (microlayer_size(im_probe).gt.zero).and. &
+                         (macrolayer_size(im_probe).gt.zero).and. &
+                         (microlayer_substrate_probe.ge.1).and. &
+                         (microlayer_substrate_probe.le.num_materials)) then
+                      icolor=NINT(colorfab(D_DECL(i,j,k)))
+                      if ((icolor.gt.color_count).or.(icolor.le.0)) then
+                       print *,"icolor invalid in fort_ratemasschange icolor=",&
+                         icolor
+                       print *,"i,j,k ",i,j,k
+                       stop
+                      endif
+                      base_type=NINT(typefab(D_DECL(i,j,k)))
+                      if ((base_type.lt.1).or.(base_type.gt.num_materials)) then
                        print *,"base_type invalid"
                        stop
                       endif
-                      ic=ic+(im1-1)*num_materials+im2
-                      contact_line_perim=blob_array(ic)
-                     else 
-                      print *,"im2 invalid"
-                      stop
-                     endif
 
-                     if ((contact_line_perim.ge.zero).and. &
-                         (contact_line_perim.le. &
-                          max_contact_line_size(im_probe))) then
-                      ! do nothing
-                     else if (contact_line_perim.gt. &
-                              max_contact_line_size(im_probe)) then
-                      source_perim_factor= &
-                       max_contact_line_size(im_probe)/contact_line_perim
+                       ! ic+1 is blob_triple_perim index
+                      ic=(icolor-1)*num_elements_blobclass+BLB_TRIPLE_PERIM
+
+                      im2=microlayer_substrate_probe
+                      if ((im2.ge.1).and.(im2.le.num_materials)) then
+                       if (base_type.eq.im_source) then
+                        im1=im_dest
+                       else if (base_type.eq.im_dest) then
+                        im1=im_source
+                       else
+                        print *,"base_type invalid"
+                        stop
+                       endif
+                       ic=ic+(im1-1)*num_materials+im2
+                       contact_line_perim=blob_array(ic)
+                      else 
+                       print *,"im2 invalid"
+                       stop
+                      endif
+
+                      if ((contact_line_perim.ge.zero).and. &
+                          (contact_line_perim.le. &
+                           max_contact_line_size(im_probe))) then
+                       ! do nothing
+                      else if (contact_line_perim.gt. &
+                               max_contact_line_size(im_probe)) then
+                       source_perim_factor= &
+                        max_contact_line_size(im_probe)/contact_line_perim
+                      else
+                       print *,"contact_line_perim invalid"
+                       stop
+                      endif
+                     else if &
+                       (is_valid_freezing_modelF(local_freezing_model).eq.1) &
+                       then
+                      if ((max_contact_line_size(im_probe).eq.zero).or. &
+                          (microlayer_size(im_probe).eq.zero).or. &
+                          (macrolayer_size(im_probe).eq.zero).or. &
+                          (microlayer_substrate_probe.eq.0)) then
+                       ! do nothing
+                      else
+                       print *,"microlayer parameters invalid"
+                       stop
+                      endif
                      else
-                      print *,"contact_line_perim invalid"
+                      print *,"is_valid_freezing_modelF invalid"
                       stop
                      endif
-                    else if &
-                      (is_valid_freezing_modelF(local_freezing_model).eq.1) &
-                      then
-                     if ((max_contact_line_size(im_probe).eq.zero).or. &
-                         (microlayer_size(im_probe).eq.zero).or. &
-                         (macrolayer_size(im_probe).eq.zero).or. &
-                         (microlayer_substrate_probe.eq.0)) then
-                      ! do nothing
-                     else
-                      print *,"microlayer parameters invalid"
-                      stop
-                     endif
-                    else
-                     print *,"is_valid_freezing_modelF invalid"
-                     stop
+        
+                    enddo ! iprobe=1,2
+
+
+                     ! V dt * L * L = volume of material change of phase
+                     ! rho_src * V dt L^2 = rho_dst * (V+Vexpand) * dt L^2
+                     ! S=V+Vexpand=
+                     !  rho_src V/rho_dst=[k grad T dot n]/(L rho_dst)
+                     ! Vexpand=(rho_src/rho_dst-1)V
+                     ! note: rho_src V = MDOT
+
+                     ! this call to get_vel_phasechange is not for the purpose
+                     ! of estimating the timestep dt.
+                    for_estdt=0
+
+                    if (is_in_probtype_list().eq.1) then
+                     call SUB_K_EFFECTIVE( &
+                      interface_mass_transfer_model( &
+                        iten+ireverse*num_interfaces), &
+                      ireverse, &
+                      iten, &
+                      molar_mass, & ! index: 1..num_materials
+                      species_molar_mass, & ! index: 1..num_species_var
+                      thermal_k_model_predict, &
+                      thermal_k_model_correct, &
+                      thermal_k_physical_base, &
+                      POUT%T_probe(1), & ! source
+                      POUT%T_probe(2), & ! dest
+                      POUT%probe_ok_gradient(1), & ! source
+                      POUT%probe_ok_gradient(2), & ! dest
+                      POUT%dxprobe_target(1), & ! source
+                      POUT%dxprobe_target(2), & ! dest
+                      LL(ireverse), &
+                      num_materials, &
+                      num_species_var)
                     endif
-       
-                   enddo ! iprobe=1,2
 
-
-                    ! V dt * L * L = volume of material change of phase
-                    ! rho_src * V dt L^2 = rho_dst * (V+Vexpand) * dt L^2
-                    ! S=V+Vexpand=rho_src V/rho_dst=[k grad T dot n]/(L rho_dst)
-                    ! Vexpand=(rho_src/rho_dst-1)V
-                    ! note: rho_src V = MDOT
-
-                    ! this call to get_vel_phasechange is not for the purpose
-                    ! of estimating the timestep dt.
-                   for_estdt=0
-
-                   if (is_in_probtype_list().eq.1) then
-                    call SUB_K_EFFECTIVE( &
-                     interface_mass_transfer_model(iten+ireverse*num_interfaces), &
-                     ireverse, &
-                     iten, &
-                     molar_mass, & ! index: 1..num_materials
-                     species_molar_mass, & ! index: 1..num_species_var
-                     thermal_k_model_predict, &
-                     thermal_k_model_correct, &
-                     thermal_k_physical_base, &
-                     POUT%T_probe(1), & ! source
-                     POUT%T_probe(2), & ! dest
-                     POUT%probe_ok_gradient(1), & ! source
-                     POUT%probe_ok_gradient(2), & ! dest
-                     POUT%dxprobe_target(1), & ! source
-                     POUT%dxprobe_target(2), & ! dest
-                     LL(ireverse), &
-                     num_materials, &
-                     num_species_var)
-                   endif
-
-#if (STANDALONE==0)
-                    ! if local_freezing_model==0 stefan problem
-                    !  5, some kind of evaporation model,
-                    !  or 1, then
-                    !  DTsrc=(Tsrc-TSAT_predict)
-                    !  DTdst=(Tdst-TSAT_predict)
-                    !  velsrc=ksrc*DTsrc/(LL * dxprobe_src)
-                    !  veldst=kdst*DTdst/(LL * dxprobe_dest)
-                    !  in: PROB.F90
-                   call get_vel_phasechange( &
-                     interface_mass_transfer_model(iten+ireverse*num_interfaces), &
-                     for_estdt, &
-                     xI, &
-                     ispec, &
-                     molar_mass, &
-                     species_molar_mass, &
-                     local_freezing_model, &
-                     local_Tanasawa_or_Schrage_or_Kassemi, &
-                     distribute_from_targ, &
-                     VEL_correct, & ! vel
-                     den_I_interp_SAT(1), & ! source 
-                     den_I_interp_SAT(2), & ! dest
-                     POUT%den_probe(1), & ! source 
-                     POUT%den_probe(2), & ! dest
-                     thermal_k_model_correct(1), &
-                     thermal_k_model_correct(2), & ! ksrc,kdst
-                     thermal_k_physical_base(1), &
-                     thermal_k_physical_base(2), & ! ksrc,kdst
-                     POUT%T_probe(1), & ! source
-                     POUT%T_probe(2), & ! dest
-                     POUT%probe_ok_gradient(1), & ! source
-                     POUT%probe_ok_gradient(2), & ! dest
-                     TSAT_predict, &
-                     POUT%T_I_interp(1), & !source
-                     POUT%T_I_interp(2), & !dest
-                     LL(ireverse), &
-                     source_perim_factor, &
-                     dest_perim_factor, &
-                     microlayer_substrate_source, &
-                     microlayer_angle(im_source), &
-                     microlayer_size(im_source), &
-                     macrolayer_size(im_source), &
-                     microlayer_substrate_dest, &
-                     microlayer_angle(im_dest), &
-                     microlayer_size(im_dest), &
-                     macrolayer_size(im_dest), &
-                     POUT%dxprobe_target(1), & ! source
-                     POUT%dxprobe_target(2), & ! dest
-                     im_source,im_dest, &
-                     prev_time,dt, &
-                     fort_alpha(iten+ireverse*num_interfaces), &
-                     fort_beta(iten+ireverse*num_interfaces), &
-                     fort_expansion_factor(iten+ireverse*num_interfaces), &
-                     K_f(ireverse), &
-                     POUT%Y_I_interp(2), & ! Cmethane_in_hydrate (dest)
-                     C_w0, &
-                     POUT%pres_I_interp(1), & ! PHYDWATER
-                     Fsource,Fdest)
-#elif (STANDALONE==1)
-                   if (local_freezing_model.eq.0) then
-                     DTsrc=POUT%T_probe(1)-TSAT_predict
-                     DTdst=POUT%T_probe(2)-TSAT_predict
-                     if (POUT%probe_ok_gradient(1).eq.1) then
-                      ! do nothing
-                     else if (POUT%probe_ok_gradient(1).eq.0) then
-                      DTsrc=zero
-                     else
-                      print *,"POUT%probe_ok_gradient(1) invalid"
-                      stop
-                     endif
-                     if (POUT%probe_ok_gradient(2).eq.1) then
-                      ! do nothing
-                     else if (POUT%probe_ok_gradient(2).eq.0) then
-                      DTdst=zero
-                     else
-                      print *,"POUT%probe_ok_gradient(2) invalid"
-                      stop
-                     endif
-                     velsrc=thermal_k_model_correct(1)*DTsrc/ &
-                       (LL(ireverse)*POUT%dxprobe_target(1))
-                     veldst=thermal_k_model_correct(2)*DTdst/ &
-                       (LL(ireverse)*POUT%dxprobe_target(2))
-                   
-                     velsum=velsrc+veldst
-                     if (velsum.gt.zero) then
-                      ! do nothing
-                     else if (velsum.le.zero) then
-                      velsum=zero
-                     else
-                      print *,"velsum invalid in stand_alone code"
-                      print *,"velsum= ",velsum
-                      stop
-                     endif 
-                     VEL_correct=velsum
+                     ! if local_freezing_model==0 stefan problem
+                     !  5, some kind of evaporation model,
+                     !  or 1, then
+                     !  DTsrc=(Tsrc-TSAT_predict)
+                     !  DTdst=(Tdst-TSAT_predict)
+                     !  velsrc=ksrc*DTsrc/(LL * dxprobe_src)
+                     !  veldst=kdst*DTdst/(LL * dxprobe_dest)
+                     !  in: PROB.F90
+                    call get_vel_phasechange( &
+                      interface_mass_transfer_model( &
+                        iten+ireverse*num_interfaces), &
+                      for_estdt, &
+                      xI, &
+                      ispec, &
+                      molar_mass, &
+                      species_molar_mass, &
+                      local_freezing_model, &
+                      local_Tanasawa_or_Schrage_or_Kassemi, &
+                      distribute_from_targ, &
+                      VEL_correct, & ! vel
+                      den_I_interp_SAT(1), & ! source 
+                      den_I_interp_SAT(2), & ! dest
+                      POUT%den_probe(1), & ! source 
+                      POUT%den_probe(2), & ! dest
+                      thermal_k_model_correct(1), &
+                      thermal_k_model_correct(2), & ! ksrc,kdst
+                      thermal_k_physical_base(1), &
+                      thermal_k_physical_base(2), & ! ksrc,kdst
+                      POUT%T_probe(1), & ! source
+                      POUT%T_probe(2), & ! dest
+                      POUT%probe_ok_gradient(1), & ! source
+                      POUT%probe_ok_gradient(2), & ! dest
+                      TSAT_predict, &
+                      POUT%T_I_interp(1), & !source
+                      POUT%T_I_interp(2), & !dest
+                      LL(ireverse), &
+                      source_perim_factor, &
+                      dest_perim_factor, &
+                      microlayer_substrate_source, &
+                      microlayer_angle(im_source), &
+                      microlayer_size(im_source), &
+                      macrolayer_size(im_source), &
+                      microlayer_substrate_dest, &
+                      microlayer_angle(im_dest), &
+                      microlayer_size(im_dest), &
+                      macrolayer_size(im_dest), &
+                      POUT%dxprobe_target(1), & ! source
+                      POUT%dxprobe_target(2), & ! dest
+                      im_source,im_dest, &
+                      prev_time,dt, &
+                      fort_alpha(iten+ireverse*num_interfaces), &
+                      fort_beta(iten+ireverse*num_interfaces), &
+                      fort_expansion_factor(iten+ireverse*num_interfaces), &
+                      K_f(ireverse), &
+                      POUT%Y_I_interp(2), & ! Cmethane_in_hydrate (dest)
+                      C_w0, &
+                      POUT%pres_I_interp(1), & ! PHYDWATER
+                      Fsource,Fdest)
+                   else if (POUT%at_interface.eq.0) then
+                    ! do nothing
                    else
-                     print *,"local_freezing_model invalid 4"
-                     stop
+                    print *,"at_interface inalid"
+                    stop
                    endif
-#else
-                   print *,"bust compiling ratemasschange"
-                   stop
-#endif
-                  else if (POUT%at_interface.eq.0) then
-                   ! do nothing
-                  else
-                   print *,"at_interface inalid"
-                   stop
-                  endif
 
-                  if (VEL_correct.lt.zero) then
-                   VEL_correct=zero
-                  endif
+                   if (VEL_correct.lt.zero) then
+                    VEL_correct=zero
+                   endif
 
-                  TSAT_correct=TSAT_predict
+                   TSAT_correct=TSAT_predict
 
-                  if (POUT%at_interface.eq.1) then
+                   if (POUT%at_interface.eq.1) then
 
-                   if (user_override_TI_YI.eq.0) then
+                    if (user_override_TI_YI.eq.0) then
 
-                    if (local_freezing_model.eq.6) then ! Palmore/Desjardins
+                     if (local_freezing_model.eq.6) then ! Palmore/Desjardins
 
-                     ! type(TSAT_MASS_FRAC_parm_type)
-                     Y_interface_min=zero
-                     TSAT_Y_PARMS%PROBE_PARMS=>PROBE_PARMS
-                     TSAT_Y_PARMS%YI_min=Y_interface_min
-                     TSAT_Y_PARMS%TI_min=TI_min
-                     TSAT_Y_PARMS%TI_max=TI_max
-                     TSAT_Y_PARMS%TSAT_base=local_Tsat(ireverse)
-                     TSAT_Y_PARMS%D_MASS=FicksLawD(iprobe_vapor)
-                     TSAT_Y_PARMS%den_G=den_I_interp_SAT(iprobe_vapor)
-                     TSAT_Y_PARMS%thermal_k=>thermal_k_model_correct
+                      ! type(TSAT_MASS_FRAC_parm_type)
+                      Y_interface_min=zero
+                      TSAT_Y_PARMS%PROBE_PARMS=>PROBE_PARMS
+                      TSAT_Y_PARMS%YI_min=Y_interface_min
+                      TSAT_Y_PARMS%TI_min=TI_min
+                      TSAT_Y_PARMS%TI_max=TI_max
+                      TSAT_Y_PARMS%TSAT_base=local_Tsat(ireverse)
+                      TSAT_Y_PARMS%D_MASS=FicksLawD(iprobe_vapor)
+                      TSAT_Y_PARMS%den_G=den_I_interp_SAT(iprobe_vapor)
+                      TSAT_Y_PARMS%thermal_k=>thermal_k_model_correct
 
-                     if (hardwire_flag(ireverse).eq.0) then
+                      if (hardwire_flag(ireverse).eq.0) then
 
-                       ! Kassemi
-                      if (fully_saturated.eq.2) then
+                        ! Kassemi
+                       if (fully_saturated.eq.2) then
 
-                       call advance_TY_gamma( &
-                        TSAT_Y_PARMS, &
-                        POUT, &
-                        fully_saturated, &
-                        trial_and_error, &
-                        probe_ok, &
-                        TSAT_iter, &
-                        TSAT_predict, &
-                        TSAT_correct, &
-                        Y_predict, &
-                        VEL_correct, &
-                        local_Tsat(ireverse), &
-                        LL(ireverse),R_Palmore_Desjardins, &
-                        molar_mass_ambient,molar_mass_vapor, &
-                        TI_YI_ptr,TI_YI_counter,TI_YI_best_guess_index, &
-                        TI_min,TI_max, &
-                        T_gamma_a,T_gamma_b,T_gamma_c, &
-                        Y_gamma_a,Y_gamma_b,Y_gamma_c, &
-                        X_gamma_a,X_gamma_b,X_gamma_c)
+                        call advance_TY_gamma( &
+                         TSAT_Y_PARMS, &
+                         POUT, &
+                         fully_saturated, &
+                         trial_and_error, &
+                         probe_ok, &
+                         TSAT_iter, &
+                         TSAT_predict, &
+                         TSAT_correct, &
+                         Y_predict, &
+                         VEL_correct, &
+                         local_Tsat(ireverse), &
+                         LL(ireverse),R_Palmore_Desjardins, &
+                         molar_mass_ambient,molar_mass_vapor, &
+                         TI_YI_ptr,TI_YI_counter,TI_YI_best_guess_index, &
+                         TI_min,TI_max, &
+                         T_gamma_a,T_gamma_b,T_gamma_c, &
+                         Y_gamma_a,Y_gamma_b,Y_gamma_c, &
+                         X_gamma_a,X_gamma_b,X_gamma_c)
 
-                       ! Palmore and Desjardins, or
-                       ! Kassemi
-                      else if ((molar_mass_ambient.gt.zero).and. &
-                               (molar_mass_vapor.gt.zero).and. &
-                               (R_Palmore_Desjardins.gt.zero).and. &
-                               (TSAT_Y_PARMS%den_G.gt.zero).and. &
-                               ((fully_saturated.eq.0).or. &
-                                (fully_saturated.eq.1))) then
+                        ! Palmore and Desjardins, or
+                        ! Kassemi
+                       else if ((molar_mass_ambient.gt.zero).and. &
+                                (molar_mass_vapor.gt.zero).and. &
+                                (R_Palmore_Desjardins.gt.zero).and. &
+                                (TSAT_Y_PARMS%den_G.gt.zero).and. &
+                                ((fully_saturated.eq.0).or. &
+                                 (fully_saturated.eq.1))) then
 
-                       ! Palmore and Desjardins, Y=X=1
-                       if (fully_saturated.eq.1) then 
+                        ! Palmore and Desjardins, Y=X=1
+                        if (fully_saturated.eq.1) then 
 
-                        trial_and_error=0
-                        Y_interface_min=one
-                        Y_predict=one
-                        TSAT_correct=local_Tsat(ireverse)
+                         trial_and_error=0
+                         Y_interface_min=one
+                         Y_predict=one
+                         TSAT_correct=local_Tsat(ireverse)
 
-                       else if ((fully_saturated.eq.0).and. &
-                                (POUT%Y_probe(iprobe_vapor).ge. &
-                                 one-Y_TOLERANCE).and. &
-                                (POUT%Y_probe(iprobe_vapor).le.one)) then
+                        else if ((fully_saturated.eq.0).and. &
+                                 (POUT%Y_probe(iprobe_vapor).ge. &
+                                  one-Y_TOLERANCE).and. &
+                                 (POUT%Y_probe(iprobe_vapor).le.one)) then
 
-                        trial_and_error=0
-                        Y_interface_min=one
-                        Y_predict=one
-                        TSAT_correct=local_Tsat(ireverse)
+                         trial_and_error=0
+                         Y_interface_min=one
+                         Y_predict=one
+                         TSAT_correct=local_Tsat(ireverse)
 
-                       else if ((fully_saturated.eq.0).and. &
-                                (TSAT_Y_PARMS%D_MASS.eq.zero)) then
+                        else if ((fully_saturated.eq.0).and. &
+                                 (TSAT_Y_PARMS%D_MASS.eq.zero)) then
 
-                        trial_and_error=0
-                        Y_interface_min=one
-                        Y_predict=one
-                        TSAT_correct=local_Tsat(ireverse)
+                         trial_and_error=0
+                         Y_interface_min=one
+                         Y_predict=one
+                         TSAT_correct=local_Tsat(ireverse)
 
-                       else if ((fully_saturated.eq.0).and. &
-                                (POUT%Y_probe(iprobe_vapor).le. &
-                                 one-Y_TOLERANCE).and. &
-                                (POUT%Y_probe(iprobe_vapor).ge.zero).and. &
-                                (TSAT_Y_PARMS%D_MASS.gt.zero)) then
+                        else if ((fully_saturated.eq.0).and. &
+                                 (POUT%Y_probe(iprobe_vapor).le. &
+                                  one-Y_TOLERANCE).and. &
+                                 (POUT%Y_probe(iprobe_vapor).ge.zero).and. &
+                                 (TSAT_Y_PARMS%D_MASS.gt.zero)) then
 
-                        if (fully_saturated.eq.0) then
+                         if (fully_saturated.eq.0) then
 
-                         call advance_TY_gamma( &
-                          TSAT_Y_PARMS, &
-                          POUT, &
-                          fully_saturated, &
-                          trial_and_error, &
-                          probe_ok, &
-                          TSAT_iter, &
-                          TSAT_predict, &
-                          TSAT_correct, &
-                          Y_predict, &
-                          VEL_correct, &
-                          local_Tsat(ireverse), &
-                          LL(ireverse),R_Palmore_Desjardins, &
-                          molar_mass_ambient,molar_mass_vapor, &
-                          TI_YI_ptr,TI_YI_counter,TI_YI_best_guess_index, &
-                          TI_min,TI_max, &
-                          T_gamma_a,T_gamma_b,T_gamma_c, &
-                          Y_gamma_a,Y_gamma_b,Y_gamma_c, &
-                          X_gamma_a,X_gamma_b,X_gamma_c)
+                          call advance_TY_gamma( &
+                           TSAT_Y_PARMS, &
+                           POUT, &
+                           fully_saturated, &
+                           trial_and_error, &
+                           probe_ok, &
+                           TSAT_iter, &
+                           TSAT_predict, &
+                           TSAT_correct, &
+                           Y_predict, &
+                           VEL_correct, &
+                           local_Tsat(ireverse), &
+                           LL(ireverse),R_Palmore_Desjardins, &
+                           molar_mass_ambient,molar_mass_vapor, &
+                           TI_YI_ptr,TI_YI_counter,TI_YI_best_guess_index, &
+                           TI_min,TI_max, &
+                           T_gamma_a,T_gamma_b,T_gamma_c, &
+                           Y_gamma_a,Y_gamma_b,Y_gamma_c, &
+                           X_gamma_a,X_gamma_b,X_gamma_c)
 
-                        else 
-                         print *,"expecting fully_saturated==0"
+                         else 
+                          print *,"expecting fully_saturated==0"
+                          stop
+                         endif
+
+                        else
+                         print *,"fully_saturated or Y_probe invalid"
                          stop
                         endif
 
                        else
-                        print *,"fully_saturated or Y_probe invalid"
+                        print *,"molar masses, den_G, fully_saturated, or R bad"
+                        print *,"molar_mass_ambient=",molar_mass_ambient
+                        print *,"molar_mass_vapor=",molar_mass_vapor
+                        print *,"R_Palmore_Desjardins=",R_Palmore_Desjardins
+                        print *,"TSAT_Y_PARMS%den_G=",TSAT_Y_PARMS%den_G
+                        print *,"fully_saturated=",fully_saturated
+                        print *,"local_freezing_model=",local_freezing_model
                         stop
                        endif
-
+  
+                      else if (hardwire_flag(ireverse).eq.1) then
+                       trial_and_error=0
                       else
-                       print *,"molar masses, den_G, fully_saturated, or R bad"
-                       print *,"molar_mass_ambient=",molar_mass_ambient
-                       print *,"molar_mass_vapor=",molar_mass_vapor
-                       print *,"R_Palmore_Desjardins=",R_Palmore_Desjardins
-                       print *,"TSAT_Y_PARMS%den_G=",TSAT_Y_PARMS%den_G
-                       print *,"fully_saturated=",fully_saturated
-                       print *,"local_freezing_model=",local_freezing_model
+                       print *,"hardwire_flag(ireverse) invalid"
                        stop
                       endif
- 
-                     else if (hardwire_flag(ireverse).eq.1) then
+  
+                      call mdot_from_T_probe( &
+                       probe_ok, &
+                       TSAT_Y_PARMS, &
+                       POUT, &
+                       TSAT_correct,Y_predict, &
+                       mdotT_debug, &
+                       TEMP_PROBE_source, &
+                       TEMP_PROBE_dest)
+
+                      call mdot_from_Y_probe( &
+                       probe_ok, &
+                       TSAT_Y_PARMS, &
+                       POUT, &
+                       Y_predict,TSAT_correct, &
+                       mdotY_top_debug,mdotY_bot_debug,mdotY_debug)
+
+                     else if &
+                       (is_valid_freezing_modelF(local_freezing_model).eq.1) &
+                      then
+
                       trial_and_error=0
+                      mdotT_debug=zero
+                      mdotY_top_debug=zero
+                      mdotY_bot_debug=zero
+                      mdotY_debug=zero
+
                      else
-                      print *,"hardwire_flag(ireverse) invalid"
+                      print *,"local_freezing_model invalid 7"
                       stop
                      endif
- 
-                     call mdot_from_T_probe( &
-                      probe_ok, &
-                      TSAT_Y_PARMS, &
-                      POUT, &
-                      TSAT_correct,Y_predict, &
-                      mdotT_debug, &
-                      TEMP_PROBE_source, &
-                      TEMP_PROBE_dest)
 
-                     call mdot_from_Y_probe( &
-                      probe_ok, &
-                      TSAT_Y_PARMS, &
-                      POUT, &
-                      Y_predict,TSAT_correct, &
-                      mdotY_top_debug,mdotY_bot_debug,mdotY_debug)
-
-                    else if &
-                      (is_valid_freezing_modelF(local_freezing_model).eq.1) &
-                     then
-
+                    else if (user_override_TI_YI.eq.1) then
                      trial_and_error=0
                      mdotT_debug=zero
                      mdotY_top_debug=zero
                      mdotY_bot_debug=zero
                      mdotY_debug=zero
-
                     else
-                     print *,"local_freezing_model invalid 7"
+                     print *,"(user_override_TI_YI invalid)"
                      stop
                     endif
 
-                   else if (user_override_TI_YI.eq.1) then
+                   else if (POUT%at_interface.eq.0) then
+
                     trial_and_error=0
                     mdotT_debug=zero
                     mdotY_top_debug=zero
                     mdotY_bot_debug=zero
                     mdotY_debug=zero
+
                    else
-                    print *,"(user_override_TI_YI invalid)"
+                    print *,"at_interface invalid fort_ratemasschange (2) "
+                    print *,"at_interface=",POUT%at_interface
                     stop
                    endif
 
-                  else if (POUT%at_interface.eq.0) then
+                   if (hardwire_flag(ireverse).eq.0) then
 
-                   trial_and_error=0
-                   mdotT_debug=zero
-                   mdotY_top_debug=zero
-                   mdotY_bot_debug=zero
-                   mdotY_debug=zero
+                    if (user_override_TI_YI.eq.0) then
 
-                  else
-                   print *,"at_interface invalid fort_ratemasschange (2) "
-                   print *,"at_interface=",POUT%at_interface
-                   stop
-                  endif
+                     if ((interface_resolved.eq.1).and. &
+                         (interp_status.eq.1)) then
+                      delta_Tsat= &
+                       saturation_temp_vel(iten+ireverse*num_interfaces)* &
+                       (VEL_correct-VEL_predict)
+                     else if ((interface_resolved.eq.0).or. &
+                              (interp_status.eq.0)) then
+                      delta_Tsat=zero
+                     else
+                      print *,"interface_resolved or interp_status invalid"
+                      stop
+                     endif
 
-                  if (hardwire_flag(ireverse).eq.0) then
+                     !  Tgamma^{k+1}=Tgamma^{k}- 
+                     !    eps2 * (V^{k+1}(Tgamma^{k})-
+                     !            V^{k}(Tgamma^{k-1}) ) 
+                     !  V^{0}=0
+                     TSAT_correct=TSAT_correct-delta_Tsat
 
-                   if (user_override_TI_YI.eq.0) then
+                     if (TSAT_correct.lt.TI_min) then
+                      TSAT_correct=TI_min
+                     endif
+                     if (TSAT_correct.gt.TI_max) then
+                      TSAT_correct=TI_max
+                     endif
 
-                    if ((interface_resolved.eq.1).and. &
-                        (interp_status.eq.1)) then
-                     delta_Tsat= &
-                      saturation_temp_vel(iten+ireverse*num_interfaces)* &
-                      (VEL_correct-VEL_predict)
-                    else if ((interface_resolved.eq.0).or. &
-                             (interp_status.eq.0)) then
+                    else if (user_override_TI_YI.eq.1) then
                      delta_Tsat=zero
                     else
-                     print *,"interface_resolved or interp_status invalid"
+                     print *,"user_override_TI_YI invalid"
                      stop
                     endif
 
-                    !  Tgamma^{k+1}=Tgamma^{k}- 
-                    !    eps2 * (V^{k+1}(Tgamma^{k})-
-                    !            V^{k}(Tgamma^{k-1}) ) 
-                    !  V^{0}=0
-                    TSAT_correct=TSAT_correct-delta_Tsat
-
-                    if (TSAT_correct.lt.TI_min) then
-                     TSAT_correct=TI_min
-                    endif
-                    if (TSAT_correct.gt.TI_max) then
-                     TSAT_correct=TI_max
-                    endif
-
-                   else if (user_override_TI_YI.eq.1) then
+                   else if (hardwire_flag(ireverse).eq.1) then
                     delta_Tsat=zero
+                    TSAT_correct=local_hardwire_T(ireverse)
                    else
-                    print *,"user_override_TI_YI invalid"
+                    print *,"hardwire_flag(ireverse) invalid"
                     stop
                    endif
+              
+                   VEL_predict=VEL_correct
+  
+                   TSAT_ERR=abs(TSAT_correct-TSAT_predict)
 
-                  else if (hardwire_flag(ireverse).eq.1) then
-                   delta_Tsat=zero
-                   TSAT_correct=local_hardwire_T(ireverse)
-                  else
-                   print *,"hardwire_flag(ireverse) invalid"
-                   stop
-                  endif
-             
-                  VEL_predict=VEL_correct
- 
-                  TSAT_ERR=abs(TSAT_correct-TSAT_predict)
+                   TSAT_predict=TSAT_correct
 
-                  TSAT_predict=TSAT_correct
-
-                  if (TSAT_iter.eq.0) then
-                   TSAT_INIT_ERR=TSAT_ERR
-                  endif
-
-                  if (1.eq.0) then
-                   if (j.eq.8) then
-                    print *,"PD DEBUG prev_time,dt ",prev_time,dt
-                    print *,"i,j,k,x ",i,j,k,xsten(0,1),xsten(0,2), &
-                      xsten(0,SDIM)
-                    print *,"TSAT_iter,TSAT_correct,TSAT_predict ", &
-                     TSAT_iter,TSAT_correct,TSAT_predict
-                    print *,"Y_predict ",Y_predict
-                    print *,"VEL_correct ",VEL_correct
-                    print *,"mdotT_debug ",mdotT_debug
-                    print *,"mdotY_debug ",mdotY_debug
-                    print *,"mdotY_top_debug ",mdotY_top_debug
-                    print *,"mdotY_bot_debug ",mdotY_bot_debug
+                   if (TSAT_iter.eq.0) then
+                    TSAT_INIT_ERR=TSAT_ERR
                    endif
-                  endif
-                  if (1.eq.0) then
-                   print *,"TSAT:it,Tnp1,Tn,mdot,Tsrc,Tdst ", &
-                     TSAT_iter,TSAT_correct,TSAT_predict,mdotT_debug, &
-                     TEMP_PROBE_source,TEMP_PROBE_dest
-                  endif
 
-                  TSAT_converge=0
-                   ! TSAT_iter starts at 0
-                  TSAT_iter=TSAT_iter+1
-
-                  if (trial_and_error.eq.0) then 
-
-                   if (TSAT_ERR.eq.zero) then
-                    TSAT_converge=1
+                   if (1.eq.0) then
+                    if (j.eq.8) then
+                     print *,"PD DEBUG prev_time,dt ",prev_time,dt
+                     print *,"i,j,k,x ",i,j,k,xsten(0,1),xsten(0,2), &
+                       xsten(0,SDIM)
+                     print *,"TSAT_iter,TSAT_correct,TSAT_predict ", &
+                      TSAT_iter,TSAT_correct,TSAT_predict
+                     print *,"Y_predict ",Y_predict
+                     print *,"VEL_correct ",VEL_correct
+                     print *,"mdotT_debug ",mdotT_debug
+                     print *,"mdotY_debug ",mdotY_debug
+                     print *,"mdotY_top_debug ",mdotY_top_debug
+                     print *,"mdotY_bot_debug ",mdotY_bot_debug
+                    endif
                    endif
-                   if (TSAT_iter.gt.EVAPORATION_iter_max) then
-                    TSAT_converge=1
+                   if (1.eq.0) then
+                    print *,"TSAT:it,Tnp1,Tn,mdot,Tsrc,Tdst ", &
+                      TSAT_iter,TSAT_correct,TSAT_predict,mdotT_debug, &
+                      TEMP_PROBE_source,TEMP_PROBE_dest
                    endif
-                   if (TSAT_iter.gt.1) then
-                    if (TSAT_ERR.lt.EVAPORATION_TOL*TSAT_INIT_ERR) then
+
+                   TSAT_converge=0
+                    ! TSAT_iter starts at 0
+                   TSAT_iter=TSAT_iter+1
+
+                   if (trial_and_error.eq.0) then 
+
+                    if (TSAT_ERR.eq.zero) then
                      TSAT_converge=1
                     endif
-                   endif
+                    if (TSAT_iter.gt.EVAPORATION_iter_max) then
+                     TSAT_converge=1
+                    endif
+                    if (TSAT_iter.gt.1) then
+                     if (TSAT_ERR.lt.EVAPORATION_TOL*TSAT_INIT_ERR) then
+                      TSAT_converge=1
+                     endif
+                    endif
 
-                  else if (trial_and_error.eq.1) then 
+                   else if (trial_and_error.eq.1) then 
 
-                   if ((TSAT_iter.ge.1).and. &
-                       (TSAT_iter.le.MAX_TI_YI_trials+1)) then
-                    ! do nothing
-                   else if (TSAT_iter.eq.MAX_TI_YI_trials+2) then
-                    TSAT_converge=1
-                    TSAT_correct=TI_YI(TI_YI_best_guess_index,1)
-                    Y_predict=TI_YI(TI_YI_best_guess_index,2)
-                    VEL_correct=TI_YI(TI_YI_best_guess_index,3)
-                   else 
-                    print *,"TSAT_iter invalid"
+                    if ((TSAT_iter.ge.1).and. &
+                        (TSAT_iter.le.MAX_TI_YI_trials+1)) then
+                     ! do nothing
+                    else if (TSAT_iter.eq.MAX_TI_YI_trials+2) then
+                     TSAT_converge=1
+                     TSAT_correct=TI_YI(TI_YI_best_guess_index,1)
+                     Y_predict=TI_YI(TI_YI_best_guess_index,2)
+                     VEL_correct=TI_YI(TI_YI_best_guess_index,3)
+                    else 
+                     print *,"TSAT_iter invalid"
+                     stop
+                    endif
+
+                   else
+                    print *,"trial_and_error invalid"
                     stop
                    endif
 
-                  else
-                   print *,"trial_and_error invalid"
-                   stop
-                  endif
+                   if (POUT%at_interface.eq.0) then
+                    TSAT_converge=1
+                   endif
 
-                  if (POUT%at_interface.eq.0) then
-                   TSAT_converge=1
-                  endif
+                   if (POUT%at_interface.eq.1) then
+                    if (DEBUG_EVAPORATION.eq.1) then
+                     print *,"DEBUG_EVAPORATION STATEMENT 3"
+                     print *,"i,j,k,TSAT_iter,TSAT_ERR ", &
+                      i,j,k,TSAT_iter,TSAT_ERR
+                     print *,"TSAT_correct ",TSAT_correct
+                     print *,"Y_predict ",Y_predict
+                    endif
+                   endif
+
+                  enddo ! do while (TSAT_converge.eq.0)
 
                   if (POUT%at_interface.eq.1) then
-                   if (DEBUG_EVAPORATION.eq.1) then
-                    print *,"DEBUG_EVAPORATION STATEMENT 3"
-                    print *,"i,j,k,TSAT_iter,TSAT_ERR ", &
-                     i,j,k,TSAT_iter,TSAT_ERR
-                    print *,"TSAT_correct ",TSAT_correct
-                    print *,"Y_predict ",Y_predict
-                   endif
-                  endif
 
-                 enddo ! do while (TSAT_converge.eq.0)
+                   if (TSAT_iter.eq.1) then
+                    ! check nothing
+                   else if (TSAT_iter.gt.1) then
 
-                 if (POUT%at_interface.eq.1) then
-
-                  if (TSAT_iter.eq.1) then
-                   ! check nothing
-                  else if (TSAT_iter.gt.1) then
-
-                   if (debug_limiter.eq.1) then
-                    print *,"debug_limiter=1 (2) "
-                    print *,"TSAT_correct=",TSAT_correct
-                    print *,"TI_YI(TI_YI_best_guess_index,1)=", &
-                      TI_YI(TI_YI_best_guess_index,1)
-                    print *,"TI_YI_best_guess_index=", &
-                      TI_YI_best_guess_index
-                    do TI_YI_loop=1,TI_YI_counter
-                     print *,"TI_YI idx,T,Y,VEL,mdotdiff ", &
-                      TI_YI_loop, &
-                      TI_YI(TI_YI_loop,1), & 
-                      TI_YI(TI_YI_loop,2), & 
-                      TI_YI(TI_YI_loop,3), & 
-                      TI_YI(TI_YI_loop,4)
-                    enddo
-                   endif
-
-                   if (TSAT_iter.eq.TI_YI_counter) then
-                    if (abs(TSAT_correct-TI_YI(TI_YI_best_guess_index,1)).le. &
-                        4.0d0*TSAT_ERR) then
-                     ! do nothing
-                    else
-                     print *,"best guess too far from bisection method guess"
+                    if (debug_limiter.eq.1) then
+                     print *,"debug_limiter=1 (2) "
                      print *,"TSAT_correct=",TSAT_correct
                      print *,"TI_YI(TI_YI_best_guess_index,1)=", &
                        TI_YI(TI_YI_best_guess_index,1)
@@ -9433,89 +9346,117 @@ stop
                        TI_YI(TI_YI_loop,3), & 
                        TI_YI(TI_YI_loop,4)
                      enddo
-
-                     stop
                     endif
-                   else
-                    print *,"TSAT_iter.eq.TI_YI_counter failed"
-                    print *,"TSAT_iter=",TSAT_iter
-                    print *,"TI_YI_counter=",TI_YI_counter
-                    stop
-                   endif
-                  else
-                   print *,"TSAT_iter invalid"
-                   stop
-                  endif
 
-                  Y_predict_hold(ireverse)=Y_predict
-                  local_Tsat(ireverse)=TSAT_correct
-                  vel_phasechange(ireverse)=VEL_correct
+                    if (TSAT_iter.eq.TI_YI_counter) then
+                     if (abs(TSAT_correct-TI_YI(TI_YI_best_guess_index,1)).le. &
+                         4.0d0*TSAT_ERR) then
+                      ! do nothing
+                     else
+                      print *,"best guess too far from bisection method guess"
+                      print *,"TSAT_correct=",TSAT_correct
+                      print *,"TI_YI(TI_YI_best_guess_index,1)=", &
+                        TI_YI(TI_YI_best_guess_index,1)
+                      print *,"TI_YI_best_guess_index=", &
+                        TI_YI_best_guess_index
+                      do TI_YI_loop=1,TI_YI_counter
+                       print *,"TI_YI idx,T,Y,VEL,mdotdiff ", &
+                        TI_YI_loop, &
+                        TI_YI(TI_YI_loop,1), & 
+                        TI_YI(TI_YI_loop,2), & 
+                        TI_YI(TI_YI_loop,3), & 
+                        TI_YI(TI_YI_loop,4)
+                      enddo
 
-                    ! source
-                  temp_target_probe_history(iten+ireverse*num_interfaces,1)= &
-                    POUT%T_probe(1)
-                  dxprobe_target_history(iten+ireverse*num_interfaces,1)= &
-                    POUT%dxprobe_target(1)
-                    ! dest
-                  temp_target_probe_history(iten+ireverse*num_interfaces,2)= &
-                    POUT%T_probe(2)
-                  dxprobe_target_history(iten+ireverse*num_interfaces,2)= &
-                    POUT%dxprobe_target(2)
-
-                  if (debugrate.eq.1) then
-                   print *,"i,j,k,ireverse,vel_phasechange ", &
-                    i,j,k,ireverse,vel_phasechange(ireverse)
-                  endif
-
-                  ! max velocity cannot exceed dxmin/(2 dt)
-                  ! i.e. umax * dt <= dxmin/2
-                  if (dt.gt.zero) then
-                   if (dxmin.gt.zero) then
-                    if (vel_phasechange(ireverse).ge.dxmin/(two*dt)) then
-                     vel_phasechange(ireverse)=dxmin/(two*dt)
-                    else if (vel_phasechange(ireverse).ge.zero) then
-                     ! do nothing
+                      stop
+                     endif
                     else
-                     print *,"vel_phasechange bust"
+                     print *,"TSAT_iter.eq.TI_YI_counter failed"
+                     print *,"TSAT_iter=",TSAT_iter
+                     print *,"TI_YI_counter=",TI_YI_counter
                      stop
                     endif
                    else
-                    print *,"dxmin invalid"
+                    print *,"TSAT_iter invalid"
                     stop
                    endif
+
+                   Y_predict_hold(ireverse)=Y_predict
+                   local_Tsat(ireverse)=TSAT_correct
+                   vel_phasechange(ireverse)=VEL_correct
+
+                     ! source
+                   temp_target_probe_history(iten+ireverse*num_interfaces,1)= &
+                     POUT%T_probe(1)
+                   dxprobe_target_history(iten+ireverse*num_interfaces,1)= &
+                     POUT%dxprobe_target(1)
+                     ! dest
+                   temp_target_probe_history(iten+ireverse*num_interfaces,2)= &
+                     POUT%T_probe(2)
+                   dxprobe_target_history(iten+ireverse*num_interfaces,2)= &
+                     POUT%dxprobe_target(2)
+
+                   if (debugrate.eq.1) then
+                    print *,"i,j,k,ireverse,vel_phasechange ", &
+                     i,j,k,ireverse,vel_phasechange(ireverse)
+                   endif
+
+                   ! max velocity cannot exceed dxmin/(2 dt)
+                   ! i.e. umax * dt <= dxmin/2
+                   if (dt.gt.zero) then
+                    if (dxmin.gt.zero) then
+                     if (vel_phasechange(ireverse).ge.dxmin/(two*dt)) then
+                      vel_phasechange(ireverse)=dxmin/(two*dt)
+                     else if (vel_phasechange(ireverse).ge.zero) then
+                      ! do nothing
+                     else
+                      print *,"vel_phasechange bust"
+                      stop
+                     endif
+                    else
+                     print *,"dxmin invalid"
+                     stop
+                    endif
+                   else
+                    print *,"dt invalid"
+                    stop
+                   endif
+
+                   valid_phase_change(ireverse)=1
+               
+                   if (debugrate.eq.1) then
+                    print *,"i,j,k,im_source,im_dest ",i,j,k, &
+                     im_source,im_dest 
+                    print *,"dt,vel_phasechange(ireverse) ", &
+                     dt,vel_phasechange(ireverse)
+                    print *,"LL,dxmin ",LL(ireverse),dxmin
+                    print *,"dxprobe_target(1)=",POUT%dxprobe_target(1)
+                    print *,"dxprobe_target(2)=",POUT%dxprobe_target(2)
+                    print *,"thermal_k_model_correct ", &
+                     thermal_k_model_correct(1),thermal_k_model_correct(2)
+                    print *,"local_Tsat(ireverse) ",local_Tsat(ireverse)
+                    print *,"T_Probe(1),T_probe(2) ",POUT%T_Probe(1), &
+                     POUT%T_probe(2)
+                    print *,"den_I_interp(1) ",POUT%den_I_interp(1)
+                    print *,"den_I_interp_SAT(1) ",den_I_interp_SAT(1)
+                    print *,"den_I_interp_SAT(2) ",den_I_interp_SAT(2)
+                    print *,"LSINTsrc,LSINTdst ",LSINT(im_source),LSINT(im_dest)
+                    print *,"nrmCP ",nrmCP(1),nrmCP(2),nrmCP(SDIM)
+                    print *,"im_dest= ",im_dest
+                   endif
+     
+                  else if (POUT%at_interface.eq.0) then
+                   ! do nothing
                   else
-                   print *,"dt invalid"
+                   print *,"at_interface invalid in fort_ratemasschange (3)"
+                   print *,"at_interface=",POUT%at_interface
                    stop
                   endif
 
-                  valid_phase_change(ireverse)=1
-              
-                  if (debugrate.eq.1) then
-                   print *,"i,j,k,im_source,im_dest ",i,j,k, &
-                    im_source,im_dest 
-                   print *,"dt,vel_phasechange(ireverse) ", &
-                    dt,vel_phasechange(ireverse)
-                   print *,"LL,dxmin ",LL(ireverse),dxmin
-                   print *,"dxprobe_target(1)=",POUT%dxprobe_target(1)
-                   print *,"dxprobe_target(2)=",POUT%dxprobe_target(2)
-                   print *,"thermal_k_model_correct ", &
-                    thermal_k_model_correct(1),thermal_k_model_correct(2)
-                   print *,"local_Tsat(ireverse) ",local_Tsat(ireverse)
-                   print *,"T_Probe(1),T_probe(2) ",POUT%T_Probe(1), &
-                    POUT%T_probe(2)
-                   print *,"den_I_interp(1) ",POUT%den_I_interp(1)
-                   print *,"den_I_interp_SAT(1) ",den_I_interp_SAT(1)
-                   print *,"den_I_interp_SAT(2) ",den_I_interp_SAT(2)
-                   print *,"LSINTsrc,LSINTdst ",LSINT(im_source),LSINT(im_dest)
-                   print *,"nrmCP ",nrmCP(1),nrmCP(2),nrmCP(SDIM)
-                   print *,"im_dest= ",im_dest
-                  endif
-    
-                 else if (POUT%at_interface.eq.0) then
+                 else if (found_path.eq.0) then
                   ! do nothing
                  else
-                  print *,"at_interface invalid in fort_ratemasschange (3)"
-                  print *,"at_interface=",POUT%at_interface
+                  print *,"found_path invalid: ",found_path
                   stop
                  endif
 
@@ -9838,18 +9779,10 @@ stop
                 create_in%local_TSAT=local_Tsat(ireverse)
                 create_in%im_source=im_source
                 create_in%im_dest=im_dest
-#if (STANDALONE==0)
                 call get_vel_phasechange_NUCLEATE( &
                  create_in,create_inout)
-#elif (STANDALONE==1)
-                print *,"should not call get_vel_phasechange_NUCLEATE for"
-                print *,"stand alone version"
-                stop
-#else
-                print *,"bust compiling ratemasschange"
-                stop
-#endif
-               else if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
+               else if ((im_primary.ge.1).and. &
+                        (im_primary.le.num_materials)) then
                 ! do nothing
                else
                 print *,"im_primary invalid"
@@ -9896,7 +9829,4 @@ stop
       end subroutine fort_ratemasschange
 
       end module mass_transfer_cpp_module
-
-#undef STANDALONE
-
 
