@@ -7891,8 +7891,8 @@ stop
                    LL(ireverse)).eq.0) then
                ! do nothing
               else if (is_multi_component_evapF(local_freezing_model, &
-                        Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
-                        LL(ireverse)).eq.1) then
+               Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
+               LL(ireverse)).eq.1) then
                print *,"ispec invalid"
                stop
               endif
@@ -7901,7 +7901,8 @@ stop
               stop
              endif
 
-             distribute_from_targ=distribute_from_target(iten+ireverse*num_interfaces)
+             distribute_from_targ= &
+               distribute_from_target(iten+ireverse*num_interfaces)
 
              if ((distribute_from_targ.ne.0).and. &
                  (distribute_from_targ.ne.1)) then
@@ -7939,8 +7940,10 @@ stop
 
               else if (LL(ireverse).ne.zero) then
 
-               local_hardwire_T(ireverse)=hardwire_T_gamma(iten+ireverse*num_interfaces)
-               local_hardwire_Y(ireverse)=hardwire_Y_gamma(iten+ireverse*num_interfaces)
+               local_hardwire_T(ireverse)= &
+                  hardwire_T_gamma(iten+ireverse*num_interfaces)
+               local_hardwire_Y(ireverse)= &
+                  hardwire_Y_gamma(iten+ireverse*num_interfaces)
                if ((local_hardwire_T(ireverse).gt.zero).and. &
                    (local_hardwire_Y(ireverse).gt.zero)) then
                 hardwire_flag(ireverse)=1
@@ -7952,8 +7955,10 @@ stop
                 stop
                endif
 
-               local_Tsat(ireverse)=saturation_temp(iten+ireverse*num_interfaces)
-               local_Tsat_base(ireverse)=saturation_temp(iten+ireverse*num_interfaces)
+               local_Tsat(ireverse)= &
+                 saturation_temp(iten+ireverse*num_interfaces)
+               local_Tsat_base(ireverse)= &
+                 saturation_temp(iten+ireverse*num_interfaces)
 
                debug_limiter=0
                if (1.eq.0) then
@@ -7985,7 +7990,8 @@ stop
                   LS_pos=LShere(im_source)
                   do dir=1,SDIM
                      ! xCP=x-phi grad phi   grad phi=(x-xCP)/phi
-                   nrmCP(dir)=LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
+                   nrmCP(dir)= &
+                     LS(D_DECL(i,j,k),num_materials+(im_source-1)*SDIM+dir)
                      ! Least squares slope: see Sussman and Puckett (2000)
                    xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
 
@@ -8002,7 +8008,8 @@ stop
                  else if (LShere(im_source).ge.zero) then
                   LS_pos=LShere(im_dest)
                   do dir=1,SDIM
-                   nrmCP(dir)=LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
+                   nrmCP(dir)= &
+                     LS(D_DECL(i,j,k),num_materials+(im_dest-1)*SDIM+dir)
 
                    xI(dir)=xsten(0,dir)-LS_pos*nrmCP(dir)
                    xdst(dir)=xI(dir)+ &
@@ -8067,8 +8074,8 @@ stop
                  endif
                     
                  if (is_multi_component_evapF(local_freezing_model, &
-                      Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
-                      LL(ireverse)).eq.1) then
+                  Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
+                  LL(ireverse)).eq.1) then
                   if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
                    Ycomp_source=(im_source-1)*num_state_material+2+ispec
                    Ycomp_dest=(im_dest-1)*num_state_material+2+ispec
@@ -8081,8 +8088,8 @@ stop
                    stop
                   endif
                  else if (is_multi_component_evapF(local_freezing_model, &
-                           Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
-                           LL(ireverse)).eq.0) then
+                  Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces), &
+                  LL(ireverse)).eq.0) then
 
                   if (ispec.eq.0) then
                    Ycomp_source=0
@@ -8343,7 +8350,8 @@ stop
 
                   if (interp_status.eq.1) then
                    delta_Tsat= &
-                    saturation_temp_curv(iten+ireverse*num_interfaces)*CURV_OUT_I
+                    saturation_temp_curv(iten+ireverse*num_interfaces)* &
+                    CURV_OUT_I
                   else if (interp_status.eq.0) then
                    delta_Tsat=zero
                   else
