@@ -18,7 +18,7 @@
       integer i1,j1,k1
       integer select
 
-      select=4
+      select=5
 
       if (select.eq.1) then
        sigma12=0.831d0   ! liquid/gas
@@ -36,6 +36,10 @@
        sigma12=0.831d0   ! liquid/gas
        sigma23=0.831d0  ! gas/ice
        sigma13=0.49977d0 ! liquid/ice
+      else if (select.eq.5) then
+       sigma12=0.072d0   ! liquid/gas
+       sigma23=0.072d0  ! gas/ice
+       sigma13=0.036d0 ! liquid/ice
       else
        print *,"select invalid"
        stop

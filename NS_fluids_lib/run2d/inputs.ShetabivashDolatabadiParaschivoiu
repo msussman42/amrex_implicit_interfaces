@@ -99,7 +99,10 @@ ns.gravity        = -9.8 # m/s^2
 # LG,LI,LS,IG,GS,SI  (SI used)
 #ns.tension=0.072 0.0 0.021 0.072 0.072 0.021
 #contact line: theta_L_initial=90 degrees
+#theta2=180 theta1=theta3="90"
 ns.tension=0.072 0.0 0.072 0.072 0.072 0.072
+#theta2=151 theta1=theta3=104
+ns.tension=0.072 0.036 0.072 0.072 0.072 0.072
 
 # specific heat of glass: 0.84E+3 J/(kg K)
 # specific heat of water: 4.186E+3 J/(kg K)
