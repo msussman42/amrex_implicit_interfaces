@@ -3905,11 +3905,15 @@ NavierStokes::read_params ()
      } // ireverse
     } // iten
 
-    pp.queryAdd("distribute_from_target",distribute_from_target,2*num_interfaces);
-    pp.queryAdd("distribute_mdot_evenly",distribute_mdot_evenly,2*num_interfaces);
-    pp.queryAdd("constant_volume_mdot",constant_volume_mdot,2*num_interfaces);
+    pp.queryAdd("distribute_from_target",
+      distribute_from_target,2*num_interfaces);
+    pp.queryAdd("distribute_mdot_evenly",
+      distribute_mdot_evenly,2*num_interfaces);
+    pp.queryAdd("constant_volume_mdot",
+      constant_volume_mdot,2*num_interfaces);
 
-    pp.queryAdd("constant_density_all_time",constant_density_all_time,num_materials);
+    pp.queryAdd("constant_density_all_time",
+      constant_density_all_time,num_materials);
     for (int i=0;i<num_materials;i++) {
      if (material_type[i]==0) {
       // do nothing
@@ -4013,6 +4017,41 @@ NavierStokes::read_params ()
 
      } // ireverse
     } // iten
+
+    for (int im=0;im<num_materials;im++) {
+     if (is_ice_matC(im)==1) {
+      for (int im_opp=0;im_opp<num_materials;im_opp++) {
+       if (im!=im_opp) {
+        if (ns_is_rigid(im_opp)==0) {
+         int iten;
+         get_iten_cpp(im+1,im_opp+1,iten);
+         if ((iten<1)||(iten>num_interfaces))
+          amrex::Error("iten invalid");
+         Real LL1=get_user_latent_heat(iten,293.0,1);
+         Real LL2=get_user_latent_heat(iten+num_interfaces,293.0,1);
+         if ((LL1!=0.0)||(LL2!=0.0)) {
+          if (tension[iten-1]==0.0) {
+           //do nothing
+          } else
+           amrex::Error("liquid-ice surface tension should be 0"); 
+         } else if ((LL1==0.0)&&(LL2==0.0)) {
+          // do nothing
+         } else
+          amrex::Error("LL1 or LL2 bad");
+        } else if (ns_is_rigid(im_opp)==1) {
+         //do nothing
+        } else
+         amrex::Error("ns_is_rigid invalid");
+       } else if (im==im_opp) { 
+        //do nothing
+       } else
+        amrex::Error("im or im_opp bust");
+      } // im_opp=0;im_opp<num_materials;im_opp++
+     } else if (is_ice_matC(im)==0) {
+      //do nothing
+     } else
+      amrex::Error("is_ice_matC invalid");
+    } // im=0;im<num_materials;im++
 
     pp.queryAdd("R_Palmore_Desjardins",R_Palmore_Desjardins);
 

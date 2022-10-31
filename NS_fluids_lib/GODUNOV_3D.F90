@@ -4718,6 +4718,9 @@ stop
       INTEGER_T ireverse_left,ireverse_right
       REAL_T LSleft(num_materials)
       REAL_T LSright(num_materials)
+      REAL_T VOFleft(num_materials)
+      REAL_T VOFright(num_materials)
+      INTEGER_T vofcomp
 
       REAL_T ice_test,cut_test
       REAL_T icemask_left
@@ -4832,6 +4835,9 @@ stop
          do im=1,num_materials
           LSleft(im)=LSnew(D_DECL(i-ii,j-jj,k-kk),im)
           LSright(im)=LSnew(D_DECL(i,j,k),im)
+          vofcomp=(im-1)*ngeom_recon+1
+          VOFleft(im)=recon(D_DECL(i-ii,j-jj,k-kk),vofcomp)
+          VOFright(im)=recon(D_DECL(i,j,k),vofcomp)
          enddo
 
          complement_flag=0
@@ -4848,6 +4854,7 @@ stop
           im_opp_left, &
           ireverse_left, &
           LSleft, &
+          VOFleft, &
           distribute_from_target, &
           complement_flag)
 
@@ -4863,6 +4870,7 @@ stop
           im_opp_right, &
           ireverse_right, &
           LSright, &
+          VOFright, &
           distribute_from_target, &
           complement_flag)
 
@@ -11829,6 +11837,7 @@ stop
            im,im_opp, &
            ireverse, &
            LSCELL, &
+           VFRAC, &
            distribute_from_target, &
            complement_flag)
 
@@ -11837,7 +11846,8 @@ stop
           else if ((ireverse.eq.0).or.(ireverse.eq.1)) then
            call get_iten(im,im_opp,iten)
            index_compare=iten+ireverse*num_interfaces-1
-           if ((index_compare.ge.0).and.(index_compare.lt.2*num_interfaces)) then
+           if ((index_compare.ge.0).and. &
+               (index_compare.lt.2*num_interfaces)) then
             if (index_compare.eq.indexEXP) then
              ! do nothing
             else

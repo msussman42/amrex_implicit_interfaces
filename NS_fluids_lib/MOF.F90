@@ -22056,8 +22056,10 @@ contains
 
       do im=1,num_materials
 
-       if ((VFRAC(im).lt.-VOFTOL).or. &
-           (VFRAC(im).gt.one+VOFTOL)) then
+       if ((VFRAC(im).ge.-VOFTOL).and. &
+           (VFRAC(im).le.one+VOFTOL)) then
+        ! do nothing
+       else
         print *,"VFRAC out of range"
         stop
        endif
