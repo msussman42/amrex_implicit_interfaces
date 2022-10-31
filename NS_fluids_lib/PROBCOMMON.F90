@@ -290,10 +290,6 @@ implicit none
 !  problo_array,probhi_array,problen_array
 ! Added April 14, 2022:
 !  fort_damping_coefficient
-! deleted April 30, 2022:
-!  FORT_MUSHY_THICK
-! added May 1, 2022:
-!  UNSCALED_MUSHY_THICK (user definable in fortran plug-in files)
 ! added June 17, 2022:
 !  fort_latent_heat_slope, fort_latent_heat_T0, fort_latent_heat_min
 ! deleted August 10, 2022:
@@ -370,8 +366,6 @@ implicit none
       REAL_T, PARAMETER :: CLAMPED_NO_WHERE_LS=-99999.0D0
 
 #include "probdataf95.H"
-
-      REAL_T :: UNSCALED_MUSHY_THICK=2.0d0
 
       INTEGER_T, PARAMETER :: DEBUG_EVAPORATION=0
       INTEGER_T, PARAMETER :: EVAPORATION_iter_max=50

@@ -206,6 +206,7 @@ stop
         im,im_opp, &
         ireverse, &
         LS, &
+        VOF, &
         distribute_from_target, &
         complement_flag)
       use global_utility_module
@@ -222,11 +223,13 @@ stop
       REAL_T, INTENT(out) :: icemask
       REAL_T, INTENT(out) :: icefacecut
       REAL_T, INTENT(in) :: LS(num_materials)
+      REAL_T, INTENT(in) :: VOF(num_materials)
       INTEGER_T, INTENT(in) :: distribute_from_target(2*num_interfaces)
       INTEGER_T, INTENT(in) :: complement_flag
 
       REAL_T dist_mask_override
       INTEGER_T im_primary
+      INTEGER_T im_primary_vof
       INTEGER_T im_secondary
       INTEGER_T im_tertiary
       INTEGER_T im_ice
@@ -235,7 +238,6 @@ stop
       INTEGER_T iten
       REAL_T LL(0:1)
       REAL_T dxmax
-      REAL_T SCALED_MUSHY_THICK
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -254,6 +256,7 @@ stop
         ! we are in "get_icemask"
 
       call get_primary_material(LS,im_primary)
+      call get_primary_material_VFRAC(VOF,im_primary_vof)
       call get_secondary_material(LS,im_primary,im_secondary)
 
       if ((im_secondary.ge.1).and. &
@@ -291,10 +294,9 @@ stop
 
       call get_iten(im,im_opp,iten)
       do ireverse=0,1
-       LL(ireverse)=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+       LL(ireverse)= &
+        get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
       enddo
-
-      SCALED_MUSHY_THICK=UNSCALED_MUSHY_THICK*dxmax
 
       ! is_ice=1 if FSI_flag==3 or 6.
       if ((is_ice(im).eq.0).and. &
@@ -465,25 +467,13 @@ stop
           if (dist_mask_override.ge.zero) then
            icemask=zero  ! mask off this cell.
           else if (dist_mask_override.le.zero) then
-           if (LS(im_ice).ge.zero) then
+           if ((LS(im_ice).ge.zero).or. &
+               (im_primary_vof.eq.im_ice).or. &
+               (im_primary.eq.im_ice)) then
             icemask=zero
-            if (LS(im_ice).le.SCALED_MUSHY_THICK) then
-             if (LS(im_source).ge.-SCALED_MUSHY_THICK) then
-              icemask=one
-             else if (LS(im_source).le.-SCALED_MUSHY_THICK) then
-              ! do nothing
-             else
-              print *,"LS(im_source) is NaN"
-              stop
-             endif
-            else if (LS(im_ice).ge.SCALED_MUSHY_THICK) then
-             ! do nothing
-            else
-             print *,"LS(im_ice) is NaN"
-             stop
-            endif
-
-           else if (LS(im_ice).le.zero) then
+           else if ((LS(im_ice).le.zero).and. &
+                    (im_primary_vof.ne.im_ice).and. &
+                    (im_primary.ne.im_ice)) then
             icemask=one
            else
             print *,"LS(im_ice) bust"
@@ -504,9 +494,13 @@ stop
            stop
           endif
 
-          if (LS(im_ice).ge.zero) then
+          if ((LS(im_ice).ge.zero).or. &
+              (im_primary_vof.eq.im_ice).or. &
+              (im_primary.eq.im_ice)) then
            icemask=zero
-          else if (LS(im_ice).le.zero) then
+          else if ((LS(im_ice).le.zero).and. &
+                   (im_primary_vof.ne.im_ice).and. &
+                   (im_primary.ne.im_ice)) then
            icemask=one
           else
            print *,"LS(im_ice) bust"
@@ -4919,6 +4913,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           if (im_opp.ne.im) then
            if (is_rigid(im_opp).eq.0) then
             call get_iten(im,im_opp,iten)
+            if ((iten.ge.1).and.(iten.le.num_interfaces)) then
+             ! do nothing
+            else
+             print *,"iten invalid"
+             stop
+            endif
             call get_user_tension( &
              xpos,time,fort_tension,user_tension,def_thermal)
             if (user_tension(iten).eq.zero) then
