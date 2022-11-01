@@ -349,7 +349,11 @@ stop
       REAL_T xlive(SDIM)
       REAL_T delx(SDIM+1)
       REAL_T GRADTEMP(SDIM+1)
-      REAL_T TMIN,TMAX,T_test,T_avg,wt_sum,VF,LS
+
+      REAL_T TMIN,TMAX
+      INTEGER_T TBOUNDS_INIT
+
+      REAL_T T_test,T_avg,wt_sum,VF,LS
       INTEGER_T mat_ncomp,matstatus
       REAL_T T_hold
       INTEGER_T own_flag
@@ -423,18 +427,22 @@ stop
 
       do nc=1,nsolve
 
-       TMAX=T_sten(D_DECL(0,0,0),nc)
+       TMAX=-1.0D+20
+       TMIN=1.0D+20
+       TBOUNDS_INIT=0
+
        if (tsat_flag.eq.0) then
         ! do nothing
        else if (tsat_flag.eq.1) then
         TMAX=TSAT
+        TMIN=TSAT
+        TBOUNDS_INIT=1
        else if (tsat_flag.eq.-1) then
         ! do nothing
        else
         print *,"tsat_flag invalid"
         stop
        endif
-       TMIN=TMAX
 
        T_avg=zero
        wt_sum=zero
@@ -472,6 +480,7 @@ stop
         endif
 
         own_flag=0
+
         if (tsat_flag.eq.-1) then
          own_flag=1
         else if (cc_flag.eq.0) then ! centroid->center
@@ -781,6 +790,7 @@ stop
       INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM)
       INTEGER_T, INTENT(in) :: comp
       INTEGER_T, INTENT(in) :: im
+      INTEGER_T :: im_local
        ! datalox:datahix,dataloy:datahiy,dataloz:datahiz
       REAL_T, pointer, INTENT(in) :: data(D_DECL(:,:,:),:)
       REAL_T, pointer, INTENT(in) :: recon(D_DECL(:,:,:),:)
@@ -799,10 +809,13 @@ stop
       INTEGER_T vofcomp
       INTEGER_T cell_index(SDIM)
 
+      REAL_T :: local_VOF(num_materials)
+
       REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten_stencil(-nhalf:nhalf,SDIM)
       REAL_T volcell
       REAL_T cencell(SDIM)
+      INTEGER_T im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T T_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T VF_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
@@ -842,8 +855,6 @@ stop
        ! declared in GLOBALUTIL.F90
       call containing_cell(bfact,dx,xlo,lo,x,cell_index)
 
-      vofcomp=(im-1)*ngeom_recon+1
-
       ic=cell_index(1)
       jc=cell_index(2)
       kc=cell_index(SDIM)
@@ -865,9 +876,21 @@ stop
        local_data_fab=>data
        call safe_data(isten,jsten,ksten,comp,local_data_fab,local_data_out)
        T_sten(D_DECL(i1,j1,k1))=local_data_out
+
+       do im_local=1,num_materials
+        vofcomp=(im_local-1)*ngeom_recon+1
+        local_data_fab=>recon
+        call safe_data(isten,jsten,ksten,vofcomp,local_data_fab,local_data_out)
+        local_VOF(im_local)=local_data_out
+       enddo !im_local=1..num_materials
+
+       call get_primary_material_VFRAC(local_VOF, &
+         im_primary_sten(D_DECL(i1,j1,k1)))
+
+       VF_sten(D_DECL(i1,j1,k1))=local_VOF(im)
+
+       vofcomp=(im-1)*ngeom_recon+1
        local_data_fab=>recon
-       call safe_data(isten,jsten,ksten,vofcomp,local_data_fab,local_data_out)
-       VF_sten(D_DECL(i1,j1,k1))=local_data_out
        do dir=1,SDIM
         call safe_data(isten,jsten,ksten,vofcomp+dir, &
           local_data_fab,local_data_out)
@@ -897,6 +920,7 @@ stop
        XC_sten, & 
        x, &   ! xI not used
        x, &   ! xtarget
+       im_primary_sten, & 
        VF_sten, & 
        VF_sten, & 
        Tsat, & ! unused if tsat_flag==0
@@ -1088,6 +1112,7 @@ stop
       INTEGER_T cell_index(SDIM)
 
       REAL_T xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T T_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       INTEGER_T cc_flag
@@ -1158,6 +1183,7 @@ stop
        XC_sten, & 
        xtarget, & ! xI (not used)
        xtarget, & ! xtarget
+       im_primary_sten, &  ! (not used)
        T_sten, &  ! VF_sten (not used)
        T_sten, &  ! LS_Sten (not used)
        Tsat, & ! unused if tsat_flag==-1
@@ -1206,6 +1232,7 @@ stop
       INTEGER_T cell_index(SDIM)
 
       REAL_T xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T T_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       INTEGER_T cc_flag
@@ -1273,6 +1300,7 @@ stop
        XC_sten, & 
        xtarget, & ! xI (not used)
        xtarget, & ! xtarget
+       im_primary_sten, &  ! (not used)
        T_sten, &  ! VF_sten (not used)
        T_sten, &  ! LS_Sten (not used)
        Tsat, & ! unused if tsat_flag==-1
@@ -1667,7 +1695,9 @@ stop
       REAL_T, INTENT(in) :: xI(SDIM)
       REAL_T, INTENT(in) :: Tsat
       INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, INTENT(in) :: im,comp
+      INTEGER_T, INTENT(in) :: comp
+      INTEGER_T, INTENT(in) :: im
+      INTEGER_T :: im_local
       REAL_T, pointer, INTENT(in) :: tempfab(D_DECL(:,:,:),:)
       REAL_T, pointer, INTENT(in) :: LS(D_DECL(:,:,:),:)
       REAL_T, pointer, INTENT(in) :: recon(D_DECL(:,:,:),:)
@@ -1687,10 +1717,14 @@ stop
       INTEGER_T, parameter :: nhalf=3
       INTEGER_T vofcomp
       INTEGER_T cell_index(SDIM)
+
+      REAL_T :: local_VOF(num_materials)
+
       REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten_stencil(-nhalf:nhalf,SDIM)
       REAL_T volcell
       REAL_T cencell(SDIM)
+      INTEGER_T im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T T_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T VF_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T LS_sten(D_DECL(-1:1,-1:1,-1:1))
@@ -1734,8 +1768,6 @@ stop
 
       call containing_cell(bfact,dx,xlo,lo,x,cell_index)
 
-      vofcomp=(im-1)*ngeom_recon+1
-
       ic=cell_index(1)
       jc=cell_index(2)
       kc=cell_index(SDIM)
@@ -1757,14 +1789,27 @@ stop
        local_data_fab=>tempfab
        call safe_data(isten,jsten,ksten,comp,local_data_fab,local_data_out)
        T_sten(D_DECL(i1,j1,k1))=local_data_out
+
+       do im_local=1,num_materials
+        vofcomp=(im_local-1)*ngeom_recon+1
+        local_data_fab=>recon
+        call safe_data(isten,jsten,ksten,vofcomp,local_data_fab,local_data_out)
+        local_VOF(im_local)=local_data_out
+       enddo !im_local=1..num_materials
+
+       call get_primary_material_VFRAC(local_VOF, &
+         im_primary_sten(D_DECL(i1,j1,k1)))
+
+       VF_sten(D_DECL(i1,j1,k1))=local_VOF(im)
+
+       vofcomp=(im-1)*ngeom_recon+1
        local_data_fab=>recon
-       call safe_data(isten,jsten,ksten,vofcomp,local_data_fab,local_data_out)
-       VF_sten(D_DECL(i1,j1,k1))=local_data_out
        do dir=1,SDIM
         call safe_data(isten,jsten,ksten,vofcomp+dir, &
           local_data_fab,local_data_out)
         XC_sten(D_DECL(i1,j1,k1),dir)=local_data_out+cencell(dir)
        enddo
+
        local_data_fab=>LS
        call safe_data(isten,jsten,ksten,im,local_data_fab,local_data_out)
        LS_sten(D_DECL(i1,j1,k1))=local_data_out
@@ -1792,6 +1837,7 @@ stop
        XC_sten, & 
        xI, &
        x, &  ! xtarget
+       im_primary_sten, & 
        VF_sten, & 
        LS_sten, & 
        Tsat, &
@@ -3166,7 +3212,8 @@ stop
       REAL_T, target, INTENT(in) :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
 
-      REAL_T, target, INTENT(in) :: conductstate(DIMV(conductstate),num_materials)
+      REAL_T, target, INTENT(in) :: &
+          conductstate(DIMV(conductstate),num_materials)
       REAL_T, pointer :: conductstate_ptr(D_DECL(:,:,:),:)
 
       REAL_T, target, INTENT(in) :: nodevel(DIMV(nodevel),2*num_interfaces*SDIM)
@@ -3213,6 +3260,9 @@ stop
       REAL_T max_velnode
       REAL_T velnode_test
       INTEGER_T vcompsrc_snew,vcompdst_snew
+
+      REAL_T local_VOF(num_materials)
+
       REAL_T oldvfrac(num_materials)
       REAL_T newvfrac(num_materials)
       REAL_T dF,dFdst,dFsrc
@@ -3360,6 +3410,7 @@ stop
       REAL_T old_nrm(SDIM)
       INTEGER_T interp_to_new_supermesh
 
+      INTEGER_T im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       REAL_T VF_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T LS_sten(D_DECL(-1:1,-1:1,-1:1))
@@ -3383,6 +3434,7 @@ stop
       REAL_T LS_dest_old,LS_dest_new
       REAL_T mass_frac_limit
       INTEGER_T, parameter :: nhalf_box=1
+      INTEGER_T vofcomp_local
       INTEGER_T im_local
       INTEGER_T im_trust
       INTEGER_T im_distrust
@@ -5001,13 +5053,23 @@ stop
                 call gridsten_level(xsten_ofs,i+i1,j+j1,k+k1,level,nhalf)
                 call Box_volumeFAST(bfact,dx,xsten_ofs,nhalf, &
                  volcell_ofs,cencell_ofs,SDIM)
+
+                do im_local=1,num_materials
+                 vofcomp_local=(im_local-1)*ngeom_recon+1
+                 local_VOF(im_local)= &
+                   recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_local)
+                enddo !im_local=1..num_materials
+
+                call get_primary_material_VFRAC(local_VOF, &
+                  im_primary_sten(D_DECL(i1,j1,k1)))
+
                 do udir=1,SDIM
                  XC_sten(D_DECL(i1,j1,k1),udir)= &
                   recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_recon+udir)+ &
                   cencell_ofs(udir)
                 enddo
-                VF_sten(D_DECL(i1,j1,k1))= &
-                 recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_recon)
+                VF_sten(D_DECL(i1,j1,k1))=local_VOF(im_probe)
+
                 LS_sten(D_DECL(i1,j1,k1))= &
                  LSold(D_DECL(i+i1,j+j1,k+k1),im_probe)
                 temperature_sten(D_DECL(i1,j1,k1))= &
@@ -5050,6 +5112,7 @@ stop
                  XC_sten, &
                  old_xI, &
                  xtarget_interp, &
+                 im_primary_sten, & 
                  VF_sten, &
                  LS_sten, &
                  Tgamma_default, &
@@ -5078,6 +5141,7 @@ stop
                  XC_sten, &
                  old_xI, &
                  xtarget_interp, &
+                 im_primary_sten, & 
                  VF_sten, &
                  LS_sten, &
                  Ygamma_default, &
