@@ -3839,9 +3839,8 @@ NavierStokes::read_params ()
          amrex::Error("comp. divu source term model for phase change invalid");
 
 	 // if freezing, we want distribute_from_target (from ice) to
-	 // be 0 otherwise there will be no place to put mdot in the
-	 // liquid once the liquid is almost all frozen.
-	 // But, rho_ice=rho_dest < rho_source=rho_liquid
+	 // be 1 since the ice is modeled as a rigid material; need
+	 // to account for expansion in the liquid.
         Real den_source=denconst[im_source-1];
         Real den_dest=denconst[im_dest-1];
         if ((den_source>0.0)&&(den_dest>0.0)) {
@@ -4030,8 +4029,50 @@ NavierStokes::read_params ()
          Real LL1=get_user_latent_heat(iten,293.0,1);
          Real LL2=get_user_latent_heat(iten+num_interfaces,293.0,1);
          if ((LL1!=0.0)||(LL2!=0.0)) {
+  	  int local_dist=-1;
           if (tension[iten-1]==0.0) {
-           //do nothing
+
+ 	   int im_source=-1;
+	   int im_dest=-1;
+	   int im_ice=im;
+	   if ((LL1!=0.0)&&(LL2==0.0)) {
+            local_dist=distribute_from_target[iten-1];
+            if (im<im_opp) {
+  	     im_source=im;
+	     im_dest=im_opp;
+	    } else if (im>im_opp) {
+ 	     im_source=im_opp;
+	     im_dest=im;
+            } else
+  	     amrex::Error("im or im_opp bust");
+	   } else if ((LL1==0.0)&&(LL2!=0.0)) {
+            local_dist=distribute_from_target[iten+num_interfaces-1];
+            if (im>im_opp) {
+  	     im_source=im;
+	     im_dest=im_opp;
+	    } else if (im<im_opp) {
+ 	     im_source=im_opp;
+	     im_dest=im;
+            } else
+  	     amrex::Error("im or im_opp bust");
+	   } else if ((LL1!=0.0)&&(LL2!=0.0)) {
+            amrex::Error("cannot do both melting and freezing yet...");
+	   } else
+  	    amrex::Error("LL1 or LL2 bust");
+
+	   if (im_source==im_ice) { //melting
+            if (local_dist==0) {
+	     // do nothing
+	    } else 
+             amrex::Error("distribute_from_target should be 0(melting)");
+	   } else if (im_dest==im_ice) {
+            if (local_dist==1) {
+	     // do nothing
+	    } else 
+             amrex::Error("distribute_from_target should be 1(freezing)");
+	   } else
+            amrex::Error("im_ice invalid");
+
           } else
            amrex::Error("liquid-ice surface tension should be 0"); 
          } else if ((LL1==0.0)&&(LL2==0.0)) {
@@ -4106,7 +4147,8 @@ NavierStokes::read_params ()
 
      if ((distribute_from_target[i]<0)||(distribute_from_target[i]>1))
       amrex::Error("distribute_from_target invalid in read_params (i)");
-     if ((distribute_from_target[i+num_interfaces]<0)||(distribute_from_target[i+num_interfaces]>1))
+     if ((distribute_from_target[i+num_interfaces]<0)||
+	 (distribute_from_target[i+num_interfaces]>1))
       amrex::Error("distribute_from_target invalid in read_params (i+num_interfaces)");
      if (mass_fraction_id[i]<0)
       amrex::Error("mass_fraction_id invalid in read_params (i)");
