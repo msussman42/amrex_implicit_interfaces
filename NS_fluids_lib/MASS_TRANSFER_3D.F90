@@ -306,6 +306,8 @@ stop
        XC_sten, &
        xI, &  ! closest point on interface to cell center.
        xtarget, &
+       im_critical, &
+       im_primary_sten, &
        VF_sten, &
        LS_sten, &
        TSAT, & !unused if tsat_flag==-1, 0 (but set to 293.0 for sanity check)
@@ -329,6 +331,8 @@ stop
       REAL_T, INTENT(in) :: TSAT
       REAL_T, INTENT(inout) :: T_sten(D_DECL(-1:1,-1:1,-1:1),nsolve)
       REAL_T, INTENT(in) :: XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
+      INTEGER_T, INTENT(in) :: im_critical
+      INTEGER_T, INTENT(in) :: im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T, INTENT(in) :: VF_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T, INTENT(in) :: LS_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T :: wt_sten(D_DECL(-1:1,-1:1,-1:1))
@@ -469,9 +473,19 @@ stop
 
         if ((tsat_flag.eq.0).or. & ! no tsat
             (tsat_flag.eq.1)) then ! tsat
+         im_primary=im_primary_sten(D_DECL(i,j,k))
+
+         if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
+          ! do nothing
+         else
+          print *,"im_primary invalid"
+          stop
+         endif
+
          VF=VF_sten(D_DECL(i,j,k))
          LS=LS_sten(D_DECL(i,j,k))
         else if (tsat_flag.eq.-1) then ! use all cells in the stencil
+         im_primary=-1
          VF=zero
          LS=zero
         else
@@ -565,6 +579,8 @@ stop
         wt_sten(D_DECL(i,j,k))=wt_local
 
         T_test=T_sten(D_DECL(i,j,k),nc)
+FIX ME
+        if ((im_primary.eq.
         if (T_test.gt.TMAX) then
          TMAX=T_test
         endif
@@ -920,6 +936,7 @@ stop
        XC_sten, & 
        x, &   ! xI not used
        x, &   ! xtarget
+       im, &
        im_primary_sten, & 
        VF_sten, & 
        VF_sten, & 
@@ -1112,6 +1129,7 @@ stop
       INTEGER_T cell_index(SDIM)
 
       REAL_T xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, PARAMETER :: im_critical=-1
       INTEGER_T im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T T_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
@@ -1183,6 +1201,7 @@ stop
        XC_sten, & 
        xtarget, & ! xI (not used)
        xtarget, & ! xtarget
+       im_critical, &
        im_primary_sten, &  ! (not used)
        T_sten, &  ! VF_sten (not used)
        T_sten, &  ! LS_Sten (not used)
@@ -1232,6 +1251,7 @@ stop
       INTEGER_T cell_index(SDIM)
 
       REAL_T xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T, PARAMETER :: im_critical=-1
       INTEGER_T im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T T_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
@@ -1300,6 +1320,7 @@ stop
        XC_sten, & 
        xtarget, & ! xI (not used)
        xtarget, & ! xtarget
+       im_critical, &  ! (not used)
        im_primary_sten, &  ! (not used)
        T_sten, &  ! VF_sten (not used)
        T_sten, &  ! LS_Sten (not used)
@@ -1837,6 +1858,7 @@ stop
        XC_sten, & 
        xI, &
        x, &  ! xtarget
+       im, &
        im_primary_sten, & 
        VF_sten, & 
        LS_sten, & 
@@ -5112,6 +5134,7 @@ stop
                  XC_sten, &
                  old_xI, &
                  xtarget_interp, &
+                 im_probe, & 
                  im_primary_sten, & 
                  VF_sten, &
                  LS_sten, &
@@ -5141,6 +5164,7 @@ stop
                  XC_sten, &
                  old_xI, &
                  xtarget_interp, &
+                 im_probe, & 
                  im_primary_sten, & 
                  VF_sten, &
                  LS_sten, &
