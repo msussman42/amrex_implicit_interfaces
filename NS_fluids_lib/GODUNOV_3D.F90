@@ -15503,6 +15503,10 @@ stop
 
       INTEGER_T mask_test
 
+      REAL_T :: local_VOF(num_materials)
+      INTEGER_T :: im_local
+      INTEGER_T :: local_vofcomp
+      INTEGER_T im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       REAL_T VF_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T LS_sten(D_DECL(-1:1,-1:1,-1:1))
@@ -16085,8 +16089,17 @@ stop
               XC_sten(D_DECL(i1,j1,k1),dir)= &
                vof(D_DECL(i+i1,j+j1,k+k1),vofcomp+dir)+cencell(dir)
              enddo
-             VF_sten(D_DECL(i1,j1,k1))= &
-              vof(D_DECL(i+i1,j+j1,k+k1),vofcomp)
+
+             do im_local=1,num_materials
+              local_vofcomp=(im_local-1)*ngeom_recon+1
+              local_VOF(im_local)= &
+                vof(D_DECL(i+i1,j+j1,k+k1),local_vofcomp)
+             enddo !im_local=1..num_materials
+
+             call get_primary_material_VFRAC(local_VOF, &
+               im_primary_sten(D_DECL(i1,j1,k1)))
+
+             VF_sten(D_DECL(i1,j1,k1))=local_VOF(im)
              LS_sten(D_DECL(i1,j1,k1))= &
               LS(D_DECL(i+i1,j+j1,k+k1),im)
             enddo
@@ -16119,7 +16132,8 @@ stop
              ! check for Tgamma or Ygamma boundary condition.
 
             do im_crit=1,num_materials
-             dencomp=STATECOMP_STATES+(im_crit-1)*num_state_material+ENUM_DENVAR+1
+             dencomp=STATECOMP_STATES+ &
+                 (im_crit-1)*num_state_material+ENUM_DENVAR+1
              Tcenter(im_crit)=cellfab(D_DECL(i,j,k),scomp(im_crit)+1)
              if (Tcenter(im_crit).ge.zero) then
               ! do nothing
@@ -16513,6 +16527,8 @@ stop
              XC_sten, &  
              xI, &
              xtarget, &
+             im, &
+             im_primary_sten, &
              VF_sten, &
              LS_sten, &
              TSAT_master, &

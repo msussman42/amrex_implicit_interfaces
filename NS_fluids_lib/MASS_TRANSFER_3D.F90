@@ -332,6 +332,7 @@ stop
       REAL_T, INTENT(inout) :: T_sten(D_DECL(-1:1,-1:1,-1:1),nsolve)
       REAL_T, INTENT(in) :: XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
       INTEGER_T, INTENT(in) :: im_critical
+      INTEGER_T :: im_primary
       INTEGER_T, INTENT(in) :: im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T, INTENT(in) :: VF_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T, INTENT(in) :: LS_sten(D_DECL(-1:1,-1:1,-1:1))
@@ -477,6 +478,8 @@ stop
 
          if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
           ! do nothing
+         else if (im_primary.eq.-1) then
+          ! do nothing
          else
           print *,"im_primary invalid"
           stop
@@ -579,14 +582,37 @@ stop
         wt_sten(D_DECL(i,j,k))=wt_local
 
         T_test=T_sten(D_DECL(i,j,k),nc)
-FIX ME
-        if ((im_primary.eq.
-        if (T_test.gt.TMAX) then
-         TMAX=T_test
+
+        if ((im_primary.eq.im_critical).or. &
+            (im_primary.eq.-1)) then
+
+         if (TBOUNDS_INIT.eq.0) then
+          TBOUNDS_INIT=1
+          TMAX=T_test
+          TMIN=T_test
+         else if (TBOUNDS_INIT.eq.1) then
+          if (T_test.gt.TMAX) then
+           TMAX=T_test
+          endif
+          if (T_test.lt.TMIN) then
+           TMIN=T_Test
+          endif
+         else 
+          print *,"TBOUNDS_INIT invalid"
+          stop
+         endif
+
+        else if ((im_primary.ne.im_critical).and. &
+                 (im_primary.ge.1).and. &
+                 (im_primary.le.num_materials)) then
+
+         ! do nothing
+
+        else
+         print *,"im_primary invalid"
+         stop
         endif
-        if (T_test.lt.TMIN) then
-         TMIN=T_Test
-        endif
+
         if (abs(T_test).lt.1.0D+50) then
          ! do nothing
         else
@@ -602,7 +628,9 @@ FIX ME
        enddo
        enddo  ! i,j,k
 
-       if (wt_sum.le.zero) then
+       if (wt_sum.gt.zero) then
+        ! do nothing
+       else
         print *,"wt_sum invalid"
         stop
        endif
@@ -616,6 +644,7 @@ FIX ME
        enddo
 
        if (tsat_flag.eq.1) then
+        T_avg=T_avg/wt_sum
         if (T_avg.ge.DATA_FLOOR) then
          ! do nothing
         else
@@ -630,6 +659,16 @@ FIX ME
         print *,"tsat_flag invalid"
         stop
        endif 
+
+       if (TBOUNDS_INIT.eq.0) then
+        TMIN=T_avg
+        TMAX=T_avg
+       else if (TBOUNDS_INIT.eq.1) then
+        ! do nothing
+       else
+        print *,"TBOUNDS_INIT invalid"
+        stop
+       endif
 
        if ((tsat_flag.eq.0).or.(tsat_flag.eq.-1)) then
         mat_ncomp=SDIM+1
