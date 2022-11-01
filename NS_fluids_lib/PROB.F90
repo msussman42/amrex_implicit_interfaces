@@ -470,12 +470,12 @@ stop
            if ((LS(im_ice).ge.zero).or. &
                (im_primary_vof.eq.im_ice).or. &
                (im_primary.eq.im_ice).or. &
-               (VOF(im_ice).gt.0.001d0)) then
+               (VOF(im_ice).ge.0.5d0)) then
             icemask=zero
            else if ((LS(im_ice).le.zero).and. &
                     (im_primary_vof.ne.im_ice).and. &
                     (im_primary.ne.im_ice).and. &
-                    (VOF(im_ice).le.0.001d0)) then
+                    (VOF(im_ice).le.0.5d0)) then
             icemask=one
            else
             print *,"LS(im_ice) bust"
@@ -498,11 +498,13 @@ stop
 
           if ((LS(im_ice).ge.zero).or. &
               (im_primary_vof.eq.im_ice).or. &
-              (im_primary.eq.im_ice)) then
+              (im_primary.eq.im_ice).or. &
+              (VOF(im_ice).ge.0.5d0)) then
            icemask=zero
           else if ((LS(im_ice).le.zero).and. &
                    (im_primary_vof.ne.im_ice).and. &
-                   (im_primary.ne.im_ice)) then
+                   (im_primary.ne.im_ice).and. &
+                   (VOF(im_ice).le.0.5d0)) then
            icemask=one
           else
            print *,"LS(im_ice) bust"
@@ -574,7 +576,7 @@ stop
        stop
       endif
    
-      if ((icefacecut.ge.zero).and.(icefacecut.le.one)) then
+      if ((icefacecut.eq.zero).or.(icefacecut.eq.one)) then
        ! do nothing
       else
        print *,"icefacecut invalid"
