@@ -4028,15 +4028,18 @@ NavierStokes::read_params ()
           amrex::Error("iten invalid");
          Real LL1=get_user_latent_heat(iten,293.0,1);
          Real LL2=get_user_latent_heat(iten+num_interfaces,293.0,1);
+
          if ((LL1!=0.0)||(LL2!=0.0)) {
-  	  int local_dist=-1;
+
+  	  int local_distribute=-1;
+
           if (tension[iten-1]==0.0) {
 
  	   int im_source=-1;
 	   int im_dest=-1;
 	   int im_ice=im;
 	   if ((LL1!=0.0)&&(LL2==0.0)) {
-            local_dist=distribute_from_target[iten-1];
+            local_distribute=distribute_from_target[iten-1];
             if (im<im_opp) {
   	     im_source=im;
 	     im_dest=im_opp;
@@ -4046,7 +4049,7 @@ NavierStokes::read_params ()
             } else
   	     amrex::Error("im or im_opp bust");
 	   } else if ((LL1==0.0)&&(LL2!=0.0)) {
-            local_dist=distribute_from_target[iten+num_interfaces-1];
+            local_distribute=distribute_from_target[iten+num_interfaces-1];
             if (im>im_opp) {
   	     im_source=im;
 	     im_dest=im_opp;
@@ -4061,12 +4064,12 @@ NavierStokes::read_params ()
   	    amrex::Error("LL1 or LL2 bust");
 
 	   if (im_source==im_ice) { //melting
-            if (local_dist==0) {
+            if (local_distribute==0) {
 	     // do nothing
 	    } else 
              amrex::Error("distribute_from_target should be 0(melting)");
 	   } else if (im_dest==im_ice) {
-            if (local_dist==1) {
+            if (local_distribute==1) {
 	     // do nothing
 	    } else 
              amrex::Error("distribute_from_target should be 1(freezing)");
@@ -4075,6 +4078,7 @@ NavierStokes::read_params ()
 
           } else
            amrex::Error("liquid-ice surface tension should be 0"); 
+
          } else if ((LL1==0.0)&&(LL2==0.0)) {
           // do nothing
          } else
