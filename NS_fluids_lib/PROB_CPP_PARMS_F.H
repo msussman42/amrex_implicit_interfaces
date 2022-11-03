@@ -141,6 +141,7 @@ namespace amrex{
        Real* molar_mass,
        Real* species_molar_mass,
        Real* tension,
+       Real* tension_init,
        Real* tension_slope,
        Real* tension_T0,
        Real* tension_min,

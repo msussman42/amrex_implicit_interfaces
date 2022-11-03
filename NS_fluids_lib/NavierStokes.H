@@ -1611,6 +1611,7 @@ protected:
     static Vector<Real> tension_T0;
     static Vector<Real> tension_slope; //should be non-positive
     static Vector<Real> tension; // 1-2 1-3 1-4 2-3 2-4 3-4
+    static Vector<Real> tension_init; // 1-2 1-3 1-4 2-3 2-4 3-4
     static Real unscaled_min_curvature_radius; //default: 2.0
     static Vector<Real> prefreeze_tension; // 1-2 1-3 1-4 2-3 2-4 3-4
     static Vector<Real> recalesce_model_parameters; // 3*num_materials

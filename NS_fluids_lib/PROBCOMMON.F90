@@ -300,6 +300,8 @@ implicit none
 !   gravity_vector(SDIM)
 ! deleted August 27, 2022:
 !   gravity,gravity_dir,invert_gravity
+! added November 3, 2022: 
+!   tension_init
 
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1

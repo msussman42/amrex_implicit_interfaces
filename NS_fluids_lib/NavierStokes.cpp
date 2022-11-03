@@ -581,6 +581,7 @@ Vector<Real> NavierStokes::tension_slope;
 Vector<Real> NavierStokes::tension_min;
 Vector<Real> NavierStokes::tension_T0;
 Vector<Real> NavierStokes::tension;
+Vector<Real> NavierStokes::tension_init;
 
 Real NavierStokes::unscaled_min_curvature_radius=2.0;
 Vector<Real> NavierStokes::prefreeze_tension;
@@ -1697,10 +1698,16 @@ void fortran_parameters() {
   tension_mintemp[im]=0.0;
  }
  Vector<Real> tensiontemp(NavierStokes::num_interfaces);
+ Vector<Real> tension_inittemp(NavierStokes::num_interfaces);
 
  Vector<Real> prefreeze_tensiontemp(NavierStokes::num_interfaces);
 
  pp.getarr("tension",tensiontemp,0,NavierStokes::num_interfaces);
+ for (int im=0;im<NavierStokes::num_interfaces;im++) {
+  tension_inittemp[im]=tensiontemp[im];
+ }
+ pp.queryarr("tension_init",tension_inittemp,0,NavierStokes::num_interfaces);
+
  pp.queryAdd("tension_slope",tension_slopetemp,NavierStokes::num_interfaces);
  pp.queryAdd("tension_T0",tension_T0temp,NavierStokes::num_interfaces);
  pp.queryAdd("tension_min",tension_mintemp,NavierStokes::num_interfaces);
@@ -2042,6 +2049,7 @@ void fortran_parameters() {
   molar_mass_temp.dataPtr(),
   species_molar_mass_temp.dataPtr(),
   tensiontemp.dataPtr(),
+  tension_inittemp.dataPtr(),
   tension_slopetemp.dataPtr(),
   tension_T0temp.dataPtr(),
   tension_mintemp.dataPtr(),
@@ -3410,6 +3418,7 @@ NavierStokes::read_params ()
     constant_density_all_time.resize(num_materials);
 
     tension.resize(num_interfaces);
+    tension_init.resize(num_interfaces);
     tension_slope.resize(num_interfaces);
     tension_T0.resize(num_interfaces);
     tension_min.resize(num_interfaces);
@@ -3693,6 +3702,9 @@ NavierStokes::read_params ()
     pp.queryAdd("mglib_min_coeff_factor",mglib_min_coeff_factor);
 
     pp.getarr("tension",tension,0,num_interfaces);
+    for (int iten=0;iten<num_interfaces;iten++)
+     tension_init[iten]=tension[iten];
+    pp.queryarr("tension_init",tension_init,0,num_interfaces);
 
     pp.queryAdd("unscaled_min_curvature_radius",unscaled_min_curvature_radius);
     if (unscaled_min_curvature_radius<2.0) {
@@ -4951,6 +4963,12 @@ NavierStokes::read_params ()
     } // i=0..num_materials-1
 
     if (ParallelDescriptor::IOProcessor()) {
+     for (int i=0;i<num_interfaces;i++) {
+      std::cout << "i,tension=" << i << ' ' <<
+         tension[i] << '\n';
+      std::cout << "i,tension_init=" << i << ' ' <<
+         tension_init[i] << '\n';
+     }
 
      std::cout << "temperature_source=" << temperature_source << '\n';
 

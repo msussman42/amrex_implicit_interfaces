@@ -224,6 +224,7 @@ stop
         ccmolar_mass, &
         ccspecies_molar_mass, &
         cctension, &
+        cctension_init, &
         cctension_slope, &
         cctension_T0, &
         cctension_min, &
@@ -382,6 +383,7 @@ stop
       REAL_T, INTENT(in) :: ccmolar_mass(ccnum_materials)
       REAL_T, INTENT(in) :: ccspecies_molar_mass(ccnum_species_var+1)
       REAL_T, INTENT(in) :: cctension(ccnten)
+      REAL_T, INTENT(in) :: cctension_init(ccnten)
       REAL_T, INTENT(in) :: cctension_slope(ccnten)
       REAL_T, INTENT(in) :: cctension_T0(ccnten)
       REAL_T, INTENT(in) :: cctension_min(ccnten)
@@ -1353,6 +1355,7 @@ stop
        fort_reference_pressure(num_interfaces+iten)=ccreference_pressure(num_interfaces+iten)
 
        fort_tension(iten)=cctension(iten)
+       fort_tension_init(iten)=cctension_init(iten)
        fort_tension_slope(iten)=cctension_slope(iten)
        fort_tension_T0(iten)=cctension_T0(iten)
        fort_tension_min(iten)=cctension_min(iten)
@@ -1476,6 +1479,7 @@ stop
 
        do iten=1,num_interfaces
         print *,"iten,tension ",iten,fort_tension(iten)
+        print *,"iten,tension_init ",iten,fort_tension_init(iten)
         print *,"iten,tension_slope ",iten,fort_tension_slope(iten)
         if (fort_tension_slope(iten).le.zero) then
          ! do nothing

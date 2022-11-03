@@ -102,6 +102,7 @@ ns.gravity        = 0.0 # thermal effects only
 #theta2=180 theta1=theta3="90"
 #thermal effects only
 ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
+ns.tension_init=0.072 0.0 0.021 0.072 0.072 0.021 # 45 degrees
 #ns.tension=0.072 0.0 0.072 0.072 0.072 0.072
 
 # specific heat of glass: 0.84E+3 J/(kg K)
