@@ -3759,7 +3759,8 @@ end subroutine dynamic_contact_angle
 
 
         ! temperature initialized with a default value
-        ! called from denBC and process_initdata
+        ! called from denBC, process_initdata,
+        ! GENERAL_PHASE_CHANGE_STATE,
         ! probtype.eq.59, probtype.eq.55, or probtype.eq.710
         ! bcflag==0 => called from initdata
         ! bcflag==1 => called from denbc
