@@ -858,9 +858,9 @@ endif
 if (probtype.eq.55) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
-  STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) ! density prescribed in the inputs file.
+  STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) 
   if (t.eq.zero) then
-   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) !initial temperature in inputs
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) 
   else if (t.gt.zero) then
    STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
   else
@@ -879,7 +879,7 @@ if (probtype.eq.55) then
       (axis_dir.eq.7)) then  ! compressible
    ! water phase
    if (im.eq.1) then
-    ! bcflag=0 (calling from FORT_INITDATA)
+    ! bcflag=0 (initial data)
     call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,0)
     STATE(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  
    endif ! im=1
@@ -888,9 +888,9 @@ if (probtype.eq.55) then
     print *,"nmat too small for freezing drop on substrate"
     stop
    endif
-   ! ice  or substrate (initial temperature)
+   ! ice or substrate (initial temperature)
    if ((im.eq.3).or.(im.eq.4)) then
-    ! bcflag=0 (calling from FORT_INITDATA)
+    ! bcflag=0 (calling from GENERAL_PHASE_CHANGE_STATE))
     call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,0)
     STATE(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  
    endif

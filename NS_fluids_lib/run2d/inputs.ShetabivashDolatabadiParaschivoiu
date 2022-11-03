@@ -85,8 +85,8 @@ ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-8
-#ns.gravity        = 0.0 # thermal effects only
-ns.gravity        = -9.8 # m/s^2
+ns.gravity        = 0.0 # thermal effects only
+#ns.gravity        = -9.8 # m/s^2; Shetabivash et al include this?
 
 # 12,13,14,23,24,34
 # LG,LI,LS,IG,GS,SI  
@@ -128,7 +128,7 @@ ns.temperature_primitive_variable=1 1 1 1
 ns.sum_interval   = 10        # timesteps between computing mass 
 
 # initial droplet with small layer of ice at its bottom, on a solid substrate.
-# probtype=55
+# probtype=55 (GENERAL_PHASE_CHANGE.F90)
 ns.axis_dir=5   
 ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=1.57
@@ -198,7 +198,7 @@ ns.output_drop_distribution=1
 # 2=dirichlet at inflow and walls.
 # 3=dirichlet at inflow, outflow, and walls.
 ns.prescribe_temperature_outflow=0
-ns.lo_bc          = 3 5
+ns.lo_bc          = 3 2
 ns.hi_bc          = 3 2
 ns.temperature_lo_bc=3 1
 ns.temperature_hi_bc=3 3
