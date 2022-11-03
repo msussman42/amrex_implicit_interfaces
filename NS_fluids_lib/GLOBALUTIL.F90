@@ -22939,7 +22939,7 @@ if (probtype.eq.55) then
     marangoni_temp(imloop)=293.0
    enddo
    call get_user_tension(xvec,time, &
-     fort_tension,user_tension,marangoni_temp)
+     fort_tension_init,user_tension,marangoni_temp)
      ! find the angle between the "im,im_3" interface and the
      ! "im,im_opp" interface.
      ! i.e. between the liquid/substrate and liquid/gas interfaces.
