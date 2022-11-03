@@ -23935,7 +23935,9 @@ end subroutine initialize2d
        INTEGER_T im_source,im_dest
        REAL_T LL,TSAT
        REAL_T cp_source,k_source,TDIFF,rho_source,rho_dest
-       REAL_T T_extreme
+       REAL_T TDIFF_source
+       REAL_T TDIFF_dest
+       REAL_T TDIFF_solid
        REAL_T den_ratio
        INTEGER_T im_solid_initdata
 
@@ -24031,15 +24033,12 @@ end subroutine initialize2d
           ! in: init_initdata
          if ((im_source.ge.1).and.(im_source.le.num_materials).and. &
              (im_dest.ge.1).and.(im_dest.le.num_materials)) then
-          T_extreme=fort_tempconst(im_source)
-          if (fort_tempconst(im_dest).gt.T_extreme) then
-           T_extreme=fort_tempconst(im_dest)
-          endif
+          TDIFF_source=fort_tempconst(im_source)-TSAT
+          TDIFF_dest=fort_tempconst(im_dest)-TSAT
+          TDIFF_solid=TDIFF_dest
           if ((im_solid_initdata.ge.1).and. &
               (im_solid_initdata.le.num_materials)) then
-           if (fort_tempconst(im_solid_initdata).gt.T_extreme) then
-            T_extreme=fort_tempconst(im_solid_initdata)
-           endif
+           TDIFF_solid=fort_tempconst(im_solid_initdata)-TSAT
           else if (im_solid_initdata.eq.0) then
            ! do nothing
           else
@@ -24050,8 +24049,20 @@ end subroutine initialize2d
           print *,"im_source or im_dest invalid"
           stop
          endif
- 
-         TDIFF=abs(T_extreme-TSAT)
+
+         if (LL.lt.zero) then
+          TDIFF_source=-TDIFF_source
+          TDIFF_dest=-TDIFF_dest
+          TDIFF_solid=-TDIFF_solid
+         else if (LL.gt.zero) then
+          ! do nothing
+         else
+          print *,"LL invalid"
+          stop
+         endif 
+         TDIFF=max(TDIFF_source,TDIFF_dest)
+         TDIFF=max(TDIFF,TDIFF_solid)
+         TDIFF=abs(TDIFF)
 
          rho_source=fort_denconst(im_source) ! kg/m^3 
          rho_dest=fort_denconst(im_dest) ! kg/m^3 
@@ -24077,6 +24088,10 @@ end subroutine initialize2d
          ! (1/(s))/(1/m^2)=m^2/s
          fort_alpha(iten+ireverse*num_interfaces)=k_source/(rho_source*cp_source) 
 
+         if (1.eq.1) then
+          print *,"TDIFF=",TDIFF
+         endif
+
          ! (J/(kg Kelvin)) Kelvin/(J/kg)=1
          fort_stefan_number(iten+ireverse*num_interfaces)=cp_source*TDIFF/abs(LL)
         
@@ -24086,12 +24101,14 @@ end subroutine initialize2d
          ! solidification
          ! circular freeze.
          if (den_ratio.lt.10.0) then
-          call find_lambda(lmSt,fort_stefan_number(iten+ireverse*num_interfaces))
+          call find_lambda(lmSt, &
+            fort_stefan_number(iten+ireverse*num_interfaces))
 
          ! spherical boiling
          else if (den_ratio.ge.10.0) then
 
-          call find_beta(lmSt,den_ratio,fort_jacob_number(iten+ireverse*num_interfaces))
+          call find_beta(lmSt, &
+            den_ratio,fort_jacob_number(iten+ireverse*num_interfaces))
 
          else
           print *,"den_ratio bust"

@@ -3160,7 +3160,7 @@ stop
 
              alpha=fort_alpha(iten+ireverse*num_interfaces)
              beta=fort_beta(iten+ireverse*num_interfaces)
-             if ((alpha.le.zero).or.(beta.le.zero)) then
+             if ((alpha.lt.zero).or.(beta.lt.zero)) then
               print *,"alpha or beta are invalid"
               stop
              endif
